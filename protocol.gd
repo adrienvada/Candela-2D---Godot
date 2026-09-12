@@ -132,7 +132,144 @@ class_name Protocol
 ##      Et le VOILE arrête désormais les joueurs (même version, toujours non
 ##      publiée). Le fil ne bouge pas, le sens si : un client d'avant prédirait
 ##      qu'il le traverse, et l'hôte le retiendrait — une correction par contact.
-const VERSION := 16
+## 17 — le SENS change (étape 27 du chantier DIX CLASSES, 2026-09-11, décisions
+##      d'Adrien), puis la FORME (étape 28, lot C, plus bas). À l'étape 27, aucun
+##      RPC n'était ajouté ni modifié. Mais cinq règles que les deux pairs doivent
+##      partager :
+##      - la torche fantôme balaie selon un plan de gestes tiré de la GRAINE de
+##        `rpc_spawn_gadget` (elle la jetait jusqu'ici) : un pair v16 dessinerait
+##        son ancien sinus pendant que l'hôte v17 éblouit selon le nouveau plan ;
+##      - les gadgets diffus ne sont plus touchés par les balles : la balle les
+##        traversait déjà, mais un hôte v16 les abîmait au passage et les
+##        détruisait ; un v17 ne les rencontre plus. Et une balle n'éteint plus
+##        la fusée : un client v16 y prédirait une balle arrêtée que l'hôte v17
+##        laisse passer ;
+##      - la suie cache le corps de qui s'y tient, et étouffe la lampe qu'on y
+##        tient — éblouissement arbitré par l'hôte compris (`facteur_de_lampe`) :
+##        un client v16 afficherait un adversaire v17 caché dans la suie, et
+##        rendrait pleine une lampe que l'hôte v17 étouffe ;
+##      - la lampe de l'arbalète est deux fois plus lumineuse, et son
+##        éblouissement avec : un v16 face à un v17 ne verrait pas la même lampe ;
+##      - la fausse torche obéit à la règle de lampe d'une vraie (la suie
+##        l'étouffe, le grésillement la fait sauter), rendu et éblouissement ; et
+##        l'éblouissement lit l'OMBRE du leurre, pas son disque de touche : un
+##        client v16 dessinerait allumée une fausse torche que l'hôte v17 étouffe.
+##
+##      Et à l'étape 28 (même version, toujours non publiée) : la nappe de braises
+##      pâlit chez les DEUX pairs — elle ne pâlissait que chez l'hôte — et son
+##      éblouissement, arbitré par l'hôte, suit cette lueur
+##      (`GadgetBase.energie_relative`). Le fil ne bouge pas, le sens si : un
+##      client v16 rendrait à pleine lueur une nappe dont l'hôte v17 fait baisser
+##      l'éblouissement. Les tics de brûlure ne sont PAS une règle partagée :
+##      l'hôte les décide, `rpc_update_hp` les porte.
+##
+##      Et la MINE, au lot A2 de la même étape (2026-09-12) : rien à partager, et
+##      c'est la raison qui compte. Sa lumière suit `reste²` chez les DEUX pairs
+##      depuis l'étape 12 (`GadgetMine._physics_process()`) et elle n'a pas changé ;
+##      seul l'hôte en tire l'éblouissement, désormais par le gain plutôt que par un
+##      rayon qui rétrécissait, et il le réplique. Un client v16 dessine exactement
+##      la même flamme qu'un v17 : c'est l'arbitrage qui bouge, pas le rendu.
+##
+##      Et, même étape : l'ombre habitée arrête balles et regard par sa PLAQUE
+##      (36 × 6), la même que son ombre, et non plus par le disque de 18 du socle.
+##      Le fil ne bouge pas, le sens si : un client v16 arrêterait ses balles
+##      prédites sur l'ancien disque (`bullet.gd` les simule chez lui) quand l'hôte
+##      v17 les laisse passer. Le point de pose, lui, change chez l'hôte SEUL — le
+##      poseur exclu du rayon, le voile reculé hors des corps ou refusé faute de
+##      place — et il voyageait déjà dans `rpc_spawn_gadget` : rien à partager.
+##
+##      Et, lot C de la même étape (2026-09-11, décision d'Adrien : dire quand
+##      revient la prochaine fusée, par une jauge sans texte), la FORME change
+##      dans la même version, toujours non publiée — v0.5.0 est sortie en 16 :
+##      `rpc_stock_fusees` gagne l'ATTENTE restante avant la prochaine fusée.
+##      L'hôte l'envoie à chaque changement de réserve — regain, lancer,
+##      changement de classe — et le client la décompte entre deux envois, sans
+##      estimer. Entre un pair d'avant ce lot et un pair d'après, le paquet porte
+##      deux valeurs là où l'autre en attend trois, ou l'inverse : l'appel est
+##      refusé par le moteur, au mieux une ligne dans une console que personne
+##      ne lit, et le compte des fusées du client se fige. Le nouvel argument n'a
+##      PAS de valeur par défaut : c'est elle qui rendait GDScript muet à la v11,
+##      et un appelant oublié doit lever une erreur de script que `run_suites.sh`
+##      attrape. Le témoin l'a signalé ; le numéro reste 17, l'empreinte
+##      recalculée APRÈS l'avoir tranché.
+##
+##      Et, le même jour (étape 28, lot E : la télémétrie des gadgets), la FORME
+##      change encore sous le même numéro, qui n'est toujours pas publié.
+##      `rpc_update_hp` gagne la CAUSE de la perte (balle ou braises), et
+##      `rpc_detruire_gadget` celle de la mort du gadget (balle ou fin de vie) : le
+##      client ne pouvait distinguer ni l'une ni l'autre, et une télémétrie déduite
+##      chez lui aurait donné deux archives différentes pour un même match. Un pair
+##      d'avant ce lot enverrait deux arguments là où l'on en attend trois : le
+##      paquet serait refusé, et la barre de vie du client se figerait. Ni l'un ni
+##      l'autre n'a de valeur par défaut, pour la raison de la v11. Le témoin l'a
+##      signalé ; le numéro reste 17, l'empreinte recalculée APRÈS l'avoir tranché.
+##
+##      Et, lot G de la même étape (2026-09-12, arbitrage d'Adrien : « oui, qu'il
+##      ait l'ombre d'un corps »), le SENS change sans que la FORME bouge —
+##      l'empreinte reste donc intacte, et le témoin doit rester vert. Le LEURRE
+##      porte désormais les couches d'ombre d'un CORPS : l'étoile de sa silhouette
+##      sur la couche du corps de son poseur, un disque de torse sur celle de son
+##      torse. Deux règles que les deux pairs doivent partager :
+##      - il ne fait plus d'ombre sous les lumières dont le masque d'ombre ne
+##        contient que le décor — fusée au sol, mine, nappe de braises, halo de la
+##        torche fantôme, lumière d'impact. Un pair d'avant ce lot dessine une
+##        ombre de corps là où un pair d'après n'en dessine aucune : les deux ne
+##        voient pas la même arène, et l'un démasque en éclairant un leurre que
+##        l'autre croit intact ;
+##      - l'éblouissement suit cette ombre : la torche et le flash de tir du poseur
+##        traversent son propre leurre (`GadgetBase.fait_ombre_aux_lumieres_de()`),
+##        et jusqu'ici, planter un leurre devant soi éteignait sa propre torche. ⚠️
+##        **Le client ne prédit RIEN de cet éblouissement** — `_maj_eblouissement()`
+##        et `_flash_de_tir()` sortent d'emblée en `ONLINE_CLIENT`, et `player.gd`
+##        recopie `net_dazzle`, la valeur que l'hôte réplique. Ce qui bouge est donc
+##        l'ARBITRAGE de l'hôte, pas une prédiction du client : exactement le
+##        raisonnement de la mine au lot A2 — le rendu ne bouge pas, l'arbitrage si.
+##        (La première rédaction disait ici « un client v16 prédirait un adversaire
+##        épargné » : faux, et écrit sans relire ces trois fonctions — la faute
+##        exacte dont cette étape a corrigé quatre exemplaires.)
+##      Rien de neuf ne voyage : les deux occluders naissent de `poseur_id` et de
+##      `classe_du_poseur`, que `rpc_spawn_gadget` porte déjà.
+##
+##      Et, lot H de la même étape (2026-09-12, décision d'Adrien : « le comptage des
+##      mines devient exact avant la publication »), la FORME change **une dernière
+##      fois sous ce numéro** : `rpc_allumer_gadget` gagne la CAUSE de l'allumage —
+##      passage ou balle. Même famille que le lot E : le client ne peut pas la
+##      déduire, il n'encaisse aucune balle et ne voit de la mine que son feu. Sans
+##      elle, la télémétrie devait retrancher les mines abattues des allumages, ce qui
+##      ne donnait qu'un MAJORANT — une mine abattue meurt 1,6 s plus tard, et le match
+##      archivé avant ne lui compte aucune mort. Un pair d'avant ce lot enverrait un
+##      argument là où l'on en attend deux : le paquet serait refusé par le moteur, et
+##      la mine s'allumerait chez l'hôte seul — c'est-à-dire un client aveuglé devant
+##      un boîtier éteint, le défaut même que la v14 décrit. L'argument n'a PAS de
+##      valeur par défaut, pour la raison de la v11. Le témoin l'a signalé ; le numéro
+##      reste 17, l'empreinte recalculée APRÈS l'avoir tranché.
+##
+##      ⚠️ **C'est le dernier moment où cette correction coûte zéro** : la v17 n'est
+##      toujours pas publiée (v0.5.0 est sortie en 16), et ce lot est le dernier avant
+##      la 0.6.0. Après le tag, le même correctif imposerait un protocole 18 et une
+##      coupure entre joueurs — c'est la raison du calendrier, pas une commodité.
+##
+## ## ⛔ LA v17 EST PUBLIÉE — depuis **v0.6.0, le 2026-09-12**
+##
+## Tout ce qui précède a été écrit pendant que ce numéro était encore libre, et neuf
+## passages ci-dessus disent « non publiée », « toujours pas publiée », « une dernière
+## fois sous ce numéro ». **Ces phrases étaient vraies à l'écriture et sont fausses
+## depuis le tag.** Elles restent là parce qu'elles racontent pourquoi chaque
+## changement a pu se faire sous un seul numéro ; elles ne sont plus une permission.
+##
+## Ce qui change concrètement, à partir de maintenant : le fil de la v17 est installé
+## chez des joueurs. **Toute modification de FORME — un argument ajouté, retiré,
+## réordonné, changé de type — impose `VERSION = 18`**, et coupe la population en deux
+## moitiés qui ne se voient pas jusqu'à ce que les deux côtés aient mis à jour. Ce
+## n'est pas une erreur à éviter, c'est un coût à assumer sciemment : `accepts()`
+## refuse symétriquement, le jeu ne plante pas, ne dit rien de faux, il refuse
+## poliment — et personne ne voit le défaut, ni chez soi (on tourne toujours sur le
+## dernier code) ni dans les suites (elles n'ont pas de population).
+##
+## Le rappel qui l'attrape avant qu'il parte : `tools/verifier_publication.sh`, à
+## lancer AVANT de poser un tag. Il refuse une mineure inchangée quand ce numéro a
+## bougé — 0.6.x → 0.7.0 pour un fil qui change, 0.6.1 pour tout le reste.
+const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -145,7 +282,7 @@ const VERSION := 16
 ## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
 ## renumérotation). La question du numéro a été tranchée d'abord — les cinq
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
-const WIRE_WITNESS := "ca43c20c041466f0"
+const WIRE_WITNESS := "81c84826a51f737c"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

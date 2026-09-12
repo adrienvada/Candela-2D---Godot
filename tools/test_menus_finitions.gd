@@ -130,6 +130,43 @@ func _test_logo_godot() -> void:
 	_check("l'avis de phase de test est présent",
 		avis.begins_with("Jeu en phase de test.") and avis.ends_with("et rien hors ligne."))
 
+	# Étape 28, lot H (2026-09-12) — l'avis promet « Rien d'autre n'est envoyé » : il
+	# doit donc ÉNUMÉRER ce qui part. Le contrôle est relié à l'ENVOI, pas à une copie
+	# du texte — c'est la seule forme qui attrape le défaut réel du lot E, où la
+	# télémétrie des gadgets s'est mise à voyager dans les mêmes `conditions` sans que
+	# l'avis bouge. Il mord dans les DEUX sens : le jour où l'envoi cesse d'emporter les
+	# gadgets, il demande de retirer la mention.
+	#
+	# ⚠️ **Le COMPORTEMENT de la fusion, pas l'orthographe d'une ligne** (corrigé en
+	# revue le 2026-09-12) : la première version cherchait le littéral
+	# « MatchRecord.conditions_a_envoyer(conditions, gadgets) » dans `game_state.gd`,
+	# donc l'ordre des arguments, le nom d'une locale et l'absence de retour à la
+	# ligne. Sabotage exécuté : le MÊME appel réparti sur deux lignes faisait rougir le
+	# contrôle, et le seul moyen de le reverdir tel qu'il était écrit aurait été de
+	# RETIRER la mention des gadgets de l'avis — c'est-à-dire de refaire mentir le jeu
+	# à ses joueurs, l'exact contraire de ce que ce contrôle existe pour tenir.
+	var fusion_emporte := MatchRecord.conditions_a_envoyer({}, {"j1": {}}).has("gadgets")
+	# … et le chemin d'envoi passe bien par cette fusion en lui donnant la télémétrie :
+	# deux fragments courts, indépendants de toute mise en page.
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+	var envoi_appelle := gs.contains("conditions_a_envoyer(") and gs.contains("_telemetrie.resume(")
+	var envoie_les_gadgets := fusion_emporte and envoi_appelle
+	_check("l'avis nomme les gadgets si, et seulement si, le rapport les emporte",
+		avis.contains("gadgets") == envoie_les_gadgets,
+		"fusion : %s, chemin d'envoi : %s, avis : %s"
+			% [str(fusion_emporte), str(envoi_appelle), str(avis.contains("gadgets"))])
+	_check("… et il nomme toujours la cadence et la machine",
+		avis.contains("relevé de cadence") and avis.contains("ta machine"))
+	_check("… et promet toujours que rien d'autre ne part",
+		avis.contains("Rien d'autre n'est envoyé"))
+	# ⚠️ **Ce contrôle n'est PAS un recensement de ce qui part.** Il ne tient qu'une
+	# famille de clés, les gadgets. Le rapport emporte aussi la mesure du LIEN
+	# (`rtt_moyen_ms`, `rtt_max_ms` — `conditions_de_match.gd`), que ni « relevé de
+	# cadence » ni « description de ta machine » ne nomme : signalé en revue le
+	# 2026-09-12, **question ouverte pour Adrien** (compléter son incise, ou cesser
+	# d'envoyer le RTT). Aucun contrôle ne l'exige ici, faute de quoi la suite
+	# réclamerait une phrase qu'Adrien n'a pas approuvée.
+
 
 func _test_menu_sourd_sous_le_voile() -> void:
 	var scene: PackedScene = load("res://main.tscn")

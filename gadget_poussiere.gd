@@ -27,9 +27,6 @@ func _init() -> void:
 	rayon = RAYON
 	# Mince : on voit à travers, on ne voit pas loin.
 	opacite = 0.55
-	# Plus fragile que la suie : c'est un nuage minéral, une balle en disperse
-	# beaucoup.
-	pv = 1.0
 
 
 ## Son image : un nuage de poussière de béton, à sa taille — 336 px, deux fois

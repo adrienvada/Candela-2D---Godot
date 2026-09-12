@@ -75,9 +75,13 @@ func _init() -> void:
 	eblouit = true
 	# Elle crache dans toutes les directions : pas d'axe, régime de proximité.
 	eblouissement_dirige = false
-	# ⚠️ **Zéro tant qu'elle n'a pas pris feu**, et c'est la seule chose qui
-	# l'empêche d'aveugler en dormant. `Eblouissement.intensite_proximite()` rend
-	# 0 pour un rayon nul, donc il n'y a aucun cas particulier à écrire ailleurs.
+	# ⚠️ **Zéro tant qu'elle n'a pas pris feu**, et c'est la PREMIÈRE garde contre
+	# un aveuglement en dormant : `Eblouissement.intensite_proximite()` rend 0 pour
+	# un rayon nul, donc il n'y a aucun cas particulier à écrire ailleurs. Il y en a
+	# une SECONDE depuis l'étape 28 (lot A2) — `energie_relative()`, qui rend 0
+	# elle aussi tant que la mine dort, et que l'hôte multiplie à son éblouissement.
+	# Ce commentaire disait « la seule chose » : c'était vrai jusqu'au jour où le
+	# gain est entré dans le calcul.
 	rayon_eblouissement = 0.0
 	# Un boîtier posé n'a pas d'orientation qui compte.
 	angle_pose = 0.0
@@ -87,6 +91,10 @@ func _init() -> void:
 	# `game_state._ligne_de_vue_depuis()` d'accord avec la réalité : sans lui, la
 	# mine arrêterait l'aveuglement sans arrêter le faisceau.
 	occulte_la_lumiere = false
+	# Le repère du poseur (étape 28) : le rayon qui DÉCLENCHE, pas celui qui
+	# aveugle — c'est là qu'il ne doit pas remettre les pieds. « Aucune veilleuse »
+	# tient toujours : le repère n'existe que sur la vue du poseur.
+	rayon_repere = RAYON_DECLENCHEMENT
 
 
 ## Pas d'occluder, et c'est CE QUI RÉPARE SON PROPRE FLASH.
@@ -123,11 +131,25 @@ func veut_s_allumer(joueurs: Array) -> bool:
 	return false
 
 
+## Une BALLE a-t-elle décidé de cet allumage ? (Étape 28, lot H.)
+##
+## ⚠️ **Le même ordre de priorité que `veut_s_allumer()`, et c'est la seule chose à
+## tenir** : là-haut `_touchee` est regardé AVANT la proximité, donc une mine à la
+## fois touchée et enjambée dans la même image est comptée abattue des deux côtés.
+## Inverser l'un sans l'autre rangerait l'allumage dans la mauvaise colonne sans que
+## rien ne le dise — c'est à ça que sert ce rappel.
+func allumage_par_balle() -> bool:
+	return _touchee
+
+
 ## L'ordre d'allumage, venu de l'hôte et rejoué chez les deux pairs.
 func allumer() -> void:
 	if _allumee:
 		return
 	_allumee = true
+	# Allumée, elle ne se déclenche plus : le repère n'a plus rien à dire.
+	if _repere != null:
+		_repere.visible = false
 	rayon_eblouissement = RAYON_EBLOUISSEMENT
 	# ⚠️ La fin se règle par la durée de vie du socle plutôt que par un second
 	# compteur : `GadgetBase` compare déjà `age()` à `duree_vie`, et deux
@@ -149,7 +171,29 @@ func encaisser(degats: float) -> bool:
 	if pv > 0.0:
 		return false
 	_touchee = true
+	# Étape 28, lot H — et c'est ce drapeau qui qualifie aussi l'ALLUMAGE à venir
+	# (`allumage_par_balle()`), lu par l'hôte à l'image où il l'ordonne : la
+	# télémétrie n'a plus à déduire les passages d'une soustraction.
+	# Étape 28, lot E — la balle a décidé, l'embrasement la tuera : comptée abattue.
+	# Une mine déclenchée par un passage meurt, elle, en « fin de vie » (son
+	# embrasement fixe `duree_vie`), et une mine déjà allumée n'arrive pas ici.
+	abattu_par_balle = true
 	return true
+
+
+## Ce que le magnésium brûle encore, entre 0 et 1 : `reste²`, la courbe même de sa
+## flamme. `_physics_process()` en tire l'énergie RENDUE, `GameState` le GAIN de son
+## éblouissement — une seule formule, deux lecteurs. C'est ce qui fait que
+## l'aveuglement suit ce qui brûle (étape 28, lot A2 ; décision d'Adrien du
+## 2026-09-11, « l'aveuglement suit ce qui brûle »).
+##
+## Zéro en dormant : une mine qui n'a pas pris feu ne brûle rien. C'est la seconde
+## garde contre un aveuglement au repos — la première est son rayon nul (`_init()`).
+func energie_relative() -> float:
+	if not _allumee:
+		return 0.0
+	var reste := clampf((duree_vie - age()) / DUREE_EMBRASEMENT, 0.0, 1.0)
+	return reste * reste
 
 
 func _physics_process(delta: float) -> void:
@@ -158,9 +202,19 @@ func _physics_process(delta: float) -> void:
 		return
 	# La combustion s'éteint sur la fin : un flash qui disparaîtrait d'un coup se
 	# lirait comme une coupure de rendu, pas comme une fin de combustion.
-	var reste := maxf(0.0, duree_vie - age()) / DUREE_EMBRASEMENT
-	_lumiere.energy = ENERGIE * reste * reste
-	rayon_eblouissement = RAYON_EBLOUISSEMENT * reste
+	_lumiere.energy = ENERGIE * energie_relative()
+	# ⚠️ **Le rayon d'éblouissement ne suit PLUS la flamme** (étape 28, lot A2). Il
+	# suivait `reste` pendant que l'énergie rendue suivait `reste²` : à reste 0,2,
+	# une flamme tombée à 4 % aveuglait encore à 0,22 un joueur posté à 72 px, le
+	# rayon même du déclenchement. C'est le GAIN de
+	# `GameState._sources_eblouissantes()` qui porte la combustion désormais ; un
+	# rayon qui rétrécirait EN PLUS l'atténuerait deux fois. Il reste à
+	# `RAYON_EBLOUISSEMENT`, écrit par `allumer()` et nulle part ailleurs.
+	#
+	# ⚠️ **Prix connu, et assumé** (chiffres en ROADMAP, lot A2) : ce n'est pas
+	# seulement la fin du flash qui baisse, c'est tout le flash — au rayon de
+	# déclenchement, le pic passe de 0,750 à 0,488 et le temps passé au-dessus de
+	# 0,3 de 1,02 s à 0,42 s. Adrien l'a validé en le sachant.
 
 
 func _monter_flamme() -> void:
@@ -191,3 +245,27 @@ func _monter_flamme() -> void:
 ## d'une mine, c'est le moment où il est trop tard.
 func _monter_visuel() -> void:
 	_poser_sprite("Visuel", "mine_magnesium")
+
+
+## Étape 28, lot F — ce que la killcam doit refaire d'elle : allumée ou non, et
+## l'énergie de son embrasement TELLE QU'ELLE BRÛLAIT. Sans ça, une mine consumée
+## avant le rejeu — le cas même qui explique la mort — en était absente.
+func etat_de_rejeu() -> Dictionary:
+	var d := super()
+	d["allumee"] = _allumee
+	d["energie"] = _lumiere.energy / ENERGIE if _lumiere != null else 0.0
+	return d
+
+
+## ⚠️ **Éteinte à énergie nulle, pas laissée à zéro** : une lumière à 0 compte quand
+## même dans le plafond de quinze par item du moteur.
+##
+## Sur une copie, `allumer()` règle `rayon_eblouissement` et `duree_vie` sans effet :
+## elle est hors du groupe « gadgets » et sans physique.
+func rejouer(d: Dictionary) -> void:
+	super(d)
+	if bool(d["allumee"]) and not _allumee:
+		allumer()
+	if _lumiere != null:
+		_lumiere.energy = ENERGIE * float(d["energie"])
+		_lumiere.enabled = _lumiere.energy > 0.0

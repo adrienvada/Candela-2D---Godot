@@ -388,7 +388,11 @@ func replay_local_journal() -> int:
 			# PE2.3 — un rapport rejoué emporte les conditions archivées avec le
 			# match, comme l'envoi d'origine l'aurait fait. Un dictionnaire vide
 			# pour une entrée d'avant le schéma 5 : le serveur en fait `null`.
-			"conditions": e.get("conditions", {}),
+			# Étape 28, lot E — et la télémétrie des gadgets archivée, rangée dedans
+			# par la MÊME fusion que l'envoi d'origine ; une entrée d'avant le schéma
+			# 6 n'en a pas, et rien n'est ajouté.
+			"conditions": MatchRecord.conditions_a_envoyer(e.get("conditions", {}),
+				MatchRecord.gadgets_de(e)),
 		})
 		repris += 1
 	if repris > 0:

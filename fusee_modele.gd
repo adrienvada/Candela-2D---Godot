@@ -108,13 +108,13 @@ const TUNNEL_ENTREE_MIN := 4.0    # px — sous ce seuil, un tunnel ne se lit pa
 
 # ── FU5 — éteindre la fusée ──────────────────────────────────────────────────
 # Piétiner une fusée AU SOL l'éteint : 0,7 s immobile dessus, le pied dans sa
-# propre lumière — le moment le plus vulnérable que le jeu puisse offrir. Une
-# balle l'éteint aussi, en un coup. Les deux remplacent la lumière par un
-# panache de fumée NOIRE, bref, qui couvre la fuite de l'éteigneur.
+# propre lumière — le moment le plus vulnérable que le jeu puisse offrir. Il
+# remplace la lumière par un panache de fumée NOIRE, bref, qui couvre la fuite
+# de l'éteigneur. Une balle l'éteignait aussi, en un coup, jusqu'au 2026-09-11 :
+# Adrien l'a retiré, un gadget gazeux ne se tue pas au tir.
 const EXTINCTION_PIETINEMENT := 0.7   # s immobile pour éteindre au pied
 const EXTINCTION_RAYON := 24.0        # px — « sur » la fusée, pas dans tout son nuage
 const EXTINCTION_VITESSE_MAX := 30.0  # px/s — tolérance d'immobilité humaine
-const EXTINCTION_RAYON_BALLE := 14.0  # px — proche du rayon visuel du corps
 const PANACHE_MONTEE := 0.3           # s — apparition quasi instantanée du panache
 const PANACHE_DUREE := 3.0            # s — avant dissipation complète
 

@@ -23,6 +23,9 @@ var sandbox_mode: bool = false
 ## (voir `conditions_de_match.gd`). Commencé au départ de la manche, arrêté à
 ## la mort — avant la killcam.
 var _conditions := ConditionsDeMatch.new()
+## Étape 28, lot E — ce que les gadgets font pendant le MATCH (voir
+## `telemetrie_gadgets.gd`), compté chez les deux pairs depuis les mêmes ordres.
+var _telemetrie := TelemetrieGadgets.new()
 ## PE3.1 — le dernier régime signalé à `GameSettings`, pour ne le dire qu'au
 ## changement et non à chaque image.
 var _arene_signalee := false
@@ -330,6 +333,13 @@ var rendu_racine_autorise := true
 ## écran partagé (`_local_player_index()` y vaut -1), et le couper ici masquerait
 ## un défaut réseau le jour où un outil jouerait en ligne.
 var archiver_les_matchs := true
+
+## Le dernier enregistrement construit par `_archive_match_result`, archivé ou non
+## (étape 28, lot E). Lu par les bancs qui mettent `archiver_les_matchs` à faux (piège
+## « Un outil de mise en scène écrivait dans le vrai historique des matchs »), et par
+## le duo, qui ne peut pas relire un historique que deux instances écrivent dans le
+## même `user://`.
+var dernier_enregistrement: Dictionary = {}
 ## Le `World2D` propre de la fenêtre, mémorisé avant qu'on lui prête celui du jeu.
 ## Sans lui, revenir à l'écran scindé laisserait la racine sur le monde du duel.
 var _monde_racine: World2D = null
@@ -436,7 +446,10 @@ func _ready():
 	weapon_arbalete.torch_cookie = "arbalete"
 	weapon_arbalete.torch_angle_deg = 5.0 # Très fin
 	weapon_arbalete.torch_scale = 3.5     # Aussi loin que le fusil
-	weapon_arbalete.torch_brightness = 0.3 # Plus discret / moins lumineux
+	# 0,6 et non plus 0,3 depuis le 2026-09-11 (Adrien : « double leur puissance,
+	# je les vois pas assez »). Cuite dans l'alpha du cookie, donc l'éblouissement
+	# suit : l'arbalète éblouit toujours « comme son faisceau le laisse voir ».
+	weapon_arbalete.torch_brightness = 0.6
 	
 	weapon_arbalete.muzzle_flash_intensity = 0.1
 	weapon_arbalete.muzzle_flash_duration = 0.05
@@ -1419,6 +1432,11 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	round_active = true
 	game_over = false
 	_conditions.commencer()
+	# Étape 28, lot E — la télémétrie repart avec le MATCH, pas la manche : un BO3
+	# archive un match. Sûr : les manches gagnées reviennent à 0 en fin de match
+	# (`_do_end_round`) et sur les deux retours au menu.
+	if p1_round_wins == 0 and p2_round_wins == 0:
+		_telemetrie.commencer()
 	# Le chrono repart en blanc : sans ça, une manche qui suit une fin de match
 	# hérite de l'or ou du rouge de la précédente jusqu'au premier passage de
 	# seuil — soit pendant ses quatre premières minutes.
@@ -1455,6 +1473,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
 	_fusees_restantes = [_stock_fusees(p1), _stock_fusees(p2)]
 	_fusees_accumulateur = [0.0, 0.0]
+	# Réserve pleine au départ : rien ne revient (étape 28, point 7).
+	_fusees_attente = [-1.0, -1.0]
 	_fusees_profil = [_profil_fusees(p1), _profil_fusees(p2)]
 	# Ce qu'on remet à zéro est le nombre de gadgets POSÉS, pas un stock restant.
 	# Voir `gadget_disponible()` : le plafond se relit à chaque appui.
@@ -1629,7 +1649,9 @@ func _process(delta):
 			ghost_p1.rotation = current_snap.p1_rot
 			ghost_p1.visible = current_snap.p1_visible
 			ghost_p1.get_node("Light").enabled = current_snap.p1_light
-			ghost_p1.get_node("Light").energy = KILLCAM_TORCH_ENERGY
+			# Étape 28, lot F — la moitié de ce que la lampe RENDAIT : le grésillement
+			# et la suie s'y lisent comme en jeu, au lieu d'une torche toujours pleine.
+			ghost_p1.get_node("Light").energy = KILLCAM_TORCH_ENERGY * current_snap.p1_lampe
 			ghost_p1.get_node("Flash").enabled = current_snap.p1_flash > 0.0
 			ghost_p1.get_node("Flash").energy = current_snap.p1_flash
 			if current_snap.p1_weapon:
@@ -1640,7 +1662,7 @@ func _process(delta):
 			ghost_p2.rotation = current_snap.p2_rot
 			ghost_p2.visible = current_snap.p2_visible
 			ghost_p2.get_node("Light").enabled = current_snap.p2_light
-			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY
+			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY * current_snap.p2_lampe
 			ghost_p2.get_node("Flash").enabled = current_snap.p2_flash > 0.0
 			ghost_p2.get_node("Flash").energy = current_snap.p2_flash
 			if current_snap.p2_weapon:
@@ -1655,6 +1677,8 @@ func _process(delta):
 
 			# Les fusées du passé, reconstruites à l'âge lu dans l'instantané.
 			_maj_fusees_killcam(current_snap)
+			# Étape 28, lot F — les gadgets du passé, et le présent masqué derrière eux.
+			_maj_gadgets_killcam(current_snap)
 			
 			# Dynamic Camera Zoom & Tracking
 			# Cinematic smooth tracking throughout the entire killcam
@@ -1715,6 +1739,18 @@ func _process(delta):
 		# lui — mais PAS pendant l'arrêt sur image de fin, qui prolonge la
 		# dernière image du rejeu : une fusée qui s'y évapore d'une image se
 		# lirait comme un bug d'affichage.
+		#
+		# ⚠️ **Les GADGETS ne partent PAS ici, et c'est un arbitrage d'Adrien**
+		# (2026-09-12, étape 28, lot G) : *« l'image de ta mort »*, plutôt que la
+		# scène du moment. Le lot F les purgeait ici, sur le patron des fusées ; or
+		# `_end_sequence_active` reste VRAI pendant toute la killcam et l'arrêt sur
+		# image (`_do_end_round`), et ne retombe qu'une ligne avant
+		# `ui.show_game_over()` : cette branche s'ouvrait donc à l'instant PRÉCIS où
+		# l'écran de fin se pose. Le présent y réapparaissait d'un coup — gadgets,
+		# lumières comprises — sur l'image figée de la mort. Ils reviennent donc
+		# dans `_abort_killcam()`,
+		# par où passent TOUTES les sorties : début de manche, match soldé, retour
+		# au menu. L'image de la mort tient jusqu'à ce que le joueur la quitte.
 		_purger_fusees_killcam()
 
 	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
@@ -1874,7 +1910,14 @@ func _sources_eblouissantes() -> Array:
 	for g in get_tree().get_nodes_in_group("gadgets"):
 		if not is_instance_valid(g) or not (g is Node2D):
 			continue
-		if not g.eblouit or g.is_queued_for_deletion():
+		# ⚠️ **Un gadget MASQUÉ par la killcam n'éblouit pas** (étape 28, lot F) : on ne
+		# peut pas être aveuglé par ce qu'on ne voit pas, et le vainqueur est téléporté
+		# sur son trajet rejoué (`_process`). C'est aussi ce qui fait qu'aucun rayon de
+		# ligne de vue n'est tiré pendant le rejeu — et donc que les COPIES, qui ne sont
+		# pas dans ce groupe, n'ont pas besoin d'être exclues de
+		# `_ligne_de_vue_depuis()`. Le jour où une source tirerait un rayon pendant un
+		# rejeu, la mine et la bobine copiées arrêteraient l'éblouissement à tort.
+		if not g.eblouit or g.is_queued_for_deletion() or g.est_masque_pour_rejeu():
 			continue
 		out.append({
 			"noeud": g,
@@ -1884,6 +1927,13 @@ func _sources_eblouissantes() -> Array:
 			# La classe du poseur porte le cookie : c'est elle qu'on
 			# échantillonne, exactement comme on échantillonne l'arme d'un joueur.
 			"arme": g.classe_du_poseur,
+			# Un gadget éblouit à hauteur de ce qu'il brûle, comme la fusée
+			# ci-dessus (étape 28, 2026-09-11, Adrien). ⚠️ Sans `has_method` : le
+			# socle répond (`GadgetBase.energie_relative`). Lu au seul régime de
+			# PROXIMITÉ ; et pas de seuil de coupure comme celui de la fusée — les
+			# braises ne descendent pas sous 0,35, et un gadget qui ne brûle pas
+			# encore n'a pas de rayon (la mine endormie) : il rend 0 avant le gain.
+			"gain": g.energie_relative(),
 		})
 	return out
 
@@ -1924,7 +1974,12 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 		# Une source dirigée SANS porteur : une lumière posée qui a un axe — la
 		# torche fantôme. Elle passe par le même échantillonnage, sans les
 		# préconditions qui ne valent que pour un joueur (`_en_jeu`, `flashlight_on`).
-		return _lumiere_du_faisceau(espace, src["arme"], noeud, cible)
+		# Mais la même RÈGLE de lampe (étape 27, trouvé en revue) : la suie
+		# l'étouffe, le grésillement la fait sauter — une fausse torche qui
+		# éblouirait là où la vraie s'éteint se trahirait. `gadget_torche_fantome.gd`
+		# applique le même facteur à l'énergie rendue.
+		return _lumiere_du_faisceau(espace, src["arme"], noeud, cible,
+			facteur_de_lampe_a(noeud.global_position))
 
 	# ── PROXIMITÉ ────────────────────────────────────────────────────────────
 	var d := noeud.global_position.distance_to(cible.global_position)
@@ -1998,8 +2053,11 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# calcule l'éblouissement. Il porte sur la lumière qui ARRIVE, avant sa
 	# conversion en pénalité : une lampe à moitié éteinte verse moitié moins, et la
 	# courbe de `plafond_pour` fait le reste.
+	# ⚠️ Le dernier argument dit QUI tient cette torche : le leurre de ce joueur ne
+	# fait pas d'ombre sous sa propre lampe, et ne doit donc pas l'arrêter ici
+	# (étape 28, lot G).
 	return _lumiere_du_faisceau(espace, source.current_weapon, source, cible,
-		facteur_de_lampe_a(source.global_position))
+		facteur_de_lampe_a(source.global_position), int(source.player_id))
 
 
 ## Le facteur de lampe à une position : le MINIMUM des gadgets, exactement comme
@@ -2022,8 +2080,12 @@ func facteur_de_lampe_a(pos: Vector2) -> float:
 ## pour un joueur. Les recopier aurait donné une seconde définition du même
 ## faisceau — la faute exacte que le commentaire ci-dessus passe vingt lignes à
 ## expliquer.
+##
+## `pid_porteur` : le joueur qui TIENT ce faisceau, ou -1 pour une lampe posée. Il
+## ne sert qu'à `_ligne_de_vue` — voir la note du leurre là-bas.
 func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
-		source: Node2D, cible: Node2D, facteur: float = 1.0) -> float:
+		source: Node2D, cible: Node2D, facteur: float = 1.0,
+		pid_porteur: int = -1) -> float:
 	if arme == null or not is_instance_valid(source):
 		return 0.0
 	# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui demande
@@ -2033,7 +2095,7 @@ func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
 		source.global_position, cible.global_position) * facteur
 	if intensite <= 0.0:
 		return 0.0
-	if not _ligne_de_vue(espace, source, cible):
+	if not _ligne_de_vue(espace, source, cible, pid_porteur):
 		return 0.0
 	# La lumière qui ARRIVE n'est pas la pénalité qu'elle COÛTE. `Vision` rend
 	# la première — le pixel du faisceau lui-même ; `Eblouissement.plafond_pour`
@@ -2047,9 +2109,9 @@ func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
 ## laisse donc passer le faisceau — on peut éblouir son adversaire par-dessus un
 ## gouffre, décision de conception couverte par `test_vision`.
 func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
-		cible: Node2D) -> bool:
+		cible: Node2D, pid_porteur: int = -1) -> bool:
 	return _ligne_de_vue_depuis(espace, source.global_position, cible,
-		source.get_rid())
+		source.get_rid(), pid_porteur)
 
 
 ## La même, depuis un POINT plutôt qu'un corps.
@@ -2058,8 +2120,11 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ## `tools/planche_eblouissement.gd` la NOMME dans ses préconditions, et que
 ## `tools/test_banc.gd` vérifie qu'elle existe. Un garde-fou qui nomme un symbole
 ## se périme EN VERT le jour où on le renomme — piège déjà consigné.
+##
+## `pid_porteur` : le joueur qui TIENT la lumière d'où part ce rayon — sa torche,
+## son flash de tir —, ou -1 pour une lumière posée, qui n'appartient à personne.
 func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
-		cible: Node2D, exclure: RID) -> bool:
+		cible: Node2D, exclure: RID, pid_porteur: int = -1) -> bool:
 	# ⚠️ **Les gadgets arrêtent le regard de la lumière autant que les murs**, et
 	# ils ne le faisaient pas. Le voile du Spectre coupait le faisceau à l'écran —
 	# son occluder le fait — pendant que l'éblouissement, lui, traversait la bâche
@@ -2071,6 +2136,19 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 	# porte un occluder**, `GadgetBase._monter_occluder()` étant appelé sans
 	# condition. Le jour où l'un d'eux n'en portera plus, il arrêterait
 	# l'éblouissement sans arrêter la lumière — l'inverse du défaut d'aujourd'hui.
+	#
+	# ⚠️ **Porter un occluder ne suffit plus depuis le 2026-09-12** (lot G). Un
+	# occluder n'arrête que les lumières dont le `shadow_item_cull_mask` contient
+	# SA couche : l'invariant utile est donc « un occluder sur une couche que cette
+	# lumière-là lit », et il ne se vérifie plus gadget par gadget. Le LEURRE en est
+	# exempté sciemment — il porte les couches d'ombre d'un corps, donc une mine qui
+	# brûle, une nappe de braises, une fusée au sol ne lui font aucune ombre, et
+	# pourtant il arrête leur éblouissement ici. **C'est voulu, parce qu'un corps
+	# fait exactement pareil** : il arrête le rayon par sa couche physique sans
+	# ombrer une lampe posée. Ce qui doit rester vrai n'est donc pas « l'ombre et
+	# l'éblouissement disent la même chose » mais « le leurre répond comme le
+	# corps qu'il imite » — et c'est ce que `fait_ombre_aux_lumieres_de()` tranche
+	# vingt lignes plus bas, source par source.
 	var q := PhysicsRayQueryParameters2D.create(depuis, cible.global_position,
 		MapGeometry.WALL_LAYER | MapGeometry.GADGET_LAYER)
 	# ⚠️ **Les gadgets qui n'arrêtent pas la lumière sont retirés du rayon.** Le
@@ -2082,12 +2160,42 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 	var exclus: Array[RID] = []
 	if exclure.is_valid():
 		exclus.append(exclure)
+	#
+	# ⚠️ **Et ceux dont l'OMBRE n'a pas la forme de la collision lisent leur ombre**
+	# (le leurre, 2026-09-11, trouvé en revue) : son ombre est l'étoile de la
+	# silhouette, sa collision le disque de 18 d'une zone de touche. Le rayon lisait
+	# le disque — ébloui dans l'ombre du canon, épargné là où la lumière passe à
+	# côté du corps. On le retire du rayon, et on lit son ombre elle-même.
+	var par_la_forme := []
 	for g in get_tree().get_nodes_in_group("gadgets"):
-		if is_instance_valid(g) and g is CollisionObject2D and not g.occulte_la_lumiere:
+		if not is_instance_valid(g) or not (g is CollisionObject2D):
+			continue
+		if not g.occulte_la_lumiere:
 			exclus.append(g.get_rid())
+		elif g.regard_par_la_forme:
+			exclus.append(g.get_rid())
+			# ⚠️ **Et sa forme ne l'arrête que si elle fait de l'ombre SOUS CETTE
+			# lumière-là** (étape 28, lot G, 2026-09-12). Le leurre porte désormais
+			# la couche d'ombre du corps de son poseur : la torche et le flash de
+			# ce poseur le traversent à l'écran, exactement comme ils traversent la
+			# place de son propre corps. Continuer de les arrêter ici ferait
+			# l'inverse du défaut que ce rayon corrige — on verrait la lumière
+			# passer sans la prendre —, et le poseur planterait un leurre qui
+			# éteint sa propre torche. Le socle répond vrai — pour les autres
+			# gadgets à FORME, s'il en vient un : cette porte n'est franchie que
+			# sous `regard_par_la_forme`, et le leurre est aujourd'hui le seul à
+			# lever ce drapeau. Les autres gadgets ne passent pas par ici, ils sont
+			# soit exclus du rayon, soit heurtés par lui.
+			if pid_porteur < 0 or g.fait_ombre_aux_lumieres_de(pid_porteur):
+				par_la_forme.append(g)
 	q.exclude = exclus
 	var res := espace.intersect_ray(q)
-	return res and res.collider == cible
+	if not (res and res.collider == cible):
+		return false
+	for g in par_la_forme:
+		if g.coupe_le_regard(depuis, cible.global_position):
+			return false
+	return true
 
 ## Le flash de tir éblouit celui d'en face (décision du 2026-08-18, avec
 ## Adrien). Pic instantané, qui passe par-dessus le plafond de la torche et se
@@ -2117,7 +2225,11 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		tireur.global_position.distance_to(cible.global_position), eclat)
 	if pic <= 0.0:
 		return
-	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible):
+	# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
+	# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
+	# l'arrête donc pas ici non plus (étape 28, lot G).
+	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible,
+			int(tireur.player_id)):
 		return
 	cible.apply_dazzle(pic)
 
@@ -2175,6 +2287,19 @@ var _fusees_restantes: Array[int] = [0, 0]
 ## mordant à stock 3.
 var _fusees_accumulateur: Array[float] = [0.0, 0.0]
 
+## Étape 28, point 7 (2026-09-11) — les secondes avant la prochaine fusée TELLES QUE
+## L'HÔTE LES A DITES dans `rpc_stock_fusees`, par joueur ; -1 : rien ne revient
+## (réserve pleine, ou classe qui ne recharge pas). Écrite chez les deux pairs, LUE
+## chez le client seul (`attente_fusee`) : l'hôte a mieux, son accumulateur.
+##
+## ⚠️ **Le client la DÉCOMPTE entre deux envois, il ne l'estime pas** (décision du
+## 2026-08-18, « l'estimation est un mensonge ») : aucune correction d'aller-retour.
+## Reçue un demi-RTT après l'envoi, elle atteint zéro un demi-RTT après l'hôte —
+## c'est-à-dire à l'instant où arrive le paquet qui apporte la fusée. Le client est
+## exactement l'hôte retardé d'un demi-RTT, et `tools/test_tir_et_reserves.gd` le
+## vérifie sur une file de paquets datés.
+var _fusees_attente: Array[float] = [-1.0, -1.0]
+
 ## Le profil suivi par joueur, pour détecter un CHANGEMENT DE CLASSE.
 ##
 ## ⚠️ Même piège que le stock de gadgets : la fenêtre de choix d'un match apparié
@@ -2186,6 +2311,20 @@ var _fusees_accumulateur: Array[float] = [0.0, 0.0]
 var _fusees_profil: Array = [null, null]
 ## Fusées reconstruites par la killcam, par graine.
 var _fusees_killcam: Dictionary = {}
+
+## Étape 28, lot F — les gadgets reconstruits par la killcam, par NOM du gadget
+## d'origine. Une entrée à `null` : irreconstructible, le cri est déjà parti (on ne
+## le répète pas à chaque image).
+var _gadgets_killcam: Dictionary = {}
+## Les gadgets et les traces VIVANTS, masqués le temps du rejeu, à rendre ensuite.
+var _gadgets_masques: Array = []
+var _traces_masquees: Array = []
+## Les traces de poudre du passé : un conteneur NOMMÉ, enfant de l'arène — Godot
+## renomme les homonymes, on les retrouve donc par le conteneur, jamais par leur nom.
+var _traces_killcam: Node2D = null
+## Le rejeu a-t-il déjà masqué le présent ? C'est aussi ce qui dit qu'il reste
+## quelque chose à rendre quand la lecture s'arrête sans avoir créé une seule copie.
+var _rejeu_gadgets_en_cours: bool = false
 
 # FU5 — piétinement, par joueur (index 0/1 = p1/p2). Hôte seul : voir
 # `_maj_extinction_fusees`. `_pietinement_pos` est réévaluée CHAQUE tick (pas
@@ -2243,13 +2382,21 @@ func fusees_restantes(pid: int) -> int:
 
 ## Secondes avant la prochaine fusée, ou -1 s'il n'y en aura pas.
 ##
-## ⚠️ **Juste chez l'hôte seul**, l'accumulateur n'étant pas répliqué. Le client
-## voit donc le compte changer sans le décompte qui l'annonce — un manque, pas un
-## mensonge, et le prix d'un octet par tick économisé. À reprendre le jour où
-## Adrien jugera l'attente illisible.
+## ⚠️ **Juste chez les DEUX pairs depuis l'étape 28** (2026-09-11 : Adrien veut
+## savoir quand revient la prochaine fusée, par une jauge sans texte). Jusque-là
+## l'accumulateur n'étant pas répliqué, le client voyait le compte changer sans
+## rien qui l'annonce. Il ne l'est toujours pas — un octet par tick pour une
+## grandeur qui descend en ligne droite. L'hôte envoie l'ATTENTE à chaque
+## changement de réserve (`rpc_stock_fusees`), et le client la décompte
+## (`_fusees_attente`).
 func attente_fusee(pid: int) -> float:
 	if pid < 0 or pid >= _fusees_restantes.size():
 		return -1.0
+	# Chez le CLIENT, l'attente envoyée par l'hôte et décomptée depuis : son propre
+	# accumulateur n'avance jamais (`_accorder_fusees` n'y fait que décompter), la
+	# formule y rendrait toujours la période entière.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return _fusees_attente[pid]
 	var profil = _profil_fusees(p1 if pid == 0 else p2)
 	if profil == null:
 		return -1.0
@@ -2266,6 +2413,8 @@ func attente_fusee(pid: int) -> float:
 ## secondes, et seulement pour les deux classes qui rechargent.
 func _accorder_fusees(delta: float) -> void:
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# Le client ne recharge rien ; il décompte l'attente que l'hôte lui a dite.
+		_decompter_attente_fusees(delta)
 		return
 	for pid in 2:
 		var joueur: Node = p1 if pid == 0 else p2
@@ -2273,8 +2422,12 @@ func _accorder_fusees(delta: float) -> void:
 		if profil != _fusees_profil[pid]:
 			# Changement de classe : on resème, y compris pendant le décompte.
 			_fusees_profil[pid] = profil
-			_annoncer_stock_fusees(pid, maxi(0, profil.stock) if profil != null else 0)
+			# L'accumulateur AVANT l'annonce, qui en tire l'attente (étape 28).
+			# Sans effet aujourd'hui — aucune classe ne pose de `plafond`, et une
+			# réserve pleine rend -1 quel que soit l'accumulateur —, mais un plafond
+			# supérieur au stock ferait annoncer l'attente de la classe QUITTÉE.
 			_fusees_accumulateur[pid] = 0.0
+			_annoncer_stock_fusees(pid, maxi(0, profil.stock) if profil != null else 0)
 			continue
 		if profil == null or not profil.recharge_active():
 			continue
@@ -2287,17 +2440,41 @@ func _accorder_fusees(delta: float) -> void:
 			_annoncer_stock_fusees(pid, int(avance[0]))
 
 
+## [Client] L'attente reçue descend entre deux envois de l'hôte — sous la MÊME garde
+## que son accumulateur (plus haut) : pendant le décompte de départ, la killcam ou
+## l'écran de fin, l'hôte ne recharge rien, et le client ne doit rien décompter.
+## Elle s'arrête à zéro, où la jauge reste pleine — « imminente » — jusqu'au paquet
+## qui apporte la fusée (`fraction_de_retour`, dans ui.gd).
+func _decompter_attente_fusees(delta: float) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	for pid in 2:
+		if _fusees_attente[pid] > 0.0:
+			_fusees_attente[pid] = maxf(0.0, _fusees_attente[pid] - delta)
+
+
+## [Hôte] Dit le compte ET l'attente — calculée ICI, après que stock et accumulateur
+## ont bougé, jamais passée par l'appelant : trois sites annoncent (changement de
+## classe, regain, lancer), un seul calcule.
 func _annoncer_stock_fusees(pid: int, stock: int) -> void:
+	var profil = _profil_fusees(p1 if pid == 0 else p2)
+	var attente: float = profil.attente_restante(stock, _fusees_accumulateur[pid]) \
+		if profil != null else -1.0
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		rpc_stock_fusees.rpc(pid, stock)
+		rpc_stock_fusees.rpc(pid, stock, attente)
 	else:
-		rpc_stock_fusees(pid, stock)
+		rpc_stock_fusees(pid, stock, attente)
 
 
+## ⚠️ **`attente` n'a PAS de valeur par défaut** (étape 28) : un appelant oublié doit
+## lever une erreur de script, que `run_suites.sh` attrape — pas envoyer -1 en
+## silence. C'est une valeur par défaut qui avait rendu GDScript muet à la v11 du
+## protocole (carnet de `protocol.gd`).
 @rpc("authority", "call_local", "reliable")
-func rpc_stock_fusees(pid: int, stock: int) -> void:
+func rpc_stock_fusees(pid: int, stock: int, attente: float) -> void:
 	if pid >= 0 and pid < _fusees_restantes.size():
 		_fusees_restantes[pid] = maxi(0, stock)
+		_fusees_attente[pid] = attente
 
 func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 	if not round_active and not sandbox_mode: return
@@ -2308,10 +2485,21 @@ func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 		return
 	if not fusee_disponible(shooter.player_id): return
 	var graine := randi()
+	var pid_f: int = shooter.player_id
+	var avant: int = _fusees_restantes[pid_f]
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		rpc_spawn_fusee.rpc(shooter.player_id, pos, rot, graine)
 	else:
 		_do_spawn_fusee(shooter.player_id, pos, rot, graine)
+	# Étape 28, point 7 — le LANCER change la réserve, donc l'attente : depuis une
+	# réserve pleine, l'accumulateur part de zéro (`FlareProfile.avancer`) et la
+	# prochaine revient dans une période entière. Sans cet envoi, le client verrait sa
+	# réserve baisser (par `rpc_spawn_fusee`) et aucune attente commencer. `call_local`
+	# a déjà décrémenté le stock ici ; même canal fiable, émis après : il arrive après.
+	# Seulement si le stock a bougé — la règle du regain : au bac à sable libre, le
+	# lancer ne décompte rien, et un paquet n'y dirait rien.
+	if _fusees_restantes[pid_f] != avant:
+		_annoncer_stock_fusees(pid_f, _fusees_restantes[pid_f])
 
 # FU2.1 : plus aucune cible pré-calculée — la fusée REBONDIT sur les murs
 # (décision d'Adrien au premier essai, elle les survolait). Le vol se simule
@@ -2377,7 +2565,11 @@ var _gadgets_poses_par: Array[int] = [0, 0]
 ## Posé dans `_do_spawn_gadget`, qui tourne chez les DEUX pairs : chacun démarre
 ## son minuteur à la pose qu'il voit, le client un demi-aller-retour après l'hôte.
 ## L'écart joue dans le sens prudent — le client ne prédit jamais une pose que
-## l'hôte refuserait.
+## l'hôte refuserait faute de recharge.
+##
+## ⚠️ **L'hôte peut en revanche refuser faute de PLACE** (étape 28, 2026-09-11 —
+## `point_de_pose_libre()`) : rien n'est armé, ni chez lui ni chez le client, qui ne
+## reçoit rien ; et le désarmement de la pose a eu lieu des deux côtés.
 var _gadget_attente: Array[float] = [0.0, 0.0]
 
 ## La batterie du grésillement, par joueur, de 0 à 1. Elle appartient au JOUEUR :
@@ -2385,6 +2577,14 @@ var _gadget_attente: Array[float] = [0.0, 0.0]
 var _batterie: Array[float] = [1.0, 1.0]
 
 const PERIODE_RECHARGE_GADGET := 60.0
+
+## Le pas du recul d'une pose, en pixels (étape 28, 2026-09-11) : un voile qui
+## évite un corps naît à moins de 2 px de lui, jamais dedans. La recherche essaie au
+## plus 49 positions par tentative — le point de départ, puis de 94 px à 0 par pas de
+## 2. Un refus n'armant pas la recharge, une tentative refusée peut se répéter à
+## chaque nouvel appui, dès la fin du désarmement de 0,30 s.
+## Voir `_reculer_hors_des_corps()`.
+const PAS_RECUL_POSE := 2.0
 
 ## Compteur de poses, pour donner un nom UNIQUE à chaque nœud.
 ##
@@ -2439,9 +2639,17 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
 		return
 
+	# Un gadget qui arrête les joueurs ne naît pas sur un corps : il RECULE vers son
+	# poseur (Adrien, 2026-09-11 : « on recule le point de pose »). Sans place, pas de
+	# pose, et rien d'armé — ni recharge, ni numéro, ni RPC. Le désarmement a déjà eu
+	# lieu (`poser_gadget`), chez l'hôte comme dans la prédiction du client : c'est ce
+	# qui les garde d'accord.
+	var point := point_de_pose_libre(poseur, pos, rot, classe.gadget.slug)
+	if not point.is_finite():
+		return
 	_gadgets_poses += 1
-	var point := _point_de_pose(pos, rot)
-	# La graine de ce qui est aléatoire dans le gadget — l'onde du grésillement.
+	# La graine de ce qui est aléatoire dans le gadget — l'onde du grésillement, et
+	# le plan de gestes de la torche fantôme (étape 27) : les deux pairs en dépendent.
 	# Tirée ICI, chez l'hôte, et portée par le RPC : deux pairs qui tireraient
 	# chacun la leur verraient deux pannes différentes.
 	var graine := randi()
@@ -2454,13 +2662,45 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 			actif_initial, _batterie[pid])
 
 
+## Où un gadget de `slug` se plante, posé par `poseur` depuis `depuis` vers `rot` :
+## devant lui, ramené en deçà du premier obstacle (`_point_de_pose`), puis — pour un
+## gadget qui arrête les joueurs — reculé hors des corps (`_reculer_hors_des_corps`).
+## `Vector2.INF` quand il n'y a de place nulle part : la pose est refusée.
+##
+## ⚠️ **L'hôte seul en fait une décision** (`spawn_gadget`), et le point final
+## voyage dans `rpc_spawn_gadget`. Le client peut l'appeler pour un PRÉ-CONTRÔLE
+## local — dire tout de suite qu'une pose n'a pas de place —, jamais pour décider :
+## il voit l'adversaire 100 ms en retard et son propre corps en avance, et son
+## verdict peut différer de celui de l'hôte. Pas dans `gadget_disponible()` pour la
+## même raison : une garde géométrique là-bas désarmerait un pair sans l'autre.
+func point_de_pose_libre(poseur: Node2D, depuis: Vector2, rot: float, slug: String) -> Vector2:
+	return _reculer_hors_des_corps(depuis, _point_de_pose(poseur, depuis, rot), rot, slug)
+
+
 ## Où le gadget se plante réellement : devant le poseur, ramené en deçà du
-## premier mur rencontré.
+## premier obstacle rencontré.
 ##
 ## Sans cette rectification, un joueur dos au mur planterait son gadget DANS la
 ## pierre : le nœud existerait, son occluder aussi, et rien à l'écran ne dirait
 ## pourquoi la manche vient de consommer une charge sans rien produire.
-func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
+##
+## ⚠️ **Le POSEUR est exclu du rayon** (étape 28, 2026-09-11). Il ne l'était pas, et
+## tout gadget posé en jeu naissait à 12 px de son poseur, dans son corps, depuis
+## l'introduction de cette fonction (`f161232`, 2026-09-09) — mesuré dans Godot, par
+## le vrai joueur qui appuie sur sa touche. Son polygone est concave : le moteur le
+## découpe en deux pièces convexes, le disque et le NEZ ; le rayon, parti du centre,
+## ignore la pièce où il naît mais entre dans le nez à 18 px. Aucune suite ne le
+## voyait : elles téléportaient le poseur et posaient dans la même image, avant que
+## le moteur l'ait déplacé — le piège « Un corps cinématique téléporté n'existe pour
+## les requêtes qu'au pas suivant ».
+##
+## ⚠️ **Le rayon s'arrête aussi aux AUTRES corps** : les joueurs sont sur la couche
+## 1, celle des murs (le défaut d'un `CharacterBody2D`). Un adversaire dans l'axe
+## ramène donc le point 6 px devant lui, et un voile de demi-épaisseur 6,5 l'y
+## mordrait — `_reculer_hors_des_corps()` le fait reculer, ou REFUSE la pose quand
+## l'adversaire est si près qu'il ne reste plus la place de la bande entre lui et le
+## poseur : voir sa doc.
+func _point_de_pose(poseur: Node2D, depuis: Vector2, rot: float) -> Vector2:
 	var direction := Vector2(cos(rot), sin(rot))
 	var cible := depuis + direction * GadgetBase.PORTEE_POSE
 	# ⚠️ `p1.get_world_2d()` et non `get_world_2d()` : `GameState` étend `Node`,
@@ -2474,12 +2714,112 @@ func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
 	var requete := PhysicsRayQueryParameters2D.create(depuis, cible)
 	requete.collision_mask = MapGeometry.WALL_LAYER
 	requete.collide_with_areas = false
+	if is_instance_valid(poseur):
+		var exclus: Array[RID] = [poseur.get_rid()]
+		requete.exclude = exclus
 	var touche := espace.intersect_ray(requete)
 	if touche.is_empty():
 		return cible
 	# Une marge, sinon le gadget naît exactement sur la surface et son occluder
 	# se confond avec celui du mur.
 	return Vector2(touche["position"]) - direction * 6.0
+
+
+## [Hôte] Le point de pose, reculé vers le poseur jusqu'à ce que le gadget n'y
+## chevauche plus aucun corps — pour un gadget qui ARRÊTE LES JOUEURS seulement.
+## Rend `point` tel quel s'il est libre, `Vector2.INF` s'il n'y a de place nulle part.
+##
+## ⚠️ **Pourquoi reculer.** Un voile né sur un corps, c'est le moteur qui l'en dégage
+## — un téléport au premier pas de ce corps, et une correction dans la prédiction du
+## client. Le poseur compte : à reculer on finit sur lui, et c'est là qu'on renonce.
+##
+## ⚠️ **Le recul ne cherche qu'en DEÇÀ du premier obstacle du rayon de pose** — un mur,
+## OU un adversaire : les joueurs sont sur la couche des murs (`_point_de_pose`). Le
+## refus survient quand cet obstacle laisse trop peu de place devant le nez du poseur :
+## un mur à moins de 40,5 px de son centre ; un adversaire dans l'axe à bout portant —
+## mesuré dans Godot, sans aucun mur, jusqu'à 60 px de centre à centre dos tourné et
+## 70 face au poseur (son bord le plus proche à 42 px ou moins) ; ou un adversaire
+## coincé contre un mur proche. C'est le voile posé à bout portant sur l'adversaire
+## qu'on vise. Un adversaire que le rayon ne rencontre pas, lui, ne barre jamais toute
+## la course : le recul part alors de 96 px (aucun refus sur 10 313 positions balayées
+## dans Godot, 2026-09-11).
+##
+## ⚠️ **Sur les formes que le moteur résout** — le polygone du joueur a un NEZ de
+## 28 px dans l'axe de sa visée (`player.tscn`) — **et sur les transformées des
+## nœuds, pas par une requête d'espace** : piège « Un corps cinématique téléporté
+## n'existe pour les requêtes qu'au pas suivant ».
+##
+## ⚠️ **Un refus ne dit rien chez l'hôte** : le joueur a perdu son désarmement de
+## 0,30 s. Le dire au joueur, c'est au pré-contrôle local (`point_de_pose_libre()`).
+func _reculer_hors_des_corps(depuis: Vector2, point: Vector2, rot: float, slug: String) -> Vector2:
+	var gabarit := _gabarit_bloquant(slug)
+	if gabarit.is_empty():
+		return point
+	var forme: Shape2D = gabarit["forme"]
+	var angle: float = rot + float(gabarit["angle_pose"])
+	var corps: Array = []
+	for j in [p1, p2]:
+		if _en_jeu(j):
+			corps.append(j)
+	if not _gene_un_corps(forme, Transform2D(angle, point), corps):
+		return point
+	var direction := Vector2(cos(rot), sin(rot))
+	# Signée : un mur au ras du poseur peut avoir ramené le point DERRIÈRE lui.
+	var d := (point - depuis).dot(direction) - PAS_RECUL_POSE
+	while d >= 0.0:
+		var candidat := depuis + direction * d
+		if not _gene_un_corps(forme, Transform2D(angle, candidat), corps):
+			return candidat
+		d -= PAS_RECUL_POSE
+	return Vector2.INF
+
+
+## Ce que la pose doit savoir d'un gadget qui ARRÊTE LES JOUEURS avant qu'il existe :
+## sa forme de collision et son angle de pose. `{}` pour tous les autres, et pour un
+## slug inconnu — `_do_spawn_gadget` en criera, on ne crie pas deux fois.
+##
+## Lu sur une instance JETABLE de la vraie classe, jamais recopié dans une table : une
+## seconde copie de la forme serait « Une forme héritée du socle ment en silence » en
+## plus retors. Les `_init()` des dix gadgets ne règlent que des champs.
+func _gabarit_bloquant(slug: String) -> Dictionary:
+	var chemin := String(IMPLEMENTATIONS.get(slug, {}).get("script", ""))
+	if chemin.is_empty() or not ResourceLoader.exists(chemin):
+		return {}
+	var script: GDScript = load(chemin)
+	var g: GadgetBase = script.new()
+	var r := {}
+	if g.arrete_les_joueurs:
+		r = {"forme": g._forme_de_collision(), "angle_pose": g.angle_pose}
+	g.free()
+	return r
+
+
+## `forme`, posée en `xf`, chevauche-t-elle l'un de ces corps — toutes leurs formes,
+## telles que le moteur les résout (les pièces convexes de leur polygone) ?
+func _gene_un_corps(forme: Shape2D, xf: Transform2D, corps: Array) -> bool:
+	for j in corps:
+		for proprio in j.get_shape_owners():
+			if j.is_shape_owner_disabled(proprio):
+				continue
+			var xf_proprio: Transform2D = j.global_transform * j.shape_owner_get_transform(proprio)
+			for i in j.shape_owner_get_shape_count(proprio):
+				if forme.collide(xf, j.shape_owner_get_shape(proprio, i), xf_proprio):
+					return true
+	return false
+
+
+## L'horloge de la télémétrie des gadgets (étape 28, lot E) : le temps RÉEL. Jamais
+## le delta, qui suit `Engine.time_scale` et ralentit à l'encaissement, ni
+## `time_left`, que le client recale par sauts.
+func _t_telemetrie() -> float:
+	return Time.get_ticks_msec() * 0.001
+
+
+## Appelée par `Player.rpc_update_hp`, chez les DEUX pairs, pour chaque PV perdu —
+## AVANT la mort, qui archive le match de façon synchrone chez l'hôte.
+func noter_pv_perdus(victime: int, source: int, cause: int, pv: float, mortel: bool) -> void:
+	_telemetrie.pv_perdus(victime, source, cause == GadgetBase.DEGATS_BRAISES, pv,
+		mortel, _t_telemetrie())
 
 
 ## [Hôte] Les gadgets qui demandent à s'allumer — la mine, aujourd'hui seule.
@@ -2517,14 +2857,32 @@ func allumer_gadget(g: Node) -> void:
 		return
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
+	# Étape 28, lot H — la CAUSE part avec l'ordre, tirée du gadget lui-même et jamais
+	# d'une constante écrite ici : lui seul sait pourquoi il demande à s'allumer, et le
+	# client ne peut pas le deviner (il n'encaisse aucune balle). Sans garde
+	# `has_method()`, qui ferait d'un oubli un « passage » muet.
+	var cause := GadgetBase.ALLUMAGE_BALLE if g.allumage_par_balle() \
+		else GadgetBase.ALLUMAGE_PASSAGE
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		rpc_allumer_gadget.rpc(String(g.name))
+		rpc_allumer_gadget.rpc(String(g.name), cause)
 	else:
-		g.allumer()
+		# Étape 28, lot E — en local aussi par l'ORDRE, en appel direct (le patron de
+		# `_annoncer_etat_gadget`) : c'est là que la télémétrie compte l'allumage.
+		# Un `g.allumer()` direct ici laisserait l'écran scindé à zéro allumage.
+		rpc_allumer_gadget(String(g.name), cause)
 
 
+## `cause` (étape 28, lot H) : `GadgetBase.ALLUMAGE_PASSAGE` ou `ALLUMAGE_BALLE`,
+## décidée par l'hôte. Sans valeur par défaut, comme `rpc_detruire_gadget` et
+## `rpc_update_hp` : c'est une valeur par défaut qui a rendu GDScript muet devant un
+## appelant oublié à la v11 (carnet de `protocol.gd`), et un appelant oublié doit ici
+## lever une erreur de script que `run_suites.sh` attrape.
 @rpc("authority", "call_local", "reliable")
-func rpc_allumer_gadget(nom: String) -> void:
+func rpc_allumer_gadget(nom: String, cause: int) -> void:
+	# Étape 28, lot E — compté à l'ORDRE, que le nœud existe encore ou non chez ce
+	# pair ; attribué par le NOM, le même calcul chez l'hôte et chez le client.
+	_telemetrie.allumage(GadgetBase.poseur_du_nom(nom), _t_telemetrie(),
+		cause == GadgetBase.ALLUMAGE_BALLE)
 	var g := bullet_container.get_node_or_null(NodePath(nom))
 	if g != null and g.has_method("allumer"):
 		g.allumer()
@@ -2556,6 +2914,30 @@ func attente_gadget(pid: int) -> float:
 	return _gadget_attente[pid] if pid >= 0 and pid < _gadget_attente.size() else 0.0
 
 
+## Étape 28, point 5 (2026-09-11) — l'appui sur la touche de gadget serait-il refusé
+## MAINTENANT ? Lu par player.gd, chez chaque pair sur SON état répliqué, pour le
+## seul ressenti : jamais un ordre. Un appui pendant le cooldown de tir attend, il
+## n'est pas refusé ; le voile sans place a son propre pré-contrôle
+## (`point_de_pose_libre`, au moment où la pose part).
+##
+## Juste chez le client aussi : son `_gadget_attente` démarre raccourcie d'un
+## aller-retour (`_do_spawn_gadget`), il ne refuse donc jamais une pose que l'hôte
+## accepterait ; `actif` et `_batterie` y sont recalés à chaque bascule.
+func appui_gadget_refuse(pid: int) -> bool:
+	var g = gadget_basculable_de(pid)
+	if g != null:
+		# L'extinction passe toujours ; seul le RALLUMAGE a un seuil.
+		return not bool(g.get("actif")) and _rallumage_refuse(pid)
+	return not gadget_disponible(pid)
+
+
+## La règle du seuil de rallumage, en UN endroit : l'arbitrage (`basculer_gadget`)
+## et le ressenti (`appui_gadget_refuse`) la lisent tous deux. Deux copies finiraient
+## par diverger, et le HUD tremblerait sur un appui accepté.
+func _rallumage_refuse(pid: int) -> bool:
+	return _batterie[pid] < GadgetGresillement.SEUIL_RALLUMAGE
+
+
 ## [Hôte] Le poseur appuie sur sa touche alors que son gadget basculable est
 ## debout : on l'allume ou on l'éteint.
 ##
@@ -2573,7 +2955,8 @@ func basculer_gadget(joueur: Node2D) -> void:
 	if g == null:
 		return
 	var allume: bool = not bool(g.get("actif"))
-	if allume and _batterie[pid] < GadgetGresillement.SEUIL_RALLUMAGE:
+	# Le seuil se lit en UN endroit, que le ressenti du refus lit aussi (étape 28).
+	if allume and _rallumage_refuse(pid):
 		return
 	_annoncer_etat_gadget(pid, String(g.name), allume)
 
@@ -2594,6 +2977,9 @@ func _annoncer_etat_gadget(pid: int, nom: String, actif: bool) -> void:
 ## L'allumage, lui, ne s'applique qu'à un nœud qui existe encore.
 @rpc("authority", "call_local", "reliable")
 func rpc_etat_gadget(pid: int, nom: String, actif: bool, batterie_joueur: float) -> void:
+	# Étape 28, lot E — chaque ordre est une bascule (ses deux appelants ne l'envoient
+	# qu'à un changement d'état) ; à batterie 0,0, la coupure de l'hôte.
+	_telemetrie.bascule(pid, actif, batterie_joueur, _t_telemetrie())
 	if pid >= 0 and pid < _batterie.size():
 		_batterie[pid] = clampf(batterie_joueur, 0.0, 1.0)
 	var g := bullet_container.get_node_or_null(NodePath(nom))
@@ -2609,17 +2995,32 @@ func rpc_etat_gadget(pid: int, nom: String, actif: bool, batterie_joueur: float)
 ## pouvait mourir chez l'hôte et survivre chez le client, qui voyait alors
 ## éteintes des torches que l'hôte laissait éblouir. Trouvé par la revue du
 ## 2026-09-10 — et c'était vrai de tous les gadgets, pas du seul grésillement.
+##
+## Étape 28, lot E — la télémétrie compte ici la mort, chez l'hôte et en local ; la
+## CAUSE voyage avec l'ordre. ⚠️ **Le client ne compte jamais ici** : il y passe à
+## son propre minuteur de fin de vie, un demi-aller-retour après l'hôte, et il
+## compte à l'ORDRE (`rpc_detruire_gadget`).
 func _sur_gadget_detruit(g: GadgetBase) -> void:
-	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
-	rpc_detruire_gadget.rpc(String(g.name))
+	var cause := GadgetBase.MORT_BALLE if g.abattu_par_balle else GadgetBase.MORT_FIN_DE_VIE
+	var nom := String(g.name)
+	# Attribué par le NOM, comme chez le client : un seul calcul des deux côtés.
+	_telemetrie.mort_de_gadget(GadgetBase.poseur_du_nom(nom), cause == GadgetBase.MORT_BALLE)
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_detruire_gadget.rpc(nom, cause)
 
 
 ## L'ordre de retrait d'un gadget, chez le client. `get_node_or_null` et jamais un
 ## accès direct : le nœud a pu disparaître de lui-même chez ce pair — fin de vie,
 ## remplacement par « un gadget debout », purge de manche.
+##
+## `cause` (étape 28, lot E) : `GadgetBase.MORT_BALLE` ou `MORT_FIN_DE_VIE`, décidée
+## par l'hôte. Sans valeur par défaut, comme `rpc_update_hp`.
 @rpc("authority", "call_remote", "reliable")
-func rpc_detruire_gadget(nom: String) -> void:
+func rpc_detruire_gadget(nom: String, cause: int) -> void:
+	# Compté à l'ORDRE, que le nœud existe encore ou non chez ce pair.
+	_telemetrie.mort_de_gadget(GadgetBase.poseur_du_nom(nom), cause == GadgetBase.MORT_BALLE)
 	var g := bullet_container.get_node_or_null(NodePath(nom))
 	if g != null and not g.is_queued_for_deletion():
 		g.queue_free()
@@ -2667,6 +3068,11 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 		push_error("GameState : implémentation illisible — %s" % chemin)
 		return
 	var g: GadgetBase = script.new()
+	# Étape 28, lot F — porté par l'instantané de killcam, pour NOMMER ce qui
+	# manquerait le jour où une copie serait irreconstructible. La copie, elle, se
+	# refait par le script du gadget d'origine, jamais par ce slug : les gadgets
+	# créés à la main dans les suites n'en ont pas, et une copie par slug crierait.
+	g.slug = slug
 	g.name = "GadgetJ%d_%d" % [pid + 1, numero]
 	g.poseur_id = pid
 	g.global_position = pos
@@ -2707,6 +3113,10 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	if g.est_basculable():
 		# Posée ALLUMÉE si la batterie le permet : la pose est le premier allumage.
 		g.set("actif", actif_initial)
+	# Le repère du poseur (étape 28) n'existe que là où SA vue existe : en ligne,
+	# la machine de l'adversaire ne le crée même pas. Rien ne voyage — la logique
+	# du cadenas de torche. Posé AVANT l'entrée dans l'arbre : `_ready()` le lit.
+	g.repere_ici = _vue_du_joueur_ici(pid)
 	# L'hôte dira au client chaque mort de ce gadget — balle ou fin de vie.
 	g.detruit.connect(_sur_gadget_detruit)
 	# Le même conteneur que les balles et les fusées : c'est lui que la manche
@@ -2714,6 +3124,9 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	bullet_container.add_child(g)
 	if pid >= 0 and pid < _gadgets_poses_par.size():
 		_gadgets_poses_par[pid] += 1
+		# Étape 28, lot E — une bobine posée ÉTEINTE n'agit pas : pose comptée, pas
+		# d'effet. `actif_initial` est celui de l'HÔTE, porté par le RPC.
+		_telemetrie.pose(pid, _t_telemetrie(), not g.est_basculable() or actif_initial)
 		_gadget_attente[pid] = PERIODE_RECHARGE_GADGET
 		# ⚠️ Chez le CLIENT, une recharge RACCOURCIE d'un aller-retour. Il reçoit la
 		# pose un demi-aller-retour après l'hôte, et sa prochaine commande mettra un
@@ -2766,19 +3179,153 @@ func _purger_fusees_killcam() -> void:
 			f.queue_free()
 	_fusees_killcam.clear()
 
+
+## Étape 28, lot F — la killcam reconstruit les GADGETS depuis les instantanés, sur
+## le patron des fusées. **Deux différences, décidées par Adrien.** Le présent est
+## MASQUÉ, pas libéré (2026-09-11) — les ordres qui arrivent pendant la killcam
+## (allumage, bascule, destruction) visent ainsi toujours un nœud qui existe. Et il
+## ne revient qu'à la SORTIE de la killcam, pas à la fin du rejeu (2026-09-12,
+## lot G : *« l'image de ta mort »*) : voir `_purger_gadgets_killcam()`.
+func _maj_gadgets_killcam(snap) -> void:
+	if not _rejeu_gadgets_en_cours:
+		_rejeu_gadgets_en_cours = true
+		_masquer_le_present()
+	var vus: Dictionary = {}
+	for d in snap.gadgets:
+		var cle: String = d["nom"]
+		vus[cle] = true
+		if not _gadgets_killcam.has(cle):
+			_gadgets_killcam[cle] = _copie_de_gadget(d)
+		var g = _gadgets_killcam[cle]
+		if g != null and is_instance_valid(g):
+			g.rejouer(d)
+	# Mort entre deux images du passé : la copie part, comme l'original est parti.
+	for cle in _gadgets_killcam.keys():
+		if not vus.has(cle):
+			var g = _gadgets_killcam[cle]
+			if g != null and is_instance_valid(g):
+				g.queue_free()
+			_gadgets_killcam.erase(cle)
+	_maj_traces_killcam(snap.traces)
+
+
+## La copie d'un gadget, construite par SON script — jamais par `duplicate()`, qui ne
+## recopie pas les variables de script (piège connu) et dont l'original est peut-être
+## déjà mort. Tout ce qui décide de l'apparence est posé AVANT `add_child()`, parce
+## que c'est `_ready()` qui monte les visuels, les lumières et les formes.
+func _copie_de_gadget(d: Dictionary) -> GadgetBase:
+	var modele: GDScript = d.get("script")
+	if modele == null:
+		# ⚠️ On CRIE, on ne substitue pas : un gadget plausible à la place d'un gadget
+		# inconnu se prendrait pour ce qui s'est passé.
+		push_error("GameState : gadget « %s » irreconstructible pour la killcam" % d["slug"])
+		return null
+	var g: GadgetBase = modele.new()
+	g.is_replay = true
+	g.slug = String(d["slug"])
+	# ⚠️ **Un nom DISTINCT du vivant** : `rpc_detruire_gadget(nom)` cherche par
+	# `get_node_or_null` dans ce même conteneur, et deux homonymes y seraient renommés
+	# — l'ordre de l'hôte pourrait alors tomber sur la copie.
+	g.name = "Rejeu_%s" % d["nom"]
+	g.poseur_id = int(d["poseur"])
+	g.classe_du_poseur = d["classe"]
+	g.duree_vie = float(d["duree_vie"])
+	# Ceinture : hors du groupe, elle n'est déjà dans aucune source d'éblouissement.
+	g.eblouit = false
+	# Aucun repère : c'est une aide à la POSE, sur la vue du poseur. Rejouée, elle
+	# dirait « pose ici » pendant qu'on regarde mourir.
+	g.repere_ici = false
+	if "graine" in g:
+		g.set("graine", d["graine"])
+	if "actif" in g:
+		g.set("actif", d["actif"])
+	g.global_position = d["pos"]
+	g.rotation = float(d["rot_pose"])
+	bullet_container.add_child(g)
+	return g
+
+
+## Les gadgets et les traces du PRÉSENT s'effacent le temps du rejeu : sans ça, la
+## mine encore debout brûlerait dans une image où elle n'existait pas, et une balle
+## rejouée s'arrêterait sur un objet posé après la mort.
+func _masquer_le_present() -> void:
+	for c in bullet_container.get_children():
+		if c is GadgetBase and not c.is_replay and not c.is_queued_for_deletion():
+			c.masquer_pour_rejeu(true)
+			_gadgets_masques.append(c)
+	for m in get_tree().get_nodes_in_group("traces_de_poudre"):
+		if m is CanvasItem and m.visible:
+			m.visible = false
+			_traces_masquees.append(m)
+
+
+## Les traces du passé : un pool de traces nues dans un conteneur nommé, retrouvées
+## par le CONTENEUR et jamais par leur nom — Godot renomme les homonymes.
+##
+## Elles n'entrent pas dans le groupe « traces_de_poudre » : l'enregistrement le lit.
+func _maj_traces_killcam(traces: PackedFloat32Array) -> void:
+	var n := int(traces.size() / 4.0)
+	if n == 0 and not is_instance_valid(_traces_killcam):
+		return
+	if not is_instance_valid(_traces_killcam):
+		_traces_killcam = Node2D.new()
+		_traces_killcam.name = "TracesKillcam"
+		arena.add_child(_traces_killcam)
+	var enfants := _traces_killcam.get_children()
+	for i in n:
+		var m: Polygon2D
+		if i < enfants.size():
+			m = enfants[i]
+		else:
+			m = GadgetPoudre.nouvelle_trace()
+			m.name = "TraceKillcam%d" % i
+			_traces_killcam.add_child(m)
+		m.visible = true
+		m.global_position = Vector2(traces[i * 4], traces[i * 4 + 1])
+		m.global_rotation = traces[i * 4 + 2]
+		m.modulate.a = traces[i * 4 + 3]
+	for i in range(n, enfants.size()):
+		enfants[i].visible = false
+
+
+## Les copies partent, le présent revient.
+##
+## ⚠️ **Appelé par `_abort_killcam()`, et par là SEULEMENT** (étape 28, lot G,
+## arbitrage d'Adrien du 2026-09-12 : *« l'image de ta mort »*). Le lot F appelait
+## aussi à la fin du rejeu, sur le patron des fusées — c'est-à-dire au moment où
+## l'écran de fin se pose, et le présent réapparaissait d'un coup sur l'arrêt sur
+## image. `_abort_killcam()` est la sortie inconditionnelle : toutes y passent —
+## début de manche, match soldé, retour au menu —, et un chemin qui l'oublierait
+## laisserait les gadgets vivants invisibles ET sans collision. Idempotent.
+func _purger_gadgets_killcam() -> void:
+	for g in _gadgets_killcam.values():
+		if g != null and is_instance_valid(g):
+			g.queue_free()
+	_gadgets_killcam.clear()
+	for g in _gadgets_masques:
+		if is_instance_valid(g) and not g.is_queued_for_deletion():
+			g.masquer_pour_rejeu(false)
+	_gadgets_masques.clear()
+	for m in _traces_masquees:
+		if is_instance_valid(m):
+			m.visible = true
+	_traces_masquees.clear()
+	if is_instance_valid(_traces_killcam):
+		_traces_killcam.queue_free()
+	_traces_killcam = null
+	_rejeu_gadgets_en_cours = false
+
 ## FU5 — éteindre une fusée passe par le MÊME arbitrage que son lancer :
-## l'hôte tranche, le client demande. Deux appelants : le piétinement
-## (`_maj_extinction_fusees`, hôte seul — SANS ce détour, chaque machine
-## déciderait de son propre chronomètre d'immobilité, avec l'écart
-## d'interpolation de l'adversaire entre les deux, et les deux écrans
-## diraient une fusée éteinte à des instants différents) ; et une balle qui
-## touche une fusée posée (`bullet.gd`, tous pairs — leur propre simulation
-## déterministe suffirait en principe, mais un seul chemin d'arbitrage pour un
-## même état répliqué évite deux logiques à maintenir en accord).
+## l'hôte tranche, le client demande. Un seul appelant depuis le 2026-09-11 : le
+## piétinement (`_maj_extinction_fusees`, hôte seul — SANS ce détour, chaque
+## machine déciderait de son propre chronomètre d'immobilité, avec l'écart
+## d'interpolation de l'adversaire entre les deux, et les deux écrans diraient
+## une fusée éteinte à des instants différents). La balle l'éteignait aussi ;
+## Adrien l'a retiré : un gadget gazeux ne se tue pas au tir.
 func demander_extinction_fusee(graine: int) -> void:
 	match NetworkManager.current_mode:
 		NetworkManager.GameMode.ONLINE_CLIENT:
-			return # la balle du client est une prédiction ; l'officielle, côté hôte, redemandera
+			return # l'hôte seul arbitre : le piétinement ne tourne que chez lui
 		NetworkManager.GameMode.ONLINE_HOST:
 			rpc_eteindre_fusee.rpc(graine)
 		_:
@@ -2952,6 +3499,12 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	for f in bullet_container.get_children():
 		if f is Fusee and not f.is_replay and f.occultation_pour(pos) > 0.0:
 			f.diffuser_flash()
+	# Étape 27 — la SUIE pulse de même : un tir dans le nuage l'allume en entier, pas
+	# au seul canon. Boucle sans garde : le socle répond `diffuser_flash()` pour tout
+	# gadget.
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g.occultation_pour(pos) > 0.0:
+			g.diffuser_flash()
 
 ## [Client] Un tir officiel correspond-il à une balle déjà prédite ? Les
 ## prédictions non confirmées (paquet d'input perdu, tir refusé par l'hôte)
@@ -3405,10 +3958,13 @@ func _peut_etre_la_soiree() -> void:
 func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 	# Le match est résolu : plus rien à forfaire dessus.
 	_forfeit_pending = false
-	# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
-	# machine. Calculées une fois : l'archive locale et le rapport au serveur
-	# (PE2.3) doivent porter le même relevé.
+	# Schémas 5 et 6 : les CONDITIONS de la manche — cadence par image, lien,
+	# machine — et ce que les GADGETS ont fait (étape 28, lot E). Calculés une
+	# fois : l'archive locale et le rapport au serveur (PE2.3) doivent porter le
+	# même relevé et le même bloc.
 	var conditions := _conditions.resume()
+	var gadgets := _telemetrie.resume(_slug_de_gadget(p1), _slug_de_gadget(p2),
+		_local_player_index())
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -3430,7 +3986,9 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# joueur depuis que dix classes se partagent dix armes.
 		_slug_de_classe(p1),
 		_slug_de_classe(p2),
-		conditions)
+		conditions,
+		gadgets)
+	dernier_enregistrement = record
 	# Voir `archiver_les_matchs` : un outil qui joue de fausses manches ne doit
 	# rien laisser dans l'historique du joueur. Seul point d'écriture du jeu —
 	# `_archive_forfeit` passe aussi par ici.
@@ -3438,7 +3996,7 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
-	_report_to_ranking(winner_id, forfeit, conditions)
+	_report_to_ranking(winner_id, forfeit, conditions, gadgets)
 
 ## Le slug de la classe d'un joueur, ou une chaîne vide.
 ##
@@ -3450,6 +4008,16 @@ func _slug_de_classe(joueur: Node) -> String:
 		return ""
 	var classe := joueur.current_weapon as ClassData
 	return String(classe.slug()) if classe != null else ""
+
+## Le slug du GADGET d'un joueur, ou une chaîne vide — jamais un repli (étape 28,
+## lot E), pour la raison de `_slug_de_classe`.
+func _slug_de_gadget(joueur: Node) -> String:
+	if joueur == null:
+		return ""
+	var classe := joueur.current_weapon as ClassData
+	if classe == null or classe.gadget == null:
+		return ""
+	return String(classe.gadget.slug)
 
 
 ## L'issue du match du point de vue de CETTE machine, dans le vocabulaire du
@@ -3476,7 +4044,8 @@ func _local_outcome(winner_id: int) -> String:
 ## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
 ## rapports par leur identifiant de match et confronte les récits. Rien n'est
 ## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
-func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {}) -> void:
+func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {},
+		gadgets: Dictionary = {}) -> void:
 	var local_idx := _local_player_index()
 	if local_idx < 0 or _match_id.is_empty():
 		return
@@ -3496,7 +4065,10 @@ func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = 
 		# rapport des matchs EN LIGNE, amicaux et classés : le serveur les passe
 		# au tamis et ne refuse jamais un rapport pour elles. L'écran scindé et
 		# l'entraînement ne passent pas par ici, donc n'envoient rien.
-		"conditions": conditions,
+		# Étape 28, lot E — la télémétrie des gadgets voyage DANS ce bloc, par la
+		# seule fusion (le rejeu du journal l'appelle aussi) : le jsonb de PE2.3,
+		# sans migration. Même tamis serveur, jamais un motif de refus.
+		"conditions": MatchRecord.conditions_a_envoyer(conditions, gadgets),
 	})
 
 ## Archive un match gagné par abandon de l'adversaire.
@@ -3544,6 +4116,19 @@ func _local_player_index() -> int:
 		NetworkManager.GameMode.ONLINE_HOST: return 0
 		NetworkManager.GameMode.ONLINE_CLIENT: return 1
 		_: return -1
+
+## Ce pair montre-t-il la vue du joueur `pid` ? Les deux en local — écran scindé,
+## entraînement, bac à sable —, le seul joueur local en ligne. La règle de
+## `player._percu_ici()`, pour ce qui n'appartient qu'aux yeux de son joueur (le
+## repère du poseur, étape 28).
+##
+## ⚠️ **Le MODE, pas le type du fournisseur d'entrées** : le photographe remplace
+## les fournisseurs par des marionnettes, et une règle par type ferait disparaître
+## le repère de ses photos, en silence. À l'entraînement, J2 garde donc le sien — sur
+## la vue de J2, que l'entraînement ne montre pas.
+func _vue_du_joueur_ici(pid: int) -> bool:
+	var local := _local_player_index()
+	return local < 0 or local == pid
 
 func _mode_label() -> String:
 	match NetworkManager.current_mode:
@@ -3603,6 +4188,9 @@ func _abort_killcam() -> void:
 	# mais on rétablit l'état réel des vues, pas les deux d'office.
 	_accorder_rendu_aux_vues()
 	_clear_kill_stamp()
+	# Étape 28, lot F — le présent masqué revient sur TOUT chemin de sortie : début de
+	# manche, match soldé, retour au menu. Idempotent.
+	_purger_gadgets_killcam()
 	ui.hide_killcam()
 
 ## [Hôte] Rejoue ce qui a été reçu pendant la séquence de fin, une fois l'écran
@@ -3784,7 +4372,7 @@ func _batir_catalogue() -> void:
 	# rebranché la table — donc rien ne crie, et rien ne se tait non plus.
 	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
 	fumiste.name = "Pistolet lourd"
-	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un rideau de suie où l'on voit qu'il y a quelqu'un sans voir qui."
+	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un nuage de suie où l'on disparaît — mais qu'une lampe allume tout entier."
 	fumiste.cooldown = 0.3333  # 2,38 → 3,00 tirs/s (doublé, PLAFONNÉ)
 	fumiste.max_ammo = 3
 	fumiste.reload_time = 2.8
@@ -3795,7 +4383,7 @@ func _batir_catalogue() -> void:
 	fumiste.root = _root(0.30)
 	fumiste.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie",
-		"Un rideau de suie : on voit qu'il y a quelqu'un, pas qui.")
+		"Un nuage de suie : on n'y voit personne, et une lampe l'allume tout entier.")
 
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
 	incendiaire.name = "Fusil de détresse"
@@ -3823,7 +4411,7 @@ func _batir_catalogue() -> void:
 	sentinelle.root = _root(0.50)
 	sentinelle.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact",
-		"Une poudre où les pas restent écrits, lisibles à la lumière.")
+		"Une poudre où chaque pas luit un moment dans le noir, puis s'éteint.")
 
 	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
 	occulteur.name = "Pistolet-mitrailleur"
@@ -3965,9 +4553,9 @@ const IMPLEMENTATIONS := {
 	# relue quand la batterie est arrivée : la bobine mourait donc même éteinte,
 	# ce que trois relecteurs sur quatre ont trouvé séparément.
 	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 0.0},
-	# ⚠️ **Pas de durée de vie : la poudre reste la manche entière.** La
-	# Sentinelle « ne cherche pas, elle veille » — un relevé qui s'effacerait tout
-	# seul obligerait à repasser vite, c'est-à-dire à chercher.
+	# ⚠️ **Pas de durée de vie : la NAPPE reste la manche entière** — la Sentinelle
+	# « ne cherche pas, elle veille ». Ce sont les TRACES qui s'éteignent, en
+	# quelques secondes, depuis le 2026-09-11 (voir `gadget_poudre.gd`).
 	"poudre_contact": {"script": "res://gadget_poudre.gd", "duree_vie": 0.0},
 }
 

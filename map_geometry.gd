@@ -54,7 +54,10 @@ const PLAYER_MASK := WALL_LAYER | PIT_LAYER | GADGET_BLOQUANT_LAYER
 ## cette absence qui laisse les joueurs traverser. Ce qui décide de bloquer ou
 ## non une BALLE est un drapeau du gadget (`GadgetBase.arrete_les_balles`),
 ## jamais la couche physique. Le voile, qui arrête les joueurs depuis le
-## 2026-09-10, le fait par `GADGET_BLOQUANT_LAYER`, jamais par celle-ci.
+## 2026-09-10, le fait par `GADGET_BLOQUANT_LAYER`, jamais par celle-ci. Et les
+## gadgets diffus, qu'une balle ne rencontre plus depuis le 2026-09-11, sortent
+## de celle-ci — encore un drapeau (`touche_par_les_balles`), appliqué par la
+## couche comme `arrete_les_joueurs` en ajoute une.
 const GADGET_LAYER := 4
 
 ## Ce que voit une balle : les murs et les gadgets. Le joueur compensé, lui, est

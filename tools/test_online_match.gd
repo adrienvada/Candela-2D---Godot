@@ -1423,6 +1423,31 @@ func _verify_kill_to_rematch() -> void:
 		"%d évènement(s)" % ReplaySystem.bullet_events.size())
 
 	if is_host:
+		# Étape 28, lot E (2026-09-11) — une pose de gadget AVANT le kill, pour que la
+		# télémétrie comparée par run_duo.sh ne soit pas vide : deux blocs vides
+		# seraient égaux pour une mauvaise raison. Le Parasite du scénario pose sa
+		# bobine, allumée (batterie pleine) : un effet, dans la fenêtre duquel J2 va
+		# mourir. On attend la CONDITION de la pose, puis on tue aussitôt — aucune
+		# attente fixe contre une fenêtre de 5 s (les famines de temporisateurs
+		# mesurées plus haut vont jusqu'à 4 s).
+		_main.spawn_gadget(_main.p1, _main.p1.global_position, _main.p1.rotation + PI)
+		_check("l'hôte pose un gadget avant le kill",
+			await _await(func(): return _main._gadgets_poses_par[0] == 1, 5.0),
+			str(_main._gadgets_poses_par))
+		# … puis il l'ABAT (revue du 2026-09-11). C'est le seul scénario où la CAUSE
+		# d'une mort de gadget voyage vraiment sur le fil : l'hôte la décide sur
+		# `abattu_par_balle`, le client la lit dans l'ordre. Si l'hôte l'envoyait en
+		# dur, ou si le client l'inversait, les deux lignes `TELEMETRIE:` cesseraient
+		# d'être identiques — et rien d'autre ne le verrait.
+		var bobine: Node = null
+		for g in _main.get_tree().get_nodes_in_group("gadgets"):
+			if is_instance_valid(g) and not g.is_queued_for_deletion() and g.poseur_id == 0:
+				bobine = g
+		_check("l'hôte retrouve la bobine qu'il vient de poser", bobine != null)
+		if bobine != null:
+			bobine.encaisser(bobine.pv)
+			_check("l'hôte l'abat d'une balle",
+				await _await(func(): return not is_instance_valid(bobine), 5.0))
 		print("KILL: l'hôte abat le joueur 2")
 		_main.p2.take_damage(1000.0, _main.p1)
 
@@ -1435,6 +1460,26 @@ func _verify_kill_to_rematch() -> void:
 	_check("l'écran de fin de match s'affiche",
 		await _await(func(): return _main.game_over and not _main._end_sequence_active, 25.0))
 	print("FIN: %s" % _ui.game_over_title.text)
+	# Étape 28, lot E — la télémétrie des gadgets de CETTE archive, sur une ligne que
+	# run_duo.sh compare entre l'hôte et le client : les deux doivent dire la même
+	# chose. `joueur_local` retiré, le seul champ qui diffère par construction (0 et
+	# 1). Lue dans `dernier_enregistrement`, jamais dans `match_history.json` : les
+	# deux instances du lot partagent le même `user://`.
+	var bloc: Dictionary = (_main.dernier_enregistrement.get("gadgets", {}) as Dictionary).duplicate(true)
+	bloc.erase("joueur_local")
+	print("TELEMETRIE: %s" % JSON.stringify(bloc, "", true))
+	var tel_j1: Dictionary = bloc.get("j1", {})
+	_check("la télémétrie compte la pose de J1", int(tel_j1.get("poses", -1)) == 1, str(tel_j1))
+	_check("… de la bobine du Parasite", String(tel_j1.get("gadget", "")) == "gresillement",
+		str(tel_j1.get("gadget")))
+	_check("… et la mort de J2 dans la fenêtre de son effet",
+		int(tel_j1.get("morts_adverses_apres_effet", -1)) == 1, str(tel_j1))
+	# Contrôlé des DEUX côtés : chez l'hôte c'est `_sur_gadget_detruit` qui a décidé la
+	# cause, chez le client c'est l'ORDRE `rpc_detruire_gadget` qui la lui a dite. Les
+	# deux doivent ranger cette mort au même endroit (revue du 2026-09-11).
+	_check("… et la mort par BALLE de sa bobine, cause portée par l'ordre",
+		int(tel_j1.get("morts_balle", -1)) == 1 and int(tel_j1.get("morts_fin_de_vie", -1)) == 0,
+		str(tel_j1))
 	# Le point décisif : la killcam a-t-elle REJOUÉ les balles enregistrées ?
 	# Enregistrement et relecture peuvent échouer indépendamment.
 	print("REJEU: impact=%d ralenti=%d balles rejouées=%d / %d enregistrées" % [

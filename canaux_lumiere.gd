@@ -12,6 +12,10 @@ class_name CanauxLumiere
 ##   n'appartient qu'à UNE vue — les copies de sol et de murs de ce joueur, et
 ##   son halo de proximité.
 ##
+## Et, plus bas, une SECONDE famille — les couches d'OMBRE, qui disent qui bouche
+## la lumière plutôt que qui la reçoit. Les deux ne se croisent jamais ; le bloc
+## qui les introduit dit pourquoi.
+##
 ## ⚠️ **Ce fichier ne référence aucun autoload, et c'est sa raison d'être.**
 ## `player.gd` en nomme plusieurs : il ne compile ni dans une suite lancée en
 ## `--script`, ni depuis un gadget qui voudrait le nommer. La règle du halo vivait
@@ -41,3 +45,41 @@ static func canal_de_vue(id: int) -> int:
 ## `tools/test_halo_proximite.tscn` garde les deux moitiés de la phrase.
 static func masque_vue_adverse(id: int) -> int:
 	return ENNEMI | canal_de_vue(1 - id)
+
+
+# ── Les couches d'OMBRE ──────────────────────────────────────────────────────
+#
+# ⚠️ **Un second espace de noms, qui ne croise JAMAIS le premier.** Les canaux
+# ci-dessus se lisent dans `light_mask` et `range_item_cull_mask` : ils disent
+# QUI est éclairé. Ceux qui suivent se lisent dans `occluder_light_mask` et
+# `shadow_item_cull_mask` : ils disent QUI fait de l'ombre. Aucune propriété du
+# moteur ne lit les deux familles, et c'est ce qui rend sans conséquence que 16
+# veuille dire « la vue de J1 » d'un côté et « le torse de J1 » de l'autre. Les
+# deux règles restent donc écrites séparément : les faire dériver l'une de
+# l'autre les marierait pour de bon, et un jour l'une devrait bouger seule.
+
+## La couche d'ombre du CORPS du joueur `id` : 4 pour J1, 8 pour J2.
+##
+## Deux couches distinctes parce qu'une torche doit ombrer le corps d'en face
+## **sans ombrer le sien** — voir `player.gd`, qui pose ses propres occluders avec
+## cette règle. Une couche commune rendait les deux indissociables : on ne pouvait
+## qu'ombrer les deux ou aucun, et le jeu avait choisi aucun.
+##
+## ⚠️ **Tout corps qui se fait passer pour le corps de `id` la porte** — le leurre
+## depuis le 2026-09-12 (décision d'Adrien : « oui, qu'il ait l'ombre d'un
+## corps »). Sur la couche du décor, il faisait de l'ombre sous les lumières dont
+## le masque d'ombre ne contient que le décor — fusée au sol, mine qui brûle,
+## nappe de braises, halo de la torche fantôme, lumière d'impact —, là où AUCUN
+## corps n'en fait : il suffisait d'éclairer la zone pour le démasquer.
+static func couche_ombre_corps(id: int) -> int:
+	return 4 << id
+
+## La couche d'ombre du TORSE du joueur `id` : 16 pour J1, 32 pour J2.
+##
+## Réservée à la rétrodiffusion, seule lumière qu'un disque de torse arrête : le
+## grand occluder du corps ne doit jamais la voir, sans quoi chaque joueur se
+## tiendrait dans sa propre ombre. Le leurre la porte aussi — sans elle, la
+## rétrodiffusion de l'adversaire le traverserait, ce qu'elle ne fait pour aucun
+## corps, et c'était un indice de plus.
+static func couche_ombre_torse(id: int) -> int:
+	return 16 << id

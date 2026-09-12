@@ -334,6 +334,31 @@ cotes="hote client"
 [ -n "${client2_pid:-}" ] && cotes="$cotes revenant"
 
 echec=0
+
+# Étape 28, lot E (2026-09-11) — les deux archives d'un même match doivent porter la
+# MÊME télémétrie des gadgets : chaque compteur avance à un ordre que les deux pairs
+# reçoivent. Comparée sur la ligne que chaque instance imprime (`TELEMETRIE: `), et
+# jamais en relisant `match_history.json` : les deux instances partagent le `user://`
+# du lot. Scénario nominal seulement (`--host`) : c'est lui qui pose un gadget avant
+# le kill. ENet seulement : l'ordre des RPC fiables sous EOS n'est pas éprouvé ici.
+if [ "$MODE_HOTE" = "--host" ]; then
+  tel_hote="$(grep -m1 '^TELEMETRIE: ' "$HOTE_LOG" || true)"
+  tel_client="$(grep -m1 '^TELEMETRIE: ' "$CLIENT_LOG" || true)"
+  if [ -z "$tel_hote" ] || [ -z "$tel_client" ]; then
+    echo "TÉLÉMÉTRIE ÉCHEC — une instance n'a rien imprimé"
+    echo "    hôte   : ${tel_hote:-(rien)}"
+    echo "    client : ${tel_client:-(rien)}"
+    echec=1
+  elif [ "$tel_hote" != "$tel_client" ]; then
+    echo "TÉLÉMÉTRIE ÉCHEC — les deux archives divergent"
+    echo "    hôte   : $tel_hote"
+    echo "    client : $tel_client"
+    echec=1
+  else
+    echo "TÉLÉMÉTRIE OK — les deux archives disent la même chose"
+  fi
+fi
+
 for cote in $cotes; do
   if [ "$cote" = "hote" ]; then log="$HOTE_LOG"; code="$code_hote"; nom="HÔTE"
   elif [ "$cote" = "client" ]; then log="$CLIENT_LOG"; code="$code_client"; nom="CLIENT"

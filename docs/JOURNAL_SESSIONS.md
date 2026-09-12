@@ -3908,6 +3908,67 @@ dans `main` en avance rapide (la branche descendait d'`origin/main` 9e75106
 sans divergence). Le chantier de la refonte est CLOS ; il reste à Adrien l'écho
 au sol du flash (V4.14).
 
+## 2026-09-11 — Sept corrections de gadgets, après l'essai d'Adrien (chantier DIX CLASSES, étape 27)
+
+Session `candela-10-classes-system-e0a52d-da`. Une cartographie en parallèle (un
+lecteur par demande) avant d'écrire ; quatre questions à Adrien ; puis le code,
+point par point, parce que six chantiers qui touchent les mêmes fichiers se
+percuteraient à la fusion s'ils étaient menés par des agents séparés.
+
+**Ce que les captures ont trouvé et que les suites ne voyaient pas** : la poudre ne
+marquait JAMAIS à l'entraînement, depuis l'étape 17 — le test forçait l'état
+`round_active` que l'entraînement n'a pas. Et deux suppositions fausses sur un test
+vide avant qu'un diagnostic pas à pas ne montre que Godot renomme les homonymes par
+leur classe. Deux pièges consignés.
+
+**Ce que les suites ont trouvé et que j'aurais écrit faux** : une fonction statique
+insérée au milieu d'une autre (des erreurs de script en cascade), un contrôle de
+largeur qui comparait « VOILE » à « GRÉSILLEMENT ».
+
+**La revue** (quatre axes, 31 agents, chaque défaut contre-vérifié) en a confirmé
+23 : deux leurres qui se trahissaient encore (la fausse torche devant la suie, le
+leurre dans la suie), l'éblouissement qui lisait le disque de touche du leurre au
+lieu de son ombre, l'occluder partagé par les deux joueurs, l'éclat de tir visible
+dans la suie, et des contrôles qui passaient pour une mauvaise raison ou selon le
+hasard. En corrigeant, deux choses de plus : les joueurs sont sur la couche des
+murs (le rayon de la suie s'arrêtait sur eux), et un corps cinématique téléporté
+n'est vu des requêtes qu'au pas de physique suivant — piège consigné.
+
+## 2026-09-11 — Étape 28, lot C : des refus qui se sentent, et des jauges de recharge (chantier DIX CLASSES)
+
+Session du chantier DIX CLASSES (worktree `candela-10-classes-system-e0a52d`),
+lot confié par l'orchestrateur de l'étape 28.
+
+**Incursion déclarée dans `player.gd`** — domaine « game feel », partagé. Rien
+d'existant n'y est réécrit, tout est ajouté : `refus_fusee`, `refus_gadget`,
+`DUREE_REFUS`, `_fusee_tenue`, `_gadget_tenu`, `RUMBLE_REFUS`,
+`_sentir_les_refus()`, `_sentir_pose_sans_place()`, `_ressentir_refus_fusee()`,
+`_ressentir_refus_gadget()`, `derniere_vibration` ; dans `_physics_process`, deux
+décréments EN TÊTE — avant toute sortie anticipée : placés après les gardes de
+manche, un refus armé en fin de manche se figeait jusqu'au FIGHT suivant (revue du
+lot) —, un appel avant les blocs de lancer et de pose, et un appel dans la branche
+de pose ; dans `_rumble`, une ligne en tête qui note la vibration DEMANDÉE (prise
+d'essai des suites, jamais lue par le jeu). Aucun son, aucune écriture de
+`_fusee_pressee`, `_gadget_pressee` ni `shoot_cooldown`.
+
+**`ui.gd`** (repris par ce chantier le 2026-09-09) — classe interne
+`CartoucheReserve` (neuve, après `CircularCooldown`) ; `_create_reserves_indicator`
+(les deux cartouches deviennent des `CartoucheReserve`, aucun enfant ajouté) ;
+`_maj_reserves` (la jauge et le tremblement des deux cartouches, la variable
+`jauge_g`) ; `fraction_de_retour()` (neuve, statique, après `decompte_gadget`).
+`_build_player_hud` n'est PAS touché : la largeur de la fiche, posée par la
+session des effets en jeu, reste telle quelle.
+
+**`game_state.gd` et `protocol.gd`** (partagés, tenus par ce chantier) —
+`_fusees_attente`, `attente_fusee`, `_accorder_fusees`, `_decompter_attente_fusees`,
+`_annoncer_stock_fusees`, `rpc_stock_fusees` (la forme du fil change),
+`spawn_fusee`, `appui_gadget_refuse`, `_rallumage_refuse`, une ligne de
+`basculer_gadget`, la remise à zéro de manche ; `WIRE_WITNESS` et l'entrée 17 du
+carnet.
+
+**Tests** — `tools/test_tir_et_reserves.gd` (en propre) ; deux appels de
+`tools/test_classes.gd` passés à trois arguments.
+
 ### 2026-09-11 (après-midi) — le second chantier : ce qui restait à encrer
 
 Même session, même branche, rouverte sur « analyse tout ce qui peut être
@@ -3951,3 +4012,137 @@ retirés, chevrons et pochoirs cuits en une texture par carte (`arena_decor.gd`,
 `tools/test_arena_matter.gd`). `tools/bench_framerate.gd` relève désormais
 appels de dessin, objets et primitives par image. Le contour de `mur_encre.gd`
 reste le second coût, non traité.
+
+## 2026-09-12 — Étape 28 : dix suggestions de gameplay, et quatre « pourquoi » faux (chantier DIX CLASSES)
+
+Session `candela-10-classes-system-e0a52d-5a` (worktree
+`candela-10-classes-system-e0a52d`, branche `claude/candela-10-classes-system-e0a52d`) :
+le nom que `ListAgents` affiche, vérifié à l'écriture — le suffixe change à chaque
+reprise de session, le worktree non. Adrien valide dix suggestions issues de
+l'étape 27 ; elles deviennent six lots, sept commits, et la fusion de `main` au milieu.
+
+**La méthode qui a payé.** Chaque lot est cartographié, puis **attaqué par un
+contradicteur avant la première ligne de code** ; à l'implémentation, deux
+contradicteurs le relisent et un correcteur vérifie chaque constat avant de le
+corriger. Ce que les contradicteurs ont trouvé et qu'un implémenteur seul n'aurait pas
+vu : des contrôles **aveugles par construction** (une queue de traces comparée par son
+éclat, qui ne dépend que du rang ; un cercle de repère qu'un test acceptait
+transparent), un contrôle **suspendu au hasard des images**, un banc dont la charge
+**fondait pendant la mesure**, et un sabotage annoncé qu'aucune main ne pouvait
+exécuter.
+
+**Quatre « pourquoi » faux, écrits puis corrigés — la leçon de l'étape.** UN SEUL
+citait un état du code qui avait changé depuis : le fondu de la nappe de braises, donné
+pour « appelé par l'hôte seul », alors que le lot A1 l'avait déplacé la veille. Les
+trois autres donnaient une cause simplement fausse — une charge qui « reste sous huit »
+quand une image d'une seconde la porte à seize, une ombre rangée avec des lumières dont
+elle ne partage pas le cas, et une constante qu'on conseillait de relever alors qu'elle
+ne touche pas la grandeur visée. Le motif est le même : **une explication plausible
+posée sur un fait qu'on n'est pas allé relire.** Un « pourquoi » se vérifie comme un
+chiffre — c'est déjà la leçon du bandeau de `CLAUDE.md` sur l'oreille audio, et elle
+s'est repayée quatre fois en un jour.
+
+**Un cinquième a été arrêté avant d'être commité, et c'était le mien** : ma synthèse
+d'étape rangeait la marge de 6 px du point de pose parmi les faussetés, alors qu'elle
+explique juste et qu'un piège consigné la donne pour telle. Le texte qui raconte quatre
+erreurs de relecture en portait une cinquième — c'est dire si la relecture d'un texte
+de bilan vaut celle du code.
+
+**Un défaut de deux jours, trouvé par un effet de bord.** En voulant faire reculer le
+voile hors des corps, le lot B a découvert que **tout gadget posé en jeu naissait à
+12 px de son poseur, dans son corps**, depuis le 2026-09-09 : le rayon de pose touchait
+le nez du polygone concave du joueur. Aucune suite ne le voyait, parce qu'elles posaient
+toutes dans l'image de la téléportation. Les essais qu'Adrien a faits à l'étape 27 se
+sont donc déroulés avec ce défaut.
+
+**La coordination entre sessions a servi deux fois.** La session FUSÉE a demandé une
+fenêtre calme pour un relevé de cadence que mes scénarios à deux instances
+contaminaient : le lot F a été arrêté, puis un lot de suites qu'un de ses agents avait
+lancé et qui **survivait à l'arrêt du workflow** — il aurait fallu le chercher. En
+retour, elle a corrigé un chiffre qu'elle m'avait donné (une asymétrie entre écran
+scindé et vue unique qui n'existait pas), ce qui a évité à mon lot F de regarder le
+mauvais compteur. Et la session du bandeau LED a sorti pour moi sa règle de canaux de
+lumière dans un module qu'un gadget peut lire, pour que le leurre suive son halo de
+proximité à la prochaine fusion.
+
+**Ce qui n'a pas pu être mesuré, et qui est écrit comme tel** : les deux relevés qui
+exigent une fenêtre au premier plan. Ils ont tourné au second plan, faute de quelqu'un
+devant l'écran, et le banc lui-même déclare ce cas « un plancher ». Un demi-résultat
+présenté comme un résultat aurait été la cinquième fausseté de la journée.
+
+---
+
+## 2026-09-12 — Les arbitrages, puis la publication de la 0.6.0 (chantier DIX CLASSES, fin de l'étape 28)
+
+Session `candela-10-classes-system-e0a52d-e7` (worktree
+`candela-10-classes-system-e0a52d`, branche `claude/candela-10-classes-system-e0a52d`).
+Suite directe de l'entrée précédente : Adrien tranche les questions restées ouvertes,
+deux lots les exécutent, et il demande la publication.
+
+**Ce que « préciser tes questions » a changé.** Adrien a répondu « précise tes
+questions sur mes décisions, je ne comprends pas tout » à six arbitrages posés en
+langage de code — couches d'occluder, masques d'ombre, moment de purge. Reformulés en
+langage de jeu (« sous quelle lumière le leurre projette-t-il une ombre qu'un vrai
+corps ne projette pas ? », « que vois-tu derrière l'écran de fin : ta mort, ou le
+présent ? »), les six ont été tranchés en deux échanges. **La question n'était pas
+trop difficile, elle était mal posée** : elle demandait à Adrien de tenir en tête une
+implémentation pour juger d'un effet de jeu.
+
+**Lot G — deux arbitrages, un défaut trouvé par-dessus.** Le leurre projetait une
+ombre là où un corps n'en projette pas, et la killcam rendait le présent au moment où
+l'écran de fin se posait. En corrigeant le premier, le lot a buté sur ce que personne
+n'avait vu : **planter un leurre devant soi éteignait sa propre torche**. Et la revue
+a trouvé mieux — la traînée d'une balle ombrait les leurres des DEUX joueurs alors
+qu'elle n'ombre qu'un corps sur deux, donc le leurre de J2 se trahissait sous chaque
+tir qui passait près de lui. L'entrée ROADMAP qui signalait ce point le lisait à
+l'envers : elle présentait comme une aggravation ce que le lot corrigeait.
+
+**Le plan disait « une ligne à déplacer ». C'en était deux** — et la seconde comptait :
+garder le second terme de la condition aurait fait tourner la purge des fusées à
+chaque image, sous un commentaire devenu faux.
+
+**Lot H — le jeu mentait à ses joueurs, et personne ne l'avait remarqué.** L'avis
+affiché en bas du menu promet « Rien d'autre n'est envoyé ». Le lot E avait ajouté la
+télémétrie des gadgets sans toucher à cette phrase, deux jours plus tôt. Le commentaire
+au-dessus de la constante avertissait pourtant : « le changer ici sans changer l'envoi
+(ou l'inverse) ferait mentir le jeu à ses joueurs. » **L'avertissement était écrit, lu,
+et n'a pas suffi** — parce que rien ne le tenait. Il y a maintenant un contrôle qui
+appelle `conditions_a_envoyer()` et exige que l'avis nomme les gadgets si et seulement
+si la clé en sort : il mord dans les deux sens.
+
+**Et le premier recensement s'est cru complet.** La revue du lot H a trouvé un second
+écart que le premier masquait : la mesure du LIEN part elle aussi. Un recensement qui
+annonce « voilà tout ce qui part » est une affirmation d'exhaustivité, c'est-à-dire la
+forme d'erreur la plus difficile à voir — il n'y a rien à relire pour la démentir, il
+faut chercher ce qui n'y est pas. Le texte d'Adrien n'a pas été réécrit pour autant :
+la question lui a été posée, et sa réponse (« publier tel quel, corriger après ») est
+consignée comme **décision datée**, pas comme question ouverte. La distinction n'est
+pas cosmétique : une question ouverte s'instruit, une décision s'applique.
+
+**Le moment d'un changement de fil est la moitié de la décision.** Le comptage des
+mines était un majorant, et le rendre exact demandait de changer la forme du fil.
+Fait ce jour-là, sous un protocole 17 que personne n'avait encore joué : gratuit. Fait
+le lendemain, après le tag : un protocole 18, et une coupure entre joueurs pour une
+colonne de statistiques. C'est ce raisonnement, et non la difficulté technique, qui a
+décidé de l'ordre des travaux.
+
+**La publication.** 73 commits depuis la v0.5.0, 64 hors fusions. Les notes de release
+ont été bâties par un atelier de vingt-deux agents : un inventaire qui range chaque
+commit dans un chantier (zéro orphelin, décompte vérifié), un rédacteur et un
+contradicteur par chantier, puis un critique de complétude. **Quarante-huit corrections
+ont été apportées aux textes par les contradicteurs** — la plus instructive : une puce
+décrivait la vignette de dégâts comme « reculant au-delà des coins », formule recopiée
+du commentaire du shader sans être redérivée. En UV, les coins d'un carré sont à 0,707
+du centre et la zone s'arrête à 0,62 : elle n'y arrive jamais. **Un commentaire de code
+n'est pas une source ; c'est un témoignage.**
+
+Le critique de complétude a rattrapé ce qu'aucun rédacteur ne pouvait voir : un commit
+qui portait dans son propre message « à confirmer par Adrien » et n'avait jamais été
+confirmé, trois jours plus tard, à la veille de partir chez les joueurs.
+
+**Ce que le carnet du protocole disait, et qui est devenu faux au tag.** Neuf passages
+écrits pendant que la v17 était libre disent « non publiée », « une dernière fois sous
+ce numéro ». Ils étaient vrais à l'écriture. Un encadré les referme désormais : ils
+racontent pourquoi les changements ont pu se cumuler sous un numéro, ils ne sont plus
+une permission. C'est exactement le piège que `CLAUDE.md` décrit pour son paragraphe
+audio — un constat daté qui se lit comme une propriété du projet.

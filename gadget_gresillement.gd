@@ -96,6 +96,9 @@ func _init() -> void:
 	# Une bobine posée à plat n'assombrit rien — même raison que la mine, et même
 	# conséquence : elle ne doit pas arrêter le rayon d'éblouissement.
 	occulte_la_lumiere = false
+	# Le repère du poseur (étape 28) : là où la lampe cesse d'être touchée. Le même
+	# allumée ou éteinte — la zone ne bouge pas, seul l'effet s'arrête.
+	rayon_repere = RAYON
 
 
 ## Un boîtier plat ne porte pas d'ombre.

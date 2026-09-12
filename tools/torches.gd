@@ -50,7 +50,7 @@ const ARMES := [
 	},
 	{
 		"nom": "arbalète", "fichier": "arbalete",
-		"angle": 5.0, "echelle": 3.5, "brillance": 0.3,
+		"angle": 5.0, "echelle": 3.5, "brillance": 0.6,
 		"origine": "inchangée — la seule qui porte hors champ",
 	},
 	# ── Les six classes du chantier CLASSES, ajoutées le 2026-09-09 ──────────

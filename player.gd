@@ -29,15 +29,22 @@ const BulletCasingScript := preload("res://bullet_casing.gd")
 ## ombrer le corps d'en face **sans ombrer le sien**. Une couche commune rendait
 ## les deux indissociables : on ne pouvait qu'ombrer les deux ou aucun, et le
 ## jeu avait choisi aucun.
+##
+## ⚠️ **La règle a déménagé dans `CanauxLumiere` le 2026-09-12**, et ces quatre
+## propriétés n'en sont plus que les noms locaux. Le leurre doit porter les mêmes
+## couches qu'un corps — Adrien : « oui, qu'il ait l'ombre d'un corps » — et un
+## gadget ne peut pas nommer `Player` : ce fichier s'appuie sur des autoloads, il
+## ne compile pas dans une suite lancée en `--script`. Recopier `4 << id` là-bas
+## aurait donné deux vérités pour une seule couche, dont l'une aurait vieilli.
 var COUCHE_OCCLUDER_SIENNE: int:
-	get: return 4 << player_id
+	get: return CanauxLumiere.couche_ombre_corps(player_id)
 var COUCHE_OCCLUDER_ADVERSE: int:
-	get: return 4 << (1 - player_id)
+	get: return CanauxLumiere.couche_ombre_corps(1 - player_id)
 ## La couche du TORSE, réservée au rétroéclairage — 16 pour J1, 32 pour J2.
 var COUCHE_TORSE: int:
-	get: return 16 << player_id
+	get: return CanauxLumiere.couche_ombre_torse(player_id)
 var COUCHE_TORSE_ADVERSE: int:
-	get: return 16 << (1 - player_id)
+	get: return CanauxLumiere.couche_ombre_torse(1 - player_id)
 @export var speed: float = 260.0
 @export var input_provider: InputProvider
 
@@ -275,6 +282,12 @@ var _torch_breath_t: float = 0.0
 ## souffle fait vivre. `flashlight.energy` en est la présentation, une fois le
 ## grésillement appliqué — voir le bloc qui les sépare, et pourquoi.
 var _energie_torche: float = 2.5
+## Le facteur de lampe APPLIQUÉ à la dernière image torche allumée — le minimum des
+## gadgets, calculé plus bas. Lu par la killcam (étape 28, lot F) : le fantôme rejoue
+## la lampe telle qu'elle était rendue, sans une troisième copie de la règle du
+## minimum. Torche éteinte, la valeur reste figée : sans effet, la lampe du fantôme
+## suivant alors `p1_light` / `p2_light`.
+var facteur_de_lampe_rendu: float = 1.0
 ## V5.6 — la rétrodiffusion « respire » au pas : bosse brève, résorbée seule.
 const BACKSCATTER_STEP_PULSE := 0.35
 var _backscatter_pulse: float = 0.0
@@ -283,6 +296,18 @@ const DUST_INTERVAL := 0.12
 var _dust_accum: float = 0.0
 
 var flashlight_on: bool = false
+
+## La suie (étape 27) : ce qu'on garde de soi pour soi au cœur du nuage — on s'y
+## devine encore. Le seuil au-delà duquel le corps cesse de faire ombre vit dans le
+## socle des gadgets (`GadgetBase.SEUIL_OMBRE_MASQUEE`) : le leurre le lit aussi.
+const PART_SOI_DANS_LA_SUIE := 0.6
+var _ombre_coupee := false
+## L'opacité que le brouillage donne au pointeur et aux révélations, posée en
+## physique ; `_process` la compose à chaque image avec le masque de la suie.
+var _alpha_brouillage := 1.0
+## Le masque de la suie à la position du joueur, relevé à la dernière image : le
+## tir le lit pour étouffer son éclat (`trigger_shoot_visuals`).
+var _masque_ici := 0.0
 var dead: bool = false
 
 # Numérotation des paquets d'input client→hôte. Le canal est unreliable :
@@ -828,7 +853,10 @@ func _ready():
 	var pts = PackedVector2Array()
 	for i in range(16):
 		var ang = (i / 16.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 18.0) # 18.0 is exactly the player radius
+		# ⚠️ Cercle PROVISOIRE, écrasé par l'étoile de la silhouette au premier
+		# `equip_weapon()` (`_accorder_occluder_a_la_silhouette`). Le lire comme
+		# « l'ombre du joueur » a fait donner un disque au leurre (étape 15).
+		pts.append(Vector2(cos(ang), sin(ang)) * 18.0)
 		
 	if has_node("LightOccluder2D"):
 		var main_occ = get_node("LightOccluder2D")
@@ -990,11 +1018,10 @@ func _poser_pose(idx: int) -> void:
 
 ## Le disque de torse qui arrête la rétrodiffusion.
 ##
-## ⚠️ **Rayon 12, et le nombre n'est pas libre.** `body_light` est posée à 18
-## unités devant le centre : l'occluder doit être STRICTEMENT plus petit, sinon
-## la lampe tombe dedans et l'ombre devient indéfinie. 12 laisse six unités de
-## marge et correspond à peu près au torse — la partie du corps qui, vue de
-## dessus, arrête vraiment une lumière rasante.
+## ⚠️ **Rayon 12, et le nombre n'est pas libre** : la raison est écrite avec la
+## forme, dans `Charte.ombre_de_torse()`. Elle a déménagé là-bas le 2026-09-12,
+## comme l'étoile de la silhouette avant elle — le leurre doit faire le même trou
+## sous la rétrodiffusion adverse, et un gadget ne peut pas nommer `Player`.
 ##
 ## Il est monté à part du grand occluder parce qu'ils ne servent pas la même
 ## lumière : celui-ci ne doit JAMAIS voir une torche, sans quoi chaque joueur se
@@ -1005,11 +1032,7 @@ func _monter_occluder_de_torse() -> void:
 	var occ := LightOccluder2D.new()
 	occ.name = "OccluderTorse"
 	var forme := OccluderPolygon2D.new()
-	var pts := PackedVector2Array()
-	for i in 16:
-		var ang := (float(i) / 16.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 12.0)
-	forme.polygon = pts
+	forme.polygon = Charte.ombre_de_torse()
 	forme.cull_mode = OccluderPolygon2D.CULL_DISABLED
 	occ.occluder = forme
 	occ.occluder_light_mask = COUCHE_TORSE
@@ -1038,50 +1061,36 @@ func _monter_occluder_de_torse() -> void:
 func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 	if not has_node("LightOccluder2D") or sil == null:
 		return
-	var img := sil.get_image()
-	if img == null:
+	# La forme se lit dans la charte depuis le 2026-09-11 : le leurre doit faire
+	# exactement le même trou, et une seule fonction le garantit.
+	var pts := Charte.ombre_de_silhouette(sil)
+	if pts.is_empty():
 		return
-	var l := img.get_width()
-	var h := img.get_height()
-	var cx := float(l) * 0.5
-	var cy := float(h) * 0.5
-	# Du pixel vers le monde : le quad fait `empreinte_sprite(l)` de large.
-	var vers_monde := Charte.empreinte_sprite(l) / float(l)
-	var pts := PackedVector2Array()
-	const RAYONS := 32
-	for i in RAYONS:
-		var ang := (float(i) / float(RAYONS)) * TAU
-		var dir := Vector2(cos(ang), sin(ang))
-		# On part du bord et on rentre : le premier pixel opaque rencontré est
-		# le plus lointain dans cette direction.
-		var portee := maxf(cx, cy) * 1.5
-		var trouve := 0.0
-		var r := portee
-		while r > 1.0:
-			var px := int(cx + dir.x * r)
-			var py := int(cy + dir.y * r)
-			if px >= 0 and px < l and py >= 0 and py < h \
-					and img.get_pixel(px, py).a > 0.35:
-				trouve = r
-				break
-			r -= 1.0
-		# ⚠️ **Le plancher ne sert QU'À éviter un polygone dégénéré.**
-		#
-		# Il valait d'abord 18 — le rayon de l'ancien cercle — « par prudence ».
-		# Mesuré ensuite : la silhouette du pistolet va de **5,8 à 24,8** unités
-		# selon la direction, moyenne 12,8, et **28 directions sur 32 tombaient
-		# sous 18**. Le plancher n'était donc pas une sécurité, c'était la forme :
-		# il rendait exactement le cercle qu'on voulait remplacer, avec une petite
-		# bosse devant. Adrien l'a vu à l'écran avant que je le mesure — « cela
-		# fait toujours un cercle, non ? ».
-		#
-		# **Une prudence qui recouvre la donnée n'est plus une prudence.** Trois
-		# unités suffisent à garantir un sommet non nul, et ne dominent jamais.
-		pts.append(dir * maxf(trouve, 3.0 / vers_monde) * vers_monde)
 	var occ := get_node("LightOccluder2D")
-	occ.occluder.polygon = pts
-	occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	# ⚠️ **Une ressource NEUVE, jamais celle de la scène.** `player.tscn` déclare
+	# l'`OccluderPolygon2D` en sous-ressource, sans `resource_local_to_scene` : J1
+	# et J2 la PARTAGEAIENT, et dans un match entre deux classes les deux corps
+	# projetaient l'ombre de la classe équipée en dernier — le leurre, lui, celle
+	# de son poseur, et il se trahissait. Trouvé en revue (2026-09-11).
+	var poly := OccluderPolygon2D.new()
+	poly.polygon = pts
+	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	occ.occluder = poly
 	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
+
+
+## Au cœur de la suie, le corps cesse de faire ombre — l'ombre dirait la position
+## et même la forme de la silhouette. Purement visuel : les balles, les collisions
+## et la ligne de vue d'éblouissement passent par la physique, pas par les
+## occluders. N'écrit que sur un changement.
+func _couper_l_ombre(coupee: bool) -> void:
+	if coupee == _ombre_coupee:
+		return
+	_ombre_coupee = coupee
+	for nom in ["LightOccluder2D", "OccluderTorse"]:
+		var occ := get_node_or_null(nom)
+		if occ != null:
+			occ.visible = not coupee
 
 
 ## DA2.11 — le viseur, enfant du joueur donc porté par sa rotation.
@@ -1225,23 +1234,47 @@ func _process(delta):
 	# le sprite restait lisible dessous (retour d'Adrien au premier essai).
 	# Calculé ici, côté joueur — lui seul connaît tous ses visuels — depuis des
 	# positions déjà répliquées : les deux machines effacent au même endroit.
-	var occultation := 0.0
-	for fusee in get_tree().get_nodes_in_group("fusees"):
-		occultation = maxf(occultation, fusee.occultation_pour(global_position))
+	#
+	# Une seule règle pour le joueur et le LEURRE depuis le 2026-09-11 (étape 27) :
+	# elle vit dans `GadgetBase.effacements_a()`, que le leurre lit aussi.
+	var effacements := GadgetBase.effacements_a(get_tree(), global_position)
+	var occultation := effacements.x
 	# Chantier CLASSES (étape 14) — les VOLUMES effacent de la même façon, et
 	# c'est délibérément le même mécanisme : deux façons de s'effacer dans deux
 	# nuages différents se sentiraient comme un défaut, pas comme deux gadgets.
 	#
-	# ⚠️ **Boucle sans garde, comme celle du dessus**, et c'est tenable pour une
+	# ⚠️ **Boucles sans garde** (`GadgetBase.effacements_a()`), et c'est tenable pour une
 	# seule raison : `GadgetBase.occultation_pour()` existe et rend zéro, donc
 	# TOUT gadget sait répondre. Le jour où quelqu'un ajoutera au groupe un objet
 	# qui ne sait pas, le jeu plantera à chaque image — c'est le défaut qu'une
 	# session voisine a relevé sur le groupe des fusées le 2026-09-09.
-	for gadget in get_tree().get_nodes_in_group("gadgets"):
-		occultation = maxf(occultation, gadget.occultation_pour(global_position))
-	for v in [visual, visual_dim, visual_reveal, visual_enemy]:
+	#
+	# Chantier CLASSES (étape 27) — la SUIE masque le corps (Adrien, 2026-09-11 :
+	# « qu'on ne me voie pas dans la fumée ») : pour l'autre, plus rien au cœur, ni
+	# sprite ni ombre. Pour soi, on se devine encore — se perdre de vue dans son
+	# propre nuage serait une punition, pas un effet. Calculée à part : la fumée de
+	# fusée, dont Adrien a validé le dosage, ne change pas.
+	var masque := effacements.y
+	_masque_ici = masque
+	var a_soi := 1.0 - maxf(occultation, masque * PART_SOI_DANS_LA_SUIE)
+	var a_autre := 1.0 - maxf(occultation, masque)
+	for v in [visual, visual_dim, visual_reveal]:
 		if v:
-			v.modulate.a = 1.0 - occultation
+			v.modulate.a = a_soi
+	if visual_enemy:
+		visual_enemy.modulate.a = a_autre
+	# Le pointeur et la silhouette révélée au tir aussi : un tir DANS la suie ne
+	# rend pas le corps — c'est le nuage entier qui pulse (`diffuser_flash`).
+	#
+	# ⚠️ **Posé à chaque image depuis l'alpha du brouillage, jamais par un `minf`
+	# cumulatif** : un `minf` ne fait que baisser, et le pointeur restait invisible
+	# après la suie — le bloc du brouillage, seul autre écrivain, ne tourne ni au
+	# décompte ni hors manche. Trouvé en revue (2026-09-11).
+	var a_masque := minf(_alpha_brouillage, 1.0 - masque)
+	for v in [visual_enemy_ptr, visual_reveal_enemy, visual_reveal_enemy_ptr]:
+		if v:
+			v.modulate.a = a_masque
+	_couper_l_ombre(masque >= GadgetBase.SEUIL_OMBRE_MASQUEE)
 
 	# L'éblouissement n'est PAS intégré ici. `game_state` s'en charge, pour les
 	# deux joueurs et en un seul endroit — c'est cette ligne-ci qui, jusqu'au
@@ -1488,6 +1521,20 @@ func _rapprocher_la_lampe() -> void:
 
 
 func _physics_process(delta):
+	# Étape 28, lot C — les deux minuteurs de REFUS se décomptent ICI, avant toute
+	# sortie anticipée : la mort, le menu, le décompte de départ, la manche finie.
+	# ⚠️ Placés plus bas, après ces gardes, ils se FIGEAIENT : un refus armé dans les
+	# 0,22 s qui précèdent la fin d'une manche gardait sa valeur pendant la killcam,
+	# l'écran de fin et le décompte — et le HUD, qui le recopie à chaque image, tenait
+	# la cartouche décalée tout l'entre-manche, puis la faisait trembler au FIGHT sur
+	# un appui que personne n'avait fait (revue du lot C, 2026-09-11, reproduit dans
+	# Godot). Ce sont des minuteurs de RESSENTI, que la simulation ne lit jamais : les
+	# décompter partout ne fait pas diverger les pairs. `tir_a_sec` (V4.4, plus bas)
+	# porte le même défaut, antérieur au lot : signalé, laissé à sa place.
+	if refus_fusee > 0.0:
+		refus_fusee = maxf(0.0, refus_fusee - delta)
+	if refus_gadget > 0.0:
+		refus_gadget = maxf(0.0, refus_gadget - delta)
 	if dead: return
 	
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1659,6 +1706,7 @@ func _physics_process(delta):
 		var regardeur: Node = state.p2 if player_id == 0 else state.p1
 		if is_instance_valid(regardeur):
 			var a := Brouillage.opacite(float(regardeur.dazzle_amount))
+			_alpha_brouillage = a
 			visual_enemy.modulate.a = a
 			if visual_enemy_ptr != null:
 				visual_enemy_ptr.modulate.a = a
@@ -1730,7 +1778,9 @@ func _physics_process(delta):
 
 		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
 		# les lampes autour de lui : le faisceau papillote, faiblit, tombe au
-		# noir, revient (le noir absolu depuis l'étape 24).
+		# noir, revient (le noir absolu depuis l'étape 24). Et la SUIE du Fumiste
+		# étouffe la lampe qu'on y tient (étape 27) : même boucle, même minimum —
+		# voir `GadgetSuie.facteur_de_lampe()`.
 		#
 		# ⚠️ **Posé APRÈS le souffle et AVANT la rétrodiffusion**, et les deux
 		# places comptent. Après le souffle, parce que la panne doit s'appliquer à
@@ -1759,6 +1809,9 @@ func _physics_process(delta):
 		# ⚠️ Aucune suite ne pouvait l'attraper : le facteur du gadget était juste,
 		# le câblage était juste, et le banc mesure les deux. C'est le nombre
 		# IMPRIMÉ par une capture qui l'a montré.
+		# Étape 28, lot F — retenu pour la killcam AVANT d'être appliqué : le fantôme
+		# rejoue le grésillement et la suie, qui n'y étaient pas.
+		facteur_de_lampe_rendu = lampe
 		flashlight.energy = _energie_torche * lampe
 
 		# V5.6 — la rétrodiffusion gonfle d'un souffle à chaque pas (posé par le
@@ -1911,6 +1964,11 @@ func _physics_process(delta):
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
+	# Étape 28, point 5 — ⚠️ AVANT les blocs de lancer et de pose, sur l'état d'AVANT
+	# l'appui : placé après, la dernière fusée lancée se lirait comme un refus (la
+	# réserve vient de tomber à zéro), et une bobine éteinte batterie basse aussi.
+	_sentir_les_refus(state, input_provider.is_flare_pressed(),
+		input_provider.is_gadget_pressed(), can_move)
 
 	# Le lancer de fusée suit la même autorité que le tir. Front montant sur un
 	# bit MAINTENU dans la commande réseau : un « just_pressed » d'un seul tick
@@ -1952,6 +2010,10 @@ func _physics_process(delta):
 		_gadget_pressee = true
 	elif can_move and not _gadget_pressee and shoot_cooldown <= 0 \
 			and state and state.gadget_disponible(player_id):
+		# Étape 28 — le voile sans place se SENT ici, au moment où la pose part (un
+		# appui pris pendant le cooldown part plus tard, sans nouveau front). Le
+		# ressenti seul : la pose et le désarmement suivent, inchangés.
+		_sentir_pose_sans_place(state)
 		poser_gadget()
 		_gadget_pressee = true
 
@@ -1971,6 +2033,65 @@ func _percu_ici() -> bool:
 	var local := _index_joueur_local()
 	return local < 0 or player_id == local
 
+## Étape 28, point 5 (2026-09-11) — un appui de fusée ou de gadget que l'arbitrage
+## refuse se SENT : la cartouche tremble (HUD) et la manette vibre. Jusqu'ici seul
+## le tir avait ce retour (V4.4, plus haut) ; la fusée et le gadget refusés ne
+## produisaient RIEN — le geste qui échoue en silence que V4.4 avait retiré.
+##
+## Les refus sont ceux que l'hôte prononce en silence : réserve vide
+## (`fusee_disponible`), recharge de pose (`gadget_disponible`), bobine éteinte sous
+## le seuil de rallumage (`GameState.appui_gadget_refuse`). Le voile sans place a son
+## propre chemin, `_sentir_pose_sans_place()`, au moment où la pose part. Un appui
+## pendant le cooldown de tir N'EST PAS un refus : il part au terme du cooldown.
+##
+## ⚠️ **Chez le seul joueur qui a pressé** (`_percu_ici`, voir au-dessus) : sinon
+## l'hôte, qui simule aussi le client, sentirait les refus de l'autre — donc
+## apprendrait qu'il vient d'essayer. **Aucun son** : un son parlerait au monde.
+## Et rien de ce qui suit ne touche la simulation — ni `_fusee_pressee`, ni
+## `_gadget_pressee`, ni `shoot_cooldown` : les deux pairs ne doivent pas diverger.
+func _sentir_les_refus(state: Node, fusee_presse: bool, gadget_presse: bool,
+		can_move: bool) -> void:
+	var front_f := fusee_presse and not _fusee_tenue
+	var front_g := gadget_presse and not _gadget_tenu
+	_fusee_tenue = fusee_presse
+	_gadget_tenu = gadget_presse
+	if not can_move or state == null or not _percu_ici():
+		return
+	if front_f and not state.fusee_disponible(player_id):
+		_ressentir_refus_fusee()
+	if front_g and state.appui_gadget_refuse(player_id):
+		_ressentir_refus_gadget()
+
+## Étape 28, point 5 — le voile SANS PLACE. La décision reste à l'hôte
+## (`GameState.spawn_gadget`, lot B) ; ceci n'est qu'un PRÉ-CONTRÔLE local, au moment
+## où la pose part, sur les mêmes arguments que `poser_gadget()` envoie. S'il n'y a
+## de place nulle part, le refus se sent comme les autres.
+##
+## ⚠️ **Il n'ajoute QUE le retour ressenti** : la pose part quand même vers l'hôte, et
+## le désarmement de 0,30 s a lieu des deux côtés, strictement comme avant. Un
+## pré-contrôle qui retiendrait la pose ou le désarmement ferait diverger les pairs —
+## le client voit l'adversaire 100 ms en retard, son verdict peut différer de celui
+## de l'hôte. C'est le prix connu : un refus senti que l'hôte accepte, ou l'inverse,
+## dans cette fenêtre.
+func _sentir_pose_sans_place(state: Node) -> void:
+	if state == null or not _percu_ici():
+		return
+	var classe := current_weapon as ClassData
+	if classe == null or classe.gadget == null:
+		return
+	var point: Vector2 = state.point_de_pose_libre(self, global_position, rotation,
+		classe.gadget.slug)
+	if not point.is_finite():
+		_ressentir_refus_gadget()
+
+func _ressentir_refus_fusee() -> void:
+	refus_fusee = DUREE_REFUS
+	_rumble(RUMBLE_REFUS, 0.0, 0.05)
+
+func _ressentir_refus_gadget() -> void:
+	refus_gadget = DUREE_REFUS
+	_rumble(RUMBLE_REFUS, 0.0, 0.05)
+
 func _update_aim_line() -> void:
 	if aim_cast == null or aim_line == null: return
 	var end_pos = Vector2(2000, 0)
@@ -1980,6 +2101,20 @@ func _update_aim_line() -> void:
 
 ## V4.4 — temps restant du tremblement de refus, lu par le HUD.
 var tir_a_sec: float = 0.0
+## Étape 28, point 5 (2026-09-11) — temps restant du tremblement de refus de la
+## FUSÉE et du GADGET, lus par le HUD comme `tir_a_sec`. Locaux à qui a pressé :
+## jamais répliqués, jamais lus par la simulation.
+var refus_fusee: float = 0.0
+var refus_gadget: float = 0.0
+## La durée de `tir_a_sec` (0,22 s, plus haut) : un refus a une seule durée.
+const DUREE_REFUS := 0.22
+## Fronts BRUTS des deux touches, pour le seul ressenti. ⚠️ Surtout pas
+## `_fusee_pressee` / `_gadget_pressee` : eux portent la simulation (lancer, pose,
+## désarmement) et doivent rester identiques chez l'hôte et dans la prédiction du
+## client — un refus qui les toucherait chez le seul joueur local ferait diverger
+## les deux pairs.
+var _fusee_tenue: bool = false
+var _gadget_tenu: bool = false
 ## État précédent de la détente, pour ne réagir qu'au front montant.
 var _detente_pressee: bool = false
 ## Même chose pour le bouton de fusée.
@@ -2068,7 +2203,10 @@ func lancer_fusee():
 ## ⚠️ **La position envoyée est celle du JOUEUR, pas celle du gadget.** C'est
 ## l'hôte qui décide où l'objet se plante réellement — il faut une requête de
 ## physique pour ne pas le planter dans un mur, et deux mondes pourraient y
-## répondre différemment. Voir `GameState._point_de_pose()`.
+## répondre différemment. Voir `GameState._point_de_pose()` — et, pour un gadget
+## qui arrête les joueurs, reculé hors des corps ou refusé faute de place
+## (`GameState.point_de_pose_libre()`, étape 28). Le désarmement ci-dessous a lieu
+## même alors, chez l'hôte comme dans la prédiction : c'est ce qui les garde d'accord.
 func poser_gadget():
 	shoot_cooldown = maxf(shoot_cooldown, GadgetProfile.DESARMEMENT)
 	get_tree().call_group("game_state", "spawn_gadget", self, global_position, rotation)
@@ -2102,6 +2240,10 @@ const RUMBLE_PULSE_PERIOD := 60.0 / 85.0
 ## Clic sec du percuteur à vide — plus faible et plus court qu'un tir, pour
 ## ne jamais se confondre avec lui.
 const RUMBLE_DRY_FIRE := 0.35
+## Étape 28 — un appui de fusée ou de gadget refusé. La MÊME signature que le
+## percuteur à vide, délibérément : un refus a un seul goût dans la main. Nommée à
+## part pour se doser sans toucher au tir à sec.
+const RUMBLE_REFUS := 0.35
 ## L'arme qui redevient prête : un « tac » sur le moteur grave, pas un coup.
 const RUMBLE_RELOAD_READY := 0.45
 const RUMBLE_FLARE_WEAK := 0.4
@@ -2112,6 +2254,13 @@ const RUMBLE_TORCH_LOCK := 0.3
 ## D3 — durée d'avalement du faisceau à l'extinction de la torche.
 const TORCH_FADE_OUT := 0.08
 var _low_hp_pulse_accum: float = 0.0
+## Étape 28, lot C (2026-09-11) — PRISE D'ESSAI : la dernière vibration DEMANDÉE
+## (faible, forte, durée), notée par `_rumble` AVANT tout filtre — fournisseur local,
+## manette branchée, curseur « Vibrations de la manette ». Les suites n'ont pas de
+## manette : sans elle, `_rumble` sortait à sa première ligne, et aucune ne pouvait
+## voir qu'un refus avait cessé de vibrer (revue du lot C). Elle prouve la DEMANDE,
+## pas le moteur qui tourne. Jamais lue par le jeu.
+var derniere_vibration := Vector3.ZERO
 
 ## `_is_locally_piloted()` n'est PAS le bon garde ici : il renvoie toujours
 ## faux en écran partagé (aucun `match` pour LOCAL_SPLITSCREEN), ce qui
@@ -2122,6 +2271,7 @@ var _low_hp_pulse_accum: float = 0.0
 ## plus, correct en écran partagé : chaque corps y a bien un pad local, le
 ## sien. Voir Pièges connus.
 func _rumble(weak: float, strong: float, duration: float) -> void:
+	derniere_vibration = Vector3(weak, strong, duration)
 	var lp := input_provider as LocalInputProvider
 	if lp == null: return
 	if not Input.get_connected_joypads().has(lp.device_id): return
@@ -2191,6 +2341,14 @@ func trigger_shoot_visuals():
 	# que le RENDU : la pénalité d'éblouissement du flash est un modèle à part.
 	var curseur_flash := EffectPolicy.curseur("flash_de_tir")
 	flash_intensity *= curseur_flash
+	# Chantier CLASSES (étape 27) — un tir DANS la suie ne sort pas du nuage : la
+	# lumière de bouche et l'éclat dessiné s'y étouffent comme une lampe, et c'est
+	# le nuage entier qui pulse (`GadgetVolume.diffuser_flash`). L'éclat, non
+	# éclairé et posé au-dessus de la masse, disait sinon la position exacte du
+	# tireur. Trouvé en revue (2026-09-11). Visuel seulement : l'éblouissement du
+	# flash est un modèle à part, arbitré par l'hôte.
+	var hors_suie := 1.0 - _masque_ici
+	flash_intensity *= hors_suie
 	var flash_duration = current_weapon.muzzle_flash_duration if current_weapon else 0.1
 	# DA2.3 — la séquence se déroule PAR-DESSUS la descente d'énergie, qui reste
 	# seule maîtresse de la luminosité. Chaque image tient un tiers de la durée :
@@ -2211,8 +2369,8 @@ func trigger_shoot_visuals():
 	# ne révèle déjà (il est posé là où elle brûle), il lui donne une forme.
 	var eclat := _eclat_de_bouche()
 	eclat.texture = LightTextures.masque(LightTextures.FLASH[0])
-	eclat.modulate = Color(Charte.HALOGENE, curseur_flash)
-	eclat.visible = eclat.texture != null and curseur_flash > 0.0
+	eclat.modulate = Color(Charte.HALOGENE, curseur_flash * hors_suie)
+	eclat.visible = eclat.texture != null and curseur_flash * hors_suie > 0.0
 	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
 	for i in range(1, LightTextures.FLASH.size()):
 		var chemin: String = LightTextures.FLASH[i]
@@ -2363,16 +2521,18 @@ func _loger_calque(calque: CanvasLayer) -> void:
 		add_child(calque)
 
 
-func take_damage(amount: float, source_player: Node2D):
+## `cause` (étape 28, lot E) : `GadgetBase.DEGATS_BALLE` par défaut — la balle et
+## les outils n'ont rien à changer ; la nappe de braises passe `DEGATS_BRAISES`.
+func take_damage(amount: float, source_player: Node2D, cause: int = GadgetBase.DEGATS_BALLE):
 	if dead: return
-	
+
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 		var new_hp = max(0.0, hp - amount)
 		var sid = source_player.player_id if source_player else -1
 		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-			rpc_update_hp.rpc(new_hp, sid)
+			rpc_update_hp.rpc(new_hp, sid, cause)
 		else:
-			rpc_update_hp(new_hp, sid)
+			rpc_update_hp(new_hp, sid, cause)
 			
 	# ⚠️ **Le son de l'impact n'est PLUS joue ici, et c'etait un doublon reel.**
 	# `bullet.gd` joue deja `play_hit` sur le meme evenement, au point d'impact
@@ -2409,8 +2569,11 @@ func take_damage(amount: float, source_player: Node2D):
 			func(val): vignette_mat.set_shader_parameter("intensity", val),
 			pic, 0.0, 0.6, Charte.Courbe.EXTINCTION)
 
+## `cause` (étape 28, lot E) : `GadgetBase.DEGATS_BALLE` ou `DEGATS_BRAISES`. ⚠️ SANS
+## valeur par défaut : un appelant resté à deux arguments doit lever une erreur de
+## script, pas envoyer un paquet que le pair d'en face jetterait.
 @rpc("authority", "call_local", "reliable")
-func rpc_update_hp(new_hp: float, source_id: int):
+func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 	# V1.5 — l'impact se prend au ventre : vibration moyenne sur toute perte de
 	# PV, branchée ici (valeur autoritaire) et non sur la balle prédite.
 	# V4.6 — et la caméra du blessé encaisse un bref dézoom, même source.
@@ -2420,6 +2583,21 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		if gs and gs.has_method("camera_hit_kick"):
 			gs.camera_hit_kick(player_id)
 		AudioManager.play_breath_hit(global_position)
+	# Étape 28, lot E — la télémétrie des gadgets. ICI : c'est la seule ligne que les
+	# DEUX pairs exécutent pour chaque PV perdu, et elle doit précéder `die()`, qui
+	# archive le match de façon synchrone chez l'hôte et en local. `hp` y vaut encore
+	# l'ancienne valeur chez les deux pairs (`take_damage` calcule `new_hp` avant
+	# l'appel local ; le client ne touche `hp` qu'ici, au départ de manche et au retour
+	# au menu — qui met fin au match) : la perte est la même des deux côtés. La liste
+	# est exhaustive, et elle a déjà été fausse d'un cas (revue du 2026-09-11) :
+	# `game_state.gd` écrit `p1.hp`/`p2.hp` en trois endroits, `_do_start_round` et les
+	# deux du retour au menu. ⚠️ Sans `has_method` : une garde muette ferait
+	# d'une fonction absente une télémétrie à zéro, sans erreur (CLAUDE.md, fusion du
+	# 2026-09-09).
+	var gs_tel = get_tree().get_first_node_in_group("game_state")
+	if gs_tel != null:
+		gs_tel.noter_pv_perdus(player_id, source_id, cause, maxf(hp - new_hp, 0.0),
+			new_hp <= 0.0 and not dead)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0

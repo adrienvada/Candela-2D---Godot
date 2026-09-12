@@ -328,6 +328,102 @@ class CircularCooldown extends Control:
 			queue_redraw()
 
 
+## Étape 28 (2026-09-11) — une cartouche de réserve qui dit deux choses de plus sans
+## rien réclamer à la mise en page :
+## - la JAUGE, un trait fin SOUS la cartouche, hors de son rectangle : le NIVEAU de
+##   ce qui se recharge ou se consume (prochaine fusée, recharge de pose, batterie
+##   du grésillement), et rien quand rien ne bouge. Sans texte (décision d'Adrien).
+##   DESSINÉE et non posée en nœud : une commande de dessin ne compte pas dans la
+##   taille minimale, un nœud de plus élargirait la cartouche (piège « Un libellé ne
+##   coupe pas : il élargit sa cartouche ») ;
+## - le TREMBLEMENT DE REFUS, horizontal — le « non » de la tête —, appliqué à son
+##   CONTENU ; le cadre et la jauge restent en place.
+##
+## ⚠️ **Une exception à V4.4 (« Dessiné, pas déplacé »), et elle répond à sa raison.**
+## Le cercle du tir à sec DESSINE son tremblement, parce qu'un conteneur réimpose sa
+## place à son enfant au tri suivant. Ici le contenu est tout un conteneur (icône,
+## titre, nom), qu'on ne redessine pas décalé : le décalage est donc RÉAPPLIQUÉ APRÈS
+## CHAQUE TRI, dans `_notification(NOTIFICATION_SORT_CHILDREN)`, que Godot appelle
+## après le placement natif — vérifié par `tools/test_tir_et_reserves.gd`. Écrit
+## depuis `update_hud`, un `position` serait effacé au tri suivant, et la cartouche
+## est retriée à CHAQUE image : `_set_flare_style()` / `_set_gadget_style()` y
+## remplacent le stylebox. Elle ne s'adosse pourtant pas à ce remplacement, qu'une
+## autre main peut retirer demain (piège « Une garantie tenue par une ligne que rien
+## ne relie à elle ») : tant qu'elle tremble, elle demande elle-même son tri.
+class CartoucheReserve extends PanelContainer:
+	## Écart entre le bas de la cartouche et la jauge, et épaisseur de la jauge (px).
+	const ECART_JAUGE := 2.0
+	const EPAISSEUR_JAUGE := 2.0
+	## Amplitude (px) et fréquence (Hz) du tremblement de refus : trois
+	## allers-retours en 0,22 s, la durée d'un refus. À doser manette en main.
+	const AMPLITUDE_REFUS := 3.0
+	const FREQUENCE_REFUS := 14.0
+	## Le niveau, de 0 à 1 ; négatif : rien ne bouge, rien à tracer.
+	var fraction: float = -1.0
+	## Secondes restantes du tremblement, recopiées du joueur par le HUD (`secouer`).
+	var secousse: float = 0.0
+	## La durée de la secousse EN COURS : la plus grande valeur recopiée depuis
+	## qu'elle a commencé, remise à zéro quand elle s'éteint. La cartouche n'a donc
+	## pas à connaître la durée d'un refus, qui vit dans player.gd — une seconde
+	## copie de la constante finirait par diverger —, et les recopies de chaque image
+	## ne relancent pas l'enveloppe.
+	var _secousse_duree: float = 0.0
+
+	func poser_jauge(f: float) -> void:
+		if not is_equal_approx(f, fraction):
+			fraction = f
+			queue_redraw()
+
+	## Le HUD recopie ici, à chaque image, le temps de refus restant du joueur.
+	## Seule une valeur plus grande que la secousse en cours la relance.
+	func secouer(restant: float) -> void:
+		if restant > secousse:
+			secousse = restant
+			_secousse_duree = maxf(_secousse_duree, restant)
+			queue_sort()
+
+	func _process(delta: float) -> void:
+		if secousse > 0.0:
+			secousse = maxf(0.0, secousse - delta)
+			if secousse <= 0.0:
+				_secousse_duree = 0.0
+			# Le dernier tri, à zéro, remet le contenu à sa place.
+			queue_sort()
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_SORT_CHILDREN and secousse > 0.0:
+			var dx := decalage_refus(secousse, _secousse_duree,
+				EffectPolicy.curseur("tremblement_interface"))
+			for c in get_children():
+				if c is Control:
+					c.position.x += dx
+
+	func _draw() -> void:
+		if fraction < 0.0:
+			return
+		var y := size.y + ECART_JAUGE
+		# La piste d'abord, pleine largeur : sans elle, une jauge à 10 % ne dirait
+		# pas de quoi elle est la part.
+		draw_rect(Rect2(0.0, y, size.x, EPAISSEUR_JAUGE), Charte.LINE)
+		if fraction > 0.0:
+			draw_rect(Rect2(0.0, y, size.x * fraction, EPAISSEUR_JAUGE), Charte.HALOGENE)
+
+	## Le décalage horizontal du contenu, en pixels. Pure : les tests l'appellent.
+	## Un COSINUS, pour que le premier écart soit franc dès l'image de l'appui ; une
+	## enveloppe `1 - SORTIE` — la courbe de la charte pour ce qui s'en va : elle
+	## garde les trois allers-retours visibles, puis s'éteint (0,98, 0,88 et 0,64 au
+	## quart, à la moitié et aux trois quarts). Un tremblement constant se lirait
+	## comme un défaut d'affichage. Curseur CONFORT « Tremblements de l'interface »,
+	## comme le cercle du tir à sec.
+	static func decalage_refus(restant: float, duree: float, curseur: float) -> float:
+		if restant <= 0.0 or duree <= 0.0 or curseur <= 0.0:
+			return 0.0
+		var ecoule := clampf((duree - restant) / duree, 0.0, 1.0)
+		var enveloppe := 1.0 - Charte.courbe(Charte.Courbe.SORTIE, ecoule)
+		return AMPLITUDE_REFUS * curseur * enveloppe \
+			* cos(TAU * FREQUENCE_REFUS * (duree - restant))
+
+
 ## Gutter de planche de bande dessinée (Proposition 1 — Roman Graphique Brutaliste)
 ## Remplace le néon laser bleu par un caniveau d'encre sombre franc et des filets
 ## d'acier nets, avec repères de massicot d'imprimerie aux tiers d'écran.
@@ -2654,7 +2750,12 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	conteneur.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 	# 1. Le panneau des Fusées éclairantes
-	var panel_fusees := PanelContainer.new()
+	# ⚠️ Une `CartoucheReserve` (étape 28) : sa jauge et son tremblement sont
+	# DESSINÉS et décalés, aucun enfant n'est ajouté — `_set_flare_style` lit
+	# `get_child(0)`, et `_set_gadget_style` cherche « Label » par nom, qu'un nœud
+	# de plus prendrait (piège « Godot renomme les homonymes par le nom de leur
+	# CLASSE »).
+	var panel_fusees := CartoucheReserve.new()
 	panel_fusees.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var marge_f := MarginContainer.new()
 	marge_f.add_theme_constant_override("margin_left", GAP_XS)
@@ -2685,8 +2786,8 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	rangee_f.add_child(fusees)
 	_set_flare_style(panel_fusees, false, Charte.HALOGENE)
 
-	# 2. Le panneau du Gadget de classe
-	var panel_gadget := PanelContainer.new()
+	# 2. Le panneau du Gadget de classe — une `CartoucheReserve`, voir au-dessus.
+	var panel_gadget := CartoucheReserve.new()
 	panel_gadget.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var marge_g := MarginContainer.new()
 	marge_g.add_theme_constant_override("margin_left", GAP_XS)
@@ -2695,10 +2796,42 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	marge_g.add_theme_constant_override("margin_bottom", GAP_XXS)
 	panel_gadget.add_child(marge_g)
 
+	# L'icône du gadget, à gauche de son titre et de son nom, comme celle des
+	# fusées (2026-09-11). Sa texture se pose dans `_maj_reserves`, pas ici : la
+	# classe peut changer pendant le décompte de manche.
+	var rangee_g := HBoxContainer.new()
+	rangee_g.add_theme_constant_override("separation", GAP_XS)
+	marge_g.add_child(rangee_g)
+	var icone_g := TextureRect.new()
+	icone_g.name = "Icone"
+	icone_g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icone_g.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icone_g.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
+	icone_g.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icone_g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rangee_g.add_child(icone_g)
+	# Le compte à rebours, DANS l'icône et non à côté — le patron du cadenas de la
+	# torche. ⚠️ **Enfant d'un TextureRect, qui n'est pas un conteneur** : quoi que
+	# le chiffre écrive, la cartouche ne bouge pas. Un libellé frère dans la rangée
+	# l'aurait élargie (piège « Un libellé ne coupe pas »). Adrien, 2026-09-11 : « le
+	# grésillement doit avoir un countdown sur l'icône de gadget ».
+	var decompte_g := Label.new()
+	decompte_g.name = "Decompte"
+	decompte_g.visible = false
+	decompte_g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	decompte_g.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	decompte_g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	decompte_g.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	Charte.appareil(decompte_g, T_MENTION - 2)
+	decompte_g.add_theme_color_override("font_color", Charte.HALOGENE)
+	decompte_g.add_theme_color_override("font_outline_color", Charte.NOIR)
+	decompte_g.add_theme_constant_override("outline_size", 4)
+	icone_g.add_child(decompte_g)
+
 	var vbox_g := VBoxContainer.new()
 	vbox_g.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox_g.add_theme_constant_override("separation", 0)
-	marge_g.add_child(vbox_g)
+	rangee_g.add_child(vbox_g)
 
 	var gadget_titre := Label.new()
 	gadget_titre.name = "Titre"
@@ -2731,6 +2864,8 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 		"fusees": fusees,
 		"gadget": gadget,
 		"gadget_titre": gadget_titre,
+		"gadget_icone": icone_g,
+		"gadget_decompte": decompte_g,
 	}
 
 
@@ -2782,6 +2917,20 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	if p_f is PanelContainer:
 		_set_flare_style(p_f, n > 0, teinte)
 
+	# Étape 28, point 7 — quand revient la prochaine : la jauge SOUS la cartouche,
+	# sans texte (décision d'Adrien du 2026-09-11 ; la largeur : voir le ⚠️ plus
+	# haut). Chez le client, `attente_fusee` rend l'attente envoyée par l'hôte, et
+	# décomptée depuis. ⚠️ Aucune garde `has_method` sur les appels neufs, contre
+	# l'usage d'à côté : c'est une garde de ce genre qui a rendu muette la perte des
+	# 106 lignes de FUSÉE (CLAUDE.md, fusion du 2026-09-09).
+	var cart_f := res.get("panel_fusees", null) as CartoucheReserve
+	if cart_f != null:
+		var periode_f: float = classe.fusees.periode_recharge \
+			if classe != null and classe.fusees != null else 0.0
+		cart_f.poser_jauge(fraction_de_retour(float(gs.attente_fusee(pid)), periode_f))
+		# Point 5 — un appui de fusée refusé : la cartouche tremble.
+		cart_f.secouer(float(p.get("refus_fusee")) if p != null else 0.0)
+
 	# ── 2. Le gadget de classe ─────────────────────────────────────────────
 	#
 	# ⚠️ Trois états à dire depuis le 2026-09-10, et l'écran n'en disait qu'un —
@@ -2791,6 +2940,10 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	var titre_g := "GADGET"
 	var texte_g := "—"
 	var vif := false
+	var decompte := -1
+	# Étape 28, point 7 — la jauge sous la cartouche. Règle : **elle dit le NIVEAU de
+	# ce qui se recharge ou se consume, et disparaît quand rien ne bouge** (-1).
+	var jauge_g := -1.0
 	if classe != null and classe.gadget != null and classe.gadget.est_livre():
 		texte_g = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
 		var dispo := bool(gs.gadget_disponible(pid)) if gs.has_method("gadget_disponible") else false
@@ -2803,6 +2956,11 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 			# « éteinte, rallumable » et « éteinte, pas encore » se lisaient pareil,
 			# et l'appui ignoré ne disait rien.
 			var pct := int(floor(batt * 100.0))
+			decompte = decompte_gadget(allume, batt)
+			# Le niveau de la batterie, DÈS LA POSE : elle descend allumée, remonte
+			# éteinte, et la jauge disparaît pleine et éteinte. `batt < 1` seul la
+			# faisait surgir d'un coup à l'image qui suit la pose (0,999).
+			jauge_g = batt if (allume or batt < 1.0) else -1.0
 			if allume:
 				titre_g = "ALLUMÉ · %d %%" % pct
 				vif = true
@@ -2816,6 +2974,8 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 			var att := float(gs.attente_gadget(pid)) if gs.has_method("attente_gadget") else 0.0
 			if att > 0.0:
 				titre_g = "RECHARGE · %ds" % int(ceil(att))
+				# La part déjà faite de la minute de recharge (étape 28, point 7).
+				jauge_g = fraction_de_retour(att, gs.PERIODE_RECHARGE_GADGET)
 
 	# ⚠️ **L'état se lit sur la ligne du TITRE, le nom reste seul en dessous.** La
 	# première version allongeait la ligne du nom — « GRÉSILLEMENT ALLUMÉ · 100 % »,
@@ -2831,9 +2991,70 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	lbl_g.add_theme_color_override("font_color",
 		Charte.HALOGENE if vif else COLOR_DIM)
 
+	# L'icône du gadget : posée seulement quand la classe change — `recadree` lit
+	# l'image, ce qui ne se fait pas à chaque image du HUD.
+	var ico: TextureRect = res.get("gadget_icone", null)
+	if ico != null:
+		var slug := ""
+		if classe != null and classe.gadget != null:
+			slug = String(classe.gadget.slug)
+		if String(ico.get_meta("slug", "?")) != slug:
+			ico.set_meta("slug", slug)
+			var chemin := classe.gadget.chemin_icone() if slug != "" else ""
+			ico.texture = MenuIcones.recadree(load(chemin)) \
+				if chemin != "" and ResourceLoader.exists(chemin) else null
+		ico.modulate = Color(1.0, 1.0, 1.0, 1.0 if vif else 0.45)
+	var lbl_d: Label = res.get("gadget_decompte", null)
+	if lbl_d != null:
+		lbl_d.visible = decompte >= 0
+		if decompte >= 0:
+			lbl_d.text = str(decompte)
+
+
 	var p_g: PanelContainer = res.get("panel_gadget", null)
 	if p_g != null:
 		_set_gadget_style(p_g, vif, teinte)
+
+	# Étape 28 — la jauge (point 7) et le tremblement de refus (point 5) du gadget.
+	# Sans garde `has_method`, comme pour les fusées plus haut.
+	var cart_g := res.get("panel_gadget", null) as CartoucheReserve
+	if cart_g != null:
+		cart_g.poser_jauge(jauge_g)
+		cart_g.secouer(float(p.get("refus_gadget")) if p != null else 0.0)
+
+## Le compte à rebours posé sur l'icône du gadget, ou -1 : rien à afficher.
+## Fonction pure : c'est elle que les tests appellent.
+##
+## - ALLUMÉE : les secondes de batterie restantes, avant que la zone ne lâche.
+##   `ceil` et non `floor` : le chiffre n'affiche jamais 0 tant qu'elle tourne —
+##   à l'inverse du pourcentage du titre, qui prend `floor` pour ne jamais annoncer
+##   le seuil avant qu'il soit atteint.
+## - SOUS LE SEUIL de rallumage : les secondes avant de pouvoir la rallumer — ce
+##   que l'appui ignoré ne disait pas.
+## - ÉTEINTE et rallumable : rien, le titre dit déjà « ÉTEINT · p % ».
+static func decompte_gadget(allume: bool, batt: float) -> int:
+	if allume:
+		return int(ceil(maxf(0.0, batt) * GadgetGresillement.DUREE_ACTIVE_MAX))
+	if batt < GadgetGresillement.SEUIL_RALLUMAGE:
+		return int(ceil((GadgetGresillement.SEUIL_RALLUMAGE - maxf(0.0, batt))
+			* GadgetGresillement.RECHARGE_BATTERIE))
+	return -1
+
+
+## Étape 28, point 7 — la part déjà faite d'une attente, de 0 à 1, pour la jauge
+## sous la cartouche ; -1 : rien ne revient. Pour la prochaine fusée et la recharge
+## de pose ; la batterie du grésillement se lit telle quelle. Pure : les tests
+## l'appellent.
+##
+## ⚠️ **Une attente NULLE rend une jauge PLEINE, pas une absence.** Chez le client,
+## l'attente reçue de l'hôte est décomptée et touche zéro un peu avant ou après le
+## paquet qui apporte la fusée, selon la gigue : rendre -1 à zéro effacerait la
+## jauge alors que « FUSÉES n » n'a pas encore bougé. Pleine, elle dit « imminente »
+## jusqu'au paquet. Seule une attente NÉGATIVE (-1, réserve pleine) dit « rien ».
+static func fraction_de_retour(attente: float, periode: float) -> float:
+	if attente < 0.0 or periode <= 0.0:
+		return -1.0
+	return clampf(1.0 - attente / periode, 0.0, 1.0)
 
 
 ## Le cadenas du cran plein, dessiné en coin de l'icône de torche.
@@ -2965,14 +3186,13 @@ func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color)
 
 	panel.add_theme_stylebox_override("panel", style)
 
-	var margin = panel.get_child(0)
-	if margin.get_child_count() == 0:
-		return
-	var vbox = margin.get_child(0)
-	var titre: Label = vbox.get_node_or_null("Titre")
+	# ⚠️ **Par NOM, plus par position**, depuis que l'icône s'intercale (2026-09-11) :
+	# `get_child(0).get_child(0)` rendait la rangée au lieu de la colonne, et la
+	# couleur du titre et du nom disparaissait sans une erreur.
+	var titre: Label = panel.find_child("Titre", true, false)
 	if titre != null:
 		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.5))
-	var label: Label = vbox.get_node_or_null("Label")
+	var label: Label = panel.find_child("Label", true, false)
 	if label != null:
 		label.add_theme_color_override("font_color", Charte.HALOGENE if active else COLOR_DIM)
 
@@ -3408,7 +3628,40 @@ func _poser_le_key_art() -> void:
 ## L'avis de phase de test, mot pour mot comme Adrien l'a écrit le 2026-09-10.
 ## Il dit ce que le relevé de fin de match envoie : le changer ici sans changer
 ## l'envoi (ou l'inverse) ferait mentir le jeu à ses joueurs.
-const AVIS_PHASE_DE_TEST := "Jeu en phase de test. Le jeu envoie avec le résultat du match un relevé de cadence et la description de ta machine (système, processeur, carte graphique, pilote, résolution), rattachés à ton identité Epic. Ça sert à savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors ligne."
+##
+## ⚠️ **COMPLÉTÉ le 2026-09-12, pas réécrit** (étape 28, lot H ; Adrien : « compléter
+## l'avis, texte proposé »). Depuis le lot E, le rapport de fin de match emporte AUSSI
+## la télémétrie des gadgets, dans les mêmes `conditions` : l'avis promettait « Rien
+## d'autre n'est envoyé » et c'était devenu faux — exactement le mensonge que le
+## paragraphe ci-dessus annonce. Les mots ajoutés sont la phrase qu'Adrien a
+## approuvée, telle qu'elle lui a été soumise, et **pas un caractère de son texte n'a
+## bougé** : ils s'insèrent dans l'énumération, avant « rattachés à ton identité
+## Epic », de sorte que ce rattachement couvre les trois choses envoyées — c'est le
+## seul point du texte où l'ajout ne demandait de toucher ni à sa ponctuation ni à son
+## ordre.
+##
+## ⚠️ **Ce que la phrase ne dit pas, et qui part quand même.** Recensé clé par clé
+## (`ConditionsDeMatch.resume()`, `MatchRecord.conditions_a_envoyer()`,
+## `RankedIdentity`, le tamis `match_report.ts`), **rien n'a été déduit** — le premier
+## recensement de ce lot se croyait complet et manquait le premier point :
+## - **la mesure du LIEN** : `rtt_moyen_ms` et `rtt_max_ms`, la latence moyenne et le
+##   pic de la connexion du joueur pendant la manche. Ni « relevé de cadence » ni
+##   « description de ta machine » ne nomme une mesure de réseau, et le dépôt sépare
+##   bien les trois (`conditions_de_match.gd` : « cadence, lien, machine et mémoire
+##   vidéo »). **La promesse « Rien d'autre n'est envoyé » reste donc inexacte sur ce
+##   point** — signalé en revue le 2026-09-12, non réécrit d'initiative : c'est le
+##   texte d'Adrien, et il décide s'il complète son incise (« …et de ta connexion ») ou
+##   si le jeu cesse d'envoyer le RTT ;
+## - **les deux côtés du bloc de gadgets** : le gadget de l'adversaire et ses
+##   compteurs, pas seulement les tiens — le serveur ne lit que le côté du rapporteur ;
+## - **`weapon_self`, `weapon_opponent`, `map`, `duration` et le format**, que l'avis
+##   range implicitement dans « le résultat du match ». Sa formulation, d'avant ce lot.
+## Aucun de ces trois points n'a été corrigé dans son texte : ils sont posés en
+## question, comme le lot l'exigeait.
+##
+## Le même texte vit dans `docs/SUPABASE.md` (« La phrase aux testeurs »), qui
+## accompagne le lien envoyé aux testeurs : les deux doivent dire la même chose.
+const AVIS_PHASE_DE_TEST := "Jeu en phase de test. Le jeu envoie avec le résultat du match un relevé de cadence et la description de ta machine (système, processeur, carte graphique, pilote, résolution) ainsi qu'un décompte de l'usage de tes gadgets, rattachés à ton identité Epic. Ça sert à savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors ligne."
 const LOGO_GODOT := "res://assets/logos/godot_roman.png"
 ## Côté du logo Godot, en px. Il loge dans la marge du bas (`GAP_L`) sans
 ## jamais toucher le cadre du menu.

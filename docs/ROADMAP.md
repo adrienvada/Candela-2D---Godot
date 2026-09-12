@@ -2425,17 +2425,22 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | Décision | Raison |
 |---|---|
 | **Le menu des effets se réduit à deux contrôles, et le Monde cesse d'être réglable** (2026-09-12, Adrien) | *« J'aimerais qu'il soit beaucoup plus simple : un maximum de dix curseurs. Idéalement moins de 5. »* — puis, précisé : un interrupteur pour tous les effets de menu, quatre niveaux pour le confort, un repli « paramètres avancés », et **« supprime toute possibilité de régler les effets monde qui influent trop sur le compétitif. Ce sera commun à tout le monde. »** L'écran montrait **34 curseurs** engendrés par la table ; chaque ligne se justifiait, l'ensemble était illisible, et un menu qu'on ne traverse pas est un menu où personne ne règle rien. Il en montre **deux**, plus 22 curseurs repliés. ⚠️ **Ce que ça emporte, et qui ne se devine pas : tout le dispositif des planchers.** Il existait pour permettre un réglage PARTIEL du Monde — 80 % pour l'éblouissement, 20 % pour la poussière, planchers levés en écran partagé. Le réglage supprimé, les planchers n'arbitrent plus rien : `floor_of`, `is_capped`, `clamp_value(id, v, ranked)`, `GameSettings.effective_effect(id, ranked)` et `GameSettings.is_ranked_context()` sont **retirés**, et `tools/test_effect_policy.gd` contrôle désormais leur ABSENCE autant que la présence du reste — un `ranked` qui reviendrait rendrait au joueur la main sur ce qui doit être commun, sans qu'aucun autre contrôle ne s'en aperçoive. La famille CONFORT s'est scindée en **MENUS (15)** et **CONFORT (7)** : le découpage existait déjà, mais comme un commentaire au milieu de la table, et un découpage que le code ne porte pas se perd au premier effet ajouté au mauvais endroit. ⚠️ **Le piège de migration, mesuré et non supposé** : tout `settings.cfg` écrit avant ce jour porte les douze effets du Monde, **et celui d'Adrien les avait TOUS à leur ancien plancher** (voir le chantier roman graphique, « les quinze curseurs »). Les relire aurait laissé son jeu à 25 % de sang et 20 % de poussière **pour toujours**, sans qu'aucun écran ne puisse plus les remonter — et sans rien qui le signale. `_load()` filtre donc sur « réglable » et non sur « existe », et la suite rejoue ce cas exact. La valeur commune est `DEFAULT`, soit le jeu tel qu'il a été écrit. ⚠️ **Et une conséquence qu'on n'a vue qu'en la cherchant : plusieurs dosages visuels ont été VALIDÉS par Adrien sur ce poste, donc à intensité réduite.** Son fichier portait dix effets du monde à leur ancien plancher — `eblouissement` 0,8, `silhouette_revelee` 0,7, `flash_de_tir` 0,6, `trait_de_balle` 0,5 et `fusee_agonie` 0,5, `lumiere_impact` 0,4, `particules_sang` 0,35, `eclats_impact` 0,3, `traces_de_sang` 0,25, `poussiere_faisceau` 0,2 — et ils remontent tous à 100 %. Le cas le plus net est FU6 (« le dosage est validé », 2026-09-09, relevé par la session du chantier FUSÉE) : l'agonie de la fusée a été approuvée à demi-amplitude. **Ce qu'il a approuvé n'est donc pas ce qu'il verra**, pour la fusée comme pour la silhouette au tir, le flash de bouche, le trait de balle et la lumière d'impact. Rien à corriger dans le code : c'est un rejugement à lui demander, et le signaler valait mieux que de le laisser le découvrir en jouant. ⚠️ Corollaire pour les BANCS : le banc de cadence lit ce même `settings.cfg` (un worktree partage le `user://` du jeu), donc tout relevé absolu pris ici l'a été sur une machine réglée, pas sur un jeu neuf. |
+| **Le leurre a l'ombre d'un CORPS, pas celle d'un mur** (2026-09-12, Adrien : « oui, qu'il ait l'ombre d'un corps ») | Question posée à la fin du lot D et tranchée ici (lot G). L'occluder du leurre vivait sur la couche du DÉCOR, celui d'un corps sur la couche de son joueur : un mur fait de l'ombre sous TOUTE lumière, un corps seulement sous celles dont le masque d'ombre contient sa couche. Le leurre projetait donc une ombre là où aucun corps n'en projette — sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le démasquer**, sans tirer, donc sans payer le flash qui équilibre le gadget. Il porte maintenant les DEUX occluders d'un corps — l'étoile de sa silhouette sur la couche du corps de son poseur, un disque de torse de 12 sur la couche de son torse. Le second n'est pas un supplément : sans lui, la correction aurait remplacé un indice par un autre, la rétrodiffusion adverse ne voyant que les couches de torse, elle aurait TRAVERSÉ le seul leurre de l'arène. Conséquence sur l'arbitrage, et c'est un changement de SENS au carnet de `protocol.gd` (17, non publiée) : la torche et le flash de tir du POSEUR ne l'ombrent plus — une lampe n'ombre jamais le corps de qui la tient —, donc ils ne doivent plus être arrêtés par sa forme dans la ligne de vue de l'éblouissement, sans quoi planter un leurre devant soi éteignait sa propre torche. Les lumières POSÉES, elles, restent arrêtées : elles n'ombrent aucun corps non plus, et pourtant un corps arrête leur éblouissement — il est sur la couche physique du rayon. |
+| **La mine aveugle à hauteur de ce qu'elle brûle** (2026-09-12, Adrien : « garder ») | Le commit A2 était séparé pour être annulable seul, et la question posée à Adrien était de le garder ou de le rendre. **Il l'a gardé après avoir lu les chiffres**, contrepartie comprise : le pic au rayon de déclenchement passe de 0,750 à 0,488 et le temps au-dessus de 0,3 de 1,02 s à 0,42 s, mais **à 300 px elle aveugle un peu PLUS qu'avant** (aire 0,079 → 0,154), parce que son rayon ne rétrécit plus. C'est la seule décision de l'étape 28 qui déplace l'équilibre, et la seule dont la question posée en disait d'abord moins que la mesure — d'où le tableau complet remis avant de trancher. Le détail des mesures et du brouillage saturé est au lot A2 ; ce qui vaut ici, c'est que la contrepartie a été dite AVANT, pas découverte après. |
+| **Un voile sans place se refuse** (2026-09-12, Adrien : « refuser la pose ») | Ferme la réserve inscrite le 2026-09-11 sur le recul du point de pose (« tranché en croyant ce refus rare et limité aux murs »). Le lot B a montré que le refus touche aussi le voile posé à bout portant sur l'adversaire qu'on vise, ce qui n'était pas le cas imaginé : l'alternative était de faire naître la bâche DERRIÈRE l'adversaire, là où il reste de la place. Adrien garde le refus, et la raison est de jeu : une bâche qui apparaît derrière quelqu'un l'enferme entre elle et le poseur — on ne donne pas au Spectre le pouvoir de coincer un corps, et surtout pas par un effet de bord d'un algorithme de recul que le joueur ne peut pas lire à l'écran. Un refus, lui, se comprend : rien ne se pose, le désarmement de 0,30 s a lieu des deux côtés, les pairs restent d'accord. Le ressenti du refus (un retour local chez le client, même fonction `GameState.point_de_pose_libre()`) reste à faire et n'est pas cette décision. |
+| **Les gadgets éblouissent à hauteur de ce qu'ils brûlent** (2026-09-11, Adrien) | La règle de la fusée (« Une fusée éteinte éblouit encore », tableau des demandes du 2026-09-11 dans le chantier « refonte roman graphique ») étendue aux gadgets, à l'étape 28 du chantier DIX CLASSES : `GadgetBase.energie_relative()` — la part de sa pleine lumière qu'un gadget brûle — devient le `gain` de sa source d'éblouissement de proximité, lu **sans garde** (le socle rend 1). Les braises rendent `0,35 + 0,65·reste`, la courbe même de leur lueur, et leur rayon d'aveuglement ne rétrécit plus : un rayon qui baisserait EN PLUS du gain atténuerait deux fois (à 68 px en fin de vie, 0,010 au lieu de 0,231). **Conséquence à connaître** : au centre de la nappe, le plafond valait 1,00 toute sa vie ; il va de 1,00 à 0,35. À 120 px en fin de vie il passe de 0,00 à 0,14 — elles éblouissent un peu plus loin qu'avant, parce que le rayon ne fond plus. La **mine** est un commit séparé (lot A2), à confirmer par Adrien sur ses chiffres : c'est tout son flash qui baisse, pas seulement sa fin, et la question posée ne le disait pas. Jusque-là elle garde son comportement (le socle rend 1). **Fait le 2026-09-12, Adrien validant en connaissance de cause** : elle rend `reste²` — la courbe que sa lumière suivait déjà — et son rayon reste à 460. **Conséquence d'équilibre, mesurée et assumée, pas maquillée** : au rayon de déclenchement (72 px), le pic d'aveuglement passe de 0,750 à 0,488 et le temps passé au-dessus de 0,3 de 1,02 s à 0,42 s ; à 30 px, le pic passe de 0,884 à 0,521 ; à 150 px de 0,553 à 0,422. À 300 px elle éblouit au contraire un peu plus (aire 0,079 → 0,154) : le rayon ne fond plus. Commit séparé et réversible seul — l'annuler ne coûte rien d'autre. |
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
 | **Le halo de proximité révèle l'ennemi proche — chez son porteur seulement** (2026-09-11, Adrien) | *« Je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne doit pas me rendre détectable auprès de mon ennemi à distance. »* Jusqu'ici le halo (`ambient_light`, canal 16 pour la vue de J1, 32 pour J2) n'éclairait **aucun** sprite ennemi : le canal 2 est commun aux deux sprites ennemis — le mien chez lui, le sien chez moi —, et l'éclairer aurait allumé MON sprite sur SON écran. Le choix d'origine protégeait donc la seconde moitié de la phrase au prix de la première : un adversaire collé à soi restait invisible sans torche. **Maintenant** : le sprite ennemi d'un joueur porte `2 | canal de la vue ADVERSE` (`canaux_lumiere.gd::masque_vue_adverse()`, canal de vue = `16 << id` — un module sans autoload, pour que le leurre du chantier « 10 classes » applique la même formule sans la recopier ni nommer `player.gd`) ; le halo de l'autre l'éclaire, chez l'autre seulement ; le mien ne l'atteint jamais. Aucune autre lumière du jeu ne touche les canaux 16/32 (vérifié), donc aucune fuite. Le halo garde ses ombres : pas de révélation à travers un mur. Mesuré au banc de rendu (vrai shader adverse, vrai halo) : halo de J1 → l'ennemi sur l'écran de J1 **136**/255, J1 sur l'écran de J2 **0** ; halo de J2 → **130** et **0**. Garde : `tools/test_halo_proximite.tscn` — **une scène, pas un `--script`** : `player.gd` ne compile pas en `--script` (autoloads), et la première version du test annonçait « tous les tests passent » sans avoir rien vérifié ; d'où un plancher de vérifications. **Point ouvert, signalé au chantier « 10 classes »** : le leurre (`gadget_leurre.gd`, masque 1\|2\|4) ne prend pas le halo et se reconnaîtrait donc de près. |
 | **Les murs et l'adversaire suivent l'énergie des lampes** (2026-09-10, Adrien) | *« Corrige d'abord le point 2, que je puisse me rendre compte de l'effet LED avec des éclairages plus réalistes et fluides. »* `shimmer_murs.gdshader` et `player_enemy_light.gdshader` lisaient `LIGHT_COLOR` sans `LIGHT_ENERGY` ; or les masques de lumière du jeu sont blancs, la forme dans l'alpha, l'intensité **seulement** dans l'énergie. Toute lampe les allumait donc d'un bloc (constat de la session « bandeau LED », mesures détaillées par la session « intelligent-lovelace », branche `claude/intelligent-lovelace-4fd4d2`, `9f71fa5`, section « Pièges connus » de SA feuille de route). **Le liseré est normalisé et plafonné** (`× min(LIGHT_ENERGY / 0,8 ; 1)`) plutôt que multiplié tel quel — tel quel, il aurait été ×2,3 sous la torche, donc saturé. **La référence est la vision de proximité** : le halo que chaque joueur porte autour de lui (`ambient_light`, 0,8, qui n'éclaire que la vue de son porteur), vérifiée contre `player.gd` par `test_mur_led`. **Elle a d'abord été la torche (2,5)**, le 2026-09-10 : fondus longs et murs qui vacillaient au tir, mais le halo ne soulignait plus le mur voisin qu'au tiers (148 → 47). **Adrien a tranché le 2026-09-11 : « garder la proximité »** — ce halo sert au joueur à se repérer dans son environnement immédiat, il ne doit rien perdre. Le plafond vient des lampes plus fortes — fusée pleine 3,0, mine 6,0 — qui sans lui auraient rendu l'arête plus forte qu'avant : **aucune lampe n'éclaire le liseré plus qu'avant ; seules celles plus faibles que le halo s'atténuent, jusqu'à 0.** Mesuré au banc isolé, liseré avant → après : torche de 6,0 à 1,0 **~182 → ~182** (tir compris), 0,5 **183 → 116**, 0,1 **182 → 23**, 0 **0 → 0** ; halo de proximité au mur **148 → 148**. **Ce qui change donc en jouant** : une lampe à 0 mais allumée (grésillement) n'éclaire plus le mur ; le « mauvais contact » (lampe à 0,15-0,55) l'atténue ; la fin des fondus devient progressive (extinction de torche, fusée entre deux sursauts, braises qui s'éteignent). Tout le reste est inchangé. (Version torche, retirée : liseré 147 / 110 au tir, 73 à 1,0.) **Le corps adverse est un commit SÉPARÉ, à confirmer par Adrien** : la décision a été prise sur une explication qui le citait (« un adversaire touché par une lumière faible serait moins visible ») sans dire assez clairement que c'est un **changement d'équilibre**. Mesuré : adversaire **112 à toute énergie, 0 compris → 112 / 112 / 112 / 44 / 0** pour 2,5 / 1 / 0,5 / 0,1 / 0 — sous la torche rien ne bouge (saturé dès ~0,26), une torche à 0 mais allumée (grésillement du Parasite) ne le dessine plus, et **la rétrodiffusion des classes furtives** (`backlight_multiplier = 0.1`, arbalète et spectre) **révèle enfin moins son porteur** — ce réglage n'avait jusqu'ici aucun effet sur ce que voit l'adversaire. **Confirmé par Adrien le 2026-09-11** pour le grésillement : *« les lumières ne doivent pas éclairer si elles sont à 0 dans leur grésillement »*. Il a aussi précisé que **la lueur de chaque joueur est sa vision de proximité et ne doit jamais le révéler à l'ennemi** — ce que le code fait déjà : `ambient_light` n'éclaire que les calques de son porteur (masques 16 / 32), jamais le sprite adverse. Ce qui révèle, c'est la **rétrodiffusion**, le reflet de la torche sur le corps (`body_light`, allumée avec la torche, énergie proportionnelle à la sienne) : elle suit maintenant sa force, et donc le `backlight_multiplier` des classes furtives. ⚠️ L'explication donnée à Adrien le 2026-09-10 appelait cette rétrodiffusion « la petite lueur autour de chaque joueur » : **c'est ce mot qui a créé le malentendu** — deux lumières distinctes portaient un seul nom. **Pas touchés** : `player_rim_light.gdshader` et `blood_shader.gdshader`, même motif, hors de la décision — listés comme exceptions dans `test_mur_led`, qui refuse tout NOUVEAU `light()` sans énergie. **`shimmer_murs.gdshader` est retiré le 2026-09-11** (refonte roman graphique, second chantier, lot N) : la tuile de mur étant noire, il ne dessinait plus rien, normalisation comprise. Le contour des murs (`mur_encre.gd`) est éclairé par défaut, donc proportionnel à l'énergie SANS plafond ni normalisation : sous le halo de proximité (0,8) il vaut 0,8 / 2,5 de ce qu'il vaut sous la torche, et la mine à 6,0 le surexpose. La session LED l'a signalé, et **Adrien a tranché le même jour : « il éclaire assez »** (voir la section du chantier LED, `bc0c25b`). Point clos : rien à régler sur `mur_encre`. ⚠️ Cette ligne a dit « point ouvert » pendant quelques heures après la décision, parce que le commit qui l'actait n'a mis à jour que la section du chantier — la session du suivi l'a vu en croisant les deux. |
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
-| **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
+| **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle *(amendé le 2026-09-11, étape 27, Adrien : les gadgets DIFFUS — suie, poussière, braises, poudre — et la fusée ne se tuent plus à la balle ; les objets, si)*. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
 | **La table rang → classe suit l'échelle de LUMIÈRE, pas celle de puissance** (2026-09-09, Adrien) | Deux ancrages d'Adrien : le rang 1 est celui du pistolet, et **Brasier est le pyrotechnicien**. Le second dit tout — Brasier n'est pas « le sixième palier de puissance », c'est *un feu*, et on y met celui qui fait du feu. L'échelle des catégories se lit donc littéralement, d'Aveugle à Candela : 1 Parasite, 2 Fumiste, 3 Illusionniste, 4 Braconnier, 5 Terrassier, 6 Incendiaire, 7 Sentinelle, 8 Occulteur, 9 Allumeur, 10 Spectre. Les trois derniers paliers basculent en **opposition** plutôt qu'en correspondance, et c'est le renversement que l'échelle appelait : au sommet de l'échelle de la lumière on trouve **la seule classe qui n'en émet aucune** — zéro fusée, zéro flash, arme silencieuse. Deux des quatre armes historiques ne changent pas de rang (pistolet à Aveugle, arbalète à Lanterne) ; le fusil passe de 2 à 3, le pompe de 3 à 5. ⚠️ **L'ORDRE reste celui de la lumière, mais le déblocage est devenu CUMULATIF le 2026-09-09** (décision d'Adrien) : chaque entrée dit ce que son rang ajoute, et un joueur a tout ce qui précède. Ce qui croît avec le rang est donc le CHOIX et non la puissance — un Zénith a neuf classes de plus qu'un Aveugle, pas une classe plus forte, et c'est la seule lecture qui rende une échelle de lumière compatible avec un déblocage. ⚠️ Une conséquence à connaître : l'exemple d'Adrien disait « au deuxième rang pistolet et fusil », or l'échelle qu'il a lui-même posée met le Fumiste au rang 2 et le fusil au rang 3. L'ordre n'a pas été touché — s'il voulait aussi le remanier, c'est une seconde décision. ⚠️ Les paliers du milieu sont justifiés par le THÈME et par rien d'autre : un Braconnier à 0,60 s de root au rang 4 est peut-être trop dur pour un quatrième palier, et ça se tranchera au banc, pas sur le papier. |
 | **Toutes les sources de lumière peuvent éblouir** (2026-09-09, Adrien) | Aujourd'hui l'éblouissement n'a que trois sources — la torche de J1 vue par J2, l'inverse, et le flash de tir par un modèle séparé — et **la fusée éclairante, la lumière la plus violente du jeu, n'aveugle personne**. Deux régimes désormais : la torche aveugle quand elle est **dirigée** (on lit le pixel du cookie, comme aujourd'hui), la fusée et les lumières posées aveuglent par **proximité** (pas d'axe, décroissance avec la distance). L'aveuglement **et le flare** sont proportionnels à la **taille** de la source, et l'unité est l'**empreinte au sol en pixels de monde** de `LightTextures.poser()` — ⚠️ **jamais `energy`**, qui va de 0,25 à 50,0 et ferait de la traînée de balle la source la plus aveuglante du jeu. Plusieurs sources simultanées : on prend le **MAXIMUM**, pas la somme, ce qui préserve la propriété « c'est un plafond, pas une intégrale » qui empêche le modèle de dériver. ⚠️ Et le max doit faire remonter la **source gagnante**, pas seulement sa valeur : `_poser_voile` dérive le penchant du voile de la POSITION de la source, donc un max qui ne retiendrait qu'un niveau ferait pencher le voile vers l'adversaire pendant qu'une fusée brûle derrière — et aucune suite ne le verrait, rien ne teste le relèvement. |
 | **On s'éblouit soi-même, mais une source PORTÉE n'aveugle son porteur que par rétrodiffusion** (2026-09-09, Adrien) | Réserve d'Adrien, mot pour mot : « très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien d'allumer sa torche ». Ce n'est pas un dosage, c'est un cas **dégénéré** : le modèle échantillonne le cookie de la source à la position de la cible, or pour sa propre torche source et cible sont le même point — le centre du cookie, sa valeur maximale. Allumer sa lampe saturerait l'éblouissement instantanément. La règle est donc physique : on ne se tient pas *dans* son faisceau, ce que reçoivent ses yeux est la **rétrodiffusion**. Une source **portée** (torche, flash de bouche, rétrodiffusion) n'éblouit son porteur que par un coefficient très faible, jamais par lecture du cookie ; une source **posée** (fusée, gadget) éblouit tout le monde de la même façon, **poseur compris** — on ne lance pas une fusée à ses pieds impunément. Cette ligne règle un cas que la question ne visait pas : **son propre flash de bouche**, posé à 28 px devant soi, qui aurait aveuglé son tireur à chaque coup. |
 | **Le drapeau « cette source n'éblouit pas » vit PAR INSTANCE** (2026-09-09, Adrien) | Adrien : « on doit pouvoir désactiver l'éblouissement d'un gadget à l'avenir si on sent que ça équilibre. » Le drapeau est donc porté par le NŒUD à sa construction, comme `is_replay` et `graine` le sont déjà pour la fusée — trois raisons : ça ne coûte rien de plus, ça couvre le cas « par type » sans effort (l'inverse étant faux), et ça n'oblige pas à savoir aujourd'hui quels gadgets existeront. ⚠️ **Et surtout pas sur `WeaponData`** : la fusée, l'écho au sol d'un tir et les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière, pas à ce qui la déclenche. Premier usage prévu : l'écho au sol d'un tir (200 px, la plus grande des deux lumières qu'un coup de feu allume) porte le drapeau à faux, pour qu'un tir ne punisse pas deux fois. |
+| **Un voile ne naît pas sur un corps : son point de pose recule** (2026-09-11, Adrien : « on recule le point de pose ») | Suggestion d'après l'étape 27, qui fermait le signalement de l'étape 25 (« un voile posé sur un joueur n'est pas refusé : c'est le moteur qui doit alors le dégager »). Chez l'HÔTE seul — le client voit l'adversaire 100 ms en retard et lui-même en avance, il ne saurait pas refaire ce calcul —, le point de pose d'un gadget qui arrête les joueurs recule vers le poseur jusqu'à ce que la bande, à sa rotation, ne chevauche plus aucun corps ; le point final voyageait déjà dans `rpc_spawn_gadget`. Le cas « aucune place » était laissé à notre jugement : **refus**, sans RPC ni recharge ni numéro — quand le premier obstacle du rayon de pose, mur OU adversaire (les joueurs sont sur la couche des murs), laisse trop peu de place devant le nez du poseur : un mur à moins d'environ 40 px, un adversaire dans l'axe à bout portant (jusqu'à 60 à 70 px de centre à centre, mesuré sans mur), ou coincé contre un mur proche. ⚠️ Tranché en croyant ce refus rare et limité aux murs : la correction du lot B a montré qu'il touche aussi le voile posé à bout portant sur l'adversaire qu'on vise — question reportée à Adrien, voir l'étape 28. **Refermée le 2026-09-12 : le refus est gardé**, voir « Un voile sans place se refuse » plus haut dans ce tableau. Le désarmement de 0,30 s a eu lieu des deux côtés, ce qui garde les pairs d'accord ; le refus ressenti passera par un pré-contrôle local chez le client, avec la même fonction (`GameState.point_de_pose_libre()`). Voir l'étape 28, lot B. |
 | **Le suivi de projet dit quelle session tient quel chantier** (2026-09-09, Adrien) | Plusieurs sessions avancent en même temps et le suivi ne disait que « une session » ou « sans titulaire » : Adrien ne pouvait pas savoir à qui parler. Désormais tout delta envoyé au porteur de la republication commence par le nom de la session qui l'envoie (celui que `ListAgents` affiche), sa branche et le chantier ; le porteur le reporte sur la carte (`data-session`) et dans le tableau « Qui travaille sur quoi » de la vue d'ensemble. Le journal des sessions dit qui tient quel *fichier* ; le suivi dit qui tient quel *chantier*. Protocole dans [README.md](../README.md#republier-le-suivi). |
 | ~~**La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5**~~ **— la famille tient, le plancher est parti** (2026-09-09, puis 2026-09-12, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. **Le 2026-09-12, le Monde a cessé d'être réglable et les planchers ont été retirés** : l'arbitrage de famille reste juste — il dit maintenant « non réglable », ce qui est la lecture MONDE poussée au bout — mais le chiffre 0,5 n'existe plus nulle part. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
@@ -2467,7 +2472,11 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **L'éblouissement LIT le faisceau, il ne le recalcule plus** (2026-08-24, Adrien) | `Vision.intensite_texture` échantillonne l'alpha de la texture que la lumière projette ; `intensite_recue` n'est plus qu'un repli pour une arme sans texture. La copie était délibérée — *« deux formules pour un même faisceau finiraient par diverger »* — et le raisonnement était juste : **une copie garantit que deux nombres restent égaux, jamais qu'ils veulent dire la même chose.** Trois divergences en étaient sorties, toutes muettes : `torch_brightness` que le modèle ignorait, le cône écrit en dur à 30° pour quatre armes de 5 à 60°, et le profil peint des cookies qui tombe à 0,49-0,73 de la formule dans les flancs. **Un pixel ne peut pas diverger de lui-même**, et il porte tout à la fois — angle, portée, luminosité, matière peinte. Deux conséquences qui ne se devinent pas : **l'échelle vient de `img.get_size()`**, donc le piège « un cookie de 1024² porte deux fois plus loin qu'un 512² » n'existe plus côté pénalité, rien n'est à compenser ; et **le halo de proximité entre dans le calcul** — mesuré à 0,004 brut à 75° et un dixième de portée, 0,000 dans le dos, donc cohérent et négligeable. |
 | **La récupération est quatre fois plus rapide, et plus rapide que la montée** (2026-08-24, Adrien, manette en main) | La descente passe de **1,5 s à 0,375 s**. Elle valait l'inverse, et pour une raison écrite : *« volontairement plus lente que la montée : c'est ce décalage qui fait de l'éblouissement une ouverture exploitable, et non une gêne qui passe avant qu'on en profite »*. **Le raisonnement se tenait ; il n'avait jamais été éprouvé.** La mécanique ne fonctionnait pas avant le 2026-08-24 — personne ne l'avait jamais jouée. À l'essai, une seconde et demie d'aveuglement ne se lit pas comme une ouverture pour l'adversaire : elle se lit comme **une perte de contrôle sur son propre personnage**. C'est le premier réglage de ce chantier tranché par le jeu et non par la mesure, et il **renverse** ce que le raisonnement seul avait produit. Le contrôle qui l'interdisait a été **retourné, pas supprimé** : sa raison reste lisible dans `test_eblouissement`, requalifiée en hypothèse que l'expérience a écartée. **Prix assumé, à connaître avant de rejuger : le flash de tir se résorbe en 0,22 s au lieu de 0,9.** Le pic est le même, sa durée fond. Si l'ouverture devient trop brève pour être exploitée, c'est `PIC_FLASH` qu'il faut monter — pas la descente qu'il faut ralentir, puisque c'est la lenteur qui a été jugée punitive. |
 | **Pas de faisceau, pas de pénalité** (2026-08-24, Adrien) | `game_state._lumiere_recue` gardait un repli sur la formule analytique quand l'arme n'avait pas de texture, défendu par un commentaire affirmant qu'une torche sans cookie ne devait pas devenir « silencieusement inoffensive ». **Le raisonnement était à l'envers, et c'est en vérifiant le travail d'une autre session que je l'ai vu dans le mien** : `equip_weapon` pose `flashlight.texture = get_torch_texture()`, donc sans cookie la lumière ne rend **rien**. Le repli faisait payer une pénalité pour un faisceau que personne ne voit — **le dernier endroit du jeu qui calculait l'éblouissement depuis autre chose que l'écran**, dans un chantier dont c'était tout le sujet. Le silence redouté n'existait pas non plus : un cookie manquant lève une erreur au chargement. `lumiere_recue()` rend zéro, et ce zéro est la règle — on ne peut pas être aveuglé par une lampe éteinte. **Conséquence à connaître : `Vision.COS_DEMI_CONE` n'a plus aucun lecteur en production.** Elle reste comme défaut des fonctions analytiques, qui gardent un rôle — `intensite_recue` est la référence contre laquelle le cookie peint est validé. C'est écrit au-dessus de la constante, faute de quoi elle aurait de nouveau l'air décidée. |
-| **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. |
+| **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. **Amendé le 2026-09-11** (étape 27, Adrien : « double leur puissance », puis « tout doubler ») : `torch_brightness` 0,3 → 0,6, éblouissement compris — pénalité à bout portant ≈ 0,43 → 0,61, le pistolet restant à 0,93. Elle reste la plus sombre des lampes ; elle cessait d'être visible du tout. |
+| **La classe adverse n'est pas annoncée au « FIGHT »** (2026-09-11, Adrien : « non ») | Proposé comme douzième suggestion après l'étape 27 : chaque pair connaît déjà la classe de l'autre dès la manche lancée (il rend son cookie et ses sons), et un encart de 1,5 s aurait dit le gadget à venir. Refusé. La proposition portait elle-même sa réserve : une information gratuite, sans être une position, qui frôle « la seule information est la lumière ». On découvre le gadget adverse en le voyant faire. |
+| **Un repère réservé au poseur, sur sa seule vue** (2026-09-11, Adrien : « pas grave si en écran scindé l'autre le voit ») | Étape 28, lot D. Un cercle ténu du rayon d'effet autour des quatre gadgets dont le bord ne se lit pas au pixel dans le noir — la mine (72, le rayon qui DÉCLENCHE), le grésillement (240, identique allumé ou éteint), la poudre (110), les braises (68, sous leur nappe) : le plancher validé, tiré d'`IMPLEMENTATIONS` et tenu par une suite. En ligne il n'existe que sur la machine du poseur — le nœud n'est même pas créé chez l'adversaire, la logique du cadenas de torche. En écran scindé, l'écran d'à côté le montre : accepté. |
+| **La télémétrie des gadgets se compte là où les deux pairs passent, et se range dans les conditions** (2026-09-11, étape 28 lot E — suggestion 8 retenue par Adrien) | Chaque compteur avance à un ordre que les deux pairs reçoivent (`rpc_spawn_gadget`, `rpc_allumer_gadget`, `rpc_etat_gadget`, `rpc_update_hp`, et l'ordre `rpc_detruire_gadget` chez le client), jamais sur une décision locale du client : les deux archives d'un match disent la même chose, à la gigue près sur les deux compteurs de fenêtre. Pour y arriver, deux RPC portent désormais une CAUSE (balle ou braises, balle ou fin de vie) — le fil change sous la v17 non publiée. Le bloc part DANS `conditions` : aucune migration, et comme les conditions, **jamais un motif de refus** (décision de PE2.3, 2026-09-10). Une fenêtre de **5 s** après un « effet » (pose, allumage, bascule vers allumé, PV de braises) : un choix de conception, pas un dosage éprouvé — `fenetre_s` et `version` voyagent dans le bloc pour pouvoir le réviser sans mélanger les échantillons. |
+| **Le comptage des mines devient exact avant la publication** (2026-09-12, Adrien — étape 28, lot H) | `rpc_allumer_gadget` porte désormais sa CAUSE, et la télémétrie compte `allumages_passage` et `allumages_balle` là où elle ne comptait qu'`allumages`. Ce qu'on lisait jusque-là — « déclenchées par un passage = `allumages − morts_balle` » — était un **majorant** : une mine abattue ne meurt pas, elle s'allume, et son embrasement la tue 1,6 s plus tard ; un match archivé avant — le cas qui intéresse, une mort dans la foulée de la mine — ne lui comptait aucune mort, et elle passait pour un passage. **Le MOMENT est la moitié de la décision** : le protocole 17 n'est pas publié (la v0.5.0 est sortie en 16) et ce lot est le dernier avant la 0.6.0. Fait maintenant, le fil change sous un numéro que personne n'a jamais joué ; fait après le tag, le même correctif imposerait un protocole 18, donc une coupure entre joueurs — pour une colonne de statistiques. **Prix assumé** : le bloc de télémétrie passe en version 2, et un bloc v1 rejoué depuis le journal local d'un poste de test perd son `allumages` au tamis du serveur — sans refus, et `version` dit pourquoi. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
 | **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherchait précisément à empêcher, et qu'il ne pouvait pas empêcher tout seul. **Depuis le 2026-09-12 il n'y a plus de curseur du tout** : l'éblouissement est commun aux deux joueurs, voile compris. La règle « le réglage ne touche jamais la pénalité » survit à sa propre cause — elle dit désormais pourquoi le voile n'avait, en dernière analyse, rien à faire dans un menu. |
@@ -3163,6 +3172,97 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Vert seul, rouge dans le lot : le `user://` est partagé par LOT, pas par suite (2026-09-11)
+
+`run_suites.sh` donne un `user://` neuf à chaque LOT, et toutes ses suites le
+partagent. Une étape qui précède `test_tir_et_reserves` y écrit un `settings.cfg`
+portant `intro_vue=true` ; dans cet état « intro déjà vue », le HUD est caché au
+moment où la suite tourne. Trois contrôles du lot C de l'étape 28 lisaient la
+position du contenu d'une cartouche après un tri manuel — or **un conteneur caché ne
+trie pas ses enfants**, et le contenu gardait une position périmée. Verts quatre fois
+sur quatre lancés seuls dans un HOME vierge, rouges dans le lot, et le journal du lot
+ne garde que « ÉCHEC (code 1) ». Trouvé en rejouant la séquence du lot dans un même
+HOME, sorties gardées, puis par dichotomie du `settings.cfg`.
+
+Une suite qui passe seule et rougit dans le lot se rejoue DANS L'ÉTAT DU LOT : un
+seul HOME, le démarrage, puis les suites qui la précèdent. Et un contrôle de mise en
+page commence par s'assurer que ce qu'il mesure est visible.
+
+### Un rayon parti du centre d'un corps concave touche le corps lui-même (2026-09-11)
+
+`_point_de_pose` lance un rayon depuis le centre du poseur, droit devant, pour planter
+son gadget à 96 px ou avant le premier mur. **Depuis `f161232` (2026-09-09), tout
+gadget posé en jeu naissait à 12 px, dans le corps de son poseur.** Le polygone du
+joueur est concave : le moteur le découpe en pièces convexes, le disque et le nez.
+`hit_from_inside` à faux ne fait ignorer que la pièce où le rayon naît ; il entrait
+dans le nez à 18 px, et la marge de 6 px ramenait le point à 12. Aucune suite ne le
+voyait : toutes téléportaient le poseur et posaient dans la même image, avant que le
+moteur n'ait appliqué la téléportation (voir « Un corps cinématique téléporté… »).
+C'est le recul du voile (étape 28, lot B) qui l'a révélé : il trouvait chaque voile
+dans le corps de son poseur, et les refusait tous.
+
+Toute requête lancée depuis le centre d'un corps EXCLUT ce corps ; et un test de pose
+passe par le vrai joueur qui appuie sur sa touche, pas par une téléportation suivie
+d'une pose dans la même image.
+
+### Un seuil atteint par une somme de pas flottants tombe un pas trop tard (2026-09-11)
+
+La brûlure des braises verse 4 PV chaque fois que sa charge — 16 PV/s × `delta`,
+image après image — atteint 4. Sur 2,0 s pile, huit tics sont dus : **le test en
+comptait sept**, à 60 comme à 480 images/s. La somme des pas arrive à
+3,999999999999994 (ou 3,99999999999996), et le huitième seuil n'est franchi qu'à
+l'image suivante. Rien ne se perd en jeu — la charge est gardée —, mais le tic sort
+de la grille des 0,25 s et un contrôle exact rougit. Vu rougir dans Godot, pas
+seulement calculé (étape 28, lot A1).
+
+Comparer un accumulateur flottant à son seuil avec une marge
+(`charge >= seuil - TOLERANCE`), et écrire ce que la marge garde — la grille —,
+pas une perte qu'elle n'évite pas.
+
+### Un corps cinématique téléporté n'existe pour les requêtes qu'au pas suivant (2026-09-11)
+
+Un test place J2 derrière le leurre (`global_position = …`), attend un
+`await physics_frame`, puis lance `intersect_ray` : **le rayon ne touche rien, pas
+même J2.** Un `CharacterBody2D` est cinématique : sa téléportation est retenue et ne
+s'applique qu'au PAS de physique suivant — et `physics_frame` rend la main AVANT ce
+pas. La requête voit donc le corps à son ancienne place. Le symptôme est traître :
+seul le premier déplacement d'une séquence est touché (les suivants, faits après une
+attente, sont appliqués par le pas de la même image), si bien qu'un contrôle positif
+échoue et que le négatif voisin **passe pour une mauvaise raison**. Deux hypothèses
+fausses (un mur, le corps repoussé par sa propre physique), puis un diagnostic qui
+imprime ce que le rayon touche.
+
+Après avoir téléporté un corps, attendre DEUX `physics_frame` avant de le chercher
+par une requête ; et donner à tout contrôle négatif de ligne de vue un témoin qui,
+l'obstacle retiré, passe. En jeu, rien à craindre : l'éblouissement se juge en
+physique sur des corps qui bougent en continu.
+
+### Un test qui force l'état ne voit pas l'état réel (2026-09-11)
+
+La poudre de contact n'a jamais posé une trace à l'ENTRAÎNEMENT, de l'étape 17 à
+l'étape 27 — là même où Adrien essaie les classes. Son garde anti-killcam ne
+lisait que `round_active`, et l'entraînement lance la manche puis le remet à faux
+(`sandbox_mode` vrai). **Le test posait `round_active = true` avant de faire
+marcher le joueur** : il éprouvait un état que le jeu n'a jamais à l'entraînement,
+et restait vert. C'est une capture dans l'état réel — rien forcé — qui l'a montré :
+zéro trace, puis treize une fois le garde aligné sur celui de la pose d'un gadget.
+
+Un test qui règle lui-même les drapeaux de mode doit aussi passer par l'état que
+le vrai chemin produit (`_on_training_requested`, un vrai lancement de manche), ou
+dire pourquoi il ne le fait pas.
+
+### Godot renomme les homonymes par le nom de leur CLASSE (2026-09-11)
+
+Des nœuds ajoutés au même parent sous le même nom ne deviennent pas « Trace »,
+« Trace2 »… mais « Trace », « @Polygon2D@1515 », « @Polygon2D@1516 ». Un test qui
+retrouvait les traces de poudre par leur nom n'en voyait qu'UNE ; la queue de
+sortie paraissait vide alors que le gadget la posait — et un contrôle « la même
+queue quel que soit l'échantillonnage » est passé en comparant deux listes vides.
+Un diagnostic pas à pas l'a montré, après deux suppositions fausses.
+
+Retrouver des nœuds créés à la volée par un GROUPE (ou une méta), jamais par leur
+nom ; et un contrôle d'égalité exige d'abord que ce qu'il compare ne soit pas vide.
+
 ### Compter des processus par la ligne de commande : l'outil se compte lui-même (2026-09-12)
 
 **Un banc qui attend le silence doit savoir reconnaître le silence.** Le relevé
@@ -3432,8 +3532,9 @@ Une valeur par défaut héritée n'est pas un choix. Quand une sous-classe
 surcharge une forme, **toutes** les formes du même objet doivent suivre —
 collision, ombre, visuel. Le socle le dit désormais au bon endroit
 (`_forme_de_collision()` à côté de `_monter_occluder()`), et le contrôle du voile
-compare sa bande de collision à celle de son ombre. L'ombre habitée garde le
-même écart en petit : signalé à l'étape 25.
+compare sa bande de collision à celle de son ombre. L'ombre habitée gardait le
+même écart en petit : signalé à l'étape 25, corrigé à l'étape 28 (2026-09-11) —
+sa collision est désormais sa plaque.
 
 ### Une question posée de mémoire fait trancher sur une liste fausse (2026-09-10)
 
@@ -15718,6 +15819,12 @@ balle. Les deux appellent `GameState.demander_extinction_fusee(graine)`, qui
 route vers `rpc_eteindre_fusee` — **même arbitrage que le lancer : l'hôte
 tranche, le client demande.**
 
+> ⚠️ **Amendé le 2026-09-11 (étape 27, Adrien) : une balle n'éteint plus la
+> fusée** — « on ne peut donc pas détruire la fusée éclairante » : un gadget
+> gazeux ne se tue pas à la balle. Le piétinement reste le seul geste ; la balle
+> la traverse (et y ouvre toujours son tunnel, FU3). Ce qui suit sur l'extinction
+> par balle est l'histoire de FU5.
+
 **Pourquoi le piétinement l'exige, contrairement aux dégâts d'une balle.** Ce
 n'est PAS une histoire de perspective du tireur à compenser (l'hôte simule déjà
 les deux joueurs en direct, sans délai à rattraper pour lui-même) — c'est
@@ -17433,6 +17540,9 @@ sont pas la même information.
 l'accumulateur n'est pas répliqué, seul le résultat l'est. Le client voit donc le
 compte monter sans le décompte qui l'annonce — un manque, pas un mensonge, et le
 prix d'un octet par tick économisé. À reprendre si Adrien juge l'attente illisible.
+**Repris à l'étape 28, lot C (2026-09-11)** : Adrien a demandé une jauge sans
+texte ; l'accumulateur ne voyage toujours pas, l'hôte envoie l'ATTENTE avec le
+compte (`rpc_stock_fusees`), et le client la décompte — voir cette étape.
 
 ### Étape 19 — l'archive dit quelle classe ✅ — LE CHANTIER EST CLOS
 
@@ -17974,6 +18084,1914 @@ Six `.uid` orphelins — restes des scripts de capture jetables des étapes 11 e
 12, commités sans leur script — sont retirés de `tools/`, sur accord d'Adrien :
 même geste que `7fc6a7a`.
 
+### Étape 27 — sept corrections de gadgets, après l'essai d'Adrien ✅ (2026-09-11)
+
+Adrien a essayé les gadgets et en a demandé sept corrections. Une cartographie en
+parallèle — un lecteur par demande — a précédé le code ; quatre questions lui ont
+été posées, le reste a pris un choix par défaut, écrit ici.
+
+**1. La poudre luit, puis s'éteint** (« sinon c'est trop inutile »). Les traces
+luisent d'elles-mêmes — vert phosphore, non éclairées, additives — et s'éteignent
+en 8 s, un fondu porté par la TRACE et jamais par le gadget. En sortant, les pieds
+emportent une charge : six traces de plus, qui pâlissent (≈ 3,5 pas), comptées en
+traces par la règle de la corde de 26 px — jamais au temps ni à la distance
+sommée, pour que la piste reste la même chez l'hôte et le client. Revenir dans la
+poudre recharge. Tranché par Adrien : **les deux joueurs voient la lueur** ; la
+Sentinelle ne marque pas sa propre poudre ; la nappe reste éclairée par le décor,
+invisible dans le noir. Renverse la règle de l'étape 17 (« visibles QUE sous une
+lumière »). Les traces ne se reportent plus sur la manche suivante : l'arène ne se
+purge pas par manche, le fondu les retire.
+⚠️ **Trouvé en route : la poudre n'avait JAMAIS marqué à l'entraînement** — voir le
+piège « Un test qui force l'état ne voit pas l'état réel ». Vu à la capture, dans
+l'état réel de l'entraînement : zéro trace avant, treize et une lueur mesurée après.
+
+**2. Un gadget diffus ne se tue pas à la balle.** Suie, poussière, braises, poudre :
+`touche_par_les_balles = false` retire `GADGET_LAYER` de leur couche, et la balle ne
+les rencontre plus — ni dégât, ni pas perdu, ni place prise dans la traversée
+bornée. La fusée : la balle ne l'éteint plus (le bloc FU5 de `bullet.gd` et
+`EXTINCTION_RAYON_BALLE` retirés), elle la traverse ; le piétinement reste. Ferme le
+défaut signalé à l'étape 25 (les nappes abîmées par les balles qui les survolent).
+Amende « tout gadget est destructible à la balle » : les objets, pas les diffus.
+
+**3. Le compte à rebours du grésillement, sur l'icône.** Le HUD n'avait aucune icône
+de gadget : elle entre dans la cartouche (27 px de plus, une fois pour toutes), et
+le chiffre en est un ENFANT — un `TextureRect` n'est pas un conteneur, c'est le
+patron du cadenas : il ne l'élargit jamais. Allumée : les secondes de batterie
+(`ceil`, jamais 0 tant qu'elle tourne) ; sous le seuil : les secondes avant de
+rallumer ; éteinte et prête : rien. `_set_gadget_style` lit par nom et non plus par
+position : l'icône intercalée aurait fait perdre la couleur sans un mot. Vu à la
+capture : « 9 » sur l'icône pour « ALLUMÉ · 59 % ».
+
+**4. La suie cache.** « Qu'on ne me voie pas dans la fumée » : opacité 1 au cœur, et
+le corps n'y fait plus d'ombre (`masque_le_corps`, au-delà de 0,5) ; soi-même, on
+s'y devine encore (plancher 0,4, choix par défaut). « Si j'éclaire dans la fumée,
+ça illumine toute la fumée » : le nuage n'est plus éclairé point par point (image
+non éclairée, en mélange) ; sa clarté est UN nombre, la lumière qu'il reçoit —
+torches à mur près sur sept points, fusées au sol —, lissé, relevé de 1,6, avec un
+pouls quand on tire dedans. Une lampe tenue dedans y reste (`facteur_de_lampe`), et
+n'éblouit plus. La suie seule : la poussière et la fumée de fusée, validées, ne
+bougent pas. Renverse l'étape 14 (« on voit qu'il y a quelqu'un, pas qui ») ; la
+phrase de fiche suit : « Un nuage de suie : on n'y voit personne, et une lampe
+l'allume tout entier. »
+Mesuré en capture : le cœur du nuage à 48 de luminance éclairé, 0 dans le noir, et
+aucun corps visible dedans.
+
+**5. Le leurre a l'ombre d'un joueur.** Ce qu'Adrien voyait rond, c'était l'ombre :
+l'étape 15 avait copié le cercle PROVISOIRE du joueur (« 18.0 is exactly the player
+radius »), que l'étoile de la silhouette écrase au premier équipement.
+L'échantillonnage radial déménage dans `Charte.ombre_de_silhouette()` — une seule
+vérité pour le joueur et le leurre, avec un cache ; le leurre projette l'étoile de
+la silhouette de sa classe, et sa collision reste le cercle de 18, zone de touche
+d'un corps. Exception écrite à « toutes les formes suivent ».
+
+**6. La torche fantôme balaie comme une main, et deux lampes doublent.** Plus de
+sinus : des gestes — coups d'œil, retours, balayages lents, hésitations — séparés de
+pauses, sur une courbe à secousse minimale, avec un tremblement, bornés à ±36°. Le
+hasard vient de la graine que l'hôte envoyait déjà avec la pose et que la torche
+JETAIT (`if "graine" in g`) : les deux pairs déroulent le même plan. Et le souffle de
+±3 % qu'elle était la seule lampe à ne pas avoir. **La lampe de l'arbalète double,
+éblouissement compris** (Adrien : « tout doubler ») : `torch_brightness` 0,3 → 0,6,
+cookie recuit — seul `cookie_arbalete.png` a changé, les onze autres identiques au
+bit près, alpha maximal 43 → 85. La fausse torche emprunte ce cookie et double avec.
+Pénalité de l'arbalète à bout portant ≈ 0,43 → 0,61 (le pistolet reste à 0,93).
+
+**Protocole 17** : rien ne change sur le fil (témoin intact), le sens si — voir le
+carnet de `protocol.gd`. La prochaine publication sera une mineure.
+
+**Validation** : `test_classes` (358 contrôles), `test_tir_et_reserves` (150),
+`test_vision`, `test_torches`, `test_protocole`, `test_fusee`, `test_charte` verts, et
+la suite complète (`./tools/run_suites.sh`, 109 suites, duos compris) verte en 344 s ;
+captures en jeu pour ce qu'aucune suite ne rend — la lueur de la poudre dans le noir,
+la suie éclairée et dans le noir avec un joueur dedans, le compte à rebours, le
+leurre, les lampes. Les corrections de la revue (ci-dessous) sont éprouvées par les
+suites, pas capturées.
+
+**La revue** — quatre relecteurs (réseau, conformité, rendu, tests), puis une
+contre-vérification contradictoire de chaque défaut : 23 confirmés, 4 réfutés.
+Aucun ne touchait la synchronisation hôte-client. Ce qu'ils ont trouvé, corrigé :
+- **deux leurres qui se trahissaient encore.** La suie distinguait la vraie torche
+  de la fausse — l'une allumait le nuage et s'y étouffait, l'autre non —, et un
+  leurre restait net dans la suie où un corps disparaît. La fausse torche obéit
+  désormais à la règle de lampe d'une vraie, rendu ET éblouissement ; le leurre
+  s'efface comme un corps, par une règle qui vit dans le socle
+  (`GadgetBase.effacements_a`) et que le joueur lit aussi. ⚠️ **Conséquence à
+  connaître** : le grésillement éteint aussi la fausse torche — « les torches
+  proches sautent jusqu'au noir », et elle se trahissait en ne sautant pas ;
+- **l'éblouissement lisait le disque de touche du leurre, pas son ombre** : ébloui
+  dans l'ombre du canon, épargné là où la lumière passe à côté du corps. Il lit
+  l'étoile (`regard_par_la_forme`, `coupe_le_regard`) ; les balles gardent le disque ;
+- **l'occluder du joueur était une ressource partagée par J1 et J2** : dans un
+  match entre deux classes, les deux corps projetaient l'ombre de la classe
+  équipée en dernier, et le leurre se trahissait dans presque tout vrai match.
+  Chaque équipement pose une ressource neuve ;
+- **un tir dans la suie montrait son éclat dessiné** — non éclairé, posé au-dessus
+  de la masse, il disait la position exacte : l'éclat et la lumière de bouche s'y
+  étouffent, c'est le nuage qui pulse ;
+- une lampe éteinte par le grésillement allumait quand même la suie où on la
+  tenait ; le pointeur de l'adversaire restait invisible après la suie (un `minf`
+  qui ne faisait que baisser) ;
+- et, trouvé en corrigeant : **les joueurs sont sur la couche des murs**, et le
+  rayon « à mur près » de la suie s'arrêtait sur leurs corps — une lampe braquée
+  sur le nuage à travers J1 rendait 0.
+
+Côté tests : un contrôle qui dépendait du hasard des images, deux aveugles par
+construction (la queue de la poudre ; les pauses de la torche, mesurées désormais
+sur l'angle — la correction a été simulée sur 300 graines en revue), un contrôle
+par lecture du source qu'un simple commentaire faisait rougir, et les chemins
+jamais parcourus : une lampe dehors, la fausse torche, le pouls par le vrai tir.
+Les textes périmés — carnet du protocole, en-têtes de la poudre et des volumes,
+décisions actées (le gadget destructible à la balle, l'arbalète qui éblouit peu,
+FU5) — sont amendés.
+
+⚠️ **Signalé, non corrigé** :
+- l'éblouissement écrit l'opacité du CORPS adverse en `_physics_process`, et la
+  boucle d'occultation l'écrase à chaque image en `_process` : l'effacement du
+  corps par l'éblouissement est inopérant depuis `535e3c7` (le pointeur et les
+  révélations, eux, le composent désormais) ;
+- la fausse torche posée face à un mur éclaire derrière lui — le défaut que la
+  lampe du joueur a perdu ce matin (`50c3e11`) ;
+- l'ombre habitée garde l'écart que le leurre avait : ombre en plaque, collision
+  et regard en disque (signalé à l'étape 25) — le crochet `regard_par_la_forme`
+  le corrigerait en une surcharge ;
+- le flash de tir éblouit toujours à travers la suie (modèle à part, arbitré par
+  l'hôte) : à trancher, si la suie doit l'étouffer comme elle étouffe l'éclat ;
+- en écran scindé, le panneau de J2 débordait déjà ; l'icône y ajoute 27 px.
+
+### Étape 28 — les dix suggestions de gameplay, en un coup d'œil ✅ (2026-09-12)
+
+Après son essai de l'étape 27, Adrien a lu douze suggestions d'optimisation du
+gameplay et a tranché : **les dix premières sont faites** (sept commits), la onzième
+est une séance de tests manette en main qu'il mène lui-même (voir H11), et la
+douzième — annoncer la classe adverse au « FIGHT » — est refusée, parce qu'elle
+donnerait une information gratuite dans un jeu où « la seule information est la
+lumière ».
+
+**La méthode, parce qu'elle explique la suite.** Les dix points ont été regroupés en
+six lots, chacun cartographié par un lecteur puis **attaqué par un contradicteur avant
+la première ligne de code** ; puis, lot par lot : un implémenteur, deux contradicteurs
+(justesse et réseau d'un côté, tests et documentation de l'autre), et un correcteur
+qui vérifie chaque constat dans le code avant de l'appliquer. Suite complète verte
+avant chaque commit (109 suites, 110 depuis celle du lot E), et rien n'est poussé.
+⚠️ **Deux rouges ANTÉRIEURS restent signalés dans les lots, et qui lance
+`run_suites.sh` chez Adrien les rencontrera** : `test_vitrine_menus`, rouge sous le
+`HOME` d'Adrien et vert sous un `HOME` isolé — un `settings.cfg` laissé par une
+séance, pas le code (lot F) ; et le duo « PRÊT s'ouvre à l'arrivée de l'adversaire »,
+intermittent, reproduit à l'identique sur une copie de `HEAD` sans le lot (lot E).
+
+| Commit | Ce qu'il change pour le joueur |
+|---|---|
+| `b1ac4f1` (A1) | Les braises brûlent par tics de 4 PV, **indépendants de la cadence**. Le total versé était déjà juste (33,6 PV aux deux cadences) ; c'est le NOMBRE d'impulsions — donc les RPC, les lumières d'impact, les vibrations — qui suivait les fps de l'hôte : 126 appels à 60 images/s, **1 008 à 480**. Leur aveuglement suit leur lueur. |
+| `76c702f` (B) | L'ombre habitée arrête les balles avec la plaque qu'elle montre ; le voile **recule hors des corps** à la pose. Et les dix gadgets naissent **enfin** à 96 px, comme l'étape 10 le voulait, au lieu de 12 dans le corps du poseur — depuis le jour où la pose existe (`f161232`) : un changement ressenti pour les dix, à éprouver en jeu. |
+| `5c52930` (C) | Un appui qui ne peut rien faire **se sent** ; les fusées et les gadgets en recharge ont leur jauge sous la cartouche. |
+| `bb0b3ca` (D) | Le leurre est rendu **comme un vrai corps, selon qui le regarde** ; un repère du rayon d'effet n'apparaît qu'à son poseur. |
+| `46c5d4c` | Fusion de `main` : la refonte roman graphique et le bandeau LED entrent dans le chantier. |
+| `a98691b` (E) | La **télémétrie des gadgets** entre dans l'archive des matchs, comptée aux mêmes ordres chez les deux pairs — les deux archives disent la même chose, **à la gigue près sur les deux compteurs de fenêtre**, et sous EOS ce n'est pas établi. |
+| `ce64209` (F) | La **killcam rejoue les gadgets** : on voit enfin la cause de sa mort, pas seulement sa mort. |
+| `1f3b875` (A2) | La mine aveugle à hauteur de ce qu'elle brûle. **Commit séparé et réversible seul** : c'est un changement d'équilibre. |
+
+**Protocole** : `VERSION` reste 17, non publiée, et le témoin du fil a été recalculé
+deux fois (lots C et E, qui font voyager l'attente de la prochaine fusée et la cause
+des dégâts). La prochaine publication sera donc une mineure.
+
+**Ce que les mesures disent, et ce qu'elles ne disent pas.**
+
+- **Coût des gadgets à la cadence — ⚠️ aucun coût n'est établi, faute d'un protocole
+  qui en tienne un.** Deux relevés de 30 s, duel complet, même machine, **enchaînés à
+  la seconde** (02:36:45 puis 02:37:19) et toujours dans l'ordre base → `--gadgets` :
+  médiane **49 puis 48 fps** avec une fausse torche, une poudre et ses 72 traces
+  entretenues. Ce n'est pas le protocole du banc, qui écrit en tête de
+  `tools/bench_framerate.gd` (l. 61-68) qu'« un banc de cadence lancé en boucle mesure
+  sa propre chaleur », que « deux relevés séparés de dix minutes ne sont pas deux
+  échantillons de la même population », et que **le protocole qui vaut** est « machine
+  refroidie, UN relevé long (60 s), pas dix courts ». La dérive thermique pousse
+  précisément le SECOND relevé vers le bas : elle suffit à expliquer l'écart. Et
+  l'écart qu'on en tirerait (≈ 0,4 ms par image) repose sur deux médianes **arrondies
+  à l'entier** par le banc (`%.0f`, l. 655) : le même couple 49/48 est compatible avec
+  tout écart de presque zéro à **0,85 ms**. À rapprocher, quand la mesure sera faite,
+  des **139 µs par image** de marge écrits en fin de chantier (« Ce qui reste, dans
+  l'ordre ») — c'est exactement ce que le relevé au premier plan doit trancher.
+  ⚠️ **Le 1 % bas de ces deux relevés (35 et 36) n'est PAS à jeter : c'est un
+  plancher**, ce qui n'est pas la même chose. La fenêtre est restée **stable** au
+  second plan, et le banc imprime alors, mot pour mot, « stable au SECOND PLAN —
+  **comparable**, mais c'est un plancher » (`bench_framerate.gd:681`) ; le « RELEVÉ À
+  JETER » (l. 693) est réservé au focus MIXTE, qui n'est pas le cas ici — « ce ne sont
+  pas le second plan mais les TRANSITIONS qui décident du 1 % bas », piège connu de ce
+  document. Donc : ces deux chiffres ne peuvent pas dire si la cible de 60 est tenue
+  (un plancher ne prouve pas un seuil), mais ils se comparent **entre eux**, et ils ne
+  bougent pas — les gadgets n'abaissent pas le 1 % bas. La mesure qui tranchera,
+  fenêtre au PREMIER plan, **reste à faire** :
+  `godot --path . res://tools/bench_framerate.tscn -- --seconds 60`, puis le même appel
+  avec `--gadgets`, machine refroidie et dans un **ordre symétrique** (base, gadgets,
+  gadgets, base) — le protocole que la session FUSÉE a tenu le même jour. Et l'image la
+  plus lente ne prouve rien : ici c'est la charge la plus LOURDE qui donne la plus
+  rapide (28,4 ms avec gadgets contre 36,7 sans), et la session FUSÉE a relevé 26,7
+  puis 54,8 ms pour une MÊME configuration mesurée deux fois (`977c5ab`, section « Ce
+  que la fusée coûte » — pas encore fusionnée ici, donc invérifiable depuis cette
+  branche).
+- **Budget de lumières pendant le rejeu** (capture `fins/01-killcam.png`, manifeste du
+  photographe, sur `1f3b875`) : **8 lumières allumées, au plus 7 par quadrant de
+  560 px**, quand le moteur en garde 15 par item. La crainte du plan — une killcam qui
+  ferait déborder le budget — ne se vérifie pas. L'image montre la mine rejouée en plein
+  embrasement, alors qu'elle n'existe plus au présent : c'est précisément ce que le lot
+  F apporte. ⚠️ **Mesuré au pixel** sur la capture (1920 × 1080) : l'embrasement ne
+  SATURE pas — le disque plafonne à (231, 230, 229), et les seuls blancs purs de l'image
+  sont le HUD, dans la bande y 54-135 — et il n'occupe pas la moitié du cadre :
+  **7,6 % des pixels au-dessus de 200 de luminance**, dans une boîte de 532 × 517 px
+  (13 % du cadre), le reste noir (luminance moyenne de l'image entière : 31 sur 255).
+  Reste le jugement, qu'aucune mesure ne rend : **est-ce trop lumineux ?** À Adrien,
+  manette en main — la capture a été prise sans personne devant l'écran.
+- ⚠️ **Ces deux instruments sont donnés pour n'avoir jamais tourné dans la section du
+  lot F, plus bas** (« ⚠️ Ce qui n'a PAS été mesuré, et pourquoi » : « mais aucun des
+  deux n'a tourné »). Ils ont tourné depuis, le 2026-09-12 sur `1f3b875`, et ce sont
+  leurs chiffres ci-dessus : **ce paragraphe du lot F est à amender dans le commit qui
+  porte cette synthèse**, sans quoi la ROADMAP affirme le contraire aux deux endroits.
+  Ne reste réellement dû que le relevé fenêtre au PREMIER plan — et **la seconde
+  question que la capture portait, « y a-t-il un hoquet au premier rejeu ? », qu'elle
+  n'a pas tranchée** : le photographe recense des lumières
+  (`is_visible_in_tree()` et `enabled`, le critère du compteur F3), il ne mesure aucun
+  temps d'image.
+
+**Ce que l'étape a appris, et qui vaut plus que les lots.** Quatre **« pourquoi »
+faux** ont été écrits puis corrigés, et les voici nommés, parce qu'une liste vague
+envoie relire ce qui est juste : la raison donnée à la marge de flottant des braises
+(« la charge reste sous huit » — une image d'une seconde la porte à seize, lot A1) ;
+l'ombre que le leurre porte au sol, rangée avec quatre lumières dont elle ne partage
+pas le cas (lot D) ; le fondu de la nappe dit « chez l'hôte seul », qui citait un état
+de la branche antérieur au lot A1 (lot F) ; et le conseil de relever `ENERGIE` pour
+rendre la mine plus aveuglante, qui n'aurait **rien** changé à l'aveuglement — cette
+constante ne multiplie que la lumière RENDUE (lot A2). Le dernier est le plus coûteux
+des quatre : les trois premiers expliquaient mal quelque chose de juste, celui-là
+aurait fait perdre une soirée à qui l'aurait suivi manette en main. ⚠️ **La marge de
+6 px du voile n'est PAS de ceux-là** : elle explique juste, le piège « Un rayon parti
+du centre d'un corps concave… » et le lot B la donnent tous deux, et le code la porte
+(`game_state.gd`, `_point_de_pose`). Une première rédaction de ce paragraphe l'y
+rangeait — cinquième « pourquoi » faux, arrêté en revue.
+Trois pièges sont consignés en conséquence (un seuil
+atteint par une somme de pas flottants, un rayon parti du centre d'un corps concave,
+et « vert seul, rouge dans le lot »).
+
+**Ce qui reste, et qui n'appartient pas à cette étape** : le relevé de cadence fenêtre
+au premier plan ci-dessus, l'alignement du leurre sur le halo de proximité (voir « À
+faire à la prochaine fusion de `main` — le leurre et le halo de proximité », en fin de
+chantier), et les arbitrages qu'Adrien seul peut rendre. ⚠️ **Cette liste-ci n'est pas
+exhaustive** — les blocs « Signalé, non corrigé » et « Question pour Adrien » de chaque
+lot font foi, et c'est là qu'elles sont argumentées. Rassemblées ici, lot par lot :
+
+- **(B) le refus du voile à bout portant** : sans aucun mur, un adversaire dans l'axe à
+  moins de 60 à 70 px fait refuser la pose, **en silence**. Le laisser, ou faire ignorer
+  les joueurs au rayon de pose — au risque d'un voile né DERRIÈRE l'adversaire ?
+- **(C) « RECHARGE · 42s »** : les secondes restent dans le titre ; la cartographie
+  proposait de les passer DANS l'icône, comme celles du grésillement. Non livré faute
+  d'arbitrage ;
+- **(C) l'appui refusé mais TENU** qui part tout seul au retour de la ressource —
+  défaut antérieur, signalé au lot C : le corriger touche la simulation des deux pairs ;
+- **(D) l'ombre du leurre** sous les lumières qu'un corps ne bloque pas — la correction
+  demande deux changements et un changement de SENS de l'éblouissement ;
+- **(D) le dosage du repère de rayon** (alpha 0,28, trait de 1,5 px), à valider sur la
+  planche ;
+- **(D) voir son leurre tel que l'adversaire le voit**, à l'entraînement — ou la
+  capture suffit-elle ?
+- **(E) l'avis de phase de test** affiché en jeu, devenu incomplet : il est mot pour
+  mot celui d'Adrien, donc non touché. Reprend-il sa propre phrase ? — ✅ **tranché le
+  2026-09-12** (« compléter l'avis, texte proposé ») : fait au **lot H**, en insérant
+  sa phrase sans toucher un caractère du reste ;
+- **(H) l'avis ne nomme toujours pas la mesure du LIEN** (`rtt_moyen_ms`,
+  `rtt_max_ms`), qui part elle aussi : sa promesse « Rien d'autre n'est envoyé » reste
+  inexacte sur ce point. Trouvé en revue du lot H, le 2026-09-12, après un premier
+  recensement qui se croyait complet. — ✅ **tranché le 2026-09-12, avant le tag** :
+  « publier tel quel, corriger après ». La 0.6.0 part donc avec cet écart connu, et il
+  reste à reprendre à la version suivante. **Ce n'est pas un oubli : c'est un choix
+  daté.** La distinction compte pour qui relira — une question ouverte s'instruit, une
+  décision actée s'applique, et confondre les deux ferait rouvrir un débat clos ou
+  enterrer un écart vivant ;
+- **(F) le moment de purge de la killcam** ;
+- **(A2) l'équilibre de la mine**, et **le comptage majorant des mines** — ce
+  second-là est ✅ **tranché et fait le 2026-09-12, au lot H** : l'ordre d'allumage
+  porte sa cause, et les deux colonnes sont exactes. L'équilibre, lui, reste à juger
+  manette en main (H11).
+
+### Étape 28 — lot A1 : les braises brûlent par tics, et leur aveuglement suit leur lueur ✅ (2026-09-11)
+
+Deux décisions d'Adrien parmi les suggestions d'après l'étape 27 : la brûlure par
+impulsions, et « l'aveuglement suit ce qui brûle » étendu aux gadgets. Ce lot porte
+le socle et les braises ; **la mine est le lot A2, un commit séparé**, pour la raison
+écrite plus bas.
+
+**1. La nappe brûle par tics de 4 PV, toutes les 0,25 s.** Elle appelait
+`take_damage(16 · delta)` à chaque image RENDUE — `GameState._process()` →
+`_maj_gadgets()`, fps déplafonnés. 2,1 s dedans, c'étaient 126 appels à
+60 images/s et **1 008 à 480** ; et chaque appel coûte un RPC fiable, une vibration,
+un souffle, une secousse de barre de vie et une `PointLight2D` à ombres de 400 px
+qui vit une seconde — **près de 480 lumières d'impact vivantes à la fois**, sur un
+moteur qui n'en applique que quinze par item. Le total, lui, était juste (33,6 PV
+aux deux cadences) : c'est le NOMBRE d'appels qui dépendait du matériel, et c'est
+lui que les nouveaux contrôles comptent. Désormais la nappe ACCUMULE et verse par
+tics (`PV_PAR_TIC`, le seul réglage du rythme) : huit tics en 2,1 s à 60 comme à
+480 images/s. L'appel reste dans `_process` : l'accumulateur suffit à rendre la
+cadence muette, un `_physics_process` dans `GameState` couperait `_maj_gadgets` en
+deux cadences (elle porte aussi l'allumage de la mine), et le patron existe déjà
+dans le fichier — le piétinement FU5 accumule le même `delta` contre un seuil.
+- **`while` et non `if`** : une image d'une seconde verse ses quatre tics.
+- **Une marge de flottant** (`TOLERANCE_TIC`, 1e-6 PV, soixante nanosecondes de
+  feu) : seize fois 1/480 sommé image après image ne fait pas exactement 4, et sans
+  elle le huitième tic de 2,0 s pile tombait une image trop tard — **vu rougir dans
+  Godot**, pas seulement calculé. Rien ne se perdait, la charge étant gardée : la
+  marge garde le tic sur la grille des 0,25 s.
+- **La charge est GARDÉE quand on sort**, et elle meurt avec la nappe. Remise à
+  zéro, douze allers-retours de 0,175 s dedans et 0,1 s dehors — 2,1 s cumulées
+  dans le feu — coûtaient **zéro PV au lieu de 32** : l'horloge refusée par Adrien,
+  sous un autre nom. Versée à la sortie, elle aurait fait un « tic » de 0,3 PV qui
+  déclenche quand même lumière, vibration et souffle. Gardée, la nappe a infligé à
+  tout instant ⌊16·T/4⌋·4 : jamais plus qu'avant, au plus un tic de moins. Prix
+  connu : le premier tic d'une rentrée peut tomber tôt — c'est une brûlure due.
+- **Tenue par NAPPE et par joueur**, pas par joueur seul. Un gadget debout par
+  joueur : au plus deux nappes, quand les deux jouent l'Incendiaire. Sous les deux,
+  deux accumulateurs versent huit tics par seconde — le même total que deux fois
+  16 PV/s d'avant ; la décision reste dans le gadget, comme le veut la doctrine du
+  socle. Par nappe : au plus 4 RPC par seconde et 5 lumières d'impact vivantes par
+  blessé ; 8 et 9 sous deux nappes.
+- **La traversée coûte 8 PV, pas 4.** Au diamètre, à 260 px/s, 0,523 s : deux tics
+  (8,4 PV en continu). Le commentaire de `DEGATS_PAR_SECONDE` et la carte validée
+  disaient « environ 4 » ; le tic ne change rien au total, c'est le chiffre annoncé
+  qui était faux.
+
+**2. L'aveuglement suit ce qui brûle** — voir « Décisions actées », 2026-09-11.
+`GadgetBase.energie_relative()` (1 dans le socle, lu sans garde : un `has_method()`
+changerait un oubli en inaction muette) devient le `gain` de la branche gadgets de
+`_sources_eblouissantes()`, comme celui des fusées. Les braises rendent
+`0,35 + 0,65·reste` — une formule pour la lueur, l'alpha et l'éblouissement — et
+leur rayon d'éblouissement ne rétrécit plus (il est écrit dans `_init`, et nulle
+part ailleurs) : gain et rayon rétrécissant ensemble auraient atténué deux fois.
+Pas de seuil de coupure comme celui de la fusée : les braises ne descendent pas sous
+0,35, et un gadget qui ne brûle pas encore n'a pas de rayon.
+
+**3. Le fondu de la nappe tourne chez les DEUX pairs.** Lueur et alpha étaient
+calculés dans `appliquer_effets()`, que seul l'hôte appelle, et seulement en manche
+ou à l'entraînement : chez l'invité la nappe restait à pleine lueur dix secondes
+puis disparaissait d'un coup, et chez l'hôte elle se figeait pendant la killcam.
+Défaut jamais consigné ; il devenait bloquant avec le point 2 — l'éblouissement
+arbitré par l'hôte aurait baissé pendant que la lueur de l'invité restait pleine,
+« l'aveuglement suit ce qui brûle » vrai sur un seul écran. Le fondu vit dans
+`GadgetBraises._physics_process()`, fonction pure de l'âge, qui court chez les deux
+pairs ; `appliquer_effets()` ne fait plus que brûler. **Protocole 17**, fil
+intact (témoin inchangé), sens changé : entrée complétée au carnet de `protocol.gd`.
+Et la doc du socle disait « chaque pas de physique » pour `appliquer_effets()` :
+c'est chaque image rendue, écrit désormais avec la conséquence.
+
+**La mine attend A2, à confirmer par Adrien.** Lui appliquer la même règle
+(`energie_relative() = reste²`, rayon constant) baisse TOUT son flash, pas seulement
+sa fin : d'environ 35 % au pic au rayon de déclenchement, et son aveuglement fort
+passe d'environ 1 s à 0,4 s (simulation à une source). La question posée disait
+« cela affaiblit la fin du flash de la mine » — le cas exact de la décision prise
+sur une explication qui ne disait pas assez que c'est un changement d'équilibre.
+Jusque-là la mine garde son comportement : le socle rend 1.
+
+**Écart assumé avec la carte validée** : elle demandait une bascule de banc pour le
+rythme des braises. Pas livrée — 4 PV toutes les 0,25 s est une décision d'Adrien,
+pas un dosage ; `PV_PAR_TIC` reste le seul réglage.
+
+**Validation** : `test_classes` (376 contrôles, dont 19 neufs), `test_tir_et_reserves`
+(149), `test_vision` (40), `test_protocole` (9), `test_charte`, `test_fusee_eteinte`
+(7), `test_eblouissement` (31), `test_lumieres` (51/51), `test_eblouissement_en_jeu`
+verts. (Décomptes remis le 2026-09-11, au lot C, à la convention « sans la ligne de
+synthèse ✓ Tous les tests passent » ; ils la comptaient.) Les nouveaux contrôles passent par un joueur de carton qui COMPTE ses appels
+(le total ne prouvait rien), par le vrai chemin (`_maj_gadgets`, le vrai joueur, ses
+lumières comptées par type) en manche ET à l'entraînement, et lisent la lueur
+RENDUE face à l'éblouissement, avec un témoin de ligne de vue. **Sabotages exécutés,
+chacun vu rougir puis remis** : la brûlure par image remise (126 et 1 008
+appels au lieu de 8, 1 008 lumières, 33,6 PV) ; `if` au lieu de `while` (un tic au
+lieu de quatre) ; la marge retirée (sept tics au lieu de huit à 2,0 s pile, aux deux
+cadences) ; la charge effacée dehors (traversée et allers-retours à zéro) ; le
+`gain` retiré de la branche gadgets, et le rayon remis à l'échelle (le rapport
+éblouissement / lueur cesse d'être constant) ; `energie_relative()` retiré du
+socle (erreurs de script, que `run_suites.sh` attrape) ; le fondu remis dans
+`appliquer_effets()` seul (la lueur reste à 1,8) ; la garde de `_maj_gadgets`
+réduite à la manche (zéro PV à l'entraînement) ; la ligne de vue coupée — et
+celui-là ne fait rougir QUE le témoin : le rapport « constant » passe sur des
+zéros, c'est ce qui justifie le témoin.
+
+**La revue du lot en a ajouté trois**, sur des défauts que la suite laissait passer
+en vert — chacun vu vert sur l'ancien test, rouge sur le nouveau :
+- **`super(delta)` retiré** de `GadgetBraises._physics_process()` : la nappe ne
+  vieillit plus, ne pâlit plus, ne meurt plus, chez les deux pairs. Le test forçait
+  `_age` à la main et appelait `_physics_process(0.0)` : il court-circuitait le
+  chemin qu'il gardait. L'âge avance désormais par `_physics_process(Δ)`, et la
+  nappe doit s'éteindre d'elle-même à `duree_vie` — quatre contrôles rougissent.
+- **L'alpha de l'image retiré du fondu** : rien ne le lisait, seule la lueur
+  l'était. L'image doit valoir lueur / pleine lueur à chaque âge, et passer sous
+  0,5 en fin de vie.
+- **La charge VERSÉE à la sortie puis effacée** — l'alternative rejetée plus haut :
+  « la charge est gardée dehors » comptait un appel sans en lire le montant, et
+  passait sur un tic de 3,2 PV. Il exige désormais 4 PV.
+
+Et le commentaire de `TOLERANCE_TIC` disait « la charge reste sous huit » : faux,
+une image d'une seconde la porte à seize. La marge tient pour une autre raison,
+écrite désormais : ôter un tic est exact à toute charge qui passe le seuil, seules
+les additions arrondissent — au pire 2e-12 PV sur la vie d'une nappe à
+480 images/s, près de cinq cent mille fois sous la marge (vérifié en doubles).
+
+⚠️ **Ce qu'aucune suite ne rend, à voir en jeu** : une vibration de 0,25 s toutes les
+0,25 s (continue, comme avant), un souffle quatre fois par seconde sans
+étranglement, la lumière d'impact qui pulse, la barre de vie qui secoue à chaque tic,
+la vignette qui pulse au lieu de rester fixe — et le recensement des lumières près
+d'une nappe au panneau F3 (quatre à cinq d'impact, plus torches, lueur et fusée,
+contre quinze par item).
+
+### Étape 28 — lot B : l'ombre habitée arrête ce qu'elle montre, et le voile recule hors des corps ✅ (2026-09-11)
+
+Deux suggestions d'après l'étape 27, retenues par Adrien : la collision de l'ombre
+habitée, et le voile posé sur un joueur — tranché : « on recule le point de pose ».
+Elles ferment les deux signalements de l'étape 25 (l'ombre habitée et son disque ;
+« un voile posé sur un joueur n'est pas refusé »), et celui de l'étape 27 sur
+l'ombre habitée.
+
+**1. L'ombre habitée arrête balles et regard par sa plaque.** Sa collision était le
+disque de 18 px du socle autour d'une plaque de 36 × 6 : une balle qui longeait la
+plaque à 10 px de son plan s'arrêtait sur du vide, et l'éblouissement butait sur un
+disque que la lumière traversait — le piège « Une forme héritée du socle ment en
+silence », en petit. `GadgetOmbre._forme_de_collision()` rend la plaque, celle de
+l'occluder au pixel près, sur le patron du voile.
+**Le crochet `regard_par_la_forme` n'a pas servi**, contrairement à ce que l'étape
+27 suggérait : il ne corrige que le rayon d'éblouissement, et la BALLE lit la
+collision (son `ShapeCast2D`). Seul, il aurait laissé les balles s'arrêter sur le
+disque. La collision devait donc changer de toute façon — et une fois égale à
+l'ombre, le rayon d'éblouissement la lit telle quelle. Le crochet reste au leurre,
+dont les deux formes doivent différer. Le sprite (40 × 12) déborde la plaque de 2 et
+3 px, moins que les 4 px de rayon de la balle : aucune balle ne traverse ce qu'on
+voit de l'objet (calculé). **Protocole 17**, fil intact, sens changé — un client
+d'avant arrêterait ses balles prédites sur l'ancien disque : carnet complété.
+
+**2. Un voile ne naît pas sur un corps : son point de pose recule** — voir
+« Décisions actées », 2026-09-11. Chez l'hôte, `spawn_gadget` passe par
+`GameState.point_de_pose_libre()` : le point de toujours (`_point_de_pose`, devant
+le poseur, en deçà du premier obstacle), puis, pour un gadget à
+`arrete_les_joueurs` — le voile seul —, `_reculer_hors_des_corps()` le ramène vers
+le poseur par pas de 2 px jusqu'à ce que la bande, à sa rotation, ne chevauche plus
+aucun corps en jeu, **poseur compris**. Le chevauchement se calcule par
+`Shape2D.collide`, sur les pièces convexes du polygone du joueur (nez compris) et
+les transformées des nœuds — pas par une requête d'espace, qui voit un corps
+téléporté un pas en retard. La forme vient d'une instance jetable de la vraie classe,
+jamais d'une table recopiée : une seconde copie de la forme serait le même piège, en
+plus retors. Un J2 décalé de 30 px dans la bande : voile à 70 px au lieu de 96,
+mesuré dans Godot comme calculé à la préparation.
+**Sans place**, la pose est refusée : ni RPC, ni recharge, ni numéro. ⚠️ **Et la
+place manque plus souvent qu'on ne l'avait cru en tranchant.** Le recul ne cherche
+qu'en deçà du premier obstacle du rayon de pose, et cet obstacle peut être
+l'ADVERSAIRE (les joueurs sont sur la couche des murs). Sans aucun mur, un
+adversaire dans l'axe à bout portant fait donc refuser la pose : jusqu'à 60 px de
+centre à centre dos tourné, 70 face au poseur — son bord le plus proche à 42 px ou
+moins du centre du poseur, la bande de 13 px n'a plus la place entre lui et le nez
+du poseur. Balayé dans Godot sans mur : 403 refus sur 11 639 positions de J2, tous
+là où le rayon s'arrête sur lui ; aucun sur les 10 313 où il ne le rencontre pas.
+La préparation affirmait « sans mur, un corps seul ne barre jamais toute la
+course », sur un script qui faisait toujours partir le recul de 96 px et ne voyait
+donc pas le rayon s'arrêter sur l'adversaire. Hors ce cas : un mur à moins de
+40,5 px du centre du poseur, ou un adversaire coincé contre un mur proche. Le
+désarmement de 0,30 s a eu lieu des deux côtés (`poser_gadget`, chez l'hôte et dans
+la prédiction du client), et c'est ce qui garde les pairs d'accord ; le point final
+voyageait déjà dans `rpc_spawn_gadget`, le fil ne bouge pas. La fonction est
+publique pour qu'un client puisse s'en servir en **pré-contrôle local** — dire le
+refus au joueur —, jamais pour décider. Ce retour ressenti n'est pas dans ce lot.
+
+**Ce qui change au ressenti** : face à un mur tout proche, le voile ne se pose plus
+— il serait né dans le nez du poseur ; posé sur un adversaire que la bande
+couvrirait, il naît devant lui au lieu de l'engloutir — **sauf à bout portant** : un
+adversaire dans l'axe à moins de 60 à 70 px fait refuser la pose, en silence (voir
+« Signalé, non corrigé »).
+
+⚠️ **Trouvé en route, et c'est le plus lourd : tout gadget posé en jeu naissait à
+12 px de son poseur, dans son propre corps.** Le rayon de `_point_de_pose` ne
+l'excluait pas. Le polygone du joueur est concave : le moteur le découpe en deux
+pièces convexes, le disque et le nez. Le rayon, parti du centre, ignore la pièce où
+il naît, mais il entre dans le NEZ à 18 px — et la marge de 6 px posait le gadget à
+12. Mesuré dans Godot, par le vrai joueur qui appuie sur sa touche, pour le voile
+comme pour l'ombre ; vrai de tous les gadgets depuis l'introduction de la fonction
+(`f161232`, 2026-09-09). **Aucune suite ne le voyait** : toutes téléportaient le
+poseur et posaient dans la même image, avant que le moteur ne l'ait déplacé — le
+piège « Un corps cinématique téléporté n'existe pour les requêtes qu'au pas
+suivant », du côté où il rend vert. C'est le témoin du recul qui l'a montré (voile à
+12 px, J2 loin) : sans correctif, le recul aurait refusé tout voile en jeu. Le poseur
+est désormais exclu du rayon, et les gadgets naissent à 96 px, comme l'étape 10 le
+voulait. ⚠️ **C'est un changement ressenti pour les dix gadgets**, à voir en jeu.
+Le rayon s'arrête toujours aux AUTRES corps, sur la couche des murs : un adversaire
+dans l'axe ramène le point 6 px devant lui — le recul en écarte le voile, ou le
+refuse quand l'adversaire est à bout portant (voir plus haut).
+
+**Validation** : `test_tir_et_reserves` (189 contrôles, dont 40 neufs),
+`test_classes` (376), `test_vision` (40), `test_protocole` (9), `test_charte`,
+`test_menus_finitions` (51), `test_liaisons` (55), `test_eblouissement_en_jeu` verts.
+Les nouveaux contrôles tirent de vraies balles (`_do_spawn_bullet`, J2 écarté de
+leur ligne, chaque balle libérée ensuite), lisent la vraie ligne de vue
+d'éblouissement, posent par le vrai `spawn_gadget` aux drapeaux d'un VRAI match —
+en bac à sable, `gadget_disponible()` rend toujours vrai et « rien d'armé » ne
+prouverait rien —, et par le vrai joueur qui tient sa touche, sans contrôle suspendu
+au temps réel. Chaque contrôle négatif a son témoin : ombre retirée, mur retiré, J2
+hors de la bande, l'ombre qui ne recule pas, J2 dans l'axe à 62 px. Sur l'ancien
+code, 17 des 36 contrôles de la première écriture rougissent.
+**Sabotages exécutés, chacun vu rougir puis remis** : le poseur retiré du recul
+(7 contrôles : le voile naît dans son nez, la recharge s'arme) ; le numéro compté
+avant le refus (2) ; le recul par pas de 20 px (1 : trop loin) ; le drapeau ignoré
+(2 : l'ombre recule) ; le poseur remis dans le rayon de pose (10, dont trois de la
+recharge de l'étape 24 : le voile refusé partout) ; la forme de l'ombre rendue au
+socle (5). **À la correction du lot B** (même jour), sur la suite complétée : un pas
+de recul en trop (2 : « un pas plus loin, il mordrait J2 » — l'ancien contrôle, à
+deux pas, restait vert — et le témoin à 62 px) ; le poseur retiré du recul (9, dont
+le refus à bout portant et « rien d'armé ») ; le recul qui refuse tout (2, dont le
+témoin à 62 px ; le refus à 55 px reste vert, comme il doit).
+
+⚠️ **Signalé, non corrigé** :
+- **question pour Adrien — le refus à bout portant** : sans aucun mur, un adversaire
+  dans l'axe à moins de 60 à 70 px (de centre à centre) fait refuser le voile, en
+  silence — le voile posé à bout portant sur l'adversaire qu'on vise, au
+  corps-à-corps de face. Le comportement n'est pas changé ; un contrôle le fixe
+  (`test_tir_et_reserves` : J2 à 55 px dans l'axe, refus ; témoin à 62 px, voile en
+  (436, 400)). Autre choix possible, qui est un choix de design : pour un gadget qui
+  arrête les joueurs, faire ignorer les joueurs au rayon de `_point_de_pose` (murs
+  seuls) ; le recul partirait alors de 96 px, et le voile pourrait naître DERRIÈRE
+  l'adversaire. C'est aussi un argument pour le retour ressenti du lot C ;
+- **le refus est muet** : le joueur perd 0,30 s de tir et rien ne le lui dit — un
+  geste qui échoue en silence, ce que V4.4 avait retiré pour la détente. Le retour
+  ressenti passera par `point_de_pose_libre()` en pré-contrôle local ; un retour
+  décidé par l'hôte exigerait un RPC neuf, donc un changement de fil ;
+- les autres gadgets posés face à un adversaire dans l'axe naissent à 6 px de son
+  corps ;
+- `tools/test_classes.gd` dit « aucune suite ne fait voler de balle » — faux depuis
+  l'étape 23 (`ad2c50f`, 2026-09-10 : `test_tir_et_reserves` y tire par le vrai
+  joueur) ; et son contrôle « planté devant le poseur » pose dans l'image de la
+  téléportation : il était vert sur le défaut des 12 px ;
+- **en ligne, rien d'éprouvé à deux instances** : un voile posé à moins de 2 px d'un
+  corps chez l'hôte peut mordre le corps prédit du client — une petite correction,
+  comme devant tout obstacle qui apparaît.
+
+### Étape 28 — lot C : des refus qui se sentent, et des jauges de recharge sous les cartouches ✅ (2026-09-11)
+
+Deux suggestions d'après l'étape 27, retenues par Adrien : le point 5 — un appui de
+fusée ou de gadget refusé ne produisait RIEN — et le point 7 — dire quand revient
+la prochaine fusée, et chaque recharge de gadget, par « une jauge sans texte sous
+la cartouche ».
+
+**1. Un refus se sent.** Réserve de fusées vide, gadget en recharge de pose, bobine
+du grésillement éteinte sous le seuil de rallumage, voile sans place : l'appui fait
+trembler la cartouche FUSÉES ou GADGET et vibrer la manette — 0,35 pendant 0,05 s,
+la signature du percuteur à vide, délibérément : un refus a un seul goût dans la
+main. Jusqu'ici seul le tir à sec avait ce retour (V4.4) ; les autres refus étaient
+des gestes qui échouent en silence, ce que V4.4 avait retiré pour la détente.
+- **Chez qui a pressé seulement** (`_percu_ici`) : l'hôte simule aussi le client, et
+  sentir ses refus lui apprendrait que l'autre vient d'essayer. **Aucun son** : un
+  son parlerait au monde.
+- **Jugé sur l'état d'AVANT l'appui**, par des fronts BRUTS (`_fusee_tenue`,
+  `_gadget_tenu`) séparés des verrous de simulation (`_fusee_pressee`,
+  `_gadget_pressee`), qui portent le lancer, la pose et le désarmement et doivent
+  rester identiques chez l'hôte et dans la prédiction du client. Évaluée après les
+  blocs de lancer et de pose, la dernière fusée lancée se serait lue comme un refus.
+- **Un appui pendant le cooldown de tir n'est pas un refus** : il part à son terme.
+  L'extinction d'une bobine passe toujours ; seul le rallumage a un seuil, lu en UN
+  endroit (`GameState._rallumage_refuse`) par l'arbitrage et par le ressenti.
+- **Le voile sans place** (décision de l'orchestrateur, sur le lot B) : la place
+  reste décidée par l'hôte. Chaque pair appelle `point_de_pose_libre()` au moment où
+  SA pose part ; sans place nulle part, le refus se sent — mais la demande part
+  quand même vers l'hôte, et le désarmement de 0,30 s a lieu des deux côtés,
+  strictement comme avant : le pré-contrôle n'ajoute QUE le ressenti. Prix connu :
+  le client voit l'adversaire 100 ms en retard, et peut sentir un refus que l'hôte
+  accepte, ou l'inverse. Ferme le signalement « le refus est muet » du lot B.
+- Le Spectre tremble aussi sur la touche de fusée — il n'en porte aucune : « un
+  appui qui ne produit rien se sent ». Choix par défaut, à confirmer en jouant.
+- **Le tremblement** : horizontal (le « non » de la tête), 3 px, 14 Hz, 0,22 s — la
+  durée du tir à sec —, un cosinus pour que le premier écart soit franc, sous une
+  enveloppe `1 − Charte.courbe(SORTIE)` qui garde trois allers-retours visibles puis
+  s'éteint. Curseur CONFORT « Tremblements de l'interface ». ⚠️ **Une exception à
+  V4.4 (« Dessiné, pas déplacé »), qui répond à sa raison** : le contenu d'une
+  cartouche est un conteneur entier, qu'on ne redessine pas décalé. Le décalage est
+  donc réappliqué APRÈS CHAQUE TRI, dans `_notification(NOTIFICATION_SORT_CHILDREN)`
+  — Godot l'appelle après le placement natif, vérifié dans Godot : neutralisée, le
+  contenu reste au bord (2 px au lieu de 5) —, et la cartouche demande elle-même son
+  tri tant qu'elle tremble, sans s'adosser au remplacement de stylebox qui la retrie
+  aujourd'hui à chaque image.
+- **Décompté avant toute sortie anticipée** (revue du lot, 2026-09-11) : les deux
+  minuteurs de refus se décomptent en TÊTE de `_physics_process`, avant la mort, le
+  menu, le décompte de départ et la manche finie. Placés après ces gardes, un refus
+  armé dans les 0,22 s qui précèdent la fin d'une manche se FIGEAIT jusqu'au FIGHT
+  suivant — et le HUD, qui le recopie à chaque image, tenait la cartouche décalée
+  tout l'entre-manche, puis la faisait trembler sur un appui que personne n'avait
+  fait. Reproduit dans Godot : 0,17 s figées sur 120 pas hors manche, le contenu
+  décalé de 1,2 px au repos ; après correction, 0 et 0. Ce sont des minuteurs de
+  RESSENTI, que la simulation ne lit jamais : les décompter partout ne fait pas
+  diverger les pairs.
+
+**2. Les jauges.** Un trait de 2 px, 2 px SOUS la cartouche, hors de son rectangle,
+sur une piste pleine largeur (`Charte.LINE`) — lisible quelle que soit la teinte de
+la bordure. DESSINÉ, pas un nœud : une commande de dessin ne compte pas dans la
+taille minimale, et la cartouche ne s'élargit pas (piège « Un libellé ne coupe
+pas »). Aucun texte, décision d'Adrien. **La règle : la jauge dit le NIVEAU de ce
+qui se recharge ou se consume, et disparaît quand rien ne bouge.**
+- **Fusées** : la part faite de l'attente de la prochaine ; absente réserve pleine,
+  et chez le Spectre. Une attente NULLE rend une jauge PLEINE (« imminente ») et non
+  une absence : chez le client, le décompte touche zéro un peu avant ou après le
+  paquet qui apporte la fusée, et la jauge ne doit pas s'effacer avant que
+  « FUSÉES n » ait bougé. L'autre moitié est chez `game_state` : le décompte du
+  client s'arrête à zéro, sans quoi le paquet en retard trouverait une attente
+  négative, rendue en absence. Et le départ de manche remet l'attente à « rien ne
+  revient » : sinon un client qui a lancé juste avant la fin d'une manche montrerait
+  une jauge pleine sous sa réserve pleine jusqu'à son premier lancer — l'hôte, rien
+  n'ayant changé pour lui, n'annonce rien qui la corrige.
+- **Recharge de pose, les dix gadgets** : la part faite de la minute. Le titre garde
+  « RECHARGE · 42s » — voir la question plus bas.
+- **Batterie du grésillement** : son NIVEAU dès la pose — elle descend allumée,
+  remonte éteinte, et disparaît pleine et éteinte. « `batt < 1` » seul la faisait
+  surgir d'un coup à l'image qui suit la pose. Le compte à rebours de l'étape 27, sur
+  l'icône, reste.
+
+**3. Le fil — protocole 17, forme changée.** L'accumulateur de fusées reste chez
+l'hôte seul (`FlareProfile.avancer` dit pourquoi). Mais `rpc_stock_fusees` gagne
+l'ATTENTE avant la prochaine : l'hôte l'envoie à chaque changement de réserve —
+regain, changement de classe, et désormais le LANCER, sans quoi le client verrait
+sa réserve baisser sans qu'aucune attente commence ; seulement si le stock a bougé
+(au bac à sable libre, le lancer ne décompte rien). Le client la DÉCOMPTE entre
+deux envois, sous la même garde que l'accumulateur de l'hôte, et ne l'estime pas
+(décision « l'estimation est un mensonge », 2026-08-18) : il est exactement l'hôte
+retardé d'un demi-RTT. Pas de valeur par défaut sur le nouvel argument : un
+appelant oublié lève une erreur de script. `Protocol.VERSION` reste **17** (non
+publié — v0.5.0 est sortie en 16) ; le témoin a d'abord rougi, puis a été recopié
+après avoir tranché : `9f4e2b539bc2175e`. Coût : un paquet fiable de plus par fusée
+lancée. Pour la recharge de pose, le client savait déjà tout — son minuteur démarre
+à la pose qu'il voit, raccourci d'un aller-retour : sa jauge est en AVANCE d'au plus
+un RTT, l'inverse de la fusée, et voulu. En ligne, le panneau adverse reste caché :
+rien de neuf n'est montré hors de l'écran scindé. Reprend la note de l'étape 18
+(« l'attente n'est pas affichée chez le client »).
+
+**Écran scindé** : rien n'est élargi — jauge dessinée, tremblement après tri. Les
+avertissements des étapes 24 et 27 sur le débordement de la fiche de J2 sont levés
+depuis que cette fiche suit la largeur de son contenu (`ui.gd::_build_player_hud`,
+session des effets en jeu, 2026-09-11).
+
+⚠️ **Pour juger le point 5, Adrien doit remonter deux curseurs.** Son `settings.cfg`
+porte « Tremblements de l'interface » et « Vibrations de la manette » à 0, comme
+tous ses curseurs CONFORT (relevé le 2026-09-11) : manette en main, il ne sentirait
+rien et conclurait que rien ne se passe. Les remonter au-dessus de 0 dans les
+options — ou juger au photographe sous un `HOME` dont le `settings.cfg` porte
+`intro_vue=true` (sous un `HOME` neuf, il photographie l'intro au lieu du jeu :
+constaté au lot D). Le test calcule son attendu
+avec le curseur RÉEL et exige un décalage nul quand il vaut 0 ; la référence reste
+`run_suites.sh`, sous un `HOME` neuf.
+
+**Validation** : `test_tir_et_reserves` (275 contrôles, dont 86 neufs),
+`test_classes` (376), `test_protocole` (9), `test_netcode` (82, en scène),
+`test_charte` (241), `test_curseurs_branches` (36), `test_menus_finitions` (50),
+`test_liaisons` (55), `test_effect_policy` (65), `test_fusee` (60),
+`test_fusee_eteinte` (7), `test_hud_style` (22), `test_prediction_tir` (15),
+`test_vision` (40), `test_vitrine_menus` (123), `test_eblouissement` (31),
+`test_curseur_joystick` (16), `test_brouillage` (57) verts, sous un `HOME` neuf.
+
+⚠️ **Trois contrôles de la secousse, verts seuls, rougissaient dans le lot** : un
+`settings.cfg` écrit plus tôt dans le `user://` partagé du lot (`intro_vue=true`) y
+laisse le HUD caché, et un conteneur caché ne trie pas ses enfants. Le test rend
+désormais visibles les ancêtres de la cartouche le temps de ses contrôles, et le
+vérifie par un contrôle neuf ; sans ce geste (sabotage exécuté), les trois contrôles
+et le neuf rougissent. Rejoué dans l'état du lot : vert. Voir le piège « Vert seul,
+rouge dans le lot ». Suite complète (`./tools/run_suites.sh`) verte ensuite : 109
+suites, duos compris, 341 s.
+Décomptes SANS la ligne de
+synthèse « ✓ Tous les tests passent » — convention à laquelle les sous-sections A1
+et B ont été remises le même jour. Les refus sont éprouvés par le VRAI joueur qui
+presse, dans l'état réel de l'entraînement (`sandbox_mode` et `training_mode` vrais,
+`round_active` faux), l'état remis entre les cas. Les jauges de fusées par deux
+instances — l'hôte, la vraie scène ; le client, une `GameState` nue dont
+l'accumulateur n'avance jamais, comme en vrai —, reliées par une FILE DE PAQUETS
+DATÉS : le client au pas k doit afficher ce qu'affichait l'hôte au pas k − m, sans
+fenêtre exclue, à RTT nul (pas grossiers, un regain à 0,5 s de report) et à 100 ms
+(pas de 0,05 s, 520 pas). Aucun autoload n'est nommé à la compilation.
+La VIBRATION est éprouvée par sa DEMANDE, pas par la manette : les suites n'en ont
+pas, et `_rumble` sort à sa première ligne hors d'un `LocalInputProvider` — la
+revue du lot a retiré les deux appels du refus sans qu'aucune suite rougisse. Une
+prise d'essai, `derniere_vibration`, note la vibration demandée avant tout filtre ;
+le jeu ne la lit jamais. La butée à zéro du décompte client et la remise à « rien
+ne revient » au départ de manche — par le vrai `_do_start_round`, en dernier dans la
+suite — ont chacune un contrôle direct : la file de paquets, à latence fixe, ne les
+exerçait pas, et la revue les avait sabotées sans rien voir rougir.
+**Sabotages exécutés — 30, chacun dans une COPIE du dépôt, vu rougir** : pas
+d'annonce au lancer (4 contrôles) ; la période annoncée au lieu de l'attente (2) ;
+la branche client d'`attente_fusee` retirée (4) ; le décompte client retiré (3) ;
+sa garde de manche retirée (2) ; `_percu_ici` retiré du ressenti (2) et du
+pré-contrôle du voile (1) ; le ressenti évalué après les blocs (3) ; le front pris
+sur `_fusee_pressee` (1) ; la condition de réserve retirée (2) ; la recharge de pose
+ignorée (1) ; le seuil de rallumage qui ne refuse jamais (2) ; le pré-contrôle du
+voile retiré (1), ou qui RETIENT la pose — désarmement asymétrique (3) ; la
+`_notification` de la cartouche neutralisée (1) ; les secousses jamais recopiées,
+gadget (1) et fusées (1) ; la règle « `batt < 1` » seule (1) ; -1 à attente nulle
+(1) ; la jauge posée en nœud (2) ; un libellé ajouté dans la cartouche (1) ; la
+jauge de pose jamais posée (4), ou non masquée quand le gadget est prêt (2) ; chaque
+recopie qui relance l'enveloppe (1) ; la jauge des fusées jamais posée (6). Puis,
+après la revue du lot, la copie intacte d'abord (témoin vert), et : les refus
+décomptés après les gardes de manche (2) ; la butée à zéro retirée (2) ; la remise
+à -1 du départ de manche retirée (2) ; la vibration du refus retirée (4) ; la prise
+d'essai rendue muette (5).
+Un premier jet du contrôle « la jauge dès la pose » passait sur la règle fautive :
+l'image attendue après la pose avait entamé la batterie (0,999). Il remet la
+batterie à 1,0 exactement, l'état de la pose.
+
+⚠️ **Signalé, non corrigé** :
+- **un appui refusé, TENU, part tout seul au retour de la ressource** : le verrou de
+  simulation n'est posé qu'au lancer ou à la pose. Près du regain d'une fusée ou de
+  la fin d'une recharge, on sent le refus, puis le geste part sans nouvel appui.
+  Défaut antérieur au lot ; le corriger touche la simulation des deux pairs ;
+- **faux refus chez le client**, rares et non mesurés : pendant au plus un demi-RTT
+  après un regain de fusée (l'hôte a regagné, le client ne le sait pas encore — la
+  fenêtre où sa prédiction de lancer se trompe déjà), et pendant environ un RTT
+  autour du seuil de 5 % de la batterie. Le corriger reviendrait à prédire le regain ;
+- l'ordre `rpc_spawn_fusee` puis `rpc_stock_fusees` sur le canal fiable est supposé,
+  pas éprouvé sur EOS : inversés, le client décompterait deux fois sa réserve
+  jusqu'à l'annonce suivante. Le code s'y fie déjà ailleurs (pose puis retrait d'un
+  gadget) ;
+- l'icône grisée du grésillement porte son chiffre à 45 % d'opacité dans l'état
+  CHARGE : `modulate` se propage à l'enfant, `self_modulate` le corrigerait ;
+- **`tir_a_sec` (V4.4) porte le défaut du refus figé**, antérieur au lot et relevé
+  par sa revue : décompté APRÈS les gardes de manche, un tir à sec pressé dans les
+  0,22 s qui précèdent la fin d'une manche figerait le tremblement du cercle de
+  recharge jusqu'au FIGHT suivant (`CircularCooldown`, que le HUD recopie à chaque
+  image). La correction appliquée aux deux refus du lot — le décompter en tête de
+  `_physics_process` — ne lui a pas été appliquée : hors du lot, et non reproduit ;
+- **rien n'est capturé** : la lisibilité du trait sous la cartouche, sur la teinte du
+  joueur, demande une capture au photographe mesurée au pixel ; le dosage du
+  tremblement et de la vibration, la manette en main.
+
+**Question pour Adrien** : les secondes de la recharge de pose restent dans le titre
+(« RECHARGE · 42s »). La cartographie du lot proposait de les déplacer DANS l'icône,
+comme celles du grésillement, et de ne laisser au titre que l'état. C'est un choix de
+présentation qu'il n'a pas tranché : non livré.
+
+### Étape 28 — lot D : le leurre rendu comme un corps, vue par vue, et un repère réservé au poseur ✅ (2026-09-11)
+
+Deux suggestions d'après l'étape 27, retenues par Adrien : le point 4 — le leurre,
+un seul polygone dessiné dans les deux vues, se trahissait par ce qu'il avait EN PLUS
+d'un corps — et le point 10 — dire au poseur où s'arrête l'effet d'un gadget dont
+le bord ne se voit pas dans le noir. Rien ne passe sur le fil.
+
+**1. Le leurre, un corps par vue — le patron de `player.gd`.** Il portait un seul
+`Polygon2D` sur les trois masques de lumière (1|2|4), sans shader, sur la couche 1
+que les deux vues dessinent : il recevait l'écho au sol d'un tir (couche 1, sans
+ombre) et les étincelles (1|4, sans ombre), qu'aucun corps adverse ne reçoit, et
+suivait le dégradé des lumières là où un corps adverse est un aplat plafonné. Il
+en porte désormais deux, bâtis par la même fonction (`_corps_de_silhouette` : même
+quad, mêmes UV, même silhouette, teinte `Charte.ADVERSAIRE`, même profondeur) :
+- **`Visuel`, le corps que voit l'ADVERSAIRE** — `visual_enemy` trait pour trait :
+  masque de lumière 2, shader `player_enemy_light` préchargé par son CHEMIN (jamais
+  `Player.SHADER_ENEMY_LIGHT` : un gadget qui nommerait `Player` ferait cesser
+  `test_classes` de compiler), couche de la vue de l'autre joueur. Le nom lui reste :
+  c'est lui qui trompe.
+- **`VisuelPoseur`, le corps que voit le POSEUR** — sur sa vue seule, sous les
+  lumières de son propre corps (masque 4), SANS le shader adverse, ni celui de son
+  corps à lui, ni son image peinte : c'est le leurre qu'il a planté, pas lui. Seul
+  le masque 4 est commun avec `visual`.
+- L'effacement de l'étape 27 (suie, fumée — `GadgetBase.effacements_a`) s'applique
+  aux DEUX : le poseur voit son leurre disparaître là où l'adversaire le perd.
+- La règle des couches vit en un endroit, `GadgetBase.couche_de_vue(pid)` — 2 pour
+  J1, 4 pour J2 ; un pid hors de {0, 1} crie et rend 0 (nulle part), jamais la
+  couche 1 qui serait les deux vues. Les suites comparent aux nœuds du VRAI joueur
+  et aux VRAIS masques de cull, qui restent la source.
+
+⚠️ **À l'entraînement, seule la vue de J1 est rendue** : Adrien n'y verra plus son
+leurre tel que l'adversaire le voit. Seule une capture le montre (plan `leurre` du
+photographe).
+
+**2. Le repère du poseur** (décision actée, Adrien : « pas grave si en écran scindé
+l'autre le voit »). Un cercle ténu du rayon d'effet — un `Line2D` fermé nommé
+`Repere`, 96 points, 1,5 px, anticrénelé, `Charte.HALOGENE` à 0,28 (la famille du
+viseur) —, non éclairé (`materiau_peint_lumineux` : un `light_mask` à 0 seul le
+laisserait noir sous le `CanvasModulate`), posé sur la couche de la vue de son
+poseur, en profondeur ABSOLUE 2 : au-dessus du sol, des murs (0) et des traces de
+poudre (1), sous le gadget qu'il entoure (4), sous la nappe des braises (7) et sous
+les corps (10). Il passe donc par-dessus les murs : les quatre zones sont en
+distance pure.
+- **Quatre gadgets, le plancher validé**, chacun avec le rayon qui DÉCIDE l'effet,
+  réglé dans son `_init()` (`rayon_repere`) : la mine **72** (le déclenchement, pas
+  les 460 de l'aveuglement ; caché dès qu'elle s'allume, puisqu'elle ne se déclenche
+  plus), le grésillement **240** (le même allumé ou éteint : la zone ne bouge pas),
+  la poudre **110**, les braises **68** — dessiné SOUS leur nappe, il ne se voit que
+  là où la peinture ne couvre pas (le garde n'exige que 90 %) ou pâlit (35 % en fin
+  de vie) : le bord qui manque. Les six autres ont une raison écrite dans la suite :
+  le voile, l'ombre et le leurre SONT des objets qu'on voit, la torche fantôme est
+  une lampe, et dans la suie ou la poussière le poseur se lit sur son propre corps.
+  Un onzième gadget doit se ranger d'un côté ou de l'autre.
+- **Chez qui** : `GameState._do_spawn_gadget` pose `repere_ici` avant l'entrée dans
+  l'arbre, par `_vue_du_joueur_ici(pid)` — les deux joueurs en local, le seul joueur
+  local en ligne (la règle de `_percu_ici`). **En ligne, le nœud n'existe même pas
+  chez l'adversaire** : aucune bascule de rendu, aucune killcam ne peut le révéler —
+  la logique du cadenas de torche. Le MODE et non le type du fournisseur d'entrées :
+  le photographe remplace les fournisseurs par des marionnettes, et une règle par
+  type ferait disparaître le repère de ses photos, en silence.
+- **Le chemin de rendu racine** (en ligne, à l'entraînement) n'est pas capturable :
+  le photographe le coupe. Il est couvert par `test_rendu_racine`, qui éprouve que
+  la racine recopie le masque de cull de la vue regardée.
+- **Coût** : au plus un repère par joueur (un gadget debout chacun), un `Line2D` bâti
+  une fois, aucun `_process`, aucune passe de lumière. Non mesuré au banc :
+  `bench_framerate` ne pose aucun gadget.
+
+**3. Le fil — rien.** Aucun RPC ne vise le repère ni les deux corps : ils naissent
+de `poseur_id` et de `classe_du_poseur`, que les deux pairs connaissent déjà.
+`Protocol.VERSION` reste 17, `WIRE_WITNESS` inchangé, rien au carnet — aucun sens ne
+change (`test_protocole` vert).
+
+**Capture — le photographe, sur ce poste, mesurée au pixel (PIL).** Fenêtre
+1920×1080, sous un `HOME` dont le `settings.cfg` porte `intro_vue=true` : sous un
+`HOME` neuf, l'intro joue par-dessus la séance, et le premier passage a photographié
+ses planches au lieu du jeu (voir plus bas).
+- **Repère** (plan `repere`, écran scindé, torches éteintes, luminance le long de
+  chaque cercle) : la mine de J1 rend **44,2** sur son cercle dans la vue de J1, **0,0**
+  à 4 px dedans et dehors, et **0,0** sur le même cercle dans la vue de J2 ; la poudre
+  de J2 rend **43,7** dans la vue de J2 (0,6 et 1,0 à ±4 px), **0,0** dans celle de J1.
+  Les braises de J1 à 85 % de leur vie : **48,6** sur le cercle dans la vue de J1,
+  contre **15,0** au même endroit dans la vue de J2, où la nappe et sa lueur sont
+  seules — le trait se lit au bord de la nappe. À l'œil : le trait de 1,5 px se lit à
+  1080p, la couture du `closed` ne se voit pas. **Le dosage (alpha 0,28, 1,5 px) reste
+  à valider par Adrien sur la planche.**
+- **Leurre** (plan `leurre`, vue de J1 torche allumée ; J2 Illusionniste, torche
+  éteinte, à même distance de l'autre côté de l'axe et à la même orientation que son
+  leurre), comparé AVANT le lot (une copie de `HEAD` par `git archive`, le nouveau
+  photographe dedans) et APRÈS : sous la torche de J1, le leurre et le vrai corps
+  sont le même trou noir — disques de 6, 9 et 12 px à **0,0** sur les deux, avant
+  comme après : chacun est dans son propre occluder, que la torche ombre. **Ce que
+  le lot change se voit sous l'écho au sol d'un tir** — lueur ambre de 200 px de
+  diamètre, sans ombre, couche 1 seule, éteinte en 0,12 s —, le leurre et J2 à 60 px
+  DERRIÈRE le tireur, torche de J1 éteinte (sa rétrodiffusion éclairerait les corps
+  voisins) : **avant, le leurre s'allumait à 59,8** (disque de 6 px, les 113 pixels
+  au-dessus de 5) **quand le vrai corps restait à 2,6 ; après, 1,8 contre 2,6** (4,1
+  contre 5,7 à 9 px, 7,3 contre 9,0 à 12 px). Il fallut trois passages pour le voir :
+  à 180 px l'écho était éteint (0,0 partout, avant comme après), à 70 px devant, la
+  gerbe de l'éclat de bouche recouvrait le corps — et le 172 qu'elle donnait n'était
+  pas le corps (vérifié : `body_light` tire son énergie de la torche de SON joueur,
+  pas de la lumière reçue).
+- **En sortie, le plan `leurre` rend la visée de J2** (trouvé en revue). Il la
+  tournait vers le cap du leurre et ne la rendait pas : pendant les images sans
+  `tenir` des plans `vue` qui suivent (rétrodiffusion, flash de tir, sang), J2
+  tournait vers ce cap au lieu de la visée commune, et leur composition dépendait de
+  la présence du plan `leurre` dans la sélection — l'écart que la Marionnette devait
+  supprimer. Mesuré à la fenêtre (rotation de J2 à la prise de `retrodiffusion`) :
+  **1,5737** seul, **1,5737** après `leurre` corrigé, **2,0691** après `leurre` sans
+  la remise.
+
+**Validation** : `test_classes` (390 contrôles, dont 14 neufs), `test_tir_et_reserves`
+(341, dont 66 neufs) — tous deux aussi sous un `HOME` dont le `settings.cfg` porte
+`intro_vue=true`, l'état où le lot les fait tourner (piège « Vert seul, rouge dans le
+lot ») : verts —, `test_rendu_racine` (25), `test_vision` (40), `test_lumieres` (51),
+`test_calques_joueur` (7), `test_charte` (241), `test_protocole` (9), `test_viseur`
+(23), `test_arena_lighting` (27), `test_arena_build` (21), `test_arena_matter` (39),
+`test_sang_au_sol` (134), `test_mur_led` (61), `test_screen_calibration` (114),
+`test_banc` (16, dont les appuis du photographe, qui gagnent
+`_do_spawn_gadget`) verts, sous un `HOME` neuf. Décomptes SANS la ligne de synthèse.
+Chaque contrôle de rendu vérifie d'abord que ce qu'il mesure est visible dans l'arbre —
+et, pour le repère, qu'il est DESSINÉ : « visible dans l'arbre » ne dit rien d'un trait
+d'alpha nul. **Trouvé en revue** : `ALPHA_REPERE` à 0, ou le `Line2D` décalé de 40 px,
+laissaient toute la suite verte. Le contrôle lit désormais la teinte PEINTE (couleur
+du trait × chaque `modulate` jusqu'à la racine) contre des planchers — alpha ≥ 0,1,
+largeur ≥ 1 px, luminance ≥ 0,3, ni `gradient` ni `width_curve` —, qui ne sont pas le
+dosage, et mesure le cercle dans le repère du GADGET, là où l'effet se décide.
+Le mode réseau est FORCÉ pour la pose (sans pair, `_apply_network_mode` retombe en
+local), sans image entre la bascule et sa restauration, et lu par son NŒUD et ses
+modes par CHAÎNE (`_nm()`, `_mode()` du lot C) : une suite en `--script` qui nommerait
+`NetworkManager` cesserait de compiler en entier. Le cas local crée les deux repères :
+les absences en ligne ne passent pas faute de création. La classe des deux joueurs,
+le mode, le bac à sable et les compteurs de pose sont remis en sortie.
+**Sabotages exécutés — 18, chacun dans une COPIE du dépôt, vu rougir, après un
+témoin vert sur chaque copie intacte** : le masque du `Visuel` remis à 1|2|4 (1
+contrôle) ; son matériau retiré (1) ; les deux couches interverties (4) ;
+`couche_de_vue(1)` en dur pour `Visuel` (1 : seul le leurre de J2) ;
+`couche_de_vue(0)` en dur pour `VisuelPoseur` (1 : seul le leurre de J2) ; la boucle
+d'effacement réduite à `Visuel` (1) ; le masque de `VisuelPoseur` remis à 1|2|4 (1) ;
+la couche du repère retirée (8) ou prise sur l'autre joueur (8) ;
+`_vue_du_joueur_ici` réduite à « vrai » (2 : hôte J2 et client J1) ; `repere_ici`
+jamais posé (9) ; le matériau non éclairé retiré (8) ; la mine sur le rayon qui
+aveugle (6) ; le repère des braises retiré (2) ; la mine allumée qui garde son repère
+(1) ; `z_as_relative` retiré (8 — le trait passait à 6, par-dessus l'image du gadget :
+le premier jet du contrôle ne comparait qu'aux murs et aux corps, et laissait passer
+ce défaut ; il compare désormais aussi au gadget) ; le repère du grésillement qui
+suit son état allumé (1 — le contrôle fait tourner un pas de sa physique entre les
+deux états, sans quoi il ne voyait rien) ; `Z_REPERE` à 8, par-dessus la nappe (9).
+Le sabotage « ordre de `GameMode` » du plan est sans objet : les modes sont lus par
+leur NOM. **Cinq de plus à la revue**, dans une copie, entre deux témoins verts, et
+sous un `HOME` à `intro_vue=true` : `ALPHA_REPERE` à 0, le trait décalé de 40 px,
+`LARGEUR_REPERE` à 0,5, le trait noir, son `modulate.a` à 0 — 8 contrôles rouges
+chacun (les huit repères vérifiés).
+
+⚠️ **Signalé, non corrigé** :
+- **L'occluder du leurre** (question pour Adrien, hors du lot). ✅ **Tranchée le
+  2026-09-12 — Adrien : « oui, qu'il ait l'ombre d'un corps » ; faite au lot G**, les
+  deux changements compris. Le constat qui suit décrit donc l'état d'AVANT, gardé pour
+  la raison : il est sur la couche
+  1, celui d'un corps sur la couche du corps de son joueur. La différence porte sur
+  les lumières dont le masque d'ombre vaut 1 seul — fusée, mine, braises, halo de la
+  torche fantôme : un vrai corps n'y fait pas d'ombre et y est éclairé, le leurre y
+  projette une ombre et reste noir dedans. Sous la lumière d'impact (ombre 1, portée
+  1|4 seulement), ni le corps adverse ni le `Visuel` du leurre (masque 2) ne sont
+  éclairés : seule y diffère l'ombre que le leurre porte au sol (corrigé en revue :
+  la première rédaction la rangeait avec les quatre autres) — et sur la FORME de
+  l'ombre sous la rétrodiffusion : un corps y oppose son disque de torse de 12, le
+  leurre son étoile. Sous la torche adverse, les deux sont dans le même cas (chacun
+  dans son propre occluder). La correction candidate demande DEUX changements —
+  l'occluder sur la couche du corps du poseur, ET un disque de torse de 12 sur sa
+  couche torse, sans lequel la rétrodiffusion adverse traverserait le leurre, ce
+  qu'elle ne fait pour aucun corps —, et l'arbitrage de l'éblouissement devrait
+  alors exclure les sources du poseur : un changement de SENS, au carnet, on reste
+  à 17. La couche 1 était un choix de l'étape 27.
+- **Le brouillage** : le jour où l'alpha du brouillage du corps cessera d'être écrasé
+  par la boucle d'occultation (déjà signalé), le `Visuel` du leurre devra le suivre, en
+  `modulate.a` seulement, sur l'éblouissement du joueur adverse — trouvé par le groupe
+  « players », jamais en nommant `Player`.
+- **Le photographe sous un `HOME` neuf photographie l'intro** : un `settings.cfg` sans
+  `intro_vue` lance l'intro à l'instanciation de `main.tscn`, et les plans `ecran` la
+  prennent (le premier passage de ce lot : une planche « ARENA » à la place de
+  l'écran scindé). Le conseil du lot C — « juger au photographe sous un `HOME`
+  neuf » — y mène tout droit ;
+- `player.gd`, note du viseur : « L'écran partagé est permanent, y compris en
+  ligne » — faux depuis le 2026-08-18 ;
+- `bullet.gd` : la traînée a pour masque d'ombre `1 | 4` — le corps de J1 (couche 4)
+  l'ombre, celui de J2 (couche 8) non : une asymétrie entre joueurs.
+
+**Questions pour Adrien** : ~~l'occluder du leurre (ci-dessus)~~ — ✅ tranchée et faite
+le 2026-09-12, lot G ; le dosage du repère sur la planche ; faut-il, à l'entraînement,
+un moyen de voir son leurre tel que l'adversaire le voit, ou la capture suffit-elle ?
+
+### Étape 28 — lot E : la télémétrie des gadgets dans l'archive des matchs ✅ (2026-09-11)
+
+La suggestion 8 d'après l'étape 27, retenue par Adrien (PE5). **H11 est ouvert** : les
+dix gadgets n'avaient jamais servi en match, et l'archive disait le résultat, les
+classes et les conditions — rien de ce que les gadgets avaient fait. Un gadget qui ne
+sert jamais, ou qui ne tue jamais personne, ne se voyait qu'en regardant jouer.
+
+**1. Ce qui est compté.** Un bloc `gadgets` par match (**schéma 6** de
+`match_record.gd`), produit par un module neuf, `telemetrie_gadgets.gd`
+(`TelemetrieGadgets` : comptabilité pure, sans autoload, l'horloge lui est passée).
+Par joueur : `poses`, `morts_balle`, `morts_fin_de_vie`, `allumages_passage`,
+`allumages_balle` (⚠️ **une seule clé `allumages` jusqu'au lot H, scindée le
+2026-09-12** — la liste est amendée ici parce que c'est celle qu'un lecteur recopie
+pour écrire une requête, le récit du lot E restant, lui, intact),
+`bascules_allume`, `bascules_eteint`, `batterie_vide`, `pv_braises_adversaire`,
+`pv_braises_soi`, `morts_adverses_apres_effet`, `morts_propres_apres_effet`, et le
+slug de son GADGET ; au premier niveau `version`, `fenetre_s` et `joueur_local` (−1
+hors ligne). **Aucune clé ne contient « classe »** — au premier niveau de
+l'enregistrement, `classe` est le booléen du classement (piège de la v4). Un
+dictionnaire vide quand rien n'a été compté ; une entrée v5 n'a pas la clé, et
+`MatchRecord.gadgets_de()` rend alors `{}`, **jamais des zéros** : « zéro pose » est un
+fait, « pas compté » n'en est pas un. La télémétrie repart avec le MATCH, pas la
+manche (`_do_start_round`, manches gagnées à zéro) : un BO3 archive un match.
+
+**2. Compté là où les DEUX pairs passent — et le fil devait changer pour ça.** Chaque
+compteur avance dans une fonction que les deux pairs exécutent pour le même
+événement : `_do_spawn_gadget` (par `rpc_spawn_gadget`), `rpc_allumer_gadget`,
+`rpc_etat_gadget`, `Player.rpc_update_hp` — et, pour la mort d'un gadget,
+`_sur_gadget_detruit` chez l'hôte, l'ORDRE `rpc_detruire_gadget` chez le client. **Le
+client ne compte jamais sur une décision locale** : il retire aussi ses gadgets à son
+propre minuteur de fin de vie, un demi-aller-retour après l'hôte, et une télémétrie
+déduite chez lui aurait fait deux archives différentes d'un même match. Deux trous
+l'interdisaient :
+- un PV de braises et une balle du poseur arrivaient par le même
+  `rpc_update_hp(new_hp, source_id)` — il gagne la CAUSE (`GadgetBase.DEGATS_BALLE`,
+  `DEGATS_BRAISES`) ; `take_damage` la prend avec un défaut « balle », qui garde
+  valides la balle et les neuf appels des outils ;
+- `rpc_detruire_gadget(nom)` ne disait pas pourquoi — il gagne `MORT_BALLE` /
+  `MORT_FIN_DE_VIE`, posée chez l'hôte par `abattu_par_balle`.
+
+Ni l'un ni l'autre n'a de valeur par défaut sur le fil (la leçon de la v11). Aucun RPC
+ni nœud nouveau. **`Protocol.VERSION` reste 17** (non publiée), le carnet est
+complété, `WIRE_WITNESS` recalculé APRÈS l'avoir tranché (`9f4e2b539bc2175e` →
+`ffd5924be23f866d`). Le crochet de `rpc_update_hp` est placé AVANT `die()`, qui
+archive le match de façon synchrone chez l'hôte, et sans `has_method` (la fusion du
+2026-09-09) ; la perte y est `hp − new_hp`, identique des deux côtés parce que le
+client ne touche `hp` qu'à cette ligne, au départ de manche et au retour au menu —
+qui met fin au match. **La liste se veut exhaustive, et elle l'était d'un cas trop
+court** : la revue du 2026-09-11 a rappelé le retour au menu (`game_state.gd`, deux
+écritures), que le contradicteur du plan avait déjà relevé. La conclusion ne change
+pas ; l'affirmation, si — un lecteur la reprend telle quelle.
+
+**Le nom reste littéral, son inverse vit dans `GadgetBase`.** Une mort ou un
+allumage de gadget est attribué par le NOM, par la même fonction chez l'hôte et chez
+le client : `GadgetBase.poseur_du_nom()`, l'inverse exact de
+`g.name = "GadgetJ%d_%d" % [pid + 1, numero]` — resté un littéral dans
+`game_state.gd`, que `test_classes` lit par son texte. La suite neuve lit ce littéral
+et éprouve l'aller-retour dessus : le jour où il change, l'inverse cesse de le suivre
+en rouge. En écran scindé, l'allumage passe désormais par l'ordre
+`rpc_allumer_gadget` en appel direct (le patron de `_annoncer_etat_gadget`) : un
+`g.allumer()` direct laissait le local à zéro allumage.
+
+**3. L'« effet » et la fenêtre.** Un effet est le moment où un gadget change la
+partie, par un événement reçu des deux côtés : la POSE (sauf une bobine posée éteinte,
+batterie sous le seuil — elle n'agit pas encore ; c'est aussi le seul événement
+discret des gadgets passifs), l'ALLUMAGE de la mine (passage ou balle), la BASCULE
+VERS ALLUMÉ du grésillement, chaque PV de BRAISES — poseur compris. Ne sont pas des
+effets : l'extinction (voulue ou imposée), la mort du gadget, son remplacement. **N =
+5 s** : elles couvrent l'embrasement de la mine (1,6 s) et le temps de l'exploiter,
+restent sous la plus courte vie d'un gadget continu (la poussière, 7,5 s) et loin de
+la recharge (60 s). Un choix de conception, pas un dosage éprouvé : `fenetre_s` et
+`version` voyagent dans le bloc pour le réviser sans mélanger les échantillons.
+L'effet est noté AVANT la mort : un dernier PV de braises tue à délai nul. Horloge :
+le temps RÉEL (`Time.get_ticks_msec`), jamais le delta (`Engine.time_scale`) ni
+`time_left` (recalé par sauts chez le client).
+
+⚠️ **Les deux compteurs de fenêtre sont les SEULS qui peuvent différer d'une archive à
+l'autre** : chaque pair date les événements à leur arrivée, et une mort qui tombe pile
+à 5 s d'un effet peut se ranger de part et d'autre, à la gigue du lien près. Écrit
+dans le code, et la requête de cohérence de `docs/SUPABASE.md` (section PE5) le
+détecte sur le terrain. L'ordre en dépend aussi : sous ENet, aucun `@rpc` ne déclarant
+de canal, les appels fiables partagent un canal ordonné — le PV mortel arrive avant
+`rpc_end_round`, et une mort simultanée se compte des deux côtés après l'archive.
+**Sous EOS, ce n'est pas établi.** Un forfait, archivé à deux instants différents,
+n'a pas deux blocs garantis identiques, par nature.
+
+**4. Un défaut corrigé au passage : `detruire()` n'avait pas de garde.** Deux balles
+dans la même image (le second `encaisser` repasse sous zéro), ou un gadget remplacé
+qui atteint sa fin de vie avant sa libération, émettaient `detruit` deux fois : deux
+ordres au client, deux morts comptées. `detruire()` rend la main sur un nœud déjà en
+file de suppression. Le client tolérait déjà l'ordre en double ; il en reçoit un de
+moins.
+
+**5. Le voyage — aucune migration, rien de déployé.** En ligne, le bloc part DANS
+`conditions` (`MatchRecord.conditions_a_envoyer()`, la seule fusion : l'envoi ET le
+rejeu du journal l'appellent) : le jsonb de PE2.3, borné sous 1 Ko pour un plafond de
+8 Ko. Le tamis serveur `parseGadgets` (`supabase/functions/_shared/match_report.ts`,
+dans le dépôt seulement) le passe à la liste blanche, **jamais un motif de refus**.
+Sans redéploiement de `report` (H14), l'ancien tamis jette `gadgets` sans refuser le
+rapport. Ses clés (`GADGET_NUMBERS`) sont comparées aux compteurs du jeu **dans les
+deux sens** par la suite neuve — le tableau lui-même, pas le fichier entier.
+
+**Lire les chiffres.** Pour la mine, `allumages` compte aussi les mines ABATTUES (une
+mine touchée demande l'allumage au lieu de mourir) : déclenchées par un passage ≤
+`allumages − morts_balle`, un **majorant** et non un compte. Une mine abattue meurt de
+son embrasement 1,6 s plus tard ; archiver le match avant — le cas même qui intéresse,
+une mort dans la foulée de la mine — ou purger la manche d'ici là ne lui compte aucune
+mort, et elle passe pour un passage. **Angle mort assumé** : les gadgets passifs, et
+une bobine allumée depuis plus de 5 s, ne sont vus que par leur pose ou leur bascule.
+
+⚠️ **Ce paragraphe est de l'HISTOIRE depuis le 2026-09-12** : `allumages` s'est scindé
+en `allumages_passage` et `allumages_balle`, deux comptes exacts, et le majorant a
+disparu — voir le **lot H**. L'angle mort des gadgets passifs, lui, n'a pas bougé ; et
+les colonnes de MORT restent muettes sur trois sorties (gadget encore debout, purgé au
+départ de manche, ou **remplacé** — ce dernier n'était nommé nulle part avant la revue
+du 2026-09-12, alors que c'est le plus fréquent des trois).
+
+**6. Ce que la revue du 2026-09-11 a corrigé.** Quatre défauts, tous tenus :
+- **les trois branches EN LIGNE n'étaient éprouvées par aucun test.** Sabotées
+  ensemble — l'hôte qui envoie `DEGATS_BALLE` en dur, l'hôte qui envoie
+  `MORT_FIN_DE_VIE` en dur, le client qui lit `cause != MORT_BALLE` —, les 143
+  contrôles restaient verts : les matchs de D tournent en écran scindé, et le
+  contrôle de texte ne lisait qu'un PRÉFIXE de la ligne, qui survit à une cause
+  inversée. La suite gagne une famille **E** où les deux chemins sont EXÉCUTÉS
+  (l'ordre `rpc_detruire_gadget` appelé comme une fonction, `take_damage` joué en
+  `ONLINE_HOST` — le pair hors ligne exécute `call_local` avec les arguments qu'un
+  vrai client recevrait), les contrôles de texte portent sur la ligne ENTIÈRE, et le
+  duo **abat** désormais la bobine avant le kill : la cause voyage pour de vrai ;
+- **« déclenchées par un passage = `allumages − morts_balle` » était faux** dans le
+  cas qui compte. Une mine abattue meurt de son embrasement 1,6 s plus tard ; si le
+  match est archivé avant — une mort dans la foulée de la mine — elle n'a pas de mort
+  dans le bloc et passe pour un passage. Reproduit sur le vrai `main.tscn`
+  (`allumages=1`, `morts_balle=0`, lecture « 1 passage » pour 0 réel). C'est
+  désormais écrit comme un **majorant** aux cinq endroits qui le disaient. Le porter
+  exactement demanderait que l'ordre d'allumage dise lui-même « par balle » : le fil
+  changerait encore, et c'est à Adrien de le trancher — **question ouverte** ✅
+  **tranchée le 2026-09-12 : faite au lot H**, et faite AVANT la publication, le fil
+  pouvant encore changer sous un numéro que personne n'a joué ;
+- **la phrase d'information aux testeurs disait encore « Rien d'autre n'est
+  envoyé »** alors que ce lot fait voyager la télémétrie dans les mêmes
+  `conditions`. Amendée dans `docs/SUPABASE.md`, datée. ⚠️ Le même texte vit dans le
+  jeu (`ui.gd`, `AVIS_PHASE_DE_TEST`), mot pour mot comme Adrien l'a écrit le
+  2026-09-10 : **pas touché**, c'est sa phrase — voir les signalements ;
+- **« le client ne touche `hp` qu'ici et au départ de manche » oubliait le retour au
+  menu** (deux écritures dans `game_state.gd`). La conclusion tient — le retour au
+  menu met fin au match —, l'énumération non : corrigée dans `player.gd` et ici.
+
+**Validation** — sous deux `HOME` isolés, l'un neuf, l'autre dont le `settings.cfg`
+porte `intro_vue=true` (l'état du lot complet ; la leçon du lot C) ; décomptes SANS la
+ligne de synthèse, identiques sous les deux : `test_telemetrie_gadgets` (**152** —
+143, puis neuf de plus après la revue du 2026-09-11, dont six qui EXÉCUTENT les
+branches en ligne au lieu de les lire ; neuve, ajoutée à `SUITES`),
+`test_classes` (390), `test_tir_et_reserves` (341),
+`test_conditions_de_match` (69), `test_rejeu_journal` (21), `test_match_format` (62),
+`test_match_history_view` (122), `test_screen_historique` (26), `test_protocole` (9),
+`test_charte` (243) verts ; les passages en scène de `test_online_match` — `--local`
+(18), `--training` (17), `--eblouissement` (9), `--fenetre` (10), `--appariement` (7)
+— verts ; Deno **100** (95 + 5 : un bloc complet, une clé inconnue ou mal typée, un
+bloc illisible qui ne fait refuser aucun rapport, des conditions réduites aux
+gadgets, un slug tronqué à 32). Le duo (`run_duo.sh`, ENet) compare la ligne
+`TELEMETRIE:` des deux instances : **« les deux archives disent la même chose »**, blocs
+non vides (J1 : une pose de bobine, une mort adverse dans la fenêtre, contrôlé des
+deux côtés). **Depuis la revue du 2026-09-11, l'hôte ABAT cette bobine avant le
+kill** : c'est le seul scénario où la CAUSE d'une mort de gadget voyage vraiment sur
+le fil — l'hôte la décide sur `abattu_par_balle`, le client la lit dans l'ordre —, et
+les deux côtés contrôlent qu'elle est rangée en `morts_balle`. Ce passage-là est
+**entièrement vert des deux côtés**, contrôle de salon compris : le rouge signalé plus
+bas ne s'est pas reproduit, il est donc intermittent. La suite neuve rejoue deux
+matchs sur le VRAI `main.tscn`, par le vrai
+`_do_start_round`, en attendant des CONDITIONS (âge de la mine ≥ armement, nappe
+libérée, bobine coupée), chaque forçage restant commenté (recharge, âge de la nappe,
+batterie), et vérifie CHAQUE clé des deux côtés : Incendiaire contre Parasite (deux
+nappes dont l'une remplace l'autre, 8 PV de braises à J2 et 4 à J1 mesurés, fin de
+vie, bobine posée allumée, éteinte, rallumée, coupée à batterie vide, abattue), puis
+Allumeur contre Illusionniste en rematch immédiat (mine armée puis déclenchée par le
+chemin local, leurre abattu PUIS détruit dans la même image).
+
+**Sabotages exécutés — 18, chacun vu rougir puis restauré à l'octet (`cmp`), l'arbre
+identique avant et après, un témoin vert de chaque côté.** Les quatre derniers sont
+ceux de la revue du 2026-09-11, sur les branches EN LIGNE — appliqués d'abord aux
+contrôles d'origine, où ils passaient tous les trois inaperçus (code 0, 143 ✓) :
+l'hôte qui envoie `DEGATS_BALLE` en dur (2 rouges, dont l'exécution en `ONLINE_HOST` :
+0 PV de braises) ; l'hôte qui envoie `MORT_FIN_DE_VIE` en dur (1) ; le client qui lit
+`cause != MORT_BALLE` (3, dont les deux ordres joués) ; et **le même, dans le duo** —
+`run_duo.sh` affiche « les deux archives divergent », l'hôte disant `morts_balle: 1`
+quand le client dit `morts_fin_de_vie: 1`, et le client rougit sur la mort par balle.
+Les quatorze premiers : la fenêtre toujours vraie
+(6 contrôles) ; l'extinction comptée comme effet (1) ; `gadgets_de` qui rend des
+zéros pour une entrée v5 (1) ; la nappe sans sa cause (3) ; le crochet déplacé après
+`die()` (6) ; `_telemetrie.commencer()` retiré (11 — B compte les poses du match A) ;
+`detruire()` sans garde (1 : `morts_balle` à 2) ; l'allumage local rendu à
+`g.allumer()` (1) ; une clé en trop dans le tamis (1), une en moins (1) ;
+`poseur_du_nom` décalé d'un (9) ; la garde client de `_sur_gadget_detruit` retirée
+(1, par le texte : aucun scénario ne l'exerce) ; la pose toujours comptée comme effet
+(1, par le texte : les matchs posent la bobine allumée) ; **dans le duo**, la pose
+comptée chez l'hôte seul — `run_duo.sh` affiche « les deux archives divergent » et le
+client rougit sur deux contrôles ; **dans Deno**, le tamis qui ne range plus les
+gadgets (4 tests rouges).
+
+⚠️ **Signalé, non corrigé** :
+- **Le duo nominal est rouge côté hôte, et ce lot n'y est pour rien** : « PRÊT s'ouvre
+  à l'arrivée de l'adversaire » échoue sur « aucun bouton PRÊT visible — écran
+  courant : local_hote » (`_ready_entry_disabled`, `tools/test_online_match.gd`).
+  Reproduit trois fois, et **à l'identique sur une copie de `HEAD` sans ce lot** (même
+  `.godot`, fichiers du lot rendus à `HEAD`) : antérieur, probablement lié à la
+  refonte des menus fusionnée en `46c5d4c`. Le client, lui, passe. **Relancé le
+  2026-09-11 après la revue** (HOME isolé, port dérivé), le même scénario est passé
+  ENTIÈREMENT vert, ce contrôle compris : le défaut est **intermittent**, pas
+  systématique — ce qui le rend plus gênant, pas moins, et il reste signalé ;
+- **l'avis de phase de test AFFICHÉ DANS LE JEU** (`ui.gd`, `AVIS_PHASE_DE_TEST`)
+  énumère ce qui part et finit par « Rien d'autre n'est envoyé » : depuis ce lot,
+  c'est incomplet. Il est « mot pour mot comme Adrien l'a écrit le 2026-09-10 » et
+  n'a donc pas été touché — la phrase jumelle de `docs/SUPABASE.md`, elle, est
+  amendée. **À trancher par Adrien** : reprend-il la sienne ? ✅ **Tranché le
+  2026-09-12** (« compléter l'avis, texte proposé ») et fait au **lot H** : sa phrase
+  s'y insère, le reste de son texte est intact, et une suite relie désormais l'avis à
+  l'envoi ;
+- l'en-tête de `gadget_base.gd` dit encore que les gadgets s'appellent
+  `Gadget_P1` / `Gadget_P2` : faux, c'est `GadgetJ%d_%d` ;
+- la note v5 du carnet de `match_record.gd` (« ces conditions restent LOCALES ») est
+  périmée depuis PE2.3 : l'entrée v6 le dit, la v5 n'est pas réécrite.
+
+### Étape 28 — lot F : la killcam rejoue les gadgets ✅ (2026-09-12)
+
+La suggestion 9 d'après l'étape 27. **La killcam montrait la mort sans sa cause.** Le
+rejeu ne reconstruisait que les fusées : une mine consumée, un leurre abattu, une
+nappe éteinte en étaient absents — et les gadgets encore DEBOUT y apparaissaient dans
+leur état présent, si bien qu'une mine posée après la mort brûlait dans une image où
+elle n'existait pas, et qu'une balle rejouée s'arrêtait dessus. Aucune erreur nulle
+part : on regardait une mort dont l'explication avait été retirée de l'image.
+
+**1. On enregistre ce qui a été RENDU, jamais ce qui le causait.** `Snapshot` gagne
+`gadgets` (un `GadgetBase.etat_de_rejeu()` par gadget du groupe), `traces` (les traces
+de poudre à plat) et `p1_lampe` / `p2_lampe`. Trois valeurs lisent le monde VIVANT —
+l'énergie du faisceau fantôme (`facteur_de_lampe_a`), la lueur de la suie
+(`_lumiere_entrante`), l'alpha du leurre (`effacements_a`) : les recalculer pendant le
+rejeu leur ferait lire le PRÉSENT, c'est-à-dire refaire le défaut qu'on corrige. On
+enregistre donc les énergies, les `modulate` et les visibilités telles qu'elles
+étaient, plus l'âge, la graine, la pose, le poseur et sa classe. Effet de bord
+honnête : chaque pair rejoue ce que LUI a rendu.
+
+**2. Une copie se CONSTRUIT par le script d'origine.** `etat_de_rejeu()` porte
+`"script": get_script()` — la killcam étant locale, cette référence désigne la même
+classe par construction : ni table à tenir, ni `load()`, ni second chemin de choix de
+classe. Jamais `duplicate()`, pour deux raisons : le vivant est peut-être mort, et
+`duplicate()` ne recopie pas les variables de script. **Pas de fabrique extraite de
+`_do_spawn_gadget` non plus** : elle ne gagne qu'UNE ligne, `g.slug = slug`. Le slug
+sert au diagnostic et au cri, pas à rebâtir — les gadgets créés par `.new()` dans les
+suites n'en ont pas, et une copie par slug crierait sur eux.
+
+**3. La copie n'entre pas dans le groupe « gadgets ».** Onze boucles le lisent :
+éblouissement, facteur de lampe, ligne de vue, effets, bascule, « un gadget debout »,
+pouls de tir, lueur des volumes. Une copie dedans éblouirait, se ferait basculer,
+viderait la batterie au HUD, ou brûlerait les joueurs téléportés sur le trajet rejoué.
+Filtrer site par site, c'est sept filtres et le huitième qu'on oublie ; les balles
+rejouées la rencontrent par la PHYSIQUE. Elle perd aussi
+`GADGET_BLOQUANT_LAYER` — le passé n'arrête personne, et `move_and_slide()` tourne
+encore hors manche — mais garde `GADGET_LAYER`, sans quoi une balle rejouée
+traverserait le voile qu'elle avait déchiré.
+
+**4. Le présent est MASQUÉ, pas libéré** (décision d'Adrien, 2026-09-11) : `hide()` +
+couche à zéro, la couche d'origine retenue (elle diffère d'un gadget à l'autre, et
+**zéro en est une** depuis que les diffus sortent de la couche des balles, d'où la
+sentinelle à −1). Les ordres qui arrivent pendant la killcam — allumage, bascule,
+destruction — visent ainsi toujours un nœud qui existe. Le rendu passe par
+`_purger_gadgets_killcam()`, appelé à la fin du rejeu ET dans `_abort_killcam()`, la
+sortie inconditionnelle : un chemin qui l'oublierait laisserait des gadgets vivants
+invisibles ET sans collision jusqu'à la manche suivante. **Un seul filtre était
+nécessaire** : un vivant masqué n'éblouit plus (on ne peut pas être aveuglé par ce
+qu'on ne voit pas). C'est aussi ce qui rend sans conséquence que les copies ne soient
+pas exclues de `_ligne_de_vue_depuis()` — aucune source ne tire de rayon pendant un
+rejeu ; le jour où l'une le ferait, la mine et la bobine copiées l'arrêteraient à
+tort, et c'est écrit au site du filtre.
+
+**5. Deux ajouts sans lesquels deux gadgets restaient muets.** Les **traces de
+poudre** vivent dans l'arène, pas dans le gadget : elles lui survivent, donc elles
+s'enregistrent à part (`[x, y, rotation, alpha]`, un seul `resize`, écriture par
+indice, une seule lecture de `global_position` par trace — la boucle tourne à 60 Hz
+dans chaque manche). Le constructeur de trace est extrait en
+`GadgetPoudre.nouvelle_trace()`, partagé avec `_poser_marque()` : deux définitions de
+la même trace finiraient par ne plus luire pareil. Et le **facteur de lampe rendu**
+(`Player.facteur_de_lampe_rendu`, le minimum qu'il vient d'appliquer) : sans lui la
+bobine rejouée n'est qu'un boîtier sombre, et une mort par panne de lampe reste sans
+cause. Pas `flashlight.energy` — l'extinction du vainqueur est enregistrée pendant les
+1,5 s qui suivent la mort ; pas un recalcul dans `record_frame` — ce serait une
+troisième copie de la règle du minimum.
+
+**6. Rien ne change sur le fil.** La killcam est locale, aucun RPC n'est ajouté ni
+modifié : **`Protocol.VERSION` reste 17, `WIRE_WITNESS` inchangé, le carnet n'a rien à
+recevoir** — `test_protocole` en est le témoin. `slug` et la référence `script` ne
+voyagent pas.
+
+**Mesures.** M1, relevé IMPRIMÉ par `test_rejeu` et jamais contrôlé (un chronomètre en
+suite rougirait au hasard) : `record_frame` coûte **49,3 µs avec deux gadgets et 144
+traces contre 4,2 µs sans**, soit **+45 µs par instantané** — à 60 Hz, 2,7 ms par
+seconde de jeu, quelle que soit la cadence de rendu. Le pire cas (144 traces = deux
+Sentinelles) et les deux gadgets sont mesurés ENSEMBLE : la part des traces n'est pas
+isolée. C'est le coût de l'ENREGISTREMENT, celui qui tombe en compétition ; les copies
+de killcam, elles, relèvent du budget de LUMIÈRES. Borne par construction de ce
+budget : au plus deux copies simultanées (« un gadget debout par joueur »), donc au
+plus +4 lumières (deux Braconniers), et le delta n'est positif que pour des gadgets
+MORTS avant le rejeu — les vivants masqués ne rendent plus. `test_rejeu` le tient :
+exactement une lumière allumée sous le conteneur pendant le rejeu, celle de la copie.
+
+⚠️ **Ce qui n'a PAS été mesuré, et pourquoi.** La variante `--gadgets` de
+`bench_framerate.gd` (torche fantôme J1, poudre J2, 72 traces entretenues dans
+`_stress()`, refus de mesurer si le groupe est vide) et le plan `killcam` étendu du
+photographe (torche fantôme dès le début, mine J2 allumée à ~2,5 s du kill — elle
+brûle 1,6 s, donc elle MEURT dans la fenêtre de rejeu, qui ne s'ouvre que 3 s avant
+l'impact) sont écrits et leurs appuis vérifiés par `test_banc` (`_do_spawn_gadget` et
+`allumer_gadget` ajoutés à `preconditions_manquantes`), **aucun des deux n'avait tourné
+au moment d'écrire ces lignes** : les deux exigent une VRAIE fenêtre.
+
+⚠️ **Amendé le 2026-09-12 : les deux ONT tourné depuis, sur `1f3b875`** — voir la
+synthèse en tête d'étape. Ce que cela a donné, et ce qu'il reste :
+- **la capture est faite** (`photos/fins/01-killcam.png`, manifeste du photographe) :
+  la mine rejouée rebrûle alors qu'elle n'existe plus au présent, et le recensement
+  donne 8 lumières allumées, au plus 7 par quadrant de 560 px, contre 15 par item au
+  moteur. Le budget de lumières n'est donc pas le problème que le plan redoutait ;
+- **le banc a tourné, mais pas selon son propre protocole** : deux relevés de 30 s
+  enchaînés, fenêtre au second plan. Reste dû : `--seconds 60`, machine refroidie,
+  ordre symétrique base/gadgets/gadgets/base, fenêtre au premier plan ;
+- **le hoquet au premier rejeu n'est pas tranché** : ni la capture ni le photographe
+  ne mesurent un temps d'image. Il faudra le regarder autrement.
+
+⚠️ **Trois défauts trouvés en RELECTURE le 2026-09-12, et ce qu'ils avaient en
+commun** : trois instruments qui ne pouvaient pas rougir. C'est la famille même des
+deux défauts que `replay_system.gd` documente depuis son en-tête — une grandeur juste
+d'un côté, muette de l'autre, sans erreur nulle part.
+
+- **L'entretien des traces du banc était IMBRIQUÉ dans le bloc `--fusee`** au lieu
+  d'en être le frère. La variante `--gadgets` seule — le mode que le protocole
+  prescrit, celui qui isole le poste ajouté — ne l'exécutait donc jamais : les
+  72 traces fondent en 8 s (`GadgetPoudre.DUREE_LUEUR`) et le relevé en dure 15 à 60,
+  si bien que le banc aurait rendu un 1 % bas « torche fantôme + nappe nue », lu comme
+  la mesure du lot. Le garde anti-zéro ne pouvait pas le voir : **il est évalué à la
+  POSE**, avant le fondu. Corrigé, et doublé d'un **recomptage à la fin de `_stress()`**
+  qui refuse le chiffre si la nappe est tombée sous la moitié de son plafond — un garde
+  qui s'exécute là où la défaillance se produit, et non avant elle.
+- **T8 comptait un gadget « refait » sans regarder ce que `rejouer()` avait produit.**
+  La copie naît du MÊME script que le vivant et monte le même visuel : son état de
+  naissance était déjà celui qu'on relisait. `GadgetVolume.rejouer()` remplacé par
+  `pass` — le rejeu de la suie ET de la poussière, deux des dix gadgets — laissait la
+  suite entièrement verte, sans une seule `SCRIPT ERROR`. La copie reçoit maintenant un
+  état **DÉCALÉ** (lieu, cap, âge, et chaque flottant, booléen ou couleur propre à la
+  sous-classe), et on relit ce qu'elle en a repris. Le commentaire qui justifiait
+  l'ancien compteur disait en plus le contraire du moteur : une erreur d'exécution dans
+  `rejouer()` n'interrompt QUE `rejouer()`, l'appelant reprend la main à la ligne
+  suivante (backtrace relevée). Ce compteur n'a jamais été un filet contre les erreurs.
+- **Le « témoin » de la lampe de J2 ne pouvait pas rougir** : `Snapshot.p2_lampe` et
+  le `FauxJoueur` de la suite valent 1.0 tous les deux, donc le contrôle passait que la
+  ligne d'enregistrement existe ou non — `snap.p2_lampe` n'était gardé par rien, dans
+  aucune suite, et un fantôme sur deux aurait retrouvé sa torche toujours pleine en
+  silence. J2 porte désormais une valeur distincte (0,75).
+
+**Validation** — sous deux `HOME`, l'un courant, l'autre isolé dont le `settings.cfg`
+porte `intro_vue=true` (la leçon du lot C) ; décomptes SANS la ligne de synthèse,
+identiques sous les deux : `test_rejeu` (**72**, contre sept sections auparavant :
+T1 enregistrement, T2 âge en secondes, T3 mélange, T4 lampe rendue, T5 traces, M1, puis
+T6/T7/T8 sur le vrai `main.tscn`), `test_classes` (390), `test_tir_et_reserves` (341),
+`test_telemetrie_gadgets` (152), `test_banc` (16), `test_rejeu_journal` (21),
+`test_protocole` (9), `test_charte` (243), `test_lumieres` (51/51), `test_ecran_de_fin`
+(52), `test_fusee` (60), `test_fusee_eteinte` (7), `test_eblouissement` (31),
+`test_habillage` (39), `test_musique` (190), `test_pause_menu` (48),
+`test_rendu_racine` (25), `test_calques_joueur` (7), `test_oreille` (21) verts, plus
+`test_releve_balistique` vert. Le jeu démarre sans une seule `SCRIPT ERROR`.
+
+⚠️ **La suite a d'abord rougi pour la bonne raison, et c'est consigné dans son
+en-tête** : `FauxJoueur` n'avait pas `facteur_de_lampe_rendu`, l'accès échouait, la
+fonction en cours s'arrêtait — **3 014 `SCRIPT ERROR` et dix contrôles en échec sur des
+instantanés jamais remplis**. C'est le piège que ce fichier documente depuis l'origine,
+rencontré une quatrième fois.
+
+**Sabotages exécutés — 15, chacun appliqué, VU ROUGIR, puis restauré à l'octet (sha256
+comparé), avec un témoin vert avant et après** : les copies qui rejoignent le groupe
+(T1 : 2 entrées) ; la porte de cadence neutralisée (T2 : l'écart tombe à 1/492, et
+450 instantanés au lieu de 60 — le sabotage « déplacer l'ajout avant la porte » du plan
+était impossible, aucun instantané n'existe avant elle) ; `_melanger` sans le bloc
+gadgets (T3 : taille 0) ; la boucle des traces qui n'écrit rien (T5 : 0) ; la mine
+rejouée sans `allumer()` (T6-b : aucun `Embrasement`) ; `_masquer_le_present()` retiré
+(T6-c/d/e : 8 rouges) ; le démasquage qui ne rend que `show()` (la couche reste à 0 au
+lieu de 12) ; le filtre d'éblouissement retiré (T6-e) ; le branchement de `_process`
+retiré (T7) ; `or _rejeu_gadgets_en_cours` retiré (T7 : le vivant reste caché) ;
+`etat_de_rejeu()` des braises sans `super()` (T8 : clés manquantes, 9 gadgets au lieu
+de 10) ; la couche bloquante gardée par la copie (T8 : rouge sur le voile). **Trois de
+plus à la relecture du 2026-09-12**, sur les contrôles ajoutés ce jour-là : le corps de
+`GadgetVolume.rejouer()` remplacé par `pass` (T8 : suie et poussière rouges sur `pos`,
+`rot`, `age` et `masse`, 8 gadgets au lieu de 10 — avant le décalage d'état, ce MÊME
+sabotage laissait la suite entièrement verte) ; `snap.p2_lampe` retiré de
+`record_frame()` (T4 : rouge — avant, le « témoin » restait vert) ; et un troisième non
+pour rougir mais pour vérifier ce que fait le moteur, un accès à une clé absente injecté
+dans `GadgetVolume.rejouer()` : la backtrace dit `[0] rejouer` puis
+`[1] _test_dix_gadgets`, l'appelant reprend bien la main — c'est le commentaire de
+l'ancien compteur qui affirmait le contraire.
+
+**Question ouverte à Adrien — l'image derrière l'écran de fin.** Le lot suit le patron
+des fusées : les copies partent et les vivants REVIENNENT à `_end_sequence_active =
+false`, c'est-à-dire derrière l'écran de fin, alors que les fantômes restent figés
+jusqu'à la manche suivante. Le saut est plus visible que pour les fusées, qui ne font
+que disparaître : ici le présent réapparaît, lumières comprises. Il n'y a pas de
+régression — avant ce lot, le présent y était de toute façon. L'autre choix serait de
+ne purger que dans `_abort_killcam()`, ce qui garderait l'image de la mort cohérente ;
+toutes les sorties y passent. ✅ **Tranché le 2026-09-12 — Adrien : « l'image de ta
+mort ».** C'est le second choix qui est fait ; voir le lot G.
+
+⚠️ **Signalé, non corrigé** :
+- **`test_vitrine_menus` est rouge sous le `HOME` courant** (« hors calibration, les
+  onze effets vivent », « en sortant, tout se rallume ») et **vert sous un `HOME`
+  isolé**. Reproduit **à l'identique sur l'arbre rendu à `HEAD`**, les treize fichiers
+  du lot restaurés : antérieur à ce lot, et causé par le `settings.cfg` utilisateur
+  qu'une séance précédente a laissé — pas par le code ;
+- ⚠️ **un signalement du lot F, retiré parce qu'il était faux** : « sur le client, la
+  nappe de braises ne baisse pas dans son enregistrement, son fondu vit dans
+  `appliquer_effets()` que l'hôte seul appelle ». Vérifié dans le code avant de le
+  consigner : depuis le lot A1, le fondu vit dans `GadgetBraises._physics_process()`
+  et tourne donc chez les DEUX pairs — `appliquer_effets()` ne fait plus que brûler.
+  La nappe baisse bien dans l'enregistrement de l'invité, et il n'y a rien à corriger
+  au lot A. Le commentaire jumeau d'`etat_de_rejeu()` portait la même affirmation :
+  corrigé lui aussi. **Une relecture qui cite un état antérieur de la branche se
+  vérifie avant d'entrer ici** ;
+- la suie ne masque pas les FANTÔMES : ils sont rendus sans éclairage et toujours
+  visibles. Le nuage et la lampe étouffée sont rejoués, pas le corps caché. Non
+  demandé ;
+- le scénario duo « PRÊT s'ouvre à l'arrivée de l'adversaire » reste intermittent
+  (déjà signalé au lot E) : il n'a pas été relancé ici, ce lot ne touche pas au salon.
+
+### Étape 28 — lot A2 : la mine ✅ (2026-09-12)
+
+Le second commit du lot A, **isolé pour être annulable seul**. La mine est le dernier
+maillon de « l'aveuglement suit ce qui brûle » (voir « Décisions actées »), et le seul
+dont la règle déplace l'ÉQUILIBRE. `GadgetMine.energie_relative()` rend le reste AU
+CARRÉ — la courbe même de sa flamme, celle que sa lumière suivait déjà — et son rayon
+d'éblouissement redevient CONSTANT (460 px, écrit par `allumer()` et nulle part
+ailleurs). Il rétrécissait avec le reste pendant que l'énergie rendue suivait `reste²` :
+un gain et un rayon qui fondent ensemble atténueraient deux fois. C'est aussi ce qui
+faisait qu'à reste 0,2, une flamme tombée à 4 % aveuglait encore à 0,22 un joueur posté
+à 72 px — le rayon même du déclenchement. Le socle rend 1 et la branche gadgets de
+`_sources_eblouissantes()` passe ce gain depuis le lot A1 : jusqu'à ce commit, la mine
+gardait donc exactement son comportement d'avant.
+
+**Ce que ça change au jeu — mesuré, et assumé.** Simulation à une seule source, 60 Hz,
+ligne de vue libre, montée 1,25/s et descente 2,67/s (`eblouissement.gd`). Chiffres du
+contradicteur du lot, **revérifiés sur le code du jour** avant d'écrire ici :
+
+| distance à la mine | pic, avant → après | temps au-dessus de 0,3 |
+|---|---|---|
+| 30 px | 0,884 → 0,521 | 1,25 s → 0,47 s |
+| 72 px (rayon de déclenchement) | 0,750 → 0,488 | 1,02 s → 0,42 s |
+| 150 px | 0,553 → 0,422 | 0,63 s → 0,30 s |
+| 300 px | 0,255 → 0,266 | 0 → 0 (aire 0,079 → 0,154) |
+
+Ce n'est donc **pas seulement la fin du flash** qui baisse, c'est tout le flash :
+l'éblouissement met 0,8 s à saturer, alors que `reste²` n'est déjà plus qu'à 56 % à
+0,4 s. À 300 px, en revanche, elle éblouit un peu plus — l'ancien rayon rétrécissant la
+coupait net dès que le reste passait sous 0,65. La question posée à Adrien disait « cela
+affaiblit la fin du flash de la mine » : elle en disait moins que ce tableau. **Il a
+validé en le sachant** ; le commit est séparé pour qu'annuler cette seule décision ne
+coûte rien d'autre, et c'est tout l'intérêt de l'avoir isolé.
+
+⚠️ **À l'écran, la baisse n'est pas proportionnelle, et une table de pics ne peut pas
+le dire** : le seul seuil non linéaire de la chaîne est en AVAL de l'éblouissement.
+`Brouillage._dose()` multiplie la valeur par `GAIN` (2,0) puis la borne à 1 — le halo et
+le flou (`brouillage_vue.gd`) comme l'effacement de la silhouette adverse
+(`Brouillage.opacite()`, lu par `player.gd`) sont donc SATURÉS dès **0,5**
+d'éblouissement, ce que le commentaire de `GAIN` écrit lui-même. Mesuré sur la même
+simulation, et le résultat va dans les deux sens : **au pic, il ne se perd presque
+rien** — à 72 px la dose vaut 0,975 au lieu de 1,000, et l'adversaire reste effacé ;
+ce qui part, c'est la **durée** du brouillage plein — 0,70 s → **0 s** à 72 px,
+1,00 s → 0,03 s à 30 px, 0,17 s → 0 s à 150 px — et le rayon dans lequel la mine
+sature le brouillage tombe de **~173 px à ~51 px**, c'est-à-dire en deçà de son propre
+rayon de déclenchement. Celui qui marche dessus — le cas même que la mine est faite
+pour punir — ne TIENT donc plus l'adversaire effacé, alors qu'il le tenait sept
+dixièmes de seconde. **Ce qui ne passe pas par la dose suit le tableau
+proportionnellement** : le voile prend l'éblouissement brut (`ui.gd._poser_voile()`),
+la vitesse et la visée sont linéaires en `dazzle_amount` (`player.gd`). C'est cette
+durée-là qu'il faut regarder manette en main (H11), plus que le pic.
+
+**Le protocole ne change pas, et c'est la raison qui compte** : la lumière de la mine
+suit `reste²` chez les deux pairs depuis l'étape 12 et n'a pas bougé d'une ligne ; seul
+l'hôte en tire l'éblouissement, qu'il réplique. Un client v16 dessine la même flamme
+qu'un v17 — c'est l'arbitrage qui change, pas le rendu. Une phrase le dit à l'entrée 17
+du carnet de `protocol.gd` ; `VERSION` reste 17, `WIRE_WITNESS` inchangé.
+
+**Le contrôle qui compte est un RAPPORT, pas une valeur.** À 150 px, sur quatre âges de
+l'embrasement, éblouissement ÷ énergie rendue reste constant — 0,674, exactement ce que
+dicte la distance. Trois témoins l'encadrent, parce qu'aucun ne suffit seul : au plein
+feu le plafond vaut la valeur attendue (une ligne de vue coupée rendrait « constant » sur
+des zéros) ; les quatre relevés couvrent vraiment l'embrasement (un âge figé rendrait
+quatre fois le même rapport) ; la flamme rendue tombe sous le dixième de son plein feu.
+L'âge avance par `_physics_process(Δ)`, jamais par affectation — le chemin réel, celui
+que la revue du lot A1 avait pris en défaut —, et par fractions de ce qu'il reste à
+brûler, un pas absolu tuant la mine au dernier relevé. Le contrôle « endormie, elle ne
+brûle rien » est le jumeau du contrôle du rayon nul : deux gardes, deux contrôles.
+
+**Validation** — sous deux `HOME`, l'un courant, l'autre isolé dont le `settings.cfg`
+porte `intro_vue=true` (la leçon du lot C) ; décomptes SANS la ligne de synthèse,
+identiques sous les deux : `test_classes` (**396**, dont 6 neufs), `test_tir_et_reserves`
+(341), `test_rejeu` (72), `test_telemetrie_gadgets` (152), `test_vision` (40),
+`test_eblouissement` (31), `test_fusee_eteinte` (7), `test_protocole` (9), `test_charte`
+(243), `test_lumieres` (51/51) et `test_eblouissement_en_jeu` (9, la scène en jeu)
+verts, sans une seule `SCRIPT ERROR`.
+
+**Sabotages exécutés, chacun appliqué, VU ROUGIR, puis restauré à l'octet (sha256
+comparé)** :
+- **le rayon remis à l'échelle de la flamme** — l'ancien code : trois rouges, le rayon
+  (91 px au dernier relevé au lieu de 460), le rapport (0,670 → 0,529 → 0,176 → 0,000)
+  et le témoin ;
+- **la mine rendant `reste` pendant que sa lumière suit `reste²`** : le rapport double à
+  chaque relevé (0,681 → 0,973 → 1,70 → 3,41), le rayon restant juste — c'est pourquoi
+  les deux contrôles sont séparés ;
+- **le `gain` retiré de la branche gadgets** : le rapport de la mine (0,688 → 1,40 →
+  4,30 → 17,2) ET celui de la nappe de braises du lot A1 — une seule ligne porte les
+  deux gadgets ;
+- **une mine endormie rendant 1 au lieu de 0** : un seul rouge, le contrôle neuf. Rien
+  d'autre ne le voit, le rayon nul masquant tout le reste — c'est exactement sa raison
+  d'être.
+
+Le témoin du plein feu rougit sous les trois premiers, et c'est voulu : sous le code
+juste, le rapport vaut la valeur dictée par la distance à 1e-3 près **quel que soit
+l'âge**, et le moindre décalage de formule le déplace dès le premier relevé.
+
+⚠️ **Ce qu'aucune suite ne dit** : si un flash affaibli se joue encore comme un flash.
+La mesure est une simulation à une seule source — ni maximum avec une torche, ni murs —
+et H11 (« éprouver les dix classes manette en main ») reste le seul juge. Si le pic
+paraît trop faible manette en main, ce sont `RAYON_EBLOUISSEMENT` ou la courbe de
+`energie_relative()` qu'il faut relever, **pas le rayon qu'il faut refaire rétrécir** :
+ce serait retrouver la double atténuation que ce lot supprime.
+
+⚠️ **Et surtout pas `ENERGIE`**, malgré ce que la première rédaction de ce paragraphe
+conseillait : elle ne multiplie que `_lumiere.energy` (`gadget_mine.gd`), la lumière
+RENDUE à l'écran. Le plafond d'aveuglement d'une source de proximité vaut
+`plafond_pour(intensité) × gain_taille(rayon) × gain` (`GameState._plafond_de_source()`)
+— `ENERGIE` n'y entre nulle part. La relever rendrait la flamme plus vive sans aveugler
+d'un pixel de plus : le conseil envoyait droit dans le mur, vérifié dans le code avant
+d'être corrigé.
+
+### Étape 28 — lot G : les arbitrages d'Adrien ✅ (2026-09-12)
+
+Quatre questions posées à la fin des lots A2, B, D et F. **Deux demandaient du code, ce
+lot les fait ; deux se consignent** — la mine (« garder ») et le voile (« refuser la
+pose »), toutes deux dans « Décisions actées ». Ce lot n'invente rien : il exécute des
+réponses.
+
+**1. L'ombre du leurre** — *« oui, qu'il ait l'ombre d'un corps »*. La décision et sa
+raison sont dans « Décisions actées » ; ce qui suit est le comment.
+
+L'occluder du leurre vivait sur `MapGeometry.WALL_LAYER`. Il porte désormais **deux**
+occluders, aux couches de ceux d'un corps : l'étoile de sa silhouette sur
+`CanauxLumiere.couche_ombre_corps(poseur_id)`, un disque de torse sur
+`couche_ombre_torse(poseur_id)`.
+
+⚠️ **Aucun numéro n'est écrit dans `gadget_leurre.gd`, et c'est tout l'enjeu.** Ces
+couches vivaient dans `player.gd`, en propriétés (`COUCHE_OCCLUDER_SIENNE`,
+`COUCHE_TORSE`) — inaccessibles depuis un gadget, qui ne peut pas nommer `Player` : ce
+fichier s'appuie sur des autoloads et ne compile pas dans une suite lancée en
+`--script`. Les recopier aurait donné deux vérités pour une seule couche, dont l'une
+aurait vieilli — c'est exactement ce que la fusion `d9bfc98` vient de faire payer au
+`2` en dur du masque de lumière. La règle a donc **déménagé dans `canaux_lumiere.gd`**,
+et les quatre propriétés de `player.gd` n'en sont plus que les noms locaux. Même geste
+pour la FORME : `Charte.ombre_de_torse()` (rayon 12) rejoint `Charte.ombre_de_silhouette()`,
+et `player._monter_occluder_de_torse()` la lit au lieu de la construire.
+
+⚠️ **`canaux_lumiere.gd` porte maintenant DEUX familles qui ne se croisent jamais** :
+les canaux (`light_mask`, `range_item_cull_mask` — qui est éclairé) et les couches
+d'ombre (`occluder_light_mask`, `shadow_item_cull_mask` — qui fait de l'ombre). `16`
+veut dire « la vue de J1 » dans la première et « le torse de J1 » dans la seconde ;
+aucune propriété du moteur ne lit les deux, et les deux règles restent écrites
+séparément plutôt que dérivées l'une de l'autre — les marier obligerait un jour l'une à
+bouger pour l'autre. Un bloc de commentaire le dit sur place.
+
+**Le disque de torse n'est pas un supplément.** La rétrodiffusion ne voit que les
+couches de torse : sortir l'étoile du décor sans poser ce disque aurait fait du leurre
+la seule chose de l'arène que la rétrodiffusion adverse TRAVERSE — un indice à la place
+d'un autre. Et les deux ombres se coupent ENSEMBLE dans la suie, comme
+`player._couper_l_ombre()` coupe les siennes : n'en couper qu'une aurait laissé un
+torse dessiné là où le corps a disparu. Même règle dans la killcam (`rejouer()`), où un
+seul booléen les porte toutes les deux.
+
+**Conséquence sur l'arbitrage, et changement de SENS au carnet.** Une lampe n'ombre
+jamais le corps de qui la tient : la torche et le flash de tir du poseur traversent
+maintenant son leurre à l'écran. `GameState._ligne_de_vue_depuis()` reçoit donc un
+`pid_porteur` — qui TIENT cette lumière, ou -1 pour une lampe posée — et interroge
+`GadgetBase.fait_ombre_aux_lumieres_de(pid)`, vrai dans le socle, faux chez le leurre
+pour son propre poseur. Sans ça, planter un leurre devant soi **éteignait sa propre
+torche** : on aurait vu la lumière passer sans la prendre, le symétrique exact du défaut
+que ce rayon a été écrit pour corriger. ⚠️ **Les lumières POSÉES restent arrêtées**, y
+compris celles du poseur : elles n'ombrent aucun corps non plus, et pourtant un corps
+arrête leur éblouissement — il est sur la couche physique du rayon. Le leurre fait donc
+comme un corps, pas comme une ombre. `Protocol.VERSION` reste 17 (non publiée), la
+FORME du fil ne bouge pas, `WIRE_WITNESS` est intact et `test_protocole` reste vert ;
+l'entrée 17 du carnet porte les deux règles partagées.
+
+**2. L'image de la mort qui reste** — *« l'image de ta mort »*, plutôt que la scène du
+moment. Le lot F suivait le patron des fusées : les copies partaient et les gadgets
+vivants revenaient à `_end_sequence_active = false`. **Cette branche ne s'ouvre qu'à
+l'instant PRÉCIS où l'écran de fin se pose sur l'arrêt sur image** — le présent y
+réapparaissait d'un coup, lumières comprises, sur l'image figée de la mort.
+`_purger_gadgets_killcam()` n'est donc plus appelé que par `_abort_killcam()`, par où
+passent TOUTES les sorties (début de manche, match soldé, retour au menu). Le plan F
+disait « une ligne à déplacer » : **c'en était deux**. Le second terme de la condition
+(`or _rejeu_gadgets_en_cours`), ajouté au lot F pour que la branche s'ouvre même sans
+fusée, n'avait plus d'objet une fois la purge partie ; le laisser aurait fait tourner
+`_purger_fusees_killcam()` à chaque image jusqu'à la sortie, sous un commentaire devenu
+faux. **Les fusées, elles, ne bougent pas** : elles partent toujours là, hors périmètre
+de cette question.
+
+**Validation** — sous deux `HOME`, l'un courant, l'autre isolé dont le `settings.cfg`
+porte `intro_vue=true` (la leçon du lot C) : `test_classes`, `test_tir_et_reserves`,
+`test_rejeu`, `test_lumieres`, `test_calques_joueur`, `test_eblouissement`,
+`test_vision`, `test_protocole`, `test_charte`, `test_telemetrie_gadgets`,
+`test_viseur`, `test_brouillage`, `test_fusee`, `test_rendu_racine`, `test_banc`,
+`test_arena_lighting`, `test_ecran_de_fin`, `test_releve_balistique`,
+`test_prediction_tir`, `test_sprites`, `test_marche`, `test_torches` — tous verts, zéro
+`SCRIPT ERROR`. Plus, hors `--script` : `test_halo_proximite.tscn` (la scène, parce que
+`player.gd` ne compile pas en `--script`), `test_netcode.tscn`, et les quatre modes de
+`test_online_match.tscn` (`--local`, `--training`, `--fenetre`, `--appariement`), qui
+sont le seul banc à traverser le cycle de fin de match modifié ici.
+
+**Après la revue** (2026-09-12), les suites touchées par le leurre, les occluders, la
+killcam ou les couches de lumière ont été relancées sous les deux `HOME` :
+`test_classes`, `test_tir_et_reserves`, `test_rejeu`, `test_lumieres`,
+`test_calques_joueur`, `test_eblouissement`, `test_vision`, `test_protocole`,
+`test_charte`, `test_telemetrie_gadgets`, `test_ecran_de_fin`, `test_banc`, plus
+`test_fusee`, `test_habillage`, `test_map_geometry`, `test_musique`, `test_pause_menu`,
+`test_releve_balistique`, `test_brouillage`, `test_arena_lighting`, `test_viseur`,
+`test_prediction_tir`, `test_rendu_racine`, et les scènes `test_halo_proximite.tscn` et
+`test_netcode.tscn` — toutes vertes, zéro `SCRIPT ERROR`. Seule exception, déjà connue :
+`test_vitrine_menus`, rouge sous le `HOME` courant et vert sous le `HOME` isolé.
+
+**Contrôles ajoutés.** `test_classes` : les deux occluders du leurre comparés à ceux du
+VRAI joueur (couche et forme, jamais un numéro recopié), leurs deux couches distinctes,
+la torche adverse qui voit l'étoile, la rétrodiffusion adverse qui voit le torse, et une
+mine allumée comme témoin — une lampe posée n'ombre ni le corps ni le leurre, mais
+ombre le décor (la moitié positive, sans laquelle un masque à zéro passerait) ; la suie
+qui coupe et rend les DEUX ombres ; et l'éblouissement, à la fois par le rayon nu (les
+porteurs déduits du poseur, jamais un `0` en dur) **et par le chemin réel**
+`_lumiere_recue`. `test_rejeu` : l'image de la mort qui tient après le rejeu, rendue par
+la seule sortie de la killcam ; et le leurre rejoué qui coupe ses deux ombres.
+
+⚠️ **Et le FLASH DE TIR, ajouté en revue** (2026-09-12). Le porteur est passé à DEUX
+endroits — `_lumiere_recue()` pour la torche, `_flash_de_tir()` pour le flash —, et seul
+le premier était éprouvé. Mesuré : inverser le porteur du flash (`1 - player_id`) ou
+retirer l'argument, c'est-à-dire revenir littéralement au lot F pour cette moitié,
+laissait `test_classes`, `test_tir_et_reserves`, `test_eblouissement` et `test_vision`
+entièrement verts — le leurre du tireur aurait de nouveau éteint son propre flash, et
+celui de l'adversaire aurait cessé de l'arrêter, sans que rien ne le dise. `test_classes`
+appelle donc `gs._flash_de_tir(gs.p1)` sur le même montage que la torche, avec le même
+témoin : le MÊME leurre, au même endroit, `poseur_id` inversé, qui doit l'arrêter.
+
+⚠️ **Deux contrôles qui auraient passé pour une mauvaise raison, trouvés en les
+sabotant** — c'est la seule raison pour laquelle ils valent quelque chose :
+- « l'image de la mort reste » restait VERT avec la purge du lot F remise en place : la
+  branche de fin de rejeu ne s'ouvre que s'il y a une copie de fusée à rendre, et le
+  banc n'en pose aucune. Le test sème donc une entrée bidon dans `_fusees_killcam` pour
+  ouvrir la branche, et un témoin vérifie qu'elle s'est réellement ouverte ;
+- le témoin « la mine allumée porte bien une lumière » lisait une référence sur un objet
+  déjà libéré. **En Godot 4, une référence libérée se compare égale à `null`** : le
+  témoin annonçait une absence de lumière alors qu'elle avait bien été créée. Tout se
+  lit maintenant AVANT le `free()`.
+
+**Sabotages exécutés, chacun appliqué, VU ROUGIR, puis restauré** (le contrôle qui
+rougit est indiqué) :
+1. l'étoile remise sur la couche du décor → « son ombre vit sur la couche du CORPS » et
+   « une lumière POSÉE n'ombre ni le corps ni le leurre » ;
+2. le disque de torse retiré → 5 rouges dans `test_classes`, 2 dans `test_rejeu` ;
+3. le disque de torse posé sur la couche du CORPS → 3 rouges, dont « les deux couches
+   restent distinctes » ;
+4. `fait_ombre_aux_lumieres_de()` du leurre rendant toujours vrai → le rayon nu ET le
+   chemin réel ;
+5. l'argument `pid_porteur` retiré de l'appel de `_lumiere_recue()` → **le seul chemin
+   réel** rougit, le rayon nu reste vert. C'est la preuve que ce contrôle-là sert ;
+6. la purge des gadgets remise dans la branche de fin de rejeu (forme minimale, puis
+   retour littéral au lot F) → 3 rouges dans `test_rejeu` les deux fois ;
+7. `_purger_gadgets_killcam()` retiré d'`_abort_killcam()` → « quitter la killcam rend
+   le présent » ;
+8. la suie ne coupant que l'étoile → « et ses deux ombres avec, comme un corps » ;
+9. la killcam ne rejouant que l'étoile → « le leurre rejoué coupe ses DEUX ombres » ;
+10. le TORSE du **joueur** remis sur la couche de son corps → le contrôle de comparaison
+    au vrai joueur. Il vérifie que la comparaison mord dans les deux sens ;
+11. *(revue)* le porteur du **flash de tir** inversé (`1 - int(tireur.player_id)`) → les
+    DEUX nouveaux contrôles, alors que sans eux tout restait vert ;
+12. *(revue)* l'argument du flash de tir **retiré** → « le flash de tir de J1 éblouit J2
+    À TRAVERS le leurre ». C'est le retour littéral au lot F pour cette moitié ;
+13. *(revue)* `GadgetBase.fait_ombre_aux_lumieres_de()` du **socle** rendu toujours faux
+    → **rien**, zéro rouge sur sept suites. C'est la preuve, et non la réfutation : cette
+    réponse du socle n'est consultée par personne, la porte n'étant franchie que sous
+    `regard_par_la_forme`, que seul le leurre lève — et qui la redéfinit. Le commentaire
+    du socle le dit désormais, pour qu'un futur gadget ne redéfinisse pas une règle qui
+    resterait muette.
+
+⚠️ **Trois « pourquoi » corrigés en revue, et aucun ne touchait au comportement** — la
+leçon de l'étape, encore : un commentaire qui cite un état du code sans l'avoir relu.
+- **Le carnet de `protocol.gd` décrivait un client qui n'existe pas.** Il justifiait le
+  changement de sens par « un client v16 prédirait un adversaire épargné » : or le client
+  ne prédit AUCUN éblouissement — `_maj_eblouissement()` et `_flash_de_tir()` sortent
+  d'emblée en `ONLINE_CLIENT`, `player.gd` recopie `net_dazzle`. La divergence annoncée
+  ne peut pas se produire, et la phrase contredisait la ligne précédente (« l'hôte SEUL
+  l'arbitre »). Reformulé sur le patron de l'entrée A2 : le rendu ne bouge pas,
+  l'arbitrage si. Le premier tiret, l'ombre partagée par les deux pairs, était juste.
+- **Le garde-fou de `_ligne_de_vue_depuis()` s'est périmé EN VERT.** Il promettait que
+  « tout gadget porte un occluder » suffit à ce que l'ombre et l'éblouissement disent la
+  même chose. Un occluder n'arrête que les lumières dont le masque d'ombre contient sa
+  couche : depuis ce lot, une mine qui brûle ne fait aucune ombre au leurre et pourtant
+  son éblouissement y reste arrêté. **C'est voulu — un corps fait exactement pareil** —
+  mais le garde-fou l'annonçait comme impossible, et rien ne l'aurait signalé à la
+  prochaine session qui s'y serait fiée pour décider si un gadget peut se passer
+  d'occluder.
+- **`gadget_leurre.gd` disait « et rien d'autre »** en énumérant ce que le leurre ombre.
+  La traînée de balle ombre aussi le leurre de J1 (masque `1 | 4`) — la même asymétrie
+  entre joueurs que celle des corps, désormais nommée sur place.
+
+⚠️ **Ce qu'aucune suite ne dit, et il faut le voir.** Rien ici ne REND : qu'une fusée au
+sol éclaire désormais le leurre **sans lui faire d'ombre portée** — comme elle éclaire
+un corps sans lui en faire —, et qu'il oppose une ombre de torse à la rétrodiffusion
+adverse, se juge à la **capture** (plan `leurre` du photographe, mesure au pixel PIL) ou
+manette en main (H11). Et l'image de fin de killcam
+— le présent qui ne réapparaît plus derrière l'écran de fin — n'est atteinte par aucun
+instrument headless : elle se regarde en jouant.
+
+⚠️ **Signalé, non corrigé** :
+- **`test_vitrine_menus` reste rouge sous le `HOME` courant** (« hors calibration, les
+  onze effets vivent », « en sortant, tout se rallume ») et **vert sous un `HOME`
+  isolé** : reconfirmé ici. C'est le `settings.cfg` utilisateur, pas le code — déjà
+  signalé au lot F ;
+- `bullet.gd` : la traînée a pour masque d'ombre `1 | 4`. Elle ombre donc le corps de
+  J1 (couche 4) et pas celui de J2 (couche 8) : **une asymétrie entre JOUEURS**, déjà
+  signalée au lot D, et c'est bien celle-là qui reste. ⚠️ **Ce lot l'a réduite, il ne
+  l'a pas aggravée**, et la première rédaction de cette ligne laissait croire
+  l'inverse : avant lui, l'occluder du leurre vivait sur la couche du décor, que le
+  masque `1 | 4` contient — la traînée ombrait donc les DEUX leurres quand elle
+  n'ombre qu'un corps sur deux, et **le leurre de J2 se trahissait à chaque balle qui
+  passait près de lui**, sans même viser. Depuis le 2026-09-12, leurre et corps du même
+  poseur répondent à l'identique sous une traînée : elle ne trahit plus aucun leurre.
+  Ce qu'il reste à corriger est donc l'asymétrie des CORPS, et elle seule ;
+- `player.gd`, note du viseur : « L'écran partagé est permanent, y compris en ligne » —
+  toujours faux depuis le 2026-08-18 ;
+- les copies de FUSÉES de killcam partent toujours à la fin du rejeu, pendant que les
+  copies de gadgets restent. Adrien n'a tranché que les gadgets, et la fusée qui
+  disparaît d'une image est justement ce que le commentaire d'origine voulait éviter
+  pendant l'arrêt sur image. À reposer s'il veut l'image de mort entière.
+
+### Étape 28 — lot H : ce que le jeu dit envoyer, et la mine qui dit qui l'a allumée ✅ (2026-09-12)
+
+**Le dernier lot avant la publication de la 0.6.0**, et c'est ce qui décide de son
+contenu : deux corrections qui coûtent zéro aujourd'hui et cher après le tag. Deux
+décisions d'Adrien du 2026-09-12, prises en connaissance de cause.
+
+**1. L'avis de phase de test disait faux, et c'est celui que liront les joueurs.**
+`ui.gd` porte `AVIS_PHASE_DE_TEST`, le texte qu'Adrien a écrit le 2026-09-10 et que le
+menu affiche en bas de l'écran. Il énumère ce que le rapport de fin de match envoie —
+relevé de cadence, description de la machine — et conclut « Rien d'autre n'est envoyé,
+et rien hors ligne. » Depuis le lot E, le rapport emporte EN PLUS la télémétrie des
+gadgets, dans ces mêmes `conditions`. Le commentaire au-dessus de la constante
+l'annonçait lui-même : « le changer ici sans changer l'envoi (ou l'inverse) ferait
+mentir le jeu à ses joueurs ». Adrien a choisi de **compléter**, avec la phrase qui lui
+était soumise : *« ainsi qu'un décompte de l'usage de tes gadgets »*.
+
+⚠️ **Recensé clé par clé** — `_report_to_ranking()` (`game_state.gd`),
+`ConditionsDeMatch.resume()`, `MatchRecord.conditions_a_envoyer()`,
+`RankedIdentity.report_match()` et `_drain_reports()`, `telemetrie_gadgets.gd`, et le
+tamis `supabase/functions/_shared/match_report.ts`. Ce qui part : l'issue et ce qui
+l'a produite (issue, abandon, durée, carte, armes, format), le relevé de cadence, **la
+mesure du LIEN**, la machine, le bloc de gadgets, et le jeton Epic. Rien hors ligne
+(l'écran scindé et l'entraînement ne passent pas par là).
+
+⚠️ **Et ce recensement-ci est le SECOND.** Le premier, écrit le même jour, concluait
+« rien d'autre » en ayant oublié `rtt_moyen_ms` / `rtt_max_ms` — la latence moyenne et
+le pic de la connexion du joueur, que `ConditionsDeMatch.resume()` pose, que le tamis
+accepte et que la requête de diagnostic de `docs/SUPABASE.md` interroge déjà. Ni
+« relevé de cadence » ni « description de ta machine » ne nomme une mesure de réseau,
+et le dépôt sépare bien les trois (« cadence, lien, machine »). **L'avis complété
+reste donc inexact sur ce point**, et l'affirmation d'exhaustivité qui vivait ici
+aurait dissuadé le prochain lecteur de refaire le recensement — c'est le plus cher des
+deux défauts. Rien n'a été réécrit d'initiative (c'est le texte d'Adrien) : voir
+« Signalé, non corrigé » ci-dessous, **à trancher avant le tag**.
+
+**Où la phrase s'insère, et pourquoi là.** Dans l'énumération, entre la parenthèse de
+la machine et « rattachés à ton identité Epic » : c'est le seul point du texte où
+l'ajout ne demande de toucher ni à sa ponctuation ni à son ordre — **pas un caractère
+de son texte n'a bougé** —, et il place les trois choses envoyées sous le même
+rattachement à l'identité, ce qui est vrai des trois.
+
+**Un contrôle relie désormais l'avis à l'ENVOI** (`tools/test_menus_finitions.gd`), et
+non à une copie du texte : il APPELLE `MatchRecord.conditions_a_envoyer({}, {"j1": {}})`
+et regarde si la clé `gadgets` en sort, puis vérifie que le chemin d'envoi passe bien
+par cette fusion en lui donnant la télémétrie ; et il exige que l'avis nomme les
+gadgets **si et seulement si** c'est le cas. Il mord donc dans les deux sens — le jour
+où l'envoi cesserait d'emporter les gadgets, il demanderait de retirer la mention.
+C'est la forme qui aurait attrapé le défaut du lot E ; l'ancien contrôle ne lisait que
+la première phrase de l'avis et sa dernière, et serait resté vert quoi qu'il arrive
+entre les deux.
+
+⚠️ **La première rédaction de ce contrôle cherchait un LITTÉRAL** —
+« `MatchRecord.conditions_a_envoyer(conditions, gadgets)` » dans le texte de
+`game_state.gd` —, donc l'ordre des arguments, le nom d'une locale et l'absence de
+retour à la ligne. Sabotage exécuté en revue : le **même** appel réparti sur deux
+lignes le faisait rougir, et le seul moyen de le reverdir tel qu'il était écrit aurait
+été de retirer de l'avis la mention des gadgets, c'est-à-dire de refaire mentir le jeu
+— un contrôle qui réclame le défaut qu'il surveille. Corrigé le 2026-09-12 : il tient
+le comportement de la fusion, plus l'orthographe d'une ligne. **Il n'est pas pour
+autant un recensement de ce qui part** : il ne tient qu'une famille de clés, et c'est
+dit sur place.
+
+**2. Le décompte des mines est devenu exact.** La décision et son pourquoi sont dans
+« Décisions actées » ; ce qui suit est le comment. `rpc_allumer_gadget` gagne un
+argument, la CAUSE (`GadgetBase.ALLUMAGE_PASSAGE` / `ALLUMAGE_BALLE`), et
+`TelemetrieGadgets` compte `allumages_passage` et `allumages_balle` au lieu du seul
+`allumages`.
+
+- **La cause est LUE sur le gadget, jamais écrite chez l'appelant** : `allumage_par_balle()`
+  répond dans le socle (faux) et dans la mine (`_touchee`), à côté de `veut_s_allumer()`
+  qui décide — les deux se lisent ensemble, et leur ordre de priorité est le même, la
+  balle d'abord. `GameState.allumer_gadget()` l'interroge **sans garde `has_method()`**,
+  qui changerait un oubli en « tout allumage est un passage », muet et faux dans la
+  seule colonne que ce lot existe pour rendre exacte.
+- **Elle voyage avec l'ordre**, en ligne comme en local, et c'est ce qui fait que les
+  deux archives d'un match disent encore la même chose : le client ne peut pas la
+  déduire, il n'encaisse aucune balle et ne voit de la mine que son feu.
+- **Le fil change de FORME, le numéro ne bouge pas.** `Protocol.VERSION` reste 17, non
+  publiée ; `WIRE_WITNESS` a été **recalculé après** avoir tranché le numéro, et le
+  carnet porte l'entrée. Le témoin a signalé le changement de lui-même, comme aux lots
+  C et E.
+- **Le bloc passe en version 2** (`TelemetrieGadgets.VERSION`), suivant la règle écrite
+  dans le fichier : une clé qui change, c'est un lecteur qui doit pouvoir savoir à
+  quelle forme il a affaire. Et il existe bel et bien des blocs v1 — le journal local
+  d'un poste de test en porte, et `RankedIdentity.replay_local_journal()` les renvoie
+  par la même fusion : un tel bloc arrivera avec son ancienne clé, que le tamis laissera
+  tomber sans refuser le rapport. D'où le filtre sur `version` ajouté à la requête
+  d'agrégation de `docs/SUPABASE.md`.
+- **Et ce numéro est désormais TENU, ce qu'il n'était pas** (ajouté en revue le
+  2026-09-12, défaut reproduit : ramené à 1, quatre suites restaient vertes, et la
+  requête documentée n'aurait plus rendu une seule ligne, pour tous les matchs, sans un
+  mot). Deux contrôles, parce qu'il y a deux façons de rompre la promesse : un témoin
+  de FORME (`TelemetrieGadgets.FORME_TEMOIN`, l'empreinte triée de
+  `COMPTEURS + CUMULS`, sur le patron de `Protocol.WIRE_WITNESS` — il rougit en
+  imprimant l'empreinte neuve et rappelle de trancher le numéro D'ABORD), et la lecture
+  du littéral `= 2` dans la requête de `docs/SUPABASE.md`, comparé à la constante. Une
+  assertion `VERSION == 2` écrite dans la suite n'aurait rien tenu : on l'incrémente
+  machinalement sans penser au lecteur SQL.
+- **Les clés restent identiques des deux côtés** : `GADGET_NUMBERS`
+  (`match_report.ts`) suit, et la suite compare les deux listes dans les deux sens. Rien
+  n'est DÉPLOYÉ — dépôt seulement, comme au lot E ; sans le redéploiement de `report`,
+  l'ancien tamis jette le bloc entier sans bruit.
+
+**Ce qui reste approché, et ce qui ne l'est plus.** Le majorant a disparu : deux
+colonnes exactes, plus aucune soustraction. Restent l'**angle mort des gadgets
+passifs** (vus par leur seule pose) et la gigue des deux compteurs de fenêtre —
+inchangés. Et une propriété qui n'est pas propre à la mine, désormais écrite comme
+telle : **les colonnes de MORT ne comptent que les gadgets passés par `detruire()`
+avant l'archive**, et trois sorties n'y passent pas — un gadget encore **debout** à la
+fin du match ; un gadget **purgé au départ de manche** (`_do_start_round` vide le
+conteneur au `queue_free()`, donc dans un BO3 tout gadget vivant en fin de manche
+quitte le match, que la télémétrie compte pourtant sur le MATCH) ; et un gadget
+**REMPLACÉ** (`_do_spawn_gadget`, un gadget debout par joueur, `queue_free()` sans
+`detruire()` — avec une recharge de 60 s dans un match de 5 min, le cas ordinaire).
+Dans les trois cas c'est une absence, pas une attribution fausse — et c'était toute la
+différence avec l'ancien `allumages − morts_balle`, qui transformait cette absence en
+un passage inventé. Le match B de la suite joue exactement le troisième cas : une mine
+abattue, puis remplacée pendant son embrasement, laisse `morts_balle` à 0 tandis que
+les deux colonnes d'allumage disent 1 et 1.
+
+⚠️ **La première rédaction de ce paragraphe n'avait gardé que le premier des trois
+cas** (corrigé en revue le 2026-09-12) : le lot E nommait la purge de manche, et le
+remplacement — le plus fréquent des trois — n'avait jamais été nommé nulle part, alors
+que le propre test du lot le démontre. Un analyste qui aurait lu la liste courte aurait
+conclu que `morts_balle` compte tous les gadgets abattus, et sous-compté.
+
+Les cinq endroits que le lot E avait alignés sur le mot « majorant » — l'en-tête de
+`telemetrie_gadgets.gd`, le carnet de `match_record.gd`, le tamis `match_report.ts`,
+« Lire les chiffres » dans `docs/SUPABASE.md`, et la section du lot E ci-dessus —
+disent maintenant ce qui est exact, la dernière en renvoyant ici plutôt qu'en se
+réécrivant. Et l'**énumération des clés** de la section du lot E, comme celle de PE5,
+est amendée : c'est la liste qu'un lecteur recopie pour écrire une requête, elle ne
+peut pas rester à `allumages`.
+
+**Validation** — sous deux `HOME` isolés, l'un neuf, l'autre dont le `settings.cfg`
+porte `[display] intro_vue=true` (la leçon du lot C) ; décomptes SANS la ligne de
+synthèse, **identiques sous les deux** : `test_telemetrie_gadgets` (**169** — 152, plus
+quinze contrôles du lot H et deux de la revue sur le numéro de version),
+`test_classes` (411), `test_tir_et_reserves` (341), `test_menus_finitions` (**53**,
+dont trois neufs sur l'avis), `test_protocole` (9), `test_conditions_de_match` (69),
+`test_rejeu` (79), `test_rejeu_journal` (21), `test_charte` (243),
+`test_netcode` (82), et les cinq modes de `test_online_match` — `--local` (18),
+`--training` (17), `--fenetre` (10), `--appariement` (7), `--eblouissement` (9). Côté
+serveur, `deno test --allow-net=jsr.io supabase/functions/_shared/` : **102** (100 au
+lot E), dont deux neufs — les deux causes qui passent entières, et un bloc v1 rejoué
+qui perd son `allumages` sans que le rapport soit refusé.
+
+**Quatre sabotages exécutés, et vus rougir** (plus le témoin du fil, qui a rougi tout
+seul avant qu'on recalcule l'empreinte) :
+1. la mention des gadgets **retirée de l'avis** → « l'avis nomme les gadgets si, et
+   seulement si, le rapport les emporte » (`test_menus_finitions`). C'est le contrôle
+   qui manquait au lot E ;
+2. `GadgetMine.allumage_par_balle()` rendu **toujours faux** → quatre contrôles, dont
+   le match B qui lit `allumages_passage = 2` au lieu de 1 et 1 ;
+3. la cause **lue à l'envers** à l'ordre (`cause != ALLUMAGE_BALLE`) → quatre
+   contrôles : les deux de la famille E (qui exécutent l'ordre côté client), celui de
+   la famille C qui lit la ligne entière, et le match B. ⚠️ La famille E n'est donc
+   **pas** le seul endroit où cette erreur se voit, comme son commentaire l'a d'abord
+   écrit : inversée au COMPTAGE plutôt qu'à l'ordre, la même erreur fait rougir six
+   contrôles, dont trois de la famille A (revue du 2026-09-12, les deux sabotages
+   exécutés). Ce que la famille E a de seul, c'est de jouer l'ordre tel qu'il arrive,
+   sur un nom sans nœud — le seul chemin où la cause n'a d'autre source que le paquet ;
+4. `allumages_balle` **retiré du seul côté serveur** → la comparaison des deux listes
+   (« absentes du serveur : ["allumages_balle"] ») ET trois tests Deno.
+
+**Quatre sabotages de plus, exécutés en revue le 2026-09-12** (chacun remis, `git diff
+--numstat` identique avant/après) :
+5. le littéral de la fusion **ré-enveloppé sur deux lignes** dans `game_state.gd`,
+   comportement inchangé → l'ancien contrôle de l'avis rougissait (« envoi : false »,
+   ce qui était faux). Le contrôle corrigé reste vert sous ce même témoin, et rougit
+   bien quand la fusion cesse pour de bon d'emporter les gadgets (`if false` dans
+   `conditions_a_envoyer` → « fusion : false, chemin d'envoi : true ») ;
+6. `TelemetrieGadgets.VERSION` **ramené à 1** → rien ne rougissait
+   (`test_telemetrie_gadgets`, `test_conditions_de_match` verts). D'où les deux
+   contrôles neufs ;
+7. le filtre SQL de `docs/SUPABASE.md` porté à **`= 3`** → « SQL : 3, jeu : 2 » ;
+8. une clé de `COMPTEURS` **renommée** (`batterie_vide` → `batterie_a_plat`) → le
+   témoin de forme rougit en imprimant l'empreinte neuve, avec les comparaisons de
+   listes et les décomptes de clés des matchs A et B.
+
+⚠️ **Signalé, non corrigé** :
+- **la mesure du LIEN part aussi** (`rtt_moyen_ms`, `rtt_max_ms`), et l'avis ne la
+  nomme pas : « relevé de cadence » et « description de ta machine » ne couvrent pas
+  une mesure de réseau, alors que le dépôt sépare bien les trois. La promesse « Rien
+  d'autre n'est envoyé » reste donc inexacte sur ce point, dans l'avis du jeu comme
+  dans la phrase aux testeurs de `docs/SUPABASE.md`. **Question à trancher par Adrien,
+  AVANT le tag de la 0.6.0**, et sans en décider ici : laisser tel quel ; compléter son
+  incise (par ex. « …de ta machine (…) et de ta connexion ») ; ou cesser d'envoyer le
+  RTT. C'est son texte — le lot avait consigne d'insérer sa phrase, pas d'en écrire une
+  autre (relevé en revue le 2026-09-12) ;
+- **le bloc envoyé porte les DEUX côtés** — le gadget de l'adversaire et ses
+  compteurs —, quand l'avis ne parle que de « tes gadgets ». Le serveur ne lit que le
+  côté du rapporteur, et l'adversaire rapporte le même match de son côté, mais la phrase
+  ne le dit pas. **Question posée à Adrien** : la laisser telle quelle (c'est son texte)
+  ou la préciser. Rien n'a été réécrit d'initiative ;
+- **les valeurs de CAUSE qui voyagent sur le fil ne sont pas dans le périmètre du
+  témoin** (`Protocol.WIRE_WITNESS`) : `ALLUMAGE_PASSAGE` / `ALLUMAGE_BALLE` de ce lot,
+  comme `MORT_*` et `DEGATS_*` du lot E, vivent dans `gadget_base.gd`, qui n'est ni
+  dans `RPC_SOURCES`, ni le codec de carte, ni un attribut de salon — les trois seules
+  sources de l'empreinte. Sabotage exécuté en revue (`ALLUMAGE_BALLE := 7`) :
+  `test_protocole` reste **vert**, les suites employant les constantes par leur nom. Le
+  fil de CE lot est bien couvert (c'est l'arité du RPC qui a changé, et le témoin l'a
+  signalé), mais une prochaine étape qui insérerait une troisième cause en décalant les
+  valeurs changerait le SENS des octets sous un `VERSION` inchangé : deux builds
+  « protocole 17 » s'accepteraient au bonjour et rangeraient chaque mine abattue en
+  passage, sans une erreur. Le remède existe déjà dans le fichier — `_empreinte()`
+  empreinte les constantes EOS par `_constante(chemin, nom)` ; il suffirait d'ajouter
+  les constantes de cause de la même façon et de corriger « trois sources ». **Hors
+  périmètre de ce lot** (le défaut date du lot E) : à faire dans un lot dédié, avec
+  recalcul du témoin ;
+- **`weapon_self`, `weapon_opponent`, `map`, `duration` et le format partent aussi**, et
+  l'avis les range implicitement dans « le résultat du match ». C'est sa formulation,
+  d'avant ce lot ; rien n'y a été touché ;
+- `player.gd`, note du viseur : « L'écran partagé est permanent, y compris en ligne » —
+  toujours faux depuis le 2026-08-18, signalé aux lots D, F et G ;
+- `bullet.gd` : la traînée ombre le corps de J1 et pas celui de J2 (masque `1 | 4`) —
+  l'asymétrie entre JOUEURS, déjà signalée au lot G.
+
+### Fait à la fusion du 2026-09-12 — le leurre et le halo de proximité ✅
+
+⚠️ **Cette section décrivait un travail à faire ; il est fait** (fusion `d9bfc98`). Le
+`Visuel` du leurre demande désormais son masque à
+`CanauxLumiere.masque_vue_adverse(poseur_id)` au lieu du `2` écrit en dur. Le contrôle
+« VUE PAR VUE » a rougi à la fusion (« 2 contre 34 »), puis verdi : le garde-fou posé
+au lot D a servi le jour même. Ce qui suit est conservé pour la raison, pas pour
+l'action.
+
+#### La raison, telle qu'elle était écrite avant la fusion
+
+(2026-09-12, hors étape 28.) La session
+du bandeau LED a sorti la règle des canaux de lumière dans `canaux_lumiere.gd`
+(`CanauxLumiere`), et le halo de proximité d'un joueur éclaire désormais le corps
+adverse — sur l'écran du porteur du halo seulement (décision d'Adrien du 2026-09-11).
+Le `Visuel` du leurre (lot D) devra alors prendre
+`CanauxLumiere.masque_vue_adverse(poseur_id)` à la place du `2` écrit en dur : sinon
+un vrai corps s'allume dans le halo et le leurre non, et il se reconnaît de près.
+Rien ne peut dériver en silence — le contrôle « le corps vu par l'adversaire a le
+masque de lumière d'un corps adverse » compare au masque RÉEL de `visual_enemy`, et
+rougira à la fusion tant que le leurre ne suivra pas. Ce changement n'est pas encore
+dans `main` ; la session LED préviendra.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
@@ -17985,6 +20003,11 @@ l'étape 22 —, et la pose.
 main le 2026-09-09 et ordonné la fusion. Restent les **neuf autres classes** et
 l'équilibrage que seuls des matchs révèlent — dont les dix gadgets, tous livrés
 et **aucun joué en match réel**.
+
+⚠️ **Et un défaut antérieur, signalé au lot C de l'étape 28 (2026-09-11)** : un appui
+de fusée ou de gadget refusé, s'il reste TENU, part tout seul au retour de la
+ressource — on sent le refus, puis le geste part sans nouvel appui. À trancher avec
+Adrien : le corriger touche la simulation des deux pairs.
 
 ⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**
 La marge est de 0,5 image par seconde — le banc vise 60,0 et relève 60,5 — soit
@@ -18413,7 +20436,9 @@ code vérifié par les suites, et les chiffres attendus restent des attentes.
 - **H14** — déployer PE2.3 : `supabase db push` puis
   `supabase functions deploy report --no-verify-jwt`, dans cet ordre, l'une
   juste après l'autre (`docs/SUPABASE.md`). Tant que ce n'est pas fait, les
-  clients à jour envoient un bloc que la base ignore, sans rien perdre.
+  clients à jour envoient un bloc que la base ignore, sans rien perdre. Et depuis
+  le 2026-09-11, le redéploiement de `report` emporte aussi le tamis de la
+  télémétrie des gadgets (`parseGadgets`, PE5) : aucune commande de plus.
 - **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
   des pics ; et désormais, gratuitement, les `conditions` de ses propres
   matchs dans `user://match_history.json` — c'est le même relevé, pris en
@@ -18452,6 +20477,16 @@ l'effet de bord Sentinelle / Incendiaire (root plus long que la cadence, signal�
 à l'étape 20 des dix classes) ne se juge qu'en jouant. Avec peu de testeurs,
 tout le monde démarre Aveugle I et l'appariement sera étroit : la fourchette
 d'attente (étape 8.5) est à revoir pour une population de dix personnes.
+
+**Mesurer ce que font les gadgets, depuis le 2026-09-11** (étape 28 des dix classes,
+lot E, et **complété au lot H le 2026-09-12**) : chaque match archivé porte un bloc
+`gadgets` (schéma 6 de `match_record.gd`) — poses, morts de gadget par balle ou en fin
+de vie, allumages **par passage ou par balle** (deux colonnes exactes depuis le lot H,
+qui a remplacé la colonne unique `allumages` et son majorant), bascules du
+grésillement, PV de braises, morts dans les 5 s qui suivent un effet —, compté chez
+les deux pairs et remonté DANS les conditions de PE2.3. Le bloc porte sa propre
+`version`, passée à **2** au lot H. Les requêtes sont dans `docs/SUPABASE.md`
+(section PE5) ; elles ne rendent rien tant que H14 n'est pas fait.
 
 ### PE6 — Distribution
 
@@ -18762,12 +20797,12 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. **`v0.5.0` publiée le 2026-09-10** — mineure : `Protocol.VERSION` 15 → 16 (tir semi-automatique, index des dix classes sur le fil, état et destruction des gadgets portés par l'hôte), `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le chantier DIX CLASSES des étapes 22 à 26 — le choix de classe revenu dans le salon, l'entraînement qui joue la classe choisie et compte ses fusées, un appui un tir (l'Occulteur seul en rafale), une minute de recharge et un gadget debout par joueur, le grésillement en batterie qui éteint les torches, le voile qu'on ne traverse plus, les images des gadgets et la poudre aux traces lisibles, les touches Y et N de J2 au clavier — ; les finitions des menus (titres re-détourés, menu muet sous l'allumage, fiche de classe refaite, icônes d'armes en couleur, verrou de torche en cadenas) ; l'intro en vidéo (DA6.6) ; les conditions de match archivées et F6 (PE2, PE3) ; et le correctif de la gâchette R2, qui avait manqué la 0.4.1 et la 0.4.2. | ✅ **Fait le 2026-09-08** |
-| H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. **`v0.5.0` publiée le 2026-09-10** — mineure : `Protocol.VERSION` 15 → 16 (tir semi-automatique, index des dix classes sur le fil, état et destruction des gadgets portés par l'hôte), `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le chantier DIX CLASSES des étapes 22 à 26 — le choix de classe revenu dans le salon, l'entraînement qui joue la classe choisie et compte ses fusées, un appui un tir (l'Occulteur seul en rafale), une minute de recharge et un gadget debout par joueur, le grésillement en batterie qui éteint les torches, le voile qu'on ne traverse plus, les images des gadgets et la poudre aux traces lisibles, les touches Y et N de J2 au clavier — ; les finitions des menus (titres re-détourés, menu muet sous l'allumage, fiche de classe refaite, icônes d'armes en couleur, verrou de torche en cadenas) ; l'intro en vidéo (DA6.6) ; les conditions de match archivées et F6 (PE2, PE3) ; et le correctif de la gâchette R2, qui avait manqué la 0.4.1 et la 0.4.2. **`v0.6.0` publiée le 2026-09-12** — mineure : `Protocol.VERSION` 16 → 17, `verifier_publication.sh` l'a confirmé avant le tag (« le fil a bougé, et la mineure aussi »). Elle porte 73 commits (64 hors fusions) : les étapes **27 et 28** du chantier DIX CLASSES (sept corrections de gadgets après l'essai d'Adrien, puis les dix suggestions de gameplay en huit lots — les braises par tics, l'ombre habitée qui arrête ce qu'elle montre, les refus qui se sentent, le leurre rendu comme un corps, la télémétrie des gadgets, la killcam qui rejoue les gadgets, la mine qui aveugle à hauteur de sa flamme, et les arbitrages des lots G et H) ; la **refonte roman graphique** en deux chantiers (les effets déclenchés, puis le sol, les traces, la fusée et les titres de menu) ; les **murs au trait** ; le **bandeau LED** allumé pour tout le monde ; le **halo de proximité** qui révèle l'ennemi collé à soi sans trahir son porteur ; le **décor cuit en une texture par carte** ; et trois retouches de ressenti. ⚠️ **Publiée en connaissance de deux manques**, tous deux tranchés par Adrien le 2026-09-12 : l'avis de phase de test ne nomme pas la mesure du LIEN qui part avec le rapport (« publier tel quel, corriger après ») ; et le commit `6781d8d`, qui fait suivre à la silhouette adverse l'énergie réelle des lampes, part sans avoir été éprouvé manette en main (« garder, publier avec ») — c'est un changement d'équilibre : le Parasite devient invisible pendant son grésillement, et les deux classes furtives se dénoncent moins. | ✅ **Fait le 2026-09-08** |
+| H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. **Séance ciblée proposée le 2026-09-11 (suggestion 11), qu'Adrien fera lui-même** : six matchs en écran scindé, choisis pour trancher ce qui n'a jamais été éprouvé — Spectre contre Allumeur (les deux extrêmes de lumière), Sentinelle contre Incendiaire (depuis le semi-automatique, une salve de deux coups immobilise 0,925 s et 0,733 s d'après le code), Illusionniste contre Braconnier (les leurres tiennent-ils 18 s et 16 s ?) —, trois questions fermées par match, consignées ici. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
-| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
+| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 
 ---
 

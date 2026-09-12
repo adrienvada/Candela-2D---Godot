@@ -80,8 +80,10 @@ const DESARMEMENT := 0.30
 ## Durée de vie en secondes, ou 0 pour « jusqu'à la fin de la manche ».
 @export var duree_vie: float = 0.0
 
-## Points de vie du gadget posé. Tous sont destructibles à la balle — c'est le
-## contrat commun de `GadgetBase` — mais pas au même prix.
+## Points de vie du gadget posé. Les objets sont destructibles à la balle — c'est
+## le contrat commun de `GadgetBase` — mais pas au même prix. Les gadgets diffus
+## (nuages et nappes) ne le sont plus depuis le 2026-09-11 : voir
+## `GadgetBase.touche_par_les_balles`.
 @export var pv: float = 1.0
 
 

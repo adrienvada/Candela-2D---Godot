@@ -41,6 +41,8 @@ const MapGeometry := preload("res://map_geometry.gd")
 const GadgetBase := preload("res://gadget_base.gd")
 const GadgetVoile := preload("res://gadget_voile.gd")
 const GadgetOmbre := preload("res://gadget_ombre.gd")
+## Sans dépendance (étape 28) : `game_state.gd` fait le même `preload`.
+const Eblouissement := preload("res://eblouissement.gd")
 
 var _failures: int = 0
 
@@ -50,6 +52,41 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 	else:
 		_failures += 1
 		printerr("  ✗ ", label, ("  → " + detail) if detail != "" else "")
+
+
+## Un joueur de carton (étape 28) : ce que `GadgetBraises.appliquer_effets` lit d'un
+## joueur, rien de plus — et il COMPTE ses brûlures. Nommé, bien qu'aucun RPC ne le
+## vise : la règle du dépôt pour tout nœud ajouté à la main.
+class FauxJoueur extends Node2D:
+	var dead := false
+	var appels := 0
+	var total := 0.0
+	# La CAUSE (étape 28, lot E) : la nappe la passe désormais. Sans ce troisième
+	# paramètre, chaque tic lèverait « trop d'arguments » sur ce carton.
+	func take_damage(montant: float, _source: Node2D, _cause: int = 0) -> void:
+		appels += 1
+		total += montant
+
+func _faux_joueur() -> FauxJoueur:
+	var f := FauxJoueur.new()
+	f.name = "FauxJoueur"
+	root.add_child(f)
+	return f
+
+## `duree` secondes par pas de `pas`, `faux` au centre de la nappe ou hors d'elle.
+func _bruler(nappe, faux, duree: float, pas: float, dedans: bool = true) -> void:
+	var dehors: Vector2 = nappe.global_position + Vector2(GadgetBraises.RAYON * 3.0, 0.0)
+	faux.global_position = nappe.global_position if dedans else dehors
+	for i in int(round(duree / pas)):
+		nappe.appliquer_effets([faux], pas)
+
+## Par TYPE, jamais par nom : Godot renomme les homonymes (Pièges connus).
+func _compter_lumieres(n: Node) -> int:
+	var k := 0
+	for c in n.get_children():
+		if c is PointLight2D:
+			k += 1
+	return k
 
 func _init() -> void:
 	call_deferred("_run")
@@ -534,6 +571,10 @@ func _test_socle_gadgets() -> void:
 	_check("il porte une forme de collision", g.get_node_or_null("Forme") != null)
 	_check("il porte un occluder : un gadget n'est pas un trou de lumière",
 		g.get_node_or_null("Occluder") != null)
+	# Étape 28 : `GameState._sources_eblouissantes()` lit ce gain SANS garde, sur
+	# tous les gadgets. Supprimé du socle, la suite crie (SCRIPT ERROR) ici même.
+	_check("le socle brûle à plein : energie_relative() vaut 1",
+		is_equal_approx(g.energie_relative(), 1.0), str(g.energie_relative()))
 
 	# Les points de vie : tout gadget est destructible à la balle.
 	g.pv = 2.0
@@ -1106,17 +1147,65 @@ func _test_torche_fantome() -> void:
 	# instance, jamais du type.
 	_check("elle est périssable", torche.duree_vie > 0.0, str(torche.duree_vie))
 
-	# ── Le balayage ──────────────────────────────────────────────────────────
-	var avant: float = torche.rotation
-	torche._age = GadgetTorcheFantome.PERIODE * 0.25
-	torche._physics_process(0.0)
-	_check("elle balaie", not is_equal_approx(torche.rotation, avant),
-		"%.3f → %.3f" % [avant, torche.rotation])
-	# Au quart de période, l'amplitude est à son maximum : c'est le seul point du
-	# cycle dont la valeur soit connue sans recopier la formule.
-	_check("son balayage tient l'amplitude annoncée",
-		is_equal_approx(absf(torche.rotation), GadgetTorcheFantome.AMPLITUDE),
-		str(torche.rotation))
+	# ── Le balayage : humain, borné, et fonction de la graine ──────────────
+	#
+	# ⚠️ Plus de sinus depuis le 2026-09-11 : un plan de gestes tiré de la graine
+	# de l'hôte (Adrien : « moins régulière, plus humaine »). On contrôle ce qui
+	# compte pour le jeu, sans recopier la formule.
+	_check("la graine de l'hôte lui parvient — le spawn ne la pose que si la variable existe",
+		"graine" in torche and torche.graine != 0, str(torche.get("graine")))
+	var borne_tenue := true
+	var bouge := false
+	var precedent: float = torche.angle_relatif(0.0)
+	for i in range(320):
+		var a: float = torche.angle_relatif(i * 0.05)
+		if absf(a) > GadgetTorcheFantome.AMPLITUDE + 1e-6:
+			borne_tenue = false
+		if absf(a - precedent) > 0.05:
+			bouge = true
+		precedent = a
+	_check("elle balaie", bouge)
+	_check("sans jamais sortir du couloir annoncé (±36°)", borne_tenue)
+	# Les pauses se mesurent SUR L'ANGLE, dans chaque pause du plan : compter les
+	# pauses du plan était vrai par construction (le tirage les rend toujours
+	# ≥ 0,25 s), et un `angle_relatif` qui interpolait À TRAVERS elles passait
+	# encore. Compter des fenêtres immobiles n'aurait rien discriminé non plus : les
+	# bouts plats de la courbe à secousse minimale en fournissent. Trouvé et simulé
+	# sur 300 graines en revue (2026-09-11).
+	var pauses := 0
+	var immobiles := 0
+	for g in torche._plan:
+		if float(g[2]) > 16.0 or float(g[2]) - float(g[1]) < 0.25:
+			continue
+		pauses += 1
+		var lo := INF
+		var hi := -INF
+		for k in 24:
+			var a: float = torche.angle_relatif(float(g[1]) + 0.005 + k * 0.01)
+			lo = minf(lo, a)
+			hi = maxf(hi, a)
+		# Deux fois le tremblement (0,012 + 0,009), plus une marge.
+		if hi - lo <= 0.045:
+			immobiles += 1
+	_check("et elle marque des pauses, comme une main qui cherche",
+		pauses >= 4 and immobiles == pauses, "%d/%d pauses immobiles" % [immobiles, pauses])
+	# Même graine, même plan — les deux pairs ; autre graine, autre plan.
+	var jumelle := GadgetTorcheFantome.new()
+	jumelle.graine = torche.graine
+	var autre := GadgetTorcheFantome.new()
+	autre.graine = torche.graine + 7919
+	var memes := true
+	var differe := false
+	for i in range(160):
+		var t := i * 0.1
+		if not is_equal_approx(jumelle.angle_relatif(t), torche.angle_relatif(t)):
+			memes = false
+		if absf(autre.angle_relatif(t) - torche.angle_relatif(t)) > 0.02:
+			differe = true
+	_check("deux torches de même graine balaient à l'identique, chez les deux pairs", memes)
+	_check("une autre graine donne un autre balayage", differe)
+	jumelle.free()
+	autre.free()
 	torche._age = 0.0
 	torche._physics_process(0.0)
 
@@ -1227,8 +1316,14 @@ func _test_mine() -> void:
 		return
 
 	_check("elle peut éblouir", mine.eblouit)
+	# ⚠️ **Les DEUX gardes du sommeil, et il faut les deux** (étape 28, lot A2) : le
+	# rayon nul arrête le calcul de proximité, l'énergie nulle annule le gain que
+	# l'hôte y multiplie. Vérifier la première seule laisserait passer une mine qui
+	# brûlerait à plein le jour où le rayon cesserait d'être la borne.
 	_check("mais pas en dormant : son rayon d'éblouissement est nul",
 		is_zero_approx(mine.rayon_eblouissement), str(mine.rayon_eblouissement))
+	_check("et elle ne brûle rien en dormant : energie_relative() vaut 0",
+		is_zero_approx(mine.energie_relative()), str(mine.energie_relative()))
 	_check("sans axe : elle crache dans toutes les directions",
 		not mine.eblouissement_dirige)
 	_check("elle n'a pas de durée de vie propre",
@@ -1292,6 +1387,80 @@ func _test_mine() -> void:
 	_check("elle ne blesse personne", is_equal_approx(gs.p2.hp, pv_avant))
 	_check("un second ordre d'allumage ne la rallume pas",
 		not mine.veut_s_allumer([gs.p1, gs.p2]))
+
+	# ── L'AVEUGLEMENT SUIT CE QUI BRÛLE (étape 28, lot A2, Adrien) ──────────
+	#
+	# ⚠️ **Au seul plein feu, ce contrôle passerait pour une mauvaise raison** :
+	# l'ancien code, le nouveau et les sabotages y donnent le même plafond. D'où
+	# quatre relevés étalés sur l'embrasement.
+	# ⚠️ **Le TÉMOIN d'abord** : au plein feu, le plafond vaut ce que dit la
+	# distance. Sans lui, une ligne de vue coupée rendrait 0 partout et le rapport
+	# serait « constant » sur des zéros.
+	# ⚠️ L'énergie RENDUE se lit sur la flamme, jamais par `energie_relative()` :
+	# comparer le gain à lui-même ne prouverait rien.
+	# ⚠️ **L'âge avance par `_physics_process(Δ)`, jamais par `_age = …`** : c'est
+	# `super(delta)` qui fait vieillir la mine, chez les deux pairs — la leçon de la
+	# revue du lot A1, où un `super` retiré laissait la suite verte. La physique
+	# automatique est coupée pour que les pas qu'il faut bien laisser passer — le
+	# serveur doit voir les corps déplacés — ne la vieillissent pas entre deux
+	# relevés. Les pas sont des FRACTIONS de ce qu'il lui reste à brûler : la mine
+	# a déjà vieilli de quelques images depuis `allumer()`, et un pas absolu la
+	# tuerait au dernier relevé.
+	# Même géométrie que la torche fantôme plus haut : la cible à +150 px, l'autre
+	# joueur à 900 px de côté — un seul corps sur le trajet à la fois.
+	mine.set_physics_process(false)
+	var d_mine := 150.0
+	gs.p2.global_position = mine.global_position + Vector2(d_mine, 0.0)
+	gs.p1.global_position = mine.global_position + Vector2(0.0, 900.0)
+	# Deux pas de physique : un corps téléporté n'existe pour les requêtes qu'au
+	# pas suivant.
+	await physics_frame
+	await physics_frame
+	var espace_m: PhysicsDirectSpaceState2D = gs.p1.get_world_2d().direct_space_state
+	var flamme: PointLight2D = mine.get_node_or_null("Embrasement")
+	var restant: float = maxf(0.0, mine.duree_vie - mine.age())
+	var rapports_m: Array[float] = []
+	var restes_m: Array[float] = []
+	var rendues_m: Array[float] = []
+	var rayon_fixe := true
+	for part in [0.0, 0.3, 0.3, 0.2]:
+		mine._physics_process(float(part) * restant)
+		restes_m.append((mine.duree_vie - mine.age()) / GadgetMine.DUREE_EMBRASEMENT)
+		var rendue: float = flamme.energy / GadgetMine.ENERGIE if flamme != null else -1.0
+		rendues_m.append(rendue)
+		var src_m := {}
+		for s in gs._sources_eblouissantes():
+			if s["noeud"] == mine:
+				src_m = s
+		if src_m.is_empty() or flamme == null:
+			rapports_m.append(-1.0)
+			continue
+		rayon_fixe = rayon_fixe and is_equal_approx(float(src_m["rayon"]),
+			GadgetMine.RAYON_EBLOUISSEMENT)
+		rapports_m.append(gs._plafond_de_source(espace_m, src_m, gs.p2)
+			/ maxf(rendue, 1e-6))
+	var attendu_m: float = Eblouissement.plafond_pour(Eblouissement.intensite_proximite(
+		d_mine, GadgetMine.RAYON_EBLOUISSEMENT)) \
+		* Eblouissement.gain_taille(GadgetMine.RAYON_EBLOUISSEMENT)
+	_check("témoin : au plein feu, la mine éblouit ce que dit la distance",
+		attendu_m > 0.0 and absf(rapports_m[0] - attendu_m) < 1e-3,
+		"%.4f vs %.4f" % [rapports_m[0], attendu_m])
+	# Second témoin : les quatre relevés couvrent VRAIMENT l'embrasement. Sans lui,
+	# une mine dont l'âge ne bougerait plus rendrait quatre fois le même rapport, et
+	# « constant » ne dirait plus rien.
+	_check("les quatre relevés couvrent l'embrasement, du plein feu à sa fin",
+		restes_m.size() == 4 and restes_m[0] > 0.9 and restes_m[3] < 0.25,
+		str(restes_m))
+	_check("et la flamme RENDUE s'éteint avec ce qui reste à brûler",
+		rendues_m[3] > 0.0 and rendues_m[3] < rendues_m[0] * 0.1, str(rendues_m))
+	var constant_m := true
+	for r in rapports_m:
+		constant_m = constant_m and absf(r - rapports_m[0]) < 1e-3
+	_check("le rapport éblouissement / énergie rendue reste constant sur l'embrasement",
+		constant_m, str(rapports_m))
+	_check("son rayon d'éblouissement ne rétrécit plus avec la flamme",
+		rayon_fixe and is_equal_approx(mine.rayon_eblouissement,
+			GadgetMine.RAYON_EBLOUISSEMENT), str(mine.rayon_eblouissement))
 
 	# ── ABATTUE, elle PART ───────────────────────────────────────────────────
 	var autre := GadgetMine.new()
@@ -1369,6 +1538,135 @@ func _test_braises() -> void:
 		GadgetBraises.DEGATS_PAR_SECONDE * 2.0 >= 25.0,
 		"%.0f PV" % (GadgetBraises.DEGATS_PAR_SECONDE * 2.0))
 
+	# ── L'AVEUGLEMENT SUIT LA LUEUR (étape 28), CHEZ LES DEUX PAIRS ─────────
+	# ⚠️ **Par `_physics_process`, jamais par `appliquer_effets`** : c'est le chemin
+	# du CLIENT, qui n'appelle pas le second. Lu par l'autre, ce contrôle passerait
+	# sur une nappe qui ne pâlit que chez l'hôte.
+	# ⚠️ L'énergie RENDUE se lit sur la lumière, jamais par `energie_relative()` :
+	# comparer le gain à lui-même ne prouverait rien.
+	# Le témoin d'abord : à pleine lueur, le plafond vaut ce que dit la distance —
+	# une ligne de vue cassée rendrait 0 partout, et un rapport « constant » à 0.
+	# Physique de la nappe gelée jusqu'à la fin du test : son âge ne bouge plus que
+	# par nos appels à `_physics_process`.
+	nappe.set_physics_process(false)
+	var d_nappe := 100.0 # hors du disque qui brûle (68) : on mesure la vue, pas la peau
+	gs.p2.global_position = nappe.global_position + Vector2(d_nappe, 0.0)
+	gs.p1.global_position = nappe.global_position + Vector2(0.0, 900.0)
+	# Deux pas : un corps téléporté n'existe pour les requêtes qu'au pas suivant.
+	await physics_frame
+	await physics_frame
+	var espace_n: PhysicsDirectSpaceState2D = gs.p1.get_world_2d().direct_space_state
+	var lueur: PointLight2D = nappe.get_node_or_null("Lueur")
+	var rapports_n: Array[float] = []
+	var derniere_lueur := -1.0
+	# ⚠️ **L'âge avance par `_physics_process(Δ)`, jamais par `_age = …`** : c'est
+	# `super(delta)` qui fait vieillir la nappe et la tue à `duree_vie`, chez les
+	# deux pairs. Une affectation le court-circuitait — `super` retiré, la nappe
+	# devenait éternelle et la suite restait verte (revue du lot A1, 2026-09-11).
+	# Les pas sont comptés ICI, pas relus sur `age()` : relus, un âge figé à zéro
+	# redemanderait chaque fois le même pas, et le contrôle suivrait le défaut.
+	var age_cumule := 0.0
+	var ages_n: Array[float] = []
+	# L'alpha de l'image, à côté de la lueur : les deux sont le point 3 du lot, et
+	# rien d'autre ne lit l'alpha — la nappe de l'invité aurait pu rester opaque
+	# dix secondes, puis disparaître d'un coup.
+	var alphas_n: Array[float] = []
+	var lueurs_n: Array[float] = []
+	var restes_n := [1.0, 0.5, 0.05]
+	nappe._age = 0.0
+	for reste in restes_n:
+		var age_vise: float = (1.0 - reste) * nappe.duree_vie
+		nappe._physics_process(age_vise - age_cumule)
+		age_cumule = age_vise
+		ages_n.append(nappe.age())
+		var visuel: Sprite2D = nappe._nappe
+		alphas_n.append(visuel.modulate.a if visuel != null else -1.0)
+		lueurs_n.append(lueur.energy if lueur != null else -1.0)
+		var src_n := {}
+		for s in gs._sources_eblouissantes():
+			if s["noeud"] == nappe:
+				src_n = s
+		if src_n.is_empty() or lueur == null:
+			rapports_n.append(-1.0)
+			continue
+		derniere_lueur = lueur.energy
+		rapports_n.append(gs._plafond_de_source(espace_n, src_n, gs.p2)
+			/ maxf(lueur.energy / GadgetBraises.ENERGIE, 1e-6))
+	var attendu_n: float = Eblouissement.plafond_pour(Eblouissement.intensite_proximite(
+		d_nappe, GadgetBraises.RAYON_EBLOUISSEMENT)) \
+		* Eblouissement.gain_taille(GadgetBraises.RAYON_EBLOUISSEMENT)
+	_check("témoin : à pleine lueur, la nappe éblouit ce que dit la distance",
+		attendu_n > 0.0 and absf(rapports_n[0] - attendu_n) < 1e-3,
+		"%.4f vs %.4f" % [rapports_n[0], attendu_n])
+	_check("sans l'hôte, la lueur pâlit avec l'âge",
+		derniere_lueur > 0.0 and derniere_lueur < GadgetBraises.ENERGIE * 0.5,
+		str(derniere_lueur))
+	var constant_n := true
+	for r in rapports_n:
+		constant_n = constant_n and absf(r - rapports_n[0]) < 1e-3
+	_check("le rapport éblouissement / lueur rendue reste constant sur la vie de la nappe",
+		constant_n, str(rapports_n))
+	_check("son rayon d'éblouissement ne rétrécit plus",
+		is_equal_approx(nappe.rayon_eblouissement, GadgetBraises.RAYON_EBLOUISSEMENT),
+		str(nappe.rayon_eblouissement))
+	var ages_ok := ages_n.size() == 3
+	for i in ages_n.size():
+		ages_ok = ages_ok and is_equal_approx(ages_n[i], (1.0 - restes_n[i]) * nappe.duree_vie)
+	_check("la nappe vieillit par sa propre physique (super)", ages_ok, str(ages_n))
+	# Absolu ET relatif : « l'alpha égale la lueur » passerait sur une nappe figée
+	# à 1 si la lueur l'était aussi — c'est le seuil sous 0,5 qui dit qu'elle pâlit.
+	var alphas_ok := alphas_n.size() == 3 and alphas_n[0] > 0.99 and alphas_n[2] < 0.5
+	for i in alphas_n.size():
+		alphas_ok = alphas_ok \
+			and absf(alphas_n[i] - lueurs_n[i] / GadgetBraises.ENERGIE) < 1e-3
+	_check("sans l'hôte, l'image pâlit comme la lueur (alpha = lueur / pleine lueur)",
+		alphas_ok, "alpha %s, lueur %s" % [str(alphas_n), str(lueurs_n)])
+	nappe._age = 0.0
+	nappe._physics_process(0.0)
+
+	# ── LA CADENCE NE DÉCIDE PLUS (étape 28) ─────────────────────────────────
+	# ⚠️ **Le NOMBRE d'appels est le contrôle, pas le total** : l'ancien code rendait
+	# déjà 33,6 PV à 60 comme à 480 images/s. Et les nombres sont ABSOLUS : « autant
+	# d'appels aux deux cadences » passerait sur une nappe qui ne brûle plus (0 = 0).
+	for cadence in [60.0, 480.0]:
+		var f := _faux_joueur()
+		_bruler(nappe, f, 2.1, 1.0 / cadence)
+		_check("2,1 s dans la nappe à %d images/s : huit tics de 4 PV" % int(cadence),
+			f.appels == 8 and is_equal_approx(f.total, 32.0),
+			"%d appels, %.2f PV" % [f.appels, f.total])
+		f.free()
+		var g2 := _faux_joueur()
+		_bruler(nappe, g2, 2.0, 1.0 / cadence)
+		_check("2,0 s pile à %d images/s : le huitième tic tombe à l'heure" % int(cadence),
+			g2.appels == 8, "%d appels" % g2.appels)
+		g2.free()
+	var h := _faux_joueur()
+	_bruler(nappe, h, 1.0, 1.0)
+	_check("une image d'une seconde verse quatre tics, pas un",
+		h.appels == 4 and is_equal_approx(h.total, 16.0), "%d appels" % h.appels)
+	h.free()
+	var t := _faux_joueur()
+	_bruler(nappe, t, 0.2, 1.0 / 480.0)
+	var apres_traversee: int = t.appels
+	_bruler(nappe, t, 1.0, 1.0 / 480.0, false)
+	_bruler(nappe, t, 0.06, 1.0 / 480.0)
+	_check("une traversée de 0,2 s ne coûte encore rien", apres_traversee == 0,
+		str(apres_traversee))
+	# ⚠️ **Le montant, pas seulement le compte.** Une charge VERSÉE à la sortie
+	# (3,2 PV) puis effacée ferait aussi « un appel » : sans le total, ce contrôle
+	# passait sur l'alternative que le lot a rejetée (revue du lot A1, 2026-09-11).
+	_check("… mais sa charge est gardée dehors : 0,06 s de plus font le premier tic, de 4 PV",
+		t.appels == 1 and is_equal_approx(t.total, GadgetBraises.PV_PAR_TIC),
+		"%d appels, %.2f PV" % [t.appels, t.total])
+	t.free()
+	var v := _faux_joueur()
+	for k in 12:
+		_bruler(nappe, v, 0.175, 1.0 / 480.0)
+		_bruler(nappe, v, 0.1, 1.0 / 480.0, false)
+	_check("des allers-retours plus courts qu'un tic brûlent comme un séjour (2,1 s cumulées)",
+		v.appels == 8, "%d appels" % v.appels)
+	v.free()
+
 	# ── ELLE BRÛLE, ET ELLE NE CONNAÎT PERSONNE ──────────────────────────────
 	var pv_avant: float = gs.p2.hp
 	gs.p2.global_position = nappe.global_position
@@ -1393,6 +1691,41 @@ func _test_braises() -> void:
 	await process_frame
 	_check("hors de la nappe, on ne brûle pas",
 		is_equal_approx(gs.p1.hp, pv_dehors))
+
+	# ── PAR LE VRAI CHEMIN : `_maj_gadgets` (l'appel de `_process`), le vrai joueur ──
+	# `round_active` est forcé en tête de ce test : c'est l'état d'une manche. Le
+	# contrôle suivant rejoue celui de l'entraînement (Pièges connus, « Un test qui
+	# force l'état ne voit pas l'état réel »). Aucune image ne passe pendant les
+	# boucles : aucune lumière d'impact ne s'éteint en route, le compte est exact.
+	nappe._charge.clear()
+	gs.p2.hp = 100.0
+	gs.p2.global_position = nappe.global_position
+	gs.p1.global_position = nappe.global_position + Vector2(0.0, 900.0)
+	var lumieres_avant := _compter_lumieres(gs.p2)
+	for i in 1008:
+		gs._maj_gadgets(1.0 / 480.0)
+	_check("par _maj_gadgets, 2,1 s à 480 images/s coûtent 32 PV",
+		is_equal_approx(100.0 - gs.p2.hp, 32.0), "%.2f PV" % (100.0 - gs.p2.hp))
+	_check("… en huit lumières d'impact, pas un millier",
+		_compter_lumieres(gs.p2) - lumieres_avant == 8,
+		str(_compter_lumieres(gs.p2) - lumieres_avant))
+
+	# ── À L'ENTRAÎNEMENT, là où Adrien essaie les classes ────────────────────
+	# Les drapeaux de `_on_training_requested` : manche désarmée, entraînement armé.
+	# J2 y est caché ; c'est J1 qui brûle. Le lancement réel n'est pas rejoué : il
+	# remonterait toute la manche pour vérifier une garde de deux drapeaux.
+	gs.round_active = false
+	gs.sandbox_mode = true
+	nappe._charge.clear()
+	gs.p1.hp = 100.0
+	gs.p1.global_position = nappe.global_position
+	gs.p2.global_position = nappe.global_position + Vector2(0.0, 900.0)
+	for i in 1008:
+		gs._maj_gadgets(1.0 / 480.0)
+	_check("à l'entraînement aussi, 2,1 s à 480 images/s coûtent 32 PV",
+		is_equal_approx(100.0 - gs.p1.hp, 32.0), "%.2f PV" % (100.0 - gs.p1.hp))
+	gs.round_active = true
+	gs.sandbox_mode = false
 
 	# ── LA NAPPE EST UNE IMAGE, QUI LUIT D'ELLE-MÊME ─────────────────────────
 	#
@@ -1432,6 +1765,13 @@ func _test_braises() -> void:
 		"%.1f %%" % (couverture * 100.0))
 	a1.free()
 
+	# ── ELLE MEURT DE SA PROPRE PHYSIQUE ─────────────────────────────────────
+	# En dernier : la nappe ne sert plus. Par `_physics_process`, le chemin des deux
+	# pairs — `super(delta)` retiré, elle brûlerait toute la manche à pleine lueur.
+	nappe._physics_process(nappe.duree_vie)
+	_check("à la fin de sa durée de vie, la nappe s'éteint d'elle-même",
+		nappe.is_queued_for_deletion(), "âge %.2f s" % nappe.age())
+
 	gs.queue_free()
 	await process_frame
 
@@ -1439,7 +1779,7 @@ func _test_braises() -> void:
 ## Les volumes — chantier CLASSES, étape 14.
 ##
 ## ⚠️ **Le contrôle qui porte les deux gadgets est qu'ils ne disent PAS la même
-## chose.** La suie est dense et petite — on voit qu'il y a quelqu'un, pas qui ;
+## chose.** La suie est dense et petite — on n'y voit personne (étape 27) ;
 ## la poussière est large et mince — personne ne voit loin, tout le monde voit un
 ## peu. Si un équilibrage les rapprochait, deux classes auraient le même gadget
 ## sous deux noms, et rien ne le signalerait.
@@ -1508,10 +1848,14 @@ func _test_volumes() -> void:
 	poussiere.free()
 
 	# ── Et le câblage : sans lui, les volumes n'effaceraient rien ────────────
+	# La boucle vit dans le socle des gadgets depuis le 2026-09-11 (étape 27), pour
+	# que le leurre s'efface exactement comme un corps : player.gd l'appelle.
 	var src := FileAccess.get_file_as_string("res://player.gd")
+	var socle := FileAccess.get_file_as_string("res://gadget_base.gd")
 	_check("player.gd interroge les gadgets, pas seulement les fusées",
-		src.contains('for gadget in get_tree().get_nodes_in_group("gadgets"):')
-			and src.contains("gadget.occultation_pour(global_position)"))
+		src.contains("GadgetBase.effacements_a(get_tree(), global_position)")
+			and socle.contains('for gadget in arbre.get_nodes_in_group("gadgets"):')
+			and socle.contains("gadget.occultation_pour(pos)"))
 
 
 ## Le leurre inerte — chantier CLASSES, étape 15.
@@ -1555,10 +1899,283 @@ func _test_leurre() -> void:
 	# 18 px : `player.gd` écrit « 18.0 is exactly the player radius » à côté de
 	# son propre occluder. La valeur est donc reprise, pas choisie.
 	_check("il occulte comme un corps", leurre.occulte_la_lumiere)
-	_check("et sur le même rayon", is_equal_approx(leurre.rayon, 18.0),
+	_check("sa zone de touche reste celle d'un corps (18)", is_equal_approx(leurre.rayon, 18.0),
 		str(leurre.rayon))
 	_check("il porte donc un occluder",
 		leurre.get_node_or_null("Occluder") != null)
+	# ⚠️ **Son OMBRE est celle d'un joueur : l'étoile de la silhouette, pas un
+	# disque.** Adrien le 2026-09-11 : « un cercle comme actuellement ». L'étape 15
+	# avait copié le cercle provisoire du joueur, que l'étoile écrase à l'équipement.
+	var occ_l: LightOccluder2D = leurre.get_node_or_null("Occluder")
+	var etoile := Charte.ombre_de_silhouette(load("res://assets/sprites/fusil_silhouette.png"))
+	_check("son ombre est l'étoile de la silhouette de sa classe",
+		occ_l != null and etoile.size() == 32 and occ_l.occluder.polygon == etoile,
+		"%d sommets" % (occ_l.occluder.polygon.size() if occ_l else -1))
+	var occ_j: LightOccluder2D = gs.p1.get_node_or_null("LightOccluder2D")
+	_check("exactement celle d'un joueur de la même classe",
+		occ_j != null and occ_l != null and occ_j.occluder.polygon == occ_l.occluder.polygon)
+
+	# ── LES COUCHES D'OMBRE SONT CELLES D'UN CORPS (lot G, 2026-09-12) ───────
+	#
+	# Adrien : « oui, qu'il ait l'ombre d'un corps ». Sur la couche du DÉCOR, le
+	# leurre faisait de l'ombre sous TOUTE lumière : il suffisait de poser une
+	# fusée, une mine ou une nappe de braises près de lui pour voir une ombre de
+	# corps là où un vrai corps n'en projette aucune.
+	#
+	# ⚠️ **Tout se compare aux occluders du VRAI joueur**, jamais à un 4, un 8 ou
+	# un 16 recopiés ici : ce sont eux la source, et un numéro écrit en dur
+	# passerait le jour où la numérotation bouge — elle a bougé à la fusion du
+	# bandeau LED.
+	var occ_torse_l: LightOccluder2D = leurre.get_node_or_null("OccluderTorse")
+	var occ_torse_j: LightOccluder2D = gs.p1.get_node_or_null("OccluderTorse")
+	_check("son ombre vit sur la couche du CORPS de son poseur, pas sur celle du décor",
+		occ_l != null and occ_j != null
+			and occ_l.occluder_light_mask == occ_j.occluder_light_mask
+			and occ_l.occluder_light_mask != MapGeometry.WALL_LAYER,
+		"%d contre %d" % [occ_l.occluder_light_mask if occ_l else -1,
+			occ_j.occluder_light_mask if occ_j else -1])
+	# Le second occluder : sans lui, la rétrodiffusion adverse traverserait le
+	# leurre, ce qu'elle ne fait pour aucun corps — un indice à la place d'un autre.
+	_check("il porte aussi le disque de torse d'un corps, à la couche du torse",
+		occ_torse_l != null and occ_torse_j != null
+			and occ_torse_l.occluder.polygon == occ_torse_j.occluder.polygon
+			and occ_torse_l.occluder_light_mask == occ_torse_j.occluder_light_mask,
+		"%d contre %d" % [occ_torse_l.occluder_light_mask if occ_torse_l else -1,
+			occ_torse_j.occluder_light_mask if occ_torse_j else -1])
+	# ⚠️ Et les deux couches sont DISTINCTES : la torche ne doit pas voir le torse,
+	# la rétrodiffusion ne doit pas voir l'étoile. Une seule couche pour les deux
+	# passerait les deux contrôles ci-dessus.
+	_check("et les deux couches restent distinctes, comme chez le joueur",
+		occ_l != null and occ_torse_l != null
+			and occ_l.occluder_light_mask != occ_torse_l.occluder_light_mask)
+	# Les lumières qui décident : ce sont elles qui font la différence à l'écran.
+	# Un CORPS et le leurre doivent répondre pareil à chacune.
+	var torche_adverse: PointLight2D = gs.p2.flashlight
+	var retro_adverse: PointLight2D = gs.p2.body_light
+	_check("la torche d'en face l'ombre, comme elle ombre un corps",
+		occ_l != null and torche_adverse != null
+			and (torche_adverse.shadow_item_cull_mask & occ_l.occluder_light_mask) != 0)
+	_check("la rétrodiffusion d'en face voit son torse, comme celui d'un corps",
+		occ_torse_l != null and retro_adverse != null
+			and (retro_adverse.shadow_item_cull_mask & occ_torse_l.occluder_light_mask) != 0)
+	# Le témoin qui tranche, et c'est le cas qu'Adrien décrit : une lumière POSÉE
+	# n'ombre que le décor. Un corps n'y fait pas d'ombre ; le leurre non plus,
+	# désormais. ⚠️ Hors de l'arbre, et libérée tout de suite : une mine qui vivrait
+	# une image entrerait dans le groupe des gadgets et dans l'éblouissement.
+	var mine_temoin = load("res://gadget_mine.gd").new()
+	mine_temoin.allumer()
+	var feu_temoin: PointLight2D = mine_temoin.get_node_or_null("Embrasement")
+	# ⚠️ Tout se lit AVANT le `free()` : en Godot 4, une référence sur un objet
+	# libéré se compare égale à `null`, et le témoin passerait alors pour une
+	# absence de lumière.
+	var eut_sa_flamme := feu_temoin != null
+	var masque_pose: int = feu_temoin.shadow_item_cull_mask if eut_sa_flamme else -1
+	mine_temoin.free()
+	_check("témoin : la mine allumée porte bien une lumière", eut_sa_flamme)
+	if masque_pose >= 0 and occ_l != null and occ_torse_l != null and occ_j != null:
+		_check("une lumière POSÉE n'ombre ni le corps du joueur ni le leurre",
+			(masque_pose & occ_j.occluder_light_mask) == 0
+				and (masque_pose & occ_l.occluder_light_mask) == 0
+				and (masque_pose & occ_torse_l.occluder_light_mask) == 0,
+			str(masque_pose))
+		# La moitié positive : cette même lumière ombre le DÉCOR. Sans elle, un
+		# masque à zéro passerait le contrôle ci-dessus pour rien.
+		_check("témoin : elle ombre le décor, elle",
+			(masque_pose & MapGeometry.WALL_LAYER) != 0)
+	# ⚠️ Et quand l'AUTRE joueur s'équipe d'une autre classe APRÈS lui. La ressource
+	# de l'occluder était partagée entre J1 et J2 : J1 projetait alors l'ombre de la
+	# classe de J2, et le leurre celle de son poseur — il se trahissait dans tout
+	# match entre deux classes. Trouvé en revue (2026-09-11).
+	var autre = null
+	for i in range(10):
+		var c = gs.weapon_for_index(i)
+		if c != null and c.slug() != gs.p1.current_weapon.slug():
+			autre = c
+			break
+	if autre != null:
+		gs.p2.equip_weapon(autre)
+	var occ_j2: LightOccluder2D = gs.p2.get_node_or_null("LightOccluder2D")
+	_check("J2 équipé d'une autre classe ensuite, J1 garde l'ombre du leurre",
+		autre != null and occ_j != null and occ_l != null
+		and occ_j.occluder.polygon == occ_l.occluder.polygon)
+	_check("et J2 projette celle de sa classe",
+		occ_j2 != null and occ_j != null and occ_j2.occluder.polygon != occ_j.occluder.polygon)
+
+	# ── DANS LA SUIE, IL DISPARAÎT COMME UN CORPS (trouvé en revue, 2026-09-11) ──
+	# Un vrai corps y perd sprite et ombre ; un leurre qui y restait net se
+	# trahissait par ce qu'il avait EN PLUS.
+	gs._do_spawn_gadget(1, leurre.global_position, 0.0, "cartouche_suie", 953)
+	var suie_l = null
+	for g in gs.get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g.masque_le_corps():
+			suie_l = g
+	_check("une suie posée sur le leurre", suie_l != null)
+	if suie_l != null:
+		suie_l._age = suie_l.duree_vie * 0.5
+		leurre._physics_process(0.0)
+		_check("dans la suie, sa silhouette disparaît comme celle d'un corps",
+			leurre._visuel != null and leurre._visuel.modulate.a < 0.02,
+			"%.3f" % (leurre._visuel.modulate.a if leurre._visuel != null else -1.0))
+		# Étape 28 : le corps que voit le POSEUR s'efface avec — il doit voir son
+		# leurre disparaître là où l'adversaire le perd.
+		_check("et son corps côté poseur aussi",
+			leurre._visuel_poseur != null and leurre._visuel_poseur.modulate.a < 0.02,
+			"%.3f" % (leurre._visuel_poseur.modulate.a if leurre._visuel_poseur != null else -1.0))
+		# ⚠️ **Les DEUX ombres** (lot G) : un corps dans la suie perd son étoile ET son
+		# disque de torse (`player._couper_l_ombre`). N'en couper qu'une laisserait la
+		# rétrodiffusion adverse dessiner un torse là où le corps a disparu.
+		_check("et ses deux ombres avec, comme un corps",
+			leurre._occluder != null and not leurre._occluder.visible
+				and leurre._occluder_torse != null and not leurre._occluder_torse.visible)
+		_check("et plus rien n'y arrête l'éblouissement, comme la lumière",
+			not leurre.coupe_le_regard(leurre.global_position - Vector2(200.0, 0.0),
+				leurre.global_position + Vector2(200.0, 0.0)))
+		suie_l.detruire()
+		await process_frame
+		leurre._physics_process(0.0)
+		_check("la suie partie, il réapparaît avec ses deux ombres",
+			leurre._visuel.modulate.a > 0.98 and leurre._occluder.visible
+				and leurre._occluder_torse != null and leurre._occluder_torse.visible,
+			"%.3f" % leurre._visuel.modulate.a)
+		_check("et son corps côté poseur réapparaît aussi",
+			leurre._visuel_poseur != null and leurre._visuel_poseur.modulate.a > 0.98,
+			"%.3f" % (leurre._visuel_poseur.modulate.a if leurre._visuel_poseur != null else -1.0))
+
+	# ── L'ÉBLOUISSEMENT LIT L'OMBRE, PAS LA ZONE DE TOUCHE (trouvé en revue) ─────
+	# Le rayon d'éblouissement heurtait le disque de 18 : ébloui dans l'ombre du
+	# canon, épargné là où la lumière passe à côté de la silhouette.
+	var espace: PhysicsDirectSpaceState2D = gs.p1.get_world_2d().direct_space_state
+	var c_l: Vector2 = leurre.global_position
+	var ombre_monde: PackedVector2Array = leurre.global_transform * leurre._etoile
+	var frole := []
+	for deg in range(0, 360, 10):
+		var n := Vector2.from_angle(deg_to_rad(float(deg)))
+		for d in [8.0, 10.0, 12.0, 14.0, 16.0]:
+			var a: Vector2 = c_l + n * d + n.orthogonal() * 250.0
+			var b: Vector2 = c_l + n * d - n.orthogonal() * 250.0
+			if Geometry2D.intersect_polyline_with_polygon(
+					PackedVector2Array([a, b]), ombre_monde).is_empty():
+				frole = [a, b]
+				break
+		if not frole.is_empty():
+			break
+	_check("un rayon peut couper le disque de touche sans toucher l'ombre", not frole.is_empty())
+	var p1_avant: Vector2 = gs.p1.global_position
+	var p2_avant: Vector2 = gs.p2.global_position
+	# J1 hors du chemin : le leurre a été posé à ses pieds.
+	gs.p1.global_position = Vector2(4000.0, 4000.0)
+	if not frole.is_empty():
+		var axe: Vector2 = (frole[1] - frole[0]).normalized()
+		# ⚠️ **Deux pas de physique, pas un.** J2 est un corps CINÉMATIQUE : sa
+		# téléportation ne s'applique qu'au pas suivant, et `physics_frame` rend la
+		# main AVANT ce pas. Après un seul, la requête voyait J2 à son ancienne place
+		# et le rayon ne touchait rien — un contrôle positif échouait, un négatif
+		# passait pour une mauvaise raison. Mesuré au diagnostic (2026-09-11).
+		gs.p2.global_position = frole[1]
+		await physics_frame
+		await physics_frame
+		_check("un rayon qui passe à côté de l'ombre éblouit, même s'il coupe la zone de touche",
+			gs._ligne_de_vue_depuis(espace, frole[0], gs.p2, RID()))
+		gs.p2.global_position = c_l + axe * 250.0
+		await physics_frame
+		await physics_frame
+		_check("un rayon qui traverse l'ombre n'éblouit pas",
+			not gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID()))
+		# Le témoin : le MÊME rayon, leurre rendu transparent, passe — c'est donc bien
+		# son ombre qui l'arrêtait, pas un mur ou un corps sur le chemin.
+		leurre.occulte_la_lumiere = false
+		_check("témoin : le même rayon, leurre transparent, passe",
+			gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID()))
+		leurre.occulte_la_lumiere = true
+		# ── ET IL N'ARRÊTE QUE CE QU'IL OMBRE (lot G, 2026-09-12) ────────────
+		#
+		# Son occluder vit désormais sur la couche du corps de son POSEUR : la
+		# torche et le flash de tir de celui-ci le traversent à l'écran, comme ils
+		# traversent la place de son propre corps. L'arbitrage doit suivre, sans
+		# quoi planter un leurre devant soi éteindrait sa propre torche — « on voit
+		# la lumière et on ne la prend pas », le symétrique exact du défaut que ce
+		# rayon corrige. Les deux porteurs se DÉDUISENT du poseur : un 0 écrit en
+		# dur passerait aussi avec la règle inversée.
+		var pose: int = leurre.poseur_id
+		_check("une lampe POSÉE, qui n'appartient à personne, reste arrêtée",
+			not gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID(), -1))
+		_check("la torche de son POSEUR le traverse, comme sa lumière",
+			gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID(), pose))
+		_check("témoin : celle de l'AUTRE joueur est arrêtée, elle",
+			not gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID(), 1 - pose))
+	gs.p1.global_position = p1_avant
+	gs.p2.global_position = p2_avant
+
+	# ── PAR LE VRAI CHEMIN : `_lumiere_recue`, et non le rayon à la main ─────
+	#
+	# Un test qui appelle `_ligne_de_vue_depuis` lui-même ne prouve pas que le
+	# chemin réel — `_lumiere_recue` → `_lumiere_du_faisceau` → `_ligne_de_vue` —
+	# transmet bien QUI tient la torche. C'est justement l'argument qu'on peut
+	# oublier de passer, et personne ne le verrait.
+	var lampe_avant: bool = gs.p1.flashlight_on
+	var pos_leurre_avant: Vector2 = leurre.global_position
+	var poseur_avant: int = leurre.poseur_id
+	# J1 éclaire J2 de face, à courte portée, son propre leurre entre les deux.
+	gs.p2.global_position = Vector2(520.0, 400.0)
+	await physics_frame
+	await physics_frame
+	# ⚠️ Position et angle de J1 posés APRÈS l'attente : son fournisseur d'entrées
+	# le tourne vers la souris pendant les images qu'on laisse passer (piège relevé
+	# au banc du grésillement).
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.p1.flashlight_on = true
+	leurre.global_position = Vector2(460.0, 400.0)
+	var a_travers: float = gs._lumiere_recue(espace, gs.p1, gs.p2)
+	_check("la torche de J1 éblouit J2 À TRAVERS le leurre que J1 a planté",
+		a_travers > 0.0, "%.4f" % a_travers)
+	# Le témoin qui tranche : le MÊME leurre, au même endroit, posé par l'AUTRE.
+	# Il redevient une ombre pour cette torche, et l'éblouissement tombe.
+	leurre.poseur_id = 1 - leurre.poseur_id
+	var arrete: float = gs._lumiere_recue(espace, gs.p1, gs.p2)
+	leurre.poseur_id = poseur_avant
+	_check("témoin : le même leurre, posé par l'autre, l'arrête",
+		is_zero_approx(arrete), "%.4f" % arrete)
+
+	# ── ET L'AUTRE MOITIÉ DU LOT : LE FLASH DE TIR ───────────────────────────
+	#
+	# ⚠️ **Le porteur est passé à DEUX endroits, et un seul était éprouvé.** La
+	# torche passe par `_lumiere_recue`, le flash de tir par `_flash_de_tir` : deux
+	# appels distincts à `_ligne_de_vue`, deux occasions d'oublier l'argument.
+	# Mesuré le 2026-09-12 : inverser le porteur du flash (`1 - player_id`), ou le
+	# retirer — c'est-à-dire revenir au lot F pour cette moitié —, laissait
+	# `test_classes`, `test_tir_et_reserves`, `test_eblouissement` et `test_vision`
+	# entièrement verts. Le jeu se serait mal comporté en ligne comme en local sans
+	# que rien ne le dise. Même montage que ci-dessus ; le flash n'a pas de cône,
+	# l'angle de J1 ne joue donc aucun rôle ici.
+	var dazzle_avant: float = gs.p2.dazzle_amount
+	gs.p2.dazzle_amount = 0.0
+	gs._flash_de_tir(gs.p1)
+	var flash_a_travers: float = gs.p2.dazzle_amount
+	_check("le flash de tir de J1 éblouit J2 À TRAVERS le leurre que J1 a planté",
+		flash_a_travers > 0.0, "%.4f" % flash_a_travers)
+	# Le témoin qui tranche : le MÊME leurre, au même endroit, posé par l'AUTRE. Il
+	# redevient une ombre pour ce flash, qui ne passe plus. Les deux porteurs se
+	# DÉDUISENT de `poseur_id` : un 0 écrit en dur passerait avec la règle inversée.
+	leurre.poseur_id = 1 - leurre.poseur_id
+	gs.p2.dazzle_amount = 0.0
+	gs._flash_de_tir(gs.p1)
+	var flash_arrete: float = gs.p2.dazzle_amount
+	leurre.poseur_id = poseur_avant
+	gs.p2.dazzle_amount = dazzle_avant
+	_check("témoin : le même flash, leurre posé par l'autre, est arrêté",
+		is_zero_approx(flash_arrete), "%.4f" % flash_arrete)
+
+	gs.p1.flashlight_on = lampe_avant
+	leurre.global_position = pos_leurre_avant
+	gs.p1.global_position = p1_avant
+	gs.p2.global_position = p2_avant
+	var r_min := INF
+	var r_max := 0.0
+	for p in etoile:
+		r_min = minf(r_min, p.length())
+		r_max = maxf(r_max, p.length())
+	_check("et ce n'est pas un cercle", r_max - r_min > 4.0, "rayons de %.1f à %.1f" % [r_min, r_max])
 	_check("une balle s'y arrête, comme sur un corps", leurre.arrete_les_balles)
 	_check("et une seule suffit à le démasquer", leurre.pv <= 1.0, str(leurre.pv))
 
@@ -1584,6 +2201,74 @@ func _test_leurre() -> void:
 		_check("à l'empreinte du joueur, pas à la taille brute de la texture",
 			is_equal_approx(largeur, Charte.empreinte_sprite(corps.texture.get_width())),
 			"%.1f" % largeur)
+
+	# ── VUE PAR VUE (étape 28, lot D, 2026-09-11) ────────────────────────────
+	# Un corps par vue, comme un joueur : celui que voit l'ADVERSAIRE est
+	# `visual_enemy` trait pour trait, celui que voit le POSEUR vit sur sa vue seule.
+	# Tout se compare aux nœuds du VRAI joueur et aux VRAIS masques de cull : ce sont
+	# eux la source, pas un 2 ou un 4 recopiés ici. Chaque « absent de l'autre vue »
+	# a sa moitié positive : une couche 0 (le cri de `couche_de_vue`) ne passe pas.
+	var adv: Polygon2D = leurre.get_node_or_null("Visuel")
+	var soi: Polygon2D = leurre.get_node_or_null("VisuelPoseur")
+	var ve: Polygon2D = gs.p1.visual_enemy   # J1 tel que J2 le voit
+	var vs: Polygon2D = gs.p1.visual         # J1 tel qu'il se voit
+	_check("deux corps : l'un pour l'adversaire, l'autre pour le poseur",
+		adv != null and soi != null)
+	if adv != null and soi != null:
+		# Ce qu'on mesure doit d'abord être visible : un nœud caché passerait tous les
+		# contrôles de couche sans jamais être dessiné.
+		_check("les deux corps sont visibles dans l'arbre",
+			adv.is_visible_in_tree() and soi.is_visible_in_tree())
+		_check("le corps vu par l'adversaire a le masque de lumière d'un corps adverse",
+			adv.light_mask == ve.light_mask, "%d contre %d" % [adv.light_mask, ve.light_mask])
+		_check("et le même shader que lui",
+			adv.material is ShaderMaterial and ve.material is ShaderMaterial
+				and adv.material.shader != null and adv.material.shader == ve.material.shader)
+		_check("il n'est dessiné que dans la vue de l'adversaire",
+			adv.visibility_layer == ve.visibility_layer
+				and (adv.visibility_layer & gs.vp2.canvas_cull_mask) != 0
+				and (adv.visibility_layer & gs.vp1.canvas_cull_mask) == 0,
+			"couche %d" % adv.visibility_layer)
+		_check("le corps du poseur n'est dessiné que dans SA vue",
+			soi.visibility_layer == vs.visibility_layer
+				and (soi.visibility_layer & gs.vp1.canvas_cull_mask) != 0
+				and (soi.visibility_layer & gs.vp2.canvas_cull_mask) == 0,
+			"couche %d" % soi.visibility_layer)
+		_check("sous les lumières de son propre corps (masque 4), sans le shader adverse",
+			soi.light_mask == vs.light_mask and soi.material == null,
+			"masque %d" % soi.light_mask)
+		_check("même silhouette, même taille, même teinte, même profondeur",
+			soi.texture == adv.texture and soi.polygon == adv.polygon
+				and soi.uv == adv.uv and soi.color.is_equal_approx(adv.color)
+				and soi.z_index == adv.z_index)
+	# Posé par J2 : les deux couches se DÉDUISENT du poseur — un 2 ou un 4 écrit en
+	# dur passerait les contrôles de J1.
+	gs.p2.equip_weapon(gs.weapon_for_index(1))
+	gs._do_spawn_gadget(1, Vector2(900.0, 400.0), 0.0, "leurre", 961)
+	var adv2: Polygon2D = null
+	var soi2: Polygon2D = null
+	var leurres_j2 := 0
+	for g in gs.get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and not g.is_queued_for_deletion() \
+				and g is GadgetLeurre and g.poseur_id == 1:
+			leurres_j2 += 1
+			adv2 = g.get_node_or_null("Visuel")
+			soi2 = g.get_node_or_null("VisuelPoseur")
+	_check("J2 a posé un leurre, un seul", leurres_j2 == 1, str(leurres_j2))
+	_check("posé par J2, son corps adverse vit dans la vue de J1",
+		adv2 != null and adv2.visibility_layer == gs.p2.visual_enemy.visibility_layer
+			and (adv2.visibility_layer & gs.vp1.canvas_cull_mask) != 0
+			and (adv2.visibility_layer & gs.vp2.canvas_cull_mask) == 0,
+		str(adv2.visibility_layer) if adv2 != null else "absent")
+	_check("et son corps côté poseur, dans celle de J2",
+		soi2 != null and soi2.visibility_layer == gs.p2.visual.visibility_layer
+			and (soi2.visibility_layer & gs.vp2.canvas_cull_mask) != 0
+			and (soi2.visibility_layer & gs.vp1.canvas_cull_mask) == 0,
+		str(soi2.visibility_layer) if soi2 != null else "absent")
+	# Témoin : le leurre de J1 est toujours là — reposer ne déplace que le gadget du
+	# MÊME poseur. Sans lui, les contrôles de J2 pourraient lire un arbre vidé.
+	_check("témoin : le leurre de J1 tient toujours",
+		is_instance_valid(leurre) and not leurre.is_queued_for_deletion())
 
 	# ── IL EST INERTE ────────────────────────────────────────────────────────
 	_check("il n'éblouit pas", not leurre.eblouit)
@@ -1945,56 +2630,174 @@ func _test_poudre() -> void:
 	_check("elle n'éblouit pas", not poudre.eblouit)
 	_check("elle reste la manche entière", is_zero_approx(poudre.duree_vie))
 
-	# ── ELLE ÉCRIT ───────────────────────────────────────────────────────────
-	var avant: int = gs.arena.get_child_count()
-	# Un joueur traverse la nappe de part en part, par pas de 10 px : plus court
-	# que l'espacement des marques, donc c'est bien la DISTANCE cumulée qui
-	# déclenche, et non le nombre d'appels.
-	gs.p1.global_position = poudre.global_position - Vector2(GadgetPoudre.RAYON, 0.0)
+	# ── ELLE ÉCRIT, sous les pas de L'AUTRE ─────────────────────────────────
+	#
+	# ⚠️ La Sentinelle (J1, la poseuse) ne marque pas sa propre poudre depuis le
+	# 2026-09-11 : c'est J2 qui traverse.
+	gs.p1.global_position = Vector2(400.0, 2000.0)
+	var avant: int = _traces(gs).size()
+	# Par pas de 10 px : plus court que l'espacement des marques, donc c'est bien la
+	# DISTANCE qui déclenche, et non le nombre d'appels.
+	gs.p2.global_position = poudre.global_position - Vector2(GadgetPoudre.RAYON, 0.0)
+	for i in 24:
+		gs.p2.global_position += Vector2(10.0, 0.0)
+		poudre._relever_les_pas()
+	var posees: int = _traces(gs).size() - avant
+	_check("la traversée laisse une piste", posees > 0, str(posees))
+	# ⚠️ Une marque tous les 26 px : ~220 px dans la nappe en donnent une petite
+	# dizaine. Ce qu'on refuse est une marque par APPEL — 24 —, qui trahirait une
+	# règle au temps au lieu d'une règle à la distance.
+	_check("et pas une marque par image", posees < 14, str(posees))
+
+	# ── À L'ENTRAÎNEMENT AUSSI ──────────────────────────────────────────────
+	#
+	# ⚠️ L'entraînement tourne manche NON active et bac à sable (`round_active`
+	# faux, `sandbox_mode` vrai) : la poudre n'y marquait jamais, depuis l'étape 17.
+	# On se remet dans cet état exact, et on traverse.
+	gs.round_active = false
+	gs.sandbox_mode = true
+	var avant_bac: int = _traces(gs).size()
+	gs.p2.global_position = poudre.global_position - Vector2(GadgetPoudre.RAYON, -30.0)
+	poudre._dernier[1] = Vector2.INF
+	for i in 24:
+		gs.p2.global_position += Vector2(10.0, 0.0)
+		poudre._relever_les_pas()
+	_check("à l'entraînement aussi, la traversée laisse une piste", _traces(gs).size() > avant_bac,
+		str(_traces(gs).size() - avant_bac))
+	gs.sandbox_mode = false
+	_check("mais pas pendant une killcam de vrai match (manche finie, hors bac à sable)",
+		_rien_ne_marque(gs, poudre))
+	gs.round_active = true
+
+	# ── LA SENTINELLE NE SE TRAHIT PAS ──────────────────────────────────────
+	var avant_j1: int = _traces(gs).size()
+	gs.p1.global_position = poudre.global_position - Vector2(GadgetPoudre.RAYON, 20.0)
 	for i in 24:
 		gs.p1.global_position += Vector2(10.0, 0.0)
 		poudre._relever_les_pas()
-	var posees: int = gs.arena.get_child_count() - avant
-	_check("la traversée laisse une piste", posees > 0, str(posees))
-	# ⚠️ Une marque tous les 26 px : 240 px parcourus dont ~220 dans la nappe en
-	# donnent une petite dizaine. Ce qu'on refuse est une marque par APPEL — 24 —
-	# qui trahirait une règle au temps au lieu d'une règle à la distance.
-	_check("et pas une marque par image", posees < 14, str(posees))
+	_check("la Sentinelle ne marque pas sa propre poudre", _traces(gs).size() == avant_j1,
+		str(_traces(gs).size() - avant_j1))
+	gs.p1.global_position = Vector2(400.0, 2000.0)
 
-	# ── ELLE NE SE LIT QUE SOUS LA LUMIÈRE ──────────────────────────────────
-	var trace: Node2D = null
-	for c in gs.arena.get_children():
-		if String(c.name).begins_with("Trace"):
-			trace = c
+	# ── ELLE LUIT DANS LE NOIR ──────────────────────────────────────────────
+	var trace: Polygon2D = _traces(gs).back() if not _traces(gs).is_empty() else null
 	_check("une trace existe dans l'arène", trace != null)
 	if trace != null:
-		# ⚠️ C'est CE réglage qui fait la classe : dans le noir, la trace n'existe
-		# pas. Il faut revenir et éclairer. `light_mask = 0` en ferait une alarme.
-		_check("elle n'est visible que sous une lumière",
-			(trace as CanvasItem).light_mask == MapGeometry.WALL_LAYER,
-			str((trace as CanvasItem).light_mask))
-		# ⚠️ Enfant de l'ARÈNE : abattre la poudre ne doit pas effacer ce qu'elle
-		# a déjà écrit, sinon une balle suffirait à nier son passage.
-		_check("et elle survit à la nappe, car elle vit dans l'arène",
-			trace.get_parent() == gs.arena)
+		# ⚠️ Renversé le 2026-09-11 : elle ne se lisait que sous une lumière. Elle
+		# luit désormais d'elle-même — non éclairée, additive, vert phosphore.
+		_check("elle luit d'elle-même : non éclairée et additive",
+			trace.material == GadgetBase.materiau_incandescent(), str(trace.material))
+		_check("d'un vert phosphore", trace.color.is_equal_approx(GadgetPoudre.COULEUR_LUEUR))
+		_check("et elle vit dans l'arène, pas dans la nappe", trace.get_parent() == gs.arena)
+
+	# ── DES PIEDS QUI S'ESSUIENT ────────────────────────────────────────────
+	#
+	# J2 est sorti de la nappe. Il continue tout droit : ses traces continuent
+	# CHARGE_MAX fois, en pâlissant, puis s'arrêtent.
+	var queue := _queue_de_sortie(gs, poudre, 10.0)
+	var eclats := queue.map(func(t): return t[1])
+	_check("en sortant, les traces continuent exactement %d pas de poudre" % GadgetPoudre.CHARGE_MAX,
+		queue.size() == GadgetPoudre.CHARGE_MAX, str(eclats))
+	var pâlit := eclats.size() >= 2
+	for k in range(1, eclats.size()):
+		if not (eclats[k] < eclats[k - 1]):
+			pâlit = false
+	_check("en pâlissant, sans jamais tomber à zéro",
+		pâlit and not eclats.is_empty() and eclats.back() > 0.0, str(eclats))
+	# ⚠️ Ce que la règle de la corde promet, et rien de plus : échantillonné autrement
+	# (7 px au lieu de 10), le même chemin donne une queue du même NOMBRE de traces,
+	# qui finit au même endroit à une corde et un pas d'échantillonnage près. Les
+	# positions glissent d'un pair à l'autre ; une trace ne décide de rien.
+	# Ce contrôle comparait les ÉCLATS, qui ne dépendent que du rang : il était
+	# aveugle par construction dès que les deux queues comptaient six traces
+	# (trouvé en revue, 2026-09-11).
+	var queue_7 := _queue_de_sortie(gs, poudre, 7.0)
+	var fin_10: float = queue.back()[0] if not queue.is_empty() else INF
+	var fin_7: float = queue_7.back()[0] if not queue_7.is_empty() else -INF
+	_check("échantillonnée autrement, la queue compte autant de traces — les deux pairs",
+		queue_7.size() == queue.size(), "%d contre %d" % [queue_7.size(), queue.size()])
+	_check("et finit au même endroit, à une corde et un pas d'échantillonnage près",
+		absf(fin_10 - fin_7) <= GadgetPoudre.PAS_ENTRE_MARQUES + 10.0,
+		"%.1f contre %.1f" % [fin_10, fin_7])
+
+	# ── ELLE S'ÉTEINT ───────────────────────────────────────────────────────
+	if trace != null and is_instance_valid(trace):
+		var eclat: float = trace.modulate.a
+		await create_timer(0.4).timeout
+		_check("et elle s'éteint avec le temps",
+			is_instance_valid(trace) and trace.modulate.a < eclat,
+			"%.3f puis %.3f" % [eclat, trace.modulate.a if is_instance_valid(trace) else -1.0])
 
 	var restantes := 0
 	poudre.detruire()
 	await process_frame
-	for c in gs.arena.get_children():
-		if String(c.name).begins_with("Trace"):
-			restantes += 1
-	_check("la nappe abattue, la piste demeure", restantes > 0, str(restantes))
+	restantes = _traces(gs).size()
+	_check("la nappe retirée, la piste luit encore un moment", restantes > 0, str(restantes))
 
 	# ── Sortir efface la mémoire, pas la piste ──────────────────────────────
 	var p2 := GadgetPoudre.new()
 	p2.global_position = Vector2.ZERO
-	_check("un joueur hors nappe n'a pas de dernier pas",
-		p2._dernier[0] == Vector2.INF)
+	_check("un joueur aux pieds propres n'a pas de dernier pas",
+		p2._dernier[0] == Vector2.INF and p2._charge[0] == 0)
 	p2.free()
 
 	gs.queue_free()
 	await process_frame
+
+
+## Hors manche et hors bac à sable — l'état d'une killcam de vrai match —, une
+## traversée ne pose rien.
+func _rien_ne_marque(gs: Node, poudre: Node) -> bool:
+	var avant := _traces(gs).size()
+	gs.p2.global_position = poudre.global_position - Vector2(GadgetPoudre.RAYON, -60.0)
+	poudre._dernier[1] = Vector2.INF
+	for i in 24:
+		gs.p2.global_position += Vector2(10.0, 0.0)
+		poudre._relever_les_pas()
+	return _traces(gs).size() == avant
+
+
+## Les traces de poudre présentes dans l'arène, dans l'ordre de pose.
+##
+## ⚠️ Par leur GROUPE : Godot renomme les homonymes en « @Polygon2D@N », et un
+## filtre sur le nom ne voyait que la première — la queue de sortie paraissait
+## vide alors que le gadget la posait. Mesuré, pas supposé.
+func _traces(gs: Node) -> Array:
+	var r := []
+	for c in gs.get_tree().get_nodes_in_group("traces_de_poudre"):
+		if is_instance_valid(c) and not c.is_queued_for_deletion():
+			r.append(c)
+	return r
+
+
+## Fait entrer J2 dans la nappe par la gauche, la traverser, puis continuer tout
+## droit 400 px au-delà, par pas de `pas` px ; rend, pour chaque trace de QUEUE —
+## celles que les pieds emportent hors de la nappe —, le couple [abscisse, éclat de
+## départ], dans l'ordre de pose.
+##
+## ⚠️ Une trace de queue se reconnaît à son ÉCLAT (sous `LUEUR_MAX`), pas à sa
+## distance au centre : l'ancien filtre classait « dedans » une trace de charge
+## posée à 110,49 px du centre (trouvé en revue).
+func _queue_de_sortie(gs: Node, poudre: Node, pas: float) -> Array:
+	var connues := {}
+	for c in _traces(gs):
+		connues[c.get_instance_id()] = true
+	var depart: Vector2 = poudre.global_position - Vector2(GadgetPoudre.RAYON - 5.0, 40.0)
+	gs.p2.global_position = depart
+	poudre._dernier[1] = Vector2.INF
+	poudre._charge[1] = 0
+	var parcouru := 0.0
+	while parcouru < GadgetPoudre.RAYON * 2.0 + 400.0:
+		parcouru += pas
+		gs.p2.global_position = depart + Vector2(parcouru, 0.0)
+		poudre._relever_les_pas()
+	var queue := []
+	for c in _traces(gs):
+		if connues.has(c.get_instance_id()):
+			continue
+		if c.modulate.a < GadgetPoudre.LUEUR_MAX - 0.001:
+			queue.append([c.global_position.x, snappedf(c.modulate.a, 0.0001)])
+	return queue
 
 
 ## Les fusées par classe — chantier CLASSES, étape 18.
@@ -2082,7 +2885,7 @@ func _test_fusees_par_classe() -> void:
 	var profil = catalogue[terrassier].fusees
 	var plein := int(gs.fusees_restantes(0))
 	# On en consomme une, puis on laisse passer une période entière.
-	gs.rpc_stock_fusees(0, plein - 1)
+	gs.rpc_stock_fusees(0, plein - 1, profil.periode_recharge)
 	_check("une fusée consommée manque", gs.fusees_restantes(0) == plein - 1)
 	gs._accorder_fusees(profil.periode_recharge + 0.01)
 	_check("elle revient après une période",
@@ -2093,7 +2896,7 @@ func _test_fusees_par_classe() -> void:
 	gs._accorder_fusees(profil.periode_recharge * 3.0)
 	_check("et la réserve ne dépasse jamais son plafond",
 		gs.fusees_restantes(0) == plein, str(gs.fusees_restantes(0)))
-	gs.rpc_stock_fusees(0, plein - 1)
+	gs.rpc_stock_fusees(0, plein - 1, profil.periode_recharge)
 	gs._accorder_fusees(0.01)
 	_check("aucun temps n'a été capitalisé contre le plafond",
 		gs.fusees_restantes(0) == plein - 1, str(gs.fusees_restantes(0)))

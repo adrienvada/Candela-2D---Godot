@@ -271,6 +271,18 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "vignette", "famille": "jeu", "source": "ecran", "ancre": [0.5, 0.5],
 		 "titre": "La vignette de dégâts",
 		 "pourquoi": "L'écran de celui qui vient d'encaisser : le rouge aux bords, l'instant d'après le coup."},
+		# --- chantier des dix classes, étape 28, lot D (2026-09-11) ---
+		# `vue` : J1 REGARDE. Le leurre de J2 et le vrai J2, côte à côte, sous sa
+		# torche — la seule image qui dise si le leurre est un corps. Aucune suite ne
+		# rend : c'est ici qu'on le juge, et au pixel.
+		{"id": "leurre", "famille": "jeu", "source": "vue", "ancre": [0.5, 0.5],
+		 "titre": "Le leurre et le corps",
+		 "pourquoi": "Un leurre de J2 et le vrai J2, à même distance sous la torche de J1 : ils doivent sortir identiques. Variante : le leurre et J2 derrière J1, à 60 px, torche de J1 éteinte, et J1 tire (l'écho au sol n'éclaire aucun corps)."},
+		# `ecran` et en écran scindé : le repère ne vit que sur la vue de son poseur,
+		# et c'est la moitié d'en face qui prouve qu'il n'y est pas.
+		{"id": "repere", "famille": "jeu", "source": "ecran",
+		 "titre": "Le repère du poseur",
+		 "pourquoi": "Une mine de J1 et une poudre de J2, torches éteintes : chaque cercle sur la seule vue de son poseur. Variante : les braises en fin de vie, le cercle sous la nappe."},
 
 		# --- fins ----------------------------------------------------------
 		{"id": "mort", "famille": "fins", "source": "ecran", "ancre": [0.5, 0.5],
@@ -283,9 +295,13 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "onde-de-choc", "famille": "fins", "source": "ecran", "ancre": [0.5, 0.5],
 		 "titre": "L'onde de choc du kill",
 		 "pourquoi": "L'anneau qui part du corps et traverse l'arène : la seule lumière autorisée à tout éclairer, parce que le duel est tranché."},
+		# Étape 28, lot F — la killcam est mise en scène AVEC ses gadgets : une torche
+		# fantôme debout depuis le début, et une mine allumée à ~2,5 s du kill, qui
+		# brûle puis meurt DANS la fenêtre de rejeu. C'est le seul instrument qui
+		# atteigne la killcam : ni suite ni planche n'y va.
 		{"id": "killcam", "famille": "fins", "source": "ecran",
 		 "titre": "La killcam",
-		 "pourquoi": "Le rejeu de sa propre mort. Une mécanique qui ne se comprend qu'en image."},
+		 "pourquoi": "Le rejeu de sa propre mort, AVEC sa cause : la mine consumée avant l'impact rebrûle, et la torche fantôme est là. Une mécanique qui ne se comprend qu'en image."},
 		{"id": "gel-fatal", "famille": "fins", "source": "ecran",
 		 "titre": "L'arrêt sur image signé",
 		 "pourquoi": "DA6.2 — le gel du kill, tamponné de l'heure. L'image que le joueur veut envoyer."},
@@ -333,7 +349,11 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	for methode in ["_on_replay_requested", "_on_training_requested",
 			"_on_main_menu_requested", "weapon_for_index",
 			"_accorder_rendu_aux_vues", "spawn_fusee",
-			"_set_player_input_provider"]:
+			"_set_player_input_provider", "_do_spawn_gadget",
+			# Étape 28, lot F — la mine du plan `killcam` doit être ALLUMÉE par l'ordre
+			# du jeu, jamais par un `allumer()` direct : c'est ce chemin-là qu'on
+			# photographie.
+			"allumer_gadget"]:
 		if not main.has_method(methode):
 			absents.append("GameState.%s() a disparu" % methode)
 
@@ -779,12 +799,23 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 		_deux_vues()
 		await _prendre(_plan(plans, "ecran-scinde"), _duel.bind(560.0, 0.4))
 
+	# Étape 28, lot D — le repère du poseur, en écran scindé : la moitié d'en face
+	# est la preuve qu'il n'y est pas.
+	if _demande(plans, "repere"):
+		_deux_vues()
+		await _plan_repere(plans)
+
 	_vue_unique()
 
 	if _demande(plans, "duel"):
 		await _prendre(_plan(plans, "duel"), _duel.bind(ECART_DUEL, 0.0))
 	if _demande(plans, "hud"):
 		await _prendre(_plan(plans, "hud"), _duel.bind(ECART_DUEL, 0.0))
+
+	# Étape 28, lot D — AVANT le sang, les impacts et la fusée : ce qu'ils laissent au
+	# sol, ou la lumière qui dure vingt secondes, fausserait la comparaison.
+	if _demande(plans, "leurre"):
+		await _plan_leurre(plans)
 
 	# La torche seule : J2 sort du cadre et éteint la sienne. On ne le détruit
 	# pas — il reprend sa place trois plans plus loin.
@@ -924,9 +955,22 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 	# l'heure du kill (`round_time - time_left`) : abattu à la première image,
 	# il annonce `KILL — 00:00`, ce qui se lit comme un défaut d'affichage plutôt
 	# que comme une signature. Quelques secondes, et il dit quelque chose.
+	# Étape 28, lot F — la torche fantôme est debout AVANT le duel : elle doit être
+	# dans le rejeu du début à la fin, pour qu'on voie qu'un gadget vivant y est
+	# rejoué à son état PASSÉ et non tel qu'il est maintenant.
+	var mine_posee := false
+	if _demande(plans, "killcam"):
+		_poser_torche_fantome()
 	var respire := 5.0
 	while respire > 0.0:
 		_duel(ECART_DUEL, 0.0)
+		# ⚠️ **À 2,5 s du kill, et pas au début.** La fenêtre de rejeu ne s'ouvre que
+		# trois secondes avant l'impact, et la mine ne brûle que 1,6 s : posée plus
+		# tôt, elle serait consumée hors champ et la capture ne prouverait rien. Là,
+		# elle brûle PUIS meurt dans la fenêtre — c'est-à-dire exactement le cas que
+		# ce lot corrige, une mort dont la cause n'existe plus au moment du rejeu.
+		if not mine_posee and respire <= 2.5 and _demande(plans, "killcam"):
+			mine_posee = _poser_mine_allumee()
 		await get_tree().process_frame
 		respire -= get_process_delta_time()
 
@@ -937,7 +981,14 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 
 	if _demande(plans, "killcam"):
 		if await _attendre(func() -> bool: return ReplaySystem.playing_back, 15.0):
-			await _prendre(_plan(plans, "killcam"), Callable(), 0.5)
+			# Étape 28, lot F — le compte des lumières est relevé à CHAQUE image du
+			# repos, donc celui de l'image juste avant la prise : calculé une fois
+			# avant l'attente, il daterait d'une demi-seconde, et le manifeste
+			# décrirait une image qui n'est pas celle qu'on regarde.
+			var plan_killcam := _plan(plans, "killcam")
+			var compter := func() -> void:
+				plan_killcam["note"] = _recensement_des_lumieres()
+			await _prendre(plan_killcam, compter, 0.5)
 		else:
 			printerr("  ✗ la killcam n'a pas démarré")
 
@@ -1087,6 +1138,277 @@ func _face_a_un_mur() -> void:
 		_main.p1.global_position = meilleur
 	for pantin in _pantins:
 		pantin.visee = axe
+
+
+# ---------------------------------------------------------------------------
+# ÉTAPE 28, LOT D — le leurre vue par vue, le repère du poseur (2026-09-11)
+# ---------------------------------------------------------------------------
+
+## La classe dont le gadget porte ce slug, ou `null`.
+func _classe_du_gadget(slug: String):
+	for i in range(10):
+		var c = _main.weapon_for_index(i)
+		if c != null and c.get("gadget") != null and String(c.gadget.slug) == slug:
+			return c
+	return null
+
+
+## Le gadget debout de ce poseur, ou `null`.
+func _gadget_de(pid: int):
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and not g.is_queued_for_deletion() and g.poseur_id == pid:
+			return g
+	return null
+
+
+## Retire les gadgets de la mise en scène : la séance continue sur d'autres plans.
+func _ranger_les_gadgets() -> void:
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g):
+			g.queue_free()
+	await _attendre_images(1)
+
+
+## Imprime où tombe le point `monde` dans l'image, pour la mesure au pixel (PIL,
+## jamais à l'œil) : en pixels de la texture de la vue 1 pour la source `vue`, de la
+## FENÊTRE dans chaque vue montrée pour la source `ecran`.
+func _consigner(nom: String, monde: Vector2, source: String) -> void:
+	if source == "vue":
+		var q: Vector2 = _main.vp1.get_canvas_transform() * monde
+		print("  MESURE %s vue1 %.1f %.1f (vue %dx%d)" % [nom, q.x, q.y,
+			_main.vp1.size.x, _main.vp1.size.y])
+		return
+	var fenetre := Vector2(DisplayServer.window_get_size())
+	var reference := get_viewport().get_visible_rect().size
+	for i in 2:
+		var vue: SubViewport = _main.vp1 if i == 0 else _main.vp2
+		var cadre := vue.get_parent() as Control
+		if cadre == null or not cadre.is_visible_in_tree():
+			continue
+		var r := cadre.get_global_rect()
+		var local: Vector2 = (vue.get_canvas_transform() * monde) * (r.size / Vector2(vue.size))
+		var q: Vector2 = (r.position + local) * (fenetre / reference)
+		var dedans := r.has_point(r.position + local)
+		print("  MESURE %s vueJ%d %.1f %.1f cadre %.0f %.0f %.0f %.0f echelle %.4f %s" % [
+			nom, i + 1, q.x, q.y, r.position.x * fenetre.x / reference.x,
+			r.position.y * fenetre.y / reference.y, r.size.x * fenetre.x / reference.x,
+			r.size.y * fenetre.y / reference.y,
+			(r.size.x / float(vue.size.x)) * fenetre.x / reference.x,
+			"dans-le-cadre" if dedans else "hors-cadre"])
+
+
+## Étape 28, lot F — la torche fantôme de J1, debout pour toute la fenêtre de rejeu.
+##
+## ⚠️ **Sa durée de vie est remise à zéro APRÈS la pose** : `_do_spawn_gadget` la prend
+## au profil de la classe ÉQUIPÉE, qui n'est pas celle de la torche. Elle pourrait
+## donc mourir avant la prise, et l'image ne montrerait pas ce qu'elle annonce.
+func _poser_torche_fantome() -> void:
+	if not is_instance_valid(_main.p1):
+		return
+	var axe: Vector2 = _main.p1.global_transform.x
+	_main._do_spawn_gadget(0, _main.p1.global_position + axe * 140.0, axe.angle(),
+		"torche_fantome", 9301)
+	var t = _gadget_de(0)
+	if t == null:
+		printerr("  ✗ killcam : la torche fantôme de J1 n'a pas été posée")
+		return
+	t.duree_vie = 0.0
+
+
+## La mine de J2, plantée entre les deux corps puis ALLUMÉE par l'ORDRE du jeu
+## (`allumer_gadget`) et jamais par un `allumer()` direct : c'est ce chemin-là qu'on
+## photographie. Elle brûle 1,6 s, donc elle est morte AVANT le kill — et c'est tout
+## le sujet du lot : la killcam doit la faire revivre.
+func _poser_mine_allumee() -> bool:
+	if not is_instance_valid(_main.p1) or not is_instance_valid(_main.p2):
+		return false
+	var vers: Vector2 = (_main.p2.global_position - _main.p1.global_position).normalized()
+	_main._do_spawn_gadget(1, _main.p1.global_position + vers * 60.0, 0.0,
+		"mine_magnesium", 9302)
+	var mine = _gadget_de(1)
+	if mine == null:
+		printerr("  ✗ killcam : la mine de J2 n'a pas été posée")
+		return false
+	_main.allumer_gadget(mine)
+	return true
+
+
+## Le budget de LUMIÈRES pendant le rejeu, écrit au manifeste (étape 28, lot F).
+##
+## Le compte suit le critère du compteur F3 (`ui.gd`) — `is_visible_in_tree()` ET
+## `enabled` —, et le recensement par quadrant de 560 px dit ce qui compte vraiment :
+## le moteur n'en garde que quinze PAR ITEM, et il écarte les plus récentes. Un total
+## honnête sur toute la carte ne dirait rien d'un coin saturé.
+func _recensement_des_lumieres() -> String:
+	if not is_instance_valid(_main.arena):
+		return ""
+	var monde: Node = _main.arena.get_parent()
+	if monde == null:
+		return ""
+	var total := 0
+	var quadrants := {}
+	var pile: Array[Node] = [monde]
+	while not pile.is_empty():
+		var n: Node = pile.pop_back()
+		var l := n as PointLight2D
+		if l != null and l.is_visible_in_tree() and l.enabled:
+			total += 1
+			var q := Vector2i((l.global_position / 560.0).floor())
+			quadrants[q] = int(quadrants.get(q, 0)) + 1
+		for e in n.get_children():
+			pile.append(e)
+	var pire := 0
+	for q in quadrants:
+		pire = maxi(pire, int(quadrants[q]))
+	var texte := "%d lumière(s) allumée(s), au plus %d par quadrant de 560 px (le moteur en garde 15 par item)" % [total, pire]
+	print("  MESURE lumieres_killcam total %d pire_quadrant %d" % [total, pire])
+	return texte
+
+
+## Le repère : une mine de J1 et une poudre de J2, torches éteintes, en écran
+## scindé — chaque cercle sur la vue de son poseur, et la moitié d'en face noire à
+## sa place. Puis les braises de J1 en fin de vie : le cercle sous la nappe.
+##
+## ⚠️ Les gadgets hors de portée des deux joueurs : une mine armée à moins de 72 px
+## d'un corps s'allumerait, une nappe à moins de 68 le brûlerait.
+func _plan_repere(plans: Array[Dictionary]) -> void:
+	var avant := [_main.p1.current_weapon, _main.p2.current_weapon]
+	var mine = _classe_du_gadget("mine_magnesium")
+	var poudre = _classe_du_gadget("poudre_contact")
+	var braises = _classe_du_gadget("nappe_braises")
+	if mine == null or poudre == null or braises == null:
+		printerr("  ✗ repere : une classe de gadget est introuvable")
+		return
+	_torches(false)
+	_main.p1.equip_weapon(mine)
+	_main.p2.equip_weapon(poudre)
+	_duel(560.0, 0.4)
+	await _attendre_images(2)
+	var p1: Vector2 = _main.p1.global_position
+	var p2: Vector2 = _main.p2.global_position
+	var axe: Vector2 = (p2 - p1).normalized()
+	var perp := axe.orthogonal()
+	var p_mine: Vector2 = p1 + axe * 180.0 + perp * 120.0
+	var p_poudre: Vector2 = p2 - axe * 180.0 - perp * 120.0
+	_main._do_spawn_gadget(0, p_mine, 0.0, "mine_magnesium", 9101)
+	_main._do_spawn_gadget(1, p_poudre, 0.0, "poudre_contact", 9102)
+	await _prendre(_plan(plans, "repere"), _duel.bind(560.0, 0.4))
+	_consigner("mine_J1_r72", p_mine, "ecran")
+	_consigner("poudre_J2_r110", p_poudre, "ecran")
+
+	_main.p1.equip_weapon(braises)
+	# Reposer DÉPLACE : la nappe prend la place de la mine de J1.
+	_main._do_spawn_gadget(0, p_mine, 0.0, "nappe_braises", 9103)
+	var nappe = _gadget_de(0)
+	var fin_de_vie := func() -> void:
+		_duel(560.0, 0.4)
+		if is_instance_valid(nappe) and nappe.duree_vie > 0.0:
+			nappe._age = nappe.duree_vie * 0.85
+	await _prendre(_derive(plans, "repere", "braises",
+		"Les braises de J1 à 85 % de leur vie : le repère passe SOUS la nappe, et ne se voit que là où elle ne couvre pas ou pâlit."),
+		fin_de_vie)
+	_consigner("braises_J1_r68", p_mine, "ecran")
+
+	await _ranger_les_gadgets()
+	for i in 2:
+		var j = _main.p1 if i == 0 else _main.p2
+		if avant[i] != null and is_instance_valid(j):
+			j.equip_weapon(avant[i])
+	_torches(true)
+
+
+## Le leurre : posé par J2 (l'Illusionniste), le vrai J2 à même distance de J1 de
+## l'autre côté de son axe, torche éteinte ; J1 regarde, torche allumée. Les deux
+## doivent sortir identiques. Puis leurre et corps passent DERRIÈRE J1, à 60 px de
+## part et d'autre, torche de J1 éteinte, et J1 tire : l'écho au sol de son tir
+## (couche 1 seule, sans ombre) n'éclaire aucun corps — et plus le leurre.
+func _plan_leurre(plans: Array[Dictionary]) -> void:
+	var avant = _main.p2.current_weapon
+	var illusionniste = _classe_du_gadget("leurre")
+	if illusionniste == null:
+		printerr("  ✗ leurre : la classe de l'Illusionniste est introuvable")
+		return
+	_main.p2.equip_weapon(illusionniste)
+	_duel(ECART_DUEL, 0.0)
+	await _attendre_images(2)
+	var p1: Vector2 = _main.p1.global_position
+	var axe: Vector2 = _main.p1.global_transform.x
+	# À 180 px, sous la torche de J1 seule, à 36 px de part et d'autre de son axe.
+	# L'écho au sol d'un tir n'atteindrait pas si loin — 200 px de DIAMÈTRE, pas de
+	# rayon : c'est pourquoi la variante du tir, plus bas, les rapproche à 60 px.
+	var p_leurre: Vector2 = p1 + axe.rotated(0.2) * 180.0
+	var p_corps: Vector2 = p1 + axe.rotated(-0.2) * 180.0
+	# Une orientation FIXE, la même pour les deux : c'est la même silhouette qu'on
+	# compare, pas deux poses. Le regard de la marionnette la suit, et elle est
+	# reposée à chaque image — sans quoi le corps tourne encore après la pose (relevé
+	# au premier passage : 0,35 rad contre 0,45).
+	var cap: float = _main.p1.rotation + PI * 0.55
+	# ⚠️ Un TABLEAU, pas la variable : une lambda GDScript capture ses locales par
+	# VALEUR, et la place du corps change pour la variante du tir.
+	var place := [p_corps]
+	var tenir := func() -> void:
+		_vivants()
+		Input.action_release("p2_torch")
+		if _pantins.size() > 1:
+			_pantins[1].torche = false
+			_pantins[1].visee = Vector2.from_angle(cap)
+		if is_instance_valid(_main.p2):
+			_main.p2.flashlight_on = false
+			_main.p2.global_position = place[0]
+			_main.p2.rotation = cap
+	for i in 30:
+		tenir.call()
+		await get_tree().physics_frame
+	_main._do_spawn_gadget(1, p_leurre, cap, "leurre", 9201)
+	await _prendre(_plan(plans, "leurre"), tenir)
+	_consigner("leurre_J2", p_leurre, "vue")
+	_consigner("corps_J2", p_corps, "vue")
+	var leurre = _gadget_de(1)
+	print("  MESURE rotations corps %.4f leurre %.4f" % [_main.p2.rotation,
+		leurre.rotation if leurre != null else NAN])
+
+	# Le tir : l'ÉCHO AU SOL seul. C'est une lueur de 200 px de DIAMÈTRE
+	# (`ground_flash`, sans ombre, couche 1 seule) qui s'éteint en 0,12 s : à 180 px
+	# il ne restait rien à voir (0,0 avant ET après le lot, premier passage) ; à 70 px
+	# DEVANT, la gerbe de l'éclat de bouche recouvrait le corps (second passage). Les
+	# deux sont donc DERRIÈRE le tireur, à 60 px et à ±0,5 rad, et sa torche est
+	# ÉTEINTE : sa rétrodiffusion (masques 2|4) éclairerait les corps à côté de lui.
+	p_leurre = p1 + axe.rotated(PI + 0.5) * 60.0
+	p_corps = p1 + axe.rotated(PI - 0.5) * 60.0
+	place[0] = p_corps
+	var leurre_tir = _gadget_de(1)
+	if leurre_tir != null:
+		leurre_tir.global_position = p_leurre
+	if not _pantins.is_empty():
+		_pantins[0].torche = false
+	Input.action_release("p1_torch")
+	_main.p1.flashlight_on = false
+	# Le temps que la rétrodiffusion s'éteigne (`TORCH_FADE_OUT`).
+	for i in 40:
+		tenir.call()
+		await get_tree().physics_frame
+	_main.p1.shoot()
+	await _prendre(_derive(plans, "leurre", "tir",
+		"J1, torche éteinte, tire : le leurre et J2 sont derrière lui, à 60 px. L'écho au sol de son tir ne doit éclairer ni l'un ni l'autre."),
+		tenir, 0.0)
+	_consigner("leurre_J2_tir", p_leurre, "vue")
+	_consigner("corps_J2_tir", p_corps, "vue")
+
+	await _ranger_les_gadgets()
+	if avant != null and is_instance_valid(_main.p2):
+		_main.p2.equip_weapon(avant)
+	if _pantins.size() > 1:
+		_pantins[1].torche = true
+		# La visée que `tenir` imposait, rendue — la convention du plan « impacts ».
+		# Sans elle, J2 tournait vers le cap du leurre pendant les images sans `tenir`
+		# des plans `vue` suivants (rétrodiffusion, flash de tir, sang) : leur
+		# composition dépendait de la présence de CE plan dans la sélection, l'écart
+		# que la Marionnette devait supprimer (trouvé en revue, 2026-09-11).
+		_pantins[1].visee = VISEE.normalized()
+	Input.action_press("p2_torch")
+	if not _pantins.is_empty():
+		_pantins[0].torche = true
+	Input.action_press("p1_torch")
 
 
 # ---------------------------------------------------------------------------
