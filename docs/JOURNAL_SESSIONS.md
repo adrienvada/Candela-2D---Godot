@@ -4126,7 +4126,7 @@ le lendemain, après le tag : un protocole 18, et une coupure entre joueurs pour
 colonne de statistiques. C'est ce raisonnement, et non la difficulté technique, qui a
 décidé de l'ordre des travaux.
 
-**La publication.** Soixante-et-onze commits depuis la v0.5.0. Les notes de release
+**La publication.** 73 commits depuis la v0.5.0, 64 hors fusions. Les notes de release
 ont été bâties par un atelier de vingt-deux agents : un inventaire qui range chaque
 commit dans un chantier (zéro orphelin, décompte vérifié), un rédacteur et un
 contradicteur par chantier, puis un critique de complétude. **Quarante-huit corrections
