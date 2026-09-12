@@ -4069,3 +4069,80 @@ proximité à la prochaine fusion.
 exigent une fenêtre au premier plan. Ils ont tourné au second plan, faute de quelqu'un
 devant l'écran, et le banc lui-même déclare ce cas « un plancher ». Un demi-résultat
 présenté comme un résultat aurait été la cinquième fausseté de la journée.
+
+---
+
+## 2026-09-12 — Les arbitrages, puis la publication de la 0.6.0 (chantier DIX CLASSES, fin de l'étape 28)
+
+Session `candela-10-classes-system-e0a52d-e7` (worktree
+`candela-10-classes-system-e0a52d`, branche `claude/candela-10-classes-system-e0a52d`).
+Suite directe de l'entrée précédente : Adrien tranche les questions restées ouvertes,
+deux lots les exécutent, et il demande la publication.
+
+**Ce que « préciser tes questions » a changé.** Adrien a répondu « précise tes
+questions sur mes décisions, je ne comprends pas tout » à six arbitrages posés en
+langage de code — couches d'occluder, masques d'ombre, moment de purge. Reformulés en
+langage de jeu (« sous quelle lumière le leurre projette-t-il une ombre qu'un vrai
+corps ne projette pas ? », « que vois-tu derrière l'écran de fin : ta mort, ou le
+présent ? »), les six ont été tranchés en deux échanges. **La question n'était pas
+trop difficile, elle était mal posée** : elle demandait à Adrien de tenir en tête une
+implémentation pour juger d'un effet de jeu.
+
+**Lot G — deux arbitrages, un défaut trouvé par-dessus.** Le leurre projetait une
+ombre là où un corps n'en projette pas, et la killcam rendait le présent au moment où
+l'écran de fin se posait. En corrigeant le premier, le lot a buté sur ce que personne
+n'avait vu : **planter un leurre devant soi éteignait sa propre torche**. Et la revue
+a trouvé mieux — la traînée d'une balle ombrait les leurres des DEUX joueurs alors
+qu'elle n'ombre qu'un corps sur deux, donc le leurre de J2 se trahissait sous chaque
+tir qui passait près de lui. L'entrée ROADMAP qui signalait ce point le lisait à
+l'envers : elle présentait comme une aggravation ce que le lot corrigeait.
+
+**Le plan disait « une ligne à déplacer ». C'en était deux** — et la seconde comptait :
+garder le second terme de la condition aurait fait tourner la purge des fusées à
+chaque image, sous un commentaire devenu faux.
+
+**Lot H — le jeu mentait à ses joueurs, et personne ne l'avait remarqué.** L'avis
+affiché en bas du menu promet « Rien d'autre n'est envoyé ». Le lot E avait ajouté la
+télémétrie des gadgets sans toucher à cette phrase, deux jours plus tôt. Le commentaire
+au-dessus de la constante avertissait pourtant : « le changer ici sans changer l'envoi
+(ou l'inverse) ferait mentir le jeu à ses joueurs. » **L'avertissement était écrit, lu,
+et n'a pas suffi** — parce que rien ne le tenait. Il y a maintenant un contrôle qui
+appelle `conditions_a_envoyer()` et exige que l'avis nomme les gadgets si et seulement
+si la clé en sort : il mord dans les deux sens.
+
+**Et le premier recensement s'est cru complet.** La revue du lot H a trouvé un second
+écart que le premier masquait : la mesure du LIEN part elle aussi. Un recensement qui
+annonce « voilà tout ce qui part » est une affirmation d'exhaustivité, c'est-à-dire la
+forme d'erreur la plus difficile à voir — il n'y a rien à relire pour la démentir, il
+faut chercher ce qui n'y est pas. Le texte d'Adrien n'a pas été réécrit pour autant :
+la question lui a été posée, et sa réponse (« publier tel quel, corriger après ») est
+consignée comme **décision datée**, pas comme question ouverte. La distinction n'est
+pas cosmétique : une question ouverte s'instruit, une décision s'applique.
+
+**Le moment d'un changement de fil est la moitié de la décision.** Le comptage des
+mines était un majorant, et le rendre exact demandait de changer la forme du fil.
+Fait ce jour-là, sous un protocole 17 que personne n'avait encore joué : gratuit. Fait
+le lendemain, après le tag : un protocole 18, et une coupure entre joueurs pour une
+colonne de statistiques. C'est ce raisonnement, et non la difficulté technique, qui a
+décidé de l'ordre des travaux.
+
+**La publication.** Soixante-et-onze commits depuis la v0.5.0. Les notes de release
+ont été bâties par un atelier de vingt-deux agents : un inventaire qui range chaque
+commit dans un chantier (zéro orphelin, décompte vérifié), un rédacteur et un
+contradicteur par chantier, puis un critique de complétude. **Quarante-huit corrections
+ont été apportées aux textes par les contradicteurs** — la plus instructive : une puce
+décrivait la vignette de dégâts comme « reculant au-delà des coins », formule recopiée
+du commentaire du shader sans être redérivée. En UV, les coins d'un carré sont à 0,707
+du centre et la zone s'arrête à 0,62 : elle n'y arrive jamais. **Un commentaire de code
+n'est pas une source ; c'est un témoignage.**
+
+Le critique de complétude a rattrapé ce qu'aucun rédacteur ne pouvait voir : un commit
+qui portait dans son propre message « à confirmer par Adrien » et n'avait jamais été
+confirmé, trois jours plus tard, à la veille de partir chez les joueurs.
+
+**Ce que le carnet du protocole disait, et qui est devenu faux au tag.** Neuf passages
+écrits pendant que la v17 était libre disent « non publiée », « une dernière fois sous
+ce numéro ». Ils étaient vrais à l'écriture. Un encadré les referme désormais : ils
+racontent pourquoi les changements ont pu se cumuler sous un numéro, ils ne sont plus
+une permission. C'est exactement le piège que `CLAUDE.md` décrit pour son paragraphe
+audio — un constat daté qui se lit comme une propriété du projet.

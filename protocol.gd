@@ -248,6 +248,27 @@ class_name Protocol
 ##      toujours pas publiée (v0.5.0 est sortie en 16), et ce lot est le dernier avant
 ##      la 0.6.0. Après le tag, le même correctif imposerait un protocole 18 et une
 ##      coupure entre joueurs — c'est la raison du calendrier, pas une commodité.
+##
+## ## ⛔ LA v17 EST PUBLIÉE — depuis **v0.6.0, le 2026-09-12**
+##
+## Tout ce qui précède a été écrit pendant que ce numéro était encore libre, et neuf
+## passages ci-dessus disent « non publiée », « toujours pas publiée », « une dernière
+## fois sous ce numéro ». **Ces phrases étaient vraies à l'écriture et sont fausses
+## depuis le tag.** Elles restent là parce qu'elles racontent pourquoi chaque
+## changement a pu se faire sous un seul numéro ; elles ne sont plus une permission.
+##
+## Ce qui change concrètement, à partir de maintenant : le fil de la v17 est installé
+## chez des joueurs. **Toute modification de FORME — un argument ajouté, retiré,
+## réordonné, changé de type — impose `VERSION = 18`**, et coupe la population en deux
+## moitiés qui ne se voient pas jusqu'à ce que les deux côtés aient mis à jour. Ce
+## n'est pas une erreur à éviter, c'est un coût à assumer sciemment : `accepts()`
+## refuse symétriquement, le jeu ne plante pas, ne dit rien de faux, il refuse
+## poliment — et personne ne voit le défaut, ni chez soi (on tourne toujours sur le
+## dernier code) ni dans les suites (elles n'ont pas de population).
+##
+## Le rappel qui l'attrape avant qu'il parte : `tools/verifier_publication.sh`, à
+## lancer AVANT de poser un tag. Il refuse une mineure inchangée quand ce numéro a
+## bougé — 0.6.x → 0.7.0 pour un fil qui change, 0.6.1 pour tout le reste.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
