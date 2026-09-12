@@ -5237,6 +5237,34 @@ coupable que le sien », après le port volé et l'autoload qui ne compile pas.
 C'est un motif, pas une série de coïncidences : **un outil de mesure qui
 dépend d'un état invisible accuse toujours ce qu'il mesure.***
 
+⚠️ **Et la forme qui échappe aux deux consignes ci-dessus : une AVANCE RAPIDE
+sur un arbre existant, avec des `class_name` neufs** (2026-09-12, publication de
+la 0.6.0). Les deux règles écrites ici parlent d'un *worktree neuf* et d'une
+*fusion qui apporte des assets*. Ni l'une ni l'autre n'attrape le geste « mettre
+l'arbre local à jour » : on n'a pas créé de worktree, on n'a pas fusionné
+d'assets, on a fait avancer une branche de seize commits. **`git` déplace les
+fichiers, pas le cache.**
+
+Constaté sur le **checkout principal** — donc là où Adrien lance le jeu, pas dans
+un arbre de travail jetable. Après l'avance rapide de `main` vers la 0.6.0,
+`grep -c TelemetrieGadgets .godot/global_script_class_cache.cfg` rendait **0**,
+et `CanauxLumiere` aussi — cette dernière était arrivée deux jours plus tôt par
+la fusion du bandeau LED, et personne ne l'avait vue manquer depuis. Mon propre
+worktree était sain (ses suites étaient vertes), ce qui est exactement ce qui
+rend le piège invisible : **celui qui met l'arbre à jour n'est pas celui qui y
+lancera le jeu.** `godot --headless --path . --import` remet les deux.
+
+Le contrôle qui ne coûte rien, et qu'il faut faire APRÈS toute mise à jour d'un
+arbre qui reçoit un fichier neuf portant `class_name` :
+`grep -c "MaClasseNeuve" .godot/global_script_class_cache.cfg` — **zéro veut dire
+que tout ce qu'on lancera ensuite mentira.**
+
+*Signalé par la session `zen-kowalevski-04cc3d-f8`, qui avait payé une heure sur
+la variante « worktree » le même jour : sept scénarios à deux instances
+« bloqués » et neuf suites en erreur de script, sans aucun rapport avec le code.
+Sans son message, ce cache serait resté faux sur le poste d'Adrien après la
+publication.*
+
 ⚠️ **Forme la plus brutale, payée le 2026-09-07 : un worktree NEUF n'a pas un
 cache périmé, il n'en a AUCUN.** `git worktree add` ne copie pas `.godot/`, qui
 est ignoré par git — donc pas de `global_script_class_cache.cfg`, donc **plus un
