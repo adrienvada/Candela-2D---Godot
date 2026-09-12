@@ -5897,6 +5897,42 @@ Zéro veut dire que le lot va rougir, et il rougira **ailleurs** — sur la suit
 qui charge la scène, jamais sur le fichier fautif.
 
 
+### « Non poussé » n'est pas « sans effet » : le checkout principal est un poste d'essai (2026-09-12)
+
+Payé en versant le chantier des menus. J'ai fait avancer `main` en local, sans
+rien pousser, et je l'ai annoncé ainsi : *« rien n'est poussé, donc rien ne
+change pour personne »*. C'était faux, et d'une façon qui ne se voit pas depuis
+un worktree.
+
+**Le checkout principal n'est pas une copie de travail neutre : c'est l'arbre
+d'où Adrien lance le jeu.** Le faire avancer change ce qu'il a sous les doigts,
+même si `origin/main` n'a pas bougé d'un octet. En l'occurrence il portait
+soudain cinq commits de plus que la 0.6.0 qu'on venait de publier — écran
+d'options refait, douze effets du monde figés à 100 % — alors qu'il avait deux
+essais MANETTE en attente sur cette release (équilibre de la mine, Parasite
+invisible pendant son grésillement). **Un essai d'équilibrage se fait sur un
+état connu**, et personne ne lui avait dit que le sien avait changé. Relevé par
+la session du chantier des dix classes, qui l'a vu de l'extérieur ; je ne
+l'avais pas vu en le faisant.
+
+**Ce que ça ne veut PAS dire** : qu'il faut défaire le versement. La sortie est
+plus simple — un worktree resté sur le commit voulu donne l'état pur sans rien
+préparer (`godot --path .claude/worktrees/<celui-qui-porte-la-release>`), et le
+binaire de la release reste la référence absolue. Dégrader un état de travail
+pour un besoin qu'un `--path` résout serait payer deux fois.
+
+**Comment appliquer** : faire avancer `main` en local est une action qui a un
+public, et ce public est humain. Le dire — quel arbre a changé, de quoi à quoi,
+et par où retrouver l'état d'avant — fait partie du versement, au même titre que
+le lot vert. Et avant de verser, savoir si quelqu'un a un essai en cours sur
+l'état qu'on remplace.
+
+⚠️ **Même angle mort que le piège du cache d'import juste au-dessus**, et c'est
+ce qui les rend tous les deux coûteux : on raisonne sur les références et les
+fichiers versionnés en oubliant l'arbre où un humain appuie sur « lancer ». Le
+cache dit « git déplace les fichiers, pas le cache » ; celui-ci dit « git
+déplace la branche, pas la connaissance qu'en a le joueur ».
+
 #### Corollaire 2 : le foyer décide du verdict, dans les DEUX sens (2026-09-12)
 
 Payé deux fois dans la même heure, chantier « Menus, réglages ».
