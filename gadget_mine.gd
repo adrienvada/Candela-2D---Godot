@@ -75,9 +75,13 @@ func _init() -> void:
 	eblouit = true
 	# Elle crache dans toutes les directions : pas d'axe, régime de proximité.
 	eblouissement_dirige = false
-	# ⚠️ **Zéro tant qu'elle n'a pas pris feu**, et c'est la seule chose qui
-	# l'empêche d'aveugler en dormant. `Eblouissement.intensite_proximite()` rend
-	# 0 pour un rayon nul, donc il n'y a aucun cas particulier à écrire ailleurs.
+	# ⚠️ **Zéro tant qu'elle n'a pas pris feu**, et c'est la PREMIÈRE garde contre
+	# un aveuglement en dormant : `Eblouissement.intensite_proximite()` rend 0 pour
+	# un rayon nul, donc il n'y a aucun cas particulier à écrire ailleurs. Il y en a
+	# une SECONDE depuis l'étape 28 (lot A2) — `energie_relative()`, qui rend 0
+	# elle aussi tant que la mine dort, et que l'hôte multiplie à son éblouissement.
+	# Ce commentaire disait « la seule chose » : c'était vrai jusqu'au jour où le
+	# gain est entré dans le calcul.
 	rayon_eblouissement = 0.0
 	# Un boîtier posé n'a pas d'orientation qui compte.
 	angle_pose = 0.0
@@ -163,15 +167,40 @@ func encaisser(degats: float) -> bool:
 	return true
 
 
+## Ce que le magnésium brûle encore, entre 0 et 1 : `reste²`, la courbe même de sa
+## flamme. `_physics_process()` en tire l'énergie RENDUE, `GameState` le GAIN de son
+## éblouissement — une seule formule, deux lecteurs. C'est ce qui fait que
+## l'aveuglement suit ce qui brûle (étape 28, lot A2 ; décision d'Adrien du
+## 2026-09-11, « l'aveuglement suit ce qui brûle »).
+##
+## Zéro en dormant : une mine qui n'a pas pris feu ne brûle rien. C'est la seconde
+## garde contre un aveuglement au repos — la première est son rayon nul (`_init()`).
+func energie_relative() -> float:
+	if not _allumee:
+		return 0.0
+	var reste := clampf((duree_vie - age()) / DUREE_EMBRASEMENT, 0.0, 1.0)
+	return reste * reste
+
+
 func _physics_process(delta: float) -> void:
 	super(delta)
 	if not _allumee or _lumiere == null or is_queued_for_deletion():
 		return
 	# La combustion s'éteint sur la fin : un flash qui disparaîtrait d'un coup se
 	# lirait comme une coupure de rendu, pas comme une fin de combustion.
-	var reste := maxf(0.0, duree_vie - age()) / DUREE_EMBRASEMENT
-	_lumiere.energy = ENERGIE * reste * reste
-	rayon_eblouissement = RAYON_EBLOUISSEMENT * reste
+	_lumiere.energy = ENERGIE * energie_relative()
+	# ⚠️ **Le rayon d'éblouissement ne suit PLUS la flamme** (étape 28, lot A2). Il
+	# suivait `reste` pendant que l'énergie rendue suivait `reste²` : à reste 0,2,
+	# une flamme tombée à 4 % aveuglait encore à 0,22 un joueur posté à 72 px, le
+	# rayon même du déclenchement. C'est le GAIN de
+	# `GameState._sources_eblouissantes()` qui porte la combustion désormais ; un
+	# rayon qui rétrécirait EN PLUS l'atténuerait deux fois. Il reste à
+	# `RAYON_EBLOUISSEMENT`, écrit par `allumer()` et nulle part ailleurs.
+	#
+	# ⚠️ **Prix connu, et assumé** (chiffres en ROADMAP, lot A2) : ce n'est pas
+	# seulement la fin du flash qui baisse, c'est tout le flash — au rayon de
+	# déclenchement, le pic passe de 0,750 à 0,488 et le temps passé au-dessus de
+	# 0,3 de 1,02 s à 0,42 s. Adrien l'a validé en le sachant.
 
 
 func _monter_flamme() -> void:

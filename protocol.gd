@@ -163,6 +163,13 @@ class_name Protocol
 ##      l'éblouissement. Les tics de brûlure ne sont PAS une règle partagée :
 ##      l'hôte les décide, `rpc_update_hp` les porte.
 ##
+##      Et la MINE, au lot A2 de la même étape (2026-09-12) : rien à partager, et
+##      c'est la raison qui compte. Sa lumière suit `reste²` chez les DEUX pairs
+##      depuis l'étape 12 (`GadgetMine._physics_process()`) et elle n'a pas changé ;
+##      seul l'hôte en tire l'éblouissement, désormais par le gain plutôt que par un
+##      rayon qui rétrécissait, et il le réplique. Un client v16 dessine exactement
+##      la même flamme qu'un v17 : c'est l'arbitrage qui bouge, pas le rendu.
+##
 ##      Et, même étape : l'ombre habitée arrête balles et regard par sa PLAQUE
 ##      (36 × 6), la même que son ombre, et non plus par le disque de 18 du socle.
 ##      Le fil ne bouge pas, le sens si : un client v16 arrêterait ses balles

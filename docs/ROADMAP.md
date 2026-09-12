@@ -2424,7 +2424,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Les gadgets éblouissent à hauteur de ce qu'ils brûlent** (2026-09-11, Adrien) | La règle de la fusée (« Une fusée éteinte éblouit encore », tableau des demandes du 2026-09-11 dans le chantier « refonte roman graphique ») étendue aux gadgets, à l'étape 28 du chantier DIX CLASSES : `GadgetBase.energie_relative()` — la part de sa pleine lumière qu'un gadget brûle — devient le `gain` de sa source d'éblouissement de proximité, lu **sans garde** (le socle rend 1). Les braises rendent `0,35 + 0,65·reste`, la courbe même de leur lueur, et leur rayon d'aveuglement ne rétrécit plus : un rayon qui baisserait EN PLUS du gain atténuerait deux fois (à 68 px en fin de vie, 0,010 au lieu de 0,231). **Conséquence à connaître** : au centre de la nappe, le plafond valait 1,00 toute sa vie ; il va de 1,00 à 0,35. À 120 px en fin de vie il passe de 0,00 à 0,14 — elles éblouissent un peu plus loin qu'avant, parce que le rayon ne fond plus. La **mine** est un commit séparé (lot A2), à confirmer par Adrien sur ses chiffres : c'est tout son flash qui baisse, pas seulement sa fin, et la question posée ne le disait pas. Jusque-là elle garde son comportement (le socle rend 1). |
+| **Les gadgets éblouissent à hauteur de ce qu'ils brûlent** (2026-09-11, Adrien) | La règle de la fusée (« Une fusée éteinte éblouit encore », tableau des demandes du 2026-09-11 dans le chantier « refonte roman graphique ») étendue aux gadgets, à l'étape 28 du chantier DIX CLASSES : `GadgetBase.energie_relative()` — la part de sa pleine lumière qu'un gadget brûle — devient le `gain` de sa source d'éblouissement de proximité, lu **sans garde** (le socle rend 1). Les braises rendent `0,35 + 0,65·reste`, la courbe même de leur lueur, et leur rayon d'aveuglement ne rétrécit plus : un rayon qui baisserait EN PLUS du gain atténuerait deux fois (à 68 px en fin de vie, 0,010 au lieu de 0,231). **Conséquence à connaître** : au centre de la nappe, le plafond valait 1,00 toute sa vie ; il va de 1,00 à 0,35. À 120 px en fin de vie il passe de 0,00 à 0,14 — elles éblouissent un peu plus loin qu'avant, parce que le rayon ne fond plus. La **mine** est un commit séparé (lot A2), à confirmer par Adrien sur ses chiffres : c'est tout son flash qui baisse, pas seulement sa fin, et la question posée ne le disait pas. Jusque-là elle garde son comportement (le socle rend 1). **Fait le 2026-09-12, Adrien validant en connaissance de cause** : elle rend `reste²` — la courbe que sa lumière suivait déjà — et son rayon reste à 460. **Conséquence d'équilibre, mesurée et assumée, pas maquillée** : au rayon de déclenchement (72 px), le pic d'aveuglement passe de 0,750 à 0,488 et le temps passé au-dessus de 0,3 de 1,02 s à 0,42 s ; à 30 px, le pic passe de 0,884 à 0,521 ; à 150 px de 0,553 à 0,422. À 300 px elle éblouit au contraire un peu plus (aire 0,079 → 0,154) : le rayon ne fond plus. Commit séparé et réversible seul — l'annuler ne coûte rien d'autre. |
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
 | **Les murs et l'adversaire suivent l'énergie des lampes** (2026-09-10, Adrien) | *« Corrige d'abord le point 2, que je puisse me rendre compte de l'effet LED avec des éclairages plus réalistes et fluides. »* `shimmer_murs.gdshader` et `player_enemy_light.gdshader` lisaient `LIGHT_COLOR` sans `LIGHT_ENERGY` ; or les masques de lumière du jeu sont blancs, la forme dans l'alpha, l'intensité **seulement** dans l'énergie. Toute lampe les allumait donc d'un bloc (constat de la session « bandeau LED », mesures détaillées par la session « intelligent-lovelace », branche `claude/intelligent-lovelace-4fd4d2`, `9f71fa5`, section « Pièges connus » de SA feuille de route). **Le liseré est normalisé et plafonné** (`× min(LIGHT_ENERGY / 0,8 ; 1)`) plutôt que multiplié tel quel — tel quel, il aurait été ×2,3 sous la torche, donc saturé. **La référence est la vision de proximité** : le halo que chaque joueur porte autour de lui (`ambient_light`, 0,8, qui n'éclaire que la vue de son porteur), vérifiée contre `player.gd` par `test_mur_led`. **Elle a d'abord été la torche (2,5)**, le 2026-09-10 : fondus longs et murs qui vacillaient au tir, mais le halo ne soulignait plus le mur voisin qu'au tiers (148 → 47). **Adrien a tranché le 2026-09-11 : « garder la proximité »** — ce halo sert au joueur à se repérer dans son environnement immédiat, il ne doit rien perdre. Le plafond vient des lampes plus fortes — fusée pleine 3,0, mine 6,0 — qui sans lui auraient rendu l'arête plus forte qu'avant : **aucune lampe n'éclaire le liseré plus qu'avant ; seules celles plus faibles que le halo s'atténuent, jusqu'à 0.** Mesuré au banc isolé, liseré avant → après : torche de 6,0 à 1,0 **~182 → ~182** (tir compris), 0,5 **183 → 116**, 0,1 **182 → 23**, 0 **0 → 0** ; halo de proximité au mur **148 → 148**. **Ce qui change donc en jouant** : une lampe à 0 mais allumée (grésillement) n'éclaire plus le mur ; le « mauvais contact » (lampe à 0,15-0,55) l'atténue ; la fin des fondus devient progressive (extinction de torche, fusée entre deux sursauts, braises qui s'éteignent). Tout le reste est inchangé. (Version torche, retirée : liseré 147 / 110 au tir, 73 à 1,0.) **Le corps adverse est un commit SÉPARÉ, à confirmer par Adrien** : la décision a été prise sur une explication qui le citait (« un adversaire touché par une lumière faible serait moins visible ») sans dire assez clairement que c'est un **changement d'équilibre**. Mesuré : adversaire **112 à toute énergie, 0 compris → 112 / 112 / 112 / 44 / 0** pour 2,5 / 1 / 0,5 / 0,1 / 0 — sous la torche rien ne bouge (saturé dès ~0,26), une torche à 0 mais allumée (grésillement du Parasite) ne le dessine plus, et **la rétrodiffusion des classes furtives** (`backlight_multiplier = 0.1`, arbalète et spectre) **révèle enfin moins son porteur** — ce réglage n'avait jusqu'ici aucun effet sur ce que voit l'adversaire. **Confirmé par Adrien le 2026-09-11** pour le grésillement : *« les lumières ne doivent pas éclairer si elles sont à 0 dans leur grésillement »*. Il a aussi précisé que **la lueur de chaque joueur est sa vision de proximité et ne doit jamais le révéler à l'ennemi** — ce que le code fait déjà : `ambient_light` n'éclaire que les calques de son porteur (masques 16 / 32), jamais le sprite adverse. Ce qui révèle, c'est la **rétrodiffusion**, le reflet de la torche sur le corps (`body_light`, allumée avec la torche, énergie proportionnelle à la sienne) : elle suit maintenant sa force, et donc le `backlight_multiplier` des classes furtives. ⚠️ L'explication donnée à Adrien le 2026-09-10 appelait cette rétrodiffusion « la petite lueur autour de chaque joueur » : **c'est ce mot qui a créé le malentendu** — deux lumières distinctes portaient un seul nom. **Pas touchés** : `player_rim_light.gdshader` et `blood_shader.gdshader`, même motif, hors de la décision — listés comme exceptions dans `test_mur_led`, qui refuse tout NOUVEAU `light()` sans énergie. **`shimmer_murs.gdshader` est retiré le 2026-09-11** (refonte roman graphique, second chantier, lot N) : la tuile de mur étant noire, il ne dessinait plus rien, normalisation comprise. Le contour des murs (`mur_encre.gd`) est éclairé par défaut, donc proportionnel à l'énergie SANS plafond ni normalisation : sous le halo de proximité (0,8) il vaut 0,8 / 2,5 de ce qu'il vaut sous la torche, et la mine à 6,0 le surexpose. La session LED l'a signalé, et **Adrien a tranché le même jour : « il éclaire assez »** (voir la section du chantier LED, `bc0c25b`). Point clos : rien à régler sur `mur_encre`. ⚠️ Cette ligne a dit « point ouvert » pendant quelques heures après la décision, parce que le commit qui l'actait n'a mis à jour que la section du chantier — la session du suivi l'a vu en croisant les deux. |
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
@@ -19095,6 +19095,116 @@ toutes les sorties y passent. **À trancher.**
   demandé ;
 - le scénario duo « PRÊT s'ouvre à l'arrivée de l'adversaire » reste intermittent
   (déjà signalé au lot E) : il n'a pas été relancé ici, ce lot ne touche pas au salon.
+
+### Étape 28 — lot A2 : la mine ✅ (2026-09-12)
+
+Le second commit du lot A, **isolé pour être annulable seul**. La mine est le dernier
+maillon de « l'aveuglement suit ce qui brûle » (voir « Décisions actées »), et le seul
+dont la règle déplace l'ÉQUILIBRE. `GadgetMine.energie_relative()` rend le reste AU
+CARRÉ — la courbe même de sa flamme, celle que sa lumière suivait déjà — et son rayon
+d'éblouissement redevient CONSTANT (460 px, écrit par `allumer()` et nulle part
+ailleurs). Il rétrécissait avec le reste pendant que l'énergie rendue suivait `reste²` :
+un gain et un rayon qui fondent ensemble atténueraient deux fois. C'est aussi ce qui
+faisait qu'à reste 0,2, une flamme tombée à 4 % aveuglait encore à 0,22 un joueur posté
+à 72 px — le rayon même du déclenchement. Le socle rend 1 et la branche gadgets de
+`_sources_eblouissantes()` passe ce gain depuis le lot A1 : jusqu'à ce commit, la mine
+gardait donc exactement son comportement d'avant.
+
+**Ce que ça change au jeu — mesuré, et assumé.** Simulation à une seule source, 60 Hz,
+ligne de vue libre, montée 1,25/s et descente 2,67/s (`eblouissement.gd`). Chiffres du
+contradicteur du lot, **revérifiés sur le code du jour** avant d'écrire ici :
+
+| distance à la mine | pic, avant → après | temps au-dessus de 0,3 |
+|---|---|---|
+| 30 px | 0,884 → 0,521 | 1,25 s → 0,47 s |
+| 72 px (rayon de déclenchement) | 0,750 → 0,488 | 1,02 s → 0,42 s |
+| 150 px | 0,553 → 0,422 | 0,63 s → 0,30 s |
+| 300 px | 0,255 → 0,266 | 0 → 0 (aire 0,079 → 0,154) |
+
+Ce n'est donc **pas seulement la fin du flash** qui baisse, c'est tout le flash :
+l'éblouissement met 0,8 s à saturer, alors que `reste²` n'est déjà plus qu'à 56 % à
+0,4 s. À 300 px, en revanche, elle éblouit un peu plus — l'ancien rayon rétrécissant la
+coupait net dès que le reste passait sous 0,65. La question posée à Adrien disait « cela
+affaiblit la fin du flash de la mine » : elle en disait moins que ce tableau. **Il a
+validé en le sachant** ; le commit est séparé pour qu'annuler cette seule décision ne
+coûte rien d'autre, et c'est tout l'intérêt de l'avoir isolé.
+
+⚠️ **À l'écran, la baisse n'est pas proportionnelle, et une table de pics ne peut pas
+le dire** : le seul seuil non linéaire de la chaîne est en AVAL de l'éblouissement.
+`Brouillage._dose()` multiplie la valeur par `GAIN` (2,0) puis la borne à 1 — le halo et
+le flou (`brouillage_vue.gd`) comme l'effacement de la silhouette adverse
+(`Brouillage.opacite()`, lu par `player.gd`) sont donc SATURÉS dès **0,5**
+d'éblouissement, ce que le commentaire de `GAIN` écrit lui-même. Mesuré sur la même
+simulation, et le résultat va dans les deux sens : **au pic, il ne se perd presque
+rien** — à 72 px la dose vaut 0,975 au lieu de 1,000, et l'adversaire reste effacé ;
+ce qui part, c'est la **durée** du brouillage plein — 0,70 s → **0 s** à 72 px,
+1,00 s → 0,03 s à 30 px, 0,17 s → 0 s à 150 px — et le rayon dans lequel la mine
+sature le brouillage tombe de **~173 px à ~51 px**, c'est-à-dire en deçà de son propre
+rayon de déclenchement. Celui qui marche dessus — le cas même que la mine est faite
+pour punir — ne TIENT donc plus l'adversaire effacé, alors qu'il le tenait sept
+dixièmes de seconde. **Ce qui ne passe pas par la dose suit le tableau
+proportionnellement** : le voile prend l'éblouissement brut (`ui.gd._poser_voile()`),
+la vitesse et la visée sont linéaires en `dazzle_amount` (`player.gd`). C'est cette
+durée-là qu'il faut regarder manette en main (H11), plus que le pic.
+
+**Le protocole ne change pas, et c'est la raison qui compte** : la lumière de la mine
+suit `reste²` chez les deux pairs depuis l'étape 12 et n'a pas bougé d'une ligne ; seul
+l'hôte en tire l'éblouissement, qu'il réplique. Un client v16 dessine la même flamme
+qu'un v17 — c'est l'arbitrage qui change, pas le rendu. Une phrase le dit à l'entrée 17
+du carnet de `protocol.gd` ; `VERSION` reste 17, `WIRE_WITNESS` inchangé.
+
+**Le contrôle qui compte est un RAPPORT, pas une valeur.** À 150 px, sur quatre âges de
+l'embrasement, éblouissement ÷ énergie rendue reste constant — 0,674, exactement ce que
+dicte la distance. Trois témoins l'encadrent, parce qu'aucun ne suffit seul : au plein
+feu le plafond vaut la valeur attendue (une ligne de vue coupée rendrait « constant » sur
+des zéros) ; les quatre relevés couvrent vraiment l'embrasement (un âge figé rendrait
+quatre fois le même rapport) ; la flamme rendue tombe sous le dixième de son plein feu.
+L'âge avance par `_physics_process(Δ)`, jamais par affectation — le chemin réel, celui
+que la revue du lot A1 avait pris en défaut —, et par fractions de ce qu'il reste à
+brûler, un pas absolu tuant la mine au dernier relevé. Le contrôle « endormie, elle ne
+brûle rien » est le jumeau du contrôle du rayon nul : deux gardes, deux contrôles.
+
+**Validation** — sous deux `HOME`, l'un courant, l'autre isolé dont le `settings.cfg`
+porte `intro_vue=true` (la leçon du lot C) ; décomptes SANS la ligne de synthèse,
+identiques sous les deux : `test_classes` (**396**, dont 6 neufs), `test_tir_et_reserves`
+(341), `test_rejeu` (72), `test_telemetrie_gadgets` (152), `test_vision` (40),
+`test_eblouissement` (31), `test_fusee_eteinte` (7), `test_protocole` (9), `test_charte`
+(243), `test_lumieres` (51/51) et `test_eblouissement_en_jeu` (9, la scène en jeu)
+verts, sans une seule `SCRIPT ERROR`.
+
+**Sabotages exécutés, chacun appliqué, VU ROUGIR, puis restauré à l'octet (sha256
+comparé)** :
+- **le rayon remis à l'échelle de la flamme** — l'ancien code : trois rouges, le rayon
+  (91 px au dernier relevé au lieu de 460), le rapport (0,670 → 0,529 → 0,176 → 0,000)
+  et le témoin ;
+- **la mine rendant `reste` pendant que sa lumière suit `reste²`** : le rapport double à
+  chaque relevé (0,681 → 0,973 → 1,70 → 3,41), le rayon restant juste — c'est pourquoi
+  les deux contrôles sont séparés ;
+- **le `gain` retiré de la branche gadgets** : le rapport de la mine (0,688 → 1,40 →
+  4,30 → 17,2) ET celui de la nappe de braises du lot A1 — une seule ligne porte les
+  deux gadgets ;
+- **une mine endormie rendant 1 au lieu de 0** : un seul rouge, le contrôle neuf. Rien
+  d'autre ne le voit, le rayon nul masquant tout le reste — c'est exactement sa raison
+  d'être.
+
+Le témoin du plein feu rougit sous les trois premiers, et c'est voulu : sous le code
+juste, le rapport vaut la valeur dictée par la distance à 1e-3 près **quel que soit
+l'âge**, et le moindre décalage de formule le déplace dès le premier relevé.
+
+⚠️ **Ce qu'aucune suite ne dit** : si un flash affaibli se joue encore comme un flash.
+La mesure est une simulation à une seule source — ni maximum avec une torche, ni murs —
+et H11 (« éprouver les dix classes manette en main ») reste le seul juge. Si le pic
+paraît trop faible manette en main, ce sont `RAYON_EBLOUISSEMENT` ou la courbe de
+`energie_relative()` qu'il faut relever, **pas le rayon qu'il faut refaire rétrécir** :
+ce serait retrouver la double atténuation que ce lot supprime.
+
+⚠️ **Et surtout pas `ENERGIE`**, malgré ce que la première rédaction de ce paragraphe
+conseillait : elle ne multiplie que `_lumiere.energy` (`gadget_mine.gd`), la lumière
+RENDUE à l'écran. Le plafond d'aveuglement d'une source de proximité vaut
+`plafond_pour(intensité) × gain_taille(rayon) × gain` (`GameState._plafond_de_source()`)
+— `ENERGIE` n'y entre nulle part. La relever rendrait la flamme plus vive sans aveugler
+d'un pixel de plus : le conseil envoyait droit dans le mur, vérifié dans le code avant
+d'être corrigé.
 
 ### À faire à la prochaine fusion de `main` — le leurre et le halo de proximité
 

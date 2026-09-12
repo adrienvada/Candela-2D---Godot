@@ -1316,8 +1316,14 @@ func _test_mine() -> void:
 		return
 
 	_check("elle peut éblouir", mine.eblouit)
+	# ⚠️ **Les DEUX gardes du sommeil, et il faut les deux** (étape 28, lot A2) : le
+	# rayon nul arrête le calcul de proximité, l'énergie nulle annule le gain que
+	# l'hôte y multiplie. Vérifier la première seule laisserait passer une mine qui
+	# brûlerait à plein le jour où le rayon cesserait d'être la borne.
 	_check("mais pas en dormant : son rayon d'éblouissement est nul",
 		is_zero_approx(mine.rayon_eblouissement), str(mine.rayon_eblouissement))
+	_check("et elle ne brûle rien en dormant : energie_relative() vaut 0",
+		is_zero_approx(mine.energie_relative()), str(mine.energie_relative()))
 	_check("sans axe : elle crache dans toutes les directions",
 		not mine.eblouissement_dirige)
 	_check("elle n'a pas de durée de vie propre",
@@ -1381,6 +1387,80 @@ func _test_mine() -> void:
 	_check("elle ne blesse personne", is_equal_approx(gs.p2.hp, pv_avant))
 	_check("un second ordre d'allumage ne la rallume pas",
 		not mine.veut_s_allumer([gs.p1, gs.p2]))
+
+	# ── L'AVEUGLEMENT SUIT CE QUI BRÛLE (étape 28, lot A2, Adrien) ──────────
+	#
+	# ⚠️ **Au seul plein feu, ce contrôle passerait pour une mauvaise raison** :
+	# l'ancien code, le nouveau et les sabotages y donnent le même plafond. D'où
+	# quatre relevés étalés sur l'embrasement.
+	# ⚠️ **Le TÉMOIN d'abord** : au plein feu, le plafond vaut ce que dit la
+	# distance. Sans lui, une ligne de vue coupée rendrait 0 partout et le rapport
+	# serait « constant » sur des zéros.
+	# ⚠️ L'énergie RENDUE se lit sur la flamme, jamais par `energie_relative()` :
+	# comparer le gain à lui-même ne prouverait rien.
+	# ⚠️ **L'âge avance par `_physics_process(Δ)`, jamais par `_age = …`** : c'est
+	# `super(delta)` qui fait vieillir la mine, chez les deux pairs — la leçon de la
+	# revue du lot A1, où un `super` retiré laissait la suite verte. La physique
+	# automatique est coupée pour que les pas qu'il faut bien laisser passer — le
+	# serveur doit voir les corps déplacés — ne la vieillissent pas entre deux
+	# relevés. Les pas sont des FRACTIONS de ce qu'il lui reste à brûler : la mine
+	# a déjà vieilli de quelques images depuis `allumer()`, et un pas absolu la
+	# tuerait au dernier relevé.
+	# Même géométrie que la torche fantôme plus haut : la cible à +150 px, l'autre
+	# joueur à 900 px de côté — un seul corps sur le trajet à la fois.
+	mine.set_physics_process(false)
+	var d_mine := 150.0
+	gs.p2.global_position = mine.global_position + Vector2(d_mine, 0.0)
+	gs.p1.global_position = mine.global_position + Vector2(0.0, 900.0)
+	# Deux pas de physique : un corps téléporté n'existe pour les requêtes qu'au
+	# pas suivant.
+	await physics_frame
+	await physics_frame
+	var espace_m: PhysicsDirectSpaceState2D = gs.p1.get_world_2d().direct_space_state
+	var flamme: PointLight2D = mine.get_node_or_null("Embrasement")
+	var restant: float = maxf(0.0, mine.duree_vie - mine.age())
+	var rapports_m: Array[float] = []
+	var restes_m: Array[float] = []
+	var rendues_m: Array[float] = []
+	var rayon_fixe := true
+	for part in [0.0, 0.3, 0.3, 0.2]:
+		mine._physics_process(float(part) * restant)
+		restes_m.append((mine.duree_vie - mine.age()) / GadgetMine.DUREE_EMBRASEMENT)
+		var rendue: float = flamme.energy / GadgetMine.ENERGIE if flamme != null else -1.0
+		rendues_m.append(rendue)
+		var src_m := {}
+		for s in gs._sources_eblouissantes():
+			if s["noeud"] == mine:
+				src_m = s
+		if src_m.is_empty() or flamme == null:
+			rapports_m.append(-1.0)
+			continue
+		rayon_fixe = rayon_fixe and is_equal_approx(float(src_m["rayon"]),
+			GadgetMine.RAYON_EBLOUISSEMENT)
+		rapports_m.append(gs._plafond_de_source(espace_m, src_m, gs.p2)
+			/ maxf(rendue, 1e-6))
+	var attendu_m: float = Eblouissement.plafond_pour(Eblouissement.intensite_proximite(
+		d_mine, GadgetMine.RAYON_EBLOUISSEMENT)) \
+		* Eblouissement.gain_taille(GadgetMine.RAYON_EBLOUISSEMENT)
+	_check("témoin : au plein feu, la mine éblouit ce que dit la distance",
+		attendu_m > 0.0 and absf(rapports_m[0] - attendu_m) < 1e-3,
+		"%.4f vs %.4f" % [rapports_m[0], attendu_m])
+	# Second témoin : les quatre relevés couvrent VRAIMENT l'embrasement. Sans lui,
+	# une mine dont l'âge ne bougerait plus rendrait quatre fois le même rapport, et
+	# « constant » ne dirait plus rien.
+	_check("les quatre relevés couvrent l'embrasement, du plein feu à sa fin",
+		restes_m.size() == 4 and restes_m[0] > 0.9 and restes_m[3] < 0.25,
+		str(restes_m))
+	_check("et la flamme RENDUE s'éteint avec ce qui reste à brûler",
+		rendues_m[3] > 0.0 and rendues_m[3] < rendues_m[0] * 0.1, str(rendues_m))
+	var constant_m := true
+	for r in rapports_m:
+		constant_m = constant_m and absf(r - rapports_m[0]) < 1e-3
+	_check("le rapport éblouissement / énergie rendue reste constant sur l'embrasement",
+		constant_m, str(rapports_m))
+	_check("son rayon d'éblouissement ne rétrécit plus avec la flamme",
+		rayon_fixe and is_equal_approx(mine.rayon_eblouissement,
+			GadgetMine.RAYON_EBLOUISSEMENT), str(mine.rayon_eblouissement))
 
 	# ── ABATTUE, elle PART ───────────────────────────────────────────────────
 	var autre := GadgetMine.new()
