@@ -877,10 +877,17 @@ func _test_lignes_de_politique() -> void:
 			_check("%s : ligne présente" % cle, false)
 			continue
 		var d: Dictionary = ligne
-		# Plancher 0.0 sans discussion : ces effets n'apprennent rien sur
-		# l'adversaire, ne se voient jamais en match, et n'existent que pour le
-		# plaisir de qui les garde.
-		_check("%s : confort, coupable à zéro" % cle,
-			int(d["famille"]) == EffectPolicy.Family.CONFORT
-			and is_zero_approx(float(d["plancher"]))
-			and String(d["phrase"]) != "")
+		# **Famille MENUS depuis le 2026-09-12**, et ce n'est pas un renommage :
+		# ces quinze-là étaient CONFORT, séparés du confort de match par un
+		# simple commentaire au milieu de la table. L'écran leur donne
+		# maintenant un interrupteur unique quand le confort a quatre niveaux —
+		# un découpage que le code ne porte pas se perd au premier effet ajouté
+		# au mauvais endroit. Le `plancher` a disparu de la table le même jour
+		# (les effets du monde ne se règlent plus, donc plus rien à border) :
+		# ce qui reste à vérifier est la famille et la phrase.
+		_check("%s : famille des menus, avec sa phrase" % cle,
+			int(d["famille"]) == EffectPolicy.Family.MENUS
+			and String(d.get("phrase", "")) != "")
+		_check("%s : coupable jusqu'à zéro" % cle,
+			EffectPolicy.reglable(cle)
+			and is_zero_approx(float(EffectPolicy.clamp_value(cle, 0.0))))

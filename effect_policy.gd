@@ -1,106 +1,117 @@
 class_name EffectPolicy
 extends RefCounted
 
-## Ce qu'un joueur a le droit de baisser dans les effets visuels, et jusqu'où.
+## Ce qu'un joueur a le droit de régler dans les effets visuels, et ce qui ne
+## se règle pas du tout.
 ##
-## Dans un jeu dont la seule information est la lumière, désactiver un effet est
-## presque toujours un **avantage compétitif** : sans secousse on vise mieux,
-## sans vignette on voit plus d'écran une fois blessé, sans éblouissement on
-## encaisse le flash adverse sans rien perdre. Si tout se coupe, tous les
-## joueurs sérieux finissent par jouer avec un jeu nu — et le jeu qu'on a écrit
-## n'est plus celui qui se joue en classé. Mais imposer secousses et flashs à
-## quelqu'un qui y est sensible n'est pas défendable non plus : c'est de
-## l'accessibilité, pas une préférence.
+## Dans un jeu dont la seule information est la lumière, baisser un effet est
+## souvent un **avantage compétitif** : sans poussière une torche se repère
+## moins bien, sans flash de bouche on encaisse le tir d'en face sans rien
+## perdre, sans sang la touche ne se confirme plus. Mais imposer secousses et
+## flashs à quelqu'un qui y est sensible n'est pas défendable non plus : c'est
+## de l'accessibilité, pas une préférence.
 ##
-## La règle tranchée coupe entre les deux :
+## Trois familles, et le menu les montre dans cet ordre :
 ##
-## - **Confort** — n'obstrue que l'écran de celui qui règle et n'apprend rien
-##   sur l'adversaire. Réglable de 0 à 100 %, zéro compris, y compris en classé.
-## - **Monde** — perçu par les deux joueurs, ou porteur d'information sur
-##   l'adversaire. Réglable jusqu'à un **plancher**, jamais annulable en classé.
+## - **Menus** — l'habillage des écrans. Ne se voit jamais pendant une manche,
+##   n'apprend rien de personne. Un seul interrupteur pour les quinze.
+## - **Confort** — obstrue l'écran de celui qui règle, pendant le match, sans
+##   rien dire de l'adversaire. Quatre niveaux, plus un réglage par effet dans
+##   les paramètres avancés.
+## - **Monde** — ce que les DEUX joueurs lisent du duel. **Ne se règle pas.**
 ##
-## En écran partagé, les planchers ne s'appliquent pas : rien n'y est en jeu.
-## Même logique que le déblocage d'armes (décision du 2026-08-16).
+## ## Pourquoi le Monde ne se règle plus (décision d'Adrien, 2026-09-12)
 ##
-## ## Ce que ce plancher n'est pas
+## Il se réglait, jusqu'à un plancher proportionnel à la part d'information qui
+## passait par l'effet — 80 % pour l'éblouissement, 20 % pour la poussière — et
+## les planchers ne valaient qu'en classé. Le dispositif tenait, mais il
+## répondait mal à la question qu'il posait : **il laissait douze curseurs
+## négociables sur ce qui fait justement l'égalité entre les deux joueurs**, et
+## la marge restante (de 100 % à 20 %) était assez large pour faire deux jeux
+## différents. Un réglage qui influe sur le compétitif n'a pas de bon plancher ;
+## il a une valeur commune, et c'est tout.
 ##
-## Ce n'est pas une mesure anti-triche : un client modifié fait ce qu'il veut, et
-## aucune valeur écrite ici ne l'en empêchera. Le plancher dit **dans quel jeu se
-## joue un match classé** ; il ne l'impose pas au binaire. Le traiter comme une
-## sécurité conduirait à l'alourdir pour rien.
+## Ce que ça simplifie, et qui vaut d'être dit : plus de plancher, donc plus de
+## contexte classé à deviner, donc plus de « la même préférence rend deux
+## valeurs selon le mode ». `curseur(id)` répond la même chose partout.
 ##
-## ## L'échelle des planchers
-##
-## Le plancher est proportionnel à la part d'information du match qui passe par
-## l'effet : 80 % pour l'éblouissement, qui est une pénalité de jeu déguisée en
-## effet, 20 % pour la poussière, qui ne fait que rendre un faisceau visible de
-## côté. Un effet dont on ne saurait pas dire quelle information il porte n'a
-## rien à faire dans la famille Monde.
+## ⚠️ Ce n'est toujours **pas** une mesure anti-triche : un client modifié fait
+## ce qu'il veut, et aucune valeur écrite ici ne l'en empêchera. La table dit
+## **dans quel jeu se joue un match** ; elle ne l'impose pas au binaire.
 ##
 ## ## Ajouter un effet
 ##
 ## Une entrée dans `EFFECTS`, et rien d'autre : l'écran, la persistance et les
-## tests parcourent tous la table. Une entrée sans famille, sans phrase, ou dont
-## le plancher contredit la famille fait échouer `tools/test_effect_policy.gd`.
+## tests parcourent tous la table. Une entrée sans famille ou sans phrase fait
+## échouer `tools/test_effect_policy.gd`.
 
-## Deux familles, et il n'en existe pas de troisième : un effet qu'on n'arrive
+## Trois familles, et il n'en existe pas de quatrième : un effet qu'on n'arrive
 ## pas à ranger est un effet qu'on n'a pas fini de comprendre.
-enum Family { CONFORT, MONDE }
+##
+## ⚠️ **Menus et Confort ont longtemps été une seule famille**, séparées par un
+## simple commentaire au milieu de la table. Ça a tenu tant que l'écran affichait
+## trente-quatre curseurs à la file ; dès qu'il a fallu un interrupteur pour les
+## uns et quatre niveaux pour les autres, le commentaire ne suffisait plus — un
+## découpage que le code ne porte pas est un découpage qui se perd au premier
+## effet ajouté au mauvais endroit.
+enum Family { MENUS, CONFORT, MONDE }
 
 const MIN := 0.0
 const MAX := 1.0
 ## Intensité d'un effet jamais réglé : le jeu tel qu'il a été écrit.
 const DEFAULT := 1.0
 
-## La table. Une ligne = un effet.
+## Les quatre niveaux du confort, et leur nom tel que le joueur le lit.
 ##
-## `phrase` n'est pas un commentaire de code, c'est le texte lu par le joueur
-## sous le curseur. Un curseur qui refuse de descendre sans dire pourquoi passe
-## pour un défaut, et se signale comme tel.
+## Ce ne sont pas des crans de curseur : ce sont les seules valeurs que l'écran
+## simple sait poser. Un réglage pris dans les paramètres avancés peut tomber
+## entre deux — l'écran l'affiche alors comme « personnalisé » plutôt que de
+## l'arrondir, parce qu'arrondir effacerait silencieusement un choix.
+const NIVEAUX: Array[float] = [0.0, 0.35, 0.70, 1.0]
+const NOMS_NIVEAUX: Array[String] = ["NUL", "FAIBLE", "MOYEN", "ÉLEVÉ"]
+
+## Écart en deçà duquel une intensité EST un niveau. Les valeurs viennent de
+## `percent_to_intensity()`, donc d'une division par 100 : la comparaison doit
+## tolérer l'arrondi du flottant, et rien de plus.
+const TOLERANCE_NIVEAU := 0.001
+
 const EFFECTS := {
 	# --- Confort : votre écran, vos affaires -------------------------------
 	# Vague M — la vitrine des menus. Plancher 0.0 sans discussion : ces effets
 	# n'apprennent rien, ne se voient jamais en match, et n'existent que pour le
 	# plaisir de qui les garde.
 	"cadran_titre": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Cadran de titre",
 		"phrase": "Le titre porte une ombre qui tourne avec le temps passé au menu. Purement décoratif.",
 	},
 	"remanence_curseur": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Rémanence du curseur",
 		"phrase": "Le curseur laisse une après-image là où il était, comme une lumière vive sur la rétine.",
 	},
 	"torche_menu": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Torche du curseur",
 		"phrase": "Le curseur porte une flaque de lumière qui le suit. Elle n'éclaire rien qu'on ne voyait pas.",
 	},
 	"regard_du_noir": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le regard du noir",
 		"phrase": "Après un long silence, deux reflets peuvent apparaître dans le noir du menu. Ils ne font rien.",
 	},
 	"passant_vitre": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Quelqu'un derrière la vitre",
 		"phrase": "Une lueur passe parfois derrière les panneaux du menu, comme une torche de l'autre côté d'un verre.",
 	},
 	"encre_coulee": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "L'encre coulée",
 		"phrase": "Un écran de menu s'écrit ligne à ligne au lieu d'apparaître d'un bloc. Purement décoratif.",
 	},
 	"gravure_code": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le code gravé",
 		"phrase": "Le code de salon se frappe caractère par caractère au lieu de s'afficher. Le code reste le même.",
 	},
@@ -109,92 +120,77 @@ const EFFECTS := {
 	# passent par des illustrations). Un curseur qui règle un composant absent
 	# est un curseur qui ment ; Adrien a demandé que chaque curseur agisse.
 	"extinction_menu": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "L'extinction des feux",
 		"phrase": "Ouvrir et fermer un menu passe par un battement de noir au lieu d'un basculement sec.",
 	},
 	"depart_au_tir": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le départ au tir",
 		"phrase": "Lancer une partie tire une traçante dans le menu. N'apparaît que sur le bouton qui engage.",
 	},
 	"brume_menu": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "La brume d'abysse",
 		"phrase": "Le fond des menus devient une pénombre qui bouge, et glisse un peu à l'opposé du curseur.",
 	},
 	"bruit_de_l_oeil": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le bruit de l'œil",
 		"phrase": "Une granulation fourmille à la lisière de la lumière du curseur, comme un œil qui force dans le noir.",
 	},
 	"titre_vivant": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le titre incandescent",
 		"phrase": "Le titre respire comme une braise et prend feu à l'ouverture du menu. Le texte ne change pas.",
 	},
 	"voile_menu": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le voile d'objectif",
 		"phrase": "Les menus semblent filmés : un grain fin, une vignette douce, une frange colorée dans les coins.",
 	},
 	"balayage_attente": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Les squelettes de lumière",
 		"phrase": "Un tableau qui attend le réseau montre des barres balayées par une lueur, au lieu d'un texte figé.",
 	},
 	"verre_panneaux": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
+		"famille": Family.MENUS,
 		"nom": "Le verre fumé",
 		"phrase": "Le cadre de droite et les rangées de réglage prennent une matière de vitre. Le texte reste net.",
 	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Secousse de caméra",
 		"phrase": "Secoue votre vue, jamais celle d'en face. Rien ne vous oblige à la garder.",
 	},
 	"recul_camera": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Recul de caméra au tir",
 		"phrase": "Le cadrage repart en arrière au coup de feu. C'est du toucher, pas de l'information.",
 	},
 	"vignette_degats": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Vignette de dégâts",
 		"phrase": "Le rouge aux bords de VOTRE écran quand vous encaissez. Vos points de vie sont déjà affichés ailleurs.",
 	},
 	"flash_mort": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Flash de mort",
 		"phrase": "Le blanc et l'aberration au moment fatal. La manche est finie : plus rien ne se joue derrière.",
 	},
 	"tremblement_interface": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Tremblements de l'interface",
 		"phrase": "Chiffres et jauges qui sursautent. Décoratif de bout en bout.",
 	},
 	"grain_killcam": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Grain de la killcam",
 		"phrase": "Grain et balayage du rejeu. Chacun rejoue son propre enregistrement, après coup.",
 	},
 	"vibration_manette": {
 		"famille": Family.CONFORT,
-		"plancher": 0.0,
 		"nom": "Vibrations de la manette",
 		"phrase": "Ne sort pas de vos mains. Coupez-la sans y penser.",
 	},
@@ -202,7 +198,6 @@ const EFFECTS := {
 	# --- Monde : la langue commune du match --------------------------------
 	"eblouissement": {
 		"famille": Family.MONDE,
-		"plancher": 0.8,
 		"nom": "Éblouissement",
 		"phrase": "L'éblouissement est une pénalité, pas une décoration : il vous handicape quand une lumière vous prend. L'annuler changerait le handicap en avantage.",
 	},
@@ -211,82 +206,70 @@ const EFFECTS := {
 	# `flash_mort`, parce que l'aberration ne porte aucune direction (déjà
 	# donnée par `lueurs_derive`/`flares_penche`, non réglables) ; ou MONDE,
 	# parce qu'elle fait partie de ce que montre l'éblouissement et pas d'un
-	# habillage à part. **Adrien a tranché pour MONDE le 2026-09-09.** Plancher
-	# aligné sur `trait_de_balle`/`fusee_agonie` — 0,5, pas sur le 0,8 de
-	# l'ancienne entrée `"eblouissement"`, qui couvrait toute la pénalité et
-	# pas seulement son rendu.
+	# habillage à part. **Adrien a tranché pour MONDE le 2026-09-09**, et cette
+	# décision-là a survécu à la suppression des planchers : la famille dit
+	# maintenant « non réglable », ce qui est la lecture MONDE poussée au bout.
 	"aberration_eblouissement": {
 		"famille": Family.MONDE,
-		"plancher": 0.5,
 		"nom": "Frange de l'éblouissement",
-		"phrase": "Fait partie de ce que montre l'éblouissement, pas un habillage à part. La couper changerait l'expérience de la pénalité d'un joueur à l'autre — le plancher la garde identique pour les deux.",
+		"phrase": "Fait partie de ce que montre l'éblouissement, pas un habillage à part. La couper changerait l'expérience de la pénalité d'un joueur à l'autre : elle reste donc identique pour les deux.",
 	},
 	"silhouette_revelee": {
 		"famille": Family.MONDE,
-		"plancher": 0.7,
 		"nom": "Silhouette révélée au tir",
 		"phrase": "Tirer, c'est se montrer. Effacer cette silhouette rendrait l'adversaire invisible à l'instant précis où le jeu veut qu'il soit vu.",
 	},
 	"flash_de_tir": {
 		"famille": Family.MONDE,
-		"plancher": 0.6,
 		"nom": "Flash de bouche",
 		"phrase": "Être ébloui par le tir d'en face est le prix à payer pour savoir où il est. Baisser le flash échangerait ce prix contre un avantage.",
 	},
 	"trait_de_balle": {
 		"famille": Family.MONDE,
-		"plancher": 0.5,
 		"nom": "Trait de balle",
-		"phrase": "La balle éclaire sa trajectoire : c'est ce qui dit d'où l'on vous tire dessus. En classé, elle reste lisible pour les deux.",
+		"phrase": "La balle éclaire sa trajectoire : c'est ce qui dit d'où l'on vous tire dessus. Elle reste lisible pour les deux.",
 	},
 	"lumiere_impact": {
 		"famille": Family.MONDE,
-		"plancher": 0.4,
 		"nom": "Lumière d'impact",
 		"phrase": "Toucher éclaire la pièce une seconde : l'un est révélé, l'autre est ébloui. Supprimer cette lumière n'annulerait que la moitié gênante.",
 	},
 	"particules_sang": {
 		"famille": Family.MONDE,
-		"plancher": 0.35,
 		"nom": "Particules de sang",
 		"phrase": "Le sang confirme la touche et éclaire le blessé. C'est une information de match, pas un ornement.",
 	},
 	"eclats_impact": {
 		"famille": Family.MONDE,
-		"plancher": 0.3,
 		"nom": "Éclats sur les murs",
 		"phrase": "Les étincelles disent qu'un tir a manqué, et où il a frappé. Les couper effacerait la trace d'un tir raté.",
 	},
 	"traces_de_sang": {
 		"famille": Family.MONDE,
-		"plancher": 0.25,
 		"nom": "Traces de sang au sol",
 		"phrase": "Une trace dit qu'on s'est battu ici. Le noir garde peu de mémoire : celle-là reste.",
 	},
 	"poussiere_faisceau": {
 		"famille": Family.MONDE,
-		"plancher": 0.2,
 		"nom": "Poussière dans le faisceau",
 		"phrase": "La poussière rend un faisceau visible de côté : une torche se repère sans être pointée sur vous. L'effacer rendrait les torches plus discrètes.",
 	},
 	# Chantier FUSÉE (FU1). Le strobe d'agonie est une information de match (qui
-	# a bougé entre deux flashs se lit par différence) : MONDE, avec un plancher.
+	# a bougé entre deux flashs se lit par différence) : MONDE, donc non réglable.
 	# À intensité réduite, les flashs s'aplatissent sur un fondu continu — le
 	# TEMPO reste porté par le son, identique pour tous, pour que la variante
 	# photosensibilité ne retire aucune information de timing (fusee_modele.gd).
 	"fusee_agonie": {
 		"famille": Family.MONDE,
-		"plancher": 0.5,
 		"nom": "Agonie de la fusée",
 		"phrase": "Les derniers flashs d'une fusée photographient la pièce pour les deux joueurs. Les aplatir n'éteint que l'image : le rythme reste dans le son.",
 	},
 	# Chantier FUSÉE (FU3). Un tir depuis l'intérieur du nuage dilue le flash de
 	# bouche dans toute la fumée : la position du tireur devient plus dure à
 	# lire. Un joueur qui l'annulerait retrouverait un flash ponctuel — la
-	# lecture la plus favorable — donc MONDE, avec un plancher.
+	# lecture la plus favorable — donc MONDE, donc non réglable.
 	"fusee_diffusion": {
 		"famille": Family.MONDE,
-		"plancher": 0.5,
 		"nom": "Diffusion du flash dans la fumée",
 		"phrase": "Tirer depuis le nuage fait pulser toute la fumée au lieu du seul canon : ça dilue la position du tireur pour les deux joueurs. L'aplatir rendrait le flash ponctuel, donc plus facile à lire.",
 	},
@@ -312,6 +295,16 @@ static func ids_of_family(family: int) -> PackedStringArray:
 			out.append(String(id))
 	return out
 
+## Les identifiants que le joueur peut effectivement régler — Menus et Confort,
+## dans l'ordre de la table. C'est exactement ce que listent les paramètres
+## avancés, et rien d'autre ne doit jamais apparaître sous un curseur.
+static func ids_reglables() -> PackedStringArray:
+	var out := PackedStringArray()
+	for id in EFFECTS:
+		if reglable(String(id)):
+			out.append(String(id))
+	return out
+
 static func exists(id: String) -> bool:
 	return EFFECTS.has(id)
 
@@ -326,15 +319,29 @@ static func family_of(id: String) -> int:
 static func is_world(id: String) -> bool:
 	return family_of(id) == Family.MONDE
 
+## LA question de ce fichier : ce réglage appartient-il au joueur ?
+##
+## Non pour le Monde — il est commun aux deux joueurs — et non pour un
+## identifiant inconnu, qui n'a plus de famille et donc plus personne pour
+## trancher. Tout le reste se règle jusqu'à zéro.
+static func reglable(id: String) -> bool:
+	var famille := family_of(id)
+	return famille == Family.MENUS or famille == Family.CONFORT
+
 ## Ce que le rendu doit APPLIQUER, depuis n'importe quel fichier du jeu.
 ##
-## Le seul chemin vers l'intensité d'un effet en production : `GameSettings`
-## (plancher du contexte compris). Sans réglages — suite en `--script`, outil,
-## banc — la réponse est `DEFAULT`, le jeu tel qu'il a été écrit, jamais une
-## erreur : un effet ne doit pas cesser de se dessiner parce qu'un autoload
-## manque. **C'est ce chemin que `tools/test_curseurs_branches.gd` cherche
-## dans le texte de chaque fichier** : quinze curseurs sur trente-quatre
-## n'avaient aucun lecteur le 2026-09-09 (audit DA5.1), et rien ne le disait.
+## Le seul chemin vers l'intensité d'un effet en production : `GameSettings`.
+## Sans réglages — suite en `--script`, outil, banc — la réponse est `DEFAULT`,
+## le jeu tel qu'il a été écrit, jamais une erreur : un effet ne doit pas cesser
+## de se dessiner parce qu'un autoload manque. **C'est ce chemin que
+## `tools/test_curseurs_branches.gd` cherche dans le texte de chaque fichier** :
+## quinze curseurs sur trente-quatre n'avaient aucun lecteur le 2026-09-09
+## (audit DA5.1), et rien ne le disait.
+##
+## ⚠️ Les douze effets du Monde passent toujours par ici, et doivent continuer
+## de le faire : ils rendent `DEFAULT` au lieu d'un réglage, mais le jour où
+## l'un d'eux cesserait d'appeler ce chemin, plus rien ne vérifierait qu'il se
+## dessine encore.
 static func curseur(id: String) -> float:
 	var boucle := Engine.get_main_loop() as SceneTree
 	if boucle == null or boucle.root == null:
@@ -361,68 +368,96 @@ static func reason_of(id: String) -> String:
 # LA CONTRAINTE
 # ---------------------------------------------------------------------------
 
-## Plancher applicable dans ce contexte. Zéro partout hors classé : l'écran
-## partagé n'est pas classé, rien n'y est en jeu.
-static func floor_of(id: String, ranked: bool) -> float:
-	if not ranked or not EFFECTS.has(id):
-		return MIN
-	return clampf(float(EFFECTS[id]["plancher"]), MIN, MAX)
-
-## Valeur réellement applicable : écrêtée entre le plancher du contexte et 1.
+## Valeur réellement applicable pour cet effet.
 ##
-## Une valeur hors bornes est ramenée plutôt que refusée — un curseur mal
-## calibré, un fichier trafiqué ou une préférence prise en écran partagé ne
-## doivent pas pouvoir fabriquer une intensité que le classé n'accepte pas.
-static func clamp_value(id: String, value: float, ranked: bool) -> float:
+## Un effet du Monde rend `DEFAULT` **quoi qu'on lui passe** : c'est la seule
+## porte par laquelle une intensité arrive au rendu, donc c'est ici que la règle
+## « commun à tout le monde » se tient — et non dans l'écran, qui peut être
+## contourné, ni dans la persistance, qui peut être réécrite à la main.
+##
+## Une valeur hors bornes est ramenée plutôt que refusée : un curseur mal
+## calibré ou un fichier trafiqué ne doivent pas pouvoir fabriquer une intensité
+## que le jeu ne sait pas rendre.
+static func clamp_value(id: String, value: float) -> float:
+	if not reglable(id):
+		return DEFAULT
 	if is_nan(value):
 		return DEFAULT
-	return clampf(value, floor_of(id, ranked), MAX)
+	return clampf(value, MIN, MAX)
 
-## Le curseur refuse-t-il de descendre jusqu'à zéro ici ? C'est la question à
-## laquelle l'écran doit répondre visiblement, jamais en masquant la course.
-static func is_capped(id: String, ranked: bool) -> bool:
-	return floor_of(id, ranked) > MIN
+# ---------------------------------------------------------------------------
+# LES QUATRE NIVEAUX DU CONFORT
+# ---------------------------------------------------------------------------
+
+## L'index du niveau qui correspond EXACTEMENT à cette intensité, ou -1.
+##
+## Le -1 se lit « personnalisé », et c'est une réponse et non un échec : un
+## joueur venu des paramètres avancés a le droit d'être entre deux niveaux, et
+## l'écran doit le dire au lieu de le déplacer.
+static func niveau_de(value: float) -> int:
+	if is_nan(value):
+		return -1
+	for i in NIVEAUX.size():
+		if absf(value - NIVEAUX[i]) < TOLERANCE_NIVEAU:
+			return i
+	return -1
+
+## Le niveau commun à toute une famille, ou -1 si ses effets divergent.
+##
+## C'est ce que l'écran simple affiche : quatre boutons dont un seul s'allume,
+## aucun quand les réglages fins ne tombent pas tous sur le même niveau.
+static func niveau_commun(valeurs: Array) -> int:
+	if valeurs.is_empty():
+		return -1
+	var premier := niveau_de(float(valeurs[0]))
+	if premier < 0:
+		return -1
+	for v in valeurs:
+		if niveau_de(float(v)) != premier:
+			return -1
+	return premier
 
 # ---------------------------------------------------------------------------
 # CE QUE LE JOUEUR LIT
 # ---------------------------------------------------------------------------
 #
 # Tout le texte destiné au joueur vit ici, à côté des valeurs qu'il explique.
-# Le mettre dans l'écran garantirait qu'un plancher changé un jour laisse
-# derrière lui une phrase qui dit autre chose.
+# Le mettre dans l'écran garantirait qu'une règle changée un jour laisse
+# derrière elle une phrase qui dit autre chose.
 
 static func family_label(family: int) -> String:
 	match family:
-		Family.CONFORT: return "Confort"
-		Family.MONDE: return "Monde"
+		Family.MENUS: return "Effets des menus"
+		Family.CONFORT: return "Effets de confort"
+		Family.MONDE: return "Effets du monde"
 	return ""
 
 ## Règle de la famille, en une ligne, sous son titre.
 static func family_rule(family: int) -> String:
 	match family:
+		Family.MENUS:
+			return "L'habillage des écrans. Rien de tout cela n'apparaît pendant une manche."
 		Family.CONFORT:
-			return "N'obstrue que votre écran. Réglable jusqu'à zéro, même en classé."
+			return "N'obstrue que votre écran pendant le match. Réglable jusqu'à zéro."
 		Family.MONDE:
-			return "Ce que les deux joueurs lisent. Se réduit en classé, ne s'annule pas."
+			return "Ce que les deux joueurs lisent du duel. Identique pour tout le monde, et ne se règle pas."
 	return ""
 
-## Bandeau de contexte, en tête d'écran. Le joueur doit savoir *avant* de
-## toucher un curseur si ce qu'il règle vaudra pour son prochain match.
-static func context_line(ranked: bool) -> String:
-	if ranked:
-		return "Match classé — les effets du monde gardent un minimum ; le confort reste libre."
-	return "Écran partagé — aucun minimum : rien n'est en jeu ici."
+## Bandeau de contexte, en tête d'écran. Le joueur doit savoir ce qui n'est
+## PAS dans cet écran avant d'y chercher un réglage qui n'y est plus.
+static func context_line() -> String:
+	return "Flash de bouche, trait de balle, sang, poussière, éblouissement : " \
+		+ "ce que les deux joueurs lisent du duel est le même pour tout le monde " \
+		+ "et ne se règle pas."
 
-## Ligne affichée sous le curseur : la contrainte d'abord, sa raison ensuite.
-static func constraint_line(id: String, ranked: bool) -> String:
+## Ligne affichée sous un curseur : la contrainte d'abord, sa raison ensuite.
+static func constraint_line(id: String) -> String:
 	if not EFFECTS.has(id):
 		return ""
 	var reason := reason_of(id)
-	if family_of(id) == Family.CONFORT:
+	if reglable(id):
 		return "Jusqu'à zéro. " + reason
-	if not ranked:
-		return "Sans minimum en écran partagé. " + reason
-	return "Minimum en classé : %d %%. %s" % [intensity_to_percent(floor_of(id, true)), reason]
+	return "Commun aux deux joueurs. " + reason
 
 # ---------------------------------------------------------------------------
 # CURSEURS GRADUÉS DE 0 À 100

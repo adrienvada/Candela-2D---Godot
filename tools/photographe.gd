@@ -590,6 +590,24 @@ func _famille_menus(plans: Array[Dictionary]) -> void:
 				await _prendre(_derive(plans, "reglages",
 					"%02d-%s" % [i, _ardoise(nom)], nom))
 
+				# **Le repli des effets, déplié.** Sans ce second plan, les
+				# vingt-deux curseurs de l'avancé n'ont AUCUN état
+				# photographiable : le plan de la rubrique ne montre que les
+				# deux contrôles simples, et c'est précisément derrière le repli
+				# que se joue le piège consigné dans `ui.gd` — un
+				# `VBoxContainer` plus haut que sa place écrase ses enfants les
+				# uns sur les autres au lieu de les couper, et ce qu'on lit
+				# alors n'est pas « il en manque » mais un libellé posé sur la
+				# valeur d'un autre.
+				var ecran_effets: Node = _ui._screens.get(_ui.PANEL_EFFECTS)
+				if ecran_effets != null and ecran_effets.is_visible_in_tree() \
+						and ecran_effets.has_method("_basculer_avance"):
+					ecran_effets._basculer_avance()
+					await _prendre(_derive(plans, "reglages",
+						"%02d-%s-avances" % [i, _ardoise(nom)],
+						nom + " — paramètres avancés"))
+					ecran_effets._basculer_avance()
+
 	_ui.hub.reset()
 	if _demande(plans, "cadre-rang"):
 		_ui.hub.montrer_texte("MON RANG",
