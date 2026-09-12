@@ -104,12 +104,10 @@ const EFFECTS := {
 		"nom": "Le code gravé",
 		"phrase": "Le code de salon se frappe caractère par caractère au lieu de s'afficher. Le code reste le même.",
 	},
-	"arene_au_repos": {
-		"famille": Family.CONFORT,
-		"plancher": 0.0,
-		"nom": "L'arène au repos",
-		"phrase": "Le cadre de droite montre la carte sélectionnée dans le noir, révélée par une lumière qui passe. À zéro, le cadre reste sombre et le rendu s'arrête vraiment.",
-	},
+	# `arene_au_repos` a été RETIRÉ le 2026-09-11 : il réglait `menu_arene.gd`,
+	# que le hub n'instancie plus depuis le 2026-08-27 (les écrans de mode
+	# passent par des illustrations). Un curseur qui règle un composant absent
+	# est un curseur qui ment ; Adrien a demandé que chaque curseur agisse.
 	"extinction_menu": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,
@@ -327,6 +325,24 @@ static func family_of(id: String) -> int:
 
 static func is_world(id: String) -> bool:
 	return family_of(id) == Family.MONDE
+
+## Ce que le rendu doit APPLIQUER, depuis n'importe quel fichier du jeu.
+##
+## Le seul chemin vers l'intensité d'un effet en production : `GameSettings`
+## (plancher du contexte compris). Sans réglages — suite en `--script`, outil,
+## banc — la réponse est `DEFAULT`, le jeu tel qu'il a été écrit, jamais une
+## erreur : un effet ne doit pas cesser de se dessiner parce qu'un autoload
+## manque. **C'est ce chemin que `tools/test_curseurs_branches.gd` cherche
+## dans le texte de chaque fichier** : quinze curseurs sur trente-quatre
+## n'avaient aucun lecteur le 2026-09-09 (audit DA5.1), et rien ne le disait.
+static func curseur(id: String) -> float:
+	var boucle := Engine.get_main_loop() as SceneTree
+	if boucle == null or boucle.root == null:
+		return DEFAULT
+	var gs := boucle.root.get_node_or_null(^"GameSettings")
+	if gs == null or not gs.has_method("current_effect"):
+		return DEFAULT
+	return float(gs.current_effect(id))
 
 static func label_of(id: String) -> String:
 	if not EFFECTS.has(id):

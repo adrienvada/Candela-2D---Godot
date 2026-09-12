@@ -43,19 +43,25 @@ func _setup_all_inputs():
 	var reload_p1 = InputEventKey.new()
 	reload_p1.physical_keycode = KEY_R
 	InputMap.action_add_event("p1_reload", reload_p1)
+	# N et non plus K pour J2 (2026-09-10, Adrien) : K est aussi sa visée vers le
+	# bas, dans la section [input] de project.godot — viser vers le bas avec un
+	# chargeur incomplet rechargeait.
 	var reload_p2 = InputEventKey.new()
-	reload_p2.physical_keycode = KEY_K
+	reload_p2.physical_keycode = KEY_N
 	InputMap.action_add_event("p2_reload", reload_p2)
 
-	# Gadget de classe — chantier CLASSES, étape 4. E et O : les seules touches
-	# déjà liées sont Échap, F, K, R et U (relevé, pas supposé), donc ces deux-là
-	# sont libres. Positions PHYSIQUES comme tout le reste de l'Input Map, sans
-	# quoi un clavier AZERTY déplacerait la touche sans que personne ne le voie.
+	# Gadget de classe — chantier CLASSES, étape 4. E pour J1, Y pour J2.
+	# ⚠️ **Y et non plus O depuis le 2026-09-10** (Adrien). Le relevé de l'étape 4
+	# — « les seules touches déjà liées sont Échap, F, K, R et U » — ne lisait que
+	# CE fichier et oubliait la section [input] de project.godot, où O était déjà
+	# le tir de J2 : J2 posait son gadget en tirant. Positions PHYSIQUES comme tout
+	# le reste de l'Input Map, sans quoi un clavier AZERTY déplacerait la touche
+	# sans que personne ne le voie. `tools/test_liaisons.gd` refuse tout doublon.
 	var gadget_p1 = InputEventKey.new()
 	gadget_p1.physical_keycode = KEY_E
 	InputMap.action_add_event("p1_gadget", gadget_p1)
 	var gadget_p2 = InputEventKey.new()
-	gadget_p2.physical_keycode = KEY_O
+	gadget_p2.physical_keycode = KEY_Y
 	InputMap.action_add_event("p2_gadget", gadget_p2)
 	
 	# Helper for joy axis

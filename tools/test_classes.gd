@@ -299,8 +299,13 @@ func _test_gadget() -> void:
 	g.implementation = "res://gadget_voile.gd"
 	_check("avec une implémentation, le gadget est livré", g.est_livre())
 
-	_check("le sprite se dérive du slug",
-		g.chemin_sprite() == "res://assets/sprites/gadget_voile.png", g.chemin_sprite())
+	# ⚠️ Le voile est fait de PIÈCES : son sprite d'un seul tenant n'existe pas.
+	# L'ancien contrôle figeait ce chemin inexistant comme le bon (revue de la
+	# fusion des menus, 2026-09-10) ; on vérifie désormais un vrai fichier.
+	_check("le sprite d'une pièce se dérive du slug, et le fichier existe",
+		GadgetProfile.chemin_sprite_de("voile_toile") == "res://assets/sprites/gadget_voile_toile.png"
+			and ResourceLoader.exists(GadgetProfile.chemin_sprite_de("voile_toile")),
+		GadgetProfile.chemin_sprite_de("voile_toile"))
 	_check("l'icône se dérive du MÊME slug",
 		g.chemin_icone() == "res://assets/ui/icones/gadget_voile.png", g.chemin_icone())
 
@@ -1389,22 +1394,43 @@ func _test_braises() -> void:
 	_check("hors de la nappe, on ne brûle pas",
 		is_equal_approx(gs.p1.hp, pv_dehors))
 
-	# ── LES CHARBONS SONT DÉTERMINISTES ──────────────────────────────────────
+	# ── LA NAPPE EST UNE IMAGE, QUI LUIT D'ELLE-MÊME ─────────────────────────
 	#
-	# ⚠️ Un tirage local donnerait deux nappes différentes chez les deux pairs.
-	# C'est la raison même pour laquelle les particules sont exclues du modèle
-	# d'éblouissement — « tirées au sort, donc absentes chez l'autre pair ».
+	# Depuis le 2026-09-10, une image peinte remplace les charbons dessinés : la
+	# même chez les deux pairs, par construction. Ce qu'il reste à garder : NON
+	# éclairée par le décor — sans quoi le `CanvasModulate` de l'arène l'éteindrait,
+	# comme il éteignait les charbons — et PAS additive, sans quoi elle blanchit.
 	var a1 := GadgetBraises.new()
-	var b1 := GadgetBraises.new()
 	a1._monter_visuel()
-	b1._monter_visuel()
-	var identiques := a1._charbons.size() == b1._charbons.size()
-	for i in a1._charbons.size():
-		if not a1._charbons[i].position.is_equal_approx(b1._charbons[i].position):
-			identiques = false
-	_check("deux nappes se dessinent à l'identique", identiques)
+	_check("la nappe est une image", a1._nappe != null and a1._nappe.texture != null)
+	var mat: CanvasItemMaterial = a1._nappe.material if a1._nappe != null else null
+	_check("elle luit d'elle-même, sans s'additionner à sa propre lumière",
+		mat != null and mat.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED
+			and mat.blend_mode == CanvasItemMaterial.BLEND_MODE_MIX)
+	# ⚠️ **L'image couvre le disque qui brûle.** Les premières braises fines
+	# (`2ce7133`) ne couvraient que 54 % du disque de `RAYON` : on brûlait à 50 px
+	# du centre là où rien n'était peint, et toutes les suites restaient vertes.
+	# Mesuré : 91 % pour les cailloux d'avant, 97 % pour le disque plein de
+	# `d2c599e`. Trouvé par la revue de la fusion des menus, le 2026-09-10.
+	var couverture := -1.0
+	if a1._nappe != null and a1._nappe.texture != null:
+		var img: Image = a1._nappe.texture.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			var centre := Vector2((img.get_width() - 1) / 2.0, (img.get_height() - 1) / 2.0)
+			var dans := 0
+			var pleins := 0
+			for y in img.get_height():
+				for x in img.get_width():
+					if Vector2(x, y).distance_to(centre) <= GadgetBraises.RAYON:
+						dans += 1
+						if img.get_pixel(x, y).a >= 0.5:
+							pleins += 1
+			couverture = float(pleins) / float(maxi(1, dans))
+	_check("l'image couvre au moins 90 % du disque qui brûle", couverture >= 0.9,
+		"%.1f %%" % (couverture * 100.0))
 	a1.free()
-	b1.free()
 
 	gs.queue_free()
 	await process_frame
@@ -1468,20 +1494,15 @@ func _test_volumes() -> void:
 		is_zero_approx(voile.occultation_pour(Vector2.ZERO)))
 	voile.free()
 
-	# ── Le contour est DÉTERMINISTE ─────────────────────────────────────────
+	# ── Le nuage est une IMAGE ──────────────────────────────────────────────
+	#
+	# Depuis le 2026-09-10, une image peinte remplace le disque au contour
+	# déterministe qu'on vérifiait ici : la même chez les deux pairs, par
+	# construction.
 	var a2 := GadgetSuie.new()
-	var b2 := GadgetSuie.new()
 	a2._monter_visuel()
-	b2._monter_visuel()
-	var identiques := a2._masse != null and b2._masse != null \
-		and a2._masse.polygon.size() == b2._masse.polygon.size()
-	if identiques:
-		for i in a2._masse.polygon.size():
-			if not a2._masse.polygon[i].is_equal_approx(b2._masse.polygon[i]):
-				identiques = false
-	_check("deux nuages se dessinent à l'identique", identiques)
+	_check("le nuage de suie est une image", a2._masse != null and a2._masse.texture != null)
 	a2.free()
-	b2.free()
 
 	suie.free()
 	poussiere.free()
@@ -1598,6 +1619,18 @@ func _test_gresillement() -> void:
 	_check("il ne fait pas de dégâts et ne s'allume pas",
 		not g.veut_s_allumer([]))
 
+	# ── Éteinte, RIEN — même en son cœur. Exactement un ──────────────────────
+	#
+	# ⚠️ Depuis le 2026-09-10 la bobine s'allume et s'éteint. Éteinte, elle doit
+	# être l'identité PARTOUT, et pas seulement hors de portée : un résidu d'une
+	# bobine éteinte dégraderait des lampes pour un appareil que son poseur croit
+	# coupé.
+	_check("éteinte, elle ne touche aucune lampe, même en son cœur",
+		is_equal_approx(g.facteur_de_lampe(Vector2.ZERO), 1.0),
+		str(g.facteur_de_lampe(Vector2.ZERO)))
+	g.actif = true
+	g.graine = 1234567
+
 	# ── Hors de portée, RIEN. Exactement un, pas « presque un » ──────────────
 	#
 	# ⚠️ C'est l'invariant que `brouillage.gd` s'impose en premier : *« à
@@ -1608,33 +1641,74 @@ func _test_gresillement() -> void:
 		is_equal_approx(g.facteur_de_lampe(Vector2(GadgetGresillement.RAYON + 1.0, 0.0)), 1.0),
 		str(g.facteur_de_lampe(Vector2(GadgetGresillement.RAYON + 1.0, 0.0))))
 
-	# ── Au cœur, ça papillote — et ça ne s'éteint jamais tout à fait ─────────
-	var mini := 1.0
-	var maxi := 0.0
-	for i in 400:
-		g._age = float(i) * 0.01
+	# ── Au cœur : jusqu'au NOIR, puis le retour ──────────────────────────────
+	#
+	# ⚠️ **Le plancher de 22 % est tombé le 2026-09-10**, sur décision d'Adrien :
+	# « jusqu'au noir absolu, de façon aléatoire ». La règle d'avant vendait le
+	# doute d'une lampe qui marche encore ; la nouvelle la coupe franchement.
+	var plancher := 1.0
+	var sommet := 0.0
+	var coupures := 0
+	var etait_noir := false
+	var pas_t := 0.005
+	var duree := 60.0
+	for i in int(duree / pas_t):
+		g._temps_actif = float(i) * pas_t
 		var f: float = g.facteur_de_lampe(Vector2.ZERO)
-		mini = minf(mini, f)
-		maxi = maxf(maxi, f)
-	_check("au cœur, la lampe faiblit vraiment", mini < 0.5, "%.2f" % mini)
-	_check("mais ne s'éteint jamais franchement",
-		mini >= GadgetGresillement.CREUX - 0.001, "%.3f" % mini)
+		plancher = minf(plancher, f)
+		sommet = maxf(sommet, f)
+		var noir := f < 0.02
+		if noir and not etait_noir:
+			coupures += 1
+		etait_noir = noir
+	_check("au cœur, la lampe va jusqu'au noir absolu", plancher < 0.02, "%.3f" % plancher)
 	# Elle doit REVENIR : une lampe uniformément affaiblie serait un variateur,
 	# pas un mauvais contact — et le joueur s'y habituerait en trois secondes.
-	_check("et elle revient à sa pleine valeur", maxi > 0.98, "%.2f" % maxi)
+	_check("et elle revient à sa pleine valeur", sommet > 0.98, "%.2f" % sommet)
+	# ⚠️ **Bornée pour les yeux** : au plus trois coupures franches par seconde,
+	# en deçà de la bande que les recommandations d'accessibilité proscrivent pour
+	# les éclats. L'onde d'avant, poussée jusqu'au noir, en aurait fait plus de cinq.
+	var par_seconde := float(coupures) / duree
+	_check("au plus trois coupures franches par seconde", par_seconde <= 3.0,
+		"%.2f par seconde" % par_seconde)
+	_check("et assez pour qu'on les remarque", par_seconde >= 0.3,
+		"%.2f par seconde" % par_seconde)
 
-	# ⚠️ **Déterministe** : deux pairs qui grésilleraient différemment
-	# produiraient un défaut que personne ne pourrait reproduire.
+	# ⚠️ **Déterministe par la GRAINE.** Deux pairs qui grésilleraient différemment
+	# produiraient un défaut que personne ne pourrait reproduire. Même graine, même
+	# panne ; autre graine, autre panne — sans quoi toutes les bobines du jeu
+	# grésilleraient au même rythme, ce qui finirait par se reconnaître.
 	var h := GadgetGresillement.new()
 	h.global_position = Vector2.ZERO
+	h.actif = true
+	h.graine = g.graine
+	var autre := GadgetGresillement.new()
+	autre.global_position = Vector2.ZERO
+	autre.actif = true
+	autre.graine = g.graine + 1
 	var pareil := true
-	for i in 50:
-		g._age = float(i) * 0.037
-		h._age = float(i) * 0.037
-		if not is_equal_approx(g.facteur_de_lampe(Vector2.ZERO),
-				h.facteur_de_lampe(Vector2.ZERO)):
+	var differe := false
+	for i in 200:
+		var t := float(i) * 0.037
+		g._temps_actif = t
+		h._temps_actif = t
+		autre._temps_actif = t
+		var fg: float = g.facteur_de_lampe(Vector2.ZERO)
+		if not is_equal_approx(fg, h.facteur_de_lampe(Vector2.ZERO)):
 			pareil = false
-	_check("deux bobines grésillent à l'identique", pareil)
+		if not is_equal_approx(fg, autre.facteur_de_lampe(Vector2.ZERO)):
+			differe = true
+	_check("même graine, même panne", pareil)
+	_check("autre graine, autre panne", differe)
+	# Et l'onde suit le temps ALLUMÉ, jamais l'âge : une bobine posée depuis
+	# longtemps puis rallumée reprend là où sa panne s'était arrêtée.
+	g._temps_actif = 1.0
+	g._age = 999.0
+	var a1: float = g.facteur_de_lampe(Vector2.ZERO)
+	g._age = 3.0
+	var a2: float = g.facteur_de_lampe(Vector2.ZERO)
+	_check("l'onde suit le temps allumé, pas l'âge", is_equal_approx(a1, a2))
+	autre.free()
 	h.free()
 	g.free()
 
@@ -1701,22 +1775,34 @@ func _test_gresillement_en_jeu() -> void:
 		await process_frame
 		return
 
-	# On cherche le creux réel de l'onde, puis on y FIGE l'appareil : sans ça, on
-	# mesurerait un instant quelconque du papillotement.
+	_check("posée, elle est ALLUMÉE — la pose est le premier allumage", bobine.actif)
+
+	# On cherche un MAUVAIS CONTACT — la lampe faiblit sans s'éteindre — puis on y
+	# FIGE l'appareil. Depuis le 2026-09-10 l'onde va jusqu'au noir ; or le
+	# garde-fou ci-dessous a besoin d'une valeur non nulle pour dire que la lampe
+	# ne s'effondre pas par composition : 2,5 × 0 ne distinguerait rien.
+	#
+	# ⚠️ **Au CENTRE d'un créneau**, pas n'importe où : la bobine continue de
+	# compter son temps allumé pendant les images qu'on attend, et un instant pris
+	# au bord d'un créneau basculerait dans le suivant avant d'être mesuré.
 	var creux := 1.0
-	var age_creux := 0.0
-	for i in 400:
-		bobine._age = float(i) * 0.01
+	var t_creux := -1.0
+	for i in 4000:
+		var t := (float(i) + 0.5) * GadgetGresillement.CRENEAU
+		bobine._temps_actif = t
 		var f: float = bobine.facteur_de_lampe(gs.p1.global_position)
-		if f < creux:
+		if f > 0.25 and f < 0.6:
 			creux = f
-			age_creux = bobine._age
+			t_creux = t
+			break
+	_check("l'onde connaît un mauvais contact, entre la lampe pleine et le noir",
+		t_creux >= 0.0, "aucun créneau entre 0,25 et 0,6")
 
 	# Trente images de physique : assez pour que toute composition se voie.
 	# C'est précisément ce que le défaut faisait — converger, image après image,
 	# vers une valeur bien plus basse que celle annoncée.
 	for i in 30:
-		bobine._age = age_creux
+		bobine._temps_actif = t_creux
 		await physics_frame
 	var rendue: float = gs.p1.flashlight.energy
 	var attendue := 2.5 * creux
@@ -1728,9 +1814,25 @@ func _test_gresillement_en_jeu() -> void:
 		absf(rendue - attendue) < attendue * 0.10,
 		"rendue %.3f, attendue %.3f" % [rendue, attendue])
 	# ⚠️ Le garde-fou explicite contre le défaut d'origine : il rendait 0,094 là
-	# où l'on attend 0,565. Un seuil franc dit *pourquoi* le contrôle existe.
+	# où l'on attendait 0,565. Un seuil franc dit *pourquoi* le contrôle existe.
 	_check("elle ne s'effondre pas par composition", rendue > attendue * 0.6,
 		"%.3f" % rendue)
+
+	# ── Et au NOIR, la torche rendue s'éteint vraiment ──────────────────────
+	var t_noir := -1.0
+	for i in 4000:
+		var t := (float(i) + 0.5) * GadgetGresillement.CRENEAU
+		bobine._temps_actif = t
+		if bobine.facteur_de_lampe(gs.p1.global_position) < 0.005:
+			t_noir = t
+			break
+	_check("l'onde atteint le noir", t_noir >= 0.0)
+	if t_noir >= 0.0:
+		for i in 30:
+			bobine._temps_actif = t_noir
+			await physics_frame
+		_check("au noir, la torche rendue s'éteint vraiment",
+			gs.p1.flashlight.energy < 0.05, "%.3f" % gs.p1.flashlight.energy)
 
 	# Et hors de portée, la lampe revient EXACTEMENT à sa valeur.
 	gs.p1.global_position = Vector2(400.0, 400.0) \
@@ -1961,9 +2063,18 @@ func _test_fusees_par_classe() -> void:
 	gs.sandbox_mode = false
 
 	# ── La RECHARGE avance, et s'arrête au plafond ──────────────────────────
+	# ⚠️ **Le Terrassier par son NOM, pas « la première classe qui recharge ».**
+	# Ce bloc prenait la première classe à recharge active et l'appelait
+	# `terrassier` parce que c'était vrai le jour où il a été écrit : deux classes
+	# rechargeaient, et le Terrassier venait avant l'Allumeur. Le 2026-09-10,
+	# sept autres se sont mises à recharger — et la première est devenue le
+	# Parasite. Les contrôles de recharge sont restés verts, puisqu'ils valent
+	# pour n'importe quelle classe qui recharge ; seuls les deux derniers, qui
+	# attendent la POUSSIÈRE du Terrassier, ont vu que la variable ne désignait
+	# plus ce qu'elle nommait.
 	var terrassier := -1
 	for i in catalogue.size():
-		if catalogue[i].fusees != null and catalogue[i].fusees.recharge_active():
+		if String(catalogue[i].slug()) == "pompe":
 			terrassier = i
 			break
 	gs.p1.equip_weapon(gs.weapon_for_index(terrassier))
@@ -2005,6 +2116,9 @@ func _test_fusees_par_classe() -> void:
 		gs.p1.equip_weapon(gs.weapon_for_index(terrassier))
 		gs._accorder_fusees(0.0)
 		ui._maj_reserves(ui.p1_reserves, 0)
+		# Réserve pleine : le compte seul, comme avant le 2026-09-10. Ce qui a
+		# changé, c'est le VIDE : il s'écrit « FUSÉES 0 » et non plus « — », le
+		# tiret étant réservé à « n'en a jamais ».
 		_check("et il compte celles qu'on a",
 			String(ui.p1_reserves["fusees"].text) == "FUSÉES %d" % plein,
 			String(ui.p1_reserves["fusees"].text))

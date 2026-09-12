@@ -74,8 +74,9 @@ func _build() -> void:
 	style.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
 	style.border_width_top = 0
 	style.border_color = MenuTheme.P1
-	# Coins arrondis en bas seulement : le bandeau pend du bord de l'écran, il n'y
-	# est pas posé.
+	# Le bandeau pend du bord de l'écran, il n'y est pas posé : pas de bordure en
+	# haut. `CORNER_PANEL` vaut 0 depuis la refonte des menus — les coins sont
+	# francs, la ligne ci-dessous ne fait que suivre la constante.
 	style.corner_radius_bottom_left = MenuWidgets.CORNER_PANEL
 	style.corner_radius_bottom_right = MenuWidgets.CORNER_PANEL
 	style.content_margin_left = MenuTheme.GAP_M

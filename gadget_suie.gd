@@ -28,17 +28,12 @@ func _init() -> void:
 	pv = 2.0
 
 
-## Du noir de carbone chaud — mais **pas du noir franc**, et c'est une correction.
+## Son image : un nuage de suie peint, à sa taille — 184 px, deux fois `RAYON`.
 ##
-## ⚠️ Le premier jet était à 0,03 de luminance : dans un jeu dont le fond est le
-## noir absolu, une masse noire est **indiscernable d'une ombre**. On ne voyait
-## pas un nuage, on voyait le faisceau commencer plus loin — ce qui est
-## l'information d'un mur, pas celle d'un volume. Constaté en capture, et
-## diagnostiqué en peignant la masse en rouge : elle était bien là, elle ne
-## disait rien.
-##
-## Relevée à 0,09, elle reste invisible dans le noir — on ne voit pas de la suie
-## sans lumière, et c'est juste — mais **sous une torche elle devient de la
-## matière** : un disque gris chaud, distinct d'une ombre portée.
-func couleur_masse() -> Color:
-	return Color(0.09, 0.085, 0.08, 0.86)
+## ⚠️ **La leçon du « noir franc » vaut pour l'image.** La masse dessinée avait
+## d'abord été peinte à 0,03 de luminance : sur un fond noir absolu, elle était
+## indiscernable d'une ombre, et l'on voyait le faisceau commencer plus loin —
+## l'information d'un mur, pas celle d'un volume. L'image est peinte à 0,19 en
+## moyenne : invisible sans lumière, de la matière sous une torche.
+func piece_sprite() -> String:
+	return "cartouche_suie"

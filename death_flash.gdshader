@@ -1,16 +1,33 @@
 shader_type canvas_item;
 
-// Flash + aberration chromatique de la mort. Ressource préchargée : compilée au
-// démarrage, la première mort ne déclenche plus de compilation à chaud.
-uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
+// Le flash de mort en PALIERS — refonte roman graphique, lot 3 (2026-09-10).
+//
+// La version d'origine relisait l'écran pour le blanchir en dégradé avec une
+// frange RVB (aberration chromatique) : un objectif de caméra qui sature. Elle
+// lisait en outre un tampon d'écran que rien ne lui garantissait — voir
+// « Le tampon d'écran n'a pas de propriétaire » dans la ROADMAP, signalé le
+// 2026-09-07 et jamais corrigé. Cette version ne lit plus l'écran du tout :
+// c'est un lecteur de `hint_screen_texture` en moins.
+//
+// Ce qu'elle dessine : une case BLANCHE, franche, qui recule en trois paliers
+// au lieu de fondre. Le blanc pur est assumé (DA5.2 l'avait examiné et gardé :
+// « une surexposition n'a pas de teinte à choisir »). `aberration_amount` est
+// conservé pour que les appelants qui le poussent ne cassent pas ; il est sans
+// effet.
+//
+// Ressource préchargée : compilée au démarrage, la première mort ne déclenche
+// plus de compilation à chaud.
 uniform float flash_intensity : hint_range(0.0, 1.0) = 1.0;
 uniform float aberration_amount = 0.05;
 
 void fragment() {
-	float offset = aberration_amount * flash_intensity;
-	float r = texture(screen_texture, SCREEN_UV + vec2(offset, 0.0)).r;
-	float g = texture(screen_texture, SCREEN_UV).g;
-	float b = texture(screen_texture, SCREEN_UV - vec2(offset, 0.0)).b;
-	vec3 color = mix(vec3(r, g, b), vec3(1.0), flash_intensity);
-	COLOR = vec4(color, 1.0);
+	float a = 0.0;
+	if (flash_intensity >= 0.66) {
+		a = 1.0;
+	} else if (flash_intensity >= 0.33) {
+		a = 0.55;
+	} else if (flash_intensity >= 0.04) {
+		a = 0.22;
+	}
+	COLOR = vec4(1.0, 1.0, 1.0, a);
 }

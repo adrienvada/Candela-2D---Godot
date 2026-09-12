@@ -45,6 +45,8 @@ const HAUTEUR_VOL_PX := 18.0
 ## lisibilité l'emporte, mais pas au point d'en faire une poutre. Valeur de
 ## départ, à doser en FU6.
 const EMPREINTE_CORPS := 30.0
+## Le point de braise au cœur de la fusée, en unités de monde (lot 3).
+const EMPREINTE_COEUR := 16.0
 
 ## Deux rebonds dans la même seconde s'entendent ; vingt dans un angle, non.
 const REBOND_SON_ESPACEMENT := 0.09
@@ -205,10 +207,20 @@ func _ready() -> void:
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	add_child(_lumiere)
 
+	# Le cœur incandescent — refonte roman graphique, lot 3 (2026-09-11). C'était
+	# le dernier dégradé radial procédural en production (`LightTextures.radial`),
+	# en mélange additif : une lueur floue. C'est désormais le masque ambiant
+	# ENCRÉ (trois paliers, lot 1) ramené à 16 px, en mélange normal et non
+	# éclairé : un point de braise à bord franc, qui se voit dans le noir complet
+	# parce qu'il EST la source — sans s'additionner à son propre halo.
 	_coeur = Sprite2D.new()
 	_coeur.name = "Coeur"
-	_coeur.texture = LightTextures.radial(16)
-	_coeur.material = _materiau_additif()
+	var tex_coeur := LightTextures.masque(LightTextures.AMBIANTE)
+	if tex_coeur == null:
+		tex_coeur = LightTextures.radial(16)
+	_coeur.texture = tex_coeur
+	_coeur.scale = Vector2.ONE * _echelle_pour(tex_coeur, EMPREINTE_COEUR)
+	_coeur.material = _materiau_incandescent()
 	_coeur.modulate = COULEUR_DETRESSE
 	_coeur.z_index = 12
 	add_child(_coeur)
@@ -281,16 +293,16 @@ func _ready() -> void:
 	_appliquer_age(_age_combustion)
 
 
-static var _materiau_additif_partage: CanvasItemMaterial
+static var _materiau_incandescent_partage: CanvasItemMaterial
 
-static func _materiau_additif() -> CanvasItemMaterial:
-	if _materiau_additif_partage == null:
-		_materiau_additif_partage = CanvasItemMaterial.new()
-		_materiau_additif_partage.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		# UNSHADED comme le patron Bullet : le cœur EST une source, il doit se
-		# voir dans le noir complet — éclairé, il serait avalé hors de son halo.
-		_materiau_additif_partage.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-	return _materiau_additif_partage
+## Non éclairé, en mélange NORMAL (plus additif depuis le lot 3, 2026-09-11) :
+## le cœur EST une source, il doit se voir dans le noir complet — éclairé, il
+## serait avalé hors de son halo. L'addition, elle, n'apportait qu'un flou.
+static func _materiau_incandescent() -> CanvasItemMaterial:
+	if _materiau_incandescent_partage == null:
+		_materiau_incandescent_partage = CanvasItemMaterial.new()
+		_materiau_incandescent_partage.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	return _materiau_incandescent_partage
 
 
 static var _voile_rechauffe := false
@@ -425,6 +437,22 @@ func occultation_pour(pos: Vector2) -> float:
 ## (game_state.gd, host-only) et la balle (bullet.gd, tous pairs).
 func est_allumee_au_sol() -> bool:
 	return _atterrie and not _eteinte
+
+
+## Ce que la fusée BRÛLE en ce moment, entre 0 et 1 — la part de son plein feu.
+##
+## ⚠️ **L'éblouissement doit la lire.** Adrien, le 2026-09-11 : « je suis
+## ébloui par une fusée éclairante même quand elle est éteinte, quand elle
+## clignote sur la fin notamment ». La source d'éblouissement de la fusée
+## (`game_state._sources_eblouissantes`) ne regardait que « posée et pas
+## éteinte » et lui donnait son rayon plein : une braise à 0,25 et un creux
+## d'agonie à 0,15 aveuglaient comme le plein feu à 3,0. La lumière que voit
+## le joueur est `_lumiere.energy` ; c'est elle qui fait l'éblouissement, à
+## l'échelle du plein feu. Une lumière désactivée rend 0.
+func energie_relative() -> float:
+	if _lumiere == null or not _lumiere.enabled:
+		return 0.0
+	return clampf(_lumiere.energy / FuseeModele.ENERGIE_PLEIN_FEU, 0.0, 1.0)
 
 
 ## FU3 — un tir est parti DE L'INTÉRIEUR du nuage : toute la fumée pulse au

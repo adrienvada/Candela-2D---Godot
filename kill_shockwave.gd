@@ -32,43 +32,40 @@ const MAX_RADIUS := 1200.0
 ## refermer l'anneau sur le premier.
 const SEGMENTS := 96
 
-## Le front s'amincit en avançant : épais et brutal au départ, filiforme à
+## Le front s'amincit en avançant : épais et brutal au départ, fin à
 ## l'arrivée — l'énergie se dilue avec la distance.
-const WIDTH_START := 16.0
-const WIDTH_END := 2.0
+const WIDTH_START := 14.0
+const WIDTH_END := 3.0
 
-## Anneau intérieur : il traîne à 92 % du rayon, plus large et plus faible —
-## un halo rouge qui épaissit le front doré sans le concurrencer.
-const INNER_RADIUS_RATIO := 0.92
-const INNER_WIDTH_RATIO := 1.75
-const INNER_ALPHA := 0.4
-
-## Composantes sur-unitaires comme le Core des balles (bullet.gd) : en blend
-## additif elles saturent vers le blanc au départ — c'est le « vif » voulu —
-## et l'alpha mourant ramène naturellement la teinte dorée sous-jacente.
-# Anneau extérieur : la lumière du feu, poussée en surexposition par l'additif.
-const OUTER_COLOR := Color(Charte.AMBRE * 1.9, 1.0)
-# Cœur : le rouge de la faute, à l'instant où elle est commise.
-const INNER_COLOR := Charte.ROUGE
+## Refonte roman graphique, lot 7 (2026-09-10) : UN anneau, franc, blanc
+## halogène — plus de halo rouge intérieur ni de doré sur-exposé. La version
+## d'origine superposait deux anneaux additifs qui saturaient vers le blanc
+## au départ puis ramenaient l'or : une lueur d'objectif. Un trait d'encre
+## n'a qu'une valeur et un bord ; il s'efface d'un coup, il ne fond pas.
+## Le trait reste plein jusqu'à cette fraction de sa vie, puis disparaît.
+const PLEIN_JUSQUA := 0.72
+const RING_COLOR := Charte.HALOGENE
 
 var _age := 0.0
 
-# Matériau additif non éclairé, identique pour toutes les ondes (même idiome
-# que Bullet._additive_material : partagé en static, jamais ré-alloué).
-static var _shared_additive: CanvasItemMaterial
+# Matériau non éclairé en mélange NORMAL, identique pour toutes les ondes
+# (partagé en static, jamais ré-alloué). Plus d'additif : un trait d'encre se
+# pose par-dessus la lumière, il ne s'y ajoute pas — en additif, l'anneau
+# blanchissait le sol éclairé et disparaissait sur le flash de mort.
+static var _shared_material: CanvasItemMaterial
 
-static func _additive_material() -> CanvasItemMaterial:
-	if _shared_additive == null:
-		_shared_additive = CanvasItemMaterial.new()
-		_shared_additive.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-		_shared_additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	return _shared_additive
+static func _materiau() -> CanvasItemMaterial:
+	if _shared_material == null:
+		_shared_material = CanvasItemMaterial.new()
+		_shared_material.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		_shared_material.blend_mode = CanvasItemMaterial.BLEND_MODE_MIX
+	return _shared_material
 
 func _ready() -> void:
 	# Au-dessus des joueurs (10) et des chiffres de dégâts (100) : l'onde EST
 	# l'événement, rien ne doit la recouvrir.
 	z_index = 150
-	material = _additive_material()
+	material = _materiau()
 	# visibility_layer et light_mask restent aux valeurs par défaut : l'onde
 	# doit être vue des DEUX viewports (elle n'appartient à aucun joueur), et
 	# le matériau unshaded ignore de toute façon les lumières.
@@ -89,21 +86,8 @@ func _draw() -> void:
 	# comme une détonation — un rayon linéaire paraîtrait mécanique.
 	var inv := 1.0 - t
 	var radius := MAX_RADIUS * (1.0 - inv * inv * inv)
-	if radius < 1.0:
-		return # Toute première frame : rien à tracer.
-
+	if radius < 1.0 or t >= PLEIN_JUSQUA:
+		return # Toute première frame, ou trait déjà effacé : rien à tracer.
 	var width := lerpf(WIDTH_START, WIDTH_END, t)
-	var alpha := inv # Extinction linéaire : simple, prévisible, jamais de résidu.
-
-	# Halo rouge d'abord : dessiné SOUS le front doré pour que celui-ci reste
-	# la lecture dominante là où les deux se chevauchent.
-	var inner_radius := radius * INNER_RADIUS_RATIO
-	if inner_radius >= 1.0:
-		var inner_color := INNER_COLOR
-		inner_color.a = INNER_ALPHA * alpha
-		draw_arc(Vector2.ZERO, inner_radius, 0.0, TAU, SEGMENTS + 1,
-			inner_color, width * INNER_WIDTH_RATIO, true)
-
-	var outer_color := OUTER_COLOR
-	outer_color.a = alpha
-	draw_arc(Vector2.ZERO, radius, 0.0, TAU, SEGMENTS + 1, outer_color, width, true)
+	# Sans anticrénelage : le bord est franc, comme celui d'un trait de plume.
+	draw_arc(Vector2.ZERO, radius, 0.0, TAU, SEGMENTS + 1, RING_COLOR, width, false)

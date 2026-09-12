@@ -627,6 +627,19 @@ const D_MOYEN := 0.18
 ## 300 ms — ce qu'on a le droit de regarder : une révélation, un verdict.
 const D_LONG := 0.30
 
+## ## Les sons d'interface se tiennent SOUS le jeu
+##
+## En dB, passés à `AudioManager.play_ui`. Un menu se parcourt vite : un tic
+## répété dix fois par seconde fatigue bien avant d'informer, et à 0 dB il
+## sonnait aussi fort qu'un pas ou un coup. Adrien les a demandés « beaucoup plus
+## discrets » le 2026-09-10. La hiérarchie reste : l'appui (un choix) s'entend
+## plus que le changement d'écran, qui s'entend plus que le simple déplacement.
+## Le fichier `ui_massicot.wav` est déjà faible à la source (−42 dBFS RMS contre
+## −19 pour `ui_tick.wav`) : son écart ici est plus petit pour cette raison.
+const NIVEAU_UI_NAV := -14.0
+const NIVEAU_UI_MASSICOT := -6.0
+const NIVEAU_UI_APPUI := -8.0
+
 ## ## La densité des assets (chantier R, étape R6)
 ##
 ## **Texels par unité de monde.** Tout ce qui se dessine à partir d'une texture

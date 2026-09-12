@@ -408,6 +408,58 @@ func _test_les_gestes_de_combat() -> void:
 
 
 
+## Les gestes de combat d'un joueur : aucune touche ni aucun bouton de souris ne
+## doit en servir deux.
+const GESTES_DE_COMBAT := ["move_up", "move_down", "move_left", "move_right",
+	"aim_up", "aim_down", "aim_left", "aim_right",
+	"shoot", "torch", "lance_fusee", "reload", "gadget"]
+
+
+## Les doublons de clavier et de souris d'un joueur, lus dans l'`InputMap` réel.
+func _doublons_clavier(j: String) -> Array[String]:
+	var pose := {}  # empreinte → action qui l'occupe
+	var doublons: Array[String] = []
+	for geste in GESTES_DE_COMBAT:
+		var action := "%s_%s" % [j, geste]
+		if not InputMap.has_action(action):
+			continue
+		for e in InputMap.action_get_events(action):
+			var empreinte := ""
+			if e is InputEventKey:
+				var code: int = e.physical_keycode if e.physical_keycode != 0 else e.keycode
+				empreinte = "touche %s" % OS.get_keycode_string(code)
+			elif e is InputEventMouseButton:
+				empreinte = "souris %d" % e.button_index
+			if empreinte.is_empty():
+				continue
+			if pose.has(empreinte) and pose[empreinte] != action:
+				doublons.append("%s partage %s avec %s" % [action, empreinte, pose[empreinte]])
+			else:
+				pose[empreinte] = action
+	return doublons
+
+
+## ⚠️ **Aucune touche ne sert deux gestes de combat chez un même joueur.** Le
+## gadget de J2 a été posé sur O après un relevé des seules liaisons de
+## `input_setup.gd` : la section [input] de `project.godot`, où O était déjà le
+## tir, n'y figurait pas — J2 posait son gadget en tirant. Et K visait vers le bas
+## ET rechargeait. `_test_les_gestes_de_combat` ne regardait que la manette.
+## Trouvé par la revue de la fusion des menus, le 2026-09-10.
+func _test_aucune_touche_ne_sert_deux_fois() -> void:
+	for j in ["p1", "p2"]:
+		var d := _doublons_clavier(j)
+		_check(d.is_empty(), "%s : une touche sert deux gestes — %s" % [j, str(d)])
+	# Le garde doit VOIR un doublon qu'on lui tend : sans ça, il pourrait être
+	# aveugle par construction, la faute que raconte la note du test précédent.
+	var piege := InputEventKey.new()
+	piege.physical_keycode = KEY_O
+	InputMap.action_add_event("p2_gadget", piege)
+	var vus := _doublons_clavier("p2")
+	InputMap.action_erase_event("p2_gadget", piege)
+	_check(vus.size() > 0 and str(vus).contains("p2_gadget"),
+		"le garde ne voit pas O tendu au gadget de J2 : %s" % str(vus))
+
+
 func _run() -> void:
 	print("=== Les liaisons de commandes ===")
 	await process_frame
@@ -444,6 +496,7 @@ func _run() -> void:
 	_test_reassigner_une_touche_epargne_la_manette()
 	_test_chaque_bloc_n_accepte_que_son_appareil()
 	_test_les_gestes_de_combat()
+	_test_aucune_touche_ne_sert_deux_fois()
 	await _test_la_mise_en_page_tient()
 
 	print("--- %d contrôles, %d échec(s) ---" % [_ok + _ko, _ko])

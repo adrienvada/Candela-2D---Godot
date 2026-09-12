@@ -307,7 +307,8 @@ class CircularCooldown extends Control:
 		if secousse > 0.0:
 			# Amplitude décroissante : un tremblement constant ressemblerait à un
 			# défaut d'affichage, pas à un refus.
-			var a := secousse * 9.0
+			# Curseur CONFORT « Tremblements de l'interface ».
+			var a := secousse * 9.0 * EffectPolicy.curseur("tremblement_interface")
 			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
 		# Cercle d'acier discret (épaisseur 2 px)
@@ -458,7 +459,8 @@ class ComicHudPanel extends PanelContainer:
 				draw_line(Vector2(0.0, 0.0), Vector2(0.0, cr), col_c, 1.0)
 
 
-## Liseré néon animé qui matérialise le focus d'un joueur.
+## Liseré animé qui matérialise le focus d'un joueur (sans halo depuis le
+## 2026-09-11 : un trait, pas un néon).
 ## Il suit sa cible en douceur : le déplacement du curseur devient lisible même
 ## quand deux joueurs bougent en même temps.
 class NeonFocusRing extends Panel:
@@ -524,10 +526,12 @@ class NeonFocusRing extends Panel:
 
 	func _process(delta: float) -> void:
 		_time += delta
+		# Refonte roman graphique (2026-09-11) : le halo (`shadow_size` de 6 à
+		# 16 px, pulsé) est retiré — un liseré d'encre n'irradie pas. Reste la
+		# bordure, dont la teinte respire entre la couleur du joueur et
+		# l'halogène : c'est ce qui dit « c'est ici » sans lueur.
 		var wave := 0.5 + 0.5 * sin(_time * 6.0)
 		_style.border_color = neon.lerp(Charte.HALOGENE, 0.45 * wave)
-		_style.shadow_size = int(roundf(lerpf(6.0, 16.0, wave)))
-		_style.shadow_color = Color(neon.r, neon.g, neon.b, 0.22 + 0.33 * wave)
 
 		# La torche respire avec le liseré, mais **plus discrètement** : c'est une
 		# flamme, pas un clignotant. Elle est calée sur le bord gauche du cadre,
@@ -578,9 +582,8 @@ class VirtualGamepadCursor extends Control:
 
 	func _draw() -> void:
 		var wave := 0.5 + 0.5 * sin(_time * 6.0)
-		# Halo doux centré sur la pointe
-		var halo_color := Color(neon.r, neon.g, neon.b, 0.18 + 0.12 * wave)
-		draw_circle(Vector2(2, 2), 11.0 + 3.0 * wave, halo_color)
+		# Pas de halo (retiré le 2026-09-11, refonte roman graphique) : la flèche
+		# est un aplat cerné, posé sur une ombre portée franche.
 
 		# Forme de flèche de curseur stylisée
 		var points := PackedVector2Array([
@@ -1019,6 +1022,15 @@ var _assets_summary: String = ""
 
 var _is_main_menu: bool = true
 
+## Vrai tant qu'une cérémonie plein écran — l'allumage, l'intro en planches —
+## recouvre le menu. **Le menu est monté et vivant dessous** (DA6.5), mais il ne
+## doit ni répondre ni faire de bruit : `_input` passe AVANT le
+## `_unhandled_input` du voile, si bien que la touche qui sautait l'allumage
+## déplaçait aussi la sélection, et chaque déplacement tiquait sous un écran
+## noir. Relevé par Adrien le 2026-09-10 : « j'entends mon curseur bouger dès le
+## début ». Posé et levé par `game_state.gd`, qui lance les voiles.
+var menu_voile: bool = false
+
 ## Écran du hub d'où est parti le dernier match — capturé dans `hide_game_over()`,
 ## le seul des quatre points de bascule de `_is_main_menu` qui marque une vraie
 ## sortie du menu vers une manche vivante (les trois autres reviennent AU menu ou
@@ -1049,7 +1061,7 @@ var _killcam_negatif: int = 0
 var _killcam_derniere_image: int = -1
 var killcam_container: Control
 ## DA4.5 — le liseré de moniteur, en 9-slice par-dessus la killcam.
-var killcam_cadre: NinePatchRect
+var killcam_cadre: Control
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
 var killcam_timecode: Label
@@ -1153,16 +1165,16 @@ func _on_any_button_pressed(btn: BaseButton) -> void:
 		menu_tracer.tirer(Vector2(zone.end.x - GAP_S, zone.get_center().y),
 			1.0, COLOR_P1)
 	if est_lanceur:
-		AudioManager.play_ui_presse()
+		AudioManager.play_ui_presse(Charte.NIVEAU_UI_APPUI)
 	else:
-		AudioManager.play_ui_tampon()
+		AudioManager.play_ui_tampon(Charte.NIVEAU_UI_APPUI)
 	_pulse_press(btn)
 
 ## La souris pilote toujours la sélection principale (J1), jamais celle de J2 —
 ## sans quoi un simple passage de curseur volerait un bouton réservé à J2 (le
 ## râtelier d'armes en 1v1 local écran partagé).
 func _on_button_hovered(btn: BaseButton) -> void:
-	if not _is_focus_usable(btn):
+	if menu_voile or not _is_focus_usable(btn):
 		return
 	var owner_id := int(btn.get_meta(META_NAV_OWNER, -1))
 	if owner_id >= 0 and owner_id != 0:
@@ -1190,7 +1202,8 @@ func _pulse_press(control: Control) -> void:
 func _process(delta: float) -> void:
 	_voile_temps += delta
 	_suivre_le_curseur_systeme()
-	_update_joystick_cursor(delta)
+	if not menu_voile:
+		_update_joystick_cursor(delta)
 	_update_network_status()
 	_sync_launch_entries()
 	_update_focus_rings()
@@ -1534,13 +1547,15 @@ func _update_health_trails(delta: float) -> void:
 func _update_shake(delta: float) -> void:
 	if p1_shake_time > 0.0:
 		p1_shake_time -= delta
-		p1_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity
+		p1_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity \
+			* EffectPolicy.curseur("tremblement_interface")
 	else:
 		p1_panel.position = Vector2.ZERO
 
 	if p2_shake_time > 0.0:
 		p2_shake_time -= delta
-		p2_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity
+		p2_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity \
+			* EffectPolicy.curseur("tremblement_interface")
 	else:
 		p2_panel.position = Vector2.ZERO
 
@@ -2006,8 +2021,12 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 	# Seulement quand la sélection CHANGE : un survol qui redésigne le même
 	# bouton n'est pas une navigation, et il crépiterait à chaque frame de
 	# mouvement de souris.
-	if control != precedent:
-		AudioManager.play_ui("ui_tick")
+	#
+	# Ni sur une pose (`snap`) : c'est le jeu qui place la sélection en ouvrant
+	# un écran, pas le joueur qui la déplace — et le massicot de l'écran a déjà
+	# marqué le moment. Ni sous un voile : on n'entend pas ce qu'on ne voit pas.
+	if control != precedent and not snap and not menu_voile:
+		AudioManager.play_ui("ui_tick", Charte.NIVEAU_UI_NAV)
 	# M9 — la torche suit la cible, et M3 referme les yeux : tout mouvement de
 	# curseur est un signe de vie, et c'est le même signe pour les deux.
 	var centre := control.get_global_rect().get_center()
@@ -2215,7 +2234,11 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 	var niveau: float = 0.0
 	if victime != null:
 		niveau = clampf(float(victime.dazzle_amount), 0.0, 1.0)
-	mat.set_shader_parameter("niveau", niveau)
+	# Curseur MONDE « Éblouissement » (plancher 0,8 en classé) : il ne touche
+	# que le VOILE — jamais la pénalité de vitesse et de visée (décision du
+	# 2026-08-18). Sans lecteur depuis le passage au voile texturé (audit
+	# DA5.1) ; rebranché le 2026-09-11 à la demande d'Adrien.
+	mat.set_shader_parameter("niveau", niveau * EffectPolicy.curseur("eblouissement"))
 	if niveau <= 0.001:
 		return
 	mat.set_shader_parameter("temps", _voile_temps)
@@ -2232,11 +2255,15 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 
 
 func _build_hud() -> void:
-	var scanline := ColorRect.new()
-	scanline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scanline.color = Color(Charte.NOIR, 0.1)
-	scanline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(scanline)
+	# Un voile d'encre uniforme à 10 % sur toute la vue de match : il assoit le
+	# HUD sur le jeu. (Il s'appelait « scanline », du nom d'un effet vidéo qu'il
+	# n'a jamais été : un aplat.)
+	var voile_encre := ColorRect.new()
+	voile_encre.name = "VoileEncre"
+	voile_encre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	voile_encre.color = Color(Charte.NOIR, 0.1)
+	voile_encre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(voile_encre)
 
 	center_line = SplitGutterDivider.new()
 	center_line.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -2386,6 +2413,19 @@ func _build_player_hud(player: int) -> Control:
 		p2_ammo_label = weapon.get("ammo", null)
 		p2_torch = torch
 
+	# Le panneau grandit avec son contenu : trois boutons de gadget et de
+	# fusées dépassaient les 340 px du minimum, et la fiche de J2, ancrée à
+	# droite, sortait de l'écran en écran scindé (Adrien, 2026-09-11 : « l'écran
+	# d'info du joueur 2 est tronqué à droite »). Le minimum reste un plancher ;
+	# la largeur réelle est celle du contenu — relue À CHAQUE changement de son
+	# minimum, pas une seule fois à `ready` : une première version ne la lisait
+	# qu'à la pose, avant les libellés définitifs, et la fiche de J2 mordait
+	# encore sur la marge de droite (Adrien : « il manque une marge à droite pour
+	# être disposée symétriquement à la fiche J1 »).
+	var suivre := func() -> void:
+		wrapper.custom_minimum_size.x = maxf(340.0, inner.get_combined_minimum_size().x)
+	inner.minimum_size_changed.connect(suivre)
+	inner.ready.connect(suivre, CONNECT_ONE_SHOT)
 	return wrapper
 
 func _build_center_hud() -> Control:
@@ -2562,6 +2602,13 @@ func _create_torch_indicator() -> PanelContainer:
 		icon.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(icon)
+		# Le cadenas du cran plein, DANS l'icône et non à côté (Adrien,
+		# 2026-09-10) : le regard qui vérifie « torche allumée » lit le verrou du
+		# même coup, sans une case de plus à apprendre.
+		var verrou := VerrouTorche.new()
+		verrou.name = "Verrou"
+		verrou.visible = false
+		icon.add_child(verrou)
 
 	var label := Label.new()
 	label.text = "TORCHE"
@@ -2688,19 +2735,46 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 
 
 ## Écrit les réserves d'un joueur en match : fusées restantes et gadget de classe.
-func _maj_reserves(res: Dictionary, joueur: int) -> void:
+func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	if res.is_empty():
 		return
 	var gs := get_tree().get_first_node_in_group("game_state")
 	if gs == null:
 		return
 
+	# ⚠️ **La couleur suit le PANNEAU, les données suivent le JOUEUR**, et les deux
+	# ne se confondent que chez l'hôte. Chez le client en ligne, `update_hud()`
+	# reçoit (p2, p1) — le joueur local d'abord —, mais ce panneau était nourri par
+	# l'index 0, donc par `gs.p1` : le client lisait dans SON bandeau les réserves de
+	# l'HÔTE. Relevé par le contre-examen du 2026-09-10. Le premier correctif proposé
+	# passait `player_id` à la place de 0 — et repeignait du même coup le panneau du
+	# client en couleur adverse, la teinte tirant du même argument.
 	var teinte: Color = COLOR_P1 if joueur == 0 else COLOR_P2
+	var p: Node2D = qui if qui != null else (gs.p1 if joueur == 0 else gs.p2)
+	var pid: int = int(p.get("player_id")) if p != null else joueur
+	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
 
 	# ── 1. Les fusées éclairantes ──────────────────────────────────────────
-	var n := int(gs.fusees_restantes(joueur)) if gs.has_method("fusees_restantes") else 0
+	#
+	# ⚠️ **« — » ne veut plus dire « vide », seulement « n'en a jamais ».**
+	# Jusqu'au 2026-09-10 le bandeau écrivait « FUSÉES — » pour un Parasite qui
+	# venait de lancer son unique fusée, exactement comme pour le Spectre, qui
+	# n'en porte aucune : l'écran ne distinguait pas « reviendra » de « jamais ».
+	# Depuis que sept classes rechargent une fusée par minute, cette différence
+	# est toute l'information — et un zéro suffit à la porter.
+	var n := int(gs.fusees_restantes(pid)) if gs.has_method("fusees_restantes") else 0
+	var plafond := 0
+	if classe != null and classe.fusees != null:
+		plafond = classe.fusees.plafond_effectif()
 	var lbl_f: Label = res["fusees"]
-	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
+	# ⚠️ **Ni plafond ni décompte dans le libellé**, et c'est une correction du jour
+	# même. La première version écrivait « FUSÉES 0/1 · 60 s » : 97 px contre 59
+	# pour le plus long libellé d'avant — et un libellé ne coupe pas, il élargit sa
+	# cartouche. En écran scindé, le panneau de J2 est calé à droite et grandit vers
+	# la droite : sa cartouche partait hors de l'écran (revue du 2026-09-10,
+	# mesuré). « Vide, reviendra » contre « n'en a jamais » ne demandait que ceci :
+	# zéro s'écrit « 0 », et le tiret est réservé au Spectre.
+	lbl_f.text = "FUSÉES —" if plafond <= 0 else "FUSÉES %d" % n
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
 
@@ -2709,25 +2783,88 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 		_set_flare_style(p_f, n > 0, teinte)
 
 	# ── 2. Le gadget de classe ─────────────────────────────────────────────
-	var p: Node2D = gs.p1 if joueur == 0 else gs.p2
-	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
-	var nom_gadget := "—"
-	var dispo := false
+	#
+	# ⚠️ Trois états à dire depuis le 2026-09-10, et l'écran n'en disait qu'un —
+	# Adrien : « l'UI ne nous apprend rien là-dessus ». PRÊT (le nom seul), EN
+	# RECHARGE (le nom et ses secondes), et pour le grésillement ALLUMÉ ou ÉTEINT,
+	# avec sa batterie.
+	var titre_g := "GADGET"
+	var texte_g := "—"
+	var vif := false
 	if classe != null and classe.gadget != null and classe.gadget.est_livre():
-		nom_gadget = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
-		dispo = bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
+		texte_g = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
+		var dispo := bool(gs.gadget_disponible(pid)) if gs.has_method("gadget_disponible") else false
+		var bascule: Node = gs.gadget_basculable_de(pid) if gs.has_method("gadget_basculable_de") else null
+		if bascule != null:
+			var allume := bool(bascule.get("actif"))
+			var batt := float(gs.batterie(pid))
+			# `floor` et non `round` : le bandeau n'annonce jamais le seuil de
+			# rallumage avant qu'il soit atteint. Et sous ce seuil, un état à part —
+			# « éteinte, rallumable » et « éteinte, pas encore » se lisaient pareil,
+			# et l'appui ignoré ne disait rien.
+			var pct := int(floor(batt * 100.0))
+			if allume:
+				titre_g = "ALLUMÉ · %d %%" % pct
+				vif = true
+			elif batt >= GadgetGresillement.SEUIL_RALLUMAGE:
+				titre_g = "ÉTEINT · %d %%" % pct
+			else:
+				titre_g = "CHARGE · %d %%" % pct
+		elif dispo:
+			vif = true
+		else:
+			var att := float(gs.attente_gadget(pid)) if gs.has_method("attente_gadget") else 0.0
+			if att > 0.0:
+				titre_g = "RECHARGE · %ds" % int(ceil(att))
 
+	# ⚠️ **L'état se lit sur la ligne du TITRE, le nom reste seul en dessous.** La
+	# première version allongeait la ligne du nom — « GRÉSILLEMENT ALLUMÉ · 100 % »,
+	# 178 px, plus que tout le bloc des réserves — et en écran scindé le panneau de
+	# J2, calé à droite et grandissant vers la droite, poussait sa cartouche hors de
+	# l'écran. La ligne de titre existait depuis le début et ne disait que
+	# « GADGET » : c'est elle qui porte l'état, et la cartouche garde sa largeur.
+	var lbl_t: Label = res.get("gadget_titre", null)
+	if lbl_t != null:
+		lbl_t.text = titre_g
 	var lbl_g: Label = res["gadget"]
-	lbl_g.text = nom_gadget if dispo else ("%s —" % nom_gadget if nom_gadget != "—" else "—")
+	lbl_g.text = texte_g
 	lbl_g.add_theme_color_override("font_color",
-		Charte.HALOGENE if dispo else COLOR_DIM)
+		Charte.HALOGENE if vif else COLOR_DIM)
 
 	var p_g: PanelContainer = res.get("panel_gadget", null)
 	if p_g != null:
-		_set_gadget_style(p_g, dispo, teinte)
+		_set_gadget_style(p_g, vif, teinte)
 
 
-func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
+## Le cadenas du cran plein, dessiné en coin de l'icône de torche.
+##
+## Dessiné et non texturé : huit pixels de haut, où une image générée ne
+## rendrait qu'une tache. Un corps plein, une anse, un cerne d'encre pour se lire
+## sur le fond clair d'une torche allumée comme sur le fond sombre du HUD.
+class VerrouTorche extends Control:
+	const COTE := Vector2(9, 11)
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = COTE
+		set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		offset_left = -COTE.x + 2.0
+		offset_top = -COTE.y + 2.0
+		offset_right = 2.0
+		offset_bottom = 2.0
+
+	func _draw() -> void:
+		var corps := Rect2(0.0, COTE.y * 0.42, COTE.x, COTE.y * 0.58)
+		# L'anse d'abord, le corps la recouvre à sa base.
+		var centre := Vector2(COTE.x * 0.5, corps.position.y)
+		draw_arc(centre, COTE.x * 0.30, PI, TAU, 10, Charte.NOIR, 3.0, true)
+		draw_arc(centre, COTE.x * 0.30, PI, TAU, 10, Charte.AMBRE, 1.5, true)
+		draw_rect(corps.grow(1.0), Charte.NOIR)
+		draw_rect(corps, Charte.AMBRE)
+
+
+func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
+		verrouillee: bool = false) -> void:
 	var style := StyleBoxFlat.new()
 	style.set_corner_radius_all(0)
 	style.set_border_width_all(2)
@@ -2755,6 +2892,22 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 		label.add_theme_color_override("font_color", Charte.HALOGENE)
 	else:
 		label.add_theme_color_override("font_color", Charte.DIM)
+
+	# Le cadenas ne se montre que torche allumée : verrouillée ET éteinte n'existe
+	# pas, et un cadenas sur une torche noire se lirait « torche bloquée ».
+	var verrou := panel.find_child("Verrou", true, false) as Control
+	if verrou != null:
+		verrou.visible = active and verrouillee
+
+
+## La torche de ce joueur est-elle tenue au cran plein ? Toujours faux pour un
+## joueur distant : son fournisseur d'entrées est réseau, et ce verrou ne voyage
+## pas (voir `InputProvider.is_flashlight_locked`).
+func _torche_verrouillee(joueur: Node) -> bool:
+	if joueur == null:
+		return false
+	var fournisseur := joueur.get("input_provider") as InputProvider
+	return fournisseur != null and fournisseur.is_flashlight_locked()
 
 func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	if panel == null or panel.get_child_count() == 0:
@@ -3155,43 +3308,27 @@ func _build_killcam() -> void:
 	killcam_timecode.hide()
 	add_child(killcam_timecode)
 
-	# DA4.5 — **le cadre du moniteur, et il vit DANS l'interface.**
+	# DA4.5 — **le cadre de la killcam, et il vit DANS l'interface.**
 	#
 	# Le voile de killcam est reparenté par `GameState` dans l'arène, pour être
 	# sous les lumières. Le cadre, lui, n'a rien à faire là : c'est un objet
 	# d'affichage, pas un objet du monde. Le poser dans l'arène le ferait
-	# s'assombrir hors des torches — un cadre de moniteur qui s'éteint quand on
-	# ne l'éclaire pas.
+	# s'assombrir hors des torches.
 	#
-	# `NinePatchRect` et non `TextureRect` : la texture fait 512² et l'écran
-	# n'est ni carré ni de cette taille. Sans 9-slice, les coins arrondis
-	# s'étireraient en ovales, ce qui est le défaut le plus reconnaissable qu'on
-	# puisse poser sur un cadre.
-	var chemin_cadre := "res://assets/ui/cadre_vhs.png"
-	if ResourceLoader.exists(chemin_cadre):
-		killcam_cadre = NinePatchRect.new()
-		killcam_cadre.name = "CadreKillcam"
-		var tex_vhs := load(chemin_cadre) as Texture2D
-		killcam_cadre.texture = tex_vhs
-		killcam_cadre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		# Déduite de la texture pour la même raison que le cadre du HUD : le brief
-		# demandait 64 px sur une planche de 512², soit **le huitième de la
-		# largeur**. Un recuit à densité double casserait une valeur écrite en dur,
-		# en silence.
-		var m_vhs := 64
-		if tex_vhs != null and tex_vhs.get_width() > 0:
-			m_vhs = int(round(tex_vhs.get_width() / 8.0))
-		killcam_cadre.patch_margin_left = m_vhs
-		killcam_cadre.patch_margin_right = m_vhs
-		killcam_cadre.patch_margin_top = m_vhs
-		killcam_cadre.patch_margin_bottom = m_vhs
-		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
-		# `HALOGENE` très atténué : un liseré de moniteur se devine, il ne se lit
-		# pas — et la killcam doit rester la chose qu'on regarde.
-		killcam_cadre.modulate = Color(Charte.HALOGENE, 0.30)
-		killcam_cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		killcam_cadre.hide()
-		add_child(killcam_cadre)
+	# Refonte roman graphique (2026-09-11) : c'était un 9-patch de moniteur VHS
+	# (`cadre_vhs.png`, coins arrondis, liseré flou) autour d'un rejeu devenu une
+	# planche de reconstitution dessinée (lot 4 bis). Le cadre suit : c'est le
+	# même `CadrePhoto` que l'estampe de kill (DA6.2) — un filet en retrait et
+	# quatre repères de coupe. La killcam et le gel qui la suit portent ainsi le
+	# MÊME cadre : l'arrêt sur image ne change pas de cadre, il s'arrête.
+	killcam_cadre = CadrePhoto.new()
+	killcam_cadre.name = "CadreKillcam"
+	# `HALOGENE` atténué : un cadre se devine, il ne se lit pas — la killcam
+	# reste la chose qu'on regarde.
+	killcam_cadre.teinte = Color(Charte.HALOGENE, 0.45)
+	killcam_cadre.epaisseur = 1.5
+	killcam_cadre.hide()
+	add_child(killcam_cadre)
 
 func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
@@ -3268,6 +3405,62 @@ func _poser_le_key_art() -> void:
 	game_over_panel.add_child(art)
 
 
+## L'avis de phase de test, mot pour mot comme Adrien l'a écrit le 2026-09-10.
+## Il dit ce que le relevé de fin de match envoie : le changer ici sans changer
+## l'envoi (ou l'inverse) ferait mentir le jeu à ses joueurs.
+const AVIS_PHASE_DE_TEST := "Jeu en phase de test. Le jeu envoie avec le résultat du match un relevé de cadence et la description de ta machine (système, processeur, carte graphique, pilote, résolution), rattachés à ton identité Epic. Ça sert à savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors ligne."
+const LOGO_GODOT := "res://assets/logos/godot_roman.png"
+## Côté du logo Godot, en px. Il loge dans la marge du bas (`GAP_L`) sans
+## jamais toucher le cadre du menu.
+const TAILLE_LOGO_GODOT := 34.0
+
+## Le bas de l'écran : le logo du moteur à gauche, l'avis de test au centre.
+##
+## **Hors de la colonne du menu, par-dessus elle** : les deux logent dans la
+## marge basse que `outer` réserve déjà (`GAP_L`). Ajoutés à la colonne, ils la
+## raccourciraient d'autant et le hub perdrait la hauteur d'une entrée.
+func _build_mentions() -> Control:
+	var mentions := Control.new()
+	mentions.name = "Mentions"
+	mentions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var avis := Label.new()
+	avis.name = "AvisPhaseDeTest"
+	avis.text = AVIS_PHASE_DE_TEST
+	Charte.appareil(avis, Charte.T_MENTION)
+	avis.add_theme_color_override("font_color", Color(COLOR_DIM, 0.8))
+	avis.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	avis.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	avis.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	avis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	avis.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	# Les deux marges latérales sont égales pour que le texte reste centré sur
+	# l'écran, et assez larges pour laisser sa place au logo.
+	var marge := GAP_L + GAP_S + TAILLE_LOGO_GODOT
+	avis.offset_left = marge
+	avis.offset_right = -marge
+	avis.offset_top = -GAP_L
+	avis.offset_bottom = 0.0
+	mentions.add_child(avis)
+
+	if ResourceLoader.exists(LOGO_GODOT):
+		var logo := TextureRect.new()
+		logo.name = "LogoGodot"
+		logo.texture = load(LOGO_GODOT)
+		logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		logo.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		logo.tooltip_text = "Fait avec Godot"
+		logo.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+		var bas := (GAP_L - TAILLE_LOGO_GODOT) * 0.5
+		logo.offset_left = GAP_S
+		logo.offset_right = GAP_S + TAILLE_LOGO_GODOT
+		logo.offset_top = -bas - TAILLE_LOGO_GODOT
+		logo.offset_bottom = -bas
+		mentions.add_child(logo)
+	return mentions
+
 func _build_menu() -> void:
 	game_over_panel = PanelContainer.new()
 	game_over_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -3291,6 +3484,8 @@ func _build_menu() -> void:
 	outer.add_theme_constant_override("margin_left", GAP_L + GAP_S)
 	outer.add_theme_constant_override("margin_right", GAP_L + GAP_S)
 	game_over_panel.add_child(outer)
+
+	game_over_panel.add_child(_build_mentions())
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", GAP_M)
@@ -5977,7 +6172,6 @@ func _refresh_class_labels() -> void:
 
 	for cote in [0, 1]:
 		var boutons := p1_weapon_buttons if cote == 0 else p2_weapon_buttons
-		var teinte := COLOR_P1 if cote == 0 else COLOR_P2
 		for place in boutons.size():
 			var btn: Button = boutons[place]
 			if place >= ordre.size():
@@ -5994,13 +6188,15 @@ func _refresh_class_labels() -> void:
 			# slug dont la vignette n'est pas cuite, et six ne le sont pas encore.
 			# Un bouton sans icône se voit ; un bouton portant celle d'une autre
 			# classe ne se verrait pas.
-			MenuIcones.poser_sur(btn, String(c.slug()), teinte, 22.0)
-			# ⚠️ **L'état coché remplit le bouton de la teinte du joueur** — et
-			# `poser_sur` peint l'icône de cette même teinte pour les quatre états.
-			# La classe sélectionnée perdait donc son icône, teinte sur teinte, ce
-			# qui se lit comme « celle-là n'en a pas ». Sur fond plein, c'est
-			# l'encre qui doit dessiner.
-			btn.add_theme_color_override("icon_pressed_color", Charte.NOIR)
+			# **L'icône garde ses couleurs d'origine** (Adrien, 2026-09-10) : teinte
+			# du joueur, elle se perdait sur les fonds bleus et rouges du salon,
+			# teinte sur teinte. Le côté du joueur est déjà dit par le bouton.
+			# 30 px et non 22 : peintes en couleur, les armes longues (fusil,
+			# sentinelle, allumeur) ne faisaient plus que 22 × 5 px de métal sombre
+			# sur un bouton sombre — le trait blanc d'avant s'en sortait, pas elles.
+			# `poser_sur` recadre l'icône sur l'arme, sans quoi la toile carrée
+			# ferait grandir chaque bouton de 30 px de haut.
+			MenuIcones.poser_sur(btn, String(c.slug()), MenuIcones.ARME_ORIGINE, 30.0)
 	_refresh_class_cards()
 	# Chaque fiche s'ouvre sur ce qui est DÉJÀ choisi de son côté. L'ouvrir sur la
 	# première de la liste montrerait une classe que personne n'a demandée, juste
@@ -6973,6 +7169,10 @@ func _on_rebind_btn_pressed(btn: Button, action: String) -> void:
 # ===========================================================================
 
 func _input(event: InputEvent) -> void:
+	# Sous un voile, l'événement reste au voile : c'est lui qui le lit, pour se
+	# lever. Voir `menu_voile`.
+	if menu_voile:
+		return
 	# En ligne, la seconde manette locale ne pilote rien.
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		if event.is_action("p2_menu_right") or event.is_action("p2_menu_left") \
@@ -7292,8 +7492,7 @@ func show_pick_window(arsenal: Array, reason: String) -> void:
 		btn.custom_minimum_size = Vector2(210, 36)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.set_meta(META_CLASSE_INDEX, i)
-		MenuIcones.poser_sur(btn, _weapon_slug(i), COLOR_P1, 24.0)
-		btn.add_theme_color_override("icon_pressed_color", Charte.NOIR)
+		MenuIcones.poser_sur(btn, _weapon_slug(i), MenuIcones.ARME_ORIGINE, 30.0)
 		# Survol et focus montrent, l'appui engage. Le même partage que le menu :
 		# on doit pouvoir lire une classe sans la prendre, y compris ici — surtout
 		# ici, où le temps manque pour se tromper puis revenir.
@@ -7486,8 +7685,8 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
-		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		_maj_reserves(p1_reserves, 0)
+		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1, _torche_verrouillee(p1))
+		_maj_reserves(p1_reserves, 0, p1)
 		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
 	if p2:
@@ -7528,8 +7727,8 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
-		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		_maj_reserves(p2_reserves, 1)
+		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2, _torche_verrouillee(p2))
+		_maj_reserves(p2_reserves, 1, p2)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#
 		# Il s'affichait partout, et c'était un défaut : `update_hud` reçoit le
@@ -7990,6 +8189,11 @@ func show_killcam() -> void:
 	# joueur croit a un bug d'affichage.
 	AudioManager.play_ui("ui_vhs_rewind")
 	reinitialiser_killcam()
+	# Curseur CONFORT « Grain de la killcam » : la trame, les contours et le
+	# grain de papier du rejeu, jusqu'à zéro.
+	if killcam_overlay.material:
+		killcam_overlay.material.set_shader_parameter("intensite",
+			EffectPolicy.curseur("grain_killcam"))
 	killcam_overlay.show()
 	killcam_container.show()
 	killcam_timecode.show()

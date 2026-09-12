@@ -1,14 +1,17 @@
 ## Test headless de l'éclairage de l'arène et de la vivacité du noir (Chantier 2 — Vague 5)
 ##
 ## Valide :
-## 1. Chargement et compilation des shaders (shimmer_murs.gdshader, poussiere_faisceau.gdshader).
-## 2. Propriétés et conformité DA du matériau mur de CandelaTileSet (Charte.HALOGENE, Charte.AMBRE, aucun vert).
+## 1. La texture peinte de poussière (DA5.3 volet G) se charge.
+## 2. Les murs n'ont PLUS de matériau (nettoyage du 2026-09-11) : le shader
+##    `shimmer_murs` sortait `vec4(0)` sur une tuile noire, il est retiré avec
+##    `poussiere_faisceau.gdshader` (aucun utilisateur). Un matériau reposé sur
+##    les murs, ou l'un des deux fichiers revenu, fait rougir la suite.
 ## 3. Respect du noir d'encre absolu (Charte.NOIR) sur le corps des murs.
 ## 4. Particules de poussières DUST dans ParticlePool :
 ##    - Soumises à la lumière (LIGHT_MODE_NORMAL, aucune lueur parasite dans le noir hors du faisceau).
 ##    - Aucune énergie propre (light.energy == 0.0).
 ##    - Décroissance conforme à la charte (Charte.Courbe.EXTINCTION).
-## 5. Câblage de l'arène et duplication des couches CustomWalls, CustomWalls_P1 et CustomWalls_P2.
+## 5. Duplication des couches CustomWalls, CustomWalls_P1 et CustomWalls_P2 sans matériau de shader.
 ##
 ## Lancer : HOME="$(mktemp -d)" /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/test_arena_lighting.gd
 extends SceneTree
@@ -26,8 +29,8 @@ func _init() -> void:
 func _run() -> void:
 	await process_frame
 
-	_test_shaders_compilation()
-	_test_candela_tileset_shimmer_material()
+	_test_texture_poussiere()
+	_test_murs_sans_materiau()
 	_test_wall_darkness_and_contrast()
 	_test_dust_particles_configuration()
 	_test_arena_wall_material_wiring()
@@ -47,53 +50,24 @@ func _check(label: String, condition: bool, detail: String = "") -> void:
 		_failures += 1
 		printerr("  ✗ ", label, ("  → " + detail) if detail != "" else "")
 
-func _test_shaders_compilation() -> void:
-	print("
-[1. Compilation des Shaders]")
-	var sh_shimmer := load("res://shimmer_murs.gdshader") as Shader
-	_check("shimmer_murs.gdshader se charge sans erreur", sh_shimmer != null)
-
-	var sh_poussiere := load("res://poussiere_faisceau.gdshader") as Shader
-	_check("poussiere_faisceau.gdshader se charge sans erreur", sh_poussiere != null)
-
-	# Instanciation de ShaderMaterial avec les shaders
-	var sm := ShaderMaterial.new()
-	sm.shader = sh_shimmer
-	_check("ShaderMaterial(shimmer_murs) instancié avec succès", sm != null and sm.shader == sh_shimmer)
-
-	# DA5.3 (volet G) : validation de la texture peinte de poussière
-	var sm_poussiere := ShaderMaterial.new()
-	sm_poussiere.shader = sh_poussiere
+func _test_texture_poussiere() -> void:
+	print("\n[1. Texture peinte de poussière]")
 	var tex_particule: Texture2D = load("res://assets/halo/particule_poussiere.png")
 	_check("Texture particule_poussiere.png chargée (DA5.3 volet G)", tex_particule != null)
-	if tex_particule != null:
-		sm_poussiere.set_shader_parameter("texture_particule", tex_particule)
-		_check("texture_particule assignée au shader sans erreur", sm_poussiere.get_shader_parameter("texture_particule") == tex_particule)
 
 
-func _test_candela_tileset_shimmer_material() -> void:
-	print("
-[2. Matériau Shimmer des Murs (CandelaTileSet)]")
-	var mat := CandelaTileSet.creer_materiau_mur()
-	_check("CandelaTileSet.creer_materiau_mur() renvoie un ShaderMaterial", mat is ShaderMaterial)
-	if mat is ShaderMaterial:
-		var sm := mat as ShaderMaterial
-		var intensite: float = float(sm.get_shader_parameter("intensite_shimmer"))
-		var frequence: float = float(sm.get_shader_parameter("frequence_scintillement"))
-		var rugosite: float = float(sm.get_shader_parameter("rugosite_arete"))
-		var col_lisere: Variant = sm.get_shader_parameter("couleur_lisere")
-		var col_reflet: Variant = sm.get_shader_parameter("couleur_reflet")
-
-		_check("intensite_shimmer dans [0.1, 2.0]", intensite >= 0.1 and intensite <= 2.0, str(intensite))
-		_check("frequence_scintillement dans [0.5, 10.0]", frequence >= 0.5 and frequence <= 10.0, str(frequence))
-		_check("rugosite_arete dans [1.0, 20.0]", rugosite >= 1.0 and rugosite <= 20.0, str(rugosite))
-
-		_check("couleur_lisere == Charte.HALOGENE", col_lisere == Charte.HALOGENE, str(col_lisere))
-		_check("couleur_reflet == Charte.AMBRE", col_reflet == Charte.AMBRE, str(col_reflet))
-
-		# Règle dure : aucun vert dans l'arène
-		var is_green_free: bool = (col_lisere != Charte.VERT and col_reflet != Charte.VERT)
-		_check("aucune couleur verte dans les paramètres du mur", is_green_free)
+func _test_murs_sans_materiau() -> void:
+	print("\n[2. Les murs n'ont plus de matériau]")
+	_check("shimmer_murs.gdshader est retiré du dépôt",
+		not ResourceLoader.exists("res://shimmer_murs.gdshader"))
+	_check("poussiere_faisceau.gdshader est retiré du dépôt",
+		not ResourceLoader.exists("res://poussiere_faisceau.gdshader"))
+	var ts_src := FileAccess.get_file_as_string("res://candela_tileset.gd")
+	_check("CandelaTileSet n'expose plus creer_materiau_mur()",
+		not ts_src.contains("func creer_materiau_mur"))
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+	_check("game_state.gd ne pose plus de matériau sur walls_layer",
+		not gs.contains("walls_layer.material ="))
 
 func _test_wall_darkness_and_contrast() -> void:
 	print("
@@ -112,11 +86,12 @@ func _test_wall_darkness_and_contrast() -> void:
 			_check("centre du mur en noir pur Charte.NOIR (0, 0, 0)",
 				is_zero_approx(centre_mur.r) and is_zero_approx(centre_mur.g) and is_zero_approx(centre_mur.b),
 				str(centre_mur))
+			# Refonte roman graphique (2026-09-11) : le liseré ne vit plus sur la
+			# tuile (il la quadrillait) mais dans `mur_encre.gd`, autour de la
+			# masse. Le bord de la tuile est donc noir comme son centre.
 			var bord_mur := img.get_pixel(ox, 0)
-			# Tolérance 8-bit RGBA (1/255 ~= 0.0039)
-			var approx_halogene := absf(bord_mur.r - Charte.HALOGENE.r) < 0.01 				and absf(bord_mur.g - Charte.HALOGENE.g) < 0.01 				and absf(bord_mur.b - Charte.HALOGENE.b) < 0.01
-			_check("liseré du mur en Charte.HALOGENE",
-				approx_halogene,
+			_check("bord de la tuile de mur en noir (le contour vit dans MurEncre)",
+				bord_mur.v < 0.05,
 				str(bord_mur))
 
 func _test_dust_particles_configuration() -> void:
@@ -158,27 +133,20 @@ func _test_dust_particles_configuration() -> void:
 	pool.free()
 
 func _test_arena_wall_material_wiring() -> void:
-	print("
-[5. Câblage du Matériau Mur dans l'Arène]")
+	print("\n[5. Duplication des couches de murs sans matériau]")
 	var tileset := CandelaTileSet.create_tileset()
 	var walls_layer := TileMapLayer.new()
 	walls_layer.name = "CustomWalls"
 	walls_layer.tile_set = tileset
+	_check("walls_layer n'a aucun matériau", walls_layer.material == null)
 
-	var wall_mat := CandelaTileSet.creer_materiau_mur()
-	walls_layer.material = wall_mat
-	_check("walls_layer reçoit le ShaderMaterial", walls_layer.material is ShaderMaterial)
-
-	# Simulation de duplication _duplicate_layer_for_player
+	# Simulation de duplication _duplicate_layer_for_player : sans ShaderMaterial,
+	# la copie reçoit un CanvasItemMaterial ordinaire.
 	var copy_p1 := walls_layer.duplicate() as TileMapLayer
 	copy_p1.name = "CustomWalls_P1"
 	copy_p1.visibility_layer = 2
 	copy_p1.light_mask = 1 | 16
-	if walls_layer.material is ShaderMaterial:
-		copy_p1.material = walls_layer.material.duplicate()
-
-	_check("CustomWalls_P1 possède son ShaderMaterial propre", copy_p1.material is ShaderMaterial)
-	_check("le shader est bien shimmer_murs", (copy_p1.material as ShaderMaterial).shader == CandelaTileSet.SHADER_SHIMMER_MURS)
+	_check("CustomWalls_P1 n'hérite d'aucun ShaderMaterial", not (copy_p1.material is ShaderMaterial))
 
 	walls_layer.free()
 	copy_p1.free()

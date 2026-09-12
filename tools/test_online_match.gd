@@ -474,9 +474,25 @@ func _run_training() -> void:
 	_ui.hub.push(_ui.SCREEN_TRAINING)
 	_check("l'écran est bien celui de l'entraînement",
 		_ui.hub.current_id() == _ui.SCREEN_TRAINING)
+	# ⚠️ Une classe AUTRE que la première, et choisie APRÈS l'entrée à l'écran :
+	# `_refresh_class_labels()` réindexe chaque bouton à chaque entrée, et une
+	# sélection posée avant pourrait être relabellisée sous une autre classe.
+	# Le Parasite (index 0) ne prouverait rien : c'est justement la valeur par
+	# défaut de la variable d'hébergement que lisait le lancement fautif.
+	var classe_choisie := -1
+	for i in range(10):
+		if String(_main.weapon_for_index(i).slug()) == "spectre":
+			classe_choisie = i
+	_ui.set_weapon_selection(0, classe_choisie)
 	_ui.training_requested.emit()
 	await get_tree().process_frame
 	await get_tree().process_frame
+	_check("l'entraînement équipe la classe CHOISIE au menu, pas le Parasite",
+		_main.p1.current_weapon == _main.weapon_for_index(classe_choisie),
+		String(_main.p1.current_weapon.slug()) if _main.p1.current_weapon else "aucune")
+	# On rend la main au reste du scénario tel qu'il a été écrit : le Parasite.
+	_ui.set_weapon_selection(0, 0)
+	_main.p1.equip_weapon(_main.weapon_for_index(0))
 
 	var ids: Array[String] = []
 	for c in MapData.list_maps():

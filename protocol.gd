@@ -105,7 +105,34 @@ class_name Protocol
 ##      pour tout le monde, elle vaut désormais de zéro (le Spectre) à trois (le
 ##      Terrassier). Un hôte v15 et un client v14 s'entendraient sur le fil et
 ##      compteraient deux réserves différentes.
-const VERSION := 15
+## 16 — le tir devient SEMI-AUTOMATIQUE pour neuf classes sur dix (décision
+##      d'Adrien, 2026-09-10). La FORME du fil ne change pas — le bit de tir
+##      reste un booléen tenu —, mais son SENS si, comme aux v12 et v15 : un
+##      appui ne vaut plus qu'un tir. Or le client PRÉDIT ses tirs. Un client
+##      v15 face à un hôte v16 prédirait une rafale que l'hôte refuserait, et
+##      afficherait des balles qui n'existent nulle part.
+##
+##      ⚠️ Et `rpc_spawn_bullet` code désormais les DIX classes (0 à 9) au lieu
+##      des quatre armes d'origine. Même signature, donc même empreinte — mais un
+##      client v15 décoderait 4 à 9 comme le Parasite, ce qu'il faisait déjà pour
+##      les six classes neuves avant que le défaut ne soit trouvé.
+##
+##      ⚠️ Et les GADGETS, dans la même version (non publiée entre-temps) :
+##      `rpc_spawn_gadget` gagne la GRAINE de l'onde du grésillement, tirée par
+##      l'hôte — deux pairs qui tireraient chacun la leur verraient deux pannes ;
+##      `rpc_etat_gadget` apparaît, qui porte l'allumage d'un gadget basculable ET
+##      la batterie de son poseur. Ici la FORME du fil change : l'empreinte a été
+##      recalculée après avoir tranché que le numéro restait 16.
+##
+##      Et, après la revue du même jour : `rpc_spawn_gadget` porte aussi l'état
+##      initial et la batterie DÉCIDÉS PAR L'HÔTE (relus chez chaque pair, ils
+##      divergeaient), et `rpc_detruire_gadget` apparaît — la destruction d'un
+##      gadget devient autoritaire, le client n'encaisse plus rien.
+##
+##      Et le VOILE arrête désormais les joueurs (même version, toujours non
+##      publiée). Le fil ne bouge pas, le sens si : un client d'avant prédirait
+##      qu'il le traverse, et l'hôte le retiendrait — une correction par contact.
+const VERSION := 16
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -118,7 +145,7 @@ const VERSION := 15
 ## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
 ## renumérotation). La question du numéro a été tranchée d'abord — les cinq
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
-const WIRE_WITNESS := "b108c437bdfce89c"
+const WIRE_WITNESS := "ca43c20c041466f0"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

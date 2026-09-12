@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Candela 2D"
-config/version="0.4.2"
+config/version="0.5.0"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0, 0, 0, 1)
@@ -25,10 +25,12 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 ; sur la transition avec la séquence PowerOn.
 boot_splash/stretch_mode=2
 boot_splash/image="res://assets/logos/boot.png"
-; DA7 — l'icône passe au Roman Graphique Brutaliste. L'ancienne (`icone.png`,
-; DA1.7, tracé vectoriel à la main sur gabarit) reste dans le dépôt : elle est
-; propre, elle n'a que le tort de ne plus ressembler au reste du jeu.
-config/icon="res://assets/logos/icone_roman.png"
+; 2026-09-10 — les deux faisceaux croisés, choisis par Adrien parmi trois
+; propositions : le triangle de DA7 (`icone_roman.png`) faisait daté. Le PNG
+; porte déjà son carré arrondi et sa marge (grille macOS, 824 px sur 1024) :
+; Godot le convertit en .icns sans rien masquer. Les anciennes restent dans le
+; dépôt.
+config/icon="res://assets/logos/icone_faisceaux.png"
 ; PE2.4 — vider stdout ET user://logs/godot.log à CHAQUE print, en release aussi.
 ; Sans ça le fichier n'est écrit qu'à la fermeture propre (RotatedFileLogger ne
 ; vide qu'en cas d'erreur ou si ce réglage est vrai) : un plantage jette la fin du

@@ -16,6 +16,11 @@ extends PanelContainer
 ## Adrien a donc rendu *« dans les stats le nombre de fusées max »* et *« une
 ## courte description du gadget »*. La description de CLASSE, elle, reste absente.
 ##
+## ⚠️ **Recomposée le soir même** (Adrien, 2026-09-10) : *« l'arme définit
+## autant la classe »*. En haut, trois cases de même taille — le sprite, l'icône
+## de l'arme, et un aperçu dessiné du cône de torche qui remplace la jauge
+## FAISCEAU. En bas, sous les jauges, le gadget avec son image et sa phrase.
+##
 ## ⚠️ **La contrainte qui a tranché est l'écran scindé.** Deux joueurs y
 ## choisissent en même temps, chacun sa liste et sa fiche, côte à côte dans le
 ## même cadre. La première version — rang, nom, arme, deux lignes de prose,
@@ -68,15 +73,21 @@ const LIGNES: Array[Dictionary] = [
 	{"cle": "degats", "libelle": "DÉGÂTS", "cout": false},
 	{"cle": "cadence", "libelle": "CADENCE", "cout": false},
 	{"cle": "chargeur", "libelle": "CHARGEUR", "cout": false},
-	{"cle": "faisceau", "libelle": "FAISCEAU", "cout": false},
+	# Plus de ligne FAISCEAU (Adrien, 2026-09-10) : l'angle se MONTRE, dans la
+	# troisième case du haut (`Cone`), au lieu de se lire en degrés sur une barre.
 	{"cle": "fusees", "libelle": "FUSÉES", "cout": false},
 	{"cle": "recharge", "libelle": "RECHARGE", "cout": true},
 	{"cle": "immobilisation", "libelle": "IMMOBILISATION", "cout": true},
 ]
 
-## Le sprite est désormais la seule image de la fiche : il prend la place que
-## la prose occupait, et se lit mieux à 96 qu'à 60.
-const COTE_PORTRAIT := 96.0
+## **Trois cases de même taille en haut : le sprite, l'arme, la torche**
+## (Adrien, 2026-09-10 : « l'arme définit autant la classe »). 92 et non 96 :
+## trois cases et deux gouttières doivent tenir dans une fiche d'écran scindé,
+## qui n'a guère plus de 300 px de contenu.
+const COTE_PORTRAIT := 92.0
+## La case du gadget, en bas, sous les jauges. Plus petite : elle illustre une
+## phrase, elle ne porte pas la classe.
+const COTE_GADGET := 64.0
 
 ## ⚠️ **Un fond de béton, pas du noir.** Les sprites sont des silhouettes encrées
 ## en noir : posées sur un fond noir, elles ne se voyaient pas — vérifié à la
@@ -88,6 +99,10 @@ const FOND_SPRITE := Color(0.28, 0.30, 0.33)
 var _teinte: Color = Charte.BLEU
 
 var _portrait: TextureRect
+var _arme: TextureRect
+var _cone: Cone
+var _cone_valeur: Label
+var _gadget_image: TextureRect
 var _gadget: Label
 var _gadget_tag: Label
 var _gadget_description: Label
@@ -136,6 +151,64 @@ class Jauge extends Control:
 				draw_rect(r, creux, false, 1.0)
 
 
+## L'aperçu du faisceau : le cône que la torche de la classe ouvre, vu de dessus.
+##
+## **Dessiné depuis les données, pas depuis le cookie.** Le cookie est un masque
+## blanc pensé pour être projeté au sol ; affiché tel quel dans une case, il ne
+## montre qu'un carré clair. Le demi-angle (`torch_angle_deg`) et la portée
+## (`portee_torche()`) sont les deux nombres que le jeu utilise pour éclairer :
+## les dessiner, c'est montrer exactement ce que la torche fera.
+##
+## La portée est RELATIVE au catalogue, comme les jauges : la plus longue des dix
+## touche le haut de la case. Une échelle absolue aurait rendu l'arbalète
+## illisible (un fil) ou les autres minuscules.
+class Cone extends Control:
+	## Couches du dégradé. Peu, exprès : l'escalier léger est la signature du
+	## halo de l'allumage (`power_on.gd`), et un dégradé lisse redevient le défaut
+	## « personne n'a choisi ça ».
+	const COUCHES := 7
+	const SEGMENTS := 24
+
+	var demi_angle: float = 0.0
+	var part_portee: float = 0.0
+	var teinte: Color = Color.WHITE
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func regler(nouveau_demi_angle: float, nouvelle_part: float, nouvelle_teinte: Color) -> void:
+		demi_angle = clampf(nouveau_demi_angle, 0.0, PI)
+		part_portee = clampf(nouvelle_part, 0.0, 1.0)
+		teinte = nouvelle_teinte
+		queue_redraw()
+
+	func _draw() -> void:
+		if size.x <= 0.0 or size.y <= 0.0:
+			return
+		# Le porteur en bas, au centre ; le faisceau monte.
+		var origine := Vector2(size.x * 0.5, size.y - 8.0)
+		var longueur := (size.y - 14.0) * lerpf(0.3, 1.0, part_portee)
+		if demi_angle > 0.0 and part_portee > 0.0:
+			for c in COUCHES:
+				var t := float(c + 1) / float(COUCHES)
+				var rayon := longueur * t
+				var points := PackedVector2Array([origine])
+				for s in SEGMENTS + 1:
+					var a := -demi_angle + 2.0 * demi_angle * float(s) / float(SEGMENTS)
+					# Angle compté depuis la verticale : `a = 0` pointe vers le haut.
+					points.append(origine + Vector2(sin(a), -cos(a)) * rayon)
+				# Du plus large au plus serré, chacun par-dessus : le centre
+				# s'accumule, le bord s'efface — ce que fait une torche.
+				var alpha := 0.16 + 0.10 * (1.0 - t)
+				draw_colored_polygon(points, Color(Charte.HALOGENE, alpha))
+			# Les deux bords du cône, à l'encre claire : l'angle se lit à eux.
+			for signe in [-1.0, 1.0]:
+				var bord: float = signe * demi_angle
+				draw_line(origine, origine + Vector2(sin(bord), -cos(bord)) * longueur,
+					Color(Charte.HALOGENE, 0.85), 1.5, true)
+		draw_circle(origine, 4.0, teinte)
+
+
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -182,48 +255,61 @@ func _batir() -> void:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(col)
 
-	# --- Le haut : le sprite, et le gadget à côté ---------------------------
+	# --- Le haut : trois cases de même taille — sprite, arme, torche ---------
+	# L'arme définit autant la classe que la silhouette (Adrien, 2026-09-10) : elle
+	# a sa case, à égalité. La troisième montre le faisceau au lieu de le chiffrer.
 	var haut := HBoxContainer.new()
-	haut.add_theme_constant_override("separation", Charte.GAP_S)
+	haut.add_theme_constant_override("separation", Charte.GAP_XS)
+	haut.alignment = BoxContainer.ALIGNMENT_CENTER
 	haut.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(haut)
 
-	var cadre := PanelContainer.new()
-	cadre.custom_minimum_size = Vector2(COTE_PORTRAIT, COTE_PORTRAIT)
-	cadre.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# ⚠️ Style monté à la main, et pas `make_panel_style` : celui-là pose GAP_M de
-	# marge intérieure sur les quatre côtés, ce qui ne laisserait à une vignette de
-	# 96 px que 48 px de sprite — la moitié du cadre en respiration.
-	var style_cadre := StyleBoxFlat.new()
-	style_cadre.bg_color = FOND_SPRITE
-	style_cadre.set_border_width_all(1)
-	style_cadre.border_color = Color(_teinte.r, _teinte.g, _teinte.b, 0.45)
-	style_cadre.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
-	style_cadre.content_margin_left = 4
-	style_cadre.content_margin_right = 4
-	style_cadre.content_margin_top = 4
-	style_cadre.content_margin_bottom = 4
-	cadre.add_theme_stylebox_override("panel", style_cadre)
-	haut.add_child(cadre)
+	_portrait = _image_dans(_case(haut, COTE_PORTRAIT, FOND_SPRITE))
+	_arme = _image_dans(_case(haut, COTE_PORTRAIT, FOND_SPRITE))
 
-	_portrait = TextureRect.new()
-	# ⚠️ `EXPAND_IGNORE_SIZE` : sans lui un `TextureRect` impose la taille NATIVE
-	# de sa texture — la vignette ferait la largeur du sprite, pas celle du cadre.
-	# Même piège que `icon_max_width` sur les boutons, payé le 2026-08-24.
-	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cadre.add_child(_portrait)
+	# La torche sur NOIR, et c'est la seule : un faisceau ne se lit que dans le
+	# noir, qui est la règle du jeu entier.
+	var case_torche := _case(haut, COTE_PORTRAIT, Charte.NOIR)
+	_cone = Cone.new()
+	case_torche.add_child(_cone)
+	# L'ouverture en degrés reste écrite, dans le coin : l'œil compare les cônes,
+	# le nombre sert à qui veut comparer deux classes au degré près. **En bas à
+	# droite** : le cône part du bas-centre et monte, ce coin-là reste noir quelle
+	# que soit l'ouverture — en haut, il mordait sur le faisceau.
+	_cone_valeur = Label.new()
+	Charte.appareil(_cone_valeur, Charte.T_MENTION, Charte.POIDS_APPUI)
+	_cone_valeur.add_theme_color_override("font_color", Charte.HALOGENE)
+	_cone_valeur.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# ⚠️ **Enfant du cône, ancré, et pas du `PanelContainer`** : posé dans la case
+	# avec un simple alignement « bas », il restait à mi-hauteur — mesuré à la
+	# capture. Un `Control` nu, lui, respecte les ancres.
+	_cone.add_child(_cone_valeur)
+	_cone_valeur.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_cone_valeur.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_cone_valeur.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
-	# Le gadget se lit à côté du sprite plutôt qu'en pied de fiche : c'est une
-	# ligne, et le sprite laissait à sa droite une colonne vide de sa hauteur.
+	col.add_child(_filet(Color(_teinte.r, _teinte.g, _teinte.b, 0.55), 2))
+
+	_batir_jauges(col)
+
+	col.add_child(_filet(Color(_teinte.r, _teinte.g, _teinte.b, 0.30), 1))
+
+	# --- Le bas : le gadget, son image, sa phrase ------------------------------
+	# Sous les jauges (Adrien, 2026-09-10) : il a désormais une image, et une
+	# phrase qu'on lit en entier plutôt que coincée à côté du sprite.
+	var bas := HBoxContainer.new()
+	bas.add_theme_constant_override("separation", Charte.GAP_S)
+	bas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(bas)
+
+	_gadget_image = _image_dans(_case(bas, COTE_GADGET, FOND_SPRITE))
+
 	var colonne_gadget := VBoxContainer.new()
 	colonne_gadget.add_theme_constant_override("separation", Charte.GAP_XXS)
 	colonne_gadget.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	colonne_gadget.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	colonne_gadget.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	haut.add_child(colonne_gadget)
+	bas.add_child(colonne_gadget)
 
 	# « GADGET », et à côté le seul marqueur de la fiche. Sur la même ligne : la
 	# phrase du gadget a besoin de la hauteur que le marqueur prenait dessous.
@@ -259,9 +345,9 @@ func _batir() -> void:
 	_gadget_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	colonne_gadget.add_child(_gadget_description)
 
-	col.add_child(_filet(Color(_teinte.r, _teinte.g, _teinte.b, 0.55), 2))
 
-	# --- Les sept jauges ------------------------------------------------------
+## Les jauges, une ligne par entrée de `LIGNES`.
+func _batir_jauges(col: VBoxContainer) -> void:
 	var grille := GridContainer.new()
 	grille.columns = 3
 	grille.add_theme_constant_override("h_separation", Charte.GAP_XS)
@@ -292,6 +378,74 @@ func _batir() -> void:
 		grille.add_child(valeur)
 		_valeurs[cle] = valeur
 
+## Une case d'image carrée, posée dans `parent`.
+##
+## ⚠️ Style monté à la main, et pas `make_panel_style` : celui-là pose GAP_M de
+## marge intérieure sur les quatre côtés, ce qui ne laisserait à une vignette de
+## 92 px que 44 px d'image — la moitié de la case en respiration.
+func _case(parent: Control, cote: float, fond: Color) -> PanelContainer:
+	var case := PanelContainer.new()
+	case.custom_minimum_size = Vector2(cote, cote)
+	case.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	case.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = fond
+	style.set_border_width_all(1)
+	style.border_color = Color(_teinte.r, _teinte.g, _teinte.b, 0.45)
+	style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	case.add_theme_stylebox_override("panel", style)
+	parent.add_child(case)
+	return case
+
+
+## L'image d'une case.
+func _image_dans(case: PanelContainer) -> TextureRect:
+	var image := TextureRect.new()
+	# ⚠️ `EXPAND_IGNORE_SIZE` : sans lui un `TextureRect` impose la taille NATIVE
+	# de sa texture — la vignette ferait la largeur du sprite, pas celle du cadre.
+	# Même piège que `icon_max_width` sur les boutons, payé le 2026-08-24.
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	case.add_child(image)
+	return image
+
+
+## La texture d'un chemin, ou `null` s'il n'existe pas : une case vide se voit,
+## une image d'emprunt se prendrait pour la bonne.
+func _texture_si(chemin: String) -> Texture2D:
+	return load(chemin) as Texture2D if chemin != "" and ResourceLoader.exists(chemin) \
+		else null
+
+
+## La même texture, recadrée sur ce qu'elle peint.
+##
+## ⚠️ **Les sprites de joueur flottent dans une toile presque vide** : le corps
+## occupe le tiers central, le reste est transparent pour laisser tourner la
+## figure en jeu. Posé tel quel dans une case de 92 px, le Parasite y faisait
+## trente pixels de large — mesuré à la capture du 2026-09-10. Le cadrage se
+## calcule une fois par chemin (`get_used_rect`), la texture d'origine n'est pas
+## touchée : le jeu garde sa toile, la fiche montre la figure.
+static func _recadree(tex: Texture2D) -> Texture2D:
+	# Le calcul vit dans `MenuIcones.recadree`, qui sert aussi les boutons
+	# d'arme : deux copies du même recadrage finiraient par diverger.
+	return MenuIcones.recadree(tex)
+
+
+## La portée de cette torche rapportée à la plus longue du catalogue.
+func _part_portee(catalogue: Array, portee: float) -> float:
+	var plus_longue := 0.0
+	for c in catalogue:
+		if c != null:
+			plus_longue = maxf(plus_longue, float(c.portee_torche()))
+	return 1.0 if plus_longue <= 0.0 else portee / plus_longue
+
+
 func _filet(couleur: Color, epaisseur: int) -> Control:
 	# ⚠️ Pas `trait` : c'est un mot réservé de GDScript, et le message d'erreur
 	# — « Expected variable name after "var" » — ne le dit pas.
@@ -315,9 +469,14 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 	# Le sprite du joueur SERT de portrait : c'est exactement la silhouette que
 	# l'adversaire découpera dans le faisceau. Une illustration séparée aurait
 	# promis une allure que le jeu ne rend pas.
-	var chemin := classe.chemin_sprite()
-	_portrait.texture = load(chemin) as Texture2D if ResourceLoader.exists(chemin) \
-		else null
+	_portrait.texture = _recadree(_texture_si(classe.chemin_sprite()))
+	# L'icône d'arme, en couleurs d'origine : la même que sur le bouton de la liste.
+	_arme.texture = _recadree(MenuIcones.arme(classe.slug()))
+	_cone.regler(classe.demi_angle_torche(),
+		_part_portee(catalogue, classe.portee_torche()), _teinte)
+	# Le demi-angle est ce que porte la donnée ; l'ouverture est ce que le joueur
+	# voit. On écrit donc le cône entier, pas la moitié.
+	_cone_valeur.text = "%d°" % int(round(classe.torch_angle_deg * 2.0))
 
 	for ligne in LIGNES:
 		var cle := String(ligne["cle"])
@@ -331,10 +490,12 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 		_gadget.text = String(classe.gadget.libelle)
 		_gadget_description.text = String(classe.gadget.description)
 		_gadget_tag.visible = classe.gadget.eblouit
+		_gadget_image.texture = _recadree(_texture_si(classe.gadget.chemin_icone()))
 	else:
 		_gadget.text = "—"
 		_gadget_description.text = ""
 		_gadget_tag.visible = false
+		_gadget_image.texture = null
 
 
 ## La classe que la fiche montre, ou `null`.
@@ -344,6 +505,10 @@ func classe_affichee() -> ClassDataT:
 
 func _vider() -> void:
 	_portrait.texture = null
+	_arme.texture = null
+	_cone.regler(0.0, 0.0, Charte.DIM)
+	_cone_valeur.text = ""
+	_gadget_image.texture = null
 	for cle in _jauges:
 		(_jauges[cle] as Jauge).regler(0.0, Charte.DIM)
 		(_valeurs[cle] as Label).text = "—"
@@ -369,11 +534,6 @@ func _mesure(classe: ClassDataT, cle: String) -> Dictionary:
 			return {"valeur": par_seconde, "texte": "%s /s" % _nombre(par_seconde, 1)}
 		"chargeur":
 			return {"valeur": float(classe.max_ammo), "texte": str(classe.max_ammo)}
-		"faisceau":
-			# Le demi-angle est ce que porte la donnée ; l'ouverture est ce que le
-			# joueur voit. On affiche donc le cône entier, pas la moitié.
-			var cone := classe.torch_angle_deg * 2.0
-			return {"valeur": cone, "texte": "%d°" % int(round(cone))}
 		"fusees":
 			# Le PLAFOND, pas le stock de départ : ce que la réserve peut contenir,
 			# recharge comprise. Zéro pour le Spectre, et donc aucun cran allumé —

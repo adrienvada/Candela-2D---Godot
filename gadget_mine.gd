@@ -182,20 +182,12 @@ func _monter_flamme() -> void:
 	add_child(_lumiere)
 
 
-## Le boîtier : un anneau sombre au sol, et rien de plus.
+## Le boîtier : son image, et rien de plus. Le point clair peint en son centre
+## n'ÉMET pas — éclairé par le décor comme le reste, il ne se voit que sous une
+## torche, ce qui laisse intacte la règle ci-dessous.
 ##
 ## ⚠️ **Aucune veilleuse, aucun témoin lumineux.** Une diode qui clignoterait la
 ## rendrait repérable dans le noir — c'est-à-dire inutile. Ce qu'on doit voir
 ## d'une mine, c'est le moment où il est trop tard.
 func _monter_visuel() -> void:
-	var anneau := Line2D.new()
-	anneau.name = "Visuel"
-	var pts := PackedVector2Array()
-	for i in 13:
-		var ang := (i / 12.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * rayon)
-	anneau.points = pts
-	anneau.width = 2.0
-	anneau.default_color = Charte.SOL_B
-	anneau.light_mask = MapGeometry.WALL_LAYER
-	add_child(anneau)
+	_poser_sprite("Visuel", "mine_magnesium")
