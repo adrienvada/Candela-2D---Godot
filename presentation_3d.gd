@@ -86,6 +86,8 @@ const IsoPate := preload("res://iso_pate.gd")
 const SHADER_SOL := preload("res://sol_projete.gdshader")
 const SHADER_MUR := preload("res://mur_iso.gdshader")
 const SHADER_CORPS := preload("res://corps_grossier_iso.gdshader")
+## ISO2b — la passe de profondeur des corps, avant leur couleur (voir le shader).
+const SHADER_CORPS_PROFONDEUR := preload("res://corps_profondeur_iso.gdshader")
 
 const NOM := "Presentation3D"
 
@@ -184,6 +186,7 @@ var _corps: Array[Node3D] = []
 var _mat_sols: Array[ShaderMaterial] = []
 var _mat_mur: ShaderMaterial
 var _mat_corps: Array[ShaderMaterial] = []
+var _mat_profondeur: Array[ShaderMaterial] = []
 var _vues3d: Array[SubViewport] = []
 var _cameras3d: Array[CameraIso] = []
 var _affichages: Array[TextureRect] = []
@@ -572,6 +575,14 @@ func _suivre() -> void:
 		_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
 		_mat_corps[j].set_shader_parameter("centre", p)
+		# ISO2b — l'effacement et la silhouette de la vue de dessus, PAR VUE, lus sur les sprites
+		# que ce corps remplace tels que `player.gd` les a posés cette image. Aucun recalcul.
+		for vue_id in 2:
+			var o := opacite_du_corps(joueur, vue_id == j)
+			var sil := silhouette_du_corps(joueur, vue_id == j)
+			for m in [_mat_corps[j], _mat_profondeur[j]]:
+				(m as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), o)
+				(m as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
 		_corps[j].basis = Basis.looking_at(Vector3(cos(joueur.rotation), 0.0, sin(joueur.rotation)), Vector3.UP)
 
 
@@ -726,6 +737,70 @@ func _retirer_capteurs() -> void:
 				_mat_corps[j].set_shader_parameter("capteur_%d" % (id + 1), null)
 
 
+# ---------------------------------------------------------------------------
+# ISO2b — L'EFFACEMENT DES CORPS ET LA SILHOUETTE DE SOI
+# ---------------------------------------------------------------------------
+
+## L'opacité à laquelle la vue de dessus dessine, chez ce regardeur, le sprite que remplace ce corps :
+## `visual` pour son propre corps, `visual_enemy` pour celui d'en face (brief d'Adrien, ISO2b).
+##
+## ⚠️ **Une seule source : le sprite.** La suie (`a_soi`, `a_autre`) et le brouillage du regardeur
+## (`Brouillage.opacite`) sont écrits par `player.gd` sur ces sprites, à deux endroits et à deux
+## moments de l'image ; les recalculer ici ferait une seconde règle qui dériverait de la première.
+## On lit ce que la vue de dessus affiche : l'opacité RENDUE (`opacite_rendue`).
+static func opacite_du_corps(joueur: Node, le_sien: bool) -> float:
+	if joueur == null or not is_instance_valid(joueur):
+		return 0.0
+	return opacite_rendue(joueur.get("visual") if le_sien else joueur.get("visual_enemy"))
+
+
+## L'opacité avec laquelle un `CanvasItem` se dessine : la sienne (`self_modulate`), fois celle de
+## chacun de ses parents de canevas (`modulate` s'hérite) ; zéro s'il ou l'un d'eux est caché.
+## ⚠️ Le sprite retiré de la lightmap par la vue iso l'est par sa COUCHE (`COUCHE_HORS_VUE`), pas par
+## `visible` : son opacité reste celle que le jeu lui donne.
+static func opacite_rendue(item: Variant) -> float:
+	if not (item is CanvasItem) or not is_instance_valid(item):
+		return 0.0
+	var a := (item as CanvasItem).self_modulate.a
+	var n: Node = item
+	while n is CanvasItem:
+		if not (n as CanvasItem).visible:
+			return 0.0
+		a *= (n as CanvasItem).modulate.a
+		n = n.get_parent()
+	return clampf(a, 0.0, 1.0)
+
+
+## La silhouette qui recouvre son propre corps, chez son propre joueur seulement (brief d'Adrien,
+## ISO2b) : celle de la vue de dessus, `visual_dim` — sa couleur telle quelle, son opacité (0,5 dans
+## `player.gd`) fois son opacité rendue. **Même valeur qu'en 2D, aucune constante neuve.** Pour la
+## vue d'en face : transparente — la silhouette de J1 ne s'écrit jamais dans la vue de J2.
+static func silhouette_du_corps(joueur: Node, le_sien: bool) -> Color:
+	if not le_sien or joueur == null or not is_instance_valid(joueur):
+		return Color(0.0, 0.0, 0.0, 0.0)
+	var dim = joueur.get("visual_dim")
+	if not (dim is Polygon2D):
+		return Color(0.0, 0.0, 0.0, 0.0)
+	var couleur: Color = (dim as Polygon2D).color
+	return Color(couleur.r, couleur.g, couleur.b, couleur.a * opacite_rendue(dim))
+
+
+## MIROIR processeur de la fin de `fragment()` dans `corps_grossier_iso.gdshader`, formule pour
+## formule, en valeurs affichées comme la vue de dessus compose (sous `gl_compatibility`, le shader y
+## travaille déjà — voir sa fin) : le corps éclairé à l'opacité `o` de son sprite,
+## puis la silhouette (`silhouette.a`) par-dessus. Rend la couleur posée et, en alpha, l'opacité du
+## fondu vers ce que la vue montre derrière le corps. Sert aux suites ; le shader ne l'appelle pas.
+static func composer_corps(corps_srgb: Color, o: float, silhouette: Color) -> Color:
+	var s := clampf(silhouette.a, 0.0, 1.0)
+	var op := clampf(o, 0.0, 1.0)
+	var a := 1.0 - (1.0 - op) * (1.0 - s)
+	if a <= 0.0001:
+		return Color(0.0, 0.0, 0.0, 0.0)
+	var k := op * (1.0 - s)
+	return Color((corps_srgb.r * k + silhouette.r * s) / a, (corps_srgb.g * k + silhouette.g * s) / a,
+		(corps_srgb.b * k + silhouette.b * s) / a, a)
+
+
 ## Les capteurs vivants : `[vue_id][corps_id]` → nœud, pour les suites et F3.
 func capteurs() -> Array:
 	return _capteurs
@@ -878,19 +953,25 @@ func _construire_la_scene() -> void:
 		mat.set_shader_parameter("monde_capteur_px", CapteurCorps.MONDE_PX)
 		mat.set_shader_parameter("rayon_lu_px", minf(RAYON_CORPS_PX + 1.0, CapteurCorps.RAYON_PX - 3.0))
 		_mat_corps.append(mat)
+		# ISO2b — la profondeur d'abord (priorité -1), la couleur ensuite (0) : un seul fondu par pixel.
+		var profondeur := ShaderMaterial.new()
+		profondeur.shader = SHADER_CORPS_PROFONDEUR
+		profondeur.render_priority = -1
+		_mat_profondeur.append(profondeur)
 		var corps := Node3D.new()
 		corps.name = "Corps%d" % (i + 1)
 		var pieces := [[cylindre, Vector3(0.0, HAUTEUR_CORPS_PX * 0.5, 0.0), "Tronc"],
 			[nez, Vector3(0.0, HAUTEUR_CORPS_PX * 0.6, -(RAYON_CORPS_PX + 4.0)), "Nez"]]
 		for piece in pieces:
-			var mi := MeshInstance3D.new()
-			mi.name = piece[2]
-			mi.mesh = piece[0]
-			mi.position = piece[1]
-			mi.material_override = mat
-			mi.layers = CALQUE_COMMUN
-			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			corps.add_child(mi)
+			for passe in [[mat, ""], [profondeur, "Profondeur"]]:
+				var mi := MeshInstance3D.new()
+				mi.name = piece[2] + passe[1]
+				mi.mesh = piece[0]
+				mi.position = piece[1]
+				mi.material_override = passe[0]
+				mi.layers = CALQUE_COMMUN
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				corps.add_child(mi)
 		_scene.add_child(corps)
 		_corps.append(corps)
 

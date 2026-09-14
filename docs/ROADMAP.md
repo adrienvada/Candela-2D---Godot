@@ -2424,6 +2424,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **L'iso devient la vue du jeu ; la vue de dessus n'est plus une vue à garder** (2026-09-14, 23:33, Adrien, rapporté par le brief long de la session pilote) | Rien n'est supprimé avant le relevé de cadence de fin de chantier : la vue de dessus reste le repli et le moteur de lumière — la projection B lit ses lightmaps. Ce qui change : un écart entre les deux vues se corrige du côté iso, et un défaut de la vue de dessus qui se voit en iso (l'effacement de l'ébloui, ISO2b) se signale comme défaut du jeu. |
+| **Pas de test à deux machines** (2026-09-14, 23:30, Adrien : il n'en a pas le matériel) | Un changement de fil réseau se couvre par `tools/run_duo.sh` (deux instances sur ce Mac) ; EOS entre deux réseaux se consigne comme risque accepté. Rapporté par « Murs bas Opus » et le brief long. |
 | **Les corps iso prennent le modelé de la lumière 2D** (2026-09-14 au soir, Adrien, après avoir rejoué l'écran scindé iso : « parfait ») | Chaque fragment d'un corps lit son capteur à sa place : le côté tourné vers la lampe est clair, le dos resté dans l'ombre du corps est sombre, et le corps monte avec la lampe au lieu de basculer au gris plein. Aucune lumière 3D : c'est la lumière du sprite, ombres et canaux compris, posée sur un volume. Voir la section ISO2, retour 3 du jalon H-ISO2. |
 | **L'ennemi s'efface aussi en iso, pour qui est ébloui et dans la suie** (2026-09-14 au soir, Adrien : « oui ») | La vue de dessus efface l'adversaire pour le joueur ébloui (`Brouillage.opacite`) et le corps pris dans la suie (opacité des sprites) ; les corps iso ne lisaient que la lumière et restaient entiers. C'est une question d'équité, donc une étape à ouvrir, et non un geste glissé dans une correction : un corps 3D doit se fondre dans le sol, pas noircir devant lui. Organisation confiée à la session pilote « Fable 5.1 - CLOUD ISO UNRAILED ». |
 | **Son propre corps garde une silhouette dans le noir, en iso comme en vue de dessus** (2026-09-14 au soir, Adrien : « oui ») | En vue de dessus, le sprite du joueur garde une silhouette à demi-opacité sans lumière (`visual_dim`) : on se voit toujours. En iso, son propre corps était noir tant qu'aucune lampe ne l'éclairait. À reprendre avec les corps d'ISO3 ou l'étape d'effacement, selon ce que la session pilote organise. |
@@ -21139,7 +21141,7 @@ lance sans demande explicite.
 |---|---|---|---|
 | ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
-| ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — 🟡 **ouverte le 2026-09-14**, commitée sur `iso2-vues`, en attente du jalon H-ISO2 (duel à deux manettes en écran scindé iso) | 4 | Fable 5.1 / xhigh |
+| ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — ✅ jalon H-ISO2 répondu le 2026-09-14 ; **ISO2b** 🟡 (effacement des corps, silhouette de soi) sur `iso2-vues`, en attente du jalon H-ISO2b | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
 | ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
@@ -21918,6 +21920,122 @@ première correction avait été annoncée comme suffisante, elle ne l'était pa
 6. ✅ **Son propre corps garde une silhouette hors lumière**, comme en vue de dessus — « oui ». Le
    modelé des corps sous la lampe : « parfait ».
 
+### ISO2b — l'effacement des corps et la silhouette de soi ✅ (ouverte et commitée le 2026-09-14, jugée au jalon H-ISO3)
+
+Demandée par Adrien au jalon H-ISO2 (réponses 2 et 3, « Décisions actées »), brief écrit par la
+session pilote « Fable 5.1 - CLOUD ISO UNRAILED ». Branche locale `iso2-vues`, sur la fusion
+`1a53368` d'`iso1-fondations` (murs hauts à 1,25 tuile, étape 0 du même brief). Non poussée.
+
+**Pourquoi.** La vue de dessus EFFACE l'adversaire pour qui est ébloui (`Brouillage.opacite` du
+regardeur) et le corps pris dans la suie : par l'opacité de leurs sprites, écrite par `player.gd`.
+Les corps iso ne lisaient que la lumière et restaient entiers — un joueur ébloui voyait en iso ce que
+la 2D lui efface. Et la vue de dessus montre toujours à chacun son propre corps, par une silhouette
+à demi-opacité (`visual_dim`) ; en iso, son corps était noir hors lumière. Deux écarts entre les
+vues, dont le premier est d'équité.
+
+**Ce qui existe.**
+- **Une seule source, le sprite.** `Presentation3D._suivre` lit à chaque image, PAR VUE, l'opacité
+  RENDUE du sprite que chaque corps remplace — `visual` pour son propre corps, `visual_enemy` pour
+  celui d'en face —, parents de canevas compris (`opacite_du_corps`, `opacite_rendue`). Rien n'est
+  recalculé : la suie et le brouillage restent la règle de `player.gd`, et l'iso lit ce qu'elle
+  produit, à l'image même où la vue de dessus le dessine (après les joueurs, avant le rendu).
+- **Le corps se fond dans le décor, il ne s'assombrit pas** (`corps_grossier_iso.gdshader`). Le
+  fragment devient transparent à hauteur de ce qui manque au sprite (`blend_mix`, `ALPHA`) : à
+  opacité 0 il ne recouvre rien, et la vue montre ce qu'il cachait, sol ou mur. Un corps qui
+  s'assombrirait ferait une silhouette noire sur un sol éclairé — une information de plus, pas de
+  moins. ⚠️ **Pourquoi la transparence plutôt qu'un mélange vers la lightmap lue sous le corps** :
+  ce que la vue montre derrière un fragment n'est pas la lightmap brute — c'est le sol en pâte D,
+  parfois un mur, parfois l'autre corps. Recomposer tout cela dans le shader du corps, c'était
+  recopier le shader du sol et se tromper devant les murs ; la transparence montre exactement le
+  pixel que la vue aurait eu. À opacité nulle le fragment est jeté, rien n'est écrit.
+- **Un seul fondu par pixel : la passe de profondeur** (`corps_profondeur_iso.gdshader`). Chaque pièce
+  du corps (tronc, nez) est dessinée d'abord sans couleur, à la priorité de rendu -1, et n'écrit que
+  sa profondeur ; la couleur passe ensuite (priorité 0) sur la seule surface la plus proche. Sans
+  elle, là où le nez recouvre le tronc à l'écran, les deux pièces se fondaient l'une sur l'autre : le
+  corps y valait 0,75 à opacité 0,5. Même règle d'opacité que la couleur ; à opacité nulle, rien.
+- **La silhouette de soi, chez soi seulement** : celle de la vue de dessus, `visual_dim` — la couleur
+  du joueur, son opacité (0,5) fois son opacité rendue, aucune constante neuve
+  (`silhouette_du_corps`). Composée PAR-DESSUS le corps éclairé, comme la vue de dessus empile
+  `visual_dim` sur `visual`, et **en valeurs affichées** comme la 2D compose : sur un corps noir, la
+  moitié de sa couleur telle qu'elle s'affiche. Pour la vue d'en face, elle est
+  transparente : la silhouette de J1 ne s'écrit jamais dans la vue de J2. Sous la lampe, son corps
+  garde donc la teinte de sa silhouette, comme son sprite.
+- **Miroir processeur** : `Presentation3D.composer_corps`, formule pour formule, que la suite
+  compare au shader.
+
+**Ce que la suite prouve** — `tools/test_iso_vues.gd`, 217 vérifications : à opacité 0 le corps
+ne recouvre rien, à 1 il est tel quel, à 0,65 le fondu vers le sol est celui du sprite 2D ; noir
+absolu à toute opacité ; la silhouette sur un corps noir vaut la moitié de sa couleur ; le shader
+compose comme son miroir ; en écran scindé, chaque corps lit par vue l'opacité rendue de SON sprite
+(parents compris, rendue non triviale à 0,5 et 0,25), et la silhouette n'existe que chez son joueur.
+**Sabotée une fois** : la silhouette posée sur la vue d'en face au lieu de la sienne — le contrôle « chez soi seulement » rougit dans les trois phases de l'écran scindé (code 1), puis restauré à l'identique et vert. S'ajoutent l'ordre des passes (profondeur avant couleur, même opacité) et la règle d'opacité de la passe de profondeur.
+
+**Ce que le banc prouve** (`tools/banc_iso.gd`, écran scindé, pâte D) :
+- **L'effacement et le fondu** (`--effacement --torches j2`, en iso puis en vue de dessus) : le corps
+  de J2, éclairé chez J1 par sa rétrodiffusion, capturé à opacité forcée 0, 0,5, 1, retiré du rendu
+  (iso), puis de nouveau à 0 — pour écarter les pixels du décor qui changent pendant le contrôle.
+  L'opacité est forcée SUR LE SPRITE, entre `player.gd` et `Presentation3D`, et le corps n'en lit que
+  la valeur ; la LED des murs, qui respire, est éteinte pendant le contrôle.
+  En iso, à opacité 0 le corps s'écarte de 3/255 du décor seul (tolérance 8), à opacité 1 de 191/255. Le fondu à 0,5 : contraste 95 pour 191, rapport 0,50, rapport médian 0,50 sur 5 514 échantillons, aucun hors tolérance, aucun pixel mouvant. Avant la passe de profondeur, 26 à 582 pixels (selon l'orientation) valaient 0,75 là où le nez recouvre le tronc.
+- **La silhouette et le noir absolu** (`--noir`, lightmaps noires, les deux vues) : chaque joueur
+  voit son corps à la moitié de sa couleur, celui d'en face à 0/255.
+  Tenue en vue unique et en écran scindé : J1 voit son corps à 87/112/126 pour 87/111/126 attendus, J2 à 125/87/89 pour 125/87/89, et chacun voit le corps d'en face à 0/0/0. Noir absolu tenu pour les deux vues : 0 pixel hors du support de la brute, capteurs à 0, et 0 partout hors des boîtes de soi, lightmaps noires.
+- **Les canaux des capteurs**, inchangés : 8 cas justes sur 8 en écran scindé.
+- **L'étalon contre la vue de dessus : le fondu.** Le brief demandait de faire tomber l'écart d'hier
+  (J2 à 81/79/63 en vue de dessus « à 0,65 », 118/110/96 en iso). Relevé à l'instant du rendu
+  (`RenderingServer.frame_pre_draw`), le sprite n'était PAS à 0,65 : il était dessiné à 1,00, comme
+  le corps iso — le 0,65 était la valeur du brouillage avant que la suie ne l'écrase (voir le piège
+  ci-dessous). L'écart de luminosité restant vient du sprite peint contre le cylindre, pas de
+  l'opacité. L'étalon qui compare l'EFFACEMENT est donc le fondu : opacité forcée à 0,5 sur le même
+  sprite, contraste du corps contre le décor rapporté à celui à opacité 1, dans les deux vues.
+
+  | Rendu | Contraste à opacité 1 | à 0,5 | Rapport | Rapport médian | Hors tolérance |
+  |---|---|---|---|---|---|
+  | vue de dessus (sprite de J2 chez J1) | 171 | 85 | 0,50 | 0,50 | 0 sur 1 077 |
+  | iso (corps de J2 chez J1) | 191 | 95 | 0,50 | 0,50 | 0 sur 5 514 |
+
+  Tolérance du rapport : ± 0,06, fixée avant la mesure finale. Relevés bruts : `docs/iso/captures_iso2b/releves_iso2b.txt`.
+
+**Pièges d'ISO2b.**
+- ⚠️ **Sous `gl_compatibility`, le shader du corps travaille déjà en valeurs affichées.** Une première
+  version convertissait vers le linéaire pour « composer en sRGB comme la 2D » : la silhouette est
+  sortie à 21/39/52 pour 87/111/126 attendus — l'attendu à la puissance 2,2 (contrôle du noir). Le
+  corps éclairé, lui, faisait l'aller-retour sans rien changer et ne pouvait pas trahir l'erreur :
+  seul un terme ajouté hors de l'aller-retour la montrait. Le gris plafonné le disait déjà, à
+  191/177/156, sa valeur de charte. Retiré ; la suite épingle la formule sans conversion.
+- ⚠️ **Le plafond gris est la règle du sprite ENNEMI.** Son propre corps porte désormais sa
+  silhouette colorée : le contrôle du plafond (« BANC_ISO corps ») ne mesure plus que les corps
+  d'en face, sans quoi il rougissait sur la couleur du joueur.
+- ⚠️ **« Noir absolu » veut dire : rien de l'adversaire.** Lightmaps noires, l'écran n'est plus à 0
+  partout : chacun y voit sa silhouette, comme en vue de dessus. Le contrôle mesure la boîte de
+  chaque corps (la sienne à sa couleur, celle d'en face à 0) puis exige 0 partout ailleurs.
+- ⚠️ **`player.gd` écrit l'opacité du sprite ennemi à deux moments de l'image** : la suie dans
+  `_process`, le brouillage dans `_physics_process`. Le corps iso lit la valeur à l'image du rendu,
+  donc celle que la vue de dessus affiche ; un relevé pris après une capture peut lire l'autre.
+  **Mesuré à l'instant du rendu, et c'est un défaut de la vue de dessus, antérieur à ISO2b** : la suie
+  (`_process`) écrase à chaque image le brouillage (`_physics_process`) sur `visual_enemy`. Un joueur
+  ébloui à 0,71 voit l'ennemi dessiné à 1,00 — en vue de dessus comme en iso, puisque l'iso lit le
+  sprite. L'effacement de l'ennemi pour l'ébloui ne se voit donc nulle part ; seuls son pointeur et sa
+  silhouette de tir s'effacent (`a_masque` combine les deux). **Signalé, non corrigé** : une ligne de
+  `player.gd` (`minf` du brouillage et de la suie, comme pour le pointeur) le rétablirait, dans les
+  deux vues à la fois ; c'est une décision hors d'ISO2b.
+
+**Pour ISO3** : un corps voxel qui remplace ces cylindres lit les mêmes uniformes par vue
+(`opacite_1`/`_2`, `silhouette_1`/`_2`) et compose de la même façon — transparence, silhouette
+par-dessus en valeurs affichées, fragment jeté à opacité nulle, passe de profondeur à la priorité -1 avant la couleur
+— en plus du capteur lu par fragment et du plafond
+à sa couleur (retours du jalon H-ISO2).
+
+**Ce qu'ISO2b ne fait pas** : la silhouette révélée au tir (`visual_reveal_enemy`, qui s'allume sans
+lumière quand l'adversaire tire) n'a pas d'équivalent iso ; ni ISO3, ni fusion de `main` (à ISO3b).
+
+#### Ce qu'Adrien jugera — regroupé au jalon H-ISO3
+
+Le brief long du 2026-09-14 (23:45) enchaîne ISO2b, ISO3a et ISO3b sans arrêt : pas de jalon
+H-ISO2b. À H-ISO3, en écran scindé iso : dans la suie, l'adversaire disparaît en se fondant dans le
+sol ; ébloui, il ne s'efface pas encore (défaut de la vue de dessus, ci-dessus) ; dans le noir, son
+propre corps garde sa silhouette, invisible chez l'autre. Planche : `docs/iso/planche_iso2b.jpg`.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
@@ -22088,6 +22206,9 @@ et un seul est du travail de session.
 > murs hauts à 1,25 tuile sont en service côté iso — 34,2 px de sol cachés derrière un mur, un
 > corps collé caché à 98 %, aucune case de sol entièrement invisible. Puis **ISO2b** : l'effacement
 > des corps iso et la silhouette de soi.
+> **ISO2b commitée** sur `iso2-vues` : le corps iso se fond dans le décor à l'opacité du sprite 2D
+> (ébloui, suie), et chacun garde sa silhouette dans le noir, invisible chez l'autre. Ce qui attend
+> Adrien : le **jalon H-ISO2b** (section ISO2b).
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

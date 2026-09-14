@@ -215,6 +215,13 @@ var _torches := "toutes"
 var _noir_en_cours := false
 ## `--canaux` : le contrôle des canaux des capteurs (voir `_controler_les_canaux`).
 var _canaux := false
+## `--effacement` : le contrôle du fondu des corps iso (ISO2b, voir `_controler_l_effacement`).
+var _effacement := false
+## ISO2b — les opacités des sprites AU RENDU, relevées sur `RenderingServer.frame_pre_draw`, après
+## tous les traitements de l'image : `player.gd` écrit l'opacité du sprite ennemi dans
+## `_physics_process` (brouillage) ET dans `_process` (suie), et un relevé pris ailleurs — après une
+## capture, par exemple — peut lire l'autre valeur que celle qui a été dessinée.
+var _opacites_au_rendu := {}
 ## Les lumières que le jeu avait rallumées depuis l'image précédente — nommées au relevé.
 var _rallumees: PackedStringArray = []
 
@@ -260,6 +267,10 @@ func _ready() -> void:
 		return
 	if _noir and (_capture == "" or not (_jeu or _base) or (_scinde and not _jeu)):
 		printerr("✗ banc_iso : --noir se prend avec --capture, et --jeu (vue unique ou --scinde) ou --base (vue unique)")
+		_sortir(2)
+		return
+	if _effacement and (_capture == "" or not (_jeu or (_base and _scinde))):
+		printerr("✗ banc_iso : --effacement se prend avec --capture, et --jeu ou --base --scinde (et --torches j2 : J2 éclairé chez J1)")
 		_sortir(2)
 		return
 	if _canaux and (_capture == "" or not _jeu):
@@ -338,6 +349,7 @@ func _ready() -> void:
 		_sortir(1)
 		return
 	_pret = true
+	RenderingServer.frame_pre_draw.connect(_relever_les_opacites)
 	_conditions()
 
 	print("Échauffement %.0f s…" % WARMUP_SEC)
@@ -374,6 +386,7 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_jeu = args.has("--jeu")
 	_noir = args.has("--noir")
 	_canaux = args.has("--canaux")
+	_effacement = args.has("--effacement")
 	_sans_hud = args.has("--sans-hud")
 	_mur_donne = args.has("--mur")
 	var taille := _value(args, "--taille", "")
@@ -920,6 +933,9 @@ func _capturer() -> void:
 		if _torches == "eblouir":
 			p2.rotation = (-axe).angle()
 		await get_tree().process_frame
+	if _effacement:
+		await _controler_l_effacement()
+		return
 	if _flash:
 		p1.shoot()
 		await get_tree().process_frame
@@ -992,7 +1008,8 @@ func _controler_les_corps(image: Image) -> int:
 			continue
 		var ebloui := float(joueurs[id].get("dazzle_amount"))
 		if ebloui > EBLOUI_IGNORE:
-			print("BANC_ISO corps vue=J%d ignorée (joueur ébloui à %.2f : halo du brouillage par-dessus)" % [id + 1, ebloui])
+			print("BANC_ISO corps vue=J%d ignorée (joueur ébloui à %.2f : halo du brouillage par-dessus) ; corps d'en face opacite_au_rendu=%.2f"
+				% [id + 1, ebloui, float(_opacites_au_rendu.get("ennemi%d" % (1 - id), -1.0))])
 			continue
 		var cam: CameraIso = p._camera_de(id)
 		var taille := ecran.get_visible_rect().size
@@ -1003,6 +1020,11 @@ func _controler_les_corps(image: Image) -> int:
 				continue
 			if j == id and ebloui > 0.01:
 				print("BANC_ISO corps vue=J%d corps=J%d ignoré (son porteur est ébloui à %.2f)" % [id + 1, j + 1, ebloui])
+				continue
+			if j == id:
+				# ISO2b : son propre corps porte la silhouette de la vue de dessus, à sa couleur — le
+				# plafond est la règle du sprite ENNEMI (`min(lit, COLOR)`), pas la sienne.
+				print("BANC_ISO corps vue=J%d corps=J%d le sien : silhouette à sa couleur, hors du plafond de l'ennemi" % [id + 1, j + 1])
 				continue
 			# Le flanc ET le dessus : depuis que chaque fragment lit le capteur à sa place, le côté
 			# tourné vers la lampe est clair et le dos sombre — le centre du flanc seul peut tomber
@@ -1030,8 +1052,11 @@ func _controler_les_corps(image: Image) -> int:
 			mesures += 1
 			if au_dessus:
 				depassements += 1
-			print("BANC_ISO corps vue=J%d corps=J%d position=%s rotation=%.3f lumieres : %s" % [id + 1, j + 1,
+			print("BANC_ISO corps vue=J%d corps=J%d opacite_au_rendu=%.2f" % [id + 1, j + 1,
+				float(_opacites_au_rendu.get(("soi%d" if id == j else "ennemi%d") % j, -1.0))])
+			print("BANC_ISO corps vue=J%d corps=J%d position=%s rotation=%.3f opacite=%.2f lumieres : %s" % [id + 1, j + 1,
 				str(corps.global_position.round()), corps.rotation,
+				float(((p.get("_mat_corps") as Array)[j] as ShaderMaterial).get_shader_parameter("opacite_%d" % (id + 1))),
 				" | ".join(_lumieres_sur(corps.global_position, Presentation3D.masque_capteur(id, j)))])
 			print("BANC_ISO corps vue=J%d corps=J%d max=%d/%d/%d plafond=%d/%d/%d eclaire=%s verdict=%s"
 				% [id + 1, j + 1, m[0], m[1], m[2], plafond[0], plafond[1], plafond[2],
@@ -1043,6 +1068,14 @@ func _controler_les_corps(image: Image) -> int:
 	print("BANC_ISO corps verdict=%s (%d corps mesurés, %d au-dessus du gris de l'ennemi)"
 		% [verdict, mesures, depassements])
 	return depassements
+
+
+func _relever_les_opacites() -> void:
+	var joueurs := [_main.p1, _main.p2]
+	for j in 2:
+		if is_instance_valid(joueurs[j]):
+			_opacites_au_rendu["ennemi%d" % j] = Presentation3D.opacite_rendue(joueurs[j].get("visual_enemy"))
+			_opacites_au_rendu["soi%d" % j] = Presentation3D.opacite_rendue(joueurs[j].get("visual"))
 
 
 ## La plus haute valeur de chaque canal dans une boîte de ±`demi_x` × ±`demi_y` pixels
@@ -1062,6 +1095,243 @@ func _max_rgb_dans(image: Image, logique: Vector2, demi_x: float, demi_y: float)
 		for c in 3:
 			m[c] = maxi(m[c], donnees[k + c])
 	return m
+
+
+## ISO2b — l'effacement (brief d'Adrien) : un corps iso à l'opacité `o` de son sprite se FOND dans ce
+## que la vue montre derrière lui ; à `o = 0`, il est indiscernable du décor. Contrôlé dans la vue de
+## J1, sur le corps de J2 éclairé (`--torches j2` : sa rétrodiffusion le trahit chez J1), par trois
+## captures de la même scène : opacité forcée à 1, forcée à 0, et corps retiré du rendu. Dans la boîte
+## du corps, l'écart entre « à 0 » et « retiré » doit rester sous la tolérance ; l'écart entre « à 1 »
+## et « retiré » doit dépasser le seuil de visibilité — sans quoi le contrôle ne prouverait rien.
+## Code 9 sinon.
+##
+## L'opacité est forcée SUR LE SPRITE (`ForceurOpacite`, priorité 9999) : après `player.gd` (priorité
+## 0), avant `Presentation3D` (10000) qui la lit. Le corps iso ne lit qu'elle, comme en jeu.
+const EFFACEMENT_TOLERANCE := 8
+const EFFACEMENT_VISIBLE := 30
+## L'étalon du fondu : à opacité 0,5, le contraste du corps contre le décor vaut la moitié de celui
+## à opacité 1, dans la vue de dessus comme en iso (le mélange est le même). Tolérance sur le rapport.
+const FONDU_TOLERANCE := 0.06
+## ISO2b — tolérance de la silhouette de soi dans le noir, par canal (l'arrondi du fondu sRGB).
+const SILHOUETTE_TOLERANCE := 8
+
+
+class ForceurOpacite extends Node:
+	var sprite: CanvasItem
+	var valeur := -1.0
+	## Les lumières qui changent d'elles-mêmes d'une image à l'autre, éteintes pendant le contrôle.
+	var lumieres_eteintes: Array[Light2D] = []
+
+	func _process(_delta: float) -> void:
+		if valeur >= 0.0 and is_instance_valid(sprite):
+			sprite.modulate.a = valeur
+		for l in lumieres_eteintes:
+			if is_instance_valid(l):
+				l.enabled = false
+
+
+func _controler_l_effacement() -> void:
+	var p := Presentation3D.instance()
+	var iso := not _base
+	if iso and (p == null or not bool(p.get("_actif")) or p.viewport_ecran(0) == null):
+		printerr("✗ --effacement : la vue iso de J1 n'est pas allumée")
+		_sortir(4)
+		return
+	var p2: Node2D = _main.p2
+	var forceur := ForceurOpacite.new()
+	forceur.name = "ForceurOpacite"
+	forceur.process_priority = 9999
+	forceur.sprite = p2.get("visual_enemy")
+	# ⚠️ Le bandeau LED des murs RESPIRE (≈ 8,5 s) : entre la première capture et les suivantes, le mur
+	# derrière J2 changeait de valeur — 60 pixels « hors norme » au premier essai, sans rapport avec le
+	# corps (noirs à opacité 1, identiques à 0,5 et à 0). Il est éteint à chaque image du contrôle.
+	var led := get_tree().root.find_child("MurLed", true, false) as Light2D
+	if led != null:
+		forceur.lumieres_eteintes.append(led)
+	add_child(forceur)
+	var maillages: Array = ((p.get("_corps") as Array)[1] as Node3D).get_children() if iso else []
+	# [nom, opacité forcée sur le sprite, corps iso rendu]. ⚠️ **L'image à opacité 0 est prise deux
+	# fois, en premier et en dernier** : un élément du décor qui change pendant le contrôle (un arc clair
+	# apparu après la première capture, à un essai du 2026-09-14) se trahit entre les deux, et ses pixels
+	# sont écartés au lieu d'être pris pour un défaut de fondu.
+	var etats := [["a0", 0.0, true], ["a05", 0.5, true], ["a1", 1.0, true]]
+	if iso:
+		etats.append(["retire", 0.0, false])
+	etats.append(["a0bis", 0.0, true])
+	var images := {}
+	var au_rendu := {}
+	for etat in etats:
+		forceur.valeur = etat[1]
+		for m in maillages:
+			(m as Node3D).visible = etat[2]
+		for i in 12:
+			await get_tree().process_frame
+		var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+		if image == null:
+			printerr("✗ aucune image rendue en 15 s")
+			_sortir(4)
+			return
+		images[etat[0]] = image
+		au_rendu[etat[0]] = float(_opacites_au_rendu.get("ennemi1", -1.0))
+		image.save_png(_capture.get_basename() + "_%s.png" % etat[0])
+	for m in maillages:
+		(m as Node3D).visible = true
+	forceur.valeur = -1.0
+	var zone := _zone_du_corps(p, 0, p2) if iso else _zone_du_sprite(0, p2)
+	var f := _mesurer_le_fondu(images, zone, iso)
+	var rapport := float(f["contraste_a_05"]) / float(f["contraste_a_1"]) if int(f["contraste_a_1"]) > 0 else -1.0
+	# Le rapport des maxima dit le pire pixel ; le rapport médian, pixel par pixel, dit le corps entier.
+	# Les deux doivent tenir : un double fondu local (le nez sur le tronc) ne se voyait que dans le premier.
+	var fondu_tenu := int(f["contraste_a_1"]) >= EFFACEMENT_VISIBLE and absf(rapport - 0.5) <= FONDU_TOLERANCE \
+		and absf(float(f["rapport_median"]) - 0.5) <= FONDU_TOLERANCE
+	print("BANC_ISO fondu rendu=%s vue=J1 corps=J2 zone=%s opacite_au_rendu=%.2f/%.2f/%.2f contraste_a_1=%d contraste_a_0.5=%d rapport=%.2f rapport_median=%.2f hors_norme=%d/%d mouvants_ecartes=%d (attendu 0,50 ± %.2f)"
+		% ["iso" if iso else "base", str(zone), au_rendu["a1"], au_rendu["a05"], au_rendu["a0"],
+		int(f["contraste_a_1"]), int(f["contraste_a_05"]), rapport, float(f["rapport_median"]),
+		int(f["hors_norme"]), int(f["pixels"]), int(f["mouvants"]), FONDU_TOLERANCE])
+	var tenu := fondu_tenu
+	if iso:
+		# À opacité 0, le corps iso est indiscernable du décor seul (corps retiré du rendu).
+		print("BANC_ISO effacement vue=J1 corps=J2 ecart_a_0=%d (tolérance %d) ecart_a_1=%d (visible dès %d)"
+			% [int(f["ecart_a_0"]), EFFACEMENT_TOLERANCE, int(f["ecart_a_1"]), EFFACEMENT_VISIBLE])
+		tenu = tenu and int(f["ecart_a_0"]) <= EFFACEMENT_TOLERANCE and int(f["ecart_a_1"]) >= EFFACEMENT_VISIBLE
+	print("BANC_ISO effacement rendu=%s verdict=%s" % ["iso" if iso else "base", "EFFACEMENT TENU" if tenu else "EFFACEMENT ROMPU"])
+	_sortir(0 if tenu else 9)
+
+
+## Les mesures du fondu dans une zone, sur les seuls pixels STABLES (même valeur à opacité 0 en début
+## et en fin de contrôle) : contraste contre le décor à opacité 1 et 0,5 (maxima), rapport médian pixel
+## par pixel là où le corps se voit (écart ≥ 40), pixels hors tolérance, pixels mouvants écartés ; et,
+## en iso, l'écart au corps retiré à opacité 0 et 1.
+static func _mesurer_le_fondu(images: Dictionary, zone: Rect2i, iso: bool) -> Dictionary:
+	var z := zone.intersection(Rect2i(Vector2i.ZERO, (images["a1"] as Image).get_size()))
+	var r := {"contraste_a_1": 0, "contraste_a_05": 0, "rapport_median": -1.0, "hors_norme": 0, "pixels": 0,
+		"mouvants": 0, "ecart_a_0": 255, "ecart_a_1": 0}
+	if z.size.x <= 0 or z.size.y <= 0:
+		return r
+	var d := {}
+	for nom in images:
+		var region := (images[nom] as Image).get_region(z)
+		region.convert(Image.FORMAT_RGB8)
+		d[nom] = region.get_data()
+	var rapports: Array[float] = []
+	var ecart_a_0 := 0
+	for k in (d["a1"] as PackedByteArray).size():
+		var v0 := int(d["a0"][k])
+		var v0b := int(d["a0bis"][k])
+		if absi(v0 - v0b) > 4:
+			r["mouvants"] = int(r["mouvants"]) + 1
+			continue
+		var v1 := int(d["a1"][k])
+		var v5 := int(d["a05"][k])
+		r["contraste_a_1"] = maxi(int(r["contraste_a_1"]), absi(v1 - v0b))
+		r["contraste_a_05"] = maxi(int(r["contraste_a_05"]), absi(v5 - v0b))
+		if absi(v1 - v0b) >= 40:
+			var q := float(v5 - v0b) / float(v1 - v0b)
+			rapports.append(q)
+			if absf(q - 0.5) > FONDU_TOLERANCE:
+				r["hors_norme"] = int(r["hors_norme"]) + 1
+		if iso:
+			var vr := int(d["retire"][k])
+			ecart_a_0 = maxi(ecart_a_0, absi(v0b - vr))
+			r["ecart_a_1"] = maxi(int(r["ecart_a_1"]), absi(v1 - vr))
+	if iso:
+		r["ecart_a_0"] = ecart_a_0
+	r["pixels"] = rapports.size()
+	if not rapports.is_empty():
+		rapports.sort()
+		r["rapport_median"] = rapports[rapports.size() / 2]
+	return r
+
+
+## La boîte d'un sprite dans la vue de dessus (écran scindé), en pixels de fenêtre.
+func _zone_du_sprite(id: int, corps: Node2D) -> Rect2i:
+	var vue: SubViewport = _main.vp1 if id == 0 else _main.vp2
+	var conteneur := vue.get_parent() as Control
+	var echelle := conteneur.size / vue.get_visible_rect().size
+	var logique := conteneur.global_position + (vue.get_canvas_transform() * corps.global_position) * echelle
+	var r := 32.0 * echelle.y
+	var e := _etirement()
+	return Rect2i(Vector2i(((logique - Vector2(r, r)) * e).round()), Vector2i((Vector2(r, r) * 2.0 * e).round()))
+
+
+## La boîte d'un corps iso à l'écran, en pixels de fenêtre : du pied au sommet du cylindre, élargie de
+## son rayon et de son nez.
+func _zone_du_corps(p: Presentation3D, id: int, corps: Node2D) -> Rect2i:
+	var ecran: Viewport = p.viewport_ecran(id)
+	var cam: CameraIso = p._camera_de(id)
+	if ecran == null or cam == null:
+		return Rect2i()
+	var taille := ecran.get_visible_rect().size
+	var origine: Vector2 = p._cadre(id).position if bool(p.get("_scinde")) else Vector2.ZERO
+	var echelle := taille.y / cam.size if cam.size > 0.0 else 1.0
+	var bas := origine + cam.vers_ecran(corps.global_position, taille, 0.0)
+	var haut := origine + cam.vers_ecran(corps.global_position, taille, Presentation3D.HAUTEUR_CORPS_PX)
+	var r := (Presentation3D.RAYON_CORPS_PX + 12.0) * echelle
+	var coin := Vector2(minf(bas.x, haut.x), minf(bas.y, haut.y)) - Vector2(r, r)
+	var etendue := Vector2(absf(bas.x - haut.x), absf(bas.y - haut.y)) + Vector2(r, r) * 2.0
+	var e := _etirement()
+	return Rect2i(Vector2i((coin * e).round()), Vector2i((etendue * e).round()))
+
+
+## La plus haute valeur de chaque canal dans un rectangle de pixels ; vide hors de l'image.
+static func _max_rgb_rect(image: Image, zone: Rect2i) -> Array:
+	if image == null:
+		return []
+	var z := zone.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	if z.size.x <= 0 or z.size.y <= 0:
+		return []
+	var region := image.get_region(z)
+	region.convert(Image.FORMAT_RGB8)
+	var d := region.get_data()
+	var m := [0, 0, 0]
+	for k in range(0, d.size(), 3):
+		for c in 3:
+			m[c] = maxi(m[c], d[k + c])
+	return m
+
+
+## ISO2b — la silhouette de soi (brief d'Adrien) : dans le noir, chaque joueur voit son propre corps à
+## la moitié de sa couleur (`visual_dim`, comme en vue de dessus), et JAMAIS celui de l'autre. Dans
+## chaque vue, la boîte de son corps doit valoir sa silhouette, celle du corps d'en face 0. Rend le
+## verdict et une copie de l'image où les boîtes de soi sont noircies, pour le reste du contrôle du noir.
+func _controler_la_silhouette(image: Image) -> Dictionary:
+	var p := Presentation3D.instance()
+	if image == null or p == null or not bool(p.get("_actif")):
+		return {"tenue": false, "sans_soi": image}
+	var sans_soi := image.duplicate() as Image
+	var joueurs := [_main.p1, _main.p2]
+	var fautes := 0
+	var mesures := 0
+	for id in 2:
+		if p.viewport_ecran(id) == null:
+			continue
+		for j in 2:
+			var corps: Node2D = joueurs[j]
+			if not corps.visible or not corps.visual.visible:
+				continue
+			var zone := _zone_du_corps(p, id, corps)
+			var m := _max_rgb_rect(image, zone)
+			if m.is_empty():
+				continue
+			mesures += 1
+			var attendu := [0, 0, 0]
+			if j == id:
+				var dim: Polygon2D = corps.get("visual_dim")
+				var s := dim.color.a * Presentation3D.opacite_rendue(dim)
+				attendu = [roundi(dim.color.r * s * 255.0), roundi(dim.color.g * s * 255.0), roundi(dim.color.b * s * 255.0)]
+				sans_soi.fill_rect(zone.intersection(Rect2i(Vector2i.ZERO, image.get_size())), Color.BLACK)
+			var juste := true
+			for c in 3:
+				if absi(int(m[c]) - int(attendu[c])) > (SILHOUETTE_TOLERANCE if j == id else 0):
+					juste = false
+			if not juste:
+				fautes += 1
+			print("BANC_ISO silhouette vue=J%d corps=J%d max=%d/%d/%d attendu=%d/%d/%d verdict=%s"
+				% [id + 1, j + 1, m[0], m[1], m[2], attendu[0], attendu[1], attendu[2], "juste" if juste else "FAUX"])
+	var tenue := fautes == 0 and mesures > 0
+	print("BANC_ISO silhouette verdict=%s (%d corps mesurés, %d faux ; la sienne à la moitié de sa couleur, celle d'en face à 0)"
+		% ["SILHOUETTE TENUE" if tenue else ("AUCUN CORPS MESURÉ" if mesures == 0 else "SILHOUETTE ROMPUE"), mesures, fautes])
+	return {"tenue": tenue, "sans_soi": sans_soi}
 
 
 ## Les lumières allumées qui peuvent atteindre un point pour ce masque de lumière : canal croisé,
@@ -1098,7 +1368,8 @@ func _mesurer_les_sprites(image: Image) -> void:
 			continue
 		var ebloui := float(joueurs[id].get("dazzle_amount"))
 		if ebloui > EBLOUI_IGNORE:
-			print("BANC_ISO sprite vue=J%d ignorée (joueur ébloui à %.2f : halo du brouillage par-dessus)" % [id + 1, ebloui])
+			print("BANC_ISO sprite vue=J%d ignorée (joueur ébloui à %.2f : halo du brouillage par-dessus) ; corps d'en face opacite_au_rendu=%.2f"
+				% [id + 1, ebloui, float(_opacites_au_rendu.get("ennemi%d" % (1 - id), -1.0))])
 			continue
 		var echelle := conteneur.size / vue.get_visible_rect().size
 		for j in 2:
@@ -1115,8 +1386,10 @@ func _mesurer_les_sprites(image: Image) -> void:
 			print("BANC_ISO sprite vue=J%d corps=J%d max=%d/%d/%d eclaire=%s" % [id + 1, j + 1, m[0], m[1], m[2],
 				"oui" if maxi(m[0], maxi(m[1], m[2])) > 40 else "non"])
 			var sprite: CanvasItem = corps.get("visual") if id == j else corps.get("visual_enemy")
+			print("BANC_ISO sprite vue=J%d corps=J%d opacite_au_rendu=%.2f" % [id + 1, j + 1,
+				float(_opacites_au_rendu.get(("soi%d" if id == j else "ennemi%d") % j, -1.0))])
 			print("BANC_ISO sprite vue=J%d corps=J%d position=%s rotation=%.3f opacite=%.2f lumieres : %s" % [id + 1, j + 1,
-				str(corps.global_position.round()), corps.rotation, sprite.modulate.a if sprite != null else -1.0,
+				str(corps.global_position.round()), corps.rotation, Presentation3D.opacite_rendue(sprite),
 				" | ".join(_lumieres_sur(corps.global_position, Presentation3D.masque_capteur(id, j)))])
 
 
@@ -1363,11 +1636,15 @@ func _capturer_le_noir() -> void:
 		_eteindre_les_lumieres(get_tree().root)
 		await get_tree().process_frame
 	var image_b: Image = await RenduCommun.capturer(get_tree(), 15000)
+	# ISO2b : dans le noir, chacun voit son propre corps à la moitié de sa couleur — et jamais celui de
+	# l'autre. Mesuré d'abord ; puis ses boîtes sont retirées de ce qui doit valoir 0 partout ailleurs.
+	var silhouette := _controler_la_silhouette(image_b)
+	var image_b_hors_soi: Image = silhouette["sans_soi"]
 	var max_lightmaps_b: Array[int] = []
 	var max_moities_b: Array[int] = []
 	for i in _vues.size():
 		max_lightmaps_b.append(_valeur_max(_vues[i].get_texture().get_image()))
-		max_moities_b.append(_valeur_max_dans(image_b, _cadre_pixels(i)))
+		max_moities_b.append(_valeur_max_dans(image_b_hors_soi, _cadre_pixels(i)))
 		_vues[i].canvas_cull_mask = masques[i]
 	var max_capteurs_b := _max_capteurs()
 	for k in capteurs_vivants.size():
@@ -1375,9 +1652,9 @@ func _capturer_le_noir() -> void:
 	var chemin_b := _capture.get_basename() + "_lightmap_noire.png"
 	if image_b != null:
 		image_b.save_png(chemin_b)
-	var max_b := _valeur_max(image_b)
+	var max_b := _valeur_max(image_b_hors_soi)
 	var max_lightmap_b: int = max_lightmaps_b.max() if not max_lightmaps_b.is_empty() else -1
-	var tenu := max_b == 0 and max_lightmap_b == 0 and hors_support == 0 and capteurs_noirs
+	var tenu := max_b == 0 and max_lightmap_b == 0 and hors_support == 0 and capteurs_noirs and bool(silhouette["tenue"])
 	print("BANC_ISO noir-b rendu=%s vue=%s max_ecran=%d/255 max_moities=%s max_lightmaps=%s max_capteurs=%s image=%s"
 		% [rendu, "scinde" if _scinde else "unique", max_b, str(max_moities_b), str(max_lightmaps_b),
 		str(max_capteurs_b), chemin_b])

@@ -6,8 +6,8 @@
 //
 // Hors de `light()`, « lumière seule » : zéro sans lumière. ⚠️ Le sprite du joueur, lui, a en
 // dessous une silhouette sans lumière à demi-opacité (`visual_dim`) : en vue de dessus on se
-// voit toujours. Le capteur ne la reproduit pas — c'est au corps de la vue iso de décider
-// comment un joueur se voit dans le noir (signalé au jalon H-ISO2, pour ISO3).
+// voit toujours. Le capteur ne la reproduit pas : c'est le corps iso qui la compose par-dessus
+// sa lumière, dans la vue de son joueur seulement (ISO2b, `Presentation3D.silhouette_du_corps`).
 shader_type canvas_item;
 render_mode light_only;
 

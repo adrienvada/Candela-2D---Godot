@@ -339,6 +339,34 @@ func _statiques(Reglages: GDScript, Pres: GDScript, Canaux: GDScript) -> void:
 		FileAccess.get_file_as_string("res://capteur_adverse.gdshader").contains("render_mode light_only;")
 		and FileAccess.get_file_as_string("res://capteur_local.gdshader").contains("render_mode light_only;"))
 
+	# ISO2b — la composition du corps (miroir processeur du shader) : fondu vers ce qui est derrière,
+	# silhouette de soi par-dessus, noir absolu à toute opacité.
+	var gris := Color(0.75, 0.69, 0.61)
+	var sol := Color(0.4, 0.3, 0.2)
+	var vide := Color(0.0, 0.0, 0.0, 0.0)
+	var c0: Color = Pres.composer_corps(gris, 0.0, vide)
+	_check("ISO2b : à opacité 0, le corps ne recouvre rien — la vue montre ce qu'il y a derrière", c0.a == 0.0, str(c0))
+	var c1: Color = Pres.composer_corps(gris, 1.0, vide)
+	_check("ISO2b : à opacité 1, le corps est tel quel", c1.a == 1.0 and Color(c1.r, c1.g, c1.b).is_equal_approx(gris), str(c1))
+	var cm: Color = Pres.composer_corps(gris, 0.65, vide)
+	_check("ISO2b : à opacité 0,65, le fondu vers le sol est celui du sprite 2D (le mélange sol-corps à 0,65), pas un assombrissement",
+		sol.lerp(Color(cm.r, cm.g, cm.b), cm.a).is_equal_approx(sol.lerp(gris, 0.65)), str(cm))
+	var cn: Color = Pres.composer_corps(Color.BLACK, 0.3, vide)
+	_check("ISO2b : noir absolu à toute opacité — un corps sans lumière ne rend aucune lumière", cn.r == 0.0 and cn.g == 0.0 and cn.b == 0.0, str(cn))
+	var teinte := Color(0.2, 0.8, 0.9)
+	var cs: Color = Pres.composer_corps(Color.BLACK, 1.0, Color(teinte.r, teinte.g, teinte.b, 0.5))
+	_check("ISO2b : son corps dans le noir vaut la moitié de sa couleur, comme la silhouette 2D sur le sprite noir",
+		is_equal_approx(cs.a, 1.0) and Color(cs.r, cs.g, cs.b).is_equal_approx(Color(teinte.r * 0.5, teinte.g * 0.5, teinte.b * 0.5)), str(cs))
+	var source_corps := FileAccess.get_file_as_string("res://corps_grossier_iso.gdshader")
+	_check("ISO2b : le shader du corps compose comme son miroir, en valeurs affichées, et se fond (blend_mix, ALPHA)",
+		source_corps.contains("float a = 1.0 - (1.0 - o) * (1.0 - s);")
+		and source_corps.contains("ALBEDO = (corps * o * (1.0 - s) + silhouette.rgb * s) / a;")
+		and source_corps.contains("blend_mix") and source_corps.contains("ALPHA = a;"))
+	var source_profondeur := FileAccess.get_file_as_string("res://corps_profondeur_iso.gdshader")
+	_check("ISO2b : la passe de profondeur suit la même règle d'opacité, n'écrit aucune couleur, et rien à opacité nulle",
+		source_profondeur.contains("float a = 1.0 - (1.0 - o) * (1.0 - s);") and source_profondeur.contains("ALPHA = 0.0;")
+		and source_profondeur.contains("discard;") and source_profondeur.contains("depth_draw_always"))
+
 	# Le réglage, persisté séparément de ce qui s'applique — comme `mode_iso`.
 	var chemin := "user://test_iso_vues_reglages.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
@@ -462,6 +490,62 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 		if lu is Vector2 and (lu as Vector2).distance_to(joueur.global_position) < 0.01:
 			centres += 1
 	_check("chaque corps lit son capteur autour de sa position (centre posé à chaque image)", centres == 2, "%d/2" % centres)
+
+	print("--- ISO2b : l'effacement et la silhouette, lus sur les sprites ---")
+	var joueurs_b: Array = [main.p1, main.p2]
+	var opacites_avant: Array[float] = [main.p1.modulate.a, main.p2.modulate.a]
+	# L'opacité RENDUE, parents compris : le corps de J1 à 0,5, celui de J2 à 0,25 par leur nœud.
+	main.p1.modulate.a = 0.5
+	main.p2.modulate.a = 0.25
+	p._suivre()
+	var opacites_justes := 0
+	var sous_la_moitie := 0
+	for j in 2:
+		for vue_id in 2:
+			var attendue: float = p.opacite_du_corps(joueurs_b[j], vue_id == j)
+			var lue = (mats[j] as ShaderMaterial).get_shader_parameter("opacite_%d" % (vue_id + 1))
+			if lue is float and absf(float(lue) - attendue) < 0.001:
+				opacites_justes += 1
+			if attendue <= 0.5001:
+				sous_la_moitie += 1
+	_check("ISO2b : chaque corps lit, par vue, l'opacité rendue du sprite qu'il remplace (le sien chez soi, l'ennemi chez l'autre, parents compris)",
+		opacites_justes == 4 and sous_la_moitie == 4, "%d/4 justes, %d/4 sous 0,5" % [opacites_justes, sous_la_moitie])
+	var silhouettes_justes := 0
+	for j in 2:
+		var dim: Polygon2D = joueurs_b[j].get("visual_dim")
+		for vue_id in 2:
+			var lue = (mats[j] as ShaderMaterial).get_shader_parameter("silhouette_%d" % (vue_id + 1))
+			if not (lue is Color):
+				continue
+			var sil := lue as Color
+			if vue_id == j:
+				if sil.a > 0.0 and absf(sil.a - dim.color.a * p.opacite_rendue(dim)) < 0.001 \
+						and Color(sil.r, sil.g, sil.b).is_equal_approx(Color(dim.color.r, dim.color.g, dim.color.b)):
+					silhouettes_justes += 1
+			elif sil.a == 0.0:
+				silhouettes_justes += 1
+	_check("ISO2b : la silhouette de soi (visual_dim : sa couleur, sa demi-opacité) chez soi seulement, jamais dans la vue de l'autre",
+		silhouettes_justes == 4, "%d/4" % silhouettes_justes)
+	# Un seul fondu par pixel : chaque pièce a sa passe de profondeur, avant sa couleur.
+	var passes_justes := 0
+	for j in 2:
+		var corps3d := (p.get("_corps") as Array)[j] as Node3D
+		for nom in ["Tronc", "Nez"]:
+			var couleur := corps3d.get_node_or_null(nom) as MeshInstance3D
+			var prof := corps3d.get_node_or_null(nom + "Profondeur") as MeshInstance3D
+			if couleur == null or prof == null:
+				continue
+			var mc := couleur.material_override as ShaderMaterial
+			var mp := prof.material_override as ShaderMaterial
+			if mp != null and mc != null and mp.shader == load("res://corps_profondeur_iso.gdshader") \
+					and mp.render_priority < mc.render_priority and prof.mesh == couleur.mesh and prof.position == couleur.position \
+					and absf(float(mp.get_shader_parameter("opacite_1")) - float(mc.get_shader_parameter("opacite_1"))) < 0.001:
+				passes_justes += 1
+	_check("ISO2b : chaque pièce de corps écrit sa profondeur avant sa couleur, à la même opacité (un seul fondu par pixel)",
+		passes_justes == 4, "%d/4" % passes_justes)
+	main.p1.modulate.a = opacites_avant[0]
+	main.p2.modulate.a = opacites_avant[1]
+	p._suivre()
 	_check("masques miroir : J1 voit J2 par 2|16, J2 voit J1 par 2|32",
 		capteurs[0][1].masque_lumiere() == (2 | 16) and capteurs[1][0].masque_lumiere() == (2 | 32))
 

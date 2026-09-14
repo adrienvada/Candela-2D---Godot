@@ -4392,3 +4392,20 @@ aucune suite ne lit la ROADMAP ni ce journal.
 faisceau : Adrien, « il ne voit pas mon halo, oui c'est bon ». Le halo reste propre à la vue de son
 porteur, le faisceau visible des deux vues ; aucun changement de règle. Le jalon H-ISO2 est répondu
 en entier, hors la taille de lightmap, laissée ouverte jusqu'au relevé de fin de chantier.
+
+**ISO2b, nuit du 2026-09-14 — l'effacement des corps et la silhouette de soi.** Brief d'Adrien écrit
+par la session pilote. Étape 0 : fusion d'`iso1-fondations` (`1a53368`, murs hauts à 1,25 tuile), un
+conflit dans ce journal, les deux côtés gardés ; la ROADMAP fusionnée corrigée là où elle disait
+encore 0,65 ; lot vert. Étapes 1 et 2 : le corps iso lit par vue l'opacité rendue du sprite qu'il
+remplace et la silhouette `visual_dim` de son joueur (`presentation_3d.gd`), se fond dans le décor
+par transparence et compose la silhouette en sRGB (`corps_grossier_iso.gdshader`) ;
+`tools/test_iso_vues.gd` étendue et sabotée ; `tools/banc_iso.gd` : contrôle `--effacement` (trois
+captures), silhouette mesurée dans le contrôle du noir, plafond réservé au corps d'en face ;
+`docs/iso/planche_iso2b.py` et sa planche. Mesures : effacement à 3/255 du décor à opacité 0 ; fondu
+à 0,5 au rapport 0,50 en vue de dessus comme en iso ; silhouette juste dans les deux vues, 0 chez
+l'autre ; noir absolu tenu. Pièges payés : shader déjà en valeurs affichées (une conversion
+assombrissait la silhouette), double fondu nez sur tronc (passe de profondeur à la priorité -1 ; un
+décalage de tri n'y faisait rien), LED des murs qui respire pendant un contrôle en plusieurs
+captures. Le 0,65 d'hier n'était pas dessiné : la suie écrase le brouillage sur le sprite ennemi,
+relevé à l'instant du rendu. Signalé : la silhouette révélée au tir n'a pas d'équivalent iso ;
+l'ordre des deux écritures d'opacité du sprite ennemi dans `player.gd`.
