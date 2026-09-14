@@ -4217,3 +4217,27 @@ sessions iso lui envoient leurs deltas, elle synthétise et transmet au porteur
 dans un worktree à part** (ici
 `/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/iso0b-b-projection-bench-08404a`,
 branche `iso-geometrie`), et toute commande remise à Adrien est absolue.
+
+**Addendum du 2026-09-14, fin d'après-midi — la série et H15.** Adrien a pris sa
+série de relevés (16 h 06 à 16 h 41) puis a tranché H15 : **go**, sans seconde
+série. Réponses : tangage 52° (« le niveau le plus bas du banc »), écran scindé
+en iso, caméra qui garde la profondeur de la vue de dessus ; et, au lieu d'une
+hauteur de mur, **deux sortes de murs** — hauts et opaques, bas pour se cacher
+accroupi. Cette dernière réponse ouvre une mécanique neuve (format de carte,
+accroupi, occlusion) qui dépasse ISO1 : consignée dans la ROADMAP comme décision
+à instruire, rien d'engagé. Pendant la série, cette session a coordonné le silence
+des sessions `hygiene-main-bench-masks-1b2155` et « ISO Corps » (aucune fenêtre ni
+lot jusqu'au « fini »).
+
+**Addendum, soir du 2026-09-14 — les règles des murs bas.** Adrien a répondu aux
+questions posées sur les murs bas et l'accroupi : le mur bas arrête la lumière
+mais laisse voir une tête debout ; il n'abrite un accroupi que de la lumière venue
+de l'autre côté ; les balles passent au-dessus ou en dessous selon la posture
+(lecture tireur/cible à confirmer) ; l'accroupi ralentit fortement et étouffe les
+pas. Consigné dans la ROADMAP (section ISO, « H15 tranché ») comme un chantier de
+gameplay à part entière, valable aussi en vue de dessus. Rien n'est ouvert.
+Seconde série de réponses le même soir : les balles et la lumière debout franchissent
+le mur bas selon **un même angle** (un accroupi loin derrière redevient visible et
+touchable) ; on enjambe un mur bas avec « croix », lentement et bruyamment ; la torche
+d'un accroupi bute sur le mur ; l'accroupi se lit à sa silhouette et à une marque HUD
+pour soi. Point dur signalé : l'ombre *finie* d'un mur bas n'existe pas nativement en 2D.

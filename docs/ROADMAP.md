@@ -2424,6 +2424,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **H15 : la vue isométrique, on y va** (2026-09-14, Adrien : « c'est bon on y va, pas besoin de nouvelle série ») | Sur le banc ISO0.b : une projection du rendu 2D exacte au pixel, pas de surcoût de cadence visible au-dessus du bruit de sa série, 5 à 15 appels de dessin de plus, et trois minutes jouées. Réglages tranchés dans la même séance : **tangage 52°**, **écran scindé en iso aussi**, **caméra qui garde la profondeur** de la vue de dessus, et **deux sortes de murs** — hauts et opaques, bas pour se cacher accroupi — qui ouvrent une mécanique neuve (section ISO, « H15 tranché ») ; **ses règles premières sont tranchées le même soir** : un mur bas arrête la lumière mais laisse voir une tête debout, n'abrite un accroupi que de la lumière venue d'en face, tir et lumière debout franchissent le mur bas selon **un même angle** (un accroupi loin derrière redevient visible et touchable), on l'enjambe lentement et bruyamment avec « croix », la torche d'un accroupi bute sur le mur, et l'accroupi ralentit fortement, étouffe les pas, se lit à sa silhouette et à une marque HUD pour soi. Lacet et taille de lightmap non tranchés. Rien d'ISO1 n'est lancé par cette décision seule. |
 | **Le leurre a l'ombre d'un CORPS, pas celle d'un mur** (2026-09-12, Adrien : « oui, qu'il ait l'ombre d'un corps ») | Question posée à la fin du lot D et tranchée ici (lot G). L'occluder du leurre vivait sur la couche du DÉCOR, celui d'un corps sur la couche de son joueur : un mur fait de l'ombre sous TOUTE lumière, un corps seulement sous celles dont le masque d'ombre contient sa couche. Le leurre projetait donc une ombre là où aucun corps n'en projette — sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le démasquer**, sans tirer, donc sans payer le flash qui équilibre le gadget. Il porte maintenant les DEUX occluders d'un corps — l'étoile de sa silhouette sur la couche du corps de son poseur, un disque de torse de 12 sur la couche de son torse. Le second n'est pas un supplément : sans lui, la correction aurait remplacé un indice par un autre, la rétrodiffusion adverse ne voyant que les couches de torse, elle aurait TRAVERSÉ le seul leurre de l'arène. Conséquence sur l'arbitrage, et c'est un changement de SENS au carnet de `protocol.gd` (17, non publiée) : la torche et le flash de tir du POSEUR ne l'ombrent plus — une lampe n'ombre jamais le corps de qui la tient —, donc ils ne doivent plus être arrêtés par sa forme dans la ligne de vue de l'éblouissement, sans quoi planter un leurre devant soi éteignait sa propre torche. Les lumières POSÉES, elles, restent arrêtées : elles n'ombrent aucun corps non plus, et pourtant un corps arrête leur éblouissement — il est sur la couche physique du rayon. |
 | **La mine aveugle à hauteur de ce qu'elle brûle** (2026-09-12, Adrien : « garder ») | Le commit A2 était séparé pour être annulable seul, et la question posée à Adrien était de le garder ou de le rendre. **Il l'a gardé après avoir lu les chiffres**, contrepartie comprise : le pic au rayon de déclenchement passe de 0,750 à 0,488 et le temps au-dessus de 0,3 de 1,02 s à 0,42 s, mais **à 300 px elle aveugle un peu PLUS qu'avant** (aire 0,079 → 0,154), parce que son rayon ne rétrécit plus. C'est la seule décision de l'étape 28 qui déplace l'équilibre, et la seule dont la question posée en disait d'abord moins que la mesure — d'où le tableau complet remis avant de trancher. Le détail des mesures et du brouillage saturé est au lot A2 ; ce qui vaut ici, c'est que la contrepartie a été dite AVANT, pas découverte après. |
 | **Un voile sans place se refuse** (2026-09-12, Adrien : « refuser la pose ») | Ferme la réserve inscrite le 2026-09-11 sur le recul du point de pose (« tranché en croyant ce refus rare et limité aux murs »). Le lot B a montré que le refus touche aussi le voile posé à bout portant sur l'adversaire qu'on vise, ce qui n'était pas le cas imaginé : l'alternative était de faire naître la bâche DERRIÈRE l'adversaire, là où il reste de la place. Adrien garde le refus, et la raison est de jeu : une bâche qui apparaît derrière quelqu'un l'enferme entre elle et le poseur — on ne donne pas au Spectre le pouvoir de coincer un corps, et surtout pas par un effet de bord d'un algorithme de recul que le joueur ne peut pas lire à l'écran. Un refus, lui, se comprend : rien ne se pose, le désarmement de 0,30 s a lieu des deux côtés, les pairs restent d'accord. Le ressenti du refus (un retour local chez le client, même fonction `GameState.point_de_pose_libre()`) reste à faire et n'est pas cette décision. |
@@ -20945,7 +20946,7 @@ lance sans demande explicite.
 
 | Étape | Objet | Sessions | Modèle / effort |
 |---|---|---|---|
-| ISO0 | Étude et prototypes ✅ ; **ISO0.b** 🟡 banc livré le 2026-09-14 (`tools/banc_iso.tscn`) — relevés d'Adrien et décision H15 attendus | 2 | Opus 5 / high |
+| ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
@@ -20973,7 +20974,7 @@ boîtes pavent la grille, une par rectangle de `merge_rects`, apparitions sur
 du sol, lumières à ombres, caméra orthographique cadrant la carte ; sait
 échouer). Aucun fichier du jeu n'est modifié.
 
-### ISO0.b — le banc B-projection dans le vrai jeu 🟡 (ouverte le 2026-09-14)
+### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est
 ouvert, l'étape ISO0.b avec lui, et **rien d'autre** : H15 (go / no-go, tangage,
@@ -21108,6 +21109,112 @@ relevés iso sur quatre sont en outre à focus mixte.
 - L'écran scindé ne s'affiche qu'avec `--scinde` : la commande de partie libre du
   protocole est en vue unique.
 
+#### ✅ H15 tranché par Adrien, le 2026-09-14 — « c'est bon on y va »
+
+Sans seconde série : l'ordre de grandeur (aucun coût visible au-dessus du bruit, 5 à
+15 appels de dessin) et la partie jouée lui suffisent. Réponses, posées en effets
+perçus et recopiées ici avec ses mots quand ils comptent :
+
+| Question | Réponse d'Adrien | Ce que l'étude recommandait |
+|---|---|---|
+| Tangage | **52°** — « le niveau le plus bas que tu me proposais dans ton banc » | 60-65° |
+| Hauteur des murs | **Deux sortes** : « des murs hauts et des murs bas. Ceux bas, on pourra se cacher derrière accroupi. Les murs hauts sont très lisibles, ne laissent rien passer. » | une seule, 0,4 tuile |
+| Écran scindé | **En iso aussi** | en iso |
+| Champ de la caméra | **La profondeur** (largeur au sol = 1920 × sin θ, soit **1513 px à 52°**) | — (non vu par l'étude) |
+| Lacet | non posé — **0° reste le défaut** | 0° |
+| Taille de lightmap | non tranchée — la série ne départage pas `plein` et `1080p` | — |
+
+**Deux conséquences qui ne se lisent pas dans les réponses, et qu'ISO1 doit porter.**
+
+1. **52° avec des murs hauts, c'est la bande cachée la plus large.** Un mur de hauteur
+   `h` masque `h / tan 52° ≈ 0,78 h` de sol derrière lui : pour un mur haut d'une
+   tuile, **27 px**, plus que le rayon d'un corps (18 px). Un joueur collé derrière un
+   mur haut, côté opposé à la caméra, sort de l'image. C'est symétrique entre les deux
+   joueurs (même caméra) mais **dépend de l'orientation du mur** : le côté nord des
+   murs cache, le côté sud non. C'est précisément le « premier point d'équité » de
+   l'étude (§ 5.2) ; le test d'équité géométrique d'ISO1 doit le chiffrer carte par
+   carte, avec la hauteur réelle des murs hauts — et c'est à Adrien de dire si « ne
+   laissent rien passer » inclut « on ne voit pas ce qui est collé derrière ».
+2. **Les murs bas et l'accroupi sont une mécanique neuve, pas un réglage de caméra.**
+   Aujourd'hui : un seul type de mur dans le format v3 (`map_codec.gd`) et l'éditeur ;
+   un seul occluder par rectangle, qui arrête toute lumière (`map_geometry.gd`) ; pas
+   d'accroupi dans `player.gd`, ni sur le fil (`protocol.gd`), ni dans le rejeu. Ce
+   qu'il faudra trancher avant d'écrire une ligne, en effets perçus :
+   - un mur bas **arrête-t-il la lumière** d'une torche ? d'un joueur debout, accroupi ?
+   - arrête-t-il **les balles** ? le passage d'un joueur (on l'enjambe, on le contourne) ?
+   - un joueur **accroupi** derrière un mur bas est-il **invisible** (même éclairé),
+     **à l'ombre**, ou simplement **plus petit** ? voit-il et tire-t-il par-dessus ?
+   - l'accroupi **ralentit-il** ? se voit-il en vue de dessus, en killcam, chez l'adversaire ?
+
+   **✅ Réponses d'Adrien, le 2026-09-14 au soir — « comme dans la vie, quoi ».**
+
+   | Question | Règle d'Adrien |
+   |---|---|
+   | La lumière et le mur bas | « Un mur bas **arrête la lumière** d'une torche, mais il **révèle quelqu'un qui ne serait pas accroupi** : la lumière passe au-dessus du mur, donc peut éclairer une tête. » |
+   | Les balles | « Les balles **passent au-dessus si on est debout**, **en dessous si on est accroupi**. » |
+   | Accroupi derrière un mur bas | « On ne devrait **pas être éclairé depuis derrière le mur**. En revanche, si on est éclairé par quelqu'un **du même côté du mur** que nous, la lumière doit nous éclairer. » |
+   | L'accroupi lui-même | « Il **ralentit fortement**, mais **diminue aussi l'ampleur des bruits de pas**. » |
+
+   **Ce que ces règles disent, reformulé pour qui écrira le code** — à relire avec Adrien,
+   pas à prendre pour acquis :
+   - Un mur bas est **opaque pour le sol et pour un corps accroupi**, **transparent pour
+     un corps debout** (sa tête dépasse). Un mur haut est opaque pour tout.
+   - La règle est **relative au côté du mur** : la même lumière qui ne traverse pas le mur
+     bas pour atteindre un accroupi l'éclaire s'il est du côté de la source. C'est
+     exactement ce qu'un occluder fait déjà — la nouveauté est qu'il ne doit concerner
+     que certaines cibles (sol, corps accroupis) et pas les corps debout.
+   **✅ Seconde série de réponses, le même soir** (posées en effets perçus) :
+
+   | Question | Règle d'Adrien |
+   |---|---|
+   | Balles : posture du tireur ou de la cible ? | **Les deux, par un angle.** « Quelqu'un qui est accroupi **loin** derrière un mur bas peut être touché. Il faut définir **un angle, le même que la lumière** je pense, à partir duquel le tir debout arrive à viser derrière un mur bas. » |
+   | Franchir un mur bas | **On l'enjambe avec « croix »** (le bouton de la manette) : « on l'enjambe **lentement**, et **en faisant du bruit** ». |
+   | La torche d'un accroupi | **Elle bute sur le mur** : accroupi derrière un mur bas, on est caché mais aveugle vers l'avant ; pour éclairer par-dessus, il faut se relever. |
+   | À quoi voit-on qu'un joueur est accroupi | **Silhouette plus basse et ramassée**, **plus une marque au HUD** pour son propre joueur seulement. |
+
+   **Ce que « un angle, le même que la lumière » veut dire en géométrie** — la
+   règle qui unifie lumière et balles, à valider avec Adrien sur un croquis :
+   derrière un mur bas de hauteur `h`, une source (torche ou canon) à hauteur `H > h`
+   et à distance `d` du mur projette une **zone d'ombre** qui s'étend jusqu'à
+   `d × (h − c) / (H − h)` derrière le mur pour une cible de hauteur `c` (un accroupi,
+   `c` petit ; le sol, `c = 0`). Un accroupi **dans** cette zone n'est ni éclairé ni
+   touchable ; **au-delà**, il l'est — d'autant plus tôt que le tireur est loin du mur.
+   Une source plus basse que le mur (torche ou canon accroupi, `H ≤ h`) ne franchit
+   jamais : c'est la torche qui bute. La même formule sert à la lumière et aux balles,
+   ce qui garantit la règle d'or du jeu : **ce qui se voit est ce qui se paie**.
+   ⚠️ En 2D, un `LightOccluder2D` ne fait qu'une ombre infinie : cette ombre **finie**
+   n'existe pas nativement. Il faudra la fabriquer (occluder dont la longueur d'ombre
+   dépend de la source, ou masque calculé dans un shader de lumière) — **c'est le point
+   dur du chantier**, et il est à prototyper avant d'être promis.
+
+   **Encore ouvert** : un corps debout derrière un mur bas **éblouit-il / est-il
+   ébloui** normalement ? l'enjambement se voit-il et **peut-on tirer** pendant ? la marque
+   HUD et la silhouette accroupie **en killcam** ? un mur bas **se dessine comment** en vue
+   de dessus, pour se distinguer d'un mur haut sans hauteur visible ? les hauteurs
+   (`h` du mur bas, `H` debout, `c` accroupi) — des nombres à fixer au banc, pas à
+   deviner.
+
+   **Pourquoi c'est un chantier à part entière, et pas une option d'ISO1.** Ces règles
+   valent aussi dans la vue de dessus actuelle : c'est du gameplay. En 2D, elles
+   demandent deux familles d'occluders (murs hauts : toute lumière ; murs bas : sol et
+   corps accroupis seulement — via `occluder_light_mask` et un canal « accroupi » dans
+   `canaux_lumiere.gd`), un état accroupi simulé, prédit, répliqué et rejoué
+   (`player.gd`, `protocol.gd` avec `VERSION` +1, `replay_system.gd`), une balistique à
+   deux hauteurs (`bullet.gd`, compensation de latence comprise), un type de case neuf
+   dans le format de carte (v4, `map_codec.gd`, éditeur, vignettes, six cartes livrées
+   à repenser ou non), la vitesse et le volume des pas (`audio_manager.gd`, portées
+   relatives). **Estimation grossière, à reprendre** : de l'ordre d'un chantier DIX
+   CLASSES réduit — plusieurs sessions, un `Protocol.VERSION` monté, un essai manette
+   d'Adrien. En B-projection, la 3D n'aura qu'à lire ce que la 2D décide : une boîte
+   basse et une boîte haute, et un corps voxel accroupi.
+   En B-projection, la lumière vient du rendu 2D : un mur bas qui laisse passer la
+   lumière « par-dessus » demande une règle 2D (masques, occluders à part) avant toute
+   3D. C'est un chantier à inscrire — probablement **avant ou pendant ISO1**, parce qu'il
+   change la géométrie qu'ISO1 extrude — et **il n'est pas ouvert**.
+
+**Ce qui n'est pas lancé** : ni ISO1, ni le chantier des murs bas. La prochaine étape
+se lance sur demande explicite, comme toutes les autres.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
@@ -21139,7 +21246,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
-| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | 🟡 **Après le banc ISO0.b, livré le 2026-09-14** (chantier démarré par Adrien ce jour-là) — relevés selon le protocole de la section ISO, puis décision ; avant toute session ISO1 |
+| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | ✅ **Tranché le 2026-09-14 : go** — tangage 52°, écran scindé en iso, caméra qui garde la profondeur, murs hauts et murs bas (mécanique neuve à instruire). Détail : section ISO, « H15 tranché » |
 
 ---
 
@@ -21248,10 +21355,13 @@ et un seul est du travail de session.
 
 ### Ce qui attend Adrien, et rien d'autre
 
-> **Mis à jour le 2026-09-14 — Adrien a démarré le chantier** (« Ok, je souhaite
-> démarrer ») : l'étape ISO0.b est ouverte et son banc `tools/banc_iso.tscn` est
-> livré ; ce qui attend Adrien est **le relevé de cadence au premier plan**
-> (protocole dans la section ISO) puis H15. Rien au-delà n'est lancé.
+> **Mis à jour le 2026-09-14, fin d'après-midi — H15 est tranché : go.** Adrien a
+> pris sa série sur le banc `tools/banc_iso.tscn`, joué, et choisi : tangage 52°,
+> écran scindé en iso, caméra qui garde la profondeur, et **deux sortes de murs**
+> (hauts et opaques ; bas, pour se cacher accroupi). Ce qui l'attend maintenant :
+> lancer ISO1 quand il le voudra, et **trancher les règles des murs bas et de
+> l'accroupi** (questions listées dans la section ISO) — une mécanique neuve qui
+> change la géométrie qu'ISO1 extrude. Rien n'est lancé.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,
