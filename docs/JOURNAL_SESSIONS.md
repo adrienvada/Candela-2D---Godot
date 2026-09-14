@@ -4198,9 +4198,11 @@ journal.
 fonctions privées sont recopiées), `tools/proto_iso.gd` (fonctions statiques
 appelées), `player.gd`, `game_state.gd`, `main.tscn`.
 
-**Signalé, non corrigé :** `bench_framerate.gd` écrit `flashlight_on` hors de la
-physique, ce que `player.gd` écrase depuis le 2026-08-26 (voir « Pièges
-connus ») — à vérifier par la session iso-outils. `CLAUDE.md` décrit les masques
+**Signalé, non corrigé ici :** `bench_framerate.gd` écrit `flashlight_on` hors de
+la physique, ce que `player.gd` écrase (voir « Pièges connus »). Vérifié le
+2026-09-14 par la session `hygiene-main-bench-masks-1b2155` : torches jamais
+allumées depuis la naissance du banc (`9d69f09`, 2026-08-15), et non depuis le
+2026-08-26 comme écrit d'abord ; corrigé dans sa branche. `CLAUDE.md` décrit les masques
 de vue « 3 et 5 dans `main.tscn` » ; le jeu les réécrit en `~4` / `~2`.
 
 **Vague 0 en parallèle :** la session `iso-assets-gemini-boards-4e8d33-e7`

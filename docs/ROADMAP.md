@@ -3195,12 +3195,17 @@ que ce soit. Le banc ISO0.b l'a payé : ses premières captures sont sorties
 torches éteintes. **Tenir l'action** (`Input.action_press("p1_torch", 0.5)`) passe
 par le chemin d'un joueur et fonctionne.
 
-⚠️ **Signalé, non vérifié, non corrigé** : `bench_framerate.gd` allume ses torches
-par `p.flashlight_on = not _sans_torches` dans sa boucle d'images. Si rien d'autre
-ne tient le bouton, ses relevés « torches allumées » postérieurs au 2026-08-26 ont
-été pris torches éteintes, et `--sans-torches` ne retire rien. Le fichier est à la
-session iso-outils ; c'est à elle de le vérifier (une capture pendant `_stress`
-suffit).
+⚠️ **Signalé par cette session, puis vérifié ailleurs — et plus ancien qu'écrit
+ici d'abord.** `bench_framerate.gd` allume ses torches par
+`p.flashlight_on = not _sans_torches` dans sa boucle d'images. Ce paragraphe datait
+le défaut du 2026-08-26 (`5037a148`) ; la session `hygiene-main-bench-masks-1b2155`
+l'a sondé le 2026-09-14 : **le banc n'a jamais eu ses torches allumées depuis sa
+naissance** (`9d69f09`, 2026-08-15) — `flashlight.enabled` faux sur 1076 images sur
+1076. Tous ses relevés « torches allumées » ont donc été pris torches éteintes, et
+`--sans-torches` n'a jamais rien retiré. Correctif dans sa branche
+`claude/hygiene-main-bench-masks-1b2155` ; la datation fait foi là-bas. Leçon de
+la correction elle-même : **un défaut daté par le commit qui le rend visible n'est
+pas daté par le commit qui l'a introduit** — il fallait sonder, pas lire `git blame`.
 
 ### Un `SubViewportContainer` sans `stretch` grandit jusqu'à la taille de sa vue (2026-09-14)
 
@@ -21047,6 +21052,61 @@ premier plan », remède de `photographe.gd`). Aucune conclusion sur la cible.
 5. Recopier les huit lignes `BANC_ISO …` ; puis **jouer trois minutes** sans
    `--charge`, F8/F9/F10 en main, pour le jugement d'H15 — celui-là n'est pas une
    mesure.
+
+#### La première série d'Adrien — 2026-09-14, 16 h 06 à 16 h 41, MacBook M3, fenêtre 2560×1440
+
+Carte « Arène Standard », `--charge`, 60 s, tangage 60°, murs 0,45 tuile.
+
+| # | Heure | Rendu | Médiane | 1 % bas | Pire image | Appels | Focus / état |
+|---|---|---|---|---|---|---|---|
+| 1 | 16:06 | vue unique, base | 100 | 62 | 18,1 ms | 133 | stable |
+| 2 | 16:07 | vue unique, iso plein | 100 | 57 | 28,0 ms | 148 | stable |
+| 3 | 16:10 | vue unique, iso 1080p | 101 | 60 | 58,3 ms | 137 | **MIXTE — jeté** |
+| 4 | 16:11 | vue unique, base | 90 | 54 | 21,6 ms | 132 | stable, finit dans le créneau pollué |
+| 5 | 16:13 | scindé, base | 103 | 57 | 19,8 ms | 202 | stable, **pollué** |
+| 6 | 16:15 | scindé, iso plein | 100 | 59 | 37,6 ms | 209 | **MIXTE — jeté**, pollué |
+| 7 | 16:16 | scindé, iso 1080p | 96 | 55 | 18,5 ms | 207 | stable |
+| 8 | 16:19 | scindé, base | 96 | 56 | 35,2 ms | 198 | stable |
+| 5 bis | 16:38 | scindé, base | 100 | 72 | 24,7 ms | 200 | stable |
+| 4 bis | 16:40 | vue unique, base | 86 | 50 | 22,6 ms | 133 | stable |
+| — | 16:20 | vue unique, iso 1080p, **partie libre sans charge** | 220 | 115 | 39,7 ms | 86 | stable |
+
+**Le créneau pollué.** Entre 16 h 12 et 16 h 16, la session
+`hygiene-main-bench-masks-1b2155` a lancé trois `bench_framerate` fenêtrés au premier
+plan ; et la session « ISO Corps » avait un `run_suites.sh` complet en arrière-plan
+pendant une partie de la série (arrêté sur demande, heures à consigner). Deux
+relevés iso sur quatre sont en outre à focus mixte.
+
+**Ce que la série dit, et ce qu'elle ne dit pas.**
+- **Le bruit est plus grand que l'effet cherché.** Le même relevé « base, vue
+  unique » a donné 100, 90 puis 86 de médiane et 62, 54 puis 50 de 1 % bas en
+  35 minutes ; « base, scindé » 103, 96 puis 100, et 57, 56 puis 72. Aucun écart
+  iso − base de la série (médiane 100 contre 100 en vue unique ; 96 contre 96 à 103
+  en scindé) ne sort de cette dispersion.
+- **Donc : pas de surcoût de B-projection visible au-dessus d'environ 10 %** sur
+  cette machine, et **pas de preuve qu'il est nul**. La série ne peut pas trancher
+  entre lightmap `plein` et `1080p` : l'un des deux relevés de chaque paire est jeté.
+- **La dérive de la base unique (100 → 86)** ressemble à la chaleur ou à une charge
+  de fond, pas au banc : c'est le motif consigné dans `bench_framerate.gd`
+  (`WARMUP_SEC`), et deux sessions tournaient à côté.
+- **Les appels de dessin, eux, ne sont pas bruités** : +15 en vue unique à lightmap
+  pleine, +5 à 1080p, +7 en écran scindé — l'ordre de grandeur des quatre à onze
+  boîtes de murs plus sol et corps. Rien de la régression `arena_decor`.
+- **Pour que le chiffre décide**, une seconde série est à prendre **toutes sessions
+  prévenues et silencieuses**, machine froide, les quatre relevés iso refaits.
+
+**Ce qu'Adrien a vu en jouant** (partie libre, vue unique) :
+- F8, F9 et F10 répondent — vérifié à la main, 43 changements imprimés en 3 min,
+  lacet 45° compris.
+- **Le voile et la lueur de la fusée de J2 sur la moitié droite de l'écran**, sans la
+  vue de J2. Le banc garde le mode « 1v1 écrans scindés » en vue unique : l'interface
+  place donc les effets d'écran de J2 (éblouissement, fusée) sur « sa » moitié. C'est
+  la configuration du banc, pas un défaut du jeu — le même artefact existe dans
+  `bench_framerate.gd --vue-unique` —, mais il se voit dès qu'on joue. À régler dans
+  ISO2 (calques d'écran relogés par vue), noté ici pour que personne ne le prenne pour
+  un effet de la projection.
+- L'écran scindé ne s'affiche qu'avec `--scinde` : la commande de partie libre du
+  protocole est en vue unique.
 
 ### Ce qui attend Adrien — jalon H15
 
