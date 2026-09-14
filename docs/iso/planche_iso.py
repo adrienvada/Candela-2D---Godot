@@ -73,7 +73,8 @@ def compresser(source, cible, max_octets):
     return len(meilleur), mode
 
 
-def planche(entrees, cible, max_octets):
+def planche(entrees, cible, max_octets, titre_texte="CANDELA — PROTOTYPE ISO 3D",
+            sous_texte="Vraies cartes du jeu · Three.js · torche = SpotLight avec ombres · murs 1 tuile · caméra orthographique"):
     largeur = COLONNES * VIGNETTE[0] + (COLONNES + 1) * MARGE
     hauteur = BANDEAU + LIGNES * (VIGNETTE[1] + LEGENDE + MARGE) + MARGE
     im = Image.new("RGB", (largeur, hauteur), ENCRE)
@@ -81,9 +82,8 @@ def planche(entrees, cible, max_octets):
     titre, sous = police(26), police(15)
     d.rectangle([0, 0, largeur, BANDEAU], fill=(10, 10, 10))
     d.rectangle([0, BANDEAU - 2, largeur, BANDEAU], fill=AMBRE)
-    d.text((MARGE + 10, 12), "CANDELA — PROTOTYPE ISO 3D", font=titre, fill=(250, 232, 204))
-    d.text((MARGE + 10, 42), "Vraies cartes du jeu · Three.js · torche = SpotLight avec ombres · murs 1 tuile · caméra orthographique",
-           font=sous, fill=MUET)
+    d.text((MARGE + 10, 12), titre_texte, font=titre, fill=(250, 232, 204))
+    d.text((MARGE + 10, 42), sous_texte, font=sous, fill=MUET)
     for i, e in enumerate(entrees[: COLONNES * LIGNES]):
         col, lig = i % COLONNES, i // COLONNES
         x = MARGE + col * (VIGNETTE[0] + MARGE)
@@ -114,6 +114,9 @@ def principal():
     p.add_argument("--planche", default=os.path.join(ICI, "planche_iso.jpg"))
     p.add_argument("--max-ko", type=int, default=400)
     p.add_argument("--max-planche-ko", type=int, default=1200)
+    # Réutilisé par le banc ISO0.b (tools/banc_iso.gd) : même grille, autre bandeau.
+    p.add_argument("--titre", default="CANDELA — PROTOTYPE ISO 3D")
+    p.add_argument("--sous-titre", default="Vraies cartes du jeu · Three.js · torche = SpotLight avec ombres · murs 1 tuile · caméra orthographique")
     a = p.parse_args()
 
     manifeste = os.path.join(a.brut, "manifeste.json")
@@ -128,7 +131,7 @@ def principal():
         etat = "ok" if taille <= a.max_ko * 1000 else "TROP GROS"
         print("%-34s %4d Ko  %-5s %s" % (e["nom"] + ".png", taille // 1000, mode, etat))
 
-    taille, qualite = planche(entrees, a.planche, a.max_planche_ko * 1000)
+    taille, qualite = planche(entrees, a.planche, a.max_planche_ko * 1000, a.titre, a.sous_titre)
     print("%-34s %4d Ko  q=%d %s" % (os.path.basename(a.planche), taille // 1000, qualite,
                                       "ok" if taille <= a.max_planche_ko * 1000 else "TROP GROS"))
 

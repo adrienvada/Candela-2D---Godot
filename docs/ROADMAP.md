@@ -3171,6 +3171,48 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Les masques de vue de `main.tscn` ne sont pas ceux du jeu (2026-09-14)
+
+`main.tscn` pose `canvas_cull_mask = 3` sur `SubViewport1` et `5` sur
+`SubViewport2`, et `CLAUDE.md` le répète. **Dès la première image, le jeu les
+réécrit** en `~4` et `~2` (`game_state.gd`, juste avant `_setup_players`) :
+« tout sauf la couche des corps de l'autre ». Le banc ISO0.b voulait cacher les
+sprites de corps sur la vingtième couche, « que ni 3 ni 5 ne contiennent » ; sa
+suite, qui lit les masques après deux images, a rougi : les deux vues lisent
+cette couche. Il n'existe **aucun bit non nul** que les deux vues ignorent ;
+seule la couche 0 n'est lue par personne.
+
+Règle : un masque, une couche ou un mode de rendu se lit **sur l'objet vivant**,
+jamais dans la scène sérialisée ni dans la documentation qui la décrit.
+
+### Écrire `flashlight_on` hors de la physique n'allume pas la torche (2026-09-14)
+
+`player.gd` relit `input_provider.is_flashlight_pressed()` à **chaque pas de
+physique** (« la torche n'obéit qu'au bouton », `5037a148`, 2026-08-26), et
+allume la `PointLight2D` dans le même `_physics_process`. Une valeur écrite
+depuis `_process` ou une coroutine est donc écrasée avant d'avoir allumé quoi
+que ce soit. Le banc ISO0.b l'a payé : ses premières captures sont sorties
+torches éteintes. **Tenir l'action** (`Input.action_press("p1_torch", 0.5)`) passe
+par le chemin d'un joueur et fonctionne.
+
+⚠️ **Signalé, non vérifié, non corrigé** : `bench_framerate.gd` allume ses torches
+par `p.flashlight_on = not _sans_torches` dans sa boucle d'images. Si rien d'autre
+ne tient le bouton, ses relevés « torches allumées » postérieurs au 2026-08-26 ont
+été pris torches éteintes, et `--sans-torches` ne retire rien. Le fichier est à la
+session iso-outils ; c'est à elle de le vérifier (une capture pendant `_stress`
+suffit).
+
+### `size = 1080 × sin θ` garde la profondeur de la vue de dessus, pas sa largeur (2026-09-14)
+
+L'étude (§ 8, ISO1) écrit que cette taille orthographique « garde l'empreinte
+1920×1080 au sol, même champ que `stretch/aspect = keep` ». C'est vrai en
+profondeur seulement : la vue montre `size` unités à la verticale, soit
+`size / sin θ = 1080` px de sol, mais `size × 16/9 = 1920 × sin θ` px en largeur —
+**1663 px à 60°, 1513 à 52°**. Une caméra inclinée ne peut pas garder les deux
+(le sol se voit raccourci sur un seul axe). Le banc imprime l'empreinte réelle ;
+le choix entre largeur et profondeur est une question d'équité de champ, à
+trancher avec H15 avant `camera_iso.gd`.
+
 ### Un workflow Ultracode de vingt-six agents en Fable 5.1 vaut le reliquat hebdomadaire du forfait (2026-09-13)
 
 L'étude ISO0 (`docs/ETUDE_ISO.md`) a lancé un workflow de 26 agents — quatorze
@@ -20882,7 +20924,7 @@ lance sans demande explicite.
 
 | Étape | Objet | Sessions | Modèle / effort |
 |---|---|---|---|
-| ISO0 | Étude et prototypes ✅ ; **ISO0.b** : banc B-projection dans le vrai jeu (`tools/banc_iso.tscn`), relevé de cadence, décision | 2 | Opus 5 / high |
+| ISO0 | Étude et prototypes ✅ ; **ISO0.b** 🟡 banc livré le 2026-09-14 (`tools/banc_iso.tscn`) — relevés d'Adrien et décision H15 attendus | 2 | Opus 5 / high |
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
@@ -20909,6 +20951,86 @@ cartes, douze captures, planche) ; `tools/proto_iso.tscn` + `proto_iso.gd`
 boîtes pavent la grille, une par rectangle de `merge_rects`, apparitions sur
 du sol, lumières à ombres, caméra orthographique cadrant la carte ; sait
 échouer). Aucun fichier du jeu n'est modifié.
+
+### ISO0.b — le banc B-projection dans le vrai jeu 🟡 (ouverte le 2026-09-14)
+
+**Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est
+ouvert, l'étape ISO0.b avec lui, et **rien d'autre** : H15 (go / no-go, tangage,
+lacet, hauteur des murs, variante de lightmap, écran scindé en iso ou en 2D) se
+tranche après ce banc, sur des relevés qu'Adrien prend lui-même fenêtre au premier
+plan. ISO1 ne se lance pas avant. Session `iso0b-b-projection-bench-08404a-6c`,
+branche `iso-geometrie`, issue de la branche de l'étude (non fusionnée dans `main`).
+
+**Pourquoi un banc et pas une décision sur l'étude.** Aucun des deux prototypes ne
+montre la voie recommandée : ils refont la lumière en 3D. Et B-projection a un
+coût que l'étude nomme sans le chiffrer — elle **réintroduit la cible de rendu
+intermédiaire** que le chantier R avait retirée pour +15 %, deux en écran scindé.
+Le banc produit ce chiffre et l'image qui va avec, dans le jeu tel qu'il est.
+
+**Ce qu'il fait** (`tools/banc_iso.gd`, aucun fichier du jeu modifié) : le vrai duel
+« 1v1 écrans scindés », jouable clavier/souris et manette, joueurs immortels pendant
+la mesure ; les dix nœuds `visual*` de chaque joueur sur la couche de visibilité 0
+(jamais `visible`, que le rejeu lit) ; le rendu forcé par `SubViewport` ; la texture
+de la vue 2D projetée sur un sol plan 3D *unshaded* qui suit la vue ; les murs de
+la carte extrudés (une boîte par rectangle de `merge_rects`, sommet noir, faces
+éclairées par la lightmap lue à 8 px devant elles) ; deux corps grossiers « gris
+plafonné, noir hors lumière » ; une caméra orthographique à `size = 1080 × sin θ`.
+Options `--base`, `--scinde`, `--lightmap plein|1080p|demi`, `--tangage`, `--lacet`,
+`--mur`, `--carte`, `--seconds`, `--charge`, `--capture`, `--flash` ; **F8 / F9 /
+F10** changent tangage, lacet et murs à chaud. Il imprime ses cibles (2D, 3D,
+fenêtre), l'empreinte au sol réelle, puis **l'état du focus avant** médiane, 1 % bas
+(formule de `ConditionsDeMatch.statistiques`), pire image et appels de dessin, et
+une ligne `BANC_ISO …` à recopier. Suite `tools/test_banc_iso.gd` (73 contrôles,
+dans le lot) ; captures et planches dans `docs/iso/captures_banc/` et
+`docs/iso/planche_banc_*.jpg`.
+
+**Trois écarts à la consigne, voulus.** (1) Les conteneurs 2D sont rendus
+**transparents, pas cachés** : le `visible` d'un conteneur est la source de vérité
+de « quelle vue est regardée » — caché, le jeu arrête la vue à chaque accord, retire
+son brouillage, et le conteneur ne transmet plus la souris dont J1 tire sa visée.
+(2) La visée souris est **reprojetée** (rayon de la caméra 3D ∩ sol, poussé dans la
+vue de J1) : sans elle le banc n'est pas jouable à la souris dès que le tangage
+quitte 90°. (3) Les torches de `--charge` et des captures sont **tenues par l'action**,
+pas écrites (voir « Pièges connus »).
+
+**Ce que le banc a déjà établi — mesuré, pas jugé.**
+- **La projection est exacte.** À 90° de tangage, lightmap pleine, l'écran iso et
+  `--base` se recalent à (0, 0) px ; écart moyen 0,8 à 1,5/255, 4,2 à 5,1 % des
+  pixels au-delà de 2 % — contre 0,9/255 et 4,5 % entre **deux captures de base**
+  identiques (la respiration des lumières). Le critère de l'étude (± 2 % au même
+  point) est tenu au plancher du bruit. Reste un biais de −0,5/255 de moyenne,
+  logé dans les quasi-noirs.
+- **L'écran scindé tient avec des murs et des corps communs** : la vue qui dessine
+  se lit dans `CAMERA_VISIBLE_LAYERS`, qui fonctionne en `gl_compatibility`.
+- **La lumière au sol n'est pas la lumière reçue par un corps.** Le halo de
+  proximité révèle l'ennemi collé à soi en n'éclairant QUE son sprite ; le sol sous
+  ses pieds reste noir, et le corps grossier (qui lit le sol, par consigne) disparaît
+  là où la vue de dessus le montre. C'est exactement ce que les capteurs de corps
+  d'ISO2 doivent lever — la preuve qu'ils ne sont pas optionnels.
+- **L'empreinte au sol n'est pas celle de la vue de dessus** (voir « Pièges connus ») :
+  1663×1080 px à 60°.
+- Les masques de vue réels sont `~4` / `~2`, pas 3 / 5 (voir « Pièges connus »).
+
+**Les relevés de cette session ne valent rien** — la fenêtre n'était pas à elle
+(Adrien travaillait à côté ; les captures ont dû passer la fenêtre « toujours au
+premier plan », remède de `photographe.gd`). Aucune conclusion sur la cible.
+
+#### Protocole de relevé — pour Adrien
+
+1. **Machine refroidie** : dix minutes sans banc ni build ; éditeur Godot fermé,
+   aucune autre fenêtre de jeu. Un banc lancé en boucle mesure sa propre chaleur
+   (`bench_framerate.gd`, `WARMUP_SEC`).
+2. **Fenêtre au premier plan, résolution native** (le jeu tel qu'il se lance, sans
+   `--taille`), **et ne plus y toucher** : un changement de focus pendant la mesure
+   décide du 1 % bas, le banc le dit en tête de résultat et le relevé se jette.
+3. **Un relevé de 60 s par exécution**, `--charge` : la même minute d'échange au
+   pompe à chaque fois — un humain ne rejoue pas deux fois la même.
+4. **Ordre base / iso / iso / base**, en vue unique (iso en lightmap `plein` puis
+   `1080p`), puis la même série en `--scinde`. Les deux `base` encadrent : s'ils
+   divergent, la machine a dérivé et la série se refait.
+5. Recopier les huit lignes `BANC_ISO …` ; puis **jouer trois minutes** sans
+   `--charge`, F8/F9/F10 en main, pour le jugement d'H15 — celui-là n'est pas une
+   mesure.
 
 ### Ce qui attend Adrien — jalon H15
 
@@ -20941,7 +21063,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
-| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | Avant toute session ISO1 |
+| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | 🟡 **Après le banc ISO0.b, livré le 2026-09-14** (chantier démarré par Adrien ce jour-là) — relevés selon le protocole de la section ISO, puis décision ; avant toute session ISO1 |
 
 ---
 
@@ -21050,6 +21172,11 @@ et un seul est du travail de session.
 
 ### Ce qui attend Adrien, et rien d'autre
 
+> **Mis à jour le 2026-09-14 — Adrien a démarré le chantier** (« Ok, je souhaite
+> démarrer ») : l'étape ISO0.b est ouverte et son banc `tools/banc_iso.tscn` est
+> livré ; ce qui attend Adrien est **le relevé de cadence au premier plan**
+> (protocole dans la section ISO) puis H15. Rien au-delà n'est lancé.
+>
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,
 > [docs/ETUDE_ISO.md](ETUDE_ISO.md), prototypes dans `docs/iso/` et

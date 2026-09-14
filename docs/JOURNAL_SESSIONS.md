@@ -4173,3 +4173,45 @@ ici.
 a été coupé à 15 (conception C, juges et réfutateurs refusés) ; le jugement et
 les vérifications ont été refaits par la session principale, contre la
 documentation Godot et le code. Consigné dans l'étude (§ 6.3) et aux pièges.
+
+### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
+
+Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
+**ISO0.b** ouverte sur la décision d'Adrien du 2026-09-14 (« Ok, je souhaite
+démarrer »). Rôle `iso-geometrie` de l'étude (§ 7.2). La branche part de
+`claude/unrailed-isometric-feasibility-44klgh` (l'étude, non fusionnée dans
+`main`) ; le worktree est celui que l'application a créé pour la session,
+basculé sur `iso-geometrie` — aucun autre arbre touché.
+
+**Fichiers créés, tous à elle :** `tools/banc_iso.gd`, `tools/banc_iso.tscn`,
+`tools/test_banc_iso.gd`, `docs/iso/captures_banc/` (sous le `.gdignore` de
+`docs/iso/`), `docs/iso/planche_banc_unique.jpg`, `docs/iso/planche_banc_scinde.jpg`.
+
+**Partagés, touchés par insertion :** `tools/run_suites.sh` (une suite,
+`test_banc_iso`, au bout de `SUITES`) ; `docs/iso/planche_iso.py` (deux options
+`--titre` et `--sous-titre`, comportement par défaut inchangé — fichier de la
+session de l'étude, close) ; `docs/ROADMAP.md` (sous-section ISO0.b, protocole de
+relevé, trois pièges, lignes ISO0 et H15, encart des prochaines étapes) ; ce
+journal.
+
+**Lu, jamais écrit :** `tools/bench_framerate.gd` (à la session iso-outils ; ses
+fonctions privées sont recopiées), `tools/proto_iso.gd` (fonctions statiques
+appelées), `player.gd`, `game_state.gd`, `main.tscn`.
+
+**Signalé, non corrigé :** `bench_framerate.gd` écrit `flashlight_on` hors de la
+physique, ce que `player.gd` écrase depuis le 2026-08-26 (voir « Pièges
+connus ») — à vérifier par la session iso-outils. `CLAUDE.md` décrit les masques
+de vue « 3 et 5 dans `main.tscn` » ; le jeu les réécrit en `~4` / `~2`.
+
+**Vague 0 en parallèle :** la session `iso-assets-gemini-boards-4e8d33-e7`
+(planches Gemini, branche `claude/iso-assets-gemini-boards-4e8d33`) ; aucun
+fichier commun hors ROADMAP, sous-sections distinctes, prévenue par message.
+
+**Suivi de projet :** cette session ne republie pas et n'écrit pas au porteur.
+Consigne d'Adrien relayée le 2026-09-14 par la session cloud « Fable 5.1 - CLOUD
+ISO UNRAILED » (`session_01S23hr7g2tRvKRxKBxAikFX`, autrice de l'étude) : les
+sessions iso lui envoient leurs deltas, elle synthétise et transmet au porteur
+(« Murs avec bande LED respirante »). Même message : **tout ce qui est iso reste
+dans un worktree à part** (ici
+`/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/iso0b-b-projection-bench-08404a`,
+branche `iso-geometrie`), et toute commande remise à Adrien est absolue.
