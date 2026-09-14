@@ -321,7 +321,25 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
-### 2026-09-11 — session « walls-led-breathing-light-4872dd-8a » : le halo révèle l'ennemi proche, `player.gd` touché
+### 2026-09-14 — session « hygiene-main-bench-masks-1b2155-df » (worktree `hygiene-main-bench-masks-1b2155`) : les torches du banc de cadence, les masques de vue
+
+Deux défauts signalés par la session ISO0.b, vérifiés puis corrigés sur une
+branche issue de `origin/main` (`336bc10`). **Touchés** : `tools/bench_framerate.gd`
+(la torche par la gâchette, `tenir_la_torche()`, contrôle par image et refus du
+chiffre ; rien d'autre du banc), `tools/test_banc.gd` (une manche jouée en
+headless prouve que la lampe suit la demande, contre-test compris), `CLAUDE.md`
+(« Boucle de jeu » : qui fait foi pour `canvas_cull_mask`), `game_state.gd`
+(**commentaire seul**, à la pose des masques — domaine « game feel », aucune ligne
+de code changée), `docs/ROADMAP.md` (deux pièges datés, relevés historiques
+qualifiés sans toucher aux chiffres). **Non touchés** : `player.gd`, `main.tscn`.
+
+⚠️ **Fenêtres** : trois sondes du banc ouvertes entre 16 h 12 et 16 h 16 ont
+chevauché la série H15 d'Adrien (`banc_iso`, worktree ISO0.b) — **ses relevés 4 à
+6**, notés douteux par ISO0.b dans sa ROADMAP. Aucune session ne voyait l'autre
+lancer une fenêtre : vérifier `ps` avant d'ouvrir un banc fenêtré ne suffit pas si
+un humain déroule un protocole avec des pauses. Lot complet lancé seulement après
+la fin de sa série, confirmée par ISO0.b (dernier relevé à 16 h 41).
+ : le halo révèle l'ennemi proche, `player.gd` touché
 
 **Déclaration : `player.gd` est du domaine « game feel »**, sur décision d'Adrien
 (« je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne

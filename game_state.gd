@@ -1081,7 +1081,15 @@ func _setup_players():
 	cam2.custom_viewport = vp2
 	players_node.add_child(cam2)
 	
-	# Restrict viewports so they don't see each other's private layers
+	# Chaque vue cache la couche privée de l'autre joueur.
+	#
+	# ⚠️ **CES deux lignes font foi, pas `main.tscn`.** La scène déclare
+	# `canvas_cull_mask` 3 et 5 depuis le premier commit (`8cc5157`), et ces lignes
+	# les écrasent avant la première image : les valeurs de la scène ne sont jamais
+	# rendues, et l'inspecteur de l'éditeur ment. Les deux jeux donnent la même
+	# image tant qu'aucun `visibility_layer` n'utilise un bit au-delà du troisième
+	# (1, 2, 4, 6 au 2026-09-14) ; sur la couche 8 ou plus, un objet serait montré
+	# dans les deux vues ici, et caché dans les deux par la scène.
 	vp1.canvas_cull_mask = ~4 # Hide layer 3 (value 4) which belongs to P2
 	vp2.canvas_cull_mask = ~2 # Hide layer 2 (value 2) which belongs to P1
 

@@ -139,6 +139,7 @@ code, sans configuration, sans redirection de port.
   59,0 ms de moyenne à 60 fps contre 21,2 ms déplafonné (145 fps en headless).
 
 - **120 fps tenus en `gl_compatibility`** — vérifié sur un rendu réel fenêtré
+  > ⚠️ **Qualifié le 2026-09-14 : pris lampes ÉTEINTES**, malgré « torches allumées » (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
   avec `tools/bench_framerate.tscn` : écran partagé (les deux vues rendent),
   pompe contre pompe à bout portant, torches allumées, HP maintenus pleins pour
   que l'échange ne s'arrête jamais. Pic de 123-125 particules sur 200 et 12
@@ -2821,6 +2822,8 @@ signature.
 
 ### ✅ RECTIFIÉ — la cible EST tenue, mes relevés valaient la moitié (2026-08-26)
 
+> ⚠️ **Qualifié le 2026-09-14 : ce relevé (75, « TENU ») a été pris lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). Le verdict de cible ne vaut que sans lampes ; chiffres conservés tels quels.
+
 **Adrien a lancé le banc lui-même, fenêtre au premier plan :**
 
 ```
@@ -3172,6 +3175,92 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Le banc de cadence n'a JAMAIS allumé ses torches (2026-09-14)
+
+`tools/bench_framerate.gd` annonce « torches allumées » depuis sa naissance
+(`9d69f09`, 2026-08-15), et écrivait pour cela `p.flashlight_on = true` après
+chaque `process_frame`. **`player.gd` réécrit ce drapeau depuis la gâchette à
+chaque pas de physique, avant d'allumer ou d'éteindre la `Light2D`** — la ligne
+existait déjà au 2026-08-03 (`Input.is_action_pressed`). Le banc arrivait donc
+toujours après le pas qui décide, et la lampe restait éteinte. Signalé par la
+session ISO0.b avec une datation au 2026-08-26 (`5037a14`, retrait du sprint) :
+trop étroite, ce commit n'a fait que retirer la condition de sprint autour d'un
+écrasement plus ancien.
+
+Reproduit en fenêtre, banc non modifié, par une sonde qui en hérite :
+**`flashlight_on` lu vrai sur 1076 images sur 1076, `flashlight.enabled` vrai sur
+0.** Pixels et œil ne tranchaient pas : les deux joueurs face à face sont
+éblouis, la vue est laiteuse avec ou sans lampe (écart moyen 0,6 sur 255 entre
+les deux captures). Ce que le rendu dit, lui : **168 appels de dessin par image
+(médiane) lampes éteintes, 204 et 206 lampes allumées**, même machine, même jour.
+
+⚠️ **Le banc ne mesurait pas « rien » : il mesurait une charge hybride.**
+L'éblouissement lit `flashlight_on` dans `GameState._process`, APRÈS le
+`process_frame` où le banc l'écrivait — il se déclenchait donc, brouillage
+compris, sans aucune lampe pour le justifier. Vérifié sur le code depuis
+`e17756b` (2026-09-09) ; avant, non vérifié.
+
+**Correctif** : `tenir_la_torche()` tient la gâchette par l'Input Map
+(`Input.action_press`, au premier cran, sans verrou), c'est-à-dire le chemin que
+le pas de physique relit. Le banc compte à chaque image mesurée les images où la
+lampe ne suit pas la demande, l'imprime AVANT le verdict et **refuse le chiffre**
+s'il y en a une. `tools/test_banc.gd` joue une vraie manche en headless et prouve
+que la lampe suit la demande après les pas de physique, avec un contre-test : le
+vieux geste doit y échouer. Sonde après correctif, fenêtre au premier plan :
+lampes allumées sur 879 images sur 879 hors décompte.
+
+**Relevés historiques douteux — chiffres conservés tels quels, qualifiés ici.**
+Tous les relevés de duel de `bench_framerate` du 2026-08-15 au 2026-09-14 ont été
+pris **lampes éteintes** (et, au moins depuis le 2026-09-09, éblouissement actif) :
+
+| Relevé | Ce qui tombe | Ce qui tient |
+|---|---|---|
+| 2026-08-16, « 120 fps tenus » (Phase 3) | déjà invalidé (compteur creux) ; lampes éteintes en plus | — |
+| 2026-08-18, relevés 1-3 (1 % bas 97) et **décomposition en sept** | **« torches : 0,00 à 0,19 ms, sous le bruit » est faux par construction** : « avec » et « sans torches » étaient la même charge (médianes 135 et 135) | le coût de la seconde vue, mesuré lampes éteintes des deux côtés |
+| 2026-08-18, arbalète « fps inchangés, médiane 144 » | la charge ne comptait pas les lampes | — |
+| 2026-08-25, R2 et R4 au second plan (144, socle nu = duel complet) | déjà plafonnés ; le « socle nu vaut le duel » s'explique aussi par là | — |
+| 2026-08-25, neuf relevés `--vue-unique` (43 à 60) | le 1 % bas du jeu, sans lampes | — |
+| 2026-08-25, R4 d'Adrien au premier plan (63 → 61, +15 %) | **le 1 % bas « ~60 » du jeu, qui ne comptait pas les lampes** | l'avant/après du chantier R, lampes éteintes des deux côtés |
+| 2026-08-26, relevé d'Adrien (75, « TENU ») | **le verdict de cible** | — |
+| 2026-09-11, bandeau LED (scindé 45/34, vue unique 65/44) | la cible, lampes allumées | l'écart avec/sans bandeau |
+| 2026-09-11, décor d'arène (1 850 → 261 appels, 110/81) | la marge sur la cible | la baisse d'appels de dessin due au décor |
+| 2026-09-12, fusée (84/85, 97/95, « 25 à 35 images de marge ») | **la marge annoncée** | l'écart avec/sans fusée |
+| 2026-09-12, gadgets (49/48, second plan) | déjà sans protocole | — |
+
+**Non concernés** : les relevés `--menus` (aucun joueur), et toute variante
+`--sans-torches` — juste par accident. **Présumé concerné, non vérifié** :
+`tools/banc_pics.gd` fait le même geste (l. 132), donc ses constats sur les pics
+du 2026-08-25/26 ont probablement été établis lampes éteintes.
+
+**La question qui reste ouverte, et ce lot ne la tranche pas : le jeu tient-il
+« 1 % bas ≥ 60 » lampes allumées ?** Aucun relevé au protocole (60 s, premier
+plan, machine refroidie) n'a encore été pris avec le banc corrigé.
+
+**Signalé en chemin, non corrigé (hors périmètre)** : (1) le banc lance la manche
+**au fusil, chargeur vide** — « Fusil / Fusil », HUD « VIDE 0/4 », **0 balle** au
+pic —, donc il ne tire plus : l'échange au pompe que décrit son en-tête n'a pas
+lieu (depuis quand : non établi) ; (2) `round_active` passe à vrai au DÉBUT du
+décompte de 3 s et l'échauffement n'en dure que 2 : ~1 s de chaque relevé est
+prise pendant le décompte (85 à 92 images sur 10 s) ; (3)
+`tools/fabrique_apercus.gd` écrit aussi `flashlight_on = true` pour ses captures.
+
+**Ce qui se généralise** : un outil qui écrit un état doit le RELIRE là où le jeu
+le consomme, pas là où il l'a écrit. Relire `flashlight_on` disait vrai ; seule
+`flashlight.enabled` disait ce que le rendu recevait.
+
+### `main.tscn` dit 3 et 5, le code rend `~4` et `~2` (2026-09-14)
+
+Les deux `SubViewport` déclarent `canvas_cull_mask` 3 et 5 depuis le premier
+commit, et `CLAUDE.md` renvoyait à la scène. `GameState._setup_players()` pose
+`~4` et `~2` avant la première image : **la scène n'est jamais rendue, l'inspecteur
+de l'éditeur ment.** Vérifié : les seules couches de visibilité en usage sont 1, 2,
+4 et 6, donc les deux jeux rendent aujourd'hui la même image — ils divergeraient
+pour un objet posé sur la couche 8 ou plus (montré dans les deux vues par le code,
+caché dans les deux par la scène). Documentation corrigée (`CLAUDE.md`,
+commentaire à la pose dans `game_state.gd`), code inchangé. Le commentaire n'est
+pas dans `main.tscn` : l'éditeur efface les commentaires d'une scène à la première
+sauvegarde.
 
 ### `shadow_item_cull_mask` filtre AUSSI les sprites qui reçoivent l'ombre (2026-09-14)
 
@@ -15072,6 +15161,8 @@ propre relevé** — voir R2.
 
 ### R2 — Relevé de référence ✅ fait le 2026-08-25
 
+> ⚠️ **Qualifié le 2026-09-14 : « torches allumées » est faux, lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
+
 Cinq exécutions, `--seconds 15`, duel complet, pompe contre pompe, torches
 allumées, sur Apple M3.
 
@@ -15225,6 +15316,8 @@ il mesure le plafond. Ce que le relevé établit vraiment :
   compteur de fps.
 
 #### Le vrai relevé — Adrien, fenêtre au PREMIER PLAN, le 2026-08-25 (jalon H10 ✅)
+
+> ⚠️ **Qualifié le 2026-09-14 : lampes ÉTEINTES dans les deux exécutions** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). L'avant/après du chantier R tient (même charge des deux côtés) ; le 1 % bas « ~60 » du jeu ne compte pas les lampes.
 
 Deux exécutions, focus **stable au premier plan** attesté par le banc lui-même,
 donc comparables. Le plafond disparaît, et le résultat renverse deux choses.
@@ -15827,6 +15920,8 @@ serait pris pour un bug plutôt que pour une incompatibilité.
   `bench_framerate --fusee`~~ — ✅ **fait le 2026-09-12, FU2 close côté perf.**
 
 #### Ce que la fusée coûte (relevé du 2026-09-12, sur `cf68cf2`)
+
+> ⚠️ **Qualifié le 2026-09-14 : lampes ÉTEINTES dans les quatre relevés** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). L'écart avec/sans fusée tient ; la marge sur la cible ne compte pas les lampes.
 
 Quatre relevés de 60 s, fenêtre au premier plan, dans un ordre symétrique pour
 que la dérive thermique ne favorise aucune condition. **Chaque relevé porte son
@@ -18375,6 +18470,7 @@ des dégâts). La prochaine publication sera donc une mineure.
 **Ce que les mesures disent, et ce qu'elles ne disent pas.**
 
 - **Coût des gadgets à la cadence — ⚠️ aucun coût n'est établi, faute d'un protocole
+  > ⚠️ **Qualifié le 2026-09-14 : ces deux relevés ont aussi été pris lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
   qui en tienne un.** Deux relevés de 30 s, duel complet, même machine, **enchaînés à
   la seconde** (02:36:45 puis 02:37:19) et toujours dans l'ordre base → `--gadgets` :
   médiane **49 puis 48 fps** avec une fausse torche, une poudre et ses 72 traces
@@ -20634,6 +20730,8 @@ d'image : toutes les ~8,5 s, ce qui longe un mur intérieur se révèle, pour le
 deux joueurs au même instant. `--sans-led-murs` l'éteint (mesures, comparaisons
 de cadence) ; `--led-murs` n'a plus d'effet.
 
+> ⚠️ **Qualifié le 2026-09-14 : tous les relevés ci-dessous ont été pris lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). Les écarts avec/sans bandeau tiennent ; la cible n'y est pas vérifiée lampes allumées.
+
 **Cadence, mesurée avant d'allumer pour tous** (`bench_framerate`, le vrai jeu,
 bandeau tenu au sommet contre `--sans-led-murs`, 30 s chacun) : **aucun écart
 mesurable**. Au second plan : 4349 / 4348 images, 1 % bas 143 / 143. Au premier
@@ -21059,6 +21157,8 @@ et un seul est du travail de session.
 
 ## D'où viennent les millisecondes du duel — mesuré le 2026-08-18
 
+> ⚠️ **Qualifié le 2026-09-14 : le verdict « torches : sous le bruit » est FAUX par construction.** Le banc n'allumait aucune lampe : « avec » et « sans torches » étaient la même charge (médianes 135 et 135) (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). Le coût de la seconde vue tient, mesuré lampes éteintes des deux côtés. Chiffres conservés tels quels.
+
 `tools/run_decomposition.sh`, sept relevés pris le 2026-08-18 avec l'accord
 d'Adrien. **Conclusion : la seconde vue EST le coût du duel ; les torches et les
 shaders du joueur ne se distinguent pas du bruit.**
@@ -21212,6 +21312,8 @@ banc sans le relancer.
 | 1 | *aucun* | Le banc pilotait `_ui.btn_mode_local`, disparu à la Phase 5. Ouvert, erreur de script, jamais entré dans le duel, **resté ouvert sans mesurer**. Tué à la main. |
 | 2 | 1 % bas **109**, minimum 109 | Mesure creuse : `get_frames_per_second()` ne bouge qu'une fois par seconde, donc 15 mesures recopiées 139 fois. `1 % bas == minimum` en est la signature. Sorti en **signal 11** (arrêt EOS non propre). |
 | 3 | **1 % bas 97** | Le seul honnête. Temps d'image relevés par image, sortie par `quit_game()`, code 0. |
+
+> ⚠️ **Qualifié le 2026-09-14 : « torches allumées » est faux, lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
 
 **Relevé n° 3 — conditions propres** (éditeur Godot fermé, aucune autre session,
 aucun autre Godot), écran partagé, torches allumées, échange au pompe :
