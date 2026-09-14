@@ -64,16 +64,25 @@ const PIED_PX := 8.0
 const RAYON_CORPS_PX := 14.0
 const HAUTEUR_CORPS_PX := 35.0
 
-## F2 fait défiler les pâtes pendant qu'elle est allumée (A → B → C → D → brute).
-## ⚠️ F3 à F7 sont pris en jeu (diagnostic, écoute, éditeur, copie, LED), F8 à F10 par
-## le banc ISO0.b : F2 est la première touche libre du dépôt entier.
+## Les touches de la pâte, pendant qu'elle est allumée : **1, 2, 3, 4** choisissent A, B, C,
+## D et **0** la brute ; F2 les fait défiler.
+##
+## ⚠️ **F2 seule n'a jamais atteint le jeu chez Adrien** (2026-09-14, trois parties, aucune
+## ligne `[iso] pâte` au journal) : sur un Mac, F2 sans `fn` règle la luminosité et n'est pas
+## transmise à l'application. La rangée des chiffres se lit par `physical_keycode` : en
+## AZERTY, `keycode` y donne `&`, `é`, `"` (piège de `tools/banc_audio.gd`). Aucune action
+## de l'Input Map ni aucun script du jeu ne la prend.
 const TOUCHE_PATE := KEY_F2
-const PATE_PAR_DEFAUT := IsoPate.GRAVURE
+const TOUCHES_DIRECTES := {KEY_1: 0, KEY_2: 1, KEY_3: 2, KEY_4: 3, KEY_0: -1}
+## **D, lavis et pochoir — décision d'Adrien, 2026-09-14** (jalon H-ISO1), sur la planche
+## et la mesure de fidélité : la seule pâte qui garde la lueur faible au niveau de la vue
+## de dessus.
+const PATE_PAR_DEFAUT := IsoPate.LAVIS
 const DRAPEAU_PATE := "--pate"
 
 static var _instance: Presentation3D
 
-## La pâte en cours (uniform `style`) — `--pate A|B|C|D|brute`, puis F2.
+## La pâte en cours (uniform `style`) — `--pate A|B|C|D|brute`, puis 1-4, 0 ou F2.
 var style_pate := PATE_PAR_DEFAUT
 ## Ce que la ligne « VUE ISO » du panneau F3 affiche.
 var etat := "en attente du prochain duel"
@@ -425,13 +434,19 @@ func _input(event: InputEvent) -> void:
 	if not _actif:
 		return
 	var touche := event as InputEventKey
-	if touche != null and touche.pressed and not touche.echo and touche.physical_keycode == TOUCHE_PATE:
-		# A → B → C → D → brute → A
-		style_pate = IsoPate.BRUTE if style_pate == IsoPate.LAVIS else \
-			(IsoPate.GRAVURE if style_pate == IsoPate.BRUTE else style_pate + 1)
-		print("[iso] pâte %s" % IsoPate.NOMS[style_pate])
-		get_viewport().set_input_as_handled()
-		return
+	if touche != null and touche.pressed and not touche.echo:
+		var choisie := -2
+		if TOUCHES_DIRECTES.has(touche.physical_keycode):
+			choisie = TOUCHES_DIRECTES[touche.physical_keycode]
+		elif touche.physical_keycode == TOUCHE_PATE or touche.keycode == TOUCHE_PATE:
+			# A → B → C → D → brute → A
+			choisie = IsoPate.BRUTE if style_pate == IsoPate.LAVIS else \
+				(IsoPate.GRAVURE if style_pate == IsoPate.BRUTE else style_pate + 1)
+		if choisie >= IsoPate.BRUTE:
+			style_pate = choisie
+			print("[iso] pâte %s" % IsoPate.NOMS[style_pate])
+			get_viewport().set_input_as_handled()
+			return
 	var souris := event as InputEventMouseMotion
 	if souris != null:
 		_viser_a_la_souris(souris)

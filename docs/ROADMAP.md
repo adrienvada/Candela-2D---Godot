@@ -3172,6 +3172,18 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une touche F sans `fn` n'atteint pas le jeu sur un Mac (2026-09-14)
+
+ISO1 avait mis le choix de la pâte sur **F2**, « première touche F libre du dépôt ».
+Adrien a joué trois parties sans jamais réussir à changer de pâte : **aucune ligne
+`[iso] pâte` au journal**, l'appui n'est jamais arrivé. Sur un clavier de Mac, F1 à F12
+sans `fn` sont les touches de luminosité, de volume, de Mission Control : le système les
+garde. F3 à F6 « marchent » chez qui a pris l'habitude de `fn` ; une consigne neuve qui dit
+« F2 » ne marche pas. Les touches de choix sont désormais **1, 2, 3, 4 et 0**, lues par
+`physical_keycode` (en AZERTY, `keycode` y donne `&`, `é`, `"`), et F2 reste en plus.
+Règle : **une touche de jeu à expliquer à Adrien se choisit hors de la rangée F**, et une
+touche dont l'appui imprime au journal se vérifie au journal, pas à l'œil.
+
 ### La vue de dessus n'est pas noire lumières éteintes : le noir absolu se juge contre la lightmap (2026-09-14)
 
 ISO1 devait prouver, au banc, qu'« toutes lumières éteintes, l'image rendue est à 0/255
@@ -21434,16 +21446,41 @@ pas tranchée ; la vue suit la sous-vue telle que le jeu la dimensionne).
 
 **Mes relevés de cadence ne valent rien** (second plan, sessions voisines) : aucun n'est cité.
 
+**✅ Pâte choisie par Adrien, le 2026-09-14 au soir : D, lavis et pochoir.** Elle devient la
+pâte par défaut (`Presentation3D.PATE_PAR_DEFAUT`) ; A, B, C et la brute restent au clavier
+pour comparer (1, 2, 3, 4, 0). Le choix rejoint la recommandation de la session, pour la
+raison qui compte ici : D est la seule pâte à garder la lueur faible au niveau de la vue de
+dessus.
+
+**Les relevés d'Adrien, le 2026-09-14 vers 18 h 38 – 18 h 40** (MacBook M3, fenêtre 2560×1440,
+Arène Standard, `--charge`, 60 s, focus stable au premier plan) :
+
+| Rendu | Médiane | 1 % bas | Pire image | Appels |
+|---|---|---|---|---|
+| vue de dessus (`--base`) | 86 | 55 | 21,4 ms | 134 |
+| iso, chemin du jeu (`--jeu`, pâte A) | 96 | 56 | 20,4 ms | 135 |
+
+**Deux relevés sur les quatre du protocole** (base / iso / iso / base) : sans les deux
+relevés d'encadrement, rien ne dit que la machine n'a pas dérivé entre les deux. La première
+série d'ISO0.b avait montré ±10 % d'écart entre deux « base » identiques ; les 10 images de
+médiane et le point de 1 % bas qui séparent ces deux lignes sont dans ce bruit. **Ce qu'elles
+disent** : aucun surcoût visible de la vue iso du jeu au-dessus du bruit, 1 appel de dessin de
+plus, et **la cible 1 % bas ≥ 60 n'est tenue ni par l'une ni par l'autre** sous charge
+automatique. ⚠️ La ligne `BANC_ISO` de `--jeu` imprimait alors `tangage=60.0 mur=0.45` — les
+défauts du banc, pas la vue rendue (52°, 0,65 tuile) ; corrigé, la mesure elle-même n'était
+pas touchée.
+
 #### Jalon H-ISO1 — ce qui attend Adrien
 
 1. **Jouer trois minutes** en vue unique (entraînement) avec la vue iso :
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" -- --iso`
-   puis ENTRAÎNEMENT ; **F2** fait défiler A → B → C → D → brute ; **F3** montre « VUE ISO ».
-2. **Choisir la pâte**, sur `docs/iso/planche_pate.jpg` et en jeu. Recommandation de la
+   puis ENTRAÎNEMENT ; **1, 2, 3, 4** choisissent A, B, C, D et **0** la brute (F2 ne passe
+   pas sans `fn` sur un Mac) ; **F3** montre « VUE ISO ».
+2. ✅ **Pâte choisie : D** (Adrien, 2026-09-14). *Pour mémoire, la recommandation de la
    session : **D (lavis et pochoir)**, parce qu'elle est la seule à garder la lueur faible au
    niveau de la vue de dessus (27,1 % contre 26,8 %) — l'information du jeu —, et qu'elle
    ne rehausse que ce qui est déjà éclairé ; **A** si l'œil l'emporte, en sachant qu'elle
-   efface trois quarts de la lueur faible.
+   efface trois quarts de la lueur faible.*
 3. **Fixer `H_haut`** d'après le tableau d'équité. Recommandation : **0,65 tuile** — la plus
    haute qui tienne le critère (17,8 px), aucune case invisible, et un écart de côté limité à
    La Croisée (−2,4 pts). Des murs d'une tuile coûtent 27 px de bande et 3,7 pts à La Croisée.
@@ -21454,6 +21491,8 @@ pas tranchée ; la vue suit la sous-vue telle que le jeu la dimensionne).
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" res://tools/banc_iso.tscn -- --base --charge --seconds 60`
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" res://tools/banc_iso.tscn -- --jeu --charge --seconds 60`
    (la seconde deux fois, puis la première), et recopier les quatre lignes `BANC_ISO`.
+   🟡 **Deux relevés pris** (base puis iso, tableau ci-dessus) ; il manque le second iso et
+   la base d'encadrement pour que la série décide.
 5. **Dire si ISO2 s'ouvre.**
 
 ### Ce qui attend Adrien — jalon H15
@@ -21606,9 +21645,9 @@ et un seul est du travail de session.
 >
 > **Mis à jour le 2026-09-14, soir — ISO1 est ouverte et commitée** sur la branche locale
 > `iso1-fondations` (section ISO, « ISO1 »). Ce qui attend Adrien : le **jalon H-ISO1** —
-> jouer trois minutes avec `-- --iso`, choisir la pâte (A, B, C ou D), fixer la hauteur des
-> murs hauts d'après le tableau d'équité, prendre quatre relevés base / iso / iso / base
-> sous fenêtre de silence, et dire si ISO2 s'ouvre. Commandes absolues dans la section.
+> jouer trois minutes avec `-- --iso`, fixer la hauteur des murs hauts d'après le tableau
+> d'équité, compléter la série de relevés (deux pris sur quatre) et dire si ISO2 s'ouvre.
+> **La pâte est choisie : D**, le soir même. Commandes absolues dans la section.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

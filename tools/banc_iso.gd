@@ -60,6 +60,7 @@ extends Node
 
 const BancCadence := preload("res://tools/bench_framerate.gd")
 const ProtoIso := preload("res://tools/proto_iso.gd")
+const IsoPate_ := preload("res://iso_pate.gd")
 
 ## Les valeurs que l'étude demande de voir (§ 9.4), dans l'ordre où F8/F9/F10
 ## les font défiler. Une valeur hors liste reste acceptée en option : c'est un
@@ -824,7 +825,12 @@ func _report() -> void:
 	# Une ligne à recopier dans un tableau, tous réglages compris.
 	print("BANC_ISO mode=%s vue=%s lightmap=%s tangage=%s lacet=%s mur=%s charge=%s carte=%s "
 		% ["base" if _base else ("jeu-" + _pate_nommee().left(1) if _jeu else "iso"), "scinde" if _scinde else "unique",
-		"-" if _base else _lightmap, str(_tangage), str(_lacet), str(_mur), str(_charge),
+		"-" if _base else _lightmap,
+		# En --jeu, ce sont les valeurs du JEU qui sont rendues, pas les défauts du banc :
+		# la première série d'ISO1 (2026-09-14) imprimait 60° et 0,45 pour une vue à 52° et 0,65.
+		str(CameraIso.TANGAGE_DEG) if _jeu else str(_tangage),
+		str(CameraIso.LACET_DEG) if _jeu else str(_lacet),
+		str(_mur if _mur_donne else IsoGeometrie.hauteur_mur_haut()) if _jeu else str(_mur), str(_charge),
 		MapData.get_selected().get("name", "?")]
 		+ "median=%.0f bas1=%.0f pire_ms=%.1f appels=%d focus=%s" % [stats["fps_median"],
 		stats["fps_1pc_bas"], stats["pire_image_ms"], _mediane(_appels),
@@ -946,7 +952,9 @@ func _attendre_la_presentation() -> bool:
 func _pate_nommee() -> String:
 	var args := OS.get_cmdline_user_args()
 	var i := args.find("--pate")
-	return args[i + 1].to_upper() if i >= 0 and i + 1 < args.size() else "A"
+	# Sans --pate, celle du jeu : D, décision d'Adrien du 2026-09-14.
+	return args[i + 1].to_upper() if i >= 0 and i + 1 < args.size() else \
+		str(IsoPate_.LETTRES[Presentation3D.PATE_PAR_DEFAUT]) if Presentation3D.PATE_PAR_DEFAUT >= 0 else "BRUTE"
 
 
 ## Le contrôle du noir absolu — deux mesures dans la même exécution, HUD retiré.

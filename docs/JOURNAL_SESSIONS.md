@@ -4288,3 +4288,10 @@ branche, sur demande d'Adrien, puis vérifiera ses ancrages (`grep` de
 **Suivi de projet :** cette session ne republie pas ; ses deltas partent vers la session
 cloud « Fable 5.1 - CLOUD ISO UNRAILED » par `SendMessage` (la Routine `create_trigger`
 a refusé le corps demandé : « job_config ou session_request requis »).
+
+**Addendum, soir du 2026-09-14 — la pâte D, et F2 qui ne passait pas.** Adrien a pris deux
+relevés (base 86 / 55, iso du jeu 96 / 56) et n'a pas pu changer de pâte : F2 sans `fn`
+n'atteint pas le jeu sur un Mac (piège consigné). Il a choisi **la pâte D** sur la planche.
+D devient la pâte par défaut ; les touches 1-4 et 0 remplacent F2 (qui reste) ; la ligne
+`BANC_ISO` de `--jeu` imprime désormais les vrais réglages rendus. Toujours rien de poussé
+ni de fusionné.

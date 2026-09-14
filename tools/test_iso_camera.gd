@@ -271,6 +271,29 @@ func _simulation_inchangee() -> void:
 	_check("même rejeu enregistré (%d images)" % (sans["rejeu"] as Array).size(),
 		_ecarts(sans["rejeu"], avec["rejeu"]) == 0 and not (sans["rejeu"] as Array).is_empty())
 
+	# Les touches de la pâte, pendant que la vue est allumée (la dernière partie l'a laissée
+	# allumée) : F2 seule n'atteint pas le jeu sur un Mac sans `fn`.
+	var p := root.get_node_or_null("Presentation3D")
+	var Pate: GDScript = load("res://iso_pate.gd")
+	_check("pâte par défaut : D, lavis et pochoir (décision d'Adrien)",
+		p != null and int(p.style_pate) == Pate.LAVIS)
+	if p != null:
+		var suite_ok := true
+		for cas in [[KEY_2, Pate.LIGNE_CLAIRE], [KEY_0, Pate.BRUTE], [KEY_F2, Pate.GRAVURE],
+				[KEY_4, Pate.LAVIS], [KEY_1, Pate.GRAVURE], [KEY_3, Pate.TRAME]]:
+			var touche := InputEventKey.new()
+			touche.physical_keycode = cas[0]
+			touche.pressed = true
+			p._input(touche)
+			suite_ok = suite_ok and int(p.style_pate) == int(cas[1])
+		_check("1, 2, 3, 4 choisissent A, B, C, D ; 0 la brute ; F2 fait défiler", suite_ok,
+			"pâte finale %d" % int(p.style_pate))
+		var lettre := InputEventKey.new()
+		lettre.physical_keycode = KEY_W
+		lettre.pressed = true
+		p._input(lettre)
+		_check("une touche de déplacement ne change pas la pâte", int(p.style_pate) == Pate.TRAME)
+
 	# L'extinction : on retire le réglage, la vue doit tout rendre.
 	reglages.mode_iso = false
 	await process_frame
