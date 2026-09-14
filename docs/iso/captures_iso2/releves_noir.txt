@@ -1,5 +1,106 @@
-===== apres_eblouir — 21:21:51
-2026-09-14 21:21:52.043 Godot[55128:11376579] [UE4] Shutdown handler: initialize.
+===== canaux_unique — 22:06:07
+2026-09-14 22:06:08.072 Godot[63603:11428740] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+  son coupé (avant la scène) : muet=true
+=== Banc ISO0.b — B-projection dans le vrai duel ===
+Rendu : JEU (Presentation3D), vue unique, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
+  son coupé (après la scène) : muet=true
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:06:10) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -2.6 dB / D -2.8 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+Carte : « Arène Standard »
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
+[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+JEU : Presentation3D allumée — unique · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 1 bascule(s)
+J1 : masque ~4 sans capteurs · lightmap 1920×1080 · rendu 2560×1440 · capteurs 4 / 18 ; 10/10 sprites de J1 retirés ; racine autorisée=false
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 1920×1080, monde 2D 1920×1080
+  SubViewport2: cible 2D 958×1080  (ARRÊTÉE)
+  Racine      : cible 3D 2560×1440 (la fenêtre)
+  Capteurs    : 2 × 256×256
+Jeu           : Presentation3D — unique · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 1 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 1920×1080 · rendu 2560×1440 · capteurs 4 / 18
+Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
+Échauffement 2 s…
+BANC_ISO canaux sonde=4 sur=J1 vueJ1/corpsJ1=249(doit) vueJ1/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=2 sur=J1 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=16 sur=J1 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=32 sur=J1 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=4 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=2 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=249(doit) verdict=juste
+BANC_ISO canaux sonde=16 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=249(doit) verdict=juste
+BANC_ISO canaux sonde=32 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 verdict=juste
+BANC_ISO canaux rallumees_par_le_jeu=Arena/MurLed, Player1/@PointLight2D@1257, Player2/@PointLight2D@1262, @RigidBody2D@1265/Light, @RigidBody2D@1266/Light, @RigidBody2D@1267/Light, @RigidBody2D@1268/Light, @RigidBody2D@1269/Light, @RigidBody2D@1270/Light, @RigidBody2D@1271/Light, @RigidBody2D@1272/Light, @RigidBody2D@1273/Light, @RigidBody2D@1274/Light, @RigidBody2D@1275/Light, @RigidBody2D@1276/Light, @RigidBody2D@1277/Light, @RigidBody2D@1278/Light, @RigidBody2D@1279/Light, @RigidBody2D@1280/Light, @RigidBody2D@1281/Light, @RigidBody2D@1282/Light, @RigidBody2D@1283/Light, @RigidBody2D@1284/Light, @RigidBody2D@1285/Light, @RigidBody2D@1286/Light, @RigidBody2D@1287/Light, @RigidBody2D@1288/Light, @RigidBody2D@1289/Light, @RigidBody2D@1290/Light, @RigidBody2D@1291/Light, @RigidBody2D@1292/Light, @RigidBody2D@1293/Light, @RigidBody2D@1294/Light, @RigidBody2D@1295/Light, @RigidBody2D@1296/Light, @RigidBody2D@1297/Light, @RigidBody2D@1298/Light, @RigidBody2D@1299/Light, @RigidBody2D@1300/Light, @RigidBody2D@1301/Light, @RigidBody2D@1302/Light, @RigidBody2D@1303/Light, @RigidBody2D@1304/Light, @RigidBody2D@1305/Light, @RigidBody2D@1306/Light, @RigidBody2D@1307/Light, @RigidBody2D@1308/Light, @RigidBody2D@1309/Light, @RigidBody2D@1310/Light, @RigidBody2D@1311/Light, @RigidBody2D@1312/Light, @RigidBody2D@1313/Light, @RigidBody2D@1314/Light, @RigidBody2D@1315/Light, @RigidBody2D@1316/Light, @RigidBody2D@1317/Light, @RigidBody2D@1318/Light, @RigidBody2D@1319/Light, @RigidBody2D@1320/Light, @RigidBody2D@1321/Light, @RigidBody2D@1322/Light, @RigidBody2D@1323/Light, @RigidBody2D@1324/Light, @RigidBody2D@1325/Light, @RigidBody2D@1326/Light, @RigidBody2D@1327/Light, @RigidBody2D@1328/Light, @RigidBody2D@1329/Light, @RigidBody2D@1330/Light, @RigidBody2D@1331/Light, @RigidBody2D@1332/Light, @RigidBody2D@1333/Light, @RigidBody2D@1334/Light, @RigidBody2D@1335/Light, @RigidBody2D@1336/Light, @RigidBody2D@1337/Light, @RigidBody2D@1338/Light, @RigidBody2D@1339/Light, @RigidBody2D@1340/Light, @RigidBody2D@1341/Light, @RigidBody2D@1342/Light, @RigidBody2D@1343/Light, @RigidBody2D@1344/Light, @RigidBody2D@1345/Light, @RigidBody2D@1346/Light, @RigidBody2D@1347/Light, @RigidBody2D@1348/Light, @RigidBody2D@1349/Light, @RigidBody2D@1350/Light, @RigidBody2D@1351/Light, @RigidBody2D@1352/Light, @RigidBody2D@1353/Light, @RigidBody2D@1354/Light, @RigidBody2D@1355/Light, @RigidBody2D@1356/Light, @RigidBody2D@1357/Light, @RigidBody2D@1358/Light, @RigidBody2D@1359/Light, @RigidBody2D@1360/Light, @RigidBody2D@1361/Light, @RigidBody2D@1362/Light, @RigidBody2D@1363/Light, @RigidBody2D@1364/Light, @RigidBody2D@1365/Light, @RigidBody2D@1366/Light, @RigidBody2D@1367/Light, @RigidBody2D@1368/Light, @RigidBody2D@1369/Light, @RigidBody2D@1370/Light, @RigidBody2D@1371/Light, @RigidBody2D@1372/Light, @RigidBody2D@1373/Light, @RigidBody2D@1374/Light, @RigidBody2D@1375/Light, @RigidBody2D@1376/Light, @RigidBody2D@1377/Light, @RigidBody2D@1378/Light, @RigidBody2D@1379/Light, @RigidBody2D@1380/Light, @RigidBody2D@1381/Light, @RigidBody2D@1382/Light, @RigidBody2D@1383/Light, @RigidBody2D@1384/Light, @RigidBody2D@1385/Light, @RigidBody2D@1386/Light, @RigidBody2D@1387/Light, @RigidBody2D@1388/Light, @RigidBody2D@1389/Light, @RigidBody2D@1390/Light, @RigidBody2D@1391/Light, @RigidBody2D@1392/Light, @RigidBody2D@1393/Light, @RigidBody2D@1394/Light, @RigidBody2D@1395/Light, @RigidBody2D@1396/Light, @RigidBody2D@1397/Light, @RigidBody2D@1398/Light, @RigidBody2D@1399/Light, @RigidBody2D@1400/Light, @RigidBody2D@1401/Light, @RigidBody2D@1402/Light, @RigidBody2D@1403/Light, @RigidBody2D@1404/Light, @RigidBody2D@1405/Light, @RigidBody2D@1406/Light, @RigidBody2D@1407/Light, @RigidBody2D@1408/Light, @RigidBody2D@1409/Light, @RigidBody2D@1410/Light, @RigidBody2D@1411/Light, @RigidBody2D@1412/Light, @RigidBody2D@1413/Light, @RigidBody2D@1414/Light, @RigidBody2D@1415/Light, @RigidBody2D@1416/Light, @RigidBody2D@1417/Light, @RigidBody2D@1418/Light, @RigidBody2D@1419/Light, @RigidBody2D@1420/Light, @RigidBody2D@1421/Light, @RigidBody2D@1422/Light, @RigidBody2D@1423/Light, @RigidBody2D@1424/Light, @RigidBody2D@1425/Light, @RigidBody2D@1426/Light, @RigidBody2D@1427/Light, @RigidBody2D@1428/Light, @RigidBody2D@1429/Light, @RigidBody2D@1430/Light, @RigidBody2D@1431/Light, @RigidBody2D@1432/Light, @RigidBody2D@1433/Light, @RigidBody2D@1434/Light, @RigidBody2D@1435/Light, @RigidBody2D@1436/Light, @RigidBody2D@1437/Light, @RigidBody2D@1438/Light, @RigidBody2D@1439/Light, @RigidBody2D@1440/Light, @RigidBody2D@1441/Light, @RigidBody2D@1442/Light, @RigidBody2D@1443/Light, @RigidBody2D@1444/Light, @RigidBody2D@1445/Light, @RigidBody2D@1446/Light, @RigidBody2D@1447/Light, @RigidBody2D@1448/Light, @RigidBody2D@1449/Light, @RigidBody2D@1450/Light, @RigidBody2D@1451/Light, @RigidBody2D@1452/Light, @RigidBody2D@1453/Light, @RigidBody2D@1454/Light, @RigidBody2D@1455/Light, @RigidBody2D@1456/Light, @RigidBody2D@1457/Light, @RigidBody2D@1458/Light, @RigidBody2D@1459/Light, @RigidBody2D@1460/Light, @RigidBody2D@1461/Light, @RigidBody2D@1462/Light, @RigidBody2D@1463/Light, @RigidBody2D@1464/Light, @RigidBody2D@1465/Light, @RigidBody2D@1466/Light, @RigidBody2D@1467/Light, @RigidBody2D@1468/Light, @RigidBody2D@1469/Light, @RigidBody2D@1470/Light, @RigidBody2D@1471/Light, @RigidBody2D@1472/Light, @RigidBody2D@1473/Light, @RigidBody2D@1474/Light, @RigidBody2D@1475/Light, @RigidBody2D@1476/Light, @RigidBody2D@1477/Light, @RigidBody2D@1478/Light, @RigidBody2D@1479/Light, @RigidBody2D@1480/Light, @RigidBody2D@1481/Light, @RigidBody2D@1482/Light, @RigidBody2D@1483/Light, @RigidBody2D@1484/Light, @RigidBody2D@1485/Light, @RigidBody2D@1486/Light, @RigidBody2D@1487/Light, @RigidBody2D@1488/Light, @RigidBody2D@1489/Light, @RigidBody2D@1490/Light, @RigidBody2D@1491/Light, @RigidBody2D@1492/Light, @RigidBody2D@1493/Light, @RigidBody2D@1494/Light, @RigidBody2D@1495/Light, @RigidBody2D@1496/Light, @RigidBody2D@1497/Light, @RigidBody2D@1498/Light, @RigidBody2D@1499/Light, @RigidBody2D@1500/Light, @RigidBody2D@1501/Light, @RigidBody2D@1502/Light, @RigidBody2D@1503/Light, @RigidBody2D@1504/Light
+BANC_ISO canaux vue=unique verdict=CANAUX TENUS (8 cas, 0 faux ; « doit » : ce capteur doit s'allumer)
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 1 bascule(s))
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2365)
+       [1] _tracer_ecoute (res://audio_manager.gd:2458)
+       [2] rendre_oreille (res://audio_manager.gd:2513)
+--- ecoute : oreille rendue (2026-09-14T22:06:16) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 5000 Hz   <<<< FERME, le bus est etouffe
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+WARNING: 2 RIDs of type "Canvas" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 3 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+ERROR: 1 shaders of type CanvasShaderGLES3 were never freed
+   at: ~ShaderGLES3 (drivers/gles3/shader_gles3.cpp:838)
+ERROR: Texture with GL ID of 132: leaked 1398100 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:82)
+WARNING: 16 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 3 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+2026-09-14 22:06:16.122 Godot[63603:11428740] [UE4] Shutdown handler: cleanup.
+ERROR: 1 RID allocations of type 'N5GLES38MaterialE' were leaked at exit.
+ERROR: 1 RID allocations of type 'N5GLES36ShaderE' were leaked at exit.
+ERROR: 1 RID allocations of type 'N5GLES37TextureE' were leaked at exit.
+===== canaux_unique rc=0
+===== canaux_scinde — 22:06:16
+2026-09-14 22:06:16.264 Godot[63614:11429172] [UE4] Shutdown handler: initialize.
 Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
 
@@ -12,7 +113,163 @@ RankedIdentity: classement non configuré (res://supabase_config.gd absent ou in
 === Banc ISO0.b — B-projection dans le vrai duel ===
 Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
   son coupé (après la scène) : muet=true
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T21:21:54) ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:06:18) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -6.0 dB / D -5.8 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+Carte : « Arène Standard »
+JEU : Presentation3D allumée — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s)
+J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18
+J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4 ; 10/10 sprites de J1 retirés ; racine autorisée=false
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080, monde 2D 957×1080
+  SubViewport2: cible 2D 958×1080, monde 2D 958×1080
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+  Capteurs    : 4 × 256×256
+Jeu           : Presentation3D — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4
+Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
+Échauffement 2 s…
+BANC_ISO canaux sonde=4 sur=J1 vueJ1/corpsJ1=249(doit) vueJ1/corpsJ2=0 vueJ2/corpsJ1=0 vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=2 sur=J1 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 vueJ2/corpsJ1=249(doit) vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=16 sur=J1 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 vueJ2/corpsJ1=0 vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=32 sur=J1 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 vueJ2/corpsJ1=249(doit) vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=4 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 vueJ2/corpsJ1=0 vueJ2/corpsJ2=249(doit) verdict=juste
+BANC_ISO canaux sonde=2 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=249(doit) vueJ2/corpsJ1=0 vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=16 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=249(doit) vueJ2/corpsJ1=0 vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux sonde=32 sur=J2 vueJ1/corpsJ1=0 vueJ1/corpsJ2=0 vueJ2/corpsJ1=0 vueJ2/corpsJ2=0 verdict=juste
+BANC_ISO canaux rallumees_par_le_jeu=Arena/MurLed, Player1/@PointLight2D@1257, Player2/@PointLight2D@1262, @RigidBody2D@1265/Light, @RigidBody2D@1266/Light, @RigidBody2D@1267/Light, @RigidBody2D@1268/Light, @RigidBody2D@1269/Light, @RigidBody2D@1270/Light, @RigidBody2D@1271/Light, @RigidBody2D@1272/Light, @RigidBody2D@1273/Light, @RigidBody2D@1274/Light, @RigidBody2D@1275/Light, @RigidBody2D@1276/Light, @RigidBody2D@1277/Light, @RigidBody2D@1278/Light, @RigidBody2D@1279/Light, @RigidBody2D@1280/Light, @RigidBody2D@1281/Light, @RigidBody2D@1282/Light, @RigidBody2D@1283/Light, @RigidBody2D@1284/Light, @RigidBody2D@1285/Light, @RigidBody2D@1286/Light, @RigidBody2D@1287/Light, @RigidBody2D@1288/Light, @RigidBody2D@1289/Light, @RigidBody2D@1290/Light, @RigidBody2D@1291/Light, @RigidBody2D@1292/Light, @RigidBody2D@1293/Light, @RigidBody2D@1294/Light, @RigidBody2D@1295/Light, @RigidBody2D@1296/Light, @RigidBody2D@1297/Light, @RigidBody2D@1298/Light, @RigidBody2D@1299/Light, @RigidBody2D@1300/Light, @RigidBody2D@1301/Light, @RigidBody2D@1302/Light, @RigidBody2D@1303/Light, @RigidBody2D@1304/Light, @RigidBody2D@1305/Light, @RigidBody2D@1306/Light, @RigidBody2D@1307/Light, @RigidBody2D@1308/Light, @RigidBody2D@1309/Light, @RigidBody2D@1310/Light, @RigidBody2D@1311/Light, @RigidBody2D@1312/Light, @RigidBody2D@1313/Light, @RigidBody2D@1314/Light, @RigidBody2D@1315/Light, @RigidBody2D@1316/Light, @RigidBody2D@1317/Light, @RigidBody2D@1318/Light, @RigidBody2D@1319/Light, @RigidBody2D@1320/Light, @RigidBody2D@1321/Light, @RigidBody2D@1322/Light, @RigidBody2D@1323/Light, @RigidBody2D@1324/Light, @RigidBody2D@1325/Light, @RigidBody2D@1326/Light, @RigidBody2D@1327/Light, @RigidBody2D@1328/Light, @RigidBody2D@1329/Light, @RigidBody2D@1330/Light, @RigidBody2D@1331/Light, @RigidBody2D@1332/Light, @RigidBody2D@1333/Light, @RigidBody2D@1334/Light, @RigidBody2D@1335/Light, @RigidBody2D@1336/Light, @RigidBody2D@1337/Light, @RigidBody2D@1338/Light, @RigidBody2D@1339/Light, @RigidBody2D@1340/Light, @RigidBody2D@1341/Light, @RigidBody2D@1342/Light, @RigidBody2D@1343/Light, @RigidBody2D@1344/Light, @RigidBody2D@1345/Light, @RigidBody2D@1346/Light, @RigidBody2D@1347/Light, @RigidBody2D@1348/Light, @RigidBody2D@1349/Light, @RigidBody2D@1350/Light, @RigidBody2D@1351/Light, @RigidBody2D@1352/Light, @RigidBody2D@1353/Light, @RigidBody2D@1354/Light, @RigidBody2D@1355/Light, @RigidBody2D@1356/Light, @RigidBody2D@1357/Light, @RigidBody2D@1358/Light, @RigidBody2D@1359/Light, @RigidBody2D@1360/Light, @RigidBody2D@1361/Light, @RigidBody2D@1362/Light, @RigidBody2D@1363/Light, @RigidBody2D@1364/Light, @RigidBody2D@1365/Light, @RigidBody2D@1366/Light, @RigidBody2D@1367/Light, @RigidBody2D@1368/Light, @RigidBody2D@1369/Light, @RigidBody2D@1370/Light, @RigidBody2D@1371/Light, @RigidBody2D@1372/Light, @RigidBody2D@1373/Light, @RigidBody2D@1374/Light, @RigidBody2D@1375/Light, @RigidBody2D@1376/Light, @RigidBody2D@1377/Light, @RigidBody2D@1378/Light, @RigidBody2D@1379/Light, @RigidBody2D@1380/Light, @RigidBody2D@1381/Light, @RigidBody2D@1382/Light, @RigidBody2D@1383/Light, @RigidBody2D@1384/Light, @RigidBody2D@1385/Light, @RigidBody2D@1386/Light, @RigidBody2D@1387/Light, @RigidBody2D@1388/Light, @RigidBody2D@1389/Light, @RigidBody2D@1390/Light, @RigidBody2D@1391/Light, @RigidBody2D@1392/Light, @RigidBody2D@1393/Light, @RigidBody2D@1394/Light, @RigidBody2D@1395/Light, @RigidBody2D@1396/Light, @RigidBody2D@1397/Light, @RigidBody2D@1398/Light, @RigidBody2D@1399/Light, @RigidBody2D@1400/Light, @RigidBody2D@1401/Light, @RigidBody2D@1402/Light, @RigidBody2D@1403/Light, @RigidBody2D@1404/Light, @RigidBody2D@1405/Light, @RigidBody2D@1406/Light, @RigidBody2D@1407/Light, @RigidBody2D@1408/Light, @RigidBody2D@1409/Light, @RigidBody2D@1410/Light, @RigidBody2D@1411/Light, @RigidBody2D@1412/Light, @RigidBody2D@1413/Light, @RigidBody2D@1414/Light, @RigidBody2D@1415/Light, @RigidBody2D@1416/Light, @RigidBody2D@1417/Light, @RigidBody2D@1418/Light, @RigidBody2D@1419/Light, @RigidBody2D@1420/Light, @RigidBody2D@1421/Light, @RigidBody2D@1422/Light, @RigidBody2D@1423/Light, @RigidBody2D@1424/Light, @RigidBody2D@1425/Light, @RigidBody2D@1426/Light, @RigidBody2D@1427/Light, @RigidBody2D@1428/Light, @RigidBody2D@1429/Light, @RigidBody2D@1430/Light, @RigidBody2D@1431/Light, @RigidBody2D@1432/Light, @RigidBody2D@1433/Light, @RigidBody2D@1434/Light, @RigidBody2D@1435/Light, @RigidBody2D@1436/Light, @RigidBody2D@1437/Light, @RigidBody2D@1438/Light, @RigidBody2D@1439/Light, @RigidBody2D@1440/Light, @RigidBody2D@1441/Light, @RigidBody2D@1442/Light, @RigidBody2D@1443/Light, @RigidBody2D@1444/Light, @RigidBody2D@1445/Light, @RigidBody2D@1446/Light, @RigidBody2D@1447/Light, @RigidBody2D@1448/Light, @RigidBody2D@1449/Light, @RigidBody2D@1450/Light, @RigidBody2D@1451/Light, @RigidBody2D@1452/Light, @RigidBody2D@1453/Light, @RigidBody2D@1454/Light, @RigidBody2D@1455/Light, @RigidBody2D@1456/Light, @RigidBody2D@1457/Light, @RigidBody2D@1458/Light, @RigidBody2D@1459/Light, @RigidBody2D@1460/Light, @RigidBody2D@1461/Light, @RigidBody2D@1462/Light, @RigidBody2D@1463/Light, @RigidBody2D@1464/Light, @RigidBody2D@1465/Light, @RigidBody2D@1466/Light, @RigidBody2D@1467/Light, @RigidBody2D@1468/Light, @RigidBody2D@1469/Light, @RigidBody2D@1470/Light, @RigidBody2D@1471/Light, @RigidBody2D@1472/Light, @RigidBody2D@1473/Light, @RigidBody2D@1474/Light, @RigidBody2D@1475/Light, @RigidBody2D@1476/Light, @RigidBody2D@1477/Light, @RigidBody2D@1478/Light, @RigidBody2D@1479/Light, @RigidBody2D@1480/Light, @RigidBody2D@1481/Light, @RigidBody2D@1482/Light, @RigidBody2D@1483/Light, @RigidBody2D@1484/Light, @RigidBody2D@1485/Light, @RigidBody2D@1486/Light, @RigidBody2D@1487/Light, @RigidBody2D@1488/Light, @RigidBody2D@1489/Light, @RigidBody2D@1490/Light, @RigidBody2D@1491/Light, @RigidBody2D@1492/Light, @RigidBody2D@1493/Light, @RigidBody2D@1494/Light, @RigidBody2D@1495/Light, @RigidBody2D@1496/Light, @RigidBody2D@1497/Light, @RigidBody2D@1498/Light, @RigidBody2D@1499/Light, @RigidBody2D@1500/Light, @RigidBody2D@1501/Light, @RigidBody2D@1502/Light, @RigidBody2D@1503/Light, @RigidBody2D@1504/Light
+BANC_ISO canaux vue=scinde verdict=CANAUX TENUS (8 cas, 0 faux ; « doit » : ce capteur doit s'allumer)
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2365)
+       [1] _tracer_ecoute (res://audio_manager.gd:2458)
+       [2] rendre_oreille (res://audio_manager.gd:2513)
+--- ecoute : oreille rendue (2026-09-14T22:06:24) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 5000 Hz   <<<< FERME, le bus est etouffe
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+2026-09-14 22:06:24.363 Godot[63614:11429172] [UE4] Shutdown handler: cleanup.
+===== canaux_scinde rc=0
+===== base_eblouir — 22:06:24
+2026-09-14 22:06:24.482 Godot[63662:11429541] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+  son coupé (avant la scène) : muet=true
+=== Banc ISO0.b — B-projection dans le vrai duel ===
+Rendu : BASE (vue de dessus, telle qu'aujourd'hui), écran scindé
+  son coupé (après la scène) : muet=true
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:06:26) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -3.8 dB / D -3.8 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+Carte : « Arène Standard »
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080
+  SubViewport2: cible 2D 958×1080
+Échauffement 2 s…
+BANC_ISO capture final/base_eblouir.png 2560×1440
+BANC_ISO sprite vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO sprite vue=J1 corps=J2 max=18/17/15 eclaire=non
+BANC_ISO sprite vue=J2 ignorée (joueur ébloui à 0.69 : halo du brouillage par-dessus)
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2365)
+       [1] _tracer_ecoute (res://audio_manager.gd:2458)
+       [2] rendre_oreille (res://audio_manager.gd:2513)
+--- ecoute : oreille rendue (2026-09-14T22:06:32) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -83.6 dB / D -85.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+2026-09-14 22:06:32.909 Godot[63662:11429541] [UE4] Shutdown handler: cleanup.
+===== base_eblouir rc=0
+===== iso_eblouir — 22:06:32
+2026-09-14 22:06:33.024 Godot[63684:11429904] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+  son coupé (avant la scène) : muet=true
+=== Banc ISO0.b — B-projection dans le vrai duel ===
+Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
+  son coupé (après la scène) : muet=true
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:06:35) ---
 [audio] auditeurs : SubViewport1, SubViewport2
 [audio] oreilles  : principale=oui seconde=oui
 [audio]   principale sur Player1, courante=true, viewport=SubViewport1
@@ -46,12 +303,12 @@ Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étire
 Jeu           : Presentation3D — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4
 Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
 Échauffement 2 s…
-BANC_ISO capture plafond/apres_eblouir.png 2560×1440
-BANC_ISO lightmap plafond/apres_eblouir_lightmap1.png 957×1080
-BANC_ISO lightmap plafond/apres_eblouir_lightmap2.png 958×1080
+BANC_ISO capture final/iso_eblouir.png 2560×1440
+BANC_ISO lightmap final/iso_eblouir_lightmap1.png 957×1080
+BANC_ISO lightmap final/iso_eblouir_lightmap2.png 958×1080
 BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
-BANC_ISO corps vue=J1 corps=J2 max=191/177/156 plafond=191/177/156 eclaire=oui verdict=sous le plafond
-BANC_ISO corps vue=J2 ignorée (joueur ébloui à 0.52 : halo du brouillage par-dessus)
+BANC_ISO corps vue=J1 corps=J2 max=17/14/11 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 ignorée (joueur ébloui à 0.71 : halo du brouillage par-dessus)
 BANC_ISO corps verdict=PLAFOND TENU (1 corps mesurés, 0 au-dessus du gris de l'ennemi)
 [iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
 ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
@@ -60,7 +317,7 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
        [0] diagnostic_ecoute (res://audio_manager.gd:2365)
        [1] _tracer_ecoute (res://audio_manager.gd:2458)
        [2] rendre_oreille (res://audio_manager.gd:2513)
---- ecoute : oreille rendue (2026-09-14T21:22:00) ---
+--- ecoute : oreille rendue (2026-09-14T22:06:41) ---
 [audio] auditeurs : racine (SANS oreille — point fixe)
 [audio] oreilles  : principale=non seconde=non
 [audio] pool chez : Players
@@ -73,16 +330,87 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
 [audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
 [audio] replis hors physique : 0
 [audio] crete Master : G -200.0 dB / D -200.0 dB
-[audio] crete SFX : G -47.9 dB / D -48.4 dB
+[audio] crete SFX : G -87.8 dB / D -86.6 dB
 [audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
 [audio] sons positionnels lances : 0
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
 [audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
 
-2026-09-14 21:22:00.044 Godot[55128:11376579] [UE4] Shutdown handler: cleanup.
-===== apres_eblouir rc=0
-===== apres_j1 — 21:22:00
-2026-09-14 21:22:00.160 Godot[55142:11376838] [UE4] Shutdown handler: initialize.
+2026-09-14 22:06:41.696 Godot[63684:11429904] [UE4] Shutdown handler: cleanup.
+===== iso_eblouir rc=0
+===== base_j1 — 22:06:41
+2026-09-14 22:06:41.812 Godot[63694:11430190] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+  son coupé (avant la scène) : muet=true
+=== Banc ISO0.b — B-projection dans le vrai duel ===
+Rendu : BASE (vue de dessus, telle qu'aujourd'hui), écran scindé
+  son coupé (après la scène) : muet=true
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:06:43) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -3.8 dB / D -3.8 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+Carte : « Arène Standard »
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080
+  SubViewport2: cible 2D 958×1080
+Échauffement 2 s…
+BANC_ISO capture final/base_j1.png 2560×1440
+BANC_ISO sprite vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO sprite vue=J1 corps=J2 max=8/7/7 eclaire=non
+BANC_ISO sprite vue=J2 corps=J1 max=187/174/152 eclaire=oui
+BANC_ISO sprite vue=J2 corps=J2 max=37/29/26 eclaire=non
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2365)
+       [1] _tracer_ecoute (res://audio_manager.gd:2458)
+       [2] rendre_oreille (res://audio_manager.gd:2513)
+--- ecoute : oreille rendue (2026-09-14T22:06:49) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -64.5 dB / D -64.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+2026-09-14 22:06:49.874 Godot[63694:11430190] [UE4] Shutdown handler: cleanup.
+===== base_j1 rc=0
+===== iso_j1 — 22:06:49
+2026-09-14 22:06:49.990 Godot[63709:11430494] [UE4] Shutdown handler: initialize.
 Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
 
@@ -95,7 +423,7 @@ RankedIdentity: classement non configuré (res://supabase_config.gd absent ou in
 === Banc ISO0.b — B-projection dans le vrai duel ===
 Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
   son coupé (après la scène) : muet=true
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T21:22:02) ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:06:52) ---
 [audio] auditeurs : SubViewport1, SubViewport2
 [audio] oreilles  : principale=oui seconde=oui
 [audio]   principale sur Player1, courante=true, viewport=SubViewport1
@@ -129,14 +457,14 @@ Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étire
 Jeu           : Presentation3D — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4
 Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
 Échauffement 2 s…
-BANC_ISO capture plafond/apres_j1.png 2560×1440
-BANC_ISO lightmap plafond/apres_j1_lightmap1.png 957×1080
-BANC_ISO lightmap plafond/apres_j1_lightmap2.png 958×1080
+BANC_ISO capture final/iso_j1.png 2560×1440
+BANC_ISO lightmap final/iso_j1_lightmap1.png 957×1080
+BANC_ISO lightmap final/iso_j1_lightmap2.png 958×1080
 BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
-BANC_ISO corps vue=J1 corps=J2 max=0/0/0 plafond=191/177/156 eclaire=non verdict=sous le plafond
-BANC_ISO corps vue=J2 corps=J1 max=191/177/156 plafond=191/177/156 eclaire=oui verdict=sous le plafond
-BANC_ISO corps vue=J2 corps=J2 max=0/0/0 plafond=191/177/156 eclaire=non verdict=sous le plafond
-BANC_ISO corps verdict=PLAFOND TENU (3 corps mesurés, 0 au-dessus du gris de l'ennemi)
+BANC_ISO corps vue=J1 corps=J2 max=8/8/7 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 max=172/160/141 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.01)
+BANC_ISO corps verdict=PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi)
 [iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
 ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
    at: get_world_2d (scene/main/canvas_item.cpp:1267)
@@ -144,7 +472,7 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
        [0] diagnostic_ecoute (res://audio_manager.gd:2365)
        [1] _tracer_ecoute (res://audio_manager.gd:2458)
        [2] rendre_oreille (res://audio_manager.gd:2513)
---- ecoute : oreille rendue (2026-09-14T21:22:08) ---
+--- ecoute : oreille rendue (2026-09-14T22:06:58) ---
 [audio] auditeurs : racine (SANS oreille — point fixe)
 [audio] oreilles  : principale=non seconde=non
 [audio] pool chez : Players
@@ -157,16 +485,87 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
 [audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
 [audio] replis hors physique : 0
 [audio] crete Master : G -200.0 dB / D -200.0 dB
-[audio] crete SFX : G -56.2 dB / D -56.5 dB
+[audio] crete SFX : G -68.7 dB / D -65.3 dB
 [audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
 [audio] sons positionnels lances : 0
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
 [audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
 
-2026-09-14 21:22:08.262 Godot[55142:11376838] [UE4] Shutdown handler: cleanup.
-===== apres_j1 rc=0
-===== torche_j1 — 21:22:08
-2026-09-14 21:22:08.386 Godot[55185:11377209] [UE4] Shutdown handler: initialize.
+2026-09-14 22:06:58.311 Godot[63709:11430494] [UE4] Shutdown handler: cleanup.
+===== iso_j1 rc=0
+===== base_j2 — 22:06:58
+2026-09-14 22:06:58.432 Godot[63723:11430804] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+  son coupé (avant la scène) : muet=true
+=== Banc ISO0.b — B-projection dans le vrai duel ===
+Rendu : BASE (vue de dessus, telle qu'aujourd'hui), écran scindé
+  son coupé (après la scène) : muet=true
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:07:00) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -3.8 dB / D -3.8 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+Carte : « Arène Standard »
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080
+  SubViewport2: cible 2D 958×1080
+Échauffement 2 s…
+BANC_ISO capture final/base_j2.png 2560×1440
+BANC_ISO sprite vue=J1 corps=J1 max=77/53/37 eclaire=oui
+BANC_ISO sprite vue=J1 corps=J2 max=171/159/139 eclaire=oui
+BANC_ISO sprite vue=J2 corps=J1 max=22/20/17 eclaire=non
+BANC_ISO sprite vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.06)
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2365)
+       [1] _tracer_ecoute (res://audio_manager.gd:2458)
+       [2] rendre_oreille (res://audio_manager.gd:2513)
+--- ecoute : oreille rendue (2026-09-14T22:07:06) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -67.6 dB / D -68.7 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+2026-09-14 22:07:06.510 Godot[63723:11430804] [UE4] Shutdown handler: cleanup.
+===== base_j2 rc=0
+===== iso_j2 — 22:07:06
+2026-09-14 22:07:06.637 Godot[63748:11431130] [UE4] Shutdown handler: initialize.
 Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
 
@@ -179,7 +578,7 @@ RankedIdentity: classement non configuré (res://supabase_config.gd absent ou in
 === Banc ISO0.b — B-projection dans le vrai duel ===
 Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
   son coupé (après la scène) : muet=true
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T21:22:10) ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:07:08) ---
 [audio] auditeurs : SubViewport1, SubViewport2
 [audio] oreilles  : principale=oui seconde=oui
 [audio]   principale sur Player1, courante=true, viewport=SubViewport1
@@ -194,6 +593,90 @@ Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, mu
 [audio] replis hors physique : 0
 [audio] crete Master : G -200.0 dB / D -200.0 dB
 [audio] crete SFX : G -12.3 dB / D -12.1 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+Carte : « Arène Standard »
+JEU : Presentation3D allumée — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s)
+J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18
+J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4 ; 10/10 sprites de J1 retirés ; racine autorisée=false
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080, monde 2D 957×1080
+  SubViewport2: cible 2D 958×1080, monde 2D 958×1080
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+  Capteurs    : 4 × 256×256
+Jeu           : Presentation3D — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4
+Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
+Échauffement 2 s…
+BANC_ISO capture final/iso_j2.png 2560×1440
+BANC_ISO lightmap final/iso_j2_lightmap1.png 957×1080
+BANC_ISO lightmap final/iso_j2_lightmap2.png 958×1080
+BANC_ISO corps vue=J1 corps=J1 max=8/7/5 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J1 corps=J2 max=172/160/140 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 max=14/13/10 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps verdict=PLAFOND TENU (3 corps mesurés, 0 au-dessus du gris de l'ennemi)
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2365)
+       [1] _tracer_ecoute (res://audio_manager.gd:2458)
+       [2] rendre_oreille (res://audio_manager.gd:2513)
+--- ecoute : oreille rendue (2026-09-14T22:07:14) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -69.6 dB / D -70.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+2026-09-14 22:07:14.996 Godot[63748:11431130] [UE4] Shutdown handler: cleanup.
+===== iso_j2 rc=0
+===== torche_j1 — 22:07:15
+2026-09-14 22:07:15.111 Godot[63775:11431439] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+  son coupé (avant la scène) : muet=true
+=== Banc ISO0.b — B-projection dans le vrai duel ===
+Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
+  son coupé (après la scène) : muet=true
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:07:17) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, -80.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -3.8 dB / D -3.8 dB
 [audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
 [audio] sons positionnels lances : 0
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
@@ -228,7 +711,7 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
        [0] diagnostic_ecoute (res://audio_manager.gd:2365)
        [1] _tracer_ecoute (res://audio_manager.gd:2458)
        [2] rendre_oreille (res://audio_manager.gd:2513)
---- ecoute : oreille rendue (2026-09-14T21:22:16) ---
+--- ecoute : oreille rendue (2026-09-14T22:07:22) ---
 [audio] auditeurs : racine (SANS oreille — point fixe)
 [audio] oreilles  : principale=non seconde=non
 [audio] pool chez : Players
@@ -241,20 +724,16 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
 [audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
 [audio] replis hors physique : 0
 [audio] crete Master : G -200.0 dB / D -200.0 dB
-[audio] crete SFX : G -41.2 dB / D -40.1 dB
+[audio] crete SFX : G -40.3 dB / D -40.3 dB
 [audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
 [audio] sons positionnels lances : 0
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
 [audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
 
-WARNING: 32 ObjectDB instances were leaked at exit (run with `--verbose` for details).
-   at: cleanup (core/object/object.cpp:2536)
-ERROR: 16 resources still in use at exit (run with --verbose for details).
-   at: clear (core/io/resource.cpp:822)
-2026-09-14 21:22:16.145 Godot[55185:11377209] [UE4] Shutdown handler: cleanup.
+2026-09-14 22:07:22.902 Godot[63775:11431439] [UE4] Shutdown handler: cleanup.
 ===== torche_j1 rc=0
-===== torche_j2 — 21:22:16
-2026-09-14 21:22:16.259 Godot[55212:11377527] [UE4] Shutdown handler: initialize.
+===== torche_j2 — 22:07:22
+2026-09-14 22:07:23.019 Godot[63792:11431727] [UE4] Shutdown handler: initialize.
 Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
 
@@ -267,7 +746,7 @@ RankedIdentity: classement non configuré (res://supabase_config.gd absent ou in
 === Banc ISO0.b — B-projection dans le vrai duel ===
 Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
   son coupé (après la scène) : muet=true
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T21:22:18) ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:07:25) ---
 [audio] auditeurs : SubViewport1, SubViewport2
 [audio] oreilles  : principale=oui seconde=oui
 [audio]   principale sur Player1, courante=true, viewport=SubViewport1
@@ -281,7 +760,7 @@ Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, mu
 [audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
 [audio] replis hors physique : 0
 [audio] crete Master : G -200.0 dB / D -200.0 dB
-[audio] crete SFX : G -12.3 dB / D -12.1 dB
+[audio] crete SFX : G -3.8 dB / D -3.8 dB
 [audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
 [audio] sons positionnels lances : 0
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
@@ -304,9 +783,9 @@ Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
 BANC_ISO capture docs/iso/captures_iso2/torche_j2.png 1920×1080
 BANC_ISO lightmap docs/iso/captures_iso2/torche_j2_lightmap1.png 957×1080
 BANC_ISO lightmap docs/iso/captures_iso2/torche_j2_lightmap2.png 958×1080
-BANC_ISO corps vue=J1 corps=J1 max=191/177/156 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J1 corps=J1 max=9/8/6 plafond=191/177/156 eclaire=non verdict=sous le plafond
 BANC_ISO corps vue=J1 corps=J2 max=191/177/156 plafond=191/177/156 eclaire=oui verdict=sous le plafond
-BANC_ISO corps vue=J2 corps=J1 max=191/177/156 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 max=10/8/6 plafond=191/177/156 eclaire=non verdict=sous le plafond
 BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.06)
 BANC_ISO corps verdict=PLAFOND TENU (3 corps mesurés, 0 au-dessus du gris de l'ennemi)
 [iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
@@ -316,7 +795,7 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
        [0] diagnostic_ecoute (res://audio_manager.gd:2365)
        [1] _tracer_ecoute (res://audio_manager.gd:2458)
        [2] rendre_oreille (res://audio_manager.gd:2513)
---- ecoute : oreille rendue (2026-09-14T21:22:24) ---
+--- ecoute : oreille rendue (2026-09-14T22:07:30) ---
 [audio] auditeurs : racine (SANS oreille — point fixe)
 [audio] oreilles  : principale=non seconde=non
 [audio] pool chez : Players
@@ -329,16 +808,16 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
 [audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
 [audio] replis hors physique : 0
 [audio] crete Master : G -200.0 dB / D -200.0 dB
-[audio] crete SFX : G -46.5 dB / D -48.6 dB
+[audio] crete SFX : G -39.4 dB / D -37.7 dB
 [audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
 [audio] sons positionnels lances : 0
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
 [audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
 
-2026-09-14 21:22:24.157 Godot[55212:11377527] [UE4] Shutdown handler: cleanup.
+2026-09-14 22:07:30.785 Godot[63792:11431727] [UE4] Shutdown handler: cleanup.
 ===== torche_j2 rc=0
-===== noir_unique — 21:22:24
-2026-09-14 21:22:24.278 Godot[55232:11377839] [UE4] Shutdown handler: initialize.
+===== noir_unique — 22:07:30
+2026-09-14 22:07:30.903 Godot[63804:11432000] [UE4] Shutdown handler: initialize.
 Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
 
@@ -351,7 +830,7 @@ RankedIdentity: classement non configuré (res://supabase_config.gd absent ou in
 === Banc ISO0.b — B-projection dans le vrai duel ===
 Rendu : JEU (Presentation3D), vue unique, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
   son coupé (après la scène) : muet=true
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T21:22:26) ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:07:32) ---
 [audio] auditeurs : SubViewport1, SubViewport2
 [audio] oreilles  : principale=oui seconde=oui
 [audio]   principale sur Player1, courante=true, viewport=SubViewport1
@@ -385,7 +864,7 @@ Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étire
 Jeu           : Presentation3D — unique · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 1 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 1920×1080 · rendu 2560×1440 · capteurs 4 / 18
 Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
 Échauffement 2 s…
-BANC_ISO noir-a rendu=jeu-D vue=unique max_ecran=255/255 max_brute=154/255 max_lightmaps=[167] max_capteurs=[0, 0] allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso2/noir_unique.png
+BANC_ISO noir-a rendu=jeu-D vue=unique max_ecran=255/255 max_brute=154/255 max_lightmaps=[171] max_capteurs=[0, 0] allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso2/noir_unique.png
 BANC_ISO noir-b rendu=jeu-D vue=unique max_ecran=0/255 max_moities=[0] max_lightmaps=[0] max_capteurs=[0, 0] image=docs/iso/captures_iso2/noir_unique_lightmap_noire.png
 BANC_ISO noir rallumees_par_le_jeu=Arena/MurLed
 BANC_ISO noir pate=D vue=unique verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 255, capteurs [0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0])
@@ -396,7 +875,7 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
        [0] diagnostic_ecoute (res://audio_manager.gd:2365)
        [1] _tracer_ecoute (res://audio_manager.gd:2458)
        [2] rendre_oreille (res://audio_manager.gd:2513)
---- ecoute : oreille rendue (2026-09-14T21:22:32) ---
+--- ecoute : oreille rendue (2026-09-14T22:07:39) ---
 [audio] auditeurs : racine (SANS oreille — point fixe)
 [audio] oreilles  : principale=non seconde=non
 [audio] pool chez : Players
@@ -427,13 +906,13 @@ WARNING: 16 ObjectDB instances were leaked at exit (run with `--verbose` for det
    at: cleanup (core/object/object.cpp:2536)
 ERROR: 3 resources still in use at exit (run with --verbose for details).
    at: clear (core/io/resource.cpp:822)
-2026-09-14 21:22:32.540 Godot[55232:11377839] [UE4] Shutdown handler: cleanup.
+2026-09-14 22:07:39.190 Godot[63804:11432000] [UE4] Shutdown handler: cleanup.
 ERROR: 1 RID allocations of type 'N5GLES38MaterialE' were leaked at exit.
 ERROR: 1 RID allocations of type 'N5GLES36ShaderE' were leaked at exit.
 ERROR: 1 RID allocations of type 'N5GLES37TextureE' were leaked at exit.
 ===== noir_unique rc=0
-===== noir_scinde — 21:22:32
-2026-09-14 21:22:32.656 Godot[55254:11378172] [UE4] Shutdown handler: initialize.
+===== noir_scinde — 22:07:39
+2026-09-14 22:07:39.310 Godot[63819:11432355] [UE4] Shutdown handler: initialize.
 Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
 OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
 
@@ -446,7 +925,7 @@ RankedIdentity: classement non configuré (res://supabase_config.gd absent ou in
 === Banc ISO0.b — B-projection dans le vrai duel ===
 Rendu : JEU (Presentation3D), écran scindé, lightmap 1080p, tangage 52.0°, murs 0.65 tuile, pâte D
   son coupé (après la scène) : muet=true
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T21:22:34) ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-14T22:07:41) ---
 [audio] auditeurs : SubViewport1, SubViewport2
 [audio] oreilles  : principale=oui seconde=oui
 [audio]   principale sur Player1, courante=true, viewport=SubViewport1
@@ -480,7 +959,7 @@ Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étire
 Jeu           : Presentation3D — scindé · 52.0° · murs 0.65 t · pâte D · lightmap 1080p · 0 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4
 Murs          : 0.65 tuile (H_HAUT locale, en attente de map_geometry.gd)
 Échauffement 2 s…
-BANC_ISO noir-a rendu=jeu-D vue=scinde max_ecran=255/255 max_brute=169/255 max_lightmaps=[176, 180] max_capteurs=[0, 0, 0, 0] allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso2/noir_scinde.png
+BANC_ISO noir-a rendu=jeu-D vue=scinde max_ecran=255/255 max_brute=169/255 max_lightmaps=[172, 180] max_capteurs=[0, 0, 0, 0] allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso2/noir_scinde.png
 BANC_ISO noir-b rendu=jeu-D vue=scinde max_ecran=0/255 max_moities=[0, 0] max_lightmaps=[0, 0] max_capteurs=[0, 0, 0, 0] image=docs/iso/captures_iso2/noir_scinde_lightmap_noire.png
 BANC_ISO noir rallumees_par_le_jeu=Arena/MurLed
 BANC_ISO noir pate=D vue=scinde verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 255, capteurs [0, 0, 0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0, 0])
@@ -491,7 +970,7 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
        [0] diagnostic_ecoute (res://audio_manager.gd:2365)
        [1] _tracer_ecoute (res://audio_manager.gd:2458)
        [2] rendre_oreille (res://audio_manager.gd:2513)
---- ecoute : oreille rendue (2026-09-14T21:22:40) ---
+--- ecoute : oreille rendue (2026-09-14T22:07:47) ---
 [audio] auditeurs : racine (SANS oreille — point fixe)
 [audio] oreilles  : principale=non seconde=non
 [audio] pool chez : Players
@@ -510,5 +989,5 @@ ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
 [audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
 [audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
 
-2026-09-14 21:22:40.945 Godot[55254:11378172] [UE4] Shutdown handler: cleanup.
+2026-09-14 22:07:47.643 Godot[63819:11432355] [UE4] Shutdown handler: cleanup.
 ===== noir_scinde rc=0

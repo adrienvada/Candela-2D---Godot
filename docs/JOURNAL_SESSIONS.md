@@ -4345,3 +4345,27 @@ des corps grossiers ; corrigé sur sa demande par un plafond au gris d'entrée
 vue de dessus, décision reconfirmée par Adrien, rien de changé. Fichiers touchés en plus :
 `camera_iso.gd` (projection d'un point en hauteur). Lots et fenêtres de banc coordonnés avec
 « Murs bas Opus » par message, avant et après chacun.
+
+**Second addendum, même soir — le corps « blanc, LED éteintes ».** Adrien a rejoué après le plafond
+et montré J2 allumé dans les deux moitiés, son propre corps noir sous son halo : la correction
+annoncée ne traitait pas ce qu'il voyait. Cause mesurée avant de corriger, par un contrôle neuf
+(`tools/banc_iso.gd --canaux`) : les quatre capteurs partageaient une couche de visibilité, et en
+écran scindé chacun recevait les canaux des deux vues — six cas faux sur huit. Corrigé : une couche
+par capteur (`presentation_3d.gd`), des disques qui reçoivent la lumière par les shaders miroirs des
+sprites (`capteur_adverse.gdshader`, `capteur_local.gdshader`, nouveaux ; `capteur_corps.gd`), et le
+corps vaut le gris fois la lumière, sans seuil, lue à la place de chaque fragment
+(`corps_grossier_iso.gdshader`) : le flanc tourné vers la lampe est clair, le dos sombre. Étalon
+neuf au banc : le sprite de la vue de dessus (`--base --scinde`), comparable à positions et lumières
+identiques seulement — le banc les imprime. `tools/test_iso_vues.gd` complétée (couches disjointes,
+aucun capteur ne voit le disque d'un autre, `light()` miroirs, centre de lecture à jour) et sabotée
+deux fois ; `tools/test_iso_geometrie.gd` suit les couches ; `tools/test_mur_led.gd` compte
+`capteur_local.gdshader` parmi les `light()` sans énergie, comme `player_rim_light` dont il est le
+miroir — seul le lot complet l'a vu, rouge une fois. Signalé : son propre corps est noir hors
+lumière en iso, là où la vue de dessus garde une silhouette ; et, défaut d'équité d'ISO2 : les corps
+iso ignorent l'effacement de l'adversaire pour qui est ébloui et dans la suie (opacité des sprites).
+Signalé, hors périmètre : le témoin sans iso de `tools/test_iso_camera.gd` (suite d'ISO1) a divergé
+deux fois sur trois essais pendant qu'une partie et un banc tournaient à côté, par une balle
+présente d'un seul côté au pas 34 ; il est passé trois fois sur trois machine au calme. La partie
+scriptée tire et relève les balles au signal de physique. Lot du commit vert (116 OK, 22 h 44,
+machine libre) ; avant lui, `duo_reconnexion` a été intermittent sur un code réseau inchangé (rouge
+à 22 h 24, puis rouge et vert relancé seul).

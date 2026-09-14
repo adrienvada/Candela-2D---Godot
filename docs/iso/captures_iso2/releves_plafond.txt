@@ -35,3 +35,42 @@ BANC_ISO corps vue=J2 corps=J1 max=191/177/156 plafond=191/177/156 eclaire=oui v
 BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.06)
 BANC_ISO corps verdict=PLAFOND TENU (3 corps mesurés, 0 au-dessus du gris de l'ennemi)
 ===== torche_j2 rc=0
+
+# Après la correction des capteurs — lecture à la place de chaque fragment
+# Étalon contrôlé : la même scène en vue de dessus (base) puis en iso (jeu), même position,
+# même rotation et mêmes lumières imprimées. Deux lancements ne sont comparables qu'à cette condition :
+# la mise en scène du banc n'est pas reproductible d'un lancement à l'autre (visée différente constatée).
+===== base
+BANC_ISO sprite vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO sprite vue=J1 corps=J2 max=81/79/63 eclaire=oui
+BANC_ISO sprite vue=J1 corps=J2 position=(228.0, 778.0) rotation=-1.571 opacite=0.65 lumieres : Arena/MurLed masque=7 energie=1.00 ombre=non(1) d=397 | Player1/Flashlight masque=7 energie=2.50 ombre=oui(11) d=177
+BANC_ISO sprite vue=J2 ignorée (joueur ébloui à 0.71 : halo du brouillage par-dessus)
+===== base rc=0
+===== jeu
+BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps vue=J1 corps=J2 position=(228.0, 778.0) rotation=-1.571 lumieres : Arena/MurLed masque=7 energie=1.00 ombre=non(1) d=397 | Player1/Flashlight masque=7 energie=2.50 ombre=oui(11) d=177
+BANC_ISO corps vue=J1 corps=J2 max=118/110/96 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 ignorée (joueur ébloui à 0.71 : halo du brouillage par-dessus)
+BANC_ISO corps verdict=PLAFOND TENU (1 corps mesurés, 0 au-dessus du gris de l'ennemi)
+===== jeu rc=0
+# Plafond, les trois scènes iso avec les boîtes à la taille du corps projeté
+===== iso_eblouir — 22:09:26
+BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps vue=J1 corps=J2 max=118/110/96 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 ignorée (joueur ébloui à 0.69 : halo du brouillage par-dessus)
+BANC_ISO corps verdict=PLAFOND TENU (1 corps mesurés, 0 au-dessus du gris de l'ennemi)
+===== iso_eblouir rc=0
+===== iso_j1 — 22:09:35
+BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps vue=J1 corps=J2 max=9/8/7 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 max=172/160/141 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.01)
+BANC_ISO corps verdict=PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi)
+===== iso_j1 rc=0
+===== iso_j2 — 22:09:44
+BANC_ISO corps vue=J1 corps=J1 max=10/8/6 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J1 corps=J2 max=172/160/140 plafond=191/177/156 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 max=16/14/11 plafond=191/177/156 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps verdict=PLAFOND TENU (3 corps mesurés, 0 au-dessus du gris de l'ennemi)
+===== iso_j2 rc=0

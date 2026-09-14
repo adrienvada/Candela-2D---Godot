@@ -21,7 +21,7 @@
 ##   (`CAMERA_VISIBLE_LAYERS`, voir `iso_lightmap.gdshaderinc`). Chaque vue s'affiche par
 ##   un `TextureRect` posé sur le cadre de son conteneur 2D, à la résolution de la fenêtre.
 ## - **Les lightmaps gardent leurs masques réels** (`~4` / `~2`, posés par
-##   `game_state.gd`), moins la couche des capteurs. Ce que chaque lightmap contient est
+##   `game_state.gd`), moins les couches des capteurs. Ce que chaque lightmap contient est
 ##   exactement ce que son joueur a le droit de voir : ses lumières, pas celles de l'autre.
 ##   C'est la règle d'équité du jeu, et le jalon H-ISO2 : « je ne vois pas sa torche, il
 ##   ne voit pas mon halo ».
@@ -96,11 +96,22 @@ const NOM := "Presentation3D"
 ## Aucun bit non nul n'échappe aux deux vues ; zéro ne partage rien avec aucun masque,
 ## racine comprise. Vérifié sur les masques vivants par `tools/test_iso_geometrie.gd`.
 const COUCHE_HORS_VUE := 0
-## La couche de visibilité 2D des disques de capteur (bit 4 des vingt couches, qu'aucun
-## `CanvasItem` du jeu ne porte — le jeu n'utilise que 1, 2 et 4). **Retirée des masques
-## des lightmaps pendant que la vue est allumée** : sans quoi `~4` et `~2`, qui lisent
-## tout sauf une couche, dessineraient un disque blanc sous chaque corps dans le sol.
+## La première couche de visibilité 2D des disques de capteur (bit 4 des vingt couches) : les
+## quatre capteurs en prennent chacun une, de 8 à 64 (`couche_capteur`), qu'aucun `CanvasItem`
+## du jeu ne porte — le jeu n'utilise que 1, 2 et 4. **Retirées des masques des lightmaps
+## pendant que la vue est allumée** : sans quoi `~4` et `~2`, qui lisent tout sauf une couche,
+## dessineraient un disque blanc sous chaque corps dans le sol.
+##
+## ⚠️ **Une couche PAR capteur, jamais une commune** (retour d'Adrien au jalon H-ISO2,
+## 2026-09-14). Les quatre disques vivent dans le même monde 2D, et deux sont posés sous chaque
+## corps — celui de la vue de J1 et celui de la vue de J2. Sur une couche commune, chaque
+## capteur dessinait les deux et recevait ses canaux ET ceux de l'autre vue : en écran scindé,
+## J2 s'allumait chez J1 sous les lumières que seul J2 a le droit de voir (étincelles, impact),
+## et le corps de J1 restait noir sous son propre halo. Mesuré par `tools/banc_iso.gd --canaux` :
+## six cas faux sur huit en écran scindé, aucun en vue unique, où seuls deux capteurs existent.
+## Aucune suite sans rendu ne pouvait le voir ; la suite, elle, vérifiait « la » couche commune.
 const COUCHE_CAPTEUR := 8
+const COUCHES_CAPTEURS := 8 | 16 | 32 | 64
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
 const CALQUE_VUE_1 := 2
@@ -366,7 +377,7 @@ func _allumer(vues: Array[SubViewport]) -> void:
 		"masques": {},
 		"vues": [],
 	}
-	# La couche des capteurs sort des DEUX masques, regardés ou non : une vue peut se
+	# Les couches des capteurs sortent des DEUX masques, regardés ou non : une vue peut se
 	# rallumer entre deux images (retour de killcam) et lirait un disque blanc au sol.
 	for vue: SubViewport in [_main.vp1, _main.vp2]:
 		_sauvegarde["masques"][vue] = vue.canvas_cull_mask
@@ -502,7 +513,7 @@ func _tenir() -> void:
 		_main.rendu_racine_autorise = false
 		_main._accorder_rendu_aux_vues()
 	for vue: SubViewport in [_main.vp1, _main.vp2]:
-		if (vue.canvas_cull_mask & COUCHE_CAPTEUR) != 0:
+		if (vue.canvas_cull_mask & COUCHES_CAPTEURS) != 0:
 			vue.canvas_cull_mask = _sans_capteurs(vue.canvas_cull_mask)
 			masques_reposes += 1
 	for j in [_main.p1, _main.p2]:
@@ -559,6 +570,8 @@ func _suivre() -> void:
 			continue
 		var p: Vector2 = joueur.global_position
 		_corps[j].position = Vector3(p.x, 0.0, p.y)
+		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
+		_mat_corps[j].set_shader_parameter("centre", p)
 		_corps[j].basis = Basis.looking_at(Vector3(cos(joueur.rotation), 0.0, sin(joueur.rotation)), Vector3.UP)
 
 
@@ -667,7 +680,7 @@ func _lightmap_en_place(vue: SubViewport) -> bool:
 
 
 static func _sans_capteurs(masque: int) -> int:
-	return (masque & 0xFFFFFFFF) & ~COUCHE_CAPTEUR
+	return (masque & 0xFFFFFFFF) & ~COUCHES_CAPTEURS
 
 
 # ---------------------------------------------------------------------------
@@ -683,12 +696,18 @@ static func masque_capteur(vue_id: int, corps_id: int) -> int:
 	return CanauxLumiere.masque_vue_adverse(corps_id)
 
 
+## La couche de visibilité du capteur de la vue `vue_id` sous le corps `corps_id` : 8, 16, 32
+## ou 64 — une par capteur (voir `COUCHE_CAPTEUR`).
+static func couche_capteur(vue_id: int, corps_id: int) -> int:
+	return COUCHE_CAPTEUR << (vue_id * 2 + corps_id)
+
+
 func _poser_capteurs() -> void:
 	_retirer_capteurs()
 	for vue in _vues:
 		var id := _id_de(vue)
 		for j in 2:
-			var c := CapteurCorps.creer(id, j, _main.vp1.world_2d, COUCHE_CAPTEUR, masque_capteur(id, j))
+			var c := CapteurCorps.creer(id, j, _main.vp1.world_2d, couche_capteur(id, j), masque_capteur(id, j))
 			add_child(c)
 			_capteurs[id][j] = c
 			_mat_corps[j].set_shader_parameter("capteur_%d" % (id + 1), c.get_texture())
@@ -802,10 +821,10 @@ func _decrire(voulues: Array[SubViewport]) -> String:
 		for vue in _vues:
 			var id := _id_de(vue)
 			var rendu: Vector2i = _vues3d[id].size if _scinde else DisplayServer.window_get_size()
-			# Le masque tel que le jeu l'a posé (`~4`, `~2`), la couche des capteurs dite à part :
+			# Le masque tel que le jeu l'a posé (`~4`, `~2`), les couches des capteurs dites à part :
 			# `~12` ne se lirait pas.
 			lignes.append("J%d : masque ~%d sans capteurs · lightmap %d×%d · rendu %d×%d · capteurs %s / %s"
-				% [id + 1, (~vue.canvas_cull_mask & 0xFFFFFFFF) & ~COUCHE_CAPTEUR, vue.size.x, vue.size.y,
+				% [id + 1, (~vue.canvas_cull_mask & 0xFFFFFFFF) & ~COUCHES_CAPTEURS, vue.size.x, vue.size.y,
 				rendu.x, rendu.y, _masque_texte(_capteurs[id][0]), _masque_texte(_capteurs[id][1])])
 		return "\n".join(lignes)
 	return "en attente du prochain duel"
@@ -854,6 +873,10 @@ func _construire_la_scene() -> void:
 	for i in 2:
 		var mat := _materiau(SHADER_CORPS)
 		mat.set_shader_parameter("gris", Charte.ADVERSAIRE)
+		# Où le corps lit son capteur : chaque fragment à sa place dans le disque, jamais au-delà
+		# de son bord adouci (voir `corps_grossier_iso.gdshader`).
+		mat.set_shader_parameter("monde_capteur_px", CapteurCorps.MONDE_PX)
+		mat.set_shader_parameter("rayon_lu_px", minf(RAYON_CORPS_PX + 1.0, CapteurCorps.RAYON_PX - 3.0))
 		_mat_corps.append(mat)
 		var corps := Node3D.new()
 		corps.name = "Corps%d" % (i + 1)

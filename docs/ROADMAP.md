@@ -3173,6 +3173,26 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Quatre capteurs sur une couche commune se voyaient entre eux (2026-09-14)
+
+Les capteurs de corps d'ISO2 sont quatre sous-vues dans le MÊME `World2D`, une par vue et par
+corps, et deux disques sont posés sous chaque corps : celui de la vue de J1 et celui de la vue de
+J2, qui portent des masques de lumière différents. Tous sur la couche 8, chaque capteur dessinait
+les deux disques de son corps et recevait donc les canaux des deux vues. En vue unique, deux
+capteurs seulement : aucun effet. **En écran scindé, J2 s'allumait chez J1 sous des lumières que
+seul J2 a le droit de voir** (étincelles et lumière d'impact, canal 4), et le corps de J1 restait
+noir sous son propre halo. Adrien l'a vu au jalon H-ISO2 — « blanc alors même que les LED sont
+éteintes » —, le soir même où une première correction (le plafond, piège suivant) avait été
+annoncée comme la bonne. **Rien ne pouvait le voir** : la suite vérifiait que chaque capteur lisait
+« la » couche des capteurs, ce qui était précisément le défaut ; le contrôle du plafond mesurait des
+corps restés sous le gris ; et sous une torche, qui éclaire tous les canaux à la fois (1|2|4), un
+capteur qui lit le mauvais disque répond juste par hasard. Correction : une couche par capteur
+(`Presentation3D.couche_capteur`, 8 à 64). Preuve : `tools/banc_iso.gd --canaux` pose une sonde
+d'un seul canal sur un corps, toutes lumières du jeu éteintes, et juge chaque capteur — six cas
+faux sur huit en écran scindé avant, 8 cas justes sur 8 après. Règle : **deux objets qui
+partagent un monde de rendu ne sont séparés que par ce que chaque observateur filtre**, et un canal
+privé se prouve avec une lumière de ce canal SEUL, jamais sous une lumière qui les éclaire tous.
+
 ### La pâte d'un sol, appliquée à un corps éclairé, le pousse au blanc (2026-09-14)
 
 Les pâtes B, C et D normalisent les tons : elles divisent par la luminance reçue pour relever une
@@ -3184,15 +3204,19 @@ planche d'ISO2 le montrait sans que personne l'y cherche — le contrôle regard
 plafond. Correction : `min(pate(c, …), c)` ; contrôle au pixel « BANC_ISO corps » dans
 `tools/banc_iso.gd`. Règle : **un invariant de la vue de dessus se contrôle aussi par le haut** —
 le noir absolu n'était que la moitié du contrat de l'ennemi, « gris plafonné, noir hors lumière ».
+⚠️ **Ce plafond était juste, mais ce n'était pas tout ce qu'Adrien voyait** : un corps allumé par la
+MAUVAISE lumière venait des capteurs (piège précédent), et le corps passait au gris plein dès 8 % de
+lumière reçue. Le corps suit désormais la courbe du sprite qu'il remplace, sans seuil.
 
 ### Un capteur de lumière ne s'éteignait pas sous le `CanvasModulate` noir (2026-09-14)
 
 Les capteurs de corps d'ISO2 dessinent un disque blanc dans une sous-vue qui partage le `World2D`
 du duel, et comptent sur le `CanvasModulate` noir de l'arène pour valoir zéro sans lumière. **Ils
 valaient 13 à 17/255 toutes lumières éteintes** : chaque corps sortait du noir, en taches de sa
-taille (contrôle du noir du banc, (a) et (b) rompus). La sous-vue ne lit que la couche des disques
-(8), et le modulateur ne s'y appliquait pas comme dans les lightmaps. Aucune erreur : une image
-presque noire. Le disque est désormais en `LIGHT_MODE_LIGHT_ONLY` — il ne vaut que les lumières —,
+taille (contrôle du noir du banc, (a) et (b) rompus). La sous-vue ne lit que la couche de son
+disque, et le modulateur ne s'y appliquait pas comme dans les lightmaps. Aucune erreur : une image
+presque noire. Le disque est désormais en « lumière seule » (`LIGHT_MODE_LIGHT_ONLY`, puis
+`render_mode light_only` dans ses shaders miroirs du jalon H-ISO2) — il ne vaut que les lumières —,
 et le banc exige des capteurs à 0 lumières éteintes. ⚠️ **Et le premier relevé en « lumière seule »
 les a montrés PLUS clairs (31 et 58/255)** : le banc n'éteignait les lumières que trente images avant
 de capturer, et le jeu rallumait le bandeau LED des murs (`Arena/MurLed`) entre-temps. Il les éteint
@@ -21620,16 +21644,19 @@ contrôle qui la prouve (`tools/test_iso_vues.gd`).
 
 **Ce qui existe.**
 - **Deux lightmaps, une par joueur.** `SubViewport1` garde son masque réel `~4`, `SubViewport2`
-  `~2` (`game_state.gd` fait foi), moins la couche 8 des capteurs pendant la vue iso. Les shaders
+  `~2` (`game_state.gd` fait foi), moins les couches des capteurs (8 à 64) pendant la vue iso. Les shaders
   choisissent la lightmap par la caméra qui dessine (`CAMERA_VISIBLE_LAYERS`, calque 4 = J2) :
   une face de mur vue par J1 ne s'allume qu'avec ce que J1 a le droit de voir.
 - **`CapteurCorps`** (`capteur_corps.gd`) : par vue regardée et par corps, une sous-vue de 256²
-  dans le `World2D` du duel, qui ne voit qu'un disque blanc sous le corps. Le disque porte le
+  dans le `World2D` du duel, qui ne voit qu'un disque blanc sous le corps, **sur une couche à lui**
+  (jalon H-ISO2 : sur une couche commune, les capteurs se voyaient entre eux). Le disque porte le
   masque de lumière du sprite qu'il remplace : `JOUEUR_LOCAL` (4) pour soi,
   `masque_vue_adverse` pour l'autre (`2|16` chez J1, `2|32` chez J2 — miroir). Les corps
   grossiers lisent cinq prises dans leur capteur : **un ennemi révélé par le seul halo de
   proximité s'allume enfin** (constat d'ISO0.b levé). Le disque est en « lumière seule » : il ne
-  vaut que la lumière reçue, zéro sans lumière (voir « Pièges connus »).
+  vaut que la lumière reçue, zéro sans lumière (voir « Pièges connus »), et la reçoit par la courbe
+  du sprite qu'il remplace (`capteur_adverse.gdshader`, `capteur_local.gdshader`) : le corps vaut
+  le gris fois ce qu'il reçoit.
 - **Écran scindé en iso** (décision H15) : `VueIso1` et `VueIso2` partagent le `World3D` de la
   racine ; murs et corps sur le calque 1, `Sol1` sur le 2, `Sol2` sur le 4 ; chaque caméra voit
   `1 | son calque`. Chaque vue rend aux pixels de la fenêtre, s'affiche par un `TextureRect` sur
@@ -21658,10 +21685,11 @@ contrôle qui la prouve (`tools/test_iso_vues.gd`).
   `presentation_3d.gd` et de `corps_grossier_iso.gdshader`, là où ISO3 les lira. Aucune constante
   de `map_geometry.gd` n'est posée ici.
 
-**Ce que la suite prouve** — `tools/test_iso_vues.gd`, 189 vérifications, dans `run_suites.sh`,
+**Ce que la suite prouve** — `tools/test_iso_vues.gd`, 189 vérifications à la livraison, 201 après
+les retours du jalon H-ISO2 (sabotée deux fois de plus, voir ces retours), dans `run_suites.sh`,
 **sabotée une fois** (la couche des capteurs laissée dans les masques des lightmaps : 6 contrôles
 rouges, code 1) **→ restaurée à l'identique → verte** : écran scindé (deux vues 3D, un monde, caméras, sols, calques) ;
-masques des lightmaps `~4`/`~2` sans la couche des capteurs ; capteurs miroir ; **canaux** : aucun
+masques des lightmaps `~4`/`~2` sans les couches des capteurs ; capteurs miroir ; **canaux** : aucun
 `CanvasItem` que lit la lightmap de J1 ne reçoit le canal de vue de J2, ni l'inverse, ni aucun
 capteur ; calques et brouillage sous l'écran de leur joueur ; auditeurs ; aller-retours scindé →
 unique → scindé → gel → 2D → iso → nouvelle manche → menu, avec monde, masques, caméras, tailles,
@@ -21737,7 +21765,7 @@ du protocole ni du format de carte.
 Adrien a joué en 1V1 local, écran scindé iso, avec la commande du jalon. Deux retours.
 
 **1. « Le joueur ennemi, éclairé par la torche ou par la LED des murs extérieurs, devient tout
-blanc. » — défaut réel, corrigé.** Mesuré au pixel sur les captures de la planche : 255/246/227
+blanc. » — défaut réel, corrigé ; mais ce n'était qu'une partie du défaut (voir le retour 3).** Mesuré au pixel sur les captures de la planche : 255/246/227
 à l'écran, quand la vue de dessus plafonne l'ennemi à `Charte.ADVERSAIRE`, 191/177/156
 (`player_enemy_light.gdshader`, `min(lit, COLOR)`). Cause : les corps grossiers passent leur
 gris dans la pâte D, qui ramène chaque ton vers une luminance pleine — faite pour relever une
@@ -21783,16 +21811,96 @@ garde la mise en scène qui l'a mesuré (`--torches eblouir`).
 montrait un « voile absent » qui n'était que l'option du banc. Une comparaison se prend dans les
 mêmes conditions des deux côtés, interface comprise.
 
+**3. « Le corps du joueur 2 est blanc alors même que les LED sont éteintes. Pourquoi ça ne se
+comporte pas comme des lumières 3D, qui éclairent un volume aussi progressivement que leur
+intensité ? » — deux défauts réels, corrigés le soir même.** Adrien a rejoué après le plafond. Sur
+sa capture, J2 était allumé dans les deux moitiés, et son propre corps noir sous son halo : la
+première correction avait été annoncée comme suffisante, elle ne l'était pas.
+
+- **Les capteurs se voyaient entre eux** (voir « Pièges connus »). En écran scindé, chaque corps
+  recevait les canaux des deux vues. Mesuré AVANT de corriger, par `tools/banc_iso.gd --canaux`
+  (une sonde d'un seul canal sur un corps, toutes lumières du jeu éteintes, huit cas) :
+
+  | Vue | Avant | Après |
+  |---|---|---|
+  | unique | 8 cas justes sur 8 | 8 cas justes sur 8 |
+  | écran scindé | 6 cas faux sur 8 | 8 cas justes sur 8 |
+
+- **Le corps tranchait au lieu de suivre la lampe.** Le disque prenait la lumière par défaut du
+  moteur, et le corps passait au gris plein dès 8 % de lumière reçue (`smoothstep(0,01 ; 0,08)`).
+  Le sprite ennemi de la vue de dessus reçoit chaque lampe par sa propre courbe — × énergie, ×4 puis
+  plafond, × la forme de son masque : il monte avec la lampe et s'éteint à son bord. Les disques
+  ont maintenant les shaders MIROIRS des sprites (`capteur_adverse.gdshader` pour l'ennemi,
+  `capteur_local.gdshader` pour soi, comparés `light()` pour `light()` par la suite), et le corps
+  vaut le gris fois ce qu'il reçoit, sans seuil. ⚠️ Miroir jusqu'au défaut : `player_rim_light`
+  n'applique pas l'énergie de la lampe (exception connue de `tools/test_mur_led.gd`), son miroir
+  non plus, et il rejoint la liste des exceptions — avec lui, il en sortira. **Seul le lot complet
+  l'a vu** : les suites iso passées seules étaient vertes, la garde vit dans la suite de la LED. La pâte D ne coupe plus qu'en dessous d'environ 7 %
+  de lumière reçue, comme au sol.
+- **Le corps prend le modelé de la lumière 2D.** Chaque fragment du cylindre lit maintenant le
+  capteur à sa place dans le disque, au lieu d'une moyenne de cinq prises au centre. Le disque est
+  éclairé comme le sprite, ombres comprises : sous la torche d'en face, le corps masque sa moitié
+  arrière (le masque d'ombre de la torche porte le corps adverse). Le flanc tourné vers la lampe est
+  clair, le dos sombre, le dessus porte tout le disque. La moyenne, elle, donnait à un disque à demi
+  éclairé un corps entier en demi-teinte. Étalon neuf au banc (`--base --scinde`, et le banc
+  imprime pour chaque corps sa position, sa rotation, l'opacité du sprite et les lumières qui
+  l'atteignent) : la même scène, J1 braquant sa torche vers J2 :
+
+  | Vue | J2 dans la vue de J1, même position, mêmes lumières | Opacité du sprite |
+  |---|---|---|
+  | vue de dessus | 81/79/63 (environ 125/121/97 sans effacement) | 0,65 |
+  | iso | 118/110/96 | aucune, voir « Signalé » |
+
+  Le capteur de J2 (sauvegardé à côté de la capture) montre sa partie ouest éclairée et l'ombre
+  que son corps porte en biais sur sa partie est ; le corps iso s'éclaire du même côté. ⚠️ **Deux
+  lancements du banc ne se comparent qu'à positions et lumières identiques** : sa mise en scène
+  n'est pas reproductible d'un lancement à l'autre, et une première comparaison (J2 à 18/255 en
+  vue de dessus) avait été prise sur une autre visée.
+
+- **Pourquoi pas des lumières 3D.** C'est le choix de la projection B : la lumière de la vue iso est
+  celle de la 2D, occluders et canaux compris, et le cahier d'ISO2 interdit toute `Light3D`. Une
+  lampe 3D ne saurait ni qu'un mur 2D fait de l'ombre, ni qu'un halo n'éclaire que la vue de son
+  joueur : l'équité serait à réécrire à côté de celle qui existe. Le modelé vient donc de la lumière
+  2D elle-même, lue à la place de chaque fragment.
+- Revérifiés après correction : plafond tenu sur toutes les scènes iso mesurées, noir absolu tenu
+  dans les deux vues.
+- ⚠️ **Signalé, non corrigé — un défaut d'équité d'ISO2, antérieur à ces retours** : la vue de
+  dessus EFFACE l'adversaire pour qui est ébloui (`Brouillage.opacite`, décision du chantier
+  « brouiller la position de celui qui éblouit ») et le corps pris dans la suie
+  (`modulate.a` des sprites, `player.gd`). Les corps iso ne lisent que la lumière, pas cette
+  opacité : dans l'étalon ci-dessus, J2 est à 0,65 d'opacité en vue de dessus et entier en iso.
+  Le reproduire demande un choix de rendu (un corps 3D qui se fond dans le sol, pas qui noircit
+  devant lui) : c'est une étape à ouvrir, pas un geste à glisser ici.
+- **Signalé, non corrigé** : en vue de dessus, son propre sprite garde une silhouette à
+  demi-opacité hors lumière (`visual_dim`) ; en iso, son propre corps est noir hors lumière. Pas
+  un défaut de la correction : les corps grossiers ne l'ont jamais reproduite.
+- Signalé, hors périmètre : le témoin sans iso de `tools/test_iso_camera.gd` (suite d'ISO1) a
+  divergé deux fois sur trois essais pendant qu'une partie et un banc tournaient à côté, par une
+  balle présente d'un seul côté au pas 34 ; il est passé trois fois sur trois machine au calme. La
+  partie scriptée tire et relève les balles au signal de physique.
+- **Le lot de ce commit : vert, 116 OK en 373 s, à 22 h 44, machine libre.** Avant lui,
+  `duo_reconnexion` (réseau, deux instances, retour pendant la killcam) a été intermittent sur un
+  code réseau inchangé : vert à 22 h 16, rouge à 22 h 24 (113 OK), puis rouge et vert relancé seul,
+  pendant qu'une partie tournait à côté. Son échec est « le salon rouvert accepte le retour » :
+  l'instant du retour dépend du tempo de la machine. Déjà connu comme intermittent (voir plus haut,
+  famille 4.1).
+
 #### Jalon H-ISO2 — ce qui attend Adrien
 
-1. 🟡 **Commencé le 2026-09-14 au soir** (retours ci-dessus : corps blanc corrigé, trou net du flou
-   reconfirmé). **Jouer un duel complet à deux manettes en écran scindé iso**, pâte D :
+1. 🟡 **Commencé le 2026-09-14 au soir** (retours ci-dessus : capteurs qui se voyaient, courbe et
+   plafond du corps corrigés ; trou net du flou reconfirmé). **Rejouer un duel complet à deux
+   manettes en écran scindé iso** avec ces corrections, pâte D :
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" -- --iso`
    puis 1V1 LOCAL. Regarder : son halo n'est que dans sa moitié ; l'autre joueur s'allume sous son
    halo quand il est collé ; F3 (avec `fn`) montre les deux vues.
 2. **Relire la phrase du jalon** contre la règle du faisceau (ci-dessus).
 3. **Dire si ISO3 s'intègre** (corps voxel lisant le capteur) **et si ISO4/ISO5 s'ouvrent.**
 4. La taille de lightmap reste ouverte jusqu'au relevé de fin de chantier.
+5. **Ouvrir l'effacement des corps iso** (adversaire pour qui est ébloui, corps dans la suie) :
+   défaut d'équité signalé au retour 3.
+6. **Dire, pour ISO3, si son propre corps garde une silhouette hors lumière** : en vue de dessus,
+   son sprite en garde une à demi-opacité ; en iso, son corps est noir tant qu'aucune lampe ne
+   l'éclaire. Et juger le modelé des corps sous la lampe (retour 3).
 
 ### Ce qui attend Adrien — jalon H15
 

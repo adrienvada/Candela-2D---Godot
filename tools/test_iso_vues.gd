@@ -308,13 +308,36 @@ func _statiques(Reglages: GDScript, Pres: GDScript, Canaux: GDScript) -> void:
 		Pres.taille_lightmap("plein", Vector2i(957, 1080), 1440.0 / 1080.0) == Vector2i(1276, 1440))
 	_check("1080p : l'aire logique telle quelle",
 		Pres.taille_lightmap("1080p", Vector2i(957, 1080), 1440.0 / 1080.0) == Vector2i(957, 1080))
-	_check("la couche des capteurs n'est ni 1, ni 2, ni 4 — ni la couche 0 des sprites retirés",
-		int(Pres.COUCHE_CAPTEUR) == 8 and int(Pres.COUCHE_HORS_VUE) == 0)
+	# ⚠️ UNE couche PAR capteur (retour d'Adrien au jalon H-ISO2) : les quatre disques partagent le
+	# monde 2D du duel, et sur une couche commune chaque capteur voyait aussi le disque posé sur
+	# le même corps par l'autre vue. Créés en dernier, ceux de J2 recouvraient ceux de J1 : en
+	# écran scindé, J1 voyait les corps avec les canaux de J2.
+	var couches_capteurs: Array[int] = [Pres.couche_capteur(0, 0), Pres.couche_capteur(0, 1),
+		Pres.couche_capteur(1, 0), Pres.couche_capteur(1, 1)]
+	var union := 0
+	var disjointes := true
+	for c in couches_capteurs:
+		if c <= 0 or (c & (c - 1)) != 0 or (c & (1 | 2 | 4)) != 0 or (union & c) != 0:
+			disjointes = false
+		union |= c
+	_check("une couche PAR capteur : quatre bits distincts, ni 1, ni 2, ni 4 — ni la couche 0 des sprites retirés",
+		disjointes and union == int(Pres.COUCHES_CAPTEURS) and int(Pres.COUCHE_HORS_VUE) == 0, str(couches_capteurs))
 	_check("masque du capteur de SON corps : JOUEUR_LOCAL",
 		Pres.masque_capteur(0, 0) == Canaux.JOUEUR_LOCAL and Pres.masque_capteur(1, 1) == Canaux.JOUEUR_LOCAL)
 	_check("masque du capteur du corps d'EN FACE : masque_vue_adverse, miroir entre J1 et J2",
 		Pres.masque_capteur(0, 1) == Canaux.masque_vue_adverse(1) and Pres.masque_capteur(0, 1) == (2 | 16)
 		and Pres.masque_capteur(1, 0) == Canaux.masque_vue_adverse(0) and Pres.masque_capteur(1, 0) == (2 | 32))
+	# La courbe des disques (jalon H-ISO2) : un capteur reçoit la lumière comme le sprite qu'il
+	# remplace. Les shaders des disques sont des MIROIRS de ceux des sprites, comparés ici.
+	var adverse := _lumiere_du_shader("res://capteur_adverse.gdshader")
+	var locale := _lumiere_du_shader("res://capteur_local.gdshader")
+	_check("le disque d'un corps d'en face reçoit la lumière comme le sprite ennemi (light() miroir de player_enemy_light)",
+		adverse != "" and adverse == _lumiere_du_shader("res://player_enemy_light.gdshader"), adverse)
+	_check("le disque de son propre corps la reçoit comme le sprite du joueur (light() miroir de player_rim_light)",
+		locale != "" and locale == _lumiere_du_shader("res://player_rim_light.gdshader"), locale)
+	_check("les deux disques sont en « lumière seule » : zéro sans lumière",
+		FileAccess.get_file_as_string("res://capteur_adverse.gdshader").contains("render_mode light_only;")
+		and FileAccess.get_file_as_string("res://capteur_local.gdshader").contains("render_mode light_only;"))
 
 	# Le réglage, persisté séparément de ce qui s'applique — comme `mode_iso`.
 	var chemin := "user://test_iso_vues_reglages.cfg"
@@ -384,10 +407,10 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 	_check("murs et corps sont communs, sur le calque 1 (%d maillages)" % communs, communs > 2 and hors_commun == 0)
 
 	_check("lightmap de J1 : masque ~4 sans la couche des capteurs",
-		vp1.canvas_cull_mask == ((~4 & 0xFFFFFFFF) & ~int(p.COUCHE_CAPTEUR)) and (vp1.canvas_cull_mask & 2) != 0
+		vp1.canvas_cull_mask == ((~4 & 0xFFFFFFFF) & ~int(p.COUCHES_CAPTEURS)) and (vp1.canvas_cull_mask & 2) != 0
 		and (vp1.canvas_cull_mask & 4) == 0, str(vp1.canvas_cull_mask))
 	_check("lightmap de J2 : masque ~2 sans la couche des capteurs",
-		vp2.canvas_cull_mask == ((~2 & 0xFFFFFFFF) & ~int(p.COUCHE_CAPTEUR)) and (vp2.canvas_cull_mask & 4) != 0
+		vp2.canvas_cull_mask == ((~2 & 0xFFFFFFFF) & ~int(p.COUCHES_CAPTEURS)) and (vp2.canvas_cull_mask & 4) != 0
 		and (vp2.canvas_cull_mask & 2) == 0, str(vp2.canvas_cull_mask))
 	_check("les deux lightmaps dessinent, transparentes à l'écran",
 		vp1.render_target_update_mode == SubViewport.UPDATE_ALWAYS and vp2.render_target_update_mode == SubViewport.UPDATE_ALWAYS
@@ -411,10 +434,69 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 				c.masque_lumiere() == attendu, str(c.masque_lumiere()))
 			_check("capteur vue J%d corps J%d : 256², dans le monde 2D du duel, ne lit que sa couche, n'écoute rien" % [id + 1, j + 1],
 				c.size == Vector2i(256, 256) and c.world_2d == vp1.world_2d
-				and c.canvas_cull_mask == int(p.COUCHE_CAPTEUR) and c.couche() == int(p.COUCHE_CAPTEUR)
+				and c.canvas_cull_mask == p.couche_capteur(id, j) and c.couche() == p.couche_capteur(id, j)
 				and not c.is_audio_listener_2d() and c.get_parent() == p)
+	var voit_un_autre := 0
+	for a in _liste_capteurs(capteurs):
+		for b in _liste_capteurs(capteurs):
+			if a != b and (a.canvas_cull_mask & b.couche()) != 0:
+				voit_un_autre += 1
+	_check("aucun capteur ne voit le disque d'un autre (sur une couche commune, la vue de J2 recouvrait celle de J1)",
+		voit_un_autre == 0, "%d paire(s)" % voit_un_autre)
+	var courbes := 0
+	for id in 2:
+		for j in 2:
+			var c = capteurs[id][j]
+			if c != null and c.matiere() is ShaderMaterial and (c.matiere() as ShaderMaterial).shader == load(
+					"res://capteur_local.gdshader" if id == j else "res://capteur_adverse.gdshader"):
+				courbes += 1
+	_check("chaque disque porte la courbe du sprite qu'il remplace (le sien : joueur ; celui d'en face : ennemi)",
+		courbes == 4, "%d/4" % courbes)
+	# Chaque fragment d'un corps lit son capteur À SA PLACE, autour du centre posé à chaque image :
+	# un centre en retard décalerait l'éclairage du corps (côté lampe) de ce qu'il a bougé.
+	var centres := 0
+	var mats: Array = p.get("_mat_corps")
+	for j in 2:
+		var joueur: Node2D = main.p1 if j == 0 else main.p2
+		var lu = (mats[j] as ShaderMaterial).get_shader_parameter("centre")
+		if lu is Vector2 and (lu as Vector2).distance_to(joueur.global_position) < 0.01:
+			centres += 1
+	_check("chaque corps lit son capteur autour de sa position (centre posé à chaque image)", centres == 2, "%d/2" % centres)
 	_check("masques miroir : J1 voit J2 par 2|16, J2 voit J1 par 2|32",
 		capteurs[0][1].masque_lumiere() == (2 | 16) and capteurs[1][0].masque_lumiere() == (2 | 32))
+
+
+## Le corps de `light()` d'un shader, commentaires et blancs retirés : deux shaders miroirs y
+## sont identiques caractère pour caractère. Chaîne vide si le shader n'a pas de `light()`.
+func _lumiere_du_shader(chemin: String) -> String:
+	var lignes: PackedStringArray = []
+	for ligne in FileAccess.get_file_as_string(chemin).split("\n"):
+		var i := ligne.find("//")
+		lignes.append(ligne.left(i) if i >= 0 else ligne)
+	var code := "".join(lignes).replace(" ", "").replace("\t", "").replace("\r", "")
+	var entete := "voidlight(){"
+	var debut := code.find(entete)
+	if debut < 0:
+		return ""
+	var profondeur := 0
+	for k in range(debut + entete.length() - 1, code.length()):
+		if code[k] == "{":
+			profondeur += 1
+		elif code[k] == "}":
+			profondeur -= 1
+			if profondeur == 0:
+				return code.substr(debut, k - debut + 1)
+	return ""
+
+
+## Les capteurs vivants d'un tableau `[vue][corps]`, à plat.
+func _liste_capteurs(capteurs: Array) -> Array[CapteurCorps]:
+	var out: Array[CapteurCorps] = []
+	for ligne in capteurs:
+		for c in ligne:
+			if c != null:
+				out.append(c as CapteurCorps)
+	return out
 
 
 func _unique(main: Node, p: Node, id: int) -> void:

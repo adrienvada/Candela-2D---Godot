@@ -312,7 +312,12 @@ func _test_intensite_par_la_couleur() -> void:
 ## hors du correctif décidé par Adrien le 2026-09-10, qui ne portait que sur le
 ## liseré des murs et le corps adverse. En retirer un quand il est corrigé ; en
 ## AJOUTER un demande de dire pourquoi.
-const LIGHT_SANS_ENERGIE := ["player_rim_light.gdshader", "blood_shader.gdshader"]
+##
+## `capteur_local.gdshader` (ISO2, jalon H-ISO2, 2026-09-14) : le disque du capteur de son propre
+## corps en vue iso est le MIROIR de `player_rim_light.gdshader` — le corps 3D doit recevoir la
+## lumière exactement comme le sprite qu'il remplace, et `tools/test_iso_vues.gd` compare les deux
+## `light()`. Il sort de cette liste le jour où `player_rim_light.gdshader` en sort, avec lui.
+const LIGHT_SANS_ENERGIE := ["player_rim_light.gdshader", "blood_shader.gdshader", "capteur_local.gdshader"]
 
 ## Garde du correctif décidé par Adrien le 2026-09-10 : un `light()` propre qui
 ## lit `LIGHT_COLOR` doit appliquer `LIGHT_ENERGY`. Les masques de lumière du

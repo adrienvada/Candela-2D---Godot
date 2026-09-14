@@ -213,6 +213,8 @@ const TORCHES := ["toutes", "j1", "j2", "aucune", "eblouir"]
 var _torches := "toutes"
 ## Pendant le contrôle du noir : les lumières s'éteignent à chaque image.
 var _noir_en_cours := false
+## `--canaux` : le contrôle des canaux des capteurs (voir `_controler_les_canaux`).
+var _canaux := false
 ## Les lumières que le jeu avait rallumées depuis l'image précédente — nommées au relevé.
 var _rallumees: PackedStringArray = []
 
@@ -258,6 +260,10 @@ func _ready() -> void:
 		return
 	if _noir and (_capture == "" or not (_jeu or _base) or (_scinde and not _jeu)):
 		printerr("✗ banc_iso : --noir se prend avec --capture, et --jeu (vue unique ou --scinde) ou --base (vue unique)")
+		_sortir(2)
+		return
+	if _canaux and (_capture == "" or not _jeu):
+		printerr("✗ banc_iso : --canaux se prend avec --capture et --jeu (vue unique ou --scinde)")
 		_sortir(2)
 		return
 	if _jeu and _lightmap == "demi":
@@ -367,6 +373,7 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 		return false
 	_jeu = args.has("--jeu")
 	_noir = args.has("--noir")
+	_canaux = args.has("--canaux")
 	_sans_hud = args.has("--sans-hud")
 	_mur_donne = args.has("--mur")
 	var taille := _value(args, "--taille", "")
@@ -887,6 +894,9 @@ func _capturer() -> void:
 	if _noir:
 		await _capturer_le_noir()
 		return
+	if _canaux:
+		await _controler_les_canaux()
+		return
 	var p1: Node2D = _main.p1
 	var p2: Node2D = _main.p2
 	var cible := _mur_le_plus_proche(p1.global_position)
@@ -933,6 +943,17 @@ func _capturer() -> void:
 		var chemin := _capture.get_basename() + "_lightmap%d.png" % (i + 1)
 		if lumiere != null and lumiere.save_png(chemin) == OK:
 			print("BANC_ISO lightmap %s %d×%d" % [chemin, lumiere.get_width(), lumiere.get_height()])
+	if _jeu and Presentation3D.instance() != null:
+		# Ce que chaque corps lit : la texture de son capteur, à côté de la capture.
+		for id in 2:
+			for j in 2:
+				var cap = Presentation3D.instance().capteurs()[id][j]
+				if cap != null:
+					var lu: Image = (cap as SubViewport).get_texture().get_image()
+					if lu != null:
+						lu.save_png(_capture.get_basename() + "_capteur_vue%d_corps%d.png" % [id + 1, j + 1])
+	if _base and _scinde:
+		_mesurer_les_sprites(image)
 	if _jeu and _controler_les_corps(image) > 0:
 		_sortir(7)
 		return
@@ -983,26 +1004,35 @@ func _controler_les_corps(image: Image) -> int:
 			if j == id and ebloui > 0.01:
 				print("BANC_ISO corps vue=J%d corps=J%d ignoré (son porteur est ébloui à %.2f)" % [id + 1, j + 1, ebloui])
 				continue
-			var logique := origine + cam.vers_ecran(corps.global_position, taille,
-				Presentation3D.HAUTEUR_CORPS_PX * 0.55)
-			var centre := Vector2i((logique * _etirement()).round())
-			var r := maxi(2, roundi(5.0 * _etirement()))
-			var zone := Rect2i(centre - Vector2i(r, r), Vector2i(2 * r, 2 * r)) \
-				.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
-			if zone.size.x <= 0 or zone.size.y <= 0:
+			# Le flanc ET le dessus : depuis que chaque fragment lit le capteur à sa place, le côté
+			# tourné vers la lampe est clair et le dos sombre — le centre du flanc seul peut tomber
+			# dans l'ombre d'un corps bien éclairé. Deux boîtes dans la silhouette, jamais le sol.
+			# Tailles tirées de la caméra : un pixel de monde vaut `echelle` pixels d'écran, le dessus
+			# du cylindre se projette en ellipse de demi-axes R et R·sin(tangage), le flanc sur
+			# H·cos(tangage). Les boîtes en couvrent 65 % : dans la silhouette, jamais le sol — et
+			# assez pour attraper le côté tourné vers la lampe, où qu'elle soit.
+			var echelle := taille.y / cam.size if cam.size > 0.0 else 1.0
+			var tangage := deg_to_rad(CameraIso.TANGAGE_DEG)
+			var rayon := Presentation3D.RAYON_CORPS_PX * echelle * 0.65
+			var flanc := _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille,
+				Presentation3D.HAUTEUR_CORPS_PX * 0.5), rayon,
+				Presentation3D.HAUTEUR_CORPS_PX * echelle * cos(tangage) * 0.3)
+			var dessus := _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille,
+				Presentation3D.HAUTEUR_CORPS_PX), rayon, rayon * sin(tangage))
+			if flanc.is_empty() and dessus.is_empty():
 				continue
-			var region := image.get_region(zone)
-			region.convert(Image.FORMAT_RGB8)
-			var donnees := region.get_data()
 			var m := [0, 0, 0]
-			for k in range(0, donnees.size(), 3):
-				for c in 3:
-					m[c] = maxi(m[c], donnees[k + c])
+			for boite in [flanc, dessus]:
+				for c in (boite as Array).size():
+					m[c] = maxi(m[c], boite[c])
 			var au_dessus: bool = m[0] > plafond[0] + TOLERANCE_PLAFOND \
 				or m[1] > plafond[1] + TOLERANCE_PLAFOND or m[2] > plafond[2] + TOLERANCE_PLAFOND
 			mesures += 1
 			if au_dessus:
 				depassements += 1
+			print("BANC_ISO corps vue=J%d corps=J%d position=%s rotation=%.3f lumieres : %s" % [id + 1, j + 1,
+				str(corps.global_position.round()), corps.rotation,
+				" | ".join(_lumieres_sur(corps.global_position, Presentation3D.masque_capteur(id, j)))])
 			print("BANC_ISO corps vue=J%d corps=J%d max=%d/%d/%d plafond=%d/%d/%d eclaire=%s verdict=%s"
 				% [id + 1, j + 1, m[0], m[1], m[2], plafond[0], plafond[1], plafond[2],
 				"oui" if maxi(m[0], maxi(m[1], m[2])) > 40 else "non",
@@ -1013,6 +1043,170 @@ func _controler_les_corps(image: Image) -> int:
 	print("BANC_ISO corps verdict=%s (%d corps mesurés, %d au-dessus du gris de l'ennemi)"
 		% [verdict, mesures, depassements])
 	return depassements
+
+
+## La plus haute valeur de chaque canal dans une boîte de ±`demi_x` × ±`demi_y` pixels
+## logiques autour d'un point logique de l'écran ; vide hors de l'image.
+func _max_rgb_dans(image: Image, logique: Vector2, demi_x: float, demi_y: float) -> Array:
+	var e := _etirement()
+	var centre := Vector2i((logique * e).round())
+	var demi := Vector2i(maxi(2, roundi(demi_x * e)), maxi(2, roundi(demi_y * e)))
+	var zone := Rect2i(centre - demi, demi * 2).intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	if zone.size.x <= 0 or zone.size.y <= 0:
+		return []
+	var region := image.get_region(zone)
+	region.convert(Image.FORMAT_RGB8)
+	var donnees := region.get_data()
+	var m := [0, 0, 0]
+	for k in range(0, donnees.size(), 3):
+		for c in 3:
+			m[c] = maxi(m[c], donnees[k + c])
+	return m
+
+
+## Les lumières allumées qui peuvent atteindre un point pour ce masque de lumière : canal croisé,
+## et portée de leur texture. Pour dire QUI éclaire un corps, pas seulement combien.
+func _lumieres_sur(point: Vector2, masque: int) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for n in get_tree().root.find_children("*", "Light2D", true, false):
+		var l := n as Light2D
+		if not l.enabled or not l.is_visible_in_tree() or (l.range_item_cull_mask & masque) == 0:
+			continue
+		var d := l.global_position.distance_to(point)
+		if l is PointLight2D and (l as PointLight2D).texture != null:
+			var pl := l as PointLight2D
+			var portee := pl.texture.get_width() * pl.texture_scale * 0.5 * maxf(absf(pl.global_scale.x), absf(pl.global_scale.y))
+			if d > portee + 20.0:
+				continue
+		out.append("%s/%s masque=%d energie=%.2f ombre=%s(%d) d=%.0f" % [String(l.get_parent().name), String(l.name),
+			l.range_item_cull_mask, l.energy, "oui" if l.shadow_enabled else "non", l.shadow_item_cull_mask, d])
+	return out
+
+
+## L'étalon de la vue de dessus (jalon H-ISO2) : dans la même scène, en `--base --scinde`, le
+## sprite de chaque corps mesuré comme le corps iso l'est — mêmes vues ignorées, mêmes corps
+## écartés. Adrien : le corps doit s'éclairer « aussi progressivement que l'intensité ». Ce qui
+## s'y compare, c'est la valeur la plus haute sur le corps, dans les deux vues : aucune lumière ne
+## doit montrer en iso un corps que la vue de dessus laisse noir, ni le cacher. Mesure seule,
+## sans verdict — c'est l'étalon.
+func _mesurer_les_sprites(image: Image) -> void:
+	var joueurs := [_main.p1, _main.p2]
+	for id in 2:
+		var vue: SubViewport = _main.vp1 if id == 0 else _main.vp2
+		var conteneur := vue.get_parent() as Control
+		if not conteneur.is_visible_in_tree():
+			continue
+		var ebloui := float(joueurs[id].get("dazzle_amount"))
+		if ebloui > EBLOUI_IGNORE:
+			print("BANC_ISO sprite vue=J%d ignorée (joueur ébloui à %.2f : halo du brouillage par-dessus)" % [id + 1, ebloui])
+			continue
+		var echelle := conteneur.size / vue.get_visible_rect().size
+		for j in 2:
+			var corps: Node2D = joueurs[j]
+			if not corps.visible or not corps.visual.visible:
+				continue
+			if j == id and ebloui > 0.01:
+				print("BANC_ISO sprite vue=J%d corps=J%d ignoré (son porteur est ébloui à %.2f)" % [id + 1, j + 1, ebloui])
+				continue
+			var logique := conteneur.global_position + (vue.get_canvas_transform() * corps.global_position) * echelle
+			var m := _max_rgb_dans(image, logique, 12.0, 12.0)
+			if m.is_empty():
+				continue
+			print("BANC_ISO sprite vue=J%d corps=J%d max=%d/%d/%d eclaire=%s" % [id + 1, j + 1, m[0], m[1], m[2],
+				"oui" if maxi(m[0], maxi(m[1], m[2])) > 40 else "non"])
+			var sprite: CanvasItem = corps.get("visual") if id == j else corps.get("visual_enemy")
+			print("BANC_ISO sprite vue=J%d corps=J%d position=%s rotation=%.3f opacite=%.2f lumieres : %s" % [id + 1, j + 1,
+				str(corps.global_position.round()), corps.rotation, sprite.modulate.a if sprite != null else -1.0,
+				" | ".join(_lumieres_sur(corps.global_position, Presentation3D.masque_capteur(id, j)))])
+
+
+## Les canaux des capteurs — second retour d'Adrien au jalon H-ISO2 (2026-09-14) : en écran
+## scindé, J2 s'allumait dans la vue de J1 « alors même que les LED sont éteintes », et le
+## corps de J1 restait noir sous son propre halo, dans sa propre vue.
+##
+## Un capteur doit recevoir exactement les lumières que recevrait le sprite qu'il remplace, et
+## rien d'autre. Le contrôle éteint toutes les lumières du jeu à chaque image, pose sur un
+## corps une sonde d'UN seul canal, et lit chaque capteur vivant en son centre, là où le corps
+## lit : il doit s'allumer si le masque de son disque croise ce canal et s'il est posé sous ce
+## corps, rester noir sinon. Quatre canaux (joueur local, ennemi, vue de J1, vue de J2) sur
+## chacun des deux corps : huit cas, chacun jugé sur tous les capteurs. Code 8 à la moindre fuite.
+##
+## ⚠️ Ce que le contrôle du plafond ne pouvait pas voir : un corps allumé par la MAUVAISE
+## lumière reste sous le gris de l'ennemi. Et une torche éclaire tous les canaux à la fois
+## (1|2|4) : sous elle, un capteur qui lit le disque d'un autre répond juste par hasard.
+const SONDE_ECLAIREE := 20
+const SONDE_NOIRE := 2
+## Le diamètre de la sonde, en pixels de monde : elle couvre un corps (rayon 18 px) et
+## n'atteint jamais l'autre, posé à 110 px.
+const SONDE_EMPREINTE_PX := 60
+
+func _controler_les_canaux() -> void:
+	var p := Presentation3D.instance()
+	if p == null or not bool(p.get("_actif")):
+		printerr("✗ --canaux : la vue iso n'est pas allumée")
+		_sortir(4)
+		return
+	var p1: Node2D = _main.p1
+	var p2: Node2D = _main.p2
+	# Les deux corps à 110 px l'un de l'autre, comme sur la planche : ni la sonde (rayon 30 px)
+	# ni la fenêtre d'un capteur (±64 px) ne touchent l'autre corps.
+	var cible := _mur_le_plus_proche(p1.global_position)
+	var axe := (cible - p1.global_position).normalized()
+	var avance := minf(p1.global_position.distance_to(cible) * 0.5, 150.0)
+	p2.global_position = p1.global_position + axe * avance + axe.orthogonal() * 110.0
+	var sonde := PointLight2D.new()
+	sonde.name = "BancSondeCanal"
+	sonde.set_meta("banc_iso_sonde", true)
+	sonde.texture = LightTextures.radial(SONDE_EMPREINTE_PX)
+	sonde.color = Color(1, 1, 1)
+	sonde.energy = 1.0
+	sonde.shadow_enabled = false
+	p1.get_parent().add_child(sonde)
+	_noir_en_cours = true
+	var joueurs: Array[Node2D] = [p1, p2]
+	var canaux: Array[int] = [CanauxLumiere.JOUEUR_LOCAL, CanauxLumiere.ENNEMI,
+		CanauxLumiere.canal_de_vue(0), CanauxLumiere.canal_de_vue(1)]
+	var faux := 0
+	var cas := 0
+	for sur in 2:
+		for canal in canaux:
+			sonde.range_item_cull_mask = canal
+			sonde.enabled = true
+			for i in 15:
+				sonde.global_position = joueurs[sur].global_position
+				await get_tree().process_frame
+			var lus: PackedStringArray = []
+			var bon := true
+			for id in 2:
+				for j in 2:
+					var c = p.capteurs()[id][j]
+					if c == null:
+						continue
+					var v: int = _valeur_au_centre(c as SubViewport)
+					var doit: bool = j == sur and (canal & Presentation3D.masque_capteur(id, j)) != 0
+					var juste: bool = (v >= SONDE_ECLAIREE) if doit else (v <= SONDE_NOIRE)
+					if not juste:
+						bon = false
+					lus.append("vueJ%d/corpsJ%d=%d%s%s" % [id + 1, j + 1, v, "(doit)" if doit else "",
+						"" if juste else "(FAUX)"])
+			cas += 1
+			if not bon:
+				faux += 1
+			print("BANC_ISO canaux sonde=%d sur=J%d %s verdict=%s"
+				% [canal, sur + 1, " ".join(lus), "juste" if bon else "FUITE"])
+	_noir_en_cours = false
+	sonde.queue_free()
+	print("BANC_ISO canaux rallumees_par_le_jeu=%s"
+		% (", ".join(_rallumees_vues.keys()) if not _rallumees_vues.is_empty() else "aucune"))
+	print("BANC_ISO canaux vue=%s verdict=%s (%d cas, %d faux ; « doit » : ce capteur doit s'allumer)"
+		% ["scinde" if _scinde else "unique", "CANAUX TENUS" if faux == 0 else "CANAUX ROMPUS", cas, faux])
+	_sortir(0 if faux == 0 else 8)
+
+
+## La valeur la plus haute au centre d'un capteur, sur ±16 px de monde : là où le corps lit.
+func _valeur_au_centre(capteur: SubViewport) -> int:
+	var t := capteur.size
+	return _valeur_max_dans(capteur.get_texture().get_image(), Rect2i(t / 2 - Vector2i(32, 32), Vector2i(64, 64)))
 
 
 ## Les torches allumées par leur BOUTON, le premier cran tenu — celles que `--torches`
@@ -1280,7 +1474,8 @@ var _rallumees_vues := {}
 ## Éteint toutes les `Light2D` et rend le chemin de celles qui étaient allumées.
 func _eteindre_et_nommer(noeud: Node) -> PackedStringArray:
 	var out: PackedStringArray = []
-	if noeud is Light2D and (noeud as Light2D).enabled:
+	# La sonde du contrôle des canaux reste allumée : c'est la seule lumière qu'il veut.
+	if noeud is Light2D and (noeud as Light2D).enabled and not noeud.has_meta("banc_iso_sonde"):
 		(noeud as Light2D).enabled = false
 		out.append(String(noeud.name))
 		_rallumees_vues[String(noeud.get_parent().name) + "/" + String(noeud.name)] = true

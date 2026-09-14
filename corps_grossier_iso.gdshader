@@ -2,8 +2,8 @@
 // ISO0.b, en attendant les corps voxel d'ISO3 (qui auront leur propre shader,
 // `corps_iso.gdshader`, à la session iso-corps).
 //
-// « Gris plafonné, noir hors lumière » — mais depuis ISO2 la lumière est celle que le
-// corps REÇOIT, lue dans son capteur (`CapteurCorps`), et non celle du sol sous ses
+// « Gris plafonné, noir hors lumière, et entre les deux la courbe du sprite » — depuis ISO2
+// la lumière est celle que le corps REÇOIT, lue dans son capteur (`CapteurCorps`), et non celle du sol sous ses
 // pieds. La différence est la règle d'équité du jeu : le halo de proximité révèle un
 // ennemi collé en n'éclairant que son sprite, le sol reste noir (constaté au banc
 // ISO0.b) — un corps qui lisait le sol disparaissait là où la vue de dessus le montre.
@@ -30,21 +30,32 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled;
 uniform sampler2D capteur_1 : source_color, filter_linear, repeat_disable;
 uniform sampler2D capteur_2 : source_color, filter_linear, repeat_disable;
 uniform vec3 gris : source_color = vec3(0.5);
-uniform float seuil_bas = 0.01;
-uniform float seuil_haut = 0.08;
-
-// Cinq lectures dans le disque du capteur (centre et quatre points à un quart de sa
-// largeur) : la lumière reçue est une moyenne sur le corps, pas un pixel.
-const vec2 PRISES[5] = {vec2(0.5, 0.5), vec2(0.4, 0.5), vec2(0.6, 0.5), vec2(0.5, 0.4), vec2(0.5, 0.6)};
+// Le centre du corps dans le monde 2D — (x, y) du joueur, soit (X, Z) en 3D —, posé à chaque
+// image avec le capteur qui le suit (`Presentation3D._suivre`).
+uniform vec2 centre = vec2(0.0);
+// Le monde qu'un capteur couvre, en pixels (`CapteurCorps.MONDE_PX`), et le rayon jusqu'où on
+// y lit : dans le disque (`CapteurCorps.RAYON_PX`), loin de son bord adouci.
+uniform float monde_capteur_px = 128.0;
+uniform float rayon_lu_px = 15.0;
 
 varying vec3 monde;
 
-vec3 lumiere_recue(bool deux) {
-	vec3 somme = vec3(0.0);
-	for (int i = 0; i < 5; i++) {
-		somme += deux ? texture(capteur_2, PRISES[i]).rgb : texture(capteur_1, PRISES[i]).rgb;
+// ⚠️ **Chaque fragment lit le capteur À SA PLACE, et c'est ce qui fait le volume** (jalon
+// H-ISO2). Le disque est éclairé comme le sprite, ombres comprises : sous la torche d'en face,
+// son corps masque la moitié arrière (`flashlight.shadow_item_cull_mask` porte le corps adverse).
+// Le flanc tourné vers la lampe lit la moitié éclairée, le dos la moitié dans l'ombre, le dessus
+// tout le disque. Avant, le corps prenait la MOYENNE de cinq prises au centre, uniforme sur tout
+// le cylindre : un disque à demi éclairé donnait un corps entier à demi-teinte, et le seuil
+// d'alors cachait l'écart en le mettant au gris plein (26/255 sous la torche, mesuré sans lui).
+// Aucune lumière 3D : c'est la lumière du sprite, posée sur un volume. Le nez, hors du disque,
+// lit à son bord.
+vec3 lumiere_recue(bool deux, vec2 decalage) {
+	float r = length(decalage);
+	if (r > rayon_lu_px) {
+		decalage *= rayon_lu_px / r;
 	}
-	return somme / 5.0;
+	vec2 uv = vec2(0.5) + decalage / monde_capteur_px;
+	return deux ? texture(capteur_2, uv).rgb : texture(capteur_1, uv).rgb;
 }
 
 void vertex() {
@@ -55,8 +66,15 @@ void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 motif = vec2(monde.x + monde.z, -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
-	float recue = pate_luminance(lumiere_recue(deux));
-	vec3 c = gris * smoothstep(seuil_bas, seuil_haut, recue);
+	vec3 lumiere = lumiere_recue(deux, monde.xz - centre);
+	float recue = pate_luminance(lumiere);
+	// ⚠️ **Sans seuil : la courbe est celle du sprite remplacé, déjà appliquée dans le capteur**
+	// (`capteur_adverse.gdshader`, `capteur_local.gdshader`). Le corps vaut le gris fois ce que le
+	// sprite recevrait — le capteur est lu en sRGB, et le gris aussi : à l'écran, le gris de la vue
+	// de dessus fois sa lumière. L'ancien `smoothstep(0,01 ; 0,08)` mettait le corps au gris plein
+	// dès 8 % de lumière reçue : un interrupteur, là où la vue de dessus monte avec la lampe
+	// (Adrien, jalon H-ISO2 : « pourquoi ça n'éclaire pas aussi progressivement que l'intensité »).
+	vec3 c = gris * lumiere;
 	// ⚠️ **Plafonnée au gris d'entrée, et c'est la règle de la vue de dessus.** Le sprite
 	// ennemi y est `min(lit, COLOR)` (`player_enemy_light.gdshader`) : éclairé, il ne dépasse
 	// jamais `Charte.ADVERSAIRE`. La pâte, elle, ramène un ton vers une luminance pleine — faite

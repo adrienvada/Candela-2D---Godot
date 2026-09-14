@@ -7,11 +7,18 @@
 ## sol sous ses pieds reste noir (constaté au banc ISO0.b). Un corps 3D qui lit la
 ## lightmap au sol disparaît donc là où la vue de dessus le montre. Le capteur rend au
 ## corps ce que son sprite recevait : une sous-vue de 256×256 partage le `World2D` du duel,
-## ne dessine qu'un disque blanc posé sous le corps (couche de visibilité
-## `Presentation3D.COUCHE_CAPTEUR`, qu'aucune lightmap ne lit), et ce disque porte le
+## ne dessine qu'un disque blanc posé sous le corps (sur une couche de visibilité À LUI,
+## `Presentation3D.couche_capteur()`, qu'aucune lightmap ne lit), et ce disque porte le
 ## **masque de lumière du sprite qu'il remplace** — `CanauxLumiere.JOUEUR_LOCAL` (4) pour son
 ## propre corps, `CanauxLumiere.masque_vue_adverse(id)` pour le corps d'en face. Les lumières
-## et les ombres du jeu font le reste, canal par canal, sans réécrire un shader `light()`.
+## et les ombres du jeu font le reste, canal par canal. Il les reçoit par la **courbe du sprite
+## qu'il remplace** — `capteur_adverse.gdshader` et `capteur_local.gdshader`, miroirs des shaders
+## des sprites : le corps 3D suit la lampe comme la vue de dessus.
+##
+## ⚠️ **Sa couche est à lui seul.** Deux capteurs sont posés sous chaque corps, un par vue, dans
+## le même monde 2D. Sur une couche commune, chacun dessinait aussi le disque de l'autre et
+## recevait les canaux des deux vues : en écran scindé, J2 s'allumait chez J1 sous les lumières
+## que seul J2 voit (jalon H-ISO2, 2026-09-14 ; six cas faux sur huit à `banc_iso.gd --canaux`).
 ##
 ## ## Équité
 ##
@@ -36,6 +43,9 @@ const TAILLE := 256
 const MONDE_PX := 128.0
 ## Le rayon du disque : celui d'un corps.
 const RAYON_PX := 18.0
+## Les shaders des disques, préchargés : rien à compiler au premier affichage.
+const SHADER_ADVERSE := preload("res://capteur_adverse.gdshader")
+const SHADER_LOCAL := preload("res://capteur_local.gdshader")
 
 var vue_id := 0
 var corps_id := 0
@@ -74,15 +84,15 @@ static func creer(vue: int, corps: int, monde: World2D, couche: int, masque_lumi
 	c._disque.color = Color.WHITE
 	c._disque.visibility_layer = couche
 	c._disque.light_mask = masque_lumiere
-	# ⚠️ **Lumière seule : le disque ne vaut que ce que les lumières lui apportent.** En mode
-	# normal il valait 13 à 17/255 TOUTES LUMIÈRES ÉTEINTES (banc ISO2, contrôle du noir) :
-	# le `CanvasModulate` noir de l'arène ne l'éteignait pas dans cette sous-vue, et chaque
-	# corps sortait du noir. Un disque « lumière seule » est noir sans lumière par
-	# construction, quel que soit l'état du modulateur. Un matériau de canevas, pas un
-	# shader : rien à compiler au premier affichage.
-	var matiere := CanvasItemMaterial.new()
-	matiere.light_mode = CanvasItemMaterial.LIGHT_MODE_LIGHT_ONLY
-	c._disque.material = matiere
+	# ⚠️ **Lumière seule, par la courbe du sprite remplacé.** Lumière seule (`render_mode
+	# light_only` des deux shaders) : en mode normal le disque valait 13 à 17/255 TOUTES
+	# LUMIÈRES ÉTEINTES (banc ISO2, contrôle du noir), le `CanvasModulate` noir de l'arène ne
+	# l'éteignant pas dans cette sous-vue. La courbe : le sprite ennemi ne prend pas la lumière
+	# par défaut du moteur (× énergie, ×4 puis plafond) ; un disque qui la prenait donnait au
+	# corps une autre lumière que celle de la vue de dessus.
+	var materiau := ShaderMaterial.new()
+	materiau.shader = SHADER_LOCAL if vue == corps else SHADER_ADVERSE
+	c._disque.material = materiau
 	c.add_child(c._disque)
 	return c
 
@@ -104,3 +114,7 @@ func masque_lumiere() -> int:
 
 func couche() -> int:
 	return _disque.visibility_layer
+
+
+func matiere() -> Material:
+	return _disque.material
