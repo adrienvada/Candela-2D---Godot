@@ -1,15 +1,21 @@
 ## Test headless des corps voxel (`voxel_corps.gd` + `voxel_catalogue.gd`) —
-## chantier ISO, étape ISO3, vague 0 (iso-corps).
+## chantier ISO, étape ISO3 (vague 0 : les dix corps ; vague 1 : accroupi et
+## enjambement).
 ##
 ## Ce que la suite garantit :
 ##   • les dix classes du CATALOGUE se construisent, neuf boîtes chacune ;
 ##   • le catalogue ne dérive pas des dix classes réelles de `game_state.gd` ;
-##   • `poser(etat)` est déterministe : même état → même pose, à l'identique ;
+##   • `poser(etat)` est déterministe : même état → même pose, à l'identique,
+##     accroupi et enjambement compris ;
 ##   • aucune partie du corps ne passe sous le sol, hors la pose de mort ;
 ##   • le cycle de marche est continu : deux `t` voisins ne sautent pas de pose ;
 ##   • la pose de mort finale est bien couchée (rotation figée) ;
+##   • la hauteur accroupie (sommet de la tête) tombe dans la fourchette
+##     0,5-0,6 de la hauteur debout, pour les dix classes ;
+##   • l'angle de la jambe qui enjambe progresse de façon monotone avec
+##     `etat.enjambe` — jamais de retour en arrière pendant le geste ;
 ##   • le matériau rend un noir strict à `lumiere_recue = 0` (couleur non nulle,
-##     mais le facteur qui la multiplie l'est) ;
+##     mais le facteur qui la multiplie l'est), accroupi et enjambement compris ;
 ##   • ni `voxel_corps.gd` ni `voxel_catalogue.gd` n'appellent `randi`/`randf`.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_voxel_corps.gd
@@ -17,6 +23,11 @@ extends SceneTree
 
 const PLANCHER := 40
 const EPSILON := 0.0005
+## Fourchette du brief ISO3 vague 1 pour la hauteur accroupie (fraction de la
+## hauteur debout). Une marge de 0,01 des deux côtés absorbe l'arrondi flottant
+## sans élargir la fourchette que le brief a posée.
+const ACCROUPI_MIN := 0.49
+const ACCROUPI_MAX := 0.61
 
 var _failures: int = 0
 var _verifications: int = 0
@@ -43,9 +54,12 @@ func _run() -> void:
 	var slugs: PackedStringArray = VoxelCatalogue.slugs()
 	_check("dix classes dans le catalogue (%d)" % slugs.size(), slugs.size() == 10)
 
+	var hauteur_debout: float = float(VoxelCatalogue.SQUELETTE["y0_tete"]) \
+		+ float(VoxelCatalogue.SQUELETTE["hauteur_tete"])
+
 	var boites_de_reference := -1
 	for slug in slugs:
-		boites_de_reference = _test_classe(VoxelCorps, slug, boites_de_reference)
+		boites_de_reference = _test_classe(VoxelCorps, slug, boites_de_reference, hauteur_debout)
 
 	_check("au moins %d vérifications ont réellement tourné" % PLANCHER,
 		_verifications >= PLANCHER, "%d" % _verifications)
@@ -73,7 +87,8 @@ func _check(label: String, condition: bool, detail: String = "") -> void:
 # UNE CLASSE
 # ---------------------------------------------------------------------------
 
-func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int) -> int:
+func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
+		hauteur_debout: float) -> int:
 	print("\n[%s]" % slug)
 	var corps: Node3D = VoxelCorps.new()
 	root.add_child(corps)
@@ -98,6 +113,8 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int) -> 
 	_test_marche_continue(corps)
 	_test_mort_couchee(corps)
 	_test_noir_absolu(corps)
+	_test_accroupi(corps, hauteur_debout)
+	_test_enjambement(corps)
 
 	root.remove_child(corps)
 	corps.free()
@@ -109,11 +126,27 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int) -> 
 # ---------------------------------------------------------------------------
 
 func _test_determinisme(corps: Node3D) -> void:
-	var etat := {
+	_verifier_determinisme(corps, {
 		"position": Vector2(140.0, -60.0), "visee": Vector2(0.7, -0.7),
 		"vitesse": Vector2(180.0, 40.0), "torche": true, "arme": corps.slug(),
-		"tir": true, "touche": true, "mort": false, "t": 0.37,
-	}
+		"tir": true, "touche": true, "mort": false, "accroupi": false, "enjambe": 0.0,
+		"t": 0.37,
+	}, "même état → même pose (marche/tir/touché)")
+	_verifier_determinisme(corps, {
+		"position": Vector2(-30.0, 90.0), "visee": Vector2(-1.0, 0.0),
+		"vitesse": Vector2(55.0, 0.0), "torche": true, "arme": corps.slug(),
+		"tir": false, "touche": false, "mort": false, "accroupi": true, "enjambe": 0.0,
+		"t": 0.08,
+	}, "même état → même pose (accroupi, en transition)")
+	_verifier_determinisme(corps, {
+		"position": Vector2(0.0, 0.0), "visee": Vector2(0.0, 1.0),
+		"vitesse": Vector2.ZERO, "torche": true, "arme": corps.slug(),
+		"tir": false, "touche": false, "mort": false, "accroupi": false, "enjambe": 0.63,
+		"t": 0.0,
+	}, "même état → même pose (enjambement)")
+
+
+func _verifier_determinisme(corps: Node3D, etat: Dictionary, label: String) -> void:
 	corps.poser(etat)
 	var a := _empreinte(corps)
 	# Un second dictionnaire, distinct en mémoire mais identique en valeur :
@@ -121,7 +154,7 @@ func _test_determinisme(corps: Node3D) -> void:
 	var etat2 := etat.duplicate(true)
 	corps.poser(etat2)
 	var b := _empreinte(corps)
-	_check("même état → même pose", a == b, "%s ≠ %s" % [str(a), str(b)])
+	_check(label, a == b, "%s ≠ %s" % [str(a), str(b)])
 
 
 ## Toutes les transformations qui comptent, réduites à des nombres comparables.
@@ -135,6 +168,7 @@ func _empreinte(corps: Node3D) -> Array:
 func _empreinte_recursive(n: Node3D, out: Array) -> void:
 	out.append(n.position)
 	out.append(n.rotation)
+	out.append(n.scale)
 	out.append(n.visible)
 	for enfant in n.get_children():
 		if enfant is Node3D:
@@ -247,6 +281,95 @@ func _test_noir_absolu(corps: Node3D) -> void:
 	corps.definir_lumiere(0.5)
 	corps.definir_lumiere(0.0)
 	_check("definir_lumiere(0.0) ramène bien lumiere_recue à 0",
+		mat.get_shader_parameter("lumiere_recue") == 0.0)
+
+
+# ---------------------------------------------------------------------------
+# ACCROUPI (ISO3 vague 1)
+# ---------------------------------------------------------------------------
+
+## Hauteur du sommet de la tête, pleinement accroupi, rapportée à la hauteur
+## debout : doit tomber dans la fourchette 0,5-0,6 que le brief a posée
+## (« à toi de trouver ce qui se lit »). `t = 1.0` dépasse largement
+## `DUREE_TRANSITION_ACCROUPI` (150 ms) : la posture est stabilisée, pas en
+## transition.
+func _test_accroupi(corps: Node3D, hauteur_debout: float) -> void:
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": true, "enjambe": 0.0, "t": 1.0,
+	})
+	var sommet: float = corps.sommet_tete()
+	var facteur := sommet / hauteur_debout
+	_check("hauteur accroupie dans la fourchette 0,5-0,6 (%.3f)" % facteur,
+		facteur >= ACCROUPI_MIN and facteur <= ACCROUPI_MAX, "%.3f" % facteur)
+
+	# Le noir absolu doit survivre au changement de posture : le matériau est
+	# unique par corps (voir `materiau()`), une posture ne doit ni le remplacer
+	# ni contourner l'uniform qui le gouverne.
+	corps.definir_lumiere(0.7)
+	corps.definir_lumiere(0.0)
+	var mat: ShaderMaterial = corps.materiau()
+	_check("noir strict à lumiere_recue = 0, accroupi",
+		mat.get_shader_parameter("lumiere_recue") == 0.0)
+
+	# Se relever est instantané par construction (voir `_facteur_accroupi`) :
+	# à `t = 0` avec `accroupi = false`, aucune trace de l'accroupi ne doit
+	# rester — c'est exactement le bogue que le premier jet de cette fonction
+	# a laissé passer (facteur = 1 au lieu de 0), trouvé au banc rapide plutôt
+	# qu'à cette suite : elle le verrouille maintenant pour de bon.
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
+	})
+	var sommet_debout: float = corps.sommet_tete()
+	_check("relevé immédiat (t=0, accroupi=false) → hauteur debout (%.3f)"
+			% (sommet_debout / hauteur_debout),
+		absf(sommet_debout - hauteur_debout) < 0.01, "%.4f" % sommet_debout)
+
+
+# ---------------------------------------------------------------------------
+# ENJAMBEMENT (ISO3 vague 1)
+# ---------------------------------------------------------------------------
+
+## L'angle de la jambe qui enjambe (toujours `JambeDroite`, voir
+## `_poser_enjambe`) doit progresser de façon monotone avec `etat.enjambe` :
+## la jambe balaie de l'arrière vers l'avant sans jamais reculer pendant le
+## geste. C'est la lecture que ce fichier retient du « x » du brief — un
+## sommet cartésien littéral resterait presque immobile ici, la rotation
+## est la grandeur qui varie effectivement et sans ambiguïté (voir l'en-tête
+## de classe de `voxel_corps.gd`, section Enjambement).
+##
+## ⚠️ L'échantillonnage commence STRICTEMENT après 0, jamais à 0 : `enjambe`
+## à exactement 0 n'est pas le début du geste, c'est son absence — `poser()`
+## retombe alors sur la marche/le repos (« 0 = pas d'enjambement », le brief),
+## une pose sans rapport avec l'arc de l'enjambée. Un premier jet de ce test
+## incluait ce point et a rougi sur un saut qui n'en était pas un : la jambe
+## passe légitimement de sa pose de repos (0°) au début de l'arc (≈ -70°)
+## quand `enjambe` quitte 0, un seul et unique désaccord au tout premier pas,
+## jamais pendant le geste lui-même.
+func _test_enjambement(corps: Node3D) -> void:
+	var precedent := -INF
+	var monotone := true
+	var n := 20
+	for i in n:
+		var e := float(i + 1) / float(n)
+		corps.poser({
+			"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+			"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+			"mort": false, "accroupi": false, "enjambe": e, "t": 0.0,
+		})
+		var angle: float = corps.get_node("JambeDroite").rotation.x
+		if angle < precedent - EPSILON:
+			monotone = false
+		precedent = angle
+	_check("enjambement monotone (JambeDroite ne recule jamais)", monotone)
+
+	corps.definir_lumiere(0.4)
+	corps.definir_lumiere(0.0)
+	var mat: ShaderMaterial = corps.materiau()
+	_check("noir strict à lumiere_recue = 0, en pleine enjambée",
 		mat.get_shader_parameter("lumiere_recue") == 0.0)
 
 

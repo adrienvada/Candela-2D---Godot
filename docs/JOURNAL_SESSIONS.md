@@ -4206,3 +4206,50 @@ avant l'alerte, rien à refaire sur ce plan.
 
 **Republication du suivi :** cette session ne republie pas — delta transmis à
 la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (protocole du CLAUDE.md).
+
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 1, branche `iso-corps`) — ajoutée le 2026-09-14 23:36 (Paris)
+
+Deuxième tranche : les deux postures, accroupi et enjambement, sur la base
+de `c2962bb`. Brief transmis par Adrien depuis la session cloud Fable 5.1.
+Toujours aucun fichier du jeu modifié, toujours indépendant de la ligne iso.
+
+**Fichiers touchés, tous à elle :** `voxel_corps.gd` (`etat.accroupi` et
+`etat.enjambe` dans `poser()`) ; `tools/banc_corps.gd` (touches A/E, `--pose
+accroupi|enjambe`) ; `tools/test_voxel_corps.gd` (poses déterministes,
+hauteur accroupie dans la fourchette, enjambement monotone, noir strict dans
+les deux nouvelles postures) ; `docs/iso/captures_corps/` (six captures de
+plus : accroupi et enjambe à 0,8/0,2/0, les deux « 0 » vérifiés noir pur par
+extrema PIL) ; `docs/ROADMAP.md` (section « Vague 1 », deux pièges) ; ce
+journal.
+
+**Mesure retenue :** hauteur accroupie (sommet de la tête) à 0,5708 de la
+hauteur debout sur les dix classes — au milieu de la fourchette 0,5-0,6 du
+brief.
+
+**Un vrai bogue trouvé au banc, pas à la suite :** l'arme et la torche,
+enfants du torse pour rester à hauteur de main sans suivre le balancement des
+bras (vague 0), héritaient intégralement le buste penché de l'accroupi
+(vague 1) — l'arme plongeait vers le sol, loin devant le corps. La suite
+passait au vert parce qu'elle ne mesurait que la hanche, le torse et la tête,
+jamais l'arme. Corrigé par une contre-rotation (position et orientation) qui
+annule la rotation du torse pour ces deux enfants. Détail et diagnostic dans
+la ROADMAP (section « Vague 1 », pièges).
+
+**Sabotage vérifié réellement** (`ACCROUPI_MAX` abaissé sous la mesure
+réelle, lot rougi sur les dix classes avec code 1, puis revert et lot vert) —
+demandé explicitement par le brief.
+
+**Coordination du Mac, plusieurs fois dans la même session :** ISO0.b, ISO2
+et Murs bas Opus ont chacune tenu le Mac à tour de rôle ce soir (fusions,
+lots complets, fenêtres de banc) ; `pgrep -fl Godot` vérifié avant chaque
+fenêtre ou lot, jamais supposé, avec des Monitor armés en attente plutôt que
+des boucles de sondage.
+
+**SendMessage bloqué par intermittence pendant une bonne partie de la
+session** (mode auto, un blocage déjà observé et documenté à la vague 0) —
+plusieurs deltas n'ont pu partir qu'après qu'Adrien a fait sortir la session
+du mode auto ; consigné ici pour que la synthèse de la session cloud sache
+pourquoi certains deltas sont arrivés tard ou groupés.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».

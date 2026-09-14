@@ -20954,11 +20954,14 @@ conséquences signalées par iso-geometrie, ni l'une ni l'autre engagée ici.**
 réseau en dépendent, c'est une mécanique neuve, pas un ajout à `poser(etat)`.
 Les dix silhouettes devront un jour avoir une pose accroupie qui tienne sous
 la hauteur d'un mur bas ; `etat` n'a aujourd'hui aucun champ pour ça, et il ne
-s'en invente pas un ici. (2) Au tangage retenu (52°), un mur haut d'une tuile
-cache ≈ 0,78 tuile (27 px) de sol derrière lui, plus que le rayon d'un corps
-(18 px) — la hauteur de `SQUELETTE` (`voxel_catalogue.gd`) pèse donc sur ce
-qui reste visible d'un corps collé à un mur ; à revoir quand la géométrie des
-murs bas/hauts existera réellement.
+s'en invente pas un ici. (2) Au tangage retenu (52°), un mur haut de 1,25 tuile
+— et non 1,0 comme la première mesure le supposait (**corrigé le 2026-09-14
+21h : la hauteur du mur haut a été tranchée à 1,25 tuile par Adrien à 19h25,
+après que cette note a été écrite** — la bande cachée passe donc de 0,78 à
+≈ 0,98 tuile, 34 px) — cache ≈ 0,98 tuile (34 px) de sol derrière lui, plus que
+le rayon d'un corps (18 px) — la hauteur de `SQUELETTE` (`voxel_catalogue.gd`)
+pèse donc sur ce qui reste visible d'un corps collé à un mur ; à revoir quand
+la géométrie des murs bas/hauts existera réellement.
 
 **Ce que iso-geometrie a mesuré au banc B-projection et qui concerne
 directement `corps_iso.gdshader` (à lire avant ISO2, détail dans SA section
@@ -21000,6 +21003,88 @@ pour des corps communs en écran scindé.
   le recul ne se disputent donc jamais le même `t` en pratique. C'est
   l'appelant (le banc, plus tard le pont ISO2) qui choisit quoi mettre dans
   `t` selon l'état — documenté dans `voxel_corps.gd`, pas deviné.
+
+### Vague 1 — les deux postures : accroupi et enjambement (inscrite le 2026-09-14 20h46)
+
+Brief transmis par Adrien depuis la session cloud Fable 5.1 (le jeu porte
+désormais l'accroupi — MB2, commit `25a8240` sur `main`, pas encore fusionné
+dans la ligne iso — et un enjambement de mur bas est en cours ailleurs, MB3b).
+Base : la tête de cette branche à `c2962bb`. Toujours aucun fichier du jeu,
+toujours indépendant de la ligne iso.
+
+**Fait** : `poser(etat)` lit deux champs de plus, `accroupi: bool` et
+`enjambe: float` (0..1, 0 = pas d'enjambement). Le squelette n'a qu'UNE jambe
+rigide par côté (vague 0, pas de genou) : l'accroupi est donc un trucage à
+trois gestes combinés — hanche abaissée (jambes ET torse à la même hauteur),
+jambes basculées vers l'avant en se raccourcissant (`scale.y`, pour garder le
+pied près du sol plutôt que de le faire traverser), buste penché et tête
+rentrée par-dessus. Mesuré sur les dix classes (identiques verticalement,
+`echelle` ne joue que sur la largeur) : sommet de la tête à **0,5708** de la
+hauteur debout — au milieu de la fourchette 0,5-0,6 posée par le brief, avec
+de la marge des deux côtés. La marche accroupie réutilise la même formule de
+cadence (`LONGUEUR_PAS`) avec une amplitude et un rebond resserrés (« à petits
+pas et sans rebond »). L'enjambement anime toujours la même jambe (la droite) :
+elle balaie d'un angle arrière à un angle avant tandis que `enjambe` va de 0 à
+1, se soulève au milieu du geste, et l'arme se baisse dès les premiers instants
+— le déplacement d'une tuile pendant le geste reste à la charge de l'appelant
+(`etat.position`), jamais recalculé ici. `tools/banc_corps.gd` a deux touches
+de plus (A accroupi, E enjamber) et `--pose accroupi|enjambe` pour les
+captures ; `tools/test_voxel_corps.gd` vérifie la fourchette de hauteur, la
+monotonie de l'angle d'enjambement, le déterminisme et le noir strict dans les
+deux nouvelles postures.
+
+**Le contrat, pour la session qui intégrera les corps au jeu** (après H-ISO2,
+quand la ligne iso aura fusionné `main`) : `poser(etat)` lit `etat.accroupi`
+(bool) et `etat.enjambe` (float 0..1) ; la posture vient du 9ᵉ argument de
+`rpc_send_inputs` de MB2 (posture voulue, répliquée par `net_accroupi`) et
+l'enjambement du bit MB3b sur le fil. L'uniform `lumiere_recue` reste 0..1 sur
+un `ShaderMaterial` unique par corps, `style` toujours réservé — ISO2 (livrée
+le 2026-09-14 au soir, commit `c0e2b25` : capteur de corps 256² par vue,
+lightmaps par joueur) alimentera `lumiere_recue`. Cette tranche ne change rien
+à cette interface.
+
+**Annoncé par ISO2 le 2026-09-14 vers 23h30 (ISO2b, pas encore écrit dans sa
+ROADMAP à cette heure — voir sa section) :** un corps ISO3 devra un jour lire
+deux uniforms de plus PAR VUE, `opacite_N` et `silhouette_N` (le corps se fond
+dans le décor à l'opacité du sprite 2D qu'il remplace, et compose la
+silhouette de soi comme ISO2b le fait pour la sienne) — même logique de
+composition que `lumiere_recue`, pas encore un champ de `corps_iso.gdshader`
+ici. À reprendre au contact de la section ISO2b de la ROADMAP le jour venu.
+
+#### Le piège rencontré ici
+
+- **`t = 0` est ambigu pour un état qui PERSISTE, contrairement à un état
+  transitoire.** La convention posée en vague 0 — l'appelant remet `t` à zéro
+  au déclenchement — fonctionne pour `tir`/`touche` parce que leur état « off »
+  n'a jamais besoin d'un fondu : il vaut 0, point. `accroupi` est différent :
+  c'est un booléen qui reste vrai ou faux longtemps, et les DEUX transitions
+  (s'accroupir, se relever) voudraient un fondu. Une première formule
+  symétrique (`lerp` dans un sens ou l'autre selon `accroupi`) rendait un corps
+  PLEINEMENT ACCROUPI dès que `accroupi = false` ET `t = 0` — exactement l'état
+  par défaut de la plupart des appels de test, qui ne pensent jamais à
+  l'accroupi. Trouvé par le test générique « rien sous le sol » (vague 0), qui
+  s'est mis à rougir sans qu'aucun test d'accroupi n'existe encore. Corrigé en
+  acceptant l'asymétrie que le brief autorisait déjà (« la simulation bascule
+  instantanément ») : s'accroupir se fond sur `DUREE_TRANSITION_ACCROUPI`, se
+  relever est instantané — plus court encore que les 150 ms permises, et sans
+  l'ambiguïté qu'un aller-retour aurait exigé de résoudre à l'aveugle depuis
+  une fonction pure qui ne connaît pas l'état précédent.
+- **Mesurer la bonne grandeur ne suffit pas si c'est la mauvaise grandeur.**
+  La suite headless est passée AU VERT sur `sommet_tete()` dans la fourchette
+  attendue dès la première version de l'accroupi — parce que cette mesure ne
+  dépend QUE de la hanche, du torse et de la tête, jamais de l'arme. Au banc,
+  l'arme plongeait pourtant vers le sol, loin devant le corps : `Arme` et
+  `Torche` sont enfants du `Torse` pour rester à hauteur de main sans suivre
+  le balancement des bras (vague 0) — mais le buste penché de l'accroupi
+  (vague 1) est une rotation de ce MÊME parent, et un enfant qui ne compense
+  pas la rotation de son parent en hérite intégralement. Rien dans la suite ne
+  regardait où l'arme finissait, donc rien n'a rougi. Corrigé par une
+  contre-rotation (position ET orientation) qui annule la rotation du torse
+  pour ces deux enfants, tout en laissant filer sa translation (la hanche qui
+  descend, elle, doit s'appliquer). **La leçon dépasse ce correctif précis** :
+  une suite verte prouve ce qu'elle a mesuré, pas ce qu'elle n'a pas pensé à
+  mesurer — un passage au banc reste nécessaire pour toute pose neuve, aussi
+  bien couverte la suite paraisse-t-elle sur le papier.
 
 ### Ce qui attend Adrien — jalon H15
 

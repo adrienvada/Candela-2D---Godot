@@ -24,12 +24,40 @@ extends Node3D
 ## ## Les couches d'animation, superposées et non exclusives
 ##
 ## `mort` domine tout le reste (un corps qui tombe ne marche ni ne respire).
-## Sinon : la charpente suit `marche` ou `repos` selon `vitesse` ; `tir`
-## ajoute un recul sur l'arme SEULE, par-dessus quoi que fasse le reste du
-## corps ; `touche` ajoute une secousse au torse. Un joueur qui encaisse en
-## marchant continue donc de marcher, secoué — ce que la description en liste
-## séparée de la commande ("repos, marche, visée, tir, touché, mort") laissait
-## ambigu, et que la superposition rend possible sans état caché.
+## `enjambe > 0` domine tout sauf `mort` : on n'enjambe pas accroupi, la
+## description du geste (ISO3 vague 1) est sans ambiguïté « debout ». Sinon :
+## la charpente suit `marche` ou `repos` selon `vitesse`, `accroupi` abaisse et
+## penche la même charpente par-dessus (voir plus bas) ; `tir` ajoute un recul
+## sur l'arme SEULE, par-dessus quoi que fasse le reste du corps ; `touche`
+## ajoute une secousse au torse. Un joueur qui encaisse en marchant continue
+## donc de marcher, secoué — ce que la description en liste séparée de la
+## commande laissait ambigu, et que la superposition rend possible sans état
+## caché.
+##
+## ## Accroupi — une charpente abaissée, pas une seconde charpente
+##
+## Une seule jambe rigide par côté (vague 0) ne peut pas plier un genou : il
+## n'y a pas de second joint. L'accroupi est donc un TRUCAGE assumé, à trois
+## gestes combinés plutôt qu'une articulation : la hanche (pivots des jambes
+## ET du torse) descend, les jambes basculent vers l'avant en se raccourcissant
+## (`scale.y`, pour que le pied reste proche du sol plutôt que de le traverser),
+## le torse penche et la tête se rentre par-dessus. Les quatre gestes sont
+## pilotés par un seul facteur 0..1 (`_facteur_accroupi`), lui-même une
+## fonction pure de `etat.accroupi` (bool) et de `etat.t` — le temps depuis le
+## dernier changement de posture, MÊME convention que `tir`/`touche` : à la
+## bascule, l'appelant remet `t` à zéro. Passé `DUREE_TRANSITION_ACCROUPI`
+## (150 ms, la limite qu'Adrien a posée), le facteur reste figé à 0 ou 1 quel
+## que soit `t` — comme `_poser_mort` se fige après son dernier palier.
+##
+## ## Enjambement — un flottant qui vient du jeu, pas une horloge
+##
+## `etat.enjambe` (0..1, 0 = pas d'enjambement) est fourni DÉJÀ AVANCÉ par
+## l'appelant — contrairement à `tir`/`touche`/`accroupi`, ce nœud ne le
+## dérive pas de `t`. La jambe qui enjambe (toujours la même, la droite)
+## balaie d'un angle négatif (arrière) à positif (avant) sur tout l'intervalle
+## et se soulève au milieu du geste ; le déplacement d'une tuile pendant que le
+## paramètre va de 0 à 1 est à la charge de l'appelant (`etat.position`),
+## jamais recalculé ici.
 ##
 ## ## Le geste de gadget
 ##
@@ -82,23 +110,49 @@ const AMPL_SECOUSSE := 0.17          # rad (~10°)
 const TEMPS_CHUTE := [0.0, 0.15, 0.35, 0.55]
 const ANGLES_CHUTE_DEG := [0.0, -22.0, -50.0, -90.0]
 
+# --- Accroupi (ISO3 vague 1) --------------------------------------------------
+# Cible choisie et VÉRIFIÉE par calcul (voir le commentaire de classe) : au
+# sommet de la tête, ≈ 0,57 de la hauteur debout (0,94 tuile) — au milieu de
+# la fourchette 0,5-0,6 posée par le brief, avec de la marge des deux côtés
+# pour que les dix classes (gabarits légèrement différents via `echelle`, qui
+# ne joue que sur la largeur — voir `_construire_squelette`) y tiennent toutes.
+const DUREE_TRANSITION_ACCROUPI := 0.15   # 150 ms — la limite posée par Adrien
+const FACTEUR_LONGUEUR_JAMBE_ACCROUPI := 0.5
+const ANGLE_JAMBE_ACCROUPI := 0.6981      # rad (40°) — bascule avant, pivot hanche
+const ANGLE_TORSE_ACCROUPI := 0.6109      # rad (35°) — buste penché
+const ANGLE_TETE_ACCROUPI_SUPPL := 0.3491 # rad (20°) — tête rentrée, EN PLUS du buste
+
+# --- Enjambement (ISO3 vague 1) -----------------------------------------------
+const ANGLE_ENJAMBE_MAX := 1.2217         # rad (70°) — amplitude totale de la jambe
+const LEVEE_ENJAMBE := 0.15               # tuiles — décollement du pied au milieu du geste
+const ANGLE_ARME_BAISSEE := 0.9           # rad (~52°) — canon vers le bas, on ne tire pas
+const SEUIL_ARME_BAISSEE := 0.1           # l'arme est baissée dès ce niveau d'enjambement
+
 var _fiche: Dictionary = {}
 var _materiau: ShaderMaterial
 var _nombre_de_boites: int = 0
 
 var _jambe_g: Node3D
 var _jambe_d: Node3D
+var _jambe_g_mesh: MeshInstance3D
+var _jambe_d_mesh: MeshInstance3D
 var _torse: Node3D
+var _tete_pivot: Node3D
+var _tete_mesh: MeshInstance3D
 var _bras_g: Node3D
 var _bras_d: Node3D
 var _arme_pivot: Node3D
 var _arme_mesh: MeshInstance3D
+var _torche_pivot: Node3D
 var _torche_mesh: MeshInstance3D
+var _torche_pos_base: Vector3 = Vector3.ZERO
 var _gadget_pivot: Node3D
 
 var _torse_y_base: float = 0.0
 var _arme_pos_base: Vector3 = Vector3.ZERO
 var _gadget_pos_base: Vector3 = Vector3.ZERO
+var _h_jambe_base: float = 0.0
+var _hanche_accroupi_y: float = 0.0
 
 
 ## Bâtit le corps depuis `VoxelCatalogue.fiche(slug)`. Rend `false` (et laisse
@@ -148,6 +202,15 @@ func definir_lumiere(v: float) -> void:
 		_materiau.set_shader_parameter("lumiere_recue", clampf(v, 0.0, 1.0))
 
 
+## Le Y global du sommet de la tête — la mesure que le brief ISO3 vague 1
+## demande pour juger la pose accroupie (« mesure-le sur la planche »).
+## Recalculée depuis le maillage réel, jamais depuis une constante : c'est la
+## même discipline que `test_proto_iso.gd` (« les comptes sont refaits ici »).
+func sommet_tete() -> float:
+	var aabb := _tete_mesh.get_aabb()
+	return _tete_mesh.to_global(Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
+
+
 # -----------------------------------------------------------------------------
 # LA POSE — fonction pure de `etat`
 # -----------------------------------------------------------------------------
@@ -164,6 +227,8 @@ func poser(etat: Dictionary) -> void:
 	var tir: bool = etat.get("tir", false)
 	var touche: bool = etat.get("touche", false)
 	var mort: bool = etat.get("mort", false)
+	var accroupi: bool = etat.get("accroupi", false)
+	var enjambe: float = clampf(etat.get("enjambe", 0.0), 0.0, 1.0)
 	var t: float = etat.get("t", 0.0)
 
 	var tuile := float(CandelaTileSet.TILE_SIZE.x)
@@ -180,20 +245,42 @@ func poser(etat: Dictionary) -> void:
 		return
 
 	rotation.x = 0.0
+
+	if enjambe > 0.0:
+		_poser_enjambe(enjambe)
+		return
+
+	var facteur_accroupi := _facteur_accroupi(accroupi, t)
+
 	var vmag := vitesse.length()
 	if vmag > 1.0:
-		_poser_marche(t, vmag)
+		_poser_marche(t, vmag, facteur_accroupi)
 	else:
-		_poser_repos(t)
+		_poser_repos(t, facteur_accroupi)
 
+	_appliquer_accroupi(facteur_accroupi)
+
+	# L'arme et la torche sont enfants du torse pour rester à hauteur de main
+	# SANS suivre le balancement des bras (vague 0, « l'arme ne ment pas ») —
+	# mais le buste penché de l'accroupi (vague 1) est une rotation de ce MÊME
+	# parent, et la suivre aveuglément commet exactement le même mensonge :
+	# sans cette contre-rotation, l'arme plongeait vers le sol loin devant le
+	# corps au lieu de rester tenue (trouvé au banc, pas à la suite — rien ne
+	# vérifiait la position de l'arme pendant l'accroupi). La translation (la
+	# hanche qui descend) continue de s'appliquer normalement via le parent ;
+	# seule la ROTATION du torse est annulée pour ces deux enfants.
+	var contre_rotation := Basis(Vector3.RIGHT, -_torse.rotation.x)
 	var recul := _enveloppe_recul(t) if tir else 0.0
-	_arme_pivot.position = _arme_pos_base + Vector3(0.0, 0.0, recul)
+	_arme_pivot.rotation.x = -_torse.rotation.x
+	_arme_pivot.position = contre_rotation * (_arme_pos_base + Vector3(0.0, 0.0, recul))
+	_torche_pivot.rotation.x = -_torse.rotation.x
+	_torche_pivot.position = contre_rotation * _torche_pos_base
 
 	_torse.rotation.z = (AMPL_SECOUSSE * sin(t * OMEGA_SECOUSSE) * exp(-t * DECAY_SECOUSSE)) if touche else 0.0
 
 
-func _poser_repos(t: float) -> void:
-	var bob := sin(t * TAU * FREQ_RESPIRATION) * AMPL_RESPIRATION
+func _poser_repos(t: float, facteur_accroupi: float) -> void:
+	var bob := sin(t * TAU * FREQ_RESPIRATION) * AMPL_RESPIRATION * lerpf(1.0, 0.3, facteur_accroupi)
 	_torse.position.y = _torse_y_base + bob
 	_jambe_g.rotation.x = 0.0
 	_jambe_d.rotation.x = 0.0
@@ -202,17 +289,93 @@ func _poser_repos(t: float) -> void:
 	_gadget_pivot.position = _gadget_pos_base + Vector3(0.0, bob * 0.5, 0.0)
 
 
-func _poser_marche(t: float, vmag: float) -> void:
+## `facteur_accroupi` resserre l'amplitude des jambes et des bras et retire
+## l'essentiel du rebond du torse : « à petits pas et sans rebond » (brief),
+## des gens qui ne veulent pas faire de bruit ne martèlent pas le sol accroupis
+## non plus que debout — la même leçon que le correctif de cadence du 2026-09-14.
+func _poser_marche(t: float, vmag: float, facteur_accroupi: float) -> void:
 	var vitesse_tuiles := vmag / float(CandelaTileSet.TILE_SIZE.x)
 	var phase := t * vitesse_tuiles / LONGUEUR_PAS
 	var ang := sin(phase * TAU)
-	_jambe_d.rotation.x = ang * AMPLITUDE_JAMBE
-	_jambe_g.rotation.x = -ang * AMPLITUDE_JAMBE
-	_bras_g.rotation.x = ang * AMPLITUDE_BRAS - GARDE_BRAS
-	_bras_d.rotation.x = -ang * AMPLITUDE_BRAS - GARDE_BRAS
-	var bob := absf(sin(phase * TAU)) * AMPL_RESPIRATION * 1.5
+	var amplitude_jambe := lerpf(AMPLITUDE_JAMBE, AMPLITUDE_JAMBE * 0.45, facteur_accroupi)
+	var amplitude_bras := lerpf(AMPLITUDE_BRAS, AMPLITUDE_BRAS * 0.45, facteur_accroupi)
+	_jambe_d.rotation.x = ang * amplitude_jambe
+	_jambe_g.rotation.x = -ang * amplitude_jambe
+	_bras_g.rotation.x = ang * amplitude_bras - GARDE_BRAS
+	_bras_d.rotation.x = -ang * amplitude_bras - GARDE_BRAS
+	var bob := absf(sin(phase * TAU)) * AMPL_RESPIRATION * lerpf(1.5, 0.3, facteur_accroupi)
 	_torse.position.y = _torse_y_base + bob
 	_gadget_pivot.position = _gadget_pos_base + Vector3(0.0, bob * 0.5, 0.0)
+
+
+## Le temps depuis le passage à `accroupi = true`, même convention que
+## `tir`/`touche` (voir l'en-tête de classe) — mais SEULEMENT dans un sens.
+## Une fonction pure de `(accroupi, t)` ne peut pas deviner si `t` proche de 0
+## veut dire « vient tout juste de passer debout » ou « n'a jamais été
+## accroupi » : les deux sont le même appel. Se relever va donc plus vite que
+## s'accroupir — un aplomb instantané, plus court encore que les 150 ms que le
+## brief autorise, et sans l'ambiguïté qu'un aller-retour aurait exigée de
+## résoudre à l'aveugle.
+func _facteur_accroupi(accroupi: bool, t: float) -> float:
+	return clampf(t / DUREE_TRANSITION_ACCROUPI, 0.0, 1.0) if accroupi else 0.0
+
+
+## Abaisse la hanche (jambes ET torse, pour qu'elles restent à la même ligne),
+## penche le torse et rentre la tête — voir « Accroupi » dans l'en-tête de
+## classe pour le pourquoi de chaque geste. Appliqué PAR-DESSUS la pose de
+## `_poser_repos`/`_poser_marche`, jamais à leur place : la bascule debout↔
+## accroupi ne doit pas réinitialiser la phase de marche en cours.
+func _appliquer_accroupi(facteur: float) -> void:
+	var hanche_y := lerpf(_torse_y_base, _hanche_accroupi_y, facteur)
+	var bob_actuel := _torse.position.y - _torse_y_base
+	var compression := lerpf(1.0, FACTEUR_LONGUEUR_JAMBE_ACCROUPI, facteur)
+	var flexion := facteur * ANGLE_JAMBE_ACCROUPI
+
+	_jambe_g.position.y = hanche_y
+	_jambe_d.position.y = hanche_y
+	_jambe_g.rotation.x += flexion
+	_jambe_d.rotation.x += flexion
+	_jambe_g_mesh.scale.y = compression
+	_jambe_d_mesh.scale.y = compression
+	_jambe_g_mesh.position.y = -_h_jambe_base * compression * 0.5
+	_jambe_d_mesh.position.y = -_h_jambe_base * compression * 0.5
+
+	_torse.position.y = hanche_y + bob_actuel
+	_torse.rotation.x = -facteur * ANGLE_TORSE_ACCROUPI
+	_tete_pivot.rotation.x = -facteur * ANGLE_TETE_ACCROUPI_SUPPL
+
+
+## Debout, jamais accroupi (voir l'en-tête de classe) : la jambe droite —
+## toujours la même, le geste n'alterne pas comme la marche — balaie de
+## l'arrière vers l'avant en se soulevant au milieu du geste ; l'arme se
+## baisse dès les premiers instants et le reste tant qu'on enjambe.
+func _poser_enjambe(enjambe: float) -> void:
+	_torse.position.y = _torse_y_base
+	_torse.rotation.x = 0.0
+	_tete_pivot.rotation.x = 0.0
+
+	_jambe_g.position.y = _torse_y_base
+	_jambe_g.rotation.x = 0.0
+	_jambe_g_mesh.scale.y = 1.0
+	_jambe_g_mesh.position.y = -_h_jambe_base * 0.5
+
+	var angle := lerpf(-ANGLE_ENJAMBE_MAX, ANGLE_ENJAMBE_MAX, enjambe)
+	var levee := LEVEE_ENJAMBE * sin(enjambe * PI)
+	_jambe_d.position.y = _torse_y_base + levee
+	_jambe_d.rotation.x = angle
+	_jambe_d_mesh.scale.y = 1.0
+	_jambe_d_mesh.position.y = -_h_jambe_base * 0.5
+
+	_bras_g.rotation.x = -GARDE_BRAS
+	_bras_d.rotation.x = -GARDE_BRAS
+
+	var baisse := ANGLE_ARME_BAISSEE * clampf(enjambe / SEUIL_ARME_BAISSEE, 0.0, 1.0)
+	_arme_pivot.rotation.x = -baisse
+	_arme_pivot.position = _arme_pos_base
+	_torche_pivot.rotation.x = 0.0
+	_torche_pivot.position = _torche_pos_base
+
+	_gadget_pivot.position = _gadget_pos_base
 
 
 func _enveloppe_recul(t: float) -> float:
@@ -233,14 +396,29 @@ func _enveloppe_recul(t: float) -> float:
 func _poser_mort(t: float) -> void:
 	rotation.x = deg_to_rad(_interp_paliers(t, TEMPS_CHUTE, ANGLES_CHUTE_DEG))
 	_torse.rotation.z = 0.0
+	_torse.rotation.x = 0.0
+	_tete_pivot.rotation.x = 0.0
 	position.y = 0.04 if t >= TEMPS_CHUTE[-1] else 0.0
 
 	var pli := clampf(t / TEMPS_CHUTE[-1], 0.0, 1.0)
+	_jambe_g.position.y = _torse_y_base
+	_jambe_d.position.y = _torse_y_base
 	_jambe_g.rotation.x = lerpf(0.0, deg_to_rad(45.0), pli)
 	_jambe_d.rotation.x = lerpf(0.0, deg_to_rad(-30.0), pli)
+	# Compression et hauteur de hanche remises à l'état debout : un cadavre
+	# hérité d'un `etat` accroupi ne doit pas garder des jambes raccourcies —
+	# `poser()` est pure, rien d'un appel précédent ne doit survivre ici.
+	_jambe_g_mesh.scale.y = 1.0
+	_jambe_d_mesh.scale.y = 1.0
+	_jambe_g_mesh.position.y = -_h_jambe_base * 0.5
+	_jambe_d_mesh.position.y = -_h_jambe_base * 0.5
+	_torse.position.y = _torse_y_base
 	_bras_g.rotation.x = lerpf(-GARDE_BRAS, deg_to_rad(20.0), pli)
 	_bras_d.rotation.x = lerpf(-GARDE_BRAS, deg_to_rad(-20.0), pli)
+	_arme_pivot.rotation.x = 0.0
 	_arme_pivot.position = _arme_pos_base
+	_torche_pivot.rotation.x = 0.0
+	_torche_pivot.position = _torche_pos_base
 	_gadget_pivot.position = _gadget_pos_base
 
 
@@ -301,11 +479,19 @@ func _construire_squelette() -> void:
 	var l_jambe: float = s["largeur_jambe"] * e
 	var p_jambe: float = s["profondeur_jambe"] * e
 	var ecart_jambe: float = s["ecart_jambe"] * e
+	_h_jambe_base = h_jambe
+	# Voir la constante : la hanche accroupie est celle qui pose le pied
+	# exactement au sol quand la jambe est comprimée et basculée à son
+	# maximum — calculée ici pour ne JAMAIS diverger de la géométrie réelle
+	# des jambes, qui varie avec `hauteur_jambe` si le squelette évolue un jour.
+	_hanche_accroupi_y = h_jambe * FACTEUR_LONGUEUR_JAMBE_ACCROUPI * cos(ANGLE_JAMBE_ACCROUPI)
 
 	_jambe_g = _pivot(self, "JambeGauche", Vector3(-ecart_jambe, y_hanche, 0.0))
-	_jambe_g.add_child(_boite(Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0)))
+	_jambe_g_mesh = _boite(Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0))
+	_jambe_g.add_child(_jambe_g_mesh)
 	_jambe_d = _pivot(self, "JambeDroite", Vector3(ecart_jambe, y_hanche, 0.0))
-	_jambe_d.add_child(_boite(Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0)))
+	_jambe_d_mesh = _boite(Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0))
+	_jambe_d.add_child(_jambe_d_mesh)
 
 	_torse = _pivot(self, "Torse", Vector3(0.0, y_hanche, 0.0))
 	_torse_y_base = y_hanche
@@ -315,11 +501,13 @@ func _construire_squelette() -> void:
 	_torse.add_child(_boite(Vector3(l_torse, h_torse, p_torse), Vector3(0.0, h_torse * 0.5, 0.0)))
 
 	# Tête — pivot propre pour qu'ISO4/ISO7 puissent l'orienter plus tard sans
-	# toucher au reste, mais AUCUNE pose de cette étape ne la fait bouger.
-	var tete_pivot := _pivot(_torse, "Tete", Vector3(0.0, s["y0_tete"] - y_hanche, 0.0))
+	# toucher au reste ; depuis ISO3 vague 1, la posture accroupie s'en sert
+	# aussi (« tête rentrée »).
+	_tete_pivot = _pivot(_torse, "Tete", Vector3(0.0, s["y0_tete"] - y_hanche, 0.0))
 	var h_tete: float = s["hauteur_tete"]
 	var c_tete: float = s["cote_tete"] * e
-	tete_pivot.add_child(_boite(Vector3(c_tete, h_tete, c_tete), Vector3(0.0, h_tete * 0.5, 0.0)))
+	_tete_mesh = _boite(Vector3(c_tete, h_tete, c_tete), Vector3(0.0, h_tete * 0.5, 0.0))
+	_tete_pivot.add_child(_tete_mesh)
 
 	var y_epaule: float = s["y_epaule"] - y_hanche
 	var l_bras: float = s["largeur_bras"] * e
@@ -345,12 +533,12 @@ func _construire_squelette() -> void:
 		Vector3(0.0, 0.0, -fa["longueur"] * 0.5))
 	_arme_pivot.add_child(_arme_mesh)
 
-	var torche_pos := Vector3(-ecart_main, y_main, -avant_main)
-	var torche_pivot := _pivot(_torse, "Torche", torche_pos)
+	_torche_pos_base = Vector3(-ecart_main, y_main, -avant_main)
+	_torche_pivot = _pivot(_torse, "Torche", _torche_pos_base)
 	var ft: Dictionary = s["torche"]
 	_torche_mesh = _boite(Vector3(ft["largeur"], ft["hauteur"], ft["longueur"]),
 		Vector3(0.0, 0.0, -ft["longueur"] * 0.5))
-	torche_pivot.add_child(_torche_mesh)
+	_torche_pivot.add_child(_torche_mesh)
 
 	_gadget_pos_base = Vector3(0.0, s["y_gadget"] - y_hanche, s["arriere_gadget"])
 	_gadget_pivot = _pivot(_torse, "Gadget", _gadget_pos_base)

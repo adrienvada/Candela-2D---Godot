@@ -1,11 +1,12 @@
 extends Node3D
 
-## Le banc des CORPS VOXEL — chantier ISO, étape ISO3, vague 0 (iso-corps).
+## Le banc des CORPS VOXEL — chantier ISO, étape ISO3 (vague 0 : les dix corps
+## et leurs mouvements ; vague 1 : accroupi et enjambement).
 ##
 ## Dix corps sur une grille, une lumière SIMULÉE (pas une `Light3D` — voir plus
-## bas), des touches pour déclencher marche, tir, touché, mort. C'est le seul
-## endroit où l'on voit les dix classes ensemble avant qu'ISO2 ne pose de vrais
-## capteurs.
+## bas), des touches pour déclencher marche, tir, touché, mort, accroupi,
+## enjambement. C'est le seul endroit où l'on voit les dix classes ensemble
+## avant qu'ISO2 ne pose de vrais capteurs.
 ##
 ## ## Pourquoi la lumière est simulée, et pas une vraie `Light3D`
 ##
@@ -24,6 +25,8 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn
 ##   godot --path . tools/banc_corps.tscn -- --lumiere=0 --capture=/chemin/noir.png
 ##   godot --path . tools/banc_corps.tscn -- --classe=spectre --lumiere=0.8 --capture=/chemin/spectre.png
+##   godot --path . tools/banc_corps.tscn -- --pose=accroupi --lumiere=0.8 --capture=/chemin/accroupi.png
+##   godot --path . tools/banc_corps.tscn -- --pose=enjambe --lumiere=0.8 --capture=/chemin/enjambe.png
 ##
 ## Sans `--capture`, la fenêtre reste ouverte et interactive. Comme
 ## `tools/proto_iso.gd`, la capture exige une vraie fenêtre (`RenduCommun`) et
@@ -44,11 +47,14 @@ const Charte := preload("res://charte.gd")
 const COLONNES := 5
 const ESPACEMENT_TUILES := 2.4
 const VITESSE_MARCHE_PX := 220.0     # px/s — cohérent avec l'ordre de grandeur du jeu, sans le recopier
+const VITESSE_MARCHE_ACCROUPI_PX := 55.0  # px/s — ordre de grandeur du ×0,25 du jeu (MB2), pas recopié
 const DUREE_TIR := 0.12
 const DUREE_TOUCHE := 0.5
+const DUREE_ENJAMBE_BANC := 0.5      # « ton banc le simule sur une demi-seconde » (brief ISO3 vague 1)
 
 var _capture := ""
 var _classe_filtre := ""
+var _pose_forcee := ""               # "" | "accroupi" | "enjambe" — --pose, pour la planche
 var _lumiere := 0.6
 var _taille := Vector2i(1920, 1080)
 var _frames := 3
@@ -59,6 +65,9 @@ var _marche := false
 var _tir_t0 := -1.0
 var _touche_t0 := -1.0
 var _mort_t0 := -1.0
+var _accroupi := false
+var _accroupi_t0 := 0.0
+var _enjambe_t0 := -1.0
 
 var _bandeau: Label
 var _releve: Label
@@ -87,6 +96,11 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"classe": _classe_filtre = val
 			"lumiere": _lumiere = clampf(float(val), 0.0, 1.0)
 			"frames": _frames = maxi(1, int(val))
+			"pose":
+				if val == "accroupi" or val == "enjambe":
+					_pose_forcee = val
+				else:
+					push_warning("banc_corps : --pose attend accroupi|enjambe (reçu « %s »)" % val)
 			"taille":
 				var parts := val.to_lower().split("x")
 				if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
@@ -236,7 +250,7 @@ func _construire_bandeau() -> void:
 	_bandeau.add_theme_font_size_override("font_size", 13)
 	_bandeau.add_theme_color_override("font_color", Charte.DIM)
 	_bandeau.text = ("ESPACE marche   T tir   H touché   M mort   R reviens   "
-		+ "HAUT/BAS lumière ±0,05   ÉCHAP quitter")
+		+ "A accroupi   E enjamber   HAUT/BAS lumière ±0,05   ÉCHAP quitter")
 	couche.add_child(_bandeau)
 
 	_releve = Label.new()
@@ -275,10 +289,13 @@ func _process(delta: float) -> void:
 
 ## Voir l'en-tête « pourquoi `t` change de sens » dans `voxel_corps.gd` : hors
 ## d'un déclencheur transitoire, `t` est l'horloge continue du banc (la marche
-## et la respiration en ont besoin) ; pendant un tir ou un touché, `t` redevient
-## le temps ÉCOULÉ DEPUIS LE DÉCLENCHEMENT, sans quoi l'enveloppe de recul ou
-## la secousse — calées sur une fenêtre de quelques centaines de ms — liraient
-## un `t` déjà grand et resteraient à leur valeur de repos.
+## et la respiration en ont besoin) ; pendant un tir, un touché ou le passage
+## à accroupi, `t` redevient le temps ÉCOULÉ DEPUIS LE DÉCLENCHEMENT, sans quoi
+## l'enveloppe de recul, la secousse ou la bascule accroupie — calées sur une
+## fenêtre de quelques centaines de ms — liraient un `t` déjà grand et
+## resteraient à leur valeur de repos. `enjambe`, lui, n'a pas besoin de ce
+## traitement : c'est l'appelant qui fournit directement la progression 0..1,
+## voir l'en-tête de `voxel_corps.gd`.
 func _rafraichir_poses() -> void:
 	var tir := _tir_t0 >= 0.0
 	var touche := _touche_t0 >= 0.0
@@ -294,15 +311,35 @@ func _rafraichir_poses() -> void:
 		if touche:
 			debut = minf(debut, _touche_t0)
 		t = _temps - debut
+	elif _accroupi:
+		t = _temps - _accroupi_t0
 
-	var vitesse := Vector2(VITESSE_MARCHE_PX, 0.0) if (_marche and not mort) else Vector2.ZERO
+	var enjambe := 0.0
+	if _enjambe_t0 >= 0.0:
+		var progres := (_temps - _enjambe_t0) / DUREE_ENJAMBE_BANC
+		if progres >= 1.0:
+			_enjambe_t0 = -1.0
+		else:
+			enjambe = progres
+
+	# La vitesse suit la posture : ×0,25 accroupi, comme MB2 (grandeur du jeu,
+	# jamais recopiée — voir la constante).
+	var vitesse_base := VITESSE_MARCHE_ACCROUPI_PX if _accroupi else VITESSE_MARCHE_PX
+	var vitesse := Vector2(vitesse_base, 0.0) if (_marche and not mort) else Vector2.ZERO
+
+	var accroupi_effectif := _accroupi
+	if _pose_forcee == "accroupi":
+		accroupi_effectif = true
+		t = 1.0  # bien au-delà de DUREE_TRANSITION_ACCROUPI : posture stabilisée
+	elif _pose_forcee == "enjambe":
+		enjambe = 0.5  # le milieu du geste — le plus lisible sur une planche figée
 
 	for c in _corps:
 		var noeud: Node3D = c["noeud"]
 		noeud.poser({
 			"position": c["pos_px"], "visee": Vector2(0.0, 1.0), "vitesse": vitesse,
 			"torche": true, "arme": c["slug"], "tir": tir, "touche": touche,
-			"mort": mort, "t": t,
+			"mort": mort, "accroupi": accroupi_effectif, "enjambe": enjambe, "t": t,
 		})
 
 	if _sol_mat != null:
@@ -312,12 +349,14 @@ func _rafraichir_poses() -> void:
 func _rafraichir_releve() -> void:
 	if _releve == null:
 		return
-	_releve.text = ("lumière %.2f · %s%s%s%s · %d corps"
+	_releve.text = ("lumière %.2f · %s%s%s%s%s%s · %d corps"
 		% [_lumiere,
 			"marche" if _marche else "repos",
 			" · TIR" if _tir_t0 >= 0.0 else "",
 			" · TOUCHÉ" if _touche_t0 >= 0.0 else "",
 			" · MORT" if _mort_t0 >= 0.0 else "",
+			" · ACCROUPI" if _accroupi else "",
+			" · ENJAMBE" if _enjambe_t0 >= 0.0 else "",
 			_corps.size()])
 
 
@@ -344,6 +383,12 @@ func _unhandled_input(evt: InputEvent) -> void:
 			_mort_t0 = -1.0
 			_tir_t0 = -1.0
 			_touche_t0 = -1.0
+		KEY_A:
+			_accroupi = not _accroupi
+			if _accroupi:
+				_accroupi_t0 = _temps
+		KEY_E:
+			_enjambe_t0 = _temps
 		KEY_UP:
 			_lumiere = clampf(_lumiere + 0.05, 0.0, 1.0)
 			for c in _corps:
