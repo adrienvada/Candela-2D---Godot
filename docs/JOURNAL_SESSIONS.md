@@ -4369,3 +4369,12 @@ présente d'un seul côté au pas 34 ; il est passé trois fois sur trois machin
 scriptée tire et relève les balles au signal de physique. Lot du commit vert (116 OK, 22 h 44,
 machine libre) ; avant lui, `duo_reconnexion` a été intermittent sur un code réseau inchangé (rouge
 à 22 h 24, puis rouge et vert relancé seul).
+
+**Troisième addendum, 22 h 58 — les réponses d'Adrien au jalon H-ISO2.** Après avoir rejoué l'écran
+scindé iso : le modelé des corps, « parfait » ; l'effacement de l'ennemi pour qui est ébloui et dans
+la suie, à reproduire en iso, « oui » ; son propre corps garde une silhouette dans le noir, « oui »
+; ISO3 s'intègre, ISO4 et ISO5 s'ouvrent, « oui. Demande à la session Fable 5.1 ». Inscrit dans «
+Décisions actées » et au jalon ; l'organisation de la suite est demandée à la session pilote par
+message. La relecture de la phrase du jalon contre la règle du faisceau reste sans réponse
+explicite. Commit de documentation seule, couvert par le lot vert de 22 h 44 sur un code identique :
+aucune suite ne lit la ROADMAP ni ce journal.

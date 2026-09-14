@@ -2424,6 +2424,10 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les corps iso prennent le modelé de la lumière 2D** (2026-09-14 au soir, Adrien, après avoir rejoué l'écran scindé iso : « parfait ») | Chaque fragment d'un corps lit son capteur à sa place : le côté tourné vers la lampe est clair, le dos resté dans l'ombre du corps est sombre, et le corps monte avec la lampe au lieu de basculer au gris plein. Aucune lumière 3D : c'est la lumière du sprite, ombres et canaux compris, posée sur un volume. Voir la section ISO2, retour 3 du jalon H-ISO2. |
+| **L'ennemi s'efface aussi en iso, pour qui est ébloui et dans la suie** (2026-09-14 au soir, Adrien : « oui ») | La vue de dessus efface l'adversaire pour le joueur ébloui (`Brouillage.opacite`) et le corps pris dans la suie (opacité des sprites) ; les corps iso ne lisaient que la lumière et restaient entiers. C'est une question d'équité, donc une étape à ouvrir, et non un geste glissé dans une correction : un corps 3D doit se fondre dans le sol, pas noircir devant lui. Organisation confiée à la session pilote « Fable 5.1 - CLOUD ISO UNRAILED ». |
+| **Son propre corps garde une silhouette dans le noir, en iso comme en vue de dessus** (2026-09-14 au soir, Adrien : « oui ») | En vue de dessus, le sprite du joueur garde une silhouette à demi-opacité sans lumière (`visual_dim`) : on se voit toujours. En iso, son propre corps était noir tant qu'aucune lampe ne l'éclairait. À reprendre avec les corps d'ISO3 ou l'étape d'effacement, selon ce que la session pilote organise. |
+| **ISO3 s'intègre, ISO4 et ISO5 s'ouvrent** (2026-09-14 au soir, Adrien : « oui. Demande à la session Fable 5.1 ») | Réponse au point 3 du jalon H-ISO2 : les corps voxel lisant le capteur remplacent les cylindres gris, puis viennent les objets debout (ISO4), la killcam et la visée reprojetée (ISO5). L'ordre et la répartition entre sessions sont demandés à la session pilote. Un corps d'ISO3 qui lit le capteur doit le lire à chaque fragment, plafonner à sa couleur et garder des shaders de disque miroirs des sprites (retours du jalon H-ISO2). |
 | **H15 : la vue isométrique, on y va** (2026-09-14, Adrien : « c'est bon on y va, pas besoin de nouvelle série ») | Sur le banc ISO0.b : une projection du rendu 2D exacte au pixel, pas de surcoût de cadence visible au-dessus du bruit de sa série, 5 à 15 appels de dessin de plus, et trois minutes jouées. Réglages tranchés dans la même séance : **tangage 52°**, **écran scindé en iso aussi**, **caméra qui garde la profondeur** de la vue de dessus, et **deux sortes de murs** — hauts et opaques, bas pour se cacher accroupi — qui ouvrent une mécanique neuve (section ISO, « H15 tranché ») ; **ses règles premières sont tranchées le même soir** : un mur bas arrête la lumière mais laisse voir une tête debout, n'abrite un accroupi que de la lumière venue d'en face, tir et lumière debout franchissent le mur bas selon **un même angle** (un accroupi loin derrière redevient visible et touchable), on l'enjambe lentement et bruyamment avec « croix », la torche d'un accroupi bute sur le mur, et l'accroupi ralentit fortement, étouffe les pas, se lit à sa silhouette et à une marque HUD pour soi. Lacet et taille de lightmap non tranchés. Rien d'ISO1 n'est lancé par cette décision seule. |
 | **Plus de relevé de cadence humain à chaque étape du chantier ISO** (2026-09-14 au soir, Adrien : « j'en ai marre de vérifier à chaque étape la tenue en fps ») | Chaque étape ISO relève seule, sans fenêtre à tenir, ce qui n'est pas bruité : appels de dessin et taille des cibles de rendu. **Un seul relevé humain** : en fin de chantier, avant de rendre la vue iso aux joueurs, ou plus tôt si Adrien ressent un ralentissement en jouant — et celui-là sous vraie fenêtre de silence, quatre relevés d'une traite. | Quatre relevés par étape ont coûté une soirée à ISO1 sans rien trancher : le bruit de la machine (±15 % entre deux bases identiques) dépasse l'écart cherché, et une session voisine suffit à le polluer. Le chiffre qui décide vraiment est celui de la fin, pas celui de chaque marche. |
 | **Le leurre a l'ombre d'un CORPS, pas celle d'un mur** (2026-09-12, Adrien : « oui, qu'il ait l'ombre d'un corps ») | Question posée à la fin du lot D et tranchée ici (lot G). L'occluder du leurre vivait sur la couche du DÉCOR, celui d'un corps sur la couche de son joueur : un mur fait de l'ombre sous TOUTE lumière, un corps seulement sous celles dont le masque d'ombre contient sa couche. Le leurre projetait donc une ombre là où aucun corps n'en projette — sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le démasquer**, sans tirer, donc sans payer le flash qui équilibre le gadget. Il porte maintenant les DEUX occluders d'un corps — l'étoile de sa silhouette sur la couche du corps de son poseur, un disque de torse de 12 sur la couche de son torse. Le second n'est pas un supplément : sans lui, la correction aurait remplacé un indice par un autre, la rétrodiffusion adverse ne voyant que les couches de torse, elle aurait TRAVERSÉ le seul leurre de l'arène. Conséquence sur l'arbitrage, et c'est un changement de SENS au carnet de `protocol.gd` (17, non publiée) : la torche et le flash de tir du POSEUR ne l'ombrent plus — une lampe n'ombre jamais le corps de qui la tient —, donc ils ne doivent plus être arrêtés par sa forme dans la ligne de vue de l'éblouissement, sans quoi planter un leurre devant soi éteignait sa propre torche. Les lumières POSÉES, elles, restent arrêtées : elles n'ombrent aucun corps non plus, et pourtant un corps arrête leur éblouissement — il est sur la couche physique du rayon. |
@@ -21887,20 +21891,22 @@ première correction avait été annoncée comme suffisante, elle ne l'était pa
 
 #### Jalon H-ISO2 — ce qui attend Adrien
 
-1. 🟡 **Commencé le 2026-09-14 au soir** (retours ci-dessus : capteurs qui se voyaient, courbe et
-   plafond du corps corrigés ; trou net du flou reconfirmé). **Rejouer un duel complet à deux
-   manettes en écran scindé iso** avec ces corrections, pâte D :
+1. ✅ **Rejoué le 2026-09-14 vers 22 h 55**, après les corrections des retours ci-dessus (capteurs
+   qui se voyaient, courbe et plafond du corps ; trou net du flou reconfirmé) : « parfait » pour le
+   modelé des corps. Commande, pâte D :
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" -- --iso`
    puis 1V1 LOCAL. Regarder : son halo n'est que dans sa moitié ; l'autre joueur s'allume sous son
    halo quand il est collé ; F3 (avec `fn`) montre les deux vues.
-2. **Relire la phrase du jalon** contre la règle du faisceau (ci-dessus).
-3. **Dire si ISO3 s'intègre** (corps voxel lisant le capteur) **et si ISO4/ISO5 s'ouvrent.**
+2. **Relire la phrase du jalon** contre la règle du faisceau (ci-dessus). ⏳ Pas de réponse
+   explicite le 2026-09-14 : le faisceau éclaire toujours le sol des deux moitiés, et Adrien n'en a
+   rien signalé en rejouant, ce qui n'est pas une relecture.
+3. ✅ **ISO3 s'intègre, ISO4 et ISO5 s'ouvrent** — « oui. Demande à la session Fable 5.1 » : ordre et
+   répartition demandés à la session pilote (voir « Décisions actées »).
 4. La taille de lightmap reste ouverte jusqu'au relevé de fin de chantier.
-5. **Ouvrir l'effacement des corps iso** (adversaire pour qui est ébloui, corps dans la suie) :
-   défaut d'équité signalé au retour 3.
-6. **Dire, pour ISO3, si son propre corps garde une silhouette hors lumière** : en vue de dessus,
-   son sprite en garde une à demi-opacité ; en iso, son corps est noir tant qu'aucune lampe ne
-   l'éclaire. Et juger le modelé des corps sous la lampe (retour 3).
+5. ✅ **Ouvrir l'effacement des corps iso** (adversaire pour qui est ébloui, corps dans la suie) —
+   « oui » : étape à ouvrir, demandée à la session pilote.
+6. ✅ **Son propre corps garde une silhouette hors lumière**, comme en vue de dessus — « oui ». Le
+   modelé des corps sous la lampe : « parfait ».
 
 ### Ce qui attend Adrien — jalon H15
 
