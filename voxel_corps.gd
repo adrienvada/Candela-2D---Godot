@@ -56,9 +56,16 @@ const AMPL_RESPIRATION := 0.012      # tuiles
 # Esthétique, volontairement PAS lue dans `player.gd` : ce corps n'a aucune
 # dépendance au fichier du jeu, contrairement à `tools/banc_marche.gd` qui,
 # lui, doit rester fidèle à la cadence réelle des pas sonores.
-const LONGUEUR_PAS := 1.15           # tuiles par foulée complète
-const AMPLITUDE_JAMBE := 0.42        # rad (~24°)
-const AMPLITUDE_BRAS := 0.24         # rad (~14°)
+#
+# ⚠️ **Une première version cadençait à ~5,5 foulées par seconde** (`LONGUEUR_PAS`
+# trop court face à la vitesse du banc) — une course de dessin animé, pas des
+# gens qui cherchent à ne pas faire de bruit. Adrien l'a vu au banc et l'a dit
+# en ces termes le 2026-09-14. `LONGUEUR_PAS` est monté et les amplitudes
+# resserrées : à la vitesse du banc, la foulée tombe autour de 1 Hz (deux pas
+# par seconde), un pas posé et non une foulée sprintée.
+const LONGUEUR_PAS := 6.0            # tuiles par foulée complète
+const AMPLITUDE_JAMBE := 0.26        # rad (~15°)
+const AMPLITUDE_BRAS := 0.14         # rad (~8°)
 const GARDE_BRAS := 0.14             # rad — légèrement relevés au repos comme en marche
 
 # --- Tir : recul de l'arme seule ---------------------------------------------
