@@ -21039,7 +21039,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
-| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 20 h 20) — **H-MB1 : duel à deux manettes validé par Adrien, EOS reporté ; la balle suit la forme de la lumière (bande de 3 px supprimée à sa demande)** — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût), MB3d livrée (équité, killcam) — **H-MB1 attend Adrien** |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 20 h 20) — **H-MB1 : duel à deux manettes validé par Adrien ; pas de test EOS à deux machines (Adrien n'en a pas les moyens) ; la balle suit la forme de la lumière (bande de 3 px supprimée à sa demande)** — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût), MB3d livrée (équité, killcam) — **H-MB1 attend Adrien** |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
 
@@ -21387,10 +21387,18 @@ de ce qui se voit.
 ### Ce qui attend Adrien
 
 **H-MB1 joué le 2026-09-14** : le duel à deux manettes sur la carte d'essai « fonctionne »
-(Adrien), et la bande de 3 px est tranchée (supprimée, § MB3d). **Reste, reporté par
-Adrien** (« on fera plus tard ») : **une partie EOS à deux machines** — le fil a changé
-(`Protocol.VERSION` 18), elle se joue avant toute publication qui porte ce chantier.
-Code de partage de la carte d'essai : `docs/MURS_BAS.md` § 9.
+(Adrien), et la bande de 3 px est tranchée (supprimée, § MB3d). **Pas de partie EOS à deux
+machines** : d'abord reportée, puis **abandonnée par Adrien le même soir** — « je ne veux
+pas faire de tests à deux machines, je n'ai pas de quoi le faire ». Le fil a changé
+(`Protocol.VERSION` 18). Ce qui le couvre : les scénarios à deux instances du lot
+(`tools/run_duo.sh`, ENet sur une machine). ⚠️ **Risque accepté, et à ne pas oublier** : EOS
+entre deux réseaux (relais, NAT, latence réelle) n'est pas vérifié pour ce chantier — la
+classe de défauts que la Phase 3 n'a vus qu'entre deux machines distinctes. **Aucune
+session ne doit présenter un test à deux machines comme un préalable** : Adrien n'a pas le
+matériel. Code de partage de la carte d'essai : `docs/MURS_BAS.md` § 9.
+
+Le chantier est **fusionné dans `main`** (avance rapide vers `f9c6af4`, 2026-09-14 à
+23 h 25, à la demande d'Adrien), non poussé.
 
 ---
 

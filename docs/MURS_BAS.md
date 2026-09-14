@@ -618,9 +618,15 @@ commentée contenait encore. Il compare désormais des lignes entières.
 
 ### ✅ H-MB1 et la bande de 3 px — tranchés par Adrien (2026-09-14, nuit)
 
-- **Duel à deux manettes sur la carte d'essai : « ça fonctionne ».** La partie EOS à deux
-  machines est **reportée par Adrien** (« on fera plus tard ») — le fil a changé
-  (`Protocol.VERSION` 18), elle reste à jouer avant toute publication.
+- **Duel à deux manettes sur la carte d'essai : « ça fonctionne ».**
+- **Pas de partie EOS à deux machines — abandonnée, pas reportée.** Adrien : « je ne veux
+  pas faire de tests à deux machines, je n'ai pas de quoi le faire » (2026-09-14, 23 h 30).
+  Le fil a changé (`Protocol.VERSION` 18 : posture et enjambement dans `rpc_send_inputs`,
+  carte v4). **Ce qui le couvre** : les scénarios à deux instances du lot
+  (`tools/run_duo.sh`, ENet sur une machine — match, rematch, reconnexion), verts à 114 OK.
+  **Ce qui ne l'est pas, et reste un risque accepté** : EOS entre deux réseaux (relais,
+  traversée de NAT, latence réelle) — la classe de défauts que la Phase 3 n'a vus
+  qu'entre deux machines distinctes.
 - **« La bande de 3 px me gêne. Aligne la balle sur la forme de lumière. »** Fait :
   `MursBas.franchit_regle` — ce qu'appellent la balle, la balle compensée et
   l'éblouissement — lit les murets **rentrés** de `RETRAIT_LUMIERE`

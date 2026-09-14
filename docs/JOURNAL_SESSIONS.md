@@ -4363,3 +4363,17 @@ restent sur la tuile entière. Touché : `murs_bas.gd`, `murs_bas_rendu.gd` ; su
 `test_murs_bas` (règle = `franchit` sur la forme de lumière, fin de bande à L − 2 touchée)
 et `test_accroupi` (équité : aucune bande, échantillonnée dès d = 0 — le cas dégénéré de
 MB3d n'existe plus, balle et lumière lisant la même forme).
+
+### 2026-09-14 (nuit) — Fusion dans main, et pas de test à deux machines (même session)
+
+**23 h 25 — fusion** (« Fusionne quand tu peux », Adrien) : avance rapide de `main` vers
+`f9c6af4`, sans conflit — `main` n'avait pas bougé depuis la base. L'état fusionné est
+exactement celui du lot vert. **Deux sessions avaient leur dossier courant dans l'arbre
+principal** (candela-2d-3b, qui y lit les deltas du suivi, et candela-2d-be) : la fusion a
+attendu leur « vas-y », plutôt qu'un déplacement de la référence `main` sous leurs pieds —
+qui aurait fait paraître leur arbre modifié à l'envers. Non poussé.
+
+**23 h 30 — pas de test EOS à deux machines.** Adrien : « je ne veux pas faire de tests à
+deux machines, je n'ai pas de quoi le faire ». Reporté puis abandonné. Les scénarios à deux
+instances du lot couvrent le fil sur une machine ; EOS entre deux réseaux reste un risque
+accepté, consigné dans la ROADMAP et `docs/MURS_BAS.md`.
