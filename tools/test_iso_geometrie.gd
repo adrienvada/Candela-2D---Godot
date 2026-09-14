@@ -22,7 +22,9 @@ const PLANCHER := 80
 const TANGAGE := 52.0
 ## Les hauteurs du tableau, en tuiles : les trois du banc ISO0.b, le seuil du critère,
 ## et ce que « des murs hauts, très lisibles » pourrait vouloir dire.
-const HAUTEURS := [0.3, 0.45, 0.65, 0.7, 1.0, 1.5, 2.0]
+const HAUTEURS := [0.3, 0.45, 0.65, 0.7, 1.0, 1.25, 1.5, 2.0]
+## La hauteur des murs hauts tranchée par Adrien le 2026-09-14 (jalon H-ISO1).
+const HAUTEUR_DECIDEE := 1.25
 
 var _failures := 0
 var _verifications := 0
@@ -150,11 +152,11 @@ func _equite_valeurs_connues(Geo: GDScript) -> void:
 		absf(Geo.part_de_corps_colle_cachee(36.0) - 1.0) < EPSILON)
 	var haut: float = Geo.hauteur_mur_haut()
 	var bande_haut: float = Geo.bande_masquee_px(haut * 35.0, TANGAGE)
-	# ⚠️ Ce contrôle rougira si H_HAUT dépasse 0,658 tuile. C'est voulu : dépasser le
-	# critère de l'étude est une DÉCISION d'Adrien, prise sur le tableau — pas un
-	# réglage qui passerait en silence. S'il le décide, ce contrôle change avec lui.
-	_check("la hauteur en service tient le critère de l'étude : %.1f px < %.0f px"
-		% [bande_haut, Geo.BANDE_MAX_PX], bande_haut < Geo.BANDE_MAX_PX)
+	# Adrien a tranché 1,25 tuile le 2026-09-14 (jalon H-ISO1), au-delà du critère de 18 px,
+	# en connaissance de cause. Ce contrôle épingle SA décision : une autre hauteur en service
+	# — une constante changée ou perdue à une fusion — doit se voir, pas passer en silence.
+	_check("la hauteur en service est celle d'Adrien : %s tuile (bande de %.1f px, critère de l'étude %.0f px dépassé et assumé)"
+		% [str(haut), bande_haut, Geo.BANDE_MAX_PX], absf(haut - HAUTEUR_DECIDEE) < EPSILON)
 
 
 ## La vérification indépendante : pour chaque case de sol, des points recomptés par un
@@ -271,6 +273,13 @@ func _tableau(Geo: GDScript, cartes: Dictionary) -> void:
 		invisibles_a_un += int(Geo.analyser_equite(cartes[slug], 1.0, TANGAGE)["cases_invisibles"])
 		invisibles_a_deux += int(Geo.analyser_equite(cartes[slug], 2.0, TANGAGE)["cases_invisibles"])
 	_check("aucune case entièrement invisible à une tuile de mur", invisibles_a_un == 0)
+	# Ce qui protège encore le jeu à la hauteur décidée : pas de case de sol que la caméra
+	# ne montre jamais. Au-delà de 1,28 tuile, chaque case au nord d'un mur le deviendrait.
+	var invisibles_en_service := 0
+	for slug in cartes:
+		invisibles_en_service += int(Geo.analyser_equite(cartes[slug], Geo.hauteur_mur_haut(), TANGAGE)["cases_invisibles"])
+	_check("à la hauteur en service (%s t), aucune case de sol entièrement invisible sur les six cartes"
+		% str(Geo.hauteur_mur_haut()), invisibles_en_service == 0, "%d" % invisibles_en_service)
 	_check("des cases entièrement invisibles à deux tuiles (%d)" % invisibles_a_deux, invisibles_a_deux > 0)
 
 

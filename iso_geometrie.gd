@@ -21,14 +21,22 @@ extends RefCounted
 ## qu'elles existent, `hauteur_mur_haut()` les lit et cette constante ne sert plus ;
 ## ce fichier ne les pose pas lui-même, `map_geometry.gd` n'est pas à ISO1.
 ##
-## **0,65 tuile** : la plus haute qui tienne le critère de l'étude à 52° (bande de
-## 17,8 px, sous les 18 px du rayon d'un corps). **EN ATTENTE D'ADRIEN** (jalon
-## H-ISO1), qui la fixe sur le tableau d'équité. C'est le SEUL endroit du dépôt où
-## cette hauteur est écrite.
-const H_HAUT := 0.65
+## **1,25 tuile — décision d'Adrien, 2026-09-14 au soir** (jalon H-ISO1), sur le tableau
+## d'équité : « des murs hauts très lisibles, qui ne laissent rien passer ». C'est aussi la
+## valeur que le chantier des murs bas pose dans `map_geometry.gd`.
+##
+## ⚠️ **Elle dépasse, en connaissance de cause, le critère de l'étude** : 34,2 px de sol
+## cachés derrière un mur à 52°, un corps collé caché à 98 %, et La Croisée qui cache 4,6
+## points de sol de plus dans la moitié de J2. Ce qui tient encore : **aucune case de sol
+## n'est entièrement invisible** tant que le mur reste sous 1,28 tuile —
+## `tools/test_iso_geometrie.gd` le vérifie sur les six cartes. C'est le SEUL endroit du
+## dépôt où cette hauteur est écrite côté iso.
+const H_HAUT := 1.25
 
 ## Le critère de l'étude (§ 5.2) : la bande de sol cachée derrière un mur reste sous
-## le rayon d'un corps, pour qu'un joueur collé derrière montre encore son torse.
+## le rayon d'un corps, pour qu'un joueur collé derrière montre encore son torse. **Dépassé
+## par décision d'Adrien pour les murs hauts** (voir `H_HAUT`) ; il reste la référence du
+## tableau d'équité, et celle des murs bas (0,4 tuile : 10,9 px).
 const BANDE_MAX_PX := 18.0
 const RAYON_CORPS_PX := 18.0
 

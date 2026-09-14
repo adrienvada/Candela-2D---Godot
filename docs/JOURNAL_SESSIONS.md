@@ -4296,6 +4296,15 @@ D devient la pâte par défaut ; les touches 1-4 et 0 remplacent F2 (qui reste) 
 `BANC_ISO` de `--jeu` imprime désormais les vrais réglages rendus. Toujours rien de poussé
 ni de fusionné.
 
+**Addendum, soir du 2026-09-14 — H-ISO1 tranché.** Murs hauts à **1,25 tuile** (Adrien, sur le
+tableau d'équité, au-delà du critère de 18 px en connaissance de cause) : `IsoGeometrie.H_HAUT`
+suit, et la suite épingle désormais cette décision et l'absence de case invisible, au lieu
+du critère. Adrien pensait avoir réglé cette hauteur avec « Murs bas Opus » : seuls les murs
+bas l'avaient été (sa ROADMAP : « le mur haut (1,25) reste la proposition ») ; les deux
+sessions l'ont relevé et il a tranché. ISO2 est ouverte par une autre session, sur `cc2bd87`.
+Plus de relevé de cadence par étape (décision d'Adrien). Reste à cette session : la fusion
+de `main` quand les murs bas y seront, sur sa demande.
+
 ### Session « prompt-iso2-3e1d2e-ce » (ISO2, branche `iso2-vues`) — ajoutée le 2026-09-14
 
 Session locale (Fable 5.1 puis Opus 5), chantier **vue isométrique**, étape **ISO2** (vues et

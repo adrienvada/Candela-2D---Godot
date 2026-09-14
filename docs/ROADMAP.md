@@ -21450,7 +21450,8 @@ iso est derrière un réglage désactivé par défaut.
 **Le contrat avec le chantier des murs bas.** `IsoGeometrie` lit `HAUTEUR_MUR_HAUT`,
 `HAUTEUR_MUR_BAS` et `Kind.LOW_WALLS` **dans le script** de `map_geometry.gd`, dès qu'ils
 existent (une référence écrite en dur ne compilerait pas avant la fusion) ; en attendant,
-une seule hauteur, **`IsoGeometrie.H_HAUT = 0,65 tuile`**, documentée « à déplacer ». La
+une seule hauteur, **`IsoGeometrie.H_HAUT`**, documentée « à déplacer » — 0,65 tuile à la
+livraison, **1,25 tuile depuis le jalon H-ISO1** (décision d'Adrien, voir plus bas). La
 source réellement utilisée s'imprime (F3, suite, journal) : une fusion qui perdrait la
 constante se verrait, au lieu de retomber en silence sur la valeur locale. `Kind.LOW_WALLS`
 sans sa hauteur crie (`push_error`).
@@ -21507,9 +21508,10 @@ murs qui cache**.
 |---|---|---|---|
 | 0,3 | 8,2 px | tenu | 17 % |
 | 0,45 | 12,3 px | tenu | 30 % |
-| **0,65** (`H_HAUT` actuelle) | **17,8 px** | **tenu** | 49 % |
+| 0,65 (recommandation de l'étude) | 17,8 px | tenu | 49 % |
 | 0,7 | 19,1 px | dépassé | 54 % |
 | 1,0 | 27,3 px | dépassé | 81 % |
+| **1,25** (`H_HAUT` en service, décision d'Adrien au jalon H-ISO1) | **34,2 px** | **dépassé, assumé** | **98 %** |
 | 1,5 | 41,0 px | dépassé | 100 % |
 | 2,0 | 54,7 px | dépassé | 100 % |
 
@@ -21616,11 +21618,17 @@ pas touchée.
    niveau de la vue de dessus (27,1 % contre 26,8 %) — l'information du jeu —, et qu'elle
    ne rehausse que ce qui est déjà éclairé ; **A** si l'œil l'emporte, en sachant qu'elle
    efface trois quarts de la lueur faible.*
-3. **Fixer `H_haut`** d'après le tableau d'équité. Recommandation : **0,65 tuile** — la plus
+3. ✅ **`H_haut` tranchée : 1,25 tuile** (Adrien, 2026-09-14 au soir), la valeur que le
+   chantier des murs bas pose dans `map_geometry.gd`. **Au-delà du critère de l'étude, en
+   connaissance de cause** : 34,2 px de sol cachés derrière un mur, un corps collé caché à
+   98 %, La Croisée à −4,6 pts entre les moitiés de J1 et J2 ; aucune case de sol
+   entièrement invisible (seuil : 1,28 tuile), ce que la suite vérifie désormais à la
+   hauteur en service. *Pour mémoire, la recommandation de la session était **0,65 tuile** — la plus
    haute qui tienne le critère (17,8 px), aucune case invisible, et un écart de côté limité à
    La Croisée (−2,4 pts). Des murs d'une tuile coûtent 27 px de bande et 3,7 pts à La Croisée.
    « Ne laissent rien passer » voulait-il dire « on ne voit pas ce qui est collé derrière » ?
-   C'est la question qui tranche entre les deux.
+   C'est la question qui tranche entre les deux.* **Réponse : oui** — à 1,25 tuile, ce qui est
+   collé derrière un mur haut ne se voit pas.
 4. ~~**Relevés de cadence**~~ — **retirés du jalon par Adrien le 2026-09-14 au soir** (voir
    « Décisions actées ») ; la série prise ce soir-là reste consignée ci-dessus. *Protocole
    d'origine, pour le relevé unique de fin de chantier :* sous fenêtre de silence, machine refroidie, fenêtre au premier
@@ -22062,7 +22070,9 @@ et un seul est du travail de session.
 > `iso1-fondations` (section ISO, « ISO1 »). Ce qui attend Adrien : le **jalon H-ISO1** —
 > jouer trois minutes avec `-- --iso`, fixer la hauteur des murs hauts d'après le tableau
 > d'équité et dire si ISO2 s'ouvre. **Plus de relevé de cadence par étape** (décision du soir
-> même) : un seul, en fin de chantier ou sur ressenti.
+> même) : un seul, en fin de chantier ou sur ressenti. **Tout H-ISO1 est tranché le soir
+> même** : pâte D, murs hauts 1,25 tuile, ISO2 ouverte par une autre session. Reste à ISO1 :
+> fusionner `main` dans `iso1-fondations` quand les murs bas y seront, sur demande d'Adrien.
 > **La pâte est choisie : D**, le soir même. Commandes absolues dans la section.
 >
 > **Mis à jour le 2026-09-14, nuit — ISO2 est commitée** sur la branche locale `iso2-vues` (section
@@ -22074,6 +22084,10 @@ et un seul est du travail de session.
 > modelé des corps), phrase du jalon relue sans changement de règle, décisions inscrites dans
 > « Décisions actées ». La suite — effacement des corps iso, silhouette de son propre corps, ISO3,
 > ISO4, ISO5 — est demandée à la session pilote « Fable 5.1 - CLOUD ISO UNRAILED ».
+> **Fusion d'`iso1-fondations` dans `iso2-vues`** (27a94a4, demande d'Adrien au brief ISO2b) : les
+> murs hauts à 1,25 tuile sont en service côté iso — 34,2 px de sol cachés derrière un mur, un
+> corps collé caché à 98 %, aucune case de sol entièrement invisible. Puis **ISO2b** : l'effacement
+> des corps iso et la silhouette de soi.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,
