@@ -12,9 +12,16 @@ extends SceneTree
 ## texte que le défaut reviendrait — un effet réécrit sans son curseur, ou un
 ## curseur ajouté à la table sans site d'appel. Les lecteurs reconnus :
 ## `EffectPolicy.curseur("id")`, `current_effect("id")`,
-## `effective_effect("id", …)`, `_intensite_vitrine("id")`. `tools/`, `effect_policy.gd` et
+## `_intensite_vitrine("id")`. `tools/`, `effect_policy.gd` et
 ## `settings_manager.gd` sont exclus : ils parcourent la table génériquement
 ## et ne prouvent rien sur l'application réelle.
+##
+## ⚠️ **La règle vaut aussi pour les douze effets du Monde**, qui ne se règlent
+## plus depuis le 2026-09-12 : ils rendent `DEFAULT` au lieu d'un réglage, mais
+## ils passent toujours par le même chemin, et c'est ce passage qui prouve
+## qu'ils se dessinent encore. Le jour où l'un d'eux cesserait d'appeler
+## `curseur()`, plus rien ne le vérifierait — et un effet du monde absent est
+## bien plus grave qu'un curseur inerte.
 
 const Politique := preload("res://effect_policy.gd")
 
@@ -30,7 +37,7 @@ func _init() -> void:
 	var tout := "\n".join(textes.values())
 	for id in Politique.ids():
 		var motifs := ['curseur("%s")' % id, 'current_effect("%s")' % id,
-			'effective_effect("%s"' % id, '_intensite_vitrine("%s")' % id]
+			'_intensite_vitrine("%s")' % id]
 		var lu := false
 		for m in motifs:
 			if tout.contains(m):

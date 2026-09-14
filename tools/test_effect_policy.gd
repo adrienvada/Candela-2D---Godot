@@ -3,15 +3,19 @@
 ##
 ## Ce que la suite protège, dans l'ordre d'importance :
 ##
-##   • LA propriété à ne jamais laisser régresser — aucun effet de la famille
-##     Monde ne peut atteindre zéro en match classé, quelle que soit la route
-##     empruntée : curseur, fichier trafiqué, préférence prise en local.
-##   • la classification est totale : aucun effet sans famille, sans plancher
-##     cohérent avec sa famille, ni sans phrase à montrer au joueur.
-##   • les planchers sont bien LEVÉS en écran partagé, où rien n'est en jeu.
+##   • LA propriété à ne jamais laisser régresser — **aucun effet de la famille
+##     Monde ne peut être réglé, par aucune route** : écran, setter, fichier
+##     trafiqué, préférence héritée d'une version antérieure. Ils valent
+##     `DEFAULT` pour tout le monde (décision d'Adrien, 2026-09-12).
+##   • l'API des planchers est bien PARTIE, et ne revient pas par la fenêtre.
+##     Un `ranked` qui réapparaîtrait rendrait au Monde sa négociabilité sans
+##     qu'aucun autre contrôle ne s'en aperçoive.
+##   • la classification est totale : aucun effet sans famille ni sans phrase.
+##   • les quatre niveaux du confort, et l'état « personnalisé » qui les
+##     accompagne.
 ##   • l'écrêtage, la persistance, le fichier absent ou trafiqué.
-##   • l'écran est engendré par la table : ajouter un effet ne coûte qu'une
-##     ligne, et n'oblige à toucher ni l'écran ni cette suite.
+##   • l'écran est engendré par la table : ajouter un effet réglable ne coûte
+##     qu'une ligne, et n'oblige à toucher ni l'écran ni cette suite.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_effect_policy.gd
 extends SceneTree
@@ -48,10 +52,9 @@ func _run() -> void:
 
 	_test_classification()
 	_test_invariant_monde()
-	_test_planchers_leves_en_local()
+	_test_niveaux()
 	_test_clamping()
 	_test_persistence()
-	_test_contexte()
 	_test_ecran()
 
 	_wipe_tmp()
@@ -101,27 +104,40 @@ func _preflight() -> bool:
 		return false
 	print("  ✓ la table porte %d effets" % (table as Dictionary).size())
 
-	for method in ["ids", "ids_of_family", "exists", "family_of", "is_world", "label_of",
-			"reason_of", "floor_of", "clamp_value", "is_capped", "family_label",
-			"family_rule", "context_line", "constraint_line", "intensity_to_percent",
+	for method in ["ids", "ids_of_family", "ids_reglables", "exists", "family_of",
+			"is_world", "reglable", "label_of", "reason_of", "clamp_value",
+			"family_label", "family_rule", "context_line", "constraint_line",
+			"niveau_de", "niveau_commun", "intensity_to_percent",
 			"percent_to_intensity"]:
 		if not _policy.has_method(method):
 			printerr("  ✗ EffectPolicy : méthode manquante : ", method)
 			ok = false
 
 	var probe: Node = _settings_script.new()
-	for method in ["set_effect", "get_effect", "effective_effect", "current_effect",
-			"is_ranked_context", "clamp_intensity"]:
+	for method in ["set_effect", "get_effect", "current_effect", "clamp_intensity"]:
 		if not probe.has_method(method):
 			printerr("  ✗ GameSettings : méthode manquante : ", method)
 			ok = false
 	if not probe.has_signal("effect_changed"):
 		printerr("  ✗ GameSettings : signal manquant : effect_changed")
 		ok = false
+
+	# ⚠️ **L'absence est contrôlée comme la présence.** Les planchers et le
+	# contexte classé sont partis le 2026-09-12 avec le réglage du Monde ; les
+	# voir revenir signifierait qu'on a rendu au joueur la main sur ce qui doit
+	# être commun, et aucun autre contrôle de cette suite ne le dirait.
+	for disparu in ["floor_of", "is_capped"]:
+		if _policy.has_method(disparu):
+			printerr("  ✗ EffectPolicy : « %s » est revenu — les planchers avec ?" % disparu)
+			ok = false
+	for disparu in ["effective_effect", "is_ranked_context"]:
+		if probe.has_method(disparu):
+			printerr("  ✗ GameSettings : « %s » est revenu" % disparu)
+			ok = false
 	probe.free()
 
 	if ok:
-		print("  ✓ l'API des effets est bien présente")
+		print("  ✓ l'API des effets est bien présente, et l'ancienne bien partie")
 	return ok
 
 ## Instance détachée de l'arbre : `_ready()` n'est pas appelé, donc ni la vidéo
@@ -188,16 +204,15 @@ func _test_classification() -> void:
 			complete = false
 			break
 
-		var floor_ranked: float = _policy.floor_of(id, true)
-		if floor_ranked < 0.0 or floor_ranked > 1.0:
-			_check("plancher dans les bornes", false, "%s → %f" % [detail, floor_ranked])
+		if String(_policy.constraint_line(id)).strip_edges() == "":
+			_check("ligne de contrainte affichable", false, detail)
 			complete = false
 			break
 
 	if complete:
-		_check("chaque effet a famille, nom, phrase et plancher borné", true)
+		_check("chaque effet a famille, nom, phrase et ligne de contrainte", true)
 
-	_check("il n'existe que deux familles", families.size() <= 2, str(families.keys()))
+	_check("il existe exactement trois familles", families.size() == 3, str(families.keys()))
 
 	# `ids_of_family` est ce que parcourt l'écran : un effet qui n'en sortirait
 	# pas serait réglable par le code et invisible au joueur.
@@ -207,154 +222,189 @@ func _test_classification() -> void:
 	_check("chaque effet apparaît dans exactement une famille", covered == ids.size(),
 		"%d listés pour %d effets" % [covered, ids.size()])
 
+	# Les réglables sont exactement Menus + Confort, ni plus ni moins.
+	var menus: int = (_policy.ids_of_family(_policy.Family.MENUS) as PackedStringArray).size()
+	var confort: int = (_policy.ids_of_family(_policy.Family.CONFORT) as PackedStringArray).size()
+	var monde: int = (_policy.ids_of_family(_policy.Family.MONDE) as PackedStringArray).size()
+	_check("les trois familles sont peuplées", menus > 0 and confort > 0 and monde > 0,
+		"%d menus, %d confort, %d monde" % [menus, confort, monde])
+	_check("« réglable » recouvre exactement Menus + Confort",
+		int((_policy.ids_reglables() as PackedStringArray).size()) == menus + confort,
+		"%d réglables pour %d + %d" % [
+			(_policy.ids_reglables() as PackedStringArray).size(), menus, confort])
+
 	_check("un identifiant inconnu n'a pas de famille", int(_policy.family_of("effet_fantome")) == -1)
 	_check("un identifiant inconnu n'existe pas", not bool(_policy.exists("effet_fantome")))
-	_check("le contexte a sa phrase dans les deux cas",
-		String(_policy.context_line(true)) != "" and String(_policy.context_line(false)) != "")
+	_check("un identifiant inconnu n'est pas réglable", not bool(_policy.reglable("effet_fantome")))
+	_check("le bandeau de contexte a sa phrase",
+		String(_policy.context_line()).strip_edges() != "")
 
 # ---------------------------------------------------------------------------
 # L'INVARIANT
 # ---------------------------------------------------------------------------
 #
 # LA propriété à ne jamais laisser régresser. Elle est vérifiée pour TOUS les
-# effets de la table, par toutes les routes qui mènent à une intensité : le
-# curseur, l'écrêtage direct, la relecture d'un fichier, et une préférence prise
-# en écran partagé où le zéro est permis.
+# effets du Monde, par toutes les routes qui mènent à une intensité : l'écrêtage
+# direct, le setter, la relecture d'un fichier trafiqué, et l'écran.
+#
+# Elle a remplacé « aucun effet Monde n'atteint zéro en classé » : la marge qui
+# restait entre le plancher et 100 % était assez large pour faire deux jeux
+# différents, et un réglage qui influe sur le compétitif n'a pas de bon plancher
+# — il a une valeur commune.
 func _test_invariant_monde() -> void:
-	print("\n[Aucun effet Monde à zéro en classé]")
+	print("\n[Aucun effet Monde n'est réglable]")
 
-	var settings := _make_settings()
-	var world_count := 0
-	var comfort_count := 0
-	var all_ok := true
+	var defaut: float = _policy.DEFAULT
+	var familles_ok := true
 	var detail := ""
-
 	for id in _policy.ids():
-		var is_world: bool = _policy.is_world(id)
-		var floor_ranked: float = _policy.floor_of(id, true)
+		var monde: bool = _policy.is_world(id)
+		if monde == bool(_policy.reglable(id)):
+			familles_ok = false
+			detail = "« %s » : Monde et réglable à la fois" % id
+			break
+	_check("Monde et réglable s'excluent, pour chaque effet", familles_ok, detail)
 
-		if is_world:
-			world_count += 1
-			# La famille et le plancher se contredisent-ils ? Un effet Monde
-			# annulable serait rangé dans la bonne famille et se comporterait
-			# comme du confort — le pire des deux mondes.
-			if floor_ranked <= 0.0:
-				all_ok = false
-				detail = "« %s » est Monde mais son plancher vaut %f" % [id, floor_ranked]
-				break
-		else:
-			comfort_count += 1
-			if floor_ranked != 0.0:
-				all_ok = false
-				detail = "« %s » est Confort mais bridé à %f" % [id, floor_ranked]
-				break
-
-		if not is_world:
+	# Route 1 : l'écrêtage direct, celui que le rendu appelle.
+	var clamp_ok := true
+	detail = ""
+	for id in _policy.ids():
+		if not _policy.is_world(id):
 			continue
-
-		# Route 1 : l'écrêtage direct, celui que le rendu appelle.
-		for attempt in [0.0, -1.0, -1000.0, 0.0001]:
-			var applied: float = _policy.clamp_value(id, attempt, true)
-			if applied < floor_ranked or applied <= 0.0:
-				all_ok = false
-				detail = "« %s » : %f écrêté à %f" % [id, attempt, applied]
+		for tentative in [0.0, -1.0, -1000.0, 0.0001, 0.5, 0.999, 42.0, NAN]:
+			var applique: float = _policy.clamp_value(id, tentative)
+			if not is_equal_approx(applique, defaut):
+				clamp_ok = false
+				detail = "« %s » : %s écrêté à %f au lieu de %f" % [
+					id, str(tentative), applique, defaut]
 				break
-		if not all_ok:
+		if not clamp_ok:
 			break
+	_check("l'écrêtage rend l'intensité d'origine quoi qu'on lui passe", clamp_ok, detail)
 
-		# Route 2 : le joueur pousse son curseur à zéro (permis en local), puis
-		# entre en classé. Sa préférence est retenue, jamais appliquée telle
-		# quelle.
-		settings.set_effect(id, 0.0)
-		if not is_zero_approx(float(settings.get_effect(id))):
-			all_ok = false
-			detail = "« %s » : la préférence brute a été relevée à l'écriture" % id
+	# Route 2 : le setter. Il refuse, sans rien retenir et sans rien émettre —
+	# une valeur retenue mais jamais rendue est exactement le réglage qui ment.
+	var settings := _make_settings()
+	var emis: Array = []
+	settings.effect_changed.connect(func(id: String, _v: float) -> void: emis.append(id))
+	var setter_ok := true
+	detail = ""
+	for id in _policy.ids():
+		if not _policy.is_world(id):
+			continue
+		settings.set_effect(String(id), 0.0)
+		if settings._effects.has(id):
+			setter_ok = false
+			detail = "« %s » : retenu dans les préférences" % id
 			break
-		var in_ranked: float = settings.effective_effect(id, true)
-		if in_ranked < floor_ranked or in_ranked <= 0.0:
-			all_ok = false
-			detail = "« %s » : %f appliqué en classé" % [id, in_ranked]
+		if not is_equal_approx(float(settings.get_effect(String(id))), defaut):
+			setter_ok = false
+			detail = "« %s » : get_effect rend %f" % [id, settings.get_effect(String(id))]
 			break
-		if not is_zero_approx(float(settings.effective_effect(id, false))):
-			all_ok = false
-			detail = "« %s » : le zéro n'est pas rendu en écran partagé" % id
+		if not is_equal_approx(float(settings.current_effect(String(id))), defaut):
+			setter_ok = false
+			detail = "« %s » : current_effect rend %f" % [id, settings.current_effect(String(id))]
 			break
-
-	_check("aucun effet Monde n'atteint zéro en classé, par aucune route", all_ok, detail)
-	_check("la table contient des effets des deux familles",
-		world_count > 0 and comfort_count > 0,
-		"%d Monde, %d Confort" % [world_count, comfort_count])
-
-	# Route 3 : le fichier trafiqué à la main, qui court-circuite tous les
-	# setters.
+	_check("le setter refuse un effet du Monde, sans rien retenir", setter_ok, detail)
+	_check("et sans émettre le moindre signal", emis.is_empty(), str(emis))
 	settings.free()
 	_wipe_tmp()
 
-	var tampered := ConfigFile.new()
-	var world_ids: PackedStringArray = PackedStringArray()
+	# Route 3 : le fichier. ⚠️ **Le cas réel, pas une hypothèse** — tout
+	# `settings.cfg` écrit avant le 2026-09-12 porte les douze effets du Monde,
+	# et celui d'Adrien les avait TOUS à leur ancien plancher. Les relire
+	# laisserait son jeu à 25 % de sang et 20 % de poussière pour toujours, sans
+	# qu'aucun écran ne puisse plus les remonter.
+	var ancien := ConfigFile.new()
+	var ids_monde := PackedStringArray()
 	for id in _policy.ids():
 		if _policy.is_world(id):
-			world_ids.append(String(id))
-			tampered.set_value("effets", String(id), 0.0)
-	tampered.save(TMP_SETTINGS)
+			ids_monde.append(String(id))
+			ancien.set_value("effets", String(id), 0.25)
+	ancien.save(TMP_SETTINGS)
 
-	var reader := _make_settings()
-	reader._load()
-	var tamper_ok := true
-	var tamper_detail := ""
-	for id in world_ids:
-		if float(reader.effective_effect(id, true)) <= 0.0:
-			tamper_ok = false
-			tamper_detail = "« %s » relu à zéro en classé" % id
+	var lecteur := _make_settings()
+	lecteur._load()
+	var relu_ok := true
+	detail = ""
+	for id in ids_monde:
+		if lecteur._effects.has(id):
+			relu_ok = false
+			detail = "« %s » relu depuis un fichier d'avant" % id
 			break
-	_check("un fichier mis à zéro à la main ne passe pas en classé", tamper_ok, tamper_detail)
-	reader.free()
+		if not is_equal_approx(float(lecteur.current_effect(id)), defaut):
+			relu_ok = false
+			detail = "« %s » appliqué à %f" % [id, lecteur.current_effect(id)]
+			break
+	_check("une préférence héritée d'avant la décision est écartée", relu_ok, detail)
+
+	lecteur._save()
+	var nettoye := ConfigFile.new()
+	nettoye.load(TMP_SETTINGS)
+	var efface := true
+	for id in ids_monde:
+		if nettoye.has_section_key("effets", id):
+			efface = false
+			detail = "« %s » réécrit dans le fichier" % id
+			break
+	_check("et elle disparaît du fichier à la première sauvegarde", efface, detail)
+	lecteur.free()
 	_wipe_tmp()
 
 # ---------------------------------------------------------------------------
-# LES PLANCHERS SONT LEVÉS EN LOCAL
+# LES QUATRE NIVEAUX
 # ---------------------------------------------------------------------------
-#
-# L'autre moitié de la règle, aussi facile à casser que la première : un
-# plancher qui déborderait sur l'écran partagé imposerait une contrainte de
-# compétition à une partie où rien n'est en jeu.
-func _test_planchers_leves_en_local() -> void:
-	print("\n[Écran partagé : aucun plancher]")
 
-	var all_zero := true
-	var detail := ""
-	for id in _policy.ids():
-		if not is_zero_approx(float(_policy.floor_of(id, false))):
-			all_zero = false
-			detail = "« %s » garde un plancher hors classé" % id
-			break
-		if not is_zero_approx(float(_policy.clamp_value(id, 0.0, false))):
-			all_zero = false
-			detail = "« %s » : zéro refusé en écran partagé" % id
-			break
-		if bool(_policy.is_capped(id, false)):
-			all_zero = false
-			detail = "« %s » annoncé bridé hors classé" % id
-			break
-	_check("tout descend à zéro en écran partagé", all_zero, detail)
+func _test_niveaux() -> void:
+	print("\n[Les quatre niveaux du confort]")
 
-	# La phrase suit le contexte : en local elle ne doit pas annoncer un
-	# minimum qui ne s'appliquera pas.
-	var world_sample := ""
-	for id in _policy.ids():
-		if _policy.is_world(id):
-			world_sample = String(id)
+	var niveaux: Array = _policy.NIVEAUX
+	var noms: Array = _policy.NOMS_NIVEAUX
+	_check("quatre niveaux", niveaux.size() == 4, str(niveaux.size()))
+	_check("autant de noms que de niveaux", noms.size() == niveaux.size(),
+		"%d noms pour %d niveaux" % [noms.size(), niveaux.size()])
+
+	var croissant := true
+	for i in range(1, niveaux.size()):
+		if float(niveaux[i]) <= float(niveaux[i - 1]):
+			croissant = false
 			break
-	if world_sample != "":
-		var local_line := String(_policy.constraint_line(world_sample, false))
-		var ranked_line := String(_policy.constraint_line(world_sample, true))
-		_check("la ligne affichée diffère selon le contexte", local_line != ranked_line)
-		_check("en local, aucun minimum n'est annoncé",
-			not local_line.contains("Minimum en classé"), local_line)
-		_check("en classé, le minimum est chiffré",
-			ranked_line.contains("Minimum en classé"), ranked_line)
-		_check("la raison est toujours jointe à la contrainte",
-			ranked_line.contains(String(_policy.reason_of(world_sample))))
+	_check("les niveaux sont croissants", croissant, str(niveaux))
+	_check("le premier est nul", is_zero_approx(float(niveaux[0])), str(niveaux[0]))
+	# Le dernier niveau EST l'intensité d'origine : un joueur qui n'a jamais
+	# touché à rien doit voir « ÉLEVÉ » allumé, et non un écran personnalisé.
+	_check("le dernier est l'intensité d'origine",
+		is_equal_approx(float(niveaux[-1]), float(_policy.DEFAULT)),
+		"%f pour un défaut de %f" % [niveaux[-1], _policy.DEFAULT])
+
+	var nommes := true
+	for n in noms:
+		if String(n).strip_edges() == "":
+			nommes = false
+			break
+	_check("chaque niveau porte un nom lisible", nommes, str(noms))
+
+	var aller_retour := true
+	for i in niveaux.size():
+		if int(_policy.niveau_de(float(niveaux[i]))) != i:
+			aller_retour = false
+			break
+	_check("chaque niveau se reconnaît lui-même", aller_retour)
+
+	# Entre deux niveaux : « personnalisé », et surtout pas un arrondi — arrondir
+	# effacerait le choix à la simple ouverture de l'écran.
+	_check("une valeur entre deux niveaux n'en est aucun",
+		int(_policy.niveau_de(0.42)) == -1, str(_policy.niveau_de(0.42)))
+	_check("NAN n'est aucun niveau", int(_policy.niveau_de(NAN)) == -1)
+
+	_check("un ensemble homogène rend son niveau",
+		int(_policy.niveau_commun([niveaux[1], niveaux[1], niveaux[1]])) == 1)
+	_check("un ensemble qui diverge rend « personnalisé »",
+		int(_policy.niveau_commun([niveaux[1], niveaux[2]])) == -1)
+	_check("un ensemble hors niveaux rend « personnalisé »",
+		int(_policy.niveau_commun([0.42, 0.42])) == -1)
+	_check("un ensemble vide rend « personnalisé »",
+		int(_policy.niveau_commun([])) == -1)
 
 # ---------------------------------------------------------------------------
 # ÉCRÊTAGE
@@ -363,16 +413,17 @@ func _test_planchers_leves_en_local() -> void:
 func _test_clamping() -> void:
 	print("\n[Valeurs hors bornes]")
 
-	var sample := String(_policy.ids()[0])
-	_check("au-delà de 1, écrêté à 1", _policy.clamp_value(sample, 4.0, true) == 1.0,
-		str(_policy.clamp_value(sample, 4.0, true)))
-	_check("au-delà de 1, écrêté aussi en local",
-		_policy.clamp_value(sample, 4.0, false) == 1.0)
+	var sample := _premier_reglable()
+	_check("un effet réglable pour l'essai", sample != "")
+	_check("au-delà de 1, écrêté à 1", _policy.clamp_value(sample, 4.0) == 1.0,
+		str(_policy.clamp_value(sample, 4.0)))
+	_check("en dessous de 0, écrêté à 0", _policy.clamp_value(sample, -2.0) == 0.0,
+		str(_policy.clamp_value(sample, -2.0)))
 	# NAN se propage silencieusement dans un flottant et rendrait un effet
 	# invisible sans la moindre erreur : il retombe sur l'intensité d'origine.
 	_check("NAN retombe sur l'intensité d'origine",
-		_policy.clamp_value(sample, NAN, true) == _policy.DEFAULT,
-		str(_policy.clamp_value(sample, NAN, true)))
+		_policy.clamp_value(sample, NAN) == _policy.DEFAULT,
+		str(_policy.clamp_value(sample, NAN)))
 
 	_check("mi-course affiche 50 %", int(_policy.intensity_to_percent(0.5)) == 50)
 	_check("un pourcentage débordant est écrêté", int(_policy.intensity_to_percent(3.0)) == 100)
@@ -390,9 +441,10 @@ func _test_clamping() -> void:
 		float(s.get_effect(sample)) == 0.0, str(s.get_effect(sample)))
 
 	# Un effet retiré de la table ne doit pas pouvoir se glisser dans le fichier
-	# de préférences : il y resterait sans politique, donc sans plancher.
+	# de préférences : il y resterait sans politique, donc sans personne pour
+	# décider s'il s'applique.
 	var emitted: Array = []
-	s.effect_changed.connect(func(id: String, value: float) -> void: emitted.append(id))
+	s.effect_changed.connect(func(id: String, _value: float) -> void: emitted.append(id))
 	s.set_effect("effet_fantome", 0.5)
 	_check("un identifiant inconnu est ignoré", not s._effects.has("effet_fantome"))
 	_check("un identifiant inconnu n'émet rien", not emitted.has("effet_fantome"),
@@ -402,17 +454,27 @@ func _test_clamping() -> void:
 	s.set_effect(sample, 0.6)
 	_check("un réglage valide émet le signal", emitted.has(sample), str(emitted))
 
-	_check("un effet jamais réglé rend l'intensité d'origine",
-		float(_make_settings_and_read(_policy.ids()[1])) == _policy.DEFAULT)
-
 	s.free()
 	_wipe_tmp()
+
+	_check("un effet jamais réglé rend l'intensité d'origine",
+		float(_make_settings_and_read(sample)) == _policy.DEFAULT)
 
 func _make_settings_and_read(id: String) -> float:
 	var s := _make_settings()
 	var value: float = s.get_effect(id)
 	s.free()
 	return value
+
+func _premier_reglable() -> String:
+	for id in _policy.ids_reglables():
+		return String(id)
+	return ""
+
+func _premier_de_famille(famille: int) -> String:
+	for id in _policy.ids_of_family(famille):
+		return String(id)
+	return ""
 
 # ---------------------------------------------------------------------------
 # PERSISTANCE
@@ -422,19 +484,17 @@ func _test_persistence() -> void:
 	print("\n[Persistance]")
 	_wipe_tmp()
 
-	var comfort := ""
-	var world := ""
-	for id in _policy.ids():
-		if _policy.is_world(id) and world == "":
-			world = String(id)
-		elif not _policy.is_world(id) and comfort == "":
-			comfort = String(id)
-	_check("un effet de chaque famille pour l'essai", comfort != "" and world != "")
+	var menu := _premier_de_famille(_policy.Family.MENUS)
+	var confort := _premier_de_famille(_policy.Family.CONFORT)
+	var monde := _premier_de_famille(_policy.Family.MONDE)
+	_check("un effet de chaque famille pour l'essai",
+		menu != "" and confort != "" and monde != "")
 
 	var writer := _make_settings()
-	writer.set_effect(comfort, 0.0)
-	writer.set_effect(world, 0.45)
-	# Un réglage d'une autre section au passage : la nouvelle section ne doit
+	writer.set_effect(menu, 0.0)
+	writer.set_effect(confort, 0.35)
+	writer.set_effect(monde, 0.45)
+	# Un réglage d'une autre section au passage : la section des effets ne doit
 	# pas déloger les anciennes.
 	writer.set_master_volume(0.42)
 	writer.set_fps_cap(120)
@@ -445,16 +505,19 @@ func _test_persistence() -> void:
 	var cfg := ConfigFile.new()
 	_check("le fichier se relit", cfg.load(TMP_SETTINGS) == OK)
 	_check("section « effets » présente", cfg.has_section("effets"))
-	_check("clé de l'effet de confort enregistrée", cfg.has_section_key("effets", comfort))
-	_check("clé de l'effet de monde enregistrée", cfg.has_section_key("effets", world))
+	_check("clé de l'effet de menu enregistrée", cfg.has_section_key("effets", menu))
+	_check("clé de l'effet de confort enregistrée", cfg.has_section_key("effets", confort))
+	_check("mais aucune clé pour l'effet du monde",
+		not cfg.has_section_key("effets", monde))
 
 	var reader := _make_settings()
 	reader._load()
-	_check("le zéro de confort est relu tel quel",
-		float(reader.get_effect(comfort)) == 0.0, str(reader.get_effect(comfort)))
-	_check("l'effet de monde est relu tel quel",
-		is_equal_approx(float(reader.get_effect(world)), 0.45), str(reader.get_effect(world)))
-	_check("les volumes survivent à l'ajout de la section effets",
+	_check("le zéro du menu est relu tel quel",
+		float(reader.get_effect(menu)) == 0.0, str(reader.get_effect(menu)))
+	_check("le niveau de confort est relu tel quel",
+		is_equal_approx(float(reader.get_effect(confort)), 0.35),
+		str(reader.get_effect(confort)))
+	_check("les volumes survivent à la section effets",
 		is_equal_approx(float(reader.master_volume), 0.42), str(reader.master_volume))
 	_check("les réglages vidéo survivent aussi", int(reader.fps_cap) == 120,
 		str(reader.fps_cap))
@@ -481,18 +544,18 @@ func _test_persistence() -> void:
 
 	# Fichier trafiqué à la main ou écrit par une version antérieure.
 	var tampered := ConfigFile.new()
-	tampered.set_value("effets", comfort, "beaucoup")
-	tampered.set_value("effets", world, 7.0)
+	tampered.set_value("effets", confort, "beaucoup")
+	tampered.set_value("effets", menu, 7.0)
 	tampered.set_value("effets", "effet_disparu", 0.5)
 	tampered.save(TMP_SETTINGS)
 
 	var defensive := _make_settings()
 	defensive._load()
 	_check("valeur illisible → intensité d'origine",
-		float(defensive.get_effect(comfort)) == _policy.DEFAULT,
-		str(defensive.get_effect(comfort)))
+		float(defensive.get_effect(confort)) == _policy.DEFAULT,
+		str(defensive.get_effect(confort)))
 	_check("valeur trop grande écrêtée à la relecture",
-		float(defensive.get_effect(world)) == 1.0, str(defensive.get_effect(world)))
+		float(defensive.get_effect(menu)) == 1.0, str(defensive.get_effect(menu)))
 	_check("un effet disparu de la table n'est pas conservé",
 		not defensive._effects.has("effet_disparu"))
 	defensive._save()
@@ -504,47 +567,13 @@ func _test_persistence() -> void:
 	_wipe_tmp()
 
 # ---------------------------------------------------------------------------
-# LE CONTEXTE
-# ---------------------------------------------------------------------------
-#
-# Le contexte est dérivé en un seul endroit. Hors arbre de scène — outils,
-# tests, éditeur — il n'y a pas de match, donc pas de classé : la réponse doit
-# être stable et ne rien exiger du réseau.
-func _test_contexte() -> void:
-	print("\n[Contexte classé / écran partagé]")
-
-	var s := _make_settings()
-	_check("hors arbre de scène, le contexte n'est pas classé",
-		not bool(s.is_ranked_context()))
-
-	var world := ""
-	for id in _policy.ids():
-		if _policy.is_world(id):
-			world = String(id)
-			break
-
-	s.set_effect(world, 0.0)
-	_check("sans NetworkManager, `current_effect` suit le contexte non classé",
-		is_zero_approx(float(s.current_effect(world))), str(s.current_effect(world)))
-	_check("et `effective_effect(classé)` applique quand même le plancher",
-		float(s.effective_effect(world, true)) == float(_policy.floor_of(world, true)),
-		str(s.effective_effect(world, true)))
-
-	# Le brut survit aux allers-retours : jouer un match classé entre deux
-	# soirées en local ne doit pas effacer un réglage.
-	var _unused: float = s.effective_effect(world, true)
-	_check("la préférence brute survit à une lecture en classé",
-		is_zero_approx(float(s.get_effect(world))), str(s.get_effect(world)))
-	s.free()
-	_wipe_tmp()
-
-# ---------------------------------------------------------------------------
 # L'ÉCRAN
 # ---------------------------------------------------------------------------
 #
-# L'écran est engendré par la table : c'est ce qui garantit qu'ajouter un effet
-# coûte une ligne et rien d'autre. On vérifie donc la correspondance ligne à
-# ligne, pas l'apparence.
+# Deux contrôles simples, un repli, et les curseurs fins derrière. Ce qu'on
+# vérifie n'est pas l'apparence mais la correspondance : l'écran montre les
+# effets réglables et eux seuls, et ses deux résumés disent la vérité sur ce que
+# les préférences contiennent réellement.
 func _test_ecran() -> void:
 	print("\n[L'écran]")
 
@@ -561,83 +590,117 @@ func _test_ecran() -> void:
 	screen.add_child(body)
 	screen.build(body)
 
-	var ids: PackedStringArray = _policy.ids()
-	_check("un curseur par effet de la table", int(screen._rows.size()) == ids.size(),
-		"%d curseurs pour %d effets" % [screen._rows.size(), ids.size()])
+	var reglables: PackedStringArray = _policy.ids_reglables()
+	_check("un curseur par effet réglable, et rien de plus",
+		int(screen._rows.size()) == reglables.size(),
+		"%d curseurs pour %d effets réglables" % [screen._rows.size(), reglables.size()])
 
-	var missing := ""
-	for id in ids:
+	var manquant := ""
+	for id in reglables:
 		if not screen._rows.has(id):
-			missing = String(id)
+			manquant = String(id)
 			break
-	_check("aucun effet sans curseur", missing == "", missing)
+	_check("aucun effet réglable sans curseur", manquant == "", manquant)
+
+	# La propriété de l'écran : le Monde n'y a PAS de ligne. Pas grisée, pas
+	# bridée : absente. Un curseur verrouillé ferait passer une règle de jeu
+	# pour une option refusée.
+	var intrus := ""
+	for id in _policy.ids():
+		if _policy.is_world(id) and screen._rows.has(id):
+			intrus = String(id)
+			break
+	_check("aucun effet du Monde n'a de ligne dans l'écran", intrus == "", intrus)
+
 	_check("le curseur est atteignable au premier appui", screen.focus_seed() != null)
+	_check("les paramètres avancés sont repliés à l'ouverture",
+		not screen._avance.visible)
+	screen._basculer_avance()
+	_check("le bouton les déplie", screen._avance.visible)
+	screen._basculer_avance()
+	_check("et les replie", not screen._avance.visible)
 
-	# Contexte strict par défaut : un écran qui n'a pas été renseigné ne promet
-	# pas un zéro que le match refusera.
-	_check("le contexte par défaut est le plus strict", bool(screen.is_ranked_context()))
-
-	screen.set_ranked_context(true)
-	var ranked_ok := true
-	var ranked_detail := ""
-	for id in ids:
-		var slider: HSlider = screen._rows[id]["slider"]
-		var expected: float = float(_policy.intensity_to_percent(_policy.floor_of(id, true)))
-		if not is_equal_approx(slider.min_value, expected):
-			ranked_ok = false
-			ranked_detail = "« %s » : course ouverte à %f, plancher à %f" % [
-				id, slider.min_value, expected]
+	# --- L'interrupteur des menus ------------------------------------------
+	var ids_menus: PackedStringArray = _policy.ids_of_family(_policy.Family.MENUS)
+	_check("à l'ouverture, les menus sont allumés",
+		int(screen._etat_menus_courant()) == 1, str(screen._etat_menus_courant()))
+	screen._basculer_menus()
+	var tous_eteints := true
+	for id in ids_menus:
+		if not is_zero_approx(float(settings.get_effect(String(id)))):
+			tous_eteints = false
 			break
-		if _policy.is_world(id) and slider.min_value <= 0.0:
-			ranked_ok = false
-			ranked_detail = "« %s » : curseur Monde descendant à zéro" % id
+	_check("un appui éteint les quinze", tous_eteints)
+	_check("et l'écran le dit", int(screen._etat_menus_courant()) == 0)
+	screen._basculer_menus()
+	var tous_allumes := true
+	for id in ids_menus:
+		if not is_equal_approx(float(settings.get_effect(String(id))), float(_policy.DEFAULT)):
+			tous_allumes = false
 			break
-		if String(screen._rows[id]["notice"].text).strip_edges() == "":
-			ranked_ok = false
-			ranked_detail = "« %s » : contrainte affichée sans explication" % id
+	_check("un second appui les rallume tous", tous_allumes)
+
+	# Depuis l'état personnalisé, l'interrupteur éteint — c'est le sens de
+	# lecture annoncé par la ligne d'état.
+	settings.set_effect(String(ids_menus[0]), 0.0)
+	screen.refresh()
+	_check("un seul effet baissé rend l'état « personnalisé »",
+		int(screen._etat_menus_courant()) == -1)
+	screen._basculer_menus()
+	_check("et depuis là, l'interrupteur éteint tout",
+		int(screen._etat_menus_courant()) == 0)
+
+	# --- Les quatre niveaux du confort --------------------------------------
+	var ids_confort: PackedStringArray = _policy.ids_of_family(_policy.Family.CONFORT)
+	var niveaux_ok := true
+	var detail := ""
+	for i in (_policy.NIVEAUX as Array).size():
+		screen._poser_niveau(i)
+		for id in ids_confort:
+			var attendu: float = float(_policy.NIVEAUX[i])
+			if not is_equal_approx(float(settings.get_effect(String(id))), attendu):
+				niveaux_ok = false
+				detail = "niveau %d : « %s » vaut %f au lieu de %f" % [
+					i, id, settings.get_effect(String(id)), attendu]
+				break
+		if not niveaux_ok:
 			break
-	_check("en classé, chaque course s'arrête à son plancher, raison affichée",
-		ranked_ok, ranked_detail)
-
-	screen.set_ranked_context(false)
-	var local_ok := true
-	for id in ids:
-		var slider: HSlider = screen._rows[id]["slider"]
-		if slider.min_value != 0.0:
-			local_ok = false
-			ranked_detail = "« %s » : course bridée en écran partagé" % id
+		if int(screen._niveau_confort_courant()) != i:
+			niveaux_ok = false
+			detail = "niveau %d posé, l'écran lit %d" % [i, screen._niveau_confort_courant()]
 			break
-	_check("en écran partagé, tous les curseurs descendent à zéro", local_ok, ranked_detail)
-
-	# Le piège du réglage détruit par l'affichage : une préférence à zéro prise
-	# en local, montrée en classé, ne doit pas être réécrite au plancher par le
-	# simple fait de repositionner le curseur.
-	var world := ""
-	for id in ids:
-		if _policy.is_world(id):
-			world = String(id)
+		if not screen._boutons_niveau[i].button_pressed:
+			niveaux_ok = false
+			detail = "niveau %d posé, bouton non enfoncé" % i
 			break
-	settings.set_effect(world, 0.0)
-	screen.set_ranked_context(true)
-	_check("afficher en classé ne réécrit pas la préférence brute",
-		is_zero_approx(float(settings.get_effect(world))), str(settings.get_effect(world)))
-	_check("mais le curseur montre bien la valeur appliquée",
-		is_equal_approx(float(screen._rows[world]["slider"].value),
-			float(_policy.intensity_to_percent(_policy.floor_of(world, true)))),
-		str(screen._rows[world]["slider"].value))
+	_check("chaque niveau aligne les sept effets de confort", niveaux_ok, detail)
 
-	# Le joueur bouge le curseur : là, et seulement là, la préférence change.
-	screen._on_slider_changed(80.0, world)
-	_check("bouger le curseur écrit la préférence",
-		is_equal_approx(float(settings.get_effect(world)), 0.8),
-		str(settings.get_effect(world)))
+	# Un réglage fin qui ne tombe sur aucun niveau : « personnalisé », et aucun
+	# bouton enfoncé. C'est ce qui garantit qu'ouvrir l'écran n'arrondit rien.
+	screen._on_slider_changed(45.0, String(ids_confort[0]))
+	_check("un curseur fin écrit la préférence",
+		is_equal_approx(float(settings.get_effect(String(ids_confort[0]))), 0.45),
+		str(settings.get_effect(String(ids_confort[0]))))
+	_check("et fait passer le résumé en « personnalisé »",
+		int(screen._niveau_confort_courant()) == -1)
+	var aucun_enfonce := true
+	for btn in screen._boutons_niveau:
+		if btn.button_pressed:
+			aucun_enfonce = false
+			break
+	_check("aucun niveau n'est allumé à tort", aucun_enfonce)
 
-	# Idempotence : deux rafraîchissements d'affilée donnent le même écran.
-	var before: float = screen._rows[world]["slider"].value
+	# Idempotence : deux rafraîchissements d'affilée donnent le même écran, et
+	# n'écrasent pas la préférence qu'ils viennent montrer.
+	var avant: float = screen._rows[String(ids_confort[0])]["slider"].value
 	screen.refresh()
 	screen.refresh()
 	_check("deux rafraîchissements donnent le même affichage",
-		is_equal_approx(float(screen._rows[world]["slider"].value), before))
+		is_equal_approx(float(screen._rows[String(ids_confort[0])]["slider"].value), avant),
+		str(screen._rows[String(ids_confort[0])]["slider"].value))
+	_check("et ne touchent pas à la préférence",
+		is_equal_approx(float(settings.get_effect(String(ids_confort[0]))), 0.45),
+		str(settings.get_effect(String(ids_confort[0]))))
 
 	screen.free()
 	settings.free()

@@ -255,9 +255,12 @@ func _dire_les_reglages() -> void:
 		% [Eblouissement.DESCENTE_PAR_S, 1.0 / Eblouissement.DESCENTE_PAR_S])
 	print("  PIC_FLASH      %.3f    PORTEE_FLASH %.0f px" % [
 		Eblouissement.PIC_FLASH, Eblouissement.PORTEE_FLASH])
+	# L'éblouissement ne se règle plus (2026-09-12) : il vaut la même chose chez
+	# les deux joueurs. La ligne reste, parce que c'est le facteur réellement
+	# appliqué au voile et qu'une planche doit dire avec quoi elle a été tirée.
 	var voile: float = GameSettings.current_effect("eblouissement")
-	print("  curseur « Éblouissement » : %.2f (brut %.2f) → voile maximal %.0f %% d'opacité"
-		% [voile, GameSettings.get_effect("eblouissement"), voile * 0.8 * 100.0])
+	print("  éblouissement (commun, non réglable) : %.2f → voile maximal %.0f %% d'opacité"
+		% [voile, voile * 0.8 * 100.0])
 	print("\n--- les quatre armes : cône, portée, éclat de bouche ---")
 	for idx in range(4):
 		var arme: WeaponData = _main.weapon_for_index(idx)
@@ -303,7 +306,7 @@ func _sweep_du_voile() -> void:
 	_eteindre_les_torches()
 	for v in [0.0, 0.25, 0.5, 0.75, 1.0]:
 		await _poser_a_valeur("10-voile-%03d" % int(v * 100.0), _main.p2, v)
-	_journal.append("voile : alpha = éblouissement × 0,80 × curseur (%.2f) → maximum %.2f"
+	_journal.append("voile : alpha = éblouissement × 0,80 × facteur commun (%.2f) → maximum %.2f"
 		% [GameSettings.current_effect("eblouissement"),
 		0.8 * GameSettings.current_effect("eblouissement")])
 

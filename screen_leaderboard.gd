@@ -670,11 +670,9 @@ func _appliquer_intensite() -> void:
 	if _skeleton == null or not is_inside_tree():
 		return
 	var reglages := get_node_or_null(^"/root/GameSettings")
-	if reglages == null or not reglages.has_method("effective_effect"):
+	if reglages == null or not reglages.has_method("current_effect"):
 		return
-	# Le classement n'est jamais un contexte de match : le plancher de la
-	# politique n'a rien à imposer ici, et `false` est la bonne réponse.
-	_skeleton.set_intensite(float(reglages.effective_effect("balayage_attente", false)))
+	_skeleton.set_intensite(float(reglages.current_effect("balayage_attente")))
 
 func _identity() -> Node:
 	if identity_override != null:

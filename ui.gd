@@ -4044,7 +4044,7 @@ func _build_hub_screens() -> void:
 		"Fenêtre, vsync, images par seconde, calibration.",
 		"", COLOR_GOLD, "", "", false, PANEL_DISPLAY))
 	custom.add_child(hub.make_entry("EFFETS",
-		"Ce qui se règle librement, et ce qui garde un plancher en classé.",
+		"L'habillage des menus, le confort en match, et les paramètres avancés.",
 		"", COLOR_GOLD, "", "", false, PANEL_EFFECTS))
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
@@ -4572,8 +4572,10 @@ func _apply_menu_effects() -> void:
 ## Deux choses s'y ajoutent au réglage du joueur, et elles ne sont pas du même
 ## ordre :
 ##
-## - **Les menus ne sont jamais classés.** Le plancher de la politique n'a donc
-##   rien à imposer ici, et `false` est la bonne réponse — pas une simplification.
+## - **Le réglage du joueur**, tel que l'écran des effets l'a retenu. Il passe
+##   par `current_effect()` comme tout le reste du jeu : depuis la suppression
+##   des planchers (2026-09-12) il n'y a plus qu'une réponse possible, et le
+##   `false` qui distinguait autrefois les menus du classé a disparu avec elle.
 ## - **L'écran de calibration éteint tout.** Voir `_calibration` : le joueur y
 ##   règle son point de noir sur un champ mesuré, et la moindre lumière ajoutée
 ##   fausserait la mesure. Ce n'est pas un choix de goût, et c'est pour cette
@@ -4583,7 +4585,7 @@ func _apply_menu_effects() -> void:
 func _intensite_vitrine(cle: String) -> float:
 	if _calibration:
 		return 0.0
-	return GameSettings.effective_effect(cle, false)
+	return GameSettings.current_effect(cle)
 
 # ===========================================================================
 # M10 — L'EXTINCTION DES FEUX

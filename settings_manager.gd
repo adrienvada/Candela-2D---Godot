@@ -116,15 +116,16 @@ var music_volume := VOLUME_DEFAULT
 var sfx_volume := VOLUME_DEFAULT
 var speaker_volume := VOLUME_DEFAULT
 
-## identifiant d'effet -> intensité BRUTE choisie, entre 0 et 1.
+## identifiant d'effet -> intensité choisie, entre 0 et 1.
 ##
-## Brute veut dire : sans plancher. Une intensité choisie en écran partagé, où
-## les planchers ne s'appliquent pas, est conservée telle quelle ; c'est à la
-## lecture que le contexte l'écrête. L'écraser à l'écriture reviendrait à punir
-## un joueur d'avoir joué un match classé entre deux soirées en local.
+## Seuls les identifiants **réglables** d'`EffectPolicy` y entrent — Menus et
+## Confort. Un effet retiré de la table, ou passé au Monde, cesse d'exister ici
+## à la première relecture : garder une valeur que plus rien n'applique, c'est
+## garder un réglage qui ment.
 ##
-## Seuls les identifiants connus d'`EffectPolicy` y entrent : un effet retiré de
-## la table cesse d'exister ici à la première relecture.
+## Il n'y a plus d'intensité « brute » distincte de l'appliquée : les planchers
+## sont partis avec le réglage du Monde (2026-09-12), et ce qui est retenu ici
+## est exactement ce que le rendu lit.
 var _effects: Dictionary = {}
 
 ## action -> description sérialisable de l'événement de manette assigné.
@@ -243,66 +244,52 @@ static func percent_to_volume(percent: int) -> float:
 # Effets visuels
 # ---------------------------------------------------------------------------
 #
-# La politique — familles, planchers, phrases — est dans `effect_policy.gd`.
-# Ici on ne fait que retenir un choix et le rendre applicable.
+# La politique — familles, phrases, ce qui se règle et ce qui ne se règle pas —
+# est dans `effect_policy.gd`. Ici on ne fait que retenir un choix et le rendre
+# applicable.
 
 ## Retient l'intensité choisie pour un effet, entre 0 et 1.
 ##
-## Un identifiant absent de la table est ignoré en silence, comme une liaison de
-## touche illisible : le fichier de préférences ne doit pas se remplir de
-## réglages qui ne pilotent plus rien.
+## Deux refus silencieux, et ce ne sont pas les mêmes :
+##
+## - un identifiant **absent de la table** est ignoré comme une liaison de touche
+##   illisible — le fichier de préférences ne doit pas se remplir de réglages qui
+##   ne pilotent plus rien ;
+## - un effet du **Monde** est ignoré parce qu'il n'appartient à personne
+##   (décision du 2026-09-12). Le refuser ICI, et pas seulement dans l'écran,
+##   est ce qui garantit qu'aucune route — banc, outil, écran futur — ne peut
+##   écrire une préférence que le rendu n'appliquera jamais : une valeur retenue
+##   mais jamais rendue est exactement le genre de réglage qui ment.
 func set_effect(id: String, intensity: float) -> void:
-	if not EffectPolicy.exists(id):
+	if not EffectPolicy.reglable(id):
 		return
 	var value := clamp_intensity(intensity)
 	_effects[id] = value
 	_save()
 	effect_changed.emit(id, value)
 
-## Intensité brute mémorisée, **sans plancher**. C'est ce que doit afficher un
-## curseur en écran partagé, et ce qu'il ne faut jamais envoyer au rendu.
+## Intensité mémorisée. C'est ce qu'affiche un curseur des paramètres avancés.
+##
+## Un effet du Monde n'a pas de préférence à rendre : il vaut `DEFAULT`, et la
+## réponse est la même que celle du rendu — il n'y a plus, depuis le 2026-09-12,
+## de valeur « brute » qui différerait de la valeur appliquée.
 func get_effect(id: String) -> float:
+	if not EffectPolicy.reglable(id):
+		return EffectPolicy.DEFAULT
 	if not _effects.has(id):
 		return EffectPolicy.DEFAULT
 	return clamp_intensity(float(_effects[id]))
 
-## Intensité applicable dans un contexte donné, plancher compris. Le paramètre
-## est explicite pour que la politique reste vérifiable sans réseau ni match.
-func effective_effect(id: String, ranked: bool) -> float:
-	return EffectPolicy.clamp_value(id, get_effect(id), ranked)
-
-## Ce que le rendu doit lire. Le contexte est dérivé ici, une fois : un site
-## d'appel qui trancherait lui-même et se tromperait lèverait le plancher sans
-## le moindre signe — le jeu resterait parfaitement jouable, simplement plus
-## tout à fait le même des deux côtés de l'écran.
-func current_effect(id: String) -> float:
-	return effective_effect(id, is_ranked_context())
-
-## Le classé, c'est le en-ligne : l'écran partagé n'est pas classé, rien n'y est
-## en jeu (décision du 2026-08-16, la même que pour le déblocage d'armes).
+## Ce que le rendu doit lire, depuis n'importe où, en une seule réponse.
 ##
-## Hors arbre de scène — tests, outils — la réponse est « non classé » : aucun
-## match n'y est joué, et il n'y a donc rien à protéger.
-func is_ranked_context() -> bool:
-	if not is_inside_tree():
-		return false
-	var nm := get_node_or_null(^"/root/NetworkManager")
-	if nm == null:
-		return false
-	return int(nm.get("current_mode")) != _local_mode_value(nm)
-
-## Valeur de `NetworkManager.GameMode.LOCAL_SPLITSCREEN`, lue sur le script
-## plutôt que recopiée : un 0 en dur ici se décalerait sans bruit le jour où un
-## mode s'insère avant lui, et le décalage lèverait les planchers en plein match
-## classé.
-static func _local_mode_value(nm: Node) -> int:
-	var script := nm.get_script() as Script
-	if script == null:
-		return 0
-	var modes: Variant = script.get_script_constant_map().get("GameMode", null)
-	if modes is Dictionary and (modes as Dictionary).has("LOCAL_SPLITSCREEN"):
-		return int((modes as Dictionary)["LOCAL_SPLITSCREEN"])
-	return 0
+## ⚠️ **Il y avait ici un `effective_effect(id, ranked)` et un
+## `is_ranked_context()`**, et ils sont partis avec les planchers : un paramètre
+## qui ne décide plus rien est pire qu'absent, parce qu'il laisse croire qu'il
+## reste un cas où la réponse change. Les deux sites d'appel qui passaient
+## `false` en dur — la vitrine des menus dans `ui.gd`, le balayage d'attente du
+## classement — appellent maintenant celui-ci.
+func current_effect(id: String) -> float:
+	return EffectPolicy.clamp_value(id, get_effect(id))
 
 static func clamp_intensity(intensity: float) -> float:
 	if is_nan(intensity):
@@ -500,13 +487,21 @@ func _load() -> void:
 
 	# Relecture par la table, jamais par le fichier : un identifiant inconnu
 	# vient d'une version plus récente ou d'une main sur le fichier, et n'a plus
-	# de politique — donc plus de plancher. Le garder serait garder un réglage
-	# que plus personne n'arbitre.
+	# de politique. Le garder serait garder un réglage que plus personne
+	# n'arbitre.
+	#
+	# ⚠️ **Et le filtre porte sur « réglable », pas sur « existe ».** Tout
+	# `settings.cfg` écrit avant le 2026-09-12 porte les douze effets du Monde,
+	# le plus souvent à leur ancien plancher — celui d'Adrien les avait TOUS au
+	# plancher. Les relire ici les laisserait à 25 % de sang et 20 % de poussière
+	# pour toujours, sans qu'aucun écran ne puisse plus les remonter, et le jeu
+	# ne serait pas le même chez lui que chez un joueur neuf. Ils sont donc
+	# écartés à la lecture, et disparaissent du fichier au premier `_save()`.
 	_effects.clear()
 	if cfg.has_section(SECTION_EFFECTS):
 		for key in cfg.get_section_keys(SECTION_EFFECTS):
 			var id := String(key)
-			if not EffectPolicy.exists(id):
+			if not EffectPolicy.reglable(id):
 				continue
 			_effects[id] = _sanitize_intensity(
 				cfg.get_value(SECTION_EFFECTS, id, EffectPolicy.DEFAULT))
