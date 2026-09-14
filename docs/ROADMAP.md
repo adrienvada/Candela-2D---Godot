@@ -21328,6 +21328,30 @@ nourrit depuis ce que le sprite 2D remplacé aurait montré, jamais deviné ici.
   complète (ou `grep -iE "SCRIPT ERROR|SHADER ERROR"`) avant de conclure
   qu'une suite verte + code 0 veut dire « tout va bien ».
 
+#### Correctif post-fusion — `echelle_lecture` (trouvé par ISO2 à ISO3a, 2026-09-15 01h20)
+
+**Un vrai écart d'équité, trouvé par ISO2 au banc du jeu réel après la fusion
+de cette vague dans `iso2-vues` (`a52425a`) : sous sa propre torche, un
+joueur restait NOIR dans la vue adverse.** La rétrodiffusion qui doit trahir
+le porteur vit dans un anneau étroit du disque du capteur (12-18 px pour le
+corps grossier d'ISO2, qui lit jusqu'à 15 px et sort à 191) — le torse du
+porteur l'arrête, si bien que le CENTRE du disque reste sombre. Un corps
+voxel, large de 5-6 px seulement (bien plus étroit que le corps grossier),
+tombe alors ENTIER dans cette ombre centrale : chaque fragment lit trop près
+du centre du disque pour jamais atteindre l'anneau éclairé. Pas un défaut de
+`corps_iso.gdshader` — un effet de l'échelle du corps qui le lit.
+
+Corrigé par un nouvel uniform `echelle_lecture` (défaut 1.0, l'identité,
+jamais devinée ici) qui dilate le DÉCALAGE lu sur le disque (`monde_px -
+centre`) avant le plafonnement à `rayon_lu_px` — donc l'empreinte du disque
+que chaque fragment couvre, sans toucher `centre` ni `rayon_lu_px` eux-mêmes.
+L'appelant (ISO2, dans `Presentation3D`) la règle d'après le rapport entre le
+rayon réellement éclairé et le demi-encombrement au sol de SON corps ; ce
+nœud ne le devine jamais lui-même — `definir_echelle_lecture()`, le banc la
+laisse à 1.0. Forme proposée par ISO2 par message inter-session, implémentée
+ici à l'identique pour rester sur une seule vérité du shader plutôt que deux
+versions divergentes du fichier fusionné.
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est

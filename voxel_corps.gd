@@ -192,6 +192,7 @@ func construire(slug: String) -> bool:
 	_materiau.set_shader_parameter("centre", Vector2.ZERO)
 	_materiau.set_shader_parameter("monde_capteur_px", 128.0)
 	_materiau.set_shader_parameter("rayon_lu_px", 15.0)
+	_materiau.set_shader_parameter("echelle_lecture", 1.0)
 	_materiau.set_shader_parameter("pixels_par_unite", 1.0)
 	_materiau.set_shader_parameter("opacite_1", 1.0)
 	_materiau.set_shader_parameter("opacite_2", 1.0)
@@ -298,6 +299,20 @@ func effacer_capteur() -> void:
 func definir_pixels_par_unite(v: float) -> void:
 	if _materiau != null:
 		_materiau.set_shader_parameter("pixels_par_unite", v)
+
+
+## Dilate le DÉCALAGE lu sur le disque du capteur (voir l'en-tête de
+## `corps_iso.gdshader`) — identité à 1.0, jamais devinée ici. Trouvée par ISO2
+## au banc du jeu réel (ISO3a) : la rétrodiffusion qui trahit le porteur sous
+## sa propre torche vit dans un anneau étroit du disque (le torse l'arrête),
+## et un corps voxel, plus étroit que le corps grossier d'ISO2, reste entier
+## dans l'ombre de son propre torse sans cette dilatation — un écart
+## d'équité, pas un défaut du shader. L'appelant la règle d'après le rapport
+## entre le rayon réellement éclairé et le demi-encombrement au sol de SON
+## corps ; ce nœud ne le devine jamais lui-même.
+func definir_echelle_lecture(v: float) -> void:
+	if _materiau != null:
+		_materiau.set_shader_parameter("echelle_lecture", v)
 
 
 ## 0..1 — voir « Effacement » dans l'en-tête du shader : une vraie

@@ -75,6 +75,19 @@ uniform bool capteur_actif = false;
 uniform vec2 centre = vec2(0.0);           // position 2D du joueur, en PIXELS, posée à chaque image
 uniform float monde_capteur_px = 128.0;    // CapteurCorps.MONDE_PX
 uniform float rayon_lu_px = 15.0;          // RAYON_CORPS_PX + 1, plafonné à RAYON_PX - 3
+// Trouvé par ISO2 au banc du jeu réel (ISO3a, H-ISO2 après-coup) : la rétrodiffusion
+// qui trahit le porteur sous sa PROPRE torche vit dans un anneau étroit du disque du
+// capteur (~12-18 px pour leur corps grossier), pas au centre — le torse l'arrête. Un
+// corps voxel, large de 5-6 px seulement, reste alors entièrement DANS l'ombre de son
+// propre torse : chaque fragment lit trop près du centre pour jamais atteindre l'anneau
+// éclairé, et le porteur reste noir dans sa propre vue — un vrai écart d'équité, pas un
+// défaut de ce shader (`corps_grossier_iso.gdshader` d'ISO2 lit le même capteur et
+// sort à 191 dans la même scène). `echelle_lecture` (identité à 1.0, jamais devinée ici)
+// dilate le DÉCALAGE lu — donc l'empreinte du disque que chaque fragment couvre — sans
+// toucher `centre` ni `rayon_lu_px` : l'appelant la règle d'après le rapport entre le
+// rayon réellement éclairé et le demi-encombrement au sol de SON corps (le banc la
+// laisse à 1.0, chaque classe y a un encombrement différent, jamais deviné ici).
+uniform float echelle_lecture = 1.0;
 
 uniform float opacite_1 = 1.0;
 uniform float opacite_2 = 1.0;
@@ -119,7 +132,7 @@ void fragment() {
 		// haut) déclare déjà un uniform `lumiere` pour son usage propre (sol/murs) — une
 		// variable locale du même nom lève une erreur de compilation shader (trouvée à
 		// cette étape, silencieuse dans le reste de la suite headless).
-		vec3 capteur_rgb = lumiere_du_capteur(deux, monde_px - centre);
+		vec3 capteur_rgb = lumiere_du_capteur(deux, (monde_px - centre) * echelle_lecture);
 		float recue = pate_luminance(capteur_rgb);
 		vec3 base = couleur_fiche.rgb * capteur_rgb;
 		c = min(pate(base, pate_luminance(base), style, motif, vec2(0.0), recue, aa), base);
