@@ -219,6 +219,12 @@ const POS_HISTORY_WINDOW := 0.4
 ## de la carte à chaque `rebuild_arena`, comme la collision : la balle et
 ## l'éblouissement les interrogent par `MursBas.franchit`.
 var murs_bas: Array = []
+## MB3c : matériaux de sol et de décor qui portent la zone morte, par vue
+## (indice = joueur dont c'est la vue). Rempli par `rebuild_arena`.
+var _materiaux_zone_morte: Array = [[], []]
+## Carte sans mur bas : les uniformes « aucun mur » ne se poussent qu'une fois.
+var _zone_morte_vide_poussee := false
+var _zone_morte_debordement_signale := false
 const LAG_COMP_MAX := 0.2
 var _pos_history: Array[Dictionary] = []
 
@@ -377,6 +383,14 @@ func camera_hit_kick(pid: int) -> void:
 
 func _ready():
 	add_to_group("game_state")
+	# MURS BAS, MB3c : la zone morte se pousse aux matériaux JUSTE AVANT le dessin,
+	# quand caméras et joueurs ont fini de bouger pour cette image. Poussée depuis
+	# `_process`, elle dépendrait de l'ordre de traitement de la caméra et
+	# traînerait d'une image derrière elle.
+	RenderingServer.frame_pre_draw.connect(_pousser_zone_morte)
+	tree_exiting.connect(func():
+		if RenderingServer.frame_pre_draw.is_connected(_pousser_zone_morte):
+			RenderingServer.frame_pre_draw.disconnect(_pousser_zone_morte))
 	# L'intro ne se joue qu'ici, au lancement. Les retours au menu passent par
 	# `play_music`, qui bascule sans redémarrer le flux.
 	AudioManager.demarrer_musique_au_lancement()
@@ -994,6 +1008,11 @@ func rebuild_arena() -> void:
 	# Écran partagé : chaque joueur reçoit sa copie des calques, éclairée par
 	# sa seule lumière ambiante. Sans ça, le halo d'un joueur révélerait sa
 	# position sur l'écran de l'autre.
+	#
+	# MURS BAS, MB3c : le sol porte la zone morte, un matériau PAR VUE — la copie
+	# duplique le `ShaderMaterial` (voir plus bas), et chaque vue reçoit ses
+	# propres uniformes d'écran (`_pousser_zone_morte`).
+	floor_layer.material = MursBasRendu.materiau_sol()
 	_duplicate_layer_for_player(floor_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
@@ -1022,6 +1041,20 @@ func rebuild_arena() -> void:
 	var decor := ArenaDecorScript.build(data, arena)
 	if decor:
 		decor.hide()
+	# MURS BAS, MB3c : les marques peintes au sol suivent la zone morte du sol.
+	# Posé sur les COPIES : `duplicate()` partagerait un matériau posé sur
+	# l'original, et les deux vues n'ont pas le même écran.
+	_materiaux_zone_morte = [[], []]
+	for pid in 2:
+		var sol := arena.get_node_or_null("CustomFloor_P%d" % (pid + 1)) as CanvasItem
+		if sol != null and sol.material is ShaderMaterial:
+			_materiaux_zone_morte[pid].append(sol.material)
+		var copie := arena.get_node_or_null("ArenaDecor_P%d" % (pid + 1)) as CanvasItem
+		if copie != null:
+			copie.material = MursBasRendu.materiau_decor()
+			_materiaux_zone_morte[pid].append(copie.material)
+	_zone_morte_vide_poussee = false
+	_zone_morte_debordement_signale = false
 	# Refonte roman graphique : le contour des masses de murs, au trait
 	# (mur_encre.gd). Même idiome : l'original porte la géométrie et se cache,
 	# les copies par vue se montrent.
@@ -5229,6 +5262,50 @@ func _viewport_du_joueur(pid: int) -> Node:
 		if conteneur != null and conteneur.visible:
 			return self
 	return vue
+
+
+## MURS BAS, MB3c — la zone morte dessinée à l'écran, vue par vue.
+##
+## Chaque vue a son propre écran : ses murs et ses longueurs se convertissent par
+## la transformation du viewport qui la REND (`_viewport_du_joueur` — la racine en
+## vue unique, sa sous-vue sinon), celle où `light()` lit LIGHT_POSITION. Une vue
+## reçoit : sa copie du sol et du décor, le corps du joueur tel qu'il se voit
+## (`visual`), et le corps de l'autre tel qu'elle le montre (`visual_enemy`).
+##
+## Jugé comme la balle (`bullet.gd`) : le corps en son centre, la hauteur de sa
+## posture. Debout, aucune zone — « un mur bas laisse voir une tête debout ».
+func _pousser_zone_morte() -> void:
+	if not is_inside_tree() or arena == null:
+		return
+	if murs_bas.is_empty():
+		if _zone_morte_vide_poussee:
+			return
+		_zone_morte_vide_poussee = true
+	var joueurs := [p1, p2]
+	for pid in 2:
+		var rendu: Node = _viewport_du_joueur(pid)
+		var cible: Viewport = rendu as Viewport if rendu is Viewport else get_window()
+		if cible == null:
+			continue
+		var ecran := cible.get_final_transform() * cible.get_canvas_transform()
+		# `size` : SubViewport et Window l'ont, pas leur base commune.
+		var taille: Vector2 = Vector2(cible.get("size"))
+		var u := MursBasRendu.uniformes_de_vue(ecran * (arena as Node2D).global_transform,
+			murs_bas, Rect2(Vector2.ZERO, taille))
+		if u["debordement"] > 0 and not _zone_morte_debordement_signale:
+			_zone_morte_debordement_signale = true
+			push_warning("Murs bas : %d murs de plus que les %d qu'un matériau reçoit — leur zone morte ne se dessine pas." \
+				% [u["debordement"], MursBasRendu.MURS_MAX])
+		for m in _materiaux_zone_morte[pid]:
+			MursBasRendu.poser_sol(m, u)
+		var moi: Player = joueurs[pid]
+		var autre: Player = joueurs[1 - pid]
+		if is_instance_valid(moi) and moi.visual != null:
+			MursBasRendu.poser_corps(moi.visual.material as ShaderMaterial, u,
+				ecran * moi.global_position, moi.accroupi)
+		if is_instance_valid(autre) and autre.visual_enemy != null:
+			MursBasRendu.poser_corps(autre.visual_enemy.material as ShaderMaterial, u,
+				ecran * autre.global_position, autre.accroupi)
 
 
 ## Loge un calque d'écran (vignette, flash de mort) là où son joueur est rendu.

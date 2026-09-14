@@ -459,7 +459,7 @@ Ce qui reste visuel en MB3a : la **zone morte au sol** et la **disparition d'un 
 dans la zone morte ne sont pas encore rendues — la balle et l'éblouissement les appliquent
 déjà, l'écran pas encore (MB3c). ⚠️ **C'est une asymétrie temporaire entre ce qui se voit et
 ce qui se paie** : on peut voir un accroupi que la balle survole. Elle se referme en MB3c, et
-H-MB1 ne se joue pas avant.
+H-MB1 ne se joue pas avant. ✅ **Refermée en MB3c** (voir plus bas).
 
 ### MB3b — l'enjambement
 
@@ -509,6 +509,68 @@ que son flash bute dessus. Deux lectures, à trancher en effets perçus : (1) **
 toujours**, même à l'abri — c'est le prix du tir, et la cachette ne dispense pas de le
 payer ; (2) **un muret cache aussi l'éclair** d'un accroupi, et la révélation ne vaut que
 pour qui la lumière aurait atteint. **Adrien a choisi (1).**
+
+### MB3c — la zone morte dessinée à l'écran
+
+La piste C du prototype, portée dans le vrai jeu. **L'asymétrie de MB3a est refermée** :
+un accroupi que la balle survole n'est plus visible à l'écran.
+
+| Quoi | Où | Comment |
+|---|---|---|
+| La règle en GLSL | `murs_bas_zone.gdshaderinc` (neuf, premier include du dépôt) | `mb_dans_la_zone_morte(LIGHT_POSITION, LIGHT_VERTEX)`, traduction de `MursBas.franchit`, avec une sortie anticipée exacte (plus loin que L du rectangle, un mur ne peut rien) |
+| Le sol | `murs_bas_sol.gdshader`, posé sur `CustomFloor` avant sa duplication | `blend_add` + éclairage par défaut écrit tel quel : hors zone, le pixel est celui de l'ancien `CanvasItemMaterial` (mesuré 0/255 d'écart) |
+| Le décor peint | `murs_bas_decor.gdshader`, posé sur `ArenaDecor_P1/P2` | mélange normal ; posé sur les COPIES, `duplicate()` partagerait le matériau |
+| Les corps | `player_rim_light.gdshader` (soi), `player_enemy_light.gdshader` (l'adversaire) | jugés en leur centre ; L_accroupi si accroupi, 0 debout |
+| Les uniformes | `murs_bas_rendu.gd` (classe `MursBasRendu`, sans autoload) | murs rentrés de `OCCLUDER_INSET`, en écran, triés au champ de la vue, plafonnés à 64 |
+| La poussée | `GameState._pousser_zone_morte`, sur `RenderingServer.frame_pre_draw` | par vue, par la transformation du viewport qui la REND (`_viewport_du_joueur`) ; juste avant le dessin, quand caméras et joueurs ont fini de bouger |
+| Le bandeau LED | `mur_led.gd` : `height = MursBasRendu.HAUTEUR_SANS_ORIGINE` | une lampe sans point d'origine (sa position est le centre de la carte) : le shader l'exempte |
+
+**Ce que la règle ne couvre pas, à dessein** : le contour d'encre (`mur_encre.gd`) et le
+dessus des murets sont à la hauteur du mur ou au-dessus — L = 0, toujours visibles ; les
+murs hauts n'ont pas de zone morte. **Ce qu'elle ne couvre pas, et qui se signale** : les
+marques posées au sol en cours de manche (taches, empreintes, douilles…) restent éclairées
+dans la zone morte. Si une empreinte d'accroupi s'y lit, c'est une information — à regarder
+en MB3d.
+
+**Coût, au banc** (2560×1440, écran scindé, torche allumée, trois tours entrelacés,
+médiane ; ordre de grandeur, pas un relevé au protocole) :
+
+| Config | Image médiane |
+|---|---|
+| Ancien matériau | 4,30 ms |
+| Règle, aucun mur | 5,19 ms (bruit : 4,07 au meilleur tour) |
+| Carte d'essai (5 murs) | 4,47 ms |
+| 40 murs à l'écran | 8,69 ms |
+
+La carte d'essai ne se distingue pas du bruit ; **40 murets serrés à l'écran coûtent
+~4 ms** — toujours loin de la cible (1 % bas ≥ 60). La poussée des uniformes : ~40 µs par
+image. Appels de dessin inchangés (41 à 47 selon la scène).
+
+**Vérifié** :
+- `tools/test_murs_bas_rendu.gd` (neuve, au lot) : longueurs (58 / 44 px, doublées au zoom
+  ×2), murs rentrés et transformés, coins remis en ordre sous miroir, tri au champ,
+  plafond et débordement, uniformes posés, shaders qui incluent la règle et compilent,
+  seule la LED porte une hauteur. Vue rougir en retirant le retrait.
+- `tools/banc_murs_bas.tscn` (neuf, FENÊTRÉ) : le vrai `main.tscn` sur la carte d'essai,
+  vue de J1 et de J2 en écran scindé puis vue unique (racine). Sol : **tous les points
+  d'accord** (733 à 754 par scène, dont ~100 noircis par la règle), aucun allumé par la
+  règle, 0/255 d'écart avec l'ancien matériau hors zone. Corps : accroupi à L − 12 noir,
+  à L + 12 éclairé, debout éclairé. Noir absolu identique avec et sans la règle. **Vu
+  rougir** en coupant la poussée : le sol perd exactement ses points de zone morte, le
+  corps accroupi s'allume.
+
+**Pièges payés au banc — tous du banc, aucun de la règle**, et chacun ressemblait à un
+défaut de la règle :
+1. **La caméra glisse** après une téléportation : attendre que la transformation écran soit
+   stable, pas un nombre d'images.
+2. **L'éblouissement de la scène précédente** : celui qui regarde s'était tenu dans la
+   torche de l'autre ; sa vue sort floutée pendant la récupération — cône mou, muret et
+   corps effacés. Deux passages ont accusé à tort la lampe, puis l'intention de torche.
+3. **Le corps d'en face est sombre sous la torche** (ses propres occluders) : lu en son
+   centre il est noir avec ou sans la règle. Le banc retire ses occluders.
+4. **La ligne de visée et le viseur sont non éclairés**, dans l'axe du porteur, donc à
+   travers la cible : ils passaient pour un corps éclairé dans une seule vue.
+5. **`hauteur_mur()` est déjà en pixels** : la première suite l'y reconvertissait (2041 px).
 
 ## 8. Lancer le prototype
 

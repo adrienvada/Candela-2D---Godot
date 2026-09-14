@@ -4295,3 +4295,22 @@ EN VOL éclaire par-dessus les murets, posée elle bute. La seconde corrige MB3a
 faisait buter toujours : `Fusee.masque_ombre(atterrie)`, posé à la construction puis aux
 trois façons de se poser (atterrissage, fusée de killcam, saut d'âge du banc). Touché :
 `fusee.gd`, `tools/test_accroupi.gd`.
+
+### 2026-09-14 (soir) — MB3c : la zone morte dessinée à l'écran (même session, même branche)
+
+**Touché** : `murs_bas_zone.gdshaderinc`, `murs_bas_sol.gdshader`,
+`murs_bas_decor.gdshader`, `murs_bas_rendu.gd` (neufs) ; `player_rim_light.gdshader`,
+`player_enemy_light.gdshader` (la règle incluse) ; `game_state.gd` (matériau du sol avant
+duplication, décor, `_pousser_zone_morte` sur `frame_pre_draw`) ; `mur_led.gd` (hauteur qui
+exempte le bandeau). Suites : `tools/test_murs_bas_rendu.gd` (neuve, au lot). Banc :
+`tools/banc_murs_bas.tscn` (neuf, fenêtré).
+
+**Huit passages du banc avant le vert, et la règle n'était en cause dans aucun.** La
+caméra qui glisse, l'éblouissement laissé par la scène précédente, le corps adverse ombré
+par ses propres occluders, la ligne de visée non éclairée à travers la cible. Deux
+hypothèses fausses ont été corrigées dans le banc avant de regarder la capture ; c'est
+l'image — un cône flou, muret et corps effacés — qui a nommé l'éblouissement en une lecture.
+Puis vu rougir en coupant la poussée des uniformes.
+
+**Coordination** : lots et fenêtres alternés avec ISO2 par messages (leur lot 21:24-21:32,
+mes bancs 21:41-21:56, leurs huit fenêtres ensuite).

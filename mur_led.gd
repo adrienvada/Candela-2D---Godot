@@ -174,6 +174,11 @@ static func poser(data: Dictionary, parent: Node, horloge_manche: Callable) -> M
 	led.position = zone.get_center()
 	led.texture_scale = zone.size.x / led.texture.get_width()
 	led.shadow_enabled = false
+	# Chantier MURS BAS, MB3c : une lumière unique sans point d'origine — sa
+	# position est le centre de la carte. La hauteur la marque, et le shader de la
+	# zone morte ne lui applique pas la règle (`murs_bas_zone.gdshaderinc`) : il
+	# ombrerait le sol derrière chaque muret vu depuis ce centre.
+	led.height = MursBasRendu.HAUTEUR_SANS_ORIGINE
 	# ⚠️ **Le sol et les murs (1), et PAS les corps — contre-jour** (décision
 	# d'Adrien, 2026-09-14). La bande éclairait aussi le sprite adverse (2) et le
 	# joueur local (4) : sans ombre, elle les éclairait À PLAT, en entier, et

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/banc_murs_bas.gd" id="1"]
+
+[node name="BancMursBas" type="Node"]
+script = ExtResource("1")

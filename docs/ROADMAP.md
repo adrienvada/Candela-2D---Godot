@@ -21039,7 +21039,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
-| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement) ; MB3c et MB3d en cours |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût) ; MB3d en cours |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
 
@@ -21281,7 +21281,8 @@ vérifie que `franchit_regle` rend la règle du prototype à l'identique et que
 `rects_monde` pave la carte. `test_classes` (412), `test_halo_proximite`, `test_vision`,
 `test_eblouissement`, `test_fusee`, `test_netcode` verts. Lot complet : **113 OK**.
 ⚠️ **Asymétrie temporaire** : l'écran ne dessine pas encore la zone morte (MB3c) — on peut
-voir un accroupi que la balle survole. H-MB1 ne se joue pas avant MB3c.
+voir un accroupi que la balle survole. H-MB1 ne se joue pas avant MB3c. ✅ **Refermée en
+MB3c.**
 
 #### MB3b — l'enjambement
 
@@ -21310,6 +21311,43 @@ décide désormais ce qui touche à la collision ; `RAYON_CORPS = 18` reste celu
 le fil ; un vrai joueur bloqué par un vrai muret sans le geste, qui le traverse en le
 tenant, à 65 px/s, avec un seul bruit, sans tirer, et qui retrouve sa collision après.
 `test_protocole` (témoin recopié, `VERSION` 18), `test_classes` (412), `test_liaisons`.
+
+#### MB3c — la zone morte dessinée à l'écran
+
+La piste C du prototype, dans le vrai jeu : la règle vit dans un include GLSL
+(`murs_bas_zone.gdshaderinc`, le premier du dépôt) que partagent le sol de chaque vue
+(`murs_bas_sol.gdshader`, additif comme l'ancien matériau), le décor peint
+(`murs_bas_decor.gdshader`) et les deux shaders de joueur (jugés en leur centre, comme la
+balle). `MursBasRendu` (`murs_bas_rendu.gd`) convertit murs rentrés et longueurs dans
+l'écran de chaque vue ; `GameState._pousser_zone_morte` les pousse sur
+`RenderingServer.frame_pre_draw`, par le viewport qui REND la vue — sous-vue en écran
+scindé, racine en vue unique. **Pourquoi `frame_pre_draw` et pas `_process`** : l'ordre de
+traitement de la caméra y ferait traîner la zone morte d'une image derrière l'écran.
+
+**Le bandeau LED est exempté par sa hauteur** (`MursBasRendu.HAUTEUR_SANS_ORIGINE`) : une
+seule lampe cuite pour toute la carte, posée en son centre. Lui appliquer la règle ombrerait
+le sol derrière chaque muret « vu » depuis ce centre. Aucune autre lampe ne pose de hauteur
+(sans carte de normales, elle n'a pas d'autre effet) — `test_murs_bas_rendu` le garde.
+
+**Vérifié** : `tools/test_murs_bas_rendu.gd` (neuve, au lot, vue rougir) et
+`tools/banc_murs_bas.tscn` (neuf, fenêtré) : vues de J1 et J2 en écran scindé puis vue
+unique — sol en accord sur tous les points (~100 noircis par scène), rien allumé par la
+règle, 0/255 d'écart avec l'ancien matériau hors zone ; accroupi à L − 12 noir, à L + 12 et
+debout éclairés ; noir absolu inchangé. **Vu rougir** en coupant la poussée. Coût (2560×1440,
+écran scindé, ordre de grandeur) : carte d'essai dans le bruit (4,47 ms contre 4,30) ;
+**40 murets à l'écran ~+4 ms** (8,69 ms), loin de la cible. Détail : `docs/MURS_BAS.md` § 11.
+
+**Pièges payés au banc — cinq, tous du banc, chacun déguisé en défaut de la règle** : la
+caméra qui glisse après une téléportation ; **l'éblouissement de la scène précédente**, qui
+floute la vue de qui s'était tenu dans la torche (deux passages ont accusé autre chose) ; le
+corps adverse sombre sous la torche par ses propres occluders ; la ligne de visée et le
+viseur **non éclairés**, qui passent à travers la cible ; `hauteur_mur()` déjà en pixels.
+**La leçon** : une capture qui contredit la règle se REGARDE avant de corriger quoi que ce
+soit — l'image floue a tranché en une lecture ce que trois hypothèses n'avaient pas fait.
+
+**Signalé, hors MB3c** : les marques posées au sol en cours de manche (taches, empreintes)
+restent éclairées dans la zone morte — une empreinte d'accroupi pourrait s'y lire (MB3d).
+`tools/test_banc.gd` ne vérifie pas encore les appuis du nouveau banc.
 
 ### Ce qui attend Adrien
 
