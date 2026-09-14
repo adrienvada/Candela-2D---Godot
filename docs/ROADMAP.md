@@ -21193,6 +21193,290 @@ boîtes pavent la grille, une par rectangle de `merge_rects`, apparitions sur
 du sol, lumières à ombres, caméra orthographique cadrant la carte ; sait
 échouer). Aucun fichier du jeu n'est modifié.
 
+### Vague 0 — iso-corps (première tranche d'ISO3, inscrite le 2026-09-14)
+
+**Section tenue par la session `iso-corps`, seule à l'éditer** (les autres
+sessions ISO tiennent la leur). Chantier : les corps voxel des dix classes,
+construits et animés par code — première tranche d'ISO3, sans dépendre du
+tangage de la caméra, de la hauteur des murs, ni du jalon H15. Sert aussi si
+Adrien choisit « l'iso pour les vitrines seulement ».
+
+**Fait** : `voxel_catalogue.gd` (les dix classes en données — un seul
+squelette, gris plafonnés tirés de `Charte.DIM`, forme d'arme et de gadget par
+classe, slugs recopiés depuis `game_state.gd`, jamais réinventés) ;
+`voxel_corps.gd` (neuf `BoxMesh` par corps, un `Node3D` pivot par membre,
+`poser(etat)` pure) ; `corps_iso.gdshader` (unshaded, noir strict à
+`lumiere_recue = 0`) ; `tools/banc_corps.tscn`/`.gd` (dix corps sur une
+grille, lumière simulée, touches marche/tir/touché/mort, `--capture`,
+`--classe`, `--lumiere`) ; `tools/test_voxel_corps.gd` dans `run_suites.sh`
+(déterminisme, aucune partie sous le sol hors mort, continuité de la marche,
+pose de mort couchée, noir à lumière nulle, catalogue non dérivé de
+`game_state.gd`, aucun hasard — sait échouer) ; la planche des dix silhouettes
+sous `docs/iso/captures_corps/` (lumière 0,8 / 0,2 / 0 — le 0 mesuré au pixel
+par PIL, extrema `(0, 0, 0)`, pas seulement lu à l'écran).
+
+**Le contrat avec ISO2** : `VoxelCorps.poser(etat: Dictionary)` est l'unique
+entrée de mouvement, fonction PURE de `etat` — `position: Vector2` (pixels),
+`visee: Vector2`, `vitesse: Vector2` (px/s), `torche: bool`, `arme: String`,
+`tir: bool`, `touche: bool`, `mort: bool`, `t: float`. Le temps ne vient que
+de `t` — jamais de l'horloge, jamais de `randf()`. `VoxelCorps.materiau()`
+expose un `ShaderMaterial` unique par corps avec l'uniform `lumiere_recue`
+(0..1, réglé par `definir_lumiere()`) : c'est TOUT ce qu'ISO2 aura à nourrir
+depuis ses capteurs — aucune autre surface de couplage. Un uniform `style`
+(0 = aplat) est réservé pour la fonction de style d'ISO1, non implémenté ici.
+
+**Ce qui n'est PAS fait, signalé pour ISO4** : un geste de gadget distinct par
+classe (les dix partagent pour l'instant un seul bob commun, synchronisé à la
+marche) — dix gestes auraient dépassé le budget de deux sessions-journées de
+cette tranche.
+
+**H15 tranché par Adrien le 2026-09-14 vers 16 h 50 (« go », sans seconde
+série de relevés — détail dans la section ISO0.b de la ROADMAP) : deux
+conséquences signalées par iso-geometrie, ni l'une ni l'autre engagée ici.**
+(1) L'accroupi n'existe pas dans le jeu — carte, collisions, occlusion et
+réseau en dépendent, c'est une mécanique neuve, pas un ajout à `poser(etat)`.
+Les dix silhouettes devront un jour avoir une pose accroupie qui tienne sous
+la hauteur d'un mur bas ; `etat` n'a aujourd'hui aucun champ pour ça, et il ne
+s'en invente pas un ici. (2) Au tangage retenu (52°), un mur haut de 1,25 tuile
+— et non 1,0 comme la première mesure le supposait (**corrigé le 2026-09-14
+21h : la hauteur du mur haut a été tranchée à 1,25 tuile par Adrien à 19h25,
+après que cette note a été écrite** — la bande cachée passe donc de 0,78 à
+≈ 0,98 tuile, 34 px) — cache ≈ 0,98 tuile (34 px) de sol derrière lui, plus que
+le rayon d'un corps (18 px) — la hauteur de `SQUELETTE` (`voxel_catalogue.gd`)
+pèse donc sur ce qui reste visible d'un corps collé à un mur ; à revoir quand
+la géométrie des murs bas/hauts existera réellement.
+
+**Ce que iso-geometrie a mesuré au banc B-projection et qui concerne
+directement `corps_iso.gdshader` (à lire avant ISO2, détail dans SA section
+ROADMAP)** : un corps qui lit la lumière au sol sous ses pieds disparaît là où
+la vue de dessus le montre — le halo de proximité n'éclaire que les sprites,
+jamais le sol ; les capteurs de corps d'ISO2 ne sont donc pas optionnels,
+c'est la source que ce shader devra lire. Et `CAMERA_VISIBLE_LAYERS`
+fonctionne dans un shader spatial en `gl_compatibility` : un même maillage
+peut donc lire la lumière de J1 ou de J2 selon la caméra qui le dessine, utile
+pour des corps communs en écran scindé.
+
+#### Pièges rencontrés ici
+
+- **Le worktree fourni par l'application ne part pas toujours de la bonne
+  base.** Celui de cette session pointait sur le tronc `main` (`336bc10`) et
+  non sur `6ccdd45`, la branche de l'étude ISO0 que le brief demandait comme
+  point de départ. Rien ne le signale sauf `git log -1 --oneline` comparé à la
+  valeur attendue AVANT toute modification — vérifié, sinon une session ISO
+  bâtit sur une base qui n'a pas l'étude, silencieusement.
+- **Une capture « preuve de noir absolu » doit exclure tout ce qui n'est pas
+  asservi à `lumiere_recue`.** Le bandeau de diagnostic du banc (texte clair)
+  et le cône-repère (couleur fixe, purement illustratif — voir son en-tête)
+  vivent dans la même image que les corps : sans les cacher avant
+  `RenduCommun.capturer()`, la valeur maximale mesurée à lumière 0 n'était pas
+  0 mais 0,85 — pas les corps, l'INTERFACE. La suite headless ne pouvait pas
+  attraper ça : elle lit l'uniform, jamais un pixel réel.
+- **`Camera3D.size` (orthographique) est le DEMI-côté vertical en
+  `KEEP_HEIGHT`, le mode par défaut** — la largeur visible vaut
+  `size × aspect`, jamais l'inverse. Une première formule dimensionnait le
+  cadrage sur la plus grande DES DEUX dimensions de la grille sans diviser par
+  l'aspect, cadrant deux fois trop large sur une scène volontairement en
+  largeur (cinq colonnes, deux rangées) — corps ridiculement petits, sans
+  qu'aucune erreur ne le signale.
+- **Un seul champ `t` pour deux usages qui semblent incompatibles.** La marche
+  veut un `t` continu (la phase du pas) ; le recul du tir et la secousse du
+  touché veulent un `t` remis à zéro au déclenchement (une enveloppe de
+  quelques centaines de ms). Les deux tiennent dans UN champ parce qu'en jeu
+  réel, tirer immobilise déjà le joueur (`RootProfile.duree`) : la marche et
+  le recul ne se disputent donc jamais le même `t` en pratique. C'est
+  l'appelant (le banc, plus tard le pont ISO2) qui choisit quoi mettre dans
+  `t` selon l'état — documenté dans `voxel_corps.gd`, pas deviné.
+
+### Vague 1 — les deux postures : accroupi et enjambement (inscrite le 2026-09-14 20h46)
+
+Brief transmis par Adrien depuis la session cloud Fable 5.1 (le jeu porte
+désormais l'accroupi — MB2, commit `25a8240` sur `main`, pas encore fusionné
+dans la ligne iso — et un enjambement de mur bas est en cours ailleurs, MB3b).
+Base : la tête de cette branche à `c2962bb`. Toujours aucun fichier du jeu,
+toujours indépendant de la ligne iso.
+
+**Fait** : `poser(etat)` lit deux champs de plus, `accroupi: bool` et
+`enjambe: float` (0..1, 0 = pas d'enjambement). Le squelette n'a qu'UNE jambe
+rigide par côté (vague 0, pas de genou) : l'accroupi est donc un trucage à
+trois gestes combinés — hanche abaissée (jambes ET torse à la même hauteur),
+jambes basculées vers l'avant en se raccourcissant (`scale.y`, pour garder le
+pied près du sol plutôt que de le faire traverser), buste penché et tête
+rentrée par-dessus. Mesuré sur les dix classes (identiques verticalement,
+`echelle` ne joue que sur la largeur) : sommet de la tête à **0,5708** de la
+hauteur debout — au milieu de la fourchette 0,5-0,6 posée par le brief, avec
+de la marge des deux côtés. La marche accroupie réutilise la même formule de
+cadence (`LONGUEUR_PAS`) avec une amplitude et un rebond resserrés (« à petits
+pas et sans rebond »). L'enjambement anime toujours la même jambe (la droite) :
+elle balaie d'un angle arrière à un angle avant tandis que `enjambe` va de 0 à
+1, se soulève au milieu du geste, et l'arme se baisse dès les premiers instants
+— le déplacement d'une tuile pendant le geste reste à la charge de l'appelant
+(`etat.position`), jamais recalculé ici. `tools/banc_corps.gd` a deux touches
+de plus (A accroupi, E enjamber) et `--pose accroupi|enjambe` pour les
+captures ; `tools/test_voxel_corps.gd` vérifie la fourchette de hauteur, la
+monotonie de l'angle d'enjambement, le déterminisme et le noir strict dans les
+deux nouvelles postures.
+
+**Le contrat, pour la session qui intégrera les corps au jeu** (après H-ISO2,
+quand la ligne iso aura fusionné `main`) : `poser(etat)` lit `etat.accroupi`
+(bool) et `etat.enjambe` (float 0..1) ; la posture vient du 9ᵉ argument de
+`rpc_send_inputs` de MB2 (posture voulue, répliquée par `net_accroupi`) et
+l'enjambement du bit MB3b sur le fil. L'uniform `lumiere_recue` reste 0..1 sur
+un `ShaderMaterial` unique par corps, `style` toujours réservé — ISO2 (livrée
+le 2026-09-14 au soir, commit `c0e2b25` : capteur de corps 256² par vue,
+lightmaps par joueur) alimentera `lumiere_recue`. Cette tranche ne change rien
+à cette interface.
+
+**Annoncé par ISO2 le 2026-09-14 vers 23h30 (ISO2b, pas encore écrit dans sa
+ROADMAP à cette heure — voir sa section) :** un corps ISO3 devra un jour lire
+deux uniforms de plus PAR VUE, `opacite_N` et `silhouette_N` (le corps se fond
+dans le décor à l'opacité du sprite 2D qu'il remplace, et compose la
+silhouette de soi comme ISO2b le fait pour la sienne) — même logique de
+composition que `lumiere_recue`, pas encore un champ de `corps_iso.gdshader`
+ici. À reprendre au contact de la section ISO2b de la ROADMAP le jour venu.
+
+#### Le piège rencontré ici
+
+- **`t = 0` est ambigu pour un état qui PERSISTE, contrairement à un état
+  transitoire.** La convention posée en vague 0 — l'appelant remet `t` à zéro
+  au déclenchement — fonctionne pour `tir`/`touche` parce que leur état « off »
+  n'a jamais besoin d'un fondu : il vaut 0, point. `accroupi` est différent :
+  c'est un booléen qui reste vrai ou faux longtemps, et les DEUX transitions
+  (s'accroupir, se relever) voudraient un fondu. Une première formule
+  symétrique (`lerp` dans un sens ou l'autre selon `accroupi`) rendait un corps
+  PLEINEMENT ACCROUPI dès que `accroupi = false` ET `t = 0` — exactement l'état
+  par défaut de la plupart des appels de test, qui ne pensent jamais à
+  l'accroupi. Trouvé par le test générique « rien sous le sol » (vague 0), qui
+  s'est mis à rougir sans qu'aucun test d'accroupi n'existe encore. Corrigé en
+  acceptant l'asymétrie que le brief autorisait déjà (« la simulation bascule
+  instantanément ») : s'accroupir se fond sur `DUREE_TRANSITION_ACCROUPI`, se
+  relever est instantané — plus court encore que les 150 ms permises, et sans
+  l'ambiguïté qu'un aller-retour aurait exigé de résoudre à l'aveugle depuis
+  une fonction pure qui ne connaît pas l'état précédent.
+- **Mesurer la bonne grandeur ne suffit pas si c'est la mauvaise grandeur.**
+  La suite headless est passée AU VERT sur `sommet_tete()` dans la fourchette
+  attendue dès la première version de l'accroupi — parce que cette mesure ne
+  dépend QUE de la hanche, du torse et de la tête, jamais de l'arme. Au banc,
+  l'arme plongeait pourtant vers le sol, loin devant le corps : `Arme` et
+  `Torche` sont enfants du `Torse` pour rester à hauteur de main sans suivre
+  le balancement des bras (vague 0) — mais le buste penché de l'accroupi
+  (vague 1) est une rotation de ce MÊME parent, et un enfant qui ne compense
+  pas la rotation de son parent en hérite intégralement. Rien dans la suite ne
+  regardait où l'arme finissait, donc rien n'a rougi. Corrigé par une
+  contre-rotation (position ET orientation) qui annule la rotation du torse
+  pour ces deux enfants, tout en laissant filer sa translation (la hanche qui
+  descend, elle, doit s'appliquer). **La leçon dépasse ce correctif précis** :
+  une suite verte prouve ce qu'elle a mesuré, pas ce qu'elle n'a pas pensé à
+  mesurer — un passage au banc reste nécessaire pour toute pose neuve, aussi
+  bien couverte la suite paraisse-t-elle sur le papier.
+
+### Vague 2 — le corps lit son capteur et porte la pâte (inscrite le 2026-09-15 01h00)
+
+Brief transmis par Adrien depuis la session cloud Fable 5.1. Étape 0 explicite
+du brief : `git merge iso1-fondations` dans `iso-corps` (fait, `9aa9cc8`, sans
+perte — vérifié par `grep` des fonctions ajoutées après coup, comme la
+consigne du dépôt le demande après toute fusion). Base : la tête de cette
+branche à `6a50b12`.
+
+**Fait** : `corps_iso.gdshader` reprend, nom pour nom, l'interface d'uniforms
+qu'ISO2 a déjà écrite et vérifiée dans son propre corps
+(`corps_grossier_iso.gdshader`, commit `02f6c28` sur `iso2-vues`) —
+`capteur_1`/`capteur_2` (les textures 256² de `CapteurCorps`, lues **par
+fragment**, jamais au centre seul, pour le modelé « côté lampe clair, dos
+sombre »), `centre`/`monde_capteur_px`/`rayon_lu_px` pour borner la lecture au
+disque, `opacite_1/2` et `silhouette_1/2` par vue pour l'effacement et la
+silhouette de soi, composés par le même alpha combiné qu'ISO2
+(`a = 1-(1-o)(1-s)`). Repli sur `lumiere_recue` (scalaire, vague 0/1) quand
+`capteur_actif` est faux — ce banc, en l'absence d'ISO3a. La pâte
+(`iso_pate.gdshaderinc`) est plafonnée canal par canal
+(`min(pate(...), couleur_fiche.rgb)`) : sans ce plafond elle pousse un gris
+éclairé au blanc, bug déjà payé par ISO2 avant même que ce shader existe.
+`voxel_corps.gd` construit désormais DEUX matériaux par corps — la couleur
+(priorité 0) et une passe de profondeur seule (`corps_iso_profondeur.gdshader`,
+priorité -1, `ALPHA 0`) : sans elle, deux des neuf boîtes qui se recouvrent
+s'assombriraient deux fois au lieu d'une là où l'effacement les rend
+semi-transparentes. Chaque boîte visible porte son double EN ENFANT (pas en
+frère), pour hériter automatiquement la compression d'une jambe accroupie —
+un double posé à côté se serait figé à la silhouette debout. Nouveaux
+réglages exposés : `definir_capteur()`/`effacer_capteur()`,
+`definir_pixels_par_unite()`, `definir_opacite()`, `definir_silhouette()`,
+`definir_style()`. `tools/banc_corps.gd` gagne `--capteur` (dégradé
+synthétique 256², une lampe latérale), `--opacite=X`, `--silhouette`, et les
+touches C/V/[/]. `tools/test_voxel_corps.gd` vérifie la pâte plafonnée sur
+cinq styles × huit lumières × dix classes contre le miroir processeur
+`iso_pate.gd`, l'effacement sur les deux passes et les deux vues, la
+silhouette de soi, et que chaque boîte porte bien son double en enfant.
+Planche complète sous `docs/iso/captures_corps/` : dix classes sous capteur à
+lampe latérale 0,8/0,2/0 (le 0 mesuré au pixel par PIL, extrema `(0,0,0)`,
+comme la vague 0) ; une ligne effacement à o=1/0,5/0 (vérifiée au pixel :
+l'opacité réduit bien le corps de moitié à 0,5, PIL contre les trois
+captures) ; une ligne silhouette de soi dans le noir absolu (lumière 0, dix
+silhouettes lisibles sur fond parfaitement noir).
+
+**Le contrat avec ISO3a** (qui intégrera les corps au jeu) : `monde.xz`
+peut être en tuiles (le repère de `voxel_corps.gd`, banc compris) OU déjà en
+pixels si ISO3a accroche le corps sous un `Node3D` mis à l'échelle de
+`TILE_SIZE.x` — jamais deviné dans le shader, toujours réglé par l'appelant
+via `pixels_par_unite` (défaut 1.0, l'identité). `opacite_N`/`silhouette_N`
+suivent la même logique de composition que `lumiere_recue` : ISO3a les
+nourrit depuis ce que le sprite 2D remplacé aurait montré, jamais deviné ici.
+
+#### Pièges rencontrés ici
+
+- **Le fichier partagé `iso_lightmap.gdshaderinc` n'avait pas la fonction que
+  le contrat d'ISO2 exigeait.** `corps_iso.gdshader` appelle
+  `lightmap_de_j2(CAMERA_VISIBLE_LAYERS)` en la croyant déjà présente — elle
+  ne l'est que sur `iso2-vues`, où ISO2 a réécrit ce fichier en profondeur
+  (deux lightmaps par joueur, `lumiere_1`/`lumiere_2`) pour son propre usage ;
+  `iso-corps` n'a fusionné que `iso1-fondations`, jamais `iso2-vues` (pas
+  demandé par le brief), donc sa copie de ce fichier est restée à l'ancienne
+  interface à une seule lightmap qu'utilisent encore `mur_iso.gdshader` et
+  `sol_projete.gdshader` — hors périmètre ISO3, jamais touchés. Erreur de
+  compilation shader silencieuse pour le reste de la suite (`SHADER ERROR`
+  n'échoue aucun `_check`, seule la ligne `RenduCommun`/`run_suites.sh`
+  qui grep `SCRIPT ERROR`/`push_error` l'aurait vue passer — trouvée en
+  lisant la sortie complète, pas le `tail` qui masquait tout sous les fuites
+  de RID que cette même erreur provoquait en cascade). Corrigé en AJOUTANT
+  `LIGHTMAP_CALQUE_VUE_2` et `lightmap_de_j2()` À CÔTÉ de l'interface
+  existante, sans rien renommer ni retirer — la fusion complète d'ISO2 dans
+  ce fichier reste un travail à part, pour le jour où `iso2-vues` rejoindra
+  `iso-corps` ou `main`.
+- **`render_priority` est une propriété du `Material`, pas du nœud qui le
+  porte.** Premier jet : `profondeur.render_priority = -1` sur le
+  `MeshInstance3D` du double de profondeur — erreur de script silencieuse
+  (`in inst` confirme même que la propriété n'existe pas sur ce type de nœud
+  dans ce Godot 4.7.1), qui laissait `_boite()` construire des doubles sans
+  jamais régler leur priorité, et faisait planter net tout le reste de
+  `_construire_squelette()` derrière — d'où des mesures (`sommet_tete()`,
+  `rotation.x` de la pose de mort) qui rentraient à 0 sur des corps
+  partiellement construits, alors que la suite ne rougissait QUE sur ces
+  symptômes indirects, jamais sur la vraie cause. Le code d'ISO2
+  (`presentation_3d.gd:959`) pose la même propriété correctement, sur le
+  `ShaderMaterial`, pas le nœud — repris ici, une seule fois à la
+  construction du matériau, partagé par les neuf doubles via
+  `material_override`.
+- **Le style par défaut d'un corps neuf, GRAVURE, ne se lit pas à l'échelle
+  d'un corps.** La période de hachure de GRAVURE (6 unités-monde) est pensée
+  pour un mur ou un sol continus sur plusieurs tuiles ; un corps tient sur une
+  fraction de tuile, plus petit que la période elle-même — il tombe presque
+  entièrement DANS ou HORS d'un trait selon sa seule position sur la grille,
+  sans rapport avec la lumière reçue. Vu au banc (`--capteur`), jamais dans la
+  suite headless qui ne mesure que des invariants numériques (monotonie,
+  plafond), tous vrais y compris dans ce cas — encore la même leçon que la
+  vague 1 : une suite verte prouve ce qu'elle a mesuré. Corrigé en prenant
+  LAVIS comme style par défaut d'un corps (`STYLE_PAR_DEFAUT` dans
+  `voxel_corps.gd`) — le style qu'Adrien a jugé « parfait » sur le corps
+  grossier d'ISO2 au jalon H-ISO2 (`PATE_PAR_DEFAUT` dans
+  `presentation_3d.gd`), pas réinventé. `definir_style()` reste le point
+  d'entrée pour qui veut trancher autrement au jalon H-ISO1 (planche).
+- **Ces trois bogues partageaient un symptôme, jamais la même cause : une
+  suite verte ne veut RIEN dire quand une `SCRIPT ERROR`/`SHADER ERROR` tourne
+  en silence à côté d'elle.** `tools/run_suites.sh` grep déjà ces signatures
+  précisément pour ça (voir son en-tête) — les trois bogues ci-dessus sont
+  sortis d'un `tail -100` qui masquait la vraie erreur sous les fuites de RID
+  qu'elle provoquait en cascade, jamais d'un `_check` rouge. Lire la sortie
+  complète (ou `grep -iE "SCRIPT ERROR|SHADER ERROR"`) avant de conclure
+  qu'une suite verte + code 0 veut dire « tout va bien ».
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est
@@ -22232,9 +22516,13 @@ et un seul est du travail de session.
 > murs hauts à 1,25 tuile sont en service côté iso — 34,2 px de sol cachés derrière un mur, un
 > corps collé caché à 98 %, aucune case de sol entièrement invisible. Puis **ISO2b** : l'effacement
 > des corps iso et la silhouette de soi.
-> **ISO2b commitée** sur `iso2-vues` : le corps iso se fond dans le décor à l'opacité du sprite 2D
-> (ébloui, suie), et chacun garde sa silhouette dans le noir, invisible chez l'autre. Ce qui attend
-> Adrien : le **jalon H-ISO2b** (section ISO2b).
+> **ISO2b commitée** sur `iso2-vues` (`02f6c28`) : le corps iso se fond dans le décor à l'opacité du
+> sprite 2D (ébloui — depuis la correction `16cd72b` du code de main —, suie), et chacun garde sa
+> silhouette dans le noir, invisible chez l'autre. **Fusion d'`iso-corps`** (vague 2 d'ISO Corps,
+> `2e6ca25`) : les corps voxel des dix classes et leurs shaders entrent dans la ligne iso — deux
+> conflits, l'include des lightmaps (gardé dans sa version à deux lightmaps, un sur-ensemble) et la
+> liste des suites (les deux gardées) ; lot vert. Puis **ISO3a**. Le tout est jugé au **jalon
+> H-ISO3** (brief long du 2026-09-14).
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

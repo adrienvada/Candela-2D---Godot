@@ -4174,6 +4174,137 @@ a été coupé à 15 (conception C, juges et réfutateurs refusés) ; le jugemen
 les vérifications ont été refaits par la session principale, contre la
 documentation Godot et le code. Consigné dans l'étude (§ 6.3) et aux pièges.
 
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 0, branche `iso-corps`) — ajoutée le 2026-09-14 16:32 (Paris)
+
+Première tranche d'ISO3 : les corps voxel des dix classes du jeu et leurs
+mouvements, construits et animés par code. Décidé par Adrien le 2026-09-14.
+Ne dépend ni du tangage caméra, ni de la hauteur des murs, ni du jalon H15.
+Aucun fichier du jeu modifié.
+
+**Fichiers créés, tous à elle :** `voxel_corps.gd`, `voxel_catalogue.gd`,
+`corps_iso.gdshader`, `tools/banc_corps.tscn`/`.gd` (avec leurs `.uid`),
+`tools/test_voxel_corps.gd`, `docs/iso/captures_corps/` (trois captures :
+lumière 0,8 / 0,2 / 0 — la dernière vérifiée noir pur par extrema PIL, pas à
+l'œil).
+
+**Partagés, touchés par insertion :** `tools/run_suites.sh` (`test_voxel_corps`
+ajoutée au tableau `SUITES`), `docs/ROADMAP.md` (section « Vague 0 —
+iso-corps » dans le chantier ISO, quatre pièges), ce journal.
+
+**Base de départ corrigée :** le worktree fourni par l'application pointait
+sur `main` (`336bc10`) et non sur `6ccdd45` (l'étude ISO0) comme demandé —
+`git branch -m` + `git reset --hard 6ccdd45` avant toute autre commande,
+constaté par `git log -1 --oneline` et non supposé.
+
+**Interruption signalée par `iso-geometrie` (ISO0.b Géométrie Opus) :** Adrien
+mesurait la cadence en direct (série H15, fenêtre au premier plan). Un
+`run_suites.sh` complet lancé en arrière-plan par cette session a été tué
+séance tenante (task stoppée, aucun processus Godot restant lié à ce
+worktree), et aucune fenêtre Godot n'a été rouverte avant son feu vert — les
+trois captures de la planche et le premier lot de tests avaient déjà tourné
+avant l'alerte, rien à refaire sur ce plan.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis à
+la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (protocole du CLAUDE.md).
+
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 1, branche `iso-corps`) — ajoutée le 2026-09-14 23:36 (Paris)
+
+Deuxième tranche : les deux postures, accroupi et enjambement, sur la base
+de `c2962bb`. Brief transmis par Adrien depuis la session cloud Fable 5.1.
+Toujours aucun fichier du jeu modifié, toujours indépendant de la ligne iso.
+
+**Fichiers touchés, tous à elle :** `voxel_corps.gd` (`etat.accroupi` et
+`etat.enjambe` dans `poser()`) ; `tools/banc_corps.gd` (touches A/E, `--pose
+accroupi|enjambe`) ; `tools/test_voxel_corps.gd` (poses déterministes,
+hauteur accroupie dans la fourchette, enjambement monotone, noir strict dans
+les deux nouvelles postures) ; `docs/iso/captures_corps/` (six captures de
+plus : accroupi et enjambe à 0,8/0,2/0, les deux « 0 » vérifiés noir pur par
+extrema PIL) ; `docs/ROADMAP.md` (section « Vague 1 », deux pièges) ; ce
+journal.
+
+**Mesure retenue :** hauteur accroupie (sommet de la tête) à 0,5708 de la
+hauteur debout sur les dix classes — au milieu de la fourchette 0,5-0,6 du
+brief.
+
+**Un vrai bogue trouvé au banc, pas à la suite :** l'arme et la torche,
+enfants du torse pour rester à hauteur de main sans suivre le balancement des
+bras (vague 0), héritaient intégralement le buste penché de l'accroupi
+(vague 1) — l'arme plongeait vers le sol, loin devant le corps. La suite
+passait au vert parce qu'elle ne mesurait que la hanche, le torse et la tête,
+jamais l'arme. Corrigé par une contre-rotation (position et orientation) qui
+annule la rotation du torse pour ces deux enfants. Détail et diagnostic dans
+la ROADMAP (section « Vague 1 », pièges).
+
+**Sabotage vérifié réellement** (`ACCROUPI_MAX` abaissé sous la mesure
+réelle, lot rougi sur les dix classes avec code 1, puis revert et lot vert) —
+demandé explicitement par le brief.
+
+**Coordination du Mac, plusieurs fois dans la même session :** ISO0.b, ISO2
+et Murs bas Opus ont chacune tenu le Mac à tour de rôle ce soir (fusions,
+lots complets, fenêtres de banc) ; `pgrep -fl Godot` vérifié avant chaque
+fenêtre ou lot, jamais supposé, avec des Monitor armés en attente plutôt que
+des boucles de sondage.
+
+**SendMessage bloqué par intermittence pendant une bonne partie de la
+session** (mode auto, un blocage déjà observé et documenté à la vague 0) —
+plusieurs deltas n'ont pu partir qu'après qu'Adrien a fait sortir la session
+du mode auto ; consigné ici pour que la synthèse de la session cloud sache
+pourquoi certains deltas sont arrivés tard ou groupés.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 2, branche `iso-corps`) — ajoutée le 2026-09-15 01:00 (Paris)
+
+Troisième tranche : « le corps lit son capteur et porte la pâte ». Brief
+transmis par Adrien depuis la session cloud Fable 5.1. Étape 0 : `git merge
+iso1-fondations` (fait, `9aa9cc8`, aucune perte détectée au `grep` d'après-
+fusion). Toujours aucun fichier du jeu modifié.
+
+**Fichiers touchés, tous à elle :** `corps_iso.gdshader` (réécrit pour
+reprendre nom pour nom l'interface d'uniforms d'ISO2 — capteur par vue,
+effacement, silhouette de soi) ; `corps_iso_profondeur.gdshader` (nouveau, la
+passe de profondeur seule) ; `voxel_corps.gd` (deux matériaux par corps, le
+double de profondeur en enfant de chaque boîte, `definir_capteur`/
+`definir_opacite`/`definir_silhouette`/`definir_style`) ; `tools/banc_corps.gd`
+(`--capteur`, `--opacite`, `--silhouette`, touches C/V/[/]) ;
+`tools/test_voxel_corps.gd` (pâte plafonnée contre le miroir processeur,
+effacement sur les deux passes/vues, silhouette de soi, double de profondeur
+en enfant) ; `iso_lightmap.gdshaderinc` (ajout additif de `lightmap_de_j2()`,
+détail ci-dessous) ; `docs/iso/captures_corps/` (sept captures : capteur à
+0,8/0,2/0, effacement à o=1/0,5/0, silhouette de soi dans le noir) ;
+`docs/ROADMAP.md` (section « Vague 2 », quatre pièges) ; ce journal.
+
+**Trois bogues réels trouvés au banc et à la lecture complète de la sortie
+de test, aucun par un `_check` rouge** (détail et diagnostic dans la ROADMAP,
+section « Vague 2 ») : (1) `iso_lightmap.gdshaderinc` n'avait pas encore la
+fonction `lightmap_de_j2()` qu'ISO2 a écrite sur sa propre branche
+(`iso2-vues`, jamais fusionnée ici) — ajoutée à côté de l'interface existante,
+sans rien casser pour `mur_iso.gdshader`/`sol_projete.gdshader`. (2)
+`render_priority` posée par erreur sur le `MeshInstance3D` du double de
+profondeur au lieu du `Material` qui le porte — une erreur de script
+silencieuse qui faisait avorter la construction du squelette en cascade, avec
+des symptômes indirects (mesures à 0) très loin de la vraie cause. (3) Le
+style par défaut d'un corps neuf (GRAVURE) ne se lit pas à l'échelle d'un
+corps, plus petit que sa période de hachure — basculé sur LAVIS, le style
+qu'Adrien a jugé « parfait » sur le corps grossier d'ISO2 à H-ISO2.
+
+**Coordination avec ISO2, en direct pendant la rédaction :** ISO2 a demandé
+un point d'étape (`ListAgents`/message entrant, 00:57) — répondu avec une
+heure de commit et le détail des trois bogues. ISO2 a ensuite prévenu que sa
+version d'`iso_lightmap.gdshaderinc` (sur `iso2-vues`) est un sur-ensemble
+qui remplacera la mienne à la fusion, à condition que `corps_iso.gdshader` et
+`corps_iso_profondeur.gdshader` n'appellent que `lightmap_de_j2()` — vérifié
+par `grep`, confirmé à ISO2 : c'est le cas, aucune retouche à prévoir de ce
+côté quand `iso2-vues` rejoindra cette branche.
+
+**Sabotage vérifié réellement** (`definir_opacite` privée de son écriture sur
+le matériau de profondeur, 20 échecs sur les dix classes avec code 1, puis
+revert et lot vert) — demandé explicitement par le brief.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
@@ -4419,3 +4550,13 @@ l'ancienne ligne, l'ennemi y reste à 1,000) et au banc à l'instant du rendu, s
 : l'ennemi est dessiné à l'opacité 0,00 chez J2 ébloui à 0,69, et à 0,65 chez J1 ébloui à 0,06 — en
 vue de dessus comme en iso, qui lit le sprite. ROADMAP : note datée dans le chantier du brouillage,
 un piège, la section ISO2b mise à jour.
+
+**ISO3a, étape C1, nuit du 2026-09-15 — fusion d'`iso-corps`.** Vague 2 d'ISO Corps commitée en
+`2e6ca25` (01:04). `git merge --no-commit --no-ff iso-corps` sur la base `27a94a4` : deux conflits,
+`iso_lightmap.gdshaderinc` (version d'`iso2-vues` gardée, un sur-ensemble ; ISO Corps a vérifié que
+ses shaders n'y appellent que `lightmap_de_j2()`) et `tools/run_suites.sh` (`test_voxel_corps` et
+`test_iso_vues` gardées). ROADMAP et journal fusionnés sans marqueur. Ancrages vérifiés des deux
+côtés (présentation, crochets de `game_state.gd` et `ui.gd`, `VoxelCorps`, `VoxelCatalogue`,
+`_classe(` relu par la suite d'ISO Corps). `--import` deux fois : le cache de classes connaît
+`VoxelCorps` et `VoxelCatalogue`, et l'import a posé `corps_iso_profondeur.gdshader.uid`, commité
+avec la fusion. Lot vert : 117 OK.
