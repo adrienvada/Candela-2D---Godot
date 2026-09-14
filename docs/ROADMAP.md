@@ -5923,12 +5923,15 @@ qui charge la scène, jamais sur le fichier fautif.
 ### Le plugin Godot AI se met à jour tout seul, et hors de git (2026-09-14)
 
 Le 2026-09-10 à 07:40, le plugin `addons/godot_ai` est passé de **3.0.7** à
-**4.0.4** dans l'arbre principal : 126 fichiers réécrits dans la même minute,
-91 modifiés, 35 ajoutés, 8 supprimés. Personne ne l'a demandé. Le plugin porte
+**4.0.4** dans l'arbre principal : **143 fichiers** — 91 modifiés, 44 ajoutés,
+8 supprimés —, tous datés de la même minute. Personne ne l'a demandé. ⚠️ `git
+status` n'en montrait que **134 lignes**, parce qu'un dossier neuf non suivi y
+compte pour une seule ; ce premier chiffre a circulé comme un nombre de fichiers
+(« 35 ajoutés ») et a été recompté sur le commit le jour même. Le plugin porte
 son propre installeur de mises à jour et s'aligne sur la version du serveur
 `godot-ai` lancé par Claude Code (`uvx godot-ai==4.0.4`). **Et rien ne l'a
 commité** : pendant quatre jours, `git status` de l'arbre principal a montré
-134 fichiers sales que chaque session a pris pour l'affaire d'une autre.
+134 lignes sales que chaque session a prises pour l'affaire d'une autre.
 
 ⚠️ **Le coût ne se voyait pas, et c'est le même angle mort que les deux pièges
 juste en dessous.** Les worktrees, où tournent les lots, recevaient la 3.0.7
