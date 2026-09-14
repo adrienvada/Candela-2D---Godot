@@ -4378,3 +4378,8 @@ Décisions actées » et au jalon ; l'organisation de la suite est demandée à 
 message. La relecture de la phrase du jalon contre la règle du faisceau reste sans réponse
 explicite. Commit de documentation seule, couvert par le lot vert de 22 h 44 sur un code identique :
 aucune suite ne lit la ROADMAP ni ce journal.
+
+**Quatrième addendum — le dernier point du jalon.** La phrase du jalon, relue contre la règle du
+faisceau : Adrien, « il ne voit pas mon halo, oui c'est bon ». Le halo reste propre à la vue de son
+porteur, le faisceau visible des deux vues ; aucun changement de règle. Le jalon H-ISO2 est répondu
+en entier, hors la taille de lightmap, laissée ouverte jusqu'au relevé de fin de chantier.

@@ -21757,7 +21757,9 @@ faisceau d'une torche éclaire le sol des deux vues**, en vue de dessus depuis t
 voulu (« voir le faisceau adverse est la moitié qui trahit », consigné le 2026-09-09). ISO2
 conserve les canaux du jeu tels quels ; ce qui est propre à chaque vue, c'est le halo et
 l'éclairage des silhouettes. Si Adrien voulait dire autre chose, c'est un changement de règle, pas
-un réglage de l'iso.
+un réglage de l'iso. ✅ **Relu le 2026-09-14 au soir**, Adrien : « il ne voit pas mon halo, oui
+c'est bon ». La règle reste celle du jeu : le halo propre à la vue de son porteur, le faisceau
+visible des deux vues. Aucun changement de règle.
 
 **Ce qu'ISO2 ne fait pas** : les corps voxel (ISO3, session « ISO Corps ») ; les objets debout
 (ISO4) ; la killcam en iso au-delà du relogement par vue et la reprojection des entrées (ISO5 —
@@ -21897,9 +21899,9 @@ première correction avait été annoncée comme suffisante, elle ne l'était pa
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" -- --iso`
    puis 1V1 LOCAL. Regarder : son halo n'est que dans sa moitié ; l'autre joueur s'allume sous son
    halo quand il est collé ; F3 (avec `fn`) montre les deux vues.
-2. **Relire la phrase du jalon** contre la règle du faisceau (ci-dessus). ⏳ Pas de réponse
-   explicite le 2026-09-14 : le faisceau éclaire toujours le sol des deux moitiés, et Adrien n'en a
-   rien signalé en rejouant, ce qui n'est pas une relecture.
+2. ✅ **La phrase du jalon, relue** contre la règle du faisceau (ci-dessus) — « il ne voit pas mon
+   halo, oui c'est bon » : halo propre à chaque vue, faisceau visible des deux, aucun changement
+   de règle.
 3. ✅ **ISO3 s'intègre, ISO4 et ISO5 s'ouvrent** — « oui. Demande à la session Fable 5.1 » : ordre et
    répartition demandés à la session pilote (voir « Décisions actées »).
 4. La taille de lightmap reste ouverte jusqu'au relevé de fin de chantier.
@@ -22068,6 +22070,10 @@ et un seul est du travail de session.
 > aller-retours prouvés, noir absolu tenu pour les deux vues. Ce qui attend Adrien : le **jalon
 > H-ISO2** — un duel complet à deux manettes en écran scindé iso — et une phrase du jalon à relire
 > contre la règle du faisceau, qui éclaire le sol des deux vues.
+> **Jalon H-ISO2 répondu le soir même** : duel rejoué après les corrections des retours (capteurs,
+> modelé des corps), phrase du jalon relue sans changement de règle, décisions inscrites dans
+> « Décisions actées ». La suite — effacement des corps iso, silhouette de son propre corps, ISO3,
+> ISO4, ISO5 — est demandée à la session pilote « Fable 5.1 - CLOUD ISO UNRAILED ».
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,
