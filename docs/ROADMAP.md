@@ -21220,6 +21220,114 @@ ici. À reprendre au contact de la section ISO2b de la ROADMAP le jour venu.
   mesurer — un passage au banc reste nécessaire pour toute pose neuve, aussi
   bien couverte la suite paraisse-t-elle sur le papier.
 
+### Vague 2 — le corps lit son capteur et porte la pâte (inscrite le 2026-09-15 01h00)
+
+Brief transmis par Adrien depuis la session cloud Fable 5.1. Étape 0 explicite
+du brief : `git merge iso1-fondations` dans `iso-corps` (fait, `9aa9cc8`, sans
+perte — vérifié par `grep` des fonctions ajoutées après coup, comme la
+consigne du dépôt le demande après toute fusion). Base : la tête de cette
+branche à `6a50b12`.
+
+**Fait** : `corps_iso.gdshader` reprend, nom pour nom, l'interface d'uniforms
+qu'ISO2 a déjà écrite et vérifiée dans son propre corps
+(`corps_grossier_iso.gdshader`, commit `02f6c28` sur `iso2-vues`) —
+`capteur_1`/`capteur_2` (les textures 256² de `CapteurCorps`, lues **par
+fragment**, jamais au centre seul, pour le modelé « côté lampe clair, dos
+sombre »), `centre`/`monde_capteur_px`/`rayon_lu_px` pour borner la lecture au
+disque, `opacite_1/2` et `silhouette_1/2` par vue pour l'effacement et la
+silhouette de soi, composés par le même alpha combiné qu'ISO2
+(`a = 1-(1-o)(1-s)`). Repli sur `lumiere_recue` (scalaire, vague 0/1) quand
+`capteur_actif` est faux — ce banc, en l'absence d'ISO3a. La pâte
+(`iso_pate.gdshaderinc`) est plafonnée canal par canal
+(`min(pate(...), couleur_fiche.rgb)`) : sans ce plafond elle pousse un gris
+éclairé au blanc, bug déjà payé par ISO2 avant même que ce shader existe.
+`voxel_corps.gd` construit désormais DEUX matériaux par corps — la couleur
+(priorité 0) et une passe de profondeur seule (`corps_iso_profondeur.gdshader`,
+priorité -1, `ALPHA 0`) : sans elle, deux des neuf boîtes qui se recouvrent
+s'assombriraient deux fois au lieu d'une là où l'effacement les rend
+semi-transparentes. Chaque boîte visible porte son double EN ENFANT (pas en
+frère), pour hériter automatiquement la compression d'une jambe accroupie —
+un double posé à côté se serait figé à la silhouette debout. Nouveaux
+réglages exposés : `definir_capteur()`/`effacer_capteur()`,
+`definir_pixels_par_unite()`, `definir_opacite()`, `definir_silhouette()`,
+`definir_style()`. `tools/banc_corps.gd` gagne `--capteur` (dégradé
+synthétique 256², une lampe latérale), `--opacite=X`, `--silhouette`, et les
+touches C/V/[/]. `tools/test_voxel_corps.gd` vérifie la pâte plafonnée sur
+cinq styles × huit lumières × dix classes contre le miroir processeur
+`iso_pate.gd`, l'effacement sur les deux passes et les deux vues, la
+silhouette de soi, et que chaque boîte porte bien son double en enfant.
+Planche complète sous `docs/iso/captures_corps/` : dix classes sous capteur à
+lampe latérale 0,8/0,2/0 (le 0 mesuré au pixel par PIL, extrema `(0,0,0)`,
+comme la vague 0) ; une ligne effacement à o=1/0,5/0 (vérifiée au pixel :
+l'opacité réduit bien le corps de moitié à 0,5, PIL contre les trois
+captures) ; une ligne silhouette de soi dans le noir absolu (lumière 0, dix
+silhouettes lisibles sur fond parfaitement noir).
+
+**Le contrat avec ISO3a** (qui intégrera les corps au jeu) : `monde.xz`
+peut être en tuiles (le repère de `voxel_corps.gd`, banc compris) OU déjà en
+pixels si ISO3a accroche le corps sous un `Node3D` mis à l'échelle de
+`TILE_SIZE.x` — jamais deviné dans le shader, toujours réglé par l'appelant
+via `pixels_par_unite` (défaut 1.0, l'identité). `opacite_N`/`silhouette_N`
+suivent la même logique de composition que `lumiere_recue` : ISO3a les
+nourrit depuis ce que le sprite 2D remplacé aurait montré, jamais deviné ici.
+
+#### Pièges rencontrés ici
+
+- **Le fichier partagé `iso_lightmap.gdshaderinc` n'avait pas la fonction que
+  le contrat d'ISO2 exigeait.** `corps_iso.gdshader` appelle
+  `lightmap_de_j2(CAMERA_VISIBLE_LAYERS)` en la croyant déjà présente — elle
+  ne l'est que sur `iso2-vues`, où ISO2 a réécrit ce fichier en profondeur
+  (deux lightmaps par joueur, `lumiere_1`/`lumiere_2`) pour son propre usage ;
+  `iso-corps` n'a fusionné que `iso1-fondations`, jamais `iso2-vues` (pas
+  demandé par le brief), donc sa copie de ce fichier est restée à l'ancienne
+  interface à une seule lightmap qu'utilisent encore `mur_iso.gdshader` et
+  `sol_projete.gdshader` — hors périmètre ISO3, jamais touchés. Erreur de
+  compilation shader silencieuse pour le reste de la suite (`SHADER ERROR`
+  n'échoue aucun `_check`, seule la ligne `RenduCommun`/`run_suites.sh`
+  qui grep `SCRIPT ERROR`/`push_error` l'aurait vue passer — trouvée en
+  lisant la sortie complète, pas le `tail` qui masquait tout sous les fuites
+  de RID que cette même erreur provoquait en cascade). Corrigé en AJOUTANT
+  `LIGHTMAP_CALQUE_VUE_2` et `lightmap_de_j2()` À CÔTÉ de l'interface
+  existante, sans rien renommer ni retirer — la fusion complète d'ISO2 dans
+  ce fichier reste un travail à part, pour le jour où `iso2-vues` rejoindra
+  `iso-corps` ou `main`.
+- **`render_priority` est une propriété du `Material`, pas du nœud qui le
+  porte.** Premier jet : `profondeur.render_priority = -1` sur le
+  `MeshInstance3D` du double de profondeur — erreur de script silencieuse
+  (`in inst` confirme même que la propriété n'existe pas sur ce type de nœud
+  dans ce Godot 4.7.1), qui laissait `_boite()` construire des doubles sans
+  jamais régler leur priorité, et faisait planter net tout le reste de
+  `_construire_squelette()` derrière — d'où des mesures (`sommet_tete()`,
+  `rotation.x` de la pose de mort) qui rentraient à 0 sur des corps
+  partiellement construits, alors que la suite ne rougissait QUE sur ces
+  symptômes indirects, jamais sur la vraie cause. Le code d'ISO2
+  (`presentation_3d.gd:959`) pose la même propriété correctement, sur le
+  `ShaderMaterial`, pas le nœud — repris ici, une seule fois à la
+  construction du matériau, partagé par les neuf doubles via
+  `material_override`.
+- **Le style par défaut d'un corps neuf, GRAVURE, ne se lit pas à l'échelle
+  d'un corps.** La période de hachure de GRAVURE (6 unités-monde) est pensée
+  pour un mur ou un sol continus sur plusieurs tuiles ; un corps tient sur une
+  fraction de tuile, plus petit que la période elle-même — il tombe presque
+  entièrement DANS ou HORS d'un trait selon sa seule position sur la grille,
+  sans rapport avec la lumière reçue. Vu au banc (`--capteur`), jamais dans la
+  suite headless qui ne mesure que des invariants numériques (monotonie,
+  plafond), tous vrais y compris dans ce cas — encore la même leçon que la
+  vague 1 : une suite verte prouve ce qu'elle a mesuré. Corrigé en prenant
+  LAVIS comme style par défaut d'un corps (`STYLE_PAR_DEFAUT` dans
+  `voxel_corps.gd`) — le style qu'Adrien a jugé « parfait » sur le corps
+  grossier d'ISO2 au jalon H-ISO2 (`PATE_PAR_DEFAUT` dans
+  `presentation_3d.gd`), pas réinventé. `definir_style()` reste le point
+  d'entrée pour qui veut trancher autrement au jalon H-ISO1 (planche).
+- **Ces trois bogues partageaient un symptôme, jamais la même cause : une
+  suite verte ne veut RIEN dire quand une `SCRIPT ERROR`/`SHADER ERROR` tourne
+  en silence à côté d'elle.** `tools/run_suites.sh` grep déjà ces signatures
+  précisément pour ça (voir son en-tête) — les trois bogues ci-dessus sont
+  sortis d'un `tail -100` qui masquait la vraie erreur sous les fuites de RID
+  qu'elle provoquait en cascade, jamais d'un `_check` rouge. Lire la sortie
+  complète (ou `grep -iE "SCRIPT ERROR|SHADER ERROR"`) avant de conclure
+  qu'une suite verte + code 0 veut dire « tout va bien ».
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est

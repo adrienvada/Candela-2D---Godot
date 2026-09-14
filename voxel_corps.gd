@@ -75,6 +75,22 @@ extends Node3D
 
 const VoxelCatalogueT := preload("res://voxel_catalogue.gd")
 const ShaderCorpsIso := preload("res://corps_iso.gdshader")
+const ShaderCorpsIsoProfondeur := preload("res://corps_iso_profondeur.gdshader")
+const IsoPateT := preload("res://iso_pate.gd")
+
+## Le style par défaut d'un corps neuf — LAVIS, pas GRAVURE (0). Choix trouvé
+## au banc (`--capteur`), pas deviné : GRAVURE hachure sur une période de 6
+## unités-monde, la même que pour un mur ou un sol continus sur plusieurs
+## tuiles ; un corps tient sur une fraction de tuile, plus petit que la
+## période elle-même, si bien qu'il tombe presque entièrement DANS ou HORS
+## d'un trait selon sa seule position sur la grille — un corps clair et son
+## voisin identique à une tuile de distance peuvent apparaître l'un plein,
+## l'autre quasi noir, sans rapport avec la lumière reçue. LAVIS est le style
+## qu'Adrien a jugé « parfait » sur le corps grossier d'ISO2 au jalon H-ISO2
+## (`PATE_PAR_DEFAUT` dans `presentation_3d.gd`) — repris ici pour la même
+## raison, pas réinventé. `definir_style()` reste le point d'entrée pour qui
+## veut trancher autrement (jalon H-ISO1, planche).
+const STYLE_PAR_DEFAUT := IsoPateT.LAVIS
 
 # --- Respiration (repos) ----------------------------------------------------
 const FREQ_RESPIRATION := 0.55       # cycles/s
@@ -130,7 +146,9 @@ const SEUIL_ARME_BAISSEE := 0.1           # l'arme est baissée dès ce niveau d
 
 var _fiche: Dictionary = {}
 var _materiau: ShaderMaterial
+var _materiau_profondeur: ShaderMaterial
 var _nombre_de_boites: int = 0
+var _boites_visibles: Array = []
 
 var _jambe_g: Node3D
 var _jambe_d: Node3D
@@ -169,7 +187,32 @@ func construire(slug: String) -> bool:
 	_materiau.shader = ShaderCorpsIso
 	_materiau.set_shader_parameter("couleur_fiche", f["couleur"])
 	_materiau.set_shader_parameter("lumiere_recue", 0.0)
-	_materiau.set_shader_parameter("style", 0.0)
+	_materiau.set_shader_parameter("style", STYLE_PAR_DEFAUT)
+	_materiau.set_shader_parameter("capteur_actif", false)
+	_materiau.set_shader_parameter("centre", Vector2.ZERO)
+	_materiau.set_shader_parameter("monde_capteur_px", 128.0)
+	_materiau.set_shader_parameter("rayon_lu_px", 15.0)
+	_materiau.set_shader_parameter("pixels_par_unite", 1.0)
+	_materiau.set_shader_parameter("opacite_1", 1.0)
+	_materiau.set_shader_parameter("opacite_2", 1.0)
+	_materiau.set_shader_parameter("silhouette_1", Color(0.0, 0.0, 0.0, 0.0))
+	_materiau.set_shader_parameter("silhouette_2", Color(0.0, 0.0, 0.0, 0.0))
+
+	# Le double en profondeur seule — voir « La passe de profondeur » dans
+	# l'en-tête de `corps_iso.gdshader`. Mêmes opacite_N/silhouette_N, tenus
+	# synchronisés par tous les setters ci-dessous : jamais réglé une fois et
+	# oublié, sans quoi les deux passes divergeraient en silence.
+	_materiau_profondeur = ShaderMaterial.new()
+	_materiau_profondeur.shader = ShaderCorpsIsoProfondeur
+	# `render_priority` est une propriété de `Material`, pas du `MeshInstance3D` qui le
+	# porte (erreur trouvée à cette étape : la poser sur le nœud lève une erreur de script,
+	# silencieuse pour le reste de la suite). Une fois ici suffit : `material_override`
+	# partage la même ressource sur les neuf boîtes de ce corps (voir `_boite`).
+	_materiau_profondeur.render_priority = -1
+	_materiau_profondeur.set_shader_parameter("opacite_1", 1.0)
+	_materiau_profondeur.set_shader_parameter("opacite_2", 1.0)
+	_materiau_profondeur.set_shader_parameter("silhouette_1", Color(0.0, 0.0, 0.0, 0.0))
+	_materiau_profondeur.set_shader_parameter("silhouette_2", Color(0.0, 0.0, 0.0, 0.0))
 
 	_construire_squelette()
 
@@ -187,6 +230,12 @@ func slug() -> String:
 	return String(_fiche.get("slug", ""))
 
 
+## Le gris plafonné de cette classe (`VoxelCatalogue.fiche()`) — exposé pour
+## qui veut composer une silhouette de soi à sa propre couleur, comme le banc.
+func couleur() -> Color:
+	return _fiche.get("couleur", Color.WHITE)
+
+
 func nombre_de_boites() -> int:
 	return _nombre_de_boites
 
@@ -197,9 +246,96 @@ func materiau() -> ShaderMaterial:
 	return _materiau
 
 
+## Le double en profondeur seule — voir « La passe de profondeur » dans
+## l'en-tête de `corps_iso.gdshader`. Exposé pour la suite, qui vérifie que ses
+## `opacite_N`/`silhouette_N` restent synchronisés avec `materiau()`.
+func materiau_profondeur() -> ShaderMaterial:
+	return _materiau_profondeur
+
+
+## Les neuf `MeshInstance3D` visibles (jamais leurs doubles en profondeur) —
+## exposé pour ISO3a si sa présentation a besoin d'en faire autre chose
+## (calques, masques de caméra) que ce que ce nœud gère déjà lui-même.
+func boites() -> Array:
+	return _boites_visibles.duplicate()
+
+
 func definir_lumiere(v: float) -> void:
 	if _materiau != null:
 		_materiau.set_shader_parameter("lumiere_recue", clampf(v, 0.0, 1.0))
+
+
+## Branche un capteur (ISO2, `CapteurCorps`) : mêmes noms et mêmes unités que
+## `corps_grossier_iso.gdshader` (commit `02f6c28`) — `centre` en PIXELS 2D,
+## posé à chaque image, `monde_capteur_px`/`rayon_lu_px` = `CapteurCorps.MONDE_PX`/
+## un rayon de lecture proche de `RAYON_PX`. `texture_2` peut rester nulle : ce
+## nœud, seul, n'a pas de second joueur à distinguer, et le shader retombe sur
+## `texture_1` des deux côtés (voir `pixels_par_unite` pour le pont
+## tuiles/pixels). `lumiere_recue` reste réglable pendant ce temps, mais le
+## shader l'ignore tant que le capteur est actif.
+func definir_capteur(texture_1: Texture2D, centre: Vector2, monde_capteur_px: float = 128.0,
+		rayon_lu_px: float = 15.0, texture_2: Texture2D = null) -> void:
+	if _materiau == null:
+		return
+	_materiau.set_shader_parameter("capteur_1", texture_1)
+	_materiau.set_shader_parameter("capteur_2", texture_2 if texture_2 != null else texture_1)
+	_materiau.set_shader_parameter("centre", centre)
+	_materiau.set_shader_parameter("monde_capteur_px", monde_capteur_px)
+	_materiau.set_shader_parameter("rayon_lu_px", rayon_lu_px)
+	_materiau.set_shader_parameter("capteur_actif", texture_1 != null)
+
+
+## Retombe sur `lumiere_recue` (le repli scalaire de vague 0/1).
+func effacer_capteur() -> void:
+	if _materiau != null:
+		_materiau.set_shader_parameter("capteur_actif", false)
+
+
+## Le pont entre le repère de CE nœud (tuiles) et celui du capteur (pixels 2D) —
+## voir `pixels_par_unite` dans `corps_iso.gdshader`. ISO3a, qui accrochera ce
+## corps sous un `Node3D` déjà à l'échelle des pixels, laissera la valeur par
+## défaut (1.0, l'identité) ; ce banc pose 35.0 (`CandelaTileSet.TILE_SIZE.x`).
+func definir_pixels_par_unite(v: float) -> void:
+	if _materiau != null:
+		_materiau.set_shader_parameter("pixels_par_unite", v)
+
+
+## 0..1 — voir « Effacement » dans l'en-tête du shader : une vraie
+## transparence, jamais un assombrissement. `vue` : 0 règle les deux vues (le
+## cas courant, un seul joueur regardé au banc), 1 ou 2 une seule — utile pour
+## la suite et pour qui veut driver les deux vues séparément avant qu'ISO3a
+## n'existe.
+func definir_opacite(o: float, vue: int = 0) -> void:
+	var v := clampf(o, 0.0, 1.0)
+	for mat in [_materiau, _materiau_profondeur]:
+		if mat == null:
+			continue
+		if vue != 2:
+			mat.set_shader_parameter("opacite_1", v)
+		if vue != 1:
+			mat.set_shader_parameter("opacite_2", v)
+
+
+## `couleur`/`alpha` — voir « Effacement et silhouette » dans l'en-tête du
+## shader : la même chose que `visual_dim` empilé sur le sprite en vue de
+## dessus, chez son propre joueur (alpha à 0 ailleurs). Même `vue` que
+## `definir_opacite`.
+func definir_silhouette(couleur: Color, alpha: float, vue: int = 0) -> void:
+	var c := Color(couleur.r, couleur.g, couleur.b, clampf(alpha, 0.0, 1.0))
+	for mat in [_materiau, _materiau_profondeur]:
+		if mat == null:
+			continue
+		if vue != 2:
+			mat.set_shader_parameter("silhouette_1", c)
+		if vue != 1:
+			mat.set_shader_parameter("silhouette_2", c)
+
+
+## Réservé jusqu'ici (ISO1 choisit la pâte sur planche) ; câblé pour de bon en
+## vague 2 — voir `iso_pate.gdshaderinc` pour les quatre valeurs et `-1` (brute).
+func definir_style(s: int) -> void:
+	if _materiau != null:
+		_materiau.set_shader_parameter("style", s)
 
 
 ## Le Y global du sommet de la tête — la mesure que le brief ISO3 vague 1
@@ -442,11 +578,26 @@ func _vider() -> void:
 		enfant.free()
 	_fiche = {}
 	_nombre_de_boites = 0
+	_boites_visibles.clear()
 	position = Vector3.ZERO
 	rotation = Vector3.ZERO
 
 
-func _boite(taille: Vector3, decalage: Vector3) -> MeshInstance3D:
+## Une boîte visible, et son double en profondeur seule — voir « La passe de
+## profondeur » dans l'en-tête de `corps_iso.gdshader` (ISO3 vague 2). Neuf
+## boîtes par corps se recouvrent ; sans ce double par boîte, deux surfaces
+## semi-transparentes superposées à l'écran s'assombriraient deux fois au lieu
+## d'une. Le double partage le MÊME maillage (rien à dupliquer que le
+## matériau) ; `render_priority = -1` le fait passer avant la couleur.
+##
+## ⚠️ **Le double est un ENFANT de la boîte visible, jamais un frère à
+## transform copiée.** L'accroupi (vague 1) change `scale`/`position` de
+## certaines boîtes à chaque pose (`_jambe_*_mesh`) — un double posé une fois
+## à côté aurait figé sa profondeur à la silhouette DEBOUT pendant que le
+## rendu montrait une jambe comprimée, désynchronisant la seule chose que
+## cette passe doit garantir. En transform locale identité sous son parent,
+## il hérite CHAQUE changement automatiquement, sans rien à resynchroniser.
+func _boite(parent: Node3D, taille: Vector3, decalage: Vector3) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
 	mesh.size = taille
 	var inst := MeshInstance3D.new()
@@ -454,7 +605,16 @@ func _boite(taille: Vector3, decalage: Vector3) -> MeshInstance3D:
 	inst.mesh = mesh
 	inst.material_override = _materiau
 	inst.position = decalage
+	parent.add_child(inst)
 	_nombre_de_boites += 1
+	_boites_visibles.append(inst)
+
+	var profondeur := MeshInstance3D.new()
+	profondeur.name = "BoiteProfondeur"
+	profondeur.mesh = mesh
+	profondeur.material_override = _materiau_profondeur
+	inst.add_child(profondeur)
+
 	return inst
 
 
@@ -487,18 +647,16 @@ func _construire_squelette() -> void:
 	_hanche_accroupi_y = h_jambe * FACTEUR_LONGUEUR_JAMBE_ACCROUPI * cos(ANGLE_JAMBE_ACCROUPI)
 
 	_jambe_g = _pivot(self, "JambeGauche", Vector3(-ecart_jambe, y_hanche, 0.0))
-	_jambe_g_mesh = _boite(Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0))
-	_jambe_g.add_child(_jambe_g_mesh)
+	_jambe_g_mesh = _boite(_jambe_g, Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0))
 	_jambe_d = _pivot(self, "JambeDroite", Vector3(ecart_jambe, y_hanche, 0.0))
-	_jambe_d_mesh = _boite(Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0))
-	_jambe_d.add_child(_jambe_d_mesh)
+	_jambe_d_mesh = _boite(_jambe_d, Vector3(l_jambe, h_jambe, p_jambe), Vector3(0.0, -h_jambe * 0.5, 0.0))
 
 	_torse = _pivot(self, "Torse", Vector3(0.0, y_hanche, 0.0))
 	_torse_y_base = y_hanche
 	var h_torse: float = s["hauteur_torse"]
 	var l_torse: float = s["largeur_torse"] * e
 	var p_torse: float = s["profondeur_torse"] * e
-	_torse.add_child(_boite(Vector3(l_torse, h_torse, p_torse), Vector3(0.0, h_torse * 0.5, 0.0)))
+	_boite(_torse, Vector3(l_torse, h_torse, p_torse), Vector3(0.0, h_torse * 0.5, 0.0))
 
 	# Tête — pivot propre pour qu'ISO4/ISO7 puissent l'orienter plus tard sans
 	# toucher au reste ; depuis ISO3 vague 1, la posture accroupie s'en sert
@@ -506,8 +664,7 @@ func _construire_squelette() -> void:
 	_tete_pivot = _pivot(_torse, "Tete", Vector3(0.0, s["y0_tete"] - y_hanche, 0.0))
 	var h_tete: float = s["hauteur_tete"]
 	var c_tete: float = s["cote_tete"] * e
-	_tete_mesh = _boite(Vector3(c_tete, h_tete, c_tete), Vector3(0.0, h_tete * 0.5, 0.0))
-	_tete_pivot.add_child(_tete_mesh)
+	_tete_mesh = _boite(_tete_pivot, Vector3(c_tete, h_tete, c_tete), Vector3(0.0, h_tete * 0.5, 0.0))
 
 	var y_epaule: float = s["y_epaule"] - y_hanche
 	var l_bras: float = s["largeur_bras"] * e
@@ -515,9 +672,9 @@ func _construire_squelette() -> void:
 	var x_epaule: float = l_torse * 0.5 + l_bras * 0.5
 
 	_bras_g = _pivot(_torse, "BrasGauche", Vector3(-x_epaule, y_epaule, 0.0))
-	_bras_g.add_child(_boite(Vector3(l_bras, longueur_bras, l_bras), Vector3(0.0, -longueur_bras * 0.5, 0.0)))
+	_boite(_bras_g, Vector3(l_bras, longueur_bras, l_bras), Vector3(0.0, -longueur_bras * 0.5, 0.0))
 	_bras_d = _pivot(_torse, "BrasDroit", Vector3(x_epaule, y_epaule, 0.0))
-	_bras_d.add_child(_boite(Vector3(l_bras, longueur_bras, l_bras), Vector3(0.0, -longueur_bras * 0.5, 0.0)))
+	_boite(_bras_d, Vector3(l_bras, longueur_bras, l_bras), Vector3(0.0, -longueur_bras * 0.5, 0.0))
 
 	# Arme et torche : tenues à hauteur de main, en avant du torse — jamais
 	# portées par le bras qui se balance (voir « couches d'animation » plus
@@ -529,19 +686,17 @@ func _construire_squelette() -> void:
 	_arme_pos_base = Vector3(ecart_main, y_main, -avant_main)
 	_arme_pivot = _pivot(_torse, "Arme", _arme_pos_base)
 	var fa: Dictionary = s["arme"]
-	_arme_mesh = _boite(Vector3(fa["largeur"], fa["hauteur"], fa["longueur"]),
+	_arme_mesh = _boite(_arme_pivot, Vector3(fa["largeur"], fa["hauteur"], fa["longueur"]),
 		Vector3(0.0, 0.0, -fa["longueur"] * 0.5))
-	_arme_pivot.add_child(_arme_mesh)
 
 	_torche_pos_base = Vector3(-ecart_main, y_main, -avant_main)
 	_torche_pivot = _pivot(_torse, "Torche", _torche_pos_base)
 	var ft: Dictionary = s["torche"]
-	_torche_mesh = _boite(Vector3(ft["largeur"], ft["hauteur"], ft["longueur"]),
+	_torche_mesh = _boite(_torche_pivot, Vector3(ft["largeur"], ft["hauteur"], ft["longueur"]),
 		Vector3(0.0, 0.0, -ft["longueur"] * 0.5))
-	_torche_pivot.add_child(_torche_mesh)
 
 	_gadget_pos_base = Vector3(0.0, s["y_gadget"] - y_hanche, s["arriere_gadget"])
 	_gadget_pivot = _pivot(_torse, "Gadget", _gadget_pos_base)
 	var fg: Dictionary = s["gadget"]
-	_gadget_pivot.add_child(_boite(Vector3(fg["largeur"], fg["hauteur"], fg["longueur"]),
-		Vector3(0.0, 0.0, fg["longueur"] * 0.5)))
+	_boite(_gadget_pivot, Vector3(fg["largeur"], fg["hauteur"], fg["longueur"]),
+		Vector3(0.0, 0.0, fg["longueur"] * 0.5))

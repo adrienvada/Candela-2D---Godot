@@ -1,6 +1,7 @@
 ## Test headless des corps voxel (`voxel_corps.gd` + `voxel_catalogue.gd`) —
 ## chantier ISO, étape ISO3 (vague 0 : les dix corps ; vague 1 : accroupi et
-## enjambement).
+## enjambement ; vague 2 : capteur par fragment, pâte plafonnée, effacement,
+## silhouette de soi).
 ##
 ## Ce que la suite garantit :
 ##   • les dix classes du CATALOGUE se construisent, neuf boîtes chacune ;
@@ -16,10 +17,18 @@
 ##     `etat.enjambe` — jamais de retour en arrière pendant le geste ;
 ##   • le matériau rend un noir strict à `lumiere_recue = 0` (couleur non nulle,
 ##     mais le facteur qui la multiplie l'est), accroupi et enjambement compris ;
+##   • la pâte ne dépasse jamais la couleur de la fiche, canal par canal, sur un
+##     balayage de lumières et de styles (mirroir processeur `iso_pate.gd`) ;
+##   • `definir_opacite`/`definir_silhouette` posent bien `opacite_1/2` et
+##     `silhouette_1/2`, sur `materiau()` ET `materiau_profondeur()` à la fois ;
+##   • chaque boîte visible porte un double en profondeur seule, en enfant (pas
+##     en frère) — condition du suivi automatique de l'accroupi ;
 ##   • ni `voxel_corps.gd` ni `voxel_catalogue.gd` n'appellent `randi`/`randf`.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_voxel_corps.gd
 extends SceneTree
+
+const IsoPate := preload("res://iso_pate.gd")
 
 const PLANCHER := 40
 const EPSILON := 0.0005
@@ -115,6 +124,10 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 	_test_noir_absolu(corps)
 	_test_accroupi(corps, hauteur_debout)
 	_test_enjambement(corps)
+	_test_pate_plafonnee(corps)
+	_test_effacement(corps)
+	_test_silhouette_de_soi(corps)
+	_test_boites_profondeur(corps)
 
 	root.remove_child(corps)
 	corps.free()
@@ -371,6 +384,161 @@ func _test_enjambement(corps: Node3D) -> void:
 	var mat: ShaderMaterial = corps.materiau()
 	_check("noir strict à lumiere_recue = 0, en pleine enjambée",
 		mat.get_shader_parameter("lumiere_recue") == 0.0)
+
+
+# ---------------------------------------------------------------------------
+# LA PÂTE, PLAFONNÉE (ISO3 vague 2)
+# ---------------------------------------------------------------------------
+
+## Mirroir processeur du chemin de repli du shader (`corps_iso.gdshader`,
+## branche `capteur_actif == false`) : `base = couleur_fiche * lumiere`,
+## `pate(base, …)`, plafonné à `base` PUIS à `couleur_fiche`. `iso_pate.gd` est
+## la même formule que `iso_pate.gdshaderinc` — pas identique au bit près
+## (flottants 64 contre 32 bits), mais les invariants qu'on vérifie ici ne
+## dépendent d'aucune valeur de motif.
+static func _formule_repli(couleur_fiche: Color, lumiere: float, style: int) -> Color:
+	var fiche_v := Vector3(couleur_fiche.r, couleur_fiche.g, couleur_fiche.b)
+	var base := fiche_v * lumiere
+	var l := IsoPate.luminance(base)
+	var c: Vector3
+	if l <= 0.0:
+		c = Vector3.ZERO
+	else:
+		c = IsoPate.pate(base, l, style, Vector2(1.3, 0.7), Vector2.ZERO, l, 0.05)
+	c = Vector3(minf(c.x, base.x), minf(c.y, base.y), minf(c.z, base.z))
+	c = Vector3(minf(c.x, fiche_v.x), minf(c.y, fiche_v.y), minf(c.z, fiche_v.z))
+	return Color(c.x, c.y, c.z)
+
+
+## « Plafond jamais dépassé... sur un balayage de lumières et de styles »
+## (brief ISO3 vague 2) : chaque canal de la sortie ≤ celui de la fiche, à
+## lumière nulle la sortie est nulle, et la luminance ne recule jamais quand
+## la lumière augmente (à style fixé).
+func _test_pate_plafonnee(corps: Node3D) -> void:
+	var fiche: Color = corps.couleur()
+	var styles := [IsoPate.BRUTE, IsoPate.GRAVURE, IsoPate.LIGNE_CLAIRE, IsoPate.TRAME, IsoPate.LAVIS]
+	var lumieres := [0.0, 0.05, 0.15, 0.3, 0.5, 0.7, 0.85, 1.0]
+
+	var jamais_depasse := true
+	var toujours_nul_a_zero := true
+	for style in styles:
+		var precedente := -INF
+		var monotone := true
+		for lumiere in lumieres:
+			var c: Color = _formule_repli(fiche, lumiere, style)
+			if c.r > fiche.r + EPSILON or c.g > fiche.g + EPSILON or c.b > fiche.b + EPSILON:
+				jamais_depasse = false
+			if lumiere == 0.0 and (c.r != 0.0 or c.g != 0.0 or c.b != 0.0):
+				toujours_nul_a_zero = false
+			var l := IsoPate.luminance(Vector3(c.r, c.g, c.b))
+			if l < precedente - EPSILON:
+				monotone = false
+			precedente = l
+		_check("pâte monotone en la lumière (style %d)" % style, monotone)
+	_check("plafond jamais dépassé (dix classes, cinq pâtes, huit lumières)", jamais_depasse)
+	_check("nul à lumière 0, quel que soit le style", toujours_nul_a_zero)
+
+
+# ---------------------------------------------------------------------------
+# EFFACEMENT (ISO3 vague 2)
+# ---------------------------------------------------------------------------
+
+## `opacite_1`/`opacite_2`, sur `materiau()` ET `materiau_profondeur()` : les
+## deux passes doivent rester d'accord, sans quoi une opacité réglée après
+## coup romprait la passe de profondeur sans que rien ne le signale (voir le
+## piège consigné dans la ROADMAP).
+func _test_effacement(corps: Node3D) -> void:
+	corps.definir_opacite(0.7)
+	var mat: ShaderMaterial = corps.materiau()
+	var mat_p: ShaderMaterial = corps.materiau_profondeur()
+	_check("definir_opacite(0.7) pose opacite_1 sur les deux passes",
+		mat.get_shader_parameter("opacite_1") == 0.7 and mat_p.get_shader_parameter("opacite_1") == 0.7)
+	_check("definir_opacite(0.7) pose opacite_2 sur les deux passes",
+		mat.get_shader_parameter("opacite_2") == 0.7 and mat_p.get_shader_parameter("opacite_2") == 0.7)
+
+	corps.definir_opacite(0.2, 1)
+	_check("definir_opacite(vue=1) ne touche pas opacite_2",
+		mat.get_shader_parameter("opacite_1") == 0.2 and mat.get_shader_parameter("opacite_2") == 0.7)
+
+	corps.definir_opacite(0.0)
+	_check("definir_opacite(0.0) — fondu exact, les deux vues",
+		mat.get_shader_parameter("opacite_1") == 0.0 and mat.get_shader_parameter("opacite_2") == 0.0)
+
+	corps.definir_opacite(1.0)
+
+
+# ---------------------------------------------------------------------------
+# SILHOUETTE DE SOI (ISO3 vague 2)
+# ---------------------------------------------------------------------------
+
+func _test_silhouette_de_soi(corps: Node3D) -> void:
+	var demi: Color = corps.couleur() * 0.5
+	corps.definir_silhouette(demi, 1.0)
+	var mat: ShaderMaterial = corps.materiau()
+	var mat_p: ShaderMaterial = corps.materiau_profondeur()
+	var s1: Color = mat.get_shader_parameter("silhouette_1")
+	var s1_p: Color = mat_p.get_shader_parameter("silhouette_1")
+	_check("silhouette de soi : couleur à 50 % sur les deux passes",
+		s1.is_equal_approx(Color(demi.r, demi.g, demi.b, 1.0))
+			and s1_p.is_equal_approx(Color(demi.r, demi.g, demi.b, 1.0)))
+
+	corps.definir_silhouette(Color(0.0, 0.0, 0.0, 0.0), 0.0)
+	var s1_eteinte: Color = mat.get_shader_parameter("silhouette_1")
+	_check("silhouette éteinte : alpha à 0 (transparente chez l'adversaire)",
+		s1_eteinte.a == 0.0)
+
+
+# ---------------------------------------------------------------------------
+# LA PASSE DE PROFONDEUR (ISO3 vague 2)
+# ---------------------------------------------------------------------------
+
+## Chaque boîte visible porte un double EN ENFANT (pas en frère) — voir le
+## commentaire de `_boite()` : c'est ce qui lui fait suivre automatiquement
+## `scale`/`position` quand l'accroupi comprime une jambe. Un double posé à
+## côté, en transform copiée une fois, se figerait à la posture debout.
+func _test_boites_profondeur(corps: Node3D) -> void:
+	var boites: Array = corps.boites()
+	_check("boites() rend les neuf boîtes visibles (%d)" % boites.size(), boites.size() == 9,
+		"%d" % boites.size())
+
+	var mat_p: ShaderMaterial = corps.materiau_profondeur()
+	var toutes_ont_leur_double := true
+	var meme_maillage := true
+	for b in boites:
+		var boite: MeshInstance3D = b
+		var double: Node = boite.get_node_or_null("BoiteProfondeur")
+		if double == null or not (double is MeshInstance3D):
+			toutes_ont_leur_double = false
+			continue
+		var mi: MeshInstance3D = double
+		if mi.mesh != boite.mesh:
+			meme_maillage = false
+		if mi.material_override != mat_p:
+			toutes_ont_leur_double = false
+	_check("chaque boîte a son double en profondeur, en enfant", toutes_ont_leur_double)
+	_check("le double partage le même maillage que la boîte visible", meme_maillage)
+	# `render_priority` est une propriété du `Material`, pas du `MeshInstance3D` qui le
+	# porte (voir le commentaire de `construire()`) — un seul réglage sur `mat_p`, partagé
+	# par les neuf doubles via `material_override`, vaut pour tous.
+	_check("le double est à la priorité de rendu -1", mat_p.render_priority == -1)
+
+	# La compression d'une jambe accroupie (vague 1) doit se voir sur son
+	# double : sinon la passe de profondeur suivrait une silhouette debout
+	# pendant que le rendu montre une jambe comprimée (piège réel, ROADMAP).
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": true, "enjambe": 0.0, "t": 1.0,
+	})
+	var jambe_d: Node3D = corps.get_node("JambeDroite/Boite")
+	var double_jambe: Node3D = jambe_d.get_node("BoiteProfondeur")
+	_check("le double suit la compression de la jambe accroupie",
+		double_jambe.global_transform.origin.is_equal_approx(jambe_d.global_transform.origin))
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
+	})
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,21 @@ uniform vec2 taille_2d = vec2(1920.0, 1080.0);
 // Pas de la pente lue par la pâte, en pixels de monde.
 const float LIGHTMAP_PAS_PX = 3.0;
 
+// La couche 3D que seule la caméra de J2 voit (`Presentation3D.CALQUE_VUE_2`) — nom et
+// valeur repris tels quels d'ISO2 (`iso2-vues`, `iso_lightmap.gdshaderinc`). Ce fichier,
+// ici, garde encore l'interface à une seule lightmap qu'utilisent `mur_iso.gdshader` et
+// `sol_projete.gdshader` (hors périmètre ISO3 : ne pas y toucher) ; `lightmap_de_j2()`
+// est ajoutée À CÔTÉ, sans rien renommer ni retirer, pour que `corps_iso.gdshader` (ISO3
+// vague 2) puisse choisir sa vue exactement comme le corps grossier d'ISO2 le fait déjà —
+// sans capteur par joueur ici, seulement le sélecteur de vue. La fusion de la lightmap
+// double par joueur (ISO2) dans ce fichier reste un travail à part, hors ISO3.
+const uint LIGHTMAP_CALQUE_VUE_2 = uint(4);
+
+// La caméra qui dessine est-elle celle de J2 ? À appeler avec `CAMERA_VISIBLE_LAYERS`.
+bool lightmap_de_j2(uint calques_camera) {
+	return (calques_camera & LIGHTMAP_CALQUE_VUE_2) != uint(0);
+}
+
 vec3 lire_lightmap(vec2 px) {
 	vec2 uv = (canevas_x * px.x + canevas_y * px.y + canevas_o) / taille_2d;
 	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {

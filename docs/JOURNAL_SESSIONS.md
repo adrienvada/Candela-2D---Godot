@@ -4254,6 +4254,57 @@ pourquoi certains deltas sont arrivés tard ou groupés.
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 2, branche `iso-corps`) — ajoutée le 2026-09-15 01:00 (Paris)
+
+Troisième tranche : « le corps lit son capteur et porte la pâte ». Brief
+transmis par Adrien depuis la session cloud Fable 5.1. Étape 0 : `git merge
+iso1-fondations` (fait, `9aa9cc8`, aucune perte détectée au `grep` d'après-
+fusion). Toujours aucun fichier du jeu modifié.
+
+**Fichiers touchés, tous à elle :** `corps_iso.gdshader` (réécrit pour
+reprendre nom pour nom l'interface d'uniforms d'ISO2 — capteur par vue,
+effacement, silhouette de soi) ; `corps_iso_profondeur.gdshader` (nouveau, la
+passe de profondeur seule) ; `voxel_corps.gd` (deux matériaux par corps, le
+double de profondeur en enfant de chaque boîte, `definir_capteur`/
+`definir_opacite`/`definir_silhouette`/`definir_style`) ; `tools/banc_corps.gd`
+(`--capteur`, `--opacite`, `--silhouette`, touches C/V/[/]) ;
+`tools/test_voxel_corps.gd` (pâte plafonnée contre le miroir processeur,
+effacement sur les deux passes/vues, silhouette de soi, double de profondeur
+en enfant) ; `iso_lightmap.gdshaderinc` (ajout additif de `lightmap_de_j2()`,
+détail ci-dessous) ; `docs/iso/captures_corps/` (sept captures : capteur à
+0,8/0,2/0, effacement à o=1/0,5/0, silhouette de soi dans le noir) ;
+`docs/ROADMAP.md` (section « Vague 2 », quatre pièges) ; ce journal.
+
+**Trois bogues réels trouvés au banc et à la lecture complète de la sortie
+de test, aucun par un `_check` rouge** (détail et diagnostic dans la ROADMAP,
+section « Vague 2 ») : (1) `iso_lightmap.gdshaderinc` n'avait pas encore la
+fonction `lightmap_de_j2()` qu'ISO2 a écrite sur sa propre branche
+(`iso2-vues`, jamais fusionnée ici) — ajoutée à côté de l'interface existante,
+sans rien casser pour `mur_iso.gdshader`/`sol_projete.gdshader`. (2)
+`render_priority` posée par erreur sur le `MeshInstance3D` du double de
+profondeur au lieu du `Material` qui le porte — une erreur de script
+silencieuse qui faisait avorter la construction du squelette en cascade, avec
+des symptômes indirects (mesures à 0) très loin de la vraie cause. (3) Le
+style par défaut d'un corps neuf (GRAVURE) ne se lit pas à l'échelle d'un
+corps, plus petit que sa période de hachure — basculé sur LAVIS, le style
+qu'Adrien a jugé « parfait » sur le corps grossier d'ISO2 à H-ISO2.
+
+**Coordination avec ISO2, en direct pendant la rédaction :** ISO2 a demandé
+un point d'étape (`ListAgents`/message entrant, 00:57) — répondu avec une
+heure de commit et le détail des trois bogues. ISO2 a ensuite prévenu que sa
+version d'`iso_lightmap.gdshaderinc` (sur `iso2-vues`) est un sur-ensemble
+qui remplacera la mienne à la fusion, à condition que `corps_iso.gdshader` et
+`corps_iso_profondeur.gdshader` n'appellent que `lightmap_de_j2()` — vérifié
+par `grep`, confirmé à ISO2 : c'est le cas, aucune retouche à prévoir de ce
+côté quand `iso2-vues` rejoindra cette branche.
+
+**Sabotage vérifié réellement** (`definir_opacite` privée de son écriture sur
+le matériau de profondeur, 20 échecs sur les dix classes avec code 1, puis
+revert et lot vert) — demandé explicitement par le brief.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape

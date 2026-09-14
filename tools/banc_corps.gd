@@ -27,6 +27,9 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn -- --classe=spectre --lumiere=0.8 --capture=/chemin/spectre.png
 ##   godot --path . tools/banc_corps.tscn -- --pose=accroupi --lumiere=0.8 --capture=/chemin/accroupi.png
 ##   godot --path . tools/banc_corps.tscn -- --pose=enjambe --lumiere=0.8 --capture=/chemin/enjambe.png
+##   godot --path . tools/banc_corps.tscn -- --capteur --lumiere=0.8 --capture=/chemin/modele.png
+##   godot --path . tools/banc_corps.tscn -- --opacite=0.5 --capture=/chemin/efface.png
+##   godot --path . tools/banc_corps.tscn -- --silhouette --lumiere=0 --capture=/chemin/silhouette.png
 ##
 ## Sans `--capture`, la fenêtre reste ouverte et interactive. Comme
 ## `tools/proto_iso.gd`, la capture exige une vraie fenêtre (`RenduCommun`) et
@@ -35,10 +38,11 @@ extends Node3D
 ## ## Le rapport
 ##
 ## Toujours : le nombre de boîtes par corps (neuf attendues, voir
-## `tools/test_voxel_corps.gd`). À `--lumiere=0` ET `--capture`, en plus : la
-## valeur maximale des pixels de l'image rendue — elle doit être exactement 0,
-## et c'est un examen réel du rendu, pas une lecture d'uniform (voir la suite
-## headless, qui elle ne peut que lire les nombres).
+## `tools/test_voxel_corps.gd`). Chaque fois que le rendu doit être noir
+## (lumière nulle, capteur synthétique éteint, silhouette hors mode soi) ET
+## `--capture` : la valeur maximale des pixels de l'image rendue — elle doit
+## être exactement 0, et c'est un examen réel du rendu, pas une lecture
+## d'uniform (voir la suite headless, qui elle ne peut que lire les nombres).
 
 const VoxelCorpsT := preload("res://voxel_corps.gd")
 const VoxelCatalogueT := preload("res://voxel_catalogue.gd")
@@ -51,6 +55,13 @@ const VITESSE_MARCHE_ACCROUPI_PX := 55.0  # px/s — ordre de grandeur du ×0,25
 const DUREE_TIR := 0.12
 const DUREE_TOUCHE := 0.5
 const DUREE_ENJAMBE_BANC := 0.5      # « ton banc le simule sur une demi-seconde » (brief ISO3 vague 1)
+const TAILLE_CAPTEUR := 256
+# Le monde que le dégradé synthétique couvre, en pixels 2D, et jusqu'où on y
+# lit — mêmes grandeurs que `CapteurCorps.MONDE_PX`/`RAYON_PX` (ISO2), pas
+# recopiées : juste assez large pour qu'un corps (rayon 0,4 tuile ≈ 14 px)
+# tienne dedans avec de la marge.
+const MONDE_CAPTEUR_PX := 64.0
+const RAYON_LU_PX := 20.0
 
 var _capture := ""
 var _classe_filtre := ""
@@ -58,8 +69,11 @@ var _pose_forcee := ""               # "" | "accroupi" | "enjambe" — --pose, p
 var _lumiere := 0.6
 var _taille := Vector2i(1920, 1080)
 var _frames := 3
+var _capteur_force := false          # --capteur : capteur synthétique dès le départ
+var _opacite_force := -1.0           # --opacite=X : sinon 1.0
+var _silhouette_force := false       # --silhouette : mode_silhouette=1 dès le départ
 
-var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2 }]
+var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
 var _marche := false
 var _tir_t0 := -1.0
@@ -68,6 +82,10 @@ var _mort_t0 := -1.0
 var _accroupi := false
 var _accroupi_t0 := 0.0
 var _enjambe_t0 := -1.0
+var _capteur_actif := false
+var _opacite := 1.0
+var _mode_silhouette := 0
+var _capteur_tex: ImageTexture
 
 var _bandeau: Label
 var _releve: Label
@@ -107,6 +125,9 @@ func _lire_arguments(args: PackedStringArray) -> void:
 					_taille = Vector2i(int(parts[0]), int(parts[1]))
 				else:
 					push_warning("banc_corps : --taille attend LxH (reçu « %s »)" % val)
+			"capteur": _capteur_force = true
+			"opacite": _opacite_force = clampf(float(val), 0.0, 1.0)
+			"silhouette": _silhouette_force = true
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
@@ -149,6 +170,10 @@ func _construire_scene() -> void:
 		if not noeud.construire(slug):
 			continue
 		noeud.definir_lumiere(_lumiere)
+		# Ce banc garde ses corps en tuiles (comme `voxel_corps.gd` partout
+		# ailleurs) ; le capteur d'ISO2 raisonne en pixels 2D — voir
+		# `pixels_par_unite` dans `corps_iso.gdshader`.
+		noeud.definir_pixels_par_unite(tuile)
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,
@@ -159,6 +184,13 @@ func _construire_scene() -> void:
 	var profondeur: float = float(maxi(lignes - 1, 0)) * ESPACEMENT_TUILES + 2.0
 	_construire_camera(largeur, profondeur)
 	_construire_bandeau()
+
+	_capteur_actif = _capteur_force
+	if _opacite_force >= 0.0:
+		_opacite = _opacite_force
+	_mode_silhouette = 1 if _silhouette_force else 0
+	if _capteur_actif:
+		_regenerer_capteur()
 	_rafraichir_poses()
 
 
@@ -250,7 +282,8 @@ func _construire_bandeau() -> void:
 	_bandeau.add_theme_font_size_override("font_size", 13)
 	_bandeau.add_theme_color_override("font_color", Charte.DIM)
 	_bandeau.text = ("ESPACE marche   T tir   H touché   M mort   R reviens   "
-		+ "A accroupi   E enjamber   HAUT/BAS lumière ±0,05   ÉCHAP quitter")
+		+ "A accroupi   E enjamber   C capteur   V silhouette de soi   "
+		+ "[ / ] opacité ±0,1   HAUT/BAS lumière ±0,05   ÉCHAP quitter")
 	couche.add_child(_bandeau)
 
 	_releve = Label.new()
@@ -263,6 +296,21 @@ func _construire_bandeau() -> void:
 # ---------------------------------------------------------------------------
 # LE RAPPORT
 # ---------------------------------------------------------------------------
+
+## Un dégradé horizontal, 256² — un côté à `_lumiere`, l'autre à 0 : la lampe
+## latérale du brief ISO3 vague 2. Chaque corps le lit à SA place (voir l'en-
+## tête de `corps_iso.gdshader`), donc chacun, posé n'importe où sur la grille,
+## montre le même modelé « côté lampe clair, dos sombre » que les autres — un
+## seul dégradé suffit, il n'y a pas besoin d'un capteur par corps ici.
+func _regenerer_capteur() -> void:
+	var img := Image.create(TAILLE_CAPTEUR, TAILLE_CAPTEUR, false, Image.FORMAT_RGB8)
+	for y in TAILLE_CAPTEUR:
+		for x in TAILLE_CAPTEUR:
+			var t := float(x) / float(TAILLE_CAPTEUR - 1)
+			var v := _lumiere * (1.0 - t)
+			img.set_pixel(x, y, Color(v, v, v))
+	_capteur_tex = ImageTexture.create_from_image(img)
+
 
 func _imprimer_rapport_boites() -> void:
 	print("BANC_CORPS — boîtes par corps :")
@@ -341,6 +389,15 @@ func _rafraichir_poses() -> void:
 			"torche": true, "arme": c["slug"], "tir": tir, "touche": touche,
 			"mort": mort, "accroupi": accroupi_effectif, "enjambe": enjambe, "t": t,
 		})
+		if _capteur_actif and _capteur_tex != null:
+			noeud.definir_capteur(_capteur_tex, c["pos_px"], MONDE_CAPTEUR_PX, RAYON_LU_PX)
+		else:
+			noeud.effacer_capteur()
+		noeud.definir_opacite(_opacite)
+		if _mode_silhouette == 1:
+			noeud.definir_silhouette(noeud.couleur() * 0.5, 1.0)
+		else:
+			noeud.definir_silhouette(Color(0.0, 0.0, 0.0, 0.0), 0.0)
 
 	if _sol_mat != null:
 		_sol_mat.set_shader_parameter("lumiere_recue", _lumiere)
@@ -349,7 +406,7 @@ func _rafraichir_poses() -> void:
 func _rafraichir_releve() -> void:
 	if _releve == null:
 		return
-	_releve.text = ("lumière %.2f · %s%s%s%s%s%s · %d corps"
+	_releve.text = ("lumière %.2f · %s%s%s%s%s%s%s · opacité %.1f%s · %d corps"
 		% [_lumiere,
 			"marche" if _marche else "repos",
 			" · TIR" if _tir_t0 >= 0.0 else "",
@@ -357,6 +414,9 @@ func _rafraichir_releve() -> void:
 			" · MORT" if _mort_t0 >= 0.0 else "",
 			" · ACCROUPI" if _accroupi else "",
 			" · ENJAMBE" if _enjambe_t0 >= 0.0 else "",
+			" · CAPTEUR" if _capteur_actif else "",
+			_opacite,
+			" · SILHOUETTE DE SOI" if _mode_silhouette == 1 else "",
 			_corps.size()])
 
 
@@ -389,14 +449,28 @@ func _unhandled_input(evt: InputEvent) -> void:
 				_accroupi_t0 = _temps
 		KEY_E:
 			_enjambe_t0 = _temps
+		KEY_C:
+			_capteur_actif = not _capteur_actif
+			if _capteur_actif:
+				_regenerer_capteur()
+		KEY_V:
+			_mode_silhouette = 1 - _mode_silhouette
+		KEY_BRACKETLEFT:
+			_opacite = clampf(_opacite - 0.1, 0.0, 1.0)
+		KEY_BRACKETRIGHT:
+			_opacite = clampf(_opacite + 0.1, 0.0, 1.0)
 		KEY_UP:
 			_lumiere = clampf(_lumiere + 0.05, 0.0, 1.0)
 			for c in _corps:
 				(c["noeud"] as Node3D).definir_lumiere(_lumiere)
+			if _capteur_actif:
+				_regenerer_capteur()
 		KEY_DOWN:
 			_lumiere = clampf(_lumiere - 0.05, 0.0, 1.0)
 			for c in _corps:
 				(c["noeud"] as Node3D).definir_lumiere(_lumiere)
+			if _capteur_actif:
+				_regenerer_capteur()
 
 
 # ---------------------------------------------------------------------------
@@ -434,8 +508,14 @@ func _capturer_puis_quitter() -> void:
 		push_error("banc_corps : écriture impossible de %s (%s)" % [_capture, error_string(erreur)])
 		get_tree().quit(5)
 		return
-	print("BANC_CORPS capture %s %dx%d (lumière=%.2f)" % [_capture, image.get_width(), image.get_height(), _lumiere])
-	if _lumiere == 0.0:
+	print("BANC_CORPS capture %s %dx%d (lumière=%.2f, capteur=%s, opacité=%.2f, silhouette=%s)"
+		% [_capture, image.get_width(), image.get_height(), _lumiere,
+			str(_capteur_actif), _opacite, str(_mode_silhouette == 1)])
+	# Le noir strict n'est attendu qu'à lumière nulle ET silhouette de soi
+	# éteinte : en mode « soi », le corps reste volontairement visible dans
+	# le noir (50 % de sa couleur) — ce n'est pas une régression du noir
+	# absolu, c'est exactement ce que ce mode doit montrer.
+	if _lumiere == 0.0 and _mode_silhouette == 0:
 		var maxi := _valeur_max(image)
 		print("BANC_CORPS valeur maximale des pixels à lumière 0 : %.6f (doit être 0)" % maxi)
 	get_tree().quit(0)
