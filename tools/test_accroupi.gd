@@ -44,6 +44,7 @@ func _lancer() -> void:
 	_test_torche_bute(p1)
 	_test_balle(p1, p2)
 	await _test_enjambement(p1)
+	_test_fusee_en_vol()
 	if _echecs == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -401,3 +402,18 @@ func _test_enjambement(p: Player) -> void:
 	MursBas.murs_de_la_manche = []
 	remove_child(collisions)
 	collisions.free()
+
+
+## Décision d'Adrien (21 h 10) : une fusée en vol éclaire par-dessus les murets,
+## posée elle bute dessus. Les murs hauts l'arrêtent toujours.
+func _test_fusee_en_vol() -> void:
+	print("\n[La fusée : par-dessus en vol, bute au sol]")
+	var bit := CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+	_check("en vol : la lueur passe au-dessus des murets", (Fusee.masque_ombre(false) & bit) == 0)
+	_check("posée : la lueur bute sur les murets", (Fusee.masque_ombre(true) & bit) != 0)
+	_check("dans les deux cas, les murs hauts l'arrêtent",
+		(Fusee.masque_ombre(false) & 1) != 0 and (Fusee.masque_ombre(true) & 1) != 0)
+	var src := FileAccess.get_file_as_string("res://fusee.gd")
+	var poses := src.count("shadow_item_cull_mask = masque_ombre(true)")
+	_check("les trois façons de se poser (vol, killcam, banc) passent au masque posé",
+		poses == 3, "%d" % poses)

@@ -203,10 +203,9 @@ func _ready() -> void:
 	# Les ombres dès le départ : la fusée rebondit sur les murs, elle ne les
 	# survole plus — une lumière qui les traverserait mentirait sur sa physique.
 	_lumiere.shadow_enabled = true
-	_lumiere.shadow_item_cull_mask = 1 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS # murs seuls : un corps ne bouche pas sa propre lumière
-	# MB3a — et les murs BAS : une fusée brûle au sol, plus bas qu'un muret, sa
-	# lueur bute dessus comme la torche d'un accroupi. ⚠️ Lecture à confirmer par
-	# Adrien pour la fusée EN VOL (ricochets), qu'on pourrait vouloir au-dessus.
+	# Murs seuls : un corps ne bouche pas sa propre lumière. EN VOL, les murs hauts
+	# seulement — voir `masque_ombre`, qui change à l'atterrissage.
+	_lumiere.shadow_item_cull_mask = masque_ombre(false)
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	add_child(_lumiere)
 
@@ -290,6 +289,7 @@ func _ready() -> void:
 	else:
 		# La killcam pilote l'âge et la position elle-même, image par image.
 		_atterrie = true
+		_lumiere.shadow_item_cull_mask = masque_ombre(true)
 		_age_combustion = 0.0
 		set_physics_process(false)
 
@@ -417,6 +417,7 @@ func appliquer_age(age: float) -> void:
 ## l'âge demandé. Sans effet en killcam (l'instantané fait foi).
 func forcer_age(age: float) -> void:
 	_atterrie = true
+	_lumiere.shadow_item_cull_mask = masque_ombre(true)
 	_velocite = Vector2.ZERO
 	_coeur.position = Vector2.ZERO
 	appliquer_age(age)
@@ -440,6 +441,16 @@ func occultation_pour(pos: Vector2) -> float:
 ## le piétinement (game_state.gd, hôte seul). La balle ne l'éteint plus.
 func est_allumee_au_sol() -> bool:
 	return _atterrie and not _eteinte
+
+
+## Le masque d'ombre de la lueur, selon qu'elle vole ou brûle au sol — chantier
+## MURS BAS. Décision d'Adrien (2026-09-14, 21 h 10) : **en vol, la fusée éclaire
+## par-dessus les murets** ; posée, elle brûle plus bas qu'eux et bute dessus, comme
+## la torche d'un accroupi (`CanauxLumiere.COUCHE_OMBRE_MUR_BAS`). Les murs hauts
+## arrêtent sa lumière dans les deux cas : elle ricoche sur eux, elle ne les
+## survole pas.
+static func masque_ombre(atterrie: bool) -> int:
+	return 1 | (CanauxLumiere.COUCHE_OMBRE_MUR_BAS if atterrie else 0)
 
 
 ## Ce que la fusée BRÛLE en ce moment, entre 0 et 1 — la part de son plein feu.
@@ -721,6 +732,8 @@ func _maj_tunnels(age_combustion: float, diametre: float) -> void:
 
 func _atterrir() -> void:
 	_atterrie = true
+	# MB3 — posée, la fusée brûle plus bas qu'un muret : sa lueur bute dessus.
+	_lumiere.shadow_item_cull_mask = masque_ombre(true)
 	_age_combustion = 0.0
 	_velocite = Vector2.ZERO
 	_coeur.position = Vector2.ZERO

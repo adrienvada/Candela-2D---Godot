@@ -494,7 +494,9 @@ un seul bruit, aucun tir, collision retrouvée après.
    quand même (la silhouette révélée au tir ne dépend d'aucune lumière). Comportement
    actuel conservé, sans une ligne changée.
 2. **Une fusée EN VOL éclaire par-dessus les murets** ; posée au sol, elle bute dessus
-   (correction de la lecture de MB3a, qui la faisait buter toujours).
+   (correction de la lecture de MB3a, qui la faisait buter toujours). Fait :
+   `Fusee.masque_ombre(atterrie)`, posé à la construction (vol) puis aux trois façons de
+   se poser — atterrissage, fusée de killcam, saut d'âge du banc.
 
 Le détail de la première question, tel qu'il a été posé :
 

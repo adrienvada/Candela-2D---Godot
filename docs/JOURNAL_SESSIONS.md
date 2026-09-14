@@ -4288,3 +4288,10 @@ fournisseurs d'entrées (`is_climb_pressed`), `player.gd` (dixième argument du 
 pendant toute la boucle de traversée, y compris l'image d'après le muret — où un tir part
 légitimement. Le contrôle « on ne tire pas en enjambant » aurait rougi pour une bonne
 raison qui n'était pas la sienne. Il ne tient plus la détente que sur le muret.
+
+**21 h 10 — deux arbitrages d'Adrien, posés pendant un lot.** Tirer trahit toujours (la
+silhouette révélée au tir se montre même derrière un muret — rien ne change) ; une fusée
+EN VOL éclaire par-dessus les murets, posée elle bute. La seconde corrige MB3a, qui la
+faisait buter toujours : `Fusee.masque_ombre(atterrie)`, posé à la construction puis aux
+trois façons de se poser (atterrissage, fusée de killcam, saut d'âge du banc). Touché :
+`fusee.gd`, `tools/test_accroupi.gd`.
