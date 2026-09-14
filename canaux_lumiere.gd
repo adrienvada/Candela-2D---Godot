@@ -98,6 +98,13 @@ static func couche_ombre_corps(id: int) -> int:
 ## (16, 32) n'occupent.
 const COUCHE_OMBRE_MUR_BAS := 64
 
+## Le masque d'ombre d'une lampe portée selon la posture de son porteur : accroupi,
+## elle lit les murs bas (elle bute) ; debout, elle passe par-dessus. Les autres
+## bits sont laissés tels quels. `Player.poser_posture` et les fantômes de la
+## killcam (MB3d) appliquent la même règle.
+static func masque_ombre_posture(masque: int, accroupi: bool) -> int:
+	return (masque | COUCHE_OMBRE_MUR_BAS) if accroupi else (masque & ~COUCHE_OMBRE_MUR_BAS)
+
 ## La couche d'ombre du TORSE du joueur `id` : 16 pour J1, 32 pour J2.
 ##
 ## Réservée à la rétrodiffusion, seule lumière qu'un disque de torse arrête : le

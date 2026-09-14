@@ -41,6 +41,9 @@ var impact_frame: int = -1
 var _impact_seen: bool = false
 var slow_mo_start_frame: int = -1
 var bullet_events: Array = []
+## L'événement de tir que `replay_spawn_bullet` est en train d'émettre, vide
+## sinon — MB3d. Voir `record_bullet_fired`.
+var tir_rejoue: Dictionary = {}
 var last_played_frame: int = -1
 var time_since_impact_real: float = 0.0
 
@@ -256,14 +259,19 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 				new_events.append(ev)
 		bullet_events = new_events
 
-func record_bullet_fired(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData):
+## `accroupi` : la posture du tireur AU TIR — chantier MURS BAS, MB3d. Une balle
+## rejouée part de la hauteur de son canon d'alors : sans elle, la killcam
+## montrerait debout un tir accroupi qui s'était arrêté sur un muret.
+func record_bullet_fired(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData,
+		accroupi: bool = false):
 	if recording:
 		bullet_events.append({
 			"frame": snapshots.size(),
 			"shooter": shooter_id,
 			"pos": pos,
 			"rot": rot,
-			"weapon": weapon
+			"weapon": weapon,
+			"accroupi": accroupi,
 		})
 
 ## V6.2 — d'où est parti le coup fatal, et où il a touché.
@@ -520,8 +528,13 @@ func get_next_frame(delta: float):
 	for i in bullet_events.size():
 		var ev: Dictionary = bullet_events[i]
 		if ev.frame > last_played_frame and ev.frame <= current_frame:
+			# MB3d — le tir en cours d'émission, lisible par qui écoute le signal.
+			# Le signal garde sa forme (deux écouteurs, dont une suite réseau) ;
+			# la posture du tireur passe par ici.
+			tir_rejoue = ev
 			replay_spawn_bullet.emit(ev.shooter, ev.pos, ev.rot, ev.weapon,
 				i == fatal)
+			tir_rejoue = {}
 	last_played_frame = current_frame
 	
 	# INTERPOLATE SNAPSHOTS for perfectly smooth slow motion

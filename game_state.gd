@@ -1742,6 +1742,17 @@ func _process(delta):
 			p1.rotation = current_snap.p1_rot
 			p2.global_position = current_snap.p2_pos
 			p2.rotation = current_snap.p2_rot
+			# MB3d — et leur posture d'alors : la balle rejouée juge sa cible à la
+			# hauteur de sa posture (`Bullet._franchit_vers`), et les lampes du
+			# fantôme accroupi butent sur les murets comme en jeu.
+			p1.poser_posture(current_snap.p1_accroupi)
+			p2.poser_posture(current_snap.p2_accroupi)
+			for paire: Array in [[ghost_p1, current_snap.p1_accroupi], [ghost_p2, current_snap.p2_accroupi]]:
+				for nom in ["Light", "Flash"]:
+					var lampe := (paire[0] as Node).get_node_or_null(nom) as Light2D
+					if lampe != null:
+						lampe.shadow_item_cull_mask = CanauxLumiere.masque_ombre_posture(
+							lampe.shadow_item_cull_mask, paire[1])
 
 			# Les fusées du passé, reconstruites à l'âge lu dans l'instantané.
 			_maj_fusees_killcam(current_snap)
@@ -3552,7 +3563,8 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 			bullet_container.add_child(b)
 
 		if record and ReplaySystem.recording:
-			ReplaySystem.record_bullet_fired(shooter.player_id, pos, final_rot, weapon)
+			ReplaySystem.record_bullet_fired(shooter.player_id, pos, final_rot, weapon,
+				shooter.get("accroupi") == true)
 
 	if not spawn_nodes: return
 
@@ -3747,6 +3759,11 @@ func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,
 	b.direction = Vector2(cos(rot), sin(rot))
 	var shooter = p1 if shooter_id == 0 else p2
 	b.source_player = shooter
+	# MB3d — la balle rejouée suit la règle des murs bas, depuis la hauteur du
+	# canon AU TIR : sans elle, la killcam montrait toucher un accroupi que la
+	# vraie balle avait survolé, ou traverser un muret où elle s'était arrêtée.
+	b.murs_bas = murs_bas
+	b.hauteur_tir = MursBas.hauteur_de_posture(ReplaySystem.tir_rejoue.get("accroupi", false) == true)
 	if weapon:
 		b.weapon = weapon
 	bullet_container.add_child(b)

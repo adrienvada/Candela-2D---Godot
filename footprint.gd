@@ -13,7 +13,8 @@ const Charte := preload("res://charte.gd")
 ##
 ## Coût pendant la manche : deux Node2D (original + duplicata J2), un polygone
 ## de 12 sommets dessiné une seule fois, deux Tween. Ni texture, ni lumière,
-## ni ombre, ni matériau — indolore sous gl_compatibility.
+## ni ombre, ni matériau propre — celui de la zone morte des murs bas est
+## partagé avec le décor de la vue (MB3d, `materiau_de_vue`).
 
 ## Durée de vie totale. Le fondu d'alpha couvre TOUTE la durée : la fraîcheur
 ## de la trace se lit directement à son intensité (« il vient de passer »).
@@ -74,8 +75,23 @@ static func spawn(arena: Node2D, pos: Vector2, rot: float, side: int) -> void:
 	# Le duplicata J2 est créé dans _ready (idiome blood_stain.gd).
 	fp.visibility_layer = 2
 	fp.light_mask = 1 | 16
+	fp.material = materiau_de_vue(arena, 1)
 
 	arena.add_child(fp)
+
+## Le matériau de la zone morte des murs bas pour la vue `vue` (1 ou 2) —
+## chantier MURS BAS, MB3d.
+##
+## Une empreinte est une marque AU SOL. Éclairée par défaut, celle d'un accroupi
+## derrière un muret s'allumait sous une torche venue de l'autre côté, là où le
+## sol autour restait noir : la trace trahissait celui que la règle cache. Elle
+## prend le matériau du décor peint de SA vue (`ArenaDecor_P1/P2`, mélange normal,
+## même éclairage hors zone), que `GameState` remplit à chaque image — un seul
+## matériau partagé par toutes les empreintes de la vue. Sans décor : `null`,
+## l'éclairage par défaut d'avant MB3d.
+static func materiau_de_vue(arena: Node, vue: int) -> Material:
+	var decor := arena.get_node_or_null("ArenaDecor_P%d" % vue) as CanvasItem
+	return decor.material if decor != null else null
 
 func _ready() -> void:
 	# Idiome blood_stain.gd:53-62 : un duplicata pour le second viewport, créé
@@ -98,10 +114,13 @@ func _create_p2_duplicate() -> void:
 		fp_p2.add_to_group("footprint_p2")
 		fp_p2.visibility_layer = 4 # Viewport J2
 		fp_p2.light_mask = 1 | 32  # Torche/décor (1) + ambiance J2 (32)
+		# `duplicate()` a recopié le matériau de la vue 1 : chaque vue a le sien.
+		fp_p2.material = materiau_de_vue(get_parent(), 2)
 		get_parent().add_child(fp_p2)
 
 func _draw() -> void:
-	# Aucun matériau : le rendu éclairé par défaut fait tout le travail
+	# Le matériau partagé de la zone morte (MB3d) garde l'éclairage par défaut
+	# hors zone : le rendu éclairé fait tout le travail
 	# (invisible sous le CanvasModulate noir, révélé par toute Light2D dont le
 	# cull mask couvre le décor). _draw n'est appelé qu'une fois : le fondu
 	# passe par modulate, qui ne déclenche pas de redraw.

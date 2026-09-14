@@ -572,6 +572,52 @@ défaut de la règle :
    travers la cible : ils passaient pour un corps éclairé dans une seule vue.
 5. **`hauteur_mur()` est déjà en pixels** : la première suite l'y reconvertissait (2041 px).
 
+### MB3d — l'équité et la killcam
+
+**La killcam rejoue la règle.** Avant MB3d, une balle rejouée ne connaissait ni les murets
+ni la hauteur de son canon : la killcam pouvait montrer toucher un accroupi que la vraie
+balle avait survolé, ou traverser un muret où elle s'était arrêtée — une leçon fausse sur
+l'action décisive.
+
+| Quoi | Où |
+|---|---|
+| La posture du tireur enregistrée avec le tir | `ReplaySystem.record_bullet_fired(…, accroupi)`, appelé par `_do_spawn_bullet` |
+| Lue pendant l'émission du tir rejoué | `ReplaySystem.tir_rejoue` — le signal `replay_spawn_bullet` garde sa forme (une suite réseau l'écoute) |
+| Balle rejouée : murets et hauteur de canon | `GameState._on_replay_spawn_bullet` |
+| Joueurs rejoués dans leur posture d'alors (la balle la lit) | `poser_posture(current_snap.pX_accroupi)`, à côté de la position |
+| Lampes du fantôme accroupi qui butent | `CanauxLumiere.masque_ombre_posture()`, même règle que `Player.poser_posture` |
+
+La silhouette du fantôme est non éclairée (`SHADER_GHOST`) : la zone morte ne la concerne
+pas, c'est un rejeu qui montre les deux joueurs.
+
+**Les empreintes suivent la zone morte.** Relevé en MB3c, confirmé en lisant le code : une
+empreinte se pose à chaque pas, accroupi compris, et s'éclairait par défaut. Celle d'un
+accroupi derrière un muret s'allumait donc sous une torche venue de l'autre côté, sur un
+sol resté noir — la trace trahissait celui que la règle cache. Elle prend désormais le
+matériau du décor peint de sa vue (`Footprint.materiau_de_vue`), partagé et rempli à
+chaque image. **Pas traité, et signalé** : les taches de sang (`blood_stain.gd`) — elles
+naissent d'une touche, donc d'un joueur que la balle a atteint, hors de la zone morte.
+
+**L'équité, vue par la vraie balle** (`test_accroupi`, `_test_equite`) :
+1. **Chacun paie pareil des deux côtés d'un muret** : J1 → J2 et son reflet J2 → J1 à
+   travers le reflet du muret rendent la même décision — quatre couples de postures,
+   quarante distances chacun.
+2. **Ce qui se voit est ce qui se paie, à 3 px près.** La balle bute sur la tuile ENTIÈRE,
+   la lumière sur l'occluder RENTRÉ (écart consigné avant ce chantier, § 3). Il reste une
+   bande de **3 px** au bout de la zone morte où un accroupi est **vu sans pouvoir être
+   touché** ; l'inverse — touché sans être vu — n'arrive jamais. La suite borne la bande
+   à `OCCLUDER_INSET` (mesurée : 3,0 px, de 40,8 à 43,7 px derrière le muret). Elle
+   échantillonne dès 0,1 px : un centre posé EXACTEMENT sur le bord de la tuile (d = 0)
+   est le cas dégénéré où la sortie du rayon tombe à t = 1 et où la balle touche sans
+   que la lumière éclaire — aucun corps n'y tient, sa collision le garde à son rayon.
+
+**Vu rougir**, chaque nouveau contrôle : balle rejouée sans murets, posture rejouée non
+posée, empreinte sans matériau, posture du tir non exposée. ⚠️ **Le premier sabotage de
+la killcam est resté VERT** : le contrôle au texte cherchait une sous-chaîne, que la ligne
+commentée contenait encore. Il compare désormais des lignes entières. ⚠️ **À trancher par Adrien** si elle compte en jeu : aligner la
+   balle sur la forme de la lumière (la bande disparaît, la balle frôle 3 px plus près des
+   coins de mur) ou la laisser.
+
 ## 8. Lancer le prototype
 
     /Applications/Godot.app/Contents/MacOS/Godot --path "<worktree>" res://tools/proto_murs_bas.tscn -- --no-eos

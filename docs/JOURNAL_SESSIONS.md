@@ -4314,3 +4314,30 @@ Puis vu rougir en coupant la poussée des uniformes.
 
 **Coordination** : lots et fenêtres alternés avec ISO2 par messages (leur lot 21:24-21:32,
 mes bancs 21:41-21:56, leurs huit fenêtres ensuite).
+
+### 2026-09-14 (nuit) — MB3d : l'équité et la killcam (même session, même branche)
+
+**Touché** : `replay_system.gd` (posture du tireur enregistrée avec le tir, `tir_rejoue`
+lu pendant l'émission), `game_state.gd` (balle rejouée avec murets et hauteur de canon,
+joueurs rejoués dans leur posture, lampes du fantôme), `canaux_lumiere.gd`
+(`masque_ombre_posture`), `footprint.gd` (matériau de zone morte de la vue). Suites :
+`test_accroupi` (équité, killcam, empreintes), `test_rejeu` (posture du tir rejoué).
+
+**Le signal du rejeu garde sa forme** : `test_online_match` l'écoute avec cinq arguments ;
+l'élargir aurait cassé une suite réseau pour faire passer un booléen. La posture passe par
+un champ lu pendant l'émission, et vidé après.
+
+**Les empreintes, relevées en MB3c et confirmées ici** : posées accroupi aussi, éclairées
+par défaut, elles trahissaient l'accroupi que la zone morte cache.
+
+**Une question pour Adrien** plutôt qu'une correction : la bande de 3 px « vu sans pouvoir
+toucher » au bout de la zone morte vient de l'écart balle / lumière consigné avant ce
+chantier. Aligner la balle change la règle de MB3a ; ça se tranche en jouant, à H-MB1.
+
+**Coordination** : aucun Godot lancé pendant les bancs et le lot d'ISO2 (22:06-22:34).
+
+**Deux leçons de vérification.** Le contrôle « jamais touché sans être vu » a rougi sur un
+seul point, d = 0 : un centre sur le bord exact de la tuile, où aucun corps ne tient — le
+domaine du test était faux, pas la règle. Et le sabotage de la killcam est d'abord resté
+vert : un contrôle au texte par sous-chaîne voit encore la ligne qu'on vient de commenter.
+Lot complet vert (22:38-22:44, 114 OK).

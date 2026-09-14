@@ -21039,7 +21039,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
-| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût) ; MB3d en cours |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût), MB3d livrée (équité, killcam) — **H-MB1 attend Adrien** |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
 
@@ -21349,9 +21349,35 @@ soit — l'image floue a tranché en une lecture ce que trois hypothèses n'avai
 restent éclairées dans la zone morte — une empreinte d'accroupi pourrait s'y lire (MB3d).
 `tools/test_banc.gd` ne vérifie pas encore les appuis du nouveau banc.
 
+#### MB3d — l'équité et la killcam
+
+**La killcam rejoue la règle.** Une balle rejouée ne connaissait ni les murets ni la hauteur
+de son canon : la killcam pouvait montrer toucher un accroupi que la vraie balle avait
+survolé — une leçon fausse sur l'action décisive, ce que V6.2 refuse déjà pour la
+trajectoire. La posture du tireur s'enregistre avec le tir
+(`ReplaySystem.record_bullet_fired(…, accroupi)`) et se lit pendant l'émission
+(`ReplaySystem.tir_rejoue`) : **le signal `replay_spawn_bullet` garde sa forme**, parce
+qu'une suite réseau l'écoute. Les joueurs rejoués prennent leur posture d'alors (la balle
+la lit), et les lampes du fantôme accroupi butent (`CanauxLumiere.masque_ombre_posture`,
+la règle de `poser_posture` sortie en un seul endroit).
+
+**Les empreintes suivent la zone morte** (signalé en MB3c) : posées à chaque pas, accroupi
+compris, et éclairées par défaut, celles d'un accroupi derrière un muret s'allumaient sous
+une torche venue de l'autre côté, sur un sol resté noir. Elles prennent le matériau de zone
+morte du décor de leur vue (`Footprint.materiau_de_vue`). Les taches de sang restent hors
+règle : elles naissent d'une touche, donc hors de la zone morte.
+
+**L'équité, par la vraie balle** (`test_accroupi`) : J1 → J2 et son reflet J2 → J1 rendent
+la même décision dans les quatre couples de postures ; **jamais touché sans être vu** ; et
+une bande de **3 px** au bout de la zone morte où un accroupi est **vu sans pouvoir être
+touché** — l'écart balle / lumière (tuile entière contre occluder rentré) consigné avant
+ce chantier. La suite la borne à `OCCLUDER_INSET`.
+
 ### Ce qui attend Adrien
 
-Rien pendant MB3. Puis **H-MB1** : un duel complet à deux manettes sur la carte d'essai
+**H-MB1**, MB3 étant livrée. Et une question, à trancher en jouant : la bande de 3 px où
+l'on voit un accroupi sans pouvoir le toucher (§ MB3d) compte-t-elle ? Si oui, la balle
+s'aligne sur la forme de la lumière. **H-MB1** : un duel complet à deux manettes sur la carte d'essai
 (code de partage : `docs/MURS_BAS.md` § 9), puis une partie EOS à deux machines — le fil a
 changé (`Protocol.VERSION` 18).
 

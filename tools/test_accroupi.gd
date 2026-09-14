@@ -45,6 +45,9 @@ func _lancer() -> void:
 	_test_balle(p1, p2)
 	await _test_enjambement(p1)
 	_test_fusee_en_vol()
+	_test_equite(p1, p2)
+	_test_killcam()
+	await _test_empreintes()
 	if _echecs == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -315,6 +318,152 @@ func _test_balle(tireur: Player, cible: Player) -> void:
 					MursBas.hauteur_de_posture(true)))
 		b.queue_free()
 	_check("la cible reste en vie : aucun tir n'a été simulé", cible.hp > 0)
+
+
+# ── MB3d : l'équité ─────────────────────────────────────────────────────────
+
+## Les deux règles fondamentales, vues par la balle :
+## 1. **Chacun paie pareil des deux côtés d'un muret** : le tir de J1 vers J2 et
+##    son reflet de J2 vers J1, à travers le reflet du muret, rendent la même
+##    décision, dans les quatre couples de postures.
+## 2. **Ce qui se voit est ce qui se paie**, à `OCCLUDER_INSET` près. La balle
+##    bute sur la tuile ENTIÈRE (la collision), la lumière sur l'occluder RENTRÉ
+##    — un écart de 3 px qui existait avant ce chantier. Il laisse une bande où
+##    l'on voit un accroupi sans pouvoir le toucher. Elle est mesurée et bornée
+##    ici, et l'inverse — touché sans être vu — ne doit jamais arriver.
+func _test_equite(p1: Player, p2: Player) -> void:
+	print("\n[L'équité des deux côtés d'un muret (MB3d)]")
+	var mur := Rect2(Vector2(0, 0), Vector2(6, 1) * MursBas.TUILE)
+	var reflet := Rect2(Vector2(0, -mur.end.y), mur.size)  # y → −y
+	var x := mur.get_center().x
+	var b: Bullet = load("res://bullet.tscn").instantiate()
+	b.weapon = WeaponData.new()
+	add_child(b)
+	b.set_physics_process(false)
+
+	var cas := 0
+	var ecarts := []
+	for tir_accroupi: bool in [false, true]:
+		for cible_accroupie: bool in [false, true]:
+			for d in range(0, 80, 2):
+				var cible := Vector2(x + 0.37 * d, mur.end.y + d)
+				var direct := _decision(b, p1, mur, Vector2(x, -90.0), cible, tir_accroupi, cible_accroupie)
+				var miroir := _decision(b, p2, reflet, Vector2(x, 90.0), Vector2(cible.x, -cible.y),
+					tir_accroupi, cible_accroupie)
+				cas += 1
+				if direct != miroir and ecarts.size() < 5:
+					ecarts.append("tir %s cible %s d=%d" % [tir_accroupi, cible_accroupie, d])
+	_check("J1 → J2 et son reflet J2 → J1 : même décision (%d cas)" % cas, ecarts.is_empty(), str(ecarts))
+
+	# Vu contre payé, sur l'axe : torche et canon debout au nord, accroupi au sud.
+	var source := Vector2(x, -90.0)
+	var rentre := mur.grow(-MapGeometry.OCCLUDER_INSET)
+	var h_debout := MursBas.hauteur_de_posture(false)
+	var h_acc := MursBas.hauteur_de_posture(true)
+	var vu_sans_touche: Array = []
+	var touche_sans_vu := 0
+	# Dès 0,1 px : un centre posé EXACTEMENT sur le bord de la tuile est le cas
+	# dégénéré où la sortie du rayon tombe à t = 1 — la balle y lit « pas de
+	# franchissement » et touche. Aucun corps n'y tient : sa collision le garde à
+	# son rayon du muret. Premier passage : ce seul point, à d = 0,0.
+	for k in range(1, 900):
+		var d := k / 10.0
+		var cible := Vector2(x, mur.end.y + d)
+		var paye := _decision(b, p1, mur, source, cible, false, true)
+		var vu := MursBas.franchit(source, cible, h_debout, h_acc, [rentre], MursBas.hauteur_mur(),
+			MursBas.ANGLE_FRANCHISSEMENT)
+		if vu and not paye:
+			vu_sans_touche.append(d)
+		elif paye and not vu:
+			touche_sans_vu += 1
+	var largeur: float = 0.0 if vu_sans_touche.is_empty() \
+		else vu_sans_touche.max() - vu_sans_touche.min() + 0.1
+	print("  bande « vu, pas touché » : %.1f px%s" % [largeur, "" if vu_sans_touche.is_empty()
+		else " (de %.1f à %.1f px derrière le muret)" % [vu_sans_touche.min(), vu_sans_touche.max()]])
+	_check("jamais touché sans être vu", touche_sans_vu == 0, "%d points" % touche_sans_vu)
+	_check("la bande « vu, pas touché » ne dépasse pas OCCLUDER_INSET",
+		largeur <= MapGeometry.OCCLUDER_INSET + 0.15, "%.1f px" % largeur)
+	b.queue_free()
+
+
+## Décision de la VRAIE balle (`Bullet._franchit_vers`) pour un tir de `source`
+## vers `cible`, par `tireur`, à travers `mur`.
+func _decision(b: Bullet, tireur: Player, mur: Rect2, source: Vector2, cible: Vector2,
+		tir_accroupi: bool, cible_accroupie: bool) -> bool:
+	b.source_player = tireur
+	b.spawn_pos = source
+	b.hauteur_tir = MursBas.hauteur_de_posture(tir_accroupi)
+	b.murs_bas = [mur]
+	return b._franchit_vers(cible, MursBas.hauteur_de_posture(cible_accroupie))
+
+
+# ── MB3d : la killcam ───────────────────────────────────────────────────────
+
+## La killcam rejoue la règle : balle rejouée avec murs et hauteur de canon au
+## tir, joueurs posés dans leur posture d'alors (la balle la lit), lampes du
+## fantôme accroupi qui butent. Le câblage de `game_state.gd` ne se monte pas ici
+## sans une partie entière : il est vérifié au texte, comme `test_classes` le fait
+## pour les signatures ; la mécanique d'émission l'est dans `test_rejeu`.
+func _test_killcam() -> void:
+	print("\n[La killcam rejoue la règle (MB3d)]")
+	_check("masque d'ombre : accroupi, le bit des murs bas est posé",
+		CanauxLumiere.masque_ombre_posture(1 | 4, true) == (1 | 4 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS))
+	_check("… debout, il est retiré sans toucher les autres",
+		CanauxLumiere.masque_ombre_posture(1 | 4 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS, false) == (1 | 4))
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+	var debut := gs.find("func _on_replay_spawn_bullet")
+	var corps := gs.substr(debut, gs.find("\nfunc ", debut + 10) - debut)
+	# ⚠️ Des LIGNES entières, pas des sous-chaînes : au premier sabotage, la ligne
+	# commentée « #… b.murs_bas = murs_bas » contenait encore la sous-chaîne, et le
+	# contrôle restait vert.
+	_check("balle rejouée : elle reçoit les murs bas", corps.contains("\n\tb.murs_bas = murs_bas\n"))
+	_check("… et la hauteur du canon au tir",
+		corps.contains("\n\tb.hauteur_tir = MursBas.hauteur_de_posture(ReplaySystem.tir_rejoue.get(\"accroupi\""))
+	_check("le tir s'enregistre avec la posture du tireur",
+		gs.contains("final_rot, weapon,\n\t\t\t\tshooter.get(\"accroupi\") == true)"))
+	_check("les joueurs rejoués prennent leur posture d'alors",
+		gs.contains("\n\t\t\tp1.poser_posture(current_snap.p1_accroupi)\n")
+		and gs.contains("\n\t\t\tp2.poser_posture(current_snap.p2_accroupi)\n"))
+	_check("les lampes du fantôme suivent sa posture",
+		gs.contains("\n\t\t\t\t\t\tlampe.shadow_item_cull_mask = CanauxLumiere.masque_ombre_posture("))
+
+
+## Une empreinte est une marque au sol : elle suit la zone morte de SA vue. Sans
+## cela, la trace d'un accroupi derrière un muret s'allumait sous une torche venue
+## de l'autre côté, sur un sol resté noir.
+func _test_empreintes() -> void:
+	print("\n[Les empreintes suivent la zone morte (MB3d)]")
+	var arene := Node2D.new()
+	add_child(arene)
+	var mats := []
+	for vue in [1, 2]:
+		var decor := Node2D.new()
+		decor.name = "ArenaDecor_P%d" % vue
+		decor.material = MursBasRendu.materiau_decor()
+		arene.add_child(decor)
+		mats.append(decor.material)
+	Footprint.spawn(arene, Vector2(50, 50), 0.0, 1)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var vue1: Node = null
+	var vue2: Node = null
+	for n in arene.get_children():
+		if n is Footprint:
+			if n.is_in_group("footprint_p2"):
+				vue2 = n
+			else:
+				vue1 = n
+	_check("vue 1 : l'empreinte prend le matériau de zone morte de sa vue",
+		vue1 != null and vue1.material == mats[0])
+	_check("vue 2 : son duplicata prend celui de la vue 2",
+		vue2 != null and vue2.material == mats[1])
+	var nue := Node2D.new()
+	add_child(nue)
+	Footprint.spawn(nue, Vector2.ZERO, 0.0, 1)
+	_check("sans décor : aucun matériau, l'éclairage d'avant",
+		nue.get_child_count() > 0 and nue.get_child(0).material == null)
+	arene.queue_free()
+	nue.queue_free()
 
 
 # ── MB3b : l'enjambement ────────────────────────────────────────────────────
