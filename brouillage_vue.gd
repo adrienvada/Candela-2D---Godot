@@ -42,6 +42,13 @@ const Brouillage := preload("res://brouillage.gd")
 const Charte := preload("res://charte.gd")
 const SHADER_FLOU := preload("res://brouillage_flou.gdshader")
 
+## Chantier ISO, étape ISO2 — monde 2D → écran, quand ce n'est plus la transformation
+## de canevas de la vue qui le dit : dans la vue isométrique l'appareil vit dans le
+## viewport 3D du joueur (`Presentation3D.viewport_ecran`) et c'est sa caméra inclinée
+## qui projette (`Presentation3D.projecteur_ecran`). Posé par `GameState` à chaque accord
+## des vues ; invalide hors iso, et alors rien ne change ici.
+var projecteur := Callable()
+
 var _couche_flou: CanvasLayer
 var _copie: BackBufferCopy
 var _flou: ColorRect
@@ -203,6 +210,14 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 	var dirige := _a_un_axe(emetteur)
 	var axe := emetteur.rotation if dirige else 0.0
 	var avant := Vector2.RIGHT.rotated(axe)
+	# ISO2 — projetée par une caméra inclinée, une direction du monde n'est plus la même
+	# à l'écran : l'axe du faisceau se relit entre deux points projetés.
+	if projecteur.is_valid() and dirige:
+		var a: Vector2 = _a_l_ecran(emetteur.global_position, vers_ecran)
+		var b: Vector2 = _a_l_ecran(emetteur.global_position + avant * 32.0, vers_ecran)
+		if b.distance_to(a) > 0.001:
+			avant = (b - a).normalized()
+			axe = avant.angle()
 	var allonge_flou := Brouillage.ALLONGEMENT_FLOU if dirige else 1.0
 	var allonge_halo := Brouillage.ALLONGEMENT_HALO if dirige else 1.0
 	var avance_flou := Brouillage.AVANCE_FLOU if dirige else 0.0
@@ -221,7 +236,7 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		# d'être carré. C'est la géométrie qui porte la forme, pas le shader.
 		var demi_long := rayon_flou * allonge_flou
 		var taille := Vector2(demi_long, rayon_flou) * 2.0
-		var centre := vers_ecran * emetteur.global_position \
+		var centre := _a_l_ecran(emetteur.global_position, vers_ecran) \
 			+ avant * (demi_long * avance_flou)
 		_flou.size = taille
 		_flou.pivot_offset = taille * 0.5
@@ -242,7 +257,7 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		# on le calcule quand même depuis lui, pour que ça reste vrai si la
 		# caméra cessait un jour de le suivre.
 		var taille_vue := vue.get_visible_rect().size
-		var soi := vers_ecran * regardeur.global_position
+		var soi := _a_l_ecran(regardeur.global_position, vers_ecran)
 		_mat_flou.set_shader_parameter("exclusion_centre", soi / taille_vue)
 		_mat_flou.set_shader_parameter("exclusion_pres", Brouillage.EXCLUSION_PRES)
 		_mat_flou.set_shader_parameter("exclusion_loin", Brouillage.EXCLUSION_LOIN)
@@ -258,10 +273,18 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		# aussi vif, mais il ne désigne plus.
 		var demi_h := rayon * allonge_halo
 		var taille_h := Vector2(demi_h, rayon) * 2.0
-		var centre_h := vers_ecran * emetteur.global_position \
+		var centre_h := _a_l_ecran(emetteur.global_position, vers_ecran) \
 			+ avant * (demi_h * avance_halo)
 		_halo.size = taille_h
 		_halo.pivot_offset = taille_h * 0.5
 		_halo.rotation = axe
 		_halo.position = centre_h - taille_h * 0.5
 		_halo.modulate.a = float(h["intensite"])
+
+
+## Un point du monde à l'écran de cette vue : par le projecteur de la vue iso quand il
+## est posé, par la transformation de canevas sinon — la seule qui existait avant ISO2.
+func _a_l_ecran(point: Vector2, vers_ecran: Transform2D) -> Vector2:
+	if projecteur.is_valid():
+		return projecteur.call(point)
+	return vers_ecran * point

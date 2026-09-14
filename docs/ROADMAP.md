@@ -3173,6 +3173,87 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un capteur de lumière ne s'éteignait pas sous le `CanvasModulate` noir (2026-09-14)
+
+Les capteurs de corps d'ISO2 dessinent un disque blanc dans une sous-vue qui partage le `World2D`
+du duel, et comptent sur le `CanvasModulate` noir de l'arène pour valoir zéro sans lumière. **Ils
+valaient 13 à 17/255 toutes lumières éteintes** : chaque corps sortait du noir, en taches de sa
+taille (contrôle du noir du banc, (a) et (b) rompus). La sous-vue ne lit que la couche des disques
+(8), et le modulateur ne s'y appliquait pas comme dans les lightmaps. Aucune erreur : une image
+presque noire. Le disque est désormais en `LIGHT_MODE_LIGHT_ONLY` — il ne vaut que les lumières —,
+et le banc exige des capteurs à 0 lumières éteintes. ⚠️ **Et le premier relevé en « lumière seule »
+les a montrés PLUS clairs (31 et 58/255)** : le banc n'éteignait les lumières que trente images avant
+de capturer, et le jeu rallumait le bandeau LED des murs (`Arena/MurLed`) entre-temps. Il les éteint
+maintenant à chaque image et nomme celles qu'il trouve rallumées. Règle : **un zéro qui dépend
+d'un multiplicateur partagé se vérifie dans la vue qui le lit**, et une extinction se tient
+jusqu'à la mesure.
+
+### Godot refuse de retailler une sous-vue étirée, et ne le dit que par un avertissement (2026-09-14)
+
+ISO2 expose la taille de la lightmap (`plein` ou `1080p`). La première version posait
+`vue.size` sur la sous-vue 2D, laissée dans son `SubViewportContainer` en `stretch`. Godot
+**refuse** ce changement : `WARNING: Can't change the size of a SubViewport with a
+SubViewportContainer parent that has stretch enabled`, vingt et une fois dans le journal de
+la suite. Aucun `SCRIPT ERROR`, aucun `push_error` — le lanceur n'entend ni l'un ni l'autre
+—, et sans fenêtre l'étirement vaut 1, donc `plein` et `1080p` ont la même taille : la suite
+était verte sur une variante qui n'existait pas. C'est le `grep` du mot `WARNING` dans le
+journal qui l'a montré.
+
+Et lâcher `stretch` ne suffit pas : le conteneur prend alors la taille de sa vue comme
+taille minimale et pousse son voisin (piège du banc ISO0.b, plus bas). La vue iso sort donc
+les deux conteneurs du tri de la boîte (`top_level`), les pose sur le cadre que la boîte leur
+aurait donné, et seulement alors lâche `stretch` en `plein`. Règle : **une taille de
+`SubViewport` se relit après l'avoir posée**, et un journal de suite se lit aussi pour ses
+`WARNING`.
+
+### Un banc qui monte `main.tscn` dans un foyer neuf photographie l'intro (2026-09-14)
+
+Le piège était consigné pour le photographe ; il a été repayé par le banc iso. Isolé dans un
+`HOME` neuf pour ne rien écrire chez Adrien, `tools/banc_iso.tscn` démarre un jeu qui n'a
+jamais vu l'intro : la vidéo se joue **par-dessus le duel** et attend une touche. Dix fenêtres
+en ont été polluées — captures de planche, contrôle du noir absolu, appels de dessin — et la
+première lecture a cherché dans la vue iso la cause d'une image qui n'en venait pas. Le
+script de série pré-écrit désormais `intro_vue=true` dans le foyer isolé. Règle : **un foyer
+isolé est un joueur neuf** ; tout ce qu'un joueur neuf voit avant de jouer s'y joue aussi.
+
+### `physics_frame` est émis AVANT que les nœuds ne traitent le pas (2026-09-14)
+
+`tools/test_iso_vues.gd` compare deux parties pas pour pas. La partie avec la vue iso avait
+un pas de retard sur le témoin : elle commençait après un `await process_frame`, le témoin
+après un `await physics_frame`. Le signal `physics_frame` part au début du pas, avant les
+`_physics_process` : des positions posées juste après sont traitées par CE pas, alors que
+des positions posées après une image de rendu ne le sont qu'au suivant. Même état, même
+commandes, un décalage d'un pas, et l'écart s'attribue à la vue. Règle : **une partie
+comparée commence toujours au même point du cycle** — ici, juste après `physics_frame`.
+
+### L'éblouissement s'intègre à la cadence de l'image, et freine qui le subit (2026-09-14, signalé)
+
+Deux parties scriptées identiques, sans vue iso, divergeaient d'une fraction de pixel dès
+qu'un faisceau ou un flash de tir éblouissait l'un des joueurs : `game_state` intègre
+`dazzle_amount` dans `_process`, avec le `delta` de l'image, et la pénalité de vitesse et de
+visée en découle. Une pénalité de jeu dépend donc de la cadence de la machine — la même
+famille que l'atténuation du grésillement corrigée le 2026-09-11. **Signalé, non corrigé**
+(hors périmètre d'ISO2, c'est de la simulation). La suite des vues s'en tient à l'écart :
+pas de torche, pas de tir en écran scindé ; la vue unique avec tirs reste prouvée par
+`test_iso_camera`, où J2 est retiré de la scène.
+
+### `unproject_position` ne se rapporte pas à l'aire des calques d'écran (2026-09-14)
+
+Le brouillage de la vue iso place son flou par la caméra 3D. `Camera3D.unproject_position()`
+envoyait le centre de la vue à x = 349 dans la racine headless, pour une aire logique de
+1920 : Godot rapporte la projection au rectangle qu'il retient pour la caméra, qui n'est pas
+forcément l'aire où vivent les `CanvasLayer`. `CameraIso.vers_ecran()` fait la projection
+orthographique à la main, sur l'aire qu'on lui donne. Règle : **une coordonnée d'écran se
+calcule dans l'espace de celui qui la lit**.
+
+### Éteindre une vue pendant la fermeture du jeu rappelle un jeu qui se démonte (2026-09-14)
+
+À la fermeture, `Presentation3D._exit_tree()` rendait ses réglages puis relançait l'accord
+des vues de `GameState` ; en vue unique, l'accord échange le `World2D` de la racine pendant
+que l'arbre se démonte, et Godot plante (signal 11, « Parameter "viewport" is null »). Toutes
+les fenêtres du banc en vue unique sortaient en code 134 **après** avoir imprimé leur mesure :
+le relevé était bon, le code de sortie mentait. L'extinction de sortie ne rappelle plus le jeu.
+
 ### Une touche F sans `fn` n'atteint pas le jeu sur un Mac (2026-09-14)
 
 ISO1 avait mis le choix de la pâte sur **F2**, « première touche F libre du dépôt ».
@@ -21018,7 +21099,7 @@ lance sans demande explicite.
 |---|---|---|---|
 | ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
-| ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé | 4 | Fable 5.1 / xhigh |
+| ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — 🟡 **ouverte le 2026-09-14**, commitée sur `iso2-vues`, en attente du jalon H-ISO2 (duel à deux manettes en écran scindé iso) | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
 | ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
@@ -21511,6 +21592,144 @@ pas touchée.
    la base d'encadrement pour que la série décide.
 5. **Dire si ISO2 s'ouvre.**
 
+### ISO2 — les vues et les canaux 🟡 (ouverte le 2026-09-14, en attente du jalon H-ISO2)
+
+**Ouverte sur demande d'Adrien** (consigne transmise par la session cloud « Fable 5.1 - CLOUD ISO
+UNRAILED », le 2026-09-14 au soir). Session `prompt-iso2-3e1d2e-ce`, branche locale **`iso2-vues`**,
+issue de `iso1-fondations` @ `cc2bd87`, worktree
+`/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e`.
+Non poussée, non fusionnée. **Rien n'est allumé chez un joueur** : `mode_iso` reste faux par défaut.
+
+**Pourquoi c'était l'étape où tout casse sans erreur console.** Quatre des défauts ci-dessous
+n'ont produit ni `SCRIPT ERROR` ni `push_error` : une taille refusée par un avertissement, une
+lightmap qui lisait la couche des capteurs, un témoin de simulation qui divergeait par
+l'éblouissement, une vue iso restée allumée sous les menus. Chaque bascule est donc écrite avec le
+contrôle qui la prouve (`tools/test_iso_vues.gd`).
+
+**Ce qui existe.**
+- **Deux lightmaps, une par joueur.** `SubViewport1` garde son masque réel `~4`, `SubViewport2`
+  `~2` (`game_state.gd` fait foi), moins la couche 8 des capteurs pendant la vue iso. Les shaders
+  choisissent la lightmap par la caméra qui dessine (`CAMERA_VISIBLE_LAYERS`, calque 4 = J2) :
+  une face de mur vue par J1 ne s'allume qu'avec ce que J1 a le droit de voir.
+- **`CapteurCorps`** (`capteur_corps.gd`) : par vue regardée et par corps, une sous-vue de 256²
+  dans le `World2D` du duel, qui ne voit qu'un disque blanc sous le corps. Le disque porte le
+  masque de lumière du sprite qu'il remplace : `JOUEUR_LOCAL` (4) pour soi,
+  `masque_vue_adverse` pour l'autre (`2|16` chez J1, `2|32` chez J2 — miroir). Les corps
+  grossiers lisent cinq prises dans leur capteur : **un ennemi révélé par le seul halo de
+  proximité s'allume enfin** (constat d'ISO0.b levé). Le disque est en « lumière seule » : il ne
+  vaut que la lumière reçue, zéro sans lumière (voir « Pièges connus »).
+- **Écran scindé en iso** (décision H15) : `VueIso1` et `VueIso2` partagent le `World3D` de la
+  racine ; murs et corps sur le calque 1, `Sol1` sur le 2, `Sol2` sur le 4 ; chaque caméra voit
+  `1 | son calque`. Chaque vue rend aux pixels de la fenêtre, s'affiche par un `TextureRect` sur
+  le cadre de sa moitié, et garde une aire 2D logique pour les calques d'écran.
+- **Vue unique** : la racine, `CameraIso` de `Presentation3D`, cull `1 | calque du joueur
+  regardé` — J2 pour un client en ligne.
+- **Les effets d'écran suivent la vue.** Calques (vignette, flash de mort) et appareil de
+  brouillage de chaque joueur sont logés sous sa `VueIso` en scindé, sous `GameState` en vue
+  unique (`Presentation3D.parent_ecran`) ; le brouillage projette le monde par la caméra 3D ;
+  l'angle du voile est projeté (−45° au monde = −38,2° à l'écran à 52°) ; **le voile de J2 ne se
+  pose que si les deux vues sont affichées** — le défaut vu au banc ISO0.b (voile et lueur de
+  fusée de J2 sur la moitié droite en vue unique) est levé dans le jeu aussi : la killcam locale
+  cache la vue de J2 et le produisait.
+- **La killcam** rejoue dans la vue de celui qui la regarde : quand le jeu cache une vue, la vue
+  iso se rallume sur l'autre. Le gel du kill arrête lightmaps, vues 3D et capteurs ensemble.
+- **F3 « VUE ISO »** dit le mode, le tangage, la pâte, la lightmap, les bascules, et par vue le
+  masque, la taille de la lightmap, celle du rendu et les masques des capteurs.
+- **L'audio ne change pas** : `oreille_suit` décide ; vues 3D et capteurs ne sont jamais
+  auditeurs. Prouvé : un seul viewport écoute le duel en vue unique, les deux sous-vues en scindé,
+  jamais la racine.
+- **Pas sous les menus** : le retour au menu remontre les deux vues ; sans garde, la vue iso s'y
+  allumait en écran scindé derrière le hub.
+- **La taille de lightmap reste un paramètre** : `GameSettings.iso_lightmap` (`1080p` par défaut,
+  persisté), `--lightmap plein|1080p` pour une exécution, deux boutons dans les réglages vidéo.
+- **Les hauteurs de simulation ne sont pas des hauteurs de rendu** : documenté en tête de
+  `presentation_3d.gd` et de `corps_grossier_iso.gdshader`, là où ISO3 les lira. Aucune constante
+  de `map_geometry.gd` n'est posée ici.
+
+**Ce que la suite prouve** — `tools/test_iso_vues.gd`, 189 vérifications, dans `run_suites.sh`,
+**sabotée une fois** (la couche des capteurs laissée dans les masques des lightmaps : 6 contrôles
+rouges, code 1) **→ restaurée à l'identique → verte** : écran scindé (deux vues 3D, un monde, caméras, sols, calques) ;
+masques des lightmaps `~4`/`~2` sans la couche des capteurs ; capteurs miroir ; **canaux** : aucun
+`CanvasItem` que lit la lightmap de J1 ne reçoit le canal de vue de J2, ni l'inverse, ni aucun
+capteur ; calques et brouillage sous l'écran de leur joueur ; auditeurs ; aller-retours scindé →
+unique → scindé → gel → 2D → iso → nouvelle manche → menu, avec monde, masques, caméras, tailles,
+`top_level`, `stretch`, calques, brouillage et auditeur rendus ; simulation identique pas pour pas
+avec ou sans iso en scindé, **avec un témoin** ; réglage de lightmap. Les suites d'ISO1
+(`test_iso_geometrie`, `test_iso_camera`) et `test_banc_iso` restent vertes.
+
+**Appels de dessin et cibles de rendu — relevés par la session, sans relevé de cadence**
+(décision d'Adrien du 2026-09-14). MacBook M3, fenêtre 2560×1440 (étirement ×1,33), Arène
+Standard, `--charge` (l'échange au pompe du banc de cadence), six secondes chacun, fenêtre au
+premier plan (relevés bruts : `docs/iso/captures_iso2/releves_appels.txt`). Les appels sont la médiane par image ; ils varient de quelques unités avec les
+balles et les particules de la charge, la taille des cibles non.
+
+| Rendu | Appels de dessin | Cibles 2D (lightmaps) | Cibles 3D | Capteurs |
+|---|---|---|---|---|
+| vue unique, vue de dessus (`--base`) | 154 | — (la racine rend le duel, 2560×1440) | — | — |
+| vue unique, iso, lightmap `1080p` | 156 | 1920×1080 (2,07 Mpx) | racine 2560×1440 | 2 × 256² |
+| vue unique, iso, lightmap `plein` | 159 | 2560×1440 (3,69 Mpx) | racine 2560×1440 | 2 × 256² |
+| écran scindé, vue de dessus (`--base --scinde`) | 221 | 957×1080 + 958×1080 (2,07 Mpx) | — | — |
+| écran scindé, iso, lightmap `1080p` | 241 | 957×1080 + 958×1080 (2,07 Mpx) | 1276×1440 + 1277×1440 (3,68 Mpx) | 4 × 256² |
+| écran scindé, iso, lightmap `plein` | 235 | 1276×1440 + 1277×1440 (3,68 Mpx) | 1276×1440 + 1277×1440 (3,68 Mpx) | 4 × 256² |
+
+**Ce que le tableau dit, pour la question laissée ouverte par H15.** Les appels de dessin ne
+départagent pas `plein` et `1080p` (3 de plus en vue unique, 6 de moins en scindé : le bruit
+de la charge) ; la vue iso coûte 2 à 5 appels en vue unique et une vingtaine en scindé (deux
+sols, deux passes de murs et de corps, quatre capteurs). **Ce qui départage, c'est la taille
+des cibles** : `plein` rend 1,8 fois plus de pixels 2D que `1080p` — et c'est la cible des
+lumières 2D, dont les torches coûtaient 3,65 ms par image au relevé du 2026-09-14. En écran
+scindé, l'iso ajoute deux cibles 3D de la taille de la fenêtre, quelle que soit la lightmap.
+Le relevé humain de fin de chantier dira ce que ces pixels coûtent en temps.
+
+**Le noir absolu — prouvé au banc, dans une vraie fenêtre, pour les deux vues** (`tools/banc_iso.gd
+--jeu [--scinde] --noir`, pâte D, 2026-09-14 à 20 h 35 ; relevés bruts dans
+`docs/iso/captures_iso2/releves_noir.txt`). Le banc éteint désormais les lumières à
+**chaque image** jusqu'à la dernière capture et nomme celles que le jeu rallume : une seule, le
+bandeau LED des murs (`Arena/MurLed`).
+
+| Vue | (a) lumières éteintes : pixels allumés hors du support de la brute | capteurs | (b) lightmaps noires : écran max | lightmaps | capteurs | Verdict |
+|---|---|---|---|---|---|---|
+| vue unique | 0 | 0, 0 | 0/255 | 0 | 0, 0 | **tenu** |
+| écran scindé | 0 (moitiés 0 et 0 en b) | 0, 0, 0, 0 | 0/255 | 0, 0 | 0, 0, 0, 0 | **tenu** |
+
+L'écran vaut 255 en (a), comme en ISO1 : c'est le résidu du jeu (viseur, liseré des murs), que la
+pâte D rehausse sans rien allumer hors de ce que la lightmap brute allume déjà. ⚠️ **Avant les
+capteurs « lumière seule », (a) comme (b) étaient rompus** : 14 à 20/255 à l'écran, des taches de
+la taille d'un corps, une par corps visible — les capteurs valaient 13 à 17/255 sans aucune lumière.
+
+**La planche** — `docs/iso/planche_iso2.jpg` (captures et relevés dans `docs/iso/captures_iso2/`,
+recomposable par `python3 docs/iso/planche_iso2.py --journal <journal du banc>`). Écran scindé iso,
+pâte D, Arène Standard, 1920×1080, sans HUD : torche de J1 seule, puis de J2 seule, chacune avec
+les deux lightmaps lues à la même image ; puis le noir des deux vues, éclairci ×8. **Ce qui s'y
+lit** : l'anneau du halo de proximité n'entoure un joueur que dans SA moitié et dans SA lightmap ;
+le faisceau éclaire le sol des deux ; un corps s'allume quand une lumière du jeu l'atteint — la
+rétrodiffusion du porteur de torche éclaire aussi le corps voisin, dans les deux vues, comme le
+sprite en vue de dessus — et reste noir sinon.
+
+**Un point à relire avec Adrien au jalon — la phrase du jalon et la règle du jeu.** « Je ne vois
+pas sa torche, il ne voit pas mon halo » : la seconde moitié est une règle du jeu et ISO2 la tient
+(le halo de proximité n'éclaire que la vue de son porteur). La première ne l'est pas : **le
+faisceau d'une torche éclaire le sol des deux vues**, en vue de dessus depuis toujours, et c'est
+voulu (« voir le faisceau adverse est la moitié qui trahit », consigné le 2026-09-09). ISO2
+conserve les canaux du jeu tels quels ; ce qui est propre à chaque vue, c'est le halo et
+l'éclairage des silhouettes. Si Adrien voulait dire autre chose, c'est un changement de règle, pas
+un réglage de l'iso.
+
+**Ce qu'ISO2 ne fait pas** : les corps voxel (ISO3, session « ISO Corps ») ; les objets debout
+(ISO4) ; la killcam en iso au-delà du relogement par vue et la reprojection des entrées (ISO5 —
+la visée souris reste celle d'ISO1, sur la vue de J1) ; aucune `Light3D` ; rien de la simulation,
+du protocole ni du format de carte.
+
+#### Jalon H-ISO2 — ce qui attend Adrien
+
+1. **Jouer un duel complet à deux manettes en écran scindé iso**, pâte D :
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" -- --iso`
+   puis 1V1 LOCAL. Regarder : son halo n'est que dans sa moitié ; l'autre joueur s'allume sous son
+   halo quand il est collé ; F3 (avec `fn`) montre les deux vues.
+2. **Relire la phrase du jalon** contre la règle du faisceau (ci-dessus).
+3. **Dire si ISO3 s'intègre** (corps voxel lisant le capteur) **et si ISO4/ISO5 s'ouvrent.**
+4. La taille de lightmap reste ouverte jusqu'au relevé de fin de chantier.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
@@ -21665,6 +21884,12 @@ et un seul est du travail de session.
 > d'équité et dire si ISO2 s'ouvre. **Plus de relevé de cadence par étape** (décision du soir
 > même) : un seul, en fin de chantier ou sur ressenti.
 > **La pâte est choisie : D**, le soir même. Commandes absolues dans la section.
+>
+> **Mis à jour le 2026-09-14, nuit — ISO2 est commitée** sur la branche locale `iso2-vues` (section
+> ISO, « ISO2 ») : lightmaps par joueur, capteurs de corps, écran scindé iso, effets d'écran par vue,
+> aller-retours prouvés, noir absolu tenu pour les deux vues. Ce qui attend Adrien : le **jalon
+> H-ISO2** — un duel complet à deux manettes en écran scindé iso — et une phrase du jalon à relire
+> contre la règle du faisceau, qui éclaire le sol des deux vues.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

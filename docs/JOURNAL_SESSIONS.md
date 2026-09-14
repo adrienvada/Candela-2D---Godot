@@ -4295,3 +4295,42 @@ n'atteint pas le jeu sur un Mac (piège consigné). Il a choisi **la pâte D** s
 D devient la pâte par défaut ; les touches 1-4 et 0 remplacent F2 (qui reste) ; la ligne
 `BANC_ISO` de `--jeu` imprime désormais les vrais réglages rendus. Toujours rien de poussé
 ni de fusionné.
+
+### Session « prompt-iso2-3e1d2e-ce » (ISO2, branche `iso2-vues`) — ajoutée le 2026-09-14
+
+Session locale (Fable 5.1 puis Opus 5), chantier **vue isométrique**, étape **ISO2** (vues et
+canaux), ouverte le 2026-09-14 sur demande d'Adrien. Rôle `iso-pilote` de l'étude (§ 7.2). La
+branche part de `iso1-fondations` @ `cc2bd87` (tête d'ISO1, gelée) ; le worktree est celui
+que l'application a créé pour la session, basculé sur la branche neuve :
+`/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e`.
+
+**Fichiers créés, à elle :** `capteur_corps.gd` (`CapteurCorps`), `tools/test_iso_vues.gd`,
+`docs/iso/planche_iso2.py`, `docs/iso/captures_iso2/`, `docs/iso/planche_iso2.jpg`, et leurs `.uid`.
+
+**Fichiers d'ISO1 repris sur cette branche** (la session « Iso 1 Opus » n'y touche plus) :
+`presentation_3d.gd` (écran scindé, capteurs, bascules, taille de lightmap),
+`iso_lightmap.gdshaderinc` (deux lightmaps, choisies par la caméra qui dessine),
+`sol_projete.gdshader`, `mur_iso.gdshader`, `corps_grossier_iso.gdshader` (lumière lue dans
+les capteurs), `tools/banc_iso.gd` (`--jeu --scinde`, `--torches`, noir absolu par vue),
+`tools/test_iso_geometrie.gd` (un contrôle de masque : la couche des capteurs sort des
+masques pendant la vue iso).
+
+**Partagés, touchés par insertion seulement :** `game_state.gd` (deux crochets : où loger
+calques et brouillage d'un joueur quand la vue iso rend son écran), `ui.gd` (angle du voile
+projeté, voile de J2 seulement si les deux vues sont affichées, réglage de lightmap),
+`settings_manager.gd` (`iso_lightmap`, `--lightmap`), `brouillage_vue.gd` (un projecteur
+monde → écran optionnel ; fichier du chantier « retouche éblouissement », clos),
+`tools/run_suites.sh` (une suite au bout de `SUITES`), `docs/ROADMAP.md` (section ISO2),
+ce journal.
+
+**Lu, jamais écrit :** `player.gd`, `audio_manager.gd`, `canaux_lumiere.gd`,
+`map_geometry.gd`, `replay_system.gd`. Aucun `voxel_*`, ni `map_codec.gd`, ni l'éditeur, ni
+la simulation, ni le protocole.
+
+**Signalé, non corrigé ici :** l'éblouissement s'intègre dans `_process`, à la cadence de
+l'image, et freine qui le subit — deux parties identiques divergent d'une fraction de pixel
+dès qu'un faisceau ou un flash de tir éblouit (vu par `test_iso_vues`, qui s'en tient à l'écart).
+
+**En parallèle :** « Murs bas Opus » (sur `main`, lots coordonnés), « ISO Corps Sonnet »
+(`iso-corps`), « Iso 1 Opus » (en attente de H-ISO1). **Suivi de projet :** cette session ne
+republie pas ; ses deltas partent vers « Fable 5.1 - CLOUD ISO UNRAILED » par `SendMessage`.

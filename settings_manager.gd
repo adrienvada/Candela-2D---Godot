@@ -89,6 +89,18 @@ var mode_iso := false
 var _mode_iso_choisi := false
 const DRAPEAU_ISO := "--iso"
 
+## ISO2 — la taille de la lightmap, la cible 2D que la vue iso projette : `1080p`, l'aire
+## logique de la vue (ce que le jeu rendait avant le chantier R), ou `plein`, les pixels de
+## la fenêtre. H15 l'a laissée ouverte, et ce n'est pas une décision d'agent : Adrien
+## tranche au relevé de fin de chantier, sur les appels de dessin et les tailles de cibles
+## que le banc imprime. Même partage que `mode_iso` : `iso_lightmap` est ce qui S'APPLIQUE,
+## `_iso_lightmap_choisi` ce qui s'enregistre ; `--lightmap plein|1080p` vaut pour une
+## exécution et ne s'écrit jamais.
+const LIGHTMAPS_ISO := ["1080p", "plein"]
+const DRAPEAU_LIGHTMAP := "--lightmap"
+var iso_lightmap := "1080p"
+var _iso_lightmap_choisi := "1080p"
+
 ## PE3.1 — le GPU brûlait pour rien hors match.
 ##
 ## Les menus tournaient déplafonnés, vers 200 images par seconde (relevé
@@ -162,6 +174,7 @@ func _ready() -> void:
 	if _has_saved_resolution or OS.is_debug_build():
 		_apply_resolution()
 	mode_iso = _mode_iso_choisi or iso_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+	iso_lightmap = _lightmap_appliquee()
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
 	_apply_audio()
@@ -202,6 +215,27 @@ func mode_iso_choisi() -> bool:
 
 static func iso_par_argument(args: PackedStringArray) -> bool:
 	return args.has(DRAPEAU_ISO)
+
+## Le choix du joueur pour la taille de la lightmap, enregistré ; une valeur inconnue
+## retombe sur `1080p`. Prend effet à l'image suivante (la vue iso repose ses lightmaps).
+func set_iso_lightmap(variante: String) -> void:
+	_iso_lightmap_choisi = variante if LIGHTMAPS_ISO.has(variante) else "1080p"
+	iso_lightmap = _lightmap_appliquee()
+	_save()
+
+func iso_lightmap_choisi() -> String:
+	return _iso_lightmap_choisi
+
+func _lightmap_appliquee() -> String:
+	var arg := lightmap_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+	return arg if arg != "" else _iso_lightmap_choisi
+
+## `--lightmap plein` ou `--lightmap 1080p` → la variante ; sinon une chaîne vide.
+static func lightmap_par_argument(args: PackedStringArray) -> String:
+	var i := args.find(DRAPEAU_LIGHTMAP)
+	if i >= 0 and i + 1 < args.size() and LIGHTMAPS_ISO.has(args[i + 1]):
+		return args[i + 1]
+	return ""
 
 func set_fps_cap(cap: int) -> void:
 	fps_cap = cap if FPS_CAPS.has(cap) else 0
@@ -516,6 +550,8 @@ func _load() -> void:
 	# Seul un VRAI `true` allume : une valeur trafiquée retombe sur la vue de dessus.
 	_mode_iso_choisi = cfg.get_value(SECTION_VIDEO, "mode_iso", false) is bool \
 		and cfg.get_value(SECTION_VIDEO, "mode_iso", false)
+	var lightmap: Variant = cfg.get_value(SECTION_VIDEO, "iso_lightmap", "1080p")
+	_iso_lightmap_choisi = lightmap if lightmap is String and LIGHTMAPS_ISO.has(lightmap) else "1080p"
 
 	master_volume = _sanitize_volume(cfg.get_value(SECTION_AUDIO, "master", VOLUME_DEFAULT))
 	music_volume = _sanitize_volume(cfg.get_value(SECTION_AUDIO, "music", VOLUME_DEFAULT))
@@ -567,6 +603,7 @@ func _save() -> void:
 	cfg.set_value(SECTION_DISPLAY, "intro_vue", intro_vue)
 	cfg.set_value(SECTION_VIDEO, "fps_cap", fps_cap)
 	cfg.set_value(SECTION_VIDEO, "mode_iso", _mode_iso_choisi)
+	cfg.set_value(SECTION_VIDEO, "iso_lightmap", _iso_lightmap_choisi)
 	if _has_saved_resolution:
 		cfg.set_value(SECTION_DISPLAY, "resolution_index", resolution_index)
 	cfg.set_value(SECTION_AUDIO, "master", master_volume)

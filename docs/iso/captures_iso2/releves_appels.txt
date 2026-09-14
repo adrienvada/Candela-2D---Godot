@@ -1,0 +1,81 @@
+Fenêtre       : 1920×1080 pixels natifs (2.07 Mpx), aire 2D 1920×1080, étirement ×1.00
+  SubViewport1: cible 2D 957×1080, monde 2D 957×1080
+  SubViewport2: cible 2D 958×1080, monde 2D 958×1080
+  VueIso1     : cible 3D 957×1080
+  VueIso2     : cible 3D 958×1080
+  Capteurs    : 4 × 256×256
+Fenêtre       : 1920×1080 pixels natifs (2.07 Mpx), aire 2D 1920×1080, étirement ×1.00
+  SubViewport1: cible 2D 957×1080, monde 2D 957×1080
+  SubViewport2: cible 2D 958×1080, monde 2D 958×1080
+  VueIso1     : cible 3D 957×1080
+  VueIso2     : cible 3D 958×1080
+  Capteurs    : 4 × 256×256
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 1920×1080, monde 2D 1920×1080
+  SubViewport2: cible 2D 958×1080  (ARRÊTÉE)
+  Racine      : cible 3D 2560×1440 (la fenêtre)
+  Capteurs    : 2 × 256×256
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080, monde 2D 957×1080
+  SubViewport2: cible 2D 958×1080, monde 2D 958×1080
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+  Capteurs    : 4 × 256×256
+===== base_unique — 20:26:44
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 1920×1080  (ARRÊTÉE)
+  SubViewport2: cible 2D 958×1080  (ARRÊTÉE)
+  Focus            : stable au premier plan — relevé comparable
+  Appels de dessin : 154 (médiane par image)
+BANC_ISO mode=base vue=unique lightmap=- tangage=60.0 lacet=0.0 mur=0.45 charge=true carte=Arène Standard median=102 bas1=46 pire_ms=22.8 appels=154 focus=premier
+===== base_unique rc=0
+===== iso_unique_1080p — 20:26:57
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 1920×1080, monde 2D 1920×1080
+  SubViewport2: cible 2D 958×1080  (ARRÊTÉE)
+  Racine      : cible 3D 2560×1440 (la fenêtre)
+  Capteurs    : 2 × 256×256
+  Focus            : stable au premier plan — relevé comparable
+  Appels de dessin : 156 (médiane par image)
+BANC_ISO mode=jeu-D vue=unique lightmap=1080p tangage=52.0 lacet=0.0 mur=0.65 charge=true carte=Arène Standard median=103 bas1=53 pire_ms=20.4 appels=156 focus=premier
+===== iso_unique_1080p rc=0
+===== iso_unique_plein — 20:27:10
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 2560×1440, monde 2D 1920×1080
+  SubViewport2: cible 2D 1277×1440  (ARRÊTÉE)
+  Racine      : cible 3D 2560×1440 (la fenêtre)
+  Capteurs    : 2 × 256×256
+  Focus            : stable au premier plan — relevé comparable
+  Appels de dessin : 159 (médiane par image)
+BANC_ISO mode=jeu-D vue=unique lightmap=plein tangage=52.0 lacet=0.0 mur=0.65 charge=true carte=Arène Standard median=100 bas1=49 pire_ms=23.2 appels=159 focus=premier
+===== iso_unique_plein rc=0
+===== base_scinde — 20:27:24
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080
+  SubViewport2: cible 2D 958×1080
+  Focus            : stable au premier plan — relevé comparable
+  Appels de dessin : 221 (médiane par image)
+BANC_ISO mode=base vue=scinde lightmap=- tangage=60.0 lacet=0.0 mur=0.45 charge=true carte=Arène Standard median=108 bas1=52 pire_ms=22.8 appels=221 focus=premier
+===== base_scinde rc=0
+===== iso_scinde_1080p — 20:27:37
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 957×1080, monde 2D 957×1080
+  SubViewport2: cible 2D 958×1080, monde 2D 958×1080
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+  Capteurs    : 4 × 256×256
+  Focus            : stable au premier plan — relevé comparable
+  Appels de dessin : 241 (médiane par image)
+BANC_ISO mode=jeu-D vue=scinde lightmap=1080p tangage=52.0 lacet=0.0 mur=0.65 charge=true carte=Arène Standard median=98 bas1=47 pire_ms=21.8 appels=241 focus=premier
+===== iso_scinde_1080p rc=0
+===== iso_scinde_plein — 20:27:51
+Fenêtre       : 2560×1440 pixels natifs (3.69 Mpx), aire 2D 1920×1080, étirement ×1.33
+  SubViewport1: cible 2D 1276×1440, monde 2D 957×1080
+  SubViewport2: cible 2D 1277×1440, monde 2D 958×1080
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+  Capteurs    : 4 × 256×256
+  Focus            : stable au premier plan — relevé comparable
+  Appels de dessin : 235 (médiane par image)
+BANC_ISO mode=jeu-D vue=scinde lightmap=plein tangage=52.0 lacet=0.0 mur=0.65 charge=true carte=Arène Standard median=105 bas1=50 pire_ms=20.2 appels=235 focus=premier
+===== iso_scinde_plein rc=0

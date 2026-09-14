@@ -44,6 +44,23 @@ func suivre(canevas: Transform2D, taille_2d: Vector2) -> void:
 	size = taille_orthographique(tangage_deg, hauteur_monde(canevas, taille_2d))
 
 
+## Point du monde 2D → écran, en unités LOGIQUES d'une vue de `taille_vue` — l'aire où
+## vivent les calques d'écran (brouillage, voile) de cette vue (ISO2).
+##
+## Orthographique en `KEEP_HEIGHT` : `size` unités de monde tiennent dans la hauteur de la
+## vue, et l'échelle est la même en largeur.
+##
+## ⚠️ **Pas `unproject_position()`.** Il se rapporte au rectangle que Godot retient pour la
+## caméra, pas forcément à l'aire logique des calques : sans fenêtre, la racine lui donnait
+## 698 px de large pour une aire de 1920, et le centre de la vue tombait à x = 349
+## (mesuré par `tools/test_iso_vues.gd`). La formule ne dépend que de la caméra.
+func vers_ecran(point: Vector2, taille_vue: Vector2) -> Vector2:
+	var t := global_transform
+	var rel := Vector3(point.x, 0.0, point.y) - t.origin
+	var echelle := taille_vue.y / size if size > 0.0 else 1.0
+	return taille_vue * 0.5 + Vector2(rel.dot(t.basis.x), -rel.dot(t.basis.y)) * echelle
+
+
 # ---------------------------------------------------------------------------
 # LES FORMULES — statiques, vérifiées sans fenêtre
 # ---------------------------------------------------------------------------

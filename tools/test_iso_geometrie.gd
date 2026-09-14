@@ -320,11 +320,14 @@ func _crochet_et_masques() -> void:
 		noeuds.append_array(n.get_children())
 	_check("aucun nœud 3D sous GameState ni sous Player*", sous_le_jeu == 0, "%d" % sous_le_jeu)
 	var couche := int((load("res://presentation_3d.gd") as Script).get_script_constant_map()["COUCHE_HORS_VUE"])
+	# ISO2 : pendant que la vue iso est allumée, la couche des capteurs de corps sort des
+	# masques des lightmaps (sinon elles dessineraient un disque blanc sous chaque corps).
+	var capteurs := int((load("res://presentation_3d.gd") as Script).get_script_constant_map().get("COUCHE_CAPTEUR", 0))
 	for paire in [[main.vp1, ~4], [main.vp2, ~2]]:
 		var vue: SubViewport = paire[0]
 		# Sur 32 bits : `~4` vaut -5 en GDScript, le masque se relit en entier non signé.
-		_check("%s : masque vivant = ~%d (game_state.gd fait foi, pas main.tscn)" % [vue.name, ~paire[1]],
-			vue.canvas_cull_mask == (paire[1] & 0xFFFFFFFF), str(vue.canvas_cull_mask))
+		_check("%s : masque vivant = ~%d, couche des capteurs à part (game_state.gd fait foi, pas main.tscn)" % [vue.name, ~paire[1]],
+			(vue.canvas_cull_mask | capteurs) == (paire[1] & 0xFFFFFFFF), str(vue.canvas_cull_mask))
 		_check("%s : la couche des sprites retirés (%d) n'y est pas lue" % [vue.name, couche],
 			(vue.canvas_cull_mask & couche) == 0 and (vue.canvas_cull_mask & (2 | 4)) != 0)
 	_check("la racine ne la lit pas non plus", (root.canvas_cull_mask & couche) == 0)

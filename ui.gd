@@ -2323,6 +2323,16 @@ func _source_du_voile(victime, defaut):
 	return s if s != null and is_instance_valid(s) else defaut
 
 
+## Les deux vues du duel sont-elles AFFICHÉES ? Le `visible` des conteneurs est la source
+## de vérité du jeu (`GameState._accorder_rendu_aux_vues`). Sans `GameState` — bancs
+## d'interface montés seuls —, on suppose l'écran scindé, comme `_voile_scinde`.
+func _deux_vues_affichees() -> bool:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs == null or not ("vp1" in gs) or gs.vp1 == null or gs.vp2 == null:
+		return true
+	return (gs.vp1.get_parent() as CanvasItem).visible and (gs.vp2.get_parent() as CanvasItem).visible
+
+
 func _poser_voile(rect: ColorRect, victime, source) -> void:
 	if rect == null:
 		return
@@ -2348,8 +2358,17 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 	mat.set_shader_parameter("aberration_chromatique",
 		0.015 * GameSettings.current_effect("aberration_eblouissement"))
 	if source != null and victime != null:
-		mat.set_shader_parameter("relevement",
-			(source.global_position - victime.global_position).angle())
+		var relevement: float = (source.global_position - victime.global_position).angle()
+		# Chantier ISO, étape ISO2 — incliné de 52°, l'angle du monde n'est plus celui de
+		# l'écran (le sol se voit raccourci en profondeur) : la vue iso le projette par la
+		# caméra 3D du joueur ébloui. Hors iso elle rend `NAN`, et l'angle du monde tient.
+		var iso := Presentation3D.instance()
+		if iso != null and victime.get("player_id") != null:
+			var a: float = iso.angle_ecran(int(victime.get("player_id")),
+				victime.global_position, source.global_position)
+			if not is_nan(a):
+				relevement = a
+		mat.set_shader_parameter("relevement", relevement)
 
 
 func _build_hud() -> void:
@@ -6968,8 +6987,9 @@ func _build_display_panel() -> Control:
 		+ "est basse."))
 	block.add_child(_build_fps_panel())
 	block.add_child(_make_reglage_titre("VUE ISOMÉTRIQUE (EXPÉRIMENTAL)",
-		"Le duel vu de trois quarts, la lumière projetée sur le relief. En vue unique "
-		+ "seulement : l'écran scindé reste vu de dessus. S'allume au prochain duel."))
+		"Le duel vu de trois quarts, la lumière projetée sur le relief — en vue unique "
+		+ "comme en écran scindé. S'allume au prochain duel. La lightmap est l'image de "
+		+ "lumière projetée : à l'aire de la vue (1080p) ou aux pixels de la fenêtre (plein)."))
 	block.add_child(_build_iso_panel())
 	block.add_child(_make_reglage_titre("CALIBRATION",
 		"Cible perceptive : ce qui doit se voir apparaît à peine, le reste reste "
@@ -7031,6 +7051,9 @@ func _build_vsync_panel() -> Control:
 	return row
 
 ## ISO1 — un seul interrupteur, désactivé par défaut (`GameSettings.mode_iso`).
+## ISO2 — et la taille de la lightmap (`GameSettings.iso_lightmap`), la question qu'H15 a
+## laissée ouverte : un réglage, pas une décision — Adrien tranche au relevé de fin de
+## chantier.
 func _build_iso_panel() -> Control:
 	var row := _make_rangee_de_choix()
 	var btn := _make_choice_button("VUE ISOMÉTRIQUE (EXPÉRIMENTAL)", COLOR_GOLD, null)
@@ -7039,6 +7062,14 @@ func _build_iso_panel() -> Control:
 	btn.button_pressed = GameSettings.mode_iso_choisi()
 	btn.toggled.connect(func(actif: bool) -> void: GameSettings.set_mode_iso(actif))
 	row.add_child(btn)
+	var group := ButtonGroup.new()
+	for variante in GameSettings.LIGHTMAPS_ISO:
+		var choix := _make_choice_button("LIGHTMAP %s" % String(variante).to_upper(), COLOR_GOLD, group)
+		choix.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
+		choix.add_theme_font_size_override("font_size", T_COURANT)
+		choix.button_pressed = GameSettings.iso_lightmap_choisi() == variante
+		choix.pressed.connect(func() -> void: GameSettings.set_iso_lightmap(variante))
+		row.add_child(choix)
 	return row
 
 func _build_fps_panel() -> Control:
@@ -8019,8 +8050,14 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		# toujours dès qu'on revient d'une partie en ligne à un écran scindé,
 		# dans la même session — et le voile de J2 disparaît sans que rien ne le
 		# signale. Poser l'état complet à chaque image coûte une affectation.
-		p2_dazzle.visible = _voile_scinde
-		if _voile_scinde:
+		# ISO2 — **et seulement si les DEUX vues sont affichées.** En « 1v1 écrans scindés »
+		# la killcam cache la vue de J2, et les bancs jouent ce mode en vue unique : le
+		# voile de J2 se posait alors sur la moitié droite d'un écran qui ne montrait que
+		# J1 (constaté au banc ISO0.b, avec la lueur de sa fusée). Un effet d'écran d'un
+		# joueur ne s'affiche que dans sa vue.
+		var voile_de_j2 := _voile_scinde and _deux_vues_affichees()
+		p2_dazzle.visible = voile_de_j2
+		if voile_de_j2:
 			_poser_voile(p2_dazzle, p2, _source_du_voile(p2, p1))
 
 	# DA5.5 — la copie plein cadre ne tourne que si au moins un voile est
@@ -8028,7 +8065,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 	# à la fois, et l'écran scindé peut afficher les deux voiles ensemble.
 	if _voile_bb != null:
 		var p1_ebloui := p1 != null and float(p1.get("dazzle_amount")) > 0.001
-		var p2_ebloui := p2 != null and _voile_scinde \
+		var p2_ebloui := p2 != null and _voile_scinde and _deux_vues_affichees() \
 			and float(p2.get("dazzle_amount")) > 0.001
 		_voile_bb.visible = p1_ebloui or p2_ebloui
 

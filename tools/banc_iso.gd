@@ -204,6 +204,15 @@ var _jeu := false
 var _noir := false
 var _sans_hud := false
 var _mur_donne := false
+## Quelles torches une capture allume : `toutes`, `j1`, `j2` ou `aucune`. La planche
+## d'ISO2 se fait à torche de J1 seule puis de J2 seule — on doit y voir que chaque vue
+## n'a que sa lumière.
+const TORCHES := ["toutes", "j1", "j2", "aucune"]
+var _torches := "toutes"
+## Pendant le contrôle du noir : les lumières s'éteignent à chaque image.
+var _noir_en_cours := false
+## Les lumières que le jeu avait rallumées depuis l'image précédente — nommées au relevé.
+var _rallumees: PackedStringArray = []
 
 ## Posé une fois la vue construite : `_process` ne touche à rien avant.
 var _pret := false
@@ -245,12 +254,12 @@ func _ready() -> void:
 		printerr("✗ banc_iso : ", refus)
 		_sortir(3)
 		return
-	if _jeu and _scinde:
-		printerr("✗ banc_iso : --jeu ne connaît que la vue unique (l'écran scindé iso est ISO2)")
+	if _noir and (_capture == "" or not (_jeu or _base) or (_scinde and not _jeu)):
+		printerr("✗ banc_iso : --noir se prend avec --capture, et --jeu (vue unique ou --scinde) ou --base (vue unique)")
 		_sortir(2)
 		return
-	if _noir and (_capture == "" or not (_jeu or _base) or _scinde):
-		printerr("✗ banc_iso : --noir se prend avec --capture, et --jeu ou --base (vue unique)")
+	if _jeu and _lightmap == "demi":
+		printerr("✗ banc_iso : le jeu ne connaît que les lightmaps plein et 1080p (--lightmap est lu par GameSettings)")
 		_sortir(2)
 		return
 	GameSettings.pilotage_externe = true
@@ -350,6 +359,10 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_carte = _value(args, "--carte", "")
 	_capture = _value(args, "--capture", "")
 	_flash = args.has("--flash")
+	_torches = _value(args, "--torches", "toutes")
+	if not TORCHES.has(_torches):
+		printerr("✗ --torches attend %s (reçu « %s »)" % [" | ".join(TORCHES), _torches])
+		return false
 	_jeu = args.has("--jeu")
 	_noir = args.has("--noir")
 	_sans_hud = args.has("--sans-hud")
@@ -373,8 +386,9 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 func _libelle() -> String:
 	var vue := "écran scindé" if _scinde else "vue unique"
 	if _jeu:
-		return "JEU (Presentation3D), vue unique, tangage %s°, murs %s tuile, pâte %s%s" % [
-			str(CameraIso.TANGAGE_DEG), str(_mur if _mur_donne else IsoGeometrie.hauteur_mur_haut()),
+		return "JEU (Presentation3D), %s, lightmap %s, tangage %s°, murs %s tuile, pâte %s%s" % [vue,
+			GameSettings.iso_lightmap, str(CameraIso.TANGAGE_DEG),
+			str(_mur if _mur_donne else IsoGeometrie.hauteur_mur_haut()),
 			_pate_nommee(), ", charge automatique" if _charge else ""]
 	if _base:
 		return "BASE (vue de dessus, telle qu'aujourd'hui), %s%s" % [vue,
@@ -573,6 +587,12 @@ func _materiau(role: int, vue: int) -> ShaderMaterial:
 # ---------------------------------------------------------------------------
 
 func _process(_delta: float) -> void:
+	# Le contrôle du noir éteint les lumières À CHAQUE IMAGE jusqu'à sa dernière capture : le
+	# jeu en rallume au pas de physique (le capteur d'un corps, en « lumière seule », valait
+	# 31/255 en vue unique et 58 en scindé quand le banc ne les éteignait que trente images
+	# avant de capturer). Ce `_process` passe après la physique et avant le rendu.
+	if _noir_en_cours:
+		_rallumees = _eteindre_et_nommer(get_tree().root)
 	if not _pret:
 		return
 	_tenir()
@@ -766,8 +786,19 @@ func _conditions() -> void:
 		return
 	if _jeu:
 		var p := Presentation3D.instance()
-		print("  %-12s: cible 3D %d×%d (la fenêtre)" % ["Racine", fenetre.x, fenetre.y])
-		print("Jeu           : Presentation3D — %s" % (p.etat if p != null else "ABSENTE"))
+		if _scinde and p != null:
+			for sv in p.get("_vues3d"):
+				print("  %-12s: cible 3D %d×%d" % [(sv as SubViewport).name, (sv as SubViewport).size.x, (sv as SubViewport).size.y])
+		else:
+			print("  %-12s: cible 3D %d×%d (la fenêtre)" % ["Racine", fenetre.x, fenetre.y])
+		var capteurs := 0
+		if p != null:
+			for id in 2:
+				for j in 2:
+					if p.capteurs()[id][j] != null:
+						capteurs += 1
+		print("  %-12s: %d × %d×%d" % ["Capteurs", capteurs, CapteurCorps.TAILLE, CapteurCorps.TAILLE])
+		print("Jeu           : Presentation3D — %s" % (p.etat.replace("\n", " | ") if p != null else "ABSENTE"))
 		print("Murs          : %s tuile (%s)" % [str(_mur if _mur_donne else IsoGeometrie.hauteur_mur_haut()),
 			"retaillés par le banc" if _mur_donne else IsoGeometrie.source_des_hauteurs()])
 		return
@@ -817,15 +848,15 @@ func _report() -> void:
 	if _jeu:
 		var p := Presentation3D.instance()
 		if p != null:
-			print("  Reposés en jeu   : %d nœud(s) de corps, %d vue(s) relancée(s) (Presentation3D)"
-				% [p.corps_recaches, p.vues_relancees])
+			print("  Reposés en jeu   : %d nœud(s) de corps, %d lightmap(s), %d masque(s) ; %d bascule(s) de vues (Presentation3D)"
+				% [p.corps_recaches, p.lightmaps_reposees, p.masques_reposes, p.bascules])
 	elif not _base:
 		print("  Reposés en jeu   : %d nœud(s) de corps, %d vue(s) relancée(s)"
 			% [_corps_recaches, _vues_relancees])
 	# Une ligne à recopier dans un tableau, tous réglages compris.
 	print("BANC_ISO mode=%s vue=%s lightmap=%s tangage=%s lacet=%s mur=%s charge=%s carte=%s "
 		% ["base" if _base else ("jeu-" + _pate_nommee().left(1) if _jeu else "iso"), "scinde" if _scinde else "unique",
-		"-" if _base else _lightmap,
+		"-" if _base else (GameSettings.iso_lightmap if _jeu else _lightmap),
 		# En --jeu, ce sont les valeurs du JEU qui sont rendues, pas les défauts du banc :
 		# la première série d'ISO1 (2026-09-14) imprimait 60° et 0,45 pour une vue à 52° et 0,65.
 		str(CameraIso.TANGAGE_DEG) if _jeu else str(_tangage),
@@ -859,6 +890,14 @@ func _capturer() -> void:
 	var cible := _mur_le_plus_proche(p1.global_position)
 	var axe := (cible - p1.global_position).normalized()
 	p2.global_position = p1.global_position + axe.orthogonal() * 70.0
+	if _torches in ["j1", "j2"]:
+		# ISO2 — la planche des canaux. Les deux joueurs à mi-chemin du mur et écartés de
+		# 110 px, torches vers le mur : chaque vue montre l'autre joueur, et aucun n'est dans
+		# le cône de l'autre (sans quoi le voile d'éblouissement couvrirait sa moitié). Ce qui
+		# doit se lire : le halo de proximité de chaque joueur dans SA vue seulement ; le
+		# faisceau, lui, éclaire le sol des deux vues — règle du jeu, conservée par l'iso.
+		var avance := minf(p1.global_position.distance_to(cible) * 0.5, 150.0)
+		p2.global_position = p1.global_position + axe * avance + axe.orthogonal() * 110.0
 	_tenir_les_torches()
 	for i in 90:
 		for p in [p1, p2]:
@@ -890,7 +929,8 @@ func _capturer() -> void:
 	_sortir(0)
 
 
-## Les deux torches allumées par leur BOUTON, le premier cran tenu.
+## Les torches allumées par leur BOUTON, le premier cran tenu — celles que `--torches`
+## demande (toutes, hors capture).
 ##
 ## ⚠️ **Écrire `flashlight_on` ne suffit pas** : `player.gd` le relit dans
 ## `input_provider.is_flashlight_pressed()` à chaque pas de physique (« la torche
@@ -898,9 +938,15 @@ func _capturer() -> void:
 ## chaque image, et les captures sont sorties torches éteintes. Tenir l'action,
 ## c'est passer par le chemin qu'un joueur emprunte.
 func _tenir_les_torches() -> void:
-	for action in ["p1_torch", "p2_torch"]:
-		if InputMap.has_action(action) and not Input.is_action_pressed(action):
+	var voulues := {"p1_torch": _torches in ["toutes", "j1"] or _capture == "",
+		"p2_torch": _torches in ["toutes", "j2"] or _capture == ""}
+	for action in voulues:
+		if not InputMap.has_action(action):
+			continue
+		if voulues[action] and not Input.is_action_pressed(action):
 			Input.action_press(action, 0.5)
+		elif not voulues[action] and Input.is_action_pressed(action):
+			Input.action_release(action)
 
 
 ## Le point de mur le plus proche de `depuis`, à plus de quatre tuiles : assez
@@ -924,13 +970,14 @@ func _mur_le_plus_proche(depuis: Vector2) -> Vector2:
 ## Le banc ne construit rien : il attend que le JEU ait allumé sa vue iso, et le dit.
 ## Une variante doit prouver qu'elle a changé quelque chose (leçon du 2026-08-18).
 func _attendre_la_presentation() -> bool:
-	_vues.assign([_main.vp1])
+	_vues.assign([_main.vp1] if not _scinde else [_main.vp1, _main.vp2])
 	var allumee := await _attendre(func() -> bool:
 		var p := Presentation3D.instance()
-		return p != null and bool(p.get("_actif")), 5.0)
+		return p != null and bool(p.get("_actif")) and bool(p.get("_scinde")) == _scinde, 5.0)
 	if not allumee:
-		printerr("✗ --jeu : la vue isométrique du jeu ne s'est pas allumée "
-			+ "(GameSettings.mode_iso, crochet de rebuild_arena, vue unique ?)")
+		printerr("✗ --jeu : la vue isométrique du jeu ne s'est pas allumée %s "
+			% ("en écran scindé" if _scinde else "en vue unique")
+			+ "(GameSettings.mode_iso, crochet de rebuild_arena, vues regardées ?)")
 		return false
 	if _mur_donne:
 		var murs := Presentation3D.instance().get_node_or_null("SceneIso/Murs")
@@ -975,6 +1022,7 @@ func _pate_nommee() -> String:
 ## dessine plus rien (`canvas_cull_mask = 0`), et l'écran doit valoir 0 PARTOUT. C'est
 ## ce que « strictement 0 à lumière 0 » veut dire au pixel, sans rien cacher du jeu.
 func _capturer_le_noir() -> void:
+	_noir_en_cours = true
 	var eteintes := 0
 	for i in 30:
 		eteintes = _eteindre_les_lumieres(get_tree().root)
@@ -989,17 +1037,19 @@ func _capturer_le_noir() -> void:
 		DirAccess.make_dir_recursive_absolute(dossier)
 	image_a.save_png(_capture)
 	var max_a := _valeur_max(image_a)
-	var vue: SubViewport = _main.vp1
-	var lumiere_a := vue.get_texture().get_image()
-	var max_lightmap_a := _valeur_max(lumiere_a)
-	if lumiere_a != null and not _base:
-		lumiere_a.save_png(_capture.get_basename() + "_lightmap1.png")
 	var rendu := "base" if _base else "jeu-" + _pate_nommee()
 	if _base:
 		print("BANC_ISO noir-a rendu=%s max_ecran=%d/255 lumieres_eteintes=%d image=%s"
 			% [rendu, max_a, eteintes, _capture])
 		_sortir(0)
 		return
+	# ISO2 : une lightmap PAR VUE regardée, et une moitié d'écran par vue en scindé.
+	var max_lightmaps_a: Array[int] = []
+	for i in _vues.size():
+		var lumiere_a := _vues[i].get_texture().get_image()
+		max_lightmaps_a.append(_valeur_max(lumiere_a))
+		if lumiere_a != null:
+			lumiere_a.save_png(_capture.get_basename() + "_lightmap%d.png" % (i + 1))
 	var presentation := Presentation3D.instance()
 	var style: int = presentation.style_pate
 	presentation.style_pate = -1
@@ -1011,29 +1061,96 @@ func _capturer_le_noir() -> void:
 	if brute != null:
 		brute.save_png(_capture.get_basename() + "_brute.png")
 	var hors_support := _allumes_hors_du_support(image_a, brute)
-	print("BANC_ISO noir-a rendu=%s max_ecran=%d/255 max_brute=%d/255 max_lightmap=%d/255 allumes_hors_support=%d lumieres_eteintes=%d image=%s"
-		% [rendu, max_a, _valeur_max(brute), max_lightmap_a, hors_support, eteintes, _capture])
+	print("BANC_ISO noir-a rendu=%s vue=%s max_ecran=%d/255 max_brute=%d/255 max_lightmaps=%s max_capteurs=%s allumes_hors_support=%d lumieres_eteintes=%d image=%s"
+		% [rendu, "scinde" if _scinde else "unique", max_a, _valeur_max(brute), str(max_lightmaps_a),
+		str(_max_capteurs()), hors_support, eteintes, _capture])
 
-	var masque := vue.canvas_cull_mask
-	vue.canvas_cull_mask = 0
+	# (a) prouve aussi le corps : **toutes lumières éteintes, chaque capteur doit valoir 0** —
+	# un corps ne s'allume que par son capteur.
+	var max_capteurs_a := _max_capteurs()
+	var capteurs_noirs := max_capteurs_a.all(func(v): return v == 0)
+	var masques: Array[int] = []
+	for vue in _vues:
+		masques.append(vue.canvas_cull_mask)
+		vue.canvas_cull_mask = 0
+	# « La vue 2D ne dessine plus rien » vaut pour les capteurs aussi : ils sont de la 2D.
+	var capteurs_vivants := _capteurs_vivants()
+	var masques_capteurs: Array[int] = []
+	for c in capteurs_vivants:
+		masques_capteurs.append(c.canvas_cull_mask)
+		c.canvas_cull_mask = 0
 	for i in 20:
 		_eteindre_les_lumieres(get_tree().root)
 		await get_tree().process_frame
 	var image_b: Image = await RenduCommun.capturer(get_tree(), 15000)
-	var lumiere_b := vue.get_texture().get_image()
-	vue.canvas_cull_mask = masque
+	var max_lightmaps_b: Array[int] = []
+	var max_moities_b: Array[int] = []
+	for i in _vues.size():
+		max_lightmaps_b.append(_valeur_max(_vues[i].get_texture().get_image()))
+		max_moities_b.append(_valeur_max_dans(image_b, _cadre_pixels(i)))
+		_vues[i].canvas_cull_mask = masques[i]
+	var max_capteurs_b := _max_capteurs()
+	for k in capteurs_vivants.size():
+		capteurs_vivants[k].canvas_cull_mask = masques_capteurs[k]
 	var chemin_b := _capture.get_basename() + "_lightmap_noire.png"
 	if image_b != null:
 		image_b.save_png(chemin_b)
 	var max_b := _valeur_max(image_b)
-	var max_lightmap_b := _valeur_max(lumiere_b)
-	var tenu := max_b == 0 and max_lightmap_b == 0 and hors_support == 0
-	print("BANC_ISO noir-b rendu=%s max_ecran=%d/255 max_lightmap=%d/255 image=%s"
-		% [rendu, max_b, max_lightmap_b, chemin_b])
-	print("BANC_ISO noir pate=%s verdict=%s (a : %d pixel(s) allumé(s) hors du support de la brute, écran max %d ; b : écran %d sur lightmap %d)"
-		% [_pate_nommee(), "NOIR ABSOLU TENU" if tenu else "NOIR ABSOLU ROMPU", hors_support, max_a,
-		max_b, max_lightmap_b])
+	var max_lightmap_b: int = max_lightmaps_b.max() if not max_lightmaps_b.is_empty() else -1
+	var tenu := max_b == 0 and max_lightmap_b == 0 and hors_support == 0 and capteurs_noirs
+	print("BANC_ISO noir-b rendu=%s vue=%s max_ecran=%d/255 max_moities=%s max_lightmaps=%s max_capteurs=%s image=%s"
+		% [rendu, "scinde" if _scinde else "unique", max_b, str(max_moities_b), str(max_lightmaps_b),
+		str(max_capteurs_b), chemin_b])
+	_noir_en_cours = false
+	print("BANC_ISO noir rallumees_par_le_jeu=%s" % ", ".join(_rallumees_vues.keys()) if not _rallumees_vues.is_empty() else "BANC_ISO noir rallumees_par_le_jeu=aucune")
+	print("BANC_ISO noir pate=%s vue=%s verdict=%s (a : %d pixel(s) allumé(s) hors du support de la brute, écran max %d, capteurs %s ; b : écran %d sur lightmap %d ; moitiés %s)"
+		% [_pate_nommee(), "scinde" if _scinde else "unique", "NOIR ABSOLU TENU" if tenu else "NOIR ABSOLU ROMPU",
+		hors_support, max_a, str(max_capteurs_a), max_b, max_lightmap_b, str(max_moities_b)])
 	_sortir(0 if tenu else 6)
+
+
+## La valeur maximale de chaque capteur de corps vivant (ISO2), vue par vue, corps par corps.
+## Un corps ne peut s'allumer que par son capteur : c'est le premier endroit où regarder quand
+## un corps sort du noir.
+func _max_capteurs() -> Array[int]:
+	var out: Array[int] = []
+	for c in _capteurs_vivants():
+		out.append(_valeur_max(c.get_texture().get_image()))
+	return out
+
+
+func _capteurs_vivants() -> Array[SubViewport]:
+	var out: Array[SubViewport] = []
+	var p := Presentation3D.instance()
+	if p == null:
+		return out
+	for id in 2:
+		for j in 2:
+			var c = p.capteurs()[id][j]
+			if c != null:
+				out.append(c as SubViewport)
+	return out
+
+
+## Le cadre de la vue `i` en PIXELS de fenêtre, à l'étirement près : celui que la vue iso
+## lui donne (`Presentation3D._cadre`) — en lightmap `plein`, le conteneur sans `stretch`
+## grandit jusqu'à sa vue et ne dit plus où elle s'affiche.
+func _cadre_pixels(i: int) -> Rect2i:
+	var p := Presentation3D.instance()
+	var cadre: Rect2 = p._cadre(1 if _vues[i] == _main.vp2 else 0) if p != null and bool(p.get("_actif")) \
+		else (_vues[i].get_parent() as Control).get_global_rect()
+	var e := _etirement()
+	return Rect2i(Vector2i((cadre.position * e).round()), Vector2i((cadre.size * e).round()))
+
+
+## La valeur de canal la plus haute dans une région de l'image, alpha exclu.
+static func _valeur_max_dans(image: Image, zone: Rect2i) -> int:
+	if image == null:
+		return -1
+	var cadre := Rect2i(Vector2i.ZERO, image.get_size()).intersection(zone)
+	if cadre.size.x <= 0 or cadre.size.y <= 0:
+		return -1
+	return _valeur_max(image.get_region(cadre))
 
 
 ## Pixels allumés dans `image` là où `reference` est noire sur tout un voisinage 5×5.
@@ -1068,6 +1185,22 @@ static func _allumes_hors_du_support(image: Image, reference: Image) -> int:
 		if not trouve:
 			n += 1
 	return n
+
+
+## Toutes celles que le jeu a rallumées pendant le contrôle, par nom de nœud (pour la ROADMAP).
+var _rallumees_vues := {}
+
+
+## Éteint toutes les `Light2D` et rend le chemin de celles qui étaient allumées.
+func _eteindre_et_nommer(noeud: Node) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if noeud is Light2D and (noeud as Light2D).enabled:
+		(noeud as Light2D).enabled = false
+		out.append(String(noeud.name))
+		_rallumees_vues[String(noeud.get_parent().name) + "/" + String(noeud.name)] = true
+	for enfant in noeud.get_children():
+		out.append_array(_eteindre_et_nommer(enfant))
+	return out
 
 
 func _eteindre_les_lumieres(noeud: Node) -> int:

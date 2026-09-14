@@ -8,6 +8,10 @@
 // pied s'allume, là où une vraie lumière 3D ne dessinerait que chez le joueur côté
 // caméra (étude ISO0, § 5.2). Hors du rectangle couvert par la vue 2D, du noir.
 //
+// ISO2 : les murs sont COMMUNS aux deux caméras de l'écran scindé ; chaque caméra lit
+// la lightmap de son joueur (`lightmap_de_j2`). Une face vue par J1 s'allume avec la
+// lumière de J1 seulement — jamais avec le halo de J2.
+//
 // `unshaded`, aucune Light3D.
 shader_type spatial;
 render_mode unshaded, cull_back, fog_disabled, shadows_disabled;
@@ -28,6 +32,7 @@ void vertex() {
 }
 
 void fragment() {
+	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 n = normale.xz;
 	float longueur = length(n);
 	n = longueur > 0.0001 ? n / longueur : vec2(0.0, 1.0);
@@ -35,7 +40,7 @@ void fragment() {
 	// debout, pas couchée.
 	vec2 motif = vec2(dot(monde.xz, vec2(-n.y, n.x)), -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
-	vec3 c = lightmap_pateuse(monde.xz + n * pied, motif, aa);
+	vec3 c = lightmap_pateuse(monde.xz + n * pied, motif, aa, deux);
 	// Sommet (et dessous) : noir strict.
 	ALBEDO = abs(normale.y) < 0.5 ? c : vec3(0.0);
 }

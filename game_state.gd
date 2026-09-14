@@ -5146,6 +5146,15 @@ func _accorder_rendu_aux_vues() -> void:
 ## Le viewport qui rend VRAIMENT le joueur `pid` : la racine si elle a pris sa
 ## vue (rendu racine, vue regardée), sa sous-vue sinon.
 func _viewport_du_joueur(pid: int) -> Node:
+	# Chantier ISO, étape ISO2 — la vue iso rend l'ÉCRAN de ce joueur ailleurs : la
+	# fenêtre en vue unique, sa sous-vue 3D en écran scindé. Ses calques d'écran et son
+	# brouillage y suivent ; laissés dans sa sous-vue 2D, ils se dessineraient DANS la
+	# lightmap et seraient projetés au sol, faces de murs comprises.
+	var iso := Presentation3D.instance()
+	if iso != null:
+		var ecran: Node = iso.parent_ecran(pid)
+		if ecran != null:
+			return ecran
 	var vue: SubViewport = vp1 if pid == 0 else vp2
 	if _rendu_racine:
 		var conteneur := vue.get_parent() as Control
@@ -5257,6 +5266,14 @@ func _accorder_brouillage_aux_vues() -> void:
 				app.get_parent().remove_child(app)
 			continue
 		var parent: Node = self if _rendu_racine else vue
+		# Chantier ISO, étape ISO2 — dans la vue iso, l'appareil vit dans le viewport 3D
+		# du joueur et projette le monde par sa caméra (`projecteur`) ; hors iso le
+		# projecteur est invalide et il garde la transformation de canevas de sa vue.
+		var iso := Presentation3D.instance()
+		var ecran: Node = iso.parent_ecran(i) if iso != null else null
+		if ecran != null:
+			parent = ecran
+		app.set("projecteur", iso.projecteur_ecran(i) if ecran != null else Callable())
 		if app.get_parent() != parent:
 			if app.get_parent() != null:
 				app.get_parent().remove_child(app)
