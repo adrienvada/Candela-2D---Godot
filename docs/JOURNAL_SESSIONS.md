@@ -4209,3 +4209,15 @@ rouge (« la manche part à l'arrivée de l'invité ») pendant qu'un lot de la 
 « Iso 1 » tournait en même temps ; rejoué seul, 3 passages sur 3 verts ; second lot
 complet : **vert, 112 OK, 355 s**. Contention, pas code — le piège est déjà consigné
 (« Un lanceur lent ne dit rien du code, il dit qui d'autre travaille »).
+
+**H-MB0, 2026-09-14 (18 h 45 à 18 h 53) — Adrien joue le prototype.** « C'est génial. »
+Il règle à chaud et s'arrête sur **mur bas 0,40 · accroupi 0,10 · α 13,5° · accroupi
+×0,25** (bande d'ombre 1,67 tuile, cachette 1,25 tuile). Valeurs relues dans ses lignes
+`REGLAGE` (terminal), portées dans `murs_bas_geometrie.gd`, le prototype et la suite.
+Restent à dire : la lecture des six règles, le dessin du mur bas, l'ouverture de MB1 ; et
+deux conséquences posées à Adrien — l'accroupi va aussi vite que l'enjambement, et un
+accroupi de 0,10 tuile serait plat s'il est extrudé tel quel en iso.
+**H-MB0 tranché, 19 h 00.** Quatre réponses d'Adrien : les six règles se comportent comme
+il les imaginait ; égalité assumée entre accroupi et enjambement (65 px/s) ; dessin du mur
+bas gardé ; **MB1 ouverte**. Contrôle en fenêtre refait avec ses valeurs : piste C
+toujours à une seule vérité (4 054/4 054, 8/8), noir 0/255 ; lot vert, 112 OK.

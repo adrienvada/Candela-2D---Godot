@@ -46,15 +46,17 @@ extends RefCounted
 ## l'égalité : une copie qu'aucun contrôle ne relie à l'original dérive.
 const TUILE := 35.0
 
-## Valeurs proposées pour le jalon H-MB0 — à fixer par Adrien au prototype.
-## Le pourquoi de chaque nombre est dans `docs/MURS_BAS.md`, § 1.
+## Valeurs FIXÉES par Adrien au prototype, jalon H-MB0, 2026-09-14 (18 h 50) —
+## réglées à chaud, relues dans les lignes `REGLAGE` de sa partie. Proposées
+## avant : mur bas 0,5, accroupi 0,25, angle 9,5°. `HAUTEUR_MUR_HAUT` n'était pas
+## réglable au prototype : elle reste la proposition. Voir `docs/MURS_BAS.md`, § 1.
 const HAUTEUR_MUR_HAUT := 1.25
-const HAUTEUR_MUR_BAS := 0.5
-const HAUTEUR_ACCROUPI := 0.25
+const HAUTEUR_MUR_BAS := 0.4
+const HAUTEUR_ACCROUPI := 0.1
 const HAUTEUR_DEBOUT := 1.0
 ## L'angle de franchissement, en degrés au-dessus de l'horizontale. Ce n'est PAS
 ## le tangage de la caméra iso (52°) : c'est une règle de jeu, pas un cadrage.
-const ANGLE_FRANCHISSEMENT := 9.5
+const ANGLE_FRANCHISSEMENT := 13.5
 
 ## Bornes de l'angle. En dessous, la zone morte dépasserait toute carte ; au-dessus
 ## de 89°, `tan` explose et la zone morte s'annule — autant ne pas avoir de mur.

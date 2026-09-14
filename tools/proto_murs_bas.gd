@@ -104,7 +104,8 @@ const NOMS_ROLE := ["Porteur de torche", "Cible debout", "Cible accroupie"]
 var h_bas := Geo.HAUTEUR_MUR_BAS          # tuiles
 var h_accroupi := Geo.HAUTEUR_ACCROUPI    # tuiles
 var angle := Geo.ANGLE_FRANCHISSEMENT     # degrés
-var facteur_accroupi := 0.45
+## Fixée par Adrien à H-MB0 (2026-09-14) : ×0,25, soit 65 px/s. Proposée à ×0,45.
+var facteur_accroupi := 0.25
 
 const PAS_HAUTEUR := 0.05
 const PAS_ANGLE := 0.5

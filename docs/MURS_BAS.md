@@ -58,7 +58,42 @@ dans `tools/murs_bas_geometrie.gd`. `visible()` y ajoute les murs hauts, qui arr
 tout. **La lumière (shader) et la balle (`resoudre_tir`) l'interrogent toutes les
 deux.**
 
-### Les valeurs proposées, et pourquoi
+### ✅ Les valeurs fixées par Adrien au prototype — H-MB0, 2026-09-14, 18 h 50
+
+Réglées à chaud pendant sa partie, relues dans ses dernières lignes `REGLAGE` :
+
+| Constante | Proposée | **Fixée** | Ce que ça donne |
+|---|---|---|---|
+| `HAUTEUR_MUR_BAS` | 0,5 | **0,40** | — |
+| `HAUTEUR_ACCROUPI` | 0,25 | **0,10** | — |
+| `HAUTEUR_DEBOUT` | 1,0 | **1,00** (inchangée) | — |
+| `ANGLE_FRANCHISSEMENT` | 9,5° | **13,5°** | — |
+| `L_sol` | 2,99 tuiles | **1,67 tuile** (58 px) | la bande d'ombre derrière le mur |
+| `L_accroupi` | 1,49 tuile | **1,25 tuile** (44 px) | la cachette |
+| vitesse accroupie | ×0,45 | **×0,25** (65 px/s) | — |
+| `HAUTEUR_MUR_HAUT` | 1,25 | **1,25** — non réglable au prototype, reste la proposition | — |
+
+**Ce que le parcours de réglage dit, plus que les chiffres.** Adrien a d'abord abaissé le
+mur jusqu'à 0,30, puis l'a remonté à 0,40 ; il a creusé l'accroupi jusqu'à 0,05 avant de
+revenir à 0,10 ; il a monté l'angle jusqu'à 18° puis l'a redescendu à 13,5° ; et il a
+essayé l'accroupi à ×0,10 avant de s'arrêter à ×0,25. Le résultat garde une cachette
+proche de la proposition (1,25 tuile au lieu de 1,5), mais **divise par deux la bande
+d'ombre au sol** (1,67 au lieu de 3). Le rapport entre les deux passe de 2 à 1,33.
+
+**Trois conséquences, dont deux tranchées par Adrien le même soir :**
+
+1. **L'accroupi va aussi vite que l'enjambement** : 65 px/s tous les deux. ✅ **Égalité
+   assumée** (Adrien) : enjamber ne coûte pas plus que marcher accroupi,
+   `FACTEUR_ENJAMBEMENT` reste à 0,25.
+2. **La bande d'ombre ne suffit plus à dire « mur bas »** : à 1,67 tuile, elle dépasse à
+   peine la cachette. Le dessin du mur bas porte donc davantage la lisibilité. ✅ **Dessin
+   gardé tel que proposé** (§ 6.4) : hachures, invisible dans le noir, pas de LED.
+3. **Un accroupi de 0,10 tuile, c'est 3,5 px de haut** si ISO1 et ISO3 extrudent cette
+   constante telle quelle : un corps presque plat en vue iso. Le contrat dit « une seule
+   source » ; il faudra peut-être séparer la hauteur de JEU de celle du VOXEL. Question pour
+   la session ISO, pas bloquante pour MB1.
+
+### Les valeurs proposées avant H-MB0, et pourquoi (historique)
 
 | Constante (tuiles) | Proposée | Pourquoi |
 |---|---|---|

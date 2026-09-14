@@ -87,8 +87,13 @@ func _test_longueur() -> void:
 	# constante, ce contrôle dit ce qu'Adrien voit changer.
 	var l_sol := Geo.longueur_zone_morte(Geo.HAUTEUR_MUR_BAS, 0.0, ALPHA)
 	var l_acc := Geo.longueur_zone_morte(Geo.HAUTEUR_MUR_BAS, Geo.HAUTEUR_ACCROUPI, ALPHA)
-	_check("valeurs proposées : L_sol ≈ 3 tuiles, L_accroupi ≈ 1,5 tuile",
-		absf(l_sol - 3.0) < 0.05 and absf(l_acc - 1.5) < 0.05, "L_sol=%.3f L_acc=%.3f" % [l_sol, l_acc])
+	_check("valeurs fixées à H-MB0 : L_sol ≈ 1,67 tuile, L_accroupi ≈ 1,25 tuile",
+		absf(l_sol - 1.67) < 0.01 and absf(l_acc - 1.25) < 0.01, "L_sol=%.3f L_acc=%.3f" % [l_sol, l_acc])
+	var p_script: GDScript = load("res://tools/proto_murs_bas.gd")
+	var proto_defaut: Node = p_script.new()
+	_check("vitesse accroupie fixée à H-MB0 : ×0,25 dans le prototype",
+		absf(float(proto_defaut.facteur_accroupi) - 0.25) < 1e-6)
+	proto_defaut.free()
 
 
 func _test_accroupi_autour_de_L() -> void:

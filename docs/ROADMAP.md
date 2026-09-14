@@ -21036,8 +21036,8 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 
 | Étape | Objet | État |
 |---|---|---|
-| **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — attend **H-MB0** |
-| MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ⏸ pas avant le mot d'Adrien |
+| **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
+| MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | 🟡 **ouverte par Adrien le 2026-09-14** |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée, `Protocol.VERSION` 17 → 18, pas étouffés, silhouette, marque HUD | ⏸ |
 | MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ⏸ |
 
@@ -21076,7 +21076,40 @@ point, à la fonction qui fait payer la balle.
   jeu a une demi-douzaine de lumières par joueur. Ordre de grandeur, pas relevé au
   protocole (fenêtre au premier plan forcée par le mode automatique, machine partagée).
 
-### Valeurs proposées pour H-MB0 (en tuiles, contrat ISO1)
+### ✅ H-MB0 — les valeurs fixées par Adrien au prototype, le 2026-09-14 (18 h 50)
+
+Premier retour, en lançant le prototype : « C'est génial. » Puis il a joué et réglé
+à chaud ; valeurs relues dans ses dernières lignes `REGLAGE` : **mur bas 0,40 ·
+accroupi 0,10 · debout 1,00 · α 13,5° · vitesse accroupie ×0,25 (65 px/s)**, soit
+**`L_sol` 1,67 tuile** (58 px) et **`L_accroupi` 1,25 tuile** (44 px). Le mur haut (1,25)
+n'était pas réglable et reste la proposition. Portées dans `tools/murs_bas_geometrie.gd`
+et le prototype.
+
+**Ce que ces valeurs changent, et qui reste à lui demander** (détail :
+`docs/MURS_BAS.md` § 1) :
+- la cachette reste proche de la proposition, mais **la bande d'ombre au sol est
+  divisée par deux** : elle ne suffit plus seule à dire « mur bas », et le dessin du mur
+  porte davantage la lisibilité ;
+- **l'accroupi va exactement aussi vite que l'enjambement** (65 px/s) : « lentement » ne
+  se sent plus en arrivant accroupi. Enjambement plus lent, ou égalité assumée ?
+- **un accroupi de 0,10 tuile fait 3,5 px de haut** s'il est extrudé tel quel en iso :
+  hauteur de jeu et hauteur de voxel sont peut-être à séparer. Question pour la session
+  ISO, pas bloquante pour MB1.
+
+**✅ Puis tranché par Adrien, le même soir, en quatre réponses :**
+- **les six règles se comportent comme il les imaginait**, toutes — y compris les deux
+  lectures ajoutées par MB0 (on ne tire pas en enjambant ; la balle d'un canon accroupi
+  s'arrête sur le mur bas) ;
+- **égalité assumée** : l'accroupi et l'enjambement vont tous deux à 65 px/s ;
+  enjamber ne coûte pas plus que marcher accroupi. `FACTEUR_ENJAMBEMENT` reste à 0,25 ;
+- **le dessin est gardé** : invisible dans le noir, dessus hachuré sous la lumière, pas
+  de bandeau LED ;
+- **MB1 est ouverte.**
+
+La question de la hauteur de voxel d'un accroupi (0,10 tuile = 3,5 px) reste pour la
+session ISO : elle n'était pas à Adrien de la trancher ici.
+
+### Valeurs proposées pour H-MB0 (en tuiles, contrat ISO1) — remplacées par celles d'Adrien ci-dessus
 
 `HAUTEUR_MUR_HAUT` 1,25 · `HAUTEUR_MUR_BAS` 0,5 · `HAUTEUR_ACCROUPI` 0,25 ·
 `HAUTEUR_DEBOUT` 1,0 · `ANGLE_FRANCHISSEMENT` 9,5° — soit **`L_sol` = 3 tuiles** (la bande
@@ -21145,7 +21178,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
-| H-MB0 | **Jouer le prototype des murs bas et fixer les valeurs** (chantier MURS BAS, `docs/MURS_BAS.md`) | Aucune suite ne dit si une bande d'ombre de 3 tuiles se lit, si 1,5 tuile de cachette est juste, ni si l'accroupi à ×0,45 est jouable. Le prototype prouve les règles au pixel ; il ne dit pas si elles sont bonnes. | Avant MB1 — rien de la carte, du fil ni du joueur ne bouge avant |
+| H-MB0 | **Jouer le prototype des murs bas et fixer les valeurs** (chantier MURS BAS, `docs/MURS_BAS.md`) | Aucune suite ne dit si une bande d'ombre de 3 tuiles se lit, si 1,5 tuile de cachette est juste, ni si l'accroupi à ×0,45 est jouable. Le prototype prouve les règles au pixel ; il ne dit pas si elles sont bonnes. | ✅ **Tranché le 2026-09-14** — mur bas 0,40, accroupi 0,10, α 13,5°, accroupi ×0,25 ; six règles validées ; dessin gardé ; enjambement à la vitesse accroupie ; MB1 ouverte |
 
 ---
 
