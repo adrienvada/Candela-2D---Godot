@@ -365,6 +365,16 @@ d'Adrien (« garder la proximité ») : sa référence d'énergie passe de la to
 **Suivi de projet :** je ne republie pas — delta envoyé à « Can2d - Mise à jour
 artefact de suivi - Sonnet LOCAL ».
 
+**2026-09-14 — contre-jour et halo ombré** (Adrien : « toutes les sources
+lumineuses [doivent se comporter] comme la lampe torche »). Touchés : `mur_led.gd`
+(la bande n'éclaire plus les corps — son choix entre deux pistes),
+`canaux_lumiere.gd` (`masque_ombre_halo()`, et le bloc qui affirmait que les deux
+familles de masques ne se croisent jamais : faux, corrigé), `player.gd` (une
+ligne, le masque d'ombre du halo) et les deux tests. **Non touchées :** les
+autres lumières dont le masque d'ombre ignore les corps — fusée, braises, mine,
+halo de la torche fantôme, lumière d'impact, traînée de balle. Domaines d'autres
+sessions ; inventaire remis à Adrien pour décision.
+
 ### 2026-09-10 — session « candela-2d-9b » (worktree `lights-display-error-3fd1cd`) : le carré près de la fusée est résolu, `particle_pool.gd` et `game_state.gd` touchés
 
 **Déclaration : deux fichiers hors de mon périmètre.** `particle_pool.gd`

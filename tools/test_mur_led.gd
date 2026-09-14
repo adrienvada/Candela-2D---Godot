@@ -269,7 +269,8 @@ func _test_pose() -> void:
 		MurLed.est_actif())
 	_check("posée au creux : éteinte, pas seulement à zéro", not led.enabled)
 	_check("aucune ombre", not led.shadow_enabled)
-	_check("éclaire décor, adversaire et joueur local", led.range_item_cull_mask == 7)
+	_check("n'éclaire que le décor : les corps à contre-jour (Adrien, 2026-09-14)",
+		led.range_item_cull_mask == CanauxLumiere.DECOR, str(led.range_item_cull_mask))
 	var texture := led.texture
 	var debut := Time.get_ticks_msec()
 	var led2 := MurLed.poser(data, arene, Callable())

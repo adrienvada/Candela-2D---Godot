@@ -845,6 +845,9 @@ func _ready():
 	ambient_light.energy = 0.8
 	ambient_light.shadow_enabled = true
 	ambient_light.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	# Le corps d'en face fait ombre sous ma lueur comme sous ma torche, et son
+	# sprite reçoit cette ombre (Adrien, 2026-09-14). Voir canaux_lumiere.gd.
+	ambient_light.shadow_item_cull_mask = CanauxLumiere.masque_ombre_halo(player_id)
 	ambient_light.range_item_cull_mask = CanauxLumiere.canal_de_vue(player_id)
 	add_child(ambient_light)
 	
