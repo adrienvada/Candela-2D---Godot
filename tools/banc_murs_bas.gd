@@ -70,6 +70,13 @@ func _ready() -> void:
 	add_child(_main)
 	await get_tree().process_frame
 	_ui = _main.get_node("UI")
+	var manquants := preconditions_manquantes(_ui, _main)
+	if not manquants.is_empty():
+		for m in manquants:
+			_echouer("le banc ne peut pas démarrer — %s" % m)
+		printerr("  Voir tools/test_banc.gd, qui vérifie ces appuis en headless.")
+		_finir()
+		return
 	_ui._intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
 	_main._on_replay_requested()
 	if not await _attendre(func(): return _main.round_active and _main.countdown_left <= 0.0, 20.0):
@@ -114,6 +121,54 @@ func _ready() -> void:
 	await _noir_absolu()
 	await _cout()
 	_finir()
+
+
+## Les appuis du banc sur le jeu — la consigne de `tools/test_banc.gd` : un outil
+## qui ouvre une fenêtre n'est dans aucune suite headless, donc il se périme en
+## silence ; il expose ses hypothèses pour qu'une suite les vérifie.
+##
+## Ce banc touche à beaucoup de choses internes (la poussée de la zone morte, le
+## rendu racine, l'état des lampes et de l'éblouissement) : c'est ce qui le rend
+## fragile, et ce qui rend cette liste utile.
+static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
+	var absents: Array[String] = []
+	if ui == null or main == null:
+		absents.append("main.tscn n'expose plus UI ou GameState")
+		return absents
+	if not "_intended_mode" in ui:
+		absents.append("UI._intended_mode a disparu")
+	for prop in ["round_active", "countdown_left", "p1", "p2", "arena", "vp1", "vp2",
+			"murs_bas", "_materiaux_zone_morte", "_zone_morte_vide_poussee", "_rendu_racine"]:
+		if not prop in main:
+			absents.append("GameState.%s a disparu" % prop)
+	for methode in ["_on_replay_requested", "rebuild_arena", "_accorder_rendu_aux_vues",
+			"_pousser_zone_morte"]:
+		if not main.has_method(methode):
+			absents.append("GameState.%s() a disparu" % methode)
+	var joueur: Node = main.get("p1") if "p1" in main else null
+	if joueur == null:
+		absents.append("GameState.p1 n'existe pas encore après le chargement de main.tscn")
+	else:
+		for prop in ["flashlight", "body_light", "ambient_light", "muzzle_flash", "flashlight_on",
+				"dazzle_amount", "aim_line", "accroupi", "visual", "visual_enemy", "player_id"]:
+			if not prop in joueur:
+				absents.append("Player.%s a disparu" % prop)
+		if not joueur.has_method("poser_posture"):
+			absents.append("Player.poser_posture() a disparu")
+	if not ResourceLoader.exists(CARTE):
+		absents.append("carte d'essai absente : %s" % CARTE)
+	else:
+		var json := JSON.new()
+		if json.parse(FileAccess.get_file_as_string(CARTE)) != OK:
+			absents.append("carte d'essai illisible")
+		else:
+			var lu: Dictionary = MapCodec.validate(json.data as Dictionary)
+			var murs := MapGeometry.rects_monde(lu.get("data", {}), MapGeometry.Kind.LOW_WALLS) \
+				if lu.get("ok", false) else []
+			if murs.size() != 5:
+				absents.append("carte d'essai : %d murs bas au lieu des 5 que les scènes supposent"
+					% murs.size())
+	return absents
 
 
 # ─── Mise en scène ───────────────────────────────────────────────────────────

@@ -4341,3 +4341,11 @@ seul point, d = 0 : un centre sur le bord exact de la tuile, où aucun corps ne 
 domaine du test était faux, pas la règle. Et le sabotage de la killcam est d'abord resté
 vert : un contrôle au texte par sous-chaîne voit encore la ligne qu'on vient de commenter.
 Lot complet vert (22:38-22:44, 114 OK).
+
+### 2026-09-14 (nuit) — Finition : les appuis du banc des murs bas (même session, même branche)
+
+Le banc fenêtré de MB3c n'était dans aucune suite, donc exposé à se périmer en silence —
+la panne de `bench_framerate` du 2026-08-18. Il publie ses appuis
+(`preconditions_manquantes`) et `tools/test_banc.gd` les vérifie en headless, contre-test
+compris ; vu rougir en renommant une méthode attendue. Touché : `tools/banc_murs_bas.gd`,
+`tools/test_banc.gd`.

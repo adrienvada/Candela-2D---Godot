@@ -21347,7 +21347,10 @@ soit — l'image floue a tranché en une lecture ce que trois hypothèses n'avai
 
 **Signalé, hors MB3c** : les marques posées au sol en cours de manche (taches, empreintes)
 restent éclairées dans la zone morte — une empreinte d'accroupi pourrait s'y lire (MB3d).
-`tools/test_banc.gd` ne vérifie pas encore les appuis du nouveau banc.
+✅ `tools/test_banc.gd` vérifie désormais les appuis du nouveau banc
+(`BancMursBas.preconditions_manquantes` : internes de la zone morte, lampes et
+éblouissement des joueurs, carte d'essai à cinq murs bas), vu rougir au sabotage ; le
+banc s'arrête proprement au démarrage si l'un manque.
 
 #### MB3d — l'équité et la killcam
 

@@ -155,6 +155,17 @@ func _run() -> void:
 		"res://un_shader_qui_n_existe_pas.gdshader")
 	_check("et il sait dire quand ils manquent", not vides_voile.is_empty())
 
+	# Le banc des MURS BAS (MB3c), même raison et même remède. Il pilote une manche
+	# en écran scindé puis en vue unique, et lit des internes : la poussée de la
+	# zone morte, le rendu racine, les lampes et l'éblouissement des joueurs. Et
+	# ses scènes supposent la carte d'essai telle qu'elle est (cinq murs bas).
+	var MursBancs: GDScript = load("res://tools/banc_murs_bas.gd")
+	var manquants_mb: Array[String] = MursBancs.preconditions_manquantes(ui, main)
+	_check("tous les appuis du banc des murs bas existent encore",
+		manquants_mb.is_empty(), "; ".join(manquants_mb))
+	var vides_mb: Array[String] = MursBancs.preconditions_manquantes(null, null)
+	_check("et il sait dire quand ils manquent", not vides_mb.is_empty())
+
 	# LE PHOTOGRAPHE, même raison et même remède : il ouvre une fenêtre, donc
 	# aucune suite ne peut l'exécuter — mais une suite peut lire ses hypothèses.
 	# Il en a plus que les autres parce qu'il touche à tout : les menus, une
