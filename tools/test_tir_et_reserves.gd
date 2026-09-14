@@ -138,6 +138,7 @@ func _run() -> void:
 	_test_repere_du_poseur(gs)
 	await _test_diffus_intouchables(gs)
 	await _test_suie_masque(gs)
+	await _test_brouillage_efface_l_ennemi(gs)
 	# ⚠️ En DERNIER : le vrai départ de manche pose l'arène, les armes et le décompte.
 	_test_attente_au_depart_de_manche(gs)
 	gs.queue_free()
@@ -1720,6 +1721,32 @@ func _test_diffus_intouchables(gs: Node) -> void:
 			and not code.contains("_fusee_touchee_ce_pas"))
 	_check("et son rayon d'extinction par balle a disparu du modèle",
 		not FileAccess.get_file_as_string("res://fusee_modele.gd").contains("EXTINCTION_RAYON_BALLE"))
+
+
+## « Il faut que l'éblouissement […] brouille la position du joueur émetteur » — Adrien,
+## 2026-08-25 (option « contraste » : la silhouette se dissout).
+##
+## ⚠️ `visual_enemy.modulate.a` a deux écrivains : le brouillage dans `_physics_process`, la
+## suie dans `_process`, qui passe après et que le rendu voit. La suie posait SEULE l'opacité et
+## effaçait le brouillage à chaque image — l'ennemi d'un joueur ébloui restait entier au rendu
+## (relevé au banc ISO2b le 2026-09-14). Ce contrôle isole la combinaison : un alpha de brouillage
+## posé, loin de toute suie, puis `_process` forcé comme le rendu le verrait.
+func _test_brouillage_efface_l_ennemi(gs: Node) -> void:
+	print("\n[Ébloui, on ne voit plus l'ennemi : le brouillage survit à la suie]")
+	gs.p2.visible = true
+	gs.p2.global_position = Vector2(4000.0, 4000.0)
+	await process_frame
+	gs.p2._alpha_brouillage = 0.25
+	gs.p2._process(0.0)
+	_check("hors de la suie, le corps ennemi garde l'opacité du brouillage de son regardeur",
+		is_equal_approx(gs.p2.visual_enemy.modulate.a, 0.25), "%.3f" % gs.p2.visual_enemy.modulate.a)
+	if gs.p2.visual_enemy_ptr != null:
+		_check("et son pointeur la même", is_equal_approx(gs.p2.visual_enemy_ptr.modulate.a, 0.25),
+			"%.3f" % gs.p2.visual_enemy_ptr.modulate.a)
+	gs.p2._alpha_brouillage = 1.0
+	gs.p2._process(0.0)
+	_check("sans éblouissement ni suie, le corps ennemi est entier",
+		is_equal_approx(gs.p2.visual_enemy.modulate.a, 1.0), "%.3f" % gs.p2.visual_enemy.modulate.a)
 
 
 ## « Il faudrait qu'on ne me voie pas dans la fumée, non ? Si j'éclaire dans la

@@ -4409,3 +4409,13 @@ décalage de tri n'y faisait rien), LED des murs qui respire pendant un contrôl
 captures. Le 0,65 d'hier n'était pas dessiné : la suie écrase le brouillage sur le sprite ennemi,
 relevé à l'instant du rendu. Signalé : la silhouette révélée au tir n'a pas d'équivalent iso ;
 l'ordre des deux écritures d'opacité du sprite ennemi dans `player.gd`.
+
+**Code de main, nuit du 2026-09-15 — l'ennemi s'efface de nouveau pour qui est ébloui.** Demandé par
+Adrien avant ISO3a, en commit séparé. `player.gd` : dans `_process`, le corps ennemi prend le
+minimum du brouillage et de la suie, comme son pointeur ; la suie écrasait le brouillage depuis le
+2026-09-11. `tools/test_tir_et_reserves.gd` : un contrôle neuf isole la combinaison, saboté une
+fois. prouvé par `tools/test_tir_et_reserves.gd` (344 vérifications ; le contrôle neuf rougit avec
+l'ancienne ligne, l'ennemi y reste à 1,000) et au banc à l'instant du rendu, scène « J1 éblouit J2 »
+: l'ennemi est dessiné à l'opacité 0,00 chez J2 ébloui à 0,69, et à 0,65 chez J1 ébloui à 0,06 — en
+vue de dessus comme en iso, qui lit le sprite. ROADMAP : note datée dans le chantier du brouillage,
+un piège, la section ISO2b mise à jour.

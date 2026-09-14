@@ -1262,7 +1262,14 @@ func _process(delta):
 		if v:
 			v.modulate.a = a_soi
 	if visual_enemy:
-		visual_enemy.modulate.a = a_autre
+		# ⚠️ **Le minimum du brouillage et de la suie, comme le pointeur** (`a_masque`, juste
+		# en dessous). Ce bloc tourne dans `_process`, donc APRÈS le brouillage écrit dans
+		# `_physics_process` : il posait la seule suie et écrasait à chaque image l'effacement de
+		# l'ennemi pour qui est ébloui. Au rendu, un joueur ébloui à 0,71 voyait l'ennemi à
+		# l'opacité 1,00 (relevé sur `RenderingServer.frame_pre_draw`, banc ISO2b, 2026-09-14) —
+		# le pointeur et la silhouette de tir s'effaçaient, le corps non. Rien ne l'a vu : la suite
+		# de la suie ne regardait que la suie.
+		visual_enemy.modulate.a = minf(_alpha_brouillage, a_autre)
 	# Le pointeur et la silhouette révélée au tir aussi : un tir DANS la suie ne
 	# rend pas le corps — c'est le nuage entier qui pulse (`diffuser_flash`).
 	#

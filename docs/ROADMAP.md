@@ -3179,6 +3179,17 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une propriété à deux écrivains se lit là où le rendu la lit (2026-09-15)
+
+`visual_enemy.modulate.a` était écrite par le brouillage dans `_physics_process`, puis par la suie
+dans `_process`. Le rendu voit la seconde ; la suie ne prenait pas la première en compte, et
+l'effacement de l'ennemi pour qui est ébloui a disparu du jeu le jour où la suie est arrivée — sans
+erreur, sans suite rouge, pendant quatre jours. Deux relevés disaient même le contraire l'un de
+l'autre : lu après une capture, le sprite était « à 0,65 » ; lu sur
+`RenderingServer.frame_pre_draw`, il était dessiné à 1,00. Règle : **une valeur qui a deux écrivains
+se combine chez le dernier** (ici `minf`), et **se vérifie à l'instant où le rendu la lit** —
+`_process` forcé dans une suite, `frame_pre_draw` au banc.
+
 ### Quatre capteurs sur une couche commune se voyaient entre eux (2026-09-14)
 
 Les capteurs de corps d'ISO2 sont quatre sous-vues dans le MÊME `World2D`, une par vue et par
@@ -14388,6 +14399,21 @@ aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
 `game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
 manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
 et ils vivent dans `brouillage.gd`.
+
+**Corrigé le 2026-09-15 — l'effacement du corps ennemi ne s'appliquait plus** (code de main, commit
+séparé sur `iso2-vues`, demandé par Adrien avant ISO3a). Depuis l'arrivée de la suie (chantier des
+classes, étape 27, 2026-09-11), `player.gd` écrivait l'opacité du sprite ennemi deux fois par
+image : le brouillage dans `_physics_process`, puis la suie seule dans `_process`, que le rendu
+voit. Le corps d'un ennemi restait donc entier pour qui était ébloui ; seuls son pointeur et sa
+silhouette de tir, qui prenaient déjà le minimum des deux, s'effaçaient. Relevé à l'instant du rendu
+par le banc ISO2b : un joueur ébloui à 0,71 voyait l'ennemi à l'opacité 1,00. Correction : le corps
+prend le minimum du brouillage et de la suie, comme le pointeur ; prouvé par
+`tools/test_tir_et_reserves.gd` (344 vérifications ; le contrôle neuf rougit avec l'ancienne ligne,
+l'ennemi y reste à 1,000) et au banc à l'instant du rendu, scène « J1 éblouit J2 » : l'ennemi est
+dessiné à l'opacité 0,00 chez J2 ébloui à 0,69, et à 0,65 chez J1 ébloui à 0,06 — en vue de dessus
+comme en iso, qui lit le sprite. Rien ne l'avait vu : la suite de la suie ne regardait que la suie,
+et un relevé pris ailleurs qu'au rendu lisait la valeur du brouillage, jamais dessinée.
+
 ## Chantier — le voile d'éblouissement texturé (inscrit le 2026-08-27)
 
 **Le problème, en une phrase : le voile est un aplat blanc, et il n'a plus de
@@ -22016,9 +22042,9 @@ compose comme son miroir ; en écran scindé, chaque corps lit par vue l'opacit�
   (`_process`) écrase à chaque image le brouillage (`_physics_process`) sur `visual_enemy`. Un joueur
   ébloui à 0,71 voit l'ennemi dessiné à 1,00 — en vue de dessus comme en iso, puisque l'iso lit le
   sprite. L'effacement de l'ennemi pour l'ébloui ne se voit donc nulle part ; seuls son pointeur et sa
-  silhouette de tir s'effacent (`a_masque` combine les deux). **Signalé, non corrigé** : une ligne de
-  `player.gd` (`minf` du brouillage et de la suie, comme pour le pointeur) le rétablirait, dans les
-  deux vues à la fois ; c'est une décision hors d'ISO2b.
+  silhouette de tir s'effacent (`a_masque` combine les deux). **Corrigé le 2026-09-15** sur demande
+  d'Adrien, en commit séparé de code de main (voir le chantier « brouiller la position de celui qui
+  éblouit ») : le corps prend le minimum des deux, dans les deux vues à la fois.
 
 **Pour ISO3** : un corps voxel qui remplace ces cylindres lit les mêmes uniformes par vue
 (`opacite_1`/`_2`, `silhouette_1`/`_2`) et compose de la même façon — transparence, silhouette
@@ -22033,7 +22059,7 @@ lumière quand l'adversaire tire) n'a pas d'équivalent iso ; ni ISO3, ni fusion
 
 Le brief long du 2026-09-14 (23:45) enchaîne ISO2b, ISO3a et ISO3b sans arrêt : pas de jalon
 H-ISO2b. À H-ISO3, en écran scindé iso : dans la suie, l'adversaire disparaît en se fondant dans le
-sol ; ébloui, il ne s'efface pas encore (défaut de la vue de dessus, ci-dessus) ; dans le noir, son
+sol ; ébloui, il s'efface de même (défaut de la vue de dessus corrigé le 2026-09-15) ; dans le noir, son
 propre corps garde sa silhouette, invisible chez l'autre. Planche : `docs/iso/planche_iso2b.jpg`.
 
 ### Ce qui attend Adrien — jalon H15
