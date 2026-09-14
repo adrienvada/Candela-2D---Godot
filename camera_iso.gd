@@ -54,9 +54,11 @@ func suivre(canevas: Transform2D, taille_2d: Vector2) -> void:
 ## caméra, pas forcément à l'aire logique des calques : sans fenêtre, la racine lui donnait
 ## 698 px de large pour une aire de 1920, et le centre de la vue tombait à x = 349
 ## (mesuré par `tools/test_iso_vues.gd`). La formule ne dépend que de la caméra.
-func vers_ecran(point: Vector2, taille_vue: Vector2) -> Vector2:
+##
+## `hauteur` : à quelle hauteur au-dessus du sol, en pixels de monde (0 : le sol).
+func vers_ecran(point: Vector2, taille_vue: Vector2, hauteur := 0.0) -> Vector2:
 	var t := global_transform
-	var rel := Vector3(point.x, 0.0, point.y) - t.origin
+	var rel := Vector3(point.x, hauteur, point.y) - t.origin
 	var echelle := taille_vue.y / size if size > 0.0 else 1.0
 	return taille_vue * 0.5 + Vector2(rel.dot(t.basis.x), -rel.dot(t.basis.y)) * echelle
 

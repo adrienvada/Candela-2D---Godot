@@ -3173,6 +3173,18 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La pâte d'un sol, appliquée à un corps éclairé, le pousse au blanc (2026-09-14)
+
+Les pâtes B, C et D normalisent les tons : elles divisent par la luminance reçue pour relever une
+lueur faible, et c'est juste pour la LUMIÈRE projetée au sol. Les corps grossiers de la vue iso
+passaient leur couleur déjà éclairée — le gris de l'ennemi — dans la même pâte : pleinement
+éclairé, ce gris sortait à 255/249/229, quand la vue de dessus plafonne l'ennemi à 191/177/156.
+Adrien l'a vu au premier duel : « il devient tout blanc ». Aucune suite ne pouvait le voir, et la
+planche d'ISO2 le montrait sans que personne l'y cherche — le contrôle regardait le noir, pas le
+plafond. Correction : `min(pate(c, …), c)` ; contrôle au pixel « BANC_ISO corps » dans
+`tools/banc_iso.gd`. Règle : **un invariant de la vue de dessus se contrôle aussi par le haut** —
+le noir absolu n'était que la moitié du contrat de l'ennemi, « gris plafonné, noir hors lumière ».
+
 ### Un capteur de lumière ne s'éteignait pas sous le `CanvasModulate` noir (2026-09-14)
 
 Les capteurs de corps d'ISO2 dessinent un disque blanc dans une sous-vue qui partage le `World2D`
@@ -21720,9 +21732,61 @@ un réglage de l'iso.
 la visée souris reste celle d'ISO1, sur la vue de J1) ; aucune `Light3D` ; rien de la simulation,
 du protocole ni du format de carte.
 
+#### Premiers retours d'Adrien au jalon H-ISO2 — 2026-09-14 au soir
+
+Adrien a joué en 1V1 local, écran scindé iso, avec la commande du jalon. Deux retours.
+
+**1. « Le joueur ennemi, éclairé par la torche ou par la LED des murs extérieurs, devient tout
+blanc. » — défaut réel, corrigé.** Mesuré au pixel sur les captures de la planche : 255/246/227
+à l'écran, quand la vue de dessus plafonne l'ennemi à `Charte.ADVERSAIRE`, 191/177/156
+(`player_enemy_light.gdshader`, `min(lit, COLOR)`). Cause : les corps grossiers passent leur
+gris dans la pâte D, qui ramène chaque ton vers une luminance pleine — faite pour relever une
+lueur faible au sol, elle pousse au blanc un corps déjà pleinement éclairé. Le défaut existait
+dans ISO1 dès qu'un corps était éclairé ; les capteurs d'ISO2, qui donnent enfin aux corps la
+lumière qu'ils reçoivent (halo, LED comprise), l'ont rendu fréquent. **Correction** : la sortie
+de la pâte est plafonnée au gris d'entrée (`min(pate(c, …), c)`), ce qui garde tout ce que la
+pâte assombrit et retire ce qu'elle ajoutait ; le noir absolu tient par construction. **Preuve** :
+`tools/banc_iso.gd --jeu` mesure désormais le flanc de chaque corps visible dans chaque vue non
+éblouie et sort en code 7 au-dessus du plafond (« BANC_ISO corps »).
+
+Mesuré au banc, écran scindé à taille native, pâte D, flanc de chaque corps, avant et après la
+correction, sur les mêmes scènes (relevés bruts : `docs/iso/captures_iso2/releves_plafond.txt`) :
+
+| Scène | Corps mesuré | Avant | Après |
+|---|---|---|---|
+| J1 éblouit J2 | J2 dans la vue de J1, sous la torche | 255/249/229, rompu | 191/177/156, tenu |
+| torche de J1 seule | J1 dans la vue de J2 | 255/250/230, rompu | 191/177/156, tenu |
+| planche, torche de J2 seule | J1 dans les deux vues, J2 dans celle de J1 | — | 191/177/156, tenu |
+
+Les corps non éclairés restent à 0/0/0 ; le noir absolu reste tenu pour les deux vues (lumières
+éteintes : 0 pixel hors support, capteurs à 0 ; lightmaps noires : écran 0/255). Le contrôle a su
+échouer (code 7) avant d'être satisfait. ⚠️ Sa première version concluait « tenu » sur **zéro corps
+mesuré** — les deux vues de la scène d'éblouissement étaient ignorées, chaque porteur de torche étant
+lui-même ébloui à 0,06 dès qu'elle est allumée ; elle dit maintenant « aucun corps mesuré », et n'écarte le corps
+du porteur que lorsqu'il est faiblement ébloui.
+
+⚠️ **Pour ISO3** : `corps_iso.gdshader` (branche `iso-corps`) multiplie aujourd'hui la couleur de
+fiche par un curseur, sans pâte ni plafond. Le jour où il inclura la pâte et lira les capteurs,
+il devra plafonner de la même façon — la consigne est écrite en tête de `iso_pate.gdshaderinc`.
+
+**2. « Une zone nette autour du joueur ébloui, dans sa propre vue. » — pas un défaut, décision
+reconfirmée.** C'est le trou du flou du brouillage autour de soi, décidé le 2026-08-25 (« il ne
+faut pas que notre propre personnage devienne flou »). Mesuré au banc sur la même scène, J1
+éblouissant J2, en écran scindé à taille native : **le voile couvre la même chose en iso et en vue
+de dessus** (luminance 194 contre 207/255 au centre, 45 contre 45/255 à 500 px), mais le cœur du
+trou était deux fois plus contrasté en iso (1,94 contre 0,88) — le corps blanc et le motif de la
+pâte D sur le sol éclairé. Adrien : « c'est bien qu'on reste net si on est ébloui, ok ». Le banc
+garde la mise en scène qui l'a mesuré (`--torches eblouir`).
+
+⚠️ **Un piège de mesure au passage** : la première capture iso de cette scène était prise avec
+`--sans-hud`, qui cache toute l'interface en iso — voile compris —, et pas en vue de dessus. Elle
+montrait un « voile absent » qui n'était que l'option du banc. Une comparaison se prend dans les
+mêmes conditions des deux côtés, interface comprise.
+
 #### Jalon H-ISO2 — ce qui attend Adrien
 
-1. **Jouer un duel complet à deux manettes en écran scindé iso**, pâte D :
+1. 🟡 **Commencé le 2026-09-14 au soir** (retours ci-dessus : corps blanc corrigé, trou net du flou
+   reconfirmé). **Jouer un duel complet à deux manettes en écran scindé iso**, pâte D :
    `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" -- --iso`
    puis 1V1 LOCAL. Regarder : son halo n'est que dans sa moitié ; l'autre joueur s'allume sous son
    halo quand il est collé ; F3 (avec `fn`) montre les deux vues.

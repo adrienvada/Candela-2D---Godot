@@ -57,5 +57,14 @@ void fragment() {
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
 	float recue = pate_luminance(lumiere_recue(deux));
 	vec3 c = gris * smoothstep(seuil_bas, seuil_haut, recue);
-	ALBEDO = pate(c, pate_luminance(c), style, motif, vec2(0.0), recue, aa);
+	// ⚠️ **Plafonnée au gris d'entrée, et c'est la règle de la vue de dessus.** Le sprite
+	// ennemi y est `min(lit, COLOR)` (`player_enemy_light.gdshader`) : éclairé, il ne dépasse
+	// jamais `Charte.ADVERSAIRE`. La pâte, elle, ramène un ton vers une luminance pleine — faite
+	// pour relever une lueur au sol, elle poussait au BLANC un corps pleinement éclairé :
+	// 255/246/227 mesurés contre un plafond de 191/177/156 (Adrien, jalon H-ISO2 : « il devient
+	// tout blanc », sous la torche comme sous la LED des murs). Le `min` garde tout ce que la
+	// pâte assombrit (lavis, grain) et retire seulement ce qu'elle ajoutait. Le noir absolu tient :
+	// le résultat ne dépasse jamais `c`, qui est nul sans lumière. Contrôlé au pixel par
+	// `tools/banc_iso.gd --jeu` (« BANC_ISO corps »).
+	ALBEDO = min(pate(c, pate_luminance(c), style, motif, vec2(0.0), recue, aa), c);
 }

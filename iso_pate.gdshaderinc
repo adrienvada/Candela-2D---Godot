@@ -17,6 +17,12 @@
 // non par l : à lumière faible, la pâte ne REHAUSSE pas un reliquat de lumière qui
 // dévoilerait ce que la vue de dessus laisse dans le noir.
 //
+// ⚠️ **POUR UN CORPS (ISO3), plafonner à la couleur d'entrée : `min(pate(c, …), c)`.** La
+// pâte B, C et D normalise les tons : pensée pour la LUMIÈRE projetée au sol, elle pousse au
+// blanc une couleur de corps déjà éclairée. Les corps grossiers d'ISO2 sont sortis à
+// 255/246/227 pour un gris plafonné à 191/177/156 (retour d'Adrien au jalon H-ISO2). La vue
+// de dessus plafonne l'ennemi à son gris ; la vue iso doit en faire autant.
+//
 // Miroir processeur, formule pour formule : `iso_pate.gd`. La suite
 // `tools/test_iso_camera.gd` y vérifie l'invariant sur les quatre pâtes ; le banc
 // (`tools/banc_iso.gd --jeu --noir`) le vérifie au pixel dans une vraie fenêtre.

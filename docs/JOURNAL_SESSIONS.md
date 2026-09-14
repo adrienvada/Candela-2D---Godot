@@ -4334,3 +4334,14 @@ dès qu'un faisceau ou un flash de tir éblouit (vu par `test_iso_vues`, qui s'e
 **En parallèle :** « Murs bas Opus » (sur `main`, lots coordonnés), « ISO Corps Sonnet »
 (`iso-corps`), « Iso 1 Opus » (en attente de H-ISO1). **Suivi de projet :** cette session ne
 republie pas ; ses deltas partent vers « Fable 5.1 - CLOUD ISO UNRAILED » par `SendMessage`.
+
+**Addendum, soir du 2026-09-14 — premiers retours du jalon H-ISO2.** Adrien a joué en 1V1 local,
+écran scindé iso. **Le corps ennemi éclairé devenait blanc** : la pâte D poussait au blanc le gris
+des corps grossiers ; corrigé sur sa demande par un plafond au gris d'entrée
+(`corps_grossier_iso.gdshader`), prouvé au pixel par un contrôle neuf de `tools/banc_iso.gd`
+(« BANC_ISO corps », code 7 au-dessus du plafond), et la consigne est écrite pour ISO3 en tête de
+`iso_pate.gdshaderinc` (fichier d'ISO1 repris sur cette branche). **La zone nette autour du joueur
+ébloui** est le trou du flou décidé le 2026-08-25 : mesuré identique sous le voile en iso et en
+vue de dessus, décision reconfirmée par Adrien, rien de changé. Fichiers touchés en plus :
+`camera_iso.gd` (projection d'un point en hauteur). Lots et fenêtres de banc coordonnés avec
+« Murs bas Opus » par message, avant et après chacun.

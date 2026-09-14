@@ -207,7 +207,9 @@ var _mur_donne := false
 ## Quelles torches une capture allume : `toutes`, `j1`, `j2` ou `aucune`. La planche
 ## d'ISO2 se fait à torche de J1 seule puis de J2 seule — on doit y voir que chaque vue
 ## n'a que sa lumière.
-const TORCHES := ["toutes", "j1", "j2", "aucune"]
+## `eblouir` : J1 braque sa torche sur J2, qui a la sienne éteinte et regarde J1 — pour
+## comparer l'éblouissement de J2 dans sa propre vue, en vue de dessus et en iso.
+const TORCHES := ["toutes", "j1", "j2", "aucune", "eblouir"]
 var _torches := "toutes"
 ## Pendant le contrôle du noir : les lumières s'éteignent à chaque image.
 var _noir_en_cours := false
@@ -898,10 +900,15 @@ func _capturer() -> void:
 		# faisceau, lui, éclaire le sol des deux vues — règle du jeu, conservée par l'iso.
 		var avance := minf(p1.global_position.distance_to(cible) * 0.5, 150.0)
 		p2.global_position = p1.global_position + axe * avance + axe.orthogonal() * 110.0
+	if _torches == "eblouir":
+		# J2 dans l'axe du faisceau de J1, à mi-chemin du mur, face à J1.
+		p2.global_position = p1.global_position + axe * minf(p1.global_position.distance_to(cible) * 0.6, 200.0)
 	_tenir_les_torches()
 	for i in 90:
 		for p in [p1, p2]:
 			p.rotation = axe.angle()
+		if _torches == "eblouir":
+			p2.rotation = (-axe).angle()
 		await get_tree().process_frame
 	if _flash:
 		p1.shoot()
@@ -926,7 +933,86 @@ func _capturer() -> void:
 		var chemin := _capture.get_basename() + "_lightmap%d.png" % (i + 1)
 		if lumiere != null and lumiere.save_png(chemin) == OK:
 			print("BANC_ISO lightmap %s %d×%d" % [chemin, lumiere.get_width(), lumiere.get_height()])
+	if _jeu and _controler_les_corps(image) > 0:
+		_sortir(7)
+		return
 	_sortir(0)
+
+
+## Le plafond des corps — premier retour d'Adrien au jalon H-ISO2 (2026-09-14) : « quand le
+## joueur ennemi est éclairé, par la torche ou par la LED des murs, il devient tout blanc ».
+##
+## Un corps éclairé ne doit jamais dépasser le gris de l'ennemi, `Charte.ADVERSAIRE` : c'est le
+## plafond que la vue de dessus impose au sprite ennemi (`player_enemy_light.gdshader`,
+## `min(lit, COLOR)`). La pâte D le poussait à 255/246/227. Mesuré sur le flanc de chaque corps
+## visible, dans chaque vue dont le joueur n'est pas ébloui : le halo du brouillage s'ajoute à
+## l'image par-dessus le corps, et ce n'est pas le corps qu'il faut juger alors.
+##
+## Rend le nombre de corps au-dessus du plafond ; imprime chaque mesure, et dit si le corps
+## était éclairé — un contrôle passé sur des corps noirs ne prouverait rien.
+const TOLERANCE_PLAFOND := 3
+## Au-delà, la vue est ignorée : le voile et le halo du brouillage recouvrent l'image. En deçà
+## mais non nul — sa propre torche allumée éblouit son porteur à 0,06 —, seul le
+## corps de l'AUTRE est mesuré : le halo se pose sur la source, ici le joueur lui-même.
+const EBLOUI_IGNORE := 0.1
+
+func _controler_les_corps(image: Image) -> int:
+	var p := Presentation3D.instance()
+	if p == null or image == null or not bool(p.get("_actif")):
+		return 0
+	var plafond := [roundi(Charte.ADVERSAIRE.r * 255.0), roundi(Charte.ADVERSAIRE.g * 255.0),
+		roundi(Charte.ADVERSAIRE.b * 255.0)]
+	var joueurs := [_main.p1, _main.p2]
+	var depassements := 0
+	var mesures := 0
+	for id in 2:
+		var ecran: Viewport = p.viewport_ecran(id)
+		if ecran == null:
+			continue
+		var ebloui := float(joueurs[id].get("dazzle_amount"))
+		if ebloui > EBLOUI_IGNORE:
+			print("BANC_ISO corps vue=J%d ignorée (joueur ébloui à %.2f : halo du brouillage par-dessus)" % [id + 1, ebloui])
+			continue
+		var cam: CameraIso = p._camera_de(id)
+		var taille := ecran.get_visible_rect().size
+		var origine: Vector2 = p._cadre(id).position if bool(p.get("_scinde")) else Vector2.ZERO
+		for j in 2:
+			var corps: Node2D = joueurs[j]
+			if not corps.visible or not corps.visual.visible:
+				continue
+			if j == id and ebloui > 0.01:
+				print("BANC_ISO corps vue=J%d corps=J%d ignoré (son porteur est ébloui à %.2f)" % [id + 1, j + 1, ebloui])
+				continue
+			var logique := origine + cam.vers_ecran(corps.global_position, taille,
+				Presentation3D.HAUTEUR_CORPS_PX * 0.55)
+			var centre := Vector2i((logique * _etirement()).round())
+			var r := maxi(2, roundi(5.0 * _etirement()))
+			var zone := Rect2i(centre - Vector2i(r, r), Vector2i(2 * r, 2 * r)) \
+				.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+			if zone.size.x <= 0 or zone.size.y <= 0:
+				continue
+			var region := image.get_region(zone)
+			region.convert(Image.FORMAT_RGB8)
+			var donnees := region.get_data()
+			var m := [0, 0, 0]
+			for k in range(0, donnees.size(), 3):
+				for c in 3:
+					m[c] = maxi(m[c], donnees[k + c])
+			var au_dessus: bool = m[0] > plafond[0] + TOLERANCE_PLAFOND \
+				or m[1] > plafond[1] + TOLERANCE_PLAFOND or m[2] > plafond[2] + TOLERANCE_PLAFOND
+			mesures += 1
+			if au_dessus:
+				depassements += 1
+			print("BANC_ISO corps vue=J%d corps=J%d max=%d/%d/%d plafond=%d/%d/%d eclaire=%s verdict=%s"
+				% [id + 1, j + 1, m[0], m[1], m[2], plafond[0], plafond[1], plafond[2],
+				"oui" if maxi(m[0], maxi(m[1], m[2])) > 40 else "non",
+				"AU-DESSUS DU PLAFOND" if au_dessus else "sous le plafond"])
+	# ⚠️ Zéro mesure n'est pas un plafond tenu : la première scène « J1 éblouit J2 » ignorait les
+	# deux vues et concluait « tenu » sur rien.
+	var verdict := "PLAFOND ROMPU" if depassements > 0 else ("PLAFOND TENU" if mesures > 0 else "AUCUN CORPS MESURÉ")
+	print("BANC_ISO corps verdict=%s (%d corps mesurés, %d au-dessus du gris de l'ennemi)"
+		% [verdict, mesures, depassements])
+	return depassements
 
 
 ## Les torches allumées par leur BOUTON, le premier cran tenu — celles que `--torches`
@@ -938,7 +1024,7 @@ func _capturer() -> void:
 ## chaque image, et les captures sont sorties torches éteintes. Tenir l'action,
 ## c'est passer par le chemin qu'un joueur emprunte.
 func _tenir_les_torches() -> void:
-	var voulues := {"p1_torch": _torches in ["toutes", "j1"] or _capture == "",
+	var voulues := {"p1_torch": _torches in ["toutes", "j1", "eblouir"] or _capture == "",
 		"p2_torch": _torches in ["toutes", "j2"] or _capture == ""}
 	for action in voulues:
 		if not InputMap.has_action(action):
