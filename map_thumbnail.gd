@@ -25,6 +25,9 @@ const Charte := preload("res://charte.gd")
 const COLOR_BACKGROUND := Color(Charte.SURFACE, 1.0)
 const COLOR_FLOOR := Color(Charte.SOL_B * 0.72, 1.0)
 const COLOR_WALL := Color(Charte.HALOGENE, 1.0)
+## Le mur bas, à mi-chemin entre le sol et le mur haut : on doit le voir sur le
+## plan sans le confondre avec un mur qui arrête tout (chantier MURS BAS, MB1).
+const COLOR_LOW_WALL := Color((Charte.HALOGENE + Charte.SOL_B * 0.72) * 0.5, 1.0)
 const COLOR_SPAWN_P1 := Color(Charte.BLEU, 1.0)
 const COLOR_SPAWN_P2 := Color(Charte.ROUGE, 1.0)
 
@@ -61,9 +64,13 @@ static func render(data: Dictionary, px_per_tile: int = 4) -> ImageTexture:
 	var img := Image.create_empty(width, height, false, Image.FORMAT_RGBA8)
 	img.fill(COLOR_BACKGROUND)
 
-	# Ordre de peinture : sol, puis murs par-dessus, puis apparitions au sommet.
+	# Ordre de peinture : sol, murs bas, puis murs par-dessus (un mur haut
+	# l'emporte sur un mur bas à la même case, comme `MapGeometry.build_grid`),
+	# puis apparitions au sommet.
 	for cell in MapCodec.get_floor_cells(data):
 		_paint_cell(img, cell, grid, scale_px, COLOR_FLOOR)
+	for cell in MapCodec.get_low_wall_cells(data):
+		_paint_cell(img, cell, grid, scale_px, COLOR_LOW_WALL)
 	for cell in MapCodec.get_wall_cells(data):
 		_paint_cell(img, cell, grid, scale_px, COLOR_WALL)
 	for player_index in 2:

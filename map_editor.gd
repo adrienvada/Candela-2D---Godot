@@ -20,7 +20,10 @@ extends Node2D
 const Charte := preload("res://charte.gd")
 
 ## Étapes d'édition, dans l'ordre de la barre du haut.
-enum EditorStep { FLOOR, WALLS, SPAWN_P1, SPAWN_P2 }
+## `LOW_WALLS` (MB1, 2026-09-14) vient juste après `WALLS` : on dessine la
+## géométrie avant de poser les joueurs. Tout ce qui indexe les étapes par
+## position passe par l'énumération, jamais par un littéral.
+enum EditorStep { FLOOR, WALLS, LOW_WALLS, SPAWN_P1, SPAWN_P2 }
 ## Outil courant, déduit des modificateurs maintenus.
 enum Brush { FREE, RECT, FILL }
 ## Dernier périphérique utilisé — décide qui pilote le curseur.
@@ -31,11 +34,12 @@ signal map_saved(map_id: String)
 signal sandbox_toggled(active: bool)
 
 const STEP_LABELS: Array[String] = [
-	"SOL", "MURS", "APPARITION J1", "APPARITION J2",
+	"SOL", "MURS", "MURS BAS", "APPARITION J1", "APPARITION J2",
 ]
 const STEP_COLOURS: Array[Color] = [
 	Charte.VERT,       # SOL — la diode « disponible »
 	Charte.HALOGENE,   # MURS — la lumière qui les révèle
+	Color(Charte.HALOGENE * 0.6, 1.0),  # MURS BAS — la même lumière, plus basse
 	Charte.BLEU,       # J1
 	Charte.ROUGE,      # J2
 ]
@@ -79,6 +83,9 @@ const EDITOR_ACTIONS: Array[String] = [
 @onready var camera: MapEditorCamera = $Camera2D
 @onready var floor_layer: TileMapLayer = $TileMap/FloorLayer
 @onready var walls_layer: TileMapLayer = $TileMap/WallsLayer
+## Créé par le code dans `_ready` et non déclaré dans `map_editor.tscn` : l'éditeur
+## de Godot efface les commentaires d'une scène, et ce calque a besoin du sien.
+var low_walls_layer: TileMapLayer = null
 @onready var grid_backdrop: Node2D = $GridBackdrop
 @onready var preview_layer: Node2D = $PreviewLayer
 @onready var effects_layer: Node2D = $EffectsLayer
@@ -147,6 +154,11 @@ func _ready() -> void:
 	var tileset := CandelaTileSet.create_tileset()
 	floor_layer.tile_set = tileset
 	walls_layer.tile_set = tileset
+	# Le calque des murs bas, frère des deux autres et juste après les murs.
+	low_walls_layer = TileMapLayer.new()
+	low_walls_layer.name = "LowWallsLayer"
+	low_walls_layer.tile_set = tileset
+	walls_layer.add_sibling(low_walls_layer)
 
 	_add_material = CanvasItemMaterial.new()
 	_add_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -154,7 +166,7 @@ func _ready() -> void:
 	_setup_inputs()
 	_setup_cursor_light()
 
-	tools.setup(floor_layer, walls_layer, grid_size)
+	tools.setup(floor_layer, walls_layer, grid_size, low_walls_layer)
 	tools.cells_touched.connect(_on_cells_touched)
 	tools.spawn_moved.connect(_on_spawn_moved)
 	tools.history_changed.connect(_on_history_changed)
@@ -722,8 +734,13 @@ func _spawn_index() -> int:
 	return 0 if current_step == EditorStep.SPAWN_P1 else 1
 
 func _layer_for_step() -> StringName:
-	return MapEditorTools.LAYER_WALLS if current_step == EditorStep.WALLS \
-		else MapEditorTools.LAYER_FLOOR
+	match current_step:
+		EditorStep.WALLS:
+			return MapEditorTools.LAYER_WALLS
+		EditorStep.LOW_WALLS:
+			return MapEditorTools.LAYER_LOW_WALLS
+		_:
+			return MapEditorTools.LAYER_FLOOR
 
 ## Ligne d'état : outil courant et modificateur maintenu.
 func _refresh_tool_hint(force: bool = false) -> void:
@@ -752,7 +769,13 @@ func _on_cells_touched(cells: Array[Vector2i], layer: StringName, painting: bool
 
 	var colour := Charte.ROUGE
 	if painting:
-		colour = STEP_COLOURS[1] if layer == MapEditorTools.LAYER_WALLS else STEP_COLOURS[0]
+		match layer:
+			MapEditorTools.LAYER_WALLS:
+				colour = STEP_COLOURS[EditorStep.WALLS]
+			MapEditorTools.LAYER_LOW_WALLS:
+				colour = STEP_COLOURS[EditorStep.LOW_WALLS]
+			_:
+				colour = STEP_COLOURS[EditorStep.FLOOR]
 
 	# Le retour tactile compte plus que l'exhaustivité : sur un grand
 	# remplissage, on échantillonne au lieu de saturer la scène.
@@ -962,8 +985,8 @@ func _load_map(data: Dictionary) -> void:
 	var entry := MapData.get_map(String(_map_meta.get("id", "")))
 	_map_source = String(entry.get("source", "")) if not entry.is_empty() else ""
 
-	MapData.apply_to_layers(floor_layer, walls_layer, spawn_points, _map_meta)
-	tools.setup(floor_layer, walls_layer, grid_size)
+	MapData.apply_to_layers(floor_layer, walls_layer, spawn_points, _map_meta, low_walls_layer)
+	tools.setup(floor_layer, walls_layer, grid_size, low_walls_layer)
 	tools.reset(grid_size, MapCodec.get_spawn(_map_meta, 0),
 		MapCodec.get_spawn(_map_meta, 1))
 
@@ -993,7 +1016,8 @@ func _request_validation() -> void:
 ## Extrait les données courantes des calques. C'est la seule vérité : les
 ## calques d'édition font foi, les métadonnées ne portent que l'identité.
 func _current_data() -> Dictionary:
-	return MapData.extract_from_layers(floor_layer, walls_layer, spawn_points, _map_meta)
+	return MapData.extract_from_layers(floor_layer, walls_layer, spawn_points, _map_meta,
+		low_walls_layer)
 
 func _run_validation() -> void:
 	_validation_dirty = false
@@ -1319,7 +1343,9 @@ func _draw_spawn_marker(index: int) -> void:
 
 	var tile := Vector2(CandelaTileSet.TILE_SIZE)
 	var centre := Vector2(cell) * tile + tile * 0.5
-	var colour := STEP_COLOURS[2 + index]
+	# Par l'énumération : un littéral `2` désignait J1 tant qu'il n'y avait que
+	# deux étapes de géométrie, et aurait peint J1 en couleur de mur bas en MB1.
+	var colour := STEP_COLOURS[int(EditorStep.SPAWN_P1) + index]
 	var pulse := sin(_pulse * 3.0 + index * PI) * 0.5 + 0.5
 
 	preview_layer.draw_circle(centre, tile.x * 0.42,

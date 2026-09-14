@@ -269,7 +269,17 @@ class_name Protocol
 ## Le rappel qui l'attrape avant qu'il parte : `tools/verifier_publication.sh`, à
 ## lancer AVANT de poser un tag. Il refuse une mineure inchangée quand ce numéro a
 ## bougé — 0.6.x → 0.7.0 pour un fil qui change, 0.6.1 pour tout le reste.
-const VERSION := 17
+##
+## 18 — le codec de carte passe à la **v4** : une famille de cellules « murs bas »
+##     (chantier MURS BAS, étape MB1, 2026-09-14). Aucun RPC ne change de forme,
+##     mais une carte voyage d'un jeu à l'autre (étape 8.8) : un jeu v17 lirait une
+##     carte v4 comme « créée avec une version plus récente » et la refuserait —
+##     ou, pire, un code v3 réécrit à la main passerait sans ses murs bas. **Non
+##     publiée** : l'étape MB2 changera aussi le fil (la posture dans les commandes
+##     numérotées) et pourra cumuler sous ce numéro tant qu'aucun tag ne l'a
+##     figé — c'est la permission que les passages v17 ci-dessus ont perdue au
+##     tag, pas une règle nouvelle.
+const VERSION := 18
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -282,7 +292,10 @@ const VERSION := 17
 ## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
 ## renumérotation). La question du numéro a été tranchée d'abord — les cinq
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
-const WIRE_WITNESS := "81c84826a51f737c"
+##
+## Recopié le 2026-09-14 (MB1) APRÈS avoir monté `VERSION` à 18 : seul
+## `mapcodec=4` a changé dans l'empreinte.
+const WIRE_WITNESS := "d76992d434d15e4f"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

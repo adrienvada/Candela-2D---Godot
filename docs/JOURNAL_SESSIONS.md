@@ -4221,3 +4221,20 @@ accroupi de 0,10 tuile serait plat s'il est extrudé tel quel en iso.
 il les imaginait ; égalité assumée entre accroupi et enjambement (65 px/s) ; dessin du mur
 bas gardé ; **MB1 ouverte**. Contrôle en fenêtre refait avec ses valeurs : piste C
 toujours à une seule vérité (4 054/4 054, 8/8), noir 0/255 ; lot vert, 112 OK.
+
+### 2026-09-14 (soir) — MB1 : le mur bas entre dans la carte (même session, même branche)
+
+**Touché, et à qui c'était :** `map_codec.gd`, `map_geometry.gd` (contrat ISO1 : lu par la
+session « Iso 1 », qui fusionnera `main` elle-même), `canaux_lumiere.gd` (chantier CLASSES,
+clos), `candela_tileset.gd`, `mur_encre.gd`, `map_thumbnail.gd`, `map_data.gd`,
+`map_editor.gd`, `map_editor_tools.gd`, `game_state.gd` (trois insertions dans
+`rebuild_arena`), `protocol.gd` (v18). Suites étendues : `test_map_codec`,
+`test_map_geometry`, `test_editor_tools`, `test_arena_build`. Créé :
+`tools/cartes/murs_bas_essai.json`. Aucune session active ne tenait ces fichiers
+(`ListAgents`, 19 h 05).
+
+**Ce que la session a payé, et qui aurait pu coûter une soirée :** une variable nommée
+`trait` — mot réservé de GDScript 4.7 — a fait tomber toutes les classes de carte d'un
+coup. Les messages accusaient les APPELANTS, et une suite est restée bloquée dix minutes
+avant qu'on aille voir. Le réflexe qui a tranché : quand tout rougit à la fois, relire le
+dernier fichier touché, pas le premier message d'erreur.

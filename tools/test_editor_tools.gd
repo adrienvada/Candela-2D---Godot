@@ -11,6 +11,7 @@ func _init() -> void:
 	_test_diagonal_requires_square()
 	_test_resize_grow_keeps_everything()
 	_test_resize_shrink_drops_overflow()
+	_test_murs_bas()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -144,3 +145,79 @@ func _test_resize_shrink_drops_overflow() -> void:
 	t.resize_grid(Vector2i(1, 1))
 	_check("plancher à MIN_GRID", t.grid_size == Vector2i(MapCodec.MIN_GRID, MapCodec.MIN_GRID),
 		str(t.grid_size))
+
+## MB1 (chantier MURS BAS, 2026-09-14) — le troisième calque de l'éditeur.
+func _test_murs_bas() -> void:
+	print("\n[Murs bas dans l'éditeur]")
+	var tileset := CandelaTileSet.create_tileset()
+	var sol := TileMapLayer.new()
+	sol.tile_set = tileset
+	var murs := TileMapLayer.new()
+	murs.tile_set = tileset
+	var bas := TileMapLayer.new()
+	bas.tile_set = tileset
+	var t := MapEditorTools.new()
+	var grille := Vector2i(12, 12)
+	t.setup(sol, murs, grille, bas)
+	t.reset(grille, MapEditorTools.NO_CELL, MapEditorTools.NO_CELL)
+	var L := MapEditorTools.LAYER_LOW_WALLS
+	var W := MapEditorTools.LAYER_WALLS
+	var c := Vector2i(4, 4)
+
+	t.begin("muret")
+	t.draw_cell(L, c, true)
+	t.commit()
+	_check("un mur bas se pose avec sa tuile hachurée",
+		t.atlas_at(L, c) == CandelaTileSet.LOW_WALL_ATLAS)
+
+	t.begin("mur")
+	t.draw_cell(W, c, true)
+	t.commit()
+	_check("poser un mur haut sur un mur bas efface le mur bas",
+		t.has_cell(W, c) and not t.has_cell(L, c))
+	t.undo()
+	_check("annuler rend le mur bas ET retire le mur haut, en un geste",
+		t.has_cell(L, c) and not t.has_cell(W, c))
+
+	t.begin("mur ailleurs")
+	t.draw_cell(W, Vector2i(7, 7), true)
+	t.commit()
+	t.begin("muret dessus")
+	t.draw_cell(L, Vector2i(7, 7), true)
+	t.commit()
+	_check("poser un mur bas sur un mur haut efface le mur haut",
+		t.has_cell(L, Vector2i(7, 7)) and not t.has_cell(W, Vector2i(7, 7)))
+
+	t.begin("miroir")
+	t.mirror(MapEditorTools.Symmetry.ROTATE_180)
+	t.commit()
+	_check("le miroir recopie les murs bas", t.has_cell(L, t.reflect(c, MapEditorTools.Symmetry.ROTATE_180)))
+
+	t.begin("muret au bord")
+	t.draw_cell(L, Vector2i(10, 10), true)
+	t.commit()
+	_check("témoin : un mur bas au bord de la grille avant rétrécissement",
+		t.has_cell(L, Vector2i(10, 10)))
+	t.begin("rétrécir")
+	t.resize_grid(Vector2i(8, 8))
+	t.commit()
+	_check("rétrécir purge les murs bas hors grille", not bas.get_used_cells().has(Vector2i(10, 10)))
+	var hors := false
+	for cellule in bas.get_used_cells():
+		hors = hors or cellule.x >= 8 or cellule.y >= 8
+	_check("aucun mur bas ne reste hors d'une grille rétrécie", not hors, str(bas.get_used_cells()))
+
+	t.begin("tout effacer")
+	t.clear_all()
+	t.commit()
+	_check("tout effacer vide aussi le calque des murs bas", bas.get_used_cells().is_empty())
+
+	# Un éditeur d'avant les murs bas (setup à trois arguments) ne plante pas.
+	var t2 := _make_tools(grille)
+	t2.begin("sans calque")
+	t2.draw_cell(W, c, true)
+	t2.commit()
+	_check("un éditeur sans calque de murs bas pose toujours ses murs", t2.has_cell(W, c))
+	sol.free()
+	murs.free()
+	bas.free()

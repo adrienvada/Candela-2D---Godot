@@ -21037,8 +21037,8 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | Étape | Objet | État |
 |---|---|---|
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
-| MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | 🟡 **ouverte par Adrien le 2026-09-14** |
-| MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée, `Protocol.VERSION` 17 → 18, pas étouffés, silhouette, marque HUD | ⏸ |
+| MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
+| MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ⏸ pas avant le mot d'Adrien |
 | MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ⏸ |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
@@ -21150,11 +21150,64 @@ fusion dans `iso-geometrie`.
   `frame_post_draw` au second plan. C'était un `y += pas` oublié. Le prototype imprime
   désormais l'heure de chaque scène : un blocage se localise en une lecture.
 
-### Ce qui attend Adrien — jalon H-MB0
+### MB1 — le mur bas entre dans la carte ✅ (2026-09-14, ouverte par Adrien le même soir)
 
-Jouer le prototype, valider ou corriger la lecture des six règles, fixer `h_bas`,
-`h_accroupi`, `α`, la vitesse accroupie et le dessin du mur bas en vue de dessus, dire si
-MB1 s'ouvre. Commande et touches : `docs/MURS_BAS.md` § 8.
+**Le monde de MB1 : tout le monde est debout.** Sans posture, personne n'est plus bas
+qu'un mur bas ; la règle d'Adrien donne alors exactement : un mur bas **arrête les corps,
+et ni la lumière ni les balles**. Rien n'est triché ni désactivé — la zone morte existe et
+ne cache que les accroupis, c'est-à-dire personne. Ce qui manque est absent, pas faux :
+on contourne un mur bas (l'enjambement vient en MB3), on ne s'accroupit pas (MB2).
+
+Livré (détail : `docs/MURS_BAS.md` § 9) : codec de carte **v4** (`low_walls`, v3 importée
+telle quelle, garde-fou de décompression testé) ; `MapGeometry.Kind.LOW_WALLS`, les quatre
+hauteurs et l'angle en constantes de `map_geometry.gd` (**contrat ISO1 tenu**), couche de
+collision 16 pour les corps seulement, occluders sur la couche d'ombre 64 qu'aucune lumière
+n'active encore ; tuile hachurée, contour d'encre de 2 px, vignette ; calque et copies par
+vue dans `rebuild_arena` ; étape « MURS BAS » dans l'éditeur, cases exclusives avec les
+murs hauts dans une même transaction ; carte d'essai `tools/cartes/murs_bas_essai.json`
+(hors cartes livrées) et son code de partage dans la note.
+
+⚠️ **`HAUTEUR_MUR_HAUT` = 1,25 n'a pas été tranchée par Adrien** : elle n'était pas
+réglable au prototype (elle n'entre dans aucune règle 2D). La session « Iso 1 » a signalé
+le 2026-09-14 au soir qu'à 52° de tangage un mur haut de 1,25 tuile cache une bande de
+**34,2 px** derrière lui (98 % d'un corps collé ; −4,6 points d'écart J1/J2 sur La
+Croisée), pour un critère d'équité de l'étude **< 18 px** (0,65 tuile), et elle demande à
+Adrien de trancher. Changer la valeur est une ligne de `map_geometry.gd` ; rien de la
+règle des murs bas n'en dépend.
+
+**`Protocol.VERSION` 17 → 18 dès MB1**, et non en MB2 : le codec de carte fait partie de
+l'empreinte du fil, une carte voyage d'un jeu à l'autre (étape 8.8), et la v17 est
+publiée. MB2 cumulera sous 18 tant qu'aucun tag ne l'a figé.
+
+**Vérifié** : dix suites touchées vertes (codec 69, géométrie 151, éditeur 38, arène,
+protocole, LED, matière, vision, carte partagée, murs bas), la géométrie vue rougir par
+sabotage de la priorité mur haut / mur bas ; rendu en fenêtre de la carte d'essai montée
+comme `rebuild_arena` : les 6 cases de murs bas sous la torche sont éclairées, torche
+éteinte l'image vaut **0/255**.
+
+#### Pièges payés en MB1
+
+- **`trait` est un mot réservé de GDScript 4.7.** Une variable ainsi nommée dans
+  `candela_tileset.gd` a fait tomber l'analyse de `CandelaTileSet`, et avec elle
+  `MapCodec`, `MapGeometry`, `MapData`, `AudioManager` : 23 erreurs au démarrage, dix
+  suites rouges — et **`test_carte_partagee` bloquée sans sortir** jusqu'au chien de
+  garde. L'erreur désigne les appelants (« Could not resolve class CandelaTileSet »),
+  jamais la ligne fautive. Quand toutes les classes tombent à la fois, relire le dernier
+  fichier touché avant les suites.
+- **Un littéral qui désigne une position dans une énumération se périme à l'insertion.**
+  `STEP_COLOURS[2 + index]` voulait dire « J1 » tant qu'il y avait deux étapes de
+  géométrie ; avec « MURS BAS » insérée, il aurait peint J1 couleur de muret. Remplacé
+  par `EditorStep.SPAWN_P1`. Même famille que « Un index qui est en fait une POSITION ».
+- **Un libellé de contrôle qui ne dit pas ce qu'il compte.** « carte vide → 1 forme + 1
+  occluder » comptait en réalité les CORPS du conteneur (deux : murs, fosses). Il a rougi
+  au troisième corps — à juste titre, mais en accusant la mauvaise chose.
+
+### Ce qui attend Adrien
+
+**Dire si MB2 s'ouvre** (l'accroupi : entrée, posture prédite, répliquée et rejouée,
+pas étouffés, silhouette, marque HUD). Et, s'il le souhaite, jouer la carte d'essai : coller
+le code de partage de `docs/MURS_BAS.md` § 9 dans la galerie, ou dessiner des murets dans
+l'éditeur (F5, étape « MURS BAS »).
 
 ---
 

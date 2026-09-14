@@ -29,6 +29,10 @@ signal spawn_moved(index: int, cell: Vector2i)
 
 const LAYER_FLOOR: StringName = &"floor"
 const LAYER_WALLS: StringName = &"walls"
+## Chantier MURS BAS, étape MB1 (2026-09-14). Même nom que la clé de carte.
+## Une case porte un mur haut OU un mur bas, jamais les deux : poser l'un efface
+## l'autre, dans la même transaction (voir `apply_cell`).
+const LAYER_LOW_WALLS: StringName = &"low_walls"
 
 ## Coordonnée atlas conventionnelle d'une cellule vide.
 const EMPTY_ATLAS := Vector2i(-1, -1)
@@ -53,7 +57,7 @@ const NEIGHBOURS_8: Array[Vector2i] = [
 
 ## Une cellule modifiée : son état avant et après, pour rejouer dans les deux sens.
 class CellEdit extends RefCounted:
-	var layer: StringName = &""              ## &"floor" | &"walls"
+	var layer: StringName = &""              ## &"floor" | &"walls" | &"low_walls"
 	var cell: Vector2i = Vector2i.ZERO
 	var before: Vector2i = Vector2i(-1, -1)  ## coord atlas, Vector2i(-1, -1) si vide
 	var after: Vector2i = Vector2i(-1, -1)
@@ -104,6 +108,7 @@ var grid_size: Vector2i = Vector2i(32, 32)
 
 var _floor_layer: TileMapLayer = null
 var _walls_layer: TileMapLayer = null
+var _low_walls_layer: TileMapLayer = null
 var _spawns: Array[Vector2i] = [NO_CELL, NO_CELL]
 
 var _undo_stack: Array[Transaction] = []
@@ -117,9 +122,13 @@ var _pending_seen: Dictionary = {}
 # CONFIGURATION
 # ---------------------------------------------------------------------------
 
-func setup(floor_layer: TileMapLayer, walls_layer: TileMapLayer, p_grid: Vector2i) -> void:
+## `low_walls_layer` est optionnel et en dernier (MB1) : un appelant d'avant les
+## murs bas garde un éditeur à deux calques, qui fonctionne comme avant.
+func setup(floor_layer: TileMapLayer, walls_layer: TileMapLayer, p_grid: Vector2i,
+		low_walls_layer: TileMapLayer = null) -> void:
 	_floor_layer = floor_layer
 	_walls_layer = walls_layer
+	_low_walls_layer = low_walls_layer
 	grid_size = p_grid
 
 ## Recale la grille après un chargement de carte. Vide l'historique : les
@@ -162,7 +171,8 @@ func resize_grid(new_size: Vector2i) -> int:
 	if target.x < previous.x or target.y < previous.y:
 		var dropped_floor: Array[Vector2i] = []
 		var dropped_walls: Array[Vector2i] = []
-		for pair in [[LAYER_FLOOR, _floor_layer], [LAYER_WALLS, _walls_layer]]:
+		for pair in [[LAYER_FLOOR, _floor_layer], [LAYER_WALLS, _walls_layer],
+				[LAYER_LOW_WALLS, _low_walls_layer]]:
 			var layer: StringName = pair[0]
 			var node: TileMapLayer = pair[1]
 			if node == null:
@@ -298,7 +308,13 @@ func _replay(transaction: Transaction) -> void:
 # ---------------------------------------------------------------------------
 
 func _layer_of(layer: StringName) -> TileMapLayer:
-	return _walls_layer if layer == LAYER_WALLS else _floor_layer
+	match layer:
+		LAYER_WALLS:
+			return _walls_layer
+		LAYER_LOW_WALLS:
+			return _low_walls_layer
+		_:
+			return _floor_layer
 
 func _write_cell(layer: StringName, cell: Vector2i, atlas: Vector2i) -> void:
 	var target := _layer_of(layer)
@@ -327,6 +343,8 @@ func has_cell(layer: StringName, cell: Vector2i) -> bool:
 func atlas_for(layer: StringName, cell: Vector2i) -> Vector2i:
 	if layer == LAYER_WALLS:
 		return CandelaTileSet.WALL_ATLAS
+	if layer == LAYER_LOW_WALLS:
+		return CandelaTileSet.LOW_WALL_ATLAS
 	return CandelaTileSet.get_floor_atlas(cell)
 
 ## Applique une valeur à une cellule en l'enregistrant dans la transaction.
@@ -338,6 +356,16 @@ func apply_cell(layer: StringName, cell: Vector2i, atlas: Vector2i) -> bool:
 	var before := atlas_at(layer, cell)
 	if before == atlas:
 		return false
+
+	# Un mur haut et un mur bas ne partagent jamais une case : poser l'un efface
+	# l'autre, ENREGISTRÉ dans la même transaction pour qu'annuler rende les deux.
+	# Sans ça, la carte sauvée porterait les deux, et seul `build_grid` saurait
+	# lequel l'emporte — l'éditeur montrerait autre chose que le jeu.
+	if atlas != EMPTY_ATLAS and _low_walls_layer != null:
+		if layer == LAYER_WALLS:
+			apply_cell(LAYER_LOW_WALLS, cell, EMPTY_ATLAS)
+		elif layer == LAYER_LOW_WALLS:
+			apply_cell(LAYER_WALLS, cell, EMPTY_ATLAS)
 
 	if _pending != null:
 		var key := "%s:%d:%d" % [layer, cell.x, cell.y]
@@ -483,11 +511,14 @@ func supports_symmetry(axis: Symmetry) -> bool:
 func mirror(axis: Symmetry) -> int:
 	var touched_floor := _mirror_layer(LAYER_FLOOR, _floor_layer, axis)
 	var touched_walls := _mirror_layer(LAYER_WALLS, _walls_layer, axis)
+	var touched_low := _mirror_layer(LAYER_LOW_WALLS, _low_walls_layer, axis)
 
 	if not touched_floor.is_empty():
 		cells_touched.emit(touched_floor, LAYER_FLOOR, true)
 	if not touched_walls.is_empty():
 		cells_touched.emit(touched_walls, LAYER_WALLS, true)
+	if not touched_low.is_empty():
+		cells_touched.emit(touched_low, LAYER_LOW_WALLS, true)
 
 	# Symétrie des apparitions : le duel doit rester équitable.
 	var p1 := _spawns[0]
@@ -496,7 +527,7 @@ func mirror(axis: Symmetry) -> int:
 		if is_inside(reflected_spawn) and reflected_spawn != p1:
 			set_spawn(1, reflected_spawn)
 
-	return touched_floor.size() + touched_walls.size()
+	return touched_floor.size() + touched_walls.size() + touched_low.size()
 
 ## Recopie un calque sur son reflet. Retourne les cellules réellement ajoutées.
 func _mirror_layer(layer: StringName, node: TileMapLayer, axis: Symmetry) -> Array[Vector2i]:
@@ -556,6 +587,11 @@ func clear_all() -> int:
 		for cell in _walls_layer.get_used_cells():
 			if apply_cell(LAYER_WALLS, cell, EMPTY_ATLAS):
 				touched_walls.append(cell)
+	var touched_low: Array[Vector2i] = []
+	if _low_walls_layer != null:
+		for cell in _low_walls_layer.get_used_cells():
+			if apply_cell(LAYER_LOW_WALLS, cell, EMPTY_ATLAS):
+				touched_low.append(cell)
 
 	for i in 2:
 		set_spawn(i, NO_CELL)
@@ -564,7 +600,9 @@ func clear_all() -> int:
 		cells_touched.emit(touched_floor, LAYER_FLOOR, false)
 	if not touched_walls.is_empty():
 		cells_touched.emit(touched_walls, LAYER_WALLS, false)
-	return touched_floor.size() + touched_walls.size()
+	if not touched_low.is_empty():
+		cells_touched.emit(touched_low, LAYER_LOW_WALLS, false)
+	return touched_floor.size() + touched_walls.size() + touched_low.size()
 
 # ---------------------------------------------------------------------------
 # GÉOMÉTRIE

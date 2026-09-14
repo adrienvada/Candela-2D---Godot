@@ -83,6 +83,21 @@ static func masque_vue_adverse(id: int) -> int:
 static func couche_ombre_corps(id: int) -> int:
 	return 4 << id
 
+## La couche d'ombre des MURS BAS — chantier MURS BAS, étape MB1 (2026-09-14).
+##
+## Les occluders d'un mur bas vivent ici, et non sur `DECOR` : un mur bas n'arrête
+## que les lumières PLUS BASSES que lui (« la torche d'un accroupi bute sur le
+## mur »). Une lumière debout passe par-dessus, et la zone d'ombre FINIE qu'elle
+## laisse derrière le mur se calcule dans les matériaux (étape MB3, piste C de
+## `docs/MURS_BAS.md`), pas par un occluder, qui ne sait faire qu'une ombre infinie.
+##
+## ⚠️ **En MB1, aucune lumière ne porte ce bit** : il n'y a pas encore de posture,
+## tout le monde est debout, donc aucune lumière n'est plus basse qu'un mur bas.
+## Le premier masque qui l'inclura est celui d'une lumière accroupie (MB2-MB3).
+## 64 : le premier bit que ni le décor (1), ni les corps (4, 8), ni les torses
+## (16, 32) n'occupent.
+const COUCHE_OMBRE_MUR_BAS := 64
+
 ## La couche d'ombre du TORSE du joueur `id` : 16 pour J1, 32 pour J2.
 ##
 ## Réservée à la rétrodiffusion, seule lumière qu'un disque de torse arrête : le

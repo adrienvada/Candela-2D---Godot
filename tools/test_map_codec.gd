@@ -14,6 +14,7 @@ func _init() -> void:
 	_test_default_map_loads()
 	_test_slugify()
 	_test_migration_v2()
+	_test_murs_bas_v4()
 	_test_playability()
 	_test_builtin_maps()
 	_test_id_collision()
@@ -165,7 +166,11 @@ func _test_default_map_loads() -> void:
 		return
 
 	var d: Dictionary = result["data"]
-	_check("version 3", int(d["version"]) == 3)
+	# Le fichier livré est en v3 sur disque ; `validate` le relève à la v4
+	# courante (MB1). Le relire comme v3 dirait que la migration n'a pas tourné.
+	_check("relevée à la version courante (%d)" % MapCodec.VERSION, int(d["version"]) == MapCodec.VERSION)
+	_check("aucun mur bas dans une carte d'avant la v4", MapCodec.get_low_wall_cells(d).is_empty()
+		and d.has("low_walls"))
 	_check("676 tuiles de sol", MapCodec.get_floor_cells(d).size() == 676)
 	_check("348 tuiles de mur", MapCodec.get_wall_cells(d).size() == 348)
 	_check("spawn P1 posé", MapCodec.get_spawn(d, 0) == Vector2i(6, 16))
@@ -198,9 +203,94 @@ func _test_migration_v2() -> void:
 		return
 
 	var d: Dictionary = result["data"]
-	_check("version relevée à 3", int(d["version"]) == 3)
+	_check("version relevée jusqu'à la courante (%d)" % MapCodec.VERSION, int(d["version"]) == MapCodec.VERSION)
 	_check("sol converti en runs", d["floor"] == "1,1,3")
 	_check("id généré", String(d.get("id", "")).length() > 0)
+	_check("v2 → v4 : liste de murs bas vide", d.has("low_walls") and String(d["low_walls"]) == "")
+
+## MB1 — la v4 et ses murs bas (chantier MURS BAS, 2026-09-14).
+func _test_murs_bas_v4() -> void:
+	print("\n[Murs bas — format v4]")
+	_check("VERSION = 4", MapCodec.VERSION == 4)
+	var map := MapCodec.new_map("Murets", Vector2i(16, 16))
+	_check("une carte neuve porte la clé low_walls", map.has("low_walls") and map["low_walls"] == "")
+	var sol: Array[Vector2i] = []
+	for y in range(1, 15):
+		for x in range(1, 15):
+			sol.append(Vector2i(x, y))
+	var bas: Array[Vector2i] = [Vector2i(5, 7), Vector2i(6, 7), Vector2i(7, 7), Vector2i(10, 3)]
+	map["floor"] = MapCodec.encode_runs(sol)
+	map["low_walls"] = MapCodec.encode_runs(bas)
+	map["spawn_p1"] = {"x": 2, "y": 2}
+	map["spawn_p2"] = {"x": 12, "y": 12}
+
+	# Aller-retour par le code de partage : les murs bas survivent.
+	var back := MapCodec.from_share_code(MapCodec.to_share_code(map))
+	_check("code de partage v4 relu", back["ok"], String(back.get("error", "")))
+	if back["ok"]:
+		var lu: Array[Vector2i] = MapCodec.get_low_wall_cells(back["data"])
+		var attendu := {}
+		for c in bas:
+			attendu[c] = true
+		var tous := lu.size() == bas.size()
+		for c in lu:
+			tous = tous and attendu.has(c)
+		_check("les quatre murs bas reviennent à l'identique", tous, str(lu))
+		_check("version 4 conservée", int(back["data"]["version"]) == 4)
+
+	# Un code v3 — tel qu'un jeu d'avant MB1 le produit — s'importe toujours.
+	var v3 := map.duplicate(true)
+	v3.erase("low_walls")
+	v3["version"] = 3
+	var v3_back := MapCodec.from_share_code(MapCodec.to_share_code(v3))
+	_check("un code de partage v3 s'importe", v3_back["ok"], String(v3_back.get("error", "")))
+	if v3_back["ok"]:
+		_check("v3 → v4 : version relevée, aucun mur bas",
+			int(v3_back["data"]["version"]) == 4 and MapCodec.get_low_wall_cells(v3_back["data"]).is_empty())
+		_check("v3 → v4 : sol et apparitions intacts",
+			MapCodec.get_floor_cells(v3_back["data"]).size() == sol.size()
+			and MapCodec.get_spawn(v3_back["data"], 1) == Vector2i(12, 12))
+
+	# Une carte d'une version FUTURE est toujours refusée.
+	var v5 := map.duplicate(true)
+	v5["version"] = 5
+	_check("une carte v5 est refusée", not MapCodec.validate(v5)["ok"])
+
+	# Entrée hostile : autre chose qu'une chaîne sous low_walls.
+	var hostile := map.duplicate(true)
+	hostile["low_walls"] = {"x": 1}
+	var refus := MapCodec.validate(hostile)
+	_check("low_walls illisible : refus propre, pas d'erreur de script",
+		not refus["ok"] and String(refus["error"]) == "Murs bas illisibles", str(refus))
+
+	# Le garde-fou de décompression tient toujours : une bombe est refusée.
+	var bombe := PackedByteArray()
+	bombe.resize(MapCodec.MAX_DECOMPRESSED_BYTES + 4096)
+	bombe.fill(32)
+	var code_bombe := MapCodec.SHARE_PREFIX + Marshalls.raw_to_base64(bombe.compress(FileAccess.COMPRESSION_GZIP))
+	_check("bombe de décompression refusée (garde-fou conservé)", not MapCodec.from_share_code(code_bombe)["ok"])
+
+	# Jouabilité : on n'apparaît pas sur un mur bas, mais un mur bas n'isole rien.
+	var sur_muret := map.duplicate(true)
+	sur_muret["spawn_p2"] = {"x": 6, "y": 7}
+	_check("apparition posée sur un mur bas refusée", not MapCodec.check_playable(sur_muret)["ok"])
+	_check("carte à murs bas jouable", MapCodec.check_playable(map)["ok"], str(MapCodec.check_playable(map)["checks"]))
+	var couloir := MapCodec.new_map("Couloir", Vector2i(12, 12))
+	var sol_c: Array[Vector2i] = []
+	for x in range(1, 11):
+		sol_c.append(Vector2i(x, 5))
+	couloir["floor"] = MapCodec.encode_runs(sol_c)
+	couloir["low_walls"] = "6,5,1"
+	couloir["spawn_p1"] = {"x": 1, "y": 5}
+	couloir["spawn_p2"] = {"x": 10, "y": 5}
+	var atteint := MapCodec.get_reachable_cells(couloir)
+	_check("un mur bas en travers d'un couloir ne coupe pas la zone (on l'enjambe)",
+		atteint.has(Vector2i(10, 5)) and atteint.has(Vector2i(6, 5)))
+	var coupe := couloir.duplicate(true)
+	coupe["walls"] = "6,5,1"
+	coupe["low_walls"] = ""
+	_check("témoin : un mur HAUT au même endroit coupe la zone",
+		not MapCodec.get_reachable_cells(coupe).has(Vector2i(10, 5)))
 
 func _test_playability() -> void:
 	print("\n[Jouabilité]")

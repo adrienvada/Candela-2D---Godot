@@ -936,6 +936,7 @@ func rebuild_arena() -> void:
 	# Purge de la construction précédente (rematch, changement de carte).
 	for node_name in ["CustomFloor", "CustomWalls", "CustomFloor_P1", "CustomFloor_P2",
 			"CustomWalls_P1", "CustomWalls_P2", "CustomWallBodies",
+			"CustomLowWalls", "CustomLowWalls_P1", "CustomLowWalls_P2",
 			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2",
 			"MurEncre", "MurEncre_P1", "MurEncre_P2"]:
 		var previous := arena.get_node_or_null(node_name)
@@ -957,6 +958,14 @@ func rebuild_arena() -> void:
 	walls_layer.z_index = 0
 	arena.add_child(walls_layer)
 
+	# Chantier MURS BAS, étape MB1 : le calque des murs bas, hachuré. Même idiome
+	# que les murs — un original porteur des données, caché, et une copie par vue.
+	var low_walls_layer := TileMapLayer.new()
+	low_walls_layer.name = "CustomLowWalls"
+	low_walls_layer.tile_set = tileset
+	low_walls_layer.z_index = 0
+	arena.add_child(low_walls_layer)
+
 	var spawns := arena.get_node_or_null("SpawnPoints")
 	if spawns == null:
 		spawns = Node2D.new()
@@ -965,7 +974,7 @@ func rebuild_arena() -> void:
 	_ensure_spawn_marker(spawns, "P1Spawn")
 	_ensure_spawn_marker(spawns, "P2Spawn")
 
-	MapData.apply_to_layers(floor_layer, walls_layer, spawns, data)
+	MapData.apply_to_layers(floor_layer, walls_layer, spawns, data, low_walls_layer)
 
 	# Collisions ET occluders produits ensemble à partir des mêmes rectangles.
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
@@ -983,6 +992,8 @@ func rebuild_arena() -> void:
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(walls_layer, 4, 1 | 32)
+	_duplicate_layer_for_player(low_walls_layer, 2, 1 | 16)
+	_duplicate_layer_for_player(low_walls_layer, 4, 1 | 32)
 	# ⚠️ **L'original reste éclairé après sa propre duplication, et c'est un
 	# défaut — pas la copie qui manque.** `floor_layer`/`walls_layer` gardent
 	# leur `visibility_layer` par défaut (1), visible dans les DEUX vues au
@@ -1000,6 +1011,7 @@ func rebuild_arena() -> void:
 	# casserait la collision, pas seulement le rendu.
 	floor_layer.hide()
 	walls_layer.hide()
+	low_walls_layer.hide()
 	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
 	var decor := ArenaDecorScript.build(data, arena)
 	if decor:

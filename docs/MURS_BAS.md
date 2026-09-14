@@ -308,6 +308,58 @@ Tout est rejouable : `proto_murs_bas.tscn -- --no-eos --auto` imprime les lignes
 - **Suite headless** `tools/test_murs_bas.gd` : 83 contrôles, vus rougir une fois
   (sabotage de la comparaison de zone morte dans `franchit()`), puis remis.
 
+## 9. MB1 — le mur bas entre dans la carte (ouverte par Adrien le 2026-09-14)
+
+### Le monde de MB1 : tout le monde est debout
+
+Tant que la posture n'existe pas (MB2), personne n'est plus bas qu'un mur bas. La règle
+d'Adrien donne alors, sans approximation : **un mur bas arrête les corps, et ni la
+lumière ni les balles** — un rayon debout passe par-dessus, et la zone morte qu'il laisse
+derrière (MB3) ne cache que ce qui est accroupi, c'est-à-dire personne. MB1 n'a donc rien
+à tricher ni rien à désactiver : il livre exactement la règle, dans un monde où `L = 0`
+pour tous. Ce qui manque encore n'est pas faux, c'est absent : on ne peut pas encore
+enjamber (on contourne), ni s'accroupir.
+
+### Ce qui est livré
+
+| Pièce | Ce qu'elle fait |
+|---|---|
+| `map_codec.gd` **v4** | clé `low_walls` en runs ; `migrate_v3_to_v4` (liste vide) ; une v3 — fichier ou code de partage — s'importe telle quelle ; `get_low_wall_cells` ; refus propre si `low_walls` n'est pas une chaîne ; on n'apparaît pas sur un mur bas, mais un mur bas ne coupe pas une zone (on l'enjambe) ; garde-fou de décompression inchangé et testé |
+| `map_geometry.gd` | `Kind.LOW_WALLS` ajouté **après** `WALLS` et `PITS` ; les **quatre hauteurs et l'angle** en constantes (contrat ISO1) ; `LOW_WALL_LAYER = 16` dans `PLAYER_MASK`, **absent de `BULLET_MASK`** ; troisième corps `MursBas` dans `build_collisions`, ses occluders sur `CanauxLumiere.COUCHE_OMBRE_MUR_BAS = 64` ; une case de mur haut l'emporte ; une case de mur bas n'est jamais une fosse |
+| `canaux_lumiere.gd` | `COUCHE_OMBRE_MUR_BAS` : le bit qu'une lumière **basse** activera (MB2-MB3). Aucune ne le porte en MB1 |
+| `candela_tileset.gd` | la tuile `LOW_WALL_ATLAS` (1, 1) : hachures diagonales sur noir — en fondu additif, rien ne se voit sans lumière |
+| `mur_encre.gd` | le contour des murs bas, **2 px** au lieu de 3, sans hachures au pied |
+| `map_thumbnail.gd` | les murs bas entre le sol et les murs, dans une couleur intermédiaire |
+| `map_data.gd` | `extract_from_layers` / `apply_to_layers` gagnent un calque de murs bas **optionnel, en dernier** : un appelant d'avant les murs bas ne perd rien |
+| `game_state.gd` (`rebuild_arena`) | le calque `CustomLowWalls`, ses deux copies par vue, sa purge |
+| éditeur (`map_editor.gd`, `map_editor_tools.gd`) | l'étape **« MURS BAS »** entre MURS et APPARITION J1 ; poser un mur haut efface le mur bas de la case et inversement, **dans la même transaction** (annuler rend les deux) ; miroir, rétrécissement et « tout effacer » les couvrent |
+| `protocol.gd` | **`VERSION` 17 → 18** et nouveau témoin : le codec de carte fait partie du fil |
+| `tools/cartes/murs_bas_essai.json` | la carte d'essai : l'arène standard et cinq murets (22 cases). **Hors** des cartes livrées, en lecture seule |
+
+### Pourquoi `Protocol.VERSION` monte en MB1 et pas en MB2
+
+Le prompt le plaçait en MB2 (la posture sur le fil). Mais `tools/test_protocole.gd` lit
+la version du codec de carte dans l'empreinte du fil, et une carte voyage d'un jeu à
+l'autre (étape 8.8) : un jeu v17 refuserait une carte v4. La v17 est publiée ; le numéro
+monte donc dès que le codec change. MB2 cumulera sous 18 tant qu'aucun tag ne l'aura figé.
+
+### Jouer la carte d'essai
+
+Dans la galerie de cartes, **coller ce code de partage** (MB1, 2026-09-14) :
+
+    CANDELA-H4sIAAAAAAAAE1WRzW7TQBSFX8WaFUhTNPfY4/hnRRHLbiisI7cx1JKbVLZDgKoSD8ET8iTcmXu6IIn05eRaJ9+deXbDeXs4La5zHx6G4zaNS3Hz5dNtcf3+tnhzcy1vnXf3yzhs42F/3u71OQTUV6G5CuVniV2MXQl95ut8yi2lLz3qvvSVIRpqw87QGFqDBFJIkGwSVgm7hGXCNmGdsA/sA/vAPrAP7AP7wD6wD6lPV/q2TIf9Ov0aXffsfjjd813w7qd9efFuOui+QV93+tbn59NlfxnmedWf1aXxsdfVWi8J6ZMpJBKrtEzVJ9M0TxQSpO7VN8k56l8ch0e1cR/XdZiKv7//FI/nZS3uhlVn69NwOe6fhLY1ZaXOspyCU8T/x9s0j9y1zKPv47JOp6PrqpRe1wo++BK9uhpg0Evv0WYEvfgcqhyihZhDbaHOYWdhl0NjocmhtdDmoEeVU2Y+PotiEYywSBExE6GKmItQRsxGqCPmIxQSMxIqiTkJpcSsQCuYFWgFswKtYFagFcwKtIJZgVYwK9AKZgVawaxAK5hVOvN8/ryVMl2Le/kH3v2BedUDAAA=
+
+Ou dessiner ses propres murets dans l'éditeur (F5), étape « MURS BAS ».
+
+### Vérifié
+
+Suites touchées vertes (codec, géométrie, éditeur, arène, protocole, bandeau LED, matière,
+vision, carte partagée, murs bas) ; la géométrie vue rougir par sabotage de la priorité
+mur haut / mur bas, puis remise. **Rendu en fenêtre** de la carte d'essai montée comme
+`rebuild_arena` (calques en fondu additif, contour d'encre, collisions) : sous une torche,
+les 6 cases de murs bas à portée sont éclairées ; torche éteinte, l'image 2560×1440 vaut
+**0/255** partout.
+
 ## 8. Lancer le prototype
 
     /Applications/Godot.app/Contents/MacOS/Godot --path "<worktree>" res://tools/proto_murs_bas.tscn -- --no-eos

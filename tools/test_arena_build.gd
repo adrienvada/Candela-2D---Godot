@@ -25,6 +25,7 @@ func _init() -> void:
 	_test_collisions_and_occluders()
 	_test_rebuild_is_idempotent()
 	_test_spawns_land_on_floor()
+	_test_murs_bas_aller_retour()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -202,3 +203,56 @@ func _test_spawns_land_on_floor() -> void:
 
 	var result := MapCodec.check_playable(data)
 	_check("carte livrée déclarée jouable", result["ok"])
+
+## MB1 (chantier MURS BAS, 2026-09-14) — le calque des murs bas, de la carte aux
+## tuiles et retour, par les deux fonctions que `rebuild_arena` et l'éditeur appellent.
+func _test_murs_bas_aller_retour() -> void:
+	print("\n[Murs bas : carte → calques → carte]")
+	var file := FileAccess.open("res://tools/cartes/murs_bas_essai.json", FileAccess.READ)
+	var json := JSON.new()
+	json.parse(file.get_as_text())
+	file.close()
+	var data: Dictionary = MapCodec.validate(json.data as Dictionary)["data"]
+	var attendus := MapCodec.get_low_wall_cells(data)
+	_check("carte d'essai : des murs bas à peindre", attendus.size() > 0, str(attendus.size()))
+
+	var tileset := CandelaTileSet.create_tileset()
+	var sol := TileMapLayer.new()
+	sol.tile_set = tileset
+	var murs := TileMapLayer.new()
+	murs.tile_set = tileset
+	var bas := TileMapLayer.new()
+	bas.tile_set = tileset
+	_map_data.apply_to_layers(sol, murs, null, data, bas)
+	_check("apply_to_layers peint chaque mur bas", bas.get_used_cells().size() == attendus.size(),
+		"%d / %d" % [bas.get_used_cells().size(), attendus.size()])
+	var bonne_tuile := true
+	for c in bas.get_used_cells():
+		bonne_tuile = bonne_tuile and bas.get_cell_atlas_coords(c) == CandelaTileSet.LOW_WALL_ATLAS
+	_check("… avec la tuile hachurée", bonne_tuile)
+
+	var relu: Dictionary = _map_data.extract_from_layers(sol, murs, null, data, bas)
+	var relus := MapCodec.get_low_wall_cells(relu)
+	var ensemble := {}
+	for c in attendus:
+		ensemble[c] = true
+	var identiques := relus.size() == attendus.size()
+	for c in relus:
+		identiques = identiques and ensemble.has(c)
+	_check("extract_from_layers les relit à l'identique", identiques)
+
+	# Un appelant d'avant les murs bas (sans calque) ne les efface pas.
+	var sans_calque: Dictionary = _map_data.extract_from_layers(sol, murs, null, data)
+	_check("sans calque de murs bas, ceux de la carte de base sont gardés",
+		MapCodec.get_low_wall_cells(sans_calque).size() == attendus.size())
+	_check("la version écrite est la courante", int(relu["version"]) == MapCodec.VERSION)
+
+	# Une case de mur haut ne reçoit pas de mur bas au dessin.
+	var conflit := data.duplicate(true)
+	conflit["walls"] = String(conflit["walls"]) + ";%d,%d,1" % [attendus[0].x, attendus[0].y]
+	_map_data.apply_to_layers(sol, murs, null, conflit, bas)
+	_check("un mur haut l'emporte aussi au dessin", not bas.get_used_cells().has(attendus[0])
+		and murs.get_used_cells().has(attendus[0]))
+	sol.free()
+	murs.free()
+	bas.free()

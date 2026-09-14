@@ -52,8 +52,13 @@ const HACHURE_PORTEE := 8.0
 const HACHURE_PAS := 5.0
 const HACHURE_LARGEUR := 1.2
 const HACHURE_ALPHA := 0.7
+## Le trait d'un mur BAS : 2 px au lieu de 3 (dessin gardé par Adrien, H-MB0,
+## 2026-09-14). Pas de hachures au pied : le dessus du mur bas est déjà hachuré
+## (`CandelaTileSet._generer_mur_bas`), et sa bande d'ombre finie viendra en MB3.
+const TRAIT_BAS := 2.0
 
 var _boucles: Array[PackedVector2Array] = []
+var _boucles_bas: Array[PackedVector2Array] = []
 
 
 ## Construit le tracé des murs de `data` dans `parent`, avec ses deux copies.
@@ -77,14 +82,17 @@ func setup(data: Dictionary) -> void:
 	visibility_layer = 1
 	light_mask = 1
 	_boucles = _boucles_de(data)
+	_boucles_bas = _boucles_de(data, MapGeometry.Kind.LOW_WALLS)
 	queue_redraw()
 
 
 ## Les contours des masses de MURS (pas des fosses : une fosse est un vide, on
-## ne la cerne pas d'un trait de mur), en pixels de monde.
-static func _boucles_de(data: Dictionary) -> Array[PackedVector2Array]:
+## ne la cerne pas d'un trait de mur), en pixels de monde. `kind` : les murs
+## hauts par défaut, `Kind.LOW_WALLS` pour les murs bas.
+static func _boucles_de(data: Dictionary,
+		kind: MapGeometry.Kind = MapGeometry.Kind.WALLS) -> Array[PackedVector2Array]:
 	var out: Array[PackedVector2Array] = []
-	var solide: Array = MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+	var solide: Array = MapGeometry.build_grid(data, kind)
 	var tuile := Vector2(CandelaTileSet.TILE_SIZE)
 	var bordure := Vector2(MapGeometry.BORDER, MapGeometry.BORDER)
 	for boucle in MapGeometry.trace_contours(solide):
@@ -102,6 +110,7 @@ func _duplicate_for_player(parent: Node2D, player_idx: int, vis_mask: int, lt_ma
 	copy.light_mask = lt_mask
 	# `duplicate()` ne recopie pas les variables de script (piège du 2026-08-25).
 	copy._boucles = _boucles
+	copy._boucles_bas = _boucles_bas
 	copy.queue_redraw()
 	parent.add_child(copy)
 
@@ -111,6 +120,8 @@ func _draw() -> void:
 		_dessiner_hachures(boucle)
 	for boucle in _boucles:
 		_dessiner_trait(boucle)
+	for boucle in _boucles_bas:
+		_dessiner_trait(boucle, TRAIT_BAS)
 
 
 ## Le sens « intérieur du mur » d'une arête orientée : `trace_contours` tourne
@@ -120,7 +131,7 @@ static func _interieur(dir: Vector2) -> Vector2:
 	return Vector2(-dir.y, dir.x)
 
 
-func _dessiner_trait(boucle: PackedVector2Array) -> void:
+func _dessiner_trait(boucle: PackedVector2Array, epaisseur: float = TRAIT) -> void:
 	var n := boucle.size()
 	if n < 3:
 		return
@@ -136,13 +147,13 @@ func _dessiner_trait(boucle: PackedVector2Array) -> void:
 		var pas := maxi(1, int(round(longueur / PAS_TRAIT)))
 		for k in pas:
 			var t := float(k) / float(pas)
-			var p := a.lerp(b, t) + dehors * (TRAIT * 0.5)
+			var p := a.lerp(b, t) + dehors * (epaisseur * 0.5)
 			# Aux sommets, pas de tremblement : l'angle reste franc.
 			if k > 0:
 				p += dehors * (_hachage(p) * 2.0 - 1.0) * TREMBLE
 			pts.append(p)
 	pts.append(pts[0])
-	draw_polyline(pts, Charte.HALOGENE, TRAIT, false)
+	draw_polyline(pts, Charte.HALOGENE, epaisseur, false)
 
 
 func _dessiner_hachures(boucle: PackedVector2Array) -> void:

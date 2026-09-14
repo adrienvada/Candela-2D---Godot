@@ -13,6 +13,15 @@ const GRID_SIZE    := Vector2i(20, 20)
 const FLOOR_ATLAS_A := Vector2i(0, 0)
 const FLOOR_ATLAS_B := Vector2i(0, 1)
 const WALL_ATLAS    := Vector2i(1, 0)
+## Le mur BAS — chantier MURS BAS, étape MB1 (2026-09-14). La quatrième case de
+## l'atlas 2×2, libre jusque-là. Voir `_generer_mur_bas`.
+const LOW_WALL_ATLAS := Vector2i(1, 1)
+## Le trait des hachures d'un mur bas : la valeur de la dalle claire, pour qu'un
+## mur bas éclairé ait la présence du sol et non celle d'un mur haut.
+const MUR_BAS_TRAIT := Color(0.178, 0.179, 0.168)
+## Une hachure tous les `MUR_BAS_PAS` pixels, épaisse de `MUR_BAS_EPAISSEUR`.
+const MUR_BAS_PAS := 6
+const MUR_BAS_EPAISSEUR := 2
 
 ## ## Le sol DESSINÉ — refonte roman graphique, lot 1 (2026-09-11)
 ##
@@ -67,6 +76,9 @@ static func create_tileset() -> TileSet:
 	# --- Tile (1,0) : le mur, du noir pur (le contour vit dans `mur_encre.gd`) ---
 	_generer_mur_atelier(img, TILE_SIZE.x, 0)
 
+	# --- Tile (1,1) : le mur bas, hachuré (chantier MURS BAS, MB1) ---
+	_generer_mur_bas(img, TILE_SIZE.x, TILE_SIZE.y)
+
 	var tex := ImageTexture.create_from_image(img)
 	source.texture = tex
 	source.texture_region_size = TILE_SIZE
@@ -74,6 +86,7 @@ static func create_tileset() -> TileSet:
 	source.create_tile(FLOOR_ATLAS_A)
 	source.create_tile(FLOOR_ATLAS_B)
 	source.create_tile(WALL_ATLAS)
+	source.create_tile(LOW_WALL_ATLAS)
 
 	ts.add_source(source, 0)
 	return ts
@@ -144,6 +157,23 @@ static func _generer_mur_atelier(img: Image, ox: int, oy: int) -> void:
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
 			img.set_pixel(ox + x, oy + y, Charte.NOIR)
+
+## Dessine la tuile de mur BAS : des hachures diagonales sur du noir.
+##
+## Dessin gardé par Adrien au jalon H-MB0 (2026-09-14) : « invisible dans le noir,
+## dessus hachuré sous la lumière, pas de bandeau LED ». Les copies par vue sont
+## en mélange ADDITIF (`GameState._duplicate_layer_for_player`) : le noir n'ajoute
+## rien, seules les hachures reçoivent la lumière — donc rien ne se voit sans elle.
+## Diagonales et non horizontales : une hachure droite se confondrait avec le joint
+## des dalles, et la diagonale se lit « autre chose que du sol » à 35 px.
+static func _generer_mur_bas(img: Image, ox: int, oy: int) -> void:
+	for y in range(TILE_SIZE.y):
+		for x in range(TILE_SIZE.x):
+			# ⚠️ Pas `trait` comme nom de variable : c'est un mot réservé de
+			# GDScript 4.7, et l'erreur d'analyse fait tomber en cascade toutes les
+			# classes qui nomment `CandelaTileSet` (vécu en MB1).
+			var hachure := (x + y) % MUR_BAS_PAS < MUR_BAS_EPAISSEUR
+			img.set_pixel(ox + x, oy + y, MUR_BAS_TRAIT if hachure else Charte.NOIR)
 
 ## Une des huit orientations, tirée d'un hachage de la position de la cellule.
 ##
