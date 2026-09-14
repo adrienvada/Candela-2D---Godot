@@ -21352,6 +21352,22 @@ laisse à 1.0. Forme proposée par ISO2 par message inter-session, implémentée
 ici à l'identique pour rester sur une seule vérité du shader plutôt que deux
 versions divergentes du fichier fusionné.
 
+**`echelle_lecture` seule ne suffisait pas au banc du jeu réel** (ISO2,
+même soirée) : à 1,81, le porteur restait à 0/0/0 sous sa propre torche dans
+la vue adverse — la tête et le torse, près de l'axe du corps, lisent encore
+l'ombre centrale même dilatée, et quand la torche regarde au nord, la caméra
+ne voit que les flancs du dos. Un second uniform, `lecture_au_bord`
+(`hint_range(0,1)`, défaut 0, sans effet sur ce banc) : à 1, chaque fragment
+lit le disque AU RAYON LU, dans SA PROPRE DIRECTION, plutôt qu'à sa propre
+distance dilatée — là où le sprite de la vue de dessus montre son croissant
+éclairé. Mesuré par ISO2 en écran scindé : porteur sous sa propre torche
+81/88/95 (le plafond exact de sa fiche, dans les deux vues), J2 dans le
+faisceau de J1 à 156 px 32/30/27 (contre un anneau à 105-109/255 au bord
+éclairé — le corps montre exactement ce que montre le bord du sprite).
+`definir_lecture_au_bord()`, réglé par la présentation du jeu, jamais deviné
+ici. Patch repris à l'identique du diff qu'ISO2 a transmis (14 lignes), pour
+la même raison qu'`echelle_lecture` : une seule vérité du fichier fusionné.
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est

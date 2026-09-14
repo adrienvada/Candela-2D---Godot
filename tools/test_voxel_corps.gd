@@ -127,6 +127,7 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 	_test_pate_plafonnee(corps)
 	_test_effacement(corps)
 	_test_echelle_lecture(corps)
+	_test_lecture_au_bord(corps)
 	_test_silhouette_de_soi(corps)
 	_test_boites_profondeur(corps)
 
@@ -480,6 +481,20 @@ func _test_echelle_lecture(corps: Node3D) -> void:
 	_check("definir_echelle_lecture(2.5) pose l'uniform",
 		mat.get_shader_parameter("echelle_lecture") == 2.5)
 	corps.definir_echelle_lecture(1.0)
+
+
+## `lecture_au_bord` — `echelle_lecture` seule ne suffisait pas au banc du
+## jeu réel (ISO3a) : au bord du disque, dans la direction de chaque
+## fragment, plutôt qu'à sa propre distance dilatée. Nul par défaut (ce banc
+## des corps reste inchangé), réglable par l'appelant (la présentation du jeu).
+func _test_lecture_au_bord(corps: Node3D) -> void:
+	var mat: ShaderMaterial = corps.materiau()
+	_check("lecture_au_bord à 0,0 par défaut",
+		mat.get_shader_parameter("lecture_au_bord") == 0.0)
+	corps.definir_lecture_au_bord(1.0)
+	_check("definir_lecture_au_bord(1.0) pose l'uniform",
+		mat.get_shader_parameter("lecture_au_bord") == 1.0)
+	corps.definir_lecture_au_bord(0.0)
 
 
 # ---------------------------------------------------------------------------
