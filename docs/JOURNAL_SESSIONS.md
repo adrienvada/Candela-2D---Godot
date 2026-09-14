@@ -4173,3 +4173,36 @@ ici.
 a été coupé à 15 (conception C, juges et réfutateurs refusés) ; le jugement et
 les vérifications ont été refaits par la session principale, contre la
 documentation Godot et le code. Consigné dans l'étude (§ 6.3) et aux pièges.
+
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 0, branche `iso-corps`) — ajoutée le 2026-09-14 16:32 (Paris)
+
+Première tranche d'ISO3 : les corps voxel des dix classes du jeu et leurs
+mouvements, construits et animés par code. Décidé par Adrien le 2026-09-14.
+Ne dépend ni du tangage caméra, ni de la hauteur des murs, ni du jalon H15.
+Aucun fichier du jeu modifié.
+
+**Fichiers créés, tous à elle :** `voxel_corps.gd`, `voxel_catalogue.gd`,
+`corps_iso.gdshader`, `tools/banc_corps.tscn`/`.gd` (avec leurs `.uid`),
+`tools/test_voxel_corps.gd`, `docs/iso/captures_corps/` (trois captures :
+lumière 0,8 / 0,2 / 0 — la dernière vérifiée noir pur par extrema PIL, pas à
+l'œil).
+
+**Partagés, touchés par insertion :** `tools/run_suites.sh` (`test_voxel_corps`
+ajoutée au tableau `SUITES`), `docs/ROADMAP.md` (section « Vague 0 —
+iso-corps » dans le chantier ISO, quatre pièges), ce journal.
+
+**Base de départ corrigée :** le worktree fourni par l'application pointait
+sur `main` (`336bc10`) et non sur `6ccdd45` (l'étude ISO0) comme demandé —
+`git branch -m` + `git reset --hard 6ccdd45` avant toute autre commande,
+constaté par `git log -1 --oneline` et non supposé.
+
+**Interruption signalée par `iso-geometrie` (ISO0.b Géométrie Opus) :** Adrien
+mesurait la cadence en direct (série H15, fenêtre au premier plan). Un
+`run_suites.sh` complet lancé en arrière-plan par cette session a été tué
+séance tenante (task stoppée, aucun processus Godot restant lié à ce
+worktree), et aucune fenêtre Godot n'a été rouverte avant son feu vert — les
+trois captures de la planche et le premier lot de tests avaient déjà tourné
+avant l'alerte, rien à refaire sur ce plan.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis à
+la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (protocole du CLAUDE.md).

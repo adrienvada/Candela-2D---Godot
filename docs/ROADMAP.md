@@ -20910,6 +20910,84 @@ boîtes pavent la grille, une par rectangle de `merge_rects`, apparitions sur
 du sol, lumières à ombres, caméra orthographique cadrant la carte ; sait
 échouer). Aucun fichier du jeu n'est modifié.
 
+### Vague 0 — iso-corps (première tranche d'ISO3, inscrite le 2026-09-14)
+
+**Section tenue par la session `iso-corps`, seule à l'éditer** (les autres
+sessions ISO tiennent la leur). Chantier : les corps voxel des dix classes,
+construits et animés par code — première tranche d'ISO3, sans dépendre du
+tangage de la caméra, de la hauteur des murs, ni du jalon H15. Sert aussi si
+Adrien choisit « l'iso pour les vitrines seulement ».
+
+**Fait** : `voxel_catalogue.gd` (les dix classes en données — un seul
+squelette, gris plafonnés tirés de `Charte.DIM`, forme d'arme et de gadget par
+classe, slugs recopiés depuis `game_state.gd`, jamais réinventés) ;
+`voxel_corps.gd` (neuf `BoxMesh` par corps, un `Node3D` pivot par membre,
+`poser(etat)` pure) ; `corps_iso.gdshader` (unshaded, noir strict à
+`lumiere_recue = 0`) ; `tools/banc_corps.tscn`/`.gd` (dix corps sur une
+grille, lumière simulée, touches marche/tir/touché/mort, `--capture`,
+`--classe`, `--lumiere`) ; `tools/test_voxel_corps.gd` dans `run_suites.sh`
+(déterminisme, aucune partie sous le sol hors mort, continuité de la marche,
+pose de mort couchée, noir à lumière nulle, catalogue non dérivé de
+`game_state.gd`, aucun hasard — sait échouer) ; la planche des dix silhouettes
+sous `docs/iso/captures_corps/` (lumière 0,8 / 0,2 / 0 — le 0 mesuré au pixel
+par PIL, extrema `(0, 0, 0)`, pas seulement lu à l'écran).
+
+**Le contrat avec ISO2** : `VoxelCorps.poser(etat: Dictionary)` est l'unique
+entrée de mouvement, fonction PURE de `etat` — `position: Vector2` (pixels),
+`visee: Vector2`, `vitesse: Vector2` (px/s), `torche: bool`, `arme: String`,
+`tir: bool`, `touche: bool`, `mort: bool`, `t: float`. Le temps ne vient que
+de `t` — jamais de l'horloge, jamais de `randf()`. `VoxelCorps.materiau()`
+expose un `ShaderMaterial` unique par corps avec l'uniform `lumiere_recue`
+(0..1, réglé par `definir_lumiere()`) : c'est TOUT ce qu'ISO2 aura à nourrir
+depuis ses capteurs — aucune autre surface de couplage. Un uniform `style`
+(0 = aplat) est réservé pour la fonction de style d'ISO1, non implémenté ici.
+
+**Ce qui n'est PAS fait, signalé pour ISO4** : un geste de gadget distinct par
+classe (les dix partagent pour l'instant un seul bob commun, synchronisé à la
+marche) — dix gestes auraient dépassé le budget de deux sessions-journées de
+cette tranche.
+
+**Ce que iso-geometrie a mesuré au banc B-projection et qui concerne
+directement `corps_iso.gdshader` (à lire avant ISO2, détail dans SA section
+ROADMAP)** : un corps qui lit la lumière au sol sous ses pieds disparaît là où
+la vue de dessus le montre — le halo de proximité n'éclaire que les sprites,
+jamais le sol ; les capteurs de corps d'ISO2 ne sont donc pas optionnels,
+c'est la source que ce shader devra lire. Et `CAMERA_VISIBLE_LAYERS`
+fonctionne dans un shader spatial en `gl_compatibility` : un même maillage
+peut donc lire la lumière de J1 ou de J2 selon la caméra qui le dessine, utile
+pour des corps communs en écran scindé.
+
+#### Pièges rencontrés ici
+
+- **Le worktree fourni par l'application ne part pas toujours de la bonne
+  base.** Celui de cette session pointait sur le tronc `main` (`336bc10`) et
+  non sur `6ccdd45`, la branche de l'étude ISO0 que le brief demandait comme
+  point de départ. Rien ne le signale sauf `git log -1 --oneline` comparé à la
+  valeur attendue AVANT toute modification — vérifié, sinon une session ISO
+  bâtit sur une base qui n'a pas l'étude, silencieusement.
+- **Une capture « preuve de noir absolu » doit exclure tout ce qui n'est pas
+  asservi à `lumiere_recue`.** Le bandeau de diagnostic du banc (texte clair)
+  et le cône-repère (couleur fixe, purement illustratif — voir son en-tête)
+  vivent dans la même image que les corps : sans les cacher avant
+  `RenduCommun.capturer()`, la valeur maximale mesurée à lumière 0 n'était pas
+  0 mais 0,85 — pas les corps, l'INTERFACE. La suite headless ne pouvait pas
+  attraper ça : elle lit l'uniform, jamais un pixel réel.
+- **`Camera3D.size` (orthographique) est le DEMI-côté vertical en
+  `KEEP_HEIGHT`, le mode par défaut** — la largeur visible vaut
+  `size × aspect`, jamais l'inverse. Une première formule dimensionnait le
+  cadrage sur la plus grande DES DEUX dimensions de la grille sans diviser par
+  l'aspect, cadrant deux fois trop large sur une scène volontairement en
+  largeur (cinq colonnes, deux rangées) — corps ridiculement petits, sans
+  qu'aucune erreur ne le signale.
+- **Un seul champ `t` pour deux usages qui semblent incompatibles.** La marche
+  veut un `t` continu (la phase du pas) ; le recul du tir et la secousse du
+  touché veulent un `t` remis à zéro au déclenchement (une enveloppe de
+  quelques centaines de ms). Les deux tiennent dans UN champ parce qu'en jeu
+  réel, tirer immobilise déjà le joueur (`RootProfile.duree`) : la marche et
+  le recul ne se disputent donc jamais le même `t` en pratique. C'est
+  l'appelant (le banc, plus tard le pont ISO2) qui choisit quoi mettre dans
+  `t` selon l'état — documenté dans `voxel_corps.gd`, pas deviné.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
