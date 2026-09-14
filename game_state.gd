@@ -984,6 +984,7 @@ func rebuild_arena() -> void:
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
 	murs_bas = MapGeometry.rects_monde(data, MapGeometry.Kind.LOW_WALLS)
+	MursBas.murs_de_la_manche = murs_bas
 
 	# Bandeau LED des murs (2026-09-10, allumé pour tout le monde le 2026-09-11) :
 	# une lumière unique, cuite depuis la grille des murs, qui respire sur

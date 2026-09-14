@@ -87,6 +87,34 @@ static func hauteur_mur() -> float:
 	return en_pixels(HAUTEUR_MUR_BAS)
 
 
+## Le rayon du corps d'un joueur, pour l'enjambement (MB3b) — celui de sa zone de
+## touche (`Bullet.PLAYER_BODY_RADIUS`, `GadgetLeurre.RAYON_CORPS`).
+const RAYON_CORPS := 18.0
+## L'ENCOMBREMENT du corps pour la collision : le polygone de `player.tscn` est une
+## étoile dont le canon avance à 28, pas un disque de 18. ⚠️ Payé au premier essai
+## de MB3b : décidé au rayon de touche, l'enjambement ne voyait jamais la poussée —
+## le canon heurtait le muret à 28 px, le corps s'arrêtait à 182 px d'un muret posé
+## à 210, et la « poussée » à 18 + 9 n'atteignait pas la pierre.
+const RAYON_ENCOMBREMENT := 28.0
+
+## Les murs bas de la manche en cours, en pixels — posés par
+## `GameState.rebuild_arena`. Un registre de classe plutôt qu'une question posée à
+## `GameState` : le joueur doit pouvoir enjamber sans connaître le nœud de jeu,
+## et une suite doit pouvoir poser un muret sans monter une partie.
+static var murs_de_la_manche: Array = []
+
+
+## Un cercle chevauche-t-il l'un des rectangles ? L'enjambement se décide là, du
+## même calcul chez l'hôte, chez le client et pour l'adversaire affiché.
+static func chevauche_cercle(centre: Vector2, rayon: float, rects: Array) -> bool:
+	for r: Rect2 in rects:
+		var proche := Vector2(clampf(centre.x, r.position.x, r.end.x),
+			clampf(centre.y, r.position.y, r.end.y))
+		if proche.distance_squared_to(centre) < rayon * rayon:
+			return true
+	return false
+
+
 ## `franchit()` avec les constantes du jeu — ce que la balle et l'éblouissement
 ## appellent. Une seule règle, un seul angle, une seule hauteur de mur.
 static func franchit_regle(source: Vector2, cible: Vector2, h_source: float, h_cible: float,

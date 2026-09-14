@@ -1772,6 +1772,18 @@ func play_wall_brush(pos: Vector2) -> AudioStreamPlayer2D:
 		return null
 	return play_sfx_2d_random_pitch(chemin, pos, 0.94, 1.06)
 
+## MB3b — enjamber un mur bas, « en faisant du bruit » (règle d'Adrien). Le
+## frôlement de mur, plus fort et plus grave : le même geste du corps contre la
+## pierre, mais un effort. Aucun échantillon neuf à commander ; l'écart se dose au
+## banc audio comme celui du pas accroupi.
+const ENJAMBEMENT_DB := 6.0
+
+func play_enjambement(pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_variante_au_hasard("wall_brush")
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return null
+	return play_sfx_2d_random_pitch(chemin, pos, 0.80, 0.88, ENJAMBEMENT_DB)
+
 ## V4.2 — le coup au but, selon qu'il touche au centre ou au bord.
 ##
 ## `proximite_bord` est le `normalized_dist` que `bullet.gd` calcule deja pour

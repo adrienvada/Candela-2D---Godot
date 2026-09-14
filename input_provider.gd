@@ -50,3 +50,9 @@ func is_crouch_pressed() -> bool:
 ## défaut, comme `reset_flashlight_state`.
 func reset_crouch_state() -> void:
 	pass
+
+## Enjamber — chantier MURS BAS, étape MB3b. Un geste TENU (choix d'Adrien) : vrai
+## tant qu'on tient la touche. Seul, il ne fait rien ; poussé contre un muret, il
+## coupe la collision avec les murs bas le temps de la traversée.
+func is_climb_pressed() -> bool:
+	return false

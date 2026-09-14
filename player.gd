@@ -378,6 +378,19 @@ var accroupi: bool = false
 ## Répliquée hôte→client, comme `net_flashlight_on`.
 var net_accroupi: bool = false
 
+## ── L'enjambement — chantier MURS BAS, étape MB3b (2026-09-14) ───────────────
+##
+## « On enjambe un mur bas avec croix, lentement et en faisant du bruit. » Geste
+## choisi par Adrien : TENIR la touche en poussant vers le muret ; lâcher arrête
+## avant de monter dessus. Pendant la traversée : debout, 65 px/s (égalité avec
+## l'accroupi assumée par Adrien au H-MB0), pas de tir.
+const FACTEUR_VITESSE_ENJAMBEMENT := 0.25
+## Vrai tant que le corps chevauche un muret ou pousse dessus en tenant la touche.
+var enjambe: bool = false
+## Nombre de murets enjambés — le bruit joué, compté pour les suites.
+var enjambements: int = 0
+var _sur_muret_avant := false
+
 # La torche est répliquée, pas simulée, côté non-autoritaire : on détecte son
 # changement ici pour que le son suive dans tous les modes.
 var _torch_audio_state: bool = false
@@ -1329,7 +1342,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false, gadget: bool = false, crouch: bool = false) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false, gadget: bool = false, crouch: bool = false, climb: bool = false) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1351,7 +1364,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload, gadget, crouch)
+	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload, gadget, crouch, climb)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -1371,7 +1384,7 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 		_input_seq += 1
 		# La posture reste celle qu'on a, comme la torche : ouvrir le menu ne
 		# relève personne.
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false, false, accroupi)
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false, false, accroupi, false)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
@@ -1379,7 +1392,8 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(),
 		input_provider.is_flare_pressed(), input_provider.is_reload_pressed(),
-		input_provider.is_gadget_pressed(), input_provider.is_crouch_pressed())
+		input_provider.is_gadget_pressed(), input_provider.is_crouch_pressed(),
+		input_provider.is_climb_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
@@ -1475,6 +1489,35 @@ func _consume_prediction_error(delta: float) -> void:
 	_predict_error -= step
 	if _predict_error.length() < 0.5:
 		_predict_error = Vector2.ZERO
+
+## MB3b — enjamber. Poussé contre un muret en tenant la touche, ou déjà dessus :
+## la collision avec les murs bas est coupée. Lâché AVANT d'y monter : elle
+## revient, et le muret arrête le corps. Déjà dessus, on ne peut plus la rendre —
+## un corps dans un mur serait éjecté —, la traversée continue donc jusqu'au bout.
+func _regler_enjambement(input_dir: Vector2) -> void:
+	# L'ENCOMBREMENT (28, le canon) et non le rayon de touche (18) : c'est la
+	# collision qu'on coupe, donc la forme de la collision qui décide.
+	var murs := MursBas.murs_de_la_manche
+	var dessus := MursBas.chevauche_cercle(global_position, MursBas.RAYON_ENCOMBREMENT, murs)
+	var pousse := false
+	if input_provider.is_climb_pressed() and input_dir.length() > 0.1:
+		pousse = MursBas.chevauche_cercle(
+			global_position + input_dir.normalized() * 4.0,
+			MursBas.RAYON_ENCOMBREMENT, murs)
+	enjambe = dessus or pousse
+	if enjambe:
+		collision_mask &= ~MapGeometry.LOW_WALL_LAYER
+	else:
+		collision_mask |= MapGeometry.LOW_WALL_LAYER
+
+## MB3b — « en faisant du bruit » : un frôlement fort à chaque montée sur un muret.
+func _guetter_enjambement() -> void:
+	var dessus := MursBas.chevauche_cercle(global_position, MursBas.RAYON_ENCOMBREMENT,
+		MursBas.murs_de_la_manche)
+	if dessus and not _sur_muret_avant:
+		enjambements += 1
+		AudioManager.play_enjambement(global_position)
+	_sur_muret_avant = dessus
 
 ## La posture — MB2. Un seul point d'écriture, pour que la silhouette ne puisse
 ## jamais dire autre chose que la simulation : la vitesse lit `accroupi`, les vues
@@ -1648,8 +1691,11 @@ func _physics_process(delta):
 	if can_move:
 		# MB2 — la posture AVANT la vitesse : le pas de cette image se fait déjà
 		# à l'allure de la posture choisie à cette image.
-		poser_posture(input_provider.is_crouch_pressed())
 		var input_dir = input_provider.get_movement_vector()
+		# MB3b — l'enjambement se décide avant la posture : on enjambe DEBOUT, et
+		# la bascule d'accroupissement reprend la main une fois le muret passé.
+		_regler_enjambement(input_dir)
+		poser_posture(input_provider.is_crouch_pressed() and not enjambe)
 		# ⚠️ **La vitesse ne dépend que de deux causes, et toutes deux se
 		# LISENT** : l'arme qu'on porte et l'éblouissement qu'on subit. Rien ne
 		# doit accélérer un joueur sans que l'adversaire puisse le voir venir —
@@ -1670,6 +1716,11 @@ func _physics_process(delta):
 		# une information retirée à l'autre ; celui-ci se voit dès qu'on éclaire.
 		if accroupi:
 			current_speed *= FACTEUR_VITESSE_ACCROUPI
+		# MB3b — « lentement » : la traversée d'un muret a sa propre allure, qui
+		# remplace celle de la marche (l'éblouissement ou le root la ralentissent
+		# encore, parce qu'ils se lisent aussi).
+		if enjambe:
+			current_speed *= FACTEUR_VITESSE_ENJAMBEMENT
 
 		velocity = input_dir * current_speed
 		if velocity != Vector2.ZERO:
@@ -1710,6 +1761,9 @@ func _physics_process(delta):
 	# simulé, sinon l'information devient asymétrique — l'hôte entendrait et
 	# pisterait le client, jamais l'inverse. (Corrige au passage l'asymétrie
 	# préexistante du SFX de pas, inaudible côté client pour l'adversaire.)
+	# MB3b — le bruit de l'enjambement, pour TOUS les rôles : l'adversaire affiché
+	# le produit comme le joueur simulé, depuis la même position.
+	_guetter_enjambement()
 	var step_moved := global_position.distance_to(_last_step_pos)
 	_last_step_pos = global_position
 	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
@@ -1971,7 +2025,8 @@ func _physics_process(delta):
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	var presse := input_provider.is_shoot_pressed()
-	if can_move and presse and shoot_cooldown <= 0 \
+	# MB3b — on ne tire pas en enjambant (proposition de la note, § 6.2).
+	if can_move and presse and shoot_cooldown <= 0 and not enjambe \
 			and (not is_reloading or recharge_interruptible()):
 		if current_ammo > 0:
 			# Un appui, un tir — sauf l'arme automatique, la seule qui tire en boucle

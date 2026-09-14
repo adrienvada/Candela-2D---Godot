@@ -284,6 +284,8 @@ class_name Protocol
 ##     bascule, jamais un appui — un paquet perdu ne peut pas faire rater un front.
 ##     Rupture franche, comme le bit de rechargement en v8 ; **cumulée sous 18**,
 ##     parce qu'aucun tag n'a figé ce numéro depuis sa montée en MB1.
+## 18 (suite) — `rpc_send_inputs` gagne un dixième argument, le geste d'ENJAMBER
+##     tenu (MB3b, 2026-09-14). Même raisonnement, même numéro : non publié.
 const VERSION := 18
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
@@ -301,8 +303,9 @@ const VERSION := 18
 ## Recopié le 2026-09-14 (MB1) APRÈS avoir monté `VERSION` à 18 : seul
 ## `mapcodec=4` a changé dans l'empreinte. Puis recopié le même soir (MB2), le
 ## numéro TRANCHÉ d'abord — il reste 18, aucun tag ne l'ayant figé — : la
-## signature de `rpc_send_inputs` gagne la posture.
-const WIRE_WITNESS := "6bac42f7efbab8b4"
+## signature de `rpc_send_inputs` gagne la posture. Et encore en MB3b (même numéro,
+## même raison) : elle gagne le geste d'enjamber.
+const WIRE_WITNESS := "ebde1452efa216c3"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

@@ -43,6 +43,7 @@ func _lancer() -> void:
 	_test_nouvelle_manche(p1)
 	_test_torche_bute(p1)
 	_test_balle(p1, p2)
+	await _test_enjambement(p1)
 	if _echecs == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -202,8 +203,9 @@ func _test_rpc_hote(p2: Player) -> void:
 		if m["name"] == "rpc_send_inputs":
 			methode = m
 	var args: Array = methode.get("args", [])
-	_check("rpc_send_inputs porte la posture en dernier argument",
-		args.size() == 9 and String(args[8]["name"]) == "crouch", str(args.size()))
+	_check("rpc_send_inputs porte la posture puis l'enjambement en derniers arguments",
+		args.size() == 10 and String(args[8]["name"]) == "crouch"
+		and String(args[9]["name"]) == "climb", str(args.size()))
 
 
 func _test_rejeu(p1: Player, p2: Player) -> void:
@@ -312,3 +314,90 @@ func _test_balle(tireur: Player, cible: Player) -> void:
 					MursBas.hauteur_de_posture(true)))
 		b.queue_free()
 	_check("la cible reste en vie : aucun tir n'a été simulé", cible.hp > 0)
+
+
+# ── MB3b : l'enjambement ────────────────────────────────────────────────────
+
+func _test_enjambement(p: Player) -> void:
+	print("\n[Enjamber un muret (MB3b)]")
+	for j: int in [1, 2]:
+		var action := "p%d_enjamber" % j
+		var clavier := -1
+		var manette := -1
+		if InputMap.has_action(action):
+			for evt in InputMap.action_get_events(action):
+				if evt is InputEventKey:
+					clavier = (evt as InputEventKey).physical_keycode
+				elif evt is InputEventJoypadButton:
+					manette = (evt as InputEventJoypadButton).button_index
+		_check("%s : %s au clavier, Croix à la manette" % [action, "Espace" if j == 1 else "point-virgule"],
+			clavier == (KEY_SPACE if j == 1 else KEY_SEMICOLON) and manette == JOY_BUTTON_A,
+			"%d / %d" % [clavier, manette])
+	var r := NetworkInputProvider.new()
+	r.update_input_state(Vector2.ZERO, Vector2.ZERO, false, false, false, false, false, false, true)
+	_check("le fournisseur réseau rend le geste d'enjamber", r.is_climb_pressed())
+	r.reset_input_state()
+	_check("… et l'oublie à la déconnexion", not r.is_climb_pressed())
+	r.free()
+
+	# Un vrai muret : une colonne de murs bas en x = 6, collision et règle.
+	var carte := MapCodec.new_map("Muret", Vector2i(12, 12))
+	var sol: Array[Vector2i] = []
+	for y in 12:
+		for x in 12:
+			sol.append(Vector2i(x, y))
+	carte["floor"] = MapCodec.encode_runs(sol)
+	carte["low_walls"] = "6,0,1;6,1,1;6,2,1;6,3,1;6,4,1;6,5,1;6,6,1;6,7,1;6,8,1;6,9,1;6,10,1;6,11,1"
+	var collisions := MapGeometry.build_collisions(carte, self)
+	MursBas.murs_de_la_manche = MapGeometry.rects_monde(carte, MapGeometry.Kind.LOW_WALLS)
+	var gauche := 6.0 * MursBas.TUILE
+	var droite := 7.0 * MursBas.TUILE
+	var f := p.input_provider as NetworkInputProvider
+	p.poser_posture(false)
+	p.global_position = Vector2(gauche - 60.0, 5.5 * MursBas.TUILE)
+	for k in 3:
+		await get_tree().physics_frame
+
+	f.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false, false)
+	for k in 60:
+		await get_tree().physics_frame
+	_check("sans le geste, le muret arrête le corps", p.global_position.x < gauche,
+		"x = %.1f, muret en %.0f" % [p.global_position.x, gauche])
+	_check("… et on n'est pas en train d'enjamber", not p.enjambe)
+
+	var avant_bruit := p.enjambements
+	var munitions: int = p.current_ammo
+	var vitesses := []
+	var x_prec := p.global_position.x
+	for k in 240:
+		# Détente tenue tant que le corps est SUR le muret — hors du muret, un tir
+		# partirait légitimement et ce contrôle ne dirait plus rien de l'enjambement.
+		var sur_le_muret := p.global_position.x < droite + MursBas.RAYON_ENCOMBREMENT - 1.0
+		f.update_input_state(Vector2.RIGHT, Vector2.RIGHT, sur_le_muret, false, false, false, false, false, true)
+		await get_tree().physics_frame
+		if p.enjambe:
+			vitesses.append((p.global_position.x - x_prec) * Engine.physics_ticks_per_second)
+		x_prec = p.global_position.x
+		if p.global_position.x > droite + MursBas.RAYON_ENCOMBREMENT + 4.0:
+			break
+	f.update_input_state(Vector2.ZERO, Vector2.ZERO, false, false, false)
+	await get_tree().physics_frame
+	_check("en tenant le geste, le corps passe de l'autre côté", p.global_position.x > droite,
+		"x = %.1f" % p.global_position.x)
+	_check("un bruit d'enjambement, un seul", p.enjambements == avant_bruit + 1,
+		"%d" % (p.enjambements - avant_bruit))
+	var vitesse_max := 0.0
+	for v: float in vitesses:
+		vitesse_max = maxf(vitesse_max, v)
+	var attendue := p.speed * Player.FACTEUR_VITESSE_ENJAMBEMENT
+	_check("lentement : %.0f px/s pendant la traversée" % attendue,
+		vitesses.size() > 0 and absf(vitesse_max - attendue) < attendue * 0.1,
+		"max %.1f sur %d images" % [vitesse_max, vitesses.size()])
+	_check("on ne tire pas en enjambant (détente tenue pendant toute la traversée)",
+		p.current_ammo == munitions, "%d → %d" % [munitions, p.current_ammo])
+	_check("la collision avec les murs bas revient une fois passé",
+		(p.collision_mask & MapGeometry.LOW_WALL_LAYER) != 0)
+
+	MursBas.murs_de_la_manche = []
+	remove_child(collisions)
+	collisions.free()

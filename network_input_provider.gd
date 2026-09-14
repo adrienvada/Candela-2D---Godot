@@ -11,6 +11,8 @@ var reload_pressed := false
 var gadget_pressed := false
 ## La posture voulue par le client (MB2) — un ÉTAT, déjà résolu de sa bascule.
 var crouch_pressed := false
+## Le geste d'enjamber, tenu (MB3b).
+var climb_pressed := false
 
 func get_movement_vector() -> Vector2:
 	return current_movement
@@ -36,8 +38,12 @@ func is_gadget_pressed() -> bool:
 func is_crouch_pressed() -> bool:
 	return crouch_pressed
 
+func is_climb_pressed() -> bool:
+	return climb_pressed
+
 ## Alimenté par les paquets d'input du client, consommé par la simulation hôte.
-func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, flare: bool, reload: bool = false, gadget: bool = false, crouch: bool = false) -> void:
+func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, flare: bool, reload: bool = false, gadget: bool = false, crouch: bool = false, climb: bool = false) -> void:
+	climb_pressed = climb
 	current_movement = movement
 	current_aim = aim
 	shoot_pressed = shoot
@@ -58,3 +64,4 @@ func reset_input_state() -> void:
 	reload_pressed = false
 	gadget_pressed = false
 	crouch_pressed = false
+	climb_pressed = false

@@ -4273,3 +4273,18 @@ Suites étendues : `test_accroupi`, `test_murs_bas`.
 **Coordination** : la session ISO2 a annoncé ses bancs et son lot par message ; mon lot
 complet n'est parti qu'après son « la machine est à toi » (20 h 45). Aucun faux rouge de
 contention ce soir-là.
+
+### 2026-09-14 (soir) — MB3b : l'enjambement (même session, même branche)
+
+**Touché** : `murs_bas.gd` (`RAYON_CORPS`, registre `murs_de_la_manche`,
+`chevauche_cercle`), `input_setup.gd` (Espace / point-virgule / Croix), les trois
+fournisseurs d'entrées (`is_climb_pressed`), `player.gd` (dixième argument du fil,
+`_regler_enjambement`, `_guetter_enjambement`, pas de tir en enjambant), `audio_manager.gd`
+(`play_enjambement`, frôlement à +6 dB), `game_state.gd` (pose du registre), `ui.gd`
+(ligne « Enjamber » des liaisons), `protocol.gd` (carnet). Suites : `test_accroupi`,
+`test_liaisons`.
+
+**Un contrôle réécrit avant d'avoir tourné** : la première version tenait la détente
+pendant toute la boucle de traversée, y compris l'image d'après le muret — où un tir part
+légitimement. Le contrôle « on ne tire pas en enjambant » aurait rougi pour une bonne
+raison qui n'était pas la sienne. Il ne tient plus la détente que sur le muret.

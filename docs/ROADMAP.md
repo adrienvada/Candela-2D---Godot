@@ -21039,7 +21039,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
-| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement) ; MB3b à MB3d en cours |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement) ; MB3c et MB3d en cours |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
 
@@ -21264,8 +21264,11 @@ les garde pour la manche.
   lit la TUILE entière ; la lumière, l'occluder rentré (écart de 3 px déjà consigné).
 - **Lumières** : `Player.poser_posture()` pose ou retire `COUCHE_OMBRE_MUR_BAS` sur les quatre
   lumières portées (torche, rétrodiffusion, halo, flash) — la torche d'un accroupi bute. Les
-  lumières au sol la portent en permanence : mine, braises, **fusée** (⚠️ lecture à confirmer
-  pour une fusée en vol).
+  lumières au sol la portent en permanence : mine, braises, **fusée posée**. ✅ **Tranché par
+  Adrien à 21 h 10 : une fusée EN VOL éclaire par-dessus les murets** (MB3a la faisait buter
+  toujours — corrigé à la suite de MB3b).
+- **Tirer trahit toujours** (Adrien, 21 h 10) : la silhouette révélée au tir, non éclairée,
+  se montre même derrière un muret. Comportement conservé.
 - **Éblouissement** : `_ligne_de_vue_depuis` applique la même règle, œil à la hauteur de la
   posture de la cible, source à celle de son porteur ; une source de proximité sans porteur
   est au sol.
@@ -21279,6 +21282,34 @@ vérifie que `franchit_regle` rend la règle du prototype à l'identique et que
 `test_eblouissement`, `test_fusee`, `test_netcode` verts. Lot complet : **113 OK**.
 ⚠️ **Asymétrie temporaire** : l'écran ne dessine pas encore la zone morte (MB3c) — on peut
 voir un accroupi que la balle survole. H-MB1 ne se joue pas avant MB3c.
+
+#### MB3b — l'enjambement
+
+**Tenir** Espace (J1), point-virgule (J2) ou Croix **en poussant vers le muret** : la
+collision avec les murs bas est coupée le temps de la traversée — debout, 65 px/s, aucun
+tir, un frôlement fort à la montée. Lâché avant d'y monter, le muret arrête ; déjà dessus,
+la traversée va au bout (un corps dans un mur ne retrouve pas sa collision). Le geste
+voyage tenu, dixième argument de `rpc_send_inputs`, sous `Protocol.VERSION` 18. Les murets
+de la manche sont un registre de classe (`MursBas.murs_de_la_manche`) : le joueur n'a pas à
+connaître le nœud de jeu pour enjamber, et une suite pose un muret sans monter une partie.
+Le bruit se décide depuis la POSITION, pour tous les rôles : l'adversaire affiché s'entend
+enjamber comme le joueur simulé.
+
+⚠️ **Croix sert aussi à valider dans les menus** — superposition contextuelle, comme L1/R1
+avec les onglets ; `Liaisons.collisions()` ne détecte pas l'intra-joueur.
+
+**Piège payé en MB3b — le rayon de TOUCHE n'est pas l'ENCOMBREMENT.** Le premier essai
+décidait la poussée au rayon de 18 (celui des balles). Or la collision du joueur est une
+étoile dont le canon avance à 28 : le corps s'arrêtait à 182 px d'un muret posé à 210, la
+sonde « 18 + 9 » n'atteignait pas la pierre, la collision n'était jamais coupée — et la
+détente tenue « sur le muret » tirait, puisque le corps n'y était pas. Quatre contrôles
+rouges, un seul chiffre (x = 182) pour les expliquer tous. `MursBas.RAYON_ENCOMBREMENT = 28`
+décide désormais ce qui touche à la collision ; `RAYON_CORPS = 18` reste celui des balles.
+
+**Vérifié** : `test_accroupi` (60 contrôles) — Espace, point-virgule et Croix ; le geste sur
+le fil ; un vrai joueur bloqué par un vrai muret sans le geste, qui le traverse en le
+tenant, à 65 px/s, avec un seul bruit, sans tirer, et qui retrouve sa collision après.
+`test_protocole` (témoin recopié, `VERSION` 18), `test_classes` (412), `test_liaisons`.
 
 ### Ce qui attend Adrien
 

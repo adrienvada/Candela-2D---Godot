@@ -38,6 +38,7 @@ var action_flare := ""
 var action_reload := ""
 var action_gadget: String = ""
 var action_crouch: String = ""
+var action_climb: String = ""
 
 ## La bascule d'accroupissement (MB2) : vraie après un appui, fausse après le
 ## suivant. `_accroupir_tenu` garde l'état de la touche à l'appel précédent, pour
@@ -66,6 +67,7 @@ func _setup_inputs() -> void:
 	action_reload = prefix + "reload"
 	action_gadget = prefix + "gadget"
 	action_crouch = prefix + "accroupir"
+	action_climb = prefix + "enjamber"
 
 func get_movement_vector() -> Vector2:
 	return Input.get_vector(action_left, action_right, action_up, action_down)
@@ -157,3 +159,8 @@ func is_crouch_pressed() -> bool:
 func reset_crouch_state() -> void:
 	_accroupi_voulu = false
 	_accroupir_tenu = false
+
+## Tenu, pas en bascule (MB3b, choix d'Adrien).
+func is_climb_pressed() -> bool:
+	return action_climb != "" and InputMap.has_action(action_climb) \
+		and Input.is_action_pressed(action_climb)

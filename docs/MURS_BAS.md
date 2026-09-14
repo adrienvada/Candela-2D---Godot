@@ -461,6 +461,53 @@ déjà, l'écran pas encore (MB3c). ⚠️ **C'est une asymétrie temporaire ent
 ce qui se paie** : on peut voir un accroupi que la balle survole. Elle se referme en MB3c, et
 H-MB1 ne se joue pas avant.
 
+### MB3b — l'enjambement
+
+| | J1 | J2 | Manette |
+|---|---|---|---|
+| Enjamber (tenu, en poussant vers le muret) | **Espace** | **point-virgule** | **Croix** |
+
+- **Le geste voyage tenu** : `InputProvider.is_climb_pressed()`, dixième argument de
+  `rpc_send_inputs` (cumulé sous `Protocol.VERSION` 18).
+- **La décision** (`Player._regler_enjambement`) : le corps chevauche un muret, OU pousse
+  dessus en tenant le geste → la collision avec `LOW_WALL_LAYER` est coupée. Lâché avant d'y
+  monter, elle revient et le muret arrête. Déjà dessus, la traversée continue : un corps
+  dans un mur ne peut pas retrouver sa collision.
+- **Pendant la traversée** : debout (la bascule d'accroupissement reprend après),
+  `FACTEUR_VITESSE_ENJAMBEMENT = 0,25` (65 px/s), aucun tir.
+- **Le bruit** : `AudioManager.play_enjambement`, le frôlement de mur à +6 dB et plus grave,
+  joué à la montée sur le muret par `_guetter_enjambement` — pour TOUS les rôles, depuis la
+  position, donc l'adversaire affiché s'entend comme le joueur simulé. Valeur de départ,
+  à doser au banc audio.
+- **Où sont les murets** : `MursBas.murs_de_la_manche`, registre posé par `rebuild_arena`.
+- **Quel rayon** : `MursBas.RAYON_ENCOMBREMENT = 28` — la collision du joueur est une étoile
+  dont le canon avance à 28. Décidé au rayon de touche (18), le premier essai ne voyait
+  jamais la poussée : le canon heurtait le muret avant que la sonde n'atteigne la pierre.
+
+**Vérifié** : `tools/test_accroupi.tscn` (60 contrôles) — touches, geste sur le fil, et un
+vrai joueur face à un vrai muret : bloqué sans le geste, traversée en le tenant à 65 px/s,
+un seul bruit, aucun tir, collision retrouvée après.
+
+### ✅ Tranché par Adrien (2026-09-14, 21 h 10) — deux questions relevées pendant MB3
+
+1. **Tirer trahit toujours** : un accroupi caché derrière un muret qui tire se révèle
+   quand même (la silhouette révélée au tir ne dépend d'aucune lumière). Comportement
+   actuel conservé, sans une ligne changée.
+2. **Une fusée EN VOL éclaire par-dessus les murets** ; posée au sol, elle bute dessus
+   (correction de la lecture de MB3a, qui la faisait buter toujours).
+
+Le détail de la première question, tel qu'il a été posé :
+
+**La silhouette révélée au tir traverse-t-elle la zone morte ?** Quand un joueur tire, sa
+silhouette s'allume pendant 2 s chez l'adversaire, **non éclairée** — elle ne dépend
+d'aucune lumière, donc d'aucun mur (curseur « Silhouette révélée au tir », plancher 0,7 en
+classé, `player.gd` après le flash). Un accroupi caché derrière un muret qui tire se
+révèle donc entier, quel que soit le muret — alors que sa balle s'arrête sur la pierre et
+que son flash bute dessus. Deux lectures, à trancher en effets perçus : (1) **tirer trahit
+toujours**, même à l'abri — c'est le prix du tir, et la cachette ne dispense pas de le
+payer ; (2) **un muret cache aussi l'éclair** d'un accroupi, et la révélation ne vaut que
+pour qui la lumière aurait atteint. **Adrien a choisi (1).**
+
 ## 8. Lancer le prototype
 
     /Applications/Godot.app/Contents/MacOS/Godot --path "<worktree>" res://tools/proto_murs_bas.tscn -- --no-eos

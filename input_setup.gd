@@ -8,13 +8,13 @@ func _setup_all_inputs():
 	var actions = [
 		"p1_move_up", "p1_move_down", "p1_move_left", "p1_move_right",
 		"p1_aim_up", "p1_aim_down", "p1_aim_left", "p1_aim_right",
-		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_gadget", "p1_accroupir", "p1_skip_killcam",
+		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_gadget", "p1_accroupir", "p1_enjamber", "p1_skip_killcam",
 		"p1_weapon_prev", "p1_weapon_next", "p1_menu_select",
 		"p1_menu_up", "p1_menu_down", "p1_menu_left", "p1_menu_right",
 		"p1_menu_prev_tab", "p1_menu_next_tab",
 		"p2_move_up", "p2_move_down", "p2_move_left", "p2_move_right",
 		"p2_aim_up", "p2_aim_down", "p2_aim_left", "p2_aim_right",
-		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_gadget", "p2_accroupir", "p2_skip_killcam",
+		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_gadget", "p2_accroupir", "p2_enjamber", "p2_skip_killcam",
 		"p2_weapon_prev", "p2_weapon_next", "p2_menu_select",
 		"p2_menu_up", "p2_menu_down", "p2_menu_left", "p2_menu_right",
 		"p2_menu_prev_tab", "p2_menu_next_tab",
@@ -38,6 +38,16 @@ func _setup_all_inputs():
 	var accroupir_p2 = InputEventKey.new()
 	accroupir_p2.physical_keycode = KEY_M
 	InputMap.action_add_event("p2_accroupir", accroupir_p2)
+
+	# Enjamber un mur bas — chantier MURS BAS, étape MB3b (2026-09-14). Choix
+	# d'Adrien : TENIR la touche en poussant vers le muret (lâcher arrête avant de
+	# monter dessus). Espace pour J1, point-virgule pour J2, Croix à la manette.
+	var enjamber_p1 = InputEventKey.new()
+	enjamber_p1.physical_keycode = KEY_SPACE
+	InputMap.action_add_event("p1_enjamber", enjamber_p1)
+	var enjamber_p2 = InputEventKey.new()
+	enjamber_p2.physical_keycode = KEY_SEMICOLON
+	InputMap.action_add_event("p2_enjamber", enjamber_p2)
 
 	# Keyboard Escape for pause
 	var esc = InputEventKey.new()
@@ -140,6 +150,9 @@ func _setup_all_inputs():
 	add_joy_btn.call("p1_gadget", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 	# L3 = s'accroupir, en bascule (MB2, choix d'Adrien du 2026-09-14).
 	add_joy_btn.call("p1_accroupir", p1_device, JOY_BUTTON_LEFT_STICK) # L3
+	# Croix = enjamber, TENUE (MB3b). ⚠️ Croix sert AUSSI à valider dans les menus :
+	# superposition contextuelle, comme L1/R1 avec les onglets (voir plus haut).
+	add_joy_btn.call("p1_enjamber", p1_device, JOY_BUTTON_A) # Croix
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
@@ -197,6 +210,7 @@ func _setup_all_inputs():
 	add_joy_btn.call("p2_gadget", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 	# L3 = s'accroupir, en bascule (MB2, choix d'Adrien du 2026-09-14).
 	add_joy_btn.call("p2_accroupir", p2_device, JOY_BUTTON_LEFT_STICK) # L3
+	add_joy_btn.call("p2_enjamber", p2_device, JOY_BUTTON_A) # Croix, tenue (MB3b)
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix
