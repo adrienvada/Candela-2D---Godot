@@ -203,7 +203,10 @@ func _ready() -> void:
 	# Les ombres dès le départ : la fusée rebondit sur les murs, elle ne les
 	# survole plus — une lumière qui les traverserait mentirait sur sa physique.
 	_lumiere.shadow_enabled = true
-	_lumiere.shadow_item_cull_mask = 1 # murs seuls : un corps ne bouche pas sa propre lumière
+	_lumiere.shadow_item_cull_mask = 1 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS # murs seuls : un corps ne bouche pas sa propre lumière
+	# MB3a — et les murs BAS : une fusée brûle au sol, plus bas qu'un muret, sa
+	# lueur bute dessus comme la torche d'un accroupi. ⚠️ Lecture à confirmer par
+	# Adrien pour la fusée EN VOL (ricochets), qu'on pourrait vouloir au-dessus.
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	add_child(_lumiere)
 

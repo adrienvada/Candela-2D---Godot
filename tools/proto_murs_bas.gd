@@ -29,7 +29,7 @@ extends Node2D
 ##   B — POLYGONES FINIS : la zone morte de chaque mur bas, calculée depuis la
 ##       torche, posée comme occluder. On espère une ombre finie.
 ##   C — ANALYTIQUE : la zone morte calculée dans `light()` par le shader, depuis
-##       la même formule que la balle (`murs_bas_geometrie.gd`).
+##       la même formule que la balle (`murs_bas.gd`, `MursBas`).
 ##
 ## `V` rend une scène fixe et compare, point par point, ce que l'écran montre à
 ## ce que `franchit()` décide — la seule vérité, celle qui fait payer la balle.
@@ -40,7 +40,7 @@ extends Node2D
 ## GRANDEUR (appels de dessin, coût du shader), et dit dans quel état de focus
 ## il a été pris.
 
-const Geo := preload("res://tools/murs_bas_geometrie.gd")
+const Geo := preload("res://murs_bas.gd")
 const Conditions := preload("res://conditions_de_match.gd")
 const SHADER := preload("res://tools/proto_murs_bas.gdshader")
 

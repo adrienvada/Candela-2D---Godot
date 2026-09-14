@@ -54,7 +54,8 @@ Trois conséquences qui se lisent dans la formule :
   sortie est à moins de `L` de la cible. L'ordre des murs n'y change rien (vérifié).
 
 Une seule fonction décide : `franchit(source, cible, h_source, h_cible, murs_bas, h_bas, α)`
-dans `tools/murs_bas_geometrie.gd`. `visible()` y ajoute les murs hauts, qui arrêtent
+dans `murs_bas.gd`, classe `MursBas` (née `tools/murs_bas_geometrie.gd` en MB0, entrée dans
+le jeu en MB3a). `visible()` y ajoute les murs hauts, qui arrêtent
 tout. **La lumière (shader) et la balle (`resoudre_tir`) l'interrogent toutes les
 deux.**
 
@@ -259,8 +260,9 @@ existera. Donc, **au moment de MB1** :
 - aucune fusion dans `iso-geometrie` : quand `main` portera MB1, la session ISO1 fusionne
   `main` elle-même.
 
-En MB0 ces noms existent déjà, avec ces valeurs, dans `tools/murs_bas_geometrie.gd` ; MB1
-les déménage, et `murs_bas_geometrie.gd` les lira de là.
+En MB0 ces noms existaient déjà dans `tools/murs_bas_geometrie.gd` ; MB1 les a déménagés
+dans `map_geometry.gd`, et la règle — devenue `murs_bas.gd`, classe `MursBas`, en MB3a — les
+lit de là.
 
 ---
 
@@ -420,6 +422,44 @@ Un accroupi n'est pas caché derrière un mur bas, sa torche ne bute pas, les ba
 jugent pas sa hauteur, on n'enjambe pas. Tout cela est MB3, et MB2 en pose les appuis : la
 posture est partout où la règle `franchit()` ira la chercher — simulation, fil, historique
 de l'hôte, killcam.
+
+## 11. MB3 — les échanges (ouverte par Adrien le 2026-09-14, 20 h 20)
+
+Quatre sous-étapes : **MB3a** la règle en jeu, **MB3b** l'enjambement, **MB3c** la zone
+morte au rendu et le banc de coût, **MB3d** l'équité, la killcam, les captures.
+
+### L'enjambement — choix d'Adrien
+
+**Tenir** Croix (manette), Espace (J1) ou point-virgule (J2) **en poussant vers le muret**.
+Lâcher arrête avant de monter dessus : pas d'enjambement accidentel. (Adrien avait d'abord
+coché « un appui lance l'enjambement complet », puis s'est corrigé.) Pendant la traversée :
+debout, 65 px/s, pas de tir, un bruit d'enjambement.
+
+### MB3a — la règle dans le jeu
+
+| Règle | Où | Comment |
+|---|---|---|
+| Une seule règle | `murs_bas.gd`, classe `MursBas` (ex-`tools/murs_bas_geometrie.gd`) | `franchit_regle(source, cible, h_source, h_cible, murs)` avec les constantes de `map_geometry.gd` |
+| Les murs de la manche | `MapGeometry.rects_monde(data, Kind.LOW_WALLS)` → `GameState.murs_bas` | recalculés à chaque `rebuild_arena`, comme la collision |
+| Canon accroupi sous le mur | `bullet.gd`, `_ready` | `LOW_WALL_LAYER` ajouté au masque du `ShapeCast` si `hauteur_tir ≤ hauteur_mur` |
+| Balle debout par-dessus | `bullet.gd`, `_franchit_vers()` avant chaque touche de joueur | survolé → exclu du `ShapeCast` pour le reste du vol |
+| Cible compensée | `GameState._do_spawn_bullet` | `lag_hauteur` = posture remontée par `_rewound_posture` |
+| Torche accroupie qui bute | `Player.poser_posture()` | `COUCHE_OMBRE_MUR_BAS` posée / retirée sur torche, rétrodiffusion, halo, flash |
+| Lumières au sol | `gadget_mine.gd`, `gadget_braises.gd`, `fusee.gd` | le bit en permanence (fusée en vol : à confirmer) |
+| Éblouissement | `GameState._ligne_de_vue_depuis` | œil à la hauteur de la cible, source à celle du porteur, sol sans porteur |
+
+**Vérifié** : `tools/test_accroupi.tscn` (49 contrôles) — les quatre lumières portées
+posent et retirent le bit sans toucher aux autres couches d'ombre ; une vraie balle
+(`bullet.tscn`) voit les murs bas sous un canon accroupi, survole un accroupi dans la zone
+morte, touche au-delà et touche un debout collé au mur ; vue rougir en neutralisant la règle.
+`test_murs_bas` (93) : `franchit_regle` = `franchit` du prototype sur 80 cas, et
+`rects_monde` en pixels de la carte. Lot complet vert, 113 OK.
+
+Ce qui reste visuel en MB3a : la **zone morte au sol** et la **disparition d'un accroupi**
+dans la zone morte ne sont pas encore rendues — la balle et l'éblouissement les appliquent
+déjà, l'écran pas encore (MB3c). ⚠️ **C'est une asymétrie temporaire entre ce qui se voit et
+ce qui se paie** : on peut voir un accroupi que la balle survole. Elle se referme en MB3c, et
+H-MB1 ne se joue pas avant.
 
 ## 8. Lancer le prototype
 

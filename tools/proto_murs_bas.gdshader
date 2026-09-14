@@ -5,7 +5,7 @@
 // source debout redescend selon l'angle α, et la bande d'ombre a une longueur
 // constante L. Ce shader la calcule dans `light()`, lumière par lumière, pour
 // chaque pixel qui la reçoit — la traduction ligne à ligne de
-// `MursBasGeometrie.franchit()` (tools/murs_bas_geometrie.gd). Les deux doivent
+// `MursBas.franchit()` (murs_bas.gd). Les deux doivent
 // rester identiques : c'est ce que le contrôle d'accord du prototype mesure au
 // pixel (touche V).
 //

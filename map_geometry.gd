@@ -313,6 +313,20 @@ static func build_collisions(data: Dictionary, parent: Node,
 	parent.add_child(root)
 	return root
 
+## Les rectangles fusionnés d'une famille, en pixels du repère de la carte — le
+## même repère et le même calcul que les formes de `_fill_body`. Chantier MURS
+## BAS, MB3 : c'est la vérité que la balle et l'éblouissement interrogent
+## (`MursBas.franchit`), et elle se dérive de la carte comme la collision, pour ne
+## jamais pouvoir s'en écarter.
+static func rects_monde(data: Dictionary, kind: Kind,
+		tile_size: Vector2i = CandelaTileSet.TILE_SIZE) -> Array:
+	var cell_size := Vector2(tile_size)
+	var out: Array = []
+	for rect: Rect2i in merge_rects(build_grid(data, kind)):
+		out.append(Rect2(Vector2(rect.position - Vector2i(BORDER, BORDER)) * cell_size,
+			Vector2(rect.size) * cell_size))
+	return out
+
 ## Peuple un corps avec les rectangles fusionnés. `occluding` décide de la
 ## génération des LightOccluder2D — c'est la seule différence entre un mur,
 ## qui arrête la lumière, et une fosse, qui la laisse passer. `occluder_mask`

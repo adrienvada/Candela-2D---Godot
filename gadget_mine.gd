@@ -230,7 +230,9 @@ func _monter_flamme() -> void:
 	# Les murs l'arrêtent : une lumière qui les traverserait mentirait sur la
 	# carte, et la carte est le seul repère stable du joueur.
 	_lumiere.shadow_enabled = true
-	_lumiere.shadow_item_cull_mask = 1
+	# MB3a — une flamme au ras du sol bute sur un mur bas, comme la torche d'un
+	# accroupi : la couche d'ombre des murs bas s'ajoute à celle des murs.
+	_lumiere.shadow_item_cull_mask = 1 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	_lumiere.range_item_cull_mask = 1 | 2 | 4
 	add_child(_lumiere)

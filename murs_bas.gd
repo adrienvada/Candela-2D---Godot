@@ -27,18 +27,21 @@
 ## Une source **plus basse que le mur** (torche ou canon d'un accroupi) ne franchit
 ## jamais : c'est « la torche d'un accroupi bute sur le mur ».
 ##
-## ## Pourquoi ce fichier est sans `class_name` et sans autoload
+## ## Un fichier du jeu depuis MB3a (2026-09-14)
 ##
-## Il est chargé par `preload` depuis la suite headless (`--script`) et depuis le
-## prototype. Un `class_name` neuf exige un réimport avant le lot (Pièges connus,
-## « un class_name NEUF exige un réimport ») ; en MB0 rien du jeu ne le nomme, un
-## chemin suffit. **En MB1, les hauteurs déménagent dans `map_geometry.gd`** —
-## contrat avec la session ISO1 : `HAUTEUR_MUR_HAUT`, `HAUTEUR_MUR_BAS`,
-## `HAUTEUR_ACCROUPI`, `HAUTEUR_DEBOUT`, en tuiles, en un seul endroit.
+## Né sous `tools/` pour le prototype (MB0), sans `class_name`. Il est désormais
+## la règle que la balle (`bullet.gd`) et l'éblouissement
+## (`GameState._ligne_de_vue_depuis`) interrogent en match : `MursBas`, sans
+## autoload, pour rester chargeable par les suites en `--script`. ⚠️ Un
+## `class_name` neuf exige `godot --headless --path . --import` avant le lot.
+##
+## Les hauteurs vivent dans `map_geometry.gd` (contrat avec ISO1) ; ce fichier les
+## lit.
 ##
 ## Unités : tout est en PIXELS de monde ici (une tuile vaut 35 px,
 ## `CandelaTileSet.TILE_SIZE`), sauf les constantes `HAUTEUR_*`, en tuiles comme
 ## le contrat l'exige. `en_pixels()` fait la conversion.
+class_name MursBas
 extends RefCounted
 
 ## Côté d'une tuile, recopié de `candela_tileset.gd` (`TILE_SIZE`) pour rester
@@ -71,6 +74,24 @@ const EPSILON := 1e-4
 ## Convertit une hauteur en tuiles vers des pixels de monde.
 static func en_pixels(tuiles: float) -> float:
 	return tuiles * TUILE
+
+
+## La hauteur d'un corps — ou de ce qu'il tient : torche, canon — selon sa posture,
+## en pixels. En match, c'est la seule façon de nommer une hauteur de joueur.
+static func hauteur_de_posture(accroupi: bool) -> float:
+	return en_pixels(HAUTEUR_ACCROUPI if accroupi else HAUTEUR_DEBOUT)
+
+
+## La hauteur d'un mur bas, en pixels.
+static func hauteur_mur() -> float:
+	return en_pixels(HAUTEUR_MUR_BAS)
+
+
+## `franchit()` avec les constantes du jeu — ce que la balle et l'éblouissement
+## appellent. Une seule règle, un seul angle, une seule hauteur de mur.
+static func franchit_regle(source: Vector2, cible: Vector2, h_source: float, h_cible: float,
+		murs_bas: Array) -> bool:
+	return franchit(source, cible, h_source, h_cible, murs_bas, hauteur_mur(), ANGLE_FRANCHISSEMENT)
 
 
 ## Longueur de la zone morte derrière un mur bas, dans l'unité de `h_mur`.

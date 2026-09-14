@@ -21039,7 +21039,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
-| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ⏸ |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement) ; MB3b à MB3d en cours |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
 
@@ -21238,14 +21238,53 @@ qu'un contrôle fermé par `)` interdit sans le dire.
 derrière un mur bas (lumière et balles à deux hauteurs), sa torche ne bute pas encore, on
 n'enjambe pas. C'est MB3.
 
+### MB3 — les échanges (ouverte par Adrien le 2026-09-14 à 20 h 20)
+
+Découpée en quatre sous-étapes livrées l'une après l'autre, chacune avec son lot vert :
+**MB3a** la règle en jeu (balles, lumières basses, éblouissement) ; **MB3b**
+l'enjambement ; **MB3c** la zone morte finie dans le rendu du jeu et le banc de coût ;
+**MB3d** l'équité, la killcam, les captures. Puis **H-MB1**.
+
+**L'enjambement, tranché par Adrien** (deux questions, puis une correction de sa part) :
+**tenir Croix en poussant vers le muret** — lâcher arrête avant de monter dessus, aucun
+enjambement accidentel ; au clavier **Espace** (J1) et **point-virgule** (J2), tenus.
+
+#### MB3a — la règle dans le jeu
+
+`tools/murs_bas_geometrie.gd` devient **`murs_bas.gd`, classe `MursBas`** (déplacé par
+`git mv`) : la règle du prototype est désormais celle du match, sans une ligne recopiée.
+`MapGeometry.rects_monde()` en dérive les rectangles depuis la carte, et `GameState.murs_bas`
+les garde pour la manche.
+
+- **Balles** : la hauteur du canon au tir voyage avec la balle. Un canon accroupi ajoute la
+  couche des murs bas à son `ShapeCast` — la balle s'y arrête comme sur un mur. Une balle
+  debout interroge `MursBas.franchit_regle()` avant de toucher un joueur : un accroupi dans
+  la zone morte est survolé et exclu pour le reste du vol. La cible compensée se juge à sa
+  position **et à sa posture d'alors** (`_rewound_posture`, posé en MB2 pour ça). La balle
+  lit la TUILE entière ; la lumière, l'occluder rentré (écart de 3 px déjà consigné).
+- **Lumières** : `Player.poser_posture()` pose ou retire `COUCHE_OMBRE_MUR_BAS` sur les quatre
+  lumières portées (torche, rétrodiffusion, halo, flash) — la torche d'un accroupi bute. Les
+  lumières au sol la portent en permanence : mine, braises, **fusée** (⚠️ lecture à confirmer
+  pour une fusée en vol).
+- **Éblouissement** : `_ligne_de_vue_depuis` applique la même règle, œil à la hauteur de la
+  posture de la cible, source à celle de son porteur ; une source de proximité sans porteur
+  est au sol.
+
+**Vérifié** : `test_accroupi` (49 contrôles) couvre la torche qui bute sur les quatre
+lumières portées sans toucher aux autres couches d'ombre, et une vraie balle — masque d'un
+canon accroupi, survol d'un accroupi dans la zone morte, touche au-delà et sur un debout
+collé ; **vue rougir** en neutralisant la règle dans `bullet.gd`. `test_murs_bas` (93)
+vérifie que `franchit_regle` rend la règle du prototype à l'identique et que
+`rects_monde` pave la carte. `test_classes` (412), `test_halo_proximite`, `test_vision`,
+`test_eblouissement`, `test_fusee`, `test_netcode` verts. Lot complet : **113 OK**.
+⚠️ **Asymétrie temporaire** : l'écran ne dessine pas encore la zone morte (MB3c) — on peut
+voir un accroupi que la balle survole. H-MB1 ne se joue pas avant MB3c.
+
 ### Ce qui attend Adrien
 
-**Dire si MB3 s'ouvre** — les échanges : balles et lumière à deux hauteurs par la règle
-`franchit()`, la zone morte dans les matériaux du jeu, la torche accroupie qui bute,
-l'enjambement par Croix, l'éblouissement par-dessus un mur bas, la killcam, le banc de coût
-et le test d'équité ; puis le jalon **H-MB1** (duel à deux manettes, puis EOS à deux
-machines, puisque le fil a changé). Et, s'il le souhaite, essayer l'accroupi dès maintenant
-en écran scindé, sur la carte d'essai (code de partage : `docs/MURS_BAS.md` § 9).
+Rien pendant MB3. Puis **H-MB1** : un duel complet à deux manettes sur la carte d'essai
+(code de partage : `docs/MURS_BAS.md` § 9), puis une partie EOS à deux machines — le fil a
+changé (`Protocol.VERSION` 18).
 
 ---
 

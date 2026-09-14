@@ -41,6 +41,8 @@ func _lancer() -> void:
 	_test_rejeu(p1, p2)
 	_test_pas_etouffe()
 	_test_nouvelle_manche(p1)
+	_test_torche_bute(p1)
+	_test_balle(p1, p2)
 	if _echecs == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -250,3 +252,63 @@ func _test_nouvelle_manche(p: Player) -> void:
 	p.poser_posture(true)
 	p.reset_posture()
 	_check("chaque manche commence debout", not p.accroupi and p.visual.scale == Vector2.ONE)
+
+
+# ── MB3a : la torche qui bute, la balle à deux hauteurs ─────────────────────
+
+func _test_torche_bute(p: Player) -> void:
+	print("\n[La torche d'un accroupi bute (MB3a)]")
+	var bit := CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+	p.poser_posture(false)
+	var debout := true
+	for l: Light2D in [p.flashlight, p.body_light, p.ambient_light, p.muzzle_flash]:
+		debout = debout and (l.shadow_item_cull_mask & bit) == 0
+	_check("debout : aucune lumière portée ne lit les murs bas", debout)
+	var avant: int = p.flashlight.shadow_item_cull_mask
+	p.poser_posture(true)
+	var bas := true
+	for l: Light2D in [p.flashlight, p.body_light, p.ambient_light, p.muzzle_flash]:
+		bas = bas and (l.shadow_item_cull_mask & bit) != 0
+	_check("accroupi : les quatre lumières portées lisent les murs bas", bas)
+	_check("accroupi : les autres couches d'ombre de la torche sont intactes",
+		(p.flashlight.shadow_item_cull_mask & ~bit) == (avant & ~bit))
+	p.poser_posture(false)
+	_check("relevé : la torche passe à nouveau par-dessus",
+		(p.flashlight.shadow_item_cull_mask & bit) == 0 and p.flashlight.shadow_item_cull_mask == avant)
+
+
+func _test_balle(tireur: Player, cible: Player) -> void:
+	print("\n[La balle à deux hauteurs (MB3a)]")
+	var mur := Rect2(Vector2(0, 0), Vector2(6, 1) * MursBas.TUILE)
+	var l := MursBas.longueur_zone_morte(MursBas.hauteur_mur(), MursBas.hauteur_de_posture(true),
+		MapGeometry.ANGLE_FRANCHISSEMENT)
+	for accroupi_tireur: bool in [false, true]:
+		var b: Bullet = load("res://bullet.tscn").instantiate()
+		b.weapon = WeaponData.new()
+		b.source_player = tireur
+		b.hauteur_tir = MursBas.hauteur_de_posture(accroupi_tireur)
+		b.murs_bas = [mur]
+		b.global_position = Vector2(mur.get_center().x, -100.0)
+		b.direction = Vector2.DOWN
+		add_child(b)
+		b.set_physics_process(false)
+		var masque_bas := (b.shape_cast.collision_mask & MapGeometry.LOW_WALL_LAYER) != 0
+		if accroupi_tireur:
+			_check("canon accroupi : la balle voit les murs bas comme des murs", masque_bas)
+		else:
+			_check("canon debout : la balle ne voit pas les murs bas", not masque_bas)
+			_check("… elle passe au-dessus d'un accroupi dans la zone morte",
+				not b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + l - 3.0),
+					MursBas.hauteur_de_posture(true)))
+			_check("… et touche un accroupi au-delà",
+				b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + l + 3.0),
+					MursBas.hauteur_de_posture(true)))
+			_check("… et touche un debout collé au mur",
+				b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + 2.0),
+					MursBas.hauteur_de_posture(false)))
+			b.murs_bas = []
+			_check("témoin : sans murs bas, tout est touché",
+				b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + 2.0),
+					MursBas.hauteur_de_posture(true)))
+		b.queue_free()
+	_check("la cible reste en vie : aucun tir n'a été simulé", cible.hp > 0)

@@ -4258,3 +4258,18 @@ paquet non fiable ; transmise en état, elle n'a rien à réconcilier.
 contrôle textuel fermait la liste d'arguments de `update_input_state` par sa parenthèse,
 et la posture ajoutée en dernier l'a fait rougir dans le lot. Corrigé en préfixe, sens
 inchangé (« l'hôte transmet le bit du gadget »). Seule suite rouge du premier lot de MB2.
+
+### 2026-09-14 (soir) — MB3a : la règle dans le jeu (même session, même branche)
+
+MB3 ouverte par Adrien à 20 h 20 ; enjambement tranché par lui (tenir Croix / Espace /
+point-virgule en poussant vers le muret — il avait d'abord coché « un appui », puis s'est
+corrigé avant qu'une ligne soit écrite). **Touché** : `tools/murs_bas_geometrie.gd` déplacé
+en `murs_bas.gd` (classe `MursBas`, `git mv`), `map_geometry.gd` (`rects_monde`),
+`bullet.gd` (hauteur de tir, survol, masque du canon accroupi), `game_state.gd`
+(`murs_bas`, compensation de posture au tir, ligne de vue), `player.gd` (bit d'ombre des
+lumières portées), `gadget_mine.gd`, `gadget_braises.gd`, `fusee.gd` (lumières au sol).
+Suites étendues : `test_accroupi`, `test_murs_bas`.
+
+**Coordination** : la session ISO2 a annoncé ses bancs et son lot par message ; mon lot
+complet n'est parti qu'après son « la machine est à toi » (20 h 45). Aucun faux rouge de
+contention ce soir-là.

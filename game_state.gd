@@ -215,6 +215,10 @@ var _predicted_shots: Array[Dictionary] = []
 # [Hôte] Historique des positions pour la compensation de latence. La fenêtre
 # couvre le recul maximal avec de la marge, sans conserver davantage.
 const POS_HISTORY_WINDOW := 0.4
+## Les murs bas de l'arène courante, en pixels — chantier MURS BAS, MB3a. Dérivés
+## de la carte à chaque `rebuild_arena`, comme la collision : la balle et
+## l'éblouissement les interrogent par `MursBas.franchit`.
+var murs_bas: Array = []
 const LAG_COMP_MAX := 0.2
 var _pos_history: Array[Dictionary] = []
 
@@ -979,6 +983,7 @@ func rebuild_arena() -> void:
 	# Collisions ET occluders produits ensemble à partir des mêmes rectangles.
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
+	murs_bas = MapGeometry.rects_monde(data, MapGeometry.Kind.LOW_WALLS)
 
 	# Bandeau LED des murs (2026-09-10, allumé pour tout le monde le 2026-09-11) :
 	# une lumière unique, cuite depuis la grille des murs, qui respire sur
@@ -2015,7 +2020,14 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 	var i := Eblouissement.intensite_proximite(d, src["rayon"])
 	if i <= 0.0:
 		return 0.0
-	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID()):
+	# MB3a — la hauteur d'une source de proximité : celle de son porteur s'il en a
+	# un, sinon le SOL — une fusée posée, une mine, des braises brûlent plus bas
+	# qu'un mur bas et butent dessus, pour l'éblouissement comme pour la lumière.
+	var porteur_prox = src.get("porteur")
+	var h_prox := 0.0
+	if porteur_prox != null:
+		h_prox = MursBas.hauteur_de_posture(porteur_prox.get("accroupi") == true)
+	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID(), -1, h_prox):
 		return 0.0
 	# `gain` : la part de sa lumière qu'une source posée brûle en ce moment
 	# (fusée en agonie, en résidu). Absent, la source brûle à plein.
@@ -2152,8 +2164,11 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ##
 ## `pid_porteur` : le joueur qui TIENT la lumière d'où part ce rayon — sa torche,
 ## son flash de tir —, ou -1 pour une lumière posée, qui n'appartient à personne.
+##
+## `h_source` (MB3a) : la hauteur de la lumière, en pixels. Par défaut, celle de
+## son porteur (`pid_porteur`), ou debout pour une lumière posée sans porteur.
 func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
-		cible: Node2D, exclure: RID, pid_porteur: int = -1) -> bool:
+		cible: Node2D, exclure: RID, pid_porteur: int = -1, h_source: float = NAN) -> bool:
 	# ⚠️ **Les gadgets arrêtent le regard de la lumière autant que les murs**, et
 	# ils ne le faisaient pas. Le voile du Spectre coupait le faisceau à l'écran —
 	# son occluder le fait — pendant que l'éblouissement, lui, traversait la bâche
@@ -2223,6 +2238,18 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 		return false
 	for g in par_la_forme:
 		if g.coupe_le_regard(depuis, cible.global_position):
+			return false
+	# MB3a — **l'éblouissement suit la règle des murs bas**, comme la balle et la
+	# lumière : une tête debout voit une lampe debout par-dessus un muret ; un
+	# accroupi dans la zone morte ne la voit pas ; une lampe basse (accroupie, au
+	# sol) bute sur le muret. L'œil est à la hauteur de la posture de la cible.
+	if not murs_bas.is_empty():
+		var h_src := h_source
+		if is_nan(h_src):
+			var porteur: Node = p1 if pid_porteur == 0 else (p2 if pid_porteur == 1 else null)
+			h_src = MursBas.hauteur_de_posture(porteur != null and porteur.get("accroupi") == true)
+		var h_oeil := MursBas.hauteur_de_posture(cible.get("accroupi") == true)
+		if not MursBas.franchit_regle(depuis, cible.global_position, h_src, h_oeil, murs_bas):
 			return false
 	return true
 
@@ -3462,8 +3489,12 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	var lag_compensated := spawn_nodes \
 		and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST \
 		and shooter == p2
+	# MB3a — et à sa posture d'alors : un accroupi que le tireur voyait debout,
+	# ou l'inverse, se juge comme il était vu.
+	var lag_hauteur := MursBas.hauteur_de_posture(false)
 	if lag_compensated:
 		lag_center = _rewound_position(p1, _lag_comp_delay())
+		lag_hauteur = MursBas.hauteur_de_posture(_rewound_posture(p1, _lag_comp_delay()))
 
 	for i in range(count):
 		var ang_offset = deg_to_rad(angles[i]) if i < angles.size() else 0.0
@@ -3475,11 +3506,15 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 			b.rotation = final_rot
 			b.direction = Vector2(cos(final_rot), sin(final_rot))
 			b.source_player = shooter
+			# MB3a — la règle des murs bas : où ils sont, et d'où part le tir.
+			b.murs_bas = murs_bas
+			b.hauteur_tir = MursBas.hauteur_de_posture(shooter.get("accroupi") == true)
 			if weapon:
 				b.weapon = weapon
 			if lag_compensated:
 				b.lag_target = p1
 				b.lag_center = lag_center
+				b.lag_hauteur = lag_hauteur
 			bullet_container.add_child(b)
 
 		if record and ReplaySystem.recording:

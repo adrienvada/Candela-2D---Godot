@@ -1487,6 +1487,15 @@ func poser_posture(voulue: bool) -> void:
 	for poly in [visual, visual_dim, visual_reveal, visual_enemy, visual_reveal_enemy]:
 		if poly != null:
 			poly.scale = echelle
+	# MB3a — « la torche d'un accroupi bute sur le mur » : toutes les lumières
+	# qu'il porte passent sous la hauteur d'un mur bas et en lisent les occluders
+	# pleins. Debout, elles passent par-dessus. Un seul bit, posé ou retiré.
+	for lumiere in [flashlight, body_light, ambient_light, muzzle_flash]:
+		if lumiere != null:
+			if voulue:
+				lumiere.shadow_item_cull_mask |= CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+			else:
+				lumiere.shadow_item_cull_mask &= ~CanauxLumiere.COUCHE_OMBRE_MUR_BAS
 
 ## [Client] Rend le joueur distant INTERP_DELAY en arrière : on dispose alors
 ## presque toujours de deux instantanés encadrants, malgré les 30 Hz.

@@ -3,7 +3,7 @@
 ##
 ## Ce qu'elle garde, et ce qu'elle ne peut pas garder.
 ##
-## - **La géométrie** (`murs_bas_geometrie.gd`) : la longueur de zone morte aux
+## - **La géométrie** (`murs_bas.gd`, `MursBas`) : la longueur de zone morte aux
 ##   valeurs limites, la symétrie des deux côtés d'un mur, un accroupi à L + ε
 ##   visible et à L − ε invisible, la torche d'un accroupi qui bute, la tête
 ##   debout jamais cachée, plusieurs murs en série, le déterminisme.
@@ -16,7 +16,7 @@
 ##   `proto_murs_bas.tscn -- --auto`. Cette suite ne le remplace pas.
 extends SceneTree
 
-const Geo := preload("res://tools/murs_bas_geometrie.gd")
+const Geo := preload("res://murs_bas.gd")
 
 var _failures := 0
 var _proto_script: GDScript
@@ -32,6 +32,7 @@ func _init() -> void:
 	_test_cas_limites_du_segment()
 	_test_determinisme()
 	_test_constantes_recopiees()
+	_test_regle_en_jeu()
 	_test_shader_traduit_la_regle()
 	_proto_script = load("res://tools/proto_murs_bas.gd")
 	_test_masques_de_piste()
@@ -424,3 +425,48 @@ func _test_scenes_d_accord() -> void:
 	_check("64 murs bas au plus (taille du tableau du shader)", bas.size() <= 64)
 	proto.queue_free()
 	_finir()
+
+
+## MB3a — la règle telle que le JEU l'appelle : `MursBas` en classe, ses hauteurs
+## de posture, et `MapGeometry.rects_monde`, la liste que `GameState` lui donne.
+func _test_regle_en_jeu() -> void:
+	print("\n— la règle en jeu (MB3a) —")
+	_check("la classe MursBas est la règle du prototype", MursBas.new() is RefCounted and Geo == MursBas)
+	_check("hauteur de posture debout / accroupi",
+		MursBas.hauteur_de_posture(false) == MapGeometry.HAUTEUR_DEBOUT * Geo.TUILE
+		and MursBas.hauteur_de_posture(true) == MapGeometry.HAUTEUR_ACCROUPI * Geo.TUILE)
+	_check("un canon accroupi est sous le mur, un canon debout au-dessus",
+		MursBas.hauteur_de_posture(true) <= MursBas.hauteur_mur()
+		and MursBas.hauteur_de_posture(false) > MursBas.hauteur_mur())
+	var mur := _mur()
+	var src := Vector2(mur.get_center().x, -80.0)
+	var l := Geo.longueur_zone_morte(MursBas.hauteur_mur(), MursBas.hauteur_de_posture(true),
+		MapGeometry.ANGLE_FRANCHISSEMENT)
+	var ecarts := 0
+	for prof in range(1, 160, 4):
+		var c := Vector2(src.x, mur.end.y + prof)
+		for h_src: float in [MursBas.hauteur_de_posture(false), MursBas.hauteur_de_posture(true)]:
+			if MursBas.franchit_regle(src, c, h_src, MursBas.hauteur_de_posture(true), [mur]) != \
+					Geo.franchit(src, c, h_src, MursBas.hauteur_de_posture(true), [mur],
+						MursBas.hauteur_mur(), MapGeometry.ANGLE_FRANCHISSEMENT):
+				ecarts += 1
+	_check("franchit_regle = franchit avec les constantes du jeu (80 cas)", ecarts == 0, str(ecarts))
+	_check("en jeu : accroupi juste derrière, caché d'un tireur debout",
+		not MursBas.franchit_regle(src, Vector2(src.x, mur.end.y + l - 2.0),
+			MursBas.hauteur_de_posture(false), MursBas.hauteur_de_posture(true), [mur]))
+	_check("en jeu : accroupi au-delà de la zone morte, touché",
+		MursBas.franchit_regle(src, Vector2(src.x, mur.end.y + l + 2.0),
+			MursBas.hauteur_de_posture(false), MursBas.hauteur_de_posture(true), [mur]))
+
+	var carte := MapCodec.new_map("Muret", Vector2i(10, 10))
+	var sol: Array[Vector2i] = []
+	for y in 10:
+		for x in 10:
+			sol.append(Vector2i(x, y))
+	carte["floor"] = MapCodec.encode_runs(sol)
+	carte["low_walls"] = "2,4,5"
+	var rects := MapGeometry.rects_monde(carte, MapGeometry.Kind.LOW_WALLS)
+	_check("rects_monde : un rectangle par muret fusionné", rects.size() == 1, str(rects.size()))
+	if rects.size() == 1:
+		_check("rects_monde : en pixels du repère de la carte",
+			rects[0] == Rect2(Vector2(2, 4) * Geo.TUILE, Vector2(5, 1) * Geo.TUILE), str(rects[0]))
