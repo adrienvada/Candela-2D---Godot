@@ -3202,6 +3202,22 @@ ne tient le bouton, ses relevés « torches allumées » postérieurs au 2026-08
 session iso-outils ; c'est à elle de le vérifier (une capture pendant `_stress`
 suffit).
 
+### Un `SubViewportContainer` sans `stretch` grandit jusqu'à la taille de sa vue (2026-09-14)
+
+Passer `stretch = false` pour donner à une sous-vue une taille à soi (la lightmap
+`plein` du banc ISO0.b) fait de cette taille la **taille minimale** du conteneur :
+dans le `HBoxContainer` des vues, il grandit d'autant et pousse son voisin, même
+transparent. Le banc lisait les cadres des vues après ce geste et appliquait
+l'étirement deux fois — vues 3D de 1701×1920 au lieu de 1276×1440 sur une
+fenêtre 2560×1440, et l'affichage de J2 hors de l'écran. **Aucune capture ne l'a
+montré** : elles se prenaient en 1920×1080, étirement ×1, où la lightmap `plein`
+égale l'aire logique. C'est une mesure courte à la taille native de la fenêtre
+qui l'a sorti, par la ligne « cible 3D » que le banc imprime.
+
+Règle : relever toute géométrie de mise en page **avant** de changer ce qui la
+décide ; et vérifier un outil de rendu à l'étirement réel de l'écran, pas
+seulement à celui des captures.
+
 ### `size = 1080 × sin θ` garde la profondeur de la vue de dessus, pas sa largeur (2026-09-14)
 
 L'étude (§ 8, ISO1) écrit que cette taille orthographique « garde l'empreinte

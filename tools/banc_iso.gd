@@ -193,6 +193,9 @@ var _taille := Vector2i.ZERO
 ## Posé une fois la vue construite : `_process` ne touche à rien avant.
 var _pret := false
 var _vues: Array[SubViewport] = []
+## Le cadre logique de chaque vue, relevé AVANT que le banc touche aux
+## conteneurs — voir `_poser_la_vue()`.
+var _cadres: Array[Rect2] = []
 var _shader: Shader
 var _materiaux: Array[ShaderMaterial] = []
 var _mat_sols: Array[ShaderMaterial] = []
@@ -367,6 +370,16 @@ func _poser_la_vue() -> bool:
 	# `visible` et non `modulate` : c'est `modulate` que le jeu réécrit à chaque
 	# accord (`_accorder_la_peinture_de_la_racine`).
 	_main.get_node("Background").visible = false
+	# ⚠️ **Les cadres se lisent AVANT la première lightmap.** Un
+	# `SubViewportContainer` sans `stretch` prend la taille de sa vue comme taille
+	# MINIMALE : dès que la lightmap `plein` dépasse l'aire logique, le conteneur
+	# (invisible) grandit d'autant et pousse son voisin. Lus après, les cadres
+	# appliquaient l'étirement deux fois — vues 3D de 1701×1920 au lieu de
+	# 1276×1440 sur une fenêtre 2560×1440, et l'affichage de J2 hors de l'écran
+	# (mesuré le 2026-09-14 ; invisible aux captures 1920×1080, étirement ×1).
+	_cadres.clear()
+	for vue in _vues:
+		_cadres.append((vue.get_parent() as Control).get_global_rect())
 	for vue in _vues:
 		_poser_lightmap(vue)
 	await get_tree().process_frame
@@ -400,7 +413,7 @@ func _poser_la_vue() -> bool:
 ## résolution de la variante.
 func _poser_lightmap(vue: SubViewport) -> void:
 	var conteneur := vue.get_parent() as SubViewportContainer
-	var logique := Vector2i(conteneur.size.round())
+	var logique := Vector2i(_cadres[_vues.find(vue)].size.round())
 	conteneur.stretch = false
 	conteneur.modulate.a = 0.0
 	# La visée souris est reprojetée par `_viser_a_la_souris()`.
@@ -419,8 +432,7 @@ func _construire_3d() -> void:
 		# Deux vues 3D, un seul monde : murs et corps n'existent qu'une fois.
 		var monde := World3D.new()
 		for i in 2:
-			var conteneur := _vues[i].get_parent() as Control
-			var rect := conteneur.get_global_rect()
+			var rect := _cadres[i]
 			var sv := SubViewport.new()
 			sv.name = "VueIso%d" % (i + 1)
 			sv.own_world_3d = false
