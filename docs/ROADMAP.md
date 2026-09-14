@@ -21459,8 +21459,21 @@ Arène Standard, `--charge`, 60 s, focus stable au premier plan) :
 |---|---|---|---|---|
 | vue de dessus (`--base`) | 86 | 55 | 21,4 ms | 134 |
 | iso, chemin du jeu (`--jeu`, pâte A) | 96 | 56 | 20,4 ms | 135 |
+| iso, chemin du jeu (`--jeu`, pâte D), 18 h 54 | 96 | 58 | 19,6 ms | 135 — **focus mixte (593 images sur 5 700) : jeté** |
+| vue de dessus (`--base`), 19 h 00 | 100 | 68 | 18,1 ms | 131 |
 
-**Deux relevés sur les quatre du protocole** (base / iso / iso / base) : sans les deux
+**La série complétée le même soir, et ce qu'elle ne peut pas dire.** Les deux « base » qui
+encadrent la série divergent entre elles — médiane 86 puis 100, 1 % bas 55 puis 68 — plus que
+tout écart iso − base : **la machine a dérivé pendant la série**, et le second iso est jeté
+pour focus mixte. ⚠️ **La dérive n'est pas un hasard** : la session ISO1 a laissé tourner un
+lot complet de suites de 18 h 46 à 18 h 52, juste avant le relevé iso de 18 h 54, sur une
+machine qu'elle aurait dû laisser refroidir. **La série ne tranche donc rien** : l'iso du jeu
+se tient entre les deux bases en médiane (96 contre 86 et 100) et en dessous de la seconde en
+1 % bas (56-58 contre 55 et 68). Un surcoût de 1 % bas jusqu'à une dizaine d'images n'est ni
+exclu ni établi. Pour qu'une série décide : fenêtre de silence **annoncée à toutes les
+sessions**, dix minutes de repos, les quatre relevés d'une traite.
+
+*Première lecture, avant la fin de la série :* **deux relevés sur les quatre du protocole** (base / iso / iso / base) : sans les deux
 relevés d'encadrement, rien ne dit que la machine n'a pas dérivé entre les deux. La première
 série d'ISO0.b avait montré ±10 % d'écart entre deux « base » identiques ; les 10 images de
 médiane et le point de 1 % bas qui séparent ces deux lignes sont dans ce bruit. **Ce qu'elles
