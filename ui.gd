@@ -1097,6 +1097,7 @@ var dbg_lumieres: Label
 var dbg_particules: Label
 var dbg_noeuds: Label
 var dbg_cartes: Label
+var dbg_iso: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
 var _f6_was_pressed: bool = false
@@ -1734,6 +1735,7 @@ func _update_debug(_delta: float) -> void:
 		if cap > 0 else COLOR_ACCENT)
 	dbg_noeuds.text = str(_debug_arena_nodes)
 	dbg_cartes.text = str(MapData.list_maps().size())
+	dbg_iso.text = Presentation3D.texte_f3(GameSettings.mode_iso)
 	net_debug_label.text = _network_debug_line()
 	var p2_path := _p2_path_label()
 	if p2_path != "":
@@ -3360,6 +3362,8 @@ func _build_debug_panel() -> void:
 	dbg_particules = _make_ligne_debug(grille, "PARTICULES")
 	dbg_noeuds = _make_ligne_debug(grille, "NŒUDS ARÈNE")
 	dbg_cartes = _make_ligne_debug(grille, "CARTES")
+	# ISO1 — l'état de la vue isométrique, et l'écran scindé qui reste vu de dessus.
+	dbg_iso = _make_ligne_debug(grille, "VUE ISO")
 
 	# La ligne réseau garde toute la largeur : elle est faite de phrases courtes
 	# (transport, lien direct ou relayé, NAT) et non de nombres à aligner.
@@ -6963,6 +6967,10 @@ func _build_display_panel() -> Control:
 		"Déplafonné par défaut : EOS coûte d'autant plus de latence que la cadence "
 		+ "est basse."))
 	block.add_child(_build_fps_panel())
+	block.add_child(_make_reglage_titre("VUE ISOMÉTRIQUE (EXPÉRIMENTAL)",
+		"Le duel vu de trois quarts, la lumière projetée sur le relief. En vue unique "
+		+ "seulement : l'écran scindé reste vu de dessus. S'allume au prochain duel."))
+	block.add_child(_build_iso_panel())
 	block.add_child(_make_reglage_titre("CALIBRATION",
 		"Cible perceptive : ce qui doit se voir apparaît à peine, le reste reste "
 		+ "invisible."))
@@ -7020,6 +7028,17 @@ func _build_vsync_panel() -> Control:
 	btn_on.pressed.connect(func() -> void: GameSettings.set_vsync(true))
 	row.add_child(btn_off)
 	row.add_child(btn_on)
+	return row
+
+## ISO1 — un seul interrupteur, désactivé par défaut (`GameSettings.mode_iso`).
+func _build_iso_panel() -> Control:
+	var row := _make_rangee_de_choix()
+	var btn := _make_choice_button("VUE ISOMÉTRIQUE (EXPÉRIMENTAL)", COLOR_GOLD, null)
+	btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L * 2, 42)
+	btn.add_theme_font_size_override("font_size", T_COURANT)
+	btn.button_pressed = GameSettings.mode_iso_choisi()
+	btn.toggled.connect(func(actif: bool) -> void: GameSettings.set_mode_iso(actif))
+	row.add_child(btn)
 	return row
 
 func _build_fps_panel() -> Control:

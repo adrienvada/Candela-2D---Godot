@@ -2424,6 +2424,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **H15 : la vue isométrique, on y va** (2026-09-14, Adrien : « c'est bon on y va, pas besoin de nouvelle série ») | Sur le banc ISO0.b : une projection du rendu 2D exacte au pixel, pas de surcoût de cadence visible au-dessus du bruit de sa série, 5 à 15 appels de dessin de plus, et trois minutes jouées. Réglages tranchés dans la même séance : **tangage 52°**, **écran scindé en iso aussi**, **caméra qui garde la profondeur** de la vue de dessus, et **deux sortes de murs** — hauts et opaques, bas pour se cacher accroupi — qui ouvrent une mécanique neuve (section ISO, « H15 tranché ») ; **ses règles premières sont tranchées le même soir** : un mur bas arrête la lumière mais laisse voir une tête debout, n'abrite un accroupi que de la lumière venue d'en face, tir et lumière debout franchissent le mur bas selon **un même angle** (un accroupi loin derrière redevient visible et touchable), on l'enjambe lentement et bruyamment avec « croix », la torche d'un accroupi bute sur le mur, et l'accroupi ralentit fortement, étouffe les pas, se lit à sa silhouette et à une marque HUD pour soi. Lacet et taille de lightmap non tranchés. Rien d'ISO1 n'est lancé par cette décision seule. |
+| **Plus de relevé de cadence humain à chaque étape du chantier ISO** (2026-09-14 au soir, Adrien : « j'en ai marre de vérifier à chaque étape la tenue en fps ») | Chaque étape ISO relève seule, sans fenêtre à tenir, ce qui n'est pas bruité : appels de dessin et taille des cibles de rendu. **Un seul relevé humain** : en fin de chantier, avant de rendre la vue iso aux joueurs, ou plus tôt si Adrien ressent un ralentissement en jouant — et celui-là sous vraie fenêtre de silence, quatre relevés d'une traite. | Quatre relevés par étape ont coûté une soirée à ISO1 sans rien trancher : le bruit de la machine (±15 % entre deux bases identiques) dépasse l'écart cherché, et une session voisine suffit à le polluer. Le chiffre qui décide vraiment est celui de la fin, pas celui de chaque marche. |
 | **Le leurre a l'ombre d'un CORPS, pas celle d'un mur** (2026-09-12, Adrien : « oui, qu'il ait l'ombre d'un corps ») | Question posée à la fin du lot D et tranchée ici (lot G). L'occluder du leurre vivait sur la couche du DÉCOR, celui d'un corps sur la couche de son joueur : un mur fait de l'ombre sous TOUTE lumière, un corps seulement sous celles dont le masque d'ombre contient sa couche. Le leurre projetait donc une ombre là où aucun corps n'en projette — sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le démasquer**, sans tirer, donc sans payer le flash qui équilibre le gadget. Il porte maintenant les DEUX occluders d'un corps — l'étoile de sa silhouette sur la couche du corps de son poseur, un disque de torse de 12 sur la couche de son torse. Le second n'est pas un supplément : sans lui, la correction aurait remplacé un indice par un autre, la rétrodiffusion adverse ne voyant que les couches de torse, elle aurait TRAVERSÉ le seul leurre de l'arène. Conséquence sur l'arbitrage, et c'est un changement de SENS au carnet de `protocol.gd` (17, non publiée) : la torche et le flash de tir du POSEUR ne l'ombrent plus — une lampe n'ombre jamais le corps de qui la tient —, donc ils ne doivent plus être arrêtés par sa forme dans la ligne de vue de l'éblouissement, sans quoi planter un leurre devant soi éteignait sa propre torche. Les lumières POSÉES, elles, restent arrêtées : elles n'ombrent aucun corps non plus, et pourtant un corps arrête leur éblouissement — il est sur la couche physique du rayon. |
 | **La mine aveugle à hauteur de ce qu'elle brûle** (2026-09-12, Adrien : « garder ») | Le commit A2 était séparé pour être annulable seul, et la question posée à Adrien était de le garder ou de le rendre. **Il l'a gardé après avoir lu les chiffres**, contrepartie comprise : le pic au rayon de déclenchement passe de 0,750 à 0,488 et le temps au-dessus de 0,3 de 1,02 s à 0,42 s, mais **à 300 px elle aveugle un peu PLUS qu'avant** (aire 0,079 → 0,154), parce que son rayon ne rétrécit plus. C'est la seule décision de l'étape 28 qui déplace l'équilibre, et la seule dont la question posée en disait d'abord moins que la mesure — d'où le tableau complet remis avant de trancher. Le détail des mesures et du brouillage saturé est au lot A2 ; ce qui vaut ici, c'est que la contrepartie a été dite AVANT, pas découverte après. |
 | **Un voile sans place se refuse** (2026-09-12, Adrien : « refuser la pose ») | Ferme la réserve inscrite le 2026-09-11 sur le recul du point de pose (« tranché en croyant ce refus rare et limité aux murs »). Le lot B a montré que le refus touche aussi le voile posé à bout portant sur l'adversaire qu'on vise, ce qui n'était pas le cas imaginé : l'alternative était de faire naître la bâche DERRIÈRE l'adversaire, là où il reste de la place. Adrien garde le refus, et la raison est de jeu : une bâche qui apparaît derrière quelqu'un l'enferme entre elle et le poseur — on ne donne pas au Spectre le pouvoir de coincer un corps, et surtout pas par un effet de bord d'un algorithme de recul que le joueur ne peut pas lire à l'écran. Un refus, lui, se comprend : rien ne se pose, le désarmement de 0,30 s a lieu des deux côtés, les pairs restent d'accord. Le ressenti du refus (un retour local chez le client, même fonction `GameState.point_de_pose_libre()`) reste à faire et n'est pas cette décision. |
@@ -3170,6 +3172,138 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une touche F sans `fn` n'atteint pas le jeu sur un Mac (2026-09-14)
+
+ISO1 avait mis le choix de la pâte sur **F2**, « première touche F libre du dépôt ».
+Adrien a joué trois parties sans jamais réussir à changer de pâte : **aucune ligne
+`[iso] pâte` au journal**, l'appui n'est jamais arrivé. Sur un clavier de Mac, F1 à F12
+sans `fn` sont les touches de luminosité, de volume, de Mission Control : le système les
+garde. F3 à F6 « marchent » chez qui a pris l'habitude de `fn` ; une consigne neuve qui dit
+« F2 » ne marche pas. Les touches de choix sont désormais **1, 2, 3, 4 et 0**, lues par
+`physical_keycode` (en AZERTY, `keycode` y donne `&`, `é`, `"`), et F2 reste en plus.
+Règle : **une touche de jeu à expliquer à Adrien se choisit hors de la rangée F**, et une
+touche dont l'appui imprime au journal se vérifie au journal, pas à l'œil.
+
+### La vue de dessus n'est pas noire lumières éteintes : le noir absolu se juge contre la lightmap (2026-09-14)
+
+ISO1 devait prouver, au banc, qu'« toutes lumières éteintes, l'image rendue est à 0/255
+partout » pour chacune des quatre pâtes. Première mesure (253 `Light2D` éteintes, HUD
+retiré) : **158/255 à l'écran** — et **185/255 dans la lightmap 2D elle-même**, avant
+toute 3D. Même mesure sur le jeu actuel, vue de dessus (`banc_iso --base --noir`) :
+**177/255**. Deux choses peignent sans lumière dans le duel tel qu'il est : le viseur
+du joueur (matériau `unshaded`, `player.gd:1126`, visible de lui seul) et un liseré sur
+le contour des murs (non identifié dans cette session, signalé). Ni l'un ni l'autre
+n'est un défaut de l'iso — le viseur est voulu.
+
+Conséquence : « 0 partout » ne peut pas se mesurer lumières éteintes sans **cacher** ces
+éléments, et les cacher pour obtenir zéro serait tricher. Le contrôle est donc scindé en
+deux mesures dans la même exécution (`tools/banc_iso.gd --jeu --noir`) : **(a)** lumières
+éteintes, la même image est reprise en pâte brute (la lightmap projetée, sans rien) et
+**aucun pixel ne doit s'allumer hors de ce que la brute allume** (voisinage de 2 px) ;
+**(b)** la vue 2D ne dessine plus rien (`canvas_cull_mask = 0`) et l'écran doit valoir 0
+au pixel — l'invariant propre à la projection et à la pâte. Résultat : **tenu pour les
+quatre pâtes** (a : 0 pixel hors support ; b : 0/255).
+
+⚠️ **Le premier critère (a) était « l'écran ≤ la lightmap », et il était faux.** Il a
+déclaré rompus B, C et D (écran 249-255 contre 185) : ces pâtes normalisent leurs tons,
+un demi-ton déjà éclairé y ressort plus clair. C'est un choix de style à juger, pas une
+lumière née dans le noir — et c'est A, jugée « tenue » par ce critère, qui retire le plus
+d'information (voir la section ISO1). Règle : **un invariant de rendu se mesure contre sa
+source, et sur ce qu'il interdit** — ici, allumer ce que la source laisse noir —, pas
+contre un idéal que la source ne tient pas ni contre une propriété voisine.
+
+### L'autoload `ReplaySystem` n'est pas comparable d'une partie à l'autre (2026-09-14)
+
+Pour prouver que la vue iso ne change pas le rejeu, `tools/test_iso_camera.gd` jouait la
+même partie scriptée deux fois et comparait `ReplaySystem.snapshots`. **Le témoin
+lui-même divergeait** — deux parties sans iso, états identiques pas pour pas, rejeux
+différents dès la cinquième image : le jeu alimente aussi l'autoload, à la cadence de
+son horloge (300 images enregistrées pour 150 appels du test). La suite enregistre
+désormais dans **sa propre instance** de `replay_system.gd`, qui lit les mêmes champs.
+Règle : **pas de comparaison sans témoin** ; une égalité ou une différence mesurée sans
+lui ne prouve rien.
+
+### Réinstancier `Main` dans la même exécution fait crier l'audio au premier tir (2026-09-14)
+
+Libérer une instance de `main.tscn` puis en instancier une seconde qui tire produit
+`SCRIPT ERROR: Trying to cast a freed object` dans `AudioManager._occupations()`
+(`audio_manager.gd:1521`, via `play_weapon_shot` et `play_shell`) : le pool garde des
+voix nées dans le monde de la première instance. Le lanceur de suites rougit sur cette
+chaîne. **Signalé, non corrigé** (hors périmètre d'ISO1) ; les suites qui jouent
+plusieurs parties le font dans UNE instance. Au passage, la libération de `Main` fait
+aussi imprimer `Condition "!is_inside_tree()"` par `AudioManager.diagnostic_ecoute()`
+(`audio_manager.gd:2365`) — une erreur moteur, pas un `push_error`, que le lanceur
+n'entend pas.
+
+### Un masque `~4` se relit 4294967291 (2026-09-14)
+
+`vp1.canvas_cull_mask = ~4` s'écrit avec l'entier signé de GDScript (−5) et se relit
+en entier **non signé** sur 32 bits. Une comparaison `masque == ~4` est donc toujours
+fausse ; comparer `masque == (~4 & 0xFFFFFFFF)`, ou tester des bits.
+
+### Les masques de vue de `main.tscn` ne sont pas ceux du jeu (2026-09-14)
+
+`main.tscn` pose `canvas_cull_mask = 3` sur `SubViewport1` et `5` sur
+`SubViewport2`, et `CLAUDE.md` le répète. **Dès la première image, le jeu les
+réécrit** en `~4` et `~2` (`game_state.gd`, juste avant `_setup_players`) :
+« tout sauf la couche des corps de l'autre ». Le banc ISO0.b voulait cacher les
+sprites de corps sur la vingtième couche, « que ni 3 ni 5 ne contiennent » ; sa
+suite, qui lit les masques après deux images, a rougi : les deux vues lisent
+cette couche. Il n'existe **aucun bit non nul** que les deux vues ignorent ;
+seule la couche 0 n'est lue par personne.
+
+Règle : un masque, une couche ou un mode de rendu se lit **sur l'objet vivant**,
+jamais dans la scène sérialisée ni dans la documentation qui la décrit.
+
+### Écrire `flashlight_on` hors de la physique n'allume pas la torche (2026-09-14)
+
+`player.gd` relit `input_provider.is_flashlight_pressed()` à **chaque pas de
+physique** (« la torche n'obéit qu'au bouton », `5037a148`, 2026-08-26), et
+allume la `PointLight2D` dans le même `_physics_process`. Une valeur écrite
+depuis `_process` ou une coroutine est donc écrasée avant d'avoir allumé quoi
+que ce soit. Le banc ISO0.b l'a payé : ses premières captures sont sorties
+torches éteintes. **Tenir l'action** (`Input.action_press("p1_torch", 0.5)`) passe
+par le chemin d'un joueur et fonctionne.
+
+⚠️ **Signalé par cette session, puis vérifié ailleurs — et plus ancien qu'écrit
+ici d'abord.** `bench_framerate.gd` allume ses torches par
+`p.flashlight_on = not _sans_torches` dans sa boucle d'images. Ce paragraphe datait
+le défaut du 2026-08-26 (`5037a148`) ; la session `hygiene-main-bench-masks-1b2155`
+l'a sondé le 2026-09-14 : **le banc n'a jamais eu ses torches allumées depuis sa
+naissance** (`9d69f09`, 2026-08-15) — `flashlight.enabled` faux sur 1076 images sur
+1076. Tous ses relevés « torches allumées » ont donc été pris torches éteintes, et
+`--sans-torches` n'a jamais rien retiré. Correctif dans sa branche
+`claude/hygiene-main-bench-masks-1b2155` ; la datation fait foi là-bas. Leçon de
+la correction elle-même : **un défaut daté par le commit qui le rend visible n'est
+pas daté par le commit qui l'a introduit** — il fallait sonder, pas lire `git blame`.
+
+### Un `SubViewportContainer` sans `stretch` grandit jusqu'à la taille de sa vue (2026-09-14)
+
+Passer `stretch = false` pour donner à une sous-vue une taille à soi (la lightmap
+`plein` du banc ISO0.b) fait de cette taille la **taille minimale** du conteneur :
+dans le `HBoxContainer` des vues, il grandit d'autant et pousse son voisin, même
+transparent. Le banc lisait les cadres des vues après ce geste et appliquait
+l'étirement deux fois — vues 3D de 1701×1920 au lieu de 1276×1440 sur une
+fenêtre 2560×1440, et l'affichage de J2 hors de l'écran. **Aucune capture ne l'a
+montré** : elles se prenaient en 1920×1080, étirement ×1, où la lightmap `plein`
+égale l'aire logique. C'est une mesure courte à la taille native de la fenêtre
+qui l'a sorti, par la ligne « cible 3D » que le banc imprime.
+
+Règle : relever toute géométrie de mise en page **avant** de changer ce qui la
+décide ; et vérifier un outil de rendu à l'étirement réel de l'écran, pas
+seulement à celui des captures.
+
+### `size = 1080 × sin θ` garde la profondeur de la vue de dessus, pas sa largeur (2026-09-14)
+
+L'étude (§ 8, ISO1) écrit que cette taille orthographique « garde l'empreinte
+1920×1080 au sol, même champ que `stretch/aspect = keep` ». C'est vrai en
+profondeur seulement : la vue montre `size` unités à la verticale, soit
+`size / sin θ = 1080` px de sol, mais `size × 16/9 = 1920 × sin θ` px en largeur —
+**1663 px à 60°, 1513 à 52°**. Une caméra inclinée ne peut pas garder les deux
+(le sol se voit raccourci sur un seul axe). Le banc imprime l'empreinte réelle ;
+le choix entre largeur et profondeur est une question d'équité de champ, à
+trancher avec H15 avant `camera_iso.gd`.
 
 ### Un workflow Ultracode de vingt-six agents en Fable 5.1 vaut le reliquat hebdomadaire du forfait (2026-09-13)
 
@@ -20882,8 +21016,8 @@ lance sans demande explicite.
 
 | Étape | Objet | Sessions | Modèle / effort |
 |---|---|---|---|
-| ISO0 | Étude et prototypes ✅ ; **ISO0.b** : banc B-projection dans le vrai jeu (`tools/banc_iso.tscn`), relevé de cadence, décision | 2 | Opus 5 / high |
-| ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique | 3 | Opus 5 / high |
+| ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
+| ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
@@ -21086,6 +21220,479 @@ ici. À reprendre au contact de la section ISO2b de la ROADMAP le jour venu.
   mesurer — un passage au banc reste nécessaire pour toute pose neuve, aussi
   bien couverte la suite paraisse-t-elle sur le papier.
 
+### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
+
+**Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est
+ouvert, l'étape ISO0.b avec lui, et **rien d'autre** : H15 (go / no-go, tangage,
+lacet, hauteur des murs, variante de lightmap, écran scindé en iso ou en 2D) se
+tranche après ce banc, sur des relevés qu'Adrien prend lui-même fenêtre au premier
+plan. ISO1 ne se lance pas avant. Session `iso0b-b-projection-bench-08404a-6c`,
+branche `iso-geometrie`, issue de la branche de l'étude (non fusionnée dans `main`).
+
+**Pourquoi un banc et pas une décision sur l'étude.** Aucun des deux prototypes ne
+montre la voie recommandée : ils refont la lumière en 3D. Et B-projection a un
+coût que l'étude nomme sans le chiffrer — elle **réintroduit la cible de rendu
+intermédiaire** que le chantier R avait retirée pour +15 %, deux en écran scindé.
+Le banc produit ce chiffre et l'image qui va avec, dans le jeu tel qu'il est.
+
+**Ce qu'il fait** (`tools/banc_iso.gd`, aucun fichier du jeu modifié) : le vrai duel
+« 1v1 écrans scindés », jouable clavier/souris et manette, joueurs immortels pendant
+la mesure ; les dix nœuds `visual*` de chaque joueur sur la couche de visibilité 0
+(jamais `visible`, que le rejeu lit) ; le rendu forcé par `SubViewport` ; la texture
+de la vue 2D projetée sur un sol plan 3D *unshaded* qui suit la vue ; les murs de
+la carte extrudés (une boîte par rectangle de `merge_rects`, sommet noir, faces
+éclairées par la lightmap lue à 8 px devant elles) ; deux corps grossiers « gris
+plafonné, noir hors lumière » ; une caméra orthographique à `size = 1080 × sin θ`.
+Options `--base`, `--scinde`, `--lightmap plein|1080p|demi`, `--tangage`, `--lacet`,
+`--mur`, `--carte`, `--seconds`, `--charge`, `--capture`, `--flash` ; **F8 / F9 /
+F10** changent tangage, lacet et murs à chaud. Il imprime ses cibles (2D, 3D,
+fenêtre), l'empreinte au sol réelle, puis **l'état du focus avant** médiane, 1 % bas
+(formule de `ConditionsDeMatch.statistiques`), pire image et appels de dessin, et
+une ligne `BANC_ISO …` à recopier. Suite `tools/test_banc_iso.gd` (73 contrôles,
+dans le lot) ; captures et planches dans `docs/iso/captures_banc/` et
+`docs/iso/planche_banc_*.jpg`.
+
+**Trois écarts à la consigne, voulus.** (1) Les conteneurs 2D sont rendus
+**transparents, pas cachés** : le `visible` d'un conteneur est la source de vérité
+de « quelle vue est regardée » — caché, le jeu arrête la vue à chaque accord, retire
+son brouillage, et le conteneur ne transmet plus la souris dont J1 tire sa visée.
+(2) La visée souris est **reprojetée** (rayon de la caméra 3D ∩ sol, poussé dans la
+vue de J1) : sans elle le banc n'est pas jouable à la souris dès que le tangage
+quitte 90°. (3) Les torches de `--charge` et des captures sont **tenues par l'action**,
+pas écrites (voir « Pièges connus »).
+
+**Ce que le banc a déjà établi — mesuré, pas jugé.**
+- **La projection est exacte.** À 90° de tangage, lightmap pleine, l'écran iso et
+  `--base` se recalent à (0, 0) px ; écart moyen 0,8 à 1,5/255, 4,2 à 5,1 % des
+  pixels au-delà de 2 % — contre 0,9/255 et 4,5 % entre **deux captures de base**
+  identiques (la respiration des lumières). Le critère de l'étude (± 2 % au même
+  point) est tenu au plancher du bruit. Reste un biais de −0,5/255 de moyenne,
+  logé dans les quasi-noirs.
+- **L'écran scindé tient avec des murs et des corps communs** : la vue qui dessine
+  se lit dans `CAMERA_VISIBLE_LAYERS`, qui fonctionne en `gl_compatibility`.
+- **La lumière au sol n'est pas la lumière reçue par un corps.** Le halo de
+  proximité révèle l'ennemi collé à soi en n'éclairant QUE son sprite ; le sol sous
+  ses pieds reste noir, et le corps grossier (qui lit le sol, par consigne) disparaît
+  là où la vue de dessus le montre. C'est exactement ce que les capteurs de corps
+  d'ISO2 doivent lever — la preuve qu'ils ne sont pas optionnels.
+- **L'empreinte au sol n'est pas celle de la vue de dessus** (voir « Pièges connus ») :
+  1663×1080 px à 60°.
+- Les masques de vue réels sont `~4` / `~2`, pas 3 / 5 (voir « Pièges connus »).
+
+**Les relevés de cette session ne valent rien** — la fenêtre n'était pas à elle
+(Adrien travaillait à côté ; les captures ont dû passer la fenêtre « toujours au
+premier plan », remède de `photographe.gd`). Aucune conclusion sur la cible.
+
+#### Protocole de relevé — pour Adrien
+
+1. **Machine refroidie** : dix minutes sans banc ni build ; éditeur Godot fermé,
+   aucune autre fenêtre de jeu. Un banc lancé en boucle mesure sa propre chaleur
+   (`bench_framerate.gd`, `WARMUP_SEC`).
+2. **Fenêtre au premier plan, résolution native** (le jeu tel qu'il se lance, sans
+   `--taille`), **et ne plus y toucher** : un changement de focus pendant la mesure
+   décide du 1 % bas, le banc le dit en tête de résultat et le relevé se jette.
+3. **Un relevé de 60 s par exécution**, `--charge` : la même minute d'échange au
+   pompe à chaque fois — un humain ne rejoue pas deux fois la même.
+4. **Ordre base / iso / iso / base**, en vue unique (iso en lightmap `plein` puis
+   `1080p`), puis la même série en `--scinde`. Les deux `base` encadrent : s'ils
+   divergent, la machine a dérivé et la série se refait.
+5. Recopier les huit lignes `BANC_ISO …` ; puis **jouer trois minutes** sans
+   `--charge`, F8/F9/F10 en main, pour le jugement d'H15 — celui-là n'est pas une
+   mesure.
+
+#### La première série d'Adrien — 2026-09-14, 16 h 06 à 16 h 41, MacBook M3, fenêtre 2560×1440
+
+Carte « Arène Standard », `--charge`, 60 s, tangage 60°, murs 0,45 tuile.
+
+| # | Heure | Rendu | Médiane | 1 % bas | Pire image | Appels | Focus / état |
+|---|---|---|---|---|---|---|---|
+| 1 | 16:06 | vue unique, base | 100 | 62 | 18,1 ms | 133 | stable |
+| 2 | 16:07 | vue unique, iso plein | 100 | 57 | 28,0 ms | 148 | stable |
+| 3 | 16:10 | vue unique, iso 1080p | 101 | 60 | 58,3 ms | 137 | **MIXTE — jeté** |
+| 4 | 16:11 | vue unique, base | 90 | 54 | 21,6 ms | 132 | stable, finit dans le créneau pollué |
+| 5 | 16:13 | scindé, base | 103 | 57 | 19,8 ms | 202 | stable, **pollué** |
+| 6 | 16:15 | scindé, iso plein | 100 | 59 | 37,6 ms | 209 | **MIXTE — jeté**, pollué |
+| 7 | 16:16 | scindé, iso 1080p | 96 | 55 | 18,5 ms | 207 | stable |
+| 8 | 16:19 | scindé, base | 96 | 56 | 35,2 ms | 198 | stable |
+| 5 bis | 16:38 | scindé, base | 100 | 72 | 24,7 ms | 200 | stable |
+| 4 bis | 16:40 | vue unique, base | 86 | 50 | 22,6 ms | 133 | stable |
+| — | 16:20 | vue unique, iso 1080p, **partie libre sans charge** | 220 | 115 | 39,7 ms | 86 | stable |
+
+**Le créneau pollué.** Entre 16 h 12 et 16 h 16, la session
+`hygiene-main-bench-masks-1b2155` a lancé trois `bench_framerate` fenêtrés au premier
+plan ; et la session « ISO Corps » avait un `run_suites.sh` complet en arrière-plan
+pendant une partie de la série (arrêté sur demande, heures à consigner). Deux
+relevés iso sur quatre sont en outre à focus mixte.
+
+**Ce que la série dit, et ce qu'elle ne dit pas.**
+- **Le bruit est plus grand que l'effet cherché.** Le même relevé « base, vue
+  unique » a donné 100, 90 puis 86 de médiane et 62, 54 puis 50 de 1 % bas en
+  35 minutes ; « base, scindé » 103, 96 puis 100, et 57, 56 puis 72. Aucun écart
+  iso − base de la série (médiane 100 contre 100 en vue unique ; 96 contre 96 à 103
+  en scindé) ne sort de cette dispersion.
+- **Donc : pas de surcoût de B-projection visible au-dessus d'environ 10 %** sur
+  cette machine, et **pas de preuve qu'il est nul**. La série ne peut pas trancher
+  entre lightmap `plein` et `1080p` : l'un des deux relevés de chaque paire est jeté.
+- **La dérive de la base unique (100 → 86)** ressemble à la chaleur ou à une charge
+  de fond, pas au banc : c'est le motif consigné dans `bench_framerate.gd`
+  (`WARMUP_SEC`), et deux sessions tournaient à côté.
+- **Les appels de dessin, eux, ne sont pas bruités** : +15 en vue unique à lightmap
+  pleine, +5 à 1080p, +7 en écran scindé — l'ordre de grandeur des quatre à onze
+  boîtes de murs plus sol et corps. Rien de la régression `arena_decor`.
+- **Pour que le chiffre décide**, une seconde série est à prendre **toutes sessions
+  prévenues et silencieuses**, machine froide, les quatre relevés iso refaits.
+
+**Ce qu'Adrien a vu en jouant** (partie libre, vue unique) :
+- F8, F9 et F10 répondent — vérifié à la main, 43 changements imprimés en 3 min,
+  lacet 45° compris.
+- **Le voile et la lueur de la fusée de J2 sur la moitié droite de l'écran**, sans la
+  vue de J2. Le banc garde le mode « 1v1 écrans scindés » en vue unique : l'interface
+  place donc les effets d'écran de J2 (éblouissement, fusée) sur « sa » moitié. C'est
+  la configuration du banc, pas un défaut du jeu — le même artefact existe dans
+  `bench_framerate.gd --vue-unique` —, mais il se voit dès qu'on joue. À régler dans
+  ISO2 (calques d'écran relogés par vue), noté ici pour que personne ne le prenne pour
+  un effet de la projection.
+- L'écran scindé ne s'affiche qu'avec `--scinde` : la commande de partie libre du
+  protocole est en vue unique.
+
+#### ✅ H15 tranché par Adrien, le 2026-09-14 — « c'est bon on y va »
+
+Sans seconde série : l'ordre de grandeur (aucun coût visible au-dessus du bruit, 5 à
+15 appels de dessin) et la partie jouée lui suffisent. Réponses, posées en effets
+perçus et recopiées ici avec ses mots quand ils comptent :
+
+| Question | Réponse d'Adrien | Ce que l'étude recommandait |
+|---|---|---|
+| Tangage | **52°** — « le niveau le plus bas que tu me proposais dans ton banc » | 60-65° |
+| Hauteur des murs | **Deux sortes** : « des murs hauts et des murs bas. Ceux bas, on pourra se cacher derrière accroupi. Les murs hauts sont très lisibles, ne laissent rien passer. » | une seule, 0,4 tuile |
+| Écran scindé | **En iso aussi** | en iso |
+| Champ de la caméra | **La profondeur** (largeur au sol = 1920 × sin θ, soit **1513 px à 52°**) | — (non vu par l'étude) |
+| Lacet | non posé — **0° reste le défaut** | 0° |
+| Taille de lightmap | non tranchée — la série ne départage pas `plein` et `1080p` | — |
+
+**Deux conséquences qui ne se lisent pas dans les réponses, et qu'ISO1 doit porter.**
+
+1. **52° avec des murs hauts, c'est la bande cachée la plus large.** Un mur de hauteur
+   `h` masque `h / tan 52° ≈ 0,78 h` de sol derrière lui : pour un mur haut d'une
+   tuile, **27 px**, plus que le rayon d'un corps (18 px). Un joueur collé derrière un
+   mur haut, côté opposé à la caméra, sort de l'image. C'est symétrique entre les deux
+   joueurs (même caméra) mais **dépend de l'orientation du mur** : le côté nord des
+   murs cache, le côté sud non. C'est précisément le « premier point d'équité » de
+   l'étude (§ 5.2) ; le test d'équité géométrique d'ISO1 doit le chiffrer carte par
+   carte, avec la hauteur réelle des murs hauts — et c'est à Adrien de dire si « ne
+   laissent rien passer » inclut « on ne voit pas ce qui est collé derrière ».
+2. **Les murs bas et l'accroupi sont une mécanique neuve, pas un réglage de caméra.**
+   Aujourd'hui : un seul type de mur dans le format v3 (`map_codec.gd`) et l'éditeur ;
+   un seul occluder par rectangle, qui arrête toute lumière (`map_geometry.gd`) ; pas
+   d'accroupi dans `player.gd`, ni sur le fil (`protocol.gd`), ni dans le rejeu. Ce
+   qu'il faudra trancher avant d'écrire une ligne, en effets perçus :
+   - un mur bas **arrête-t-il la lumière** d'une torche ? d'un joueur debout, accroupi ?
+   - arrête-t-il **les balles** ? le passage d'un joueur (on l'enjambe, on le contourne) ?
+   - un joueur **accroupi** derrière un mur bas est-il **invisible** (même éclairé),
+     **à l'ombre**, ou simplement **plus petit** ? voit-il et tire-t-il par-dessus ?
+   - l'accroupi **ralentit-il** ? se voit-il en vue de dessus, en killcam, chez l'adversaire ?
+
+   **✅ Réponses d'Adrien, le 2026-09-14 au soir — « comme dans la vie, quoi ».**
+
+   | Question | Règle d'Adrien |
+   |---|---|
+   | La lumière et le mur bas | « Un mur bas **arrête la lumière** d'une torche, mais il **révèle quelqu'un qui ne serait pas accroupi** : la lumière passe au-dessus du mur, donc peut éclairer une tête. » |
+   | Les balles | « Les balles **passent au-dessus si on est debout**, **en dessous si on est accroupi**. » |
+   | Accroupi derrière un mur bas | « On ne devrait **pas être éclairé depuis derrière le mur**. En revanche, si on est éclairé par quelqu'un **du même côté du mur** que nous, la lumière doit nous éclairer. » |
+   | L'accroupi lui-même | « Il **ralentit fortement**, mais **diminue aussi l'ampleur des bruits de pas**. » |
+
+   **Ce que ces règles disent, reformulé pour qui écrira le code** — à relire avec Adrien,
+   pas à prendre pour acquis :
+   - Un mur bas est **opaque pour le sol et pour un corps accroupi**, **transparent pour
+     un corps debout** (sa tête dépasse). Un mur haut est opaque pour tout.
+   - La règle est **relative au côté du mur** : la même lumière qui ne traverse pas le mur
+     bas pour atteindre un accroupi l'éclaire s'il est du côté de la source. C'est
+     exactement ce qu'un occluder fait déjà — la nouveauté est qu'il ne doit concerner
+     que certaines cibles (sol, corps accroupis) et pas les corps debout.
+   **✅ Seconde série de réponses, le même soir** (posées en effets perçus) :
+
+   | Question | Règle d'Adrien |
+   |---|---|
+   | Balles : posture du tireur ou de la cible ? | **Les deux, par un angle.** « Quelqu'un qui est accroupi **loin** derrière un mur bas peut être touché. Il faut définir **un angle, le même que la lumière** je pense, à partir duquel le tir debout arrive à viser derrière un mur bas. » |
+   | Franchir un mur bas | **On l'enjambe avec « croix »** (le bouton de la manette) : « on l'enjambe **lentement**, et **en faisant du bruit** ». |
+   | La torche d'un accroupi | **Elle bute sur le mur** : accroupi derrière un mur bas, on est caché mais aveugle vers l'avant ; pour éclairer par-dessus, il faut se relever. |
+   | À quoi voit-on qu'un joueur est accroupi | **Silhouette plus basse et ramassée**, **plus une marque au HUD** pour son propre joueur seulement. |
+
+   **Ce que « un angle, le même que la lumière » veut dire en géométrie** — la
+   règle qui unifie lumière et balles, à valider avec Adrien sur un croquis :
+   derrière un mur bas de hauteur `h`, une source (torche ou canon) à hauteur `H > h`
+   et à distance `d` du mur projette une **zone d'ombre** qui s'étend jusqu'à
+   `d × (h − c) / (H − h)` derrière le mur pour une cible de hauteur `c` (un accroupi,
+   `c` petit ; le sol, `c = 0`). Un accroupi **dans** cette zone n'est ni éclairé ni
+   touchable ; **au-delà**, il l'est — d'autant plus tôt que le tireur est loin du mur.
+   Une source plus basse que le mur (torche ou canon accroupi, `H ≤ h`) ne franchit
+   jamais : c'est la torche qui bute. La même formule sert à la lumière et aux balles,
+   ce qui garantit la règle d'or du jeu : **ce qui se voit est ce qui se paie**.
+   ⚠️ En 2D, un `LightOccluder2D` ne fait qu'une ombre infinie : cette ombre **finie**
+   n'existe pas nativement. Il faudra la fabriquer (occluder dont la longueur d'ombre
+   dépend de la source, ou masque calculé dans un shader de lumière) — **c'est le point
+   dur du chantier**, et il est à prototyper avant d'être promis.
+
+   **Encore ouvert** : un corps debout derrière un mur bas **éblouit-il / est-il
+   ébloui** normalement ? l'enjambement se voit-il et **peut-on tirer** pendant ? la marque
+   HUD et la silhouette accroupie **en killcam** ? un mur bas **se dessine comment** en vue
+   de dessus, pour se distinguer d'un mur haut sans hauteur visible ? les hauteurs
+   (`h` du mur bas, `H` debout, `c` accroupi) — des nombres à fixer au banc, pas à
+   deviner.
+
+   **Pourquoi c'est un chantier à part entière, et pas une option d'ISO1.** Ces règles
+   valent aussi dans la vue de dessus actuelle : c'est du gameplay. En 2D, elles
+   demandent deux familles d'occluders (murs hauts : toute lumière ; murs bas : sol et
+   corps accroupis seulement — via `occluder_light_mask` et un canal « accroupi » dans
+   `canaux_lumiere.gd`), un état accroupi simulé, prédit, répliqué et rejoué
+   (`player.gd`, `protocol.gd` avec `VERSION` +1, `replay_system.gd`), une balistique à
+   deux hauteurs (`bullet.gd`, compensation de latence comprise), un type de case neuf
+   dans le format de carte (v4, `map_codec.gd`, éditeur, vignettes, six cartes livrées
+   à repenser ou non), la vitesse et le volume des pas (`audio_manager.gd`, portées
+   relatives). **Estimation grossière, à reprendre** : de l'ordre d'un chantier DIX
+   CLASSES réduit — plusieurs sessions, un `Protocol.VERSION` monté, un essai manette
+   d'Adrien. En B-projection, la 3D n'aura qu'à lire ce que la 2D décide : une boîte
+   basse et une boîte haute, et un corps voxel accroupi.
+   En B-projection, la lumière vient du rendu 2D : un mur bas qui laisse passer la
+   lumière « par-dessus » demande une règle 2D (masques, occluders à part) avant toute
+   3D. C'est un chantier à inscrire — probablement **avant ou pendant ISO1**, parce qu'il
+   change la géométrie qu'ISO1 extrude — et **il n'est pas ouvert**.
+
+**Ce qui a été lancé depuis** : ISO1, le 2026-09-14 au soir (section suivante), sur la
+branche `iso1-fondations`. **Ce qui ne l'est pas depuis cette section** : le chantier des
+murs bas (tenu ailleurs, sur `main`), ISO2 et la suite. La prochaine étape se lance sur
+demande explicite, comme toutes les autres.
+
+### ISO1 — les fondations de la vue isométrique 🟡 (ouverte le 2026-09-14, en attente du jalon H-ISO1)
+
+**Ouverte sur la décision H15** (Adrien, 2026-09-14 : « c'est bon on y va »). Session
+« Iso 1 Opus », branche locale **`iso1-fondations`**, issue de `iso-geometrie` @ `d57aaca`,
+worktree `/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450`.
+Non poussée, non fusionnée. **Rien de ce qui suit n'est allumé chez un joueur** : la vue
+iso est derrière un réglage désactivé par défaut.
+
+**Ce qui existe.** Le banc ISO0.b devient un chemin de rendu du jeu, sans refaire son code :
+- **`presentation_3d.gd`** (`Presentation3D`) — **enfant de la racine de l'arbre**, sœur de
+  `Main`, jamais sous `Player*` ni `GameState` (un nœud sous un porteur de RPC peut dérouter
+  les RPC sans erreur console). Elle possède sol, murs, deux corps grossiers et la caméra.
+  **Un seul crochet dans le jeu**, six lignes en fin de `GameState.rebuild_arena()`, sous
+  garde `GameSettings.mode_iso` ; allumer, tenir, éteindre et reconstruire les murs, elle le
+  fait elle-même à chaque image — parce que le jeu redéfait ses gestes (accords de rendu,
+  couches de sprites) et qu'un second crochet aurait fini par diverger du premier.
+- **`GameSettings.mode_iso`** — persisté dans `user://settings.cfg`, **désactivé par
+  défaut** ; interrupteur « Vue isométrique (expérimental) » dans les réglages vidéo ;
+  **`--iso`** l'allume pour une exécution et ne s'écrit jamais (sans cette séparation, le
+  premier volume touché pendant un banc aurait persisté l'iso chez le joueur).
+- **Vue unique seulement** (entraînement, en ligne). En écran scindé la vue reste de dessus
+  jusqu'à ISO2, et la ligne **« VUE ISO »** du panneau F3 le dit (« écran scindé : vue de
+  dessus jusqu'à ISO2 »), pas une boîte de dialogue.
+- **`iso_geometrie.gd`** — `build_meshes` : une boîte par rectangle de
+  `merge_rects(build_grid(data, Kind.WALLS))`, posée sur la collision du jeu, déterministe.
+- **`camera_iso.gd`** — orthographique, tangage 52°, lacet 0°, `size = 1080 × sin θ` (la
+  profondeur gardée, 1513 px de large au sol), qui suit la transformation de canevas de la
+  vue regardée — zoom et secousse compris — et **ne montre jamais plus de carte que la
+  caméra 2D** (lacet nul ; vérifié aux quatre coins).
+- **`sol_projete.gdshader`, `mur_iso.gdshader`, `corps_grossier_iso.gdshader`** —
+  préchargés, *unshaded*, aucune `Light3D` ; la lightmap lue par `iso_lightmap.gdshaderinc`
+  (formule miroir de `CameraIso.uv_de`) ; faces de murs allumées au pied, sommet noir strict.
+- **Le chemin `SubViewport` forcé** (`rendu_racine_autorise = false`), le conteneur 2D
+  **transparent et non caché** (écart du banc ISO0.b, même raison), le `Background` éteint,
+  les dix sprites de corps sur la couche de visibilité 0 — jamais `visible`. Tout est
+  **rendu à l'extinction**, vérifié par la suite.
+- **Visée souris reprojetée** (rayon caméra ∩ sol, poussé dans la vue) : sans elle le duel
+  n'est pas jouable à la souris. La vraie reprojection des entrées reste ISO5.
+
+**Le contrat avec le chantier des murs bas.** `IsoGeometrie` lit `HAUTEUR_MUR_HAUT`,
+`HAUTEUR_MUR_BAS` et `Kind.LOW_WALLS` **dans le script** de `map_geometry.gd`, dès qu'ils
+existent (une référence écrite en dur ne compilerait pas avant la fusion) ; en attendant,
+une seule hauteur, **`IsoGeometrie.H_HAUT = 0,65 tuile`**, documentée « à déplacer ». La
+source réellement utilisée s'imprime (F3, suite, journal) : une fusion qui perdrait la
+constante se verrait, au lieu de retomber en silence sur la valeur locale. `Kind.LOW_WALLS`
+sans sa hauteur crie (`push_error`).
+
+**La pâte de roman graphique — à choisir par Adrien.** `iso_pate.gdshaderinc` porte
+`pate(couleur, lumiere, style, …)` et l'uniform `style` ; **le shader des corps d'ISO3
+l'inclura**. Quatre pâtes : **A** gravure à l'encre (hachures qui suivent la pente de la
+lumière), **B** ligne claire (aplats, contour par la pente), **C** trame et encre décalée,
+**D** lavis et pochoir ; et **brute** (la lightmap seule) pour comparer. F2 les fait
+défiler en jeu, `--pate A|B|C|D|brute` au lancement. **Invariant non négociable** : monotone
+en la lumière, strictement 0 à lumière 0, **aucun terme additif** — tout ce que la pâte fait
+multiplie la couleur reçue. Vérifié sur un miroir processeur (`iso_pate.gd`) : 1 728 lieux,
+201 niveaux de lumière, quatre pâtes. ⚠️ **Le premier lavis violait l'invariant** — il
+désaturait vers la luminance *annoncée* au lieu de celle de la couleur reçue ; une couleur
+nulle donnait du gris. La suite l'a vu ; corrigé dans les deux fichiers.
+
+**Ce que chaque pâte garde de la lumière** — mesuré au pixel sur « Le cloître », torche et
+flash, part de l'arène au-dessus de 8/255 (et de 32/255) :
+
+| Pâte | > 8/255 | > 32/255 | Moyenne | Lecture |
+|---|---|---|---|---|
+| brute (= la vue de dessus projetée) | 26,8 % | 6,4 % | 7,9/255 | la référence |
+| **D** lavis et pochoir | 27,1 % | 5,2 % | 8,4/255 | garde la lueur faible |
+| **B** ligne claire | 19,6 % | 3,6 % | 6,6/255 | en perd un quart |
+| **A** gravure à l'encre | 6,4 % | 3,2 % | 3,0/255 | **efface les trois quarts de la lueur faible** |
+| **C** trame et encre décalée | 3,2 % | 1,9 % | 2,6/255 | **efface presque toute la lueur faible** |
+
+**Pourquoi ce tableau compte plus que la planche.** Dans Candela la lueur faible est de
+l'information : un halo lointain, un reflet qui dit qu'on éclaire, la rétrodiffusion. Une pâte
+qui l'efface rend la vue iso **plus pauvre que la vue de dessus**, de la même façon pour les
+deux joueurs mais pas pour le jeu. A et C sont les plus « roman graphique » à l'œil et les
+moins fidèles au chiffre ; B et D rehaussent un demi-ton déjà éclairé, sans jamais allumer ce
+qui est noir.
+
+**Le noir absolu — prouvé au banc, dans une vraie fenêtre, pour les quatre pâtes.**
+`tools/banc_iso.gd --jeu --noir` (voir « Pièges connus » : la vue de dessus n'est pas noire
+lumières éteintes) :
+
+| Pâte | (a) lumières éteintes : pixels allumés hors du support de la brute | écran max | (b) lightmap noire : écran max | Verdict |
+|---|---|---|---|---|
+| A | 0 | 158/255 | 0/255 | tenu |
+| B | 0 | 249/255 | 0/255 | tenu |
+| C | 0 | 255/255 | 0/255 | tenu |
+| D | 0 | 255/255 | 0/255 | tenu |
+| vue de dessus actuelle (`--base`) | — | **177/255** | — | le résidu du jeu : viseur, liseré des murs |
+
+**Le test d'équité géométrique** (`tools/test_iso_geometrie.gd`, calcul analytique puis
+recompté par lancer de rayons contre les boîtes réellement construites : 0 désaccord sur
+les six cartes à 0,65, 1 et 1,5 tuile ; la même analyse caméra retournée se trompe, preuve
+qu'elle voit l'orientation). Tangage 52°, lacet 0°, caméra au sud : **c'est le côté nord des
+murs qui cache**.
+
+| Mur (tuiles) | Bande cachée | Critère < 18 px | Disque d'un corps collé caché |
+|---|---|---|---|
+| 0,3 | 8,2 px | tenu | 17 % |
+| 0,45 | 12,3 px | tenu | 30 % |
+| **0,65** (`H_HAUT` actuelle) | **17,8 px** | **tenu** | 49 % |
+| 0,7 | 19,1 px | dépassé | 54 % |
+| 1,0 | 27,3 px | dépassé | 81 % |
+| 1,5 | 41,0 px | dépassé | 100 % |
+| 2,0 | 54,7 px | dépassé | 100 % |
+
+Un corps d'une tuile de haut collé derrière un mur ne disparaît **entièrement** qu'au-delà
+de 2,3 tuiles de mur : sa tête dépasse avant. Par carte (cases de sol touchées / sol ; part
+du sol cachée ; écart entre la moitié de J1 et celle de J2) :
+
+| Carte | à 0,65 t | à 1,0 t | à 1,5 t (cases invisibles) |
+|---|---|---|---|
+| Arène Circulaire | 28 / 356 · 4,0 % · 0 pt | 6,1 % · 0 pt | 9,2 % · 0 pt (28) |
+| Arène Standard (`default`) | 26 / 676 · 2,0 % · 0 pt | 3,0 % · 0 pt | 4,5 % · 0 pt (26) |
+| Le Cloître | 38 / 528 · 3,7 % · 0 pt | 5,6 % · 0 pt | 8,4 % · 0 pt (38) |
+| L'Usine | 48 / 460 · 5,3 % · **−0,5 pt** | 8,2 % · −0,8 pt | 12,0 % · −1,1 pt (48) |
+| **La Croisée** | 42 / 424 · 5,0 % · **−2,4 pts** | 7,7 % · **−3,7 pts** | 11,6 % · **−5,3 pts** (42) |
+| Le Bunker | 42 / 364 · 5,9 % · 0 pt | 9,0 % · 0 pt | 13,5 % · 0 pt (42) |
+
+**Ce que le tableau dit, pour trancher `H_haut`.** Aucune case n'est entièrement invisible
+tant que le mur reste sous 1,28 tuile ; au-delà, chaque case de sol au nord d'un mur l'est.
+**La Croisée est la seule carte où la hauteur crée un avantage de côté** : la moitié de J2
+cache 2,4 points de sol de plus que celle de J1 à 0,65 tuile, 3,7 à une tuile — ses murs ne
+sont pas orientés pareil dans les deux moitiés. Un écart qu'une vue de dessus n'a pas, et que
+seul un lacet ou une carte retouchée effacerait.
+
+**Ce que les suites prouvent** (`tools/test_iso_geometrie.gd`, 86 contrôles ;
+`tools/test_iso_camera.gd`, 87 ; les deux dans `run_suites.sh`, **chacune sabotée une fois →
+code 1 → restaurée**) : une boîte par rectangle sur les six cartes, posée sur la collision ;
+déterminisme ; `size = 1080 × sin θ` et 1513 px au sol à 52° ; monde → uv aux quatre coins ;
+empreinte contenue dans la vue 2D à trois zooms et trois tangages (et refus d'une caméra sans
+sin θ) ; `mode_iso` faux par défaut, persisté, `--iso` jamais écrit, valeur trafiquée refusée ;
+**la simulation identique pas pour pas avec ou sans vue iso** — positions, rotations, points de
+vie, torches, balles et rejeu, avec **un témoin** (deux parties sans iso, identiques) sans quoi
+l'égalité ne prouverait rien ; aucun nœud 3D sous `GameState` ni `Player*` ; les masques
+vivants `~4` / `~2` ne lisent pas la couche 0 ; à l'extinction, couches, alpha, souris, fond
+et rendu racine rendus. `tools/test_banc_iso.gd` reste vert : le banc ISO0.b marche encore.
+**Lot complet vert** le 2026-09-14 à 18 h 30 (heure de Paris), 367 s, scénarios à deux
+instances compris, sans erreur de script.
+
+**Le banc apprend le chemin du jeu.** `tools/banc_iso.gd --jeu` ne construit plus rien : il
+allume `mode_iso` pour l'exécution et mesure `Presentation3D` telle qu'Adrien la joue (vue
+unique ; `--mur` y retaille les boîtes pour une planche). `--noir` fait le contrôle ci-dessus,
+`--sans-hud` retire le HUD d'une capture. Ses lignes `BANC_ISO mode=jeu-A …` se comparent aux
+`mode=base`.
+
+**Planches** : `docs/iso/planche_pate.jpg` (les quatre pâtes et la brute, Le Cloître, torche,
+un flash ; les contrôles du noir éclaircis ×8), `docs/iso/planche_iso1.jpg` (`default` et
+Le Cloître, murs à 0,65 et 1,0 tuile, pâte A, sans HUD). Captures et relevés bruts dans
+`docs/iso/captures_iso1/`, sous le `.gdignore` de `docs/iso/` (aucun `.import`), recomposables
+par `python3 docs/iso/planche_iso1.py --journal docs/iso/captures_iso1/releves_noir.txt`.
+
+**Ce qu'ISO1 ne fait pas, et qui se verra en jouant** : l'écran scindé reste de dessus (ISO2) ;
+les corps grossiers lisent la lumière **au sol**, donc un ennemi révélé par le seul halo de
+proximité disparaît (les capteurs d'ISO2 le lèvent) ; le voile, la vignette et le brouillage
+restent dans la lightmap ou à l'écran tels quels (ISO2) ; killcam et fantômes restent plats
+dans la lightmap (ISO5) ; gadgets debout plats (ISO4) ; lightmap `1080p` (la taille n'est
+pas tranchée ; la vue suit la sous-vue telle que le jeu la dimensionne).
+
+**Mes relevés de cadence ne valent rien** (second plan, sessions voisines) : aucun n'est cité.
+
+**✅ Pâte choisie par Adrien, le 2026-09-14 au soir : D, lavis et pochoir.** Elle devient la
+pâte par défaut (`Presentation3D.PATE_PAR_DEFAUT`) ; A, B, C et la brute restent au clavier
+pour comparer (1, 2, 3, 4, 0). Le choix rejoint la recommandation de la session, pour la
+raison qui compte ici : D est la seule pâte à garder la lueur faible au niveau de la vue de
+dessus.
+
+**Les relevés d'Adrien, le 2026-09-14 vers 18 h 38 – 18 h 40** (MacBook M3, fenêtre 2560×1440,
+Arène Standard, `--charge`, 60 s, focus stable au premier plan) :
+
+| Rendu | Médiane | 1 % bas | Pire image | Appels |
+|---|---|---|---|---|
+| vue de dessus (`--base`) | 86 | 55 | 21,4 ms | 134 |
+| iso, chemin du jeu (`--jeu`, pâte A) | 96 | 56 | 20,4 ms | 135 |
+| iso, chemin du jeu (`--jeu`, pâte D), 18 h 54 | 96 | 58 | 19,6 ms | 135 — **focus mixte (593 images sur 5 700) : jeté** |
+| vue de dessus (`--base`), 19 h 00 | 100 | 68 | 18,1 ms | 131 |
+
+**La série complétée le même soir, et ce qu'elle ne peut pas dire.** Les deux « base » qui
+encadrent la série divergent entre elles — médiane 86 puis 100, 1 % bas 55 puis 68 — plus que
+tout écart iso − base : **la machine a dérivé pendant la série**, et le second iso est jeté
+pour focus mixte. ⚠️ **La dérive n'est pas un hasard** : la session ISO1 a laissé tourner un
+lot complet de suites de 18 h 46 à 18 h 52, juste avant le relevé iso de 18 h 54, sur une
+machine qu'elle aurait dû laisser refroidir. **La série ne tranche donc rien** : l'iso du jeu
+se tient entre les deux bases en médiane (96 contre 86 et 100) et en dessous de la seconde en
+1 % bas (56-58 contre 55 et 68). Un surcoût de 1 % bas jusqu'à une dizaine d'images n'est ni
+exclu ni établi. Pour qu'une série décide : fenêtre de silence **annoncée à toutes les
+sessions**, dix minutes de repos, les quatre relevés d'une traite.
+
+*Première lecture, avant la fin de la série :* **deux relevés sur les quatre du protocole** (base / iso / iso / base) : sans les deux
+relevés d'encadrement, rien ne dit que la machine n'a pas dérivé entre les deux. La première
+série d'ISO0.b avait montré ±10 % d'écart entre deux « base » identiques ; les 10 images de
+médiane et le point de 1 % bas qui séparent ces deux lignes sont dans ce bruit. **Ce qu'elles
+disent** : aucun surcoût visible de la vue iso du jeu au-dessus du bruit, 1 appel de dessin de
+plus, et **la cible 1 % bas ≥ 60 n'est tenue ni par l'une ni par l'autre** sous charge
+automatique. ⚠️ La ligne `BANC_ISO` de `--jeu` imprimait alors `tangage=60.0 mur=0.45` — les
+défauts du banc, pas la vue rendue (52°, 0,65 tuile) ; corrigé, la mesure elle-même n'était
+pas touchée.
+
+#### Jalon H-ISO1 — ce qui attend Adrien
+
+1. **Jouer trois minutes** en vue unique (entraînement) avec la vue iso :
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" -- --iso`
+   puis ENTRAÎNEMENT ; **1, 2, 3, 4** choisissent A, B, C, D et **0** la brute (F2 ne passe
+   pas sans `fn` sur un Mac) ; **F3** montre « VUE ISO ».
+2. ✅ **Pâte choisie : D** (Adrien, 2026-09-14). *Pour mémoire, la recommandation de la
+   session : **D (lavis et pochoir)**, parce qu'elle est la seule à garder la lueur faible au
+   niveau de la vue de dessus (27,1 % contre 26,8 %) — l'information du jeu —, et qu'elle
+   ne rehausse que ce qui est déjà éclairé ; **A** si l'œil l'emporte, en sachant qu'elle
+   efface trois quarts de la lueur faible.*
+3. ✅ **`H_haut` tranchée : 1,25 tuile** (Adrien, 2026-09-14 au soir), la valeur que le
+   chantier des murs bas pose dans `map_geometry.gd`. **Au-delà du critère de l'étude, en
+   connaissance de cause** : 34,2 px de sol cachés derrière un mur, un corps collé caché à
+   98 %, La Croisée à −4,6 pts entre les moitiés de J1 et J2 ; aucune case de sol
+   entièrement invisible (seuil : 1,28 tuile), ce que la suite vérifie désormais à la
+   hauteur en service. *Pour mémoire, la recommandation de la session était **0,65 tuile** — la plus
+   haute qui tienne le critère (17,8 px), aucune case invisible, et un écart de côté limité à
+   La Croisée (−2,4 pts). Des murs d'une tuile coûtent 27 px de bande et 3,7 pts à La Croisée.
+   « Ne laissent rien passer » voulait-il dire « on ne voit pas ce qui est collé derrière » ?
+   C'est la question qui tranche entre les deux.* **Réponse : oui** — à 1,25 tuile, ce qui est
+   collé derrière un mur haut ne se voit pas.
+4. ~~**Relevés de cadence**~~ — **retirés du jalon par Adrien le 2026-09-14 au soir** (voir
+   « Décisions actées ») ; la série prise ce soir-là reste consignée ci-dessus. *Protocole
+   d'origine, pour le relevé unique de fin de chantier :* sous fenêtre de silence, machine refroidie, fenêtre au premier
+   plan, ordre **base / iso / iso / base**, vue unique, 60 s chacun :
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" res://tools/banc_iso.tscn -- --base --charge --seconds 60`
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" res://tools/banc_iso.tscn -- --jeu --charge --seconds 60`
+   (la seconde deux fois, puis la première), et recopier les quatre lignes `BANC_ISO`.
+   🟡 **Deux relevés pris** (base puis iso, tableau ci-dessus) ; il manque le second iso et
+   la base d'encadrement pour que la série décide.
+5. **Dire si ISO2 s'ouvre.**
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
@@ -21117,7 +21724,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
-| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | Avant toute session ISO1 |
+| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | ✅ **Tranché le 2026-09-14 : go** — tangage 52°, écran scindé en iso, caméra qui garde la profondeur, murs hauts et murs bas (mécanique neuve à instruire). Détail : section ISO, « H15 tranché » |
 
 ---
 
@@ -21226,6 +21833,23 @@ et un seul est du travail de session.
 
 ### Ce qui attend Adrien, et rien d'autre
 
+> **Mis à jour le 2026-09-14, fin d'après-midi — H15 est tranché : go.** Adrien a
+> pris sa série sur le banc `tools/banc_iso.tscn`, joué, et choisi : tangage 52°,
+> écran scindé en iso, caméra qui garde la profondeur, et **deux sortes de murs**
+> (hauts et opaques ; bas, pour se cacher accroupi). Ce qui l'attend maintenant :
+> lancer ISO1 quand il le voudra, et **trancher les règles des murs bas et de
+> l'accroupi** (questions listées dans la section ISO) — une mécanique neuve qui
+> change la géométrie qu'ISO1 extrude. Rien n'est lancé.
+>
+> **Mis à jour le 2026-09-14, soir — ISO1 est ouverte et commitée** sur la branche locale
+> `iso1-fondations` (section ISO, « ISO1 »). Ce qui attend Adrien : le **jalon H-ISO1** —
+> jouer trois minutes avec `-- --iso`, fixer la hauteur des murs hauts d'après le tableau
+> d'équité et dire si ISO2 s'ouvre. **Plus de relevé de cadence par étape** (décision du soir
+> même) : un seul, en fin de chantier ou sur ressenti. **Tout H-ISO1 est tranché le soir
+> même** : pâte D, murs hauts 1,25 tuile, ISO2 ouverte par une autre session. Reste à ISO1 :
+> fusionner `main` dans `iso1-fondations` quand les murs bas y seront, sur demande d'Adrien.
+> **La pâte est choisie : D**, le soir même. Commandes absolues dans la section.
+>
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,
 > [docs/ETUDE_ISO.md](ETUDE_ISO.md), prototypes dans `docs/iso/` et

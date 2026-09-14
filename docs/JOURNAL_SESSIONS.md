@@ -4253,3 +4253,134 @@ pourquoi certains deltas sont arrivés tard ou groupés.
 
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
+### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
+
+Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
+**ISO0.b** ouverte sur la décision d'Adrien du 2026-09-14 (« Ok, je souhaite
+démarrer »). Rôle `iso-geometrie` de l'étude (§ 7.2). La branche part de
+`claude/unrailed-isometric-feasibility-44klgh` (l'étude, non fusionnée dans
+`main`) ; le worktree est celui que l'application a créé pour la session,
+basculé sur `iso-geometrie` — aucun autre arbre touché.
+
+**Fichiers créés, tous à elle :** `tools/banc_iso.gd`, `tools/banc_iso.tscn`,
+`tools/test_banc_iso.gd`, `docs/iso/captures_banc/` (sous le `.gdignore` de
+`docs/iso/`), `docs/iso/planche_banc_unique.jpg`, `docs/iso/planche_banc_scinde.jpg`.
+
+**Partagés, touchés par insertion :** `tools/run_suites.sh` (une suite,
+`test_banc_iso`, au bout de `SUITES`) ; `docs/iso/planche_iso.py` (deux options
+`--titre` et `--sous-titre`, comportement par défaut inchangé — fichier de la
+session de l'étude, close) ; `docs/ROADMAP.md` (sous-section ISO0.b, protocole de
+relevé, trois pièges, lignes ISO0 et H15, encart des prochaines étapes) ; ce
+journal.
+
+**Lu, jamais écrit :** `tools/bench_framerate.gd` (à la session iso-outils ; ses
+fonctions privées sont recopiées), `tools/proto_iso.gd` (fonctions statiques
+appelées), `player.gd`, `game_state.gd`, `main.tscn`.
+
+**Signalé, non corrigé ici :** `bench_framerate.gd` écrit `flashlight_on` hors de
+la physique, ce que `player.gd` écrase (voir « Pièges connus »). Vérifié le
+2026-09-14 par la session `hygiene-main-bench-masks-1b2155` : torches jamais
+allumées depuis la naissance du banc (`9d69f09`, 2026-08-15), et non depuis le
+2026-08-26 comme écrit d'abord ; corrigé dans sa branche. `CLAUDE.md` décrit les masques
+de vue « 3 et 5 dans `main.tscn` » ; le jeu les réécrit en `~4` / `~2`.
+
+**Vague 0 en parallèle :** la session `iso-assets-gemini-boards-4e8d33-e7`
+(planches Gemini, branche `claude/iso-assets-gemini-boards-4e8d33`) ; aucun
+fichier commun hors ROADMAP, sous-sections distinctes, prévenue par message.
+
+**Suivi de projet :** cette session ne republie pas et n'écrit pas au porteur.
+Consigne d'Adrien relayée le 2026-09-14 par la session cloud « Fable 5.1 - CLOUD
+ISO UNRAILED » (`session_01S23hr7g2tRvKRxKBxAikFX`, autrice de l'étude) : les
+sessions iso lui envoient leurs deltas, elle synthétise et transmet au porteur
+(« Murs avec bande LED respirante »). Même message : **tout ce qui est iso reste
+dans un worktree à part** (ici
+`/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/iso0b-b-projection-bench-08404a`,
+branche `iso-geometrie`), et toute commande remise à Adrien est absolue.
+
+**Addendum du 2026-09-14, fin d'après-midi — la série et H15.** Adrien a pris sa
+série de relevés (16 h 06 à 16 h 41) puis a tranché H15 : **go**, sans seconde
+série. Réponses : tangage 52° (« le niveau le plus bas du banc »), écran scindé
+en iso, caméra qui garde la profondeur de la vue de dessus ; et, au lieu d'une
+hauteur de mur, **deux sortes de murs** — hauts et opaques, bas pour se cacher
+accroupi. Cette dernière réponse ouvre une mécanique neuve (format de carte,
+accroupi, occlusion) qui dépasse ISO1 : consignée dans la ROADMAP comme décision
+à instruire, rien d'engagé. Pendant la série, cette session a coordonné le silence
+des sessions `hygiene-main-bench-masks-1b2155` et « ISO Corps » (aucune fenêtre ni
+lot jusqu'au « fini »).
+
+**Addendum, soir du 2026-09-14 — les règles des murs bas.** Adrien a répondu aux
+questions posées sur les murs bas et l'accroupi : le mur bas arrête la lumière
+mais laisse voir une tête debout ; il n'abrite un accroupi que de la lumière venue
+de l'autre côté ; les balles passent au-dessus ou en dessous selon la posture
+(lecture tireur/cible à confirmer) ; l'accroupi ralentit fortement et étouffe les
+pas. Consigné dans la ROADMAP (section ISO, « H15 tranché ») comme un chantier de
+gameplay à part entière, valable aussi en vue de dessus. Rien n'est ouvert.
+Seconde série de réponses le même soir : les balles et la lumière debout franchissent
+le mur bas selon **un même angle** (un accroupi loin derrière redevient visible et
+touchable) ; on enjambe un mur bas avec « croix », lentement et bruyamment ; la torche
+d'un accroupi bute sur le mur ; l'accroupi se lit à sa silhouette et à une marque HUD
+pour soi. Point dur signalé : l'ombre *finie* d'un mur bas n'existe pas nativement en 2D.
+
+### Session « Iso 1 Opus » (ISO1, branche `iso1-fondations`) — ajoutée le 2026-09-14
+
+Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape **ISO1**
+ouverte le 2026-09-14 sur la décision H15 d'Adrien (« c'est bon on y va »). Rôle
+`iso-geometrie` de l'étude (§ 7.2). La branche part de `iso-geometrie` @ `d57aaca`
+(ISO0.b close, non poussée) ; le worktree est celui que l'application a créé pour la
+session, basculé sur la branche neuve — aucun autre arbre touché :
+`/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450`.
+
+**Fichiers créés, tous à elle :** `presentation_3d.gd`, `iso_geometrie.gd`,
+`camera_iso.gd`, `iso_pate.gd`, `iso_pate.gdshaderinc` (**l'include que le shader des
+corps d'ISO3 inclura** — session iso-corps), `iso_lightmap.gdshaderinc`,
+`sol_projete.gdshader`, `mur_iso.gdshader`, `corps_grossier_iso.gdshader` (les cylindres
+du banc ; `corps_iso.gdshader` reste le nom réservé à ISO3), `tools/test_iso_geometrie.gd`,
+`tools/test_iso_camera.gd`, `docs/iso/planche_iso1.py`, `docs/iso/captures_iso1/`,
+`docs/iso/planche_pate.jpg`, `docs/iso/planche_iso1.jpg`, et leurs `.uid`.
+
+**Partagés, touchés par insertion seulement, sur consigne d'Adrien :**
+`game_state.gd` (UN crochet de six lignes en fin de `rebuild_arena()`),
+`settings_manager.gd` (`mode_iso`, sa persistance, `--iso`), `ui.gd` (l'interrupteur
+« Vue isométrique (expérimental) » des réglages vidéo, la ligne « VUE ISO » du panneau
+F3), `tools/run_suites.sh` (deux suites au bout de `SUITES`), `tools/banc_iso.gd`
+(fichier du rôle : `--jeu`, `--noir`, `--sans-hud`), `docs/ROADMAP.md` (section ISO1,
+quatre pièges), ce journal. Les `.uid` de `tools/banc_iso.gd` et `tools/test_banc_iso.gd`,
+jamais commités par ISO0.b, partent avec ce lot.
+
+**Lu, jamais écrit :** `map_geometry.gd` (le contrat des hauteurs avec le chantier murs
+bas : `HAUTEUR_MUR_HAUT`, `HAUTEUR_MUR_BAS`, `Kind.LOW_WALLS` lus dynamiquement dès
+qu'ils existeront — ce fichier n'en pose aucun), `player.gd`, `replay_system.gd`,
+`local_input_provider.gd`, `map_codec.gd`, `audio_manager.gd`. Aucun `voxel_*`, ni
+`map_codec.gd`, ni l'éditeur.
+
+**Signalé, non corrigé ici :** `AudioManager._occupations()` crie « Trying to cast a
+freed object » quand une seconde instance de `Main` tire dans la même exécution ; la vue
+de dessus n'est pas noire lumières éteintes (viseur `unshaded` voulu, liseré des murs
+non identifié). Voir « Pièges connus » (2026-09-14).
+
+**En parallèle :** « Murs bas Opus » (chantier murs bas, sur `main`), « ISO Corps Sonnet »
+(`iso-corps`), « ISO Assets Sonnet » (planches Gemini). Aucun fichier commun hors ROADMAP.
+Quand `main` portera les murs bas, c'est cette session qui fusionnera `main` dans sa
+branche, sur demande d'Adrien, puis vérifiera ses ancrages (`grep` de
+`Presentation3D.accrocher`, `mode_iso`, `dbg_iso`, `_build_iso_panel`).
+
+**Suivi de projet :** cette session ne republie pas ; ses deltas partent vers la session
+cloud « Fable 5.1 - CLOUD ISO UNRAILED » par `SendMessage` (la Routine `create_trigger`
+a refusé le corps demandé : « job_config ou session_request requis »).
+
+**Addendum, soir du 2026-09-14 — la pâte D, et F2 qui ne passait pas.** Adrien a pris deux
+relevés (base 86 / 55, iso du jeu 96 / 56) et n'a pas pu changer de pâte : F2 sans `fn`
+n'atteint pas le jeu sur un Mac (piège consigné). Il a choisi **la pâte D** sur la planche.
+D devient la pâte par défaut ; les touches 1-4 et 0 remplacent F2 (qui reste) ; la ligne
+`BANC_ISO` de `--jeu` imprime désormais les vrais réglages rendus. Toujours rien de poussé
+ni de fusionné.
+
+**Addendum, soir du 2026-09-14 — H-ISO1 tranché.** Murs hauts à **1,25 tuile** (Adrien, sur le
+tableau d'équité, au-delà du critère de 18 px en connaissance de cause) : `IsoGeometrie.H_HAUT`
+suit, et la suite épingle désormais cette décision et l'absence de case invisible, au lieu
+du critère. Adrien pensait avoir réglé cette hauteur avec « Murs bas Opus » : seuls les murs
+bas l'avaient été (sa ROADMAP : « le mur haut (1,25) reste la proposition ») ; les deux
+sessions l'ont relevé et il a tranché. ISO2 est ouverte par une autre session, sur `cc2bd87`.
+Plus de relevé de cadence par étape (décision d'Adrien). Reste à cette session : la fusion
+de `main` quand les murs bas y seront, sur sa demande.
