@@ -4146,3 +4146,30 @@ ce numéro ». Ils étaient vrais à l'écriture. Un encadré les referme désor
 racontent pourquoi les changements ont pu se cumuler sous un numéro, ils ne sont plus
 une permission. C'est exactement le piège que `CLAUDE.md` décrit pour son paragraphe
 audio — un constat daté qui se lit comme une propriété du projet.
+
+### Session « candela-2d-godot-c3 » (étude ISO0, branche `claude/unrailed-isometric-feasibility-44klgh`) — ajoutée le 2026-09-14
+
+Session cloud, demande d'Adrien du 2026-09-13 : que coûterait une vue
+isométrique 2D/3D « à la Unrailed 2 ». **Une étude, pas un chantier** : rien du
+jeu n'est modifié, aucune étape n'est engagée, la décision est à Adrien (H15).
+
+**Fichiers créés, tous à elle :** `docs/ETUDE_ISO.md` (l'étude), `docs/iso/`
+(prototype Three.js `proto_iso.html`, `README_PROTO.md`, `capturer_iso.mjs`,
+`planche_iso.py`, `planche_iso.jpg`, `captures/`, `captures_godot/`, et le
+`.gdignore` qui empêche Godot d'importer et d'exporter ces images),
+`tools/proto_iso.gd`, `tools/proto_iso.tscn`, `tools/test_proto_iso.gd` (avec
+leurs `.uid`).
+
+**Partagés, touchés par insertion :** `tools/run_suites.sh` (une suite ajoutée,
+`test_proto_iso`, au bout du tableau `SUITES`), `docs/ROADMAP.md` (une section
+« Chantier — la vue isométrique », un jalon H15, cinq pièges, une ligne des
+prochaines étapes), ce journal.
+
+**Republication du suivi :** aucune session n'était joignable (`ListAgents`
+vide le 2026-09-13) ; cette session a pris la charge pour son delta et le dit
+ici.
+
+**Ce que la limite hebdomadaire a fait à l'étude :** le workflow de 26 agents
+a été coupé à 15 (conception C, juges et réfutateurs refusés) ; le jugement et
+les vérifications ont été refaits par la session principale, contre la
+documentation Godot et le code. Consigné dans l'étude (§ 6.3) et aux pièges.

@@ -1,0 +1,4 @@
+# Images et pages de l'étude isométrique (ISO0) : de la documentation, pas des
+# ressources du jeu. Sans ce fichier, Godot importe chaque PNG (un .import par
+# capture) et export_presets.cfg ("all_resources", seul tools/* exclu) les
+# embarquerait dans le .pck. Même règle que assets/sources/*/.gdignore.

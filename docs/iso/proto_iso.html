@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candela — prototype iso</title>
+<!--
+  Candela 2D — PROTOTYPE VISUEL « isométrique 3D » (étude, hors jeu).
+
+  Une seule page, autonome : les six cartes livrées (assets/maps/*.json, format v3)
+  sont embarquées telles quelles dans le bloc <script id="cartes">, décodées par le
+  même RLE que map_codec.gd, et dressées en boîtes/dalles avec Three.js r128.
+  La règle de solidité est celle de map_geometry.gd : un mur est une boîte
+  (arrête le joueur, les balles et la lumière) ; une case sans sol ni mur est une
+  fosse (trou dans le sol : arrête le joueur, pas la lumière) ; une ceinture d'une
+  case autour de la grille est une fosse.
+
+  Mode capture (Playwright) par paramètres d'URL — voir README_PROTO.md.
+  Aucun aléa à l'exécution : tout ce qui varie est tiré d'un générateur à graine.
+-->
+<style>
+  :root {
+    --encre: #050505;
+    --papier: #d8d2c4;
+    --ambre: #F5B03D;
+    --halogene: #FAE8CC;
+    --panneau: rgba(8, 8, 8, 0.86);
+    --trait: #2b2a27;
+    --muet: #8a8578;
+  }
+  html, body { margin: 0; height: 100%; background: var(--encre); color: var(--papier);
+    font: 12px/1.45 "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace; overflow: hidden; }
+  canvas#vue { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+  #hud { position: fixed; top: 12px; left: 12px; width: 272px; max-height: calc(100vh - 24px);
+    overflow-y: auto; background: var(--panneau); border: 1px solid var(--trait);
+    border-left: 3px solid var(--ambre); padding: 10px 12px 12px; box-sizing: border-box;
+    backdrop-filter: blur(2px); scrollbar-width: thin; }
+  #hud h1 { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 2px;
+    color: var(--halogene); font-weight: 600; }
+  #hud .sous { color: var(--muet); margin: 0 0 8px; font-size: 11px; }
+  #hud h2 { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ambre);
+    margin: 10px 0 4px; border-bottom: 1px solid var(--trait); padding-bottom: 2px; font-weight: 600; }
+  .ligne { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 6px; margin: 3px 0; }
+  .ligne label { color: var(--papier); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ligne output { text-align: right; color: var(--muet); font-variant-numeric: tabular-nums; }
+  .ligne.case { grid-template-columns: 96px 1fr; }
+  input[type=range] { width: 100%; margin: 0; accent-color: var(--ambre); height: 14px; }
+  input[type=checkbox] { accent-color: var(--ambre); margin: 0; justify-self: start; }
+  select { width: 100%; background: #111; color: var(--papier); border: 1px solid var(--trait);
+    font: inherit; padding: 2px 4px; }
+  select:focus, input:focus { outline: 1px solid var(--ambre); }
+  #stats { color: var(--muet); font-size: 11px; margin-top: 6px; }
+  #aide { margin-top: 8px; color: var(--muet); font-size: 10.5px; line-height: 1.5; }
+  #aide b { color: var(--papier); font-weight: 600; }
+  #alerte { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); max-width: 520px;
+    background: var(--panneau); border: 1px solid var(--ambre); padding: 16px 20px; display: none; }
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0 2px; }
+  .presets button { background: #111; color: var(--papier); border: 1px solid var(--trait); font: inherit;
+    font-size: 10.5px; padding: 3px 2px; cursor: pointer; }
+  .presets button.actif { border-color: var(--ambre); color: var(--halogene); }
+  .presets button:hover { border-color: var(--muet); }
+  @media (max-width: 480px) { #hud { width: calc(100vw - 24px); } }
+</style>
+</head>
+<body>
+<canvas id="vue"></canvas>
+
+<div id="hud">
+  <h1>Candela — iso</h1>
+  <p class="sous">prototype d'étude · vraies cartes · Three.js</p>
+
+  <h2>Carte</h2>
+  <div class="ligne case"><label for="carte">Carte</label><select id="carte"></select></div>
+  <div id="stats">—</div>
+
+  <h2>Caméra</h2>
+  <div class="presets" id="presets"></div>
+  <div class="ligne"><label for="pitch">Pitch</label><input id="pitch" type="range" min="10" max="90" step="0.5"><output>—</output></div>
+  <div class="ligne"><label for="yaw">Yaw</label><input id="yaw" type="range" min="0" max="360" step="1"><output>—</output></div>
+  <div class="ligne"><label for="zoom">Zoom</label><input id="zoom" type="range" min="0.5" max="3" step="0.05"><output>—</output></div>
+  <div class="ligne case"><label for="persp">Perspective</label><input id="persp" type="checkbox"></div>
+  <div class="ligne case"><label for="suivre">Centrer J1</label><input id="suivre" type="checkbox"></div>
+
+  <h2>Décor</h2>
+  <div class="ligne"><label for="mur">Hauteur murs</label><input id="mur" type="range" min="0.3" max="1.5" step="0.05"><output>—</output></div>
+  <div class="ligne"><label for="ambiance">Ambiance</label><input id="ambiance" type="range" min="0" max="0.1" step="0.005"><output>—</output></div>
+  <div class="ligne"><label for="exposition">Exposition</label><input id="exposition" type="range" min="0.4" max="2.5" step="0.05"><output>—</output></div>
+  <div class="ligne case"><label for="fosse">Fosse d'essai</label><input id="fosse" type="checkbox" title="Creuse un trou 4×3 au centre — synthétique, aucune carte livrée n'a de fosse intérieure"></div>
+
+  <h2>Torche J1</h2>
+  <div class="ligne case"><label for="torche">Allumée (T)</label><input id="torche" type="checkbox"></div>
+  <div class="ligne"><label for="angle">Demi-angle</label><input id="angle" type="range" min="5" max="60" step="1"><output>—</output></div>
+  <div class="ligne"><label for="portee">Portée</label><input id="portee" type="range" min="4" max="24" step="0.5"><output>—</output></div>
+  <div class="ligne"><label for="intensite">Intensité</label><input id="intensite" type="range" min="0" max="8" step="0.1"><output>—</output></div>
+  <div class="ligne"><label for="teinte">Ambre→halog.</label><input id="teinte" type="range" min="0" max="1" step="0.05"><output>—</output></div>
+  <div class="ligne"><label for="hauteur">Haut. torche</label><input id="hauteur" type="range" min="0.2" max="1.5" step="0.05"><output>—</output></div>
+  <div class="ligne"><label for="halo">Halo prox.</label><input id="halo" type="range" min="0" max="2" step="0.05"><output>—</output></div>
+
+  <h2>Joueur 2</h2>
+  <div class="ligne case"><label for="j2torche">Torche J2</label><input id="j2torche" type="checkbox"></div>
+  <div class="ligne case"><label for="j2suit">Vise J1</label><input id="j2suit" type="checkbox"></div>
+  <div class="ligne"><label for="j2angle">Orientation</label><input id="j2angle" type="range" min="0" max="360" step="1"><output>—</output></div>
+
+  <div id="aide">
+    <b>ZQSD / WASD / flèches</b> déplacer · <b>souris</b> viser · <b>clic / F</b> tirer (flash)<br>
+    <b>T</b> torche · <b>P</b> masquer ce panneau · <b>V</b> perspective · <b>C</b> centrer J1<br>
+    <b>1-4</b> préréglages · <b>R</b> recadrer · <b>Y</b> torche J2
+  </div>
+</div>
+
+<div id="alerte"></div>
+
+<!-- Les six cartes livrées, copiées telles quelles depuis assets/maps/*.json (format v3). -->
+<script id="cartes" type="application/json">
+[{"version":3,"id":"00000001","name":"Arène Standard","author":"Candela","created_utc":"2026-08-03T15:55:32","grid_size":{"x":32,"y":32},"tile_size":35,"floor":"3,3,26;3,4,26;3,5,26;3,6,26;3,7,26;3,8,26;3,9,26;3,10,26;3,11,26;3,12,26;3,13,26;3,14,26;3,15,26;3,16,26;3,17,26;3,18,26;3,19,26;3,20,26;3,21,26;3,22,26;3,23,26;3,24,26;3,25,26;3,26,26;3,27,26;3,28,26","walls":"0,0,32;0,1,32;0,2,32;0,3,3;29,3,3;0,4,3;29,4,3;0,5,3;29,5,3;0,6,3;29,6,3;0,7,3;29,7,3;0,8,3;29,8,3;0,9,3;29,9,3;0,10,3;29,10,3;0,11,3;29,11,3;0,12,3;29,12,3;0,13,3;29,13,3;0,14,3;29,14,3;0,15,3;29,15,3;0,16,3;29,16,3;0,17,3;29,17,3;0,18,3;29,18,3;0,19,3;29,19,3;0,20,3;29,20,3;0,21,3;29,21,3;0,22,3;29,22,3;0,23,3;29,23,3;0,24,3;29,24,3;0,25,3;29,25,3;0,26,3;29,26,3;0,27,3;29,27,3;0,28,3;29,28,3;0,29,32;0,30,32;0,31,32","spawn_p1":{"x":6,"y":16},"spawn_p2":{"x":25,"y":16},"__slug":"default"},{"version":3,"id":"00000002","name":"Arène Circulaire","author":"Candela","created_utc":"2026-08-03T17:04:59","grid_size":{"x":24,"y":24},"tile_size":35,"floor":"2,2,20;2,3,20;2,4,20;2,5,20;2,6,20;2,7,20;2,8,9;13,8,9;2,9,7;15,9,7;2,10,7;15,10,7;2,11,6;16,11,6;2,12,6;16,12,6;2,13,7;15,13,7;2,14,7;15,14,7;2,15,9;13,15,9;2,16,20;2,17,20;2,18,20;2,19,20;2,20,20;2,21,20","walls":"0,0,24;0,1,24;0,2,2;22,2,2;0,3,2;22,3,2;0,4,2;22,4,2;0,5,2;22,5,2;0,6,2;22,6,2;0,7,2;22,7,2;0,8,2;11,8,2;22,8,2;0,9,2;9,9,6;22,9,2;0,10,2;9,10,6;22,10,2;0,11,2;8,11,8;22,11,2;0,12,2;8,12,8;22,12,2;0,13,2;9,13,6;22,13,2;0,14,2;9,14,6;22,14,2;0,15,2;11,15,2;22,15,2;0,16,2;22,16,2;0,17,2;22,17,2;0,18,2;22,18,2;0,19,2;22,19,2;0,20,2;22,20,2;0,21,2;22,21,2;0,22,24;0,23,24","spawn_p1":{"x":4,"y":11},"spawn_p2":{"x":19,"y":11},"__slug":"arene_circulaire"},{"version":3,"id":"map_001","name":"Le Cloitre","author":"Candela LevelDesign","created_utc":"2026-09-07T19:00:00","grid_size":{"x":30,"y":30},"tile_size":35,"floor":"3,3,24;3,4,24;3,5,24;3,6,24;3,7,24;3,8,24;3,9,6;12,9,6;21,9,6;3,10,6;12,10,6;21,10,6;3,11,6;12,11,6;21,11,6;3,12,11;16,12,11;3,13,11;16,13,11;3,14,11;16,14,11;3,15,11;16,15,11;3,16,11;16,16,11;3,17,11;16,17,11;3,18,6;12,18,6;21,18,6;3,19,6;12,19,6;21,19,6;3,20,6;12,20,6;21,20,6;3,21,24;3,22,24;3,23,24;3,24,24;3,25,24;3,26,24","walls":"0,0,30;0,1,30;0,2,30;0,3,3;27,3,3;0,4,3;27,4,3;0,5,3;27,5,3;0,6,3;27,6,3;0,7,3;27,7,3;0,8,3;27,8,3;0,9,3;9,9,3;18,9,3;27,9,3;0,10,3;9,10,3;18,10,3;27,10,3;0,11,3;9,11,3;18,11,3;27,11,3;0,12,3;14,12,2;27,12,3;0,13,3;14,13,2;27,13,3;0,14,3;14,14,2;27,14,3;0,15,3;14,15,2;27,15,3;0,16,3;14,16,2;27,16,3;0,17,3;14,17,2;27,17,3;0,18,3;9,18,3;18,18,3;27,18,3;0,19,3;9,19,3;18,19,3;27,19,3;0,20,3;9,20,3;18,20,3;27,20,3;0,21,3;27,21,3;0,22,3;27,22,3;0,23,3;27,23,3;0,24,3;27,24,3;0,25,3;27,25,3;0,26,3;27,26,3;0,27,30;0,28,30;0,29,30","spawn_p1":{"x":6,"y":15},"spawn_p2":{"x":23,"y":15},"__slug":"map_001_le_cloitre"},{"version":3,"id":"map_002","name":"L Usine","author":"Candela LevelDesign","created_utc":"2026-09-07T19:00:00","grid_size":{"x":32,"y":26},"tile_size":35,"floor":"3,3,26;3,4,26;3,5,26;3,6,5;10,6,12;24,6,5;3,7,5;10,7,12;24,7,5;3,8,5;10,8,12;24,8,5;3,9,5;10,9,5;18,9,4;24,9,5;3,10,12;18,10,11;3,11,26;3,12,9;20,12,9;3,13,9;20,13,9;3,14,26;3,15,12;18,15,11;3,16,5;10,16,5;18,16,4;24,16,5;3,17,5;10,17,12;24,17,5;3,18,5;10,18,12;24,18,5;3,19,5;10,19,12;24,19,5;3,20,26;3,21,26;3,22,26","walls":"0,0,32;0,1,32;0,2,32;0,3,3;29,3,3;0,4,3;29,4,3;0,5,3;29,5,3;0,6,3;8,6,2;22,6,2;29,6,3;0,7,3;8,7,2;22,7,2;29,7,3;0,8,3;8,8,2;22,8,2;29,8,3;0,9,3;8,9,2;15,9,3;22,9,2;29,9,3;0,10,3;15,10,3;29,10,3;0,11,3;29,11,3;0,12,3;12,12,8;29,12,3;0,13,3;12,13,8;29,13,3;0,14,3;29,14,3;0,15,3;15,15,3;29,15,3;0,16,3;8,16,2;15,16,3;22,16,2;29,16,3;0,17,3;8,17,2;22,17,2;29,17,3;0,18,3;8,18,2;22,18,2;29,18,3;0,19,3;8,19,2;22,19,2;29,19,3;0,20,3;29,20,3;0,21,3;29,21,3;0,22,3;29,22,3;0,23,32;0,24,32;0,25,32","spawn_p1":{"x":5,"y":13},"spawn_p2":{"x":26,"y":13},"__slug":"map_002_l_usine"},{"version":3,"id":"map_003","name":"La Croisee","author":"Candela LevelDesign","created_utc":"2026-09-07T19:00:00","grid_size":{"x":28,"y":28},"tile_size":35,"floor":"3,3,22;3,4,22;3,5,22;3,6,22;3,7,4;11,7,6;21,7,4;3,8,4;11,8,6;21,8,4;3,9,4;11,9,6;21,9,4;3,10,22;3,11,22;3,12,9;13,12,2;16,12,9;3,13,9;16,13,9;3,14,9;16,14,9;3,15,9;13,15,2;16,15,9;3,16,22;3,17,22;3,18,4;11,18,6;21,18,4;3,19,4;11,19,6;21,19,4;3,20,4;11,20,6;21,20,4;3,21,22;3,22,22;3,23,22;3,24,22","walls":"0,0,28;0,1,28;0,2,28;0,3,3;25,3,3;0,4,3;25,4,3;0,5,3;25,5,3;0,6,3;25,6,3;0,7,3;7,7,4;17,7,4;25,7,3;0,8,3;7,8,4;17,8,4;25,8,3;0,9,3;7,9,4;17,9,4;25,9,3;0,10,3;25,10,3;0,11,3;25,11,3;0,12,3;12,12,1;15,12,1;25,12,3;0,13,3;12,13,4;25,13,3;0,14,3;12,14,4;25,14,3;0,15,3;12,15,1;15,15,1;25,15,3;0,16,3;25,16,3;0,17,3;25,17,3;0,18,3;7,18,4;17,18,4;25,18,3;0,19,3;7,19,4;17,19,4;25,19,3;0,20,3;7,20,4;17,20,4;25,20,3;0,21,3;25,21,3;0,22,3;25,22,3;0,23,3;25,23,3;0,24,3;25,24,3;0,25,28;0,26,28;0,27,28","spawn_p1":{"x":5,"y":5},"spawn_p2":{"x":22,"y":22},"__slug":"map_003_la_croisee"},{"version":3,"id":"map_004","name":"Le Bunker","author":"Candela LevelDesign","created_utc":"2026-09-07T19:00:00","grid_size":{"x":26,"y":26},"tile_size":35,"floor":"3,3,20;3,4,20;3,5,20;3,6,20;3,7,20;3,8,5;18,8,5;3,9,5;9,9,8;18,9,5;3,10,5;9,10,8;18,10,5;3,11,5;9,11,8;18,11,5;3,12,9;14,12,9;3,13,9;14,13,9;3,14,5;9,14,8;18,14,5;3,15,5;9,15,8;18,15,5;3,16,5;9,16,8;18,16,5;3,17,5;18,17,5;3,18,20;3,19,20;3,20,20;3,21,20;3,22,20","walls":"0,0,26;0,1,26;0,2,26;0,3,3;23,3,3;0,4,3;23,4,3;0,5,3;23,5,3;0,6,3;23,6,3;0,7,3;23,7,3;0,8,3;8,8,10;23,8,3;0,9,3;8,9,1;17,9,1;23,9,3;0,10,3;8,10,1;17,10,1;23,10,3;0,11,3;8,11,1;17,11,1;23,11,3;0,12,3;12,12,2;23,12,3;0,13,3;12,13,2;23,13,3;0,14,3;8,14,1;17,14,1;23,14,3;0,15,3;8,15,1;17,15,1;23,15,3;0,16,3;8,16,1;17,16,1;23,16,3;0,17,3;8,17,10;23,17,3;0,18,3;23,18,3;0,19,3;23,19,3;0,20,3;23,20,3;0,21,3;23,21,3;0,22,3;23,22,3;0,23,26;0,24,26;0,25,26","spawn_p1":{"x":5,"y":13},"spawn_p2":{"x":20,"y":13},"__slug":"map_004_le_bunker"}]
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // Repli hors ligne : si le CDN n'a pas répondu, une copie locale de three.min.js
+  // posée à côté de la page suffit. Sans elle, l'alerte ci-dessous explique le manque.
+  if (typeof THREE === 'undefined') {
+    document.write('<script src="three.min.js"><\/script>');
+  }
+</script>
+<script>
+(function () {
+  'use strict';
+
+  window.__erreurs = [];
+  window.addEventListener('error', function (e) { window.__erreurs.push(String(e.message || e)); });
+
+  if (typeof THREE === 'undefined') {
+    var al = document.getElementById('alerte');
+    al.style.display = 'block';
+    al.innerHTML = '<b>Three.js n’a pas pu être chargé.</b><br>La page attend ' +
+      '<code>https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js</code>, ou à défaut ' +
+      'un fichier <code>three.min.js</code> (r128) posé à côté de <code>proto_iso.html</code>.';
+    window.__erreurs.push('THREE absent');
+    return;
+  }
+
+  // -------------------------------------------------------------------------
+  // Palette et constantes — charte du jeu (charte.gd) : HALOGENE, AMBRE ; béton.
+  // -------------------------------------------------------------------------
+  var AMBRE = 0xF5B03D, HALOGENE = 0xFAE8CC;
+  var BETON_MUR = 0x4a4a46, BETON_SOL = 0x5c5c57;
+  var TAILLE_TUILE_PX = 35;              // tile_size du jeu ; 1 unité de scène = 1 tuile
+  // player.tscn : disque de 18 px (0,514 tuile). Un peu moins ici, pour qu'une case
+  // adjacente à un mur reste tenable : à 0,514 le disque chevauche le mur voisin.
+  var RAYON_JOUEUR = 0.45;
+  var VITESSE = 260 / TAILLE_TUILE_PX;   // player.gd : speed = 260 px/s
+  var CEINTURE = 1;                      // map_geometry.gd : BORDER
+  var MAX_GRID = 128;                    // map_codec.gd
+
+  var PRESETS = {
+    unrailed: { nom: 'Unrailed ¾', pitch: 52, yaw: 45 },
+    iso:      { nom: 'Iso vraie',  pitch: 35.264, yaw: 45 },
+    incline:  { nom: 'Dessus incl.', pitch: 70, yaw: 0 },
+    dessus:   { nom: 'Dessus',     pitch: 90, yaw: 0 },
+  };
+
+  // État réglable — tout ce que le HUD et l'URL peuvent changer.
+  var etat = {
+    carte: 'default', preset: 'unrailed', pitch: 52, yaw: 45, zoom: 1, persp: false, suivre: false,
+    mur: 1.0, ambiance: 0.015, exposition: 1.2, fosse: false,
+    torche: true, angle: 35, portee: 12, intensite: 5.0, teinte: 0.7, hauteur: 0.9, halo: 1.0,
+    j2torche: true, j2suit: true, j2angle: 180,
+    hud: true, flash: false, stable: false,
+  };
+
+  // -------------------------------------------------------------------------
+  // Décodage v3 — même sémantique que map_codec.gd::decode_runs et
+  // map_geometry.gd::build_grid (cellules hors grille ignorées, ceinture = fosse).
+  // -------------------------------------------------------------------------
+  function decoderRuns(chaine) {
+    var cellules = [];
+    if (!chaine) return cellules;
+    var runs = chaine.split(';');
+    for (var i = 0; i < runs.length; i++) {
+      if (runs[i] === '') continue;
+      var parts = runs[i].split(',').filter(function (p) { return p !== ''; });
+      if (parts.length !== 3) continue;
+      if (!/^-?\d+$/.test(parts[0]) || !/^-?\d+$/.test(parts[1]) || !/^-?\d+$/.test(parts[2])) continue;
+      var x = parseInt(parts[0], 10), y = parseInt(parts[1], 10), n = parseInt(parts[2], 10);
+      if (n <= 0 || n > MAX_GRID) continue;
+      for (var k = 0; k < n; k++) cellules.push([x + k, y]);
+    }
+    return cellules;
+  }
+
+  function cle(x, y) { return x + ',' + y; }
+
+  function decoderCarte(brut) {
+    var gx = brut.grid_size.x | 0, gy = brut.grid_size.y | 0;
+    var sol = new Set(), murs = new Set();
+    decoderRuns(brut.floor).forEach(function (c) { if (c[0] >= 0 && c[1] >= 0 && c[0] < gx && c[1] < gy) sol.add(cle(c[0], c[1])); });
+    decoderRuns(brut.walls).forEach(function (c) { if (c[0] >= 0 && c[1] >= 0 && c[0] < gx && c[1] < gy) murs.add(cle(c[0], c[1])); });
+    // Fosses : ni sol ni mur, sur la grille étendue d'une ceinture.
+    var fosses = [], fossesInterieures = 0;
+    for (var x = -CEINTURE; x < gx + CEINTURE; x++) {
+      for (var y = -CEINTURE; y < gy + CEINTURE; y++) {
+        var k = cle(x, y);
+        if (!sol.has(k) && !murs.has(k)) {
+          fosses.push([x, y]);
+          if (x >= 0 && y >= 0 && x < gx && y < gy) fossesInterieures++;
+        }
+      }
+    }
+    return {
+      slug: brut.__slug, nom: brut.name, gx: gx, gy: gy, tuile: brut.tile_size,
+      sol: sol, murs: murs, fosses: fosses, fossesInterieures: fossesInterieures,
+      spawn1: [brut.spawn_p1.x | 0, brut.spawn_p1.y | 0],
+      spawn2: [brut.spawn_p2.x | 0, brut.spawn_p2.y | 0],
+    };
+  }
+
+  var CARTES = {};
+  var ORDRE = [];
+  JSON.parse(document.getElementById('cartes').textContent).forEach(function (b) {
+    CARTES[b.__slug] = decoderCarte(b);
+    ORDRE.push(b.__slug);
+  });
+
+  // Générateur à graine (mulberry32) : la variation des dalles est reproductible.
+  function graine(chaine) { var h = 2166136261; for (var i = 0; i < chaine.length; i++) { h ^= chaine.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function prng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+  // -------------------------------------------------------------------------
+  // Scène
+  // -------------------------------------------------------------------------
+  var canvas = document.getElementById('vue');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = etat.exposition;
+  renderer.setClearColor(0x000000, 1);
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+
+  var ambiance = new THREE.AmbientLight(0xffffff, etat.ambiance);
+  scene.add(ambiance);
+
+  // Grain de béton : texture générée (64², blanc ± bruit) avec un liseré d'encre
+  // sur le bord — chaque face de boîte prend la texture entière, donc chaque tuile
+  // et chaque mur portent un trait sombre à leurs arêtes (l'esprit roman graphique).
+  function textureGrain(seed, amplitude, liseré) {
+    var n = 64, cv = document.createElement('canvas'); cv.width = cv.height = n;
+    var ctx = cv.getContext('2d'), img = ctx.createImageData(n, n), r = prng(seed);
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      var v = 236 + (r() - 0.5) * 2 * amplitude;
+      var bord = Math.min(x, y, n - 1 - x, n - 1 - y);
+      if (bord < 1) v *= liseré; else if (bord < 2) v *= (1 + liseré) / 2;
+      var i = (y * n + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.max(0, Math.min(255, v)); img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    var t = new THREE.CanvasTexture(cv);
+    t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+    return t;
+  }
+  var grainMur = textureGrain(11, 14, 0.62), grainSol = textureGrain(23, 10, 0.70);
+
+  function couleurLin(hex) { return new THREE.Color(hex).convertSRGBToLinear(); }
+  // Les gris béton sont lus comme albédo LINÉAIRE (0x4a → 29 %, 0x5c → 36 % : un béton réel) ;
+  // convertis depuis le sRGB ils tomberaient à 7-11 % et la torche n'en tirerait rien.
+  var matMur = new THREE.MeshStandardMaterial({ color: new THREE.Color(BETON_MUR), roughness: 0.93, metalness: 0.0, map: grainMur });
+  var matSol = new THREE.MeshStandardMaterial({ color: new THREE.Color(BETON_SOL), roughness: 0.96, metalness: 0.0, map: grainSol });
+  var matJ1 = new THREE.MeshStandardMaterial({ color: new THREE.Color(0x6e685e), roughness: 0.65, metalness: 0.0, emissive: couleurLin(0x17130f) });
+  var matJ2 = new THREE.MeshStandardMaterial({ color: new THREE.Color(0x665e53), roughness: 0.65, metalness: 0.0 });
+
+  var geoBoite = new THREE.BoxGeometry(1, 1, 1);
+  var EPAISSEUR_DALLE = 0.12;
+  var geoDalle = new THREE.BoxGeometry(1, EPAISSEUR_DALLE, 1);
+
+  var carte = null;            // carte décodée courante
+  var meshMurs = null, meshSol = null;
+  var solides = null;          // Set des cases infranchissables (murs + fosses), grille étendue
+  var fosseEssai = new Set();  // cases creusées par l'option « fosse d'essai »
+
+  function casesFosseEssai(c) {
+    var s = new Set();
+    if (!etat.fosse) return s;
+    var cx = Math.floor(c.gx / 2) - 2, cy = Math.floor(c.gy / 2) - 1;
+    for (var x = cx; x < cx + 4; x++) for (var y = cy; y < cy + 3; y++) if (c.sol.has(cle(x, y)) && !c.murs.has(cle(x, y))) s.add(cle(x, y));
+    return s;
+  }
+
+  function construireCarte() {
+    var c = CARTES[etat.carte];
+    if (!c) { c = CARTES[ORDRE[0]]; etat.carte = c.slug; }
+    carte = c;
+    if (meshMurs) { scene.remove(meshMurs); meshMurs.dispose(); }
+    if (meshSol) { scene.remove(meshSol); meshSol.dispose(); }
+    fosseEssai = casesFosseEssai(c);
+
+    var r = prng(graine(c.slug));
+    var m = new THREE.Matrix4(), col = new THREE.Color();
+
+    // Dalles de sol : une par case de sol sans mur, face supérieure à y = 0.
+    var solListe = [];
+    c.sol.forEach(function (k) { if (!c.murs.has(k) && !fosseEssai.has(k)) solListe.push(k.split(',').map(Number)); });
+    meshSol = new THREE.InstancedMesh(geoDalle, matSol, Math.max(1, solListe.length));
+    solListe.forEach(function (p, i) {
+      m.makeTranslation(p[0] + 0.5, -EPAISSEUR_DALLE / 2, p[1] + 0.5);
+      meshSol.setMatrixAt(i, m);
+      var damier = ((p[0] + p[1]) & 1) ? 0.955 : 1.0;      // le damier SOL_A / SOL_B du jeu, très atténué
+      var v = damier * (0.97 + r() * 0.06);
+      meshSol.setColorAt(i, col.setRGB(v, v, v));
+    });
+    if (solListe.length === 0) meshSol.count = 0;
+    meshSol.castShadow = true; meshSol.receiveShadow = true;
+    scene.add(meshSol);
+
+    // Murs : une boîte par case, hauteur réglable (voir majHauteurMurs).
+    var mursListe = [];
+    c.murs.forEach(function (k) { mursListe.push(k.split(',').map(Number)); });
+    meshMurs = new THREE.InstancedMesh(geoBoite, matMur, Math.max(1, mursListe.length));
+    meshMurs.userData.cases = mursListe;
+    mursListe.forEach(function (p, i) {
+      var v = 0.93 + r() * 0.12;
+      meshMurs.setColorAt(i, col.setRGB(v, v, v * 0.995));
+    });
+    if (mursListe.length === 0) meshMurs.count = 0;
+    meshMurs.castShadow = true; meshMurs.receiveShadow = true;
+    scene.add(meshMurs);
+    majHauteurMurs();
+
+    // Cases infranchissables : murs, fosses (ceinture comprise), fosse d'essai.
+    solides = new Set();
+    c.murs.forEach(function (k) { solides.add(k); });
+    c.fosses.forEach(function (p) { solides.add(cle(p[0], p[1])); });
+    fosseEssai.forEach(function (k) { solides.add(k); });
+
+    window.__stats = { slug: c.slug, nom: c.nom, grid: [c.gx, c.gy], tuile: c.tuile, murs: c.murs.size,
+      sol: c.sol.size, dalles: solListe.length, fosses_avec_ceinture: c.fosses.length,
+      fosses_interieures: c.fossesInterieures, spawn_p1: c.spawn1, spawn_p2: c.spawn2 };
+    document.getElementById('stats').textContent = c.gx + '×' + c.gy + ' tuiles · ' + c.murs.size + ' murs · ' +
+      solListe.length + ' dalles · ' + c.fossesInterieures + ' fosse' + (c.fossesInterieures > 1 ? 's' : '') + ' intérieure' + (c.fossesInterieures > 1 ? 's' : '') +
+      (etat.fosse ? ' (+ essai)' : '');
+  }
+
+  function majHauteurMurs() {
+    if (!meshMurs) return;
+    var m = new THREE.Matrix4(), h = etat.mur;
+    meshMurs.userData.cases.forEach(function (p, i) {
+      m.makeScale(1, h, 1); m.setPosition(p[0] + 0.5, h / 2, p[1] + 0.5);
+      meshMurs.setMatrixAt(i, m);
+    });
+    meshMurs.instanceMatrix.needsUpdate = true;
+  }
+
+  function estSolide(cx, cy) {
+    if (cx < -CEINTURE || cy < -CEINTURE || cx >= carte.gx + CEINTURE || cy >= carte.gy + CEINTURE) return true;
+    return solides.has(cle(cx, cy));
+  }
+
+  // Disque du joueur contre les cases solides (glissement axe par axe, comme un
+  // CharacterBody2D contre des rectangles).
+  function libre(px, pz, r) {
+    var x0 = Math.floor(px - r), x1 = Math.floor(px + r), z0 = Math.floor(pz - r), z1 = Math.floor(pz + r);
+    for (var cx = x0; cx <= x1; cx++) for (var cz = z0; cz <= z1; cz++) {
+      if (!estSolide(cx, cz)) continue;
+      var qx = Math.max(cx, Math.min(px, cx + 1)), qz = Math.max(cz, Math.min(pz, cz + 1));
+      var dx = px - qx, dz = pz - qz;
+      if (dx * dx + dz * dz < r * r) return false;
+    }
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // Joueurs — corps (cylindre + calotte) plus un nez conique ; la torche est un
+  // SpotLight à la pointe du nez, comme le Flashlight de player.tscn à (28, 0).
+  // -------------------------------------------------------------------------
+  var HAUTEUR_CORPS = 0.62, RAYON_CORPS = 0.36, RAYON_TETE = 0.30;
+  function creerJoueur(mat) {
+    var g = new THREE.Group();
+    var corps = new THREE.Mesh(new THREE.CylinderGeometry(RAYON_CORPS, RAYON_CORPS * 1.08, HAUTEUR_CORPS, 24), mat);
+    corps.position.y = HAUTEUR_CORPS / 2; corps.castShadow = true; corps.receiveShadow = true; g.add(corps);
+    var tete = new THREE.Mesh(new THREE.SphereGeometry(RAYON_TETE, 24, 16), mat);
+    tete.position.y = HAUTEUR_CORPS + RAYON_TETE * 0.55; tete.castShadow = true; tete.receiveShadow = true; g.add(tete);
+    var nez = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.42, 16), mat);
+    nez.rotation.z = -Math.PI / 2; nez.position.set(RAYON_CORPS + 0.18, 0.5, 0); nez.castShadow = true; g.add(nez);
+    g.userData = { angle: 0, x: 0, z: 0 };
+    return g;
+  }
+  var j1 = creerJoueur(matJ1), j2 = creerJoueur(matJ2);
+  scene.add(j1); scene.add(j2);
+
+  function creerTorche() {
+    // Décroissance 0,5 : (1 - d/portée)^0,5 — plein feu sur les deux premiers tiers, puis
+    // extinction, comme le cookie 2D du jeu ; à 1 le sol lointain disparaissait.
+    var t = new THREE.SpotLight(0xffffff, 0, 12, THREE.MathUtils.degToRad(35), 0.35, 0.5);
+    t.castShadow = true;
+    t.shadow.mapSize.set(2048, 2048);
+    t.shadow.bias = -0.0004; t.shadow.normalBias = 0.02;
+    t.shadow.camera.near = 0.08; t.shadow.camera.far = 30;
+    scene.add(t); scene.add(t.target);
+    // Rétrodiffusion : le reflet de la torche sur son porteur (body_light du jeu) —
+    // seule chose qui révèle un porteur de torche à l'adversaire, hors flash.
+    var retro = new THREE.PointLight(0xffffff, 0, 1.4, 1);
+    scene.add(retro);
+    return { spot: t, retro: retro };
+  }
+  var torche1 = creerTorche(), torche2 = creerTorche();
+
+  // Halo de proximité de J1 seul (ambient_light du jeu : n'éclaire que la vue de
+  // son porteur ; la caméra est celle de J1, donc J2 n'en a pas).
+  var halo = new THREE.PointLight(0xffffff, 1.0, 3.0, 1);
+  halo.castShadow = true; halo.shadow.mapSize.set(512, 512); halo.shadow.camera.near = 0.05; halo.shadow.camera.far = 4;
+  halo.shadow.bias = -0.002;
+  scene.add(halo);
+
+  // Flash de tir : lumière ponctuelle brève à la bouche du canon.
+  var flash = new THREE.PointLight(0xffffff, 0, 9, 1);
+  flash.castShadow = true; flash.shadow.mapSize.set(1024, 1024); flash.shadow.camera.near = 0.05; flash.shadow.camera.far = 10;
+  flash.shadow.bias = -0.002;
+  scene.add(flash);
+  var flashT = -1;   // temps restant du flash (s), < 0 : éteint
+
+  var COL_AMBRE = couleurLin(AMBRE), COL_HALO = couleurLin(HALOGENE);
+  function teinteTorche() { return COL_AMBRE.clone().lerp(COL_HALO, etat.teinte); }
+
+  function placerTorche(t, joueur, allumee, intensite) {
+    var a = joueur.userData.angle, dx = Math.cos(a), dz = Math.sin(a);
+    var px = joueur.userData.x, pz = joueur.userData.z;
+    var nez = RAYON_CORPS + 0.5;
+    t.spot.position.set(px + dx * nez, etat.hauteur, pz + dz * nez);
+    t.spot.target.position.set(px + dx * etat.portee * 0.45, 0, pz + dz * etat.portee * 0.45);
+    t.spot.target.updateMatrixWorld();
+    t.spot.angle = THREE.MathUtils.degToRad(etat.angle);
+    t.spot.distance = etat.portee;
+    t.spot.shadow.camera.far = etat.portee + 2;
+    t.spot.intensity = allumee ? intensite : 0;
+    t.spot.color.copy(teinteTorche());
+    t.spot.visible = allumee;
+    t.retro.position.set(px + dx * (RAYON_CORPS + 0.1), 0.55, pz + dz * (RAYON_CORPS + 0.1));
+    t.retro.intensity = allumee ? intensite * 0.09 : 0;
+    t.retro.color.copy(teinteTorche());
+    t.retro.visible = allumee;
+  }
+
+  // -------------------------------------------------------------------------
+  // Caméra — orthographique (défaut) ou perspective, cadrée sur la carte.
+  // -------------------------------------------------------------------------
+  var camOrtho = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 400);
+  var camPersp = new THREE.PerspectiveCamera(30, 1, 0.1, 400);
+  var DIST_CAM = 120;
+  function camera() { return etat.persp ? camPersp : camOrtho; }
+
+  function directionCamera() {
+    var p = THREE.MathUtils.degToRad(etat.pitch), y = THREE.MathUtils.degToRad(etat.yaw);
+    return new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p));
+  }
+
+  function cibleCamera() {
+    if (etat.suivre && j1) return new THREE.Vector3(j1.userData.x, 0.3, j1.userData.z);
+    return new THREE.Vector3(carte.gx / 2, 0.3, carte.gy / 2);
+  }
+
+  function orienterCamera(cam, cible) {
+    var d = directionCamera();
+    cam.position.copy(cible).addScaledVector(d, DIST_CAM);
+    var y = THREE.MathUtils.degToRad(etat.yaw);
+    // À la verticale, « vers le haut de l'écran » est le nord de la carte tourné par le yaw.
+    if (etat.pitch >= 89.5) cam.up.set(-Math.sin(y), 0, -Math.cos(y)); else cam.up.set(0, 1, 0);
+    cam.lookAt(cible);
+    cam.updateMatrixWorld(true);
+  }
+
+  var cadre = { hw: 10, hh: 10 };
+  function cadrer() {
+    // Boîte englobante de la carte (murs compris) projetée dans le repère caméra.
+    var centre = new THREE.Vector3(carte.gx / 2, 0.3, carte.gy / 2);
+    orienterCamera(camOrtho, centre);
+    var inv = new THREE.Matrix4().copy(camOrtho.matrixWorldInverse);
+    var xs = [-CEINTURE, carte.gx + CEINTURE], ys = [-EPAISSEUR_DALLE, Math.max(etat.mur, 1.0)], zs = [-CEINTURE, carte.gy + CEINTURE];
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    xs.forEach(function (x) { ys.forEach(function (y) { zs.forEach(function (z) {
+      var p = new THREE.Vector3(x, y, z).applyMatrix4(inv);
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }); }); });
+    var marge = 1.04;
+    var hw = Math.max(Math.abs(minX), Math.abs(maxX)) * marge, hh = Math.max(Math.abs(minY), Math.abs(maxY)) * marge;
+    var aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
+    if (hw / hh < aspect) hw = hh * aspect; else hh = hw / aspect;
+    cadre.hw = hw; cadre.hh = hh;
+    appliquerCamera();
+  }
+
+  function appliquerCamera() {
+    var aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
+    var cible = cibleCamera();
+    camOrtho.left = -cadre.hw; camOrtho.right = cadre.hw; camOrtho.top = cadre.hh; camOrtho.bottom = -cadre.hh;
+    camOrtho.zoom = etat.zoom; camOrtho.updateProjectionMatrix();
+    orienterCamera(camOrtho, cible);
+    camPersp.aspect = aspect; camPersp.updateProjectionMatrix();
+    var d = cadre.hh / Math.tan(THREE.MathUtils.degToRad(camPersp.fov / 2)) / etat.zoom;
+    DIST_CAM = etat.persp ? d : 120;
+    orienterCamera(camPersp, cible);
+    DIST_CAM = 120;
+  }
+
+  function redimensionner() {
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    cadrer();
+  }
+  window.addEventListener('resize', redimensionner);
+
+  // -------------------------------------------------------------------------
+  // Entrées
+  // -------------------------------------------------------------------------
+  var touches = {};
+  var souris = { x: 0, y: 0, actif: false };
+  var visee = { angle: 0, fixe: null };   // fixe : point [x, z] visé en mode capture
+
+  window.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) {
+      if (e.code === 'Escape') e.target.blur();
+      return;
+    }
+    touches[e.code] = true;
+    var presetsListe = Object.keys(PRESETS);
+    switch (e.code) {
+      case 'KeyT': etat.torche = !etat.torche; synchroniserHud(); break;
+      case 'KeyP': etat.hud = !etat.hud; document.getElementById('hud').style.display = etat.hud ? '' : 'none'; break;
+      case 'KeyV': etat.persp = !etat.persp; synchroniserHud(); appliquerCamera(); break;
+      case 'KeyC': etat.suivre = !etat.suivre; synchroniserHud(); appliquerCamera(); break;
+      case 'KeyR': cadrer(); break;
+      case 'KeyY': etat.j2torche = !etat.j2torche; synchroniserHud(); break;
+      case 'KeyF': tirer(); break;
+      case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4':
+        appliquerPreset(presetsListe[parseInt(e.code.slice(5), 10) - 1]); break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+  window.addEventListener('keyup', function (e) { touches[e.code] = false; });
+  window.addEventListener('blur', function () { touches = {}; });
+
+  canvas.addEventListener('mousemove', function (e) {
+    souris.x = (e.clientX / canvas.clientWidth) * 2 - 1;
+    souris.y = -(e.clientY / canvas.clientHeight) * 2 + 1;
+    souris.actif = true;
+  });
+  canvas.addEventListener('mousedown', function (e) { if (e.button === 0) tirer(); });
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  function tirer() { flashT = 0.16; }
+
+  var raycaster = new THREE.Raycaster();
+  var planSol = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  var pointVise = new THREE.Vector3();
+  function pointSourisAuSol() {
+    raycaster.setFromCamera(new THREE.Vector2(souris.x, souris.y), camera());
+    return raycaster.ray.intersectPlane(planSol, pointVise) ? pointVise : null;
+  }
+
+  function appliquerPreset(nom) {
+    var p = PRESETS[nom]; if (!p) return;
+    etat.preset = nom; etat.pitch = p.pitch; etat.yaw = p.yaw;
+    synchroniserHud(); cadrer();
+  }
+
+  // -------------------------------------------------------------------------
+  // HUD ↔ état
+  // -------------------------------------------------------------------------
+  var champs = ['pitch', 'yaw', 'zoom', 'mur', 'ambiance', 'exposition', 'angle', 'portee', 'intensite', 'teinte', 'hauteur', 'halo', 'j2angle'];
+  var cases = ['persp', 'suivre', 'fosse', 'torche', 'j2torche', 'j2suit'];
+  var formats = { pitch: function (v) { return v + '°'; }, yaw: function (v) { return v + '°'; }, angle: function (v) { return v + '°'; },
+    j2angle: function (v) { return v + '°'; }, portee: function (v) { return v + ' t'; }, mur: function (v) { return v + ' t'; },
+    hauteur: function (v) { return v + ' t'; } };
+
+  function synchroniserHud() {
+    champs.forEach(function (id) {
+      var el = document.getElementById(id); el.value = etat[id];
+      el.nextElementSibling.textContent = (formats[id] || String)(Math.round(etat[id] * 100) / 100);
+    });
+    cases.forEach(function (id) { document.getElementById(id).checked = !!etat[id]; });
+    document.getElementById('carte').value = etat.carte;
+    var boutons = document.querySelectorAll('#presets button');
+    for (var i = 0; i < boutons.length; i++) {
+      var b = boutons[i], p = PRESETS[b.dataset.preset];
+      b.classList.toggle('actif', Math.abs(p.pitch - etat.pitch) < 0.01 && Math.abs(p.yaw - etat.yaw) < 0.01);
+    }
+  }
+
+  function brancherHud() {
+    var sel = document.getElementById('carte');
+    ORDRE.forEach(function (slug) { var o = document.createElement('option'); o.value = slug; o.textContent = CARTES[slug].nom + ' (' + slug + ')'; sel.appendChild(o); });
+    sel.addEventListener('change', function () { etat.carte = sel.value; construireCarte(); placerSpawns(); cadrer(); });
+
+    var pr = document.getElementById('presets');
+    Object.keys(PRESETS).forEach(function (nom, i) {
+      var b = document.createElement('button'); b.dataset.preset = nom; b.textContent = (i + 1) + ' ' + PRESETS[nom].nom; b.title = 'pitch ' + PRESETS[nom].pitch + '°, yaw ' + PRESETS[nom].yaw + '°';
+      b.addEventListener('click', function () { appliquerPreset(nom); }); pr.appendChild(b);
+    });
+
+    champs.forEach(function (id) {
+      var el = document.getElementById(id);
+      el.addEventListener('input', function () {
+        etat[id] = parseFloat(el.value);
+        if (id === 'j2angle') etat.j2suit = false;
+        if (id === 'mur') { majHauteurMurs(); }
+        if (id === 'ambiance') ambiance.intensity = etat.ambiance;
+        if (id === 'exposition') renderer.toneMappingExposure = etat.exposition;
+        if (id === 'pitch' || id === 'yaw') { etat.preset = ''; cadrer(); }
+        if (id === 'zoom') appliquerCamera();
+        synchroniserHud();
+      });
+    });
+    cases.forEach(function (id) {
+      var el = document.getElementById(id);
+      el.addEventListener('change', function () {
+        etat[id] = el.checked;
+        if (id === 'fosse') { construireCarte(); }
+        if (id === 'persp' || id === 'suivre') appliquerCamera();
+        synchroniserHud();
+      });
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Paramètres d'URL — mode capture
+  // -------------------------------------------------------------------------
+  function lireUrl() {
+    var q = new URLSearchParams(window.location.search);
+    if (Array.from(q.keys()).length === 0) return;
+    etat.stable = true;      // toute capture est stable : pas de souffle de torche
+    function nombre(nom, cible) { if (q.has(nom) && q.get(nom) !== '' && isFinite(parseFloat(q.get(nom)))) etat[cible || nom] = parseFloat(q.get(nom)); }
+    function bool(nom, cible) { if (q.has(nom)) etat[cible || nom] = !(q.get(nom) === '0' || q.get(nom) === 'false' || q.get(nom) === 'off' || q.get(nom) === 'non'); }
+    if (q.has('carte') && CARTES[q.get('carte')]) etat.carte = q.get('carte');
+    if (q.has('preset') && PRESETS[q.get('preset')]) { etat.preset = q.get('preset'); etat.pitch = PRESETS[etat.preset].pitch; etat.yaw = PRESETS[etat.preset].yaw; }
+    nombre('pitch'); nombre('yaw'); nombre('zoom'); nombre('mur'); nombre('ambiance'); nombre('exposition');
+    nombre('portee'); nombre('intensite'); nombre('teinte'); nombre('hauteur'); nombre('halo');
+    if (q.has('torche')) {
+      var t = q.get('torche');
+      if (t === '0' || t === 'off' || t === 'non') etat.torche = false;
+      else if (isFinite(parseFloat(t))) { etat.torche = true; etat.angle = parseFloat(t); }
+    }
+    if (q.has('j2torche')) {
+      var u = q.get('j2torche');
+      if (u === '0' || u === 'off' || u === 'non') etat.j2torche = false;
+      else if (u === 'suit' || u === '1' || u === 'on') { etat.j2torche = true; etat.j2suit = true; }
+      else if (isFinite(parseFloat(u))) { etat.j2torche = true; etat.j2suit = false; etat.j2angle = parseFloat(u); }
+    }
+    ['j1', 'j2'].forEach(function (nom) {
+      if (!q.has(nom)) return;
+      var xy = q.get(nom).split(',').map(parseFloat);
+      if (xy.length === 2 && isFinite(xy[0]) && isFinite(xy[1])) etat[nom + 'pos'] = [xy[0] + 0.5, xy[1] + 0.5];
+    });
+    if (q.has('cible')) {
+      var xy = q.get('cible').split(',').map(parseFloat);
+      if (xy.length === 2 && isFinite(xy[0]) && isFinite(xy[1])) visee.fixe = [xy[0] + 0.5, xy[1] + 0.5];
+    }
+    bool('hud'); bool('flash'); bool('persp'); bool('fosse'); bool('suivre');
+    if (q.has('stable')) bool('stable');
+    // Bornes des curseurs.
+    etat.pitch = Math.max(10, Math.min(90, etat.pitch)); etat.yaw = ((etat.yaw % 360) + 360) % 360;
+    etat.mur = Math.max(0.3, Math.min(1.5, etat.mur)); etat.angle = Math.max(5, Math.min(60, etat.angle));
+  }
+
+  // -------------------------------------------------------------------------
+  // Placement initial et boucle
+  // -------------------------------------------------------------------------
+  function placerSpawns() {
+    j1.userData.x = carte.spawn1[0] + 0.5; j1.userData.z = carte.spawn1[1] + 0.5;
+    j2.userData.x = carte.spawn2[0] + 0.5; j2.userData.z = carte.spawn2[1] + 0.5;
+    if (etat.j1pos) { j1.userData.x = etat.j1pos[0]; j1.userData.z = etat.j1pos[1]; }
+    if (etat.j2pos) { j2.userData.x = etat.j2pos[0]; j2.userData.z = etat.j2pos[1]; }
+    j1.userData.angle = Math.atan2(j2.userData.z - j1.userData.z, j2.userData.x - j1.userData.x);
+    j2.userData.angle = Math.atan2(j1.userData.z - j2.userData.z, j1.userData.x - j2.userData.x);
+    visee.angle = j1.userData.angle;
+  }
+
+  function souffle(t) {
+    // Respiration de la torche (TORCH_BREATH_AMP = 3 %), déterministe : somme de sinus.
+    if (etat.stable) return 1;
+    return 1 + 0.03 * (Math.sin(t * 6.1) * 0.5 + Math.sin(t * 9.7 + 1.3) * 0.3 + Math.sin(t * 2.3 + 0.4) * 0.2);
+  }
+
+  var horloge = new THREE.Clock();
+  var images = 0;
+  function boucle() {
+    var dt = Math.min(0.05, horloge.getDelta()), t = horloge.elapsedTime;
+
+    // Déplacement de J1 relatif à la caméra (haut de l'écran = loin de la caméra).
+    var y = THREE.MathUtils.degToRad(etat.yaw);
+    var fx = -Math.sin(y), fz = -Math.cos(y), rx = Math.cos(y), rz = -Math.sin(y);
+    var mx = 0, mz = 0;
+    if (touches.KeyW || touches.KeyZ || touches.ArrowUp) { mx += fx; mz += fz; }
+    if (touches.KeyS || touches.ArrowDown) { mx -= fx; mz -= fz; }
+    if (touches.KeyD || touches.ArrowRight) { mx += rx; mz += rz; }
+    if (touches.KeyA || touches.KeyQ || touches.ArrowLeft) { mx -= rx; mz -= rz; }
+    var n = Math.hypot(mx, mz);
+    if (n > 0) {
+      mx /= n; mz /= n;
+      var nx = j1.userData.x + mx * VITESSE * dt, nz = j1.userData.z + mz * VITESSE * dt;
+      // Une position déjà bloquée (placement par l'URL dans un mur) ne doit pas figer
+      // le joueur : on accepte alors tout mouvement, pour en sortir.
+      var coince = !libre(j1.userData.x, j1.userData.z, RAYON_JOUEUR);
+      if (coince || libre(nx, j1.userData.z, RAYON_JOUEUR)) j1.userData.x = nx;
+      if (coince || libre(j1.userData.x, nz, RAYON_JOUEUR)) j1.userData.z = nz;
+      if (etat.suivre) appliquerCamera();
+    }
+
+    // Visée : point fixe (capture), sinon la souris projetée au sol.
+    if (visee.fixe) {
+      j1.userData.angle = Math.atan2(visee.fixe[1] - j1.userData.z, visee.fixe[0] - j1.userData.x);
+    } else if (souris.actif) {
+      var p = pointSourisAuSol();
+      if (p) {
+        var cible = Math.atan2(p.z - j1.userData.z, p.x - j1.userData.x);
+        var diff = Math.atan2(Math.sin(cible - j1.userData.angle), Math.cos(cible - j1.userData.angle));
+        j1.userData.angle += diff * Math.min(1, dt * 18);   // aim_lerp_speed = 18 dans player.gd
+      }
+    }
+    if (etat.j2suit) {
+      j2.userData.angle = Math.atan2(j1.userData.z - j2.userData.z, j1.userData.x - j2.userData.x);
+      etat.j2angle = Math.round(((THREE.MathUtils.radToDeg(j2.userData.angle) % 360) + 360) % 360);
+      document.getElementById('j2angle').value = etat.j2angle;
+      document.getElementById('j2angle').nextElementSibling.textContent = etat.j2angle + '°';
+    } else {
+      j2.userData.angle = THREE.MathUtils.degToRad(etat.j2angle);
+    }
+
+    j1.position.set(j1.userData.x, 0, j1.userData.z); j1.rotation.y = -j1.userData.angle;
+    j2.position.set(j2.userData.x, 0, j2.userData.z); j2.rotation.y = -j2.userData.angle;
+
+    placerTorche(torche1, j1, etat.torche, etat.intensite * souffle(t));
+    placerTorche(torche2, j2, etat.j2torche, etat.intensite * souffle(t + 4.2));
+
+    halo.position.set(j1.userData.x, HAUTEUR_CORPS + RAYON_TETE * 2 + 0.35, j1.userData.z);
+    halo.intensity = etat.halo; halo.color.copy(COL_HALO);
+
+    // Flash : pic immédiat puis extinction en 0,16 s ; figé au pic en capture (flash=1).
+    var a = j1.userData.angle, nez = RAYON_CORPS + 0.55;
+    flash.position.set(j1.userData.x + Math.cos(a) * nez, etat.hauteur + 0.05, j1.userData.z + Math.sin(a) * nez);
+    flash.color.copy(COL_AMBRE.clone().lerp(COL_HALO, 0.45));
+    if (etat.flash && etat.stable) { flash.intensity = 9; flash.visible = true; }
+    else if (flashT > 0) { flash.intensity = 9 * Math.pow(flashT / 0.16, 1.6); flash.visible = true; flashT -= dt; }
+    else { flash.intensity = 0; flash.visible = false; }
+
+    renderer.render(scene, camera());
+    images++;
+    if (images === 2) window.__pret = true;
+    requestAnimationFrame(boucle);
+  }
+
+  // Démarrage.
+  lireUrl();
+  brancherHud();
+  construireCarte();
+  placerSpawns();
+  ambiance.intensity = etat.ambiance;
+  renderer.toneMappingExposure = etat.exposition;
+  if (!etat.hud) document.getElementById('hud').style.display = 'none';
+  synchroniserHud();
+  redimensionner();
+  window.__etat = etat;
+  window.__debug = { torche1: torche1, torche2: torche2, j1: j1, j2: j2, halo: halo, flash: flash, scene: scene, renderer: renderer };
+  boucle();
+})();
+</script>
+</body>
+</html>

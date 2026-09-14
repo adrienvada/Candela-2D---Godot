@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-12
+> Dernière mise à jour : 2026-09-14
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3170,6 +3170,70 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un workflow Ultracode de vingt-six agents en Fable 5.1 vaut le reliquat hebdomadaire du forfait (2026-09-13)
+
+L'étude ISO0 (`docs/ETUDE_ISO.md`) a lancé un workflow de 26 agents — quatorze
+lecteurs et chercheurs, trois architectes, deux juges, huit réfutateurs — sur
+le modèle de la session, Fable 5.1, plus deux agents de prototypage. Après
+2,9 millions de tokens d'agents, **le plafond hebdomadaire de Max 20x est
+tombé à 3 h du matin**, et les onze derniers agents (une conception, les deux
+juges, les huit réfutateurs) ont été refusés : `You've hit your weekly limit ·
+resets Sep 14, 10am (UTC)`. L'étude a été terminée à la main par la session
+principale.
+
+Ce qu'il faut en retenir, et qui vaut pour tout chantier à plusieurs sessions :
+**les sous-agents et les workflows héritent du modèle de la session** — poser
+`CLAUDE_CODE_SUBAGENT_MODEL=sonnet` dans chaque session ; garder Ultracode en
+taille `small` et le réserver à un audit ciblé ; lancer les étapes qui exigent
+Fable 5.1 en début de semaine ; lire `/usage` le lundi. Une étude qui coûte une
+semaine de forfait n'est pas gratuite parce qu'elle tourne la nuit.
+
+### Godot importe — et exporterait — toute image posée sous `docs/` (2026-09-13)
+
+Les captures du prototype iso écrites dans `docs/iso/captures/` ont reçu
+chacune leur `.png.import` au premier `--import` : Godot importe tout fichier
+image sous `res://`, `docs/` compris. Et `export_presets.cfg` n'exclut que
+`tools/*` (`export_filter="all_resources"`) : ces images seraient parties dans
+le `.pck` des joueurs. Un `docs/iso/.gdignore` règle les deux, sur le modèle de
+`assets/sources/*/.gdignore`. Règle : **toute image de documentation vit dans
+un dossier porteur d'un `.gdignore`**, sinon elle est une ressource du jeu.
+
+### Un sol Lambert efface le cône d'une torche 3D (2026-09-13)
+
+Au prototype Godot (`tools/proto_iso.tscn`, 3D en `gl_compatibility`), la
+torche `SpotLight3D` à hauteur de poitrine rase le sol : à cinq tuiles la
+lumière arrive à 7° et un `StandardMaterial3D` n'en garde que 12 % — le cône
+n'était qu'un fuseau brun pâle. Le cookie 2D, lui, ignore l'angle d'incidence.
+Une fonction `light()` sur mesure avec un Lambert nul sur le sol rend le cône
+plein ; ce n'est pas un réglage d'énergie. Plus généralement : **un portage 3D
+qui recalcule la lumière recalcule aussi tout ce que le cookie décidait**, et
+c'est pour cela que l'étude recommande de projeter le rendu 2D plutôt que de
+le refaire.
+
+### Des lumières 3D à ombres rendent les faces des murs asymétriques entre les deux joueurs (2026-09-13)
+
+Même prototype, carte du Cloître, même torche : la torche éclaire les faces
+tournées vers son porteur, la caméra ne voit que les faces tournées vers elle.
+Le joueur situé côté caméra « dessine » sur les murs ; l'autre voit un bloc noir
+posé sur un sol éclairé. Avec un lacet fixe, **la moitié des visées montrent des
+murs noirs, et ce n'est pas la même moitié pour les deux joueurs**. Une face
+éclairée d'après la lumière lue à son pied (le rendu 2D projeté) s'allume pour
+les deux, ni plus ni moins. À garder en tête pour toute lumière 3D ajoutée un
+jour, y compris hors du duel.
+
+### Sous Xvfb sans gestionnaire de fenêtres, `window_set_size()` ne redimensionne pas la vue (2026-09-13)
+
+Le prototype a rendu ses premières captures en 1280×720 alors que
+`DisplayServer.window_get_size()` répondait 1920×1080 : sans gestionnaire de
+fenêtres, l'événement `ConfigureNotify` n'arrive jamais et `root.size` reste à
+sa valeur de départ. `Window.size = …` redimensionne la vue immédiatement.
+Contexte utile : **Godot 4.7 rend bien en 3D dans le conteneur d'une session
+cloud** (`xvfb-run` + Mesa llvmpipe, `gl_compatibility`, ombres comprises,
+≈ 4 s par image) — assez pour des captures d'étude, jamais pour une mesure de
+cadence. Et une erreur d'analyse y laisse tourner la scène sans script pour
+toujours : tout outil de capture se lance sous `timeout` et relit son journal
+(`SCRIPT ERROR|Parse Error`), comme `run_photos.sh` le fait déjà.
 
 ### Vert seul, rouge dans le lot : le `user://` est partagé par LOT, pas par suite (2026-09-11)
 
@@ -20762,6 +20826,101 @@ période.
 
 ---
 
+## Chantier — la vue isométrique 2D/3D « à la Unrailed 2 » (étude ISO0, inscrite le 2026-09-14)
+
+**Demande d'Adrien, 2026-09-13 :** que coûterait de donner au jeu une vue 2D/3D
+à la Unrailed 2, en vue isométrique — mécanismes à conserver, points durs,
+coût, répartition entre sessions Claude Code avec quels modèles, trajet par
+étapes, visuels et prototypes. **La réponse complète est
+[docs/ETUDE_ISO.md](ETUDE_ISO.md)** (et, avec la galerie et le prototype à
+manipuler, la page https://claude.ai/code/artifact/3beaf3fb-bddd-4aec-85c8-86909d503411) ; cette section n'en garde que ce qui doit
+survivre dans la feuille de route. **Rien n'est engagé** : l'étude est
+l'étape ISO0, elle se termine par le jalon H15, et aucune étape suivante ne se
+lance sans demande explicite.
+
+### Ce que l'étude a établi
+
+- **Faisable sans toucher au réseau, à la prédiction, au rejeu ni aux cartes** :
+  la simulation ne manipule que des `Vector2` et des scalaires, l'éblouissement
+  lit l'image du cookie et un raycast physique, jamais les pixels rendus
+  (`vision.gd:130-155`, `game_state.gd:2005-2117`). La 3D peut être un second
+  écran du même monde, dans un sous-arbre hors des nœuds porteurs de RPC.
+- **Le point dur est la lumière, pas la géométrie.** Vérifié dans la
+  documentation officielle : le renderer `gl_compatibility` ne supporte **ni
+  les projecteurs de lumière (le cookie), ni les `Decal`** ; une lumière 3D à
+  ombres est une passe additive par objet, mélangée en sRGB ; huit lumières par
+  maillage. Les ombres de `SpotLight3D`/`OmniLight3D` et `shadow_caster_mask`
+  fonctionnent bien en Compatibility 4.7 — rendus à l'image par le prototype.
+- **Approche retenue par l'étude : B-projection.** Le pipeline de lumière 2D
+  actuel (lumières, occluders, canaux de `canaux_lumiere.gd`) reste la seule
+  vérité ; il est rendu dans une sous-vue par joueur et **projeté sur un sol
+  3D** ; la 3D n'ajoute que le relief (murs en boîtes basses, corps voxel,
+  caméra orthographique inclinée). Ce que l'écran montre est au pixel près ce
+  que l'hôte fait payer. Écartées : A (2D oblique par la matrice du canevas,
+  un trucage par sprite) et C (3D complet, 60 à 80 sessions, la torche
+  toujours impossible).
+- **Deux mesures des prototypes** (`docs/iso/`, `tools/proto_iso.tscn`) : un mur
+  d'une tuile cache `h / tan θ` de sol — 0,78 tuile à 52° (Unrailed), 1,41 en
+  isométrie vraie, 0,36 à 70° — d'où **murs de 0,4 tuile et tangage de 60 à
+  65°** (bande de 7-8 px, sous le rayon d'un corps) ; et de vraies lumières 3D
+  rendent les faces des murs **asymétriques entre les deux joueurs** (voir
+  « Pièges connus »), ce que la projection du rendu 2D évite par construction.
+- **Coût** : 26 sessions-journées (30 avec l'option de cadence ISO8), 4 à 6
+  semaines calendaires avec deux ou trois sessions en parallèle et six jalons
+  d'Adrien. **Le forfait est la contrainte** : l'étude seule a épuisé le
+  reliquat hebdomadaire de Max 20x (voir « Pièges connus ») ; le chantier ne
+  tient que si 80 % des sessions tournent en Sonnet 5 / Opus 5.
+- **Le risque principal n'est pas technique** : le noir absolu gomme ce qui
+  fait Unrailed (couleur, soleil, contours, anneaux — ces deux derniers
+  dévoileraient un corps dans le noir), et le pipeline d'assets « vue
+  strictement de dessus » livré les 9-12 septembre serait à refaire.
+  L'alternative à peser : **l'iso pour les vitrines** (accueil, fiches, killcam,
+  écran de fin, trailer), **la vue de dessus pour le duel** — trois à quatre
+  sessions, mêmes briques.
+
+### Les étapes, si Adrien dit oui
+
+| Étape | Objet | Sessions | Modèle / effort |
+|---|---|---|---|
+| ISO0 | Étude et prototypes ✅ ; **ISO0.b** : banc B-projection dans le vrai jeu (`tools/banc_iso.tscn`), relevé de cadence, décision | 2 | Opus 5 / high |
+| ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique | 3 | Opus 5 / high |
+| ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé | 4 | Fable 5.1 / xhigh |
+| ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
+| ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
+| ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
+| ISO6 | Outils : banc `--iso`, photographe, F3, diagnostic, `ConditionsDeMatch` | 2 | Sonnet 5 / medium |
+| ISO7 | Direction artistique et assets (Gemini en série, fond vert) | 3 | Sonnet 5 / medium |
+| ISO8 | *Option* : lumière seule + sol texturé, si la cadence l'exige | 4 | Opus 5 / high |
+| ISO9 | Équité, rendu imposé par l'hôte en classé (`Protocol.VERSION` +1), documentation, audit | 2 | Opus 5 / medium |
+
+Cinq sessions en worktrees, **par fichiers** : `iso-pilote` (tient
+`game_state.gd`, `main.tscn`, `ui.gd`, la ROADMAP, le suivi), `iso-geometrie`,
+`iso-corps`, `iso-outils`, `iso-assets`. Vagues et barrières dans l'étude
+(§ 7.3) ; chaque barrière est un jalon d'Adrien, jamais un agent. Règles du
+dépôt inchangées : jamais de fusion dans la branche d'autrui, `--import` et
+`grep` du cache de classes après chaque fusion, `CLAUDE_CODE_SUBAGENT_MODEL=sonnet`.
+
+### Ce qui est dans le dépôt depuis cette étude
+
+`docs/ETUDE_ISO.md` ; `docs/iso/proto_iso.html` (prototype Three.js, six
+cartes, douze captures, planche) ; `tools/proto_iso.tscn` + `proto_iso.gd`
+(prototype Godot 3D, dix captures en `gl_compatibility` sous Xvfb) et sa suite
+`tools/test_proto_iso.gd` dans `run_suites.sh` (≈ 175 vérifications : les
+boîtes pavent la grille, une par rectangle de `merge_rects`, apparitions sur
+du sol, lumières à ombres, caméra orthographique cadrant la carte ; sait
+échouer). Aucun fichier du jeu n'est modifié.
+
+### Ce qui attend Adrien — jalon H15
+
+Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
+(0° recommandé), hauteur des murs (0,4 tuile), variante de lightmap, écran
+scindé en iso ou maintenu en 2D — sur trois relevés au premier plan après
+ISO0.b. Puis les décisions de direction artistique (sommet des murs, tranche
+de plateau, palette des corps), le choix des corps (voxels par code
+recommandé), et la confirmation du forfait dans *Settings › Usage*.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -20782,6 +20941,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
+| H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | Avant toute session ISO1 |
 
 ---
 
@@ -20889,6 +21049,14 @@ et un seul est du travail de session.
    chacun ; les lots 9 et 10 attendent Adrien.
 
 ### Ce qui attend Adrien, et rien d'autre
+
+> **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
+> **vue isométrique « à la Unrailed 2 »** (section dédiée,
+> [docs/ETUDE_ISO.md](ETUDE_ISO.md), prototypes dans `docs/iso/` et
+> `tools/proto_iso.tscn`) attend le jalon **H15**. Rien n'est engagé ; la voie
+> recommandée (B-projection) coûte 26 à 30 sessions et le forfait est la
+> contrainte. L'alternative « l'iso pour les vitrines, la vue de dessus pour le
+> duel » y est chiffrée aussi.
 
 3. **L'appariement automatique à deux fenêtres**, avec `--eos-ephemeral` des deux
    côtés — sans lui, les deux instances partagent un Device ID donc un PUID, et
