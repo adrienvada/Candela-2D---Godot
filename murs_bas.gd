@@ -115,11 +115,34 @@ static func chevauche_cercle(centre: Vector2, rayon: float, rects: Array) -> boo
 	return false
 
 
+## Le retrait de la FORME DE LUMIÈRE d'un mur bas : son occluder est rentré de
+## `MapGeometry.OCCLUDER_INSET`, et la zone morte dessinée aussi
+## (`MursBasRendu.uniformes_de_vue`). Une seule constante pour la lumière et la balle.
+const RETRAIT_LUMIERE := MapGeometry.OCCLUDER_INSET
+
+
+## Les murs bas tels que la lumière les voit : rentrés de `RETRAIT_LUMIERE`.
+static func forme_de_lumiere(murs_bas: Array) -> Array:
+	var rentres: Array = []
+	for r: Rect2 in murs_bas:
+		rentres.append(r.grow(-RETRAIT_LUMIERE))
+	return rentres
+
+
 ## `franchit()` avec les constantes du jeu — ce que la balle et l'éblouissement
-## appellent. Une seule règle, un seul angle, une seule hauteur de mur.
+## appellent. Une seule règle, un seul angle, une seule hauteur de mur, et **une
+## seule forme de mur : celle de la lumière**.
+##
+## ⚠️ Décision d'Adrien (2026-09-14, après H-MB1) : « la bande de 3 px me gêne,
+## aligne la balle sur la forme de lumière ». La balle lisait la tuile ENTIÈRE, la
+## lumière l'occluder RENTRÉ : au bout de la zone morte restait une bande de 3 px
+## où l'on voyait un accroupi sans pouvoir le toucher. Rentrer les murs ICI, et
+## non dans `GameState.murs_bas`, laisse la collision et l'enjambement sur la
+## tuile entière — ils ne concernent pas ce qui se voit.
 static func franchit_regle(source: Vector2, cible: Vector2, h_source: float, h_cible: float,
 		murs_bas: Array) -> bool:
-	return franchit(source, cible, h_source, h_cible, murs_bas, hauteur_mur(), ANGLE_FRANCHISSEMENT)
+	return franchit(source, cible, h_source, h_cible, forme_de_lumiere(murs_bas), hauteur_mur(),
+		ANGLE_FRANCHISSEMENT)
 
 
 ## Longueur de la zone morte derrière un mur bas, dans l'unité de `h_mur`.

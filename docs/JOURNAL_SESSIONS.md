@@ -4349,3 +4349,17 @@ la panne de `bench_framerate` du 2026-08-18. Il publie ses appuis
 (`preconditions_manquantes`) et `tools/test_banc.gd` les vérifie en headless, contre-test
 compris ; vu rougir en renommant une méthode attendue. Touché : `tools/banc_murs_bas.gd`,
 `tools/test_banc.gd`.
+
+### 2026-09-14 (nuit) — H-MB1, et la balle alignée sur la lumière (même session, même branche)
+
+**H-MB1, par Adrien** : le duel à deux manettes « fonctionne » ; la partie EOS à deux
+machines est reportée (« on fera plus tard »). **Et la bande de 3 px** « vu sans pouvoir
+toucher » : « me gêne, aligne la balle sur la forme de lumière ».
+
+**Fait** : `MursBas.franchit_regle` lit les murets rentrés de `RETRAIT_LUMIERE`
+(= `OCCLUDER_INSET`), la constante que lit aussi `MursBasRendu`. Balle, balle compensée
+et éblouissement passent tous par là ; la collision d'un canon accroupi et l'enjambement
+restent sur la tuile entière. Touché : `murs_bas.gd`, `murs_bas_rendu.gd` ; suites
+`test_murs_bas` (règle = `franchit` sur la forme de lumière, fin de bande à L − 2 touchée)
+et `test_accroupi` (équité : aucune bande, échantillonnée dès d = 0 — le cas dégénéré de
+MB3d n'existe plus, balle et lumière lisant la même forme).

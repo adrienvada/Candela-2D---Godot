@@ -447,12 +447,21 @@ func _test_regle_en_jeu() -> void:
 		var c := Vector2(src.x, mur.end.y + prof)
 		for h_src: float in [MursBas.hauteur_de_posture(false), MursBas.hauteur_de_posture(true)]:
 			if MursBas.franchit_regle(src, c, h_src, MursBas.hauteur_de_posture(true), [mur]) != \
-					Geo.franchit(src, c, h_src, MursBas.hauteur_de_posture(true), [mur],
+					Geo.franchit(src, c, h_src, MursBas.hauteur_de_posture(true),
+						[mur.grow(-MapGeometry.OCCLUDER_INSET)],
 						MursBas.hauteur_mur(), MapGeometry.ANGLE_FRANCHISSEMENT):
 				ecarts += 1
-	_check("franchit_regle = franchit avec les constantes du jeu (80 cas)", ecarts == 0, str(ecarts))
+	_check("franchit_regle = franchit sur la forme de LUMIÈRE, constantes du jeu (80 cas)",
+		ecarts == 0, str(ecarts))
+	_check("la forme de lumière est le mur rentré de OCCLUDER_INSET",
+		MursBas.forme_de_lumiere([mur]) == [mur.grow(-MapGeometry.OCCLUDER_INSET)])
+	# La zone morte finit à L de la sortie du mur RENTRÉ, soit 3 px plus tôt que
+	# sur la tuile entière (décision d'Adrien, après H-MB1).
 	_check("en jeu : accroupi juste derrière, caché d'un tireur debout",
-		not MursBas.franchit_regle(src, Vector2(src.x, mur.end.y + l - 2.0),
+		not MursBas.franchit_regle(src, Vector2(src.x, mur.end.y + l - 5.0),
+			MursBas.hauteur_de_posture(false), MursBas.hauteur_de_posture(true), [mur]))
+	_check("en jeu : là où finissait la bande de 3 px (L − 2), l'accroupi est touché",
+		MursBas.franchit_regle(src, Vector2(src.x, mur.end.y + l - 2.0),
 			MursBas.hauteur_de_posture(false), MursBas.hauteur_de_posture(true), [mur]))
 	_check("en jeu : accroupi au-delà de la zone morte, touché",
 		MursBas.franchit_regle(src, Vector2(src.x, mur.end.y + l + 2.0),

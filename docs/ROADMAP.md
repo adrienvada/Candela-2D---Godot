@@ -21039,7 +21039,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
 | MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
-| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | 🟡 **ouverte par Adrien le 2026-09-14** (20 h 20) — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût), MB3d livrée (équité, killcam) — **H-MB1 attend Adrien** |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 20 h 20) — **H-MB1 : duel à deux manettes validé par Adrien, EOS reporté ; la balle suit la forme de la lumière (bande de 3 px supprimée à sa demande)** — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût), MB3d livrée (équité, killcam) — **H-MB1 attend Adrien** |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
 
@@ -21376,13 +21376,21 @@ une bande de **3 px** au bout de la zone morte où un accroupi est **vu sans pou
 touché** — l'écart balle / lumière (tuile entière contre occluder rentré) consigné avant
 ce chantier. La suite la borne à `OCCLUDER_INSET`.
 
+✅ **Supprimée à la demande d'Adrien, après H-MB1** (« la bande de 3 px me gêne, aligne la
+balle sur la forme de lumière ») : `MursBas.franchit_regle` — balle, balle compensée,
+éblouissement — lit les murets rentrés de `RETRAIT_LUMIERE` (= `OCCLUDER_INSET`), la forme
+de l'occluder et de la zone morte dessinée. Ni « vu, pas touché », ni « touché, pas vu ».
+**Pourquoi rentrer dans la règle et pas dans `GameState.murs_bas`** : la collision d'un
+canon accroupi et l'enjambement doivent rester sur la tuile entière ; ils ne décident pas
+de ce qui se voit.
+
 ### Ce qui attend Adrien
 
-**H-MB1**, MB3 étant livrée. Et une question, à trancher en jouant : la bande de 3 px où
-l'on voit un accroupi sans pouvoir le toucher (§ MB3d) compte-t-elle ? Si oui, la balle
-s'aligne sur la forme de la lumière. **H-MB1** : un duel complet à deux manettes sur la carte d'essai
-(code de partage : `docs/MURS_BAS.md` § 9), puis une partie EOS à deux machines — le fil a
-changé (`Protocol.VERSION` 18).
+**H-MB1 joué le 2026-09-14** : le duel à deux manettes sur la carte d'essai « fonctionne »
+(Adrien), et la bande de 3 px est tranchée (supprimée, § MB3d). **Reste, reporté par
+Adrien** (« on fera plus tard ») : **une partie EOS à deux machines** — le fil a changé
+(`Protocol.VERSION` 18), elle se joue avant toute publication qui porte ce chantier.
+Code de partage de la carte d'essai : `docs/MURS_BAS.md` § 9.
 
 ---
 

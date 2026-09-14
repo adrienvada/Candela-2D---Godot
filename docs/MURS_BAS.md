@@ -614,9 +614,23 @@ naissent d'une touche, donc d'un joueur que la balle a atteint, hors de la zone 
 **Vu rougir**, chaque nouveau contrôle : balle rejouée sans murets, posture rejouée non
 posée, empreinte sans matériau, posture du tir non exposée. ⚠️ **Le premier sabotage de
 la killcam est resté VERT** : le contrôle au texte cherchait une sous-chaîne, que la ligne
-commentée contenait encore. Il compare désormais des lignes entières. ⚠️ **À trancher par Adrien** si elle compte en jeu : aligner la
-   balle sur la forme de la lumière (la bande disparaît, la balle frôle 3 px plus près des
-   coins de mur) ou la laisser.
+commentée contenait encore. Il compare désormais des lignes entières.
+
+### ✅ H-MB1 et la bande de 3 px — tranchés par Adrien (2026-09-14, nuit)
+
+- **Duel à deux manettes sur la carte d'essai : « ça fonctionne ».** La partie EOS à deux
+  machines est **reportée par Adrien** (« on fera plus tard ») — le fil a changé
+  (`Protocol.VERSION` 18), elle reste à jouer avant toute publication.
+- **« La bande de 3 px me gêne. Aligne la balle sur la forme de lumière. »** Fait :
+  `MursBas.franchit_regle` — ce qu'appellent la balle, la balle compensée et
+  l'éblouissement — lit les murets **rentrés** de `RETRAIT_LUMIERE`
+  (= `MapGeometry.OCCLUDER_INSET`), la forme que reçoivent l'occluder et la zone morte
+  dessinée (`MursBasRendu` lit la même constante). La zone morte finit donc 3 px plus
+  tôt pour la balle, au pixel près où elle finit à l'écran : **ni « vu, pas touché », ni
+  « touché, pas vu »** (`test_accroupi`, échantillonné dès d = 0).
+- **Ce qui ne bouge pas, à dessein** : la collision d'un canon accroupi contre le muret
+  et l'enjambement restent sur la tuile entière — ils ne décident pas de ce qui se voit.
+  L'écart de 3 px des **murs hauts** (§ 3) n'est pas concerné.
 
 ## 8. Lancer le prototype
 

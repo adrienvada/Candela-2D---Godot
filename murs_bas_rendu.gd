@@ -61,7 +61,7 @@ static func uniformes_de_vue(monde_vers_ecran: Transform2D, murs: Array, ecran: 
 	var tableau := PackedVector4Array()
 	var debordement := 0
 	for r: Rect2 in murs:
-		var rentre := r.grow(-MapGeometry.OCCLUDER_INSET)
+		var rentre := r.grow(-MursBas.RETRAIT_LUMIERE)
 		var a := monde_vers_ecran * rentre.position
 		var b := monde_vers_ecran * rentre.end
 		var e := Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)), (b - a).abs())

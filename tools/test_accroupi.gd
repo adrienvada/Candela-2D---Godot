@@ -304,7 +304,7 @@ func _test_balle(tireur: Player, cible: Player) -> void:
 		else:
 			_check("canon debout : la balle ne voit pas les murs bas", not masque_bas)
 			_check("… elle passe au-dessus d'un accroupi dans la zone morte",
-				not b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + l - 3.0),
+				not b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + l - 6.0),
 					MursBas.hauteur_de_posture(true)))
 			_check("… et touche un accroupi au-delà",
 				b._franchit_vers(Vector2(mur.get_center().x, mur.end.y + l + 3.0),
@@ -326,11 +326,11 @@ func _test_balle(tireur: Player, cible: Player) -> void:
 ## 1. **Chacun paie pareil des deux côtés d'un muret** : le tir de J1 vers J2 et
 ##    son reflet de J2 vers J1, à travers le reflet du muret, rendent la même
 ##    décision, dans les quatre couples de postures.
-## 2. **Ce qui se voit est ce qui se paie**, à `OCCLUDER_INSET` près. La balle
-##    bute sur la tuile ENTIÈRE (la collision), la lumière sur l'occluder RENTRÉ
-##    — un écart de 3 px qui existait avant ce chantier. Il laisse une bande où
-##    l'on voit un accroupi sans pouvoir le toucher. Elle est mesurée et bornée
-##    ici, et l'inverse — touché sans être vu — ne doit jamais arriver.
+## 2. **Ce qui se voit est ce qui se paie**, exactement. En MB3d, la balle lisait
+##    la tuile ENTIÈRE et la lumière l'occluder RENTRÉ : une bande de 3 px où l'on
+##    voyait un accroupi sans pouvoir le toucher. Adrien l'a jugée gênante après
+##    H-MB1 : la règle de la balle lit désormais la forme de la lumière
+##    (`MursBas.franchit_regle`). Ni « vu, pas touché », ni « touché, pas vu ».
 func _test_equite(p1: Player, p2: Player) -> void:
 	print("\n[L'équité des deux côtés d'un muret (MB3d)]")
 	var mur := Rect2(Vector2(0, 0), Vector2(6, 1) * MursBas.TUILE)
@@ -362,11 +362,9 @@ func _test_equite(p1: Player, p2: Player) -> void:
 	var h_acc := MursBas.hauteur_de_posture(true)
 	var vu_sans_touche: Array = []
 	var touche_sans_vu := 0
-	# Dès 0,1 px : un centre posé EXACTEMENT sur le bord de la tuile est le cas
-	# dégénéré où la sortie du rayon tombe à t = 1 — la balle y lit « pas de
-	# franchissement » et touche. Aucun corps n'y tient : sa collision le garde à
-	# son rayon du muret. Premier passage : ce seul point, à d = 0,0.
-	for k in range(1, 900):
+	# Dès d = 0 : balle et lumière lisent la même forme, le centre posé sur le bord
+	# de la tuile n'est plus un cas à part (en MB3d, il touchait sans être vu).
+	for k in 900:
 		var d := k / 10.0
 		var cible := Vector2(x, mur.end.y + d)
 		var paye := _decision(b, p1, mur, source, cible, false, true)
@@ -376,13 +374,14 @@ func _test_equite(p1: Player, p2: Player) -> void:
 			vu_sans_touche.append(d)
 		elif paye and not vu:
 			touche_sans_vu += 1
-	var largeur: float = 0.0 if vu_sans_touche.is_empty() \
-		else vu_sans_touche.max() - vu_sans_touche.min() + 0.1
-	print("  bande « vu, pas touché » : %.1f px%s" % [largeur, "" if vu_sans_touche.is_empty()
-		else " (de %.1f à %.1f px derrière le muret)" % [vu_sans_touche.min(), vu_sans_touche.max()]])
 	_check("jamais touché sans être vu", touche_sans_vu == 0, "%d points" % touche_sans_vu)
-	_check("la bande « vu, pas touché » ne dépasse pas OCCLUDER_INSET",
-		largeur <= MapGeometry.OCCLUDER_INSET + 0.15, "%.1f px" % largeur)
+	# Décision d'Adrien après H-MB1 : la balle suit la forme de la lumière. La
+	# bande de 3 px « vu, pas touché » mesurée en MB3d (de 40,8 à 43,7 px) a disparu.
+	_check("aucune bande « vu, pas touché » : la balle lit la forme de la lumière",
+		vu_sans_touche.is_empty(),
+		"%d points, de %.1f à %.1f px" % [vu_sans_touche.size(),
+			vu_sans_touche.min() if not vu_sans_touche.is_empty() else 0.0,
+			vu_sans_touche.max() if not vu_sans_touche.is_empty() else 0.0])
 	b.queue_free()
 
 
