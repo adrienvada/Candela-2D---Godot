@@ -5920,6 +5920,35 @@ Zéro veut dire que le lot va rougir, et il rougira **ailleurs** — sur la suit
 qui charge la scène, jamais sur le fichier fautif.
 
 
+### Le plugin Godot AI se met à jour tout seul, et hors de git (2026-09-14)
+
+Le 2026-09-10 à 07:40, le plugin `addons/godot_ai` est passé de **3.0.7** à
+**4.0.4** dans l'arbre principal : 126 fichiers réécrits dans la même minute,
+91 modifiés, 35 ajoutés, 8 supprimés. Personne ne l'a demandé. Le plugin porte
+son propre installeur de mises à jour et s'aligne sur la version du serveur
+`godot-ai` lancé par Claude Code (`uvx godot-ai==4.0.4`). **Et rien ne l'a
+commité** : pendant quatre jours, `git status` de l'arbre principal a montré
+134 fichiers sales que chaque session a pris pour l'affaire d'une autre.
+
+⚠️ **Le coût ne se voyait pas, et c'est le même angle mort que les deux pièges
+juste en dessous.** Les worktrees, où tournent les lots, recevaient la 3.0.7
+de git ; l'éditeur et le jeu lancés depuis l'arbre principal tournaient sur la
+4.0.4. Aucun lot de ces quatre jours n'a donc exercé la version réellement
+utilisée. Et la version sur disque était fragile : un `reset --hard` sur `main`
+dans l'arbre principal l'aurait effacée sans trace, puisque rien ne la
+reproduisait.
+
+Ce que ça ne change **pas** : le jeu exporté. Le plugin part bien dans les
+builds (le filtre d'export n'exclut que `tools/`), et son autoload
+`_mcp_game_helper` tourne dans le processus du jeu, mais il reste inerte sans
+débogueur branché (`EngineDebugger.is_active()`), donc en release.
+
+**Commité le 2026-09-14 à la demande d'Adrien**, après un lot complet sur la
+4.0.4. Revenir à la 3.0.7 aurait décalé le plugin du serveur 4.0.4 et risqué
+de couper le pont. **Comment appliquer** : après toute mise à jour de
+`godot-ai`, `git status addons/godot_ai` dans l'arbre principal. Des fichiers
+sales là ne sont pas le travail d'une autre session, c'est le plugin.
+
 ### « Non poussé » n'est pas « sans effet » : le checkout principal est un poste d'essai (2026-09-12)
 
 Payé en versant le chantier des menus. J'ai fait avancer `main` en local, sans
