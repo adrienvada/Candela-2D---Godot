@@ -3172,6 +3172,63 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La vue de dessus n'est pas noire lumières éteintes : le noir absolu se juge contre la lightmap (2026-09-14)
+
+ISO1 devait prouver, au banc, qu'« toutes lumières éteintes, l'image rendue est à 0/255
+partout » pour chacune des quatre pâtes. Première mesure (253 `Light2D` éteintes, HUD
+retiré) : **158/255 à l'écran** — et **185/255 dans la lightmap 2D elle-même**, avant
+toute 3D. Même mesure sur le jeu actuel, vue de dessus (`banc_iso --base --noir`) :
+**177/255**. Deux choses peignent sans lumière dans le duel tel qu'il est : le viseur
+du joueur (matériau `unshaded`, `player.gd:1126`, visible de lui seul) et un liseré sur
+le contour des murs (non identifié dans cette session, signalé). Ni l'un ni l'autre
+n'est un défaut de l'iso — le viseur est voulu.
+
+Conséquence : « 0 partout » ne peut pas se mesurer lumières éteintes sans **cacher** ces
+éléments, et les cacher pour obtenir zéro serait tricher. Le contrôle est donc scindé en
+deux mesures dans la même exécution (`tools/banc_iso.gd --jeu --noir`) : **(a)** lumières
+éteintes, la même image est reprise en pâte brute (la lightmap projetée, sans rien) et
+**aucun pixel ne doit s'allumer hors de ce que la brute allume** (voisinage de 2 px) ;
+**(b)** la vue 2D ne dessine plus rien (`canvas_cull_mask = 0`) et l'écran doit valoir 0
+au pixel — l'invariant propre à la projection et à la pâte. Résultat : **tenu pour les
+quatre pâtes** (a : 0 pixel hors support ; b : 0/255).
+
+⚠️ **Le premier critère (a) était « l'écran ≤ la lightmap », et il était faux.** Il a
+déclaré rompus B, C et D (écran 249-255 contre 185) : ces pâtes normalisent leurs tons,
+un demi-ton déjà éclairé y ressort plus clair. C'est un choix de style à juger, pas une
+lumière née dans le noir — et c'est A, jugée « tenue » par ce critère, qui retire le plus
+d'information (voir la section ISO1). Règle : **un invariant de rendu se mesure contre sa
+source, et sur ce qu'il interdit** — ici, allumer ce que la source laisse noir —, pas
+contre un idéal que la source ne tient pas ni contre une propriété voisine.
+
+### L'autoload `ReplaySystem` n'est pas comparable d'une partie à l'autre (2026-09-14)
+
+Pour prouver que la vue iso ne change pas le rejeu, `tools/test_iso_camera.gd` jouait la
+même partie scriptée deux fois et comparait `ReplaySystem.snapshots`. **Le témoin
+lui-même divergeait** — deux parties sans iso, états identiques pas pour pas, rejeux
+différents dès la cinquième image : le jeu alimente aussi l'autoload, à la cadence de
+son horloge (300 images enregistrées pour 150 appels du test). La suite enregistre
+désormais dans **sa propre instance** de `replay_system.gd`, qui lit les mêmes champs.
+Règle : **pas de comparaison sans témoin** ; une égalité ou une différence mesurée sans
+lui ne prouve rien.
+
+### Réinstancier `Main` dans la même exécution fait crier l'audio au premier tir (2026-09-14)
+
+Libérer une instance de `main.tscn` puis en instancier une seconde qui tire produit
+`SCRIPT ERROR: Trying to cast a freed object` dans `AudioManager._occupations()`
+(`audio_manager.gd:1521`, via `play_weapon_shot` et `play_shell`) : le pool garde des
+voix nées dans le monde de la première instance. Le lanceur de suites rougit sur cette
+chaîne. **Signalé, non corrigé** (hors périmètre d'ISO1) ; les suites qui jouent
+plusieurs parties le font dans UNE instance. Au passage, la libération de `Main` fait
+aussi imprimer `Condition "!is_inside_tree()"` par `AudioManager.diagnostic_ecoute()`
+(`audio_manager.gd:2365`) — une erreur moteur, pas un `push_error`, que le lanceur
+n'entend pas.
+
+### Un masque `~4` se relit 4294967291 (2026-09-14)
+
+`vp1.canvas_cull_mask = ~4` s'écrit avec l'entier signé de GDScript (−5) et se relit
+en entier **non signé** sur 32 bits. Une comparaison `masque == ~4` est donc toujours
+fausse ; comparer `masque == (~4 & 0xFFFFFFFF)`, ou tester des bits.
+
 ### Les masques de vue de `main.tscn` ne sont pas ceux du jeu (2026-09-14)
 
 `main.tscn` pose `canvas_cull_mask = 3` sur `SubViewport1` et `5` sur
@@ -20947,7 +21004,7 @@ lance sans demande explicite.
 | Étape | Objet | Sessions | Modèle / effort |
 |---|---|---|---|
 | ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
-| ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique | 3 | Opus 5 / high |
+| ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
@@ -21212,8 +21269,192 @@ perçus et recopiées ici avec ses mots quand ils comptent :
    3D. C'est un chantier à inscrire — probablement **avant ou pendant ISO1**, parce qu'il
    change la géométrie qu'ISO1 extrude — et **il n'est pas ouvert**.
 
-**Ce qui n'est pas lancé** : ni ISO1, ni le chantier des murs bas. La prochaine étape
-se lance sur demande explicite, comme toutes les autres.
+**Ce qui a été lancé depuis** : ISO1, le 2026-09-14 au soir (section suivante), sur la
+branche `iso1-fondations`. **Ce qui ne l'est pas depuis cette section** : le chantier des
+murs bas (tenu ailleurs, sur `main`), ISO2 et la suite. La prochaine étape se lance sur
+demande explicite, comme toutes les autres.
+
+### ISO1 — les fondations de la vue isométrique 🟡 (ouverte le 2026-09-14, en attente du jalon H-ISO1)
+
+**Ouverte sur la décision H15** (Adrien, 2026-09-14 : « c'est bon on y va »). Session
+« Iso 1 Opus », branche locale **`iso1-fondations`**, issue de `iso-geometrie` @ `d57aaca`,
+worktree `/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450`.
+Non poussée, non fusionnée. **Rien de ce qui suit n'est allumé chez un joueur** : la vue
+iso est derrière un réglage désactivé par défaut.
+
+**Ce qui existe.** Le banc ISO0.b devient un chemin de rendu du jeu, sans refaire son code :
+- **`presentation_3d.gd`** (`Presentation3D`) — **enfant de la racine de l'arbre**, sœur de
+  `Main`, jamais sous `Player*` ni `GameState` (un nœud sous un porteur de RPC peut dérouter
+  les RPC sans erreur console). Elle possède sol, murs, deux corps grossiers et la caméra.
+  **Un seul crochet dans le jeu**, six lignes en fin de `GameState.rebuild_arena()`, sous
+  garde `GameSettings.mode_iso` ; allumer, tenir, éteindre et reconstruire les murs, elle le
+  fait elle-même à chaque image — parce que le jeu redéfait ses gestes (accords de rendu,
+  couches de sprites) et qu'un second crochet aurait fini par diverger du premier.
+- **`GameSettings.mode_iso`** — persisté dans `user://settings.cfg`, **désactivé par
+  défaut** ; interrupteur « Vue isométrique (expérimental) » dans les réglages vidéo ;
+  **`--iso`** l'allume pour une exécution et ne s'écrit jamais (sans cette séparation, le
+  premier volume touché pendant un banc aurait persisté l'iso chez le joueur).
+- **Vue unique seulement** (entraînement, en ligne). En écran scindé la vue reste de dessus
+  jusqu'à ISO2, et la ligne **« VUE ISO »** du panneau F3 le dit (« écran scindé : vue de
+  dessus jusqu'à ISO2 »), pas une boîte de dialogue.
+- **`iso_geometrie.gd`** — `build_meshes` : une boîte par rectangle de
+  `merge_rects(build_grid(data, Kind.WALLS))`, posée sur la collision du jeu, déterministe.
+- **`camera_iso.gd`** — orthographique, tangage 52°, lacet 0°, `size = 1080 × sin θ` (la
+  profondeur gardée, 1513 px de large au sol), qui suit la transformation de canevas de la
+  vue regardée — zoom et secousse compris — et **ne montre jamais plus de carte que la
+  caméra 2D** (lacet nul ; vérifié aux quatre coins).
+- **`sol_projete.gdshader`, `mur_iso.gdshader`, `corps_grossier_iso.gdshader`** —
+  préchargés, *unshaded*, aucune `Light3D` ; la lightmap lue par `iso_lightmap.gdshaderinc`
+  (formule miroir de `CameraIso.uv_de`) ; faces de murs allumées au pied, sommet noir strict.
+- **Le chemin `SubViewport` forcé** (`rendu_racine_autorise = false`), le conteneur 2D
+  **transparent et non caché** (écart du banc ISO0.b, même raison), le `Background` éteint,
+  les dix sprites de corps sur la couche de visibilité 0 — jamais `visible`. Tout est
+  **rendu à l'extinction**, vérifié par la suite.
+- **Visée souris reprojetée** (rayon caméra ∩ sol, poussé dans la vue) : sans elle le duel
+  n'est pas jouable à la souris. La vraie reprojection des entrées reste ISO5.
+
+**Le contrat avec le chantier des murs bas.** `IsoGeometrie` lit `HAUTEUR_MUR_HAUT`,
+`HAUTEUR_MUR_BAS` et `Kind.LOW_WALLS` **dans le script** de `map_geometry.gd`, dès qu'ils
+existent (une référence écrite en dur ne compilerait pas avant la fusion) ; en attendant,
+une seule hauteur, **`IsoGeometrie.H_HAUT = 0,65 tuile`**, documentée « à déplacer ». La
+source réellement utilisée s'imprime (F3, suite, journal) : une fusion qui perdrait la
+constante se verrait, au lieu de retomber en silence sur la valeur locale. `Kind.LOW_WALLS`
+sans sa hauteur crie (`push_error`).
+
+**La pâte de roman graphique — à choisir par Adrien.** `iso_pate.gdshaderinc` porte
+`pate(couleur, lumiere, style, …)` et l'uniform `style` ; **le shader des corps d'ISO3
+l'inclura**. Quatre pâtes : **A** gravure à l'encre (hachures qui suivent la pente de la
+lumière), **B** ligne claire (aplats, contour par la pente), **C** trame et encre décalée,
+**D** lavis et pochoir ; et **brute** (la lightmap seule) pour comparer. F2 les fait
+défiler en jeu, `--pate A|B|C|D|brute` au lancement. **Invariant non négociable** : monotone
+en la lumière, strictement 0 à lumière 0, **aucun terme additif** — tout ce que la pâte fait
+multiplie la couleur reçue. Vérifié sur un miroir processeur (`iso_pate.gd`) : 1 728 lieux,
+201 niveaux de lumière, quatre pâtes. ⚠️ **Le premier lavis violait l'invariant** — il
+désaturait vers la luminance *annoncée* au lieu de celle de la couleur reçue ; une couleur
+nulle donnait du gris. La suite l'a vu ; corrigé dans les deux fichiers.
+
+**Ce que chaque pâte garde de la lumière** — mesuré au pixel sur « Le cloître », torche et
+flash, part de l'arène au-dessus de 8/255 (et de 32/255) :
+
+| Pâte | > 8/255 | > 32/255 | Moyenne | Lecture |
+|---|---|---|---|---|
+| brute (= la vue de dessus projetée) | 26,8 % | 6,4 % | 7,9/255 | la référence |
+| **D** lavis et pochoir | 27,1 % | 5,2 % | 8,4/255 | garde la lueur faible |
+| **B** ligne claire | 19,6 % | 3,6 % | 6,6/255 | en perd un quart |
+| **A** gravure à l'encre | 6,4 % | 3,2 % | 3,0/255 | **efface les trois quarts de la lueur faible** |
+| **C** trame et encre décalée | 3,2 % | 1,9 % | 2,6/255 | **efface presque toute la lueur faible** |
+
+**Pourquoi ce tableau compte plus que la planche.** Dans Candela la lueur faible est de
+l'information : un halo lointain, un reflet qui dit qu'on éclaire, la rétrodiffusion. Une pâte
+qui l'efface rend la vue iso **plus pauvre que la vue de dessus**, de la même façon pour les
+deux joueurs mais pas pour le jeu. A et C sont les plus « roman graphique » à l'œil et les
+moins fidèles au chiffre ; B et D rehaussent un demi-ton déjà éclairé, sans jamais allumer ce
+qui est noir.
+
+**Le noir absolu — prouvé au banc, dans une vraie fenêtre, pour les quatre pâtes.**
+`tools/banc_iso.gd --jeu --noir` (voir « Pièges connus » : la vue de dessus n'est pas noire
+lumières éteintes) :
+
+| Pâte | (a) lumières éteintes : pixels allumés hors du support de la brute | écran max | (b) lightmap noire : écran max | Verdict |
+|---|---|---|---|---|
+| A | 0 | 158/255 | 0/255 | tenu |
+| B | 0 | 249/255 | 0/255 | tenu |
+| C | 0 | 255/255 | 0/255 | tenu |
+| D | 0 | 255/255 | 0/255 | tenu |
+| vue de dessus actuelle (`--base`) | — | **177/255** | — | le résidu du jeu : viseur, liseré des murs |
+
+**Le test d'équité géométrique** (`tools/test_iso_geometrie.gd`, calcul analytique puis
+recompté par lancer de rayons contre les boîtes réellement construites : 0 désaccord sur
+les six cartes à 0,65, 1 et 1,5 tuile ; la même analyse caméra retournée se trompe, preuve
+qu'elle voit l'orientation). Tangage 52°, lacet 0°, caméra au sud : **c'est le côté nord des
+murs qui cache**.
+
+| Mur (tuiles) | Bande cachée | Critère < 18 px | Disque d'un corps collé caché |
+|---|---|---|---|
+| 0,3 | 8,2 px | tenu | 17 % |
+| 0,45 | 12,3 px | tenu | 30 % |
+| **0,65** (`H_HAUT` actuelle) | **17,8 px** | **tenu** | 49 % |
+| 0,7 | 19,1 px | dépassé | 54 % |
+| 1,0 | 27,3 px | dépassé | 81 % |
+| 1,5 | 41,0 px | dépassé | 100 % |
+| 2,0 | 54,7 px | dépassé | 100 % |
+
+Un corps d'une tuile de haut collé derrière un mur ne disparaît **entièrement** qu'au-delà
+de 2,3 tuiles de mur : sa tête dépasse avant. Par carte (cases de sol touchées / sol ; part
+du sol cachée ; écart entre la moitié de J1 et celle de J2) :
+
+| Carte | à 0,65 t | à 1,0 t | à 1,5 t (cases invisibles) |
+|---|---|---|---|
+| Arène Circulaire | 28 / 356 · 4,0 % · 0 pt | 6,1 % · 0 pt | 9,2 % · 0 pt (28) |
+| Arène Standard (`default`) | 26 / 676 · 2,0 % · 0 pt | 3,0 % · 0 pt | 4,5 % · 0 pt (26) |
+| Le Cloître | 38 / 528 · 3,7 % · 0 pt | 5,6 % · 0 pt | 8,4 % · 0 pt (38) |
+| L'Usine | 48 / 460 · 5,3 % · **−0,5 pt** | 8,2 % · −0,8 pt | 12,0 % · −1,1 pt (48) |
+| **La Croisée** | 42 / 424 · 5,0 % · **−2,4 pts** | 7,7 % · **−3,7 pts** | 11,6 % · **−5,3 pts** (42) |
+| Le Bunker | 42 / 364 · 5,9 % · 0 pt | 9,0 % · 0 pt | 13,5 % · 0 pt (42) |
+
+**Ce que le tableau dit, pour trancher `H_haut`.** Aucune case n'est entièrement invisible
+tant que le mur reste sous 1,28 tuile ; au-delà, chaque case de sol au nord d'un mur l'est.
+**La Croisée est la seule carte où la hauteur crée un avantage de côté** : la moitié de J2
+cache 2,4 points de sol de plus que celle de J1 à 0,65 tuile, 3,7 à une tuile — ses murs ne
+sont pas orientés pareil dans les deux moitiés. Un écart qu'une vue de dessus n'a pas, et que
+seul un lacet ou une carte retouchée effacerait.
+
+**Ce que les suites prouvent** (`tools/test_iso_geometrie.gd`, 86 contrôles ;
+`tools/test_iso_camera.gd`, 87 ; les deux dans `run_suites.sh`, **chacune sabotée une fois →
+code 1 → restaurée**) : une boîte par rectangle sur les six cartes, posée sur la collision ;
+déterminisme ; `size = 1080 × sin θ` et 1513 px au sol à 52° ; monde → uv aux quatre coins ;
+empreinte contenue dans la vue 2D à trois zooms et trois tangages (et refus d'une caméra sans
+sin θ) ; `mode_iso` faux par défaut, persisté, `--iso` jamais écrit, valeur trafiquée refusée ;
+**la simulation identique pas pour pas avec ou sans vue iso** — positions, rotations, points de
+vie, torches, balles et rejeu, avec **un témoin** (deux parties sans iso, identiques) sans quoi
+l'égalité ne prouverait rien ; aucun nœud 3D sous `GameState` ni `Player*` ; les masques
+vivants `~4` / `~2` ne lisent pas la couche 0 ; à l'extinction, couches, alpha, souris, fond
+et rendu racine rendus. `tools/test_banc_iso.gd` reste vert : le banc ISO0.b marche encore.
+**Lot complet vert** le 2026-09-14 à 18 h 30 (heure de Paris), 367 s, scénarios à deux
+instances compris, sans erreur de script.
+
+**Le banc apprend le chemin du jeu.** `tools/banc_iso.gd --jeu` ne construit plus rien : il
+allume `mode_iso` pour l'exécution et mesure `Presentation3D` telle qu'Adrien la joue (vue
+unique ; `--mur` y retaille les boîtes pour une planche). `--noir` fait le contrôle ci-dessus,
+`--sans-hud` retire le HUD d'une capture. Ses lignes `BANC_ISO mode=jeu-A …` se comparent aux
+`mode=base`.
+
+**Planches** : `docs/iso/planche_pate.jpg` (les quatre pâtes et la brute, Le Cloître, torche,
+un flash ; les contrôles du noir éclaircis ×8), `docs/iso/planche_iso1.jpg` (`default` et
+Le Cloître, murs à 0,65 et 1,0 tuile, pâte A, sans HUD). Captures et relevés bruts dans
+`docs/iso/captures_iso1/`, sous le `.gdignore` de `docs/iso/` (aucun `.import`), recomposables
+par `python3 docs/iso/planche_iso1.py --journal docs/iso/captures_iso1/releves_noir.txt`.
+
+**Ce qu'ISO1 ne fait pas, et qui se verra en jouant** : l'écran scindé reste de dessus (ISO2) ;
+les corps grossiers lisent la lumière **au sol**, donc un ennemi révélé par le seul halo de
+proximité disparaît (les capteurs d'ISO2 le lèvent) ; le voile, la vignette et le brouillage
+restent dans la lightmap ou à l'écran tels quels (ISO2) ; killcam et fantômes restent plats
+dans la lightmap (ISO5) ; gadgets debout plats (ISO4) ; lightmap `1080p` (la taille n'est
+pas tranchée ; la vue suit la sous-vue telle que le jeu la dimensionne).
+
+**Mes relevés de cadence ne valent rien** (second plan, sessions voisines) : aucun n'est cité.
+
+#### Jalon H-ISO1 — ce qui attend Adrien
+
+1. **Jouer trois minutes** en vue unique (entraînement) avec la vue iso :
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" -- --iso`
+   puis ENTRAÎNEMENT ; **F2** fait défiler A → B → C → D → brute ; **F3** montre « VUE ISO ».
+2. **Choisir la pâte**, sur `docs/iso/planche_pate.jpg` et en jeu. Recommandation de la
+   session : **D (lavis et pochoir)**, parce qu'elle est la seule à garder la lueur faible au
+   niveau de la vue de dessus (27,1 % contre 26,8 %) — l'information du jeu —, et qu'elle
+   ne rehausse que ce qui est déjà éclairé ; **A** si l'œil l'emporte, en sachant qu'elle
+   efface trois quarts de la lueur faible.
+3. **Fixer `H_haut`** d'après le tableau d'équité. Recommandation : **0,65 tuile** — la plus
+   haute qui tienne le critère (17,8 px), aucune case invisible, et un écart de côté limité à
+   La Croisée (−2,4 pts). Des murs d'une tuile coûtent 27 px de bande et 3,7 pts à La Croisée.
+   « Ne laissent rien passer » voulait-il dire « on ne voit pas ce qui est collé derrière » ?
+   C'est la question qui tranche entre les deux.
+4. **Relevés de cadence** — sous fenêtre de silence, machine refroidie, fenêtre au premier
+   plan, ordre **base / iso / iso / base**, vue unique, 60 s chacun :
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" res://tools/banc_iso.tscn -- --base --charge --seconds 60`
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450" res://tools/banc_iso.tscn -- --jeu --charge --seconds 60`
+   (la seconde deux fois, puis la première), et recopier les quatre lignes `BANC_ISO`.
+5. **Dire si ISO2 s'ouvre.**
 
 ### Ce qui attend Adrien — jalon H15
 
@@ -21362,6 +21603,12 @@ et un seul est du travail de session.
 > lancer ISO1 quand il le voudra, et **trancher les règles des murs bas et de
 > l'accroupi** (questions listées dans la section ISO) — une mécanique neuve qui
 > change la géométrie qu'ISO1 extrude. Rien n'est lancé.
+>
+> **Mis à jour le 2026-09-14, soir — ISO1 est ouverte et commitée** sur la branche locale
+> `iso1-fondations` (section ISO, « ISO1 »). Ce qui attend Adrien : le **jalon H-ISO1** —
+> jouer trois minutes avec `-- --iso`, choisir la pâte (A, B, C ou D), fixer la hauteur des
+> murs hauts d'après le tableau d'équité, prendre quatre relevés base / iso / iso / base
+> sous fenêtre de silence, et dire si ISO2 s'ouvre. Commandes absolues dans la section.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

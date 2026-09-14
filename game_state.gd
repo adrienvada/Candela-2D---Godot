@@ -1016,6 +1016,12 @@ func rebuild_arena() -> void:
 	# défaut de la texture de torche, weapon_data.gd).
 	Fusee.prechauffer(arena)
 
+	# Chantier ISO, étape ISO1 — la vue isométrique, derrière `GameSettings.mode_iso`.
+	# **Le seul crochet du jeu** : `Presentation3D` vit sous la racine de l'arbre, hors
+	# de tout porteur de RPC, et tient elle-même bascule, retour et murs.
+	if GameSettings.mode_iso:
+		Presentation3D.accrocher(self)
+
 ## Duplique un calque pour un seul viewport, avec son masque de lumière propre.
 func _duplicate_layer_for_player(layer: TileMapLayer, visibility: int, light_mask: int) -> void:
 	var copy := layer.duplicate() as TileMapLayer

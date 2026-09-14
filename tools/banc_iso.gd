@@ -34,12 +34,22 @@
 ##   godot --path . res://tools/banc_iso.tscn -- [--base] [--scinde]
 ##       [--lightmap plein|1080p|demi] [--tangage 60] [--lacet 0] [--mur 0.45]
 ##       [--carte <slug>] [--seconds 60] [--charge]
-##       [--capture chemin.png [--flash]] [--taille 1920x1080]
+##       [--capture chemin.png [--flash] [--noir]] [--taille 1920x1080]
+##       [--jeu [--pate A|B|C|D|brute] [--sans-hud]]
 ##
 ## `--charge` : l'échange au pompe de `bench_framerate.gd`, pour des relevés
 ## comparables. `--capture` : une image (et la lightmap de chaque vue à côté),
 ## torches braquées côte à côte sur le mur le plus proche ; `--flash` y ajoute un
 ## tir de J1 — et la secousse de caméra qui va avec.
+##
+## `--jeu` (ISO1) : la vue iso n'est plus construite par le banc mais par le JEU —
+## `GameSettings.mode_iso` allumé pour l'exécution, `Presentation3D` posée par le crochet
+## de `rebuild_arena()`. C'est le chemin qu'Adrien joue, donc celui qu'on mesure. Tangage
+## et lacet sont ceux du jeu (`CameraIso`) ; `--mur` y retaille les boîtes pour une
+## planche, sans toucher au jeu ; F2 fait défiler les pâtes. Vue unique seulement : l'écran
+## scindé iso est ISO2. `--noir` (avec `--capture`) éteint TOUTES les lumières et le HUD,
+## puis imprime la valeur maximale de l'image et de la lightmap : le contrôle du noir
+## absolu, au pixel, pour la pâte passée en `--pate`. `--sans-hud` retire le HUD d'une capture.
 ##
 ## Pendant la partie : **F8** fait défiler le tangage, **F9** le lacet, **F10** la
 ## hauteur des murs. Le protocole de relevé est dans `docs/ROADMAP.md`, section ISO.
@@ -189,6 +199,10 @@ var _seconds := 60.0
 var _capture := ""
 var _flash := false
 var _taille := Vector2i.ZERO
+var _jeu := false
+var _noir := false
+var _sans_hud := false
+var _mur_donne := false
 
 ## Posé une fois la vue construite : `_process` ne touche à rien avant.
 var _pret := false
@@ -230,7 +244,19 @@ func _ready() -> void:
 		printerr("✗ banc_iso : ", refus)
 		_sortir(3)
 		return
+	if _jeu and _scinde:
+		printerr("✗ banc_iso : --jeu ne connaît que la vue unique (l'écran scindé iso est ISO2)")
+		_sortir(2)
+		return
+	if _noir and (_capture == "" or not (_jeu or _base) or _scinde):
+		printerr("✗ banc_iso : --noir se prend avec --capture, et --jeu ou --base (vue unique)")
+		_sortir(2)
+		return
 	GameSettings.pilotage_externe = true
+	if _jeu:
+		# Pour cette exécution seulement : `mode_iso` n'est pas `set_mode_iso()`, rien ne
+		# s'écrit dans settings.cfg.
+		GameSettings.mode_iso = true
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_couper_le_son("avant la scène")
@@ -274,7 +300,8 @@ func _ready() -> void:
 
 	# Avant le lancement : la manche démarre déjà sur le chemin mesuré, sans
 	# bascule racine → sous-vues au milieu de l'échauffement.
-	_main.rendu_racine_autorise = _base
+	if not _jeu:
+		_main.rendu_racine_autorise = _base
 	_ui._intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
 	if _charge:
 		_select_shotgun(_ui.p1_weapon_group)
@@ -322,6 +349,10 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_carte = _value(args, "--carte", "")
 	_capture = _value(args, "--capture", "")
 	_flash = args.has("--flash")
+	_jeu = args.has("--jeu")
+	_noir = args.has("--noir")
+	_sans_hud = args.has("--sans-hud")
+	_mur_donne = args.has("--mur")
 	var taille := _value(args, "--taille", "")
 	if taille != "":
 		var parts := taille.to_lower().split("x")
@@ -340,6 +371,10 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 
 func _libelle() -> String:
 	var vue := "écran scindé" if _scinde else "vue unique"
+	if _jeu:
+		return "JEU (Presentation3D), vue unique, tangage %s°, murs %s tuile, pâte %s%s" % [
+			str(CameraIso.TANGAGE_DEG), str(_mur if _mur_donne else IsoGeometrie.hauteur_mur_haut()),
+			_pate_nommee(), ", charge automatique" if _charge else ""]
 	if _base:
 		return "BASE (vue de dessus, telle qu'aujourd'hui), %s%s" % [vue,
 			", rendu par la racine" if not _scinde else ""]
@@ -363,7 +398,11 @@ func _poser_la_vue() -> bool:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	if _base:
+		if _noir:
+			_ui.visible = false
 		return true
+	if _jeu:
+		return await _attendre_la_presentation()
 
 	_vues.assign([_main.vp1] if not _scinde else [_main.vp1, _main.vp2])
 	# Le fond noir plein cadre de `main.tscn` se dessine APRÈS la 3D de la racine.
@@ -536,7 +575,7 @@ func _process(_delta: float) -> void:
 	if not _pret:
 		return
 	_tenir()
-	if not _base:
+	if not _base and not _jeu:
 		_suivre()
 
 
@@ -550,9 +589,9 @@ func _tenir() -> void:
 		if not is_instance_valid(j):
 			continue
 		j.hp = 100.0
-		if not _base:
+		if not _base and not _jeu:
 			_corps_recaches += _cacher_corps(j)
-	if not _base:
+	if not _base and not _jeu:
 		for vue in _vues:
 			if vue.render_target_update_mode != SubViewport.UPDATE_ALWAYS:
 				vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -613,7 +652,7 @@ func _cacher_corps(joueur: Node) -> int:
 # ---------------------------------------------------------------------------
 
 func _input(event: InputEvent) -> void:
-	if not _pret or _base:
+	if not _pret or _base or _jeu:
 		return
 	var touche := event as InputEventKey
 	if touche != null and touche.pressed and not touche.echo:
@@ -724,6 +763,13 @@ func _conditions() -> void:
 		if _main._rendu_racine:
 			print("  %-12s: le duel est rendu par la RACINE (chantier R)" % "Racine")
 		return
+	if _jeu:
+		var p := Presentation3D.instance()
+		print("  %-12s: cible 3D %d×%d (la fenêtre)" % ["Racine", fenetre.x, fenetre.y])
+		print("Jeu           : Presentation3D — %s" % (p.etat if p != null else "ABSENTE"))
+		print("Murs          : %s tuile (%s)" % [str(_mur if _mur_donne else IsoGeometrie.hauteur_mur_haut()),
+			"retaillés par le banc" if _mur_donne else IsoGeometrie.source_des_hauteurs()])
+		return
 	if _scinde:
 		for sv in _vues3d:
 			print("  %-12s: cible 3D %d×%d" % [sv.name, sv.size.x, sv.size.y])
@@ -767,12 +813,17 @@ func _report() -> void:
 	print("  Appels de dessin : %d (médiane par image)" % _mediane(_appels))
 	print("  Cible 1 %% bas ≥ %.0f : %s" % [BancCadence.CIBLE_1_POURCENT_BAS,
 		"tenue" if stats["fps_1pc_bas"] >= BancCadence.CIBLE_1_POURCENT_BAS else "NON TENUE"])
-	if not _base:
+	if _jeu:
+		var p := Presentation3D.instance()
+		if p != null:
+			print("  Reposés en jeu   : %d nœud(s) de corps, %d vue(s) relancée(s) (Presentation3D)"
+				% [p.corps_recaches, p.vues_relancees])
+	elif not _base:
 		print("  Reposés en jeu   : %d nœud(s) de corps, %d vue(s) relancée(s)"
 			% [_corps_recaches, _vues_relancees])
 	# Une ligne à recopier dans un tableau, tous réglages compris.
 	print("BANC_ISO mode=%s vue=%s lightmap=%s tangage=%s lacet=%s mur=%s charge=%s carte=%s "
-		% ["base" if _base else "iso", "scinde" if _scinde else "unique",
+		% ["base" if _base else ("jeu-" + _pate_nommee().left(1) if _jeu else "iso"), "scinde" if _scinde else "unique",
 		"-" if _base else _lightmap, str(_tangage), str(_lacet), str(_mur), str(_charge),
 		MapData.get_selected().get("name", "?")]
 		+ "median=%.0f bas1=%.0f pire_ms=%.1f appels=%d focus=%s" % [stats["fps_median"],
@@ -794,6 +845,9 @@ func _report() -> void:
 ## sans `--flash`, deux captures du même réglage se superposent au pixel, et c'est
 ## ce qui permet de comparer l'iso à 90° avec `--base`.
 func _capturer() -> void:
+	if _noir:
+		await _capturer_le_noir()
+		return
 	var p1: Node2D = _main.p1
 	var p2: Node2D = _main.p2
 	var cible := _mur_le_plus_proche(p1.global_position)
@@ -855,6 +909,179 @@ func _mur_le_plus_proche(depuis: Vector2) -> Vector2:
 			distance = d
 			meilleur = point
 	return meilleur
+
+
+# ---------------------------------------------------------------------------
+# --jeu : LA VUE DU JEU, ET LE NOIR ABSOLU
+# ---------------------------------------------------------------------------
+
+## Le banc ne construit rien : il attend que le JEU ait allumé sa vue iso, et le dit.
+## Une variante doit prouver qu'elle a changé quelque chose (leçon du 2026-08-18).
+func _attendre_la_presentation() -> bool:
+	_vues.assign([_main.vp1])
+	var allumee := await _attendre(func() -> bool:
+		var p := Presentation3D.instance()
+		return p != null and bool(p.get("_actif")), 5.0)
+	if not allumee:
+		printerr("✗ --jeu : la vue isométrique du jeu ne s'est pas allumée "
+			+ "(GameSettings.mode_iso, crochet de rebuild_arena, vue unique ?)")
+		return false
+	if _mur_donne:
+		var murs := Presentation3D.instance().get_node_or_null("SceneIso/Murs")
+		var h := _mur * CandelaTileSet.TILE_SIZE.y
+		for boite in murs.get_children():
+			(boite as Node3D).scale.y = h
+			(boite as Node3D).position.y = h * 0.5
+	if _sans_hud or _noir:
+		_ui.visible = false
+	var couches := 0
+	for nom in Presentation3D.APPUIS_JOUEUR:
+		if (_main.p1.get(nom) as CanvasItem).visibility_layer == Presentation3D.COUCHE_HORS_VUE:
+			couches += 1
+	print("JEU : Presentation3D allumée — %s ; %d/10 sprites de J1 retirés ; racine autorisée=%s"
+		% [Presentation3D.instance().etat, couches, str(_main.rendu_racine_autorise)])
+	return true
+
+
+func _pate_nommee() -> String:
+	var args := OS.get_cmdline_user_args()
+	var i := args.find("--pate")
+	return args[i + 1].to_upper() if i >= 0 and i + 1 < args.size() else "A"
+
+
+## Le contrôle du noir absolu — deux mesures dans la même exécution, HUD retiré.
+##
+## **(a) Toutes les lumières éteintes** — le scénario du jeu. Éteintes par `enabled`, à
+## chaque image pendant une demi-seconde : une balle née entre temps apporte la sienne.
+## ⚠️ **Le jeu de dessus n'est pas noir dans ce cas, et ce n'est pas l'iso** (mesuré le
+## 2026-09-14) : le viseur du joueur et le liseré des murs peignent sans lumière, dans la
+## lightmap elle-même. Ce qui revient à l'iso se juge donc ici contre SA SOURCE : la même
+## image est reprise en pâte brute (la lightmap projetée, sans rien), et **aucun pixel ne
+## doit s'allumer hors de ce que la brute allume** (tolérance de 2 px pour le filtrage).
+## ⚠️ Pas « l'écran ≤ la lightmap » : B, C et D normalisent leurs tons, un demi-ton y
+## ressort plus clair — c'est un choix de style à juger (il rehausse ce qui est déjà
+## éclairé), pas une lumière née dans le noir. En `--base`, la mesure donne le résidu
+## de la vue de dessus, pour comparer.
+##
+## **(b) Lightmap noire** — l'invariant propre à la projection et à la pâte : la vue 2D ne
+## dessine plus rien (`canvas_cull_mask = 0`), et l'écran doit valoir 0 PARTOUT. C'est
+## ce que « strictement 0 à lumière 0 » veut dire au pixel, sans rien cacher du jeu.
+func _capturer_le_noir() -> void:
+	var eteintes := 0
+	for i in 30:
+		eteintes = _eteindre_les_lumieres(get_tree().root)
+		await get_tree().process_frame
+	var image_a: Image = await RenduCommun.capturer(get_tree(), 15000)
+	if image_a == null:
+		printerr("✗ aucune image rendue en 15 s")
+		_sortir(4)
+		return
+	var dossier := _capture.get_base_dir()
+	if dossier != "":
+		DirAccess.make_dir_recursive_absolute(dossier)
+	image_a.save_png(_capture)
+	var max_a := _valeur_max(image_a)
+	var vue: SubViewport = _main.vp1
+	var lumiere_a := vue.get_texture().get_image()
+	var max_lightmap_a := _valeur_max(lumiere_a)
+	if lumiere_a != null and not _base:
+		lumiere_a.save_png(_capture.get_basename() + "_lightmap1.png")
+	var rendu := "base" if _base else "jeu-" + _pate_nommee()
+	if _base:
+		print("BANC_ISO noir-a rendu=%s max_ecran=%d/255 lumieres_eteintes=%d image=%s"
+			% [rendu, max_a, eteintes, _capture])
+		_sortir(0)
+		return
+	var presentation := Presentation3D.instance()
+	var style: int = presentation.style_pate
+	presentation.style_pate = -1
+	for i in 10:
+		_eteindre_les_lumieres(get_tree().root)
+		await get_tree().process_frame
+	var brute: Image = await RenduCommun.capturer(get_tree(), 15000)
+	presentation.style_pate = style
+	if brute != null:
+		brute.save_png(_capture.get_basename() + "_brute.png")
+	var hors_support := _allumes_hors_du_support(image_a, brute)
+	print("BANC_ISO noir-a rendu=%s max_ecran=%d/255 max_brute=%d/255 max_lightmap=%d/255 allumes_hors_support=%d lumieres_eteintes=%d image=%s"
+		% [rendu, max_a, _valeur_max(brute), max_lightmap_a, hors_support, eteintes, _capture])
+
+	var masque := vue.canvas_cull_mask
+	vue.canvas_cull_mask = 0
+	for i in 20:
+		_eteindre_les_lumieres(get_tree().root)
+		await get_tree().process_frame
+	var image_b: Image = await RenduCommun.capturer(get_tree(), 15000)
+	var lumiere_b := vue.get_texture().get_image()
+	vue.canvas_cull_mask = masque
+	var chemin_b := _capture.get_basename() + "_lightmap_noire.png"
+	if image_b != null:
+		image_b.save_png(chemin_b)
+	var max_b := _valeur_max(image_b)
+	var max_lightmap_b := _valeur_max(lumiere_b)
+	var tenu := max_b == 0 and max_lightmap_b == 0 and hors_support == 0
+	print("BANC_ISO noir-b rendu=%s max_ecran=%d/255 max_lightmap=%d/255 image=%s"
+		% [rendu, max_b, max_lightmap_b, chemin_b])
+	print("BANC_ISO noir pate=%s verdict=%s (a : %d pixel(s) allumé(s) hors du support de la brute, écran max %d ; b : écran %d sur lightmap %d)"
+		% [_pate_nommee(), "NOIR ABSOLU TENU" if tenu else "NOIR ABSOLU ROMPU", hors_support, max_a,
+		max_b, max_lightmap_b])
+	_sortir(0 if tenu else 6)
+
+
+## Pixels allumés dans `image` là où `reference` est noire sur tout un voisinage 5×5.
+## Rapide dans le noir : seuls les pixels allumés sont examinés.
+static func _allumes_hors_du_support(image: Image, reference: Image) -> int:
+	if image == null or reference == null or image.get_size() != reference.get_size():
+		return -1
+	var a := image.duplicate() as Image
+	var r := reference.duplicate() as Image
+	a.convert(Image.FORMAT_RGB8)
+	r.convert(Image.FORMAT_RGB8)
+	var da := a.get_data()
+	var dr := r.get_data()
+	var w := a.get_width()
+	var h := a.get_height()
+	var n := 0
+	for i in range(0, da.size(), 3):
+		if da[i] == 0 and da[i + 1] == 0 and da[i + 2] == 0:
+			continue
+		var p := i / 3
+		var px := p % w
+		var py := p / w
+		var trouve := false
+		for oy in range(maxi(0, py - 2), mini(h, py + 3)):
+			for ox in range(maxi(0, px - 2), mini(w, px + 3)):
+				var j := (oy * w + ox) * 3
+				if dr[j] != 0 or dr[j + 1] != 0 or dr[j + 2] != 0:
+					trouve = true
+					break
+			if trouve:
+				break
+		if not trouve:
+			n += 1
+	return n
+
+
+func _eteindre_les_lumieres(noeud: Node) -> int:
+	var n := 0
+	if noeud is Light2D:
+		(noeud as Light2D).enabled = false
+		n += 1
+	for enfant in noeud.get_children():
+		n += _eteindre_les_lumieres(enfant)
+	return n
+
+
+## La valeur de canal la plus haute (0-255), alpha exclu — par la comparaison du moteur
+## avec une image noire, et non par une boucle sur onze millions d'octets.
+static func _valeur_max(image: Image) -> int:
+	if image == null:
+		return -1
+	var rgb := image.duplicate() as Image
+	rgb.convert(Image.FORMAT_RGB8)
+	var noire := Image.create(rgb.get_width(), rgb.get_height(), false, Image.FORMAT_RGB8)
+	noire.fill(Color.BLACK)
+	return int(round(float(rgb.compute_image_metrics(noire, false)["max"])))
 
 
 # ---------------------------------------------------------------------------

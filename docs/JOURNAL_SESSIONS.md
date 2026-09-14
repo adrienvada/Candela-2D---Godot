@@ -4241,3 +4241,50 @@ le mur bas selon **un même angle** (un accroupi loin derrière redevient visibl
 touchable) ; on enjambe un mur bas avec « croix », lentement et bruyamment ; la torche
 d'un accroupi bute sur le mur ; l'accroupi se lit à sa silhouette et à une marque HUD
 pour soi. Point dur signalé : l'ombre *finie* d'un mur bas n'existe pas nativement en 2D.
+
+### Session « Iso 1 Opus » (ISO1, branche `iso1-fondations`) — ajoutée le 2026-09-14
+
+Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape **ISO1**
+ouverte le 2026-09-14 sur la décision H15 d'Adrien (« c'est bon on y va »). Rôle
+`iso-geometrie` de l'étude (§ 7.2). La branche part de `iso-geometrie` @ `d57aaca`
+(ISO0.b close, non poussée) ; le worktree est celui que l'application a créé pour la
+session, basculé sur la branche neuve — aucun autre arbre touché :
+`/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso1-091450`.
+
+**Fichiers créés, tous à elle :** `presentation_3d.gd`, `iso_geometrie.gd`,
+`camera_iso.gd`, `iso_pate.gd`, `iso_pate.gdshaderinc` (**l'include que le shader des
+corps d'ISO3 inclura** — session iso-corps), `iso_lightmap.gdshaderinc`,
+`sol_projete.gdshader`, `mur_iso.gdshader`, `corps_grossier_iso.gdshader` (les cylindres
+du banc ; `corps_iso.gdshader` reste le nom réservé à ISO3), `tools/test_iso_geometrie.gd`,
+`tools/test_iso_camera.gd`, `docs/iso/planche_iso1.py`, `docs/iso/captures_iso1/`,
+`docs/iso/planche_pate.jpg`, `docs/iso/planche_iso1.jpg`, et leurs `.uid`.
+
+**Partagés, touchés par insertion seulement, sur consigne d'Adrien :**
+`game_state.gd` (UN crochet de six lignes en fin de `rebuild_arena()`),
+`settings_manager.gd` (`mode_iso`, sa persistance, `--iso`), `ui.gd` (l'interrupteur
+« Vue isométrique (expérimental) » des réglages vidéo, la ligne « VUE ISO » du panneau
+F3), `tools/run_suites.sh` (deux suites au bout de `SUITES`), `tools/banc_iso.gd`
+(fichier du rôle : `--jeu`, `--noir`, `--sans-hud`), `docs/ROADMAP.md` (section ISO1,
+quatre pièges), ce journal. Les `.uid` de `tools/banc_iso.gd` et `tools/test_banc_iso.gd`,
+jamais commités par ISO0.b, partent avec ce lot.
+
+**Lu, jamais écrit :** `map_geometry.gd` (le contrat des hauteurs avec le chantier murs
+bas : `HAUTEUR_MUR_HAUT`, `HAUTEUR_MUR_BAS`, `Kind.LOW_WALLS` lus dynamiquement dès
+qu'ils existeront — ce fichier n'en pose aucun), `player.gd`, `replay_system.gd`,
+`local_input_provider.gd`, `map_codec.gd`, `audio_manager.gd`. Aucun `voxel_*`, ni
+`map_codec.gd`, ni l'éditeur.
+
+**Signalé, non corrigé ici :** `AudioManager._occupations()` crie « Trying to cast a
+freed object » quand une seconde instance de `Main` tire dans la même exécution ; la vue
+de dessus n'est pas noire lumières éteintes (viseur `unshaded` voulu, liseré des murs
+non identifié). Voir « Pièges connus » (2026-09-14).
+
+**En parallèle :** « Murs bas Opus » (chantier murs bas, sur `main`), « ISO Corps Sonnet »
+(`iso-corps`), « ISO Assets Sonnet » (planches Gemini). Aucun fichier commun hors ROADMAP.
+Quand `main` portera les murs bas, c'est cette session qui fusionnera `main` dans sa
+branche, sur demande d'Adrien, puis vérifiera ses ancrages (`grep` de
+`Presentation3D.accrocher`, `mode_iso`, `dbg_iso`, `_build_iso_panel`).
+
+**Suivi de projet :** cette session ne republie pas ; ses deltas partent vers la session
+cloud « Fable 5.1 - CLOUD ISO UNRAILED » par `SendMessage` (la Routine `create_trigger`
+a refusé le corps demandé : « job_config ou session_request requis »).

@@ -1,0 +1,13 @@
+BANC_ISO noir-a rendu=jeu-A max_ecran=158/255 max_brute=161/255 max_lightmap=185/255 allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso1/noir_A.png
+BANC_ISO noir-b rendu=jeu-A max_ecran=0/255 max_lightmap=0/255 image=docs/iso/captures_iso1/noir_A_lightmap_noire.png
+BANC_ISO noir pate=A verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 158 ; b : écran 0 sur lightmap 0)
+BANC_ISO noir-a rendu=jeu-B max_ecran=249/255 max_brute=160/255 max_lightmap=185/255 allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso1/noir_B.png
+BANC_ISO noir-b rendu=jeu-B max_ecran=0/255 max_lightmap=0/255 image=docs/iso/captures_iso1/noir_B_lightmap_noire.png
+BANC_ISO noir pate=B verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 249 ; b : écran 0 sur lightmap 0)
+BANC_ISO noir-a rendu=jeu-C max_ecran=255/255 max_brute=160/255 max_lightmap=185/255 allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso1/noir_C.png
+BANC_ISO noir-b rendu=jeu-C max_ecran=0/255 max_lightmap=0/255 image=docs/iso/captures_iso1/noir_C_lightmap_noire.png
+BANC_ISO noir pate=C verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 255 ; b : écran 0 sur lightmap 0)
+BANC_ISO noir-a rendu=jeu-D max_ecran=255/255 max_brute=161/255 max_lightmap=185/255 allumes_hors_support=0 lumieres_eteintes=253 image=docs/iso/captures_iso1/noir_D.png
+BANC_ISO noir-b rendu=jeu-D max_ecran=0/255 max_lightmap=0/255 image=docs/iso/captures_iso1/noir_D_lightmap_noire.png
+BANC_ISO noir pate=D verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 255 ; b : écran 0 sur lightmap 0)
+BANC_ISO noir-a rendu=base max_ecran=177/255 lumieres_eteintes=253 image=docs/iso/captures_iso1/noir_base.png

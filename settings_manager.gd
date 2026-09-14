@@ -77,6 +77,18 @@ var intro_vue := false
 var fps_cap := 0
 var resolution_index := 0
 
+## Chantier ISO, étape ISO1 — la vue isométrique du duel (`presentation_3d.gd`).
+##
+## **Désactivée par défaut**, et c'est une consigne : elle est expérimentale, elle
+## réintroduit une cible de rendu intermédiaire, et l'écran scindé l'ignore jusqu'à
+## ISO2. `mode_iso` est ce qui S'APPLIQUE ; ce qui s'ENREGISTRE est le choix du
+## joueur seul (`_mode_iso_choisi`). `--iso` allume la vue pour une exécution — banc,
+## photographe — et ne s'écrit jamais dans `settings.cfg` : sans cette séparation, le
+## premier volume touché pendant un banc aurait persisté l'iso chez le joueur.
+var mode_iso := false
+var _mode_iso_choisi := false
+const DRAPEAU_ISO := "--iso"
+
 ## PE3.1 — le GPU brûlait pour rien hors match.
 ##
 ## Les menus tournaient déplafonnés, vers 200 images par seconde (relevé
@@ -149,6 +161,7 @@ func _ready() -> void:
 	# `project.godot` au lieu de se voir recentrée d'office.
 	if _has_saved_resolution or OS.is_debug_build():
 		_apply_resolution()
+	mode_iso = _mode_iso_choisi or iso_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
 	_apply_audio()
@@ -176,6 +189,19 @@ func set_vsync(enabled: bool) -> void:
 	vsync_enabled = enabled
 	_apply_video()
 	_save()
+
+## Le choix du joueur, enregistré. Éteindre prend effet à l'image suivante ; allumer,
+## au prochain duel (`GameState.rebuild_arena()` est le seul crochet de la vue).
+func set_mode_iso(actif: bool) -> void:
+	_mode_iso_choisi = actif
+	mode_iso = actif or iso_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+	_save()
+
+func mode_iso_choisi() -> bool:
+	return _mode_iso_choisi
+
+static func iso_par_argument(args: PackedStringArray) -> bool:
+	return args.has(DRAPEAU_ISO)
 
 func set_fps_cap(cap: int) -> void:
 	fps_cap = cap if FPS_CAPS.has(cap) else 0
@@ -487,6 +513,9 @@ func _load() -> void:
 	intro_vue = cfg.get_value(SECTION_DISPLAY, "intro_vue", false)
 	var loaded_cap: int = cfg.get_value(SECTION_VIDEO, "fps_cap", 0)
 	fps_cap = loaded_cap if FPS_CAPS.has(loaded_cap) else 0
+	# Seul un VRAI `true` allume : une valeur trafiquée retombe sur la vue de dessus.
+	_mode_iso_choisi = cfg.get_value(SECTION_VIDEO, "mode_iso", false) is bool \
+		and cfg.get_value(SECTION_VIDEO, "mode_iso", false)
 
 	master_volume = _sanitize_volume(cfg.get_value(SECTION_AUDIO, "master", VOLUME_DEFAULT))
 	music_volume = _sanitize_volume(cfg.get_value(SECTION_AUDIO, "music", VOLUME_DEFAULT))
@@ -537,6 +566,7 @@ func _save() -> void:
 	cfg.set_value(SECTION_VIDEO, "vsync_enabled", vsync_enabled)
 	cfg.set_value(SECTION_DISPLAY, "intro_vue", intro_vue)
 	cfg.set_value(SECTION_VIDEO, "fps_cap", fps_cap)
+	cfg.set_value(SECTION_VIDEO, "mode_iso", _mode_iso_choisi)
 	if _has_saved_resolution:
 		cfg.set_value(SECTION_DISPLAY, "resolution_index", resolution_index)
 	cfg.set_value(SECTION_AUDIO, "master", master_volume)
