@@ -20947,6 +20947,19 @@ classe (les dix partagent pour l'instant un seul bob commun, synchronisé à la
 marche) — dix gestes auraient dépassé le budget de deux sessions-journées de
 cette tranche.
 
+**H15 tranché par Adrien le 2026-09-14 vers 16 h 50 (« go », sans seconde
+série de relevés — détail dans la section ISO0.b de la ROADMAP) : deux
+conséquences signalées par iso-geometrie, ni l'une ni l'autre engagée ici.**
+(1) L'accroupi n'existe pas dans le jeu — carte, collisions, occlusion et
+réseau en dépendent, c'est une mécanique neuve, pas un ajout à `poser(etat)`.
+Les dix silhouettes devront un jour avoir une pose accroupie qui tienne sous
+la hauteur d'un mur bas ; `etat` n'a aujourd'hui aucun champ pour ça, et il ne
+s'en invente pas un ici. (2) Au tangage retenu (52°), un mur haut d'une tuile
+cache ≈ 0,78 tuile (27 px) de sol derrière lui, plus que le rayon d'un corps
+(18 px) — la hauteur de `SQUELETTE` (`voxel_catalogue.gd`) pèse donc sur ce
+qui reste visible d'un corps collé à un mur ; à revoir quand la géométrie des
+murs bas/hauts existera réellement.
+
 **Ce que iso-geometrie a mesuré au banc B-projection et qui concerne
 directement `corps_iso.gdshader` (à lire avant ISO2, détail dans SA section
 ROADMAP)** : un corps qui lit la lumière au sol sous ses pieds disparaît là où
