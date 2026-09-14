@@ -4174,3 +4174,38 @@ ce numéro ». Ils étaient vrais à l'écriture. Un encadré les referme désor
 racontent pourquoi les changements ont pu se cumuler sous un numéro, ils ne sont plus
 une permission. C'est exactement le piège que `CLAUDE.md` décrit pour son paragraphe
 audio — un constat daté qui se lit comme une propriété du projet.
+
+## 2026-09-14 — Session « Murs bas Opus », branche `claude/prompt-murs-bas-3fb1dd` (chantier MURS BAS ET ACCROUPI, étape MB0)
+
+Vue de dessus, sur `main` (base `983cb41`). Worktree
+`.claude/worktrees/prompt-murs-bas-3fb1dd`. Étape MB0 seulement ; MB1 à MB3 attendent
+le jalon H-MB0.
+
+**En propre (tous créés) :** `tools/murs_bas_geometrie.gd`, `tools/proto_murs_bas.tscn`,
+`tools/proto_murs_bas.gd`, `tools/proto_murs_bas.gdshader`, `tools/test_murs_bas.gd`,
+`docs/MURS_BAS.md`. **Touché ailleurs :** `tools/run_suites.sh` (une suite ajoutée),
+`docs/ROADMAP.md` (section du chantier, jalon H-MB0). **Aucun fichier du jeu.** Aucun
+fichier `iso_*`, `banc_iso*`, `voxel_*`.
+
+**Ce qui a décidé de la piste, et qui vaut au-delà de ce chantier : on n'a pas choisi
+entre trois pistes en les décrivant, on les a fait rendre et on a lu l'écran.** Deux des
+trois (occluders natifs, polygones « finis ») avaient l'air de pouvoir marcher ; le
+contrôle d'accord leur a trouvé chacune trois corps sur huit en désaccord avec la
+fonction qui fait payer la balle. La troisième a d'abord eu 12 écarts, puis 4, puis 2 :
+aucun ne venait de la règle, tous d'un retrait de 3 px entre occluder et collision qui
+existe déjà dans le jeu — et que personne n'avait mesuré, faute d'avoir jamais comparé la
+lumière à la balle au pixel.
+
+**Signalé, non corrigé (hors périmètre) :** aux coins des murs, l'occluder est rentré de
+3 px (`MapGeometry.OCCLUDER_INSET`) et la collision non — un faisceau peut passer là où
+une balle bute. À trancher en MB3.
+
+**Deltas :** envoyés par `SendMessage` à « Fable 5.1 - CLOUD ISO UNRAILED » ; l'outil
+de Routine de cette session n'expose pas `create_trigger` / `fire_trigger`. Suivi non
+republié par cette session (centralisé).
+
+**Lots.** Référence sur `983cb41` : vert (111 OK). Premier lot final : `duo_apparie`
+rouge (« la manche part à l'arrivée de l'invité ») pendant qu'un lot de la session
+« Iso 1 » tournait en même temps ; rejoué seul, 3 passages sur 3 verts ; second lot
+complet : **vert, 112 OK, 355 s**. Contention, pas code — le piège est déjà consigné
+(« Un lanceur lent ne dit rien du code, il dit qui d'autre travaille »).

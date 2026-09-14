@@ -206,7 +206,7 @@ SUITES=(test_liaisons test_icones_editeur
         test_dosage_audio test_planche_marche test_fusee test_munitions_recharge test_sang_au_sol test_bilan_de_soiree
         test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting test_hud_style
         test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte
-        test_telemetrie_gadgets)
+        test_telemetrie_gadgets test_murs_bas)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.

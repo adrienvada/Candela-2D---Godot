@@ -21005,6 +21005,126 @@ période.
 
 ---
 
+## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
+
+**Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le
+2026-09-14 sur la branche `iso-geometrie` : go, tangage 52°, « des murs hauts et des
+murs bas »), mais c'est du **gameplay** : il vaut quel que soit l'aspect final, et il
+**précède** ISO1, qui extrudera sa géométrie. La note de conception complète est
+[docs/MURS_BAS.md](MURS_BAS.md) ; cette section n'en garde que ce qui doit survivre ici.
+
+### Les règles d'Adrien, 2026-09-14 (soir)
+
+- Un mur bas arrête la lumière mais laisse voir une tête debout.
+- Un accroupi derrière un mur bas n'est pas éclairé depuis l'autre côté, mais il l'est
+  par une lumière venue de son côté.
+- Balles et lumière debout franchissent le mur bas selon **un même angle** : un accroupi
+  loin derrière redevient visible et touchable.
+- On enjambe un mur bas avec « croix », lentement et en faisant du bruit.
+- La torche d'un accroupi bute sur le mur.
+- L'accroupi ralentit fortement, étouffe les pas, et se lit à sa silhouette plus une
+  marque HUD pour soi.
+
+**Ce que « un même angle » tranche, et pourquoi c'est la bonne lecture.** La section ISO
+proposait une ombre qui dépend de la distance du tireur au mur (`d · (h − c)/(H − h)`).
+L'angle unique d'Adrien donne une **bande de longueur constante** `L = (h_bas − c)/tan α`
+derrière chaque mur bas, comptée le long du rayon depuis sa sortie : un joueur ne voit
+pas `d`, il voit la bande. La même fonction (`franchit()`) sert à la lumière et à la
+balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
+
+### Étapes
+
+| Étape | Objet | État |
+|---|---|---|
+| **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — attend **H-MB0** |
+| MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ⏸ pas avant le mot d'Adrien |
+| MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée, `Protocol.VERSION` 17 → 18, pas étouffés, silhouette, marque HUD | ⏸ |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ⏸ |
+
+### MB0 — ce qui est livré, et ce qui a été mesuré
+
+Fichiers **tous neufs**, aucun fichier du jeu modifié : `tools/murs_bas_geometrie.gd`
+(la règle), `tools/proto_murs_bas.{tscn,gd,gdshader}`, `tools/test_murs_bas.gd` (83
+contrôles, ajoutée au lot, vue rougir par sabotage de la comparaison de zone morte puis
+remise), `docs/MURS_BAS.md`. Seul fichier existant touché : `tools/run_suites.sh` (une
+suite ajoutée).
+
+**La piste retenue est C — la zone morte calculée dans `light()`**, et ce n'est pas un
+choix de goût : le prototype rend quatre scènes fixes et compare l'écran, point par
+point, à la fonction qui fait payer la balle.
+
+| Piste | Sol en accord | Corps en accord |
+|---|---|---|
+| A — murs bas en occluders natifs, dans toute lumière | 97 % | **5/8** |
+| B — polygone de zone morte « fini » posé en occluder | 97 % | **5/8** |
+| C — zone morte analytique dans le shader | **100 %** (4 007/4 007) | **8/8** |
+
+- **Pourquoi A et B ont deux vérités.** Un `LightOccluder2D` projette une ombre
+  **infinie**, même quand son polygone est fini (B rend les mêmes écarts que A). Et un
+  sprite reçoit l'ombre d'une lumière en entier ou pas du tout : pour garder la tête
+  debout visible, il faut l'exempter de TOUTE ombre — elle est alors éclairée derrière un
+  mur haut et sous une torche accroupie qui devrait buter. Mesuré, pas raisonné.
+- **Pourquoi pas trois lumières** (une sans murs bas, une avec, une soustractive) : elle
+  n'ombre que derrière le premier mur d'un rayon. Écartée avant d'être écrite ; la suite
+  garde le cas de deux murs en série.
+- **Noir absolu** : toutes lumières éteintes, un debout et un accroupi contre un mur bas,
+  **max 0/255** sur l'image 2560×1440, pour les trois pistes.
+- **Coût de C** : **aucun appel de dessin en plus** ; de l'ordre de **0,9 ms par lumière
+  plein écran à 10 rectangles bas**, du même ordre que le bruit du prototype ; **visible
+  à 40 à chaque passage** (+1,1 à +3,9 ms, trois passages).
+  Il se paie `lumières × pixels reçus × rectangles`, et c'est **le risque de MB3** : le
+  jeu a une demi-douzaine de lumières par joueur. Ordre de grandeur, pas relevé au
+  protocole (fenêtre au premier plan forcée par le mode automatique, machine partagée).
+
+### Valeurs proposées pour H-MB0 (en tuiles, contrat ISO1)
+
+`HAUTEUR_MUR_HAUT` 1,25 · `HAUTEUR_MUR_BAS` 0,5 · `HAUTEUR_ACCROUPI` 0,25 ·
+`HAUTEUR_DEBOUT` 1,0 · `ANGLE_FRANCHISSEMENT` 9,5° — soit **`L_sol` = 3 tuiles** (la bande
+d'ombre qui dit « mur bas » dans le noir) et **`L_accroupi` = 1,5 tuile** (collé au mur,
+caché ; deux tuiles en arrière, exposé à qui est debout) ; accroupi **×0,45** (117 px/s) ;
+enjambement **×0,25** (65 px/s, ~1,1 s). Le pourquoi de chacune : `docs/MURS_BAS.md` § 1.
+**`α` n'est pas le tangage de la caméra.**
+
+**Contrat avec ISO1**, à tenir en MB1 : `MapGeometry.Kind.LOW_WALLS` ; les quatre
+hauteurs (plus l'angle) en constantes de `map_geometry.gd`, en tuiles, en un seul
+endroit ; rien d'autre de l'interface de `map_geometry.gd` ne change de forme ; aucune
+fusion dans `iso-geometrie`.
+
+### Pièges découverts par MB0
+
+- **Un occluder de profondeur finie projette une ombre infinie.** L'idée « dessiner la
+  zone morte en occluders recalculés par lumière » ne peut pas marcher : la carte d'ombre
+  ne stocke que la distance du PREMIER occluder. Mesuré (piste B = piste A, à 4 points
+  près).
+- **La lumière et la balle ne voient pas le même mur, à 3 px près, et c'est déjà vrai
+  dans le jeu.** Les occluders sont rentrés de `MapGeometry.OCCLUDER_INSET`, la collision
+  non. Le contrôle d'accord de C a relevé 12, puis 4, puis 2 écarts — tous des rayons
+  rasant un coin à moins de 3 px — jusqu'à ce que la vérité de la lumière ET le shader
+  prennent le rectangle rentré. **Signalé, hors périmètre** : aujourd'hui, aux coins des
+  murs, un faisceau peut passer là où une balle bute. MB3 devra choisir et l'écrire dans
+  son test d'équité.
+- **Le plafond de 120 images cache le coût d'un shader** : 8,33 ms de médiane dans les
+  huit configurations du premier passage, quelles qu'elles soient. Le prototype lève le
+  plafond et la synchro le temps de la mesure, et les restaure.
+- **`viewport_get_measured_render_time_gpu` rend 0 en `gl_compatibility`** : un coût de
+  pixel ne se lit que dans la durée d'image.
+- **Le premier `--import` d'un worktree neuf peut planter (code 134)**, et le lot lancé
+  derrière est rouge de bout en bout (« Cannot infer the type of local_user_id », EOS
+  pas encore enregistré) ; un second import au premier plan le remet vert. Vécu au
+  démarrage de MB0.
+- **Une boucle de balayage sans incrément ressemble à une fenêtre bridée** : le premier
+  mode automatique a été tué au plafond après une capture, et le premier suspect était
+  `frame_post_draw` au second plan. C'était un `y += pas` oublié. Le prototype imprime
+  désormais l'heure de chaque scène : un blocage se localise en une lecture.
+
+### Ce qui attend Adrien — jalon H-MB0
+
+Jouer le prototype, valider ou corriger la lecture des six règles, fixer `h_bas`,
+`h_accroupi`, `α`, la vitesse accroupie et le dessin du mur bas en vue de dessus, dire si
+MB1 s'ouvre. Commande et touches : `docs/MURS_BAS.md` § 8.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -21025,6 +21145,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
+| H-MB0 | **Jouer le prototype des murs bas et fixer les valeurs** (chantier MURS BAS, `docs/MURS_BAS.md`) | Aucune suite ne dit si une bande d'ombre de 3 tuiles se lit, si 1,5 tuile de cachette est juste, ni si l'accroupi à ×0,45 est jouable. Le prototype prouve les règles au pixel ; il ne dit pas si elles sont bonnes. | Avant MB1 — rien de la carte, du fil ni du joueur ne bouge avant |
 
 ---
 
