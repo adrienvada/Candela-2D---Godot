@@ -365,6 +365,9 @@ run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).
 run test_halo_proximite res://tools/test_halo_proximite.tscn
+# L'accroupi (chantier MURS BAS, MB2) : une scène pour la même raison — un vrai
+# joueur qui marche, et les autoloads qu'il nomme.
+run test_accroupi res://tools/test_accroupi.tscn
 
 # Le cycle de fin de match, en une seule instance et sans réseau.
 #

@@ -21038,7 +21038,7 @@ balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
 |---|---|---|
 | **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
 | MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
-| MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ⏸ pas avant le mot d'Adrien |
+| MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
 | MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ⏸ |
 
 ### MB0 — ce qui est livré, et ce qui a été mesuré
@@ -21167,13 +21167,14 @@ vue dans `rebuild_arena` ; étape « MURS BAS » dans l'éditeur, cases exclusiv
 murs hauts dans une même transaction ; carte d'essai `tools/cartes/murs_bas_essai.json`
 (hors cartes livrées) et son code de partage dans la note.
 
-⚠️ **`HAUTEUR_MUR_HAUT` = 1,25 n'a pas été tranchée par Adrien** : elle n'était pas
-réglable au prototype (elle n'entre dans aucune règle 2D). La session « Iso 1 » a signalé
-le 2026-09-14 au soir qu'à 52° de tangage un mur haut de 1,25 tuile cache une bande de
-**34,2 px** derrière lui (98 % d'un corps collé ; −4,6 points d'écart J1/J2 sur La
-Croisée), pour un critère d'équité de l'étude **< 18 px** (0,65 tuile), et elle demande à
-Adrien de trancher. Changer la valeur est une ligne de `map_geometry.gd` ; rien de la
-règle des murs bas n'en dépend.
+✅ **`HAUTEUR_MUR_HAUT` = 1,25 tuile, choisie par Adrien le 2026-09-14 à 19 h 25 —
+au-delà du critère iso, en connaissance de cause.** Elle n'était pas réglable au prototype
+(elle n'entre dans aucune règle 2D). La session « Iso 1 » avait signalé qu'à 52° de
+tangage un mur haut de 1,25 tuile cache une bande de **34,2 px** derrière lui (98 % d'un
+corps collé ; −4,6 points d'écart J1/J2 sur La Croisée), pour un critère d'équité de
+l'étude **< 18 px** (0,65 tuile). Adrien a tranché avec ces chiffres en main ; décision
+relayée par « Iso 1 », dont la suite `tools/test_iso_geometrie.gd` vérifie désormais que
+la hauteur en service vaut 1,25 et qu'aucune case de sol n'est entièrement invisible.
 
 **`Protocol.VERSION` 17 → 18 dès MB1**, et non en MB2 : le codec de carte fait partie de
 l'empreinte du fil, une carte voyage d'un jeu à l'autre (étape 8.8), et la v17 est
@@ -21202,12 +21203,49 @@ comme `rebuild_arena` : les 6 cases de murs bas sous la torche sont éclairées,
   occluder » comptait en réalité les CORPS du conteneur (deux : murs, fosses). Il a rougi
   au troisième corps — à juste titre, mais en accusant la mauvaise chose.
 
+### MB2 — l'accroupi ✅ (2026-09-14, ouverte par Adrien à 19 h 40)
+
+**Les touches, choisies par Adrien : en bascule partout** — un appui pour se baisser, un
+pour se relever. **C** pour J1, **M** pour J2, **clic du stick gauche (L3)** à la manette
+(« les pouces restent sur les sticks »). Croix reste réservée à l'enjambement (MB3).
+
+**Ce qui voyage sur le fil est la posture VOULUE, pas l'appui.** La bascule se résout
+dans le fournisseur local ; `rpc_send_inputs` porte son résultat en neuvième argument. Un
+paquet perdu ne peut donc pas faire rater un front à l'hôte, et il n'y a rien à
+réconcilier : l'hôte applique le bit, le client prédit le même, l'adversaire l'affiche
+depuis ses instantanés (`net_accroupi`, sans interpolation : un corps n'est pas « à moitié
+accroupi »). **`Protocol.VERSION` reste 18** : la montée de MB1 n'a été figée par aucun
+tag, le changement de forme se cumule, et le carnet le dit.
+
+Livré (détail : `docs/MURS_BAS.md` § 10) : vitesse ×0,25 (quatrième cause de
+ralentissement, et elle se LIT à la silhouette) ; les cinq vues du corps ramassées
+à 0,8, zone de touche et ombre du corps inchangées ; pas étouffés (−9 dB, portée ×0,5,
+valeurs de départ à doser au banc audio) ; posture dans l'historique de compensation de
+latence (`_rewound_posture`, pour la balistique de MB3) ; posture enregistrée à 60 Hz et
+silhouette rejouée en killcam ; marque « ACCROUPI » dans le panneau de torche du joueur,
+jamais de l'adversaire ; ligne « S'accroupir » dans le menu de liaisons ; chaque manche
+commence debout.
+
+**Piège payé en MB2 — un contrôle textuel épingle la FIN d'une liste d'arguments.**
+`tools/test_classes.gd` cherchait `update_input_state(mov, aim, shoot, torch, flare, reload,
+gadget)` avec sa parenthèse fermante : la posture ajoutée en dernier l'a fait rougir dans le
+lot (seule suite rouge sur 113), alors que le bit de gadget voyageait toujours. Corrigé en
+préfixe. Même famille que « Un contrôle textuel épingle un IDENTIFIANT, jamais un SENS » —
+ajouter un argument EN FIN de signature est le geste recommandé du carnet, et c'est celui-là
+qu'un contrôle fermé par `)` interdit sans le dire.
+
+**Ce que MB2 ne fait pas, et qui n'est pas faux** : un accroupi n'est pas encore caché
+derrière un mur bas (lumière et balles à deux hauteurs), sa torche ne bute pas encore, on
+n'enjambe pas. C'est MB3.
+
 ### Ce qui attend Adrien
 
-**Dire si MB2 s'ouvre** (l'accroupi : entrée, posture prédite, répliquée et rejouée,
-pas étouffés, silhouette, marque HUD). Et, s'il le souhaite, jouer la carte d'essai : coller
-le code de partage de `docs/MURS_BAS.md` § 9 dans la galerie, ou dessiner des murets dans
-l'éditeur (F5, étape « MURS BAS »).
+**Dire si MB3 s'ouvre** — les échanges : balles et lumière à deux hauteurs par la règle
+`franchit()`, la zone morte dans les matériaux du jeu, la torche accroupie qui bute,
+l'enjambement par Croix, l'éblouissement par-dessus un mur bas, la killcam, le banc de coût
+et le test d'équité ; puis le jalon **H-MB1** (duel à deux manettes, puis EOS à deux
+machines, puisque le fil a changé). Et, s'il le souhaite, essayer l'accroupi dès maintenant
+en écran scindé, sur la carte d'essai (code de partage : `docs/MURS_BAS.md` § 9).
 
 ---
 

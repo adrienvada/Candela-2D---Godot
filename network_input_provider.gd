@@ -9,6 +9,8 @@ var flashlight_pressed := false
 var flare_pressed := false
 var reload_pressed := false
 var gadget_pressed := false
+## La posture voulue par le client (MB2) — un ÉTAT, déjà résolu de sa bascule.
+var crouch_pressed := false
 
 func get_movement_vector() -> Vector2:
 	return current_movement
@@ -31,8 +33,11 @@ func is_reload_pressed() -> bool:
 func is_gadget_pressed() -> bool:
 	return gadget_pressed
 
+func is_crouch_pressed() -> bool:
+	return crouch_pressed
+
 ## Alimenté par les paquets d'input du client, consommé par la simulation hôte.
-func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, flare: bool, reload: bool = false, gadget: bool = false) -> void:
+func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, flare: bool, reload: bool = false, gadget: bool = false, crouch: bool = false) -> void:
 	current_movement = movement
 	current_aim = aim
 	shoot_pressed = shoot
@@ -40,6 +45,7 @@ func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight
 	flare_pressed = flare
 	reload_pressed = reload
 	gadget_pressed = gadget
+	crouch_pressed = crouch
 
 ## Remet les commandes au neutre : le dernier paquet reçu ne doit pas survivre
 ## à la déconnexion de son émetteur.
@@ -51,3 +57,4 @@ func reset_input_state() -> void:
 	flare_pressed = false
 	reload_pressed = false
 	gadget_pressed = false
+	crouch_pressed = false

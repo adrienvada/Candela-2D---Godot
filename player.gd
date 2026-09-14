@@ -360,6 +360,24 @@ var _predict_history: Dictionary = {}
 var _predict_error: Vector2 = Vector2.ZERO
 var _last_corrected_seq: int = -1
 
+## ── La posture accroupie — chantier MURS BAS, étape MB2 (2026-09-14) ─────────
+##
+## Règles d'Adrien : « l'accroupi ralentit fortement, étouffe les pas, et se lit à
+## sa silhouette plus une marque HUD pour soi ». Simulée comme le déplacement :
+## l'hôte l'applique depuis le bit reçu, le client la prédit depuis sa propre
+## bascule, l'adversaire l'affiche depuis les instantanés. Balles et lumière à deux
+## hauteurs, et l'enjambement, viennent en MB3.
+##
+## Vitesse fixée par Adrien au prototype (H-MB0) : ×0,25, soit 65 px/s.
+const FACTEUR_VITESSE_ACCROUPI := 0.25
+## « Silhouette plus basse et ramassée » : les cinq vues du corps réduites d'un
+## cinquième. Visuel seulement — la zone de touche et l'ombre du corps ne changent
+## pas en MB2 (les balles à deux hauteurs sont l'objet de MB3).
+const ECHELLE_SILHOUETTE_ACCROUPIE := 0.8
+var accroupi: bool = false
+## Répliquée hôte→client, comme `net_flashlight_on`.
+var net_accroupi: bool = false
+
 # La torche est répliquée, pas simulée, côté non-autoritaire : on détecte son
 # changement ici pour que le son suive dans tous les modes.
 var _torch_audio_state: bool = false
@@ -557,6 +575,7 @@ func _ready():
 	rep_config.add_property(NodePath(".:net_flashlight_on"))
 	rep_config.add_property(NodePath(".:net_dazzle"))
 	rep_config.add_property(NodePath(".:net_ack_seq"))
+	rep_config.add_property(NodePath(".:net_accroupi"))
 	# L'hôte est autorité sur les deux joueurs : la réplication va toujours
 	# hôte→client, y compris pour les HP.
 	rep_config.add_property(NodePath(".:hp"))
@@ -1190,6 +1209,7 @@ func _process(delta):
 		net_flashlight_on = flashlight_on
 		net_dazzle = dazzle_amount
 		net_ack_seq = _last_input_seq
+		net_accroupi = accroupi
 
 	# Hors du bloc de simulation : côté client la torche est répliquée, et les
 	# sorties anticipées de _physics_process ne doivent pas laisser le son bloqué.
@@ -1309,7 +1329,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false, gadget: bool = false) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false, gadget: bool = false, crouch: bool = false) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1331,7 +1351,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload, gadget)
+	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload, gadget, crouch)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -1349,7 +1369,9 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false, false)
+		# La posture reste celle qu'on a, comme la torche : ouvrir le menu ne
+		# relève personne.
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false, false, accroupi)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
@@ -1357,7 +1379,7 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(),
 		input_provider.is_flare_pressed(), input_provider.is_reload_pressed(),
-		input_provider.is_gadget_pressed())
+		input_provider.is_gadget_pressed(), input_provider.is_crouch_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
@@ -1397,6 +1419,7 @@ func _on_net_synchronized() -> void:
 				"pos": net_position,
 				"rot": net_rotation,
 				"torch": net_flashlight_on,
+				"accroupi": net_accroupi,
 			})
 			if _net_snapshots.size() > SNAPSHOT_BUFFER_MAX:
 				_net_snapshots.remove_at(0)
@@ -1453,8 +1476,23 @@ func _consume_prediction_error(delta: float) -> void:
 	if _predict_error.length() < 0.5:
 		_predict_error = Vector2.ZERO
 
+## La posture — MB2. Un seul point d'écriture, pour que la silhouette ne puisse
+## jamais dire autre chose que la simulation : la vitesse lit `accroupi`, les vues
+## du corps suivent ici, au changement seulement.
+func poser_posture(voulue: bool) -> void:
+	if voulue == accroupi:
+		return
+	accroupi = voulue
+	var echelle := Vector2.ONE * (ECHELLE_SILHOUETTE_ACCROUPIE if voulue else 1.0)
+	for poly in [visual, visual_dim, visual_reveal, visual_enemy, visual_reveal_enemy]:
+		if poly != null:
+			poly.scale = echelle
+
 ## [Client] Rend le joueur distant INTERP_DELAY en arrière : on dispose alors
 ## presque toujours de deux instantanés encadrants, malgré les 30 Hz.
+##
+## La posture ne s'interpole pas : elle suit l'instantané le plus ancien des deux
+## encadrants, comme la torche — un corps n'est pas « à moitié accroupi ».
 func _apply_remote_interpolation() -> void:
 	if _net_snapshots.is_empty(): return
 
@@ -1466,6 +1504,7 @@ func _apply_remote_interpolation() -> void:
 		global_position = first["pos"]
 		rotation = first["rot"]
 		flashlight_on = first["torch"]
+		poser_posture(first.get("accroupi", false))
 		return
 
 	if render_t >= last["t"]:
@@ -1481,6 +1520,7 @@ func _apply_remote_interpolation() -> void:
 			global_position = last["pos"]
 			rotation = last["rot"]
 		flashlight_on = last["torch"]
+		poser_posture(last.get("accroupi", false))
 		return
 
 	for i in range(_net_snapshots.size() - 1):
@@ -1492,6 +1532,7 @@ func _apply_remote_interpolation() -> void:
 			global_position = a["pos"].lerp(b["pos"], w)
 			rotation = lerp_angle(a["rot"], b["rot"], w)
 			flashlight_on = a["torch"]
+			poser_posture(a.get("accroupi", false))
 			# Les instantanés antérieurs ne resserviront plus.
 			if i > 0:
 				_net_snapshots = _net_snapshots.slice(i)
@@ -1596,6 +1637,9 @@ func _physics_process(delta):
 		return
 		
 	if can_move:
+		# MB2 — la posture AVANT la vitesse : le pas de cette image se fait déjà
+		# à l'allure de la posture choisie à cette image.
+		poser_posture(input_provider.is_crouch_pressed())
 		var input_dir = input_provider.get_movement_vector()
 		# ⚠️ **La vitesse ne dépend que de deux causes, et toutes deux se
 		# LISENT** : l'arme qu'on porte et l'éblouissement qu'on subit. Rien ne
@@ -1612,7 +1656,12 @@ func _physics_process(delta):
 			current_speed *= RootProfile.facteur(_root_restant, _root_duree)
 		if dazzle_amount > 0:
 			current_speed *= lerp(1.0, 0.4, dazzle_amount)
-			
+		# La posture — quatrième cause, et elle se LIT aussi : la silhouette
+		# ramassée (`poser_posture`). Un ralentissement qu'on ne voit pas serait
+		# une information retirée à l'autre ; celui-ci se voit dès qu'on éclaire.
+		if accroupi:
+			current_speed *= FACTEUR_VITESSE_ACCROUPI
+
 		velocity = input_dir * current_speed
 		if velocity != Vector2.ZERO:
 			move_and_slide()
@@ -1641,7 +1690,8 @@ func _physics_process(delta):
 			# Correction appliquée AVANT l'archivage : l'historique doit décrire
 			# la position réellement affichée, sinon l'écart serait recompté.
 			_consume_prediction_error(delta)
-			_predict_history[_input_seq] = {"pos": global_position, "rot": rotation}
+			_predict_history[_input_seq] = {"pos": global_position, "rot": rotation,
+				"accroupi": accroupi}
 			if _predict_history.size() > PREDICT_HISTORY_MAX:
 				_predict_history.erase(_predict_history.keys()[0])
 
@@ -1677,7 +1727,9 @@ func _physics_process(delta):
 			# qui compte, et que ce calcul garantit, c'est que deux cases
 			# voisines different.
 			var case := Vector2i((global_position / float(CandelaTileSet.TILE_SIZE.x)).floor())
-			AudioManager.play_footstep(global_position, case)
+			# MB2 — accroupi, le pas s'étouffe. Hors du bloc `can_move` comme le
+			# reste : l'adversaire interpolé étouffe les siens de la même façon.
+			AudioManager.play_footstep(global_position, case, accroupi)
 			# V5.11 — le frolement, au meme rythme que le pas et jamais seul :
 			# on ne frole un mur qu'en s'y deplacant. Le lier au pas plutot qu'a
 			# un minuteur evite le crepitement d'un joueur immobile colle a une
@@ -2303,6 +2355,14 @@ func reset_step_tracker() -> void:
 func reset_flashlight_latch() -> void:
 	if input_provider:
 		input_provider.reset_flashlight_state()
+
+## MB2 — chaque manche commence debout. La bascule d'accroupissement est une
+## mémoire, comme le cran plein de la torche : survivant à la mort, elle ferait
+## réapparaître le joueur accroupi sans qu'il ait touché à rien.
+func reset_posture() -> void:
+	if input_provider:
+		input_provider.reset_crouch_state()
+	poser_posture(false)
 
 ## Ressenti lourd du tir : un claquement (les deux moteurs, bref) puis un
 ## grave qui traîne (moteur grave seul) — pas un pouls plat. Le second temps

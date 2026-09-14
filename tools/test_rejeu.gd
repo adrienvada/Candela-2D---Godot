@@ -71,6 +71,8 @@ class FauxJoueur extends Node2D:
 	## décrit juste au-dessus, une quatrième fois. (Vu rouge le 2026-09-11 : 3 014
 	## `SCRIPT ERROR` et dix contrôles en échec, avant l'ajout de cette ligne.)
 	var facteur_de_lampe_rendu: float = 1.0
+	## MB2 — la posture, que `record_frame` enregistre.
+	var accroupi: bool = false
 
 func _faux_joueur() -> FauxJoueur:
 	var n := FauxJoueur.new()

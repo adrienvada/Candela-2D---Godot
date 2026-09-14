@@ -4238,3 +4238,23 @@ clos), `candela_tileset.gd`, `mur_encre.gd`, `map_thumbnail.gd`, `map_data.gd`,
 coup. Les messages accusaient les APPELANTS, et une suite est restée bloquée dix minutes
 avant qu'on aille voir. Le réflexe qui a tranché : quand tout rougit à la fois, relire le
 dernier fichier touché, pas le premier message d'erreur.
+
+### 2026-09-14 (soir) — MB2 : l'accroupi (même session, même branche)
+
+Ouverte par Adrien à 19 h 40 ; touches choisies par lui en deux questions (C / M / L3, en
+bascule). **Touché** : `input_setup.gd`, `input_provider.gd`, `local_input_provider.gd`,
+`network_input_provider.gd`, `player.gd` (posture, vitesse, silhouette, fil, instantanés,
+pas), `game_state.gd` (historique de compensation, fantômes de killcam, remise à zéro de
+manche), `replay_system.gd`, `audio_manager.gd` (`play_footstep` gagne `etouffe`), `ui.gd`
+(bloc HUD et table des liaisons), `protocol.gd` (carnet, témoin). Suites : `test_accroupi`
+créée (scène), `test_liaisons`, `test_rejeu`, `test_menus_finitions` étendues. Aucune session
+active ne tenait ces fichiers (`ListAgents`, 19 h 41).
+
+**La décision de forme qui a tout simplifié** : faire voyager la posture VOULUE plutôt que
+l'appui. Une bascule transmise en fronts aurait demandé à l'hôte de ne jamais perdre un
+paquet non fiable ; transmise en état, elle n'a rien à réconcilier.
+
+**MB2, suite — `tools/test_classes.gd` touché aussi** (chantier CLASSES, clos) : un
+contrôle textuel fermait la liste d'arguments de `update_input_state` par sa parenthèse,
+et la posture ajoutée en dernier l'a fait rougir dans le lot. Corrigé en préfixe, sens
+inchangé (« l'hôte transmet le bit du gadget »). Seule suite rouge du premier lot de MB2.

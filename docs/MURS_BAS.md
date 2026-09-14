@@ -360,6 +360,67 @@ mur haut / mur bas, puis remise. **Rendu en fenêtre** de la carte d'essai mont�
 les 6 cases de murs bas à portée sont éclairées ; torche éteinte, l'image 2560×1440 vaut
 **0/255** partout.
 
+## 10. MB2 — l'accroupi (ouverte par Adrien le 2026-09-14, 19 h 40)
+
+### Les touches — choix d'Adrien
+
+| | J1 | J2 | Manette |
+|---|---|---|---|
+| S'accroupir / se relever | **C** | **M** | **L3** (clic du stick gauche) |
+
+**En bascule partout** : un appui pour se baisser, un pour se relever. Positions physiques,
+comme toute l'Input Map. La ligne « S'accroupir » apparaît dans le menu de liaisons, et
+`tools/test_liaisons.gd` la compte parmi les gestes de combat (aucun doublon permis).
+
+### Le fil : une posture, pas un appui
+
+`InputProvider.is_crouch_pressed()` rend la posture VOULUE. Le fournisseur local résout la
+bascule sur le front montant de la touche (appelé deux fois par image, il ne compte le front
+qu'une fois) ; le fournisseur réseau rend le bit reçu. `rpc_send_inputs` gagne ce bit en
+neuvième argument. Conséquences :
+
+- **rien à réconcilier** : l'hôte applique le bit, le client prédit le même depuis le même
+  état ; un paquet perdu retarde la posture d'un paquet, il ne l'inverse jamais ;
+- **l'adversaire** suit `net_accroupi` (répliqué à 30 Hz) sans interpolation — la posture
+  de l'instantané le plus ancien des deux encadrants, comme la torche ;
+- **`Protocol.VERSION` reste 18** (montée en MB1, aucun tag depuis) ; nouveau témoin.
+
+### Dans la simulation
+
+| Règle | Où | Valeur |
+|---|---|---|
+| Ralentit fortement | `player.gd`, après le root et l'éblouissement | `FACTEUR_VITESSE_ACCROUPI = 0,25` (65 px/s) |
+| Silhouette basse et ramassée | `Player.poser_posture()` : les cinq vues du corps | `ECHELLE_SILHOUETTE_ACCROUPIE = 0,8` ; zone de touche et ombre inchangées |
+| Étouffe les pas | `AudioManager.play_footstep(…, etouffe)` | −9 dB, portée ×0,5 — valeurs de départ, **à doser au banc audio** |
+| Marque HUD pour soi | `ui.gd` : « ACCROUPI » dans le panneau de torche | jamais dans celui de l'adversaire |
+| Compensation de latence | `_pos_history` porte la posture ; `_rewound_posture()` | pour la balistique de MB3 |
+| Killcam | `ReplaySystem.Snapshot.p1/p2_accroupi`, silhouette des fantômes | 60 Hz |
+| Chaque manche debout | `Player.reset_posture()` | — |
+
+Un seul point d'écriture de la posture, `poser_posture()` : la vitesse lit `accroupi`, et la
+silhouette suit au changement seulement. La silhouette ne peut donc pas dire autre chose que
+la simulation.
+
+### Vérifié
+
+`tools/test_accroupi.tscn` (38 contrôles, scène : un vrai joueur qui marche) : les touches
+par défaut, la bascule du fournisseur local (un front compté une fois par image), le bit
+du fournisseur réseau, le RPC de l'hôte qui reçoit la posture et sa signature à neuf
+arguments, le ratio de vitesse mesuré sur trente pas de physique (0,25 à 0,03 près), les
+cinq vues ramassées et la zone de touche inchangée, l'adversaire interpolé (y compris un
+instantané d'avant MB2, lu debout), l'image de killcam, le pas étouffé (écart de niveau et
+portée) et la remise debout de manche. **Vue rougir** en retirant la ligne du ralentissement
+(ratio 1,000), puis restaurée. `test_liaisons` (57 contrôles), `test_rejeu` (80),
+`test_menus_finitions` (60, dont la marque HUD), `test_netcode` (83), `test_pool_sfx`,
+`test_dosage_audio`, `test_marche` et `test_protocole` (nouveau témoin) verts.
+
+### Ce que MB2 ne fait pas encore
+
+Un accroupi n'est pas caché derrière un mur bas, sa torche ne bute pas, les balles ne
+jugent pas sa hauteur, on n'enjambe pas. Tout cela est MB3, et MB2 en pose les appuis : la
+posture est partout où la règle `franchit()` ira la chercher — simulation, fil, historique
+de l'hôte, killcam.
+
 ## 8. Lancer le prototype
 
     /Applications/Godot.app/Contents/MacOS/Godot --path "<worktree>" res://tools/proto_murs_bas.tscn -- --no-eos

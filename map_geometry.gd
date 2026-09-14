@@ -55,7 +55,9 @@ const PLAYER_MASK := WALL_LAYER | PIT_LAYER | GADGET_BLOQUANT_LAYER | LOW_WALL_L
 
 ## ── Les hauteurs, en TUILES — un seul endroit (contrat avec ISO1) ───────────
 ##
-## Fixées par Adrien au prototype des murs bas, jalon H-MB0 (2026-09-14). La
+## Fixées par Adrien au prototype des murs bas, jalon H-MB0 (2026-09-14) ; le mur
+## haut le même soir (19 h 25), au-delà du critère d'équité de l'étude iso et en
+## connaissance de cause — 34,2 px cachés derrière lui à 52°, voir la ROADMAP. La
 ## vue iso extrude les murs hauts à `HAUTEUR_MUR_HAUT` et les murs bas à
 ## `HAUTEUR_MUR_BAS` ; la règle de jeu les compare aux postures. Personne ne
 ## recopie ces nombres : on lit ces constantes.

@@ -1273,6 +1273,8 @@ func _start_round():
 	p2.reset_step_tracker()
 	p1.reset_flashlight_latch()
 	p2.reset_flashlight_latch()
+	p1.reset_posture()
+	p2.reset_posture()
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if multiplayer.get_peers().size() == 0:
@@ -1448,6 +1450,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p2.reset_step_tracker()
 	p1.reset_flashlight_latch()
 	p2.reset_flashlight_latch()
+	p1.reset_posture()
+	p2.reset_posture()
 	time_left = round_time
 	round_active = true
 	game_over = false
@@ -1668,6 +1672,9 @@ func _process(delta):
 			ghost_p1.global_position = current_snap.p1_pos
 			ghost_p1.rotation = current_snap.p1_rot
 			ghost_p1.visible = current_snap.p1_visible
+			# MB2 — la silhouette rejouée suit la posture enregistrée.
+			(ghost_p1.get_node("VisualColored") as Node2D).scale = Vector2.ONE \
+				* (Player.ECHELLE_SILHOUETTE_ACCROUPIE if current_snap.p1_accroupi else 1.0)
 			ghost_p1.get_node("Light").enabled = current_snap.p1_light
 			# Étape 28, lot F — la moitié de ce que la lampe RENDAIT : le grésillement
 			# et la suie s'y lisent comme en jeu, au lieu d'une torche toujours pleine.
@@ -1681,6 +1688,8 @@ func _process(delta):
 			ghost_p2.global_position = current_snap.p2_pos
 			ghost_p2.rotation = current_snap.p2_rot
 			ghost_p2.visible = current_snap.p2_visible
+			(ghost_p2.get_node("VisualColored") as Node2D).scale = Vector2.ONE \
+				* (Player.ECHELLE_SILHOUETTE_ACCROUPIE if current_snap.p2_accroupi else 1.0)
 			ghost_p2.get_node("Light").enabled = current_snap.p2_light
 			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY * current_snap.p2_lampe
 			ghost_p2.get_node("Flash").enabled = current_snap.p2_flash > 0.0
@@ -3543,7 +3552,10 @@ func _consume_predicted_shot(angle: float) -> bool:
 func _record_position_history() -> void:
 	if not is_instance_valid(p1) or not is_instance_valid(p2): return
 	var now := Time.get_ticks_msec() / 1000.0
-	_pos_history.append({"t": now, "p1": p1.global_position, "p2": p2.global_position})
+	# MB2 — la posture voyage avec la position : une balle compensée devra juger
+	# la hauteur de sa cible TELLE QU'ELLE ÉTAIT (règle des murs bas, MB3).
+	_pos_history.append({"t": now, "p1": p1.global_position, "p2": p2.global_position,
+		"a1": p1.accroupi, "a2": p2.accroupi})
 	while _pos_history.size() > 1 and now - _pos_history[0]["t"] > POS_HISTORY_WINDOW:
 		_pos_history.remove_at(0)
 
@@ -3562,6 +3574,21 @@ func _rewound_position(player: Player, back: float) -> Vector2:
 			var w: float = 0.0 if span <= 0.0001 else (t - float(a["t"])) / span
 			return (a[key] as Vector2).lerp(b[key], w)
 	return player.global_position
+
+## [Hôte] Posture d'un joueur telle qu'elle était il y a `back` secondes — MB2.
+## Ne s'interpole pas : l'échantillon le plus récent qui ne dépasse pas l'instant
+## visé fait foi, comme pour la torche d'un adversaire interpolé.
+func _rewound_posture(player: Player, back: float) -> bool:
+	if _pos_history.is_empty(): return player.accroupi
+	var key := "a1" if player == p1 else "a2"
+	var t := Time.get_ticks_msec() / 1000.0 - back
+	if t >= float(_pos_history[-1]["t"]): return player.accroupi
+	var retenue: bool = _pos_history[0].get(key, false)
+	for entree: Dictionary in _pos_history:
+		if float(entree["t"]) > t:
+			break
+		retenue = entree.get(key, false)
+	return retenue
 
 ## Recul appliqué aux tirs du client : ce qu'il voyait était en retard d'un
 ## demi aller-retour, plus le retard d'interpolation de son adversaire.

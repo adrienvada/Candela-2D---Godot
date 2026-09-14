@@ -91,6 +91,12 @@ class Snapshot:
 	var p1_lampe: float = 1.0
 	var p2_lampe: float = 1.0
 
+	## La posture de chaque joueur à cette image — chantier MURS BAS, MB2. La
+	## killcam rejoue la silhouette accroupie : une mort derrière un muret ne se
+	## comprend pas si le mort y paraît debout.
+	var p1_accroupi: bool = false
+	var p2_accroupi: bool = false
+
 func start_recording():
 	snapshots.clear()
 	bullet_events.clear()
@@ -151,6 +157,9 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		# l'extinction du vainqueur est enregistrée pendant les 1,5 s qui suivent la
 		# mort, et le fantôme suit déjà `p1_light` pour l'allumage.
 		snap.p1_lampe = p1.facteur_de_lampe_rendu
+		# `get()` et `== true` : un corps sans posture (faux joueur de test, cible
+		# d'entraînement) rend `null`, que la ligne lit « debout » sans échouer.
+		snap.p1_accroupi = p1.get("accroupi") == true
 
 	if p2:
 		snap.p2_pos = p2.global_position
@@ -179,6 +188,7 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		snap.p2_flash = p2.get_node("MuzzleFlash").energy if p2.get_node("MuzzleFlash").enabled else 0.0
 		snap.p2_weapon = p2.current_weapon
 		snap.p2_lampe = p2.facteur_de_lampe_rendu
+		snap.p2_accroupi = p2.get("accroupi") == true
 
 	if bullets_node:
 		for c in bullets_node.get_children():

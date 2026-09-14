@@ -284,6 +284,27 @@ func _test_menu_sourd_sous_le_voile() -> void:
 		_check("torche tenue sans verrou : pas de cadenas", not cadenas.visible)
 		ui.call("_set_torch_style", panneau, false, Charte.BLEU, true)
 		_check("torche éteinte : jamais de cadenas", not cadenas.visible)
+	# MB2 (chantier MURS BAS) : la marque « accroupi », pour le seul joueur concerné.
+	var marque: Control = null
+	if panneau != null:
+		marque = panneau.find_child("Accroupi", true, false) as Control
+	_check("le panneau du joueur porte sa marque « accroupi »", marque != null)
+	if marque != null:
+		_check("le libellé de la torche reste le second enfant (lu par index)",
+			(panneau.get_child(0).get_child(0).get_child(1) as Label).text == "TORCHE")
+		var accroupi := CorpsAccroupi.new()
+		ui.call("_marquer_accroupi", panneau, accroupi)
+		_check("joueur accroupi : marque visible", marque.visible)
+		accroupi.accroupi = false
+		ui.call("_marquer_accroupi", panneau, accroupi)
+		_check("joueur debout : pas de marque", not marque.visible)
+		accroupi.free()
+		ui.call("_marquer_accroupi", panneau, null)
+		_check("sans joueur : pas de marque", not marque.visible)
+		var sans_posture := Node.new()
+		ui.call("_marquer_accroupi", panneau, sans_posture)
+		_check("un corps sans posture : pas de marque", not marque.visible)
+		sans_posture.free()
 
 	main.queue_free()
 	await process_frame
@@ -305,3 +326,9 @@ func _appui(action: String) -> InputEventAction:
 	ev.action = action
 	ev.pressed = true
 	return ev
+
+
+## MB2 (chantier MURS BAS) — un corps qui porte une posture, sans rien d'autre d'un
+## joueur : `_marquer_accroupi` ne lit que `accroupi`.
+class CorpsAccroupi extends Node:
+	var accroupi := true

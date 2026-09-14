@@ -1706,12 +1706,30 @@ func play_weapon_shot(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
 ##
 ## Repli sur `footstep`, le son unique d'avant V5.7 — meme geste que les tirs,
 ## dont la cle `"shoot"` sert encore quand les variantes manquent.
-func play_footstep(pos: Vector2, cellule: Vector2i) -> AudioStreamPlayer2D:
+##
+## `etouffe` (chantier MURS BAS, MB2) : le pas d'un joueur accroupi. Règle d'Adrien,
+## 2026-09-14 : « l'accroupi étouffe les pas ». Un écart de niveau et une portée
+## réduite, posés APRÈS le calcul ordinaire — le duck sous le tir, l'occlusion par
+## les murs et la fumée continuent de s'appliquer par-dessus, rien n'est remplacé.
+func play_footstep(pos: Vector2, cellule: Vector2i, etouffe: bool = false) -> AudioStreamPlayer2D:
 	var famille := "footstep_a" if (cellule.x + cellule.y) % 2 == 0 else "footstep_b"
 	var chemin := chemin_variante_au_hasard(famille)
+	var lecteur: AudioStreamPlayer2D
 	if chemin == "" or get_audio_stream(chemin) == null:
-		return play_sfx_2d_random_pitch("footstep", pos, 0.95, 1.05)
-	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
+		lecteur = play_sfx_2d_random_pitch("footstep", pos, 0.95, 1.05)
+	else:
+		lecteur = play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
+	if etouffe and lecteur != null:
+		lecteur.volume_db += PAS_ACCROUPI_DB
+		lecteur.max_distance *= PAS_ACCROUPI_PORTEE
+	return lecteur
+
+## Le pas accroupi, en ÉCART au pas debout (MB2). Proposition de la note de
+## conception (`docs/MURS_BAS.md` § 2) : −22 dB au lieu de −13, portée 0,30 au lieu
+## de 0,60. **Valeurs de départ, pas des décisions** : elles se dosent au banc
+## `tools/banc_audio.tscn`, jamais en éditant ces nombres à l'aveugle.
+const PAS_ACCROUPI_DB := -9.0
+const PAS_ACCROUPI_PORTEE := 0.5
 
 ## V4.3 — le projectile qui rebondit et REPART.
 ##

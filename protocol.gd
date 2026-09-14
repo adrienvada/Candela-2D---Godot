@@ -279,6 +279,11 @@ class_name Protocol
 ##     numérotées) et pourra cumuler sous ce numéro tant qu'aucun tag ne l'a
 ##     figé — c'est la permission que les passages v17 ci-dessus ont perdue au
 ##     tag, pas une règle nouvelle.
+## 18 (suite) — `rpc_send_inputs` gagne un neuvième argument, la POSTURE voulue
+##     (chantier MURS BAS, étape MB2, 2026-09-14) : un état déjà résolu de la
+##     bascule, jamais un appui — un paquet perdu ne peut pas faire rater un front.
+##     Rupture franche, comme le bit de rechargement en v8 ; **cumulée sous 18**,
+##     parce qu'aucun tag n'a figé ce numéro depuis sa montée en MB1.
 const VERSION := 18
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
@@ -294,8 +299,10 @@ const VERSION := 18
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
 ##
 ## Recopié le 2026-09-14 (MB1) APRÈS avoir monté `VERSION` à 18 : seul
-## `mapcodec=4` a changé dans l'empreinte.
-const WIRE_WITNESS := "d76992d434d15e4f"
+## `mapcodec=4` a changé dans l'empreinte. Puis recopié le même soir (MB2), le
+## numéro TRANCHÉ d'abord — il reste 18, aucun tag ne l'ayant figé — : la
+## signature de `rpc_send_inputs` gagne la posture.
+const WIRE_WITNESS := "6bac42f7efbab8b4"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

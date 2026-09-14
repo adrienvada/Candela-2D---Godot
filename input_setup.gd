@@ -8,13 +8,13 @@ func _setup_all_inputs():
 	var actions = [
 		"p1_move_up", "p1_move_down", "p1_move_left", "p1_move_right",
 		"p1_aim_up", "p1_aim_down", "p1_aim_left", "p1_aim_right",
-		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_gadget", "p1_skip_killcam",
+		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_gadget", "p1_accroupir", "p1_skip_killcam",
 		"p1_weapon_prev", "p1_weapon_next", "p1_menu_select",
 		"p1_menu_up", "p1_menu_down", "p1_menu_left", "p1_menu_right",
 		"p1_menu_prev_tab", "p1_menu_next_tab",
 		"p2_move_up", "p2_move_down", "p2_move_left", "p2_move_right",
 		"p2_aim_up", "p2_aim_down", "p2_aim_left", "p2_aim_right",
-		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_gadget", "p2_skip_killcam",
+		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_gadget", "p2_accroupir", "p2_skip_killcam",
 		"p2_weapon_prev", "p2_weapon_next", "p2_menu_select",
 		"p2_menu_up", "p2_menu_down", "p2_menu_left", "p2_menu_right",
 		"p2_menu_prev_tab", "p2_menu_next_tab",
@@ -26,6 +26,19 @@ func _setup_all_inputs():
 			InputMap.add_action(a)
 			InputMap.action_set_deadzone(a, 0.2)
 			
+	# S'accroupir — chantier MURS BAS, étape MB2 (2026-09-14). Choix d'Adrien : EN
+	# BASCULE partout (un appui pour se baisser, un pour se relever), C pour J1, M
+	# pour J2, clic du stick gauche (L3) à la manette — les pouces restent sur les
+	# sticks. La bascule vit dans `LocalInputProvider.is_crouch_pressed()`, pas ici.
+	# C et M : libres dans ce fichier ET dans la section [input] de project.godot
+	# (le relevé qui n'avait lu qu'une des deux sources a coûté deux doublons).
+	var accroupir_p1 = InputEventKey.new()
+	accroupir_p1.physical_keycode = KEY_C
+	InputMap.action_add_event("p1_accroupir", accroupir_p1)
+	var accroupir_p2 = InputEventKey.new()
+	accroupir_p2.physical_keycode = KEY_M
+	InputMap.action_add_event("p2_accroupir", accroupir_p2)
+
 	# Keyboard Escape for pause
 	var esc = InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
@@ -125,6 +138,8 @@ func _setup_all_inputs():
 	# ne détecte que l'inter-joueur : cette vérification intra-joueur est manuelle.
 	add_joy_btn.call("p1_lance_fusee", p1_device, JOY_BUTTON_LEFT_SHOULDER) # L1
 	add_joy_btn.call("p1_gadget", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	# L3 = s'accroupir, en bascule (MB2, choix d'Adrien du 2026-09-14).
+	add_joy_btn.call("p1_accroupir", p1_device, JOY_BUTTON_LEFT_STICK) # L3
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
@@ -180,6 +195,8 @@ func _setup_all_inputs():
 	# ne détecte que l'inter-joueur : cette vérification intra-joueur est manuelle.
 	add_joy_btn.call("p2_lance_fusee", p2_device, JOY_BUTTON_LEFT_SHOULDER) # L1
 	add_joy_btn.call("p2_gadget", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	# L3 = s'accroupir, en bascule (MB2, choix d'Adrien du 2026-09-14).
+	add_joy_btn.call("p2_accroupir", p2_device, JOY_BUTTON_LEFT_STICK) # L3
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix

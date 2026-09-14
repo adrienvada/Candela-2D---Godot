@@ -37,6 +37,13 @@ var action_torch := ""
 var action_flare := ""
 var action_reload := ""
 var action_gadget: String = ""
+var action_crouch: String = ""
+
+## La bascule d'accroupissement (MB2) : vraie après un appui, fausse après le
+## suivant. `_accroupir_tenu` garde l'état de la touche à l'appel précédent, pour
+## ne basculer que sur le FRONT montant — une touche tenue ne clignote pas.
+var _accroupi_voulu := false
+var _accroupir_tenu := false
 
 func _ready() -> void:
 	_setup_inputs()
@@ -58,6 +65,7 @@ func _setup_inputs() -> void:
 	action_flare = prefix + "lance_fusee"
 	action_reload = prefix + "reload"
 	action_gadget = prefix + "gadget"
+	action_crouch = prefix + "accroupir"
 
 func get_movement_vector() -> Vector2:
 	return Input.get_vector(action_left, action_right, action_up, action_down)
@@ -132,3 +140,20 @@ func is_reload_pressed() -> bool:
 
 func is_gadget_pressed() -> bool:
 	return Input.is_action_pressed(action_gadget)
+
+## En bascule (choix d'Adrien, 2026-09-14). ⚠️ Appelé PLUSIEURS fois par image
+## (émission des commandes, puis simulation) : le front ne se compte qu'une fois,
+## parce que le second appel voit la touche déjà tenue.
+func is_crouch_pressed() -> bool:
+	if action_crouch == "" or not InputMap.has_action(action_crouch):
+		return false
+	var tenu := Input.is_action_pressed(action_crouch)
+	if tenu and not _accroupir_tenu:
+		_accroupi_voulu = not _accroupi_voulu
+	_accroupir_tenu = tenu
+	return _accroupi_voulu
+
+## À chaque manche : on réapparaît debout, quelle que soit la posture à la mort.
+func reset_crouch_state() -> void:
+	_accroupi_voulu = false
+	_accroupir_tenu = false
