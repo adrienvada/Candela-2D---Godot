@@ -187,6 +187,18 @@ var _mat_sols: Array[ShaderMaterial] = []
 var _mat_mur: ShaderMaterial
 var _mat_corps: Array[ShaderMaterial] = []
 var _mat_profondeur: Array[ShaderMaterial] = []
+## ISO3a — les corps de la vue iso sont les corps voxel des dix classes (`VoxelCorps`, chantier ISO
+## Corps). Les cylindres d'ISO1 et d'ISO2 restent derrière `--corps-grossiers`, pour le banc et les
+## comparaisons, jamais pour le jeu.
+const DRAPEAU_CORPS_GROSSIERS := "--corps-grossiers"
+var corps_voxel := true
+## Par joueur : son `VoxelCorps` (vide en corps grossiers), et ce qu'il faut retenir d'une image à
+## l'autre pour déduire ses états (points de vie, recharge, instants du tir, du coup reçu, de la mort).
+var _voxels: Array = []
+var _etats_corps: Array = []
+## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
+const DUREE_TIR_CORPS := 0.25
+const DUREE_TOUCHE_CORPS := 0.6
 var _vues3d: Array[SubViewport] = []
 var _cameras3d: Array[CameraIso] = []
 var _affichages: Array[TextureRect] = []
@@ -304,6 +316,7 @@ func _ready() -> void:
 			style_pate = st
 		else:
 			push_error("Presentation3D : --pate attend A, B, C, D ou brute (reçu « %s »)" % args[i + 1])
+	corps_voxel = not args.has(DRAPEAU_CORPS_GROSSIERS)
 	_construire_la_scene()
 
 
@@ -572,7 +585,13 @@ func _suivre() -> void:
 		if not _corps[j].visible:
 			continue
 		var p: Vector2 = joueur.global_position
-		_corps[j].position = Vector3(p.x, 0.0, p.y)
+		if corps_voxel:
+			# ISO3a — le corps de sa classe, posé et animé depuis le joueur (`VoxelCorps.poser`, fonction
+			# pure) ; son ancre reste à l'origine, à l'échelle d'une tuile.
+			_accorder_la_classe(j, joueur)
+			(_voxels[j] as VoxelCorps).poser(etat_du_corps(j, joueur))
+		else:
+			_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
 		_mat_corps[j].set_shader_parameter("centre", p)
 		# ISO2b — l'effacement et la silhouette de la vue de dessus, PAR VUE, lus sur les sprites
@@ -583,7 +602,8 @@ func _suivre() -> void:
 			for m in [_mat_corps[j], _mat_profondeur[j]]:
 				(m as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), o)
 				(m as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
-		_corps[j].basis = Basis.looking_at(Vector3(cos(joueur.rotation), 0.0, sin(joueur.rotation)), Vector3.UP)
+		if not corps_voxel:
+			_corps[j].basis = Basis.looking_at(Vector3(cos(joueur.rotation), 0.0, sin(joueur.rotation)), Vector3.UP)
 
 
 # ---------------------------------------------------------------------------
@@ -740,6 +760,128 @@ func _retirer_capteurs() -> void:
 # ---------------------------------------------------------------------------
 # ISO2b — L'EFFACEMENT DES CORPS ET LA SILHOUETTE DE SOI
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# ISO3a — LES CORPS VOXEL
+# ---------------------------------------------------------------------------
+
+## Un `VoxelCorps` par joueur, sous une ancre `CorpsN` posée à l'origine et mise à l'échelle d'une
+## tuile. ⚠️ **L'échelle est portée par l'ancre, jamais devinée dans le shader.** `VoxelCorps` pense
+## en tuiles (`poser()` divise la position par la taille d'une tuile, ses boîtes mesurent des
+## fractions de tuile) ; la scène iso pense en pixels de monde, comme les lightmaps et les capteurs.
+## Sous l'ancre, le corps retombe en pixels, et son shader lit `monde.xz` directement en pixels :
+## `pixels_par_unite` reste à l'identité (convenu avec la session ISO Corps le 2026-09-15).
+##
+## Un seul corps par joueur pour les deux caméras, comme le corps grossier : chaque caméra le relit
+## avec ses propres uniformes (`capteur_N`, `opacite_N`, `silhouette_N`, choisis par
+## `lightmap_de_j2(CAMERA_VISIBLE_LAYERS)`) — c'est « un corps par joueur et par vue » au sens des
+## canaux, sans poser deux fois chaque corps par image.
+func _construire_les_corps_voxel() -> void:
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	for i in 2:
+		var ancre := Node3D.new()
+		ancre.name = "Corps%d" % (i + 1)
+		ancre.scale = Vector3.ONE * tuile
+		var voxel := VoxelCorps.new()
+		voxel.name = "Voxel"
+		ancre.add_child(voxel)
+		_scene.add_child(ancre)
+		_corps.append(ancre)
+		_voxels.append(voxel)
+		_mat_corps.append(null)
+		_mat_profondeur.append(null)
+		_etats_corps.append({"hp": -1.0, "recharge": 0.0, "t_tir": -100.0, "t_touche": -100.0,
+			"t_mort": -100.0, "mort": false})
+		_accorder_la_classe(i, null)
+
+
+## Le corps de la classe du joueur, reconstruit si la classe a changé, et ses nouveaux matériaux reliés
+## à ce que la présentation pilote : capteurs des deux vues, capteur actif, échelle en pixels, style.
+## ⚠️ `construire()` crée de NOUVEAUX matériaux : sans ce relais, un joueur qui change de classe
+## entre deux manches aurait un corps lisant des capteurs vides — noir partout.
+func _accorder_la_classe(j: int, joueur: Node) -> void:
+	var voxel := _voxels[j] as VoxelCorps
+	var slug := slug_du_corps(joueur)
+	if voxel.slug() == slug and _mat_corps[j] != null:
+		return
+	if not voxel.construire(slug):
+		return
+	voxel.definir_pixels_par_unite(1.0)
+	var mat := voxel.materiau()
+	mat.set_shader_parameter("capteur_actif", true)
+	mat.set_shader_parameter("monde_capteur_px", CapteurCorps.MONDE_PX)
+	mat.set_shader_parameter("rayon_lu_px", minf(RAYON_CORPS_PX + 1.0, CapteurCorps.RAYON_PX - 3.0))
+	mat.set_shader_parameter("style", style_pate)
+	# ⚠️ **Lu au bord du disque, dans la direction du fragment.** Un corps voxel est bien plus mince que son
+	# sprite : lu à sa propre distance du centre, son torse et sa tête restaient à l'ombre du torse du
+	# porteur, et un porteur de torche trahi par sa rétrodiffusion en vue de dessus restait noir en iso
+	# (banc ISO3a, 2026-09-15). Chaque point de sa surface lit maintenant la lumière du sprite dans sa
+	# direction, au rayon lu — là où le sprite montre son croissant éclairé (voir `corps_iso.gdshader`).
+	mat.set_shader_parameter("lecture_au_bord", 1.0)
+	_mat_corps[j] = mat
+	_mat_profondeur[j] = voxel.materiau_profondeur()
+	for id in 2:
+		var c = _capteurs[id][j]
+		if c != null:
+			mat.set_shader_parameter("capteur_%d" % (id + 1), (c as CapteurCorps).get_texture())
+
+
+## Le corps voxel d'un joueur : celui de sa classe (`ClassData.slug()`, la lecture de
+## `GameState._slug_de_classe`). Sans classe connue du catalogue, le corps de la première classe :
+## c'est un repli de RENDU — il faut bien dessiner quelqu'un —, pas une statistique. `VoxelCatalogue`
+## et `GameState` refusent ce repli pour les données, à raison ; l'image n'en porte aucune.
+static func slug_du_corps(joueur: Node) -> String:
+	if joueur != null and is_instance_valid(joueur):
+		var classe := joueur.get("current_weapon") as ClassData
+		if classe != null:
+			var s := String(classe.slug())
+			if VoxelCatalogue.slugs().has(s):
+				return s
+	return VoxelCatalogue.slugs()[0]
+
+
+## L'état que `VoxelCorps.poser()` attend, déduit du joueur sans rien lui ajouter : position, visée,
+## vitesse, torche, et trois événements lus d'une image à l'autre — un temps de recharge qui repart
+## (un tir), des points de vie qui baissent (un coup reçu), `dead` qui passe à vrai (la mort). `t` est le
+## temps depuis le dernier de ces événements tant qu'il dure, sinon le temps qui passe (la cadence de
+## la marche et de la respiration). Accroupi et enjambement restent à zéro jusqu'à ISO3b, qui fusionne
+## la posture de `main`. ⚠️ Le corps d'un mort est caché comme son sprite (`visual.visible`) : la pose
+## de mort ne se voit donc que le temps de l'image où les deux ne sont pas encore d'accord.
+func etat_du_corps(j: int, joueur: Node) -> Dictionary:
+	var e: Dictionary = _etats_corps[j]
+	var maintenant := Time.get_ticks_msec() / 1000.0
+	var hp := float(joueur.get("hp"))
+	var recharge := float(joueur.get("shoot_cooldown"))
+	var mort := bool(joueur.get("dead"))
+	if float(e["hp"]) >= 0.0 and hp < float(e["hp"]) - 0.001:
+		e["t_touche"] = maintenant
+	if recharge > float(e["recharge"]) + 0.001:
+		e["t_tir"] = maintenant
+	if mort and not bool(e["mort"]):
+		e["t_mort"] = maintenant
+	e["hp"] = hp
+	e["recharge"] = recharge
+	e["mort"] = mort
+	var tir := maintenant - float(e["t_tir"]) < DUREE_TIR_CORPS
+	var touche := maintenant - float(e["t_touche"]) < DUREE_TOUCHE_CORPS
+	var t := maintenant
+	if mort:
+		t = maintenant - float(e["t_mort"])
+	elif tir or touche:
+		t = maintenant - maxf(float(e["t_tir"]) if tir else -100.0, float(e["t_touche"]) if touche else -100.0)
+	var rotation := float(joueur.get("rotation"))
+	var vitesse = joueur.get("velocity")
+	return {
+		"position": (joueur as Node2D).global_position,
+		"visee": Vector2(cos(rotation), sin(rotation)),
+		"vitesse": vitesse if vitesse is Vector2 else Vector2.ZERO,
+		"torche": bool(joueur.get("flashlight_on")),
+		"arme": (_voxels[j] as VoxelCorps).slug(),
+		"tir": tir, "touche": touche, "mort": mort,
+		"accroupi": false, "enjambe": 0.0,
+		"t": t,
+	}
+
 
 ## L'opacité à laquelle la vue de dessus dessine, chez ce regardeur, le sprite que remplace ce corps :
 ## `visual` pour son propre corps, `visual_enemy` pour celui d'en face (brief d'Adrien, ISO2b).
@@ -939,41 +1081,44 @@ func _construire_la_scene() -> void:
 		_scene.add_child(sol)
 		_sols.append(sol)
 
-	var cylindre := CylinderMesh.new()
-	cylindre.top_radius = RAYON_CORPS_PX
-	cylindre.bottom_radius = RAYON_CORPS_PX
-	cylindre.height = HAUTEUR_CORPS_PX
-	var nez := BoxMesh.new()
-	nez.size = Vector3(6.0, 6.0, 12.0)
-	for i in 2:
-		var mat := _materiau(SHADER_CORPS)
-		mat.set_shader_parameter("gris", Charte.ADVERSAIRE)
-		# Où le corps lit son capteur : chaque fragment à sa place dans le disque, jamais au-delà
-		# de son bord adouci (voir `corps_grossier_iso.gdshader`).
-		mat.set_shader_parameter("monde_capteur_px", CapteurCorps.MONDE_PX)
-		mat.set_shader_parameter("rayon_lu_px", minf(RAYON_CORPS_PX + 1.0, CapteurCorps.RAYON_PX - 3.0))
-		_mat_corps.append(mat)
-		# ISO2b — la profondeur d'abord (priorité -1), la couleur ensuite (0) : un seul fondu par pixel.
-		var profondeur := ShaderMaterial.new()
-		profondeur.shader = SHADER_CORPS_PROFONDEUR
-		profondeur.render_priority = -1
-		_mat_profondeur.append(profondeur)
-		var corps := Node3D.new()
-		corps.name = "Corps%d" % (i + 1)
-		var pieces := [[cylindre, Vector3(0.0, HAUTEUR_CORPS_PX * 0.5, 0.0), "Tronc"],
-			[nez, Vector3(0.0, HAUTEUR_CORPS_PX * 0.6, -(RAYON_CORPS_PX + 4.0)), "Nez"]]
-		for piece in pieces:
-			for passe in [[mat, ""], [profondeur, "Profondeur"]]:
-				var mi := MeshInstance3D.new()
-				mi.name = piece[2] + passe[1]
-				mi.mesh = piece[0]
-				mi.position = piece[1]
-				mi.material_override = passe[0]
-				mi.layers = CALQUE_COMMUN
-				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-				corps.add_child(mi)
-		_scene.add_child(corps)
-		_corps.append(corps)
+	if corps_voxel:
+		_construire_les_corps_voxel()
+	else:
+		var cylindre := CylinderMesh.new()
+		cylindre.top_radius = RAYON_CORPS_PX
+		cylindre.bottom_radius = RAYON_CORPS_PX
+		cylindre.height = HAUTEUR_CORPS_PX
+		var nez := BoxMesh.new()
+		nez.size = Vector3(6.0, 6.0, 12.0)
+		for i in 2:
+			var mat := _materiau(SHADER_CORPS)
+			mat.set_shader_parameter("gris", Charte.ADVERSAIRE)
+			# Où le corps lit son capteur : chaque fragment à sa place dans le disque, jamais au-delà
+			# de son bord adouci (voir `corps_grossier_iso.gdshader`).
+			mat.set_shader_parameter("monde_capteur_px", CapteurCorps.MONDE_PX)
+			mat.set_shader_parameter("rayon_lu_px", minf(RAYON_CORPS_PX + 1.0, CapteurCorps.RAYON_PX - 3.0))
+			_mat_corps.append(mat)
+			# ISO2b — la profondeur d'abord (priorité -1), la couleur ensuite (0) : un seul fondu par pixel.
+			var profondeur := ShaderMaterial.new()
+			profondeur.shader = SHADER_CORPS_PROFONDEUR
+			profondeur.render_priority = -1
+			_mat_profondeur.append(profondeur)
+			var corps := Node3D.new()
+			corps.name = "Corps%d" % (i + 1)
+			var pieces := [[cylindre, Vector3(0.0, HAUTEUR_CORPS_PX * 0.5, 0.0), "Tronc"],
+				[nez, Vector3(0.0, HAUTEUR_CORPS_PX * 0.6, -(RAYON_CORPS_PX + 4.0)), "Nez"]]
+			for piece in pieces:
+				for passe in [[mat, ""], [profondeur, "Profondeur"]]:
+					var mi := MeshInstance3D.new()
+					mi.name = piece[2] + passe[1]
+					mi.mesh = piece[0]
+					mi.position = piece[1]
+					mi.material_override = passe[0]
+					mi.layers = CALQUE_COMMUN
+					mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					corps.add_child(mi)
+			_scene.add_child(corps)
+			_corps.append(corps)
 
 	# Les deux vues 3D de l'écran scindé. `own_world_3d` faux : elles rendent le
 	# `World3D` de la racine, celui de `SceneIso` — murs et corps n'existent qu'une fois.

@@ -4560,3 +4560,20 @@ côtés (présentation, crochets de `game_state.gd` et `ui.gd`, `VoxelCorps`, `V
 `_classe(` relu par la suite d'ISO Corps). `--import` deux fois : le cache de classes connaît
 `VoxelCorps` et `VoxelCatalogue`, et l'import a posé `corps_iso_profondeur.gdshader.uid`, commité
 avec la fusion. Lot vert : 117 OK.
+
+**ISO3a, nuit du 2026-09-15 — les corps voxel dans la vue iso.** Étape B : attente de la vague 2
+d'ISO Corps (Monitor sur `iso-corps`, noms d'uniformes et échelle convenus par message avant son
+commit, dont `pixels_par_unite` à l'identité). Étape C1 : fusion `a52425a`, lot vert. Étape C2 :
+`presentation_3d.gd` branche un `VoxelCorps` par joueur sous une ancre à l'échelle d'une tuile,
+choisi par sa classe, reconstruit et relié au changement de classe, posé depuis le joueur (états
+déduits : tir, touché, mort) ; les cylindres derrière `--corps-grossiers`. `tools/test_iso_corps.gd`
+neuve (49 vérifications, sabotée une fois) ; `tools/test_iso_vues.gd` compte les passes des boîtes ;
+`tools/banc_iso.gd` mesure un corps humanoïde (hauteur réelle, boîtes étroites, plafond à la couleur
+de la fiche) ; le porteur de torche, noir chez l'autre, lit désormais le disque au bord
+(`lecture_au_bord`, après l'échec d'`echelle_lecture`), et les fichiers d'ISO Corps sont repris à
+l'identique (`corps_iso.gdshader` d'`ee06216`, `voxel_corps.gd` et sa suite de `7cbd3ad`) ; planche
+`docs/iso/planche_iso3a.jpg`. Au banc : noir absolu et silhouette tenus dans les deux vues avec les
+corps voxel ; effacement à 1/255 du décor à opacité 0 ; plafond tenu sous chaque torche ; canaux
+tenus. Signalé : `player.gd` n'expose ni tir ni coup reçu ; la marche de l'adversaire interpolé en
+ligne reste à vérifier. La phrase « rien ne l'avait vu » de la correction du brouillage est
+rectifiée : le suivi de projet portait le défaut depuis le 11 septembre, sans titulaire.

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-14
+> Dernière mise à jour : 2026-09-15
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2424,6 +2424,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Tester plus tard : jalons regroupés en H-ISO5, relevé confié à ISO2** (2026-09-15, vers 01:20, Adrien, rapporté par la suite du brief long de la session pilote : « 15/09 vers 01:20, tester plus tard : jalons regroupés en H-ISO5, relevé confié à ISO2 ») | Adrien ne s'arrête pas pour jouer entre les étapes de la ligne iso : H-ISO3 et H-ISO4 ne sont plus des arrêts, leurs paquets partent en delta à la session pilote, et la session ISO2 enchaîne ISO3b, ISO4, ISO5 puis le relevé de cadence de fin de chantier, qu'elle prend elle-même en fenêtre de silence — le seul relevé de cadence du chantier. Ce qui ne change pas : un arrêt immédiat si une fusion perd l'une des deux logiques ou si une étape casse le noir absolu ou l'équité sans sortie propre. |
 | **L'iso devient la vue du jeu ; la vue de dessus n'est plus une vue à garder** (2026-09-14, 23:33, Adrien, rapporté par le brief long de la session pilote) | Rien n'est supprimé avant le relevé de cadence de fin de chantier : la vue de dessus reste le repli et le moteur de lumière — la projection B lit ses lightmaps. Ce qui change : un écart entre les deux vues se corrige du côté iso, et un défaut de la vue de dessus qui se voit en iso (l'effacement de l'ébloui, ISO2b) se signale comme défaut du jeu. |
 | **Pas de test à deux machines** (2026-09-14, 23:30, Adrien : il n'en a pas le matériel) | Un changement de fil réseau se couvre par `tools/run_duo.sh` (deux instances sur ce Mac) ; EOS entre deux réseaux se consigne comme risque accepté. Rapporté par « Murs bas Opus » et le brief long. |
 | **Les corps iso prennent le modelé de la lumière 2D** (2026-09-14 au soir, Adrien, après avoir rejoué l'écran scindé iso : « parfait ») | Chaque fragment d'un corps lit son capteur à sa place : le côté tourné vers la lampe est clair, le dos resté dans l'ombre du corps est sombre, et le corps monte avec la lampe au lieu de basculer au gris plein. Aucune lumière 3D : c'est la lumière du sprite, ombres et canaux compris, posée sur un volume. Voir la section ISO2, retour 3 du jalon H-ISO2. |
@@ -14403,16 +14404,17 @@ et ils vivent dans `brouillage.gd`.
 **Corrigé le 2026-09-15 — l'effacement du corps ennemi ne s'appliquait plus** (code de main, commit
 séparé sur `iso2-vues`, demandé par Adrien avant ISO3a). Depuis l'arrivée de la suie (chantier des
 classes, étape 27, 2026-09-11), `player.gd` écrivait l'opacité du sprite ennemi deux fois par
-image : le brouillage dans `_physics_process`, puis la suie seule dans `_process`, que le rendu
-voit. Le corps d'un ennemi restait donc entier pour qui était ébloui ; seuls son pointeur et sa
-silhouette de tir, qui prenaient déjà le minimum des deux, s'effaçaient. Relevé à l'instant du rendu
-par le banc ISO2b : un joueur ébloui à 0,71 voyait l'ennemi à l'opacité 1,00. Correction : le corps
-prend le minimum du brouillage et de la suie, comme le pointeur ; prouvé par
-`tools/test_tir_et_reserves.gd` (344 vérifications ; le contrôle neuf rougit avec l'ancienne ligne,
-l'ennemi y reste à 1,000) et au banc à l'instant du rendu, scène « J1 éblouit J2 » : l'ennemi est
-dessiné à l'opacité 0,00 chez J2 ébloui à 0,69, et à 0,65 chez J1 ébloui à 0,06 — en vue de dessus
-comme en iso, qui lit le sprite. Rien ne l'avait vu : la suite de la suie ne regardait que la suie,
-et un relevé pris ailleurs qu'au rendu lisait la valeur du brouillage, jamais dessinée.
+image : le brouillage dans `_physics_process`, puis la suie seule dans `_process`, que le rendu voit. Le
+corps d'un ennemi restait donc entier pour qui était ébloui ; seuls son pointeur et sa silhouette de
+tir, qui prenaient déjà le minimum des deux, s'effaçaient. Relevé à l'instant du rendu par le banc
+ISO2b : un joueur ébloui à 0,71 voyait l'ennemi à l'opacité 1,00. Correction : le corps prend le
+minimum du brouillage et de la suie, comme le pointeur ; prouvé par `tools/test_tir_et_reserves.gd`
+(344 vérifications ; le contrôle neuf rougit avec l'ancienne ligne, l'ennemi y reste à 1,000) et au
+banc à l'instant du rendu, scène « J1 éblouit J2 » : l'ennemi est dessiné à l'opacité 0,00 chez J2
+ébloui à 0,69, et à 0,65 chez J1 ébloui à 0,06 — en vue de dessus comme en iso, qui lit le sprite.
+Le suivi de projet le portait depuis le 11 septembre (revue contradictoire de Phase 7, sans
+titulaire) ; le dépôt, lui, n'en disait rien : la suite de la suie ne regardait que la suie, et un
+relevé pris ailleurs qu'au rendu lisait la valeur du brouillage, jamais dessinée.
 
 ## Chantier — le voile d'éblouissement texturé (inscrit le 2026-08-27)
 
@@ -21168,7 +21170,7 @@ lance sans demande explicite.
 | ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — ✅ jalon H-ISO2 répondu le 2026-09-14 ; **ISO2b** 🟡 (effacement des corps, silhouette de soi) sur `iso2-vues`, en attente du jalon H-ISO2b | 4 | Fable 5.1 / xhigh |
-| ISO3 | Corps voxel des dix classes, matériau d'équité (« gris plafonné, noir hors lumière ») | 4 | Sonnet 5 / high |
+| ISO3 | Corps voxel des dix classes, matériau d'équité — vagues 0 à 2 sur `iso-corps` (ISO Corps), **ISO3a** ✅ les corps voxel dans la vue iso (`iso2-vues`, 2026-09-15) ; ISO3b 🟡 (murs bas, postures, killcam) | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
 | ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
 | ISO6 | Outils : banc `--iso`, photographe, F3, diagnostic, `ConditionsDeMatch` | 2 | Sonnet 5 / medium |
@@ -22230,7 +22232,7 @@ première correction avait été annoncée comme suffisante, elle ne l'était pa
 6. ✅ **Son propre corps garde une silhouette hors lumière**, comme en vue de dessus — « oui ». Le
    modelé des corps sous la lampe : « parfait ».
 
-### ISO2b — l'effacement des corps et la silhouette de soi ✅ (ouverte et commitée le 2026-09-14, jugée au jalon H-ISO3)
+### ISO2b — l'effacement des corps et la silhouette de soi ✅ (ouverte et commitée le 2026-09-14, jugée au jalon H-ISO5)
 
 Demandée par Adrien au jalon H-ISO2 (réponses 2 et 3, « Décisions actées »), brief écrit par la
 session pilote « Fable 5.1 - CLOUD ISO UNRAILED ». Branche locale `iso2-vues`, sur la fusion
@@ -22339,12 +22341,113 @@ par-dessus en valeurs affichées, fragment jeté à opacité nulle, passe de pro
 **Ce qu'ISO2b ne fait pas** : la silhouette révélée au tir (`visual_reveal_enemy`, qui s'allume sans
 lumière quand l'adversaire tire) n'a pas d'équivalent iso ; ni ISO3, ni fusion de `main` (à ISO3b).
 
-#### Ce qu'Adrien jugera — regroupé au jalon H-ISO3
+#### Ce qu'Adrien jugera — regroupé au jalon H-ISO5
 
-Le brief long du 2026-09-14 (23:45) enchaîne ISO2b, ISO3a et ISO3b sans arrêt : pas de jalon
-H-ISO2b. À H-ISO3, en écran scindé iso : dans la suie, l'adversaire disparaît en se fondant dans le
+Le brief long du 2026-09-14 (23:45) enchaîne ISO2b, ISO3a et ISO3b sans arrêt, et sa suite du
+2026-09-15 (vers 01:20) ISO4, ISO5 et le relevé : ni H-ISO2b ni H-ISO3. À H-ISO5, en écran scindé
+iso : dans la suie, l'adversaire disparaît en se fondant dans le
 sol ; ébloui, il s'efface de même (défaut de la vue de dessus corrigé le 2026-09-15) ; dans le noir, son
 propre corps garde sa silhouette, invisible chez l'autre. Planche : `docs/iso/planche_iso2b.jpg`.
+
+### ISO3a — les corps voxel dans la vue iso ✅ (commitée le 2026-09-15, jugée au jalon H-ISO5)
+
+Brief long d'Adrien (2026-09-14, 23:45), écrit par la session pilote : étapes B et C. Branche locale
+`iso2-vues`, sur la fusion `a52425a` d'`iso-corps` (vague 2 d'ISO Corps, `2e6ca25`). Non poussée.
+
+**Pourquoi.** Les cylindres d'ISO1 et d'ISO2 n'étaient qu'un moyen de prouver la lumière, l'effacement
+et la silhouette ; les corps du duel sont ceux des dix classes, que la session ISO Corps a bâtis en
+voxels (vagues 0 à 2) et qui lisent la même lumière, par les mêmes uniformes.
+
+**Ce qui existe.**
+- **Un `VoxelCorps` par joueur**, de sa classe (`ClassData.slug()`, la lecture de
+  `GameState._slug_de_classe`), sous une ancre `SceneIso/CorpsN` posée à l'origine et mise à l'échelle
+  d'une tuile. ⚠️ **L'échelle est portée par l'ancre, jamais devinée dans le shader** : `VoxelCorps`
+  pense en tuiles, la scène iso en pixels de monde ; sous l'ancre, le corps retombe en pixels et son
+  shader lit `monde.xz` en pixels, `pixels_par_unite` à l'identité (convenu avec ISO Corps avant son
+  commit). Un corps pour les deux caméras, relu par chacune avec ses uniformes : « un corps par
+  joueur et par vue » au sens des canaux, sans le poser deux fois par image.
+- **La présentation pilote les matériaux du corps voxel comme ceux du cylindre** : mêmes noms
+  d'uniformes (`capteur_1/2`, `centre`, `monde_capteur_px`, `rayon_lu_px`, `opacite_N`,
+  `silhouette_N`, `style`), convenus avant la vague 2. Les capteurs des deux vues sont liés au corps,
+  le capteur est actif, l'opacité et la silhouette sont posées par vue sur ses deux passes, la pâte
+  est celle de la vue. Rien n'est recopié : `_accorder_la_classe` relie les matériaux, et `_suivre`
+  continue de les nourrir comme avant.
+- **Chaque fragment du corps lit le disque au bord, dans sa direction** (`lecture_au_bord` à 1, uniform
+  ajouté à `corps_iso.gdshader`, transmis à ISO Corps) : là où le sprite de la vue de dessus montre son
+  croissant éclairé. Côté lampe clair, dos sombre, et le corps iso montre ce que montre le bord du
+  sprite, ni plus ni moins — au banc court de 01:36, J2 au bord du faisceau de J1 à 156 px sort à
+  32/30/27 pour un anneau à 105/255 sous une fiche à 81/88/95 (81 × 105/255 ≈ 33). ⚠️ Ce cas rasant
+  varie d'un lancement à l'autre : au banc complet de 01:41, J1 a dérivé à 163 px et le corps de J2 sort
+  à 0/0/0 (capteur non conservé, anneau non relu). Le porteur, lui, sort à 81/88/95 à chaque lancement.
+- **Les fichiers d'ISO Corps sont repris à l'identique, sans fusion** : `corps_iso.gdshader` au contenu
+  d'`ee06216` (où ISO Corps a repris `lecture_au_bord` à l'identique), `voxel_corps.gd` et
+  `tools/test_voxel_corps.gd` à celui de `7cbd3ad` (`echelle_lecture`, son premier correctif). Le brief
+  n'accorde que deux fusions d'`iso-corps` ; la `voxel_corps.gd` d'`ee06216` porte déjà la pose du
+  leurre de la vague 3, qui entrera par la seconde, celle d'ISO4 — elle trouvera le reste identique.
+- **Un changement de classe reconstruit le corps et relie ses nouveaux matériaux.** ⚠️
+  `construire()` crée de nouveaux matériaux : sans ce relais, un joueur qui change de classe
+  entre deux manches aurait un corps lisant des capteurs vides.
+- **Les états depuis le joueur, sans rien lui ajouter** (`etat_du_corps`) : position, visée, vitesse,
+  torche, et trois événements lus d'une image à l'autre — un temps de recharge qui repart (un tir), des
+  points de vie qui baissent (un coup reçu), `dead` qui passe à vrai. Accroupi et enjambement restent à
+  zéro jusqu'à ISO3b, qui fusionne la posture de `main`. Le corps d'un mort est caché comme son sprite.
+- **Sans classe connue**, le corps de la première classe du catalogue : un repli de RENDU, jamais de
+  statistique (`VoxelCatalogue` et `GameState` refusent ce repli pour les données, à raison).
+- **Les cylindres restent derrière `--corps-grossiers`**, pour le banc et les comparaisons, jamais
+  pour le jeu.
+
+**Ce que la suite prouve** — `tools/test_iso_corps.gd` (neuve, dans `run_suites.sh`), 49
+vérifications : un corps voxel par joueur, de sa classe, à l'échelle, posé et orienté comme le
+joueur, neuf boîtes et leur passe de profondeur ; matériaux pilotés (capteurs des deux vues liés,
+capteur actif, opacité et silhouette par vue sur les deux passes, lecture au bord posée et présente dans le shader) ; états déduits ; reconstruction
+et reliaison au changement de classe ; aucune `Light3D`, aucun nœud 3D sous le jeu, masques réels
+~4/~2 inchangés ; simulation identique pas pour pas avec et sans corps voxel. **Sabotée une fois**
+(les capteurs non reliés à la reconstruction : « ses nouveaux matériaux sont pilotés, capteurs reliés » en échec, 1 test rouge), restaurée, verte.
+`tools/test_iso_vues.gd` compte désormais les passes de profondeur des neuf boîtes de chaque corps.
+
+**Ce que le banc prouve** (`tools/banc_iso.gd`, pâte D) :
+  - **Noir absolu et silhouette de soi, vue unique** : NOIR ABSOLU TENU — a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 250, capteurs [0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0] ; SILHOUETTE TENUE (J1 voit J1 à 87/112/126 (attendu 87/111/126) ; J1 voit J2 à 0/0/0 (attendu 0/0/0)).
+  - **Noir absolu et silhouette de soi, écran scindé** : NOIR ABSOLU TENU — a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 255, capteurs [0, 0, 0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0, 0] ; SILHOUETTE TENUE (J1 voit J1 à 87/112/126 (attendu 87/111/126) ; J1 voit J2 à 0/0/0 (attendu 0/0/0) ; J2 voit J1 à 0/0/0 (attendu 0/0/0) ; J2 voit J2 à 125/87/89 (attendu 125/87/89)).
+  - **Effacement et fondu du corps voxel de J2 chez J1** : EFFACEMENT TENU — à opacité 0, 1/255 d'écart au décor seul (tolérance 8) ; à 0,5, contraste 47 pour 95, rapport 0.49, médian 0.49, 45 hors tolérance sur 1843, 0 pixels mouvants écartés.
+  - **Canaux des capteurs** : CANAUX TENUS (8 cas, 0 faux ; « doit » : ce capteur doit s'allumer).
+  - **Plafond sous la torche de J1 seule** : PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi) — J2 chez J1 : 0/0/0 pour un plafond de 81/88/95 ; J1 chez J2 : 81/88/95 pour un plafond de 81/88/95, éclairé.
+  - **Plafond sous la torche de J2 seule** : PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi) — J2 chez J1 : 81/88/95 pour un plafond de 81/88/95, éclairé ; J1 chez J2 : 1/2/2 pour un plafond de 81/88/95.
+  - **L'ennemi s'efface pour l'ébloui, sur le corps voxel** : J2 ébloui à 0.68 voit l'ennemi à l'opacité 0.00 au rendu.
+
+**Appels de dessin et cibles** (relevé d'agent, `--seconds 5`, aucune fenêtre à tenir) :
+
+  | Rendu | Appels de dessin (médiane) | Cibles |
+  |---|---|---|
+  | vue unique, corps voxel | 134 | la fenêtre, 2560×1440 ; lightmap 1920×1080 |
+  | écran scindé, corps voxel | 153 | deux vues 3D, 1276×1440 et 1277×1440 ; lightmap 957×1080 |
+  | écran scindé, cylindres (`--corps-grossiers`) | 129 | deux vues 3D, 1276×1440 et 1277×1440 ; lightmap 957×1080 |
+
+**Pièges d'ISO3a.**
+- ⚠️ **Un corps voxel lu à sa propre taille cachait le porteur de torche.** La rétrodiffusion d'une
+  torche est arrêtée par le torse de son porteur : sur le disque du capteur, il ne reste qu'un anneau
+  éclairé à l'avant, et c'est lui que la vue de dessus montre sur le sprite (18 px de rayon). Le
+  cylindre lisait jusqu'à 15 px et l'attrapait ; le corps voxel, large de 5 à 6 px, ne lisait que
+  l'intérieur, dans l'ombre du torse — sous sa propre torche, J1 restait NOIR chez J2 (banc ISO3a,
+  0/0/0), alors que la règle du jeu veut que la rétrodiffusion trahisse. Rien sans rendu ne pouvait le
+  voir, et le banc l'a d'abord dit « plafond tenu » : un corps noir est toujours sous le plafond.
+  **Dilater la lecture n'a pas suffi** (`echelle_lecture`, 1,81 d'après le rayon au sol du corps :
+  encore 0/0/0) — la tête et le torse, près de l'axe, lisent toujours l'ombre centrale, et quand la
+  torche regarde au nord la caméra ne voit que les flancs du dos. Lu au bord dans sa direction, le
+  porteur sort à 81/88/95, le plafond exact de sa fiche. Règle : **un corps qui remplace un sprite lit
+  la lumière là où le sprite la montre — à son bord, dans la direction de chaque point de sa surface.**
+- ⚠️ **Le banc mesurait un cylindre.** Ses boîtes (flanc et dessus d'un cylindre de 14 px de rayon)
+  tombent, sur un corps humanoïde, entre les jambes ou autour du cou, et mesurent le sol. Elles
+  prennent maintenant la hauteur réelle du corps (`VoxelCorps.sommet_tete`) et restent étroites dans
+  le torse et la tête ; le plafond d'un corps voxel est la couleur de sa fiche, pas le gris de l'ennemi.
+- ⚠️ **`player.gd` n'expose ni « vient de tirer » ni « vient d'être touché ».** La présentation les
+  déduit d'une image à l'autre (recharge, points de vie). Signalé : un signal côté joueur serait plus
+  sûr, et c'est hors du périmètre de la ligne iso.
+- ⚠️ **À vérifier en ligne** : chez le client, l'adversaire est interpolé ; si sa `velocity` n'est pas
+  tenue à jour, son corps ne marche pas. Pas de test à deux machines (décision du 2026-09-14) : à
+  couvrir par `run_duo.sh` le jour où la vue iso passe en ligne.
+
+**Ce qu'ISO3a ne fait pas** : les postures accroupi et enjambement, et la killcam des fantômes voxel
+(ISO3b, après la fusion de `main`) ; les objets debout (ISO4) ; la killcam en iso (ISO5).
 
 ### Ce qui attend Adrien — jalon H15
 
@@ -22522,7 +22625,7 @@ et un seul est du travail de session.
 > `2e6ca25`) : les corps voxel des dix classes et leurs shaders entrent dans la ligne iso — deux
 > conflits, l'include des lightmaps (gardé dans sa version à deux lightmaps, un sur-ensemble) et la
 > liste des suites (les deux gardées) ; lot vert. Puis **ISO3a**. Le tout est jugé au **jalon
-> H-ISO3** (brief long du 2026-09-14).
+> H-ISO5** (brief long du 2026-09-14, jalons regroupés par sa suite du 2026-09-15, vers 01:20).
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

@@ -526,10 +526,24 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 				silhouettes_justes += 1
 	_check("ISO2b : la silhouette de soi (visual_dim : sa couleur, sa demi-opacité) chez soi seulement, jamais dans la vue de l'autre",
 		silhouettes_justes == 4, "%d/4" % silhouettes_justes)
-	# Un seul fondu par pixel : chaque pièce a sa passe de profondeur, avant sa couleur.
+	# Un seul fondu par pixel : chaque pièce a sa passe de profondeur, avant sa couleur. Corps voxel
+	# (ISO3a) : neuf boîtes par corps, chacune doublée en enfant ; corps grossiers : tronc et nez.
 	var passes_justes := 0
+	var passes_attendues := 0
 	for j in 2:
 		var corps3d := (p.get("_corps") as Array)[j] as Node3D
+		if bool(p.get("corps_voxel")):
+			var voxel := (p.get("_voxels") as Array)[j] as VoxelCorps
+			passes_attendues += 9
+			for b in voxel.boites():
+				var d := (b as Node).get_node_or_null("BoiteProfondeur") as MeshInstance3D
+				if d != null and d.material_override == voxel.materiau_profondeur() \
+						and voxel.materiau_profondeur().render_priority < voxel.materiau().render_priority \
+						and absf(float(voxel.materiau_profondeur().get_shader_parameter("opacite_1"))
+							- float(voxel.materiau().get_shader_parameter("opacite_1"))) < 0.001:
+					passes_justes += 1
+			continue
+		passes_attendues += 2
 		for nom in ["Tronc", "Nez"]:
 			var couleur := corps3d.get_node_or_null(nom) as MeshInstance3D
 			var prof := corps3d.get_node_or_null(nom + "Profondeur") as MeshInstance3D
@@ -542,7 +556,7 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 					and absf(float(mp.get_shader_parameter("opacite_1")) - float(mc.get_shader_parameter("opacite_1"))) < 0.001:
 				passes_justes += 1
 	_check("ISO2b : chaque pièce de corps écrit sa profondeur avant sa couleur, à la même opacité (un seul fondu par pixel)",
-		passes_justes == 4, "%d/4" % passes_justes)
+		passes_justes == passes_attendues and passes_attendues > 0, "%d/%d" % [passes_justes, passes_attendues])
 	main.p1.modulate.a = opacites_avant[0]
 	main.p2.modulate.a = opacites_avant[1]
 	p._suivre()

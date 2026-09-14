@@ -207,7 +207,7 @@ SUITES=(test_liaisons test_icones_editeur
         test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting test_hud_style
         test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte
         test_telemetrie_gadgets
-        test_proto_iso test_voxel_corps test_banc_iso test_iso_geometrie test_iso_camera test_iso_vues)
+        test_proto_iso test_voxel_corps test_banc_iso test_iso_geometrie test_iso_camera test_iso_vues test_iso_corps)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.

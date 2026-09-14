@@ -126,6 +126,7 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 	_test_enjambement(corps)
 	_test_pate_plafonnee(corps)
 	_test_effacement(corps)
+	_test_echelle_lecture(corps)
 	_test_silhouette_de_soi(corps)
 	_test_boites_profondeur(corps)
 
@@ -465,6 +466,20 @@ func _test_effacement(corps: Node3D) -> void:
 		mat.get_shader_parameter("opacite_1") == 0.0 and mat.get_shader_parameter("opacite_2") == 0.0)
 
 	corps.definir_opacite(1.0)
+
+
+## `echelle_lecture` — trouvé par ISO2 au banc du jeu réel : un corps voxel,
+## plus étroit que leur corps grossier, reste dans l'ombre de son propre
+## torse sur le disque du capteur sans cette dilatation du décalage lu.
+## Identité à 1.0 par défaut (jamais devinée ici), réglable par l'appelant.
+func _test_echelle_lecture(corps: Node3D) -> void:
+	var mat: ShaderMaterial = corps.materiau()
+	_check("echelle_lecture à 1,0 par défaut",
+		mat.get_shader_parameter("echelle_lecture") == 1.0)
+	corps.definir_echelle_lecture(2.5)
+	_check("definir_echelle_lecture(2.5) pose l'uniform",
+		mat.get_shader_parameter("echelle_lecture") == 2.5)
+	corps.definir_echelle_lecture(1.0)
 
 
 # ---------------------------------------------------------------------------

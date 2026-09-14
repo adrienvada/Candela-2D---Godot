@@ -1035,18 +1035,33 @@ func _controler_les_corps(image: Image) -> int:
 			# assez pour attraper le côté tourné vers la lampe, où qu'elle soit.
 			var echelle := taille.y / cam.size if cam.size > 0.0 else 1.0
 			var tangage := deg_to_rad(CameraIso.TANGAGE_DEG)
-			var rayon := Presentation3D.RAYON_CORPS_PX * echelle * 0.65
-			var flanc := _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille,
-				Presentation3D.HAUTEUR_CORPS_PX * 0.5), rayon,
-				Presentation3D.HAUTEUR_CORPS_PX * echelle * cos(tangage) * 0.3)
-			var dessus := _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille,
-				Presentation3D.HAUTEUR_CORPS_PX), rayon, rayon * sin(tangage))
+			var hauteur := _hauteur_du_corps_px(p, j)
+			var flanc: Array
+			var dessus: Array
+			if bool(p.get("corps_voxel")):
+				# ISO3a : un corps voxel est humanoïde — des boîtes étroites dans le torse et la tête, pour ne
+				# jamais mesurer le sol entre les jambes ou autour du cou.
+				flanc = _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille, hauteur * 0.6),
+					4.0 * echelle, 4.0 * echelle)
+				dessus = _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille, hauteur * 0.88),
+					2.5 * echelle, 2.5 * echelle)
+			else:
+				var rayon := Presentation3D.RAYON_CORPS_PX * echelle * 0.65
+				flanc = _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille,
+					hauteur * 0.5), rayon, hauteur * echelle * cos(tangage) * 0.3)
+				dessus = _max_rgb_dans(image, origine + cam.vers_ecran(corps.global_position, taille,
+					hauteur), rayon, rayon * sin(tangage))
 			if flanc.is_empty() and dessus.is_empty():
 				continue
 			var m := [0, 0, 0]
 			for boite in [flanc, dessus]:
 				for c in (boite as Array).size():
 					m[c] = maxi(m[c], boite[c])
+			if bool(p.get("corps_voxel")):
+				# ISO3a : le plafond d'un corps voxel est la couleur de sa classe (`couleur_fiche`), que sa pâte
+				# plafonne canal par canal — la règle du sprite ennemi, à la couleur de la fiche.
+				var fiche: Color = ((p.get("_voxels") as Array)[j] as VoxelCorps).couleur()
+				plafond = [roundi(fiche.r * 255.0), roundi(fiche.g * 255.0), roundi(fiche.b * 255.0)]
 			var au_dessus: bool = m[0] > plafond[0] + TOLERANCE_PLAFOND \
 				or m[1] > plafond[1] + TOLERANCE_PLAFOND or m[2] > plafond[2] + TOLERANCE_PLAFOND
 			mesures += 1
@@ -1265,12 +1280,21 @@ func _zone_du_corps(p: Presentation3D, id: int, corps: Node2D) -> Rect2i:
 	var origine: Vector2 = p._cadre(id).position if bool(p.get("_scinde")) else Vector2.ZERO
 	var echelle := taille.y / cam.size if cam.size > 0.0 else 1.0
 	var bas := origine + cam.vers_ecran(corps.global_position, taille, 0.0)
-	var haut := origine + cam.vers_ecran(corps.global_position, taille, Presentation3D.HAUTEUR_CORPS_PX)
+	var haut := origine + cam.vers_ecran(corps.global_position, taille,
+		_hauteur_du_corps_px(p, 0 if corps == _main.p1 else 1))
 	var r := (Presentation3D.RAYON_CORPS_PX + 12.0) * echelle
 	var coin := Vector2(minf(bas.x, haut.x), minf(bas.y, haut.y)) - Vector2(r, r)
 	var etendue := Vector2(absf(bas.x - haut.x), absf(bas.y - haut.y)) + Vector2(r, r) * 2.0
 	var e := _etirement()
 	return Rect2i(Vector2i((coin * e).round()), Vector2i((etendue * e).round()))
+
+
+## La hauteur d'un corps iso en pixels de monde : le sommet de la tête d'un corps voxel (ISO3a), sinon
+## la hauteur du cylindre.
+func _hauteur_du_corps_px(p: Presentation3D, j: int) -> float:
+	if bool(p.get("corps_voxel")):
+		return ((p.get("_voxels") as Array)[j] as VoxelCorps).sommet_tete()
+	return Presentation3D.HAUTEUR_CORPS_PX
 
 
 ## La plus haute valeur de chaque canal dans un rectangle de pixels ; vide hors de l'image.
