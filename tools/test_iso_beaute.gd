@@ -349,8 +349,8 @@ func _les_faces_et_le_bain() -> void:
 	var dessus := IsoMateriaux.lambert_du_corps(g_lampe, 0.6, Vector3(0, 1, 0))
 	_check("corps : la face vers la lampe garde sa lumière (%.2f), le dos descend au plancher (%.2f)" % [face_sud, face_nord],
 		face_sud > 0.95 and absf(face_nord - IsoMateriaux.LAMBERT_PLANCHER) < 1e-4)
-	_check("corps : la face de profil est entre les deux (%.2f), le dessus reste à 1" % face_est,
-		face_est >= IsoMateriaux.LAMBERT_PLANCHER - 1e-4 and face_est < face_sud and is_equal_approx(dessus, 1.0))
+	_check("corps : la face de profil est entre les deux (%.2f), le dessus monte à 1,15 (%.2f)" % [face_est, dessus],
+		face_est >= IsoMateriaux.LAMBERT_PLANCHER - 1e-4 and face_est < face_sud and is_equal_approx(dessus, 1.15))
 	# Le modelé RÉPARTIT (retour de la session cloud, 12:30) : la face que le joueur lit n'est jamais la plus sombre.
 	var lampe_ouest := Vector2(-0.2, 0.0)
 	var visibles := [Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]
@@ -363,6 +363,11 @@ func _les_faces_et_le_bain() -> void:
 	var sud_devant := IsoMateriaux.lambert_du_corps(Vector2(0.0, 0.2), 0.6, Vector3(0, 0, 1))
 	_check("corps : la face sud ne passe jamais sous 0,7 lampe de côté (%.2f) ou devant (%.2f)" % [sud_de_cote, sud_devant],
 		sud_de_cote >= 0.7 and sud_devant >= 0.7)
+	# Décidé à 12:50 : lampe de côté, la face sud tombe à 0,9 et le dessus monte à 1,15 — le volume se lit à la caméra.
+	_check("corps : lampe de côté, dessus plus clair que la face sud (%.2f > %.2f)" % [IsoMateriaux.lambert_du_corps(lampe_ouest, 0.6, Vector3(0, 1, 0)), sud_de_cote],
+		is_equal_approx(sud_de_cote, 0.9) and IsoMateriaux.lambert_du_corps(lampe_ouest, 0.6, Vector3(0, 1, 0)) > sud_de_cote + 0.2)
+	_check("corps : lumière uniforme, aucun modelé (dessus compris)", is_equal_approx(IsoMateriaux.lambert_du_corps(Vector2.ZERO, 0.6, Vector3(0, 1, 0)), 1.0)
+		or is_equal_approx(IsoMateriaux.lambert_du_corps(Vector2(0.001, 0.0), 0.6, Vector3(0, 1, 0)), 1.0))
 	var code_corps := (load("res://corps_iso.gdshader") as Shader).code
 	_check("corps : le modelé est re-plafonné à la fiche", code_corps.contains("normale_monde, lambert_plancher)), couleur_fiche.rgb);"))
 	_check("corps : le modelé passe par pate_facteur, avant l'encre et jamais sur la silhouette",

@@ -282,6 +282,16 @@ func _tenir_le_cadrage() -> void:
 	if _cadrage == "e1":
 		p1.rotation = -PI / 2.0
 		p2.rotation = 0.0
+		# ⚠️ **La visée se tient par le stick, pas par `rotation`** : `LocalInputProvider.get_aim_direction` rend la
+		# direction du stick s'il est poussé, sinon celle de la SOURIS — au banc du 2026-09-15 (12:31), la torche de J1
+		# ne visait pas au même endroit dans l'avant et l'après, et la face de face contre la face rasée restait non
+		# départagée. Pousser le stick à chaque image fixe la torche d'une capture à l'autre.
+		for action in ["p1_aim_down", "p1_aim_left", "p1_aim_right", "p2_aim_up", "p2_aim_down", "p2_aim_left"]:
+			if InputMap.has_action(action) and Input.is_action_pressed(action):
+				Input.action_release(action)
+		for action in ["p1_aim_up", "p2_aim_right"]:
+			if InputMap.has_action(action):
+				Input.action_press(action, 1.0)
 	else:
 		p2.rotation = axe.angle() if _cadrage == "mur" else (-axe).angle()
 	# ⚠️ **La torche ne reste allumée que tenue** : sans cet appui à chaque image, le banc du 2026-09-15 11:15 a tout

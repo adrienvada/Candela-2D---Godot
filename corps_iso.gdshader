@@ -167,23 +167,24 @@ void vertex() {
 // ISO7b — le facteur de modelé d'une face de normale `n` (monde), pour un gradient `g` de la lightmap au sol
 // (vers où la lumière monte) et la lumière la plus forte lue autour (`l_max`). Miroir : `IsoMateriaux.lambert_du_corps`.
 float lambert_du_corps(vec2 g, float l_max, vec3 n, float plancher) {
-	// ⚠️ **Le modelé RÉPARTIT la lumière du capteur, il ne la retire pas** (retour de la session cloud, 12:30) : un
-	// Lambert plafonné à 1 assombrissait toute la figure (luminance 71 → 59 au banc des dix classes) et rendait la
-	// face tournée vers l'œil la plus sombre. Face par face, pour `cos` l'angle entre la face et la lampe :
-	// côté lampe `1 + 0,3 cos` (jusqu'à 1,3) ; côté opposé `1 + 0,6 cos` (jusqu'au plancher, le dos) ; dessus 1. Lampe
-	// de côté, la face sud reste à 1 et la moyenne des faces visibles vaut 1. Re-plafonné à la fiche après usage.
-	if (n.y > 0.5) {
-		return 1.0;
-	}
-	if (n.y < -0.5) {
-		return plancher;
-	}
+	// ⚠️ **Le modelé RÉPARTIT la lumière du capteur, il ne la retire pas** (session cloud, 12:30 puis 12:50). Un Lambert
+	// plafonné à 1 assombrissait la figure (71 → 59) ; un modelé à moyenne gardée qui laissait dessus et face sud à 1
+	// ne se voyait pas (75 → 75), la caméra au lacet 0 ne voyant QUE ces deux faces. Décidé à 12:50 : dessus 1,15 ; face
+	// latérale `0,9 + 0,35 cos` vers la lampe (1,25 face à elle, 0,9 de profil — la face sud, lampe de côté) et
+	// `0,9 + 0,5 cos` à l'opposé (jusqu'au plancher, le dos). Lampe à l'ouest, les quatre faces visibles valent en
+	// moyenne 0,93. Pondéré par la netteté de la direction ; re-plafonné à la fiche après usage.
 	float norme = length(g);
-	if (norme <= 0.00001) {
+	float face;
+	if (n.y > 0.5) {
+		face = 1.15;
+	} else if (n.y < -0.5) {
+		face = plancher;
+	} else if (norme <= 0.00001) {
 		return 1.0;
+	} else {
+		float cosinus = dot(normalize(n.xz), g / norme);
+		face = cosinus >= 0.0 ? 0.9 + 0.35 * cosinus : max(plancher, 0.9 + 0.5 * cosinus);
 	}
-	float cosinus = dot(normalize(n.xz), g / norme);
-	float face = cosinus >= 0.0 ? 1.0 + 0.3 * cosinus : max(plancher, 1.0 + 0.6 * cosinus);
 	float certitude = smoothstep(0.05, 0.3, norme / max(l_max, 0.02));
 	return mix(1.0, face, certitude);
 }

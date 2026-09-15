@@ -5385,3 +5385,7 @@ session cloud) ; chaleur de la face r/g 1,15 → 1,33 contre 1,32 sur E1 ; lot c
 réécrit sur le retour de la session cloud pour RÉPARTIR la lumière du capteur, ne se voit pas à la caméra au lacet 0
 — proposé, pas tranché. Galerie : https://claude.ai/artifact/TjC6Xkboc39KJkjnPoqsut ; planche
 `docs/iso/planche_iso7b.jpg`.
+Suite à 13:06-13:14 : modelé des corps décidé par la session cloud (dessus 1,15, face sud 0,9, côté lampe 1,25,
+dos au plancher) — le volume se voit, la luminance moyenne ne bouge pas ; paire avant/après identique, la visée
+tenue au stick (29 pixels éteints au lieu de 19 521) ; face sud r/g 1,37 contre 1,32 sur E1. Non départagé : face de
+face contre face rasée. Question ouverte : la chaleur graduée jaunit le halo de la fusée. Lot complet vert.

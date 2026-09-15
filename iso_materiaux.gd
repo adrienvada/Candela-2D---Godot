@@ -265,17 +265,19 @@ static func lambert(l_0: float, l_avant: float, l_t1: float, l_t2: float, planch
 ## ISO7b — miroir de `lambert_du_corps` (`corps_iso.gdshader`) : le facteur de modelé d'une face de normale `n`
 ## (monde) sous un gradient au sol `g` (vers où la lumière monte) et la lumière la plus forte lue `l_max`.
 static func lambert_du_corps(g: Vector2, l_max: float, n: Vector3, plancher: float = LAMBERT_PLANCHER) -> float:
-	# Le modelé RÉPARTIT (voir `corps_iso.gdshader`) : côté lampe `1 + 0,3 cos`, côté opposé `1 + 0,6 cos` jusqu'au
-	# plancher, dessus 1.
-	if n.y > 0.5:
-		return 1.0
-	if n.y < -0.5:
-		return plancher
+	# Décidé à 12:50 (voir `corps_iso.gdshader`) : dessus 1,15 ; vers la lampe `0,9 + 0,35 cos` ; à l'opposé
+	# `0,9 + 0,5 cos` jusqu'au plancher ; pondéré par la netteté de la direction.
 	var norme := g.length()
-	if norme <= 0.00001:
+	var face := 1.0
+	if n.y > 0.5:
+		face = 1.15
+	elif n.y < -0.5:
+		face = plancher
+	elif norme <= 0.00001:
 		return 1.0
-	var cosinus := Vector2(n.x, n.z).normalized().dot(g / norme)
-	var face := 1.0 + 0.3 * cosinus if cosinus >= 0.0 else maxf(plancher, 1.0 + 0.6 * cosinus)
+	else:
+		var cosinus := Vector2(n.x, n.z).normalized().dot(g / norme)
+		face = 0.9 + 0.35 * cosinus if cosinus >= 0.0 else maxf(plancher, 0.9 + 0.5 * cosinus)
 	var certitude := smoothstep(0.05, 0.3, norme / maxf(l_max, 0.02))
 	return lerpf(1.0, face, certitude)
 

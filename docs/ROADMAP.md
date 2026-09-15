@@ -24467,6 +24467,33 @@ appels de dessin 95 → 96 (vue unique) et 172 → 172 (écran scindé). Planche
   retirer de lumière demanderait de décaler dessus et face sud en sens opposés : proposé à la session cloud, pas
   tranché ici.
 
+- ⚠️ **La visée d'un joueur de banc se tient au stick, pas par `rotation`.** `LocalInputProvider.get_aim_direction`
+  rend la direction du stick s'il est poussé, sinon celle de la SOURIS : poser `rotation` à chaque image ne
+  fixait pas la torche, qui visait ailleurs entre l'avant et l'après. Le cadrage e1 pousse désormais `p1_aim_up` et
+  `p2_aim_right` à chaque image : la paire avant/après porte la même torche (passage suivant après commit
+  `27ddb1c`).
+
+- **Corps : le modelé décidé par la session cloud (12:50), sur proposition de la session.** Dessus 1,15 ; face
+  latérale `0,9 + 0,35 cos` vers la lampe (1,25 face à elle, 0,9 de profil) et `0,9 + 0,5 cos` à l'opposé (dos au
+  plancher 0,4) ; pondéré par la netteté de la direction ; re-plafonné à la fiche. Pourquoi : à la caméra au lacet
+  0 ne se voient que le dessus et la face sud ; les laisser tous deux à 1 rendait le modelé invisible (75 → 75), et
+  seul un écart entre eux donne du volume sans retirer de lumière (moyenne des quatre faces visibles, lampe de
+  côté : 0,93).
+
+**Sixième passage (13:06-13:14), paire identique** — visée de J1 et J2 tenue au stick, Le Cloître, bandeau figé.
+Suite 116 vérifications, **lot complet vert** (411 s, 0 SHADER/SCRIPT ERROR), 29 pixels éclairés éteints en vue unique
+et 41 en écran scindé (contre 19 521 quand la torche suivait la souris), appels 95 → 96 et 174 → 176.
+- **Face sud sous torche** : r/g 1,16 → 1,37, b/g 0,75 → 0,63 (E1, face éclairée : 1,32 / 0,56) ; lumière à 0,89-0,90
+  de l'avant, soit la matière. **Sol dans le cône** : r/g 1,12 → 1,29, lumière ×0,97.
+- **Face de face contre face rasée : non départagées.** La face mesurée est éclairée de face par J1 ; le cône de J2
+  éclaire le sol devant elle, pas la face. Il faudra une face que seule une torche parallèle éclaire.
+- **Corps : le modelé se voit.** Tête et épaules claires, torse et face sud plus sombres ; luminance moyenne 75,0
+  → 74,8 — la lumière du capteur est répartie, pas retirée.
+- ⚠️ **Question ouverte : la chaleur graduée jaunit le halo de la fusée** (rouge-orangé avant, jaune-orangé après).
+  La pondération par la neutralité protège une couleur saturée, mais la pâte D a déjà désaturé le halo de 35 % avant
+  la température. La couleur d'une fusée se lit en jeu : signalé à la session cloud avec une proposition, pas
+  corrigé en silence.
+
 **La caméra ne bouge pas** (lacet 0, tangage 52 — étude § 5.2, H15). Pour la session cloud : `CameraIso` a un lacet
 paramétrable par instance (`var lacet_deg`, lu par `transform_pour` et `stick_au_sol`) ; son en-tête prévient
 qu'un lacet non nul fait tourner l'empreinte au sol hors du rectangle de la vue 2D.
