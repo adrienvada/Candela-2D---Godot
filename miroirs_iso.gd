@@ -220,6 +220,9 @@ func _creer(noeud: Node2D, slug: String, main: Node, vues: Array, parent_capteur
 		rayon_lu = minf(float(VoxelCatalogueObjets.OBJETS[slug]["rayon_px"]) + 1.0, CapteurCorps.RAYON_PX - 3.0)
 		voxel = objet
 	voxel.call("definir_pixels_par_unite", 1.0)
+	# Raccords de la vague — l'encre des arêtes des corps (ISO7, ISO Corps vague 5) sur les objets debout et le
+	# leurre : ils partagent `corps_iso.gdshader`, le même crochet leur pose la même encre.
+	IsoMateriaux.accorder_corps(voxel.call("materiau") as ShaderMaterial)
 	var capteurs := [null, null]
 	for id in vues:
 		var masque := MapGeometry.WALL_LAYER

@@ -24301,6 +24301,53 @@ cette branche, et l'appeler casserait la compilation du shader (`tools/test_iso_
 Les signatures de `lightmap_pateuse`, `pate` et `pate_bruit`, dont dépend `volume_iso.gdshader`, ne
 changent pas (engagement d'ISO7 Beauté).
 
+
+### Raccords de la vague « grand budget » ✅ (2026-09-15, après les quatre fusions, jugés au test final)
+
+Brief de la session cloud (`briefs/iso5_fusions.md`, branche-signal `claude/reveil`), sur mandat d'Adrien
+de 05:00. Quatre chantiers nés de `iso2-vues` à `953ead3` ont été fusionnés un par un : `iso7-beaute`
+(`63d6c60`), `iso-gadgets-lumieres` (`80c51e4`), `iso-habillage` (`de2bbff`), `iso-corps` vague 5
+(`7cdd984`). Chacun avait posé ses crochets dans le code des autres ; il restait les gestes qui ne
+pouvaient se faire qu'une fois tout réuni.
+
+**Ce qui est fait.**
+- **Les nuages prennent la température de la lumière** (`volume_iso.gdshader`, `iso_volumes.gd`) : un
+  uniform `temperature`, réglé à `IsoMateriaux.TEMPERATURE` (0,5, nul sans beauté), et
+  `c = pate_temperature(c, temperature)` en fin de fragment. Sans lui, une fumée sur le sol chaud d'ISO7
+  restait grise — le sol et les murs avaient la teinte, le nuage posé dessus non (consigné par Gadgets).
+- **L'encre des arêtes sur les objets debout et le leurre** (`miroirs_iso.gd`) : les `VoxelObjet` et le
+  corps du leurre utilisent déjà `corps_iso.gdshader`, qui déclare `encre_arete` et `encre_reste` depuis
+  la vague 5. Le même crochet que les corps (`IsoMateriaux.accorder_corps`, appelé à la création du
+  miroir) leur pose la même encre : 0,9 px, reste 0,35, par `pate_facteur`. Un objet sans encre à côté d'un
+  corps encré se lisait comme d'un autre jeu.
+- **`sol_projete.gdshader` retiré** : plus aucun script ne le charge depuis ISO7 (`sol_iso.gdshader` le
+  remplace, formule pour formule), ni dans la vue iso ni dans la vue de dessus.
+
+**Ce qui ne l'est pas, et pourquoi.**
+- **L'intensité des lueurs par `pate_facteur`** (`halo_iso.gdshader`) : le brief ne la demande que si les
+  lueurs paraissent ternes au banc. Aucun banc fenêtré n'a été pris pour ce raccord ; à regarder au test
+  final.
+- **L'éclat de bouche depuis `VoxelCorps.pointe_arme()`** : déjà branché par `iso_volumes.gd` (par
+  `has_method`), maintenant que la vague 5 déclare la fonction. Non vérifié au banc.
+- **L'icône de torche du HUD** : demandée à ISO Assets. Première livraison (`8c4e776`) refusée : passée par
+  `tools/preparer_habillage.py icone`, son faisceau diffus sortait olive (299 pixels r ≈ g > b, par exemple
+  128/120/83, contre 1 851 pixels chauds r > g > b), une tache verdâtre à 128 px. Seconde livraison
+  (`49ee29e`, disque halogène à bord net) acceptée : 4 203 pixels chauds, 22 olive, 0 vert. **Pas encore
+  posée** : la session cloud arrête ISO5 après ce commit, et confie la pose (`assets/ui/icones/torche.png`,
+  `MenuIcones.TORCHE`) à la relève d'ISO6 ; l'ancienne icône reste en place d'ici là.
+
+**La preuve** — `tools/test_iso_objets.gd` : les miroirs de chaque objet et du leurre portent l'encre des
+corps ; le matériau des nuages porte la température, et le shader l'applique. Lot complet vert.
+
+**Pièges.**
+- ⚠️ **Un crochet posé « tant que le shader ne déclare pas l'uniform, Godot l'ignore » ne se voit pas avant
+  la fusion qui le déclare.** `IsoMateriaux.accorder_corps` (ISO7) posait l'encre sur des corps dont le
+  shader ne la connaissait pas encore : aucun effet, aucune erreur. Elle est apparue d'un coup avec la
+  fusion d'`iso-corps` — et les objets, qui partagent le shader sans passer par ce crochet, seraient restés
+  sans encre sans ce raccord.
+- ⚠️ **Une icône à fond vert se juge au pixel, pas à la vignette.** Le détourage de `preparer_habillage.py`
+  a bien retiré le fond (aucun pixel g > r + 12) ; c'est la lueur générée qui avait viré à l'olive.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

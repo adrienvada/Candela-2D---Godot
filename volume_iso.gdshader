@@ -45,6 +45,9 @@ uniform float graine = 0.0;
 uniform float age = 0.0;
 // Un ruban (la toile du voile) : ni disque ni bord, une densité pleine le long du maillage.
 uniform bool ruban = false;
+// Raccords de la vague — la température de la lumière (ISO7, `pate_temperature`) : le nuage posé sur le sol
+// chaud en prend la teinte, luminance gardée. 0 : la lightmap telle quelle. Réglé par `IsoVolumes`.
+uniform float temperature = 0.0;
 
 varying vec3 monde;
 
@@ -75,6 +78,7 @@ void fragment() {
 	if (a <= 0.003) {
 		discard;
 	}
+	c = pate_temperature(c, temperature);
 	ALBEDO = c;
 	ALPHA = a;
 }

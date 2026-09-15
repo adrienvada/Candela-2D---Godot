@@ -403,6 +403,8 @@ func _materiau_volume() -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER_VOLUME
 	mat.render_priority = PRIORITE_VOLUME
+	# Raccords de la vague — la teinte chaude du sol et des murs (ISO7), nulle sans beauté.
+	mat.set_shader_parameter("temperature", IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
 	return mat
 
 

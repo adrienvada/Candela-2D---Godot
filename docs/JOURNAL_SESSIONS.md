@@ -5354,3 +5354,13 @@ n'étant pas une fusion sans perte, les ancrages ont été relus des deux côté
 d'ISO5 et d'E2). `iso_pate.*` toujours identiques à `0cc300e`. L'encre des corps est posée en jeu par
 `IsoMateriaux.accorder_corps` (ISO7), déjà appelé dans `_accorder_le_slug` : elle apparaît avec cette
 fusion, qui déclare enfin les uniforms. Deux imports, lot complet.
+
+**Raccords de la vague « grand budget », 2026-09-15 vers 10:30.** Après les quatre fusions (`63d6c60`,
+`80c51e4`, `de2bbff`, `7cdd984`). Les nuages prennent la température de la lumière (`volume_iso.gdshader`,
+`IsoVolumes._materiau_volume`) ; les objets debout et le leurre portent l'encre des arêtes des corps
+(`IsoMateriaux.accorder_corps` dans `MiroirsIso._creer` : ils partagent `corps_iso.gdshader`) ;
+`sol_projete.gdshader` retiré, chargé par personne depuis ISO7. `tools/test_iso_objets.gd` le prouve.
+Laissés au test final, faute de banc : l'intensité des lueurs par `pate_facteur`, l'éclat de bouche depuis
+`pointe_arme()`. L'icône de torche : première livraison d'ISO Assets (`8c4e776`) refusée, faisceau olive
+(299 pixels r ≈ g > b) ; la seconde (`49ee29e`) mesurée bonne (4 203 chauds, 22 olive), posée par la
+relève d'ISO6. Deux imports, lot complet.

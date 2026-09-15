@@ -205,6 +205,28 @@ func _les_capteurs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 				printerr("    %s vue %d : couche=%d masque=%d shader=%s" % [slug, id + 1, cap.couche(), cap.masque_lumiere(), shader.resource_path])
 	_check("un capteur par vue pour chaque miroir, sur la couche des objets hors des lightmaps, avec le masque et la courbe du sprite remplacé",
 		justes == total, "%d/%d" % [justes, total])
+	# Raccords de la vague « grand budget » — l'encre des arêtes d'ISO7 et d'ISO Corps (vague 5) sur les
+	# objets debout et le leurre, par le même crochet que les corps (`IsoMateriaux.accorder_corps`).
+	var encres := 0
+	for slug in poses:
+		var voxel: Node3D = miroirs.miroir_de(poses[slug] as Node)
+		var mat: ShaderMaterial = voxel.call("materiau") if voxel != null else null
+		if mat != null and is_equal_approx(float(mat.get_shader_parameter("encre_arete")),
+				IsoMateriaux.ENCRE_VOXEL_PX if IsoMateriaux.beaute_active() else 0.0) \
+				and is_equal_approx(float(mat.get_shader_parameter("encre_reste")), IsoMateriaux.ENCRE_VOXEL_RESTE):
+			encres += 1
+		else:
+			printerr("    %s : encre absente du matériau du miroir" % slug)
+	_check("les miroirs des objets et du leurre portent l'encre des arêtes des corps (IsoMateriaux.accorder_corps)",
+		encres == poses.size(), "%d/%d" % [encres, poses.size()])
+	# Et la température de la lumière sur les nuages : la teinte chaude du sol et des murs (ISO7).
+	var volumes := IsoVolumes.new()
+	var mat_volume: ShaderMaterial = volumes.call("_materiau_volume")
+	_check("les nuages prennent la température de la lumière du sol (IsoMateriaux.TEMPERATURE)",
+		is_equal_approx(float(mat_volume.get_shader_parameter("temperature")),
+			IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
+		and (IsoVolumes.SHADER_VOLUME as Shader).code.contains("pate_temperature(c, temperature)"))
+	volumes.free()
 
 
 func _la_fusee(main: Node, miroirs: MiroirsIso) -> void:
