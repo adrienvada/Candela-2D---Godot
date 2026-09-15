@@ -324,6 +324,9 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "affiche", "famille": "fins", "source": "ecran",
 		 "titre": "L'affiche de fin",
 		 "pourquoi": "DA6.1 — le verdict composé comme un poster : le mot, le filet, la légende, la ligne de session."},
+		{"id": "affiche-defaite", "famille": "fins", "source": "ecran",
+		 "titre": "L'affiche de défaite",
+		 "pourquoi": "Pas 6 — l'illustration de la défaite, que l'écran partagé ne pose jamais (il dit « JOUEUR n GAGNE ») : posée comme en ligne, J1 battu par J2."},
 		{"id": "soiree", "famille": "fins", "source": "ecran",
 		 "titre": "La carte de fin de soirée",
 		 "pourquoi": "DA6.3 / DA6.4 — ce que la soirée a produit, dans le format 4:5 qu'on exporte et qu'on envoie."},
@@ -371,7 +374,9 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 			# Étape 28, lot F — la mine du plan `killcam` doit être ALLUMÉE par l'ordre
 			# du jeu, jamais par un `allumer()` direct : c'est ce chemin-là qu'on
 			# photographie.
-			"allumer_gadget"]:
+			"allumer_gadget",
+			# Pas 6 — l'affiche de défaite se pose avec les faits que GameState donne à la sienne.
+			"_mode_label"]:
 		if not main.has_method(methode):
 			absents.append("GameState.%s() a disparu" % methode)
 
@@ -1060,6 +1065,29 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 	if is_instance_valid(affiche) and affiche.has_method("congedier"):
 		affiche.congedier()
 		await _attendre_disparition(affiche, 3.0)
+
+	# Pas 6 (2026-09-15) — l'affiche de DÉFAITE. L'écran partagé ne la pose jamais : son titre dit
+	# « JOUEUR n GAGNE », et `AfficheDeFin._illustration_pour` ne prend `fin_defaite.jpg` que sur « DÉFAITE ».
+	# On la pose donc comme `GameState._poser_affiche_de_fin` la pose en ligne : sans titre de salon, J1 local
+	# battu par J2, les autres faits lus sur la manche qui vient de finir.
+	if _demande(plans, "affiche-defaite"):
+		var defaite := AfficheDeFin.poser(_main, {
+			"vainqueur": 1,
+			"local_idx": 0,
+			"carte": String(MapData.get_selected().get("name", "")),
+			"duree": _main.round_time - _main.time_left,
+			"arme_j1": _main.p1.current_weapon.name if is_instance_valid(_main.p1) and _main.p1.current_weapon else "",
+			"arme_j2": _main.p2.current_weapon.name if is_instance_valid(_main.p2) and _main.p2.current_weapon else "",
+			"mode": _main._mode_label(),
+			"session_j1": _main.p1_session_wins,
+			"session_j2": _main.p2_session_wins,
+			"serie": _main._mot_de_serie,
+			"marge_px": _main.dernier_effleurement,
+		})
+		await _prendre(_plan(plans, "affiche-defaite"))
+		if is_instance_valid(defaite):
+			defaite.congedier()
+			await _attendre_disparition(defaite, 3.0)
 
 	# **Le bilan et les verdicts ne portent pas les mêmes valeurs, et c'est tout
 	# l'intérêt.** Posés identiques, les quatre images étaient quatre fois la

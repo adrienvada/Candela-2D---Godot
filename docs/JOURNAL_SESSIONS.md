@@ -5596,3 +5596,8 @@ remplacés sous leurs noms et tailles, aucun code : `fond_hub_iso.jpg` (accueil 
 été refusées puis refaites par `preparer_habillage.py fin`. Piège : l'affiche de fin retourne l'image à l'écran.
 Piège payé : Godot lit la texture importée, et les premières captures et le premier lot voyaient encore les
 anciennes images. Arrêt, `godot --headless --path . --import`, reprise. Lot complet vert à 16:16 : 127 OK en 413 s.
+
+**L'affiche de défaite au photographe, 2026-09-15 vers 16:25.** Session « Iso 1 Opus ». Nouveau plan
+`affiche-defaite` : l'affiche posée comme en ligne, J1 battu, puisque l'écran partagé ne pose jamais l'image de
+défaite. Il sert à photographier `fin_defaite.jpg` pour le verdict de la session cloud.
+Capture : le mot « DÉFAITE » et la lampe tombée. Lot complet vert : 127 OK en 414 s.

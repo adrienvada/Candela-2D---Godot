@@ -25065,6 +25065,13 @@ aucun code touché. Sources livrées par « ISO Assets Sonnet » :
   dans un commit à part.
 - Lot complet vert à 16:16, après réimport : 127 OK en 413 s.
 
+**Le photographe prend l'affiche de défaite** (plan `affiche-defaite`, famille `fins`, commit à part du pas 6).
+L'écran partagé ne pose jamais `fin_defaite.jpg`, puisque son titre dit « JOUEUR n GAGNE ». Le plan pose donc
+`AfficheDeFin` comme `GameState._poser_affiche_de_fin` la pose en ligne : sans titre de salon, J1 local battu
+par J2, les autres faits lus sur la manche sacrifiée. `_mode_label` rejoint les appuis vérifiés par
+`test_banc`. C'est sur cette capture que se lève la réserve de la session cloud sur `fin_defaite`.
+Lot complet vert : 127 OK en 414 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
