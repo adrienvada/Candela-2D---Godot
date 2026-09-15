@@ -78,7 +78,10 @@ void fragment() {
 	if (a <= 0.003) {
 		discard;
 	}
-	c = pate_temperature(c, temperature);
+	// ISO7b (ligne posée par ISO7 Beauté sur l'ordre de la session cloud, 2026-09-15 14:21 — Gadgets clos) : la neutralité
+	// qui dose la chaleur se lit sur la lightmap AVANT la pâte, comme au sol et sur les murs. Mesurée après elle, un nuage
+	// dans le halo d'une fusée prenait la chaleur des torches. Seuils 0 : la teinte chaude d'ISO7, sans graduation.
+	c = pate_temperature_graduee_neutre(c, temperature, 0.0, 0.0, pate_poids_neutre(lire_lightmap(px, deux)));
 	ALBEDO = c;
 	ALPHA = a;
 }

@@ -295,19 +295,22 @@ func _les_faces_et_le_bain() -> void:
 	var pas := IsoMateriaux.LAMBERT_PAS_PX
 	# Face qui regarde +y (vers la torche), pied en (0, 8).
 	var pied_face := Vector2(0.0, 8.0)
+	# Le plancher ÉTUDIÉ (0,4) : en jeu, le Lambert des faces est éteint (plancher 1, décision du 2026-09-15 14:21) ; la
+	# formule reste éprouvée, pour la lightmap de direction proposée après le test final.
+	var etudie := 0.4
 	var face := IsoMateriaux.lambert(lumiere.call(pied_face), lumiere.call(pied_face + Vector2(0, pas)),
-		lumiere.call(pied_face + Vector2(pas, 0)), lumiere.call(pied_face - Vector2(pas, 0)))
+		lumiere.call(pied_face + Vector2(pas, 0)), lumiere.call(pied_face - Vector2(pas, 0)), etudie)
 	# Face qui regarde +x, pied à 3 tuiles à gauche de la torche : la lumière vient de son côté.
 	var pied_profil := Vector2(-8.0, 105.0) + Vector2(-60.0, 0.0)
 	var n := Vector2(-1.0, 0.0)
 	var t := Vector2(0.0, -1.0)
 	var profil := IsoMateriaux.lambert(lumiere.call(pied_profil), lumiere.call(pied_profil + n * pas),
-		lumiere.call(pied_profil + t * pas), lumiere.call(pied_profil - t * pas))
+		lumiere.call(pied_profil + t * pas), lumiere.call(pied_profil - t * pas), etudie)
 	_check("sous la même lightmap, la face qui regarde la torche est plus claire que celle de dos (%.2f > %.2f)" % [face, profil],
 		face > profil + 0.2)
 	_check("la face qui regarde la torche garde toute sa lumière (%.2f)" % face, face > 0.95)
-	_check("la face de dos ne descend pas sous le plancher (%.2f ≥ %.2f)" % [profil, IsoMateriaux.LAMBERT_PLANCHER],
-		profil >= IsoMateriaux.LAMBERT_PLANCHER - 1e-4)
+	_check("la face de dos ne descend pas sous le plancher (%.2f ≥ %.2f)" % [profil, etudie],
+		profil >= etudie - 1e-4)
 	_check("lumière uniforme : aucune direction, la face garde sa lumière", is_equal_approx(IsoMateriaux.lambert(0.5, 0.5, 0.5, 0.5), 1.0))
 	_check("plancher 1 : le Lambert est éteint", is_equal_approx(IsoMateriaux.lambert(0.1, 0.9, 0.0, 0.0, 1.0), 1.0))
 	var code_mur := SHADER_MUR.code
@@ -390,42 +393,38 @@ func _les_faces_et_le_bain() -> void:
 	var sol := ShaderMaterial.new()
 	sol.shader = load("res://sol_iso.gdshader")
 	IsoMateriaux.accorder_sol(sol)
-	# ISO7b, ordre 17 — le modelé des corps : même gradient, faces du voxel.
-	var g_lampe := Vector2(0.0, 0.2)   # la lumière monte vers +z (la lampe est au sud du corps)
-	var face_sud := IsoMateriaux.lambert_du_corps(g_lampe, 0.6, Vector3(0, 0, 1))
-	var face_nord := IsoMateriaux.lambert_du_corps(g_lampe, 0.6, Vector3(0, 0, -1))
-	var face_est := IsoMateriaux.lambert_du_corps(g_lampe, 0.6, Vector3(1, 0, 0))
-	var dessus := IsoMateriaux.lambert_du_corps(g_lampe, 0.6, Vector3(0, 1, 0))
-	_check("corps : la face vers la lampe garde sa lumière (%.2f), le dos descend au plancher (%.2f)" % [face_sud, face_nord],
-		face_sud > 0.95 and absf(face_nord - IsoMateriaux.LAMBERT_PLANCHER) < 1e-4)
-	_check("corps : la face de profil est entre les deux (%.2f), le dessus monte à 1,15 (%.2f)" % [face_est, dessus],
-		face_est >= IsoMateriaux.LAMBERT_PLANCHER - 1e-4 and face_est < face_sud and is_equal_approx(dessus, 1.15))
-	# Le modelé RÉPARTIT (retour de la session cloud, 12:30) : la face que le joueur lit n'est jamais la plus sombre.
-	var lampe_ouest := Vector2(-0.2, 0.0)
+	# ISO7b — le modelé des corps, tenu par la CAMÉRA (décision de la session cloud, 2026-09-15 14:21) : plus aucune
+	# lecture du gradient — un corps qui traverse un cône ne voit pas son côté clair sauter.
+	var dessus := IsoMateriaux.modele_du_corps(Vector3(0, 1, 0))
+	var face_sud := IsoMateriaux.modele_du_corps(Vector3(0, 0, 1))
+	_check("corps : dessus 1,15 et face sud 0,9 (%.2f, %.2f)" % [dessus, face_sud],
+		is_equal_approx(dessus, 1.15) and is_equal_approx(face_sud, 0.9))
+	var une_valeur := true
+	for nv: Vector3 in [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, -1), Vector3(0, -1, 0)]:
+		une_valeur = une_valeur and is_equal_approx(IsoMateriaux.modele_du_corps(nv), IsoMateriaux.MODELE_AUTRES)
+	_check("corps : toutes les autres faces à une seule valeur (%.2f)" % IsoMateriaux.MODELE_AUTRES, une_valeur)
 	var visibles := [Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]
 	var somme := 0.0
 	for nv: Vector3 in visibles:
-		somme += IsoMateriaux.lambert_du_corps(lampe_ouest, 0.6, nv)
-	_check("corps : la moyenne des faces visibles reste la lumière du capteur (%.2f ≈ 1)" % (somme / visibles.size()),
-		absf(somme / visibles.size() - 1.0) < 0.1)
-	var sud_de_cote := IsoMateriaux.lambert_du_corps(lampe_ouest, 0.6, Vector3(0, 0, 1))
-	var sud_devant := IsoMateriaux.lambert_du_corps(Vector2(0.0, 0.2), 0.6, Vector3(0, 0, 1))
-	_check("corps : la face sud ne passe jamais sous 0,7 lampe de côté (%.2f) ou devant (%.2f)" % [sud_de_cote, sud_devant],
-		sud_de_cote >= 0.7 and sud_devant >= 0.7)
-	# Décidé à 12:50 : lampe de côté, la face sud tombe à 0,9 et le dessus monte à 1,15 — le volume se lit à la caméra.
-	_check("corps : lampe de côté, dessus plus clair que la face sud (%.2f > %.2f)" % [IsoMateriaux.lambert_du_corps(lampe_ouest, 0.6, Vector3(0, 1, 0)), sud_de_cote],
-		is_equal_approx(sud_de_cote, 0.9) and IsoMateriaux.lambert_du_corps(lampe_ouest, 0.6, Vector3(0, 1, 0)) > sud_de_cote + 0.2)
-	_check("corps : lumière uniforme, aucun modelé (dessus compris)", is_equal_approx(IsoMateriaux.lambert_du_corps(Vector2.ZERO, 0.6, Vector3(0, 1, 0)), 1.0)
-		or is_equal_approx(IsoMateriaux.lambert_du_corps(Vector2(0.001, 0.0), 0.6, Vector3(0, 1, 0)), 1.0))
+		somme += IsoMateriaux.modele_du_corps(nv)
+	_check("corps : la moyenne des faces vues reste la lumière du capteur (%.2f ≈ 1)" % (somme / visibles.size()),
+		absf(somme / visibles.size() - 1.0) < 0.05)
+	_check("corps : la face sud ne passe jamais sous 0,7 (%.2f)" % face_sud, face_sud >= 0.7)
+	var tournee := IsoMateriaux.modele_du_corps(Vector3(0.6, 0.0, 0.8))
+	_check("corps : une face tournée ne prend que la valeur de sa normale (%.2f)" % tournee, is_equal_approx(tournee, 0.9))
 	var code_corps := (load("res://corps_iso.gdshader") as Shader).code
-	_check("corps : le modelé est re-plafonné à la fiche", code_corps.contains("normale_monde, lambert_plancher)), couleur_fiche.rgb);"))
+	_check("corps : le modelé ne lit plus la lightmap (ni gradient, ni pas, ni gradient simulé)",
+		not code_corps.contains("lambert_du_corps") and not code_corps.contains("lambert_pas_px") and not code_corps.contains("gradient_simule"))
+	_check("corps : le modelé est re-plafonné à la fiche", code_corps.contains("modele_du_corps(normale_monde)), couleur_fiche.rgb);"))
 	_check("corps : le modelé passe par pate_facteur, avant l'encre et jamais sur la silhouette",
-		code_corps.find("lambert_du_corps(vec2(") > 0 and code_corps.find("lambert_du_corps(vec2(") < code_corps.find("pate_encre_boite(local")
-		and code_corps.find("lambert_du_corps(vec2(") < code_corps.find("silhouette.rgb * s"))
+		code_corps.find("modele_du_corps(normale_monde)") > 0 and code_corps.find("modele_du_corps(normale_monde)") < code_corps.find("pate_encre_boite(local")
+		and code_corps.find("modele_du_corps(normale_monde)") < code_corps.find("silhouette.rgb * s"))
 	var corps_mat := ShaderMaterial.new()
 	corps_mat.shader = load("res://corps_iso.gdshader")
 	IsoMateriaux.accorder_corps(corps_mat)
-	_check("corps : accorder_corps pose le modelé", is_equal_approx(float(corps_mat.get_shader_parameter("lambert_plancher")), IsoMateriaux.LAMBERT_PLANCHER))
+	_check("corps : accorder_corps pose le modelé", is_equal_approx(float(corps_mat.get_shader_parameter("modele")), 1.0))
+	_check("faces : le Lambert est éteint en jeu (plancher %.1f posé)" % IsoMateriaux.LAMBERT_PLANCHER,
+		IsoMateriaux.LAMBERT_PLANCHER >= 1.0 and is_equal_approx(float(mur.get_shader_parameter("lambert_plancher")), 1.0))
 	_check("ISO7b posé : Lambert, contact, dalles, température graduée",
 		is_equal_approx(float(mur.get_shader_parameter("lambert_plancher")), IsoMateriaux.LAMBERT_PLANCHER)
 		and float(mur.get_shader_parameter("contact_px")) > 0.0 and float(sol.get_shader_parameter("dalles")) == 1.0

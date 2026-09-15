@@ -3189,6 +3189,18 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une valeur de lumière par point ne dit pas d'où elle vient (2026-09-15)
+
+ISO7b a donné aux faces des murs et aux corps la « direction de la lumière » lue dans le gradient de la lightmap.
+Sur les formules, la face qui regarde la torche restait claire et celle de profil tombait au plancher. Au banc, une
+seule scène l'a démenti (J1 seul devant un long mur, visée le long du mur puis face au mur) : à 3 tuiles, le facteur
+posait 0,67 sur la face rasée et 0,70 sur la face visée de face ; à 1 tuile il s'inversait, 0,83 contre 0,49. Une
+torche est un cône : sa lumière décroît lentement vers la source et vite sur ses bords, et le gradient suit le BORD
+de la tache — le long du mur quand on le vise, devant lui quand on le longe. Aucune variante de lecture (pas plus
+courts, plusieurs pas, centroïde en éventail) ne tient les deux cas. **Règle : une direction se lit dans une donnée
+qui la porte, jamais dans une intensité.** Le Lambert des faces est éteint, le modelé des corps ne tient plus qu'à la
+caméra ; une lightmap de direction est proposée pour après le test final (voir ISO7b, huitième passage).
+
 ### Deux branches justes, une fusion fausse, et aucun conflit (2026-09-15)
 
 `GameState._viewport_du_joueur` a appris la vue iso sur `iso2-vues` (ISO2) : l'écran d'un joueur est
@@ -24519,7 +24531,7 @@ ce passage (la suite ne lit que les fonctions existantes d'`iso_pate.gd`).
   (trois variantes calculées sur les deux géométries, 2026-09-15 14:00) : une valeur de lumière par point ne dit pas
   d'où elle vient. Signalé à la session cloud avec trois voies — une lightmap de direction (touche les lumières 2D,
   hors périmètre), le Lambert des faces éteint (plancher 1 : contact, dalles et chaleur restent), ou le garder comme
-  ombre de bord de tache.
+  ombre de bord de tache. **Tranché à 14:21 : voie (B), jusqu'au bout** — voir le huitième passage.
 - ⚠️ **Piège : une teinte de fusée ne se compare pas entre deux passes.** Libre, la fusée passe du rouge de détresse à
   l'ambre en quelques secondes, et l'âge atteint à la capture dépend de la cadence : à 13:40, le halo était rouge dans
   une passe et ambre dans les deux autres. Le banc la tient à 1 s de combustion (`--fusee-plein-feu`, par
@@ -24528,6 +24540,31 @@ ce passage (la suite ne lit que les fonctions existantes d'`iso_pate.gd`).
 - ⚠️ **Piège : nommer `Fusee` dans une suite `--script` compile `fusee.gd`, qui dépend de l'autoload `NetworkManager`** —
   SCRIPT ERROR dans le journal, suite pourtant verte (132 vérifications, 0 échec). La couleur se lit dans le texte du
   script, et le banc appelle `appliquer_age` par nom de méthode.
+
+**Huitième passage (14:21-14:55), voie (B) jusqu'au bout** — décision de la session cloud (14:21) sur la mesure du
+septième : « une direction fausse vaut moins qu'une absence de direction ».
+- **Lambert des faces éteint** : `IsoMateriaux.LAMBERT_PLANCHER` à 1. Le calcul reste dans `mur_iso.gdshader`
+  (plancher < 1 le rallume) et sa formule reste éprouvée par la suite, pour la voie (A).
+- **Modelé des corps par la caméra seule** (`modele_du_corps`, uniform `modele`) : dessus 1,15, face sud 0,9, toutes
+  les autres faces à 1 ; plus aucune lecture de la lightmap dans `corps_iso.gdshader` (cinq relevés de moins par
+  fragment de corps). **Pourquoi** : le côté lampe à 1,25 et le dos au plancher venaient du gradient, qui lit le bord
+  d'une tache de lumière — un corps qui traversait un cône voyait son côté clair sauter. Le dessus et la face sud
+  tiennent à la caméra, pas à la lumière. `tools/banc_corps.gd --modele` suit.
+- **Nuages** (`volume_iso.gdshader`, une ligne posée ici, Gadgets étant clos, sur l'ordre de la session cloud) : même
+  neutralité lue avant la pâte, par `pate_temperature_graduee_neutre` à seuils nuls (la teinte chaude d'ISO7, sans
+  graduation) ; son contrôle dans `tools/test_iso_objets.gd` suit.
+- Restent : le contact au pied, les dalles, la chaleur graduée, le dessus et la face sud des corps.
+- **Mesuré (14:29-14:37)** : suites `test_iso_beaute` 136 et `test_iso_objets` 41 vérifications, **lot complet vert**
+  (413 s, 0 SHADER/SCRIPT ERROR). Fusée tenue en plein feu, avant sans chaleur (nuages compris) : halo 4,6° → 4,6°,
+  r/g 1,90 tenu, cône r/g 1,07 → 1,24, 3 pixels éteints. **Nuages seuls** (`--volumes-seuls`, 4 nuages suivis) :
+  couper leur chaleur ne change que 2 pixels — dans le halo rouge, un nuage garde la teinte de la fusée (4,6°). Le
+  banc ne rend pas l'état d'avant pour les nuages (leur shader n'a pas d'interrupteur) ; la suite l'éprouve sur la
+  formule. Paire ISO7 / ISO7b au Cloître : 28 pixels éclairés éteints sur 97 042, 228 allumés (0,011 %), lumière
+  éclairée moyenne 33,2 → 35,2.
+- **(A) — proposition datée (2026-09-15), pour APRÈS le test final, pas un chantier d'aujourd'hui : une lightmap de
+  direction.** Chaque lumière 2D écrirait, dans une seconde texture par joueur, la direction de sa source (RG) pondérée
+  par son énergie ; faces et corps y liraient une vraie incidence. Coût : une passe de lumières 2D de plus par joueur,
+  et elle touche les Light2D. **(C) écartée** : une ombre qui n'est pas de la direction se lirait comme une direction.
 
 **La caméra ne bouge pas** (lacet 0, tangage 52 — étude § 5.2, H15). Pour la session cloud : `CameraIso` a un lacet
 paramétrable par instance (`var lacet_deg`, lu par `transform_pour` et `stick_au_sol`) ; son en-tête prévient

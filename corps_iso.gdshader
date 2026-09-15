@@ -135,18 +135,15 @@ uniform float pixels_par_unite : hint_range(0.0, 1000.0) = 1.0;
 uniform float encre_arete = 0.0;
 uniform float encre_reste = 0.35;
 
-// ISO7b (ordre 17 de la session cloud) — le MODELÉ par la direction de la lumière : le gradient de la lightmap
-// autour du pied du corps (`centre`, là où lit le capteur), une tuile de part et d'autre en x et en z. Chaque face
-// du voxel prend `max(plancher, dot(normale au sol, direction))` ; le dessus reste à 1, le dessous au plancher. Le
-// facteur ne fait que RÉPARTIR la lumière que le capteur autorise, entre `lambert_plancher` et 1 : le capteur reste
-// la seule vérité d'équité, et un corps noir reste noir. Posé par `pate_facteur`, après le plafond de fiche et avant
-// l'encre — jamais sur l'opacité ni la silhouette. `lambert_plancher = 1.0` (défaut) : aucun effet.
-uniform float lambert_plancher : hint_range(0.0, 1.0) = 1.0;
-uniform float lambert_pas_px = 35.0;
-// ISO7b — pour le banc des corps SEUL (`tools/banc_corps.gd --modele`), où il n'y a ni capteur ni lightmap : le
-// gradient au sol et la lumière la plus forte, posés à la main. Jamais utilisés en jeu (capteur actif).
-uniform vec2 gradient_simule = vec2(0.0);
-uniform float l_max_simule = 1.0;
+// ISO7b — le MODELÉ des corps, tenu par la CAMÉRA : dessus 1,15, face sud 0,9, toutes les autres faces à 1. Au lacet 0
+// seuls le dessus et la face sud se voient, et leur écart donne le volume ; la moyenne des faces vues reste la lumière du
+// capteur, qui reste la seule vérité d'équité (un corps noir reste noir). Posé par `pate_facteur`, après le plafond de
+// fiche et avant l'encre — jamais sur l'opacité ni la silhouette. `modele = 0` (défaut) : aucun effet.
+// ⚠️ **Plus aucune lecture du gradient de la lightmap** (décision de la session cloud, 2026-09-15 14:21). Le côté lampe
+// à 1,25 et le dos au plancher venaient de ce gradient, qui lit le BORD d'une tache de lumière et non la direction de
+// sa source (au banc des faces : 0,67 rasante contre 0,70 de face à 3 tuiles, inversé à 1 tuile) — un corps qui
+// traversait un cône voyait son côté clair sauter.
+uniform float modele : hint_range(0.0, 1.0) = 0.0;
 
 varying vec3 monde;
 varying vec3 local;             // VERTEX, repère du modèle — voir `pate_encre_boite()`
@@ -164,29 +161,17 @@ void vertex() {
 	normale_monde = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
-// ISO7b — le facteur de modelé d'une face de normale `n` (monde), pour un gradient `g` de la lightmap au sol
-// (vers où la lumière monte) et la lumière la plus forte lue autour (`l_max`). Miroir : `IsoMateriaux.lambert_du_corps`.
-float lambert_du_corps(vec2 g, float l_max, vec3 n, float plancher) {
-	// ⚠️ **Le modelé RÉPARTIT la lumière du capteur, il ne la retire pas** (session cloud, 12:30 puis 12:50). Un Lambert
-	// plafonné à 1 assombrissait la figure (71 → 59) ; un modelé à moyenne gardée qui laissait dessus et face sud à 1
-	// ne se voyait pas (75 → 75), la caméra au lacet 0 ne voyant QUE ces deux faces. Décidé à 12:50 : dessus 1,15 ; face
-	// latérale `0,9 + 0,35 cos` vers la lampe (1,25 face à elle, 0,9 de profil — la face sud, lampe de côté) et
-	// `0,9 + 0,5 cos` à l'opposé (jusqu'au plancher, le dos). Lampe à l'ouest, les quatre faces visibles valent en
-	// moyenne 0,93. Pondéré par la netteté de la direction ; re-plafonné à la fiche après usage.
-	float norme = length(g);
-	float face;
+// ISO7b — le facteur de modelé d'une face de normale `n` (monde). Miroir : `IsoMateriaux.modele_du_corps`.
+// ⚠️ **Le modelé RÉPARTIT la lumière du capteur, il ne la retire pas** (session cloud, 12:30 puis 12:50) : un modelé
+// qui laissait dessus et face sud à 1 ne se voyait pas (75 → 75), la caméra au lacet 0 ne voyant QUE ces deux faces.
+float modele_du_corps(vec3 n) {
 	if (n.y > 0.5) {
-		face = 1.15;
-	} else if (n.y < -0.5) {
-		face = plancher;
-	} else if (norme <= 0.00001) {
-		return 1.0;
-	} else {
-		float cosinus = dot(normalize(n.xz), g / norme);
-		face = cosinus >= 0.0 ? 0.9 + 0.35 * cosinus : max(plancher, 0.9 + 0.5 * cosinus);
+		return 1.15;
 	}
-	float certitude = smoothstep(0.05, 0.3, norme / max(l_max, 0.02));
-	return mix(1.0, face, certitude);
+	if (n.z > 0.5 && abs(n.y) <= 0.5) {
+		return 0.9;
+	}
+	return 1.0;
 }
 
 // Miroir de `lumiere_recue()` dans `corps_grossier_iso.gdshader` — même borne au
@@ -226,24 +211,13 @@ void fragment() {
 		float l = pate_luminance(base);
 		c = (l <= 0.0) ? vec3(0.0) : pate(base, l, style, motif, vec2(0.0), l, aa);
 		c = min(c, base);
-		// ISO7b — le banc des corps : le modelé par un gradient simulé, faute de lightmap.
-		if (lambert_plancher < 1.0 && length(gradient_simule) > 0.0) {
-			c = min(pate_facteur(c, lambert_du_corps(gradient_simule, l_max_simule, normale_monde, lambert_plancher)),
-				couleur_fiche.rgb);
-		}
 	}
 	// Le plafond général : jamais plus clair que la fiche, quelle que soit la pâte.
 	c = min(c, couleur_fiche.rgb);
-	// ISO7b — le modelé : la lumière du capteur répartie sur les faces par la direction lue dans la lightmap.
-	if (capteur_actif && lambert_plancher < 1.0) {
-		float lx_0 = pate_luminance(lire_lightmap(centre - vec2(lambert_pas_px, 0.0), deux));
-		float lx_1 = pate_luminance(lire_lightmap(centre + vec2(lambert_pas_px, 0.0), deux));
-		float lz_0 = pate_luminance(lire_lightmap(centre - vec2(0.0, lambert_pas_px), deux));
-		float lz_1 = pate_luminance(lire_lightmap(centre + vec2(0.0, lambert_pas_px), deux));
-		float l_c = pate_luminance(lire_lightmap(centre, deux));
-		// Re-plafonné à la fiche : le côté lampe peut monter jusqu'à 1,3, jamais au-delà de la couleur de la classe.
-		c = min(pate_facteur(c, lambert_du_corps(vec2(lx_1 - lx_0, lz_1 - lz_0) * 0.5, max(l_c, max(max(lx_0, lx_1), max(lz_0, lz_1))),
-			normale_monde, lambert_plancher)), couleur_fiche.rgb);
+	// ISO7b — le modelé : la lumière du capteur répartie sur les faces que la caméra voit. Re-plafonné à la fiche : le
+	// dessus monte à 1,15, jamais au-delà de la couleur de la classe.
+	if (modele > 0.5) {
+		c = min(pate_facteur(c, modele_du_corps(normale_monde)), couleur_fiche.rgb);
 	}
 	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
 	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran

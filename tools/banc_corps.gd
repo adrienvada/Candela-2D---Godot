@@ -86,8 +86,8 @@ var _capteur_force := false          # --capteur : capteur synthétique dès le 
 var _opacite_force := -1.0           # --opacite=X : sinon 1.0
 var _silhouette_force := false       # --silhouette : mode_silhouette=1 dès le départ
 var _encre := 0.0                    # ISO3 vague 5 — --encre=X (tuiles) : définir_encre(X), sinon 0.0 (défaut)
-## ISO7b (crochet d'ISO7 Beauté) — `--modele` : le modelé par la direction de la lumière, avec un gradient SIMULÉ
-## (ce banc n'a ni capteur ni lightmap) : la lumière monte vers la gauche, comme la lampe de la planche E9 du DA.
+## ISO7b (crochet d'ISO7 Beauté) — `--modele` : le modelé des corps par la caméra (dessus 1,15, face sud 0,9, autres
+## faces 1), sans aucune lecture de la lumière — décision de la session cloud, 2026-09-15 14:21.
 var _modele := false
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
@@ -203,9 +203,7 @@ func _construire_scene() -> void:
 			noeud.definir_encre(_encre)
 		if _modele:
 			var m: ShaderMaterial = noeud.materiau()
-			m.set_shader_parameter("lambert_plancher", IsoMateriaux.LAMBERT_PLANCHER)
-			m.set_shader_parameter("gradient_simule", Vector2(-0.2, 0.0))
-			m.set_shader_parameter("l_max_simule", 0.6)
+			m.set_shader_parameter("modele", 1.0)
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,

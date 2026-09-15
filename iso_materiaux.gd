@@ -115,9 +115,8 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	var active := beaute_active()
 	materiau.set_shader_parameter("encre_arete", ENCRE_VOXEL_PX if active else 0.0)
 	materiau.set_shader_parameter("encre_reste", ENCRE_VOXEL_RESTE)
-	# ISO7b — le modelé des corps et des objets debout par la direction de la lumière (même plancher que les murs).
-	materiau.set_shader_parameter("lambert_plancher", LAMBERT_PLANCHER if active else 1.0)
-	materiau.set_shader_parameter("lambert_pas_px", LAMBERT_PAS_PX)
+	# ISO7b — le modelé des corps : par la caméra, jamais par le gradient (voir `modele_du_corps`).
+	materiau.set_shader_parameter("modele", 1.0 if active else 0.0)
 
 
 ## ISO7, étape 6 — la température de la lumière vue sur le sol et les murs (`pate_temperature`).
@@ -143,7 +142,12 @@ const TEMPERATURE_SEUIL_HAUT := 0.45
 ## présentation.
 const PIED_FACE_PX := 12.0
 
-const LAMBERT_PLANCHER := 0.4
+## ⚠️ **1 : le Lambert des faces est ÉTEINT** (décision de la session cloud, 2026-09-15 14:21, sur la mesure du banc).
+## Le gradient de la lightmap lit le BORD de la tache de lumière d'une torche, pas la direction de sa source : à 3 tuiles
+## il posait 0,67 sur une face rasée et 0,70 sur une face visée de face, et à 1 tuile il s'inversait (0,83 contre 0,49).
+## Une valeur de lumière par point ne dit pas d'où elle vient ; une direction fausse vaut moins qu'aucune. Le calcul reste
+## dans `mur_iso.gdshader` (plancher < 1 le rallume), pour la lightmap de direction proposée après le test final.
+const LAMBERT_PLANCHER := 1.0
 const LAMBERT_PAS_PX := 35.0
 
 ## ISO7b — l'ombre de contact au pied des faces : 6 px de monde, 55 % gardés au ras du sol.
@@ -264,24 +268,23 @@ static func lambert(l_0: float, l_avant: float, l_t1: float, l_t2: float, planch
 	return lerpf(1.0, maxf(plancher, face_lampe), certitude)
 
 
-## ISO7b — miroir de `lambert_du_corps` (`corps_iso.gdshader`) : le facteur de modelé d'une face de normale `n`
-## (monde) sous un gradient au sol `g` (vers où la lumière monte) et la lumière la plus forte lue `l_max`.
-static func lambert_du_corps(g: Vector2, l_max: float, n: Vector3, plancher: float = LAMBERT_PLANCHER) -> float:
-	# Décidé à 12:50 (voir `corps_iso.gdshader`) : dessus 1,15 ; vers la lampe `0,9 + 0,35 cos` ; à l'opposé
-	# `0,9 + 0,5 cos` jusqu'au plancher ; pondéré par la netteté de la direction.
-	var norme := g.length()
-	var face := 1.0
+## ISO7b — les facteurs du modelé des corps, tenus par la CAMÉRA (lacet 0 : seuls le dessus et la face sud se voient).
+const MODELE_DESSUS := 1.15
+const MODELE_FACE_SUD := 0.9
+const MODELE_AUTRES := 1.0
+
+
+## ISO7b — miroir de `modele_du_corps` (`corps_iso.gdshader`) : le facteur de modelé d'une face de normale `n` (monde).
+## ⚠️ **Aucune lecture du gradient** (décision de la session cloud, 2026-09-15 14:21) : le côté lampe à 1,25 et le dos au
+## plancher venaient du gradient de la lightmap, qui lit le bord d'une tache de lumière et non sa source — un corps qui
+## traverse un cône voyait son côté clair sauter. Restent le dessus plus clair que la face sud, qui tiennent à la caméra ;
+## les autres faces valent 1, et la moyenne des faces vues reste la lumière du capteur.
+static func modele_du_corps(n: Vector3) -> float:
 	if n.y > 0.5:
-		face = 1.15
-	elif n.y < -0.5:
-		face = plancher
-	elif norme <= 0.00001:
-		return 1.0
-	else:
-		var cosinus := Vector2(n.x, n.z).normalized().dot(g / norme)
-		face = 0.9 + 0.35 * cosinus if cosinus >= 0.0 else maxf(plancher, 0.9 + 0.5 * cosinus)
-	var certitude := smoothstep(0.05, 0.3, norme / maxf(l_max, 0.02))
-	return lerpf(1.0, face, certitude)
+		return MODELE_DESSUS
+	if n.z > 0.5 and absf(n.y) <= 0.5:
+		return MODELE_FACE_SUD
+	return MODELE_AUTRES
 
 
 ## Les textures du catalogue, pour la suite : chemin → texture.

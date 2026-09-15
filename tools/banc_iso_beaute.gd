@@ -156,6 +156,9 @@ func _controler_la_beaute() -> void:
 			var ecran: Vector2 = projecteur.call(_face_e1)
 			print("BANC_ISO_BEAUTE face_e1 monde=%s ecran=(%d, %d)" % [str(_face_e1), roundi(ecran.x), roundi(ecran.y)])
 
+	# ISO7b — les nuages n'existent qu'une fois la fusée posée : leurs matériaux se relisent après la chauffe.
+	materiaux = _materiaux_iso(presentation, 2 if _volumes_seuls else 1)
+	print("BANC_ISO_BEAUTE materiaux=%d dont nuages=%d" % [materiaux.size(), _compter_volumes(materiaux)])
 	# ⚠️ **Avant, après, avant bis.** Ce qui change entre les deux « avant » n'est pas l'habillage : c'est le jeu qui
 	# bouge (torche qui bascule, fusée qui grandit, bandeau qui respire). Ces pixels-là sortent de la mesure.
 	var gardes := _eteindre_la_beaute(materiaux, _neutres())
@@ -320,6 +323,8 @@ func _face_sud_de_mur_haut(depuis: Vector2) -> Vector2:
 ## à l'ambre en quelques secondes, et l'âge atteint à la capture dépend de la cadence : au banc du 2026-09-15 (13:40), le
 ## halo était rouge dans une passe et ambre dans la suivante — une teinte comparée entre deux passes ne disait rien.
 var _fusee_plein_feu := OS.get_cmdline_user_args().has("--fusee-plein-feu")
+## ISO7b — `--volumes-seuls` : l'avant et l'après ne règlent que les nuages (la teinte d'un nuage près d'une fusée).
+var _volumes_seuls := OS.get_cmdline_user_args().has("--volumes-seuls")
 
 
 func _tenir_le_cadrage() -> void:
@@ -375,16 +380,36 @@ func _capture_et_appels() -> Dictionary:
 	return {"image": image, "appels": _mediane(appels)}
 
 
-## Les matériaux iso que l'habillage règle : les murs et les sols de la présentation.
-static func _materiaux_iso(presentation: Node) -> Array[ShaderMaterial]:
+## Les matériaux iso que l'habillage règle : les murs et les sols de la présentation. ISO7b — `volumes` : 1 y ajoute
+## les nuages d'`IsoVolumes` présents à l'instant de l'appel, 2 ne rend QUE les nuages (`--volumes-seuls`).
+static func _materiaux_iso(presentation: Node, volumes := 0) -> Array[ShaderMaterial]:
 	var tous: Array[ShaderMaterial] = []
-	var mur = presentation.get("_mat_mur")
-	if mur is ShaderMaterial:
-		tous.append(mur)
-	for s in presentation.get("_mat_sols"):
-		if s is ShaderMaterial:
-			tous.append(s)
+	if volumes != 2:
+		var mur = presentation.get("_mat_mur")
+		if mur is ShaderMaterial:
+			tous.append(mur)
+		for s in presentation.get("_mat_sols"):
+			if s is ShaderMaterial:
+				tous.append(s)
+	if volumes > 0:
+		var miroirs = presentation.get("_miroirs")
+		var vol = miroirs.get("volumes") if miroirs != null else null
+		if vol != null:
+			for e in vol.call("suivis"):
+				for m in (e as Dictionary).get("mats", []):
+					# Par le chemin du shader : nommer `IsoVolumes` compilerait ses dépendances dans la suite.
+					if m is ShaderMaterial and (m as ShaderMaterial).shader != null \
+							and (m as ShaderMaterial).shader.resource_path == "res://volume_iso.gdshader":
+						tous.append(m)
 	return tous
+
+
+static func _compter_volumes(materiaux: Array[ShaderMaterial]) -> int:
+	var n := 0
+	for m in materiaux:
+		if m.shader != null and m.shader.resource_path == "res://volume_iso.gdshader":
+			n += 1
+	return n
 
 
 ## Les paramètres de l'habillage, et la valeur qui rend ISO1-ISO5.

@@ -5394,3 +5394,8 @@ avant la pâte — halo de fusée tenu en plein feu 5,0° → 5,0° (contre 5,1�
 Paire face / rasante sur une scène de banc, à 1 et 3 tuiles : à 3 tuiles la rasante est sous la face, mais par la
 lightmap ; le Lambert pose 0,67 contre 0,70, et s'inverse à 1 tuile. Défaut du gradient signalé, non corrigé : il
 lit le bord de la tache de lumière, pas la direction de la source ; trois voies proposées à la session cloud.
+Suite à 14:21-14:55 : la session cloud tranche la voie (B) jusqu'au bout — Lambert des faces éteint, modelé des corps
+tenu par la caméra seule (dessus 1,15, face sud 0,9, autres faces 1, plus aucune lecture de lightmap), nuages à la
+neutralité lue avant la pâte (une ligne de `volume_iso.gdshader`, Gadgets clos). La lightmap de direction reste une
+proposition datée pour après le test final ; le piège « une valeur de lumière par point ne dit pas d'où elle vient »
+entre dans les pièges connus.
