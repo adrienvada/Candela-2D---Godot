@@ -4393,6 +4393,97 @@ brief.
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (finition, branche `iso-corps`) — ajoutée le 2026-09-15 04:10 (Paris)
+
+Entre les vagues 3 et 4 : le geste de gadget par classe, signalé pour ISO4 en
+vague 0 (« un seul bob commun, dix gestes auraient dépassé le budget de
+cette tranche »), fait sur mot direct d'Adrien (« go », confirmé « gestes de
+gadget par classe » plutôt qu'une vague 4) une fois ISO4 intégrée et
+committée par ISO2 (`77941df`). Base : `628bf0b`.
+
+**Fichiers touchés :** `voxel_corps.gd` (`GESTES_GADGET`, `_geste_gadget(t)`,
+appelé depuis `_poser_repos`/`_poser_marche`, remis à zéro dans
+`_poser_mort`/`_poser_enjambe`) ; `tools/test_voxel_corps.gd` (quatre
+contrôles par classe + un contrôle croisé) ; `docs/iso/planche_gestes_gadget.png`
+et six captures `docs/iso/captures_corps/geste_voile_frame_*.png` ;
+`docs/ROADMAP.md` (section « Finition », le tableau des dix gestes) ; ce
+journal.
+
+**Le principe :** une rotation continue et pure de `t`, par classe, tirée du
+comportement RÉEL du gadget porté (son fichier `gadget_*.gd` lu avant de
+choisir la forme — tressautement électrique pour le grésillement, quasi-
+immobilité pour le leurre/l'ombre/la mine qui ne trahissent rien avant
+d'être posés, flottement à deux axes pour le voile, etc.), superposée au bob
+du torse déjà existant, jamais à sa place. Aucun champ neuf dans `etat` :
+`_geste_gadget()` lit `gadget_slug`, déjà dans la fiche du catalogue.
+
+**Le piège de la vague 1 évité par construction, pas retrouvé après coup :**
+`_gadget_pivot` avait déjà quatre points de contact (`repos`, `marche`,
+`enjambe`, `mort`) ; les quatre ont reçu la remise à zéro de la rotation dès
+le premier jet, la même discipline que `_torche_pivot`/`_arme_pivot` depuis
+la vague 1 — sans quoi une rotation de geste aurait survécu, cachée, d'un
+appel `repos` à un appel `mort` suivant.
+
+**Sabotage vérifié réellement** (`_geste_gadget` forcé sur un seul slug pour
+toutes les classes → le contrôle croisé rougit, code 1 → revert → vert).
+
+**Vérifié au banc, pas seulement en nombres** : le geste est une rotation
+continue, invisible sur une capture unique — planche de six captures du
+Spectre à des `t` croissants, montrant le gadget changer d'angle sans se
+détacher du corps.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 4, branche `iso-corps`) — ajoutée le 2026-09-15 04:30 (Paris)
+
+Cinquième tranche : des corps plus épais, sur décision d'Adrien (« le volume
+de chaque joueur doit être plus important... tant pis si ça touche leur
+hitbox »), pendant qu'ISO5 Opus reprenait ISO2 sur `iso2-vues`. Base :
+`1265eba`. Toujours aucun fichier du jeu hors des fichiers voxel.
+
+**Fichiers touchés :** `voxel_catalogue.gd` (`EPAISSEUR_REGLAGES`,
+`EPAISSEUR_PAR_DEFAUT = "x1_6"`, `fiche(slug, epaisseur)`) ; `voxel_corps.gd`
+(`construire(slug, epaisseur)`, `rayon_empreinte(corps_seul)` nouveau) ;
+`tools/banc_corps.gd` (`--epaisseur=`, tangage 58°→52°) ;
+`tools/test_voxel_corps.gd` (empreinte du corps seul, hauteur inchangée,
+silhouettes distinctes) ; `docs/iso/planche_corps_epais.png` et les
+captures `docs/iso/captures_corps/epaisseur_*.png` ; `docs/ROADMAP.md`
+(section « Vague 4 », deux tableaux de mesures, deux pièges) ; ce journal.
+
+**Le mécanisme trouvé avant d'être inventé** : `echelle` (vague 0, une
+petite variation par classe) s'appliquait déjà à TOUTES les dimensions X/Z
+du squelette, jamais à une hauteur — exactement le levier qu'il fallait.
+`EPAISSEUR_REGLAGES` le multiplie par-dessus, un paramètre optionnel de
+`construire()` : tout appelant existant (ISO2/ISO5) grossit sans changer une
+ligne.
+
+**Le réglage retenu (`x1_6`) n'est pas un compromis arbitraire entre trois
+options : c'est le plus épais des trois qui respecte encore la règle du
+couloir d'une tuile.** `x2_0` fait dépasser six classes sur dix ; `x1_6`
+tient les dix, la marge la plus mince sur « pompe » (17,3 px sur 17,5 px
+permis). Mesuré, pas choisi à l'œil seul — même si la comparaison visuelle
+contre la planche de référence d'ISO Assets a confirmé le choix après coup.
+
+**Un vrai piège de mesure, pas retrouvé après coup mais avant de publier un
+chiffre faux** : le premier relevé de l'empreinte totale (corps + arme)
+donnait le MÊME rayon maximal aux quatre réglages d'épaisseur — semblant
+prouver que rien ne changeait. La cause : l'arme (jusqu'à 0,38 tuile de long)
+domine largement un torse élargi de quelques centièmes de tuile, et la
+mesure ne distinguait pas les deux. Corrigé en mesurant séparément le corps
+seul (la règle du couloir) et le total (le rayon de hitbox) — deux questions,
+deux nombres, jamais un seul relevé pour les deux.
+
+**Le rayon maximal à publier pour ISO5** (`bullet.gd:PLAYER_BODY_RADIUS`,
+18 px aujourd'hui) : **24,4 px** (0,6963 tuile), classe « sentinelle »,
+identique aux quatre réglages d'épaisseur puisque l'arme n'en dépend pas.
+
+**Sabotage vérifié réellement** (réglage par défaut forcé à `x2_0`, connu
+pour dépasser le couloir → dix échecs, code 1 → revert → vert).
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
@@ -4932,3 +5023,12 @@ halo d'éblouissement figés par la suspension du jeu, LED des murs prise pour u
 Adrien : les deux fantômes sont visibles des deux joueurs (règle de la vue de dessus), et le fantôme iso
 est quatre fois plus lumineux que le fantôme 2D texturé. Question posée à Adrien pour l'étape E2 (corps
 épais) : la zone de touche reste à 18 px (réponse « Garder 18 px »). Planche `docs/iso/planche_iso5.jpg`.
+
+**Fusion d'`iso-corps` dans `iso2-vues`, 2026-09-15 vers 05:00 (étape E2, troisième fusion accordée
+par Adrien).** `ebde701` (vague 4 d'ISO Corps : corps plus épais, `EPAISSEUR_PAR_DEFAUT = "x1_6"`,
+`rayon_empreinte`), avec `1265eba` (gestes de gadget) et `628bf0b`. Aucun conflit textuel : depuis la
+base `d641b48`, `iso2-vues` n'avait touché aucun des fichiers voxel ; seuls la ROADMAP et ce journal
+étaient communs, fusionnés seuls. Ancrages relus des deux côtés (`fantome_montre`, `vers_sol`,
+`_controler_la_killcam`, `test_iso_killcam` ; `EPAISSEUR_REGLAGES`, `construire(slug, epaisseur)`,
+`rayon_empreinte`, `lecture_au_bord`) ; comptes de lignes cohérents (ROADMAP 24 287 + la section
+vague 4 = 24 509). Deux imports sans erreur, puis le lot complet.

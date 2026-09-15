@@ -1,7 +1,7 @@
 ## Test headless des corps voxel (`voxel_corps.gd` + `voxel_catalogue.gd`) —
 ## chantier ISO, étape ISO3 (vague 0 : les dix corps ; vague 1 : accroupi et
 ## enjambement ; vague 2 : capteur par fragment, pâte plafonnée, effacement,
-## silhouette de soi).
+## silhouette de soi ; vague 4 : corps plus épais, empreinte mesurée).
 ##
 ## Ce que la suite garantit :
 ##   • les dix classes du CATALOGUE se construisent, neuf boîtes chacune ;
@@ -37,6 +37,10 @@ const EPSILON := 0.0005
 ## sans élargir la fourchette que le brief a posée.
 const ACCROUPI_MIN := 0.49
 const ACCROUPI_MAX := 0.61
+## ISO3 vague 4 — brief d'Adrien : « un corps ne doit pas dépasser une tuile
+## de large (35 px) : les couloirs d'une tuile doivent rester praticables ».
+## Une tuile de large = un rayon de 0,5 tuile depuis l'axe du corps.
+const LARGEUR_MAX_COULOIR := 0.5
 
 var _failures: int = 0
 var _verifications: int = 0
@@ -69,6 +73,9 @@ func _run() -> void:
 	var boites_de_reference := -1
 	for slug in slugs:
 		boites_de_reference = _test_classe(VoxelCorps, slug, boites_de_reference, hauteur_debout)
+
+	_test_gestes_distincts(VoxelCorps, slugs)
+	_test_silhouettes_distinctes(VoxelCorps, slugs)
 
 	_check("au moins %d vérifications ont réellement tourné" % PLANCHER,
 		_verifications >= PLANCHER, "%d" % _verifications)
@@ -130,6 +137,9 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 	_test_lecture_au_bord(corps)
 	_test_silhouette_de_soi(corps)
 	_test_boites_profondeur(corps)
+	_test_geste_gadget(corps)
+	_test_empreinte_epaisseur(corps)
+	_test_hauteur_inchangee_par_epaisseur(VoxelCorps, slug, hauteur_debout)
 
 	root.remove_child(corps)
 	corps.free()
@@ -569,6 +579,189 @@ func _test_boites_profondeur(corps: Node3D) -> void:
 		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
 		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
 	})
+
+
+# ---------------------------------------------------------------------------
+# LE GESTE DE GADGET (ISO4, finition)
+# ---------------------------------------------------------------------------
+
+## Le geste anime réellement `Torse/Gadget` au fil de `t` (un balayage de `t`
+## dont l'amplitude ne reste pas plate), reste pur (même `t` → même rotation),
+## et se remet exactement à zéro en mort et en enjambement — un `etat` qui ne
+## doit plus rien laisser d'un geste précédent, même discipline que
+## `_torche_pivot`/`_arme_pivot` (voir l'en-tête de classe de `voxel_corps.gd`).
+func _test_geste_gadget(corps: Node3D) -> void:
+	var pivot: Node3D = corps.get_node("Torse/Gadget")
+
+	var etat_a := {
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "t": 0.6,
+	}
+	corps.poser(etat_a)
+	var rotation_a: Vector3 = pivot.rotation
+	corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false, "mort": false, "t": 0.0})
+	corps.poser(etat_a)
+	_check("le geste de gadget est pur (même t → même rotation)",
+		rotation_a.is_equal_approx(pivot.rotation))
+
+	var mini := Vector3(INF, INF, INF)
+	var maxi := Vector3(-INF, -INF, -INF)
+	for i in 40:
+		var t := float(i) * 0.05
+		corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+			"torche": true, "arme": corps.slug(), "tir": false, "touche": false, "mort": false, "t": t})
+		var r: Vector3 = pivot.rotation
+		mini = mini.min(r)
+		maxi = maxi.max(r)
+	var etendue: Vector3 = maxi - mini
+	_check("le geste de gadget anime réellement (étendue %.4f rad sur 2 s)"
+			% etendue.length(),
+		etendue.length() > 0.001, "%.5f" % etendue.length())
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": false, "arme": "", "tir": false, "touche": false, "mort": true, "t": 0.6,
+	})
+	_check("le geste de gadget se remet à zéro en mort",
+		pivot.rotation.is_equal_approx(Vector3.ZERO))
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "enjambe": 0.6, "t": 0.0,
+	})
+	_check("le geste de gadget se remet à zéro en enjambement",
+		pivot.rotation.is_equal_approx(Vector3.ZERO))
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
+	})
+
+
+## Deux classes au gadget différent doivent produire deux gestes différents à
+## un `t` partagé — la preuve que ce n'est plus le bob commun de vague 0.
+func _test_gestes_distincts(VoxelCorps: GDScript, slugs: PackedStringArray) -> void:
+	if slugs.size() < 2:
+		return
+	var rotations: Array = []
+	for slug in slugs:
+		var corps: Node3D = VoxelCorps.new()
+		root.add_child(corps)
+		if corps.construire(slug):
+			corps.poser({
+				"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+				"torche": true, "arme": slug, "tir": false, "touche": false,
+				"mort": false, "t": 0.6,
+			})
+			rotations.append(corps.get_node("Torse/Gadget").rotation)
+		root.remove_child(corps)
+		corps.free()
+	var toutes_identiques := true
+	for i in range(1, rotations.size()):
+		if not rotations[i].is_equal_approx(rotations[0]):
+			toutes_identiques = false
+			break
+	_check("les gestes de gadget diffèrent d'une classe à l'autre (pas un bob commun)",
+		not toutes_identiques)
+
+
+# ---------------------------------------------------------------------------
+# L'ÉPAISSEUR (ISO3 vague 4)
+# ---------------------------------------------------------------------------
+
+## L'empreinte au sol du CORPS SEUL (jamais l'arme — voir l'en-tête de
+## `VoxelCorps.rayon_empreinte()`) reste dans le couloir d'une tuile, au
+## réglage d'épaisseur PAR DÉFAUT (celui que tout appelant reçoit sans rien
+## changer), sur les quatre postures que la décision d'Adrien nomme :
+## debout, accroupi, en marche et en enjambement — jamais un seul relevé au
+## repos, qui manquerait l'écart d'un pas ou d'une jambe qui se lève.
+func _test_empreinte_epaisseur(corps: Node3D) -> void:
+	var pire := 0.0
+
+	corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false, "mort": false, "t": 0.0})
+	pire = maxf(pire, corps.rayon_empreinte(true))
+
+	corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": true, "t": 1.0})
+	pire = maxf(pire, corps.rayon_empreinte(true))
+
+	for i in 8:
+		var t := float(i) * 0.18
+		corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2(220.0, 0.0),
+			"torche": true, "arme": corps.slug(), "tir": false, "touche": false, "mort": false, "t": t})
+		pire = maxf(pire, corps.rayon_empreinte(true))
+
+	for i in 8:
+		var e := float(i + 1) * 0.125
+		corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+			"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+			"mort": false, "enjambe": e, "t": 0.0})
+		pire = maxf(pire, corps.rayon_empreinte(true))
+
+	_check("empreinte du corps seul ≤ un couloir d'une tuile (%.4f ≤ %.1f, %.1f px)"
+			% [pire, LARGEUR_MAX_COULOIR, pire * 35.0],
+		pire <= LARGEUR_MAX_COULOIR + EPSILON, "%.4f (%.1f px)" % [pire, pire * 35.0])
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
+	})
+
+
+## La hauteur debout (`sommet_tete()`) ne dépend QUE des dimensions Y du
+## squelette, jamais de `echelle` — donc jamais du réglage d'épaisseur
+## (`echelle` ne joue que sur X/Z, voir `VoxelCatalogueObjets`... pardon,
+## `VoxelCatalogue.EPAISSEUR_REGLAGES`). Vérifié en comparant l'ancien
+## gabarit (« leger ») au réglage par défaut, sur la MÊME classe : la
+## décision d'Adrien porte sur le volume, jamais sur la taille du personnage.
+func _test_hauteur_inchangee_par_epaisseur(VoxelCorps: GDScript, slug: String,
+		hauteur_debout_defaut: float) -> void:
+	var corps_leger: Node3D = VoxelCorps.new()
+	root.add_child(corps_leger)
+	if corps_leger.construire(slug, "leger"):
+		corps_leger.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+			"torche": true, "arme": slug, "tir": false, "touche": false, "mort": false, "t": 0.0})
+		var h_leger: float = corps_leger.sommet_tete()
+		_check("hauteur debout inchangée par l'épaisseur (léger %.4f vs défaut %.4f)"
+				% [h_leger, hauteur_debout_defaut],
+			absf(h_leger - hauteur_debout_defaut) < EPSILON, "%.4f" % h_leger)
+	root.remove_child(corps_leger)
+	corps_leger.free()
+
+
+## Les dix classes restent visuellement distinctes après l'épaississement —
+## `echelle` varie toujours d'une classe à l'autre (vague 0), le réglage
+## d'épaisseur les multiplie TOUTES par le même facteur : l'écart relatif
+## entre classes doit donc survivre, pas se tasser dans une seule silhouette.
+## Mesuré sur l'empreinte du corps seul, debout — la grandeur la plus
+## directement liée à `echelle`.
+func _test_silhouettes_distinctes(VoxelCorps: GDScript, slugs: PackedStringArray) -> void:
+	if slugs.size() < 2:
+		return
+	var empreintes: Array = []
+	for slug in slugs:
+		var corps: Node3D = VoxelCorps.new()
+		root.add_child(corps)
+		if corps.construire(slug):
+			corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+				"torche": true, "arme": slug, "tir": false, "touche": false, "mort": false, "t": 0.0})
+			empreintes.append(corps.rayon_empreinte(true))
+		root.remove_child(corps)
+		corps.free()
+	var mini: float = empreintes[0]
+	var maxi: float = empreintes[0]
+	for v in empreintes:
+		mini = minf(mini, v)
+		maxi = maxf(maxi, v)
+	_check("les dix classes restent distinctes en largeur (%.4f à %.4f tuile)" % [mini, maxi],
+		maxi - mini > 0.01, "écart %.4f" % (maxi - mini))
 
 
 # ---------------------------------------------------------------------------

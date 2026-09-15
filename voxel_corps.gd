@@ -59,12 +59,16 @@ extends Node3D
 ## paramètre va de 0 à 1 est à la charge de l'appelant (`etat.position`),
 ## jamais recalculé ici.
 ##
-## ## Le geste de gadget
+## ## Le geste de gadget (ISO4, finition)
 ##
-## Un seul, partagé par les dix classes : le gadget suit le bob du torse
-## pendant la marche. Un geste PAR CLASSE (le brief l'autorise « si c'est
-## simple ») aurait exigé dix animations distinctes pour un chantier dont le
-## budget est de deux sessions-journées — **signalé pour ISO4**, pas fait ici.
+## Un geste PAR CLASSE, pas un seul partagé (vague 0 partageait le bob du
+## torse, signalé pour ISO4 — voir `GESTES_GADGET`) : une rotation continue,
+## pure de `t`, superposée à ce bob, tirée du comportement réel de chaque
+## gadget (son propre fichier `gadget_*.gd`, lu avant de choisir la forme du
+## geste) — un tressautement électrique pour le grésillement, un lacet ample
+## pour la torche fantôme, un flottement à deux axes pour le voile, une quasi-
+## immobilité pour le leurre, l'ombre habitée et la mine (qui ne trahissent
+## rien avant d'être posés), etc. Détail par classe : voir `GESTES_GADGET`.
 ##
 ## ## Ce que ce nœud NE fait PAS
 ##
@@ -91,6 +95,85 @@ const IsoPateT := preload("res://iso_pate.gd")
 ## raison, pas réinventé. `definir_style()` reste le point d'entrée pour qui
 ## veut trancher autrement (jalon H-ISO1, planche).
 const STYLE_PAR_DEFAUT := IsoPateT.LAVIS
+
+# --- Geste de gadget (ISO4, finition) ---------------------------------------
+#
+# Vague 0 partageait un seul geste entre les dix classes (le gadget suivait
+# le bob du torse, rien de plus — « signalé pour ISO4 »). Chaque classe a
+# maintenant SON geste, une rotation continue et pure de `t` superposée à ce
+# bob — jamais une position ou une vitesse devinées, jamais `randf`. Chaque
+# entrée est tirée du comportement RÉEL du gadget porté (son fichier `gadget_*.gd`
+# lu avant de choisir la forme du geste, pas un style générique posé au hasard) :
+#
+#   - `gresillement` (pistolet) : un tressautement rapide et irrégulier — le
+#     gadget lui-même « fait sauter les lampes torches autour d'elle » par un
+#     bruit de coupure déterministe (`niveau_noir`, `CRENEAU`) ; deux
+#     harmoniques proches en fréquence pour un tic électrique, jamais un
+#     balancement propre.
+#   - `leurre` (fusil) : presque immobile — le gadget déployé « ne bouge pas,
+#     n'éclaire pas » (`gadget_leurre.gd`), porté il ne devrait pas trahir
+#     plus de vie que posé.
+#   - `poussiere` (pompe) : un roulis lent et large — une nappe fine qui
+#     « on voit à travers, on ne voit pas loin », portée comme un nuage.
+#   - `torche_fantome` (arbalète) : un lacet lent, plus ample que les autres —
+#     un rappel du balayage du faisceau qu'elle joue une fois posée
+#     (`AMPLITUDE` du fichier réel, réduite ici à l'échelle d'un geste porté).
+#   - `cartouche_suie` (fumiste) : un roulis lent et resserré — dense et
+#     petite, elle bouge moins que la poussière qu'elle masque plus qu'elle
+#     ne dissipe.
+#   - `nappe_braises` (incendiaire) : un tressaillement rapide sur deux
+#     harmoniques proches, la chaleur d'un foyer porté contre le dos.
+#   - `poudre_contact` (sentinelle) : un tangage très lent — un sablier
+#     porté, jamais secoué (elle ne doit rien laisser paraître avant d'être
+#     posée).
+#   - `ombre_habitee` (occulteur) : quasiment immobile — une plaque d'acier
+#     lourde, dont tout l'effet tient à rester parfaitement immobile une fois
+#     montée.
+#   - `mine_magnesium` (allumeur) : quasiment immobile — « aucune veilleuse,
+#     aucun témoin lumineux visible » tant qu'elle n'est pas déclenchée
+#     (`gadget_mine.gd`), portée comme posée.
+#   - `voile` (spectre) : un flottement à deux axes — la toile qui ondule une
+#     fois tendue (`ONDULATION`, `PERIODE_ONDULATION` du fichier réel).
+#
+# Chaque terme : `axe` (Vector3 normalisé, l'axe de rotation local du
+# gadget), `amplitude` (rad), `freq` (Hz, cycles de `t` par seconde),
+# `phase` (rad, optionnel, défaut 0 — sépare les harmoniques d'un même
+# geste). Sommés terme à terme, jamais moyennés.
+const GESTES_GADGET := {
+	"gresillement": [
+		{"axe": Vector3.UP, "amplitude": 0.05, "freq": 9.0},
+		{"axe": Vector3.UP, "amplitude": 0.025, "freq": 20.7, "phase": 1.3},
+	],
+	"leurre": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.01, "freq": 0.2},
+	],
+	"poussiere": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.05, "freq": 0.35},
+	],
+	"torche_fantome": [
+		{"axe": Vector3.UP, "amplitude": 0.15, "freq": 0.25},
+	],
+	"cartouche_suie": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.04, "freq": 0.22},
+	],
+	"nappe_braises": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.05, "freq": 5.0},
+		{"axe": Vector3.RIGHT, "amplitude": 0.02, "freq": 12.1, "phase": 0.6},
+	],
+	"poudre_contact": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.03, "freq": 0.15},
+	],
+	"ombre_habitee": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.02, "freq": 0.12},
+	],
+	"mine_magnesium": [
+		{"axe": Vector3.RIGHT, "amplitude": 0.01, "freq": 0.2},
+	],
+	"voile": [
+		{"axe": Vector3.UP, "amplitude": 0.08, "freq": 0.4},
+		{"axe": Vector3.RIGHT, "amplitude": 0.05, "freq": 0.55, "phase": 1.1},
+	],
+}
 
 # --- Respiration (repos) ----------------------------------------------------
 const FREQ_RESPIRATION := 0.55       # cycles/s
@@ -173,12 +256,16 @@ var _h_jambe_base: float = 0.0
 var _hanche_accroupi_y: float = 0.0
 
 
-## Bâtit le corps depuis `VoxelCatalogue.fiche(slug)`. Rend `false` (et laisse
-## le catalogue crier) si le slug est inconnu. Idempotent : un second appel
-## reconstruit proprement, comme `proto_iso.gd:construire()`.
-func construire(slug: String) -> bool:
+## Bâtit le corps depuis `VoxelCatalogue.fiche(slug, epaisseur)`. Rend `false`
+## (et laisse le catalogue crier) si le slug OU `epaisseur` est inconnu.
+## Idempotent : un second appel reconstruit proprement, comme
+## `proto_iso.gd:construire()`. `epaisseur` (ISO3 vague 4, voir
+## `VoxelCatalogue.EPAISSEUR_REGLAGES`) : par défaut le nouveau gabarit épais
+## — tout appelant déjà écrit (ISO2/ISO5, les bancs, la suite) le reçoit sans
+## changer une ligne. `"leger"` retrouve l'ancien gabarit (vague 0-3).
+func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_DEFAUT) -> bool:
 	_vider()
-	var f := VoxelCatalogueT.fiche(slug)
+	var f := VoxelCatalogueT.fiche(slug, epaisseur)
 	if f.is_empty():
 		return false
 	_fiche = f
@@ -372,6 +459,47 @@ func sommet_tete() -> float:
 	return _tete_mesh.to_global(Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
 
 
+## ISO3 vague 4 — l'empreinte au sol RÉELLE de la pose courante : la plus
+## grande distance, en tuiles, entre l'origine du corps et un coin de l'une
+## de ses boîtes, projetée sur le plan XZ. Recalculée depuis le maillage réel
+## via `global_transform` (donc juste même quand une jambe ou le torse est
+## en rotation — marche, accroupi, enjambement), jamais depuis `rayon_corps`
+## seul : la décision d'Adrien (« tant pis si ça touche leur hitbox »)
+## remplace le contrat fixe de la vague 0 par cette mesure, posture par
+## posture — voir `tools/test_voxel_corps.gd` et la ROADMAP, section
+## « Vague 4 », pour le tableau complet.
+##
+## `corps_seul` (par défaut faux, les neuf boîtes) : vrai exclut l'arme, la
+## torche et le gadget — ce que la règle du couloir d'une tuile borne, c'est
+## le VOLUME DU CORPS qui grossit avec l'épaisseur (torse, tête, bras,
+## jambes), jamais la portée d'une arme tenue en avant, qui ne dépend pas de
+## l'épaisseur et existait déjà, telle quelle, en vague 0. Les deux mesures
+## servent des questions différentes : `corps_seul = true` pour « un corps
+## passe-t-il un couloir d'une tuile ? », `corps_seul = false` (l'ensemble,
+## ce que la vue de dessus montre et ce qu'une balle peut toucher) pour le
+## rayon à publier à ISO5 pour `bullet.gd:PLAYER_BODY_RADIUS`.
+func rayon_empreinte(corps_seul: bool = false) -> float:
+	var origine: Vector3 = global_transform.origin
+	var r := 0.0
+	for b in _boites_visibles:
+		var inst: MeshInstance3D = b
+		if corps_seul:
+			var parent: Node = inst.get_parent()
+			var nom_parent: String = String(parent.name) if parent != null else ""
+			if nom_parent == "Arme" or nom_parent == "Torche" or nom_parent == "Gadget":
+				continue
+		var box: BoxMesh = inst.mesh
+		var demi: Vector3 = box.size * 0.5
+		for sx in [-1.0, 1.0]:
+			for sy in [-1.0, 1.0]:
+				for sz in [-1.0, 1.0]:
+					var coin_local := Vector3(demi.x * sx, demi.y * sy, demi.z * sz)
+					var coin_monde: Vector3 = inst.global_transform * coin_local
+					var d := Vector2(coin_monde.x - origine.x, coin_monde.z - origine.z).length()
+					r = maxf(r, d)
+	return r
+
+
 # -----------------------------------------------------------------------------
 # LA POSE — fonction pure de `etat`
 # -----------------------------------------------------------------------------
@@ -455,6 +583,7 @@ func _poser_repos(t: float, facteur_accroupi: float) -> void:
 	_bras_g.rotation.x = -GARDE_BRAS
 	_bras_d.rotation.x = -GARDE_BRAS
 	_gadget_pivot.position = _gadget_pos_base + Vector3(0.0, bob * 0.5, 0.0)
+	_gadget_pivot.rotation = _geste_gadget(t)
 
 
 ## `facteur_accroupi` resserre l'amplitude des jambes et des bras et retire
@@ -474,6 +603,23 @@ func _poser_marche(t: float, vmag: float, facteur_accroupi: float) -> void:
 	var bob := absf(sin(phase * TAU)) * AMPL_RESPIRATION * lerpf(1.5, 0.3, facteur_accroupi)
 	_torse.position.y = _torse_y_base + bob
 	_gadget_pivot.position = _gadget_pos_base + Vector3(0.0, bob * 0.5, 0.0)
+	_gadget_pivot.rotation = _geste_gadget(t)
+
+
+## Le geste de gadget de CETTE classe (voir `GESTES_GADGET`) — une rotation
+## pure de `t`, en radians par axe. Slug inconnu (catalogue sans geste écrit,
+## ne devrait pas arriver) : `Vector3.ZERO`, jamais une valeur devinée.
+func _geste_gadget(t: float) -> Vector3:
+	var slug: String = _fiche.get("gadget_slug", "")
+	if not GESTES_GADGET.has(slug):
+		return Vector3.ZERO
+	var total := Vector3.ZERO
+	for terme in GESTES_GADGET[slug]:
+		var axe: Vector3 = terme["axe"]
+		var phase: float = terme.get("phase", 0.0)
+		var angle := sin(t * TAU * float(terme["freq"]) + phase) * float(terme["amplitude"])
+		total += axe * angle
+	return total
 
 
 ## Le temps depuis le passage à `accroupi = true`, même convention que
@@ -544,6 +690,7 @@ func _poser_enjambe(enjambe: float) -> void:
 	_torche_pivot.position = _torche_pos_base
 
 	_gadget_pivot.position = _gadget_pos_base
+	_gadget_pivot.rotation = Vector3.ZERO
 
 
 func _enveloppe_recul(t: float) -> float:
@@ -588,6 +735,7 @@ func _poser_mort(t: float) -> void:
 	_torche_pivot.rotation.x = 0.0
 	_torche_pivot.position = _torche_pos_base
 	_gadget_pivot.position = _gadget_pos_base
+	_gadget_pivot.rotation = Vector3.ZERO
 
 
 static func _interp_paliers(t: float, temps: Array, valeurs: Array) -> float:
