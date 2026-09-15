@@ -5054,3 +5054,69 @@ appuis. Preuve en quatre passages de 5 s : 199 appels de dessin en vue de dessus
 série bouclait sous zsh sur des chaînes d'options non découpées, et les quatre passages ont mesuré le
 même duel scindé en vue de dessus ; le libellé du banc l'a dit. Les cinq commandes du relevé sont dans
 la ROADMAP, section « Relevé de fin de chantier iso ».
+### 2026-09-15 (matin) — ISO7 Beauté : les murs et le sol texturés (session « ISO7 Beauté Opus », branche `iso7-beaute`)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (mandat d'Adrien, 05:00), relayé par la
+Concierge à 05:18. Branche `iso7-beaute` créée depuis `iso2-vues` à `953ead3` ; travail dans le worktree
+de la session (`iso7-beaute-opus-713f60`), le harnais refusant l'écriture dans `.claude/worktrees/iso7-beaute`.
+
+État des lieux écrit d'abord (ROADMAP, section ISO7, dix lignes). Les trois textures de la vague 2 d'ISO
+Assets ne se tuilaient pas et portaient une lumière cuite (mesuré) : versions plates demandées, livrées en
+vingt minutes (`5f1f046`). `tools/verifie_tuilable.py` et `tools/fabrique_textures_iso.py` neufs ;
+`assets/iso/face_mur.png` et `assets/iso/sol.png` (512 px, facteurs de matière, mipmaps).
+
+`iso_materiaux.gd` neuf (catalogue et miroir processeur) ; `mur_iso.gdshader` habillé (matière, encre
+d'arête hors jonctions de boîtes par grille des murs, liseré du sommet, dessus des murets lu à sa case) ;
+`sol_iso.gdshader` neuf (voie b : lightmap × matière). Crochets : trois lignes dans `presentation_3d.gd`
+(`accorder_mur`, `accorder_sol`, `accorder_grille`) et le préchargement du sol ; `test_iso_beaute` au lot.
+`sol_projete.gdshader` n'est plus préchargé par personne (signalé, non supprimé). Suite
+`tools/test_iso_beaute.gd` ; banc `tools/banc_iso_beaute.gd` (hérite de `banc_iso.gd`, avant/après sur la
+même image, `--sans-beaute` pour l'avant des planches).
+
+### 2026-09-15 (matin) — ISO7 Beauté : la pâte et la lumière vue (même session, même branche)
+
+Étape 5 : l'encre des arêtes devient une fonction de la pâte (`pate_trait_de_bord`, `pate_encre_boite`,
+miroirs dans `iso_pate.gd`), partagée par les murs et offerte aux corps et aux objets par contrat avec
+ISO Corps. Premier contrat faux (taille lue dans l'échelle du transform, vrai pour les murs, faux pour les
+BoxMesh des voxels) : relevé par ISO Corps avant tout branchement, corrigé (demi-taille par `abs(VERTEX)`,
+normale du modèle). Bandes et grain de la pâte D inchangés (décision H-ISO1 sur relevé). Crochet
+`IsoMateriaux.accorder_corps(mat)` dans `Presentation3D._accorder_le_slug`, sans effet tant que le shader
+des corps ne déclare pas l'uniform.
+
+Étape 6 : `pate_temperature` (teinte chaude d'une lumière neutre, luminance gardée), force 0,5 sur le sol
+et les murs ; halos et lumières 2D laissés à la session Gadgets et lumière.
+
+### 2026-09-15 (matin) — ISO7 Beauté : les bancs en fenêtre, et ce qu'ils ont trouvé (même session, même branche)
+
+`tools/banc_iso_beaute.gd` passé à 06:45 (créneau prêté par ISO Corps) : noir absolu tenu en vue unique
+et en écran scindé, appels de dessin en baisse (69 → 65, 148 → 140), silhouettes justes. Mais verdict
+« HABILLAGE ROMPU » : 1 237 pixels éclairés éteints par l'encre des arêtes, qui multipliait une matière
+sombre (5 % de la lumière gardée), et une lumière moyenne assombrie de 24 %. Corrigé : l'encre ne se
+cumule plus avec la matière (plancher 25 %), matière des murs à 0,8 et du sol à 0,5. Bancs à repasser.
+
+### 2026-09-15 (matin) — ISO7 Beauté : le facteur écrit n'est pas le facteur vu (même session, même branche)
+
+Second et troisième passages des bancs (Le Cloître, bandeau LED figé, passe `--isoler` avec témoin par
+essai et sondes d'encre). Trois causes démêlées : la respiration du bandeau LED (d'où `--led-murs-fige`),
+la bascule de la torche de J1 d'une capture à l'autre (bruit du banc, lectures prises loin du cône), et la
+vraie : un facteur posé dans l'espace du shader se voit ≈ f^2,4 à l'écran (reste d'encre 0,25 : 28 → 1 ;
+reste 1 : rien). Tout facteur ISO7 passe désormais par `pate_facteur` (décodage sRGB, multiplication,
+encodage), la suite mesure le plancher en valeur affichée. Noir absolu tenu à chaque passage.
+
+### 2026-09-15 (matin) — ISO7 Beauté : le plancher d'encre, les mesures finales et la planche (même session, même branche)
+
+Conversion seule insuffisante (une face à 21/255 tombait encore à 1) : l'encre ne descend plus sous 16/255
+en valeur affichée et n'encre pas une face plus sombre (`pate_matiere_et_encre`). La suite a rougi deux fois
+à bon droit (variable en double qui la rendait muette en code 0 ; monotonie lue dans le mauvais espace) ;
+les chaînes s'arrêtent désormais sur toute erreur de script et sur une suite sans « 0 échec(s) ». Mesures
+finales sur Le Cloître : noir absolu tenu, appels de dessin en baisse, comparaisons propres à 10-11 pixels
+éteints (< 0,01 %) et −4 % de lumière moyenne ; deux passes restent brouillées par la torche de J1 qui
+bascule (bruit du banc, consigné). Planche `docs/iso/planche_iso7.jpg`. Lot complet vert, 0 SHADER ERROR.
+
+**Fusions de la vague « grand budget » dans `iso2-vues`, 2026-09-15 à partir de 09:48 — 1/4 :
+`iso7-beaute` (`0cc300e`).** Sur mandat de la session cloud (`briefs/iso5_fusions.md`, branche-signal
+`claude/reveil`, mandat d'Adrien de 05:00 : « livre-moi le jeu dans une version grand budget aboutie en
+mode isométrique […] tu peux prendre toutes les décisions »). Le jalon H-ISO5 n'est plus un arrêt.
+Conflits seulement dans la ROADMAP et ce journal (deux ajouts au même endroit, gardés). `iso_pate.*`
+identiques à `0cc300e`. Crochets d'ISO7 (`IsoMateriaux.accorder_*`, `sol_iso.gdshader`) et fonctions
+d'ISO5/E2/G relus. Deux imports sans erreur de script ni de shader, puis lot complet.
