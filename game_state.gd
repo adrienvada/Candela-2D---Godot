@@ -5599,7 +5599,8 @@ func _restore_viewports():
 		# n'avait jamais été placée.
 		ui.disposer_hud(true)
 		cam1.global_position = p1.global_position
-		# ISO8 — le zoom du duel, pas 1,0.
+		# ISO8 — le zoom du duel, pas 1,0 ; l'entraînement est local : les valeurs de la machine s'appliquent.
+		GameSettings.accorder_au_mode(false)
 		cam1.zoom = Vector2.ONE * GameSettings.zoom_duel
 		cam2.zoom = Vector2.ONE * GameSettings.zoom_duel
 		return
@@ -5617,7 +5618,11 @@ func _restore_viewports():
 		ui.center_line.hide()
 	_accorder_rendu_aux_vues()
 	ui.disposer_hud()
-	# ISO8 — le zoom du duel (`GameSettings.zoom_duel`), pas 1,0 : c'est aussi d'où la killcam repart.
+	# ISO8 — le zoom du duel (`GameSettings.zoom_duel`), pas 1,0 : c'est aussi d'où la killcam repart. EN LIGNE,
+	# zoom, décalage et portée valent les constantes, des deux côtés (`accorder_au_mode`, décision de 13:58) :
+	# le cadrage fait partie de l'information.
+	GameSettings.accorder_au_mode(NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
+		or NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT)
 	cam1.zoom = Vector2.ONE * GameSettings.zoom_duel
 	cam2.zoom = Vector2.ONE * GameSettings.zoom_duel
 	cam1.global_position = p1.global_position

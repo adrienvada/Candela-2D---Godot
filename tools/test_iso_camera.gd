@@ -217,6 +217,30 @@ func _regard_du_duel() -> void:
 	_check("--torche=1.0 rend les portées d'avant ISO8 ; borné (0,1 → 0,5)",
 		is_equal_approx(Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"])), 1.0)
 		and is_equal_approx(Script.facteur_portee_applique(PackedStringArray(["--torche=0.1"])), 0.5))
+	# ISO8 — la règle en ligne (décision de la session cloud, 13:58) : en ligne, les trois valeurs du duel sont
+	# les constantes, même lancé avec --zoom=1.0 --torche=1.0 ; en local, les valeurs de la machine.
+	var locales := [Script.zoom_applique(Script.ZOOM_DUEL_DEFAUT, PackedStringArray(["--zoom=1.0"])),
+		Script.decalage_applique(PackedStringArray([])),
+		Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"]))]
+	var en_ligne: Array = Script.valeurs_du_duel(true, locales[0], locales[1], locales[2])
+	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,8, décalage 0,25, portée ×0,75 — les défauts",
+		is_equal_approx(en_ligne[0], 1.8) and is_equal_approx(en_ligne[1], 0.25) and is_equal_approx(en_ligne[2], 0.75),
+		str(en_ligne))
+	var en_local: Array = Script.valeurs_du_duel(false, locales[0], locales[1], locales[2])
+	_check("en écran scindé local, les mêmes drapeaux s'appliquent (zoom 1,0, portée 1,0)",
+		is_equal_approx(en_local[0], 1.0) and is_equal_approx(en_local[2], 1.0), str(en_local))
+	_check("hors build debug, --zoom=, --decalage= et --torche= sont ignorés",
+		Script.arguments_de_reglage(PackedStringArray(["--zoom=1.0", "--torche=1.0"]), false).is_empty()
+		and Script.arguments_de_reglage(PackedStringArray(["--zoom=1.0"]), true).size() == 1)
+	var reglages_ligne: Node = Script.new()
+	reglages_ligne._zoom_local = 1.0
+	reglages_ligne._facteur_local = 1.0
+	var facteur_global_avant: float = WeaponData.facteur_portee
+	reglages_ligne.accorder_au_mode(true)
+	_check("accorder_au_mode(en ligne) pose aussi le facteur sur WeaponData",
+		is_equal_approx(reglages_ligne.zoom_duel, 1.8) and is_equal_approx(WeaponData.facteur_portee, 0.75))
+	WeaponData.facteur_portee = facteur_global_avant
+	reglages_ligne.free()
 	var pistolet := WeaponData.new()
 	var facteur_avant: float = WeaponData.facteur_portee
 	WeaponData.facteur_portee = 0.75

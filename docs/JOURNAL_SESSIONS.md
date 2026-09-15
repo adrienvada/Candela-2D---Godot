@@ -5490,3 +5490,13 @@ Vérifications de l'étape 3 (13:56) : `test_torches`, `test_iso_camera` (123 v�
 Sabotage (facteur par défaut remis à 1,0) : le contrôle du facteur ×0,75 rougit, fichier rétabli à l'identique (`cmp`). Lot complet lancé.
 Étape 4, premier calcul (13:59, demande de la session cloud) : à ×1,8 dans une fenêtre de 1440 px, les textures d'ISO7 gardent plus d'un texel par pixel d'écran — sol 1,52 en profondeur et 1,20 en largeur, face de mur 2,40 le long et 3,90 en hauteur ; elles ne s'étireraient qu'au-delà de ×2,16 (sol en largeur). Calcul à partir des shaders et de la géométrie de la caméra, détaillé dans la ROADMAP.
 Lot complet vert à 14:04 : 127 OK en 413 s.
+
+**ISO8 — la règle en ligne, 2026-09-15 à partir de 14:05.** Session « Iso 1 Opus », après le commit de l'étape 3
+(`0d69cc8`). Décision de la session cloud (13:58) : en ligne, zoom ×1,8, décalage 0,25 et portée ×0,75 valent les
+constantes des deux côtés, quoi que disent drapeaux ou `settings.cfg` — « un joueur à --zoom=1.0 voit plus qu'un
+joueur à ×1,8 ». `GameSettings` sépare les valeurs locales de celles qui s'appliquent ; `accorder_au_mode(en_ligne)`,
+appelé par `GameState` à chaque départ de manche, tranche ; les drapeaux ne valent qu'en build debug. Aucun état
+réseau, `Protocol.VERSION` inchangé. `test_iso_camera` vérifie le cas en ligne avec `--zoom=1.0 --torche=1.0`.
+Au retour du Mac (14:19) : `test_iso_camera` verte seule avec la règle en ligne (127 vérifications).
+Sabotage (branche en ligne de `valeurs_du_duel` désarmée) : les deux contrôles en ligne rougissent (les valeurs locales [1,0 ; 0,25 ; 1,0] passaient en ligne), fichier rétabli à l'identique (`cmp`). Lot complet lancé.
+Lot complet vert à 14:27 : 127 OK en 413 s.

@@ -136,6 +136,14 @@ const FACTEUR_PORTEE_MAX := 1.5
 const DRAPEAU_TORCHE := "--torche="
 var facteur_portee := FACTEUR_PORTEE_DEFAUT
 var zoom_duel := ZOOM_DUEL_DEFAUT
+## ISO8 — EN LIGNE, les trois valeurs du duel sont les constantes, des deux côtés (décision de la session cloud,
+## 2026-09-15 à 13:58 : « le cadrage serré non plus n'est pas neutre, un flash ou un cône hors champ n'est pas
+## vu, donc un joueur à --zoom=1.0 voit plus qu'un joueur à ×1,8 »). `zoom_duel`, `decalage_visee` et
+## `facteur_portee` sont ce qui S'APPLIQUE ; ces trois-là, ce que la machine voudrait en local (drapeaux de
+## débogage, réglage enregistré). `accorder_au_mode` tranche, appelé par `GameState` à chaque départ de manche.
+var _zoom_local := ZOOM_DUEL_DEFAUT
+var _decalage_local := DECALAGE_VISEE_DEFAUT
+var _facteur_local := FACTEUR_PORTEE_DEFAUT
 var decalage_visee := DECALAGE_VISEE_DEFAUT
 var _zoom_duel_choisi := ZOOM_DUEL_DEFAUT
 var _zoom_duel_regle := false
@@ -227,10 +235,11 @@ func _ready() -> void:
 		_apply_resolution()
 	mode_iso = iso_applique(_vue_de_dessus_choisie, _arguments())
 	iso_lightmap = _lightmap_appliquee()
-	zoom_duel = zoom_applique(_zoom_duel_choisi, _arguments())
-	decalage_visee = decalage_applique(_arguments())
-	facteur_portee = facteur_portee_applique(_arguments())
-	WeaponData.facteur_portee = facteur_portee
+	_zoom_local = zoom_applique(_zoom_duel_choisi, _arguments_de_reglage())
+	_decalage_local = decalage_applique(_arguments_de_reglage())
+	_facteur_local = facteur_portee_applique(_arguments_de_reglage())
+	# Hors match, les valeurs locales ; `GameState` accorde au mode à chaque départ (`accorder_au_mode`).
+	accorder_au_mode(false)
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
 	_apply_audio()
@@ -295,7 +304,8 @@ static func _arguments() -> PackedStringArray:
 func set_zoom_duel(zoom: float) -> void:
 	_zoom_duel_choisi = clampf(zoom, ZOOM_DUEL_MIN, ZOOM_DUEL_MAX)
 	_zoom_duel_regle = true
-	zoom_duel = zoom_applique(_zoom_duel_choisi, _arguments())
+	_zoom_local = zoom_applique(_zoom_duel_choisi, _arguments_de_reglage())
+	zoom_duel = _zoom_local
 	_save()
 
 func zoom_duel_choisi() -> float:
@@ -306,6 +316,36 @@ static func zoom_applique(choisi: float, args: PackedStringArray) -> float:
 	var arg := valeur_par_argument(args, DRAPEAU_ZOOM)
 	var z := arg.to_float() if arg.is_valid_float() else choisi
 	return clampf(z, ZOOM_DUEL_MIN, ZOOM_DUEL_MAX)
+
+## ISO8 — les valeurs du duel pour ce mode : les constantes EN LIGNE, quoi que disent les drapeaux ou
+## `settings.cfg` ; les valeurs locales en écran scindé et à l'entraînement. Aucun état réseau : ce sont les mêmes
+## constantes dans le même code, sur les deux machines, et `Protocol.VERSION` ne bouge pas.
+func accorder_au_mode(en_ligne: bool) -> void:
+	var v := valeurs_du_duel(en_ligne, _zoom_local, _decalage_local, _facteur_local)
+	zoom_duel = v[0]
+	decalage_visee = v[1]
+	facteur_portee = v[2]
+	WeaponData.facteur_portee = facteur_portee
+
+## `[zoom, décalage, facteur de portée]` — calcul pur, vérifié en `--script` par `test_iso_camera`.
+static func valeurs_du_duel(en_ligne: bool, zoom_local: float, decalage_local: float, facteur_local: float) -> Array:
+	if en_ligne:
+		return [ZOOM_DUEL_DEFAUT, DECALAGE_VISEE_DEFAUT, FACTEUR_PORTEE_DEFAUT]
+	return [zoom_local, decalage_local, facteur_local]
+
+## ISO8 — les drapeaux `--zoom=`, `--decalage=` et `--torche=` ne valent qu'en build de DÉBOGAGE : un export
+## release les ignore, comme `--eos-ephemeral` (`network_manager.gd`). Sans quoi un joueur lancerait sa partie
+## locale avec la carte entière à l'écran — et, avant la règle en ligne, en ligne aussi.
+func _arguments_de_reglage() -> PackedStringArray:
+	return arguments_de_reglage(_arguments(), OS.is_debug_build())
+
+static func arguments_de_reglage(args: PackedStringArray, debug: bool) -> PackedStringArray:
+	if debug:
+		return args
+	for a in args:
+		if a.begins_with(DRAPEAU_ZOOM) or a.begins_with(DRAPEAU_DECALAGE) or a.begins_with(DRAPEAU_TORCHE):
+			push_warning("GameSettings : %s ignoré hors build debug" % a)
+	return PackedStringArray()
 
 ## `--torche=X` l'emporte sur le défaut ; une valeur illisible est ignorée ; le résultat reste dans les bornes.
 static func facteur_portee_applique(args: PackedStringArray) -> float:
