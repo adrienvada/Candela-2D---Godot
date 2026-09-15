@@ -99,9 +99,19 @@ func _ready() -> void:
 				if (l as Light2D).enabled and (l as Light2D).is_visible_in_tree():
 					lumieres_balles += 1
 	var actives := 0
+	# Le recensement PAR FAMILLE (second volet, 2026-09-15 12:05) : le fichier qui crée la lumière (le
+	# premier ancêtre qui porte un script), et le nom du nœud — « player.gd:MuzzleFlash »,
+	# « particle_pool.gd:Light »… Un mécanisme plausible ne vaut rien tant qu'on n'a pas compté.
+	var familles := {}
 	for l in _main.find_children("*", "Light2D", true, false):
 		if (l as Light2D).enabled and (l as Light2D).is_visible_in_tree():
 			actives += 1
+			var cle := "%s:%s" % [_fichier_createur(l as Node), _nom_sans_numero(l as Node)]
+			familles[cle] = int(familles.get(cle, 0)) + 1
+	var cles := familles.keys()
+	cles.sort()
+	for cle in cles:
+		print("BANC_BALLE_FAMILLE nom=%s famille=%s lumieres=%d" % [_nom, cle, familles[cle]])
 	var rondeur_rafale := _rondeur(centre)
 	_sauver(get_viewport().get_texture().get_image(), "balle_%s_rafale" % _nom)
 	print("BANC_BALLE nom=%s balles_en_vol=%d lumieres_actives=%d dont_balles=%d rondeur_fusee_seule=%.2f rondeur_pendant_rafale=%.2f" % [
@@ -126,6 +136,26 @@ func _rondeur(centre: Vector2) -> float:
 		mini = minf(mini, l)
 		maxi = maxf(maxi, l)
 	return mini / maxi if maxi > SEUIL else 0.0
+
+
+## Le fichier du premier nœud qui porte un script, en remontant depuis la lumière (elle-même comprise).
+static func _fichier_createur(n: Node) -> String:
+	var p := n
+	while p != null:
+		var s: Script = p.get_script()
+		if s != null and s.resource_path != "":
+			return s.resource_path.get_file()
+		p = p.get_parent()
+	return "?"
+
+
+## Le nom du nœud sans le numéro qu'ajoute Godot aux homonymes (« @PointLight2D@123 » → « PointLight2D »).
+static func _nom_sans_numero(n: Node) -> String:
+	var nom := String(n.name)
+	if nom.begins_with("@"):
+		var morceaux := nom.split("@", false)
+		return morceaux[0] if morceaux.size() > 0 else nom
+	return nom
 
 
 func _images(n: int) -> void:

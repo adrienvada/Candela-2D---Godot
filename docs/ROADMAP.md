@@ -2425,6 +2425,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les étincelles d'impact n'éclairent plus ; l'écho au sol du tir et la lumière de coup restent** (2026-09-15, 12:05, session cloud qui décide pour Adrien, second volet de la décision ci-dessous : « c'est le même mal que celui qu'Adrien a nommé ») | Recensées au banc pendant une rafale près d'une fusée : 60 lumières sur 63 étaient des étincelles d'impact (douze par impact de mur, énergie 1,5) ; éteintes, il en reste 9 et le halo de la fusée revient à sa rondeur seule (0,88). Leur dessin additif non éclairé reste : on les voit toujours jaillir dans le noir. **Gardés, et pourquoi** : l'écho au sol du tir (`ground_flash`, 0,12 s, sans ombre) prolonge le flash de bouche et dit d'où l'on tire — 7 au plus pendant la rafale, sous le plafond ; la lumière de coup (`hit_light`) ne s'allume qu'une fois par coup reçu, dit qui est touché, et porte son propre réglage joueur (« Lumière d'impact », dans `ui.gd`) qu'une suppression laisserait sans effet. Ni l'une ni l'autre n'était allumée en nombre au relevé. |
 | **La balle n'est plus une source de lumière** (2026-09-15 vers 10:55, Adrien, réveillé, à la session cloud : « Supprimons le fait que la balle soit une source de lumière. Cela fait saturer le nombre de lumières possibles du moteur et fait buguer lors de tirs vifs avec une source comme une fusée éclairante. » ; faite par « ISO7 Gadgets et lumière Opus », branche `balle-sans-lumiere`) | Godot n'applique jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, les plus récentes en premier, et un quadrant de sol est un item (« Pièges connus », « quinze par item ») ; chaque balle portait une `PointLight2D` à ombres (`TrailLight`), étirée jusqu'à 800 px — une rafale près d'une fusée coupait son halo. **Conséquence de jeu, acceptée** : une balle qui passe près d'un corps ne le révèle plus, et elle n'éclaire plus ni mur ni sol. L'information de tir reste le flash de bouche (`MuzzleFlash`, inchangé) et le trait de la balle — sa traçante et son aura, non éclairées, visibles dans le noir. `WeaponData.emits_light` et `bullet_light_energy` restent (données de classe, index d'arme sur le fil) et ne pilotent plus que l'aura et la traçante : l'arbalète garde sa balle sans aura. |
 | **Une source de lumière a une hauteur, qui décide de ce qu'un muret lui cache — sauf les lampes du joueur et ce qui les imite, qui gardent la règle « d'un même angle »** (2026-09-15, session « ISO7 Gadgets et lumière Opus », sur le brief de la session cloud qui décide pour Adrien jusqu'au test final ; demande d'Adrien de 05:00 : « que les fumées et les lumières diffuses de fusées etc. aient une lumière 3D qui éclaire par-dessus les murs bas ») | La fusée en vol éclaire par-dessus un muret avec une zone morte `D × 0,40 / (h − 0,40)`, courte quand elle est haute et qui s'allonge quand elle redescend, puis elle bute ; braises, mine et fusée posée butent (elles le faisaient déjà). La hauteur vit dans la lightmap 2D (`Light2D.height`), identique pour les deux joueurs. La torche, la rétrodiffusion, le halo, le flash, la lumière de coup et la torche fantôme gardent la bande constante d'ISO3b : c'est la règle que la balle et l'éblouissement font payer (`MursBas.franchit`), et une torche à hauteur dessinerait « vu, pas touché » ou « touché, pas vu », ce qu'Adrien a fait supprimer après H-MB1. Détail : section « Gadgets et lumières en iso ». |
 | **Les volumes iso sont des couches horizontales qui recopient la lightmap sous elles, dessinées avant les corps** (2026-09-15, même session) | Noir absolu et équité tiennent par construction (la couche vaut la lumière que la vue de dessus dessine là, lue dans la lightmap de la caméra qui la dessine), et un nuage ne cache jamais un corps plus que la vue de dessus, où l'effacement passe par l'opacité du corps. Pas de lueur sur le corps touché : elle dévoilerait un corps que la vue de dessus laisse noir. |
@@ -4205,8 +4206,28 @@ gardés), et les verticales sont les bords des deux vues de l'écran scindé —
 droit de la vue de J2. Règle : **une arête se confronte au cadre des vues avant d'être attribuée au moteur**, et
 un effet qu'on croit supprimer se juge sur la capture d'APRÈS, pas sur celle d'avant.
 ⚠️ **Trois balles sur cinq étaient déjà mortes au relevé**, avant comme après (elles touchent un mur à l'est
-du banc) : les 45 lumières restantes sont surtout les étincelles d'impact (`SPARK`, douze par impact de mur),
-le second levier que ce piège nommait déjà. Elles ne sont pas l'objet de la décision d'Adrien.
+du banc) : les 45 lumières restantes étaient surtout les étincelles d'impact (`SPARK`, douze par impact de
+mur), le second levier que ce piège nommait déjà — traitées dans le second volet ci-dessous.
+
+**Second volet, même jour (session cloud, 12:05) : les étincelles d'impact n'éclairent plus.** Le premier
+volet laissait le halo à 0,78 en rafale et 45 lumières actives ; « c'est le même mal que celui qu'Adrien a
+nommé ». Recensement par famille au même banc (le fichier créateur et le nom du nœud de chaque lumière
+`enabled` et visible, au relevé de la rafale) :
+
+| Famille | Avant (`f8681a5`) | Après |
+|---|---|---|
+| Étincelles d'impact (`particle_pool.gd`, `Light` des `SPARK`) | **60** | **0** |
+| Échos au sol du tir (`player.gd`, `ground_flash`, 0,12 s chacun) | 2 | 7 |
+| Flash de bouche (`player.gd:MuzzleFlash`) | 0 | 1 |
+| Fusée (`fusee.gd:Halo`) | 1 | 1 |
+| **Total** | **63** | **9** |
+| Rondeur du halo, fusée seule / pendant la rafale | 0,88 / 0,86 | 0,88 / **0,88** puis 0,86 (deux passages) |
+
+Les échos et le flash varient d'un passage à l'autre selon l'instant du relevé dans la rafale ; les étincelles,
+non. ⚠️ **La rondeur varie aussi d'un passage à l'autre** : 0,78 puis 0,86 sur le même code avant ce volet,
+selon l'instant où les balles meurent. D'où deux passages après, tous deux au-dessus de la cible (≥ 0,85).
+Ce qui éclaire vraiment le jeu ne change pas : torche, flash de bouche, écho au sol du tir, fusée, gadgets à
+lumière, lumière de coup (voir « Décisions actées »).
 
 ### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
 

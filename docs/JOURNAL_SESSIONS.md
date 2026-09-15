@@ -5282,6 +5282,13 @@ deux captures, d'abord lues comme l'arête de quadrant, sont les auras des balle
 tirée dans un mur, rondeur prise hors du halo). File du Mac tenue par messages avec Iso 1 Opus et ISO7
 Beauté.
 
+**Second volet, 2026-09-15 vers 12:25 — les étincelles d'impact n'éclairent plus.** Demandé par la session
+cloud à 12:05 : le halo restait à 0,78 en rafale et 45 lumières restaient actives. Le banc apprend à
+recenser par famille (fichier créateur et nom de nœud) : 60 lumières sur 63 étaient des étincelles
+d'impact (`particle_pool.gd`, genre `SPARK`). Éteintes comme la poussière et la fumée, dessin additif
+gardé : 9 lumières, rondeur 0,88 puis 0,86 sur deux passages (cible ≥ 0,85). Gardés, avec leur raison :
+l'écho au sol du tir et la lumière de coup. La rondeur varie d'un passage à l'autre, d'où deux passages.
+
 **Fusions de la vague — 2/4 : `iso-gadgets-lumieres` (`e280015`), 2026-09-15 vers 10:05.** Hauteur des
 sources dans la lightmap, volumes et lueurs iso, miroirs revus (`iso_volumes.gd`, `volume_iso.gdshader`,
 `halo_iso.gdshader`, `test_iso_gadgets`). Trois conflits, tous des ajouts parallèles : `run_suites.sh`
