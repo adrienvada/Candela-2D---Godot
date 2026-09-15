@@ -507,6 +507,33 @@ func _test_enjambement(p: Player) -> void:
 	for k in 3:
 		await get_tree().physics_frame
 
+	# ISO11, L1 — « on ne doit pas pouvoir escalader un mur juste avec le joystick »
+	# (Adrien, test 1). Canon tourné ailleurs, le disque du corps (18 px) s'arrête
+	# contre le muret dans le cercle d'encombrement (28) : la règle d'avant le
+	# croyait « déjà dessus » et le laissait passer sans le geste.
+	for visee: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT]:
+		p.global_position = Vector2(gauche - 60.0, 5.5 * MursBas.TUILE)
+		p.rotation = visee.angle()
+		for k in 3:
+			await get_tree().physics_frame
+		var x_max := p.global_position.x
+		var vu_enjambe := false
+		f.update_input_state(Vector2.RIGHT, visee, false, false, false)
+		for k in 90:
+			await get_tree().physics_frame
+			x_max = maxf(x_max, p.global_position.x)
+			vu_enjambe = vu_enjambe or p.enjambe
+		_check("sans le geste, canon vers %s : le muret arrête le disque du corps" % visee,
+			x_max < gauche - MursBas.RAYON_DEDANS and not vu_enjambe,
+			"x max = %.1f, muret en %.0f, enjambe vu %s" % [x_max, gauche, vu_enjambe])
+		_check("… et la collision des murets reste posée",
+			(p.collision_mask & MapGeometry.LOW_WALL_LAYER) != 0)
+	f.update_input_state(Vector2.ZERO, Vector2.RIGHT, false, false, false)
+	p.global_position = Vector2(gauche - 60.0, 5.5 * MursBas.TUILE)
+	p.rotation = 0.0
+	for k in 3:
+		await get_tree().physics_frame
+
 	f.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false, false)
 	for k in 60:
 		await get_tree().physics_frame
@@ -546,6 +573,42 @@ func _test_enjambement(p: Player) -> void:
 		p.current_ammo == munitions, "%d → %d" % [munitions, p.current_ammo])
 	_check("la collision avec les murs bas revient une fois passé",
 		(p.collision_mask & MapGeometry.LOW_WALL_LAYER) != 0)
+
+	# ISO11, L1 — dans l'autre sens, canon vers le haut : le geste suffit quelle
+	# que soit la visée, et lâché une fois le corps sur la pierre, la traversée
+	# continue (un corps rendu à la collision au milieu du muret serait éjecté).
+	var bruit_retour := p.enjambements
+	var lache_dessus := false
+	var passe := false
+	for k in 360:
+		var tenu := p.global_position.x > droite
+		f.update_input_state(Vector2.LEFT, Vector2.UP, false, false, false, false, false, false, tenu)
+		await get_tree().physics_frame
+		if not tenu and p.enjambe:
+			lache_dessus = true
+		if p.global_position.x < gauche - MursBas.RAYON_ENCOMBREMENT - 4.0:
+			passe = true
+			break
+	f.update_input_state(Vector2.ZERO, Vector2.ZERO, false, false, false)
+	await get_tree().physics_frame
+	_check("canon vers le haut, geste tenu jusqu'à la pierre puis lâché : la traversée va au bout",
+		passe and lache_dessus, "x = %.1f, lâché dessus %s" % [p.global_position.x, lache_dessus])
+	_check("… un bruit d'enjambement de plus", p.enjambements == bruit_retour + 1,
+		"%d" % (p.enjambements - bruit_retour))
+	_check("… et la collision des murets revient", (p.collision_mask & MapGeometry.LOW_WALL_LAYER) != 0)
+
+	# ISO11, L1 — le geste tenu en s'ÉLOIGNANT d'un muret n'ouvre rien.
+	p.global_position = Vector2(gauche - 20.0, 5.5 * MursBas.TUILE)
+	p.rotation = PI * 0.5
+	await get_tree().physics_frame
+	f.update_input_state(Vector2.LEFT, Vector2.DOWN, false, false, false, false, false, false, true)
+	await get_tree().physics_frame
+	_check("geste tenu en s'éloignant du muret : pas d'enjambement", not p.enjambe)
+	f.update_input_state(Vector2.ZERO, Vector2.ZERO, false, false, false)
+	p.enjambe = true
+	p.reset_posture()
+	_check("reset_posture oublie un enjambement commencé et rend la collision",
+		not p.enjambe and (p.collision_mask & MapGeometry.LOW_WALL_LAYER) != 0)
 
 	MursBas.murs_de_la_manche = []
 	remove_child(collisions)

@@ -115,6 +115,24 @@ static func chevauche_cercle(centre: Vector2, rayon: float, rects: Array) -> boo
 	return false
 
 
+## ISO11, L1 — sous le cercle inscrit du disque du corps (17,65 px : l'étoile à
+## seize côtés de 18 px de `player.tscn`). Un centre plus près d'un muret que ce
+## rayon n'y est pas arrivé en marchant contre : le corps est DANS la pierre, et
+## sa traversée doit continuer, geste tenu ou non.
+const RAYON_DEDANS := 16.0
+
+
+## La distance d'un point au plus proche des rectangles — 0 dedans, INF sans
+## rectangle. Dit si un pas va VERS un muret (ISO11, L1).
+static func distance_aux_murs(centre: Vector2, rects: Array) -> float:
+	var d := INF
+	for r: Rect2 in rects:
+		var proche := Vector2(clampf(centre.x, r.position.x, r.end.x),
+			clampf(centre.y, r.position.y, r.end.y))
+		d = minf(d, proche.distance_to(centre))
+	return d
+
+
 ## Le retrait de la FORME DE LUMIÈRE d'un mur bas : son occluder est rentré de
 ## `MapGeometry.OCCLUDER_INSET`, et la zone morte dessinée aussi
 ## (`MursBasRendu.uniformes_de_vue`). Une seule constante pour la lumière et la balle.

@@ -3231,6 +3231,17 @@ Ici : le corps du voile vit dans `voile_eblouissement.gdshaderinc`, inclus par `
 `ui._poser_voile` choisit au seuil `aberration_debut`, lu dans le shader. Ce que la copie coûtait au repos :
 0,53 ms par image à 2560×1440.
 
+### Un cercle qui dit « déjà dessus » doit être celui du corps, pas celui de son point le plus long (2026-09-15)
+
+ISO11, L1 : au premier test, Adrien escaladait tout mur bas frôlé « juste avec le joystick », sans « croix ». La règle
+d'enjambement (MB3b) coupait la collision des murets si le corps « chevauchait déjà » un muret, lu sur le cercle
+d'**encombrement** de 28 px — la pointe du canon. Le corps est une étoile : un disque de 18 px et une pointe à 28. Canon
+tourné ailleurs, le disque s'arrête contre la pierre à 18 px, **dans** ce cercle : la règle se croyait montée, coupait la
+collision, et le pas suivant entrait dans le muret. La suite de MB3b ne l'a pas vu : elle poussait toujours canon vers
+le muret, le seul cas où la pointe arrête le corps à 28. **Règle : un test de chevauchement qui décide d'un état doit
+être essayé sous toutes les orientations du corps**, et un « déjà commencé » se retient comme un état (ici `enjambe` de
+l'image d'avant) plutôt que de se déduire d'une distance que la marche seule atteint.
+
 ### Une valeur de lumière par point ne dit pas d'où elle vient (2026-09-15)
 
 ISO7b a donné aux faces des murs et aux corps la « direction de la lumière » lue dans le gradient de la lightmap.
@@ -25473,6 +25484,38 @@ pilier, le sol et une tache, le corps de J1, la fusée posée et sa suie, une fa
 du voile sur le corps éclairé de J1 (0,12 / 0,2 / 0,35 / 0,6 / 1,0 ; relevés 0,094 / 0,172 / 0,323 / 0,574 / 0,973, le
 même écart d'une image de décroissance qu'au tour 2). `planche_finale.py` prend deux arguments de plus, `--loupe` (les
 PNG de la loupe copiés tels quels dans `captures_finale/`) et `--tete`. Les PNG de la rampe partent octet pour octet.
+
+### ISO11 — les retours du test 1 🟡 (ouvert le 2026-09-15 au soir, branche `iso11-retours` depuis `266f65d`)
+
+**D'où il vient.** Adrien a joué la tête d'`iso2-vues` en écran scindé (vers 21:20) et a donné six retours, relayés par
+la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (message de 21:31, relais de 21:34). ISO10 reste clos. Ordre de
+travail : L1 mécanique, L2 killcam, L3 zoom, L4 carte → armes, en commits séparés ; puis le banc de variantes des corps
+(L5) et l'inventaire de l'habillage (L6). Aucune fusion dans `iso2-vues` sans le mot de la session cloud ; rien de poussé.
+⚠️ La levée de l'interdit sur la simulation pour L1 est arrivée par relais, pas de la main d'Adrien dans la fenêtre de
+cette session : le travail reste sur la branche, à juger par lui avant toute fusion.
+
+#### L1 — on n'enjambe plus un muret sans le geste
+
+Ses mots : « on ne doit pas pouvoir escalader un mur juste avec le joystick, il faut appuyer sur croix en plus (sinon dès
+qu'on est proche d'un mur bas on l'escalade, et donc c'est difficile de se cacher derrière) ».
+- **Le geste existait déjà** (MB3b) : direction vers le muret ET « croix » tenue (A sur Xbox), Espace / point-virgule au
+  clavier, rebindable dans les réglages (« Enjamber »), et un bit sur le fil depuis la v18. C'est la règle qui fuyait.
+- **La cause** : « déjà sur le muret » se lisait sur le cercle d'encombrement de 28 px (la pointe du canon). Canon tourné
+  ailleurs, le disque du corps (18 px) s'arrête contre la pierre dans ce cercle ; la collision était coupée sans le geste
+  (voir « Pièges connus »). Mesuré à la suite, règle d'avant remise le temps d'une prise : canon vers le haut, le bas ou
+  l'arrière, le corps poussé sans le geste finit à x = 273 à 286 px, au-delà d'un muret posé à 210.
+- **La correction** (`Player._regler_enjambement`) : un enjambement **commence** seulement en poussant VERS un muret, geste
+  tenu (le pas rapproche du muret : `MursBas.distance_aux_murs`), puis se **prolonge** tant que le corps chevauche le
+  muret, geste lâché ou non (un corps rendu à la collision au milieu de la pierre serait éjecté). Seul un disque déjà
+  DANS la pierre (`MursBas.RAYON_DEDANS`, 16 px, sous le cercle inscrit du corps — le cas d'un saut de correction réseau)
+  continue sans geste. `reset_posture` oublie un enjambement commencé et rend la collision.
+- **Même règle pour les deux joueurs**, à l'hôte comme dans la prédiction du client. **Aucun changement de fil** : le
+  geste voyage déjà (dixième argument de `rpc_send_inputs`, v18 non publiée). `Protocol.VERSION` reste donc à 18 — le
+  carnet ne compte que la forme du fil. Le rejeu enregistre des positions, pas des commandes : son format n'en dépend pas.
+- **Preuve** : `test_accroupi`, section « Enjamber un muret » — sans le geste, canon vers le haut, le bas et l'arrière, le
+  muret arrête le disque du corps et la collision reste posée ; dans l'autre sens, canon vers le haut, geste tenu jusqu'à
+  la pierre puis lâché, la traversée va au bout avec un seul bruit ; le geste tenu en s'éloignant n'ouvre rien. Avec la
+  règle d'avant, cinq de ces contrôles échouent. Lot complet vert à 21:48 : 111 suites, sans erreur de script, 435 s.
 
 ### Ce qui attend Adrien — jalon H15
 

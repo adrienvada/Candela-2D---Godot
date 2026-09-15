@@ -5699,3 +5699,9 @@ Lot complet vert à 20:03 : 111 suites, sans erreur de script, 415 s.
 cloud : `iso10-finition` fusionnée dans `iso2-vues` en avance rapide (`64d9da4..3414df1`), ancrages relus, tous présents.
 Planche finale refaite sur la tête fusionnée avec le Cloître, les cinq cases d'ISO10 et la bande de rampe du voile sur le
 corps de J1 ; banc des gadgets OK, `test_banc` vert. Lot complet vert après la fusion à 20:16 : 111 suites, sans erreur de script, 412 s. Rien n'est poussé.
+
+**ISO11, L1 — l'enjambement ne fuit plus, 2026-09-15 après le relais de 21:34.** Session « Iso 1 Opus », branche
+`iso11-retours` depuis `266f65d`. Adrien escaladait les murets au joystick seul. Le geste existait (MB3b) ; la règle
+lisait « déjà dessus » sur le cercle de 28 px du canon, que le disque de 18 px atteint canon tourné ailleurs. Correction :
+un enjambement commence au geste tenu vers le muret, se prolonge sur le chevauchement. Cinq contrôles neufs dans
+`test_accroupi`, rouges avec la règle d'avant. Protocole inchangé (le geste voyage déjà en v18). Lot complet vert à 21:48 : 111 suites, sans erreur de script, 435 s.

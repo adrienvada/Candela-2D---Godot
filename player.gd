@@ -385,7 +385,8 @@ var net_accroupi: bool = false
 ## avant de monter dessus. Pendant la traversée : debout, 65 px/s (égalité avec
 ## l'accroupi assumée par Adrien au H-MB0), pas de tir.
 const FACTEUR_VITESSE_ENJAMBEMENT := 0.25
-## Vrai tant que le corps chevauche un muret ou pousse dessus en tenant la touche.
+## Vrai dès qu'on pousse vers un muret en tenant la touche, puis tant que le corps
+## le chevauche (ISO11, L1 : un chevauchement sans geste n'ouvre rien).
 var enjambe: bool = false
 ## Nombre de murets enjambés — le bruit joué, compté pour les suites.
 var enjambements: int = 0
@@ -1497,10 +1498,20 @@ func _consume_prediction_error(delta: float) -> void:
 	if _predict_error.length() < 0.5:
 		_predict_error = Vector2.ZERO
 
-## MB3b — enjamber. Poussé contre un muret en tenant la touche, ou déjà dessus :
-## la collision avec les murs bas est coupée. Lâché AVANT d'y monter : elle
-## revient, et le muret arrête le corps. Déjà dessus, on ne peut plus la rendre —
-## un corps dans un mur serait éjecté —, la traversée continue donc jusqu'au bout.
+## MB3b — enjamber. Poussé VERS un muret en tenant la touche : la collision avec
+## les murs bas est coupée. Lâché AVANT d'y monter : elle revient, et le muret
+## arrête le corps. Commencé, on ne peut plus la rendre — un corps dans un mur
+## serait éjecté —, la traversée continue donc jusqu'au bout.
+##
+## ⚠️ ISO11, L1 — « on ne doit pas pouvoir escalader un mur juste avec le
+## joystick » (Adrien, test 1). « Déjà dessus » se lisait sur le cercle
+## d'encombrement de 28 px, celui du canon. Canon tourné ailleurs, le disque du
+## corps (18 px) s'arrête contre le muret DANS ce cercle : la règle le croyait
+## monté et coupait la collision sans le geste — tout muret frôlé s'escaladait,
+## et l'on ne pouvait plus se cacher derrière. Le chevauchement ne prolonge
+## désormais qu'un enjambement COMMENCÉ par le geste (`enjambe` de l'image
+## d'avant) ; seul un disque déjà dans la pierre (`RAYON_DEDANS`, un saut de
+## correction réseau) continue sans lui. Aucun bit de plus sur le fil.
 func _regler_enjambement(input_dir: Vector2) -> void:
 	# L'ENCOMBREMENT (28, le canon) et non le rayon de touche (18) : c'est la
 	# collision qu'on coupe, donc la forme de la collision qui décide.
@@ -1508,10 +1519,12 @@ func _regler_enjambement(input_dir: Vector2) -> void:
 	var dessus := MursBas.chevauche_cercle(global_position, MursBas.RAYON_ENCOMBREMENT, murs)
 	var pousse := false
 	if input_provider.is_climb_pressed() and input_dir.length() > 0.1:
-		pousse = MursBas.chevauche_cercle(
-			global_position + input_dir.normalized() * 4.0,
-			MursBas.RAYON_ENCOMBREMENT, murs)
-	enjambe = dessus or pousse
+		var devant := global_position + input_dir.normalized() * 4.0
+		# VERS le muret : le geste tenu en s'en éloignant n'ouvre rien.
+		pousse = MursBas.chevauche_cercle(devant, MursBas.RAYON_ENCOMBREMENT, murs) \
+			and MursBas.distance_aux_murs(devant, murs) < MursBas.distance_aux_murs(global_position, murs)
+	var dedans := MursBas.chevauche_cercle(global_position, MursBas.RAYON_DEDANS, murs)
+	enjambe = pousse or dedans or (enjambe and dessus)
 	if enjambe:
 		collision_mask &= ~MapGeometry.LOW_WALL_LAYER
 	else:
@@ -2434,6 +2447,10 @@ func reset_posture() -> void:
 	if input_provider:
 		input_provider.reset_crouch_state()
 	poser_posture(false)
+	# ISO11, L1 — l'enjambement est une mémoire aussi : commencé à la mort, il
+	# laisserait la collision des murets coupée au spawn suivant.
+	enjambe = false
+	collision_mask |= MapGeometry.LOW_WALL_LAYER
 
 ## Ressenti lourd du tir : un claquement (les deux moteurs, bref) puis un
 ## grave qui traîne (moteur grave seul) — pas un pouls plat. Le second temps
