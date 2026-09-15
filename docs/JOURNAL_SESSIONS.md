@@ -5694,3 +5694,8 @@ d'une prise à l'autre à rayon égal, cause non trouvée (ni suie, ni scintille
 anneaux ne sépare rien. Présenté tel quel à la session cloud, qui garde 0,18 et en fait un point ouvert du test final.
 Les chevrons de la balle en vol sont le viseur. La rampe est recadrée sur le corps de J1, prise avec la planche finale.
 Lot complet vert à 20:03 : 111 suites, sans erreur de script, 415 s.
+
+**ISO10, fusion et planche finale, 2026-09-15 à partir de 20:05.** Session « Iso 1 Opus ». Séquence de fin de la session
+cloud : `iso10-finition` fusionnée dans `iso2-vues` en avance rapide (`64d9da4..3414df1`), ancrages relus, tous présents.
+Planche finale refaite sur la tête fusionnée avec le Cloître, les cinq cases d'ISO10 et la bande de rampe du voile sur le
+corps de J1 ; banc des gadgets OK, `test_banc` vert. Lot complet vert après la fusion à 20:16 : 111 suites, sans erreur de script, 412 s. Rien n'est poussé.

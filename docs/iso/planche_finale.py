@@ -54,6 +54,36 @@ FINS = [
     ("fins/05-affiche.png", "L'affiche de fin", "le verdict dans la pâte"),
 ]
 REFERENCE = ("planche_corps_v5.png", "Les dix corps v5 (ISO Corps)", "référence : le gabarit du DA")
+## Séquence de fin d'ISO10 (session cloud, 19:53) : les cases d'ISO10, recadrages 800×450 à la fenêtre native au Cloître
+## (`--famille=loupe`, voir tools/loupe.gd), et la bande de rampe du voile, cinq niveaux au cadrage du corps de J1.
+LOUPES_ISO10 = [
+    ("loupe-pilier", "La face d'un pilier (ISO10, 1b)", "lavis au pied, matière de la face · loupe 1:1"),
+    ("loupe-sol", "Le sol et une tache (1b)", "fissures et pores en gris moyen, sang à paliers · loupe 1:1"),
+    ("loupe-corps-j1", "Le corps de J1 (1d)", "MSAA 3D ×4, ombre de contact · loupe 1:1"),
+    ("loupe-fusee-suie", "La fusée posée et la suie (1c)", "plus d'anneaux, lueur rouge en mélange, suie ambre · loupe 1:1"),
+    ("loupe-face-sang-peinture", "Une face au-dessus du sang (1f)", "la face lit la lumière, pas le sol peint · loupe 1:1"),
+]
+RAMPE = [("loupe-rampe-%s" % n, "Le voile à %s" % v, "rampe de l'aberration, corps de J1 éclairé · loupe 1:1")
+         for n, v in (("012", "0,12"), ("020", "0,2"), ("035", "0,35"), ("060", "0,6"), ("100", "1,0"))]
+
+
+def loupes(dossier, entrees):
+    """Les PNG de loupe d'une séance du photographe, par identifiant (manifeste), recopiés TELS QUELS."""
+    m = json.load(open(os.path.join(dossier, "manifeste.json"), encoding="utf-8"))
+    par_id = {f["id"]: f for f in m["photos"] if f.get("famille") == "loupe"}
+    dest = os.path.join(ICI, "captures_finale")
+    out = []
+    for ident, titre, detail in entrees:
+        fiche = par_id.get(ident)
+        if fiche is None:
+            out.append((None, titre, detail, 1))
+            continue
+        fichier = fiche["fichier"]
+        source = fichier if os.path.isabs(fichier) else os.path.join(dossier, fichier)
+        cible = os.path.join(dest, ident + ".png")
+        shutil.copyfile(source, cible)
+        out.append((cible, titre, detail, 1))
+    return out
 
 
 def copier(source, dest, max_ko):
@@ -68,6 +98,8 @@ def main():
     p.add_argument("--photos", required=True)
     p.add_argument("--gadgets", required=True)
     p.add_argument("--photos-cloitre", default="")
+    p.add_argument("--loupe", default="", help="séance --famille=loupe au Cloître : cases d'ISO10 et bande de rampe")
+    p.add_argument("--tete", default="", help="le commit de la tête fusionnée, pour le sous-titre")
     p.add_argument("--max-ko", type=int, default=450)
     p.add_argument("--max-planche-ko", type=int, default=1800)
     a = p.parse_args()
@@ -99,11 +131,14 @@ def main():
         cases.append((copier(source, dest, a.max_ko) if os.path.exists(source) else None, titre, detail, 1))
     for rel, titre, detail in FINS:
         cases.append((copier(os.path.join(a.photos, rel), dest, a.max_ko), titre, detail, 1))
+    if a.loupe:
+        cases.extend(loupes(a.loupe, LOUPES_ISO10))
+        cases.extend(loupes(a.loupe, RAMPE))
     ref, titre, detail = REFERENCE
     cases.append((os.path.join(ICI, ref), titre, detail, 1))
-    planche(cases, 3, "CANDELA — LE DUEL EN VUE ISOMÉTRIQUE, VAGUE « GRAND BUDGET »",
-            "iso2-vues @ %s · photographe sans drapeau (mode_rendu=iso), murs bas et Cloître · banc des gadgets après les fusions ISO7b et ISO8 · 2026-09-15"
-            % manifeste.get("commit", "?"),
+    planche(cases, 3, "CANDELA — LE DUEL EN VUE ISOMÉTRIQUE, VAGUE « GRAND BUDGET » ET FINITION ISO10",
+            "iso2-vues @ %s · photographe sans drapeau (mode_rendu=iso), murs bas et Cloître · banc des gadgets · cases d'ISO10 et rampe du voile, loupes 1:1 · 2026-09-15"
+            % (a.tete or manifeste.get("commit", "?")),
             os.path.join(ICI, "planche_finale.jpg"), a.max_planche_ko)
 
 

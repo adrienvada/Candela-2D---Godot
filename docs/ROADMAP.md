@@ -25458,6 +25458,22 @@ des réglages à juger en jeu, des leviers non posés et des questions ouvertes.
   dans `voile_eblouissement.gdshaderinc` (le banc du voile les liste) ; et les curseurs de l'écran des réglages
   (éblouissement, aberration). Rien ne touche la simulation, le protocole, les hitbox ni le noir absolu.
 
+#### ISO10 — fusion dans `iso2-vues` et planche finale
+
+Séquence de fin de la session cloud (19:53). **La fusion** : `iso10-finition` avance `iso2-vues` en avance rapide
+(`64d9da4..3414df1`, 64 fichiers, aucun conflit), faite par la session qui tient les deux branches — aucun autre worktree
+n'occupait `iso2-vues`. Ancrages relus après la fusion : `peinture_iso.gd`, `voile_eblouissement.gdshaderinc` et
+`voile_eblouissement_calme.gdshader`, `halo_iso.gdshaderinc` et `halo_iso_melange.gdshader` (avec leurs `.uid`),
+`contact_des_corps` dans `sol_iso.gdshader`, `Presentation3D.ANTICRENELAGE_3D` et `COUCHE_PEINTURE`,
+`aberration_debut` / `aberration_pleine`, le lavis de `mur_encre.gd` — tous présents. Lot complet vert après la fusion, à 20:16 : 111 suites, sans erreur de script, 412 s.
+
+**La planche finale** (`docs/iso/planche_finale.jpg`, 1944×3766) est refaite sur la tête fusionnée, en une séance : le
+duel, l'écran scindé, le Cloître, le banc des gadgets, les fins, puis les cases d'ISO10 à la loupe 1:1 (la face d'un
+pilier, le sol et une tache, le corps de J1, la fusée posée et sa suie, une face au-dessus du sang) et la bande de rampe
+du voile sur le corps éclairé de J1 (0,12 / 0,2 / 0,35 / 0,6 / 1,0 ; relevés 0,094 / 0,172 / 0,323 / 0,574 / 0,973, le
+même écart d'une image de décroissance qu'au tour 2). `planche_finale.py` prend deux arguments de plus, `--loupe` (les
+PNG de la loupe copiés tels quels dans `captures_finale/`) et `--tete`. Les PNG de la rampe partent octet pour octet.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
