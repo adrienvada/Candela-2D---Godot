@@ -101,11 +101,11 @@ func _batir(taille: Vector2, pour_export: bool) -> void:
 		illustration.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		illustration.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		illustration.modulate = Color(1.0, 1.0, 1.0, FOND_FORCE)
+		illustration.modulate = Color(Color.WHITE, FOND_FORCE)
 		add_child(illustration)
 
 	var cadre := CadrePhoto.new()
-	cadre.teinte = Color(Charte.ACIER, 0.26)
+	cadre.teinte = Color(Charte.PATE_TEXTE_SECOND, 0.26)
 	add_child(cadre)
 
 	var colonne := VBoxContainer.new()
@@ -122,9 +122,9 @@ func _batir(taille: Vector2, pour_export: bool) -> void:
 	var tete := HBoxContainer.new()
 	tete.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	colonne.add_child(tete)
-	tete.add_child(_mention("CANDELA", Color(Charte.HALOGENE, 0.70), echelle))
+	tete.add_child(_mention("CANDELA", Color(Charte.PATE_TEXTE, 0.70), echelle))
 	tete.add_child(_ressort())
-	tete.add_child(_mention(_date(), Color(Charte.ACIER, 0.45), echelle))
+	tete.add_child(_mention(_date(), Color(Charte.PATE_TEXTE_SECOND, 0.45), echelle))
 
 	colonne.add_child(_filet(echelle, 0.26))
 	# Deux ressorts, un de chaque côté du corps : la masse se centre au lieu de
@@ -136,9 +136,9 @@ func _batir(taille: Vector2, pour_export: bool) -> void:
 	# Un seul chiffre en grand, et le mot dessous. C'est le geste d'affiche de
 	# DA6.1 réemployé : ce qui compte se lit de loin, le reste se lit de près.
 	var n := int(_bilan.get("matchs", 0))
-	colonne.add_child(_enorme(str(n), Charte.HALOGENE, echelle, 0.155))
+	colonne.add_child(_enorme(str(n), Charte.PATE_TEXTE, echelle, 0.155))
 	colonne.add_child(_mention("MATCH%s CE SOIR" % ("S" if n > 1 else ""),
-		Color(Charte.ACIER, 0.62), echelle))
+		Color(Charte.PATE_TEXTE_SECOND, 0.62), echelle))
 	colonne.add_child(_air(Charte.GAP_L, echelle))
 
 	# --- le score ---------------------------------------------------------
@@ -147,12 +147,12 @@ func _batir(taille: Vector2, pour_export: bool) -> void:
 	var d := int(_bilan.get("defaites", 0))
 	var nul := int(_bilan.get("nulles", 0))
 	colonne.add_child(_enorme("%d – %d" % [v, d],
-		Charte.VERT if v > d else (Charte.ROUGE if d > v else Charte.ACIER),
+		Charte.VERT if v > d else (Charte.ROUGE if d > v else Charte.PATE_TEXTE_SECOND),
 		echelle, 0.095))
 	var sous_score := "VICTOIRES – DÉFAITES" if local >= 0 else "JOUEUR 1 – JOUEUR 2"
 	if nul > 0:
 		sous_score += "   ·   %d ÉGALITÉ%s" % [nul, "S" if nul > 1 else ""]
-	colonne.add_child(_mention(sous_score, Color(Charte.ACIER, 0.62), echelle))
+	colonne.add_child(_mention(sous_score, Color(Charte.PATE_TEXTE_SECOND, 0.62), echelle))
 	colonne.add_child(_air(Charte.GAP_L, echelle))
 	colonne.add_child(_filet(echelle, 0.18))
 	colonne.add_child(_air(Charte.GAP_M, echelle))
@@ -170,11 +170,11 @@ func _batir(taille: Vector2, pour_export: bool) -> void:
 	pied.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	colonne.add_child(pied)
 	pied.add_child(_mention(BilanDeSoiree.phrase(_bilan),
-		Color(Charte.ACIER, 0.40), echelle, Charte.T_MENTION))
+		Color(Charte.PATE_TEXTE_SECOND, 0.40), echelle, Charte.T_MENTION))
 	if not pour_export:
 		pied.add_child(_ressort())
 		pied.add_child(_mention("ENTRÉE — GARDER L'IMAGE   ·   ÉCHAP — FERMER",
-			Color(Charte.ACIER, 0.38), echelle, Charte.T_MENTION))
+			Color(Charte.PATE_TEXTE_SECOND, 0.38), echelle, Charte.T_MENTION))
 
 
 ## Les lignes « intitulé / valeur » de la soirée, dans l'ordre où on les lit.
@@ -226,10 +226,10 @@ func _enorme(texte: String, teinte: Color, echelle: float, part: float) -> Label
 func _paire(intitule: String, valeur: String, echelle: float) -> HBoxContainer:
 	var ligne := HBoxContainer.new()
 	ligne.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ligne.add_child(_mention(intitule, Color(Charte.ACIER, 0.48), echelle,
+	ligne.add_child(_mention(intitule, Color(Charte.PATE_TEXTE_SECOND, 0.48), echelle,
 		Charte.T_MENTION))
 	ligne.add_child(_ressort())
-	ligne.add_child(_mention(valeur, Color(Charte.HALOGENE, 0.88), echelle))
+	ligne.add_child(_mention(valeur, Color(Charte.PATE_TEXTE, 0.88), echelle))
 	return ligne
 
 
@@ -245,7 +245,7 @@ func _mention(texte: String, teinte: Color, echelle: float,
 
 func _filet(echelle: float, alpha: float) -> ColorRect:
 	var r := ColorRect.new()
-	r.color = Color(Charte.ACIER, alpha)
+	r.color = Color(Charte.PATE_TEXTE_SECOND, alpha)
 	r.custom_minimum_size = Vector2(0, maxf(1.0, roundf(echelle)))
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return r

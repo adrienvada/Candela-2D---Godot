@@ -31,7 +31,7 @@ const REPERE := 0.022
 ## se lit comme un repère et non comme un angle mal fermé.
 const JOUR := 0.006
 
-@export var teinte: Color = Charte.LINE
+@export var teinte: Color = Charte.PATE_FILET
 @export var epaisseur: float = 1.0
 ## Les repères se taisent quand le cadre est petit : sous cette hauteur, quatre
 ## traits de six pixels ne sont plus des repères, ce sont des poussières.

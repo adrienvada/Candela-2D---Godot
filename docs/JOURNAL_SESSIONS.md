@@ -5158,3 +5158,69 @@ ajouts d'ISO7, rien n'a été repris de ce côté. Ancrages de Gadgets relus (`p
 `zone_morte_source`, `eclaire_par_hauteur`, `mb_z_sans_origine`, `hauteur_de_vol`, `SLUG_DU_CATALOGUE`,
 `volumes.suivre`, `anneau_a`, `HAUTEUR_AU_RAS_DU_SOL`), ceux d'ISO7 et d'ISO5 aussi. Deux imports, lot
 complet.
+### Session « Habillage sonnet » (chantier Habillage iso, étapes 1 et 2, branche `iso-habillage`) — ajoutée le 2026-09-15 (Paris)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (vague « grand budget », mandat
+d'Adrien de 05:00), relayé par la Concierge à 05:18. Base : `iso2-vues` à `953ead3`. Aucun
+fichier de la vue de jeu, des gadgets, de `player.gd` ni de `game_state.gd`.
+
+**Fichiers touchés :** `charte.gd` (famille « LA PÂTE ») ; `menu_theme.gd` ; `menu_widgets.gd`
+(`materiau_pate`, `poser_pate`, `empater`, usines basculées) ; `menu_hub.gd` ;
+`menu_recitatif.gd` ; `menu_comic_panel.gd` ; `menu_fiche_classe.gd` ; `map_gallery.gd` ;
+`map_editor_hud.gd` ; `menu_icones.gd` ; `menu_apercu.gd` ; `menu_hatch_rect.gd` ;
+`menu_rivets_overlay.gd` ; `menu_artwork.gd` ; `ui.gd` (alias, fond du hub, passage
+d'empâtement) ; `killcam_overlay.gdshader` (crochet) ; `menu_pate.gdshader` (neuf) ;
+`tools/test_habillage.gd` ; `tools/fabrique_pate_ui.py` et `tools/preparer_habillage.py`
+(neufs) ; `assets/ui/matiere/pate_grain.png`, `assets/ui/fond_hub_iso.jpg`,
+`assets/ui/portraits/portrait_{fusil,pompe,arbalete}.png` ; `docs/ROADMAP.md` (section
+« Habillage iso ») ; ce journal.
+
+**Ce qui ne se devinait pas.** Les couleurs de la charte que l'interface emploie — `ACIER`,
+`DIM`, `SURFACE`, `LINE` — sont aussi lues par le jeu (`player.gd`, les voxels) : repeindre les
+menus en changeant leurs valeurs aurait repeint l'arène sans qu'une suite de menus ne rougisse.
+La bascule passe donc par les alias. Et le verre de M14 pose son propre matériau sur le cadre de
+droite et les rangées de réglage : la pâte se pose en un seul passage APRÈS lui, qui saute tout
+nœud déjà doté.
+
+**Coordination.** Cinq sessions se sont disputé le Mac ; la course au premier `pgrep` vide a
+lancé deux lots l'un dans l'autre et en a fait échouer un troisième avant départ. Un ordre de
+passage explicite l'a remplacée (Gadgets → Beauté → Habillage → ISO Corps). ISO5 a répondu ne pas
+tenir `killcam_overlay.gdshader` et a invité à poser le crochet ici ; ISO Assets a livré le fond
+du hub et quatre portraits, dont un à recadrer.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis à la session cloud
+« Fable 5.1 - CLOUD ISO UNRAILED ».
+
+**Étape 3 (même session, même branche) :** les dix portraits iso préparés depuis le lot B d'ISO Assets
+remplacent le sprite vu de dessus dans la fiche de classe et sur l'affiche du match
+(`MenuFicheClasse.chemin_portrait`). La règle qui justifiait le sprite — montrer la silhouette que
+l'adversaire découpe — demande désormais le portrait : en iso, cette silhouette est le corps voxel.
+
+**Étape 4 (même session, même branche) :** le HUD de match passe à la pâte — neutres d'appareil et couleurs
+chiffrées retirés de sa plage d'`ui.gd`, matière sur ses panneaux et cartouches, dix icônes de gadget iso.
+Pour garder un commit par étape sans worktree de plus, les étapes suivantes attendaient dans un patch
+binaire pendant que le lot tournait sur l'état exact commité ; le patch se réapplique ensuite fichier par
+fichier, en ne retenant que les chemins de l'étape.
+
+**Étape 5 (même session, même branche) :** la killcam. Le voile vire au papier par le crochet posé à
+l'étape 2, sous le curseur CONFORT ; deux bandes de format cinéma montent sous le HUD et suivent la
+visibilité du cadre de killcam ; le mot KILLCAM quitte la frange bleu/ambre d'un moniteur vidéo pour le
+mauvais repérage d'un tirage (encre, carmin) et prend le pochoir. L'estampe de kill garde sa forme jugée
+par Adrien et change de matière : pochoir, cadre d'encre projetée carmin fabriqué par script.
+
+**Étape 6 (même session, même branche) :** les fins et l'intro. L'affiche de fin pose sous son mot
+l'illustration du lot D d'ISO Assets, recadrée dans son encre, retournée pour que le mot tombe sur l'ombre ;
+la carte de soirée remplit son emplacement vide depuis DA6.3 ; les verdicts cessent d'être trois
+lettrages dorés générés pour devenir le titre lui-même, tamponné (les fichiers restent sur disque) ;
+l'intro prend la charte sans changer son texte.
+
+**Fusions de la vague — 3/4 : `iso-habillage` (`1ab8bb1`), 2026-09-15 vers 10:25.** Charte, hub, HUD,
+killcam et fins dans la pâte du DA (`charte.gd`, `menu_widgets.gd`, `menu_pate.gdshader`, `ui.gd`,
+`estampe_de_kill.gd`, `affiche_de_fin.gd`, `assets/ui/`, `test_habillage`), et le crochet de teinte du voile
+de killcam (`trait_couleur`, `virage`, sans `source_color`), que le calque iso d'ISO5 reçoit par le
+matériau partagé. Un seul conflit, ce journal (ajouts gardés) ; la ROADMAP a fusionné seule, sections
+ISO5, E2, Relevé, ISO7, Gadgets et Habillage présentes. `iso_pate.*` toujours identiques à `0cc300e`.
+Ancrages d'Habillage relus (`ENCRE`, `PATE_FOND`, `PATE_POCHOIR_FORCE`, `PATE_VIRAGE_KILLCAM`,
+`materiau_pate`, `empater`, `materiau_pochoir`, les deux uniforms, `killcam_bandes`, `chemin_portrait`,
+`_poser_cadre_de_tampon`, `_illustration_pour`, plus aucun `VERDICT_TEXTURES`), ceux d'ISO7, de Gadgets et
+d'ISO5 aussi. Deux imports, lot complet.

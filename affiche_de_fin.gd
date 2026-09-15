@@ -99,6 +99,13 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	# appuierait du même geste sur l'entrée du salon qui se trouve dessous.
 	fond.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(fond)
+	# Habillage iso (2026-09-15) : l'illustration de fin, ENFANT du fond — elle
+	# hérite de son fondu d'entrée et de sortie sans une ligne de plus. Opaque comme
+	# lui : la décision « le fond est opaque » tient, c'est le noir qui cède la place
+	# à une image entière, jamais à une transparence qui laisserait remonter le salon.
+	var illustration := _illustration_pour(_verdict_texte(titre, faits))
+	if illustration != null:
+		fond.add_child(illustration)
 
 	_racine = Control.new()
 	_racine.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -113,7 +120,7 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	# 0,30 et non 0,22 : sur un fond devenu opaque, un filet à 0,22 d'acier tombe
 	# à RGB 39 — il existe dans le fichier et pas à l'œil. Le premier réglage
 	# avait été choisi contre un fond translucide, où il portait davantage.
-	cadre.teinte = Color(Charte.ACIER, 0.30)
+	cadre.teinte = Color(Charte.PATE_TEXTE_SECOND, 0.30)
 	_racine.add_child(cadre)
 
 	# --- ligne de tête ---------------------------------------------------
@@ -121,9 +128,9 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	_racine.add_child(tete)
 	var mode := String(faits.get("mode", "")).strip_edges().to_upper()
 	tete.add_child(_mention("CANDELA" + (" · " + mode if mode != "" else ""),
-		Color(Charte.HALOGENE, 0.66), echelle))
+		Color(Charte.PATE_TEXTE, 0.66), echelle))
 	tete.add_child(_ressort())
-	tete.add_child(_mention(_date(), Color(Charte.ACIER, 0.45), echelle))
+	tete.add_child(_mention(_date(), Color(Charte.PATE_TEXTE_SECOND, 0.45), echelle))
 
 	# --- le bloc du verdict ----------------------------------------------
 	var bloc := VBoxContainer.new()
@@ -150,24 +157,24 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	bloc.add_child(mot)
 
 	var filet := ColorRect.new()
-	filet.color = Color(Charte.ACIER, 0.44)
+	filet.color = Color(Charte.PATE_TEXTE_SECOND, 0.44)
 	filet.custom_minimum_size = Vector2(0, maxf(1.0, roundf(echelle)))
 	filet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bloc.add_child(filet)
 
 	var legende := _legende(faits)
 	if legende != "":
-		bloc.add_child(_mention(legende, Color(Charte.ACIER, 0.72), echelle,
+		bloc.add_child(_mention(legende, Color(Charte.PATE_TEXTE_SECOND, 0.72), echelle,
 			Charte.T_TITRE))
 
 	# --- la ligne de session ---------------------------------------------
 	var pied := _bande(marge, false)
 	_racine.add_child(pied)
 	for texte in _colonnes_de_session(faits):
-		pied.add_child(_mention(texte, Color(Charte.ACIER, 0.62), echelle))
+		pied.add_child(_mention(texte, Color(Charte.PATE_TEXTE_SECOND, 0.62), echelle))
 		pied.add_child(_ressort())
 
-	_invite = _mention("UNE TOUCHE POUR CONTINUER", Color(Charte.ACIER, 0.38),
+	_invite = _mention("UNE TOUCHE POUR CONTINUER", Color(Charte.PATE_TEXTE_SECOND, 0.38),
 		echelle)
 	_invite.modulate.a = 0.0
 	pied.add_child(_invite)
@@ -264,12 +271,54 @@ func _verdict_texte(titre: Label, faits: Dictionary) -> String:
 	return "VICTOIRE" if vainqueur == local else "DÉFAITE"
 
 
+## Les illustrations de fin, en pâte D (sources ISO Assets `fin_victoire` et
+## `fin_defaite`, recadrées dans leur encre par `tools/preparer_habillage.py`).
+const FIN_VICTOIRE := "res://assets/ui/fin_victoire.jpg"
+const FIN_DEFAITE := "res://assets/ui/fin_defaite.jpg"
+## Ce que l'illustration garde de sa lumière sous le mot. 0,55 : le verdict est en
+## couleur de joueur ou en gris d'égalité, et l'image doit rester SOUS lui.
+const FORCE_ILLUSTRATION := 0.55
+
+
+## L'illustration qui va avec le mot — lu, jamais recalculé (voir l'en-tête).
+##
+## - **Égalité** : aucune. Personne n'a éteint personne ; l'affiche garde son noir.
+## - **Défaite** : la lampe tombée. **Tout le reste** (« VICTOIRE », « JOUEUR n
+##   GAGNE ») : la torche tenue — en écran partagé, quelqu'un a gagné.
+##
+## ⚠️ **Retournée** (`flip_h`) : les deux planches posent leur sujet éclairé à
+## GAUCHE, là où l'affiche pose le mot. En miroir, la gauche devient l'ombre et
+## reçoit le verdict ; la lumière passe à droite, dans le vide que le bloc laisse.
+##
+## Absente, l'affiche reste sur son noir et le dit (`push_error`) : pas d'image de
+## remplacement.
+func _illustration_pour(mot: String) -> TextureRect:
+	var m := mot.strip_edges().to_upper()
+	if m == "" or m.begins_with("ÉGALITÉ"):
+		return null
+	var chemin := FIN_DEFAITE if m.begins_with("DÉFAITE") else FIN_VICTOIRE
+	if not ResourceLoader.exists(chemin):
+		push_error("affiche de fin : illustration absente — %s" % chemin)
+		return null
+	var ill := TextureRect.new()
+	ill.name = "Illustration"
+	ill.texture = load(chemin)
+	ill.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ill.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	ill.flip_h = true
+	ill.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	ill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ill.self_modulate = Color(FORCE_ILLUSTRATION, FORCE_ILLUSTRATION, FORCE_ILLUSTRATION)
+	return ill
+
+
 func _verdict_teinte(titre: Label) -> Color:
 	if titre != null and is_instance_valid(titre):
 		var c := titre.get_theme_color(&"font_color")
 		if c.a > 0.0:
 			return c
-	return Charte.HALOGENE
+	return Charte.PATE_TEXTE
 
 
 ## La carte, la durée, les deux armes. L'ordre va du lieu au geste.

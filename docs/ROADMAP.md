@@ -24115,6 +24115,381 @@ scindé en iso ou maintenu en 2D — sur trois relevés au premier plan après
 ISO0.b. Puis les décisions de direction artistique (sommet des murs, tranche
 de plateau, palette des corps), le choix des corps (voxels par code
 recommandé), et la confirmation du forfait dans *Settings › Usage*.
+### Habillage iso — HUD, menus, killcam et fins dans la pâte du DA ✅ (ouvert et livré le 2026-09-15, vague « grand budget », à juger au jalon de test final)
+
+**D'où il vient.** Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (15/09, vers 05:25),
+sur le mandat d'Adrien de 05:00 : « une version grand budget aboutie en mode isométrique ».
+L'interface est ce qu'il voit en premier et en dernier ; elle parlait encore le roman graphique
+2D des chantiers DA et MV, pas la pâte D des planches iso. Session « Habillage sonnet »
+(`habillage-sonnet-candela-6c2849-b8`), branche `iso-habillage` créée depuis `iso2-vues` à
+`953ead3` (corps épais inclus). Sept étapes, dans l'ordre : inventaire (celle-ci, écrite avant
+de toucher un fichier), charte iso, hub, HUD, killcam, fins et intro, preuves.
+
+**Ce qui ne bouge pas.** La navigation (deux curseurs, `nav_owner`, `nav_seed`, voisin
+géométrique), la structure des écrans, les signaux, le bloc lobby, les préchargements. Seul
+l'aspect change, par la charte et les ressources. L'interface a le droit d'être visible au-dessus
+du noir ; elle n'a pas le droit de révéler davantage qu'aujourd'hui (pas de mini-carte, pas de
+position adverse).
+
+#### Périmètre — et une décision de cette session
+
+- **Tenus** (brief) : `ui.gd` (aspect), `charte.gd`, `assets/ui/**`, `tools/test_habillage.gd`,
+  `docs/iso/planche_habillage.jpg`, cette section.
+- **`intro_vue.gd` n'existe pas.** `intro_vue` est un réglage (`settings_manager.gd:76`) ; l'intro
+  est `intro_planches.gd`, l'allumage `power_on.gd`.
+- **Les satellites d'interface sont pris, pour l'aspect seulement** : `menu_*.gd`, `hub_screen.gd`,
+  `screen_*.gd`, `match_banner.gd`, `map_gallery.gd`, `estampe_de_kill.gd`, `affiche_de_fin.gd`,
+  `carte_de_soiree.gd`, `panneau_de_soiree.gd`, `cadre_photo.gd`, `releve_balistique.gd`,
+  `intro_planches.gd`, `power_on.gd`, la barre d'outils de `map_editor_hud.gd`. **Pourquoi** : le
+  HUD, la killcam et les fins que le brief demande vivent là autant que dans `ui.gd`, et aucun
+  autre brief de la vague ne les tient — vérifié sur `origin/claude/reveil` à `c89a205` ; les
+  briefs « ISO7 Beauté » et « Gadgets et lumières » renvoient explicitement « `ui.gd` et
+  l'habillage » à cette session. `kill_shockwave.gd` reste à Gadgets.
+- **Pas touchés** : la vue de jeu, les shaders iso, les gadgets, `player.gd` (donc le **bandeau
+  fatal**, `player.gd:2974`, ne change que par sa plaque `assets/ui/cartouche_fatal.png`),
+  `game_state.gd` (qui POSE l'estampe, l'affiche et la soirée), `network_manager.gd`.
+- **Crochet partagé** : `killcam_overlay.gdshader`. Le brief le disait tenu par ISO5 ; ISO5 a
+  répondu (05:26) qu'il ne le tient pas — c'est le shader du jeu, que la vue iso réutilise par son
+  matériau — et invite à le poser ici. Deux uniforms **sans hint `source_color`** (sous
+  `gl_compatibility`, le hint peut convertir la valeur et changer le trait par défaut), valeurs par
+  défaut égales au rendu actuel, et un contrôle de suite qui exige leur déclaration plutôt qu'un
+  repli muet.
+
+#### Inventaire — les écrans, où ils se construisent, ce qu'ils affichent
+
+| Écran | Construit par | Affiche | Matière aujourd'hui |
+|---|---|---|---|
+| HUD de match | `ui.gd` `_build_hud`, `_build_player_hud`, `_create_weapon_indicator`, `_create_torche_indicator`, `_create_reserves_indicator`, `_build_center_hud`, `_build_countdown` | JOUEUR n, SANTÉ et barres, munitions « n / n » / RECHARGE / VIDE, anneau de recharge, TORCHE (cadenas, ACCROUPI), FUSÉES, GADGET (icône), chrono, décompte, ping | `ComicHudPanel` en `_draw` (SURFACE, LINE, coins, onglets), `StyleBoxFlat` LINE et noir |
+| Hub | `menu_hub.gd` `_build`, `make_entry` ; `ui.gd` `_build_menu`, `_build_menu_header`, `_build_hub_screens` | titre en récitatif, colonne d'entrées, cadre de droite (texte, illustration floutée), enseigne, key art à 0,34, mentions | `MenuComicPanel`, `StyleBoxFlat` SURFACE/LINE, `menu_bg_blur`/`menu_artwork`, quinze effets de vitrine |
+| Sélection de classe | `ui.gd` `_build_class_card`, `_build_class_station`, `_build_pick_panel` ; `menu_fiche_classe.gd` | râtelier, fiche (sprite, icône d'arme, cône, jauges, gadget et sa phrase) | `make_panel_style`, vignette `FOND_SPRITE` grise en dur |
+| Salon | `ui.gd` `_build_salon_aside`, `_build_lobby_widgets`, `_build_map_card` ; `match_banner.gd` | code de salon (`MenuEngraver`), IP, joueurs, carte | `StyleBoxFlat`, `make_panel_style` |
+| Options | `ui.gd` `_build_controls_panel`, `_build_display_panel` ; `screen_*.gd` | liaisons (pictogrammes `prompts/*.svg`), affichage, effets, audio, calibration, profil, historique | `MenuWidgets` |
+| Pause | `ui.gd` `_build_pause_menu` | PAUSE, score de session, REPRENDRE / OPTIONS / QUITTER LE MATCH / MENU PRINCIPAL | rideau BACKDROP 0,88, `MenuVeil` |
+| Éditeur (barre) | `map_editor_hud.gd` `_build_tools_panel`, `_build_actions_panel` | outils, SAUVEGARDER / TESTER / RETOUR | `StyleBoxFlat`, COL_* dérivées |
+| Killcam | `ui.gd` `_build_killcam` ; `releve_balistique.gd` ; `estampe_de_kill.gd` ; bandeau fatal (`player.gd`) | voile dessiné + grain, KILLCAM en enseigne, timecode, `CadrePhoto` ; relevé balistique ; « KILL — mm:ss » en ROUGE | `killcam_overlay.gdshader`, `grain_video.png`, `cartouche_fatal.png` |
+| Fins | `ui.gd` `show_game_over`, `_build_bilan` ; `affiche_de_fin.gd` ; `panneau_de_soiree.gd`/`carte_de_soiree.gd` ; `menu_tampon_verdict.gd` | VICTOIRE / DÉFAITE / ÉGALITÉ (`verdict_*.png`), bilan de session, affiche, carte de soirée | fond NOIR, `CadrePhoto`, `police_display` ; **`carte_soiree_fond.png` absent** (chargé en option) |
+| Intro | `intro_planches.gd` `_construire` ; `power_on.gd` | six planches `ill_intro_*.png` + `.ogv`, cartouches, « UNE TOUCHE POUR PASSER » | `menu_artwork.gdshader`, lettrage en `load(CHEMIN_DISPLAY)` direct, **tailles 46 et 14 en dur** |
+
+#### La charte aujourd'hui, et le constat qui oriente l'étape 2
+
+`charte.gd` : sept couleurs en deux familles — le MONDE chaud (`NOIR`, `HALOGENE`, `AMBRE`) et
+l'APPAREIL LED (`VERT`, `BLEU`, `ROUGE`, `ACIER`) —, des dérivées écrites en formules et
+recalculées par `test_charte.gd` (`CARMIN`, `DIM`, `LINE`, `SURFACE`, `BACKDROP`, `SOL_*`,
+`ADVERSAIRE`), saturation plafonnée à 75 %, grille de 8 (`GAP_XXS` 4 → `GAP_XL` 64), échelle
+12/15/19/25/42/68 plus `T_DECOMPTE`, deux fontes (Big Shoulders Display pour l'enseigne, Oxanium
+pour l'appareil), quatre courbes et trois durées.
+
+⚠️ **Ces couleurs ne sont pas celles de l'interface seule.** `ACIER` est lu par `player.gd`,
+`wall_impact.gd` et `game_state.gd` ; `DIM` par `voxel_catalogue.gd` et
+`voxel_catalogue_objets.gd` (les gris des voxels) ; `HALOGENE` et `AMBRE` par `bullet.gd`,
+`player.gd`, `mur_led.gd`… Repeindre l'interface en retouchant leurs valeurs repeindrait le jeu,
+hors périmètre et sans qu'une seule suite de menus ne rougisse. **La charte iso s'ajoute donc
+comme une famille, et l'interface bascule vers ses rôles ; aucune valeur existante ne bouge.**
+
+**Couleurs en dur**, commentaires exclus : `ui.gd` 53 (12 numériques, 31 dérivées
+`Color(Charte.X, a)`, 10 `Color.XXX`) ; `map_editor.gd` 20 ; `menu_particles_ambiance.gd` 18 ;
+`map_editor_hud.gd`, `releve_balistique.gd`, `carte_de_soiree.gd` 12 ; `menu_widgets.gd`,
+`menu_fiche_classe.gd` 11 ; `affiche_de_fin.gd`, `intro_planches.gd` 7 ; le reste de 0 à 4.
+Tailles en dur : `intro_planches.gd` (46, 46, 14), `affiche_de_fin.gd` `maxi(24, …)`,
+`carte_de_soiree.gd` `maxi(18, …)`, `MenuEngraver.new(0, 20, …)`, `menu_recitatif.gd` `TAILLE 26`.
+
+#### Les ressources d'`assets/ui` (toutes suivies par git, toutes avec leur `.import`)
+
+| Famille | Nombre | Taille | Style |
+|---|---|---|---|
+| `ill_*.png` (écrans du hub, intro) | 23 | 1024×640 | roman graphique 2D |
+| `fond_*.png` | 3 | 1920×1071 | roman graphique 2D |
+| `titres/titre_*.png`, `verdict_*.png`, `tampon_fatal.png` | 13 + 3 + 1 | ~1250×500 | lettrage doré ; les titres ne sont plus affichés (récitatif) |
+| `icones/arme_*`, `gadget_*`, `outil_*`, `rang_*`, `torche` | 14 + 10 + 19 + 10 + 1 | 128×128 | illustré 2D, trois-quarts |
+| `cartouche_fatal`, `curseur_torche`, `grain_video`, `vide_*`, `icone_*`, `apercu_personnalisation` | 8 | 128 à 1024 | divers |
+| `prompts/*.svg` | pictogrammes manette | — | — |
+
+#### Les suites qui gardent l'interface, et ce qu'elles figent
+
+- `test_menu_hub` : un lanceur a le même fond et le même cadre qu'une entrée, jamais une couleur
+  de joueur ; il se reconnaît à son gras.
+- `test_menus_finitions` : niveaux sonores d'interface, au moins dix titres `titre_`/`verdict_`
+  avec mipmaps, logo et avis, nœuds `PowerOn`, `IntroPlanches`, `Verrou`, `Accroupi`.
+- `test_pause_menu` : champs et signaux de la pause, curseur sur REPRENDRE.
+- `test_audit_menus` : aucun cadre droit vide, colonne de lecture `Charte.mesure_px`, minima de
+  commandes par panneau.
+- `test_menu_artworks`, `test_vitrine_menus` : les quinze effets et leur retour à l'état sain,
+  grisage `Color(1, 1, 1, 0.45)`.
+- `test_habillage` : aucun compteur ne tremble (chasse des dix chiffres mesurée), enseignes hors
+  fonte d'appareil, code de salon à largeur fixe, graisses qui agissent.
+- `test_charte` : saturation, aucune valeur pure, dérivées recalculées, pas de vert dans l'arène.
+- `test_banc` : les appuis du photographe (`UI.hub`, `match_hud`, `show_game_over`, `poser_bilan`,
+  `set_countdown`, `disposer_hud`…).
+- Aussi dans le lot : `test_hud_style`, `test_inked_icons`, `test_ecran_de_fin`,
+  `test_bandeau_fatal`, `test_intro_planches`, `test_enseigne`.
+- **Photographe** (`tools/photographe.gd`, plans `ecran`) : menus (`accueil`, `salon-local`,
+  `personnalisation`, `reglages`, `cadre-*`, `power-on`, `code-de-salon`), jeu (`decompte`, `hud`,
+  `ecran-scinde`, `entrainement`, `eblouissement`), fins (`killcam`, `gel-fatal`, `affiche`,
+  `soiree`, `verdict-victoire|defaite|egalite`, `bilan`).
+
+#### Ce que les planches du DA donnent à mesurer
+
+Relevé au pixel (PIL, quantification à dix teintes) sur `killcam_tireur_01`, `killcam_victime_01`,
+`vignette_bunker_01` et `face_mur_01` : **tout est chaud** (teinte 26 à 32°) et **peu saturé**
+(0,11 à 0,35). Encre #110E0B à #211D1A ; terre d'ombre #3E3229 ; béton #6D6359 à #8A7F73 ; papier
+ou béton éclairé #B29A7F à #D0B294 ; sol sous la torche #9F7950. 37 % du cadre en noir pur, bandes
+de format cinéma, et une estampe **à l'encre projetée** (cadre carré, éclaboussures), jamais du
+texte lisible. L'interface actuelle, elle, est froide (`ACIER`, `LINE`, `SURFACE` montent vers
+un bleu-gris) : c'est l'écart que l'étape 2 comble.
+
+Candidats vérifiés au calcul : `ENCRE` (0,075 ; 0,063 ; 0,051) et `PAPIER` (0,80 ; 0,72 ; 0,62) ;
+leurs mélanges à 22, 50 et 65 % retombent à quelques unités des mesures (béton à mi-chemin :
+#706456 contre #6D6359 mesuré). Contrastes sur l'encre à 94 % : `PAPIER` 9,9:1, béton clair
+4,8:1, `AMBRE` 10,1:1 ; sur la terre d'ombre, le béton clair tombe à 3,0:1 — **la terre d'ombre ne
+porte pas de texte**, elle fait les filets au repos.
+
+#### Ce qui lie l'habillage — décisions à ne pas défaire
+
+- En ligne, le HUD de l'adversaire est masqué (« Décisions actées ») ; la classe adverse n'est pas
+  annoncée ; le voile d'éblouissement passe sous le HUD ; une absence vaut mieux qu'une estimation.
+- Adrien a choisi les titres en **récitatif de BD** (chantier roman graphique, second lot) ; les
+  `titre_*.png` restent sur disque et leur suppression est sa décision. Il a **refusé** le lit
+  d'ambiance `menu_arene` (DA4.18) ; les halos néon ont été retirés ; la killcam est une « planche
+  de reconstitution » gardée à moitié (`FORCE_DESSIN` 0,5) ; les registres enseigne/appareil ont
+  été jugés à l'œil (DA4, 2026-08-24).
+- ⚠️ **Écart signalé** : le chantier roman graphique a laissé « tels quels », sur le mot d'Adrien,
+  le tampon et l'estampe de kill ; le brief demande de refaire l'estampe dans la composition des
+  planches killcam. La session cloud décide à la place d'Adrien jusqu'au test final ; l'habillage
+  garde la structure et le message de l'estampe (le cadre, « KILL — mm:ss ») et change sa matière
+  (encre, papier, pochoir). À juger au jalon.
+- Une image générée n'est jamais l'asset, seulement sa matière (« Décisions actées ») ; depuis le
+  2026-08-27, le menu entier est pourtant habillé d'images générées, floutées derrière le panneau.
+  Les images iso passent donc par le même traitement (détourage, recadrage, shader
+  `menu_artwork`), jamais posées brutes.
+
+#### Crochets et demandes en cours
+
+- `killcam_overlay.gdshader` : `trait_couleur` (vec3) et `virage` (vec4), à poser ici (voir
+  « Périmètre »).
+- ISO Assets, 24 images demandées à 05:21, accusé à 05:23, livrées par lot : A — fond du hub (2) ;
+  B — dix portraits de classe ; C — dix icônes de gadget ; D — victoire et défaite (2). Sources
+  brutes dans sa branche, prises par `git checkout claude/iso-assets-gemini-boards-4e8d33 --
+  <chemin>`, détourées ici par `tools/incruster_vert.py`.
+
+#### Pièges
+
+- ⚠️ **Une couleur de charte n'est pas une couleur d'interface** (voir plus haut). DA1 a réuni la
+  palette en un seul fichier, et le jeu en a hérité ; « changer la charte » ne veut plus dire
+  « changer les menus ».
+- ⚠️ **`pgrep -x Godot` vide n'est pas un Mac libre.** `run_suites.sh` enchaîne ses suites avec de
+  courts creux sans aucun Godot ; une attente qui déclare « libre » au premier creux lance son lot
+  au milieu de celui d'un autre. Exiger un vide qui dure (45 s ici), et revérifier juste avant de
+  lancer.
+- ⚠️ **`FETCH_HEAD` appartient au worktree qui a fait le `fetch`.** Lu depuis un autre arbre,
+  `git show FETCH_HEAD:…` échoue ; derrière un `2>/dev/null`, l'échec devient une liste vide, et
+  « aucun autre brief ne cite ce fichier » s'affiche sans qu'aucun brief n'ait été lu. Lire la
+  référence distante (`origin/claude/reveil`).
+
+
+#### Étape 2 — la charte iso : la pâte ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **`charte.gd`, famille « LA PÂTE »** : `ENCRE` et `PAPIER` mesurés sur les planches ;
+  `TERRE`, `BETON`, `BETON_CLAIR` écrits en formules (`lerp(ENCRE, PAPIER, 0,22 / 0,50 /
+  0,65)`) ; les rôles `PATE_FOND` (encre à 94 %), `PATE_RIDEAU` (encre × 0,5 à 96 %),
+  `PATE_FILET`, `PATE_TEXTE`, `PATE_TEXTE_SECOND`, `PATE_SURVOL`, `PATE_TEXTE_SUR_PAPIER`,
+  `PATE_FILAMENT` (l'ambre), `PATE_FILAMENT_COEUR` (l'halogène), `PATE_OMBRE` ; la matière
+  (`CHEMIN_PATE_GRAIN`, tuile de 256 px, force 0,10). **Aucune valeur existante n'a bougé.**
+- **La bascule par les alias, jamais par les valeurs** : `menu_theme.gd` (`LINE`, `SURFACE`,
+  `BACKDROP`, `DIM`, `LUMIERE`, `ACCENT` pointent vers la pâte ; `FILAMENT`,
+  `TEXTE_SUR_PAPIER`, `OMBRE` ajoutés), les alias `COLOR_*` d'`ui.gd`, les usines de
+  `menu_widgets.gd`, et les satellites de menu (`menu_hub`, `menu_recitatif`,
+  `menu_comic_panel`, `menu_fiche_classe`, `map_gallery`, la barre de `map_editor_hud`,
+  `menu_icones`, `menu_apercu`, `menu_hatch_rect`, `menu_rivets_overlay`). `P1` et `P2` — le
+  bleu et le rouge — ne bougent pas : ils disent qui regarde, ce ne sont pas des décors.
+- **La matière** : `menu_pate.gdshader`, préchargé dans `menu_widgets.gd`, AJOUTE un grain de
+  lavis à la plaque d'un `Control`, en espace local ; `assets/ui/matiere/pate_grain.png`
+  fabriqué par `tools/fabrique_pate_ui.py` (graine fixe ; tuilable par mosaïque 3 × 3 —
+  raccord gauche/droite 10,6 pour 10,0 entre voisins horizontaux, haut/bas 15,0 pour 13,0 entre
+  voisins verticaux ; moyenne 127,75). Un seul matériau, partagé.
+- **L'empâtement en un passage** : `MenuWidgets.empater(racine)`, appelé dans `ui._ready()`
+  sur les quatre racines du menu (hub, pause, choix de classe, dialogue), APRÈS le verre de
+  M14.
+- **Le fond du hub** : `assets/ui/fond_hub_iso.jpg` (source ISO Assets `hub_bunker_a`, commit
+  `fd07b5a` de sa branche, préparée par `tools/preparer_habillage.py`) remplace
+  `keyart_encre.png` — resté sur disque — à une présence de 0,40, et devient l'illustration de
+  l'accueil : clé `ill_accueil` déclarée dans `MenuArtwork.cle_canonique()`, POI recalé sur sa
+  torche mesurée (0,751 ; 0,354). Les illustrations floutées virent vers le rideau d'encre, plus
+  vers un bleu-noir.
+- **Le récitatif** prend le papier, l'encre et le grain de la pâte.
+- **Crochet partagé posé** : `killcam_overlay.gdshader`, `trait_couleur` et `virage` (voir
+  « Périmètre ») ; `ui.gd` ne les pousse pas encore — c'est l'étape 5.
+- **Préparation des images** : `tools/preparer_habillage.py` (fond, portrait 256, icône 128) —
+  détourage à seuils mesurés sur le bord de chaque source, recadrage avec marge, virage
+  encre/papier commun. Trois portraits préparés (fusil, pompe, arbalète), pas encore affichés :
+  la fiche de classe attend les dix (étape 3).
+
+**Décisions de cette étape.**
+- La pâte est une famille ajoutée et l'interface change de rôles ; la charte d'appareil reste
+  celle du jeu. `test_charte` n'a pas une ligne de changée.
+- Grain ajouté, jamais multiplié : sur l'encre, une matière multipliée ne se verrait pas. Au pic
+  du grain, le texte courant garde 8,7:1.
+- La règle de M14 — « un effet de matière se pose sur ce qu'on manipule, pas sur ce qu'on lit » —
+  tient : le grain est le fond d'une plaque, pas une luisance sur un chiffre ; le texte, enfant
+  de la plaque, n'est pas sous le matériau.
+- Les portraits gardent le lavis orangé des sources pour l'unité des dix ; le virage se fait au
+  détourage, identique pour tous. `hub_bunker_b` est écarté (rendu 3D lisse, hors pâte D).
+
+**Preuves.** `tools/test_habillage.gd` gagne huit familles de contrôles : la pâte descend de deux
+couleurs (dérivées, saturation, teinte chaude 20-40°) ; elle se lit (4,5:1 et 7:1, fonds
+translucides composés sur le noir) ; la matière est posée (fichier, taille, grain centré,
+matériau partagé qui porte sa texture) ; le voile de killcam porte son crochet (lu dans le texte
+du shader, sans `source_color`, défauts inchangés) ; le menu est empâté sans avoir éteint le verre
+de M14 ; les fichiers basculés ne nomment plus aucun neutre d'appareil ni aucune couleur
+chiffrée ; `preparer_habillage.py` recopie fidèlement la charte ; les ressources existent, ont
+leur taille et sont connues de git.
+Sabotée une fois : `LINE` repointé vers `C.LINE` dans `menu_theme.gd` (la bascule oubliée) → code 1,
+un seul échec, qui nomme `menu_theme.gd:62` ; rétabli. Son premier passage avait déjà trouvé de VRAIES fautes :
+sept `Charte.DIM` restés dans quatre satellites, et un contrôle du crochet qui accusait à tort la trame
+d'encre. Les suites qui gardent l'interface (`test_charte`, `test_menu_hub`, `test_menus_finitions`,
+`test_pause_menu`, `test_audit_menus`, `test_vitrine_menus`, `test_menu_artworks`, `test_hud_style`,
+`test_ecran_de_fin`, `test_banc`) passent. Photographe en vraie fenêtre, HOME isolé, `intro_vue=true` :
+21 captures avant (`953ead3`) et 21 après, planche `docs/iso/planche_habillage.jpg` (accueil, réglages,
+salon, HUD, killcam, affiche). Le HUD, la killcam et l'affiche n'y changent presque pas : ce sont les
+étapes 4 à 6.
+
+**À juger à l'œil (jalon).** Le bunker iso en fond du hub ne se voit qu'au-dessus du cadre de droite, qui
+couvre sa torche : son angle de mur arrière dessine un fronton derrière l'enseigne. Lisible, mais ce n'est
+pas la lumière de l'image qui se montre.
+
+**Pièges.**
+- ⚠️ **Un nœud n'a qu'un matériau.** Posée avant le verre de M14, la pâte est écrasée ; posée
+  après sans garde, elle éteint le verre — dans les deux cas sans une erreur. D'où un passage
+  unique, placé après `_build_menu()`, qui saute tout nœud déjà doté.
+- ⚠️ **Le texte d'un `Button` est dessiné par le bouton**, donc sous son matériau : le grain
+  passerait sur les lettres. Les entrées du hub, dont le libellé est un `Label` enfant, prennent
+  la pâte ; les boutons à `text` propre ne la prennent pas.
+- ⚠️ **`hint_default_white` est le cousin de `hint_default_black`** : un grain absent éclaircit
+  chaque panneau uniformément, sans erreur. `materiau_pate()` crie, et la suite exige le paramètre.
+- ⚠️ **Un raccord de tuile se compare aux voisins du même axe.** Le lavis est horizontal : comparé à
+  l'écart horizontal, le raccord vertical passait pour une couture qu'il n'est pas.
+- ⚠️ **Un `sed` ne dit rien quand son motif manque** — ni erreur, ni code de retour. Et le `sed` de macOS
+  **ignore `\b`** : `s/Charte\.DIM\b/…/` n'a rien remplacé dans quatre fichiers, sans un mot. C'est le
+  contrôle par lecture de `test_habillage` qui l'a trouvé, pas la relecture.
+
+
+#### Étape 3 — le hub : les portraits de classe ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **Dix portraits iso**, `assets/ui/portraits/portrait_<slug>.png`, 256 px : sources ISO Assets
+  (`2129a89`, dont le Parasite regénéré au bon cadrage), préparés par `tools/preparer_habillage.py`
+  — détourage à seuils mesurés sur le bord de chaque source (verdeur du fond de 76 à 94 selon
+  l'image), recadrage avec 8 % de marge, virage encre/papier commun, mipmaps.
+- **La fiche de classe** (`menu_fiche_classe.gd`) montre le portrait dans sa première case, à la
+  place du sprite vu de dessus ; **l'affiche du match** (`ui.gd`, `_refresh_class_cards`) aussi.
+  Un seul format de chemin : `MenuFicheClasse.chemin_portrait(slug)`.
+- Le fond du hub et l'illustration d'accueil sont ceux de l'étape 2.
+
+**Décision de cette étape — et elle suit la règle qui semblait l'interdire.** La fiche montrait le
+sprite parce qu'il était « exactement la silhouette que l'adversaire découpera dans le faisceau » ;
+une illustration « aurait promis une allure que le jeu ne rend pas ». L'iso est devenu le jeu : ce
+que l'adversaire découpe est désormais le corps VOXEL épais, et le portrait est tiré de la frise de
+ces corps. C'est le sprite vu de dessus qui promettrait aujourd'hui une allure que le jeu ne rend
+plus. Aucun repli sur le sprite : un portrait absent laisse la case vide.
+
+⚠️ **Aucun autoload dans la fiche**, donc aucun choix « portrait en iso, sprite en vue de dessus » :
+`menu_fiche_classe.gd` est préchargé par `test_classes` en `--script`, et un fichier qui nomme un
+autoload y devient inchargeable. La vue de dessus n'est plus qu'un drapeau de débogage ; la fiche
+montre le jeu.
+
+**Preuves.** `tools/test_habillage.gd` : un portrait par classe DU CATALOGUE (`GameState.classes()`,
+jamais une liste recopiée — une onzième classe sans portrait rougira), 256 px, connu de git ; la
+fiche montre bien le portrait de la première classe. `test_classes` (qui exige un portrait non nul
+pour les dix) reste vert.
+
+
+#### Étape 4 — le HUD de match ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **`ui.gd`, la plage du HUD** (de la classe `CircularCooldown` à `_build_status_bar`) : les
+  neutres d'appareil passent aux rôles de la pâte ; les couleurs chiffrées descendent de la
+  charte (ombres `MenuWidgets.SHADOW_COLOR_DEFAULT` et `PATE_OMBRE`, modulations
+  `Color(Color.WHITE, a)`) ; les textes halogènes passent à `COLOR_LUMIERE`. **La lumière reste
+  halogène** : le cercle de recharge (couleur du joueur), la jauge d'une réserve, les curseurs.
+- **La pâte sur les panneaux** : panneaux joueur et chrono (`ComicHudPanel`, par son `_draw` — pas
+  de `StyleBoxTexture`, que `test_hud_style` refuse), cartouche de torche, cartouches de fusées et
+  de gadget. Les libellés, enfants, restent nets. Le matériau vit sur le NŒUD : les styles
+  remplacés à chaque image par `_set_*_style` ne l'effacent pas.
+- **Dix icônes de gadget iso** (lot C d'ISO Assets, `2129a89` ; suie et braises regénérées en
+  `21e16d4`, rognées à la source la première fois), préparées à 128 px avec le même détourage et
+  le même virage que les portraits. La fiche de classe les montre aussi.
+- **Aucune information de plus** : mêmes libellés, mêmes champs, même disposition ; le masquage du
+  panneau adverse en ligne (`disposer_hud`) n'est pas touché.
+
+**Preuves.** `tools/test_habillage.gd` relit la plage du HUD — bornée par ses MARQUEURS, jamais
+par des numéros de ligne — et y refuse tout neutre d'appareil et toute couleur chiffrée ; il exige
+la pâte sur les panneaux joueur et sur la cartouche du chrono. `test_hud_style` (liseré à la
+couleur du joueur, pas de `StyleBoxTexture`) reste vert. Captures du HUD avant/après sur la planche.
+Lot complet : **rouge au premier passage** sur `duo_reconnexion` seul (« le salon rouvert accepte le
+retour », côté hôte ; aucune erreur de script dans les journaux) — l'intermittent déjà consigné plus haut
+(ISO2 et famille 4.1), qui dépend du tempo de la machine. Relancé en entier sur l'arbre inchangé : **vert,
+tout passe, 403 s**. Le commit s'est fait sur ce second lot, jamais sur le premier.
+
+**Pièges.**
+- ⚠️ **L'`awk` de macOS ignore `\b`, comme son `sed`** : un relevé des neutres par `awk` est revenu
+  VIDE sur une plage qui en comptait une cinquantaine. Le `grep` de macOS, lui, le comprend. Un
+  relevé vide se revérifie par un autre outil avant de se croire.
+- ⚠️ **Un contrôle borné par numéros de ligne relit autre chose à l'étape suivante** : chaque étape
+  ajoute des lignes à `ui.gd`. Bornes par marqueurs (`class CircularCooldown`,
+  `func _build_status_bar`), et un contrôle qui échoue si les marqueurs disparaissent.
+
+
+#### Étape 5 — la killcam ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **Le voile** reçoit la pâte par le crochet de l'étape 2 : `ui.gd` pousse `trait_couleur` (le
+  papier) et `virage` (le papier, à `Charte.PATE_VIRAGE_KILLCAM` = 0,35). Sous le curseur CONFORT
+  « Grain de la killcam » et sous `FORCE_DESSIN` comme tout le dessin : à zéro, l'image nue. Le
+  matériau est partagé avec le calque plein écran de la vue iso (ISO5) : les deux vues suivent.
+- **Les bandes de format cinéma** des planches `killcam_tireur_01` / `killcam_victime_01` : deux
+  aplats d'encre de 7,5 % de hauteur, empâtés, montés SOUS le HUD ; leur visibilité suit le cadre
+  de killcam (`visibility_changed`) plutôt que chaque site qui ouvre ou ferme la killcam.
+- **Le mot KILLCAM** : ses deux ombres étaient bleue et ambre — la frange d'un moniteur vidéo, un
+  vocabulaire que la killcam a quitté le 2026-09-11. Elles deviennent l'encre et le carmin d'un
+  tirage mal repéré ; le tremblement, animation jugée, ne bouge pas ; le mot prend le pochoir.
+- **L'estampe de kill** garde sa FORME — « KILL — mm:ss », sa place au centre, son inclinaison, son
+  rebond, jugés par Adrien — et change de MATIÈRE : le grain du pochoir
+  (`MenuWidgets.materiau_pochoir()`, `Charte.PATE_POCHOIR_FORCE` = 0,28) et un cadre d'encre projetée
+  carmin (`assets/ui/matiere/tampon_encre.png`, fabriqué par `tools/fabrique_tampon_encre.py`,
+  graine fixe), posé ENFANT du libellé et dessiné derrière lui : il hérite de l'inclinaison, de
+  l'échelle et du fondu sans une ligne d'animation de plus.
+- Le timecode, le cadre de killcam, le cadre photo et les légendes passent au papier et à la terre
+  d'ombre.
+
+**Décision.** Le pochoir est la seule matière qui passe SUR des lettres : un tampon ne prend
+jamais uniformément. Partout ailleurs, la pâte évite le texte (`empater()`).
+
+
+#### Étape 6 — les fins et l'intro ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **L'affiche de fin** pose l'illustration du lot D d'ISO Assets (`fin_victoire.jpg`,
+  `fin_defaite.jpg`, recadrées À L'INTÉRIEUR de leur encre par `tools/preparer_habillage.py` — le
+  bord de papier clair aurait fait un cadre blanc sur un jeu noir) en ENFANT du fond opaque, à
+  55 %. Elle suit le mot LU sur le titre du menu, jamais recalculé : défaite → la lampe tombée ;
+  victoire ou « JOUEUR n GAGNE » → la torche tenue ; égalité → le noir. **Retournée** : les planches
+  posent leur sujet éclairé à gauche, où l'affiche pose le mot ; en miroir, la gauche est l'ombre.
+- **La carte de soirée** remplit enfin son emplacement câblé et vide depuis DA6.3
+  (`carte_soiree_fond.png`) : un recadrage 4:5 du bunker du hub, centré sur sa torche mesurée,
+  posé à 22 % comme prévu. Aucune ligne de sa logique ne change ; ses couleurs passent à la pâte.
+- **Les verdicts ne sont plus des images.** Les trois lettrages dorés générés
+  (`titres/verdict_*.png`) cèdent la place au titre lui-même, en enseigne avec le pochoir, à la
+  couleur que `show_game_over()` lui donne (gris d'égalité compris). Les fichiers restent sur
+  disque : leur suppression est la décision d'Adrien, comme pour les titres.
+- **L'intro** garde son texte et prend la charte : lettrage en papier à `T_VERDICT` et à la graisse
+  d'enseigne de sa taille (il était à 46 px, fonte chargée sans graisse), indice à `T_COURANT`,
+  cartouche en encre et ambre de la charte avec la pâte, halo en halogène de la charte.
+
+**À juger au jalon.** L'affiche de fin cesse d'être un aplat noir : c'est le premier écran où une
+illustration générée occupe tout le cadre sous du texte. À 55 %, le mot se lit ; c'est la seule
+valeur de cette étape réglée à la capture plutôt que par un calcul.
+
+
 ## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
 
 **Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le

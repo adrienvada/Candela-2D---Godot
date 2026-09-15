@@ -99,7 +99,7 @@ func _composer(faits: Dictionary) -> void:
 	# Un filet plus présent qu'au menu : il tombe sur une image de jeu presque
 	# noire, où `LINE` disparaîtrait. C'est la même couleur, montée en alpha —
 	# jamais une seconde couleur, qui ferait une seconde décision à tenir.
-	cadre.teinte = Color(Charte.ACIER, 0.34)
+	cadre.teinte = Color(Charte.PATE_TEXTE_SECOND, 0.34)
 	_racine.add_child(cadre)
 
 	var taille := _ecran()
@@ -116,12 +116,12 @@ func _composer(faits: Dictionary) -> void:
 	_racine.add_child(pied)
 	var gauche := _legende(faits)
 	if gauche != "":
-		pied.add_child(_mention(gauche, Color(Charte.ACIER, 0.62)))
+		pied.add_child(_mention(gauche, Color(Charte.PATE_TEXTE_SECOND, 0.62)))
 	var vide := Control.new()
 	vide.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pied.add_child(vide)
 	pied.add_child(_mention("CANDELA · " + _date(),
-		Color(Charte.HALOGENE, 0.55)))
+		Color(Charte.PATE_TEXTE, 0.55)))
 
 	# --- le tampon, inchangé --------------------------------------------
 	var tampon := Label.new()
@@ -139,6 +139,13 @@ func _composer(faits: Dictionary) -> void:
 	tampon.pivot_offset = taille / 2.0
 	tampon.rotation = INCLINAISON
 	tampon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Habillage iso (2026-09-15) : la MATIÈRE du tampon, jamais sa forme. Le texte,
+	# la place, l'inclinaison et le rebond restent ceux qu'Adrien a jugés (chantier
+	# roman graphique : « restés tels quels ») ; le tampon prend le grain du pochoir
+	# et un cadre d'encre projetée, la signature des planches `killcam_tireur_01` et
+	# `killcam_victime_01`.
+	MenuWidgets.poser_pochoir(tampon)
+	_poser_cadre_de_tampon(tampon, reglages, taille)
 	_racine.add_child(tampon)
 
 	# Le cadre et les mentions arrivent AVANT le tampon, et plus doucement : ils
@@ -204,6 +211,45 @@ func _exit_tree() -> void:
 		var ci := n as CanvasItem
 		if is_instance_valid(ci):
 			ci.modulate.a = 1.0
+
+
+## Le cadre d'encre projetée du tampon — un masque blanc fabriqué par
+## `tools/fabrique_tampon_encre.py` (graine fixe), teinté du carmin.
+const CHEMIN_CADRE_TAMPON := "res://assets/ui/matiere/tampon_encre.png"
+## Le cadre déborde du mot : 30 % en largeur, 55 % en hauteur, pour que le trait
+## d'encre ne morde jamais sur une lettre.
+const CADRE_DEBORD := Vector2(1.30, 1.55)
+
+
+## Pose le cadre ENFANT du libellé, dessiné DERRIÈRE lui (`show_behind_parent`) :
+## il hérite de l'inclinaison, de l'échelle et du fondu du tampon sans une ligne
+## d'animation de plus — deux tweens tenus d'accord finiraient par se décaler.
+##
+## ⚠️ **Absent, le tampon reste nu, et le dit** : un `push_error`, jamais un cadre
+## de remplacement. Un repli dessiné à la main se prendrait pour l'asset.
+func _poser_cadre_de_tampon(tampon: Label, reglages: LabelSettings, taille: Vector2) -> void:
+	if not ResourceLoader.exists(CHEMIN_CADRE_TAMPON):
+		push_error("estampe de kill : cadre de tampon absent — %s" % CHEMIN_CADRE_TAMPON)
+		return
+	var mot := Vector2(reglages.font_size * 6.0, reglages.font_size)
+	if reglages.font != null:
+		mot = reglages.font.get_string_size(tampon.text, HORIZONTAL_ALIGNMENT_LEFT,
+			-1, reglages.font_size)
+	var dim := mot * CADRE_DEBORD
+	var cadre := TextureRect.new()
+	cadre.name = "CadreDeTampon"
+	cadre.texture = load(CHEMIN_CADRE_TAMPON)
+	cadre.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	cadre.stretch_mode = TextureRect.STRETCH_SCALE
+	cadre.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	cadre.self_modulate = Charte.CARMIN
+	cadre.show_behind_parent = true
+	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Le libellé couvre l'écran (`PRESET_FULL_RECT`) et centre son texte : son
+	# centre local est donc le centre de l'écran, connu avant toute mise en page.
+	cadre.size = dim
+	cadre.position = taille / 2.0 - dim / 2.0
+	tampon.add_child(cadre)
 
 
 ## La taille réelle de l'écran, disponible IMMÉDIATEMENT.

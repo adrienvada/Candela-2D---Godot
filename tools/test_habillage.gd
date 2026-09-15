@@ -137,6 +137,19 @@ func _run() -> void:
 	_test_le_registre_suit_le_gabarit()
 	_test_la_graisse_agit()
 	_test_la_table_des_graisses()
+	_test_la_pate_descend_de_deux_couleurs()
+	_test_la_pate_se_lit()
+	_test_la_matiere_est_posee()
+	_test_le_voile_de_killcam_porte_son_crochet()
+	_test_le_menu_est_empate()
+	_test_les_fichiers_bascules_parlent_la_pate()
+	_test_la_preparation_recopie_la_charte()
+	_test_les_ressources_de_l_habillage()
+	_test_les_portraits_de_classe(main)
+	_test_le_hud_parle_la_pate()
+	_test_la_killcam_porte_la_pate()
+	_test_l_estampe_garde_sa_forme_et_change_de_matiere()
+	_test_l_affiche_pose_son_illustration()
 
 	main.queue_free()
 	if _ko == 0:
@@ -360,3 +373,483 @@ func _test_la_table_des_graisses() -> void:
 	for poids: int in appareil.keys():
 		_check(not enseigne.has(poids),
 			"le poids %d sert dans les deux registres : il ne dit plus lequel" % poids)
+
+
+# =============================================================================
+# LA PÂTE — l'habillage iso (2026-09-15)
+# =============================================================================
+#
+# La charte d'appareil disait « LED » ; les planches iso disent encre et papier.
+# Ces contrôles tiennent la famille ajoutée à `charte.gd` à ce qu'elle affirme :
+# deux couleurs mesurées et des dérivées qui en sont des FORMULES, une teinte
+# chaude, et une lecture que les chiffres garantissent plutôt que l'œil.
+
+
+## Écart maximal entre deux couleurs, sur les quatre canaux.
+static func _ecart(a: Color, b: Color) -> float:
+	return maxf(maxf(absf(a.r - b.r), absf(a.g - b.g)),
+		maxf(absf(a.b - b.b), absf(a.a - b.a)))
+
+
+## Luminance relative au sens des contrastes de lecture (sRGB linéarisé).
+static func _lum(c: Color) -> float:
+	var canaux: Array[float] = []
+	for v: float in [c.r, c.g, c.b]:
+		canaux.append(v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4))
+	return 0.2126 * canaux[0] + 0.7152 * canaux[1] + 0.0722 * canaux[2]
+
+
+static func _contraste(a: Color, b: Color) -> float:
+	var la := _lum(a)
+	var lb := _lum(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+## ⚠️ **Un fond translucide se lit sur ce qu'il recouvre.** Le fond de panneau est
+## à 94 % ; mesuré seul, il vaudrait sa couleur pleine, et le contraste serait
+## calculé sur un panneau qui n'existe pas à l'écran. Il recouvre le noir de la
+## vue : c'est sur ce noir qu'on le compose.
+static func _sur_le_noir(fond: Color) -> Color:
+	return Color(fond.r * fond.a, fond.g * fond.a, fond.b * fond.a)
+
+
+func _test_la_pate_descend_de_deux_couleurs() -> void:
+	for d: Array in [[C.TERRE, 0.22, "TERRE"], [C.BETON, 0.50, "BETON"],
+			[C.BETON_CLAIR, 0.65, "BETON_CLAIR"]]:
+		var attendu: Color = C.ENCRE.lerp(C.PAPIER, d[1])
+		_check(_ecart(d[0], attendu) < 0.0005,
+			"%s n'est plus lerp(ENCRE, PAPIER, %.2f) : %s contre %s" % [d[2], d[1], d[0], attendu])
+	_check(_ecart(C.PATE_FOND, Color(C.ENCRE, 0.94)) < 0.0005,
+		"PATE_FOND n'est plus l'encre à 94 %% : %s" % C.PATE_FOND)
+	var rideau := Color(C.ENCRE.r * 0.5, C.ENCRE.g * 0.5, C.ENCRE.b * 0.5, 0.96)
+	_check(_ecart(C.PATE_RIDEAU, rideau) < 0.0005,
+		"PATE_RIDEAU n'est plus ENCRE × 0,5 à 96 %% : %s contre %s" % [C.PATE_RIDEAU, rideau])
+
+	# Les règles dures de la charte valent pour la pâte : saturation plafonnée,
+	# aucune valeur pure. Et la sienne : la pâte est CHAUDE — c'est la mesure des
+	# planches (teinte 26 à 32°), et c'est ce qui la sépare de l'appareil.
+	var famille := {"ENCRE": C.ENCRE, "PAPIER": C.PAPIER, "TERRE": C.TERRE,
+		"BETON": C.BETON, "BETON_CLAIR": C.BETON_CLAIR}
+	for nom: String in famille.keys():
+		var c: Color = famille[nom]
+		_check(c.s <= 0.7501, "%s dépasse le plafond de saturation : %.3f" % [nom, c.s])
+		for canal: float in [c.r, c.g, c.b]:
+			_check(canal > 0.0 and canal < 1.0, "%s porte une valeur pure : %s" % [nom, c])
+		var teinte := c.h * 360.0
+		_check(teinte >= 20.0 and teinte <= 40.0,
+			"%s n'est plus dans les teintes chaudes des planches (20-40°) : %.1f°" % [nom, teinte])
+
+
+## Les seuils de lecture : 4,5:1 pour tout texte, 7:1 pour le texte courant, qui
+## se lit longtemps. Mesurés : papier 9,9 ; béton clair 4,8 ; filament 10,1.
+func _test_la_pate_se_lit() -> void:
+	var fond := _sur_le_noir(C.PATE_FOND)
+	var cas := [
+		[C.PATE_TEXTE, fond, 7.0, "le texte courant sur un panneau"],
+		[C.PATE_TEXTE_SECOND, fond, 4.5, "le texte secondaire sur un panneau"],
+		[C.PATE_FILAMENT, fond, 4.5, "le filament sur un panneau"],
+		[C.PATE_TEXTE_SUR_PAPIER, C.PATE_SURVOL, 7.0, "le texte d'une plaque survolée"],
+		[C.PATE_TEXTE, _sur_le_noir(C.PATE_RIDEAU), 7.0, "le texte courant sur un rideau"],
+	]
+	for c: Array in cas:
+		var r := _contraste(c[0], c[1])
+		_check(r >= c[2], "%s ne se lit plus : %.2f:1 pour %.1f:1 exigés" % [c[3], r, c[2]])
+
+
+## La matière est un fichier, un matériau et un paramètre : les trois doivent y
+## être, et aucun des trois ne crie tout seul s'il manque.
+func _test_la_matiere_est_posee() -> void:
+	_check(ResourceLoader.exists(C.CHEMIN_PATE_GRAIN),
+		"le grain de la pâte n'existe pas : %s" % C.CHEMIN_PATE_GRAIN)
+	var tex := load(C.CHEMIN_PATE_GRAIN) as Texture2D
+	_check(tex != null, "le grain de la pâte ne se charge pas (cache d'import construit ?)")
+	if tex != null:
+		_check(tex.get_width() == int(C.PATE_GRAIN_ECHELLE) and tex.get_height() == int(C.PATE_GRAIN_ECHELLE),
+			"le grain n'a plus le côté de sa tuile : %d×%d pour %d" % [
+				tex.get_width(), tex.get_height(), int(C.PATE_GRAIN_ECHELLE)])
+		# Le shader AJOUTE (g − 0,5) : un grain décentré assombrirait ou
+		# éclaircirait chaque panneau, uniformément et sans erreur.
+		var img := tex.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			var somme := 0.0
+			var n := 0
+			for y in range(0, img.get_height(), 4):
+				for x in range(0, img.get_width(), 4):
+					somme += img.get_pixel(x, y).r
+					n += 1
+			var moyenne := somme / float(maxi(n, 1))
+			_check(absf(moyenne - 0.5) < 0.02,
+				"le grain n'est plus centré : moyenne %.3f pour 0,5" % moyenne)
+	var m := MenuWidgets.materiau_pate()
+	_check(m != null and m.shader != null, "le matériau de la pâte n'a pas son shader")
+	if m != null:
+		_check(m.get_shader_parameter("grain") != null,
+			"le matériau de la pâte ne porte pas son grain : chaque panneau s'éclaircirait sans erreur")
+		_check(MenuWidgets.materiau_pate() == m,
+			"le matériau de la pâte n'est plus partagé : un matériau par panneau les sépare tous au dessin")
+
+
+## Le crochet posé dans le voile de killcam, lu dans le TEXTE du shader.
+##
+## ⚠️ **Pas par `get_shader_uniform_list()`** : en headless, le serveur de rendu
+## factice peut rendre une liste vide, et le contrôle échouerait pour une raison
+## qui n'a rien à voir. Et `set_shader_parameter` sur un nom absent ne dit rien :
+## sans ce contrôle, un uniform renommé laisserait `ui.gd` pousser dans le vide.
+func _test_le_voile_de_killcam_porte_son_crochet() -> void:
+	var sh := load("res://killcam_overlay.gdshader") as Shader
+	_check(sh != null, "killcam_overlay.gdshader ne se charge pas")
+	if sh == null:
+		return
+	var code := sh.code
+	for decl: String in ["uniform vec3 trait_couleur", "uniform vec4 virage"]:
+		var i := code.find(decl)
+		_check(i >= 0, "le voile de killcam ne déclare plus « %s »" % decl)
+		if i >= 0:
+			var ligne := code.substr(i, code.find("\n", i) - i)
+			_check(not ligne.contains("source_color"),
+				"« %s » porte un hint source_color : sous gl_compatibility le défaut ne rendrait plus le même trait" % decl)
+	_check(code.contains("uniform vec3 trait_couleur = vec3(0.98, 0.91, 0.80);"),
+		"le trait par défaut n'est plus le littéral qu'il remplace : la killcam changerait sans qu'on le demande")
+	_check(code.contains("uniform vec4 virage = vec4(0.0, 0.0, 0.0, 0.0);"),
+		"le virage par défaut n'est plus éteint")
+	# ⚠️ Visé sur le littéral du TRAIT, pas sur « mix(postere, vec3( » : la trame
+	# d'encre juste au-dessus s'écrit `mix(postere, vec3(0.0), …)`, et le premier jet
+	# de ce contrôle la prenait pour l'ancien trait — un échec qui accusait le crochet.
+	_check(not code.contains("mix(postere, vec3(0.98"),
+		"le trait lit encore un littéral au lieu de trait_couleur")
+
+
+## Le passage d'empâtement a eu lieu sur le menu — et il n'a rien écrasé.
+##
+## ⚠️ **Les deux échecs possibles sont muets à l'écran**, et c'est pourquoi ils
+## se comptent : un passage oublié laisse des panneaux lisses que seule une
+## capture montre ; un passage fait AVANT le verre de M14 serait écrasé par lui,
+## et un passage fait APRÈS sans garde éteindrait le verre — dans les deux cas
+## sans une erreur, un nœud n'ayant qu'un matériau.
+func _test_le_menu_est_empate() -> void:
+	var pate := MenuWidgets.materiau_pate()
+	var hub = _ui.get("hub")
+	var racine = _ui.get("game_over_panel")
+	_check(hub != null and racine != null, "ui.hub ou ui.game_over_panel introuvable")
+	if hub == null or racine == null:
+		return
+	var empatees := 0
+	var lettres_grainees := 0
+	var rangees := 0
+	var rangees_sans_verre := 0
+	var pile: Array[Node] = [racine]
+	while not pile.is_empty():
+		var n: Node = pile.pop_back()
+		if n is CanvasItem and (n as CanvasItem).material == pate:
+			empatees += 1
+			if n is Button and (n as Button).text != "":
+				lettres_grainees += 1
+		if n is PanelContainer and String(n.name).begins_with(MenuGlass.PREFIXE_RANGEE):
+			rangees += 1
+			if (n as CanvasItem).material == null or (n as CanvasItem).material == pate:
+				rangees_sans_verre += 1
+		pile.append_array(n.get_children())
+	_check(empatees >= 8, "le menu n'est pas empâté : %d plaques seulement" % empatees)
+	_check(lettres_grainees == 0,
+		"%d boutons portent la pâte sur leur propre texte : le grain passe sur les lettres" % lettres_grainees)
+	var droite: Control = hub.right_panel()
+	_check(droite != null and droite.material != null and droite.material != pate,
+		"le cadre de droite a perdu son verre (M14)")
+	_check(rangees_sans_verre == 0,
+		"%d rangées de réglage sur %d ont perdu leur verre (M14)" % [rangees_sans_verre, rangees])
+	var pause = _ui.get("pause_panel")
+	if pause != null:
+		var n_pause := MenuWidgets.empater(pause)
+		_check(n_pause == 0,
+			"la pause avait encore %d plaques sans pâte après la construction" % n_pause)
+
+
+## Les fichiers d'interface déjà basculés vers la pâte. La liste GRANDIT d'étape en
+## étape (HUD, killcam, fins) : un fichier y entre quand il est repris, jamais
+## avant — sinon le contrôle rougirait sur un travail pas encore fait.
+const FICHIERS_PATE := [
+	"menu_theme.gd", "menu_widgets.gd", "menu_hub.gd", "menu_recitatif.gd",
+	"menu_comic_panel.gd", "menu_fiche_classe.gd", "map_gallery.gd",
+	"map_editor_hud.gd", "menu_icones.gd", "menu_apercu.gd", "menu_hatch_rect.gd",
+	"menu_rivets_overlay.gd",
+	# Étape 5 : la killcam.
+	"cadre_photo.gd", "estampe_de_kill.gd",
+	# Étape 6 : les fins et l'intro.
+	"affiche_de_fin.gd", "carte_de_soiree.gd", "intro_planches.gd",
+]
+
+
+## « Aucune couleur en dur hors `charte.gd` », vérifié en LISANT les fichiers.
+##
+## Deux interdits, et une permission :
+## - les neutres d'APPAREIL (`ACIER`, `SURFACE`, `LINE`, `DIM`, `BACKDROP`) — froids,
+##   et partagés avec le jeu : un fichier d'interface qui les nomme encore a
+##   échappé à la bascule ;
+## - tout littéral chiffré `Color(0…` — une couleur qui n'a pas de nom n'a pas de
+##   formule, et c'est ainsi que le dépôt avait accumulé 220 `Color(...)`.
+## - **permis** : `HALOGENE` et `AMBRE`, qui sont la LUMIÈRE et non un neutre (le
+##   cône dessiné de la fiche, le cœur du filament), et `Color.WHITE`, qui n'est
+##   pas une couleur mais une modulation neutre.
+## Les commentaires sont exclus : ils nomment l'ancienne couleur pour dire
+## pourquoi elle est partie.
+func _test_les_fichiers_bascules_parlent_la_pate() -> void:
+	var neutres := RegEx.new()
+	neutres.compile("\\b(Charte|C)\\.(ACIER|SURFACE|LINE|DIM|BACKDROP)\\b")
+	var chiffres := RegEx.new()
+	chiffres.compile("\\bColor\\(\\s*[0-9.]")
+	var lus := 0
+	for f: String in FICHIERS_PATE:
+		var fa := FileAccess.open("res://" + f, FileAccess.READ)
+		if fa == null:
+			_check(false, "fichier basculé illisible : %s" % f)
+			continue
+		lus += 1
+		var n := 0
+		while not fa.eof_reached():
+			var ligne := fa.get_line()
+			n += 1
+			var code := ligne
+			var diese := ligne.find("#")
+			if diese >= 0:
+				code = ligne.substr(0, diese)
+			if neutres.search(code) != null:
+				_check(false, "%s:%d nomme encore un neutre d'appareil : %s" % [f, n, ligne.strip_edges()])
+			if chiffres.search(code) != null:
+				_check(false, "%s:%d écrit une couleur chiffrée : %s" % [f, n, ligne.strip_edges()])
+	_check(lus == FICHIERS_PATE.size(), "tous les fichiers basculés ont été lus")
+
+
+## `tools/preparer_habillage.py` recopie l'encre, le béton et le papier pour le
+## virage des portraits. Une copie est une vérité de plus : on la relit ici.
+func _test_la_preparation_recopie_la_charte() -> void:
+	var fa := FileAccess.open("res://tools/preparer_habillage.py", FileAccess.READ)
+	_check(fa != null, "tools/preparer_habillage.py illisible")
+	if fa == null:
+		return
+	var texte := fa.get_as_text()
+	var attendus := {"ENCRE": C.ENCRE, "BETON": C.BETON, "PAPIER": C.PAPIER}
+	for nom: String in attendus.keys():
+		var re := RegEx.new()
+		re.compile("(?m)^%s = \\(([0-9.]+), ([0-9.]+), ([0-9.]+)\\)" % nom)
+		var m := re.search(texte)
+		_check(m != null, "preparer_habillage.py ne déclare plus %s" % nom)
+		if m == null:
+			continue
+		var c: Color = attendus[nom]
+		var copie := Color(float(m.get_string(1)), float(m.get_string(2)), float(m.get_string(3)))
+		_check(_ecart(Color(c, 1.0), copie) < 0.0005,
+			"preparer_habillage.py a divergé de charte.gd sur %s : %s contre %s" % [nom, copie, c])
+
+
+## Chaque ressource de l'habillage : présente, chargée, à sa taille, connue de git.
+##
+## ⚠️ **« Connue de git » n'est pas une coquetterie.** Une image posée dans le
+## worktree et jamais ajoutée passe toutes les suites de la machine qui l'a
+## fabriquée, puis manque partout ailleurs — et le repli de l'appelant la
+## cacherait. `git ls-files --error-unmatch` le dit avant le commit.
+const RESSOURCES_HABILLAGE := {
+	"res://assets/ui/matiere/pate_grain.png": Vector2i(256, 256),
+	"res://assets/ui/fond_hub_iso.jpg": Vector2i(1920, 1071),
+	"res://assets/ui/matiere/tampon_encre.png": Vector2i(1024, 340),
+	"res://assets/ui/fin_victoire.jpg": Vector2i(1920, 1080),
+	"res://assets/ui/fin_defaite.jpg": Vector2i(1920, 1080),
+	"res://assets/ui/carte_soiree_fond.png": Vector2i(1080, 1350),
+}
+
+
+func _test_les_ressources_de_l_habillage() -> void:
+	var depot := ProjectSettings.globalize_path("res://")
+	for chemin: String in RESSOURCES_HABILLAGE.keys():
+		var tex := load(chemin) as Texture2D if ResourceLoader.exists(chemin) else null
+		_check(tex != null, "ressource d'habillage absente ou non importée : %s" % chemin)
+		if tex != null:
+			var attendu: Vector2i = RESSOURCES_HABILLAGE[chemin]
+			_check(Vector2i(tex.get_width(), tex.get_height()) == attendu,
+				"%s n'a plus sa taille : %d×%d pour %s" % [chemin, tex.get_width(), tex.get_height(), attendu])
+		var sortie: Array = []
+		var code := OS.execute("git", ["-C", depot, "ls-files", "--error-unmatch",
+			chemin.trim_prefix("res://")], sortie, true)
+		_check(code == 0, "%s n'est pas connu de git : il manquerait sur toute autre machine" % chemin)
+	# Et ce sont bien celles que le hub montre.
+	_check(String(_ui.get("KEY_ART")) == "res://assets/ui/fond_hub_iso.jpg",
+		"le fond du hub n'est plus le bunker iso : %s" % _ui.get("KEY_ART"))
+	var ill: Dictionary = _ui.get("ILLUSTRATIONS")
+	_check(ill != null and String(ill.get("ill_accueil", "")) == "res://assets/ui/fond_hub_iso.jpg",
+		"l'illustration d'accueil n'est plus le bunker iso")
+	_check(MenuArtwork.cle_canonique("res://assets/ui/fond_hub_iso.jpg") == "ill_accueil",
+		"le bunker iso ne se rattache plus à la clé ill_accueil (POI et effet)")
+
+
+## Les portraits iso — étape 3 : un par classe DU CATALOGUE, jamais d'une liste
+## recopiée ici (une onzième classe sans portrait doit rougir, pas passer), à
+## 256 px, connus de git ; et la fiche les montre à la place du sprite vu de dessus.
+func _test_les_portraits_de_classe(main: Node) -> void:
+	var catalogue: Array = main.call("classes") if main.has_method("classes") else []
+	_check(catalogue.size() == int(_ui.get("NB_CLASSES")),
+		"le catalogue des classes n'a pas été lu : %d classes" % catalogue.size())
+	var depot := ProjectSettings.globalize_path("res://")
+	for c in catalogue:
+		var chemin := MenuFicheClasse.chemin_portrait(String(c.slug()))
+		var tex := load(chemin) as Texture2D if ResourceLoader.exists(chemin) else null
+		_check(tex != null, "portrait absent ou non importé : %s" % chemin)
+		if tex != null:
+			_check(tex.get_width() == 256 and tex.get_height() == 256,
+				"%s n'a plus 256 px : %d×%d" % [chemin, tex.get_width(), tex.get_height()])
+		var sortie: Array = []
+		var code := OS.execute("git", ["-C", depot, "ls-files", "--error-unmatch",
+			chemin.trim_prefix("res://")], sortie, true)
+		_check(code == 0, "%s n'est pas connu de git" % chemin)
+	if catalogue.is_empty():
+		return
+	var fiche := MenuFicheClasse.new()
+	root.add_child(fiche)
+	fiche.batir(Charte.BLEU)
+	var premiere = catalogue[0]
+	fiche.montrer(premiere, catalogue)
+	var attendu := load(MenuFicheClasse.chemin_portrait(String(premiere.slug())))
+	_check(fiche._portrait.texture == attendu,
+		"la fiche ne montre pas le portrait iso de %s" % premiere.slug())
+	fiche.queue_free()
+
+
+## Le HUD de match — étape 4 : il parle la pâte, et ses panneaux en portent la
+## matière.
+##
+## ⚠️ **La plage relue d'`ui.gd` est bornée par des MARQUEURS, pas par des numéros
+## de ligne** : de la classe `CircularCooldown` à `_build_status_bar`. Un numéro
+## est un constat daté (piège déjà consigné) ; le fichier gagne des lignes à
+## chaque étape, et un contrôle borné en dur relirait bientôt autre chose que le
+## HUD. Même règle que `_test_les_fichiers_bascules_parlent_la_pate` : aucun neutre
+## d'appareil, aucune couleur chiffrée ; `HALOGENE` reste permis, c'est la lumière
+## (les curseurs, la jauge d'une réserve).
+func _test_le_hud_parle_la_pate() -> void:
+	var fa := FileAccess.open("res://ui.gd", FileAccess.READ)
+	_check(fa != null, "ui.gd illisible")
+	if fa == null:
+		return
+	var neutres := RegEx.new()
+	neutres.compile("\\b(Charte|C)\\.(ACIER|SURFACE|LINE|DIM|BACKDROP)\\b")
+	var chiffres := RegEx.new()
+	chiffres.compile("\\bColor\\(\\s*[0-9.]")
+	var dedans := false
+	var vu_debut := false
+	var vu_fin := false
+	var n := 0
+	while not fa.eof_reached():
+		var ligne := fa.get_line()
+		n += 1
+		if ligne.begins_with("class CircularCooldown"):
+			dedans = true
+			vu_debut = true
+		elif ligne.begins_with("func _build_status_bar"):
+			dedans = false
+			vu_fin = true
+		if not dedans:
+			continue
+		var code := ligne
+		var diese := ligne.find("#")
+		if diese >= 0:
+			code = ligne.substr(0, diese)
+		if neutres.search(code) != null:
+			_check(false, "ui.gd:%d (HUD) nomme encore un neutre d'appareil : %s" % [n, ligne.strip_edges()])
+		if chiffres.search(code) != null:
+			_check(false, "ui.gd:%d (HUD) écrit une couleur chiffrée : %s" % [n, ligne.strip_edges()])
+	_check(vu_debut and vu_fin,
+		"les marqueurs de la plage du HUD ont disparu d'ui.gd : le contrôle ne relit plus rien")
+
+	# Les panneaux joueur et le chrono portent la pâte. Le panneau du chrono se
+	# retrouve par le parent du chrono, comme le fait `test_hud_style`.
+	var pate := MenuWidgets.materiau_pate()
+	for champ: String in ["p1_panel", "p2_panel"]:
+		var panneau = _ui.get(champ)
+		_check(panneau != null and (panneau as CanvasItem).material == pate,
+			"ui.%s ne porte pas la pâte" % champ)
+	var chrono = _ui.get("time_label")
+	var cartouche: Node = chrono
+	while cartouche != null and not cartouche.get("is_center_panel"):
+		cartouche = cartouche.get_parent()
+	_check(cartouche != null and (cartouche as CanvasItem).material == pate,
+		"la cartouche du chrono ne porte pas la pâte")
+
+
+## La killcam — étape 5 : le voile reçoit la pâte par son crochet, les bandes de
+## format cinéma existent et restent cachées hors killcam, et le mot a quitté la
+## frange bleu/ambre d'un moniteur vidéo.
+func _test_la_killcam_porte_la_pate() -> void:
+	var voile = _ui.get("killcam_overlay")
+	_check(voile != null and voile.material != null, "le voile de killcam n'a pas de matériau")
+	if voile != null and voile.material != null:
+		var virage = voile.material.get_shader_parameter("virage")
+		_check(virage is Vector4 and absf((virage as Vector4).w - C.PATE_VIRAGE_KILLCAM) < 0.001,
+			"le voile de killcam ne reçoit pas le virage de la charte : %s" % str(virage))
+		var trait_c = voile.material.get_shader_parameter("trait_couleur")
+		_check(trait_c is Vector3 and absf((trait_c as Vector3).x - C.PAPIER.r) < 0.001,
+			"le trait du voile n'est pas passé au papier : %s" % str(trait_c))
+	var bandes = _ui.get("killcam_bandes")
+	_check(bandes != null and (bandes as Control).get_child_count() == 2,
+		"les bandes de format cinéma de la killcam n'existent pas")
+	if bandes != null:
+		_check(not (bandes as Control).visible, "les bandes de killcam sont visibles hors killcam")
+		# ⚠️ **« Sous le HUD », pas « premier enfant »** : `_build_menu()` passe après
+		# `_build_killcam()` et place la torche du menu en tête du calque, si bien que
+		# les bandes n'y sont plus premières. La propriété qui compte est leur rang
+		# par rapport au HUD — le premier jet de ce contrôle exigeait l'index 0 et
+		# aurait échoué sans défaut.
+		var hud = _ui.get("match_hud")
+		_check(hud != null and (bandes as Node).get_index() < (hud as Node).get_index(),
+			"les bandes de killcam passent PAR-DESSUS le HUD de match")
+	for champ: String in ["killcam_label_shadow1", "killcam_label_shadow2"]:
+		var l = _ui.get(champ)
+		if l != null:
+			var c: Color = (l as Label).get_theme_color("font_color")
+			_check(not c.is_equal_approx(Color(C.BLEU, 0.5)) and not c.is_equal_approx(Color(C.AMBRE, 0.5)),
+				"ui.%s porte encore la frange d'un moniteur vidéo : %s" % [champ, c])
+	var mot = _ui.get("killcam_label")
+	_check(mot != null and (mot as CanvasItem).material == MenuWidgets.materiau_pochoir(),
+		"le mot KILLCAM ne porte pas le pochoir")
+
+
+## L'estampe de kill — étape 5 : sa FORME est celle qu'Adrien a jugée (le texte, la
+## place au centre, l'inclinaison), sa MATIÈRE change (pochoir, cadre d'encre).
+func _test_l_estampe_garde_sa_forme_et_change_de_matiere() -> void:
+	var estampe := EstampeDeKill.poser(root, {"temps": 72.0})
+	var tampon: Label = null
+	for n in estampe.find_children("*", "Label", true, false):
+		if (n as Label).text.begins_with("KILL"):
+			tampon = n
+	_check(tampon != null, "l'estampe n'a plus son tampon « KILL — mm:ss »")
+	if tampon != null:
+		_check(tampon.text == "KILL — 01:12", "le texte du tampon a changé : %s" % tampon.text)
+		_check(is_equal_approx(tampon.rotation, EstampeDeKill.INCLINAISON),
+			"l'inclinaison du tampon a changé")
+		_check(tampon.material == MenuWidgets.materiau_pochoir(), "le tampon ne porte pas le pochoir")
+		var cadre := tampon.get_node_or_null("CadreDeTampon") as TextureRect
+		_check(cadre != null and cadre.texture != null, "le tampon n'a pas son cadre d'encre")
+		if cadre != null:
+			_check(cadre.show_behind_parent, "le cadre du tampon est dessiné PAR-DESSUS le mot")
+			_check(cadre.self_modulate.is_equal_approx(C.CARMIN), "le cadre du tampon n'est pas carmin")
+	estampe.free()
+
+
+## L'affiche de fin — étape 6 : l'illustration suit le mot LU, retournée, et
+## l'égalité garde son noir.
+func _test_l_affiche_pose_son_illustration() -> void:
+	var cas := [
+		[{"vainqueur": 0, "local_idx": 0}, AfficheDeFin.FIN_VICTOIRE],
+		[{"vainqueur": 1, "local_idx": 0}, AfficheDeFin.FIN_DEFAITE],
+		[{"vainqueur": 0, "local_idx": -1}, AfficheDeFin.FIN_VICTOIRE],
+		[{"vainqueur": -1}, ""],
+	]
+	for c: Array in cas:
+		var affiche := AfficheDeFin.poser(root, c[0])
+		var ill := affiche.find_child("Illustration", true, false) as TextureRect
+		if String(c[1]) == "":
+			_check(ill == null, "l'égalité ne doit pas porter d'illustration")
+		else:
+			_check(ill != null and ill.texture == load(String(c[1])),
+				"l'affiche (%s) ne pose pas %s" % [str(c[0]), c[1]])
+			if ill != null:
+				_check(ill.flip_h, "l'illustration de fin n'est pas retournée : le mot tomberait sur la lumière")
+		affiche.free()

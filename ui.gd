@@ -72,16 +72,20 @@ const VoileTextures := preload("res://voile_textures.gd")
 const COLOR_P1 := Charte.BLEU
 const COLOR_P2 := Charte.ROUGE
 const COLOR_GOLD := Charte.AMBRE
-const COLOR_DIM := Charte.DIM
+## ⚠️ **Habillage iso (2026-09-15) : les alias d'interface pointent vers les
+## rôles de la PÂTE**, plus vers les couleurs d'appareil du même nom. Celles-ci
+## (`Charte.DIM`, `LINE`, `SURFACE`, `ACIER`) sont lues aussi par le jeu ; les
+## retoucher aurait repeint l'arène. Voir « LA PÂTE » dans `charte.gd`.
+const COLOR_DIM := Charte.PATE_TEXTE_SECOND
 ## L'accent d'interface — celui qui n'appartient à aucun des deux joueurs.
-const COLOR_ACCENT := Charte.ACIER
+const COLOR_ACCENT := Charte.PATE_SURVOL
 ## Avertissement qui n'est pas une erreur ; le succès et l'échec ont désormais
 ## leurs propres couleurs (`Charte.ETAT_OK` / `Charte.ETAT_FAUTE`).
 const COLOR_WARN := Charte.ETAT_ATTENTION
-const COLOR_LINE := Charte.LINE
-const COLOR_SURFACE := Charte.SURFACE
-## Le blanc cassé de la lumière : il remplace chaque blanc pur de l'interface.
-const COLOR_LUMIERE := Charte.HALOGENE
+const COLOR_LINE := Charte.PATE_FILET
+const COLOR_SURFACE := Charte.PATE_FOND
+## Le texte courant : le papier des planches (il était l'halogène).
+const COLOR_LUMIERE := Charte.PATE_TEXTE
 
 ## Espacements : la grille de 8, et son unique demi-pas.
 const GAP_XXS := Charte.GAP_XXS
@@ -240,7 +244,7 @@ const PANEL_HISTORY := "panneau_historique"
 ## - **les écrans de mode montrent des CAPTURES** du jeu réel — on y prépare un
 ##   match, et ce qu'on veut alors savoir c'est à quoi il ressemble vraiment.
 const ILLUSTRATIONS := {
-	"ill_accueil": "res://assets/ui/ill_accueil.png",
+	"ill_accueil": "res://assets/ui/fond_hub_iso.jpg",
 	"ill_amical_ligne": "res://assets/ui/ill_amical_ligne.png",
 	"ill_amical_local": "res://assets/ui/ill_amical_local.png",
 	"ill_scinde": "res://assets/ui/ill_ecran_scinde.png",
@@ -312,9 +316,9 @@ class CircularCooldown extends Control:
 			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
 		# Cercle d'acier discret (épaisseur 2 px)
-		draw_arc(center, radius, 0, TAU, 32, Charte.LINE, 2.0, true)
+		draw_arc(center, radius, 0, TAU, 32, Charte.PATE_FILET, 2.0, true)
 		# Repères cardinaux de précision télémétrique
-		var col_tick := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.50)
+		var col_tick := Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.50)
 		draw_line(center + Vector2(0, -radius - 2.0), center + Vector2(0, -radius + 2.0), col_tick, 1.0)
 		draw_line(center + Vector2(0, radius - 2.0), center + Vector2(0, radius + 2.0), col_tick, 1.0)
 		draw_line(center + Vector2(-radius - 2.0, 0), center + Vector2(-radius + 2.0, 0), col_tick, 1.0)
@@ -404,7 +408,7 @@ class CartoucheReserve extends PanelContainer:
 		var y := size.y + ECART_JAUGE
 		# La piste d'abord, pleine largeur : sans elle, une jauge à 10 % ne dirait
 		# pas de quoi elle est la part.
-		draw_rect(Rect2(0.0, y, size.x, EPAISSEUR_JAUGE), Charte.LINE)
+		draw_rect(Rect2(0.0, y, size.x, EPAISSEUR_JAUGE), Charte.PATE_FILET)
 		if fraction > 0.0:
 			draw_rect(Rect2(0.0, y, size.x * fraction, EPAISSEUR_JAUGE), Charte.HALOGENE)
 
@@ -429,8 +433,8 @@ class CartoucheReserve extends PanelContainer:
 ## d'acier nets, avec repères de massicot d'imprimerie aux tiers d'écran.
 class SplitGutterDivider extends Panel:
 	const COULEUR_FOND := Charte.NOIR
-	const COULEUR_FILET := Charte.LINE
-	const COULEUR_REPERE := Color(0.70, 0.76, 0.82, 0.45) # Charte.ACIER * 0.45
+	const COULEUR_FILET := Charte.PATE_FILET
+	const COULEUR_REPERE := Color(Charte.BETON_CLAIR, 0.45)
 	const REPERES_Y := [0.18, 0.38, 0.62, 0.82]
 
 	func _init() -> void:
@@ -465,7 +469,7 @@ class SplitGutterDivider extends Panel:
 ## Remplace la texture 9-patch de cadre 3D sci-fi par un cartouche vectoriel net,
 ## avec liseré d'accent discret, onglet de coin biseauté et repères de massicot.
 class ComicHudPanel extends PanelContainer:
-	var accent_color: Color = Charte.ACIER
+	var accent_color: Color = Charte.PATE_TEXTE_SECOND
 	var is_player_1: bool = true
 	var is_center_panel: bool = false
 
@@ -474,6 +478,10 @@ class ComicHudPanel extends PanelContainer:
 		is_player_1 = p_is_p1
 		is_center_panel = p_is_center
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Habillage iso : la matière de la pâte sur ce que le panneau DESSINE (son
+		# fond, ses filets) — pas une `StyleBoxTexture`, que `test_hud_style` refuse.
+		# Les libellés, enfants, restent nets.
+		MenuWidgets.poser_pate(self)
 		var empty := StyleBoxEmpty.new()
 		add_theme_stylebox_override("panel", empty)
 
@@ -484,21 +492,21 @@ class ComicHudPanel extends PanelContainer:
 			return
 
 		# 1. Ombre d'encrage noire pure portée en décalage franc (3 px bas-droite)
-		draw_rect(Rect2(3.0, 3.0, w, h), Color(0.0, 0.0, 0.0, 0.90))
+		draw_rect(Rect2(3.0, 3.0, w, h), Charte.PATE_OMBRE)
 
-		# 2. Fond de panneau en Charte.SURFACE (96% opaque)
-		draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.96))
+		# 2. Fond de panneau en Charte.PATE_FOND (96% opaque)
+		draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.PATE_FOND.r, Charte.PATE_FOND.g, Charte.PATE_FOND.b, 0.96))
 
 		# 3. Filet d'encrage extérieur et d'acier (cadre net de 1 px)
-		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.LINE, false, 1.0)
+		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.PATE_FILET, false, 1.0)
 
 		# 4. Traitement du liseré d'accent et des repères de massicot
 		if is_center_panel:
 			# Chrono central : cartouche narratif compact
 			draw_line(Vector2(0.0, 1.0), Vector2(w, 1.0), accent_color, 2.0)
-			draw_line(Vector2(0.0, h - 1.0), Vector2(w, h - 1.0), Charte.LINE, 1.0)
+			draw_line(Vector2(0.0, h - 1.0), Vector2(w, h - 1.0), Charte.PATE_FILET, 1.0)
 			# Repères d'angles aux 4 coins (équerres de 6 px)
-			var col_c := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.65)
+			var col_c := Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.65)
 			var cr := 6.0
 			draw_line(Vector2(0.0, cr), Vector2(0.0, 0.0), col_c, 1.0)
 			draw_line(Vector2(0.0, 0.0), Vector2(cr, 0.0), col_c, 1.0)
@@ -538,7 +546,7 @@ class ComicHudPanel extends PanelContainer:
 				draw_polyline(pts, col_onglet, 1.0)
 
 			# Repères de massicot aux 3 coins libres (équerres de 8 px)
-			var col_c := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.65)
+			var col_c := Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.65)
 			var cr := 8.0
 			# Bas-gauche
 			draw_line(Vector2(0.0, h - cr), Vector2(0.0, h), col_c, 1.0)
@@ -564,7 +572,7 @@ class NeonFocusRing extends Panel:
 	## au-dessus de 32 elle concurrence le libellé qu'elle désigne.
 	const TAILLE_TORCHE := 28.0
 
-	var neon: Color = Charte.ACIER
+	var neon: Color = Charte.PATE_TEXTE_SECOND
 	var target_rect: Rect2 = Rect2()
 
 	var _style: StyleBoxFlat
@@ -584,7 +592,7 @@ class NeonFocusRing extends Panel:
 	## de servir les deux joueurs.
 	var torche: TextureRect
 
-	func _init(tint: Color = Charte.ACIER) -> void:
+	func _init(tint: Color = Charte.PATE_TEXTE_SECOND) -> void:
 		neon = tint
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -696,7 +704,7 @@ class VirtualGamepadCursor extends Control:
 		var shadow_points := PackedVector2Array()
 		for pt in points:
 			shadow_points.append(pt + Vector2(1.5, 1.5))
-		draw_colored_polygon(shadow_points, Color(0, 0, 0, 0.5))
+		draw_colored_polygon(shadow_points, Color(Charte.NOIR, 0.5))
 
 		# Corps de la flèche
 		var fill_color := neon.lerp(Charte.HALOGENE, 0.35 * wave)
@@ -1159,6 +1167,11 @@ var _killcam_derniere_image: int = -1
 var killcam_container: Control
 ## DA4.5 — le liseré de moniteur, en 9-slice par-dessus la killcam.
 var killcam_cadre: Control
+## Habillage iso (2026-09-15) : les bandes de format cinéma de la killcam.
+var killcam_bandes: Control
+## La hauteur d'une bande, en part de la hauteur de l'écran. 7,5 % : la proportion
+## des bandes des planches `killcam_tireur_01` et `killcam_victime_01`.
+const KILLCAM_BANDE := 0.075
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
 var killcam_timecode: Label
@@ -1192,6 +1205,12 @@ func _ready() -> void:
 	_build_pause_menu()
 	_build_pick_panel()
 	_build_dialog()
+	# Habillage iso (2026-09-15) : la pâte, en un seul passage sur les quatre
+	# racines du menu. **Après `_build_menu()`**, qui pose le verre de M14 : le
+	# passage saute tout nœud qui a déjà un matériau, et c'est ce qui l'empêche
+	# d'éteindre le verre. Le HUD et la killcam ont leurs propres étapes.
+	for racine: Node in [game_over_panel, pause_panel, pick_panel, dialog_panel]:
+		MenuWidgets.empater(racine)
 	_build_status_bar()
 	_build_countdown()
 	_build_debug_panel()
@@ -1934,7 +1953,7 @@ func _update_killcam(delta: float) -> void:
 		killcam_timecode.add_theme_color_override("font_color", Color(Charte.ROUGE, 0.8))
 	else:
 		killcam_timecode.text = "REC  \n%02d:%02d:%02d" % [mins, sec, frames]
-		killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
+		killcam_timecode.add_theme_color_override("font_color", Color(Charte.PATE_TEXTE, 0.8))
 
 	if killcam_overlay.material:
 		killcam_overlay.material.set_shader_parameter("time", ms / 1000.0)
@@ -2550,7 +2569,7 @@ func _build_center_hud() -> Control:
 	center_hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center_hud.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-	var panel := _create_glow_panel(Charte.ACIER * 0.5, false, true)
+	var panel := _create_glow_panel(Charte.PATE_TEXTE_SECOND * 0.5, false, true)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.custom_minimum_size = Vector2(190, 0)
 	center_hud.add_child(panel)
@@ -2610,9 +2629,9 @@ func _create_health_bars(color: Color) -> Dictionary:
 	bg_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Charte.SURFACE
+	bg_style.bg_color = Charte.PATE_FOND
 	bg_style.set_border_width_all(1)
-	bg_style.border_color = Charte.LINE
+	bg_style.border_color = Charte.PATE_FILET
 	bg_style.set_corner_radius_all(0)
 	bg_bar.add_theme_stylebox_override("background", bg_style)
 
@@ -2637,7 +2656,7 @@ func _create_health_bars(color: Color) -> Dictionary:
 	var hatch := MenuHatchRect.new()
 	hatch.name = "HatchAlerte"
 	hatch.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
-	hatch.color_ink = Color(0, 0, 0, 0.0)
+	hatch.color_ink = Color(Charte.NOIR, 0.0)
 	hatch.color_line = Charte.ROUGE
 	hatch.spacing = 8.0
 	hatch.line_width = 1.8
@@ -2678,13 +2697,13 @@ func _create_weapon_indicator(color: Color) -> Dictionary:
 	var title := Label.new()
 	title.text = "ARME"
 	title.add_theme_font_size_override("font_size", T_MENTION)
-	title.add_theme_color_override("font_color", Charte.ACIER)
+	title.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	info_box.add_child(title)
 
 	var ammo_label := Label.new()
 	ammo_label.text = "--"
 	ammo_label.add_theme_font_size_override("font_size", T_MENTION)
-	ammo_label.add_theme_color_override("font_color", Charte.HALOGENE)
+	ammo_label.add_theme_color_override("font_color", COLOR_LUMIERE)
 	info_box.add_child(ammo_label)
 
 	container.add_child(circle_container)
@@ -2740,11 +2759,14 @@ func _create_torch_indicator() -> PanelContainer:
 	marque.name = "Accroupi"
 	marque.text = "ACCROUPI"
 	marque.add_theme_font_size_override("font_size", T_MENTION)
-	marque.add_theme_color_override("font_color", Charte.ACIER)
+	marque.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	marque.visible = false
 	hbox.add_child(marque)
 
 	_set_torch_style(panel, false, Charte.HALOGENE)
+	# La cartouche prend la pâte. Son style est REMPLACÉ à chaque image
+	# (`_set_torch_style`) ; le matériau, lui, vit sur le nœud et reste.
+	MenuWidgets.poser_pate(panel)
 	return panel
 
 ## MB2 — la marque « accroupi » du panneau d'un joueur.
@@ -2864,7 +2886,7 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	decompte_g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	decompte_g.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	Charte.appareil(decompte_g, T_MENTION - 2)
-	decompte_g.add_theme_color_override("font_color", Charte.HALOGENE)
+	decompte_g.add_theme_color_override("font_color", COLOR_LUMIERE)
 	decompte_g.add_theme_color_override("font_outline_color", Charte.NOIR)
 	decompte_g.add_theme_constant_override("outline_size", 4)
 	icone_g.add_child(decompte_g)
@@ -2879,7 +2901,7 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	gadget_titre.text = "GADGET"
 	gadget_titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gadget_titre.add_theme_font_size_override("font_size", T_MENTION - 2)
-	gadget_titre.add_theme_color_override("font_color", Charte.ACIER)
+	gadget_titre.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	vbox_g.add_child(gadget_titre)
 
 	var gadget := Label.new()
@@ -2889,6 +2911,9 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	Charte.appareil(gadget, T_MENTION)
 	vbox_g.add_child(gadget)
 	_set_gadget_style(panel_gadget, false, Charte.HALOGENE)
+	# Les deux cartouches prennent la pâte, comme celle de la torche.
+	MenuWidgets.poser_pate(panel_fusees)
+	MenuWidgets.poser_pate(panel_gadget)
 
 	# Agencement selon le joueur pour la symétrie du HUD
 	if player == 0:
@@ -2952,7 +2977,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	# zéro s'écrit « 0 », et le tiret est réservé au Spectre.
 	lbl_f.text = "FUSÉES —" if plafond <= 0 else "FUSÉES %d" % n
 	lbl_f.add_theme_color_override("font_color",
-		Charte.HALOGENE if n > 0 else COLOR_DIM)
+		COLOR_LUMIERE if n > 0 else COLOR_DIM)
 
 	var p_f = res.get("panel_fusees", res.get("panel"))
 	if p_f is PanelContainer:
@@ -3030,7 +3055,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	var lbl_g: Label = res["gadget"]
 	lbl_g.text = texte_g
 	lbl_g.add_theme_color_override("font_color",
-		Charte.HALOGENE if vif else COLOR_DIM)
+		COLOR_LUMIERE if vif else COLOR_DIM)
 
 	# L'icône du gadget : posée seulement quand la classe change — `recadree` lit
 	# l'image, ce qui ne se fait pas à chaque image du HUD.
@@ -3044,7 +3069,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 			var chemin := classe.gadget.chemin_icone() if slug != "" else ""
 			ico.texture = MenuIcones.recadree(load(chemin)) \
 				if chemin != "" and ResourceLoader.exists(chemin) else null
-		ico.modulate = Color(1.0, 1.0, 1.0, 1.0 if vif else 0.45)
+		ico.modulate = Color(Color.WHITE, 1.0 if vif else 0.45)
 	var lbl_d: Label = res.get("gadget_decompte", null)
 	if lbl_d != null:
 		lbl_d.visible = decompte >= 0
@@ -3132,7 +3157,7 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(Charte.LINE, 0.9)
+		style.bg_color = Color(Charte.PATE_FILET, 0.9)
 		style.border_color = player_color
 		# DA5.7c — portait Vector2(3, 3) en dur, sans raison retrouvée pour cet
 		# écart d'1 px avec le reste du dépôt : aligné sur la constante la plus
@@ -3141,8 +3166,8 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 		style.shadow_size = 0
 		style.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
 	else:
-		style.bg_color = Color(Charte.SURFACE, 0.8)
-		style.border_color = Color(Charte.LINE, 1.0)
+		style.bg_color = Color(Charte.PATE_FOND, 0.8)
+		style.border_color = Color(Charte.PATE_FILET, 1.0)
 		style.shadow_size = 0
 		style.shadow_offset = Vector2.ZERO
 
@@ -3151,9 +3176,9 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 	var hbox := panel.get_child(0).get_child(0)
 	var label := hbox.get_child(1) as Label
 	if active:
-		label.add_theme_color_override("font_color", Charte.HALOGENE)
+		label.add_theme_color_override("font_color", COLOR_LUMIERE)
 	else:
-		label.add_theme_color_override("font_color", Charte.DIM)
+		label.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 
 	# Le cadenas ne se montre que torche allumée : verrouillée ET éteinte n'existe
 	# pas, et un cadenas sur une torche noire se lirait « torche bloquée ».
@@ -3179,14 +3204,14 @@ func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) 
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(Charte.LINE, 0.9)
+		style.bg_color = Color(Charte.PATE_FILET, 0.9)
 		style.border_color = player_color
-		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 		style.shadow_size = 0
 		style.shadow_offset = Vector2(3, 3)
 	else:
-		style.bg_color = Color(Charte.SURFACE, 0.8)
-		style.border_color = Color(Charte.LINE, 1.0)
+		style.bg_color = Color(Charte.PATE_FOND, 0.8)
+		style.border_color = Color(Charte.PATE_FILET, 1.0)
 		style.shadow_size = 0
 		style.shadow_offset = Vector2.ZERO
 
@@ -3199,12 +3224,12 @@ func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) 
 	var label: Label = hbox.get_node_or_null("Label")
 	if label != null:
 		if active:
-			label.add_theme_color_override("font_color", Charte.HALOGENE)
+			label.add_theme_color_override("font_color", COLOR_LUMIERE)
 		else:
-			label.add_theme_color_override("font_color", Charte.DIM)
+			label.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	var icon: TextureRect = hbox.get_node_or_null("Icon")
 	if icon != null:
-		icon.modulate = Color.WHITE if active else Color(1, 1, 1, 0.3)
+		icon.modulate = Color.WHITE if active else Color(Color.WHITE, 0.3)
 
 func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	if panel == null or panel.get_child_count() == 0:
@@ -3214,14 +3239,14 @@ func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color)
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(Charte.LINE, 0.9)
+		style.bg_color = Color(Charte.PATE_FILET, 0.9)
 		style.border_color = player_color
-		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 		style.shadow_size = 0
 		style.shadow_offset = Vector2(3, 3)
 	else:
-		style.bg_color = Color(Charte.SURFACE, 0.8)
-		style.border_color = Color(Charte.LINE, 1.0)
+		style.bg_color = Color(Charte.PATE_FOND, 0.8)
+		style.border_color = Color(Charte.PATE_FILET, 1.0)
 		style.shadow_size = 0
 		style.shadow_offset = Vector2.ZERO
 
@@ -3232,10 +3257,10 @@ func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color)
 	# couleur du titre et du nom disparaissait sans une erreur.
 	var titre: Label = panel.find_child("Titre", true, false)
 	if titre != null:
-		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.5))
+		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.5))
 	var label: Label = panel.find_child("Label", true, false)
 	if label != null:
-		label.add_theme_color_override("font_color", Charte.HALOGENE if active else COLOR_DIM)
+		label.add_theme_color_override("font_color", COLOR_LUMIERE if active else COLOR_DIM)
 
 
 # ===========================================================================
@@ -3541,6 +3566,16 @@ func _build_killcam() -> void:
 		# shader : en Godot 4 c'est l'échantillonneur qui décide, et l'import de la
 		# texture n'a pas de réglage de répétition à donner. Rien à vérifier ici.
 		material.set_shader_parameter("grain", load(planche))
+	# Habillage iso (2026-09-15) : la planche de reconstitution prend la pâte — son
+	# trait passe au papier, son dessin vire vers lui. Le crochet est dans le shader
+	# (`trait_couleur`, `virage`, sans `source_color`) ; le matériau est PARTAGÉ avec
+	# le calque plein écran de la vue iso (ISO5), donc les deux vues suivent.
+	# `tools/test_habillage.gd` exige les deux déclarations : `set_shader_parameter`
+	# sur un nom absent ne dit rien.
+	material.set_shader_parameter("trait_couleur",
+		Vector3(Charte.PAPIER.r, Charte.PAPIER.g, Charte.PAPIER.b))
+	material.set_shader_parameter("virage", Vector4(Charte.PAPIER.r, Charte.PAPIER.g,
+		Charte.PAPIER.b, Charte.PATE_VIRAGE_KILLCAM))
 	killcam_overlay.material = material
 	# killcam_overlay n'est PAS ajouté ici : GameState le reparente dans l'arène.
 
@@ -3551,12 +3586,18 @@ func _build_killcam() -> void:
 	killcam_container.hide()
 	add_child(killcam_container)
 
-	killcam_label_shadow1 = _make_killcam_label(Color(Charte.BLEU, 0.5))
+	# Habillage iso (2026-09-15) : les deux ombres étaient bleue et ambre — la
+	# frange d'un moniteur vidéo, un vocabulaire que la killcam a quitté le
+	# 2026-09-11 (planche de reconstitution). Elles deviennent l'ENCRE et le CARMIN
+	# d'un tirage mal repéré : le même tremblement, dans la langue de l'imprimé. Le
+	# mot, lui, prend le grain du pochoir.
+	killcam_label_shadow1 = _make_killcam_label(Color(Charte.NOIR, 0.8))
 	killcam_container.add_child(killcam_label_shadow1)
-	killcam_label_shadow2 = _make_killcam_label(Color(Charte.AMBRE, 0.5))
+	killcam_label_shadow2 = _make_killcam_label(Color(Charte.CARMIN, 0.6))
 	killcam_container.add_child(killcam_label_shadow2)
 	killcam_label = _make_killcam_label(Charte.ROUGE)
 	killcam_container.add_child(killcam_label)
+	MenuWidgets.poser_pochoir(killcam_label)
 
 	killcam_timecode = Label.new()
 	# DA4.2 — l'appareil. Le timecode défile image par image ; il est en outre
@@ -3564,7 +3605,7 @@ func _build_killcam() -> void:
 	# au lieu de le laisser aligné. C'est le seul compteur du jeu où le
 	# tremblement se verrait comme un défaut de marge plutôt que de chiffre.
 	Charte.appareil(killcam_timecode, T_TITRE)
-	killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
+	killcam_timecode.add_theme_color_override("font_color", Color(Charte.PATE_TEXTE, 0.8))
 	killcam_timecode.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	killcam_timecode.offset_right = -40
 	killcam_timecode.offset_top = 40
@@ -3588,10 +3629,42 @@ func _build_killcam() -> void:
 	killcam_cadre.name = "CadreKillcam"
 	# `HALOGENE` atténué : un cadre se devine, il ne se lit pas — la killcam
 	# reste la chose qu'on regarde.
-	killcam_cadre.teinte = Color(Charte.HALOGENE, 0.45)
+	killcam_cadre.teinte = Color(Charte.PATE_TEXTE, 0.45)
 	killcam_cadre.epaisseur = 1.5
 	killcam_cadre.hide()
 	add_child(killcam_cadre)
+
+	# Habillage iso (2026-09-15) — les bandes de format cinéma des planches
+	# `killcam_tireur_01` et `killcam_victime_01` : deux aplats d'encre, en haut et
+	# en bas, qui disent « ceci est un rejeu » avant qu'on lise le mot.
+	#
+	# ⚠️ **Montées SOUS le HUD** (premier enfant du calque) : le HUD de match reste
+	# lisible par-dessus, et rien de ce qu'il affiche n'est masqué. Elles ne mordent
+	# que sur les bords du REJEU, qui n'est plus une information de duel.
+	#
+	# ⚠️ **Leur visibilité suit le cadre de killcam** plutôt que d'être posée à
+	# chaque site qui ouvre ou ferme la killcam : un site oublié laisserait des
+	# bandes sur le match suivant, sans une erreur.
+	killcam_bandes = Control.new()
+	killcam_bandes.name = "BandesKillcam"
+	killcam_bandes.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	killcam_bandes.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	killcam_bandes.hide()
+	for haut in [true, false]:
+		var bande := ColorRect.new()
+		bande.name = "BandeHaute" if haut else "BandeBasse"
+		bande.color = Charte.ENCRE
+		bande.anchor_left = 0.0
+		bande.anchor_right = 1.0
+		bande.anchor_top = 0.0 if haut else 1.0 - KILLCAM_BANDE
+		bande.anchor_bottom = KILLCAM_BANDE if haut else 1.0
+		bande.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		MenuWidgets.poser_pate(bande)
+		killcam_bandes.add_child(bande)
+	add_child(killcam_bandes)
+	move_child(killcam_bandes, 0)
+	killcam_cadre.visibility_changed.connect(func() -> void:
+		killcam_bandes.visible = killcam_cadre.visible)
 
 func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
@@ -3640,12 +3713,20 @@ func _make_killcam_label(tint: Color) -> Label:
 ## Roman Graphique Brutaliste et jurait avec tout ce qui l'entoure désormais.
 ## Sa composition est conservée — deux faisceaux rasants, moitié gauche vide —
 ## parce que c'est elle qui laisse la place au titre et aux entrées.
-const KEY_ART := "res://assets/keyart/keyart_encre.png"
+##
+## **Habillage iso (2026-09-15) : le fond du hub est le bunker en iso**, dans la
+## pâte D des planches (`fond_hub_iso.jpg`, préparé par
+## `tools/preparer_habillage.py` depuis la source d'ISO Assets `hub_bunker_a`). Même
+## composition que la planche à l'encre qu'il remplace — le tiers gauche noir,
+## la lumière à droite —, et pour la même raison : c'est le tiers gauche qui
+## reçoit le titre et les entrées. `keyart_encre.png` reste sur disque.
+const KEY_ART := "res://assets/ui/fond_hub_iso.jpg"
 
-## Présence de la planche, 0 à 1. À 0,34, son faisceau le plus clair tombe vers
-## 0,34 de luminance — nettement sous un texte en `HALOGENE`, assez au-dessus du
-## fond pour qu'on voie deux torches se faire face.
-const PRESENCE_KEY_ART := 0.34
+## Présence de la planche, 0 à 1. La règle ne change pas : le point le plus clair
+## de l'image doit tomber vers 0,34 de luminance, sous le texte courant et
+## au-dessus du fond. La torche du bunker culmine vers 0,9 ; à 0,40 elle retombe
+## à 0,36. (La planche à l'encre, plus claire, était posée à 0,34.)
+const PRESENCE_KEY_ART := 0.40
 
 
 func _poser_le_key_art() -> void:
@@ -3765,7 +3846,7 @@ func _build_menu() -> void:
 
 	var backdrop := ColorRect.new()
 	backdrop.name = "Rideau"
-	backdrop.color = Charte.BACKDROP
+	backdrop.color = Charte.PATE_RIDEAU
 	# M10 lit ici l'opacité de nuit du panneau : elle est la valeur d'arrivée du
 	# rideau, et la relire dans le code de l'effet en ferait une seconde vérité
 	# qui finirait par diverger de celle-ci.
@@ -5350,11 +5431,14 @@ func _refresh_weapon_locks() -> void:
 ## elle existera, c'est ici qu'il faudra revenir — le son se sequencera sur
 ## l'animation, jamais sur un minuteur parallele qui derivera.
 ##
-const VERDICT_TEXTURES := {
-	"VICTOIRE": "res://assets/ui/titres/verdict_victoire.png",
-	"DÉFAITE": "res://assets/ui/titres/verdict_defaite.png",
-	"ÉGALITÉ": "res://assets/ui/titres/verdict_egalite.png",
-}
+## ⚠️ **Habillage iso (2026-09-15) : les verdicts ne sont plus des images.** Ils
+## étaient trois lettrages dorés générés (`assets/ui/titres/verdict_*.png`),
+## posés par-dessus le titre qu'ils rendaient transparent — le dernier reste des
+## titres en image qu'Adrien a remplacés par le récitatif le 2026-09-11. Le verdict
+## est désormais le TITRE lui-même : fonte d'enseigne, grain du pochoir, et la
+## couleur que `show_game_over()` lui donne (dont le gris de l'égalité, décision
+## d'Adrien). Les trois fichiers restent sur disque : leur suppression est sa
+## décision, comme pour les `titre_*.png`.
 
 ## `CANDELA 2D` est le titre du MENU, pas une fin de match : il se tait.
 func _poser_titre(texte: String) -> void:
@@ -5367,10 +5451,6 @@ func _poser_titre(texte: String) -> void:
 	var tex: Texture2D = null
 	if texte == "CANDELA 2D":
 		tex = load(Charte.CHEMIN_ENSEIGNE)
-	elif VERDICT_TEXTURES.has(texte):
-		var chemin: String = String(VERDICT_TEXTURES[texte])
-		if ResourceLoader.exists(chemin):
-			tex = load(chemin)
 	if tex != null:
 		menu_enseigne.texture = tex
 		const ENCRE_VISEE := 80.0
@@ -5397,6 +5477,8 @@ func _build_menu_header() -> Control:
 	header.add_theme_constant_override("separation", GAP_XS)
 
 	game_over_title = Label.new()
+	# Habillage iso : le verdict est tamponné — le grain du pochoir sur ses lettres.
+	MenuWidgets.poser_pochoir(game_over_title)
 	_poser_titre("CANDELA 2D")
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# DA4 — l'enseigne, et elle referme une incohérence entre l'arène et
@@ -5731,7 +5813,7 @@ func _build_map_card() -> Control:
 	var thumb_style := StyleBoxFlat.new()
 	thumb_style.bg_color = Charte.NOIR
 	thumb_style.set_border_width_all(1)
-	thumb_style.border_color = Charte.LINE
+	thumb_style.border_color = COLOR_LINE
 	thumb_style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
 	thumb_panel.add_theme_stylebox_override("panel", thumb_style)
 	row.add_child(thumb_panel)
@@ -6217,6 +6299,8 @@ func _build_class_card(joueur: int) -> Control:
 	var sprite := TextureRect.new()
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# Un portrait de 256 px posé à 88 : sans mipmaps il scintille (DA4.19).
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vignette.add_child(sprite)
 
@@ -6237,7 +6321,7 @@ func _build_class_card(joueur: int) -> Control:
 
 	var nom := Label.new()
 	Charte.enseigne(nom, T_APPUI)
-	nom.add_theme_color_override("font_color", Charte.HALOGENE)
+	nom.add_theme_color_override("font_color", COLOR_LUMIERE)
 	nom.horizontal_alignment = aligne
 	nom.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	nom.clip_text = true
@@ -6517,9 +6601,10 @@ func _refresh_class_cards() -> void:
 			continue
 		_cartes_classe_nom[joueur].text = String(c.libelle).to_upper()
 		_cartes_classe_meta[joueur].text = String(c.name)
-		# Le sprite de jeu, comme dans la fiche — et, comme elle, rien à sa
+		# Le portrait iso, comme dans la fiche (habillage iso, 2026-09-15 : le corps
+		# que l'adversaire découpe est désormais voxel) — et, comme elle, rien à sa
 		# place s'il manque : un cadre vide se voit, un repli se prend pour un choix.
-		var chemin := String(c.chemin_sprite())
+		var chemin := MenuFicheClasse.chemin_portrait(String(c.slug()))
 		_cartes_classe_sprite[joueur].texture = load(chemin) as Texture2D \
 			if ResourceLoader.exists(chemin) else null
 
@@ -6564,7 +6649,7 @@ func _build_pause_menu() -> void:
 
 	var backdrop := ColorRect.new()
 	backdrop.name = "Rideau"
-	backdrop.color = Color(Charte.BACKDROP, 0.88)
+	backdrop.color = Color(Charte.PATE_RIDEAU, 0.88)
 	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	pause_panel.add_child(backdrop)
 	# Le même matériau que le menu : les deux fonds ne sont jamais visibles
@@ -6673,7 +6758,7 @@ func _open_pause_options() -> void:
 	btn_back.show()
 
 	_poser_titre("OPTIONS")
-	game_over_title.add_theme_color_override("font_color", Charte.HALOGENE)
+	game_over_title.add_theme_color_override("font_color", COLOR_LUMIERE)
 	game_over_score.text = ""
 
 	hub.reset()

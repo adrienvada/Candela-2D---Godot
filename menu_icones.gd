@@ -281,7 +281,7 @@ static func recadree(tex: Texture2D) -> Texture2D:
 ## joueur*. Le site d'appel reste libre de la changer, c'est tout l'intérêt de
 ## ne pas enfermer la couleur ici.
 static func poser_outil(bouton: Button, slug: String,
-		teinte: Color = Charte.HALOGENE, cote: float = 22.0) -> bool:
+		teinte: Color = Charte.PATE_TEXTE, cote: float = 22.0) -> bool:
 	return poser_texture(bouton, outil(slug), teinte, cote)
 
 
@@ -307,7 +307,7 @@ static func poser_texture(bouton: Button, tex: Texture2D, teinte: Color,
 	bouton.add_theme_color_override("icon_normal_color", teinte)
 	bouton.add_theme_color_override("icon_pressed_color", teinte)
 	bouton.add_theme_color_override("icon_hover_color", teinte)
-	bouton.add_theme_color_override("icon_disabled_color", Charte.DIM)
+	bouton.add_theme_color_override("icon_disabled_color", Charte.PATE_TEXTE_SECOND)
 	return true
 
 

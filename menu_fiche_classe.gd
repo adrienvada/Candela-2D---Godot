@@ -94,7 +94,7 @@ const COTE_GADGET := 64.0
 ## capture, le Parasite était un carré vide. Un gris désaturé rend la découpe
 ## lisible sans rien peindre sur la figure. Public : les cartes de classe de
 ## l'affiche du match (`ui.gd`) montrent le même sprite, et le même fond.
-const FOND_SPRITE := Color(0.28, 0.30, 0.33)
+const FOND_SPRITE := Charte.TERRE
 
 var _teinte: Color = Charte.BLEU
 
@@ -229,14 +229,14 @@ func batir(teinte: Color) -> void:
 
 func _batir() -> void:
 	add_theme_stylebox_override("panel",
-		MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 2))
+		MenuWidgets.make_panel_style(Charte.PATE_FILET, MenuWidgets.CORNER_PANEL, 2))
 
 	# La trame d'encre, DERRIÈRE le contenu (`show_behind_parent`) : c'est le
 	# fond de case de bande dessinée, pas un voile posé sur le texte.
 	var trame := MenuHatchRect.new()
 	trame.name = "Trame"
 	trame.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
-	trame.color_ink = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.94)
+	trame.color_ink = Color(Charte.PATE_FOND.r, Charte.PATE_FOND.g, Charte.PATE_FOND.b, 0.94)
 	trame.color_line = Color(_teinte.r, _teinte.g, _teinte.b, 0.10)
 	trame.spacing = 13.0
 	trame.density = 0.22
@@ -278,7 +278,7 @@ func _batir() -> void:
 	# que soit l'ouverture — en haut, il mordait sur le faisceau.
 	_cone_valeur = Label.new()
 	Charte.appareil(_cone_valeur, Charte.T_MENTION, Charte.POIDS_APPUI)
-	_cone_valeur.add_theme_color_override("font_color", Charte.HALOGENE)
+	_cone_valeur.add_theme_color_override("font_color", Charte.PATE_TEXTE)
 	_cone_valeur.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# ⚠️ **Enfant du cône, ancré, et pas du `PanelContainer`** : posé dans la case
 	# avec un simple alignement « bas », il restait à mi-hauteur — mesuré à la
@@ -321,7 +321,7 @@ func _batir() -> void:
 	var etiquette_gadget := Label.new()
 	etiquette_gadget.text = "GADGET"
 	Charte.appareil(etiquette_gadget, Charte.T_MENTION)
-	etiquette_gadget.add_theme_color_override("font_color", Charte.DIM)
+	etiquette_gadget.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	entete_gadget.add_child(etiquette_gadget)
 
 	# Il porte une vraie règle du jeu : un gadget qui éblouit change ce que
@@ -334,14 +334,14 @@ func _batir() -> void:
 
 	_gadget = Label.new()
 	Charte.appareil(_gadget, Charte.T_APPUI, Charte.POIDS_APPUI)
-	_gadget.add_theme_color_override("font_color", Charte.HALOGENE)
+	_gadget.add_theme_color_override("font_color", Charte.PATE_TEXTE)
 	_gadget.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	colonne_gadget.add_child(_gadget)
 
 	# Ce que le gadget FAIT — le nom seul ne le dit pas (Adrien, 2026-09-10).
 	_gadget_description = Label.new()
 	Charte.appareil(_gadget_description, Charte.T_MENTION)
-	_gadget_description.add_theme_color_override("font_color", Charte.ACIER)
+	_gadget_description.add_theme_color_override("font_color", Charte.PATE_SURVOL)
 	_gadget_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	colonne_gadget.add_child(_gadget_description)
 
@@ -361,7 +361,7 @@ func _batir_jauges(col: VBoxContainer) -> void:
 		var etiquette := Label.new()
 		etiquette.text = String(ligne["libelle"])
 		Charte.appareil(etiquette, Charte.T_MENTION)
-		etiquette.add_theme_color_override("font_color", Charte.DIM)
+		etiquette.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 		etiquette.custom_minimum_size = Vector2(112, 0)
 		grille.add_child(etiquette)
 
@@ -372,7 +372,7 @@ func _batir_jauges(col: VBoxContainer) -> void:
 
 		var valeur := Label.new()
 		Charte.appareil(valeur, Charte.T_MENTION, Charte.POIDS_APPUI)
-		valeur.add_theme_color_override("font_color", Charte.HALOGENE)
+		valeur.add_theme_color_override("font_color", Charte.PATE_TEXTE)
 		valeur.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		valeur.custom_minimum_size = Vector2(72, 0)
 		grille.add_child(valeur)
@@ -466,10 +466,16 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 		_vider()
 		return
 
-	# Le sprite du joueur SERT de portrait : c'est exactement la silhouette que
-	# l'adversaire découpera dans le faisceau. Une illustration séparée aurait
-	# promis une allure que le jeu ne rend pas.
-	_portrait.texture = _recadree(_texture_si(classe.chemin_sprite()))
+	# ⚠️ **Habillage iso (2026-09-15) : le portrait iso remplace le sprite vu de
+	# dessus, et c'est la même règle qui le demande.** Le sprite servait de portrait
+	# parce qu'il était « exactement la silhouette que l'adversaire découpera dans
+	# le faisceau ». L'iso est devenu le jeu : ce que l'adversaire découpe est
+	# désormais le CORPS VOXEL épais, et le portrait est tiré de la frise de ces
+	# corps (`planche_classes_synthese`), préparé par `tools/preparer_habillage.py`.
+	# Le sprite vu de dessus promettrait aujourd'hui une allure que le jeu ne rend
+	# plus. Pas de repli sur le sprite : un portrait absent laisse la case vide,
+	# qui se voit — `tools/test_habillage.gd` exige les dix.
+	_portrait.texture = _texture_si(chemin_portrait(classe.slug()))
 	# L'icône d'arme, en couleurs d'origine : la même que sur le bouton de la liste.
 	_arme.texture = _recadree(MenuIcones.arme(classe.slug()))
 	_cone.regler(classe.demi_angle_torche(),
@@ -503,14 +509,21 @@ func classe_affichee() -> ClassDataT:
 	return _classe
 
 
+## Le portrait iso d'une classe, par son slug. **Un seul format, écrit ici** :
+## l'affiche du match (`ui.gd`) le lit aussi, et deux copies du chemin
+## finiraient par diverger. Déjà recadré à la préparation : pas de `_recadree()`.
+static func chemin_portrait(slug: String) -> String:
+	return "res://assets/ui/portraits/portrait_%s.png" % slug
+
+
 func _vider() -> void:
 	_portrait.texture = null
 	_arme.texture = null
-	_cone.regler(0.0, 0.0, Charte.DIM)
+	_cone.regler(0.0, 0.0, Charte.PATE_TEXTE_SECOND)
 	_cone_valeur.text = ""
 	_gadget_image.texture = null
 	for cle in _jauges:
-		(_jauges[cle] as Jauge).regler(0.0, Charte.DIM)
+		(_jauges[cle] as Jauge).regler(0.0, Charte.PATE_TEXTE_SECOND)
 		(_valeurs[cle] as Label).text = "—"
 	_gadget.text = "—"
 	_gadget_description.text = ""

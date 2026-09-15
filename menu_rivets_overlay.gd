@@ -37,12 +37,12 @@ enum Style {
 		chevrons_taille = v
 		queue_redraw()
 
-@export var couleur_rivet: Color = Color(0.44, 0.48, 0.53):
+@export var couleur_rivet: Color = Charte.BETON:
 	set(v):
 		couleur_rivet = v
 		queue_redraw()
 
-@export var couleur_avertissement: Color = Color(0.96, 0.69, 0.24):
+@export var couleur_avertissement: Color = Charte.AMBRE:
 	set(v):
 		couleur_avertissement = v
 		queue_redraw()
@@ -82,11 +82,11 @@ func _draw_rivet(pos: Vector2) -> void:
 	var s := rivet_size
 	var r := Rect2(pos - Vector2(s * 0.5, s * 0.5), Vector2(s, s))
 	# Ombre d'encre décalée
-	draw_rect(Rect2(r.position + Vector2(1, 1), r.size), Color(0, 0, 0, 0.9))
+	draw_rect(Rect2(r.position + Vector2(1, 1), r.size), Charte.PATE_OMBRE)
 	# Corps en acier riveté
 	draw_rect(r, couleur_rivet)
 	# Filet d'encre
-	draw_rect(r, Color(0, 0, 0, 0.95), false, 1.0)
+	draw_rect(r, Color(Charte.NOIR, 0.95), false, 1.0)
 	# Reflet biseauté
 	draw_line(r.position, r.position + Vector2(s * 0.5, 0), Charte.HALOGENE, 1.0)
 

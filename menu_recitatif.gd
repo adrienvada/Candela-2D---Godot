@@ -23,9 +23,14 @@ extends PanelContainer
 ## chose que le noir, et c'est bien ainsi.
 
 const Charte := preload("res://charte.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 
-## Le papier : l'halogène, seul blanc de la charte.
-const PAPIER := Charte.HALOGENE
+## Le papier : celui de la pâte (habillage iso, 2026-09-15). Il était l'halogène,
+## « seul blanc de la charte » ; les planches iso n'ont pas de blanc — leur papier
+## est le béton sous la torche, et la case en prend la matière (le grain de lavis).
+const PAPIER := Charte.PAPIER
+## L'encre du bord et des lettres : le noir chaud des planches, 10:1 sur le papier.
+const ENCRE := Charte.ENCRE
 ## L'épaisseur du bord d'encre, en pixels.
 const BORD := 3
 ## La taille des capitales. 26 : deux points sous `T_TITRE` + 1, pour que
@@ -41,21 +46,23 @@ func _init() -> void:
 	var style := StyleBoxFlat.new()
 	style.bg_color = PAPIER
 	style.set_border_width_all(BORD)
-	style.border_color = Charte.NOIR
+	style.border_color = ENCRE
 	style.set_corner_radius_all(0)
 	style.shadow_size = 0
 	style.shadow_offset = Vector2(5, 5)
-	style.shadow_color = Color(Charte.NOIR, 0.9)
+	style.shadow_color = Charte.PATE_OMBRE
 	style.content_margin_left = Charte.GAP_S
 	style.content_margin_right = Charte.GAP_S
 	style.content_margin_top = Charte.GAP_XXS
 	style.content_margin_bottom = Charte.GAP_XXS
 	add_theme_stylebox_override("panel", style)
+	# La case prend le grain ; ses capitales, enfants, restent nettes.
+	MenuWidgets.poser_pate(self)
 
 	_label = Label.new()
 	_label.name = "Texte"
 	Charte.enseigne(_label, TAILLE)
-	_label.add_theme_color_override("font_color", Charte.NOIR)
+	_label.add_theme_color_override("font_color", ENCRE)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_label)
 
