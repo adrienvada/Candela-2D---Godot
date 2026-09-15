@@ -231,6 +231,12 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "torche", "famille": "jeu", "source": "vue", "ancre": [0.5, 0.5],
 		 "titre": "La torche seule dans le noir",
 		 "pourquoi": "La promesse du jeu sans adversaire : la seule information est la lumière."},
+		# ISO6 — demande de la session cloud (2026-09-15, 11:50) : la même scène que le duel (carte d'essai
+		# des murs bas, J1 face au mur haut, J2 derrière un muret), torche RASANTE, parallèle au mur. Face
+		# contre profil : ce que la vue iso ajoute à la vue de dessus, c'est le volume des murs.
+		{"id": "volume", "famille": "jeu", "source": "vue", "ancre": [0.5, 0.5],
+		 "titre": "Le volume du mur, torche rasante",
+		 "pourquoi": "La scène du duel, torche parallèle au mur haut : le relief qu'une vue de dessus ne montre pas, à comparer au plan de face."},
 		{"id": "retrodiffusion", "famille": "jeu", "source": "vue", "ancre": [0.5, 0.5],
 		 "titre": "Le mur qui renvoie la lumière",
 		 "pourquoi": "La mécanique que personne ne devine sur une capture de menu : éclairer trahit."},
@@ -775,6 +781,7 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 		printerr("  ✗ la manche n'a jamais démarré")
 		return
 	_prendre_les_commandes()
+	_centrer_sur_la_carte()
 
 	# Le décompte se photographie PENDANT qu'il tourne, et il est épinglé le
 	# temps de la prise : sans ça, les 0,6 s de repos le feraient tomber d'un
@@ -788,6 +795,8 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 	if not await _attendre(func() -> bool: return _main.countdown_left <= 0.0, 20.0):
 		printerr("  ✗ le décompte n'a jamais fini")
 		return
+	# Rappelé après le décompte : sa fin pourrait reposer les joueurs sur leurs départs.
+	_centrer_sur_la_carte()
 
 	# **Les torches AVANT l'écran scindé, et c'est une réparation.** Le premier
 	# jet les allumait juste après, et le plan de l'écran scindé sortait
@@ -810,10 +819,17 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 
 	_vue_unique()
 
+	# ISO6 — les plans du duel se prennent sur la carte d'essai des murs bas (demande de la session
+	# cloud, 2026-09-15, 11:50) : l'Arène standard n'a aucun mur intérieur, et la vague doit montrer des
+	# faces de mur et des volumes. Retour à la carte de la séance avant le sang.
+	if ["duel", "hud", "leurre", "torche", "volume", "retrodiffusion", "flash-de-tir"].any(
+			func(id: String) -> bool: return _demande(plans, id)):
+		await _passer_sur_la_carte_des_murs_bas()
+
 	if _demande(plans, "duel"):
-		await _prendre(_plan(plans, "duel"), _duel.bind(ECART_DUEL, 0.0))
+		await _prendre(_plan(plans, "duel"), _face_au_mur_haut)
 	if _demande(plans, "hud"):
-		await _prendre(_plan(plans, "hud"), _duel.bind(ECART_DUEL, 0.0))
+		await _prendre(_plan(plans, "hud"), _face_au_mur_haut)
 
 	# Étape 28, lot D — AVANT le sang, les impacts et la fusée : ce qu'ils laissent au
 	# sol, ou la lumière qui dure vingt secondes, fausserait la comparaison.
@@ -824,7 +840,7 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 	# pas — il reprend sa place trois plans plus loin.
 	if _demande(plans, "torche"):
 		var seul := func() -> void:
-			_vivants()
+			_face_au_mur_haut()
 			Input.action_release("p2_torch")
 			if is_instance_valid(_main.p2):
 				_main.p2.flashlight_on = false
@@ -832,6 +848,11 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 					+ _main.p1.global_transform.x * 4000.0
 		await _prendre(_plan(plans, "torche"), seul)
 		Input.action_press("p2_torch")
+
+	# ISO6 — la même scène, torche rasante le long du mur : face contre profil.
+	if _demande(plans, "volume"):
+		await _prendre(_plan(plans, "volume"), _face_au_mur_haut.bind(true))
+		_viser_par_defaut()
 
 	# La rétrodiffusion : on cherche le mur le plus proche dans l'axe et on s'en
 	# approche. Sans cette recherche, l'image dépend de la carte et du hasard du
@@ -841,13 +862,16 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 		await _prendre(_plan(plans, "retrodiffusion"), _duel.bind(120.0, 0.9))
 
 	if _demande(plans, "flash-de-tir"):
-		_duel(ECART_DUEL, 0.0)
+		_face_au_mur_haut()
 		await _attendre_images(2)
 		_vivants()
 		_main.p1.shoot()
 		# Repos nul : l'éclat de bouche dure un dixième de seconde. Attendre,
 		# c'est photographier ce qu'il en reste, c'est-à-dire rien.
 		await _prendre(_plan(plans, "flash-de-tir"), Callable(), 0.0)
+
+	_viser_par_defaut()
+	await _revenir_a_la_carte()
 
 	if _demande(plans, "sang"):
 		# Le sang naît des balles, pas des dégâts : c'est `bullet.gd` qui pose la
@@ -901,11 +925,16 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 		await _prendre(_plan(plans, "eblouissement"), ebloui)
 
 	if _demande(plans, "fusee"):
-		_duel(ECART_DUEL, 0.0)
+		# ISO6 — sur la carte d'essai des murs bas, comme les plans du duel.
+		await _passer_sur_la_carte_des_murs_bas()
+		_face_au_mur_haut()
+		await _attendre_images(2)
 		if is_instance_valid(_main.p1):
 			_main.p1.lancer_fusee()
 		# La fusée s'allume en vol : on la laisse arriver avant de la regarder.
-		await _prendre(_plan(plans, "fusee"), _duel.bind(ECART_DUEL, 0.0), 1.2)
+		await _prendre(_plan(plans, "fusee"), _face_au_mur_haut, 1.2)
+		_viser_par_defaut()
+		await _revenir_a_la_carte()
 
 	if _demande(plans, "armes"):
 		for idx in range(4):
@@ -951,6 +980,7 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 			return
 		await _attendre(func() -> bool: return _main.countdown_left <= 0.0, 20.0)
 	_prendre_les_commandes()
+	_centrer_sur_la_carte()
 	_vue_unique()
 	_torches(true)
 
@@ -1084,6 +1114,7 @@ func _manche_sacrifiee(plans: Array[Dictionary]) -> void:
 			return
 		await _attendre(func() -> bool: return _main.countdown_left <= 0.0, 20.0)
 	_prendre_les_commandes()
+	_centrer_sur_la_carte()
 	_vue_unique()
 	_torches(true)
 	var respire := 1.0
@@ -1552,6 +1583,112 @@ func _approcher_un_mur() -> void:
 			meilleur = coup["position"] - Vector2.RIGHT.rotated(a) * 85.0
 	if plus_court < INF:
 		_main.p1.global_position = meilleur
+
+
+## ISO6 — J1 au centre de la carte, sur le sol dégagé le plus proche : le cadrage des plans du duel.
+##
+## ⚠️ **La moitié gauche de chaque plan du duel sortait noire, hors carte**, et ce n'était pas l'iso :
+## la vue de dessus du même instant (banc killcam) montre la même bande. La caméra suit J1, et la scène
+## le laissait à son point d'apparition, contre le mur ouest de l'Arène standard. Posé au centre, J1 a
+## de la carte des deux côtés ; `_duel` place ensuite J2 par rapport à lui, image par image. Jamais à
+## l'entraînement : sa cible est posée près du point d'apparition.
+## Recherche en anneaux autour du centre, un disque de 40 px sans mur : un centre de carte peut être un
+## pilier, et un joueur posé dans un mur serait éjecté au premier pas de physique.
+func _centrer_sur_la_carte() -> void:
+	if not is_instance_valid(_main.p1):
+		return
+	var data: Dictionary = MapData.get_selected()
+	if data.is_empty():
+		return
+	var centre := Vector2(MapCodec.get_grid_size(data)) * Vector2(CandelaTileSet.TILE_SIZE) * 0.5
+	var espace: PhysicsDirectSpaceState2D = _main.p1.get_world_2d().direct_space_state
+	var disque := CircleShape2D.new()
+	disque.radius = 40.0
+	var q := PhysicsShapeQueryParameters2D.new()
+	q.shape = disque
+	q.collision_mask = MapGeometry.WALL_LAYER
+	for anneau in 16:
+		var essais := 1 if anneau == 0 else 8 * anneau
+		for k in essais:
+			var p := centre + Vector2.RIGHT.rotated(TAU * float(k) / float(essais)) * (35.0 * anneau)
+			q.transform = Transform2D(0.0, p)
+			if espace.intersect_shape(q, 1).is_empty():
+				_main.p1.global_position = p
+				return
+	printerr("  ! aucun sol dégagé près du centre de la carte : J1 reste à son point d'apparition")
+
+
+## ISO6 — la carte d'essai des murs bas (`tools/cartes/murs_bas_essai.json`, celle du banc des gadgets et du
+## paquet H-ISO3) : 32 × 32 tuiles, murs hauts en bordure seulement, cinq murets. Posée comme le banc la
+## pose (`MapData.current_map_data`, puis `rebuild_arena()`), en pleine manche ; la carte de la séance est
+## gardée et rendue par `_revenir_a_la_carte()`.
+const CARTE_MURS_BAS := "res://tools/cartes/murs_bas_essai.json"
+var _carte_de_la_seance: Dictionary = {}
+
+func _passer_sur_la_carte_des_murs_bas() -> void:
+	if not _carte_de_la_seance.is_empty():
+		return
+	var json := JSON.new()
+	if json.parse(FileAccess.get_file_as_string(CARTE_MURS_BAS)) != OK or not (json.data is Dictionary):
+		printerr("  ! carte d'essai des murs bas illisible (%s) : les plans du duel restent sur la carte de la séance"
+			% CARTE_MURS_BAS)
+		return
+	_carte_de_la_seance = MapData.get_selected()
+	MapData.current_map_data = MapCodec.validate(json.data as Dictionary)["data"]
+	_main.rebuild_arena()
+	await _attendre_images(5)
+	print("  · carte d'essai des murs bas posée (%d murets)" % (_main.murs_bas as Array).size())
+
+
+func _revenir_a_la_carte() -> void:
+	if _carte_de_la_seance.is_empty():
+		return
+	MapData.current_map_data = _carte_de_la_seance
+	_carte_de_la_seance = {}
+	_main.rebuild_arena()
+	await _attendre_images(5)
+
+
+## La scène des plans du duel sur la carte d'essai — pour UNE image, rappelée à chaque image du repos.
+##
+## - **J1 face au mur haut, éclairé de face, à 3,5 tuiles** : le mur de bordure NORD, dont la face sud est
+##   celle que la caméra iso voit (elle regarde depuis le sud) ; visée au nord.
+## - **J2 derrière un muret** : au sud du muret horizontal le plus au nord (19 à 24, ligne 8 sur la carte
+##   d'essai), dos à J1 — le muret coupe la ligne de J1 à J2.
+## - `rasante` : J1 à une tuile de la même face, torche vers l'est, parallèle au mur.
+##
+## La visée passe par la marionnette, pas par `rotation` : le joueur réoriente son corps sur sa visée à
+## chaque pas de physique, et une rotation écrite ici serait défaite avant l'image.
+func _face_au_mur_haut(rasante := false) -> void:
+	if not is_instance_valid(_main.p1) or not is_instance_valid(_main.p2):
+		return
+	var tuile := MursBas.TUILE
+	var face_nord := 3.0 * tuile
+	if rasante:
+		_main.p1.global_position = Vector2(8.0 * tuile, face_nord + 1.0 * tuile)
+		_viser(0, Vector2.RIGHT)
+	else:
+		_main.p1.global_position = Vector2(16.0 * tuile, face_nord + 3.5 * tuile)
+		_viser(0, Vector2.UP)
+	var muret := Rect2()
+	for r in _main.murs_bas as Array:
+		var rect := r as Rect2
+		if rect.size.x > rect.size.y and (muret.size == Vector2.ZERO or rect.position.y < muret.position.y):
+			muret = rect
+	if muret.size != Vector2.ZERO:
+		_main.p2.global_position = Vector2(muret.get_center().x, muret.end.y + 32.0)
+		_viser(1, Vector2.DOWN)
+	_vivants()
+
+
+func _viser(pid: int, direction: Vector2) -> void:
+	if pid < _pantins.size() and is_instance_valid(_pantins[pid]):
+		_pantins[pid].visee = direction.normalized()
+
+
+func _viser_par_defaut() -> void:
+	for pantin in _pantins:
+		pantin.visee = VISEE.normalized()
 
 
 # ---------------------------------------------------------------------------

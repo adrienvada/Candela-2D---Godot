@@ -5388,3 +5388,18 @@ règle, 4 rouges. Photographe sans drapeau : 46 images en iso (dont les plans `e
 perdue, manifeste `mode_rendu=iso` ; un cadrage signalé (J1 contre le mur ouest, moitié d'écran hors
 carte). Planche `docs/iso/planche_iso6.jpg`. **`CLAUDE.md` non modifié** : une session voisine ne peut
 pas faire éditer ce fichier ; texte proposé dans la section ISO6 de la ROADMAP, pour Adrien.
+
+**ISO6 — le cadrage du photographe recentré, 2026-09-15 vers 11:45.** Demande de la session cloud (11:40) :
+la moitié gauche des plans du duel sortait noire, hors carte — la même bande qu'en vue de dessus, donc la
+mise en scène et non l'iso (J1 laissé à son point d'apparition contre le mur ouest). `_centrer_sur_la_carte()`
+pose J1 sur le sol dégagé le plus proche du centre de la carte aux départs des familles jeu et fins (jamais à
+l'entraînement). Seconde demande de la session cloud (11:50) : les plans du duel (`duel`, `hud`, `leurre`,
+`torche`, `retrodiffusion`, `flash-de-tir`, `fusee`) passent sur la carte d'essai des murs bas —
+`_face_au_mur_haut()` : J1 à 3,5 tuiles de la bordure nord, J2 derrière le muret le plus au nord — et un plan
+neuf `volume`, torche rasante le long du mur. Photographe relancé, dossier renvoyé à ISO Assets.
+
+**La planche finale de la vague « grand budget », 2026-09-15 vers 12:05.** Session « Iso 1 Opus ».
+`docs/iso/planche_finale.jpg` : les deux vues, le duel et le volume sur la carte d'essai des murs bas, la
+fusée en vol puis posée derrière un muret, suie et poussière, éblouissement, killcam, gel signé, affiche, et
+les corps v5 en référence. Sources prises après les quatre fusions : le photographe sans drapeau (49 images)
+et le banc des gadgets (VERDICT=OK, 0 échec, noir absolu tenu pour les dix gadgets 2D coupée).

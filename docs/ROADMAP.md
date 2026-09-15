@@ -24437,17 +24437,43 @@ menus, 21 jeu, 10 fins), aucune prise perdue, aucune erreur de script ; manifest
 Les plans `ecran` d'Habillage (menus, `decompte`, `hud`, `ecran-scinde`, `entrainement`,
 `eblouissement`, `killcam`, `gel-fatal`, `affiche`, `soiree`, verdicts, `bilan`) sont tous du lot, en iso.
 Relus à l'œil sur quatre plans : corps voxel et murs en relief partout, la source `vue` (`duel`) sans
-interface, l'écran scindé à deux caméras iso, la killcam dans la vue iso. ⚠️ **Cadrage signalé, non
-recalculé** : la mise en scène du duel pose J1 contre le mur ouest de l'Arène standard, et la caméra, qui
-le suit, montre une moitié d'écran hors carte (noire) — c'était déjà vrai en vue de dessus, mais l'iso
-ne cadre plus la carte entière en profondeur. Recentrer la scène (`_duel`, point de départ) est une
-retouche de mise en scène à faire avec la planche finale, pas un défaut de la vue.
+interface, l'écran scindé à deux caméras iso, la killcam dans la vue iso. ⚠️ **Cadrage : la moitié gauche
+de chaque plan du duel sortait noire, hors carte.** Ce n'était pas l'iso — la vue de dessus du même instant
+(capture 2D du banc killcam) montre la même bande : la caméra suit J1, et la mise en scène le laissait à son
+point d'apparition, contre le mur ouest de l'Arène standard. **Recentré dans un commit à part** (demande de
+la session cloud, 11:40) : `_centrer_sur_la_carte()` pose J1 sur le sol dégagé le plus proche du centre
+de la carte (anneaux de 35 px, disque de 40 px sans mur), après le départ de la manche et après le
+décompte (famille jeu), au départ de la famille fins et de la manche sacrifiée — jamais à l'entraînement,
+dont la cible est près du point d'apparition. `_duel` place J2 par rapport à J1, image par image.
+**Et les plans du duel passent sur la carte d'essai des murs bas** (seconde demande de la session cloud,
+11:50 : « l'arène des plans de duel n'a aucun mur intérieur, on n'y voit ni face de mur ni volume ») :
+`duel`, `hud`, `leurre`, `torche`, `retrodiffusion`, `flash-de-tir` et `fusee` se prennent sur
+`tools/cartes/murs_bas_essai.json` (posée comme le banc des gadgets la pose, en pleine manche, puis la
+carte de la séance rendue). `_face_au_mur_haut()` : J1 à 3,5 tuiles de la face sud du mur de bordure
+nord — la face que la caméra iso voit —, visée au nord ; J2 au sud du muret horizontal le plus au nord,
+dos à J1, le muret coupant leur ligne. **Plan neuf `volume`** : la même scène, J1 à une tuile du mur,
+torche rasante vers l'est — face contre profil. La visée passe par la marionnette : le joueur réoriente
+son corps sur sa visée à chaque pas, et une `rotation` écrite serait défaite avant l'image. La carte
+d'essai n'a aucun mur haut intérieur ; le « mur haut éclairé de face » est donc la bordure.
 
 **La planche** — `docs/iso/planche_iso6.jpg` (recomposable : `python3 docs/iso/planche_iso6.py
 --photos <dossier du photographe> --banc <dossier du banc killcam>`, qui refuse un manifeste qui ne dit pas
 `mode_rendu=iso` ; images dans `docs/iso/captures_iso6/`) : l'accueil, le décompte, le duel HUD compris,
 l'écran scindé, la source `vue`, la killcam ; puis la killcam lumières éteintes (×4) et le même instant
 en vue de dessus, l'étalon du fantôme.
+
+**La planche finale de la vague** — `docs/iso/planche_finale.jpg` (recomposable : `python3
+docs/iso/planche_finale.py --photos <dossier du photographe> --gadgets <dossier du banc des gadgets>`,
+images dans `docs/iso/captures_finale/`), 2026-09-15 vers 12:05 : le duel en vue unique HUD compris et le
+plan `volume` sur la carte d'essai des murs bas, l'écran scindé, la fusée en vol puis posée derrière un
+muret, la cartouche de suie et la poussière sous la lampe, la fusée en match, l'éblouissement, la killcam,
+le gel signé, l'affiche de fin, et la planche des corps v5 d'ISO Corps en référence. Sources : photographe
+relancé sans drapeau (49 images, manifeste `mode_rendu=iso`, aucune prise perdue) et
+`tools/banc_iso_gadgets.tscn` repris APRÈS les quatre fusions : **VERDICT=OK, 0 échec** — zone morte des
+murets à 25 px mesurés pour 26 attendus à 1,50 tuile, 0 désaccord entre J1 et J2 ; pour chacun des dix
+gadgets, écran à 0 lumières éteintes et 2D coupée (la suie, les braises et la poudre brillent lumières
+éteintes 2D gardée, par dessein : ce sont des dessins lumineux du jeu) ; appels de dessin de la scène de la
+fusée posée 139 images coupées, 149 rendues.
 
 **⚠️ `CLAUDE.md` n'est pas modifié, et c'est une règle du harnais, pas un oubli.** Le brief demandait de
 réécrire ses sections « Le jeu en une phrase », « Boucle de jeu » et « Rendu » pour décrire l'iso comme
