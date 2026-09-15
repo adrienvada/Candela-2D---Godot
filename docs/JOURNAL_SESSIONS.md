@@ -5459,3 +5459,24 @@ fin de ce journal (l'entrée d'ISO8 avant celle de la fusion de 13:00), les deux
 (`RegardDuel`, `zoom_duel`, `zoom_applique`, `decalage_applique`, `_suivre_du_regard`, `_carte_px`, le zoom du
 duel au départ de manche, `banc_claustro`, `_regard_du_duel` dans `test_iso_camera`) présents.
 Lot complet vert à 13:21 : 127 OK en 414 s.
+
+**ISO8, étape 2 — la caméra qui suit, aux défauts choisis, 2026-09-15 à partir de 13:22.** Session « Iso 1 Opus »,
+sur `iso8-claustro` après la fusion `623e155`. Zoom du duel ×1,8 et décalage d'un quart de la hauteur visible par
+défaut ; killcam bornée à partir du zoom du duel, sans saut à sa première image ; F3 : texels de lightmap par pixel
+d'écran (0,75 en 1080p dans une fenêtre de 1440 px, que le zoom ne change pas) et taille d'une tuile à l'écran
+(84 px à ×1,8). Première vérification : `test_iso_camera` rouge sur le TÉMOIN de simulation (deux parties sans
+iso divergent au pas 113, une balle d'un seul côté) — diagnostic en cours.
+Diagnostic : le DÉCALAGE vers la visée, pas le zoom — vert avec `--decalage=0` à ×1,8, vert à `--zoom=1.0
+--decalage=0`. Sans stick tenu, J1 vise la souris convertie par la caméra, et la caméra lissée sur le temps
+d'image rend cette visée dépendante du rythme des images. `test_iso_camera` désarme le décalage pendant ses
+parties comparées (elle mesure la vue iso) ; le ressenti à la souris reste à juger au test final.
+Premier lot de l'étape 2 (13:34, 125 OK) : `test_iso_vues` et `test_entrainement` rouges, tous deux sur une
+supposition de l'ancienne caméra. `test_iso_vues` mesurait 180 px de profondeur pour 100 px de monde (le zoom
+×1,8) et lit désormais le zoom sur le canevas de la vue ; `test_entrainement` exigeait une caméra exactement sur
+le joueur, et exige maintenant le regard que `RegardDuel` prescrit pour lui ET une caméra qui bouge avec lui — le
+défaut du 2026-08-19 (caméra jamais posée à l'entraînement) reste attrapé. Mac rendu à ISO7 Beauté à 13:37 ;
+relance, sabotage et lot à son retour.
+Au retour du Mac (13:44) : `test_iso_vues` et `test_entrainement` vertes seules. Sabotage (zoom par défaut remis à
+1,0) : `test_iso_camera` rougit sur le contrôle du zoom ×1,8, fichier rétabli à l'identique (`cmp`). Lot complet
+relancé.
+Lot complet vert à 13:53 : 127 OK en 412 s.

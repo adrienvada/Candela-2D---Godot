@@ -203,10 +203,19 @@ func _regard_du_duel() -> void:
 	var Script: GDScript = load("res://settings_manager.gd")
 	var reglages := root.get_node("GameSettings")
 	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	# ISO8, étape 2 — les défauts choisis par la session cloud sur la planche des variantes (12:50).
 	if Script.valeur_par_argument(args, "--zoom=").is_empty():
-		_check("zoom du duel neutre par défaut (1,0 : le jeu d'avant ISO8)", is_equal_approx(reglages.zoom_duel, 1.0))
+		_check("zoom du duel ×1,8 par défaut (choix de la session cloud)", is_equal_approx(reglages.zoom_duel, 1.8))
 	if Script.valeur_par_argument(args, "--decalage=").is_empty():
-		_check("décalage de visée neutre par défaut (0)", is_equal_approx(reglages.decalage_visee, 0.0))
+		_check("décalage de visée d'un quart de la hauteur visible par défaut", is_equal_approx(reglages.decalage_visee, 0.25))
+	_check("--zoom=1.0 rend le cadrage d'avant ISO8 pour une exécution",
+		is_equal_approx(Script.zoom_applique(Script.ZOOM_DUEL_DEFAUT, PackedStringArray(["--zoom=1.0"])), 1.0))
+	var Pres8: GDScript = load("res://presentation_3d.gd")
+	_check("F3 : la lightmap 1080p dans une fenêtre de 1440 px vaut 0,75 texel par pixel, quel que soit le zoom",
+		is_equal_approx(Pres8.texels_par_pixel(1080, 1440), 0.75))
+	_check("F3 : à ×1,8 dans une fenêtre de 1440 px, une tuile de 35 px de source couvre 84 px d'écran",
+		is_equal_approx(Pres8.tuile_a_l_ecran(35.0, 1.8, 1440, 1080.0), 84.0),
+		str(Pres8.tuile_a_l_ecran(35.0, 1.8, 1440, 1080.0)))
 	_check("--zoom=1.8 s'applique", is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=1.8"])), 1.8))
 	_check("--zoom borné (0,5 → 1,0 ; 9 → 3,0)",
 		is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=0.5"])), 1.0)
@@ -348,6 +357,13 @@ func _reglage() -> void:
 func _simulation_inchangee() -> void:
 	print("\n--- La vue ne change rien à la simulation ---")
 	var reglages := root.get_node("GameSettings")
+	# ⚠️ ISO8 — le décalage de la caméra vers la visée est DÉSARMÉ pendant les parties comparées, puis rendu.
+	# Sans stick tenu, J1 vise la souris, convertie par la caméra (`LocalInputProvider.cible_de_la_souris`) ;
+	# la caméra avançant vers la visée avec un lissage réglé sur le temps d'image, cette visée de repli dépend du
+	# rythme des images, et deux parties identiques cessaient de l'être (pas 113, une balle d'un seul côté) —
+	# avec OU sans iso. Ce que ce contrôle mesure, c'est la vue iso ; le regard est une présentation locale.
+	var decalage_avant: float = reglages.decalage_visee
+	reglages.decalage_visee = 0.0
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -369,6 +385,7 @@ func _simulation_inchangee() -> void:
 		_ecarts(sans["etats"], avec["etats"]) == 0, _premier_ecart(sans["etats"], avec["etats"]))
 	_check("même rejeu enregistré (%d images)" % (sans["rejeu"] as Array).size(),
 		_ecarts(sans["rejeu"], avec["rejeu"]) == 0 and not (sans["rejeu"] as Array).is_empty())
+	reglages.decalage_visee = decalage_avant
 
 	# Les touches de la pâte, pendant que la vue est allumée (la dernière partie l'a laissée
 	# allumée) : F2 seule n'atteint pas le jeu sur un Mac sans `fn`.

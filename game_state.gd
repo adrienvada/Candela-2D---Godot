@@ -1804,24 +1804,29 @@ func _process(delta):
 			var target_zoom_val = 1.0
 			var target_pos = midpoint
 			
+			# ISO8 — les bornes du zoom de killcam partent du zoom du duel (`GameSettings.zoom_duel`) : à
+			# ×1,8, une lecture bornée à 1,3 aurait d'abord DÉZOOMÉ la caméra, rendant d'un coup la carte que
+			# le duel cachait. Le cadrage sur les deux fantômes reste le même calcul.
+			var z_duel: float = GameSettings.zoom_duel
 			if Engine.time_scale < 0.9:
 				# We are in bullet time! Zoom in hard.
 				var zoom_x = viewport_size.x / (dx + margin * 2)
 				var zoom_y = viewport_size.y / (dy + margin * 2)
-				target_zoom_val = clamp(min(zoom_x, zoom_y), 1.2, 2.8) # Push zoom further
+				target_zoom_val = clamp(min(zoom_x, zoom_y), 1.2 * z_duel, 2.8 * z_duel) # Push zoom further
 			else:
 				# Normal playback: stay zoomed out to see the action
 				var zoom_x = viewport_size.x / (dx + margin * 2.5)
 				var zoom_y = viewport_size.y / (dy + margin * 2.5)
-				target_zoom_val = clamp(min(zoom_x, zoom_y), 0.7, 1.3)
-				
+				target_zoom_val = clamp(min(zoom_x, zoom_y), 0.7 * z_duel, 1.3 * z_duel)
+
 			var target_zoom = Vector2(target_zoom_val, target_zoom_val)
-			
+
 			if _first_replay_frame:
 				cam1.global_position = target_pos
-				cam1.zoom = target_zoom
 				cam2.global_position = target_pos
-				cam2.zoom = target_zoom
+				# ISO8 — la première image garde le zoom du duel : le lissage part de lui, sans saut.
+				cam1.zoom = Vector2.ONE * z_duel
+				cam2.zoom = Vector2.ONE * z_duel
 				_first_replay_frame = false
 			else:
 				# Exponential smoothing prevents overshoot and jumping when delta scales wildly in bullet time

@@ -24604,6 +24604,44 @@ session cloud.**
   probablement l'intermittent consigné à ISO2 (le témoin de simulation qui diverge quand d'autres suites
   chargent la machine) — le lot ne garde pas la sortie d'une suite rouge, et on ne peut pas le prouver.
 
+**Le choix de la session cloud** (2026-09-15, 12:50, sur la planche des variantes) : **zoom ×1,8** (« la face
+du pilier, le corps et le cône se lisent enfin, en vue unique comme en scindé ; ×2,2 ne montre presque plus de
+carte ») ; **portée ×0,75**, un facteur GLOBAL dans `portee_torche()` et `echelle_torche()` et non dix
+valeurs réécrites (« les classes vont de 1,0 à 3,5 et cet écart est leur identité ») ; **demi-angles
+inchangés** (« l'ouverture est une identité de classe ») — le cookie à 30° du banc n'a jamais été cuit, rien
+à retirer ; **décalage vers la visée d'un quart de la hauteur visible** ; killcam qui part du zoom du duel ;
+lightmap : mesurer les texels à ×1,8 au F3, sans relevé de cadence.
+
+**Étape 2 — la caméra qui suit, aux défauts choisis** 🟡 (2026-09-15, après la fusion `623e155`).
+- `GameSettings.ZOOM_DUEL_DEFAUT` = 1,8 et `DECALAGE_VISEE_DEFAUT` = 0,25. `--zoom=1.0 --decalage=0` rend le
+  cadrage d'avant ISO8 pour une exécution.
+- **Killcam** : ses bornes (0,7-1,3 en lecture, 1,2-2,8 au ralenti) sont multipliées par le zoom du duel, et
+  sa première image garde le zoom du duel au lieu de sauter à sa cible. À ×1,8, une lecture bornée à 1,3
+  aurait d'abord dézoomé la caméra et rendu d'un coup la carte que le duel cachait.
+- **F3** : par vue, le zoom, les texels de lightmap par pixel d'écran et la taille à l'écran d'une tuile.
+  **Le zoom ne change pas la densité de la lightmap à l'écran** : la lightmap rend le monde déjà zoomé, à taille
+  de texture constante — 1080 texels pour 1440 pixels, 0,75, dans la fenêtre d'Adrien, en 1080p comme avant
+  ISO8. Ce que le zoom grossit, c'est l'art des tuiles : 35 px de source sur 84 px d'écran à ×1,8 (47 avant).
+  La pleine résolution par défaut reste la question d'Adrien au test final, sans relevé de cadence d'ici là.
+- ⚠️ **Le décalage vers la visée a rompu le témoin de simulation de `test_iso_camera`** (deux parties SANS iso
+  divergeant au pas 113, une balle d'un seul côté), et c'est un vrai couplage, pas l'intermittent : sans stick
+  tenu, J1 vise la souris, convertie par la caméra (`LocalInputProvider.cible_de_la_souris`) ; la caméra
+  avançant vers la visée avec un lissage réglé sur le temps d'image, la visée de repli dépend du rythme des
+  images. Isolé : vert avec `--decalage=0` au zoom ×1,8, vert à `--zoom=1.0 --decalage=0`. **La suite désarme
+  le décalage pendant ses parties comparées** (elle mesure la vue iso, pas la caméra). Rien sur le fil : la
+  visée d'un client en ligne arrive déjà calculée chez l'hôte. **À juger au test final, à la souris** : la
+  caméra qui avance vers la visée déplace aussi le curseur dans le monde — agréable, ou « la caméra court après
+  la visée » ? `--decalage=0` pour comparer.
+- **Deux contrôles qui supposaient l'ancienne caméra, relus et adaptés — pas désarmés.** Le premier lot de
+  l'étape 2 (13:34, 125 OK) : `test_iso_vues` attendait que 100 px de monde donnent 100 px de profondeur à
+  l'écran, et en mesurait 180 — le zoom ×1,8 ; il lit maintenant le zoom sur le canevas de la vue. Et
+  `test_entrainement` (`test_online_match.gd`) exigeait une caméra EXACTEMENT sur le joueur ; elle doit
+  désormais tomber sur le regard que `RegardDuel` prescrit pour ce joueur ET bouger avec lui (plus de 100 px
+  pour un pas de 360) — le défaut du 2026-08-19 (une caméra jamais posée, puis immobile à l'entraînement)
+  reste attrapé.
+- **Pas encore de boutons de zoom dans les réglages de débogage** : une rangée de plus dans le panneau vidéo
+  risque l'audit des menus ; les drapeaux suffisent pour comparer au test final.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

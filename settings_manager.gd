@@ -113,13 +113,15 @@ const MODE_RENDU_DESSUS := "dessus"
 ## `zoom_duel` : le zoom des deux caméras du duel, 1,0 étant la vue d'avant ISO8. `decalage_visee` : la part
 ## de la hauteur visible dont la caméra avance vers la visée (`RegardDuel`), 0 la laissant sur le joueur.
 ##
-## **Défauts NEUTRES tant que la session cloud n'a pas choisi sur la planche des variantes** : le jeu change
-## le jour où ces deux constantes changent, pas avant. `--zoom=1.8` et `--decalage=0.25` valent pour une
-## exécution et ne s'écrivent jamais. Le zoom choisi au réglage de débogage s'enregistre, **mais seulement
+## **Défauts choisis par la session cloud sur la planche des variantes** (2026-09-15, 12:50 : « à ×1,8 la
+## face du pilier, le corps et le cône se lisent enfin […] ×2,2 ne montre presque plus de carte » ; « un quart
+## de la hauteur visible, comme le brief »). Préparés d'abord sur des défauts neutres (1,0 et 0), pour que
+## l'étape 1 ne change pas le jeu. `--zoom=2.2` et `--decalage=0` valent pour une exécution et ne s'écrivent
+## jamais. Le zoom choisi au réglage de débogage s'enregistre, **mais seulement
 ## s'il a été réglé** : un `settings.cfg` qui porterait 1,0 par défaut garderait l'ancien cadrage le jour où
 ## le défaut passera à 1,8 — le piège exact de `video/mode_iso` (ISO6).
-const ZOOM_DUEL_DEFAUT := 1.0
-const DECALAGE_VISEE_DEFAUT := 0.0
+const ZOOM_DUEL_DEFAUT := 1.8
+const DECALAGE_VISEE_DEFAUT := 0.25
 const ZOOM_DUEL_MIN := 1.0
 const ZOOM_DUEL_MAX := 3.0
 const DECALAGE_VISEE_MAX := 0.4

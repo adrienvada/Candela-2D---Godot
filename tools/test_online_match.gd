@@ -549,17 +549,30 @@ func _run_training() -> void:
 	#
 	# Deux contrôles, parce que les deux moitiés ont échoué séparément : la
 	# caméra doit être POSÉE sur le joueur à l'entrée, et le SUIVRE ensuite.
-	_check("la caméra est posée sur le joueur à l'entrée",
-		_main.cam1.global_position.distance_to(_main.p1.global_position) < 4.0,
-		"caméra %s, joueur %s" % [_main.cam1.global_position, _main.p1.global_position])
+	#
+	# ISO8 — « posée sur le joueur » veut dire désormais : là où `RegardDuel` la met pour CE joueur, avancée
+	# d'un quart de la hauteur visible vers sa visée et bornée à la carte (zoom du duel ×1,8). Comparer à la
+	# position du joueur rougissait sur une caméra juste ; le défaut du 2026-08-19 (une caméra jamais posée,
+	# puis immobile) reste attrapé : elle doit tomber sur le regard prescrit ET bouger avec le joueur.
+	var regard := func() -> Vector2:
+		var vue := _main.cam1.custom_viewport as Viewport
+		var vue_px: Vector2 = vue.get_visible_rect().size if vue != null else Vector2(1920.0, 1080.0)
+		return RegardDuel.centre_du_regard(_main.p1.global_position, _main._regard_decalage[0], vue_px,
+			_main.cam1.zoom.y, _main._carte_px, float(CandelaTileSet.TILE_SIZE.y))
+	_check("la caméra est posée sur le regard du joueur à l'entrée",
+		_main.cam1.global_position.distance_to(regard.call()) < 4.0,
+		"caméra %s, regard prescrit %s, joueur %s" % [_main.cam1.global_position, regard.call(), _main.p1.global_position])
 
 	var depart: Vector2 = _main.p1.global_position
+	var camera_avant: Vector2 = _main.cam1.global_position
 	_main.p1.global_position = depart + Vector2(300, 200)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_check("et elle le suit quand il se déplace",
-		_main.cam1.global_position.distance_to(_main.p1.global_position) < 4.0,
-		"caméra %s, joueur %s" % [_main.cam1.global_position, _main.p1.global_position])
+		_main.cam1.global_position.distance_to(regard.call()) < 4.0
+		and _main.cam1.global_position.distance_to(camera_avant) > 100.0,
+		"caméra %s (avant %s), regard prescrit %s, joueur %s" % [_main.cam1.global_position, camera_avant,
+		regard.call(), _main.p1.global_position])
 	_main.p1.global_position = depart
 
 	await get_tree().create_timer(1.0).timeout
