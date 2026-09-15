@@ -286,6 +286,10 @@ func _poser_du_sang(pos: Vector2) -> void:
 	var arene: Node = p._main.arena
 	if arene == null:
 		return
+	# ISO10, 1b — la même tache à chaque séance : `blood_stain` tire sa planche au hasard, et deux séances
+	# posaient deux taches de tailles différentes (tour 1 contre 1b). Une loupe « avant / après » qui change de
+	# sujet ne compare plus rien.
+	seed(40)
 	for gerbe in [false, true]:
 		var tache := Node2D.new()
 		tache.set_script(preload("res://blood_stain.gd"))

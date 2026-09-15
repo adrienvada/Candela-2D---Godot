@@ -22,11 +22,13 @@ extends Node2D
 ##    déplacé de ±0,7 px par un hachage de sa position, donc identique sur les
 ##    deux machines et d'une manche à l'autre) : un trait de plume, pas un
 ##    rectangle.
-## 2. **Les hachures** : des traits NOIRS à 45°, sur le sol, le long du mur,
-##    sur une bande de `HACHURE_PORTEE` px. C'est l'ombre dessinée au pied d'un
-##    mur dans une planche. Noires, elles n'existent que là où le sol est
-##    éclairé — dans le noir, rien ; un coup de torche, et le pied du mur se
-##    hachure.
+## 2. **Le lavis au pied** : un dégradé NOIR, de l'encre au pied du mur vers le
+##    sol nu, sur `LAVIS_PORTEE` px. C'est l'ombre dessinée au pied d'un mur dans
+##    une planche. Noir, il n'existe que là où le sol est éclairé — dans le noir,
+##    rien ; un coup de torche, et le pied du mur s'assombrit.
+##    (ISO10, 1b, 2026-09-15 : il remplace une bande de hachures à 45° — des
+##    tirets à période fixe que la vue iso grossissait 2,4 fois. Voir
+##    `LAVIS_PORTEE`.)
 ##
 ## Les tuiles de mur, elles, deviennent du noir pur (`candela_tileset.gd`) : la
 ## masse. La décision du 2026-08-25 — « un mur n'est pas une surface, c'est une
@@ -46,12 +48,18 @@ const TRAIT := 3.0
 const PAS_TRAIT := 7.0
 ## Amplitude de l'irrégularité du trait, en pixels.
 const TREMBLE := 0.7
-## Profondeur de la bande hachurée sur le sol, au pied du mur.
-const HACHURE_PORTEE := 8.0
-## Espacement des hachures le long du mur.
-const HACHURE_PAS := 5.0
-const HACHURE_LARGEUR := 1.2
-const HACHURE_ALPHA := 0.7
+## ISO10, 1b (2026-09-15) — **le pied du mur est un LAVIS, plus une bande de hachures.** Verdict de la loupe
+## (tour 1) : des tirets noirs obliques à période fixe, grossis 2,4 fois en iso, que la planche du DA (face_mur_01,
+## béton à coups d'encre diluée, bords diffus) n'a pas. Un dégradé continu, de l'encre au pied vers le sol nu :
+## bord diffus par construction, aucune période, aucun trait à un texel. Un seul dessin pour les deux vues
+## (décision de la session cloud, 16:56) : la vue de dessus change avec l'iso.
+##
+## Profondeur 7 px, et pas les 8 de l'ancienne bande : le lavis part de la ligne du trait (`TRAIT + 0,5`) et finit
+## donc à 10,5 px du mur, avant les 12 px où les faces iso lisent leur lumière (`IsoMateriaux.PIED_FACE_PX`,
+## `test_iso_beaute`). Les hachures, elles, allaient jusqu'à 13,1 px — au-delà, sans que le test le voie.
+const LAVIS_PORTEE := 7.0
+## L'encre au pied du mur, en alpha de noir. Plus légère que les hachures (0,7 sur un trait fin) : une surface.
+const LAVIS_ALPHA := 0.45
 ## Le trait d'un mur BAS : 2 px au lieu de 3 (dessin gardé par Adrien, H-MB0,
 ## 2026-09-14). Pas de hachures au pied : le dessus du mur bas est déjà hachuré
 ## (`CandelaTileSet._generer_mur_bas`), et sa bande d'ombre finie viendra en MB3.
@@ -117,7 +125,7 @@ func _duplicate_for_player(parent: Node2D, player_idx: int, vis_mask: int, lt_ma
 
 func _draw() -> void:
 	for boucle in _boucles:
-		_dessiner_hachures(boucle)
+		_dessiner_lavis(boucle)
 	for boucle in _boucles:
 		_dessiner_trait(boucle)
 	for boucle in _boucles_bas:
@@ -156,26 +164,30 @@ func _dessiner_trait(boucle: PackedVector2Array, epaisseur: float = TRAIT) -> vo
 	draw_polyline(pts, Charte.HALOGENE, epaisseur, false)
 
 
-func _dessiner_hachures(boucle: PackedVector2Array) -> void:
+## Le lavis au pied d'un contour de mur : pour chaque arête, un quadrilatère côté sol, de la ligne du trait jusqu'à
+## `LAVIS_PORTEE`, encre au pied et transparent au bout (couleurs par sommet). Relu bilinéaire par la lightmap, son
+## bord est diffus par construction.
+##
+## Les coins : le quadrilatère déborde d'une demi-portée aux deux bouts de l'arête, pour que deux arêtes voisines se
+## recouvrent dans l'angle sortant au lieu de laisser un coin nu — le rôle qu'avait le « trait de plus » des
+## hachures. Dans un angle rentrant, le débord passe dans la masse du mur voisin, noire : sans effet.
+func _dessiner_lavis(boucle: PackedVector2Array) -> void:
 	var n := boucle.size()
 	if n < 3:
 		return
-	var encre := Color(Charte.NOIR, HACHURE_ALPHA)
+	var pied := Color(Charte.NOIR, LAVIS_ALPHA)
+	var bout := Color(Charte.NOIR, 0.0)
 	for i in n:
 		var a := boucle[i]
 		var b := boucle[(i + 1) % n]
 		var dir := (b - a).normalized()
 		var dehors := -_interieur(dir)
-		var oblique := (dehors + dir).normalized()
-		var longueur := a.distance_to(b)
-		var d := HACHURE_PAS * 0.5
-		while d < longueur - 1.0:
-			var depart := a + dir * d + dehors * (TRAIT + 0.5)
-			var portee := HACHURE_PORTEE * (0.7 + 0.5 * _hachage(depart))
-			draw_line(depart, depart + oblique * portee, encre, HACHURE_LARGEUR)
-			d += HACHURE_PAS
-	# Le coin : un trait de plus dans chaque angle sortant, sinon l'angle
-	# reste nu entre deux bandes.
+		var depart := dehors * (TRAIT + 0.5)
+		var fin := dehors * (TRAIT + 0.5 + LAVIS_PORTEE)
+		var aa := a - dir * LAVIS_PORTEE * 0.5
+		var bb := b + dir * LAVIS_PORTEE * 0.5
+		draw_polygon(PackedVector2Array([aa + depart, bb + depart, bb + fin, aa + fin]),
+			PackedColorArray([pied, pied, bout, bout]))
 
 
 ## Hachage déterministe d'une position, dans [0, 1[. Les deux machines d'un

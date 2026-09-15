@@ -137,9 +137,10 @@ const TEMPERATURE_SEUIL_HAUT := 0.45
 ## ISO7b — la face prend la direction de la lumière (`mur_iso.gdshader`, gradient de la lightmap devant elle).
 ## Plancher 0,4 : une face de profil garde 40 % de la lumière qu'elle reçoit, pour rester lisible (brief :
 ## 0,35 à 0,45). Pas d'une tuile : le gradient se lit à l'échelle d'une tuile, pas du grain de la lightmap.
-## ISO7b — où une face lit sa lumière : 12 px devant elle, au-delà des hachures d'encre de `MurEncre` (portée jusqu'à
-## 9,6 px). À 8 px (`Presentation3D.PIED_PX`), la face portait des rayures au pas des hachures. Reposé ici, après la
-## présentation.
+## ISO7b — où une face lit sa lumière : 12 px devant elle, au-delà de l'encre du pied de `MurEncre`. À 8 px
+## (`Presentation3D.PIED_PX`), la face portait des rayures au pas des hachures. Reposé ici, après la présentation.
+## ISO10, 1b — l'encre du pied est un lavis qui s'arrête à 10,5 px de la ligne du mur (trait + `LAVIS_PORTEE`) ; les
+## hachures qu'il remplace allaient en fait jusqu'à 13,1 px (l'ancien compte, 9,6, oubliait le décalage du trait).
 const PIED_FACE_PX := 12.0
 
 ## ⚠️ **1 : le Lambert des faces est ÉTEINT** (décision de la session cloud, 2026-09-15 14:21, sur la mesure du banc).

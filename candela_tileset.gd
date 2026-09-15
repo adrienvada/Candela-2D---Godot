@@ -49,9 +49,15 @@ const MUR_BAS_EPAISSEUR := 2
 const SOL_DESSIN_A := Color(0.148, 0.148, 0.140)
 const SOL_DESSIN_B := Color(0.178, 0.179, 0.168)
 ## Le joint et le trait des fissures, en part de noir mêlée à l'aplat.
+##
+## ISO10, 1b (2026-09-15) — **fissures et pores en gris moyen, plus en noir.** Verdict de la loupe (tour 1) : des
+## traits noirs de deux pixels, trois à six par dalle, que la vue iso grossit 2,4 fois en blocs contrastés ; la
+## planche du DA (sol_01) montre des fissures en cheveu, des taches de lavis douces et quelques points discrets.
+## Fissures 0,72 → 0,35, pores 0,45 → 0,20 (et plus rares, voir `_generer_dalle_encre`). Les joints, jugés bons,
+## ne bougent pas. Un seul dessin pour les deux vues (décision de la session cloud, 16:56).
 const JOINT_ENCRE := 0.42
-const FISSURE_ENCRE := 0.72
-const PORE_ENCRE := 0.45
+const FISSURE_ENCRE := 0.35
+const PORE_ENCRE := 0.20
 
 ## ⚠️ **Le mur n'est PAS peint, et c'est une décision, pas un oubli.**
 ## Voir « Décisions actées » — DA2.7 a été mesurée puis abandonnée le
@@ -111,18 +117,20 @@ static func _generer_dalle_encre(img: Image, oy: int, aplat: Color, graine: int)
 			var bord := x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1
 			img.set_pixel(x, oy + y, joint if bord else aplat)
 
-	# Les pores : un pixel sur soixante environ, jamais deux voisins — un
-	# semis, pas un grain.
+	# Les pores : un pixel sur deux cents environ, jamais deux voisins — quelques points discrets, pas un semis.
+	# ISO10, 1b — 0,07 → 0,02 : grossis 2,4 fois en iso, les pores d'un pixel sur soixante se lisaient en paires de
+	# points noirs le long de tout ce qui éclaire le sol (constat sur la loupe du trait de balle).
 	for y in range(2, TILE_SIZE.y - 1, 2):
 		for x in range(2, TILE_SIZE.x - 1, 2):
-			if _hachage(graine * 7919 + y * 131 + x) < 0.07:
+			if _hachage(graine * 7919 + y * 131 + x) < 0.02:
 				img.set_pixel(x, oy + y, pore)
 
 	# Les fissures : deux ou trois traits brisés qui avancent surtout en
 	# DIAGONALE, par pas d'un pixel, avec un coude de temps en temps. Un trait
 	# de plume qui cherche son chemin dans le béton. (Un premier jet n'avançait
 	# qu'en x ou en y : des escaliers à angle droit, un circuit imprimé.)
-	var nb := 2 + int(_hachage(graine) * 2.0)
+	# ISO10, 1b — une ou deux fissures par dalle, plus deux ou trois.
+	var nb := 1 + int(_hachage(graine) * 2.0)
 	for k in nb:
 		var g := graine * 31 + k * 977
 		var x := 2 + int(_hachage(g) * float(TILE_SIZE.x - 4))

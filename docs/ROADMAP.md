@@ -25152,6 +25152,41 @@ qu'elle porte le cône de la classe qui la pose : le Braconnier, à l'arbalète,
   (`CandelaTileSet._generer_dalle_encre`, un pixel sur deux jamais voisins), grossis 2,4 fois — pas des traces de pas.
 - Lot complet vert à 17:02 : 127 OK en 421 s.
 
+**1b — l'encre dans le dessin, un seul dessin pour les deux vues.** Défauts 2, 3, 4 et 8 du verdict. Décision de la
+session cloud (16:56) : la vue de dessus (`--2d`) change avec l'iso. Toute cette encre est dessinée UNE fois en 2D,
+dans la lumière du jeu, puis relue par la vue iso. Un pixel d'écran y vaut environ 0,4 pixel de ce dessin : une
+« transition d'un pixel d'écran » ne s'y dessine pas, c'est le dessin lui-même qui s'adoucit. Le dessin deux fois
+plus fin reste le second levier, si le tour 2 le demande.
+- **Murs (défaut 2)** : `MurEncre._dessiner_hachures` est remplacé par `_dessiner_lavis`. Un dégradé noir au pied du
+  mur, de l'encre (alpha 0,45) au sol nu, sur `LAVIS_PORTEE` 7 px, quadrilatères à couleurs par sommet débordant
+  dans les angles sortants : ni période ni tiret.
+- **Sol (défauts 3 et 8)** : `CandelaTileSet._generer_dalle_encre`. Fissures en gris moyen (`FISSURE_ENCRE` 0,72 →
+  0,35), une ou deux par dalle au lieu de deux ou trois ; pores plus rares (un sur deux cents au lieu d'un sur
+  soixante) et plus pâles (0,45 → 0,20) ; joints inchangés. Les paires de points noirs du trait de balle (défaut 8)
+  étaient ces pores grossis 2,4 fois.
+- ⚠️ **Défaut ancien trouvé en route** : les faces iso lisent leur lumière à 12 px devant elles, « au-delà des
+  hachures ». Le contrôle de `test_iso_beaute` comptait 9,6 px de hachures et oubliait qu'elles partaient de la
+  ligne du trait (3,5 px) : elles allaient en fait jusqu'à 13,1 px. Le lavis finit à 10,5 px, et le contrôle compte
+  désormais l'étendue complète.
+- **À la loupe** (pilier, sol, ombre ; `docs/iso/loupe/` du tour 1 contre les loupes de 1b) : plus aucune bande de
+  tirets, un assombrissement léger au pied ; fissures pâles et rares ; bord de l'ombre inchangé. Une mesure d'encre
+  dure (marques sombres dans le sol éclairé) bouge peu, 778 → 747 sur le pilier, 712 → 567 sur l'ombre, parce
+  qu'elle compte aussi les joints, le trait du mur et les ombres portées. C'est l'œil qui tranche ici, pas elle.
+- **Loupe reproductible** : `blood_stain` tire sa planche au hasard, et deux séances posaient deux taches de tailles
+  différentes. L'outil fixe désormais le tirage (`seed(40)`) avant de poser le sang.
+- **Le sang (défaut 4) ne bouge PAS dans 1b** — décision de la session cloud (17:08), voie (a). Ses bords en escalier
+  sont les paliers d'encre voulus au lot 1 de la refonte roman graphique (10/09 : « un dégradé mou est un style,
+  celui de la photo »), que `test_encrage` garde (moins de 25 % de part molle dans `assets/decals`). On ne rouvre pas
+  cette décision : ni les PNG ni la suite ne changent. Le sang se rejuge au tour 2 ; si l'escalier vient du
+  grossissement des paliers à la relecture iso, le même adoucissement d'un pixel d'écran que le halo de la fusée
+  (1c, voie c) s'y applique.
+- **Constat qui entre au lot, en famille 1f** (décision de la session cloud, 17:08) : le sang au sol TEINTE EN ROUGE
+  les faces de mur proches. Une face lit sa lumière au sol, 12 px devant elle, et une tache posée là rougit toute la
+  face (loupe-sol, loupe-ombre ; déjà visible sur la loupe d'ombre du tour 1). Une face doit lire la LUMIÈRE, pas le
+  sol peint : première piste, la lecture de la lightmap AVANT la pâte (celle de `pate_poids_neutre`), sans rien
+  changer à la décision ISO7b ni à la chaleur ; une cible de rendu de plus se chiffrerait avant de coder.
+- Lot complet vert à 17:16 : 127 OK en 414 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

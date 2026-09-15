@@ -317,13 +317,17 @@ func _les_faces_et_le_bain() -> void:
 	_check("le gradient se lit DEVANT la face, jamais derrière", code_mur.contains("pied_px + n * lambert_pas_px")
 		and not code_mur.contains("pied_px - n * lambert_pas_px"))
 	_check("Lambert et contact multiplient la matière", code_mur.contains("matiere * lambert * contact"))
-	# Les rayures des faces (constat de la session cloud, 2026-09-15 12:10) : la lecture au pied tombait dans les hachures.
-	var portee_max := MurEncre.HACHURE_PORTEE * 1.2
-	_check("la face lit sa lumière au-delà des hachures d'encre (pied %.1f > portée %.1f)" % [IsoMateriaux.PIED_FACE_PX, portee_max],
-		IsoMateriaux.PIED_FACE_PX > portee_max + 1.0)
-	_check("la face et le liseré lisent une moyenne le long du mur, sur une période de hachure",
-		code_mur.contains("brute = lire_lightmap_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lire_lightmap_moyenne(monde.xz + sortie")
-		and is_equal_approx(1.875 + 1.875, MurEncre.HACHURE_PAS * 0.75))
+	# Les rayures des faces (constat de la session cloud, 2026-09-15 12:10) : la lecture au pied tombait dans l'encre du pied.
+	# ISO10, 1b — la bande de hachures est devenue un lavis, et on compte son étendue COMPLÈTE depuis la ligne du mur (le
+	# trait, puis le lavis). L'ancien contrôle ignorait le décalage du trait : les hachures allaient en fait jusqu'à
+	# 13,1 px, au-delà des 12 px de lecture, et il passait quand même.
+	var encre_max := MurEncre.TRAIT + 0.5 + MurEncre.LAVIS_PORTEE
+	_check("la face lit sa lumière au-delà de l'encre du pied (pied %.1f > encre %.1f)" % [IsoMateriaux.PIED_FACE_PX, encre_max],
+		IsoMateriaux.PIED_FACE_PX > encre_max + 1.0)
+	# La lecture moyenne le long du mur reste : elle effaçait la période des hachures, elle lisse encore le lavis et le
+	# trait. Plus de période à couvrir, donc plus de lien au pas des hachures.
+	_check("la face et le liseré lisent une moyenne le long du mur",
+		code_mur.contains("brute = lire_lightmap_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lire_lightmap_moyenne(monde.xz + sortie"))
 	# La température graduée : plus chaude en basse lumière, luminance gardée.
 	var bas := IsoPate.temperature_graduee(IsoPate.depuis_affiche(Vector3.ONE * 0.06), 0.8, IsoMateriaux.TEMPERATURE_SEUIL_BAS,
 		IsoMateriaux.TEMPERATURE_SEUIL_HAUT)

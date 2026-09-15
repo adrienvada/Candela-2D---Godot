@@ -5622,3 +5622,13 @@ La mesure au pixel reste contaminée (halo du corps, murs voisins) et le dit. Au
 de balle sont les pores des dalles. Dans le même commit, les deux ajouts demandés par la session cloud : le piège de
 la texture d'écran et le point ouvert du shader jamais libéré.
 Lot complet vert à 17:02 : 127 OK en 421 s.
+
+**ISO10, lot 1, 1b — l'encre dans le dessin, 2026-09-15 à partir de 17:03.** Session « Iso 1 Opus ». Un seul dessin
+pour les deux vues (décision de la session cloud, 16:56). Changements :
+- murs : la bande de hachures au pied devient un lavis en dégradé de 7 px ;
+- sol : fissures en gris moyen, une ou deux par dalle, pores rares et pâles, joints gardés.
+Les paires de points noirs du trait de balle étaient les pores. Trouvé en route : les hachures allaient jusqu'à
+13,1 px du mur, au-delà des 12 px où les faces lisent leur lumière, et le test ne comptait pas le trait. L'outil de
+loupe fixe désormais le tirage du sang. Le sang ne bouge pas : ses paliers d'encre du 10/09 restent (session cloud,
+17:08, voie a), rejugés au tour 2. Le constat du sang qui teinte les faces de mur en rouge entre au lot en famille 1f.
+Lot complet vert à 17:16 : 127 OK en 414 s.
