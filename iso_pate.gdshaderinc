@@ -146,6 +146,29 @@ vec3 pate_temperature(vec3 c, float force) {
 	return chaude * (l / max(pate_luminance(chaude), 0.000001));
 }
 
+// ISO7b — la température GRADUÉE : chaude au bord du bain de lumière, plus neutre au centre. Mesurée sur la
+// planche E1 du DA (variante 2) : sol le plus clair (179/255) r/g 1,19 b/g 0,78 ; bord du bain (95/255) r/g
+// 1,49 b/g 0,60 ; face éclairée r/g 1,32 b/g 0,56. `seuil_bas` et `seuil_haut` sont des luminances AFFICHÉES :
+// sous le bas, la teinte braise ; au-dessus du haut, `PATE_TEINTE_CHAUDE`. Mêmes garanties que
+// `pate_temperature` : luminance gardée, lumière colorée intacte, 0 → 0.
+const vec3 PATE_TEINTE_BRAISE = vec3(1.28, 0.86, 0.52);
+
+vec3 pate_temperature_graduee(vec3 c, float force, float seuil_bas, float seuil_haut) {
+	float l = pate_luminance(c);
+	if (l <= 0.0 || force <= 0.0) {
+		return c;
+	}
+	float la = pate_luminance(pate_vers_affiche(c));
+	float braise = 1.0 - smoothstep(seuil_bas, max(seuil_haut, seuil_bas + 0.001), la);
+	vec3 teinte_brute = mix(PATE_TEINTE_CHAUDE, PATE_TEINTE_BRAISE, braise);
+	float mx = max(c.r, max(c.g, c.b));
+	float mn = min(c.r, min(c.g, c.b));
+	float neutre = 1.0 - clamp((mx - mn) / max(mx, 0.0001), 0.0, 1.0);
+	vec3 teinte = teinte_brute / pate_luminance(teinte_brute);
+	vec3 chaude = c * mix(vec3(1.0), teinte, clamp(force, 0.0, 1.0) * neutre);
+	return chaude * (l / max(pate_luminance(chaude), 0.000001));
+}
+
 // L'encre des arêtes d'une BOÎTE, quelle que soit la façon dont elle est construite — cube unité
 // mis à l'échelle (les murs) ou `BoxMesh` à sa vraie taille sous une échelle identité (les voxels,
 // jambes comprimées en Y à l'accroupi) — et quelle que soit sa rotation (un corps tourne) :

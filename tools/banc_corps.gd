@@ -34,6 +34,7 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn -- --epaisseur=leger --lumiere=0.8 --capture=/chemin/avant.png
 ##   godot --path . tools/banc_corps.tscn -- --epaisseur=x1_6 --lumiere=0.8 --capture=/chemin/apres.png
 ##   godot --path . tools/banc_corps.tscn -- --encre=0.03 --lumiere=0.8 --capture=/chemin/encre.png
+##   godot --path . tools/banc_corps.tscn -- --modele --lumiere=0.8 --capture=/chemin/modele.png
 ##
 ## `--epaisseur` (ISO3 vague 4) : `leger` (×1,0, l'ancien gabarit vague 0-3),
 ## `x1_3`, `x1_6` (le réglage par défaut si l'option est omise — voir
@@ -85,6 +86,9 @@ var _capteur_force := false          # --capteur : capteur synthétique dès le 
 var _opacite_force := -1.0           # --opacite=X : sinon 1.0
 var _silhouette_force := false       # --silhouette : mode_silhouette=1 dès le départ
 var _encre := 0.0                    # ISO3 vague 5 — --encre=X (tuiles) : définir_encre(X), sinon 0.0 (défaut)
+## ISO7b (crochet d'ISO7 Beauté) — `--modele` : le modelé par la direction de la lumière, avec un gradient SIMULÉ
+## (ce banc n'a ni capteur ni lightmap) : la lumière monte vers la gauche, comme la lampe de la planche E9 du DA.
+var _modele := false
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -148,6 +152,7 @@ func _lire_arguments(args: PackedStringArray) -> void:
 					push_warning("banc_corps : --epaisseur attend %s (reçu « %s »)"
 						% [", ".join(VoxelCatalogueT.EPAISSEUR_REGLAGES.keys()), val])
 			"encre": _encre = maxf(0.0, float(val))
+			"modele": _modele = true
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
@@ -196,6 +201,11 @@ func _construire_scene() -> void:
 		noeud.definir_pixels_par_unite(tuile)
 		if _encre > 0.0:
 			noeud.definir_encre(_encre)
+		if _modele:
+			var m: ShaderMaterial = noeud.materiau()
+			m.set_shader_parameter("lambert_plancher", IsoMateriaux.LAMBERT_PLANCHER)
+			m.set_shader_parameter("gradient_simule", Vector2(-0.2, 0.0))
+			m.set_shader_parameter("l_max_simule", 0.6)
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,

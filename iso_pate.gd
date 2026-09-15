@@ -119,6 +119,25 @@ static func temperature(c: Vector3, force: float) -> Vector3:
 	return chaude * (l / maxf(luminance(chaude), 0.000001))
 
 
+## ISO7b — miroir de `PATE_TEINTE_BRAISE` et `pate_temperature_graduee`.
+const TEINTE_BRAISE := Vector3(1.28, 0.86, 0.52)
+
+
+static func temperature_graduee(c: Vector3, force: float, seuil_bas: float, seuil_haut: float) -> Vector3:
+	var l := luminance(c)
+	if l <= 0.0 or force <= 0.0:
+		return c
+	var la := luminance(vers_affiche(c))
+	var braise := 1.0 - smoothstep(seuil_bas, maxf(seuil_haut, seuil_bas + 0.001), la)
+	var teinte_brute := TEINTE_CHAUDE.lerp(TEINTE_BRAISE, braise)
+	var mx := maxf(c.x, maxf(c.y, c.z))
+	var mn := minf(c.x, minf(c.y, c.z))
+	var neutre := 1.0 - clampf((mx - mn) / maxf(mx, 0.0001), 0.0, 1.0)
+	var teinte := teinte_brute / luminance(teinte_brute)
+	var chaude := c * Vector3.ONE.lerp(teinte, clampf(force, 0.0, 1.0) * neutre)
+	return chaude * (l / maxf(luminance(chaude), 0.000001))
+
+
 ## ISO7 — miroir de `pate_trait_de_bord` : 1 sur le trait, 0 au-delà.
 static func trait_de_bord(distance: float, largeur: float, aa: float) -> float:
 	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance)

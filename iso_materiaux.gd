@@ -95,7 +95,14 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE)
 	materiau.set_shader_parameter("encre_plancher_affiche", ENCRE_PLANCHER_AFFICHE)
 	materiau.set_shader_parameter("lisere_sommet_px", LISERE_SOMMET_PX if active else 0.0)
-	materiau.set_shader_parameter("temperature", TEMPERATURE if active else 0.0)
+	materiau.set_shader_parameter("temperature", (TEMPERATURE_GRADUEE if active else 0.0))
+	materiau.set_shader_parameter("temperature_seuil_bas", TEMPERATURE_SEUIL_BAS)
+	materiau.set_shader_parameter("temperature_seuil_haut", TEMPERATURE_SEUIL_HAUT if active else 0.0)
+	materiau.set_shader_parameter("pied", PIED_FACE_PX)
+	materiau.set_shader_parameter("lambert_plancher", LAMBERT_PLANCHER if active else 1.0)
+	materiau.set_shader_parameter("lambert_pas_px", LAMBERT_PAS_PX)
+	materiau.set_shader_parameter("contact_px", CONTACT_PX if active else 0.0)
+	materiau.set_shader_parameter("contact_reste", CONTACT_RESTE)
 	# Sans beauté, aucun muret : tous les dessus redeviennent noirs, comme avant ISO7.
 	materiau.set_shader_parameter("seuil_muret_px", SEUIL_MURET_PX if active else 0.0)
 
@@ -107,6 +114,9 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	var active := beaute_active()
 	materiau.set_shader_parameter("encre_arete", ENCRE_VOXEL_PX if active else 0.0)
 	materiau.set_shader_parameter("encre_reste", ENCRE_VOXEL_RESTE)
+	# ISO7b — le modelé des corps et des objets debout par la direction de la lumière (même plancher que les murs).
+	materiau.set_shader_parameter("lambert_plancher", LAMBERT_PLANCHER if active else 1.0)
+	materiau.set_shader_parameter("lambert_pas_px", LAMBERT_PAS_PX)
 
 
 ## ISO7, étape 6 — la température de la lumière vue sur le sol et les murs (`pate_temperature`).
@@ -114,6 +124,42 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 ## mais la pâte D désature de 35 % vers la luminance et la rend grise. 0,5 rend une partie de cette
 ## chaleur, luminance gardée : aucune bande ne bascule, et une lumière colorée garde sa teinte.
 const TEMPERATURE := 0.5
+
+## ISO7b — la température graduée par la luminance AFFICHÉE (`pate_temperature_graduee`) : braise sous
+## `TEMPERATURE_SEUIL_BAS`, teinte chaude d'ISO7 au-dessus de `TEMPERATURE_SEUIL_HAUT`. La planche E1 est
+## chaude au bord du bain (95/255, r/g 1,49) et plus neutre au centre (179/255, r/g 1,19) ; le jeu est bien
+## plus sombre qu'elle, d'où des seuils plus bas que ses valeurs. Force relevée à 0,8 : c'est la couleur
+## qui porte le bain d'E1.
+const TEMPERATURE_GRADUEE := 0.8
+const TEMPERATURE_SEUIL_BAS := 0.08
+const TEMPERATURE_SEUIL_HAUT := 0.45
+
+## ISO7b — la face prend la direction de la lumière (`mur_iso.gdshader`, gradient de la lightmap devant elle).
+## Plancher 0,4 : une face de profil garde 40 % de la lumière qu'elle reçoit, pour rester lisible (brief :
+## 0,35 à 0,45). Pas d'une tuile : le gradient se lit à l'échelle d'une tuile, pas du grain de la lightmap.
+## ISO7b — où une face lit sa lumière : 12 px devant elle, au-delà des hachures d'encre de `MurEncre` (portée jusqu'à
+## 9,6 px). À 8 px (`Presentation3D.PIED_PX`), la face portait des rayures au pas des hachures. Reposé ici, après la
+## présentation.
+const PIED_FACE_PX := 12.0
+
+const LAMBERT_PLANCHER := 0.4
+const LAMBERT_PAS_PX := 35.0
+
+## ISO7b — l'ombre de contact au pied des faces : 6 px de monde, 55 % gardés au ras du sol.
+const CONTACT_PX := 6.0
+const CONTACT_RESTE := 0.55
+
+## ISO7b — des dalles de deux tuiles au sol, joint fin ; la trame de 35 px de la lightmap neutralisée.
+const DALLE_PX := 70.0
+const JOINT_DALLE_PX := 1.2
+const JOINT_DALLE_RESTE := 0.6
+## L'exposant du rapport des deux tons du damier (voir `sol_iso.gdshader`). **0 : le damier est gardé.**
+## ⚠️ Mesuré au banc (2026-09-15, 11:10, cadrage e1) : ramener la case claire au ton de la sombre AVANT la pâte
+## (exposant 2,2) faisait passer sa luminance sous les seuils de bande de la pâte D — le halo d'une fusée
+## descendait d'une bande entière (lumière éclairée moyenne 45,9 → 33,3) et le damier revenait à l'envers.
+## Effacer le damier sans décaler les seuils de lumière du jeu n'est pas possible ici ; il reste la référence
+## spatiale du joueur (décision d'Adrien, 2026-09-11). Seuls le joint de 35 px et les dalles changent.
+const TON_EXPOSANT := 0.0
 
 
 ## Pose la matière du sol sur le matériau d'un sol (`sol_iso.gdshader`). Sans beauté, force et
@@ -123,7 +169,19 @@ static func accorder_sol(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("texture_sol", TEXTURE_SOL)
 	materiau.set_shader_parameter("periode_sol_px", PERIODE_SOL_PX)
 	materiau.set_shader_parameter("force_matiere", FORCE_MATIERE_SOL if active else 0.0)
-	materiau.set_shader_parameter("temperature", TEMPERATURE if active else 0.0)
+	materiau.set_shader_parameter("temperature", TEMPERATURE_GRADUEE if active else 0.0)
+	materiau.set_shader_parameter("temperature_seuil_bas", TEMPERATURE_SEUIL_BAS)
+	materiau.set_shader_parameter("temperature_seuil_haut", TEMPERATURE_SEUIL_HAUT if active else 0.0)
+	materiau.set_shader_parameter("dalles", 1.0 if active else 0.0)
+	materiau.set_shader_parameter("tuile_px", float(CandelaTileSet.TILE_SIZE.x))
+	materiau.set_shader_parameter("joint_2d_px", 1.0)
+	materiau.set_shader_parameter("ton_a", CandelaTileSet.SOL_DESSIN_A.get_luminance())
+	materiau.set_shader_parameter("ton_b", CandelaTileSet.SOL_DESSIN_B.get_luminance())
+	# Linéarisée par `source_color` : le rapport des tons s'y lit à la puissance 2,2 (à trancher au banc).
+	materiau.set_shader_parameter("ton_exposant", TON_EXPOSANT)
+	materiau.set_shader_parameter("dalle_px", DALLE_PX)
+	materiau.set_shader_parameter("joint_dalle_px", JOINT_DALLE_PX)
+	materiau.set_shader_parameter("joint_dalle_reste", JOINT_DALLE_RESTE)
 
 
 ## La grille des murs d'une carte, pour que l'encre et le liseré ne tombent que sur les VRAIS
@@ -190,6 +248,36 @@ static func dessus_muret(lumiere_de_la_case: Vector3, encre: float, reste: float
 ## Le sol (`sol_iso.gdshader`) : la lumière pâteuse au point, fois la matière.
 static func sol(lumiere_pateuse: Vector3, matiere_brute: float, force: float) -> Vector3:
 	return IsoPateMiroir.facteur(lumiere_pateuse, lerpf(1.0, matiere_brute, force))
+
+
+## ISO7b — miroir du facteur de Lambert de `mur_iso.gdshader`, depuis les quatre lectures de luminance :
+## au pied (`l_0`), une tuile devant (`l_avant`), une tuile de chaque côté le long de la face (`l_t1`, `l_t2`).
+static func lambert(l_0: float, l_avant: float, l_t1: float, l_t2: float, plancher: float = LAMBERT_PLANCHER) -> float:
+	if plancher >= 1.0:
+		return 1.0
+	var g := Vector2(l_avant - l_0, 0.5 * (l_t1 - l_t2))
+	var norme := g.length()
+	var face_lampe := clampf(g.x / norme, 0.0, 1.0) if norme > 0.00001 else 1.0
+	var certitude := smoothstep(0.05, 0.3, norme / maxf(maxf(l_0, l_avant), 0.02))
+	return lerpf(1.0, maxf(plancher, face_lampe), certitude)
+
+
+## ISO7b — miroir de `lambert_du_corps` (`corps_iso.gdshader`) : le facteur de modelé d'une face de normale `n`
+## (monde) sous un gradient au sol `g` (vers où la lumière monte) et la lumière la plus forte lue `l_max`.
+static func lambert_du_corps(g: Vector2, l_max: float, n: Vector3, plancher: float = LAMBERT_PLANCHER) -> float:
+	# Le modelé RÉPARTIT (voir `corps_iso.gdshader`) : côté lampe `1 + 0,3 cos`, côté opposé `1 + 0,6 cos` jusqu'au
+	# plancher, dessus 1.
+	if n.y > 0.5:
+		return 1.0
+	if n.y < -0.5:
+		return plancher
+	var norme := g.length()
+	if norme <= 0.00001:
+		return 1.0
+	var cosinus := Vector2(n.x, n.z).normalized().dot(g / norme)
+	var face := 1.0 + 0.3 * cosinus if cosinus >= 0.0 else maxf(plancher, 1.0 + 0.6 * cosinus)
+	var certitude := smoothstep(0.05, 0.3, norme / maxf(l_max, 0.02))
+	return lerpf(1.0, face, certitude)
 
 
 ## Les textures du catalogue, pour la suite : chemin → texture.

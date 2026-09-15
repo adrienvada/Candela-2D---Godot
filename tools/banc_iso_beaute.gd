@@ -33,7 +33,9 @@
 ## Vraie fenêtre, jamais headless. Ses appuis sont vérifiés par `tools/test_iso_beaute.gd`.
 extends "res://tools/banc_iso.gd"
 
-const CADRAGES := ["mur", "planche"]
+const CADRAGES := ["mur", "planche", "e1"]
+## ISO7b — la carte d'essai des murs bas (murs de face, de profil, murets), celle de `tools/banc_murs_bas.gd`.
+const CARTE_ESSAI := "res://tools/cartes/murs_bas_essai.json"
 ## Seuils des mesures, en niveaux sur 255.
 const SEUIL_CLAIR := 24
 const SEUIL_NOIR := 2
@@ -44,6 +46,12 @@ const IMAGES_APPELS := 30
 
 var _beaute := false
 var _cadrage := "mur"
+## ISO7b — `--carte-essai` : la carte d'essai des murs bas ; `--fusee` : une fusée posée devant J1.
+var _carte_essai := false
+var _fusee := false
+## ISO7b — le milieu de la face SUD d'un mur haut de la carte chargée : la seule face qu'une caméra au lacet 0
+## montre. Posé une fois par `_poser_le_cadrage`, tenu ensuite.
+var _face_e1 := Vector2.INF
 
 
 func _lire_arguments(args: PackedStringArray) -> bool:
@@ -51,6 +59,8 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 		return false
 	_beaute = args.has("--beaute")
 	_cadrage = _value(args, "--cadrage", "mur")
+	_carte_essai = args.has("--carte-essai")
+	_fusee = args.has("--fusee")
 	if not CADRAGES.has(_cadrage):
 		printerr("✗ --cadrage attend %s (reçu « %s »)" % [" | ".join(CADRAGES), _cadrage])
 		return false
@@ -77,18 +87,63 @@ func _controler_la_beaute() -> void:
 		printerr("✗ la vue iso n'est pas allumée")
 		_sortir(1)
 		return
+	if _carte_essai:
+		# Même chemin que `tools/banc_murs_bas.gd` : la carte posée sous la manche lancée, puis `rebuild_arena`.
+		var json := JSON.new()
+		json.parse(FileAccess.get_file_as_string(CARTE_ESSAI))
+		MapData.current_map_data = MapCodec.validate(json.data as Dictionary)["data"]
+		_main.rebuild_arena()
+		for i in 10:
+			await get_tree().process_frame
+		print("Carte : « %s » (carte d'essai)" % String(MapData.current_map_data.get("name", "?")))
+		# ⚠️ **`rebuild_arena` éteint les torches, et l'action reste « appuyée »** : le jeu ne voit aucun nouvel appui,
+		# rien ne les rallume — toutes les captures du 2026-09-15 à 11:35 sont sorties sans un cône. Relâcher, une
+		# image, puis appuyer : l'appui est de nouveau un appui.
+		for action in ["p1_torch", "p2_torch"]:
+			if InputMap.has_action(action):
+				Input.action_release(action)
+		for i in 3:
+			await get_tree().process_frame
+		_tenir_les_torches()
 	_poser_le_cadrage()
-	for i in 90:
+	if _fusee:
+		var p1: Node2D = _main.p1
+		var axe := (_mur_le_plus_proche(p1.global_position) - p1.global_position).normalized()
+		if _cadrage == "e1" and _face_e1 != Vector2.INF:
+			axe = Vector2(0.0, -1.0)
+			_main._do_spawn_fusee(0, _face_e1 + Vector2(150.0, 90.0), 0.0, 951)
+		else:
+			_main._do_spawn_fusee(0, p1.global_position + axe * 90.0 + axe.orthogonal() * 60.0, 0.0, 951)
+	# 240 images : le halo d'une fusée grandit à son allumage (anneau de 7 221 pixels « éteints » entre deux
+	# captures à 40 images d'écart, le 2026-09-15).
+	for i in 240:
 		_tenir_le_cadrage()
 		await get_tree().process_frame
+	if _cadrage == "e1" and _face_e1 != Vector2.INF:
+		# Où la face visée tombe à l'écran (vue de J1), pour que les gros plans la cadrent sans la deviner.
+		var projecteur := presentation.projecteur_ecran(0)
+		if projecteur.is_valid():
+			var ecran: Vector2 = projecteur.call(_face_e1)
+			print("BANC_ISO_BEAUTE face_e1 monde=%s ecran=(%d, %d)" % [str(_face_e1), roundi(ecran.x), roundi(ecran.y)])
 
-	var apres := await _capture_et_appels()
+	# ⚠️ **Avant, après, avant bis.** Ce qui change entre les deux « avant » n'est pas l'habillage : c'est le jeu qui
+	# bouge (torche qui bascule, fusée qui grandit, bandeau qui respire). Ces pixels-là sortent de la mesure.
 	var materiaux := _materiaux_iso(presentation)
-	var gardes := _eteindre_la_beaute(materiaux)
+	var gardes := _eteindre_la_beaute(materiaux, NEUTRES_ISO7B if _avant_iso7 else NEUTRES)
 	for i in 10:
 		_tenir_le_cadrage()
 		await get_tree().process_frame
 	var avant := await _capture_et_appels()
+	_rendre_la_beaute(materiaux, gardes)
+	for i in 10:
+		_tenir_le_cadrage()
+		await get_tree().process_frame
+	var apres := await _capture_et_appels()
+	gardes = _eteindre_la_beaute(materiaux, NEUTRES_ISO7B if _avant_iso7 else NEUTRES)
+	for i in 10:
+		_tenir_le_cadrage()
+		await get_tree().process_frame
+	var avant_bis := await _capture_et_appels()
 	if _isoler and avant["image"] != null:
 		await _isoler_les_parametres(materiaux, gardes, avant["image"])
 	_rendre_la_beaute(materiaux, gardes)
@@ -106,7 +161,9 @@ func _controler_la_beaute() -> void:
 	(avant["image"] as Image).save_png(chemin_avant)
 	(apres["image"] as Image).save_png(_capture)
 
-	var m := mesurer(avant["image"], apres["image"])
+	var derive: Image = masque_de_derive(avant["image"], avant_bis["image"]) if avant_bis["image"] != null else null
+	var m := mesurer(avant["image"], apres["image"], derive)
+	print("BANC_ISO_BEAUTE derive pixels=%d (écartés des mesures : le jeu a bougé entre les deux avant)" % m["derive"])
 	print("BANC_ISO_BEAUTE cadrage=%s vue=%s appels_avant=%d appels_apres=%d" % [_cadrage,
 		"scinde" if _scinde else "unique", avant["appels"], apres["appels"]])
 	print("BANC_ISO_BEAUTE pixels=%d clairs_avant=%d eteints_apres=%d allumes_neufs=%d (%.3f %%) changes=%d"
@@ -187,9 +244,34 @@ func _poser_le_cadrage() -> void:
 	if _cadrage == "planche":
 		# J2 contre le mur, dans le faisceau de J1 : la planche E1 (« la promesse du jeu en iso »).
 		p2.global_position = cible - axe * 26.0
+	elif _cadrage == "e1":
+		# ISO7b — la caméra regarde le nord (lacet 0) : seules les faces SUD se voient. J1, 160 px au sud d'une face
+		# sud, l'éclaire DE FACE ; J2, à 45 px de la même face et décalé, la rase torche parallèle (lumière de
+		# profil). ⚠️ Le mur se choisit dans la carte CHARGÉE (`current_map_data`) : `_mur_le_plus_proche` lit le
+		# catalogue (`get_selected`), et le cadrage tombait à côté sur la carte d'essai.
+		_face_e1 = _face_sud_de_mur_haut(p1.global_position)
+		p1.global_position = _face_e1 + Vector2(0.0, 160.0)
+		p2.global_position = _face_e1 + Vector2(-150.0, 45.0)
 	else:
 		p2.global_position = p1.global_position + axe.orthogonal() * 70.0
 	_tenir_les_torches()
+
+
+## Le milieu de la face sud du mur haut (au moins deux tuiles de large) le plus proche de `depuis`, dans la
+## carte chargée.
+func _face_sud_de_mur_haut(depuis: Vector2) -> Vector2:
+	var data: Dictionary = MapData.current_map_data if not MapData.current_map_data.is_empty() else MapData.get_selected()
+	var meilleure := depuis
+	var distance := INF
+	for r: Rect2 in IsoGeometrie.rects_px(data, MapGeometry.Kind.WALLS):
+		if r.size.x < 70.0:
+			continue
+		var face := Vector2(r.get_center().x, r.end.y)
+		var d := face.distance_to(depuis)
+		if d < distance:
+			distance = d
+			meilleure = face
+	return meilleure
 
 
 func _tenir_le_cadrage() -> void:
@@ -197,10 +279,15 @@ func _tenir_le_cadrage() -> void:
 	var p2: Node2D = _main.p2
 	var axe := (_mur_le_plus_proche(p1.global_position) - p1.global_position).normalized()
 	p1.rotation = axe.angle()
-	p2.rotation = axe.angle() if _cadrage == "mur" else (-axe).angle()
-	# ⚠️ **Pas de `_tenir_les_torches()` à chaque image** : rejouer l'appui faisait basculer la torche de J1 d'une
-	# capture à l'autre (~18 000 pixels du cône éteints ou allumés, lus comme un défaut d'habillage). Les torches
-	# se posent une fois, dans `_poser_le_cadrage`.
+	if _cadrage == "e1":
+		p1.rotation = -PI / 2.0
+		p2.rotation = 0.0
+	else:
+		p2.rotation = axe.angle() if _cadrage == "mur" else (-axe).angle()
+	# ⚠️ **La torche ne reste allumée que tenue** : sans cet appui à chaque image, le banc du 2026-09-15 11:15 a tout
+	# capturé torches éteintes. Tenue, elle bascule parfois d'une capture à l'autre : ce bruit-là est MESURÉ par le
+	# second « avant » (voir `_controler_la_beaute`) et retiré des mesures, au lieu d'être supposé absent.
+	_tenir_les_torches()
 
 
 func _capture_et_appels() -> Dictionary:
@@ -230,15 +317,22 @@ const NEUTRES := {"force_matiere": 0.0, "encre_arete_px": 0.0, "lisere_sommet_px
 	"temperature": 0.0}
 
 
-static func _eteindre_la_beaute(materiaux: Array[ShaderMaterial]) -> Array:
+## ISO7b — `--avant-iso7` : l'avant est l'habillage d'ISO7 (le jeu de ce matin, a5ac4b8), et seuls les réglages
+## d'ISO7b sont neutralisés — Lambert, contact, dalles, température graduée (rendue à la force d'ISO7).
+const NEUTRES_ISO7B := {"lambert_plancher": 1.0, "contact_px": 0.0, "dalles": 0.0, "temperature_seuil_haut": 0.0,
+	"temperature": 0.5, "pied": 8.0}
+var _avant_iso7 := OS.get_cmdline_user_args().has("--avant-iso7")
+
+
+static func _eteindre_la_beaute(materiaux: Array[ShaderMaterial], neutres: Dictionary = NEUTRES) -> Array:
 	var gardes := []
 	for mat in materiaux:
 		var g := {}
-		for p in NEUTRES:
+		for p in neutres:
 			var v = mat.get_shader_parameter(p)
 			if v != null:
 				g[p] = v
-				mat.set_shader_parameter(p, NEUTRES[p])
+				mat.set_shader_parameter(p, neutres[p])
 		gardes.append(g)
 	return gardes
 
@@ -251,7 +345,21 @@ static func _rendre_la_beaute(materiaux: Array[ShaderMaterial], gardes: Array) -
 
 ## Les mesures avant/après, sur deux images de même taille. Statique : la suite l'éprouve sur des
 ## images fabriquées (un habillage honnête, un habillage qui éteint, un qui allume une surface).
-static func mesurer(avant: Image, apres: Image) -> Dictionary:
+## Les pixels qui changent de plus de 6/255 entre deux captures du même état : blanc = dérive du jeu.
+static func masque_de_derive(a: Image, b: Image) -> Image:
+	var w := mini(a.get_width(), b.get_width())
+	var h := mini(a.get_height(), b.get_height())
+	var masque := Image.create_empty(w, h, false, Image.FORMAT_L8)
+	for y in h:
+		for x in w:
+			var u := a.get_pixel(x, y)
+			var v := b.get_pixel(x, y)
+			if absf(maxf(u.r, maxf(u.g, u.b)) - maxf(v.r, maxf(v.g, v.b))) * 255.0 > 6.0:
+				masque.set_pixel(x, y, Color.WHITE)
+	return masque
+
+
+static func mesurer(avant: Image, apres: Image, derive: Image = null) -> Dictionary:
 	var w := mini(avant.get_width(), apres.get_width())
 	var h := mini(avant.get_height(), apres.get_height())
 	var clairs := 0
@@ -265,8 +373,12 @@ static func mesurer(avant: Image, apres: Image) -> Dictionary:
 	var somme_avant := 0.0
 	var somme_apres := 0.0
 	var eclaires := 0
+	var derives := 0
 	for y in h:
 		for x in w:
+			if derive != null and derive.get_pixel(x, y).r > 0.5:
+				derives += 1
+				continue
 			var a := avant.get_pixel(x, y)
 			var b := apres.get_pixel(x, y)
 			var va := int(round(maxf(a.r, maxf(a.g, a.b)) * 255.0))
@@ -289,7 +401,7 @@ static func mesurer(avant: Image, apres: Image) -> Dictionary:
 				histo_apres[mini(7, vb / 32)] += 1
 	var total := w * h
 	return {
-		"pixels": total, "clairs_avant": clairs, "eteints": eteints, "neufs": neufs,
+		"derive": derives, "pixels": total, "clairs_avant": clairs, "eteints": eteints, "neufs": neufs,
 		"part_neuve": float(neufs) / float(maxi(1, total)), "changes": changes,
 		"histo_avant": histo_avant, "histo_apres": histo_apres,
 		"max_avant": max_avant, "max_apres": max_apres,

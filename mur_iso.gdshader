@@ -52,10 +52,19 @@ uniform float encre_arete_px = 0.0;
 uniform float encre_arete_reste : hint_range(0.0, 1.0) = 0.12;
 // Sous ce plancher (valeur affichée), l'encre n'éteint rien : une face à peine éclairée garde sa lumière.
 uniform float encre_plancher_affiche : hint_range(0.0, 1.0) = 0.0;
+// ISO7b — la face prend la DIRECTION de la lumière (gradient de la lightmap devant elle) : plancher 1 = éteint.
+uniform float lambert_plancher : hint_range(0.0, 1.0) = 1.0;
+uniform float lambert_pas_px = 35.0;
+// ISO7b — l'ombre de contact au pied de la face : hauteur en px de monde, et ce qu'elle garde au ras du sol.
+uniform float contact_px = 0.0;
+uniform float contact_reste : hint_range(0.0, 1.0) = 1.0;
 uniform float lisere_sommet_px = 0.0;
 uniform float seuil_muret_px = 26.0;
 // ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée (`pate_temperature`).
 uniform float temperature : hint_range(0.0, 1.0) = 0.0;
+// ISO7b — la température graduée par la luminance affichée (chaude au bord du bain, neutre au centre).
+uniform float temperature_seuil_bas : hint_range(0.0, 1.0) = 0.0;
+uniform float temperature_seuil_haut : hint_range(0.0, 1.0) = 0.0;
 
 // La grille des murs : R = mur haut, G = muret ; un texel par tuile, bordure comprise.
 uniform sampler2D grille_murs : filter_nearest, repeat_disable;
@@ -78,6 +87,26 @@ void vertex() {
 	// taille de la boîte en pixels de monde.
 	local = VERTEX;
 	taille = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
+}
+
+// ISO7b — la lumière d'un pied de face : `lightmap_pateuse` (iso_lightmap.gdshaderinc) sur une lecture MOYENNÉE
+// le long de la face, sur une période des hachures de `MurEncre`. ⚠️ Lue en un seul point à 8 px devant la face,
+// la lumière tombait dans la bande de hachures d'encre dessinée au pied de chaque mur (45°, pas de 5 px, portée
+// jusqu'à 9,6 px) : chaque colonne de la face lisait tour à tour une hachure et un creux, et la face portait des
+// rayures verticales régulières (période mesurée : 6 px d'écran, amplitude 30 niveaux, 2026-09-15). Pied porté à
+// 12 px (au-delà des hachures) et quatre lectures sur une période : la moyenne ne déplace aucune ombre de plus
+// de 2 px le long du mur. La pente est nulle (la pâte D, celle du jeu, ne la lit pas).
+vec3 lightmap_pateuse_moyenne(vec2 p, vec2 le_long, vec2 motif, float aa, bool deux) {
+	vec3 c = 0.25 * (lire_lightmap(p - le_long * 1.875, deux) + lire_lightmap(p - le_long * 0.625, deux)
+		+ lire_lightmap(p + le_long * 0.625, deux) + lire_lightmap(p + le_long * 1.875, deux));
+	if (style == PATE_BRUTE) {
+		return c;
+	}
+	float l = pate_luminance(c);
+	if (l <= 0.0) {
+		return vec3(0.0);
+	}
+	return pate(c, l, style, motif, vec2(0.0), l, aa);
 }
 
 // La masse continue-t-elle au point `px` du sol ? R : mur haut, G : muret. Hors de la grille,
@@ -133,7 +162,8 @@ void fragment() {
 			float largeur = max(lisere_sommet_px, px_monde);
 			float lisere = fin * pate_trait_de_bord(d_bord, largeur, px_monde);
 			if (lisere > 0.0) {
-				c = pate_facteur(lightmap_pateuse(monde.xz + sortie * (d_bord + pied), motif, aa, deux), lisere);
+				c = pate_facteur(lightmap_pateuse_moyenne(monde.xz + sortie * (d_bord + pied), vec2(-sortie.y, sortie.x),
+					motif, aa, deux), lisere);
 			}
 		}
 	} else {
@@ -142,7 +172,30 @@ void fragment() {
 		// laissaient 5 % de la lumière : au banc, 1 237 pixels éclairés (25 à 40/255) tombaient au noir
 		// sur les arêtes d'une face à peine allumée — une lumière réelle effacée. Sur le trait, le facteur
 		// est le plus petit des deux, jamais leur produit : plancher `encre_arete_reste`.
-		c = lightmap_pateuse(monde.xz + n * pied, motif, aa, deux);
+		c = lightmap_pateuse_moyenne(monde.xz + n * pied, tangente, motif, aa, deux);
+		// ISO7b — **la direction de la lumière se lit dans la lightmap elle-même** (aucune Light3D) : son
+		// gradient DEVANT la face et le long d'elle, jamais derrière — derrière, c'est l'ombre du mur lui-même,
+		// qui ferait croire que toute face regarde la lampe. Composante « vers l'avant » positive : la lumière
+		// monte en s'éloignant du mur, la source est en face. Le facteur ne fait qu'assombrir une face de profil
+		// (plancher `lambert_plancher`), et seulement quand la direction est franche (`certitude`) : sous une
+		// lumière uniforme, la face garde sa lumière. La lightmap reste la seule vérité de visibilité : une face
+		// que la lumière n'atteint pas est noire, quel que soit ce facteur.
+		float lambert = 1.0;
+		if (lambert_plancher < 1.0) {
+			vec2 pied_px = monde.xz + n * pied;
+			float l_0 = pate_luminance(lire_lightmap(pied_px, deux));
+			float l_avant = pate_luminance(lire_lightmap(pied_px + n * lambert_pas_px, deux));
+			float l_t1 = pate_luminance(lire_lightmap(pied_px + tangente * lambert_pas_px, deux));
+			float l_t2 = pate_luminance(lire_lightmap(pied_px - tangente * lambert_pas_px, deux));
+			vec2 g = vec2(l_avant - l_0, 0.5 * (l_t1 - l_t2));
+			float norme = length(g);
+			float face_lampe = norme > 0.00001 ? clamp(g.x / norme, 0.0, 1.0) : 1.0;
+			float certitude = smoothstep(0.05, 0.3, norme / max(max(l_0, l_avant), 0.02));
+			lambert = mix(1.0, max(lambert_plancher, face_lampe), certitude);
+		}
+		// ISO7b — le contact : une bande qui s'assombrit vers le pied de la face.
+		float hauteur_face = (local.y + 0.5) * taille.y;
+		float contact = contact_px > 0.0 ? mix(contact_reste, 1.0, smoothstep(0.0, contact_px, hauteur_face)) : 1.0;
 		// L'arête verticale de CETTE face : sur l'axe tangent à la face.
 		bool face_x = an.x > 0.5;
 		float d_vert = face_x ? d.z : d.x;
@@ -155,9 +208,13 @@ void fragment() {
 			? (1.0 - max(au_dela.r, au_dela.g)) * pate_trait_de_bord(d_vert, largeur, px_monde) : 0.0;
 		// Le facteur se pose sur la valeur AFFICHÉE (`pate_facteur`) : posé dans l'espace du shader, un
 		// reste de 0,25 se voyait à 0,036 (mesuré au banc).
-		c = pate_matiere_et_encre(c, matiere, encre_arete_reste, max(encre_h, encre_v), encre_plancher_affiche);
+		c = pate_matiere_et_encre(c, matiere * lambert * contact, encre_arete_reste, max(encre_h, encre_v),
+			encre_plancher_affiche);
 	}
 	// ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée : 0 reste 0.
-	c = pate_temperature(c, temperature);
+	// ISO7b — graduée : `temperature_seuil_haut` à 0 rend la température d'ISO7 (teinte chaude partout).
+	c = temperature_seuil_haut > 0.0
+		? pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut)
+		: pate_temperature(c, temperature);
 	ALBEDO = c;
 }

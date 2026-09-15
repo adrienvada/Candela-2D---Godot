@@ -135,11 +135,25 @@ uniform float pixels_par_unite : hint_range(0.0, 1000.0) = 1.0;
 uniform float encre_arete = 0.0;
 uniform float encre_reste = 0.35;
 
+// ISO7b (ordre 17 de la session cloud) — le MODELÉ par la direction de la lumière : le gradient de la lightmap
+// autour du pied du corps (`centre`, là où lit le capteur), une tuile de part et d'autre en x et en z. Chaque face
+// du voxel prend `max(plancher, dot(normale au sol, direction))` ; le dessus reste à 1, le dessous au plancher. Le
+// facteur ne fait que RÉPARTIR la lumière que le capteur autorise, entre `lambert_plancher` et 1 : le capteur reste
+// la seule vérité d'équité, et un corps noir reste noir. Posé par `pate_facteur`, après le plafond de fiche et avant
+// l'encre — jamais sur l'opacité ni la silhouette. `lambert_plancher = 1.0` (défaut) : aucun effet.
+uniform float lambert_plancher : hint_range(0.0, 1.0) = 1.0;
+uniform float lambert_pas_px = 35.0;
+// ISO7b — pour le banc des corps SEUL (`tools/banc_corps.gd --modele`), où il n'y a ni capteur ni lightmap : le
+// gradient au sol et la lumière la plus forte, posés à la main. Jamais utilisés en jeu (capteur actif).
+uniform vec2 gradient_simule = vec2(0.0);
+uniform float l_max_simule = 1.0;
+
 varying vec3 monde;
 varying vec3 local;             // VERTEX, repère du modèle — voir `pate_encre_boite()`
 varying vec3 demi;              // abs(VERTEX), constant par sommet sur nos BoxMesh
 varying vec3 echelle;           // longueur des colonnes de MODEL_MATRIX
 varying vec3 normale_locale;    // NORMAL, repère du modèle
+varying vec3 normale_monde;     // ISO7b — NORMAL dans le monde : un corps tourne
 
 void vertex() {
 	monde = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -147,6 +161,31 @@ void vertex() {
 	demi = abs(VERTEX);
 	echelle = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
 	normale_locale = NORMAL;
+	normale_monde = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+}
+
+// ISO7b — le facteur de modelé d'une face de normale `n` (monde), pour un gradient `g` de la lightmap au sol
+// (vers où la lumière monte) et la lumière la plus forte lue autour (`l_max`). Miroir : `IsoMateriaux.lambert_du_corps`.
+float lambert_du_corps(vec2 g, float l_max, vec3 n, float plancher) {
+	// ⚠️ **Le modelé RÉPARTIT la lumière du capteur, il ne la retire pas** (retour de la session cloud, 12:30) : un
+	// Lambert plafonné à 1 assombrissait toute la figure (luminance 71 → 59 au banc des dix classes) et rendait la
+	// face tournée vers l'œil la plus sombre. Face par face, pour `cos` l'angle entre la face et la lampe :
+	// côté lampe `1 + 0,3 cos` (jusqu'à 1,3) ; côté opposé `1 + 0,6 cos` (jusqu'au plancher, le dos) ; dessus 1. Lampe
+	// de côté, la face sud reste à 1 et la moyenne des faces visibles vaut 1. Re-plafonné à la fiche après usage.
+	if (n.y > 0.5) {
+		return 1.0;
+	}
+	if (n.y < -0.5) {
+		return plancher;
+	}
+	float norme = length(g);
+	if (norme <= 0.00001) {
+		return 1.0;
+	}
+	float cosinus = dot(normalize(n.xz), g / norme);
+	float face = cosinus >= 0.0 ? 1.0 + 0.3 * cosinus : max(plancher, 1.0 + 0.6 * cosinus);
+	float certitude = smoothstep(0.05, 0.3, norme / max(l_max, 0.02));
+	return mix(1.0, face, certitude);
 }
 
 // Miroir de `lumiere_recue()` dans `corps_grossier_iso.gdshader` — même borne au
@@ -186,9 +225,25 @@ void fragment() {
 		float l = pate_luminance(base);
 		c = (l <= 0.0) ? vec3(0.0) : pate(base, l, style, motif, vec2(0.0), l, aa);
 		c = min(c, base);
+		// ISO7b — le banc des corps : le modelé par un gradient simulé, faute de lightmap.
+		if (lambert_plancher < 1.0 && length(gradient_simule) > 0.0) {
+			c = min(pate_facteur(c, lambert_du_corps(gradient_simule, l_max_simule, normale_monde, lambert_plancher)),
+				couleur_fiche.rgb);
+		}
 	}
 	// Le plafond général : jamais plus clair que la fiche, quelle que soit la pâte.
 	c = min(c, couleur_fiche.rgb);
+	// ISO7b — le modelé : la lumière du capteur répartie sur les faces par la direction lue dans la lightmap.
+	if (capteur_actif && lambert_plancher < 1.0) {
+		float lx_0 = pate_luminance(lire_lightmap(centre - vec2(lambert_pas_px, 0.0), deux));
+		float lx_1 = pate_luminance(lire_lightmap(centre + vec2(lambert_pas_px, 0.0), deux));
+		float lz_0 = pate_luminance(lire_lightmap(centre - vec2(0.0, lambert_pas_px), deux));
+		float lz_1 = pate_luminance(lire_lightmap(centre + vec2(0.0, lambert_pas_px), deux));
+		float l_c = pate_luminance(lire_lightmap(centre, deux));
+		// Re-plafonné à la fiche : le côté lampe peut monter jusqu'à 1,3, jamais au-delà de la couleur de la classe.
+		c = min(pate_facteur(c, lambert_du_corps(vec2(lx_1 - lx_0, lz_1 - lz_0) * 0.5, max(l_c, max(max(lx_0, lx_1), max(lz_0, lz_1))),
+			normale_monde, lambert_plancher)), couleur_fiche.rgb);
+	}
 	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
 	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran
 	// comme f^2,4 (une encre de 0,25 tombait à 1/255, pas à 7/255) ; `pate_facteur`

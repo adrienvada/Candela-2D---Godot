@@ -5364,3 +5364,24 @@ Laissés au test final, faute de banc : l'intensité des lueurs par `pate_facteu
 `pointe_arme()`. L'icône de torche : première livraison d'ISO Assets (`8c4e776`) refusée, faisceau olive
 (299 pixels r ≈ g > b) ; la seconde (`49ee29e`) mesurée bonne (4 203 chauds, 22 olive), posée par la
 relève d'ISO6. Deux imports, lot complet.
+
+### 2026-09-15 (fin de matinée) — ISO7b : la lumière sur les faces (session « ISO7 Beauté Opus », branche `iso7b-faces`)
+
+Brief de la session cloud (11:00, Adrien réveillé : « rapprocher le duel de la planche E1 du DA, et continuer
+jusqu'au résultat »), puis section 5 (11:20, le modelé des corps). Branche `iso7b-faces` depuis `a5ac4b8`.
+Mesures d'abord, sur la variante 2 d'E1 : bain chaud plus orangé au bord (r/g 1,49) qu'au centre (1,19).
+Écrit : faces de mur qui lisent le gradient de la lightmap devant elles (Lambert, plancher 0,4) ; bande de
+contact au pied ; sol à dalles de deux tuiles, joint de 35 px enjambé ; chaleur graduée par la luminance
+affichée (`pate_temperature_graduee`, ajout à la pâte) ; modelé des corps et objets par le même gradient au
+pied du corps, dans `corps_iso.gdshader` (repris d'ISO Corps close), dessus à 1, silhouette et opacité intactes ;
+`tools/banc_corps.gd --modele` (gradient simulé, crochet signalé). Banc : cadrage e1 sur la carte d'essai
+(face sud éclairée de face et rasée de profil, fusée), avant = ISO7, masque de dérive.
+Trois passages au banc avant une mesure juste : le damier effacé avant la pâte faisait tomber une bande entière
+de lumière (damier gardé) ; le banc visait le catalogue au lieu de la carte chargée ; torches éteintes et halo de
+fusée en croissance entre deux captures (chauffe longue, séquence avant/après/avant bis, dérive écartée et comptée).
+Cinq passages au banc avant une mesure juste, et c'est le cinquième qui fait foi (Le Cloître, torches allumées,
+12:31-12:39) : rayures des faces corrigées à l'œil (elles venaient des hachures d'encre lues au pied, constat de la
+session cloud) ; chaleur de la face r/g 1,15 → 1,33 contre 1,32 sur E1 ; lot complet vert. Le modelé des corps,
+réécrit sur le retour de la session cloud pour RÉPARTIR la lumière du capteur, ne se voit pas à la caméra au lacet 0
+— proposé, pas tranché. Galerie : https://claude.ai/artifact/TjC6Xkboc39KJkjnPoqsut ; planche
+`docs/iso/planche_iso7b.jpg`.
