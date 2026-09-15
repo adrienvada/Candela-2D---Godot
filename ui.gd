@@ -316,9 +316,9 @@ class CircularCooldown extends Control:
 			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
 		# Cercle d'acier discret (épaisseur 2 px)
-		draw_arc(center, radius, 0, TAU, 32, Charte.LINE, 2.0, true)
+		draw_arc(center, radius, 0, TAU, 32, Charte.PATE_FILET, 2.0, true)
 		# Repères cardinaux de précision télémétrique
-		var col_tick := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.50)
+		var col_tick := Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.50)
 		draw_line(center + Vector2(0, -radius - 2.0), center + Vector2(0, -radius + 2.0), col_tick, 1.0)
 		draw_line(center + Vector2(0, radius - 2.0), center + Vector2(0, radius + 2.0), col_tick, 1.0)
 		draw_line(center + Vector2(-radius - 2.0, 0), center + Vector2(-radius + 2.0, 0), col_tick, 1.0)
@@ -408,7 +408,7 @@ class CartoucheReserve extends PanelContainer:
 		var y := size.y + ECART_JAUGE
 		# La piste d'abord, pleine largeur : sans elle, une jauge à 10 % ne dirait
 		# pas de quoi elle est la part.
-		draw_rect(Rect2(0.0, y, size.x, EPAISSEUR_JAUGE), Charte.LINE)
+		draw_rect(Rect2(0.0, y, size.x, EPAISSEUR_JAUGE), Charte.PATE_FILET)
 		if fraction > 0.0:
 			draw_rect(Rect2(0.0, y, size.x * fraction, EPAISSEUR_JAUGE), Charte.HALOGENE)
 
@@ -433,8 +433,8 @@ class CartoucheReserve extends PanelContainer:
 ## d'acier nets, avec repères de massicot d'imprimerie aux tiers d'écran.
 class SplitGutterDivider extends Panel:
 	const COULEUR_FOND := Charte.NOIR
-	const COULEUR_FILET := Charte.LINE
-	const COULEUR_REPERE := Color(0.70, 0.76, 0.82, 0.45) # Charte.ACIER * 0.45
+	const COULEUR_FILET := Charte.PATE_FILET
+	const COULEUR_REPERE := Color(Charte.BETON_CLAIR, 0.45)
 	const REPERES_Y := [0.18, 0.38, 0.62, 0.82]
 
 	func _init() -> void:
@@ -469,7 +469,7 @@ class SplitGutterDivider extends Panel:
 ## Remplace la texture 9-patch de cadre 3D sci-fi par un cartouche vectoriel net,
 ## avec liseré d'accent discret, onglet de coin biseauté et repères de massicot.
 class ComicHudPanel extends PanelContainer:
-	var accent_color: Color = Charte.ACIER
+	var accent_color: Color = Charte.PATE_TEXTE_SECOND
 	var is_player_1: bool = true
 	var is_center_panel: bool = false
 
@@ -478,6 +478,10 @@ class ComicHudPanel extends PanelContainer:
 		is_player_1 = p_is_p1
 		is_center_panel = p_is_center
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Habillage iso : la matière de la pâte sur ce que le panneau DESSINE (son
+		# fond, ses filets) — pas une `StyleBoxTexture`, que `test_hud_style` refuse.
+		# Les libellés, enfants, restent nets.
+		MenuWidgets.poser_pate(self)
 		var empty := StyleBoxEmpty.new()
 		add_theme_stylebox_override("panel", empty)
 
@@ -488,21 +492,21 @@ class ComicHudPanel extends PanelContainer:
 			return
 
 		# 1. Ombre d'encrage noire pure portée en décalage franc (3 px bas-droite)
-		draw_rect(Rect2(3.0, 3.0, w, h), Color(0.0, 0.0, 0.0, 0.90))
+		draw_rect(Rect2(3.0, 3.0, w, h), Charte.PATE_OMBRE)
 
-		# 2. Fond de panneau en Charte.SURFACE (96% opaque)
-		draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.96))
+		# 2. Fond de panneau en Charte.PATE_FOND (96% opaque)
+		draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.PATE_FOND.r, Charte.PATE_FOND.g, Charte.PATE_FOND.b, 0.96))
 
 		# 3. Filet d'encrage extérieur et d'acier (cadre net de 1 px)
-		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.LINE, false, 1.0)
+		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.PATE_FILET, false, 1.0)
 
 		# 4. Traitement du liseré d'accent et des repères de massicot
 		if is_center_panel:
 			# Chrono central : cartouche narratif compact
 			draw_line(Vector2(0.0, 1.0), Vector2(w, 1.0), accent_color, 2.0)
-			draw_line(Vector2(0.0, h - 1.0), Vector2(w, h - 1.0), Charte.LINE, 1.0)
+			draw_line(Vector2(0.0, h - 1.0), Vector2(w, h - 1.0), Charte.PATE_FILET, 1.0)
 			# Repères d'angles aux 4 coins (équerres de 6 px)
-			var col_c := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.65)
+			var col_c := Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.65)
 			var cr := 6.0
 			draw_line(Vector2(0.0, cr), Vector2(0.0, 0.0), col_c, 1.0)
 			draw_line(Vector2(0.0, 0.0), Vector2(cr, 0.0), col_c, 1.0)
@@ -542,7 +546,7 @@ class ComicHudPanel extends PanelContainer:
 				draw_polyline(pts, col_onglet, 1.0)
 
 			# Repères de massicot aux 3 coins libres (équerres de 8 px)
-			var col_c := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.65)
+			var col_c := Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.65)
 			var cr := 8.0
 			# Bas-gauche
 			draw_line(Vector2(0.0, h - cr), Vector2(0.0, h), col_c, 1.0)
@@ -568,7 +572,7 @@ class NeonFocusRing extends Panel:
 	## au-dessus de 32 elle concurrence le libellé qu'elle désigne.
 	const TAILLE_TORCHE := 28.0
 
-	var neon: Color = Charte.ACIER
+	var neon: Color = Charte.PATE_TEXTE_SECOND
 	var target_rect: Rect2 = Rect2()
 
 	var _style: StyleBoxFlat
@@ -588,7 +592,7 @@ class NeonFocusRing extends Panel:
 	## de servir les deux joueurs.
 	var torche: TextureRect
 
-	func _init(tint: Color = Charte.ACIER) -> void:
+	func _init(tint: Color = Charte.PATE_TEXTE_SECOND) -> void:
 		neon = tint
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -700,7 +704,7 @@ class VirtualGamepadCursor extends Control:
 		var shadow_points := PackedVector2Array()
 		for pt in points:
 			shadow_points.append(pt + Vector2(1.5, 1.5))
-		draw_colored_polygon(shadow_points, Color(0, 0, 0, 0.5))
+		draw_colored_polygon(shadow_points, Color(Charte.NOIR, 0.5))
 
 		# Corps de la flèche
 		var fill_color := neon.lerp(Charte.HALOGENE, 0.35 * wave)
@@ -2560,7 +2564,7 @@ func _build_center_hud() -> Control:
 	center_hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center_hud.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-	var panel := _create_glow_panel(Charte.ACIER * 0.5, false, true)
+	var panel := _create_glow_panel(Charte.PATE_TEXTE_SECOND * 0.5, false, true)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.custom_minimum_size = Vector2(190, 0)
 	center_hud.add_child(panel)
@@ -2620,9 +2624,9 @@ func _create_health_bars(color: Color) -> Dictionary:
 	bg_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Charte.SURFACE
+	bg_style.bg_color = Charte.PATE_FOND
 	bg_style.set_border_width_all(1)
-	bg_style.border_color = Charte.LINE
+	bg_style.border_color = Charte.PATE_FILET
 	bg_style.set_corner_radius_all(0)
 	bg_bar.add_theme_stylebox_override("background", bg_style)
 
@@ -2647,7 +2651,7 @@ func _create_health_bars(color: Color) -> Dictionary:
 	var hatch := MenuHatchRect.new()
 	hatch.name = "HatchAlerte"
 	hatch.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
-	hatch.color_ink = Color(0, 0, 0, 0.0)
+	hatch.color_ink = Color(Charte.NOIR, 0.0)
 	hatch.color_line = Charte.ROUGE
 	hatch.spacing = 8.0
 	hatch.line_width = 1.8
@@ -2688,13 +2692,13 @@ func _create_weapon_indicator(color: Color) -> Dictionary:
 	var title := Label.new()
 	title.text = "ARME"
 	title.add_theme_font_size_override("font_size", T_MENTION)
-	title.add_theme_color_override("font_color", Charte.ACIER)
+	title.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	info_box.add_child(title)
 
 	var ammo_label := Label.new()
 	ammo_label.text = "--"
 	ammo_label.add_theme_font_size_override("font_size", T_MENTION)
-	ammo_label.add_theme_color_override("font_color", Charte.HALOGENE)
+	ammo_label.add_theme_color_override("font_color", COLOR_LUMIERE)
 	info_box.add_child(ammo_label)
 
 	container.add_child(circle_container)
@@ -2750,11 +2754,14 @@ func _create_torch_indicator() -> PanelContainer:
 	marque.name = "Accroupi"
 	marque.text = "ACCROUPI"
 	marque.add_theme_font_size_override("font_size", T_MENTION)
-	marque.add_theme_color_override("font_color", Charte.ACIER)
+	marque.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	marque.visible = false
 	hbox.add_child(marque)
 
 	_set_torch_style(panel, false, Charte.HALOGENE)
+	# La cartouche prend la pâte. Son style est REMPLACÉ à chaque image
+	# (`_set_torch_style`) ; le matériau, lui, vit sur le nœud et reste.
+	MenuWidgets.poser_pate(panel)
 	return panel
 
 ## MB2 — la marque « accroupi » du panneau d'un joueur.
@@ -2874,7 +2881,7 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	decompte_g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	decompte_g.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	Charte.appareil(decompte_g, T_MENTION - 2)
-	decompte_g.add_theme_color_override("font_color", Charte.HALOGENE)
+	decompte_g.add_theme_color_override("font_color", COLOR_LUMIERE)
 	decompte_g.add_theme_color_override("font_outline_color", Charte.NOIR)
 	decompte_g.add_theme_constant_override("outline_size", 4)
 	icone_g.add_child(decompte_g)
@@ -2889,7 +2896,7 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	gadget_titre.text = "GADGET"
 	gadget_titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	gadget_titre.add_theme_font_size_override("font_size", T_MENTION - 2)
-	gadget_titre.add_theme_color_override("font_color", Charte.ACIER)
+	gadget_titre.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	vbox_g.add_child(gadget_titre)
 
 	var gadget := Label.new()
@@ -2899,6 +2906,9 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	Charte.appareil(gadget, T_MENTION)
 	vbox_g.add_child(gadget)
 	_set_gadget_style(panel_gadget, false, Charte.HALOGENE)
+	# Les deux cartouches prennent la pâte, comme celle de la torche.
+	MenuWidgets.poser_pate(panel_fusees)
+	MenuWidgets.poser_pate(panel_gadget)
 
 	# Agencement selon le joueur pour la symétrie du HUD
 	if player == 0:
@@ -2962,7 +2972,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	# zéro s'écrit « 0 », et le tiret est réservé au Spectre.
 	lbl_f.text = "FUSÉES —" if plafond <= 0 else "FUSÉES %d" % n
 	lbl_f.add_theme_color_override("font_color",
-		Charte.HALOGENE if n > 0 else COLOR_DIM)
+		COLOR_LUMIERE if n > 0 else COLOR_DIM)
 
 	var p_f = res.get("panel_fusees", res.get("panel"))
 	if p_f is PanelContainer:
@@ -3040,7 +3050,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	var lbl_g: Label = res["gadget"]
 	lbl_g.text = texte_g
 	lbl_g.add_theme_color_override("font_color",
-		Charte.HALOGENE if vif else COLOR_DIM)
+		COLOR_LUMIERE if vif else COLOR_DIM)
 
 	# L'icône du gadget : posée seulement quand la classe change — `recadree` lit
 	# l'image, ce qui ne se fait pas à chaque image du HUD.
@@ -3054,7 +3064,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 			var chemin := classe.gadget.chemin_icone() if slug != "" else ""
 			ico.texture = MenuIcones.recadree(load(chemin)) \
 				if chemin != "" and ResourceLoader.exists(chemin) else null
-		ico.modulate = Color(1.0, 1.0, 1.0, 1.0 if vif else 0.45)
+		ico.modulate = Color(Color.WHITE, 1.0 if vif else 0.45)
 	var lbl_d: Label = res.get("gadget_decompte", null)
 	if lbl_d != null:
 		lbl_d.visible = decompte >= 0
@@ -3142,7 +3152,7 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(Charte.LINE, 0.9)
+		style.bg_color = Color(Charte.PATE_FILET, 0.9)
 		style.border_color = player_color
 		# DA5.7c — portait Vector2(3, 3) en dur, sans raison retrouvée pour cet
 		# écart d'1 px avec le reste du dépôt : aligné sur la constante la plus
@@ -3151,8 +3161,8 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 		style.shadow_size = 0
 		style.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
 	else:
-		style.bg_color = Color(Charte.SURFACE, 0.8)
-		style.border_color = Color(Charte.LINE, 1.0)
+		style.bg_color = Color(Charte.PATE_FOND, 0.8)
+		style.border_color = Color(Charte.PATE_FILET, 1.0)
 		style.shadow_size = 0
 		style.shadow_offset = Vector2.ZERO
 
@@ -3161,9 +3171,9 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 	var hbox := panel.get_child(0).get_child(0)
 	var label := hbox.get_child(1) as Label
 	if active:
-		label.add_theme_color_override("font_color", Charte.HALOGENE)
+		label.add_theme_color_override("font_color", COLOR_LUMIERE)
 	else:
-		label.add_theme_color_override("font_color", Charte.DIM)
+		label.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 
 	# Le cadenas ne se montre que torche allumée : verrouillée ET éteinte n'existe
 	# pas, et un cadenas sur une torche noire se lirait « torche bloquée ».
@@ -3189,14 +3199,14 @@ func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) 
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(Charte.LINE, 0.9)
+		style.bg_color = Color(Charte.PATE_FILET, 0.9)
 		style.border_color = player_color
-		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 		style.shadow_size = 0
 		style.shadow_offset = Vector2(3, 3)
 	else:
-		style.bg_color = Color(Charte.SURFACE, 0.8)
-		style.border_color = Color(Charte.LINE, 1.0)
+		style.bg_color = Color(Charte.PATE_FOND, 0.8)
+		style.border_color = Color(Charte.PATE_FILET, 1.0)
 		style.shadow_size = 0
 		style.shadow_offset = Vector2.ZERO
 
@@ -3209,12 +3219,12 @@ func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) 
 	var label: Label = hbox.get_node_or_null("Label")
 	if label != null:
 		if active:
-			label.add_theme_color_override("font_color", Charte.HALOGENE)
+			label.add_theme_color_override("font_color", COLOR_LUMIERE)
 		else:
-			label.add_theme_color_override("font_color", Charte.DIM)
+			label.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
 	var icon: TextureRect = hbox.get_node_or_null("Icon")
 	if icon != null:
-		icon.modulate = Color.WHITE if active else Color(1, 1, 1, 0.3)
+		icon.modulate = Color.WHITE if active else Color(Color.WHITE, 0.3)
 
 func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	if panel == null or panel.get_child_count() == 0:
@@ -3224,14 +3234,14 @@ func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color)
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(Charte.LINE, 0.9)
+		style.bg_color = Color(Charte.PATE_FILET, 0.9)
 		style.border_color = player_color
-		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 		style.shadow_size = 0
 		style.shadow_offset = Vector2(3, 3)
 	else:
-		style.bg_color = Color(Charte.SURFACE, 0.8)
-		style.border_color = Color(Charte.LINE, 1.0)
+		style.bg_color = Color(Charte.PATE_FOND, 0.8)
+		style.border_color = Color(Charte.PATE_FILET, 1.0)
 		style.shadow_size = 0
 		style.shadow_offset = Vector2.ZERO
 
@@ -3242,10 +3252,10 @@ func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color)
 	# couleur du titre et du nom disparaissait sans une erreur.
 	var titre: Label = panel.find_child("Titre", true, false)
 	if titre != null:
-		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.5))
+		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.PATE_TEXTE_SECOND.r, Charte.PATE_TEXTE_SECOND.g, Charte.PATE_TEXTE_SECOND.b, 0.5))
 	var label: Label = panel.find_child("Label", true, false)
 	if label != null:
-		label.add_theme_color_override("font_color", Charte.HALOGENE if active else COLOR_DIM)
+		label.add_theme_color_override("font_color", COLOR_LUMIERE if active else COLOR_DIM)
 
 
 # ===========================================================================

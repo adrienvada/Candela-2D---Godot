@@ -5081,3 +5081,9 @@ du hub et quatre portraits, dont un à recadrer.
 remplacent le sprite vu de dessus dans la fiche de classe et sur l'affiche du match
 (`MenuFicheClasse.chemin_portrait`). La règle qui justifiait le sprite — montrer la silhouette que
 l'adversaire découpe — demande désormais le portrait : en iso, cette silhouette est le corps voxel.
+
+**Étape 4 (même session, même branche) :** le HUD de match passe à la pâte — neutres d'appareil et couleurs
+chiffrées retirés de sa plage d'`ui.gd`, matière sur ses panneaux et cartouches, dix icônes de gadget iso.
+Pour garder un commit par étape sans worktree de plus, les étapes suivantes attendaient dans un patch
+binaire pendant que le lot tournait sur l'état exact commité ; le patch se réapplique ensuite fichier par
+fichier, en ne retenant que les chemins de l'étape.

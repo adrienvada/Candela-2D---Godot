@@ -23866,6 +23866,42 @@ fiche montre bien le portrait de la première classe. `test_classes` (qui exige 
 pour les dix) reste vert.
 
 
+#### Étape 4 — le HUD de match ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **`ui.gd`, la plage du HUD** (de la classe `CircularCooldown` à `_build_status_bar`) : les
+  neutres d'appareil passent aux rôles de la pâte ; les couleurs chiffrées descendent de la
+  charte (ombres `MenuWidgets.SHADOW_COLOR_DEFAULT` et `PATE_OMBRE`, modulations
+  `Color(Color.WHITE, a)`) ; les textes halogènes passent à `COLOR_LUMIERE`. **La lumière reste
+  halogène** : le cercle de recharge (couleur du joueur), la jauge d'une réserve, les curseurs.
+- **La pâte sur les panneaux** : panneaux joueur et chrono (`ComicHudPanel`, par son `_draw` — pas
+  de `StyleBoxTexture`, que `test_hud_style` refuse), cartouche de torche, cartouches de fusées et
+  de gadget. Les libellés, enfants, restent nets. Le matériau vit sur le NŒUD : les styles
+  remplacés à chaque image par `_set_*_style` ne l'effacent pas.
+- **Dix icônes de gadget iso** (lot C d'ISO Assets, `2129a89` ; suie et braises regénérées en
+  `21e16d4`, rognées à la source la première fois), préparées à 128 px avec le même détourage et
+  le même virage que les portraits. La fiche de classe les montre aussi.
+- **Aucune information de plus** : mêmes libellés, mêmes champs, même disposition ; le masquage du
+  panneau adverse en ligne (`disposer_hud`) n'est pas touché.
+
+**Preuves.** `tools/test_habillage.gd` relit la plage du HUD — bornée par ses MARQUEURS, jamais
+par des numéros de ligne — et y refuse tout neutre d'appareil et toute couleur chiffrée ; il exige
+la pâte sur les panneaux joueur et sur la cartouche du chrono. `test_hud_style` (liseré à la
+couleur du joueur, pas de `StyleBoxTexture`) reste vert. Captures du HUD avant/après sur la planche.
+Lot complet : **rouge au premier passage** sur `duo_reconnexion` seul (« le salon rouvert accepte le
+retour », côté hôte ; aucune erreur de script dans les journaux) — l'intermittent déjà consigné plus haut
+(ISO2 et famille 4.1), qui dépend du tempo de la machine. Relancé en entier sur l'arbre inchangé : **vert,
+tout passe, 403 s**. Le commit s'est fait sur ce second lot, jamais sur le premier.
+
+**Pièges.**
+- ⚠️ **L'`awk` de macOS ignore `\b`, comme son `sed`** : un relevé des neutres par `awk` est revenu
+  VIDE sur une plage qui en comptait une cinquantaine. Le `grep` de macOS, lui, le comprend. Un
+  relevé vide se revérifie par un autre outil avant de se croire.
+- ⚠️ **Un contrôle borné par numéros de ligne relit autre chose à l'étape suivante** : chaque étape
+  ajoute des lignes à `ui.gd`. Bornes par marqueurs (`class CircularCooldown`,
+  `func _build_status_bar`), et un contrôle qui échoue si les marqueurs disparaissent.
+
+
 ## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
 
 **Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le

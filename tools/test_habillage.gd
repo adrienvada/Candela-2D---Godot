@@ -146,6 +146,7 @@ func _run() -> void:
 	_test_la_preparation_recopie_la_charte()
 	_test_les_ressources_de_l_habillage()
 	_test_les_portraits_de_classe(main)
+	_test_le_hud_parle_la_pate()
 
 	main.queue_free()
 	if _ko == 0:
@@ -700,3 +701,63 @@ func _test_les_portraits_de_classe(main: Node) -> void:
 	_check(fiche._portrait.texture == attendu,
 		"la fiche ne montre pas le portrait iso de %s" % premiere.slug())
 	fiche.queue_free()
+
+
+## Le HUD de match — étape 4 : il parle la pâte, et ses panneaux en portent la
+## matière.
+##
+## ⚠️ **La plage relue d'`ui.gd` est bornée par des MARQUEURS, pas par des numéros
+## de ligne** : de la classe `CircularCooldown` à `_build_status_bar`. Un numéro
+## est un constat daté (piège déjà consigné) ; le fichier gagne des lignes à
+## chaque étape, et un contrôle borné en dur relirait bientôt autre chose que le
+## HUD. Même règle que `_test_les_fichiers_bascules_parlent_la_pate` : aucun neutre
+## d'appareil, aucune couleur chiffrée ; `HALOGENE` reste permis, c'est la lumière
+## (les curseurs, la jauge d'une réserve).
+func _test_le_hud_parle_la_pate() -> void:
+	var fa := FileAccess.open("res://ui.gd", FileAccess.READ)
+	_check(fa != null, "ui.gd illisible")
+	if fa == null:
+		return
+	var neutres := RegEx.new()
+	neutres.compile("\\b(Charte|C)\\.(ACIER|SURFACE|LINE|DIM|BACKDROP)\\b")
+	var chiffres := RegEx.new()
+	chiffres.compile("\\bColor\\(\\s*[0-9.]")
+	var dedans := false
+	var vu_debut := false
+	var vu_fin := false
+	var n := 0
+	while not fa.eof_reached():
+		var ligne := fa.get_line()
+		n += 1
+		if ligne.begins_with("class CircularCooldown"):
+			dedans = true
+			vu_debut = true
+		elif ligne.begins_with("func _build_status_bar"):
+			dedans = false
+			vu_fin = true
+		if not dedans:
+			continue
+		var code := ligne
+		var diese := ligne.find("#")
+		if diese >= 0:
+			code = ligne.substr(0, diese)
+		if neutres.search(code) != null:
+			_check(false, "ui.gd:%d (HUD) nomme encore un neutre d'appareil : %s" % [n, ligne.strip_edges()])
+		if chiffres.search(code) != null:
+			_check(false, "ui.gd:%d (HUD) écrit une couleur chiffrée : %s" % [n, ligne.strip_edges()])
+	_check(vu_debut and vu_fin,
+		"les marqueurs de la plage du HUD ont disparu d'ui.gd : le contrôle ne relit plus rien")
+
+	# Les panneaux joueur et le chrono portent la pâte. Le panneau du chrono se
+	# retrouve par le parent du chrono, comme le fait `test_hud_style`.
+	var pate := MenuWidgets.materiau_pate()
+	for champ: String in ["p1_panel", "p2_panel"]:
+		var panneau = _ui.get(champ)
+		_check(panneau != null and (panneau as CanvasItem).material == pate,
+			"ui.%s ne porte pas la pâte" % champ)
+	var chrono = _ui.get("time_label")
+	var cartouche: Node = chrono
+	while cartouche != null and not cartouche.get("is_center_panel"):
+		cartouche = cartouche.get_parent()
+	_check(cartouche != null and (cartouche as CanvasItem).material == pate,
+		"la cartouche du chrono ne porte pas la pâte")
