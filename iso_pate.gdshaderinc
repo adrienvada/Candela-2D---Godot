@@ -17,6 +17,12 @@
 // non par l : à lumière faible, la pâte ne REHAUSSE pas un reliquat de lumière qui
 // dévoilerait ce que la vue de dessus laisse dans le noir.
 //
+// ⚠️ **POUR UN CORPS (ISO3), plafonner à la couleur d'entrée : `min(pate(c, …), c)`.** La
+// pâte B, C et D normalise les tons : pensée pour la LUMIÈRE projetée au sol, elle pousse au
+// blanc une couleur de corps déjà éclairée. Les corps grossiers d'ISO2 sont sortis à
+// 255/246/227 pour un gris plafonné à 191/177/156 (retour d'Adrien au jalon H-ISO2). La vue
+// de dessus plafonne l'ennemi à son gris ; la vue iso doit en faire autant.
+//
 // Miroir processeur, formule pour formule : `iso_pate.gd`. La suite
 // `tools/test_iso_camera.gd` y vérifie l'invariant sur les quatre pâtes ; le banc
 // (`tools/banc_iso.gd --jeu --noir`) le vérifie au pixel dans une vraie fenêtre.
@@ -58,6 +64,67 @@ float pate_bruit(vec2 p) {
 float pate_trait(float coord, float periode, float demi_largeur, float aa) {
 	float s = abs(fract(coord / periode) - 0.5) * 2.0;
 	return 1.0 - smoothstep(demi_largeur - aa, demi_largeur + aa, s + aa);
+}
+
+// ---------------------------------------------------------------------------
+// ISO7 — l'ENCRE DES ARÊTES, partagée par les murs, les objets et les corps
+// ---------------------------------------------------------------------------
+// « Un mur n'est pas une surface, c'est une masse cernée d'un filament » (Adrien, 2026-08-25) :
+// en iso, le filament est l'arête. Ces deux fonctions rendent un FACTEUR dans [reste, 1] que
+// l'appelant multiplie à sa couleur déjà passée à la pâte — jamais un terme additif : sur du noir,
+// l'encre reste du noir. Aucune dérivée à l'intérieur : `px_monde` (pixels de monde par pixel
+// d'écran, `max(fwidth(monde.x), fwidth(monde.y), fwidth(monde.z))`) se calcule dans fragment(),
+// hors de tout branchement, et se passe ici.
+
+// 1 sur le trait (à moins de `largeur` du bord), 0 au-delà ; `aa` en unités de `distance`.
+float pate_trait_de_bord(float distance, float largeur, float aa) {
+	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance);
+}
+
+// ---------------------------------------------------------------------------
+// ISO7 — la TEMPÉRATURE de la lumière vue (étape 6)
+// ---------------------------------------------------------------------------
+// Les planches du DA peignent la lumière chaude (ambre sur béton). La température change la TEINTE
+// d'une lumière neutre, jamais sa quantité : la luminance rendue est celle reçue, donc aucune bande de
+// la pâte ne bascule et aucun seuil n'est franchi. Une lumière déjà colorée (fusée rouge, LED) garde
+// sa teinte : la force est pondérée par la neutralité de la couleur. 0 → 0.
+const vec3 PATE_TEINTE_CHAUDE = vec3(1.10, 0.97, 0.80);
+
+vec3 pate_temperature(vec3 c, float force) {
+	float l = pate_luminance(c);
+	if (l <= 0.0 || force <= 0.0) {
+		return c;
+	}
+	float mx = max(c.r, max(c.g, c.b));
+	float mn = min(c.r, min(c.g, c.b));
+	float neutre = 1.0 - clamp((mx - mn) / max(mx, 0.0001), 0.0, 1.0);
+	vec3 teinte = PATE_TEINTE_CHAUDE / pate_luminance(PATE_TEINTE_CHAUDE);
+	vec3 chaude = c * mix(vec3(1.0), teinte, clamp(force, 0.0, 1.0) * neutre);
+	return chaude * (l / max(pate_luminance(chaude), 0.000001));
+}
+
+// L'encre des arêtes d'une BOÎTE, quelle que soit la façon dont elle est construite — cube unité
+// mis à l'échelle (les murs) ou `BoxMesh` à sa vraie taille sous une échelle identité (les voxels,
+// jambes comprimées en Y à l'accroupi) — et quelle que soit sa rotation (un corps tourne) :
+// - `local`  : VERTEX, repère du modèle ;
+// - `demi`   : la demi-taille du maillage, repère du modèle. ⚠️ Pour une `BoxMesh` SANS subdivision,
+//              tous les sommets sont des coins : `abs(VERTEX)` posé en varying dans vertex() vaut la
+//              demi-taille à chaque sommet, donc aussi après interpolation. (Découvert avec ISO Corps le
+//              2026-09-15 : `length(MODEL_MATRIX[i])` seul lisait l'échelle 1 des voxels, jamais leur taille.)
+// - `echelle`: `vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz))` ;
+// - `normale`: NORMAL, repère du MODÈLE (alignée sur les axes de la boîte même si le corps tourne).
+// Distances en unités du monde. Le trait longe les quatre bords de la face ; jamais sous un pixel
+// d'écran. Facteur 1 si `largeur` <= 0.
+float pate_encre_boite(vec3 local, vec3 demi, vec3 echelle, vec3 normale, float largeur, float reste,
+		float px_monde) {
+	if (largeur <= 0.0) {
+		return 1.0;
+	}
+	vec3 d = max(demi - abs(local), vec3(0.0)) * echelle;
+	vec3 an = abs(normale);
+	float bord = an.x > 0.5 ? min(d.y, d.z) : (an.y > 0.5 ? min(d.x, d.z) : min(d.x, d.y));
+	float w = max(largeur, px_monde);
+	return mix(1.0, clamp(reste, 0.0, 1.0), pate_trait_de_bord(bord, w, px_monde));
 }
 
 // couleur          la lumière reçue (lightmap), déjà colorée ;

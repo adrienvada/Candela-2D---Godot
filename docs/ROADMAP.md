@@ -21819,10 +21819,44 @@ maillage réel de l'arme à chaque pose, jamais une constante. Dictionnaire
 vide si aucune arme visible. Signalé par message à « ISO7 Gadgets et
 lumière Opus ».
 
-**La pâte d'« ISO7 Beauté Opus » : pas encore branchée.** Le brief est
-explicite — « branche-le quand son message arrive, pas avant ». Rien reçu à
-la clôture de cette vague ; `STYLE_PAR_DEFAUT` (LAVIS) reste inchangé, à
-reprendre dans une vague suivante.
+**La pâte d'« ISO7 Beauté Opus » — branchée après coup, même vague.** Son
+message est arrivé après le premier commit de cette vague ; ajouté par-dessus
+plutôt que reporté, le brief demandant explicitement de la brancher « quand
+son message arrive ». Contrat : `pate_encre_boite()` (`iso_pate.gdshaderinc`,
+pris chez elle par `git checkout 6e64afb -- iso_pate.gdshaderinc iso_pate.gd`,
+jamais par fusion) assombrit multiplicativement les quatre bords de la face
+rendue, dans `[encre_reste, 1]` — deux nouveaux uniforms sur
+`corps_iso.gdshader` (`encre_arete`, `encre_reste`, 0.0/0.35 par défaut : sans
+effet tant que personne ne règle une largeur), quatre nouveaux varyings
+(`local`, `demi`, `echelle`, `normale_locale`), un appel juste après le
+plafond de fiche et avant la composition opacité/silhouette (jamais sur
+`silhouette_N`). `VoxelCorps.definir_encre(largeur, reste)`, nouveau, pose les
+deux uniforms.
+
+**Son hypothèse de départ (cube unité mis à l'échelle) ne tenait pas pour mes
+boîtes** — signalé avant qu'elle écrive une ligne de shader plutôt qu'après :
+`_boite()` pose `mesh.size = taille` (la vraie taille) sur un `MeshInstance3D`
+à l'échelle IDENTITÉ (sauf les jambes, comprimées en Y à l'accroupi) —
+`length(MODEL_MATRIX[i])` seul aurait lu ≈1 partout, jamais la vraie
+dimension. Corrigée ensemble : `demi = abs(VERTEX)` (correct sur un `BoxMesh`
+sans subdivision — tous les sommets sont des coins) porte la vraie taille,
+`echelle` (MODEL_MATRIX) porte l'ancre ET la compression des jambes, les deux
+combinés dans `pate_encre_boite()`.
+
+**Vérifié** (nouveaux tests dans `tools/test_voxel_corps.gd`, sabotage
+compris) : le facteur reste dans `[reste, 1]` sur un balayage de positions
+(centre de face → 1, pile sur le bord → `reste`, vérifié à 0,3500 pour
+`reste = 0,35`) ; `largeur <= 0` rend exactement 1 (aucun effet sans réglage,
+donc rien ne change pour ISO2/ISO5/les bancs) ; le noir absolu tient avec
+l'encre appliquée, `reste` à 0, 0,35 et 1 (multiplier un noir par un facteur
+de `[0,1]` le laisse nul — l'algèbre que le brief demande de prouver) ;
+l'équité entre les deux capteurs tient par construction (le facteur ne
+dépend en rien de quelle vue est lue). Sabotage vérifié réellement (les deux
+côtés de `mix()` inversés dans `iso_pate.gd` → deux échecs exactement là où
+attendu, centre et bord permutés → code 1 → revert → vert). Lot complet vert
+(366 s), aucun `SHADER ERROR` dans le journal (grep explicite, piège
+qu'ISO7 Beauté venait de payer sur son propre mur : un uniform utilisé mais
+non déclaré ne fait qu'une ligne d'erreur, le lot sort vert quand même).
 
 **Vérifié** (headless, sabotage compris) — valeurs RÉELLES, pas celles du
 premier essai :

@@ -62,6 +62,19 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled, blend_mix, dept
 // 0,5 demandé). `voxel_corps.gd` construit, pour chaque boîte visible, un double en
 // `corps_iso_profondeur.gdshader` — même maillage, `render_priority -1`, `ALPHA 0` — sans
 // qu'aucun appelant n'ait à le demander.
+//
+// ## L'encre des arêtes (ISO3 vague 5, contrat d'« ISO7 Beauté Opus »)
+//
+// `pate_encre_boite()` (`iso_pate.gdshaderinc`) assombrit multiplicativement les quatre
+// bords de la face rendue, dans `[encre_reste, 1]` — jamais un ajout de matière, jamais
+// négatif : un noir déjà nul (`c == 0`) reste nul. `encre_arete = 0.0` (le défaut) rend le
+// facteur toujours 1 : rien ne change tant que personne ne règle une largeur — ce banc, la
+// suite et tout appelant déjà écrit restent identiques à avant cette vague. `demi = abs(VERTEX)`
+// est correct ici parce que `voxel_corps.gd`/`voxel_objets.gd` posent des `BoxMesh` à leur
+// vraie taille (jamais un cube unité mis à l'échelle) et ne les subdivisent jamais — tous les
+// sommets sont des coins. Posé APRÈS le plafond de fiche et AVANT la composition
+// opacité/silhouette : l'encre touche la couleur rendue, jamais `silhouette_N` (la couleur du
+// joueur à son opacité, chez lui, ne doit rien à la pâte).
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
@@ -113,10 +126,24 @@ uniform vec4 silhouette_2 = vec4(0.0);
 // une seconde fois par-dessus la sienne (signalé par ISO2 avant que ça n'arrive).
 uniform float pixels_par_unite : hint_range(0.0, 1000.0) = 1.0;
 
+// ISO3 vague 5 — largeur de l'encre d'arête, en unités de `monde` (des pixels sous
+// l'ancre de Presentation3D, des tuiles ici). 0.0 = aucun effet (défaut). `encre_reste` :
+// la valeur du facteur SUR le trait — voir `pate_encre_boite()`.
+uniform float encre_arete = 0.0;
+uniform float encre_reste = 0.35;
+
 varying vec3 monde;
+varying vec3 local;             // VERTEX, repère du modèle — voir `pate_encre_boite()`
+varying vec3 demi;              // abs(VERTEX), constant par sommet sur nos BoxMesh
+varying vec3 echelle;           // longueur des colonnes de MODEL_MATRIX
+varying vec3 normale_locale;    // NORMAL, repère du modèle
 
 void vertex() {
 	monde = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	local = VERTEX;
+	demi = abs(VERTEX);
+	echelle = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
+	normale_locale = NORMAL;
 }
 
 // Miroir de `lumiere_recue()` dans `corps_grossier_iso.gdshader` — même borne au
@@ -138,6 +165,7 @@ void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 motif = vec2(monde.x + monde.z, -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
+	float px_monde = max(max(fwidth(monde.x), fwidth(monde.y)), fwidth(monde.z));
 
 	vec3 c;
 	if (capteur_actif) {
@@ -158,6 +186,9 @@ void fragment() {
 	}
 	// Le plafond général : jamais plus clair que la fiche, quelle que soit la pâte.
 	c = min(c, couleur_fiche.rgb);
+	// L'encre des arêtes (ISO3 vague 5) : multiplicative, [encre_reste, 1] — un noir
+	// déjà nul le reste. Jamais sur `silhouette_N`, composée après, plus bas.
+	c *= pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde);
 
 	float o = clamp(deux ? opacite_2 : opacite_1, 0.0, 1.0);
 	vec4 silhouette = deux ? silhouette_2 : silhouette_1;

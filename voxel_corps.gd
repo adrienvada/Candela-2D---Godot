@@ -450,6 +450,18 @@ func definir_style(s: int) -> void:
 		_materiau.set_shader_parameter("style", s)
 
 
+## ISO3 vague 5 — l'encre des arêtes (contrat d'« ISO7 Beauté Opus »,
+## `pate_encre_boite()` dans `iso_pate.gdshaderinc`). `largeur` en unités de ce
+## nœud (tuiles ici, pixels sous l'ancre de Presentation3D) — 0.0 (le défaut du
+## shader) n'a aucun effet. `reste` : la valeur du facteur SUR le trait, dans
+## [0, 1]. Ne pose rien sur `materiau_profondeur()` : la passe de profondeur
+## n'écrit aucune couleur, `corps_iso_profondeur.gdshader` n'a pas cet uniform.
+func definir_encre(largeur: float, reste: float = 0.35) -> void:
+	if _materiau != null:
+		_materiau.set_shader_parameter("encre_arete", largeur)
+		_materiau.set_shader_parameter("encre_reste", clampf(reste, 0.0, 1.0))
+
+
 ## Le Y global du sommet de la tête — la mesure que le brief ISO3 vague 1
 ## demande pour juger la pose accroupie (« mesure-le sur la planche »).
 ## Recalculée depuis le maillage réel, jamais depuis une constante : c'est la

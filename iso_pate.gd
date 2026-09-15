@@ -66,6 +66,40 @@ static func _trait(coord: float, periode: float, demi_largeur: float, aa: float)
 	return 1.0 - smoothstep(demi_largeur - aa, demi_largeur + aa, s + aa)
 
 
+## ISO7 — miroir de `PATE_TEINTE_CHAUDE` et `pate_temperature` : la teinte d'une lumière neutre, sa
+## luminance gardée.
+const TEINTE_CHAUDE := Vector3(1.10, 0.97, 0.80)
+
+
+static func temperature(c: Vector3, force: float) -> Vector3:
+	var l := luminance(c)
+	if l <= 0.0 or force <= 0.0:
+		return c
+	var mx := maxf(c.x, maxf(c.y, c.z))
+	var mn := minf(c.x, minf(c.y, c.z))
+	var neutre := 1.0 - clampf((mx - mn) / maxf(mx, 0.0001), 0.0, 1.0)
+	var teinte := TEINTE_CHAUDE / luminance(TEINTE_CHAUDE)
+	var chaude := c * Vector3.ONE.lerp(teinte, clampf(force, 0.0, 1.0) * neutre)
+	return chaude * (l / maxf(luminance(chaude), 0.000001))
+
+
+## ISO7 — miroir de `pate_trait_de_bord` : 1 sur le trait, 0 au-delà.
+static func trait_de_bord(distance: float, largeur: float, aa: float) -> float:
+	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance)
+
+
+## ISO7 — miroir de `pate_encre_boite` : le facteur d'encre des arêtes d'une boîte, dans [reste, 1].
+static func encre_boite(local: Vector3, demi: Vector3, echelle: Vector3, normale: Vector3, largeur: float,
+		reste: float, px_monde: float) -> float:
+	if largeur <= 0.0:
+		return 1.0
+	var d := (demi - local.abs()).max(Vector3.ZERO) * echelle
+	var an := normale.abs()
+	var bord := minf(d.y, d.z) if an.x > 0.5 else (minf(d.x, d.z) if an.y > 0.5 else minf(d.x, d.y))
+	var w := maxf(largeur, px_monde)
+	return lerpf(1.0, clampf(reste, 0.0, 1.0), trait_de_bord(bord, w, px_monde))
+
+
 static func pate(couleur: Vector3, lumiere: float, st: int, motif: Vector2, pente: Vector2,
 		lumiere_decalee: float, aa: float) -> Vector3:
 	if st == BRUTE:

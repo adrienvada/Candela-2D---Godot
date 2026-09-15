@@ -4531,6 +4531,39 @@ prévu par `banc_corps.gd` depuis la vague 0) plutôt que sur la grille entière
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (la pâte d'ISO7 Beauté, branchée après coup dans la vague 5) — ajoutée le 2026-09-15 06h47 (Paris)
+
+Le contrat de pâte d'« ISO7 Beauté Opus » est arrivé après le premier commit
+de la vague 5 — branché par-dessus, même vague, le brief le demandant « quand
+son message arrive ». `iso_pate.gdshaderinc`/`iso_pate.gd` pris par
+`git checkout 6e64afb -- ...` (jamais par fusion, comme pour les images d'ISO
+Assets) ; `corps_iso.gdshader` reçoit deux uniforms (`encre_arete`,
+`encre_reste`, 0.0/0.35 par défaut), quatre varyings, un appel multiplicatif
+après le plafond de fiche ; `VoxelCorps.definir_encre()`, nouveau.
+
+**Son hypothèse de départ ne tenait pas pour mes boîtes, signalé avant
+qu'elle code** : elle supposait un cube unité mis à l'échelle (comme ses
+murs) ; mes `BoxMesh` sont à leur vraie taille sur un `MeshInstance3D` à
+l'échelle identité (sauf les jambes, comprimées en Y à l'accroupi) —
+`length(MODEL_MATRIX[i])` seul aurait lu ≈1 partout. Corrigée à deux (`demi
+= abs(VERTEX)` porte la vraie taille sur un `BoxMesh` sans subdivision,
+`echelle` porte l'ancre et la compression des jambes) avant que le code
+existe, pas après un test rouge.
+
+**Vérifié** (nouveaux tests dans `tools/test_voxel_corps.gd`) : le facteur
+reste dans `[reste, 1]` sur un balayage de positions, `largeur <= 0` rend
+exactement 1, le noir absolu tient avec l'encre appliquée (multiplier un
+noir par `[0,1]` le laisse nul), l'équité entre capteurs tient par
+construction (le facteur ne lit pas quelle vue). Sabotage vérifié réellement
+(les deux côtés d'un `mix()` inversés dans `iso_pate.gd` → deux échecs
+exactement là où attendus → revert → vert). Lot complet vert (366 s), aucun
+`SHADER ERROR` — grep explicite dans le journal, le piège qu'ISO7 Beauté
+venait de payer sur son propre mur (un uniform non déclaré ne fait qu'une
+ligne d'erreur, le lot sort vert quand même).
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
