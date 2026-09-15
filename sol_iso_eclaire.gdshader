@@ -89,6 +89,26 @@ uniform vec2 led_origine_px = vec2(0.0);
 uniform vec2 led_taille_px = vec2(1.0);
 uniform vec3 led_couleur = vec3(0.0);
 uniform float led_gain = 1.0;
+// ISO12 — le halo de proximité de chaque joueur (`ambient_light`), qui n'éclaire que la vue de son porteur : une émission PAR VUE,
+// comme la silhouette de soi. La vue 1 lit le halo de J1, la vue 2 celui de J2 (xy : position en px de monde, z : énergie, 0 éteint).
+uniform sampler2D halo_soi_texture : filter_linear, repeat_disable;
+uniform vec3 halo_soi_1 = vec3(0.0);
+uniform vec3 halo_soi_2 = vec3(0.0);
+uniform float halo_soi_empreinte_px = 150.0;
+uniform vec3 halo_soi_couleur = vec3(1.0);
+uniform float halo_soi_gain = 0.25;
+
+vec3 lire_halo_soi(vec2 px, bool deux) {
+	vec3 h = deux ? halo_soi_2 : halo_soi_1;
+	if (h.z <= 0.0) {
+		return vec3(0.0);
+	}
+	vec2 uv = (px - h.xy) / halo_soi_empreinte_px + vec2(0.5);
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+		return vec3(0.0);
+	}
+	return texture(halo_soi_texture, uv).a * halo_soi_couleur * h.z * halo_soi_gain;
+}
 
 vec3 lire_led(vec2 px) {
 	if (!led_active) {
@@ -249,7 +269,7 @@ void fragment() {
 		EMISSION = vec3(step(0.0005, pate_luminance(brute)));
 	} else {
 		ALBEDO = c * albedo;
-		EMISSION = c * albedo * lire_led(px_lu);
+		EMISSION = c * albedo * (lire_led(px_lu) + lire_halo_soi(px_lu, deux));
 	}
 }
 

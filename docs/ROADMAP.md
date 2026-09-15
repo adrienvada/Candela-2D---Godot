@@ -25683,6 +25683,68 @@ ce qu'il ne dit PAS encore :
 - **Silhouette de soi : tenue** — dans le noir, torches éteintes, J1 à 63 dans sa vue et 0 dans celle de J2, sur les deux cartes.
  Lot complet vert à 23:41 (drapeau éteint) : 112 suites, sans erreur de script, 432 s.
 
+#### Lot 0 bis — la preuve rendue honnête, et ce qu'elle a montré
+
+Après le commit du lot 0 (d001f49), la session cloud (23:42) a demandé, dans l'ordre : la preuve rejouée (rouge nul, bleu sous
+1 %, et le faisceau du Braconnier expliqué avant tout), la planche aux cadrages de la loupe, un relevé de cadence Mac libre, une
+variante recommandée. Elle a accepté le commit (rétrodiffusion, bandeau de LED en émission bridée, damier, énergies communes,
+garde des shaders spatiaux) et visé 1,0 ± 0,1 pour la torche et la fusée.
+
+- **L'instrument d'abord.** Vérifié sur calques rouge/bleu avant de rien corriger : le rouge du Cloître était la silhouette de
+  soi, émise en prise normale et oubliée par le mode masque du corps ; le flash rejoué toutes les 0,5 s tombait dans une prise
+  de la paire et pas dans l'autre ; le bleu comptait la frange où la lightmap vaut à peine plus que zéro. Corrigé : la
+  silhouette dans le masque, le flash coupé pendant la preuve, le bleu jugé contre une prise de référence 2D par visée
+  (visible au-dessus de 8/255, noir en 3D). Le banc tient aussi l'horloge de la manche (la manche de cinq minutes se terminait
+  pendant le banc, torches éteintes, et invalidait l'écran scindé du Cloître) et gagne `--carte`, `--vue`, `--preuve-seule`.
+  Rejouée : rouge 108 857 → 3 817 pixels, pire bleu 59 % → 15 % avec rétrodiffusion.
+- **Ce que la preuve rejouée a montré, et qui était vrai :**
+  - **le faisceau du Braconnier manquait près de la lampe** — même scène (flash coupé, prises consécutives) : son spot de
+    10° à hauteur de main, visant le sol à mi-portée, ne touchait le sol qu'à ~130 px ; aucun spot rond aussi étroit ne couvre
+    une bande de sol de la lampe au bout de la portée. Le bord visible appartient à la bride : le spot 3D n'a qu'à couvrir la
+    zone du cône. Angle plancher de 45° pour tout spot de torche ;
+  - **la bande du bandeau de LED et le liseré des piliers sortaient trop sombres** : le gain 0,11 venait d'une correction à la
+    puissance 2,2 qui a sur-corrigé. Porté à 0,25 ;
+  - **le halo de rétrodiffusion d'un joueur restait noir dans sa propre vue** : l'omni, contre son corps voxel, était ombrée par
+    ce corps. La rétrodiffusion ne porte plus d'ombre (six faces de cube de moins par image, en prime) ;
+  - **le halo de proximité d'un joueur restait noir dans sa propre vue** : `ambient_light`, qui n'éclaire que le canal de la
+    vue de son porteur (`CanauxLumiere.canal_de_vue`), était exclu du miroir au plan — une Light3D ne se réserve pas à une vue,
+    et une omni ajouterait du modelé dans la vue de l'AUTRE partout où elle est déjà éclairée. Il entre en ÉMISSION PAR VUE
+    dans le sol et les murs éclairés, comme la silhouette de soi : la même texture (intensité dans l'alpha) sur la même empreinte
+    (150 px), lue par la vue de son porteur seulement, bridée ;
+  - les derniers pixels rouges bordaient un corps que l'autre voit s'effacer : le mode masque le posait opaque et cachait le sol
+    vu à travers lui. Le masque garde désormais l'alpha du corps ;
+  - une paire (murs bas, visée 4, rétrodiffusion non) ne comparait pas la même scène : la vue de J2 de la prise 3D ne montrait
+    ni murs ni bandeau, et son faisceau n'était pas où la référence le montre — une vue gelée le temps d'une image. Rejouée.
+- **La pâte (b)** existe désormais : les matériaux rendent la lumière continue et une passe range l'image en paliers — sur
+  l'affichage de chaque vue en écran scindé (`pate_vue_iso.gdshader`, aucune copie d'écran), sur un rectangle plein écran qui
+  lit l'écran en vue unique (`pate_ecran_iso.gdshader` : la copie d'écran est son coût, piège ISO10, mesuré au banc).
+- **Énergies visées à 1,0 ± 0,1** : torche, flash et torche fantôme 5 → 3,6 ; fusée, braise et mine 32 → 52.
+- **Le temps GPU par prise** (`RenderingServer.viewport_get_measured_render_time_gpu`, fenêtre et sous-vues iso), relevé à côté
+  de la cadence : il ne dépend pas du cadencement de la fenêtre, qui a rendu le premier relevé muet.
+
+**Quatrième preuve rejouée (2026-09-16, 00:00) et banc de la planche (00:03 à 00:13)** — plafond 8, bandeau figé, atlas 2048,
+bride (0 ; 0,05) :
+- **Preuve, ce qui tient** : rouge 108 857 → 3 817 → 1 094 → **87 pixels** au total, zéro sur les seize paires du Cloître, au
+  plus 31 par paire sur les murs bas (rétrodiffusion allumée). Bleu : **12 paires sur 32 sous 1 %**, pire 3,86 % (murs bas,
+  visée 7) ; Cloître 0,33 à 3,25 %, murs bas 0,82 à 3,86 %. Silhouette de soi tenue (J1 à 73-77 dans sa vue, 0 à 0,8 dans
+  l'autre). **Ni rouge nul, ni bleu sous 1 % partout : la preuve n'est pas close.** Restes vus sur calques : le tronçon du faisceau
+  de J2 le plus proche de la lampe, encore absent dans la vue de J1 (dans la sienne, le faisceau est revenu sur presque
+  toute sa longueur) ; le corps de J2 vu de loin dans la vue de J1 (gris en 2D, noir en 3D) ; 31 à 33 pixels rouges épars
+  au milieu de la vue de J1 sur les murs bas, non identifiés ; les liserés du pied des faces, le hachurage 2D de la zone morte des
+  murets.
+- **Planche** : 98 PNG aux cadrages de la loupe et deux planches réduites (`docs/iso/iso12/planche_murs_bas.jpg`,
+  `planche_cloitre.jpg`), montées en galerie par ISO Assets. À l'œil : la pâte (b) postérise en bandes dures et brûle les
+  blancs ; (a) et (c) se ressemblent à cette échelle ; le contact ne change presque rien ; sans rétrodiffusion le halo du
+  porteur disparaît. **Le cône change de nature** : triangle net en 2D, flaque ronde et douce en 3D — la bride laisse voir
+  l'empreinte ronde du spot dans la zone éclairée en 2D (halo, bandeau).
+- **Appels de dessin** (la rétrodiffusion ne s'ombrant plus) : murs bas vue unique 105 → 116 avec ombres (+10 %), écran scindé
+  185 → 200 (+8 %) ; Cloître vue unique 125 → 142-144 (+14 %), écran scindé 249 → 284-286 (+14 %), 274 sans ombre des omni,
+  249 ombres en vue unique seulement.
+- **Cadence : toujours NON MESURÉE.** Médianes à 60,0, référence éteinte à 40-50 au 1 % bas : fenêtre encore cadencée (Mac
+  partagé). Et le temps GPU ajouté au banc rend 0,00 partout : le rendu Compatibility ne fournit pas cette mesure. Le relevé
+  demandé (Mac libre, fenêtre au premier plan) reste à faire.
+ Lot complet vert à 00:21 (drapeau éteint) : 112 suites, sans erreur de script, 436 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

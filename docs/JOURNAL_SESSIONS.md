@@ -5733,3 +5733,12 @@ calibrer ; énergies par type de source posées dans le code. Premier banc compl
 bas) ; appels de dessin +29 en vue unique et +51 en écran scindé avec ombres ; preuve non concluante par défaut de
 l'instrument (silhouette oubliée par le masque, flash rejoué entre deux prises, frange sous le seuil) et écran scindé du
 Cloître invalide (fin de manche) — corrections préparées, à rejouer ; silhouette de soi tenue. Lot complet vert à 23:41 (drapeau éteint) : 112 suites, sans erreur de script, 432 s.
+
+**ISO12, lot 0 bis — la preuve rendue honnête, 2026-09-15 et 16 dans la nuit.** Session « Iso 1 Opus », branche
+`iso12-lumiere3d`. Instrument corrigé sur calques (silhouette oubliée par le masque, flash rejoué entre deux prises, frange sous
+le seuil, horloge de la manche) ; puis trois manques vrais : faisceau du Braconnier absent près de la lampe (angle plancher 45°),
+bandeau de LED trop sombre (gain 0,25), halo de rétrodiffusion ombré par le corps (plus d'ombre), halo de proximité absent de la vue de son porteur (émission par
+vue), corps effacés opaques dans le masque (alpha gardé). Pâte (b) posée ; énergies
+visées à 1,0 ; temps GPU au banc. Quatrième preuve : rouge 87 px, bleu sous 1 % sur 12 paires sur 32 (pire 3,86 %) ; planche de 98 PNG en galerie ; pâte (b)
+écartée à l'œil ; appels de dessin +8 à +14 % avec ombres ; cadence toujours non mesurée (fenêtre cadencée, temps GPU non fourni
+par Compatibility). Lot complet vert à 00:21 (drapeau éteint) : 112 suites, sans erreur de script, 436 s.

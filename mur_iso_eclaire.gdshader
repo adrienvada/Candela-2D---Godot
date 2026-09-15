@@ -71,6 +71,26 @@ uniform vec2 led_origine_px = vec2(0.0);
 uniform vec2 led_taille_px = vec2(1.0);
 uniform vec3 led_couleur = vec3(0.0);
 uniform float led_gain = 1.0;
+// ISO12 — le halo de proximité de chaque joueur (`ambient_light`), qui n'éclaire que la vue de son porteur : une émission PAR VUE,
+// comme la silhouette de soi. La vue 1 lit le halo de J1, la vue 2 celui de J2 (xy : position en px de monde, z : énergie, 0 éteint).
+uniform sampler2D halo_soi_texture : filter_linear, repeat_disable;
+uniform vec3 halo_soi_1 = vec3(0.0);
+uniform vec3 halo_soi_2 = vec3(0.0);
+uniform float halo_soi_empreinte_px = 150.0;
+uniform vec3 halo_soi_couleur = vec3(1.0);
+uniform float halo_soi_gain = 0.25;
+
+vec3 lire_halo_soi(vec2 px, bool deux) {
+	vec3 h = deux ? halo_soi_2 : halo_soi_1;
+	if (h.z <= 0.0) {
+		return vec3(0.0);
+	}
+	vec2 uv = (px - h.xy) / halo_soi_empreinte_px + vec2(0.5);
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+		return vec3(0.0);
+	}
+	return texture(halo_soi_texture, uv).a * halo_soi_couleur * h.z * halo_soi_gain;
+}
 
 vec3 lire_led(vec2 px) {
 	if (!led_active) {
@@ -263,7 +283,7 @@ void fragment() {
 			float lisere = fin * pate_trait_de_bord(d_bord, largeur, px_monde);
 			if (lisere > 0.0) {
 				brute = lire_lumiere_moyenne(monde.xz + sortie * (d_bord + pied), vec2(-sortie.y, sortie.x), deux, peinture_ref, peinture_min);
-				led_ici = lire_led(monde.xz + sortie * (d_bord + pied));
+				led_ici = lire_led(monde.xz + sortie * (d_bord + pied)) + lire_halo_soi(monde.xz + sortie * (d_bord + pied), deux);
 				c = pate_facteur(bride_de(brute, motif, aa), lisere);
 			}
 		}
@@ -274,7 +294,7 @@ void fragment() {
 		// sur les arêtes d'une face à peine allumée — une lumière réelle effacée. Sur le trait, le facteur
 		// est le plus petit des deux, jamais leur produit : plancher `encre_arete_reste`.
 		brute = lire_lumiere_moyenne(monde.xz + n * pied, tangente, deux, peinture_ref, peinture_min);
-		led_ici = lire_led(monde.xz + n * pied);
+		led_ici = lire_led(monde.xz + n * pied) + lire_halo_soi(monde.xz + n * pied, deux);
 		c = bride_de(brute, motif, aa);
 		// ISO7b — **la direction de la lumière se lit dans la lightmap elle-même** (aucune Light3D) : son
 		// gradient DEVANT la face et le long d'elle, jamais derrière — derrière, c'est l'ombre du mur lui-même,

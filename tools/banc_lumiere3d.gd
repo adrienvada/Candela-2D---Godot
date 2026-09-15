@@ -22,6 +22,8 @@
 ## Lancer (vraie fenêtre, chien de garde à la main — pas de `timeout` sur ce Mac) :
 ##   godot --path . res://tools/banc_lumiere3d.tscn -- --captures <dossier absolu> [--rapide]
 ## `--rapide` : une carte, vue unique, ombres oui/non seulement (la vérification du montage).
+## `--carte=<nom>` (murs_bas | cloitre), `--vue=<vue>` (unique | scinde) : n'en prendre qu'une ; `--preuve-seule` : ni
+## variantes, seulement la preuve et la silhouette de soi — pour rejouer ce qu'un banc a laissé invalide.
 ## `--energies torche:30,fusee:50,…` : les constantes d'énergie par type de source (`lumieres_iso.gd`), pour la calibration —
 ## les mêmes pour les deux joueurs et les deux vues ; un type absent garde sa valeur.
 extends Node
@@ -68,6 +70,9 @@ var _p: Presentation3D
 var _dossier := ""
 var _rapide := false
 var _energies := {}
+var _carte_seule := ""
+var _vue_seule := ""
+var _preuve_seule := false
 var _pantins: Array = []
 var _scene := {}
 var _fusee: Node2D = null
@@ -92,6 +97,12 @@ func _ready() -> void:
 		return
 	_dossier = args[i + 1]
 	_rapide = args.has("--rapide")
+	_preuve_seule = args.has("--preuve-seule")
+	for a in args:
+		if a.begins_with("--carte="):
+			_carte_seule = a.trim_prefix("--carte=")
+		elif a.begins_with("--vue="):
+			_vue_seule = a.trim_prefix("--vue=")
 	var e := args.find("--energies")
 	if e >= 0 and e + 1 < args.size():
 		for paire in args[e + 1].split(","):
@@ -136,6 +147,8 @@ func _ready() -> void:
 	print("=== Banc de la lumière 3D bridée (ISO12, lot 0) — plafond max_lights_per_object=%s, énergies %s ===" \
 		% [str(ProjectSettings.get_setting("rendering/limits/opengl/max_lights_per_object", "?")), JSON.stringify(_energies)])
 	for carte in (CARTES.slice(0, 1) if _rapide else CARTES):
+		if _carte_seule != "" and String(carte["nom"]) != _carte_seule:
+			continue
 		await _une_carte(carte)
 	_finir()
 
@@ -167,6 +180,10 @@ func _une_carte(carte: Dictionary) -> void:
 	_poser_la_fusee()
 	var nom := String(carte["nom"])
 	var vues := ["unique"] if _rapide else ["unique", "scinde"]
+	if _vue_seule != "":
+		vues = [_vue_seule]
+	if _preuve_seule:
+		vues = []
 	for vue in vues:
 		_poser_la_vue(vue == "scinde")
 		# La référence : la vue iso d'ISO11, lumière 3D éteinte.
@@ -177,7 +194,7 @@ func _une_carte(carte: Dictionary) -> void:
 		if _rapide:
 			continue
 		for b in BRIDES:
-			for pate in [0, 1]:
+			for pate in [0, 2, 1]:
 				for contact in [true, false]:
 					await _prendre(nom, vue, {"lumiere": true, "ombres": true, "atlas": 2048, "bride": b,
 						"pate": pate, "contact": contact})
@@ -200,20 +217,32 @@ func _prendre(carte: String, vue: String, v: Dictionary) -> void:
 	await _images(IMAGES_DE_REPOS)
 	var durees := PackedFloat32Array()
 	var appels: Array[int] = []
+	# Le temps GPU de la fenêtre et des sous-vues iso, indépendant du cadencement de la fenêtre (voir l'en-tête du banc).
+	var vues_mesurees: Array[RID] = [get_viewport().get_viewport_rid()]
+	for sous_vue in _p.get("_vues3d"):
+		vues_mesurees.append((sous_vue as SubViewport).get_viewport_rid())
+	for rid in vues_mesurees:
+		RenderingServer.viewport_set_measure_render_time(rid, true)
+	var gpu: Array[float] = []
 	for k in IMAGES_MESUREES:
 		await RenderingServer.frame_post_draw
 		durees.append(get_process_delta_time())
 		appels.append(int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+		var total := 0.0
+		for rid in vues_mesurees:
+			total += RenderingServer.viewport_get_measured_render_time_gpu(rid)
+		gpu.append(total)
 	appels.sort()
+	gpu.sort()
 	var s := ConditionsDeMatch.statistiques(durees)
 	var id := _id_variante(carte, vue, v)
 	var fichier := await _capturer(id)
 	var lumieres := int(_p.get("_lumieres").call("allumees")) if _p.get("_lumieres") != null else 0
-	print("BANC_LUMIERE3D prise=%s carte=%s vue=%s lumiere=%s ombres=%s atlas=%d bride=%s pate=%s contact=%s omni=%s torches_seules=%s ombres_vue_unique=%s retro=%s fps_median=%.1f fps_1pc_bas=%.1f pire_ms=%.1f appels=%d lumieres3d=%d fichier=%s ancres=%s"
+	print("BANC_LUMIERE3D prise=%s carte=%s vue=%s lumiere=%s ombres=%s atlas=%d bride=%s pate=%s contact=%s omni=%s torches_seules=%s ombres_vue_unique=%s retro=%s gpu_ms=%.2f fps_median=%.1f fps_1pc_bas=%.1f pire_ms=%.1f appels=%d lumieres3d=%d fichier=%s ancres=%s"
 		% [id, carte, vue, str(v.get("lumiere", false)), str(v.get("ombres", false)), int(v.get("atlas", 0)),
-		str(v.get("bride", Vector2(0.0, 0.05))), "c" if int(v.get("pate", 0)) == 1 else "a",
+		str(v.get("bride", Vector2(0.0, 0.05))), ["a", "c", "b"][int(v.get("pate", 0))],
 		str(v.get("contact", true)), str(v.get("omni", true)), str(v.get("torches_seules", false)),
-		str(v.get("vue_unique_seulement", false)), str(v.get("retro", true)),
+		str(v.get("vue_unique_seulement", false)), str(v.get("retro", true)), gpu[gpu.size() / 2],
 		float(s["fps_median"]), float(s["fps_1pc_bas"]), float(s["pire_image_ms"]),
 		appels[appels.size() / 2], lumieres, fichier, JSON.stringify(_ancres(vue == "scinde"))])
 
@@ -231,6 +260,8 @@ func _poser_la_variante(v: Dictionary) -> void:
 	_p.poser_lumiere_3d(bool(v.get("lumiere", false)))
 	if _energies.has("led"):
 		_p.gain_led_3d = float(_energies["led"])
+	if _energies.has("halo_soi"):
+		_p.gain_halo_soi_3d = float(_energies["halo_soi"])
 	var lumieres: Node = _p.get("_lumieres")
 	if lumieres != null and not _energies.is_empty():
 		var table: Dictionary = lumieres.get("energie_par_type")
@@ -246,12 +277,20 @@ func _poser_la_variante(v: Dictionary) -> void:
 ## La preuve « visible en 3D ⊆ L2D > 0 » : huit visées, les deux vues, une prise normale et une prise masque chacune.
 func _la_preuve(carte: String) -> void:
 	_poser_la_vue(true)
+	# Le flash rejoué tomberait dans une prise et pas dans l'autre : la paire ne comparerait plus la même scène.
+	_flash_actif = false
 	for k in VISEES_PREUVE:
 		var angle := TAU * float(k) / float(VISEES_PREUVE)
 		(_pantins[0] as Pantin).visee = Vector2.RIGHT.rotated(angle)
 		(_pantins[1] as Pantin).visee = Vector2.RIGHT.rotated(angle + PI)
 		_scene["v1"] = (_pantins[0] as Pantin).visee
 		_scene["v2"] = (_pantins[1] as Pantin).visee
+		# La référence 2D de cette visée : la vue iso d'ISO11, lumière 3D éteinte — le bleu se juge contre ce que la 2D MONTRE.
+		_poser_la_variante({"lumiere": false})
+		await _images(IMAGES_DE_REPOS)
+		var id_ref := "%s_preuve_v%d_reference2d" % [carte, k]
+		var fichier_ref := await _capturer(id_ref)
+		print("BANC_LUMIERE3D preuve_reference carte=%s visee=%d fichier=%s" % [carte, k, fichier_ref])
 		# La preuve dans les deux sens, rétrodiffusion oui puis non (la seconde montre ce que la première répare).
 		for retro in [true, false]:
 			for masque in [0, 1]:
@@ -263,6 +302,7 @@ func _la_preuve(carte: String) -> void:
 					% [carte, k, 1 if retro else 0, masque, fichier])
 	_scene["v1"] = Vector2.UP
 	_scene["v2"] = Vector2.UP
+	_flash_actif = true
 
 
 ## La silhouette de soi : noir complet (torches éteintes, flash coupé, fusée retirée), écran scindé.
@@ -295,6 +335,7 @@ func _ancres(scinde: bool) -> Dictionary:
 		"j2": _main.p2.global_position,
 		"bord_cone": _main.p1.global_position + devant.rotated(demi) * portee * 0.6,
 		"pied_mur": _main.p1.global_position + devant * 3.2 * MursBas.TUILE,
+		"sol": _main.p1.global_position + devant * 1.6 * MursBas.TUILE + devant.orthogonal() * 0.8 * MursBas.TUILE,
 	}
 	if is_instance_valid(_fusee):
 		points["fusee"] = _fusee.global_position
@@ -342,7 +383,7 @@ func _id_variante(carte: String, vue: String, v: Dictionary) -> String:
 	if not bool(v.get("retro", true)):
 		suffixe += "_retro0"
 	return "%s_%s_ombres%s_atlas%d_bride%02d_pate%s_contact%s%s" % [carte, vue, "1" if v.get("ombres", true) else "0",
-		int(v.get("atlas", 2048)), roundi(b.y * 100.0), "c" if int(v.get("pate", 0)) == 1 else "a",
+		int(v.get("atlas", 2048)), roundi(b.y * 100.0), ["a", "c", "b"][int(v.get("pate", 0))],
 		"1" if v.get("contact", true) else "0", suffixe]
 
 
@@ -367,6 +408,9 @@ func _retirer_la_fusee() -> void:
 
 
 func _tenir() -> void:
+	# La manche dure cinq minutes : sans cela, les dernières prises du banc tombent après la fin de la manche, torches éteintes.
+	if _main.get("time_left") != null and float(_main.time_left) < 240.0:
+		_main.time_left = 280.0
 	for pid in 2:
 		var j: Node2D = _main.p1 if pid == 0 else _main.p2
 		if not is_instance_valid(j):

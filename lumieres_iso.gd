@@ -24,6 +24,10 @@ extends Node3D
 const TUILE := 35.0
 ## Le cône 3D dépasse le cône 2D de cinq degrés, adouci (décision de la session cloud, 22:15).
 const CONE_EN_PLUS_DEG := 5.0
+## L'angle plancher d'un spot de torche. ⚠️ Preuve rejouée du 2026-09-15 (23:48) : le faisceau de 5° du Braconnier, en spot de 10°,
+## ne touchait le sol qu'à ~130 px devant la lampe et la bande proche restait noire en 3D alors que la 2D la montre. Le bord
+## visible du cône est celui de la bride : le spot 3D doit seulement COUVRIR toute la zone du cône 2D, de la lampe au bout.
+const CONE_PLANCHER_DEG := 45.0
 const ATTENUATION_ANGULAIRE := 2.0
 ## La portée 3D dépasse un peu la portée 2D, pour la même raison.
 const PORTEE_EN_PLUS := 1.15
@@ -32,10 +36,11 @@ const PORTEE_EN_PLUS := 1.15
 const VISEE_AU_SOL_PORTEE := 0.5
 ## Les types de source. Les énergies sont calibrées au banc (`tools/banc_lumiere3d.gd`) : une par type, pour tous.
 const TYPES := ["torche", "flash", "fusee", "braise", "mine", "torche_fantome", "retrodiffusion"]
-## Calibrées au banc le 2026-09-15 (cinquième passe rapide, bandeau de LED figé) : la luminance moyenne là où la 2D est
-## éclairée, 3D sur 2D — cône de torche 1,06 à 1,29, halo de fusée 0,77 à 0,84, rétrodiffusion 1,10 avec 6 / 20 / 1.
+## Calibrées au banc le 2026-09-15. Cinquième passe rapide (bandeau de LED figé), luminance moyenne là où la 2D est éclairée,
+## 3D sur 2D : cône de torche 1,06 à 1,29 avec 6, halo de fusée 0,77 à 0,84 avec 20, rétrodiffusion 1,10 avec 1. Puis ramenées
+## vers 1,0 ± 0,1 (demande de la session cloud, 23:42) : torche 3,6 et fusée 52, à revérifier au banc.
 ## Les mêmes pour les deux joueurs et les deux vues : c'est de l'équité, pas un réglage.
-var energie_par_type := {"torche": 5.0, "flash": 5.0, "fusee": 32.0, "braise": 32.0, "mine": 32.0, "torche_fantome": 5.0,
+var energie_par_type := {"torche": 3.6, "flash": 3.6, "fusee": 52.0, "braise": 52.0, "mine": 52.0, "torche_fantome": 3.6,
 	"retrodiffusion": 0.8}
 var retrodiffusion := true
 var ombres := true
@@ -132,7 +137,7 @@ func _torche(source: Light2D, arme: WeaponData, hauteur_px: float, type: String,
 	var au_sol := devant * arme.portee_torche() * VISEE_AU_SOL_PORTEE
 	var cible := Vector3(p.x + au_sol.x, 0.0, p.y + au_sol.y)
 	l.look_at(cible, Vector3.UP)
-	l.spot_angle = clampf(arme.torch_angle_deg + CONE_EN_PLUS_DEG, 1.0, 89.0)
+	l.spot_angle = clampf(maxf(arme.torch_angle_deg + CONE_EN_PLUS_DEG, CONE_PLANCHER_DEG), 1.0, 89.0)
 	l.spot_angle_attenuation = ATTENUATION_ANGULAIRE
 	l.spot_range = arme.portee_torche() * PORTEE_EN_PLUS
 
@@ -143,7 +148,9 @@ func _omni(source: Light2D, type: String, position_3d: Variant, vus: Dictionary)
 	var l := _lumiere(source, false, vus) as OmniLight3D
 	if not _recopier(source, l, type):
 		return
-	l.shadow_enabled = ombres and ombres_omni and not ombres_torches_joueurs_seules
+	# La rétrodiffusion ne s'ombre pas : c'est la lumière qui revient sur le porteur, que son propre corps ne bouche pas. ⚠️ Preuve
+	# rejouée (23:48) : ombrée, l'omni posée contre le corps voxel de J2 plongeait son propre halo dans l'ombre de ce corps.
+	l.shadow_enabled = ombres and ombres_omni and not ombres_torches_joueurs_seules and type != "retrodiffusion"
 	if position_3d is Vector3:
 		l.global_position = position_3d
 	else:

@@ -95,6 +95,9 @@ const SHADER_MUR_ECLAIRE := preload("res://mur_iso_eclaire.gdshader")
 const SHADER_CORPS_ECLAIRE := preload("res://corps_iso_eclaire.gdshader")
 const SHADER_CORPS_VOXEL := preload("res://corps_iso.gdshader")
 const LumieresIsoT := preload("res://lumieres_iso.gd")
+## ISO12 — la pâte (b), passe sur l'image : l'écran en vue unique, la texture des vues en écran scindé.
+const SHADER_PATE_ECRAN := preload("res://pate_ecran_iso.gdshader")
+const SHADER_PATE_VUE := preload("res://pate_vue_iso.gdshader")
 const SHADER_CORPS := preload("res://corps_grossier_iso.gdshader")
 ## ISO2b — la passe de profondeur des corps, avant leur couleur (voir le shader).
 const SHADER_CORPS_PROFONDEUR := preload("res://corps_profondeur_iso.gdshader")
@@ -231,8 +234,11 @@ var _miroirs: MiroirsIso
 ## touche la bride (équité) ; seul le banc (`tools/banc_lumiere3d.gd`) la fait varier.
 var lumiere_3d := false
 var bride := Vector2(0.0, 0.05)
-## 0 : (a) la bride en paliers de pâte ; 1 : (c) continue.
+## 0 : (a) la bride en paliers de pâte ; 1 : (c) continue ; 2 : (b) continue dans les matériaux, paliers posés par une passe sur
+## l'image (`pate_ecran_iso` en vue unique, `pate_vue_iso` en écran scindé).
 var variante_pate_3d := 0
+var _pate_ecran: CanvasLayer = null
+var _mat_pate_vue: ShaderMaterial = null
 ## 1 : le masque de la preuve (blanc là où L2D > 0), pour le compte de pixels du banc.
 var masque_preuve := 0
 var ombres_3d := true
@@ -244,8 +250,12 @@ var ombres_torches_joueurs_seules_3d := false
 ## Économie ultime du brief : les ombres en vue unique seulement ; l'écran scindé garde la bride sans ombre.
 var ombres_vue_unique_seulement := false
 ## ISO12 — le gain du bandeau de LED des murs en émission (`MurLed`), calibré au banc ; commun à tous.
-## Calibré au banc (cinquième passe rapide) : la bande de sol le long des murs sortait 1,57 fois la 2D avec 0,3.
-var gain_led_3d := 0.11
+## Calibré au banc : la bande de sol le long des murs sortait 1,57 fois la 2D avec 0,3 (cinquième passe rapide), d'où 0,11 par
+## une correction à la puissance 2,2 — qui a SUR-corrigé : la preuve rejouée (23:48) montrait la bande et le liseré des piliers
+## trop sombres. 0,25, à revérifier au banc.
+var gain_led_3d := 0.25
+## ISO12 — le gain du halo de proximité en émission par vue (`ambient_light`), commun à tous, à calibrer au banc.
+var gain_halo_soi_3d := 0.25
 var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
@@ -768,6 +778,8 @@ func _suivre() -> void:
 	if _lumieres != null:
 		_lumieres.call("suivre", _main, _voxels)
 		_accorder_la_led()
+	# La passe de pâte suit la vue (unique ou scindée) à chaque image : la vue peut basculer après la variante.
+	_accorder_la_pate_ecran()
 
 
 func variante_lightmap() -> String:
@@ -1714,7 +1726,7 @@ func _accorder_la_bride() -> void:
 			continue
 		m.set_shader_parameter("bride_bas", bride.x)
 		m.set_shader_parameter("bride_haut", bride.y)
-		m.set_shader_parameter("variante_pate", variante_pate_3d)
+		m.set_shader_parameter("variante_pate", 1 if variante_pate_3d == 2 else variante_pate_3d)
 		m.set_shader_parameter("masque_preuve", masque_preuve)
 	if _lumieres != null:
 		_lumieres.set("ombres", ombres_3d and not (ombres_vue_unique_seulement and _scinde))
@@ -1772,6 +1784,70 @@ func _accorder_la_led() -> void:
 		(m as ShaderMaterial).set_shader_parameter("led_taille_px", taille)
 		(m as ShaderMaterial).set_shader_parameter("led_couleur", couleur)
 		(m as ShaderMaterial).set_shader_parameter("led_gain", gain_led_3d)
+	_accorder_le_halo_soi(mats)
+
+
+## ISO12 — la pâte (b) : posée seulement lumière 3D allumée et `variante_pate_3d` 2. En écran scindé, un matériau sur l'affichage
+## de chaque vue (aucune copie d'écran) ; en vue unique, un rectangle plein écran SOUS le reste du canevas, qui lit l'écran.
+func _accorder_la_pate_ecran() -> void:
+	var active := lumiere_3d and variante_pate_3d == 2 and _actif
+	if _mat_pate_vue == null:
+		_mat_pate_vue = ShaderMaterial.new()
+		_mat_pate_vue.shader = SHADER_PATE_VUE
+	_mat_pate_vue.set_shader_parameter("style", style_pate)
+	for affichage in _affichages:
+		var voulu: Material = _mat_pate_vue if active and _scinde else null
+		if (affichage as TextureRect).material != voulu:
+			(affichage as TextureRect).material = voulu
+	if active and not _scinde:
+		if _pate_ecran == null:
+			_pate_ecran = CanvasLayer.new()
+			_pate_ecran.name = "PateEcranIso"
+			_pate_ecran.layer = -50
+			var rect := ColorRect.new()
+			rect.name = "Pate"
+			rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+			rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var mat := ShaderMaterial.new()
+			mat.shader = SHADER_PATE_ECRAN
+			rect.material = mat
+			_pate_ecran.add_child(rect)
+			add_child(_pate_ecran)
+		((_pate_ecran.get_child(0) as ColorRect).material as ShaderMaterial).set_shader_parameter("style", style_pate)
+		_pate_ecran.visible = true
+	elif _pate_ecran != null:
+		_pate_ecran.visible = false
+
+
+## ISO12 — le halo de proximité de chaque joueur (`ambient_light`) sur le sol et les murs éclairés, PAR VUE : la vue 1 reçoit
+## celui de J1, la vue 2 celui de J2 (`lightmap_de_j2` dans le shader choisit). Position et énergie de CETTE image, 0 s'il est éteint.
+func _accorder_le_halo_soi(mats: Array) -> void:
+	var halos := [Vector3.ZERO, Vector3.ZERO]
+	var texture: Texture2D = null
+	var empreinte := 150.0
+	var couleur := Vector3.ONE
+	for j in 2:
+		var joueur = _main.p1 if j == 0 else _main.p2
+		if not is_instance_valid(joueur):
+			continue
+		var h := joueur.get("ambient_light") as PointLight2D
+		if h == null or h.texture == null:
+			continue
+		texture = h.texture
+		empreinte = float(h.texture.get_width()) * h.texture_scale
+		couleur = Vector3(h.color.r, h.color.g, h.color.b)
+		if h.enabled and h.is_visible_in_tree():
+			halos[j] = Vector3(h.global_position.x, h.global_position.y, h.energy)
+	for m in mats:
+		if m == null:
+			continue
+		if texture != null:
+			(m as ShaderMaterial).set_shader_parameter("halo_soi_texture", texture)
+		(m as ShaderMaterial).set_shader_parameter("halo_soi_1", halos[0])
+		(m as ShaderMaterial).set_shader_parameter("halo_soi_2", halos[1])
+		(m as ShaderMaterial).set_shader_parameter("halo_soi_empreinte_px", empreinte)
+		(m as ShaderMaterial).set_shader_parameter("halo_soi_couleur", couleur)
+		(m as ShaderMaterial).set_shader_parameter("halo_soi_gain", gain_halo_soi_3d)
 
 
 func _construire_les_murs() -> void:

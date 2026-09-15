@@ -250,9 +250,13 @@ void fragment() {
 		discard;
 	}
 	if (masque_preuve == 1) {
+		// La silhouette de soi est visible en 2D sans lumière (`visual_dim`) : le masque la montre, sinon la preuve la compte
+		// comme une fuite (premier banc complet, 23:25).
 		ALBEDO = vec3(0.0);
-		EMISSION = vec3(step(0.0005, recue));
-		ALPHA = 1.0;
+		EMISSION = vec3(max(step(0.0005, recue), step(0.0001, s)));
+		// Le même alpha que le rendu : un corps qui s'efface laisse voir le sol derrière lui, et le masque de ce sol avec lui
+		// (troisième preuve rejouée, 23:55).
+		ALPHA = a;
 	} else {
 		// La couleur éclairée par la lampe, la silhouette de soi en émission : les deux composées par le même alpha
 		// qu'avant (`a = 1 - (1-o)(1-s)`), mais seule la première passe par light().
