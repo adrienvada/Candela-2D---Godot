@@ -917,6 +917,8 @@ func _accorder_le_slug(j: int, slug: String) -> void:
 	# (banc ISO3a, 2026-09-15). Chaque point de sa surface lit maintenant la lumière du sprite dans sa
 	# direction, au rayon lu — là où le sprite montre son croissant éclairé (voir `corps_iso.gdshader`).
 	mat.set_shader_parameter("lecture_au_bord", 1.0)
+	# ISO7 — l'encre des arêtes des voxels (sans effet tant que le shader des corps ne la déclare pas).
+	IsoMateriaux.accorder_corps(mat)
 	_mat_corps[j] = mat
 	_mat_profondeur[j] = voxel.materiau_profondeur()
 	for id in 2:

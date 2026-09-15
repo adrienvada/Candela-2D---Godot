@@ -23645,7 +23645,43 @@ tuile pas (couture verticale 5,2) et n'est pas utilisée.
   la matière à la résolution de la lightmap (1 texel ≈ 1 px de monde), là où le sol 3D est rastérisé à
   ~1,27 pixel d'écran par pixel de monde. Le damier de 35 px continue de venir de la lightmap.
 
+**Le contrat de la pâte (étape 5)** — ce qu'`iso_pate.gdshaderinc` offre, et ce qu'il n'offre pas :
+- **Les bandes et le grain de la pâte D ne changent pas.** Ses seuils ont été tranchés par Adrien au jalon
+  H-ISO1 sur une mesure de fidélité (la lueur faible gardée : 27,1 % des pixels au-dessus de 8/255) ;
+  les retoucher sans relevé défairait cette décision. La pâte D reste le défaut (`style` = 3).
+- **Ce qui s'ajoute : l'encre des arêtes**, partagée par les murs, les objets et les corps.
+  `pate_trait_de_bord(distance, largeur, aa)` et `pate_encre_boite(local, demi, echelle, normale,
+  largeur, reste, px_monde)` rendent un FACTEUR dans [reste, 1] (miroirs `IsoPate.trait_de_bord`,
+  `IsoPate.encre_boite`). Distance au bord = `max(demi − |local|, 0) × echelle`, en unités du monde.
+  Aucune dérivée à l'intérieur : `px_monde` se calcule dans `fragment()`, hors branchement.
+  Multiplicatif, donc noir reste noir et allumé reste allumé (reste > 0).
+- **Les corps (contrat envoyé à ISO Corps le 2026-09-15 vers 06:15, corrigé vers 06:20)** :
+  `corps_iso.gdshader` déclare `uniform float encre_arete = 0.0` et `uniform float encre_reste = 0.35`
+  (défaut sans effet), pose les varyings `local = VERTEX`, `demi = abs(VERTEX)`, `echelle` (longueurs des
+  colonnes de `MODEL_MATRIX`), `normale_locale = NORMAL`, et multiplie `c` par `pate_encre_boite(...)` après son
+  plafond `min(c, couleur_fiche)` et AVANT la composition opacité/silhouette — **jamais sur la silhouette
+  de soi**, qui reste la valeur de la vue de dessus. `uniform int style` inchangé (-1 brute, 0 à 3 :
+  A, B, C, D). Les valeurs viennent d'`IsoMateriaux.accorder_corps` (0,9 px, reste 0,35), appelé dans
+  `Presentation3D._accorder_le_slug` ; tant que le shader ne déclare pas l'uniform, Godot l'ignore.
+
+**La lumière vue (étape 6)** — une température, et rien d'autre :
+- **Pourquoi.** Les planches peignent une lumière ambre. La torche est déjà chaude en 2D
+  (`Charte.HALOGENE`, 0,98 / 0,91 / 0,80), mais la pâte D désature de 35 % vers la luminance : en iso,
+  l'halogène sortait gris.
+- **Comment.** `pate_temperature(c, force)` (miroir `IsoPate.temperature`) change la TEINTE d'une lumière
+  neutre et rend exactement sa luminance : aucune bande de la pâte ne bascule, aucun seuil n'est franchi,
+  0 reste 0. La force est pondérée par la neutralité de la couleur : une fusée rouge ou une LED gardent
+  leur teinte. Appliquée en dernier sur le sol et les murs, force `IsoMateriaux.TEMPERATURE` = 0,5.
+- **Ce qui n'est PAS fait, et pourquoi.** Halos (`light_textures.gd`) et lumières 2D : tenus par la
+  session « ISO7 Gadgets et lumière Opus » ; l'énergie et la portée restent décidées par la lightmap.
+  Aucune « lueur du sol » ajoutée en 3D : elle est déjà dans la lightmap, et en inventer une ajouterait
+  une lumière que la vue de dessus n'a pas. Les corps ne reçoivent pas la température (ils plafonnent à
+  leur couleur de fiche : l'y ajouter se ferait par le contrat d'ISO Corps, sur relevé).
+- **Écrêtage.** Un canal rouge réchauffé peut dépasser 1 et être écrêté à l'affichage : la luminance
+  baisse alors un peu, elle ne monte jamais. Le banc compte les pixels à 255 avant/après.
+
 **Crochets posés dans des fichiers partagés** :
+- `presentation_3d.gd` : `IsoMateriaux.accorder_corps(mat)` dans `_accorder_le_slug` (étape 5) ;
 - `presentation_3d.gd` : `IsoMateriaux.accorder_mur(_mat_mur)` à la construction de la scène ;
   `IsoMateriaux.accorder_grille(_mat_mur, data)` après `IsoGeometrie.build_meshes`.
 - `tools/run_suites.sh` : `test_iso_beaute` ajoutée à la liste.
@@ -23656,6 +23692,18 @@ tuile pas (couture verticale 5,2) et n'est pas utilisée.
 - ⚠️ **Décaler d'une demi-période peut poser la couture sur un joint.** Une source de coffrage porte ses
   joints au quart et à la moitié : le vérificateur lisait une couture qui était un joint de béton. Décalage
   de 0,375.
+- ⚠️ **Un lot vert avec un shader cassé — le piège consigné, repayé.** La température (étape 6) était
+  appelée dans `mur_iso.gdshader` sans son `uniform` : un `SHADER ERROR` dans le journal de la suite, le
+  lot complet sorti « tout passe », 80 vérifications vertes. Lu seulement parce que le journal était relu
+  en entier. La suite exige désormais que chaque paramètre posé par le catalogue soit DÉCLARÉ dans son
+  shader (`_uniforms_declares`, sabotée une fois : uniform retiré), et la chaîne de lot s'arrête sur tout
+  `SHADER ERROR` du journal de la suite.
+- ⚠️ **L'échelle d'un `MeshInstance3D` n'est pas la taille de sa boîte.** Le premier contrat d'encre lisait
+  la taille dans `length(MODEL_MATRIX[i])`, vrai pour les murs (cube unité mis à l'échelle), faux pour les
+  voxels : `voxel_corps.gd` cuit la taille dans la `BoxMesh` et laisse l'échelle à 1 (sauf les jambes,
+  comprimées en Y). Relevé par ISO Corps avant tout branchement. La demi-taille se lit dans `abs(VERTEX)` —
+  une `BoxMesh` sans subdivision n'a que des coins — et la normale dans le repère du MODÈLE, un corps
+  tournant.
 - ⚠️ **Une suite qui appelle un Python passe seule et rougit dans le lot.** `run_suites.sh` exporte un
   `HOME` isolé ; le Python de l'utilisateur y perd ses paquets (PIL vit dans
   `~/Library/Python/3.9/lib/python/site-packages`), et `verifie_tuilable.py` sortait en erreur d'import.

@@ -165,7 +165,8 @@ static func _materiaux_iso(presentation: Node) -> Array[ShaderMaterial]:
 
 
 ## Les paramètres de l'habillage, et la valeur qui rend ISO1-ISO5.
-const NEUTRES := {"force_matiere": 0.0, "encre_arete_px": 0.0, "lisere_sommet_px": 0.0, "seuil_muret_px": 0.0}
+const NEUTRES := {"force_matiere": 0.0, "encre_arete_px": 0.0, "lisere_sommet_px": 0.0, "seuil_muret_px": 0.0,
+	"temperature": 0.0}
 
 
 static func _eteindre_la_beaute(materiaux: Array[ShaderMaterial]) -> Array:

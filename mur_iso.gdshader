@@ -52,6 +52,8 @@ uniform float encre_arete_px = 0.0;
 uniform float encre_arete_reste : hint_range(0.0, 1.0) = 0.12;
 uniform float lisere_sommet_px = 0.0;
 uniform float seuil_muret_px = 26.0;
+// ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée (`pate_temperature`).
+uniform float temperature : hint_range(0.0, 1.0) = 0.0;
 
 // La grille des murs : R = mur haut, G = muret ; un texel par tuile, bordure comprise.
 uniform sampler2D grille_murs : filter_nearest, repeat_disable;
@@ -89,11 +91,6 @@ vec2 occupe(vec2 px) {
 	return textureLod(grille_murs, uv, 0.0).rg;
 }
 
-// 1 sur le trait (à moins de `largeur` du bord), 0 au-delà ; `aa` en pixels de monde.
-float trait_de_bord(float distance, float largeur, float aa) {
-	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance);
-}
-
 void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec3 an = abs(normale);
@@ -127,12 +124,12 @@ void fragment() {
 			c = lightmap_pateuse(monde.xz, motif, aa, deux);
 			float fin = 1.0 - max(au_dela.r, au_dela.g);
 			float largeur = max(encre_arete_px, px_monde);
-			c *= mix(1.0, encre_arete_reste, fin * trait_de_bord(d_bord, largeur, px_monde));
+			c *= mix(1.0, encre_arete_reste, fin * pate_trait_de_bord(d_bord, largeur, px_monde));
 		} else {
 			// Sommet de mur haut : noir strict, sauf le liseré — la lumière de la face qu'il couronne.
 			float fin = 1.0 - au_dela.r;
 			float largeur = max(lisere_sommet_px, px_monde);
-			float lisere = fin * trait_de_bord(d_bord, largeur, px_monde);
+			float lisere = fin * pate_trait_de_bord(d_bord, largeur, px_monde);
 			if (lisere > 0.0) {
 				c = lightmap_pateuse(monde.xz + sortie * (d_bord + pied), motif, aa, deux) * lisere;
 			}
@@ -147,10 +144,12 @@ void fragment() {
 		// Une demi-tuile au-delà du bord, une demi-tuile DANS le mur : une case de masse, ou non.
 		vec2 au_dela = occupe(monde.xz + axe * (d_vert + tuile_px * 0.5) - n * tuile_px * 0.5);
 		float largeur = max(encre_arete_px, px_monde);
-		float encre_h = encre_arete_px > 0.0 ? trait_de_bord(d.y, largeur, px_monde) : 0.0;
+		float encre_h = encre_arete_px > 0.0 ? pate_trait_de_bord(d.y, largeur, px_monde) : 0.0;
 		float encre_v = encre_arete_px > 0.0
-			? (1.0 - max(au_dela.r, au_dela.g)) * trait_de_bord(d_vert, largeur, px_monde) : 0.0;
+			? (1.0 - max(au_dela.r, au_dela.g)) * pate_trait_de_bord(d_vert, largeur, px_monde) : 0.0;
 		c *= mix(1.0, encre_arete_reste, max(encre_h, encre_v));
 	}
+	// ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée : 0 reste 0.
+	c = pate_temperature(c, temperature);
 	ALBEDO = c;
 }

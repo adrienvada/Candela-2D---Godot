@@ -98,6 +98,7 @@ func _run() -> void:
 	_l_equite_du_shader()
 	_les_crochets_et_la_grille()
 	_le_sol()
+	_la_pate_des_voxels()
 	_le_banc()
 	print("%d vérifications, %d échec(s)" % [_verifications, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -145,6 +146,122 @@ func _le_sol() -> void:
 				eteints += 1
 	_check("sol : noir à lumière 0 sous toute matière", faux == 0, "%d non nuls" % faux)
 	_check("sol : un point éclairé reste éclairé", eteints == 0, "%d éteints" % eteints)
+
+
+# ---------------------------------------------------------------------------
+# LA PÂTE — l'encre des arêtes des voxels (étape 5)
+# ---------------------------------------------------------------------------
+
+func _la_pate_des_voxels() -> void:
+	print("— la pâte : l'encre des arêtes")
+	var inc := FileAccess.get_file_as_string("res://iso_pate.gdshaderinc")
+	_check("la pâte offre pate_trait_de_bord et pate_encre_boite",
+		inc.contains("float pate_trait_de_bord(") and inc.contains("float pate_encre_boite("))
+	_check("les murs utilisent l'encre partagée (aucune copie locale)",
+		SHADER_MUR.code.contains("pate_trait_de_bord(") and not SHADER_MUR.code.contains("float trait_de_bord("))
+	var reste := IsoMateriaux.ENCRE_VOXEL_RESTE
+	var largeur := IsoMateriaux.ENCRE_VOXEL_PX
+	# Deux constructions de boîte : le cube unité mis à l'échelle (murs) et la BoxMesh à sa vraie taille
+	# sous l'ancre d'une tuile (voxels, `voxel_corps.gd:_boite`) — même face, mêmes distances au monde.
+	var constructions := {
+		"cube unité × (20, 30, 14)": [Vector3(0.5, 0.5, 0.5), Vector3(20.0, 30.0, 14.0)],
+		"BoxMesh (0,57 ; 0,86 ; 0,4) × tuile": [Vector3(0.2857, 0.4286, 0.2), Vector3(35.0, 35.0, 35.0)],
+	}
+	for nom: String in constructions:
+		var demi: Vector3 = constructions[nom][0]
+		var echelle: Vector3 = constructions[nom][1]
+		var centre := IsoPate.encre_boite(Vector3(demi.x, 0.0, 0.0), demi, echelle, Vector3.RIGHT, largeur, reste, 0.3)
+		var bord := IsoPate.encre_boite(Vector3(demi.x, demi.y, 0.0), demi, echelle, Vector3.RIGHT, largeur, reste, 0.3)
+		# À un pixel de monde du bord haut : hors du trait de 0,9 px (aa 0,3) → encore presque 1.
+		var pres := IsoPate.encre_boite(Vector3(demi.x, demi.y - 1.6 / echelle.y, 0.0), demi, echelle, Vector3.RIGHT,
+			largeur, reste, 0.3)
+		_check("encre (%s) : 1 au milieu de la face (%.3f)" % [nom, centre], is_equal_approx(centre, 1.0))
+		_check("encre (%s) : le reste sur l'arête (%.3f ≈ %.2f)" % [nom, bord, reste], absf(bord - reste) < 0.01)
+		_check("encre (%s) : le trait se mesure en pixels de monde (%.3f à 1,6 px)" % [nom, pres], pres > 0.99)
+		var hors := 0
+		for i in 21:
+			for k in 21:
+				for n: Vector3 in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+					var local := Vector3(-demi.x + 2.0 * demi.x * i / 20.0, -demi.y + 2.0 * demi.y * k / 20.0,
+						demi.z - demi.z * (i + k) / 20.0)
+					var f := IsoPate.encre_boite(local, demi, echelle, n, largeur, reste, 0.3)
+					if f < reste - 1e-5 or f > 1.0 + 1e-5:
+						hors += 1
+		_check("encre (%s) : le facteur reste dans [reste, 1] sur toute la boîte" % nom, hors == 0, "%d hors" % hors)
+	_check("encre : largeur 0 = aucun effet", is_equal_approx(IsoPate.encre_boite(Vector3.ONE * 0.5, Vector3.ONE * 0.5,
+		Vector3.ONE, Vector3.RIGHT, 0.0, reste, 0.3), 1.0))
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	_check("crochet : IsoMateriaux.accorder_corps dans presentation_3d.gd", pres.contains("IsoMateriaux.accorder_corps(mat)"))
+	var mat := ShaderMaterial.new()
+	IsoMateriaux.accorder_corps(mat)
+	_check("accorder_corps pose l'encre des voxels", is_equal_approx(float(mat.get_shader_parameter("encre_arete")), largeur)
+		and is_equal_approx(float(mat.get_shader_parameter("encre_reste")), reste))
+
+	print("— la lumière vue : la température (étape 6)")
+	_check("la pâte offre pate_temperature", inc.contains("vec3 pate_temperature(vec3 c, float force)"))
+	var t := IsoMateriaux.TEMPERATURE
+	var ecart_lum := 0.0
+	var zeros := 0
+	for i in 12:
+		for k in 12:
+			var c := Vector3(i / 11.0, k / 11.0, (i + k) / 22.0)
+			var r := IsoPate.temperature(c, t)
+			if c == Vector3.ZERO and r != Vector3.ZERO:
+				zeros += 1
+			ecart_lum = maxf(ecart_lum, absf(IsoPate.luminance(r) - IsoPate.luminance(c)))
+	_check("température : 0 reste 0", zeros == 0 and IsoPate.temperature(Vector3.ZERO, 1.0) == Vector3.ZERO)
+	_check("température : la luminance est gardée (écart max %.2e)" % ecart_lum, ecart_lum < 1e-5)
+	var gris := IsoPate.temperature(Vector3(0.5, 0.5, 0.5), t)
+	_check("température : un gris devient chaud (%s)" % str(gris), gris.x > gris.y and gris.y > gris.z)
+	var rouge := Vector3(0.9, 0.08, 0.05)
+	var rouge_t := IsoPate.temperature(rouge, t)
+	_check("température : une lumière saturée garde sa teinte (%s)" % str(rouge_t), rouge_t.distance_to(rouge) < 0.01)
+	var halogene := Vector3(Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b)
+	var lave := halogene.lerp(Vector3.ONE * IsoPate.luminance(halogene), 0.35)
+	var rechauffe := IsoPate.temperature(lave, t)
+	_check("température : l'halogène lavé par la pâte D retrouve de la chaleur (b/r %.3f < %.3f)"
+		% [rechauffe.z / rechauffe.x, lave.z / lave.x], rechauffe.z / rechauffe.x < lave.z / lave.x)
+	var mur := ShaderMaterial.new()
+	mur.shader = SHADER_MUR
+	IsoMateriaux.accorder_mur(mur)
+	var sol := ShaderMaterial.new()
+	sol.shader = load("res://sol_iso.gdshader")
+	IsoMateriaux.accorder_sol(sol)
+	# ⚠️ Un uniform utilisé mais non déclaré ne fait qu'un `SHADER ERROR` dans le journal, qu'aucun contrôle
+	# ne voit (piège consigné, et repayé ici le 2026-09-15 : le lot est sorti vert avec le mur cassé).
+	_check("mur et sol DÉCLARENT l'uniform temperature", SHADER_MUR.code.contains("uniform float temperature")
+		and (load("res://sol_iso.gdshader") as Shader).code.contains("uniform float temperature"))
+	_check("mur et sol déclarent tous les uniforms que le catalogue pose", _uniforms_declares())
+	_check("température posée sur le mur et le sol", is_equal_approx(float(mur.get_shader_parameter("temperature")), t)
+		and is_equal_approx(float(sol.get_shader_parameter("temperature")), t))
+	_check("sol : la température s'applique après la matière", (load("res://sol_iso.gdshader") as Shader).code.contains(
+		"c *= matiere;\n\tc = pate_temperature(c, temperature);"))
+
+
+## Chaque `set_shader_parameter("x", …)` des fonctions d'accord du catalogue (murs et grille → mur_iso,
+## sol → sol_iso) nomme un uniform que le shader DÉCLARE. `accorder_corps` est exclu : ses uniforms
+## vivent chez ISO Corps, et le paramètre est ignoré tant qu'elle ne les déclare pas (voulu).
+func _uniforms_declares() -> bool:
+	var source := FileAccess.get_file_as_string("res://iso_materiaux.gd")
+	var codes := {"mur": SHADER_MUR.code, "grille": SHADER_MUR.code,
+		"sol": (load("res://sol_iso.gdshader") as Shader).code}
+	var parametre := RegEx.create_from_string("set_shader_parameter\\(\"([a-z_0-9]+)\"")
+	var ok := true
+	var vus := 0
+	for bloc in source.split("static func accorder_").slice(1):
+		var nom := bloc.get_slice("(", 0)
+		if not codes.has(nom):
+			continue
+		# Le bloc s'arrête à la fonction suivante, quelle qu'elle soit.
+		var corps := bloc.get_slice("\nstatic func ", 0)
+		for m in parametre.search_all(corps):
+			vus += 1
+			var u := m.get_string(1)
+			var declaration := RegEx.create_from_string("uniform [^;]*\\b%s\\b" % u)
+			if declaration.search(codes[nom]) == null:
+				ok = false
+				printerr("    uniform non déclaré dans le shader « %s » : %s" % [nom, u])
+	return ok and vus >= 15
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +419,8 @@ func _l_equite_du_shader() -> void:
 	_check("le fragment affecte la couleur", not affectations.is_empty())
 	var sources_propres := true
 	for a: String in affectations:
-		if not (a.contains("lightmap_pateuse(") or a.contains("vec3(0.0)")):
+		# La température (étape 6) réécrit `c` à partir de `c` lui-même, luminance gardée : pas une source.
+		if not (a.contains("lightmap_pateuse(") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"):
 			sources_propres = false
 			printerr("    affectation hors lightmap : ", a)
 	_check("toute couleur de mur naît d'une lecture de lightmap ou du noir", sources_propres)

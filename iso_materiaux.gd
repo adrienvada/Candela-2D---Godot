@@ -20,6 +20,9 @@
 class_name IsoMateriaux
 extends RefCounted
 
+## Le miroir processeur de la pâte : l'encre des arêtes y vit, une seule formule pour tous.
+const IsoPateMiroir := preload("res://iso_pate.gd")
+
 ## La face des murs hauts et des murets : béton et lavis (source : `face_mur_01.jpg` d'ISO Assets,
 ## vague 2, aplanie et rendue tuilable).
 const TEXTURE_FACE_MUR := preload("res://assets/iso/face_mur.png")
@@ -52,6 +55,13 @@ const FORCE_MATIERE_MUR := 1.0
 const ENCRE_ARETE_PX := 1.6
 const ENCRE_ARETE_RESTE := 0.12
 
+## L'encre des arêtes des voxels (corps, objets, leurre) : plus fine que celle des murs — un corps
+## fait 20 px de large, un trait de mur l'aurait noyé —, et plus claire, pour que la lumière du
+## capteur lise encore le modelé. Passée au shader des corps par `accorder_corps` (contrat avec
+## ISO Corps : uniforms `encre_arete` et `encre_reste`, défaut 0 = aucun effet).
+const ENCRE_VOXEL_PX := 0.9
+const ENCRE_VOXEL_RESTE := 0.35
+
 ## Le liseré du sommet d'un mur haut : largeur en pixels de monde. Le sommet reste une masse
 ## noire ; seul son bord prend la lumière de la face qu'il couronne.
 const LISERE_SOMMET_PX := 2.4
@@ -81,16 +91,35 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX if active else 0.0)
 	materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE)
 	materiau.set_shader_parameter("lisere_sommet_px", LISERE_SOMMET_PX if active else 0.0)
+	materiau.set_shader_parameter("temperature", TEMPERATURE if active else 0.0)
 	# Sans beauté, aucun muret : tous les dessus redeviennent noirs, comme avant ISO7.
 	materiau.set_shader_parameter("seuil_muret_px", SEUIL_MURET_PX if active else 0.0)
 
 
-## Pose la matière du sol sur le matériau d'un sol (`sol_iso.gdshader`). Sans beauté, force à zéro : le
-## sol d'ISO1, formule pour formule.
+## Pose l'encre des arêtes sur le matériau d'un corps voxel (`corps_iso.gdshader`, tenu par ISO Corps).
+## Tant que le shader ne déclare pas `encre_arete`, Godot ignore le paramètre : ce crochet ne fait
+## rien avant que la session ISO Corps n'ait branché `pate_encre_boite` (contrat du 2026-09-15).
+static func accorder_corps(materiau: ShaderMaterial) -> void:
+	var active := beaute_active()
+	materiau.set_shader_parameter("encre_arete", ENCRE_VOXEL_PX if active else 0.0)
+	materiau.set_shader_parameter("encre_reste", ENCRE_VOXEL_RESTE)
+
+
+## ISO7, étape 6 — la température de la lumière vue sur le sol et les murs (`pate_temperature`).
+## Pourquoi il en faut une : la torche est déjà chaude en 2D (`Charte.HALOGENE`, 0,98 / 0,91 / 0,80),
+## mais la pâte D désature de 35 % vers la luminance et la rend grise. 0,5 rend une partie de cette
+## chaleur, luminance gardée : aucune bande ne bascule, et une lumière colorée garde sa teinte.
+const TEMPERATURE := 0.5
+
+
+## Pose la matière du sol sur le matériau d'un sol (`sol_iso.gdshader`). Sans beauté, force et
+## température à zéro : le sol d'ISO1, formule pour formule.
 static func accorder_sol(materiau: ShaderMaterial) -> void:
+	var active := beaute_active()
 	materiau.set_shader_parameter("texture_sol", TEXTURE_SOL)
 	materiau.set_shader_parameter("periode_sol_px", PERIODE_SOL_PX)
-	materiau.set_shader_parameter("force_matiere", FORCE_MATIERE_SOL if beaute_active() else 0.0)
+	materiau.set_shader_parameter("force_matiere", FORCE_MATIERE_SOL if active else 0.0)
+	materiau.set_shader_parameter("temperature", TEMPERATURE if active else 0.0)
 
 
 ## La grille des murs d'une carte, pour que l'encre et le liseré ne tombent que sur les VRAIS
@@ -130,9 +159,10 @@ static func accorder_grille(materiau: ShaderMaterial, data: Dictionary) -> void:
 # `tools/test_iso_beaute.gd` y balaie l'invariant du noir absolu ; le GPU se vérifie au pixel
 # au banc `tools/banc_iso_beaute.gd`.
 
-## 1 sur le trait (à moins de `largeur` du bord), 0 au-delà — `trait_de_bord` du shader.
+## 1 sur le trait (à moins de `largeur` du bord), 0 au-delà — `pate_trait_de_bord` de la pâte, dont
+## le miroir vit dans `iso_pate.gd` : une seule formule.
 static func trait_de_bord(distance: float, largeur: float, aa: float) -> float:
-	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance)
+	return IsoPateMiroir.trait_de_bord(distance, largeur, aa)
 
 
 ## La face verticale : la lumière pâteuse lue au pied, fois la matière (texture brute

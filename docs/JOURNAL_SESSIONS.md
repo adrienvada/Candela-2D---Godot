@@ -5062,3 +5062,16 @@ d'arête hors jonctions de boîtes par grille des murs, liseré du sommet, dessu
 `sol_projete.gdshader` n'est plus préchargé par personne (signalé, non supprimé). Suite
 `tools/test_iso_beaute.gd` ; banc `tools/banc_iso_beaute.gd` (hérite de `banc_iso.gd`, avant/après sur la
 même image, `--sans-beaute` pour l'avant des planches).
+
+### 2026-09-15 (matin) — ISO7 Beauté : la pâte et la lumière vue (même session, même branche)
+
+Étape 5 : l'encre des arêtes devient une fonction de la pâte (`pate_trait_de_bord`, `pate_encre_boite`,
+miroirs dans `iso_pate.gd`), partagée par les murs et offerte aux corps et aux objets par contrat avec
+ISO Corps. Premier contrat faux (taille lue dans l'échelle du transform, vrai pour les murs, faux pour les
+BoxMesh des voxels) : relevé par ISO Corps avant tout branchement, corrigé (demi-taille par `abs(VERTEX)`,
+normale du modèle). Bandes et grain de la pâte D inchangés (décision H-ISO1 sur relevé). Crochet
+`IsoMateriaux.accorder_corps(mat)` dans `Presentation3D._accorder_le_slug`, sans effet tant que le shader
+des corps ne déclare pas l'uniform.
+
+Étape 6 : `pate_temperature` (teinte chaude d'une lumière neutre, luminance gardée), force 0,5 sur le sol
+et les murs ; halos et lumières 2D laissés à la session Gadgets et lumière.

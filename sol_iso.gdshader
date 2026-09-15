@@ -25,6 +25,8 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled;
 uniform sampler2D texture_sol : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform float periode_sol_px = 140.0;
 uniform float force_matiere : hint_range(0.0, 1.0) = 0.0;
+// ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée (`pate_temperature`).
+uniform float temperature : hint_range(0.0, 1.0) = 0.0;
 
 varying vec3 monde;
 
@@ -40,5 +42,6 @@ void fragment() {
 	float matiere = mix(1.0, texture(texture_sol, px / periode_sol_px).r, force_matiere);
 	vec3 c = lightmap_pateuse(px, px, aa, deux);
 	c *= matiere;
+	c = pate_temperature(c, temperature);
 	ALBEDO = c;
 }
