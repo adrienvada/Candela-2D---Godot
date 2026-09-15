@@ -24979,6 +24979,57 @@ d'un mur haut intérieur, la fusée. Recomposable : `python3 docs/iso/planche_fi
   défaut `null` veut dire « aucun défaut », et chaque lancement d'un foyer où le zoom n'a jamais été réglé
   imprimait une ERREUR (introduite à l'étape 2 d'ISO8).
 
+### ISO10 — la finition : la série de loupe 🟡 (ouverte le 2026-09-15 à 15:31, ordre 40 de la session cloud)
+
+Mot d'Adrien (15:2x), relayé par la session cloud : « confronter vraiment les images en jeu aux images générées
+par Gemini, s'arrêter uniquement à un niveau très joli, fluide et agréable à regarder, sans pixels voyants ».
+Méthode : `briefs/iso10_finition.md` (branche `claude/reveil`). Le chantier ne se ferme pas sur un lot vert : il se
+ferme sur un verdict de la session cloud, pris loupe par loupe, contre les planches du DA. **Ce qui suit est
+l'outil et la première série ; la liste des défauts viendra du verdict**, pas de ce paragraphe.
+
+**L'outil — `tools/loupe.gd`, famille `loupe` du photographe.** Une capture réduite cache justement ce qu'on
+veut juger. Chaque loupe est donc un recadrage de 800×450 dans la fenêtre NATIVE, sans aucun
+redimensionnement, au cadrage par défaut du jeu (×1,8, décalage 0,25, portée ×0,75). Commande :
+`./tools/run_photos.sh --famille=loupe --taille=2560x1440`. Jamais prise sans être demandée.
+- **Scène** : au Cloître par défaut (`--carte-duel` en pose une autre). Pilier (315 ; 315) de 105 px ; J1 en
+  (367,5 ; 542,5), torche sur la face sud ; J2 en (415,5 ; 472,5), dans le cône, torche ÉTEINTE (braquée sur J1,
+  elle l'éblouirait et le voile couvrirait tout).
+- **Recadrages** : chaque centre est projeté par `CameraIso.vers_ecran` (hauteur comprise), à la taille de
+  l'image prise.
+- **Dix sujets** : face sud du pilier ; sol du cône et une tache de sang posée comme `bullet.gd` la pose, sans
+  tir ; les deux corps ; bord du cône ; bord de l'ombre du pilier ; HUD et viseur ; bandeau LED tenu à son
+  sommet sur une face hors de la torche ; balle en vol puis impact ; fusée posée avec la suie de J2 dans son
+  halo ; torche fantôme posée. S'y ajoutent pilier, corps et bord du cône en écran scindé (sous-vue 3D de J1,
+  1276×1440).
+- **Planche** : `docs/iso/planche_loupe.jpg`, recomposable par `python3 docs/iso/planche_loupe.py --photos <séance>
+  --fluidite <séance fluidité> --da <worktree d'ISO Assets>`. Les loupes y sont à 1:1 à gauche et la planche du
+  DA réduite à droite. Les PNG de `docs/iso/loupe/` font foi (la planche est un JPEG).
+- **Planches du DA** : face_mur_01, sol_01, frise_1_a_5, E1_promesse_02 (la variante retenue, en pleine taille),
+  E3_flash_pro, fusee_posee_01 avec fumee_03 (la plus proche du nuage de la cartouche), icône
+  gadget_torche_fantome. HUD et viseur n'ont pas de planche.
+
+**La fluidité.** Trente images consécutives : J1 marche vers le nord-ouest et balaie sa visée de 80°, la caméra
+glisse. Temps d'image relevés par l'outil (le F3 affiche des images par seconde, pas de temps d'image) :
+**min 9,37 ms, moyen 9,84 ms, max 11,11 ms** en temps réel dans la séance de loupe ; min 7,66, moyen 11,87,
+max 13,92 ms dans la séance à horloge fixe. Bande : `docs/iso/loupe/fluidite_bande.jpg`.
+
+⚠️ **Trois pièges payés en route :**
+- **Une capture fige le jeu le temps de lire la texture.** En temps réel, la caméra rattrape ce retard d'un bond,
+  et trente captures de suite ne sont PAS trente images à 60 Hz. La bande se prend donc seule, sous
+  `godot --path . --fixed-fps 60 res://tools/photographe.tscn -- --plan=loupe-fluidite --taille=2560x1440`.
+- **`--fixed-fps` ne se lit pas dans `OS.get_cmdline_args()`** : le moteur consomme ce drapeau avant le script, et
+  la première séance lancée dessous n'a pris aucune image. L'outil le reconnaît à son effet : chaque image
+  avance le jeu d'exactement 1/60 s.
+- **À ×1,8 au Cloître, tout mur à l'écran est à portée de torche.** Le premier jet du bandeau cherchait un mur
+  « hors de portée », n'en trouvait aucun et retombait sur la face du pilier SOUS la torche. Il cherche désormais
+  hors de portée OU à plus de 15° hors du cône.
+
+Limite de cette série : aucune ligne de tir ne mettait l'impact au centre d'une loupe loin du HUD. La balle part
+au nord-ouest et touche le mur ouest, et l'impact tombe dans le coin haut gauche de sa loupe, traçante comprise.
+
+**Un lot exact** : le fond du hub et celui de la carte de soirée, déjà remplacés pour le pas 6, ont été remis à
+leur version commitée le temps du lot de ce commit. Ils reviennent au commit du pas 6.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

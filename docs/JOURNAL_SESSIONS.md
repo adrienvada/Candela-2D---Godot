@@ -5578,3 +5578,14 @@ séances de 47 images (`mode_rendu=iso`), banc des gadgets VERDICT=OK. Trois cho
   signalée ;
 - l'ERREUR `debogage/zoom_duel` imprimée à chaque lancement d'un foyer neuf est corrigée.
 Lot complet vert à 15:32 : 127 OK en 414 s.
+
+**La série de loupe (ISO10, ordre 40), 2026-09-15 de 15:40 à 16:00 environ.** Session « Iso 1 Opus », pas 4 bis de
+la séquence de fin, sur le mot d'Adrien de 15:2x : juger le jeu à 1:1 contre les planches du DA. Nouvel outil
+`tools/loupe.gd`, famille `loupe` du photographe. Au Cloître, à la fenêtre native 2560×1440 : dix sujets et trois
+en écran scindé, soit 17 recadrages 800×450 sans redimensionnement, plus une bande de trente images
+consécutives prise sous `--fixed-fps 60`. Planche `docs/iso/planche_loupe.jpg` (loupe à gauche, DA à droite), PNG
+dans `docs/iso/loupe/`. Temps d'image de la bande, en temps réel : 9,37 / 9,84 / 11,11 ms. Trois pièges consignés :
+- une capture fige le jeu ;
+- `--fixed-fps` est absent de `get_cmdline_args` ;
+- à ×1,8, tout mur à l'écran est à portée de torche.
+Lot complet vert à 16:04 : 127 OK en 410 s.

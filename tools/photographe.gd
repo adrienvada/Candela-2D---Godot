@@ -73,6 +73,8 @@ extends Node
 ##     ./tools/run_photos.sh --zoom=1.6           cadrage serré (déclaré au manifeste)
 ##     ./tools/run_photos.sh --carte-duel=res://assets/maps/map_001_le_cloitre.json
 ##                                                les plans du duel sur une autre carte que celle des murs bas
+##     ./tools/run_photos.sh --famille=loupe --taille=2560x1440
+##                                                la série de loupe : recadrages 1:1 à la fenêtre native (tools/loupe.gd)
 ##     ./tools/run_photos.sh --sortie=user://presse  ailleurs que dans `user://photos`
 ##
 ## Les images sortent dans `user://photos/`, dont le chemin réel est imprimé à
@@ -142,7 +144,10 @@ const VISEE := Vector2(1.0, 0.36)
 ## menus d'abord (état de démarrage), les familles pures ensuite (elles ne
 ## touchent pas au jeu), le duel enfin, et la mort en dernier — on ne rouvre pas
 ## un menu propre après avoir tué quelqu'un.
-const FAMILLES: Array[String] = ["menus", "illustrations", "cartes", "jeu", "fins"]
+## `loupe` (ordre 40, 2026-09-15) vient en dernier et ne se prend que demandée (`--famille=loupe`) :
+## des recadrages 1:1 à la fenêtre native, voir `tools/loupe.gd`.
+const FAMILLES: Array[String] = ["menus", "illustrations", "cartes", "jeu", "fins", "loupe"]
+const Loupe := preload("res://tools/loupe.gd")
 
 var _main: Node
 var _ui: Node
@@ -335,6 +340,8 @@ static func catalogue() -> Array[Dictionary]:
 		 "titre": "Le bilan de session, bandeau plein",
 		 "pourquoi": "DA6.4 — score de session, série brisée, marge du dernier coup. La carte de fin de soirée, dans son état le plus chargé."},
 	]
+	# La loupe (ordre 40) : ses plans vivent avec leur mise en scène, dans `tools/loupe.gd`.
+	out.append_array(Loupe.catalogue())
 	return out
 
 
@@ -537,6 +544,7 @@ func _ready() -> void:
 			"cartes": await _famille_cartes(plans)
 			"jeu": await _famille_jeu(plans)
 			"fins": await _famille_fins(plans)
+			"loupe": await Loupe.new().famille(self, plans)
 
 	_ecrire_le_manifeste()
 	_ecrire_la_planche()
@@ -1689,7 +1697,7 @@ func _mise_en_scene_du_duel(data: Dictionary) -> Dictionary:
 			if not _sol_libre(rasante):
 				rasante = Vector2(r.get_center().x - 1.5 * t, r.end.y + 1.0 * t)
 			return {"p1": p1, "v1": Vector2.UP, "rasante": rasante, "p2": p2, "v2": Vector2.UP,
-				"mur": "mur haut intérieur %s" % str(r)}
+				"mur": "mur haut intérieur %s" % str(r), "rect": r}
 	var muret := Rect2()
 	for m in _main.murs_bas as Array:
 		var rect := m as Rect2
@@ -2209,6 +2217,9 @@ func _selection(args: PackedStringArray) -> Array[Dictionary]:
 		var garde := true
 		if familles != "":
 			garde = familles.split(",").has(String(plan["famille"]))
+		elif ids == "":
+			# La loupe veut sa fenêtre native et sa propre séance : jamais prise sans être demandée.
+			garde = String(plan["famille"]) != "loupe"
 		if garde and ids != "":
 			garde = ids.split(",").has(String(plan["id"]))
 		if garde:
