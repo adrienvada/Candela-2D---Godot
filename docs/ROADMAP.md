@@ -25072,6 +25072,44 @@ par J2, les autres faits lus sur la manche sacrifiée. `_mode_label` rejoint les
 `test_banc`. C'est sur cette capture que se lève la réserve de la session cloud sur `fin_defaite`.
 Lot complet vert : 127 OK en 414 s.
 
+#### ISO10, lot 1 — le verdict de la loupe, tour 1 (branche `iso10-finition` depuis `64d9da4`)
+
+Verdict de la session cloud (16:19, `briefs/iso10_lot1.md`) : bons, et **à ne pas toucher**, le bord du cône,
+le bord de l'ombre, le HUD, la face du pilier, la fluidité et les loupes en scindé. Défauts à corriger, par
+familles, un commit chacune : 1a la frange, 1b l'encre (murs, sol, marques, points du trait de balle), 1c la
+fusée, 1d les corps, 1e la torche fantôme. Ensuite le tour 2 de loupe.
+
+**1a — la frange chromatique à 0 au repos.** Une frange rouge/cyan d'un pixel sur tous les bords de la vue
+unique, au repos, rien en scindé ni sur le HUD.
+- **Cause, mesurée en jeu** : le porteur d'une torche allumée reçoit en permanence la rétrodiffusion de ses
+  propres murs, `Eblouissement.RETRODIFFUSION` à 0,06. La loupe relève `eblouissement_j1 0.060` à chaque prise.
+  La copie plein cadre du voile s'allume dès 0,001, et l'aberration du voile vaut 0,015 × niveau, en radial :
+  à 0,06, un pixel sur 2560.
+- **Remède, dans le rendu seul**, sous les trois conditions de la session cloud (16:28) :
+  - **Une rampe, pas un seuil.** `aberration_debut` et `aberration_pleine` (0,12 et 0,35) : l'aberration vaut 0
+    sous le début, au-dessus de la rétrodiffusion (0,06 × gain de taille ≤ 2), puis monte en `smoothstep`
+    jusqu'à sa pleine valeur, sans sauter au premier éblouissement. Ce sont les valeurs de la session cloud,
+    posées telles quelles : le banc du voile les liste désormais, mais elles n'y ont PAS encore été réglées à
+    l'œil. Le début est seulement vérifié au-dessus de la rétrodiffusion maximale.
+  - **La copie plein cadre s'éteint sous le début.** ⚠️ Cacher `_voile_bb` ne suffit pas : Godot copie l'écran
+    pour tout objet dont le shader DÉCLARE `hint_screen_texture`, qu'il la lise ou non. Le corps du voile passe
+    donc dans `voile_eblouissement.gdshaderinc`, inclus par deux shaders :
+    - `voile_eblouissement.gdshader`, plein : il lit l'écran, avec aberration ;
+    - `voile_eblouissement_calme.gdshader` : sans lecture d'écran, composé par le GPU, résultat identique sans
+      aberration.
+    `ui._poser_voile` bascule entre les deux au seuil, que `ui.aberration_debut()` lit dans le shader ; la
+    copie suit le même seuil. **Ce que coûtaient la copie et le voile plein au repos : 0,53 ms par image**
+    (`--plan=loupe-cout-voile`, fenêtre native au Cloître, J1 à 0,060 : 14,35 ms forcés contre 13,82 ms au
+    calme, huit blocs alternés de 120 images).
+  - **Rien d'autre ne bouge** : le voile, la pénalité (curseur « eblouissement », plancher 0,8) et le mode témoin.
+- **Mesures** (décalage rouge↔vert sur les arêtes) : avant, ±1 px sur pilier, corps et LED ; après, 0 sur les
+  quatre. Sous un éblouissement réel, la frange reste, franche à l'œil. Le script ne la chiffre pas là (le voile
+  couvre les arêtes), mais sur la capture d'avant il trouve −23 px du côté droit.
+- ⚠️ **Piège de lecture** : une frange « au repos » n'est pas forcément un effet oublié. C'était un effet
+  légitime, alimenté par un niveau que personne ne regardait. Le voile d'éblouissement vit en permanence dès
+  qu'une torche est allumée.
+- Lot complet vert à 16:46 : 127 OK en 412 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

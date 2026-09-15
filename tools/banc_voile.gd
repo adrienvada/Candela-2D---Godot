@@ -126,6 +126,9 @@ const REGLAGES := [
 	# DA5.5 — le tableau est déjà générique : Tab/flèches/R/E le lisent sans
 	# rien savoir de ce paramètre en particulier.
 	["aberration chromatique", "aberration_chromatique", 0.0, 0.05, 0.002],
+	# ISO10, 1a — la rampe : l'aberration commence au-dessus de la rétrodiffusion de sa propre torche.
+	["aberration — début (niveau)", "aberration_debut", 0.0, 1.0, 0.01],
+	["aberration — pleine (niveau)", "aberration_pleine", 0.0, 1.0, 0.01],
 ]
 
 ## Portée du faisceau du banc, en pixels. Le banc **ne recopie pas l'arsenal** —

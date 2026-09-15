@@ -66,6 +66,8 @@ static func catalogue() -> Array[Dictionary]:
 			"Les loupes 1, 3 et 4 dans la vue 3D de J1."],
 		["loupe-fluidite", "Trente images consécutives à 60 Hz",
 			"J1 avance et tourne sa visée, la caméra glisse : un saut ou un hoquet se voit d'une image à l'autre."],
+		["loupe-cout-voile", "Le coût du voile plein au repos (mesure, sans image)",
+			"ISO10, 1a : temps d'image avec la copie plein cadre et le voile plein forcés, contre le voile calme, en blocs alternés."],
 	]:
 		c.append({"id": e[0], "famille": "loupe", "source": "ecran", "titre": e[1], "pourquoi": e[2]})
 	return c
@@ -175,6 +177,9 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			["bord-cone", func(img: Image) -> Vector2: return _pixel(img, bord)]], true, 1.0)
 		p._vue_unique()
 
+	if p._demande(plans, "loupe-cout-voile"):
+		await _cout_du_voile()
+
 	if p._demande(plans, "loupe-fluidite"):
 		await _fluidite(plans)
 
@@ -208,8 +213,10 @@ func _prise(plans: Array[Dictionary], id: String, recadrages: Array, scinde := f
 	for r in recadrages:
 		var sous: Dictionary = plan if String(r[0]) == "" else p._derive(plans, id, String(r[0]), "")
 		var centre: Vector2 = (r[1] as Callable).call(img)
-		print("  MESURE %s centre %.0f %.0f image %dx%d" % [sous["id"], centre.x, centre.y,
-			img.get_width(), img.get_height()])
+		# ISO10, 1a — l'éblouissement de J1 à la prise : la rétrodiffusion de sa propre torche le tient
+		# au-dessus de 0 au repos, et l'aberration du voile en dépend (planche de loupe, tour 1).
+		print("  MESURE %s centre %.0f %.0f image %dx%d eblouissement_j1 %.3f" % [sous["id"], centre.x,
+			centre.y, img.get_width(), img.get_height(), float(p._main.p1.dazzle_amount)])
 		p._ecrire(sous, recadrer(img, centre))
 
 
@@ -442,6 +449,50 @@ func _loupe_torche_fantome(plans: Array[Dictionary], lieu: Vector2) -> void:
 		return _pixel(img, lieu + Vector2(0.0, -40.0), 8.0)]], false, 1.0)
 	if arme_avant != null:
 		m.p1.equip_weapon(arme_avant)
+
+
+# ---------------------------------------------------------------------------
+# LE COÛT DU VOILE AU REPOS (ISO10, 1a)
+# ---------------------------------------------------------------------------
+
+## Ce que coûtaient la copie plein cadre et le voile plein tant que la rétrodiffusion les tenait allumés au
+## repos. Même scène, même image : huit blocs de 120 images, alternés A/B pour que la dérive (chauffe du GPU,
+## mise au premier plan) se partage entre les deux. A = `_voile_bb` visible et voile plein posés à chaque
+## image, comme avant 1a ; B = le jeu tel qu'il est (voile calme, copie éteinte). Les temps d'image se lisent
+## entre deux `frame_post_draw`, sans capture.
+func _cout_du_voile() -> void:
+	var ui: Node = p._ui
+	var rect: ColorRect = ui.get("p1_dazzle")
+	var bb: Node = ui.get("_voile_bb")
+	if rect == null or bb == null or not rect.has_meta("voile_plein"):
+		printerr("  ✗ loupe-cout-voile : voile de J1 ou copie plein cadre introuvables")
+		return
+	var plein: ShaderMaterial = rect.get_meta("voile_plein")
+	var sommes := {"A": 0.0, "B": 0.0}
+	var comptes := {"A": 0, "B": 0}
+	for n in 60:
+		_tenir_scene()
+		await p.get_tree().process_frame
+	for bloc in 8:
+		var force := bloc % 2 == 0
+		var cle := "A" if force else "B"
+		await RenderingServer.frame_post_draw
+		var avant := Time.get_ticks_usec()
+		for k in 120:
+			_tenir_scene()
+			if force:
+				# Après le `_process` de l'UI de cette image : `process_frame` passe avant le rendu.
+				rect.material = plein
+				bb.visible = true
+			await RenderingServer.frame_post_draw
+			var maintenant := Time.get_ticks_usec()
+			sommes[cle] += float(maintenant - avant) / 1000.0
+			comptes[cle] += 1
+			avant = maintenant
+	var a: float = float(sommes["A"]) / maxf(float(comptes["A"]), 1.0)
+	var b: float = float(sommes["B"]) / maxf(float(comptes["B"]), 1.0)
+	print("  MESURE loupe-cout-voile image moyenne : copie et voile plein %.3f ms, voile calme %.3f ms, écart %.3f ms (%d + %d images, éblouissement J1 %.3f)"
+		% [a, b, a - b, comptes["A"], comptes["B"], float(p._main.p1.dazzle_amount)])
 
 
 # ---------------------------------------------------------------------------

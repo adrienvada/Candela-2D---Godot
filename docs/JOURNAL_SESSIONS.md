@@ -5601,3 +5601,14 @@ anciennes images. Arrêt, `godot --headless --path . --import`, reprise. Lot com
 `affiche-defaite` : l'affiche posée comme en ligne, J1 battu, puisque l'écran partagé ne pose jamais l'image de
 défaite. Il sert à photographier `fin_defaite.jpg` pour le verdict de la session cloud.
 Capture : le mot « DÉFAITE » et la lampe tombée. Lot complet vert : 127 OK en 414 s.
+
+**ISO10, lot 1, 1a — la frange à 0 au repos, 2026-09-15 à partir de 16:30.** Session « Iso 1 Opus », branche
+`iso10-finition` depuis `64d9da4`, sur le verdict de loupe de la session cloud (16:19) et ses trois conditions
+(16:28). Cause mesurée en jeu : la rétrodiffusion de sa propre torche tient J1 ébloui à 0,060 en permanence, et
+l'aberration du voile en dépend ; ±1 px radial sur toutes les loupes de la vue unique. Remède :
+- une rampe d'aberration de 0,12 à 0,35, réglable au banc du voile ;
+- sous 0,12, un voile calme sans lecture d'écran, et la copie plein cadre éteinte (Godot copie l'écran pour tout
+  shader qui déclare la texture d'écran : d'où deux shaders pour un corps).
+Après : 0 px sur pilier, corps et LED ; la frange reste sous un éblouissement réel. La copie et le voile plein coûtaient 0,53 ms par image au repos
+(14,35 contre 13,82 ms, blocs alternés).
+Lot complet vert à 16:46 : 127 OK en 412 s.

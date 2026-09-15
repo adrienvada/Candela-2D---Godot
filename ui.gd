@@ -62,6 +62,8 @@ const Brouillage := preload("res://brouillage.gd")
 ## éblouissement produirait un hoquet pile sur l'action décisive — la faute déjà
 ## payée par les shaders de mort de `player.gd`.
 const SHADER_VOILE := preload("res://voile_eblouissement.gdshader")
+## ISO10, 1a — le même voile sans lecture d'écran, posé sous `aberration_debut` (voir `_poser_voile`).
+const SHADER_VOILE_CALME := preload("res://voile_eblouissement_calme.gdshader")
 
 ## ⚠️ **Les trois textures du voile, et leur absence était le défaut.** Sans
 ## elles, `hint_default_black` rend du NOIR sans une erreur : le jeu affichait le
@@ -2299,6 +2301,11 @@ func _forger_voile(parent: Control, nom: String) -> ColorRect:
 	mat.set_shader_parameter("flare_tex", tex["flare"])
 	mat.set_shader_parameter("fantome_tex", tex["fantome"])
 	rect.material = mat
+	# ISO10, 1a — le voile calme, mêmes paramètres, sans lecture d'écran : `_poser_voile` choisit.
+	var calme := mat.duplicate() as ShaderMaterial
+	calme.shader = SHADER_VOILE_CALME
+	rect.set_meta("voile_plein", mat)
+	rect.set_meta("voile_calme", calme)
 	parent.add_child(rect)
 	return rect
 
@@ -2356,15 +2363,31 @@ func _deux_vues_affichees() -> bool:
 	return (gs.vp1.get_parent() as CanvasItem).visible and (gs.vp2.get_parent() as CanvasItem).visible
 
 
+## ISO10, 1a — le niveau (curseur compris) où l'aberration commence, lu dans le shader du voile et jamais
+## recopié : le banc du voile le règle là. Sous lui, le voile calme et pas de copie plein cadre.
+static func aberration_debut() -> float:
+	var v: Variant = RenderingServer.shader_get_parameter_default(SHADER_VOILE.get_rid(), &"aberration_debut")
+	return float(v) if v != null else 0.12
+
+
 func _poser_voile(rect: ColorRect, victime, source) -> void:
 	if rect == null:
-		return
-	var mat := rect.material as ShaderMaterial
-	if mat == null:
 		return
 	var niveau: float = 0.0
 	if victime != null:
 		niveau = clampf(float(victime.dazzle_amount), 0.0, 1.0)
+	# ISO10, 1a — **le voile plein seulement quand l'aberration peut exister.** La rétrodiffusion de sa propre
+	# torche tient le niveau à 0,06 en permanence : le voile plein lisait alors l'écran, et une copie plein
+	# cadre tournait, pour une aberration qui ne doit rien montrer au repos.
+	var plein: ShaderMaterial = rect.get_meta("voile_plein", null)
+	var calme: ShaderMaterial = rect.get_meta("voile_calme", null)
+	if plein != null and calme != null:
+		var choisi := plein if niveau * EffectPolicy.curseur("eblouissement") >= aberration_debut() else calme
+		if rect.material != choisi:
+			rect.material = choisi
+	var mat := rect.material as ShaderMaterial
+	if mat == null:
+		return
 	# Curseur MONDE « Éblouissement » (plancher 0,8 en classé) : il ne touche
 	# que le VOILE — jamais la pénalité de vitesse et de visée (décision du
 	# 2026-08-18). Sans lecteur depuis le passage au voile texturé (audit
@@ -8184,9 +8207,12 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 	# effectivement visible. Un `or` : les deux joueurs peuvent être éblouis
 	# à la fois, et l'écran scindé peut afficher les deux voiles ensemble.
 	if _voile_bb != null:
-		var p1_ebloui := p1 != null and float(p1.get("dazzle_amount")) > 0.001
+		# ISO10, 1a — au seuil du voile plein, pas à 0,001 : sous `aberration_debut`, le voile calme ne lit pas
+		# l'écran, et la copie tournait à vide depuis que la rétrodiffusion existe.
+		var seuil := aberration_debut() / maxf(EffectPolicy.curseur("eblouissement"), 1e-3)
+		var p1_ebloui := p1 != null and float(p1.get("dazzle_amount")) >= seuil
 		var p2_ebloui := p2 != null and _voile_scinde and _deux_vues_affichees() \
-			and float(p2.get("dazzle_amount")) > 0.001
+			and float(p2.get("dazzle_amount")) >= seuil
 		_voile_bb.visible = p1_ebloui or p2_ebloui
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
