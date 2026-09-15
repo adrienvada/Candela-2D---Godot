@@ -4407,6 +4407,55 @@ détacher du corps.
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 4, branche `iso-corps`) — ajoutée le 2026-09-15 04:30 (Paris)
+
+Cinquième tranche : des corps plus épais, sur décision d'Adrien (« le volume
+de chaque joueur doit être plus important... tant pis si ça touche leur
+hitbox »), pendant qu'ISO5 Opus reprenait ISO2 sur `iso2-vues`. Base :
+`1265eba`. Toujours aucun fichier du jeu hors des fichiers voxel.
+
+**Fichiers touchés :** `voxel_catalogue.gd` (`EPAISSEUR_REGLAGES`,
+`EPAISSEUR_PAR_DEFAUT = "x1_6"`, `fiche(slug, epaisseur)`) ; `voxel_corps.gd`
+(`construire(slug, epaisseur)`, `rayon_empreinte(corps_seul)` nouveau) ;
+`tools/banc_corps.gd` (`--epaisseur=`, tangage 58°→52°) ;
+`tools/test_voxel_corps.gd` (empreinte du corps seul, hauteur inchangée,
+silhouettes distinctes) ; `docs/iso/planche_corps_epais.png` et les
+captures `docs/iso/captures_corps/epaisseur_*.png` ; `docs/ROADMAP.md`
+(section « Vague 4 », deux tableaux de mesures, deux pièges) ; ce journal.
+
+**Le mécanisme trouvé avant d'être inventé** : `echelle` (vague 0, une
+petite variation par classe) s'appliquait déjà à TOUTES les dimensions X/Z
+du squelette, jamais à une hauteur — exactement le levier qu'il fallait.
+`EPAISSEUR_REGLAGES` le multiplie par-dessus, un paramètre optionnel de
+`construire()` : tout appelant existant (ISO2/ISO5) grossit sans changer une
+ligne.
+
+**Le réglage retenu (`x1_6`) n'est pas un compromis arbitraire entre trois
+options : c'est le plus épais des trois qui respecte encore la règle du
+couloir d'une tuile.** `x2_0` fait dépasser six classes sur dix ; `x1_6`
+tient les dix, la marge la plus mince sur « pompe » (17,3 px sur 17,5 px
+permis). Mesuré, pas choisi à l'œil seul — même si la comparaison visuelle
+contre la planche de référence d'ISO Assets a confirmé le choix après coup.
+
+**Un vrai piège de mesure, pas retrouvé après coup mais avant de publier un
+chiffre faux** : le premier relevé de l'empreinte totale (corps + arme)
+donnait le MÊME rayon maximal aux quatre réglages d'épaisseur — semblant
+prouver que rien ne changeait. La cause : l'arme (jusqu'à 0,38 tuile de long)
+domine largement un torse élargi de quelques centièmes de tuile, et la
+mesure ne distinguait pas les deux. Corrigé en mesurant séparément le corps
+seul (la règle du couloir) et le total (le rayon de hitbox) — deux questions,
+deux nombres, jamais un seul relevé pour les deux.
+
+**Le rayon maximal à publier pour ISO5** (`bullet.gd:PLAYER_BODY_RADIUS`,
+18 px aujourd'hui) : **24,4 px** (0,6963 tuile), classe « sentinelle »,
+identique aux quatre réglages d'épaisseur puisque l'arme n'en dépend pas.
+
+**Sabotage vérifié réellement** (réglage par défaut forcé à `x2_0`, connu
+pour dépasser le couloir → dix échecs, code 1 → revert → vert).
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape

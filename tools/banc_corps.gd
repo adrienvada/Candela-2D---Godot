@@ -1,7 +1,8 @@
 extends Node3D
 
 ## Le banc des CORPS VOXEL — chantier ISO, étape ISO3 (vague 0 : les dix corps
-## et leurs mouvements ; vague 1 : accroupi et enjambement).
+## et leurs mouvements ; vague 1 : accroupi et enjambement ; vague 4 : le
+## réglage d'épaisseur, `--epaisseur=`).
 ##
 ## Dix corps sur une grille, une lumière SIMULÉE (pas une `Light3D` — voir plus
 ## bas), des touches pour déclencher marche, tir, touché, mort, accroupi,
@@ -30,6 +31,12 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn -- --capteur --lumiere=0.8 --capture=/chemin/modele.png
 ##   godot --path . tools/banc_corps.tscn -- --opacite=0.5 --capture=/chemin/efface.png
 ##   godot --path . tools/banc_corps.tscn -- --silhouette --lumiere=0 --capture=/chemin/silhouette.png
+##   godot --path . tools/banc_corps.tscn -- --epaisseur=leger --lumiere=0.8 --capture=/chemin/avant.png
+##   godot --path . tools/banc_corps.tscn -- --epaisseur=x1_6 --lumiere=0.8 --capture=/chemin/apres.png
+##
+## `--epaisseur` (ISO3 vague 4) : `leger` (×1,0, l'ancien gabarit vague 0-3),
+## `x1_3`, `x1_6` (le réglage par défaut si l'option est omise — voir
+## `VoxelCatalogue.EPAISSEUR_PAR_DEFAUT`) ou `x2_0`.
 ##
 ## Sans `--capture`, la fenêtre reste ouverte et interactive. Comme
 ## `tools/proto_iso.gd`, la capture exige une vraie fenêtre (`RenduCommun`) et
@@ -66,6 +73,7 @@ const RAYON_LU_PX := 20.0
 var _capture := ""
 var _classe_filtre := ""
 var _pose_forcee := ""               # "" | "accroupi" | "enjambe" — --pose, pour la planche
+var _epaisseur := VoxelCatalogueT.EPAISSEUR_PAR_DEFAUT  # ISO3 vague 4 — --epaisseur=leger|x1_3|x1_6|x2_0
 var _lumiere := 0.6
 var _taille := Vector2i(1920, 1080)
 var _frames := 3
@@ -128,6 +136,12 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"capteur": _capteur_force = true
 			"opacite": _opacite_force = clampf(float(val), 0.0, 1.0)
 			"silhouette": _silhouette_force = true
+			"epaisseur":
+				if VoxelCatalogueT.EPAISSEUR_REGLAGES.has(val):
+					_epaisseur = val
+				else:
+					push_warning("banc_corps : --epaisseur attend %s (reçu « %s »)"
+						% [", ".join(VoxelCatalogueT.EPAISSEUR_REGLAGES.keys()), val])
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
@@ -167,7 +181,7 @@ func _construire_scene() -> void:
 		var noeud: Node3D = VoxelCorpsT.new()
 		noeud.name = "Corps_%s" % slug
 		add_child(noeud)
-		if not noeud.construire(slug):
+		if not noeud.construire(slug, _epaisseur):
 			continue
 		noeud.definir_lumiere(_lumiere)
 		# Ce banc garde ses corps en tuiles (comme `voxel_corps.gd` partout
@@ -258,7 +272,12 @@ func _construire_camera(largeur_tuiles: float, profondeur_tuiles: float) -> void
 	cam.name = "Camera"
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	var aspect := float(_taille.x) / float(_taille.y)
-	var pitch := deg_to_rad(58.0)
+	# 52°, pas le 58° d'origine (antérieur à H15) : c'est le tangage RÉELLEMENT
+	# tranché par Adrien pour le jeu (ROADMAP, « H15 tranché ») — corrigé ici en
+	# ISO3 vague 4, dont le brief cite explicitement « sous la lampe à 0,8, à
+	# 52° » pour juger la planche avant/après (même correctif déjà fait pour
+	# `banc_objets.gd` en vague 3, jamais reporté ici avant maintenant).
+	var pitch := deg_to_rad(52.0)
 	var depuis_largeur := largeur_tuiles / aspect
 	var depuis_profondeur := profondeur_tuiles * sin(pitch) + 1.0
 	cam.size = maxf(depuis_largeur, depuis_profondeur) * 1.1

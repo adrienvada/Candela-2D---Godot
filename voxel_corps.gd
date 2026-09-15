@@ -256,12 +256,16 @@ var _h_jambe_base: float = 0.0
 var _hanche_accroupi_y: float = 0.0
 
 
-## Bâtit le corps depuis `VoxelCatalogue.fiche(slug)`. Rend `false` (et laisse
-## le catalogue crier) si le slug est inconnu. Idempotent : un second appel
-## reconstruit proprement, comme `proto_iso.gd:construire()`.
-func construire(slug: String) -> bool:
+## Bâtit le corps depuis `VoxelCatalogue.fiche(slug, epaisseur)`. Rend `false`
+## (et laisse le catalogue crier) si le slug OU `epaisseur` est inconnu.
+## Idempotent : un second appel reconstruit proprement, comme
+## `proto_iso.gd:construire()`. `epaisseur` (ISO3 vague 4, voir
+## `VoxelCatalogue.EPAISSEUR_REGLAGES`) : par défaut le nouveau gabarit épais
+## — tout appelant déjà écrit (ISO2/ISO5, les bancs, la suite) le reçoit sans
+## changer une ligne. `"leger"` retrouve l'ancien gabarit (vague 0-3).
+func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_DEFAUT) -> bool:
 	_vider()
-	var f := VoxelCatalogueT.fiche(slug)
+	var f := VoxelCatalogueT.fiche(slug, epaisseur)
 	if f.is_empty():
 		return false
 	_fiche = f
@@ -453,6 +457,47 @@ func definir_style(s: int) -> void:
 func sommet_tete() -> float:
 	var aabb := _tete_mesh.get_aabb()
 	return _tete_mesh.to_global(Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
+
+
+## ISO3 vague 4 — l'empreinte au sol RÉELLE de la pose courante : la plus
+## grande distance, en tuiles, entre l'origine du corps et un coin de l'une
+## de ses boîtes, projetée sur le plan XZ. Recalculée depuis le maillage réel
+## via `global_transform` (donc juste même quand une jambe ou le torse est
+## en rotation — marche, accroupi, enjambement), jamais depuis `rayon_corps`
+## seul : la décision d'Adrien (« tant pis si ça touche leur hitbox »)
+## remplace le contrat fixe de la vague 0 par cette mesure, posture par
+## posture — voir `tools/test_voxel_corps.gd` et la ROADMAP, section
+## « Vague 4 », pour le tableau complet.
+##
+## `corps_seul` (par défaut faux, les neuf boîtes) : vrai exclut l'arme, la
+## torche et le gadget — ce que la règle du couloir d'une tuile borne, c'est
+## le VOLUME DU CORPS qui grossit avec l'épaisseur (torse, tête, bras,
+## jambes), jamais la portée d'une arme tenue en avant, qui ne dépend pas de
+## l'épaisseur et existait déjà, telle quelle, en vague 0. Les deux mesures
+## servent des questions différentes : `corps_seul = true` pour « un corps
+## passe-t-il un couloir d'une tuile ? », `corps_seul = false` (l'ensemble,
+## ce que la vue de dessus montre et ce qu'une balle peut toucher) pour le
+## rayon à publier à ISO5 pour `bullet.gd:PLAYER_BODY_RADIUS`.
+func rayon_empreinte(corps_seul: bool = false) -> float:
+	var origine: Vector3 = global_transform.origin
+	var r := 0.0
+	for b in _boites_visibles:
+		var inst: MeshInstance3D = b
+		if corps_seul:
+			var parent: Node = inst.get_parent()
+			var nom_parent: String = String(parent.name) if parent != null else ""
+			if nom_parent == "Arme" or nom_parent == "Torche" or nom_parent == "Gadget":
+				continue
+		var box: BoxMesh = inst.mesh
+		var demi: Vector3 = box.size * 0.5
+		for sx in [-1.0, 1.0]:
+			for sy in [-1.0, 1.0]:
+				for sz in [-1.0, 1.0]:
+					var coin_local := Vector3(demi.x * sx, demi.y * sy, demi.z * sz)
+					var coin_monde: Vector3 = inst.global_transform * coin_local
+					var d := Vector2(coin_monde.x - origine.x, coin_monde.z - origine.z).length()
+					r = maxf(r, d)
+	return r
 
 
 # -----------------------------------------------------------------------------

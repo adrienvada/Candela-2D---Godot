@@ -21557,6 +21557,164 @@ un appel `repos`/`marche` précédent aurait survécu, cachée, dans un appel
 vague 1, par avance. Écrit dès le premier jet plutôt que trouvé par un test
 qui rougit après coup — la leçon de la vague 1 retenue, pas reproduite.
 
+### Vague 4 — des corps plus épais, comme sur les planches du DA (inscrite le 2026-09-15 04h30)
+
+**Décision d'Adrien, mot pour mot (2026-09-15, transmise par la session cloud
+Fable 5.1 pendant qu'ISO5 Opus reprenait ISO2 sur `iso2-vues`)** : « il faut
+que le volume de chaque joueur soit plus important, comme dans les visuels
+générés par la session Assets : il faut qu'il soit plus épais par exemple.
+Tant pis si ça touche leur hitbox. » Une décision de rendu ET de jeu — le
+corps visible grossit, la zone de touche suivra le corps visible, mais c'est
+ISO5 Opus qui change la hitbox (`bullet.gd`), pas cette vague. Base :
+`1265eba` (après la finition des gestes de gadget). Aucune fusion, aucun
+fichier du jeu hors des fichiers voxel.
+
+**La cible, mesurée sur les planches AVANT de toucher au catalogue** (le
+brief le demandait explicitement) : `claude/iso-assets-gemini-boards-4e8d33:
+docs/iso/planches_gemini/planche_palette_corps.jpg` — la seule planche de la
+vague 0 d'ISO Assets qui montre des corps voxel dans le MÊME style que
+celui-ci (boîtes, pas de détail de vêtement). `planche_vitrines.jpg` en
+montre un autre, réaliste et détaillé (gilet, arme, torche tenue à la main) —
+écarté comme cible : un style de rendu entièrement différent de celui déjà
+posé ici (`corps_iso.gdshader`, gris plafonné, pas de texture), très
+probablement une piste explorée puis non retenue par ISO Assets pour cette
+famille de corps. Sur `planche_palette_corps.jpg`, la mesure au pixel (trois
+figures, celle du centre la plus nette) : torse large et plat, à peu près
+aussi large que profond à l'œil (le panneau latéral visible en ombre est
+presque aussi large que la face) ; jambes épaisses, deux blocs nettement
+séparés par un espace de l'ordre d'une largeur de jambe ; tête cubique,
+sensiblement de la même largeur que le torse. Le chiffre precis n'a pas pu
+être tiré au pixel près d'une image JPEG à cette résolution (mesures
+tentées, contaminées par des figures voisines trop proches) — la référence
+retenue est donc QUALITATIVE (« un corps qui se lit comme un bloc, pas des
+membres fins sur un tronc étroit »), le choix final tranché par comparaison
+visuelle directe au banc, comme le brief l'invite (« choisis celui qui
+ressemble le plus »).
+
+**Le mécanisme : multiplier `echelle`, qui ne joue déjà QUE sur X/Z.**
+Trouvaille en lisant `_construire_squelette()` avant d'écrire quoi que ce
+soit : `echelle` (vague 0, une petite variation PAR classe, 0,95 à 1,08)
+s'applique déjà à `largeur_torse`, `profondeur_torse`, `cote_tete`,
+`largeur_jambe`, `profondeur_jambe`, `ecart_jambe` (l'écart entre jambes, qui
+suit donc leur largeur sans jamais les faire se chevaucher) et
+`largeur_bras` — jamais à une hauteur. C'est exactement le levier qu'il
+fallait, déjà câblé : `VoxelCatalogue.EPAISSEUR_REGLAGES` (`leger` ×1,0,
+`x1_3`, `x1_6`, `x2_0`) multiplie `echelle` par-dessus sa valeur par classe,
+dans `fiche(slug, epaisseur)` — un nouveau paramètre optionnel, jamais un
+changement de contrat : `VoxelCorps.construire(slug)` sans second argument
+reçoit maintenant `EPAISSEUR_PAR_DEFAUT`, donc tout appelant déjà écrit
+(ISO2/ISO5, les bancs, la suite) grossit sans changer une ligne.
+
+**Le réglage retenu : `x1_6`, pas `x2_0`.** Mesuré (voir le tableau plus
+bas) : `x2_0` fait dépasser à SIX classes sur dix le couloir d'une tuile
+(0,5 tuile de rayon, 17,5 px) que le brief pose comme limite absolue — la
+pire, « pompe » (Le Terrassier, déjà la plus large avant tout réglage,
+`echelle = 1,08`), atteint 19,4 px. `x1_6` reste sous ce plafond pour les dix
+classes, avec la marge la plus mince sur la même classe (17,3 px, 0,2 px de
+marge) — c'est donc le réglage le PLUS ÉPAIS qui respecte encore la règle du
+couloir, pas un compromis arbitraire entre les trois. Comparé ensuite à la
+planche de référence (capture ci-dessous) : lisible comme un bloc, torse et
+jambes nettement plus larges qu'avant, sans jamais friser le grotesque —
+retenu comme valeur par défaut. `x1_3` reste disponible, plus conservateur ;
+`x2_0` aussi, réservé à qui veut voir la limite. Adrien tranche définitivement
+à H-ISO5 sur `docs/iso/planche_corps_epais.png`.
+
+**L'empreinte au sol, mesurée posture par posture — jamais un seul relevé
+debout** (`VoxelCorps.rayon_empreinte(corps_seul)`, recalculée depuis le
+maillage réel via `global_transform`, donc juste en rotation — marche,
+accroupi, enjambement). Deux mesures, pas une, pour deux questions
+différentes :
+
+- **corps seul** (torse/tête/bras/jambes, sans l'arme ni la torche) — ce que
+  la règle du couloir d'une tuile borne. Pire cas sur les quatre postures
+  (debout, accroupi stabilisé, marche balayée sur 8 phases, enjambement
+  balayé sur 8 valeurs), au réglage par défaut `x1_6` :
+
+  | Classe | Corps seul, pire cas (tuile) | (px) |
+  |---|---|---|
+  | pistolet | 0,4787 | 16,8 |
+  | fusil | 0,4826 | 16,9 |
+  | pompe | **0,4935** | **17,3** |
+  | arbalète | 0,4826 | 16,9 |
+  | fumiste | 0,4894 | 17,1 |
+  | incendiaire | 0,4853 | 17,0 |
+  | sentinelle | 0,4800 | 16,8 |
+  | occulteur | 0,4761 | 16,7 |
+  | allumeur | 0,4867 | 17,0 |
+  | spectre | 0,4774 | 16,7 |
+
+  Toutes sous 0,5 tuile (17,5 px) — la marge la plus mince tenue par
+  « pompe ». Au réglage `x2_0` (non retenu), la même mesure sur « pompe »
+  atteint 0,5531 tuile (19,4 px) — DÉPASSE, ce qui a définitivement écarté ce
+  réglage comme défaut.
+
+- **total** (corps + arme + torche, ce qu'une balle peut toucher et ce que
+  la vue de dessus montre) — le nouveau rayon à publier pour la hitbox. Pire
+  cas sur les mêmes postures PLUS l'enveloppe de recul du tir :
+
+  | Classe | Total, pire cas (tuile) | (px) |
+  |---|---|---|
+  | pistolet | 0,4854 | 17,0 |
+  | fusil | 0,6191 | 21,7 |
+  | pompe | 0,5824 | 20,4 |
+  | arbalète | 0,5487 | 19,2 |
+  | fumiste | 0,4965 | 17,4 |
+  | incendiaire | 0,4887 | 17,1 |
+  | **sentinelle** | **0,6963** | **24,4** |
+  | occulteur | 0,5052 | 17,7 |
+  | allumeur | 0,6037 | 21,1 |
+  | spectre | 0,5604 | 19,6 |
+
+  **Rayon maximal à publier pour ISO5 (`bullet.gd:PLAYER_BODY_RADIUS`,
+  aujourd'hui 18 px) : 24,4 px (0,6963 tuile), classe « sentinelle » (La
+  Sentinelle, l'arme la plus longue du catalogue, `longueur = 0,38`
+  tuile).** IDENTIQUE aux quatre réglages d'épaisseur : l'arme n'est touchée
+  par AUCUN d'eux (`echelle` ne joue que sur le corps), donc ce chiffre ne
+  bouge pas si Adrien tranche plus tard pour `x1_3` ou `x2_0` — seule la
+  colonne « corps seul » en dépend.
+
+**La hauteur debout, vérifiée inchangée, pas seulement supposée** :
+`sommet_tete()` vaut 0,9400 tuile identiquement au réglage `leger` et au
+réglage par défaut, sur les dix classes — `echelle` ne touche jamais Y,
+`tools/test_voxel_corps.gd` le vérifie maintenant explicitement plutôt que
+de s'y fier. La fourchette accroupie (0,49-0,61 de la hauteur debout, vague 1)
+et le plafond de mur haut (1,25 tuile, ISO1) restent donc exacts sans y
+retoucher.
+
+**Fait** : `voxel_catalogue.gd` (`EPAISSEUR_REGLAGES`, `EPAISSEUR_PAR_DEFAUT`,
+`fiche(slug, epaisseur)`) ; `voxel_corps.gd` (`construire(slug, epaisseur)`,
+nouveau — `rayon_empreinte(corps_seul)`) ; `tools/banc_corps.gd`
+(`--epaisseur=`, tangage remis à 52° — voir le piège plus bas) ;
+`tools/test_voxel_corps.gd` (empreinte du corps seul ≤ couloir, hauteur
+inchangée par l'épaisseur, silhouettes toujours distinctes entre classes —
+sait échouer) ; la planche `docs/iso/planche_corps_epais.png` (avant/après,
+dix classes, lampe à 0,8, 52°) et les captures individuelles sous
+`docs/iso/captures_corps/epaisseur_*.png` (le « 0 » mesuré noir pur par
+PIL) ; ce fichier, cette section.
+
+#### Les pièges rencontrés ici
+
+- **L'empreinte totale (corps + arme) ne bouge presque pas avec
+  l'épaisseur — parce que l'arme n'en fait pas partie.** Le premier relevé
+  (une seule mesure `rayon_empreinte()`, toutes les neuf boîtes confondues)
+  donnait le MÊME rayon maximal (24,4 px, sentinelle) à `leger`, `x1_3` ET
+  `x1_6`, et presque le même à `x2_0` — un résultat qui semblait prouver que
+  l'épaississement ne changeait rien, alors qu'il changeait tout sur le
+  corps lui-même. La cause : `_boites_visibles` porte les neuf boîtes, arme
+  et torche comprises, et une arme tenue en avant (jusqu'à 0,38 tuile de
+  longueur, sentinelle) domine largement un torse élargi de quelques
+  centièmes de tuile. Corrigé en mesurant DEUX grandeurs distinctes
+  (`corps_seul` filtre l'arme/la torche/le gadget par le nom de leur pivot
+  parent) pour DEUX questions différentes — le couloir d'une tuile pour le
+  corps, le rayon de hitbox pour l'ensemble. Sans ce partage, la table
+  mesurée aurait semblé contredire le réglage choisi.
+- **Le tangage de `banc_corps.gd` (58°) n'était toujours pas corrigé.** Le
+  même piège que la vague 3 (`banc_objets.gd`, déjà corrigé alors) —
+  signalé à l'époque comme spécifique au fichier neuf, jamais reporté sur
+  `banc_corps.gd` lui-même. Le brief de cette vague cite explicitement
+  « sous la lampe à 0,8, à 52° » pour juger la planche avant/après : corrigé
+  ici, cette fois sur le fichier d'origine.
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est

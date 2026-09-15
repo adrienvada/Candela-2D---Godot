@@ -161,17 +161,58 @@ static func slugs() -> PackedStringArray:
 		out.append(c["slug"])
 	return out
 
+
+## ISO3 vague 4 — décision d'Adrien (2026-09-15, mot pour mot : « il faut que
+## le volume de chaque joueur soit plus important... tant pis si ça touche
+## leur hitbox ») : les corps grossissent en largeur et en profondeur pour
+## retrouver la masse des planches du DA (`planche_palette_corps.jpg`,
+## mesurée dans la ROADMAP, section « Vague 4 », avant d'écrire cette
+## constante), JAMAIS en hauteur (la hauteur debout, la fourchette accroupie
+## à 0,57 et le plafond de mur haut à 1,25 tuile n'en dépendent pas et ne
+## doivent pas bouger). Multiplie `echelle` — qui ne joue déjà QUE sur les
+## dimensions X/Z du squelette (voir `_construire_squelette()`), jamais Y —
+## donc torse, tête, bras et jambes épaississent ensemble, dans les mêmes
+## proportions relatives qu'avant entre les dix classes (la variation
+## d'`echelle` PAR classe, elle, ne change pas : Le Terrassier, `echelle`
+## le plus large du catalogue, reste visiblement plus large que L'Occulteur,
+## le plus étroit, juste les deux plus épais qu'avant — vérifié par
+## `tools/test_voxel_corps.gd`, pas supposé). `"leger"` (×1,0) est l'ancien
+## gabarit (vague 0-3), gardé pour la planche avant/après et pour qui a
+## besoin d'y revenir — jamais retiré.
+const EPAISSEUR_REGLAGES := {
+	"leger": 1.0,
+	"x1_3": 1.3,
+	"x1_6": 1.6,
+	"x2_0": 2.0,
+}
+
+## Le réglage par défaut de tout `VoxelCorps.construire(slug)` qui n'en
+## précise pas — donc de tout appelant déjà écrit (ISO2/ISO5, les bancs, la
+## suite) sans qu'aucun n'ait à changer une ligne. Choisi par comparaison
+## visuelle au banc contre `planche_palette_corps.jpg` (ROADMAP, section
+## « Vague 4 ») — PAS deviné, et pas nécessairement définitif : Adrien
+## tranche à H-ISO5 sur la planche `docs/iso/planche_corps_epais.png`.
+const EPAISSEUR_PAR_DEFAUT := "x1_6"
+
+
 ## La fiche complète d'une classe : charpente commune + ce qui lui est propre,
-## couleur calculée. Dictionnaire vide et `push_error` si le slug est inconnu —
-## un repli plausible (la première classe, par exemple) cacherait une faute de
-## frappe d'appelant derrière un corps qui a l'air correct.
-static func fiche(slug: String) -> Dictionary:
+## couleur calculée, `echelle` élargie par le réglage d'épaisseur (vague 4,
+## voir `EPAISSEUR_REGLAGES`). Dictionnaire vide et `push_error` si le slug
+## OU le réglage d'épaisseur est inconnu — un repli plausible (la première
+## classe, l'échelle 1.0) cacherait une faute de frappe d'appelant derrière
+## un corps qui a l'air correct.
+static func fiche(slug: String, epaisseur: String = EPAISSEUR_PAR_DEFAUT) -> Dictionary:
+	if not EPAISSEUR_REGLAGES.has(epaisseur):
+		push_error("VoxelCatalogue : réglage d'épaisseur inconnu « %s » (connus : %s)"
+			% [epaisseur, ", ".join(EPAISSEUR_REGLAGES.keys())])
+		return {}
 	for c in CLASSES:
 		if c["slug"] == slug:
 			var f := SQUELETTE.duplicate(true)
 			for cle in c:
 				f[cle] = c[cle]
 			f["couleur"] = GRIS_PLAFOND * _facteur_gris(c["gris_rang"])
+			f["echelle"] = float(f["echelle"]) * float(EPAISSEUR_REGLAGES[epaisseur])
 			return f
 	push_error("VoxelCatalogue : classe inconnue « %s » (connues : %s)"
 		% [slug, ", ".join(slugs())])
