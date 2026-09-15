@@ -466,10 +466,16 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 		_vider()
 		return
 
-	# Le sprite du joueur SERT de portrait : c'est exactement la silhouette que
-	# l'adversaire découpera dans le faisceau. Une illustration séparée aurait
-	# promis une allure que le jeu ne rend pas.
-	_portrait.texture = _recadree(_texture_si(classe.chemin_sprite()))
+	# ⚠️ **Habillage iso (2026-09-15) : le portrait iso remplace le sprite vu de
+	# dessus, et c'est la même règle qui le demande.** Le sprite servait de portrait
+	# parce qu'il était « exactement la silhouette que l'adversaire découpera dans
+	# le faisceau ». L'iso est devenu le jeu : ce que l'adversaire découpe est
+	# désormais le CORPS VOXEL épais, et le portrait est tiré de la frise de ces
+	# corps (`planche_classes_synthese`), préparé par `tools/preparer_habillage.py`.
+	# Le sprite vu de dessus promettrait aujourd'hui une allure que le jeu ne rend
+	# plus. Pas de repli sur le sprite : un portrait absent laisse la case vide,
+	# qui se voit — `tools/test_habillage.gd` exige les dix.
+	_portrait.texture = _texture_si(chemin_portrait(classe.slug()))
 	# L'icône d'arme, en couleurs d'origine : la même que sur le bouton de la liste.
 	_arme.texture = _recadree(MenuIcones.arme(classe.slug()))
 	_cone.regler(classe.demi_angle_torche(),
@@ -501,6 +507,13 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 ## La classe que la fiche montre, ou `null`.
 func classe_affichee() -> ClassDataT:
 	return _classe
+
+
+## Le portrait iso d'une classe, par son slug. **Un seul format, écrit ici** :
+## l'affiche du match (`ui.gd`) le lit aussi, et deux copies du chemin
+## finiraient par diverger. Déjà recadré à la préparation : pas de `_recadree()`.
+static func chemin_portrait(slug: String) -> String:
+	return "res://assets/ui/portraits/portrait_%s.png" % slug
 
 
 func _vider() -> void:

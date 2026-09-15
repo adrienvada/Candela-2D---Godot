@@ -145,6 +145,7 @@ func _run() -> void:
 	_test_les_fichiers_bascules_parlent_la_pate()
 	_test_la_preparation_recopie_la_charte()
 	_test_les_ressources_de_l_habillage()
+	_test_les_portraits_de_classe(main)
 
 	main.queue_free()
 	if _ko == 0:
@@ -667,3 +668,35 @@ func _test_les_ressources_de_l_habillage() -> void:
 		"l'illustration d'accueil n'est plus le bunker iso")
 	_check(MenuArtwork.cle_canonique("res://assets/ui/fond_hub_iso.jpg") == "ill_accueil",
 		"le bunker iso ne se rattache plus à la clé ill_accueil (POI et effet)")
+
+
+## Les portraits iso — étape 3 : un par classe DU CATALOGUE, jamais d'une liste
+## recopiée ici (une onzième classe sans portrait doit rougir, pas passer), à
+## 256 px, connus de git ; et la fiche les montre à la place du sprite vu de dessus.
+func _test_les_portraits_de_classe(main: Node) -> void:
+	var catalogue: Array = main.call("classes") if main.has_method("classes") else []
+	_check(catalogue.size() == int(_ui.get("NB_CLASSES")),
+		"le catalogue des classes n'a pas été lu : %d classes" % catalogue.size())
+	var depot := ProjectSettings.globalize_path("res://")
+	for c in catalogue:
+		var chemin := MenuFicheClasse.chemin_portrait(String(c.slug()))
+		var tex := load(chemin) as Texture2D if ResourceLoader.exists(chemin) else null
+		_check(tex != null, "portrait absent ou non importé : %s" % chemin)
+		if tex != null:
+			_check(tex.get_width() == 256 and tex.get_height() == 256,
+				"%s n'a plus 256 px : %d×%d" % [chemin, tex.get_width(), tex.get_height()])
+		var sortie: Array = []
+		var code := OS.execute("git", ["-C", depot, "ls-files", "--error-unmatch",
+			chemin.trim_prefix("res://")], sortie, true)
+		_check(code == 0, "%s n'est pas connu de git" % chemin)
+	if catalogue.is_empty():
+		return
+	var fiche := MenuFicheClasse.new()
+	root.add_child(fiche)
+	fiche.batir(Charte.BLEU)
+	var premiere = catalogue[0]
+	fiche.montrer(premiere, catalogue)
+	var attendu := load(MenuFicheClasse.chemin_portrait(String(premiere.slug())))
+	_check(fiche._portrait.texture == attendu,
+		"la fiche ne montre pas le portrait iso de %s" % premiere.slug())
+	fiche.queue_free()

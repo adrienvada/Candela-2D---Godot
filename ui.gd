@@ -6235,6 +6235,8 @@ func _build_class_card(joueur: int) -> Control:
 	var sprite := TextureRect.new()
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# Un portrait de 256 px posé à 88 : sans mipmaps il scintille (DA4.19).
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vignette.add_child(sprite)
 
@@ -6535,9 +6537,10 @@ func _refresh_class_cards() -> void:
 			continue
 		_cartes_classe_nom[joueur].text = String(c.libelle).to_upper()
 		_cartes_classe_meta[joueur].text = String(c.name)
-		# Le sprite de jeu, comme dans la fiche — et, comme elle, rien à sa
+		# Le portrait iso, comme dans la fiche (habillage iso, 2026-09-15 : le corps
+		# que l'adversaire découpe est désormais voxel) — et, comme elle, rien à sa
 		# place s'il manque : un cadre vide se voit, un repli se prend pour un choix.
-		var chemin := String(c.chemin_sprite())
+		var chemin := MenuFicheClasse.chemin_portrait(String(c.slug()))
 		_cartes_classe_sprite[joueur].texture = load(chemin) as Texture2D \
 			if ResourceLoader.exists(chemin) else null
 

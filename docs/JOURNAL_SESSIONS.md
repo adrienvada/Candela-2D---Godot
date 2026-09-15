@@ -5076,3 +5076,8 @@ du hub et quatre portraits, dont un à recadrer.
 
 **Republication du suivi :** cette session ne republie pas — delta transmis à la session cloud
 « Fable 5.1 - CLOUD ISO UNRAILED ».
+
+**Étape 3 (même session, même branche) :** les dix portraits iso préparés depuis le lot B d'ISO Assets
+remplacent le sprite vu de dessus dans la fiche de classe et sur l'affiche du match
+(`MenuFicheClasse.chemin_portrait`). La règle qui justifiait le sprite — montrer la silhouette que
+l'adversaire découpe — demande désormais le portrait : en iso, cette silhouette est le corps voxel.

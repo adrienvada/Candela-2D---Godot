@@ -23836,6 +23836,36 @@ pas la lumière de l'image qui se montre.
   contrôle par lecture de `test_habillage` qui l'a trouvé, pas la relecture.
 
 
+#### Étape 3 — le hub : les portraits de classe ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **Dix portraits iso**, `assets/ui/portraits/portrait_<slug>.png`, 256 px : sources ISO Assets
+  (`2129a89`, dont le Parasite regénéré au bon cadrage), préparés par `tools/preparer_habillage.py`
+  — détourage à seuils mesurés sur le bord de chaque source (verdeur du fond de 76 à 94 selon
+  l'image), recadrage avec 8 % de marge, virage encre/papier commun, mipmaps.
+- **La fiche de classe** (`menu_fiche_classe.gd`) montre le portrait dans sa première case, à la
+  place du sprite vu de dessus ; **l'affiche du match** (`ui.gd`, `_refresh_class_cards`) aussi.
+  Un seul format de chemin : `MenuFicheClasse.chemin_portrait(slug)`.
+- Le fond du hub et l'illustration d'accueil sont ceux de l'étape 2.
+
+**Décision de cette étape — et elle suit la règle qui semblait l'interdire.** La fiche montrait le
+sprite parce qu'il était « exactement la silhouette que l'adversaire découpera dans le faisceau » ;
+une illustration « aurait promis une allure que le jeu ne rend pas ». L'iso est devenu le jeu : ce
+que l'adversaire découpe est désormais le corps VOXEL épais, et le portrait est tiré de la frise de
+ces corps. C'est le sprite vu de dessus qui promettrait aujourd'hui une allure que le jeu ne rend
+plus. Aucun repli sur le sprite : un portrait absent laisse la case vide.
+
+⚠️ **Aucun autoload dans la fiche**, donc aucun choix « portrait en iso, sprite en vue de dessus » :
+`menu_fiche_classe.gd` est préchargé par `test_classes` en `--script`, et un fichier qui nomme un
+autoload y devient inchargeable. La vue de dessus n'est plus qu'un drapeau de débogage ; la fiche
+montre le jeu.
+
+**Preuves.** `tools/test_habillage.gd` : un portrait par classe DU CATALOGUE (`GameState.classes()`,
+jamais une liste recopiée — une onzième classe sans portrait rougira), 256 px, connu de git ; la
+fiche montre bien le portrait de la première classe. `test_classes` (qui exige un portrait non nul
+pour les dix) reste vert.
+
+
 ## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
 
 **Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le
