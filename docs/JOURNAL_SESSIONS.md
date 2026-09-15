@@ -5043,3 +5043,22 @@ l'accord des constantes de `bullet.gd` et `gadget_leurre.gd` ; sabotée une fois
 Banc : plafond tenu dans trois passages ; porteur sous sa torche à 74/81/87 et 73/80/86 (81/88/95 au
 corps fin). Piège : avec `--flash`, le tir éblouit et le porteur mesuré est du sol. Planche
 `docs/iso/planche_corps_epais_jeu.jpg`.
+
+### 2026-09-15 (matin) — ISO7 Beauté : les murs et le sol texturés (session « ISO7 Beauté Opus », branche `iso7-beaute`)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (mandat d'Adrien, 05:00), relayé par la
+Concierge à 05:18. Branche `iso7-beaute` créée depuis `iso2-vues` à `953ead3` ; travail dans le worktree
+de la session (`iso7-beaute-opus-713f60`), le harnais refusant l'écriture dans `.claude/worktrees/iso7-beaute`.
+
+État des lieux écrit d'abord (ROADMAP, section ISO7, dix lignes). Les trois textures de la vague 2 d'ISO
+Assets ne se tuilaient pas et portaient une lumière cuite (mesuré) : versions plates demandées, livrées en
+vingt minutes (`5f1f046`). `tools/verifie_tuilable.py` et `tools/fabrique_textures_iso.py` neufs ;
+`assets/iso/face_mur.png` et `assets/iso/sol.png` (512 px, facteurs de matière, mipmaps).
+
+`iso_materiaux.gd` neuf (catalogue et miroir processeur) ; `mur_iso.gdshader` habillé (matière, encre
+d'arête hors jonctions de boîtes par grille des murs, liseré du sommet, dessus des murets lu à sa case) ;
+`sol_iso.gdshader` neuf (voie b : lightmap × matière). Crochets : trois lignes dans `presentation_3d.gd`
+(`accorder_mur`, `accorder_sol`, `accorder_grille`) et le préchargement du sol ; `test_iso_beaute` au lot.
+`sol_projete.gdshader` n'est plus préchargé par personne (signalé, non supprimé). Suite
+`tools/test_iso_beaute.gd` ; banc `tools/banc_iso_beaute.gd` (hérite de `banc_iso.gd`, avant/après sur la
+même image, `--sans-beaute` pour l'avant des planches).

@@ -85,7 +85,8 @@ class_name Presentation3D
 extends Node3D
 
 const IsoPate := preload("res://iso_pate.gd")
-const SHADER_SOL := preload("res://sol_projete.gdshader")
+## ISO7 — le sol habillé : `sol_projete.gdshader` (ISO1) plus la matière du sol, force 0 sans beauté.
+const SHADER_SOL := preload("res://sol_iso.gdshader")
 const SHADER_MUR := preload("res://mur_iso.gdshader")
 const SHADER_CORPS := preload("res://corps_grossier_iso.gdshader")
 ## ISO2b — la passe de profondeur des corps, avant leur couleur (voir le shader).
@@ -1427,11 +1428,14 @@ func _construire_la_scene() -> void:
 
 	_mat_mur = _materiau(SHADER_MUR)
 	_mat_mur.set_shader_parameter("pied", PIED_PX)
+	# ISO7 — la matière et l'encre des murs viennent du catalogue (`iso_materiaux.gd`).
+	IsoMateriaux.accorder_mur(_mat_mur)
 
 	var plan := PlaneMesh.new()
 	plan.size = Vector2.ONE
 	for id in 2:
 		var mat := _materiau(SHADER_SOL)
+		IsoMateriaux.accorder_sol(mat)
 		_mat_sols.append(mat)
 		var sol := MeshInstance3D.new()
 		sol.name = "Sol%d" % (id + 1)
@@ -1519,6 +1523,8 @@ func _construire_les_murs() -> void:
 	var cartes := get_node_or_null(^"/root/MapData")
 	var data: Dictionary = cartes.get_selected() if cartes != null else {}
 	_murs = IsoGeometrie.build_meshes(data, _mat_mur)
+	# ISO7 — la grille des murs de CETTE carte : l'encre et le liseré ne tombent que sur les vrais bords.
+	IsoMateriaux.accorder_grille(_mat_mur, data)
 	for boite in _murs.get_children():
 		(boite as MeshInstance3D).layers = CALQUE_COMMUN
 	_scene.add_child(_murs)

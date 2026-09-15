@@ -1,5 +1,6 @@
-// Les murs de la vue isométrique (ISO1) : sommet noir strict, faces allumées par la
-// lightmap lue AU PIED du mur.
+// Les murs de la vue isométrique (ISO1, habillés par ISO7) : faces allumées par la lightmap lue
+// AU PIED du mur, matière et encre d'arête ; sommet des murs hauts noir cerné d'un liseré ;
+// dessus des murets lu à sa propre case.
 //
 // Une face verticale prend la lumière du sol à `pied` pixels devant elle — pas zéro :
 // la case du mur est noire dans la lightmap et son liseré d'encre en occupe le bord
@@ -12,6 +13,29 @@
 // la lightmap de son joueur (`lightmap_de_j2`). Une face vue par J1 s'allume avec la
 // lumière de J1 seulement — jamais avec le halo de J2.
 //
+// ## ISO7 — l'habillage, et pourquoi il ne dit rien de plus que la lightmap
+//
+// Tout ce qui s'ajoute ici MULTIPLIE une lumière lue dans la lightmap du joueur :
+// - **la matière** (`texture_face`) : un facteur dans [0,43 ; 1] accroché aux coordonnées du
+//   MONDE (identique pour les deux joueurs), jamais une couleur ;
+// - **l'encre des arêtes** : un facteur `encre_arete_reste` sur un trait le long des bords de
+//   la face — « un mur n'est pas une surface, c'est une masse cernée d'un filament » (Adrien,
+//   2026-08-25) ;
+// - **le liseré du sommet** d'un mur haut : la lumière de la face qu'il couronne, sur un trait
+//   de `lisere_sommet_px` ; l'intérieur du sommet reste noir strict, la masse ;
+// - **le dessus d'un muret** : la lightmap À SA CASE — les hachures que la vue de dessus y
+//   dessine sous la lumière (dessin gardé au jalon H-MB0).
+// Donc 0 à lumière 0, partout (prouvé au pixel par `tools/banc_iso_beaute.gd`).
+//
+// ⚠️ **Une boîte n'est pas un mur.** `merge_rects` découpe une masse en plusieurs rectangles
+// jointifs : une arête verticale de boîte peut tomber au milieu d'une face continue, et un bord
+// de sommet au milieu d'un sommet. La grille des murs (`grille_murs`, une case par tuile, posée
+// par `IsoMateriaux.accorder_grille`) dit si la masse continue au-delà du bord : si oui, ni
+// encre ni liseré. Sans elle, chaque mur en L portait un trait noir en travers de sa face.
+//
+// ⚠️ Les dérivées (mipmaps de la matière, `fwidth`) se prennent HORS de tout branchement.
+//
+// Défauts : force de matière 0, aucune encre, aucun liseré, grille inactive — le mur d'ISO1.
 // `unshaded`, aucune Light3D.
 shader_type spatial;
 render_mode unshaded, cull_back, fog_disabled, shadows_disabled;
@@ -21,26 +45,112 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled;
 
 uniform float pied = 8.0;
 
+uniform sampler2D texture_face : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform float periode_face_px = 70.0;
+uniform float force_matiere : hint_range(0.0, 1.0) = 0.0;
+uniform float encre_arete_px = 0.0;
+uniform float encre_arete_reste : hint_range(0.0, 1.0) = 0.12;
+uniform float lisere_sommet_px = 0.0;
+uniform float seuil_muret_px = 26.0;
+
+// La grille des murs : R = mur haut, G = muret ; un texel par tuile, bordure comprise.
+uniform sampler2D grille_murs : filter_nearest, repeat_disable;
+uniform bool grille_active = false;
+uniform vec2 grille_origine_px = vec2(0.0);
+uniform vec2 grille_cases = vec2(1.0);
+uniform float tuile_px = 35.0;
+
 varying vec3 monde;
 varying vec3 normale;
+varying vec3 local;
+varying vec3 taille;
 
 void vertex() {
 	monde = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	// Boîtes alignées sur les axes : l'échelle non uniforme ne tourne pas une normale
 	// d'axe, la normaliser suffit.
 	normale = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	// Le cube unité (`IsoGeometrie.build_meshes`) : VERTEX dans [-0,5 ; 0,5], l'échelle porte la
+	// taille de la boîte en pixels de monde.
+	local = VERTEX;
+	taille = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
+}
+
+// La masse continue-t-elle au point `px` du sol ? R : mur haut, G : muret. Hors de la grille,
+// rien (la ceinture de la carte est une fosse, pas un mur).
+vec2 occupe(vec2 px) {
+	if (!grille_active) {
+		return vec2(0.0);
+	}
+	vec2 uv = (px - grille_origine_px) / (tuile_px * grille_cases);
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+		return vec2(0.0);
+	}
+	return textureLod(grille_murs, uv, 0.0).rg;
+}
+
+// 1 sur le trait (à moins de `largeur` du bord), 0 au-delà ; `aa` en pixels de monde.
+float trait_de_bord(float distance, float largeur, float aa) {
+	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance);
 }
 
 void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
+	vec3 an = abs(normale);
 	vec2 n = normale.xz;
 	float longueur = length(n);
 	n = longueur > 0.0001 ? n / longueur : vec2(0.0, 1.0);
+	vec2 tangente = vec2(-n.y, n.x);
 	// Le motif court le long de la face et en hauteur : une hachure de mur se lit
-	// debout, pas couchée.
-	vec2 motif = vec2(dot(monde.xz, vec2(-n.y, n.x)), -monde.y);
+	// debout, pas couchée. Sur un dessus, il se couche avec le sol.
+	vec2 motif = normale.y > 0.5 ? monde.xz : vec2(dot(monde.xz, tangente), -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
-	vec3 c = lightmap_pateuse(monde.xz + n * pied, motif, aa, deux);
-	// Sommet (et dessous) : noir strict.
-	ALBEDO = abs(normale.y) < 0.5 ? c : vec3(0.0);
+	// Pixels de monde par pixel d'écran : le trait ne descend jamais sous un pixel d'écran.
+	float px_monde = max(max(fwidth(monde.x), fwidth(monde.y)), fwidth(monde.z));
+	float matiere = mix(1.0, texture(texture_face, vec2(dot(monde.xz, tangente), -monde.y) / periode_face_px).r,
+		force_matiere);
+	// Distance aux bords de la boîte, axe par axe, en pixels de monde.
+	vec3 d = (0.5 - abs(local)) * taille;
+
+	vec3 c = vec3(0.0);
+	if (normale.y < -0.5) {
+		// Dessous : jamais vu, noir.
+		c = vec3(0.0);
+	} else if (normale.y > 0.5) {
+		// Le bord le plus proche du sommet, et la direction qui en sort.
+		bool bord_x = d.x < d.z;
+		float d_bord = bord_x ? d.x : d.z;
+		vec2 sortie = bord_x ? vec2(sign(local.x), 0.0) : vec2(0.0, sign(local.z));
+		vec2 au_dela = occupe(monde.xz + sortie * (d_bord + tuile_px * 0.5));
+		if (taille.y < seuil_muret_px) {
+			// Dessus de muret : la lightmap à sa case, cernée d'encre là où le muret finit.
+			c = lightmap_pateuse(monde.xz, motif, aa, deux);
+			float fin = 1.0 - max(au_dela.r, au_dela.g);
+			float largeur = max(encre_arete_px, px_monde);
+			c *= mix(1.0, encre_arete_reste, fin * trait_de_bord(d_bord, largeur, px_monde));
+		} else {
+			// Sommet de mur haut : noir strict, sauf le liseré — la lumière de la face qu'il couronne.
+			float fin = 1.0 - au_dela.r;
+			float largeur = max(lisere_sommet_px, px_monde);
+			float lisere = fin * trait_de_bord(d_bord, largeur, px_monde);
+			if (lisere > 0.0) {
+				c = lightmap_pateuse(monde.xz + sortie * (d_bord + pied), motif, aa, deux) * lisere;
+			}
+		}
+	} else {
+		// Face verticale : la lumière au pied, la matière, l'encre des arêtes.
+		c = lightmap_pateuse(monde.xz + n * pied, motif, aa, deux) * matiere;
+		// L'arête verticale de CETTE face : sur l'axe tangent à la face.
+		bool face_x = an.x > 0.5;
+		float d_vert = face_x ? d.z : d.x;
+		vec2 axe = face_x ? vec2(0.0, sign(local.z)) : vec2(sign(local.x), 0.0);
+		// Une demi-tuile au-delà du bord, une demi-tuile DANS le mur : une case de masse, ou non.
+		vec2 au_dela = occupe(monde.xz + axe * (d_vert + tuile_px * 0.5) - n * tuile_px * 0.5);
+		float largeur = max(encre_arete_px, px_monde);
+		float encre_h = encre_arete_px > 0.0 ? trait_de_bord(d.y, largeur, px_monde) : 0.0;
+		float encre_v = encre_arete_px > 0.0
+			? (1.0 - max(au_dela.r, au_dela.g)) * trait_de_bord(d_vert, largeur, px_monde) : 0.0;
+		c *= mix(1.0, encre_arete_reste, max(encre_h, encre_v));
+	}
+	ALBEDO = c;
 }

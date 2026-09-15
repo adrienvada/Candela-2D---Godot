@@ -23570,6 +23570,102 @@ passages ; relevés bruts dans `docs/iso/captures_corps_epais/releves_corps_epai
   Changer la constante seule aurait fait deux zones de touche différentes selon qu'un tir est compensé ou
   non — un écart d'équité entre l'hôte et le client.
 
+### ISO7 — Beauté 🟡 (ouverte le 2026-09-15 vers 05:20, branche `iso7-beaute`)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », sur mandat d'Adrien du 2026-09-15 à
+05:00 (« livre-moi le jeu dans une version grand budget aboutie en mode isométrique »), tenu par la
+session « ISO7 Beauté Opus ». Branche `iso7-beaute`, créée depuis `iso2-vues` à `953ead3` (corps épais
+fusionnés). ⚠️ Travail dans le worktree de la session (`iso7-beaute-opus-713f60`) et non dans
+`.claude/worktrees/iso7-beaute` comme le brief le prévoyait : le harnais refuse qu'une session écrive
+hors de son propre worktree. Le worktree créé pour rien a été retiré vide ; la branche porte le nom
+attendu pour la fusion par ISO5.
+
+**Pourquoi.** L'iso d'ISO1-ISO5 est juste mais nue : un sol qui n'est que la lightmap passée à la pâte D,
+des murs dont les faces reprennent la lumière du sol devant elles, des sommets noirs. Les planches du DA
+(`docs/iso/planches_gemini/` sur `claude/iso-assets-gemini-boards-4e8d33`) montrent de la matière, des
+arêtes lisibles, une lumière chaude. La beauté est un habillage de la lumière, jamais une information de
+plus : noir absolu et lightmap seule vérité restent la règle.
+
+**Le pipeline tel qu'il est, avant ISO7** (lu dans le code à `953ead3`, pas deviné) :
+1. Chaque sous-vue 2D du duel rend tout le jeu (dalles d'encre 35 px deux tons 0,148/0,178 de
+   `CandelaTileSet`, murs noirs pleins, contour halogène de 3 px et hachures de `MurEncre`, `ArenaDecor`,
+   `MurLed`, lumières 2D et occluders) sous le masque de son joueur (`~4`, `~2`) : ce sont les lightmaps,
+   `1080p` par défaut.
+2. `Presentation3D` (sous `/root`) les lit dans ses shaders par `iso_lightmap.gdshaderinc` : transformation
+   de canevas de la vue, noir hors du rectangle couvert, lightmap choisie par `CAMERA_VISIBLE_LAYERS`.
+3. Le sol : un `PlaneMesh` par joueur (`Sol1` calque 2, `Sol2` calque 4), `sol_projete.gdshader`,
+   *unshaded*, `lightmap_pateuse()` — six lectures de lightmap par pixel, puis `pate()`.
+4. La pâte D (`iso_pate.gdshaderinc`, miroir `iso_pate.gd`) : couleur normalisée par `max(l, 0,25)`,
+   trois bandes à seuils bruités, désaturation de 35 %, grain de 0,82 à 1. Multiplicative, 0 à lumière 0.
+5. Les murs : `IsoGeometrie.build_meshes` pose un `BoxMesh` unité mis à l'échelle par rectangle fusionné
+   (1,25 tuile les hauts, 0,40 les bas), tous sous UN matériau `mur_iso.gdshader`, calque commun.
+6. Une face de mur lit la lightmap à 8 px devant elle (`pied`) et la passe à la pâte ; le sommet (et le
+   dessous) est noir strict. Aucune texture, aucune arête marquée : la masse n'a pas de filament en 3D.
+7. Les corps : `VoxelCorps` (`corps_iso.gdshader`), lumière lue par fragment dans un capteur 256² par vue
+   et par corps (`CapteurCorps`), pâte plafonnée `min(pate(c), c)`, opacité et silhouette par vue.
+8. Les objets debout : `VoxelObjets` sous `MiroirsIso`, même shader que les corps, capteurs
+   `capteur_objet.gdshader` (lumière du décor) ; viseur, ligne de visée et balle en quads au sol.
+9. Caméra orthographique à 52°, lacet 0°, `size = 1080 × sin θ` : un pixel de monde vaut ~1,27 pixel
+   d'écran en 1080 lignes, une tuile ~44 px.
+10. `style` (uniform de la pâte) est poussé à chaque image par `_suivre` à tous les matériaux, D par
+    défaut ; aucune `Light3D` nulle part.
+
+**Les sources du DA, mesurées avant usage** (`tools/verifie_tuilable.py`) : les trois textures de la
+vague 2 d'ISO Assets (`033c35d`) ne se tuilent pas (couture 1,4 à 3,4 fois l'écart entre voisins) et
+portent une lumière cuite (quarts de 90 à 148 sur le sol). `tranche_plateau_01` est une vignette, pas une
+texture (moitié basse noire). Versions à lumière plate demandées à ISO Assets le 2026-09-15 à 05:25,
+livrées à 05:40 (`5f1f046`, sept images) : six sur sept se tuilent et sont plates ; `dessus_mur_01` ne se
+tuile pas (couture verticale 5,2) et n'est pas utilisée.
+
+**Les textures de jeu** (`assets/iso/`, fabriquées par `tools/fabrique_textures_iso.py`, vérifiées par
+`tools/verifie_tuilable.py`) :
+- `face_mur.png` ← `face_mur_01_plat.jpg` (grandes pierres appareillées) ; `sol.png` ← `sol_01_plat.jpg`
+  (matière sans joint). 512 px, niveaux de gris, moyenne ~0,77, plancher 0,43 : un **facteur**, jamais
+  une couleur. Mipmaps et filtrage linéaire à l'import.
+- **Lues par `git show` vers un dossier temporaire, pas prises par `git checkout`** : le brief disait
+  checkout, mais il aurait fait entrer ~30 Mo de sources 2048 px dans la branche du jeu pour deux images
+  de 512 px. La provenance (branche, commit, fichier) est écrite ici et dans l'en-tête du catalogue.
+
+**Décisions de la session (mandat de la session cloud, jalons DA encore ouverts depuis H15)** :
+- **Sommet des murs hauts : noir strict cerné d'un liseré.** Ni texture de dessus, ni sommet éclairé : la
+  masse reste noire (« un mur n'est pas une surface, c'est une masse cernée d'un filament », 2026-08-25),
+  et son bord porte un trait de 2,4 px de monde qui prend **la lumière de la face qu'il couronne** — la
+  même lecture au pied que la face. Aucune information de plus que la face ; la planche 3 de la vague 0
+  (« sommet noir strict ou liseré ») est tranchée par liseré.
+- **Dessus des murets : la lightmap à sa propre case.** Ils étaient noirs en iso ; la vue de dessus y
+  dessine des hachures sous la lumière (dessin gardé au jalon H-MB0). La vue iso montre maintenant ce que
+  la vue de dessus montre.
+- **Encre des arêtes : multiplicative**, 1,6 px de monde, garde 12 % de la lumière. Posée sur les
+  arêtes hautes, basses et verticales des faces — mais **pas sur les jonctions de boîtes** : `merge_rects`
+  découpe une masse en rectangles jointifs, et une grille des murs (`IsoMateriaux.image_grille`, même
+  source que la collision) dit au shader si la masse continue au-delà du bord.
+- **Sol : voie (b)**, la 3D multiplie la lumière de la lightmap par sa matière (`sol_iso.gdshader`). La
+  voie (a) — dessiner la matière dans la scène 2D — changeait la vue de dessus et passait par
+  `candela_tileset.gd` et `game_state.gd`, hors de ce chantier ; elle aurait aussi plafonné la finesse de
+  la matière à la résolution de la lightmap (1 texel ≈ 1 px de monde), là où le sol 3D est rastérisé à
+  ~1,27 pixel d'écran par pixel de monde. Le damier de 35 px continue de venir de la lightmap.
+
+**Crochets posés dans des fichiers partagés** :
+- `presentation_3d.gd` : `IsoMateriaux.accorder_mur(_mat_mur)` à la construction de la scène ;
+  `IsoMateriaux.accorder_grille(_mat_mur, data)` après `IsoGeometrie.build_meshes`.
+- `tools/run_suites.sh` : `test_iso_beaute` ajoutée à la liste.
+
+**Pièges.**
+- ⚠️ **Une texture réduite APRÈS avoir été tuilée ne se tuile plus.** Le filtre de réduction répète le
+  bord au lieu de lire la colonne d'en face : 2,2 fois l'écart ordinaire à la couture.
+- ⚠️ **Décaler d'une demi-période peut poser la couture sur un joint.** Une source de coffrage porte ses
+  joints au quart et à la moitié : le vérificateur lisait une couture qui était un joint de béton. Décalage
+  de 0,375.
+- ⚠️ **Une suite qui appelle un Python passe seule et rougit dans le lot.** `run_suites.sh` exporte un
+  `HOME` isolé ; le Python de l'utilisateur y perd ses paquets (PIL vit dans
+  `~/Library/Python/3.9/lib/python/site-packages`), et `verifie_tuilable.py` sortait en erreur d'import.
+  La mesure de tuilabilité est recopiée en GDScript dans `tools/test_iso_beaute.gd` ; l'outil Python
+  reste celui de la fabrique.
+- ⚠️ **macOS n'a pas `timeout`** : un `timeout 400 godot …` sort en 127 sans rien lancer, et le lot
+  semble fini. Chien de garde : `perl -e 'alarm 400; exec @ARGV' godot …`.
+- ⚠️ **Le harnais refuse d'écrire hors du worktree de la session.** Un brief qui nomme un autre worktree
+  ne peut pas être suivi à la lettre : basculer son propre worktree (propre) sur la branche voulue.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
