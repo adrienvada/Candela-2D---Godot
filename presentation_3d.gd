@@ -91,6 +91,12 @@ const SHADER_MUR := preload("res://mur_iso.gdshader")
 const SHADER_CORPS := preload("res://corps_grossier_iso.gdshader")
 ## ISO2b — la passe de profondeur des corps, avant leur couleur (voir le shader).
 const SHADER_CORPS_PROFONDEUR := preload("res://corps_profondeur_iso.gdshader")
+## ISO10, 1d — l'anticrénelage 3D des vues iso (verdict de la loupe, défaut 4 : « les corps sans anticrénelage »).
+## Mesuré à la loupe (`loupe-corps-msaa`, fenêtre native au Cloître) : aux transitions fortes du corps de J1, 5 % de
+## pixels intermédiaires sans, 22 % à ×2, 36 % à ×4 ; coût +0,09 à +0,21 ms par image à ×4. Le FXAA de la fenêtre
+## ne fait rien sous `gl_compatibility` (4,5 %), et le MSAA d'une sous-vue changé en cours de partie n'y prend pas :
+## il est posé à la création.
+const ANTICRENELAGE_3D := Viewport.MSAA_4X
 
 const NOM := "Presentation3D"
 
@@ -435,7 +441,10 @@ func _allumer(vues: Array[SubViewport]) -> void:
 		"fond_visible": fond.visible if fond != null else false,
 		"masques": {},
 		"vues": [],
+		"msaa_fenetre": get_window().msaa_3d,
 	}
+	# ISO10, 1d — en vue unique, la 3D est rendue par la fenêtre : c'est elle qui porte l'anticrénelage. Rendu à l'extinction.
+	get_window().msaa_3d = ANTICRENELAGE_3D
 	# Les couches des capteurs sortent des DEUX masques, regardés ou non : une vue peut se
 	# rallumer entre deux images (retour de killcam) et lirait un disque blanc au sol.
 	for vue: SubViewport in [_main.vp1, _main.vp2]:
@@ -546,6 +555,8 @@ func _eteindre(sortie_de_l_arbre := false) -> void:
 		var fond = _sauvegarde["fond"]
 		if is_instance_valid(fond):
 			fond.visible = _sauvegarde["fond_visible"]
+		if is_inside_tree():
+			get_window().msaa_3d = _sauvegarde["msaa_fenetre"]
 		if is_instance_valid(_main):
 			_main.rendu_racine_autorise = _sauvegarde["autorise"]
 			# `_actif` est faux : l'accord ramène calques et brouillage dans les vues du jeu.
@@ -677,6 +688,7 @@ func _suivre() -> void:
 		# enregistre. `visible` du joueur : l'entraînement cache J2 ainsi.
 		_corps[j].visible = is_instance_valid(joueur) and joueur.visible and joueur.visual.visible
 		if not _corps[j].visible:
+			_poser_contact(j, Vector2.ZERO, [0.0, 0.0])
 			continue
 		var p: Vector2 = joueur.global_position
 		if corps_voxel:
@@ -690,12 +702,15 @@ func _suivre() -> void:
 		_mat_corps[j].set_shader_parameter("centre", p)
 		# ISO2b — l'effacement et la silhouette de la vue de dessus, PAR VUE, lus sur les sprites
 		# que ce corps remplace tels que `player.gd` les a posés cette image. Aucun recalcul.
+		var forces := [0.0, 0.0]
 		for vue_id in 2:
 			var o := opacite_du_corps(joueur, vue_id == j)
 			var sil := silhouette_du_corps(joueur, vue_id == j)
+			forces[vue_id] = o
 			for m in [_mat_corps[j], _mat_profondeur[j]]:
 				(m as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), o)
 				(m as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
+		_poser_contact(j, p, forces)
 		if not corps_voxel:
 			_corps[j].basis = Basis.looking_at(Vector3(cos(joueur.rotation), 0.0, sin(joueur.rotation)), Vector3.UP)
 
@@ -1027,6 +1042,13 @@ func fantome_montre(j: int) -> Node2D:
 	return fantome if (fantome as Node2D).is_visible_in_tree() else null
 
 
+## ISO10, 1d — l'ombre de contact du corps `j` sur le sol de chaque vue (`contact_corps_N` de `sol_iso.gdshader`). Sa
+## force est l'opacité du corps DANS cette vue, jamais plus : le sol ne montre d'un corps que ce que la vue en montre.
+func _poser_contact(j: int, p: Vector2, forces: Array) -> void:
+	for vue_id in mini(_mat_sols.size(), 2):
+		_mat_sols[vue_id].set_shader_parameter("contact_corps_%d" % (j + 1), Vector3(p.x, p.y, float(forces[vue_id])))
+
+
 ## ISO5 — le corps du joueur `j` porté par son fantôme de killcam : position et visée du fantôme ; classe,
 ## torche, tir, coup reçu et posture de l'instantané rejoué (`GameState.current_snap`).
 ##
@@ -1050,6 +1072,8 @@ func _suivre_le_fantome(j: int, fantome: Node2D) -> void:
 		_corps[j].basis = Basis.looking_at(Vector3(cos(fantome.global_rotation), 0.0,
 			sin(fantome.global_rotation)), Vector3.UP)
 	_mat_corps[j].set_shader_parameter("centre", p)
+	# Le fantôme n'a aucune part éclairée (opacité 0) : aucune ombre de contact non plus.
+	_poser_contact(j, p, [0.0, 0.0])
 	for vue_id in 2:
 		var vue: SubViewport = _main.vp1 if vue_id == 0 else _main.vp2
 		var sil := silhouette_du_fantome(trace, couche_d_origine(trace), vue.canvas_cull_mask)
@@ -1532,6 +1556,7 @@ func _construire_la_scene() -> void:
 		var vue := SubViewport.new()
 		vue.name = "VueIso%d" % (id + 1)
 		vue.own_world_3d = false
+		vue.msaa_3d = ANTICRENELAGE_3D
 		vue.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		vue.audio_listener_enable_2d = false
 		vue.audio_listener_enable_3d = false

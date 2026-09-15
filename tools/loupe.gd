@@ -68,6 +68,8 @@ static func catalogue() -> Array[Dictionary]:
 			"Les loupes 1, 3 et 4 dans la vue 3D de J1."],
 		["loupe-fluidite", "Trente images consécutives à 60 Hz",
 			"J1 avance et tourne sa visée, la caméra glisse : un saut ou un hoquet se voit d'une image à l'autre."],
+		["loupe-corps-msaa", "Les deux corps sans MSAA 3D, à ×2 et à ×4, et le coût de chaque niveau",
+			"ISO10, 1d : l'escalier des arêtes des voxels contre ce que l'anticrénelage 3D de la fenêtre coûte par image."],
 		["loupe-cout-voile", "Le coût du voile plein au repos (mesure, sans image)",
 			"ISO10, 1a : temps d'image avec la copie plein cadre et le voile plein forcés, contre le voile calme, en blocs alternés."],
 	]:
@@ -129,6 +131,8 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 	await _prise(plans, "loupe-corps", [
 		["j1", func(img: Image) -> Vector2: return _pixel(img, _j1, HAUTEUR_CORPS)],
 		["j2", func(img: Image) -> Vector2: return _pixel(img, _j2, HAUTEUR_CORPS)]])
+	if p._demande(plans, "loupe-corps-msaa"):
+		await _corps_msaa(plans)
 
 	# Le bord OUEST du cône : à l'est, le pilier et le bloc voisin le coupent.
 	var bord := _j1 + _visee_j1.rotated(-demi) * minf(170.0, portee * 0.55)
@@ -581,6 +585,74 @@ func _loupe_torche_braconnier(plans: Array[Dictionary], lieux: Array[Vector2]) -
 ## mise au premier plan) se partage entre les deux. A = `_voile_bb` visible et voile plein posés à chaque
 ## image, comme avant 1a ; B = le jeu tel qu'il est (voile calme, copie éteinte). Les temps d'image se lisent
 ## entre deux `frame_post_draw`, sans capture.
+## ISO10, 1d — l'anticrénelage 3D des corps, mesuré avant d'être posé. En vue unique la 3D est rendue par la
+## fenêtre elle-même (`Presentation3D.viewport_ecran`) : c'est donc son `msaa_3d` qu'on règle. Trois niveaux pris
+## à l'image, puis leur coût en blocs alternés de 120 images ; le réglage d'origine est rendu à la fin.
+## Premier essai : sur une seule ligne, le bord du corps sautait de 22 à 103 à ×4 comme sans — une arête DROITE, qu'aucun
+## anticrénelage ne peut adoucir. D'où la mesure sur toutes les transitions fortes du centre, et deux prises de plus :
+## le FXAA de la fenêtre (sans effet sous `gl_compatibility`) et le MSAA ×4 de la sous-vue scindée, changé en cours de
+## partie (sans effet non plus : le jeu le pose à la création, `Presentation3D.ANTICRENELAGE_3D`). Le jeu pose ×4 sur la
+## fenêtre à l'allumage de la vue iso : la prise « x0 » le coupe le temps de la prise, puis le réglage est rendu.
+func _corps_msaa(plans: Array[Dictionary]) -> void:
+	var fenetre: Window = p.get_window()
+	var origine := fenetre.msaa_3d
+	var origine_ssaa := fenetre.screen_space_aa
+	var niveaux := [[Viewport.MSAA_DISABLED, "x0"], [Viewport.MSAA_2X, "x2"], [Viewport.MSAA_4X, "x4"]]
+	for n in niveaux:
+		fenetre.msaa_3d = n[0]
+		var suffixe: String = n[1]
+		await _prise(plans, "loupe-corps-msaa", [
+			["j1-" + suffixe, func(img: Image) -> Vector2: return _pixel(img, _j1, HAUTEUR_CORPS)],
+			["j2-" + suffixe, func(img: Image) -> Vector2: return _pixel(img, _j2, HAUTEUR_CORPS)]], false, 0.8)
+	fenetre.msaa_3d = Viewport.MSAA_DISABLED
+	fenetre.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	await _prise(plans, "loupe-corps-msaa", [
+		["j1-fxaa", func(img: Image) -> Vector2: return _pixel(img, _j1, HAUTEUR_CORPS)],
+		["j2-fxaa", func(img: Image) -> Vector2: return _pixel(img, _j2, HAUTEUR_CORPS)]], false, 0.8)
+	fenetre.screen_space_aa = origine_ssaa
+	p._deux_vues()
+	var pres := Presentation3D.instance()
+	var vue: Viewport = pres.viewport_ecran(0) if pres != null else null
+	if vue == null:
+		printerr("  ✗ loupe-corps-msaa : sous-vue 3D de J1 introuvable en écran scindé")
+	else:
+		var origine_vue := vue.msaa_3d
+		for n in [[Viewport.MSAA_DISABLED, "scinde-x0"], [Viewport.MSAA_4X, "scinde-x4"]]:
+			vue.msaa_3d = n[0]
+			var suffixe: String = n[1]
+			await _prise(plans, "loupe-corps-msaa", [
+				["j1-" + suffixe, func(img: Image) -> Vector2: return _pixel(img, _j1, HAUTEUR_CORPS)]], true, 1.0)
+		vue.msaa_3d = origine_vue
+	p._vue_unique()
+	niveaux.append([Viewport.MSAA_DISABLED, "fxaa"])
+	var sommes := [0.0, 0.0, 0.0, 0.0]
+	var comptes := [0, 0, 0, 0]
+	for bloc in 12:
+		var i := bloc % 4
+		fenetre.msaa_3d = niveaux[i][0]
+		fenetre.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if i == 3 else origine_ssaa
+		# Le premier bloc de chaque niveau paie l'allocation du tampon multi-échantillons : trente images de pose.
+		for k in 30:
+			_tenir_scene()
+			await RenderingServer.frame_post_draw
+		var avant := Time.get_ticks_usec()
+		for k in 120:
+			_tenir_scene()
+			await RenderingServer.frame_post_draw
+			var maintenant := Time.get_ticks_usec()
+			sommes[i] += float(maintenant - avant) / 1000.0
+			comptes[i] += 1
+			avant = maintenant
+	fenetre.msaa_3d = origine
+	fenetre.screen_space_aa = origine_ssaa
+	var moyennes: Array[float] = []
+	for i in 4:
+		moyennes.append(float(sommes[i]) / maxf(float(comptes[i]), 1.0))
+	print("  MESURE loupe-corps-msaa image moyenne : sans %.3f ms, ×2 %.3f ms (+%.3f), ×4 %.3f ms (+%.3f), FXAA %.3f ms (+%.3f), %d images par niveau, fenêtre %s"
+		% [moyennes[0], moyennes[1], moyennes[1] - moyennes[0], moyennes[2], moyennes[2] - moyennes[0], moyennes[3],
+		moyennes[3] - moyennes[0], comptes[0], str(DisplayServer.window_get_size())])
+
+
 func _cout_du_voile() -> void:
 	var ui: Node = p._ui
 	var rect: ColorRect = ui.get("p1_dazzle")

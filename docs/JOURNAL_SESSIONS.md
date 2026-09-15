@@ -5645,3 +5645,17 @@ La lumière, son rayon et les paliers ne bougent pas. À la loupe : juste posée
 braise, un nuage orange doux qui couvre en partie les volutes, à juger au tour 2 ; témoins inchangés.
 Banc des gadgets : VERDICT OK, 0 échec, noir absolu tenu par les dix gadgets ; fusée au sol 149/159 appels de dessin.
 Lot complet vert à 17:42 : 111 suites, sans erreur de script, 412 s.
+
+**ISO10, lot 1, 1d — les corps, 2026-09-15 à partir de 17:45.** Session « Iso 1 Opus ». Mesuré à la loupe avant tout
+code de jeu. Anticrénelage :
+- le MSAA 3D de la fenêtre agit : 5 % de pixels intermédiaires aux transitions fortes du corps sans, 36 % à ×4, pour
+  un coût au niveau du bruit (+0,09 à +0,21 ms par image) ;
+- le FXAA ne fait rien sous `gl_compatibility`, et le MSAA d'une sous-vue changé en cours de partie n'y prend pas :
+  ×4 est posé à la création des vues scindées et sur la fenêtre à l'allumage de la vue iso.
+Piège payé : un relevé sur une seule ligne disait que le MSAA n'agissait pas — c'était une arête droite. Ombre de
+contact : un facteur du sol sous chaque pied, dont la force dans une vue est l'opacité du corps dans cette vue ; le
+premier réglage (demi-tuile, 0,55) disparaissait sous le corps, reposé à trois quarts de tuile et 0,5. Témoins : face
+du pilier et bord de l'ombre inchangés.
+Sol sous le pied de J1 : 85 % de sa luminance sans contact au premier réglage, 78 % posé (un peu flatteur : la prise
+est centrée 5 px plus haut). À l'œil, une tache sombre douce et discrète, à juger au tour 2.
+Lot complet vert à 18:07 : 111 suites, sans erreur de script, 415 s.

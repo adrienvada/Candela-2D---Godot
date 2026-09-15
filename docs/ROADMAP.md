@@ -25232,6 +25232,47 @@ Ce qui a été fait, dans l'ordre des preuves :
   lumières éteintes et 2D coupée) ; la fusée au sol coûte 149 appels de dessin sans images, 159 avec.
 - **Lot complet** (`./tools/run_suites.sh`, 17:42) : vert, 111 suites, sans erreur de script, 412 s.
 
+**1d — les corps : l'anticrénelage et l'ombre de contact.** Défaut 4 du verdict : « les corps sans anticrénelage ni
+ombre de contact (la lumière directionnelle reste pour après le test) ». Mesuré à la loupe avant tout code de jeu
+(`--plan=loupe-corps-msaa`, fenêtre native au Cloître).
+- **Anticrénelage : le MSAA 3D, ×4.** Mesure : part de pixels INTERMÉDIAIRES aux transitions fortes du centre de la
+  loupe du corps de J1 (un pixel entre deux voisins très différents, loin des deux).
+  - vue unique, `msaa_3d` de la fenêtre : 5 % sans, 22 % à ×2, 36 % à ×4 ;
+  - coût par image, blocs alternés de 120 images : +0,14 et +0,21 ms à ×2 et ×4 au premier passage, +0,03 et +0,09 ms au
+    second, sur 9,2 à 9,4 ms — au niveau du bruit ;
+  - le FXAA de la fenêtre ne fait rien sous `gl_compatibility` (4,5 %) ;
+  - le `msaa_3d` d'une sous-vue scindée changé en cours de partie n'y prend pas (6,9 → 5,8 %). Posé à la création des
+    `VueIso`, il y prend : 9,9 % au tour 1, 39 % en 1d.
+  - `Presentation3D.ANTICRENELAGE_3D` : posé à la création des deux sous-vues, et sur la fenêtre à l'allumage de la vue
+    iso (rendu à l'extinction : la vue de dessus n'a pas de 3D).
+  - ⚠️ **Piège de mesure** : un premier relevé sur UNE ligne concluait que le MSAA n'agissait pas — le bord y sautait de
+    22 à 103 à ×4 comme sans. C'était une arête DROITE, qu'aucun anticrénelage ne peut adoucir ; les corps voxel en
+    sont presque entièrement faits. Seules les diagonales (tête, arme, corps tourné) changent.
+  - ⚠️ **Le MSAA vaut pour toute la 3D, pas les seuls corps** : les arêtes des murs s'adoucissent aussi. Témoins
+    comparés à 1c (sans frange) : face du pilier, écart moyen 0,12 ; bord de l'ombre du pilier inchangé, les écarts de
+    la loupe tombant sur l'arête du mur éclairé au bord droit. Le bord du cône et l'ombre sont dessinés dans la
+    lightmap, que le MSAA ne touche pas.
+- **Ombre de contact : un facteur du sol, par vue.** `sol_iso.gdshader`, `contact_des_corps` : un disque plein sous le
+  pied jusqu'à 35 % du rayon, fondu jusqu'au rayon, passé par `pate_facteur` (un noir reste noir). Aucune direction.
+  - **Sa force dans une vue est l'opacité du corps DANS cette vue** (`_poser_contact`) : un corps qu'une vue ne voit
+    pas n'y pose aucune ombre, un corps caché ou un fantôme de killcam non plus. Le sol ne montre d'un corps que ce que
+    la vue en montre.
+  - Premier essai à une demi-tuile et 0,55 (le reste du pied des murs) : présente, mais lisible seulement amplifiée
+    six fois — le corps, large d'environ une tuile à l'écran, couvrait presque tout le disque. Posé à trois quarts de
+    tuile et 0,5 : plus bas, matière, joint et contact ensemble passeraient sous le plancher de 0,2
+    (0,72 × 0,6 × 0,5 = 0,215).
+  - **À la loupe** (corps de J1 sous sa torche, bande de sol juste sous le corps) : 54,7/255 sans contact, 46,7 au
+    premier réglage (85 %), 42,8 posé (78 %). À l'œil, une tache sombre douce autour des pieds, discrète. ⚠️ La prise
+    posée est centrée 5 px plus haut que les autres : une part de l'écart vient de ce décalage, le 78 % est un peu
+    flatteur. En écran scindé, au même cadrage exact : 53,0 au premier réglage, 43,7 posé. À juger au tour 2, sous le
+    cône et dans le noir.
+- **Contrôles** (`test_iso_beaute`) : le contact passe par `pate_facteur`, il est posé, le facteur combiné reste ≥ 0,2,
+  un noir reste noir ; la force vient de l'opacité par vue, éteinte pour un corps caché et un fantôme ; le MSAA est
+  posé à la création et sur la fenêtre, et rendu.
+- **Couleurs des corps** : non touchées. La planche E9 (gris plafonné, gris béton, noir) reste celle de la fiche.
+- Au tour 2 : les corps sous le cône et dans le noir, la loupe du pied de J1.
+- **Lot complet** (`./tools/run_suites.sh`, 18:07) : vert, 111 suites, sans erreur de script, 415 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

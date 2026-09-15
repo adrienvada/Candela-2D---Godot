@@ -58,6 +58,12 @@ uniform float ton_exposant = 1.0;
 uniform float dalle_px = 70.0;
 uniform float joint_dalle_px = 1.2;
 uniform float joint_dalle_reste : hint_range(0.0, 1.0) = 0.6;
+// ISO10, 1d — l'ombre de contact des corps, par vue. xy : le pied du corps en px de monde ; z : sa force, l'opacité
+// du corps DANS cette vue (0 l'éteint — un corps qu'une vue ne voit pas n'y pose aucune ombre). Rayon 0 : aucune.
+uniform vec3 contact_corps_1 = vec3(0.0);
+uniform vec3 contact_corps_2 = vec3(0.0);
+uniform float contact_corps_rayon_px = 0.0;
+uniform float contact_corps_reste : hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 monde;
 
@@ -96,6 +102,24 @@ void vertex() {
 	monde = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
+// Le facteur des deux ombres de contact en `p` : plein (`contact_corps_reste`) sous le pied jusqu'à 35 % du rayon,
+// puis un fondu jusqu'à 1 au rayon. Aucune direction : la lumière directionnelle reste pour après le test final.
+float contact_des_corps(vec2 p) {
+	if (contact_corps_rayon_px <= 0.0) {
+		return 1.0;
+	}
+	float f = 1.0;
+	for (int k = 0; k < 2; k++) {
+		vec3 corps = k == 0 ? contact_corps_1 : contact_corps_2;
+		if (corps.z <= 0.0) {
+			continue;
+		}
+		float d = length(p - corps.xy) / contact_corps_rayon_px;
+		f *= mix(1.0, contact_corps_reste, clamp(corps.z, 0.0, 1.0) * (1.0 - smoothstep(0.35, 1.0, d)));
+	}
+	return f;
+}
+
 void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 px = monde.xz;
@@ -132,5 +156,7 @@ void fragment() {
 	} else {
 		c = pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut);
 	}
+	// ISO10, 1d — sur la valeur affichée, comme la matière : un sol noir reste noir sous un corps.
+	c = pate_facteur(c, contact_des_corps(px));
 	ALBEDO = c;
 }

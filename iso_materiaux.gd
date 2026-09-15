@@ -155,6 +155,14 @@ const LAMBERT_PAS_PX := 35.0
 const CONTACT_PX := 6.0
 const CONTACT_RESTE := 0.55
 
+## ISO10, 1d — l'ombre de contact des corps au sol (`sol_iso.gdshader`, `contact_des_corps`) : un disque plein sous le
+## pied, fondu jusqu'à son rayon. Premier essai à une demi-tuile et 0,55 (le reste du pied des murs) : le corps, large
+## d'environ une tuile à l'écran, couvrait presque tout le disque, et l'écart ne se lisait qu'amplifié six fois. Trois
+## quarts de tuile et 0,5 : plus bas, matière, joint des dalles et contact ensemble passeraient sous le plancher de 0,2
+## que garde `test_iso_beaute` (0,72 × 0,6 × 0,5 = 0,215). À juger au tour 2 de loupe.
+const CONTACT_CORPS_RAYON_TUILES := 0.75
+const CONTACT_CORPS_RESTE := 0.5
+
 ## ISO7b — des dalles de deux tuiles au sol, joint fin ; la trame de 35 px de la lightmap neutralisée.
 const DALLE_PX := 70.0
 const JOINT_DALLE_PX := 1.2
@@ -189,6 +197,10 @@ static func accorder_sol(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("dalle_px", DALLE_PX)
 	materiau.set_shader_parameter("joint_dalle_px", JOINT_DALLE_PX)
 	materiau.set_shader_parameter("joint_dalle_reste", JOINT_DALLE_RESTE)
+	# Sans beauté, aucune ombre de contact : le sol d'ISO1. Les pieds et leur force sont posés à chaque image par la présentation.
+	materiau.set_shader_parameter("contact_corps_rayon_px",
+		CONTACT_CORPS_RAYON_TUILES * float(CandelaTileSet.TILE_SIZE.x) if active else 0.0)
+	materiau.set_shader_parameter("contact_corps_reste", CONTACT_CORPS_RESTE)
 
 
 ## La grille des murs d'une carte, pour que l'encre et le liseré ne tombent que sur les VRAIS

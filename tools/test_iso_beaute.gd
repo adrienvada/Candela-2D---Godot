@@ -148,6 +148,22 @@ func _le_sol() -> void:
 				eteints += 1
 	_check("sol : noir à lumière 0 sous toute matière", faux == 0, "%d non nuls" % faux)
 	_check("sol : un point éclairé reste éclairé", eteints == 0, "%d éteints" % eteints)
+	# ISO10, 1d — l'ombre de contact des corps : un facteur sur la valeur affichée (un noir reste noir), dont la force
+	# dans une vue est l'opacité du corps dans cette vue — le sol ne montre d'un corps que ce que la vue en montre.
+	var rayon := float(mat.get_shader_parameter("contact_corps_rayon_px"))
+	var reste := float(mat.get_shader_parameter("contact_corps_reste"))
+	_check("sol : l'ombre de contact des corps passe par pate_facteur", code.contains("c = pate_facteur(c, contact_des_corps(px));"))
+	_check("sol : l'ombre de contact est posée (rayon %.1f px, reste %.2f)" % [rayon, reste], rayon > 0.0 and reste > 0.0 and reste < 1.0)
+	var bas_sol := (1.0 - IsoMateriaux.FORCE_MATIERE_SOL * (1.0 - IsoMateriaux.PLANCHER)) * IsoMateriaux.JOINT_DALLE_RESTE * reste
+	_check("sol : matière, joint et contact ensemble laissent un facteur ≥ 0,2 (%.3f)" % bas_sol, bas_sol >= 0.2 - 1e-4)
+	_check("sol : sous un corps, un noir reste noir", IsoPate.facteur(Vector3.ZERO, reste) == Vector3.ZERO)
+	_check("présentation : la force de l'ombre est l'opacité du corps dans la vue",
+		pres.contains("forces[vue_id] = o") and pres.contains("_poser_contact(j, p, forces)"))
+	_check("présentation : un corps caché et un fantôme de killcam ne posent aucune ombre",
+		pres.contains("_poser_contact(j, Vector2.ZERO, [0.0, 0.0])") and pres.contains("_poser_contact(j, p, [0.0, 0.0])"))
+	_check("présentation : MSAA 3D posé à la création des vues scindées et sur la fenêtre en vue unique",
+		pres.contains("vue.msaa_3d = ANTICRENELAGE_3D") and pres.contains("get_window().msaa_3d = ANTICRENELAGE_3D")
+		and pres.contains("get_window().msaa_3d = _sauvegarde[\"msaa_fenetre\"]"))
 
 
 # ---------------------------------------------------------------------------
