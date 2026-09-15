@@ -24332,9 +24332,13 @@ pouvaient se faire qu'une fois tout réuni.
 - **L'icône de torche du HUD** : demandée à ISO Assets. Première livraison (`8c4e776`) refusée : passée par
   `tools/preparer_habillage.py icone`, son faisceau diffus sortait olive (299 pixels r ≈ g > b, par exemple
   128/120/83, contre 1 851 pixels chauds r > g > b), une tache verdâtre à 128 px. Seconde livraison
-  (`49ee29e`, disque halogène à bord net) acceptée : 4 203 pixels chauds, 22 olive, 0 vert. **Pas encore
-  posée** : la session cloud arrête ISO5 après ce commit, et confie la pose (`assets/ui/icones/torche.png`,
-  `MenuIcones.TORCHE`) à la relève d'ISO6 ; l'ancienne icône reste en place d'ici là.
+  (`49ee29e`, disque halogène à bord net) acceptée : 4 203 pixels chauds, 22 olive, 0 vert. ✅ **Posée par
+  la relève d'ISO6** (2026-09-15 vers 10:50, session « Iso 1 Opus ») : `git show 49ee29e:…/icone_torche.png`
+  puis `python3 tools/preparer_habillage.py icone` vers `assets/ui/icones/torche.png` (`MenuIcones.TORCHE`),
+  verdeur du fond 93, seuils 28 / 70, sujet (430, 422)–(1620, 1627) dans 2048². Relue au pixel après
+  préparation : 128×128 RGBA, 3 879 pixels opaques dont 3 877 chauds (r > g > b), 2 olive (|r − g| ≤ 8,
+  g > b + 10), 0 vert (g > r + 12). Les seuils de ce relevé ne sont pas ceux d'ISO5 : les chiffres ne se
+  comparent qu'à eux-mêmes, et le verdict (aucun vert, olive négligeable) tient des deux côtés.
 
 **La preuve** — `tools/test_iso_objets.gd` : les miroirs de chaque objet et du leurre portent l'encre des
 corps ; le matériau des nuages porte la température, et le shader l'applique. Lot complet vert.

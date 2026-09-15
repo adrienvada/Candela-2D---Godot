@@ -5364,3 +5364,12 @@ Laissés au test final, faute de banc : l'intensité des lueurs par `pate_facteu
 `pointe_arme()`. L'icône de torche : première livraison d'ISO Assets (`8c4e776`) refusée, faisceau olive
 (299 pixels r ≈ g > b) ; la seconde (`49ee29e`) mesurée bonne (4 203 chauds, 22 olive), posée par la
 relève d'ISO6. Deux imports, lot complet.
+
+**Relève d'ISO6 — l'icône de torche du HUD posée, 2026-09-15 vers 10:50.** Session « Iso 1 Opus », entrée
+dans le worktree d'ISO5 (`EnterWorktree`, branche `iso2-vues`, tête `a5ac4b8`, arbre propre) sur le brief
+`briefs/iso6_releve.md` de la session cloud (mandat d'Adrien de 05:00). Premier geste, commit à part : la
+seconde livraison d'ISO Assets (`49ee29e`) passée par `tools/preparer_habillage.py icone` vers
+`assets/ui/icones/torche.png` ; relue au pixel (3 877 chauds, 2 olive, 0 vert sur 3 879 opaques). La
+puce « icône » des raccords de la vague, qui la disait non posée, est corrigée. Avant le lot, un Godot
+ouvert dans ce même worktree (`-- --iso`, commande du jalon) : attendu qu'il se ferme, trois relevés
+`pgrep` vides. Deux imports, lot complet.
