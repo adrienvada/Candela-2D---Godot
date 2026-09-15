@@ -25562,6 +25562,19 @@ jour-là qu'ISO8 n'enregistre le zoom que réglé. `test_iso_camera` est repinc�
 `accorder_au_mode`) ; ses ×1,8 explicites (le calcul de tuile à l'écran, l'écriture d'un zoom réglé) restent des
 données de test. Lot complet vert à 22:17 : 112 suites, sans erreur de script, 434 s.
 
+#### L4 — choisir une carte enchaîne sur le choix des armes
+
+Ses mots : « quand on sélectionne une carte dans « choisir une carte » dans un menu, il faut que ça nous bascule sur le
+menu de sélection des armes ». Le flux d'avant : « CHANGER DE CARTE » ouvre la galerie dans le cadre de droite, la
+vignette pressée change la carte (`_on_map_chosen` → `_refresh_map_card`) et le curseur RESTE dans la galerie ; les
+armes vivent dans le panneau du salon, sous « PRÉPARER LE MATCH ». Désormais (`UI._enchainer_sur_les_armes`), la carte
+choisie, le cadre de droite passe au salon — l'affiche du match et le râtelier — et le curseur de J1 se pose sur la
+première arme de sa rangée. Seulement sur un écran qui offre les deux entrées (écran scindé, hôte en ligne, hôte en
+réseau local, entraînement : `_entree_preparer`, en miroir de `_entree_changer_carte`) : l'invité ne choisit pas la
+carte et rien ne bouge pour lui. `map_chosen` ne part que d'un choix du joueur (vignette pressée, code importé), jamais
+d'une restauration. Preuve : `test_audit_menus`, section « Choisir une carte enchaîne sur les armes », par le vrai
+chemin d'une vignette pressée sur les quatre écrans, et l'écran d'un invité inchangé. Sur le `ui.gd` d'avant, les quatre écrans échouent : la carte change, le cadre reste sur la galerie (`cartes`) et le curseur de J1 sur une vignette. Lot complet vert à 22:32 : 112 suites, sans erreur de script, 434 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

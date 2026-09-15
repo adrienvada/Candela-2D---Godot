@@ -922,6 +922,9 @@ var map_card_meta: Label
 ## partagé par tous les écrans qui la montrent ; ce dictionnaire lui dit vers
 ## quelle entrée du hub se rabattre, ou de ne rien faire.
 var _entree_changer_carte: Dictionary = {}
+## ISO11, L4 — l'entrée qui prépare le match (le râtelier des classes), par écran qui propose aussi de changer de
+## carte : choisir une carte y ENCHAÎNE (`_on_map_chosen`).
+var _entree_preparer: Dictionary = {}
 
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
@@ -4064,11 +4067,12 @@ func _build_hub_screens() -> void:
 		+ "en bas de l'écran.")
 
 	# --- 1v1 écrans scindés ---------------------------------------------------
-	scinde.add_child(hub.make_entry("PRÉPARER LE MATCH",
+	_entree_preparer[SCREEN_LOCAL] = hub.make_entry("PRÉPARER LE MATCH",
 		"À droite : l'affiche du match — la carte, et la classe de chacun —, puis "
 		+ "le choix de classe des deux joueurs, côte à côte. Le bouton qui lance "
 		+ "la manche est dessous, près de ce qu'il consomme.",
-		"", COLOR_GOLD, "", "", false, PANEL_SALON))
+		"", COLOR_GOLD, "", "", false, PANEL_SALON)
+	scinde.add_child(_entree_preparer[SCREEN_LOCAL])
 	_entree_changer_carte[SCREEN_LOCAL] = hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS)
@@ -4119,12 +4123,13 @@ func _build_hub_screens() -> void:
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
 	# ferait croire à un choix qui sera écrasé au lancement.
 	for h in [hote, hote_lan]:
-		h.add_child(hub.make_entry("PRÉPARER LE MATCH",
+		var id_h: String = SCREEN_HOST if h == hote else SCREEN_LOCAL_HOST
+		_entree_preparer[id_h] = hub.make_entry("PRÉPARER LE MATCH",
 			"Votre classe se choisit à droite, sous l'affiche du match. Ouvrez-y le "
 			+ "salon et transmettez ce qu'il affiche ; le bouton PRÊT attend sous la "
 			+ "liste des joueurs, et le match part quand les deux se sont déclarés.",
-			"", COLOR_GOLD, "", "", false, PANEL_SALON))
-		var id_h: String = SCREEN_HOST if h == hote else SCREEN_LOCAL_HOST
+			"", COLOR_GOLD, "", "", false, PANEL_SALON)
+		h.add_child(_entree_preparer[id_h])
 		_entree_changer_carte[id_h] = hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
 			"", COLOR_P1, "", "", false, PANEL_MAPS)
@@ -4170,11 +4175,12 @@ func _build_hub_screens() -> void:
 		+ "En attendant, un match privé vous fait jouer ; il ne compte pas.")
 
 	# --- S'entraîner ----------------------------------------------------------
-	entrainement.add_child(hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
+	_entree_preparer[SCREEN_TRAINING] = hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
 		"Seul, contre une cible fixe, sur la carte par défaut. La classe se "
 		+ "choisit à droite, et le bouton qui lance est dessous. Rien n'est "
 		+ "enregistré ni classé. Échap pour revenir.",
-		"", COLOR_GOLD, "", "", false, PANEL_SALON))
+		"", COLOR_GOLD, "", "", false, PANEL_SALON)
+	entrainement.add_child(_entree_preparer[SCREEN_TRAINING])
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
 		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
@@ -6819,6 +6825,22 @@ func _remettre_la_navigation_a_l_accueil() -> void:
 
 func _on_map_chosen(_map_id: String) -> void:
 	_refresh_map_card()
+	_enchainer_sur_les_armes()
+
+## ISO11, L4 — « quand on sélectionne une carte dans « choisir une carte », il faut que ça nous bascule sur le menu
+## de sélection des armes » (Adrien, test 1). La carte choisie, le cadre de droite passe au salon — l'affiche du
+## match et le râtelier des classes — et le curseur de J1 se pose sur la première arme de sa rangée. Seulement sur
+## un écran qui offre les deux entrées : un invité ne choisit pas la carte, et `_entree_preparer` n'a rien pour lui.
+## `map_chosen` ne part que d'un choix du joueur (une vignette pressée, un code importé), jamais d'une restauration.
+func _enchainer_sur_les_armes() -> void:
+	if hub == null:
+		return
+	var ecran := hub.current_id()
+	var preparer: Variant = _entree_preparer.get(ecran, null)
+	if not _entree_changer_carte.has(ecran) or not (preparer is Button and is_instance_valid(preparer)):
+		return
+	hub.reveal_entry(preparer)
+	_seed_focus(0)
 
 # ---------------------------------------------------------------------------
 # CONTRÔLES

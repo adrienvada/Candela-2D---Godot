@@ -5715,5 +5715,10 @@ Suite neuve `test_killcam_calme`. 598 images de rejeu mesurées, pas max 1,97 px
 **ISO11, L3 — le zoom du duel à ×1,5, 2026-09-15 au soir.** Session « Iso 1 Opus », branche `iso11-retours`. Décision
 ISO8 amendée par Adrien (« un peu moins zoomée ») : ×1,8 → ×1,5 par défaut et en ligne, killcam comprise ; décalage 0,25
 et portée ×0,75 inchangés, `--zoom=` garde la main. `test_iso_camera` repincé. Lot complet vert à 22:17 : 112 suites, sans erreur de script, 434 s.
+
+**ISO11, L4 — la carte choisie enchaîne sur les armes, 2026-09-15 au soir.** Session « Iso 1 Opus », branche
+`iso11-retours`. Choisir une vignette dans « CHANGER DE CARTE » passe le cadre de droite au salon et pose le curseur de
+J1 sur sa première arme, sur les quatre écrans où la carte se choisit ; l'invité n'est pas concerné. Preuve dans
+`test_audit_menus`. Sur le `ui.gd` d'avant, les quatre écrans échouent : la carte change, le cadre reste sur la galerie (`cartes`) et le curseur de J1 sur une vignette. Lot complet vert à 22:32 : 112 suites, sans erreur de script, 434 s.
 sur le code d'avant, saut de 210,7 px à la première image et pas de 396 px. Bande du photographe (`killcam-bande`,
 une prise toutes les ~0,37 s, pas trente images consécutives) : zoom 1,800 → 1,543 puis immobile. Lot complet vert à 22:06 : 112 suites, sans erreur de script, 435 s.

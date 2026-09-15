@@ -55,6 +55,7 @@ func _run() -> void:
 	_audit_panneaux_declares()
 	await _audit_personnalisation()
 	_audit_carte_appartient_a_l_hote()
+	await _audit_carte_enchaine_sur_les_armes()
 	await _audit_la_colonne_de_lecture()
 	await _audit_le_cadre_montre_vraiment()
 	await _audit_on_peut_lancer_une_recherche()
@@ -574,6 +575,53 @@ func _compte_commandes(racine: Control) -> int:
 ## structure du menu, elle ne demande ni réseau ni adversaire, et elle est
 ## déterministe — contrairement à tout ce qui s'échantillonne pendant une
 ## transition.
+## ISO11, L4 — « quand on sélectionne une carte dans « choisir une carte », il faut que ça nous bascule sur le menu de
+## sélection des armes » (Adrien, test 1). Par le VRAI chemin d'une vignette pressée (`MapGallery._on_tile_pressed`,
+## qui n'émet `map_chosen` que si la sélection change) : sur chaque écran qui offre de changer de carte, le cadre de
+## droite passe au salon et le curseur de J1 se pose sur une arme ; sur l'écran d'un invité, rien ne bouge.
+func _audit_carte_enchaine_sur_les_armes() -> void:
+	print("\n[Choisir une carte enchaîne sur les armes (ISO11, L4)]")
+	var map_data := root.get_node("MapData")
+	var depart := String(map_data.selected_map_id)
+	var ids: Array[String] = []
+	for carte: Dictionary in map_data.list_maps():
+		ids.append(String(carte.get("id", "")))
+	_check("au moins deux cartes au catalogue, pour changer de sélection", ids.size() >= 2, str(ids.size()))
+	if ids.size() < 2:
+		return
+	var hub = _ui.hub
+	var bascule := 0
+	for ecran: String in [_ui.SCREEN_LOCAL, _ui.SCREEN_HOST, _ui.SCREEN_LOCAL_HOST, _ui.SCREEN_TRAINING]:
+		if not hub.has_screen(ecran):
+			continue
+		hub.reset()
+		hub.push(ecran)
+		await process_frame
+		hub.reveal_entry(_ui._entree_changer_carte[ecran])
+		await process_frame
+		_check("%s : « changer de carte » montre la galerie" % ecran, hub.shown_panel() == _ui.PANEL_MAPS,
+			hub.shown_panel())
+		var autre: String = ids[0] if ids[0] != String(map_data.selected_map_id) else ids[1]
+		_ui.map_gallery._on_tile_pressed(autre)
+		await process_frame
+		var sur_une_arme: bool = _ui.p1_weapon_buttons.has(_ui.p1_focus)
+		_check("%s : la carte choisie, le cadre passe au salon et J1 est sur une arme" % ecran,
+			String(map_data.selected_map_id) == autre and hub.shown_panel() == _ui.PANEL_SALON and sur_une_arme,
+			"carte %s, panneau %s, curseur %s" % [map_data.selected_map_id, hub.shown_panel(), _ui.p1_focus])
+		bascule += 1
+	_check("les quatre écrans qui choisissent la carte ont été essayés", bascule == 4, str(bascule))
+
+	# L'invité ne choisit pas la carte : même appel, aucun effet.
+	hub.reset()
+	hub.push(_ui.SCREEN_JOIN)
+	await process_frame
+	var avant_invite: String = hub.shown_panel()
+	_ui._enchainer_sur_les_armes()
+	_check("écran d'un invité : l'enchaînement ne fait rien", hub.shown_panel() == avant_invite, hub.shown_panel())
+	map_data.select_map(depart)
+	hub.reset()
+
+
 func _audit_carte_appartient_a_l_hote() -> void:
 	print("\n[La carte appartient à l'hôte]")
 	var details: Dictionary = _ui.hub._entry_details
