@@ -320,12 +320,21 @@ func _ready() -> void:
 	_construire_la_scene()
 
 
+func _enter_tree() -> void:
+	# ISO3b — la zone morte des murs bas sur les disques des capteurs, poussée juste avant le rendu,
+	# comme `GameState._pousser_zone_morte` : les caméras des capteurs ont alors suivi leur corps.
+	if not RenderingServer.frame_pre_draw.is_connected(_pousser_zone_morte_capteurs):
+		RenderingServer.frame_pre_draw.connect(_pousser_zone_morte_capteurs)
+
+
 ## ⚠️ **Pendant la fermeture du jeu, on ne rappelle pas le jeu.** L'extinction rend ses
 ## réglages à `GameState` puis relance l'accord des vues ; à la fermeture, l'accord échange le
 ## `World2D` de la racine pendant que l'arbre se démonte, et Godot plante (signal 11,
 ## « Parameter "viewport" is null » dans `Control`) — toutes les fenêtres du banc en vue unique
 ## sortaient en code 134 après leur mesure, le 2026-09-14.
 func _exit_tree() -> void:
+	if RenderingServer.frame_pre_draw.is_connected(_pousser_zone_morte_capteurs):
+		RenderingServer.frame_pre_draw.disconnect(_pousser_zone_morte_capteurs)
 	if _actif:
 		_eteindre(true)
 
@@ -333,6 +342,9 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	var voulues := _vues_a_projeter()
 	if _actif and voulues != _vues:
+		# Pourquoi la vue change, dans le journal : une extinction muette au milieu d'un banc a déjà fait
+		# mesurer la vue de dessus sous le nom de l'iso (ISO3b, section « coût » du banc des murs bas).
+		print("[iso] les vues à projeter changent : %s" % raison_des_vues())
 		_eteindre()
 		if not voulues.is_empty():
 			bascules += 1
@@ -351,6 +363,21 @@ func _process(_delta: float) -> void:
 func _mode_iso_voulu() -> bool:
 	var reglages := get_node_or_null(^"/root/GameSettings")
 	return reglages != null and bool(reglages.get("mode_iso"))
+
+
+## Ce que `_vues_a_projeter` lit, en clair — imprimé à chaque changement de vues.
+func raison_des_vues() -> String:
+	var interface = _main.get("ui") if is_instance_valid(_main) else null
+	var conteneurs := []
+	if is_instance_valid(_main):
+		for vue: SubViewport in [_main.vp1, _main.vp2]:
+			var conteneur := vue.get_parent() as Control
+			conteneurs.append("%s=%s" % [vue.name, conteneur.visible if conteneur != null else "sans conteneur"])
+	return "mode_iso=%s, jeu=%s, joueurs=%s, caméras=%s, menu=%s, %s" % [
+		_mode_iso_voulu(), is_instance_valid(_main) and _main.is_inside_tree(),
+		is_instance_valid(_main) and is_instance_valid(_main.p1) and is_instance_valid(_main.p2),
+		is_instance_valid(_main) and _main.cam1 != null and _main.cam2 != null,
+		interface != null and bool(interface.get("_is_main_menu")), ", ".join(conteneurs)]
 
 
 ## Les vues à projeter, dans l'ordre `vp1`, `vp2` — vide si rien à faire. Le `visible`
@@ -534,6 +561,34 @@ func _tenir() -> void:
 			masques_reposes += 1
 	for j in [_main.p1, _main.p2]:
 		corps_recaches += _cacher_corps(j)
+
+
+## ISO3b — la zone morte des murs bas sur les disques des capteurs. Le capteur rend au corps iso la
+## lumière du sprite qu'il remplace ; ce sprite, accroupi dans la zone morte d'un muret, ne reçoit plus
+## la lumière venue de l'autre côté (MB3c, `player_enemy_light.gdshader` et `player_rim_light`) : le
+## disque la refuse de même, par les mêmes uniformes (`MursBasRendu.poser_corps`, jugé en son centre à
+## la hauteur de sa posture), convertis dans l'écran du CAPTEUR — celui où son `light()` lit
+## LIGHT_POSITION. Les murs sont ceux que `GameState` pousse à ses propres vues (`murs_bas`), jamais une
+## copie : le banc les retire pour mesurer « sans la règle », et les capteurs doivent suivre.
+func _pousser_zone_morte_capteurs() -> void:
+	if not _actif or _main == null or not is_instance_valid(_main):
+		return
+	var arene := _main.get("arena") as Node2D
+	if arene == null:
+		return
+	var murs: Array = _main.get("murs_bas") if "murs_bas" in _main else []
+	var joueurs := [_main.p1, _main.p2]
+	for id in _capteurs.size():
+		for j in (_capteurs[id] as Array).size():
+			var c = _capteurs[id][j]
+			if c == null or not is_instance_valid(c) or not is_instance_valid(joueurs[j]):
+				continue
+			var capteur := c as CapteurCorps
+			var ecran := capteur.get_final_transform() * capteur.get_canvas_transform()
+			var u := MursBasRendu.uniformes_de_vue(ecran * arene.global_transform, murs,
+				Rect2(Vector2.ZERO, Vector2(capteur.size)))
+			MursBasRendu.poser_corps(capteur.matiere() as ShaderMaterial, u,
+				ecran * (joueurs[j] as Node2D).global_position, bool(joueurs[j].get("accroupi")))
 
 
 func _suivre() -> void:
@@ -844,8 +899,9 @@ static func slug_du_corps(joueur: Node) -> String:
 ## vitesse, torche, et trois événements lus d'une image à l'autre — un temps de recharge qui repart
 ## (un tir), des points de vie qui baissent (un coup reçu), `dead` qui passe à vrai (la mort). `t` est le
 ## temps depuis le dernier de ces événements tant qu'il dure, sinon le temps qui passe (la cadence de
-## la marche et de la respiration). Accroupi et enjambement restent à zéro jusqu'à ISO3b, qui fusionne
-## la posture de `main`. ⚠️ Le corps d'un mort est caché comme son sprite (`visual.visible`) : la pose
+## la marche et de la respiration). Accroupi et enjambement viennent de la posture de `main` (ISO3b) :
+## `accroupi` lu sur le joueur, sa bascule remettant `t` à zéro comme un tir ; l'enjambement déduit de
+## la position (`progres_enjambement`). ⚠️ Le corps d'un mort est caché comme son sprite (`visual.visible`) : la pose
 ## de mort ne se voit donc que le temps de l'image où les deux ne sont pas encore d'accord.
 func etat_du_corps(j: int, joueur: Node) -> Dictionary:
 	var e: Dictionary = _etats_corps[j]
@@ -862,15 +918,35 @@ func etat_du_corps(j: int, joueur: Node) -> Dictionary:
 	e["hp"] = hp
 	e["recharge"] = recharge
 	e["mort"] = mort
+	# ISO3b — la posture de `main` (MB2), lue et jamais écrite. C'est aussi ce que le rejeu repose sur les
+	# joueurs pendant la killcam (`poser_posture`, depuis `Snapshot.pN_accroupi`) : un fantôme iso (ISO5)
+	# prendra la posture enregistrée sans rien de plus.
+	var accroupi := bool(joueur.get("accroupi"))
+	if accroupi != bool(e.get("accroupi", false)):
+		e["t_posture"] = maintenant
+	e["accroupi"] = accroupi
 	var tir := maintenant - float(e["t_tir"]) < DUREE_TIR_CORPS
 	var touche := maintenant - float(e["t_touche"]) < DUREE_TOUCHE_CORPS
+	var posture := maintenant - float(e.get("t_posture", -100.0)) < VoxelCorps.DUREE_TRANSITION_ACCROUPI
 	var t := maintenant
 	if mort:
 		t = maintenant - float(e["t_mort"])
-	elif tir or touche:
-		t = maintenant - maxf(float(e["t_tir"]) if tir else -100.0, float(e["t_touche"]) if touche else -100.0)
+	elif tir or touche or posture:
+		t = maintenant - maxf(maxf(float(e["t_tir"]) if tir else -100.0,
+			float(e["t_touche"]) if touche else -100.0), float(e["t_posture"]) if posture else -100.0)
 	var rotation := float(joueur.get("rotation"))
 	var vitesse = joueur.get("velocity")
+	# ISO3b — l'enjambement, un progrès 0..1 le long de la traversée du muret : `VoxelCorps` le veut
+	# « déjà avancé ». Déduit de la POSITION et des murs de la manche, par la règle même qui décide
+	# `enjambe` dans `player.gd` (`MursBas.chevauche_cercle`). ⚠️ Chez le client, `Player.enjambe`
+	# n'est jamais recalculé pour l'adversaire interpolé (`_regler_enjambement` n'est appelé que pour
+	# un joueur qui bouge) — signalé, hors périmètre ; sa position, elle, est à jour.
+	var v2: Vector2 = vitesse if vitesse is Vector2 else Vector2.ZERO
+	if v2.length() > 1.0:
+		e["direction"] = v2.normalized()
+	var direction: Vector2 = e.get("direction", Vector2(cos(rotation), sin(rotation)))
+	var enjambe := progres_enjambement((joueur as Node2D).global_position, direction,
+		MursBas.murs_de_la_manche, bool(joueur.get("enjambe")))
 	return {
 		"position": (joueur as Node2D).global_position,
 		"visee": Vector2(cos(rotation), sin(rotation)),
@@ -878,9 +954,38 @@ func etat_du_corps(j: int, joueur: Node) -> Dictionary:
 		"torche": bool(joueur.get("flashlight_on")),
 		"arme": (_voxels[j] as VoxelCorps).slug(),
 		"tir": tir, "touche": touche, "mort": mort,
-		"accroupi": false, "enjambe": 0.0,
+		"accroupi": accroupi, "enjambe": enjambe,
 		"t": t,
 	}
+
+
+## Le progrès d'un enjambement, 0..1 — 0 hors de tout muret. Sur un muret (le cercle d'encombrement le
+## chevauche : la règle de `player.gd`), la part parcourue du rectangle du muret élargi de ce rayon, le
+## long de `direction` : l'entrée à 0, la sortie à 1. Poussé contre un muret sans y être monté
+## (`pousse`), le geste commence. Fonction pure des positions : elle vaut pour le direct comme pour un
+## rejeu.
+const PROGRES_ENJAMBEMENT_MIN := 0.02
+
+
+static func progres_enjambement(position: Vector2, direction: Vector2, murs: Array, pousse: bool) -> float:
+	var d := direction.normalized() if direction.length_squared() > 0.0001 else Vector2.DOWN
+	for r: Rect2 in murs:
+		if not MursBas.chevauche_cercle(position, MursBas.RAYON_ENCOMBREMENT, [r]):
+			continue
+		var g := r.grow(MursBas.RAYON_ENCOMBREMENT)
+		var entree := -INF
+		var sortie := INF
+		for axe in 2:
+			if absf(d[axe]) < 1e-6:
+				continue
+			var t1 := (g.position[axe] - position[axe]) / d[axe]
+			var t2 := (g.end[axe] - position[axe]) / d[axe]
+			entree = maxf(entree, minf(t1, t2))
+			sortie = minf(sortie, maxf(t1, t2))
+		if is_inf(entree) or is_inf(sortie) or sortie <= entree:
+			return PROGRES_ENJAMBEMENT_MIN
+		return clampf(-entree / (sortie - entree), PROGRES_ENJAMBEMENT_MIN, 1.0)
+	return PROGRES_ENJAMBEMENT_MIN if pousse else 0.0
 
 
 ## L'opacité à laquelle la vue de dessus dessine, chez ce regardeur, le sprite que remplace ce corps :

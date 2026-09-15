@@ -49,14 +49,25 @@ var _mat_decor: Array = [null, null]
 var _ancien_sol := CanvasItemMaterial.new()
 
 
+## ISO3b — `--iso` : le même banc, vue isométrique du jeu allumée. Le sol et le décor de chaque vue
+## se rendent alors dans sa LIGHTMAP (`vp1`/`vp2`), que la vue 3D projette au sol : l'accord du sol s'y
+## lit tel quel, et la vue unique lit la lightmap de J1 au lieu de la racine. Le corps d'en face se lit
+## sur le CAPTEUR qui éclaire son corps voxel, plus sur son sprite, retiré des vues.
+var _iso := false
+
+
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
+	_iso = args.has("--iso")
 	var i := args.find("--captures")
 	if i >= 0 and i + 1 < args.size():
 		_dossier = args[i + 1]
 		DirAccess.make_dir_recursive_absolute(_dossier)
 	_ancien_sol.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	GameSettings.pilotage_externe = true
+	if _iso:
+		# Pour cette exécution seulement : rien ne s'écrit dans settings.cfg.
+		GameSettings.mode_iso = true
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	# macOS bride une fenêtre au second plan au point que `frame_post_draw` cesse
@@ -64,7 +75,7 @@ func _ready() -> void:
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
 	DisplayServer.window_move_to_foreground()
 	AudioServer.set_bus_mute(0, true)
-	print("=== Banc zone morte au rendu (MB3c) ===")
+	print("=== Banc zone morte au rendu (MB3c)%s ===" % (" — vue iso du jeu (ISO3b)" if _iso else ""))
 
 	_main = preload("res://main.tscn").instantiate()
 	add_child(_main)
@@ -104,6 +115,9 @@ func _ready() -> void:
 		_verifier("vue %d : le sol porte le shader de la zone morte" % (j + 1),
 			sol.material is ShaderMaterial and (sol.material as ShaderMaterial).shader == MursBasRendu.SHADER_SOL)
 	_verifier("les deux vues ont chacune leur matériau de sol", _mat_sol[0] != _mat_sol[1])
+	if _iso and not await _attendre_l_iso(true):
+		_finir()
+		return
 	_ui.visible = false
 	_eteindre_le_bandeau()
 
@@ -112,11 +126,16 @@ func _ready() -> void:
 	_main.vp2.get_parent().visible = false
 	_main._accorder_rendu_aux_vues()
 	await _images(5)
-	if _verifier("vue unique : la racine rend le duel", _main._rendu_racine == true):
+	if _iso:
+		if await _attendre_l_iso(false):
+			await _scenes("vue_unique", 0)
+	elif _verifier("vue unique : la racine rend le duel", _main._rendu_racine == true):
 		await _scenes("vue_unique", 0)
 	_main.vp2.get_parent().visible = true
 	_main._accorder_rendu_aux_vues()
 	await _images(5)
+	if _iso:
+		await _attendre_l_iso(true)
 
 	await _noir_absolu()
 	await _cout()
@@ -246,7 +265,7 @@ func _eteindre_le_bandeau() -> void:
 
 func _viewport(vue: String, j: int) -> Viewport:
 	if vue == "vue_unique":
-		return get_viewport()
+		return _main.vp1 if _iso else get_viewport()
 	return _main.vp1 if j == 0 else _main.vp2
 
 
@@ -283,6 +302,11 @@ func _scenes(vue: String, j: int) -> void:
 			await _images(4)
 			images[m[0]] = v.get_texture().get_image()
 			_sauver(images[m[0]], "%s_j%d_%s_%s" % [vue, j + 1, (scene[0] as String).replace(" ", "_"), m[0]])
+			if _iso:
+				var capteur := _capteur_d_en_face(j)
+				images[m[0] + "_capteur"] = capteur.get_texture().get_image() if capteur != null else null
+				_sauver(get_viewport().get_texture().get_image(),
+					"%s_j%d_%s_%s_iso" % [vue, j + 1, (scene[0] as String).replace(" ", "_"), m[0]])
 			var apres := v.get_final_transform() * v.get_canvas_transform()
 			if not apres.is_equal_approx(ecran):
 				_echouer("%s J%d « %s » : la vue a bougé pendant les captures" % [vue, j + 1, scene[0]])
@@ -400,6 +424,9 @@ func _accord_sol(vue: String, j: int, nom: String, images: Dictionary, xf: Trans
 
 
 func _accord_corps(vue: String, j: int, scene: Array, images: Dictionary, centre: Vector2) -> void:
+	if _iso:
+		_accord_capteur(vue, j, scene, images)
+		return
 	var attendu: bool = scene[3]
 	var sans_regle := _max_autour(images["sans_regle"], centre, 2) > SEUIL
 	var lu := _max_autour(images["regle"], centre, 2) > SEUIL
@@ -407,6 +434,81 @@ func _accord_corps(vue: String, j: int, scene: Array, images: Dictionary, centre
 		vue, j + 1, scene[0], sans_regle, lu, attendu])
 	_verifier("%s J%d « %s » : éclairé sans la règle (scène bien posée)" % [vue, j + 1, scene[0]], sans_regle)
 	_verifier("%s J%d « %s » : corps %s" % [vue, j + 1, scene[0], "éclairé" if attendu else "noir"], lu == attendu)
+
+
+## ISO3b — le corps d'en face tel que la vue iso l'éclaire : le disque de son capteur, lu sur tout son
+## rayon (la lampe l'éclaire de son côté), au lieu du centre de son sprite, retiré des vues.
+func _accord_capteur(vue: String, j: int, scene: Array, images: Dictionary) -> void:
+	var attendu: bool = scene[3]
+	var a = images.get("sans_regle_capteur")
+	var b = images.get("regle_capteur")
+	if a == null or b == null:
+		_echouer("%s J%d « %s » : pas de capteur pour le corps d'en face" % [vue, j + 1, scene[0]])
+		return
+	var sans: Image = a
+	var avec: Image = b
+	var centre := Vector2(sans.get_width(), sans.get_height()) * 0.5
+	var rayon := int(CapteurCorps.RAYON_PX * float(CapteurCorps.TAILLE) / CapteurCorps.MONDE_PX) - 2
+	var m_sans := _max_autour(sans, centre, rayon)
+	var m_avec := _max_autour(avec, centre, rayon)
+	print("ACCORD_CAPTEUR vue=%s joueur=%d scene=« %s » sans_regle=%d/255 regle=%d/255 attendu=%s" % [
+		vue, j + 1, scene[0], roundi(m_sans * 255.0), roundi(m_avec * 255.0), "éclairé" if attendu else "noir"])
+	_verifier("%s J%d « %s » : capteur éclairé sans la règle (scène bien posée)" % [vue, j + 1, scene[0]],
+		m_sans > SEUIL)
+	_verifier("%s J%d « %s » : capteur %s, donc le corps voxel" % [vue, j + 1, scene[0],
+		"éclairé" if attendu else "noir"], (m_avec > SEUIL) == attendu)
+
+
+func _capteur_d_en_face(j: int) -> CapteurCorps:
+	var iso := Presentation3D.instance()
+	if iso == null:
+		return null
+	return iso.capteurs()[j][1 - j] as CapteurCorps
+
+
+## ISO3b — attend la vue iso dans la disposition voulue, puis vérifie ce que le banc suppose d'elle :
+## les murets extrudés à leur hauteur, et la zone morte poussée à la lightmap.
+func _attendre_l_iso(scinde: bool) -> bool:
+	var allumee := await _attendre(func() -> bool:
+		var iso := Presentation3D.instance()
+		return iso != null and bool(iso.get("_actif")) and bool(iso.get("_scinde")) == scinde, 5.0)
+	if not _verifier("vue iso allumée %s" % ("en écran scindé" if scinde else "en vue unique"), allumee):
+		return false
+	await _images(5)
+	var iso := Presentation3D.instance()
+	var murs := iso.get_node_or_null("SceneIso/Murs")
+	var bas := 0
+	var justes := 0
+	var h := MapGeometry.HAUTEUR_MUR_BAS * CandelaTileSet.TILE_SIZE.y
+	if murs != null:
+		for boite in murs.get_children():
+			if String(boite.name).begins_with("MurBas"):
+				bas += 1
+				if is_equal_approx((boite as Node3D).scale.y, h):
+					justes += 1
+	print("ISO etat=%s murets=%d hauteur=%.1f px" % [iso.etat.replace("\n", " | "), bas, h])
+	_verifier("vue iso : %d murets extrudés à %.2f tuile" % [_murs.size(), MapGeometry.HAUTEUR_MUR_BAS],
+		bas == _murs.size() and justes == bas)
+	for pid in 2:
+		if iso.parent_ecran(pid) == null:
+			continue
+		var monde: Node = _main.call("_viewport_du_monde", pid) if _main.has_method("_viewport_du_monde") \
+			else _main._viewport_du_joueur(pid)
+		print("ISO J%d : zone morte poussée à %s" % [pid + 1, monde.name if monde != null else "rien"])
+	# Les appels de dessin de la vue iso sur la carte des murets, et la poussée de la zone morte aux
+	# capteurs — relevés ici, pendant que la vue tient (voir `_cout`).
+	var appels := []
+	for k in 60:
+		await RenderingServer.frame_post_draw
+		appels.append(int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+	appels.sort()
+	var t0 := Time.get_ticks_usec()
+	for k in 1000:
+		iso._pousser_zone_morte_capteurs()
+	print("ISO_APPELS vue=%s appels=%d poussee_capteurs=%.1f µs par image (%d murs, médiane de 60 images)" % [
+		"scinde" if scinde else "unique", appels[appels.size() / 2],
+		float(Time.get_ticks_usec() - t0) / 1000.0, (_main.murs_bas as Array).size()])
+	return true
 
 
 # ─── 4 : noir absolu ─────────────────────────────────────────────────────────
@@ -483,6 +585,16 @@ func _cout() -> void:
 		_main._pousser_zone_morte()
 	print("COUT poussee_uniformes=%.1f µs par image (40 murs, deux vues, six matériaux)" % [
 		float(Time.get_ticks_usec() - t0) / 1000.0])
+	if _iso:
+		# ⚠️ **Le coût ne dit rien de l'iso si la vue iso est éteinte.** Premier passage d'ISO3b : le jeu
+		# revenait au menu au début de cette section (`[iso] … menu=true`), et ses 41 appels de dessin
+		# mesuraient le menu. Les appels et la poussée des capteurs de la vue iso se relèvent donc
+		# pendant que la vue tient (`ISO_APPELS`, dans `_attendre_l_iso`) ; ici, on dit seulement si elle
+		# tenait encore.
+		var iso := Presentation3D.instance()
+		var active := iso != null and bool(iso.get("_actif"))
+		print("COUT vue_iso=%s%s" % ["allumée" if active else "éteinte",
+			"" if active or iso == null else " — " + iso.raison_des_vues()])
 	for j in 2:
 		_mode(j, true, false)
 

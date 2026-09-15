@@ -4821,3 +4821,17 @@ pas — `tools/test_iso_vues.gd` a rougi sur ses deux contrôles de miroir (215 
 fausses) ; les miroirs la prennent, inerte tant qu'ISO3b n'en pose pas les uniformes. Deux imports
 sans erreur, puis le lot complet vert au second passage (394 s ; le premier, 391 s, n'avait rougi
 que sur ces deux contrôles de miroir)..
+
+**ISO3b, nuit du 2026-09-15 — les murs bas dans la vue iso.** Sur la fusion `93fc10c`. Murets
+extrudés dès la fusion, prouvés sur la carte d'essai. `GameState._viewport_du_monde` : en iso, la
+zone morte se pousse à la lightmap et non à l'écran 3D — une perte sans conflit de la fusion. Au
+banc, avant la correction : 9 scène(s) sur 9 où le sol de la lightmap ne suit pas la règle (la pire
+: ecran scinde, J1, « accroupi a L-12 » : sol 600/733 juste (97 points en zone morte, 0 allumés par
+la règle, hors zone 92/255 de l'ancien)) ; après : 0 sur 9.
+`Presentation3D._pousser_zone_morte_capteurs` : les quatre capteurs reçoivent la zone morte dans
+leur écran. `etat_du_corps` : accroupi et sa bascule, enjambement déduit de la position
+(`progres_enjambement`). `tools/test_iso_murs_bas.gd` neuve (30 vérifications, rouge sans la
+correction) ; `tools/banc_murs_bas.gd` gagne `--iso` ; planche `docs/iso/planche_iso3b.jpg`. Au banc
+--iso, après la correction : OK, 9 scène(s) de sol justes sur 9, capteurs d'en face conformes à la
+règle. Paquet H-ISO3 envoyé en delta. Signalé : `Player.enjambe` jamais recalculé pour l'adversaire
+interpolé chez le client.

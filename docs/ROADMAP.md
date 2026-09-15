@@ -3185,6 +3185,21 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Deux branches justes, une fusion fausse, et aucun conflit (2026-09-15)
+
+`GameState._viewport_du_joueur` a appris la vue iso sur `iso2-vues` (ISO2) : l'écran d'un joueur est
+sa vue 3D, et ses calques d'écran y vont. Sur `main`, la zone morte des murs bas (MB3c) s'est appuyée
+sur la même fonction pour une autre question : le viewport où `light()` lit LIGHT_POSITION. Hors iso,
+les deux réponses coïncident ; en iso, le sol se rend dans la lightmap, et la zone morte tombait
+ailleurs. La fusion `93fc10c` n'a touché aucune ligne commune, et aucune suite existante ne l'a vu :
+seuls le contrôle du repère de `tools/test_iso_murs_bas.gd` et le banc au rendu l'ont dit. Même
+fusion, même famille : le shader miroir d'un capteur a gardé l'ancien `light()` pendant que sa source
+prenait la règle — rattrapé, lui, par la comparaison de `tools/test_iso_vues.gd`.
+
+**Règle : une fonction qu'on étend pour une nouvelle vue dit à QUELLE question elle répond, et une
+fusion relit chaque appelant neuf, de chaque côté, contre ce sens-là.** `_viewport_du_monde` et
+`_viewport_du_joueur` sont désormais deux fonctions.
+
 ### Une propriété à deux écrivains se lit là où le rendu la lit (2026-09-15)
 
 `visual_enemy.modulate.a` était écrite par le brouillage dans `_physics_process`, puis par la suie
@@ -21412,7 +21427,7 @@ lance sans demande explicite.
 | ISO0 | Étude et prototypes ✅ ; **ISO0.b** ✅ banc livré, série d'Adrien prise et **H15 tranché : go** (2026-09-14) | 2 | Opus 5 / high |
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — ✅ jalon H-ISO2 répondu le 2026-09-14 ; **ISO2b** 🟡 (effacement des corps, silhouette de soi) sur `iso2-vues`, en attente du jalon H-ISO2b | 4 | Fable 5.1 / xhigh |
-| ISO3 | Corps voxel des dix classes, matériau d'équité — vagues 0 à 2 sur `iso-corps` (ISO Corps), **ISO3a** ✅ les corps voxel dans la vue iso (`iso2-vues`, 2026-09-15) ; ISO3b 🟡 (murs bas, postures, killcam) | 4 | Sonnet 5 / high |
+| ISO3 | Corps voxel des dix classes, matériau d'équité — vagues 0 à 2 sur `iso-corps` (ISO Corps), **ISO3a** ✅ les corps voxel dans la vue iso (`iso2-vues`, 2026-09-15) ; **ISO3b** ✅ murs bas, zone morte et postures (`iso2-vues`, 2026-09-15) | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
 | ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
 | ISO6 | Outils : banc `--iso`, photographe, F3, diagnostic, `ConditionsDeMatch` | 2 | Sonnet 5 / medium |
@@ -22690,6 +22705,212 @@ et reliaison au changement de classe ; aucune `Light3D`, aucun nœud 3D sous le 
 
 **Ce qu'ISO3a ne fait pas** : les postures accroupi et enjambement, et la killcam des fantômes voxel
 (ISO3b, après la fusion de `main`) ; les objets debout (ISO4) ; la killcam en iso (ISO5).
+
+### ISO3b — les murs bas, leur zone morte et les postures dans la vue iso ✅ (commitée le 2026-09-15, jugée au jalon H-ISO5)
+
+Brief long d'Adrien (2026-09-14, 23:45), étape D. Branche locale `iso2-vues`, sur la fusion
+`93fc10c` de `main` (murs bas et accroupi, `cd1197c`). Non poussée.
+
+**Pourquoi.** Les murs bas sont du gameplay : ils valent quelle que soit la vue. La vue iso doit en
+hériter sans rien réécrire — les murets à leur hauteur, la zone morte telle que la vue de dessus la
+dessine, et la posture sur les corps voxel.
+
+**Ce qui existe.**
+- **Les murets à 0,40 tuile, les murs hauts à 1,25.** `IsoGeometrie` les extrudait dès la fusion :
+  ses hauteurs se lisent dans `map_geometry.gd` (`HAUTEUR_MUR_BAS`, `HAUTEUR_MUR_HAUT`), et
+  `Kind.LOW_WALLS` y ajoute une seconde sorte de murs. Chaque muret iso couvre exactement le
+  rectangle que la balle et la lumière lisent (`MapGeometry.rects_monde`).
+- **La zone morte dans la lightmap** (`GameState._viewport_du_monde`). La zone morte des murs bas se
+  calcule dans le `light()` du sol et du décor, en espace écran ; en vue iso, ce sol se rend dans la
+  lightmap du joueur (`vp1`/`vp2`), que la vue 3D projette au sol. `_pousser_zone_morte` se règle
+  désormais sur ce viewport-là, et non plus sur l'écran 3D. Au banc, avant la correction : 9
+  scène(s) sur 9 où le sol de la lightmap ne suit pas la règle (la pire : ecran scinde, J1, «
+  accroupi a L-12 » : sol 600/733 juste (97 points en zone morte, 0 allumés par la règle, hors zone
+  92/255 de l'ancien)) ; après : 0 sur 9.
+- **La zone morte sur les capteurs** (`Presentation3D._pousser_zone_morte_capteurs`, juste avant le
+  rendu). Les shaders miroirs portent la règle depuis la fusion ; la présentation leur pousse les
+  uniformes de `MursBasRendu`, dans l'écran de chaque capteur, jugés au centre du corps et à la
+  hauteur de sa posture. Un accroupi caché derrière un muret en vue de dessus est noir sur son corps
+  iso.
+- **Les postures sur les corps voxel** (`etat_du_corps`). `accroupi` est lu sur le joueur, et sa
+  bascule remet `t` à zéro pour la transition de 150 ms. L'enjambement est un progrès 0..1 le long
+  de la traversée du muret, déduit de la position par la règle même de `player.gd`
+  (`progres_enjambement`, `MursBas.chevauche_cercle`).
+- **La killcam** : le rejeu repose la posture enregistrée sur les joueurs (`poser_posture`, depuis
+  `Snapshot.pN_accroupi`), et l'enjambement se déduit des positions rejouées. Les fantômes voxel
+  d'ISO5 prendront donc la posture sans rien de plus ; d'ici là, la killcam n'a pas de corps iso.
+
+**Ce que la suite prouve** — `tools/test_iso_murs_bas.gd` (neuve, dans `run_suites.sh`), 30
+vérifications, sur la carte d'essai : les murets et les murs hauts à leur hauteur et sur leurs
+rectangles ; en iso, la zone morte poussée à la lightmap et reçue par son sol et son décor dans son
+repère ; les quatre capteurs dans le leur ; la règle dans les shaders miroirs ; accroupi, bascule,
+enjambement et posture reposée par le rejeu ; `progres_enjambement` croissant, dans les deux sens ;
+aucune `Light3D`. **Rouge sans la correction du viewport du monde** (4 contrôle(s) rouges sans elle
+: « J1 : en iso, l'écran est la vue 3D, et le monde 2D se rend dans sa lightmap » ; « J2 : en iso,
+l'écran est la vue 3D, et le monde 2D se rend dans sa lightmap » ; « J1 : le sol et le décor de sa
+lightmap reçoivent la zone morte dans le repère de la lightmap »), verte avec.
+
+**Ce que le banc prouve** (`tools/banc_murs_bas.gd --iso`, carte d'essai, écran scindé puis vue
+unique) :
+  - ecran scinde, J1, « accroupi a L-12 » : sol 733/733 juste (97 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J1, « accroupi a L+12 » : sol 733/733 juste (126 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J1, « debout a L-12 » : sol 733/733 juste (97 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J2, « accroupi a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J2, « accroupi a L+12 » : sol 754/754 juste (127 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J2, « debout a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - vue unique, J1, « accroupi a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - vue unique, J1, « accroupi a L+12 » : sol 754/754 juste (127 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - vue unique, J1, « debout a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés par la
+    règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J1, « accroupi a L-12 » : capteur d'en face 0/255 (sans la règle 187/255), attendu
+    noir.
+  - ecran scinde, J1, « accroupi a L+12 » : capteur d'en face 172/255 (sans la règle 172/255),
+    attendu éclairé.
+  - ecran scinde, J1, « debout a L-12 » : capteur d'en face 187/255 (sans la règle 187/255), attendu
+    éclairé.
+  - ecran scinde, J2, « accroupi a L-12 » : capteur d'en face 0/255 (sans la règle 187/255), attendu
+    noir.
+  - ecran scinde, J2, « accroupi a L+12 » : capteur d'en face 172/255 (sans la règle 172/255),
+    attendu éclairé.
+  - ecran scinde, J2, « debout a L-12 » : capteur d'en face 187/255 (sans la règle 187/255), attendu
+    éclairé.
+  - vue unique, J1, « accroupi a L-12 » : capteur d'en face 0/255 (sans la règle 187/255), attendu
+    noir.
+  - vue unique, J1, « accroupi a L+12 » : capteur d'en face 172/255 (sans la règle 172/255), attendu
+    éclairé.
+  - vue unique, J1, « debout a L-12 » : capteur d'en face 187/255 (sans la règle 187/255), attendu
+    éclairé.
+  - Noir absolu, lightmap de J1, toutes lumières éteintes : 0/255 avec la règle, 0/255 sans (témoin
+    0/255).
+  - Noir absolu, lightmap de J2, toutes lumières éteintes : 0/255 avec la règle, 0/255 sans (témoin
+    0/255).
+  - Coût (ordre de grandeur, pas un relevé au protocole) : ancien, 0 murs, 119 appels, 4.68 ms ;
+    regle_0_mur, 0 murs, 119 appels, 4.84 ms ; regle_carte_5, 5 murs, 117 appels, 4.38 ms ;
+    regle_40_murs, 40 murs, 117 appels, 8.53 ms.
+  - Poussée de la zone morte aux matériaux de sol et de décor des deux vues : 34.7 µs par image (40
+    murs).
+  - Vue iso tenue, carte d'essai (médiane de 60 images) — écran scindé, HUD affiché : 184 appels,
+    poussée des capteurs 14.4 µs par image (5 murs) ; vue unique, HUD caché : 60 appels, poussée des
+    capteurs 7.9 µs par image (5 murs) ; écran scindé, HUD caché : 119 appels, poussée des capteurs
+    14.7 µs par image (5 murs).
+  - Vue iso : 5 murets extrudés à 14.0 px.
+  - Verdict du banc : OK (0 échec(s)) ; avant la correction : ECHEC (15 échec(s)).
+
+**Pièges d'ISO3b.**
+- ⚠️ **Deux branches ont chacune eu raison, et leur fusion avait tort, sans conflit.**
+  `_viewport_du_joueur` a appris l'iso à ISO2 : les calques d'écran d'un joueur vont à sa vue 3D. La
+  zone morte de MB3c s'est appuyée sur cette même fonction pour dire « le viewport où `light()` lit
+  LIGHT_POSITION » — vrai hors iso, faux en iso, où le monde 2D se rend dans la lightmap. Aucune
+  ligne ne se touchait ; seul un contrôle au rendu pouvait le voir. Règle : **« l'écran d'un joueur
+  » et « le viewport de son monde » sont deux questions ; en iso elles ont deux réponses.**
+- ⚠️ **Le foyer neuf qui rejoue l'intro a mordu une fois de plus** (déjà dans « Pièges connus »).
+  Les premiers passages de `banc_murs_bas.gd --iso` tournaient dans un `HOME` temporaire sans
+  `intro_vue=true` : l'intro narrative jouait par-dessus le jeu, les captures de l'écran iso
+  montraient ses illustrations, et elle rendait la main au menu au début de la section « coût » —
+  que j'ai d'abord crue défectueuse. Les accords au sol et aux capteurs, lus sur les lightmaps et
+  les capteurs, n'en dépendaient pas ; les captures d'écran et les appels de dessin ont été repris,
+  intro sautée. La raison d'une extinction de la vue iso s'imprime désormais
+  (`Presentation3D.raison_des_vues`) : c'est elle qui a dit `menu=true`.
+- ⚠️ **Un miroir de shader se désynchronise sans conflit.** `player_enemy_light` a pris la zone
+  morte sur `main`, le miroir du capteur non ; c'est le contrôle de `test_iso_vues.gd`, qui compare
+  les deux `light()`, qui l'a dit au premier lot de la fusion.
+
+**Ce qu'ISO3b ne fait pas** : les fantômes voxel de la killcam (ISO5) ; les objets debout (ISO4) ;
+une correction de `Player.enjambe` chez le client, signalée.
+
+#### Paquet H-ISO3 — envoyé en delta, jugé au jalon H-ISO5
+
+À lancer (écran scindé : deux manettes, ou clavier + manette) :
+```
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" -- --iso
+```
+
+La carte d'essai des murs bas (cinq murets, 22 cases), à importer par code de partage dans l'éditeur
+de cartes :
+```
+CANDELA-H4sIAAAAAAAAE1WRzW7TQBSFX8WaFUhTNPfY4/hnRRHLbiisI7cx1JKbVLZDgKoSD8ET8iTcmXu6IIn05eRaJ9+deXbDeXs4La5zHx6G4zaNS3Hz5dNtcf3+tnhzcy1vnXf3yzhs42F/3u71OQTUV6G5CuVniV2MXQl95ut8yi2lLz3qvvSVIRpqw87QGFqDBFJIkGwSVgm7hGXCNmGdsA/sA/vAPrAP7AP7wD6wD6lPV/q2TIf9Ov0aXffsfjjd813w7qd9efFuOui+QV93+tbn59NlfxnmedWf1aXxsdfVWi8J6ZMpJBKrtEzVJ9M0TxQSpO7VN8k56l8ch0e1cR/XdZiKv7//FI/nZS3uhlVn69NwOe6fhLY1ZaXOspyCU8T/x9s0j9y1zKPv47JOp6PrqpRe1wo++BK9uhpg0Evv0WYEvfgcqhyihZhDbaHOYWdhl0NjocmhtdDmoEeVU2Y+PotiEYywSBExE6GKmItQRsxGqCPmIxQSMxIqiTkJpcSsQCuYFWgFswKtYFagFcwKtIJZgVYwK9AKZgVawaxAK5hVOvN8/ryVMl2Le/kH3v2BedUDAAA=
+```
+
+Planches :
+- docs/iso/planche_iso2b.jpg : effacement et silhouette de soi.
+- docs/iso/planche_iso3a.jpg : les corps voxel des dix classes.
+- docs/iso/planche_iso3b.jpg : murets, zone morte dans la lightmap et sur les capteurs.
+
+Mesures :
+  - ecran scinde, J1, « accroupi a L-12 » : sol 733/733 juste (97 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J1, « accroupi a L+12 » : sol 733/733 juste (126 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J1, « debout a L-12 » : sol 733/733 juste (97 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J2, « accroupi a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J2, « accroupi a L+12 » : sol 754/754 juste (127 points en zone morte, 0 allumés
+    par la règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J2, « debout a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - vue unique, J1, « accroupi a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - vue unique, J1, « accroupi a L+12 » : sol 754/754 juste (127 points en zone morte, 0 allumés par
+    la règle, hors zone 0/255 de l'ancien).
+  - vue unique, J1, « debout a L-12 » : sol 754/754 juste (98 points en zone morte, 0 allumés par la
+    règle, hors zone 0/255 de l'ancien).
+  - ecran scinde, J1, « accroupi a L-12 » : capteur d'en face 0/255 (sans la règle 187/255), attendu
+    noir.
+  - ecran scinde, J1, « accroupi a L+12 » : capteur d'en face 172/255 (sans la règle 172/255),
+    attendu éclairé.
+  - ecran scinde, J1, « debout a L-12 » : capteur d'en face 187/255 (sans la règle 187/255), attendu
+    éclairé.
+  - ecran scinde, J2, « accroupi a L-12 » : capteur d'en face 0/255 (sans la règle 187/255), attendu
+    noir.
+  - ecran scinde, J2, « accroupi a L+12 » : capteur d'en face 172/255 (sans la règle 172/255),
+    attendu éclairé.
+  - ecran scinde, J2, « debout a L-12 » : capteur d'en face 187/255 (sans la règle 187/255), attendu
+    éclairé.
+  - vue unique, J1, « accroupi a L-12 » : capteur d'en face 0/255 (sans la règle 187/255), attendu
+    noir.
+  - vue unique, J1, « accroupi a L+12 » : capteur d'en face 172/255 (sans la règle 172/255), attendu
+    éclairé.
+  - vue unique, J1, « debout a L-12 » : capteur d'en face 187/255 (sans la règle 187/255), attendu
+    éclairé.
+  - Noir absolu, lightmap de J1, toutes lumières éteintes : 0/255 avec la règle, 0/255 sans (témoin
+    0/255).
+  - Noir absolu, lightmap de J2, toutes lumières éteintes : 0/255 avec la règle, 0/255 sans (témoin
+    0/255).
+  - Coût (ordre de grandeur, pas un relevé au protocole) : ancien, 0 murs, 119 appels, 4.68 ms ;
+    regle_0_mur, 0 murs, 119 appels, 4.84 ms ; regle_carte_5, 5 murs, 117 appels, 4.38 ms ;
+    regle_40_murs, 40 murs, 117 appels, 8.53 ms.
+  - Poussée de la zone morte aux matériaux de sol et de décor des deux vues : 34.7 µs par image (40
+    murs).
+  - Vue iso tenue, carte d'essai (médiane de 60 images) — écran scindé, HUD affiché : 184 appels,
+    poussée des capteurs 14.4 µs par image (5 murs) ; vue unique, HUD caché : 60 appels, poussée des
+    capteurs 7.9 µs par image (5 murs) ; écran scindé, HUD caché : 119 appels, poussée des capteurs
+    14.7 µs par image (5 murs).
+  - Vue iso : 5 murets extrudés à 14.0 px.
+  - Verdict du banc : OK (0 échec(s)) ; avant la correction : ECHEC (15 échec(s)).
+
+Ce qu'il faudra regarder, en jeu :
+1. Les corps voxel de chaque classe, sous sa torche et dans celle de l'autre. Le porteur doit se
+   trahir comme en vue de dessus.
+2. S'accroupir derrière un muret face à la torche adverse : le corps doit rester noir dans la zone
+   morte, et s'éclairer un pas au-delà, ou debout.
+3. Enjamber un muret : le geste, et le corps qui ne traverse pas le muret de façon gênante.
+4. Dans la suie et ébloui : l'adversaire s'efface. Dans le noir : sa propre silhouette reste, celle
+   de l'autre non.
+5. La killcam n'a pas encore de corps iso : les fantômes voxel viennent à ISO5.
+
+Signalé, hors périmètre :
+- player.gd n'expose ni tir ni coup reçu.
+- Chez le client, Player.enjambe n'est jamais recalculé pour l'adversaire interpolé.
+- La marche de l'adversaire interpolé en ligne reste à vérifier.
 
 ### Ce qui attend Adrien — jalon H15
 

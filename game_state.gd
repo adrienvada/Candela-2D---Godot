@@ -5296,11 +5296,28 @@ func _viewport_du_joueur(pid: int) -> Node:
 	return vue
 
 
+## Le viewport où se rend le MONDE 2D du joueur `pid` — son sol, son décor, les lumières qui les
+## éclairent : celui dont `light()` lit LIGHT_POSITION. Hors vue iso, c'est celui qui rend son écran
+## (`_viewport_du_joueur`).
+##
+## ⚠️ **En vue iso, ce n'est plus le même** (ISO3b, 2026-09-15). L'écran du joueur est une vue 3D, et
+## son monde 2D se rend dans sa sous-vue 2D, devenue la lightmap que la vue 3D projette au sol. Poussée
+## avec la transformation de l'écran 3D, la zone morte des murs bas tombait ailleurs dans la lightmap.
+## C'est une perte sans conflit textuel de la fusion de `main` : `_viewport_du_joueur` avait appris
+## l'iso (ISO2, pour les calques d'écran) sur une branche, la zone morte s'y est appuyée (MB3c) sur
+## l'autre.
+func _viewport_du_monde(pid: int) -> Node:
+	var iso := Presentation3D.instance()
+	if iso != null and iso.parent_ecran(pid) != null:
+		return vp1 if pid == 0 else vp2
+	return _viewport_du_joueur(pid)
+
+
 ## MURS BAS, MB3c — la zone morte dessinée à l'écran, vue par vue.
 ##
 ## Chaque vue a son propre écran : ses murs et ses longueurs se convertissent par
-## la transformation du viewport qui la REND (`_viewport_du_joueur` — la racine en
-## vue unique, sa sous-vue sinon), celle où `light()` lit LIGHT_POSITION. Une vue
+## la transformation du viewport qui la REND (`_viewport_du_monde` — la racine en
+## vue unique, sa sous-vue sinon, sa lightmap en vue iso), celle où `light()` lit LIGHT_POSITION. Une vue
 ## reçoit : sa copie du sol et du décor, le corps du joueur tel qu'il se voit
 ## (`visual`), et le corps de l'autre tel qu'elle le montre (`visual_enemy`).
 ##
@@ -5315,7 +5332,7 @@ func _pousser_zone_morte() -> void:
 		_zone_morte_vide_poussee = true
 	var joueurs := [p1, p2]
 	for pid in 2:
-		var rendu: Node = _viewport_du_joueur(pid)
+		var rendu: Node = _viewport_du_monde(pid)
 		var cible: Viewport = rendu as Viewport if rendu is Viewport else get_window()
 		if cible == null:
 			continue

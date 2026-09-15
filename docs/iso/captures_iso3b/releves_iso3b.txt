@@ -1,0 +1,300 @@
+2026-09-15 02:42:43.190 Godot[50633:11825740] [UE4] Shutdown handler: initialize.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M3
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+=== Banc zone morte au rendu (MB3c) — vue iso du jeu (ISO3b) ===
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-15T02:42:45) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, +0.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -6.0 dB / D -5.8 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  ✓ vue 1 : le sol porte le shader de la zone morte
+  ✓ vue 2 : le sol porte le shader de la zone morte
+  ✓ les deux vues ont chacune leur matériau de sol
+  ✓ vue iso allumée en écran scindé
+ISO etat=scindé · 52.0° · murs 1.25 t · pâte D · lightmap 1080p · 0 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4 murets=5 hauteur=14.0 px
+  ✓ vue iso : 5 murets extrudés à 0.40 tuile
+ISO J1 : zone morte poussée à SubViewport1
+ISO J2 : zone morte poussée à SubViewport2
+ISO_APPELS vue=scinde appels=184 poussee_capteurs=14.4 µs par image (5 murs, médiane de 60 images)
+ACCORD_SOL vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » sol=733/733 zone_morte=97 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ ecran_scinde J1 « accroupi a L-12 » : le sol suit la règle
+  ✓ ecran_scinde J1 « accroupi a L-12 » : la scène exerce la zone morte (> 20 points)
+  ✓ ecran_scinde J1 « accroupi a L-12 » : la règle n'allume rien
+  ✓ ecran_scinde J1 « accroupi a L-12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » sans_regle=187/255 regle=0/255 attendu=noir
+  ✓ ecran_scinde J1 « accroupi a L-12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ ecran_scinde J1 « accroupi a L-12 » : capteur noir, donc le corps voxel
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » @PointLight2D@1192 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » @RayCast2D@1193 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » cible_accroupie=true zone=43.7 au_centre=true centre=(478.5, 696.7357) attendu=(479.0, 697.0) nb=0 J1[torche=true retro=false halo=false flash=false] J2[torche=false retro=false halo=false flash=false]
+ACCORD_SOL vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » sol=733/733 zone_morte=126 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ ecran_scinde J1 « accroupi a L+12 » : le sol suit la règle
+  ✓ ecran_scinde J1 « accroupi a L+12 » : la scène exerce la zone morte (> 20 points)
+  ✓ ecran_scinde J1 « accroupi a L+12 » : la règle n'allume rien
+  ✓ ecran_scinde J1 « accroupi a L+12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » sans_regle=172/255 regle=172/255 attendu=éclairé
+  ✓ ecran_scinde J1 « accroupi a L+12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ ecran_scinde J1 « accroupi a L+12 » : capteur éclairé, donc le corps voxel
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » @PointLight2D@1192 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » @RayCast2D@1193 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » cible_accroupie=true zone=43.7 au_centre=true centre=(478.5, 720.7357) attendu=(479.0, 721.0) nb=0 J1[torche=true retro=false halo=false flash=false] J2[torche=false retro=false halo=false flash=false]
+ACCORD_SOL vue=ecran_scinde joueur=1 scene=« debout a L-12 » sol=733/733 zone_morte=97 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ ecran_scinde J1 « debout a L-12 » : le sol suit la règle
+  ✓ ecran_scinde J1 « debout a L-12 » : la scène exerce la zone morte (> 20 points)
+  ✓ ecran_scinde J1 « debout a L-12 » : la règle n'allume rien
+  ✓ ecran_scinde J1 « debout a L-12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=ecran_scinde joueur=1 scene=« debout a L-12 » sans_regle=187/255 regle=187/255 attendu=éclairé
+  ✓ ecran_scinde J1 « debout a L-12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ ecran_scinde J1 « debout a L-12 » : capteur éclairé, donc le corps voxel
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » @PointLight2D@1192 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=1 scene=« debout a L-12 » @RayCast2D@1193 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=ecran_scinde joueur=1 scene=« debout a L-12 » cible_accroupie=false zone=0.0 au_centre=true centre=(478.5, 696.7357) attendu=(479.0, 697.0) nb=0 J1[torche=true retro=false halo=false flash=false] J2[torche=false retro=false halo=false flash=false]
+ACCORD_SOL vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » sol=754/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ ecran_scinde J2 « accroupi a L-12 » : le sol suit la règle
+  ✓ ecran_scinde J2 « accroupi a L-12 » : la scène exerce la zone morte (> 20 points)
+  ✓ ecran_scinde J2 « accroupi a L-12 » : la règle n'allume rien
+  ✓ ecran_scinde J2 « accroupi a L-12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » sans_regle=187/255 regle=0/255 attendu=noir
+  ✓ ecran_scinde J2 « accroupi a L-12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ ecran_scinde J2 « accroupi a L-12 » : capteur noir, donc le corps voxel
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » @PointLight2D@1187 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » @RayCast2D@1188 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » OreilleJ1 (AudioListener2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » cible_accroupie=true zone=43.7 au_centre=true centre=(479.0, 696.7357) attendu=(479.0, 697.0) nb=0 J1[torche=false retro=false halo=false flash=false] J2[torche=true retro=false halo=false flash=false]
+ACCORD_SOL vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » sol=754/754 zone_morte=127 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ ecran_scinde J2 « accroupi a L+12 » : le sol suit la règle
+  ✓ ecran_scinde J2 « accroupi a L+12 » : la scène exerce la zone morte (> 20 points)
+  ✓ ecran_scinde J2 « accroupi a L+12 » : la règle n'allume rien
+  ✓ ecran_scinde J2 « accroupi a L+12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » sans_regle=172/255 regle=172/255 attendu=éclairé
+  ✓ ecran_scinde J2 « accroupi a L+12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ ecran_scinde J2 « accroupi a L+12 » : capteur éclairé, donc le corps voxel
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » @PointLight2D@1187 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » @RayCast2D@1188 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » OreilleJ1 (AudioListener2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » cible_accroupie=true zone=43.7 au_centre=true centre=(479.0, 720.7357) attendu=(479.0, 721.0) nb=0 J1[torche=false retro=false halo=false flash=false] J2[torche=true retro=false halo=false flash=false]
+ACCORD_SOL vue=ecran_scinde joueur=2 scene=« debout a L-12 » sol=754/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ ecran_scinde J2 « debout a L-12 » : le sol suit la règle
+  ✓ ecran_scinde J2 « debout a L-12 » : la scène exerce la zone morte (> 20 points)
+  ✓ ecran_scinde J2 « debout a L-12 » : la règle n'allume rien
+  ✓ ecran_scinde J2 « debout a L-12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=ecran_scinde joueur=2 scene=« debout a L-12 » sans_regle=187/255 regle=187/255 attendu=éclairé
+  ✓ ecran_scinde J2 « debout a L-12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ ecran_scinde J2 « debout a L-12 » : capteur éclairé, donc le corps voxel
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » @PointLight2D@1187 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » @RayCast2D@1188 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=ecran_scinde joueur=2 scene=« debout a L-12 » OreilleJ1 (AudioListener2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=ecran_scinde joueur=2 scene=« debout a L-12 » cible_accroupie=false zone=0.0 au_centre=true centre=(479.0, 696.7357) attendu=(479.0, 697.0) nb=0 J1[torche=false retro=false halo=false flash=false] J2[torche=true retro=false halo=false flash=false]
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
+[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  ✓ vue iso allumée en vue unique
+ISO etat=unique · 52.0° · murs 1.25 t · pâte D · lightmap 1080p · 1 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 1920×1080 · rendu 2560×1440 · capteurs 4 / 18 murets=5 hauteur=14.0 px
+  ✓ vue iso : 5 murets extrudés à 0.40 tuile
+ISO J1 : zone morte poussée à SubViewport1
+ISO_APPELS vue=unique appels=60 poussee_capteurs=7.9 µs par image (5 murs, médiane de 60 images)
+ACCORD_SOL vue=vue_unique joueur=1 scene=« accroupi a L-12 » sol=754/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ vue_unique J1 « accroupi a L-12 » : le sol suit la règle
+  ✓ vue_unique J1 « accroupi a L-12 » : la scène exerce la zone morte (> 20 points)
+  ✓ vue_unique J1 « accroupi a L-12 » : la règle n'allume rien
+  ✓ vue_unique J1 « accroupi a L-12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=vue_unique joueur=1 scene=« accroupi a L-12 » sans_regle=187/255 regle=0/255 attendu=noir
+  ✓ vue_unique J1 « accroupi a L-12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ vue_unique J1 « accroupi a L-12 » : capteur noir, donc le corps voxel
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » @PointLight2D@1192 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L-12 » @RayCast2D@1193 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=vue_unique joueur=1 scene=« accroupi a L-12 » cible_accroupie=true zone=43.7 au_centre=true centre=(960.0, 696.7357) attendu=(960.0, 697.0) nb=0 J1[torche=true retro=false halo=false flash=false] J2[torche=false retro=false halo=false flash=false]
+ACCORD_SOL vue=vue_unique joueur=1 scene=« accroupi a L+12 » sol=754/754 zone_morte=127 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ vue_unique J1 « accroupi a L+12 » : le sol suit la règle
+  ✓ vue_unique J1 « accroupi a L+12 » : la scène exerce la zone morte (> 20 points)
+  ✓ vue_unique J1 « accroupi a L+12 » : la règle n'allume rien
+  ✓ vue_unique J1 « accroupi a L+12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=vue_unique joueur=1 scene=« accroupi a L+12 » sans_regle=172/255 regle=172/255 attendu=éclairé
+  ✓ vue_unique J1 « accroupi a L+12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ vue_unique J1 « accroupi a L+12 » : capteur éclairé, donc le corps voxel
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » @PointLight2D@1192 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« accroupi a L+12 » @RayCast2D@1193 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=vue_unique joueur=1 scene=« accroupi a L+12 » cible_accroupie=true zone=43.7 au_centre=true centre=(960.0, 720.7357) attendu=(960.0, 721.0) nb=0 J1[torche=true retro=false halo=false flash=false] J2[torche=false retro=false halo=false flash=false]
+ACCORD_SOL vue=vue_unique joueur=1 scene=« debout a L-12 » sol=754/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=0/255
+  ✓ vue_unique J1 « debout a L-12 » : le sol suit la règle
+  ✓ vue_unique J1 « debout a L-12 » : la scène exerce la zone morte (> 20 points)
+  ✓ vue_unique J1 « debout a L-12 » : la règle n'allume rien
+  ✓ vue_unique J1 « debout a L-12 » : hors zone, l'ancien pixel (≤ 2/255)
+ACCORD_CAPTEUR vue=vue_unique joueur=1 scene=« debout a L-12 » sans_regle=187/255 regle=187/255 attendu=éclairé
+  ✓ vue_unique J1 « debout a L-12 » : capteur éclairé sans la règle (scène bien posée)
+  ✓ vue_unique J1 « debout a L-12 » : capteur éclairé, donc le corps voxel
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » CollisionPolygon2D (CollisionPolygon2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » Flashlight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » BodyLight (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » MuzzleFlash (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » Muzzle (Marker2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » VisualEnemy/DirPointer (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » VisualRevealEnemy/DirPointerReveal (Polygon2D) couche=1 lumiere=3 parent_mat=true materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » @PointLight2D@1192 (PointLight2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_NOEUD vue=vue_unique joueur=1 scene=« debout a L-12 » @RayCast2D@1193 (RayCast2D) couche=1 lumiere=1 parent_mat=false materiau=aucun partage_visual=false
+DIAG_CLASSES J1=Pistolet J2=Pistolet
+DIAG_CORPS vue=vue_unique joueur=1 scene=« debout a L-12 » cible_accroupie=false zone=0.0 au_centre=true centre=(960.0, 696.7357) attendu=(960.0, 697.0) nb=0 J1[torche=true retro=false halo=false flash=false] J2[torche=false retro=false halo=false flash=false]
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=true
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 1 bascule(s))
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  ✓ vue iso allumée en écran scindé
+ISO etat=scindé · 52.0° · murs 1.25 t · pâte D · lightmap 1080p · 2 bascule(s) | J1 : masque ~4 sans capteurs · lightmap 957×1080 · rendu 1276×1440 · capteurs 4 / 18 | J2 : masque ~2 sans capteurs · lightmap 958×1080 · rendu 1277×1440 · capteurs 34 / 4 murets=5 hauteur=14.0 px
+  ✓ vue iso : 5 murets extrudés à 0.40 tuile
+ISO J1 : zone morte poussée à SubViewport1
+ISO J2 : zone morte poussée à SubViewport2
+ISO_APPELS vue=scinde appels=119 poussee_capteurs=14.7 µs par image (5 murs, médiane de 60 images)
+NOIR_ABSOLU vue=1 regle=0/255@(0, 0) ancien=0/255@(0, 0) regle_bis=0/255@(0, 0)
+  ✓ vue 1 : toutes lumières éteintes, rien de plus clair qu'avant
+NOIR_ABSOLU vue=2 regle=0/255@(0, 0) ancien=0/255@(0, 0) regle_bis=0/255@(0, 0)
+  ✓ vue 2 : toutes lumières éteintes, rien de plus clair qu'avant
+COUT fenetre=(2560, 1440) focus=premier_plan (ordre de grandeur, pas un relevé au protocole)
+COUT config=ancien murs_envoyes=0 appels=119 image_mediane=4.68 ms (tours 3.97, 4.68, 4.82)
+COUT config=regle_0_mur murs_envoyes=0 appels=119 image_mediane=4.84 ms (tours 4.37, 4.84, 5.17)
+COUT config=regle_carte_5 murs_envoyes=5 appels=117 image_mediane=4.38 ms (tours 4.32, 4.38, 4.77)
+COUT config=regle_40_murs murs_envoyes=40 appels=117 image_mediane=8.53 ms (tours 7.76, 8.53, 8.89)
+COUT poussee_uniformes=34.7 µs par image (40 murs, deux vues, six matériaux)
+COUT vue_iso=allumée
+BANC_MURS_BAS VERDICT=OK echecs=0
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 2 bascule(s))
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2395)
+       [1] _tracer_ecoute (res://audio_manager.gd:2488)
+       [2] rendre_oreille (res://audio_manager.gd:2543)
+--- ecoute : oreille rendue (2026-09-15T02:43:24) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, +0.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 2
+[audio]   par famille : ambience=2
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : res://assets/audio/sfx/ambience_03.wav
+[audio]   source=(750.5803, 900.0131) oreille=(752.5, 190.0) distance=710 px
+[audio]   portee=2851 px  volume=-20.0 dB  bus=SFX  playing=true
+
+2026-09-15 02:43:24.884 Godot[50633:11825740] [UE4] Shutdown handler: cleanup.
+
+===== AVANT la correction du viewport du monde (banc_avant.log) =====
+AVANT ISO J1 : zone morte poussée à VueIso1
+AVANT ISO J2 : zone morte poussée à VueIso2
+AVANT ACCORD_SOL vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » sol=600/733 zone_morte=97 allumes_par_la_regle=0 ecart_ancien=92/255
+AVANT ACCORD_CAPTEUR vue=ecran_scinde joueur=1 scene=« accroupi a L-12 » sans_regle=187/255 regle=0/255 attendu=noir
+AVANT ACCORD_SOL vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » sol=578/733 zone_morte=126 allumes_par_la_regle=0 ecart_ancien=92/255
+AVANT ACCORD_CAPTEUR vue=ecran_scinde joueur=1 scene=« accroupi a L+12 » sans_regle=172/255 regle=172/255 attendu=éclairé
+AVANT ACCORD_SOL vue=ecran_scinde joueur=1 scene=« debout a L-12 » sol=600/733 zone_morte=97 allumes_par_la_regle=0 ecart_ancien=92/255
+AVANT ACCORD_CAPTEUR vue=ecran_scinde joueur=1 scene=« debout a L-12 » sans_regle=187/255 regle=187/255 attendu=éclairé
+AVANT ACCORD_SOL vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » sol=625/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=54/255
+AVANT ACCORD_CAPTEUR vue=ecran_scinde joueur=2 scene=« accroupi a L-12 » sans_regle=187/255 regle=0/255 attendu=noir
+AVANT ACCORD_SOL vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » sol=603/754 zone_morte=127 allumes_par_la_regle=0 ecart_ancien=54/255
+AVANT ACCORD_CAPTEUR vue=ecran_scinde joueur=2 scene=« accroupi a L+12 » sans_regle=172/255 regle=172/255 attendu=éclairé
+AVANT ACCORD_SOL vue=ecran_scinde joueur=2 scene=« debout a L-12 » sol=625/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=54/255
+AVANT ACCORD_CAPTEUR vue=ecran_scinde joueur=2 scene=« debout a L-12 » sans_regle=187/255 regle=187/255 attendu=éclairé
+AVANT ISO J1 : zone morte poussée à Main
+AVANT ACCORD_SOL vue=vue_unique joueur=1 scene=« accroupi a L-12 » sol=656/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=0/255
+AVANT ACCORD_CAPTEUR vue=vue_unique joueur=1 scene=« accroupi a L-12 » sans_regle=187/255 regle=0/255 attendu=noir
+AVANT ACCORD_SOL vue=vue_unique joueur=1 scene=« accroupi a L+12 » sol=627/754 zone_morte=127 allumes_par_la_regle=0 ecart_ancien=0/255
+AVANT ACCORD_CAPTEUR vue=vue_unique joueur=1 scene=« accroupi a L+12 » sans_regle=172/255 regle=172/255 attendu=éclairé
+AVANT ACCORD_SOL vue=vue_unique joueur=1 scene=« debout a L-12 » sol=656/754 zone_morte=98 allumes_par_la_regle=0 ecart_ancien=0/255
+AVANT ACCORD_CAPTEUR vue=vue_unique joueur=1 scene=« debout a L-12 » sans_regle=187/255 regle=187/255 attendu=éclairé
+AVANT ISO J1 : zone morte poussée à VueIso1
+AVANT ISO J2 : zone morte poussée à VueIso2
+AVANT NOIR_ABSOLU vue=1 regle=0/255@(0, 0) ancien=0/255@(0, 0) regle_bis=0/255@(0, 0)
+AVANT NOIR_ABSOLU vue=2 regle=0/255@(0, 0) ancien=0/255@(0, 0) regle_bis=0/255@(0, 0)
