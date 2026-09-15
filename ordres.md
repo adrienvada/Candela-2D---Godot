@@ -19,14 +19,18 @@ Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse Lis
 ## ORDRE 13 — 15/09 10:50 (envoyé 10:46 par mcp__ccd_session_mgmt__send_message ; la porteuse a republié à 10:48 et 10:50)
 ## ORDRE 14 — 15/09 11:00 (relayé 10:59 ; galerie publiée à 11:13, 46 captures ajoutées à 11:41, recadrées à 12:08)
 ## ORDRE 15 — 15/09 11:00 (relayé 10:59 ; accusé 11:00 ; f8681a5 à 12:04, b4858bf à 12:32 : chantier clos)
-## ORDRE 16 — 15/09 11:00 (relayé 10:59 ; accusé 11:00, points d'étape 11:15 et 11:48, premières images 12:25)
+## ORDRE 16 — 15/09 11:00 (relayé 10:59 ; accusé 11:00, points d'étape 11:15 et 11:48, images 12:25, commit 27ddb1c à 12:42)
 ## ORDRE 17 — 15/09 11:20 (relayé 11:19 ; accusé par Beauté à 11:19)
 ## ORDRE 18 — 15/09 11:37 (relayé 11:37 ; accusé par Iso 1 à 11:38)
 ## ORDRE 19 — 15/09 11:43 (relayé 11:43 ; accusé par Iso 1 à 11:44, captures recadrées à 12:08, message de fin d'ISO6 à 12:12)
 ## ORDRE 20 — 15/09 12:05 (relayé 12:05 ; accusé par Gadgets à 12:06 ; b4858bf à 12:32)
 ## ORDRE 21 — 15/09 12:10 (relayé 12:09 ; Beauté a répondu à 12:10 : hachures d'encre au pied des murs)
-## ORDRE 22 — 15/09 12:25 (relayé 12:23 ; accusé par Iso 1 à 12:24, branche iso8-claustro)
+## ORDRE 22 — 15/09 12:25 (relayé 12:23 ; accusé par Iso 1 à 12:24 ; planche des variantes prête à 12:44)
 ## ORDRE 23 — 15/09 12:30 (relayé 12:26 ; accusé par Beauté à 12:27)
+## ORDRE 24 — 15/09 12:35 (relayé 12:33 ; accusé par Iso 1 à 12:34)
 
-## ORDRE 24 — 15/09 12:35
-RELAIS → « Iso 1 Opus » (titre : « Iso 1 Opus ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 12:35. Première fusion, sur mon mot : la branche balle-sans-lumiere de Gadgets est close à b4858bf (deux commits, f8681a5 « La balle n'éclaire plus » et b4858bf « Les étincelles d'impact n'éclairent plus » ; fichiers de jeu touchés : bullet.gd, weapon_data.gd, particle_pool.gd, un commentaire dans miroirs_iso.gd, plus le banc tools/banc_balle_sans_lumiere.gd, captures docs/iso/captures_balle/, ROADMAP et journal ; lot complet entièrement vert à 12:32). Fusionne-la dans iso2-vues dès que ta planche des variantes d'ISO8 est sortie, avant l'étape 2 : dans ton worktree, git checkout iso2-vues (arbre propre), git merge balle-sans-lumiere, conflits résolus en gardant les deux ajouts (ROADMAP, journal), lot complet vert, delta avec le hash ; puis git checkout iso8-claustro et git merge iso2-vues dans TA branche pour continuer sur la base à jour. La seconde fusion (iso7b-faces) viendra sur un autre mot, quand Beauté aura commité. Accuse réception à « Fable 5.1 - CLOUD ISO UNRAILED » par SendMessage. Ne réponds pas à la Concierge.
+## ORDRE 25 — 15/09 12:50
+RELAIS → « iso7-beaute-opus-713f60-10 » (titre : « ISO7 Beauté Opus ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 12:50. Ton commit 27ddb1c et ta galerie v2 sont lus : la face sud sous torche est devenue une matière continue, chaude, avec son contact au pied, et le sol en dalles chaudes : c'est le cône d'E1 qui commence à exister, bravo. Corps : OUI à ta proposition (dessus 1,15, face sud 0,9 lampe de côté, côté lampe 1,25, dos au plancher, moyenne des faces vues gardée), pose-la. Faces : prouve la paire face / rasante sur une scène identique (visée de J1 tenue dans le banc), mêmes mesures. Puis un commit, lot complet vert, planche_iso7b.jpg à jour, delta avec le hash : ce sera la tête à fusionner, Iso 1 la prendra sur mon mot après balle-sans-lumiere. Accuse réception à « Fable 5.1 - CLOUD ISO UNRAILED » par SendMessage. Ne réponds pas à la Concierge.
+
+## ORDRE 26 — 15/09 12:50
+RELAIS → « candela-2d-3b » (titre : « Can2d - Mise à jour artefact de suivi - Sonnet LOCAL ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 12:50. Le tableau de bord est resté à sa version de 11:40 (v223) ; trois synthèses l'attendent sur la page Synthèse ISO (https://claude.ai/code/artifact/707760b4-cb41-4651-9be9-e0093aa5d91a, JSON #syntheses-data) et par tes Routines : la 61 (décision d'Adrien de 10:55, « la balle n'est plus une source de lumière », ordres 14 à 16), la 64 (ISO6 close, message de fin d'Iso 1 à 12:12, commit ee5ac9f) et la 65 (mandat d'Adrien de 12:20 : zoomer, réduire les cônes ; chantier ISO8 chez Iso 1 ; Gadgets clos à 12:32 avec b4858bf, 63 → 9 lumières en rafale ; Beauté commit 27ddb1c). Republie avec ces trois synthèses et accuse réception à la session cloud par SendMessage, avec la version.
