@@ -98,6 +98,7 @@ func _run() -> void:
 	_l_equite_du_shader()
 	_les_crochets_et_la_grille()
 	_le_sol()
+	_la_peinture()
 	_la_pate_des_voxels()
 	_les_faces_et_le_bain()
 	_le_banc()
@@ -169,6 +170,68 @@ func _le_sol() -> void:
 # ---------------------------------------------------------------------------
 # LA PÂTE — l'encre des arêtes des voxels (étape 5)
 # ---------------------------------------------------------------------------
+
+## ISO10, 1f — le mur ne rougit pas du sang : une face lit la lumière divisée par la peinture du sol
+## (`IsoMateriaux.lumiere_lue`, miroir de `lire_lumiere`). Équité : la MÊME lumière avec ou sans tache. Invariants : noir
+## absolu, rouge d'une fusée gardé, aucune direction lue.
+func _la_peinture() -> void:
+	print("— la peinture du sol, divisée hors de la lumière des faces (1f)")
+	var PeintureIsoT: GDScript = load("res://peinture_iso.gd")
+	var ref := IsoMateriaux.peinture_reference()
+	var plancher := IsoMateriaux.peinture_plancher()
+	_check("plancher : 0,05 affiché, sous l'albédo du sol dessiné (%.4f < %.4f)" % [plancher, minf(ref.x, minf(ref.y, ref.z))],
+		absf(plancher - 0.0039) < 3e-4 and plancher < minf(ref.x, minf(ref.y, ref.z)))
+	# Des albédos au-dessus du plancher : sol, carmin du sang, cœur sombre, éclat d'encre.
+	var carmin: Color = (preload("res://charte.gd").CARMIN as Color).srgb_to_linear()
+	var sang := Vector3(carmin.r, carmin.g, carmin.b)
+	var albedos: Array[Vector3] = [ref, sang, sang * 0.4 + Vector3.ONE * plancher, Vector3(0.9, 0.85, 0.75)]
+	var lumieres: Array[Vector3] = [Vector3(1.0, 0.9, 0.75), Vector3(0.3, 0.3, 0.3), Vector3(0.6, 0.12, 0.06), Vector3(0.02, 0.02, 0.02)]
+	var ecart := 0.0
+	for l: Vector3 in lumieres:
+		var propre := IsoMateriaux.lumiere_lue(l * ref, ref)
+		for a: Vector3 in albedos:
+			ecart = maxf(ecart, (IsoMateriaux.lumiere_lue(l * a, a) - propre).length())
+	_check("équité : une face lit la même lumière sur le sol propre et sous une tache (écart max %.6f)" % ecart, ecart < 1e-4)
+	var noir := true
+	for a: Vector3 in albedos:
+		noir = noir and IsoMateriaux.lumiere_lue(Vector3.ZERO, a) == Vector3.ZERO
+	noir = noir and IsoMateriaux.lumiere_lue(Vector3.ZERO, Vector3.ZERO) == Vector3.ZERO
+	_check("noir absolu : lightmap nulle → 0, même sur une peinture nulle", noir)
+	var fusee := IsoMateriaux.lumiere_lue(Vector3(0.6, 0.12, 0.06) * sang, sang)
+	_check("une lumière rouge reste rouge sous la tache (r/g %.1f)" % (fusee.x / maxf(fusee.y, 1e-6)), fusee.x / maxf(fusee.y, 1e-6) > 4.0)
+	# Le shader : même formule, lue chaque point avant la moyenne, pour la face et le liseré.
+	var code := SHADER_MUR.code
+	_check("mur_iso : la lumière d'un point est la lightmap × référence ÷ max(peinture, plancher)",
+		code.contains("vec3 l = lire_lightmap(px, deux);") and code.contains("vec3 p = max(texture(peinture, uv).rgb, vec3(plancher));")
+		and code.contains("return min(l * ref / p, vec3(1.0));"))
+	# La référence et le plancher sont lus DANS la peinture (étalons peints), dans son espace de couleur.
+	_check("mur_iso : référence et plancher lus dans la peinture, aux étalons peints à la couleur du sol et à 0,05 affiché",
+		code.contains("vec3 peinture_ref = lire_etalon(peinture_etalon_px);") and code.contains("float peinture_min = lire_etalon(peinture_plancher_px).g;")
+		and PeintureIsoT.couleur_reference().is_equal_approx(CandelaTileSet.SOL_DESSIN_A.lerp(CandelaTileSet.SOL_DESSIN_B, 0.5))
+		and is_equal_approx(PeintureIsoT.couleur_plancher().r, IsoMateriaux.PEINTURE_PLANCHER_AFFICHE))
+	_check("mur_iso : chaque lecture divisée avant la moyenne",
+		code.contains("0.25 * (lire_lumiere(p - le_long * 1.875, deux, ref, plancher)"))
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	_check("présentation : la peinture posée à l'allumage et retirée à l'extinction",
+		pres.contains("\t_poser_capteurs()\n\t_poser_peinture()") and pres.contains("\t_retirer_capteurs()\n\t_retirer_peinture()"))
+	var couche := int(Presentation3D.COUCHE_PEINTURE)
+	_check("la couche de la peinture : un seul bit, hors des vues (1, 2, 4) et des capteurs, retirée des lightmaps",
+		couche > 0 and (couche & (couche - 1)) == 0 and (couche & (1 | 2 | 4)) == 0
+		and (couche & int(Presentation3D.COUCHES_CAPTEURS)) == 0 and (int(Presentation3D.COUCHES_HORS_LIGHTMAP) & couche) != 0
+		and (Presentation3D._sans_capteurs(~0) & couche) == 0)
+	var peinture_code := FileAccess.get_file_as_string("res://peinture_iso.gd")
+	_check("peinture : caméra fixe en espace monde, copies non éclairées (hors du CanvasModulate), rendue à la demande, empreintes exclues",
+		peinture_code.contains("canvas_transform = Transform2D(0.0, Vector2(echelle, echelle), 0.0, -cadre.position * echelle)")
+		and peinture_code.contains("copie.light_mask = 0") and peinture_code.contains("CanvasItemMaterial.LIGHT_MODE_UNSHADED")
+		and peinture_code.contains("copie.material = _sans_lumiere") and peinture_code.contains("SubViewport.UPDATE_ONCE")
+		and peinture_code.contains("\tadd_child(copie)") and not peinture_code.contains("_arene.add_child(copie)")
+		and peinture_code.contains("(copie as Node2D).global_transform = (source as Node2D).global_transform")
+		and not peinture_code.contains("\"footprint"))
+	var mat := ShaderMaterial.new()
+	mat.shader = SHADER_MUR
+	IsoMateriaux.accorder_peinture(mat, null, Rect2())
+	_check("sans peinture (vue éteinte), la face relit la lightmap telle quelle", not bool(mat.get_shader_parameter("peinture_active")))
+
 
 func _la_pate_des_voxels() -> void:
 	print("— la pâte : l'encre des arêtes")
@@ -276,7 +339,7 @@ func _la_pate_des_voxels() -> void:
 ## vivent chez ISO Corps, et le paramètre est ignoré tant qu'elle ne les déclare pas (voulu).
 func _uniforms_declares() -> bool:
 	var source := FileAccess.get_file_as_string("res://iso_materiaux.gd")
-	var codes := {"mur": SHADER_MUR.code, "grille": SHADER_MUR.code,
+	var codes := {"mur": SHADER_MUR.code, "grille": SHADER_MUR.code, "peinture": SHADER_MUR.code,
 		"sol": (load("res://sol_iso.gdshader") as Shader).code, "corps": (load("res://corps_iso.gdshader") as Shader).code}
 	var parametre := RegEx.create_from_string("set_shader_parameter\\(\"([a-z_0-9]+)\"")
 	var ok := true
@@ -342,8 +405,9 @@ func _les_faces_et_le_bain() -> void:
 		IsoMateriaux.PIED_FACE_PX > encre_max + 1.0)
 	# La lecture moyenne le long du mur reste : elle effaçait la période des hachures, elle lisse encore le lavis et le
 	# trait. Plus de période à couvrir, donc plus de lien au pas des hachures.
+	# ISO10, 1f — la moyenne lit la LUMIÈRE (`lire_lumiere_moyenne`, la lightmap divisée par la peinture), plus la lightmap.
 	_check("la face et le liseré lisent une moyenne le long du mur",
-		code_mur.contains("brute = lire_lightmap_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lire_lightmap_moyenne(monde.xz + sortie"))
+		code_mur.contains("brute = lire_lumiere_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lire_lumiere_moyenne(monde.xz + sortie"))
 	# La température graduée : plus chaude en basse lumière, luminance gardée.
 	var bas := IsoPate.temperature_graduee(IsoPate.depuis_affiche(Vector3.ONE * 0.06), 0.8, IsoMateriaux.TEMPERATURE_SEUIL_BAS,
 		IsoMateriaux.TEMPERATURE_SEUIL_HAUT)
@@ -681,7 +745,7 @@ func _l_equite_du_shader() -> void:
 		var ligne := brute.strip_edges()
 		if ligne.begins_with("brute = ") or ligne.begins_with("vec3 brute = "):
 			bruts += 1
-			if not (ligne.contains("lire_lightmap(") or ligne.contains("lire_lightmap_moyenne(") or ligne.contains("vec3(0.0)")):
+			if not (ligne.contains("lire_lightmap(") or ligne.contains("lire_lightmap_moyenne(") or ligne.contains("lire_lumiere_moyenne(") or ligne.contains("vec3(0.0)")):
 				bruts_propres = false
 				printerr("    lumière brute hors lightmap : ", ligne)
 	_check("la lumière brute (neutralité de la chaleur) n'est qu'une lecture de lightmap (%d)" % bruts, bruts_propres and bruts >= 4)

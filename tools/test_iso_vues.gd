@@ -446,10 +446,10 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 	_check("murs et corps sont communs, sur le calque 1 (%d maillages)" % communs, communs > 2 and hors_commun == 0)
 
 	_check("lightmap de J1 : masque ~4 sans la couche des capteurs",
-		vp1.canvas_cull_mask == ((~4 & 0xFFFFFFFF) & ~int(p.COUCHES_CAPTEURS)) and (vp1.canvas_cull_mask & 2) != 0
+		vp1.canvas_cull_mask == ((~4 & 0xFFFFFFFF) & ~int(p.COUCHES_HORS_LIGHTMAP)) and (vp1.canvas_cull_mask & 2) != 0
 		and (vp1.canvas_cull_mask & 4) == 0, str(vp1.canvas_cull_mask))
 	_check("lightmap de J2 : masque ~2 sans la couche des capteurs",
-		vp2.canvas_cull_mask == ((~2 & 0xFFFFFFFF) & ~int(p.COUCHES_CAPTEURS)) and (vp2.canvas_cull_mask & 4) != 0
+		vp2.canvas_cull_mask == ((~2 & 0xFFFFFFFF) & ~int(p.COUCHES_HORS_LIGHTMAP)) and (vp2.canvas_cull_mask & 4) != 0
 		and (vp2.canvas_cull_mask & 2) == 0, str(vp2.canvas_cull_mask))
 	_check("les deux lightmaps dessinent, transparentes à l'écran",
 		vp1.render_target_update_mode == SubViewport.UPDATE_ALWAYS and vp2.render_target_update_mode == SubViewport.UPDATE_ALWAYS

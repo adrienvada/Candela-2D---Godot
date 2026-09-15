@@ -100,9 +100,46 @@ void vertex() {
 // 12 px (au-delà des hachures) et quatre lectures sur une période : la moyenne ne déplace aucune ombre de plus
 // de 2 px le long du mur. La pente est nulle (la pâte D, celle du jeu, ne la lit pas).
 // La lecture et la pâte sont deux fonctions : la lumière lue sert aussi à la neutralité de la chaleur, sans relire.
-vec3 lire_lightmap_moyenne(vec2 p, vec2 le_long, bool deux) {
-	return 0.25 * (lire_lightmap(p - le_long * 1.875, deux) + lire_lightmap(p - le_long * 0.625, deux)
-		+ lire_lightmap(p + le_long * 0.625, deux) + lire_lightmap(p + le_long * 1.875, deux));
+//
+// ISO10, 1f — **la face lit la LUMIÈRE, pas le sol peint.** La lightmap est le sol peint × la lumière : une tache de sang
+// au pied d'un mur y est rouge, et la face la lisait rouge. `peinture` est la peinture de la carte sans lumière
+// (`peinture_iso.gd`), en espace MONDE : une texture pour toute la carte, la même pour les deux vues.
+uniform sampler2D peinture : source_color, filter_linear, repeat_disable;
+uniform bool peinture_active = false;
+uniform vec2 peinture_origine_px = vec2(0.0);
+uniform vec2 peinture_taille_px = vec2(1.0);
+// Les deux étalons PEINTS dans la peinture (`peinture_iso.gd`) : la couleur moyenne du sol dessiné, et le gris du plancher
+// (0,05 affiché). Lus par la même texture que la peinture, ils sont dans le même espace de couleur qu'elle — une référence
+// calculée côté processeur en linéaire assombrissait les faces de six fois (troisième passage en jeu).
+uniform vec2 peinture_etalon_px = vec2(0.0);
+uniform vec2 peinture_plancher_px = vec2(0.0);
+
+vec3 lire_etalon(vec2 px) {
+	return texture(peinture, (px - peinture_origine_px) / peinture_taille_px).rgb;
+}
+
+// La lumière d'un point du sol sans sa peinture : lightmap × référence ÷ max(peinture, plancher), canal par canal. La
+// référence rend à la face sa valeur d'avant sur un sol propre ; sous une tache, la même. Noir absolu : une lightmap nulle
+// rend 0. Une lumière rouge (fusée) reste au numérateur, donc rouge. Plafonnée à 1 : une peinture plus sombre que la
+// référence sous une forte lumière n'éclaircit pas au-delà du blanc.
+vec3 lire_lumiere(vec2 px, bool deux, vec3 ref, float plancher) {
+	vec3 l = lire_lightmap(px, deux);
+	if (!peinture_active) {
+		return l;
+	}
+	vec2 uv = (px - peinture_origine_px) / peinture_taille_px;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+		return l;
+	}
+	vec3 p = max(texture(peinture, uv).rgb, vec3(plancher));
+	return min(l * ref / p, vec3(1.0));
+}
+
+// Chaque lecture est divisée AVANT la moyenne : un rapport de moyennes n'est pas une moyenne de rapports, et l'écart se
+// lisait aux coins (mesure de 1f : 64 à 72 % au bout de la bande, où le bord du cône et l'encre du mur se mêlent).
+vec3 lire_lumiere_moyenne(vec2 p, vec2 le_long, bool deux, vec3 ref, float plancher) {
+	return 0.25 * (lire_lumiere(p - le_long * 1.875, deux, ref, plancher) + lire_lumiere(p - le_long * 0.625, deux, ref, plancher)
+		+ lire_lumiere(p + le_long * 0.625, deux, ref, plancher) + lire_lumiere(p + le_long * 1.875, deux, ref, plancher));
 }
 
 vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa) {
@@ -150,6 +187,9 @@ void fragment() {
 	vec3 c = vec3(0.0);
 	// La lumière REÇUE, avant la pâte : elle seule dit si la lumière est neutre (voir `pate_poids_neutre`).
 	vec3 brute = vec3(0.0);
+	// ISO10, 1f — les étalons de la peinture, lus une fois par fragment, hors de tout branchement.
+	vec3 peinture_ref = lire_etalon(peinture_etalon_px);
+	float peinture_min = lire_etalon(peinture_plancher_px).g;
 	if (normale.y < -0.5) {
 		// Dessous : jamais vu, noir.
 		c = vec3(0.0);
@@ -172,7 +212,7 @@ void fragment() {
 			float largeur = max(lisere_sommet_px, px_monde);
 			float lisere = fin * pate_trait_de_bord(d_bord, largeur, px_monde);
 			if (lisere > 0.0) {
-				brute = lire_lightmap_moyenne(monde.xz + sortie * (d_bord + pied), vec2(-sortie.y, sortie.x), deux);
+				brute = lire_lumiere_moyenne(monde.xz + sortie * (d_bord + pied), vec2(-sortie.y, sortie.x), deux, peinture_ref, peinture_min);
 				c = pate_facteur(lightmap_pateuse_lue(brute, motif, aa), lisere);
 			}
 		}
@@ -182,7 +222,7 @@ void fragment() {
 		// laissaient 5 % de la lumière : au banc, 1 237 pixels éclairés (25 à 40/255) tombaient au noir
 		// sur les arêtes d'une face à peine allumée — une lumière réelle effacée. Sur le trait, le facteur
 		// est le plus petit des deux, jamais leur produit : plancher `encre_arete_reste`.
-		brute = lire_lightmap_moyenne(monde.xz + n * pied, tangente, deux);
+		brute = lire_lumiere_moyenne(monde.xz + n * pied, tangente, deux, peinture_ref, peinture_min);
 		c = lightmap_pateuse_lue(brute, motif, aa);
 		// ISO7b — **la direction de la lumière se lit dans la lightmap elle-même** (aucune Light3D) : son
 		// gradient DEVANT la face et le long d'elle, jamais derrière — derrière, c'est l'ombre du mur lui-même,

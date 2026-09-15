@@ -5659,3 +5659,19 @@ du pilier et bord de l'ombre inchangés.
 Sol sous le pied de J1 : 85 % de sa luminance sans contact au premier réglage, 78 % posé (un peu flatteur : la prise
 est centrée 5 px plus haut). À l'œil, une tache sombre douce et discrète, à juger au tour 2.
 Lot complet vert à 18:07 : 111 suites, sans erreur de script, 415 s.
+
+**ISO10, lot 1, 1f — le mur ne rougit pas du sang, 2026-09-15 à partir de 18:10.** Session « Iso 1 Opus ». Voie (E)
+mesurée avant tout code, dans la lightmap même : trois passages et trois pièges (la torche que `player.gd` rallume à chaque
+image, le plancher à donner en valeur affichée, la tache à poser vers le bas). Défaut reproduit, r/g 1,32 sous la tache
+contre 1,21 à côté ; (E) le retire, 1,16, profil de lumière à 1 % ; limite aux arêtes vives. Feu vert de la session cloud
+(18:24), à la condition d'une peinture en espace monde. Posée : `peinture_iso.gd`, une texture de toute la carte dessinée
+par des copies sans lumière sur une couche à elles, rendue à la demande, les empreintes exclues ; `mur_iso` divise chaque
+lecture avant la moyenne, référence la couleur du sol. Mémoire : 3,2 à 5,4 Mo sur les cartes livrées. Quatre
+passages en jeu : les copies d'abord invisibles (sous l'arène, couche 1 : une vue ne rend un élément que si ses parents
+sont aussi sur sa couche ; j'ai d'abord accusé à tort le `CanvasModulate`), puis des faces six fois plus sombres (une
+référence calculée en linéaire contre une peinture lue autrement) ; les copies deviennent enfants de la sous-vue, et la
+référence et le plancher sont peints dans la texture, lus par la même lecture.
+À la loupe du quatrième passage : face propre 103,7 contre 108,5 avant, même couleur ; au-dessus du sang, r/g 1,51 → 1,25
+(face propre 1,15), sans tache froide (b/r 0,52 contre 0,65), bruit ± 37 contre ± 49. Coût d'un rendu forcé à chaque
+image dans le bruit du banc (−0,37 à +1,1 ms) ; en duel, 0,6 rendu par seconde.
+Lot complet vert à 19:06 : 111 suites, sans erreur de script, 413 s.

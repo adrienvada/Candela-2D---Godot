@@ -332,7 +332,7 @@ func _crochet_et_masques() -> void:
 	# ISO2 : pendant que la vue iso est allumée, les couches des capteurs de corps (une par
 	# capteur) sortent des masques des lightmaps (sinon elles dessineraient un disque blanc
 	# sous chaque corps).
-	var capteurs := int((load("res://presentation_3d.gd") as Script).get_script_constant_map().get("COUCHES_CAPTEURS", 0))
+	var capteurs := int((load("res://presentation_3d.gd") as Script).get_script_constant_map().get("COUCHES_HORS_LIGHTMAP", 0))
 	for paire in [[main.vp1, ~4], [main.vp2, ~2]]:
 		var vue: SubViewport = paire[0]
 		# Sur 32 bits : `~4` vaut -5 en GDScript, le masque se relit en entier non signé.

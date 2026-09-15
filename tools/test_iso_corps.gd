@@ -265,7 +265,7 @@ func _rien_de_plus(main: Node, p: Node, vp1: SubViewport, vp2: SubViewport) -> v
 	print("\n--- Rien de plus : pas de lumière 3D, pas de 3D sous le jeu, masques inchangés ---")
 	_check("aucune Light3D dans l'arbre", root.find_children("*", "Light3D", true, false).is_empty())
 	_check("aucun nœud 3D sous GameState ni sous Player*", _noeuds_3d_sous(main) == 0)
-	var couches := int(p.get("COUCHES_CAPTEURS"))
+	var couches := int(p.get("COUCHES_HORS_LIGHTMAP"))
 	_check("lightmap de J1 : masque réel ~4, sans les couches des capteurs",
 		vp1.canvas_cull_mask == ((~4 & 0xFFFFFFFF) & ~couches), str(vp1.canvas_cull_mask))
 	_check("lightmap de J2 : masque réel ~2, sans les couches des capteurs",

@@ -119,6 +119,48 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("modele", 1.0 if active else 0.0)
 
 
+## ISO10, 1f — la lumière d'une face lue SANS la peinture du sol (`mur_iso.gdshader`, `lire_lumiere`) : lightmap ×
+## référence ÷ max(peinture, plancher), canal par canal. La référence est la couleur moyenne du sol dessiné
+## (`CandelaTileSet.SOL_DESSIN_A` et `_B`, en linéaire : 0,019 et 0,027, l'albédo mesuré sur la bande de 1f valant 0,026) :
+## sur un sol propre la face lit ce qu'elle lisait, sous une tache elle lit la même chose. Le plancher se donne en valeur
+## AFFICHÉE (0,05, session cloud) : un plancher de 0,05 LINÉAIRE couvrait tout le sol (mesure du 2026-09-15, deuxième passage de `--plan=loupe-peinture`).
+const PEINTURE_PLANCHER_AFFICHE := 0.05
+
+
+static func peinture_reference() -> Vector3:
+	var a := CandelaTileSet.SOL_DESSIN_A.srgb_to_linear()
+	var b := CandelaTileSet.SOL_DESSIN_B.srgb_to_linear()
+	return Vector3(a.r + b.r, a.g + b.g, a.b + b.b) * 0.5
+
+
+static func peinture_plancher() -> float:
+	return Color(PEINTURE_PLANCHER_AFFICHE, 0.0, 0.0).srgb_to_linear().r
+
+
+## Miroir de `lire_lumiere` (`mur_iso.gdshader`) : la suite y vérifie l'équité — une face lit la même lumière avec ou sans
+## tache — et le noir absolu.
+static func lumiere_lue(lightmap: Vector3, peinture: Vector3) -> Vector3:
+	var ref := peinture_reference()
+	var plancher := peinture_plancher()
+	return Vector3(minf(lightmap.x * ref.x / maxf(peinture.x, plancher), 1.0),
+		minf(lightmap.y * ref.y / maxf(peinture.y, plancher), 1.0),
+		minf(lightmap.z * ref.z / maxf(peinture.z, plancher), 1.0))
+
+
+## Pose la peinture sur le matériau des murs. `texture` nulle (vue éteinte) ou sans beauté : la face relit la lightmap
+## telle quelle, comme avant 1f. La référence et le plancher ne se posent PAS en valeur : ils sont peints dans la texture
+## (`peinture_iso.gd`, étalons) et `mur_iso` les y lit à `etalon_px` et `plancher_px`, dans l'espace de couleur de la
+## peinture elle-même. `peinture_reference()` et `peinture_plancher()` en restent le miroir en linéaire, pour la suite.
+static func accorder_peinture(materiau: ShaderMaterial, texture: Texture2D, cadre: Rect2,
+		etalon_px := Vector2.ZERO, plancher_px := Vector2.ZERO) -> void:
+	materiau.set_shader_parameter("peinture", texture)
+	materiau.set_shader_parameter("peinture_active", beaute_active() and texture != null and cadre.has_area())
+	materiau.set_shader_parameter("peinture_origine_px", cadre.position)
+	materiau.set_shader_parameter("peinture_taille_px", cadre.size if cadre.has_area() else Vector2.ONE)
+	materiau.set_shader_parameter("peinture_etalon_px", etalon_px)
+	materiau.set_shader_parameter("peinture_plancher_px", plancher_px)
+
+
 ## ISO7, étape 6 — la température de la lumière vue sur le sol et les murs (`pate_temperature`).
 ## Pourquoi il en faut une : la torche est déjà chaude en 2D (`Charte.HALOGENE`, 0,98 / 0,91 / 0,80),
 ## mais la pâte D désature de 35 % vers la luminance et la rend grise. 0,5 rend une partie de cette

@@ -125,6 +125,12 @@ const COUCHE_CAPTEUR := 8
 ## ISO4 : plus les couches des disques des objets et du leurre, une par vue (`MiroirsIso.couche_objets`,
 ## 128 et 256) — elles sortent des masques des lightmaps comme celles des corps.
 const COUCHES_CAPTEURS := 8 | 16 | 32 | 64 | 128 | 256
+## ISO10, 1f — la couche des copies sans lumière de la peinture de la carte (`peinture_iso.gd`). Hors des lightmaps, comme
+## les capteurs : une copie non éclairée y dessinerait l'albédo sous le `CanvasModulate` noir, par-dessus le sol éclairé.
+const COUCHE_PEINTURE := 512
+## Tout ce que les lightmaps ne lisent pas pendant que la vue iso tient.
+const COUCHES_HORS_LIGHTMAP := COUCHES_CAPTEURS | COUCHE_PEINTURE
+const PeintureIsoT := preload("res://peinture_iso.gd")
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
 const CALQUE_VUE_1 := 2
@@ -182,6 +188,8 @@ var bascules := 0
 var _main: Node
 var _actif := false
 var _reconstruire := true
+## ISO10, 1f — la peinture de la carte sans lumière (`peinture_iso.gd`), refaite à chaque allumage.
+var _peinture: SubViewport = null
 ## Les vues regardées, dans l'ordre `vp1` puis `vp2` ; une ou deux.
 var _vues: Array[SubViewport] = []
 var _scinde := false
@@ -486,6 +494,7 @@ func _allumer(vues: Array[SubViewport]) -> void:
 		m.set_shader_parameter("lumiere_1", _main.vp1.get_texture())
 		m.set_shader_parameter("lumiere_2", _main.vp2.get_texture())
 	_poser_capteurs()
+	_poser_peinture()
 	for j in [_main.p1, _main.p2]:
 		_cacher_corps(j)
 	_poser_cameras()
@@ -517,6 +526,7 @@ func _eteindre(sortie_de_l_arbre := false) -> void:
 		_vues3d[i].render_target_update_mode = SubViewport.UPDATE_DISABLED
 		_affichages[i].visible = false
 	_retirer_capteurs()
+	_retirer_peinture()
 	_rendre_corps()
 	# `Main` libéré pendant que la vue tenait : les calques d'écran et le brouillage qu'il
 	# avait logés dans nos vues 3D n'ont plus personne pour les reprendre.
@@ -596,7 +606,7 @@ func _tenir() -> void:
 		_main.rendu_racine_autorise = false
 		_main._accorder_rendu_aux_vues()
 	for vue: SubViewport in [_main.vp1, _main.vp2]:
-		if (vue.canvas_cull_mask & COUCHES_CAPTEURS) != 0:
+		if (vue.canvas_cull_mask & COUCHES_HORS_LIGHTMAP) != 0:
 			vue.canvas_cull_mask = _sans_capteurs(vue.canvas_cull_mask)
 			masques_reposes += 1
 	for j in [_main.p1, _main.p2]:
@@ -826,7 +836,7 @@ func _lightmap_en_place(vue: SubViewport) -> bool:
 
 
 static func _sans_capteurs(masque: int) -> int:
-	return (masque & 0xFFFFFFFF) & ~COUCHES_CAPTEURS
+	return (masque & 0xFFFFFFFF) & ~COUCHES_HORS_LIGHTMAP
 
 
 # ---------------------------------------------------------------------------
@@ -846,6 +856,36 @@ static func masque_capteur(vue_id: int, corps_id: int) -> int:
 ## ou 64 — une par capteur (voir `COUCHE_CAPTEUR`).
 static func couche_capteur(vue_id: int, corps_id: int) -> int:
 	return COUCHE_CAPTEUR << (vue_id * 2 + corps_id)
+
+
+## ISO10, 1f — la peinture de la carte sans lumière (`peinture_iso.gd`), refaite à chaque allumage : ses copies vivent dans
+## l'arène, et une arène reconstruite n'en garde rien. `remove_child` avant `queue_free` : l'ancienne rend ses copies tout
+## de suite, pas en fin d'image à côté de celles de la nouvelle.
+func _poser_peinture() -> void:
+	_retirer_peinture()
+	var arene: Node2D = _main.arena
+	if arene == null or not arene.is_inside_tree():
+		return
+	var cartes := get_node_or_null(^"/root/MapData")
+	var data: Dictionary = cartes.get_selected() if cartes != null else {}
+	_peinture = PeintureIsoT.creer(arene, data)
+	add_child(_peinture)
+	IsoMateriaux.accorder_peinture(_mat_mur, _peinture.get_texture(), _peinture.cadre,
+		_peinture.point_reference(), _peinture.point_plancher())
+
+
+func _retirer_peinture() -> void:
+	if is_instance_valid(_peinture):
+		remove_child(_peinture)
+		_peinture.queue_free()
+	_peinture = null
+	if _mat_mur != null:
+		IsoMateriaux.accorder_peinture(_mat_mur, null, Rect2())
+
+
+## La peinture en place, pour la mesure (`tools/loupe.gd`) ; `null` quand la vue iso est éteinte.
+func peinture() -> SubViewport:
+	return _peinture if is_instance_valid(_peinture) else null
 
 
 func _poser_capteurs() -> void:
@@ -1444,7 +1484,7 @@ func _decrire(voulues: Array[SubViewport]) -> String:
 			# Le masque tel que le jeu l'a posé (`~4`, `~2`), les couches des capteurs dites à part :
 			# `~12` ne se lirait pas.
 			lignes.append("J%d : masque ~%d sans capteurs · lightmap %d×%d · rendu %d×%d · capteurs %s / %s"
-				% [id + 1, (~vue.canvas_cull_mask & 0xFFFFFFFF) & ~COUCHES_CAPTEURS, vue.size.x, vue.size.y,
+				% [id + 1, (~vue.canvas_cull_mask & 0xFFFFFFFF) & ~COUCHES_HORS_LIGHTMAP, vue.size.x, vue.size.y,
 				rendu.x, rendu.y, _masque_texte(_capteurs[id][0]), _masque_texte(_capteurs[id][1])])
 			# ISO8 — ce que le zoom fait à la matière (brief : « à ×1,8, la lightmap 1080p montre ses texels »).
 			var cam2d: Camera2D = _main.cam1 if id == 0 else _main.cam2

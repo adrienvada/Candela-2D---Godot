@@ -3197,6 +3197,26 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une sous-vue à couche dédiée n'affiche rien si les PARENTS de l'élément ne sont pas sur sa couche (2026-09-15)
+
+Chantier ISO10, 1f. La peinture de la carte est une sous-vue qui partage le monde 2D du duel et n'affiche que la couche
+512. Ses copies, posées sous l'arène avec `visibility_layer = 512`, n'apparaissaient pas : la texture restait à 0/255,
+sans erreur ni avertissement, et les faces de mur divisaient par le plancher. **Godot ne rend un `CanvasItem` que si lui
+ET tous ses parents partagent une couche avec le masque de la vue** ; l'arène est sur la couche 1. Deux passages en jeu
+perdus, dont un sur un faux diagnostic (le `CanvasModulate`, jamais vérifié). Le remède est le patron du disque de
+`capteur_corps.gd` : l'élément est l'ENFANT de la sous-vue, dont la chaîne des parents s'arrête là, et il dessine toujours
+dans le monde partagé — poser sa transformation globale depuis la source.
+
+### Couper les lumières le temps d'une prise ne suffit pas : `player.gd` rallume la torche à chaque image (2026-09-15)
+
+Chantier ISO10, 1f. Pour prendre la « peinture seule » d'une vue, l'outil coupait toutes les `Light2D` et cachait le
+`CanvasModulate`, puis attendait deux images. La torche revenait : tant qu'elle est allumée, `player.gd` repose
+`flashlight.enabled = true` (et `body_light`) dans son traitement de CHAQUE image. La prise montrait le cône en clair
+sur l'albédo, 3,87 fois plus lumineux qu'un sol hors de toute lumière, et une division lightmap ÷ peinture en tirait des
+chiffres faux mais plausibles. **Recouper juste avant le rendu** (`RenderingServer.frame_pre_draw`, après les
+traitements) : 0,99. Le contrôle qui l'a vu compare la même matière dans le cône et hors de toute lumière ; sans lui, rien
+ne le signalait. Même règle pour tout état que le jeu repose à chaque image (énergie, couleur, visibilité d'un sprite).
+
 ### Un shader qui DÉCLARE la texture d'écran fait copier l'écran, qu'il la lise ou non (2026-09-15)
 
 ISO10, 1a : la frange chromatique d'un pixel sur tous les bords de la vue unique, au repos, venait de l'aberration
@@ -25272,6 +25292,80 @@ ombre de contact (la lumière directionnelle reste pour après le test) ». Mesu
 - **Couleurs des corps** : non touchées. La planche E9 (gris plafonné, gris béton, noir) reste celle de la fiche.
 - Au tour 2 : les corps sous le cône et dans le noir, la loupe du pied de J1.
 - **Lot complet** (`./tools/run_suites.sh`, 18:07) : vert, 111 suites, sans erreur de script, 415 s.
+
+**1f — le mur ne rougit pas du sang : la voie (E), lumière = lightmap ÷ peinture.** Constat de 1b : une face de mur
+lit sa lumière dans la lightmap, 12 px devant elle ; or la lightmap est le rendu 2D de la vue de dessus, le SOL PEINT ×
+la lumière. Une tache de sang au pied d'un mur y est rouge, et la face la lisait rouge. Aucun tampon ne porte la lumière
+seule. Voies (C) et (D) refusées, (B) dernier recours, (E) puis (A) à mesurer (session cloud, 17:13).
+- **Mesurée avant tout code** (`--plan=loupe-peinture`, outil seul) : la peinture prise DANS la lightmap (Light2D coupées,
+  `CanvasModulate` caché), sans puis avec une tache au pied de la face sud du pilier. Trois passages avant une mesure
+  valable — trois pièges :
+  - `player.gd` repose `flashlight.enabled = true` à CHAQUE image : coupée une fois, la torche revenait dans la
+    « peinture » (× 3,87 dans le cône). Recoupée à `frame_pre_draw` avant chaque rendu : 0,99 ;
+  - l'albédo du sol vaut ≈ 0,026 LINÉAIRE (≈ 40/255 affiché) : un plancher de 0,05 linéaire couvrait les 190 texels de
+    la bande. Le plancher se donne en valeur AFFICHÉE (0,05 → 0,0039 linéaire) ;
+  - posée vers le haut, la tache filait sous le pilier : le défaut n'était pas reproduit. Posée vers le bas, 42 texels.
+  - Deux essais nus hors du jeu (`--script`) se sont contredits : écartés.
+- **Résultat**, lecture filtrée 3×3 et comparaison DANS la même prise (sous la tache contre le sol propre voisin, même
+  souffle de torche) : aujourd'hui r/g 1,32 sous la tache contre 1,21 à côté ; (E) 1,16 contre 1,21 ; luminance sous la
+  tache ÷ voisins, (E) 0,78 contre 0,77 sans tache. Limite aux arêtes vives : 64 à 72 % au coin du pilier, où le bord du
+  cône et l'encre du mur tombent dans la même moyenne. Feu vert de la session cloud (18:24).
+- **Posée**, à la condition de la session cloud : la peinture en espace MONDE, une texture pour toute la carte.
+  - `peinture_iso.gd` : une sous-vue qui partage le monde 2D du duel, caméra FIXE sur le cadre de la carte (celui du
+    décor cuit), 1 texel par pixel de monde, plafonnée à 4 096 texels de côté ; la même pour les deux vues.
+  - ⚠️ **Quatre passages en jeu avant une peinture juste**, et un faux diagnostic de ma part en route :
+    - passages 1 et 2 : la texture valait 0/255 au pied du pilier, la division tombait partout sur le plancher, les faces
+      s'éclaircissaient de 1,6 fois et le rouge ne reculait qu'à peine (r/g 1,52 → 1,39). J'en ai d'abord accusé le
+      `CanvasModulate` sans le vérifier, et passé les copies en matériau non éclairé : rien n'a changé. **La cause était
+      la chaîne des parents** : une vue ne rend un `CanvasItem` que si lui ET tous ses parents partagent une couche avec
+      son masque ; posées sous l'arène (couche 1), les copies de la couche 512 étaient toutes écartées. Enfants de la
+      sous-vue (le patron du disque de `capteur_corps.gd`), à la transformation globale de leur source : 31,7/255 ;
+    - au passage 2, la caméra fixe posée avant l'arbre faisait refuser Godot (« !viewport->canvas_map.has(p_canvas) ») :
+      elle se pose dans `_ready` ;
+    - passage 3 : le rouge disparaissait (r/g 1,51 → 1,19, la face propre à 1,15-1,18), mais les faces s'assombrissaient
+      de six fois. La peinture était juste au point lu (0,018 linéaire, sonde en Python), la référence calculée en
+      linéaire côté processeur aussi (0,023) ; une sonde en jeu (référence 1, plancher 0) montrait que le shader lisait la
+      peinture autour de 0,1 à 0,18 — pas dans l'espace où la référence était calculée. **La référence et le plancher
+      sont désormais PEINTS dans la texture**, deux étalons au coin du cadre (la couleur moyenne du sol dessiné, le gris
+      de 0,05 affiché), et `mur_iso` les y lit : même texture, même lecture, même espace de couleur, quel qu'il soit ;
+    - le matériau non éclairé des copies est gardé : il les tient hors des lumières et du `CanvasModulate`, à coût nul.
+  - Elle dessine des copies non éclairées (`light_mask` 0) sur `Presentation3D.COUCHE_PEINTURE` (512), retirée des masques
+    des lightmaps avec les capteurs (`COUCHES_HORS_LIGHTMAP`) : sol, décor et encre des murs une fois par carte ; sang,
+    éclats et douilles immobiles à la pose ; rendue à la demande. Empreintes de pas exclues : une par pas, fondu de 2 s,
+    elles changeraient la peinture à chaque image ; grises, elles ne rougissent rien.
+  - ⚠️ Une copie de trace entre dans le groupe de SA copie J2 avant d'entrer dans l'arbre (son `_ready` s'arrête : ni
+    plafond, ni copie de copie), et ses variables de script sont recopiées TOUTES par la liste des propriétés — le piège
+    du 2026-08-25 (une variable oubliée, une copie qui dessine le vide) ne peut pas revenir.
+  - `mur_iso.gdshader`, `lire_lumiere` : lightmap × référence ÷ max(peinture, plancher), canal par canal, plafonnée à 1.
+    Référence et plancher lus aux deux étalons peints dans la peinture (la couleur moyenne de `SOL_DESSIN_A` et `_B`, le
+    gris de 0,05 affiché) : sur un sol propre la face lit ce qu'elle lisait. Chaque lecture est divisée AVANT la moyenne des quatre (un rapport de moyennes n'est pas une
+    moyenne de rapports : c'était l'écart des coins). Face et liseré ; le Lambert (éteint) et le dessus des murets lisent
+    toujours la lightmap. Le sol iso ne change pas : c'est lui qui montre le sang.
+  - Invariants : noir absolu (une lightmap nulle rend 0), aucune direction lue (ISO7b), une lumière rouge de fusée reste
+    au numérateur.
+- **Mémoire** : 3,2 à 5,4 Mo en RGBA8 pour les cartes livrées (910 à 1 190 px de cadre) ; 79 Mo pour une carte de 128 ×
+  128 cases, ramenée à 4 096 texels (≈ 64 Mo, 0,9 texel par pixel).
+- **Mesures en jeu**, quatrième passage (fenêtre native au Cloître, `--plan=loupe-face-sang` et `loupe-peinture-cout`,
+  après `loupe-pilier` et `loupe-ombre`, prises au même passage pour le tour 2) :
+  - face sud du pilier, sang au pied, bande de la face juste au-dessus du pied : **face propre 103,7 contre 108,5** avec la
+    lightmap seule, r/g 1,15 des deux côtés — elle garde sa lumière d'avant ; **au-dessus du sang, r/g 1,51 → 1,25**
+    (face propre 1,15) : 72 % de l'excès rouge retiré, pas tout. Le reste n'est pas localisé par cette mesure ; à la
+    planche, la bande rouge du bord droit de la face, sous la traînée, a disparu. À juger au tour 2 ;
+  - **pas de tache froide** : b/r 0,45 → 0,52 au-dessus du sang, en dessous de la face propre (0,65) ;
+  - **bruit sous la tache** : luminance ± 37 contre ± 49 avec la lightmap seule ;
+  - **la peinture n'est pas éteinte** : recadrée au pied du pilier, 31,7/255 en moyenne (sol, pilier noir, encre), la
+    tache à sa place ;
+  - **coût** d'un rendu de peinture forcé à CHAQUE image (1 120 × 1 120 texels, blocs alternés de 120 images) : de −0,37
+    à +1,1 ms selon les passages, en vue unique comme en écran scindé — dans le bruit du banc, qui varie d'autant entre
+    deux passages identiques ;
+  - **fréquence en duel** (`bench_framerate --iso --vue-unique`, 18 s, pompe à bout portant) : 11 rendus pour 25 traces
+    peintes, 0,6 par seconde — les poses d'une même image n'en font qu'un. 198 appels de dessin par image (médiane).
+- **Contrôles** (`test_iso_beaute`, `_la_peinture`) : l'équité — une face lit la même lumière sur le sol propre et sous
+  une tache, sur quatre lumières et quatre albédos (miroir `IsoMateriaux.lumiere_lue`) ; le noir absolu ; le rouge d'une
+  fusée gardé ; la formule du shader et la division avant la moyenne ; la peinture posée et retirée avec la vue ; sa couche
+  hors des vues, des capteurs et des lightmaps ; caméra fixe, copies sans lumière, rendu à la demande, empreintes exclues.
+  `test_iso_vues`, `test_iso_corps` et `test_iso_geometrie` lisent désormais `COUCHES_HORS_LIGHTMAP`.
+- **Lot complet** (`./tools/run_suites.sh`, 19:06) : vert, 111 suites, sans erreur de script, 413 s.
 
 ### Ce qui attend Adrien — jalon H15
 

@@ -70,6 +70,12 @@ static func catalogue() -> Array[Dictionary]:
 			"J1 avance et tourne sa visée, la caméra glisse : un saut ou un hoquet se voit d'une image à l'autre."],
 		["loupe-corps-msaa", "Les deux corps sans MSAA 3D, à ×2 et à ×4, et le coût de chaque niveau",
 			"ISO10, 1d : l'escalier des arêtes des voxels contre ce que l'anticrénelage 3D de la fenêtre coûte par image."],
+		["loupe-peinture", "La lumière qu'une face lirait en divisant la lightmap par la peinture seule",
+			"ISO10, 1f, voie (E) : lightmap et peinture (lumières coupées), sans puis avec une tache de sang au pied de la face sud du pilier, et la bande que la face lit."],
+		["loupe-face-sang", "La face sud du pilier avec du sang à son pied, lumière divisée par la peinture puis non",
+			"ISO10, 1f : la face ne rougit plus du sang ; et la texture de peinture de la carte au même lieu (le CanvasModulate ne l'éteint pas)."],
+		["loupe-peinture-cout", "Le coût d'un rendu de peinture à chaque image (mesure, sans image)",
+			"ISO10, 1f : temps d'image avec la peinture refaite à chaque image, contre sans, en vue unique puis en écran scindé."],
 		["loupe-cout-voile", "Le coût du voile plein au repos (mesure, sans image)",
 			"ISO10, 1a : temps d'image avec la copie plein cadre et le voile plein forcés, contre le voile calme, en blocs alternés."],
 	]:
@@ -190,6 +196,14 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			["bord-cone", func(img: Image) -> Vector2: return _pixel(img, bord)]], true, 1.0)
 		p._vue_unique()
 
+	# Après tout le reste : la tache posée au pied du pilier resterait dans les loupes qui suivent.
+	if p._demande(plans, "loupe-peinture"):
+		await _loupe_peinture(plans, face)
+	if p._demande(plans, "loupe-face-sang"):
+		await _loupe_face_sang(plans, face)
+	if p._demande(plans, "loupe-peinture-cout"):
+		await _cout_peinture()
+
 	if p._demande(plans, "loupe-cout-voile"):
 		await _cout_du_voile()
 
@@ -296,7 +310,8 @@ func _tenir_scene() -> void:
 # LES MISES EN SCÈNE
 # ---------------------------------------------------------------------------
 
-func _poser_du_sang(pos: Vector2) -> void:
+## `direction` : l'axe du tir, où l'éclaboussure s'étire. Vers le haut par défaut (les loupes du tour 1).
+func _poser_du_sang(pos: Vector2, direction := Vector2.UP) -> void:
 	var arene: Node = p._main.arena
 	if arene == null:
 		return
@@ -308,7 +323,7 @@ func _poser_du_sang(pos: Vector2) -> void:
 		var tache := Node2D.new()
 		tache.set_script(preload("res://blood_stain.gd"))
 		arene.add_child(tache)
-		tache.setup(pos, Vector2.UP, INF, gerbe)
+		tache.setup(pos, direction, INF, gerbe)
 
 
 func _viseur_monde() -> Vector2:
@@ -585,6 +600,167 @@ func _loupe_torche_braconnier(plans: Array[Dictionary], lieux: Array[Vector2]) -
 ## mise au premier plan) se partage entre les deux. A = `_voile_bb` visible et voile plein posés à chaque
 ## image, comme avant 1a ; B = le jeu tel qu'il est (voile calme, copie éteinte). Les temps d'image se lisent
 ## entre deux `frame_post_draw`, sans capture.
+## ISO10, 1f, voie (E) — MESURE, jamais le jeu : la lumière qu'une face lirait en divisant la lightmap par la PEINTURE
+## seule. La peinture est prise dans la lightmap même (même cadrage, même filtrage) : une image les Light2D coupées et
+## le `CanvasModulate` caché, soit l'albédo de tout ce qui se dessine. Quatre images — lightmap et peinture, sans puis
+## avec une tache de sang au pied de la face sud du pilier — et la bande que la face lit, en texels de la lightmap.
+## ⚠️ Pas une copie des calques dans une vue à part : `duplicate()` perd les variables de script, et le décor comme
+## l'encre des murs ne s'y redessineraient pas. Les lumières restent coupées deux images, le temps d'une prise.
+func _loupe_peinture(plans: Array[Dictionary], face: Vector2) -> void:
+	var m: Node = p._main
+	var vue: SubViewport = m.vp1
+	var pied := IsoMateriaux.PIED_FACE_PX
+	var bande_a := face + Vector2(-_pilier.size.x * 0.5, pied)
+	var bande_b := face + Vector2(_pilier.size.x * 0.5, pied)
+	# « sans-sang-bis » : la même scène reprise, sans rien changer — le bruit entre deux prises (la torche respire, ±3 %),
+	# sous lequel aucun écart de la voie (E) ne se lit. Deuxième passage : 11 % d'écart sans que la tache touche la bande.
+	for etat in ["sans-sang", "sans-sang-bis", "avec-sang"]:
+		if etat == "avec-sang":
+			# ⚠️ Vers le BAS, depuis le pied de la face : posée vers le haut (deuxième passage), l'éclaboussure filait
+			# sous le pilier et une seule traînée croisait la bande — la rougeur lue changeait à peine (1,15 → 1,17).
+			_poser_du_sang(face + Vector2(0.0, 4.0), Vector2.DOWN)
+		for n in 30:
+			_tenir_scene()
+			await p.get_tree().process_frame
+		var lightmap: Image = await _image_de_vue(vue)
+		var coupees := _couper_les_lumieres(m)
+		var peinture: Image = await _image_de_vue(vue, coupees)
+		_rendre_les_lumieres(coupees)
+		print("  · loupe-peinture %s : %d lumières et modulations coupées le temps de la prise" % [etat, coupees.size()])
+		for paire in [["lightmap", lightmap], ["peinture", peinture]]:
+			p._ecrire(p._derive(plans, "loupe-peinture", "%s-%s" % [etat, paire[0]], ""), paire[1])
+	var ct: Transform2D = vue.canvas_transform
+	var logique := Vector2(vue.size_2d_override) if vue.size_2d_override != Vector2i.ZERO else Vector2(vue.size)
+	var echelle := Vector2(vue.size) / logique
+	var a := (ct * bande_a) * echelle
+	var b := (ct * bande_b) * echelle
+	var j1 := (ct * _j1) * echelle
+	print("  MESURE loupe-peinture bande %.1f %.1f %.1f %.1f j1 %.1f %.1f lightmap %dx%d pied %.0f" % [a.x, a.y, b.x, b.y,
+		j1.x, j1.y, vue.size.x, vue.size.y, pied])
+
+
+## ISO10, 1f — la face sud du pilier avec du sang à son pied, vue par la vue iso : la lumière divisée par la peinture
+## (le jeu), puis la lightmap relue telle quelle (`peinture_active` coupé le temps d'une prise). Et la texture de peinture
+## de la carte recadrée au même lieu : si le `CanvasModulate` l'éteignait, elle serait noire.
+func _loupe_face_sang(plans: Array[Dictionary], face: Vector2) -> void:
+	var pres := Presentation3D.instance()
+	var pe: SubViewport = pres.peinture() if pres != null else null
+	var mat: ShaderMaterial = pres.get("_mat_mur") if pres != null else null
+	if pe == null or mat == null:
+		printerr("  ✗ loupe-face-sang : la peinture ou le matériau des murs est absent (vue iso éteinte ?)")
+		return
+	_poser_du_sang(face + Vector2(0.0, 4.0), Vector2.DOWN)
+	var centre := func(img: Image) -> Vector2: return _pixel(img, face, HAUTEUR_PIED_DE_FACE)
+	await _prise(plans, "loupe-face-sang", [["peinture", centre]], false, 1.0)
+	mat.set_shader_parameter("peinture_active", false)
+	await _prise(plans, "loupe-face-sang", [["lightmap-seule", centre]], false, 0.4)
+	mat.set_shader_parameter("peinture_active", true)
+	await RenderingServer.frame_post_draw
+	var img: Image = pe.get_texture().get_image()
+	var cadre: Rect2 = pe.get("cadre")
+	var echelle := float(pe.get("echelle"))
+	var texel := (face - cadre.position) * echelle
+	var morceau := recadrer(img, texel)
+	var somme := 0.0
+	for y in range(0, morceau.get_height(), 4):
+		for x in range(0, morceau.get_width(), 4):
+			somme += morceau.get_pixel(x, y).get_luminance()
+	var n := float((morceau.get_height() / 4) * (morceau.get_width() / 4))
+	p._ecrire(p._derive(plans, "loupe-face-sang", "texture-peinture", ""), morceau)
+	print("  MESURE loupe-face-sang peinture %dx%d texels, %.2f texel/px, %.1f Mo, %d rendus, %d traces peintes, luminance moyenne au lieu %.3f"
+		% [pe.size.x, pe.size.y, echelle, float(pe.call("memoire_mo")), int(pe.get("rendus")),
+		(pe.get("_copies") as Dictionary).size(), somme / maxf(n, 1.0)])
+
+
+## ISO10, 1f — le coût d'un rendu de peinture : blocs alternés de 120 images, la peinture redemandée à chaque image
+## (le pire cas d'une rafale : les demandes d'une même image n'en font qu'un) contre aucune, en vue unique puis en
+## écran scindé. Le changement de vue rallume la vue iso et refait la peinture : elle est relue après.
+func _cout_peinture() -> void:
+	for scinde in [false, true]:
+		if scinde:
+			p._deux_vues()
+		for n in 60:
+			_tenir_scene()
+			await p.get_tree().process_frame
+		var pres := Presentation3D.instance()
+		var pe: SubViewport = pres.peinture() if pres != null else null
+		if pe == null:
+			printerr("  ✗ loupe-peinture-cout : pas de peinture (%s)" % ("scindé" if scinde else "vue unique"))
+			continue
+		var sommes := {"A": 0.0, "B": 0.0}
+		var comptes := {"A": 0, "B": 0}
+		var rendus_avant := int(pe.get("rendus"))
+		for bloc in 8:
+			var force := bloc % 2 == 0
+			var cle := "A" if force else "B"
+			await RenderingServer.frame_post_draw
+			var avant := Time.get_ticks_usec()
+			for k in 120:
+				_tenir_scene()
+				if force:
+					pe.call("salir")
+				await RenderingServer.frame_post_draw
+				var maintenant := Time.get_ticks_usec()
+				sommes[cle] += float(maintenant - avant) / 1000.0
+				comptes[cle] += 1
+				avant = maintenant
+		var a: float = float(sommes["A"]) / maxf(float(comptes["A"]), 1.0)
+		var b: float = float(sommes["B"]) / maxf(float(comptes["B"]), 1.0)
+		print("  MESURE loupe-peinture-cout %s : peinture à chaque image %.3f ms, sans %.3f ms, écart %.3f ms (%d rendus pour %d images forcées, %dx%d texels)"
+			% ["écran scindé" if scinde else "vue unique", a, b, a - b, int(pe.get("rendus")) - rendus_avant, comptes["A"],
+			pe.size.x, pe.size.y])
+		if scinde:
+			p._vue_unique()
+
+
+## Trois images rendues, puis la texture de la vue : la première peut encore être celle d'avant le changement.
+## `coupees` : recoupées JUSTE AVANT chaque rendu. ⚠️ Premier passage : coupées une seule fois, la torche
+## revenait dans la « peinture » — `player.gd` repose `flashlight.enabled = true` à chaque image tant qu'elle est
+## allumée, et le cône se lisait en clair sur l'albédo.
+func _image_de_vue(vue: SubViewport, coupees: Array = []) -> Image:
+	for k in 3:
+		_tenir_scene()
+		await RenderingServer.frame_pre_draw
+		_recouper(coupees)
+		await RenderingServer.frame_post_draw
+	return vue.get_texture().get_image()
+
+
+func _recouper(coupees: Array) -> void:
+	for o in coupees:
+		if not is_instance_valid(o):
+			continue
+		if o is Light2D:
+			(o as Light2D).enabled = false
+		else:
+			(o as CanvasItem).visible = false
+
+
+func _couper_les_lumieres(racine: Node) -> Array:
+	var coupees := []
+	for n in racine.find_children("*", "Light2D", true, false):
+		var l := n as Light2D
+		if l.enabled:
+			l.enabled = false
+			coupees.append(l)
+	for n in racine.find_children("*", "CanvasModulate", true, false):
+		var c := n as CanvasModulate
+		if c.visible:
+			c.visible = false
+			coupees.append(c)
+	return coupees
+
+
+func _rendre_les_lumieres(coupees: Array) -> void:
+	for o in coupees:
+		if not is_instance_valid(o):
+			continue
+		if o is Light2D:
+			(o as Light2D).enabled = true
+		else:
+			(o as CanvasItem).visible = true
+
+
 ## ISO10, 1d — l'anticrénelage 3D des corps, mesuré avant d'être posé. En vue unique la 3D est rendue par la
 ## fenêtre elle-même (`Presentation3D.viewport_ecran`) : c'est donc son `msaa_3d` qu'on règle. Trois niveaux pris
 ## à l'image, puis leur coût en blocs alternés de 120 images ; le réglage d'origine est rendu à la fin.
