@@ -5043,3 +5043,22 @@ l'accord des constantes de `bullet.gd` et `gadget_leurre.gd` ; sabotée une fois
 Banc : plafond tenu dans trois passages ; porteur sous sa torche à 74/81/87 et 73/80/86 (81/88/95 au
 corps fin). Piège : avec `--flash`, le tir éblouit et le porteur mesuré est du sol. Planche
 `docs/iso/planche_corps_epais_jeu.jpg`.
+
+### Session « ISO7 Gadgets et lumière Opus » (Gadgets et lumières en iso, branche `iso-gadgets-lumieres`) — ajoutée le 2026-09-15 vers 06:00 (Paris)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », relayé par la Concierge à 05:18, sur mandat
+d'Adrien de 05:00. Branche créée depuis `iso2-vues` (`953ead3`) dans son propre worktree ; le harnais
+refusant d'écrire hors du worktree de départ de la session, entrée par `EnterWorktree` (précédent d'ISO5).
+**Inventaire** écrit d'abord dans la ROADMAP (22 sources et gadgets). **Hauteur des sources** : la hauteur
+d'une `Light2D` choisit sa règle dans `murs_bas_zone.gdshaderinc` (0 : la bande constante du jeu ; une
+hauteur réelle : `D × (h_mur − c) / (h − h_mur)` ; au-delà d'un seuil : sans origine, le bandeau LED dont la
+marque passe de 1,0 à 4096 px) ; `MursBasRendu.poser_hauteur_source` pose la hauteur et le bit d'ombre des
+murets ensemble ; fusée en vol `1,5 · (1 − (1 − élan)²)`, posée 0,15, braises et mine 0,05 ; les lampes du
+joueur et la torche fantôme gardent la règle du jeu (écart au brief, motivé). **Volumes, lueurs, miroirs** :
+`iso_volumes.gd`, `volume_iso.gdshader`, `halo_iso.gdshader` neufs, branchés par `MiroirsIso` — aucune ligne
+dans `presentation_3d.gd`, `game_state.gd` ni `player.gd`. **Trouvé** : la mine et l'ombre habitée n'avaient pas
+de voxel en match (slugs du jeu contre clés du catalogue), invisible aux suites d'ISO4 qui posaient sous les
+clés du catalogue ; corrigé par une table dans `MiroirsIso`. `tools/test_iso_gadgets.gd` neuve, 99
+vérifications, gadgets posés par `GameState._do_spawn_gadget` ; sabotée une fois (table vidée : 2 rouges),
+restaurée. Signalé : le champ de murets de `uniformes_de_vue` est agrandi de la bande du jeu, pas de la zone
+d'une source haute et lointaine.

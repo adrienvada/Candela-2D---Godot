@@ -44,17 +44,32 @@ const SPRITES_REMPLACES := {
 	"leurre": ["Visuel", "VisuelPoseur"],
 }
 
+## Gadgets et lumières (2026-09-15) — le slug que le JEU donne à un gadget posé
+## (`GameState.IMPLEMENTATIONS`) quand il diffère de la clé du catalogue des voxels.
+##
+## ⚠️ **Sans cette table, la mine et l'ombre habitée n'avaient pas de voxel en match.** Le jeu les pose
+## sous `mine_magnesium` et `ombre_habitee` ; le catalogue (vague 3 d'ISO Corps) les nomme `mine` et
+## `ombre`. `slug_objet` rendait donc "" pour elles, et elles restaient couchées dans la lightmap. La
+## suite et le banc d'ISO4 posaient leurs gadgets sous les clés du catalogue (`g.slug = slug`), jamais par
+## le vrai chemin : verts, ils ne pouvaient pas le voir. `tools/test_iso_gadgets.gd` pose désormais par
+## `GameState._do_spawn_gadget`.
+const SLUG_DU_CATALOGUE := {"mine_magnesium": "mine", "ombre_habitee": "ombre"}
+
 var _miroirs := {}           # instance_id du nœud 2D -> Dictionary
 var _couches := {}           # instance_id d'un CanvasItem retiré -> sa couche d'origine
 var _quads_joueurs: Array = [{}, {}]
 var _quads_balles := {}      # instance_id de la balle -> {"core": MeshInstance3D, "aura": MeshInstance3D}
 var _plan := PlaneMesh.new()
 var _quads_masques := false
+## Gadgets et lumières — les volumes, les lueurs, l'onde et la toile (`iso_volumes.gd`).
+var volumes := IsoVolumes.new()
 
 
 func _init() -> void:
 	name = "Miroirs"
 	_plan.size = Vector2.ONE
+	volumes.miroirs = self
+	add_child(volumes)
 
 
 ## La couche de visibilité des disques des objets dans les capteurs de la vue `vue_id` : 128 ou 256.
@@ -75,6 +90,7 @@ static func slug_objet(noeud: Node) -> String:
 		var s := String(noeud.get("slug"))
 		if s == "leurre":
 			return "leurre"
+		s = String(SLUG_DU_CATALOGUE.get(s, s))
 		return s if VoxelCatalogueObjets.OBJETS.has(s) else ""
 	if "_atterrie" in noeud and "graine" in noeud:
 		return "fusee" if bool(noeud.get("_atterrie")) else ""
@@ -113,6 +129,17 @@ func quads_de_la_balle(balle: Node) -> Dictionary:
 ## quads SONT des dessins 2D sans lumière passés en 3D, et ils y étaient retirés avec leur lightmap.
 func masquer_les_quads(masques: bool) -> void:
 	_quads_masques = masques
+	volumes.masquer(masques)
+
+
+## Ce dessin 2D est-il retiré des lightmaps par le miroir d'un objet posé ? `IsoVolumes` le demande avant
+## de rendre un dessin qu'il avait sorti (le cœur d'une fusée qui vient d'atterrir passe de la comète au
+## voxel posé : une seule main le rend).
+func tient_le_dessin(item: Object) -> bool:
+	for m: Dictionary in _miroirs.values():
+		if (m["sprites"] as Array).has(item):
+			return true
+	return false
 
 
 ## Une image : miroirs créés, posés ou retirés ; quads des joueurs et des balles. `vues` : les ids des
@@ -143,10 +170,14 @@ func suivre(main: Node, vues: Array, style: int, parent_capteurs: Node) -> void:
 		if not vus.has(id):
 			_retirer_balle(id)
 	_suivre_joueurs(main)
+	# Gadgets et lumières — après les miroirs : une fusée qui vient d'atterrir a déjà son voxel, qui tient
+	# son cœur, quand la comète le lâche.
+	volumes.suivre(main, vues, style, parent_capteurs)
 
 
 ## Tout rendre : sprites à leur couche, capteurs et voxels libérés, quads retirés.
 func vider() -> void:
+	volumes.vider()
 	for id in _miroirs.keys():
 		_retirer(id)
 	for id in _quads_balles.keys():

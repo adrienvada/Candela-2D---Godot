@@ -207,6 +207,9 @@ func _ready() -> void:
 	# seulement — voir `masque_ombre`, qui change à l'atterrissage.
 	_lumiere.shadow_item_cull_mask = masque_ombre(false)
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	# Gadgets et lumières — une source qui a une hauteur : au lancer, haut au-dessus
+	# des murets. `_voler` la fait redescendre avec l'élan (`hauteur_de_vol`).
+	MursBasRendu.poser_hauteur_source(_lumiere, hauteur_de_vol(1.0))
 	add_child(_lumiere)
 
 	# Le cœur incandescent — refonte roman graphique, lot 3 (2026-09-11). C'était
@@ -290,6 +293,7 @@ func _ready() -> void:
 		# La killcam pilote l'âge et la position elle-même, image par image.
 		_atterrie = true
 		_lumiere.shadow_item_cull_mask = masque_ombre(true)
+		MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_FUSEE_AU_SOL)
 		_age_combustion = 0.0
 		set_physics_process(false)
 
@@ -384,6 +388,7 @@ func _voler(delta: float) -> void:
 	# L'élan restant porte la hauteur factice et l'orientation du corps.
 	var elan := vitesse / FuseeModele.VITESSE_LANCER
 	_coeur.position = Vector2(0.0, -HAUTEUR_VOL_PX * elan)
+	MursBasRendu.poser_hauteur_source(_lumiere, hauteur_de_vol(elan))
 	if _corps:
 		_corps.position = _coeur.position
 		_corps.rotation = _velocite.angle() if vitesse > 0.0 else _corps.rotation
@@ -418,6 +423,7 @@ func appliquer_age(age: float) -> void:
 func forcer_age(age: float) -> void:
 	_atterrie = true
 	_lumiere.shadow_item_cull_mask = masque_ombre(true)
+	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_FUSEE_AU_SOL)
 	_velocite = Vector2.ZERO
 	_coeur.position = Vector2.ZERO
 	appliquer_age(age)
@@ -451,6 +457,39 @@ func est_allumee_au_sol() -> bool:
 ## survole pas.
 static func masque_ombre(atterrie: bool) -> int:
 	return 1 | (CanauxLumiere.COUCHE_OMBRE_MUR_BAS if atterrie else 0)
+
+
+## Gadgets et lumières (2026-09-15) — la hauteur RÉELLE du vol, en tuiles, selon l'élan
+## restant (1 au lancer, 0 posée). Elle est la hauteur de sa lumière : haute, la fusée
+## éclaire par-dessus un muret en ne laissant derrière lui qu'une zone morte courte ;
+## redescendue au ras du muret (élan 0,14), elle y bute.
+##
+## ⚠️ **Pas `HAUTEUR_VOL_PX`**, qui décale le cœur du sprite 2D de 18 px au plus : une
+## hauteur factice, lisible en vue de dessus. Celle-ci est une hauteur de monde, lue par
+## la lightmap (identique pour les deux joueurs) et par la comète de la vue iso.
+##
+## La courbe : `1 − (1 − e)²`, lente au début puis plongeante — la fusée garde sa hauteur
+## tant qu'elle a de l'élan et tombe à la fin, comme un objet lancé qui a passé son
+## sommet. L'élan est dérivé de la vitesse, donc des mêmes rebonds chez les deux pairs.
+static func hauteur_de_vol(elan: float) -> float:
+	var e := clampf(elan, 0.0, 1.0)
+	return MursBasRendu.HAUTEUR_FUSEE_LANCER * (1.0 - (1.0 - e) * (1.0 - e))
+
+
+## La hauteur de source de la lumière de la fusée, en tuiles (voir `MursBasRendu`).
+func hauteur_source() -> float:
+	return MursBasRendu.hauteur_source(_lumiere)
+
+
+## L'opacité de la fumée telle qu'elle est peinte en ce moment (panache d'extinction compris), et son
+## rayon — ce que le volume de la vue iso élève (`IsoVolumes`). Lecture seule : c'est `occultation_pour`
+## qui fait foi pour le jeu.
+func alpha_fumee() -> float:
+	return _alpha_fumee_courant
+
+
+func rayon_fumee() -> float:
+	return _rayon_courant
 
 
 ## Ce que la fusée BRÛLE en ce moment, entre 0 et 1 — la part de son plein feu.
@@ -734,6 +773,7 @@ func _atterrir() -> void:
 	_atterrie = true
 	# MB3 — posée, la fusée brûle plus bas qu'un muret : sa lueur bute dessus.
 	_lumiere.shadow_item_cull_mask = masque_ombre(true)
+	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_FUSEE_AU_SOL)
 	_age_combustion = 0.0
 	_velocite = Vector2.ZERO
 	_coeur.position = Vector2.ZERO

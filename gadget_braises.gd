@@ -235,6 +235,9 @@ func _monter_lueur() -> void:
 	_lumiere.shadow_enabled = true
 	# MB3a — une nappe au sol bute sur un mur bas (couche d'ombre des murs bas).
 	_lumiere.shadow_item_cull_mask = 1 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+	# Gadgets et lumières — sa hauteur de source : au ras du sol, sous le muret. Elle
+	# y bute comme avant ; la hauteur le DIT, pour la lightmap et pour la vue iso.
+	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_AU_RAS_DU_SOL)
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	_lumiere.range_item_cull_mask = 1 | 2 | 4
 	add_child(_lumiere)

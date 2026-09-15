@@ -59,23 +59,62 @@ float mb_sortie(vec2 a, vec2 b, vec4 r) {
 	return ts;
 }
 
+// Gadgets et lumières (2026-09-15) — la HAUTEUR DE LA SOURCE, pour les sources qui
+// en déclarent une (`MursBasRendu.poser_hauteur_source`). Toutes en pixels d'ÉCRAN :
+// Godot porte `Light2D.height` dans LIGHT_POSITION.z à l'échelle de la cible de
+// rendu, comme la position (`MursBasRendu.uniformes_de_vue` pose la même échelle).
+uniform float mb_h_mur = 14.0;
+// La hauteur de ce qui reçoit : 0 pour le sol, celle de la posture pour un corps.
+uniform float mb_h_cible = 0.0;
+// Au-delà, une lampe n'a pas de point d'origine (le bandeau LED) : aucune règle.
+uniform float mb_z_sans_origine = 2048.0;
+
 // Vrai si la lumière venue de `source` tombe dans la zone morte d'un mur bas.
 //
-// ⚠️ `source.z` est la HAUTEUR de la lampe (`Light2D.height`), et une hauteur non
-// nulle veut dire « lampe sans point d'origine » : le bandeau LED des murs
-// (`mur_led.gd`), une seule lumière cuite pour toute la carte, dont la position
-// est le centre de la carte. Lui appliquer la règle ombrerait le sol derrière
-// chaque muret vu depuis ce centre — un rayon qui n'existe pas. Aucune autre
-// lampe du jeu ne pose de hauteur : sans carte de normales, elle n'a pas d'autre
-// effet (`MursBasRendu.HAUTEUR_SANS_ORIGINE`, gardé par `tools/test_murs_bas_rendu.gd`).
+// ⚠️ `source.z` est la HAUTEUR de la lampe (`Light2D.height`), et elle choisit la
+// règle. Trois cas :
+//
+// - **z = 0 : la règle du jeu**, celle de la balle — « un même angle » (Adrien,
+//   2026-09-14), une bande de longueur constante `mb_zone_morte` derrière chaque
+//   muret. Les lampes portées par un joueur, la torche fantôme qui les imite, la
+//   balle et ses éclats : elles ne posent aucune hauteur, et ce chemin est celui
+//   de MB3c, inchangé.
+// - **0 < z < `mb_z_sans_origine` : une source qui a une hauteur** (fusée, braises,
+//   mine…). Le rayon qui rase l'arête de sortie du muret, à la distance D de la
+//   source, redescend à la hauteur de la cible `c` après `D · (h_mur − c) / (z − h_mur)`.
+//   Plus la source est haute, plus la zone est courte ; elle s'allonge avec D. Une
+//   source au ras du muret ou plus basse ne le franchit jamais : c'est l'occluder
+//   de `CanauxLumiere.COUCHE_OMBRE_MUR_BAS` qui l'arrête (ombre infinie), et que
+//   `poser_hauteur_source` lui donne — ce shader n'a rien à calculer pour elle.
+// - **z ≥ `mb_z_sans_origine` : une lampe sans point d'origine**, le bandeau LED des
+//   murs (`mur_led.gd`), une seule lumière cuite pour toute la carte, posée en son
+//   centre. Lui appliquer une règle ombrerait le sol derrière chaque muret vu depuis
+//   ce centre — un rayon qui n'existe pas.
+//
+// Sans carte de normales, la hauteur n'a aucun autre effet sur le rendu
+// (`tools/test_murs_bas_rendu.gd` garde les deux).
 bool mb_dans_la_zone_morte(vec3 source, vec3 sommet) {
-	if (mb_zone_morte <= 0.0 || source.z > 0.0) {
+	if (source.z >= mb_z_sans_origine) {
+		return false;
+	}
+	bool par_hauteur = source.z > 0.0;
+	float k = 0.0;
+	if (par_hauteur) {
+		// Au ras ou sous le muret : l'occluder s'en charge. Cible plus haute que le
+		// muret : il ne cache rien à une source qui le dépasse.
+		if (source.z <= mb_h_mur || mb_h_cible >= mb_h_mur) {
+			return false;
+		}
+		k = (mb_h_mur - mb_h_cible) / (source.z - mb_h_mur);
+	} else if (mb_zone_morte <= 0.0) {
 		return false;
 	}
 	vec2 cible = mb_au_centre ? mb_centre : sommet.xy;
 	vec2 src = source.xy;
 	float longueur = length(cible - src);
-	float zone2 = mb_zone_morte * mb_zone_morte;
+	// Borne de la zone : la constante du jeu, ou `longueur · k` (D ≤ longueur).
+	float borne = par_hauteur ? longueur * k : mb_zone_morte;
+	float borne2 = borne * borne;
 	for (int i = 0; i < mb_nb_murs; i++) {
 		vec4 r = mb_murs[i];
 		// Sortie anticipée EXACTE, et c'est elle qui paie le coût : un point de la
@@ -83,11 +122,15 @@ bool mb_dans_la_zone_morte(vec3 source, vec3 sommet) {
 		// mur — donc à moins de L du rectangle. Plus loin, le mur ne peut rien.
 		float dx = max(max(r.x - cible.x, cible.x - r.z), 0.0);
 		float dy = max(max(r.y - cible.y, cible.y - r.w), 0.0);
-		if (dx * dx + dy * dy >= zone2) {
+		if (dx * dx + dy * dy >= borne2) {
 			continue;
 		}
 		float t = mb_sortie(src, cible, r);
-		if (t >= 0.0 && (1.0 - t) * longueur < mb_zone_morte) {
+		if (t < 0.0) {
+			continue;
+		}
+		float zone = par_hauteur ? t * longueur * k : mb_zone_morte;
+		if ((1.0 - t) * longueur < zone) {
 			return true;
 		}
 	}
