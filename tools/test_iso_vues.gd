@@ -711,9 +711,12 @@ func _effets_suivent_la_vue(main: Node, p: Node, scinde: bool) -> void:
 	var droite: Vector2 = proj.call(centre + Vector2(100, 0))
 	# H15 : la caméra GARDE LA PROFONDEUR de la vue de dessus (`size = 1080 × sin θ`) ; c'est
 	# la largeur qui s'étire de 1 / sin θ — l'iso voit 1513 px de large au lieu de 1920.
-	_check("et garde la profondeur (%.1f px pour 100) en étirant la largeur de 1 / sin 52° (%.1f px pour 100)"
-		% [ecran.y - haut.y, droite.x - ecran.x],
-		absf((ecran.y - haut.y) - 100.0) < 1.0 and absf((droite.x - ecran.x) - 100.0 / sin(deg_to_rad(52.0))) < 1.0)
+	# ISO8 — au zoom du duel (×1,8 par défaut) : 100 px de monde font 100 × zoom px d'écran. Le zoom est lu
+	# sur le canevas de la vue, pas supposé à 1,0 : c'est lui que la caméra iso suit.
+	var z: float = canevas.y.length()
+	_check("et garde la profondeur (%.1f px pour 100 × %.2f) en étirant la largeur de 1 / sin 52° (%.1f px)"
+		% [ecran.y - haut.y, z, droite.x - ecran.x],
+		absf((ecran.y - haut.y) - 100.0 * z) < 1.0 and absf((droite.x - ecran.x) - 100.0 * z / sin(deg_to_rad(52.0))) < 1.0)
 	var angle: float = p.angle_ecran(0, centre, centre + Vector2(100, -100))
 	_check("l'angle du voile est projeté : −45° dans le monde devient %.1f° à l'écran" % rad_to_deg(angle),
 		absf(angle - atan2(-100.0, 100.0 / sin(deg_to_rad(52.0)))) < 0.01)

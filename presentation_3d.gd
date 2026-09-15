@@ -1422,8 +1422,27 @@ func _decrire(voulues: Array[SubViewport]) -> String:
 			lignes.append("J%d : masque ~%d sans capteurs · lightmap %d×%d · rendu %d×%d · capteurs %s / %s"
 				% [id + 1, (~vue.canvas_cull_mask & 0xFFFFFFFF) & ~COUCHES_CAPTEURS, vue.size.x, vue.size.y,
 				rendu.x, rendu.y, _masque_texte(_capteurs[id][0]), _masque_texte(_capteurs[id][1])])
+			# ISO8 — ce que le zoom fait à la matière (brief : « à ×1,8, la lightmap 1080p montre ses texels »).
+			var cam2d: Camera2D = _main.cam1 if id == 0 else _main.cam2
+			var zoom := cam2d.zoom.y if is_instance_valid(cam2d) else 1.0
+			var aire := vue.get_visible_rect().size.y
+			lignes.append("J%d : zoom ×%.2f · %.2f texel de lightmap par pixel d'écran · tuile de %d px de source sur %d px d'écran"
+				% [id + 1, zoom, texels_par_pixel(vue.size.y, rendu.y),
+				int(CandelaTileSet.TILE_SIZE.y), roundi(tuile_a_l_ecran(float(CandelaTileSet.TILE_SIZE.y), zoom, rendu.y, aire))])
 		return "\n".join(lignes)
 	return "en attente du prochain duel"
+
+
+## ISO8 — texels de lightmap par pixel d'écran, en hauteur. **Le zoom n'y change rien** : la lightmap rend le
+## monde déjà zoomé, à taille de texture constante. Ce qui change, c'est `tuile_a_l_ecran`.
+static func texels_par_pixel(lightmap_h: int, rendu_h: int) -> float:
+	return float(lightmap_h) / float(maxi(rendu_h, 1))
+
+
+## ISO8 — combien de pixels d'écran couvre une tuile du monde : sa taille de source × le zoom × l'étirement de la
+## fenêtre sur l'aire logique de la vue. Au-delà du nombre de texels de source (35), l'art de la tuile est grossi.
+static func tuile_a_l_ecran(tuile_px: float, zoom: float, rendu_h: int, aire_h: float) -> float:
+	return tuile_px * zoom * float(rendu_h) / maxf(aire_h, 1.0)
 
 
 static func _masque_texte(c) -> String:

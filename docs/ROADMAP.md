@@ -2427,6 +2427,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **En ligne, le cadrage et la portée sont les mêmes pour tous : zoom ×1,8, décalage 0,25, portée ×0,75, quoi que disent les drapeaux ou `settings.cfg`** (2026-09-15 à 13:58, session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final, en réponse au correctif d'ISO8 sur la portée : « le cadrage serré non plus n'est pas neutre, un flash ou un cône hors champ n'est pas vu, donc un joueur à --zoom=1.0 voit plus qu'un joueur à ×1,8 ») | La lumière est la seule information du jeu, et le cadrage en fait partie : ce qu'une caméra ne montre pas, un joueur ne le voit pas. `GameSettings.accorder_au_mode(en_ligne)`, appelé par `GameState` à chaque départ de manche, pose les constantes pour `ONLINE_HOST` et `ONLINE_CLIENT` — les mêmes dans le même code sur les deux machines, donc **aucun état réseau et `Protocol.VERSION` inchangé** ; les valeurs locales (drapeaux, réglage enregistré) ne valent qu'en écran scindé et à l'entraînement. Les drapeaux `--zoom=`, `--decalage=` et `--torche=` sont ignorés hors build debug, comme `--eos-ephemeral`. ISO9 n'a rien de plus à imposer sur ces trois valeurs. |
+| **Serrer la caméra et raccourcir les torches, pour un duel plus claustrophobe** (2026-09-15 à 12:20, Adrien, à la session cloud : « Si tu juges qu'il faut changer les proportions, zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pas » ; chantier ISO8, brief de la session cloud de 12:25) | Sur les captures d'ISO6, le duel montre toute l'arène et le volume de l'iso ne se voit pas ; les planches du DA sont trois fois plus serrées. Les valeurs ne sont pas choisies par l'agent : un banc photographie les variantes (zoom ×1,0 à ×2,2, portée 1,6 à 1,0, demi-angle 35° et 30°) et la session cloud tranche sur la planche. La caméra est une présentation (aucune simulation) ; la portée des torches est une valeur de jeu que l'éblouissement suit, en un facteur global identique pour tous. Ni protocole ni zone de touche ne changent, et les deux joueurs ont la même caméra et la même torche — en ligne, le facteur doit valoir la même chose des deux côtés (ISO9). |
 | **Les étincelles d'impact n'éclairent plus ; l'écho au sol du tir et la lumière de coup restent** (2026-09-15, 12:05, session cloud qui décide pour Adrien, second volet de la décision ci-dessous : « c'est le même mal que celui qu'Adrien a nommé ») | Recensées au banc pendant une rafale près d'une fusée : 60 lumières sur 63 étaient des étincelles d'impact (douze par impact de mur, énergie 1,5) ; éteintes, il en reste 9 et le halo de la fusée revient à sa rondeur seule (0,88). Leur dessin additif non éclairé reste : on les voit toujours jaillir dans le noir. **Gardés, et pourquoi** : l'écho au sol du tir (`ground_flash`, 0,12 s, sans ombre) prolonge le flash de bouche et dit d'où l'on tire — 7 au plus pendant la rafale, sous le plafond ; la lumière de coup (`hit_light`) ne s'allume qu'une fois par coup reçu, dit qui est touché, et porte son propre réglage joueur (« Lumière d'impact », dans `ui.gd`) qu'une suppression laisserait sans effet. Ni l'une ni l'autre n'était allumée en nombre au relevé. |
 | **L'iso est le jeu par défaut ; la vue de dessus passe derrière un drapeau de débogage** (2026-09-15 vers 11:00, ISO6, session « Iso 1 Opus » en relève d'ISO5, sur le brief `briefs/iso6_releve.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final ; décision d'Adrien du 2026-09-14 à 23:33 : l'iso devient la vue du jeu) | `GameSettings.mode_iso` vaut vrai par défaut. `--2d` (une exécution) ou le réglage `debogage/vue_de_dessus` (proposé en build de débogage seulement) ramènent la vue de dessus, gardée jusqu'à ISO9 : elle reste le moteur de lumière que l'iso projette. `--iso` reste accepté, sans effet sauf sur un réglage de débogage oublié. **L'ancienne clé `video/mode_iso` n'est plus lue** : chaque `settings.cfg` d'avant ISO6 la porte à `false`, et la relire aurait gardé la vue de dessus chez tous les joueurs existants. F3, F6, `ConditionsDeMatch` (v2) et le manifeste du photographe disent `mode_rendu`. Les suites de référence 2D tournent sous `--2d` (`SUITES_2D` de `run_suites.sh`). |
 | **La balle n'est plus une source de lumière** (2026-09-15 vers 10:55, Adrien, réveillé, à la session cloud : « Supprimons le fait que la balle soit une source de lumière. Cela fait saturer le nombre de lumières possibles du moteur et fait buguer lors de tirs vifs avec une source comme une fusée éclairante. » ; faite par « ISO7 Gadgets et lumière Opus », branche `balle-sans-lumiere`) | Godot n'applique jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, les plus récentes en premier, et un quadrant de sol est un item (« Pièges connus », « quinze par item ») ; chaque balle portait une `PointLight2D` à ombres (`TrailLight`), étirée jusqu'à 800 px — une rafale près d'une fusée coupait son halo. **Conséquence de jeu, acceptée** : une balle qui passe près d'un corps ne le révèle plus, et elle n'éclaire plus ni mur ni sol. L'information de tir reste le flash de bouche (`MuzzleFlash`, inchangé) et le trait de la balle — sa traçante et son aura, non éclairées, visibles dans le noir. `WeaponData.emits_light` et `bullet_light_energy` restent (données de classe, index d'arme sur le fil) et ne pilotent plus que l'aura et la traçante : l'arbalète garde sa balle sans aura. |
@@ -21501,7 +21503,7 @@ lance sans demande explicite.
 | ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel — ✅ `iso2-vues`, 2026-09-15 ; puis les fusions de la vague « grand budget » et leurs raccords | 3 | Opus 5 / high |
 | ISO6 | **L'iso par défaut** (`--2d` en débogage) ; outils : banc de cadence et photographe en iso, F3, diagnostic, `ConditionsDeMatch` — 🟡 `iso2-vues`, 2026-09-15, relève d'ISO5 par « Iso 1 Opus » | 2 | Opus 5 / high |
 | ISO7 | Direction artistique et assets (Gemini en série, fond vert) | 3 | Sonnet 5 / medium |
-| ISO8 | *Option* : lumière seule + sol texturé, si la cadence l'exige | 4 | Opus 5 / high |
+| ISO8 | **Réattribué par la vague « grand budget » : la caméra serrée** (zoom, regard vers la visée, torches plus courtes) — 🟡 `iso8-claustro`, 2026-09-15, « Iso 1 Opus ». *L'option de l'étude « lumière seule + sol texturé, si la cadence l'exige » reste possible, sans numéro, après le relevé de fin de chantier.* | 4 | Opus 5 / high |
 | ISO9 | Équité, rendu imposé par l'hôte en classé (`Protocol.VERSION` +1), documentation, audit | 2 | Opus 5 / medium |
 
 Cinq sessions en worktrees, **par fichiers** : `iso-pilote` (tient
@@ -24765,6 +24767,190 @@ qu'un lacet non nul fait tourner l'empreinte au sol hors du rectangle de la vue 
 (`--cadrage e1`, `--carte-essai`, `--fusee`, `--avant-iso7` ; au septième passage `--avant`, `--pose`,
 `--fusee-plein-feu`, `--cadrage rasante`, `--distances`). Signalé sans y toucher : les nuages (`volume_iso.gdshader`,
 `IsoVolumes`) prennent la chaleur non graduée avec la neutralité mesurée après la pâte.
+
+### ISO8 — la caméra serrée : zoom, regard vers la visée, torches plus courtes 🟡 (ouverte le 2026-09-15 à 12:24, branche `iso8-claustro`)
+
+Brief `briefs/iso8_claustro.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (12:25), tenu par la
+session « Iso 1 Opus ». Branche `iso8-claustro`, créée dans le worktree d'ISO5/ISO6 depuis `iso2-vues` à
+`ee5ac9f`. Non poussée.
+
+**Pourquoi.** Adrien, 12:20 : « Si tu juges qu'il faut changer les proportions, zoomer dans le jeu, réduire la
+taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pas. » Sur les captures d'ISO6, le
+duel montre toute l'arène (tuile de 35 px, corps d'une vingtaine de pixels) et le volume de l'iso ne se voit
+pas ; les planches du DA sont des gros plans environ trois fois plus serrés.
+
+**Ce qui ne bouge pas.** Aucun protocole (`Protocol.VERSION` = 18), la zone de touche à 18 px, le noir absolu.
+**La caméra** (étapes 1 et 2) est une présentation locale : aucune ligne de simulation, la même règle pour les
+deux joueurs, aucune donnée sur le fil. **La portée des torches** (étape 3), elle, est une valeur de JEU —
+l'éblouissement la suit — : voir l'étape 3 et sa réserve pour le jeu en ligne.
+
+**Étape 1 — le banc des variantes, avant tout choix.** `tools/banc_claustro.gd` (vraie fenêtre), sur la
+carte d'essai des murs bas (J1 à 3,5 tuiles de la bordure nord, J2 derrière le muret le plus au nord — la
+carte n'a aucun mur haut intérieur) puis sur Le Cloître (J1 à 3,5 tuiles au sud du plus large mur haut
+intérieur dégagé des deux côtés, J2 derrière lui, le mur coupant leur ligne — vérifié par un rayon), en vue
+unique et en écran scindé : zoom ×1,0 (témoin), ×1,5, ×1,8, ×2,2 ; portée `torch_scale` 1,6 (témoin), 1,2,
+1,0 ; et, au zoom ×1,8, le demi-angle de 30°. **Le 30° est le cookie du Fumiste**, cuit à 30° par la même
+chaîne que celui du pistolet (35°) : recuire la planche `bis04` sans ses curseurs exacts (que la ROADMAP ne
+consigne pas) aurait changé la texture en plus de l'angle, et la comparaison n'aurait plus mesuré l'angle.
+Les variantes sont posées sur les objets en mémoire le temps d'une prise, puis rendues : rien ne s'écrit dans
+les données de classe ni dans `settings.cfg`. Planche `docs/iso/planche_iso8_variantes.jpg` (grille zoom ×
+portée par carte, la rangée à 30°, l'écran scindé à ×1,8) : **la session cloud choisit sur image.**
+
+**Ce que le banc a relevé** (2026-09-15, 12:40, vraie fenêtre 1920×1080, pâte D) : **VERDICT=OK, 60 prises,
+0 échec, vue iso tenue sur chacune.** Scènes : carte d'essai, J1 en (560 ; 227,5), J2 en (752,5 ; 347)
+derrière le muret de 175×35 px ; Le Cloître, J1 en (367,5 ; 542,5) au sud d'un pilier de 3×3 tuiles, J2 en
+(367,5 ; 273) derrière lui. Appels de dessin : 67 à 80 en vue unique, 141 à 156 en écran scindé ; ils ne
+varient ni avec le zoom ni avec la portée au-delà du bruit. Lightmaps : 1920×1080 en vue unique, 957×1080
+par vue en écran scindé — **dans une fenêtre de 1920×1080, où la lightmap 1080p est aux pixels de la
+fenêtre** : la question des texels visibles à ×1,8 se pose dans une fenêtre plus grande (2560×1440 sur le
+Mac d'Adrien) et reste à mesurer à l'étape 2. ⚠️ **Relu sur les prises brutes, pas sur la planche** : à la
+réduction, la rangée à 30° du Cloître paraissait moins serrée que celle à 35°, parce qu'elle laisse deviner
+les contours d'autres murs ; les prises brutes montrent le même zoom (J1 à la même taille), et ×2,2 plus
+serré que ×1,8. Au-delà de ×1,0, la caméra s'arrête aux bords : au Cloître, J1 est décalé à gauche contre le
+mur ouest — c'est la borne de `RegardDuel`, pas un défaut de cadrage du banc. **En attente du choix de la
+session cloud.**
+
+**Étape 2 — préparée sur des défauts NEUTRES, en attendant le choix.**
+- `GameSettings.zoom_duel` (défaut 1,0) et `decalage_visee` (défaut 0) ; `--zoom=X` et `--decalage=X` pour une
+  exécution, jamais écrits. **Le zoom du réglage de débogage ne s'écrit que s'il a été réglé** : un
+  `settings.cfg` qui porterait 1,0 par défaut garderait l'ancien cadrage le jour où le défaut passera à 1,8 —
+  le piège exact de `video/mode_iso` (ISO6).
+- `RegardDuel` (calcul pur, testé en `--script`) : la caméra avance vers la visée d'une part de la hauteur
+  visible (lissée, ~120 ms), et **au-delà d'un zoom de 1,0** s'arrête aux bords de la carte avec au plus une
+  tuile de hors-carte. Au zoom 1,0, borner l'axe vertical déplacerait le cadrage de toutes les parties
+  d'aujourd'hui (la vue de 1 080 px est plus petite que la hauteur des cartes de 32 tuiles, 1 120 px).
+- `game_state.gd` : le zoom du duel posé au départ de manche et à l'entraînement (au lieu de 1,0), le dézoom
+  du coup reçu (V4.6) qui part du zoom du duel et y revient, et le suivi par `_suivre_du_regard`. La vue iso
+  suit le `canvas_transform`, zoom compris (ISO1) : elle se serre avec la caméra 2D.
+- **À faire après le choix** : la killcam impose encore ses bornes absolues (0,7-1,3, et 1,2-2,8 au ralenti)
+  et saute à son zoom à la première image du rejeu ; elle doit partir du zoom du duel. Et, à ×1,8, la
+  lightmap 1080p montre-t-elle ses texels ? À mesurer au banc (tailles de lightmap relevées par prise).
+- **La preuve** : `tools/test_iso_camera.gd` (115 vérifications) — défauts neutres, drapeaux lus et bornés, un
+  zoom jamais réglé qui ne s'écrit pas, la caméra exactement sur le joueur au zoom 1,0 sans décalage, le
+  décalage au quart de la hauteur visible, au plus une tuile de hors-carte à ×2, aucune borne au centre.
+  ⚠️ **Un lot rouge, puis vert, sans rien changer** : le premier lot (12:48, 126 OK) a rougi sur
+  `test_iso_camera`, qui passe seule dans le foyer d'Adrien ET dans un foyer neuf comme celui du lot
+  (script du scratchpad, 115 vérifications) ; le second (12:57, **127 OK en 414 s**) est vert. C'est très
+  probablement l'intermittent consigné à ISO2 (le témoin de simulation qui diverge quand d'autres suites
+  chargent la machine) — le lot ne garde pas la sortie d'une suite rouge, et on ne peut pas le prouver.
+
+**Le choix de la session cloud** (2026-09-15, 12:50, sur la planche des variantes) : **zoom ×1,8** (« la face
+du pilier, le corps et le cône se lisent enfin, en vue unique comme en scindé ; ×2,2 ne montre presque plus de
+carte ») ; **portée ×0,75**, un facteur GLOBAL dans `portee_torche()` et `echelle_torche()` et non dix
+valeurs réécrites (« les classes vont de 1,0 à 3,5 et cet écart est leur identité ») ; **demi-angles
+inchangés** (« l'ouverture est une identité de classe ») — le cookie à 30° du banc n'a jamais été cuit, rien
+à retirer ; **décalage vers la visée d'un quart de la hauteur visible** ; killcam qui part du zoom du duel ;
+lightmap : mesurer les texels à ×1,8 au F3, sans relevé de cadence.
+
+**Étape 2 — la caméra qui suit, aux défauts choisis** 🟡 (2026-09-15, après la fusion `623e155`).
+- `GameSettings.ZOOM_DUEL_DEFAUT` = 1,8 et `DECALAGE_VISEE_DEFAUT` = 0,25. `--zoom=1.0 --decalage=0` rend le
+  cadrage d'avant ISO8 pour une exécution.
+- **Killcam** : ses bornes (0,7-1,3 en lecture, 1,2-2,8 au ralenti) sont multipliées par le zoom du duel, et
+  sa première image garde le zoom du duel au lieu de sauter à sa cible. À ×1,8, une lecture bornée à 1,3
+  aurait d'abord dézoomé la caméra et rendu d'un coup la carte que le duel cachait.
+- **F3** : par vue, le zoom, les texels de lightmap par pixel d'écran et la taille à l'écran d'une tuile.
+  **Le zoom ne change pas la densité de la lightmap à l'écran** : la lightmap rend le monde déjà zoomé, à taille
+  de texture constante — 1080 texels pour 1440 pixels, 0,75, dans la fenêtre d'Adrien, en 1080p comme avant
+  ISO8. Ce que le zoom grossit, c'est l'art des tuiles : 35 px de source sur 84 px d'écran à ×1,8 (47 avant).
+  La pleine résolution par défaut reste la question d'Adrien au test final, sans relevé de cadence d'ici là.
+- ⚠️ **Le décalage vers la visée a rompu le témoin de simulation de `test_iso_camera`** (deux parties SANS iso
+  divergeant au pas 113, une balle d'un seul côté), et c'est un vrai couplage, pas l'intermittent : sans stick
+  tenu, J1 vise la souris, convertie par la caméra (`LocalInputProvider.cible_de_la_souris`) ; la caméra
+  avançant vers la visée avec un lissage réglé sur le temps d'image, la visée de repli dépend du rythme des
+  images. Isolé : vert avec `--decalage=0` au zoom ×1,8, vert à `--zoom=1.0 --decalage=0`. **La suite désarme
+  le décalage pendant ses parties comparées** (elle mesure la vue iso, pas la caméra). Rien sur le fil : la
+  visée d'un client en ligne arrive déjà calculée chez l'hôte. **À juger au test final, à la souris** : la
+  caméra qui avance vers la visée déplace aussi le curseur dans le monde — agréable, ou « la caméra court après
+  la visée » ? `--decalage=0` pour comparer.
+- **Deux contrôles qui supposaient l'ancienne caméra, relus et adaptés — pas désarmés.** Le premier lot de
+  l'étape 2 (13:34, 125 OK) : `test_iso_vues` attendait que 100 px de monde donnent 100 px de profondeur à
+  l'écran, et en mesurait 180 — le zoom ×1,8 ; il lit maintenant le zoom sur le canevas de la vue. Et
+  `test_entrainement` (`test_online_match.gd`) exigeait une caméra EXACTEMENT sur le joueur ; elle doit
+  désormais tomber sur le regard que `RegardDuel` prescrit pour ce joueur ET bouger avec lui (plus de 100 px
+  pour un pas de 360) — le défaut du 2026-08-19 (une caméra jamais posée, puis immobile à l'entraînement)
+  reste attrapé.
+- **Pas encore de boutons de zoom dans les réglages de débogage** : une rangée de plus dans le panneau vidéo
+  risque l'audit des menus ; les drapeaux suffisent pour comparer au test final.
+
+**Étape 2 commitée** (`886fa4c`, lot vert à 13:53 : 127 OK en 412 s ; `test_iso_camera` sabotée une fois —
+zoom par défaut remis à 1,0 : le contrôle du zoom ×1,8 rougit, fichier rétabli à l'identique).
+
+**Étape 3 — les torches plus courtes, en un facteur global** 🟡 (2026-09-15, à partir de 13:55).
+- `WeaponData.facteur_portee` (statique), appliqué dans `portee_torche()` et `echelle_torche()` — les deux
+  seules portes par lesquelles le jeu éclaire et mesure : lampe du joueur (`player.gd`), fantômes de killcam
+  (`game_state.gd`), torche fantôme, éblouissement par `Vision`, fiche de classe. Aucun appelant ne lit
+  `torch_scale` pour éclairer (relevé par `grep` avant d'écrire). **Aucune classe réécrite** : les
+  `torch_scale` de 1,0 (pompe) à 3,5 (arbalète) restent, et leur écart avec eux.
+- **Statique, et posé par `GameSettings`** (`FACTEUR_PORTEE_DEFAUT` = 0,75, `--torche=1.0` pour les portées
+  d'avant ISO8) : `WeaponData` se charge dans les suites `--script`, qui compilent avant les autoloads — lire
+  `GameSettings` depuis la ressource aurait cassé leur compilation (« Pièges connus »).
+- Pistolet : 307 px de portée au lieu de 410, neuf tuiles au lieu de douze. Demi-angles inchangés.
+- ⚠️ **Contrairement au reste d'ISO8, ce n'est pas une présentation : la portée est une valeur de JEU.**
+  L'éblouissement (calculé par l'hôte, `Vision` par `echelle_torche()`) et ce qui en dérive la suivent — c'est
+  ce que le brief demande (« tout ce qui dérive de la portée suit »). Les deux joueurs gardent la même torche,
+  le protocole (`Protocol.VERSION` = 18) et la zone de touche ne changent pas. **Mais le facteur est un réglage
+  local** : un client lancé en `--torche=1.0` contre un hôte à 0,75 verrait sa torche porter plus loin qu'elle
+  n'éblouit. En ligne, le facteur doit valoir la même chose des deux côtés, et rien ne l'impose encore — c'est
+  la question d'ISO9 (« rendu imposé par l'hôte en classé »). D'ici là, `--torche=` est un outil de comparaison
+  locale, et le défaut est le même dans tous les builds. ✅ **Levé à 13:58** par la règle en ligne (« Décisions
+  actées ») : en ligne, les trois valeurs sont les constantes des deux côtés — voir « La règle en ligne » plus bas.
+
+**La règle en ligne** 🟡 (2026-09-15, à partir de 14:05, commit à part après `0d69cc8`).
+- `GameSettings` garde ce que la machine voudrait (`_zoom_local`, `_decalage_local`, `_facteur_local` : drapeaux
+  de débogage et réglage enregistré) et ce qui s'applique (`zoom_duel`, `decalage_visee`, `facteur_portee`).
+  `accorder_au_mode(en_ligne)` tranche par `valeurs_du_duel` (calcul pur) et pose aussi
+  `WeaponData.facteur_portee`.
+- `GameState` l'appelle à chaque départ de manche (en ligne pour `ONLINE_HOST` et `ONLINE_CLIENT`) et à
+  l'entraînement (local), juste avant de poser le zoom des caméras.
+- Les drapeaux passent par `arguments_de_reglage(args, debug)` : ignorés hors build debug, avec un
+  avertissement, comme `--eos-ephemeral`.
+- `test_iso_camera` : en ligne avec `--zoom=1.0 --torche=1.0`, les trois valeurs sont les défauts ; en local, les
+  drapeaux s'appliquent ; hors debug, ils sont ignorés ; `accorder_au_mode(true)` pose le facteur sur
+  `WeaponData`.
+- `test_torches` : l'empreinte au sol vaut `512 × échelle × facteur`. `test_iso_camera` : défaut 0,75 posé
+  sur `WeaponData`, drapeau borné, pistolet à 307 px, rapport arbalète / pompe gardé à 3,5, demi-angle intact.
+
+**Étape 4 — la densité des textures d'ISO7 à ×1,8** (demande de la session cloud, 13:56 : « si elles
+s'étirent, Beauté livrera des tuiles plus denses »). **Calculée** à partir des shaders et de la géométrie de la
+caméra, pas relevée au pixel : `sol_iso.gdshader` répète `assets/iso/sol.png` (512²) tous les 140 px de monde
+(`PERIODE_SOL_PX`) ; `mur_iso.gdshader` répète `face_mur.png` (512²) tous les 70 px (`PERIODE_FACE_MUR_PX`), le
+long de la face ET sur sa hauteur (`vec2(dot(monde.xz, tangente), -monde.y) / periode_face_px`). La caméra iso
+garde la profondeur de la vue de dessus et étire la largeur de 1 / sin 52° (`test_iso_vues`) ; une hauteur
+verticale se projette en cos 52° / sin 52° de la profondeur. Dans la fenêtre d'Adrien (2560×1440, aire logique
+1080), à ×1,8 : un pixel de monde vaut 2,40 px d'écran en profondeur, 3,05 en largeur, 1,88 en hauteur de face.
+
+| Surface | Texels par pixel de monde | ×1,0 (texels par pixel d'écran) | ×1,8 (texels par pixel d'écran) |
+|---|---|---|---|
+| Sol, en profondeur | 3,66 | 2,74 | **1,52** |
+| Sol, en largeur | 3,66 | 2,16 | **1,20** |
+| Face de mur, le long | 7,31 | 4,32 | **2,40** |
+| Face de mur, en hauteur | 7,31 | 7,02 | **3,90** |
+
+**Aucune ne s'étire à ×1,8** : toutes gardent plus d'un texel par pixel d'écran, le sol en largeur le moins
+(1,20). Elles s'étireraient au-delà de ×2,16 environ pour le sol en largeur (le plafond de `--zoom` est 3,0).
+Ce que le zoom grossit à l'écran, ce sont la lightmap (0,75 texel par pixel, inchangée) et l'art des tuiles de
+la vue de dessus qu'elle porte (35 px de source sur 84 px d'écran) — pas les matières d'ISO7.
+
+**Étape 4 — avant et après, la planche** 🟡 (2026-09-15, 14:28). `tools/banc_claustro.gd --avant-apres`
+(vraie fenêtre 1920×1080) : sur la carte d'essai des murs bas et Le Cloître, en vue unique et en écran scindé,
+le jeu d'avant ISO8 (zoom ×1,0, aucun décalage, portée ×1,0) contre les défauts d'ISO8 ; les valeurs posées
+sur `GameSettings` et `WeaponData` pour l'exécution, la caméra placée par le jeu lui-même
+(`GameState._suivre_du_regard`). **VERDICT=OK, 8 prises, 0 échec.** Planche `docs/iso/planche_iso8.jpg`
+(recomposable : `python3 docs/iso/planche_iso8.py --captures <dossier> --journal <journal du banc>`).
+
+| Carte, vue | Avant : caméra / joueur J1 | Après : caméra / joueur J1 | Portée du pistolet | Appels |
+|---|---|---|---|---|
+| Cloître, unique | (368 ; 521) / (368 ; 543) | **(498 ; 396)** / (368 ; 543) | 410 → 307 px | 84 → 77 |
+| Cloître, scindé | (368 ; 540) / (368 ; 543) | **(368 ; 395)** / (368 ; 543) | 410 → 307 px | 162 → 157 |
+| Carte d'essai, unique | (562 ; 219) / (560 ; 228) | **(560 ; 265)** / (560 ; 228) | 410 → 307 px | 71 → 73 |
+| Carte d'essai, scindé | (560 ; 224) / (560 ; 228) | **(560 ; 265)** / (560 ; 228) | 410 → 307 px | 164 → 148 |
+
+**Ce que les positions prouvent.** Au Cloître, J1 vise le nord : la caméra avance de 147 px vers la visée —
+un quart des 600 px de monde visibles à ×1,8 —, et en vue unique se décale de 130 px vers l'est pour ne pas
+montrer le hors-carte (demi-largeur visible 533 px, moins la tuile tolérée). Sur la carte d'essai, J1 est à
+3,5 tuiles de la bordure nord : la caméra est bornée à y = 265 (demi-hauteur 300 moins une tuile) et ne peut
+pas avancer vers la visée — c'est la borne, pas un défaut. Avant ISO8, la caméra est sur le joueur à quelques
+pixels près (le recul et la secousse de caméra). Les appels de dessin ne bougent pas au-delà du bruit.
 
 ### Ce qui attend Adrien — jalon H15
 

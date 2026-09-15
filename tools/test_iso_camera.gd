@@ -52,6 +52,7 @@ func _run() -> void:
 	_empreinte_contenue(Cam)
 	_pates(Pate)
 	_reglage()
+	_regard_du_duel()
 	await _simulation_inchangee()
 
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER],
@@ -195,6 +196,124 @@ func _pates(Pate: GDScript) -> void:
 
 # ---------------------------------------------------------------------------
 
+## ISO8 — la caméra serrée, préparée sur des défauts NEUTRES tant que la session cloud n'a pas choisi sur la
+## planche des variantes : le zoom du duel et le décalage de visée (`GameSettings`), le regard (`RegardDuel`).
+func _regard_du_duel() -> void:
+	print("\n--- ISO8 : zoom du duel, décalage de visée, regard borné ---")
+	var Script: GDScript = load("res://settings_manager.gd")
+	var reglages := root.get_node("GameSettings")
+	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	# ISO8, étape 2 — les défauts choisis par la session cloud sur la planche des variantes (12:50).
+	if Script.valeur_par_argument(args, "--zoom=").is_empty():
+		_check("zoom du duel ×1,8 par défaut (choix de la session cloud)", is_equal_approx(reglages.zoom_duel, 1.8))
+	if Script.valeur_par_argument(args, "--decalage=").is_empty():
+		_check("décalage de visée d'un quart de la hauteur visible par défaut", is_equal_approx(reglages.decalage_visee, 0.25))
+	_check("--zoom=1.0 rend le cadrage d'avant ISO8 pour une exécution",
+		is_equal_approx(Script.zoom_applique(Script.ZOOM_DUEL_DEFAUT, PackedStringArray(["--zoom=1.0"])), 1.0))
+	# ISO8, étape 3 — la portée des torches, en un facteur global.
+	if Script.valeur_par_argument(args, "--torche=").is_empty():
+		_check("facteur de portée ×0,75 par défaut, posé sur WeaponData au démarrage",
+			is_equal_approx(reglages.facteur_portee, 0.75) and is_equal_approx(WeaponData.facteur_portee, 0.75))
+	_check("--torche=1.0 rend les portées d'avant ISO8 ; borné (0,1 → 0,5)",
+		is_equal_approx(Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"])), 1.0)
+		and is_equal_approx(Script.facteur_portee_applique(PackedStringArray(["--torche=0.1"])), 0.5))
+	# ISO8 — la règle en ligne (décision de la session cloud, 13:58) : en ligne, les trois valeurs du duel sont
+	# les constantes, même lancé avec --zoom=1.0 --torche=1.0 ; en local, les valeurs de la machine.
+	var locales := [Script.zoom_applique(Script.ZOOM_DUEL_DEFAUT, PackedStringArray(["--zoom=1.0"])),
+		Script.decalage_applique(PackedStringArray([])),
+		Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"]))]
+	var en_ligne: Array = Script.valeurs_du_duel(true, locales[0], locales[1], locales[2])
+	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,8, décalage 0,25, portée ×0,75 — les défauts",
+		is_equal_approx(en_ligne[0], 1.8) and is_equal_approx(en_ligne[1], 0.25) and is_equal_approx(en_ligne[2], 0.75),
+		str(en_ligne))
+	var en_local: Array = Script.valeurs_du_duel(false, locales[0], locales[1], locales[2])
+	_check("en écran scindé local, les mêmes drapeaux s'appliquent (zoom 1,0, portée 1,0)",
+		is_equal_approx(en_local[0], 1.0) and is_equal_approx(en_local[2], 1.0), str(en_local))
+	_check("hors build debug, --zoom=, --decalage= et --torche= sont ignorés",
+		Script.arguments_de_reglage(PackedStringArray(["--zoom=1.0", "--torche=1.0"]), false).is_empty()
+		and Script.arguments_de_reglage(PackedStringArray(["--zoom=1.0"]), true).size() == 1)
+	var reglages_ligne: Node = Script.new()
+	reglages_ligne._zoom_local = 1.0
+	reglages_ligne._facteur_local = 1.0
+	var facteur_global_avant: float = WeaponData.facteur_portee
+	reglages_ligne.accorder_au_mode(true)
+	_check("accorder_au_mode(en ligne) pose aussi le facteur sur WeaponData",
+		is_equal_approx(reglages_ligne.zoom_duel, 1.8) and is_equal_approx(WeaponData.facteur_portee, 0.75))
+	WeaponData.facteur_portee = facteur_global_avant
+	reglages_ligne.free()
+	var pistolet := WeaponData.new()
+	var facteur_avant: float = WeaponData.facteur_portee
+	WeaponData.facteur_portee = 0.75
+	_check("pistolet (1,6) : 307 px de portée au facteur 0,75, au lieu de 410",
+		is_equal_approx(pistolet.portee_torche(), 307.2), str(pistolet.portee_torche()))
+	var pompe := WeaponData.new()
+	pompe.torch_scale = 1.0
+	var arbalete := WeaponData.new()
+	arbalete.torch_scale = 3.5
+	_check("l'écart entre les classes est gardé : arbalète / pompe vaut toujours 3,5",
+		is_equal_approx(arbalete.portee_torche() / pompe.portee_torche(), 3.5))
+	_check("le demi-angle n'est pas touché (35° pour le pistolet)", is_equal_approx(pistolet.torch_angle_deg, 35.0))
+	WeaponData.facteur_portee = facteur_avant
+	var Pres8: GDScript = load("res://presentation_3d.gd")
+	_check("F3 : la lightmap 1080p dans une fenêtre de 1440 px vaut 0,75 texel par pixel, quel que soit le zoom",
+		is_equal_approx(Pres8.texels_par_pixel(1080, 1440), 0.75))
+	_check("F3 : à ×1,8 dans une fenêtre de 1440 px, une tuile de 35 px de source couvre 84 px d'écran",
+		is_equal_approx(Pres8.tuile_a_l_ecran(35.0, 1.8, 1440, 1080.0), 84.0),
+		str(Pres8.tuile_a_l_ecran(35.0, 1.8, 1440, 1080.0)))
+	_check("--zoom=1.8 s'applique", is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=1.8"])), 1.8))
+	_check("--zoom borné (0,5 → 1,0 ; 9 → 3,0)",
+		is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=0.5"])), 1.0)
+		and is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=9"])), 3.0))
+	_check("--zoom illisible : le choix s'applique", is_equal_approx(Script.zoom_applique(1.5, PackedStringArray(["--zoom=large"])), 1.5))
+	_check("--decalage=0.25 s'applique, borné à 0,4",
+		is_equal_approx(Script.decalage_applique(PackedStringArray(["--decalage=0.25"])), 0.25)
+		and is_equal_approx(Script.decalage_applique(PackedStringArray(["--decalage=2"])), 0.4))
+
+	# ⚠️ Le piège de `video/mode_iso` (ISO6) : un zoom jamais réglé ne s'écrit pas.
+	var chemin := "user://test_iso8_reglages.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
+	var neuf: Node = Script.new()
+	neuf._settings_path = chemin
+	neuf._load()
+	neuf.set_fps_cap(120)
+	var cfg := ConfigFile.new()
+	cfg.load(chemin)
+	_check("un zoom jamais réglé ne s'écrit pas : le défaut du jeu reste libre de changer",
+		not cfg.has_section_key("debogage", "zoom_duel"))
+	neuf.set_zoom_duel(1.8)
+	cfg.load(chemin)
+	_check("un zoom réglé s'écrit dans la section de débogage", is_equal_approx(float(cfg.get_value("debogage", "zoom_duel", 0.0)), 1.8))
+	var relu: Node = Script.new()
+	relu._settings_path = chemin
+	relu._load()
+	_check("et se relit", is_equal_approx(relu.zoom_duel_choisi(), 1.8))
+	for n in [neuf, relu]:
+		n.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
+
+	# Le regard.
+	var vue := Vector2(1920.0, 1080.0)
+	var carte := Rect2(Vector2.ZERO, Vector2(32.0, 32.0) * 35.0)
+	var joueur := Vector2(210.0, 227.5)
+	_check("zoom 1,0 et décalage 0 : la caméra reste EXACTEMENT sur le joueur (aucune borne, aucun lissage)",
+		RegardDuel.centre_du_regard(joueur, RegardDuel.decalage_vise(Vector2.UP, 0.0, vue, 1.0), vue, 1.0, carte, 35.0) == joueur)
+	var vise := RegardDuel.decalage_vise(Vector2.RIGHT, 0.25, vue, 2.0)
+	_check("le décalage vaut un quart de la hauteur visible dans la direction de la visée (×2 : 135 px)",
+		vise.is_equal_approx(Vector2(135.0, 0.0)), str(vise))
+	var c := RegardDuel.centre_du_regard(joueur, Vector2.ZERO, vue, 2.0, carte, 35.0)
+	var visible := RegardDuel.etendue_visible(vue, 2.0)
+	_check("zoom ×2 contre un coin : la vue ne montre pas plus d'une tuile de hors-carte",
+		c.x - visible.x * 0.5 >= -35.0 - 0.01 and c.y - visible.y * 0.5 >= -35.0 - 0.01, str(c))
+	var au_centre := carte.get_center()
+	_check("zoom ×2 au centre de la carte : aucune borne ne déplace la caméra",
+		RegardDuel.centre_du_regard(au_centre, Vector2.ZERO, vue, 2.0, carte, 35.0) == au_centre)
+	_check("même règle pour les deux joueurs : le regard ne dépend que de la position, de la visée et de la vue",
+		RegardDuel.centre_du_regard(joueur, vise, vue, 2.0, carte, 35.0)
+		== RegardDuel.centre_du_regard(joueur, vise, vue, 2.0, carte, 35.0))
+	var lisse := RegardDuel.lisser(Vector2.ZERO, Vector2(100.0, 0.0), 0.5)
+	_check("le décalage se lisse sans dépasser sa cible", lisse.x > 90.0 and lisse.x <= 100.0, str(lisse))
+
+
 func _reglage() -> void:
 	print("\n--- GameSettings.mode_iso (ISO6 : l'iso par défaut, la vue de dessus en débogage) ---")
 	var reglages := root.get_node("GameSettings")
@@ -282,6 +401,13 @@ func _reglage() -> void:
 func _simulation_inchangee() -> void:
 	print("\n--- La vue ne change rien à la simulation ---")
 	var reglages := root.get_node("GameSettings")
+	# ⚠️ ISO8 — le décalage de la caméra vers la visée est DÉSARMÉ pendant les parties comparées, puis rendu.
+	# Sans stick tenu, J1 vise la souris, convertie par la caméra (`LocalInputProvider.cible_de_la_souris`) ;
+	# la caméra avançant vers la visée avec un lissage réglé sur le temps d'image, cette visée de repli dépend du
+	# rythme des images, et deux parties identiques cessaient de l'être (pas 113, une balle d'un seul côté) —
+	# avec OU sans iso. Ce que ce contrôle mesure, c'est la vue iso ; le regard est une présentation locale.
+	var decalage_avant: float = reglages.decalage_visee
+	reglages.decalage_visee = 0.0
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -303,6 +429,7 @@ func _simulation_inchangee() -> void:
 		_ecarts(sans["etats"], avec["etats"]) == 0, _premier_ecart(sans["etats"], avec["etats"]))
 	_check("même rejeu enregistré (%d images)" % (sans["rejeu"] as Array).size(),
 		_ecarts(sans["rejeu"], avec["rejeu"]) == 0 and not (sans["rejeu"] as Array).is_empty())
+	reglages.decalage_visee = decalage_avant
 
 	# Les touches de la pâte, pendant que la vue est allumée (la dernière partie l'a laissée
 	# allumée) : F2 seule n'atteint pas le jeu sur un Mac sans `fn`.

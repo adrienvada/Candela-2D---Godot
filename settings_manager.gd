@@ -108,6 +108,46 @@ const SECTION_DEBOGAGE := "debogage"
 const MODE_RENDU_ISO := "iso"
 const MODE_RENDU_DESSUS := "dessus"
 
+## Chantier ISO, étape ISO8 — la caméra serrée (brief de la session cloud, 2026-09-15 12:25 ; Adrien, 12:20 :
+## « zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus claustrophobique »).
+## `zoom_duel` : le zoom des deux caméras du duel, 1,0 étant la vue d'avant ISO8. `decalage_visee` : la part
+## de la hauteur visible dont la caméra avance vers la visée (`RegardDuel`), 0 la laissant sur le joueur.
+##
+## **Défauts choisis par la session cloud sur la planche des variantes** (2026-09-15, 12:50 : « à ×1,8 la
+## face du pilier, le corps et le cône se lisent enfin […] ×2,2 ne montre presque plus de carte » ; « un quart
+## de la hauteur visible, comme le brief »). Préparés d'abord sur des défauts neutres (1,0 et 0), pour que
+## l'étape 1 ne change pas le jeu. `--zoom=2.2` et `--decalage=0` valent pour une exécution et ne s'écrivent
+## jamais. Le zoom choisi au réglage de débogage s'enregistre, **mais seulement
+## s'il a été réglé** : un `settings.cfg` qui porterait 1,0 par défaut garderait l'ancien cadrage le jour où
+## le défaut passera à 1,8 — le piège exact de `video/mode_iso` (ISO6).
+const ZOOM_DUEL_DEFAUT := 1.8
+const DECALAGE_VISEE_DEFAUT := 0.25
+const ZOOM_DUEL_MIN := 1.0
+const ZOOM_DUEL_MAX := 3.0
+const DECALAGE_VISEE_MAX := 0.4
+const DRAPEAU_ZOOM := "--zoom="
+const DRAPEAU_DECALAGE := "--decalage="
+## ISO8, étape 3 — la portée de toutes les torches, en un facteur global (choix de la session cloud, 12:50 :
+## « portée ×0,75 […] comme un FACTEUR GLOBAL posé une seule fois »). Posé sur `WeaponData.facteur_portee`
+## au démarrage ; `--torche=1.0` rend les portées d'avant ISO8 pour une exécution, sans jamais s'écrire.
+const FACTEUR_PORTEE_DEFAUT := 0.75
+const FACTEUR_PORTEE_MIN := 0.5
+const FACTEUR_PORTEE_MAX := 1.5
+const DRAPEAU_TORCHE := "--torche="
+var facteur_portee := FACTEUR_PORTEE_DEFAUT
+var zoom_duel := ZOOM_DUEL_DEFAUT
+## ISO8 — EN LIGNE, les trois valeurs du duel sont les constantes, des deux côtés (décision de la session cloud,
+## 2026-09-15 à 13:58 : « le cadrage serré non plus n'est pas neutre, un flash ou un cône hors champ n'est pas
+## vu, donc un joueur à --zoom=1.0 voit plus qu'un joueur à ×1,8 »). `zoom_duel`, `decalage_visee` et
+## `facteur_portee` sont ce qui S'APPLIQUE ; ces trois-là, ce que la machine voudrait en local (drapeaux de
+## débogage, réglage enregistré). `accorder_au_mode` tranche, appelé par `GameState` à chaque départ de manche.
+var _zoom_local := ZOOM_DUEL_DEFAUT
+var _decalage_local := DECALAGE_VISEE_DEFAUT
+var _facteur_local := FACTEUR_PORTEE_DEFAUT
+var decalage_visee := DECALAGE_VISEE_DEFAUT
+var _zoom_duel_choisi := ZOOM_DUEL_DEFAUT
+var _zoom_duel_regle := false
+
 ## ISO2 — la taille de la lightmap, la cible 2D que la vue iso projette : `1080p`, l'aire
 ## logique de la vue (ce que le jeu rendait avant le chantier R), ou `plein`, les pixels de
 ## la fenêtre. H15 l'a laissée ouverte, et ce n'est pas une décision d'agent : Adrien
@@ -195,6 +235,11 @@ func _ready() -> void:
 		_apply_resolution()
 	mode_iso = iso_applique(_vue_de_dessus_choisie, _arguments())
 	iso_lightmap = _lightmap_appliquee()
+	_zoom_local = zoom_applique(_zoom_duel_choisi, _arguments_de_reglage())
+	_decalage_local = decalage_applique(_arguments_de_reglage())
+	_facteur_local = facteur_portee_applique(_arguments_de_reglage())
+	# Hors match, les valeurs locales ; `GameState` accorde au mode à chaque départ (`accorder_au_mode`).
+	accorder_au_mode(false)
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
 	_apply_audio()
@@ -254,6 +299,71 @@ static func deux_d_par_argument(args: PackedStringArray) -> bool:
 
 static func _arguments() -> PackedStringArray:
 	return OS.get_cmdline_user_args() + OS.get_cmdline_args()
+
+## ISO8 — le zoom du duel choisi au réglage de débogage, enregistré (et marqué comme réglé).
+func set_zoom_duel(zoom: float) -> void:
+	_zoom_duel_choisi = clampf(zoom, ZOOM_DUEL_MIN, ZOOM_DUEL_MAX)
+	_zoom_duel_regle = true
+	_zoom_local = zoom_applique(_zoom_duel_choisi, _arguments_de_reglage())
+	zoom_duel = _zoom_local
+	_save()
+
+func zoom_duel_choisi() -> float:
+	return _zoom_duel_choisi
+
+## `--zoom=X` l'emporte sur le choix ; une valeur illisible est ignorée ; le résultat reste dans les bornes.
+static func zoom_applique(choisi: float, args: PackedStringArray) -> float:
+	var arg := valeur_par_argument(args, DRAPEAU_ZOOM)
+	var z := arg.to_float() if arg.is_valid_float() else choisi
+	return clampf(z, ZOOM_DUEL_MIN, ZOOM_DUEL_MAX)
+
+## ISO8 — les valeurs du duel pour ce mode : les constantes EN LIGNE, quoi que disent les drapeaux ou
+## `settings.cfg` ; les valeurs locales en écran scindé et à l'entraînement. Aucun état réseau : ce sont les mêmes
+## constantes dans le même code, sur les deux machines, et `Protocol.VERSION` ne bouge pas.
+func accorder_au_mode(en_ligne: bool) -> void:
+	var v := valeurs_du_duel(en_ligne, _zoom_local, _decalage_local, _facteur_local)
+	zoom_duel = v[0]
+	decalage_visee = v[1]
+	facteur_portee = v[2]
+	WeaponData.facteur_portee = facteur_portee
+
+## `[zoom, décalage, facteur de portée]` — calcul pur, vérifié en `--script` par `test_iso_camera`.
+static func valeurs_du_duel(en_ligne: bool, zoom_local: float, decalage_local: float, facteur_local: float) -> Array:
+	if en_ligne:
+		return [ZOOM_DUEL_DEFAUT, DECALAGE_VISEE_DEFAUT, FACTEUR_PORTEE_DEFAUT]
+	return [zoom_local, decalage_local, facteur_local]
+
+## ISO8 — les drapeaux `--zoom=`, `--decalage=` et `--torche=` ne valent qu'en build de DÉBOGAGE : un export
+## release les ignore, comme `--eos-ephemeral` (`network_manager.gd`). Sans quoi un joueur lancerait sa partie
+## locale avec la carte entière à l'écran — et, avant la règle en ligne, en ligne aussi.
+func _arguments_de_reglage() -> PackedStringArray:
+	return arguments_de_reglage(_arguments(), OS.is_debug_build())
+
+static func arguments_de_reglage(args: PackedStringArray, debug: bool) -> PackedStringArray:
+	if debug:
+		return args
+	for a in args:
+		if a.begins_with(DRAPEAU_ZOOM) or a.begins_with(DRAPEAU_DECALAGE) or a.begins_with(DRAPEAU_TORCHE):
+			push_warning("GameSettings : %s ignoré hors build debug" % a)
+	return PackedStringArray()
+
+## `--torche=X` l'emporte sur le défaut ; une valeur illisible est ignorée ; le résultat reste dans les bornes.
+static func facteur_portee_applique(args: PackedStringArray) -> float:
+	var arg := valeur_par_argument(args, DRAPEAU_TORCHE)
+	var f := arg.to_float() if arg.is_valid_float() else FACTEUR_PORTEE_DEFAUT
+	return clampf(f, FACTEUR_PORTEE_MIN, FACTEUR_PORTEE_MAX)
+
+static func decalage_applique(args: PackedStringArray) -> float:
+	var arg := valeur_par_argument(args, DRAPEAU_DECALAGE)
+	var d := arg.to_float() if arg.is_valid_float() else DECALAGE_VISEE_DEFAUT
+	return clampf(d, 0.0, DECALAGE_VISEE_MAX)
+
+## `--nom=valeur` → `valeur` ; sinon une chaîne vide.
+static func valeur_par_argument(args: PackedStringArray, prefixe: String) -> String:
+	for a in args:
+		if a.begins_with(prefixe):
+			return a.substr(prefixe.length())
+	return ""
 
 ## Le choix du joueur pour la taille de la lightmap, enregistré ; une valeur inconnue
 ## retombe sur `1080p`. Prend effet à l'image suivante (la vue iso repose ses lightmaps).
@@ -576,6 +686,11 @@ func _load() -> void:
 	# `video/mode_iso` n'est plus lu — voir l'en-tête.
 	_vue_de_dessus_choisie = cfg.get_value(SECTION_DEBOGAGE, "vue_de_dessus", false) is bool \
 		and cfg.get_value(SECTION_DEBOGAGE, "vue_de_dessus", false)
+	# ISO8 — relu seulement s'il a été réglé ; sinon le défaut du jeu s'applique (voir l'en-tête).
+	var zoom_lu: Variant = cfg.get_value(SECTION_DEBOGAGE, "zoom_duel", null)
+	_zoom_duel_regle = zoom_lu is float or zoom_lu is int
+	_zoom_duel_choisi = clampf(float(zoom_lu), ZOOM_DUEL_MIN, ZOOM_DUEL_MAX) if _zoom_duel_regle \
+		else ZOOM_DUEL_DEFAUT
 	var lightmap: Variant = cfg.get_value(SECTION_VIDEO, "iso_lightmap", "1080p")
 	_iso_lightmap_choisi = lightmap if lightmap is String and LIGHTMAPS_ISO.has(lightmap) else "1080p"
 
@@ -637,6 +752,8 @@ func _save() -> void:
 	cfg.set_value(SECTION_DISPLAY, "intro_vue", intro_vue)
 	cfg.set_value(SECTION_VIDEO, "fps_cap", fps_cap)
 	cfg.set_value(SECTION_DEBOGAGE, "vue_de_dessus", _vue_de_dessus_choisie)
+	if _zoom_duel_regle:
+		cfg.set_value(SECTION_DEBOGAGE, "zoom_duel", _zoom_duel_choisi)
 	cfg.set_value(SECTION_VIDEO, "iso_lightmap", _iso_lightmap_choisi)
 	if _has_saved_resolution:
 		cfg.set_value(SECTION_DISPLAY, "resolution_index", resolution_index)

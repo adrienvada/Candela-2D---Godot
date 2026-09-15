@@ -371,15 +371,38 @@ func camera_shot_kick(pid: int, dir: Vector2) -> void:
 
 ## V4.6 — Encaisser se sent au ventre : bref dézoom de la caméra du blessé,
 ## déclenché par la perte de PV autoritaire (rpc_update_hp), jamais prédite.
+## ISO8 — le dézoom part du zoom du duel et y revient : revenir à 1,0 aurait
+## rendu toute la carte au premier coup reçu.
 func camera_hit_kick(pid: int) -> void:
 	if not round_active: return
 	var cam: Camera2D = cam1 if pid == 0 else cam2
 	if cam == null: return
+	var z := Vector2.ONE * GameSettings.zoom_duel
 	var tw := create_tween()
-	tw.tween_property(cam, "zoom", Vector2(0.98, 0.98), 0.04)
+	tw.tween_property(cam, "zoom", z * 0.98, 0.04)
 	# DA4.13 — la caméra revient à sa place : ENTREE, ce qui s'installe.
-	Charte.animer(tw, cam, "zoom", Vector2(0.98, 0.98), Vector2.ONE, 0.12,
+	Charte.animer(tw, cam, "zoom", z * 0.98, z, 0.12,
 		Charte.Courbe.ENTREE)
+
+## ISO8 — le décalage de regard lissé de chaque caméra, et le rectangle de la carte en pixels du monde (posé
+## par `rebuild_arena`). Voir `RegardDuel`.
+var _regard_decalage: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
+var _carte_px := Rect2()
+
+func _suivre_du_regard(delta: float) -> void:
+	for pid in 2:
+		var joueur: Node2D = p1 if pid == 0 else p2
+		var cam: Camera2D = cam1 if pid == 0 else cam2
+		if joueur == null or cam == null:
+			continue
+		var vue := cam.custom_viewport as Viewport
+		var vue_px := vue.get_visible_rect().size if vue != null else Vector2(1920.0, 1080.0)
+		var zoom := cam.zoom.y
+		var vise := RegardDuel.decalage_vise(Vector2.RIGHT.rotated(joueur.rotation), GameSettings.decalage_visee,
+			vue_px, zoom)
+		_regard_decalage[pid] = RegardDuel.lisser(_regard_decalage[pid], vise, delta)
+		cam.global_position = RegardDuel.centre_du_regard(joueur.global_position, _regard_decalage[pid], vue_px,
+			zoom, _carte_px, float(CandelaTileSet.TILE_SIZE.y))
 
 func _ready():
 	add_to_group("game_state")
@@ -937,6 +960,8 @@ func rebuild_arena() -> void:
 	var _grille := MapCodec.get_grid_size(data)
 	AudioManager.demarrer_ambiance(Rect2(Vector2.ZERO,
 		Vector2(_grille) * Vector2(CandelaTileSet.TILE_SIZE)))
+	# ISO8 — la même carte bornera le regard des caméras (`_suivre_du_regard`).
+	_carte_px = Rect2(Vector2.ZERO, Vector2(_grille) * Vector2(CandelaTileSet.TILE_SIZE))
 
 	# La géométrie historique de arena.tscn ne sert plus qu'à documenter le
 	# format ; elle est neutralisée pour ne pas doubler la carte JSON.
@@ -1660,10 +1685,9 @@ func _process(delta):
 	# Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au
 	# classement ; c'est l'entraînement, le seul mode qui sépare les deux, qui a
 	# révélé la confusion.
-	if p1 != null:
-		cam1.global_position = p1.global_position
-	if p2 != null:
-		cam2.global_position = p2.global_position
+	# ISO8 — et il suit avec le zoom du duel, avancé vers la visée, borné à la carte (`RegardDuel`). Aux
+	# défauts d'aujourd'hui (zoom 1,0, décalage 0), la caméra reste exactement sur le joueur.
+	_suivre_du_regard(delta)
 
 	# **Même piège que le regard, et il a fallu le payer deux fois.** Ce suivi
 	# vivait dans `if round_active:`, alors que le lancer de fusée s'autorise
@@ -1780,24 +1804,29 @@ func _process(delta):
 			var target_zoom_val = 1.0
 			var target_pos = midpoint
 			
+			# ISO8 — les bornes du zoom de killcam partent du zoom du duel (`GameSettings.zoom_duel`) : à
+			# ×1,8, une lecture bornée à 1,3 aurait d'abord DÉZOOMÉ la caméra, rendant d'un coup la carte que
+			# le duel cachait. Le cadrage sur les deux fantômes reste le même calcul.
+			var z_duel: float = GameSettings.zoom_duel
 			if Engine.time_scale < 0.9:
 				# We are in bullet time! Zoom in hard.
 				var zoom_x = viewport_size.x / (dx + margin * 2)
 				var zoom_y = viewport_size.y / (dy + margin * 2)
-				target_zoom_val = clamp(min(zoom_x, zoom_y), 1.2, 2.8) # Push zoom further
+				target_zoom_val = clamp(min(zoom_x, zoom_y), 1.2 * z_duel, 2.8 * z_duel) # Push zoom further
 			else:
 				# Normal playback: stay zoomed out to see the action
 				var zoom_x = viewport_size.x / (dx + margin * 2.5)
 				var zoom_y = viewport_size.y / (dy + margin * 2.5)
-				target_zoom_val = clamp(min(zoom_x, zoom_y), 0.7, 1.3)
-				
+				target_zoom_val = clamp(min(zoom_x, zoom_y), 0.7 * z_duel, 1.3 * z_duel)
+
 			var target_zoom = Vector2(target_zoom_val, target_zoom_val)
-			
+
 			if _first_replay_frame:
 				cam1.global_position = target_pos
-				cam1.zoom = target_zoom
 				cam2.global_position = target_pos
-				cam2.zoom = target_zoom
+				# ISO8 — la première image garde le zoom du duel : le lissage part de lui, sans saut.
+				cam1.zoom = Vector2.ONE * z_duel
+				cam2.zoom = Vector2.ONE * z_duel
 				_first_replay_frame = false
 			else:
 				# Exponential smoothing prevents overshoot and jumping when delta scales wildly in bullet time
@@ -5570,8 +5599,10 @@ func _restore_viewports():
 		# n'avait jamais été placée.
 		ui.disposer_hud(true)
 		cam1.global_position = p1.global_position
-		cam1.zoom = Vector2(1.0, 1.0)
-		cam2.zoom = Vector2(1.0, 1.0)
+		# ISO8 — le zoom du duel, pas 1,0 ; l'entraînement est local : les valeurs de la machine s'appliquent.
+		GameSettings.accorder_au_mode(false)
+		cam1.zoom = Vector2.ONE * GameSettings.zoom_duel
+		cam2.zoom = Vector2.ONE * GameSettings.zoom_duel
 		return
 	if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		vp1.get_parent().show()
@@ -5587,8 +5618,13 @@ func _restore_viewports():
 		ui.center_line.hide()
 	_accorder_rendu_aux_vues()
 	ui.disposer_hud()
-	cam1.zoom = Vector2(1.0, 1.0)
-	cam2.zoom = Vector2(1.0, 1.0)
+	# ISO8 — le zoom du duel (`GameSettings.zoom_duel`), pas 1,0 : c'est aussi d'où la killcam repart. EN LIGNE,
+	# zoom, décalage et portée valent les constantes, des deux côtés (`accorder_au_mode`, décision de 13:58) :
+	# le cadrage fait partie de l'information.
+	GameSettings.accorder_au_mode(NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
+		or NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT)
+	cam1.zoom = Vector2.ONE * GameSettings.zoom_duel
+	cam2.zoom = Vector2.ONE * GameSettings.zoom_duel
 	cam1.global_position = p1.global_position
 	cam2.global_position = p2.global_position
 	var mod = arena.get_node_or_null("CanvasModulate")

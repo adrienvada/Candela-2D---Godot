@@ -5423,6 +5423,25 @@ fusée en vol puis posée derrière un muret, suie et poussière, éblouissement
 les corps v5 en référence. Sources prises après les quatre fusions : le photographe sans drapeau (49 images)
 et le banc des gadgets (VERDICT=OK, 0 échec, noir absolu tenu pour les dix gadgets 2D coupée).
 
+**ISO8 — la caméra serrée, étape 1 et préparation de l'étape 2, 2026-09-15 à partir de 12:24.** Session « Iso 1 Opus »,
+branche `iso8-claustro` depuis `ee5ac9f`, sur le brief `briefs/iso8_claustro.md` de la session cloud (mandat
+d'Adrien de 12:20 : « zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus
+claustrophobique »). Étape 1 : `tools/banc_claustro.gd`, les variantes zoom ×1,0 / ×1,5 / ×1,8 / ×2,2, portée
+`torch_scale` 1,6 / 1,2 / 1,0, demi-angle 35° et 30° (le cookie du Fumiste, cuit à 30°, plutôt qu'une recuisson
+sans les curseurs exacts de `bis04`), en vue unique et en écran scindé, sur la carte d'essai des murs bas et Le
+Cloître ; planche `docs/iso/planche_iso8_variantes.jpg` pour que la session cloud choisisse sur image. Étape 2
+préparée sur des défauts NEUTRES (zoom 1,0, décalage 0) : `RegardDuel` (regard avancé vers la visée, borné à la
+carte au-delà du zoom 1,0), `GameSettings.zoom_duel` et `decalage_visee` (`--zoom=`, `--decalage=` ; le zoom de
+débogage ne s'écrit que s'il a été réglé — le piège de `video/mode_iso`), le dézoom au coup reçu qui part du zoom
+du duel.
+Banc des variantes, 12:40 : VERDICT=OK, 60 prises, 0 échec, vue iso tenue partout ; appels de dessin 67 à 80
+(vue unique) et 141 à 156 (écran scindé), sans effet visible du zoom ni de la portée. La planche a trompé une
+fois à la réduction (la rangée à 30° du Cloître paraissait moins serrée) : relue sur les prises brutes, le
+zoom est bien le même. Planche et dossier envoyés à ISO Assets ; choix demandé à la session cloud.
+Lots de l'étape 1 : le premier (12:48, 126 OK) rouge sur `test_iso_camera`, verte seule dans le foyer d'Adrien et
+dans un foyer neuf ; le second (12:57, 127 OK en 414 s) vert, sans rien changer — l'intermittent du témoin de
+simulation d'ISO2, très probablement. Choix de la session cloud reçu à 12:50 : zoom ×1,8, facteur de portée
+global ×0,75, demi-angles inchangés, décalage d'un quart de la hauteur visible, killcam qui part du zoom du duel.
 **Fusion de `balle-sans-lumiere` (`b4858bf`) dans `iso2-vues`, 2026-09-15 vers 13:00.** Session « Iso 1 Opus », sur le
 mot de la session cloud (12:35). Deux commits de « ISO7 Gadgets et lumière Opus » : la balle n'éclaire plus
 (`f8681a5`), les étincelles d'impact non plus (`b4858bf`). Base commune `a5ac4b8`, avant ISO6. Un seul conflit, la
@@ -5480,3 +5499,72 @@ présents ; `bullet.gd`, `particle_pool.gd`, `miroirs_iso.gd`, `settings_manager
 tailles des textures d'ISO7 inchangées (140 et 70 px, 512²) : la table de densité d'ISO8 tient.
 Premier lot de cette fusion (14:54, 125 OK) : `test_arena_matter` et `test_iso_camera` rouges ; relancées seules, vertes toutes les deux (`test_arena_matter` : 46 tests réussis). `test_iso_camera` est l'intermittent connu ; `test_arena_matter` n'avait jamais rougi ainsi — lot complet relancé avant tout commit.
 Second lot (15:01) : vert, 127 OK en 412 s, sans rien changer. `test_arena_matter` reste NON ÉLUCIDÉ : suite synchrone (aucune attente), donc un état `user://` laissé par une suite précédente du lot (piège « Vert seul, rouge dans le lot ») est plus plausible que la charge ; signalé.
+
+**Fusion d'`iso2-vues` (`a1cf64b`) dans `iso8-claustro`, 2026-09-15 vers 13:10.** Session « Iso 1 Opus », sur le mot de
+la session cloud : travailler l'étape 2 d'ISO8 sur la balle sans lumière. Deux conflits d'ajouts simultanés, la
+tête des « Décisions actées » de la ROADMAP (la ligne d'ISO8 de 12:20 avant celle des étincelles de 12:05) et la
+fin de ce journal (l'entrée d'ISO8 avant celle de la fusion de 13:00), les deux côtés gardés. Ancrages relus :
+`bullet.gd`, `particle_pool.gd`, `miroirs_iso.gd` et le banc de Gadgets identiques à `iso2-vues` ; ceux d'ISO8
+(`RegardDuel`, `zoom_duel`, `zoom_applique`, `decalage_applique`, `_suivre_du_regard`, `_carte_px`, le zoom du
+duel au départ de manche, `banc_claustro`, `_regard_du_duel` dans `test_iso_camera`) présents.
+Lot complet vert à 13:21 : 127 OK en 414 s.
+
+**ISO8, étape 2 — la caméra qui suit, aux défauts choisis, 2026-09-15 à partir de 13:22.** Session « Iso 1 Opus »,
+sur `iso8-claustro` après la fusion `623e155`. Zoom du duel ×1,8 et décalage d'un quart de la hauteur visible par
+défaut ; killcam bornée à partir du zoom du duel, sans saut à sa première image ; F3 : texels de lightmap par pixel
+d'écran (0,75 en 1080p dans une fenêtre de 1440 px, que le zoom ne change pas) et taille d'une tuile à l'écran
+(84 px à ×1,8). Première vérification : `test_iso_camera` rouge sur le TÉMOIN de simulation (deux parties sans
+iso divergent au pas 113, une balle d'un seul côté) — diagnostic en cours.
+Diagnostic : le DÉCALAGE vers la visée, pas le zoom — vert avec `--decalage=0` à ×1,8, vert à `--zoom=1.0
+--decalage=0`. Sans stick tenu, J1 vise la souris convertie par la caméra, et la caméra lissée sur le temps
+d'image rend cette visée dépendante du rythme des images. `test_iso_camera` désarme le décalage pendant ses
+parties comparées (elle mesure la vue iso) ; le ressenti à la souris reste à juger au test final.
+Premier lot de l'étape 2 (13:34, 125 OK) : `test_iso_vues` et `test_entrainement` rouges, tous deux sur une
+supposition de l'ancienne caméra. `test_iso_vues` mesurait 180 px de profondeur pour 100 px de monde (le zoom
+×1,8) et lit désormais le zoom sur le canevas de la vue ; `test_entrainement` exigeait une caméra exactement sur
+le joueur, et exige maintenant le regard que `RegardDuel` prescrit pour lui ET une caméra qui bouge avec lui — le
+défaut du 2026-08-19 (caméra jamais posée à l'entraînement) reste attrapé. Mac rendu à ISO7 Beauté à 13:37 ;
+relance, sabotage et lot à son retour.
+Au retour du Mac (13:44) : `test_iso_vues` et `test_entrainement` vertes seules. Sabotage (zoom par défaut remis à
+1,0) : `test_iso_camera` rougit sur le contrôle du zoom ×1,8, fichier rétabli à l'identique (`cmp`). Lot complet
+relancé.
+Lot complet vert à 13:53 : 127 OK en 412 s.
+
+**ISO8, étape 3 — les torches plus courtes, 2026-09-15 à partir de 13:55.** Session « Iso 1 Opus », après le commit
+de l'étape 2 (`886fa4c`). Un facteur global `WeaponData.facteur_portee` (0,75), appliqué dans `portee_torche()` et
+`echelle_torche()`, posé par `GameSettings` au démarrage (`--torche=`), aucune classe réécrite, demi-angles
+inchangés : le pistolet passe de 410 à 307 px. Statique plutôt que lu dans `GameSettings`, parce que `WeaponData`
+se charge dans les suites `--script`. `test_torches` et `test_iso_camera` adaptés.
+Vérifications de l'étape 3 (13:56) : `test_torches`, `test_iso_camera` (123 vérifications) et `test_vision` vertes seules.
+Sabotage (facteur par défaut remis à 1,0) : le contrôle du facteur ×0,75 rougit, fichier rétabli à l'identique (`cmp`). Lot complet lancé.
+Étape 4, premier calcul (13:59, demande de la session cloud) : à ×1,8 dans une fenêtre de 1440 px, les textures d'ISO7 gardent plus d'un texel par pixel d'écran — sol 1,52 en profondeur et 1,20 en largeur, face de mur 2,40 le long et 3,90 en hauteur ; elles ne s'étireraient qu'au-delà de ×2,16 (sol en largeur). Calcul à partir des shaders et de la géométrie de la caméra, détaillé dans la ROADMAP.
+Lot complet vert à 14:04 : 127 OK en 413 s.
+
+**ISO8 — la règle en ligne, 2026-09-15 à partir de 14:05.** Session « Iso 1 Opus », après le commit de l'étape 3
+(`0d69cc8`). Décision de la session cloud (13:58) : en ligne, zoom ×1,8, décalage 0,25 et portée ×0,75 valent les
+constantes des deux côtés, quoi que disent drapeaux ou `settings.cfg` — « un joueur à --zoom=1.0 voit plus qu'un
+joueur à ×1,8 ». `GameSettings` sépare les valeurs locales de celles qui s'appliquent ; `accorder_au_mode(en_ligne)`,
+appelé par `GameState` à chaque départ de manche, tranche ; les drapeaux ne valent qu'en build debug. Aucun état
+réseau, `Protocol.VERSION` inchangé. `test_iso_camera` vérifie le cas en ligne avec `--zoom=1.0 --torche=1.0`.
+Au retour du Mac (14:19) : `test_iso_camera` verte seule avec la règle en ligne (127 vérifications).
+Sabotage (branche en ligne de `valeurs_du_duel` désarmée) : les deux contrôles en ligne rougissent (les valeurs locales [1,0 ; 0,25 ; 1,0] passaient en ligne), fichier rétabli à l'identique (`cmp`). Lot complet lancé.
+Lot complet vert à 14:27 : 127 OK en 413 s.
+
+**ISO8, étape 4 — avant et après, 2026-09-15 à 14:28.** Session « Iso 1 Opus ». Règle en ligne commitée ; banc
+`banc_claustro --avant-apres` : VERDICT=OK, 8 prises, 0 échec. Au Cloître à ×1,8, la caméra avance de 147 px vers
+la visée (un quart de 600 px visibles) et se décale de 130 px vers l'est pour rester dans la carte ; sur la carte
+d'essai, elle est bornée à y = 265 contre la bordure nord. Portée du pistolet 410 → 307 px ; appels de dessin
+inchangés au bruit près. Planche `docs/iso/planche_iso8.jpg`.
+Lot complet vert à 14:44 : 127 OK en 413 s.
+
+**Fusion d'`iso8-claustro` (`db8af01`) dans `iso2-vues`, 2026-09-15 vers 15:05.** Session « Iso 1 Opus », pas 3 de la
+séquence de fin de la session cloud. Fusionnée directement (je tiens les deux branches ; un seul passage de
+conflits), comme annoncé à la session cloud. Deux conflits d'ajouts simultanés — la section ISO7b contre la section
+ISO8 de la ROADMAP, et les entrées de ce journal —, les deux côtés gardés en sections entières. Ancrages relus :
+ceux d'ISO8 présents (`RegardDuel`, `zoom_duel`, `decalage_visee`, `accorder_au_mode`, `valeurs_du_duel`,
+`arguments_de_reglage`, `WeaponData.facteur_portee`, `_suivre_du_regard`, `banc_claustro`, `_regard_du_duel`) ;
+les fichiers d'ISO7b, de Gadgets et d'ISO6 que la branche ISO8 ne touchait pas (shaders, `iso_materiaux.gd`,
+`iso_pate.*`, `test_iso_objets.gd`, `test_iso_beaute.gd`, `bullet.gd`, `particle_pool.gd`, `miroirs_iso.gd`,
+`photographe.gd`, `run_suites.sh`, `conditions_de_match.gd`) inchangés par la fusion. Premier lot où tournent ensemble
+les corps et les faces d'ISO7b et la caméra d'ISO8.
+Lot complet vert à 15:11 : 127 OK en 414 s — le premier où tournent ensemble les corps et faces d'ISO7b et la caméra d'ISO8 ; `test_arena_matter` n'a pas rougi.
