@@ -99,6 +99,7 @@ func _run() -> void:
 	_les_crochets_et_la_grille()
 	_le_sol()
 	_la_pate_des_voxels()
+	_les_faces_et_le_bain()
 	_le_banc()
 	print("%d vérifications, %d échec(s)" % [_verifications, _failures])
 	quit(1 if _failures > 0 else 0)
@@ -122,9 +123,10 @@ func _le_sol() -> void:
 		and float(mat.get_shader_parameter("force_matiere")) > 0.0)
 	var code := shader_sol.code
 	_check("sol : unshaded", code.contains("render_mode unshaded"))
-	_check("sol : la couleur naît de la lightmap", code.contains("vec3 c = lightmap_pateuse(px, px, aa, deux);"))
+	_check("sol : la couleur naît de la lightmap (tonée avant la pâte)", code.contains("vec3 c = lightmap_pateuse_sol(px_lu, px, aa, deux);")
+		and code.contains("vec3 c = lire_lightmap(p, deux) * ton_du_sol(p);"))
 	_check("sol : la matière passe par pate_facteur, aucun terme additif",
-		code.contains("c = pate_facteur(c, matiere);") and not code.contains("c *= ") and not code.contains("c += ") and not code.contains("c -= "))
+		code.contains("c = pate_facteur(c, matiere * dalle);") and not code.contains("c *= ") and not code.contains("c += ") and not code.contains("c -= "))
 	var ligne_uv := ""
 	for l in code.split("\n"):
 		if l.contains("texture(texture_sol"):
@@ -232,10 +234,10 @@ func _la_pate_des_voxels() -> void:
 	_check("mur et sol DÉCLARENT l'uniform temperature", SHADER_MUR.code.contains("uniform float temperature")
 		and (load("res://sol_iso.gdshader") as Shader).code.contains("uniform float temperature"))
 	_check("mur et sol déclarent tous les uniforms que le catalogue pose", _uniforms_declares())
-	_check("température posée sur le mur et le sol", is_equal_approx(float(mur.get_shader_parameter("temperature")), t)
-		and is_equal_approx(float(sol.get_shader_parameter("temperature")), t))
+	_check("température posée sur le mur et le sol (graduée, ISO7b)", is_equal_approx(float(mur.get_shader_parameter("temperature")),
+		IsoMateriaux.TEMPERATURE_GRADUEE) and is_equal_approx(float(sol.get_shader_parameter("temperature")), IsoMateriaux.TEMPERATURE_GRADUEE))
 	_check("sol : la température s'applique après la matière", (load("res://sol_iso.gdshader") as Shader).code.contains(
-		"c = pate_facteur(c, matiere);\n\tc = pate_temperature(c, temperature);"))
+		"c = pate_facteur(c, matiere * dalle);\n\t// ISO7b"))
 	# Le facteur se VOIT tel qu'il est écrit : la raison d'être de pate_facteur (banc du 2026-09-15).
 	var gris_ecrit := Vector3(0.37, 0.37, 0.37)
 	var affiche := IsoPate.luminance(IsoPate.vers_affiche(IsoPate.facteur(gris_ecrit, 0.25))) / IsoPate.luminance(IsoPate.vers_affiche(gris_ecrit))
@@ -259,7 +261,7 @@ func _la_pate_des_voxels() -> void:
 func _uniforms_declares() -> bool:
 	var source := FileAccess.get_file_as_string("res://iso_materiaux.gd")
 	var codes := {"mur": SHADER_MUR.code, "grille": SHADER_MUR.code,
-		"sol": (load("res://sol_iso.gdshader") as Shader).code}
+		"sol": (load("res://sol_iso.gdshader") as Shader).code, "corps": (load("res://corps_iso.gdshader") as Shader).code}
 	var parametre := RegEx.create_from_string("set_shader_parameter\\(\"([a-z_0-9]+)\"")
 	var ok := true
 	var vus := 0
@@ -277,6 +279,156 @@ func _uniforms_declares() -> bool:
 				ok = false
 				printerr("    uniform non déclaré dans le shader « %s » : %s" % [nom, u])
 	return ok and vus >= 15
+
+
+# ---------------------------------------------------------------------------
+# ISO7b — LES FACES PRENNENT LA LUMIÈRE, LE BAIN EST CHAUD, LE SOL EN DALLES
+# ---------------------------------------------------------------------------
+
+func _les_faces_et_le_bain() -> void:
+	print("— ISO7b : les faces, le bain, les dalles")
+	# Sous la MÊME lightmap — une torche posée à 3 tuiles devant un mur, dont la lumière décroît avec la distance —,
+	# la face qui la regarde et la face de profil (la torche sur son côté) lisent quatre valeurs différentes.
+	var source := Vector2(0.0, 105.0)
+	var lumiere := func(p: Vector2) -> float:
+		return maxf(0.0, 1.0 - p.distance_to(source) / 200.0)
+	var pas := IsoMateriaux.LAMBERT_PAS_PX
+	# Face qui regarde +y (vers la torche), pied en (0, 8).
+	var pied_face := Vector2(0.0, 8.0)
+	# Le plancher ÉTUDIÉ (0,4) : en jeu, le Lambert des faces est éteint (plancher 1, décision du 2026-09-15 14:21) ; la
+	# formule reste éprouvée, pour la lightmap de direction proposée après le test final.
+	var etudie := 0.4
+	var face := IsoMateriaux.lambert(lumiere.call(pied_face), lumiere.call(pied_face + Vector2(0, pas)),
+		lumiere.call(pied_face + Vector2(pas, 0)), lumiere.call(pied_face - Vector2(pas, 0)), etudie)
+	# Face qui regarde +x, pied à 3 tuiles à gauche de la torche : la lumière vient de son côté.
+	var pied_profil := Vector2(-8.0, 105.0) + Vector2(-60.0, 0.0)
+	var n := Vector2(-1.0, 0.0)
+	var t := Vector2(0.0, -1.0)
+	var profil := IsoMateriaux.lambert(lumiere.call(pied_profil), lumiere.call(pied_profil + n * pas),
+		lumiere.call(pied_profil + t * pas), lumiere.call(pied_profil - t * pas), etudie)
+	_check("sous la même lightmap, la face qui regarde la torche est plus claire que celle de dos (%.2f > %.2f)" % [face, profil],
+		face > profil + 0.2)
+	_check("la face qui regarde la torche garde toute sa lumière (%.2f)" % face, face > 0.95)
+	_check("la face de dos ne descend pas sous le plancher (%.2f ≥ %.2f)" % [profil, etudie],
+		profil >= etudie - 1e-4)
+	_check("lumière uniforme : aucune direction, la face garde sa lumière", is_equal_approx(IsoMateriaux.lambert(0.5, 0.5, 0.5, 0.5), 1.0))
+	_check("plancher 1 : le Lambert est éteint", is_equal_approx(IsoMateriaux.lambert(0.1, 0.9, 0.0, 0.0, 1.0), 1.0))
+	var code_mur := SHADER_MUR.code
+	_check("le gradient se lit DEVANT la face, jamais derrière", code_mur.contains("pied_px + n * lambert_pas_px")
+		and not code_mur.contains("pied_px - n * lambert_pas_px"))
+	_check("Lambert et contact multiplient la matière", code_mur.contains("matiere * lambert * contact"))
+	# Les rayures des faces (constat de la session cloud, 2026-09-15 12:10) : la lecture au pied tombait dans les hachures.
+	var portee_max := MurEncre.HACHURE_PORTEE * 1.2
+	_check("la face lit sa lumière au-delà des hachures d'encre (pied %.1f > portée %.1f)" % [IsoMateriaux.PIED_FACE_PX, portee_max],
+		IsoMateriaux.PIED_FACE_PX > portee_max + 1.0)
+	_check("la face et le liseré lisent une moyenne le long du mur, sur une période de hachure",
+		code_mur.contains("brute = lire_lightmap_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lire_lightmap_moyenne(monde.xz + sortie")
+		and is_equal_approx(1.875 + 1.875, MurEncre.HACHURE_PAS * 0.75))
+	# La température graduée : plus chaude en basse lumière, luminance gardée.
+	var bas := IsoPate.temperature_graduee(IsoPate.depuis_affiche(Vector3.ONE * 0.06), 0.8, IsoMateriaux.TEMPERATURE_SEUIL_BAS,
+		IsoMateriaux.TEMPERATURE_SEUIL_HAUT)
+	var haut := IsoPate.temperature_graduee(IsoPate.depuis_affiche(Vector3.ONE * 0.7), 0.8, IsoMateriaux.TEMPERATURE_SEUIL_BAS,
+		IsoMateriaux.TEMPERATURE_SEUIL_HAUT)
+	_check("bain : plus chaud au bord (r/g %.2f) qu'au centre (r/g %.2f)" % [bas.x / bas.y, haut.x / haut.y],
+		bas.x / bas.y > haut.x / haut.y + 0.1)
+	var gris := IsoPate.depuis_affiche(Vector3.ONE * 0.3)
+	_check("bain : luminance gardée", absf(IsoPate.luminance(IsoPate.temperature_graduee(gris, 0.8, 0.08, 0.45)) - IsoPate.luminance(gris)) < 1e-5)
+	_check("bain : 0 reste 0", IsoPate.temperature_graduee(Vector3.ZERO, 1.0, 0.08, 0.45) == Vector3.ZERO)
+	# ISO7b — la neutralité se lit AVANT la pâte (le halo de fusée jaunissait, constat du 2026-09-15 13:20).
+	var halogene := Vector3(Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b)
+	# ⚠️ Lue dans le TEXTE de fusee.gd : nommer `Fusee` compile le script, qui dépend de l'autoload `NetworkManager`,
+	# absent sous `--script` (SCRIPT ERROR dans le journal, suite pourtant verte).
+	var detresse := Vector3(0.0, 0.0, 0.0)
+	var lu := RegEx.create_from_string("const COULEUR_DETRESSE := Color\\(([0-9.]+), ([0-9.]+), ([0-9.]+)\\)").search(
+		FileAccess.get_file_as_string("res://fusee.gd"))
+	if lu != null:
+		detresse = Vector3(lu.get_string(1).to_float(), lu.get_string(2).to_float(), lu.get_string(3).to_float())
+	_check("la couleur de détresse de la fusée se lit (%s)" % str(detresse), lu != null and detresse.x > 0.5)
+	var ambre := Vector3(Charte.AMBRE.r, Charte.AMBRE.g, Charte.AMBRE.b)
+	_check("neutralité : l'halogène des torches compte neutre (poids %.2f)" % IsoPate.poids_neutre(halogene),
+		IsoPate.poids_neutre(halogene) > 0.95)
+	_check("neutralité : la fusée et l'ambre comptent colorés (poids %.2f, %.2f)" % [IsoPate.poids_neutre(detresse), IsoPate.poids_neutre(ambre)],
+		IsoPate.poids_neutre(detresse) == 0.0 and IsoPate.poids_neutre(ambre) == 0.0)
+	var melange := IsoPate.poids_neutre(halogene.lerp(detresse, 0.4))
+	_check("neutralité : un halo sur un cône fond, sans marche (poids %.2f)" % melange, melange > 0.0 and melange < 1.0)
+	_check("neutralité : 0 → 0", IsoPate.poids_neutre(Vector3.ZERO) == 0.0)
+	# La pâte D désature de 35 % vers la luminance : le halo et le cône tels que la température les reçoit.
+	var desature := func(c: Vector3) -> Vector3:
+		return c.lerp(Vector3.ONE * IsoPate.luminance(c), 0.35) * 0.3
+	var bas_t := IsoMateriaux.TEMPERATURE_SEUIL_BAS
+	var haut_t := IsoMateriaux.TEMPERATURE_SEUIL_HAUT
+	var halo: Vector3 = desature.call(detresse)
+	var halo_ancien := IsoPate.temperature_graduee(halo, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t)
+	var halo_neuf := IsoPate.temperature_graduee_neutre(halo, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t, IsoPate.poids_neutre(detresse))
+	var teinte := func(c: Vector3) -> float:
+		return Color(c.x, c.y, c.z).h * 360.0
+	_check("halo : mesurée après la pâte, la neutralité laissait la chaleur tourner la fusée (%.1f° → %.1f°)" % [teinte.call(halo), teinte.call(halo_ancien)],
+		absf(teinte.call(halo_ancien) - teinte.call(halo)) > 5.0)
+	_check("halo : lue avant la pâte, la fusée garde sa teinte (%.1f° → %.1f°)" % [teinte.call(halo), teinte.call(halo_neuf)],
+		halo_neuf.is_equal_approx(halo))
+	var cone: Vector3 = desature.call(halogene)
+	var cone_ancien := IsoPate.temperature_graduee(cone, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t)
+	var cone_neuf := IsoPate.temperature_graduee_neutre(cone, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t, IsoPate.poids_neutre(halogene))
+	_check("cône : la torche reste chaude (r/g %.2f → %.2f, %.2f avant la correction)" % [cone.x / cone.y, cone_neuf.x / cone_neuf.y, cone_ancien.x / cone_ancien.y],
+		cone_neuf.x / cone_neuf.y > cone.x / cone.y + 0.1 and cone_neuf.x / cone_neuf.y >= cone_ancien.x / cone_ancien.y - 0.02)
+	_check("cône : luminance gardée", absf(IsoPate.luminance(cone_neuf) - IsoPate.luminance(cone)) < 1e-5)
+	var code_sol_neutre := (load("res://sol_iso.gdshader") as Shader).code
+	_check("murs et sol dosent la chaleur par la lumière lue (pate_poids_neutre(brute))",
+		code_mur.contains("pate_poids_neutre(brute)") and code_sol_neutre.contains("pate_poids_neutre(brute)"))
+	var mur_neutre := ShaderMaterial.new()
+	mur_neutre.shader = SHADER_MUR
+	IsoMateriaux.accorder_mur(mur_neutre)
+	var sol_neutre := ShaderMaterial.new()
+	sol_neutre.shader = load("res://sol_iso.gdshader")
+	IsoMateriaux.accorder_sol(sol_neutre)
+	_check("accorder_mur et accorder_sol lisent la neutralité avant la pâte",
+		float(mur_neutre.get_shader_parameter("neutre_avant_pate")) == 1.0 and float(sol_neutre.get_shader_parameter("neutre_avant_pate")) == 1.0)
+	# Les dalles : le damier est ASSOMBRI, jamais éclairci.
+	var sol_code := (load("res://sol_iso.gdshader") as Shader).code
+	_check("dalles : la case claire est assombrie (ton_a < ton_b)", CandelaTileSet.SOL_DESSIN_A.get_luminance() < CandelaTileSet.SOL_DESSIN_B.get_luminance()
+		and sol_code.contains("pow(ton_a / ton_b, ton_exposant)"))
+	var mur := ShaderMaterial.new()
+	mur.shader = SHADER_MUR
+	IsoMateriaux.accorder_mur(mur)
+	var sol := ShaderMaterial.new()
+	sol.shader = load("res://sol_iso.gdshader")
+	IsoMateriaux.accorder_sol(sol)
+	# ISO7b — le modelé des corps, tenu par la CAMÉRA (décision de la session cloud, 2026-09-15 14:21) : plus aucune
+	# lecture du gradient — un corps qui traverse un cône ne voit pas son côté clair sauter.
+	var dessus := IsoMateriaux.modele_du_corps(Vector3(0, 1, 0))
+	var face_sud := IsoMateriaux.modele_du_corps(Vector3(0, 0, 1))
+	_check("corps : dessus 1,15 et face sud 0,9 (%.2f, %.2f)" % [dessus, face_sud],
+		is_equal_approx(dessus, 1.15) and is_equal_approx(face_sud, 0.9))
+	var une_valeur := true
+	for nv: Vector3 in [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, -1), Vector3(0, -1, 0)]:
+		une_valeur = une_valeur and is_equal_approx(IsoMateriaux.modele_du_corps(nv), IsoMateriaux.MODELE_AUTRES)
+	_check("corps : toutes les autres faces à une seule valeur (%.2f)" % IsoMateriaux.MODELE_AUTRES, une_valeur)
+	var visibles := [Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]
+	var somme := 0.0
+	for nv: Vector3 in visibles:
+		somme += IsoMateriaux.modele_du_corps(nv)
+	_check("corps : la moyenne des faces vues reste la lumière du capteur (%.2f ≈ 1)" % (somme / visibles.size()),
+		absf(somme / visibles.size() - 1.0) < 0.05)
+	_check("corps : la face sud ne passe jamais sous 0,7 (%.2f)" % face_sud, face_sud >= 0.7)
+	var tournee := IsoMateriaux.modele_du_corps(Vector3(0.6, 0.0, 0.8))
+	_check("corps : une face tournée ne prend que la valeur de sa normale (%.2f)" % tournee, is_equal_approx(tournee, 0.9))
+	var code_corps := (load("res://corps_iso.gdshader") as Shader).code
+	_check("corps : le modelé ne lit plus la lightmap (ni gradient, ni pas, ni gradient simulé)",
+		not code_corps.contains("lambert_du_corps") and not code_corps.contains("lambert_pas_px") and not code_corps.contains("gradient_simule"))
+	_check("corps : le modelé est re-plafonné à la fiche", code_corps.contains("modele_du_corps(normale_monde)), couleur_fiche.rgb);"))
+	_check("corps : le modelé passe par pate_facteur, avant l'encre et jamais sur la silhouette",
+		code_corps.find("modele_du_corps(normale_monde)") > 0 and code_corps.find("modele_du_corps(normale_monde)") < code_corps.find("pate_encre_boite(local")
+		and code_corps.find("modele_du_corps(normale_monde)") < code_corps.find("silhouette.rgb * s"))
+	var corps_mat := ShaderMaterial.new()
+	corps_mat.shader = load("res://corps_iso.gdshader")
+	IsoMateriaux.accorder_corps(corps_mat)
+	_check("corps : accorder_corps pose le modelé", is_equal_approx(float(corps_mat.get_shader_parameter("modele")), 1.0))
+	_check("faces : le Lambert est éteint en jeu (plancher %.1f posé)" % IsoMateriaux.LAMBERT_PLANCHER,
+		IsoMateriaux.LAMBERT_PLANCHER >= 1.0 and is_equal_approx(float(mur.get_shader_parameter("lambert_plancher")), 1.0))
+	_check("ISO7b posé : Lambert, contact, dalles, température graduée",
+		is_equal_approx(float(mur.get_shader_parameter("lambert_plancher")), IsoMateriaux.LAMBERT_PLANCHER)
+		and float(mur.get_shader_parameter("contact_px")) > 0.0 and float(sol.get_shader_parameter("dalles")) == 1.0
+		and float(sol.get_shader_parameter("temperature_seuil_haut")) > 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -307,9 +459,59 @@ func _le_banc() -> void:
 	var part := float((banc.mesurer(avant, allumant) as Dictionary)["part_neuve"])
 	_check("banc : une surface qui s'allume dépasse la part permise (%.2f > %.2f)" % [part, banc.PART_NEUVE_MAX],
 		part > banc.PART_NEUVE_MAX)
+	# ISO7b — le masque de dérive : un pixel que le JEU a changé entre les deux « avant » ne compte ni comme éteint
+	# ni comme allumé (torche qui bascule, fusée qui grandit : 7 221 faux éteints au banc du 2026-09-15).
+	var avant_bis := avant.duplicate() as Image
+	avant_bis.set_pixel(3, 3, Color(0, 0, 0))
+	var derive: Image = banc.masque_de_derive(avant, avant_bis)
+	_check("banc : le masque de dérive voit le pixel qui a bougé entre les deux avant",
+		derive.get_pixel(3, 3).r > 0.5 and derive.get_pixel(4, 4).r < 0.5)
+	var m_derive: Dictionary = banc.mesurer(avant, eteignant, derive)
+	_check("banc : un pixel en dérive n'est pas compté éteint (%d éteint, %d en dérive)" % [m_derive["eteints"], m_derive["derive"]],
+		m_derive["eteints"] == 0 and m_derive["derive"] == 1)
+	var neutres_iso7b: Dictionary = banc.NEUTRES_ISO7B
+	for p in ["lambert_plancher", "contact_px", "dalles", "temperature_seuil_haut"]:
+		_check("banc : l'avant ISO7 neutralise %s" % p, neutres_iso7b.has(p))
 	var neutres: Dictionary = banc.NEUTRES
 	for p in ["force_matiere", "encre_arete_px", "lisere_sommet_px", "seuil_muret_px"]:
 		_check("banc : l'avant neutralise %s" % p, neutres.has(p) and float(neutres[p]) == 0.0)
+	# ISO7b — `--avant` et `--pose`, la teinte du halo, la paire face / rasante.
+	var valeurs: Dictionary = banc.lire_valeurs("temperature=0,neutre_avant_pate=0.5")
+	_check("banc : --avant et --pose se lisent (%s)" % str(valeurs),
+		valeurs.size() == 2 and is_equal_approx(float(valeurs["neutre_avant_pate"]), 0.5) and (banc.lire_valeurs("") as Dictionary).is_empty())
+	_check("banc : le cadrage rasante existe", (banc.CADRAGES as Array).has("rasante"))
+	var sans_chaleur := Image.create_empty(20, 10, false, Image.FORMAT_RGB8)
+	sans_chaleur.fill(Color(0, 0, 0))
+	sans_chaleur.fill_rect(Rect2i(0, 0, 10, 10), Color(0.8, 0.3, 0.3))
+	sans_chaleur.fill_rect(Rect2i(10, 0, 10, 10), Color(0.6, 0.58, 0.55))
+	var jauni := sans_chaleur.duplicate() as Image
+	jauni.fill_rect(Rect2i(0, 0, 10, 10), Color(0.8, 0.5, 0.2))
+	var t_garde: Dictionary = banc.mesurer_teintes(sans_chaleur, sans_chaleur)
+	var t_jauni: Dictionary = banc.mesurer_teintes(sans_chaleur, jauni)
+	_check("banc : un halo gardé ne tourne pas (%.1f° → %.1f°, %d halo, %d cône)" % [t_garde["halo_teinte_avant"], t_garde["halo_teinte_apres"], t_garde["halo_n"], t_garde["cone_n"]],
+		absf(float(t_garde["halo_teinte_apres"]) - float(t_garde["halo_teinte_avant"])) < 0.5 and t_garde["halo_n"] == 100 and t_garde["cone_n"] == 100)
+	_check("banc : un halo qui jaunit se voit (%.1f° → %.1f°)" % [t_jauni["halo_teinte_avant"], t_jauni["halo_teinte_apres"]],
+		float(t_jauni["halo_teinte_apres"]) > float(t_jauni["halo_teinte_avant"]) + 10.0)
+	var led := Image.create_empty(10, 10, false, Image.FORMAT_RGB8)
+	led.fill(Color(0.96, 0.69, 0.24))
+	_check("banc : une LED ambre n'entre pas dans le halo rouge (%d)" % (banc.mesurer_teintes(led, led) as Dictionary)["halo_n"],
+		(banc.mesurer_teintes(led, led) as Dictionary)["halo_n"] == 0)
+	var lambert_img := Image.create_empty(10, 10, false, Image.FORMAT_RGB8)
+	lambert_img.fill(Color(0, 0, 0))
+	lambert_img.fill_rect(Rect2i(0, 0, 5, 10), Color(0.2, 0.2, 0.2))
+	var sans_img := Image.create_empty(10, 10, false, Image.FORMAT_RGB8)
+	sans_img.fill(Color(0, 0, 0))
+	sans_img.fill_rect(Rect2i(0, 0, 5, 10), Color(0.5, 0.5, 0.5))
+	var rap: Dictionary = banc.rapport_sur_eclaires(lambert_img, sans_img, Rect2(0, 0, 10, 10))
+	_check("banc : le facteur du Lambert se lit sur les pixels éclairés sans lui (%.2f sur %d)" % [rap["rapport"], rap["pixels"]],
+		absf(float(rap["rapport"]) - 0.4) < 0.01 and rap["pixels"] == 50)
+	var face_img := Image.create_empty(20, 10, false, Image.FORMAT_RGB8)
+	face_img.fill(Color(0, 0, 0))
+	face_img.fill_rect(Rect2i(0, 0, 10, 10), Color(0.4, 0.4, 0.4))
+	face_img.fill_rect(Rect2i(10, 0, 10, 10), Color(1, 1, 1))
+	var mf: Dictionary = banc.mesurer_face(face_img, Rect2(0, 0, 20, 10), Rect2(10, 0, 10, 10))
+	_check("banc : la face se mesure, le corps exclu (%.1f sur %d pixels)" % [mf["moyenne"], mf["pixels"]],
+		mf["pixels"] == 100 and absf(float(mf["moyenne"]) - 102.0) < 1.0)
 	_check("banc : la scène du banc existe", ResourceLoader.exists("res://tools/banc_iso_beaute.tscn"))
 
 
@@ -445,11 +647,24 @@ func _l_equite_du_shader() -> void:
 	var sources_propres := true
 	for a: String in affectations:
 		# La température (étape 6) réécrit `c` à partir de `c` lui-même, luminance gardée : pas une source.
-		if not (a.contains("lightmap_pateuse(") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
-				or a.begins_with("c = pate_facteur(c, ") or a.begins_with("c = pate_matiere_et_encre(c, ")):
+		# ISO7b — la température graduée réécrit `c` à partir de `c`, luminance gardée : pas une source non plus.
+		# ISO7b — `lightmap_pateuse_lue(brute` : la pâte d'une lecture moyennée, `brute` n'étant qu'une lecture (voir plus bas).
+		if not (a.contains("lightmap_pateuse(") or a.contains("lightmap_pateuse_lue(brute,") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
+				or a.begins_with("c = pate_facteur(c, ") or a.begins_with("c = pate_matiere_et_encre(c, ")
+				or a.begins_with("c = pate_temperature_graduee(c, ") or a.begins_with("c = pate_temperature_graduee_neutre(c, ")):
 			sources_propres = false
 			printerr("    affectation hors lightmap : ", a)
 	_check("toute couleur de mur naît d'une lecture de lightmap ou du noir", sources_propres)
+	var bruts_propres := true
+	var bruts := 0
+	for brute in lignes:
+		var ligne := brute.strip_edges()
+		if ligne.begins_with("brute = ") or ligne.begins_with("vec3 brute = "):
+			bruts += 1
+			if not (ligne.contains("lire_lightmap(") or ligne.contains("lire_lightmap_moyenne(") or ligne.contains("vec3(0.0)")):
+				bruts_propres = false
+				printerr("    lumière brute hors lightmap : ", ligne)
+	_check("la lumière brute (neutralité de la chaleur) n'est qu'une lecture de lightmap (%d)" % bruts, bruts_propres and bruts >= 4)
 	var multiplications := 0
 	for brute in lignes:
 		var ligne := brute.strip_edges()

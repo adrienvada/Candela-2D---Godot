@@ -5431,3 +5431,52 @@ tête des « Décisions actées » de la ROADMAP : les quatre lignes gardées, d
 `miroirs_iso.gd` et le banc de Gadgets identiques à leur branche ; ceux d'ISO6 (`iso_applique`, `mode_rendu`,
 `ATTENUATION_FANTOME`, `_centrer_sur_la_carte`, `_face_au_mur_haut`, `SUITES_2D`, `ConditionsDeMatch` v2) présents.
 Lot complet vert à 13:06 : 127 OK en 411 s.
+
+### 2026-09-15 (fin de matinée) — ISO7b : la lumière sur les faces (session « ISO7 Beauté Opus », branche `iso7b-faces`)
+
+Brief de la session cloud (11:00, Adrien réveillé : « rapprocher le duel de la planche E1 du DA, et continuer
+jusqu'au résultat »), puis section 5 (11:20, le modelé des corps). Branche `iso7b-faces` depuis `a5ac4b8`.
+Mesures d'abord, sur la variante 2 d'E1 : bain chaud plus orangé au bord (r/g 1,49) qu'au centre (1,19).
+Écrit : faces de mur qui lisent le gradient de la lightmap devant elles (Lambert, plancher 0,4) ; bande de
+contact au pied ; sol à dalles de deux tuiles, joint de 35 px enjambé ; chaleur graduée par la luminance
+affichée (`pate_temperature_graduee`, ajout à la pâte) ; modelé des corps et objets par le même gradient au
+pied du corps, dans `corps_iso.gdshader` (repris d'ISO Corps close), dessus à 1, silhouette et opacité intactes ;
+`tools/banc_corps.gd --modele` (gradient simulé, crochet signalé). Banc : cadrage e1 sur la carte d'essai
+(face sud éclairée de face et rasée de profil, fusée), avant = ISO7, masque de dérive.
+Trois passages au banc avant une mesure juste : le damier effacé avant la pâte faisait tomber une bande entière
+de lumière (damier gardé) ; le banc visait le catalogue au lieu de la carte chargée ; torches éteintes et halo de
+fusée en croissance entre deux captures (chauffe longue, séquence avant/après/avant bis, dérive écartée et comptée).
+Cinq passages au banc avant une mesure juste, et c'est le cinquième qui fait foi (Le Cloître, torches allumées,
+12:31-12:39) : rayures des faces corrigées à l'œil (elles venaient des hachures d'encre lues au pied, constat de la
+session cloud) ; chaleur de la face r/g 1,15 → 1,33 contre 1,32 sur E1 ; lot complet vert. Le modelé des corps,
+réécrit sur le retour de la session cloud pour RÉPARTIR la lumière du capteur, ne se voit pas à la caméra au lacet 0
+— proposé, pas tranché. Galerie : https://claude.ai/artifact/TjC6Xkboc39KJkjnPoqsut ; planche
+`docs/iso/planche_iso7b.jpg`.
+Suite à 13:06-13:14 : modelé des corps décidé par la session cloud (dessus 1,15, face sud 0,9, côté lampe 1,25,
+dos au plancher) — le volume se voit, la luminance moyenne ne bouge pas ; paire avant/après identique, la visée
+tenue au stick (29 pixels éteints au lieu de 19 521) ; face sud r/g 1,37 contre 1,32 sur E1. Non départagé : face de
+face contre face rasée. Question ouverte : la chaleur graduée jaunit le halo de la fusée. Lot complet vert.
+Suite à 13:20-14:20, sur deux ordres de la session cloud : la neutralité qui dose la chaleur se lit sur la lightmap
+avant la pâte — halo de fusée tenu en plein feu 5,0° → 5,0° (contre 5,1° → 8,6° à db26c43), cône toujours chaud.
+Paire face / rasante sur une scène de banc, à 1 et 3 tuiles : à 3 tuiles la rasante est sous la face, mais par la
+lightmap ; le Lambert pose 0,67 contre 0,70, et s'inverse à 1 tuile. Défaut du gradient signalé, non corrigé : il
+lit le bord de la tache de lumière, pas la direction de la source ; trois voies proposées à la session cloud.
+Suite à 14:21-14:55 : la session cloud tranche la voie (B) jusqu'au bout — Lambert des faces éteint, modelé des corps
+tenu par la caméra seule (dessus 1,15, face sud 0,9, autres faces 1, plus aucune lecture de lightmap), nuages à la
+neutralité lue avant la pâte (une ligne de `volume_iso.gdshader`, Gadgets clos). La lightmap de direction reste une
+proposition datée pour après le test final ; le piège « une valeur de lumière par point ne dit pas d'où elle vient »
+entre dans les pièges connus.
+
+**Fusion d'`iso7b-faces` (`33e1fd9`) dans `iso2-vues`, 2026-09-15 vers 14:50.** Session « Iso 1 Opus », pas 2 de la
+séquence de fin de la session cloud (14:39). Quatre commits de « ISO7 Beauté Opus » sur `a5ac4b8` : la lumière sur
+les faces, le modelé des corps sans lecture de lightmap (voie B), le halo de la fusée, les nuages à la neutralité
+lue. Deux conflits d'ajouts simultanés — la section ISO6 contre la section ISO7b de la ROADMAP, et les entrées de
+ce journal —, les deux côtés gardés en sections entières. `test_iso_objets.gd` fusionné seul, avec les slugs du
+jeu d'ISO6 ET le contrôle des nuages d'ISO7b. Ancrages relus : ceux de Beauté (`pate_poids_neutre`,
+`pate_temperature_graduee_neutre`, `lire_lightmap_moyenne`, `lightmap_pateuse_lue`, `neutre_avant_pate`,
+`modele_du_corps`, l'appel des nuages dans `volume_iso.gdshader`, `LAMBERT_PLANCHER := 1.0`, `planche_iso7b.jpg`)
+présents ; `bullet.gd`, `particle_pool.gd`, `miroirs_iso.gd`, `settings_manager.gd`, `presentation_3d.gd`,
+`photographe.gd`, `run_suites.sh`, `game_state.gd` et `conditions_de_match.gd` inchangés par la fusion. Périodes et
+tailles des textures d'ISO7 inchangées (140 et 70 px, 512²) : la table de densité d'ISO8 tient.
+Premier lot de cette fusion (14:54, 125 OK) : `test_arena_matter` et `test_iso_camera` rouges ; relancées seules, vertes toutes les deux (`test_arena_matter` : 46 tests réussis). `test_iso_camera` est l'intermittent connu ; `test_arena_matter` n'avait jamais rougi ainsi — lot complet relancé avant tout commit.
+Second lot (15:01) : vert, 127 OK en 412 s, sans rien changer. `test_arena_matter` reste NON ÉLUCIDÉ : suite synchrone (aucune attente), donc un état `user://` laissé par une suite précédente du lot (piège « Vert seul, rouge dans le lot ») est plus plausible que la charge ; signalé.

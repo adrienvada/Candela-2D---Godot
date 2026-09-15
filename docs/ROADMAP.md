@@ -3195,6 +3195,18 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une valeur de lumière par point ne dit pas d'où elle vient (2026-09-15)
+
+ISO7b a donné aux faces des murs et aux corps la « direction de la lumière » lue dans le gradient de la lightmap.
+Sur les formules, la face qui regarde la torche restait claire et celle de profil tombait au plancher. Au banc, une
+seule scène l'a démenti (J1 seul devant un long mur, visée le long du mur puis face au mur) : à 3 tuiles, le facteur
+posait 0,67 sur la face rasée et 0,70 sur la face visée de face ; à 1 tuile il s'inversait, 0,83 contre 0,49. Une
+torche est un cône : sa lumière décroît lentement vers la source et vite sur ses bords, et le gradient suit le BORD
+de la tache — le long du mur quand on le vise, devant lui quand on le longe. Aucune variante de lecture (pas plus
+courts, plusieurs pas, centroïde en éventail) ne tient les deux cas. **Règle : une direction se lit dans une donnée
+qui la porte, jamais dans une intensité.** Le Lambert des faces est éteint, le modelé des corps ne tient plus qu'à la
+caméra ; une lightmap de direction est proposée pour après le test final (voir ISO7b, huitième passage).
+
 ### Deux branches justes, une fusion fausse, et aucun conflit (2026-09-15)
 
 `GameState._viewport_du_joueur` a appris la vue iso sur `iso2-vues` (ISO2) : l'écran d'un joueur est
@@ -24537,6 +24549,222 @@ sur sa demande directe**, texte proposé :
   rend la 3D, en écran scindé deux sous-vues 3D. `--2d` ramène la vue de dessus. »
 - « Rendu » : « Aucune `Light3D` : la lumière de l'iso est celle des Light2D/occluders, projetée
   (B-projection, `docs/ETUDE_ISO.md`). Pâte D (`iso_pate.gdshaderinc`), noir absolu prouvé au banc. »
+
+### ISO7b — la lumière sur les faces 🟡 (ouverte le 2026-09-15 à 11:00, branche `iso7b-faces`)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (11:00), sur demande d'Adrien réveillé (10:55) :
+« rapprocher le duel de la planche E1 du DA, et continuer jusqu'au résultat ». Branche `iso7b-faces` depuis
+`iso2-vues` à `a5ac4b8` (ISO7 et la vague fusionnés), dans le worktree de la session.
+
+**Pourquoi.** La planche ISO7 disait vrai — sans lumière ajoutée, l'avant et l'après restaient proches — et
+disait donc où travailler : **dans le cône**. Ce que la variante 2 d'E1 a et que le jeu n'avait pas : des faces
+de mur qui prennent la direction de la lampe (claire de face, sombre de profil), un bain chaud plus orangé
+vers son bord, de larges dalles au lieu d'un quadrillage, une ombre de contact au pied des murs.
+
+**Mesures sur E1 variante 2** (moyennes 25×25 px) : sol le plus clair lum 179, r/g 1,19, b/g 0,78 ; bord du
+bain lum 95, r/g 1,49, b/g 0,60 ; face éclairée r/g 1,32, b/g 0,56 ; face de profil lum 67, neutre.
+
+**Décisions de la session.**
+- **Les faces lisent la direction de la lumière dans la lightmap** (aucune Light3D) : quatre lectures autour
+  du pied — au pied, une tuile DEVANT, une tuile de chaque côté le long de la face ; jamais derrière, où
+  l'ombre du mur lui-même ferait croire que toute face regarde la lampe. Facteur de Lambert
+  `max(plancher, composante avant / norme)`, plancher 0,4, pondéré par la netteté de la direction (sous une
+  lumière uniforme, la face garde sa lumière). Il ne fait qu'assombrir ; la lightmap reste la seule vérité de
+  visibilité.
+- **Contact** : une bande de 6 px de monde au pied de chaque face, 55 % gardés au ras du sol. Pas d'ombre au
+  sol ajoutée : les hachures de `MurEncre` la dessinent déjà dans la lightmap.
+- **Dalles** : le sol 3D enjambe le joint de 35 px de la lightmap (lecture glissée de 1,5 px vers le centre de
+  la tuile), ramène la case claire du damier au ton de la sombre AVANT la pâte (assombrie, jamais l'inverse),
+  et pose des dalles de deux tuiles à joint fin (60 % gardés). La référence spatiale du joueur reste une grille,
+  de 70 px.
+- **Chaleur graduée** : `pate_temperature_graduee` (ajoutée à la pâte, `pate_temperature` intacte pour les
+  nuages) — teinte braise (r/g 1,49, b/g 0,60 d'E1) sous 0,08 de luminance affichée, teinte chaude d'ISO7
+  au-dessus de 0,45 ; force 0,8 ; luminance gardée.
+
+**Premier passage au banc (11:09, cadrage e1, carte d'essai des murs bas)** : suite 99 vérifications (sabotée :
+gradient lu derrière la face, rouge), noir absolu tenu. Lumière éclairée moyenne 45,9 → 33,3 en vue unique.
+- ⚠️ **Effacer le damier avant la pâte assombrit toute une bande de lumière.** Ramener la case claire au ton de
+  la sombre (exposant 2,2) faisait passer sa luminance sous les seuils de la pâte D : le halo d'une fusée
+  descendait d'une bande entière, ne gardait qu'un cœur clair, et le damier revenait à l'envers. **Décision :
+  le damier est gardé** (exposant 0) — il reste la référence spatiale du joueur (décision d'Adrien du
+  2026-09-11) ; seuls le joint de 35 px et les dalles de 70 px changent.
+- ⚠️ **Au lacet 0, seules les faces SUD se voient.** « Un mur de face et un mur de profil » veut donc dire, en
+  jeu, une face sud éclairée depuis le sud et une face sud rasée par une torche parallèle — c'est ce que le
+  Lambert distingue, et ce que le cadrage e1 met en scène.
+- ⚠️ **`_mur_le_plus_proche` du banc lit le catalogue, pas la carte chargée.** Sur la carte d'essai, le premier
+  cadrage e1 visait un mur de l'Arène Standard : aucune face à l'image. Le cadrage choisit désormais sa face
+  dans `MapData.current_map_data`.
+
+**Deuxième passage au banc (11:15)** : lumière éclairée 33,8 → 20,1 en vue unique, 7 221 pixels « éteints » —
+et aucun de ces nombres ne mesurait l'habillage.
+- ⚠️ **La torche ne reste allumée que tenue.** Le banc avait cessé de rejouer l'appui à chaque image (pour éviter
+  une bascule d'une capture à l'autre) : toutes les captures sont sorties torches éteintes, la face visée
+  éclairée par rien. L'appui est rendu ; la bascule, elle, est désormais mesurée (ci-dessous).
+- ⚠️ **Le halo d'une fusée grandit à son allumage.** Les 7 221 pixels formaient un anneau au bord du halo :
+  capturé en premier, « après » voyait un halo plus petit que « avant », capturé 40 images plus tard.
+- **Correction de méthode** : chauffe de 240 images, et séquence **avant, après, avant bis**. Les pixels qui
+  changent de plus de 6/255 entre les deux « avant » sont la dérive du jeu (torche, fusée, bandeau) : ils sortent
+  des mesures, et leur nombre est imprimé. Le bruit n'est plus supposé absent, il est compté.
+
+**Le modelé des corps et des objets debout (ordre 17 de la session cloud, 11:20).** Dans le jeu, un corps était
+une silhouette grise uniforme : le capteur lui donne sa lumière, rien ne la répartissait sur ses faces ; la
+planche E9 du DA modèle les corps par la lampe. `corps_iso.gdshader` (repris d'ISO Corps, close) lit le même
+gradient que les murs, autour du pied du corps (`centre`, là où lit le capteur), une tuile de part et d'autre en
+x et en z. Chaque face latérale du voxel prend `max(0,4 ; dot(normale au sol, direction))` pondéré par la
+netteté de la direction ; le dessus reste à 1 (« légèrement plus clair », E9), le dessous au plancher. Normales en
+espace MONDE : un corps tourne. Posé par `pate_facteur` après le plafond de fiche et avant l'encre — ni
+l'opacité, ni la silhouette de soi, ni le fantôme de killcam ne changent. Le capteur reste la seule vérité
+d'équité : le modelé répartit entre 0,4 et 1 la lumière qu'il autorise. Réglé par `IsoMateriaux.accorder_corps`
+(crochet existant pour les corps ; posé par ISO5 pour les objets et le leurre).
+
+**Troisième passage au banc (11:35)** — suite 109 vérifications, lot complet vert (11:43, 0 SHADER/SCRIPT ERROR),
+noir absolu tenu ; en vue unique, verdict « honnête » (0 pixel éclairé éteint, 85 084 pixels de dérive écartés,
+lumière éclairée 56,4 → 60,6). **Et pourtant rien de prouvé sur les faces** :
+- ⚠️ **`rebuild_arena` éteint les torches, et l'action reste « appuyée ».** La carte d'essai est chargée après le
+  début de la manche : le jeu ne voit aucun nouvel appui, rien ne rallume les torches, et toutes les captures sont
+  sorties sans un cône — seule la fusée éclairait, la face visée restait noire avant comme après. Un verdict
+  « honnête » sur une scène sans la lumière qu'on voulait juger ne juge rien. Corrigé : relâcher, une image,
+  appuyer, après le chargement.
+- **Corps : demi-Lambert.** Au banc des dix classes, le Lambert strict mettait au plancher toutes les faces que la
+  caméra voit quand la lampe est de côté (dot = 0) : les corps s'assombrissaient en bloc. La planche E9 garde la
+  face tournée vers l'œil à mi-lumière. Le modelé des corps prend donc `max(0,4 ; 0,5 + 0,5 × cos)` — 1 vers la
+  lampe, 0,5 de profil, plancher dos à elle. Les murs gardent le Lambert strict du brief : c'est justement la face
+  sud RASÉE de profil qui doit y descendre.
+
+- ⚠️ **Les rayures verticales des faces venaient de la lecture au pied, pas de la texture** (constat de la session
+  cloud à 12:10, sur les captures d'ISO6). Elles existaient déjà dans les « avant » d'ISO7, matière à zéro. Une face
+  lisait la lightmap en un point à 8 px devant elle — pile dans la bande de hachures d'encre que `MurEncre` dessine
+  au pied de chaque mur (45°, pas de 5 px, portée de 5,6 à 9,6 px) : chaque colonne lisait tour à tour une hachure
+  et un creux. Mesuré sur la face sud de la bordure nord : période 6 px d'écran (5 px de monde), amplitude 30
+  niveaux. Corrigé : pied à 12 px et quatre lectures moyennées le long du mur sur une période de hachure
+  (`lightmap_pateuse_moyenne`), pour la face et le liseré.
+
+**Quatrième passage (12:13)** — suite 111 vérifications, noir absolu tenu, appels de dessin stables (91 → 91,
+163 → 165). Galerie des premières images : https://claude.ai/artifact/TjC6Xkboc39KJkjnPoqsut (E1 v2 en
+référence ; dix classes avant/après ; face nord avant/après).
+- ⚠️ **Sur la carte d'essai, les torches restent éteintes au banc**, même en relâchant puis rappuyant l'action après
+  `rebuild_arena` : aucun cône dans les captures, la face visée n'est éclairée par rien. Sur Le Cloître, sans
+  rechargement de carte, les torches marchent : le cadrage e1 y passe désormais (`--carte map_001_le_cloitre`).
+  La cause exacte du côté du jeu n'est pas cherchée ici (`player.gd`, hors chantier).
+- **Corps : demi-Lambert relevé** à 0,6 de profil (`0,6 + 0,4 × cos`, plancher 0,4) : à 0,5, la face tournée vers
+  l'œil tombait trop bas et le corps entier s'assombrissait ; la planche E9 la garde à mi-lumière haute.
+- **Lot complet rouge sur un seul test réseau sans rendu** : `duo_reconnexion`, famille 4.1 (« le salon rouvert
+  accepte le retour », 0 manche démarrée). Aucun rendu iso ni aucun shader de ce chantier n'y tourne, et le même
+  test passait au lot de 11:43 ; relancé avant tout commit, jamais contourné.
+
+**Cinquième passage (12:31-12:39), Le Cloître, torches allumées** — suite 114 vérifications, **lot complet vert**
+(413 s, 0 SHADER/SCRIPT ERROR ; `duo_reconnexion` repasse : c'était bien un test instable), noir absolu tenu,
+appels de dessin 95 → 96 (vue unique) et 172 → 172 (écran scindé). Planche `docs/iso/planche_iso7b.jpg`.
+- **Rayures des faces : corrigées à l'œil.** La face sud du bloc central, rayée avant (lecture à 8 px), montre
+  une matière continue après (12 px, quatre lectures moyennées).
+- **Chaleur mesurée contre E1** (pixels éclairés de la zone) : face r/g 1,15 → 1,33, b/g 0,75 → 0,66 (E1, face
+  éclairée : 1,32 / 0,56) ; sol dans le cône r/g 1,15 → 1,32 (E1 : 1,19 au centre du bain, 1,49 au bord).
+- **Part éclairée en baisse sur la face (68,5 → 58,4 %) et le sol (31,2 → 27,3 %)** — et 19 521 pixels éteints en
+  vue unique : la torche de J1 ne vise pas au même endroit dans l'avant et l'après (sa visée suit la souris, le
+  banc ne la tient pas). La face de face et la face rasée ne sont donc pas encore départagées par une paire
+  identique ; l'écran scindé, où rien n'a bougé, n'éteint que 42 pixels.
+- **Modelé des corps : invisible à la caméra, par construction** (luminance 75 → 75 au banc des dix classes). La
+  règle de la session cloud (moyenne gardée, dessus à 1, face sud à 1 lampe de côté) laisse inchangées les deux
+  faces qu'une caméra au lacet 0 voit ; seules les faces latérales, presque de profil, bougent. Du volume sans
+  retirer de lumière demanderait de décaler dessus et face sud en sens opposés : proposé à la session cloud, pas
+  tranché ici.
+
+- ⚠️ **La visée d'un joueur de banc se tient au stick, pas par `rotation`.** `LocalInputProvider.get_aim_direction`
+  rend la direction du stick s'il est poussé, sinon celle de la SOURIS : poser `rotation` à chaque image ne
+  fixait pas la torche, qui visait ailleurs entre l'avant et l'après. Le cadrage e1 pousse désormais `p1_aim_up` et
+  `p2_aim_right` à chaque image : la paire avant/après porte la même torche (passage suivant après commit
+  `27ddb1c`).
+
+- **Corps : le modelé décidé par la session cloud (12:50), sur proposition de la session.** Dessus 1,15 ; face
+  latérale `0,9 + 0,35 cos` vers la lampe (1,25 face à elle, 0,9 de profil) et `0,9 + 0,5 cos` à l'opposé (dos au
+  plancher 0,4) ; pondéré par la netteté de la direction ; re-plafonné à la fiche. Pourquoi : à la caméra au lacet
+  0 ne se voient que le dessus et la face sud ; les laisser tous deux à 1 rendait le modelé invisible (75 → 75), et
+  seul un écart entre eux donne du volume sans retirer de lumière (moyenne des quatre faces visibles, lampe de
+  côté : 0,93).
+
+**Sixième passage (13:06-13:14), paire identique** — visée de J1 et J2 tenue au stick, Le Cloître, bandeau figé.
+Suite 116 vérifications, **lot complet vert** (411 s, 0 SHADER/SCRIPT ERROR), 29 pixels éclairés éteints en vue unique
+et 41 en écran scindé (contre 19 521 quand la torche suivait la souris), appels 95 → 96 et 174 → 176.
+- **Face sud sous torche** : r/g 1,16 → 1,37, b/g 0,75 → 0,63 (E1, face éclairée : 1,32 / 0,56) ; lumière à 0,89-0,90
+  de l'avant, soit la matière. **Sol dans le cône** : r/g 1,12 → 1,29, lumière ×0,97.
+- **Face de face contre face rasée : non départagées.** La face mesurée est éclairée de face par J1 ; le cône de J2
+  éclaire le sol devant elle, pas la face. Il faudra une face que seule une torche parallèle éclaire.
+- **Corps : le modelé se voit.** Tête et épaules claires, torse et face sud plus sombres ; luminance moyenne 75,0
+  → 74,8 — la lumière du capteur est répartie, pas retirée.
+- ⚠️ **Question ouverte : la chaleur graduée jaunit le halo de la fusée** (rouge-orangé avant, jaune-orangé après).
+  La pondération par la neutralité protège une couleur saturée, mais la pâte D a déjà désaturé le halo de 35 % avant
+  la température. La couleur d'une fusée se lit en jeu : signalé à la session cloud avec une proposition, pas
+  corrigé en silence.
+
+**Septième passage (13:20-14:20), le halo et la paire face / rasante** — sur deux ordres de la session cloud (13:20).
+Suite 135 vérifications, **lot complet vert** (409 s, 0 SHADER/SCRIPT ERROR, 14:19). Le lot de 14:11 était rouge sur
+`test_iso_camera` seule, verte relancée à part (90 vérifications) : l'intermittence déjà vue par Iso 1, sans lien avec
+ce passage (la suite ne lit que les fonctions existantes d'`iso_pate.gd`).
+- **Le halo de la fusée garde sa couleur.** La chaleur graduée ne va qu'à la lumière neutre ; la neutralité se mesure
+  désormais sur la lightmap LUE, avant la pâte (`pate_poids_neutre`, `pate_temperature_graduee_neutre`, ajoutées à
+  `iso_pate.*`) : poids 1 pour l'halogène des torches (neutralité 0,82), 0 pour la fusée, le carmin et les LED ambre
+  (0,25 à 0,31), un fondu entre les deux. **Pourquoi** : mesurée après la pâte, la neutralité ne protégeait plus rien —
+  la pâte D désature de 35 %, un rouge y paraissait à moitié neutre. Mesuré au banc, fusée tenue en plein feu, avant sans
+  chaleur : au commit db26c43 le halo tournait de 5,1° à 8,6° (r/g 1,90 → 2,14) ; corrigé, 5,0° → 5,0° (r/g 1,90 → 1,90),
+  et le cône de la torche reste chaud (r/g 1,07 → 1,24, contre 1,27). Un seul relevé de lightmap de plus par pixel de
+  sol ; sur les faces, la lecture moyennée sert aux deux (`lire_lightmap_moyenne`, puis `lightmap_pateuse_lue`).
+  `neutre_avant_pate` à 0 rend l'état db26c43 (pour le banc).
+- **La paire face / rasante, sur une seule scène** (`--cadrage rasante --distances 1,3 --torches j1`) : J1 seul devant
+  la plus longue face sud libre du Cloître, visée au stick le long du mur puis face au mur, Lambert allumé, éteint,
+  rallumé (dérive 0,0 à 0,2). **À 3 tuiles, la rasante est bien sous la face** (face éclairée 31,0 contre 88,9) — mais
+  c'est la lightmap qui le fait (sans Lambert : 39,9 contre 101,2). **Le Lambert, lui, ne départage pas** : il pose 0,67
+  sur la rasante et 0,70 sur la face ; à 1 tuile, il s'inverse (0,83 rasante, 0,49 face).
+- ⚠️ **Défaut du gradient, non corrigé ici : il lit le BORD de la tache de lumière, pas la direction de la source.**
+  Une torche est un cône : sa lumière décroît lentement le long du faisceau (vers la source, la vraie direction) et
+  vite sur ses bords. Face à un mur, le bord de la tache court LE LONG du mur — la face se lit « de profil » ; le long
+  d'un mur, le bord monte DEVANT lui — la face se lit « de face ». Aucun choix de pas ni d'échantillons n'y remédie
+  (trois variantes calculées sur les deux géométries, 2026-09-15 14:00) : une valeur de lumière par point ne dit pas
+  d'où elle vient. Signalé à la session cloud avec trois voies — une lightmap de direction (touche les lumières 2D,
+  hors périmètre), le Lambert des faces éteint (plancher 1 : contact, dalles et chaleur restent), ou le garder comme
+  ombre de bord de tache. **Tranché à 14:21 : voie (B), jusqu'au bout** — voir le huitième passage.
+- ⚠️ **Piège : une teinte de fusée ne se compare pas entre deux passes.** Libre, la fusée passe du rouge de détresse à
+  l'ambre en quelques secondes, et l'âge atteint à la capture dépend de la cadence : à 13:40, le halo était rouge dans
+  une passe et ambre dans les deux autres. Le banc la tient à 1 s de combustion (`--fusee-plein-feu`, par
+  `appliquer_age`, le chemin de la killcam) et lit la classe « halo » en rouge seulement (les LED ambre sont saturées
+  aussi).
+- ⚠️ **Piège : nommer `Fusee` dans une suite `--script` compile `fusee.gd`, qui dépend de l'autoload `NetworkManager`** —
+  SCRIPT ERROR dans le journal, suite pourtant verte (132 vérifications, 0 échec). La couleur se lit dans le texte du
+  script, et le banc appelle `appliquer_age` par nom de méthode.
+
+**Huitième passage (14:21-14:55), voie (B) jusqu'au bout** — décision de la session cloud (14:21) sur la mesure du
+septième : « une direction fausse vaut moins qu'une absence de direction ».
+- **Lambert des faces éteint** : `IsoMateriaux.LAMBERT_PLANCHER` à 1. Le calcul reste dans `mur_iso.gdshader`
+  (plancher < 1 le rallume) et sa formule reste éprouvée par la suite, pour la voie (A).
+- **Modelé des corps par la caméra seule** (`modele_du_corps`, uniform `modele`) : dessus 1,15, face sud 0,9, toutes
+  les autres faces à 1 ; plus aucune lecture de la lightmap dans `corps_iso.gdshader` (cinq relevés de moins par
+  fragment de corps). **Pourquoi** : le côté lampe à 1,25 et le dos au plancher venaient du gradient, qui lit le bord
+  d'une tache de lumière — un corps qui traversait un cône voyait son côté clair sauter. Le dessus et la face sud
+  tiennent à la caméra, pas à la lumière. `tools/banc_corps.gd --modele` suit.
+- **Nuages** (`volume_iso.gdshader`, une ligne posée ici, Gadgets étant clos, sur l'ordre de la session cloud) : même
+  neutralité lue avant la pâte, par `pate_temperature_graduee_neutre` à seuils nuls (la teinte chaude d'ISO7, sans
+  graduation) ; son contrôle dans `tools/test_iso_objets.gd` suit.
+- Restent : le contact au pied, les dalles, la chaleur graduée, le dessus et la face sud des corps.
+- **Mesuré (14:29-14:37)** : suites `test_iso_beaute` 136 et `test_iso_objets` 41 vérifications, **lot complet vert**
+  (413 s, 0 SHADER/SCRIPT ERROR). Fusée tenue en plein feu, avant sans chaleur (nuages compris) : halo 4,6° → 4,6°,
+  r/g 1,90 tenu, cône r/g 1,07 → 1,24, 3 pixels éteints. **Nuages seuls** (`--volumes-seuls`, 4 nuages suivis) :
+  couper leur chaleur ne change que 2 pixels — dans le halo rouge, un nuage garde la teinte de la fusée (4,6°). Le
+  banc ne rend pas l'état d'avant pour les nuages (leur shader n'a pas d'interrupteur) ; la suite l'éprouve sur la
+  formule. Paire ISO7 / ISO7b au Cloître : 28 pixels éclairés éteints sur 97 042, 228 allumés (0,011 %), lumière
+  éclairée moyenne 33,2 → 35,2.
+- **(A) — proposition datée (2026-09-15), pour APRÈS le test final, pas un chantier d'aujourd'hui : une lightmap de
+  direction.** Chaque lumière 2D écrirait, dans une seconde texture par joueur, la direction de sa source (RG) pondérée
+  par son énergie ; faces et corps y liraient une vraie incidence. Coût : une passe de lumières 2D de plus par joueur,
+  et elle touche les Light2D. **(C) écartée** : une ombre qui n'est pas de la direction se lirait comme une direction.
+
+**La caméra ne bouge pas** (lacet 0, tangage 52 — étude § 5.2, H15). Pour la session cloud : `CameraIso` a un lacet
+paramétrable par instance (`var lacet_deg`, lu par `transform_pour` et `stick_au_sol`) ; son en-tête prévient
+qu'un lacet non nul fait tourner l'empreinte au sol hors du rectangle de la vue 2D.
+
+**Crochets posés dans des fichiers partagés** : aucun nouveau — tout vit dans `mur_iso.gdshader`,
+`sol_iso.gdshader`, `iso_materiaux.gd`, des ajouts de fonctions à `iso_pate.*`, et le banc
+(`--cadrage e1`, `--carte-essai`, `--fusee`, `--avant-iso7` ; au septième passage `--avant`, `--pose`,
+`--fusee-plein-feu`, `--cadrage rasante`, `--distances`). Signalé sans y toucher : les nuages (`volume_iso.gdshader`,
+`IsoVolumes`) prennent la chaleur non graduée avec la neutralité mesurée après la pâte.
 
 ### Ce qui attend Adrien — jalon H15
 

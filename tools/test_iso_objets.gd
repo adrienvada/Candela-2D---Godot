@@ -244,7 +244,7 @@ func _les_capteurs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 	_check("les nuages prennent la température de la lumière du sol (IsoMateriaux.TEMPERATURE)",
 		is_equal_approx(float(mat_volume.get_shader_parameter("temperature")),
 			IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
-		and (IsoVolumes.SHADER_VOLUME as Shader).code.contains("pate_temperature(c, temperature)"))
+		and (IsoVolumes.SHADER_VOLUME as Shader).code.contains("pate_temperature_graduee_neutre(c, temperature, 0.0, 0.0, pate_poids_neutre(lire_lightmap(px, deux)))"))
 	volumes.free()
 
 
