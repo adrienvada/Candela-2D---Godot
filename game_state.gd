@@ -389,6 +389,13 @@ func camera_hit_kick(pid: int) -> void:
 var _regard_decalage: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 var _carte_px := Rect2()
 
+## ISO11, L2 — la killcam calme (`killcam_cadrage.gd`). `_killcam_cadrage_tenu` : vrai du début du rejeu à la sortie
+## de la killcam (`_abort_killcam`, par où passent toutes les sorties), gel de fin compris — le regard du duel
+## n'y touche plus la caméra. `_killcam_cadre` : le mouvement en cours.
+const CadrageKillcam := preload("res://killcam_cadrage.gd")
+var _killcam_cadrage_tenu := false
+var _killcam_cadre: Dictionary = {}
+
 func _suivre_du_regard(delta: float) -> void:
 	for pid in 2:
 		var joueur: Node2D = p1 if pid == 0 else p2
@@ -1687,7 +1694,10 @@ func _process(delta):
 	# révélé la confusion.
 	# ISO8 — et il suit avec le zoom du duel, avancé vers la visée, borné à la carte (`RegardDuel`). Aux
 	# défauts d'aujourd'hui (zoom 1,0, décalage 0), la caméra reste exactement sur le joueur.
-	_suivre_du_regard(delta)
+	# ⚠️ ISO11, L2 — PAS pendant la killcam : il reposait la caméra sur le joueur rejoué, avancée vers sa visée, à
+	# chaque image et avant le cadrage du rejeu, qui repartait donc chaque fois d'ailleurs (`killcam_cadrage.gd`).
+	if not _killcam_cadrage_tenu:
+		_suivre_du_regard(delta)
 
 	# **Même piège que le regard, et il a fallu le payer deux fois.** Ce suivi
 	# vivait dans `if round_active:`, alors que le lancer de fusée s'autorise
@@ -1790,52 +1800,26 @@ func _process(delta):
 			# Étape 28, lot F — les gadgets du passé, et le présent masqué derrière eux.
 			_maj_gadgets_killcam(current_snap)
 			
-			# Dynamic Camera Zoom & Tracking
-			# Cinematic smooth tracking throughout the entire killcam
-			var unscaled_delta = delta / Engine.time_scale if Engine.time_scale > 0 else delta
-			var midpoint = (ghost_p1.global_position + ghost_p2.global_position) / 2.0
-			var viewport_size = get_viewport().get_visible_rect().size
-			var margin = 250.0 # Larger margin so players are visible and not hidden by UI
-			
-			var dx = max(abs(ghost_p1.global_position.x - ghost_p2.global_position.x), 200.0)
-			var dy = max(abs(ghost_p1.global_position.y - ghost_p2.global_position.y), 200.0)
-			
-			# Only apply extreme cinematic zoom during bullet time!
-			var target_zoom_val = 1.0
-			var target_pos = midpoint
-			
-			# ISO8 — les bornes du zoom de killcam partent du zoom du duel (`GameSettings.zoom_duel`) : à
-			# ×1,8, une lecture bornée à 1,3 aurait d'abord DÉZOOMÉ la caméra, rendant d'un coup la carte que
-			# le duel cachait. Le cadrage sur les deux fantômes reste le même calcul.
-			var z_duel: float = GameSettings.zoom_duel
-			if Engine.time_scale < 0.9:
-				# We are in bullet time! Zoom in hard.
-				var zoom_x = viewport_size.x / (dx + margin * 2)
-				var zoom_y = viewport_size.y / (dy + margin * 2)
-				target_zoom_val = clamp(min(zoom_x, zoom_y), 1.2 * z_duel, 2.8 * z_duel) # Push zoom further
-			else:
-				# Normal playback: stay zoomed out to see the action
-				var zoom_x = viewport_size.x / (dx + margin * 2.5)
-				var zoom_y = viewport_size.y / (dy + margin * 2.5)
-				target_zoom_val = clamp(min(zoom_x, zoom_y), 0.7 * z_duel, 1.3 * z_duel)
-
-			var target_zoom = Vector2(target_zoom_val, target_zoom_val)
-
+			# ISO11, L2 — la killcam CALME (`killcam_cadrage.gd`) : un cadrage calculé une fois sur tout ce que les
+			# deux joueurs parcourront dans la fenêtre de lecture, un seul mouvement lent en temps RÉEL depuis la
+			# caméra du duel, puis plus rien ne bouge. Remplace une cible recalculée à chaque image, et deux plages
+			# de zoom qui se relayaient au passage du ralenti.
+			var unscaled_delta: float = delta / Engine.time_scale if Engine.time_scale > 0 else delta
 			if _first_replay_frame:
-				cam1.global_position = target_pos
-				cam2.global_position = target_pos
-				# ISO8 — la première image garde le zoom du duel : le lissage part de lui, sans saut.
-				cam1.zoom = Vector2.ONE * z_duel
-				cam2.zoom = Vector2.ONE * z_duel
+				var cam_vue: Camera2D = cam2 \
+					if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT else cam1
+				var vue := cam_vue.custom_viewport as Viewport
+				var vue_px := vue.get_visible_rect().size if vue != null else Vector2(1920.0, 1080.0)
+				_killcam_cadre = CadrageKillcam.preparer(cam_vue.global_position, GameSettings.zoom_duel,
+					ReplaySystem.positions_de_la_fenetre(), vue_px, GameSettings.zoom_duel)
 				_first_replay_frame = false
-			else:
-				# Exponential smoothing prevents overshoot and jumping when delta scales wildly in bullet time
-				var lerp_speed = 3.0 if Engine.time_scale >= 0.9 else 6.0
-				var weight = 1.0 - exp(-lerp_speed * unscaled_delta)
-				cam1.global_position = cam1.global_position.lerp(target_pos, weight)
-				cam1.zoom = cam1.zoom.lerp(target_zoom, weight)
-				cam2.global_position = cam2.global_position.lerp(target_pos, weight)
-				cam2.zoom = cam2.zoom.lerp(target_zoom, weight)
+			var pose: Array = CadrageKillcam.avancer(_killcam_cadre, unscaled_delta)
+			if not pose.is_empty():
+				for cam: Camera2D in [cam1, cam2]:
+					cam.global_position = pose[0]
+					cam.zoom = Vector2.ONE * float(pose[1])
+					# Ni secousse ni recul pendant le rejeu : un décalage résiduel se lirait comme un saut.
+					cam.offset = Vector2.ZERO
 			
 		# Allow skipping killcam (Indépendant)
 		if Input.is_action_just_pressed("p1_skip_killcam"):
@@ -3970,6 +3954,8 @@ func _do_end_round(winner_id: int):
 		ui.show_killcam()
 		
 		_first_replay_frame = true
+		_killcam_cadrage_tenu = true
+		_killcam_cadre = {}
 		_armer_le_releve()
 		ReplaySystem.start_playback()
 		
@@ -4351,6 +4337,8 @@ func _clear_kill_stamp() -> void:
 ## vitesse, menus compris.
 func _abort_killcam() -> void:
 	ReplaySystem.playing_back = false
+	# ISO11, L2 — le regard du duel reprend la caméra.
+	_killcam_cadrage_tenu = false
 	Engine.time_scale = 1.0
 	_liberer_le_releve()
 	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé —

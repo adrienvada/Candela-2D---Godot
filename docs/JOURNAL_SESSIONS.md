@@ -5705,3 +5705,11 @@ corps de J1 ; banc des gadgets OK, `test_banc` vert. Lot complet vert après la 
 lisait « déjà dessus » sur le cercle de 28 px du canon, que le disque de 18 px atteint canon tourné ailleurs. Correction :
 un enjambement commence au geste tenu vers le muret, se prolonge sur le chevauchement. Cinq contrôles neufs dans
 `test_accroupi`, rouges avec la règle d'avant. Protocole inchangé (le geste voyage déjà en v18). Lot complet vert à 21:48 : 111 suites, sans erreur de script, 435 s.
+
+**ISO11, L2 — la killcam calme, 2026-09-15 au soir.** Session « Iso 1 Opus », branche `iso11-retours`. Quatre causes lues
+dans le code : le regard du duel reposait la caméra à chaque image du rejeu, deux plages de zoom se relayaient au passage
+du ralenti, la cible se recalculait à chaque image, la première image sautait sur le milieu des fantômes. Remplacées par
+un cadrage calculé une fois sur la fenêtre de lecture et un seul mouvement lent en temps réel (`killcam_cadrage.gd`).
+Suite neuve `test_killcam_calme`. 598 images de rejeu mesurées, pas max 1,97 px, un seul sens de zoom ;
+sur le code d'avant, saut de 210,7 px à la première image et pas de 396 px. Bande du photographe (`killcam-bande`,
+une prise toutes les ~0,37 s, pas trente images consécutives) : zoom 1,800 → 1,543 puis immobile. Lot complet vert à 22:06 : 112 suites, sans erreur de script, 435 s.

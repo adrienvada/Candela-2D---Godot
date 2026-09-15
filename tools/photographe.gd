@@ -318,6 +318,13 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "killcam", "famille": "fins", "source": "ecran",
 		 "titre": "La killcam",
 		 "pourquoi": "Le rejeu de sa propre mort, AVEC sa cause : la mine consumée avant l'impact rebrûle, et la torche fantôme est là. Une mécanique qui ne se comprend qu'en image."},
+		# ISO11, L2 — la preuve de la killcam calme : trente prises de suite dès le début du rejeu (« les zooms
+		# sont intempestifs et chaotiques », Adrien au test 1). Une image seule ne dit rien d'un saut. ⚠️ Pas trente
+		# images CONSÉCUTIVES : une capture d'écran prend 350 à 450 ms, la bande échantillonne le rejeu (~0,37 s).
+		# Les sauts d'une image à la suivante, c'est `tools/test_killcam_calme.gd` qui les mesure.
+		{"id": "killcam-bande", "famille": "fins", "source": "ecran",
+		 "titre": "La killcam, trente prises du rejeu",
+		 "pourquoi": "ISO11, L2 — un seul mouvement de zoom lent, un cadrage qui glisse sans à-coup, aucun décalage de visée : ce qu'une suite mesure à la caméra image par image, et ce qu'on voit ici prise après prise (une toutes les ~0,37 s)."},
 		{"id": "gel-fatal", "famille": "fins", "source": "ecran",
 		 "titre": "L'arrêt sur image signé",
 		 "pourquoi": "DA6.2 — le gel du kill, tamponné de l'heure. L'image que le joueur veut envoyer."},
@@ -1008,7 +1015,8 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 	# dans le rejeu du début à la fin, pour qu'on voie qu'un gadget vivant y est
 	# rejoué à son état PASSÉ et non tel qu'il est maintenant.
 	var mine_posee := false
-	if _demande(plans, "killcam"):
+	var mettre_en_scene := _demande(plans, "killcam") or _demande(plans, "killcam-bande")
+	if mettre_en_scene:
 		_poser_torche_fantome()
 	var respire := 5.0
 	while respire > 0.0:
@@ -1018,7 +1026,7 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 		# tôt, elle serait consumée hors champ et la capture ne prouverait rien. Là,
 		# elle brûle PUIS meurt dans la fenêtre — c'est-à-dire exactement le cas que
 		# ce lot corrige, une mort dont la cause n'existe plus au moment du rejeu.
-		if not mine_posee and respire <= 2.5 and _demande(plans, "killcam"):
+		if not mine_posee and respire <= 2.5 and mettre_en_scene:
 			mine_posee = _poser_mine_allumee()
 		await get_tree().process_frame
 		respire -= get_process_delta_time()
@@ -1027,6 +1035,22 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 		printerr("  ✗ pas d'adversaire à faire tomber")
 		return
 	_main.p2.take_damage(9999.0, _main.p1)
+
+	# ISO11, L2 — la bande : trente prises de suite dès que le rejeu joue, chacune attendant l'image dessinée
+	# suivante — et chacune durant 350 à 450 ms : un échantillon du rejeu, pas ses images consécutives. Prise AVANT le plan `killcam`, qui laisse le rejeu respirer une demi-seconde.
+	if _demande(plans, "killcam-bande"):
+		if await _attendre(func() -> bool: return ReplaySystem.playing_back, 15.0):
+			var t0 := Time.get_ticks_msec()
+			for i in 30:
+				var img: Image = await _capturer("ecran")
+				if img == null:
+					_perdues += 1
+					continue
+				_ecrire(_derive(plans, "killcam-bande", "%02d" % (i + 1),
+					"image %d/30 du rejeu, %d ms après la première prise, zoom caméra %.3f"
+					% [i + 1, Time.get_ticks_msec() - t0, _main.cam1.zoom.y]), img)
+		else:
+			printerr("  ✗ la killcam n'a pas démarré (bande)")
 
 	if _demande(plans, "killcam"):
 		if await _attendre(func() -> bool: return ReplaySystem.playing_back, 15.0):

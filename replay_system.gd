@@ -428,6 +428,27 @@ func start_playback():
 	_pretrace_reste = -1.0
 	_pretrace_fait = false
 
+## ISO11, L2 — ce que la killcam cadre : les positions des deux joueurs sur toute la fenêtre de lecture, de son début
+## jusqu'à `CADRAGE_APRES_IMPACT` images après l'impact (la lecture s'arrête une seconde RÉELLE après, presque
+## entièrement au ralenti). Lue une fois, à la première image du rejeu.
+const CADRAGE_APRES_IMPACT := 30
+
+func positions_de_la_fenetre() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if snapshots.is_empty():
+		return out
+	var debut := clampi(floori(playback_index), 0, snapshots.size() - 1)
+	var fin := snapshots.size() - 1
+	if impact_frame != -1:
+		fin = clampi(impact_frame + CADRAGE_APRES_IMPACT, debut, fin)
+	for i in range(debut, fin + 1):
+		var s = snapshots[i]
+		if s == null:
+			continue
+		out.append(s.p1_pos)
+		out.append(s.p2_pos)
+	return out
+
 func get_next_frame(delta: float):
 	if not playing_back or snapshots.is_empty(): return null
 	

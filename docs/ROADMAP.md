@@ -25517,6 +25517,40 @@ qu'on est proche d'un mur bas on l'escalade, et donc c'est difficile de se cache
   la pierre puis lâché, la traversée va au bout avec un seul bruit ; le geste tenu en s'éloignant n'ouvre rien. Avec la
   règle d'avant, cinq de ces contrôles échouent. Lot complet vert à 21:48 : 111 suites, sans erreur de script, 435 s.
 
+#### L2 — la killcam calme
+
+Ses mots : « la killcam : les zooms sont intempestifs et chaotiques ».
+- **Les causes, lues dans le code** (`GameState._process`) :
+  - **le regard du duel continuait pendant le rejeu** : `_suivre_du_regard` repose chaque caméra sur son joueur,
+    avancée d'un quart de la hauteur visible vers sa visée, à CHAQUE image et AVANT le bloc de la killcam — dont le
+    lissage repartait donc chaque fois de la position du regard, qui suivait les rotations rejouées ;
+  - **deux cibles de zoom qui se relayaient** : au ralenti (`Engine.time_scale < 0,9`) une plage serrée (1,2 à 2,8 × le
+    zoom du duel), hors ralenti une plage large (0,7 à 1,3 ×), et une vitesse de lissage qui changeait avec (3 ↔ 6) ;
+    le rejeu franchit ce seuil plusieurs fois (ralenti du tir, 0,03 à l'impact, accélération jusqu'à ×6) ;
+  - **une cible recalculée à chaque image** sur l'écart des deux fantômes : le zoom respirait à chaque pas ;
+  - **un saut à la première image** : la caméra posée d'un coup sur le milieu des deux fantômes.
+- **Ce qui la remplace** (`killcam_cadrage.gd`) : un cadrage calculé UNE fois, à la première image du rejeu, sur toutes
+  les positions des deux joueurs dans la fenêtre de lecture (`ReplaySystem.positions_de_la_fenetre`) ; un seul
+  mouvement de 1,6 s en temps réel, adouci aux deux bouts, depuis la caméra du duel ; puis plus rien ne bouge jusqu'à
+  la sortie de la killcam. Le regard du duel est tenu à l'écart de la première image du rejeu à `_abort_killcam`
+  (gel de fin compris) ; ni secousse ni recul pendant le rejeu. Bornes du zoom : 0,7 à 1,3 × le zoom du duel — la
+  plage serrée du ralenti a disparu.
+- **Preuve** : `tools/test_killcam_calme.gd` (suite neuve, sans fenêtre, sur le vrai chemin `_do_end_round`) mesure la
+  caméra à chaque image du rejeu, J1 tournant sur lui-même pendant l'enregistrement. Mesuré : 598 images de rejeu, départ sur la caméra du duel, pas max
+  1,97 px de monde d'une image à la suivante, un seul sens de zoom (190 descentes, aucune montée), immobile une fois
+  arrivé, les deux fantômes dans le cadre une fois le mouvement fini (hors cadre seulement pendant la glissade, qui part
+  du cadrage du duel). **Sur le code d'avant, la même suite échoue sur quatre contrôles** : saut de 210,7 px à la
+  première image, pas de 396 px entre deux images (la caméra ballottée entre le regard et le lissage), regard jamais
+  tenu à l'écart. Limite : la suite tue par `take_damage`, sans balle ; le ralenti, donc le relais des deux plages de
+  zoom, n'y est pas exercé.
+- **Image** : le photographe gagne le plan `killcam-bande` (famille `fins`), planche `docs/iso/iso11/killcam_bande.jpg`
+  composée et mesurée par `docs/iso/iso11/bande_killcam.py`. ⚠️ Ce ne sont pas trente images CONSÉCUTIVES : une
+  capture d'écran prend 350 à 450 ms, la bande échantillonne donc le rejeu toutes les ~0,37 s sur 11 s. Elle montre le
+  mouvement : zoom 1,800 → 1,543 en douze prises régulières, puis immobile de la 14ᵉ à la 30ᵉ ; glissement d'image
+  de 4 à 16 px d'écran par prise, croissant puis décroissant, puis nul. Le seul écart fort (prises 6 → 7) est la mine
+  mise en scène qui s'allume et inonde le sol de lumière, pas la caméra : le HUD, les murs et le repère « 02 » y sont
+  à la même place. Lot complet vert à 22:06 : 112 suites (dont `test_killcam_calme`), sans erreur de script, 435 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
