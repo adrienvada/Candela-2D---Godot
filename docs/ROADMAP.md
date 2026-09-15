@@ -21736,6 +21736,171 @@ nourrit depuis ce que le sprite 2D remplacé aurait montré, jamais deviné ici.
   complète (ou `grep -iE "SCRIPT ERROR|SHADER ERROR"`) avant de conclure
   qu'une suite verte + code 0 veut dire « tout va bien ».
 
+#### Correctif post-fusion — `echelle_lecture` (trouvé par ISO2 à ISO3a, 2026-09-15 01h20)
+
+**Un vrai écart d'équité, trouvé par ISO2 au banc du jeu réel après la fusion
+de cette vague dans `iso2-vues` (`a52425a`) : sous sa propre torche, un
+joueur restait NOIR dans la vue adverse.** La rétrodiffusion qui doit trahir
+le porteur vit dans un anneau étroit du disque du capteur (12-18 px pour le
+corps grossier d'ISO2, qui lit jusqu'à 15 px et sort à 191) — le torse du
+porteur l'arrête, si bien que le CENTRE du disque reste sombre. Un corps
+voxel, large de 5-6 px seulement (bien plus étroit que le corps grossier),
+tombe alors ENTIER dans cette ombre centrale : chaque fragment lit trop près
+du centre du disque pour jamais atteindre l'anneau éclairé. Pas un défaut de
+`corps_iso.gdshader` — un effet de l'échelle du corps qui le lit.
+
+Corrigé par un nouvel uniform `echelle_lecture` (défaut 1.0, l'identité,
+jamais devinée ici) qui dilate le DÉCALAGE lu sur le disque (`monde_px -
+centre`) avant le plafonnement à `rayon_lu_px` — donc l'empreinte du disque
+que chaque fragment couvre, sans toucher `centre` ni `rayon_lu_px` eux-mêmes.
+L'appelant (ISO2, dans `Presentation3D`) la règle d'après le rapport entre le
+rayon réellement éclairé et le demi-encombrement au sol de SON corps ; ce
+nœud ne le devine jamais lui-même — `definir_echelle_lecture()`, le banc la
+laisse à 1.0. Forme proposée par ISO2 par message inter-session, implémentée
+ici à l'identique pour rester sur une seule vérité du shader plutôt que deux
+versions divergentes du fichier fusionné.
+
+**`echelle_lecture` seule ne suffisait pas au banc du jeu réel** (ISO2,
+même soirée) : à 1,81, le porteur restait à 0/0/0 sous sa propre torche dans
+la vue adverse — la tête et le torse, près de l'axe du corps, lisent encore
+l'ombre centrale même dilatée, et quand la torche regarde au nord, la caméra
+ne voit que les flancs du dos. Un second uniform, `lecture_au_bord`
+(`hint_range(0,1)`, défaut 0, sans effet sur ce banc) : à 1, chaque fragment
+lit le disque AU RAYON LU, dans SA PROPRE DIRECTION, plutôt qu'à sa propre
+distance dilatée — là où le sprite de la vue de dessus montre son croissant
+éclairé. Mesuré par ISO2 en écran scindé : porteur sous sa propre torche
+81/88/95 (le plafond exact de sa fiche, dans les deux vues), J2 dans le
+faisceau de J1 à 156 px 32/30/27 (contre un anneau à 105-109/255 au bord
+éclairé — le corps montre exactement ce que montre le bord du sprite).
+`definir_lecture_au_bord()`, réglé par la présentation du jeu, jamais deviné
+ici. Patch repris à l'identique du diff qu'ISO2 a transmis (14 lignes), pour
+la même raison qu'`echelle_lecture` : une seule vérité du fichier fusionné.
+
+### Vague 3 — les objets debout en voxel (inscrite le 2026-09-15 02h00)
+
+Brief transmis par Adrien depuis la session cloud Fable 5.1, pendant qu'ISO2
+branchait la vague 2 dans le jeu réel (ISO3a) — deux chantiers en parallèle
+sur la même branche `iso-corps`, jamais fusionnée entre les deux : ISO2
+fusionnera `iso-corps` une seconde fois pour prendre cette vague. Base : la
+tête de cette branche au moment de l'écrire (`ee06216`, après le correctif
+`lecture_au_bord`). Toujours aucun fichier du jeu, aucune fusion d'`iso2-vues`
+ni de `main`.
+
+**Qui devient un voxel, qui reste à plat — lu gadget par gadget avant de
+trancher** (`gadget_mine.gd`, `gadget_torche_fantome.gd`, `gadget_voile.gd`,
+`gadget_ombre.gd`, `gadget_gresillement.gd`, `gadget_poudre.gd`,
+`gadget_braises.gd`, `gadget_volume.gd` + `gadget_suie.gd`/`gadget_poussiere.gd`,
+`fusee.gd`/`fusee_modele.gd`, `gadget_leurre.gd`, `bullet.gd`) :
+
+- **Voxel** : la mine (un boîtier posé), la torche fantôme (pied + tête, un
+  vrai luminaire), les DEUX PIQUETS du voile (des poteaux — jamais la toile,
+  fine et déjà à plat), la plaque de l'ombre habitée (montée sur un mât), la
+  bobine du grésillement, la fusée POSÉE (`fusee.gd`, jamais en vol — hors
+  périmètre par consigne explicite du brief).
+- **Reste à plat, dans la lightmap** : suie, poussière, poudre de contact,
+  nappe de braises. Verdict identique côté code pour les quatre :
+  `arrete_les_balles = false`, `touche_par_les_balles = false`,
+  `occulte_la_lumiere = false`, et pour trois des quatre `_monter_occluder()`
+  est vide — ce ne sont pas des objets physiques dans le jeu lui-même, juste
+  une lueur ou une nappe qui teinte la lightmap 2D ; leur donner un volume 3D
+  inventerait une présence que le jeu n'a jamais eue.
+- **Le leurre, à part** : `gadget_leurre.gd` ne dessine aucun objet — il
+  recopie le corps de la classe qui l'a posé (silhouette, ombre, teinte
+  adverse), pour être indiscernable d'un vrai joueur. Son voxel EST donc un
+  `VoxelCorps`, pas un objet neuf (voir l'en-tête de `voxel_objets.gd` pour
+  l'état exact). Un seul ajout côté corps pour ce besoin : `poser(etat)` lit
+  `etat.arme_baissee` (bool, additif, défaut faux — aucun appelant existant
+  n'en est changé), qui abaisse l'arme de `ANGLE_ARME_BAISSEE` (le même angle
+  que l'enjambement, réutilisé, pas réinventé) par-dessus la contre-rotation
+  du torse déjà en place.
+  ⚠️ **Écrit avant `lecture_au_bord`, committé avec lui par erreur** (`ee06216`,
+  qui devait ne porter que le correctif d'ISO3a) : `voxel_corps.gd` avait déjà
+  cet ajout en mémoire de travail au moment d'écrire ce commit, et rien ne l'en
+  a distingué au `git add`. ISO2 l'a repéré et a choisi, à raison, de ne PAS
+  reprendre `voxel_corps.gd` d'`ee06216` sur `iso2-vues` — cette pièce entrera
+  par la fusion de la vague 3, pas par une copie anticipée d'un correctif qui
+  n'était pas censé la porter. Conséquence pour qui lit l'historique : le
+  commit de CETTE vague ne touche plus `voxel_corps.gd` (déjà dans `HEAD`
+  depuis `ee06216`), alors qu'`arme_baissee` est bien, logiquement, un
+  morceau de la vague 3 — pas de `git commit --amend` pour corriger
+  l'historique (règle du dépôt), seulement cette note.
+
+**Fait** : `voxel_catalogue_objets.gd` (une fiche par objet — `rayon_px`
+recopié du gadget réel, jamais réinventé, `couleur` sur la même échelle
+plafonnée que `VoxelCatalogue`) ; `voxel_objets.gd` (`VoxelObjet`, même
+interface que `VoxelCorps` — `poser(etat)` pur, `boites()`, les DEUX
+matériaux `corps_iso.gdshader`/`corps_iso_profondeur.gdshader` avec les
+MÊMES uniforms, dupliqués plutôt que partagés par refactor : `voxel_corps.gd`
+est déjà intégré dans le jeu réel au moment d'écrire ceci, le retoucher pour
+en extraire un socle commun aurait risqué la seule chose déjà vérifiée en
+jeu) ; `tools/banc_objets.tscn`/`.gd` (les six objets + un corps d'échelle +
+le leurre, `--objet=slug` pour un cadrage serré par objet — voir « Le piège
+de lisibilité » plus bas, `--etat`, `--opacite` pour le leurre) ;
+`tools/test_voxel_objets.gd` dans `run_suites.sh` (chaque objet se construit,
+hauteur et empreinte mesurées contre le plafond d'équité, noir strict, double
+en profondeur en enfant, deux instances indépendantes, le leurre porte la
+bonne classe et abaisse réellement l'arme — sait échouer) ; la planche
+`docs/iso/planche_objets.png` et les captures sous `docs/iso/captures_objets/`.
+
+**Le plafond d'équité, chiffré et mesuré (pas seulement dessiné à vue)** :
+hauteur totale ≤ 0,25 tuile (8,75 px) pour tout objet, empreinte au sol ≤
+rayon de collision réel de l'objet `× 1,10` — les deux tenus par construction
+et vérifiés par `hauteur_totale()`/`rayon_empreinte()`, recalculées depuis le
+maillage réel à chaque pose (même discipline que `VoxelCorps.sommet_tete()`),
+jamais depuis une constante à part. Mesuré sur les six objets (repère animé
+allumé ET éteint, le plus haut des deux compte) :
+
+| Objet | Hauteur (tuile) | Empreinte (tuile) | Limite (rayon réel × 1,10) |
+|---|---|---|---|
+| mine | 0,19 | 0,2121 | 0,2514 |
+| torche fantôme | 0,20 | 0,1131 | 0,2829 |
+| voile (par piquet) | 0,15 | 0,0849 | 0,2043 |
+| ombre | 0,22 | 0,5036 | 0,5735 |
+| grésillement | 0,10 | 0,1980 | 0,2829 |
+| fusée posée | 0,23 | 0,0707 | 0,4714 |
+
+**Le contrat pour ISO4** (qui branchera ces objets, comme ISO2 l'a fait pour
+les corps) : même interface qu'`VoxelCorps` terme à terme — `construire(slug)`,
+`poser(etat)` pur (`position: Vector2` px, `orientation: Vector2`, `allumee`/
+`eteinte: bool` selon l'objet), `boites()`, `materiau()`/`materiau_profondeur()`,
+`definir_capteur()`/`effacer_capteur()`/`definir_pixels_par_unite()`/
+`definir_opacite()`/`definir_silhouette()`/`definir_style()`. Aucun
+`echelle_lecture`/`lecture_au_bord` propre aux objets : ce sont des
+uniforms du SHADER, partagés avec les corps, réglés par le même appelant.
+
+#### Le piège de lisibilité, trouvé au banc — pas deviné sur le papier
+
+**Le premier cadrage (les six objets en rangée, la même largeur de caméra
+que pour dix corps) rendait chaque objet à quelques pixels — des rectangles
+indistincts, aucune forme reconnaissable.** Le plafond d'équité (0,25 tuile)
+borne les objets à une fraction de la taille d'un corps par construction :
+les afficher à la même échelle de caméra qu'une planche de DIX CORPS revenait
+à les montrer six fois trop petits pour juger quoi que ce soit. Le brief
+demandait « se reconnaître d'un coup d'œil dans la vue à 52°, à la taille
+d'une tuile de 35 px » — une échelle bien plus proche que celle de la planche
+de comparaison. Corrigé par `--objet=slug` : un cadrage SERRÉ sur un seul
+objet (plus son corps d'échelle), qui EST la bonne échelle pour juger la
+lisibilité — la planche large reste utile pour comparer les six entre eux,
+mais jamais pour juger si un seul se reconnaît.
+
+**Deuxième piège, dans le même capture serré : le tangage hérité de
+`banc_corps.gd` (58°) n'est pas celui du jeu.** H15 a tranché 52° le 2026-09-14
+(ROADMAP, section H15) — `banc_corps.gd` prédate cette décision et personne
+n'y est retourné depuis (hors périmètre de cette vague, signalé mais pas
+corrigé). `banc_objets.gd`, un fichier neuf, n'a pas de passé à hériter :
+posé à 52° directement, l'angle que le brief cite explicitement pour juger
+la lisibilité.
+
+Aux deux corrections : les six objets se distinguent par leur PROFIL plutôt
+que par le détail (le plafond de 0,25 tuile ne permet rien d'autre) — un
+carré plat (mine), un poteau (torche fantôme), une plaque large (ombre), deux
+points espacés (les piquets du voile), un tenon fin (fusée posée), un carré
+plat plus petit (grésillement, volontairement proche de la mine : l'objet
+réel « n'a aucun témoin lumineux visible », pas un oubli d'ici). C'est le
+même niveau d'abstraction que les corps eux-mêmes (des blocs gris, pas des
+silhouettes détaillées) — cohérent avec le style déjà posé, pas un compromis
+propre à cette vague.
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est
@@ -23497,6 +23662,15 @@ et un seul est du travail de session.
 > uniformes. Deux imports sans erreur, puis le lot complet vert au second passage (394 s ; le
 > premier, 391 s, n'avait rougi que sur ces deux contrôles de miroir).. Puis **ISO3b** : les murs
 > bas extrudés et les postures sur les corps voxel.
+> **ISO3b commitée** (`b455602`) : les murets extrudés à 0,40 tuile, la zone morte des murs bas dans
+> la lightmap (`_viewport_du_monde`, une seconde perte sans conflit de la fusion de `main`) et sur
+> les capteurs, les postures sur les corps voxel ; le paquet H-ISO3 est parti en delta. **Fusion
+> d'`iso-corps`** (vague 3 d'ISO Corps, `d641b48`, la seconde et dernière que le brief accorde) :
+> trois conflits — `voxel_corps.gd` et sa suite pris entiers côté `iso-corps` (notre côté était son
+> `7cbd3ad` à l'identique, vérifié), la liste des suites gardée des deux côtés ; 4573 points
+> d'ancrage des deux côtés relus dans l'arbre fusionné, aucun perdu ; Deux imports sans erreur, puis
+> le lot complet vert (393 s), `test_voxel_objets` compris ; les quatre `.uid` des scripts de la
+> vague 3, générés par l'import, entrent avec la fusion. Puis **ISO4** : les objets debout.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,

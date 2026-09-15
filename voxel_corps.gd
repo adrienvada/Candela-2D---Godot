@@ -193,6 +193,7 @@ func construire(slug: String) -> bool:
 	_materiau.set_shader_parameter("monde_capteur_px", 128.0)
 	_materiau.set_shader_parameter("rayon_lu_px", 15.0)
 	_materiau.set_shader_parameter("echelle_lecture", 1.0)
+	_materiau.set_shader_parameter("lecture_au_bord", 0.0)
 	_materiau.set_shader_parameter("pixels_par_unite", 1.0)
 	_materiau.set_shader_parameter("opacite_1", 1.0)
 	_materiau.set_shader_parameter("opacite_2", 1.0)
@@ -315,6 +316,15 @@ func definir_echelle_lecture(v: float) -> void:
 		_materiau.set_shader_parameter("echelle_lecture", v)
 
 
+## 0..1 — voir `lecture_au_bord` dans l'en-tête du shader : `echelle_lecture`
+## seule ne suffisait pas (trouvé par ISO2 au banc du jeu réel, ISO3a) — à 0
+## (le défaut), rien ne change ici ; c'est la présentation du jeu qui règle
+## 1.0, jamais ce banc.
+func definir_lecture_au_bord(v: float) -> void:
+	if _materiau != null:
+		_materiau.set_shader_parameter("lecture_au_bord", clampf(v, 0.0, 1.0))
+
+
 ## 0..1 — voir « Effacement » dans l'en-tête du shader : une vraie
 ## transparence, jamais un assombrissement. `vue` : 0 règle les deux vues (le
 ## cas courant, un seul joueur regardé au banc), 1 ou 2 une seule — utile pour
@@ -380,6 +390,12 @@ func poser(etat: Dictionary) -> void:
 	var mort: bool = etat.get("mort", false)
 	var accroupi: bool = etat.get("accroupi", false)
 	var enjambe: float = clampf(etat.get("enjambe", 0.0), 0.0, 1.0)
+	# ISO3 vague 3 — le leurre (`gadget_leurre.gd`) porte un `VoxelCorps` immobile,
+	# « arme baissée » : ni marche ni tir ni enjambement ne produisent cette pose,
+	# elle a donc besoin de son propre champ, additif (défaut faux, aucun appelant
+	# existant n'en pâtit). Ignoré en mort/enjambement, qui ont déjà leur propre
+	# position d'arme.
+	var arme_baissee: bool = etat.get("arme_baissee", false)
 	var t: float = etat.get("t", 0.0)
 
 	var tuile := float(CandelaTileSet.TILE_SIZE.x)
@@ -422,7 +438,8 @@ func poser(etat: Dictionary) -> void:
 	# seule la ROTATION du torse est annulée pour ces deux enfants.
 	var contre_rotation := Basis(Vector3.RIGHT, -_torse.rotation.x)
 	var recul := _enveloppe_recul(t) if tir else 0.0
-	_arme_pivot.rotation.x = -_torse.rotation.x
+	var baisse := ANGLE_ARME_BAISSEE if arme_baissee else 0.0
+	_arme_pivot.rotation.x = -_torse.rotation.x - baisse
 	_arme_pivot.position = contre_rotation * (_arme_pos_base + Vector3(0.0, 0.0, recul))
 	_torche_pivot.rotation.x = -_torse.rotation.x
 	_torche_pivot.position = contre_rotation * _torche_pos_base
