@@ -65,16 +65,19 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled, blend_mix, dept
 //
 // ## L'encre des arêtes (ISO3 vague 5, contrat d'« ISO7 Beauté Opus »)
 //
-// `pate_encre_boite()` (`iso_pate.gdshaderinc`) assombrit multiplicativement les quatre
-// bords de la face rendue, dans `[encre_reste, 1]` — jamais un ajout de matière, jamais
-// négatif : un noir déjà nul (`c == 0`) reste nul. `encre_arete = 0.0` (le défaut) rend le
-// facteur toujours 1 : rien ne change tant que personne ne règle une largeur — ce banc, la
-// suite et tout appelant déjà écrit restent identiques à avant cette vague. `demi = abs(VERTEX)`
-// est correct ici parce que `voxel_corps.gd`/`voxel_objets.gd` posent des `BoxMesh` à leur
-// vraie taille (jamais un cube unité mis à l'échelle) et ne les subdivisent jamais — tous les
-// sommets sont des coins. Posé APRÈS le plafond de fiche et AVANT la composition
-// opacité/silhouette : l'encre touche la couleur rendue, jamais `silhouette_N` (la couleur du
-// joueur à son opacité, chez lui, ne doit rien à la pâte).
+// `pate_encre_boite()` (`iso_pate.gdshaderinc`) donne, pour chaque fragment, un facteur dans
+// `[encre_reste, 1]` sur les quatre bords de la face rendue — 1 loin d'un bord. Posé par
+// `pate_facteur(c, f)`, PAS `c *= f` : un facteur écrit dans ce shader se VOIT à l'écran comme
+// f^2,4 (mesuré au banc par ISO7 Beauté, 2026-09-15 — une encre de 0,25 tombait un pixel à
+// 28/255 jusqu'à 1/255, pas 7/255) ; `pate_facteur` passe par la valeur affichée pour que le
+// facteur se voie tel qu'il est écrit. `encre_arete = 0.0` (le défaut) rend le facteur
+// toujours 1 : rien ne change tant que personne ne règle une largeur — ce banc, la suite et
+// tout appelant déjà écrit restent identiques à avant cette vague. `demi = abs(VERTEX)` est
+// correct ici parce que `voxel_corps.gd`/`voxel_objets.gd` posent des `BoxMesh` à leur vraie
+// taille (jamais un cube unité mis à l'échelle) et ne les subdivisent jamais — tous les sommets
+// sont des coins. Posé APRÈS le plafond de fiche et AVANT la composition opacité/silhouette :
+// l'encre touche la couleur rendue, jamais `silhouette_N` (la couleur du joueur à son opacité,
+// chez lui, ne doit rien à la pâte).
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
@@ -186,9 +189,13 @@ void fragment() {
 	}
 	// Le plafond général : jamais plus clair que la fiche, quelle que soit la pâte.
 	c = min(c, couleur_fiche.rgb);
-	// L'encre des arêtes (ISO3 vague 5) : multiplicative, [encre_reste, 1] — un noir
-	// déjà nul le reste. Jamais sur `silhouette_N`, composée après, plus bas.
-	c *= pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde);
+	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
+	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran
+	// comme f^2,4 (une encre de 0,25 tombait à 1/255, pas à 7/255) ; `pate_facteur`
+	// passe par la valeur affichée pour que le facteur se voie tel qu'il est écrit.
+	// Un noir déjà nul le reste (0 → 0, garanti par `pate_facteur`). Jamais sur
+	// `silhouette_N`, composée après, plus bas.
+	c = pate_facteur(c, pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde));
 
 	float o = clamp(deux ? opacite_2 : opacite_1, 0.0, 1.0);
 	vec4 silhouette = deux ? silhouette_2 : silhouette_1;

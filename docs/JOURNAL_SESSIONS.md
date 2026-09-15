@@ -4561,6 +4561,19 @@ exactement là où attendus → revert → vert). Lot complet vert (366 s), aucu
 venait de payer sur son propre mur (un uniform non déclaré ne fait qu'une
 ligne d'erreur, le lot sort vert quand même).
 
+**Correctif reçu juste après, même vague, même session : `pate_facteur`, pas
+un `c *= f` nu.** ISO7 Beauté a mesuré au banc, sur ses murs, qu'un facteur
+écrit dans un shader spatial se voit à l'écran comme `f^2,4` — signalé après
+mon premier câblage, corrigé avant que le commit ne parte. **Sondé par
+sabotage que la suite headless ne peut PAS voir ce point précis** : le
+`c *=` nu remis en place ne fait rougir aucun test (le noir absolu tient dans
+les deux cas, l'algèbre ne distingue pas gamma-correct de brut). Preuve par
+le pixel réel à la place : deux captures du Terrassier, une par version du
+shader, comparées par PIL — écart réel et dans le sens attendu (le brut plus
+sombre, (16,19,21) contre (30,34,37) au point de plus grand écart, 36 531
+pixels différents). `--encre=` ajouté à `tools/banc_corps.gd` pour cette
+vérification, réutilisable.
+
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 

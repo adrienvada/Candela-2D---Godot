@@ -497,15 +497,18 @@ func _test_encre_boite_bornee() -> void:
 		au_bord_proche_du_reste)
 
 
-## « L'encre est multiplicative, jamais un ajout de matière » (contrat
-## d'ISO7 Beauté) : sur ce corps, à `lumiere_recue = 0`, la sortie du shader
-## est nulle AVANT l'encre (voir `_formule_repli`) — multiplier un noir par
-## n'importe quel facteur de `[0, 1]` le laisse nul. Vérifié par le calcul,
-## pas supposé : c'est exactement l'algèbre que la brief demande de prouver
-## (« max 0 à lumière 0 »). Et le facteur ne dépend en RIEN de quel capteur
-## (1 ou 2) est lu — sa signature n'a pas ce paramètre — donc l'équité entre
-## les deux vues tient par construction, revérifiée ici sur les deux valeurs
-## de `reste` extrêmes (0 et 1) plutôt que suffite en un coup d'œil au code.
+## « L'encre passe par `pate_facteur`, jamais un `c *= f` nu » (mesuré au
+## banc par ISO7 Beauté, 2026-09-15 : un facteur écrit dans le shader se VOIT
+## à l'écran comme f^2,4 — `pate_facteur` décode/multiplie/recode en valeur
+## affichée pour que le facteur se voie tel qu'il est écrit). Sur ce corps, à
+## `lumiere_recue = 0`, la sortie du shader est nulle AVANT l'encre (voir
+## `_formule_repli`) — `IsoPate.facteur(Vector3.ZERO, f)` garantit 0 → 0 pour
+## tout `f`. Vérifié par le calcul, pas supposé : c'est exactement l'algèbre
+## que la brief demande de prouver (« max 0 à lumière 0 »). Et le facteur ne
+## dépend en RIEN de quel capteur (1 ou 2) est lu — sa signature n'a pas ce
+## paramètre — donc l'équité entre les deux vues tient par construction,
+## revérifiée ici sur les deux valeurs de `reste` extrêmes (0 et 1) plutôt
+## que suffite en un coup d'œil au code.
 func _test_encre_arete(corps: Node3D) -> void:
 	corps.definir_encre(0.0, 0.35)
 	var mat: ShaderMaterial = corps.materiau()
@@ -522,7 +525,7 @@ func _test_encre_arete(corps: Node3D) -> void:
 		var sortie := _formule_repli(fiche, 0.0, IsoPate.LAVIS)
 		var facteur: float = IsoPate.encre_boite(Vector3(0.02, 0.0, 0.0), Vector3(0.14, 0.19, 0.08),
 			Vector3(1.6, 1.6, 1.6), Vector3(0.0, 0.0, 1.0), 0.05, reste, 0.01)
-		var encre := Vector3(sortie.r, sortie.g, sortie.b) * facteur
+		var encre := IsoPate.facteur(Vector3(sortie.r, sortie.g, sortie.b), facteur)
 		if encre.length_squared() > EPSILON * EPSILON:
 			noir_tient = false
 	_check("noir absolu tient avec l'encre appliquée (lumière 0, reste 0/0,35/1)", noir_tient)

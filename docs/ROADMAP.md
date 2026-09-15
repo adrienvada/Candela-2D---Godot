@@ -21858,6 +21858,26 @@ attendu, centre et bord permutés → code 1 → revert → vert). Lot complet v
 qu'ISO7 Beauté venait de payer sur son propre mur : un uniform utilisé mais
 non déclaré ne fait qu'une ligne d'erreur, le lot sort vert quand même).
 
+**Correctif reçu en cours de route : `pate_facteur`, pas `c *= f` nu.** ISO7
+Beauté a mesuré au banc, sur ses murs, qu'un facteur écrit dans un shader
+spatial se VOIT à l'écran comme `f^2,4` (une encre de 0,25 tombait un pixel
+de 28/255 à 1/255, pas 7/255) — signalé après mon premier câblage
+(`c *= pate_encre_boite(...)`), corrigé avant que ce commit ne parte
+(`c = pate_facteur(c, pate_encre_boite(...))`). **Ce point précis n'est PAS
+couvert par la suite headless** — sondé explicitement par sabotage (le
+`c *=` nu remis en place ne fait rougir AUCUN test : le noir absolu tient
+dans les deux cas, `0 × f = 0` que `f` soit corrigé en gamma ou non, et les
+bornes de `pate_encre_boite()` elle-même n'ont pas changé). La différence ne
+se voit que sur un VRAI rendu, pas dans l'algèbre — même limite que
+« noir absolu » ailleurs dans ce fichier (l'algèbre prouve le zéro, le banc
+prouve le pixel). Preuve par le pixel réel, donc : deux captures du
+Terrassier (`--encre=0.04 --lumiere=0.8`), l'une avec chaque version du
+shader, comparées par PIL — écart réel et dans le sens attendu (le brut est
+plus sombre) : au point de plus grand écart, `pate_facteur` rend (30,34,37),
+`c *=` nu rend (16,19,21), sur 36 531 pixels différents au total. `--encre=`
+ajouté à `tools/banc_corps.gd` pour cette vérification, gardé pour qui veut
+la refaire — capture témoin `docs/iso/captures_corps/vague5_encre_gamma_correct.png`.
+
 **Vérifié** (headless, sabotage compris) — valeurs RÉELLES, pas celles du
 premier essai :
 
@@ -21874,14 +21894,20 @@ couloir, dix classes) → code 1 → revert → vert. Lot complet
 (`./tools/run_suites.sh`, 369 s) vert, sans erreur de script.
 
 **Fait** : `voxel_catalogue.gd` (`SQUELETTE` redistribué, `fiche()` inchangée) ;
-`voxel_corps.gd` (`pointe_arme()`, nouveau) ; `tools/test_voxel_corps.gd`
-(aucune modification — la fourchette accroupie et le couloir étaient déjà
-recalculés depuis `SQUELETTE` à chaque exécution, pas des constantes à mettre
-à jour) ; la planche `docs/iso/planche_corps_v5.png` (Terrassier et Spectre,
-gros plan, lampe 0,8, 52°, DA/avant/après côte à côte — un plan large sur les
-dix classes, tenté d'abord, rendait chaque corps large de quelques pixels et
-a été abandonné, même piège de lisibilité que la vague 3) ; les captures
-`docs/iso/captures_corps/vague5_*.png` ; ce fichier, cette section.
+`voxel_corps.gd` (`pointe_arme()`, `definir_encre()`, nouveaux) ;
+`corps_iso.gdshader` (uniforms `encre_arete`/`encre_reste`, varyings
+`local`/`demi`/`echelle`/`normale_locale`, `c = pate_facteur(c,
+pate_encre_boite(...))`) ; `iso_pate.gdshaderinc`/`iso_pate.gd` (pris chez
+ISO7 Beauté par `git checkout`, pas modifiés ici) ; `tools/banc_corps.gd`
+(`--encre=`) ; `tools/test_voxel_corps.gd` (les tests d'encre, nouveaux ; la
+fourchette accroupie et le couloir n'ont demandé AUCUNE modification — déjà
+recalculés depuis `SQUELETTE` à chaque exécution, pas des constantes à
+mettre à jour) ; la planche `docs/iso/planche_corps_v5.png` (Terrassier et
+Spectre, gros plan, lampe 0,8, 52°, DA/avant/après côte à côte — un plan
+large sur les dix classes, tenté d'abord, rendait chaque corps large de
+quelques pixels et a été abandonné, même piège de lisibilité que la vague 3) ;
+les captures `docs/iso/captures_corps/vague5_*.png` ; ce fichier, cette
+section.
 
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 

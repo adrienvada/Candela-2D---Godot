@@ -82,6 +82,49 @@ float pate_trait_de_bord(float distance, float largeur, float aa) {
 }
 
 // ---------------------------------------------------------------------------
+// ISO7 — un facteur d'habillage s'applique à la valeur AFFICHÉE
+// ---------------------------------------------------------------------------
+// ⚠️ **Mesuré au banc le 2026-09-15, et c'est ce qui décide de tout facteur ISO7.** La valeur que ces
+// shaders écrivent n'est pas celle que l'écran montre, à une conversion sRGB près : une encre de 0,25
+// posée par `c *= 0.25` faisait passer un pixel de 28/255 à 1/255 (et non à 7), un reste de 1 ne
+// changeait rien. Un facteur f posé dans l'espace du shader se voyait donc comme ≈ f^2,4 — le plancher
+// de 0,25 promis par les suites tombait à 0,036 à l'écran, et la matière de 0,8 assombrissait comme 0,6.
+// `pate_facteur(c, f)` passe la couleur à sa valeur affichée (décodage sRGB), la multiplie, et la rend :
+// le facteur se VOIT tel qu'il est écrit. 0 reste 0 ; monotone en c comme en f.
+vec3 pate_vers_affiche(vec3 c) {
+	vec3 s = max(c, vec3(0.0));
+	return mix(s / 12.92, pow((s + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), s));
+}
+
+vec3 pate_depuis_affiche(vec3 a) {
+	vec3 s = max(a, vec3(0.0));
+	return mix(s * 12.92, 1.055 * pow(s, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), s));
+}
+
+vec3 pate_facteur(vec3 c, float f) {
+	return pate_depuis_affiche(pate_vers_affiche(c) * max(f, 0.0));
+}
+
+// La matière ET l'encre d'une arête, en valeur affichée. L'encre (`t` ∈ [0, 1] sur le trait) ne se
+// cumule pas avec la matière (le plus petit des deux facteurs, jamais leur produit) et ne descend
+// jamais sous `plancher` : **une face à peine éclairée garde sa lumière**, le filament n'apparaît
+// qu'au-dessus du plancher. Au banc, une face à 21/255 tombait à 1/255 sous une encre de 0,25 — une
+// lumière réelle effacée, exactement ce que la règle « allumé reste allumé » interdit.
+// Garanties : 0 → 0 ; monotone en la lumière ; jamais plus clair que la matière seule ; au-dessus du
+// plancher, jamais sous lui ; sous lui, la matière seule.
+vec3 pate_matiere_et_encre(vec3 c, float matiere, float reste, float t, float plancher) {
+	vec3 a = pate_vers_affiche(c);
+	float s = pate_luminance(a);
+	if (s <= 0.0) {
+		return vec3(0.0);
+	}
+	float m = max(matiere, 0.0);
+	float avec_encre = max(s * min(m, reste), min(s * m, plancher));
+	float cible = mix(s * m, min(s * m, avec_encre), clamp(t, 0.0, 1.0));
+	return pate_depuis_affiche(a * (cible / s));
+}
+
+// ---------------------------------------------------------------------------
 // ISO7 — la TEMPÉRATURE de la lumière vue (étape 6)
 // ---------------------------------------------------------------------------
 // Les planches du DA peignent la lumière chaude (ambre sur béton). La température change la TEINTE
