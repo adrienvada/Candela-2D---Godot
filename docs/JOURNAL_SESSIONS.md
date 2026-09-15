@@ -5270,6 +5270,18 @@ recadrer la planche des gadgets. Le harnais refuse de poser `HOME` : banc dans l
 avec ISO7 Beauté : sa température de pâte à reporter sur `volume_iso.gdshader` après la fusion. Refusé :
 les fumées additives d'ISO Assets (brilleraient dans le noir).
 
+**La balle n'éclaire plus, 2026-09-15 vers 11:50 (même session, branche `balle-sans-lumiere` depuis
+`a5ac4b8`).** Décision d'Adrien, réveillé, relayée par la session cloud : « Supprimons le fait que la balle
+soit une source de lumière. » `bullet.gd` perd sa `PointLight2D` (création, étirement, triplement du tir
+fatal, fondu) ; la traçante et l'aura restent, `emits_light` ne pilote plus qu'elles. Aucune suite ne lisait
+la lumière de la balle. Banc neuf `tools/banc_balle_sans_lumiere.gd`, même scène avant et après : lumières
+des balles 2 → 0, rondeur du halo de la fusée pendant la rafale 0,56 → 0,78 ; la traînée claire que la
+lumière de la balle projetait au sol près de la fusée a disparu. Les ellipses tranchées à la verticale des
+deux captures, d'abord lues comme l'arête de quadrant, sont les auras des balles coupées par le cadre des vues
+(identiques avant et après). Deux premiers passages du banc sans mesure (rafale
+tirée dans un mur, rondeur prise hors du halo). File du Mac tenue par messages avec Iso 1 Opus et ISO7
+Beauté.
+
 **Fusions de la vague — 2/4 : `iso-gadgets-lumieres` (`e280015`), 2026-09-15 vers 10:05.** Hauteur des
 sources dans la lightmap, volumes et lueurs iso, miroirs revus (`iso_volumes.gd`, `volume_iso.gdshader`,
 `halo_iso.gdshader`, `test_iso_gadgets`). Trois conflits, tous des ajouts parallèles : `run_suites.sh`

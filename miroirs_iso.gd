@@ -340,8 +340,9 @@ func _suivre_joueurs(main: Node) -> void:
 				mi_viseur.visible = true
 
 
-## La balle se voit dans les deux vues (couche 1 en 2D) : ses quads vont au calque commun. Sa lumière
-## (`TrailLight`) reste en 2D et éclaire le sol de la lightmap.
+## La balle se voit dans les deux vues (couche 1 en 2D) : ses quads vont au calque commun. Elle n'éclaire
+## plus rien depuis le 2026-09-15 (décision d'Adrien, « la balle n'est plus une source de lumière ») : sa
+## traçante et son aura, non éclairées, sont tout ce qu'on voit d'elle.
 func _suivre_balle(balle: Node2D, vus: Dictionary) -> void:
 	var id := balle.get_instance_id()
 	vus[id] = true
