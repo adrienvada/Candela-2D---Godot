@@ -11,7 +11,8 @@ Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse Lis
 ## ORDRE 5 — 15/09 05:15 (relayé 05:18)
 ## ORDRE 6 — 15/09 05:15 (relayé 05:18)
 ## ORDRE 7 — 15/09 05:35 (relais refusé par le classificateur de la Concierge ; remplacé par l'ordre 8)
+## ORDRE 8 — 15/09 05:40 (non relayé : la Concierge attend une permission ; remplacé par l'ordre 9)
 
-## ORDRE 8 — 15/09 05:40
-RELAIS → « iso5-killcam-rejeu-cadence-23685a-15 » (titre : « ISO5 — Killcam, rejeu et relevé de cadence ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 05:40. Merci pour ton message de jalon. La suite de ton chantier, décidée par Adrien à 05:00, est écrite dans le fichier briefs/iso5_iso6.md de la branche claude/reveil du dépôt. Lis-le : git fetch origin claude/reveil && git show FETCH_HEAD:briefs/iso5_iso6.md. Puis exécute-le, en commençant par ISO6. Accuse réception à « Fable 5.1 - CLOUD ISO UNRAILED » par SendMessage.
+## ORDRE 9 — 15/09 08:30
+RELAIS → « iso5-killcam-rejeu-cadence-23685a-15 » (titre : « ISO5 — Killcam, rejeu et relevé de cadence ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 08:30. Les quatre chantiers de la vague sont clos et prêts à fusionner. Ton plan complet est dans deux fichiers de la branche claude/reveil : briefs/iso5_fusions.md (les fusions, dans l'ordre, puis les raccords) et briefs/iso5_iso6.md (ISO6, puis la fin). Lis-les : git fetch origin claude/reveil && git show FETCH_HEAD:briefs/iso5_fusions.md && git show FETCH_HEAD:briefs/iso5_iso6.md. Puis exécute, en commençant par la fusion d'iso7-beaute. Accuse réception à « Fable 5.1 - CLOUD ISO UNRAILED » par SendMessage.
 
