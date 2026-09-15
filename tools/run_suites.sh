@@ -197,7 +197,7 @@ export CANDELA_PORT
 
 SUITES=(test_liaisons test_icones_editeur
 	test_map_codec test_map_geometry test_mur_led test_arena_build test_editor_tools
-        test_classes test_tir_et_reserves test_match_format test_pause_menu test_menu_hub test_comic_panel test_audio_settings
+        test_classes test_match_format test_pause_menu test_menu_hub test_comic_panel test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
@@ -362,6 +362,17 @@ run() {
 }
 
 for t in "${SUITES[@]}"; do run "$t" --script "res://tools/$t.gd"; done
+# ISO6 — les suites de RÉFÉRENCE 2D, sous le drapeau de débogage `--2d`.
+#
+# L'iso est le jeu par défaut depuis ISO6 : toute suite qui monte `main.tscn` tourne donc sous la
+# vue iso, qui retire les sprites de corps des vues (couche 0, remplacés par les corps voxel) et
+# force le chemin sous-vue. Les suites ci-dessous mesurent le RENDU DE LA VUE DE DESSUS — couches
+# de visibilité des sprites, masques des vues — et non la simulation ; la vue de dessus restant le
+# moteur de lumière que l'iso projette, jusqu'à ISO9, elles gardent leur sens et restent au lot,
+# sous le drapeau. Une suite n'entre ici que si ses contrôles rouges en iso sont des contrôles de
+# la vue de dessus, relus un par un — jamais pour faire taire un défaut de l'iso.
+SUITES_2D=(test_tir_et_reserves)
+for t in "${SUITES_2D[@]}"; do run "$t" --script "res://tools/$t.gd" -- --2d; done
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).

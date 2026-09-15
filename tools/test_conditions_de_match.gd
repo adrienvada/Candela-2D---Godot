@@ -101,6 +101,15 @@ func _test_trous_et_rtt() -> void:
 	_check("RTT max 60 ms", _proche(float(r["rtt_max_ms"]), 60.0), str(r["rtt_max_ms"]))
 	_check("le résumé porte sa version", int(r["version"]) == ConditionsDeMatch.VERSION)
 	_check("le résumé porte la machine", r["machine"] is Dictionary and r["machine"].has("os"))
+	# ISO6 — la vue qui a produit la cadence, et sa lightmap.
+	_check("le résumé v2 porte mode_rendu et iso_lightmap, vides quand personne ne les a dits",
+		ConditionsDeMatch.VERSION >= 2 and String(r.get("mode_rendu", "?")) == ""
+		and String(r.get("iso_lightmap", "?")) == "")
+	var avec_rendu := ConditionsDeMatch.new()
+	avec_rendu.commencer("iso", "plein")
+	var rr := avec_rendu.resume()
+	_check("… et ceux que game_state lui passe", rr["mode_rendu"] == "iso" and rr["iso_lightmap"] == "plein",
+		"%s / %s" % [rr["mode_rendu"], rr["iso_lightmap"]])
 
 	c.arreter()
 	c.echantillonner(-1.0, 1_720_000)

@@ -77,17 +77,36 @@ var intro_vue := false
 var fps_cap := 0
 var resolution_index := 0
 
-## Chantier ISO, étape ISO1 — la vue isométrique du duel (`presentation_3d.gd`).
+## Chantier ISO — la vue isométrique du duel (`presentation_3d.gd`).
 ##
-## **Désactivée par défaut**, et c'est une consigne : elle est expérimentale, elle
-## réintroduit une cible de rendu intermédiaire, et l'écran scindé l'ignore jusqu'à
-## ISO2. `mode_iso` est ce qui S'APPLIQUE ; ce qui s'ENREGISTRE est le choix du
-## joueur seul (`_mode_iso_choisi`). `--iso` allume la vue pour une exécution — banc,
-## photographe — et ne s'écrit jamais dans `settings.cfg` : sans cette séparation, le
-## premier volume touché pendant un banc aurait persisté l'iso chez le joueur.
-var mode_iso := false
-var _mode_iso_choisi := false
+## **ISO6 : l'iso EST le jeu, vraie par défaut** (Adrien, 2026-09-14 à 23:33 : « l'iso
+## devient la vue du jeu » ; mandat du 2026-09-15 à 05:00). Désactivée par défaut d'ISO1 à
+## ISO5, c'était alors une consigne : elle était expérimentale. La vue de dessus reste dans
+## le code jusqu'à ISO9 — elle est aussi le moteur de lumière que l'iso projette — mais
+## derrière un DRAPEAU DE DÉBOGAGE : `--2d` pour une exécution, ou le réglage
+## `debogage/vue_de_dessus`, que les réglages ne proposent qu'en build de débogage.
+##
+## `mode_iso` est ce qui S'APPLIQUE ; ce qui s'ENREGISTRE est le seul choix de débogage
+## (`_vue_de_dessus_choisie`). Aucun drapeau ne s'écrit dans `settings.cfg` : sans cette
+## séparation, le premier volume touché pendant une suite lancée en `--2d` aurait persisté la
+## vue de dessus chez le joueur. Préséance : `--2d`, puis `--iso` (le drapeau d'ISO1 à ISO5,
+## toujours accepté : sans effet, sauf à l'emporter sur un réglage de débogage oublié — un
+## banc qui dit « iso » mesure l'iso), puis le réglage, puis l'iso.
+##
+## ⚠️ **L'ancienne clé `video/mode_iso` n'est plus lue, et c'est voulu.** Chaque
+## `settings.cfg` écrit avant ISO6 la porte à `false` — la valeur par défaut d'alors, écrite
+## à la première sauvegarde de n'importe quel réglage. La relire aurait gardé la vue de
+## dessus chez tous les joueurs existants, Adrien compris. Elle disparaît du fichier au
+## premier `_save()`, qui réécrit le fichier entier.
+var mode_iso := true
+var _vue_de_dessus_choisie := false
 const DRAPEAU_ISO := "--iso"
+const DRAPEAU_2D := "--2d"
+const SECTION_DEBOGAGE := "debogage"
+## Le nom du rendu dans F3, F6 et `ConditionsDeMatch` : un relevé qui ne dit pas quelle
+## vue il a mesurée ne se compare à rien.
+const MODE_RENDU_ISO := "iso"
+const MODE_RENDU_DESSUS := "dessus"
 
 ## ISO2 — la taille de la lightmap, la cible 2D que la vue iso projette : `1080p`, l'aire
 ## logique de la vue (ce que le jeu rendait avant le chantier R), ou `plein`, les pixels de
@@ -174,7 +193,7 @@ func _ready() -> void:
 	# `project.godot` au lieu de se voir recentrée d'office.
 	if _has_saved_resolution or OS.is_debug_build():
 		_apply_resolution()
-	mode_iso = _mode_iso_choisi or iso_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+	mode_iso = iso_applique(_vue_de_dessus_choisie, _arguments())
 	iso_lightmap = _lightmap_appliquee()
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
@@ -204,18 +223,37 @@ func set_vsync(enabled: bool) -> void:
 	_apply_video()
 	_save()
 
-## Le choix du joueur, enregistré. Éteindre prend effet à l'image suivante ; allumer,
-## au prochain duel (`GameState.rebuild_arena()` est le seul crochet de la vue).
-func set_mode_iso(actif: bool) -> void:
-	_mode_iso_choisi = actif
-	mode_iso = actif or iso_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+## Le réglage de DÉBOGAGE, enregistré : la vue de dessus au lieu de l'iso. La quitter prend
+## effet à l'image suivante ; revenir à l'iso, au prochain duel (`GameState.rebuild_arena()`
+## est le seul crochet de la vue).
+func set_vue_de_dessus(actif: bool) -> void:
+	_vue_de_dessus_choisie = actif
+	mode_iso = iso_applique(actif, _arguments())
 	_save()
 
-func mode_iso_choisi() -> bool:
-	return _mode_iso_choisi
+func vue_de_dessus_choisie() -> bool:
+	return _vue_de_dessus_choisie
+
+## `iso` ou `dessus` — ce qui s'applique, pour les diagnostics.
+func mode_rendu() -> String:
+	return MODE_RENDU_ISO if mode_iso else MODE_RENDU_DESSUS
+
+## La préséance de l'en-tête : `--2d`, puis `--iso`, puis le réglage de débogage, puis l'iso.
+static func iso_applique(vue_de_dessus: bool, args: PackedStringArray) -> bool:
+	if deux_d_par_argument(args):
+		return false
+	if iso_par_argument(args):
+		return true
+	return not vue_de_dessus
 
 static func iso_par_argument(args: PackedStringArray) -> bool:
 	return args.has(DRAPEAU_ISO)
+
+static func deux_d_par_argument(args: PackedStringArray) -> bool:
+	return args.has(DRAPEAU_2D)
+
+static func _arguments() -> PackedStringArray:
+	return OS.get_cmdline_user_args() + OS.get_cmdline_args()
 
 ## Le choix du joueur pour la taille de la lightmap, enregistré ; une valeur inconnue
 ## retombe sur `1080p`. Prend effet à l'image suivante (la vue iso repose ses lightmaps).
@@ -534,9 +572,10 @@ func _load() -> void:
 	intro_vue = cfg.get_value(SECTION_DISPLAY, "intro_vue", false)
 	var loaded_cap: int = cfg.get_value(SECTION_VIDEO, "fps_cap", 0)
 	fps_cap = loaded_cap if FPS_CAPS.has(loaded_cap) else 0
-	# Seul un VRAI `true` allume : une valeur trafiquée retombe sur la vue de dessus.
-	_mode_iso_choisi = cfg.get_value(SECTION_VIDEO, "mode_iso", false) is bool \
-		and cfg.get_value(SECTION_VIDEO, "mode_iso", false)
+	# Seul un VRAI `true` ramène la vue de dessus : une valeur trafiquée retombe sur l'iso.
+	# `video/mode_iso` n'est plus lu — voir l'en-tête.
+	_vue_de_dessus_choisie = cfg.get_value(SECTION_DEBOGAGE, "vue_de_dessus", false) is bool \
+		and cfg.get_value(SECTION_DEBOGAGE, "vue_de_dessus", false)
 	var lightmap: Variant = cfg.get_value(SECTION_VIDEO, "iso_lightmap", "1080p")
 	_iso_lightmap_choisi = lightmap if lightmap is String and LIGHTMAPS_ISO.has(lightmap) else "1080p"
 
@@ -597,7 +636,7 @@ func _save() -> void:
 	cfg.set_value(SECTION_VIDEO, "vsync_enabled", vsync_enabled)
 	cfg.set_value(SECTION_DISPLAY, "intro_vue", intro_vue)
 	cfg.set_value(SECTION_VIDEO, "fps_cap", fps_cap)
-	cfg.set_value(SECTION_VIDEO, "mode_iso", _mode_iso_choisi)
+	cfg.set_value(SECTION_DEBOGAGE, "vue_de_dessus", _vue_de_dessus_choisie)
 	cfg.set_value(SECTION_VIDEO, "iso_lightmap", _iso_lightmap_choisi)
 	if _has_saved_resolution:
 		cfg.set_value(SECTION_DISPLAY, "resolution_index", resolution_index)

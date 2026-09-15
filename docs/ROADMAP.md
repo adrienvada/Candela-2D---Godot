@@ -26,7 +26,9 @@
 
 ## Le jeu
 
-Duel 1v1 en vue de dessus. Deux joueurs s'affrontent dans le noir absolu ; la
+Duel 1v1 en vue isométrique (depuis ISO6, 2026-09-15, sur la branche `iso2-vues` :
+la vue de dessus reste derrière le drapeau de débogage `--2d` jusqu'à ISO9, et
+reste le moteur de lumière que l'iso projette). Deux joueurs s'affrontent dans le noir absolu ; la
 seule source d'information est la lumière — sa propre torche, qui révèle mais
 trahit, le flash d'un tir, la rétrodiffusion sur un mur. **Être vu, c'est être
 mort.** Chaque manche est un BO1 de 5 minutes.
@@ -2425,6 +2427,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **L'iso est le jeu par défaut ; la vue de dessus passe derrière un drapeau de débogage** (2026-09-15 vers 11:00, ISO6, session « Iso 1 Opus » en relève d'ISO5, sur le brief `briefs/iso6_releve.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final ; décision d'Adrien du 2026-09-14 à 23:33 : l'iso devient la vue du jeu) | `GameSettings.mode_iso` vaut vrai par défaut. `--2d` (une exécution) ou le réglage `debogage/vue_de_dessus` (proposé en build de débogage seulement) ramènent la vue de dessus, gardée jusqu'à ISO9 : elle reste le moteur de lumière que l'iso projette. `--iso` reste accepté, sans effet sauf sur un réglage de débogage oublié. **L'ancienne clé `video/mode_iso` n'est plus lue** : chaque `settings.cfg` d'avant ISO6 la porte à `false`, et la relire aurait gardé la vue de dessus chez tous les joueurs existants. F3, F6, `ConditionsDeMatch` (v2) et le manifeste du photographe disent `mode_rendu`. Les suites de référence 2D tournent sous `--2d` (`SUITES_2D` de `run_suites.sh`). |
+| **« Livre-moi le jeu dans une version grand budget aboutie en mode isométrique » ; les relevés avec les tests humains** (2026-09-15 à 05:00 et 05:13, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », rapporté par `briefs/socle.md` de la branche-signal `claude/reveil`) | 05:00 : « Si tu peux décaler encore davantage les tests humains, t'assurer que le jeu est beau, que les gadgets sont bien implémentés, que les fumées et les lumières diffuses de fusées etc. ont une lumière 3D qui éclaire par-dessus les murs bas etc. […] livre-moi le jeu dans une version grand budget aboutie en mode isométrique. Tu reporteras tous les tests possibles à la fin, fais confiance à ton intuition. » Puis : « Tu régénéreras tous les sprites que tu juges utiles. […] tu peux prendre toutes les décisions jusqu'à m'offrir un jeu qui s'approche de la qualité technique des visuels générés comme prévisualisation par Gemini. » 05:13 : « tant pis pour les relevés, on les fera en même temps que les tests humains quand je serai devant la machine ». **La session cloud décide donc à la place d'Adrien jusqu'au test final** ; chaque session de la vague prouve elle-même ce que son œil aurait vu (suite sabotée une fois, banc en vraie fenêtre, planche), et aucune ne prend de relevé de cadence. |
 | **Une source de lumière a une hauteur, qui décide de ce qu'un muret lui cache — sauf les lampes du joueur et ce qui les imite, qui gardent la règle « d'un même angle »** (2026-09-15, session « ISO7 Gadgets et lumière Opus », sur le brief de la session cloud qui décide pour Adrien jusqu'au test final ; demande d'Adrien de 05:00 : « que les fumées et les lumières diffuses de fusées etc. aient une lumière 3D qui éclaire par-dessus les murs bas ») | La fusée en vol éclaire par-dessus un muret avec une zone morte `D × 0,40 / (h − 0,40)`, courte quand elle est haute et qui s'allonge quand elle redescend, puis elle bute ; braises, mine et fusée posée butent (elles le faisaient déjà). La hauteur vit dans la lightmap 2D (`Light2D.height`), identique pour les deux joueurs. La torche, la rétrodiffusion, le halo, le flash, la lumière de coup et la torche fantôme gardent la bande constante d'ISO3b : c'est la règle que la balle et l'éblouissement font payer (`MursBas.franchit`), et une torche à hauteur dessinerait « vu, pas touché » ou « touché, pas vu », ce qu'Adrien a fait supprimer après H-MB1. Détail : section « Gadgets et lumières en iso ». |
 | **Les volumes iso sont des couches horizontales qui recopient la lightmap sous elles, dessinées avant les corps** (2026-09-15, même session) | Noir absolu et équité tiennent par construction (la couche vaut la lumière que la vue de dessus dessine là, lue dans la lightmap de la caméra qui la dessine), et un nuage ne cache jamais un corps plus que la vue de dessus, où l'effacement passe par l'opacité du corps. Pas de lueur sur le corps touché : elle dévoilerait un corps que la vue de dessus laisse noir. |
 | **Le relevé de cadence de fin de chantier iso se prend avec les tests humains de H-ISO5, pas avant** (2026-09-15 vers 05:40, Adrien, à la session ISO5 qui demandait le Mac pour vingt minutes : « Tant pis pour les relevés, on les fera en même temps que les tests humains quand je serai devant la machine ») | Le relevé exige une vraie fenêtre de silence : fenêtre au premier plan, aucune autre application, personne devant le Mac. Adrien n'était pas en mesure de la laisser. La session prépare donc le banc (`--iso`, `--lightmap`, relevé d'appels de dessin et de cibles, preuve que les options changent le rendu) et s'arrête avant les cinq relevés : la taille de lightmap retenue et la porte de sortie de la 2D se décident au jalon H-ISO5, sur les chiffres pris ce jour-là. |
@@ -21433,8 +21437,8 @@ lance sans demande explicite.
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — ✅ jalon H-ISO2 répondu le 2026-09-14 ; **ISO2b** 🟡 (effacement des corps, silhouette de soi) sur `iso2-vues`, en attente du jalon H-ISO2b | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité — vagues 0 à 2 sur `iso-corps` (ISO Corps), **ISO3a** ✅ les corps voxel dans la vue iso (`iso2-vues`, 2026-09-15) ; **ISO3b** ✅ murs bas, zone morte et postures (`iso2-vues`, 2026-09-15) | 4 | Sonnet 5 / high |
 | ISO4 | Objets debout, leurre, balle, viseur, ligne de visée — ✅ `iso2-vues`, 2026-09-15 (voxels sous capteurs, quads au sol, banc d'équité 6/6) | 3 | Sonnet 5 / medium |
-| ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
-| ISO6 | Outils : banc `--iso`, photographe, F3, diagnostic, `ConditionsDeMatch` | 2 | Sonnet 5 / medium |
+| ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel — ✅ `iso2-vues`, 2026-09-15 ; puis les fusions de la vague « grand budget » et leurs raccords | 3 | Opus 5 / high |
+| ISO6 | **L'iso par défaut** (`--2d` en débogage) ; outils : banc de cadence et photographe en iso, F3, diagnostic, `ConditionsDeMatch` — 🟡 `iso2-vues`, 2026-09-15, relève d'ISO5 par « Iso 1 Opus » | 2 | Opus 5 / high |
 | ISO7 | Direction artistique et assets (Gemini en série, fond vert) | 3 | Sonnet 5 / medium |
 | ISO8 | *Option* : lumière seule + sol texturé, si la cadence l'exige | 4 | Opus 5 / high |
 | ISO9 | Équité, rendu imposé par l'hôte en classé (`Protocol.VERSION` +1), documentation, audit | 2 | Opus 5 / medium |
@@ -23806,7 +23810,7 @@ de textures de plus que la 1080p, et 3 appels. Aucun verdict de cadence n'est ti
 **Les cinq relevés, à prendre d'une traite au jalon H-ISO5** (60 s chacun, machine refroidie, fenêtre au
 premier plan, aucune autre application, torches allumées, corps épais et objets) :
 ```
-/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --vue-unique --gadgets --seconds 60
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --2d --vue-unique --gadgets --seconds 60
 /Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap 1080p --vue-unique --gadgets --seconds 60
 /Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap plein --vue-unique --gadgets --seconds 60
 /Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap 1080p --gadgets --seconds 60
@@ -24351,6 +24355,113 @@ corps ; le matériau des nuages porte la température, et le shader l'applique. 
   sans encre sans ce raccord.
 - ⚠️ **Une icône à fond vert se juge au pixel, pas à la vignette.** Le détourage de `preparer_habillage.py`
   a bien retiré le fond (aucun pixel g > r + 12) ; c'est la lueur générée qui avait viré à l'olive.
+
+### ISO6 — l'iso par défaut, et les outils qui la mesurent 🟡 (2026-09-15, relève d'ISO5, jugée au test final)
+
+Brief `briefs/iso6_releve.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (mandat d'Adrien de
+05:00), tenu par la session « Iso 1 Opus », entrée dans le worktree d'ISO5 par `EnterWorktree` (branche
+`iso2-vues`, tête `a5ac4b8`, arbre propre). Non poussée, non fusionnée.
+
+**Pourquoi.** Adrien a décidé le 2026-09-14 à 23:33 que l'iso devient la vue du jeu. Jusqu'ici elle
+restait derrière un interrupteur « expérimental », éteint par défaut, et chaque banc, suite et outil la
+demandait par `--iso`. Un joueur qui lançait le jeu voyait la vue de dessus.
+
+**Ce qui existe.**
+- **`mode_iso` vrai par défaut** (`settings_manager.gd`). Préséance : `--2d`, puis `--iso` (accepté, sans
+  effet sauf sur un réglage de débogage oublié), puis `debogage/vue_de_dessus`, puis l'iso
+  (`GameSettings.iso_applique`, statique, testée sans ligne de commande). Le bouton des réglages vidéo
+  devient « VUE DE DESSUS (DÉBOGAGE) », en build de débogage seulement. `GameSettings.mode_rendu()` rend
+  `iso` ou `dessus`.
+- **L'ancienne clé `video/mode_iso` n'est plus lue** : tout `settings.cfg` d'avant ISO6 la porte à
+  `false` (écrite à la première sauvegarde de n'importe quel réglage), et la relire aurait gardé la vue
+  de dessus chez Adrien et chez chaque joueur existant. Elle disparaît au premier `_save()`.
+- **F3** : la ligne « RENDU » commence par `mode_rendu=iso` ou `mode_rendu=dessus`, puis l'état de la vue
+  (tailles de chaque lightmap et du rendu, déjà dites par ISO2). **F6** (`diagnostic_texte`) porte
+  `mode_rendu` et `iso_lightmap` dans « Réglages ». **`ConditionsDeMatch` v2** : `mode_rendu` et
+  `iso_lightmap`, passés par `game_state.gd` à `commencer()` (aucun autoload dans le fichier) — une
+  cadence de match archivée dit maintenant quelle vue l'a produite.
+- **Banc de cadence** : l'iso par défaut, `--2d` mesure la vue de dessus (libellé « VUE DE DESSUS
+  (--2d) »), `--iso --2d` refusé. La première des cinq commandes du relevé de fin de chantier (section
+  « Relevé ») porte désormais `--2d` : sans lui, elle aurait mesuré l'iso sous le nom de la vue de dessus.
+  `banc_iso.gd` pose `mode_iso = _jeu` dans les deux sens (le `--base` restait sinon en iso), de même
+  `banc_murs_bas.gd`.
+- **Photographe** : la source `vue` prend en iso ce que rend la caméra de J1 (`_capturer_la_vue_iso`) —
+  la fenêtre, interface cachée, en vue unique ; la sous-vue 3D en écran scindé. `vp1` n'y est plus que la
+  lightmap. Le manifeste et la planche disent `mode_rendu`.
+- **Le fantôme de killcam iso aligné sur le fantôme 2D** (`Presentation3D.ATTENUATION_FANTOME` = 0,25, sur
+  la couleur, pas la couverture). La piste d'ISO5 (luminance de la texture de `VisualColored`) ne tenait
+  pas : cette texture est un blanc de 1×1.
+- **L'icône de torche du HUD** posée dans son propre commit (`0bff2bc`).
+
+**Les suites.** Toutes les suites qui montent `main.tscn` tournent maintenant sous l'iso. Le premier lot
+d'essai en a trouvé quatre rouges, relues une par une :
+- `test_classes` — **un vrai défaut de l'iso** : `Main` libéré pendant que la vue tenait laissait une
+  instance libérée affectée à une variable typée dans `Presentation3D._eteindre` (erreur de script).
+  Corrigé (variable non typée, `is_instance_valid` ensuite).
+- `test_tir_et_reserves` — **une référence 2D** : elle compare la couche du repère d'un gadget à celle
+  du sprite du joueur, qui passe à la couche 0 en iso. Elle tourne sous `--2d` (`SUITES_2D` de
+  `run_suites.sh`, commentaire à l'appui : une suite n'y entre que si ses rouges sont des contrôles de
+  la vue de dessus).
+- `test_iso_vues`, `test_iso_corps` — leur témoin « sans iso » supposait l'ancien défaut ; il demande
+  désormais la vue de dessus AVANT de monter `Main` (le premier `rebuild_arena()` accroche sinon la
+  présentation).
+- **Les gadgets sous les clés du catalogue** (point laissé par ISO4) : `test_iso_objets` et le banc
+  `--objets` de `banc_iso.gd` posent maintenant sous les slugs du jeu (`mine_magnesium`, `ombre_habitee`),
+  et la suite relit dans le texte de `game_state.gd` que chaque slug et son script sont ceux de
+  `GameState.IMPLEMENTATIONS`. `test_iso_gadgets` le faisait déjà par le vrai chemin.
+
+**Ce que la suite prouve** — `tools/test_iso_camera.gd` (98 vérifications) : l'iso par défaut dans le
+lot, la préséance des drapeaux, le réglage de débogage persisté dans sa section, aucun drapeau jamais
+écrit, une valeur trafiquée qui retombe sur l'iso, **un `settings.cfg` d'avant ISO6 qui n'éteint pas
+l'iso** et dont la clé disparaît, F3. `test_conditions_de_match` : le résumé v2 et ce que `game_state` lui
+passe. `test_iso_killcam` (49) : la silhouette atténuée, la constante dans la fourchette mesurée.
+**Sabotée deux fois, et la première ne valait rien** : `var mode_iso := false` n'a rien rougi — `_ready`
+recalcule `mode_iso` par `iso_applique`, l'initialiseur n'est pas le défaut. Second sabotage, sur la règle
+(`return vue_de_dessus`) : 4 contrôles rouges, code 1 ; fichier rétabli à l'identique (`cmp`), vert.
+**Lot complet vert** : 127 OK en 413 s (11:24), avant le fantôme ; puis, tout compris (fantôme, banc,
+suites), **127 OK en 413 s à 11:34**, sans erreur de script.
+
+**Ce que le banc prouve** — `tools/banc_iso.gd --jeu --scinde --killcam --vue j1`, vraie fenêtre,
+après l'atténuation : KILLCAM TENUE, corps des fantômes tenus (1 436 et 1 454 pixels), le voile lit la
+vue iso, noir absolu tenu (0 pixel hors du support de la brute). Étalon, lumières éteintes, teinte
+noire, médianes des pixels allumés :
+
+| Fantôme | iso avant (ISO5) | iso après (ISO6) | vue de dessus |
+|---|---|---|---|
+| J1 | 87/111/126 | 21/27/31 | 22/29/30 |
+| J2 | 125/87/89 | 31/21/21 | 31/23/22 |
+
+**Le photographe en iso, et les 21 plans d'Habillage repris** — `./tools/run_photos.sh
+--famille=menus,jeu,fins`, SANS drapeau, vraie fenêtre 1920×1080, 2026-09-15 vers 11:27 : 46 images (15
+menus, 21 jeu, 10 fins), aucune prise perdue, aucune erreur de script ; manifeste `"mode_rendu": "iso"`.
+Les plans `ecran` d'Habillage (menus, `decompte`, `hud`, `ecran-scinde`, `entrainement`,
+`eblouissement`, `killcam`, `gel-fatal`, `affiche`, `soiree`, verdicts, `bilan`) sont tous du lot, en iso.
+Relus à l'œil sur quatre plans : corps voxel et murs en relief partout, la source `vue` (`duel`) sans
+interface, l'écran scindé à deux caméras iso, la killcam dans la vue iso. ⚠️ **Cadrage signalé, non
+recalculé** : la mise en scène du duel pose J1 contre le mur ouest de l'Arène standard, et la caméra, qui
+le suit, montre une moitié d'écran hors carte (noire) — c'était déjà vrai en vue de dessus, mais l'iso
+ne cadre plus la carte entière en profondeur. Recentrer la scène (`_duel`, point de départ) est une
+retouche de mise en scène à faire avec la planche finale, pas un défaut de la vue.
+
+**La planche** — `docs/iso/planche_iso6.jpg` (recomposable : `python3 docs/iso/planche_iso6.py
+--photos <dossier du photographe> --banc <dossier du banc killcam>`, qui refuse un manifeste qui ne dit pas
+`mode_rendu=iso` ; images dans `docs/iso/captures_iso6/`) : l'accueil, le décompte, le duel HUD compris,
+l'écran scindé, la source `vue`, la killcam ; puis la killcam lumières éteintes (×4) et le même instant
+en vue de dessus, l'étalon du fantôme.
+
+**⚠️ `CLAUDE.md` n'est pas modifié, et c'est une règle du harnais, pas un oubli.** Le brief demandait de
+réécrire ses sections « Le jeu en une phrase », « Boucle de jeu » et « Rendu » pour décrire l'iso comme
+le jeu. Une session voisine ne peut pas faire modifier `CLAUDE.md` à une autre. **À faire par Adrien, ou
+sur sa demande directe**, texte proposé :
+- « Le jeu en une phrase » : « Duel 1v1 en vue isométrique dans le noir absolu : la seule information est
+  la lumière (torche, flash de tir, rétrodiffusion). La vue de dessus reste derrière le drapeau de
+  débogage `--2d` jusqu'à ISO9 ; elle est aussi le moteur de lumière que l'iso projette. »
+- « Boucle de jeu », en tête : « **L'iso est le rendu par défaut (ISO6).** `Presentation3D`, accrochée
+  par `rebuild_arena()` sous la racine, projette les lightmaps 2D (`SubViewport1`/`2`, masques `~4`/`~2`)
+  sur un sol et des murs 3D et remplace les sprites de corps par des corps voxel ; en vue unique la racine
+  rend la 3D, en écran scindé deux sous-vues 3D. `--2d` ramène la vue de dessus. »
+- « Rendu » : « Aucune `Light3D` : la lumière de l'iso est celle des Light2D/occluders, projetée
+  (B-projection, `docs/ETUDE_ISO.md`). Pâte D (`iso_pate.gdshaderinc`), noir absolu prouvé au banc. »
 
 ### Ce qui attend Adrien — jalon H15
 

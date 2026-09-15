@@ -49,6 +49,9 @@ func _run() -> void:
 		VoxelCatalogue.slugs().has(Pres.slug_du_corps(null)), Pres.slug_du_corps(null))
 	_la_zone_de_touche()
 
+	# ISO6 — l'iso est le défaut : la vue de dessus du témoin se demande AVANT de monter `Main`, dont
+	# le premier `rebuild_arena()` accroche sinon la présentation.
+	reglages.mode_iso = false
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame

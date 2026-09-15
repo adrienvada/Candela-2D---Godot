@@ -200,20 +200,29 @@ func _ready() -> void:
 	_gadgets = args.has("--gadgets")
 	_vue_unique = args.has("--vue-unique")
 	_sans_racine = args.has("--sans-racine")
-	_iso = args.has("--iso")
+	# ISO6 — l'iso est le jeu, donc le banc la mesure par défaut ; `--2d` mesure la vue de dessus
+	# (drapeau de débogage, comme dans le jeu). `--iso` reste accepté : les commandes des relevés
+	# d'ISO5 le portent.
+	if args.has("--iso") and args.has("--2d"):
+		printerr("✗ --iso et --2d ensemble : un relevé ne mesure qu'une vue")
+		_sortir(2)
+		return
+	_iso = not args.has("--2d")
 	_lightmap = _value(args, "--lightmap", "")
 	if _lightmap != "" and not (_iso and Presentation3D.LIGHTMAPS.has(_lightmap)):
-		printerr("✗ --lightmap se prend avec --iso et attend %s (reçu « %s »)"
+		printerr("✗ --lightmap se prend avec la vue iso (pas avec --2d) et attend %s (reçu « %s »)"
 			% [" | ".join(Presentation3D.LIGHTMAPS), _lightmap])
 		_sortir(2)
 		return
+	if not _iso:
+		GameSettings.mode_iso = false
 	if _iso:
 		var absents_iso := preconditions_iso(GameSettings)
 		if not absents_iso.is_empty():
 			printerr("✗ --iso : %s" % "; ".join(absents_iso))
 			_sortir(1)
 			return
-		# Pour cette exécution seulement : ni `set_mode_iso()` ni sauvegarde, rien ne s'écrit dans
+		# Pour cette exécution seulement : ni `set_vue_de_dessus()` ni sauvegarde, rien ne s'écrit dans
 		# settings.cfg (`pilotage_externe` est déjà posé).
 		GameSettings.mode_iso = true
 		GameSettings.iso_lightmap = _lightmap if _lightmap != "" else "1080p"
@@ -516,6 +525,8 @@ func _libelle_charge() -> String:
 		libelle += " + gadgets (torche fantôme, poudre et ses traces)"
 	if _iso:
 		libelle += " — VUE ISO, lightmap %s" % (_lightmap if _lightmap != "" else "1080p")
+	else:
+		libelle += " — VUE DE DESSUS (--2d)"
 	return libelle
 
 func _appliquer_variante() -> void:

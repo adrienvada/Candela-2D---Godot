@@ -215,8 +215,14 @@ func _la_killcam(main: Node, p: Presentation3D) -> void:
 			bool(e.get("accroupi", not snap.get(n + "accroupi"))) == bool(snap.get(n + "accroupi"))
 			and bool(e.get("torche", not snap.get(n + "light"))) == bool(snap.get(n + "light")))
 		var trace := fantome.get_node("VisualColored") as Polygon2D
-		var attendue := Color(trace.color.r, trace.color.g, trace.color.b,
+		# ISO6 — la couleur atténuée sur l'étalon du fantôme 2D (`Presentation3D.ATTENUATION_FANTOME`), la
+		# couverture inchangée. La constante est relue ICI dans la fourchette mesurée : un retour à 1,0 (le
+		# fantôme quatre fois trop clair) rougit.
+		var k := Presentation3D.ATTENUATION_FANTOME
+		var attendue := Color(trace.color.r * k, trace.color.g * k, trace.color.b * k,
 			trace.color.a * Presentation3D.opacite_rendue(trace))
+		_check("J%d : l'atténuation du fantôme iso est dans la fourchette de l'étalon 2D (0,24 à 0,27, ISO5)" % (j + 1),
+			k >= 0.2 and k <= 0.3, str(k))
 		var composes := true
 		for m in [mats[j], profondeurs[j]]:
 			for vue in [1, 2]:

@@ -49,15 +49,26 @@ const TROU_S := 0.5
 ## Version du RÉSUMÉ, indépendante du schéma de `MatchRecord` : le jour où une
 ## clé s'ajoute ici, un lecteur sait à quelle forme il a affaire sans que tout
 ## le journal change de version.
-const VERSION := 1
+##
+## 2 — ajout de `mode_rendu` et `iso_lightmap` (chantier ISO, ISO6, 2026-09-15) : l'iso
+##     devient le rendu par défaut, la vue de dessus un drapeau de débogage ; une cadence
+##     relevée sans dire la vue qui l'a produite ne se compare plus à rien. Chaîne vide
+##     quand l'appelant ne l'a pas dite (les tests).
+const VERSION := 2
 
+var mode_rendu := ""
+var iso_lightmap := ""
 var _durees := PackedFloat32Array()
 var _rtt := PackedFloat32Array()
 var _trous := 0
 var _en_cours := false
 var _dernier_tic_usec := 0
 
-func commencer() -> void:
+## `rendu` et `lightmap` : `GameSettings.mode_rendu()` et `GameSettings.iso_lightmap`, PASSÉS par
+## `game_state.gd` — aucun autoload ici (voir l'en-tête).
+func commencer(rendu: String = "", lightmap: String = "") -> void:
+	mode_rendu = rendu
+	iso_lightmap = lightmap
 	_durees = PackedFloat32Array()
 	_rtt = PackedFloat32Array()
 	_trous = 0
@@ -90,6 +101,8 @@ func echantillonner(rtt_ms: float = -1.0, tic_usec: int = -1) -> void:
 func resume() -> Dictionary:
 	var r := statistiques(_durees)
 	r["version"] = VERSION
+	r["mode_rendu"] = mode_rendu
+	r["iso_lightmap"] = iso_lightmap
 	r["trous"] = _trous
 	if _rtt.is_empty():
 		r["rtt_moyen_ms"] = -1.0

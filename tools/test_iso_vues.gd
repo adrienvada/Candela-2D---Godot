@@ -19,7 +19,7 @@
 ##     brouillage et auditeur restaurés à l'identique, sans erreur console ;
 ##   • **la simulation** identique pas pour pas avec ou sans iso en écran scindé (la vue
 ##     unique est prouvée par `test_iso_camera.gd`), avec un témoin ;
-##   • le réglage de lightmap (`plein` / `1080p`, `--lightmap`), `mode_iso` faux par défaut.
+##   • le réglage de lightmap (`plein` / `1080p`, `--lightmap`), `mode_iso` vrai par défaut (ISO6).
 ##
 ## Ce qu'elle ne voit pas : ce que le GPU met dans les lightmaps et les capteurs. Ça se
 ## prouve au banc, dans une vraie fenêtre (`tools/banc_iso.gd --jeu --scinde --noir`, et la
@@ -56,10 +56,13 @@ func _run() -> void:
 	var Canaux: GDScript = load("res://canaux_lumiere.gd")
 	var reglages := root.get_node("GameSettings")
 	var audio := root.get_node_or_null("AudioManager")
-	_check("mode_iso est faux par défaut (lot lancé sans --iso)", reglages.mode_iso == false)
+	_check("mode_iso est vrai par défaut depuis ISO6 (lot lancé sans --2d)", reglages.mode_iso == true)
 	_check("la lightmap est en 1080p par défaut", reglages.iso_lightmap == "1080p")
 	_statiques(Reglages, Pres, Canaux)
 
+	# ISO6 — l'iso est le défaut : la vue de dessus du témoin se demande AVANT de monter `Main`, dont
+	# le premier `rebuild_arena()` accroche sinon la présentation.
+	reglages.mode_iso = false
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame

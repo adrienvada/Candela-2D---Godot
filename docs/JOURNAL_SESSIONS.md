@@ -5373,3 +5373,18 @@ seconde livraison d'ISO Assets (`49ee29e`) passée par `tools/preparer_habillage
 puce « icône » des raccords de la vague, qui la disait non posée, est corrigée. Avant le lot, un Godot
 ouvert dans ce même worktree (`-- --iso`, commande du jalon) : attendu qu'il se ferme, trois relevés
 `pgrep` vides. Deux imports, lot complet.
+
+**ISO6 — l'iso par défaut, 2026-09-15 de 11:00 à 11:35 (lot complet vert à 11:34, 127 OK).** Session « Iso 1 Opus », relève d'ISO5 sur
+`iso2-vues`. `GameSettings.mode_iso` vrai par défaut ; `--2d` et le réglage `debogage/vue_de_dessus`
+(build de débogage) ramènent la vue de dessus ; `--iso` accepté. L'ancienne clé `video/mode_iso` n'est
+plus lue — tout `settings.cfg` d'avant ISO6 la porte à `false`. F3 (« RENDU »), F6, `ConditionsDeMatch`
+v2 et le manifeste du photographe disent `mode_rendu`. Le premier lot d'essai sous l'iso par défaut a
+trouvé un vrai défaut (`Presentation3D._eteindre` sur un `Main` libéré, `test_classes`), une référence
+2D (`test_tir_et_reserves`, désormais sous `--2d` dans `SUITES_2D`) et deux témoins qui supposaient
+l'ancien défaut. Les gadgets des suites et du banc d'ISO4 posés sous les slugs du jeu. Fantôme de
+killcam iso atténué à 0,25, mesuré au banc : 21/27/31 contre 22/29/30 en vue de dessus. Sabotage :
+le premier (l'initialiseur) ne rougissait rien, `_ready` recalculant `mode_iso` ; le second, sur la
+règle, 4 rouges. Photographe sans drapeau : 46 images en iso (dont les plans `ecran` d'Habillage), aucune
+perdue, manifeste `mode_rendu=iso` ; un cadrage signalé (J1 contre le mur ouest, moitié d'écran hors
+carte). Planche `docs/iso/planche_iso6.jpg`. **`CLAUDE.md` non modifié** : une session voisine ne peut
+pas faire éditer ce fichier ; texte proposé dans la section ISO6 de la ROADMAP, pour Adrien.

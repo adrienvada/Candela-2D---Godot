@@ -8,7 +8,9 @@
 ##   • **l'invariant du noir absolu** sur le miroir processeur des quatre pâtes
 ##     (`iso_pate.gd`) : strictement 0 à lumière 0, monotone en la lumière, aucun
 ##     terme additif ;
-##   • `GameSettings.mode_iso` faux par défaut, persisté, et `--iso` jamais écrit ;
+##   • `GameSettings.mode_iso` VRAI par défaut depuis ISO6 ; la vue de dessus derrière `--2d`
+##     ou le réglage de débogage persisté, aucun drapeau jamais écrit, l'ancienne clé
+##     `video/mode_iso` ni relue ni réécrite ;
 ##   • **la vue ne change rien à la simulation** : le même entraînement scripté, joué
 ##     sans puis avec la vue allumée, donne les mêmes positions, les mêmes tirs et le
 ##     même rejeu ; et à l'extinction tout ce qu'elle a touché revient.
@@ -194,41 +196,72 @@ func _pates(Pate: GDScript) -> void:
 # ---------------------------------------------------------------------------
 
 func _reglage() -> void:
-	print("\n--- GameSettings.mode_iso ---")
+	print("\n--- GameSettings.mode_iso (ISO6 : l'iso par défaut, la vue de dessus en débogage) ---")
 	var reglages := root.get_node("GameSettings")
-	_check("mode_iso est faux par défaut (lot lancé sans --iso)", reglages.mode_iso == false)
 	var Script: GDScript = load("res://settings_manager.gd")
+	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	if Script.deux_d_par_argument(args):
+		_check("lancée en --2d : la vue de dessus s'applique", reglages.mode_iso == false and reglages.mode_rendu() == "dessus")
+	else:
+		_check("mode_iso est VRAI par défaut (lot lancé sans --2d)", reglages.mode_iso == true and reglages.mode_rendu() == "iso")
 	var chemin := "user://test_iso_reglages.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
 	var neuf: Node = Script.new()
 	neuf._settings_path = chemin
 	neuf._load()
-	_check("installation neuve : ni choisi ni appliqué", not neuf.mode_iso_choisi() and not neuf.mode_iso)
-	neuf.set_mode_iso(true)
+	_check("installation neuve : aucun réglage de débogage", not neuf.vue_de_dessus_choisie())
+	# La préséance, sans dépendre de la ligne de commande du lot.
+	_check("sans drapeau ni réglage : l'iso", Script.iso_applique(false, PackedStringArray([])))
+	_check("le réglage de débogage ramène la vue de dessus", not Script.iso_applique(true, PackedStringArray([])))
+	_check("--2d ramène la vue de dessus", not Script.iso_applique(false, PackedStringArray(["--2d"])))
+	_check("--iso, accepté, ne change rien au défaut", Script.iso_applique(false, PackedStringArray(["--iso"])))
+	_check("--iso l'emporte sur un réglage de débogage oublié", Script.iso_applique(true, PackedStringArray(["--iso"])))
+	_check("--2d l'emporte sur --iso", not Script.iso_applique(false, PackedStringArray(["--iso", "--2d"])))
+	neuf.set_vue_de_dessus(true)
 	var cfg := ConfigFile.new()
 	cfg.load(chemin)
-	_check("le choix s'enregistre dans la section vidéo", cfg.get_value("video", "mode_iso", false) == true)
+	_check("le réglage de débogage s'enregistre dans sa section",
+		cfg.get_value("debogage", "vue_de_dessus", false) == true)
+	_check("et l'ancienne clé video/mode_iso ne s'écrit plus", not cfg.has_section_key("video", "mode_iso"))
 	var relu: Node = Script.new()
 	relu._settings_path = chemin
 	relu._load()
-	_check("et se relit au lancement suivant", relu.mode_iso_choisi())
-	relu.set_mode_iso(false)
+	_check("et se relit au lancement suivant", relu.vue_de_dessus_choisie())
+	relu.set_vue_de_dessus(false)
 	cfg.load(chemin)
-	_check("l'extinction s'enregistre aussi", cfg.get_value("video", "mode_iso", true) == false)
-	_check("--iso est reconnu", Script.iso_par_argument(PackedStringArray(["--iso"])))
-	_check("et son absence aussi", not Script.iso_par_argument(PackedStringArray(["--charge"])))
-	# Un banc lancé avec --iso qui touche un autre réglage ne doit pas persister l'iso.
-	relu.mode_iso = true
+	_check("le retour à l'iso s'enregistre aussi", cfg.get_value("debogage", "vue_de_dessus", true) == false)
+	# Un lancement en --2d qui touche un autre réglage ne doit pas persister la vue de dessus.
+	relu.mode_iso = false
 	relu.set_fps_cap(120)
 	cfg.load(chemin)
-	_check("--iso appliqué ne s'écrit jamais : seul le choix s'enregistre",
-		cfg.get_value("video", "mode_iso", true) == false)
-	cfg.set_value("video", "mode_iso", "oui")
+	_check("--2d appliqué ne s'écrit jamais : seul le réglage s'enregistre",
+		cfg.get_value("debogage", "vue_de_dessus", true) == false)
+	cfg.set_value("debogage", "vue_de_dessus", "oui")
 	cfg.save(chemin)
 	var trafique: Node = Script.new()
 	trafique._settings_path = chemin
 	trafique._load()
-	_check("une valeur trafiquée retombe sur la vue de dessus", not trafique.mode_iso_choisi())
+	_check("une valeur trafiquée retombe sur l'iso", not trafique.vue_de_dessus_choisie())
+	# ISO6 — F3 dit d'abord quel rendu tourne.
+	var Pres: GDScript = load("res://presentation_3d.gd")
+	_check("F3 : la ligne RENDU commence par mode_rendu=iso en iso",
+		String(Pres.texte_f3(true)).begins_with("mode_rendu=iso"), Pres.texte_f3(true))
+	_check("F3 : et par mode_rendu=dessus sous le drapeau de débogage",
+		String(Pres.texte_f3(false)).begins_with("mode_rendu=dessus"), Pres.texte_f3(false))
+	# ⚠️ Le piège de la migration : chaque settings.cfg d'avant ISO6 porte video/mode_iso=false.
+	var ancien := ConfigFile.new()
+	ancien.set_value("video", "mode_iso", false)
+	ancien.save(chemin)
+	var joueur_existant: Node = Script.new()
+	joueur_existant._settings_path = chemin
+	joueur_existant._load()
+	_check("un settings.cfg d'avant ISO6 (video/mode_iso=false) n'éteint pas l'iso",
+		not joueur_existant.vue_de_dessus_choisie()
+		and Script.iso_applique(joueur_existant.vue_de_dessus_choisie(), PackedStringArray([])))
+	joueur_existant.set_fps_cap(0)
+	cfg.load(chemin)
+	_check("et sa clé disparaît à la première sauvegarde", not cfg.has_section_key("video", "mode_iso"))
+	joueur_existant.free()
 	for n in [neuf, relu, trafique]:
 		n.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))

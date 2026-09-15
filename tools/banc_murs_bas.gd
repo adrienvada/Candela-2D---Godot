@@ -65,9 +65,9 @@ func _ready() -> void:
 		DirAccess.make_dir_recursive_absolute(_dossier)
 	_ancien_sol.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	GameSettings.pilotage_externe = true
-	if _iso:
-		# Pour cette exécution seulement : rien ne s'écrit dans settings.cfg.
-		GameSettings.mode_iso = true
+	# Pour cette exécution seulement : rien ne s'écrit dans settings.cfg. ISO6 : posé dans les deux
+	# sens, l'iso étant le défaut — sans `--iso`, ce banc mesure la vue de dessus (MB3c).
+	GameSettings.mode_iso = _iso
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	# macOS bride une fenêtre au second plan au point que `frame_post_draw` cesse

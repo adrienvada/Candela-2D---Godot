@@ -1067,7 +1067,8 @@ func rebuild_arena() -> void:
 	# défaut de la texture de torche, weapon_data.gd).
 	Fusee.prechauffer(arena)
 
-	# Chantier ISO, étape ISO1 — la vue isométrique, derrière `GameSettings.mode_iso`.
+	# Chantier ISO, étape ISO1 — la vue isométrique, derrière `GameSettings.mode_iso` (vrai par
+	# défaut depuis ISO6 ; `--2d` ramène la vue de dessus, drapeau de débogage).
 	# **Le seul crochet du jeu** : `Presentation3D` vit sous la racine de l'arbre, hors
 	# de tout porteur de RPC, et tient elle-même bascule, retour et murs.
 	if GameSettings.mode_iso:
@@ -1500,7 +1501,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	time_left = round_time
 	round_active = true
 	game_over = false
-	_conditions.commencer()
+	_conditions.commencer(GameSettings.mode_rendu(), GameSettings.iso_lightmap)
 	# Étape 28, lot E — la télémétrie repart avec le MATCH, pas la manche : un BO3
 	# archive un match. Sûr : les manches gagnées reviennent à 0 en fin de match
 	# (`_do_end_round`) et sur les deux retours au menu.

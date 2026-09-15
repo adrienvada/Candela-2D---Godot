@@ -19,11 +19,16 @@ extends SceneTree
 
 const PLANCHER := 30
 
+## ISO6 — sous les slugs du JEU (`GameState.IMPLEMENTATIONS`), pas sous les clés du catalogue des voxels.
+## ⚠️ Posée sous `mine` et `ombre`, cette suite donnait un voxel à deux gadgets qui n'en avaient pas en match
+## (le jeu les pose sous `mine_magnesium` et `ombre_habitee`) : verte sur un chemin que le jeu ne prend pas
+## (voir `MiroirsIso.SLUG_DU_CATALOGUE`, table posée par Gadgets et lumières). `_les_slugs` relit la table du
+## jeu dans le TEXTE de `game_state.gd`, qu'une suite `--script` ne peut pas charger.
 const GADGETS := {
-	"mine": "res://gadget_mine.gd",
+	"mine_magnesium": "res://gadget_mine.gd",
 	"torche_fantome": "res://gadget_torche_fantome.gd",
 	"voile": "res://gadget_voile.gd",
-	"ombre": "res://gadget_ombre.gd",
+	"ombre_habitee": "res://gadget_ombre.gd",
 	"gresillement": "res://gadget_gresillement.gd",
 	"leurre": "res://gadget_leurre.gd",
 }
@@ -90,7 +95,7 @@ func _run() -> void:
 	_check("à l'extinction, plus aucun miroir", (miroirs as MiroirsIso).nombre_de_miroirs() == 0)
 	var rendus := 0
 	for slug in poses:
-		for nom in MiroirsIso.SPRITES_REMPLACES[slug]:
+		for nom in MiroirsIso.SPRITES_REMPLACES[_cle(slug)]:
 			var s := (poses[slug] as Node).get_node_or_null(NodePath(nom)) as CanvasItem
 			if s != null and s.visibility_layer != Presentation3D.COUCHE_HORS_VUE:
 				rendus += 1
@@ -115,6 +120,20 @@ func _les_slugs() -> void:
 		var g := GadgetBase.new()
 		g.slug = slug
 		_check("« %s » reste à plat dans la lightmap" % slug, MiroirsIso.slug_objet(g) == "")
+		g.free()
+	# ISO6 — les gadgets de cette suite sont posés sous les slugs du jeu, avec le script que le jeu leur donne.
+	var table := FileAccess.get_file_as_string("res://game_state.gd")
+	var hors_table: Array[String] = []
+	for slug in GADGETS:
+		if not table.contains("\"%s\": {\"script\": \"%s\"" % [slug, GADGETS[slug]]):
+			hors_table.append(String(slug))
+	_check("les gadgets posés ici portent les slugs et les scripts de GameState.IMPLEMENTATIONS",
+		hors_table.is_empty(), ", ".join(hors_table))
+	for slug in GADGETS:
+		var g := GadgetBase.new()
+		g.slug = slug
+		_check("posé sous le slug du jeu « %s », il reçoit le miroir « %s »" % [slug, _cle(slug)],
+			MiroirsIso.slug_objet(g) == _cle(slug))
 		g.free()
 	_check("les couches des objets sortent des lightmaps avec celles des corps (128 et 256)",
 		(Presentation3D.COUCHES_CAPTEURS & MiroirsIso.couche_objets(0)) != 0
@@ -151,7 +170,7 @@ func _les_miroirs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 		var bon_type := voxel is VoxelCorps if slug == "leurre" else voxel is VoxelObjet
 		var bon_slug := false
 		if voxel is VoxelObjet:
-			bon_slug = (voxel as VoxelObjet).slug() == slug
+			bon_slug = (voxel as VoxelObjet).slug() == _cle(slug)
 		elif voxel is VoxelCorps:
 			bon_slug = (voxel as VoxelCorps).slug() == String((main.p1.current_weapon as ClassData).slug())
 		var place := voxel != null and Vector2(voxel.global_position.x, voxel.global_position.z).distance_to(g.global_position) < 0.05
@@ -163,7 +182,7 @@ func _les_miroirs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 		justes == poses.size(), "%d/%d" % [justes, poses.size()])
 	var retires := 0
 	for slug in poses:
-		for nom in MiroirsIso.SPRITES_REMPLACES[slug]:
+		for nom in MiroirsIso.SPRITES_REMPLACES[_cle(slug)]:
 			var s := (poses[slug] as Node).get_node_or_null(NodePath(nom)) as CanvasItem
 			if s != null and s.visibility_layer == Presentation3D.COUCHE_HORS_VUE:
 				retires += 1
@@ -295,8 +314,8 @@ func _les_quads(main: Node, miroirs: MiroirsIso) -> void:
 
 
 func _le_rejeu(main: Node, miroirs: MiroirsIso) -> void:
-	var g: GadgetBase = (load(GADGETS["mine"]) as GDScript).new()
-	g.slug = "mine"
+	var g: GadgetBase = (load(GADGETS["mine_magnesium"]) as GDScript).new()
+	g.slug = "mine_magnesium"
 	g.name = "GadgetJ2_990"
 	g.poseur_id = 1
 	g.is_replay = true
@@ -315,10 +334,15 @@ func _le_rejeu(main: Node, miroirs: MiroirsIso) -> void:
 static func _sprites_attendus(poses: Dictionary) -> int:
 	var n := 0
 	for slug in poses:
-		for nom in MiroirsIso.SPRITES_REMPLACES[slug]:
+		for nom in MiroirsIso.SPRITES_REMPLACES[_cle(slug)]:
 			if (poses[slug] as Node).get_node_or_null(NodePath(nom)) != null:
 				n += 1
 	return n
+
+
+## La clé du catalogue des voxels pour un slug du jeu (`mine_magnesium` → `mine`).
+static func _cle(slug: Variant) -> String:
+	return String(MiroirsIso.SLUG_DU_CATALOGUE.get(String(slug), String(slug)))
 
 
 func _depart_fini(main: Node) -> bool:

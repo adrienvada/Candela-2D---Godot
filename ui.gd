@@ -1815,6 +1815,10 @@ func diagnostic_texte() -> String:
 		"plafond_choisi": GameSettings.fps_cap,
 		"plafond_effectif": GameSettings.plafond_effectif(),
 		"resolution_index": GameSettings.resolution_index,
+		# ISO6 — quelle vue a tourné, et à quelle taille de lightmap : « ça rame » ne se
+		# lit pas de la même façon en iso et en vue de dessus.
+		"mode_rendu": GameSettings.mode_rendu(),
+		"iso_lightmap": GameSettings.iso_lightmap,
 	}
 	var mode := "ecran_scinde"
 	match NetworkManager.current_mode:
@@ -3426,8 +3430,9 @@ func _build_debug_panel() -> void:
 	dbg_particules = _make_ligne_debug(grille, "PARTICULES")
 	dbg_noeuds = _make_ligne_debug(grille, "NŒUDS ARÈNE")
 	dbg_cartes = _make_ligne_debug(grille, "CARTES")
-	# ISO1 — l'état de la vue isométrique, et l'écran scindé qui reste vu de dessus.
-	dbg_iso = _make_ligne_debug(grille, "VUE ISO")
+	# ISO1 — l'état de la vue isométrique. ISO6 — la ligne dit d'abord le rendu (`iso` ou
+	# `dessus`, le drapeau de débogage), puis la taille de chaque lightmap.
+	dbg_iso = _make_ligne_debug(grille, "RENDU")
 
 	# La ligne réseau garde toute la largeur : elle est faite de phrases courtes
 	# (transport, lien direct ou relayé, NAT) et non de nombres à aligner.
@@ -7095,10 +7100,10 @@ func _build_display_panel() -> Control:
 		"Déplafonné par défaut : EOS coûte d'autant plus de latence que la cadence "
 		+ "est basse."))
 	block.add_child(_build_fps_panel())
-	block.add_child(_make_reglage_titre("VUE ISOMÉTRIQUE (EXPÉRIMENTAL)",
-		"Le duel vu de trois quarts, la lumière projetée sur le relief — en vue unique "
-		+ "comme en écran scindé. S'allume au prochain duel. La lightmap est l'image de "
-		+ "lumière projetée : à l'aire de la vue (1080p) ou aux pixels de la fenêtre (plein)."))
+	block.add_child(_make_reglage_titre("VUE ISOMÉTRIQUE",
+		"Le duel vu de trois quarts, la lumière projetée sur le relief. La lightmap est "
+		+ "l'image de lumière projetée : à l'aire de la vue (1080p) ou aux pixels de la "
+		+ "fenêtre (plein)."))
 	block.add_child(_build_iso_panel())
 	block.add_child(_make_reglage_titre("CALIBRATION",
 		"Cible perceptive : ce qui doit se voir apparaît à peine, le reste reste "
@@ -7159,18 +7164,22 @@ func _build_vsync_panel() -> Control:
 	row.add_child(btn_on)
 	return row
 
-## ISO1 — un seul interrupteur, désactivé par défaut (`GameSettings.mode_iso`).
-## ISO2 — et la taille de la lightmap (`GameSettings.iso_lightmap`), la question qu'H15 a
+## ISO2 — la taille de la lightmap (`GameSettings.iso_lightmap`), la question qu'H15 a
 ## laissée ouverte : un réglage, pas une décision — Adrien tranche au relevé de fin de
 ## chantier.
+## ISO6 — l'iso est le jeu : l'interrupteur « vue isométrique (expérimental) » d'ISO1 devient
+## celui de la vue de dessus, un réglage de DÉBOGAGE (`GameSettings.set_vue_de_dessus`), proposé
+## en build de débogage seulement. Un joueur n'a pas à trouver dans ses réglages une vue que le
+## jeu retirera à ISO9.
 func _build_iso_panel() -> Control:
 	var row := _make_rangee_de_choix()
-	var btn := _make_choice_button("VUE ISOMÉTRIQUE (EXPÉRIMENTAL)", COLOR_GOLD, null)
-	btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L * 2, 42)
-	btn.add_theme_font_size_override("font_size", T_COURANT)
-	btn.button_pressed = GameSettings.mode_iso_choisi()
-	btn.toggled.connect(func(actif: bool) -> void: GameSettings.set_mode_iso(actif))
-	row.add_child(btn)
+	if OS.is_debug_build():
+		var btn := _make_choice_button("VUE DE DESSUS (DÉBOGAGE)", COLOR_GOLD, null)
+		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L * 2, 42)
+		btn.add_theme_font_size_override("font_size", T_COURANT)
+		btn.button_pressed = GameSettings.vue_de_dessus_choisie()
+		btn.toggled.connect(func(actif: bool) -> void: GameSettings.set_vue_de_dessus(actif))
+		row.add_child(btn)
 	var group := ButtonGroup.new()
 	for variante in GameSettings.LIGHTMAPS_ISO:
 		var choix := _make_choice_button("LIGHTMAP %s" % String(variante).to_upper(), COLOR_GOLD, group)

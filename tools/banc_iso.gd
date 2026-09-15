@@ -293,10 +293,10 @@ func _ready() -> void:
 		_sortir(2)
 		return
 	GameSettings.pilotage_externe = true
-	if _jeu:
-		# Pour cette exécution seulement : `mode_iso` n'est pas `set_mode_iso()`, rien ne
-		# s'écrit dans settings.cfg.
-		GameSettings.mode_iso = true
+	# Pour cette exécution seulement : `mode_iso` n'est pas `set_vue_de_dessus()`, rien ne s'écrit
+	# dans settings.cfg. ISO6 : posé dans les DEUX sens — l'iso étant le défaut, le banc `--base`
+	# mesurerait sinon l'iso sous le nom de la vue de dessus.
+	GameSettings.mode_iso = _jeu
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_couper_le_son("avant la scène")
@@ -1181,8 +1181,10 @@ func _controler_la_killcam() -> void:
 			var a := _mediane_allumee(iso[teinte], boites[j])
 			var b := _mediane_allumee(plat[teinte], zone_2d)
 			lignes.append("J%d, teinte %s : iso %d/%d/%d, vue de dessus %d/%d/%d" % [j + 1, teinte, a[0], a[1], a[2], b[0], b[1], b[2]])
-		lignes.append("J%d, silhouette attendue %d/%d/%d" % [j + 1, roundi(trace.color.r * trace.color.a * 255.0),
-			roundi(trace.color.g * trace.color.a * 255.0), roundi(trace.color.b * trace.color.a * 255.0)])
+		# ISO6 — la silhouette porte l'atténuation alignée sur le fantôme 2D (`ATTENUATION_FANTOME`).
+		var k := Presentation3D.ATTENUATION_FANTOME
+		lignes.append("J%d, silhouette attendue %d/%d/%d" % [j + 1, roundi(trace.color.r * k * trace.color.a * 255.0),
+			roundi(trace.color.g * k * trace.color.a * 255.0), roundi(trace.color.b * k * trace.color.a * 255.0)])
 	print("BANC_ISO killcam noir vue=j%d verdict=%s (hors des fantômes : %d pixel(s) allumé(s) hors du support de la brute, max %d/255 ; teinte de killcam %s)"
 		% [pid + 1, "NOIR ABSOLU TENU" if noir_tenu else "NOIR ABSOLU ROMPU", hors, hors_max, str(teinte_killcam)])
 	print("BANC_ISO killcam etalon vue=j%d (information, médianes des pixels allumés) — %s" % [pid + 1, " ; ".join(lignes)])
@@ -1559,11 +1561,16 @@ func _controler_l_effacement() -> void:
 ## caché, puis montré. Tenu si la tête et le torse de J2 — les boîtes du plafond, `_controler_les_corps` —
 ## ne changent pas ; les pixels changés dans la zone du corps se relèvent à côté. La fusée est lancée puis
 ## forcée à l'état posé. Le leurre est un corps : il se mesure de même, pour information, sans verdict.
+##
+## ISO6 — les clés sont les slugs du JEU (`GameState.IMPLEMENTATIONS`), plus ceux du catalogue des
+## voxels : posés sous `mine` et `ombre`, la mine et l'ombre habitée recevaient ici un voxel qu'elles
+## n'avaient pas en match (voir `MiroirsIso.SLUG_DU_CATALOGUE`), et le banc les jugeait sur un chemin
+## que le jeu ne prend pas.
 const OBJETS_BANC := {
-	"mine": "res://gadget_mine.gd",
+	"mine_magnesium": "res://gadget_mine.gd",
 	"torche_fantome": "res://gadget_torche_fantome.gd",
 	"voile": "res://gadget_voile.gd",
-	"ombre": "res://gadget_ombre.gd",
+	"ombre_habitee": "res://gadget_ombre.gd",
 	"gresillement": "res://gadget_gresillement.gd",
 	"fusee": "",
 	"leurre": "res://gadget_leurre.gd",
@@ -1593,7 +1600,8 @@ func _controler_les_objets() -> void:
 	var juges := 0
 	var numero := 950
 	for slug in OBJETS_BANC:
-		var rayon := float(VoxelCatalogueObjets.OBJETS[slug]["rayon_px"]) if VoxelCatalogueObjets.OBJETS.has(slug) \
+		var cle := String(MiroirsIso.SLUG_DU_CATALOGUE.get(slug, slug))
+		var rayon := float(VoxelCatalogueObjets.OBJETS[cle]["rayon_px"]) if VoxelCatalogueObjets.OBJETS.has(cle) \
 			else Presentation3D.RAYON_CORPS_PX
 		var pos := p2.global_position + vers_camera * (rayon + Presentation3D.RAYON_CORPS_PX)
 		var g: Node2D = null

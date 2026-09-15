@@ -47,8 +47,11 @@ extends Node
 ##
 ## - `ecran` — la fenêtre entière, telle que le joueur la voit : HUD compris,
 ##   menus, écrans de fin. C'est la capture « honnête ».
-## - `vue` — la texture de `SubViewport1` seule : **le duel sans le HUD**, au
-##   même cadrage et à la même résolution. C'est l'image d'affiche.
+## - `vue` — **le duel sans le HUD**, au même cadrage et à la même résolution.
+##   C'est l'image d'affiche. En vue de dessus (`--2d`), la texture de
+##   `SubViewport1` ; en iso — le jeu par défaut depuis ISO6 —, ce que rend la
+##   caméra iso de J1, interface cachée (`_capturer_la_vue_iso`) : `vp1` n'y est
+##   plus que la lightmap.
 ##
 ## ⚠️ **`rendu_racine_autorise` est mis à faux pendant toute la séance**, et ce
 ## n'est pas un détail. Depuis le chantier R, une vue unique se rend DANS LA
@@ -1623,6 +1626,9 @@ func _capturer(source: String) -> Image:
 ## définition, on verrait seulement plus de monde. Le temps de deux images, puis
 ## tout est remis en place.
 func _capturer_la_vue() -> Image:
+	var iso := Presentation3D.instance()
+	if iso != null and iso.viewport_ecran(0) != null:
+		return await _capturer_la_vue_iso(iso)
 	var vue: SubViewport = _main.vp1
 	var conteneur := vue.get_parent() as SubViewportContainer
 	var cam: Camera2D = _main.cam1
@@ -1658,6 +1664,46 @@ func _capturer_la_vue() -> Image:
 		conteneur.stretch = stretch_avant
 		if is_instance_valid(cam):
 			cam.zoom = zoom_avant
+		await _attendre_images(1)
+	return img if img != null else ecran
+
+
+## ISO6 — la source `vue` quand l'iso rend le duel, c'est-à-dire par défaut.
+##
+## ⚠️ **En iso, `vp1` n'est plus le duel : c'est la LIGHTMAP**, l'image de lumière que la vue
+## projette sur le relief. La prendre pour source rendrait une vue de dessus sans murs ni corps,
+## sous le nom d'une capture du jeu. On prend donc ce que la caméra iso de J1 rend :
+## - **en vue unique**, la fenêtre elle-même (la racine rend la 3D aux pixels de la fenêtre :
+##   aucun suréchantillonnage à faire), les calques de l'interface cachés le temps de la prise —
+##   c'est ce que la texture de `vp1` excluait en vue de dessus ; les calques d'écran du duel
+##   (vignette, brouillage, voile de killcam), logés sous `GameState`, restent, comme ils
+##   restaient dans la sous-vue ;
+## - **en écran scindé**, la texture de la sous-vue 3D de J1, qui porte ses propres calques.
+func _capturer_la_vue_iso(iso: Presentation3D) -> Image:
+	var ecran_j1 := iso.viewport_ecran(0)
+	var unique := ecran_j1 == get_window()
+	var caches: Array[Node] = []
+	if unique:
+		for enfant in _ui.get_children():
+			if (enfant is CanvasLayer or enfant is CanvasItem) and bool(enfant.get("visible")):
+				enfant.set("visible", false)
+				caches.append(enfant)
+	_au_premier_plan()
+	var ecran: Image = await Commun.capturer(get_tree(), 3000)
+	if ecran == null:
+		_au_premier_plan()
+		await _attendre_images(4)
+		ecran = await Commun.capturer(get_tree(), 4000)
+	var img: Image = null
+	if ecran != null and not unique:
+		var t := ecran_j1.get_texture()
+		img = t.get_image() if t != null else null
+	# Rendu AVANT tout retour, y compris sur une prise perdue : une interface laissée cachée
+	# retirerait le HUD de tous les plans `ecran` qui suivent.
+	for enfant in caches:
+		if is_instance_valid(enfant):
+			enfant.set("visible", true)
+	if not caches.is_empty():
 		await _attendre_images(1)
 	return img if img != null else ecran
 
@@ -1761,6 +1807,9 @@ func _ecrire_le_manifeste() -> void:
 		"decoupes": _decoupes,
 		"sans_hud": _sans_hud,
 		"zoom": _zoom,
+		# ISO6 — quelle vue a été photographiée : l'iso par défaut, la vue de dessus sous `--2d`.
+		"mode_rendu": GameSettings.mode_rendu(),
+		"iso_lightmap": GameSettings.iso_lightmap,
 		"photos": _photos,
 	}
 	var f := FileAccess.open("%s/manifeste.json" % _dossier, FileAccess.WRITE)
@@ -1808,6 +1857,7 @@ func _ecrire_la_planche() -> void:
 		mention = " · cadrage serré ×%.2f" % _zoom
 	if _sans_hud:
 		mention += " · sans HUD"
+	mention += " · rendu %s" % GameSettings.mode_rendu()
 	h += "<h1>Candela — planche photo</h1><div class=\"meta\">%s · version %s%s%s · %d image(s)</div>" % [
 		Time.get_datetime_string_from_system(),
 		ProjectSettings.get_setting("application/config/version", "?"),

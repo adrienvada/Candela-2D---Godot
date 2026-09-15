@@ -54,8 +54,8 @@
 ##
 ## ## Quand elle s'allume
 ##
-## `GameSettings.mode_iso` (« Vue isométrique (expérimental) » dans les réglages, ou
-## `--iso`) et au moins une vue regardée. Le jeu ne l'appelle qu'à UN endroit : la fin de
+## `GameSettings.mode_iso` — vrai par défaut depuis ISO6, faux sous le drapeau de débogage
+## `--2d` ou le réglage « Vue de dessus (débogage) » — et au moins une vue regardée. Le jeu ne l'appelle qu'à UN endroit : la fin de
 ## `GameState.rebuild_arena()`. Tout le reste — allumer, tenir, éteindre, reconstruire les
 ## murs — elle le fait elle-même, à chaque image : le jeu redéfait ses gestes (accords de
 ## rendu, couches de sprites) et elle les repose en les comptant, comme le banc ISO0.b.
@@ -240,12 +240,13 @@ static func instance() -> Presentation3D:
 	return _instance if is_instance_valid(_instance) else null
 
 
-## Le texte de la ligne « VUE ISO » du panneau F3.
+## Le texte de la ligne « RENDU » du panneau F3. ISO6 : il commence par `mode_rendu`, et l'état
+## de la vue porte la taille de chaque lightmap (`_decrire`).
 static func texte_f3(mode_iso: bool) -> String:
 	if not mode_iso:
-		return "désactivée"
+		return "mode_rendu=dessus (drapeau de débogage --2d ou réglage)"
 	var p := instance()
-	return p.etat if p != null else "en attente du prochain duel"
+	return "mode_rendu=iso · " + (p.etat if p != null else "en attente du prochain duel")
 
 
 # ---------------------------------------------------------------------------
@@ -517,7 +518,11 @@ func _eteindre(sortie_de_l_arbre := false) -> void:
 					enfant.queue_free()
 	if not _sauvegarde.is_empty():
 		for s in _sauvegarde["vues"]:
-			var vue: SubViewport = s["vue"]
+			# ⚠️ Non typée : `Main` libéré pendant que la vue tenait (une suite qui fait `queue_free()`
+			# sur le jeu) laisse ici une instance libérée, et l'affecter à une variable typée
+			# `SubViewport` est une erreur de script avant même le `is_instance_valid` qui suit.
+			# Trouvé par ISO6, quand l'iso est devenue le défaut de toutes les suites (`test_classes`).
+			var vue = s["vue"]
 			var conteneur = s["conteneur"]
 			if is_instance_valid(conteneur):
 				conteneur.modulate.a = s["alpha"]
@@ -1056,11 +1061,24 @@ func _suivre_le_fantome(j: int, fantome: Node2D) -> void:
 ## La silhouette qu'un fantôme de killcam dessine dans une vue : la couleur de son `VisualColored` (alpha
 ## 0,5 compris, posé par `_setup_ghosts`) fois son opacité rendue ; transparente si le masque de la vue ne
 ## voit pas sa couche. `couche` : sa couche d'origine, la vue iso l'ayant retirée des lightmaps.
+##
+## ISO6 — **la couleur est atténuée de `ATTENUATION_FANTOME` pour s'aligner sur le fantôme 2D.** ISO5 a
+## mesuré, dans les mêmes conditions et la même exécution (`banc_iso.gd --jeu --scinde --killcam`, lumières
+## éteintes, teinte noire, médianes des pixels allumés), le fantôme iso à 87/111/126 et 125/87/89 contre
+## 22/30/30 et 31/23/22 en vue de dessus : un rapport de 0,24 à 0,27 sur les six canaux. Relu par ISO6 au
+## pixel sur la capture 2D d'une vraie killcam (`captures_iso5/gros_plan_j1_vue_de_dessus.png`) : médianes
+## 19/25/25 et 23/16/15 — le fantôme 2D est bien quatre fois plus sombre que sa couleur à demi-opacité.
+## ⚠️ La piste d'ISO5 (« la luminance moyenne de la texture de `VisualColored` ») ne tient pas : cette
+## texture est un blanc de 1×1 (`player.gd`, posée pour que les UV existent). L'atténuation est donc un
+## étalon mesuré, pas une formule dérivée ; l'alpha (la couverture) ne change pas.
+const ATTENUATION_FANTOME := 0.25
+
 static func silhouette_du_fantome(trace: Variant, couche: int, masque_de_la_vue: int) -> Color:
 	if not is_instance_valid(trace) or not (trace is Polygon2D) or (couche & masque_de_la_vue) == 0:
 		return Color(0.0, 0.0, 0.0, 0.0)
 	var c: Color = (trace as Polygon2D).color
-	return Color(c.r, c.g, c.b, c.a * opacite_rendue(trace))
+	return Color(c.r * ATTENUATION_FANTOME, c.g * ATTENUATION_FANTOME, c.b * ATTENUATION_FANTOME,
+		c.a * opacite_rendue(trace))
 
 
 ## La classe du fantôme : celle de l'instantané (`pN_weapon`), retenue quand l'instantané manque — l'arrêt
