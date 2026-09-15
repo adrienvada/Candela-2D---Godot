@@ -459,6 +459,36 @@ func sommet_tete() -> float:
 	return _tete_mesh.to_global(Vector3(0.0, aabb.position.y + aabb.size.y, 0.0)).y
 
 
+## ISO3 vague 5 — la bouche de l'arme, pour « ISO7 Gadgets et lumière Opus »
+## (le flash de bouche en iso a besoin d'un point et d'une direction, il ne
+## les invente pas). Recalculée depuis le maillage réel de l'arme, jamais
+## depuis une constante — même discipline que `sommet_tete()`/`rayon_empreinte()` :
+## la bouche suit la pose courante (recul du tir, bras baissé à l'enjambement,
+## contre-rotation de l'accroupi), qu'on l'appelle avant ou après `poser()`
+## n'a d'importance que pour savoir QUELLE pose elle décrit.
+##
+## Repère GLOBAL de ce nœud (tuiles, même convention que `sommet_tete()`),
+## PAS le repère local de l'arme : un appelant qui place un effet dans la
+## même scène 3D n'a rien à recomposer. `direction` est le vecteur unitaire
+## vers l'avant du canon (`Basis.FORWARD` de l'arme, donc de la visée du
+## corps une fois `visee` posée par `poser()`).
+##
+## Dictionnaire vide si aucune arme n'est construite ou si `_arme_mesh` est
+## invisible (`arme_slug == ""`, voir `poser()`) — jamais une position
+## inventée à l'origine du corps, qui laisserait un appelant croire à une
+## arme absente qu'elle tire depuis les pieds.
+func pointe_arme() -> Dictionary:
+	if _arme_mesh == null or not _arme_mesh.visible or _fiche.is_empty():
+		return {}
+	var fa: Dictionary = _fiche.get("arme", {})
+	var longueur: float = float(fa.get("longueur", 0.0))
+	var pointe_locale := Vector3(0.0, 0.0, -longueur)
+	return {
+		"position": _arme_pivot.to_global(pointe_locale),
+		"direction": (_arme_pivot.global_transform.basis * Vector3.FORWARD).normalized(),
+	}
+
+
 ## ISO3 vague 4 — l'empreinte au sol RÉELLE de la pose courante : la plus
 ## grande distance, en tuiles, entre l'origine du corps et un coin de l'une
 ## de ses boîtes, projetée sur le plan XZ. Recalculée depuis le maillage réel

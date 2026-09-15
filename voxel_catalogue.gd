@@ -40,36 +40,67 @@ const GRIS_PLAFOND := Charte.DIM
 ## 35 px — voir `CandelaTileSet.TILE_SIZE`). Hauteur totale 1,0, rayon au sol
 ## 0,4 : les deux constantes du prototype iso (`tools/proto_iso.gd:60-61`), pas
 ## des nombres redécouverts ici.
+## ISO3 vague 5 — répartition verticale mesurée sur le gabarit du DA
+## (`gabarit_proportions_01.jpg`, ISO Assets), pas devinée : tête 28,4 %,
+## torse 45,9 %, jambes 25,7 % de la hauteur totale (six lignes de guidage de
+## l'image, détectées au pixel par PIL — voir ROADMAP, section « Vague 5 »),
+## contre 21,3 %/34,0 %/44,7 % avant cette vague. Le total reste 0,94 (jamais
+## touché, voir `hauteur_debout`) : `hauteur_jambe` + `hauteur_torse` +
+## `hauteur_tete` = 0,39 + 0,335 + 0,215 = 0,94, une tête plus grande et un
+## torse plus profond au prix de jambes plus courtes — le style « figurine
+## trapue » du gabarit, jamais un simple agrandissement uniforme (qui aurait
+## cassé `hauteur_debout`). **Choix retenu à mi-chemin du gabarit, pas
+## deviné mais BUTÉ par deux tests qui ont fait reculer un premier essai plus
+## proche du gabarit** (jambe à 0,30, torse à 0,38, tête à 0,26) : la
+## fourchette accroupie (0,49-0,61) est passée à 0,611 et l'empreinte du
+## corps seul à 19,5 px (contre 17,5 permis) — la vraie cause n'était pas la
+## tête plus large mais le TORSE ET LA TÊTE plus hauts, qui, une fois penchés
+## en accroupi (35°, +20° pour la tête), poussent plus loin en profondeur
+## qu'avant ; l'ancien pire cas (le bras tendu, debout) n'était plus le pire
+## une fois la tête et le torse assez hauts pour que leur inclinaison
+## l'emporte. Reculé par petits pas, mesuré à chaque pas
+## (`test_voxel_corps.gd`, jamais à l'œil), jusqu'à cette valeur : les deux
+## contraintes tiennent avec une marge réelle (0,581 et 17,4 px au pire cas,
+## voir ROADMAP). Le brief interdit de toucher aux postures déjà réglées
+## (accroupi, enjambement) : ces deux constantes n'ont pas bougé, c'est la
+## hauteur des boîtes qui a cédé du terrain à leur place.
 const SQUELETTE := {
 	"hauteur_corps": 1.0,
 	"rayon_corps": 0.4,
 
 	# Jambes : du sol jusqu'à l'entrejambe.
-	"hauteur_jambe": 0.42,
+	"hauteur_jambe": 0.39,
 	"largeur_jambe": 0.12,
 	"profondeur_jambe": 0.12,
 	"ecart_jambe": 0.08,          # demi-écart au centre
 
 	# Torse : de l'entrejambe aux épaules.
-	"y0_torse": 0.42,
-	"hauteur_torse": 0.32,
+	"y0_torse": 0.39,
+	"hauteur_torse": 0.335,
 	"largeur_torse": 0.28,
 	"profondeur_torse": 0.16,
 
-	# Tête : posée sur les épaules, sous le plafond de la tuile.
-	"y0_tete": 0.74,
-	"hauteur_tete": 0.20,
-	"cote_tete": 0.19,
+	# Tête : posée sur les épaules, sous le plafond de la tuile. `cote_tete`
+	# monte de 0,19 à 0,20 (vague 5) — le gabarit du DA a une tête relativement
+	# plus large que le corps (46 % de la largeur d'épaules mesurée, contre
+	# 41 % avant cette vague) ; le bras tenu en avant reste le point le plus
+	# éloigné du corps debout (voir `_construire_squelette`), cette tête plus
+	# large ne menace donc pas le couloir d'une tuile à elle seule — vérifié,
+	# pas supposé (voir le commentaire de `SQUELETTE` : c'est la hauteur de la
+	# tête ET du torse, penchée en accroupi, qui a dû reculer, pas sa largeur).
+	"y0_tete": 0.725,
+	"hauteur_tete": 0.215,
+	"cote_tete": 0.20,
 
 	# Bras : pivot à l'épaule, boîte suspendue vers le bas par défaut (une
 	# rotation de pose les relève, voir `voxel_corps.gd`).
-	"y_epaule": 0.72,
+	"y_epaule": 0.705,
 	"longueur_bras": 0.26,
 	"largeur_bras": 0.09,
 
 	# Arme et torche : hauteur de main, en avant du torse. La torche est à
 	# gauche (elle n'engage jamais la visée), l'arme à droite.
-	"y_main": 0.58,
+	"y_main": 0.5575,
 	"avant_main": 0.30,
 	"ecart_main": 0.13,
 
@@ -77,7 +108,7 @@ const SQUELETTE := {
 	"torche": {"largeur": 0.05, "hauteur": 0.05, "longueur": 0.16},
 
 	# Gadget : porté dans le dos, à hauteur de ceinture.
-	"y_gadget": 0.46,
+	"y_gadget": 0.43,
 	"arriere_gadget": 0.14,
 }
 

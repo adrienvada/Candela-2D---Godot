@@ -4456,6 +4456,81 @@ pour dépasser le couloir → dix échecs, code 1 → revert → vert).
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 5, branche `iso-corps`) — ajoutée le 2026-09-15 05h19 (Paris)
+
+Sixième tranche, sur brief de la session cloud « Fable 5.1 - CLOUD ISO
+UNRAILED » (mandat d'Adrien de 05:00, relayé par « Concierge ») : rapprocher
+les dix corps du gabarit trois-vues livré par ISO Assets
+(`gabarit_proportions_01.jpg`, vague 2 de ce chantier-là). Base : `ebde701`
+(fusionné entre-temps dans `iso2-vues` par ISO5 Opus, `26417a8`).
+
+**Fichiers touchés :** `voxel_catalogue.gd` (`SQUELETTE` redistribué) ;
+`voxel_corps.gd` (`pointe_arme()`, nouveau, pour ISO7 Gadgets) ; ni
+`tools/test_voxel_corps.gd` ni `tools/banc_corps.gd` n'ont eu besoin d'une
+ligne de code (déjà génériques) ; `docs/iso/planche_corps_v5.png` et les
+captures `docs/iso/captures_corps/vague5_*.png` ; `docs/ROADMAP.md` (section
+« Vague 5 », un piège) ; ce journal.
+
+**Mesuré au pixel, pas à l'œil** : six lignes de guidage détectées par seuil
+sur le canal vert de `gabarit_proportions_01.jpg` (PIL) donnent trois zones —
+tête 28,4 %, torse 45,9 %, jambes 25,7 % de la hauteur totale — contre
+21,3 %/34,0 %/44,7 % dans le catalogue d'avant cette vague. La largeur, elle,
+était déjà globalement conforme (ratio tête/épaules 41 % contre 46 % au
+gabarit, jambes déjà proportionnellement plus larges que le gabarit) : c'est
+la hauteur qui portait tout l'écart.
+
+**Le piège : un premier essai proche du gabarit a fait rougir la suite sur
+DEUX contraintes en même temps, pas une seule.** Jambes à 0,30/torse à
+0,38/tête à 0,26 (near le gabarit) → fourchette accroupie à 0,611 (plafond
+0,61) ET empreinte du corps seul à 19,1-19,8 px (plafond 17,5 px) sur les dix
+classes. La tête plus large n'y était pour rien : c'est la hauteur du torse
+et de la tête qui, penchée en accroupi (35° + 20° pour la tête, 55° au
+total), pousse plus loin en profondeur qu'avant — l'ancien pire cas du
+couloir (le bras tendu, debout, trouvé en vague 4) change de posture une fois
+la tête et le torse assez hauts. Reculé par petits pas MESURÉS (une
+estimation à la main avait été tentée avant de coder — juste dans le sens,
+fausse sur l'ampleur), jusqu'à jambes 0,39/torse 0,335/tête 0,215,
+`cote_tete` 0,19→0,20 : marge réelle des deux côtés (0,581 et 16,8-17,4 px au
+pire cas).
+
+**Les armes** : trois classes ne correspondaient pas à leur frise (Fumiste =
+« Pistolet lourd » dessiné en fusil deux mains, Allumeur = « Carabine double »
+dessiné en tube cylindrique, Spectre = « Pistolet silencieux » dessiné en
+mitraillette) — signalé à « ISO Assets Sonnet » par message, une ligne par
+classe. Les dimensions `arme` du catalogue ISO, elles, correspondaient déjà
+aux vraies armes : aucun changement nécessaire là.
+
+**Casque/capuche/masque/sac : cherchés, PAS ajoutés.** Deux hypothèses vues
+sur la planche basse résolution (sac au dos du Braconnier, masque sur la
+tête du Spectre) n'ont pas résisté à un agrandissement ciblé — artefacts de
+rendu/chevauchement de figures voisines dans la frise, pas des éléments
+réels. Le brief autorise des boîtes « si elles font la silhouette », pas «
+si elles pourraient en faire une » : rien d'inventé sur une image à faible
+résolution.
+
+**`pointe_arme()`** (nouveau, `voxel_corps.gd`) : position et direction
+globales de la bouche de l'arme, recalculées depuis le maillage réel à
+chaque pose — signalé à « ISO7 Gadgets et lumière Opus » pour son flash de
+bouche en iso.
+
+**La pâte d'« ISO7 Beauté Opus » : pas branchée.** Rien reçu à la clôture de
+cette vague — le brief dit explicitement d'attendre son message.
+
+**Sabotage vérifié réellement** (jambe/torse ramenés à leur valeur d'avant
+cette vague, tête gardée grossie → 20 échecs sur les deux contraintes →
+code 1 → revert → vert). Lot complet (369 s) vert.
+
+**Un piège de planche évité par expérience, pas retrouvé après coup** : un
+premier plan large sur les dix classes (même cadrage que la vague 4) rendait
+chaque corps large de quelques pixels, illisible — le piège documenté en
+vague 3 pour `banc_objets.gd` et déjà réappliqué en vague 4 sur
+`banc_corps.gd`, mais pas pour une PLANCHE COMPARATIVE avant/après : corrigé
+en zoomant sur deux classes (`--classe=pompe`, `--classe=spectre`, déjà
+prévu par `banc_corps.gd` depuis la vague 0) plutôt que sur la grille entière.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
