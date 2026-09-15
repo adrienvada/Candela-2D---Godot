@@ -711,7 +711,7 @@ func _effets_suivent_la_vue(main: Node, p: Node, scinde: bool) -> void:
 	var droite: Vector2 = proj.call(centre + Vector2(100, 0))
 	# H15 : la caméra GARDE LA PROFONDEUR de la vue de dessus (`size = 1080 × sin θ`) ; c'est
 	# la largeur qui s'étire de 1 / sin θ — l'iso voit 1513 px de large au lieu de 1920.
-	# ISO8 — au zoom du duel (×1,8 par défaut) : 100 px de monde font 100 × zoom px d'écran. Le zoom est lu
+	# ISO8 — au zoom du duel (×1,5 par défaut depuis ISO11) : 100 px de monde font 100 × zoom px d'écran. Le zoom est lu
 	# sur le canevas de la vue, pas supposé à 1,0 : c'est lui que la caméra iso suit.
 	var z: float = canevas.y.length()
 	_check("et garde la profondeur (%.1f px pour 100 × %.2f) en étirant la largeur de 1 / sin 52° (%.1f px)"

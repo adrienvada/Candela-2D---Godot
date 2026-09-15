@@ -25551,6 +25551,17 @@ Ses mots : « la killcam : les zooms sont intempestifs et chaotiques ».
   mise en scène qui s'allume et inonde le sol de lumière, pas la caméra : le HUD, les murs et le repère « 02 » y sont
   à la même place. Lot complet vert à 22:06 : 112 suites (dont `test_killcam_calme`), sans erreur de script, 435 s.
 
+#### L3 — la vue un peu moins zoomée : ×1,8 → ×1,5 (décision ISO8 amendée par Adrien)
+
+Ses mots : « il faudrait que la vue soit un peu moins zoomée ». **La décision ISO8 est amendée** : le zoom du duel par
+défaut passe de ×1,8 à ×1,5 (`GameSettings.ZOOM_DUEL_DEFAUT`), la même valeur EN LIGNE des deux côtés
+(`valeurs_du_duel` rend les constantes), et la killcam repart de là (`killcam_cadrage.gd` lit `zoom_duel`). Ce qui ne
+bouge pas : le décalage de visée de 0,25, la portée des torches ×0,75, la règle en ligne, et `--zoom=` qui garde la
+main en build de débogage. Un `settings.cfg` sans zoom réglé suit le nouveau défaut sans migration — c'est pour ce
+jour-là qu'ISO8 n'enregistre le zoom que réglé. `test_iso_camera` est repincé à ×1,5 (défaut, en ligne,
+`accorder_au_mode`) ; ses ×1,8 explicites (le calcul de tuile à l'écran, l'écriture d'un zoom réglé) restent des
+données de test. Lot complet vert à 22:17 : 112 suites, sans erreur de script, 434 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

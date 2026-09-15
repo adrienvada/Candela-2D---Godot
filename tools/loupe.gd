@@ -5,7 +5,7 @@ extends RefCounted
 ## 15:2x : « confronter vraiment les images en jeu aux images générées par Gemini […] sans pixels
 ## voyants ». Une capture réduite cache justement ce qu'on veut juger. Chaque loupe est donc un
 ## recadrage de 800×450 pris dans la fenêtre NATIVE (2560×1440 sur le Mac d'Adrien), SANS aucun
-## redimensionnement, au cadrage par défaut du jeu (×1,8, décalage 0,25, portée ×0,75).
+## redimensionnement, au cadrage par défaut du jeu (×1,5 depuis ISO11, décalage 0,25, portée ×0,75).
 ##
 ##     ./tools/run_photos.sh --famille=loupe --taille=2560x1440
 ##

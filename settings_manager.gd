@@ -120,7 +120,13 @@ const MODE_RENDU_DESSUS := "dessus"
 ## jamais. Le zoom choisi au réglage de débogage s'enregistre, **mais seulement
 ## s'il a été réglé** : un `settings.cfg` qui porterait 1,0 par défaut garderait l'ancien cadrage le jour où
 ## le défaut passera à 1,8 — le piège exact de `video/mode_iso` (ISO6).
-const ZOOM_DUEL_DEFAUT := 1.8
+##
+## ⚠️ **ISO11, L3 — amendé par Adrien au test 1** (2026-09-15, relayé par la session cloud : « il faudrait que la vue
+## soit un peu moins zoomée »). ×1,8 → ×1,5 : la même règle vaut en ligne (`valeurs_du_duel`), la killcam repart de
+## là (`killcam_cadrage.gd`), le décalage de 0,25 ne bouge pas, et `--zoom=` garde la main en build de débogage.
+## Un `settings.cfg` sans zoom réglé suit le nouveau défaut sans rien migrer — c'est pour ce jour-là que le zoom ne
+## s'enregistre que réglé.
+const ZOOM_DUEL_DEFAUT := 1.5
 const DECALAGE_VISEE_DEFAUT := 0.25
 const ZOOM_DUEL_MIN := 1.0
 const ZOOM_DUEL_MAX := 3.0

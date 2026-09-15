@@ -5711,5 +5711,9 @@ dans le code : le regard du duel reposait la caméra à chaque image du rejeu, d
 du ralenti, la cible se recalculait à chaque image, la première image sautait sur le milieu des fantômes. Remplacées par
 un cadrage calculé une fois sur la fenêtre de lecture et un seul mouvement lent en temps réel (`killcam_cadrage.gd`).
 Suite neuve `test_killcam_calme`. 598 images de rejeu mesurées, pas max 1,97 px, un seul sens de zoom ;
+
+**ISO11, L3 — le zoom du duel à ×1,5, 2026-09-15 au soir.** Session « Iso 1 Opus », branche `iso11-retours`. Décision
+ISO8 amendée par Adrien (« un peu moins zoomée ») : ×1,8 → ×1,5 par défaut et en ligne, killcam comprise ; décalage 0,25
+et portée ×0,75 inchangés, `--zoom=` garde la main. `test_iso_camera` repincé. Lot complet vert à 22:17 : 112 suites, sans erreur de script, 434 s.
 sur le code d'avant, saut de 210,7 px à la première image et pas de 396 px. Bande du photographe (`killcam-bande`,
 une prise toutes les ~0,37 s, pas trente images consécutives) : zoom 1,800 → 1,543 puis immobile. Lot complet vert à 22:06 : 112 suites, sans erreur de script, 435 s.

@@ -205,7 +205,8 @@ func _regard_du_duel() -> void:
 	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
 	# ISO8, étape 2 — les défauts choisis par la session cloud sur la planche des variantes (12:50).
 	if Script.valeur_par_argument(args, "--zoom=").is_empty():
-		_check("zoom du duel ×1,8 par défaut (choix de la session cloud)", is_equal_approx(reglages.zoom_duel, 1.8))
+		# ISO11, L3 — ×1,8 → ×1,5, amendé par Adrien au test 1 (« un peu moins zoomée »).
+		_check("zoom du duel ×1,5 par défaut (amendé par Adrien au test 1)", is_equal_approx(reglages.zoom_duel, 1.5))
 	if Script.valeur_par_argument(args, "--decalage=").is_empty():
 		_check("décalage de visée d'un quart de la hauteur visible par défaut", is_equal_approx(reglages.decalage_visee, 0.25))
 	_check("--zoom=1.0 rend le cadrage d'avant ISO8 pour une exécution",
@@ -223,8 +224,8 @@ func _regard_du_duel() -> void:
 		Script.decalage_applique(PackedStringArray([])),
 		Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"]))]
 	var en_ligne: Array = Script.valeurs_du_duel(true, locales[0], locales[1], locales[2])
-	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,8, décalage 0,25, portée ×0,75 — les défauts",
-		is_equal_approx(en_ligne[0], 1.8) and is_equal_approx(en_ligne[1], 0.25) and is_equal_approx(en_ligne[2], 0.75),
+	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,5, décalage 0,25, portée ×0,75 — les défauts",
+		is_equal_approx(en_ligne[0], 1.5) and is_equal_approx(en_ligne[1], 0.25) and is_equal_approx(en_ligne[2], 0.75),
 		str(en_ligne))
 	var en_local: Array = Script.valeurs_du_duel(false, locales[0], locales[1], locales[2])
 	_check("en écran scindé local, les mêmes drapeaux s'appliquent (zoom 1,0, portée 1,0)",
@@ -238,7 +239,7 @@ func _regard_du_duel() -> void:
 	var facteur_global_avant: float = WeaponData.facteur_portee
 	reglages_ligne.accorder_au_mode(true)
 	_check("accorder_au_mode(en ligne) pose aussi le facteur sur WeaponData",
-		is_equal_approx(reglages_ligne.zoom_duel, 1.8) and is_equal_approx(WeaponData.facteur_portee, 0.75))
+		is_equal_approx(reglages_ligne.zoom_duel, 1.5) and is_equal_approx(WeaponData.facteur_portee, 0.75))
 	WeaponData.facteur_portee = facteur_global_avant
 	reglages_ligne.free()
 	var pistolet := WeaponData.new()

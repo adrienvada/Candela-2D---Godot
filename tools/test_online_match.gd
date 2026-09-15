@@ -551,7 +551,7 @@ func _run_training() -> void:
 	# caméra doit être POSÉE sur le joueur à l'entrée, et le SUIVRE ensuite.
 	#
 	# ISO8 — « posée sur le joueur » veut dire désormais : là où `RegardDuel` la met pour CE joueur, avancée
-	# d'un quart de la hauteur visible vers sa visée et bornée à la carte (zoom du duel ×1,8). Comparer à la
+	# d'un quart de la hauteur visible vers sa visée et bornée à la carte (zoom du duel, ×1,5 par défaut). Comparer à la
 	# position du joueur rougissait sur une caméra juste ; le défaut du 2026-08-19 (une caméra jamais posée,
 	# puis immobile) reste attrapé : elle doit tomber sur le regard prescrit ET bouger avec le joueur.
 	var regard := func() -> Vector2:
