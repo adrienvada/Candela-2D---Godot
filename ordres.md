@@ -43,13 +43,12 @@ Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse Lis
 ## ORDRE 37 — 15/09 15:08 (relayé 15:10 ; accusé par Iso 1 à 15:10 ; inventaire reçu à 15:13)
 ## ORDRE 38 — 15/09 15:12 (relayé 15:14 ; accusé par ISO Assets à 15:14)
 ## ORDRE 39 — 15/09 15:12 (relayé 15:14 ; accusé par Iso 1 à 15:15 ; bunker et carte de soirée posés, affiches attendues à 1920×1080)
-## ORDRE 40 — 15/09 15:31 (relayé 15:33 ; accusé par Iso 1 à 15:34)
-## ORDRE 41 — 15/09 15:36 (relayé 15:37 ; retouche de la victoire dans la galerie à 15:48)
+## ORDRE 40 — 15/09 15:31 (relayé 15:33 ; accusé par Iso 1 à 15:34 ; série de loupe commitée a2c6cd2 à 16:04)
+## ORDRE 41 — 15/09 15:36 (relayé 15:37 ; retouche de la victoire dans la galerie à 15:48, commit 7e81220)
 ## ORDRE 42 — 15/09 15:36 (relayé 15:37 ; accusé par Iso 1 à 15:3x)
-## ORDRE 43 — 15/09 15:46 (relayé 15:48)
+## ORDRE 43 — 15/09 15:46 (relayé 15:48 ; la porteuse a republié v227 avec les synthèses 73 à 75 à 15:52)
+## ORDRE 44 — 15/09 15:49 (relayé 15:50)
+## ORDRE 45 — 15/09 15:49 (relayé 15:50 ; accusé par Iso 1 à 15:5x ; affiches reçues à 1920×1080)
 
-## ORDRE 44 — 15/09 15:49
-RELAIS → « ISO Assets Sonnet » (titre : « ISO Assets Sonnet ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 15:49. La retouche de fin_victoire (galerie 1789480136-80f0) est ACCEPTÉE : même estampe, même figure, mêmes dalles, le corps tombé et sa fumée gardés, la lampe torche allumée dans la main et son faisceau qui traverse l'image. C'est exactement la retouche demandée. Livre-la à Iso 1 à 1920×1080 par tools/preparer_habillage.py fin, avec fin_defaite_v2 par la même chaîne, si ce n'est pas déjà fait, et dis-le moi. Merci pour la rapidité. Accuse réception par SendMessage. Ne réponds pas à la Concierge.
-
-## ORDRE 45 — 15/09 15:49
-RELAIS → « Iso 1 Opus » (titre : « Iso 1 Opus ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 15:49. La retouche de fin_victoire d'ISO Assets est acceptée sur image (estampe et composition de l'originale gardées, lampe torche en main). Dès que les deux affiches te parviennent à 1920×1080, le pas 6 se commite comme prévu (un commit : bunker, carte, deux affiches ; test_habillage et lot verts ; captures des quatre écrans ; delta avec le hash). La loupe reste prioritaire si elle est prête avant. Accuse réception par SendMessage. Ne réponds pas à la Concierge.
+## ORDRE 46 — 15/09 16:06
+RELAIS → « ISO Assets Sonnet » (titre : « ISO Assets Sonnet ») : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 16:06. Iso 1 a commité la série de loupe (a2c6cd2, 16:04) : dix-sept PNG de 800×450 dans docs/iso/loupe/ de son worktree (prompt-iso2-3e1d2e), plus docs/iso/planche_loupe.jpg et docs/iso/loupe/fluidite_bande.jpg. Publie-les dans la galerie sous img/loupe/, et pour les PNG OCTET POUR OCTET : pas de redimensionnement, pas de conversion en JPEG, pas de recompression — une loupe recompressée ment sur les pixels, et c'est sur ces pixels que je juge (mandat d'Adrien : « sans pixels voyants »). La planche et la bande peuvent rester en JPEG. Une section « ISO10 — la loupe » en tête de galerie, chaque loupe avec son nom de fichier et, à côté, la planche du DA qu'Iso 1 lui a associée (face_mur_01, sol_01, frise_1_a_5, E1 promesse 02, E3 flash, fusee_posee_01 + fumee_03, icône gadget_torche_fantome du 10/09). Dès que c'est publié, un delta à « Fable 5.1 - CLOUD ISO UNRAILED » avec la liste des chemins publiés. Si Iso 1 ne t'a pas encore envoyé les fichiers, demande-les lui par SendMessage (« Iso 1 Opus »). Accuse réception par SendMessage. Ne réponds pas à la Concierge.
