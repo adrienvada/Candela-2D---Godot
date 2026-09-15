@@ -5087,3 +5087,9 @@ chiffrées retirés de sa plage d'`ui.gd`, matière sur ses panneaux et cartouch
 Pour garder un commit par étape sans worktree de plus, les étapes suivantes attendaient dans un patch
 binaire pendant que le lot tournait sur l'état exact commité ; le patch se réapplique ensuite fichier par
 fichier, en ne retenant que les chemins de l'étape.
+
+**Étape 5 (même session, même branche) :** la killcam. Le voile vire au papier par le crochet posé à
+l'étape 2, sous le curseur CONFORT ; deux bandes de format cinéma montent sous le HUD et suivent la
+visibilité du cadre de killcam ; le mot KILLCAM quitte la frange bleu/ambre d'un moniteur vidéo pour le
+mauvais repérage d'un tirage (encre, carmin) et prend le pochoir. L'estampe de kill garde sa forme jugée
+par Adrien et change de matière : pochoir, cadre d'encre projetée carmin fabriqué par script.

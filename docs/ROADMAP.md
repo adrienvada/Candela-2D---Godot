@@ -23902,6 +23902,32 @@ tout passe, 403 s**. Le commit s'est fait sur ce second lot, jamais sur le premi
   `func _build_status_bar`), et un contrôle qui échoue si les marqueurs disparaissent.
 
 
+#### Étape 5 — la killcam ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **Le voile** reçoit la pâte par le crochet de l'étape 2 : `ui.gd` pousse `trait_couleur` (le
+  papier) et `virage` (le papier, à `Charte.PATE_VIRAGE_KILLCAM` = 0,35). Sous le curseur CONFORT
+  « Grain de la killcam » et sous `FORCE_DESSIN` comme tout le dessin : à zéro, l'image nue. Le
+  matériau est partagé avec le calque plein écran de la vue iso (ISO5) : les deux vues suivent.
+- **Les bandes de format cinéma** des planches `killcam_tireur_01` / `killcam_victime_01` : deux
+  aplats d'encre de 7,5 % de hauteur, empâtés, montés SOUS le HUD ; leur visibilité suit le cadre
+  de killcam (`visibility_changed`) plutôt que chaque site qui ouvre ou ferme la killcam.
+- **Le mot KILLCAM** : ses deux ombres étaient bleue et ambre — la frange d'un moniteur vidéo, un
+  vocabulaire que la killcam a quitté le 2026-09-11. Elles deviennent l'encre et le carmin d'un
+  tirage mal repéré ; le tremblement, animation jugée, ne bouge pas ; le mot prend le pochoir.
+- **L'estampe de kill** garde sa FORME — « KILL — mm:ss », sa place au centre, son inclinaison, son
+  rebond, jugés par Adrien — et change de MATIÈRE : le grain du pochoir
+  (`MenuWidgets.materiau_pochoir()`, `Charte.PATE_POCHOIR_FORCE` = 0,28) et un cadre d'encre projetée
+  carmin (`assets/ui/matiere/tampon_encre.png`, fabriqué par `tools/fabrique_tampon_encre.py`,
+  graine fixe), posé ENFANT du libellé et dessiné derrière lui : il hérite de l'inclinaison, de
+  l'échelle et du fondu sans une ligne d'animation de plus.
+- Le timecode, le cadre de killcam, le cadre photo et les légendes passent au papier et à la terre
+  d'ombre.
+
+**Décision.** Le pochoir est la seule matière qui passe SUR des lettres : un tampon ne prend
+jamais uniformément. Partout ailleurs, la pâte évite le texte (`empater()`).
+
+
 ## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
 
 **Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le

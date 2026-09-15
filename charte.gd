@@ -265,6 +265,15 @@ const PATE_GRAIN_ECHELLE := 256.0
 ## Amplitude du grain, ajoutée et non multipliée : sur l'encre, une matière
 ## multipliée ne se verrait pas (0,075 × 1,16 reste noir).
 const PATE_GRAIN_FORCE := 0.10
+## Le POCHOIR : la même pâte, appuyée, pour ce qui est TAMPONNÉ — un mot
+## d'enseigne posé à l'encre (le tampon de kill). Là, le grain passe sur les
+## lettres, et c'est voulu : un tampon ne prend jamais uniformément.
+const PATE_POCHOIR_FORCE := 0.28
+## Le virage de la killcam : la planche de reconstitution prend la teinte du papier
+## (`killcam_overlay.gdshader`, uniform `virage`). 0,35 — sous le curseur CONFORT
+## « Grain de la killcam » et sous `FORCE_DESSIN` comme tout le dessin : à fond,
+## il reste un ton, jamais un filtre sépia.
+const PATE_VIRAGE_KILLCAM := 0.35
 
 # =============================================================================
 # TYPOGRAPHIE — une échelle de six, et plus une taille arbitraire

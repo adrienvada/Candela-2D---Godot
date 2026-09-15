@@ -1167,6 +1167,11 @@ var _killcam_derniere_image: int = -1
 var killcam_container: Control
 ## DA4.5 — le liseré de moniteur, en 9-slice par-dessus la killcam.
 var killcam_cadre: Control
+## Habillage iso (2026-09-15) : les bandes de format cinéma de la killcam.
+var killcam_bandes: Control
+## La hauteur d'une bande, en part de la hauteur de l'écran. 7,5 % : la proportion
+## des bandes des planches `killcam_tireur_01` et `killcam_victime_01`.
+const KILLCAM_BANDE := 0.075
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
 var killcam_timecode: Label
@@ -1948,7 +1953,7 @@ func _update_killcam(delta: float) -> void:
 		killcam_timecode.add_theme_color_override("font_color", Color(Charte.ROUGE, 0.8))
 	else:
 		killcam_timecode.text = "REC  \n%02d:%02d:%02d" % [mins, sec, frames]
-		killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
+		killcam_timecode.add_theme_color_override("font_color", Color(Charte.PATE_TEXTE, 0.8))
 
 	if killcam_overlay.material:
 		killcam_overlay.material.set_shader_parameter("time", ms / 1000.0)
@@ -3561,6 +3566,16 @@ func _build_killcam() -> void:
 		# shader : en Godot 4 c'est l'échantillonneur qui décide, et l'import de la
 		# texture n'a pas de réglage de répétition à donner. Rien à vérifier ici.
 		material.set_shader_parameter("grain", load(planche))
+	# Habillage iso (2026-09-15) : la planche de reconstitution prend la pâte — son
+	# trait passe au papier, son dessin vire vers lui. Le crochet est dans le shader
+	# (`trait_couleur`, `virage`, sans `source_color`) ; le matériau est PARTAGÉ avec
+	# le calque plein écran de la vue iso (ISO5), donc les deux vues suivent.
+	# `tools/test_habillage.gd` exige les deux déclarations : `set_shader_parameter`
+	# sur un nom absent ne dit rien.
+	material.set_shader_parameter("trait_couleur",
+		Vector3(Charte.PAPIER.r, Charte.PAPIER.g, Charte.PAPIER.b))
+	material.set_shader_parameter("virage", Vector4(Charte.PAPIER.r, Charte.PAPIER.g,
+		Charte.PAPIER.b, Charte.PATE_VIRAGE_KILLCAM))
 	killcam_overlay.material = material
 	# killcam_overlay n'est PAS ajouté ici : GameState le reparente dans l'arène.
 
@@ -3571,12 +3586,18 @@ func _build_killcam() -> void:
 	killcam_container.hide()
 	add_child(killcam_container)
 
-	killcam_label_shadow1 = _make_killcam_label(Color(Charte.BLEU, 0.5))
+	# Habillage iso (2026-09-15) : les deux ombres étaient bleue et ambre — la
+	# frange d'un moniteur vidéo, un vocabulaire que la killcam a quitté le
+	# 2026-09-11 (planche de reconstitution). Elles deviennent l'ENCRE et le CARMIN
+	# d'un tirage mal repéré : le même tremblement, dans la langue de l'imprimé. Le
+	# mot, lui, prend le grain du pochoir.
+	killcam_label_shadow1 = _make_killcam_label(Color(Charte.NOIR, 0.8))
 	killcam_container.add_child(killcam_label_shadow1)
-	killcam_label_shadow2 = _make_killcam_label(Color(Charte.AMBRE, 0.5))
+	killcam_label_shadow2 = _make_killcam_label(Color(Charte.CARMIN, 0.6))
 	killcam_container.add_child(killcam_label_shadow2)
 	killcam_label = _make_killcam_label(Charte.ROUGE)
 	killcam_container.add_child(killcam_label)
+	MenuWidgets.poser_pochoir(killcam_label)
 
 	killcam_timecode = Label.new()
 	# DA4.2 — l'appareil. Le timecode défile image par image ; il est en outre
@@ -3584,7 +3605,7 @@ func _build_killcam() -> void:
 	# au lieu de le laisser aligné. C'est le seul compteur du jeu où le
 	# tremblement se verrait comme un défaut de marge plutôt que de chiffre.
 	Charte.appareil(killcam_timecode, T_TITRE)
-	killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
+	killcam_timecode.add_theme_color_override("font_color", Color(Charte.PATE_TEXTE, 0.8))
 	killcam_timecode.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	killcam_timecode.offset_right = -40
 	killcam_timecode.offset_top = 40
@@ -3608,10 +3629,42 @@ func _build_killcam() -> void:
 	killcam_cadre.name = "CadreKillcam"
 	# `HALOGENE` atténué : un cadre se devine, il ne se lit pas — la killcam
 	# reste la chose qu'on regarde.
-	killcam_cadre.teinte = Color(Charte.HALOGENE, 0.45)
+	killcam_cadre.teinte = Color(Charte.PATE_TEXTE, 0.45)
 	killcam_cadre.epaisseur = 1.5
 	killcam_cadre.hide()
 	add_child(killcam_cadre)
+
+	# Habillage iso (2026-09-15) — les bandes de format cinéma des planches
+	# `killcam_tireur_01` et `killcam_victime_01` : deux aplats d'encre, en haut et
+	# en bas, qui disent « ceci est un rejeu » avant qu'on lise le mot.
+	#
+	# ⚠️ **Montées SOUS le HUD** (premier enfant du calque) : le HUD de match reste
+	# lisible par-dessus, et rien de ce qu'il affiche n'est masqué. Elles ne mordent
+	# que sur les bords du REJEU, qui n'est plus une information de duel.
+	#
+	# ⚠️ **Leur visibilité suit le cadre de killcam** plutôt que d'être posée à
+	# chaque site qui ouvre ou ferme la killcam : un site oublié laisserait des
+	# bandes sur le match suivant, sans une erreur.
+	killcam_bandes = Control.new()
+	killcam_bandes.name = "BandesKillcam"
+	killcam_bandes.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	killcam_bandes.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	killcam_bandes.hide()
+	for haut in [true, false]:
+		var bande := ColorRect.new()
+		bande.name = "BandeHaute" if haut else "BandeBasse"
+		bande.color = Charte.ENCRE
+		bande.anchor_left = 0.0
+		bande.anchor_right = 1.0
+		bande.anchor_top = 0.0 if haut else 1.0 - KILLCAM_BANDE
+		bande.anchor_bottom = KILLCAM_BANDE if haut else 1.0
+		bande.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		MenuWidgets.poser_pate(bande)
+		killcam_bandes.add_child(bande)
+	add_child(killcam_bandes)
+	move_child(killcam_bandes, 0)
+	killcam_cadre.visibility_changed.connect(func() -> void:
+		killcam_bandes.visible = killcam_cadre.visible)
 
 func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()

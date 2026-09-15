@@ -52,6 +52,26 @@ static func poser_pate(noeud: CanvasItem) -> void:
 		noeud.material = materiau_pate()
 
 
+static var _pochoir: ShaderMaterial = null
+
+
+## Le matériau du POCHOIR : la pâte, appuyée (`Charte.PATE_POCHOIR_FORCE`), pour ce
+## qui est tamponné. Partagé lui aussi. Posé sur un libellé, le grain passe sur les
+## lettres — voulu ici, évité partout ailleurs (`empater()` saute les boutons à
+## texte propre).
+static func materiau_pochoir() -> ShaderMaterial:
+	if _pochoir != null:
+		return _pochoir
+	_pochoir = materiau_pate().duplicate() as ShaderMaterial
+	_pochoir.set_shader_parameter("force", Charte.PATE_POCHOIR_FORCE)
+	return _pochoir
+
+
+static func poser_pochoir(noeud: CanvasItem) -> void:
+	if noeud != null:
+		noeud.material = materiau_pochoir()
+
+
 ## Les plaques qui prennent la pâte : l'aplat de leur style de repos.
 const _STYLES_DE_PLAQUE := ["panel", "normal"]
 

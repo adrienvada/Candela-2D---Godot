@@ -147,6 +147,8 @@ func _run() -> void:
 	_test_les_ressources_de_l_habillage()
 	_test_les_portraits_de_classe(main)
 	_test_le_hud_parle_la_pate()
+	_test_la_killcam_porte_la_pate()
+	_test_l_estampe_garde_sa_forme_et_change_de_matiere()
 
 	main.queue_free()
 	if _ko == 0:
@@ -571,6 +573,8 @@ const FICHIERS_PATE := [
 	"menu_comic_panel.gd", "menu_fiche_classe.gd", "map_gallery.gd",
 	"map_editor_hud.gd", "menu_icones.gd", "menu_apercu.gd", "menu_hatch_rect.gd",
 	"menu_rivets_overlay.gd",
+	# Étape 5 : la killcam.
+	"cadre_photo.gd", "estampe_de_kill.gd",
 ]
 
 
@@ -645,6 +649,7 @@ func _test_la_preparation_recopie_la_charte() -> void:
 const RESSOURCES_HABILLAGE := {
 	"res://assets/ui/matiere/pate_grain.png": Vector2i(256, 256),
 	"res://assets/ui/fond_hub_iso.jpg": Vector2i(1920, 1071),
+	"res://assets/ui/matiere/tampon_encre.png": Vector2i(1024, 340),
 }
 
 
@@ -761,3 +766,62 @@ func _test_le_hud_parle_la_pate() -> void:
 		cartouche = cartouche.get_parent()
 	_check(cartouche != null and (cartouche as CanvasItem).material == pate,
 		"la cartouche du chrono ne porte pas la pâte")
+
+
+## La killcam — étape 5 : le voile reçoit la pâte par son crochet, les bandes de
+## format cinéma existent et restent cachées hors killcam, et le mot a quitté la
+## frange bleu/ambre d'un moniteur vidéo.
+func _test_la_killcam_porte_la_pate() -> void:
+	var voile = _ui.get("killcam_overlay")
+	_check(voile != null and voile.material != null, "le voile de killcam n'a pas de matériau")
+	if voile != null and voile.material != null:
+		var virage = voile.material.get_shader_parameter("virage")
+		_check(virage is Vector4 and absf((virage as Vector4).w - C.PATE_VIRAGE_KILLCAM) < 0.001,
+			"le voile de killcam ne reçoit pas le virage de la charte : %s" % str(virage))
+		var trait_c = voile.material.get_shader_parameter("trait_couleur")
+		_check(trait_c is Vector3 and absf((trait_c as Vector3).x - C.PAPIER.r) < 0.001,
+			"le trait du voile n'est pas passé au papier : %s" % str(trait_c))
+	var bandes = _ui.get("killcam_bandes")
+	_check(bandes != null and (bandes as Control).get_child_count() == 2,
+		"les bandes de format cinéma de la killcam n'existent pas")
+	if bandes != null:
+		_check(not (bandes as Control).visible, "les bandes de killcam sont visibles hors killcam")
+		# ⚠️ **« Sous le HUD », pas « premier enfant »** : `_build_menu()` passe après
+		# `_build_killcam()` et place la torche du menu en tête du calque, si bien que
+		# les bandes n'y sont plus premières. La propriété qui compte est leur rang
+		# par rapport au HUD — le premier jet de ce contrôle exigeait l'index 0 et
+		# aurait échoué sans défaut.
+		var hud = _ui.get("match_hud")
+		_check(hud != null and (bandes as Node).get_index() < (hud as Node).get_index(),
+			"les bandes de killcam passent PAR-DESSUS le HUD de match")
+	for champ: String in ["killcam_label_shadow1", "killcam_label_shadow2"]:
+		var l = _ui.get(champ)
+		if l != null:
+			var c: Color = (l as Label).get_theme_color("font_color")
+			_check(not c.is_equal_approx(Color(C.BLEU, 0.5)) and not c.is_equal_approx(Color(C.AMBRE, 0.5)),
+				"ui.%s porte encore la frange d'un moniteur vidéo : %s" % [champ, c])
+	var mot = _ui.get("killcam_label")
+	_check(mot != null and (mot as CanvasItem).material == MenuWidgets.materiau_pochoir(),
+		"le mot KILLCAM ne porte pas le pochoir")
+
+
+## L'estampe de kill — étape 5 : sa FORME est celle qu'Adrien a jugée (le texte, la
+## place au centre, l'inclinaison), sa MATIÈRE change (pochoir, cadre d'encre).
+func _test_l_estampe_garde_sa_forme_et_change_de_matiere() -> void:
+	var estampe := EstampeDeKill.poser(root, {"temps": 72.0})
+	var tampon: Label = null
+	for n in estampe.find_children("*", "Label", true, false):
+		if (n as Label).text.begins_with("KILL"):
+			tampon = n
+	_check(tampon != null, "l'estampe n'a plus son tampon « KILL — mm:ss »")
+	if tampon != null:
+		_check(tampon.text == "KILL — 01:12", "le texte du tampon a changé : %s" % tampon.text)
+		_check(is_equal_approx(tampon.rotation, EstampeDeKill.INCLINAISON),
+			"l'inclinaison du tampon a changé")
+		_check(tampon.material == MenuWidgets.materiau_pochoir(), "le tampon ne porte pas le pochoir")
+		var cadre := tampon.get_node_or_null("CadreDeTampon") as TextureRect
+		_check(cadre != null and cadre.texture != null, "le tampon n'a pas son cadre d'encre")
+		if cadre != null:
+			_check(cadre.show_behind_parent, "le cadre du tampon est dessiné PAR-DESSUS le mot")
+			_check(cadre.self_modulate.is_equal_approx(C.CARMIN), "le cadre du tampon n'est pas carmin")
+	estampe.free()
