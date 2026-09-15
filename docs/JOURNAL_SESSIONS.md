@@ -5686,3 +5686,11 @@ avoir corrigé le filtre de la ligne de tir. Frange nulle au repos (LED, corps d
 (+1,−3) ; Braconnier et leurre toujours identiques ; fluidité 12,4 à 17,4 ms, contre 8 à 11 ms aux passages précédents
 sans changement du rendu — la charge du poste a varié.
 Lot complet vert à 19:27 : 111 suites, sans erreur de script, 414 s.
+
+**ISO10, lot 2, 2026-09-15 après le verdict du tour 2 (19:35).** Session « Iso 1 Opus ». Verdict : les sept défauts du
+tour 1 réglés. 2a (la braise de la fusée) : quatre passages de banc sans réponse fiable — le rayon de la fumée vaut 200 px
+et non 440 ; les volutes de la pose viennent de la suie ; à 0,02 les anneaux reviennent ; à la braise, l'aplat change
+d'une prise à l'autre à rayon égal, cause non trouvée (ni suie, ni scintillement, ni graine) ; la mesure automatique des
+anneaux ne sépare rien. Présenté tel quel à la session cloud, qui garde 0,18 et en fait un point ouvert du test final.
+Les chevrons de la balle en vol sont le viseur. La rampe est recadrée sur le corps de J1, prise avec la planche finale.
+Lot complet vert à 20:03 : 111 suites, sans erreur de script, 415 s.

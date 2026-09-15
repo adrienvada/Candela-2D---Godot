@@ -25411,6 +25411,53 @@ Braconnier, le sang, la face du pilier avec une tache à son pied à côté de `
 - Les PNG sont recopiés tels quels dans `docs/iso/loupe/` et transmis à ISO Assets par leurs chemins.
 - **Lot complet** (`./tools/run_suites.sh`, 19:27) : vert, 111 suites, sans erreur de script, 414 s.
 
+#### ISO10, lot 2 (verdict du tour 2, session cloud 19:35) — clos sans code de jeu
+
+Verdict du tour 2, pris sur les 28 PNG de la galerie : les sept défauts du tour 1 réglés sur image ; le sang passe. Un
+lot 2 court, puis « plus rien à voir » (session cloud, 19:53).
+- **2a, la fusée en braise — rayon de moyenne GARDÉ à 0,18, aucun code.** Demande : la braise « aplat orange », ramener
+  les volutes en baissant `lissage_rayon` vers 0,04. Mesuré au banc (`--plan=loupe-fusee-lissage`, et
+  `loupe-fusee-lissage-sans-suie`, outil seul) :
+  - le rayon de la fumée est `FuseeModele.RAYON_FUMEE` = 200 px (156 à 200 selon la couche), pas 440 : 0,18 ≈ 36 px,
+    0,09 ≈ 18 px, 0,04 ≈ 8 px (la période même des anneaux), 0,02 ≈ 4 px ;
+  - sur `loupe-fusee-suie` juste posée, lobes et volutes viennent du nuage de SUIE posé dans le halo ; la fusée seule
+    n'y montre qu'une nappe rouge ;
+  - à 0,02, des arcs parallèles répétés reviennent à la pose, comme sur le témoin du tour 1 ;
+  - ⚠️ **à la braise, l'aplat ne suit pas le rayon** : même fusée, 0,18 / 0,04 / 0,03 plats et 0,02 vif ; fusée neuve
+    par rayon, avec ou sans suie, 0,18 vif, 0,09 et 0,04 plats, 0,02 vif. Écartés par vérification : la suie qui se
+    dissipe, un scintillement (âge figé, `_physics_process` coupé, aucun shader de la fusée ne lit TIME), une graine
+    différente (0 pour toutes). Cause non trouvée ;
+  - ⚠️ la mesure automatique des anneaux (oscillations de 6 à 8 px, même sur l'écart à une prise sans volumes) ne
+    séparait pas le témoin du tour 1 des images propres : le jugement se fait à l'œil, au ×4.
+  Décision de la session cloud : option (a) — son jugement de la braise tenait sur une seule image, ce n'est pas un défaut
+  prouvé de la correction de 1c.
+- **Chevrons de `loupe-balle-vol`** : le viseur d'Adrien (variante C du 2025-08-25, quatre chevrons vers l'intérieur,
+  110 px devant le joueur), pas des marques du trait de balle. Clos.
+- **2b, outil seul** : `loupe-rampe` recadrée sur le corps éclairé de J1 (le cadrage des LED, mur dans le noir, n'a plus
+  d'arête sous le voile dès 0,2) ; la bande se prend avec la planche finale. 0,12 et 0,35 restent des réglages.
+- **Lot complet** (`./tools/run_suites.sh`, 20:03) : vert, 111 suites, sans erreur de script, 415 s.
+
+#### ISO10 — ce qui reste au test final (jugé par Adrien)
+
+La session cloud a dit « plus rien à voir » sur le code d'ISO10 (19:53). Ce qui reste n'est pas un défaut prouvé : ce sont
+des réglages à juger en jeu, des leviers non posés et des questions ouvertes.
+- **POINT OUVERT — la braise de la fusée** : « la braise de la fusée varie d'une prise à l'autre à rayon égal, cause non
+  trouvée ; si Adrien la trouve plate en jeu, le levier est un lissage qui suit l'âge de la fumée (large à la pose, petit
+  à la braise), non mesuré » (libellé de la session cloud). `volume_iso.gdshader` reçoit déjà `age`.
+- **Les valeurs de la rampe du voile** (1a) : `aberration_debut` 0,12 et `aberration_pleine` 0,35 sont les valeurs de la
+  session cloud, jamais réglées à l'œil au banc ; la bande de rampe de la planche finale les montre sur le corps de J1.
+- **Le sang et les dalles dessinés à 2×** (1b) : le second levier contre les texels visibles à ×4, deux fois plus de
+  mémoire pour les dalles — non posé, le sang passe au tour 2.
+- **La lightmap en pleine résolution** : question ouverte, 0,75 texel par pixel à ×1,8 ; le verdict du tour 2 a jugé le
+  bord du cône propre à cette résolution.
+- **Q17, pour Adrien** : la visée à la souris est couplée au regard lissé de la caméra, dont le lissage dépend de la
+  cadence d'images (le test de simulation désarme le décalage pendant sa comparaison).
+- **Ce qu'Adrien peut toucher au test final** : `--zoom=X` et `--decalage=X` (le cadrage du duel) et `--torche=X` (le
+  facteur de portée des torches ; `--torche=1.0` rend les portées d'avant ISO8) — les trois en build de DÉBOGAGE
+  seulement, pour une exécution, sans jamais s'écrire (`settings_manager.gd`) ; `aberration_debut` / `aberration_pleine`
+  dans `voile_eblouissement.gdshaderinc` (le banc du voile les liste) ; et les curseurs de l'écran des réglages
+  (éblouissement, aberration). Rien ne touche la simulation, le protocole, les hitbox ni le noir absolu.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

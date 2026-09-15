@@ -24,6 +24,8 @@ extends RefCounted
 ## Le panneau F3 affiche des images par seconde, pas de temps d'image ; ce sont ces relevés-ci qui les donnent.
 
 const CARTE_DEFAUT := "res://assets/maps/map_001_le_cloitre.json"
+## Le shader des couches de fumée des volumes iso : le banc du rayon de moyenne (lot 2, 2a) y reconnaît ses matériaux.
+const SHADER_VOLUME_ISO := preload("res://volume_iso.gdshader")
 const TAILLE_LOUPE := Vector2i(800, 450)
 const FENETRE_NATIVE := Vector2i(2560, 1440)
 ## Hauteurs visées, en pixels de monde (la caméra iso compte la hauteur dans l'unité du sol). Le pied d'une
@@ -64,6 +66,10 @@ static func catalogue() -> Array[Dictionary]:
 			"La traçante à l'image qui suit le tir, puis l'éclat et les étincelles sur le mur."],
 		["loupe-fusee-suie", "Une fusée posée, un nuage de suie dedans",
 			"Le halo de la fusée au sol et la fumée qui prend sa lumière."],
+		["loupe-fusee-lissage", "Le banc du rayon de moyenne de la fumée : 0,18 / 0,08 / 0,04 / 0,02",
+			"ISO10, lot 2, 2a : la même fusée juste posée puis à la braise, à quatre rayons de moyenne des couches de fumée — les anneaux (6 à 8 px) doivent rester partis, les volutes (40 à 80 px) revenir."],
+		["loupe-fusee-lissage-sans-suie", "Le même banc du rayon de moyenne, la fusée seule, sans cartouche de suie",
+			"ISO10, lot 2, 2a : l'aplat orange de la braise vient-il du lissage ou du nuage de suie posé dans le halo ?"],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
 			"Le sprite du gadget et son faisceau, dans le noir."],
 		["loupe-torche-braconnier", "La torche fantôme à côté d'un vrai Braconnier",
@@ -179,6 +185,20 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-fusee-suie : aucun sol dégagé à l'écran hors de la torche")
 		else:
 			fusee = await _loupe_fusee_suie(plans, lieux[0])
+	if p._demande(plans, "loupe-fusee-lissage"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-lissage : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			var banc: Node = await _loupe_fusee_lissage(plans, lieux[0])
+			if banc != null and is_instance_valid(banc):
+				banc.queue_free()
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-fusee-lissage-sans-suie"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-lissage-sans-suie : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_lissage(plans, lieux[0], "loupe-fusee-lissage-sans-suie", false)
+			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
 		for l in lieux:
@@ -434,22 +454,18 @@ func _dernier_eclat() -> Node2D:
 ## ⚠️ Premier montage : le shader du voile plein réécrit juste avant le rendu (`frame_pre_draw`), à côté de l'interface.
 ## Le voile y peignait sans l'écran derrière lui — presque noir à 0,12, un dégradé sans une arête à 0,35 — quand un vrai
 ## éblouissement à 0,85 laisse lire le décor sous la frange.
-func _loupe_rampe(plans: Array[Dictionary], portee: float, demi: float) -> void:
+## Lot 2, 2b (session cloud, 19:35) — le cadrage ÉCLAIRÉ de `loupe-corps-j1`, pas celui des LED : au tour 2, le mur des
+## LED, dans le noir (luminance 10,6/255), n'avait plus une arête sous le voile dès 0,2, et l'aberration ne s'y jugeait
+## pas. Le corps de J1 sous sa torche garde des arêtes où la lire.
+func _loupe_rampe(plans: Array[Dictionary], _portee: float, _demi: float) -> void:
 	var m: Node = p._main
-	var mur := _mur_dans_le_noir(portee, demi)
 	var curseur := maxf(float(EffectPolicy.curseur("eblouissement")), 0.001)
-	# Le bandeau tenu au sommet de sa respiration, comme `loupe-led` : sans lui (premier passage du tour 2), la rampe
-	# tombait dans le creux et ne se comparait plus à la loupe des LED.
-	var arene: Node = m.arena
-	var led: Node = arene.get_node_or_null(MurLed.NOM) if arene != null else null
 	for niveau in [0.12, 0.2, 0.35, 0.6, 1.0]:
 		var tenir := func() -> void:
 			_tenir_scene()
-			if led != null and is_instance_valid(led):
-				led.regler(1.0)
 			m.p1.dazzle_amount = minf(niveau / curseur, 1.0)
 		await _prise(plans, "loupe-rampe", [["%03d" % int(round(niveau * 100.0)), func(img: Image) -> Vector2:
-			return _pixel(img, mur, HAUTEUR_PIED_DE_FACE)]], false, 0.8, tenir)
+			return _pixel(img, _j1, HAUTEUR_CORPS)]], false, 0.8, tenir)
 	# L'éblouissement forcé redescend de lui-même : les loupes suivantes le reprennent au repos (0,06).
 	for n in 90:
 		_tenir_scene()
@@ -566,6 +582,88 @@ func _loupe_fusee_suie(plans: Array[Dictionary], lieu: Vector2) -> Node:
 	await _prise(plans, "loupe-fusee-suie", [["braise", func(img: Image) -> Vector2:
 		return _pixel(img, lieu, 8.0)]], false, 0.8)
 	return f
+
+
+## ISO10, lot 2, 2a — le banc du rayon de moyenne des couches de fumée (`volume_iso.gdshader`, `lissage_rayon`, défaut
+## 0,18 posé en 1c). La même fusée et la même suie que `loupe-fusee-suie`, prises juste posées (âge 1 s) puis à la braise
+## (8 s), pour chaque rayon. Le rayon est posé sur les matériaux de fumée À CHAQUE IMAGE de la prise (une couche neuve
+## naît avec le défaut du shader) ; rien du jeu ne change. Verdict du tour 2 : à 0,18 (≈ 80 px) la braise est un aplat
+## qui efface les volutes (40 à 80 px) ; les anneaux avaient une période de 6 à 8 px.
+## `id` : le plan qui nomme les prises ; `avec_suie` faux pose la fusée seule (troisième passage : d'une scène neuve à
+## l'autre, la braise passait de marbrée à plate sans suivre le rayon — la variante sans suie dit si l'aplat vient du nuage
+## de suie posé dans le halo plutôt que du lissage).
+func _loupe_fusee_lissage(plans: Array[Dictionary], lieu: Vector2, id := "loupe-fusee-lissage", avec_suie := true) -> Node:
+	var m: Node = p._main
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ loupe-fusee-lissage : volumes iso introuvables")
+		return null
+	var centre := func(img: Image) -> Vector2: return _pixel(img, lieu, 8.0)
+	# ⚠️ UNE SCÈNE NEUVE PAR RAYON — fusée et suie posées, prises, puis rangées. Les deux premiers passages gardaient la
+	# même fusée et la même suie plus de dix secondes : la dernière prise (0,02) sortait nettement plus claire, avec ses
+	# volutes, et 0,18 / 0,04 / 0,03 donnaient le même aplat. L'effet suivait l'ordre des prises (la suie se dissipe), pas
+	# le lissage, qui ne passait que de 5 à 4 px entre 0,03 et 0,02.
+	# Rayons : la fumée monte à `FuseeModele.RAYON_FUMEE` (200 px, 156 à 200 selon la couche). 0,18 ≈ 36 px (le jeu
+	# depuis 1c) ; 0,09 ≈ 18 px (le rayon que vise la session cloud, qui comptait sur 440 px) ; 0,04 ≈ 8 px, la période
+	# même des anneaux ; 0,02 ≈ 4 px.
+	var premiere := true
+	for rayon in [0.18, 0.09, 0.04, 0.02]:
+		var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+		f.set("depart", lieu)
+		f.set("direction", Vector2.DOWN)
+		f.set("joueurs", [m.p1, m.p2])
+		m.bullet_container.add_child(f)
+		await p.get_tree().process_frame
+		f.set_physics_process(false)
+		f.global_position = lieu
+		if avec_suie:
+			m._do_spawn_gadget(1, lieu + Vector2(20.0, 10.0), 0.0, "cartouche_suie", 9502)
+		print("  · %s : rayon %.2f, fusée%s neuve en %s" % [id, rayon, " et suie" if avec_suie else " seule", str(lieu)])
+		# L'âge FIGÉ à chaque image de l'attente, pas seulement posé avant elle. Quatrième passage (sans suie) : à la braise,
+		# 0,18 et 0,02 sortaient avec un cœur vif, 0,09 et 0,04 en aplat, le même motif qu'avec la suie — ni la suie ni le
+		# lissage, mais l'instant de la prise dans une braise qui vit pendant les 0,8 s d'attente.
+		var age_fige := [1.0]
+		var tenir := func() -> void:
+			_tenir_scene()
+			_poser_lissage(volumes, rayon)
+			if is_instance_valid(f):
+				f.call("forcer_age", age_fige[0])
+		var nom := "%03d" % int(round(rayon * 100.0))
+		f.call("forcer_age", 1.0)
+		if premiere:
+			# La référence sans volumes, juste posée, sur la première scène : le décor que la fumée recouvre.
+			volumes.set("images_actives", false)
+			await _prise(plans, id, [["ref-posee", centre]], false, 1.2, tenir)
+			volumes.set("images_actives", true)
+		await _prise(plans, id, [[nom + "-posee", centre]], false, 1.2, tenir)
+		age_fige[0] = 8.0
+		f.call("forcer_age", 8.0)
+		await _prise(plans, id, [[nom + "-braise", centre]], false, 0.8, tenir)
+		if premiere:
+			volumes.set("images_actives", false)
+			await _prise(plans, id, [["ref-braise", centre]], false, 0.4, tenir)
+			volumes.set("images_actives", true)
+			premiere = false
+		f.queue_free()
+		await p._ranger_les_gadgets()
+		for n in 30:
+			_tenir_scene()
+			await p.get_tree().process_frame
+	_poser_lissage(volumes, 0.18)
+	return null
+
+
+## Le rayon de moyenne sur toutes les couches de fumée suivies par les volumes iso.
+func _poser_lissage(volumes: Object, valeur: float) -> void:
+	var suivis = volumes.get("_suivis")
+	if not (suivis is Dictionary):
+		return
+	for e in (suivis as Dictionary).values():
+		for mat in e["mats"]:
+			if mat is ShaderMaterial and (mat as ShaderMaterial).shader == SHADER_VOLUME_ISO:
+				(mat as ShaderMaterial).set_shader_parameter("lissage_rayon", valeur)
 
 
 ## La torche fantôme posée par J1, équipé le temps de la pose de la classe qui la porte :
