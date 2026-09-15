@@ -4305,6 +4305,66 @@ revert et lot vert) — demandé explicitement par le brief.
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+**Deux correctifs post-fusion, entre la vague 2 et la vague 3, trouvés par
+ISO2 au banc du jeu réel (ISO3a)** — voir ROADMAP, section « Vague 2 »,
+« Correctifs post-fusion » : `echelle_lecture` (commit `7cbd3ad`), puis
+`lecture_au_bord` (commit `ee06216`, `echelle_lecture` seule ne suffisait
+pas). Les deux repris à l'identique des diffs qu'ISO2 a transmis par message
+inter-session, pour rester sur une seule vérité du shader fusionné.
+
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 3, branche `iso-corps`) — ajoutée le 2026-09-15 02:00 (Paris)
+
+Quatrième tranche : les objets debout du jeu en voxel (mine, torche fantôme,
+piquets du voile, plaque de l'ombre, bobine du grésillement, fusée posée),
+avec l'interface des corps. Brief transmis par Adrien depuis la session
+cloud Fable 5.1, pendant qu'ISO2 branchait la vague 2 dans le jeu réel — deux
+chantiers en parallèle sur `iso-corps`, sans fusion entre les deux ; ISO2
+fusionnera `iso-corps` une seconde fois pour prendre cette vague. Base :
+`ee06216`. Toujours aucun fichier du jeu.
+
+**Fichiers touchés, tous à elle :** `voxel_catalogue_objets.gd` (nouveau, une
+fiche par objet) ; `voxel_objets.gd` (nouveau, `VoxelObjet`, même interface
+que `VoxelCorps`) ; `tools/banc_objets.tscn`/`.gd` (nouveau) ;
+`tools/test_voxel_objets.gd` (nouveau, dans `run_suites.sh`) ;
+`docs/iso/captures_objets/` et `docs/iso/planche_objets.png` ; `docs/ROADMAP.md`
+(section « Vague 3 », le tableau des mesures d'équité, deux pièges) ; ce
+journal. `voxel_corps.gd` (`etat.arme_baissee`, additif, pour le leurre — voir
+plus bas) N'APPARAÎT PAS dans le commit de cette vague : écrit avant
+`lecture_au_bord`, il est parti avec lui dans `ee06216` par erreur de `git
+add` — détail et conséquence pour ISO2 dans la ROADMAP.
+
+**Le tri gadget par gadget, lu avant de dessiner** (le brief le demandait
+explicitement) : six objets deviennent un voxel (des objets posés, réels dans
+le jeu) ; quatre restent à plat dans la lightmap 2D (suie, poussière, poudre,
+braises — vérifié dans leur propre code : aucun des quatre n'est un objet
+physique, `occulte_la_lumiere = false` pour trois sur quatre). Le leurre est
+à part : il recopie le corps de son poseur plutôt que de dessiner un objet,
+donc son voxel est un `VoxelCorps` tout simple — un seul champ neuf,
+`arme_baissee` (bool, additif), lui suffit.
+
+**Le plafond d'équité, chiffré** : hauteur ≤ 0,25 tuile, empreinte au sol ≤
+rayon de collision réel × 1,10 — les deux mesurés depuis le maillage réel
+par `hauteur_totale()`/`rayon_empreinte()`, jamais devinés. Tableau complet
+dans la ROADMAP.
+
+**Un vrai piège de lisibilité, trouvé au banc, pas sur le papier :** le
+premier cadrage (même largeur de caméra qu'une planche de dix corps) rendait
+les six objets à quelques pixels — rien de reconnaissable, alors que le
+brief demande « se reconnaître d'un coup d'œil ». Le plafond d'équité borne
+mécaniquement les objets à une fraction de la taille d'un corps : les montrer
+à la même échelle qu'une comparaison à dix revenait à les réduire six fois
+trop. Corrigé par `--objet=slug`, un cadrage serré par objet — et au passage,
+le tangage de caméra (58°, hérité de `banc_corps.gd`, antérieur à H15) posé
+à 52° pour ce fichier neuf, l'angle réellement tranché par Adrien et celui
+que le brief cite pour juger la lisibilité.
+
+**Sabotage vérifié réellement** (plafond de hauteur abaissé sous une mesure
+réelle, lot rougi, puis revert et lot vert) — demandé explicitement par le
+brief.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
