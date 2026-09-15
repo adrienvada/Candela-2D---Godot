@@ -66,6 +66,42 @@ static func _trait(coord: float, periode: float, demi_largeur: float, aa: float)
 	return 1.0 - smoothstep(demi_largeur - aa, demi_largeur + aa, s + aa)
 
 
+## ISO7 — miroirs de `pate_vers_affiche`, `pate_depuis_affiche` et `pate_facteur` : un facteur
+## d'habillage s'applique à la valeur AFFICHÉE (décodage sRGB, multiplication, encodage).
+static func _vers_affiche_canal(c: float) -> float:
+	var s := maxf(c, 0.0)
+	return s / 12.92 if s < 0.04045 else pow((s + 0.055) / 1.055, 2.4)
+
+
+static func _depuis_affiche_canal(a: float) -> float:
+	var s := maxf(a, 0.0)
+	return s * 12.92 if s < 0.0031308 else 1.055 * pow(s, 1.0 / 2.4) - 0.055
+
+
+static func vers_affiche(c: Vector3) -> Vector3:
+	return Vector3(_vers_affiche_canal(c.x), _vers_affiche_canal(c.y), _vers_affiche_canal(c.z))
+
+
+static func depuis_affiche(a: Vector3) -> Vector3:
+	return Vector3(_depuis_affiche_canal(a.x), _depuis_affiche_canal(a.y), _depuis_affiche_canal(a.z))
+
+
+static func facteur(c: Vector3, f: float) -> Vector3:
+	return depuis_affiche(vers_affiche(c) * maxf(f, 0.0))
+
+
+## Miroir de `pate_matiere_et_encre` : matière et encre en valeur affichée, l'encre bornée par `plancher`.
+static func matiere_et_encre(c: Vector3, matiere: float, reste: float, t: float, plancher: float) -> Vector3:
+	var a := vers_affiche(c)
+	var s := luminance(a)
+	if s <= 0.0:
+		return Vector3.ZERO
+	var m := maxf(matiere, 0.0)
+	var avec_encre := maxf(s * minf(m, reste), minf(s * m, plancher))
+	var cible := lerpf(s * m, minf(s * m, avec_encre), clampf(t, 0.0, 1.0))
+	return depuis_affiche(a * (cible / s))
+
+
 ## ISO7 — miroir de `PATE_TEINTE_CHAUDE` et `pate_temperature` : la teinte d'une lumière neutre, sa
 ## luminance gardée.
 const TEINTE_CHAUDE := Vector3(1.10, 0.97, 0.80)

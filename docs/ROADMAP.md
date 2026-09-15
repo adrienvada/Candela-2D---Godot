@@ -23635,7 +23635,8 @@ tuile pas (couture verticale 5,2) et n'est pas utilisée.
 - **Dessus des murets : la lightmap à sa propre case.** Ils étaient noirs en iso ; la vue de dessus y
   dessine des hachures sous la lumière (dessin gardé au jalon H-MB0). La vue iso montre maintenant ce que
   la vue de dessus montre.
-- **Encre des arêtes : multiplicative**, 1,6 px de monde, garde 12 % de la lumière. Posée sur les
+- **Encre des arêtes : multiplicative**, 1,6 px de monde, garde 25 % de la lumière (12 % d'abord, relevé
+  aux bancs : voir plus bas) et ne se cumule jamais avec la matière. Posée sur les
   arêtes hautes, basses et verticales des faces — mais **pas sur les jonctions de boîtes** : `merge_rects`
   découpe une masse en rectangles jointifs, et une grille des murs (`IsoMateriaux.image_grille`, même
   source que la collision) dit au shader si la masse continue au-delà du bord.
@@ -23663,6 +23664,13 @@ tuile pas (couture verticale 5,2) et n'est pas utilisée.
   de soi**, qui reste la valeur de la vue de dessus. `uniform int style` inchangé (-1 brute, 0 à 3 :
   A, B, C, D). Les valeurs viennent d'`IsoMateriaux.accorder_corps` (0,9 px, reste 0,35), appelé dans
   `Presentation3D._accorder_le_slug` ; tant que le shader ne déclare pas l'uniform, Godot l'ignore.
+  **Branché par ISO Corps, commit `36a982d`** (sur sa branche, fichiers de pâte pris par checkout de
+  `6e64afb`) : uniforms déclarés, `VoxelCorps.definir_encre()`, tests bornés et sabotés, lot vert.
+  ⚠️ **Pour la fusion dans `iso2-vues`** : les deux branches portent la même `iso_pate.gdshaderinc` de
+  `6e64afb` — la vérifier identique après fusion (`git diff 6e64afb -- iso_pate.gdshaderinc iso_pate.gd`).
+  Les objets et le leurre (`MiroirsIso`, via `VoxelObjets`/`VoxelCorps`) ne reçoivent l'encre que si
+  quelqu'un appelle `definir_encre()` ou `IsoMateriaux.accorder_corps` sur leur matériau : aucun crochet
+  n'est posé dans `miroirs_iso.gd` (fichier d'ISO4, hors de ce chantier) — à poser après fusion.
 
 **La lumière vue (étape 6)** — une température, et rien d'autre :
 - **Pourquoi.** Les planches peignent une lumière ambre. La torche est déjà chaude en 2D
@@ -23680,6 +23688,44 @@ tuile pas (couture verticale 5,2) et n'est pas utilisée.
 - **Écrêtage.** Un canal rouge réchauffé peut dépasser 1 et être écrêté à l'affichage : la luminance
   baisse alors un peu, elle ne monte jamais. Le banc compte les pixels à 255 avant/après.
 
+**Les bancs en vraie fenêtre (2026-09-15, 06:45, habillage de `6e64afb`)** — `tools/banc_iso_beaute.gd`,
+foyer isolé, 1920×1080, carte par défaut :
+- **Noir absolu tenu**, vue unique et écran scindé : écran 0/255 sur lightmap 0, aucun pixel allumé hors du
+  support de la brute, capteurs à 0, silhouettes justes (la sienne à 87/112/126 pour 87/111/126 attendu,
+  celle d'en face à 0).
+- **Appels de dessin** : 69 → 65 en vue unique, 148 → 140 en écran scindé — l'habillage n'en ajoute aucun.
+- **Allumés neufs** (liserés, dessus de murets) : 0,04 % des pixels en vue unique, 0,09 % en écran scindé,
+  sous la borne de 2 %.
+- ⚠️ **Verdict « HABILLAGE ROMPU » sur les trois cadrages : 1 237 pixels éclairés éteints.** Localisés : les
+  arêtes haute et basse de la longue face du mur nord, faiblement allumée. L'encre (12 %) multipliait la
+  matière (43 % au plus sombre) : 5 % de la lumière, et un pixel à 25-40/255 tombait à 2. Une lumière
+  réelle effacée par un trait : c'est le défaut que la règle « allumé reste allumé » interdit. **Corrigé** :
+  sur le trait, le facteur est le plus petit de la matière et de l'encre, jamais leur produit, et l'encre
+  des murs garde 25 % (plancher combiné 0,25 ; la suite exige ≥ 0,2).
+- ⚠️ **L'habillage assombrissait la lumière de 24 %** (moyenne des pixels éclairés 36,0 → 27,5 en vue
+  unique ; 44,0 → 34,3 en écran scindé). Dans un jeu dont la seule information est la lumière, c'est trop :
+  la matière des murs passe à 0,8 et celle du sol à 0,5 (facteurs moyens ~0,82 et ~0,89). À remesurer
+  aux bancs suivants.
+
+**Les mesures finales (sixième passage, 2026-09-15 08:17-08:25)** — Le Cloître, bandeau LED figé,
+1920×1080, habillage corrigé (facteurs en valeur affichée, plancher d'encre) :
+- **Noir absolu tenu**, vue unique et écran scindé ; silhouettes justes (la sienne 87/112/126, celle d'en face 0).
+- **Appels de dessin** : 81 → 78 en vue unique, 164 → 160 en écran scindé.
+- **Comparaisons propres** (fin de `--isoler` et écran scindé) : 10 et 11 pixels éclairés éteints sur 133 000
+  et 210 000 (< 0,01 %, arêtes antialiasées), allumés neufs 0,07 %, lumière moyenne −4 % (28,0 → 26,8 ;
+  33,4 → 32,2).
+- **Attribution** : encre, liseré, murets et température pris seuls n'éteignent plus rien (0 à 3 pixels) ; la
+  matière seule assombrit comme écrit (faces 28 → 26, 22 → 18).
+- ⚠️ **Deux mesures restent brouillées, et ce n'est pas l'habillage** : le cadrage « mur » séparé (18 152 éteints)
+  et deux essais de `--isoler` portent la signature de la torche de J1 qui bascule (≈ 3 500 éteints et ≈ 17 600
+  allumés dans le cône) — même sans que le banc rejoue l'appui. Le verdict du banc exige 0 pixel éteint : il
+  sort donc « ROMPU » sur ces passes ; il n'a pas été assoupli. À traiter : figer l'état de la torche dans le
+  banc (hors de ce chantier : `player.gd`).
+- **Ce que la planche montre** (`docs/iso/planche_iso7.jpg`) : l'avant et l'après sont proches — un habillage qui
+  n'invente aucune lumière reste discret dans un jeu éclairé à la seule torche. L'écart avec les planches du DA
+  (murs clairs, relief lu partout) tient d'abord à la lumière disponible, que ce chantier n'a pas le droit
+  d'ajouter.
+
 **Crochets posés dans des fichiers partagés** :
 - `presentation_3d.gd` : `IsoMateriaux.accorder_corps(mat)` dans `_accorder_le_slug` (étape 5) ;
 - `presentation_3d.gd` : `IsoMateriaux.accorder_mur(_mat_mur)` à la construction de la scène ;
@@ -23692,6 +23738,38 @@ tuile pas (couture verticale 5,2) et n'est pas utilisée.
 - ⚠️ **Décaler d'une demi-période peut poser la couture sur un joint.** Une source de coffrage porte ses
   joints au quart et à la moitié : le vérificateur lisait une couture qui était un joint de béton. Décalage
   de 0,375.
+- ⚠️ **Un facteur écrit dans le shader n'est pas le facteur que l'écran montre — le piège qui décide de
+  tout l'habillage.** Au banc (`--isoler`, Le Cloître, bandeau figé), une encre posée par `c *= mix(…, 0.25,
+  t)` faisait passer le haut d'une face de 28/255 à 1/255, et à 21 → 0 ailleurs ; avec un reste de 1, rien
+  ne bougeait. Aucun modèle linéaire ne rend ces nombres (0,25 × 28 = 7) ; une conversion sRGB entre la
+  valeur écrite et la valeur affichée les rend tous : un facteur f posé dans l'espace du shader se voit
+  ≈ f^2,4. Le plancher de 0,25 que la suite prouvait tombait à 0,036 à l'écran, et la matière assombrissait
+  bien plus que prévu. **Tout facteur ISO7 passe désormais par `pate_facteur(c, f)`** (décodage sRGB,
+  multiplication, encodage ; miroir `IsoPate.facteur`) et la suite mesure le plancher en valeur affichée.
+  Leçon : une suite sur les formules prouve la formule, pas l'écran — c'est le banc qui a vu l'écart.
+  **La conversion ne suffisait pas** (quatrième passage, 08:11) : l'encre à 0,25 faisait passer 28 → 5 et
+  21 → 1 — mieux, mais une face à peine éclairée perdait encore sa lumière. **Décision** : en valeur affichée,
+  l'encre ne descend jamais sous un plancher de 16/255, et une face plus sombre que ce plancher n'est pas
+  encrée (`pate_matiere_et_encre`, garanties : 0 → 0, monotone, jamais plus clair que la matière seule).
+  Le filament d'une arête n'a de sens que dans la lumière ; dans la pénombre, il effaçait ce qu'il cernait.
+  **Vérifié au cinquième passage (08:16)** : l'encre seule n'éteint plus rien (1 pixel, bruit), le haut
+  des faces à 21-28/255 reste intact. **Limite assumée** : sur ces faces-là, sous le plancher, aucun filament
+  n'est posé — l'arête ne s'encre que là où la torche éclaire franchement.
+- ⚠️ **Une suite qui ne compile pas sort en code 0 — repayé ici.** Une variable déclarée deux fois dans
+  `tools/test_iso_beaute.gd` : `Parse Error` au journal, code 0, aucune ligne de vérification, et la chaîne
+  a enchaîné sur le banc. Les chaînes de cette session s'arrêtent désormais sur `SCRIPT ERROR`, `Parse
+  Error`, `SHADER ERROR` et sur une suite sans son « 0 échec(s) ».
+- ⚠️ **Un témoin par essai ne suffit pas si la torche bascule.** `_tenir_les_torches` rejoue l'appui et la
+  torche de J1 bascule d'une capture à l'autre : les essais qui tombaient sur une bascule comptaient ~18 000
+  pixels éteints ou allumés — le cône du sol. Les lectures fiables se prennent sur les faces éclairées par le
+  bandeau figé, loin du cône.
+- ⚠️ **Un avant/après se prend bandeau LED FIGÉ, sinon il mesure sa respiration.** Le bandeau des murs
+  (`MurLed`) respire sur l'horloge de manche ; l'avant et l'après sont pris à une quarantaine d'images
+  d'écart. Au second passage des bancs (07:33), le sol dans le cône des torches — éclairé par elles, stables
+  — perdait 13 %, exactement la matière du sol ; mais la face du mur nord perdait 44 % uniformément
+  (0,52 à 0,61) et la pénombre 61 % : deux zones éclairées par la lueur du bandeau, pas par les torches.
+  Les passes avant/après prennent désormais `--led-murs-fige=0.6` ; `--isoler` y ajoute un témoin sans
+  aucun paramètre pour chiffrer le bruit restant d'une image à l'autre.
 - ⚠️ **Un lot vert avec un shader cassé — le piège consigné, repayé.** La température (étape 6) était
   appelée dans `mur_iso.gdshader` sans son `uniform` : un `SHADER ERROR` dans le journal de la suite, le
   lot complet sorti « tout passe », 80 vérifications vertes. Lu seulement parce que le journal était relu

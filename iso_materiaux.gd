@@ -23,8 +23,8 @@ extends RefCounted
 ## Le miroir processeur de la pâte : l'encre des arêtes y vit, une seule formule pour tous.
 const IsoPateMiroir := preload("res://iso_pate.gd")
 
-## La face des murs hauts et des murets : béton et lavis (source : `face_mur_01.jpg` d'ISO Assets,
-## vague 2, aplanie et rendue tuilable).
+## La face des murs hauts et des murets : grandes pierres appareillées (source : `face_mur_01_plat.jpg`,
+## ISO Assets `5f1f046`, réduite, tuilée et mise en facteur par `tools/fabrique_textures_iso.py`).
 const TEXTURE_FACE_MUR := preload("res://assets/iso/face_mur.png")
 
 ## Le sol : béton, lavis et taches, SANS joint — le damier de 35 px vient de la lightmap et reste la
@@ -41,19 +41,22 @@ const PLANCHER := 110.0 / 255.0
 const PERIODE_SOL_PX := 140.0
 ## Le sol porte déjà ses dalles d'encre depuis la lightmap : sa matière est plus discrète que celle
 ## des murs, qui n'ont rien d'autre.
-const FORCE_MATIERE_SOL := 0.7
+const FORCE_MATIERE_SOL := 0.5
 
 ## Une répétition de la face de mur tous les deux pas de tuile : les grands coups de lavis de
 ## la source tombent alors à ~20 px de monde, lisibles comme matière et non comme objets.
 const PERIODE_FACE_MUR_PX := 70.0
 ## La force de la matière sur une face : 0, face nue (ISO1) ; 1, la texture entière.
-const FORCE_MATIERE_MUR := 1.0
+const FORCE_MATIERE_MUR := 0.8
 
 ## L'encre des arêtes : la largeur du trait en pixels de monde, et ce qu'il garde de la lumière
 ## (0 : noir d'encre). « Un mur n'est pas une surface, c'est une masse cernée d'un filament »
 ## (Adrien, 2026-08-25) : en iso, le filament est l'arête.
 const ENCRE_ARETE_PX := 1.6
-const ENCRE_ARETE_RESTE := 0.12
+const ENCRE_ARETE_RESTE := 0.25
+## Le plancher de l'encre, en valeur affichée (16/255) : sous lui, une arête n'est pas encrée. Au banc, une
+## face à 21/255 tombait à 1/255 sous l'encre — une lumière réelle effacée (`pate_matiere_et_encre`).
+const ENCRE_PLANCHER_AFFICHE := 16.0 / 255.0
 
 ## L'encre des arêtes des voxels (corps, objets, leurre) : plus fine que celle des murs — un corps
 ## fait 20 px de large, un trait de mur l'aurait noyé —, et plus claire, pour que la lumière du
@@ -90,6 +93,7 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("force_matiere", FORCE_MATIERE_MUR if active else 0.0)
 	materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX if active else 0.0)
 	materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE)
+	materiau.set_shader_parameter("encre_plancher_affiche", ENCRE_PLANCHER_AFFICHE)
 	materiau.set_shader_parameter("lisere_sommet_px", LISERE_SOMMET_PX if active else 0.0)
 	materiau.set_shader_parameter("temperature", TEMPERATURE if active else 0.0)
 	# Sans beauté, aucun muret : tous les dessus redeviennent noirs, comme avant ISO7.
@@ -170,22 +174,22 @@ static func trait_de_bord(distance: float, largeur: float, aa: float) -> float:
 static func face(lumiere_pateuse: Vector3, matiere_brute: float, force: float, encre: float,
 		reste: float = ENCRE_ARETE_RESTE) -> Vector3:
 	var matiere := lerpf(1.0, matiere_brute, force)
-	return lumiere_pateuse * matiere * lerpf(1.0, reste, clampf(encre, 0.0, 1.0))
+	return IsoPateMiroir.matiere_et_encre(lumiere_pateuse, matiere, reste, clampf(encre, 0.0, 1.0), ENCRE_PLANCHER_AFFICHE)
 
 
 ## Le sommet d'un mur haut : noir, sauf le liseré (`lisere` ∈ [0, 1]) qui prend la lumière de la face.
 static func sommet(lumiere_de_la_face: Vector3, lisere: float) -> Vector3:
-	return lumiere_de_la_face * clampf(lisere, 0.0, 1.0) if lisere > 0.0 else Vector3.ZERO
+	return IsoPateMiroir.facteur(lumiere_de_la_face, clampf(lisere, 0.0, 1.0)) if lisere > 0.0 else Vector3.ZERO
 
 
 ## Le dessus d'un muret : la lumière à sa case, fois l'encre de son bord.
 static func dessus_muret(lumiere_de_la_case: Vector3, encre: float, reste: float = ENCRE_ARETE_RESTE) -> Vector3:
-	return lumiere_de_la_case * lerpf(1.0, reste, clampf(encre, 0.0, 1.0))
+	return IsoPateMiroir.matiere_et_encre(lumiere_de_la_case, 1.0, reste, clampf(encre, 0.0, 1.0), ENCRE_PLANCHER_AFFICHE)
 
 
 ## Le sol (`sol_iso.gdshader`) : la lumière pâteuse au point, fois la matière.
 static func sol(lumiere_pateuse: Vector3, matiere_brute: float, force: float) -> Vector3:
-	return lumiere_pateuse * lerpf(1.0, matiere_brute, force)
+	return IsoPateMiroir.facteur(lumiere_pateuse, lerpf(1.0, matiere_brute, force))
 
 
 ## Les textures du catalogue, pour la suite : chemin → texture.

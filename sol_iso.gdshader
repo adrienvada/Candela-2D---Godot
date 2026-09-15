@@ -41,7 +41,9 @@ void fragment() {
 	// Hors de tout branchement : les mipmaps prennent leurs dérivées ici.
 	float matiere = mix(1.0, texture(texture_sol, px / periode_sol_px).r, force_matiere);
 	vec3 c = lightmap_pateuse(px, px, aa, deux);
-	c *= matiere;
+	// Sur la valeur AFFICHÉE (`pate_facteur`) : posée dans l'espace du shader, une matière de 0,5 se voyait
+	// comme ~0,2 (mesuré au banc, 2026-09-15).
+	c = pate_facteur(c, matiere);
 	c = pate_temperature(c, temperature);
 	ALBEDO = c;
 }

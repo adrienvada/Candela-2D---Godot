@@ -89,6 +89,8 @@ func _controler_la_beaute() -> void:
 		_tenir_le_cadrage()
 		await get_tree().process_frame
 	var avant := await _capture_et_appels()
+	if _isoler and avant["image"] != null:
+		await _isoler_les_parametres(materiaux, gardes, avant["image"])
 	_rendre_la_beaute(materiaux, gardes)
 	if apres["image"] == null or avant["image"] == null:
 		printerr("✗ aucune image rendue en 15 s")
@@ -120,6 +122,63 @@ func _controler_la_beaute() -> void:
 	_sortir(0 if tenu else 8)
 
 
+## `--isoler` (avec `--beaute`) : l'ATTRIBUTION. En partant de l'avant (tout neutre), un seul paramètre
+## d'habillage reprend sa valeur, capture, mesure contre l'avant — pour chaque paramètre, plus un témoin
+## où rien ne reprend (le bruit d'une image à l'autre). Dit lequel éteint des pixels ou assombrit la
+## lumière, au lieu de le deviner (verdict « HABILLAGE ROMPU » du 2026-09-15 sur une seule ligne d'écran).
+var _isoler := OS.get_cmdline_user_args().has("--isoler")
+
+
+## ⚠️ **Un témoin PAR essai, pris juste avant lui.** Le premier `--isoler` comparait chaque essai à l'avant
+## du début : cent images plus tard, la torche de J1 avait basculé (`_tenir_les_torches` rejoue l'appui), et
+## le « liseré seul » comptait 17 672 pixels éteints — le cône du sol, pas un liseré.
+func _isoler_les_parametres(materiaux: Array[ShaderMaterial], _gardes: Array, _avant: Image) -> void:
+	# Chaque essai : les valeurs qu'il pose sur la base neutre. Les deux dernières sondent l'encre elle-même.
+	var gardes_mur: Dictionary = _gardes[0] if not _gardes.is_empty() else {}
+	var essais := {}
+	for p in NEUTRES:
+		var valeur = null
+		for g: Dictionary in _gardes:
+			if g.has(p):
+				valeur = g[p]
+		essais[p] = {p: valeur}
+	essais["encre_reste_1"] = {"encre_arete_px": gardes_mur.get("encre_arete_px", 1.6), "encre_arete_reste": 1.0}
+	essais["encre_reste_0.25"] = {"encre_arete_px": gardes_mur.get("encre_arete_px", 1.6), "encre_arete_reste": 0.25}
+	for nom: String in essais:
+		var temoin: Image = await _capture_posee(materiaux, {})
+		var image: Image = await _capture_posee(materiaux, essais[nom])
+		if temoin == null or image == null:
+			print("BANC_ISO_BEAUTE isoler %s : aucune image" % nom)
+			continue
+		temoin.save_png(_capture.get_basename() + "_temoin_%s.png" % nom)
+		image.save_png(_capture.get_basename() + "_seul_%s.png" % nom)
+		var m := mesurer(temoin, image)
+		print("BANC_ISO_BEAUTE isoler %-18s eteints=%d neufs=%d changes=%d moyenne_eclairee %.1f -> %.1f"
+			% [nom, m["eteints"], m["neufs"], m["changes"], m["moy_avant"], m["moy_apres"]])
+
+
+## Pose `valeurs` sur les matériaux qui déclarent chaque paramètre, capture, puis remet ces paramètres à leur
+## valeur neutre (ou d'origine pour ceux hors de `NEUTRES`).
+func _capture_posee(materiaux: Array[ShaderMaterial], valeurs: Dictionary) -> Image:
+	var avant_pose := []
+	for mat in materiaux:
+		var g := {}
+		for p in valeurs:
+			var v = mat.get_shader_parameter(p)
+			if v != null and valeurs[p] != null:
+				g[p] = v
+				mat.set_shader_parameter(p, valeurs[p])
+		avant_pose.append(g)
+	for k in 10:
+		_tenir_le_cadrage()
+		await get_tree().process_frame
+	var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+	for i in materiaux.size():
+		for p in avant_pose[i]:
+			materiaux[i].set_shader_parameter(p, avant_pose[i][p])
+	return image
+
+
 func _poser_le_cadrage() -> void:
 	var p1: Node2D = _main.p1
 	var p2: Node2D = _main.p2
@@ -139,7 +198,9 @@ func _tenir_le_cadrage() -> void:
 	var axe := (_mur_le_plus_proche(p1.global_position) - p1.global_position).normalized()
 	p1.rotation = axe.angle()
 	p2.rotation = axe.angle() if _cadrage == "mur" else (-axe).angle()
-	_tenir_les_torches()
+	# ⚠️ **Pas de `_tenir_les_torches()` à chaque image** : rejouer l'appui faisait basculer la torche de J1 d'une
+	# capture à l'autre (~18 000 pixels du cône éteints ou allumés, lus comme un défaut d'habillage). Les torches
+	# se posent une fois, dans `_poser_le_cadrage`.
 
 
 func _capture_et_appels() -> Dictionary:

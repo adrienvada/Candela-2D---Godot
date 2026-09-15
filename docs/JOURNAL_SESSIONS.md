@@ -5075,3 +5075,30 @@ des corps ne déclare pas l'uniform.
 
 Étape 6 : `pate_temperature` (teinte chaude d'une lumière neutre, luminance gardée), force 0,5 sur le sol
 et les murs ; halos et lumières 2D laissés à la session Gadgets et lumière.
+
+### 2026-09-15 (matin) — ISO7 Beauté : les bancs en fenêtre, et ce qu'ils ont trouvé (même session, même branche)
+
+`tools/banc_iso_beaute.gd` passé à 06:45 (créneau prêté par ISO Corps) : noir absolu tenu en vue unique
+et en écran scindé, appels de dessin en baisse (69 → 65, 148 → 140), silhouettes justes. Mais verdict
+« HABILLAGE ROMPU » : 1 237 pixels éclairés éteints par l'encre des arêtes, qui multipliait une matière
+sombre (5 % de la lumière gardée), et une lumière moyenne assombrie de 24 %. Corrigé : l'encre ne se
+cumule plus avec la matière (plancher 25 %), matière des murs à 0,8 et du sol à 0,5. Bancs à repasser.
+
+### 2026-09-15 (matin) — ISO7 Beauté : le facteur écrit n'est pas le facteur vu (même session, même branche)
+
+Second et troisième passages des bancs (Le Cloître, bandeau LED figé, passe `--isoler` avec témoin par
+essai et sondes d'encre). Trois causes démêlées : la respiration du bandeau LED (d'où `--led-murs-fige`),
+la bascule de la torche de J1 d'une capture à l'autre (bruit du banc, lectures prises loin du cône), et la
+vraie : un facteur posé dans l'espace du shader se voit ≈ f^2,4 à l'écran (reste d'encre 0,25 : 28 → 1 ;
+reste 1 : rien). Tout facteur ISO7 passe désormais par `pate_facteur` (décodage sRGB, multiplication,
+encodage), la suite mesure le plancher en valeur affichée. Noir absolu tenu à chaque passage.
+
+### 2026-09-15 (matin) — ISO7 Beauté : le plancher d'encre, les mesures finales et la planche (même session, même branche)
+
+Conversion seule insuffisante (une face à 21/255 tombait encore à 1) : l'encre ne descend plus sous 16/255
+en valeur affichée et n'encre pas une face plus sombre (`pate_matiere_et_encre`). La suite a rougi deux fois
+à bon droit (variable en double qui la rendait muette en code 0 ; monotonie lue dans le mauvais espace) ;
+les chaînes s'arrêtent désormais sur toute erreur de script et sur une suite sans « 0 échec(s) ». Mesures
+finales sur Le Cloître : noir absolu tenu, appels de dessin en baisse, comparaisons propres à 10-11 pixels
+éteints (< 0,01 %) et −4 % de lumière moyenne ; deux passes restent brouillées par la torche de J1 qui
+bascule (bruit du banc, consigné). Planche `docs/iso/planche_iso7.jpg`. Lot complet vert, 0 SHADER ERROR.

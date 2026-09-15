@@ -50,6 +50,8 @@ uniform float periode_face_px = 70.0;
 uniform float force_matiere : hint_range(0.0, 1.0) = 0.0;
 uniform float encre_arete_px = 0.0;
 uniform float encre_arete_reste : hint_range(0.0, 1.0) = 0.12;
+// Sous ce plancher (valeur affichée), l'encre n'éteint rien : une face à peine éclairée garde sa lumière.
+uniform float encre_plancher_affiche : hint_range(0.0, 1.0) = 0.0;
 uniform float lisere_sommet_px = 0.0;
 uniform float seuil_muret_px = 26.0;
 // ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée (`pate_temperature`).
@@ -124,19 +126,23 @@ void fragment() {
 			c = lightmap_pateuse(monde.xz, motif, aa, deux);
 			float fin = 1.0 - max(au_dela.r, au_dela.g);
 			float largeur = max(encre_arete_px, px_monde);
-			c *= mix(1.0, encre_arete_reste, fin * pate_trait_de_bord(d_bord, largeur, px_monde));
+			c = pate_matiere_et_encre(c, 1.0, encre_arete_reste, fin * pate_trait_de_bord(d_bord, largeur, px_monde), encre_plancher_affiche);
 		} else {
 			// Sommet de mur haut : noir strict, sauf le liseré — la lumière de la face qu'il couronne.
 			float fin = 1.0 - au_dela.r;
 			float largeur = max(lisere_sommet_px, px_monde);
 			float lisere = fin * pate_trait_de_bord(d_bord, largeur, px_monde);
 			if (lisere > 0.0) {
-				c = lightmap_pateuse(monde.xz + sortie * (d_bord + pied), motif, aa, deux) * lisere;
+				c = pate_facteur(lightmap_pateuse(monde.xz + sortie * (d_bord + pied), motif, aa, deux), lisere);
 			}
 		}
 	} else {
 		// Face verticale : la lumière au pied, la matière, l'encre des arêtes.
-		c = lightmap_pateuse(monde.xz + n * pied, motif, aa, deux) * matiere;
+		// ⚠️ **L'encre ne se CUMULE pas avec la matière.** Multipliées, 12 % d'encre sur une tache à 43 %
+		// laissaient 5 % de la lumière : au banc, 1 237 pixels éclairés (25 à 40/255) tombaient au noir
+		// sur les arêtes d'une face à peine allumée — une lumière réelle effacée. Sur le trait, le facteur
+		// est le plus petit des deux, jamais leur produit : plancher `encre_arete_reste`.
+		c = lightmap_pateuse(monde.xz + n * pied, motif, aa, deux);
 		// L'arête verticale de CETTE face : sur l'axe tangent à la face.
 		bool face_x = an.x > 0.5;
 		float d_vert = face_x ? d.z : d.x;
@@ -147,7 +153,9 @@ void fragment() {
 		float encre_h = encre_arete_px > 0.0 ? pate_trait_de_bord(d.y, largeur, px_monde) : 0.0;
 		float encre_v = encre_arete_px > 0.0
 			? (1.0 - max(au_dela.r, au_dela.g)) * pate_trait_de_bord(d_vert, largeur, px_monde) : 0.0;
-		c *= mix(1.0, encre_arete_reste, max(encre_h, encre_v));
+		// Le facteur se pose sur la valeur AFFICHÉE (`pate_facteur`) : posé dans l'espace du shader, un
+		// reste de 0,25 se voyait à 0,036 (mesuré au banc).
+		c = pate_matiere_et_encre(c, matiere, encre_arete_reste, max(encre_h, encre_v), encre_plancher_affiche);
 	}
 	// ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée : 0 reste 0.
 	c = pate_temperature(c, temperature);

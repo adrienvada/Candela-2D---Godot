@@ -123,8 +123,8 @@ func _le_sol() -> void:
 	var code := shader_sol.code
 	_check("sol : unshaded", code.contains("render_mode unshaded"))
 	_check("sol : la couleur naît de la lightmap", code.contains("vec3 c = lightmap_pateuse(px, px, aa, deux);"))
-	_check("sol : la matière multiplie (c *= matiere), aucun terme additif",
-		code.contains("c *= matiere;") and not code.contains("c += ") and not code.contains("c -= "))
+	_check("sol : la matière passe par pate_facteur, aucun terme additif",
+		code.contains("c = pate_facteur(c, matiere);") and not code.contains("c *= ") and not code.contains("c += ") and not code.contains("c -= "))
 	var ligne_uv := ""
 	for l in code.split("\n"):
 		if l.contains("texture(texture_sol"):
@@ -210,7 +210,7 @@ func _la_pate_des_voxels() -> void:
 				zeros += 1
 			ecart_lum = maxf(ecart_lum, absf(IsoPate.luminance(r) - IsoPate.luminance(c)))
 	_check("température : 0 reste 0", zeros == 0 and IsoPate.temperature(Vector3.ZERO, 1.0) == Vector3.ZERO)
-	_check("température : la luminance est gardée (écart max %.2e)" % ecart_lum, ecart_lum < 1e-5)
+	_check("température : la luminance est gardée (écart max %.8f)" % ecart_lum, ecart_lum < 1e-5)
 	var gris := IsoPate.temperature(Vector3(0.5, 0.5, 0.5), t)
 	_check("température : un gris devient chaud (%s)" % str(gris), gris.x > gris.y and gris.y > gris.z)
 	var rouge := Vector3(0.9, 0.08, 0.05)
@@ -235,7 +235,22 @@ func _la_pate_des_voxels() -> void:
 	_check("température posée sur le mur et le sol", is_equal_approx(float(mur.get_shader_parameter("temperature")), t)
 		and is_equal_approx(float(sol.get_shader_parameter("temperature")), t))
 	_check("sol : la température s'applique après la matière", (load("res://sol_iso.gdshader") as Shader).code.contains(
-		"c *= matiere;\n\tc = pate_temperature(c, temperature);"))
+		"c = pate_facteur(c, matiere);\n\tc = pate_temperature(c, temperature);"))
+	# Le facteur se VOIT tel qu'il est écrit : la raison d'être de pate_facteur (banc du 2026-09-15).
+	var gris_ecrit := Vector3(0.37, 0.37, 0.37)
+	var affiche := IsoPate.luminance(IsoPate.vers_affiche(IsoPate.facteur(gris_ecrit, 0.25))) / IsoPate.luminance(IsoPate.vers_affiche(gris_ecrit))
+	_check("pate_facteur : 0,25 posé se voit 0,25 (%.4f)" % affiche, absf(affiche - 0.25) < 1e-3)
+	_check("pate_facteur : 0 reste 0, et facteur 1 rend la couleur", IsoPate.facteur(Vector3.ZERO, 0.7) == Vector3.ZERO
+		and IsoPate.facteur(gris_ecrit, 1.0).distance_to(gris_ecrit) < 1e-5)
+	_check("la pâte offre pate_facteur et pate_matiere_et_encre", inc.contains("vec3 pate_facteur(vec3 c, float f)")
+		and inc.contains("vec3 pate_matiere_et_encre("))
+	# Le cas du banc : une face à 21/255 sous une encre pleine tombait à 1/255.
+	var sombre := IsoPate.depuis_affiche(Vector3.ONE * (21.0 / 255.0))
+	var vue := IsoPate.luminance(IsoPate.vers_affiche(IsoMateriaux.face(sombre, 1.0, 0.0, 1.0))) * 255.0
+	_check("encre pleine sur une face à 21/255 : reste au-dessus de 2/255 (%.1f)" % vue, vue > 2.0)
+	var claire := IsoPate.depuis_affiche(Vector3.ONE * (200.0 / 255.0))
+	var vue_claire := IsoPate.luminance(IsoPate.vers_affiche(IsoMateriaux.face(claire, 1.0, 0.0, 1.0))) * 255.0
+	_check("encre pleine sur une face à 200/255 : l'arête se voit (%.1f ≤ 60)" % vue_claire, vue_claire <= 60.0)
 
 
 ## Chaque `set_shader_parameter("x", …)` des fonctions d'accord du catalogue (murs et grille → mur_iso,
@@ -368,6 +383,7 @@ func _le_noir_absolu() -> void:
 			# La lumière reçue : une couleur de lightmap passée à la pâte D, sur un lieu du monde.
 			var lieu := Vector2(13.7 * mi + 3.1 * ei, 7.9 * ei - 2.3 * mi)
 			var precedent := -1.0
+			var precedent_recu := -1.0
 			for li in 41:
 				var niveau := li / 40.0
 				var brute := Vector3(1.0, 0.86, 0.62) * niveau
@@ -380,17 +396,26 @@ func _le_noir_absolu() -> void:
 						zeros_faux += 1
 				var face := IsoMateriaux.face(pateuse, matiere, 1.0, encre)
 				var lf := IsoPate.luminance(face)
-				if lf + 1e-6 < precedent:
+				# ⚠️ **La monotonie se juge À L'ÉCRAN, et relativement à la lumière reçue.** L'encre raisonne en
+				# luminance affichée ; la pâte D change la teinte d'un niveau à l'autre, et une luminance
+				# prise dans l'espace du shader peut alors reculer d'un cheveu sans que l'écran recule (9 reculs
+				# lus ainsi le 2026-09-15). La règle : si la lumière reçue monte à l'écran, la face ne descend pas.
+				var recu_affiche := IsoPate.luminance(IsoPate.vers_affiche(pateuse))
+				var face_affiche := IsoPate.luminance(IsoPate.vers_affiche(face))
+				if recu_affiche + 1e-6 >= precedent_recu and face_affiche + 1e-6 < precedent:
 					non_monotones += 1
-				precedent = lf
+				precedent = face_affiche
+				precedent_recu = recu_affiche
 				if IsoPate.luminance(pateuse) > 0.0:
 					if lf <= 0.0:
 						eteints += 1
-					bas = minf(bas, lf / IsoPate.luminance(pateuse))
+					bas = minf(bas, IsoPate.luminance(IsoPate.vers_affiche(face)) / IsoPate.luminance(IsoPate.vers_affiche(pateuse)))
 	_check("à lumière 0, mur, sommet et muret sont noirs (%d cas)" % n, zeros_faux == 0, "%d non nuls" % zeros_faux)
 	_check("la face est monotone en la lumière", non_monotones == 0, "%d reculs" % non_monotones)
 	_check("un point éclairé reste éclairé sous matière et encre", eteints == 0, "%d éteints" % eteints)
-	_check("le facteur le plus bas (matière × encre) reste > 0 (%.3f)" % bas, bas > 0.0)
+	# ⚠️ Pas seulement > 0 : au banc, un facteur de 0,05 (encre × matière) éteignait au noir les pixels
+	# éclairés de 25 à 40/255. Le plancher combiné doit laisser un pixel à 25 au-dessus de 2.
+	_check("le facteur le plus bas sous matière et encre reste ≥ 0,2 (%.3f)" % bas, bas >= 0.2 - 1e-4)
 	# Le sabotage que ce contrôle sait voir : une ambiance additive de 1 %.
 	var ambiance := IsoMateriaux.face(Vector3.ZERO, 1.0, 1.0, 0.0) + Vector3.ONE * 0.01
 	_check("témoin : une ambiance de 1 % serait refusée", ambiance != Vector3.ZERO)
@@ -420,7 +445,8 @@ func _l_equite_du_shader() -> void:
 	var sources_propres := true
 	for a: String in affectations:
 		# La température (étape 6) réécrit `c` à partir de `c` lui-même, luminance gardée : pas une source.
-		if not (a.contains("lightmap_pateuse(") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"):
+		if not (a.contains("lightmap_pateuse(") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
+				or a.begins_with("c = pate_facteur(c, ") or a.begins_with("c = pate_matiere_et_encre(c, ")):
 			sources_propres = false
 			printerr("    affectation hors lightmap : ", a)
 	_check("toute couleur de mur naît d'une lecture de lightmap ou du noir", sources_propres)
@@ -430,9 +456,11 @@ func _l_equite_du_shader() -> void:
 		if ligne.begins_with("c += ") or ligne.begins_with("c -= "):
 			sources_propres = false
 		if ligne.begins_with("c *= "):
+			sources_propres = false
+		if ligne.contains("pate_facteur(") or ligne.contains("pate_matiere_et_encre("):
 			multiplications += 1
 	_check("aucun terme additif sur la couleur (c += / c -=)", sources_propres)
-	_check("l'encre multiplie (%d c *=)" % multiplications, multiplications >= 2)
+	_check("matière, encre et liseré passent par pate_facteur, jamais par c *= (%d)" % multiplications, multiplications >= 3 and sources_propres)
 	_check("la matière est accrochée au monde", uv_matiere.contains("monde"), uv_matiere)
 	_check("la matière ne dépend ni de la caméra ni du joueur", not uv_matiere.contains("deux")
 		and not uv_matiere.contains("CAMERA") and not uv_matiere.contains("VIEW"), uv_matiere)
