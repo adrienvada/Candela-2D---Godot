@@ -31,6 +31,8 @@ extends Node3D
 
 const SHADER_VOLUME := preload("res://volume_iso.gdshader")
 const SHADER_HALO := preload("res://halo_iso.gdshader")
+## ISO10, 1c — la lueur au sol de la fusée posée, en mélange et non en addition (voir `halo_iso.gdshaderinc`).
+const SHADER_HALO_MELANGE := preload("res://halo_iso_melange.gdshader")
 const SHADER_TRAIT := preload("res://quad_iso.gdshader")
 const OndeDeMort := preload("res://kill_shockwave.gd")
 
@@ -178,7 +180,8 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 			maxf(float(f.call("age_combustion")), 0.0))
 	var relative := float(f.call("energie_relative")) if f.has_method("energie_relative") else 0.0
 	var lueur := _entree(f, "lueur", vus, 1)
-	_halos(lueur, 1)
+	# ISO10, 1c — en mélange : le rouge de détresse ne s'additionne plus au sol rougi (rose, puis blanc).
+	_halos(lueur, 1, SHADER_HALO_MELANGE)
 	var h := MursBasRendu.HAUTEUR_FUSEE_AU_SOL * TUILE
 	var taille := TUILE * (0.6 + 0.6 * relative)
 	_poser_halo(lueur, 0, Vector3(f.global_position.x, h, f.global_position.y), taille,
@@ -445,7 +448,7 @@ func _poser_couches(e: Dictionary, centre: Vector2, rayon: float, hauteur: float
 		mat.set_shader_parameter("age", age)
 
 
-func _halos(e: Dictionary, n: int) -> void:
+func _halos(e: Dictionary, n: int, shader: Shader = SHADER_HALO) -> void:
 	while (e["noeuds"] as Array).size() < n:
 		var mi := MeshInstance3D.new()
 		mi.name = "Lueur%d" % (e["noeuds"] as Array).size()
@@ -453,7 +456,7 @@ func _halos(e: Dictionary, n: int) -> void:
 		mi.layers = CALQUE
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var mat := ShaderMaterial.new()
-		mat.shader = SHADER_HALO
+		mat.shader = shader
 		mi.material_override = mat
 		add_child(mi)
 		e["noeuds"].append(mi)

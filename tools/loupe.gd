@@ -149,6 +149,11 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 	if p._demande(plans, "loupe-balle"):
 		await _loupe_balle(plans)
 
+	# La caméra doit être posée AVANT de choisir des lieux « à l'écran » : lancé seul, un plan arrive ici sans que les
+	# prises précédentes aient laissé le regard se poser, et la fusée tombait hors du cadre (ISO10, 1c, 17:35).
+	for n in 30:
+		_tenir_scene()
+		await p.get_tree().process_frame
 	var lieux := _lieux_dans_le_noir(portee)
 	var fusee: Node = null
 	if p._demande(plans, "loupe-fusee-suie"):
@@ -217,6 +222,11 @@ func _prise(plans: Array[Dictionary], id: String, recadrages: Array, scinde := f
 	for r in recadrages:
 		var sous: Dictionary = plan if String(r[0]) == "" else p._derive(plans, id, String(r[0]), "")
 		var centre: Vector2 = (r[1] as Callable).call(img)
+		# Un centre hors de l'image donne une loupe recadrée contre le bord, qui ne montre pas son sujet : le dire.
+		if centre.x < 0.0 or centre.y < 0.0 or centre.x > img.get_width() or centre.y > img.get_height():
+			printerr("  ! loupe %s : centre (%.0f, %.0f) HORS de l'image %dx%d — la loupe ne montre pas son sujet" % [
+				String(plan["id"]) if String(r[0]) == "" else "%s-%s" % [id, r[0]], centre.x, centre.y,
+				img.get_width(), img.get_height()])
 		# ISO10, 1a — l'éblouissement de J1 à la prise : la rétrodiffusion de sa propre torche le tient
 		# au-dessus de 0 au repos, et l'aberration du voile en dépend (planche de loupe, tour 1).
 		print("  MESURE %s centre %.0f %.0f image %dx%d eblouissement_j1 %.3f" % [sous["id"], centre.x,
@@ -435,6 +445,24 @@ func _loupe_fusee_suie(plans: Array[Dictionary], lieu: Vector2) -> Node:
 	print("  · loupe-fusee-suie : fusée et suie en %s" % str(lieu))
 	await _prise(plans, "loupe-fusee-suie", [["", func(img: Image) -> Vector2:
 		return _pixel(img, lieu, 8.0)]], false, 1.6)
+	# ISO10, 1c — la même fusée, volumes iso COUPÉS (`IsoVolumes.images_actives`, le geste du banc des gadgets) : les
+	# « anneaux » du tour 1 ressemblent aux copies décalées d'une même volute, une par couche de fumée empilée. Si
+	# elles disparaissent sans les volumes, la cause est là.
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes != null:
+		volumes.set("images_actives", false)
+		await _prise(plans, "loupe-fusee-suie", [["sans-volumes", func(img: Image) -> Vector2:
+			return _pixel(img, lieu, 8.0)]], false, 0.4)
+		volumes.set("images_actives", true)
+	else:
+		printerr("  ! loupe-fusee-suie : volumes iso introuvables, pas de prise sans volumes")
+	# ISO10, 1c — la même fusée passée à la BRAISE (8 s de combustion : pleine flamme 2 s, braise 10 s), pour juger ses
+	# deux phases (consigne de la session cloud, 16:42) : juste posée, rouge de détresse ; puis orange de braise.
+	f.call("forcer_age", 8.0)
+	await _prise(plans, "loupe-fusee-suie", [["braise", func(img: Image) -> Vector2:
+		return _pixel(img, lieu, 8.0)]], false, 0.8)
 	return f
 
 

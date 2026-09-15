@@ -5632,3 +5632,16 @@ Les paires de points noirs du trait de balle étaient les pores. Trouvé en rout
 loupe fixe désormais le tirage du sang. Le sang ne bouge pas : ses paliers d'encre du 10/09 restent (session cloud,
 17:08, voie a), rejugés au tour 2. Le constat du sang qui teinte les faces de mur en rouge entre au lot en famille 1f.
 Lot complet vert à 17:16 : 127 OK en 414 s.
+
+**ISO10, lot 1, 1c — la fusée et sa suie, 2026-09-15 à partir de 17:20.** Session « Iso 1 Opus ». Première piste
+(bord des bandes de la pâte) essayée puis annulée, faute d'effet. Cause des anneaux prouvée : sans les volumes iso,
+la même fusée n'en a aucun. Chacune des quatre couches de fumée relisait la lumière nette, volutes comprises, et la
+caméra inclinée décalait les quatre copies. Remèdes :
+- les couches relisent une lumière moyennée, avec un grain à l'échelle de l'écran ;
+- la lueur au sol de la fusée passe en mélange et non en addition, pour que le rouge ne vire plus au rose ni au blanc ;
+- les marches des trois paliers des nappes s'étalent sur un pixel ;
+- nappes et voile prennent l'ambre de fumee_03 mesuré sur la planche.
+La lumière, son rayon et les paliers ne bougent pas. À la loupe : juste posée, plus d'anneaux et moins de rose ; à la
+braise, un nuage orange doux qui couvre en partie les volutes, à juger au tour 2 ; témoins inchangés.
+Banc des gadgets : VERDICT OK, 0 échec, noir absolu tenu par les dix gadgets ; fusée au sol 149/159 appels de dessin.
+Lot complet vert à 17:42 : 111 suites, sans erreur de script, 412 s.

@@ -256,7 +256,11 @@ func _ready() -> void:
 		# Un seul matériau pour les trois : elles ne diffèrent que par leur
 		# transform et leur modulate, rien qui vive dans le shader.
 		nappe.material = mat_nappe
-		nappe.modulate = Color(0.72, 0.70, 0.68, 0.0)
+		# ISO10, 1c (2026-09-15) — l'ambre de fumee_03 (planche du DA, teinte moyenne mesurée 0,618 / 0,369 / 0,18),
+		# remontée à une luminance proche du gris d'avant (0,72 / 0,70 / 0,68) : le nuage garde sa clarté, il change de
+		# couleur, dans les deux phases (décision de la session cloud, 16:42). La lumière reste rouge puis braise ;
+		# `occultation_pour`, ce que le jeu lit de la fumée, ne dépend pas de la teinte.
+		nappe.modulate = Color(0.94, 0.56, 0.27, 0.0)
 		nappe.z_index = 10
 		add_child(nappe)
 		_nappes.append(nappe)

@@ -30,7 +30,10 @@ shader_type canvas_item;
 void fragment() {
 	vec4 planche = texture(TEXTURE, UV);
 	float densite = max(planche.r, max(planche.g, planche.b));
-	float palier = step(0.15, densite) * 0.35 + step(0.45, densite) * 0.30
-		+ step(0.75, densite) * 0.35;
+	// ISO10, 1c (2026-09-15) — les trois paliers restent (décision d'Adrien, lot 3 du 11/09) ; leur MARCHE s'étale sur
+	// un pixel d'écran (`fwidth` de la densité) au lieu de tomber d'un texel de planche grossi 2,4 fois en iso.
+	float w = max(fwidth(densite), 1e-4);
+	float palier = smoothstep(0.15 - w, 0.15 + w, densite) * 0.35 + smoothstep(0.45 - w, 0.45 + w, densite) * 0.30
+		+ smoothstep(0.75 - w, 0.75 + w, densite) * 0.35;
 	COLOR = vec4(COLOR.rgb, COLOR.a * planche.a * palier);
 }

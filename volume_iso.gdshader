@@ -48,8 +48,26 @@ uniform bool ruban = false;
 // Raccords de la vague — la température de la lumière (ISO7, `pate_temperature`) : le nuage posé sur le sol
 // chaud en prend la teinte, luminance gardée. 0 : la lightmap telle quelle. Réglé par `IsoVolumes`.
 uniform float temperature = 0.0;
+// ISO10, 1c (2026-09-15) — **une couche montre la lumière du nuage, pas le dessin de sa volute.** Chaque couche relisait
+// la lightmap NETTE sous elle, volutes des nappes 2D comprises : empilées à quatre hauteurs et vues par la caméra
+// inclinée, les quatre copies nettes de la même volute se décalaient à l'écran en arcs parallèles — les « anneaux » de
+// la loupe (tour 1). Prouvé : la même fusée, volumes coupés, n'en a aucun. La couche relit maintenant une MOYENNE sur
+// `lissage_rayon` × rayon : les copies n'ont plus de détail à répéter, et le dessin de la volute reste celui des
+// nappes, au sol, une seule fois. Le ruban (la toile du voile, debout) garde sa lecture nette. Noir absolu tenu : une
+// moyenne de lectures nulles est nulle ; jamais plus clair que la plus claire des lectures.
+uniform float lissage_rayon = 0.18;
 
 varying vec3 monde;
+
+// La lightmap moyennée autour de `p` : le point et huit lectures sur un cercle de `r` pixels de monde.
+vec3 lire_lightmap_lissee(vec2 p, float r, bool deux) {
+	vec3 s = lire_lightmap(p, deux);
+	for (int k = 0; k < 8; k++) {
+		float t = float(k) * 0.785398163;
+		s += lire_lightmap(p + vec2(cos(t), sin(t)) * r, deux);
+	}
+	return s / 9.0;
+}
 
 void vertex() {
 	monde = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -59,7 +77,18 @@ void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 px = monde.xz;
 	float aa = clamp((fwidth(px.x) + fwidth(px.y)) / 6.0, 0.02, 0.5);
-	vec3 c = lightmap_pateuse(px, px, aa, deux);
+	// Hors de tout branchement, comme `aa` : la taille d'un pixel d'écran en pixels de monde.
+	float px_ecran = max(max(fwidth(px.x), fwidth(px.y)), 1e-3);
+	vec3 lue = ruban ? lire_lightmap(px, deux) : lire_lightmap_lissee(px, max(rayon * lissage_rayon, 1.0), deux);
+	vec3 c;
+	if (ruban) {
+		c = lightmap_pateuse(px, px, aa, deux);
+	} else {
+		// Pente nulle et lumière décalée égale à la lumière lue : un nuage n'a pas de bord de lumière à dessiner, il
+		// montre la teinte qu'il reçoit.
+		float l_lue = pate_luminance(lue);
+		c = l_lue <= 0.0 ? vec3(0.0) : (style == PATE_BRUTE ? lue : pate(lue, l_lue, style, px, vec2(0.0), l_lue, aa));
+	}
 	float a = densite;
 	if (!ruban) {
 		vec2 d = (px - centre) / max(rayon, 1.0);
@@ -72,7 +101,10 @@ void fragment() {
 			vec2 local = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y);
 			a *= texture(masque, local * 0.5 + vec2(0.5)).a;
 		}
-		a *= 0.7 + 0.3 * pate_bruit(px * 0.05 + vec2(graine * 13.1, age * 0.35));
+		// ISO10, 1c — le grain du bord à l'échelle de l'ÉCRAN (cellules de trois pixels), plus en cellules de 20 px de
+		// monde grossies 2,4 fois : c'étaient les « blocs » de la fumée. Ancré dans le monde (px divisé par une
+		// constante de zoom) : il ne glisse pas avec la caméra.
+		a *= 0.7 + 0.3 * pate_bruit(px / (3.0 * px_ecran) + vec2(graine * 13.1, age * 0.35));
 	}
 	a = clamp(a, 0.0, 1.0);
 	if (a <= 0.003) {

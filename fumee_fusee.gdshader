@@ -23,7 +23,8 @@ render_mode blend_mix;
 // jamais mêlés au même tampon : un trou EFFACE la densité en permanence tant
 // qu'un corps y est, un tunnel s'ÉTEINT tout seul en 0,4 s quoi qu'il arrive.
 
-uniform vec4 teinte : source_color = vec4(0.72, 0.70, 0.68, 1.0);
+// ISO10, 1c — l'ambre de fumee_03, comme les nappes (`fusee.gd`) ; l'extinction la plonge toujours au noir.
+uniform vec4 teinte : source_color = vec4(0.94, 0.56, 0.27, 1.0);
 uniform float alpha_globale : hint_range(0.0, 1.0) = 0.0;
 uniform float age = 0.0;
 uniform float graine = 0.0;

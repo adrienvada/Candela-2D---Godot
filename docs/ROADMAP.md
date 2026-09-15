@@ -25187,6 +25187,51 @@ plus fin reste le second levier, si le tour 2 le demande.
   changer à la décision ISO7b ni à la chaleur ; une cible de rendu de plus se chiffrerait avant de coder.
 - Lot complet vert à 17:16 : 127 OK en 414 s.
 
+**1c — la fusée et sa suie.** Défaut 6 du verdict : halo rose-saumon, nappes à lobes durs, anneaux concentriques,
+fumée en blocs. Décisions de la session cloud (16:42), qui tiennent les deux décisions d'Adrien :
+- la LUMIÈRE garde son rouge de détresse puis l'orange de braise (FU2.1) ; nappes et fumée passent à l'ambre de
+  fumee_03 ;
+- les trois paliers de densité restent (lot 3, 11/09) ; seule leur marche s'adoucit ;
+- les quatre paliers de `retrodiffusion_corona.png` restent ;
+- invariants : rayon de lumière (440 px posée, 160 en vol), noir absolu, neutralité du halo.
+Ce qui a été fait, dans l'ordre des preuves :
+- **Première piste, essayée et ANNULÉE** : élargir à un pixel d'écran le bord des trois bandes de la pâte lavis
+  (`iso_pate.gdshaderinc`, `a = max(0,01 ; fwidth(l))`). Elle compilait, mais la loupe avant/après était identique :
+  les anneaux ne venaient pas de là. Pas de changement sans effet démontré.
+- **La cause des anneaux, prouvée** : profil de luminance à oscillations de 6 à 8 px et 20 à 40 niveaux (ni banding
+  8 bits, ni trois bandes), et au grossissement ×4 des arcs parallèles répétés. La même fusée photographiée VOLUMES
+  COUPÉS (`IsoVolumes.images_actives`) n'a aucun anneau. `IsoVolumes` empile la fumée en quatre couches, de 0,25 à
+  1 tuile, et chacune relisait la lightmap NETTE sous son point, volutes des nappes 2D comprises : vues par la caméra
+  inclinée, quatre copies de la même volute décalées à l'écran.
+- **`volume_iso.gdshader`** : une couche de nuage relit une lumière MOYENNÉE (`lire_lightmap_lissee`, le point et huit
+  lectures sur un cercle de 0,18 × rayon) ; le dessin de la volute reste celui des nappes, au sol, une fois. Le ruban
+  (la toile debout du voile) garde sa lecture nette. Noir absolu tenu : une moyenne de lectures nulles est nulle. Le
+  grain du bord passe à l'échelle de l'écran (cellules de trois pixels, plus 20 px de monde grossis 2,4 fois : les
+  « blocs »). La neutralité de la chaleur garde sa lecture au point net : ligne épinglée par `test_iso_objets` (ISO7b).
+- **La lueur au sol de la fusée en MÉLANGE** : `halo_iso.gdshader` passe dans `halo_iso.gdshaderinc`, inclus par
+  `halo_iso.gdshader` (additif, toutes les autres lueurs) et `halo_iso_melange.gdshader` (`blend_mix`), que
+  `IsoVolumes._suivre_fusee` donne à la seule lueur de la fusée posée. Additionné au sol déjà rougi par la même
+  lumière, le rouge saturait canal par canal (rose, puis blanc) ; en mélange, il tend vers sa couleur sans la
+  dépasser. La lumière 2D ne bouge pas.
+- **`nappe_fusee.gdshader`** : les trois `step` de densité deviennent des `smoothstep` d'une largeur `fwidth(densite)`.
+- **La teinte** : nappes (`fusee.gd`) et voile (`fumee_fusee.gdshader`) passent du gris (0,72 ; 0,70 ; 0,68) à l'ambre
+  de fumee_03, mesuré sur la planche (0,618 ; 0,369 ; 0,18, luminance 0,41) et remonté à une clarté proche du gris :
+  (0,94 ; 0,56 ; 0,27). L'extinction plonge toujours la teinte au noir ; `occultation_pour` n'en dépend pas.
+- **Suites** : `test_iso_gadgets` réécrit son contrôle d'équité sur l'intention (toutes les lectures, nette et
+  moyennée, prennent la lightmap de la caméra qui dessine) : 99 vérifications ; `test_iso_objets` 48.
+- **L'outil de loupe** : la fusée prise trois fois (juste posée, volumes coupés, à la braise à 8 s) ; la caméra se
+  pose avant de choisir les lieux « à l'écran » (lancé seul, un plan mettait la fusée hors cadre) ; un centre de loupe
+  hors de l'image est signalé.
+- **À la loupe** (fusée au même lieu, tour 1 contre 1c) :
+  - juste posée : les anneaux sont partis, la tache rose-blanc du centre s'est réduite ; le nuage reste beige rosé,
+    la lumière rouge de départ éclairant une fumée désormais ambre ;
+  - à la braise (8 s) : un nuage orange, doux, aux bords plumeux, plus proche de fumee_03. ⚠️ À juger au tour 2 : la
+    fumée moyennée y couvre en grande partie le dessin des volutes des nappes ;
+  - témoins : le pilier identique à 1b, le bord de l'ombre inchangé.
+- **Banc des gadgets** (`banc_iso_gadgets`) : VERDICT OK, 0 échec. Les dix gadgets tiennent le noir absolu (écran à 0
+  lumières éteintes et 2D coupée) ; la fusée au sol coûte 149 appels de dessin sans images, 159 avec.
+- **Lot complet** (`./tools/run_suites.sh`, 17:42) : vert, 111 suites, sans erreur de script, 412 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

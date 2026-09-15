@@ -275,9 +275,14 @@ func _les_shaders() -> void:
 		volume != null and _a_l_uniforme(volume, "lumiere_1") and _a_l_uniforme(volume, "lumiere_2")
 		and _a_l_uniforme(volume, "densite") and _a_l_uniforme(volume, "masque"))
 	var texte := FileAccess.get_file_as_string("res://volume_iso.gdshader")
+	# ISO10, 1c — une couche de nuage lit désormais la lumière MOYENNÉE (`lire_lightmap_lissee`), le ruban la lumière
+	# nette : ce qui compte ici n'est pas la forme de la lecture, c'est que TOUTES les lectures prennent la lightmap de
+	# la caméra qui dessine (`deux`), jamais celle de l'autre joueur.
 	_check("une couche lit la lightmap de la caméra qui la dessine (J1 ou J2)",
 		texte.contains("bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);")
-		and texte.contains("vec3 c = lightmap_pateuse(px, px, aa, deux);"))
+		and texte.contains("lightmap_pateuse(px, px, aa, deux)")
+		and texte.contains("lire_lightmap_lissee(px, max(rayon * lissage_rayon, 1.0), deux)")
+		and texte.contains("s += lire_lightmap(p + vec2(cos(t), sin(t)) * r, deux);"))
 	_check("une couche recopie la lightmap sans gain : 0 sans lumière, jamais plus claire",
 		texte.contains("ALBEDO = c;") and texte.contains("unshaded"))
 	_check("aucune couche n'écrit la profondeur (elle ne cache pas ce qui est derrière elle)",
