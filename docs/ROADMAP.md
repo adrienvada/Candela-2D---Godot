@@ -25030,6 +25030,41 @@ au nord-ouest et touche le mur ouest, et l'impact tombe dans le coin haut gauche
 **Un lot exact** : le fond du hub et celui de la carte de soirée, déjà remplacés pour le pas 6, ont été remis à
 leur version commitée le temps du lot de ce commit. Ils reviennent au commit du pas 6.
 
+**Pas 6 — la lampe électrique à la place des torches à flamme dans les images du DA** (séquence de fin, ordres
+36 à 41 de la session cloud, 2026-09-15). **Quatre images, pas trois** : `hub_bunker_a` était installée deux fois,
+en fond de l'accueil et du hub (`fond_hub_iso.jpg`), et recadrée en 4:5 pour la carte de soirée
+(`carte_soiree_fond.png`). Les dix portraits de classe ne portent aucune torche. `killcam_tireur_01` n'a jamais été
+installée : le code ne la cite qu'en commentaire. Mêmes noms, mêmes tailles (épinglées par `test_habillage`),
+aucun code touché. Sources livrées par « ISO Assets Sonnet » :
+- **Fond du hub** : `hub_bunker_a_v2.jpg`, 2752×1536, réduit par `tools/preparer_habillage.py fond`, au même
+  rapport que 1920×1071 à une ligne près.
+- **Carte de soirée** : `carte_soiree_fond_v2.png`, déjà 1080×1350.
+- **Les deux affiches** : `fin_victoire_v2_1920.jpg` et `fin_defaite_v2_1920.jpg`, faites par `preparer_habillage.py
+  fin`. La victoire est une retouche de l'originale, gardant l'estampe et la composition, avec une lampe en
+  main.
+- **Refus en chemin** : les premières v2 des affiches, livrées en 2816×1536 et 2752×1536, n'avaient pas le
+  rapport attendu et n'ont pas été posées. La session cloud a en outre refusé la première `fin_victoire_v2`
+  (style rompu).
+- ⚠️ **Piège de lecture** : `fin_victoire.jpg` porte sa figure à GAUCHE, mais l'affiche de fin la RETOURNE à l'écran
+  pour laisser la place au titre. Une capture la montre donc à droite, et une revue faite sur capture a cru la
+  composition inversée.
+- ⚠️ **Piège payé : remplacer un fichier ne change rien au jeu tant que Godot ne l'a pas réimporté.** Le jeu, les
+  suites et le photographe lisent la texture cuite dans `.godot/imported/`, pas le JPEG. Premières captures après
+  la pose (vers 16:07) : accueil, hub et carte de soirée montraient encore les ANCIENNES images, torche à flamme
+  comprise, et le lot lancé en même temps testait lui aussi les anciennes. `test_habillage` ne l'a pas vu : il
+  épingle les TAILLES, identiques par consigne. Remède : `godot --headless --path . --import` après toute
+  image remplacée, AVANT le lot et les captures. Le cache n'est pas versionné ; chaque arbre réimporte de
+  lui-même à l'ouverture de l'éditeur, mais pas un `godot --path .` lancé en ligne de commande.
+- **Vérifié à l'écran après réimport**, par le photographe dans un foyer neuf (plans `accueil`, `affiche`,
+  `soiree`) :
+  - l'accueil a sa pièce iso en fond ;
+  - l'affiche de victoire montre la figure lampe en main, retournée à droite par le jeu ;
+  - la carte de soirée montre la lampe posée.
+  Les plans `verdict-victoire` / `verdict-defaite` montrent le SALON titré, pas l'affiche. Et aucun plan ne montre
+  l'affiche de DÉFAITE : l'écran partagé dit toujours « JOUEUR n GAGNE ». Elle attend un plan du photographe,
+  dans un commit à part.
+- Lot complet vert à 16:16, après réimport : 127 OK en 413 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

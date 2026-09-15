@@ -5589,3 +5589,10 @@ dans `docs/iso/loupe/`. Temps d'image de la bande, en temps réel : 9,37 / 9,84 
 - `--fixed-fps` est absent de `get_cmdline_args` ;
 - à ×1,8, tout mur à l'écran est à portée de torche.
 Lot complet vert à 16:04 : 127 OK en 410 s.
+
+**Pas 6 — les images du DA à lampe électrique, 2026-09-15 vers 16:10.** Session « Iso 1 Opus ». Quatre fichiers
+remplacés sous leurs noms et tailles, aucun code : `fond_hub_iso.jpg` (accueil et hub), `carte_soiree_fond.png`,
+`fin_victoire.jpg`, `fin_defaite.jpg`. Les sources sont d'ISO Assets. Les affiches livrées au mauvais rapport ont
+été refusées puis refaites par `preparer_habillage.py fin`. Piège : l'affiche de fin retourne l'image à l'écran.
+Piège payé : Godot lit la texture importée, et les premières captures et le premier lot voyaient encore les
+anciennes images. Arrêt, `godot --headless --path . --import`, reprise. Lot complet vert à 16:16 : 127 OK en 413 s.
