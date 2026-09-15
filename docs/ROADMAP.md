@@ -2427,7 +2427,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les étincelles d'impact n'éclairent plus ; l'écho au sol du tir et la lumière de coup restent** (2026-09-15, 12:05, session cloud qui décide pour Adrien, second volet de la décision ci-dessous : « c'est le même mal que celui qu'Adrien a nommé ») | Recensées au banc pendant une rafale près d'une fusée : 60 lumières sur 63 étaient des étincelles d'impact (douze par impact de mur, énergie 1,5) ; éteintes, il en reste 9 et le halo de la fusée revient à sa rondeur seule (0,88). Leur dessin additif non éclairé reste : on les voit toujours jaillir dans le noir. **Gardés, et pourquoi** : l'écho au sol du tir (`ground_flash`, 0,12 s, sans ombre) prolonge le flash de bouche et dit d'où l'on tire — 7 au plus pendant la rafale, sous le plafond ; la lumière de coup (`hit_light`) ne s'allume qu'une fois par coup reçu, dit qui est touché, et porte son propre réglage joueur (« Lumière d'impact », dans `ui.gd`) qu'une suppression laisserait sans effet. Ni l'une ni l'autre n'était allumée en nombre au relevé. |
 | **L'iso est le jeu par défaut ; la vue de dessus passe derrière un drapeau de débogage** (2026-09-15 vers 11:00, ISO6, session « Iso 1 Opus » en relève d'ISO5, sur le brief `briefs/iso6_releve.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final ; décision d'Adrien du 2026-09-14 à 23:33 : l'iso devient la vue du jeu) | `GameSettings.mode_iso` vaut vrai par défaut. `--2d` (une exécution) ou le réglage `debogage/vue_de_dessus` (proposé en build de débogage seulement) ramènent la vue de dessus, gardée jusqu'à ISO9 : elle reste le moteur de lumière que l'iso projette. `--iso` reste accepté, sans effet sauf sur un réglage de débogage oublié. **L'ancienne clé `video/mode_iso` n'est plus lue** : chaque `settings.cfg` d'avant ISO6 la porte à `false`, et la relire aurait gardé la vue de dessus chez tous les joueurs existants. F3, F6, `ConditionsDeMatch` (v2) et le manifeste du photographe disent `mode_rendu`. Les suites de référence 2D tournent sous `--2d` (`SUITES_2D` de `run_suites.sh`). |
+| **La balle n'est plus une source de lumière** (2026-09-15 vers 10:55, Adrien, réveillé, à la session cloud : « Supprimons le fait que la balle soit une source de lumière. Cela fait saturer le nombre de lumières possibles du moteur et fait buguer lors de tirs vifs avec une source comme une fusée éclairante. » ; faite par « ISO7 Gadgets et lumière Opus », branche `balle-sans-lumiere`) | Godot n'applique jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, les plus récentes en premier, et un quadrant de sol est un item (« Pièges connus », « quinze par item ») ; chaque balle portait une `PointLight2D` à ombres (`TrailLight`), étirée jusqu'à 800 px — une rafale près d'une fusée coupait son halo. **Conséquence de jeu, acceptée** : une balle qui passe près d'un corps ne le révèle plus, et elle n'éclaire plus ni mur ni sol. L'information de tir reste le flash de bouche (`MuzzleFlash`, inchangé) et le trait de la balle — sa traçante et son aura, non éclairées, visibles dans le noir. `WeaponData.emits_light` et `bullet_light_energy` restent (données de classe, index d'arme sur le fil) et ne pilotent plus que l'aura et la traçante : l'arbalète garde sa balle sans aura. |
 | **« Livre-moi le jeu dans une version grand budget aboutie en mode isométrique » ; les relevés avec les tests humains** (2026-09-15 à 05:00 et 05:13, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », rapporté par `briefs/socle.md` de la branche-signal `claude/reveil`) | 05:00 : « Si tu peux décaler encore davantage les tests humains, t'assurer que le jeu est beau, que les gadgets sont bien implémentés, que les fumées et les lumières diffuses de fusées etc. ont une lumière 3D qui éclaire par-dessus les murs bas etc. […] livre-moi le jeu dans une version grand budget aboutie en mode isométrique. Tu reporteras tous les tests possibles à la fin, fais confiance à ton intuition. » Puis : « Tu régénéreras tous les sprites que tu juges utiles. […] tu peux prendre toutes les décisions jusqu'à m'offrir un jeu qui s'approche de la qualité technique des visuels générés comme prévisualisation par Gemini. » 05:13 : « tant pis pour les relevés, on les fera en même temps que les tests humains quand je serai devant la machine ». **La session cloud décide donc à la place d'Adrien jusqu'au test final** ; chaque session de la vague prouve elle-même ce que son œil aurait vu (suite sabotée une fois, banc en vraie fenêtre, planche), et aucune ne prend de relevé de cadence. |
 | **Une source de lumière a une hauteur, qui décide de ce qu'un muret lui cache — sauf les lampes du joueur et ce qui les imite, qui gardent la règle « d'un même angle »** (2026-09-15, session « ISO7 Gadgets et lumière Opus », sur le brief de la session cloud qui décide pour Adrien jusqu'au test final ; demande d'Adrien de 05:00 : « que les fumées et les lumières diffuses de fusées etc. aient une lumière 3D qui éclaire par-dessus les murs bas ») | La fusée en vol éclaire par-dessus un muret avec une zone morte `D × 0,40 / (h − 0,40)`, courte quand elle est haute et qui s'allonge quand elle redescend, puis elle bute ; braises, mine et fusée posée butent (elles le faisaient déjà). La hauteur vit dans la lightmap 2D (`Light2D.height`), identique pour les deux joueurs. La torche, la rétrodiffusion, le halo, le flash, la lumière de coup et la torche fantôme gardent la bande constante d'ISO3b : c'est la règle que la balle et l'éblouissement font payer (`MursBas.franchit`), et une torche à hauteur dessinerait « vu, pas touché » ou « touché, pas vu », ce qu'Adrien a fait supprimer après H-MB1. Détail : section « Gadgets et lumières en iso ». |
 | **Les volumes iso sont des couches horizontales qui recopient la lightmap sous elles, dessinées avant les corps** (2026-09-15, même session) | Noir absolu et équité tiennent par construction (la couche vaut la lumière que la vue de dessus dessine là, lue dans la lightmap de la caméra qui la dessine), et un nuage ne cache jamais un corps plus que la vue de dessus, où l'effacement passe par l'opacité du corps. Pas de lueur sur le corps touché : elle dévoilerait un corps que la vue de dessus laisse noir. |
@@ -4183,6 +4185,53 @@ saut moyen de rouge de **32,6 à 8,8**, le niveau des simples joints de tuiles
    active, rectangle monde = taille de texture × `texture_scale`, croisé avec
    les carrés de 560 px du sol et filtré par `light_mask`. Un mécanisme
    plausible ne vaut rien tant qu'on n'a pas compté.
+
+⚠️ **2026-09-15 — la balle cesse d'être une lumière** (décision d'Adrien, « Décisions actées » : « cela fait
+saturer le nombre de lumières possibles du moteur et fait buguer lors de tirs vifs avec une source comme une
+fusée éclairante »). Chaque balle portait une `PointLight2D` à ombres (`TrailLight`) étirée jusqu'à 800 px :
+cinq balles couvraient plusieurs quadrants chacune. Recensement au banc `tools/banc_balle_sans_lumiere.gd`
+(vue iso, écran scindé, fusée posée par `_do_spawn_fusee` plein feu, rafale de cinq balles par
+`_do_spawn_bullet` à 45 px d'elle, relevé après cinq pas de physique), même scène avant (`a5ac4b8`) et après :
+
+| | Balles en vol au relevé | Lumières `enabled` et visibles | Dont balles | Rondeur du halo, fusée seule | Rondeur pendant la rafale |
+|---|---|---|---|---|---|
+| Avant | 2 | 47 | 2 | 0,88 | **0,56** |
+| Après | 2 | 45 | **0** | 0,88 | **0,78** |
+
+La rondeur est le minimum sur le maximum de la lightmap de J1 sur seize points à 60 px de la fusée. Sur la
+capture « avant », la lumière de la balle projette au sol une longue traînée claire qui frôle la fusée et
+mange un côté de son halo ; « après », elle a disparu, et il ne reste de la balle que sa traçante et son aura,
+non éclairées.
+
+⚠️ **Une droite verticale n'est pas forcément une arête de quadrant.** Les deux captures montrent de grandes
+ellipses jaunes tranchées net à la verticale ; j'y ai d'abord lu le piège, avant de voir qu'elles étaient
+IDENTIQUES après la suppression des lumières. Ce sont les AURAS des balles (dessins additifs non éclairés,
+gardés), et les verticales sont les bords des deux vues de l'écran scindé — le milieu de la fenêtre et le bord
+droit de la vue de J2. Règle : **une arête se confronte au cadre des vues avant d'être attribuée au moteur**, et
+un effet qu'on croit supprimer se juge sur la capture d'APRÈS, pas sur celle d'avant.
+⚠️ **Trois balles sur cinq étaient déjà mortes au relevé**, avant comme après (elles touchent un mur à l'est
+du banc) : les 45 lumières restantes étaient surtout les étincelles d'impact (`SPARK`, douze par impact de
+mur), le second levier que ce piège nommait déjà — traitées dans le second volet ci-dessous.
+
+**Second volet, même jour (session cloud, 12:05) : les étincelles d'impact n'éclairent plus.** Le premier
+volet laissait le halo à 0,78 en rafale et 45 lumières actives ; « c'est le même mal que celui qu'Adrien a
+nommé ». Recensement par famille au même banc (le fichier créateur et le nom du nœud de chaque lumière
+`enabled` et visible, au relevé de la rafale) :
+
+| Famille | Avant (`f8681a5`) | Après |
+|---|---|---|
+| Étincelles d'impact (`particle_pool.gd`, `Light` des `SPARK`) | **60** | **0** |
+| Échos au sol du tir (`player.gd`, `ground_flash`, 0,12 s chacun) | 2 | 7 |
+| Flash de bouche (`player.gd:MuzzleFlash`) | 0 | 1 |
+| Fusée (`fusee.gd:Halo`) | 1 | 1 |
+| **Total** | **63** | **9** |
+| Rondeur du halo, fusée seule / pendant la rafale | 0,88 / 0,86 | 0,88 / **0,88** puis 0,86 (deux passages) |
+
+Les échos et le flash varient d'un passage à l'autre selon l'instant du relevé dans la rafale ; les étincelles,
+non. ⚠️ **La rondeur varie aussi d'un passage à l'autre** : 0,78 puis 0,86 sur le même code avant ce volet,
+selon l'instant où les balles meurent. D'où deux passages après, tous deux au-dessus de la cible (≥ 0,85).
+Ce qui éclaire vraiment le jeu ne change pas : torche, flash de bouche, écho au sol du tir, fusée, gadgets à
+lumière, lumière de coup (voir « Décisions actées »).
 
 ### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
 
@@ -24073,7 +24122,7 @@ Relevé sur `953ead3`. « Iso » dit ce que la vue iso montre aujourd'hui : la l
 | Lumière de coup (`hit_light`) | `PointLight2D` carmin, 1 s, ombre des murs | projetée | règle du jeu | une lueur sur le corps touché (étape 4) |
 | Écho au sol du tir (`ground_flash`) | `PointLight2D` **sans ombre**, 130 px, 0,12 s | projeté | aucune : il ne connaît ni muret ni mur haut (inchangé) | — |
 | Onde de mort (`kill_shockwave.gd`) | anneau DESSINÉ non éclairé, aucune lumière | aplati dans la lightmap | pas une source | un anneau au sol (quad, étape 4) |
-| Balle (`TrailLight`), éclats (`particle_pool`) | lumières portées par le tir | quads au sol (ISO4) + lumière projetée | règle du jeu | — |
+| Balle, éclats (`particle_pool`) | éclats : lumières d'impact ; balle : traçante et aura non éclairées, **plus aucune lumière depuis le 2026-09-15** (décision d'Adrien, « Décisions actées ») | quads au sol (ISO4) | éclats : règle du jeu | — |
 | Bandeau LED des murs | une lumière cuite pour toute la carte | projetée | **sans origine** (marque `HAUTEUR_SANS_ORIGINE`) | — |
 | Fusée en vol (`fusee.gd`) | `Halo` à 0,8 ; cœur et corps décalés de `HAUTEUR_VOL_PX` (18 px factices) ; passe par-dessus les murets (masque sans le bit) | lumière projetée ; **aucun miroir** (le voxel n'existe que posée) | **profil du vol : 1,5 au lancer → 0 posée**, selon l'élan | la comète à sa hauteur (étape 4) |
 | Fusée posée : plein feu, braise, agonie, résidu | `Halo` jusqu'à 3,0 ; bit des murets ; cœur non éclairé | voxel tige + braise sous capteur (ISO4) | **0,15** (tous les actes au sol) | une lueur basse qui pulse (étape 4) |
