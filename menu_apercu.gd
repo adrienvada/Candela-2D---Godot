@@ -68,7 +68,7 @@ func _init(chemin: String = "") -> void:
 	_absent.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_absent.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	Charte.appareil(_absent, Charte.T_MENTION)
-	_absent.add_theme_color_override("font_color", Charte.LINE)
+	_absent.add_theme_color_override("font_color", Charte.PATE_FILET)
 	_absent.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_absent.hide()
 	add_child(_absent)

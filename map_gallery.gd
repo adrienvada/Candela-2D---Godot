@@ -42,7 +42,7 @@ const TILE_GAP := 16
 
 const COLOR_P1 := Charte.BLEU
 const COLOR_P2 := Charte.ROUGE
-const COLOR_DIM := Charte.DIM
+const COLOR_DIM := Charte.PATE_TEXTE_SECOND
 const COLOR_OK := Charte.ETAT_OK
 const COLOR_ERROR := Charte.ETAT_FAUTE
 
@@ -140,7 +140,7 @@ func _build() -> void:
 		# que la matière. `LINE` plutôt que `DIM` — une illustration d'absence doit
 		# rester en retrait de la phrase qu'elle accompagne, sinon elle devient le
 		# sujet.
-		dessin.modulate = Charte.LINE
+		dessin.modulate = Charte.PATE_FILET
 		dessin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		dessin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		dessin.custom_minimum_size = Vector2(0, 128)
@@ -203,7 +203,7 @@ func _build_import_row() -> Control:
 
 func _build_actions() -> Control:
 	var toolbar := PanelContainer.new()
-	toolbar.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 1))
+	toolbar.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(Charte.PATE_FILET, MenuWidgets.CORNER_PANEL, 1))
 
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -214,7 +214,7 @@ func _build_actions() -> Control:
 	_btn_import.pressed.connect(_open_import)
 	actions.add_child(_btn_import)
 
-	_btn_share = _make_action_button("PARTAGER", Charte.HALOGENE)
+	_btn_share = _make_action_button("PARTAGER", Charte.PATE_TEXTE)
 	_btn_share.pressed.connect(_share_selected)
 	actions.add_child(_btn_share)
 
@@ -237,7 +237,7 @@ func _build_toast() -> Control:
 	_toast_panel.modulate.a = 0.0
 	_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast_panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(
-		Charte.ACIER * 0.5, MenuWidgets.CORNER_BADGE, 1, Color(Charte.SURFACE, 0.96)))
+		Charte.PATE_SURVOL * 0.5, MenuWidgets.CORNER_BADGE, 1, Color(Charte.PATE_FOND, 0.96)))
 
 	_toast_label = Label.new()
 	Charte.appareil(_toast_label, Charte.T_MENTION)
@@ -250,8 +250,8 @@ func _build_toast() -> Control:
 # ---------------------------------------------------------------------------
 
 func _build_styles() -> void:
-	_style_normal = MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 2)
-	_style_hover = MenuWidgets.make_panel_style(Charte.ACIER, MenuWidgets.CORNER_PANEL, 2)
+	_style_normal = MenuWidgets.make_panel_style(Charte.PATE_FILET, MenuWidgets.CORNER_PANEL, 2)
+	_style_hover = MenuWidgets.make_panel_style(Charte.PATE_SURVOL, MenuWidgets.CORNER_PANEL, 2)
 	_style_selected = MenuWidgets.make_panel_style(COLOR_P1, MenuWidgets.CORNER_PANEL, 2)
 
 func _make_action_button(label: String, accent: Color) -> Button:
@@ -335,7 +335,7 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	var cadre_style := StyleBoxFlat.new()
 	cadre_style.bg_color = Charte.NOIR
 	cadre_style.set_border_width_all(1)
-	cadre_style.border_color = Charte.LINE
+	cadre_style.border_color = Charte.PATE_FILET
 	cadre_style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
 	cadre.add_theme_stylebox_override("panel", cadre_style)
 	row.add_child(cadre)
@@ -380,7 +380,7 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	badge_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var badge_col: Color = Charte.AMBRE if source == "builtin" else COLOR_P2
 	badge_panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(
-		badge_col * 0.8, MenuWidgets.CORNER_BADGE, 1, Color(Charte.SURFACE, 0.88)))
+		badge_col * 0.8, MenuWidgets.CORNER_BADGE, 1, Color(Charte.PATE_FOND, 0.88)))
 
 	var pastille := Label.new()
 	pastille.text = "OFFICIELLE" if source == "builtin" else "PERSO"
@@ -407,8 +407,8 @@ func _make_create_tile() -> Button:
 	tile.focus_mode = Control.FOCUS_ALL
 	tile.tooltip_text = "Créer une nouvelle carte dans l'éditeur"
 
-	var dashed := MenuWidgets.make_panel_style(Charte.LINE * 0.7, MenuWidgets.CORNER_PANEL, 2)
-	dashed.bg_color = Color(Charte.SURFACE * 0.6, 0.7)
+	var dashed := MenuWidgets.make_panel_style(Charte.PATE_FILET * 0.7, MenuWidgets.CORNER_PANEL, 2)
+	dashed.bg_color = Color(Charte.PATE_FOND * 0.6, 0.7)
 	tile.add_theme_stylebox_override("normal", dashed)
 	tile.add_theme_stylebox_override("focus", dashed)
 

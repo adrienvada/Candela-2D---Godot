@@ -25,7 +25,9 @@ const PORTEE_TORCHE := 450.0
 const MAX_OMBRE_OFFSET := 14.0
 
 ## Éléments de style
-var _border_color_base := Charte.LINE
+## Habillage iso (2026-09-15) : le filet de la pâte au repos, le filament ambre
+## là où la torche du menu le touche.
+var _border_color_base := Charte.PATE_FILET
 var _border_color_highlight := Charte.AMBRE
 var _corner_marks: bool = true
 
@@ -55,7 +57,7 @@ func _ready() -> void:
 func associer_stylebox(style: StyleBoxFlat) -> void:
 	_target_stylebox = style
 	if _target_stylebox != null:
-		_target_stylebox.shadow_color = Color(0.0, 0.0, 0.0, 0.70)
+		_target_stylebox.shadow_color = Color(Charte.NOIR, 0.70)
 		_target_stylebox.shadow_size = 12
 		_target_stylebox.shadow_offset = _shadow_offset
 
@@ -157,7 +159,7 @@ func _draw() -> void:
 	
 	# Repères de massicot / coins d'encrage de BD brutale aux 4 angles
 	if _corner_marks:
-		var col_coin := Charte.ACIER
+		var col_coin := Charte.BETON_CLAIR
 		col_coin.a = 0.65
 		# Haut-gauche
 		draw_line(Vector2(TAILLE_ONGLET, 0), Vector2(TAILLE_ONGLET, TAILLE_ONGLET), col_coin, 1.0)
@@ -182,15 +184,15 @@ func _draw() -> void:
 			# Zone encore masquée par l'encre noire brute
 			if cut_x < r.size.x:
 				var dark_rect := Rect2(cut_x, 0, r.size.x - cut_x, r.size.y)
-				draw_rect(dark_rect, Charte.NOIR)
+				draw_rect(dark_rect, Charte.ENCRE)
 				# Lame du massicot / trait d'encre noir franc
-				draw_line(Vector2(cut_x, 0), Vector2(cut_x, r.size.y), Charte.HALOGENE, 2.0)
+				draw_line(Vector2(cut_x, 0), Vector2(cut_x, r.size.y), Charte.PATE_FILAMENT_COEUR, 2.0)
 				draw_line(Vector2(cut_x - 1.0, 0), Vector2(cut_x - 1.0, r.size.y), Charte.AMBRE, 1.0)
 		else:
 			# Volet avançant de droite à gauche (retour en arrière)
 			var cut_x := r.size.x * (1.0 - p)
 			if cut_x > 0.0:
 				var dark_rect := Rect2(0, 0, cut_x, r.size.y)
-				draw_rect(dark_rect, Charte.NOIR)
-				draw_line(Vector2(cut_x, 0), Vector2(cut_x, r.size.y), Charte.HALOGENE, 2.0)
+				draw_rect(dark_rect, Charte.ENCRE)
+				draw_line(Vector2(cut_x, 0), Vector2(cut_x, r.size.y), Charte.PATE_FILAMENT_COEUR, 2.0)
 				draw_line(Vector2(cut_x + 1.0, 0), Vector2(cut_x + 1.0, r.size.y), Charte.AMBRE, 1.0)

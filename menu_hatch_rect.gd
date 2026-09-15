@@ -54,7 +54,7 @@ var color_ink: Color = Charte.NOIR:
 		color_ink = v
 		_update_param("color_ink", color_ink)
 
-var color_line: Color = Charte.LINE:
+var color_line: Color = Charte.PATE_FILET:
 	set(v):
 		color_line = v
 		_update_param("color_line", color_line)
@@ -79,7 +79,7 @@ var border_width: float = 0.0:
 		border_width = v
 		_update_param("border_width", border_width)
 
-var border_color: Color = Charte.LINE:
+var border_color: Color = Charte.PATE_FILET:
 	set(v):
 		border_color = v
 		_update_param("border_color", border_color)
@@ -173,9 +173,9 @@ func get_shader_material() -> ShaderMaterial:
 # =============================================================================
 
 ## Configure pour un fond de panneau inactif ou désactivé
-func apply_preset_inactive(accent: Color = Charte.LINE) -> void:
+func apply_preset_inactive(accent: Color = Charte.PATE_FILET) -> void:
 	pattern_mode = PatternMode.CROSS
-	color_ink = Charte.SURFACE
+	color_ink = Charte.PATE_FOND
 	color_line = accent
 	density = 0.35
 	spacing = 12.0
@@ -186,7 +186,7 @@ func apply_preset_inactive(accent: Color = Charte.LINE) -> void:
 	speed = 0.0
 
 ## Configure pour une trame de demi-teinte (halftone sérigraphique)
-func apply_preset_halftone(ink: Color = Charte.NOIR, dots: Color = Charte.LINE,
+func apply_preset_halftone(ink: Color = Charte.NOIR, dots: Color = Charte.PATE_FILET,
 		dot_spacing: float = 8.0, dot_density: float = 0.5) -> void:
 	pattern_mode = PatternMode.HALFTONE
 	color_ink = ink
@@ -199,7 +199,7 @@ func apply_preset_halftone(ink: Color = Charte.NOIR, dots: Color = Charte.LINE,
 	speed = 0.0
 
 ## Configure un cadre avec bordure au trait de plume / Rotring
-func apply_preset_rotring_panel(accent: Color = Charte.LINE,
+func apply_preset_rotring_panel(accent: Color = Charte.PATE_FILET,
 		b_width: float = 2.0, rough: float = 0.45) -> void:
 	border_width = b_width
 	border_color = accent

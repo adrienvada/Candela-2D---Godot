@@ -25,6 +25,19 @@ uniform sampler2D grain : filter_linear, repeat_enable;
 uniform float grain_echelle = 3.0;
 uniform float intensite : hint_range(0.0, 1.0) = 1.0;
 
+// Crochet de l'habillage iso (2026-09-15) — deux uniforms, et leurs valeurs par
+// défaut rendent l'image d'avant au bit près : `trait_couleur` vaut le littéral
+// qu'il remplace, et un `virage` d'alpha nul laisse `mix(dessin, …, 0.0)` rendre
+// `dessin` exactement. `ui.gd` les pousse depuis la charte de la pâte.
+//
+// ⚠️ **Sans hint `source_color`, délibérément.** Sous `gl_compatibility`, ce
+// hint peut convertir la valeur de sRGB en linéaire : le défaut ne rendrait plus
+// le même trait, et la killcam changerait sans qu'on l'ait demandé. Signalé par
+// ISO5 avant la pose. `tools/test_habillage.gd` exige que les deux soient déclarés
+// — un paramètre absent serait sinon ignoré sans erreur par `set_shader_parameter`.
+uniform vec3 trait_couleur = vec3(0.98, 0.91, 0.80);
+uniform vec4 virage = vec4(0.0, 0.0, 0.0, 0.0);
+
 // Adrien, le 2026-09-11, sur le rendu : « réduis de moitié l'effet ». Le
 // dessin (tons, contours, trame, papier) se mélange à l'image nue à cette
 // force au maximum du curseur ; le curseur garde toute sa course en dessous.
@@ -64,11 +77,15 @@ void fragment() {
 	postere = mix(postere, vec3(0.0), encre * 0.55);
 
 	// Le trait, par-dessus : halogène, pas blanc pur.
-	vec3 dessin = mix(postere, vec3(0.98, 0.91, 0.80), contour * (0.55 + 0.35 * tension));
+	vec3 dessin = mix(postere, trait_couleur, contour * (0.55 + 0.35 * tension));
 
 	// Le grain de papier : centré sur zéro, faible, immobile.
 	float papier = texture(grain, uv * grain_echelle).r - 0.5;
 	dessin += papier * 0.05;
+
+	// Le virage de l'habillage iso : la planche prend la teinte de l'encre et du
+	// papier. Sous le curseur `intensite` comme tout le dessin — à zéro, l'image nue.
+	dessin = mix(dessin, vec3(luma(dessin)) * virage.rgb * 2.0, virage.a);
 
 	col = mix(col, dessin, intensite * FORCE_DESSIN);
 	col *= smoothstep(0.8, 0.2, distance(uv, vec2(0.5)) * 1.2);

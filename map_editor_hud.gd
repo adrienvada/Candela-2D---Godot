@@ -50,11 +50,11 @@ const ACTION_BACK: StringName = &"back"
 enum Toast { INFO, SUCCESS, WARN, ERROR }
 
 # --- Palette néon -----------------------------------------------------------
-const COL_PANEL := Color(Charte.SURFACE * 0.7, 0.93)
-const COL_PANEL_SOFT := Color(Charte.SURFACE * 1.3, 0.95)
+const COL_PANEL := Color(Charte.PATE_FOND * 0.7, 0.93)
+const COL_PANEL_SOFT := Color(Charte.PATE_FOND * 1.3, 0.95)
 const COL_BORDER := Color(Charte.BLEU, 0.28)
-const COL_TEXT := Charte.HALOGENE
-const COL_DIM := Charte.DIM
+const COL_TEXT := Charte.PATE_TEXTE
+const COL_DIM := Charte.PATE_TEXTE_SECOND
 const COL_OK := Charte.ETAT_OK
 const COL_WARN := Charte.ETAT_ATTENTION
 const COL_ERROR := Charte.ETAT_FAUTE
@@ -808,7 +808,7 @@ func show_toast(message: String, kind: Toast = Toast.INFO) -> void:
 		_:
 			colour = COL_ACCENT
 
-	var panel := _make_panel(Color(Charte.SURFACE, 0.94))
+	var panel := _make_panel(Color(Charte.PATE_FOND, 0.94))
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.modulate.a = 0.0
 
@@ -913,7 +913,7 @@ func _style_button(button: Button, tint: Color, strong: bool) -> void:
 
 	var disabled := normal.duplicate() as StyleBoxFlat
 	disabled.bg_color = Color(Charte.SOL_A, 0.55)
-	disabled.border_color = Color(Charte.LINE * 1.55, 0.45)
+	disabled.border_color = Color(Charte.PATE_FILET * 1.55, 0.45)
 
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
@@ -921,7 +921,7 @@ func _style_button(button: Button, tint: Color, strong: bool) -> void:
 	button.add_theme_stylebox_override("disabled", disabled)
 	button.add_theme_stylebox_override("focus", hover)
 	button.add_theme_color_override("font_color", COL_TEXT)
-	button.add_theme_color_override("font_hover_color", Charte.HALOGENE)
+	button.add_theme_color_override("font_hover_color", Charte.PATE_TEXTE)
 	button.add_theme_color_override("font_disabled_color", COL_DIM)
 
 func _style_step_button(button: Button, tint: Color, active: bool) -> void:

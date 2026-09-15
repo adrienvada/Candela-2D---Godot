@@ -31,12 +31,16 @@ const P2 := C.ROUGE
 ## « lanceur » se confondaient avec le liseré de sélection parce que les deux
 ## portaient `P1`. On avait retiré la couleur des lanceurs ; la cause restait —
 ## l'interface empruntait la couleur de quelqu'un faute d'en avoir une.
-const ACCENT := C.ACIER
+##
+## **Habillage iso (2026-09-15) : l'accent est le papier, plus l'acier.** Même
+## rôle — la couleur qui n'est à aucun joueur —, dans la pâte des planches :
+## ce qui s'éclaire au survol s'éclaire comme le béton sous la torche.
+const ACCENT := C.PATE_SURVOL
 ## Les titres, et tout ce qui mérite d'être lu en premier. Même teinte que le feu
 ## du jeu : dans un tableau de bord, l'ambre est la couleur de ce qui appelle.
 const GOLD := C.AMBRE
 ## Texte secondaire, sous-titres, entrées inactives.
-const DIM := C.DIM
+const DIM := C.PATE_TEXTE_SECOND
 ## Avertissement qui n'est pas une erreur.
 ##
 ## Alias d'`AMBRE`, et c'est la moitié d'une correction : le code écrivait
@@ -49,14 +53,26 @@ const OK := C.ETAT_OK
 ## Ce qui a échoué.
 const FAUTE := C.ETAT_FAUTE
 ## Filets et bordures au repos.
-const LINE := C.LINE
+##
+## ⚠️ **Depuis l'habillage iso, ces alias ne pointent plus vers les couleurs
+## d'appareil du même nom** (`C.LINE`, `C.SURFACE`…), et c'est le cœur de la
+## bascule : ces dernières sont lues par le jeu (`player.gd`, les voxels), les
+## changer aurait repeint l'arène. L'interface change de rôles ; le jeu garde ses
+## couleurs. Voir « LA PÂTE » dans `charte.gd`.
+const LINE := C.PATE_FILET
 ## Fond des panneaux, légèrement translucide.
-const SURFACE := C.SURFACE
+const SURFACE := C.PATE_FOND
 ## Fond d'un écran de hub. Moins opaque que le noir du jeu : on doit sentir
 ## qu'il y a un monde derrière, même à l'arrêt.
-const BACKDROP := C.BACKDROP
-## Le blanc cassé de la lumière. Remplace chaque blanc pur de l'interface.
-const LUMIERE := C.HALOGENE
+const BACKDROP := C.PATE_RIDEAU
+## Le texte courant, et ce qui s'éclaire : le papier des planches.
+const LUMIERE := C.PATE_TEXTE
+## Le texte posé sur une plaque éclairée (survol, bouton principal).
+const TEXTE_SUR_PAPIER := C.PATE_TEXTE_SUR_PAPIER
+## Le filament : le cadre de ce qui est choisi, et les valeurs qu'on règle.
+const FILAMENT := C.PATE_FILAMENT
+## L'ombre portée d'une plaque.
+const OMBRE := C.PATE_OMBRE
 
 # --- Typographie ------------------------------------------------------------
 

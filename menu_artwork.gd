@@ -31,7 +31,9 @@ enum EffectMode {
 
 ## Points d'intérêt en coordonnées normalisées (U, V) dans l'image 1024x640.
 const POIS: Dictionary = {
-	"ill_accueil": Vector2(0.62, 0.25),
+	# Habillage iso (2026-09-15) : l'accueil montre le bunker iso (`fond_hub_iso.jpg`),
+	# et son POI est sa torche, mesurée au pixel (barycentre des pixels ≥ 235).
+	"ill_accueil": Vector2(0.751, 0.354),
 	"ill_competitif": Vector2(0.65, 0.65),
 	"ill_ecran_scinde": Vector2(0.50, 0.45),
 	"ill_scinde": Vector2(0.50, 0.45),
@@ -98,6 +100,10 @@ static func cle_canonique(identifiant: String) -> String:
 	if identifiant == "":
 		return "ill_accueil"
 	var nom := identifiant.get_file().get_basename()
+	# Déclaré et non laissé au repli final : le repli rend aussi `ill_accueil`,
+	# mais une image qui y tombe par défaut ne se distingue pas d'une image oubliée.
+	if nom == "fond_hub_iso":
+		return "ill_accueil"
 	if nom == "ill_maj" or nom == "mise_a_jour" or nom == "ill_mise_a_jour":
 		return "ill_mise_a_jour"
 	if nom == "ill_scinde" or nom == "ecran_scinde" or nom == "ill_ecran_scinde":

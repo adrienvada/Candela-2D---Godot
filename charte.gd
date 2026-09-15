@@ -181,6 +181,92 @@ const ETAT_ATTENTION := AMBRE
 const ETAT_FAUTE := ROUGE
 
 # =============================================================================
+# LA PÂTE — l'habillage iso : l'encre et le papier des planches du DA
+# =============================================================================
+#
+# **Une troisième famille, ajoutée le 2026-09-15 (chantier Habillage iso), et
+# elle ne remplace rien.** Les sept d'au-dessus ne sont pas des couleurs
+# d'interface : `ACIER` est lu par `player.gd` et `wall_impact.gd`, `DIM` par
+# les voxels, `HALOGENE` et `AMBRE` par les balles et les murs LED. Repeindre les
+# menus en retouchant leurs valeurs aurait repeint le jeu — sans qu'une seule
+# suite de menus ne rougisse. L'interface bascule donc vers les RÔLES ci-dessous
+# (par `menu_theme.gd` et les alias d'`ui.gd`) ; le jeu garde les sept.
+#
+# **Deux couleurs mesurées, et tout le reste en descend.** Relevé au pixel sur
+# les planches Gemini de la pâte D (`killcam_tireur_01`, `killcam_victime_01`,
+# `vignette_bunker_01`, `face_mur_01`) : tout y est chaud (teinte 26 à 32°) et
+# peu saturé (0,11 à 0,35). L'encre est leur noir chaud, le papier leur béton
+# éclairé ; les mélanges à 22, 50 et 65 % retombent sur la terre d'ombre et le
+# béton mesurés à quelques unités près (béton : #706456 contre #6D6359).
+# `tools/test_habillage.gd` recalcule chaque dérivée et chaque contraste.
+
+## L'encre : le noir chaud des planches. **Jamais le `NOIR` pur**, qui reste
+## celui de la calibration et de l'arène : un panneau en noir pur se confondrait
+## avec le noir absolu de la vue, et l'interface doit s'en détacher sans rien
+## éclairer.
+const ENCRE := Color(0.075, 0.063, 0.051)
+
+## Le papier : le béton sous la torche. Le texte courant de l'interface —
+## 9,9:1 sur le fond de panneau.
+const PAPIER := Color(0.80, 0.72, 0.62)
+
+## `lerp(ENCRE, PAPIER, 0.22)` — la terre d'ombre. Filets et cadres au repos.
+##
+## ⚠️ **Ne porte pas de texte et n'en reçoit pas** : le béton clair n'y tient que
+## 3,0:1. Un fond de terre d'ombre sous une phrase serait la faute de lisibilité
+## que le premier jet de cette palette allait commettre.
+const TERRE := Color(0.2345, 0.2075, 0.1762)
+
+## `lerp(ENCRE, PAPIER, 0.50)` — le béton. Pistes de jauge, traits secondaires.
+const BETON := Color(0.4375, 0.3915, 0.3355)
+
+## `lerp(ENCRE, PAPIER, 0.65)` — le béton clair. Texte secondaire : 4,8:1 sur le
+## fond de panneau, au-dessus du seuil de 4,5.
+const BETON_CLAIR := Color(0.54625, 0.49005, 0.42085)
+
+# --- Les rôles de la pâte : ce que l'interface nomme --------------------------
+#
+# Mêmes rôles que la charte d'appareil (« un rôle par couleur », 2026-08-24) :
+# le survol s'éclaire, la sélection prend le filament, le liseré d'un joueur
+# garde son bleu ou son rouge — ces deux-là ne sont pas de la décoration, ils
+# disent qui regarde.
+
+## Fond de panneau : l'encre, alpha 0,94 — on doit deviner le monde derrière,
+## comme sous l'ancien `SURFACE`.
+const PATE_FOND := Color(ENCRE, 0.94)
+## Fond d'un écran entier : `ENCRE * 0.5`, alpha 0,96.
+const PATE_RIDEAU := Color(0.0375, 0.0315, 0.0255, 0.96)
+## Filet au repos.
+const PATE_FILET := TERRE
+## Texte courant.
+const PATE_TEXTE := PAPIER
+## Texte secondaire, unités, entrées inactives.
+const PATE_TEXTE_SECOND := BETON_CLAIR
+## Le survol : la plaque s'éclaire au papier.
+const PATE_SURVOL := PAPIER
+## Le texte posé sur une plaque éclairée.
+const PATE_TEXTE_SUR_PAPIER := ENCRE
+## Le filament : le cadre de ce qui est choisi, actif ou engagé. La seule lumière
+## de l'interface, et c'est celle de la torche. **Sans halo** : un liseré d'encre
+## n'irradie pas (refonte roman graphique, 2026-09-11).
+const PATE_FILAMENT := AMBRE
+## Le cœur du filament : une ligne plus fine posée dans le liseré ambre.
+const PATE_FILAMENT_COEUR := HALOGENE
+## L'ombre portée d'une plaque.
+const PATE_OMBRE := Color(NOIR, 0.90)
+
+## La matière des fonds : un grain de lavis tuilable, fabriqué par
+## `tools/fabrique_pate_ui.py` (graine fixe, rejouable) et posé par
+## `menu_pate.gdshader` sur ce qu'un `Control` dessine lui-même — jamais sur ses
+## enfants, donc jamais sur le texte.
+const CHEMIN_PATE_GRAIN := "res://assets/ui/matiere/pate_grain.png"
+## Côté d'une tuile de grain, en pixels d'interface.
+const PATE_GRAIN_ECHELLE := 256.0
+## Amplitude du grain, ajoutée et non multipliée : sur l'encre, une matière
+## multipliée ne se verrait pas (0,075 × 1,16 reste noir).
+const PATE_GRAIN_FORCE := 0.10
+
+# =============================================================================
 # TYPOGRAPHIE — une échelle de six, et plus une taille arbitraire
 # =============================================================================
 #

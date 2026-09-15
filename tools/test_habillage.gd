@@ -137,6 +137,14 @@ func _run() -> void:
 	_test_le_registre_suit_le_gabarit()
 	_test_la_graisse_agit()
 	_test_la_table_des_graisses()
+	_test_la_pate_descend_de_deux_couleurs()
+	_test_la_pate_se_lit()
+	_test_la_matiere_est_posee()
+	_test_le_voile_de_killcam_porte_son_crochet()
+	_test_le_menu_est_empate()
+	_test_les_fichiers_bascules_parlent_la_pate()
+	_test_la_preparation_recopie_la_charte()
+	_test_les_ressources_de_l_habillage()
 
 	main.queue_free()
 	if _ko == 0:
@@ -360,3 +368,302 @@ func _test_la_table_des_graisses() -> void:
 	for poids: int in appareil.keys():
 		_check(not enseigne.has(poids),
 			"le poids %d sert dans les deux registres : il ne dit plus lequel" % poids)
+
+
+# =============================================================================
+# LA PÂTE — l'habillage iso (2026-09-15)
+# =============================================================================
+#
+# La charte d'appareil disait « LED » ; les planches iso disent encre et papier.
+# Ces contrôles tiennent la famille ajoutée à `charte.gd` à ce qu'elle affirme :
+# deux couleurs mesurées et des dérivées qui en sont des FORMULES, une teinte
+# chaude, et une lecture que les chiffres garantissent plutôt que l'œil.
+
+
+## Écart maximal entre deux couleurs, sur les quatre canaux.
+static func _ecart(a: Color, b: Color) -> float:
+	return maxf(maxf(absf(a.r - b.r), absf(a.g - b.g)),
+		maxf(absf(a.b - b.b), absf(a.a - b.a)))
+
+
+## Luminance relative au sens des contrastes de lecture (sRGB linéarisé).
+static func _lum(c: Color) -> float:
+	var canaux: Array[float] = []
+	for v: float in [c.r, c.g, c.b]:
+		canaux.append(v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4))
+	return 0.2126 * canaux[0] + 0.7152 * canaux[1] + 0.0722 * canaux[2]
+
+
+static func _contraste(a: Color, b: Color) -> float:
+	var la := _lum(a)
+	var lb := _lum(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+## ⚠️ **Un fond translucide se lit sur ce qu'il recouvre.** Le fond de panneau est
+## à 94 % ; mesuré seul, il vaudrait sa couleur pleine, et le contraste serait
+## calculé sur un panneau qui n'existe pas à l'écran. Il recouvre le noir de la
+## vue : c'est sur ce noir qu'on le compose.
+static func _sur_le_noir(fond: Color) -> Color:
+	return Color(fond.r * fond.a, fond.g * fond.a, fond.b * fond.a)
+
+
+func _test_la_pate_descend_de_deux_couleurs() -> void:
+	for d: Array in [[C.TERRE, 0.22, "TERRE"], [C.BETON, 0.50, "BETON"],
+			[C.BETON_CLAIR, 0.65, "BETON_CLAIR"]]:
+		var attendu: Color = C.ENCRE.lerp(C.PAPIER, d[1])
+		_check(_ecart(d[0], attendu) < 0.0005,
+			"%s n'est plus lerp(ENCRE, PAPIER, %.2f) : %s contre %s" % [d[2], d[1], d[0], attendu])
+	_check(_ecart(C.PATE_FOND, Color(C.ENCRE, 0.94)) < 0.0005,
+		"PATE_FOND n'est plus l'encre à 94 %% : %s" % C.PATE_FOND)
+	var rideau := Color(C.ENCRE.r * 0.5, C.ENCRE.g * 0.5, C.ENCRE.b * 0.5, 0.96)
+	_check(_ecart(C.PATE_RIDEAU, rideau) < 0.0005,
+		"PATE_RIDEAU n'est plus ENCRE × 0,5 à 96 %% : %s contre %s" % [C.PATE_RIDEAU, rideau])
+
+	# Les règles dures de la charte valent pour la pâte : saturation plafonnée,
+	# aucune valeur pure. Et la sienne : la pâte est CHAUDE — c'est la mesure des
+	# planches (teinte 26 à 32°), et c'est ce qui la sépare de l'appareil.
+	var famille := {"ENCRE": C.ENCRE, "PAPIER": C.PAPIER, "TERRE": C.TERRE,
+		"BETON": C.BETON, "BETON_CLAIR": C.BETON_CLAIR}
+	for nom: String in famille.keys():
+		var c: Color = famille[nom]
+		_check(c.s <= 0.7501, "%s dépasse le plafond de saturation : %.3f" % [nom, c.s])
+		for canal: float in [c.r, c.g, c.b]:
+			_check(canal > 0.0 and canal < 1.0, "%s porte une valeur pure : %s" % [nom, c])
+		var teinte := c.h * 360.0
+		_check(teinte >= 20.0 and teinte <= 40.0,
+			"%s n'est plus dans les teintes chaudes des planches (20-40°) : %.1f°" % [nom, teinte])
+
+
+## Les seuils de lecture : 4,5:1 pour tout texte, 7:1 pour le texte courant, qui
+## se lit longtemps. Mesurés : papier 9,9 ; béton clair 4,8 ; filament 10,1.
+func _test_la_pate_se_lit() -> void:
+	var fond := _sur_le_noir(C.PATE_FOND)
+	var cas := [
+		[C.PATE_TEXTE, fond, 7.0, "le texte courant sur un panneau"],
+		[C.PATE_TEXTE_SECOND, fond, 4.5, "le texte secondaire sur un panneau"],
+		[C.PATE_FILAMENT, fond, 4.5, "le filament sur un panneau"],
+		[C.PATE_TEXTE_SUR_PAPIER, C.PATE_SURVOL, 7.0, "le texte d'une plaque survolée"],
+		[C.PATE_TEXTE, _sur_le_noir(C.PATE_RIDEAU), 7.0, "le texte courant sur un rideau"],
+	]
+	for c: Array in cas:
+		var r := _contraste(c[0], c[1])
+		_check(r >= c[2], "%s ne se lit plus : %.2f:1 pour %.1f:1 exigés" % [c[3], r, c[2]])
+
+
+## La matière est un fichier, un matériau et un paramètre : les trois doivent y
+## être, et aucun des trois ne crie tout seul s'il manque.
+func _test_la_matiere_est_posee() -> void:
+	_check(ResourceLoader.exists(C.CHEMIN_PATE_GRAIN),
+		"le grain de la pâte n'existe pas : %s" % C.CHEMIN_PATE_GRAIN)
+	var tex := load(C.CHEMIN_PATE_GRAIN) as Texture2D
+	_check(tex != null, "le grain de la pâte ne se charge pas (cache d'import construit ?)")
+	if tex != null:
+		_check(tex.get_width() == int(C.PATE_GRAIN_ECHELLE) and tex.get_height() == int(C.PATE_GRAIN_ECHELLE),
+			"le grain n'a plus le côté de sa tuile : %d×%d pour %d" % [
+				tex.get_width(), tex.get_height(), int(C.PATE_GRAIN_ECHELLE)])
+		# Le shader AJOUTE (g − 0,5) : un grain décentré assombrirait ou
+		# éclaircirait chaque panneau, uniformément et sans erreur.
+		var img := tex.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			var somme := 0.0
+			var n := 0
+			for y in range(0, img.get_height(), 4):
+				for x in range(0, img.get_width(), 4):
+					somme += img.get_pixel(x, y).r
+					n += 1
+			var moyenne := somme / float(maxi(n, 1))
+			_check(absf(moyenne - 0.5) < 0.02,
+				"le grain n'est plus centré : moyenne %.3f pour 0,5" % moyenne)
+	var m := MenuWidgets.materiau_pate()
+	_check(m != null and m.shader != null, "le matériau de la pâte n'a pas son shader")
+	if m != null:
+		_check(m.get_shader_parameter("grain") != null,
+			"le matériau de la pâte ne porte pas son grain : chaque panneau s'éclaircirait sans erreur")
+		_check(MenuWidgets.materiau_pate() == m,
+			"le matériau de la pâte n'est plus partagé : un matériau par panneau les sépare tous au dessin")
+
+
+## Le crochet posé dans le voile de killcam, lu dans le TEXTE du shader.
+##
+## ⚠️ **Pas par `get_shader_uniform_list()`** : en headless, le serveur de rendu
+## factice peut rendre une liste vide, et le contrôle échouerait pour une raison
+## qui n'a rien à voir. Et `set_shader_parameter` sur un nom absent ne dit rien :
+## sans ce contrôle, un uniform renommé laisserait `ui.gd` pousser dans le vide.
+func _test_le_voile_de_killcam_porte_son_crochet() -> void:
+	var sh := load("res://killcam_overlay.gdshader") as Shader
+	_check(sh != null, "killcam_overlay.gdshader ne se charge pas")
+	if sh == null:
+		return
+	var code := sh.code
+	for decl: String in ["uniform vec3 trait_couleur", "uniform vec4 virage"]:
+		var i := code.find(decl)
+		_check(i >= 0, "le voile de killcam ne déclare plus « %s »" % decl)
+		if i >= 0:
+			var ligne := code.substr(i, code.find("\n", i) - i)
+			_check(not ligne.contains("source_color"),
+				"« %s » porte un hint source_color : sous gl_compatibility le défaut ne rendrait plus le même trait" % decl)
+	_check(code.contains("uniform vec3 trait_couleur = vec3(0.98, 0.91, 0.80);"),
+		"le trait par défaut n'est plus le littéral qu'il remplace : la killcam changerait sans qu'on le demande")
+	_check(code.contains("uniform vec4 virage = vec4(0.0, 0.0, 0.0, 0.0);"),
+		"le virage par défaut n'est plus éteint")
+	# ⚠️ Visé sur le littéral du TRAIT, pas sur « mix(postere, vec3( » : la trame
+	# d'encre juste au-dessus s'écrit `mix(postere, vec3(0.0), …)`, et le premier jet
+	# de ce contrôle la prenait pour l'ancien trait — un échec qui accusait le crochet.
+	_check(not code.contains("mix(postere, vec3(0.98"),
+		"le trait lit encore un littéral au lieu de trait_couleur")
+
+
+## Le passage d'empâtement a eu lieu sur le menu — et il n'a rien écrasé.
+##
+## ⚠️ **Les deux échecs possibles sont muets à l'écran**, et c'est pourquoi ils
+## se comptent : un passage oublié laisse des panneaux lisses que seule une
+## capture montre ; un passage fait AVANT le verre de M14 serait écrasé par lui,
+## et un passage fait APRÈS sans garde éteindrait le verre — dans les deux cas
+## sans une erreur, un nœud n'ayant qu'un matériau.
+func _test_le_menu_est_empate() -> void:
+	var pate := MenuWidgets.materiau_pate()
+	var hub = _ui.get("hub")
+	var racine = _ui.get("game_over_panel")
+	_check(hub != null and racine != null, "ui.hub ou ui.game_over_panel introuvable")
+	if hub == null or racine == null:
+		return
+	var empatees := 0
+	var lettres_grainees := 0
+	var rangees := 0
+	var rangees_sans_verre := 0
+	var pile: Array[Node] = [racine]
+	while not pile.is_empty():
+		var n: Node = pile.pop_back()
+		if n is CanvasItem and (n as CanvasItem).material == pate:
+			empatees += 1
+			if n is Button and (n as Button).text != "":
+				lettres_grainees += 1
+		if n is PanelContainer and String(n.name).begins_with(MenuGlass.PREFIXE_RANGEE):
+			rangees += 1
+			if (n as CanvasItem).material == null or (n as CanvasItem).material == pate:
+				rangees_sans_verre += 1
+		pile.append_array(n.get_children())
+	_check(empatees >= 8, "le menu n'est pas empâté : %d plaques seulement" % empatees)
+	_check(lettres_grainees == 0,
+		"%d boutons portent la pâte sur leur propre texte : le grain passe sur les lettres" % lettres_grainees)
+	var droite: Control = hub.right_panel()
+	_check(droite != null and droite.material != null and droite.material != pate,
+		"le cadre de droite a perdu son verre (M14)")
+	_check(rangees_sans_verre == 0,
+		"%d rangées de réglage sur %d ont perdu leur verre (M14)" % [rangees_sans_verre, rangees])
+	var pause = _ui.get("pause_panel")
+	if pause != null:
+		var n_pause := MenuWidgets.empater(pause)
+		_check(n_pause == 0,
+			"la pause avait encore %d plaques sans pâte après la construction" % n_pause)
+
+
+## Les fichiers d'interface déjà basculés vers la pâte. La liste GRANDIT d'étape en
+## étape (HUD, killcam, fins) : un fichier y entre quand il est repris, jamais
+## avant — sinon le contrôle rougirait sur un travail pas encore fait.
+const FICHIERS_PATE := [
+	"menu_theme.gd", "menu_widgets.gd", "menu_hub.gd", "menu_recitatif.gd",
+	"menu_comic_panel.gd", "menu_fiche_classe.gd", "map_gallery.gd",
+	"map_editor_hud.gd", "menu_icones.gd", "menu_apercu.gd", "menu_hatch_rect.gd",
+	"menu_rivets_overlay.gd",
+]
+
+
+## « Aucune couleur en dur hors `charte.gd` », vérifié en LISANT les fichiers.
+##
+## Deux interdits, et une permission :
+## - les neutres d'APPAREIL (`ACIER`, `SURFACE`, `LINE`, `DIM`, `BACKDROP`) — froids,
+##   et partagés avec le jeu : un fichier d'interface qui les nomme encore a
+##   échappé à la bascule ;
+## - tout littéral chiffré `Color(0…` — une couleur qui n'a pas de nom n'a pas de
+##   formule, et c'est ainsi que le dépôt avait accumulé 220 `Color(...)`.
+## - **permis** : `HALOGENE` et `AMBRE`, qui sont la LUMIÈRE et non un neutre (le
+##   cône dessiné de la fiche, le cœur du filament), et `Color.WHITE`, qui n'est
+##   pas une couleur mais une modulation neutre.
+## Les commentaires sont exclus : ils nomment l'ancienne couleur pour dire
+## pourquoi elle est partie.
+func _test_les_fichiers_bascules_parlent_la_pate() -> void:
+	var neutres := RegEx.new()
+	neutres.compile("\\b(Charte|C)\\.(ACIER|SURFACE|LINE|DIM|BACKDROP)\\b")
+	var chiffres := RegEx.new()
+	chiffres.compile("\\bColor\\(\\s*[0-9.]")
+	var lus := 0
+	for f: String in FICHIERS_PATE:
+		var fa := FileAccess.open("res://" + f, FileAccess.READ)
+		if fa == null:
+			_check(false, "fichier basculé illisible : %s" % f)
+			continue
+		lus += 1
+		var n := 0
+		while not fa.eof_reached():
+			var ligne := fa.get_line()
+			n += 1
+			var code := ligne
+			var diese := ligne.find("#")
+			if diese >= 0:
+				code = ligne.substr(0, diese)
+			if neutres.search(code) != null:
+				_check(false, "%s:%d nomme encore un neutre d'appareil : %s" % [f, n, ligne.strip_edges()])
+			if chiffres.search(code) != null:
+				_check(false, "%s:%d écrit une couleur chiffrée : %s" % [f, n, ligne.strip_edges()])
+	_check(lus == FICHIERS_PATE.size(), "tous les fichiers basculés ont été lus")
+
+
+## `tools/preparer_habillage.py` recopie l'encre, le béton et le papier pour le
+## virage des portraits. Une copie est une vérité de plus : on la relit ici.
+func _test_la_preparation_recopie_la_charte() -> void:
+	var fa := FileAccess.open("res://tools/preparer_habillage.py", FileAccess.READ)
+	_check(fa != null, "tools/preparer_habillage.py illisible")
+	if fa == null:
+		return
+	var texte := fa.get_as_text()
+	var attendus := {"ENCRE": C.ENCRE, "BETON": C.BETON, "PAPIER": C.PAPIER}
+	for nom: String in attendus.keys():
+		var re := RegEx.new()
+		re.compile("(?m)^%s = \\(([0-9.]+), ([0-9.]+), ([0-9.]+)\\)" % nom)
+		var m := re.search(texte)
+		_check(m != null, "preparer_habillage.py ne déclare plus %s" % nom)
+		if m == null:
+			continue
+		var c: Color = attendus[nom]
+		var copie := Color(float(m.get_string(1)), float(m.get_string(2)), float(m.get_string(3)))
+		_check(_ecart(Color(c, 1.0), copie) < 0.0005,
+			"preparer_habillage.py a divergé de charte.gd sur %s : %s contre %s" % [nom, copie, c])
+
+
+## Chaque ressource de l'habillage : présente, chargée, à sa taille, connue de git.
+##
+## ⚠️ **« Connue de git » n'est pas une coquetterie.** Une image posée dans le
+## worktree et jamais ajoutée passe toutes les suites de la machine qui l'a
+## fabriquée, puis manque partout ailleurs — et le repli de l'appelant la
+## cacherait. `git ls-files --error-unmatch` le dit avant le commit.
+const RESSOURCES_HABILLAGE := {
+	"res://assets/ui/matiere/pate_grain.png": Vector2i(256, 256),
+	"res://assets/ui/fond_hub_iso.jpg": Vector2i(1920, 1071),
+}
+
+
+func _test_les_ressources_de_l_habillage() -> void:
+	var depot := ProjectSettings.globalize_path("res://")
+	for chemin: String in RESSOURCES_HABILLAGE.keys():
+		var tex := load(chemin) as Texture2D if ResourceLoader.exists(chemin) else null
+		_check(tex != null, "ressource d'habillage absente ou non importée : %s" % chemin)
+		if tex != null:
+			var attendu: Vector2i = RESSOURCES_HABILLAGE[chemin]
+			_check(Vector2i(tex.get_width(), tex.get_height()) == attendu,
+				"%s n'a plus sa taille : %d×%d pour %s" % [chemin, tex.get_width(), tex.get_height(), attendu])
+		var sortie: Array = []
+		var code := OS.execute("git", ["-C", depot, "ls-files", "--error-unmatch",
+			chemin.trim_prefix("res://")], sortie, true)
+		_check(code == 0, "%s n'est pas connu de git : il manquerait sur toute autre machine" % chemin)
+	# Et ce sont bien celles que le hub montre.
+	_check(String(_ui.get("KEY_ART")) == "res://assets/ui/fond_hub_iso.jpg",
+		"le fond du hub n'est plus le bunker iso : %s" % _ui.get("KEY_ART"))
+	var ill: Dictionary = _ui.get("ILLUSTRATIONS")
+	_check(ill != null and String(ill.get("ill_accueil", "")) == "res://assets/ui/fond_hub_iso.jpg",
+		"l'illustration d'accueil n'est plus le bunker iso")
+	_check(MenuArtwork.cle_canonique("res://assets/ui/fond_hub_iso.jpg") == "ill_accueil",
+		"le bunker iso ne se rattache plus à la clé ill_accueil (POI et effet)")

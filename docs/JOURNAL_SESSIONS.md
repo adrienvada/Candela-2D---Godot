@@ -5043,3 +5043,36 @@ l'accord des constantes de `bullet.gd` et `gadget_leurre.gd` ; sabotée une fois
 Banc : plafond tenu dans trois passages ; porteur sous sa torche à 74/81/87 et 73/80/86 (81/88/95 au
 corps fin). Piège : avec `--flash`, le tir éblouit et le porteur mesuré est du sol. Planche
 `docs/iso/planche_corps_epais_jeu.jpg`.
+
+### Session « Habillage sonnet » (chantier Habillage iso, étapes 1 et 2, branche `iso-habillage`) — ajoutée le 2026-09-15 (Paris)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (vague « grand budget », mandat
+d'Adrien de 05:00), relayé par la Concierge à 05:18. Base : `iso2-vues` à `953ead3`. Aucun
+fichier de la vue de jeu, des gadgets, de `player.gd` ni de `game_state.gd`.
+
+**Fichiers touchés :** `charte.gd` (famille « LA PÂTE ») ; `menu_theme.gd` ; `menu_widgets.gd`
+(`materiau_pate`, `poser_pate`, `empater`, usines basculées) ; `menu_hub.gd` ;
+`menu_recitatif.gd` ; `menu_comic_panel.gd` ; `menu_fiche_classe.gd` ; `map_gallery.gd` ;
+`map_editor_hud.gd` ; `menu_icones.gd` ; `menu_apercu.gd` ; `menu_hatch_rect.gd` ;
+`menu_rivets_overlay.gd` ; `menu_artwork.gd` ; `ui.gd` (alias, fond du hub, passage
+d'empâtement) ; `killcam_overlay.gdshader` (crochet) ; `menu_pate.gdshader` (neuf) ;
+`tools/test_habillage.gd` ; `tools/fabrique_pate_ui.py` et `tools/preparer_habillage.py`
+(neufs) ; `assets/ui/matiere/pate_grain.png`, `assets/ui/fond_hub_iso.jpg`,
+`assets/ui/portraits/portrait_{fusil,pompe,arbalete}.png` ; `docs/ROADMAP.md` (section
+« Habillage iso ») ; ce journal.
+
+**Ce qui ne se devinait pas.** Les couleurs de la charte que l'interface emploie — `ACIER`,
+`DIM`, `SURFACE`, `LINE` — sont aussi lues par le jeu (`player.gd`, les voxels) : repeindre les
+menus en changeant leurs valeurs aurait repeint l'arène sans qu'une suite de menus ne rougisse.
+La bascule passe donc par les alias. Et le verre de M14 pose son propre matériau sur le cadre de
+droite et les rangées de réglage : la pâte se pose en un seul passage APRÈS lui, qui saute tout
+nœud déjà doté.
+
+**Coordination.** Cinq sessions se sont disputé le Mac ; la course au premier `pgrep` vide a
+lancé deux lots l'un dans l'autre et en a fait échouer un troisième avant départ. Un ordre de
+passage explicite l'a remplacée (Gadgets → Beauté → Habillage → ISO Corps). ISO5 a répondu ne pas
+tenir `killcam_overlay.gdshader` et a invité à poser le crochet ici ; ISO Assets a livré le fond
+du hub et quatre portraits, dont un à recadrer.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis à la session cloud
+« Fable 5.1 - CLOUD ISO UNRAILED ».

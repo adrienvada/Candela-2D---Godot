@@ -440,7 +440,9 @@ func _build_blur_material() -> ShaderMaterial:
 		mat.shader = shader
 		mat.set_shader_parameter("blur_amount", 5.0)
 		mat.set_shader_parameter("darken", 0.70)
-		mat.set_shader_parameter("tint", Color(0.03, 0.03, 0.05, 1.0))
+		# Habillage iso : l'illustration floutée vire vers le rideau d'encre de la
+		# pâte, chaud, et non plus vers un bleu-noir. Même obscurité, autre température.
+		mat.set_shader_parameter("tint", Color(Charte.PATE_RIDEAU, 1.0))
 		mat.set_shader_parameter("mode_flou_total", 1.0)
 		mat.set_shader_parameter("pied_debut", 0.55)
 		mat.set_shader_parameter("pied_fin", 0.88)
@@ -976,13 +978,19 @@ func make_entry(label: String, detail: String, target: String = "",
 	normal.content_margin_right = MenuTheme.GAP_S
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("disabled", normal)
+	# Habillage iso : la plaque de l'entrée prend le grain de la pâte. Son libellé
+	# et son chevron sont des ENFANTS, donc nets — le matériau d'un Control ne
+	# peint que sa propre StyleBox. Le verre de M14 ne vitre pas les entrées (il
+	# vitre le cadre de droite et les rangées `Row_`) : les deux matériaux ne se
+	# disputent jamais le même nœud.
+	MenuWidgets.poser_pate(btn)
 
 	# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
 	#
 	# Direction Roman Graphique Brutaliste : contraste franc au survol et ombre nette.
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Charte.HALOGENE
-	hover.bg_color = Color(Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b, 0.15)
+	hover.border_color = MenuTheme.LUMIERE
+	hover.bg_color = Color(MenuTheme.LUMIERE, 0.15)
 	hover.shadow_size = 0
 	hover.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
 	hover.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
@@ -991,9 +999,9 @@ func make_entry(label: String, detail: String, target: String = "",
 	# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
 	# Bordure ambre énergique et ombre dure Roman Graphique.
 	var choisie := normal.duplicate() as StyleBoxFlat
-	choisie.border_color = MenuTheme.GOLD
+	choisie.border_color = MenuTheme.FILAMENT
 	choisie.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
-	choisie.bg_color = Color(MenuTheme.GOLD.r, MenuTheme.GOLD.g, MenuTheme.GOLD.b, 0.22)
+	choisie.bg_color = Color(MenuTheme.FILAMENT, 0.22)
 	choisie.shadow_size = 0
 	choisie.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
 	choisie.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT

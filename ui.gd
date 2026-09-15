@@ -72,16 +72,20 @@ const VoileTextures := preload("res://voile_textures.gd")
 const COLOR_P1 := Charte.BLEU
 const COLOR_P2 := Charte.ROUGE
 const COLOR_GOLD := Charte.AMBRE
-const COLOR_DIM := Charte.DIM
+## ⚠️ **Habillage iso (2026-09-15) : les alias d'interface pointent vers les
+## rôles de la PÂTE**, plus vers les couleurs d'appareil du même nom. Celles-ci
+## (`Charte.DIM`, `LINE`, `SURFACE`, `ACIER`) sont lues aussi par le jeu ; les
+## retoucher aurait repeint l'arène. Voir « LA PÂTE » dans `charte.gd`.
+const COLOR_DIM := Charte.PATE_TEXTE_SECOND
 ## L'accent d'interface — celui qui n'appartient à aucun des deux joueurs.
-const COLOR_ACCENT := Charte.ACIER
+const COLOR_ACCENT := Charte.PATE_SURVOL
 ## Avertissement qui n'est pas une erreur ; le succès et l'échec ont désormais
 ## leurs propres couleurs (`Charte.ETAT_OK` / `Charte.ETAT_FAUTE`).
 const COLOR_WARN := Charte.ETAT_ATTENTION
-const COLOR_LINE := Charte.LINE
-const COLOR_SURFACE := Charte.SURFACE
-## Le blanc cassé de la lumière : il remplace chaque blanc pur de l'interface.
-const COLOR_LUMIERE := Charte.HALOGENE
+const COLOR_LINE := Charte.PATE_FILET
+const COLOR_SURFACE := Charte.PATE_FOND
+## Le texte courant : le papier des planches (il était l'halogène).
+const COLOR_LUMIERE := Charte.PATE_TEXTE
 
 ## Espacements : la grille de 8, et son unique demi-pas.
 const GAP_XXS := Charte.GAP_XXS
@@ -240,7 +244,7 @@ const PANEL_HISTORY := "panneau_historique"
 ## - **les écrans de mode montrent des CAPTURES** du jeu réel — on y prépare un
 ##   match, et ce qu'on veut alors savoir c'est à quoi il ressemble vraiment.
 const ILLUSTRATIONS := {
-	"ill_accueil": "res://assets/ui/ill_accueil.png",
+	"ill_accueil": "res://assets/ui/fond_hub_iso.jpg",
 	"ill_amical_ligne": "res://assets/ui/ill_amical_ligne.png",
 	"ill_amical_local": "res://assets/ui/ill_amical_local.png",
 	"ill_scinde": "res://assets/ui/ill_ecran_scinde.png",
@@ -1192,6 +1196,12 @@ func _ready() -> void:
 	_build_pause_menu()
 	_build_pick_panel()
 	_build_dialog()
+	# Habillage iso (2026-09-15) : la pâte, en un seul passage sur les quatre
+	# racines du menu. **Après `_build_menu()`**, qui pose le verre de M14 : le
+	# passage saute tout nœud qui a déjà un matériau, et c'est ce qui l'empêche
+	# d'éteindre le verre. Le HUD et la killcam ont leurs propres étapes.
+	for racine: Node in [game_over_panel, pause_panel, pick_panel, dialog_panel]:
+		MenuWidgets.empater(racine)
 	_build_status_bar()
 	_build_countdown()
 	_build_debug_panel()
@@ -3640,12 +3650,20 @@ func _make_killcam_label(tint: Color) -> Label:
 ## Roman Graphique Brutaliste et jurait avec tout ce qui l'entoure désormais.
 ## Sa composition est conservée — deux faisceaux rasants, moitié gauche vide —
 ## parce que c'est elle qui laisse la place au titre et aux entrées.
-const KEY_ART := "res://assets/keyart/keyart_encre.png"
+##
+## **Habillage iso (2026-09-15) : le fond du hub est le bunker en iso**, dans la
+## pâte D des planches (`fond_hub_iso.jpg`, préparé par
+## `tools/preparer_habillage.py` depuis la source d'ISO Assets `hub_bunker_a`). Même
+## composition que la planche à l'encre qu'il remplace — le tiers gauche noir,
+## la lumière à droite —, et pour la même raison : c'est le tiers gauche qui
+## reçoit le titre et les entrées. `keyart_encre.png` reste sur disque.
+const KEY_ART := "res://assets/ui/fond_hub_iso.jpg"
 
-## Présence de la planche, 0 à 1. À 0,34, son faisceau le plus clair tombe vers
-## 0,34 de luminance — nettement sous un texte en `HALOGENE`, assez au-dessus du
-## fond pour qu'on voie deux torches se faire face.
-const PRESENCE_KEY_ART := 0.34
+## Présence de la planche, 0 à 1. La règle ne change pas : le point le plus clair
+## de l'image doit tomber vers 0,34 de luminance, sous le texte courant et
+## au-dessus du fond. La torche du bunker culmine vers 0,9 ; à 0,40 elle retombe
+## à 0,36. (La planche à l'encre, plus claire, était posée à 0,34.)
+const PRESENCE_KEY_ART := 0.40
 
 
 func _poser_le_key_art() -> void:
@@ -3765,7 +3783,7 @@ func _build_menu() -> void:
 
 	var backdrop := ColorRect.new()
 	backdrop.name = "Rideau"
-	backdrop.color = Charte.BACKDROP
+	backdrop.color = Charte.PATE_RIDEAU
 	# M10 lit ici l'opacité de nuit du panneau : elle est la valeur d'arrivée du
 	# rideau, et la relire dans le code de l'effet en ferait une seconde vérité
 	# qui finirait par diverger de celle-ci.
@@ -5731,7 +5749,7 @@ func _build_map_card() -> Control:
 	var thumb_style := StyleBoxFlat.new()
 	thumb_style.bg_color = Charte.NOIR
 	thumb_style.set_border_width_all(1)
-	thumb_style.border_color = Charte.LINE
+	thumb_style.border_color = COLOR_LINE
 	thumb_style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
 	thumb_panel.add_theme_stylebox_override("panel", thumb_style)
 	row.add_child(thumb_panel)
@@ -6237,7 +6255,7 @@ func _build_class_card(joueur: int) -> Control:
 
 	var nom := Label.new()
 	Charte.enseigne(nom, T_APPUI)
-	nom.add_theme_color_override("font_color", Charte.HALOGENE)
+	nom.add_theme_color_override("font_color", COLOR_LUMIERE)
 	nom.horizontal_alignment = aligne
 	nom.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	nom.clip_text = true
@@ -6564,7 +6582,7 @@ func _build_pause_menu() -> void:
 
 	var backdrop := ColorRect.new()
 	backdrop.name = "Rideau"
-	backdrop.color = Color(Charte.BACKDROP, 0.88)
+	backdrop.color = Color(Charte.PATE_RIDEAU, 0.88)
 	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	pause_panel.add_child(backdrop)
 	# Le même matériau que le menu : les deux fonds ne sont jamais visibles
@@ -6673,7 +6691,7 @@ func _open_pause_options() -> void:
 	btn_back.show()
 
 	_poser_titre("OPTIONS")
-	game_over_title.add_theme_color_override("font_color", Charte.HALOGENE)
+	game_over_title.add_theme_color_override("font_color", COLOR_LUMIERE)
 	game_over_score.text = ""
 
 	hub.reset()
