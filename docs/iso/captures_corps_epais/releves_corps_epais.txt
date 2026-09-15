@@ -1,0 +1,26 @@
+BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps vue=J1 corps=J2 opacite_au_rendu=0.65
+BANC_ISO corps vue=J1 corps=J2 position=(338.0, 728.0) rotation=1.571 opacite=0.65 lumieres : Player1/Flashlight masque=7 energie=2.51 ombre=oui(11) d=160
+BANC_ISO corps vue=J1 corps=J2 max=8/8/7 plafond=81/88/95 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 opacite_au_rendu=1.00
+BANC_ISO corps vue=J2 corps=J1 position=(228.0, 578.0) rotation=1.389 opacite=1.00 lumieres : Player1/Flashlight masque=7 energie=2.51 ombre=oui(11) d=30 | Player1/BodyLight masque=6 energie=0.60 ombre=oui(51) d=18
+BANC_ISO corps vue=J2 corps=J1 max=74/81/87 plafond=81/88/95 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.01)
+BANC_ISO corps verdict=PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi)
+BANC_ISO corps vue=J1 corps=J1 le sien : silhouette à sa couleur, hors du plafond de l'ennemi
+BANC_ISO corps vue=J1 corps=J2 opacite_au_rendu=1.00
+BANC_ISO corps vue=J1 corps=J2 position=(338.0, 728.0) rotation=1.571 opacite=1.00 lumieres : Player2/Flashlight masque=7 energie=2.49 ombre=oui(7) d=30 | Player2/BodyLight masque=6 energie=0.60 ombre=oui(51) d=18
+BANC_ISO corps vue=J1 corps=J2 max=73/80/86 plafond=81/88/95 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 ignorée (joueur ébloui à 0.10 : halo du brouillage par-dessus) ; corps d'en face opacite_au_rendu=0.00
+BANC_ISO corps verdict=PLAFOND TENU (1 corps mesurés, 0 au-dessus du gris de l'ennemi)
+BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps vue=J1 corps=J2 opacite_au_rendu=0.65
+BANC_ISO corps vue=J1 corps=J2 position=(338.0, 728.0) rotation=1.571 opacite=0.65 lumieres : Player1/Flashlight masque=7 energie=1.96 ombre=oui(11) d=203
+BANC_ISO corps vue=J1 corps=J2 max=17/8/15 plafond=81/88/95 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 opacite_au_rendu=0.00
+BANC_ISO corps vue=J2 corps=J1 position=(228.0, 578.0) rotation=-1.166 opacite=0.00 lumieres : Player1/Flashlight masque=7 energie=1.96 ombre=oui(11) d=30 | Player1/BodyLight masque=6 energie=0.47 ombre=oui(51) d=18
+BANC_ISO corps vue=J2 corps=J1 max=71/66/58 plafond=81/88/95 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.04)
+BANC_ISO corps verdict=PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi)
+BANC_ISO corps porteur J1 chez J2 : 74/81/87 (sans tir, torche de J1 seule ; ISO3a, corps fin : 81/88/95)
+BANC_ISO corps porteur J2 chez J1 : 73/80/86 (J2 vient de tirer, torche de J2 seule)

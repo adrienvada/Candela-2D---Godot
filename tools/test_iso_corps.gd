@@ -47,6 +47,7 @@ func _run() -> void:
 	var Pres: GDScript = load("res://presentation_3d.gd")
 	_check("sans classe, le corps dessiné est une classe du catalogue (repli de RENDU, jamais de statistique)",
 		VoxelCatalogue.slugs().has(Pres.slug_du_corps(null)), Pres.slug_du_corps(null))
+	_la_zone_de_touche()
 
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
@@ -86,6 +87,49 @@ func _run() -> void:
 	reglages.mode_iso = false
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	_sortir()
+
+
+## E2 — les corps épais (vague 4 d'ISO Corps) et la zone de touche, qu'Adrien garde à 18 px (2026-09-15).
+## Le corps visible SEUL de chaque classe doit tenir dans la zone de touche ; l'arme, elle, peut dépasser
+## (information). Les trois constantes qui disent cette zone restent d'accord — lues dans le TEXTE des
+## scripts : `Bullet` et `GadgetLeurre` nomment des autoloads, et une suite `extends SceneTree` ne peut pas
+## les compiler (piège d'ISO4).
+func _la_zone_de_touche() -> void:
+	print("\n--- Les corps épais tiennent dans la zone de touche (18 px, décision d'Adrien) ---")
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	var zone := MursBas.RAYON_CORPS
+	for chemin_constante in [["res://bullet.gd", "const PLAYER_BODY_RADIUS := "], ["res://gadget_leurre.gd", "const RAYON_CORPS := "]]:
+		var texte := FileAccess.get_file_as_string(chemin_constante[0])
+		var i := texte.find(chemin_constante[1])
+		var valeur := texte.substr(i + String(chemin_constante[1]).length()).get_slice("\n", 0).to_float() if i >= 0 else -1.0
+		_check("%s garde la zone de touche des corps (%s px)" % [String(chemin_constante[0]).get_file(), str(valeur)],
+			is_equal_approx(valeur, zone), "%s contre %s" % [str(valeur), str(zone)])
+	var ancre := Node3D.new()
+	root.add_child(ancre)
+	var pire_corps := 0.0
+	var pire_total := 0.0
+	var classe_pire := ""
+	var dedans := 0
+	for slug in VoxelCatalogue.slugs():
+		var corps := VoxelCorps.new()
+		ancre.add_child(corps)
+		corps.construire(slug)
+		corps.poser({"position": Vector2.ZERO, "visee": Vector2.RIGHT, "vitesse": Vector2.ZERO, "t": 0.0})
+		var seul := corps.rayon_empreinte(true) * tuile
+		var total := corps.rayon_empreinte(false) * tuile
+		if seul <= zone:
+			dedans += 1
+		else:
+			printerr("    %s : corps seul %.1f px, au-delà de %.1f" % [slug, seul, zone])
+		if seul > pire_corps:
+			pire_corps = seul
+			classe_pire = slug
+		pire_total = maxf(pire_total, total)
+		corps.free()
+	ancre.free()
+	_check("le corps épais seul de chaque classe tient dans la zone de touche (%d/%d, pire %.1f px, %s)"
+		% [dedans, VoxelCatalogue.slugs().size(), pire_corps, classe_pire], dedans == VoxelCatalogue.slugs().size())
+	print("    (information) corps + arme + torche, pire cas debout : %.1f px — l'arme dépasse la zone de touche, et ne se touche pas" % pire_total)
 
 
 func _les_corps(main: Node, p: Node) -> void:

@@ -5032,3 +5032,14 @@ base `d641b48`, `iso2-vues` n'avait touché aucun des fichiers voxel ; seuls la 
 `_controler_la_killcam`, `test_iso_killcam` ; `EPAISSEUR_REGLAGES`, `construire(slug, epaisseur)`,
 `rayon_empreinte`, `lecture_au_bord`) ; comptes de lignes cohérents (ROADMAP 24 287 + la section
 vague 4 = 24 509). Deux imports sans erreur, puis le lot complet.
+
+**E2, 2026-09-15 vers 05:30 — les corps épais et la zone de touche.** Après la fusion `26417a8`. Le
+brief faisait prendre à `PLAYER_BODY_RADIUS` le rayon maximal publié par ISO Corps (24,4 px). La mesure
+disait que le corps épais seul ne dépasse jamais 17,3 px, et que les 24,4 px sont ceux de l'arme ; le
+code disait que cette constante ne sert qu'au tir compensé. Question posée à Adrien en effets de jeu :
+réponse « Garder 18 px ». Aucun fichier de jeu touché. `tools/test_iso_corps.gd` gagne le contrôle « le
+corps épais seul de chaque classe tient dans la zone de touche » (10/10, pire 14,5 px debout) et
+l'accord des constantes de `bullet.gd` et `gadget_leurre.gd` ; sabotée une fois (24,4 px), restaurée.
+Banc : plafond tenu dans trois passages ; porteur sous sa torche à 74/81/87 et 73/80/86 (81/88/95 au
+corps fin). Piège : avec `--flash`, le tir éblouit et le porteur mesuré est du sol. Planche
+`docs/iso/planche_corps_epais_jeu.jpg`.

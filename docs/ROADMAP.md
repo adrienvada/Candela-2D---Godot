@@ -2425,6 +2425,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le relevé de cadence de fin de chantier iso se prend avec les tests humains de H-ISO5, pas avant** (2026-09-15 vers 05:40, Adrien, à la session ISO5 qui demandait le Mac pour vingt minutes : « Tant pis pour les relevés, on les fera en même temps que les tests humains quand je serai devant la machine ») | Le relevé exige une vraie fenêtre de silence : fenêtre au premier plan, aucune autre application, personne devant le Mac. Adrien n'était pas en mesure de la laisser. La session prépare donc le banc (`--iso`, `--lightmap`, relevé d'appels de dessin et de cibles, preuve que les options changent le rendu) et s'arrête avant les cinq relevés : la taille de lightmap retenue et la porte de sortie de la 2D se décident au jalon H-ISO5, sur les chiffres pris ce jour-là. |
+| **Corps épais : la zone de touche reste à 18 px** (2026-09-15 vers 04:40, Adrien, réponse « Garder 18 px (Recommandé) » à la question de la session ISO5 ; sa demande de départ, transmise par la session pilote vers 03:50 : « il faut que le volume de chaque joueur soit plus important, comme dans les visuels générés par la session Assets : il faut qu'il soit plus épais par exemple. Tant pis si ça touche leur hitbox. ») | Mesuré par ISO Corps (vague 4, réglage `x1_6`) : le corps épais SEUL ne dépasse jamais 17,3 px de rayon, dans aucune posture ni aucune classe — il tient déjà dans la zone de touche de 18 px. Les 24,4 px publiés viennent de l'ARME tenue devant le corps (la carabine de la Sentinelle). Passer à 24,4 px aurait fait compter une balle qui ne frôle que l'arme, et grossi la zone de touche d'environ 84 % en surface ; et comme une balle ordinaire touche par la forme de collision du joueur, qui sert aussi au déplacement, il aurait fallu une forme de touche à part. Rien ne change donc dans `bullet.gd`, `gadget_leurre.gd` ni `murs_bas.gd` : ce qu'on voit du corps est ce qu'on touche, l'arme non. |
 | **Tester plus tard : jalons regroupés en H-ISO5, relevé confié à ISO2** (2026-09-15, vers 01:20, Adrien, rapporté par la suite du brief long de la session pilote : « 15/09 vers 01:20, tester plus tard : jalons regroupés en H-ISO5, relevé confié à ISO2 ») | Adrien ne s'arrête pas pour jouer entre les étapes de la ligne iso : H-ISO3 et H-ISO4 ne sont plus des arrêts, leurs paquets partent en delta à la session pilote, et la session ISO2 enchaîne ISO3b, ISO4, ISO5 puis le relevé de cadence de fin de chantier, qu'elle prend elle-même en fenêtre de silence — le seul relevé de cadence du chantier. Ce qui ne change pas : un arrêt immédiat si une fusion perd l'une des deux logiques ou si une étape casse le noir absolu ou l'équité sans sortie propre. |
 | **L'iso devient la vue du jeu ; la vue de dessus n'est plus une vue à garder** (2026-09-14, 23:33, Adrien, rapporté par le brief long de la session pilote) | Rien n'est supprimé avant le relevé de cadence de fin de chantier : la vue de dessus reste le repli et le moteur de lumière — la projection B lit ses lightmaps. Ce qui change : un écart entre les deux vues se corrige du côté iso, et un défaut de la vue de dessus qui se voit en iso (l'effacement de l'ébloui, ISO2b) se signale comme défaut du jeu. |
 | **Pas de test à deux machines** (2026-09-14, 23:30, Adrien : il n'en a pas le matériel) | Un changement de fil réseau se couvre par `tools/run_duo.sh` (deux instances sur ce Mac) ; EOS entre deux réseaux se consigne comme risque accepté. Rapporté par « Murs bas Opus » et le brief long. |
@@ -23501,6 +23503,72 @@ calques d'écran retirés ; relevés bruts dans `docs/iso/captures_iso5/releves_
 
 **Ce qu'ISO5 ne fait pas** : changer la règle de visibilité des fantômes (voir les pièges) ; la marche
 de l'adversaire interpolé en ligne et `Player.enjambe` chez le client (signalés, hors périmètre).
+
+### E2 — Corps épais et hitbox ✅ (2026-09-15, jugée au jalon H-ISO5)
+
+Demande d'Adrien du 2026-09-15 vers 03:50, transmise par la session pilote : « il faut que le volume de
+chaque joueur soit plus important, comme dans les visuels générés par la session Assets : il faut qu'il
+soit plus épais par exemple. Tant pis si ça touche leur hitbox. » Partage : ISO Corps refait le volume
+(vague 4 sur `iso-corps`, `ebde701`) ; la session ISO5 fusionne et fait suivre la zone de touche.
+Branche locale `iso2-vues`, fusion `26417a8`. Non poussée.
+
+**La décision qui a changé le travail.** Le brief demandait que `PLAYER_BODY_RADIUS` prenne le rayon
+maximal publié par ISO Corps, 24,4 px. La mesure d'ISO Corps disait autre chose : le corps épais SEUL ne
+dépasse jamais 17,3 px (toutes classes, toutes postures, réglage `x1_6`) ; les 24,4 px viennent de
+l'arme tenue devant le corps (la carabine de la Sentinelle), identiques à tout réglage d'épaisseur. Et le
+code disait encore autre chose : `PLAYER_BODY_RADIUS` ne sert qu'au tir compensé côté hôte ; une balle
+ordinaire touche par la forme de collision de `player.tscn`, qui sert aussi au déplacement. La question
+a donc été posée à Adrien, en effets de jeu : garder 18 px, passer à 24,4 px pour tous (toucher l'arme
+compte, zone de touche +84 % en surface, forme de touche séparée du déplacement), ou un rayon par
+classe. **Réponse : garder 18 px** (voir « Décisions actées »).
+
+**Rayons.** Zone de touche : 18 px avant, 18 px après (`bullet.gd` `PLAYER_BODY_RADIUS`,
+`gadget_leurre.gd` `RAYON_CORPS`, `murs_bas.gd` `RAYON_CORPS`). Corps visible : ISO Corps publie
+17,3 px au pire de toutes les postures ; `test_iso_corps` relève 14,5 px debout (pompe). Corps + arme
++ torche : 24,4 px (Sentinelle) — l'arme dépasse la zone de touche et ne se touche pas. La collision de
+déplacement, le capteur de corps (disque de 18 px sur 256²) et la lecture au bord (rayon lu 15 px, dans la
+direction de chaque fragment, indépendant de la largeur du corps) ne changent pas.
+
+**Fichiers touchés** : aucun fichier de jeu. `tools/test_iso_corps.gd` gagne le contrôle de la zone de
+touche ; la fusion apporte `voxel_catalogue.gd`, `voxel_corps.gd`, `tools/banc_corps.gd`,
+`tools/test_voxel_corps.gd`.
+
+**L'équité, prouvée.**
+- **Même zone pour les deux joueurs et les deux machines** : une seule constante, inchangée ; aucun
+  changement de simulation ni de protocole (`Protocol.VERSION` reste 18) ; `test_transport` et les
+  scénarios `run_duo` verts au lot complet.
+- **Ce qu'on voit du corps est ce qu'on touche** : `test_iso_corps` vérifie que le corps épais seul de
+  chacune des dix classes tient dans la zone de touche (10/10) et que `bullet.gd` et `gadget_leurre.gd`
+  gardent 18 px. **Sabotée une fois** (`PLAYER_BODY_RADIUS` à 24,4, la hitbox qui suivrait l'arme) :
+  « bullet.gd garde la zone de touche des corps (24.4 px) → 24.4 contre 18.0 », restaurée à l'identique,
+  verte.
+- **La bande cachée derrière un mur haut ne bouge pas** : elle se calcule sur la zone de touche, restée à
+  18 px.
+- Les suites de tir (`test_tir_et_reserves`, `test_brouillage`, celles des murs bas) n'ont rien à mettre
+  à jour : aucune constante de tir n'a changé ; elles passent au lot complet.
+
+**Ce que le banc prouve** (`tools/banc_iso.gd --jeu --scinde`, vraie fenêtre, corps épais `x1_6`, trois
+passages ; relevés bruts dans `docs/iso/captures_corps_epais/releves_corps_epais.txt`) :
+  - **Plafond** : PLAFOND TENU dans les trois passages (torche de J1 et tir de J1 ; torche de J2 et tir de
+    J2 ; torche de J1 sans tir) — aucun corps épais au-dessus du gris de l'ennemi.
+  - **Le porteur se trahit toujours sous sa propre torche** (la règle payée à ISO3a) : J1 sort à 74/81/87
+    chez J2 (sans tir, torche de J1 seule), J2 à 73/80/86 chez J1 (torche de J2) — éclairés, sous le plafond
+    de 81/88/95. Au corps fin d'ISO3a, le même porteur sortait à 81/88/95 : le corps épais le rend à peine
+    plus sombre, jamais noir. La lecture au bord reste juste.
+  - ⚠️ Avec `--flash`, la mesure du porteur ne vaut rien : le tir éblouit, le corps est effacé à l'opacité
+    0,00, et la boîte lit 71/66/58 de sol et de halo. Le porteur se mesure sans tir.
+  - Planche : `docs/iso/planche_corps_epais_jeu.jpg` (les deux vues, un duel avec les corps épais, les
+    traçantes au sol, le porteur, et la planche « avant / après » d'ISO Corps en référence).
+
+**Pièges.**
+- ⚠️ **« Le rayon maximal publié » n'était pas un rayon de corps.** Le chiffre de 24,4 px mesurait
+  corps + arme + torche, pour une question (ce qu'une balle PEUT toucher) que la règle du jeu ne pose pas :
+  la zone de touche est ronde et se rapporte au corps. Prendre le chiffre sans lire sa colonne aurait
+  grossi la zone de touche de 84 % en surface, pour les dix classes, en disant « la hitbox suit le corps ».
+- ⚠️ **`PLAYER_BODY_RADIUS` ne décide pas de tous les tirs.** Il ne sert qu'au tir compensé (`lag_center`
+  + rayon) ; le tir ordinaire passe par la forme de collision du joueur, partagée avec le déplacement.
+  Changer la constante seule aurait fait deux zones de touche différentes selon qu'un tir est compensé ou
+  non — un écart d'équité entre l'hôte et le client.
 
 ### Ce qui attend Adrien — jalon H15
 
