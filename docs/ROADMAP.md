@@ -24703,6 +24703,27 @@ verticale se projette en cos 52° / sin 52° de la profondeur. Dans la fenêtre 
 Ce que le zoom grossit à l'écran, ce sont la lightmap (0,75 texel par pixel, inchangée) et l'art des tuiles de
 la vue de dessus qu'elle porte (35 px de source sur 84 px d'écran) — pas les matières d'ISO7.
 
+**Étape 4 — avant et après, la planche** 🟡 (2026-09-15, 14:28). `tools/banc_claustro.gd --avant-apres`
+(vraie fenêtre 1920×1080) : sur la carte d'essai des murs bas et Le Cloître, en vue unique et en écran scindé,
+le jeu d'avant ISO8 (zoom ×1,0, aucun décalage, portée ×1,0) contre les défauts d'ISO8 ; les valeurs posées
+sur `GameSettings` et `WeaponData` pour l'exécution, la caméra placée par le jeu lui-même
+(`GameState._suivre_du_regard`). **VERDICT=OK, 8 prises, 0 échec.** Planche `docs/iso/planche_iso8.jpg`
+(recomposable : `python3 docs/iso/planche_iso8.py --captures <dossier> --journal <journal du banc>`).
+
+| Carte, vue | Avant : caméra / joueur J1 | Après : caméra / joueur J1 | Portée du pistolet | Appels |
+|---|---|---|---|---|
+| Cloître, unique | (368 ; 521) / (368 ; 543) | **(498 ; 396)** / (368 ; 543) | 410 → 307 px | 84 → 77 |
+| Cloître, scindé | (368 ; 540) / (368 ; 543) | **(368 ; 395)** / (368 ; 543) | 410 → 307 px | 162 → 157 |
+| Carte d'essai, unique | (562 ; 219) / (560 ; 228) | **(560 ; 265)** / (560 ; 228) | 410 → 307 px | 71 → 73 |
+| Carte d'essai, scindé | (560 ; 224) / (560 ; 228) | **(560 ; 265)** / (560 ; 228) | 410 → 307 px | 164 → 148 |
+
+**Ce que les positions prouvent.** Au Cloître, J1 vise le nord : la caméra avance de 147 px vers la visée —
+un quart des 600 px de monde visibles à ×1,8 —, et en vue unique se décale de 130 px vers l'est pour ne pas
+montrer le hors-carte (demi-largeur visible 533 px, moins la tuile tolérée). Sur la carte d'essai, J1 est à
+3,5 tuiles de la bordure nord : la caméra est bornée à y = 265 (demi-hauteur 300 moins une tuile) et ne peut
+pas avancer vers la visée — c'est la borne, pas un défaut. Avant ISO8, la caméra est sur le joueur à quelques
+pixels près (le recul et la secousse de caméra). Les appels de dessin ne bougent pas au-delà du bruit.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

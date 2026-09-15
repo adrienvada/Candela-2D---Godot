@@ -5500,3 +5500,10 @@ réseau, `Protocol.VERSION` inchangé. `test_iso_camera` vérifie le cas en lign
 Au retour du Mac (14:19) : `test_iso_camera` verte seule avec la règle en ligne (127 vérifications).
 Sabotage (branche en ligne de `valeurs_du_duel` désarmée) : les deux contrôles en ligne rougissent (les valeurs locales [1,0 ; 0,25 ; 1,0] passaient en ligne), fichier rétabli à l'identique (`cmp`). Lot complet lancé.
 Lot complet vert à 14:27 : 127 OK en 413 s.
+
+**ISO8, étape 4 — avant et après, 2026-09-15 à 14:28.** Session « Iso 1 Opus ». Règle en ligne commitée ; banc
+`banc_claustro --avant-apres` : VERDICT=OK, 8 prises, 0 échec. Au Cloître à ×1,8, la caméra avance de 147 px vers
+la visée (un quart de 600 px visibles) et se décale de 130 px vers l'est pour rester dans la carte ; sur la carte
+d'essai, elle est bornée à y = 265 contre la bordure nord. Portée du pistolet 410 → 307 px ; appels de dessin
+inchangés au bruit près. Planche `docs/iso/planche_iso8.jpg`.
+Lot complet vert à 14:44 : 127 OK en 413 s.

@@ -82,6 +82,15 @@ var _scene := {}
 var _armes := {}
 var _echecs := 0
 var _prises := 0
+## ISO8, étape 4 — `--avant-apres` : au lieu de la grille des variantes, le jeu d'avant ISO8 (zoom ×1,0, aucun
+## décalage, portée ×1,0) contre les défauts d'ISO8 (`GameSettings`), sur les mêmes scènes, en vue unique et en
+## écran scindé. Les valeurs sont posées sur `GameSettings` et `WeaponData` pour l'exécution, puis rendues ;
+## les armes gardent leurs `torch_scale` (la portée ne varie que par le facteur global, comme dans le jeu).
+var _avant_apres := false
+const ETATS_AVANT_APRES := [
+	{"nom": "avant", "zoom": 1.0, "decalage": 0.0, "facteur": 1.0},
+	{"nom": "apres", "zoom": -1.0, "decalage": -1.0, "facteur": -1.0},
+]
 
 
 func _ready() -> void:
@@ -98,6 +107,7 @@ func _ready() -> void:
 		return
 	_dossier = args[i + 1]
 	DirAccess.make_dir_recursive_absolute(_dossier)
+	_avant_apres = args.has("--avant-apres")
 	# Pour cette exécution seulement : rien ne s'écrit dans settings.cfg, et l'intro ne joue pas par-dessus
 	# le duel (piège « un foyer isolé est un joueur neuf »).
 	GameSettings.pilotage_externe = true
@@ -148,6 +158,13 @@ func _une_carte(carte: Dictionary) -> void:
 		return
 	print("BANC_CLAUSTRO scene carte=%s j1=%s visee_j1=%s j2=%s visee_j2=%s (%s)" % [carte["nom"], str(_scene["p1"]),
 		str(_scene["v1"]), str(_scene["p2"]), str(_scene["v2"]), _scene["mur"]])
+	if _avant_apres:
+		for vue in ["unique", "scinde"]:
+			_poser_la_vue(vue == "scinde")
+			for etat in ETATS_AVANT_APRES:
+				await _prendre_un_etat(String(carte["nom"]), vue, etat)
+		_poser_l_etat({"zoom": -1.0, "decalage": -1.0, "facteur": -1.0})
+		return
 	for vue in ["unique", "scinde"]:
 		_poser_la_vue(vue == "scinde")
 		for z in ZOOMS:
@@ -184,6 +201,46 @@ func _prendre(carte: String, vue: String, zoom: float, torche: float, etroit: bo
 		DisplayServer.window_get_size().x, DisplayServer.window_get_size().y,
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		"tenue" if iso_tenue else "ROMPUE", nom])
+
+
+## ISO8, étape 4 — un état du jeu (avant ISO8, ou les défauts d'ISO8 : une valeur négative dit « le défaut »),
+## posé sur `GameSettings` et `WeaponData`, puis la prise. Le décalage vers la visée est celui du jeu : c'est
+## `GameState._suivre_du_regard` qui place la caméra, le banc ne pose que le zoom.
+func _poser_l_etat(etat: Dictionary) -> void:
+	var z: float = float(etat["zoom"]) if float(etat["zoom"]) > 0.0 else GameSettings.ZOOM_DUEL_DEFAUT
+	var d: float = float(etat["decalage"]) if float(etat["decalage"]) >= 0.0 else GameSettings.DECALAGE_VISEE_DEFAUT
+	var f: float = float(etat["facteur"]) if float(etat["facteur"]) > 0.0 else GameSettings.FACTEUR_PORTEE_DEFAUT
+	GameSettings.zoom_duel = z
+	GameSettings.decalage_visee = d
+	GameSettings.facteur_portee = f
+	WeaponData.facteur_portee = f
+	_zoom = z
+	for j in [_main.p1, _main.p2]:
+		if is_instance_valid(j) and j.get("current_weapon") != null:
+			var lampe := j.get("flashlight") as PointLight2D
+			lampe.texture_scale = j.current_weapon.echelle_torche()
+
+
+func _prendre_un_etat(carte: String, vue: String, etat: Dictionary) -> void:
+	_poser_l_etat(etat)
+	# Le regard se lisse sur ~120 ms : 60 images pour qu'il ait fini son chemin.
+	for k in 60:
+		_tenir()
+		await get_tree().process_frame
+	_tenir()
+	DisplayServer.window_move_to_foreground()
+	var img: Image = await RenduCommun.capturer(get_tree(), 15000)
+	if img == null:
+		_echouer("%s %s %s : aucune image rendue en 15 s" % [carte, vue, etat["nom"]])
+		return
+	var nom := "%s_%s_%s.png" % [carte, vue, etat["nom"]]
+	img.save_png(_dossier.path_join(nom))
+	_prises += 1
+	var arme = _main.p1.get("current_weapon")
+	print("BANC_CLAUSTRO avant_apres carte=%s vue=%s etat=%s zoom=%.2f decalage=%.2f facteur=%.2f portee_px=%.0f camera=%s joueur=%s appels=%d fichier=%s"
+		% [carte, vue, etat["nom"], GameSettings.zoom_duel, GameSettings.decalage_visee, GameSettings.facteur_portee,
+		float(arme.portee_torche()), str(_main.cam1.global_position.round()), str(_main.p1.global_position.round()),
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), nom])
 
 
 ## Les joueurs replacés, leur visée reposée, gardés en vie ; le zoom posé sur les deux caméras — à CHAQUE
