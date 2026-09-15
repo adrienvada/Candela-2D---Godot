@@ -138,6 +138,14 @@ var _vue_unique := false
 ## d'AVANT le chantier R. Sert à mesurer les deux chemins dans la même session,
 ## sur la même machine, sous le même focus.
 var _sans_racine := false
+## Chantier ISO, relevé de fin de chantier — mesurer la VUE ISOMÉTRIQUE (`--iso`), avec
+## `--vue-unique` ou en écran scindé, et la taille de sa lightmap (`--lightmap 1080p|plein`).
+## La charge simulée reste celle du duel : seul le rendu change. ⚠️ Un relevé « iso » pris pendant
+## que la vue iso s'est éteinte mesurerait la vue de dessus sous le nom de l'iso (piège d'ISO3b) :
+## le banc refuse de démarrer si elle ne tient pas, et refuse le chiffre si elle s'éteint en route.
+var _iso := false
+var _lightmap := ""
+var _images_hors_iso := 0
 ## Images mesurées où la lampe d'un joueur ne suivait PAS la demande du banc, et
 ## images mesurées pendant le décompte de départ (le jeu y éteint les torches
 ## lui-même : elles ne sont pas un désaccord, elles sont hors de la question).
@@ -192,6 +200,23 @@ func _ready() -> void:
 	_gadgets = args.has("--gadgets")
 	_vue_unique = args.has("--vue-unique")
 	_sans_racine = args.has("--sans-racine")
+	_iso = args.has("--iso")
+	_lightmap = _value(args, "--lightmap", "")
+	if _lightmap != "" and not (_iso and Presentation3D.LIGHTMAPS.has(_lightmap)):
+		printerr("✗ --lightmap se prend avec --iso et attend %s (reçu « %s »)"
+			% [" | ".join(Presentation3D.LIGHTMAPS), _lightmap])
+		_sortir(2)
+		return
+	if _iso:
+		var absents_iso := preconditions_iso(GameSettings)
+		if not absents_iso.is_empty():
+			printerr("✗ --iso : %s" % "; ".join(absents_iso))
+			_sortir(1)
+			return
+		# Pour cette exécution seulement : ni `set_mode_iso()` ni sauvegarde, rien ne s'écrit dans
+		# settings.cfg (`pilotage_externe` est déjà posé).
+		GameSettings.mode_iso = true
+		GameSettings.iso_lightmap = _lightmap if _lightmap != "" else "1080p"
 	if args.has("--menus"):
 		_variante = "--menus"
 
@@ -243,6 +268,9 @@ func _ready() -> void:
 	print("Manche lancée — armes : %s / %s" % [
 		_main.p1.current_weapon.name, _main.p2.current_weapon.name])
 	_appliquer_variante()
+	if _iso and not await _vue_iso_tenue():
+		_sortir(1)
+		return
 	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
 	await _stress(WARMUP_SEC, false)
@@ -405,6 +433,10 @@ func _stress(duration: float, sampling: bool) -> void:
 		# celui qui isole le poste ajouté.
 		if _gadgets:
 			_entretenir_la_poudre()
+		if sampling and _iso:
+			var iso := Presentation3D.instance()
+			if iso == null or not bool(iso.get("_actif")):
+				_images_hors_iso += 1
 		for p in [_main.p1, _main.p2]:
 			p.hp = 100.0
 			# Torches éteintes : c'est le seul geste du duel qu'on retire, et il
@@ -441,6 +473,10 @@ func _stress(duration: float, sampling: bool) -> void:
 	# est le coût. C'est exactement ce qui serait arrivé avec l'entretien imbriqué.
 	# Le même refus pour les torches : un chiffre « torches allumées » pris lampes
 	# éteintes est le coût d'une autre charge, et rien d'autre ne le dirait.
+	if sampling and _images_hors_iso > 0:
+		printerr("✗ --iso : la vue isométrique était éteinte sur %d image(s) mesurée(s) : chiffre refusé"
+			% _images_hors_iso)
+		_sortir(1)
 	if sampling and _torches_desaccord > 0:
 		printerr("✗ la lampe n'a pas suivi la demande du banc sur %d image(s) : chiffre refusé"
 			% _torches_desaccord)
@@ -478,6 +514,8 @@ func _libelle_charge() -> String:
 		libelle += " + fusée éclairante"
 	if _gadgets:
 		libelle += " + gadgets (torche fantôme, poudre et ses traces)"
+	if _iso:
+		libelle += " — VUE ISO, lightmap %s" % (_lightmap if _lightmap != "" else "1080p")
 	return libelle
 
 func _appliquer_variante() -> void:
@@ -648,6 +686,23 @@ func _conditions() -> void:
 		print("  %-12s: rendu %d×%d  ← chantier R, le duel passe par la RACINE"
 			% ["Racine", largeur, hauteur])
 	print("Pixels de jeu : %.2f Mpx par image" % (pixels_jeu / 1e6))
+	# La vue iso : ses lightmaps et ses vues 3D, telles que `Presentation3D` les décrit (F3).
+	if _iso and Presentation3D.instance() != null:
+		print("Vue iso       : %s" % Presentation3D.instance().etat.replace("\n", " | "))
+
+
+## La vue iso tient-elle, et sur la bonne configuration de vues ? Refuse le relevé sinon.
+func _vue_iso_tenue() -> bool:
+	var tenue := await _await(func() -> bool:
+		var p := Presentation3D.instance()
+		return p != null and bool(p.get("_actif")) and bool(p.get("_scinde")) != _vue_unique, 5.0)
+	if not tenue:
+		printerr("✗ --iso : la vue isométrique ne tient pas %s — le relevé mesurerait la vue de dessus sous le nom de l'iso"
+			% ("en vue unique" if _vue_unique else "en écran scindé"))
+		if Presentation3D.instance() != null:
+			printerr("    raison : %s" % Presentation3D.instance().raison_des_vues())
+		return false
+	return true
 
 
 func _report() -> void:
@@ -686,6 +741,12 @@ func _report() -> void:
 	if not _appels.is_empty():
 		print("  Rendu (médiane par image) : %d appels de dessin, %d objets, %d primitives"
 			% [_mediane_int(_appels), _mediane_int(_objets), _mediane_int(_primitives)])
+	print("  Mémoire vidéo    : %.0f Mo (textures %.0f Mo, tampons %.0f Mo)" % [
+		Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+		Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+		Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0])
+	if _iso and Presentation3D.instance() != null:
+		print("  Vue iso          : %s" % Presentation3D.instance().etat.replace("\n", " | "))
 	# La ligne des torches AVANT le verdict : elle dit de quelle charge le chiffre
 	# est le coût, et un avertissement placé après ce qu'il invalide arrive trop
 	# tard (piège du 2026-08-26). Le mode menus n'a pas de joueur : rien à dire.
@@ -744,6 +805,22 @@ func _report() -> void:
 ## La liste est publique et statique pour que `tools/test_banc.gd` la vérifie en
 ## headless, sans rien rasteriser. Elle ne remplace pas le banc ; elle garantit
 ## qu'il pourra démarrer.
+## Les appuis de la variante `--iso` : les réglages que le banc pose pour l'exécution, et les tailles de
+## lightmap que la présentation connaît. Vérifiés en headless par `tools/test_banc.gd`.
+static func preconditions_iso(reglages: Object) -> Array[String]:
+	var absents: Array[String] = []
+	if reglages == null:
+		absents.append("GameSettings absent")
+		return absents
+	for prop in ["mode_iso", "iso_lightmap", "pilotage_externe"]:
+		if not prop in reglages:
+			absents.append("GameSettings.%s a disparu (variante --iso)" % prop)
+	for variante in ["1080p", "plein"]:
+		if not Presentation3D.LIGHTMAPS.has(variante):
+			absents.append("Presentation3D ne connaît plus la lightmap « %s » (--lightmap)" % variante)
+	return absents
+
+
 static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	var absents: Array[String] = []
 	if ui == null or main == null:

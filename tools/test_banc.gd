@@ -129,6 +129,14 @@ func _run() -> void:
 	_check("et le mode menus sait dire quand ils manquent",
 		not vides_menus.is_empty())
 
+	# Chantier ISO — la variante `--iso` (relevé de fin de chantier) a ses propres appuis : les réglages
+	# qu'elle pose pour l'exécution et les tailles de lightmap de la présentation.
+	var manquants_iso: Array[String] = Banc.preconditions_iso(root.get_node_or_null("GameSettings"))
+	_check("les appuis de la variante --iso existent encore", manquants_iso.is_empty(),
+		"; ".join(manquants_iso))
+	_check("et la variante --iso sait dire quand ils manquent",
+		not (Banc.preconditions_iso(null) as Array).is_empty())
+
 	# La planche de l'éblouissement, même raison et même remède : elle ouvre une
 	# fenêtre, donc aucune suite ne peut l'exécuter — mais une suite peut lire
 	# ses hypothèses. Elle en a beaucoup plus que le banc de cadence, parce

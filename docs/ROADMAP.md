@@ -23570,6 +23570,67 @@ passages ; relevés bruts dans `docs/iso/captures_corps_epais/releves_corps_epai
   Changer la constante seule aurait fait deux zones de touche différentes selon qu'un tir est compensé ou
   non — un écart d'équité entre l'hôte et le client.
 
+### Relevé de fin de chantier iso 🟡 (banc prêt, relevé reporté au jalon H-ISO5)
+
+Étape G du brief du 2026-09-15 (vers 01:20) : le seul relevé de cadence humain du chantier, qui décide
+de la taille de lightmap et ouvre, ou non, la porte de sortie de la 2D. Cible : 1 % bas ≥ 60, fenêtre au
+premier plan, résolution native, torches allumées. **Adrien l'a reporté aux tests humains** (voir
+« Décisions actées », 2026-09-15 vers 05:40) : la session a préparé le banc et s'est arrêtée avant les
+cinq relevés.
+
+**Le banc sait mesurer la vue iso** (`tools/bench_framerate.gd`) :
+- `--iso` allume la vue iso pour l'exécution (`GameSettings.mode_iso`, rien d'écrit dans
+  `settings.cfg`) ; `--lightmap 1080p|plein` choisit la taille de lightmap ; `--vue-unique` ou l'écran
+  scindé, comme avant ; `--gadgets` pose la torche fantôme (un objet debout en voxel) et la poudre.
+- Il **refuse de démarrer** si la vue iso ne tient pas sur la configuration demandée, et **refuse le
+  chiffre** si elle s'éteint pendant la mesure : un relevé « iso » pris vue éteinte mesurerait la vue de
+  dessus sous le nom de l'iso (piège d'ISO3b).
+- Les conditions et le rapport disent les lightmaps et les vues 3D (la ligne F3 de la présentation) et la
+  mémoire vidéo (totale, textures, tampons).
+- Ses appuis (`GameSettings.mode_iso`, `iso_lightmap`, `pilotage_externe`, les deux tailles de lightmap
+  de `Presentation3D`) sont vérifiés en headless par `tools/test_banc.gd`, qui sait aussi dire quand ils
+  manquent.
+
+**La preuve que les options changent le rendu** (passages de 5 s, 2026-09-15 vers 06:05, torches
+allumées, gadgets posés, corps épais ; relevé d'agent : **les fps ne comptent pas** — 5 s, trois ou quatre
+images dans le 1 % bas, une machine qui venait d'enchaîner les bancs fenêtrés ; seuls les appels de
+dessin, les cibles et la mémoire disent quelque chose) :
+
+| Passage | Libellé du banc | Appels de dessin (médiane) | Cibles | Mémoire vidéo |
+|---|---|---|---|---|
+| `--vue-unique --gadgets` | duel vue unique rendue par la racine | 199 | racine 2560×1440, sous-vues arrêtées | 268 Mo |
+| `--iso --vue-unique --gadgets` | … — VUE ISO, lightmap 1080p | 235 | lightmap 1920×1080, rendu 2560×1440, capteurs | 280 Mo |
+| `--iso --lightmap plein --vue-unique --gadgets` | … — VUE ISO, lightmap plein | 238 | lightmap 2560×1440, rendu 2560×1440 | 296 Mo |
+| `--iso --gadgets` (écran scindé) | duel complet — VUE ISO, lightmap 1080p | 412 | lightmaps 957×1080 et 958×1080, vues 3D 1276×1440 et 1277×1440 | 330 Mo |
+
+La vue iso ajoute 36 appels de dessin en vue unique et double à peu près la charge en écran scindé (deux
+lightmaps, deux vues 3D, quatre capteurs de corps et ceux des objets) ; la lightmap pleine coûte 16 Mo
+de textures de plus que la 1080p, et 3 appels. Aucun verdict de cadence n'est tiré de ces passages.
+
+**Les cinq relevés, à prendre d'une traite au jalon H-ISO5** (60 s chacun, machine refroidie, fenêtre au
+premier plan, aucune autre application, torches allumées, corps épais et objets) :
+```
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --vue-unique --gadgets --seconds 60
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap 1080p --vue-unique --gadgets --seconds 60
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap plein --vue-unique --gadgets --seconds 60
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap 1080p --gadgets --seconds 60
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d/.claude/worktrees/prompt-iso2-3e1d2e" res://tools/bench_framerate.tscn -- --iso --lightmap plein --gadgets --seconds 60
+```
+Pour chacun : médiane, 1 % bas, appels de dessin, tailles de cibles, mémoire vidéo, focus stable. La
+décision s'écrit alors ici, en tableau : la plus petite lightmap qui tient l'aspect (planches) et la cible ;
+« porte de sortie de la 2D ouverte » si le 1 % bas tient 60 en vue unique ET en écran scindé avec cette
+taille ; sinon « fermée », avec le coût de chaque poste d'après les appels de dessin (lightmaps, capteurs,
+corps voxel, objets, passes de profondeur) et l'ordre des économies proposé (dont l'option ISO8 de
+l'étude : lumière seule dans la lightmap, décor dans les matériaux 3D).
+
+**Pièges.**
+- ⚠️ **Sous zsh, `$variante` ne se découpe pas en mots.** Le premier passage de preuve bouclait sur des
+  chaînes d'options (`for variante in "--iso --vue-unique …"`) : Godot a reçu UNE option, que le banc ne
+  connaît pas, et les quatre passages ont mesuré le même « duel complet » en écran scindé — 196 à 204
+  appels de dessin, deux sous-vues de 957×1080, aucune vue iso. C'est le libellé « Charge: duel complet »,
+  sans « VUE ISO », qui l'a dit. Options écrites en toutes lettres ; et un relevé se lit d'abord par son
+  libellé, jamais par son chiffre.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

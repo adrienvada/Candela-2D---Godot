@@ -5043,3 +5043,14 @@ l'accord des constantes de `bullet.gd` et `gadget_leurre.gd` ; sabotée une fois
 Banc : plafond tenu dans trois passages ; porteur sous sa torche à 74/81/87 et 73/80/86 (81/88/95 au
 corps fin). Piège : avec `--flash`, le tir éblouit et le porteur mesuré est du sol. Planche
 `docs/iso/planche_corps_epais_jeu.jpg`.
+
+**Étape G, 2026-09-15 vers 06:05 — le banc de cadence apprend la vue iso ; le relevé est reporté.**
+Adrien, sollicité pour laisser le Mac vingt minutes : « Tant pis pour les relevés, on les fera en même
+temps que les tests humains quand je serai devant la machine ». `tools/bench_framerate.gd` gagne `--iso`
+et `--lightmap 1080p|plein` (refus de démarrer si la vue iso ne tient pas, refus du chiffre si elle
+s'éteint en route, lightmaps, vues 3D et mémoire vidéo au rapport) ; `tools/test_banc.gd` vérifie ses
+appuis. Preuve en quatre passages de 5 s : 199 appels de dessin en vue de dessus, 235 en iso vue unique
+1080p, 238 en lightmap pleine, 412 en iso écran scindé — fps non interprétés. Piège payé : la première
+série bouclait sous zsh sur des chaînes d'options non découpées, et les quatre passages ont mesuré le
+même duel scindé en vue de dessus ; le libellé du banc l'a dit. Les cinq commandes du relevé sont dans
+la ROADMAP, section « Relevé de fin de chantier iso ».
