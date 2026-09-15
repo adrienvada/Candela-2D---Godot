@@ -25367,6 +25367,50 @@ seule. Voies (C) et (D) refusées, (B) dernier recours, (E) puis (A) à mesurer 
   `test_iso_vues`, `test_iso_corps` et `test_iso_geometrie` lisent désormais `COUCHES_HORS_LIGHTMAP`.
 - **Lot complet** (`./tools/run_suites.sh`, 19:06) : vert, 111 suites, sans erreur de script, 413 s.
 
+#### ISO10, tour 2 de loupe (après 1a à 1f)
+
+Consigne de la session cloud (16:19, puis 16:48, 17:08, 18:24) : les mêmes cadrages que le tour 1, l'impact au centre,
+une troisième colonne à la planche (le centre 200 × 112 grossi ×4 au plus proche voisin), les PNG à ISO Assets octet
+pour octet ; et ce qu'elle a demandé de juger dessus — la rampe du voile (cinq niveaux forcés au cadrage des LED), un
+vrai éblouissement par la torche de J2, les deux fusées posées (rouge et braise), la torche fantôme à côté d'un vrai
+Braconnier, le sang, la face du pilier avec une tache à son pied à côté de `loupe-ombre`.
+- **Outil** (`tools/loupe.gd`) :
+  - l'impact AU CENTRE : la loupe se pose sur l'éclat réellement laissé par le tir (le plus récent de `wall_impact`). Au
+    tour 1, aucune ligne de tir ne passait les filtres, `_ligne_de_tir_libre` rendait son point de repli, et l'impact
+    tombait contre le bord gauche de la loupe. ⚠️ Centrer sur l'éclat ne suffisait pas (premier passage du tour 2 :
+    éclat à x = 82 à l'écran, même repli) : le filtre écartait toute direction « vers » J2 (produit scalaire > 0,2),
+    donc le tir droit sur la face sud du pilier, qui passe à 48 px de lui. Il écarte désormais une ligne qui passe à
+    moins de 30 px de J2 avant le mur ;
+  - `loupe-rampe` : le voile à 0,12 / 0,2 / 0,35 / 0,6 / 1,0, niveau posé sur `dazzle_amount` de J1 le temps de la
+    prise (divisé par le curseur « éblouissement »), sans torche qui éblouisse : c'est le vrai chemin du voile qui peint
+    (bascule plein/calme, copie d'écran, relèvement), J1 figé par la mise en scène ; le bandeau LED tenu au sommet de sa
+    respiration comme `loupe-led` (au premier passage, la rampe tombait dans le creux). Premier montage : le shader du
+    voile plein réécrit à `frame_pre_draw`. Je l'ai cru faux — plus une arête dès 0,2 — et remplacé ; **le vrai chemin
+    donne les mêmes chiffres** (arêtes 2 268 sur `loupe-led`, 34 à 0,12, 0 de 0,2 à 0,6). Le montage n'y était pour rien :
+    le cadrage des LED est un mur dans le noir (luminance moyenne 10,6/255), que le voile recouvre entièrement dès 0,2.
+    Sous le vrai éblouissement, le corps de J1 est éclairé par la torche de J2, d'où le décor encore lisible. ⚠️ Ce
+    cadrage ne permet donc pas de juger l'aberration de la rampe : il n'a plus d'arête où la lire ;
+  - `loupe-eblouissement` : J2 tourné vers J1, torche allumée, loupe du corps de J1 ;
+  - `loupe-face-sang` relit la peinture en place avant sa texture : la vue iso se rallume au retour de l'écran scindé,
+    et la peinture d'avant était libérée (erreur de script au premier passage).
+- **Planche** (`docs/iso/planche_loupe.py`) : trois colonnes, loupe à 1:1, centre ×4, planche du DA.
+- **Séance** (fenêtre native 2560×1440 au Cloître, troisième passage du tour 2 ; 28 loupes, bande de fluidité, planche
+  2 464 × 15 418) :
+  - **frange (1a)** : recalage rouge/vert nul sur `loupe-led` et `loupe-corps-j1` (0,0) ; sous le vrai éblouissement
+    (J1 à 0,849), rouge +1,−3 et bleu −1,+3 — elle revient ;
+  - **rampe** : niveaux relevés 0,092 / 0,172 / 0,324 / 0,572 / 0,974 (lus après la prise, l'éblouissement forcé
+    redescendant déjà) ; luminance moyenne 10,9 → 128,0/255, arêtes 34 à 0,12 puis 0 — voir la réserve plus haut ;
+  - **impact au centre** : tir vers l'est sur le pilier voisin, éclat posé en (490 ; 463), à 2 px du point prévu ;
+  - **torche fantôme contre Braconnier (1e)** : les deux lumières toujours identiques propriété par propriété, hors le
+    masque d'ombre (11 / 15) et l'origine, par dessein ;
+  - **face avec du sang (1f)** et la texture de peinture recadrée au même lieu : les taches et l'éclat du tir y sont
+    peints ;
+  - **fluidité** : 30 images sous `--fixed-fps 60`, 12,4 à 17,4 ms (moyenne 14,0). Les deux passages précédents de la
+    même journée, sans changement du rendu entre eux, donnaient 7,9 à 10,1 puis 8,0 à 11,2 ms : la charge du poste a
+    varié (plusieurs sessions sur le Mac). À relever au premier plan si le chiffre compte.
+- Les PNG sont recopiés tels quels dans `docs/iso/loupe/` et transmis à ISO Assets par leurs chemins.
+- **Lot complet** (`./tools/run_suites.sh`, 19:27) : vert, 111 suites, sans erreur de script, 414 s.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

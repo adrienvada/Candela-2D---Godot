@@ -40,6 +40,9 @@ GEMINI = "docs/iso/planches_gemini"
 ## Loupe → planches du DA, chemins relatifs à --da. La frise et la fumée existent en plusieurs planches :
 ## la plus proche du cadrage (consigne de la session cloud, 15:36). E1 et E3 : la variante en pleine
 ## taille (`assets/sources/iso/`) plutôt que la planche contact où elle est réduite.
+## Tour 2 (après les familles 1a à 1f) : les dix-sept cadrages du tour 1, dans le même ordre, plus ce que la session
+## cloud a demandé de juger dessus — la rampe du voile, un vrai éblouissement, les deux fusées (rouge et braise), le
+## Braconnier et son leurre, la face du pilier avec du sang à son pied (divisée, puis la lightmap seule pour comparer).
 DA = {
     "loupe-pilier": [GEMINI + "/textures/face_mur_01.jpg"],
     "loupe-sol": [GEMINI + "/textures/sol_01.jpg"],
@@ -47,13 +50,24 @@ DA = {
     "loupe-corps-j2": [GEMINI + "/classes/frise_1_a_5.jpg"],
     "loupe-bord-cone": ["assets/sources/iso/E1_promesse_02.jpg"],
     "loupe-ombre": ["assets/sources/iso/E1_promesse_02.jpg"],
+    "loupe-face-sang-peinture": [GEMINI + "/textures/face_mur_01.jpg"],
+    "loupe-face-sang-lightmap-seule": [GEMINI + "/textures/face_mur_01.jpg"],
     "loupe-hud-hud": [],
     "loupe-hud-viseur": [],
     "loupe-led": ["assets/sources/iso/E1_promesse_02.jpg"],
+    "loupe-rampe-012": [],
+    "loupe-rampe-020": [],
+    "loupe-rampe-035": [],
+    "loupe-rampe-060": [],
+    "loupe-rampe-100": [],
+    "loupe-eblouissement-corps-j1": [GEMINI + "/classes/frise_1_a_5.jpg"],
     "loupe-balle-vol": ["assets/sources/iso/E3_flash_pro.jpg"],
     "loupe-balle-impact": ["assets/sources/iso/E3_flash_pro.jpg"],
     "loupe-fusee-suie": [GEMINI + "/objets/fusee_posee_01.jpg", GEMINI + "/effets/fumee_03.png"],
+    "loupe-fusee-suie-braise": [GEMINI + "/objets/fusee_posee_01.jpg", GEMINI + "/effets/fumee_03.png"],
     "loupe-torche-fantome": ["assets/ui/icones/gadget_torche_fantome.png"],
+    "loupe-torche-braconnier-original": ["assets/ui/icones/gadget_torche_fantome.png"],
+    "loupe-torche-braconnier-leurre": ["assets/ui/icones/gadget_torche_fantome.png"],
     "loupe-scinde-pilier": [GEMINI + "/textures/face_mur_01.jpg"],
     "loupe-scinde-corps-j1": [GEMINI + "/classes/frise_1_a_5.jpg"],
     "loupe-scinde-corps-j2": [GEMINI + "/classes/frise_1_a_5.jpg"],
@@ -123,7 +137,8 @@ def main():
                 bande.paste(v, (6 + (k % cols) * (vignette[0] + 6), 6 + (k // cols) * (vignette[1] + 6)))
             bande.save(os.path.join(dest, "fluidite_bande.jpg"), quality=92, optimize=True)
 
-    largeur = MARGE * 3 + LOUPE[0] * 2
+    # Tour 2 : trois colonnes — la loupe à 1:1, son centre 200×112 grossi ×4 au plus proche voisin, la planche du DA.
+    largeur = MARGE * 4 + LOUPE[0] * 3
     hauteur = 96 + len(rangs) * (LEGENDE + LOUPE[1] + MARGE)
     bande_planche = None
     if bande is not None:
@@ -133,16 +148,21 @@ def main():
     d = ImageDraw.Draw(planche)
     titre, petit = police(30), police(18)
     d.text((MARGE, 16), "CANDELA — LA LOUPE : LE JEU À 1:1 CONTRE LES PLANCHES DU DA", font=titre, fill=(232, 170, 80))
-    d.text((MARGE, 56), "iso2-vues @ %s + l'outil de loupe · fenêtre %s · recadrages 800×450 sans redimensionnement · "
-           "à gauche le jeu, à droite le DA" % (m.get("commit", "?"), m.get("taille_demandee", "?")), font=petit, fill=GRIS)
+    d.text((MARGE, 56), "tour 2 · iso10-finition @ %s · fenêtre %s · recadrages 800×450 sans redimensionnement · "
+           "le jeu à 1:1, son centre ×4 au plus proche voisin, le DA" % (m.get("commit", "?"), m.get("taille_demandee", "?")),
+           font=petit, fill=GRIS)
     y = 96
     for i in rangs:
         f = loupes[i]
         d.text((MARGE, y + 8), "%s — %s" % (i, f.get("titre", "")), font=petit, fill=TEXTE)
         y += LEGENDE
-        planche.paste(Image.open(os.path.join(dest, i + ".png")).convert("RGB"), (MARGE, y))
+        loupe = Image.open(os.path.join(dest, i + ".png")).convert("RGB")
+        planche.paste(loupe, (MARGE, y))
+        cx, cy = (LOUPE[0] - 200) // 2, (LOUPE[1] - 112) // 2
+        centre = loupe.crop((cx, cy, cx + 200, cy + 112)).resize((800, 448), Image.NEAREST)
+        planche.paste(centre, (MARGE * 2 + LOUPE[0], y))
         refs = [r for r in DA.get(i, []) if os.path.exists(os.path.join(a.da, r))]
-        x0 = MARGE * 2 + LOUPE[0]
+        x0 = MARGE * 3 + LOUPE[0] * 2
         if not refs:
             d.text((x0 + 12, y + 12), "aucune planche du DA pour ce cadrage", font=petit, fill=GRIS)
         else:

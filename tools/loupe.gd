@@ -56,6 +56,10 @@ static func catalogue() -> Array[Dictionary]:
 			"Le texte et les cadres du HUD à la fenêtre native, le viseur posé au sol."],
 		["loupe-led", "Le bandeau LED et sa lumière sur le mur",
 			"Le dégradé du bandeau au sommet de sa respiration, loin de toute torche : bandes visibles ou non."],
+		["loupe-rampe", "La rampe du voile : cinq niveaux forcés au cadrage des LED",
+			"ISO10, 1a (tour 2) : le voile plein forcé à 0,12 / 0,2 / 0,35 / 0,6 / 1,0, sans vrai éblouissement ni pénalité — l'aberration monte en rampe."],
+		["loupe-eblouissement", "Le corps de J1 sous la torche de J2",
+			"ISO10, 1a (tour 2) : un vrai éblouissement, J2 tourné vers J1 torche allumée — la frange doit revenir."],
 		["loupe-balle", "Une balle en vol et son impact",
 			"La traçante à l'image qui suit le tir, puis l'éclat et les étincelles sur le mur."],
 		["loupe-fusee-suie", "Une fusée posée, un nuage de suie dedans",
@@ -156,6 +160,10 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 
 	if p._demande(plans, "loupe-led"):
 		await _loupe_led(plans, portee, demi)
+	if p._demande(plans, "loupe-rampe"):
+		await _loupe_rampe(plans, portee, demi)
+	if p._demande(plans, "loupe-eblouissement"):
+		await _loupe_eblouissement(plans)
 	if p._demande(plans, "loupe-balle"):
 		await _loupe_balle(plans)
 
@@ -388,36 +396,111 @@ func _loupe_balle(plans: Array[Dictionary]) -> void:
 		_tenir_scene()
 		await p.get_tree().process_frame
 	m.p1.shoot()
+	# La traçante à mi-chemin du mur, jamais au-delà : le tir sur la face du pilier n'a que 122 px de course (tour 2 ;
+	# le seuil de 200 px de `_ligne_de_tir_libre` l'écartait, et la ligne de repli rejetait l'impact au bord).
+	var course := minf(170.0, float(ligne["l"]) * 0.6)
 	await _prise(plans, "loupe-balle", [["vol", func(img: Image) -> Vector2:
-		return _pixel(img, _j1 + dir * 170.0, 10.0)]], false, 0.0)
+		return _pixel(img, _j1 + dir * course, 10.0)]], false, 0.0)
+	# Tour 2 — l'impact AU CENTRE : la loupe se pose sur l'éclat réellement laissé par ce tir (le plus récent de
+	# `wall_impact`), pas sur le point prévu. Au tour 1, aucune ligne ne passait les filtres, `_ligne_de_tir_libre`
+	# rendait son point de repli, et l'impact tombait contre le bord gauche de la loupe.
 	await _prise(plans, "loupe-balle", [["impact", func(img: Image) -> Vector2:
-		return _pixel(img, impact, 10.0)]], false, 0.12)
+		var eclat := _dernier_eclat()
+		if eclat == null:
+			printerr("  ! loupe-balle : aucun éclat posé, la loupe vise le point prévu %s" % str(impact))
+			return _pixel(img, impact, 10.0)
+		print("  · loupe-balle : éclat posé en %s (prévu %s)" % [str(eclat.global_position), str(impact)])
+		return _pixel(img, eclat.global_position, 10.0)]], false, 0.12)
 	_visee_j1 = Vector2.UP
+
+
+## L'éclat de mur le plus récent (le rang d'arrivée de `wall_impact.gd`), ou `null`.
+func _dernier_eclat() -> Node2D:
+	var meilleur: Node2D = null
+	var rang := -1
+	for e in p.get_tree().get_nodes_in_group("wall_impact"):
+		var r := int(e.get("_order"))
+		if r > rang:
+			rang = r
+			meilleur = e as Node2D
+	return meilleur
+
+
+## Tour 2 — la rampe du voile de 1a : le voile à cinq niveaux, au cadrage de `loupe-led`, sans torche qui éblouisse et
+## sans toucher au réglage de la pénalité (session cloud, 16:48). Le niveau est posé sur `dazzle_amount` de J1 le temps de
+## la prise (divisé par le curseur « éblouissement », que l'interface remultiplie), avant le traitement de l'interface :
+## c'est alors le VRAI chemin du voile qui peint — bascule plein/calme, copie d'écran, relèvement. J1 est figé par la mise
+## en scène : la pénalité de vitesse et de visée ne joue sur rien de ce qu'on photographie.
+## ⚠️ Premier montage : le shader du voile plein réécrit juste avant le rendu (`frame_pre_draw`), à côté de l'interface.
+## Le voile y peignait sans l'écran derrière lui — presque noir à 0,12, un dégradé sans une arête à 0,35 — quand un vrai
+## éblouissement à 0,85 laisse lire le décor sous la frange.
+func _loupe_rampe(plans: Array[Dictionary], portee: float, demi: float) -> void:
+	var m: Node = p._main
+	var mur := _mur_dans_le_noir(portee, demi)
+	var curseur := maxf(float(EffectPolicy.curseur("eblouissement")), 0.001)
+	# Le bandeau tenu au sommet de sa respiration, comme `loupe-led` : sans lui (premier passage du tour 2), la rampe
+	# tombait dans le creux et ne se comparait plus à la loupe des LED.
+	var arene: Node = m.arena
+	var led: Node = arene.get_node_or_null(MurLed.NOM) if arene != null else null
+	for niveau in [0.12, 0.2, 0.35, 0.6, 1.0]:
+		var tenir := func() -> void:
+			_tenir_scene()
+			if led != null and is_instance_valid(led):
+				led.regler(1.0)
+			m.p1.dazzle_amount = minf(niveau / curseur, 1.0)
+		await _prise(plans, "loupe-rampe", [["%03d" % int(round(niveau * 100.0)), func(img: Image) -> Vector2:
+			return _pixel(img, mur, HAUTEUR_PIED_DE_FACE)]], false, 0.8, tenir)
+	# L'éblouissement forcé redescend de lui-même : les loupes suivantes le reprennent au repos (0,06).
+	for n in 90:
+		_tenir_scene()
+		await p.get_tree().process_frame
+
+
+## Tour 2 — un VRAI éblouissement : J2 tourne sa torche allumée vers J1 (`_tenir_scene` la tient éteinte et visant à
+## droite ; on la réécrit après). La frange du voile doit revenir sur le corps de J1.
+func _loupe_eblouissement(plans: Array[Dictionary]) -> void:
+	var m: Node = p._main
+	var tenir := func() -> void:
+		_tenir_scene()
+		p._viser(1, (_j1 - _j2).normalized())
+		if p._pantins.size() > 1:
+			p._pantins[1].torche = true
+		Input.action_press("p2_torch")
+		m.p2.flashlight_on = true
+	await _prise(plans, "loupe-eblouissement", [["corps-j1", func(img: Image) -> Vector2:
+		return _pixel(img, _j1, HAUTEUR_CORPS)]], false, 1.5, tenir)
+	Input.action_release("p2_torch")
+	for n in 60:
+		_tenir_scene()
+		await p.get_tree().process_frame
 
 
 func _ligne_de_tir_libre() -> Dictionary:
 	var m: Node = p._main
 	var espace := (m.p1 as Node2D).get_world_2d().direct_space_state
-	var vers_j2 := (_j2 - _j1).normalized()
 	var choix := {"dir": Vector2(-0.707, -0.707), "impact": _j1 + Vector2(-0.707, -0.707) * 300.0, "l": 300.0}
 	var ecart := INF
 	var taille := Vector2(DisplayServer.window_get_size())
 	var marge := Vector2(TAILLE_LOUPE) * 0.5
 	for k in 32:
 		var d := Vector2.RIGHT.rotated(TAU * float(k) / 32.0)
-		if d.dot(vers_j2) > 0.2:
-			continue
 		var q := PhysicsRayQueryParameters2D.create(_j1, _j1 + d * 1200.0, MapGeometry.WALL_LAYER)
 		q.exclude = [m.p1.get_rid(), m.p2.get_rid()]
 		var r := espace.intersect_ray(q)
 		if r.is_empty():
 			continue
 		var l := _j1.distance_to(r["position"])
+		# La balle ne doit pas toucher J2 : écartée si la ligne passe à moins de 30 px de lui AVANT le mur. Tour 2 — le
+		# filtre d'avant écartait toute direction « vers » J2 (produit scalaire > 0,2), donc le tir droit sur la face sud du
+		# pilier, qui passe pourtant à 48 px de lui ; aucune ligne ne restait et l'impact tombait au bord de l'écran.
+		var le_long := (_j2 - _j1).dot(d)
+		if le_long > 0.0 and le_long < l and absf((_j2 - _j1).cross(d)) < 30.0:
+			continue
 		# L'impact ENTIER dans une loupe à l'écran, sous le HUD (premier essai de la loupe : contre le bord gauche,
 		# recadré sous le panneau du joueur) ; et la ligne assez longue pour voir la balle en vol.
 		var ecran := _pixel_taille(taille, r["position"], 10.0)
 		if ecran.x < marge.x or ecran.x > taille.x - marge.x or ecran.y < marge.y * 2.0 \
-				or ecran.y > taille.y - marge.y or l < 200.0:
+				or ecran.y > taille.y - marge.y or l < 100.0:
 			continue
 		if absf(l - 380.0) < ecart:
 			ecart = absf(l - 380.0)
@@ -656,6 +739,11 @@ func _loupe_face_sang(plans: Array[Dictionary], face: Vector2) -> void:
 	await _prise(plans, "loupe-face-sang", [["lightmap-seule", centre]], false, 0.4)
 	mat.set_shader_parameter("peinture_active", true)
 	await RenderingServer.frame_post_draw
+	# Relue ici : la vue iso peut s'être rallumée pendant les prises, et la peinture d'avant être libérée (tour 2).
+	pe = pres.peinture()
+	if pe == null:
+		printerr("  ✗ loupe-face-sang : plus de peinture en place après les prises")
+		return
 	var img: Image = pe.get_texture().get_image()
 	var cadre: Rect2 = pe.get("cadre")
 	var echelle := float(pe.get("echelle"))

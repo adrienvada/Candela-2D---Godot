@@ -5675,3 +5675,14 @@ référence et le plancher sont peints dans la texture, lus par la même lecture
 (face propre 1,15), sans tache froide (b/r 0,52 contre 0,65), bruit ± 37 contre ± 49. Coût d'un rendu forcé à chaque
 image dans le bruit du banc (−0,37 à +1,1 ms) ; en duel, 0,6 rendu par seconde.
 Lot complet vert à 19:06 : 111 suites, sans erreur de script, 413 s.
+
+**ISO10, tour 2 de loupe, 2026-09-15, séance lancée vers 19:10.** Session « Iso 1 Opus ». Les cadrages du tour 1 et ceux demandés
+par la session cloud au fil des familles : rampe du voile, vrai éblouissement, fusée rouge et braise, Braconnier et
+leurre, face du pilier avec du sang au pied. Impact recentré sur l'éclat réellement posé (au tour 1, la ligne de tir de
+repli le rejetait au bord). Planche à trois colonnes, centre ×4 au plus proche voisin.
+Trois passages : le premier montage de la rampe, cru faux, donnait en fait les mêmes chiffres que le vrai chemin du voile
+(le cadrage des LED, mur dans le noir, n'a plus d'arête sous le voile dès 0,2) ; l'impact n'est venu au centre qu'après
+avoir corrigé le filtre de la ligne de tir. Frange nulle au repos (LED, corps de J1), revenue sous vrai éblouissement
+(+1,−3) ; Braconnier et leurre toujours identiques ; fluidité 12,4 à 17,4 ms, contre 8 à 11 ms aux passages précédents
+sans changement du rendu — la charge du poste a varié.
+Lot complet vert à 19:27 : 111 suites, sans erreur de script, 414 s.
