@@ -5403,3 +5403,23 @@ neuf `volume`, torche rasante le long du mur. Photographe relancé, dossier renv
 fusée en vol puis posée derrière un muret, suie et poussière, éblouissement, killcam, gel signé, affiche, et
 les corps v5 en référence. Sources prises après les quatre fusions : le photographe sans drapeau (49 images)
 et le banc des gadgets (VERDICT=OK, 0 échec, noir absolu tenu pour les dix gadgets 2D coupée).
+
+**ISO8 — la caméra serrée, étape 1 et préparation de l'étape 2, 2026-09-15 à partir de 12:24.** Session « Iso 1 Opus »,
+branche `iso8-claustro` depuis `ee5ac9f`, sur le brief `briefs/iso8_claustro.md` de la session cloud (mandat
+d'Adrien de 12:20 : « zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus
+claustrophobique »). Étape 1 : `tools/banc_claustro.gd`, les variantes zoom ×1,0 / ×1,5 / ×1,8 / ×2,2, portée
+`torch_scale` 1,6 / 1,2 / 1,0, demi-angle 35° et 30° (le cookie du Fumiste, cuit à 30°, plutôt qu'une recuisson
+sans les curseurs exacts de `bis04`), en vue unique et en écran scindé, sur la carte d'essai des murs bas et Le
+Cloître ; planche `docs/iso/planche_iso8_variantes.jpg` pour que la session cloud choisisse sur image. Étape 2
+préparée sur des défauts NEUTRES (zoom 1,0, décalage 0) : `RegardDuel` (regard avancé vers la visée, borné à la
+carte au-delà du zoom 1,0), `GameSettings.zoom_duel` et `decalage_visee` (`--zoom=`, `--decalage=` ; le zoom de
+débogage ne s'écrit que s'il a été réglé — le piège de `video/mode_iso`), le dézoom au coup reçu qui part du zoom
+du duel.
+Banc des variantes, 12:40 : VERDICT=OK, 60 prises, 0 échec, vue iso tenue partout ; appels de dessin 67 à 80
+(vue unique) et 141 à 156 (écran scindé), sans effet visible du zoom ni de la portée. La planche a trompé une
+fois à la réduction (la rangée à 30° du Cloître paraissait moins serrée) : relue sur les prises brutes, le
+zoom est bien le même. Planche et dossier envoyés à ISO Assets ; choix demandé à la session cloud.
+Lots de l'étape 1 : le premier (12:48, 126 OK) rouge sur `test_iso_camera`, verte seule dans le foyer d'Adrien et
+dans un foyer neuf ; le second (12:57, 127 OK en 414 s) vert, sans rien changer — l'intermittent du témoin de
+simulation d'ISO2, très probablement. Choix de la session cloud reçu à 12:50 : zoom ×1,8, facteur de portée
+global ×0,75, demi-angles inchangés, décalage d'un quart de la hauteur visible, killcam qui part du zoom du duel.

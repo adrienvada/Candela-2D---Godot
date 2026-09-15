@@ -52,6 +52,7 @@ func _run() -> void:
 	_empreinte_contenue(Cam)
 	_pates(Pate)
 	_reglage()
+	_regard_du_duel()
 	await _simulation_inchangee()
 
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER],
@@ -194,6 +195,71 @@ func _pates(Pate: GDScript) -> void:
 
 
 # ---------------------------------------------------------------------------
+
+## ISO8 — la caméra serrée, préparée sur des défauts NEUTRES tant que la session cloud n'a pas choisi sur la
+## planche des variantes : le zoom du duel et le décalage de visée (`GameSettings`), le regard (`RegardDuel`).
+func _regard_du_duel() -> void:
+	print("\n--- ISO8 : zoom du duel, décalage de visée, regard borné ---")
+	var Script: GDScript = load("res://settings_manager.gd")
+	var reglages := root.get_node("GameSettings")
+	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	if Script.valeur_par_argument(args, "--zoom=").is_empty():
+		_check("zoom du duel neutre par défaut (1,0 : le jeu d'avant ISO8)", is_equal_approx(reglages.zoom_duel, 1.0))
+	if Script.valeur_par_argument(args, "--decalage=").is_empty():
+		_check("décalage de visée neutre par défaut (0)", is_equal_approx(reglages.decalage_visee, 0.0))
+	_check("--zoom=1.8 s'applique", is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=1.8"])), 1.8))
+	_check("--zoom borné (0,5 → 1,0 ; 9 → 3,0)",
+		is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=0.5"])), 1.0)
+		and is_equal_approx(Script.zoom_applique(1.0, PackedStringArray(["--zoom=9"])), 3.0))
+	_check("--zoom illisible : le choix s'applique", is_equal_approx(Script.zoom_applique(1.5, PackedStringArray(["--zoom=large"])), 1.5))
+	_check("--decalage=0.25 s'applique, borné à 0,4",
+		is_equal_approx(Script.decalage_applique(PackedStringArray(["--decalage=0.25"])), 0.25)
+		and is_equal_approx(Script.decalage_applique(PackedStringArray(["--decalage=2"])), 0.4))
+
+	# ⚠️ Le piège de `video/mode_iso` (ISO6) : un zoom jamais réglé ne s'écrit pas.
+	var chemin := "user://test_iso8_reglages.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
+	var neuf: Node = Script.new()
+	neuf._settings_path = chemin
+	neuf._load()
+	neuf.set_fps_cap(120)
+	var cfg := ConfigFile.new()
+	cfg.load(chemin)
+	_check("un zoom jamais réglé ne s'écrit pas : le défaut du jeu reste libre de changer",
+		not cfg.has_section_key("debogage", "zoom_duel"))
+	neuf.set_zoom_duel(1.8)
+	cfg.load(chemin)
+	_check("un zoom réglé s'écrit dans la section de débogage", is_equal_approx(float(cfg.get_value("debogage", "zoom_duel", 0.0)), 1.8))
+	var relu: Node = Script.new()
+	relu._settings_path = chemin
+	relu._load()
+	_check("et se relit", is_equal_approx(relu.zoom_duel_choisi(), 1.8))
+	for n in [neuf, relu]:
+		n.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
+
+	# Le regard.
+	var vue := Vector2(1920.0, 1080.0)
+	var carte := Rect2(Vector2.ZERO, Vector2(32.0, 32.0) * 35.0)
+	var joueur := Vector2(210.0, 227.5)
+	_check("zoom 1,0 et décalage 0 : la caméra reste EXACTEMENT sur le joueur (aucune borne, aucun lissage)",
+		RegardDuel.centre_du_regard(joueur, RegardDuel.decalage_vise(Vector2.UP, 0.0, vue, 1.0), vue, 1.0, carte, 35.0) == joueur)
+	var vise := RegardDuel.decalage_vise(Vector2.RIGHT, 0.25, vue, 2.0)
+	_check("le décalage vaut un quart de la hauteur visible dans la direction de la visée (×2 : 135 px)",
+		vise.is_equal_approx(Vector2(135.0, 0.0)), str(vise))
+	var c := RegardDuel.centre_du_regard(joueur, Vector2.ZERO, vue, 2.0, carte, 35.0)
+	var visible := RegardDuel.etendue_visible(vue, 2.0)
+	_check("zoom ×2 contre un coin : la vue ne montre pas plus d'une tuile de hors-carte",
+		c.x - visible.x * 0.5 >= -35.0 - 0.01 and c.y - visible.y * 0.5 >= -35.0 - 0.01, str(c))
+	var au_centre := carte.get_center()
+	_check("zoom ×2 au centre de la carte : aucune borne ne déplace la caméra",
+		RegardDuel.centre_du_regard(au_centre, Vector2.ZERO, vue, 2.0, carte, 35.0) == au_centre)
+	_check("même règle pour les deux joueurs : le regard ne dépend que de la position, de la visée et de la vue",
+		RegardDuel.centre_du_regard(joueur, vise, vue, 2.0, carte, 35.0)
+		== RegardDuel.centre_du_regard(joueur, vise, vue, 2.0, carte, 35.0))
+	var lisse := RegardDuel.lisser(Vector2.ZERO, Vector2(100.0, 0.0), 0.5)
+	_check("le décalage se lisse sans dépasser sa cible", lisse.x > 90.0 and lisse.x <= 100.0, str(lisse))
+
 
 func _reglage() -> void:
 	print("\n--- GameSettings.mode_iso (ISO6 : l'iso par défaut, la vue de dessus en débogage) ---")
