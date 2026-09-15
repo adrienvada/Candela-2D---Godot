@@ -5270,6 +5270,25 @@ recadrer la planche des gadgets. Le harnais refuse de poser `HOME` : banc dans l
 avec ISO7 Beauté : sa température de pâte à reporter sur `volume_iso.gdshader` après la fusion. Refusé :
 les fumées additives d'ISO Assets (brilleraient dans le noir).
 
+**La balle n'éclaire plus, 2026-09-15 vers 11:50 (même session, branche `balle-sans-lumiere` depuis
+`a5ac4b8`).** Décision d'Adrien, réveillé, relayée par la session cloud : « Supprimons le fait que la balle
+soit une source de lumière. » `bullet.gd` perd sa `PointLight2D` (création, étirement, triplement du tir
+fatal, fondu) ; la traçante et l'aura restent, `emits_light` ne pilote plus qu'elles. Aucune suite ne lisait
+la lumière de la balle. Banc neuf `tools/banc_balle_sans_lumiere.gd`, même scène avant et après : lumières
+des balles 2 → 0, rondeur du halo de la fusée pendant la rafale 0,56 → 0,78 ; la traînée claire que la
+lumière de la balle projetait au sol près de la fusée a disparu. Les ellipses tranchées à la verticale des
+deux captures, d'abord lues comme l'arête de quadrant, sont les auras des balles coupées par le cadre des vues
+(identiques avant et après). Deux premiers passages du banc sans mesure (rafale
+tirée dans un mur, rondeur prise hors du halo). File du Mac tenue par messages avec Iso 1 Opus et ISO7
+Beauté.
+
+**Second volet, 2026-09-15 vers 12:25 — les étincelles d'impact n'éclairent plus.** Demandé par la session
+cloud à 12:05 : le halo restait à 0,78 en rafale et 45 lumières restaient actives. Le banc apprend à
+recenser par famille (fichier créateur et nom de nœud) : 60 lumières sur 63 étaient des étincelles
+d'impact (`particle_pool.gd`, genre `SPARK`). Éteintes comme la poussière et la fumée, dessin additif
+gardé : 9 lumières, rondeur 0,88 puis 0,86 sur deux passages (cible ≥ 0,85). Gardés, avec leur raison :
+l'écho au sol du tir et la lumière de coup. La rondeur varie d'un passage à l'autre, d'où deux passages.
+
 **Fusions de la vague — 2/4 : `iso-gadgets-lumieres` (`e280015`), 2026-09-15 vers 10:05.** Hauteur des
 sources dans la lightmap, volumes et lueurs iso, miroirs revus (`iso_volumes.gd`, `volume_iso.gdshader`,
 `halo_iso.gdshader`, `test_iso_gadgets`). Trois conflits, tous des ajouts parallèles : `run_suites.sh`
@@ -5423,3 +5442,20 @@ Lots de l'étape 1 : le premier (12:48, 126 OK) rouge sur `test_iso_camera`, ver
 dans un foyer neuf ; le second (12:57, 127 OK en 414 s) vert, sans rien changer — l'intermittent du témoin de
 simulation d'ISO2, très probablement. Choix de la session cloud reçu à 12:50 : zoom ×1,8, facteur de portée
 global ×0,75, demi-angles inchangés, décalage d'un quart de la hauteur visible, killcam qui part du zoom du duel.
+**Fusion de `balle-sans-lumiere` (`b4858bf`) dans `iso2-vues`, 2026-09-15 vers 13:00.** Session « Iso 1 Opus », sur le
+mot de la session cloud (12:35). Deux commits de « ISO7 Gadgets et lumière Opus » : la balle n'éclaire plus
+(`f8681a5`), les étincelles d'impact non plus (`b4858bf`). Base commune `a5ac4b8`, avant ISO6. Un seul conflit, la
+tête des « Décisions actées » de la ROADMAP : les quatre lignes gardées, de la plus récente à la plus ancienne
+(12:05, 11:00, 10:55, 05:00). Le journal a fusionné seul. Ancrages relus : `bullet.gd`, `particle_pool.gd`,
+`miroirs_iso.gd` et le banc de Gadgets identiques à leur branche ; ceux d'ISO6 (`iso_applique`, `mode_rendu`,
+`ATTENUATION_FANTOME`, `_centrer_sur_la_carte`, `_face_au_mur_haut`, `SUITES_2D`, `ConditionsDeMatch` v2) présents.
+Lot complet vert à 13:06 : 127 OK en 411 s.
+
+**Fusion d'`iso2-vues` (`a1cf64b`) dans `iso8-claustro`, 2026-09-15 vers 13:10.** Session « Iso 1 Opus », sur le mot de
+la session cloud : travailler l'étape 2 d'ISO8 sur la balle sans lumière. Deux conflits d'ajouts simultanés, la
+tête des « Décisions actées » de la ROADMAP (la ligne d'ISO8 de 12:20 avant celle des étincelles de 12:05) et la
+fin de ce journal (l'entrée d'ISO8 avant celle de la fusion de 13:00), les deux côtés gardés. Ancrages relus :
+`bullet.gd`, `particle_pool.gd`, `miroirs_iso.gd` et le banc de Gadgets identiques à `iso2-vues` ; ceux d'ISO8
+(`RegardDuel`, `zoom_duel`, `zoom_applique`, `decalage_applique`, `_suivre_du_regard`, `_carte_px`, le zoom du
+duel au départ de manche, `banc_claustro`, `_regard_du_duel` dans `test_iso_camera`) présents.
+Lot complet vert à 13:21 : 127 OK en 414 s.

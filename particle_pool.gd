@@ -249,9 +249,15 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.polygon = PackedVector2Array([
 			Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)])
 		poly.material = _mat_add
+		# ⚠️ **Les étincelles d'impact n'éclairent plus** (2026-09-15, second volet de « la balle n'est plus
+		# une source de lumière », décision d'Adrien relayée par la session cloud). Douze par impact de mur,
+		# à énergie 1,5 : une rafale de cinq balles en allumait 60 d'un coup (recensement au banc
+		# `tools/banc_balle_sans_lumiere.gd`, 60 lumières sur 63), et crevait le plafond de quinze lumières par
+		# quadrant que ce fichier avait déjà payé pour la poussière. Le dessin additif non éclairé (`_mat_add`)
+		# reste : c'est lui qu'on voit jaillir dans le noir. Éteinte, pas seulement à zéro — voir DUST.
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
-		light.energy = 1.5
-		light.enabled = true # un nœud recyclé peut sortir d'un genre éteint
+		light.energy = 0.0
+		light.enabled = false
 		rb.linear_damp = randf_range(1.0, 4.0) # Étincelles volatiles
 		rb.angular_velocity = randf_range(-20.0, 20.0)
 		rb.physics_material_override = _phys_spark

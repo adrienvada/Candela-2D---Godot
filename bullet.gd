@@ -54,7 +54,6 @@ var lag_hauteur: float = MursBas.hauteur_de_posture(false)
 var _lag_survolee := false
 
 var shape_cast: ShapeCast2D
-var light: PointLight2D
 var spawn_pos: Vector2
 
 # FU3 — le tunnel que cette balle creuse dans une fumée de fusée, s'il y en a
@@ -75,22 +74,19 @@ static func _additive_material() -> CanvasItemMaterial:
 
 func _ready():
 	z_index = 10
-	# Add a dynamic point light to the bullet itself
-	light = PointLight2D.new()
-	light.name = "TrailLight"
-	light.color = Charte.AMBRE
-	light.energy = 50.0
-	# DA2.12 — le halo peint de la traînée. Texture partagée et mise en cache :
-	# chaque balle en allouait une identique de 128×128, soit cinq par volée de
-	# pompe. `poser()` tient l'empreinte au sol quelle que soit la résolution du
-	# fichier — recuire en 256² ne devra rien déplacer.
-	LightTextures.poser(light, LightTextures.TRAINEE, LightTextures.EMPREINTE_TRAINEE)
-	var grad_tex := light.texture
-	light.shadow_enabled = true
-	light.shadow_item_cull_mask = 1 | 4 # Casts shadows from walls(1) and players(4)
-	light.range_item_cull_mask = 1 | 2 | 4 # Trail light illuminates players (2)
-	add_child(light)
-	
+	# ⚠️ **La balle n'est plus une source de lumière** (décision d'Adrien, 2026-09-15 vers 10:55 :
+	# « Supprimons le fait que la balle soit une source de lumière. Cela fait saturer le nombre de lumières
+	# possibles du moteur et fait buguer lors de tirs vifs avec une source comme une fusée éclairante. »).
+	# Elle portait une `PointLight2D` à ombres (« TrailLight »), étirée jusqu'à 800 px : Godot n'applique
+	# jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, et une rafale près d'une fusée
+	# coupait son halo (« Pièges connus », « quinze par item »). Conséquence acceptée : une balle qui passe
+	# près d'un corps ne le révèle plus. Ce qui la fait voir dans le noir reste : la traçante (`Core`) et
+	# l'aura (`Aura`), non éclairées et additives.
+	#
+	# DA2.12 — le halo peint de la traînée, désormais porté par l'aura seule. Texture partagée et mise en
+	# cache par `LightTextures.masque()`.
+	var grad_tex := LightTextures.masque(LightTextures.TRAINEE)
+
 	var core = Line2D.new()
 	core.name = "Core"
 	core.width = 5.0
@@ -116,7 +112,7 @@ func _ready():
 	# Add a glowing aura Sprite2D so the glow is visible even over the darkened killcam overlay
 	var aura = Sprite2D.new()
 	aura.name = "Aura"
-	aura.texture = grad_tex # Reuse the gradient texture from the light
+	aura.texture = grad_tex # Le dégradé de la traînée (LightTextures.TRAINEE)
 	aura.modulate = Color(Charte.AMBRE, 0.6) # Même teinte que la balle, atténuée
 	aura.material = mat # Reuse the unshaded, additive material (mat is already BLEND_MODE_ADD)
 	aura.scale = Vector2(1.5, 1.5) # Reduced scale to make it less thick
@@ -129,15 +125,15 @@ func _ready():
 		core.default_color = weapon.bullet_color
 		core.width = weapon.bullet_width
 		
+		# `emits_light` ne pilote plus que l'aura et la traçante additive (décision du 2026-09-15) :
+		# `bullet_light_energy` reste dans les données de classe, et aucune balle n'éclaire plus rien.
 		if not weapon.emits_light:
-			light.enabled = false
 			aura.visible = false
 			core.material = null # Use default shaded material
 		else:
-			# Curseur MONDE « Trait de balle » (plancher 0,5 en classé) : la
-			# lumière qui dit d'où l'on tire, et l'aura qui la double.
+			# Curseur MONDE « Trait de balle » (plancher 0,5 en classé) : l'aura
+			# qui dit d'où l'on tire.
 			var trait_balle := EffectPolicy.curseur("trait_de_balle")
-			light.energy = weapon.bullet_light_energy * trait_balle
 			aura.modulate.a *= trait_balle
 	
 	# ShapeCast for accurate collision
@@ -347,13 +343,10 @@ func _physics_process(delta):
 	if is_replay:
 		queue_redraw()
 
-	# Stretch the light and core to form a long laser trail
+	# La traçante s'étire derrière la balle.
 	var dist_from_spawn = global_position.distance_to(spawn_pos)
 	var trail_length = min(dist_from_spawn, 800.0)
-	light.rotation = 0.0
-	light.scale = Vector2(max(1.0, trail_length / 128.0), 0.15)
-	light.position = -Vector2(trail_length / 2.0, 0)
-	
+
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
 
@@ -579,16 +572,15 @@ static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
 		return -1.0
 	return entry
 
-## V2.6 — Le trait du tir fatal sur-expose : largeur et énergie triplées,
+## V2.6 — Le trait du tir fatal sur-expose : largeur triplée, aura pleine,
 ## fondu ralenti pour que le gel de l'instant fatal (V2.1) fige une image
-## incandescente. L'arbalète, sans lumière par design, ne gagne que la largeur.
+## incandescente. L'arbalète, sans aura par design, ne gagne que la largeur.
+## (Son énergie de lumière triplée a disparu avec la lumière, 2026-09-15.)
 const LETHAL_FADE_DURATION := 0.35
 var _fade_duration := 0.08
 
 func _flare_trail() -> void:
 	_fade_duration = LETHAL_FADE_DURATION
-	if light.enabled:
-		light.energy *= 3.0
 	if has_node("Core"):
 		var core: Line2D = get_node("Core")
 		core.width *= 3.0
@@ -609,10 +601,7 @@ func _fade_and_destroy(hit_point: Vector2):
 	var dist_from_spawn = hit_point.distance_to(spawn_pos)
 	var trail_length = min(dist_from_spawn, 800.0)
 	global_position = hit_point
-	light.rotation = 0.0
-	light.scale = Vector2(max(1.0, trail_length / 128.0), 0.15)
-	light.position = -Vector2(trail_length / 2.0, 0)
-	
+
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
 	
@@ -630,8 +619,6 @@ func _fade_and_destroy(hit_point: Vector2):
 	# rien ne repeint entre-temps, donc les deux se valent — mais la différence a
 	# déjà éteint un effet en silence le 2026-08-26, et elle mérite d'être lue.
 	var tween = create_tween().set_parallel(true)
-	Charte.animer(tween, light, "energy", light.energy, 0.0, _fade_duration,
-		Charte.Courbe.EXTINCTION)
 	if has_node("Core"):
 		var noyau := get_node("Core") as CanvasItem
 		Charte.animer(tween, noyau, "modulate:a", noyau.modulate.a, 0.0,
