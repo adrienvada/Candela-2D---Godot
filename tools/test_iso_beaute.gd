@@ -319,7 +319,7 @@ func _les_faces_et_le_bain() -> void:
 	_check("la face lit sa lumière au-delà des hachures d'encre (pied %.1f > portée %.1f)" % [IsoMateriaux.PIED_FACE_PX, portee_max],
 		IsoMateriaux.PIED_FACE_PX > portee_max + 1.0)
 	_check("la face et le liseré lisent une moyenne le long du mur, sur une période de hachure",
-		code_mur.contains("c = lightmap_pateuse_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lightmap_pateuse_moyenne(monde.xz + sortie")
+		code_mur.contains("brute = lire_lightmap_moyenne(monde.xz + n * pied, tangente") and code_mur.contains("lire_lightmap_moyenne(monde.xz + sortie")
 		and is_equal_approx(1.875 + 1.875, MurEncre.HACHURE_PAS * 0.75))
 	# La température graduée : plus chaude en basse lumière, luminance gardée.
 	var bas := IsoPate.temperature_graduee(IsoPate.depuis_affiche(Vector3.ONE * 0.06), 0.8, IsoMateriaux.TEMPERATURE_SEUIL_BAS,
@@ -331,6 +331,55 @@ func _les_faces_et_le_bain() -> void:
 	var gris := IsoPate.depuis_affiche(Vector3.ONE * 0.3)
 	_check("bain : luminance gardée", absf(IsoPate.luminance(IsoPate.temperature_graduee(gris, 0.8, 0.08, 0.45)) - IsoPate.luminance(gris)) < 1e-5)
 	_check("bain : 0 reste 0", IsoPate.temperature_graduee(Vector3.ZERO, 1.0, 0.08, 0.45) == Vector3.ZERO)
+	# ISO7b — la neutralité se lit AVANT la pâte (le halo de fusée jaunissait, constat du 2026-09-15 13:20).
+	var halogene := Vector3(Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b)
+	# ⚠️ Lue dans le TEXTE de fusee.gd : nommer `Fusee` compile le script, qui dépend de l'autoload `NetworkManager`,
+	# absent sous `--script` (SCRIPT ERROR dans le journal, suite pourtant verte).
+	var detresse := Vector3(0.0, 0.0, 0.0)
+	var lu := RegEx.create_from_string("const COULEUR_DETRESSE := Color\\(([0-9.]+), ([0-9.]+), ([0-9.]+)\\)").search(
+		FileAccess.get_file_as_string("res://fusee.gd"))
+	if lu != null:
+		detresse = Vector3(lu.get_string(1).to_float(), lu.get_string(2).to_float(), lu.get_string(3).to_float())
+	_check("la couleur de détresse de la fusée se lit (%s)" % str(detresse), lu != null and detresse.x > 0.5)
+	var ambre := Vector3(Charte.AMBRE.r, Charte.AMBRE.g, Charte.AMBRE.b)
+	_check("neutralité : l'halogène des torches compte neutre (poids %.2f)" % IsoPate.poids_neutre(halogene),
+		IsoPate.poids_neutre(halogene) > 0.95)
+	_check("neutralité : la fusée et l'ambre comptent colorés (poids %.2f, %.2f)" % [IsoPate.poids_neutre(detresse), IsoPate.poids_neutre(ambre)],
+		IsoPate.poids_neutre(detresse) == 0.0 and IsoPate.poids_neutre(ambre) == 0.0)
+	var melange := IsoPate.poids_neutre(halogene.lerp(detresse, 0.4))
+	_check("neutralité : un halo sur un cône fond, sans marche (poids %.2f)" % melange, melange > 0.0 and melange < 1.0)
+	_check("neutralité : 0 → 0", IsoPate.poids_neutre(Vector3.ZERO) == 0.0)
+	# La pâte D désature de 35 % vers la luminance : le halo et le cône tels que la température les reçoit.
+	var desature := func(c: Vector3) -> Vector3:
+		return c.lerp(Vector3.ONE * IsoPate.luminance(c), 0.35) * 0.3
+	var bas_t := IsoMateriaux.TEMPERATURE_SEUIL_BAS
+	var haut_t := IsoMateriaux.TEMPERATURE_SEUIL_HAUT
+	var halo: Vector3 = desature.call(detresse)
+	var halo_ancien := IsoPate.temperature_graduee(halo, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t)
+	var halo_neuf := IsoPate.temperature_graduee_neutre(halo, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t, IsoPate.poids_neutre(detresse))
+	var teinte := func(c: Vector3) -> float:
+		return Color(c.x, c.y, c.z).h * 360.0
+	_check("halo : mesurée après la pâte, la neutralité laissait la chaleur tourner la fusée (%.1f° → %.1f°)" % [teinte.call(halo), teinte.call(halo_ancien)],
+		absf(teinte.call(halo_ancien) - teinte.call(halo)) > 5.0)
+	_check("halo : lue avant la pâte, la fusée garde sa teinte (%.1f° → %.1f°)" % [teinte.call(halo), teinte.call(halo_neuf)],
+		halo_neuf.is_equal_approx(halo))
+	var cone: Vector3 = desature.call(halogene)
+	var cone_ancien := IsoPate.temperature_graduee(cone, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t)
+	var cone_neuf := IsoPate.temperature_graduee_neutre(cone, IsoMateriaux.TEMPERATURE_GRADUEE, bas_t, haut_t, IsoPate.poids_neutre(halogene))
+	_check("cône : la torche reste chaude (r/g %.2f → %.2f, %.2f avant la correction)" % [cone.x / cone.y, cone_neuf.x / cone_neuf.y, cone_ancien.x / cone_ancien.y],
+		cone_neuf.x / cone_neuf.y > cone.x / cone.y + 0.1 and cone_neuf.x / cone_neuf.y >= cone_ancien.x / cone_ancien.y - 0.02)
+	_check("cône : luminance gardée", absf(IsoPate.luminance(cone_neuf) - IsoPate.luminance(cone)) < 1e-5)
+	var code_sol_neutre := (load("res://sol_iso.gdshader") as Shader).code
+	_check("murs et sol dosent la chaleur par la lumière lue (pate_poids_neutre(brute))",
+		code_mur.contains("pate_poids_neutre(brute)") and code_sol_neutre.contains("pate_poids_neutre(brute)"))
+	var mur_neutre := ShaderMaterial.new()
+	mur_neutre.shader = SHADER_MUR
+	IsoMateriaux.accorder_mur(mur_neutre)
+	var sol_neutre := ShaderMaterial.new()
+	sol_neutre.shader = load("res://sol_iso.gdshader")
+	IsoMateriaux.accorder_sol(sol_neutre)
+	_check("accorder_mur et accorder_sol lisent la neutralité avant la pâte",
+		float(mur_neutre.get_shader_parameter("neutre_avant_pate")) == 1.0 and float(sol_neutre.get_shader_parameter("neutre_avant_pate")) == 1.0)
 	# Les dalles : le damier est ASSOMBRI, jamais éclairci.
 	var sol_code := (load("res://sol_iso.gdshader") as Shader).code
 	_check("dalles : la case claire est assombrie (ton_a < ton_b)", CandelaTileSet.SOL_DESSIN_A.get_luminance() < CandelaTileSet.SOL_DESSIN_B.get_luminance()
@@ -427,6 +476,43 @@ func _le_banc() -> void:
 	var neutres: Dictionary = banc.NEUTRES
 	for p in ["force_matiere", "encre_arete_px", "lisere_sommet_px", "seuil_muret_px"]:
 		_check("banc : l'avant neutralise %s" % p, neutres.has(p) and float(neutres[p]) == 0.0)
+	# ISO7b — `--avant` et `--pose`, la teinte du halo, la paire face / rasante.
+	var valeurs: Dictionary = banc.lire_valeurs("temperature=0,neutre_avant_pate=0.5")
+	_check("banc : --avant et --pose se lisent (%s)" % str(valeurs),
+		valeurs.size() == 2 and is_equal_approx(float(valeurs["neutre_avant_pate"]), 0.5) and (banc.lire_valeurs("") as Dictionary).is_empty())
+	_check("banc : le cadrage rasante existe", (banc.CADRAGES as Array).has("rasante"))
+	var sans_chaleur := Image.create_empty(20, 10, false, Image.FORMAT_RGB8)
+	sans_chaleur.fill(Color(0, 0, 0))
+	sans_chaleur.fill_rect(Rect2i(0, 0, 10, 10), Color(0.8, 0.3, 0.3))
+	sans_chaleur.fill_rect(Rect2i(10, 0, 10, 10), Color(0.6, 0.58, 0.55))
+	var jauni := sans_chaleur.duplicate() as Image
+	jauni.fill_rect(Rect2i(0, 0, 10, 10), Color(0.8, 0.5, 0.2))
+	var t_garde: Dictionary = banc.mesurer_teintes(sans_chaleur, sans_chaleur)
+	var t_jauni: Dictionary = banc.mesurer_teintes(sans_chaleur, jauni)
+	_check("banc : un halo gardé ne tourne pas (%.1f° → %.1f°, %d halo, %d cône)" % [t_garde["halo_teinte_avant"], t_garde["halo_teinte_apres"], t_garde["halo_n"], t_garde["cone_n"]],
+		absf(float(t_garde["halo_teinte_apres"]) - float(t_garde["halo_teinte_avant"])) < 0.5 and t_garde["halo_n"] == 100 and t_garde["cone_n"] == 100)
+	_check("banc : un halo qui jaunit se voit (%.1f° → %.1f°)" % [t_jauni["halo_teinte_avant"], t_jauni["halo_teinte_apres"]],
+		float(t_jauni["halo_teinte_apres"]) > float(t_jauni["halo_teinte_avant"]) + 10.0)
+	var led := Image.create_empty(10, 10, false, Image.FORMAT_RGB8)
+	led.fill(Color(0.96, 0.69, 0.24))
+	_check("banc : une LED ambre n'entre pas dans le halo rouge (%d)" % (banc.mesurer_teintes(led, led) as Dictionary)["halo_n"],
+		(banc.mesurer_teintes(led, led) as Dictionary)["halo_n"] == 0)
+	var lambert_img := Image.create_empty(10, 10, false, Image.FORMAT_RGB8)
+	lambert_img.fill(Color(0, 0, 0))
+	lambert_img.fill_rect(Rect2i(0, 0, 5, 10), Color(0.2, 0.2, 0.2))
+	var sans_img := Image.create_empty(10, 10, false, Image.FORMAT_RGB8)
+	sans_img.fill(Color(0, 0, 0))
+	sans_img.fill_rect(Rect2i(0, 0, 5, 10), Color(0.5, 0.5, 0.5))
+	var rap: Dictionary = banc.rapport_sur_eclaires(lambert_img, sans_img, Rect2(0, 0, 10, 10))
+	_check("banc : le facteur du Lambert se lit sur les pixels éclairés sans lui (%.2f sur %d)" % [rap["rapport"], rap["pixels"]],
+		absf(float(rap["rapport"]) - 0.4) < 0.01 and rap["pixels"] == 50)
+	var face_img := Image.create_empty(20, 10, false, Image.FORMAT_RGB8)
+	face_img.fill(Color(0, 0, 0))
+	face_img.fill_rect(Rect2i(0, 0, 10, 10), Color(0.4, 0.4, 0.4))
+	face_img.fill_rect(Rect2i(10, 0, 10, 10), Color(1, 1, 1))
+	var mf: Dictionary = banc.mesurer_face(face_img, Rect2(0, 0, 20, 10), Rect2(10, 0, 10, 10))
+	_check("banc : la face se mesure, le corps exclu (%.1f sur %d pixels)" % [mf["moyenne"], mf["pixels"]],
+		mf["pixels"] == 100 and absf(float(mf["moyenne"]) - 102.0) < 1.0)
 	_check("banc : la scène du banc existe", ResourceLoader.exists("res://tools/banc_iso_beaute.tscn"))
 
 
@@ -562,13 +648,24 @@ func _l_equite_du_shader() -> void:
 	var sources_propres := true
 	for a: String in affectations:
 		# La température (étape 6) réécrit `c` à partir de `c` lui-même, luminance gardée : pas une source.
-		# ISO7b — `lightmap_pateuse_moyenne(` (la lecture au pied moyennée le long du mur) est une lecture de lightmap.
-		if not (a.contains("lightmap_pateuse(") or a.contains("lightmap_pateuse_moyenne(") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
+		# ISO7b — la température graduée réécrit `c` à partir de `c`, luminance gardée : pas une source non plus.
+		# ISO7b — `lightmap_pateuse_lue(brute` : la pâte d'une lecture moyennée, `brute` n'étant qu'une lecture (voir plus bas).
+		if not (a.contains("lightmap_pateuse(") or a.contains("lightmap_pateuse_lue(brute,") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
 				or a.begins_with("c = pate_facteur(c, ") or a.begins_with("c = pate_matiere_et_encre(c, ")
-				or a == "c = temperature_seuil_haut > 0.0"):
+				or a.begins_with("c = pate_temperature_graduee(c, ") or a.begins_with("c = pate_temperature_graduee_neutre(c, ")):
 			sources_propres = false
 			printerr("    affectation hors lightmap : ", a)
 	_check("toute couleur de mur naît d'une lecture de lightmap ou du noir", sources_propres)
+	var bruts_propres := true
+	var bruts := 0
+	for brute in lignes:
+		var ligne := brute.strip_edges()
+		if ligne.begins_with("brute = ") or ligne.begins_with("vec3 brute = "):
+			bruts += 1
+			if not (ligne.contains("lire_lightmap(") or ligne.contains("lire_lightmap_moyenne(") or ligne.contains("vec3(0.0)")):
+				bruts_propres = false
+				printerr("    lumière brute hors lightmap : ", ligne)
+	_check("la lumière brute (neutralité de la chaleur) n'est qu'une lecture de lightmap (%d)" % bruts, bruts_propres and bruts >= 4)
 	var multiplications := 0
 	for brute in lignes:
 		var ligne := brute.strip_edges()

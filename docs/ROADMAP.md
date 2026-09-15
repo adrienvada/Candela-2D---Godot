@@ -24494,13 +24494,50 @@ et 41 en écran scindé (contre 19 521 quand la torche suivait la souris), appel
   la température. La couleur d'une fusée se lit en jeu : signalé à la session cloud avec une proposition, pas
   corrigé en silence.
 
+**Septième passage (13:20-14:20), le halo et la paire face / rasante** — sur deux ordres de la session cloud (13:20).
+Suite 135 vérifications, **lot complet vert** (409 s, 0 SHADER/SCRIPT ERROR, 14:19). Le lot de 14:11 était rouge sur
+`test_iso_camera` seule, verte relancée à part (90 vérifications) : l'intermittence déjà vue par Iso 1, sans lien avec
+ce passage (la suite ne lit que les fonctions existantes d'`iso_pate.gd`).
+- **Le halo de la fusée garde sa couleur.** La chaleur graduée ne va qu'à la lumière neutre ; la neutralité se mesure
+  désormais sur la lightmap LUE, avant la pâte (`pate_poids_neutre`, `pate_temperature_graduee_neutre`, ajoutées à
+  `iso_pate.*`) : poids 1 pour l'halogène des torches (neutralité 0,82), 0 pour la fusée, le carmin et les LED ambre
+  (0,25 à 0,31), un fondu entre les deux. **Pourquoi** : mesurée après la pâte, la neutralité ne protégeait plus rien —
+  la pâte D désature de 35 %, un rouge y paraissait à moitié neutre. Mesuré au banc, fusée tenue en plein feu, avant sans
+  chaleur : au commit db26c43 le halo tournait de 5,1° à 8,6° (r/g 1,90 → 2,14) ; corrigé, 5,0° → 5,0° (r/g 1,90 → 1,90),
+  et le cône de la torche reste chaud (r/g 1,07 → 1,24, contre 1,27). Un seul relevé de lightmap de plus par pixel de
+  sol ; sur les faces, la lecture moyennée sert aux deux (`lire_lightmap_moyenne`, puis `lightmap_pateuse_lue`).
+  `neutre_avant_pate` à 0 rend l'état db26c43 (pour le banc).
+- **La paire face / rasante, sur une seule scène** (`--cadrage rasante --distances 1,3 --torches j1`) : J1 seul devant
+  la plus longue face sud libre du Cloître, visée au stick le long du mur puis face au mur, Lambert allumé, éteint,
+  rallumé (dérive 0,0 à 0,2). **À 3 tuiles, la rasante est bien sous la face** (face éclairée 31,0 contre 88,9) — mais
+  c'est la lightmap qui le fait (sans Lambert : 39,9 contre 101,2). **Le Lambert, lui, ne départage pas** : il pose 0,67
+  sur la rasante et 0,70 sur la face ; à 1 tuile, il s'inverse (0,83 rasante, 0,49 face).
+- ⚠️ **Défaut du gradient, non corrigé ici : il lit le BORD de la tache de lumière, pas la direction de la source.**
+  Une torche est un cône : sa lumière décroît lentement le long du faisceau (vers la source, la vraie direction) et
+  vite sur ses bords. Face à un mur, le bord de la tache court LE LONG du mur — la face se lit « de profil » ; le long
+  d'un mur, le bord monte DEVANT lui — la face se lit « de face ». Aucun choix de pas ni d'échantillons n'y remédie
+  (trois variantes calculées sur les deux géométries, 2026-09-15 14:00) : une valeur de lumière par point ne dit pas
+  d'où elle vient. Signalé à la session cloud avec trois voies — une lightmap de direction (touche les lumières 2D,
+  hors périmètre), le Lambert des faces éteint (plancher 1 : contact, dalles et chaleur restent), ou le garder comme
+  ombre de bord de tache.
+- ⚠️ **Piège : une teinte de fusée ne se compare pas entre deux passes.** Libre, la fusée passe du rouge de détresse à
+  l'ambre en quelques secondes, et l'âge atteint à la capture dépend de la cadence : à 13:40, le halo était rouge dans
+  une passe et ambre dans les deux autres. Le banc la tient à 1 s de combustion (`--fusee-plein-feu`, par
+  `appliquer_age`, le chemin de la killcam) et lit la classe « halo » en rouge seulement (les LED ambre sont saturées
+  aussi).
+- ⚠️ **Piège : nommer `Fusee` dans une suite `--script` compile `fusee.gd`, qui dépend de l'autoload `NetworkManager`** —
+  SCRIPT ERROR dans le journal, suite pourtant verte (132 vérifications, 0 échec). La couleur se lit dans le texte du
+  script, et le banc appelle `appliquer_age` par nom de méthode.
+
 **La caméra ne bouge pas** (lacet 0, tangage 52 — étude § 5.2, H15). Pour la session cloud : `CameraIso` a un lacet
 paramétrable par instance (`var lacet_deg`, lu par `transform_pour` et `stick_au_sol`) ; son en-tête prévient
 qu'un lacet non nul fait tourner l'empreinte au sol hors du rectangle de la vue 2D.
 
 **Crochets posés dans des fichiers partagés** : aucun nouveau — tout vit dans `mur_iso.gdshader`,
 `sol_iso.gdshader`, `iso_materiaux.gd`, des ajouts de fonctions à `iso_pate.*`, et le banc
-(`--cadrage e1`, `--carte-essai`, `--fusee`, `--avant-iso7`).
+(`--cadrage e1`, `--carte-essai`, `--fusee`, `--avant-iso7` ; au septième passage `--avant`, `--pose`,
+`--fusee-plein-feu`, `--cadrage rasante`, `--distances`). Signalé sans y toucher : les nuages (`volume_iso.gdshader`,
+`IsoVolumes`) prennent la chaleur non graduée avec la neutralité mesurée après la pâte.
 
 ### Ce qui attend Adrien — jalon H15
 

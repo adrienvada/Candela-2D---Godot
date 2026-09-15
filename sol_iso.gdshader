@@ -43,6 +43,9 @@ uniform float temperature : hint_range(0.0, 1.0) = 0.0;
 // ISO7b — la température graduée par la luminance affichée (chaude au bord du bain, neutre au centre).
 uniform float temperature_seuil_bas : hint_range(0.0, 1.0) = 0.0;
 uniform float temperature_seuil_haut : hint_range(0.0, 1.0) = 0.0;
+// ISO7b — 1 : la neutralité qui dose la chaleur se lit sur la lightmap AVANT la pâte (`pate_poids_neutre`), et une
+// lumière colorée garde sa teinte. 0 : mesurée après la pâte, comme au commit db26c43 (le halo de fusée jaunissait).
+uniform float neutre_avant_pate : hint_range(0.0, 1.0) = 0.0;
 // ISO7b — des dalles, pas une grille. `dalles` à 0 : le sol d'ISO7 exactement.
 uniform float dalles : hint_range(0.0, 1.0) = 0.0;
 uniform float tuile_px = 35.0;
@@ -117,9 +120,17 @@ void fragment() {
 	// Sur la valeur AFFICHÉE (`pate_facteur`) : posée dans l'espace du shader, une matière de 0,5 se voyait
 	// comme ~0,2 (mesuré au banc, 2026-09-15).
 	c = pate_facteur(c, matiere * dalle);
-	// ISO7b — graduée : `temperature_seuil_haut` à 0 rend la température d'ISO7 (teinte chaude partout).
-	c = temperature_seuil_haut > 0.0
-		? pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut)
-		: pate_temperature(c, temperature);
+	// ISO7b — graduée : `temperature_seuil_haut` à 0 rend la température d'ISO7 (teinte chaude partout) ; la
+	// neutralité lue avant la pâte (`neutre_avant_pate`) garde sa teinte à une lumière colorée. Le ton du damier
+	// est un facteur gris : il ne change pas la neutralité, la lecture brute suffit.
+	if (temperature_seuil_haut <= 0.0) {
+		c = pate_temperature(c, temperature);
+	} else if (neutre_avant_pate > 0.5) {
+		vec3 brute = lire_lightmap(px_lu, deux);
+		c = pate_temperature_graduee_neutre(c, temperature, temperature_seuil_bas, temperature_seuil_haut,
+			pate_poids_neutre(brute));
+	} else {
+		c = pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut);
+	}
 	ALBEDO = c;
 }

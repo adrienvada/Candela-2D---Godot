@@ -138,6 +138,34 @@ static func temperature_graduee(c: Vector3, force: float, seuil_bas: float, seui
 	return chaude * (l / maxf(luminance(chaude), 0.000001))
 
 
+## ISO7b — miroir de `PATE_NEUTRE_BAS`, `PATE_NEUTRE_HAUT` et `pate_poids_neutre` : la neutralité de la lumière
+## REÇUE (avant la pâte), en poids de 0 (lumière colorée) à 1 (halogène).
+const NEUTRE_BAS := 0.5
+const NEUTRE_HAUT := 0.8
+
+
+static func poids_neutre(brute: Vector3) -> float:
+	var mx := maxf(brute.x, maxf(brute.y, brute.z))
+	if mx <= 0.0:
+		return 0.0
+	var mn := minf(brute.x, minf(brute.y, brute.z))
+	return smoothstep(NEUTRE_BAS, NEUTRE_HAUT, 1.0 - (mx - mn) / mx)
+
+
+## ISO7b — miroir de `pate_temperature_graduee_neutre` : le poids de neutralité est donné.
+static func temperature_graduee_neutre(c: Vector3, force: float, seuil_bas: float, seuil_haut: float,
+		poids: float) -> Vector3:
+	var l := luminance(c)
+	if l <= 0.0 or force <= 0.0:
+		return c
+	var la := luminance(vers_affiche(c))
+	var braise := 1.0 - smoothstep(seuil_bas, maxf(seuil_haut, seuil_bas + 0.001), la)
+	var teinte_brute := TEINTE_CHAUDE.lerp(TEINTE_BRAISE, braise)
+	var teinte := teinte_brute / luminance(teinte_brute)
+	var chaude := c * Vector3.ONE.lerp(teinte, clampf(force, 0.0, 1.0) * clampf(poids, 0.0, 1.0))
+	return chaude * (l / maxf(luminance(chaude), 0.000001))
+
+
 ## ISO7 — miroir de `pate_trait_de_bord` : 1 sur le trait, 0 au-delà.
 static func trait_de_bord(distance: float, largeur: float, aa: float) -> float:
 	return 1.0 - smoothstep(largeur - aa, largeur + aa, distance)

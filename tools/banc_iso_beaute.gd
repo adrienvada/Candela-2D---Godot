@@ -28,12 +28,20 @@
 ## ## Lancer
 ##
 ##   godot --path . res://tools/banc_iso_beaute.tscn -- --jeu --beaute --capture chemin.png
-##       [--cadrage mur|planche] [--scinde] [--taille 1920x1080] [--carte <slug>]
+##       [--cadrage mur|planche|e1|rasante] [--scinde] [--taille 1920x1080] [--carte <slug>]
+##       [--avant nom=valeur,...] [--pose nom=valeur,...] [--torches j1]
+##
+## ISO7b — `--avant` remplace les valeurs neutres de l'avant ; `--pose` règle les matériaux dès le départ (l'après).
+## Avec `--fusee`, la teinte du halo et du cône avant/après (`mesurer_teintes`). `--cadrage rasante` (avec
+## `--torches j1`) : la paire face / rasante sur une longue face sud (`_controler_la_rasante`).
 ##
 ## Vraie fenêtre, jamais headless. Ses appuis sont vérifiés par `tools/test_iso_beaute.gd`.
 extends "res://tools/banc_iso.gd"
 
-const CADRAGES := ["mur", "planche", "e1"]
+const CADRAGES := ["mur", "planche", "e1", "rasante"]
+## ISO7b — la scène rasante : J1 à une tuile de la face, mesurée sur quatre tuiles de part et d'autre de lui.
+const RASANTE_DISTANCE_PX := 35.0
+const RASANTE_DEMI_FACE_PX := 280.0
 ## ISO7b — la carte d'essai des murs bas (murs de face, de profil, murets), celle de `tools/banc_murs_bas.gd`.
 const CARTE_ESSAI := "res://tools/cartes/murs_bas_essai.json"
 ## Seuils des mesures, en niveaux sur 255.
@@ -52,6 +60,15 @@ var _fusee := false
 ## ISO7b — le milieu de la face SUD d'un mur haut de la carte chargée : la seule face qu'une caméra au lacet 0
 ## montre. Posé une fois par `_poser_le_cadrage`, tenu ensuite.
 var _face_e1 := Vector2.INF
+## ISO7b — `--avant` : les valeurs de l'avant, à la place de `NEUTRES` ; `--pose` : posées dès le départ, l'après.
+var _avant_valeurs := {}
+var _pose := {}
+## ISO7b — `--cadrage rasante` : la visée de J1, le long du mur (« rasante ») ou face à lui (« face »).
+var _visee := "rasante"
+## ISO7b — `--distances 1,3` : les distances de J1 à la face, en tuiles, mesurées l'une après l'autre.
+var _distances: Array[float] = [1.0]
+## La portion de face mesurée (x : son étendue, clippée ; y : la face).
+var _face_rect := Rect2()
 
 
 func _lire_arguments(args: PackedStringArray) -> bool:
@@ -61,6 +78,11 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_cadrage = _value(args, "--cadrage", "mur")
 	_carte_essai = args.has("--carte-essai")
 	_fusee = args.has("--fusee")
+	_avant_valeurs = lire_valeurs(_value(args, "--avant", ""))
+	_pose = lire_valeurs(_value(args, "--pose", ""))
+	_distances.clear()
+	for d in _value(args, "--distances", "1").split(",", false):
+		_distances.append(maxf(0.5, d.to_float()))
 	if not CADRAGES.has(_cadrage):
 		printerr("✗ --cadrage attend %s (reçu « %s »)" % [" | ".join(CADRAGES), _cadrage])
 		return false
@@ -105,6 +127,14 @@ func _controler_la_beaute() -> void:
 		for i in 3:
 			await get_tree().process_frame
 		_tenir_les_torches()
+	var materiaux := _materiaux_iso(presentation)
+	for mat in materiaux:
+		for p in _pose:
+			if mat.get_shader_parameter(p) != null:
+				mat.set_shader_parameter(p, _pose[p])
+	if _cadrage == "rasante":
+		await _controler_la_rasante(presentation, materiaux)
+		return
 	_poser_le_cadrage()
 	if _fusee:
 		var p1: Node2D = _main.p1
@@ -128,8 +158,7 @@ func _controler_la_beaute() -> void:
 
 	# ⚠️ **Avant, après, avant bis.** Ce qui change entre les deux « avant » n'est pas l'habillage : c'est le jeu qui
 	# bouge (torche qui bascule, fusée qui grandit, bandeau qui respire). Ces pixels-là sortent de la mesure.
-	var materiaux := _materiaux_iso(presentation)
-	var gardes := _eteindre_la_beaute(materiaux, NEUTRES_ISO7B if _avant_iso7 else NEUTRES)
+	var gardes := _eteindre_la_beaute(materiaux, _neutres())
 	for i in 10:
 		_tenir_le_cadrage()
 		await get_tree().process_frame
@@ -139,7 +168,7 @@ func _controler_la_beaute() -> void:
 		_tenir_le_cadrage()
 		await get_tree().process_frame
 	var apres := await _capture_et_appels()
-	gardes = _eteindre_la_beaute(materiaux, NEUTRES_ISO7B if _avant_iso7 else NEUTRES)
+	gardes = _eteindre_la_beaute(materiaux, _neutres())
 	for i in 10:
 		_tenir_le_cadrage()
 		await get_tree().process_frame
@@ -172,6 +201,12 @@ func _controler_la_beaute() -> void:
 	print("BANC_ISO_BEAUTE histogramme_apres=%s" % str(m["histo_apres"]))
 	print("BANC_ISO_BEAUTE max_avant=%d max_apres=%d moyenne_eclairee_avant=%.1f moyenne_eclairee_apres=%.1f"
 		% [m["max_avant"], m["max_apres"], m["moy_avant"], m["moy_apres"]])
+	if _fusee:
+		var t := mesurer_teintes(avant["image"], apres["image"], derive)
+		print("BANC_ISO_BEAUTE teintes halo n=%d teinte %.1f° -> %.1f° r/g %.2f -> %.2f | cône n=%d teinte %.1f° -> %.1f° r/g %.2f -> %.2f b/g %.2f -> %.2f"
+			% [t["halo_n"], t["halo_teinte_avant"], t["halo_teinte_apres"], t["halo_rg_avant"], t["halo_rg_apres"],
+			t["cone_n"], t["cone_teinte_avant"], t["cone_teinte_apres"], t["cone_rg_avant"], t["cone_rg_apres"],
+			t["cone_bg_avant"], t["cone_bg_apres"]])
 	var tenu: bool = m["eteints"] == 0 and m["part_neuve"] <= PART_NEUVE_MAX \
 		and int(apres["appels"]) <= int(avant["appels"])
 	print("BANC_ISO_BEAUTE verdict=%s images=%s %s" % ["HABILLAGE HONNÊTE" if tenu else "HABILLAGE ROMPU",
@@ -252,6 +287,13 @@ func _poser_le_cadrage() -> void:
 		_face_e1 = _face_sud_de_mur_haut(p1.global_position)
 		p1.global_position = _face_e1 + Vector2(0.0, 160.0)
 		p2.global_position = _face_e1 + Vector2(-150.0, 45.0)
+	elif _cadrage == "rasante":
+		# J1 à une tuile d'une longue face sud ; J2 écarté, torche éteinte (`--torches j1`) : seule la lampe de J1 compte.
+		_face_e1 = _face_sud_longue(p1.global_position)
+		if _face_e1 != Vector2.INF:
+			p1.global_position = _face_e1 + Vector2(0.0, _distances[0] * RASANTE_DISTANCE_PX)
+			if p2.global_position.distance_to(_face_e1) < 600.0:
+				p2.global_position = _face_e1 + Vector2(0.0, 900.0)
 	else:
 		p2.global_position = p1.global_position + axe.orthogonal() * 70.0
 	_tenir_les_torches()
@@ -274,11 +316,34 @@ func _face_sud_de_mur_haut(depuis: Vector2) -> Vector2:
 	return meilleure
 
 
+## ISO7b — `--fusee-plein-feu` : la fusée tenue à 1 s de combustion (plein feu, rouge de détresse). ⚠️ Libre, elle passe
+## à l'ambre en quelques secondes, et l'âge atteint à la capture dépend de la cadence : au banc du 2026-09-15 (13:40), le
+## halo était rouge dans une passe et ambre dans la suivante — une teinte comparée entre deux passes ne disait rien.
+var _fusee_plein_feu := OS.get_cmdline_user_args().has("--fusee-plein-feu")
+
+
 func _tenir_le_cadrage() -> void:
+	if _fusee_plein_feu:
+		# Par nom de méthode : nommer la classe `Fusee` compile `fusee.gd`, qui dépend d'un autoload absent de la suite.
+		for c in _main.bullet_container.get_children():
+			if c.has_method("appliquer_age"):
+				c.call("appliquer_age", 1.0)
 	var p1: Node2D = _main.p1
 	var p2: Node2D = _main.p2
 	var axe := (_mur_le_plus_proche(p1.global_position) - p1.global_position).normalized()
 	p1.rotation = axe.angle()
+	if _cadrage == "rasante":
+		# Visée au stick (voir plus bas, « e1 ») : vers l'est le long du mur, ou vers le nord face à lui.
+		var voulue := "p1_aim_right" if _visee == "rasante" else "p1_aim_up"
+		p1.rotation = 0.0 if _visee == "rasante" else -PI / 2.0
+		for action in ["p1_aim_up", "p1_aim_down", "p1_aim_left", "p1_aim_right",
+				"p2_aim_up", "p2_aim_down", "p2_aim_left", "p2_aim_right"]:
+			if action != voulue and InputMap.has_action(action) and Input.is_action_pressed(action):
+				Input.action_release(action)
+		if InputMap.has_action(voulue):
+			Input.action_press(voulue, 1.0)
+		_tenir_les_torches()
+		return
 	if _cadrage == "e1":
 		p1.rotation = -PI / 2.0
 		p2.rotation = 0.0
@@ -417,3 +482,249 @@ static func mesurer(avant: Image, apres: Image, derive: Image = null) -> Diction
 		"max_avant": max_avant, "max_apres": max_apres,
 		"moy_avant": somme_avant / maxf(1.0, eclaires), "moy_apres": somme_apres / maxf(1.0, eclaires),
 	}
+
+
+## `_neutres()` : les valeurs de l'avant — `--avant` s'il est donné, sinon celles d'ISO7 (`--avant-iso7`) ou d'ISO1-ISO5.
+func _neutres() -> Dictionary:
+	if not _avant_valeurs.is_empty():
+		return _avant_valeurs
+	return NEUTRES_ISO7B if _avant_iso7 else NEUTRES
+
+
+## « nom=valeur,nom=valeur » → {nom: valeur}. Vide → {}.
+static func lire_valeurs(texte: String) -> Dictionary:
+	var valeurs := {}
+	for paire in texte.split(",", false):
+		var nom := paire.get_slice("=", 0).strip_edges()
+		if nom != "" and paire.contains("="):
+			valeurs[nom] = paire.get_slice("=", 1).to_float()
+	return valeurs
+
+
+# ---------------------------------------------------------------------------
+# ISO7b — LA TEINTE DU HALO
+# ---------------------------------------------------------------------------
+
+## La teinte du halo d'une fusée et celle du cône d'une torche, avant/après. Les classes se lisent sur l'AVANT, à
+## prendre SANS chaleur (`--avant temperature=0`) : la couleur de la lumière elle-même. Halo : pixel éclairé saturé
+## à dominante rouge ; cône : pixel éclairé presque neutre. Teinte de la couleur MOYENNE de chaque classe, en degrés
+## (0 rouge, 30 orange, 60 jaune ; un rose passe sous 0).
+const SATURATION_HALO := 0.45
+const SATURATION_CONE := 0.25
+const SEUIL_TEINTE := 40
+
+
+static func mesurer_teintes(avant: Image, apres: Image, derive: Image = null) -> Dictionary:
+	var w := mini(avant.get_width(), apres.get_width())
+	var h := mini(avant.get_height(), apres.get_height())
+	var halo_avant := Vector3.ZERO
+	var halo_apres := Vector3.ZERO
+	var cone_avant := Vector3.ZERO
+	var cone_apres := Vector3.ZERO
+	var n_halo := 0
+	var n_cone := 0
+	for y in h:
+		for x in w:
+			if derive != null and derive.get_pixel(x, y).r > 0.5:
+				continue
+			var a := avant.get_pixel(x, y)
+			var mx := maxf(a.r, maxf(a.g, a.b))
+			if mx * 255.0 <= SEUIL_TEINTE:
+				continue
+			var saturation := (mx - minf(a.r, minf(a.g, a.b))) / mx
+			var b := apres.get_pixel(x, y)
+			# Rouge seulement (−25° à 20°) : les LED ambre des murs (38°) sont saturées elles aussi, et diluaient la classe.
+			var teinte_a := a.h * 360.0
+			if saturation > SATURATION_HALO and a.r >= mx and (teinte_a <= 20.0 or teinte_a >= 335.0):
+				n_halo += 1
+				halo_avant += Vector3(a.r, a.g, a.b)
+				halo_apres += Vector3(b.r, b.g, b.b)
+			elif saturation < SATURATION_CONE:
+				n_cone += 1
+				cone_avant += Vector3(a.r, a.g, a.b)
+				cone_apres += Vector3(b.r, b.g, b.b)
+	return {
+		"halo_n": n_halo, "halo_teinte_avant": teinte_deg(halo_avant), "halo_teinte_apres": teinte_deg(halo_apres),
+		"halo_rg_avant": halo_avant.x / maxf(halo_avant.y, 1e-6), "halo_rg_apres": halo_apres.x / maxf(halo_apres.y, 1e-6),
+		"cone_n": n_cone, "cone_teinte_avant": teinte_deg(cone_avant), "cone_teinte_apres": teinte_deg(cone_apres),
+		"cone_rg_avant": cone_avant.x / maxf(cone_avant.y, 1e-6), "cone_rg_apres": cone_apres.x / maxf(cone_apres.y, 1e-6),
+		"cone_bg_avant": cone_avant.z / maxf(cone_avant.y, 1e-6), "cone_bg_apres": cone_apres.z / maxf(cone_apres.y, 1e-6),
+	}
+
+
+## La teinte d'une couleur (somme de pixels acceptée), en degrés dans ]-180, 180].
+static func teinte_deg(c: Vector3) -> float:
+	var mx := maxf(c.x, maxf(c.y, c.z))
+	if mx <= 0.0:
+		return 0.0
+	var teinte := Color(c.x / mx, c.y / mx, c.z / mx).h * 360.0
+	return teinte - 360.0 if teinte > 180.0 else teinte
+
+
+# ---------------------------------------------------------------------------
+# ISO7b — LA PAIRE FACE / RASANTE
+# ---------------------------------------------------------------------------
+
+## `--cadrage rasante` : la paire face / rasante sur UNE scène (brief de la session cloud, 13:20). J1 seul, à une tuile
+## d'une longue face sud ; visée le long du mur, puis face au mur ; pour chacune, le Lambert allumé, éteint (plancher
+## 1), rallumé (la dérive du jeu). Mesure : la luminance de la face à l'écran, corps de J1 exclu.
+func _controler_la_rasante(presentation: Node, materiaux: Array[ShaderMaterial]) -> void:
+	_poser_le_cadrage()
+	var mur: ShaderMaterial = materiaux[0] if not materiaux.is_empty() else null
+	var cam = presentation.call("_camera_de", 0)
+	var ecran: Viewport = presentation.viewport_ecran(0)
+	if _face_e1 == Vector2.INF or mur == null or mur.get_shader_parameter("lambert_plancher") == null \
+			or cam == null or ecran == null:
+		printerr("✗ rasante : aucune longue face sud libre, aucun matériau de mur ou aucune caméra")
+		_sortir(4)
+		return
+	var plancher: float = mur.get_shader_parameter("lambert_plancher")
+	print("BANC_ISO_RASANTE face monde=%s j1=%s plancher=%.2f" % [str(_face_e1), str((_main.p1 as Node2D).global_position), plancher])
+	var resultats := {}
+	var premiere := true
+	# ⚠️ **À une tuile, la torche braquée sur le mur n'éclaire presque rien de la face** (banc du 2026-09-15 13:40 :
+	# 471 pixels éclairés contre 3 934 le long du mur), et le corps de J1 occupe la lecture un pas devant le pied. La
+	# même scène se prend donc à plusieurs distances, et le gradient se juge pixel à pixel : Lambert contre sans Lambert,
+	# sur les pixels que la lumière atteint.
+	for distance in _distances:
+		(_main.p1 as Node2D).global_position = _face_e1 + Vector2(0.0, distance * RASANTE_DISTANCE_PX)
+		var t := roundi(distance)
+		for visee in ["rasante", "face"]:
+			_visee = visee
+			for i in (240 if premiere else 120):
+				_tenir_le_cadrage()
+				await get_tree().process_frame
+			var images := {}
+			for etat in ["lambert", "sans", "lambert_bis"]:
+				mur.set_shader_parameter("lambert_plancher", 1.0 if etat == "sans" else plancher)
+				for i in 10:
+					_tenir_le_cadrage()
+					await get_tree().process_frame
+				var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+				if image == null:
+					printerr("✗ aucune image rendue en 15 s")
+					_sortir(4)
+					return
+				var cle := "%s_%dt_%s" % [visee, t, etat]
+				image.save_png(_capture.get_basename() + "_%s.png" % cle)
+				if premiere:
+					image.save_png(_capture)
+					premiere = false
+				images[etat] = image
+				var zone := _zone_de_la_face(cam, ecran.get_visible_rect().size, image)
+				var m := mesurer_face(image, zone["face"], zone["corps"])
+				resultats[cle] = m
+				print("BANC_ISO_RASANTE distance=%dt visee=%s etat=%s moyenne=%.1f eclairee=%.1f (%d/%d pixels > %d) r/g=%.2f zone=%s corps=%s"
+					% [t, visee, etat, m["moyenne"], m["eclairee"], m["eclaires"], m["pixels"], SEUIL_CLAIR, m["rg"],
+					str(zone["face"]), str(zone["corps"])])
+			var zone_l := _zone_de_la_face(cam, ecran.get_visible_rect().size, images["lambert"])
+			var r := rapport_sur_eclaires(images["lambert"], images["sans"], zone_l["face"], zone_l["corps"])
+			resultats["%s_%dt_rapport" % [visee, t]] = r
+		var ras: float = resultats["rasante_%dt_lambert" % t]["moyenne"]
+		var face: float = resultats["face_%dt_lambert" % t]["moyenne"]
+		var ras_sans: float = resultats["rasante_%dt_sans" % t]["moyenne"]
+		var face_sans: float = resultats["face_%dt_sans" % t]["moyenne"]
+		print("BANC_ISO_RASANTE distance=%dt rasante/face %.2f avec Lambert, %.2f sans ; Lambert/sans sur les pixels éclairés : rasante %.2f (%d px), face %.2f (%d px) ; dérive rasante %.1f, face %.1f"
+			% [t, ras / maxf(face, 0.001), ras_sans / maxf(face_sans, 0.001),
+			resultats["rasante_%dt_rapport" % t]["rapport"], resultats["rasante_%dt_rapport" % t]["pixels"],
+			resultats["face_%dt_rapport" % t]["rapport"], resultats["face_%dt_rapport" % t]["pixels"],
+			absf(ras - float(resultats["rasante_%dt_lambert_bis" % t]["moyenne"])),
+			absf(face - float(resultats["face_%dt_lambert_bis" % t]["moyenne"]))])
+	mur.set_shader_parameter("lambert_plancher", plancher)
+	_sortir(0)
+
+
+## Le facteur que le Lambert pose, pixel à pixel : somme avec Lambert sur somme sans, sur les pixels de `zone` que la
+## lumière atteint sans Lambert (> `SEUIL_CLAIR`), `exclu` retiré.
+static func rapport_sur_eclaires(avec: Image, sans: Image, zone: Rect2, exclu: Rect2 = Rect2()) -> Dictionary:
+	var w := mini(avec.get_width(), sans.get_width())
+	var h := mini(avec.get_height(), sans.get_height())
+	var dedans := Rect2i(zone).intersection(Rect2i(0, 0, w, h))
+	var somme_avec := 0.0
+	var somme_sans := 0.0
+	var pixels := 0
+	for y in range(dedans.position.y, dedans.end.y):
+		for x in range(dedans.position.x, dedans.end.x):
+			if exclu.has_area() and exclu.has_point(Vector2(x + 0.5, y + 0.5)):
+				continue
+			var s := sans.get_pixel(x, y)
+			var vs := maxf(s.r, maxf(s.g, s.b)) * 255.0
+			if vs <= SEUIL_CLAIR:
+				continue
+			var a := avec.get_pixel(x, y)
+			somme_avec += maxf(a.r, maxf(a.g, a.b)) * 255.0
+			somme_sans += vs
+			pixels += 1
+	return {"rapport": somme_avec / maxf(somme_sans, 1.0), "pixels": pixels}
+
+
+## Le milieu de la plus longue face sud (au moins 8 tuiles) dont le devant est libre jusqu'à une tuile au-delà de la
+## plus grande distance ; à longueur égale, la plus proche de `depuis`. Pose `_face_rect` (l'étendue mesurée, clippée à
+## `RASANTE_DEMI_FACE_PX` de part et d'autre). `Vector2.INF` s'il n'y en a aucune.
+func _face_sud_longue(depuis: Vector2) -> Vector2:
+	var data: Dictionary = MapData.current_map_data if not MapData.current_map_data.is_empty() else MapData.get_selected()
+	var rects: Array = IsoGeometrie.rects_px(data, MapGeometry.Kind.WALLS)
+	var profondeur: float = (float(_distances.max()) + 1.0) * RASANTE_DISTANCE_PX
+	var meilleure := Vector2.INF
+	var longueur := 0.0
+	var distance := INF
+	for r: Rect2 in rects:
+		if r.size.x < 280.0:
+			continue
+		var face := Vector2(r.get_center().x, r.end.y)
+		var x0 := maxf(r.position.x, face.x - RASANTE_DEMI_FACE_PX)
+		var x1 := minf(r.end.x, face.x + RASANTE_DEMI_FACE_PX)
+		var devant := Rect2(x0, face.y + 1.0, x1 - x0, profondeur)
+		var libre := true
+		for autre: Rect2 in rects:
+			if autre.intersects(devant):
+				libre = false
+				break
+		if not libre:
+			continue
+		if x1 - x0 > longueur + 0.5 or (absf(x1 - x0 - longueur) <= 0.5 and face.distance_to(depuis) < distance):
+			longueur = x1 - x0
+			distance = face.distance_to(depuis)
+			meilleure = face
+			_face_rect = Rect2(x0, face.y, x1 - x0, 0.0)
+	return meilleure
+
+
+## La face à l'écran (de 6 px au-dessus du sol — la bande de contact exclue — à 3 px sous le sommet) et le corps de J1,
+## en pixels de l'image capturée.
+func _zone_de_la_face(cam, taille: Vector2, image: Image) -> Dictionary:
+	var echelle := Vector2(image.get_width(), image.get_height()) / taille
+	var hauteur := IsoGeometrie.hauteur_mur_haut() * float(CandelaTileSet.TILE_SIZE.y)
+	var a: Vector2 = cam.vers_ecran(Vector2(_face_rect.position.x, _face_e1.y), taille, 6.0) * echelle
+	var b: Vector2 = cam.vers_ecran(Vector2(_face_rect.end.x, _face_e1.y), taille, hauteur - 3.0) * echelle
+	var p1: Vector2 = (_main.p1 as Node2D).global_position
+	var c: Vector2 = cam.vers_ecran(p1 + Vector2(-26.0, 26.0), taille, 0.0) * echelle
+	var d: Vector2 = cam.vers_ecran(p1 + Vector2(26.0, -26.0), taille, Presentation3D.HAUTEUR_CORPS_PX + 12.0) * echelle
+	return {"face": Rect2(a, Vector2.ZERO).expand(b), "corps": Rect2(c, Vector2.ZERO).expand(d)}
+
+
+## Luminance (canal max, sur 255) d'une zone de l'image, `exclu` retiré : moyenne de tous les pixels, moyenne des
+## pixels éclairés (> `SEUIL_CLAIR`) et leur r/g.
+static func mesurer_face(image: Image, zone: Rect2, exclu: Rect2 = Rect2()) -> Dictionary:
+	var dedans := Rect2i(zone).intersection(Rect2i(0, 0, image.get_width(), image.get_height()))
+	var somme := 0.0
+	var somme_eclairee := 0.0
+	var pixels := 0
+	var eclaires := 0
+	var r := 0.0
+	var g := 0.0
+	for y in range(dedans.position.y, dedans.end.y):
+		for x in range(dedans.position.x, dedans.end.x):
+			if exclu.has_area() and exclu.has_point(Vector2(x + 0.5, y + 0.5)):
+				continue
+			var p := image.get_pixel(x, y)
+			var v := maxf(p.r, maxf(p.g, p.b)) * 255.0
+			pixels += 1
+			somme += v
+			if v > SEUIL_CLAIR:
+				eclaires += 1
+				somme_eclairee += v
+				r += p.r
+				g += p.g
+	return {"moyenne": somme / maxf(1.0, pixels), "eclairee": somme_eclairee / maxf(1.0, eclaires),
+		"eclaires": eclaires, "pixels": pixels, "rg": r / maxf(g, 1e-6)}

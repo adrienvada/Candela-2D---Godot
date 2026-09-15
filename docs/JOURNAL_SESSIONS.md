@@ -5389,3 +5389,8 @@ Suite à 13:06-13:14 : modelé des corps décidé par la session cloud (dessus 1
 dos au plancher) — le volume se voit, la luminance moyenne ne bouge pas ; paire avant/après identique, la visée
 tenue au stick (29 pixels éteints au lieu de 19 521) ; face sud r/g 1,37 contre 1,32 sur E1. Non départagé : face de
 face contre face rasée. Question ouverte : la chaleur graduée jaunit le halo de la fusée. Lot complet vert.
+Suite à 13:20-14:20, sur deux ordres de la session cloud : la neutralité qui dose la chaleur se lit sur la lightmap
+avant la pâte — halo de fusée tenu en plein feu 5,0° → 5,0° (contre 5,1° → 8,6° à db26c43), cône toujours chaud.
+Paire face / rasante sur une scène de banc, à 1 et 3 tuiles : à 3 tuiles la rasante est sous la face, mais par la
+lightmap ; le Lambert pose 0,67 contre 0,70, et s'inverse à 1 tuile. Défaut du gradient signalé, non corrigé : il
+lit le bord de la tache de lumière, pas la direction de la source ; trois voies proposées à la session cloud.
