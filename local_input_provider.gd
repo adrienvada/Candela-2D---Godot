@@ -76,11 +76,30 @@ func get_aim_direction(player_global_pos: Vector2) -> Vector2:
 	var aim_dir := Input.get_vector(action_aim_left, action_aim_right, action_aim_up, action_aim_down)
 	# Fallback to mouse aiming for P1 if no gamepad stick input is detected
 	if aim_dir.length() < 0.1 and device_id == 0:
-		var viewport = get_viewport()
-		if viewport:
-			var m_pos = viewport.get_canvas_transform().affine_inverse() * viewport.get_mouse_position()
-			aim_dir = player_global_pos.direction_to(m_pos)
+		var cible = cible_de_la_souris(get_tree().root.get_mouse_position())
+		if cible is Vector2:
+			aim_dir = player_global_pos.direction_to(cible)
+	else:
+		# ISO5 — le stick tourné du lacet de la caméra iso (0° acté : sans effet).
+		var iso := Presentation3D.instance()
+		if iso != null:
+			aim_dir = iso.stick_au_sol(get_parent(), aim_dir)
 	return aim_dir
+
+## Le point du monde sous le curseur. ISO5 — en vue iso, le rayon de la caméra de SON joueur coupé par le
+## sol (`Presentation3D.point_au_sol`, `souris_racine` en unités logiques de la fenêtre) ; sinon, la vue
+## de dessus, comme avant. La commande qui part sur le fil est la même direction du monde dans les deux
+## cas : rien de la vue ne voyage.
+func cible_de_la_souris(souris_racine: Vector2) -> Variant:
+	var iso := Presentation3D.instance()
+	if iso != null:
+		var sol = iso.point_au_sol(get_parent(), souris_racine)
+		if sol is Vector2:
+			return sol
+	var viewport = get_viewport()
+	if viewport:
+		return viewport.get_canvas_transform().affine_inverse() * viewport.get_mouse_position()
+	return null
 
 ## La course brute sous laquelle une détente TENUE redevient relâchée.
 ##

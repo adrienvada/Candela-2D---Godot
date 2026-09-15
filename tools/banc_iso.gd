@@ -220,6 +220,10 @@ var _effacement := false
 ## ISO4 — `--objets` : un objet voxel posé devant un corps ne lui cache ni la tête ni le torse (voir
 ## `_controler_les_objets`). Avec `--jeu --scinde --torches j2 --capture`.
 var _objets := false
+## ISO5 — `--killcam` : une killcam complète en iso, par `_do_end_round` (voir `_controler_la_killcam`).
+## Avec `--jeu --scinde --capture` ; `--vue j2` la regarde par la vue de J2 (la configuration du client).
+var _killcam := false
+var _vue_killcam := "j1"
 ## ISO2b — les opacités des sprites AU RENDU, relevées sur `RenderingServer.frame_pre_draw`, après
 ## tous les traitements de l'image : `player.gd` écrit l'opacité du sprite ennemi dans
 ## `_physics_process` (brouillage) ET dans `_process` (suie), et un relevé pris ailleurs — après une
@@ -278,6 +282,10 @@ func _ready() -> void:
 		return
 	if _canaux and (_capture == "" or not _jeu):
 		printerr("✗ banc_iso : --canaux se prend avec --capture et --jeu (vue unique ou --scinde)")
+		_sortir(2)
+		return
+	if _killcam and (_capture == "" or not _jeu or not ["j1", "j2"].has(_vue_killcam)):
+		printerr("✗ banc_iso : --killcam se prend avec --capture et --jeu (--vue j1 | j2)")
 		_sortir(2)
 		return
 	if _jeu and _lightmap == "demi":
@@ -391,6 +399,8 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_canaux = args.has("--canaux")
 	_effacement = args.has("--effacement")
 	_objets = args.has("--objets")
+	_killcam = args.has("--killcam")
+	_vue_killcam = _value(args, "--vue", "j1")
 	_sans_hud = args.has("--sans-hud")
 	_mur_donne = args.has("--mur")
 	var taille := _value(args, "--taille", "")
@@ -908,6 +918,9 @@ func _report() -> void:
 ## sans `--flash`, deux captures du même réglage se superposent au pixel, et c'est
 ## ce qui permet de comparer l'iso à 90° avec `--base`.
 func _capturer() -> void:
+	if _killcam:
+		await _controler_la_killcam()
+		return
 	if _noir:
 		await _capturer_le_noir()
 		return
@@ -981,6 +994,326 @@ func _capturer() -> void:
 		_sortir(7)
 		return
 	_sortir(0)
+
+
+## ISO5 — `--killcam` : une killcam complète en iso, par le vrai chemin de fin de manche
+## (`GameState._do_end_round`), regardée par la vue de J1 (`--vue j1`, le local et l'hôte) ou de J2 (`--vue
+## j2`, la configuration du client). Le jeu est suspendu pendant les mesures (`set_process(false)` sur
+## `GameState`, qui fait avancer le rejeu) : chaque paire de captures montre la même image du rejeu.
+##
+## Quatre contrôles :
+## 1. **Les corps des fantômes** — capture sans voile, puis silhouettes des fantômes mises à zéro : les
+##    pixels qui changent dans la boîte de chaque fantôme sont son corps voxel.
+## 2. **Le voile lit la vue iso** — avec et sans voile : dans les pixels du corps, l'image voilée ressemble
+##    plus à l'image AVEC corps qu'à l'image sans corps. Un voile qui lirait la lightmap ne verrait pas le
+##    corps voxel.
+## 3. **Le noir absolu** — lumières éteintes, teinte d'ambiance noire, voile, quads et calques d'écran
+##    retirés : hors des boîtes des fantômes, aucun pixel allumé hors du support de la projection brute
+##    (la LED des murs est du décor, dans les deux vues).
+## 4. **L'étalon contre la vue de dessus (information)** — lumières éteintes, sous la teinte de killcam
+##    puis sous une teinte noire : la médiane des pixels allumés du fantôme en iso, celle du fantôme 2D
+##    (vue iso éteinte, `GameSettings.mode_iso = false`), et la silhouette attendue.
+const TOLERANCE_ETALON_KILLCAM := 6
+const SEUIL_PIXEL_CHANGE := 6
+
+func _controler_la_killcam() -> void:
+	var p := Presentation3D.instance()
+	var p1: Node2D = _main.p1
+	var p2: Node2D = _main.p2
+	var cible := _mur_le_plus_proche(p1.global_position)
+	var axe := (cible - p1.global_position).normalized()
+	p2.global_position = p1.global_position + axe.orthogonal() * 160.0
+	_tenir_les_torches()
+	for i in 90:
+		p1.rotation = (p2.global_position - p1.global_position).angle()
+		p2.rotation = (p1.global_position - p2.global_position).angle()
+		await get_tree().process_frame
+	p1.shoot()
+	for i in 30:
+		await get_tree().process_frame
+	var rejeu := get_node(^"/root/ReplaySystem")
+	_main._do_end_round(0)
+	if not await _attendre(func() -> bool:
+			return bool(rejeu.get("playing_back")) and _main.current_snap != null and _main.ghost_p1.visible, 15.0):
+		printerr("✗ --killcam : la killcam n'a pas démarré")
+		_sortir(1)
+		return
+	var pid := 1 if _vue_killcam == "j2" else 0
+	if pid == 1:
+		(_main.vp1.get_parent() as Control).hide()
+		(_main.vp2.get_parent() as Control).show()
+		_main._accorder_rendu_aux_vues()
+	if not await _attendre(func() -> bool:
+			return bool(p.get("_actif")) and not bool(p.get("_scinde")) and p._vue_de(pid) != null, 5.0):
+		printerr("✗ --killcam : la vue iso ne tient pas en vue unique sur la vue de J%d (%s)" % [pid + 1, p.raison_des_vues()])
+		_sortir(1)
+		return
+	for i in 20:
+		await get_tree().process_frame
+	_main.set_process(false)
+	# ⚠️ **Les calques d'écran se posent par-dessus les DEUX vues** — halo et voile d'éblouissement,
+	# séparation des couleurs du brouillage, interface. Jeu suspendu, l'éblouissement ne retombe plus quand
+	# les lumières s'éteignent : au premier passage, le « noir » valait 255 sur 3,6 millions de pixels, et
+	# l'étalon comparait le halo. Ils sont retirés pour toute la mesure ; l'interface cesse aussi de
+	# repousser les uniformes du voile (`ui.gd` réécrit `negatif` et `tension` à chaque image).
+	_ui.set_process(false)
+	var calques_caches := _cacher_les_calques_d_ecran()
+	for i in 6:
+		await get_tree().process_frame
+	var dossier := _capture.get_base_dir()
+	if dossier != "":
+		DirAccess.make_dir_recursive_absolute(dossier)
+	var base := _capture.get_basename()
+	var voile_2d := _ui.killcam_overlay as CanvasItem
+	var voile_iso := p.voile_de_killcam(pid)
+	print("BANC_ISO killcam vue=j%d voile_iso=%s voile_2d_couche=%d zoom=%.2f taille_camera=%.1f capteurs=%s"
+		% [pid + 1, voile_iso != null and voile_iso.visible, voile_2d.visibility_layer, _main.cam1.zoom.x,
+		float((p._camera_de(pid) as CameraIso).size), str(_max_capteurs())])
+
+	print("BANC_ISO killcam calques_d_ecran_retires=%d" % calques_caches)
+	var capture_voilee: Image = await RenduCommun.capturer(get_tree(), 15000)
+	if capture_voilee != null:
+		capture_voilee.save_png(_capture)
+	# Le voile en NÉGATIF PUR (sans dessin, sans tension) : sur le corps, l'image voilée doit valoir le négatif
+	# vignetté de l'image AVEC corps. Un voile qui lirait autre chose que la vue iso ne verrait pas le corps.
+	var matiere := voile_2d.material as ShaderMaterial
+	matiere.set_shader_parameter("intensite", 0.0)
+	matiere.set_shader_parameter("tension", 0.0)
+	matiere.set_shader_parameter("negatif", 1.0)
+	for i in 6:
+		await get_tree().process_frame
+	var image_a: Image = await RenduCommun.capturer(get_tree(), 15000)
+	image_a.save_png(base + "_voile_negatif.png")
+	voile_2d.hide()
+	for i in 6:
+		await get_tree().process_frame
+	var image_b: Image = await RenduCommun.capturer(get_tree(), 15000)
+	var traces := {}
+	var boites := {}
+	for j in 2:
+		var fantome: Node2D = _main.ghost_p1 if j == 0 else _main.ghost_p2
+		if fantome.visible:
+			traces[j] = fantome.get_node("VisualColored") as Polygon2D
+			boites[j] = _boite_iso_du_fantome(p, pid, j, fantome.global_position)
+	for j in traces:
+		var eteinte: Polygon2D = traces[j]
+		eteinte.color.a = 0.0
+	for i in 6:
+		await get_tree().process_frame
+	var image_c: Image = await RenduCommun.capturer(get_tree(), 15000)
+	for j in traces:
+		var rendue: Polygon2D = traces[j]
+		rendue.color.a = 0.5
+	if image_a == null or image_b == null or image_c == null:
+		printerr("✗ aucune image rendue en 15 s")
+		_sortir(4)
+		return
+	image_b.save_png(base + "_sans_voile.png")
+
+	# 1 et 2.
+	var corps_tenus := not boites.is_empty()
+	var voile_lit := not boites.is_empty()
+	var details: PackedStringArray = []
+	for j in boites:
+		var zone: Rect2i = boites[j]
+		var mesure := _corps_et_voile(image_a, image_b, image_c, zone)
+		corps_tenus = corps_tenus and int(mesure["corps"]) >= 30
+		voile_lit = voile_lit and int(mesure["corps"]) > 0 and float(mesure["ecart_avec"]) < float(mesure["ecart_sans"]) \
+			and float(mesure["ecart_avec"]) < 20.0
+		details.append("fantôme J%d : %d pixels de corps dans %s ; négatif voilé contre négatif avec corps %.1f, contre sans corps %.1f"
+			% [j + 1, mesure["corps"], str(zone), mesure["ecart_avec"], mesure["ecart_sans"]])
+	print("BANC_ISO killcam corps vue=j%d verdict=%s — %s" % [pid + 1,
+		"CORPS DES FANTÔMES TENUS" if corps_tenus else "CORPS DES FANTÔMES ABSENTS", " ; ".join(details)])
+	voile_lit = voile_lit and voile_2d.visibility_layer == Presentation3D.COUCHE_HORS_VUE
+	print("BANC_ISO killcam voile vue=j%d verdict=%s" % [pid + 1,
+		"LE VOILE LIT LA VUE ISO" if voile_lit else "LE VOILE NE LIT PAS LA VUE ISO"])
+
+	# 3 et 4. Lumières éteintes, voile et quads retirés.
+	var miroirs = p.get("_miroirs")
+	if miroirs != null:
+		miroirs.masquer_les_quads(true)
+	var ambiance := _main.arena.get_node_or_null("CanvasModulate") as CanvasModulate
+	var teinte_killcam: Color = ambiance.color if ambiance != null else Color.WHITE
+	var iso := {}
+	var plat := {}
+	for teinte in ["killcam", "noire"]:
+		if ambiance != null:
+			ambiance.color = teinte_killcam if teinte == "killcam" else Color.BLACK
+		for i in 20:
+			_eteindre_les_lumieres(get_tree().root)
+			await get_tree().process_frame
+		iso[teinte] = await RenduCommun.capturer(get_tree(), 15000)
+	(iso["noire"] as Image).save_png(base + "_noir.png")
+	# La projection BRUTE (pâte retirée), même image : ce que la vue iso montre ne doit rien allumer hors de
+	# son support — la LED des murs et le sol qu'elle éclaire sont du décor, présents dans les deux vues.
+	var style_pate: int = p.style_pate
+	p.style_pate = -1
+	for i in 10:
+		_eteindre_les_lumieres(get_tree().root)
+		await get_tree().process_frame
+	var brute: Image = await RenduCommun.capturer(get_tree(), 15000)
+	p.style_pate = style_pate
+	var hors_max := _valeur_max(_sans_zones(iso["noire"], boites.values()))
+	var hors := _allumes_hors_du_support(_sans_zones(iso["noire"], boites.values()), _sans_zones(brute, boites.values()))
+	GameSettings.mode_iso = false
+	for i in 20:
+		_eteindre_les_lumieres(get_tree().root)
+		await get_tree().process_frame
+	for teinte in ["noire", "killcam"]:
+		if ambiance != null:
+			ambiance.color = teinte_killcam if teinte == "killcam" else Color.BLACK
+		for i in 20:
+			_eteindre_les_lumieres(get_tree().root)
+			await get_tree().process_frame
+		plat[teinte] = await RenduCommun.capturer(get_tree(), 15000)
+	(plat["killcam"] as Image).save_png(base + "_vue_de_dessus.png")
+	var noir_tenu := hors == 0
+	# L'étalon est une INFORMATION, pas un verdict : le fantôme 2D est un sprite texturé à l'encre (couleur ×
+	# texture × 0,5), le corps iso porte la silhouette de soi d'ISO2b (couleur × 0,5) — deux dessins, pas
+	# deux mesures d'une même chose. Médianes des pixels allumés : le maximum tombe sur les arêtes où deux
+	# boîtes du voxel se recouvrent (0,75 de la couleur au premier passage, pour une médiane à 0,5).
+	var lignes: PackedStringArray = []
+	for j in boites:
+		var fantome: Node2D = _main.ghost_p1 if j == 0 else _main.ghost_p2
+		var zone_2d := _boite_2d_du_fantome(pid, fantome.global_position)
+		var trace: Polygon2D = traces[j]
+		for teinte in ["killcam", "noire"]:
+			var a := _mediane_allumee(iso[teinte], boites[j])
+			var b := _mediane_allumee(plat[teinte], zone_2d)
+			lignes.append("J%d, teinte %s : iso %d/%d/%d, vue de dessus %d/%d/%d" % [j + 1, teinte, a[0], a[1], a[2], b[0], b[1], b[2]])
+		lignes.append("J%d, silhouette attendue %d/%d/%d" % [j + 1, roundi(trace.color.r * trace.color.a * 255.0),
+			roundi(trace.color.g * trace.color.a * 255.0), roundi(trace.color.b * trace.color.a * 255.0)])
+	print("BANC_ISO killcam noir vue=j%d verdict=%s (hors des fantômes : %d pixel(s) allumé(s) hors du support de la brute, max %d/255 ; teinte de killcam %s)"
+		% [pid + 1, "NOIR ABSOLU TENU" if noir_tenu else "NOIR ABSOLU ROMPU", hors, hors_max, str(teinte_killcam)])
+	print("BANC_ISO killcam etalon vue=j%d (information, médianes des pixels allumés) — %s" % [pid + 1, " ; ".join(lignes)])
+	var tenue := corps_tenus and voile_lit and noir_tenu
+	print("BANC_ISO killcam vue=j%d verdict=%s" % [pid + 1, "KILLCAM TENUE" if tenue else "KILLCAM ROMPUE"])
+	_sortir(0 if tenue else 8)
+
+
+## La boîte, en pixels de la capture, d'un corps posé en `pos` et vu par la caméra iso de la vue `pid`.
+func _boite_iso_du_fantome(p: Presentation3D, pid: int, j: int, pos: Vector2) -> Rect2i:
+	var cam := p._camera_de(pid) as CameraIso
+	var taille := p.viewport_ecran(pid).get_visible_rect().size
+	var e := _etirement()
+	var pied := cam.vers_ecran(pos, taille)
+	var tete := cam.vers_ecran(pos, taille, _hauteur_du_corps_px(p, j))
+	var echelle := taille.y / cam.size
+	var demi := 12.0 * echelle
+	var r := Rect2(Vector2(minf(pied.x, tete.x) - demi, minf(pied.y, tete.y) - demi * 0.5), Vector2.ZERO)
+	r = r.expand(Vector2(maxf(pied.x, tete.x) + demi, maxf(pied.y, tete.y) + demi * 0.5))
+	return Rect2i(Vector2i((r.position * e).floor()), Vector2i((r.size * e).ceil()))
+
+
+## La boîte, en pixels de la capture, du fantôme 2D en `pos`, vue iso éteinte (rendu par la racine ou par la
+## sous-vue, selon `GameState._rendu_racine`).
+func _boite_2d_du_fantome(pid: int, pos: Vector2) -> Rect2i:
+	var vue: SubViewport = _main.vp1 if pid == 0 else _main.vp2
+	var e := _etirement()
+	var ecran: Vector2
+	var zoom := vue.canvas_transform.x.length()
+	if bool(_main.get("_rendu_racine")):
+		ecran = get_tree().root.canvas_transform * pos
+		zoom = get_tree().root.canvas_transform.x.length()
+	else:
+		ecran = (vue.get_parent() as Control).get_global_rect().position + vue.canvas_transform * pos
+	var demi := 24.0 * zoom
+	return Rect2i(Vector2i(((ecran - Vector2(demi, demi)) * e).floor()), Vector2i((Vector2(demi, demi) * 2.0 * e).ceil()))
+
+
+## Dans `zone` : les pixels qui changent entre `b` (sans voile) et `c` (sans voile ni silhouettes) sont le
+## corps ; sur eux, l'écart moyen de `a` (voile en négatif pur) au négatif vignetté de `b` et de `c`.
+static func _corps_et_voile(a: Image, b: Image, c: Image, zone: Rect2i) -> Dictionary:
+	var cadre := Rect2i(Vector2i.ZERO, b.get_size()).intersection(zone)
+	var taille := Vector2(b.get_size())
+	var corps := 0
+	var avec := 0.0
+	var sans := 0.0
+	for y in range(cadre.position.y, cadre.end.y):
+		for x in range(cadre.position.x, cadre.end.x):
+			var cb := b.get_pixel(x, y)
+			var cc := c.get_pixel(x, y)
+			if _ecart_255(cb, cc) < SEUIL_PIXEL_CHANGE:
+				continue
+			corps += 1
+			var ca := a.get_pixel(x, y)
+			avec += _ecart_255(ca, _negatif_vignette(cb, Vector2(x, y) / taille))
+			sans += _ecart_255(ca, _negatif_vignette(cc, Vector2(x, y) / taille))
+	return {"corps": corps, "ecart_avec": avec / maxf(1.0, corps), "ecart_sans": sans / maxf(1.0, corps)}
+
+
+## Ce que `killcam_overlay.gdshader` rend d'un pixel à intensité 0 et négatif 1 : la vignette, puis le négatif.
+static func _negatif_vignette(c: Color, uv: Vector2) -> Color:
+	var t := clampf((0.8 - uv.distance_to(Vector2(0.5, 0.5)) * 1.2) / 0.6, 0.0, 1.0)
+	var v := t * t * (3.0 - 2.0 * t)
+	return Color(1.0 - c.r * v, 1.0 - c.g * v, 1.0 - c.b * v)
+
+
+## Cache tous les calques d'écran du jeu (éblouissement, brouillage, interface…), sauf le voile de killcam
+## iso, que la présentation montre elle-même. Rend leur nombre.
+func _cacher_les_calques_d_ecran() -> int:
+	var n := 0
+	for calque in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		if String(calque.name).begins_with("VoileKillcamIso"):
+			continue
+		if (calque as CanvasLayer).visible:
+			(calque as CanvasLayer).visible = false
+			n += 1
+	return n
+
+
+static func _ecart_255(u: Color, v: Color) -> float:
+	return maxf(maxf(absf(u.r - v.r), absf(u.g - v.g)), absf(u.b - v.b)) * 255.0
+
+
+static func _max_rgb_zone(image: Image, zone: Rect2i) -> Array[int]:
+	var sortie: Array[int] = [0, 0, 0]
+	if image == null:
+		return [-1, -1, -1]
+	var cadre := Rect2i(Vector2i.ZERO, image.get_size()).intersection(zone)
+	for y in range(cadre.position.y, cadre.end.y):
+		for x in range(cadre.position.x, cadre.end.x):
+			var px := image.get_pixel(x, y)
+			sortie[0] = maxi(sortie[0], roundi(px.r * 255.0))
+			sortie[1] = maxi(sortie[1], roundi(px.g * 255.0))
+			sortie[2] = maxi(sortie[2], roundi(px.b * 255.0))
+	return sortie
+
+
+## Une copie de l'image, les zones données mises au noir ; `null` sans image.
+static func _sans_zones(image: Image, zones: Array) -> Image:
+	if image == null:
+		return null
+	var copie := image.duplicate() as Image
+	copie.convert(Image.FORMAT_RGB8)
+	for zone: Rect2i in zones:
+		var cadre := Rect2i(Vector2i.ZERO, copie.get_size()).intersection(zone)
+		if cadre.size.x > 0 and cadre.size.y > 0:
+			copie.fill_rect(cadre, Color.BLACK)
+	return copie
+
+
+## La médiane, canal par canal, des pixels allumés (plus haut canal au-dessus de 8) d'une zone.
+static func _mediane_allumee(image: Image, zone: Rect2i) -> Array[int]:
+	if image == null:
+		return [-1, -1, -1]
+	var cadre := Rect2i(Vector2i.ZERO, image.get_size()).intersection(zone)
+	var canaux := [[], [], []]
+	for y in range(cadre.position.y, cadre.end.y):
+		for x in range(cadre.position.x, cadre.end.x):
+			var px := image.get_pixel(x, y)
+			if maxf(maxf(px.r, px.g), px.b) * 255.0 <= 8.0:
+				continue
+			canaux[0].append(roundi(px.r * 255.0))
+			canaux[1].append(roundi(px.g * 255.0))
+			canaux[2].append(roundi(px.b * 255.0))
+	var sortie: Array[int] = [0, 0, 0]
+	for k in 3:
+		var valeurs: Array = canaux[k]
+		if not valeurs.is_empty():
+			valeurs.sort()
+			sortie[k] = int(valeurs[valeurs.size() / 2])
+	return sortie
 
 
 ## Le plafond des corps — premier retour d'Adrien au jalon H-ISO2 (2026-09-14) : « quand le
@@ -1963,11 +2296,17 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	var absents: Array[String] = BancCadence.preconditions_manquantes(ui, main)
 	if ui == null or main == null:
 		return absents
-	for prop in ["rendu_racine_autorise", "_rendu_racine", "vp1", "vp2", "ui", "countdown_left"]:
+	for prop in ["rendu_racine_autorise", "_rendu_racine", "vp1", "vp2", "ui", "countdown_left",
+			"ghost_p1", "ghost_p2", "current_snap", "arena"]:
 		if not prop in main:
 			absents.append("GameState.%s a disparu" % prop)
 	if not main.has_method("_accorder_rendu_aux_vues"):
 		absents.append("GameState._accorder_rendu_aux_vues() a disparu")
+	# ISO5 — `--killcam` passe par le vrai chemin de fin de manche.
+	if not main.has_method("_do_end_round"):
+		absents.append("GameState._do_end_round() a disparu (variante --killcam)")
+	if not "killcam_overlay" in ui:
+		absents.append("UI.killcam_overlay a disparu (variante --killcam)")
 	if not "center_line" in ui:
 		absents.append("UI.center_line a disparu")
 	if main.get_node_or_null("Background") == null:

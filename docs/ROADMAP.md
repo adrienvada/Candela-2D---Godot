@@ -23161,6 +23161,125 @@ sortent des lightmaps »), restaurée, verte.
 **Ce qu'ISO4 ne fait pas** : les fantômes voxel de la killcam et la visée à la souris par la caméra
 iso (ISO5) ; un geste de gadget par classe (signalé par ISO Corps, vague 1).
 
+### ISO5 — la killcam, le rejeu et les entrées dans la vue iso ✅ (commitée le 2026-09-15, jugée au jalon H-ISO5)
+
+Brief d'Adrien, suite du 2026-09-15 (vers 01:20), étape F, repris par la session « iso5-killcam-rejeu-
+cadence » en relève d'ISO2 (arrêtée proprement après ISO4, contexte trop lourd). Branche locale
+`iso2-vues`, sur `77941df`. Non poussée.
+
+**Pourquoi.** La killcam rejoue l'enregistrement en cachant les sprites des vrais joueurs
+(`hide_all_visuals`) et en montrant deux fantômes à leur place ; la vue iso lisait le joueur, donc le
+corps voxel disparaissait pendant toute la lecture, et les fantômes 2D restaient aplatis dans la
+lightmap. Le voile de killcam relisait la sous-vue du duel, devenue en iso une lightmap projetée au
+sol. Et la visée souris passait par un brouillon d'ISO1 qui ne servait que J1.
+
+**Ce qui existe.**
+- **Pendant la killcam, le FANTÔME porte le corps** (`Presentation3D.fantome_montre`,
+  `_suivre_le_fantome`). Dès que le jeu montre `GhostP1`/`GhostP2` (noms explicites, `_setup_ghosts`),
+  le corps voxel du joueur suit le fantôme : position et visée du fantôme ; classe, torche, tir (éclair
+  qui s'allume), coup reçu (points de vie qui baissent) et posture de l'instantané rejoué
+  (`current_snap`), à l'horloge du rejeu (`playback_index / 60`) — le fantôme marche au ralenti avec le
+  ralenti, se fige pendant le pré-tracé et l'arrêt sur image. Un fantôme caché (la victime morte dans le
+  rejeu) rend la main au joueur, caché lui aussi : le corps disparaît avec le sprite. L'arrêt sur image
+  qui suit la lecture garde les fantômes montrés sans instantané : la classe et les états sont retenus.
+- **Composé comme le fantôme se dessine en vue de dessus, pas comme un joueur.** Le fantôme 2D est
+  `VisualColored` en aplat (`ghost_unshaded.gdshader`), à la moitié de sa couleur, sans sprite éclairé,
+  sur la couche commune. Le corps iso n'a donc aucune part éclairée (opacité 0) et porte la silhouette du
+  fantôme (`silhouette_du_fantome` : sa couleur, alpha 0,5 compris, fois son opacité rendue) dans chaque
+  vue dont le masque voit sa couche — les deux. Son sprite et son pointeur sortent des lightmaps.
+- **Le voile de killcam lit la vue iso** (`_accorder_le_voile_de_killcam`). `killcam_overlay` sort de la
+  lightmap ; un `CanvasLayer` plein écran (calque -1, sous le brouillage, l'interface et l'estampe) pose
+  un rectangle qui PARTAGE SON MATÉRIAU — tension, négatif et curseur de grain poussés par `ui.gd` valent
+  pour les deux —, montré quand le voile 2D l'est. En vue unique il s'attache à la fenêtre ; en écran
+  scindé, à la vue 3D. L'habillage (planche, estampe, bandeau, affiche, bilan) reste au-dessus, inchangé.
+- **Le zoom de la killcam** (0,7 à 2,8) devient la taille orthographique de la caméra iso autour du même
+  point : c'était déjà vrai par `canvas_transform → hauteur_monde` (ISO1) ; c'est désormais prouvé sur le
+  vrai chemin.
+- **Le rejeu hors killcam** : il n'y en a pas dans le jeu. `ReplaySystem` ne sert qu'à la killcam
+  (`game_state.gd`, et le photographe qui passe par la même killcam) ; le format d'enregistrement ne
+  change pas.
+- **La visée souris par la caméra iso** (`LocalInputProvider.cible_de_la_souris`,
+  `Presentation3D.point_au_sol`, `CameraIso.vers_sol`). Le rayon de la caméra de SON joueur coupé par le
+  sol, rendu en pixels du monde 2D : `vers_sol` est l'inverse exact de `vers_ecran`, mêmes unités
+  logiques, jamais `project_ray_origin()` (piège d'ISO2). En écran scindé, chaque joueur vise par sa
+  propre caméra, dans son propre cadre. Repli sur la vue de dessus quand la vue iso ne rend pas ce joueur.
+  Le brouillon d'ISO1 (`_viser_a_la_souris`, un événement souris poussé dans la sous-vue de J1 seul) est
+  retiré.
+- **Le stick tourné du lacet** (`CameraIso.stick_au_sol`) : sa droite vise la droite de l'écran, son bas
+  le bas de l'écran. À 0° (valeur actée), l'identité.
+- **Rien sur le fil.** La commande numérotée reste une direction du monde ; `NetworkInputProvider` ne
+  change pas ; `Protocol.VERSION` reste 18 ; aucune ligne de simulation.
+
+**Ce que la suite prouve** — `tools/test_iso_killcam.gd` (neuve, dans `run_suites.sh`), 46
+vérifications, sur le VRAI chemin `_do_end_round` : aucun RPC ni `multiplayer` dans le code de la vue
+iso ni dans la visée, `NetworkInputProvider` sans iso, protocole à 18 ; le stick tourné du lacet vise la
+même direction à l'écran (4 lacets, 2 axes), inchangé à 0° par le vrai chemin de `LocalInputProvider` ;
+aller-retour monde → écran → sol à moins de 0,5 px dans la vue de chaque joueur (écran scindé, puis vue
+unique pendant la killcam), chacun par sa caméra ; la commande souris iso est la direction du monde de la
+vue de dessus ; la killcam passe la vue iso en vue unique, fantômes nommés, sprites des joueurs cachés,
+chaque fantôme porte un corps visible, à sa place, de la classe et dans la posture et la torche de
+l'instantané, composé comme le fantôme 2D sur les deux passes, sprite retiré des lightmaps ; le voile
+posé, montré, partageant le matériau, sous les calques, le voile 2D hors lightmap ; un gadget posé par
+le vrai chemin, recréé par la killcam, a son miroir ; zoom 0,7 / 1 / 2,8 → taille orthographique autour
+du même point ; l'extinction rend les couches. **Sabotée une fois** (`fantome_montre` rendant `null`) :
+10 contrôles rouges — pour J1 et J2, « le fantôme porte le corps », « le corps voxel reste visible pendant
+la lecture », « posture et torche du corps sont celles de l'instantané », « composé comme le fantôme
+2D », « le sprite du fantôme et son pointeur sortent des lightmaps » —, restaurée à l'identique, verte.
+
+**Ce que le banc prouve** (`tools/banc_iso.gd --jeu --scinde --killcam --capture … --vue j1|j2`, vraie
+fenêtre, une killcam complète par `_do_end_round` ; le jeu et l'interface suspendus pendant les mesures,
+calques d'écran retirés ; relevés bruts dans `docs/iso/captures_iso5/releves_iso5.txt`) :
+  - **Vue de J1 (local, hôte) : KILLCAM TENUE.** Corps des fantômes tenus (758 et 789 pixels de corps
+    voxel dans leurs boîtes). LE VOILE LIT LA VUE ISO : voile forcé en négatif pur, l'image voilée vaut le
+    négatif vignetté de l'image AVEC corps à 0,3 et 0,0 niveau près, contre 71 et 119 pour l'image sans
+    corps. NOIR ABSOLU TENU : lumières éteintes et teinte noire, 0 pixel allumé hors du support de la
+    projection brute, hors des fantômes (la LED des murs, décor des deux vues, monte à 194/255).
+  - **Vue de J2 (configuration du client) : KILLCAM TENUE.** 798 et 786 pixels de corps ; voile 0,2 et 0,0
+    contre 79 et 85 ; noir absolu tenu, 0 pixel hors du support.
+  - **Canaux** : aucun capteur ne s'allume pendant la killcam (`[0, 0]`) — les corps des fantômes n'ont
+    aucune part éclairée ; les lumières rejouées des fantômes éclairent le sol des lightmaps comme en 2D.
+  - **Zoom** relevé au banc : 1,30 → taille orthographique 654,7 (1080 / 1,30 × sin 52°).
+  - **Étalon contre la vue de dessus (information)**, lumières éteintes, teinte noire, médianes des pixels
+    allumés du fantôme : iso 87/111/126 (J1) et 125/87/89 (J2), exactement la silhouette attendue ; vue de
+    dessus 22/30/30 et 31/23/22. **Le fantôme iso est environ quatre fois plus lumineux que le fantôme 2D** :
+    celui-ci est un sprite texturé à l'encre (couleur × texture × 0,5), le corps iso porte la règle de la
+    silhouette de soi d'ISO2b (couleur × 0,5, jugée « parfait » au jalon H-ISO2). À regarder par Adrien au
+    jalon H-ISO5, sur la planche.
+  - Planche : `docs/iso/planche_iso5.jpg`.
+
+**Pièges d'ISO5.**
+- ⚠️ **Le fantôme de killcam n'est pas un joueur, et la règle de sa silhouette non plus.** Le brief
+  demandait « la silhouette de soi pour le fantôme du joueur local ». La vue de dessus montre pourtant
+  les DEUX fantômes aux DEUX joueurs, en aplat à demi-couleur (`visibility_layer = 1`, « visible par
+  toutes les caméras »). L'iso suit la vue de dessus ; changer la règle serait changer le jeu, et c'est à
+  Adrien de le trancher (jalon H-ISO5).
+- ⚠️ **Sans impact enregistré, la fenêtre du rejeu commence ~180 images avant la fin de
+  l'enregistrement.** Un gadget posé 2,9 s avant la fin n'apparaît dans la killcam qu'une fois le rejeu
+  arrivé à sa pose : le premier contrôle, trois images après le départ, comptait 0 copie sur 0. Et la
+  torche fantôme hérite la durée de vie du profil de la classe : la suite la tient en vie, comme le banc
+  de cadence.
+- ⚠️ **Une suite qui ne compile pas sort en code 0.** `var pose := main.bullet_container.get_node_or_null(…)`
+  (`main` non typé) : « Cannot infer the type », la suite ne tourne pas, Godot rend 0. `run_suites.sh`
+  l'attrape par `SCRIPT ERROR` ; un lancement seul, non.
+- ⚠️ **Trois passages de banc pour que la mesure mesure.** (1) Le voile se comparait tel quel : sous le
+  curseur « Grain de la killcam » d'Adrien et au centre de la vignette, il ne change rien — un écart
+  « voilé contre avec corps » à 0,0 passait pour une preuve et n'en était pas une ; il est désormais forcé
+  en négatif pur, et `ui.gd`, qui repousse `negatif` et `tension` à chaque image, est suspendu. (2) Jeu
+  suspendu, l'éblouissement ne retombe plus quand les lumières s'éteignent : le halo, la séparation des
+  couleurs du brouillage et l'interface couvraient le « noir » (255 sur 3,6 millions de pixels) et
+  l'étalon ; les calques d'écran sont retirés pendant la mesure. (3) Restait 194/255 hors des fantômes :
+  la LED des murs et le sol qu'elle éclaire, décor des deux vues ; le noir se juge contre le support de la
+  projection brute, comme ISO2. Et l'étalon lit la MÉDIANE : le maximum tombe sur les arêtes où deux boîtes
+  du voxel se recouvrent (0,75 de la couleur pour une médiane à 0,5).
+- ⚠️ **Le harnais interdit d'écrire dans le worktree d'une autre session**, même quand le brief l'y
+  envoie : la première heure s'est faite dans un worktree voisin, puis la session est entrée dans celui
+  d'ISO2 (`EnterWorktree`) et y a rapporté le travail par un patch. Et `perl -e 'alarm…; exec'` comme
+  chien de garde est refusé dans un worktree isolé : un `sleep` en arrière-plan qui tue le PID le
+  remplace.
+
+**Ce qu'ISO5 ne fait pas** : changer la règle de visibilité des fantômes (voir les pièges) ; la marche
+de l'adversaire interpolé en ligne et `Player.enjambe` chez le client (signalés, hors périmètre).
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

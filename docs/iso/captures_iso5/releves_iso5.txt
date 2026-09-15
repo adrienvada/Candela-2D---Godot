@@ -1,0 +1,14 @@
+BANC_ISO killcam vue=j2 voile_iso=true voile_2d_couche=0 zoom=1.30 taille_camera=654.7 capteurs=[0, 0]
+BANC_ISO killcam calques_d_ecran_retires=5
+BANC_ISO killcam corps vue=j2 verdict=CORPS DES FANTÔMES TENUS — fantôme J1 : 798 pixels de corps dans [P: (906, 662), S: (53, 71)] ; négatif voilé contre négatif avec corps 0.2, contre sans corps 79.3 ; fantôme J2 : 786 pixels de corps dans [P: (1257, 662), S: (53, 71)] ; négatif voilé contre négatif avec corps 0.0, contre sans corps 85.0
+BANC_ISO killcam voile vue=j2 verdict=LE VOILE LIT LA VUE ISO
+BANC_ISO killcam noir vue=j2 verdict=NOIR ABSOLU TENU (hors des fantômes : 0 pixel(s) allumé(s) hors du support de la brute, max 194/255 ; teinte de killcam (0.266, 0.2888, 0.3116, 1.0))
+BANC_ISO killcam etalon vue=j2 (information, médianes des pixels allumés) — J1, teinte killcam : iso 12/12/11, vue de dessus 13/14/13 ; J1, teinte noire : iso 87/111/126, vue de dessus 22/29/30 ; J1, silhouette attendue 87/111/126 ; J2, teinte killcam : iso 125/87/89, vue de dessus 12/12/13 ; J2, teinte noire : iso 125/87/89, vue de dessus 31/23/22 ; J2, silhouette attendue 125/87/89
+BANC_ISO killcam vue=j2 verdict=KILLCAM TENUE
+BANC_ISO killcam vue=j1 voile_iso=true voile_2d_couche=0 zoom=1.30 taille_camera=654.7 capteurs=[0, 0]
+BANC_ISO killcam calques_d_ecran_retires=5
+BANC_ISO killcam corps vue=j1 verdict=CORPS DES FANTÔMES TENUS — fantôme J1 : 758 pixels de corps dans [P: (1247, 662), S: (53, 71)] ; négatif voilé contre négatif avec corps 0.3, contre sans corps 71.3 ; fantôme J2 : 789 pixels de corps dans [P: (1599, 662), S: (53, 71)] ; négatif voilé contre négatif avec corps 0.0, contre sans corps 119.2
+BANC_ISO killcam voile vue=j1 verdict=LE VOILE LIT LA VUE ISO
+BANC_ISO killcam noir vue=j1 verdict=NOIR ABSOLU TENU (hors des fantômes : 0 pixel(s) allumé(s) hors du support de la brute, max 194/255 ; teinte de killcam (0.266, 0.2888, 0.3116, 1.0))
+BANC_ISO killcam etalon vue=j1 (information, médianes des pixels allumés) — J1, teinte killcam : iso 11/12/10, vue de dessus 13/14/13 ; J1, teinte noire : iso 87/111/126, vue de dessus 22/30/30 ; J1, silhouette attendue 87/111/126 ; J2, teinte killcam : iso 125/87/89, vue de dessus 23/12/13 ; J2, teinte noire : iso 125/87/89, vue de dessus 31/23/22 ; J2, silhouette attendue 125/87/89
+BANC_ISO killcam vue=j1 verdict=KILLCAM TENUE

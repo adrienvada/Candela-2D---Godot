@@ -68,6 +68,8 @@
 ## capteurs retirée des masques de cull, le `Background`, `GameState.rendu_racine_autorise`
 ## (le chemin `SubViewport` forcé, sans quoi la texture de la vue n'existe pas), et la
 ## couche de visibilité des dix sprites de corps — **jamais `visible`**, que le rejeu lit.
+## ISO5 y ajoute la couche du sprite des fantômes de killcam (`VisualColored`) et celle du voile de
+## killcam (`UI.killcam_overlay`), relu sur la vue iso par un calque à soi.
 ## Positions, rotations et `visual.visible` sont LUS. Tout est rendu à l'extinction.
 ##
 ## ⚠️ **Pour ISO3 — les hauteurs de simulation ne sont pas des hauteurs de rendu.** Le
@@ -207,6 +209,15 @@ var _cameras3d: Array[CameraIso] = []
 var _affichages: Array[TextureRect] = []
 ## `[vue_id][corps_id]` → `CapteurCorps`, ou `null` quand la vue n'est pas regardée.
 var _capteurs := [[null, null], [null, null]]
+## ISO5 — par joueur, ce que son fantôme de killcam a laissé d'une image à l'autre (points de vie, éclair
+## du tir, posture, position à l'horloge du rejeu) ; vidé dès que le fantôme n'est plus montré.
+var _etats_fantomes := [{}, {}]
+## ISO5 — le voile de killcam de la vue iso, un `CanvasLayer` par vue regardée (voir
+## `_accorder_le_voile_de_killcam`) ; `null` tant qu'aucune killcam ne l'a demandé.
+var _voiles: Array = [null, null]
+## Sous tous les calques du jeu (brouillage 1, interface 10, estampe 95) : en vue de dessus, le voile vit
+## DANS l'arène (`z_index` 2), donc sous chacun d'eux.
+const CALQUE_VOILE_KILLCAM := -1
 
 
 ## Le crochet du jeu — appelé par `GameState.rebuild_arena()`, sous garde `mode_iso`.
@@ -479,6 +490,12 @@ func _eteindre(sortie_de_l_arbre := false) -> void:
 	# ISO4 — les sprites remplacés reprennent leur couche, les capteurs des objets partent.
 	if _miroirs != null:
 		_miroirs.vider()
+	# ISO5 — le voile de killcam iso part avec la vue ; le voile 2D reprend sa couche (`_rendre_corps`).
+	for i in _voiles.size():
+		if _voiles[i] != null and is_instance_valid(_voiles[i]):
+			(_voiles[i] as CanvasLayer).visible = false
+			(_voiles[i] as Node).queue_free()
+		_voiles[i] = null
 	_actif = false
 	if _scene != null:
 		_scene.visible = false
@@ -638,8 +655,18 @@ func _suivre() -> void:
 			var joueur = joueurs[j]
 			if capteur != null and is_instance_valid(joueur):
 				capteur.suivre(joueur.global_position, joueur.visible and joueur.visual.visible)
+	_accorder_le_voile_de_killcam()
 	for j in 2:
 		var joueur = joueurs[j]
+		# ISO5 — **pendant la killcam, c'est le FANTÔME qui porte le corps**, pas le joueur. Le rejeu cache
+		# les sprites des vrais joueurs (`hide_all_visuals`) et montre les fantômes `GhostP1`/`GhostP2` à
+		# leur place : lire le joueur ferait disparaître le corps pendant toute la lecture (constat d'ISO4).
+		var fantome := fantome_montre(j)
+		if fantome != null:
+			_suivre_le_fantome(j, fantome)
+			continue
+		if not (_etats_fantomes[j] as Dictionary).is_empty():
+			_etats_fantomes[j] = {}
 		# `visual.visible` est LU, jamais écrit : c'est l'état de mort que le rejeu
 		# enregistre. `visible` du joueur : l'entraînement cache J2 ainsi.
 		_corps[j].visible = is_instance_valid(joueur) and joueur.visible and joueur.visual.visible
@@ -867,8 +894,12 @@ func _construire_les_corps_voxel() -> void:
 ## ⚠️ `construire()` crée de NOUVEAUX matériaux : sans ce relais, un joueur qui change de classe
 ## entre deux manches aurait un corps lisant des capteurs vides — noir partout.
 func _accorder_la_classe(j: int, joueur: Node) -> void:
+	_accorder_le_slug(j, slug_du_corps(joueur))
+
+
+## Le corps d'un slug donné : celui de la classe du joueur, ou celle qu'avait son fantôme de killcam (ISO5).
+func _accorder_le_slug(j: int, slug: String) -> void:
 	var voxel := _voxels[j] as VoxelCorps
-	var slug := slug_du_corps(joueur)
 	if voxel.slug() == slug and _mat_corps[j] != null:
 		return
 	if not voxel.construire(slug):
@@ -898,12 +929,16 @@ func _accorder_la_classe(j: int, joueur: Node) -> void:
 ## c'est un repli de RENDU — il faut bien dessiner quelqu'un —, pas une statistique. `VoxelCatalogue`
 ## et `GameState` refusent ce repli pour les données, à raison ; l'image n'en porte aucune.
 static func slug_du_corps(joueur: Node) -> String:
-	if joueur != null and is_instance_valid(joueur):
-		var classe := joueur.get("current_weapon") as ClassData
-		if classe != null:
-			var s := String(classe.slug())
-			if VoxelCatalogue.slugs().has(s):
-				return s
+	var classe: Variant = joueur.get("current_weapon") if joueur != null and is_instance_valid(joueur) else null
+	return slug_de_la_classe(classe)
+
+
+## Le slug du corps voxel d'une classe (`ClassData`), avec le même repli de rendu que `slug_du_corps`.
+static func slug_de_la_classe(classe: Variant) -> String:
+	if classe is ClassData:
+		var s := String((classe as ClassData).slug())
+		if VoxelCatalogue.slugs().has(s):
+			return s
 	return VoxelCatalogue.slugs()[0]
 
 
@@ -967,6 +1002,136 @@ func etat_du_corps(j: int, joueur: Node) -> Dictionary:
 		"arme": (_voxels[j] as VoxelCorps).slug(),
 		"tir": tir, "touche": touche, "mort": mort,
 		"accroupi": accroupi, "enjambe": enjambe,
+		"t": t,
+	}
+
+
+## ISO5 — le fantôme de killcam du joueur `j` quand le jeu le MONTRE, sinon `null`. `visible` est lu,
+## jamais écrit : c'est le rejeu qui le pose (`ghost_pN.visible = snap.pN_visible`), et un fantôme caché
+## — la victime morte dans le rejeu — rend la main au joueur, caché lui aussi : le corps disparaît avec
+## le sprite, comme en vue de dessus.
+func fantome_montre(j: int) -> Node2D:
+	if not is_instance_valid(_main):
+		return null
+	var fantome = _main.get("ghost_p1" if j == 0 else "ghost_p2")
+	if not is_instance_valid(fantome) or not (fantome is Node2D):
+		return null
+	return fantome if (fantome as Node2D).is_visible_in_tree() else null
+
+
+## ISO5 — le corps du joueur `j` porté par son fantôme de killcam : position et visée du fantôme ; classe,
+## torche, tir, coup reçu et posture de l'instantané rejoué (`GameState.current_snap`).
+##
+## ⚠️ **Composé comme le fantôme se dessine en vue de dessus, pas comme un joueur.** Le fantôme 2D est
+## `VisualColored` en aplat (`ghost_unshaded.gdshader`), à la moitié de sa couleur, sans aucun sprite
+## éclairé, et sur la couche commune (« visible par toutes les caméras », `_setup_ghosts`). Le corps iso
+## n'a donc aucune part éclairée (opacité 0) et porte la silhouette du fantôme dans CHAQUE vue dont le
+## masque voit sa couche — la règle de la silhouette de soi (chez soi seulement) est celle du duel, pas
+## celle du rejeu, qui montre les deux fantômes aux deux joueurs. Une seule source : le sprite du fantôme.
+func _suivre_le_fantome(j: int, fantome: Node2D) -> void:
+	var trace := fantome.get_node_or_null(^"VisualColored") as CanvasItem
+	_cacher_le_fantome(fantome)
+	var snap = _main.get("current_snap")
+	var p := fantome.global_position
+	_corps[j].visible = true
+	if corps_voxel:
+		_accorder_le_slug(j, slug_de_la_classe(_classe_du_fantome(j, snap)))
+		(_voxels[j] as VoxelCorps).poser(etat_du_fantome(j, fantome, snap))
+	else:
+		_corps[j].position = Vector3(p.x, 0.0, p.y)
+		_corps[j].basis = Basis.looking_at(Vector3(cos(fantome.global_rotation), 0.0,
+			sin(fantome.global_rotation)), Vector3.UP)
+	_mat_corps[j].set_shader_parameter("centre", p)
+	for vue_id in 2:
+		var vue: SubViewport = _main.vp1 if vue_id == 0 else _main.vp2
+		var sil := silhouette_du_fantome(trace, couche_d_origine(trace), vue.canvas_cull_mask)
+		for m in [_mat_corps[j], _mat_profondeur[j]]:
+			(m as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), 0.0)
+			(m as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
+
+
+## La silhouette qu'un fantôme de killcam dessine dans une vue : la couleur de son `VisualColored` (alpha
+## 0,5 compris, posé par `_setup_ghosts`) fois son opacité rendue ; transparente si le masque de la vue ne
+## voit pas sa couche. `couche` : sa couche d'origine, la vue iso l'ayant retirée des lightmaps.
+static func silhouette_du_fantome(trace: Variant, couche: int, masque_de_la_vue: int) -> Color:
+	if not is_instance_valid(trace) or not (trace is Polygon2D) or (couche & masque_de_la_vue) == 0:
+		return Color(0.0, 0.0, 0.0, 0.0)
+	var c: Color = (trace as Polygon2D).color
+	return Color(c.r, c.g, c.b, c.a * opacite_rendue(trace))
+
+
+## La classe du fantôme : celle de l'instantané (`pN_weapon`), retenue quand l'instantané manque — l'arrêt
+## sur image qui suit la lecture garde les fantômes montrés sans instantané.
+func _classe_du_fantome(j: int, snap: Variant) -> Variant:
+	var e: Dictionary = _etats_fantomes[j]
+	if snap != null:
+		var c = snap.get("p%d_weapon" % (j + 1))
+		if c is ClassData:
+			e["classe"] = c
+	if e.has("classe"):
+		return e["classe"]
+	var joueur = _main.p1 if j == 0 else _main.p2
+	return joueur.get("current_weapon") if is_instance_valid(joueur) else null
+
+
+## ISO5 — le temps du rejeu, en secondes d'enregistrement (`ReplaySystem.RECORD_HZ`, 60) : il ralentit avec
+## le ralenti, s'arrête pendant le pré-tracé et l'arrêt sur image. La marche et la respiration du fantôme
+## battent à ce temps-là, comme ses gestes. Sans rejeu, le temps réel.
+func horloge_du_rejeu() -> float:
+	var rejeu := get_node_or_null(^"/root/ReplaySystem")
+	return float(rejeu.get("playback_index")) / 60.0 if rejeu != null else Time.get_ticks_msec() / 1000.0
+
+
+## L'état que `VoxelCorps.poser()` attend, pour le fantôme du joueur `j` — mêmes clés que `etat_du_corps`.
+## Les événements se lisent d'un instantané à l'autre, à l'horloge du rejeu : un éclair de tir qui
+## s'allume (`pN_flash`), des points de vie qui baissent (`pN_hp`), une posture qui bascule
+## (`pN_accroupi`). La vitesse se déduit des positions rejouées. Jamais mort : un fantôme mort est caché.
+func etat_du_fantome(j: int, fantome: Node2D, snap: Variant) -> Dictionary:
+	var e: Dictionary = _etats_fantomes[j]
+	var horloge := horloge_du_rejeu()
+	var pos := fantome.global_position
+	if snap != null:
+		var n := "p%d_" % (j + 1)
+		var hp := float(snap.get(n + "hp"))
+		var flash := float(snap.get(n + "flash"))
+		var accroupi := bool(snap.get(n + "accroupi"))
+		if e.has("hp") and hp < float(e["hp"]) - 0.001:
+			e["t_touche"] = horloge
+		if flash > 0.0 and float(e.get("flash", 0.0)) <= 0.0:
+			e["t_tir"] = horloge
+		if e.has("accroupi") and accroupi != bool(e["accroupi"]):
+			e["t_posture"] = horloge
+		e["hp"] = hp
+		e["flash"] = flash
+		e["accroupi"] = accroupi
+		e["torche"] = bool(snap.get(n + "light"))
+	if not e.has("pos"):
+		e["pos"] = pos
+		e["horloge"] = horloge
+		e["vitesse"] = Vector2.ZERO
+	elif horloge > float(e["horloge"]) + 1e-6:
+		e["vitesse"] = (pos - (e["pos"] as Vector2)) / (horloge - float(e["horloge"]))
+		e["pos"] = pos
+		e["horloge"] = horloge
+	var tir := horloge - float(e.get("t_tir", -100.0)) < DUREE_TIR_CORPS
+	var touche := horloge - float(e.get("t_touche", -100.0)) < DUREE_TOUCHE_CORPS
+	var posture := horloge - float(e.get("t_posture", -100.0)) < VoxelCorps.DUREE_TRANSITION_ACCROUPI
+	var t := horloge
+	if tir or touche or posture:
+		t = horloge - maxf(maxf(float(e["t_tir"]) if tir else -100.0,
+			float(e["t_touche"]) if touche else -100.0), float(e["t_posture"]) if posture else -100.0)
+	var visee := Vector2(cos(fantome.global_rotation), sin(fantome.global_rotation))
+	var vitesse: Vector2 = e["vitesse"]
+	var direction := vitesse.normalized() if vitesse.length() > 1.0 else visee
+	return {
+		"position": pos,
+		"visee": visee,
+		"vitesse": vitesse,
+		"torche": bool(e.get("torche", false)),
+		"arme": (_voxels[j] as VoxelCorps).slug(),
+		"tir": tir, "touche": touche, "mort": false,
+		"accroupi": bool(e.get("accroupi", false)),
+		"enjambe": progres_enjambement(pos, direction, MursBas.murs_de_la_manche, false),
 		"t": t,
 	}
 
@@ -1137,6 +1302,82 @@ func _rendre_corps() -> void:
 		if is_instance_valid(noeud) and (noeud as CanvasItem).visibility_layer == COUCHE_HORS_VUE:
 			(noeud as CanvasItem).visibility_layer = _couches[noeud]
 	_couches.clear()
+
+
+## Sort un sprite des lightmaps (couche 0), en retenant sa couche d'origine ; 1 s'il y était encore.
+func _retirer_de_la_lightmap(item: CanvasItem) -> int:
+	if item == null or item.visibility_layer == COUCHE_HORS_VUE:
+		return 0
+	if not _couches.has(item):
+		_couches[item] = item.visibility_layer
+	item.visibility_layer = COUCHE_HORS_VUE
+	return 1
+
+
+## La couche qu'avait un sprite avant que la vue iso ne le retire des lightmaps.
+func couche_d_origine(item: Variant) -> int:
+	if not is_instance_valid(item) or not (item is CanvasItem):
+		return 0
+	return int(_couches.get(item, (item as CanvasItem).visibility_layer))
+
+
+## ISO5 — le sprite d'un fantôme (`VisualColored` et son pointeur) sort des lightmaps comme ceux des
+## joueurs : sans cela il se dessinerait deux fois, debout en voxel et à plat sous lui.
+func _cacher_le_fantome(fantome: Node2D) -> int:
+	var trace := fantome.get_node_or_null(^"VisualColored") as CanvasItem
+	if trace == null:
+		return 0
+	var n := _retirer_de_la_lightmap(trace)
+	for enfant in trace.find_children("*", "CanvasItem", true, false):
+		n += _retirer_de_la_lightmap(enfant as CanvasItem)
+	return n
+
+
+## ISO5 — **le voile de killcam lit l'image de la vue iso.** `killcam_overlay.gdshader` relit l'écran
+## (`hint_screen_texture`) pour le réduire à trois tons, tirer ses contours et poser sa vignette. En vue
+## de dessus il vit dans l'arène (`z_index` 2), sous les fantômes : il lit la sous-vue du duel. En iso,
+## cette sous-vue est la lightmap projetée au sol — le voile n'y verrait ni les murs ni les corps, et
+## sa vignette serait posée sur le sol, pas sur l'écran. Il sort donc des lightmaps, et un rectangle plein
+## écran PARTAGEANT SON MATÉRIAU (les uniformes que `ui.gd` pousse — tension, négatif, curseur de grain —
+## valent pour les deux) se pose dans la vue iso, sous tous les calques du jeu : l'habillage de la killcam
+## (planche, estampe, bandeau, affiche) reste au-dessus, inchangé. Montré quand le voile 2D l'est.
+func _accorder_le_voile_de_killcam() -> void:
+	var interface = _main.get("ui")
+	var voile_2d = interface.get("killcam_overlay") if interface != null else null
+	if not is_instance_valid(voile_2d) or not (voile_2d is CanvasItem):
+		return
+	_retirer_de_la_lightmap(voile_2d)
+	var montre := (voile_2d as CanvasItem).is_visible_in_tree()
+	for id in 2:
+		var regardee := _vue_de(id) != null
+		var calque = _voiles[id]
+		if calque == null and regardee and montre:
+			calque = _creer_le_voile(id)
+		if calque != null and is_instance_valid(calque):
+			(calque as CanvasLayer).visible = regardee and montre
+			((calque as Node).get_child(0) as CanvasItem).material = (voile_2d as CanvasItem).material
+
+
+func _creer_le_voile(id: int) -> CanvasLayer:
+	var calque := CanvasLayer.new()
+	calque.name = "VoileKillcamIso%d" % (id + 1)
+	calque.layer = CALQUE_VOILE_KILLCAM
+	var rect := ColorRect.new()
+	rect.name = "Voile"
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	calque.add_child(rect)
+	# Vue unique : sous ce nœud de la racine, le calque s'attache à la fenêtre ; écran scindé : à la vue 3D.
+	var parent: Node = _vues3d[id] if _scinde else self
+	parent.add_child(calque)
+	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_voiles[id] = calque
+	return calque
+
+
+## Le voile de killcam iso de la vue `id`, pour les suites et le banc (`null` sans killcam).
+func voile_de_killcam(id: int) -> CanvasLayer:
+	var calque = _voiles[id]
+	return calque if is_instance_valid(calque) else null
 
 
 # ---------------------------------------------------------------------------
@@ -1321,34 +1562,38 @@ func _input(event: InputEvent) -> void:
 			print("[iso] pâte %s" % IsoPate.NOMS[style_pate])
 			get_viewport().set_input_as_handled()
 			return
-	var souris := event as InputEventMouseMotion
-	if souris != null:
-		_viser_a_la_souris(souris)
 
 
-## La souris vise le point du SOL sous le curseur, et non le point de l'écran.
+## ISO5 — 0 pour J1, 1 pour J2, -1 pour tout autre nœud.
+func indice_du_joueur(joueur: Node) -> int:
+	if not is_instance_valid(_main) or joueur == null:
+		return -1
+	return 0 if joueur == _main.p1 else (1 if joueur == _main.p2 else -1)
+
+
+## ISO5 — **le point du SOL sous le curseur, dans la vue de ce joueur** : le rayon de sa caméra iso coupé
+## par le plan du sol, rendu en pixels du monde 2D (`CameraIso.vers_sol`, l'inverse exact de
+## `vers_ecran`). `souris_racine` : la position de la souris en unités logiques de la fenêtre. En écran
+## scindé, chaque joueur vise par sa propre caméra, dans son propre cadre. `null` quand la vue iso ne rend
+## pas ce joueur : `LocalInputProvider` garde alors la visée de la vue de dessus.
 ##
-## `LocalInputProvider` lit la position de la souris dans la vue et la ramène au monde
-## par la transformation de canevas. On lui pousse donc, en coordonnées de sa vue,
-## l'image du point où le rayon de la caméra 3D coupe le sol (patron du banc ISO0.b).
-## En écran scindé, seule la vue de J1 prend la souris (J2 joue à la manette), dans son
-## cadre. La vraie reprojection des entrées est l'affaire d'ISO5.
-func _viser_a_la_souris(souris: InputEventMouseMotion) -> void:
-	var vue: SubViewport = _vues[0]
-	var pos := souris.position
-	var cam: CameraIso = _camera
-	if _scinde:
-		var cadre := _cadre(0)
-		if not cadre.has_point(pos):
-			return
-		pos -= cadre.position
-		cam = _cameras3d[0]
-	var origine := cam.project_ray_origin(pos)
-	var direction := cam.project_ray_normal(pos)
-	if absf(direction.y) < 1e-5:
-		return
-	var sol := origine + direction * (-origine.y / direction.y)
-	var poussee := souris.duplicate() as InputEventMouseMotion
-	poussee.position = vue.canvas_transform * Vector2(sol.x, sol.z)
-	poussee.global_position = poussee.position
-	vue.push_input(poussee, true)
+## Remplace le brouillon d'ISO1 (`_viser_a_la_souris`), qui poussait un événement souris reprojeté dans
+## la sous-vue de J1 seul : en écran scindé, la souris ne visait jamais par la vue de J2.
+func point_au_sol(joueur: Node, souris_racine: Vector2) -> Variant:
+	var pid := indice_du_joueur(joueur)
+	if pid < 0:
+		return null
+	var cam := _camera_de(pid)
+	var ecran := viewport_ecran(pid)
+	if cam == null or ecran == null:
+		return null
+	var pos := souris_racine - (_cadre(pid).position if _scinde else Vector2.ZERO)
+	return cam.vers_sol(pos, ecran.get_visible_rect().size)
+
+
+## ISO5 — le stick de visée tourné du lacet de la caméra de ce joueur : pousser vers le haut vise vers le
+## haut de SON écran. Lacet acté à 0° (H15) : sans effet, prouvé par `tools/test_iso_killcam.gd`.
+func stick_au_sol(joueur: Node, stick: Vector2) -> Vector2:
+	var pid := indice_du_joueur(joueur)
+	var cam := _camera_de(pid) if pid >= 0 else null
+	return CameraIso.stick_au_sol(stick, cam.lacet_deg) if cam != null else stick

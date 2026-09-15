@@ -4917,3 +4917,18 @@ ensuite. Piège payé : nommer `Bullet`/`Fusee` rendait la présentation incompi
 headless. Premier lot rouge sur la seule suite neuve, verte seule : elle relisait le quad du viseur
 entre la physique et la présentation ; les joueurs sont désormais figés pendant la mesure, second
 lot relancé. Planche `docs/iso/planche_iso4.jpg`.
+
+**ISO5, nuit du 2026-09-15 — la killcam, le rejeu et les entrées dans la vue iso.** Session
+« iso5-killcam-rejeu-cadence », relève d'ISO2, sur `77941df`. Le harnais interdisait d'abord d'écrire
+dans le worktree d'ISO2 : première heure dans un worktree voisin, puis entrée dans celui d'ISO2
+(`EnterWorktree`, à la demande d'Adrien) et report du travail par patch. Pendant la killcam, le fantôme
+porte le corps voxel (classe, torche, tir, coup, posture de l'instantané, horloge du rejeu), composé
+comme le fantôme 2D ; le voile de killcam sort de la lightmap et relit la vue iso ; la souris vise par
+`CameraIso.vers_sol` dans la vue de son joueur, le stick est tourné du lacet ; le brouillon
+`_viser_a_la_souris` est retiré. `tools/test_iso_killcam.gd` neuve (46 vérifications, sabotée : 10
+rouges). `tools/banc_iso.gd --killcam` : KILLCAM TENUE dans les vues de J1 et de J2 ; trois passages
+pour que la mesure mesure (voile neutre au centre sous le curseur de grain d'Adrien, calques d'écran et
+halo d'éblouissement figés par la suspension du jeu, LED des murs prise pour une fuite). Constat pour
+Adrien : les deux fantômes sont visibles des deux joueurs (règle de la vue de dessus), et le fantôme iso
+est quatre fois plus lumineux que le fantôme 2D texturé. Question posée à Adrien pour l'étape E2 (corps
+épais) : la zone de touche reste à 18 px (réponse « Garder 18 px »). Planche `docs/iso/planche_iso5.jpg`.

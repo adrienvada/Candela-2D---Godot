@@ -63,6 +63,27 @@ func vers_ecran(point: Vector2, taille_vue: Vector2, hauteur := 0.0) -> Vector2:
 	return taille_vue * 0.5 + Vector2(rel.dot(t.basis.x), -rel.dot(t.basis.y)) * echelle
 
 
+## ISO5 — l'inverse de `vers_ecran` au sol : un point de l'écran (unités logiques d'une vue de
+## `taille_vue`) → le point du sol que le rayon de la caméra y rencontre, en pixels du monde 2D. Même
+## formule, mêmes unités, donc pas `project_ray_origin()` (voir `vers_ecran`).
+func vers_sol(ecran: Vector2, taille_vue: Vector2) -> Vector2:
+	var t := global_transform
+	var echelle := taille_vue.y / size if size > 0.0 else 1.0
+	var d := (ecran - taille_vue * 0.5) / echelle
+	var o := t.origin + t.basis.x * d.x - t.basis.y * d.y
+	var rayon := -t.basis.z
+	if absf(rayon.y) < 1e-6:
+		return Vector2(o.x, o.z)
+	var k := -o.y / rayon.y
+	return Vector2(o.x + rayon.x * k, o.z + rayon.z * k)
+
+
+## ISO5 — un stick lu à l'écran (droite, bas) → une direction du monde 2D : tourné du lacet, pour que sa
+## droite vise la droite de l'écran et son haut le haut de l'écran. À 0° (valeur actée), l'identité.
+static func stick_au_sol(stick: Vector2, lacet: float) -> Vector2:
+	return stick.rotated(-deg_to_rad(lacet))
+
+
 # ---------------------------------------------------------------------------
 # LES FORMULES — statiques, vérifiées sans fenêtre
 # ---------------------------------------------------------------------------
