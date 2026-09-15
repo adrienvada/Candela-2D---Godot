@@ -24952,6 +24952,33 @@ montrer le hors-carte (demi-largeur visible 533 px, moins la tuile tolérée). S
 pas avancer vers la visée — c'est la borne, pas un défaut. Avant ISO8, la caméra est sur le joueur à quelques
 pixels près (le recul et la secousse de caméra). Les appels de dessin ne bougent pas au-delà du bruit.
 
+**La planche finale refaite après les fusions d'ISO7b et d'ISO8** (séquence de fin de la session cloud, pas 4,
+2026-09-15 vers 15:30). `docs/iso/planche_finale.jpg` recomposée sur `iso2-vues` : les cases de 12:05, reprises
+avec les faces d'ISO7b et la caméra ×1,8 d'ISO8, **plus trois cases au Cloître** — le duel HUD compris, le volume
+d'un mur haut intérieur, la fusée. Recomposable : `python3 docs/iso/planche_finale.py --photos <séance murs bas>
+--photos-cloitre <séance Cloître> --gadgets <banc des gadgets>`.
+- **Le photographe prend `--carte-duel=<chemin>`** : les plans du duel sur une autre carte que celle des murs
+  bas, pour montrer une carte livrée. Mise en scène reprise de `banc_claustro` (`_mise_en_scene_du_duel`) : le
+  mur haut intérieur le plus large, à trois tuiles des bords au moins ; J1 à 3,5 tuiles de sa face sud, celle
+  que la caméra voit ; J2 caché derrière ; en rasante, J1 à une tuile de la face. Sans mur intérieur, la scène
+  d'ISO6 est inchangée (bordure nord, muret). Au Cloître : le mur (315 ; 315) de 105 px, J1 en (367,5 ; 542,5),
+  J2 en (367,5 ; 273) — les positions du banc. Le manifeste inscrit `carte_duel`.
+- **Sources** : deux séances du photographe sans drapeau de rendu (manifeste `mode_rendu=iso`, 47 images
+  chacune, aucune prise perdue) ; `tools/banc_iso_gadgets.tscn` **VERDICT=OK, 0 échec** (appels de dessin de la
+  fusée posée : 134 images coupées, 144 rendues).
+- ⚠️ **Piège de l'outil : un foyer neuf joue l'intro par-dessus la séance.** Lancé avec un `HOME` temporaire
+  vide, le photographe a photographié l'écran titre (« une touche pour passer ») puis le menu principal à la
+  place du duel, sans aucune erreur. Remède : poser d'avance un `settings.cfg` qui ne contient que
+  `[display] intro_vue=true`, tout le reste aux défauts du jeu.
+- ⚠️ **Limite de `--carte-duel`, signalée et non corrigée.** Dans la séance complète au Cloître, J2 meurt
+  pendant le plan `sang` (`[REPLAY] P2 died`) : ce plan tire sur la carte de la séance, mais J1 y garde sa
+  position du Cloître, et `_vivants()`, qui remet 100 PV à chaque image, ne suffit pas là. Les plans 13 à 17
+  sortent alors dans l'état d'après la mort (voile sépia, vue plate). La case « fusée au Cloître » vient donc
+  d'une reprise du plan seul (`--plan=fusee --carte-duel=…`). La séance sans `--carte-duel` n'est pas touchée.
+- Au passage, `settings_manager.gd` ne lit plus `debogage/zoom_duel` par `get_value(…, null)` : pour Godot, un
+  défaut `null` veut dire « aucun défaut », et chaque lancement d'un foyer où le zoom n'a jamais été réglé
+  imprimait une ERREUR (introduite à l'étape 2 d'ISO8).
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

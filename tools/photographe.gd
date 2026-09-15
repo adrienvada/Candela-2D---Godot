@@ -71,6 +71,8 @@ extends Node
 ##     ./tools/run_photos.sh --decoupes           + les recadrages carré et 9:16
 ##     ./tools/run_photos.sh --sans-hud           le HUD retiré des plans `ecran`
 ##     ./tools/run_photos.sh --zoom=1.6           cadrage serré (déclaré au manifeste)
+##     ./tools/run_photos.sh --carte-duel=res://assets/maps/map_001_le_cloitre.json
+##                                                les plans du duel sur une autre carte que celle des murs bas
 ##     ./tools/run_photos.sh --sortie=user://presse  ailleurs que dans `user://photos`
 ##
 ## Les images sortent dans `user://photos/`, dont le chemin réel est imprimé à
@@ -471,7 +473,8 @@ func _ready() -> void:
 	_decoupes = _drapeau(args, "--decoupes")
 	_sans_hud = _drapeau(args, "--sans-hud")
 	_zoom = maxf(0.2, float(_valeur(args, "--zoom", "1.0")))
-	_taille = _lire_taille(_valeur(args, "--taille", "%dx%d" % [TAILLE_DEFAUT.x, TAILLE_DEFAUT.y]))
+	_carte_duel = _valeur(args, "--carte-duel", CARTE_MURS_BAS)
+	_taille =_lire_taille(_valeur(args, "--taille", "%dx%d" % [TAILLE_DEFAUT.x, TAILLE_DEFAUT.y]))
 
 	print("=== Le photographe ===")
 	_poser_la_fenetre()
@@ -1624,20 +1627,29 @@ func _centrer_sur_la_carte() -> void:
 ## gardée et rendue par `_revenir_a_la_carte()`.
 const CARTE_MURS_BAS := "res://tools/cartes/murs_bas_essai.json"
 var _carte_de_la_seance: Dictionary = {}
+## Séquence de fin (session cloud, 14:39) : `--carte-duel=<chemin>` pose une autre carte pour les plans du
+## duel — la planche finale se prend AUSSI au Cloître (`res://assets/maps/map_001_le_cloitre.json`), la
+## carte livrée aux murs hauts intérieurs. Par défaut, la carte d'essai.
+var _carte_duel := CARTE_MURS_BAS
+## La mise en scène du duel, calculée une fois par carte posée (`_mise_en_scene_du_duel`).
+var _scene_duel: Dictionary = {}
 
 func _passer_sur_la_carte_des_murs_bas() -> void:
 	if not _carte_de_la_seance.is_empty():
 		return
 	var json := JSON.new()
-	if json.parse(FileAccess.get_file_as_string(CARTE_MURS_BAS)) != OK or not (json.data is Dictionary):
-		printerr("  ! carte d'essai des murs bas illisible (%s) : les plans du duel restent sur la carte de la séance"
-			% CARTE_MURS_BAS)
+	if json.parse(FileAccess.get_file_as_string(_carte_duel)) != OK or not (json.data is Dictionary):
+		printerr("  ! carte du duel illisible (%s) : les plans du duel restent sur la carte de la séance"
+			% _carte_duel)
 		return
 	_carte_de_la_seance = MapData.get_selected()
-	MapData.current_map_data = MapCodec.validate(json.data as Dictionary)["data"]
+	var data: Dictionary = MapCodec.validate(json.data as Dictionary)["data"]
+	MapData.current_map_data = data
 	_main.rebuild_arena()
 	await _attendre_images(5)
-	print("  · carte d'essai des murs bas posée (%d murets)" % (_main.murs_bas as Array).size())
+	_scene_duel = _mise_en_scene_du_duel(data)
+	print("  · carte du duel posée : %s (%d murets) · %s" % [_carte_duel, (_main.murs_bas as Array).size(),
+		_scene_duel.get("mur", "aucune mise en scène")])
 
 
 func _revenir_a_la_carte() -> void:
@@ -1645,16 +1657,79 @@ func _revenir_a_la_carte() -> void:
 		return
 	MapData.current_map_data = _carte_de_la_seance
 	_carte_de_la_seance = {}
+	_scene_duel = {}
 	_main.rebuild_arena()
 	await _attendre_images(5)
 
 
-## La scène des plans du duel sur la carte d'essai — pour UNE image, rappelée à chaque image du repos.
+## Où poser J1 et J2 sur la carte du duel — la règle de `tools/banc_claustro.gd` (`_mise_en_scene`).
 ##
-## - **J1 face au mur haut, éclairé de face, à 3,5 tuiles** : le mur de bordure NORD, dont la face sud est
-##   celle que la caméra iso voit (elle regarde depuis le sud) ; visée au nord.
-## - **J2 derrière un muret** : au sud du muret horizontal le plus au nord (19 à 24, ligne 8 sur la carte
-##   d'essai), dos à J1 — le muret coupe la ligne de J1 à J2.
+## - **Un mur haut intérieur** (à trois tuiles au moins des bords), le plus large d'abord : J1 à 3,5 tuiles
+##   au sud de sa face sud, celle que la caméra iso voit ; J2 caché au nord, derrière lui. Rasante : J1 à
+##   une tuile de la face, à l'ouest du mur, torche vers l'est le long de la face.
+## - **Aucun** (la carte d'essai, murs hauts en bordure seulement) : la bordure nord et le muret le plus au
+##   nord — la scène de l'ISO6, inchangée.
+func _mise_en_scene_du_duel(data: Dictionary) -> Dictionary:
+	var t := MursBas.TUILE
+	var tuile := Vector2(t, t)
+	var grille := Vector2(MapCodec.get_grid_size(data)) * tuile
+	var interieurs: Array[Rect2] = []
+	for r in IsoGeometrie.rects_px(data, MapGeometry.Kind.WALLS, tuile):
+		if r.position.x >= 3.0 * t - 0.5 and r.position.y >= 3.0 * t - 0.5 \
+				and r.end.x <= grille.x - 3.0 * t + 0.5 and r.end.y <= grille.y - 3.0 * t + 0.5:
+			interieurs.append(r)
+	interieurs.sort_custom(func(a: Rect2, b: Rect2) -> bool: return a.size.x > b.size.x)
+	for r in interieurs:
+		if r.size.x < 2.0 * t:
+			continue
+		var p1 := Vector2(r.get_center().x, r.end.y + 3.5 * t)
+		var p2 := Vector2(r.get_center().x, r.position.y - 1.2 * t)
+		var rasante := Vector2(r.position.x + 0.5 * t, r.end.y + 1.0 * t)
+		if _sol_libre(p1) and _sol_libre(p2) and _mur_entre(p1, p2):
+			if not _sol_libre(rasante):
+				rasante = Vector2(r.get_center().x - 1.5 * t, r.end.y + 1.0 * t)
+			return {"p1": p1, "v1": Vector2.UP, "rasante": rasante, "p2": p2, "v2": Vector2.UP,
+				"mur": "mur haut intérieur %s" % str(r)}
+	var muret := Rect2()
+	for m in _main.murs_bas as Array:
+		var rect := m as Rect2
+		if rect.size.x > rect.size.y and (muret.size == Vector2.ZERO or rect.position.y < muret.position.y):
+			muret = rect
+	var scene := {"p1": Vector2(16.0 * t, 3.0 * t + 3.5 * t), "v1": Vector2.UP,
+		"rasante": Vector2(8.0 * t, 3.0 * t + 1.0 * t), "mur": "bordure nord"}
+	if muret.size != Vector2.ZERO:
+		scene["p2"] = Vector2(muret.get_center().x, muret.end.y + 32.0)
+		scene["v2"] = Vector2.DOWN
+		scene["mur"] = "bordure nord, J2 derrière le muret %s" % str(muret)
+	return scene
+
+
+func _sol_libre(p: Vector2) -> bool:
+	var espace := (_main.p1 as Node2D).get_world_2d().direct_space_state
+	var disque := CircleShape2D.new()
+	disque.radius = 40.0
+	var q := PhysicsShapeQueryParameters2D.new()
+	q.shape = disque
+	q.collision_mask = MapGeometry.WALL_LAYER
+	q.transform = Transform2D(0.0, p)
+	q.exclude = [_main.p1.get_rid(), _main.p2.get_rid()]
+	return espace.intersect_shape(q, 1).is_empty()
+
+
+func _mur_entre(a: Vector2, b: Vector2) -> bool:
+	var espace := (_main.p1 as Node2D).get_world_2d().direct_space_state
+	var q := PhysicsRayQueryParameters2D.create(a, b, MapGeometry.WALL_LAYER)
+	q.exclude = [_main.p1.get_rid(), _main.p2.get_rid()]
+	return not espace.intersect_ray(q).is_empty()
+
+
+## La scène des plans du duel sur la carte du duel — pour UNE image, rappelée à chaque image du repos.
+##
+## - **J1 face au mur haut, éclairé de face, à 3,5 tuiles** : sur la carte d'essai, le mur de bordure NORD,
+##   dont la face sud est celle que la caméra iso voit (elle regarde depuis le sud) ; au Cloître, un mur
+##   haut intérieur. Visée au nord.
+## - **J2 caché** : sur la carte d'essai, au sud du muret horizontal le plus au nord, dos à J1 ; au Cloître,
+##   derrière le mur haut. Le mur coupe la ligne de J1 à J2.
 ## - `rasante` : J1 à une tuile de la même face, torche vers l'est, parallèle au mur.
 ##
 ## La visée passe par la marionnette, pas par `rotation` : le joueur réoriente son corps sur sa visée à
@@ -1662,22 +1737,17 @@ func _revenir_a_la_carte() -> void:
 func _face_au_mur_haut(rasante := false) -> void:
 	if not is_instance_valid(_main.p1) or not is_instance_valid(_main.p2):
 		return
-	var tuile := MursBas.TUILE
-	var face_nord := 3.0 * tuile
+	if _scene_duel.is_empty():
+		_scene_duel = _mise_en_scene_du_duel(MapData.current_map_data)
 	if rasante:
-		_main.p1.global_position = Vector2(8.0 * tuile, face_nord + 1.0 * tuile)
+		_main.p1.global_position = _scene_duel["rasante"]
 		_viser(0, Vector2.RIGHT)
 	else:
-		_main.p1.global_position = Vector2(16.0 * tuile, face_nord + 3.5 * tuile)
-		_viser(0, Vector2.UP)
-	var muret := Rect2()
-	for r in _main.murs_bas as Array:
-		var rect := r as Rect2
-		if rect.size.x > rect.size.y and (muret.size == Vector2.ZERO or rect.position.y < muret.position.y):
-			muret = rect
-	if muret.size != Vector2.ZERO:
-		_main.p2.global_position = Vector2(muret.get_center().x, muret.end.y + 32.0)
-		_viser(1, Vector2.DOWN)
+		_main.p1.global_position = _scene_duel["p1"]
+		_viser(0, _scene_duel["v1"])
+	if _scene_duel.has("p2"):
+		_main.p2.global_position = _scene_duel["p2"]
+		_viser(1, _scene_duel["v2"])
 	_vivants()
 
 
@@ -1944,6 +2014,7 @@ func _ecrire_le_manifeste() -> void:
 		"decoupes": _decoupes,
 		"sans_hud": _sans_hud,
 		"zoom": _zoom,
+		"carte_duel": _carte_duel,
 		# ISO6 — quelle vue a été photographiée : l'iso par défaut, la vue de dessus sous `--2d`.
 		"mode_rendu": GameSettings.mode_rendu(),
 		"iso_lightmap": GameSettings.iso_lightmap,

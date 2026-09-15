@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Planche finale de la vague « grand budget » : le duel iso avec tout, tel qu'il se joue.
 
-Usage : python3 docs/iso/planche_finale.py --photos DIR --gadgets DIR
+Usage : python3 docs/iso/planche_finale.py --photos DIR --gadgets DIR [--photos-cloitre DIR]
 
 - --photos : le dossier de `./tools/run_photos.sh --famille=menus,jeu,fins --sortie=DIR`, lancé SANS
   drapeau (manifeste `mode_rendu` = `iso`, refusé sinon) ;
+- --photos-cloitre : le même, relancé avec `--carte-duel=res://assets/maps/map_001_le_cloitre.json` (les plans
+  du duel au Cloître, murs hauts intérieurs) ;
 - --gadgets : le dossier de `tools/banc_iso_gadgets.tscn -- --captures DIR`, pris APRÈS les quatre
   fusions (murs et sol texturés d'ISO7, encre des corps de la vague 5, volumes et lueurs de Gadgets).
 
@@ -30,6 +32,13 @@ PHOTOS = [
     ("jeu/06-hud.png", "Le duel, vue unique", "carte d'essai des murs bas · J1 face au mur haut, J2 derrière un muret · HUD"),
     ("jeu/10-volume.png", "Le volume du mur", "même scène, torche rasante le long du mur"),
     ("jeu/02-ecran-scinde.png", "L'écran scindé", "deux caméras iso, deux lightmaps, le halo propre à chaque vue"),
+]
+## Séquence de fin (session cloud, 14:39) : la planche finale se fait AUSSI sur Le Cloître, la carte livrée
+## aux murs hauts intérieurs — le photographe relancé avec `--carte-duel=res://assets/maps/map_001_le_cloitre.json`.
+PHOTOS_CLOITRE = [
+    ("jeu/06-hud.png", "Le duel au Cloître", "J1 face à un mur haut intérieur, J2 caché derrière · zoom ×1,8 · HUD"),
+    ("jeu/10-volume.png", "Le volume d'un mur du Cloître", "même scène, torche rasante le long de la face"),
+    ("jeu/17-fusee.png", "La fusée au Cloître", "sa lueur sur les faces des murs hauts"),
 ]
 GADGETS = [
     ("scene_fusee_vol.png", "La fusée en vol par-dessus un muret", "carte d'essai des murs bas · la lueur a une hauteur"),
@@ -58,6 +67,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--photos", required=True)
     p.add_argument("--gadgets", required=True)
+    p.add_argument("--photos-cloitre", default="")
     p.add_argument("--max-ko", type=int, default=450)
     p.add_argument("--max-planche-ko", type=int, default=1800)
     a = p.parse_args()
@@ -71,6 +81,19 @@ def main():
     cases = []
     for rel, titre, detail in PHOTOS:
         cases.append((copier(os.path.join(a.photos, rel), dest, a.max_ko), titre, detail, 1))
+    if a.photos_cloitre:
+        manifeste_c = json.load(open(os.path.join(a.photos_cloitre, "manifeste.json"), encoding="utf-8"))
+        if manifeste_c.get("mode_rendu") != "iso":
+            sys.exit("✗ manifeste du Cloître mode_rendu=%s" % manifeste_c.get("mode_rendu"))
+        for rel, titre, detail in PHOTOS_CLOITRE:
+            source = os.path.join(a.photos_cloitre, rel)
+            cible = os.path.join(dest, "cloitre_" + rel.replace("/", "_"))
+            if os.path.exists(source):
+                shutil.copyfile(source, cible)
+                compresser(cible, cible, a.max_ko * 1024)
+                cases.append((cible, titre, detail, 1))
+            else:
+                cases.append((None, titre, detail, 1))
     for nom, titre, detail in GADGETS:
         source = os.path.join(a.gadgets, nom)
         cases.append((copier(source, dest, a.max_ko) if os.path.exists(source) else None, titre, detail, 1))
@@ -79,7 +102,7 @@ def main():
     ref, titre, detail = REFERENCE
     cases.append((os.path.join(ICI, ref), titre, detail, 1))
     planche(cases, 3, "CANDELA — LE DUEL EN VUE ISOMÉTRIQUE, VAGUE « GRAND BUDGET »",
-            "iso2-vues @ %s · photographe sans drapeau (mode_rendu=iso) · banc des gadgets après les quatre fusions · 2026-09-15"
+            "iso2-vues @ %s · photographe sans drapeau (mode_rendu=iso), murs bas et Cloître · banc des gadgets après les fusions ISO7b et ISO8 · 2026-09-15"
             % manifeste.get("commit", "?"),
             os.path.join(ICI, "planche_finale.jpg"), a.max_planche_ko)
 

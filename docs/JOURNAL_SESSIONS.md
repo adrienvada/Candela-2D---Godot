@@ -5568,3 +5568,13 @@ les fichiers d'ISO7b, de Gadgets et d'ISO6 que la branche ISO8 ne touchait pas (
 `photographe.gd`, `run_suites.sh`, `conditions_de_match.gd`) inchangés par la fusion. Premier lot où tournent ensemble
 les corps et les faces d'ISO7b et la caméra d'ISO8.
 Lot complet vert à 15:11 : 127 OK en 414 s — le premier où tournent ensemble les corps et faces d'ISO7b et la caméra d'ISO8 ; `test_arena_matter` n'a pas rougi.
+
+**La planche finale refaite, 2026-09-15 vers 15:30.** Session « Iso 1 Opus », pas 4 de la séquence de fin de la
+session cloud. `docs/iso/planche_finale.jpg` recomposée après les fusions 2 et 3, avec trois cases au Cloître
+(duel, volume, fusée). Le photographe prend `--carte-duel=<chemin>`, mise en scène du banc du Cloître. Deux
+séances de 47 images (`mode_rendu=iso`), banc des gadgets VERDICT=OK. Trois choses payées en route :
+- un foyer neuf joue l'intro par-dessus la séance ; remède : `intro_vue=true` posé d'avance ;
+- au Cloître, J2 meurt au plan `sang` et gâche les plans 13 à 17 ; la fusée est reprise seule, la limite est
+  signalée ;
+- l'ERREUR `debogage/zoom_duel` imprimée à chaque lancement d'un foyer neuf est corrigée.
+Lot complet vert à 15:32 : 127 OK en 414 s.

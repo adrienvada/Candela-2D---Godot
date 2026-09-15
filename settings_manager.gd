@@ -687,7 +687,10 @@ func _load() -> void:
 	_vue_de_dessus_choisie = cfg.get_value(SECTION_DEBOGAGE, "vue_de_dessus", false) is bool \
 		and cfg.get_value(SECTION_DEBOGAGE, "vue_de_dessus", false)
 	# ISO8 — relu seulement s'il a été réglé ; sinon le défaut du jeu s'applique (voir l'en-tête).
-	var zoom_lu: Variant = cfg.get_value(SECTION_DEBOGAGE, "zoom_duel", null)
+	# `has_section_key` d'abord : `get_value` avec `null` pour défaut vaut « aucun défaut » et imprime une
+	# ERREUR à chaque lancement d'un foyer où le zoom n'a jamais été réglé.
+	var zoom_lu: Variant = cfg.get_value(SECTION_DEBOGAGE, "zoom_duel") \
+		if cfg.has_section_key(SECTION_DEBOGAGE, "zoom_duel") else null
 	_zoom_duel_regle = zoom_lu is float or zoom_lu is int
 	_zoom_duel_choisi = clampf(float(zoom_lu), ZOOM_DUEL_MIN, ZOOM_DUEL_MAX) if _zoom_duel_regle \
 		else ZOOM_DUEL_DEFAUT
