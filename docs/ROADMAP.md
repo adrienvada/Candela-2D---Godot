@@ -22127,6 +22127,200 @@ PIL) ; ce fichier, cette section.
   « sous la lampe à 0,8, à 52° » pour juger la planche avant/après : corrigé
   ici, cette fois sur le fichier d'origine.
 
+### Vague 5 — les dix corps sur le gabarit du DA (inscrite le 2026-09-15 05h19)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », sur mandat
+d'Adrien de 05:00 (« appuie-toi sur les créations de la session assets »,
+« un jeu qui s'approche de la qualité technique des visuels générés par
+Gemini », décide à sa place jusqu'au test final — voir le socle commun de
+cette vague, transmis par la session « Concierge »). ISO Assets a livré
+(vague 2, `033c35d` sur `claude/iso-assets-gemini-boards-4e8d33`) un gabarit
+de proportions trois vues (`docs/iso/planches_gemini/classes/
+gabarit_proportions_01.jpg`) et deux frises de cinq classes sous lampe à
+52°, style « corps voxel épais, esprit Unrailed 2 ».
+
+**Mesuré avant de toucher** (le brief l'exige) : le gabarit de proportions
+porte six lignes de guidage horizontales, gravées dans l'image — détectées
+au pixel par PIL (seuil sur le canal vert, pas à l'œil, même discipline que
+`docs/feedback-diagnostic-rendu-mesurer.md`) plutôt que lues à l'estimation.
+Position des six lignes (image 2752×1536) : y = 179 (sommet de la tête), 521
+(base de la tête/haut des épaules), 616, 979,5 (les deux marquent la largeur
+d'épaules et le haut des hanches à l'intérieur du torse), 1074 (bas des
+hanches), 1384 (sol). Trois zones : **tête 179→521 (342 px, 28,4 % de la
+hauteur totale), torse 521→1074 (553 px, 45,9 %), jambes 1074→1384 (310 px,
+25,7 %).**
+
+Comparé au catalogue d'avant cette vague (`SQUELETTE`, vague 0-4) : tête
+0,20/0,94 = 21,3 %, torse 0,32/0,94 = 34,0 %, jambes 0,42/0,94 = 44,7 %. Écart
+net dans les trois zones — le gabarit du DA est une silhouette « figurine
+trapue » (grosse tête, torse profond, jambes courtes), la mienne avant cette
+vague une proportion d'adulte réaliste (jambes ≈ moitié de la hauteur).
+
+Largeur mesurée sur la même image (profil du contour, vue de face) : tête
+366 px, épaules+bras au plus large 792 px (ratio tête/épaules 46,2 %), paire
+de jambes 439 px (ratio jambes/tête 120 %). Contre le catalogue d'avant cette
+vague (ratios indépendants de `echelle`/l'épaisseur, qui multiplient
+tout uniformément) : tête/épaules 0,19/0,46 = 41,3 % (un peu plus étroit que
+le DA), jambes/tête 0,28/0,19 = 147 % (déjà plus large que le DA). Conclusion :
+la carrure en LARGEUR était déjà globalement conforme (voire un peu en avance
+sur les jambes) — c'est la répartition en HAUTEUR qui portait l'écart, plus
+une tête légèrement trop étroite.
+
+**Retenu** (`voxel_catalogue.gd:SQUELETTE`) : redistribution de la hauteur à
+somme inchangée (0,94, `hauteur_debout` intact) — jambes 0,42→0,39, torse
+0,32→0,335, tête 0,20→0,215, plus `cote_tete` 0,19→0,20 pour rattraper le
+ratio tête/épaules. Un premier essai, plus proche du gabarit (jambes 0,30,
+torse 0,38, tête 0,26), a dû reculer — voir le piège ci-dessous. Largeur du
+torse, des bras et des jambes **non touchée** : déjà conforme ou en avance
+sur le gabarit (voir plus haut), aucune raison de la changer.
+
+#### Le piège trouvé ici : la hauteur qui grossit se paie en accroupi, pas debout
+
+Le premier essai (jambes 0,30, torse 0,38, tête 0,26 — 28,4 % du gabarit
+presque atteint) a fait ROUGIR la suite sur LES DEUX contraintes à la fois,
+sur les dix classes : la fourchette accroupie est montée à 0,611 (0,001
+au-dessus du plafond 0,61) et l'empreinte du corps seul a bondi à 19,1-19,8 px
+(contre 17,5 permis) — un dépassement net, pas un arrondi. La cause n'est PAS
+`cote_tete` (la tête plus large) : c'est la HAUTEUR du torse et de la tête,
+plus grande, qui se paie quand l'accroupi les PENCHE (35° pour le torse, +20°
+pour la tête, soit 55° au total) — un torse ou une tête plus haute, penchée au
+même angle, pousse plus loin en profondeur (Z) qu'avant. L'ancien pire cas du
+couloir (vague 4 : le bras tendu, debout, quasi impossible à distinguer d'un
+relevé pris à l'œil) n'est plus le pire une fois la tête et le torse assez
+hauts pour que leur inclinaison l'emporte — un pire cas qui CHANGE DE POSTURE
+d'une vague à l'autre, jamais supposé rester le même. Reculé par petits pas
+(jambes 0,36/torse 0,35/tête 0,23, puis 0,38/0,34/0,22), mesuré à chaque pas
+plutôt que recalculé à la main (une estimation analytique de l'effet du
+levier avait été tentée avant de coder — juste dans le sens, fausse sur
+l'ampleur), jusqu'à la valeur retenue : marge réelle des deux côtés (0,581 et
+16,8-17,4 px au pire cas, jamais à la limite).
+
+**Les armes** : trois classes ne correspondaient pas à leur frise —
+comparaison entre le libellé du DA et le nom réel de l'arme
+(`game_state.gd`), pas une supposition. Le Fumiste (« Pistolet lourd »,
+arme de poing une main) était dessiné avec un fusil deux mains ; l'Allumeur
+(« Carabine double », deux canons côte à côte) avec un tube cylindrique
+unique façon lance-grenade ; le Spectre (« Pistolet silencieux », arme de
+poing une main) avec une mitraillette compacte deux mains. Signalé à « ISO
+Assets Sonnet » par message (une ligne par classe, forme réelle et port) —
+elle documente la correction dans `docs/PROMPTS_ISO.md`, ne régénère la
+frise que si un usage en a besoin. Les dimensions `arme` du catalogue ISO,
+elles, correspondaient déjà à ces vraies armes (le Fumiste est déjà la
+troisième arme la plus courte, l'Allumeur déjà la plus large — aucun
+changement nécessaire côté `voxel_catalogue.gd`, vérifié plutôt que supposé).
+
+**Casque/capuche/masque/sac, PAS ajoutés** : deux hypothèses vues sur la
+planche basse résolution (un sac au dos du Braconnier, un masque sur la
+tête du Spectre) n'ont pas résisté à un agrandissement ciblé (recadrage PIL
+des trois portraits en cause) — ce qui ressemblait à un sac sur le
+Braconnier est l'ombre du bras tenant l'arbalète, et la tête du Spectre est
+un cube plein comme les autres classes, juste très sombre (classe la plus
+équitable en gris, `gris_rang = 7`). Le seul indice qui a résisté à
+l'agrandissement (un volume derrière l'épaule de l'Incendiaire) reste
+ambigu : il peut appartenir à la Sentinelle voisine sur la frise, les deux
+figures se chevauchant en profondeur dans le cadrage isométrique. **Aucune
+boîte inventée** sur la foi d'un artefact de rendu bas-résolution — le brief
+autorise « une ou deux boîtes de plus si elles font la silhouette », pas «
+si elles pourraient en faire une » ; qui veut ce sac/masque devra le
+redemander à ISO Assets avec un rendu dédié, isolé, à pleine résolution.
+
+**Le point d'arme pour ISO7 Gadgets et lumière Opus** : `VoxelCorps.pointe_arme()`
+(nouveau, `voxel_corps.gd`) — position et direction globales (repère de ce
+nœud, tuiles, même convention que `sommet_tete()`), recalculées depuis le
+maillage réel de l'arme à chaque pose, jamais une constante. Dictionnaire
+vide si aucune arme visible. Signalé par message à « ISO7 Gadgets et
+lumière Opus ».
+
+**La pâte d'« ISO7 Beauté Opus » — branchée après coup, même vague.** Son
+message est arrivé après le premier commit de cette vague ; ajouté par-dessus
+plutôt que reporté, le brief demandant explicitement de la brancher « quand
+son message arrive ». Contrat : `pate_encre_boite()` (`iso_pate.gdshaderinc`,
+pris chez elle par `git checkout 6e64afb -- iso_pate.gdshaderinc iso_pate.gd`,
+jamais par fusion) assombrit multiplicativement les quatre bords de la face
+rendue, dans `[encre_reste, 1]` — deux nouveaux uniforms sur
+`corps_iso.gdshader` (`encre_arete`, `encre_reste`, 0.0/0.35 par défaut : sans
+effet tant que personne ne règle une largeur), quatre nouveaux varyings
+(`local`, `demi`, `echelle`, `normale_locale`), un appel juste après le
+plafond de fiche et avant la composition opacité/silhouette (jamais sur
+`silhouette_N`). `VoxelCorps.definir_encre(largeur, reste)`, nouveau, pose les
+deux uniforms.
+
+**Son hypothèse de départ (cube unité mis à l'échelle) ne tenait pas pour mes
+boîtes** — signalé avant qu'elle écrive une ligne de shader plutôt qu'après :
+`_boite()` pose `mesh.size = taille` (la vraie taille) sur un `MeshInstance3D`
+à l'échelle IDENTITÉ (sauf les jambes, comprimées en Y à l'accroupi) —
+`length(MODEL_MATRIX[i])` seul aurait lu ≈1 partout, jamais la vraie
+dimension. Corrigée ensemble : `demi = abs(VERTEX)` (correct sur un `BoxMesh`
+sans subdivision — tous les sommets sont des coins) porte la vraie taille,
+`echelle` (MODEL_MATRIX) porte l'ancre ET la compression des jambes, les deux
+combinés dans `pate_encre_boite()`.
+
+**Vérifié** (nouveaux tests dans `tools/test_voxel_corps.gd`, sabotage
+compris) : le facteur reste dans `[reste, 1]` sur un balayage de positions
+(centre de face → 1, pile sur le bord → `reste`, vérifié à 0,3500 pour
+`reste = 0,35`) ; `largeur <= 0` rend exactement 1 (aucun effet sans réglage,
+donc rien ne change pour ISO2/ISO5/les bancs) ; le noir absolu tient avec
+l'encre appliquée, `reste` à 0, 0,35 et 1 (multiplier un noir par un facteur
+de `[0,1]` le laisse nul — l'algèbre que le brief demande de prouver) ;
+l'équité entre les deux capteurs tient par construction (le facteur ne
+dépend en rien de quelle vue est lue). Sabotage vérifié réellement (les deux
+côtés de `mix()` inversés dans `iso_pate.gd` → deux échecs exactement là où
+attendu, centre et bord permutés → code 1 → revert → vert). Lot complet vert
+(366 s), aucun `SHADER ERROR` dans le journal (grep explicite, piège
+qu'ISO7 Beauté venait de payer sur son propre mur : un uniform utilisé mais
+non déclaré ne fait qu'une ligne d'erreur, le lot sort vert quand même).
+
+**Correctif reçu en cours de route : `pate_facteur`, pas `c *= f` nu.** ISO7
+Beauté a mesuré au banc, sur ses murs, qu'un facteur écrit dans un shader
+spatial se VOIT à l'écran comme `f^2,4` (une encre de 0,25 tombait un pixel
+de 28/255 à 1/255, pas 7/255) — signalé après mon premier câblage
+(`c *= pate_encre_boite(...)`), corrigé avant que ce commit ne parte
+(`c = pate_facteur(c, pate_encre_boite(...))`). **Ce point précis n'est PAS
+couvert par la suite headless** — sondé explicitement par sabotage (le
+`c *=` nu remis en place ne fait rougir AUCUN test : le noir absolu tient
+dans les deux cas, `0 × f = 0` que `f` soit corrigé en gamma ou non, et les
+bornes de `pate_encre_boite()` elle-même n'ont pas changé). La différence ne
+se voit que sur un VRAI rendu, pas dans l'algèbre — même limite que
+« noir absolu » ailleurs dans ce fichier (l'algèbre prouve le zéro, le banc
+prouve le pixel). Preuve par le pixel réel, donc : deux captures du
+Terrassier (`--encre=0.04 --lumiere=0.8`), l'une avec chaque version du
+shader, comparées par PIL — écart réel et dans le sens attendu (le brut est
+plus sombre) : au point de plus grand écart, `pate_facteur` rend (30,34,37),
+`c *=` nu rend (16,19,21), sur 36 531 pixels différents au total. `--encre=`
+ajouté à `tools/banc_corps.gd` pour cette vérification, gardé pour qui veut
+la refaire — capture témoin `docs/iso/captures_corps/vague5_encre_gamma_correct.png`.
+
+**Vérifié** (headless, sabotage compris) — valeurs RÉELLES, pas celles du
+premier essai :
+
+| Mesure | Pire cas mesuré | Plafond |
+|---|---|---|
+| Fourchette accroupie (10 classes, identique — indépendante d'`echelle`) | 0,581 | 0,49-0,61 |
+| Empreinte du corps seul (pire classe : « pompe », `echelle` la plus large) | 0,4983 tuile (17,4 px) | 0,5 tuile (17,5 px) |
+| Empreinte du corps seul (meilleur cas : « occulteur », `echelle` la plus étroite) | 0,4802 tuile (16,8 px) | — |
+| Hauteur debout (10 classes, léger vs défaut) | 0,9400 = 0,9400 | inchangée |
+
+Sabotage vérifié réellement : jambe/torse ramenés à leur valeur d'avant cette
+vague (0,42/0,32) en gardant la tête grossie → 20 échecs (fourchette ET
+couloir, dix classes) → code 1 → revert → vert. Lot complet
+(`./tools/run_suites.sh`, 369 s) vert, sans erreur de script.
+
+**Fait** : `voxel_catalogue.gd` (`SQUELETTE` redistribué, `fiche()` inchangée) ;
+`voxel_corps.gd` (`pointe_arme()`, `definir_encre()`, nouveaux) ;
+`corps_iso.gdshader` (uniforms `encre_arete`/`encre_reste`, varyings
+`local`/`demi`/`echelle`/`normale_locale`, `c = pate_facteur(c,
+pate_encre_boite(...))`) ; `iso_pate.gdshaderinc`/`iso_pate.gd` (pris chez
+ISO7 Beauté par `git checkout`, pas modifiés ici) ; `tools/banc_corps.gd`
+(`--encre=`) ; `tools/test_voxel_corps.gd` (les tests d'encre, nouveaux ; la
+fourchette accroupie et le couloir n'ont demandé AUCUNE modification — déjà
+recalculés depuis `SQUELETTE` à chaque exécution, pas des constantes à
+mettre à jour) ; la planche `docs/iso/planche_corps_v5.png` (Terrassier et
+Spectre, gros plan, lampe 0,8, 52°, DA/avant/après côte à côte — un plan
+large sur les dix classes, tenté d'abord, rendait chaque corps large de
+quelques pixels et a été abandonné, même piège de lisibilité que la vague 3) ;
+les captures `docs/iso/captures_corps/vague5_*.png` ; ce fichier, cette
+section.
+
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
 **Décision d'Adrien, 2026-09-14 : « Ok, je souhaite démarrer ».** Le chantier est

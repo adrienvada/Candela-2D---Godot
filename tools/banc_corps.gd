@@ -33,10 +33,14 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn -- --silhouette --lumiere=0 --capture=/chemin/silhouette.png
 ##   godot --path . tools/banc_corps.tscn -- --epaisseur=leger --lumiere=0.8 --capture=/chemin/avant.png
 ##   godot --path . tools/banc_corps.tscn -- --epaisseur=x1_6 --lumiere=0.8 --capture=/chemin/apres.png
+##   godot --path . tools/banc_corps.tscn -- --encre=0.03 --lumiere=0.8 --capture=/chemin/encre.png
 ##
 ## `--epaisseur` (ISO3 vague 4) : `leger` (×1,0, l'ancien gabarit vague 0-3),
 ## `x1_3`, `x1_6` (le réglage par défaut si l'option est omise — voir
 ## `VoxelCatalogue.EPAISSEUR_PAR_DEFAUT`) ou `x2_0`.
+##
+## `--encre` (ISO3 vague 5, contrat d'ISO7 Beauté) : `definir_encre(X)` sur
+## chaque corps, `X` en tuiles (0.0 par défaut — aucun effet, comme le shader).
 ##
 ## Sans `--capture`, la fenêtre reste ouverte et interactive. Comme
 ## `tools/proto_iso.gd`, la capture exige une vraie fenêtre (`RenduCommun`) et
@@ -80,6 +84,7 @@ var _frames := 3
 var _capteur_force := false          # --capteur : capteur synthétique dès le départ
 var _opacite_force := -1.0           # --opacite=X : sinon 1.0
 var _silhouette_force := false       # --silhouette : mode_silhouette=1 dès le départ
+var _encre := 0.0                    # ISO3 vague 5 — --encre=X (tuiles) : définir_encre(X), sinon 0.0 (défaut)
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -142,6 +147,7 @@ func _lire_arguments(args: PackedStringArray) -> void:
 				else:
 					push_warning("banc_corps : --epaisseur attend %s (reçu « %s »)"
 						% [", ".join(VoxelCatalogueT.EPAISSEUR_REGLAGES.keys()), val])
+			"encre": _encre = maxf(0.0, float(val))
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
@@ -188,6 +194,8 @@ func _construire_scene() -> void:
 		# ailleurs) ; le capteur d'ISO2 raisonne en pixels 2D — voir
 		# `pixels_par_unite` dans `corps_iso.gdshader`.
 		noeud.definir_pixels_par_unite(tuile)
+		if _encre > 0.0:
+			noeud.definir_encre(_encre)
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,

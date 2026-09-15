@@ -4484,6 +4484,127 @@ pour dépasser le couloir → dix échecs, code 1 → revert → vert).
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (chantier ISO3, vague 5, branche `iso-corps`) — ajoutée le 2026-09-15 05h19 (Paris)
+
+Sixième tranche, sur brief de la session cloud « Fable 5.1 - CLOUD ISO
+UNRAILED » (mandat d'Adrien de 05:00, relayé par « Concierge ») : rapprocher
+les dix corps du gabarit trois-vues livré par ISO Assets
+(`gabarit_proportions_01.jpg`, vague 2 de ce chantier-là). Base : `ebde701`
+(fusionné entre-temps dans `iso2-vues` par ISO5 Opus, `26417a8`).
+
+**Fichiers touchés :** `voxel_catalogue.gd` (`SQUELETTE` redistribué) ;
+`voxel_corps.gd` (`pointe_arme()`, nouveau, pour ISO7 Gadgets) ; ni
+`tools/test_voxel_corps.gd` ni `tools/banc_corps.gd` n'ont eu besoin d'une
+ligne de code (déjà génériques) ; `docs/iso/planche_corps_v5.png` et les
+captures `docs/iso/captures_corps/vague5_*.png` ; `docs/ROADMAP.md` (section
+« Vague 5 », un piège) ; ce journal.
+
+**Mesuré au pixel, pas à l'œil** : six lignes de guidage détectées par seuil
+sur le canal vert de `gabarit_proportions_01.jpg` (PIL) donnent trois zones —
+tête 28,4 %, torse 45,9 %, jambes 25,7 % de la hauteur totale — contre
+21,3 %/34,0 %/44,7 % dans le catalogue d'avant cette vague. La largeur, elle,
+était déjà globalement conforme (ratio tête/épaules 41 % contre 46 % au
+gabarit, jambes déjà proportionnellement plus larges que le gabarit) : c'est
+la hauteur qui portait tout l'écart.
+
+**Le piège : un premier essai proche du gabarit a fait rougir la suite sur
+DEUX contraintes en même temps, pas une seule.** Jambes à 0,30/torse à
+0,38/tête à 0,26 (near le gabarit) → fourchette accroupie à 0,611 (plafond
+0,61) ET empreinte du corps seul à 19,1-19,8 px (plafond 17,5 px) sur les dix
+classes. La tête plus large n'y était pour rien : c'est la hauteur du torse
+et de la tête qui, penchée en accroupi (35° + 20° pour la tête, 55° au
+total), pousse plus loin en profondeur qu'avant — l'ancien pire cas du
+couloir (le bras tendu, debout, trouvé en vague 4) change de posture une fois
+la tête et le torse assez hauts. Reculé par petits pas MESURÉS (une
+estimation à la main avait été tentée avant de coder — juste dans le sens,
+fausse sur l'ampleur), jusqu'à jambes 0,39/torse 0,335/tête 0,215,
+`cote_tete` 0,19→0,20 : marge réelle des deux côtés (0,581 et 16,8-17,4 px au
+pire cas).
+
+**Les armes** : trois classes ne correspondaient pas à leur frise (Fumiste =
+« Pistolet lourd » dessiné en fusil deux mains, Allumeur = « Carabine double »
+dessiné en tube cylindrique, Spectre = « Pistolet silencieux » dessiné en
+mitraillette) — signalé à « ISO Assets Sonnet » par message, une ligne par
+classe. Les dimensions `arme` du catalogue ISO, elles, correspondaient déjà
+aux vraies armes : aucun changement nécessaire là.
+
+**Casque/capuche/masque/sac : cherchés, PAS ajoutés.** Deux hypothèses vues
+sur la planche basse résolution (sac au dos du Braconnier, masque sur la
+tête du Spectre) n'ont pas résisté à un agrandissement ciblé — artefacts de
+rendu/chevauchement de figures voisines dans la frise, pas des éléments
+réels. Le brief autorise des boîtes « si elles font la silhouette », pas «
+si elles pourraient en faire une » : rien d'inventé sur une image à faible
+résolution.
+
+**`pointe_arme()`** (nouveau, `voxel_corps.gd`) : position et direction
+globales de la bouche de l'arme, recalculées depuis le maillage réel à
+chaque pose — signalé à « ISO7 Gadgets et lumière Opus » pour son flash de
+bouche en iso.
+
+**La pâte d'« ISO7 Beauté Opus » : pas branchée.** Rien reçu à la clôture de
+cette vague — le brief dit explicitement d'attendre son message.
+
+**Sabotage vérifié réellement** (jambe/torse ramenés à leur valeur d'avant
+cette vague, tête gardée grossie → 20 échecs sur les deux contraintes →
+code 1 → revert → vert). Lot complet (369 s) vert.
+
+**Un piège de planche évité par expérience, pas retrouvé après coup** : un
+premier plan large sur les dix classes (même cadrage que la vague 4) rendait
+chaque corps large de quelques pixels, illisible — le piège documenté en
+vague 3 pour `banc_objets.gd` et déjà réappliqué en vague 4 sur
+`banc_corps.gd`, mais pas pour une PLANCHE COMPARATIVE avant/après : corrigé
+en zoomant sur deux classes (`--classe=pompe`, `--classe=spectre`, déjà
+prévu par `banc_corps.gd` depuis la vague 0) plutôt que sur la grille entière.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
+### Session « ISO Corps Sonnet » (la pâte d'ISO7 Beauté, branchée après coup dans la vague 5) — ajoutée le 2026-09-15 06h47 (Paris)
+
+Le contrat de pâte d'« ISO7 Beauté Opus » est arrivé après le premier commit
+de la vague 5 — branché par-dessus, même vague, le brief le demandant « quand
+son message arrive ». `iso_pate.gdshaderinc`/`iso_pate.gd` pris par
+`git checkout 6e64afb -- ...` (jamais par fusion, comme pour les images d'ISO
+Assets) ; `corps_iso.gdshader` reçoit deux uniforms (`encre_arete`,
+`encre_reste`, 0.0/0.35 par défaut), quatre varyings, un appel multiplicatif
+après le plafond de fiche ; `VoxelCorps.definir_encre()`, nouveau.
+
+**Son hypothèse de départ ne tenait pas pour mes boîtes, signalé avant
+qu'elle code** : elle supposait un cube unité mis à l'échelle (comme ses
+murs) ; mes `BoxMesh` sont à leur vraie taille sur un `MeshInstance3D` à
+l'échelle identité (sauf les jambes, comprimées en Y à l'accroupi) —
+`length(MODEL_MATRIX[i])` seul aurait lu ≈1 partout. Corrigée à deux (`demi
+= abs(VERTEX)` porte la vraie taille sur un `BoxMesh` sans subdivision,
+`echelle` porte l'ancre et la compression des jambes) avant que le code
+existe, pas après un test rouge.
+
+**Vérifié** (nouveaux tests dans `tools/test_voxel_corps.gd`) : le facteur
+reste dans `[reste, 1]` sur un balayage de positions, `largeur <= 0` rend
+exactement 1, le noir absolu tient avec l'encre appliquée (multiplier un
+noir par `[0,1]` le laisse nul), l'équité entre capteurs tient par
+construction (le facteur ne lit pas quelle vue). Sabotage vérifié réellement
+(les deux côtés d'un `mix()` inversés dans `iso_pate.gd` → deux échecs
+exactement là où attendus → revert → vert). Lot complet vert (366 s), aucun
+`SHADER ERROR` — grep explicite dans le journal, le piège qu'ISO7 Beauté
+venait de payer sur son propre mur (un uniform non déclaré ne fait qu'une
+ligne d'erreur, le lot sort vert quand même).
+
+**Correctif reçu juste après, même vague, même session : `pate_facteur`, pas
+un `c *= f` nu.** ISO7 Beauté a mesuré au banc, sur ses murs, qu'un facteur
+écrit dans un shader spatial se voit à l'écran comme `f^2,4` — signalé après
+mon premier câblage, corrigé avant que le commit ne parte. **Sondé par
+sabotage que la suite headless ne peut PAS voir ce point précis** : le
+`c *=` nu remis en place ne fait rougir aucun test (le noir absolu tient dans
+les deux cas, l'algèbre ne distingue pas gamma-correct de brut). Preuve par
+le pixel réel à la place : deux captures du Terrassier, une par version du
+shader, comparées par PIL — écart réel et dans le sens attendu (le brut plus
+sombre, (16,19,21) contre (30,34,37) au point de plus grand écart, 36 531
+pixels différents). `--encre=` ajouté à `tools/banc_corps.gd` pour cette
+vérification, réutilisable.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape
@@ -5224,3 +5345,12 @@ Ancrages d'Habillage relus (`ENCRE`, `PATE_FOND`, `PATE_POCHOIR_FORCE`, `PATE_VI
 `materiau_pate`, `empater`, `materiau_pochoir`, les deux uniforms, `killcam_bandes`, `chemin_portrait`,
 `_poser_cadre_de_tampon`, `_illustration_pour`, plus aucun `VERDICT_TEXTURES`), ceux d'ISO7, de Gadgets et
 d'ISO5 aussi. Deux imports, lot complet.
+
+**Fusions de la vague — 4/4 : `iso-corps` (`03ffdb6`, vague 5), 2026-09-15 vers 10:15.** Squelette des
+corps sur le gabarit du DA, `VoxelCorps.pointe_arme()`, l'encre des arêtes (`encre_arete`, `encre_reste`,
+`VoxelCorps.definir_encre()`) passée par `pate_facteur`. Aucun conflit textuel ; une fusion sans conflit
+n'étant pas une fusion sans perte, les ancrages ont été relus des deux côtés (`SQUELETTE`, `pointe_arme`,
+`definir_encre`, `pate_encre_boite` dans `corps_iso.gdshader` ; ceux d'ISO7, de Gadgets, d'Habillage,
+d'ISO5 et d'E2). `iso_pate.*` toujours identiques à `0cc300e`. L'encre des corps est posée en jeu par
+`IsoMateriaux.accorder_corps` (ISO7), déjà appelé dans `_accorder_le_slug` : elle apparaît avec cette
+fusion, qui déclare enfin les uniforms. Deux imports, lot complet.

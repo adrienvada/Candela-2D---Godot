@@ -63,6 +63,7 @@ func _run() -> void:
 
 	_test_aucun_hasard()
 	_test_catalogue_a_jour(VoxelCatalogue)
+	_test_encre_boite_bornee()
 
 	var slugs: PackedStringArray = VoxelCatalogue.slugs()
 	_check("dix classes dans le catalogue (%d)" % slugs.size(), slugs.size() == 10)
@@ -132,6 +133,7 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 	_test_accroupi(corps, hauteur_debout)
 	_test_enjambement(corps)
 	_test_pate_plafonnee(corps)
+	_test_encre_arete(corps)
 	_test_effacement(corps)
 	_test_echelle_lecture(corps)
 	_test_lecture_au_bord(corps)
@@ -449,6 +451,86 @@ func _test_pate_plafonnee(corps: Node3D) -> void:
 		_check("pâte monotone en la lumière (style %d)" % style, monotone)
 	_check("plafond jamais dépassé (dix classes, cinq pâtes, huit lumières)", jamais_depasse)
 	_check("nul à lumière 0, quel que soit le style", toujours_nul_a_zero)
+
+
+# ---------------------------------------------------------------------------
+# L'ENCRE DES ARÊTES (ISO3 vague 5, contrat d'« ISO7 Beauté Opus »)
+# ---------------------------------------------------------------------------
+
+## `IsoPate.encre_boite()` (miroir processeur de `pate_encre_boite()`, le
+## shader) : borné à [reste, 1] sur un vrai balayage de positions (loin d'un
+## bord, pile dessus, entre les deux) — jamais supposé rester dans la
+## fourchette parce que la formule a l'air d'un `clamp`. `largeur <= 0` doit
+## rendre 1 exactement (le défaut du shader, « rien ne change sans réglage »).
+func _test_encre_boite_bornee() -> void:
+	var demi := Vector3(0.14, 0.19, 0.08)
+	var echelle := Vector3(1.6, 1.6, 1.6)
+	var normale := Vector3(0.0, 0.0, 1.0)   # face avant (Z)
+	var reste := 0.35
+	var largeur := 0.05
+	var px_monde := 0.01
+
+	var f_defaut := IsoPate.encre_boite(Vector3.ZERO, demi, echelle, normale, 0.0, reste, px_monde)
+	_check("largeur <= 0 : facteur toujours 1 (aucun effet sans réglage)", f_defaut == 1.0,
+		"%.4f" % f_defaut)
+
+	var toujours_borne := true
+	var au_centre_egal_un := true
+	var au_bord_proche_du_reste := true
+	for lx in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+		for ly in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+			var local := Vector3(demi.x * lx, demi.y * ly, 0.0)
+			var f: float = IsoPate.encre_boite(local, demi, echelle, normale, largeur, reste, px_monde)
+			if f < reste - EPSILON or f > 1.0 + EPSILON:
+				toujours_borne = false
+	var f_centre: float = IsoPate.encre_boite(Vector3.ZERO, demi, echelle, normale, largeur, reste, px_monde)
+	if absf(f_centre - 1.0) > EPSILON:
+		au_centre_egal_un = false
+	var f_bord: float = IsoPate.encre_boite(Vector3(demi.x, 0.0, 0.0), demi, echelle, normale,
+		largeur, reste, px_monde)
+	if absf(f_bord - reste) > 0.01:
+		au_bord_proche_du_reste = false
+
+	_check("le facteur reste dans [reste, 1] sur tout le balayage", toujours_borne)
+	_check("au centre de la face, loin de tout bord : facteur 1 (%.4f)" % f_centre, au_centre_egal_un)
+	_check("pile sur le bord (X = demi.x) : facteur ≈ reste (%.4f)" % f_bord,
+		au_bord_proche_du_reste)
+
+
+## « L'encre passe par `pate_facteur`, jamais un `c *= f` nu » (mesuré au
+## banc par ISO7 Beauté, 2026-09-15 : un facteur écrit dans le shader se VOIT
+## à l'écran comme f^2,4 — `pate_facteur` décode/multiplie/recode en valeur
+## affichée pour que le facteur se voie tel qu'il est écrit). Sur ce corps, à
+## `lumiere_recue = 0`, la sortie du shader est nulle AVANT l'encre (voir
+## `_formule_repli`) — `IsoPate.facteur(Vector3.ZERO, f)` garantit 0 → 0 pour
+## tout `f`. Vérifié par le calcul, pas supposé : c'est exactement l'algèbre
+## que la brief demande de prouver (« max 0 à lumière 0 »). Et le facteur ne
+## dépend en RIEN de quel capteur (1 ou 2) est lu — sa signature n'a pas ce
+## paramètre — donc l'équité entre les deux vues tient par construction,
+## revérifiée ici sur les deux valeurs de `reste` extrêmes (0 et 1) plutôt
+## que suffite en un coup d'œil au code.
+func _test_encre_arete(corps: Node3D) -> void:
+	corps.definir_encre(0.0, 0.35)
+	var mat: ShaderMaterial = corps.materiau()
+	_check("encre_arete à 0 par défaut (rien ne change sans réglage)",
+		mat.get_shader_parameter("encre_arete") == 0.0)
+
+	corps.definir_encre(0.05, 0.35)
+	_check("definir_encre() pose encre_arete", mat.get_shader_parameter("encre_arete") == 0.05)
+	_check("definir_encre() pose encre_reste", mat.get_shader_parameter("encre_reste") == 0.35)
+
+	var fiche: Color = corps.couleur()
+	var noir_tient := true
+	for reste in [0.0, 0.35, 1.0]:
+		var sortie := _formule_repli(fiche, 0.0, IsoPate.LAVIS)
+		var facteur: float = IsoPate.encre_boite(Vector3(0.02, 0.0, 0.0), Vector3(0.14, 0.19, 0.08),
+			Vector3(1.6, 1.6, 1.6), Vector3(0.0, 0.0, 1.0), 0.05, reste, 0.01)
+		var encre := IsoPate.facteur(Vector3(sortie.r, sortie.g, sortie.b), facteur)
+		if encre.length_squared() > EPSILON * EPSILON:
+			noir_tient = false
+	_check("noir absolu tient avec l'encre appliquée (lumière 0, reste 0/0,35/1)", noir_tient)
+
+	corps.definir_encre(0.0, 0.35)
 
 
 # ---------------------------------------------------------------------------
