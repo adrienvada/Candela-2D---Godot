@@ -117,7 +117,19 @@ var _torch_image: Image
 ## mentaient, et c'est ainsi qu'on hérite d'un nombre que plus personne n'ose
 ## toucher. Une seule constante porte désormais cette unité.
 func portee_torche() -> float:
-	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale
+	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee
+
+## ISO8 — la portée de TOUTES les torches, en un seul facteur (brief de la session cloud, 2026-09-15 12:50,
+## sur mandat d'Adrien de 12:20 : « réduire la taille des cônes de lumière pour le rendre plus
+## claustrophobique »). **Un facteur global, jamais dix `torch_scale` réécrits** : les classes vont de 1,0
+## (pompe) à 3,5 (arbalète), et cet écart est leur identité. Appliqué ICI et dans `echelle_torche()`, les deux
+## seules portes par lesquelles le jeu éclaire et mesure (lampe du joueur, fantômes de killcam, torche
+## fantôme, éblouissement par `Vision`, fiche de classe) : aucun appelant ne lit `torch_scale` pour éclairer.
+##
+## Statique et posé par `GameSettings` au démarrage (`FACTEUR_PORTEE_DEFAUT`, `--torche=X`), parce que
+## `WeaponData` se charge dans les suites `--script`, qui compilent avant les autoloads : lire `GameSettings`
+## d'ici casserait leur compilation. Le demi-angle n'est pas touché (« l'ouverture est une identité de classe »).
+static var facteur_portee := 1.0
 
 ## Demi-angle du faisceau, en radians.
 ##
@@ -184,9 +196,10 @@ const TAILLE_COOKIE_REFERENCE := 512.0
 ## côté, c'était garantir qu'un seul serait corrigé.
 func echelle_torche() -> float:
 	var tex := get_torch_texture()
+	# ISO8 — le facteur de portée global, ici comme dans `portee_torche()` (voir `facteur_portee`).
 	if tex == null or tex.get_width() <= 0:
-		return torch_scale
-	return torch_scale * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
+		return torch_scale * facteur_portee
+	return torch_scale * facteur_portee * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
 
 
 ## L'image du faisceau, celle-là même que la lumière projette — pour que

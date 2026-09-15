@@ -127,6 +127,14 @@ const ZOOM_DUEL_MAX := 3.0
 const DECALAGE_VISEE_MAX := 0.4
 const DRAPEAU_ZOOM := "--zoom="
 const DRAPEAU_DECALAGE := "--decalage="
+## ISO8, étape 3 — la portée de toutes les torches, en un facteur global (choix de la session cloud, 12:50 :
+## « portée ×0,75 […] comme un FACTEUR GLOBAL posé une seule fois »). Posé sur `WeaponData.facteur_portee`
+## au démarrage ; `--torche=1.0` rend les portées d'avant ISO8 pour une exécution, sans jamais s'écrire.
+const FACTEUR_PORTEE_DEFAUT := 0.75
+const FACTEUR_PORTEE_MIN := 0.5
+const FACTEUR_PORTEE_MAX := 1.5
+const DRAPEAU_TORCHE := "--torche="
+var facteur_portee := FACTEUR_PORTEE_DEFAUT
 var zoom_duel := ZOOM_DUEL_DEFAUT
 var decalage_visee := DECALAGE_VISEE_DEFAUT
 var _zoom_duel_choisi := ZOOM_DUEL_DEFAUT
@@ -221,6 +229,8 @@ func _ready() -> void:
 	iso_lightmap = _lightmap_appliquee()
 	zoom_duel = zoom_applique(_zoom_duel_choisi, _arguments())
 	decalage_visee = decalage_applique(_arguments())
+	facteur_portee = facteur_portee_applique(_arguments())
+	WeaponData.facteur_portee = facteur_portee
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
 	_apply_audio()
@@ -296,6 +306,12 @@ static func zoom_applique(choisi: float, args: PackedStringArray) -> float:
 	var arg := valeur_par_argument(args, DRAPEAU_ZOOM)
 	var z := arg.to_float() if arg.is_valid_float() else choisi
 	return clampf(z, ZOOM_DUEL_MIN, ZOOM_DUEL_MAX)
+
+## `--torche=X` l'emporte sur le défaut ; une valeur illisible est ignorée ; le résultat reste dans les bornes.
+static func facteur_portee_applique(args: PackedStringArray) -> float:
+	var arg := valeur_par_argument(args, DRAPEAU_TORCHE)
+	var f := arg.to_float() if arg.is_valid_float() else FACTEUR_PORTEE_DEFAUT
+	return clampf(f, FACTEUR_PORTEE_MIN, FACTEUR_PORTEE_MAX)
 
 static func decalage_applique(args: PackedStringArray) -> float:
 	var arg := valeur_par_argument(args, DRAPEAU_DECALAGE)

@@ -126,8 +126,10 @@ func _init() -> void:
 		# L'empreinte au sol, en unités de monde, doit valoir `512 x torch_scale`
 		# quelle que soit la résolution du fichier. C'est le piège de la portée,
 		# rendu mécanique : recuire en 2048² ne devra rien déplacer.
+		# ISO8 — fois le facteur de portée global (`WeaponData.facteur_portee`, 0,75 depuis ISO8, posé par
+		# `GameSettings`) : la table garde les échelles des classes, le facteur les raccourcit toutes ensemble.
 		var empreinte := float(tex.get_width()) * w.echelle_torche()
-		var attendue: float = WD.TAILLE_COOKIE_REFERENCE * float(t["echelle"])
+		var attendue: float = WD.TAILLE_COOKIE_REFERENCE * float(t["echelle"]) * WD.facteur_portee
 		_vrai("%s : empreinte %d au lieu de %d" % [t["fichier"], empreinte, attendue],
 			is_equal_approx(empreinte, attendue))
 

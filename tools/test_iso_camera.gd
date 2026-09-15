@@ -210,6 +210,26 @@ func _regard_du_duel() -> void:
 		_check("décalage de visée d'un quart de la hauteur visible par défaut", is_equal_approx(reglages.decalage_visee, 0.25))
 	_check("--zoom=1.0 rend le cadrage d'avant ISO8 pour une exécution",
 		is_equal_approx(Script.zoom_applique(Script.ZOOM_DUEL_DEFAUT, PackedStringArray(["--zoom=1.0"])), 1.0))
+	# ISO8, étape 3 — la portée des torches, en un facteur global.
+	if Script.valeur_par_argument(args, "--torche=").is_empty():
+		_check("facteur de portée ×0,75 par défaut, posé sur WeaponData au démarrage",
+			is_equal_approx(reglages.facteur_portee, 0.75) and is_equal_approx(WeaponData.facteur_portee, 0.75))
+	_check("--torche=1.0 rend les portées d'avant ISO8 ; borné (0,1 → 0,5)",
+		is_equal_approx(Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"])), 1.0)
+		and is_equal_approx(Script.facteur_portee_applique(PackedStringArray(["--torche=0.1"])), 0.5))
+	var pistolet := WeaponData.new()
+	var facteur_avant: float = WeaponData.facteur_portee
+	WeaponData.facteur_portee = 0.75
+	_check("pistolet (1,6) : 307 px de portée au facteur 0,75, au lieu de 410",
+		is_equal_approx(pistolet.portee_torche(), 307.2), str(pistolet.portee_torche()))
+	var pompe := WeaponData.new()
+	pompe.torch_scale = 1.0
+	var arbalete := WeaponData.new()
+	arbalete.torch_scale = 3.5
+	_check("l'écart entre les classes est gardé : arbalète / pompe vaut toujours 3,5",
+		is_equal_approx(arbalete.portee_torche() / pompe.portee_torche(), 3.5))
+	_check("le demi-angle n'est pas touché (35° pour le pistolet)", is_equal_approx(pistolet.torch_angle_deg, 35.0))
+	WeaponData.facteur_portee = facteur_avant
 	var Pres8: GDScript = load("res://presentation_3d.gd")
 	_check("F3 : la lightmap 1080p dans une fenêtre de 1440 px vaut 0,75 texel par pixel, quel que soit le zoom",
 		is_equal_approx(Pres8.texels_par_pixel(1080, 1440), 0.75))

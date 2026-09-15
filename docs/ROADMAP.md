@@ -2427,7 +2427,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Serrer la caméra et raccourcir les torches, pour un duel plus claustrophobe** (2026-09-15 à 12:20, Adrien, à la session cloud : « Si tu juges qu'il faut changer les proportions, zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pas » ; chantier ISO8, brief de la session cloud de 12:25) | Sur les captures d'ISO6, le duel montre toute l'arène et le volume de l'iso ne se voit pas ; les planches du DA sont trois fois plus serrées. Les valeurs ne sont pas choisies par l'agent : un banc photographie les variantes (zoom ×1,0 à ×2,2, portée 1,6 à 1,0, demi-angle 35° et 30°) et la session cloud tranche sur la planche. Présentation seulement : ni simulation, ni protocole, ni zone de touche ne changent, et les deux joueurs ont la même caméra et la même torche. |
+| **Serrer la caméra et raccourcir les torches, pour un duel plus claustrophobe** (2026-09-15 à 12:20, Adrien, à la session cloud : « Si tu juges qu'il faut changer les proportions, zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pas » ; chantier ISO8, brief de la session cloud de 12:25) | Sur les captures d'ISO6, le duel montre toute l'arène et le volume de l'iso ne se voit pas ; les planches du DA sont trois fois plus serrées. Les valeurs ne sont pas choisies par l'agent : un banc photographie les variantes (zoom ×1,0 à ×2,2, portée 1,6 à 1,0, demi-angle 35° et 30°) et la session cloud tranche sur la planche. La caméra est une présentation (aucune simulation) ; la portée des torches est une valeur de jeu que l'éblouissement suit, en un facteur global identique pour tous. Ni protocole ni zone de touche ne changent, et les deux joueurs ont la même caméra et la même torche — en ligne, le facteur doit valoir la même chose des deux côtés (ISO9). |
 | **Les étincelles d'impact n'éclairent plus ; l'écho au sol du tir et la lumière de coup restent** (2026-09-15, 12:05, session cloud qui décide pour Adrien, second volet de la décision ci-dessous : « c'est le même mal que celui qu'Adrien a nommé ») | Recensées au banc pendant une rafale près d'une fusée : 60 lumières sur 63 étaient des étincelles d'impact (douze par impact de mur, énergie 1,5) ; éteintes, il en reste 9 et le halo de la fusée revient à sa rondeur seule (0,88). Leur dessin additif non éclairé reste : on les voit toujours jaillir dans le noir. **Gardés, et pourquoi** : l'écho au sol du tir (`ground_flash`, 0,12 s, sans ombre) prolonge le flash de bouche et dit d'où l'on tire — 7 au plus pendant la rafale, sous le plafond ; la lumière de coup (`hit_light`) ne s'allume qu'une fois par coup reçu, dit qui est touché, et porte son propre réglage joueur (« Lumière d'impact », dans `ui.gd`) qu'une suppression laisserait sans effet. Ni l'une ni l'autre n'était allumée en nombre au relevé. |
 | **L'iso est le jeu par défaut ; la vue de dessus passe derrière un drapeau de débogage** (2026-09-15 vers 11:00, ISO6, session « Iso 1 Opus » en relève d'ISO5, sur le brief `briefs/iso6_releve.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final ; décision d'Adrien du 2026-09-14 à 23:33 : l'iso devient la vue du jeu) | `GameSettings.mode_iso` vaut vrai par défaut. `--2d` (une exécution) ou le réglage `debogage/vue_de_dessus` (proposé en build de débogage seulement) ramènent la vue de dessus, gardée jusqu'à ISO9 : elle reste le moteur de lumière que l'iso projette. `--iso` reste accepté, sans effet sauf sur un réglage de débogage oublié. **L'ancienne clé `video/mode_iso` n'est plus lue** : chaque `settings.cfg` d'avant ISO6 la porte à `false`, et la relire aurait gardé la vue de dessus chez tous les joueurs existants. F3, F6, `ConditionsDeMatch` (v2) et le manifeste du photographe disent `mode_rendu`. Les suites de référence 2D tournent sous `--2d` (`SUITES_2D` de `run_suites.sh`). |
 | **La balle n'est plus une source de lumière** (2026-09-15 vers 10:55, Adrien, réveillé, à la session cloud : « Supprimons le fait que la balle soit une source de lumière. Cela fait saturer le nombre de lumières possibles du moteur et fait buguer lors de tirs vifs avec une source comme une fusée éclairante. » ; faite par « ISO7 Gadgets et lumière Opus », branche `balle-sans-lumiere`) | Godot n'applique jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, les plus récentes en premier, et un quadrant de sol est un item (« Pièges connus », « quinze par item ») ; chaque balle portait une `PointLight2D` à ombres (`TrailLight`), étirée jusqu'à 800 px — une rafale près d'une fusée coupait son halo. **Conséquence de jeu, acceptée** : une balle qui passe près d'un corps ne le révèle plus, et elle n'éclaire plus ni mur ni sol. L'information de tir reste le flash de bouche (`MuzzleFlash`, inchangé) et le trait de la balle — sa traçante et son aura, non éclairées, visibles dans le noir. `WeaponData.emits_light` et `bullet_light_energy` restent (données de classe, index d'arme sur le fil) et ne pilotent plus que l'aura et la traçante : l'arbalète garde sa balle sans aura. |
@@ -24550,9 +24550,10 @@ taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pa
 duel montre toute l'arène (tuile de 35 px, corps d'une vingtaine de pixels) et le volume de l'iso ne se voit
 pas ; les planches du DA sont des gros plans environ trois fois plus serrés.
 
-**Ce qui ne bouge pas.** Aucune ligne de simulation, aucun protocole (`Protocol.VERSION` = 18), la zone de
-touche à 18 px, le noir absolu. Une caméra est une présentation locale : les deux joueurs ont la même règle,
-et aucune donnée ne passe sur le fil.
+**Ce qui ne bouge pas.** Aucun protocole (`Protocol.VERSION` = 18), la zone de touche à 18 px, le noir absolu.
+**La caméra** (étapes 1 et 2) est une présentation locale : aucune ligne de simulation, la même règle pour les
+deux joueurs, aucune donnée sur le fil. **La portée des torches** (étape 3), elle, est une valeur de JEU —
+l'éblouissement la suit — : voir l'étape 3 et sa réserve pour le jeu en ligne.
 
 **Étape 1 — le banc des variantes, avant tout choix.** `tools/banc_claustro.gd` (vraie fenêtre), sur la
 carte d'essai des murs bas (J1 à 3,5 tuiles de la bordure nord, J2 derrière le muret le plus au nord — la
@@ -24641,6 +24642,51 @@ lightmap : mesurer les texels à ×1,8 au F3, sans relevé de cadence.
   reste attrapé.
 - **Pas encore de boutons de zoom dans les réglages de débogage** : une rangée de plus dans le panneau vidéo
   risque l'audit des menus ; les drapeaux suffisent pour comparer au test final.
+
+**Étape 2 commitée** (`886fa4c`, lot vert à 13:53 : 127 OK en 412 s ; `test_iso_camera` sabotée une fois —
+zoom par défaut remis à 1,0 : le contrôle du zoom ×1,8 rougit, fichier rétabli à l'identique).
+
+**Étape 3 — les torches plus courtes, en un facteur global** 🟡 (2026-09-15, à partir de 13:55).
+- `WeaponData.facteur_portee` (statique), appliqué dans `portee_torche()` et `echelle_torche()` — les deux
+  seules portes par lesquelles le jeu éclaire et mesure : lampe du joueur (`player.gd`), fantômes de killcam
+  (`game_state.gd`), torche fantôme, éblouissement par `Vision`, fiche de classe. Aucun appelant ne lit
+  `torch_scale` pour éclairer (relevé par `grep` avant d'écrire). **Aucune classe réécrite** : les
+  `torch_scale` de 1,0 (pompe) à 3,5 (arbalète) restent, et leur écart avec eux.
+- **Statique, et posé par `GameSettings`** (`FACTEUR_PORTEE_DEFAUT` = 0,75, `--torche=1.0` pour les portées
+  d'avant ISO8) : `WeaponData` se charge dans les suites `--script`, qui compilent avant les autoloads — lire
+  `GameSettings` depuis la ressource aurait cassé leur compilation (« Pièges connus »).
+- Pistolet : 307 px de portée au lieu de 410, neuf tuiles au lieu de douze. Demi-angles inchangés.
+- ⚠️ **Contrairement au reste d'ISO8, ce n'est pas une présentation : la portée est une valeur de JEU.**
+  L'éblouissement (calculé par l'hôte, `Vision` par `echelle_torche()`) et ce qui en dérive la suivent — c'est
+  ce que le brief demande (« tout ce qui dérive de la portée suit »). Les deux joueurs gardent la même torche,
+  le protocole (`Protocol.VERSION` = 18) et la zone de touche ne changent pas. **Mais le facteur est un réglage
+  local** : un client lancé en `--torche=1.0` contre un hôte à 0,75 verrait sa torche porter plus loin qu'elle
+  n'éblouit. En ligne, le facteur doit valoir la même chose des deux côtés, et rien ne l'impose encore — c'est
+  la question d'ISO9 (« rendu imposé par l'hôte en classé »). D'ici là, `--torche=` est un outil de comparaison
+  locale, et le défaut est le même dans tous les builds.
+- `test_torches` : l'empreinte au sol vaut `512 × échelle × facteur`. `test_iso_camera` : défaut 0,75 posé
+  sur `WeaponData`, drapeau borné, pistolet à 307 px, rapport arbalète / pompe gardé à 3,5, demi-angle intact.
+
+**Étape 4 — la densité des textures d'ISO7 à ×1,8** (demande de la session cloud, 13:56 : « si elles
+s'étirent, Beauté livrera des tuiles plus denses »). **Calculée** à partir des shaders et de la géométrie de la
+caméra, pas relevée au pixel : `sol_iso.gdshader` répète `assets/iso/sol.png` (512²) tous les 140 px de monde
+(`PERIODE_SOL_PX`) ; `mur_iso.gdshader` répète `face_mur.png` (512²) tous les 70 px (`PERIODE_FACE_MUR_PX`), le
+long de la face ET sur sa hauteur (`vec2(dot(monde.xz, tangente), -monde.y) / periode_face_px`). La caméra iso
+garde la profondeur de la vue de dessus et étire la largeur de 1 / sin 52° (`test_iso_vues`) ; une hauteur
+verticale se projette en cos 52° / sin 52° de la profondeur. Dans la fenêtre d'Adrien (2560×1440, aire logique
+1080), à ×1,8 : un pixel de monde vaut 2,40 px d'écran en profondeur, 3,05 en largeur, 1,88 en hauteur de face.
+
+| Surface | Texels par pixel de monde | ×1,0 (texels par pixel d'écran) | ×1,8 (texels par pixel d'écran) |
+|---|---|---|---|
+| Sol, en profondeur | 3,66 | 2,74 | **1,52** |
+| Sol, en largeur | 3,66 | 2,16 | **1,20** |
+| Face de mur, le long | 7,31 | 4,32 | **2,40** |
+| Face de mur, en hauteur | 7,31 | 7,02 | **3,90** |
+
+**Aucune ne s'étire à ×1,8** : toutes gardent plus d'un texel par pixel d'écran, le sol en largeur le moins
+(1,20). Elles s'étireraient au-delà de ×2,16 environ pour le sol en largeur (le plafond de `--zoom` est 3,0).
+Ce que le zoom grossit à l'écran, ce sont la lightmap (0,75 texel par pixel, inchangée) et l'art des tuiles de
+la vue de dessus qu'elle porte (35 px de source sur 84 px d'écran) — pas les matières d'ISO7.
 
 ### Ce qui attend Adrien — jalon H15
 

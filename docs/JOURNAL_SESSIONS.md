@@ -5480,3 +5480,13 @@ Au retour du Mac (13:44) : `test_iso_vues` et `test_entrainement` vertes seules.
 1,0) : `test_iso_camera` rougit sur le contrôle du zoom ×1,8, fichier rétabli à l'identique (`cmp`). Lot complet
 relancé.
 Lot complet vert à 13:53 : 127 OK en 412 s.
+
+**ISO8, étape 3 — les torches plus courtes, 2026-09-15 à partir de 13:55.** Session « Iso 1 Opus », après le commit
+de l'étape 2 (`886fa4c`). Un facteur global `WeaponData.facteur_portee` (0,75), appliqué dans `portee_torche()` et
+`echelle_torche()`, posé par `GameSettings` au démarrage (`--torche=`), aucune classe réécrite, demi-angles
+inchangés : le pistolet passe de 410 à 307 px. Statique plutôt que lu dans `GameSettings`, parce que `WeaponData`
+se charge dans les suites `--script`. `test_torches` et `test_iso_camera` adaptés.
+Vérifications de l'étape 3 (13:56) : `test_torches`, `test_iso_camera` (123 vérifications) et `test_vision` vertes seules.
+Sabotage (facteur par défaut remis à 1,0) : le contrôle du facteur ×0,75 rougit, fichier rétabli à l'identique (`cmp`). Lot complet lancé.
+Étape 4, premier calcul (13:59, demande de la session cloud) : à ×1,8 dans une fenêtre de 1440 px, les textures d'ISO7 gardent plus d'un texel par pixel d'écran — sol 1,52 en profondeur et 1,20 en largeur, face de mur 2,40 le long et 3,90 en hauteur ; elles ne s'étireraient qu'au-delà de ×2,16 (sol en largeur). Calcul à partir des shaders et de la géométrie de la caméra, détaillé dans la ROADMAP.
+Lot complet vert à 14:04 : 127 OK en 413 s.
