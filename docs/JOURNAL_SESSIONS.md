@@ -5093,3 +5093,9 @@ l'étape 2, sous le curseur CONFORT ; deux bandes de format cinéma montent sous
 visibilité du cadre de killcam ; le mot KILLCAM quitte la frange bleu/ambre d'un moniteur vidéo pour le
 mauvais repérage d'un tirage (encre, carmin) et prend le pochoir. L'estampe de kill garde sa forme jugée
 par Adrien et change de matière : pochoir, cadre d'encre projetée carmin fabriqué par script.
+
+**Étape 6 (même session, même branche) :** les fins et l'intro. L'affiche de fin pose sous son mot
+l'illustration du lot D d'ISO Assets, recadrée dans son encre, retournée pour que le mot tombe sur l'ombre ;
+la carte de soirée remplit son emplacement vide depuis DA6.3 ; les verdicts cessent d'être trois
+lettrages dorés générés pour devenir le titre lui-même, tamponné (les fichiers restent sur disque) ;
+l'intro prend la charte sans changer son texte.

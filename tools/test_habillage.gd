@@ -149,6 +149,7 @@ func _run() -> void:
 	_test_le_hud_parle_la_pate()
 	_test_la_killcam_porte_la_pate()
 	_test_l_estampe_garde_sa_forme_et_change_de_matiere()
+	_test_l_affiche_pose_son_illustration()
 
 	main.queue_free()
 	if _ko == 0:
@@ -575,6 +576,8 @@ const FICHIERS_PATE := [
 	"menu_rivets_overlay.gd",
 	# Étape 5 : la killcam.
 	"cadre_photo.gd", "estampe_de_kill.gd",
+	# Étape 6 : les fins et l'intro.
+	"affiche_de_fin.gd", "carte_de_soiree.gd", "intro_planches.gd",
 ]
 
 
@@ -650,6 +653,9 @@ const RESSOURCES_HABILLAGE := {
 	"res://assets/ui/matiere/pate_grain.png": Vector2i(256, 256),
 	"res://assets/ui/fond_hub_iso.jpg": Vector2i(1920, 1071),
 	"res://assets/ui/matiere/tampon_encre.png": Vector2i(1024, 340),
+	"res://assets/ui/fin_victoire.jpg": Vector2i(1920, 1080),
+	"res://assets/ui/fin_defaite.jpg": Vector2i(1920, 1080),
+	"res://assets/ui/carte_soiree_fond.png": Vector2i(1080, 1350),
 }
 
 
@@ -825,3 +831,25 @@ func _test_l_estampe_garde_sa_forme_et_change_de_matiere() -> void:
 			_check(cadre.show_behind_parent, "le cadre du tampon est dessiné PAR-DESSUS le mot")
 			_check(cadre.self_modulate.is_equal_approx(C.CARMIN), "le cadre du tampon n'est pas carmin")
 	estampe.free()
+
+
+## L'affiche de fin — étape 6 : l'illustration suit le mot LU, retournée, et
+## l'égalité garde son noir.
+func _test_l_affiche_pose_son_illustration() -> void:
+	var cas := [
+		[{"vainqueur": 0, "local_idx": 0}, AfficheDeFin.FIN_VICTOIRE],
+		[{"vainqueur": 1, "local_idx": 0}, AfficheDeFin.FIN_DEFAITE],
+		[{"vainqueur": 0, "local_idx": -1}, AfficheDeFin.FIN_VICTOIRE],
+		[{"vainqueur": -1}, ""],
+	]
+	for c: Array in cas:
+		var affiche := AfficheDeFin.poser(root, c[0])
+		var ill := affiche.find_child("Illustration", true, false) as TextureRect
+		if String(c[1]) == "":
+			_check(ill == null, "l'égalité ne doit pas porter d'illustration")
+		else:
+			_check(ill != null and ill.texture == load(String(c[1])),
+				"l'affiche (%s) ne pose pas %s" % [str(c[0]), c[1]])
+			if ill != null:
+				_check(ill.flip_h, "l'illustration de fin n'est pas retournée : le mot tomberait sur la lumière")
+		affiche.free()

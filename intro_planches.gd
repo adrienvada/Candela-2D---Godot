@@ -201,7 +201,7 @@ func _construire() -> void:
 
 	var fonte: Font = null
 	if ResourceLoader.exists(Charte.CHEMIN_DISPLAY):
-		fonte = load(Charte.CHEMIN_DISPLAY) as Font
+		fonte = Charte.police_display(Charte.graisse_pour(Charte.T_VERDICT, Charte.Registre.ENSEIGNE))
 
 	_ombre_lettrage = Label.new()
 	_ombre_lettrage.name = "OmbreLettrage"
@@ -211,8 +211,8 @@ func _construire() -> void:
 	_ombre_lettrage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ombre_lettrage.offset_top = 2.0
 	_ombre_lettrage.offset_bottom = 2.0
-	_ombre_lettrage.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0, 0.95))
-	_ombre_lettrage.add_theme_font_size_override("font_size", 46)
+	_ombre_lettrage.add_theme_color_override("font_color", Color(Charte.NOIR, 0.95))
+	_ombre_lettrage.add_theme_font_size_override("font_size", Charte.T_VERDICT)
 	_ombre_lettrage.add_theme_constant_override("character_spacing", 11)
 	if fonte != null:
 		_ombre_lettrage.add_theme_font_override("font", fonte)
@@ -224,8 +224,8 @@ func _construire() -> void:
 	_lettrage.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_lettrage.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_lettrage.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_lettrage.add_theme_color_override("font_color", Charte.HALOGENE)
-	_lettrage.add_theme_font_size_override("font_size", 46)
+	_lettrage.add_theme_color_override("font_color", Charte.PATE_TEXTE)
+	_lettrage.add_theme_font_size_override("font_size", Charte.T_VERDICT)
 	_lettrage.add_theme_constant_override("character_spacing", 11)
 	if fonte != null:
 		_lettrage.add_theme_font_override("font", fonte)
@@ -273,8 +273,8 @@ func _construire() -> void:
 	_indice.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_indice.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_indice.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_indice.add_theme_color_override("font_color", Charte.DIM)
-	_indice.add_theme_font_size_override("font_size", 14)
+	_indice.add_theme_color_override("font_color", Charte.PATE_TEXTE_SECOND)
+	_indice.add_theme_font_size_override("font_size", Charte.T_COURANT)
 	add_child(_indice)
 
 
@@ -632,9 +632,14 @@ class _SlotPlanche extends Control:
 ## Cartouche texturé de roman graphique avec filets d'or ambré et repères de coupe.
 class _CartoucheGraphique extends Control:
 	const TAILLE_ONGLET := 7.0
-	const COULEUR_FOND := Color(0.015, 0.015, 0.02, 0.88)
-	const COULEUR_FILET := Color(0.96, 0.69, 0.24, 0.65)
-	const COULEUR_ACCENT := Color(0.96, 0.69, 0.24, 0.95)
+	const COULEUR_FOND := Color(Charte.ENCRE, 0.88)
+	const COULEUR_FILET := Color(Charte.AMBRE, 0.65)
+	const COULEUR_ACCENT := Color(Charte.AMBRE, 0.95)
+
+	# Habillage iso (2026-09-15) : la plaque d'encre prend la matière de la pâte.
+	# Le lettrage vit à côté, dans des libellés frères : il reste net.
+	func _init() -> void:
+		MenuWidgets.poser_pate(self)
 
 	func _draw() -> void:
 		if size.x <= 0.0 or size.y <= 0.0:
@@ -680,4 +685,4 @@ class _Halo extends Control:
 			var chute: float = (1.0 - t) * (1.0 - t)
 			var a: float = clampf(energie, 0.0, 1.4) * GRAIN * chute
 			draw_rect(Rect2(centre - demi, demi * 2.0),
-				Color(0.98, 0.91, 0.80, a), true)
+				Color(Charte.HALOGENE, a), true)

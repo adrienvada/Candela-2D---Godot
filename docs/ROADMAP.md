@@ -23578,7 +23578,7 @@ scindé en iso ou maintenu en 2D — sur trois relevés au premier plan après
 ISO0.b. Puis les décisions de direction artistique (sommet des murs, tranche
 de plateau, palette des corps), le choix des corps (voxels par code
 recommandé), et la confirmation du forfait dans *Settings › Usage*.
-### Habillage iso — HUD, menus, killcam et fins dans la pâte du DA 🟡 (ouvert le 2026-09-15, vague « grand budget »)
+### Habillage iso — HUD, menus, killcam et fins dans la pâte du DA ✅ (ouvert et livré le 2026-09-15, vague « grand budget », à juger au jalon de test final)
 
 **D'où il vient.** Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (15/09, vers 05:25),
 sur le mandat d'Adrien de 05:00 : « une version grand budget aboutie en mode isométrique ».
@@ -23926,6 +23926,31 @@ tout passe, 403 s**. Le commit s'est fait sur ce second lot, jamais sur le premi
 
 **Décision.** Le pochoir est la seule matière qui passe SUR des lettres : un tampon ne prend
 jamais uniformément. Partout ailleurs, la pâte évite le texte (`empater()`).
+
+
+#### Étape 6 — les fins et l'intro ✅ (2026-09-15)
+
+**Ce qui est posé.**
+- **L'affiche de fin** pose l'illustration du lot D d'ISO Assets (`fin_victoire.jpg`,
+  `fin_defaite.jpg`, recadrées À L'INTÉRIEUR de leur encre par `tools/preparer_habillage.py` — le
+  bord de papier clair aurait fait un cadre blanc sur un jeu noir) en ENFANT du fond opaque, à
+  55 %. Elle suit le mot LU sur le titre du menu, jamais recalculé : défaite → la lampe tombée ;
+  victoire ou « JOUEUR n GAGNE » → la torche tenue ; égalité → le noir. **Retournée** : les planches
+  posent leur sujet éclairé à gauche, où l'affiche pose le mot ; en miroir, la gauche est l'ombre.
+- **La carte de soirée** remplit enfin son emplacement câblé et vide depuis DA6.3
+  (`carte_soiree_fond.png`) : un recadrage 4:5 du bunker du hub, centré sur sa torche mesurée,
+  posé à 22 % comme prévu. Aucune ligne de sa logique ne change ; ses couleurs passent à la pâte.
+- **Les verdicts ne sont plus des images.** Les trois lettrages dorés générés
+  (`titres/verdict_*.png`) cèdent la place au titre lui-même, en enseigne avec le pochoir, à la
+  couleur que `show_game_over()` lui donne (gris d'égalité compris). Les fichiers restent sur
+  disque : leur suppression est la décision d'Adrien, comme pour les titres.
+- **L'intro** garde son texte et prend la charte : lettrage en papier à `T_VERDICT` et à la graisse
+  d'enseigne de sa taille (il était à 46 px, fonte chargée sans graisse), indice à `T_COURANT`,
+  cartouche en encre et ambre de la charte avec la pâte, halo en halogène de la charte.
+
+**À juger au jalon.** L'affiche de fin cesse d'être un aplat noir : c'est le premier écran où une
+illustration générée occupe tout le cadre sous du texte. À 55 %, le mot se lit ; c'est la seule
+valeur de cette étape réglée à la capture plutôt que par un calcul.
 
 
 ## Chantier — murs bas et accroupi (inscrit le 2026-09-14)

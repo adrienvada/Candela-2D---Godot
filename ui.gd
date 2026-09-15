@@ -5431,11 +5431,14 @@ func _refresh_weapon_locks() -> void:
 ## elle existera, c'est ici qu'il faudra revenir — le son se sequencera sur
 ## l'animation, jamais sur un minuteur parallele qui derivera.
 ##
-const VERDICT_TEXTURES := {
-	"VICTOIRE": "res://assets/ui/titres/verdict_victoire.png",
-	"DÉFAITE": "res://assets/ui/titres/verdict_defaite.png",
-	"ÉGALITÉ": "res://assets/ui/titres/verdict_egalite.png",
-}
+## ⚠️ **Habillage iso (2026-09-15) : les verdicts ne sont plus des images.** Ils
+## étaient trois lettrages dorés générés (`assets/ui/titres/verdict_*.png`),
+## posés par-dessus le titre qu'ils rendaient transparent — le dernier reste des
+## titres en image qu'Adrien a remplacés par le récitatif le 2026-09-11. Le verdict
+## est désormais le TITRE lui-même : fonte d'enseigne, grain du pochoir, et la
+## couleur que `show_game_over()` lui donne (dont le gris de l'égalité, décision
+## d'Adrien). Les trois fichiers restent sur disque : leur suppression est sa
+## décision, comme pour les `titre_*.png`.
 
 ## `CANDELA 2D` est le titre du MENU, pas une fin de match : il se tait.
 func _poser_titre(texte: String) -> void:
@@ -5448,10 +5451,6 @@ func _poser_titre(texte: String) -> void:
 	var tex: Texture2D = null
 	if texte == "CANDELA 2D":
 		tex = load(Charte.CHEMIN_ENSEIGNE)
-	elif VERDICT_TEXTURES.has(texte):
-		var chemin: String = String(VERDICT_TEXTURES[texte])
-		if ResourceLoader.exists(chemin):
-			tex = load(chemin)
 	if tex != null:
 		menu_enseigne.texture = tex
 		const ENCRE_VISEE := 80.0
@@ -5478,6 +5477,8 @@ func _build_menu_header() -> Control:
 	header.add_theme_constant_override("separation", GAP_XS)
 
 	game_over_title = Label.new()
+	# Habillage iso : le verdict est tamponné — le grain du pochoir sur ses lettres.
+	MenuWidgets.poser_pochoir(game_over_title)
 	_poser_titre("CANDELA 2D")
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# DA4 — l'enseigne, et elle referme une incohérence entre l'arène et

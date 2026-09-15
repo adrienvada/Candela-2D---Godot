@@ -126,12 +126,72 @@ def sujet(source, sortie, cote):
     print(f"{source} -> {sortie} {cote}x{cote}")
 
 
+def fin(source, sortie):
+    """Illustration de fin : la source est un lavis posé sur une feuille, avec un
+    bord de papier clair tout autour. Plein écran sur un jeu noir, ce bord ferait
+    un cadre blanc criard : on recadre À L'INTÉRIEUR de l'encre, mesurée — la
+    première et la dernière ligne/colonne dont la médiane de luminance tombe sous
+    le papier —, puis 2 % de retrait pour ne garder aucun liseré déchiré."""
+    im = Image.open(source).convert("RGB")
+    l, h = im.size
+    gris = im.convert("L")
+    p = gris.load()
+
+    def mediane(valeurs):
+        v = sorted(valeurs)
+        return v[len(v) // 2]
+
+    seuil = 150
+    colonnes = [mediane([p[x, y] for y in range(0, h, 9)]) for x in range(l)]
+    lignes = [mediane([p[x, y] for x in range(0, l, 9)]) for y in range(h)]
+    x0 = next(x for x in range(l) if colonnes[x] < seuil)
+    x1 = next(x for x in range(l - 1, -1, -1) if colonnes[x] < seuil)
+    y0 = next(y for y in range(h) if lignes[y] < seuil)
+    y1 = next(y for y in range(h - 1, -1, -1) if lignes[y] < seuil)
+    rx, ry = int((x1 - x0) * 0.02), int((y1 - y0) * 0.02)
+    x0, x1, y0, y1 = x0 + rx, x1 - rx, y0 + ry, y1 - ry
+    print(f"  encre mesurée ({x0}, {y0}) – ({x1}, {y1}) dans {l}x{h}")
+    im = im.crop((x0, y0, x1, y1))
+    # 16:9 par recadrage centré, jamais par étirement.
+    cl, ch = im.size
+    cible = 1920 / 1080
+    if cl / ch > cible:
+        nl = int(round(ch * cible))
+        im = im.crop(((cl - nl) // 2, 0, (cl - nl) // 2 + nl, ch))
+    else:
+        nh = int(round(cl / cible))
+        im = im.crop((0, (ch - nh) // 2, cl, (ch - nh) // 2 + nh))
+    im = im.resize((1920, 1080), Image.LANCZOS)
+    im.save(sortie, quality=90, optimize=True)
+    print(f"fin : {source} -> {sortie} 1920x1080")
+
+
+def carte(source, sortie):
+    """Fond de la carte de soirée (`carte_de_soiree.gd`, emplacement câblé et
+    vide depuis DA6.3) : un recadrage 4:5 du bunker du hub, CENTRÉ SUR SA TORCHE —
+    le point mesuré au pixel pour le POI de l'accueil (0,751 ; 0,354). La carte
+    le pose à 22 % : c'est une matière sous des chiffres, pas une image."""
+    im = Image.open(source).convert("RGB")
+    l, h = im.size
+    u = 0.751
+    cl = int(round(h * 0.8))
+    cx = int(round(u * l))
+    x0 = max(0, min(l - cl, cx - cl // 2))
+    im = im.crop((x0, 0, x0 + cl, h)).resize((1080, 1350), Image.LANCZOS)
+    im.save(sortie, optimize=True)
+    print(f"carte : {source} {l}x{h}, colonne x={x0}..{x0 + cl} -> {sortie} 1080x1350")
+
+
 def main():
     if len(sys.argv) != 4:
         raise SystemExit(__doc__)
     mode, source, sortie = sys.argv[1:]
     if mode == "fond":
         fond(source, sortie)
+    elif mode == "fin":
+        fin(source, sortie)
+    elif mode == "carte":
+        carte(source, sortie)
     elif mode == "portrait":
         sujet(source, sortie, 256)
     elif mode == "icone":
