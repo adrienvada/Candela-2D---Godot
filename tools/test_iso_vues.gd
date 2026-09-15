@@ -320,7 +320,15 @@ func _statiques(Reglages: GDScript, Pres: GDScript, Canaux: GDScript) -> void:
 		if c <= 0 or (c & (c - 1)) != 0 or (c & (1 | 2 | 4)) != 0 or (union & c) != 0:
 			disjointes = false
 		union |= c
-	_check("une couche PAR capteur : quatre bits distincts, ni 1, ni 2, ni 4 — ni la couche 0 des sprites retirés",
+	# ISO4 : plus une couche PAR VUE pour les disques des objets et du leurre (`MiroirsIso.couche_objets`) —
+	# un disque d'objet ne partage jamais la couche d'un corps, sans quoi le capteur d'un corps lirait
+	# aussi l'objet posé à ses pieds.
+	for c in [MiroirsIso.couche_objets(0), MiroirsIso.couche_objets(1)]:
+		couches_capteurs.append(c)
+		if c <= 0 or (c & (c - 1)) != 0 or (c & (1 | 2 | 4)) != 0 or (union & c) != 0:
+			disjointes = false
+		union |= c
+	_check("une couche PAR capteur : quatre bits distincts pour les corps, un par vue pour les objets, ni 1, ni 2, ni 4 — ni la couche 0 des sprites retirés",
 		disjointes and union == int(Pres.COUCHES_CAPTEURS) and int(Pres.COUCHE_HORS_VUE) == 0, str(couches_capteurs))
 	_check("masque du capteur de SON corps : JOUEUR_LOCAL",
 		Pres.masque_capteur(0, 0) == Canaux.JOUEUR_LOCAL and Pres.masque_capteur(1, 1) == Canaux.JOUEUR_LOCAL)

@@ -4905,3 +4905,15 @@ et `tools/test_voxel_corps.gd` pris entiers côté `iso-corps` — notre côté 
 l'arbre fusionné, aucun perdu. Deux imports sans erreur, puis le lot complet vert (393 s),
 `test_voxel_objets` compris ; les quatre `.uid` des scripts de la vague 3, générés par l'import,
 entrent avec la fusion.
+
+**ISO4, nuit du 2026-09-15 — les objets debout dans la vue iso.** Sur la fusion `a753c22`.
+`miroirs_iso.gd` neuf : voxels des six objets de la vague 3 sous capteurs (couches 128 et 256),
+corps de classe du leurre, quads au sol de la balle, du viseur et de la ligne de visée, sprites
+remplacés retirés des lightmaps et rendus à l'extinction, rejeu compris. `tools/test_iso_objets.gd`
+neuve (40 vérifications, sabotée une fois). `tools/banc_iso.gd --objets` : OBJETS ÉQUITABLES (6/6
+objets laissent voir la tête et le torse d'un corps collé derrière). Noir absolu : (b) rompu au
+premier passage par les quads non éclairés, que le contrôle retire désormais avec la 2D ; tenu
+ensuite. Piège payé : nommer `Bullet`/`Fusee` rendait la présentation incompilable dans les suites
+headless. Premier lot rouge sur la seule suite neuve, verte seule : elle relisait le quad du viseur
+entre la physique et la présentation ; les joueurs sont désormais figés pendant la mesure, second
+lot relancé. Planche `docs/iso/planche_iso4.jpg`.

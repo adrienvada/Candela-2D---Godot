@@ -113,7 +113,9 @@ const COUCHE_HORS_VUE := 0
 ## six cas faux sur huit en écran scindé, aucun en vue unique, où seuls deux capteurs existent.
 ## Aucune suite sans rendu ne pouvait le voir ; la suite, elle, vérifiait « la » couche commune.
 const COUCHE_CAPTEUR := 8
-const COUCHES_CAPTEURS := 8 | 16 | 32 | 64
+## ISO4 : plus les couches des disques des objets et du leurre, une par vue (`MiroirsIso.couche_objets`,
+## 128 et 256) — elles sortent des masques des lightmaps comme celles des corps.
+const COUCHES_CAPTEURS := 8 | 16 | 32 | 64 | 128 | 256
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
 const CALQUE_VUE_1 := 2
@@ -196,6 +198,7 @@ var corps_voxel := true
 ## l'autre pour déduire ses états (points de vie, recharge, instants du tir, du coup reçu, de la mort).
 var _voxels: Array = []
 var _etats_corps: Array = []
+var _miroirs: MiroirsIso
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
 const DUREE_TOUCHE_CORPS := 0.6
@@ -473,6 +476,9 @@ func _allumer(vues: Array[SubViewport]) -> void:
 
 
 func _eteindre(sortie_de_l_arbre := false) -> void:
+	# ISO4 — les sprites remplacés reprennent leur couche, les capteurs des objets partent.
+	if _miroirs != null:
+		_miroirs.vider()
 	_actif = false
 	if _scene != null:
 		_scene.visible = false
@@ -665,7 +671,13 @@ func _suivre() -> void:
 # LES LIGHTMAPS — la taille, une question laissée ouverte par H15
 # ---------------------------------------------------------------------------
 
-## `1080p` ou `plein` : `--lightmap` pour l'exécution, sinon le réglage du joueur.
+## `1080p` ou `plein` : `--lightmap` pour l'exécution, sinon le réglage du joueur.	# ISO4 — les miroirs, après les corps : ils lisent les mêmes vues et la même pâte.
+	var ids := []
+	for vue in _vues:
+		ids.append(_id_de(vue))
+	_miroirs.suivre(_main, ids, style_pate, self)
+
+
 func variante_lightmap() -> String:
 	var reglages := get_node_or_null(^"/root/GameSettings")
 	var v := String(reglages.get("iso_lightmap")) if reglages != null else "1080p"
@@ -1165,6 +1177,9 @@ func _construire_la_scene() -> void:
 	_scene.name = "SceneIso"
 	_scene.visible = false
 	add_child(_scene)
+	# ISO4 — les objets debout, le leurre, la balle, le viseur et la ligne de visée.
+	_miroirs = MiroirsIso.new()
+	_scene.add_child(_miroirs)
 
 	_camera = CameraIso.new()
 	add_child(_camera)

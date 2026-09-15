@@ -21428,7 +21428,7 @@ lance sans demande explicite.
 | ISO1 | Fondations : `Presentation3D`, `iso_geometrie.gd`, `camera_iso.gd`, sol projeté, murs, test d'équité géométrique — 🟡 **ouverte le 2026-09-14**, commitée sur `iso1-fondations`, en attente du jalon H-ISO1 (pâte, `H_haut`, relevés) | 3 | Opus 5 / high |
 | ISO2 | Vues et canaux : lightmaps par joueur, capteurs de corps, racine 3D, écran scindé — ✅ jalon H-ISO2 répondu le 2026-09-14 ; **ISO2b** 🟡 (effacement des corps, silhouette de soi) sur `iso2-vues`, en attente du jalon H-ISO2b | 4 | Fable 5.1 / xhigh |
 | ISO3 | Corps voxel des dix classes, matériau d'équité — vagues 0 à 2 sur `iso-corps` (ISO Corps), **ISO3a** ✅ les corps voxel dans la vue iso (`iso2-vues`, 2026-09-15) ; **ISO3b** ✅ murs bas, zone morte et postures (`iso2-vues`, 2026-09-15) | 4 | Sonnet 5 / high |
-| ISO4 | Objets debout, leurre, balle, viseur, ligne de visée | 3 | Sonnet 5 / medium |
+| ISO4 | Objets debout, leurre, balle, viseur, ligne de visée — ✅ `iso2-vues`, 2026-09-15 (voxels sous capteurs, quads au sol, banc d'équité 6/6) | 3 | Sonnet 5 / medium |
 | ISO5 | Killcam, rejeu, entrées souris/stick, photographe du duel | 3 | Opus 5 / high |
 | ISO6 | Outils : banc `--iso`, photographe, F3, diagnostic, `ConditionsDeMatch` | 2 | Sonnet 5 / medium |
 | ISO7 | Direction artistique et assets (Gemini en série, fond vert) | 3 | Sonnet 5 / medium |
@@ -23076,6 +23076,90 @@ Signalé, hors périmètre :
 - player.gd n'expose ni tir ni coup reçu.
 - Chez le client, Player.enjambe n'est jamais recalculé pour l'adversaire interpolé.
 - La marche de l'adversaire interpolé en ligne reste à vérifier.
+
+### ISO4 — les objets debout, le leurre, la balle, le viseur et la ligne de visée ✅ (commitée le 2026-09-15, jugée au jalon H-ISO5)
+
+Brief long d'Adrien, suite du 2026-09-15 (vers 01:20), étape E. Branche locale `iso2-vues`, sur la
+fusion `a753c22` d'`iso-corps` (vague 3 d'ISO Corps). Non poussée.
+
+**Pourquoi.** La vue iso projette la lightmap au sol, et tout ce qui y est dessiné s'y aplatit. Un
+objet qui a un corps dans le jeu — il arrête une balle ou occulte la lumière — doit se lever ; ce
+qui n'en a pas (suie, poussière, poudre, braises) reste une nappe. Le viseur, la ligne de visée et
+la balle, dessinés sans lumière, doivent rester au sol et se cacher derrière un mur comme le sol.
+
+**Ce qui existe** — `miroirs_iso.gd` (`MiroirsIso`, sous la scène iso), suivi image par image depuis
+`Presentation3D._suivre` :
+- **Les objets debout.** Chaque mine, torche fantôme, voile (ses deux piquets), ombre, grésillement
+  et fusée posée reçoit son `VoxelObjet`, à sa place et à son orientation ; la fusée en vol n'en a
+  pas. Les sprites remplacés sortent des lightmaps (couche 0) et la retrouvent à l'extinction ; la
+  toile du voile, la lentille de la torche, les lumières et les fumées restent à plat.
+- **Le leurre** reçoit le corps voxel de la classe de son poseur (`VoxelCorps`, arme baissée, torche
+  éteinte), avec l'opacité de ses deux silhouettes 2D, vue par vue.
+- **La lumière des voxels** se lit dans des capteurs, un par vue et par objet, sur une couche par
+  vue (128 et 256, ajoutées à `COUCHES_CAPTEURS`, donc hors des lightmaps), avec le masque et la
+  courbe du sprite remplacé : celle du moteur pour un gadget (`capteur_objet.gdshader`, neuf), celle
+  de l'ennemi dans la vue adverse du leurre, celle du moteur dans la vue de son poseur.
+- **La balle, le viseur et la ligne de visée** deviennent des quads posés à 0,6 px du sol
+  (`quad_iso.gdshader`, `quad_iso_additif.gdshader`), testés en profondeur : la balle au calque
+  commun, le viseur et la ligne de visée au calque de la vue de leur joueur seulement, comme leurs
+  couches 2D.
+- **Le rejeu** : la killcam recrée gadgets, fusées et balles dans le même conteneur (`is_replay`),
+  et ils reçoivent leur miroir comme en direct.
+
+**Ce que la suite prouve** — `tools/test_iso_objets.gd` (neuve, dans `run_suites.sh`), 40
+vérifications : chaque objet du catalogue a son miroir, chaque nappe n'en a pas ; le leurre au corps
+de sa classe ; la fusée seulement posée ; capteurs sur la couche des objets, hors des masques,
+masque et courbe du sprite ; sprites retirés puis rendus ; quads des viseurs et lignes de visée au
+calque de leur vue, et leur interrupteur ; miroir d'un gadget rejoué ; aucune `Light3D`. **Sabotée
+une fois** (le retrait des sprites neutralisé : « les sprites remplacés sortent des lightmaps  → 0/9
+» ; « posée, son cœur et son corps sortent des lightmaps » ; « J1 : la ligne de visée et le viseur
+sortent des lightmaps »), restaurée, verte.
+
+**Ce que les bancs prouvent** (`tools/banc_iso.gd`, pâte D, intro sautée) :
+  - **Verdict : OBJETS ÉQUITABLES (6/6 objets laissent voir la tête et le torse d'un corps collé
+    derrière)**.
+  - **Noir absolu, vue unique** : NOIR ABSOLU TENU — a : 0 pixel(s) allumé(s) hors du support de la
+    brute, écran max 179, capteurs [0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0] ; SILHOUETTE
+    TENUE.
+  - **Noir absolu, écran scindé** : NOIR ABSOLU TENU — a : 0 pixel(s) allumé(s) hors du support de
+    la brute, écran max 189, capteurs [0, 0, 0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0, 0] ;
+    SILHOUETTE TENUE.
+  - **Effacement du corps de J2 chez J1** : EFFACEMENT TENU — 1/255 du décor à opacité 0, fondu au
+    rapport 0.49 (médian 0.49).
+  - Appels de dessin (`--seconds 5`, une manche sans gadget posé) : vue unique 134, écran scindé
+    153.
+
+**Pièges d'ISO4.**
+- ⚠️ **Nommer `Bullet` ou `Fusee` rend la présentation incompilable dans les suites headless.** Ces
+  scripts nomment l'autoload `NetworkManager`, et une suite `extends SceneTree` compile avant les
+  autoloads : `MiroirsIso` reconnaît donc balles, fusées et gadgets par leurs propriétés, jamais par
+  leur classe. Au premier jet, `test_iso_vues` et la suite neuve ne se chargeaient plus du tout.
+- ⚠️ **Le viseur passé en 3D a rompu le contrôle (b) du noir absolu** (179/255 en vue unique, une
+  silhouette faussée en écran scindé). Ce ne sont pas des lumières : ce sont des dessins 2D sans
+  lumière, que (b) retirait avec leur lightmap. (b) les retire désormais en 3D aussi
+  (`MiroirsIso.masquer_les_quads`), et (a) les juge toujours contre la brute.
+- ⚠️ **Un banc sans script ne s'arrête pas.** Une erreur d'analyse dans `banc_iso.gd` (une clé de
+  dictionnaire comparée sans type) a laissé une fenêtre ouverte sept minutes sans rien mesurer :
+  chaque banc tourne désormais sous chien de garde et s'arrête à la première « Parse Error » de son
+  journal — la règle était déjà dans « Pièges connus », le script de lancement l'avait oubliée.
+- ⚠️ **Le leurre devant un corps ne se mesure pas** : ses occluders 2D mettent le corps derrière lui
+  dans l'ombre, voxel montré ou caché (0/0/0). Relevé pour information, sans verdict.
+- ⚠️ **Derrière le voile, le corps s'assombrit — et ce n'est pas le voxel.** Sur la planche, J2 ne
+  montre que 128 pixels éclairés derrière le voile, contre 616 derrière la mine et 650 derrière
+  l'ombre (mesurés sur les captures). Le voxel du voile n'y change pourtant aucun pixel (0 sur
+  10824, banc `--objets`) : c'est la toile 2D, qui occulte la lumière comme en vue de dessus, qui
+  éteint une part du corps. Règle du jeu conservée, pas une occlusion de la vue iso ; à ne pas lire
+  autrement sur la planche.
+- ⚠️ **Vert seul, rouge dans le lot : un quad relu entre la physique et la présentation.** Le
+  premier lot d'ISO4 a rougi sur `test_iso_objets` (« le quad du viseur est posé sous le viseur »,
+  tolérance 0,05 px). Relu juste après `process_frame`, le viseur avait déjà tourné avec la physique
+  de l'image ; son quad n'est reposé qu'en fin de `_process`, avant le rendu — à jour à l'écran, pas
+  au moment de la lecture. Le foyer du lot (cadence déplafonnée) le rendait visible, un foyer neuf
+  non. Reproduit dans le foyer du lot, puis corrigé dans la suite : les joueurs sont figés le temps
+  de la mesure.
+
+**Ce qu'ISO4 ne fait pas** : les fantômes voxel de la killcam et la visée à la souris par la caméra
+iso (ISO5) ; un geste de gadget par classe (signalé par ISO Corps, vague 1).
 
 ### Ce qui attend Adrien — jalon H15
 

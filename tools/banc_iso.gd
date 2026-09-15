@@ -217,6 +217,9 @@ var _noir_en_cours := false
 var _canaux := false
 ## `--effacement` : le contrôle du fondu des corps iso (ISO2b, voir `_controler_l_effacement`).
 var _effacement := false
+## ISO4 — `--objets` : un objet voxel posé devant un corps ne lui cache ni la tête ni le torse (voir
+## `_controler_les_objets`). Avec `--jeu --scinde --torches j2 --capture`.
+var _objets := false
 ## ISO2b — les opacités des sprites AU RENDU, relevées sur `RenderingServer.frame_pre_draw`, après
 ## tous les traitements de l'image : `player.gd` écrit l'opacité du sprite ennemi dans
 ## `_physics_process` (brouillage) ET dans `_process` (suie), et un relevé pris ailleurs — après une
@@ -387,6 +390,7 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_noir = args.has("--noir")
 	_canaux = args.has("--canaux")
 	_effacement = args.has("--effacement")
+	_objets = args.has("--objets")
 	_sans_hud = args.has("--sans-hud")
 	_mur_donne = args.has("--mur")
 	var taille := _value(args, "--taille", "")
@@ -936,6 +940,9 @@ func _capturer() -> void:
 	if _effacement:
 		await _controler_l_effacement()
 		return
+	if _objets:
+		await _controler_les_objets()
+		return
 	if _flash:
 		p1.shoot()
 		await get_tree().process_frame
@@ -1211,6 +1218,136 @@ func _controler_l_effacement() -> void:
 		tenu = tenu and int(f["ecart_a_0"]) <= EFFACEMENT_TOLERANCE and int(f["ecart_a_1"]) >= EFFACEMENT_VISIBLE
 	print("BANC_ISO effacement rendu=%s verdict=%s" % ["iso" if iso else "base", "EFFACEMENT TENU" if tenu else "EFFACEMENT ROMPU"])
 	_sortir(0 if tenu else 9)
+
+
+## ISO4 — l'équité des objets debout : « un objet voxel ne doit jamais cacher un corps que la vue de dessus
+## laisse voir » (brief). Chaque objet de la vague 3 est posé devant J2, du côté de la caméra de J1, au
+## contact (son rayon plus celui d'un corps), J2 éclairé par sa propre torche ; l'image est prise son voxel
+## caché, puis montré. Tenu si la tête et le torse de J2 — les boîtes du plafond, `_controler_les_corps` —
+## ne changent pas ; les pixels changés dans la zone du corps se relèvent à côté. La fusée est lancée puis
+## forcée à l'état posé. Le leurre est un corps : il se mesure de même, pour information, sans verdict.
+const OBJETS_BANC := {
+	"mine": "res://gadget_mine.gd",
+	"torche_fantome": "res://gadget_torche_fantome.gd",
+	"voile": "res://gadget_voile.gd",
+	"ombre": "res://gadget_ombre.gd",
+	"gresillement": "res://gadget_gresillement.gd",
+	"fusee": "",
+	"leurre": "res://gadget_leurre.gd",
+}
+const OBJET_TOLERANCE := 3
+
+
+func _controler_les_objets() -> void:
+	var p := Presentation3D.instance()
+	if not _jeu or _capture == "" or p == null or not bool(p.get("_actif")) or p.viewport_ecran(0) == null:
+		printerr("✗ --objets : il faut --jeu --capture, et la vue iso de J1 allumée")
+		_sortir(4)
+		return
+	var miroirs = p.get("_miroirs")
+	var p2: Node2D = _main.p2
+	var led := get_tree().root.find_child("MurLed", true, false) as Light2D
+	if led != null:
+		led.enabled = false
+	var cam: CameraIso = p._camera_de(0)
+	var taille := p.viewport_ecran(0).get_visible_rect().size
+	var origine: Vector2 = p._cadre(0).position if bool(p.get("_scinde")) else Vector2.ZERO
+	var echelle := taille.y / cam.size if cam.size > 0.0 else 1.0
+	var hauteur := _hauteur_du_corps_px(p, 1)
+	# La caméra regarde depuis le sud (lacet 0) : « devant » J2, c'est vers le bas de l'écran, +y en 2D.
+	var vers_camera := Vector2(0.0, 1.0)
+	var tenus := 0
+	var juges := 0
+	var numero := 950
+	for slug in OBJETS_BANC:
+		var rayon := float(VoxelCatalogueObjets.OBJETS[slug]["rayon_px"]) if VoxelCatalogueObjets.OBJETS.has(slug) \
+			else Presentation3D.RAYON_CORPS_PX
+		var pos := p2.global_position + vers_camera * (rayon + Presentation3D.RAYON_CORPS_PX)
+		var g: Node2D = null
+		if slug == "fusee":
+			_main._do_spawn_fusee(0, pos, PI / 2.0, numero)
+			g = _main.bullet_container.get_node_or_null(NodePath("FuseeJ1_%d" % numero)) as Node2D
+			if g != null:
+				g.call("forcer_age", 0.5)
+				g.global_position = pos
+		else:
+			g = (load(OBJETS_BANC[slug]) as GDScript).new()
+			g.set("slug", slug)
+			g.name = "GadgetJ1_%d" % numero
+			g.set("poseur_id", 0)
+			g.set("classe_du_poseur", _main.p1.current_weapon)
+			g.position = pos
+			_main.bullet_container.add_child(g)
+		numero += 1
+		if g == null:
+			printerr("  ✗ %s : objet non posé" % slug)
+			continue
+		for i in 20:
+			await get_tree().process_frame
+		var voxel: Node3D = miroirs.miroir_de(g)
+		if voxel == null:
+			printerr("  ✗ %s : aucun miroir" % slug)
+			g.queue_free()
+			continue
+		voxel.visible = false
+		for i in 8:
+			await get_tree().process_frame
+		var sans: Image = await RenduCommun.capturer(get_tree(), 15000)
+		voxel.visible = true
+		for i in 8:
+			await get_tree().process_frame
+		var avec: Image = await RenduCommun.capturer(get_tree(), 15000)
+		if sans == null or avec == null:
+			printerr("✗ aucune image rendue en 15 s")
+			_sortir(4)
+			return
+		avec.save_png(_capture.get_basename() + "_objet_%s.png" % slug)
+		var boites := []
+		for image in [sans, avec]:
+			var flanc := _max_rgb_dans(image, origine + cam.vers_ecran(p2.global_position, taille, hauteur * 0.6),
+				4.0 * echelle, 4.0 * echelle)
+			var tete := _max_rgb_dans(image, origine + cam.vers_ecran(p2.global_position, taille, hauteur * 0.88),
+				2.5 * echelle, 2.5 * echelle)
+			boites.append([flanc, tete])
+		var ecart := 0
+		for b in 2:
+			for c in 3:
+				ecart = maxi(ecart, absi(int(boites[0][b][c]) - int(boites[1][b][c])))
+		var zone := _zone_du_corps(p, 0, p2).intersection(Rect2i(Vector2i.ZERO, avec.get_size()))
+		var changes := 0
+		if zone.size.x > 0 and zone.size.y > 0:
+			var a := sans.get_region(zone)
+			var b2 := avec.get_region(zone)
+			a.convert(Image.FORMAT_RGB8)
+			b2.convert(Image.FORMAT_RGB8)
+			var da := a.get_data()
+			var db := b2.get_data()
+			for k in range(0, da.size(), 3):
+				if absi(int(da[k]) - int(db[k])) > 30 or absi(int(da[k + 1]) - int(db[k + 1])) > 30 \
+						or absi(int(da[k + 2]) - int(db[k + 2])) > 30:
+					changes += 1
+		var eclaire := maxi(maxi(int(boites[0][0][0]), int(boites[0][0][1])), maxi(int(boites[0][1][0]), int(boites[0][1][1]))) > 40
+		var tenu := ecart <= OBJET_TOLERANCE and eclaire
+		# `slug` vient d'une clé de dictionnaire, sans type : l'inférence refuse la comparaison.
+		var info: bool = String(slug) == "leurre"
+		if not info:
+			juges += 1
+			if tenu:
+				tenus += 1
+		print("BANC_ISO objet slug=%s zone=%d,%d,%d,%d devant_J2=%.0f px tete=%s/%s torse=%s/%s ecart=%d pixels_changes=%d/%d eclaire=%s verdict=%s"
+			% [slug, zone.position.x, zone.position.y, zone.size.x, zone.size.y, rayon + Presentation3D.RAYON_CORPS_PX, str(boites[0][1]), str(boites[1][1]), str(boites[0][0]),
+			str(boites[1][0]), ecart, changes, zone.size.x * zone.size.y, "oui" if eclaire else "non",
+			"information (un corps)" if info else ("TÊTE ET TORSE INTACTS" if tenu else "CACHE LE CORPS")])
+		g.queue_free()
+		for i in 6:
+			await get_tree().process_frame
+	var verdict := tenus == juges and juges > 0
+	print("BANC_ISO objets verdict=%s (%d/%d objets laissent voir la tête et le torse d'un corps collé derrière)"
+		% ["OBJETS ÉQUITABLES" if verdict else "UN OBJET CACHE UN CORPS", tenus, juges])
+	var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+	if image != null:
+		image.save_png(_capture)
+	_sortir(0 if verdict else 9)
 
 
 ## Les mesures du fondu dans une zone, sur les seuls pixels STABLES (même valeur à opacité 0 en début
@@ -1650,6 +1787,13 @@ func _capturer_le_noir() -> void:
 	for vue in _vues:
 		masques.append(vue.canvas_cull_mask)
 		vue.canvas_cull_mask = 0
+	# ISO4 : le viseur, la ligne de visée et la balle sont passés de la lightmap à des quads 3D au sol. Ce
+	# sont toujours des dessins 2D SANS LUMIÈRE (voir plus haut, en-tête du contrôle) : (b) les retire avec
+	# le reste de la 2D, comme il les retirait avec leur lightmap — sans quoi le viseur de chacun ressortait
+	# ici à 179/255 et la ligne de visée faussait une silhouette. (a) les juge toujours contre la brute.
+	var miroirs = presentation.get("_miroirs")
+	if miroirs != null:
+		miroirs.masquer_les_quads(true)
 	# « La vue 2D ne dessine plus rien » vaut pour les capteurs aussi : ils sont de la 2D.
 	var capteurs_vivants := _capteurs_vivants()
 	var masques_capteurs: Array[int] = []
@@ -1673,6 +1817,8 @@ func _capturer_le_noir() -> void:
 	var max_capteurs_b := _max_capteurs()
 	for k in capteurs_vivants.size():
 		capteurs_vivants[k].canvas_cull_mask = masques_capteurs[k]
+	if miroirs != null:
+		miroirs.masquer_les_quads(false)
 	var chemin_b := _capture.get_basename() + "_lightmap_noire.png"
 	if image_b != null:
 		image_b.save_png(chemin_b)

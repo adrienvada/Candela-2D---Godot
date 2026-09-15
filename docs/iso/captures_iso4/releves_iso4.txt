@@ -1,0 +1,115 @@
+===== banc_objets
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+BANC_ISO objet slug=mine zone=780,842,88,122 devant_J2=22 px tete=[81, 88, 95]/[81, 88, 95] torse=[81, 88, 95]/[81, 88, 95] ecart=0 pixels_changes=0/10736 eclaire=oui verdict=TÊTE ET TORSE INTACTS
+BANC_ISO objet slug=torche_fantome zone=780,842,88,122 devant_J2=23 px tete=[81, 88, 95]/[81, 88, 95] torse=[81, 88, 95]/[81, 88, 95] ecart=0 pixels_changes=225/10736 eclaire=oui verdict=TÊTE ET TORSE INTACTS
+BANC_ISO objet slug=voile zone=780,841,88,123 devant_J2=20 px tete=[81, 88, 95]/[81, 88, 95] torse=[81, 88, 95]/[81, 88, 95] ecart=0 pixels_changes=0/10824 eclaire=oui verdict=TÊTE ET TORSE INTACTS
+BANC_ISO objet slug=ombre zone=780,842,88,122 devant_J2=32 px tete=[81, 88, 95]/[81, 88, 95] torse=[81, 88, 95]/[81, 88, 95] ecart=0 pixels_changes=50/10736 eclaire=oui verdict=TÊTE ET TORSE INTACTS
+BANC_ISO objet slug=gresillement zone=780,842,88,122 devant_J2=23 px tete=[81, 88, 95]/[81, 88, 95] torse=[81, 88, 95]/[81, 88, 95] ecart=0 pixels_changes=0/10736 eclaire=oui verdict=TÊTE ET TORSE INTACTS
+BANC_ISO objet slug=fusee zone=780,842,88,122 devant_J2=29 px tete=[82, 76, 82]/[82, 75, 81] torse=[116, 92, 98]/[119, 92, 99] ecart=3 pixels_changes=429/10736 eclaire=oui verdict=TÊTE ET TORSE INTACTS
+BANC_ISO objet slug=leurre zone=780,841,88,123 devant_J2=28 px tete=[0, 0, 0]/[0, 0, 0] torse=[0, 0, 0]/[0, 0, 0] ecart=0 pixels_changes=484/10824 eclaire=non verdict=information (un corps)
+BANC_ISO objets verdict=OBJETS ÉQUITABLES (6/6 objets laissent voir la tête et le torse d'un corps collé derrière)
+
+===== tir
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+BANC_ISO capture iso4/bancs/tir.png 2560×1440
+BANC_ISO lightmap iso4/bancs/tir_lightmap1.png 957×1080
+BANC_ISO lightmap iso4/bancs/tir_lightmap2.png 958×1080
+BANC_ISO corps vue=J1 corps=J1 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps vue=J1 corps=J2 opacite_au_rendu=0.65
+BANC_ISO corps vue=J1 corps=J2 position=(338.0, 728.0) rotation=1.571 opacite=0.65 lumieres : Player1/Flashlight masque=7 energie=1.79 ombre=oui(11) d=172
+BANC_ISO corps vue=J1 corps=J2 max=0/0/0 plafond=81/88/95 eclaire=non verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J1 opacite_au_rendu=0.00
+BANC_ISO corps vue=J2 corps=J1 position=(228.0, 578.0) rotation=1.932 opacite=0.00 lumieres : Player1/Flashlight masque=7 energie=1.79 ombre=oui(11) d=30 | Player1/BodyLight masque=6 energie=0.43 ombre=oui(51) d=18
+BANC_ISO corps vue=J2 corps=J1 max=50/47/41 plafond=81/88/95 eclaire=oui verdict=sous le plafond
+BANC_ISO corps vue=J2 corps=J2 ignoré (son porteur est ébloui à 0.06)
+BANC_ISO corps verdict=PLAFOND TENU (2 corps mesurés, 0 au-dessus du gris de l'ennemi)
+
+===== noir_unique
+  Racine      : cible 3D 2560×1440 (la fenêtre)
+BANC_ISO noir-a rendu=jeu-D vue=unique max_ecran=179/255 max_brute=179/255 max_lightmaps=[0] max_capteurs=[0, 0] allumes_hors_support=0 lumieres_eteintes=253 image=iso4/bancs/noir_unique.png
+BANC_ISO silhouette vue=J1 corps=J1 max=87/112/126 attendu=87/111/126 verdict=juste
+BANC_ISO silhouette vue=J1 corps=J2 max=0/0/0 attendu=0/0/0 verdict=juste
+BANC_ISO silhouette verdict=SILHOUETTE TENUE (2 corps mesurés, 0 faux ; la sienne à la moitié de sa couleur, celle d'en face à 0)
+BANC_ISO noir-b rendu=jeu-D vue=unique max_ecran=0/255 max_moities=[0] max_lightmaps=[0] max_capteurs=[0, 0] image=iso4/bancs/noir_unique_lightmap_noire.png
+BANC_ISO noir rallumees_par_le_jeu=Arena/MurLed
+BANC_ISO noir pate=D vue=unique verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 179, capteurs [0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0])
+
+===== noir_scinde
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+BANC_ISO noir-a rendu=jeu-D vue=scinde max_ecran=189/255 max_brute=189/255 max_lightmaps=[0, 0] max_capteurs=[0, 0, 0, 0] allumes_hors_support=0 lumieres_eteintes=253 image=iso4/bancs/noir_scinde.png
+BANC_ISO silhouette vue=J1 corps=J1 max=87/112/126 attendu=87/111/126 verdict=juste
+BANC_ISO silhouette vue=J1 corps=J2 max=0/0/0 attendu=0/0/0 verdict=juste
+BANC_ISO silhouette vue=J2 corps=J1 max=0/0/0 attendu=0/0/0 verdict=juste
+BANC_ISO silhouette vue=J2 corps=J2 max=125/87/89 attendu=125/87/89 verdict=juste
+BANC_ISO silhouette verdict=SILHOUETTE TENUE (4 corps mesurés, 0 faux ; la sienne à la moitié de sa couleur, celle d'en face à 0)
+BANC_ISO noir-b rendu=jeu-D vue=scinde max_ecran=0/255 max_moities=[0, 0] max_lightmaps=[0, 0] max_capteurs=[0, 0, 0, 0] image=iso4/bancs/noir_scinde_lightmap_noire.png
+BANC_ISO noir rallumees_par_le_jeu=Arena/MurLed
+BANC_ISO noir pate=D vue=scinde verdict=NOIR ABSOLU TENU (a : 0 pixel(s) allumé(s) hors du support de la brute, écran max 189, capteurs [0, 0, 0, 0] ; b : écran 0 sur lightmap 0 ; moitiés [0, 0])
+
+===== effacement
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+BANC_ISO fondu rendu=iso vue=J1 corps=J2 zone=[P: (780, 842), S: (88, 122)] opacite_au_rendu=1.00/0.50/0.00 contraste_a_1=95 contraste_a_0.5=47 rapport=0.49 rapport_median=0.49 hors_norme=19/1845 mouvants_ecartes=0 (attendu 0,50 ± 0.06)
+BANC_ISO effacement vue=J1 corps=J2 ecart_a_0=1 (tolérance 8) ecart_a_1=95 (visible dès 30)
+BANC_ISO effacement rendu=iso verdict=EFFACEMENT TENU
+
+===== appels_unique
+  Racine      : cible 3D 2560×1440 (la fenêtre)
+BANC_ISO mode=jeu-D vue=unique lightmap=1080p tangage=52.0 lacet=0.0 mur=1.25 charge=false carte=Arène Standard median=240 bas1=115 pire_ms=9.2 appels=134 focus=premier
+
+===== appels_scinde
+  VueIso1     : cible 3D 1276×1440
+  VueIso2     : cible 3D 1277×1440
+BANC_ISO mode=jeu-D vue=scinde lightmap=1080p tangage=52.0 lacet=0.0 mur=1.25 charge=false carte=Arène Standard median=210 bas1=96 pire_ms=11.1 appels=153 focus=premier
+
+===== test_iso_objets
+  ✓ « mine » a un corps : il reçoit un miroir
+  ✓ « torche_fantome » a un corps : il reçoit un miroir
+  ✓ « voile » a un corps : il reçoit un miroir
+  ✓ « ombre » a un corps : il reçoit un miroir
+  ✓ « gresillement » a un corps : il reçoit un miroir
+  ✓ « fusee » a un corps : il reçoit un miroir
+  ✓ « suie » reste à plat dans la lightmap
+  ✓ « poussiere » reste à plat dans la lightmap
+  ✓ « poudre_contact » reste à plat dans la lightmap
+  ✓ « nappe_braises » reste à plat dans la lightmap
+  ✓ les couches des objets sortent des lightmaps avec celles des corps (128 et 256)
+  ✓ la manche iso démarre
+  ✓ la vue iso est allumée en écran scindé
+  ✓ la présentation porte ses miroirs (MiroirsIso)
+  ✓ chaque gadget posé a son miroir, de son slug et à sa place (le leurre : le corps de la classe du poseur)
+  ✓ les sprites remplacés sortent des lightmaps
+  ✓ la toile du voile reste à plat dans la lightmap
+  ✓ les voxels sont tous sous la scène iso (aucun nœud 3D sous le jeu)
+  ✓ un capteur par vue pour chaque miroir, sur la couche des objets hors des lightmaps, avec le masque et la courbe du sprite remplacé
+  ✓ la fusée est lancée
+  ✓ en vol, la fusée n'a pas de miroir
+  ✓ posée, la fusée a son miroir
+  ✓ posée, son cœur et son corps sortent des lightmaps
+  ✓ J1 : la ligne de visée et le viseur ont leur quad au calque de sa vue (2)
+  ✓ J1 : la ligne de visée et le viseur sortent des lightmaps
+  ✓ J1 : le quad du viseur est posé au sol, sous le viseur
+  ✓ J2 : la ligne de visée et le viseur ont leur quad au calque de sa vue (4)
+  ✓ J2 : la ligne de visée et le viseur sortent des lightmaps
+  ✓ J2 : le quad du viseur est posé au sol, sous le viseur
+  ✓ masquer_les_quads garde cachés viseurs et lignes de visée (contrôle (b) du noir absolu)
+  ✓ et les rend quand le contrôle est fini
+  ✓ un gadget recréé par le rejeu reçoit son miroir comme en direct
+  ✓ un gadget libéré perd son miroir
+  ✓ aucune Light3D dans la vue iso
+  ✓ à l'extinction, plus aucun miroir
+  ✓ à l'extinction, chaque sprite remplacé retrouve sa couche
+  ✓ à l'extinction, le leurre est de nouveau vu par l'adversaire en 2D (couche de sa vue)
+  ✓ à l'extinction, la ligne de visée et le viseur de J1 reviennent dans sa vue (couche 2)
+  ✓ assez de vérifications (38 ≥ 30)
+✓ Tous les tests passent (39 vérifications)
+
+===== sabotage (miroirs_iso.gd : _retirer_de_la_lightmap neutralisée)
+  ✗ les sprites remplacés sortent des lightmaps  → 0/9
+  ✗ posée, son cœur et son corps sortent des lightmaps
+  ✗ J1 : la ligne de visée et le viseur sortent des lightmaps
+  ✗ J2 : la ligne de visée et le viseur sortent des lightmaps
+✗ 4 test(s) en échec
