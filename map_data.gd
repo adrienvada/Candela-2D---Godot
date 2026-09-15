@@ -344,9 +344,15 @@ func import_share_code(code: String) -> Dictionary:
 # TILEMAP ↔ DONNÉES
 # ---------------------------------------------------------------------------
 
-## Lit l'état des calques d'édition et produit un dictionnaire de carte v3.
+## Lit l'état des calques d'édition et produit un dictionnaire de carte
+## (version courante de `MapCodec`).
+##
+## `low_walls_layer` (MB1, 2026-09-14) est optionnel et en DERNIER : les appelants
+## d'avant les murs bas continuent de fonctionner, et une carte dont on ne lit pas
+## le calque garde les murs bas de `base` au lieu de les perdre en silence.
 func extract_from_layers(floor_layer: TileMapLayer, walls_layer: TileMapLayer,
-		spawns: Node2D, base: Dictionary = {}) -> Dictionary:
+		spawns: Node2D, base: Dictionary = {},
+		low_walls_layer: TileMapLayer = null) -> Dictionary:
 	var data := base.duplicate(true) if not base.is_empty() else MapCodec.new_map("Carte sans nom")
 
 	var floor_cells: Array[Vector2i] = []
@@ -356,6 +362,12 @@ func extract_from_layers(floor_layer: TileMapLayer, walls_layer: TileMapLayer,
 
 	data["floor"] = MapCodec.encode_runs(floor_cells)
 	data["walls"] = MapCodec.encode_runs(wall_cells)
+	if low_walls_layer != null:
+		var low_cells: Array[Vector2i] = []
+		low_cells.assign(low_walls_layer.get_used_cells())
+		data["low_walls"] = MapCodec.encode_runs(low_cells)
+	elif not data.has("low_walls"):
+		data["low_walls"] = ""
 	data["version"] = MapCodec.VERSION
 	data["tile_size"] = CandelaTileSet.TILE_SIZE.x
 
@@ -375,12 +387,26 @@ func _extract_spawn(spawns: Node2D, node_name: String, layer: TileMapLayer) -> D
 
 ## Peint une carte sur les calques (visuel uniquement).
 ## La physique et l'occlusion sont produites par MapGeometry.build_collisions().
+##
+## `low_walls_layer` (MB1) : optionnel, en dernier, comme pour `extract_from_layers`.
+## Une case portant un mur haut n'y reçoit pas de mur bas — même arbitrage que
+## `MapGeometry.build_grid`, pour que le dessin ne montre pas ce que la collision
+## ignore.
 func apply_to_layers(floor_layer: TileMapLayer, walls_layer: TileMapLayer,
-		spawns: Node2D, data: Dictionary = {}) -> void:
+		spawns: Node2D, data: Dictionary = {},
+		low_walls_layer: TileMapLayer = null) -> void:
 	var map: Dictionary = data if not data.is_empty() else get_selected()
 
 	floor_layer.clear()
 	walls_layer.clear()
+	if low_walls_layer != null:
+		low_walls_layer.clear()
+		var hauts := {}
+		for cell in MapCodec.get_wall_cells(map):
+			hauts[cell] = true
+		for cell in MapCodec.get_low_wall_cells(map):
+			if not hauts.has(cell):
+				low_walls_layer.set_cell(cell, 0, CandelaTileSet.LOW_WALL_ATLAS)
 
 	for cell in MapCodec.get_floor_cells(map):
 		# DA2.6 — huit orientations tirées de la position. Voir

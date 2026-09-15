@@ -40,8 +40,12 @@ const DEFERRED_TIMEOUT_MS_BY_COMMAND := {
 	"stop_project": 4500,
 	"run_project": 6000,
 	"take_screenshot": 30000,
+	"check_client_status": 30000,
 	"game_eval": 15000,
 	"game_command": 15000,
+	## The editor-side runtime-control timer owns 5s; keep the dispatcher
+	## outside it so the actionable control result wins before DEFERRED_TIMEOUT.
+	"game_debug_control": 6500,
 	"scan_filesystem": 30000,
 }
 const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
@@ -74,11 +78,68 @@ func register_lazy_handler(handler_key: String, script_path: String, ctor_args: 
 func register_lazy(command_name: String, handler_key: String, method: StringName) -> void:
 	_lazy_commands[command_name] = {"handler": handler_key, "method": method}
 
+func unregister(command_name: String, handler_key: String) -> void:
+	_handlers.erase(command_name)
+	_lazy_commands.erase(command_name)
+	## Drop the lazy spec/cache only when no remaining command routes to
+	## this handler key. Custom tools use 1:1 keys ("custom:<name>") so this
+	## always erases for them, but built-in keys serve many commands —
+	## erasing the shared spec would strand the siblings on
+	## "No lazy handler declared" at dispatch time.
+	for entry in _lazy_commands.values():
+		if entry.get("handler", "") == handler_key:
+			return
+	_lazy_handler_cache.erase(handler_key)
+	_lazy_handler_specs.erase(handler_key)
+
+## Synchronously realize handler-owned work before any add-on script can be
+## replaced. A handler that cannot prove quiescence keeps the dispatcher live
+## and makes the caller fail closed.
+func quiesce_for_script_swap() -> Dictionary:
+	# Deferred timeouts are not proof that the underlying work has returned;
+	# the independent ledger also covers an old composition after a reload.
+	var work: Dictionary = preload("res://addons/godot_ai/utils/script_work.gd").quiescence()
+	if not bool(work.get("ok", false)):
+		return work
+	if not _pending_deferred.is_empty():
+		return {"ok": false, "error": "Wait for pending tool responses before updating."}
+	for handler_key in _lazy_handler_cache:
+		var instance: Variant = _lazy_handler_cache[handler_key]
+		if not is_instance_valid(instance) or not instance.has_method("quiesce_for_script_swap"):
+			return {
+				"ok": false,
+				"error": "Command handler '%s' cannot prove quiescence for script replacement." % handler_key,
+			}
+		var result: Variant = instance.call("quiesce_for_script_swap")
+		if not result is Dictionary or not bool(result.get("ok", false)):
+			return {
+				"ok": false,
+				"error": "Command handler '%s' could not quiesce for script replacement: %s" % [
+					handler_key, result,
+				],
+			}
+	return {"ok": true}
+
 
 ## Drop registered handlers, queued commands, and the log buffer ref so
 ## plugin.gd can release RefCounted handlers before Godot reloads their
-## class_name scripts (issue #46). After clear(), the dispatcher is inert.
-func clear() -> void:
+## class_name scripts (issue #46). After a successful clear(), the dispatcher
+## is inert. A failed quiesce leaves every reference intact.
+func clear() -> Dictionary:
+	var quiesced := quiesce_for_script_swap()
+	if not bool(quiesced.get("ok", false)):
+		return quiesced
+	release_after_teardown()
+	return {"ok": true}
+
+
+## Ordinary plugin teardown is not permission to replace scripts. The root
+## first stops transport and joins its client/vision workers, then drops this
+## graph even when a handler cannot certify hot script replacement. Requiring
+## that stronger certificate here leaks the dispatcher <-> handler cycles at
+## every editor exit. Hot-update callers must still use clear(), which refuses
+## to release anything until every materialized handler proves quiescence.
+func release_after_teardown() -> void:
 	_handlers.clear()
 	## Release lazily-constructed handler instances (and the ctor args that
 	## reference plugin-lifetime objects) at the same teardown point where
@@ -225,7 +286,12 @@ func _dispatch(cmd: Dictionary) -> Dictionary:
 		result = ErrorCodes.make(ErrorCodes.UNKNOWN_COMMAND, "Unknown command: %s" % command)
 
 	if result.get("_deferred", false):
-		_register_deferred(request_id, command)
+		## A handler may attach `_deferred_timeout_ms` to its deferred sentinel
+		## to claim a per-request budget larger than its command's shared entry
+		## (e.g. game_command's `input_sequence`, which steps frames well past
+		## the 15s that suits one-shot game ops). 0/absent falls back to the
+		## per-command table.
+		_register_deferred(request_id, command, int(result.get("_deferred_timeout_ms", 0)))
 		if mcp_logging:
 			_log_buffer.log("[defer] %s (request %s)" % [command, request_id])
 		return result
@@ -359,13 +425,21 @@ func _materialize_lazy_command(command: String) -> Dictionary:
 	return {}
 
 
-func _register_deferred(request_id: String, command: String) -> void:
+func _register_deferred(request_id: String, command: String, timeout_override_ms: int = 0) -> void:
 	if request_id.is_empty():
 		return
+	## A positive per-request override wins over the per-command table so a
+	## single deferred call can claim more headroom without globally widening
+	## the command's budget (see _dispatch: input_sequence needs ~30s, but the
+	## other game_command ops must keep their tight 15s).
+	var timeout_ms: int = (
+		timeout_override_ms if timeout_override_ms > 0
+		else _deferred_timeout_ms_for_command(command)
+	)
 	_pending_deferred[request_id] = {
 		"command": command,
 		"started_ms": Time.get_ticks_msec(),
-		"timeout_ms": _deferred_timeout_ms_for_command(command),
+		"timeout_ms": timeout_ms,
 	}
 
 

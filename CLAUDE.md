@@ -124,7 +124,14 @@ Phase 9, pas un rangement, et le déplacer casse silencieusement les correctifs.
   `SubViewport` : `_restore_viewports()` coupe aussi le
   `render_target_update_mode` de la vue masquée, sans quoi elle dessine dans une
   texture que personne n'affiche — 1,5 ms mesurées. La séparation des vues passe
-  par `canvas_cull_mask` : chaque joueur ne voit que ses propres lumières.
+  par `canvas_cull_mask` : chaque vue cache la couche privée de l'autre joueur
+  (couche 2 pour J1, 4 pour J2, 1 commune). **C'est `game_state.gd` qui fait
+  foi, pas `main.tscn`** : la scène déclare 3 et 5, mais `_setup_players()` pose
+  `~4` et `~2` avant la première image, et les valeurs de la scène ne sont
+  jamais rendues. Aujourd'hui les deux jeux rendent la même image — aucun
+  `visibility_layer` n'utilise un bit au-delà du troisième (1, 2, 4, 6) — mais
+  un objet posé sur la couche 8 ou plus s'afficherait dans les deux vues, là où
+  la scène le cacherait dans les deux (constaté le 2026-09-14).
 
   **En vue unique, le duel n'est plus rendu par un `SubViewport` du tout**
   (chantier R, 2026-08-25) : la racine adopte le même `World2D`, le masque de

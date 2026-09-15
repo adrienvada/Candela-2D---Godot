@@ -10,6 +10,18 @@ shader_type canvas_item;
 //
 // Ressource partagée par les deux joueurs : compilée une fois au chargement,
 // jamais pendant une manche.
+//
+// Chantier MURS BAS, MB3c : un accroupi derrière un mur bas ne reçoit pas la
+// lumière venue de l'autre côté — jugé en son centre, comme la balle. Les
+// uniformes viennent de `MursBasRendu.poser_corps()`, par vue. ⚠️ Le matériau
+// est partagé par `visual` et `visual_ptr` d'UN joueur, pas entre joueurs : ils
+// ont le même centre.
+#include "res://murs_bas_zone.gdshaderinc"
+
 void light() {
-	LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb, LIGHT_COLOR.a);
+	if (mb_dans_la_zone_morte(LIGHT_POSITION, LIGHT_VERTEX)) {
+		LIGHT = vec4(0.0);
+	} else {
+		LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb, LIGHT_COLOR.a);
+	}
 }

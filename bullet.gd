@@ -37,6 +37,22 @@ var _traverses: int = 0
 var lag_target: Player
 var lag_center: Vector2 = Vector2.ZERO
 
+## ── Chantier MURS BAS, MB3a (2026-09-14) ─────────────────────────────────────
+##
+## « Balles et lumière debout franchissent le mur bas selon un même angle : un
+## accroupi loin derrière redevient visible et touchable. » La balle interroge
+## la MÊME règle que la lumière, `MursBas.franchit`, depuis son point de départ.
+##
+## `hauteur_tir` : la hauteur du canon au tir, posée par `GameState` avant
+## `add_child`. Un canon plus bas qu'un mur bas voit les murs bas comme des murs.
+var hauteur_tir: float = MursBas.hauteur_de_posture(false)
+## Les murs bas de l'arène, en pixels (`GameState.murs_bas`).
+var murs_bas: Array = []
+## La hauteur de la cible compensée TELLE QU'ELLE ÉTAIT (`_rewound_posture`).
+var lag_hauteur: float = MursBas.hauteur_de_posture(false)
+## La cible compensée est dans la zone morte : la balle est passée au-dessus.
+var _lag_survolee := false
+
 var shape_cast: ShapeCast2D
 var light: PointLight2D
 var spawn_pos: Vector2
@@ -136,6 +152,11 @@ func _ready():
 	# hors du masque des joueurs, précisément pour que ceux-ci les traversent.
 	# Sans cette ligne une balle passerait au travers d'une mine sans la voir.
 	shape_cast.collision_mask = MapGeometry.BULLET_MASK
+	# MB3a — « en dessous si on est accroupi » : le canon d'un accroupi ne passe
+	# pas le mur bas, la balle s'y arrête comme sur un mur (effets et rebond
+	# compris). Une balle debout, elle, ne voit pas la couche.
+	if hauteur_tir <= MursBas.hauteur_mur():
+		shape_cast.collision_mask |= MapGeometry.LOW_WALL_LAYER
 	add_child(shape_cast)
 	if source_player:
 		shape_cast.add_exception(source_player)
@@ -170,7 +191,8 @@ func _physics_process(delta):
 
 	# Cible compensée : test manuel segment/cercle, le ShapeCast ne la voit plus.
 	# Un mur touché plus tôt sur le pas l'emporte toujours.
-	if lag_target and is_instance_valid(lag_target) and (lag_target.hp > 0 or is_replay):
+	if lag_target and is_instance_valid(lag_target) and (lag_target.hp > 0 or is_replay) \
+			and not _lag_survolee:
 		var lag_dist := _circle_entry_distance(global_position, direction, travel_step,
 			lag_center, PLAYER_BODY_RADIUS + radius)
 		if lag_dist >= 0.0:
@@ -183,15 +205,24 @@ func _physics_process(delta):
 			var obstacle_avant := shape_cast.is_colliding() \
 				and global_position.distance_to(shape_cast.get_collision_point(0)) < lag_dist
 			if not obstacle_avant:
-				_hit_player(lag_target, lag_center, global_position + direction * lag_dist)
-				return
+				# MB3a — la cible compensée se juge à sa position ET à sa posture
+				# d'alors : ce que le tireur voyait, les deux.
+				if _franchit_vers(lag_center, lag_hauteur):
+					_hit_player(lag_target, lag_center, global_position + direction * lag_dist)
+					return
+				_lag_survolee = true
 
 	if shape_cast.is_colliding():
 		var collider = shape_cast.get_collider(0)
 		var hit_point = shape_cast.get_collision_point(0)
 
 		if collider is Player and (collider.hp > 0 or is_replay):
-			_hit_player(collider, collider.global_position, hit_point)
+			if _franchit_vers(collider.global_position, MursBas.hauteur_de_posture(collider.accroupi)):
+				_hit_player(collider, collider.global_position, hit_point)
+			else:
+				# MB3a — cet accroupi est dans la zone morte d'un mur bas : la
+				# balle passe au-dessus de lui et l'ignore pour le reste du vol.
+				shape_cast.add_exception(collider)
 			return
 		elif collider is TrainingTarget:
 			_hit_training_target(collider, hit_point)
@@ -229,7 +260,12 @@ func _physics_process(delta):
 			else:
 				return
 		if collider is Player and (collider.hp > 0 or is_replay):
-			_hit_player(collider, collider.global_position, hit_point)
+			if _franchit_vers(collider.global_position, MursBas.hauteur_de_posture(collider.accroupi)):
+				_hit_player(collider, collider.global_position, hit_point)
+			else:
+				# MB3a — cet accroupi est dans la zone morte d'un mur bas : la
+				# balle passe au-dessus de lui et l'ignore pour le reste du vol.
+				shape_cast.add_exception(collider)
 			return
 		elif collider is TrainingTarget:
 			_hit_training_target(collider, hit_point)
@@ -345,6 +381,15 @@ func _draw() -> void:
 	if back < 8.0:
 		return
 	draw_dashed_line(Vector2(-back, 0.0), Vector2.ZERO, TRACE_COLOR, 2.0, 12.0)
+
+## MB3a — la balle atteint-elle une cible de hauteur `h_cible` en `centre`, par
+## la règle des murs bas ? Depuis `spawn_pos` : le départ du tir, ou le point du
+## dernier rebond. La TUILE entière fait foi pour la balle (la collision), là où
+## la lumière lit l'occluder rentré de 3 px (`docs/MURS_BAS.md` § 3).
+func _franchit_vers(centre: Vector2, h_cible: float) -> bool:
+	if murs_bas.is_empty():
+		return true
+	return MursBas.franchit_regle(spawn_pos, centre, hauteur_tir, h_cible, murs_bas)
 
 ## Impact joueur. `center` est le point de référence pour l'atténuation : la
 ## position réelle du joueur, ou celle remontée dans le temps quand le tir est

@@ -14,6 +14,8 @@ func _init() -> void:
 	_test_edge_cases()
 	_test_contours()
 	_test_occluder_inset_keeps_collision_intact()
+	_test_murs_bas()
+	_test_cartes_livrees_et_essai()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -416,7 +418,9 @@ func _test_edge_cases() -> void:
 	var empty_parent := Node2D.new()
 	var empty_body := MapGeometry.build_collisions({}, empty_parent)
 	_check("carte vide → corps construit sans planter", empty_body != null)
-	_check("carte vide → 1 forme + 1 occluder", empty_body.get_child_count() == 2,
+	# Trois corps depuis MB1 : Murs, Fosses, MursBas. Le libellé d'origine disait
+	# « 1 forme + 1 occluder » pour ce qui comptait en fait les deux CORPS.
+	_check("carte vide → trois corps (murs, fosses, murs bas)", empty_body.get_child_count() == 3,
 		"%d enfants" % empty_body.get_child_count())
 	empty_parent.free()
 
@@ -548,3 +552,159 @@ func _test_occluder_inset_keeps_collision_intact() -> void:
 
 	arena.free()
 	arena2.free()
+
+# ---------------------------------------------------------------------------
+# MURS BAS — chantier MURS BAS, étape MB1 (2026-09-14)
+# ---------------------------------------------------------------------------
+
+## La troisième famille : `Kind.LOW_WALLS`, sa couche, ses occluders à part.
+func _test_murs_bas() -> void:
+	print("\n[Murs bas — Kind.LOW_WALLS]")
+	_check("Kind.WALLS et Kind.PITS gardent leurs valeurs, LOW_WALLS vient après (contrat ISO1)",
+		MapGeometry.Kind.WALLS == 0 and MapGeometry.Kind.PITS == 1 and MapGeometry.Kind.LOW_WALLS == 2)
+	var autres := [MapGeometry.WALL_LAYER, MapGeometry.PIT_LAYER, MapGeometry.GADGET_LAYER,
+		MapGeometry.GADGET_BLOQUANT_LAYER]
+	var distincte := true
+	for c: int in autres:
+		distincte = distincte and (c & MapGeometry.LOW_WALL_LAYER) == 0
+	_check("couche des murs bas distincte des quatre autres", distincte, str(MapGeometry.LOW_WALL_LAYER))
+	_check("les joueurs heurtent les murs bas", MapGeometry.PLAYER_MASK & MapGeometry.LOW_WALL_LAYER != 0)
+	_check("les balles ne les voient pas : un corps debout tire par-dessus",
+		MapGeometry.BULLET_MASK & MapGeometry.LOW_WALL_LAYER == 0)
+	_check("hauteurs ordonnées : accroupi < mur bas < debout ≤ mur haut",
+		MapGeometry.HAUTEUR_ACCROUPI < MapGeometry.HAUTEUR_MUR_BAS
+		and MapGeometry.HAUTEUR_MUR_BAS < MapGeometry.HAUTEUR_DEBOUT
+		and MapGeometry.HAUTEUR_DEBOUT <= MapGeometry.HAUTEUR_MUR_HAUT)
+	_check("angle de franchissement dans ]0°, 90°[",
+		MapGeometry.ANGLE_FRANCHISSEMENT > 0.0 and MapGeometry.ANGLE_FRANCHISSEMENT < 90.0)
+	_check("couche d'ombre des murs bas hors du décor, des corps et des torses",
+		CanauxLumiere.COUCHE_OMBRE_MUR_BAS & (1 | 4 | 8 | 16 | 32) == 0)
+
+	var b := MapGeometry.BORDER
+	var map := _open_map(Vector2i(12, 12))
+	map["walls"] = "2,2,3"
+	map["low_walls"] = "2,2,1;6,5,4;6,6,4"
+	var walls := MapGeometry.build_grid(map, MapGeometry.Kind.WALLS)
+	var pits := MapGeometry.build_grid(map, MapGeometry.Kind.PITS)
+	var lows := MapGeometry.build_grid(map, MapGeometry.Kind.LOW_WALLS)
+	_check("un mur bas est posé où la carte le dit", lows[6 + b][5 + b] and lows[9 + b][6 + b])
+	_check("un mur haut l'emporte sur un mur bas à la même case",
+		walls[2 + b][2 + b] and not lows[2 + b][2 + b])
+
+	var sans_sol := MapCodec.new_map("Muret sans sol", Vector2i(8, 8))
+	var sol: Array[Vector2i] = [Vector2i(1, 1), Vector2i(2, 1)]
+	sans_sol["floor"] = MapCodec.encode_runs(sol)
+	sans_sol["low_walls"] = "4,4,1"
+	_check("une case de mur bas n'est jamais une fosse, même sans sol écrit",
+		not MapGeometry.build_grid(sans_sol, MapGeometry.Kind.PITS)[4 + b][4 + b]
+		and MapGeometry.build_grid(sans_sol, MapGeometry.Kind.LOW_WALLS)[4 + b][4 + b])
+
+	_check("murs, fosses et murs bas ne se chevauchent jamais", _chevauchements(walls, pits, lows) == 0,
+		"%d cases" % _chevauchements(walls, pits, lows))
+	_assert_exact_cover("union des trois familles", MapGeometry.build_solid_grid(map))
+
+	var sans_bas := map.duplicate(true)
+	sans_bas["low_walls"] = ""
+	_check("build_grid(WALLS) rend la même chose avec ou sans murs bas (contrat ISO1)",
+		MapGeometry.build_grid(sans_bas, MapGeometry.Kind.WALLS) == walls)
+	var sans_bas_lows := MapGeometry.build_grid(sans_bas, MapGeometry.Kind.LOW_WALLS)
+	var aucun := true
+	for col: Array in sans_bas_lows:
+		aucun = aucun and not col.has(true)
+	_check("témoin : sans murs bas, la grille LOW_WALLS est vide", aucun)
+
+	var parent := Node2D.new()
+	var root := MapGeometry.build_collisions(map, parent)
+	var corps := root.get_node_or_null("MursBas") as StaticBody2D
+	var murs := root.get_node_or_null("Murs") as StaticBody2D
+	_check("corps MursBas construit", corps != null)
+	if corps != null and murs != null:
+		_check("MursBas sur sa couche", corps.collision_layer == MapGeometry.LOW_WALL_LAYER,
+			str(corps.collision_layer))
+		var formes := 0
+		var masques_bas := true
+		var nb_occ := 0
+		for enfant in corps.get_children():
+			if enfant is CollisionShape2D:
+				formes += 1
+			elif enfant is LightOccluder2D:
+				nb_occ += 1
+				masques_bas = masques_bas and (enfant as LightOccluder2D).occluder_light_mask \
+					== CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+		var attendu := MapGeometry.merge_rects(lows).size()
+		_check("une forme et un occluder par rectangle de mur bas", formes == attendu and nb_occ == attendu,
+			"%d formes, %d occluders, %d rectangles" % [formes, nb_occ, attendu])
+		_check("les occluders des murs bas sont sur leur bit, pas sur le décor", masques_bas)
+		var masques_hauts := true
+		for enfant in murs.get_children():
+			if enfant is LightOccluder2D:
+				masques_hauts = masques_hauts and (enfant as LightOccluder2D).occluder_light_mask == 1
+		_check("les occluders des murs hauts restent sur le décor (1)", masques_hauts)
+	parent.free()
+
+
+## Nombre de cases portant plus d'une famille.
+func _chevauchements(walls: Array, pits: Array, lows: Array) -> int:
+	var n := 0
+	for ix in walls.size():
+		for iy in (walls[ix] as Array).size():
+			if int(walls[ix][iy]) + int(pits[ix][iy]) + int(lows[ix][iy]) > 1:
+				n += 1
+	return n
+
+
+## Les deux familles de collision et d'occlusion sur TOUTES les cartes livrées —
+## énumérées depuis le dossier, jamais recopiées en liste — et sur la carte
+## d'essai des murs bas, qui vit sous `tools/` (les livrées sont en lecture seule).
+func _test_cartes_livrees_et_essai() -> void:
+	print("\n[Deux familles sur les cartes livrées et la carte d'essai]")
+	var chemins: Array[String] = []
+	for f in DirAccess.get_files_at("res://assets/maps"):
+		if f.ends_with(".json"):
+			chemins.append("res://assets/maps/" + f)
+	_check("six cartes livrées trouvées dans le dossier", chemins.size() == 6, str(chemins.size()))
+	const ESSAI := "res://tools/cartes/murs_bas_essai.json"
+	chemins.append(ESSAI)
+	for chemin in chemins:
+		var data := _charger_carte(chemin)
+		var nom := chemin.get_file()
+		_check("%s : chargée et valide" % nom, not data.is_empty())
+		if data.is_empty():
+			continue
+		var walls := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+		var pits := MapGeometry.build_grid(data, MapGeometry.Kind.PITS)
+		var lows := MapGeometry.build_grid(data, MapGeometry.Kind.LOW_WALLS)
+		var rects_bas := MapGeometry.merge_rects(lows).size()
+		_check("%s : familles disjointes" % nom, _chevauchements(walls, pits, lows) == 0)
+		_assert_exact_cover("%s : union" % nom, MapGeometry.build_solid_grid(data))
+		var parent := Node2D.new()
+		var root := MapGeometry.build_collisions(data, parent)
+		var murs_n := 0
+		var bas_n := 0
+		for enfant in (root.get_node("Murs") as Node).get_children():
+			murs_n += 1 if enfant is CollisionShape2D else 0
+		for enfant in (root.get_node("MursBas") as Node).get_children():
+			bas_n += 1 if enfant is CollisionShape2D else 0
+		_check("%s : une forme par rectangle, dans chaque famille" % nom,
+			murs_n == MapGeometry.merge_rects(walls).size() and bas_n == rects_bas,
+			"murs %d, murs bas %d/%d" % [murs_n, bas_n, rects_bas])
+		parent.free()
+		if chemin == ESSAI:
+			_check("%s : porte des murs bas" % nom, rects_bas > 0, str(rects_bas))
+			_check("%s : jouable" % nom, MapCodec.check_playable(data)["ok"],
+				str(MapCodec.check_playable(data)["checks"]))
+		else:
+			_check("%s : aucune case de mur bas (carte d'avant la v4)" % nom, rects_bas == 0)
+
+
+func _charger_carte(chemin: String) -> Dictionary:
+	var file := FileAccess.open(chemin, FileAccess.READ)
+	if file == null:
+		return {}
+	var json := JSON.new()
+	var parsed := json.parse(file.get_as_text())
+	file.close()
+	if parsed != OK or typeof(json.data) != TYPE_DICTIONARY:
+		return {}
+	var result := MapCodec.validate(json.data as Dictionary)
+	return result["data"] if result["ok"] else {}

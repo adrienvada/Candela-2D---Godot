@@ -206,7 +206,7 @@ SUITES=(test_liaisons test_icones_editeur
         test_dosage_audio test_planche_marche test_fusee test_munitions_recharge test_sang_au_sol test_bilan_de_soiree
         test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting test_hud_style
         test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte
-        test_telemetrie_gadgets
+        test_telemetrie_gadgets test_murs_bas test_murs_bas_rendu
         test_proto_iso test_voxel_corps test_banc_iso test_iso_geometrie test_iso_camera test_iso_vues test_iso_corps)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
@@ -366,6 +366,9 @@ run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).
 run test_halo_proximite res://tools/test_halo_proximite.tscn
+# L'accroupi (chantier MURS BAS, MB2) : une scène pour la même raison — un vrai
+# joueur qui marche, et les autoloads qu'il nomme.
+run test_accroupi res://tools/test_accroupi.tscn
 
 # Le cycle de fin de match, en une seule instance et sans réseau.
 #

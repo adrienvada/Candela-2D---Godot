@@ -728,11 +728,43 @@ func _test_calibration() -> void:
 		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil",
 		"titre_vivant", "voile_menu", "balayage_attente", "verre_panneaux"]
 
+	# ⚠️ **Ce contrôle PRÉSUMAIT un réglage, et la présomption est devenue fausse.**
+	#
+	# Il exigeait que les quinze effets rendent une intensité strictement
+	# positive. Sous le `HOME` d'Adrien — curseurs au minimum, commit `04753b7`
+	# — il rougissait donc légitimement : trois lots d'affilée l'ont vu rouge
+	# ici et vert sous un foyer isolé, sans que personne remonte la cause
+	# (relevé par la session DIX CLASSES le 2026-09-12).
+	#
+	# Et depuis le 2026-09-12 la présomption ne tient plus pour personne :
+	# l'écran des effets a remplacé ces quinze curseurs par **un interrupteur**,
+	# donc « tout éteint » est un usage normal, d'un seul clic. Le contrôle
+	# aurait rougi pour tout le monde à la première personne qui l'actionne.
+	#
+	# Les intensités sont donc posées ICI, en mémoire, puis rendues. **Jamais
+	# par `set_effect()`** : il appelle `_save()`, et une suite qui écrit dans
+	# `user://settings.cfg` réécrit les préférences réelles du joueur — ce que
+	# tout le dépôt s'interdit. Le sujet du contrôle n'a jamais été la
+	# préférence : c'est le garde-fou, et il doit s'exercer sur un réglage connu.
+	# ⚠️ **Par l'arbre, jamais par l'identifiant `GameSettings`.** En mode
+	# `--script`, le script est compilé AVANT l'enregistrement des autoloads :
+	# nommer le singleton fait échouer la compilation du fichier entier
+	# (« Identifier not found: GameSettings »), et la suite ne s'exécute pas du
+	# tout. Vécu à l'instant, sur cette ligne même.
+	var reglages: Node = root.get_node_or_null(^"/root/GameSettings")
+	_check("les réglages sont joignables", reglages != null)
+	var reglages_avant: Dictionary = {}
+	if reglages != null:
+		reglages_avant = (reglages._effects as Dictionary).duplicate()
+		for cle in effets:
+			reglages._effects[cle] = 1.0
+
 	var hors_mesure := true
 	for cle in effets:
 		if float(ui._intensite_vitrine(cle)) <= 0.0:
 			hors_mesure = false
-	_check("hors calibration, les onze effets vivent", hors_mesure)
+			_check("  %s éteint hors du champ de mesure" % cle, false)
+	_check("hors calibration, les quinze effets vivent", hors_mesure)
 
 	# Le déclencheur a changé deux fois le 2026-08-18, et la seconde fois explique
 	# pourquoi il est branché là. La calibration est d'abord devenue un PANNEAU du
@@ -753,7 +785,7 @@ func _test_calibration() -> void:
 		if float(ui._intensite_vitrine(cle)) != 0.0:
 			eteints = false
 			_check("  %s éteint sur le champ de mesure" % cle, false)
-	_check("sur la calibration, les onze s'éteignent", eteints)
+	_check("sur la calibration, les quinze s'éteignent", eteints)
 	# Et pas seulement en théorie : les nœuds ont reçu l'ordre.
 	_check("la torche est réellement coupée",
 		is_zero_approx(float(ui.menu_torch.get("_intensite"))))
@@ -764,6 +796,12 @@ func _test_calibration() -> void:
 	_check("en sortant, tout se rallume",
 		float(ui._intensite_vitrine("torche_menu")) > 0.0
 		and float(ui.menu_torch.get("_intensite")) > 0.0)
+
+	# Rendues telles quelles : les préférences du poste ne sont pas à nous. Rien
+	# n'a appelé `_save()`, donc `user://settings.cfg` n'a jamais été touché —
+	# vérifié par empreinte SHA-1 avant/après.
+	if reglages != null:
+		reglages._effects = reglages_avant
 
 	ui.queue_free()
 	await process_frame
@@ -877,10 +915,17 @@ func _test_lignes_de_politique() -> void:
 			_check("%s : ligne présente" % cle, false)
 			continue
 		var d: Dictionary = ligne
-		# Plancher 0.0 sans discussion : ces effets n'apprennent rien sur
-		# l'adversaire, ne se voient jamais en match, et n'existent que pour le
-		# plaisir de qui les garde.
-		_check("%s : confort, coupable à zéro" % cle,
-			int(d["famille"]) == EffectPolicy.Family.CONFORT
-			and is_zero_approx(float(d["plancher"]))
-			and String(d["phrase"]) != "")
+		# **Famille MENUS depuis le 2026-09-12**, et ce n'est pas un renommage :
+		# ces quinze-là étaient CONFORT, séparés du confort de match par un
+		# simple commentaire au milieu de la table. L'écran leur donne
+		# maintenant un interrupteur unique quand le confort a quatre niveaux —
+		# un découpage que le code ne porte pas se perd au premier effet ajouté
+		# au mauvais endroit. Le `plancher` a disparu de la table le même jour
+		# (les effets du monde ne se règlent plus, donc plus rien à border) :
+		# ce qui reste à vérifier est la famille et la phrase.
+		_check("%s : famille des menus, avec sa phrase" % cle,
+			int(d["famille"]) == EffectPolicy.Family.MENUS
+			and String(d.get("phrase", "")) != "")
+		_check("%s : coupable jusqu'à zéro" % cle,
+			EffectPolicy.reglable(cle)
+			and is_zero_approx(float(EffectPolicy.clamp_value(cle, 0.0))))

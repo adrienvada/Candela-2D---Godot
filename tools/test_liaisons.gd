@@ -412,7 +412,7 @@ func _test_les_gestes_de_combat() -> void:
 ## doit en servir deux.
 const GESTES_DE_COMBAT := ["move_up", "move_down", "move_left", "move_right",
 	"aim_up", "aim_down", "aim_left", "aim_right",
-	"shoot", "torch", "lance_fusee", "reload", "gadget"]
+	"shoot", "torch", "lance_fusee", "reload", "gadget", "accroupir", "enjamber"]
 
 
 ## Les doublons de clavier et de souris d'un joueur, lus dans l'`InputMap` réel.

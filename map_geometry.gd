@@ -39,8 +39,36 @@ const PIT_LAYER := 2
 ## murs. Ce qui décide est le drapeau `GadgetBase.arrete_les_joueurs`, gadget par
 ## gadget, comme `arrete_les_balles` décide pour les balles.
 const GADGET_BLOQUANT_LAYER := 8
-## Masque à donner aux joueurs : les murs, les fosses, et les gadgets bloquants.
-const PLAYER_MASK := WALL_LAYER | PIT_LAYER | GADGET_BLOQUANT_LAYER
+## La couche des MURS BAS — chantier MURS BAS, étape MB1 (2026-09-14).
+##
+## Un mur bas arrête les corps (on l'enjambe, étape MB3 — jusque-là on le
+## contourne) et **ni les balles ni la lumière d'un corps debout**. Il n'est donc
+## pas dans `BULLET_MASK` : une balle debout passe par-dessus, et ce qui fera
+## buter la balle d'un accroupi, en MB3, est la règle `franchit()` de
+## `docs/MURS_BAS.md`, pas une couche physique.
+## 16 : le premier bit libre après les murs (1), fosses (2), gadgets (4) et
+## gadgets bloquants (8).
+const LOW_WALL_LAYER := 16
+## Masque à donner aux joueurs : les murs, les fosses, les gadgets bloquants, et
+## les murs bas.
+const PLAYER_MASK := WALL_LAYER | PIT_LAYER | GADGET_BLOQUANT_LAYER | LOW_WALL_LAYER
+
+## ── Les hauteurs, en TUILES — un seul endroit (contrat avec ISO1) ───────────
+##
+## Fixées par Adrien au prototype des murs bas, jalon H-MB0 (2026-09-14) ; le mur
+## haut le même soir (19 h 25), au-delà du critère d'équité de l'étude iso et en
+## connaissance de cause — 34,2 px cachés derrière lui à 52°, voir la ROADMAP. La
+## vue iso extrude les murs hauts à `HAUTEUR_MUR_HAUT` et les murs bas à
+## `HAUTEUR_MUR_BAS` ; la règle de jeu les compare aux postures. Personne ne
+## recopie ces nombres : on lit ces constantes.
+const HAUTEUR_MUR_HAUT := 1.25
+const HAUTEUR_MUR_BAS := 0.4
+const HAUTEUR_ACCROUPI := 0.1
+const HAUTEUR_DEBOUT := 1.0
+## L'angle selon lequel balles et lumière debout redescendent derrière un mur
+## bas, en degrés au-dessus de l'horizontale. Ce n'est PAS le tangage de la
+## caméra iso. Zone cachée derrière le mur : `(HAUTEUR_MUR_BAS − c) / tan α`.
+const ANGLE_FRANCHISSEMENT := 13.5
 
 ## La couche des GADGETS posés — chantier CLASSES, étape 5.
 ##
@@ -76,12 +104,18 @@ const BORDER := 1
 # GRILLE DE SOLIDITÉ
 # ---------------------------------------------------------------------------
 
-## Deux natures d'obstacle, à ne surtout pas confondre :
-##   MURS   — pleins. Ils arrêtent le joueur, les balles ET la lumière.
-##   FOSSES — le vide, l'absence de sol. Elles arrêtent le joueur, mais la
-##            lumière et les balles les traversent. On doit pouvoir se tirer
-##            dessus d'une rive à l'autre d'un gouffre.
-enum Kind { WALLS, PITS }
+## Trois natures d'obstacle, à ne surtout pas confondre :
+##   MURS      — pleins. Ils arrêtent le joueur, les balles ET la lumière.
+##   FOSSES    — le vide, l'absence de sol. Elles arrêtent le joueur, mais la
+##               lumière et les balles les traversent. On doit pouvoir se tirer
+##               dessus d'une rive à l'autre d'un gouffre.
+##   MURS BAS  — ils arrêtent le joueur (qui les enjambera) ; balles et lumière
+##               d'un corps debout passent par-dessus ; une lumière plus basse
+##               qu'eux bute (`CanauxLumiere.COUCHE_OMBRE_MUR_BAS`). Posés sur du
+##               sol : une case de mur bas n'est jamais une fosse.
+##
+## ⚠️ `LOW_WALLS` est AJOUTÉ en dernier : `WALLS` et `PITS` gardent leurs valeurs.
+enum Kind { WALLS, PITS, LOW_WALLS }
 
 ## Grille booléenne d'un seul type d'obstacle.
 ##
@@ -108,6 +142,11 @@ static func build_grid(data: Dictionary, kind: Kind) -> Array:
 		if cell.x >= 0 and cell.y >= 0 and cell.x < cells_w and cell.y < cells_h:
 			wall_set[cell] = true
 
+	var low_set := {}
+	for cell in MapCodec.get_low_wall_cells(data):
+		if cell.x >= 0 and cell.y >= 0 and cell.x < cells_w and cell.y < cells_h:
+			low_set[cell] = true
+
 	var width: int = cells_w + BORDER * 2
 	var height: int = cells_h + BORDER * 2
 
@@ -118,20 +157,26 @@ static func build_grid(data: Dictionary, kind: Kind) -> Array:
 		column.resize(height)
 		for iy in height:
 			var cell := Vector2i(ix - BORDER, iy - BORDER)
-			if kind == Kind.WALLS:
-				column[iy] = wall_set.has(cell)
-			else:
-				# Fosse : pas de sol, et pas déjà occupée par un mur.
-				column[iy] = not floor_set.has(cell) and not wall_set.has(cell)
+			match kind:
+				Kind.WALLS:
+					column[iy] = wall_set.has(cell)
+				Kind.LOW_WALLS:
+					# Un mur haut l'emporte : une case ne porte qu'un obstacle.
+					column[iy] = low_set.has(cell) and not wall_set.has(cell)
+				_:
+					# Fosse : pas de sol, et pas déjà occupée par un mur, haut ou bas.
+					column[iy] = not floor_set.has(cell) and not wall_set.has(cell) \
+						and not low_set.has(cell)
 		out[ix] = column
 
 	return out
 
-## Union des murs et des fosses — tout ce qui arrête le joueur.
+## Union des murs, des fosses et des murs bas — tout ce qui arrête le joueur.
 ## Sert à la validation et aux tests de couverture, pas à la construction.
 static func build_solid_grid(data: Dictionary) -> Array:
 	var walls := build_grid(data, Kind.WALLS)
 	var pits := build_grid(data, Kind.PITS)
+	var lows := build_grid(data, Kind.LOW_WALLS)
 
 	var out: Array = []
 	out.resize(walls.size())
@@ -139,7 +184,7 @@ static func build_solid_grid(data: Dictionary) -> Array:
 		var column: Array[bool] = []
 		column.resize((walls[ix] as Array).size())
 		for iy in column.size():
-			column[iy] = walls[ix][iy] or pits[ix][iy]
+			column[iy] = walls[ix][iy] or pits[ix][iy] or lows[ix][iy]
 		out[ix] = column
 
 	return out
@@ -255,14 +300,40 @@ static func build_collisions(data: Dictionary, parent: Node,
 	_fill_body(pits, merge_rects(build_grid(data, Kind.PITS)), tile_size, false)
 	root.add_child(pits)
 
+	# --- Murs bas : arrêtent le joueur ; leur ombre ne vaut que pour les ---
+	# --- lumières plus basses qu'eux (bit à part, qu'aucune n'active en MB1) ---
+	var lows := StaticBody2D.new()
+	lows.name = "MursBas"
+	lows.collision_layer = LOW_WALL_LAYER
+	lows.collision_mask = 0
+	_fill_body(lows, merge_rects(build_grid(data, Kind.LOW_WALLS)), tile_size, true,
+		CanauxLumiere.COUCHE_OMBRE_MUR_BAS)
+	root.add_child(lows)
+
 	parent.add_child(root)
 	return root
 
+## Les rectangles fusionnés d'une famille, en pixels du repère de la carte — le
+## même repère et le même calcul que les formes de `_fill_body`. Chantier MURS
+## BAS, MB3 : c'est la vérité que la balle et l'éblouissement interrogent
+## (`MursBas.franchit`), et elle se dérive de la carte comme la collision, pour ne
+## jamais pouvoir s'en écarter.
+static func rects_monde(data: Dictionary, kind: Kind,
+		tile_size: Vector2i = CandelaTileSet.TILE_SIZE) -> Array:
+	var cell_size := Vector2(tile_size)
+	var out: Array = []
+	for rect: Rect2i in merge_rects(build_grid(data, kind)):
+		out.append(Rect2(Vector2(rect.position - Vector2i(BORDER, BORDER)) * cell_size,
+			Vector2(rect.size) * cell_size))
+	return out
+
 ## Peuple un corps avec les rectangles fusionnés. `occluding` décide de la
 ## génération des LightOccluder2D — c'est la seule différence entre un mur,
-## qui arrête la lumière, et une fosse, qui la laisse passer.
+## qui arrête la lumière, et une fosse, qui la laisse passer. `occluder_mask`
+## est la couche d'ombre des occluders : 1 pour un mur haut (toute lumière),
+## `COUCHE_OMBRE_MUR_BAS` pour un mur bas (les lumières basses seulement).
 static func _fill_body(body: StaticBody2D, rects: Array[Rect2i],
-		tile_size: Vector2i, occluding: bool) -> void:
+		tile_size: Vector2i, occluding: bool, occluder_mask: int = 1) -> void:
 	var cell_size := Vector2(tile_size)
 
 	for i in rects.size():
@@ -289,6 +360,7 @@ static func _fill_body(body: StaticBody2D, rects: Array[Rect2i],
 		# occluder_light_mask laissé à sa valeur par défaut (1), comme les
 		# occluders de StaticGeometry dans arena.tscn : les torches, les balles
 		# et les étincelles moulinent toutes shadow_item_cull_mask & 1.
+		occluder.occluder_light_mask = occluder_mask
 		occluder.occluder = _build_rect_occluder(size)
 		body.add_child(occluder)
 

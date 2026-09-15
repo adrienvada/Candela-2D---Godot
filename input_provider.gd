@@ -37,3 +37,22 @@ func is_reload_pressed() -> bool:
 ## Le gadget de la classe — chantier CLASSES, étape 4.
 func is_gadget_pressed() -> bool:
 	return false
+
+## La posture VOULUE : vrai tant que le joueur veut être accroupi — chantier
+## MURS BAS, étape MB2. Un état et non un appui : la bascule (un appui pour se
+## baisser, un pour se relever, choix d'Adrien du 2026-09-14) est résolue par le
+## fournisseur local, et c'est son RÉSULTAT qui voyage sur le fil. L'hôte n'a
+## donc jamais à deviner un front qu'un paquet perdu lui aurait caché.
+func is_crouch_pressed() -> bool:
+	return false
+
+## Remise à zéro de la bascule d'accroupissement, à chaque manche. No-op par
+## défaut, comme `reset_flashlight_state`.
+func reset_crouch_state() -> void:
+	pass
+
+## Enjamber — chantier MURS BAS, étape MB3b. Un geste TENU (choix d'Adrien) : vrai
+## tant qu'on tient la touche. Seul, il ne fait rien ; poussé contre un muret, il
+## coupe la collision avec les murs bas le temps de la traversée.
+func is_climb_pressed() -> bool:
+	return false

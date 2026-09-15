@@ -138,6 +138,15 @@ var _vue_unique := false
 ## d'AVANT le chantier R. Sert à mesurer les deux chemins dans la même session,
 ## sur la même machine, sous le même focus.
 var _sans_racine := false
+## Images mesurées où la lampe d'un joueur ne suivait PAS la demande du banc, et
+## images mesurées pendant le décompte de départ (le jeu y éteint les torches
+## lui-même : elles ne sont pas un désaccord, elles sont hors de la question).
+## Voir `tenir_la_torche()` — sans ces compteurs, le banc a mesuré un mois entier
+## torches éteintes en annonçant « torches allumées ».
+var _torches_desaccord := 0
+var _torches_decompte := 0
+## Le compteur de pas de physique à la dernière image vue EN décompte.
+var _pas_du_decompte := -1
 
 
 func _ready() -> void:
@@ -401,7 +410,8 @@ func _stress(duration: float, sampling: bool) -> void:
 			# Torches éteintes : c'est le seul geste du duel qu'on retire, et il
 			# emporte avec lui les Light2D, leurs ombres portées et la
 			# rétrodiffusion. Le reste de la boucle est identique au mot près.
-			p.flashlight_on = not _sans_torches
+			# Par la GÂCHETTE, jamais par `flashlight_on` : voir `tenir_la_torche()`.
+			tenir_la_torche(p, not _sans_torches)
 			if p.shoot_cooldown <= 0.0:
 				p.shoot()
 		# Se viser mutuellement : les balles portent, donc les impacts aussi.
@@ -422,12 +432,19 @@ func _stress(duration: float, sampling: bool) -> void:
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
 			_peak_bullets = maxi(_peak_bullets, _main.bullet_container.get_child_count())
 			_relever_rendu()
+			_relever_torches()
 
 	# Étape 28, lot F — on RECOMPTE après coup, et on refuse le chiffre si la nappe a
 	# fondu. ⚠️ Le garde de `_appliquer_variante()` ne voit que la POSE : le fondu des
 	# traces, lui, se produit PENDANT la mesure. Un garde évalué avant ne peut pas voir
 	# une charge qui fond — il lit 72, accepte, et le relevé part sans dire de quoi il
 	# est le coût. C'est exactement ce qui serait arrivé avec l'entretien imbriqué.
+	# Le même refus pour les torches : un chiffre « torches allumées » pris lampes
+	# éteintes est le coût d'une autre charge, et rien d'autre ne le dirait.
+	if sampling and _torches_desaccord > 0:
+		printerr("✗ la lampe n'a pas suivi la demande du banc sur %d image(s) : chiffre refusé"
+			% _torches_desaccord)
+		_sortir(1)
 	if sampling and _gadgets:
 		var restantes := _traces_vivantes()
 		if restantes * 2 < GadgetPoudre.MARQUES_MAX:
@@ -669,6 +686,20 @@ func _report() -> void:
 	if not _appels.is_empty():
 		print("  Rendu (médiane par image) : %d appels de dessin, %d objets, %d primitives"
 			% [_mediane_int(_appels), _mediane_int(_objets), _mediane_int(_primitives)])
+	# La ligne des torches AVANT le verdict : elle dit de quelle charge le chiffre
+	# est le coût, et un avertissement placé après ce qu'il invalide arrive trop
+	# tard (piège du 2026-08-26). Le mode menus n'a pas de joueur : rien à dire.
+	if not _menus:
+		var demande := "éteintes" if _sans_torches else "allumées"
+		if _torches_desaccord == 0:
+			print("  Torches          : %s sur toute la mesure (vérifié par image)" % demande)
+		else:
+			print("  ✗ TORCHES : la lampe n'a pas suivi la demande (« %s ») sur %d image(s)"
+				% [demande, _torches_desaccord])
+		if _torches_decompte > 0:
+			print("    dont %d image(s) mesurées pendant le décompte de départ, où le jeu"
+				% _torches_decompte)
+			print("    éteint les torches lui-même — non comptées comme désaccord")
 	print("  Verdict %.0f fps   : %s" % [CIBLE_1_POURCENT_BAS,
 		"TENU" if low1 >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas à %.0f)" % low1])
 	# **Ce n'est pas le second plan qui casse le 1 % bas, c'est le CHANGEMENT.**
@@ -730,6 +761,13 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		absents.append("GameState.spawn_fusee() a disparu (variante --fusee)")
 	if not main.has_method("_do_spawn_gadget"):
 		absents.append("GameState._do_spawn_gadget() a disparu (variante --gadgets)")
+	if not "countdown_left" in main:
+		absents.append("GameState.countdown_left a disparu (contrôle des torches)")
+	# `tenir_la_torche()` ne sait allumer que par la gâchette : sans ces actions,
+	# il ne ferait rien, et le banc mesurerait torches éteintes.
+	for action in ["p1_torch", "p2_torch"]:
+		if not InputMap.has_action(action):
+			absents.append("action %s absente de l'Input Map (tenir_la_torche)" % action)
 	for groupe in ["p1_weapon_group", "p2_weapon_group"]:
 		if groupe in ui:
 			var g: ButtonGroup = ui.get(groupe)
@@ -814,6 +852,61 @@ func _relever_rendu() -> void:
 	_appels.append(int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)))
 	_objets.append(int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)))
 	_primitives.append(int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)))
+
+
+## Tenir la gâchette de torche d'un joueur, ou la lâcher — le seul chemin que
+## `player.gd` respecte.
+##
+## ⚠️ **Le banc écrivait `p.flashlight_on = true`, et le jeu l'écrasait à chaque
+## pas de physique** (constaté le 2026-09-14). `_physics_process` relit
+## `flashlight_on = input_provider.is_flashlight_pressed()` AVANT d'allumer ou
+## d'éteindre la `Light2D`, et le banc, qui écrit après `process_frame`, arrive
+## toujours après le pas qui compte. Résultat : `flashlight_on` se LISAIT vrai
+## (le banc venait de l'écrire) pendant que `flashlight.enabled` restait faux —
+## 1076 images sur 1076 à la sonde. L'écrasement existe depuis la naissance du
+## banc (`9d69f09`, 2026-08-15 : `Input.is_action_pressed` à l'époque) ; ce n'est
+## pas le retrait du sprint (`5037a14`) qui l'a introduit.
+##
+## D'où la gâchette : `Input.action_press` sur l'action du fournisseur, que le pas
+## de physique suivant lit exactement comme un doigt. **Au premier cran**, sous
+## `TORCH_CRAN_FOND` : allumée tant que tenue, sans basculer le verrou du cran
+## plein — l'état de la lampe reste une fonction de la demande, sans mémoire, et
+## `--sans-torches` ne peut pas hériter d'un verrou resté enclenché.
+##
+## Statique et publique pour que `tools/test_banc.gd` prouve en headless que la
+## lampe suit la demande après un pas de physique.
+static func tenir_la_torche(joueur: Node, allumee: bool) -> void:
+	var fournisseur = joueur.get("input_provider")
+	if fournisseur == null or not "action_torch" in fournisseur:
+		return
+	var action: String = fournisseur.action_torch
+	if not InputMap.has_action(action):
+		return
+	if allumee:
+		Input.action_press(action, LocalInputProvider.TORCH_CRAN_FOND * 0.5)
+	else:
+		Input.action_release(action)
+
+
+## La lampe suit-elle la demande, à CETTE image ? Relevé au vol, comme les
+## compteurs de rendu : lu après la boucle, il ne dirait que l'état final.
+func _relever_torches() -> void:
+	# ⚠️ **Le décompte ne finit pas pour la lampe à l'image où il passe à zéro.**
+	# Il se décrémente au traitement d'image ; la lampe ne s'allume qu'au pas de
+	# physique SUIVANT, et à cadence déplafonnée plusieurs images passent sans
+	# aucun pas. La première version de ce contrôle comptait cette image-là comme
+	# un désaccord et refusait un relevé sain (sonde du 2026-09-14 : 1 image sur
+	# 837, torches allumées sur toutes les autres). Tant qu'aucun pas n'a suivi
+	# le décompte, on est encore dedans.
+	if _main.countdown_left > 0.0:
+		_pas_du_decompte = Engine.get_physics_frames()
+	if _main.countdown_left > 0.0 or Engine.get_physics_frames() == _pas_du_decompte:
+		_torches_decompte += 1
+		return
+	for p in [_main.p1, _main.p2]:
+		if p.flashlight.enabled != (not _sans_torches):
+			_torches_desaccord += 1
+			return
 
 
 static func _mediane_int(valeurs: Array[int]) -> int:

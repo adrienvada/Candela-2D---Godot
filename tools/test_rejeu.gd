@@ -71,6 +71,8 @@ class FauxJoueur extends Node2D:
 	## décrit juste au-dessus, une quatrième fois. (Vu rouge le 2026-09-11 : 3 014
 	## `SCRIPT ERROR` et dix contrôles en échec, avant l'ajout de cette ligne.)
 	var facteur_de_lampe_rendu: float = 1.0
+	## MB2 — la posture, que `record_frame` enregistre.
+	var accroupi: bool = false
 
 func _faux_joueur() -> FauxJoueur:
 	var n := FauxJoueur.new()
@@ -91,6 +93,7 @@ func _run() -> void:
 	_test_sentinelle()
 	_test_ancrage()
 	_test_trajectoire()
+	_test_posture_du_tir()
 	_test_ancre_dans_le_tampon()
 	# Étape 28, lot F — les gadgets, d'abord sans rien monter…
 	_test_gadgets_enregistres()
@@ -287,6 +290,43 @@ func _test_trajectoire() -> void:
 	_check("le dernier tir de la victime n'est pas le tir fatal",
 		t2.size() == 2 and t2[0] == Vector2(10, 10), str(t2))
 	_liberer(c)
+
+## MURS BAS, MB3d — la posture du tireur voyage avec le tir rejoué.
+##
+## Une balle rejouée part de la hauteur de son canon d'alors : un tir accroupi
+## qui s'était arrêté sur un muret ne doit pas le traverser dans la killcam. Le
+## signal `replay_spawn_bullet` garde sa forme ; la posture se lit dans
+## `tir_rejoue` PENDANT l'émission, et seulement pendant.
+func _test_posture_du_tir() -> void:
+	print("\n[La posture du tireur voyage avec le tir rejoué (MB3d)]")
+	var b := _banc()
+	var r: Node = b[0]
+	var p1: FauxJoueur = b[1]
+	for i in 30:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	r.record_bullet_fired(0, Vector2(10, 10), 0.0, null, true)
+	for i in 10:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	r.record_bullet_fired(1, Vector2(20, 20), 0.0, null)
+	for i in 30:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	_check("un tir accroupi s'enregistre accroupi", r.bullet_events[0].get("accroupi") == true)
+	_check("sans posture donnée, le tir est debout (appels d'avant MB3d)",
+		r.bullet_events[1].get("accroupi") == false)
+
+	var lus: Array = []
+	r.replay_spawn_bullet.connect(func(tireur, _p, _r, _w, _f):
+		lus.append([tireur, r.tir_rejoue.get("accroupi")]))
+	r.start_playback()
+	for i in 3000:
+		if lus.size() >= 2 or not r.playing_back:
+			break
+		r.get_next_frame(1.0 / 60.0)
+	_check("les deux tirs sont rejoués", lus.size() == 2, str(lus))
+	_check("pendant l'émission, la posture du tir se lit",
+		lus.size() == 2 and lus[0] == [0, true] and lus[1] == [1, false], str(lus))
+	_check("hors émission, rien ne traîne", r.tir_rejoue.is_empty())
+	_liberer(b)
 
 ## L'ancre d'impact désigne-t-elle une image qui existe encore ?
 ##

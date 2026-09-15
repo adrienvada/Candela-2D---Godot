@@ -2732,8 +2732,28 @@ func _create_torch_indicator() -> PanelContainer:
 	label.add_theme_font_size_override("font_size", T_MENTION)
 	hbox.add_child(label)
 
+	# La marque « accroupi » — chantier MURS BAS, MB2 : « une marque HUD pour
+	# soi ». Posée APRÈS le libellé, qui doit rester le second enfant
+	# (`_set_torch_style` le lit par index). Dans le panneau du joueur, jamais de
+	# l'adversaire : en ligne, son panneau n'est pas affiché (`disposer_hud`).
+	var marque := Label.new()
+	marque.name = "Accroupi"
+	marque.text = "ACCROUPI"
+	marque.add_theme_font_size_override("font_size", T_MENTION)
+	marque.add_theme_color_override("font_color", Charte.ACIER)
+	marque.visible = false
+	hbox.add_child(marque)
+
 	_set_torch_style(panel, false, Charte.HALOGENE)
 	return panel
+
+## MB2 — la marque « accroupi » du panneau d'un joueur.
+func _marquer_accroupi(panel: PanelContainer, joueur: Node) -> void:
+	if panel == null:
+		return
+	var marque := panel.find_child("Accroupi", true, false) as Control
+	if marque != null:
+		marque.visible = joueur != null and joueur.get("accroupi") == true
 
 ## Les réserves de la classe : fusées et gadget, deux nombres qu'on ne pouvait
 ## pas compter avant l'étape 18.
@@ -4067,7 +4087,7 @@ func _build_hub_screens() -> void:
 		"Fenêtre, vsync, images par seconde, calibration.",
 		"", COLOR_GOLD, "", "", false, PANEL_DISPLAY))
 	custom.add_child(hub.make_entry("EFFETS",
-		"Ce qui se règle librement, et ce qui garde un plancher en classé.",
+		"L'habillage des menus, le confort en match, et les paramètres avancés.",
 		"", COLOR_GOLD, "", "", false, PANEL_EFFECTS))
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
@@ -4595,8 +4615,10 @@ func _apply_menu_effects() -> void:
 ## Deux choses s'y ajoutent au réglage du joueur, et elles ne sont pas du même
 ## ordre :
 ##
-## - **Les menus ne sont jamais classés.** Le plancher de la politique n'a donc
-##   rien à imposer ici, et `false` est la bonne réponse — pas une simplification.
+## - **Le réglage du joueur**, tel que l'écran des effets l'a retenu. Il passe
+##   par `current_effect()` comme tout le reste du jeu : depuis la suppression
+##   des planchers (2026-09-12) il n'y a plus qu'une réponse possible, et le
+##   `false` qui distinguait autrefois les menus du classé a disparu avec elle.
 ## - **L'écran de calibration éteint tout.** Voir `_calibration` : le joueur y
 ##   règle son point de noir sur un champ mesuré, et la moindre lumière ajoutée
 ##   fausserait la mesure. Ce n'est pas un choix de goût, et c'est pour cette
@@ -4606,7 +4628,7 @@ func _apply_menu_effects() -> void:
 func _intensite_vitrine(cle: String) -> float:
 	if _calibration:
 		return 0.0
-	return GameSettings.effective_effect(cle, false)
+	return GameSettings.current_effect(cle)
 
 # ===========================================================================
 # M10 — L'EXTINCTION DES FEUX
@@ -6741,12 +6763,14 @@ const LIBELLES := {
 	"lance_fusee": "Fusée éclairante",
 	"reload": "Recharger",
 	"gadget": "Gadget",
+	"accroupir": "S'accroupir",
+	"enjamber": "Enjamber",
 }
 
 ## L'ordre d'apparition : on se déplace, on vise, on tire, on recharge, on s'éclaire.
 const ORDRE := ["move_up", "move_down", "move_left", "move_right",
 	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "reload", "torch",
-	"lance_fusee", "gadget"]
+	"lance_fusee", "gadget", "accroupir", "enjamber"]
 
 ## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
 ## Elle s'écrit quand même — voir `_lignes_du_bloc()`.
@@ -7989,6 +8013,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1, _torche_verrouillee(p1))
+		_marquer_accroupi(p1_torch, p1)
 		_maj_reserves(p1_reserves, 0, p1)
 		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
@@ -8031,6 +8056,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2, _torche_verrouillee(p2))
+		_marquer_accroupi(p2_torch, p2)
 		_maj_reserves(p2_reserves, 1, p2)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#

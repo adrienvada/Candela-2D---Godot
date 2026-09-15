@@ -6,15 +6,15 @@ class_name CanauxLumiere
 ##
 ## - `DECOR` (1) : sol, murs, décor — commun aux deux vues ;
 ## - `ENNEMI` (2) : les sprites « ennemis », LES DEUX (le mien chez lui, le sien
-##   chez moi) — torche, reflet, tirs, bandeau LED ;
+##   chez moi) — torche, reflet, tirs ;
 ## - `JOUEUR_LOCAL` (4) : le sprite du joueur tel qu'il se voit ;
 ## - `canal_de_vue(id)` (16 pour la vue de J1, 32 pour celle de J2) : ce qui
 ##   n'appartient qu'à UNE vue — les copies de sol et de murs de ce joueur, et
 ##   son halo de proximité.
 ##
 ## Et, plus bas, une SECONDE famille — les couches d'OMBRE, qui disent qui bouche
-## la lumière plutôt que qui la reçoit. Les deux ne se croisent jamais ; le bloc
-## qui les introduit dit pourquoi.
+## la lumière plutôt que qui la reçoit. Le bloc qui les introduit dit où les deux
+## se rencontrent, et pourquoi il faut le savoir.
 ##
 ## ⚠️ **Ce fichier ne référence aucun autoload, et c'est sa raison d'être.**
 ## `player.gd` en nomme plusieurs : il ne compile ni dans une suite lancée en
@@ -49,14 +49,23 @@ static func masque_vue_adverse(id: int) -> int:
 
 # ── Les couches d'OMBRE ──────────────────────────────────────────────────────
 #
-# ⚠️ **Un second espace de noms, qui ne croise JAMAIS le premier.** Les canaux
-# ci-dessus se lisent dans `light_mask` et `range_item_cull_mask` : ils disent
-# QUI est éclairé. Ceux qui suivent se lisent dans `occluder_light_mask` et
-# `shadow_item_cull_mask` : ils disent QUI fait de l'ombre. Aucune propriété du
-# moteur ne lit les deux familles, et c'est ce qui rend sans conséquence que 16
-# veuille dire « la vue de J1 » d'un côté et « le torse de J1 » de l'autre. Les
-# deux règles restent donc écrites séparément : les faire dériver l'une de
-# l'autre les marierait pour de bon, et un jour l'une devrait bouger seule.
+# Un second espace de noms. Les canaux ci-dessus se lisent dans `light_mask` et
+# `range_item_cull_mask` : ils disent QUI est éclairé. Ceux qui suivent se lisent
+# dans `occluder_light_mask` : ils disent QUI fait de l'ombre. Les deux règles
+# restent écrites séparément : les faire dériver l'une de l'autre les marierait
+# pour de bon, et un jour l'une devrait bouger seule.
+#
+# ⚠️ **Mais elles se CROISENT dans `shadow_item_cull_mask` — et ce bloc a affirmé
+# le contraire jusqu'au 2026-09-14.** Le moteur y compare DEUX choses : le
+# `occluder_light_mask` des occluders (qui fait de l'ombre) ET le `light_mask` des
+# sprites (qui la REÇOIT). Un sprite dont le `light_mask` ne croise pas ce masque
+# est éclairé en entier, occluder ou pas. C'est toute la différence entre la
+# torche (`1 | 2 | corps adverse`, où 2 = `ENNEMI`) et le halo d'avant (`1`) :
+# mesuré au banc, 7 % du corps adverse éclairé sous l'une, 100 % sous l'autre.
+# Conséquence pratique : dans un masque d'ombre, 16 veut dire À LA FOIS « torse de
+# J1 » pour un occluder et « vue de J1 » pour un sprite. Y mettre
+# `canal_de_vue(id)` fait donc aussi ombrer le torse de `id` — voir
+# `masque_ombre_halo()`, qui l'évite.
 
 ## La couche d'ombre du CORPS du joueur `id` : 4 pour J1, 8 pour J2.
 ##
@@ -74,6 +83,28 @@ static func masque_vue_adverse(id: int) -> int:
 static func couche_ombre_corps(id: int) -> int:
 	return 4 << id
 
+## La couche d'ombre des MURS BAS — chantier MURS BAS, étape MB1 (2026-09-14).
+##
+## Les occluders d'un mur bas vivent ici, et non sur `DECOR` : un mur bas n'arrête
+## que les lumières PLUS BASSES que lui (« la torche d'un accroupi bute sur le
+## mur »). Une lumière debout passe par-dessus, et la zone d'ombre FINIE qu'elle
+## laisse derrière le mur se calcule dans les matériaux (étape MB3, piste C de
+## `docs/MURS_BAS.md`), pas par un occluder, qui ne sait faire qu'une ombre infinie.
+##
+## ⚠️ **En MB1, aucune lumière ne porte ce bit** : il n'y a pas encore de posture,
+## tout le monde est debout, donc aucune lumière n'est plus basse qu'un mur bas.
+## Le premier masque qui l'inclura est celui d'une lumière accroupie (MB2-MB3).
+## 64 : le premier bit que ni le décor (1), ni les corps (4, 8), ni les torses
+## (16, 32) n'occupent.
+const COUCHE_OMBRE_MUR_BAS := 64
+
+## Le masque d'ombre d'une lampe portée selon la posture de son porteur : accroupi,
+## elle lit les murs bas (elle bute) ; debout, elle passe par-dessus. Les autres
+## bits sont laissés tels quels. `Player.poser_posture` et les fantômes de la
+## killcam (MB3d) appliquent la même règle.
+static func masque_ombre_posture(masque: int, accroupi: bool) -> int:
+	return (masque | COUCHE_OMBRE_MUR_BAS) if accroupi else (masque & ~COUCHE_OMBRE_MUR_BAS)
+
 ## La couche d'ombre du TORSE du joueur `id` : 16 pour J1, 32 pour J2.
 ##
 ## Réservée à la rétrodiffusion, seule lumière qu'un disque de torse arrête : le
@@ -83,3 +114,26 @@ static func couche_ombre_corps(id: int) -> int:
 ## corps, et c'était un indice de plus.
 static func couche_ombre_torse(id: int) -> int:
 	return 16 << id
+
+## Le masque d'ombre du halo de proximité du joueur `id`.
+##
+## Demande d'Adrien (2026-09-14) : que toutes les sources lumineuses se
+## comportent comme la lampe torche — la silhouette de l'ennemi éclairée, et qui
+## « crée de l'ombre ». Sous la torche, le corps d'en face reste sombre, liseré
+## du côté de la lampe, et projette son ombre ; sous le halo il était éclairé à
+## plat, en entier, et s'additionnait au bandeau LED jusqu'au blanc.
+##
+## Trois bits, chacun pour une raison :
+## - `DECOR` : les murs font ombre, comme avant ;
+## - `ENNEMI` : pour que le sprite adverse REÇOIVE l'ombre (bloc ci-dessus).
+##   ⚠️ Pas `canal_de_vue(id)`, qui y parvenait aussi : il vaut la couche du
+##   torse de `id`, et ce torse, posé au centre même du halo, aurait ombré sa
+##   propre lueur ;
+## - le corps d'EN FACE, jamais le sien — sinon on se tiendrait dans sa propre
+##   ombre.
+##
+## `ENNEMI` fait recevoir l'ombre aux DEUX sprites ennemis, mais le halo n'en
+## éclaire qu'un (`range_item_cull_mask`) : « ma lueur ne me trahit pas à
+## distance » tient toujours. `tools/test_halo_proximite.tscn` garde les deux.
+static func masque_ombre_halo(id: int) -> int:
+	return DECOR | ENNEMI | couche_ombre_corps(1 - id)

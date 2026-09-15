@@ -139,6 +139,7 @@ code, sans configuration, sans redirection de port.
   59,0 ms de moyenne à 60 fps contre 21,2 ms déplafonné (145 fps en headless).
 
 - **120 fps tenus en `gl_compatibility`** — vérifié sur un rendu réel fenêtré
+  > ⚠️ **Qualifié le 2026-09-14 : pris lampes ÉTEINTES**, malgré « torches allumées » (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
   avec `tools/bench_framerate.tscn` : écran partagé (les deux vues rendent),
   pompe contre pompe à bout portant, torches allumées, HP maintenus pleins pour
   que l'échange ne s'arrête jamais. Pic de 123-125 particules sur 200 et 12
@@ -2433,11 +2434,13 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **ISO3 s'intègre, ISO4 et ISO5 s'ouvrent** (2026-09-14 au soir, Adrien : « oui. Demande à la session Fable 5.1 ») | Réponse au point 3 du jalon H-ISO2 : les corps voxel lisant le capteur remplacent les cylindres gris, puis viennent les objets debout (ISO4), la killcam et la visée reprojetée (ISO5). L'ordre et la répartition entre sessions sont demandés à la session pilote. Un corps d'ISO3 qui lit le capteur doit le lire à chaque fragment, plafonner à sa couleur et garder des shaders de disque miroirs des sprites (retours du jalon H-ISO2). |
 | **H15 : la vue isométrique, on y va** (2026-09-14, Adrien : « c'est bon on y va, pas besoin de nouvelle série ») | Sur le banc ISO0.b : une projection du rendu 2D exacte au pixel, pas de surcoût de cadence visible au-dessus du bruit de sa série, 5 à 15 appels de dessin de plus, et trois minutes jouées. Réglages tranchés dans la même séance : **tangage 52°**, **écran scindé en iso aussi**, **caméra qui garde la profondeur** de la vue de dessus, et **deux sortes de murs** — hauts et opaques, bas pour se cacher accroupi — qui ouvrent une mécanique neuve (section ISO, « H15 tranché ») ; **ses règles premières sont tranchées le même soir** : un mur bas arrête la lumière mais laisse voir une tête debout, n'abrite un accroupi que de la lumière venue d'en face, tir et lumière debout franchissent le mur bas selon **un même angle** (un accroupi loin derrière redevient visible et touchable), on l'enjambe lentement et bruyamment avec « croix », la torche d'un accroupi bute sur le mur, et l'accroupi ralentit fortement, étouffe les pas, se lit à sa silhouette et à une marque HUD pour soi. Lacet et taille de lightmap non tranchés. Rien d'ISO1 n'est lancé par cette décision seule. |
 | **Plus de relevé de cadence humain à chaque étape du chantier ISO** (2026-09-14 au soir, Adrien : « j'en ai marre de vérifier à chaque étape la tenue en fps ») | Chaque étape ISO relève seule, sans fenêtre à tenir, ce qui n'est pas bruité : appels de dessin et taille des cibles de rendu. **Un seul relevé humain** : en fin de chantier, avant de rendre la vue iso aux joueurs, ou plus tôt si Adrien ressent un ralentissement en jouant — et celui-là sous vraie fenêtre de silence, quatre relevés d'une traite. | Quatre relevés par étape ont coûté une soirée à ISO1 sans rien trancher : le bruit de la machine (±15 % entre deux bases identiques) dépasse l'écart cherché, et une session voisine suffit à le polluer. Le chiffre qui décide vraiment est celui de la fin, pas celui de chaque marche. |
+| **Le menu des effets se réduit à deux contrôles, et le Monde cesse d'être réglable** (2026-09-12, Adrien) | *« J'aimerais qu'il soit beaucoup plus simple : un maximum de dix curseurs. Idéalement moins de 5. »* — puis, précisé : un interrupteur pour tous les effets de menu, quatre niveaux pour le confort, un repli « paramètres avancés », et **« supprime toute possibilité de régler les effets monde qui influent trop sur le compétitif. Ce sera commun à tout le monde. »** L'écran montrait **34 curseurs** engendrés par la table ; chaque ligne se justifiait, l'ensemble était illisible, et un menu qu'on ne traverse pas est un menu où personne ne règle rien. Il en montre **deux**, plus 22 curseurs repliés. ⚠️ **Ce que ça emporte, et qui ne se devine pas : tout le dispositif des planchers.** Il existait pour permettre un réglage PARTIEL du Monde — 80 % pour l'éblouissement, 20 % pour la poussière, planchers levés en écran partagé. Le réglage supprimé, les planchers n'arbitrent plus rien : `floor_of`, `is_capped`, `clamp_value(id, v, ranked)`, `GameSettings.effective_effect(id, ranked)` et `GameSettings.is_ranked_context()` sont **retirés**, et `tools/test_effect_policy.gd` contrôle désormais leur ABSENCE autant que la présence du reste — un `ranked` qui reviendrait rendrait au joueur la main sur ce qui doit être commun, sans qu'aucun autre contrôle ne s'en aperçoive. La famille CONFORT s'est scindée en **MENUS (15)** et **CONFORT (7)** : le découpage existait déjà, mais comme un commentaire au milieu de la table, et un découpage que le code ne porte pas se perd au premier effet ajouté au mauvais endroit. ⚠️ **Le piège de migration, mesuré et non supposé** : tout `settings.cfg` écrit avant ce jour porte les douze effets du Monde, **et celui d'Adrien les avait TOUS à leur ancien plancher** (voir le chantier roman graphique, « les quinze curseurs »). Les relire aurait laissé son jeu à 25 % de sang et 20 % de poussière **pour toujours**, sans qu'aucun écran ne puisse plus les remonter — et sans rien qui le signale. `_load()` filtre donc sur « réglable » et non sur « existe », et la suite rejoue ce cas exact. La valeur commune est `DEFAULT`, soit le jeu tel qu'il a été écrit. ⚠️ **Et une conséquence qu'on n'a vue qu'en la cherchant : plusieurs dosages visuels ont été VALIDÉS par Adrien sur ce poste, donc à intensité réduite.** Son fichier portait dix effets du monde à leur ancien plancher — `eblouissement` 0,8, `silhouette_revelee` 0,7, `flash_de_tir` 0,6, `trait_de_balle` 0,5 et `fusee_agonie` 0,5, `lumiere_impact` 0,4, `particules_sang` 0,35, `eclats_impact` 0,3, `traces_de_sang` 0,25, `poussiere_faisceau` 0,2 — et ils remontent tous à 100 %. Le cas le plus net est FU6 (« le dosage est validé », 2026-09-09, relevé par la session du chantier FUSÉE) : l'agonie de la fusée a été approuvée à demi-amplitude. **Ce qu'il a approuvé n'est donc pas ce qu'il verra**, pour la fusée comme pour la silhouette au tir, le flash de bouche, le trait de balle et la lumière d'impact. Rien à corriger dans le code : c'est un rejugement à lui demander, et le signaler valait mieux que de le laisser le découvrir en jouant. ⚠️ Corollaire pour les BANCS : le banc de cadence lit ce même `settings.cfg` (un worktree partage le `user://` du jeu), donc tout relevé absolu pris ici l'a été sur une machine réglée, pas sur un jeu neuf. |
 | **Le leurre a l'ombre d'un CORPS, pas celle d'un mur** (2026-09-12, Adrien : « oui, qu'il ait l'ombre d'un corps ») | Question posée à la fin du lot D et tranchée ici (lot G). L'occluder du leurre vivait sur la couche du DÉCOR, celui d'un corps sur la couche de son joueur : un mur fait de l'ombre sous TOUTE lumière, un corps seulement sous celles dont le masque d'ombre contient sa couche. Le leurre projetait donc une ombre là où aucun corps n'en projette — sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le démasquer**, sans tirer, donc sans payer le flash qui équilibre le gadget. Il porte maintenant les DEUX occluders d'un corps — l'étoile de sa silhouette sur la couche du corps de son poseur, un disque de torse de 12 sur la couche de son torse. Le second n'est pas un supplément : sans lui, la correction aurait remplacé un indice par un autre, la rétrodiffusion adverse ne voyant que les couches de torse, elle aurait TRAVERSÉ le seul leurre de l'arène. Conséquence sur l'arbitrage, et c'est un changement de SENS au carnet de `protocol.gd` (17, non publiée) : la torche et le flash de tir du POSEUR ne l'ombrent plus — une lampe n'ombre jamais le corps de qui la tient —, donc ils ne doivent plus être arrêtés par sa forme dans la ligne de vue de l'éblouissement, sans quoi planter un leurre devant soi éteignait sa propre torche. Les lumières POSÉES, elles, restent arrêtées : elles n'ombrent aucun corps non plus, et pourtant un corps arrête leur éblouissement — il est sur la couche physique du rayon. |
 | **La mine aveugle à hauteur de ce qu'elle brûle** (2026-09-12, Adrien : « garder ») | Le commit A2 était séparé pour être annulable seul, et la question posée à Adrien était de le garder ou de le rendre. **Il l'a gardé après avoir lu les chiffres**, contrepartie comprise : le pic au rayon de déclenchement passe de 0,750 à 0,488 et le temps au-dessus de 0,3 de 1,02 s à 0,42 s, mais **à 300 px elle aveugle un peu PLUS qu'avant** (aire 0,079 → 0,154), parce que son rayon ne rétrécit plus. C'est la seule décision de l'étape 28 qui déplace l'équilibre, et la seule dont la question posée en disait d'abord moins que la mesure — d'où le tableau complet remis avant de trancher. Le détail des mesures et du brouillage saturé est au lot A2 ; ce qui vaut ici, c'est que la contrepartie a été dite AVANT, pas découverte après. |
 | **Un voile sans place se refuse** (2026-09-12, Adrien : « refuser la pose ») | Ferme la réserve inscrite le 2026-09-11 sur le recul du point de pose (« tranché en croyant ce refus rare et limité aux murs »). Le lot B a montré que le refus touche aussi le voile posé à bout portant sur l'adversaire qu'on vise, ce qui n'était pas le cas imaginé : l'alternative était de faire naître la bâche DERRIÈRE l'adversaire, là où il reste de la place. Adrien garde le refus, et la raison est de jeu : une bâche qui apparaît derrière quelqu'un l'enferme entre elle et le poseur — on ne donne pas au Spectre le pouvoir de coincer un corps, et surtout pas par un effet de bord d'un algorithme de recul que le joueur ne peut pas lire à l'écran. Un refus, lui, se comprend : rien ne se pose, le désarmement de 0,30 s a lieu des deux côtés, les pairs restent d'accord. Le ressenti du refus (un retour local chez le client, même fonction `GameState.point_de_pose_libre()`) reste à faire et n'est pas cette décision. |
 | **Les gadgets éblouissent à hauteur de ce qu'ils brûlent** (2026-09-11, Adrien) | La règle de la fusée (« Une fusée éteinte éblouit encore », tableau des demandes du 2026-09-11 dans le chantier « refonte roman graphique ») étendue aux gadgets, à l'étape 28 du chantier DIX CLASSES : `GadgetBase.energie_relative()` — la part de sa pleine lumière qu'un gadget brûle — devient le `gain` de sa source d'éblouissement de proximité, lu **sans garde** (le socle rend 1). Les braises rendent `0,35 + 0,65·reste`, la courbe même de leur lueur, et leur rayon d'aveuglement ne rétrécit plus : un rayon qui baisserait EN PLUS du gain atténuerait deux fois (à 68 px en fin de vie, 0,010 au lieu de 0,231). **Conséquence à connaître** : au centre de la nappe, le plafond valait 1,00 toute sa vie ; il va de 1,00 à 0,35. À 120 px en fin de vie il passe de 0,00 à 0,14 — elles éblouissent un peu plus loin qu'avant, parce que le rayon ne fond plus. La **mine** est un commit séparé (lot A2), à confirmer par Adrien sur ses chiffres : c'est tout son flash qui baisse, pas seulement sa fin, et la question posée ne le disait pas. Jusque-là elle garde son comportement (le socle rend 1). **Fait le 2026-09-12, Adrien validant en connaissance de cause** : elle rend `reste²` — la courbe que sa lumière suivait déjà — et son rayon reste à 460. **Conséquence d'équilibre, mesurée et assumée, pas maquillée** : au rayon de déclenchement (72 px), le pic d'aveuglement passe de 0,750 à 0,488 et le temps passé au-dessus de 0,3 de 1,02 s à 0,42 s ; à 30 px, le pic passe de 0,884 à 0,521 ; à 150 px de 0,553 à 0,422. À 300 px elle éblouit au contraire un peu plus (aire 0,079 → 0,154) : le rayon ne fond plus. Commit séparé et réversible seul — l'annuler ne coûte rien d'autre. |
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
+| **Le bandeau LED à contre-jour, le halo ombré comme la torche** (2026-09-14, Adrien) | *« Pourquoi le sprite d'un joueur apparaît blanc quand il est éclairé par les murs […] mais pas quand il est éclairé par une lampe torche : il faudrait que toutes les sources lumineuses se comportent comme la lampe torche. »* Sous la torche, le corps d'en face reste sombre, liseré côté lampe, et projette une ombre ; sous le bandeau et sous le halo il était éclairé à plat, en entier, et les deux s'additionnaient jusqu'au blanc. Banc de rendu (sprite, silhouette et occluder réels, adversaire près d'un mur) : **7 %** du corps éclairé sous la torche ; **100 %** sous le bandeau comme sous le halo, moyenne **218/201/175** sous les deux. **Cause** : `shadow_item_cull_mask` filtre aussi les sprites qui REÇOIVENT l'ombre (« Pièges connus », même date) — la torche contient le canal du sprite ennemi, le halo ne le contenait pas, et le bandeau n'a pas d'ombre. **Halo** : `CanauxLumiere.masque_ombre_halo()` = décor, canal ennemi, corps d'en face (pas le canal de vue, qui aurait fait ombrer le torse du porteur au centre de sa propre lueur) → **6 %**, comme la torche. **Bandeau** : une lumière unique sans point d'origine ne peut pas ombrer dans le bon sens (essayé : le liseré tombe du côté du centre de la carte). Deux pistes montrées en planche — « lampe du mur voisin » (corps sombre, liseré ambré côté mur, deux lumières de plus) et « contre-jour » ; **Adrien a choisi le contre-jour** : la bande n'éclaire plus que le décor, et le corps s'y découpe en noir. Ce que ça change en jouant : un adversaire collé au mur n'est plus « pleinement visible la moitié du cycle » (section du chantier LED) — il se lit comme un trou dans la bande qui respire. Le sprite du joueur local n'est plus éclairé par la bande non plus. **Non traitées, domaines d'autres sessions** — les lumières dont le masque d'ombre ignore le sprite adverse, qui l'éclairent donc encore à plat : fusée, nappe de braises, mine, halo de la torche fantôme, lumière d'impact (`1`), traînée de balle (`1 \| 4`), flash de tir (`1 \| corps adverse` : l'ombre tombe au sol, le corps reste éclairé). Inventaire remis à Adrien. Gardes : `test_mur_led` (portée = décor), `test_halo_proximite` (règle et nœuds réels). |
 | **Le halo de proximité révèle l'ennemi proche — chez son porteur seulement** (2026-09-11, Adrien) | *« Je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne doit pas me rendre détectable auprès de mon ennemi à distance. »* Jusqu'ici le halo (`ambient_light`, canal 16 pour la vue de J1, 32 pour J2) n'éclairait **aucun** sprite ennemi : le canal 2 est commun aux deux sprites ennemis — le mien chez lui, le sien chez moi —, et l'éclairer aurait allumé MON sprite sur SON écran. Le choix d'origine protégeait donc la seconde moitié de la phrase au prix de la première : un adversaire collé à soi restait invisible sans torche. **Maintenant** : le sprite ennemi d'un joueur porte `2 | canal de la vue ADVERSE` (`canaux_lumiere.gd::masque_vue_adverse()`, canal de vue = `16 << id` — un module sans autoload, pour que le leurre du chantier « 10 classes » applique la même formule sans la recopier ni nommer `player.gd`) ; le halo de l'autre l'éclaire, chez l'autre seulement ; le mien ne l'atteint jamais. Aucune autre lumière du jeu ne touche les canaux 16/32 (vérifié), donc aucune fuite. Le halo garde ses ombres : pas de révélation à travers un mur. Mesuré au banc de rendu (vrai shader adverse, vrai halo) : halo de J1 → l'ennemi sur l'écran de J1 **136**/255, J1 sur l'écran de J2 **0** ; halo de J2 → **130** et **0**. Garde : `tools/test_halo_proximite.tscn` — **une scène, pas un `--script`** : `player.gd` ne compile pas en `--script` (autoloads), et la première version du test annonçait « tous les tests passent » sans avoir rien vérifié ; d'où un plancher de vérifications. **Point ouvert, signalé au chantier « 10 classes »** : le leurre (`gadget_leurre.gd`, masque 1\|2\|4) ne prend pas le halo et se reconnaîtrait donc de près. |
 | **Les murs et l'adversaire suivent l'énergie des lampes** (2026-09-10, Adrien) | *« Corrige d'abord le point 2, que je puisse me rendre compte de l'effet LED avec des éclairages plus réalistes et fluides. »* `shimmer_murs.gdshader` et `player_enemy_light.gdshader` lisaient `LIGHT_COLOR` sans `LIGHT_ENERGY` ; or les masques de lumière du jeu sont blancs, la forme dans l'alpha, l'intensité **seulement** dans l'énergie. Toute lampe les allumait donc d'un bloc (constat de la session « bandeau LED », mesures détaillées par la session « intelligent-lovelace », branche `claude/intelligent-lovelace-4fd4d2`, `9f71fa5`, section « Pièges connus » de SA feuille de route). **Le liseré est normalisé et plafonné** (`× min(LIGHT_ENERGY / 0,8 ; 1)`) plutôt que multiplié tel quel — tel quel, il aurait été ×2,3 sous la torche, donc saturé. **La référence est la vision de proximité** : le halo que chaque joueur porte autour de lui (`ambient_light`, 0,8, qui n'éclaire que la vue de son porteur), vérifiée contre `player.gd` par `test_mur_led`. **Elle a d'abord été la torche (2,5)**, le 2026-09-10 : fondus longs et murs qui vacillaient au tir, mais le halo ne soulignait plus le mur voisin qu'au tiers (148 → 47). **Adrien a tranché le 2026-09-11 : « garder la proximité »** — ce halo sert au joueur à se repérer dans son environnement immédiat, il ne doit rien perdre. Le plafond vient des lampes plus fortes — fusée pleine 3,0, mine 6,0 — qui sans lui auraient rendu l'arête plus forte qu'avant : **aucune lampe n'éclaire le liseré plus qu'avant ; seules celles plus faibles que le halo s'atténuent, jusqu'à 0.** Mesuré au banc isolé, liseré avant → après : torche de 6,0 à 1,0 **~182 → ~182** (tir compris), 0,5 **183 → 116**, 0,1 **182 → 23**, 0 **0 → 0** ; halo de proximité au mur **148 → 148**. **Ce qui change donc en jouant** : une lampe à 0 mais allumée (grésillement) n'éclaire plus le mur ; le « mauvais contact » (lampe à 0,15-0,55) l'atténue ; la fin des fondus devient progressive (extinction de torche, fusée entre deux sursauts, braises qui s'éteignent). Tout le reste est inchangé. (Version torche, retirée : liseré 147 / 110 au tir, 73 à 1,0.) **Le corps adverse est un commit SÉPARÉ, à confirmer par Adrien** : la décision a été prise sur une explication qui le citait (« un adversaire touché par une lumière faible serait moins visible ») sans dire assez clairement que c'est un **changement d'équilibre**. Mesuré : adversaire **112 à toute énergie, 0 compris → 112 / 112 / 112 / 44 / 0** pour 2,5 / 1 / 0,5 / 0,1 / 0 — sous la torche rien ne bouge (saturé dès ~0,26), une torche à 0 mais allumée (grésillement du Parasite) ne le dessine plus, et **la rétrodiffusion des classes furtives** (`backlight_multiplier = 0.1`, arbalète et spectre) **révèle enfin moins son porteur** — ce réglage n'avait jusqu'ici aucun effet sur ce que voit l'adversaire. **Confirmé par Adrien le 2026-09-11** pour le grésillement : *« les lumières ne doivent pas éclairer si elles sont à 0 dans leur grésillement »*. Il a aussi précisé que **la lueur de chaque joueur est sa vision de proximité et ne doit jamais le révéler à l'ennemi** — ce que le code fait déjà : `ambient_light` n'éclaire que les calques de son porteur (masques 16 / 32), jamais le sprite adverse. Ce qui révèle, c'est la **rétrodiffusion**, le reflet de la torche sur le corps (`body_light`, allumée avec la torche, énergie proportionnelle à la sienne) : elle suit maintenant sa force, et donc le `backlight_multiplier` des classes furtives. ⚠️ L'explication donnée à Adrien le 2026-09-10 appelait cette rétrodiffusion « la petite lueur autour de chaque joueur » : **c'est ce mot qui a créé le malentendu** — deux lumières distinctes portaient un seul nom. **Pas touchés** : `player_rim_light.gdshader` et `blood_shader.gdshader`, même motif, hors de la décision — listés comme exceptions dans `test_mur_led`, qui refuse tout NOUVEAU `light()` sans énergie. **`shimmer_murs.gdshader` est retiré le 2026-09-11** (refonte roman graphique, second chantier, lot N) : la tuile de mur étant noire, il ne dessinait plus rien, normalisation comprise. Le contour des murs (`mur_encre.gd`) est éclairé par défaut, donc proportionnel à l'énergie SANS plafond ni normalisation : sous le halo de proximité (0,8) il vaut 0,8 / 2,5 de ce qu'il vaut sous la torche, et la mine à 6,0 le surexpose. La session LED l'a signalé, et **Adrien a tranché le même jour : « il éclaire assez »** (voir la section du chantier LED, `bc0c25b`). Point clos : rien à régler sur `mur_encre`. ⚠️ Cette ligne a dit « point ouvert » pendant quelques heures après la décision, parce que le commit qui l'actait n'a mis à jour que la section du chantier — la session du suivi l'a vu en croisant les deux. |
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
@@ -2450,7 +2453,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Le drapeau « cette source n'éblouit pas » vit PAR INSTANCE** (2026-09-09, Adrien) | Adrien : « on doit pouvoir désactiver l'éblouissement d'un gadget à l'avenir si on sent que ça équilibre. » Le drapeau est donc porté par le NŒUD à sa construction, comme `is_replay` et `graine` le sont déjà pour la fusée — trois raisons : ça ne coûte rien de plus, ça couvre le cas « par type » sans effort (l'inverse étant faux), et ça n'oblige pas à savoir aujourd'hui quels gadgets existeront. ⚠️ **Et surtout pas sur `WeaponData`** : la fusée, l'écho au sol d'un tir et les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière, pas à ce qui la déclenche. Premier usage prévu : l'écho au sol d'un tir (200 px, la plus grande des deux lumières qu'un coup de feu allume) porte le drapeau à faux, pour qu'un tir ne punisse pas deux fois. |
 | **Un voile ne naît pas sur un corps : son point de pose recule** (2026-09-11, Adrien : « on recule le point de pose ») | Suggestion d'après l'étape 27, qui fermait le signalement de l'étape 25 (« un voile posé sur un joueur n'est pas refusé : c'est le moteur qui doit alors le dégager »). Chez l'HÔTE seul — le client voit l'adversaire 100 ms en retard et lui-même en avance, il ne saurait pas refaire ce calcul —, le point de pose d'un gadget qui arrête les joueurs recule vers le poseur jusqu'à ce que la bande, à sa rotation, ne chevauche plus aucun corps ; le point final voyageait déjà dans `rpc_spawn_gadget`. Le cas « aucune place » était laissé à notre jugement : **refus**, sans RPC ni recharge ni numéro — quand le premier obstacle du rayon de pose, mur OU adversaire (les joueurs sont sur la couche des murs), laisse trop peu de place devant le nez du poseur : un mur à moins d'environ 40 px, un adversaire dans l'axe à bout portant (jusqu'à 60 à 70 px de centre à centre, mesuré sans mur), ou coincé contre un mur proche. ⚠️ Tranché en croyant ce refus rare et limité aux murs : la correction du lot B a montré qu'il touche aussi le voile posé à bout portant sur l'adversaire qu'on vise — question reportée à Adrien, voir l'étape 28. **Refermée le 2026-09-12 : le refus est gardé**, voir « Un voile sans place se refuse » plus haut dans ce tableau. Le désarmement de 0,30 s a eu lieu des deux côtés, ce qui garde les pairs d'accord ; le refus ressenti passera par un pré-contrôle local chez le client, avec la même fonction (`GameState.point_de_pose_libre()`). Voir l'étape 28, lot B. |
 | **Le suivi de projet dit quelle session tient quel chantier** (2026-09-09, Adrien) | Plusieurs sessions avancent en même temps et le suivi ne disait que « une session » ou « sans titulaire » : Adrien ne pouvait pas savoir à qui parler. Désormais tout delta envoyé au porteur de la republication commence par le nom de la session qui l'envoie (celui que `ListAgents` affiche), sa branche et le chantier ; le porteur le reporte sur la carte (`data-session`) et dans le tableau « Qui travaille sur quoi » de la vue d'ensemble. Le journal des sessions dit qui tient quel *fichier* ; le suivi dit qui tient quel *chantier*. Protocole dans [README.md](../README.md#republier-le-suivi). |
-| **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
+| ~~**La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5**~~ **— la famille tient, le plancher est parti** (2026-09-09, puis 2026-09-12, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. **Le 2026-09-12, le Monde a cessé d'être réglable et les planchers ont été retirés** : l'arbitrage de famille reste juste — il dit maintenant « non réglable », ce qui est la lecture MONDE poussée au bout — mais le chiffre 0,5 n'existe plus nulle part. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
 | **Navigation manette hybride : D-Pad case par case et joystick curseur virtuel avec bascule instantanée** (2026-09-07, Adrien) | Deux modes de contrôle complémentaires à la manette dans les menus : le D-Pad (`JOY_BUTTON_DPAD_*`) et les flèches clavier naviguent de manière discrète case par case (curseur virtuel masqué). Le stick analogique fait apparaître un curseur virtuel fluide (`VirtualGamepadCursor`, halo `Charte.AMBRE`, accélération progressive) qui se dirige comme une souris, survole les contrôles interactifs, met à jour le focus/panneau d'aperçu et active au bouton de sélection (`p1_menu_select`). Dès qu'une flèche/D-Pad est pressée ou que la souris physique bouge, le curseur virtuel de joystick s'efface immédiatement. Découplage des axes analogiques dans `input_setup.gd` sur `p1_menu_*` / `p2_menu_*` pour prévenir les sauts de focus involontaires. |
 | **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. ⚠️ **DÉPASSÉ EN PARTIE le 2026-09-09** — voir « Étape 20 — le réglage d'Adrien, manette en main ». Les chargeurs (Pistolet 6, Fusil 4), les dégâts du Fusil (60/25), les cadences sous 3 tirs/s (doublées) et la touche de fusée (Triangle → L1) ont changé ; le Terrassier recharge désormais cartouche par cartouche. La hiérarchie des temps de recharge, elle, tient toujours. *La décision ci-dessus reste vraie de sa date : elle n'est plus vraie du code.* |
@@ -2487,7 +2490,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Le comptage des mines devient exact avant la publication** (2026-09-12, Adrien — étape 28, lot H) | `rpc_allumer_gadget` porte désormais sa CAUSE, et la télémétrie compte `allumages_passage` et `allumages_balle` là où elle ne comptait qu'`allumages`. Ce qu'on lisait jusque-là — « déclenchées par un passage = `allumages − morts_balle` » — était un **majorant** : une mine abattue ne meurt pas, elle s'allume, et son embrasement la tue 1,6 s plus tard ; un match archivé avant — le cas qui intéresse, une mort dans la foulée de la mine — ne lui comptait aucune mort, et elle passait pour un passage. **Le MOMENT est la moitié de la décision** : le protocole 17 n'est pas publié (la v0.5.0 est sortie en 16) et ce lot est le dernier avant la 0.6.0. Fait maintenant, le fil change sous un numéro que personne n'a jamais joué ; fait après le tag, le même correctif imposerait un protocole 18, donc une coupure entre joueurs — pour une colonne de statistiques. **Prix assumé** : le bloc de télémétrie passe en version 2, et un bloc v1 rejoué depuis le journal local d'un poste de test perd son `allumages` au tamis du serveur — sans refus, et `version` dit pourquoi. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
-| **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
+| **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherchait précisément à empêcher, et qu'il ne pouvait pas empêcher tout seul. **Depuis le 2026-09-12 il n'y a plus de curseur du tout** : l'éblouissement est commun aux deux joueurs, voile compris. La règle « le réglage ne touche jamais la pénalité » survit à sa propre cause — elle dit désormais pourquoi le voile n'avait, en dernière analyse, rien à faire dans un menu. |
 | **Divisions : I la plus basse** (convention Rocket League) | Décidée à l'écriture d'`elo.ts` et déployée le 2026-08-17, jamais remontée comme telle — la feuille de route la listait encore comme une question ouverte pour Adrien. C'est l'inverse de League of Legends, d'où le rappel dans le code : **interverties, les divisions produisent une échelle parfaitement plausible à l'œil**, et l'erreur ne se voit qu'au moment où un joueur se plaint de descendre en gagnant. |
 | **Un débutant part d'Aveugle I** (2026-08-18) | Le classement de départ (1000) tombait dans **Bougie**, troisième catégorie sur dix : un débutant serait arrivé avec trois des quatre armes et n'en aurait débloqué qu'une. C'est `RANK_FLOOR` qui a été déplacé, **pas `START_RATING`** — la table des classements est reconstruite par rejeu intégral de l'historique, donc abaisser le départ aurait recalculé tous les matchs déjà joués et déplacé tous les joueurs. Déplacer le plancher ne change que la **lecture** de l'échelle. **Prix assumé :** un débutant ne peut plus chuter, ce que le calibrage d'origine cherchait précisément à éviter. ⚠️ **Non déployé** — tant que la fonction en ligne porte l'ancien plancher, l'écran affiche Bougie pour un débutant. |
 | **Format BO1, 5 minutes** | Un duel où chaque erreur est fatale se suffit en une manche : c'est ce qui rend chaque décision lourde. Le format transite par `MatchRecord.Format` — un BO3/BO5 s'ajouterait sans refonte, mais n'est pas implémenté. |
@@ -2827,6 +2830,8 @@ signature.
 
 
 ### ✅ RECTIFIÉ — la cible EST tenue, mes relevés valaient la moitié (2026-08-26)
+
+> ⚠️ **Qualifié le 2026-09-14 : ce relevé (75, « TENU ») a été pris lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). Le verdict de cible ne vaut que sans lampes ; chiffres conservés tels quels.
 
 **Adrien a lancé le banc lui-même, fenêtre au premier plan :**
 
@@ -3503,6 +3508,113 @@ cloud** (`xvfb-run` + Mesa llvmpipe, `gl_compatibility`, ombres comprises,
 cadence. Et une erreur d'analyse y laisse tourner la scène sans script pour
 toujours : tout outil de capture se lance sous `timeout` et relit son journal
 (`SCRIPT ERROR|Parse Error`), comme `run_photos.sh` le fait déjà.
+### Le banc de cadence n'a JAMAIS allumé ses torches (2026-09-14)
+
+`tools/bench_framerate.gd` annonce « torches allumées » depuis sa naissance
+(`9d69f09`, 2026-08-15), et écrivait pour cela `p.flashlight_on = true` après
+chaque `process_frame`. **`player.gd` réécrit ce drapeau depuis la gâchette à
+chaque pas de physique, avant d'allumer ou d'éteindre la `Light2D`** — la ligne
+existait déjà au 2026-08-03 (`Input.is_action_pressed`). Le banc arrivait donc
+toujours après le pas qui décide, et la lampe restait éteinte. Signalé par la
+session ISO0.b avec une datation au 2026-08-26 (`5037a14`, retrait du sprint) :
+trop étroite, ce commit n'a fait que retirer la condition de sprint autour d'un
+écrasement plus ancien.
+
+Reproduit en fenêtre, banc non modifié, par une sonde qui en hérite :
+**`flashlight_on` lu vrai sur 1076 images sur 1076, `flashlight.enabled` vrai sur
+0.** Pixels et œil ne tranchaient pas : les deux joueurs face à face sont
+éblouis, la vue est laiteuse avec ou sans lampe (écart moyen 0,6 sur 255 entre
+les deux captures). Ce que le rendu dit, lui : **168 appels de dessin par image
+(médiane) lampes éteintes, 204 et 206 lampes allumées**, même machine, même jour.
+
+⚠️ **Le banc ne mesurait pas « rien » : il mesurait une charge hybride.**
+L'éblouissement lit `flashlight_on` dans `GameState._process`, APRÈS le
+`process_frame` où le banc l'écrivait — il se déclenchait donc, brouillage
+compris, sans aucune lampe pour le justifier. Vérifié sur le code depuis
+`e17756b` (2026-09-09) ; avant, non vérifié.
+
+**Correctif** : `tenir_la_torche()` tient la gâchette par l'Input Map
+(`Input.action_press`, au premier cran, sans verrou), c'est-à-dire le chemin que
+le pas de physique relit. Le banc compte à chaque image mesurée les images où la
+lampe ne suit pas la demande, l'imprime AVANT le verdict et **refuse le chiffre**
+s'il y en a une. `tools/test_banc.gd` joue une vraie manche en headless et prouve
+que la lampe suit la demande après les pas de physique, avec un contre-test : le
+vieux geste doit y échouer. Sonde après correctif, fenêtre au premier plan :
+lampes allumées sur 879 images sur 879 hors décompte.
+
+**Relevés historiques douteux — chiffres conservés tels quels, qualifiés ici.**
+Tous les relevés de duel de `bench_framerate` du 2026-08-15 au 2026-09-14 ont été
+pris **lampes éteintes** (et, au moins depuis le 2026-09-09, éblouissement actif) :
+
+| Relevé | Ce qui tombe | Ce qui tient |
+|---|---|---|
+| 2026-08-16, « 120 fps tenus » (Phase 3) | déjà invalidé (compteur creux) ; lampes éteintes en plus | — |
+| 2026-08-18, relevés 1-3 (1 % bas 97) et **décomposition en sept** | **« torches : 0,00 à 0,19 ms, sous le bruit » est faux par construction** : « avec » et « sans torches » étaient la même charge (médianes 135 et 135) | le coût de la seconde vue, mesuré lampes éteintes des deux côtés |
+| 2026-08-18, arbalète « fps inchangés, médiane 144 » | la charge ne comptait pas les lampes | — |
+| 2026-08-25, R2 et R4 au second plan (144, socle nu = duel complet) | déjà plafonnés ; le « socle nu vaut le duel » s'explique aussi par là | — |
+| 2026-08-25, neuf relevés `--vue-unique` (43 à 60) | le 1 % bas du jeu, sans lampes | — |
+| 2026-08-25, R4 d'Adrien au premier plan (63 → 61, +15 %) | **le 1 % bas « ~60 » du jeu, qui ne comptait pas les lampes** | l'avant/après du chantier R, lampes éteintes des deux côtés |
+| 2026-08-26, relevé d'Adrien (75, « TENU ») | **le verdict de cible** | — |
+| 2026-09-11, bandeau LED (scindé 45/34, vue unique 65/44) | la cible, lampes allumées | l'écart avec/sans bandeau |
+| 2026-09-11, décor d'arène (1 850 → 261 appels, 110/81) | la marge sur la cible | la baisse d'appels de dessin due au décor |
+| 2026-09-12, fusée (84/85, 97/95, « 25 à 35 images de marge ») | **la marge annoncée** | l'écart avec/sans fusée |
+| 2026-09-12, gadgets (49/48, second plan) | déjà sans protocole | — |
+
+**Non concernés** : les relevés `--menus` (aucun joueur), et toute variante
+`--sans-torches` — juste par accident. **Présumé concerné, non vérifié** :
+`tools/banc_pics.gd` fait le même geste (l. 132), donc ses constats sur les pics
+du 2026-08-25/26 ont probablement été établis lampes éteintes.
+
+**La question qui reste ouverte, et ce lot ne la tranche pas : le jeu tient-il
+« 1 % bas ≥ 60 » lampes allumées ?** Aucun relevé au protocole (60 s, premier
+plan, machine refroidie) n'a encore été pris avec le banc corrigé.
+
+**Signalé en chemin, non corrigé (hors périmètre)** : (1) le banc lance la manche
+**au fusil, chargeur vide** — « Fusil / Fusil », HUD « VIDE 0/4 », **0 balle** au
+pic —, donc il ne tire plus : l'échange au pompe que décrit son en-tête n'a pas
+lieu (depuis quand : non établi) ; (2) `round_active` passe à vrai au DÉBUT du
+décompte de 3 s et l'échauffement n'en dure que 2 : ~1 s de chaque relevé est
+prise pendant le décompte (85 à 92 images sur 10 s) ; (3)
+`tools/fabrique_apercus.gd` écrit aussi `flashlight_on = true` pour ses captures.
+
+**Ce qui se généralise** : un outil qui écrit un état doit le RELIRE là où le jeu
+le consomme, pas là où il l'a écrit. Relire `flashlight_on` disait vrai ; seule
+`flashlight.enabled` disait ce que le rendu recevait.
+
+### `main.tscn` dit 3 et 5, le code rend `~4` et `~2` (2026-09-14)
+
+Les deux `SubViewport` déclarent `canvas_cull_mask` 3 et 5 depuis le premier
+commit, et `CLAUDE.md` renvoyait à la scène. `GameState._setup_players()` pose
+`~4` et `~2` avant la première image : **la scène n'est jamais rendue, l'inspecteur
+de l'éditeur ment.** Vérifié : les seules couches de visibilité en usage sont 1, 2,
+4 et 6, donc les deux jeux rendent aujourd'hui la même image — ils divergeraient
+pour un objet posé sur la couche 8 ou plus (montré dans les deux vues par le code,
+caché dans les deux par la scène). Documentation corrigée (`CLAUDE.md`,
+commentaire à la pose dans `game_state.gd`), code inchangé. Le commentaire n'est
+pas dans `main.tscn` : l'éditeur efface les commentaires d'une scène à la première
+sauvegarde.
+
+### `shadow_item_cull_mask` filtre AUSSI les sprites qui reçoivent l'ombre (2026-09-14)
+
+Le nom et la documentation disent « quels occluders font de l'ombre ». Le moteur y
+compare en réalité **deux** masques : le `occluder_light_mask` des occluders, et le
+`light_mask` des sprites. **Un sprite dont le `light_mask` ne croise pas le masque
+d'ombre d'une lumière est éclairé en entier, même au cœur d'un occluder.**
+
+Payé ainsi : Adrien voyait l'adversaire « blanc » près des murs, et normal sous la
+torche. Le masque d'ombre de la torche (`1 | 2 | corps adverse`) contient le canal 2,
+celui du sprite ennemi : le corps y reste sombre, liseré côté lampe — **7 %** de ses
+pixels éclairés au banc. Celui du halo valait `1` : **100 %**, à plat, et additionné
+au bandeau LED jusqu'au blanc. ⚠️ **Ajouter la seule couche du corps adverse ne
+changeait rien au sprite** : l'ombre tombait bien au sol derrière lui, le corps
+restait lumineux. Il a fallu un banc à neuf cas pour le voir.
+
+Deux conséquences. Pour qu'un corps paraisse sombre sous une lumière, le masque
+d'ombre doit contenir la couche de son occluder **et** un canal de son sprite. Et
+les deux familles de `canaux_lumiere.gd` se rencontrent là : 16 y veut dire à la fois
+« torse de J1 » (occluder) et « vue de J1 » (sprite) — mettre le canal d'une vue
+dans un masque d'ombre fait ombrer un torse. Le fichier affirmait que les deux
+familles ne se croisent jamais ; corrigé.
 
 ### Vert seul, rouge dans le lot : le `user://` est partagé par LOT, pas par suite (2026-09-11)
 
@@ -6228,6 +6340,113 @@ lot. Le contrôle qui le prouve ne coûte rien :
 Zéro veut dire que le lot va rougir, et il rougira **ailleurs** — sur la suite
 qui charge la scène, jamais sur le fichier fautif.
 
+
+### Le plugin Godot AI se met à jour tout seul, et hors de git (2026-09-14)
+
+Le 2026-09-10 à 07:40, le plugin `addons/godot_ai` est passé de **3.0.7** à
+**4.0.4** dans l'arbre principal : **143 fichiers** — 91 modifiés, 44 ajoutés,
+8 supprimés —, tous datés de la même minute. Personne ne l'a demandé. ⚠️ `git
+status` n'en montrait que **134 lignes**, parce qu'un dossier neuf non suivi y
+compte pour une seule ; ce premier chiffre a circulé comme un nombre de fichiers
+(« 35 ajoutés ») et a été recompté sur le commit le jour même. Le plugin porte
+son propre installeur de mises à jour et s'aligne sur la version du serveur
+`godot-ai` lancé par Claude Code (`uvx godot-ai==4.0.4`). **Et rien ne l'a
+commité** : pendant quatre jours, `git status` de l'arbre principal a montré
+134 lignes sales que chaque session a prises pour l'affaire d'une autre.
+
+⚠️ **Le coût ne se voyait pas, et c'est le même angle mort que les deux pièges
+juste en dessous.** Les worktrees, où tournent les lots, recevaient la 3.0.7
+de git ; l'éditeur et le jeu lancés depuis l'arbre principal tournaient sur la
+4.0.4. Aucun lot de ces quatre jours n'a donc exercé la version réellement
+utilisée. Et la version sur disque était fragile : un `reset --hard` sur `main`
+dans l'arbre principal l'aurait effacée sans trace, puisque rien ne la
+reproduisait.
+
+Ce que ça ne change **pas** : le jeu exporté. Le plugin part bien dans les
+builds (le filtre d'export n'exclut que `tools/`), et son autoload
+`_mcp_game_helper` tourne dans le processus du jeu, mais il reste inerte sans
+débogueur branché (`EngineDebugger.is_active()`), donc en release.
+
+**Commité le 2026-09-14 à la demande d'Adrien**, après un lot complet sur la
+4.0.4. Revenir à la 3.0.7 aurait décalé le plugin du serveur 4.0.4 et risqué
+de couper le pont. **Comment appliquer** : après toute mise à jour de
+`godot-ai`, `git status addons/godot_ai` dans l'arbre principal. Des fichiers
+sales là ne sont pas le travail d'une autre session, c'est le plugin.
+
+### « Non poussé » n'est pas « sans effet » : le checkout principal est un poste d'essai (2026-09-12)
+
+Payé en versant le chantier des menus. J'ai fait avancer `main` en local, sans
+rien pousser, et je l'ai annoncé ainsi : *« rien n'est poussé, donc rien ne
+change pour personne »*. C'était faux, et d'une façon qui ne se voit pas depuis
+un worktree.
+
+**Le checkout principal n'est pas une copie de travail neutre : c'est l'arbre
+d'où Adrien lance le jeu.** Le faire avancer change ce qu'il a sous les doigts,
+même si `origin/main` n'a pas bougé d'un octet. En l'occurrence il portait
+soudain cinq commits de plus que la 0.6.0 qu'on venait de publier — écran
+d'options refait, douze effets du monde figés à 100 % — alors qu'il avait deux
+essais MANETTE en attente sur cette release (équilibre de la mine, Parasite
+invisible pendant son grésillement). **Un essai d'équilibrage se fait sur un
+état connu**, et personne ne lui avait dit que le sien avait changé. Relevé par
+la session du chantier des dix classes, qui l'a vu de l'extérieur ; je ne
+l'avais pas vu en le faisant.
+
+**Ce que ça ne veut PAS dire** : qu'il faut défaire le versement. La sortie est
+plus simple — un worktree resté sur le commit voulu donne l'état pur sans rien
+préparer (`godot --path .claude/worktrees/<celui-qui-porte-la-release>`), et le
+binaire de la release reste la référence absolue. Dégrader un état de travail
+pour un besoin qu'un `--path` résout serait payer deux fois.
+
+**Comment appliquer** : faire avancer `main` en local est une action qui a un
+public, et ce public est humain. Le dire — quel arbre a changé, de quoi à quoi,
+et par où retrouver l'état d'avant — fait partie du versement, au même titre que
+le lot vert. Et avant de verser, savoir si quelqu'un a un essai en cours sur
+l'état qu'on remplace.
+
+⚠️ **Même angle mort que le piège du cache d'import juste au-dessus**, et c'est
+ce qui les rend tous les deux coûteux : on raisonne sur les références et les
+fichiers versionnés en oubliant l'arbre où un humain appuie sur « lancer ». Le
+cache dit « git déplace les fichiers, pas le cache » ; celui-ci dit « git
+déplace la branche, pas la connaissance qu'en a le joueur ».
+
+#### Corollaire 2 : le foyer décide du verdict, dans les DEUX sens (2026-09-12)
+
+Payé deux fois dans la même heure, chantier « Menus, réglages ».
+
+**Un lot complet part d'un foyer neuf** (`mktemp -d`, voir « Chaque lot de tests
+a son propre `user://` »). **Une suite lancée SEULE part du foyer réel** — celui
+d'Adrien, avec ses préférences. Les deux sont voulus ; ce qui ne l'est pas, c'est
+d'en tirer la même conclusion.
+
+`test_vitrine_menus` **échoue lancée seule et passe dans le lot** :
+*« hors calibration, les onze effets vivent »*. Rien de cassé — son
+`settings.cfg` porte les quinze effets de menu à `0.0`, donc ils ne vivent pas,
+et la suite a raison de le dire. Le contrôle mesure une préférence qu'il croit
+mesurer un code.
+
+⚠️ **Et l'inverse mord aussi : un foyer neuf rejoue l'intro.** `intro_vue` est
+faux dans un `settings.cfg` absent (DA6.6), donc le jeu ouvre sur les planches
+d'intro — et les plans de menu du photographe, qui appuient sur des entrées,
+appuient dans l'intro. Résultat : `--plan=reglages` a rendu quatre **captures
+des planches d'intro**, sans une erreur, sans un avertissement. La consigne
+« pour juger un effet, `HOME=$(mktemp -d)` devant lui » est juste et
+insuffisante : il faut **amorcer** le foyer.
+
+    FOYER=$(mktemp -d)
+    D="$FOYER/Library/Application Support/Godot/app_userdata/Candela 2D"
+    mkdir -p "$D" && printf '[display]\n\nintro_vue=true\n' > "$D/settings.cfg"
+    HOME="$FOYER" ./tools/run_photos.sh --plan=reglages
+
+`intro_vue` **et rien d'autre** : toute clé de plus ferait juger un effet sur un
+réglage choisi, ce qui est le défaut qu'on cherchait à éviter en changeant de
+foyer.
+
+**La leçon commune, et elle vaut plus que les deux cas** : un verdict ne se lit
+pas sans savoir de quel foyer il sort. Les trois diagnostics faux de cette
+session — « `test_vitrine_menus` est rouge sur cette branche », « les sept
+scénarios à deux instances sont cassés », « le photographe ne trouve pas le
+menu » — venaient tous de l'environnement, aucun du code, et **les trois se
+lisaient comme des défauts.**
 
 Premier lancement des suites depuis un `git worktree` fraîchement créé :
 **`test_charte` échoue**, seul, sans qu'une ligne de code soit en cause. Le même
@@ -15290,6 +15509,8 @@ propre relevé** — voir R2.
 
 ### R2 — Relevé de référence ✅ fait le 2026-08-25
 
+> ⚠️ **Qualifié le 2026-09-14 : « torches allumées » est faux, lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
+
 Cinq exécutions, `--seconds 15`, duel complet, pompe contre pompe, torches
 allumées, sur Apple M3.
 
@@ -15443,6 +15664,8 @@ il mesure le plafond. Ce que le relevé établit vraiment :
   compteur de fps.
 
 #### Le vrai relevé — Adrien, fenêtre au PREMIER PLAN, le 2026-08-25 (jalon H10 ✅)
+
+> ⚠️ **Qualifié le 2026-09-14 : lampes ÉTEINTES dans les deux exécutions** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). L'avant/après du chantier R tient (même charge des deux côtés) ; le 1 % bas « ~60 » du jeu ne compte pas les lampes.
 
 Deux exécutions, focus **stable au premier plan** attesté par le banc lui-même,
 donc comparables. Le plafond disparaît, et le résultat renverse deux choses.
@@ -16045,6 +16268,8 @@ serait pris pour un bug plutôt que pour une incompatibilité.
   `bench_framerate --fusee`~~ — ✅ **fait le 2026-09-12, FU2 close côté perf.**
 
 #### Ce que la fusée coûte (relevé du 2026-09-12, sur `cf68cf2`)
+
+> ⚠️ **Qualifié le 2026-09-14 : lampes ÉTEINTES dans les quatre relevés** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). L'écart avec/sans fusée tient ; la marge sur la cible ne compte pas les lampes.
 
 Quatre relevés de 60 s, fenêtre au premier plan, dans un ordre symétrique pour
 que la dérive thermique ne favorise aucune condition. **Chaque relevé porte son
@@ -18593,6 +18818,7 @@ des dégâts). La prochaine publication sera donc une mineure.
 **Ce que les mesures disent, et ce qu'elles ne disent pas.**
 
 - **Coût des gadgets à la cadence — ⚠️ aucun coût n'est établi, faute d'un protocole
+  > ⚠️ **Qualifié le 2026-09-14 : ces deux relevés ont aussi été pris lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
   qui en tienne un.** Deux relevés de 30 s, duel complet, même machine, **enchaînés à
   la seconde** (02:36:45 puis 02:37:19) et toujours dans l'ordre base → `--gadgets` :
   médiane **49 puis 48 fps** avec une fausse torche, une poudre et ses 72 traces
@@ -20520,6 +20746,15 @@ plancher** : inoffensif tant qu'ils étaient inertes, décisif depuis — sang �
 25 %, vignette et flash de mort absents, killcam nue. Le photographe lit les
 réglages du poste : pour juger un effet, `HOME=$(mktemp -d)` devant lui.
 
+> **Suite, le 2026-09-12 — la moitié MONDE de ce piège est refermée par la
+> décision, pas par un correctif.** Les douze effets du Monde ont cessé d'être
+> réglables (voir « Décisions actées »), et `_load()` écarte désormais leurs
+> anciennes valeurs : le sang d'Adrien est remonté à 100 % tout seul, au premier
+> lancement. **La moitié CONFORT reste entière** — ses quinze effets de menu et
+> ses sept effets de confort sont toujours à 0,0 dans son fichier, et l'écran
+> les lui montrera « DÉSACTIVÉS » / « NUL », ce qui est exact. Le conseil du
+> photographe ne change donc pas d'un iota.
+
 **Le cookie de torche reste tel quel** — Adrien, le 2026-09-11 : « ne change
 pas le cookie de la torche par paliers ». Pour mémoire, l'enjeu : le faisceau de la lampe est une image
 (`assets/torche/cookie_*.png`) et le modèle d'éblouissement lit l'opacité de
@@ -20843,6 +21078,8 @@ d'image : toutes les ~8,5 s, ce qui longe un mur intérieur se révèle, pour le
 deux joueurs au même instant. `--sans-led-murs` l'éteint (mesures, comparaisons
 de cadence) ; `--led-murs` n'a plus d'effet.
 
+> ⚠️ **Qualifié le 2026-09-14 : tous les relevés ci-dessous ont été pris lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). Les écarts avec/sans bandeau tiennent ; la cible n'y est pas vérifiée lampes allumées.
+
 **Cadence, mesurée avant d'allumer pour tous** (`bench_framerate`, le vrai jeu,
 bandeau tenu au sommet contre `--sans-led-murs`, 30 s chacun) : **aucun écart
 mesurable**. Au second plan : 4349 / 4348 images, 1 % bas 143 / 143. Au premier
@@ -21092,6 +21329,11 @@ pilier : 51 / 129 / 131 / 131 pour un souffle de 0,10 / 0,25 / 0,50 / 1 — il
 lumière par 4). Avec la respiration au carré, un adversaire collé au mur est
 donc pleinement visible **environ la moitié de chaque cycle**. C'est le point de
 dosage de jeu le plus sensible, à juger par Adrien.
+
+**Remplacé le 2026-09-14 — contre-jour** (« Décisions actées ») : la bande
+n'éclaire plus les corps. Les chiffres ci-dessus décrivent l'ancien comportement ;
+désormais l'adversaire collé au mur ne s'allume pas, il se découpe en noir sur le
+sol qui respire.
 
 ⚠️ Pendant les premières photos, rien n'apparaissait : le photographe déclenche
 pendant le décompte, où l'horloge de manche est à 0 — donc au creux. D'où
@@ -22457,6 +22699,400 @@ scindé en iso ou maintenu en 2D — sur trois relevés au premier plan après
 ISO0.b. Puis les décisions de direction artistique (sommet des murs, tranche
 de plateau, palette des corps), le choix des corps (voxels par code
 recommandé), et la confirmation du forfait dans *Settings › Usage*.
+## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
+
+**Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le
+2026-09-14 sur la branche `iso-geometrie` : go, tangage 52°, « des murs hauts et des
+murs bas »), mais c'est du **gameplay** : il vaut quel que soit l'aspect final, et il
+**précède** ISO1, qui extrudera sa géométrie. La note de conception complète est
+[docs/MURS_BAS.md](MURS_BAS.md) ; cette section n'en garde que ce qui doit survivre ici.
+
+### Les règles d'Adrien, 2026-09-14 (soir)
+
+- Un mur bas arrête la lumière mais laisse voir une tête debout.
+- Un accroupi derrière un mur bas n'est pas éclairé depuis l'autre côté, mais il l'est
+  par une lumière venue de son côté.
+- Balles et lumière debout franchissent le mur bas selon **un même angle** : un accroupi
+  loin derrière redevient visible et touchable.
+- On enjambe un mur bas avec « croix », lentement et en faisant du bruit.
+- La torche d'un accroupi bute sur le mur.
+- L'accroupi ralentit fortement, étouffe les pas, et se lit à sa silhouette plus une
+  marque HUD pour soi.
+
+**Ce que « un même angle » tranche, et pourquoi c'est la bonne lecture.** La section ISO
+proposait une ombre qui dépend de la distance du tireur au mur (`d · (h − c)/(H − h)`).
+L'angle unique d'Adrien donne une **bande de longueur constante** `L = (h_bas − c)/tan α`
+derrière chaque mur bas, comptée le long du rayon depuis sa sortie : un joueur ne voit
+pas `d`, il voit la bande. La même fonction (`franchit()`) sert à la lumière et à la
+balle — c'est ce qui tient « ce qui se voit est ce qui se paie ».
+
+### Étapes
+
+| Étape | Objet | État |
+|---|---|---|
+| **MB0** | Note, prototype en fenêtre à trois pistes, contrôle du noir absolu, suite headless | ✅ **livrée le 2026-09-14** — **H-MB0 tranché** le même soir : valeurs fixées au prototype, règles validées, dessin gardé, MB1 ouverte |
+| MB1 | La carte : `map_codec.gd` v4, `MapGeometry.Kind.LOW_WALLS`, éditeur, vignettes | ✅ **livrée le 2026-09-14** (ouverte par Adrien le même soir) — `Protocol.VERSION` 18 |
+| MB2 | L'accroupi : entrée, posture prédite/répliquée/rejouée (cumule sous `Protocol.VERSION` 18, monté en MB1), pas étouffés, silhouette, marque HUD | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 19 h 40) — C / M / L3 en bascule |
+| MB3 | Les échanges : balistique à deux hauteurs, zone morte dans les matériaux du jeu, enjambement, éblouissement, killcam, banc de coût, test d'équité — puis **H-MB1** (duel à deux manettes, puis EOS à deux machines) | ✅ **livrée le 2026-09-14** (ouverte par Adrien à 20 h 20) — **H-MB1 : duel à deux manettes validé par Adrien ; pas de test EOS à deux machines (Adrien n'en a pas les moyens) ; la balle suit la forme de la lumière (bande de 3 px supprimée à sa demande)** — MB3a livrée (balles, lumières basses, éblouissement), MB3b livrée (enjambement), MB3c livrée (zone morte à l'écran, banc de coût), MB3d livrée (équité, killcam) — **H-MB1 attend Adrien** |
+
+### MB0 — ce qui est livré, et ce qui a été mesuré
+
+Fichiers **tous neufs**, aucun fichier du jeu modifié : `tools/murs_bas_geometrie.gd`
+(la règle), `tools/proto_murs_bas.{tscn,gd,gdshader}`, `tools/test_murs_bas.gd` (83
+contrôles, ajoutée au lot, vue rougir par sabotage de la comparaison de zone morte puis
+remise), `docs/MURS_BAS.md`. Seul fichier existant touché : `tools/run_suites.sh` (une
+suite ajoutée).
+
+**La piste retenue est C — la zone morte calculée dans `light()`**, et ce n'est pas un
+choix de goût : le prototype rend quatre scènes fixes et compare l'écran, point par
+point, à la fonction qui fait payer la balle.
+
+| Piste | Sol en accord | Corps en accord |
+|---|---|---|
+| A — murs bas en occluders natifs, dans toute lumière | 97 % | **5/8** |
+| B — polygone de zone morte « fini » posé en occluder | 97 % | **5/8** |
+| C — zone morte analytique dans le shader | **100 %** (4 007/4 007) | **8/8** |
+
+- **Pourquoi A et B ont deux vérités.** Un `LightOccluder2D` projette une ombre
+  **infinie**, même quand son polygone est fini (B rend les mêmes écarts que A). Et un
+  sprite reçoit l'ombre d'une lumière en entier ou pas du tout : pour garder la tête
+  debout visible, il faut l'exempter de TOUTE ombre — elle est alors éclairée derrière un
+  mur haut et sous une torche accroupie qui devrait buter. Mesuré, pas raisonné.
+- **Pourquoi pas trois lumières** (une sans murs bas, une avec, une soustractive) : elle
+  n'ombre que derrière le premier mur d'un rayon. Écartée avant d'être écrite ; la suite
+  garde le cas de deux murs en série.
+- **Noir absolu** : toutes lumières éteintes, un debout et un accroupi contre un mur bas,
+  **max 0/255** sur l'image 2560×1440, pour les trois pistes.
+- **Coût de C** : **aucun appel de dessin en plus** ; de l'ordre de **0,9 ms par lumière
+  plein écran à 10 rectangles bas**, du même ordre que le bruit du prototype ; **visible
+  à 40 à chaque passage** (+1,1 à +3,9 ms, trois passages).
+  Il se paie `lumières × pixels reçus × rectangles`, et c'est **le risque de MB3** : le
+  jeu a une demi-douzaine de lumières par joueur. Ordre de grandeur, pas relevé au
+  protocole (fenêtre au premier plan forcée par le mode automatique, machine partagée).
+
+### ✅ H-MB0 — les valeurs fixées par Adrien au prototype, le 2026-09-14 (18 h 50)
+
+Premier retour, en lançant le prototype : « C'est génial. » Puis il a joué et réglé
+à chaud ; valeurs relues dans ses dernières lignes `REGLAGE` : **mur bas 0,40 ·
+accroupi 0,10 · debout 1,00 · α 13,5° · vitesse accroupie ×0,25 (65 px/s)**, soit
+**`L_sol` 1,67 tuile** (58 px) et **`L_accroupi` 1,25 tuile** (44 px). Le mur haut (1,25)
+n'était pas réglable et reste la proposition. Portées dans `tools/murs_bas_geometrie.gd`
+et le prototype.
+
+**Ce que ces valeurs changent, et qui reste à lui demander** (détail :
+`docs/MURS_BAS.md` § 1) :
+- la cachette reste proche de la proposition, mais **la bande d'ombre au sol est
+  divisée par deux** : elle ne suffit plus seule à dire « mur bas », et le dessin du mur
+  porte davantage la lisibilité ;
+- **l'accroupi va exactement aussi vite que l'enjambement** (65 px/s) : « lentement » ne
+  se sent plus en arrivant accroupi. Enjambement plus lent, ou égalité assumée ?
+- **un accroupi de 0,10 tuile fait 3,5 px de haut** s'il est extrudé tel quel en iso :
+  hauteur de jeu et hauteur de voxel sont peut-être à séparer. Question pour la session
+  ISO, pas bloquante pour MB1.
+
+**✅ Puis tranché par Adrien, le même soir, en quatre réponses :**
+- **les six règles se comportent comme il les imaginait**, toutes — y compris les deux
+  lectures ajoutées par MB0 (on ne tire pas en enjambant ; la balle d'un canon accroupi
+  s'arrête sur le mur bas) ;
+- **égalité assumée** : l'accroupi et l'enjambement vont tous deux à 65 px/s ;
+  enjamber ne coûte pas plus que marcher accroupi. `FACTEUR_ENJAMBEMENT` reste à 0,25 ;
+- **le dessin est gardé** : invisible dans le noir, dessus hachuré sous la lumière, pas
+  de bandeau LED ;
+- **MB1 est ouverte.**
+
+La question de la hauteur de voxel d'un accroupi (0,10 tuile = 3,5 px) reste pour la
+session ISO : elle n'était pas à Adrien de la trancher ici.
+
+### Valeurs proposées pour H-MB0 (en tuiles, contrat ISO1) — remplacées par celles d'Adrien ci-dessus
+
+`HAUTEUR_MUR_HAUT` 1,25 · `HAUTEUR_MUR_BAS` 0,5 · `HAUTEUR_ACCROUPI` 0,25 ·
+`HAUTEUR_DEBOUT` 1,0 · `ANGLE_FRANCHISSEMENT` 9,5° — soit **`L_sol` = 3 tuiles** (la bande
+d'ombre qui dit « mur bas » dans le noir) et **`L_accroupi` = 1,5 tuile** (collé au mur,
+caché ; deux tuiles en arrière, exposé à qui est debout) ; accroupi **×0,45** (117 px/s) ;
+enjambement **×0,25** (65 px/s, ~1,1 s). Le pourquoi de chacune : `docs/MURS_BAS.md` § 1.
+**`α` n'est pas le tangage de la caméra.**
+
+**Contrat avec ISO1**, à tenir en MB1 : `MapGeometry.Kind.LOW_WALLS` ; les quatre
+hauteurs (plus l'angle) en constantes de `map_geometry.gd`, en tuiles, en un seul
+endroit ; rien d'autre de l'interface de `map_geometry.gd` ne change de forme ; aucune
+fusion dans `iso-geometrie`.
+
+### Pièges découverts par MB0
+
+- **Un occluder de profondeur finie projette une ombre infinie.** L'idée « dessiner la
+  zone morte en occluders recalculés par lumière » ne peut pas marcher : la carte d'ombre
+  ne stocke que la distance du PREMIER occluder. Mesuré (piste B = piste A, à 4 points
+  près).
+- **La lumière et la balle ne voient pas le même mur, à 3 px près, et c'est déjà vrai
+  dans le jeu.** Les occluders sont rentrés de `MapGeometry.OCCLUDER_INSET`, la collision
+  non. Le contrôle d'accord de C a relevé 12, puis 4, puis 2 écarts — tous des rayons
+  rasant un coin à moins de 3 px — jusqu'à ce que la vérité de la lumière ET le shader
+  prennent le rectangle rentré. **Signalé, hors périmètre** : aujourd'hui, aux coins des
+  murs, un faisceau peut passer là où une balle bute. MB3 devra choisir et l'écrire dans
+  son test d'équité.
+- **Le plafond de 120 images cache le coût d'un shader** : 8,33 ms de médiane dans les
+  huit configurations du premier passage, quelles qu'elles soient. Le prototype lève le
+  plafond et la synchro le temps de la mesure, et les restaure.
+- **`viewport_get_measured_render_time_gpu` rend 0 en `gl_compatibility`** : un coût de
+  pixel ne se lit que dans la durée d'image.
+- **Le premier `--import` d'un worktree neuf peut planter (code 134)**, et le lot lancé
+  derrière est rouge de bout en bout (« Cannot infer the type of local_user_id », EOS
+  pas encore enregistré) ; un second import au premier plan le remet vert. Vécu au
+  démarrage de MB0.
+- **Une boucle de balayage sans incrément ressemble à une fenêtre bridée** : le premier
+  mode automatique a été tué au plafond après une capture, et le premier suspect était
+  `frame_post_draw` au second plan. C'était un `y += pas` oublié. Le prototype imprime
+  désormais l'heure de chaque scène : un blocage se localise en une lecture.
+
+### MB1 — le mur bas entre dans la carte ✅ (2026-09-14, ouverte par Adrien le même soir)
+
+**Le monde de MB1 : tout le monde est debout.** Sans posture, personne n'est plus bas
+qu'un mur bas ; la règle d'Adrien donne alors exactement : un mur bas **arrête les corps,
+et ni la lumière ni les balles**. Rien n'est triché ni désactivé — la zone morte existe et
+ne cache que les accroupis, c'est-à-dire personne. Ce qui manque est absent, pas faux :
+on contourne un mur bas (l'enjambement vient en MB3), on ne s'accroupit pas (MB2).
+
+Livré (détail : `docs/MURS_BAS.md` § 9) : codec de carte **v4** (`low_walls`, v3 importée
+telle quelle, garde-fou de décompression testé) ; `MapGeometry.Kind.LOW_WALLS`, les quatre
+hauteurs et l'angle en constantes de `map_geometry.gd` (**contrat ISO1 tenu**), couche de
+collision 16 pour les corps seulement, occluders sur la couche d'ombre 64 qu'aucune lumière
+n'active encore ; tuile hachurée, contour d'encre de 2 px, vignette ; calque et copies par
+vue dans `rebuild_arena` ; étape « MURS BAS » dans l'éditeur, cases exclusives avec les
+murs hauts dans une même transaction ; carte d'essai `tools/cartes/murs_bas_essai.json`
+(hors cartes livrées) et son code de partage dans la note.
+
+✅ **`HAUTEUR_MUR_HAUT` = 1,25 tuile, choisie par Adrien le 2026-09-14 à 19 h 25 —
+au-delà du critère iso, en connaissance de cause.** Elle n'était pas réglable au prototype
+(elle n'entre dans aucune règle 2D). La session « Iso 1 » avait signalé qu'à 52° de
+tangage un mur haut de 1,25 tuile cache une bande de **34,2 px** derrière lui (98 % d'un
+corps collé ; −4,6 points d'écart J1/J2 sur La Croisée), pour un critère d'équité de
+l'étude **< 18 px** (0,65 tuile). Adrien a tranché avec ces chiffres en main ; décision
+relayée par « Iso 1 », dont la suite `tools/test_iso_geometrie.gd` vérifie désormais que
+la hauteur en service vaut 1,25 et qu'aucune case de sol n'est entièrement invisible.
+
+**`Protocol.VERSION` 17 → 18 dès MB1**, et non en MB2 : le codec de carte fait partie de
+l'empreinte du fil, une carte voyage d'un jeu à l'autre (étape 8.8), et la v17 est
+publiée. MB2 cumulera sous 18 tant qu'aucun tag ne l'a figé.
+
+**Vérifié** : dix suites touchées vertes (codec 69, géométrie 151, éditeur 38, arène,
+protocole, LED, matière, vision, carte partagée, murs bas), la géométrie vue rougir par
+sabotage de la priorité mur haut / mur bas ; rendu en fenêtre de la carte d'essai montée
+comme `rebuild_arena` : les 6 cases de murs bas sous la torche sont éclairées, torche
+éteinte l'image vaut **0/255**.
+
+#### Pièges payés en MB1
+
+- **`trait` est un mot réservé de GDScript 4.7.** Une variable ainsi nommée dans
+  `candela_tileset.gd` a fait tomber l'analyse de `CandelaTileSet`, et avec elle
+  `MapCodec`, `MapGeometry`, `MapData`, `AudioManager` : 23 erreurs au démarrage, dix
+  suites rouges — et **`test_carte_partagee` bloquée sans sortir** jusqu'au chien de
+  garde. L'erreur désigne les appelants (« Could not resolve class CandelaTileSet »),
+  jamais la ligne fautive. Quand toutes les classes tombent à la fois, relire le dernier
+  fichier touché avant les suites.
+- **Un littéral qui désigne une position dans une énumération se périme à l'insertion.**
+  `STEP_COLOURS[2 + index]` voulait dire « J1 » tant qu'il y avait deux étapes de
+  géométrie ; avec « MURS BAS » insérée, il aurait peint J1 couleur de muret. Remplacé
+  par `EditorStep.SPAWN_P1`. Même famille que « Un index qui est en fait une POSITION ».
+- **Un libellé de contrôle qui ne dit pas ce qu'il compte.** « carte vide → 1 forme + 1
+  occluder » comptait en réalité les CORPS du conteneur (deux : murs, fosses). Il a rougi
+  au troisième corps — à juste titre, mais en accusant la mauvaise chose.
+
+### MB2 — l'accroupi ✅ (2026-09-14, ouverte par Adrien à 19 h 40)
+
+**Les touches, choisies par Adrien : en bascule partout** — un appui pour se baisser, un
+pour se relever. **C** pour J1, **M** pour J2, **clic du stick gauche (L3)** à la manette
+(« les pouces restent sur les sticks »). Croix reste réservée à l'enjambement (MB3).
+
+**Ce qui voyage sur le fil est la posture VOULUE, pas l'appui.** La bascule se résout
+dans le fournisseur local ; `rpc_send_inputs` porte son résultat en neuvième argument. Un
+paquet perdu ne peut donc pas faire rater un front à l'hôte, et il n'y a rien à
+réconcilier : l'hôte applique le bit, le client prédit le même, l'adversaire l'affiche
+depuis ses instantanés (`net_accroupi`, sans interpolation : un corps n'est pas « à moitié
+accroupi »). **`Protocol.VERSION` reste 18** : la montée de MB1 n'a été figée par aucun
+tag, le changement de forme se cumule, et le carnet le dit.
+
+Livré (détail : `docs/MURS_BAS.md` § 10) : vitesse ×0,25 (quatrième cause de
+ralentissement, et elle se LIT à la silhouette) ; les cinq vues du corps ramassées
+à 0,8, zone de touche et ombre du corps inchangées ; pas étouffés (−9 dB, portée ×0,5,
+valeurs de départ à doser au banc audio) ; posture dans l'historique de compensation de
+latence (`_rewound_posture`, pour la balistique de MB3) ; posture enregistrée à 60 Hz et
+silhouette rejouée en killcam ; marque « ACCROUPI » dans le panneau de torche du joueur,
+jamais de l'adversaire ; ligne « S'accroupir » dans le menu de liaisons ; chaque manche
+commence debout.
+
+**Piège payé en MB2 — un contrôle textuel épingle la FIN d'une liste d'arguments.**
+`tools/test_classes.gd` cherchait `update_input_state(mov, aim, shoot, torch, flare, reload,
+gadget)` avec sa parenthèse fermante : la posture ajoutée en dernier l'a fait rougir dans le
+lot (seule suite rouge sur 113), alors que le bit de gadget voyageait toujours. Corrigé en
+préfixe. Même famille que « Un contrôle textuel épingle un IDENTIFIANT, jamais un SENS » —
+ajouter un argument EN FIN de signature est le geste recommandé du carnet, et c'est celui-là
+qu'un contrôle fermé par `)` interdit sans le dire.
+
+**Ce que MB2 ne fait pas, et qui n'est pas faux** : un accroupi n'est pas encore caché
+derrière un mur bas (lumière et balles à deux hauteurs), sa torche ne bute pas encore, on
+n'enjambe pas. C'est MB3.
+
+### MB3 — les échanges (ouverte par Adrien le 2026-09-14 à 20 h 20)
+
+Découpée en quatre sous-étapes livrées l'une après l'autre, chacune avec son lot vert :
+**MB3a** la règle en jeu (balles, lumières basses, éblouissement) ; **MB3b**
+l'enjambement ; **MB3c** la zone morte finie dans le rendu du jeu et le banc de coût ;
+**MB3d** l'équité, la killcam, les captures. Puis **H-MB1**.
+
+**L'enjambement, tranché par Adrien** (deux questions, puis une correction de sa part) :
+**tenir Croix en poussant vers le muret** — lâcher arrête avant de monter dessus, aucun
+enjambement accidentel ; au clavier **Espace** (J1) et **point-virgule** (J2), tenus.
+
+#### MB3a — la règle dans le jeu
+
+`tools/murs_bas_geometrie.gd` devient **`murs_bas.gd`, classe `MursBas`** (déplacé par
+`git mv`) : la règle du prototype est désormais celle du match, sans une ligne recopiée.
+`MapGeometry.rects_monde()` en dérive les rectangles depuis la carte, et `GameState.murs_bas`
+les garde pour la manche.
+
+- **Balles** : la hauteur du canon au tir voyage avec la balle. Un canon accroupi ajoute la
+  couche des murs bas à son `ShapeCast` — la balle s'y arrête comme sur un mur. Une balle
+  debout interroge `MursBas.franchit_regle()` avant de toucher un joueur : un accroupi dans
+  la zone morte est survolé et exclu pour le reste du vol. La cible compensée se juge à sa
+  position **et à sa posture d'alors** (`_rewound_posture`, posé en MB2 pour ça). La balle
+  lit la TUILE entière ; la lumière, l'occluder rentré (écart de 3 px déjà consigné).
+- **Lumières** : `Player.poser_posture()` pose ou retire `COUCHE_OMBRE_MUR_BAS` sur les quatre
+  lumières portées (torche, rétrodiffusion, halo, flash) — la torche d'un accroupi bute. Les
+  lumières au sol la portent en permanence : mine, braises, **fusée posée**. ✅ **Tranché par
+  Adrien à 21 h 10 : une fusée EN VOL éclaire par-dessus les murets** (MB3a la faisait buter
+  toujours — corrigé à la suite de MB3b).
+- **Tirer trahit toujours** (Adrien, 21 h 10) : la silhouette révélée au tir, non éclairée,
+  se montre même derrière un muret. Comportement conservé.
+- **Éblouissement** : `_ligne_de_vue_depuis` applique la même règle, œil à la hauteur de la
+  posture de la cible, source à celle de son porteur ; une source de proximité sans porteur
+  est au sol.
+
+**Vérifié** : `test_accroupi` (49 contrôles) couvre la torche qui bute sur les quatre
+lumières portées sans toucher aux autres couches d'ombre, et une vraie balle — masque d'un
+canon accroupi, survol d'un accroupi dans la zone morte, touche au-delà et sur un debout
+collé ; **vue rougir** en neutralisant la règle dans `bullet.gd`. `test_murs_bas` (93)
+vérifie que `franchit_regle` rend la règle du prototype à l'identique et que
+`rects_monde` pave la carte. `test_classes` (412), `test_halo_proximite`, `test_vision`,
+`test_eblouissement`, `test_fusee`, `test_netcode` verts. Lot complet : **113 OK**.
+⚠️ **Asymétrie temporaire** : l'écran ne dessine pas encore la zone morte (MB3c) — on peut
+voir un accroupi que la balle survole. H-MB1 ne se joue pas avant MB3c. ✅ **Refermée en
+MB3c.**
+
+#### MB3b — l'enjambement
+
+**Tenir** Espace (J1), point-virgule (J2) ou Croix **en poussant vers le muret** : la
+collision avec les murs bas est coupée le temps de la traversée — debout, 65 px/s, aucun
+tir, un frôlement fort à la montée. Lâché avant d'y monter, le muret arrête ; déjà dessus,
+la traversée va au bout (un corps dans un mur ne retrouve pas sa collision). Le geste
+voyage tenu, dixième argument de `rpc_send_inputs`, sous `Protocol.VERSION` 18. Les murets
+de la manche sont un registre de classe (`MursBas.murs_de_la_manche`) : le joueur n'a pas à
+connaître le nœud de jeu pour enjamber, et une suite pose un muret sans monter une partie.
+Le bruit se décide depuis la POSITION, pour tous les rôles : l'adversaire affiché s'entend
+enjamber comme le joueur simulé.
+
+⚠️ **Croix sert aussi à valider dans les menus** — superposition contextuelle, comme L1/R1
+avec les onglets ; `Liaisons.collisions()` ne détecte pas l'intra-joueur.
+
+**Piège payé en MB3b — le rayon de TOUCHE n'est pas l'ENCOMBREMENT.** Le premier essai
+décidait la poussée au rayon de 18 (celui des balles). Or la collision du joueur est une
+étoile dont le canon avance à 28 : le corps s'arrêtait à 182 px d'un muret posé à 210, la
+sonde « 18 + 9 » n'atteignait pas la pierre, la collision n'était jamais coupée — et la
+détente tenue « sur le muret » tirait, puisque le corps n'y était pas. Quatre contrôles
+rouges, un seul chiffre (x = 182) pour les expliquer tous. `MursBas.RAYON_ENCOMBREMENT = 28`
+décide désormais ce qui touche à la collision ; `RAYON_CORPS = 18` reste celui des balles.
+
+**Vérifié** : `test_accroupi` (60 contrôles) — Espace, point-virgule et Croix ; le geste sur
+le fil ; un vrai joueur bloqué par un vrai muret sans le geste, qui le traverse en le
+tenant, à 65 px/s, avec un seul bruit, sans tirer, et qui retrouve sa collision après.
+`test_protocole` (témoin recopié, `VERSION` 18), `test_classes` (412), `test_liaisons`.
+
+#### MB3c — la zone morte dessinée à l'écran
+
+La piste C du prototype, dans le vrai jeu : la règle vit dans un include GLSL
+(`murs_bas_zone.gdshaderinc`, le premier du dépôt) que partagent le sol de chaque vue
+(`murs_bas_sol.gdshader`, additif comme l'ancien matériau), le décor peint
+(`murs_bas_decor.gdshader`) et les deux shaders de joueur (jugés en leur centre, comme la
+balle). `MursBasRendu` (`murs_bas_rendu.gd`) convertit murs rentrés et longueurs dans
+l'écran de chaque vue ; `GameState._pousser_zone_morte` les pousse sur
+`RenderingServer.frame_pre_draw`, par le viewport qui REND la vue — sous-vue en écran
+scindé, racine en vue unique. **Pourquoi `frame_pre_draw` et pas `_process`** : l'ordre de
+traitement de la caméra y ferait traîner la zone morte d'une image derrière l'écran.
+
+**Le bandeau LED est exempté par sa hauteur** (`MursBasRendu.HAUTEUR_SANS_ORIGINE`) : une
+seule lampe cuite pour toute la carte, posée en son centre. Lui appliquer la règle ombrerait
+le sol derrière chaque muret « vu » depuis ce centre. Aucune autre lampe ne pose de hauteur
+(sans carte de normales, elle n'a pas d'autre effet) — `test_murs_bas_rendu` le garde.
+
+**Vérifié** : `tools/test_murs_bas_rendu.gd` (neuve, au lot, vue rougir) et
+`tools/banc_murs_bas.tscn` (neuf, fenêtré) : vues de J1 et J2 en écran scindé puis vue
+unique — sol en accord sur tous les points (~100 noircis par scène), rien allumé par la
+règle, 0/255 d'écart avec l'ancien matériau hors zone ; accroupi à L − 12 noir, à L + 12 et
+debout éclairés ; noir absolu inchangé. **Vu rougir** en coupant la poussée. Coût (2560×1440,
+écran scindé, ordre de grandeur) : carte d'essai dans le bruit (4,47 ms contre 4,30) ;
+**40 murets à l'écran ~+4 ms** (8,69 ms), loin de la cible. Détail : `docs/MURS_BAS.md` § 11.
+
+**Pièges payés au banc — cinq, tous du banc, chacun déguisé en défaut de la règle** : la
+caméra qui glisse après une téléportation ; **l'éblouissement de la scène précédente**, qui
+floute la vue de qui s'était tenu dans la torche (deux passages ont accusé autre chose) ; le
+corps adverse sombre sous la torche par ses propres occluders ; la ligne de visée et le
+viseur **non éclairés**, qui passent à travers la cible ; `hauteur_mur()` déjà en pixels.
+**La leçon** : une capture qui contredit la règle se REGARDE avant de corriger quoi que ce
+soit — l'image floue a tranché en une lecture ce que trois hypothèses n'avaient pas fait.
+
+**Signalé, hors MB3c** : les marques posées au sol en cours de manche (taches, empreintes)
+restent éclairées dans la zone morte — une empreinte d'accroupi pourrait s'y lire (MB3d).
+✅ `tools/test_banc.gd` vérifie désormais les appuis du nouveau banc
+(`BancMursBas.preconditions_manquantes` : internes de la zone morte, lampes et
+éblouissement des joueurs, carte d'essai à cinq murs bas), vu rougir au sabotage ; le
+banc s'arrête proprement au démarrage si l'un manque.
+
+#### MB3d — l'équité et la killcam
+
+**La killcam rejoue la règle.** Une balle rejouée ne connaissait ni les murets ni la hauteur
+de son canon : la killcam pouvait montrer toucher un accroupi que la vraie balle avait
+survolé — une leçon fausse sur l'action décisive, ce que V6.2 refuse déjà pour la
+trajectoire. La posture du tireur s'enregistre avec le tir
+(`ReplaySystem.record_bullet_fired(…, accroupi)`) et se lit pendant l'émission
+(`ReplaySystem.tir_rejoue`) : **le signal `replay_spawn_bullet` garde sa forme**, parce
+qu'une suite réseau l'écoute. Les joueurs rejoués prennent leur posture d'alors (la balle
+la lit), et les lampes du fantôme accroupi butent (`CanauxLumiere.masque_ombre_posture`,
+la règle de `poser_posture` sortie en un seul endroit).
+
+**Les empreintes suivent la zone morte** (signalé en MB3c) : posées à chaque pas, accroupi
+compris, et éclairées par défaut, celles d'un accroupi derrière un muret s'allumaient sous
+une torche venue de l'autre côté, sur un sol resté noir. Elles prennent le matériau de zone
+morte du décor de leur vue (`Footprint.materiau_de_vue`). Les taches de sang restent hors
+règle : elles naissent d'une touche, donc hors de la zone morte.
+
+**L'équité, par la vraie balle** (`test_accroupi`) : J1 → J2 et son reflet J2 → J1 rendent
+la même décision dans les quatre couples de postures ; **jamais touché sans être vu** ; et
+une bande de **3 px** au bout de la zone morte où un accroupi est **vu sans pouvoir être
+touché** — l'écart balle / lumière (tuile entière contre occluder rentré) consigné avant
+ce chantier. La suite la borne à `OCCLUDER_INSET`.
+
+✅ **Supprimée à la demande d'Adrien, après H-MB1** (« la bande de 3 px me gêne, aligne la
+balle sur la forme de lumière ») : `MursBas.franchit_regle` — balle, balle compensée,
+éblouissement — lit les murets rentrés de `RETRAIT_LUMIERE` (= `OCCLUDER_INSET`), la forme
+de l'occluder et de la zone morte dessinée. Ni « vu, pas touché », ni « touché, pas vu ».
+**Pourquoi rentrer dans la règle et pas dans `GameState.murs_bas`** : la collision d'un
+canon accroupi et l'enjambement doivent rester sur la tuile entière ; ils ne décident pas
+de ce qui se voit.
+
+### Ce qui attend Adrien
+
+**H-MB1 joué le 2026-09-14** : le duel à deux manettes sur la carte d'essai « fonctionne »
+(Adrien), et la bande de 3 px est tranchée (supprimée, § MB3d). **Pas de partie EOS à deux
+machines** : d'abord reportée, puis **abandonnée par Adrien le même soir** — « je ne veux
+pas faire de tests à deux machines, je n'ai pas de quoi le faire ». Le fil a changé
+(`Protocol.VERSION` 18). Ce qui le couvre : les scénarios à deux instances du lot
+(`tools/run_duo.sh`, ENet sur une machine). ⚠️ **Risque accepté, et à ne pas oublier** : EOS
+entre deux réseaux (relais, NAT, latence réelle) n'est pas vérifié pour ce chantier — la
+classe de défauts que la Phase 3 n'a vus qu'entre deux machines distinctes. **Aucune
+session ne doit présenter un test à deux machines comme un préalable** : Adrien n'a pas le
+matériel. Code de partage de la carte d'essai : `docs/MURS_BAS.md` § 9.
+
+Le chantier est **fusionné dans `main`** (avance rapide vers `f9c6af4`, 2026-09-14 à
+23 h 25, à la demande d'Adrien), non poussé.
 
 ---
 
@@ -22481,6 +23117,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 | H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | ✅ **Tranché le 2026-09-14 : go** — tangage 52°, écran scindé en iso, caméra qui garde la profondeur, murs hauts et murs bas (mécanique neuve à instruire). Détail : section ISO, « H15 tranché » |
+| H-MB0 | **Jouer le prototype des murs bas et fixer les valeurs** (chantier MURS BAS, `docs/MURS_BAS.md`) | Aucune suite ne dit si une bande d'ombre de 3 tuiles se lit, si 1,5 tuile de cachette est juste, ni si l'accroupi à ×0,45 est jouable. Le prototype prouve les règles au pixel ; il ne dit pas si elles sont bonnes. | ✅ **Tranché le 2026-09-14** — mur bas 0,40, accroupi 0,10, α 13,5°, accroupi ×0,25 ; six règles validées ; dessin gardé ; enjambement à la vitesse accroupie ; MB1 ouverte |
 
 ---
 
@@ -22626,6 +23263,19 @@ et un seul est du travail de session.
 > conflits, l'include des lightmaps (gardé dans sa version à deux lightmaps, un sur-ensemble) et la
 > liste des suites (les deux gardées) ; lot vert. Puis **ISO3a**. Le tout est jugé au **jalon
 > H-ISO5** (brief long du 2026-09-14, jalons regroupés par sa suite du 2026-09-15, vers 01:20).
+> **ISO3a commitée** (`80ba9df`) : les corps voxel des dix classes remplacent les cylindres, et le
+> porteur de torche lit le disque de son capteur au bord (`lecture_au_bord`) — il restait noir chez
+> l'autre. **Fusion de `main`** (`cd1197c`, murs bas et accroupi, la seule que le brief accorde) :
+> sept conflits de documentation et de liste, tous « ajoutés au même endroit des deux côtés »,
+> résolus en gardant les deux ; 5413 points d'ancrage des deux côtés (fonctions, constantes,
+> variables, signaux) relus dans l'arbre fusionné, aucun perdu ; Et une perte sans conflit,
+> rattrapée par la suite : `player_enemy_light` et `player_rim_light` ont pris la zone morte des
+> murs bas dans `light()`, et les shaders miroirs des capteurs (`capteur_adverse`, `capteur_local`)
+> ne la portaient pas — `tools/test_iso_vues.gd` a rougi sur ses deux contrôles de miroir (215
+> vérifications justes, 2 fausses) ; les miroirs la prennent, inerte tant qu'ISO3b n'en pose pas les
+> uniformes. Deux imports sans erreur, puis le lot complet vert au second passage (394 s ; le
+> premier, 391 s, n'avait rougi que sur ces deux contrôles de miroir).. Puis **ISO3b** : les murs
+> bas extrudés et les postures sur les corps voxel.
 >
 > **Ajouté le 2026-09-14 — une décision, pas un chantier :** l'étude de la
 > **vue isométrique « à la Unrailed 2 »** (section dédiée,
@@ -22658,6 +23308,8 @@ et un seul est du travail de session.
    côtés.
 
 ## D'où viennent les millisecondes du duel — mesuré le 2026-08-18
+
+> ⚠️ **Qualifié le 2026-09-14 : le verdict « torches : sous le bruit » est FAUX par construction.** Le banc n'allumait aucune lampe : « avec » et « sans torches » étaient la même charge (médianes 135 et 135) (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »). Le coût de la seconde vue tient, mesuré lampes éteintes des deux côtés. Chiffres conservés tels quels.
 
 `tools/run_decomposition.sh`, sept relevés pris le 2026-08-18 avec l'accord
 d'Adrien. **Conclusion : la seconde vue EST le coût du duel ; les torches et les
@@ -22812,6 +23464,8 @@ banc sans le relancer.
 | 1 | *aucun* | Le banc pilotait `_ui.btn_mode_local`, disparu à la Phase 5. Ouvert, erreur de script, jamais entré dans le duel, **resté ouvert sans mesurer**. Tué à la main. |
 | 2 | 1 % bas **109**, minimum 109 | Mesure creuse : `get_frames_per_second()` ne bouge qu'une fois par seconde, donc 15 mesures recopiées 139 fois. `1 % bas == minimum` en est la signature. Sorti en **signal 11** (arrêt EOS non propre). |
 | 3 | **1 % bas 97** | Le seul honnête. Temps d'image relevés par image, sortie par `quit_game()`, code 0. |
+
+> ⚠️ **Qualifié le 2026-09-14 : « torches allumées » est faux, lampes ÉTEINTES** (voir Pièges connus, « Le banc de cadence n'a JAMAIS allumé ses torches »).
 
 **Relevé n° 3 — conditions propres** (éditeur Godot fermé, aucune autre session,
 aucun autre Godot), écran partagé, torches allumées, échange au pompe :

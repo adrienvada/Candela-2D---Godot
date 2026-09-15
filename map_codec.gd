@@ -1,4 +1,9 @@
-## MapCodec — Encodage / décodage du format de carte Candela v3.
+## MapCodec — Encodage / décodage du format de carte Candela v4.
+##
+## v4 (chantier MURS BAS, étape MB1, 2026-09-14) : une troisième famille de
+## cellules, `low_walls`, en runs comme `floor` et `walls`. Une carte v3 — fichier
+## ou code de partage — s'importe telle quelle : la migration lui donne une liste
+## de murs bas vide. Rien d'autre du format ne change.
 ##
 ## Deux responsabilités :
 ##   1. Compression RLE des cellules (runs horizontaux) — une carte 20×20 pleine
@@ -13,7 +18,11 @@
 class_name MapCodec
 extends RefCounted
 
-const VERSION := 3
+## ⚠️ Lu par l'empreinte du fil (`tools/test_protocole.gd`) : le monter change le
+## témoin de `Protocol`, et c'est voulu — deux jeux dont l'un ne sait pas lire un
+## mur bas ne doivent pas s'échanger une carte (étape 8.8, la carte que l'autre n'a
+## pas).
+const VERSION := 4
 const SHARE_PREFIX := "CANDELA-"
 const MAX_GRID := 128
 const MIN_GRID := 8
@@ -143,6 +152,13 @@ static func validate(data: Dictionary) -> Dictionary:
 	var normalized := data.duplicate(true)
 	if version < 3:
 		normalized = migrate_v2_to_v3(normalized)
+	if version < 4:
+		normalized = migrate_v3_to_v4(normalized)
+
+	# Même vigilance que pour `grid_size` plus bas : un code reçu d'ailleurs peut
+	# mettre n'importe quoi sous la clé, et `decode_runs` attend une chaîne.
+	if typeof(normalized.get("low_walls", "")) != TYPE_STRING:
+		return _fail("Murs bas illisibles")
 
 	# Grille : bornes strictes pour éviter une allocation absurde à la construction.
 	#
@@ -187,7 +203,9 @@ static func migrate_v2_to_v3(data: Dictionary) -> Dictionary:
 					cells.append(Vector2i(int(cell["x"]), int(cell["y"])))
 			out[key] = encode_runs(cells)
 
-	out["version"] = VERSION
+	# 3 et non `VERSION` : cette fonction produit du v3, que `migrate_v3_to_v4`
+	# prend ensuite. Écrire `VERSION` ici la ferait mentir dès la v4.
+	out["version"] = 3
 	if not out.has("id"):
 		out["id"] = generate_id()
 	if not out.has("name"):
@@ -197,6 +215,15 @@ static func migrate_v2_to_v3(data: Dictionary) -> Dictionary:
 	if not out.has("created_utc"):
 		out["created_utc"] = Time.get_datetime_string_from_system(true)
 
+	return out
+
+## v3 → v4 : une carte d'avant les murs bas n'en a aucun. La clé est ajoutée
+## vide plutôt que laissée absente, pour que tout lecteur trouve la même forme.
+static func migrate_v3_to_v4(data: Dictionary) -> Dictionary:
+	var out := data.duplicate(true)
+	if not out.has("low_walls"):
+		out["low_walls"] = ""
+	out["version"] = 4
 	return out
 
 # ---------------------------------------------------------------------------
@@ -215,6 +242,7 @@ static func new_map(map_name: String, grid_size: Vector2i = Vector2i(32, 32)) ->
 		"tile_size": CandelaTileSet.TILE_SIZE.x,
 		"floor": "",
 		"walls": "",
+		"low_walls": "",
 		"spawn_p1": {"x": -1, "y": -1},
 		"spawn_p2": {"x": -1, "y": -1},
 	}
@@ -272,6 +300,11 @@ static func get_floor_cells(data: Dictionary) -> Array[Vector2i]:
 static func get_wall_cells(data: Dictionary) -> Array[Vector2i]:
 	return decode_runs(String(data.get("walls", "")))
 
+## Les murs bas, tels qu'écrits. Une case portant AUSSI un mur haut reste un mur
+## haut : c'est `MapGeometry.build_grid` qui tranche, l'éditeur les garde exclusifs.
+static func get_low_wall_cells(data: Dictionary) -> Array[Vector2i]:
+	return decode_runs(String(data.get("low_walls", "")))
+
 static func get_spawn(data: Dictionary, player_index: int) -> Vector2i:
 	var key := "spawn_p1" if player_index == 0 else "spawn_p2"
 	var s: Dictionary = data.get(key, {})
@@ -299,11 +332,14 @@ static func check_playable(data: Dictionary) -> Dictionary:
 	var spawn1 := get_spawn(data, 0)
 	var spawn2 := get_spawn(data, 1)
 
-	# Ensemble des cases praticables : du sol, sans mur par-dessus.
+	# Ensemble des cases où l'on peut APPARAÎTRE : du sol, sans mur par-dessus —
+	# ni haut, ni bas. On enjambe un mur bas, on n'y naît pas.
 	var walkable := {}
 	for c in floor_cells:
 		walkable[c] = true
 	for c in wall_cells:
+		walkable.erase(c)
+	for c in get_low_wall_cells(data):
 		walkable.erase(c)
 
 	var checks: Array[Dictionary] = []
@@ -346,9 +382,15 @@ static func check_playable(data: Dictionary) -> Dictionary:
 
 ## Cases praticables réellement atteignables depuis l'apparition J1.
 ## Sert à mettre en évidence les zones orphelines dans l'éditeur.
+##
+## Un mur bas n'isole rien : on l'enjambe (règle d'Adrien, 2026-09-14). Il reste
+## donc dans le graphe — seul un mur haut coupe une zone. L'apparition, elle, ne
+## peut pas être posée dessus (voir `check_playable`).
 static func get_reachable_cells(data: Dictionary) -> Dictionary:
 	var walkable := {}
 	for c in get_floor_cells(data):
+		walkable[c] = true
+	for c in get_low_wall_cells(data):
 		walkable[c] = true
 	for c in get_wall_cells(data):
 		walkable.erase(c)

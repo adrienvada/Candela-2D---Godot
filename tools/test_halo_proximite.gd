@@ -1,9 +1,11 @@
 ## Garde de la règle du halo de proximité — décision d'Adrien, 2026-09-11 :
 ## « je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne
 ## doit pas me rendre détectable auprès de mon ennemi à distance. »
+## Et 2026-09-14 : que le halo se comporte comme la torche — le corps d'en face
+## fait ombre et son sprite la reçoit ; le sien, jamais.
 ##
-## Les deux moitiés de la phrase sont vérifiées, d'abord sur la règle
-## (`canaux_lumiere.gd` : `canal_de_vue()` et `masque_vue_adverse()`), puis sur
+## Les deux décisions sont vérifiées, d'abord sur la règle (`canaux_lumiere.gd` :
+## `canal_de_vue()`, `masque_vue_adverse()`, `masque_ombre_halo()`), puis sur
 ## deux vrais joueurs instanciés : c'est sur les nœuds que la règle doit tenir,
 ## pas seulement dans les fonctions qui la calculent.
 ##
@@ -17,7 +19,7 @@
 extends Node
 
 ## Nombre de vérifications en dessous duquel le test ne peut pas être vert.
-const PLANCHER := 20
+const PLANCHER := 40
 
 var _failures: int = 0
 var _verifications: int = 0
@@ -56,6 +58,17 @@ func _test_regle() -> void:
 			(CanauxLumiere.masque_vue_adverse(a) & 2) != 0)
 		_check("le halo de J%d ne touche ni le décor commun, ni le canal ennemi, ni le joueur local" % (a + 1),
 			(halo & (1 | 2 | 4)) == 0)
+		var ombre := CanauxLumiere.masque_ombre_halo(a)
+		_check("sous le halo de J%d, les murs font toujours ombre" % (a + 1),
+			(ombre & CanauxLumiere.DECOR) != 0)
+		_check("sous le halo de J%d, le corps d'en face fait ombre" % (a + 1),
+			(ombre & CanauxLumiere.couche_ombre_corps(b)) != 0)
+		_check("sous le halo de J%d, son propre corps ne fait pas ombre" % (a + 1),
+			(ombre & CanauxLumiere.couche_ombre_corps(a)) == 0)
+		_check("sous le halo de J%d, aucun torse ne fait ombre (le sien est au centre de la lueur)" % (a + 1),
+			(ombre & (CanauxLumiere.couche_ombre_torse(a) | CanauxLumiere.couche_ombre_torse(b))) == 0)
+		_check("sous le halo de J%d, le sprite ennemi qu'il éclaire REÇOIT l'ombre" % (a + 1),
+			(ombre & CanauxLumiere.masque_vue_adverse(b)) != 0)
 
 func _test_joueurs_reels() -> void:
 	print("\n— Sur deux vrais joueurs")
@@ -77,6 +90,9 @@ func _test_joueurs_reels() -> void:
 		_check("%s : halo sur son canal de vue" % nom, p.ambient_light != null
 			and p.ambient_light.range_item_cull_mask == CanauxLumiere.canal_de_vue(id),
 			str(p.ambient_light.range_item_cull_mask) if p.ambient_light else "pas de halo")
+		_check("%s : halo au masque d'ombre de la règle" % nom, p.ambient_light != null
+			and p.ambient_light.shadow_item_cull_mask == CanauxLumiere.masque_ombre_halo(id),
+			str(p.ambient_light.shadow_item_cull_mask) if p.ambient_light else "pas de halo")
 		for vue in ["visual_enemy", "visual_enemy_ptr"]:
 			var n = p.get(vue)
 			_check("%s : %s porte le masque de la vue adverse" % [nom, vue], n != null
@@ -96,6 +112,18 @@ func _test_joueurs_reels() -> void:
 			(halo & joueurs[a].visual_enemy.light_mask) == 0)
 		_check("nœuds : le halo de J%d révèle J%d de près, chez J%d" % [a + 1, b + 1, a + 1],
 			(halo & joueurs[b].visual_enemy.light_mask) != 0)
+		# Et comme la torche : les occluders RÉELLEMENT posés, pas la règle.
+		var ombre: int = joueurs[a].ambient_light.shadow_item_cull_mask
+		var occ_b = joueurs[b].get_node_or_null("LightOccluder2D")
+		var occ_a = joueurs[a].get_node_or_null("LightOccluder2D")
+		var torse_a = joueurs[a].get_node_or_null("OccluderTorse")
+		_check("nœuds : le corps de J%d fait ombre sous le halo de J%d" % [b + 1, a + 1],
+			occ_b != null and (ombre & occ_b.occluder_light_mask) != 0)
+		_check("nœuds : ni le corps ni le torse de J%d n'ombrent son propre halo" % (a + 1),
+			occ_a != null and torse_a != null
+			and (ombre & (occ_a.occluder_light_mask | torse_a.occluder_light_mask)) == 0)
+		_check("nœuds : le sprite ennemi de J%d reçoit l'ombre du halo de J%d" % [b + 1, a + 1],
+			(ombre & joueurs[b].visual_enemy.light_mask) != 0)
 	for p in joueurs:
 		p.queue_free()
 	await get_tree().process_frame

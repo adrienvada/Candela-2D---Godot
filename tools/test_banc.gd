@@ -31,6 +31,67 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 func _init() -> void:
 	call_deferred("_run")
 
+## Répète `geste` à chaque image jusqu'à ce que `n` pas de physique soient passés :
+## c'est le rythme du banc (il écrit après `process_frame`), et c'est au pas de
+## physique que `player.gd` décide de la lampe.
+func _pendant_pas_de_physique(n: int, geste: Callable) -> void:
+	var cible := Engine.get_physics_frames() + n
+	while Engine.get_physics_frames() < cible:
+		geste.call()
+		await process_frame
+	geste.call()
+	await process_frame
+
+func _torche_du_banc(Banc: GDScript, main: Node, ui: Node) -> void:
+	# Le lancement du banc, au mot près (`bench_framerate.gd::_ready`).
+	#
+	# ⚠️ **Jamais `NetworkManager.GameMode` écrit en toutes lettres ici.** Nommer
+	# l'autoload dans ce fichier compile `network_manager.gd` en même temps que
+	# lui, AVANT que les autoloads du plugin EOS existent : « Identifier not found:
+	# HLobbies », puis 5 418 `SCRIPT ERROR` en cascade (payé le 2026-09-14, en
+	# écrivant ce contrôle). C'est le piège de l'en-tête — `load` et non `preload`
+	# — sous une autre forme : on passe par le nœud, qui existe à l'exécution.
+	var reseau: Node = root.get_node("NetworkManager")
+	var modes: Dictionary = reseau.get_script().get_script_constant_map()["GameMode"]
+	ui._intended_mode = modes["LOCAL_SPLITSCREEN"]
+	main._on_replay_requested()
+	var limite := Time.get_ticks_msec() + 15000
+	while not (main.round_active and main.countdown_left <= 0.0) \
+			and Time.get_ticks_msec() < limite:
+		await process_frame
+	_check("la manche du banc démarre et sort du décompte",
+		main.round_active and main.countdown_left <= 0.0,
+		"round_active=%s countdown_left=%.2f" % [main.round_active, main.countdown_left])
+	if not main.round_active:
+		return
+	var joueurs: Array = [main.p1, main.p2]
+
+	# 1. Le geste du banc : la gâchette tenue. La lampe doit s'allumer ET le rester.
+	await _pendant_pas_de_physique(6, func():
+		for p in joueurs:
+			Banc.tenir_la_torche(p, true))
+	_check("torche demandée allumée : la lampe des deux joueurs l'est après les pas de physique",
+		joueurs.all(func(p): return p.flashlight_on and p.flashlight.enabled),
+		"J1 enabled=%s J2 enabled=%s" % [main.p1.flashlight.enabled, main.p2.flashlight.enabled])
+
+	# 2. Lâchée (`--sans-torches`) : éteinte, fondu D3 compris — et aucun verrou du
+	# cran plein ne doit la garder allumée.
+	await _pendant_pas_de_physique(30, func():
+		for p in joueurs:
+			Banc.tenir_la_torche(p, false))
+	_check("torche demandée éteinte : la lampe l'est, sans verrou resté enclenché",
+		joueurs.all(func(p): return not p.flashlight.enabled),
+		"J1 enabled=%s J2 enabled=%s" % [main.p1.flashlight.enabled, main.p2.flashlight.enabled])
+
+	# 3. Le contre-test : l'ANCIEN geste doit échouer ici, sinon ce contrôle ne
+	# saurait pas rougir le jour où le banc y reviendrait.
+	await _pendant_pas_de_physique(6, func():
+		for p in joueurs:
+			p.flashlight_on = true)
+	_check("contre-test : écrire flashlight_on n'allume PAS la lampe (le jeu l'écrase)",
+		joueurs.all(func(p): return not p.flashlight.enabled),
+		"l'écriture directe tient désormais — revoir tenir_la_torche() et ce contrôle")
+
 func _run() -> void:
 	print("=== LE BANC PEUT-IL DÉMARRER ===")
 	await process_frame
@@ -93,6 +154,17 @@ func _run() -> void:
 	var vides_voile: Array[String] = Voile.preconditions_manquantes(
 		"res://un_shader_qui_n_existe_pas.gdshader")
 	_check("et il sait dire quand ils manquent", not vides_voile.is_empty())
+
+	# Le banc des MURS BAS (MB3c), même raison et même remède. Il pilote une manche
+	# en écran scindé puis en vue unique, et lit des internes : la poussée de la
+	# zone morte, le rendu racine, les lampes et l'éblouissement des joueurs. Et
+	# ses scènes supposent la carte d'essai telle qu'elle est (cinq murs bas).
+	var MursBancs: GDScript = load("res://tools/banc_murs_bas.gd")
+	var manquants_mb: Array[String] = MursBancs.preconditions_manquantes(ui, main)
+	_check("tous les appuis du banc des murs bas existent encore",
+		manquants_mb.is_empty(), "; ".join(manquants_mb))
+	var vides_mb: Array[String] = MursBancs.preconditions_manquantes(null, null)
+	_check("et il sait dire quand ils manquent", not vides_mb.is_empty())
 
 	# LE PHOTOGRAPHE, même raison et même remède : il ouvre une fenêtre, donc
 	# aucune suite ne peut l'exécuter — mais une suite peut lire ses hypothèses.
@@ -199,6 +271,18 @@ func _run() -> void:
 	_check("les membres dont hérite tools/cineaste.gd existent encore",
 		perdus.is_empty(), ", ".join(perdus)
 		+ " — prévenir la session DA7 avant de renommer")
+
+	# ⚠️ **L'état que le banc DEMANDE est-il celui que le joueur GARDE ?**
+	#
+	# Le banc écrivait `p.flashlight_on = true` et annonçait « torches allumées » ;
+	# `player.gd` réécrit ce drapeau depuis la gâchette à chaque pas de physique,
+	# avant d'allumer la lampe. Du 2026-08-15 au 2026-09-14, **chaque relevé a donc
+	# été pris lampes éteintes**, et aucune suite ne pouvait le voir : les appuis
+	# ci-dessus vérifient que le banc DÉMARRE, pas que sa charge est celle qu'il dit.
+	#
+	# Ce contrôle joue une vraie manche — le chemin du banc, rien de forcé — et lit
+	# `flashlight.enabled`, la lampe réelle, jamais le drapeau que le banc écrit.
+	await _torche_du_banc(Banc, main, ui)
 
 	main.queue_free()
 	if _failures == 0:

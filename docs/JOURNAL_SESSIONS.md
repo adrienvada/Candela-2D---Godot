@@ -321,7 +321,25 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
-### 2026-09-11 — session « walls-led-breathing-light-4872dd-8a » : le halo révèle l'ennemi proche, `player.gd` touché
+### 2026-09-14 — session « hygiene-main-bench-masks-1b2155-df » (worktree `hygiene-main-bench-masks-1b2155`) : les torches du banc de cadence, les masques de vue
+
+Deux défauts signalés par la session ISO0.b, vérifiés puis corrigés sur une
+branche issue de `origin/main` (`336bc10`). **Touchés** : `tools/bench_framerate.gd`
+(la torche par la gâchette, `tenir_la_torche()`, contrôle par image et refus du
+chiffre ; rien d'autre du banc), `tools/test_banc.gd` (une manche jouée en
+headless prouve que la lampe suit la demande, contre-test compris), `CLAUDE.md`
+(« Boucle de jeu » : qui fait foi pour `canvas_cull_mask`), `game_state.gd`
+(**commentaire seul**, à la pose des masques — domaine « game feel », aucune ligne
+de code changée), `docs/ROADMAP.md` (deux pièges datés, relevés historiques
+qualifiés sans toucher aux chiffres). **Non touchés** : `player.gd`, `main.tscn`.
+
+⚠️ **Fenêtres** : trois sondes du banc ouvertes entre 16 h 12 et 16 h 16 ont
+chevauché la série H15 d'Adrien (`banc_iso`, worktree ISO0.b) — **ses relevés 4 à
+6**, notés douteux par ISO0.b dans sa ROADMAP. Aucune session ne voyait l'autre
+lancer une fenêtre : vérifier `ps` avant d'ouvrir un banc fenêtré ne suffit pas si
+un humain déroule un protocole avec des pauses. Lot complet lancé seulement après
+la fin de sa série, confirmée par ISO0.b (dernier relevé à 16 h 41).
+ : le halo révèle l'ennemi proche, `player.gd` touché
 
 **Déclaration : `player.gd` est du domaine « game feel »**, sur décision d'Adrien
 (« je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne
@@ -364,6 +382,16 @@ d'Adrien (« garder la proximité ») : sa référence d'énergie passe de la to
 
 **Suivi de projet :** je ne republie pas — delta envoyé à « Can2d - Mise à jour
 artefact de suivi - Sonnet LOCAL ».
+
+**2026-09-14 — contre-jour et halo ombré** (Adrien : « toutes les sources
+lumineuses [doivent se comporter] comme la lampe torche »). Touchés : `mur_led.gd`
+(la bande n'éclaire plus les corps — son choix entre deux pistes),
+`canaux_lumiere.gd` (`masque_ombre_halo()`, et le bloc qui affirmait que les deux
+familles de masques ne se croisent jamais : faux, corrigé), `player.gd` (une
+ligne, le masque d'ombre du halo) et les deux tests. **Non touchées :** les
+autres lumières dont le masque d'ombre ignore les corps — fusée, braises, mine,
+halo de la torche fantôme, lumière d'impact, traînée de balle. Domaines d'autres
+sessions ; inventaire remis à Adrien pour décision.
 
 ### 2026-09-10 — session « candela-2d-9b » (worktree `lights-display-error-3fd1cd`) : le carré près de la fusée est résolu, `particle_pool.gd` et `game_state.gd` touchés
 
@@ -4577,3 +4605,219 @@ corps voxel ; effacement à 1/255 du décor à opacité 0 ; plafond tenu sous ch
 tenus. Signalé : `player.gd` n'expose ni tir ni coup reçu ; la marche de l'adversaire interpolé en
 ligne reste à vérifier. La phrase « rien ne l'avait vu » de la correction du brouillage est
 rectifiée : le suivi de projet portait le défaut depuis le 11 septembre, sans titulaire.
+## 2026-09-14 — Session « Murs bas Opus », branche `claude/prompt-murs-bas-3fb1dd` (chantier MURS BAS ET ACCROUPI, étape MB0)
+
+Vue de dessus, sur `main` (base `983cb41`). Worktree
+`.claude/worktrees/prompt-murs-bas-3fb1dd`. Étape MB0 seulement ; MB1 à MB3 attendent
+le jalon H-MB0.
+
+**En propre (tous créés) :** `tools/murs_bas_geometrie.gd`, `tools/proto_murs_bas.tscn`,
+`tools/proto_murs_bas.gd`, `tools/proto_murs_bas.gdshader`, `tools/test_murs_bas.gd`,
+`docs/MURS_BAS.md`. **Touché ailleurs :** `tools/run_suites.sh` (une suite ajoutée),
+`docs/ROADMAP.md` (section du chantier, jalon H-MB0). **Aucun fichier du jeu.** Aucun
+fichier `iso_*`, `banc_iso*`, `voxel_*`.
+
+**Ce qui a décidé de la piste, et qui vaut au-delà de ce chantier : on n'a pas choisi
+entre trois pistes en les décrivant, on les a fait rendre et on a lu l'écran.** Deux des
+trois (occluders natifs, polygones « finis ») avaient l'air de pouvoir marcher ; le
+contrôle d'accord leur a trouvé chacune trois corps sur huit en désaccord avec la
+fonction qui fait payer la balle. La troisième a d'abord eu 12 écarts, puis 4, puis 2 :
+aucun ne venait de la règle, tous d'un retrait de 3 px entre occluder et collision qui
+existe déjà dans le jeu — et que personne n'avait mesuré, faute d'avoir jamais comparé la
+lumière à la balle au pixel.
+
+**Signalé, non corrigé (hors périmètre) :** aux coins des murs, l'occluder est rentré de
+3 px (`MapGeometry.OCCLUDER_INSET`) et la collision non — un faisceau peut passer là où
+une balle bute. À trancher en MB3.
+
+**Deltas :** envoyés par `SendMessage` à « Fable 5.1 - CLOUD ISO UNRAILED » ; l'outil
+de Routine de cette session n'expose pas `create_trigger` / `fire_trigger`. Suivi non
+republié par cette session (centralisé).
+
+**Lots.** Référence sur `983cb41` : vert (111 OK). Premier lot final : `duo_apparie`
+rouge (« la manche part à l'arrivée de l'invité ») pendant qu'un lot de la session
+« Iso 1 » tournait en même temps ; rejoué seul, 3 passages sur 3 verts ; second lot
+complet : **vert, 112 OK, 355 s**. Contention, pas code — le piège est déjà consigné
+(« Un lanceur lent ne dit rien du code, il dit qui d'autre travaille »).
+
+**H-MB0, 2026-09-14 (18 h 45 à 18 h 53) — Adrien joue le prototype.** « C'est génial. »
+Il règle à chaud et s'arrête sur **mur bas 0,40 · accroupi 0,10 · α 13,5° · accroupi
+×0,25** (bande d'ombre 1,67 tuile, cachette 1,25 tuile). Valeurs relues dans ses lignes
+`REGLAGE` (terminal), portées dans `murs_bas_geometrie.gd`, le prototype et la suite.
+Restent à dire : la lecture des six règles, le dessin du mur bas, l'ouverture de MB1 ; et
+deux conséquences posées à Adrien — l'accroupi va aussi vite que l'enjambement, et un
+accroupi de 0,10 tuile serait plat s'il est extrudé tel quel en iso.
+**H-MB0 tranché, 19 h 00.** Quatre réponses d'Adrien : les six règles se comportent comme
+il les imaginait ; égalité assumée entre accroupi et enjambement (65 px/s) ; dessin du mur
+bas gardé ; **MB1 ouverte**. Contrôle en fenêtre refait avec ses valeurs : piste C
+toujours à une seule vérité (4 054/4 054, 8/8), noir 0/255 ; lot vert, 112 OK.
+
+### 2026-09-14 (soir) — MB1 : le mur bas entre dans la carte (même session, même branche)
+
+**Touché, et à qui c'était :** `map_codec.gd`, `map_geometry.gd` (contrat ISO1 : lu par la
+session « Iso 1 », qui fusionnera `main` elle-même), `canaux_lumiere.gd` (chantier CLASSES,
+clos), `candela_tileset.gd`, `mur_encre.gd`, `map_thumbnail.gd`, `map_data.gd`,
+`map_editor.gd`, `map_editor_tools.gd`, `game_state.gd` (trois insertions dans
+`rebuild_arena`), `protocol.gd` (v18). Suites étendues : `test_map_codec`,
+`test_map_geometry`, `test_editor_tools`, `test_arena_build`. Créé :
+`tools/cartes/murs_bas_essai.json`. Aucune session active ne tenait ces fichiers
+(`ListAgents`, 19 h 05).
+
+**Ce que la session a payé, et qui aurait pu coûter une soirée :** une variable nommée
+`trait` — mot réservé de GDScript 4.7 — a fait tomber toutes les classes de carte d'un
+coup. Les messages accusaient les APPELANTS, et une suite est restée bloquée dix minutes
+avant qu'on aille voir. Le réflexe qui a tranché : quand tout rougit à la fois, relire le
+dernier fichier touché, pas le premier message d'erreur.
+
+### 2026-09-14 (soir) — MB2 : l'accroupi (même session, même branche)
+
+Ouverte par Adrien à 19 h 40 ; touches choisies par lui en deux questions (C / M / L3, en
+bascule). **Touché** : `input_setup.gd`, `input_provider.gd`, `local_input_provider.gd`,
+`network_input_provider.gd`, `player.gd` (posture, vitesse, silhouette, fil, instantanés,
+pas), `game_state.gd` (historique de compensation, fantômes de killcam, remise à zéro de
+manche), `replay_system.gd`, `audio_manager.gd` (`play_footstep` gagne `etouffe`), `ui.gd`
+(bloc HUD et table des liaisons), `protocol.gd` (carnet, témoin). Suites : `test_accroupi`
+créée (scène), `test_liaisons`, `test_rejeu`, `test_menus_finitions` étendues. Aucune session
+active ne tenait ces fichiers (`ListAgents`, 19 h 41).
+
+**La décision de forme qui a tout simplifié** : faire voyager la posture VOULUE plutôt que
+l'appui. Une bascule transmise en fronts aurait demandé à l'hôte de ne jamais perdre un
+paquet non fiable ; transmise en état, elle n'a rien à réconcilier.
+
+**MB2, suite — `tools/test_classes.gd` touché aussi** (chantier CLASSES, clos) : un
+contrôle textuel fermait la liste d'arguments de `update_input_state` par sa parenthèse,
+et la posture ajoutée en dernier l'a fait rougir dans le lot. Corrigé en préfixe, sens
+inchangé (« l'hôte transmet le bit du gadget »). Seule suite rouge du premier lot de MB2.
+
+### 2026-09-14 (soir) — MB3a : la règle dans le jeu (même session, même branche)
+
+MB3 ouverte par Adrien à 20 h 20 ; enjambement tranché par lui (tenir Croix / Espace /
+point-virgule en poussant vers le muret — il avait d'abord coché « un appui », puis s'est
+corrigé avant qu'une ligne soit écrite). **Touché** : `tools/murs_bas_geometrie.gd` déplacé
+en `murs_bas.gd` (classe `MursBas`, `git mv`), `map_geometry.gd` (`rects_monde`),
+`bullet.gd` (hauteur de tir, survol, masque du canon accroupi), `game_state.gd`
+(`murs_bas`, compensation de posture au tir, ligne de vue), `player.gd` (bit d'ombre des
+lumières portées), `gadget_mine.gd`, `gadget_braises.gd`, `fusee.gd` (lumières au sol).
+Suites étendues : `test_accroupi`, `test_murs_bas`.
+
+**Coordination** : la session ISO2 a annoncé ses bancs et son lot par message ; mon lot
+complet n'est parti qu'après son « la machine est à toi » (20 h 45). Aucun faux rouge de
+contention ce soir-là.
+
+### 2026-09-14 (soir) — MB3b : l'enjambement (même session, même branche)
+
+**Touché** : `murs_bas.gd` (`RAYON_CORPS`, registre `murs_de_la_manche`,
+`chevauche_cercle`), `input_setup.gd` (Espace / point-virgule / Croix), les trois
+fournisseurs d'entrées (`is_climb_pressed`), `player.gd` (dixième argument du fil,
+`_regler_enjambement`, `_guetter_enjambement`, pas de tir en enjambant), `audio_manager.gd`
+(`play_enjambement`, frôlement à +6 dB), `game_state.gd` (pose du registre), `ui.gd`
+(ligne « Enjamber » des liaisons), `protocol.gd` (carnet). Suites : `test_accroupi`,
+`test_liaisons`.
+
+**Un contrôle réécrit avant d'avoir tourné** : la première version tenait la détente
+pendant toute la boucle de traversée, y compris l'image d'après le muret — où un tir part
+légitimement. Le contrôle « on ne tire pas en enjambant » aurait rougi pour une bonne
+raison qui n'était pas la sienne. Il ne tient plus la détente que sur le muret.
+
+**21 h 10 — deux arbitrages d'Adrien, posés pendant un lot.** Tirer trahit toujours (la
+silhouette révélée au tir se montre même derrière un muret — rien ne change) ; une fusée
+EN VOL éclaire par-dessus les murets, posée elle bute. La seconde corrige MB3a, qui la
+faisait buter toujours : `Fusee.masque_ombre(atterrie)`, posé à la construction puis aux
+trois façons de se poser (atterrissage, fusée de killcam, saut d'âge du banc). Touché :
+`fusee.gd`, `tools/test_accroupi.gd`.
+
+### 2026-09-14 (soir) — MB3c : la zone morte dessinée à l'écran (même session, même branche)
+
+**Touché** : `murs_bas_zone.gdshaderinc`, `murs_bas_sol.gdshader`,
+`murs_bas_decor.gdshader`, `murs_bas_rendu.gd` (neufs) ; `player_rim_light.gdshader`,
+`player_enemy_light.gdshader` (la règle incluse) ; `game_state.gd` (matériau du sol avant
+duplication, décor, `_pousser_zone_morte` sur `frame_pre_draw`) ; `mur_led.gd` (hauteur qui
+exempte le bandeau). Suites : `tools/test_murs_bas_rendu.gd` (neuve, au lot). Banc :
+`tools/banc_murs_bas.tscn` (neuf, fenêtré).
+
+**Huit passages du banc avant le vert, et la règle n'était en cause dans aucun.** La
+caméra qui glisse, l'éblouissement laissé par la scène précédente, le corps adverse ombré
+par ses propres occluders, la ligne de visée non éclairée à travers la cible. Deux
+hypothèses fausses ont été corrigées dans le banc avant de regarder la capture ; c'est
+l'image — un cône flou, muret et corps effacés — qui a nommé l'éblouissement en une lecture.
+Puis vu rougir en coupant la poussée des uniformes.
+
+**Coordination** : lots et fenêtres alternés avec ISO2 par messages (leur lot 21:24-21:32,
+mes bancs 21:41-21:56, leurs huit fenêtres ensuite).
+
+### 2026-09-14 (nuit) — MB3d : l'équité et la killcam (même session, même branche)
+
+**Touché** : `replay_system.gd` (posture du tireur enregistrée avec le tir, `tir_rejoue`
+lu pendant l'émission), `game_state.gd` (balle rejouée avec murets et hauteur de canon,
+joueurs rejoués dans leur posture, lampes du fantôme), `canaux_lumiere.gd`
+(`masque_ombre_posture`), `footprint.gd` (matériau de zone morte de la vue). Suites :
+`test_accroupi` (équité, killcam, empreintes), `test_rejeu` (posture du tir rejoué).
+
+**Le signal du rejeu garde sa forme** : `test_online_match` l'écoute avec cinq arguments ;
+l'élargir aurait cassé une suite réseau pour faire passer un booléen. La posture passe par
+un champ lu pendant l'émission, et vidé après.
+
+**Les empreintes, relevées en MB3c et confirmées ici** : posées accroupi aussi, éclairées
+par défaut, elles trahissaient l'accroupi que la zone morte cache.
+
+**Une question pour Adrien** plutôt qu'une correction : la bande de 3 px « vu sans pouvoir
+toucher » au bout de la zone morte vient de l'écart balle / lumière consigné avant ce
+chantier. Aligner la balle change la règle de MB3a ; ça se tranche en jouant, à H-MB1.
+
+**Coordination** : aucun Godot lancé pendant les bancs et le lot d'ISO2 (22:06-22:34).
+
+**Deux leçons de vérification.** Le contrôle « jamais touché sans être vu » a rougi sur un
+seul point, d = 0 : un centre sur le bord exact de la tuile, où aucun corps ne tient — le
+domaine du test était faux, pas la règle. Et le sabotage de la killcam est d'abord resté
+vert : un contrôle au texte par sous-chaîne voit encore la ligne qu'on vient de commenter.
+Lot complet vert (22:38-22:44, 114 OK).
+
+### 2026-09-14 (nuit) — Finition : les appuis du banc des murs bas (même session, même branche)
+
+Le banc fenêtré de MB3c n'était dans aucune suite, donc exposé à se périmer en silence —
+la panne de `bench_framerate` du 2026-08-18. Il publie ses appuis
+(`preconditions_manquantes`) et `tools/test_banc.gd` les vérifie en headless, contre-test
+compris ; vu rougir en renommant une méthode attendue. Touché : `tools/banc_murs_bas.gd`,
+`tools/test_banc.gd`.
+
+### 2026-09-14 (nuit) — H-MB1, et la balle alignée sur la lumière (même session, même branche)
+
+**H-MB1, par Adrien** : le duel à deux manettes « fonctionne » ; la partie EOS à deux
+machines est reportée (« on fera plus tard »). **Et la bande de 3 px** « vu sans pouvoir
+toucher » : « me gêne, aligne la balle sur la forme de lumière ».
+
+**Fait** : `MursBas.franchit_regle` lit les murets rentrés de `RETRAIT_LUMIERE`
+(= `OCCLUDER_INSET`), la constante que lit aussi `MursBasRendu`. Balle, balle compensée
+et éblouissement passent tous par là ; la collision d'un canon accroupi et l'enjambement
+restent sur la tuile entière. Touché : `murs_bas.gd`, `murs_bas_rendu.gd` ; suites
+`test_murs_bas` (règle = `franchit` sur la forme de lumière, fin de bande à L − 2 touchée)
+et `test_accroupi` (équité : aucune bande, échantillonnée dès d = 0 — le cas dégénéré de
+MB3d n'existe plus, balle et lumière lisant la même forme).
+
+### 2026-09-14 (nuit) — Fusion dans main, et pas de test à deux machines (même session)
+
+**23 h 25 — fusion** (« Fusionne quand tu peux », Adrien) : avance rapide de `main` vers
+`f9c6af4`, sans conflit — `main` n'avait pas bougé depuis la base. L'état fusionné est
+exactement celui du lot vert. **Deux sessions avaient leur dossier courant dans l'arbre
+principal** (candela-2d-3b, qui y lit les deltas du suivi, et candela-2d-be) : la fusion a
+attendu leur « vas-y », plutôt qu'un déplacement de la référence `main` sous leurs pieds —
+qui aurait fait paraître leur arbre modifié à l'envers. Non poussé.
+
+**23 h 30 — pas de test EOS à deux machines.** Adrien : « je ne veux pas faire de tests à
+deux machines, je n'ai pas de quoi le faire ». Reporté puis abandonné. Les scénarios à deux
+instances du lot couvrent le fil sur une machine ; EOS entre deux réseaux reste un risque
+accepté, consigné dans la ROADMAP et `docs/MURS_BAS.md`.
+
+**Fusion de `main` dans `iso2-vues`, nuit du 2026-09-15 (ISO3b, première marche).** `cd1197c` (murs
+bas et accroupi, pas de test à deux machines, banc de cadence aux torches allumées, Godot AI 4.0.4).
+Sept conflits, tous de documentation ou de liste et tous d'ajouts au même endroit : ROADMAP (date,
+décisions actées, pièges connus, chantiers, jalons), journal, liste des suites — les deux côtés
+gardés, la date du 15. game_state.gd, player.gd, ui.gd, settings_manager.gd et tools/test_mur_led.gd
+fusionnés sans conflit textuel ; 5413 points d'ancrage des deux côtés (fonctions, constantes,
+variables, signaux) relus dans l'arbre fusionné, aucun perdu. Et une perte sans conflit, rattrapée
+par la suite : `player_enemy_light` et `player_rim_light` ont pris la zone morte des murs bas dans
+`light()`, et les shaders miroirs des capteurs (`capteur_adverse`, `capteur_local`) ne la portaient
+pas — `tools/test_iso_vues.gd` a rougi sur ses deux contrôles de miroir (215 vérifications justes, 2
+fausses) ; les miroirs la prennent, inerte tant qu'ISO3b n'en pose pas les uniformes. Deux imports
+sans erreur, puis le lot complet vert au second passage (394 s ; le premier, 391 s, n'avait rougi
+que sur ces deux contrôles de miroir)..

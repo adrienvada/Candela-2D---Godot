@@ -532,8 +532,12 @@ func _test_bit_gadget() -> void:
 		joueur.contains("reload: bool = false, gadget: bool = false"))
 	_check("le client l'envoie depuis son fournisseur",
 		joueur.contains("input_provider.is_gadget_pressed()"))
+	# ⚠️ Le PRÉFIXE et non l'appel entier : la parenthèse fermante épinglait la
+	# fin de la liste, et la posture ajoutée APRÈS le gadget (chantier MURS BAS,
+	# MB2, 2026-09-14) a fait rougir ce contrôle alors que le gadget voyageait
+	# toujours. Ce qui compte ici est que le gadget suive le rechargement.
 	_check("l'hôte le transmet au fournisseur réseau",
-		joueur.contains("update_input_state(mov, aim, shoot, torch, flare, reload, gadget)"))
+		joueur.contains("update_input_state(mov, aim, shoot, torch, flare, reload, gadget"))
 
 	# Et le numéro de version, qui est une décision humaine mécanisée par le
 	# témoin : le fil a changé, donc il doit avoir bougé.

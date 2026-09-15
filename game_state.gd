@@ -215,6 +215,16 @@ var _predicted_shots: Array[Dictionary] = []
 # [Hôte] Historique des positions pour la compensation de latence. La fenêtre
 # couvre le recul maximal avec de la marge, sans conserver davantage.
 const POS_HISTORY_WINDOW := 0.4
+## Les murs bas de l'arène courante, en pixels — chantier MURS BAS, MB3a. Dérivés
+## de la carte à chaque `rebuild_arena`, comme la collision : la balle et
+## l'éblouissement les interrogent par `MursBas.franchit`.
+var murs_bas: Array = []
+## MB3c : matériaux de sol et de décor qui portent la zone morte, par vue
+## (indice = joueur dont c'est la vue). Rempli par `rebuild_arena`.
+var _materiaux_zone_morte: Array = [[], []]
+## Carte sans mur bas : les uniformes « aucun mur » ne se poussent qu'une fois.
+var _zone_morte_vide_poussee := false
+var _zone_morte_debordement_signale := false
 const LAG_COMP_MAX := 0.2
 var _pos_history: Array[Dictionary] = []
 
@@ -373,6 +383,14 @@ func camera_hit_kick(pid: int) -> void:
 
 func _ready():
 	add_to_group("game_state")
+	# MURS BAS, MB3c : la zone morte se pousse aux matériaux JUSTE AVANT le dessin,
+	# quand caméras et joueurs ont fini de bouger pour cette image. Poussée depuis
+	# `_process`, elle dépendrait de l'ordre de traitement de la caméra et
+	# traînerait d'une image derrière elle.
+	RenderingServer.frame_pre_draw.connect(_pousser_zone_morte)
+	tree_exiting.connect(func():
+		if RenderingServer.frame_pre_draw.is_connected(_pousser_zone_morte):
+			RenderingServer.frame_pre_draw.disconnect(_pousser_zone_morte))
 	# L'intro ne se joue qu'ici, au lancement. Les retours au menu passent par
 	# `play_music`, qui bascule sans redémarrer le flux.
 	AudioManager.demarrer_musique_au_lancement()
@@ -936,6 +954,7 @@ func rebuild_arena() -> void:
 	# Purge de la construction précédente (rematch, changement de carte).
 	for node_name in ["CustomFloor", "CustomWalls", "CustomFloor_P1", "CustomFloor_P2",
 			"CustomWalls_P1", "CustomWalls_P2", "CustomWallBodies",
+			"CustomLowWalls", "CustomLowWalls_P1", "CustomLowWalls_P2",
 			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2",
 			"MurEncre", "MurEncre_P1", "MurEncre_P2"]:
 		var previous := arena.get_node_or_null(node_name)
@@ -957,6 +976,14 @@ func rebuild_arena() -> void:
 	walls_layer.z_index = 0
 	arena.add_child(walls_layer)
 
+	# Chantier MURS BAS, étape MB1 : le calque des murs bas, hachuré. Même idiome
+	# que les murs — un original porteur des données, caché, et une copie par vue.
+	var low_walls_layer := TileMapLayer.new()
+	low_walls_layer.name = "CustomLowWalls"
+	low_walls_layer.tile_set = tileset
+	low_walls_layer.z_index = 0
+	arena.add_child(low_walls_layer)
+
 	var spawns := arena.get_node_or_null("SpawnPoints")
 	if spawns == null:
 		spawns = Node2D.new()
@@ -965,11 +992,13 @@ func rebuild_arena() -> void:
 	_ensure_spawn_marker(spawns, "P1Spawn")
 	_ensure_spawn_marker(spawns, "P2Spawn")
 
-	MapData.apply_to_layers(floor_layer, walls_layer, spawns, data)
+	MapData.apply_to_layers(floor_layer, walls_layer, spawns, data, low_walls_layer)
 
 	# Collisions ET occluders produits ensemble à partir des mêmes rectangles.
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
+	murs_bas = MapGeometry.rects_monde(data, MapGeometry.Kind.LOW_WALLS)
+	MursBas.murs_de_la_manche = murs_bas
 
 	# Bandeau LED des murs (2026-09-10, allumé pour tout le monde le 2026-09-11) :
 	# une lumière unique, cuite depuis la grille des murs, qui respire sur
@@ -979,10 +1008,17 @@ func rebuild_arena() -> void:
 	# Écran partagé : chaque joueur reçoit sa copie des calques, éclairée par
 	# sa seule lumière ambiante. Sans ça, le halo d'un joueur révélerait sa
 	# position sur l'écran de l'autre.
+	#
+	# MURS BAS, MB3c : le sol porte la zone morte, un matériau PAR VUE — la copie
+	# duplique le `ShaderMaterial` (voir plus bas), et chaque vue reçoit ses
+	# propres uniformes d'écran (`_pousser_zone_morte`).
+	floor_layer.material = MursBasRendu.materiau_sol()
 	_duplicate_layer_for_player(floor_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(walls_layer, 4, 1 | 32)
+	_duplicate_layer_for_player(low_walls_layer, 2, 1 | 16)
+	_duplicate_layer_for_player(low_walls_layer, 4, 1 | 32)
 	# ⚠️ **L'original reste éclairé après sa propre duplication, et c'est un
 	# défaut — pas la copie qui manque.** `floor_layer`/`walls_layer` gardent
 	# leur `visibility_layer` par défaut (1), visible dans les DEUX vues au
@@ -1000,10 +1036,25 @@ func rebuild_arena() -> void:
 	# casserait la collision, pas seulement le rendu.
 	floor_layer.hide()
 	walls_layer.hide()
+	low_walls_layer.hide()
 	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
 	var decor := ArenaDecorScript.build(data, arena)
 	if decor:
 		decor.hide()
+	# MURS BAS, MB3c : les marques peintes au sol suivent la zone morte du sol.
+	# Posé sur les COPIES : `duplicate()` partagerait un matériau posé sur
+	# l'original, et les deux vues n'ont pas le même écran.
+	_materiaux_zone_morte = [[], []]
+	for pid in 2:
+		var sol := arena.get_node_or_null("CustomFloor_P%d" % (pid + 1)) as CanvasItem
+		if sol != null and sol.material is ShaderMaterial:
+			_materiaux_zone_morte[pid].append(sol.material)
+		var copie := arena.get_node_or_null("ArenaDecor_P%d" % (pid + 1)) as CanvasItem
+		if copie != null:
+			copie.material = MursBasRendu.materiau_decor()
+			_materiaux_zone_morte[pid].append(copie.material)
+	_zone_morte_vide_poussee = false
+	_zone_morte_debordement_signale = false
 	# Refonte roman graphique : le contour des masses de murs, au trait
 	# (mur_encre.gd). Même idiome : l'original porte la géométrie et se cache,
 	# les copies par vue se montrent.
@@ -1087,7 +1138,15 @@ func _setup_players():
 	cam2.custom_viewport = vp2
 	players_node.add_child(cam2)
 	
-	# Restrict viewports so they don't see each other's private layers
+	# Chaque vue cache la couche privée de l'autre joueur.
+	#
+	# ⚠️ **CES deux lignes font foi, pas `main.tscn`.** La scène déclare
+	# `canvas_cull_mask` 3 et 5 depuis le premier commit (`8cc5157`), et ces lignes
+	# les écrasent avant la première image : les valeurs de la scène ne sont jamais
+	# rendues, et l'inspecteur de l'éditeur ment. Les deux jeux donnent la même
+	# image tant qu'aucun `visibility_layer` n'utilise un bit au-delà du troisième
+	# (1, 2, 4, 6 au 2026-09-14) ; sur la couche 8 ou plus, un objet serait montré
+	# dans les deux vues ici, et caché dans les deux par la scène.
 	vp1.canvas_cull_mask = ~4 # Hide layer 3 (value 4) which belongs to P2
 	vp2.canvas_cull_mask = ~2 # Hide layer 2 (value 2) which belongs to P1
 
@@ -1259,6 +1318,8 @@ func _start_round():
 	p2.reset_step_tracker()
 	p1.reset_flashlight_latch()
 	p2.reset_flashlight_latch()
+	p1.reset_posture()
+	p2.reset_posture()
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if multiplayer.get_peers().size() == 0:
@@ -1434,6 +1495,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p2.reset_step_tracker()
 	p1.reset_flashlight_latch()
 	p2.reset_flashlight_latch()
+	p1.reset_posture()
+	p2.reset_posture()
 	time_left = round_time
 	round_active = true
 	game_over = false
@@ -1654,6 +1717,9 @@ func _process(delta):
 			ghost_p1.global_position = current_snap.p1_pos
 			ghost_p1.rotation = current_snap.p1_rot
 			ghost_p1.visible = current_snap.p1_visible
+			# MB2 — la silhouette rejouée suit la posture enregistrée.
+			(ghost_p1.get_node("VisualColored") as Node2D).scale = Vector2.ONE \
+				* (Player.ECHELLE_SILHOUETTE_ACCROUPIE if current_snap.p1_accroupi else 1.0)
 			ghost_p1.get_node("Light").enabled = current_snap.p1_light
 			# Étape 28, lot F — la moitié de ce que la lampe RENDAIT : le grésillement
 			# et la suie s'y lisent comme en jeu, au lieu d'une torche toujours pleine.
@@ -1667,6 +1733,8 @@ func _process(delta):
 			ghost_p2.global_position = current_snap.p2_pos
 			ghost_p2.rotation = current_snap.p2_rot
 			ghost_p2.visible = current_snap.p2_visible
+			(ghost_p2.get_node("VisualColored") as Node2D).scale = Vector2.ONE \
+				* (Player.ECHELLE_SILHOUETTE_ACCROUPIE if current_snap.p2_accroupi else 1.0)
 			ghost_p2.get_node("Light").enabled = current_snap.p2_light
 			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY * current_snap.p2_lampe
 			ghost_p2.get_node("Flash").enabled = current_snap.p2_flash > 0.0
@@ -1680,6 +1748,17 @@ func _process(delta):
 			p1.rotation = current_snap.p1_rot
 			p2.global_position = current_snap.p2_pos
 			p2.rotation = current_snap.p2_rot
+			# MB3d — et leur posture d'alors : la balle rejouée juge sa cible à la
+			# hauteur de sa posture (`Bullet._franchit_vers`), et les lampes du
+			# fantôme accroupi butent sur les murets comme en jeu.
+			p1.poser_posture(current_snap.p1_accroupi)
+			p2.poser_posture(current_snap.p2_accroupi)
+			for paire: Array in [[ghost_p1, current_snap.p1_accroupi], [ghost_p2, current_snap.p2_accroupi]]:
+				for nom in ["Light", "Flash"]:
+					var lampe := (paire[0] as Node).get_node_or_null(nom) as Light2D
+					if lampe != null:
+						lampe.shadow_item_cull_mask = CanauxLumiere.masque_ombre_posture(
+							lampe.shadow_item_cull_mask, paire[1])
 
 			# Les fusées du passé, reconstruites à l'âge lu dans l'instantané.
 			_maj_fusees_killcam(current_snap)
@@ -1992,7 +2071,14 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 	var i := Eblouissement.intensite_proximite(d, src["rayon"])
 	if i <= 0.0:
 		return 0.0
-	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID()):
+	# MB3a — la hauteur d'une source de proximité : celle de son porteur s'il en a
+	# un, sinon le SOL — une fusée posée, une mine, des braises brûlent plus bas
+	# qu'un mur bas et butent dessus, pour l'éblouissement comme pour la lumière.
+	var porteur_prox = src.get("porteur")
+	var h_prox := 0.0
+	if porteur_prox != null:
+		h_prox = MursBas.hauteur_de_posture(porteur_prox.get("accroupi") == true)
+	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID(), -1, h_prox):
 		return 0.0
 	# `gain` : la part de sa lumière qu'une source posée brûle en ce moment
 	# (fusée en agonie, en résidu). Absent, la source brûle à plein.
@@ -2129,8 +2215,11 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ##
 ## `pid_porteur` : le joueur qui TIENT la lumière d'où part ce rayon — sa torche,
 ## son flash de tir —, ou -1 pour une lumière posée, qui n'appartient à personne.
+##
+## `h_source` (MB3a) : la hauteur de la lumière, en pixels. Par défaut, celle de
+## son porteur (`pid_porteur`), ou debout pour une lumière posée sans porteur.
 func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
-		cible: Node2D, exclure: RID, pid_porteur: int = -1) -> bool:
+		cible: Node2D, exclure: RID, pid_porteur: int = -1, h_source: float = NAN) -> bool:
 	# ⚠️ **Les gadgets arrêtent le regard de la lumière autant que les murs**, et
 	# ils ne le faisaient pas. Le voile du Spectre coupait le faisceau à l'écran —
 	# son occluder le fait — pendant que l'éblouissement, lui, traversait la bâche
@@ -2200,6 +2289,18 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 		return false
 	for g in par_la_forme:
 		if g.coupe_le_regard(depuis, cible.global_position):
+			return false
+	# MB3a — **l'éblouissement suit la règle des murs bas**, comme la balle et la
+	# lumière : une tête debout voit une lampe debout par-dessus un muret ; un
+	# accroupi dans la zone morte ne la voit pas ; une lampe basse (accroupie, au
+	# sol) bute sur le muret. L'œil est à la hauteur de la posture de la cible.
+	if not murs_bas.is_empty():
+		var h_src := h_source
+		if is_nan(h_src):
+			var porteur: Node = p1 if pid_porteur == 0 else (p2 if pid_porteur == 1 else null)
+			h_src = MursBas.hauteur_de_posture(porteur != null and porteur.get("accroupi") == true)
+		var h_oeil := MursBas.hauteur_de_posture(cible.get("accroupi") == true)
+		if not MursBas.franchit_regle(depuis, cible.global_position, h_src, h_oeil, murs_bas):
 			return false
 	return true
 
@@ -3439,8 +3540,12 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	var lag_compensated := spawn_nodes \
 		and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST \
 		and shooter == p2
+	# MB3a — et à sa posture d'alors : un accroupi que le tireur voyait debout,
+	# ou l'inverse, se juge comme il était vu.
+	var lag_hauteur := MursBas.hauteur_de_posture(false)
 	if lag_compensated:
 		lag_center = _rewound_position(p1, _lag_comp_delay())
+		lag_hauteur = MursBas.hauteur_de_posture(_rewound_posture(p1, _lag_comp_delay()))
 
 	for i in range(count):
 		var ang_offset = deg_to_rad(angles[i]) if i < angles.size() else 0.0
@@ -3452,15 +3557,20 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 			b.rotation = final_rot
 			b.direction = Vector2(cos(final_rot), sin(final_rot))
 			b.source_player = shooter
+			# MB3a — la règle des murs bas : où ils sont, et d'où part le tir.
+			b.murs_bas = murs_bas
+			b.hauteur_tir = MursBas.hauteur_de_posture(shooter.get("accroupi") == true)
 			if weapon:
 				b.weapon = weapon
 			if lag_compensated:
 				b.lag_target = p1
 				b.lag_center = lag_center
+				b.lag_hauteur = lag_hauteur
 			bullet_container.add_child(b)
 
 		if record and ReplaySystem.recording:
-			ReplaySystem.record_bullet_fired(shooter.player_id, pos, final_rot, weapon)
+			ReplaySystem.record_bullet_fired(shooter.player_id, pos, final_rot, weapon,
+				shooter.get("accroupi") == true)
 
 	if not spawn_nodes: return
 
@@ -3529,7 +3639,10 @@ func _consume_predicted_shot(angle: float) -> bool:
 func _record_position_history() -> void:
 	if not is_instance_valid(p1) or not is_instance_valid(p2): return
 	var now := Time.get_ticks_msec() / 1000.0
-	_pos_history.append({"t": now, "p1": p1.global_position, "p2": p2.global_position})
+	# MB2 — la posture voyage avec la position : une balle compensée devra juger
+	# la hauteur de sa cible TELLE QU'ELLE ÉTAIT (règle des murs bas, MB3).
+	_pos_history.append({"t": now, "p1": p1.global_position, "p2": p2.global_position,
+		"a1": p1.accroupi, "a2": p2.accroupi})
 	while _pos_history.size() > 1 and now - _pos_history[0]["t"] > POS_HISTORY_WINDOW:
 		_pos_history.remove_at(0)
 
@@ -3548,6 +3661,21 @@ func _rewound_position(player: Player, back: float) -> Vector2:
 			var w: float = 0.0 if span <= 0.0001 else (t - float(a["t"])) / span
 			return (a[key] as Vector2).lerp(b[key], w)
 	return player.global_position
+
+## [Hôte] Posture d'un joueur telle qu'elle était il y a `back` secondes — MB2.
+## Ne s'interpole pas : l'échantillon le plus récent qui ne dépasse pas l'instant
+## visé fait foi, comme pour la torche d'un adversaire interpolé.
+func _rewound_posture(player: Player, back: float) -> bool:
+	if _pos_history.is_empty(): return player.accroupi
+	var key := "a1" if player == p1 else "a2"
+	var t := Time.get_ticks_msec() / 1000.0 - back
+	if t >= float(_pos_history[-1]["t"]): return player.accroupi
+	var retenue: bool = _pos_history[0].get(key, false)
+	for entree: Dictionary in _pos_history:
+		if float(entree["t"]) > t:
+			break
+		retenue = entree.get(key, false)
+	return retenue
 
 ## Recul appliqué aux tirs du client : ce qu'il voyait était en retard d'un
 ## demi aller-retour, plus le retard d'interpolation de son adversaire.
@@ -3637,6 +3765,11 @@ func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,
 	b.direction = Vector2(cos(rot), sin(rot))
 	var shooter = p1 if shooter_id == 0 else p2
 	b.source_player = shooter
+	# MB3d — la balle rejouée suit la règle des murs bas, depuis la hauteur du
+	# canon AU TIR : sans elle, la killcam montrait toucher un accroupi que la
+	# vraie balle avait survolé, ou traverser un muret où elle s'était arrêtée.
+	b.murs_bas = murs_bas
+	b.hauteur_tir = MursBas.hauteur_de_posture(ReplaySystem.tir_rejoue.get("accroupi", false) == true)
 	if weapon:
 		b.weapon = weapon
 	bullet_container.add_child(b)
@@ -5161,6 +5294,50 @@ func _viewport_du_joueur(pid: int) -> Node:
 		if conteneur != null and conteneur.visible:
 			return self
 	return vue
+
+
+## MURS BAS, MB3c — la zone morte dessinée à l'écran, vue par vue.
+##
+## Chaque vue a son propre écran : ses murs et ses longueurs se convertissent par
+## la transformation du viewport qui la REND (`_viewport_du_joueur` — la racine en
+## vue unique, sa sous-vue sinon), celle où `light()` lit LIGHT_POSITION. Une vue
+## reçoit : sa copie du sol et du décor, le corps du joueur tel qu'il se voit
+## (`visual`), et le corps de l'autre tel qu'elle le montre (`visual_enemy`).
+##
+## Jugé comme la balle (`bullet.gd`) : le corps en son centre, la hauteur de sa
+## posture. Debout, aucune zone — « un mur bas laisse voir une tête debout ».
+func _pousser_zone_morte() -> void:
+	if not is_inside_tree() or arena == null:
+		return
+	if murs_bas.is_empty():
+		if _zone_morte_vide_poussee:
+			return
+		_zone_morte_vide_poussee = true
+	var joueurs := [p1, p2]
+	for pid in 2:
+		var rendu: Node = _viewport_du_joueur(pid)
+		var cible: Viewport = rendu as Viewport if rendu is Viewport else get_window()
+		if cible == null:
+			continue
+		var ecran := cible.get_final_transform() * cible.get_canvas_transform()
+		# `size` : SubViewport et Window l'ont, pas leur base commune.
+		var taille: Vector2 = Vector2(cible.get("size"))
+		var u := MursBasRendu.uniformes_de_vue(ecran * (arena as Node2D).global_transform,
+			murs_bas, Rect2(Vector2.ZERO, taille))
+		if u["debordement"] > 0 and not _zone_morte_debordement_signale:
+			_zone_morte_debordement_signale = true
+			push_warning("Murs bas : %d murs de plus que les %d qu'un matériau reçoit — leur zone morte ne se dessine pas." \
+				% [u["debordement"], MursBasRendu.MURS_MAX])
+		for m in _materiaux_zone_morte[pid]:
+			MursBasRendu.poser_sol(m, u)
+		var moi: Player = joueurs[pid]
+		var autre: Player = joueurs[1 - pid]
+		if is_instance_valid(moi) and moi.visual != null:
+			MursBasRendu.poser_corps(moi.visual.material as ShaderMaterial, u,
+				ecran * moi.global_position, moi.accroupi)
+		if is_instance_valid(autre) and autre.visual_enemy != null:
+			MursBasRendu.poser_corps(autre.visual_enemy.material as ShaderMaterial, u,
+				ecran * autre.global_position, autre.accroupi)
 
 
 ## Loge un calque d'écran (vignette, flash de mort) là où son joueur est rendu.

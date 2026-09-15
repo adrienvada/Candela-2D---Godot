@@ -3,8 +3,9 @@
 ## Demande d'Adrien (2026-09-10) : « une légère bande de lumière faible à rythme
 ## lent, comme une respiration, qui révèle ce qui est proche des murs — comme si
 ## les murs avaient un bandeau LED tout le long d'eux ». Ce n'est PAS un décor :
-## la bande éclaire le sol ET les joueurs, donc elle rend périodiquement visibles
-## les planques le long des murs.
+## la bande éclaire le sol, donc elle rend périodiquement visibles les planques le
+## long des murs — un corps qui s'y tient s'y découpe en noir, à contre-jour.
+## (Jusqu'au 2026-09-14 elle éclairait aussi les joueurs, à plat : voir `poser()`.)
 ##
 ## **Allumé pour tout le monde depuis le 2026-09-11** (Adrien : « pour tout le
 ## monde »), après un essai derrière le drapeau `--led-murs` — devenu inutile,
@@ -27,9 +28,9 @@
 ## d'Adrien du 2026-09-10, confirmée pour l'adversaire le 2026-09-11) ; le
 ## liseré se normalise sur la vision de proximité (0,8), au-delà de laquelle il
 ## répond comme avant. La bande (énergie 1) n'en est donc pas affectée.
-## La couleur reste pourtant le levier : `player_rim_light.gdshader` (le corps du
-## joueur local, que la bande éclaire aussi) et `blood_shader.gdshader`
-## l'ignorent encore, et une énergie fixe à 1 rend la bande juste sous tous.
+## La couleur reste pourtant le levier : `blood_shader.gdshader` l'ignore encore
+## (`player_rim_light.gdshader` aussi, mais la bande n'éclaire plus les corps
+## depuis le 2026-09-14), et une énergie fixe à 1 rend la bande juste sous tous.
 ##
 ## ⚠️ **UNE seule lumière pour toute la carte, et c'est la contrainte qui fonde le
 ## module.** Godot n'applique pas plus de 15 lumières à un même `CanvasItem`, et
@@ -173,9 +174,21 @@ static func poser(data: Dictionary, parent: Node, horloge_manche: Callable) -> M
 	led.position = zone.get_center()
 	led.texture_scale = zone.size.x / led.texture.get_width()
 	led.shadow_enabled = false
-	# Sol et murs (1), sprite adverse (2), joueur local (4) : les mêmes cibles
-	# que la torche. Visibilité par défaut (1) : les deux vues la dessinent.
-	led.range_item_cull_mask = 1 | 2 | 4
+	# Chantier MURS BAS, MB3c : une lumière unique sans point d'origine — sa
+	# position est le centre de la carte. La hauteur la marque, et le shader de la
+	# zone morte ne lui applique pas la règle (`murs_bas_zone.gdshaderinc`) : il
+	# ombrerait le sol derrière chaque muret vu depuis ce centre.
+	led.height = MursBasRendu.HAUTEUR_SANS_ORIGINE
+	# ⚠️ **Le sol et les murs (1), et PAS les corps — contre-jour** (décision
+	# d'Adrien, 2026-09-14). La bande éclairait aussi le sprite adverse (2) et le
+	# joueur local (4) : sans ombre, elle les éclairait À PLAT, en entier, et
+	# s'additionnait au halo jusqu'au blanc — là où la torche laisse le corps
+	# sombre, liseré côté lampe. Une lumière unique sans point d'origine ne peut
+	# pas ombrer dans le bon sens (mesuré : le liseré tombe du côté du centre de
+	# la carte). Le corps se découpe donc en noir sur le sol qui respire : on voit
+	# le trou qu'il fait dans la lumière, comme partout ailleurs dans le jeu.
+	# Visibilité par défaut (1) : les deux vues la dessinent.
+	led.range_item_cull_mask = CanauxLumiere.DECOR
 	led.regler(0.0)
 	parent.add_child(led)
 	return led

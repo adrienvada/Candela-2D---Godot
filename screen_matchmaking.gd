@@ -297,8 +297,13 @@ func queue_is_ranked() -> bool:
 	return _ranked
 
 ## Dit à l'écran de quelle file il parle. Le hub le sait, l'écran non : c'est le
-## même partage que `ScreenEffects.set_ranked_context()`. Idempotent — le
-## rappeler avec la même valeur ne coûte qu'un rafraîchissement.
+## partage habituel du contrat `HubScreen` — un écran décrit ce qu'il est, il ne
+## sait pas où il est. Idempotent — le rappeler avec la même valeur ne coûte
+## qu'un rafraîchissement.
+##
+## (Ce commentaire citait `ScreenEffects.set_ranked_context()` comme exemple du
+## même partage ; cette méthode est partie le 2026-09-12 avec les planchers des
+## effets — l'écran des effets n'a plus de contexte à recevoir.)
 func set_ranked_queue(ranked: bool) -> void:
 	_ranked = ranked
 	refresh()
