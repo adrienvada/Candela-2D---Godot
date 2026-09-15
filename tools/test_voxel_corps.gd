@@ -70,6 +70,8 @@ func _run() -> void:
 	for slug in slugs:
 		boites_de_reference = _test_classe(VoxelCorps, slug, boites_de_reference, hauteur_debout)
 
+	_test_gestes_distincts(VoxelCorps, slugs)
+
 	_check("au moins %d vérifications ont réellement tourné" % PLANCHER,
 		_verifications >= PLANCHER, "%d" % _verifications)
 	_terminer()
@@ -130,6 +132,7 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 	_test_lecture_au_bord(corps)
 	_test_silhouette_de_soi(corps)
 	_test_boites_profondeur(corps)
+	_test_geste_gadget(corps)
 
 	root.remove_child(corps)
 	corps.free()
@@ -569,6 +572,94 @@ func _test_boites_profondeur(corps: Node3D) -> void:
 		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
 		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
 	})
+
+
+# ---------------------------------------------------------------------------
+# LE GESTE DE GADGET (ISO4, finition)
+# ---------------------------------------------------------------------------
+
+## Le geste anime réellement `Torse/Gadget` au fil de `t` (un balayage de `t`
+## dont l'amplitude ne reste pas plate), reste pur (même `t` → même rotation),
+## et se remet exactement à zéro en mort et en enjambement — un `etat` qui ne
+## doit plus rien laisser d'un geste précédent, même discipline que
+## `_torche_pivot`/`_arme_pivot` (voir l'en-tête de classe de `voxel_corps.gd`).
+func _test_geste_gadget(corps: Node3D) -> void:
+	var pivot: Node3D = corps.get_node("Torse/Gadget")
+
+	var etat_a := {
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "t": 0.6,
+	}
+	corps.poser(etat_a)
+	var rotation_a: Vector3 = pivot.rotation
+	corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false, "mort": false, "t": 0.0})
+	corps.poser(etat_a)
+	_check("le geste de gadget est pur (même t → même rotation)",
+		rotation_a.is_equal_approx(pivot.rotation))
+
+	var mini := Vector3(INF, INF, INF)
+	var maxi := Vector3(-INF, -INF, -INF)
+	for i in 40:
+		var t := float(i) * 0.05
+		corps.poser({"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+			"torche": true, "arme": corps.slug(), "tir": false, "touche": false, "mort": false, "t": t})
+		var r: Vector3 = pivot.rotation
+		mini = mini.min(r)
+		maxi = maxi.max(r)
+	var etendue: Vector3 = maxi - mini
+	_check("le geste de gadget anime réellement (étendue %.4f rad sur 2 s)"
+			% etendue.length(),
+		etendue.length() > 0.001, "%.5f" % etendue.length())
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": false, "arme": "", "tir": false, "touche": false, "mort": true, "t": 0.6,
+	})
+	_check("le geste de gadget se remet à zéro en mort",
+		pivot.rotation.is_equal_approx(Vector3.ZERO))
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "enjambe": 0.6, "t": 0.0,
+	})
+	_check("le geste de gadget se remet à zéro en enjambement",
+		pivot.rotation.is_equal_approx(Vector3.ZERO))
+
+	corps.poser({
+		"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+		"torche": true, "arme": corps.slug(), "tir": false, "touche": false,
+		"mort": false, "accroupi": false, "enjambe": 0.0, "t": 0.0,
+	})
+
+
+## Deux classes au gadget différent doivent produire deux gestes différents à
+## un `t` partagé — la preuve que ce n'est plus le bob commun de vague 0.
+func _test_gestes_distincts(VoxelCorps: GDScript, slugs: PackedStringArray) -> void:
+	if slugs.size() < 2:
+		return
+	var rotations: Array = []
+	for slug in slugs:
+		var corps: Node3D = VoxelCorps.new()
+		root.add_child(corps)
+		if corps.construire(slug):
+			corps.poser({
+				"position": Vector2.ZERO, "visee": Vector2.DOWN, "vitesse": Vector2.ZERO,
+				"torche": true, "arme": slug, "tir": false, "touche": false,
+				"mort": false, "t": 0.6,
+			})
+			rotations.append(corps.get_node("Torse/Gadget").rotation)
+		root.remove_child(corps)
+		corps.free()
+	var toutes_identiques := true
+	for i in range(1, rotations.size()):
+		if not rotations[i].is_equal_approx(rotations[0]):
+			toutes_identiques = false
+			break
+	_check("les gestes de gadget diffèrent d'une classe à l'autre (pas un bob commun)",
+		not toutes_identiques)
 
 
 # ---------------------------------------------------------------------------

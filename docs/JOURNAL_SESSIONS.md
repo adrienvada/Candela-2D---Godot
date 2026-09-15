@@ -4365,6 +4365,48 @@ brief.
 **Republication du suivi :** cette session ne republie pas — delta transmis
 à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
 
+### Session « ISO Corps Sonnet » (finition, branche `iso-corps`) — ajoutée le 2026-09-15 04:10 (Paris)
+
+Entre les vagues 3 et 4 : le geste de gadget par classe, signalé pour ISO4 en
+vague 0 (« un seul bob commun, dix gestes auraient dépassé le budget de
+cette tranche »), fait sur mot direct d'Adrien (« go », confirmé « gestes de
+gadget par classe » plutôt qu'une vague 4) une fois ISO4 intégrée et
+committée par ISO2 (`77941df`). Base : `628bf0b`.
+
+**Fichiers touchés :** `voxel_corps.gd` (`GESTES_GADGET`, `_geste_gadget(t)`,
+appelé depuis `_poser_repos`/`_poser_marche`, remis à zéro dans
+`_poser_mort`/`_poser_enjambe`) ; `tools/test_voxel_corps.gd` (quatre
+contrôles par classe + un contrôle croisé) ; `docs/iso/planche_gestes_gadget.png`
+et six captures `docs/iso/captures_corps/geste_voile_frame_*.png` ;
+`docs/ROADMAP.md` (section « Finition », le tableau des dix gestes) ; ce
+journal.
+
+**Le principe :** une rotation continue et pure de `t`, par classe, tirée du
+comportement RÉEL du gadget porté (son fichier `gadget_*.gd` lu avant de
+choisir la forme — tressautement électrique pour le grésillement, quasi-
+immobilité pour le leurre/l'ombre/la mine qui ne trahissent rien avant
+d'être posés, flottement à deux axes pour le voile, etc.), superposée au bob
+du torse déjà existant, jamais à sa place. Aucun champ neuf dans `etat` :
+`_geste_gadget()` lit `gadget_slug`, déjà dans la fiche du catalogue.
+
+**Le piège de la vague 1 évité par construction, pas retrouvé après coup :**
+`_gadget_pivot` avait déjà quatre points de contact (`repos`, `marche`,
+`enjambe`, `mort`) ; les quatre ont reçu la remise à zéro de la rotation dès
+le premier jet, la même discipline que `_torche_pivot`/`_arme_pivot` depuis
+la vague 1 — sans quoi une rotation de geste aurait survécu, cachée, d'un
+appel `repos` à un appel `mort` suivant.
+
+**Sabotage vérifié réellement** (`_geste_gadget` forcé sur un seul slug pour
+toutes les classes → le contrôle croisé rougit, code 1 → revert → vert).
+
+**Vérifié au banc, pas seulement en nombres** : le geste est une rotation
+continue, invisible sur une capture unique — planche de six captures du
+Spectre à des `t` croissants, montrant le gadget changer d'angle sans se
+détacher du corps.
+
+**Republication du suivi :** cette session ne republie pas — delta transmis
+à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ».
+
 ### Session « iso0b-b-projection-bench-08404a-6c » (ISO0.b, branche `iso-geometrie`) — ajoutée le 2026-09-14
 
 Session locale (Opus 5, réflexion *high*), chantier **vue isométrique**, étape

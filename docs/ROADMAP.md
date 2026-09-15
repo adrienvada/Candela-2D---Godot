@@ -21079,7 +21079,8 @@ depuis ses capteurs — aucune autre surface de couplage. Un uniform `style`
 **Ce qui n'est PAS fait, signalé pour ISO4** : un geste de gadget distinct par
 classe (les dix partagent pour l'instant un seul bob commun, synchronisé à la
 marche) — dix gestes auraient dépassé le budget de deux sessions-journées de
-cette tranche.
+cette tranche. **Fait à la finition du 2026-09-15, sur mot d'Adrien** — voir
+la section « Finition — un geste de gadget par classe » après la vague 3.
 
 **H15 tranché par Adrien le 2026-09-14 vers 16 h 50 (« go », sans seconde
 série de relevés — détail dans la section ISO0.b de la ROADMAP) : deux
@@ -21492,6 +21493,69 @@ réel « n'a aucun témoin lumineux visible », pas un oubli d'ici). C'est le
 même niveau d'abstraction que les corps eux-mêmes (des blocs gris, pas des
 silhouettes détaillées) — cohérent avec le style déjà posé, pas un compromis
 propre à cette vague.
+
+### Finition — un geste de gadget par classe (inscrite le 2026-09-15 04h10)
+
+Signalé pour ISO4 en vague 0, fait sur mot direct d'Adrien (« go » après
+confirmation : gestes de gadget, pas une vague 4) une fois ISO4 intégrée et
+committée par ISO2 (`77941df`). Base : `628bf0b`. Aucune fusion, aucun
+fichier du jeu.
+
+**Le principe : une rotation continue, pure de `t`, par classe — jamais un
+état neuf dans `etat`.** Vague 0 faisait suivre au gadget le bob vertical du
+torse pendant la marche, PARTAGÉ par les dix classes. `GESTES_GADGET`
+(`voxel_corps.gd`) donne maintenant à chaque classe sa propre rotation de
+`Torse/Gadget`, superposée à ce bob (jamais à sa place) : une liste de termes
+sinusoïdaux (`axe`, `amplitude`, `freq`, `phase` optionnelle) sommés, pas
+moyennés — un seul terme pour un balancement propre, deux pour un
+tressautement (deux fréquences proches) ou un flottement à deux axes.
+`_geste_gadget(t)` lit `_fiche["gadget_slug"]`, déjà posé par
+`VoxelCatalogue.fiche()` — aucune donnée neuve à faire remonter du jeu.
+
+**Chaque forme tirée du comportement RÉEL du gadget porté, lu avant de
+choisir** (même discipline que la vague 3) — voir le commentaire de
+`GESTES_GADGET` pour le détail complet, gadget par gadget :
+
+| Classe | Gadget | Geste | Pourquoi |
+|---|---|---|---|
+| pistolet | grésillement | tressautement rapide, deux fréquences proches | fait sauter les torches par un bruit de coupure déterministe |
+| fusil | leurre | quasi immobile | le leurre déployé « ne bouge pas » |
+| pompe | poussière | roulis lent et large | nappe fine, « on voit à travers » |
+| arbalète | torche fantôme | lacet ample | rappel du balayage du faisceau, une fois posée |
+| fumiste | cartouche de suie | roulis lent et resserré | dense et petite, moins mobile que la poussière |
+| incendiaire | nappe de braises | tressaillement rapide, deux fréquences proches | la chaleur d'un foyer porté au dos |
+| sentinelle | poudre de contact | tangage très lent | un sablier qu'on ne secoue pas |
+| occulteur | ombre habitée | quasi immobile | une plaque lourde, l'effet tient à son immobilité |
+| allumeur | mine au magnésium | quasi immobile | « aucun témoin lumineux visible » avant déclenchement |
+| spectre | voile | flottement à deux axes | la toile ondule une fois tendue |
+
+**Vérifié** (`tools/test_voxel_corps.gd`, quatre nouveaux contrôles par
+classe + un contrôle croisé) : le geste est pur (même `t` → même rotation) ;
+il anime réellement (balayage de `t` sur 2 s, étendue mesurée non nulle,
+0,01 à 0,19 rad selon la classe) ; il se remet exactement à zéro en mort et
+en enjambement (même discipline que `_torche_pivot`/`_arme_pivot`) ; et les
+dix classes produisent des rotations mesurablement différentes à un `t`
+partagé — la preuve que ce n'est plus le bob commun de vague 0. Sabotage
+réel (`_geste_gadget` forcé sur un seul slug pour tous → le contrôle croisé
+rougit, code 1 → revert → vert). Suite complète verte.
+
+**Vérifié au banc aussi, pas seulement en nombres** — le geste est une
+rotation continue et subtile, invisible sur une capture unique. Planche
+`docs/iso/planche_gestes_gadget.png` : six captures du Spectre (voile) à des
+`t` croissants (`--frames` du banc, 5 à 80), montrant le gadget changer
+d'angle sans jamais se détacher du corps ni voler en éclats — captures
+individuelles sous `docs/iso/captures_corps/geste_voile_frame_*.png`.
+
+#### Le piège évité ici, par construction plutôt que trouvé après coup
+
+Les quatre endroits qui touchaient déjà `_gadget_pivot` avant cette finition
+(`_poser_repos`, `_poser_marche`, `_poser_enjambe`, `_poser_mort`) devaient
+TOUS recevoir la même discipline de remise à zéro que `_torche_pivot` et
+`_arme_pivot` ont déjà (vague 1) — sans quoi une rotation de geste posée par
+un appel `repos`/`marche` précédent aurait survécu, cachée, dans un appel
+`mort`/`enjambe` suivant : exactement le bogue de contre-rotation de la
+vague 1, par avance. Écrit dès le premier jet plutôt que trouvé par un test
+qui rougit après coup — la leçon de la vague 1 retenue, pas reproduite.
 
 ### ISO0.b — le banc B-projection dans le vrai jeu ✅ (ouverte et close le 2026-09-14, H15 tranché)
 
