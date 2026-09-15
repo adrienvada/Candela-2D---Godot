@@ -1,0 +1,62 @@
+BANC_ISO_GADGETS hauteur=0.05 vue=J1 zone_attendue=infinie zone_mesuree=infinie (px de monde derrière la face de sortie)
+  ✓ hauteur 0.05, lightmap de J1 : zone morte de infinie mesurée, infinie attendue (± 2 px)
+BANC_ISO_GADGETS hauteur=0.05 vue=J1 desaccords=0 points_temoin=825
+  ✓ hauteur 0.05, lightmap de J1 : chaque point éclairé par le témoin suit la règle (0 désaccords sur 825)
+BANC_ISO_GADGETS hauteur=0.05 vue=J2 zone_attendue=infinie zone_mesuree=infinie (px de monde derrière la face de sortie)
+  ✓ hauteur 0.05, lightmap de J2 : zone morte de infinie mesurée, infinie attendue (± 2 px)
+BANC_ISO_GADGETS hauteur=0.05 vue=J2 desaccords=0 points_temoin=825
+  ✓ hauteur 0.05, lightmap de J2 : chaque point éclairé par le témoin suit la règle (0 désaccords sur 825)
+  ✓ hauteur 0.05 : J1 et J2 mesurent la même zone morte (infinie / infinie)
+BANC_ISO_GADGETS hauteur=0.70 vue=J1 zone_attendue=94 px (2.69 tuile) zone_mesuree=93 px (2.66 tuile) (px de monde derrière la face de sortie)
+  ✓ hauteur 0.70, lightmap de J1 : zone morte de 93 px (2.66 tuile) mesurée, 93 px (2.67 tuile) attendue (± 2 px)
+BANC_ISO_GADGETS hauteur=0.70 vue=J1 desaccords=0 points_temoin=825
+  ✓ hauteur 0.70, lightmap de J1 : chaque point éclairé par le témoin suit la règle (0 désaccords sur 825)
+BANC_ISO_GADGETS hauteur=0.70 vue=J2 zone_attendue=94 px (2.69 tuile) zone_mesuree=93 px (2.66 tuile) (px de monde derrière la face de sortie)
+  ✓ hauteur 0.70, lightmap de J2 : zone morte de 93 px (2.66 tuile) mesurée, 93 px (2.67 tuile) attendue (± 2 px)
+BANC_ISO_GADGETS hauteur=0.70 vue=J2 desaccords=0 points_temoin=825
+  ✓ hauteur 0.70, lightmap de J2 : chaque point éclairé par le témoin suit la règle (0 désaccords sur 825)
+  ✓ hauteur 0.70 : J1 et J2 mesurent la même zone morte (93 px (2.66 tuile) / 93 px (2.66 tuile))
+BANC_ISO_GADGETS hauteur=1.50 vue=J1 zone_attendue=26 px (0.74 tuile) zone_mesuree=25 px (0.71 tuile) (px de monde derrière la face de sortie)
+  ✓ hauteur 1.50, lightmap de J1 : zone morte de 25 px (0.71 tuile) mesurée, 25 px (0.73 tuile) attendue (± 2 px)
+BANC_ISO_GADGETS hauteur=1.50 vue=J1 desaccords=0 points_temoin=825
+  ✓ hauteur 1.50, lightmap de J1 : chaque point éclairé par le témoin suit la règle (0 désaccords sur 825)
+BANC_ISO_GADGETS hauteur=1.50 vue=J2 zone_attendue=26 px (0.74 tuile) zone_mesuree=25 px (0.71 tuile) (px de monde derrière la face de sortie)
+  ✓ hauteur 1.50, lightmap de J2 : zone morte de 25 px (0.71 tuile) mesurée, 25 px (0.73 tuile) attendue (± 2 px)
+BANC_ISO_GADGETS hauteur=1.50 vue=J2 desaccords=0 points_temoin=825
+  ✓ hauteur 1.50, lightmap de J2 : chaque point éclairé par le témoin suit la règle (0 désaccords sur 825)
+  ✓ hauteur 1.50 : J1 et J2 mesurent la même zone morte (25 px (0.71 tuile) / 25 px (0.71 tuile))
+BANC_ISO_GADGETS scene=fusee_vol hauteur=1.20
+BANC_ISO_GADGETS scene=fusee_sol hauteur=0.15
+BANC_ISO_GADGETS appels fusee_sol sans_images=139 avec_images=149
+BANC_ISO_GADGETS scene=torche regle=jeu (bande constante d'ISO3b)
+  ✓ « mine_magnesium » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=mine_magnesium lampe_max=189 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « mine_magnesium » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « ombre_habitee » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=ombre_habitee lampe_max=184 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « ombre_habitee » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « torche_fantome » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=torche_fantome lampe_max=184 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « torche_fantome » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « voile » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=voile lampe_max=213 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « voile » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « gresillement » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=gresillement lampe_max=189 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « gresillement » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « leurre » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=leurre lampe_max=184 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « leurre » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « cartouche_suie » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=cartouche_suie lampe_max=255 noir_lumieres_eteintes=244 noir_sans_2d=0
+  ✓ « cartouche_suie » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « poussiere » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=poussiere lampe_max=223 noir_lumieres_eteintes=0 noir_sans_2d=0
+  ✓ « poussiere » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « nappe_braises » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=nappe_braises lampe_max=255 noir_lumieres_eteintes=255 noir_sans_2d=0
+  ✓ « nappe_braises » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+  ✓ « poudre_contact » posé par le vrai chemin
+BANC_ISO_GADGETS gadget=poudre_contact lampe_max=192 noir_lumieres_eteintes=27 noir_sans_2d=0
+  ✓ « poudre_contact » : lumières éteintes et 2D coupée, l'écran vaut 0 (0/255)
+BANC_ISO_GADGETS VERDICT=OK echecs=0

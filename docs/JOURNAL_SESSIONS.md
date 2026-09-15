@@ -5062,3 +5062,13 @@ clés du catalogue ; corrigé par une table dans `MiroirsIso`. `tools/test_iso_g
 vérifications, gadgets posés par `GameState._do_spawn_gadget` ; sabotée une fois (table vidée : 2 rouges),
 restaurée. Signalé : le champ de murets de `uniformes_de_vue` est agrandi de la bande du jeu, pas de la zone
 d'une source haute et lointaine.
+
+**Étape 6, 2026-09-15 vers 07:30 — le banc fenêtré et les planches.** `tools/banc_iso_gadgets.gd` : zone
+morte au pixel dans les deux lightmaps pour 0,05 / 0,70 / 1,50 tuile (infinie ; 93 px pour 94 attendus ;
+25 pour 26 ; J1 = J2 ; 0 désaccord sur 825 points), noir absolu 0/255 pour les dix gadgets, 139 → 149
+appels de dessin avec les images d'une fusée posée. Trois passages de banc pour que la mesure mesure (joueurs
+hors des vues, débord de 3 px de la tuile rentrée, silhouette de soi dans le noir), un quatrième pour
+recadrer la planche des gadgets. Le harnais refuse de poser `HOME` : banc dans le foyer d'Adrien, sans
+écriture de réglages. File du Mac tenue par messages avec Habillage, ISO7 Beauté et ISO Corps. Coordonné
+avec ISO7 Beauté : sa température de pâte à reporter sur `volume_iso.gdshader` après la fusion. Refusé :
+les fumées additives d'ISO Assets (brilleraient dans le noir).

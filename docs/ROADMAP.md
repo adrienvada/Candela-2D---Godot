@@ -23572,7 +23572,7 @@ passages ; relevés bruts dans `docs/iso/captures_corps_epais/releves_corps_epai
   Changer la constante seule aurait fait deux zones de touche différentes selon qu'un tir est compensé ou
   non — un écart d'équité entre l'hôte et le client.
 
-### Gadgets et lumières en iso 🟡 (ouverte le 2026-09-15, session « ISO7 Gadgets et lumière Opus »)
+### Gadgets et lumières en iso ✅ (ouverte et commitée le 2026-09-15, session « ISO7 Gadgets et lumière Opus », jugée au jalon H-ISO5)
 
 Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 2026-09-15 vers 05:20, sur mandat d'Adrien
 de 05:00 : « que les gadgets soient bien implémentés, que les fumées et les lumières diffuses de fusées
@@ -23723,6 +23723,12 @@ image, rejeu compris (la killcam recrée gadgets et fusées dans le même conten
   `Halo`, déjà projetée au sol. Seule sa lentille se lève. Une vraie torche n'a pas de halo dessiné : lui en
   donner un la trahirait.
 - **Les traces de poudre restent au sol**, dans la lightmap : ce sont des marques de pas, couchées par nature.
+- **Pas de texture de fumée additive** (ISO Assets en a généré trois, `21e16d4` sur
+  `claude/iso-assets-gemini-boards-4e8d33`, `docs/iso/planches_gemini/effets/fumee_0*.png`). Une bouffée
+  additive sur fond noir brille sans lumière : elle dirait où est le nuage à qui n'a pas de lampe, et
+  romprait le noir absolu que les couches tiennent par construction. La traînée de comète du même commit est
+  gardée en réserve : elle devrait suivre la vitesse de la fusée et vivre sous `assets/` (`docs/` est ignoré
+  par Godot).
 
 **Crochets posés dans des fichiers partagés** : aucun dans `presentation_3d.gd`, `game_state.gd` ni
 `player.gd` — `IsoVolumes` est branché par `MiroirsIso.suivre`/`vider`/`masquer_les_quads`, et lit la
@@ -23760,6 +23766,65 @@ slug du jeu » rouges, restaurée à l'identique, verte.
   la charge du Mac (un autre Godot tournait).
 - ⚠️ **Le harnais refuse une commande qui lance Godot avec un argument calculé** (une boucle `for t in …`) ou
   trop composée : une commande par suite, en clair.
+
+#### Étape 6 — le banc en vraie fenêtre et les planches
+
+`tools/banc_iso_gadgets.gd` (neuf, `.tscn`), écran scindé, carte d'essai des murets, vue iso allumée.
+Relevés bruts : `docs/iso/captures_gadgets/releves_gadgets.txt` ; planches composées par
+`docs/iso/planche_iso_gadgets.py` (Pillow).
+
+**Ce que le banc prouve** (quatrième passage, 2026-09-15 vers 07:37, `VERDICT=OK`, 0 échec ; le troisième,
+à 07:26, rendait les mêmes zones et le même noir, gadgets mal cadrés) :
+- **La hauteur au pixel, dans la lightmap de chaque joueur.** Une lampe d'essai à D = 2 tuiles de la face de
+  sortie du muret ; seuls comptent les points que la même lampe éclaire sans aucune règle (825 points).
+
+  | Source | Zone attendue (jumelle) | Mesurée, lightmap de J1 | Mesurée, lightmap de J2 | Désaccords |
+  |---|---|---|---|---|
+  | 0,05 tuile | infinie | infinie | infinie | 0 / 825 |
+  | 0,70 tuile | 94 px (2,69 tuiles) | 93 px (2,66) | 93 px (2,66) | 0 / 825 |
+  | 1,50 tuile | 26 px (0,74 tuile) | 25 px (0,71) | 25 px (0,71) | 0 / 825 |
+
+  La formule `D × 0,40 / (h − 0,40)` donne 2,67 et 0,73 tuiles ; la jumelle compte D jusqu'à la face RENTRÉE
+  du muret (`RETRAIT_LUMIERE`), d'où un pixel de plus. J1 et J2 mesurent la même zone, au pixel.
+- **Le noir absolu, gadget par gadget** : lumières éteintes et 2D coupée, **0/255** dans le cadre de chacun
+  des dix gadgets (volumes, lueurs et toile n'allument rien par eux-mêmes). Lumières éteintes SANS couper la
+  2D, relevé pour information : 0 sauf la nappe de braises (255, image peinte lumineuse, par dessein), la
+  suie (244 : sa lueur lissée retombe en 0,1 s, la mesure la prend avant) et la poudre (27 : ses traces
+  luisent, par dessein). Sous la torche à 0,8, les cadres montent de 184 (leurre, torche fantôme) à 255
+  (suie, braises).
+- **Le coût des images** sur une fusée posée (fumée en volume et lueur) : **139 appels de dessin sans elles,
+  149 avec** (médiane de 30 images, écran scindé). Ordre de grandeur, pas un relevé au protocole.
+
+**Planches** : `docs/iso/planche_lumieres_hauteur.jpg` (fusée en vol à 1,2 tuile, fusée posée, torche
+derrière le même muret ; lightmaps de J1 aux trois hauteurs ; vues iso à 0,70 et 1,50, les deux joueurs ;
+lightmap de J2 à 0,70) et `docs/iso/planche_iso_gadgets.jpg` (chaque gadget sous la torche de J1 à 0,8,
+puis dans le noir).
+
+**Écart au socle** : le banc n'a pas pu tourner sous un `HOME` temporaire — le harnais refuse toute
+commande qui pose `HOME` (« injecting git configuration »). Il a tourné dans le foyer d'Adrien, sans y
+écrire : `GameSettings.pilotage_externe` (aucun `settings.cfg`), `intro_vue` posé dans le code, aucun match
+terminé (aucune archive). Seul `godot.log` a été réécrit.
+
+**Pièges payés au banc** — trois passages pour que la mesure mesure, chacun déguisé en défaut de la règle :
+- ⚠️ **Chaque caméra suit son joueur** : écartés du muret pour ne rien masquer, les deux joueurs sortaient la
+  scène de leurs vues — 0 point témoin dans la lightmap de J1. Ils se tiennent derrière la lampe.
+- ⚠️ **La face mesurée est celle du muret RENTRÉ, et la tuile dessinée déborde de 3 px derrière elle** : la
+  lampe éclaire ce débord, et la « zone morte » mesurée valait 3 px dans les deux lightmaps (3 désaccords sur
+  834, tous sur la tuile). Le balayage commence au-delà.
+- ⚠️ **La silhouette de soi reste visible dans le noir** (ISO2b, par dessein) : 125/255 dans chaque cadre,
+  lumières éteintes et 2D coupée. Le contrôle (b) d'ISO1 l'écarte ; les corps sortent de la mesure.
+- ⚠️ **Un gadget posé contre le mur du haut** : torche dans le mur, huit vignettes sur dix sans gadget. Posé
+  au sud du muret.
+
+**À faire après la fusion avec `iso7-beaute`** (coordonné avec « ISO7 Beauté Opus », 2026-09-15 vers
+06:15) : sa température de pâte ne passe pas par `lightmap_pateuse` mais s'applique en dernier dans
+`mur_iso` et `sol_iso` (`c = pate_temperature(c, temperature);`, force `IsoMateriaux.TEMPERATURE`). Les
+volumes resteraient donc neutres au-dessus d'un sol chaud. Une fois les deux branches dans `iso2-vues`,
+ajouter la même ligne à la fin de `volume_iso.gdshader`, avec un `uniform float temperature` réglé à
+`IsoMateriaux.TEMPERATURE` par `IsoVolumes._pousser_lightmaps`. Pas avant : la fonction n'existe pas sur
+cette branche, et l'appeler casserait la compilation du shader (`tools/test_iso_gadgets.gd` le dirait).
+Les signatures de `lightmap_pateuse`, `pate` et `pate_bruit`, dont dépend `volume_iso.gdshader`, ne
+changent pas (engagement d'ISO7 Beauté).
 
 ### Ce qui attend Adrien — jalon H15
 
