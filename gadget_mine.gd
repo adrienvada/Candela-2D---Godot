@@ -233,6 +233,8 @@ func _monter_flamme() -> void:
 	# MB3a — une flamme au ras du sol bute sur un mur bas, comme la torche d'un
 	# accroupi : la couche d'ombre des murs bas s'ajoute à celle des murs.
 	_lumiere.shadow_item_cull_mask = 1 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+	# Gadgets et lumières — sa hauteur de source : au ras du sol (voir les braises).
+	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_AU_RAS_DU_SOL)
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	_lumiere.range_item_cull_mask = 1 | 2 | 4
 	add_child(_lumiere)

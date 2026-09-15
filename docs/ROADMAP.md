@@ -2425,6 +2425,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Une source de lumière a une hauteur, qui décide de ce qu'un muret lui cache — sauf les lampes du joueur et ce qui les imite, qui gardent la règle « d'un même angle »** (2026-09-15, session « ISO7 Gadgets et lumière Opus », sur le brief de la session cloud qui décide pour Adrien jusqu'au test final ; demande d'Adrien de 05:00 : « que les fumées et les lumières diffuses de fusées etc. aient une lumière 3D qui éclaire par-dessus les murs bas ») | La fusée en vol éclaire par-dessus un muret avec une zone morte `D × 0,40 / (h − 0,40)`, courte quand elle est haute et qui s'allonge quand elle redescend, puis elle bute ; braises, mine et fusée posée butent (elles le faisaient déjà). La hauteur vit dans la lightmap 2D (`Light2D.height`), identique pour les deux joueurs. La torche, la rétrodiffusion, le halo, le flash, la lumière de coup et la torche fantôme gardent la bande constante d'ISO3b : c'est la règle que la balle et l'éblouissement font payer (`MursBas.franchit`), et une torche à hauteur dessinerait « vu, pas touché » ou « touché, pas vu », ce qu'Adrien a fait supprimer après H-MB1. Détail : section « Gadgets et lumières en iso ». |
+| **Les volumes iso sont des couches horizontales qui recopient la lightmap sous elles, dessinées avant les corps** (2026-09-15, même session) | Noir absolu et équité tiennent par construction (la couche vaut la lumière que la vue de dessus dessine là, lue dans la lightmap de la caméra qui la dessine), et un nuage ne cache jamais un corps plus que la vue de dessus, où l'effacement passe par l'opacité du corps. Pas de lueur sur le corps touché : elle dévoilerait un corps que la vue de dessus laisse noir. |
 | **Le relevé de cadence de fin de chantier iso se prend avec les tests humains de H-ISO5, pas avant** (2026-09-15 vers 05:40, Adrien, à la session ISO5 qui demandait le Mac pour vingt minutes : « Tant pis pour les relevés, on les fera en même temps que les tests humains quand je serai devant la machine ») | Le relevé exige une vraie fenêtre de silence : fenêtre au premier plan, aucune autre application, personne devant le Mac. Adrien n'était pas en mesure de la laisser. La session prépare donc le banc (`--iso`, `--lightmap`, relevé d'appels de dessin et de cibles, preuve que les options changent le rendu) et s'arrête avant les cinq relevés : la taille de lightmap retenue et la porte de sortie de la 2D se décident au jalon H-ISO5, sur les chiffres pris ce jour-là. |
 | **Corps épais : la zone de touche reste à 18 px** (2026-09-15 vers 04:40, Adrien, réponse « Garder 18 px (Recommandé) » à la question de la session ISO5 ; sa demande de départ, transmise par la session pilote vers 03:50 : « il faut que le volume de chaque joueur soit plus important, comme dans les visuels générés par la session Assets : il faut qu'il soit plus épais par exemple. Tant pis si ça touche leur hitbox. ») | Mesuré par ISO Corps (vague 4, réglage `x1_6`) : le corps épais SEUL ne dépasse jamais 17,3 px de rayon, dans aucune posture ni aucune classe — il tient déjà dans la zone de touche de 18 px. Les 24,4 px publiés viennent de l'ARME tenue devant le corps (la carabine de la Sentinelle). Passer à 24,4 px aurait fait compter une balle qui ne frôle que l'arme, et grossi la zone de touche d'environ 84 % en surface ; et comme une balle ordinaire touche par la forme de collision du joueur, qui sert aussi au déplacement, il aurait fallu une forme de touche à part. Rien ne change donc dans `bullet.gd`, `gadget_leurre.gd` ni `murs_bas.gd` : ce qu'on voit du corps est ce qu'on touche, l'arme non. |
 | **Tester plus tard : jalons regroupés en H-ISO5, relevé confié à ISO2** (2026-09-15, vers 01:20, Adrien, rapporté par la suite du brief long de la session pilote : « 15/09 vers 01:20, tester plus tard : jalons regroupés en H-ISO5, relevé confié à ISO2 ») | Adrien ne s'arrête pas pour jouer entre les étapes de la ligne iso : H-ISO3 et H-ISO4 ne sont plus des arrêts, leurs paquets partent en delta à la session pilote, et la session ISO2 enchaîne ISO3b, ISO4, ISO5 puis le relevé de cadence de fin de chantier, qu'elle prend elle-même en fenêtre de silence — le seul relevé de cadence du chantier. Ce qui ne change pas : un arrêt immédiat si une fusion perd l'une des deux logiques ou si une étape casse le noir absolu ou l'équité sans sortie propre. |
@@ -23851,6 +23853,259 @@ foyer isolé, 1920×1080, carte par défaut :
   semble fini. Chien de garde : `perl -e 'alarm 400; exec @ARGV' godot …`.
 - ⚠️ **Le harnais refuse d'écrire hors du worktree de la session.** Un brief qui nomme un autre worktree
   ne peut pas être suivi à la lettre : basculer son propre worktree (propre) sur la branche voulue.
+### Gadgets et lumières en iso ✅ (ouverte et commitée le 2026-09-15, session « ISO7 Gadgets et lumière Opus », jugée au jalon H-ISO5)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 2026-09-15 vers 05:20, sur mandat d'Adrien
+de 05:00 : « que les gadgets soient bien implémentés, que les fumées et les lumières diffuses de fusées
+etc. aient une lumière 3D qui éclaire par-dessus les murs bas ». Branche locale `iso-gadgets-lumieres`,
+depuis `iso2-vues` (`953ead3`, corps épais fusionnés). Non poussée. Aucune `Light3D` : la « lumière 3D »
+est une **hauteur de source dans la lightmap 2D**, plus des lueurs et des volumes cosmétiques en iso.
+
+#### Étape 1 — l'inventaire, écrit avant de toucher
+
+Relevé sur `953ead3`. « Iso » dit ce que la vue iso montre aujourd'hui : la lightmap 2D projetée au sol
+(ISO1/ISO2), les capteurs de corps (ISO2), les voxels et quads d'ISO4 (`miroirs_iso.gd`).
+
+| Élément | En 2D (vue de dessus) | En iso aujourd'hui | Hauteur de source retenue | Ce qui manque |
+|---|---|---|---|---|
+| Torche (`flashlight`) | `PointLight2D` à cookie ; ombre des murs et du corps d'en face ; bit des murets selon la posture (MB3a) | projetée au sol ; capteurs de corps | **règle du jeu** (bande constante d'ISO3b), inchangée | — |
+| Rétrodiffusion (`body_light`) | `PointLight2D`, occluder de torse, canaux 2 et 4 | capteurs | règle du jeu | — |
+| Halo de proximité (`ambient_light`) | `PointLight2D`, canal de sa vue, ombre du halo | capteurs | règle du jeu | — |
+| Flash de bouche (`MuzzleFlash`) + éclat dessiné | lumière brève ; éclat `Sprite2D` non éclairé au canon | lumière projetée ; éclat aplati dans la lightmap | règle du jeu | un éclat au bout de l'arme du corps voxel (étape 4) |
+| Lumière de coup (`hit_light`) | `PointLight2D` carmin, 1 s, ombre des murs | projetée | règle du jeu | une lueur sur le corps touché (étape 4) |
+| Écho au sol du tir (`ground_flash`) | `PointLight2D` **sans ombre**, 130 px, 0,12 s | projeté | aucune : il ne connaît ni muret ni mur haut (inchangé) | — |
+| Onde de mort (`kill_shockwave.gd`) | anneau DESSINÉ non éclairé, aucune lumière | aplati dans la lightmap | pas une source | un anneau au sol (quad, étape 4) |
+| Balle (`TrailLight`), éclats (`particle_pool`) | lumières portées par le tir | quads au sol (ISO4) + lumière projetée | règle du jeu | — |
+| Bandeau LED des murs | une lumière cuite pour toute la carte | projetée | **sans origine** (marque `HAUTEUR_SANS_ORIGINE`) | — |
+| Fusée en vol (`fusee.gd`) | `Halo` à 0,8 ; cœur et corps décalés de `HAUTEUR_VOL_PX` (18 px factices) ; passe par-dessus les murets (masque sans le bit) | lumière projetée ; **aucun miroir** (le voxel n'existe que posée) | **profil du vol : 1,5 au lancer → 0 posée**, selon l'élan | la comète à sa hauteur (étape 4) |
+| Fusée posée : plein feu, braise, agonie, résidu | `Halo` jusqu'à 3,0 ; bit des murets ; cœur non éclairé | voxel tige + braise sous capteur (ISO4) | **0,15** (tous les actes au sol) | une lueur basse qui pulse (étape 4) |
+| Fumée de fusée : nappes, voile à trous, sillage, masses, tunnels, panache d'extinction | trois `Sprite2D` tournants + `Voile` (shader) ; `occultation_pour` efface les sprites | à plat dans la lightmap | — | un volume de couches, ~1 tuile (étape 3) |
+| Mine (`gadget_mine.gd`) | sprite éclairé, occluder ; `Embrasement` à 6,0, bit des murets | voxel sous capteur (ISO4) ; flamme projetée | **0,05** | un éclair debout à l'embrasement (étape 4) |
+| Torche fantôme | `Faisceau` (cookie de la classe, ombre 1\|2\|4\|8), `Halo`, lentille non éclairée, pied et tête | voxel sous capteur ; lentille aplatie | **règle du jeu**, comme la vraie torche | une lampe debout et son halo (étape 4) |
+| Nappe de braises | image peinte lumineuse ; `Lueur` à 1,8, bit des murets | à plat | **0,05** | un tapis de points incandescents (étape 4), volume ~0,1 (étape 3) |
+| Voile | toile `Line2D` éclairée + deux piquets + occluder | voxels des piquets ; **toile à plat** | pas de lumière | la toile debout (étape 5) |
+| Ombre habitée | sprite éclairé + occluder | voxel sous capteur (ISO4) | — | — |
+| Poudre de contact | nappe assombrie + traces `Polygon2D` additives posées dans l'arène | à plat | — | volume ~0,1 et traces (étapes 3 et 5) |
+| Grésillement | sprite éclairé + occluder | voxel sous capteur (ISO4) | — | — |
+| Suie (`gadget_suie.gd`) | masse `Sprite2D` allumée EN ENTIER par `_lumiere_entrante` (gain 1,6), masque le corps | à plat | — | volume ~0,8 tuile (étape 3) |
+| Poussière | masse éclairée par le décor, fondu | à plat | — | volume ~0,4 tuile (étape 3) |
+| Leurre | deux silhouettes `Polygon2D` + occluders | corps voxel de la classe du poseur (ISO4) | — | — |
+
+**Le mécanisme qu'on généralise, pas un second.** ISO3b dessine la zone morte des murets dans le
+`light()` du sol, du décor et des corps (`murs_bas_zone.gdshaderinc`), poussée par
+`GameState._pousser_zone_morte` au viewport qui rend le monde (`_viewport_du_monde` : la lightmap en
+iso) et par `Presentation3D._pousser_zone_morte_capteurs` aux capteurs. La lampe y est déjà lue en 3D :
+`LIGHT_POSITION.z` est sa `height`, que le bandeau LED utilisait comme marque « sans origine ».
+
+#### Étape 2 — la hauteur des sources
+
+**Ce qui est fait.** La hauteur d'une lampe (`Light2D.height`) choisit sa règle, dans le même include :
+- **0 : la règle du jeu**, la bande constante « d'un même angle » (MB3c). Le chemin est celui d'avant.
+- **Une hauteur réelle** : derrière un muret de hauteur `h_mur`, le rayon qui rase l'arête de sortie, à
+  la distance D de la source, redescend à la hauteur `c` de la cible après
+  **`L = D · (h_mur − c) / (h − h_mur)`** — au sol, `D × 0,40 / (h − 0,40)`. Source au ras du muret ou
+  plus basse : elle **bute**, par l'occluder `COUCHE_OMBRE_MUR_BAS` (ombre infinie), et le shader ne
+  calcule rien pour elle.
+- **Au-delà du seuil : sans origine** (bandeau LED), aucune règle.
+
+`MursBasRendu.poser_hauteur_source(lampe, tuiles)` est le seul écrivain : il pose la hauteur **et** le
+bit d'ombre des murets qui va avec, parce qu'une lampe basse sans le bit traverserait les murets et une
+lampe haute avec lui y buterait. `MursBasRendu.zone_morte_source` et `eclaire_par_hauteur` sont la
+jumelle GDScript du shader. Les murs hauts restent des occluders pleins dans tous les masques.
+
+**Hauteurs retenues** (tuiles) : fusée en vol `1,5 · (1 − (1 − élan)²)` — lente puis plongeante, sous le
+muret à élan 0,14 ; fusée posée 0,15 ; braises et mine 0,05. Les lampes portées par le joueur (torche,
+rétrodiffusion, halo, flash, lumière de coup), la torche fantôme, la balle et ses éclats **gardent la
+règle du jeu**.
+
+**Pourquoi le brief n'est pas suivi à la lettre pour la torche et ses sœurs** (le brief fixait 0,70) :
+1. **La torche du joueur doit rester celle d'ISO3b** — le brief l'exige aussi (« ne la casse pas »), et
+   les deux phrases ne tiennent ensemble qu'ainsi. La bande constante est une règle d'Adrien (« balles
+   et lumière debout franchissent le mur bas selon un même angle ») : `MursBas.franchit` la fait payer
+   à la balle et à l'éblouissement. Une torche à 0,70 dessinerait `L = 1,33 D` — 2,67 tuiles à 2 tuiles
+   du muret, 5,3 à 4 — là où la balle survole 1,67 tuile : « vu, pas touché » ou « touché, pas vu »,
+   exactement ce qu'Adrien a fait supprimer après H-MB1.
+2. **La torche fantôme imite la torche** : une zone morte différente la trahirait (le piège déjà payé
+   avec la suie, `gadget_volume.gd`, « une fausse torche que la suie ignorait se distinguait de la
+   vraie »).
+3. **Le flash de bouche et la lumière de coup** sont portés par le joueur et suivent sa posture
+   (`CanauxLumiere.masque_ombre_posture`, MB3a) : les passer à la hauteur ferait deux règles pour un
+   même corps.
+4. **L'écho au sol n'a pas d'ombre du tout** : lui donner une hauteur ne changerait rien.
+5. **La fusée posée à 0,15 pour tous ses actes** (le brief disait 0,05 pour le résidu) : sous le muret,
+   les deux hauteurs rendent la même lightmap.
+
+**Ce que la hauteur change à l'écran aujourd'hui** : la fusée en vol. Elle éclairait par-dessus les
+murets avec la bande constante du jeu (1,67 tuile, décision d'Adrien du 2026-09-14 à 21 h 10) ; elle y
+dessine désormais la zone de sa hauteur (0,73 tuile à 2 tuiles d'un muret, au lancer), s'allongeant à
+mesure qu'elle redescend, puis bute. Braises, mine et fusée posée butaient déjà : la hauteur le déclare.
+
+**Crochets posés dans des fichiers partagés** : `murs_bas_zone.gdshaderinc` (trois uniformes, la règle
+de la hauteur) ; `murs_bas_rendu.gd` (`HAUTEUR_SANS_ORIGINE` 1,0 → 4096, hauteurs, `poser_hauteur_source`,
+jumelle, trois uniformes poussés) ; `gadget_braises.gd`, `gadget_mine.gd` (une ligne chacun) ;
+`tools/test_murs_bas_rendu.gd` (deux contrôles réécrits pour la nouvelle sémantique, un ajouté) ;
+`tools/run_suites.sh` (une suite). **Aucune ligne** dans `game_state.gd`, `presentation_3d.gd` ni
+`player.gd` : les uniformes passent par `MursBasRendu._poser`, déjà appelé par les deux poussées.
+
+**Pièges.**
+- ⚠️ **La marque « sans origine » valait 1,0 px.** Tant qu'aucune lampe n'avait de hauteur, « non
+  nulle » voulait dire « bandeau LED ». Avec des hauteurs réelles, une braise vaut 1,75 px : le bandeau
+  se serait lu comme une source au ras du sol, et chaque muret aurait projeté une ombre infinie depuis le
+  centre de la carte. La marque est à 4096 px et se reconnaît par un seuil, jamais par une égalité : la
+  hauteur arrive au shader multipliée par l'échelle de la vue.
+- ⚠️ **Le harnais refuse d'écrire dans un worktree créé par `git worktree add` depuis celui de la
+  session** : il faut y entrer (`EnterWorktree`) — même précédent qu'ISO5.
+- ⚠️ **`timeout` n'existe pas sur le Mac d'Adrien** : un lancement « sous chien de garde » écrit ainsi
+  sort en code 127 sans avoir rien lancé, et ressemble à un échec de la suite.
+
+**Signalé, hors périmètre** : le champ où `uniformes_de_vue` garde les murets est agrandi de la zone de
+la règle du jeu (`l_sol`, 1,67 tuile). La zone d'une source haute mais lointaine peut être plus longue :
+un muret hors de ce champ ne projette pas la sienne sur le bord de l'écran. Élargir coûte des rectangles
+au shader ; à mesurer au banc avant de décider.
+
+#### Étapes 3 à 5 — les volumes, les lueurs, les miroirs
+
+**Ce qui est fait** — `iso_volumes.gd` (`IsoVolumes`, neuf), enfant de `MiroirsIso` et suivi par lui à chaque
+image, rejeu compris (la killcam recrée gadgets et fusées dans le même conteneur) :
+- **Les volumes** : suie 0,8 tuile (4 couches), poussière 0,4 (3), fumée de fusée 1,0 (4, panache d'extinction
+  compris), nappe de braises et poudre 0,1 (2). Chaque couche est un plan HORIZONTAL posé à sa hauteur, qui
+  montre la lightmap au point du sol juste en dessous d'elle, découpée par la forme du nuage (l'alpha de son
+  image 2D, tournée comme elle) et adoucie au bord (`volume_iso.gdshader`, neuf). Le rayon se resserre et
+  l'opacité baisse en montant.
+- **Les lueurs** (`halo_iso.gdshader`, neuf, additif) : la **comète** d'une fusée en vol à la hauteur de sa
+  lumière (le cœur et le corps dessinés sortent des lightmaps pendant le vol, où ils étaient décalés de 18 px
+  factices) ; la **lueur basse** d'une fusée posée, qui suit `energie_relative` (plein feu, braise, sursauts
+  d'agonie) ; le **tapis de seize points** de la nappe de braises ; la **lentille** de la torche fantôme
+  levée au bout de son fût ; l'**éclair** de la mine à l'embrasement ; l'**éclat de bouche** au bout de
+  l'arme du corps voxel (`VoxelCorps.pointe_arme()` d'ISO Corps quand sa vague 5 sera fusionnée, la boîte
+  sous le pivot `Torse/Arme` d'ici là).
+- **L'onde de mort** : un anneau couché au sol, testé en profondeur ; la courbe de l'anneau est une fonction
+  pure partagée avec le trait 2D (`KillShockwave.anneau_a`).
+- **La toile du voile, debout** entre ses piquets (0,15 tuile), en ruban qui suit l'ondulation de la `Line2D`
+  et recopie la lightmap à son pied.
+- **La mine et l'ombre habitée ont enfin leur voxel en match** (voir le piège ci-dessous).
+
+**Les décisions, et pourquoi.**
+- **Des couches horizontales, pas « face à la caméra »** (le brief disait face caméra). Un plan vertical
+  lirait la lightmap le long d'une ligne et la tirerait en stries ; un plan horizontal a, en chaque point,
+  exactement un point de sol sous lui. La couche recopie donc la lumière que la vue de dessus dessine là, sans
+  en inventer : **noir absolu par construction** (lightmap 0, couche 0), **équité par construction** (elle
+  lit la lightmap de la caméra qui la dessine, comme le sol).
+- **Les couches se dessinent AVANT les corps** (`render_priority` −2, sous la profondeur −1 et la couleur 0
+  des corps). En vue de dessus, un corps dans un nuage s'efface par son OPACITÉ (ISO2b la lit déjà), la masse
+  étant posée sous lui ; des couches dessinées par-dessus le cacheraient une seconde fois, davantage qu'en 2D.
+  Un nuage ne cache jamais un corps plus que la vue de dessus.
+- **Chaque lueur vaut l'énergie de SA lumière 2D** : lumière éteinte, lueur éteinte. Elles n'éclairent rien
+  (aucune `Light3D`) et ne sont que des sources que la vue de dessus montre déjà, levées à leur hauteur.
+- **Pas de lueur sur le corps touché** (le brief la demandait). `hit_light` n'éclaire que le décor et le
+  canal du joueur local (masque 1|4) : le corps touché s'éclaire déjà chez lui par son capteur, et un halo
+  visible des deux dévoilerait dans le noir un corps que la vue de dessus y laisse noir.
+- **Pas de halo ajouté à la torche fantôme** : sa lampe debout est le voxel d'ISO4, son halo est sa lumière
+  `Halo`, déjà projetée au sol. Seule sa lentille se lève. Une vraie torche n'a pas de halo dessiné : lui en
+  donner un la trahirait.
+- **Les traces de poudre restent au sol**, dans la lightmap : ce sont des marques de pas, couchées par nature.
+- **Pas de texture de fumée additive** (ISO Assets en a généré trois, `21e16d4` sur
+  `claude/iso-assets-gemini-boards-4e8d33`, `docs/iso/planches_gemini/effets/fumee_0*.png`). Une bouffée
+  additive sur fond noir brille sans lumière : elle dirait où est le nuage à qui n'a pas de lampe, et
+  romprait le noir absolu que les couches tiennent par construction. La traînée de comète du même commit est
+  gardée en réserve : elle devrait suivre la vitesse de la fusée et vivre sous `assets/` (`docs/` est ignoré
+  par Godot).
+
+**Crochets posés dans des fichiers partagés** : aucun dans `presentation_3d.gd`, `game_state.gd` ni
+`player.gd` — `IsoVolumes` est branché par `MiroirsIso.suivre`/`vider`/`masquer_les_quads`, et lit la
+présentation (`_voxels`) sans l'écrire. Dans les fichiers tenus : `kill_shockwave.gd` (`anneau_a`, le trait 2D
+passe par elle), `fusee.gd` (`alpha_fumee`, `rayon_fumee`, lecture seule).
+
+**Ce que la suite prouve** — `tools/test_iso_gadgets.gd` (neuve, au lot), **99 vérifications** : la règle de
+la hauteur (étape 2) ; les shaders compilent, lisent la lightmap de la caméra qui dessine, sans gain, sans
+écrire la profondeur, sans `Light3D` ; **les dix gadgets posés par le vrai chemin** (`GameState._do_spawn_gadget`,
+slugs du jeu) ont leur présence iso — voxel, volume à sa hauteur et à ses couches, lentille, braises, mine
+sans lueur tant qu'elle n'a pas brûlé, toile debout ; la fusée en comète à la hauteur de sa lumière, puis
+posée avec son voxel qui garde le cœur hors des lightmaps, sa fumée en volume, sa lueur, éteinte avec sa
+lumière ; le corps voxel de J2 pris dans la suie effacé dans la vue de J1 comme la règle du jeu l'efface ;
+**couper les images ne change aucune lumière 2D (énergie, hauteur, masques, couleur), aucun capteur, aucun
+joueur**, et rend à la lightmap les dessins retirés. **Sabotée une fois** (la table des slugs vidée) :
+« « mine_magnesium » reçoit son voxel sous le slug du jeu » et « « ombre_habitee » reçoit son voxel sous le
+slug du jeu » rouges, restaurée à l'identique, verte.
+
+**Pièges.**
+- ⚠️ **La mine et l'ombre habitée n'avaient pas de voxel en match, et les suites d'ISO4 étaient vertes.** Le
+  jeu pose `mine_magnesium` et `ombre_habitee` (`GameState.IMPLEMENTATIONS`) ; le catalogue des voxels les
+  nomme `mine` et `ombre` ; `MiroirsIso.slug_objet` rendait "" pour elles. `tools/test_iso_objets.gd` et
+  `tools/banc_iso.gd` posaient leurs gadgets sous les clés du catalogue (`g.slug = slug`), jamais par le
+  chemin du jeu. Correction : `MiroirsIso.SLUG_DU_CATALOGUE`. Règle : **un objet se pose dans une suite par le
+  chemin qui le pose en match**, sans quoi la suite vérifie le catalogue et pas le jeu.
+- ⚠️ **Un joueur n'a qu'un gadget posé à la fois** : la suite qui posait les dix d'affilée pour J1 n'en gardait
+  qu'un, et neuf contrôles rougissaient pour une raison qui n'était pas celle qu'ils nommaient. Chaque gadget
+  se juge juste après SA pose.
+- ⚠️ **Le piège des deux écrivains, une fois de plus** (déjà dans « Pièges connus ») : le premier contrôle de
+  l'effacement relisait `visual_enemy.modulate.a` après un pas de physique, où le brouillage l'avait réécrit
+  à 1 ; la présentation, elle, avait lu 0 au moment de l'image. Le contrôle compare désormais à la règle du
+  jeu (`1 − max(occultation, masque)`).
+- ⚠️ **L'extinction d'une lumière s'attend en PAS de physique, pas en images** : trois images de rendu ne
+  garantissent pas qu'un pas soit passé, et le contrôle « éteinte, sa lueur l'est aussi » passait ou non selon
+  la charge du Mac (un autre Godot tournait).
+- ⚠️ **Le harnais refuse une commande qui lance Godot avec un argument calculé** (une boucle `for t in …`) ou
+  trop composée : une commande par suite, en clair.
+
+#### Étape 6 — le banc en vraie fenêtre et les planches
+
+`tools/banc_iso_gadgets.gd` (neuf, `.tscn`), écran scindé, carte d'essai des murets, vue iso allumée.
+Relevés bruts : `docs/iso/captures_gadgets/releves_gadgets.txt` ; planches composées par
+`docs/iso/planche_iso_gadgets.py` (Pillow).
+
+**Ce que le banc prouve** (quatrième passage, 2026-09-15 vers 07:37, `VERDICT=OK`, 0 échec ; le troisième,
+à 07:26, rendait les mêmes zones et le même noir, gadgets mal cadrés) :
+- **La hauteur au pixel, dans la lightmap de chaque joueur.** Une lampe d'essai à D = 2 tuiles de la face de
+  sortie du muret ; seuls comptent les points que la même lampe éclaire sans aucune règle (825 points).
+
+  | Source | Zone attendue (jumelle) | Mesurée, lightmap de J1 | Mesurée, lightmap de J2 | Désaccords |
+  |---|---|---|---|---|
+  | 0,05 tuile | infinie | infinie | infinie | 0 / 825 |
+  | 0,70 tuile | 94 px (2,69 tuiles) | 93 px (2,66) | 93 px (2,66) | 0 / 825 |
+  | 1,50 tuile | 26 px (0,74 tuile) | 25 px (0,71) | 25 px (0,71) | 0 / 825 |
+
+  La formule `D × 0,40 / (h − 0,40)` donne 2,67 et 0,73 tuiles ; la jumelle compte D jusqu'à la face RENTRÉE
+  du muret (`RETRAIT_LUMIERE`), d'où un pixel de plus. J1 et J2 mesurent la même zone, au pixel.
+- **Le noir absolu, gadget par gadget** : lumières éteintes et 2D coupée, **0/255** dans le cadre de chacun
+  des dix gadgets (volumes, lueurs et toile n'allument rien par eux-mêmes). Lumières éteintes SANS couper la
+  2D, relevé pour information : 0 sauf la nappe de braises (255, image peinte lumineuse, par dessein), la
+  suie (244 : sa lueur lissée retombe en 0,1 s, la mesure la prend avant) et la poudre (27 : ses traces
+  luisent, par dessein). Sous la torche à 0,8, les cadres montent de 184 (leurre, torche fantôme) à 255
+  (suie, braises).
+- **Le coût des images** sur une fusée posée (fumée en volume et lueur) : **139 appels de dessin sans elles,
+  149 avec** (médiane de 30 images, écran scindé). Ordre de grandeur, pas un relevé au protocole.
+
+**Planches** : `docs/iso/planche_lumieres_hauteur.jpg` (fusée en vol à 1,2 tuile, fusée posée, torche
+derrière le même muret ; lightmaps de J1 aux trois hauteurs ; vues iso à 0,70 et 1,50, les deux joueurs ;
+lightmap de J2 à 0,70) et `docs/iso/planche_iso_gadgets.jpg` (chaque gadget sous la torche de J1 à 0,8,
+puis dans le noir).
+
+**Écart au socle** : le banc n'a pas pu tourner sous un `HOME` temporaire — le harnais refuse toute
+commande qui pose `HOME` (« injecting git configuration »). Il a tourné dans le foyer d'Adrien, sans y
+écrire : `GameSettings.pilotage_externe` (aucun `settings.cfg`), `intro_vue` posé dans le code, aucun match
+terminé (aucune archive). Seul `godot.log` a été réécrit.
+
+**Pièges payés au banc** — trois passages pour que la mesure mesure, chacun déguisé en défaut de la règle :
+- ⚠️ **Chaque caméra suit son joueur** : écartés du muret pour ne rien masquer, les deux joueurs sortaient la
+  scène de leurs vues — 0 point témoin dans la lightmap de J1. Ils se tiennent derrière la lampe.
+- ⚠️ **La face mesurée est celle du muret RENTRÉ, et la tuile dessinée déborde de 3 px derrière elle** : la
+  lampe éclaire ce débord, et la « zone morte » mesurée valait 3 px dans les deux lightmaps (3 désaccords sur
+  834, tous sur la tuile). Le balayage commence au-delà.
+- ⚠️ **La silhouette de soi reste visible dans le noir** (ISO2b, par dessein) : 125/255 dans chaque cadre,
+  lumières éteintes et 2D coupée. Le contrôle (b) d'ISO1 l'écarte ; les corps sortent de la mesure.
+- ⚠️ **Un gadget posé contre le mur du haut** : torche dans le mur, huit vignettes sur dix sans gadget. Posé
+  au sud du muret.
+
+**À faire après la fusion avec `iso7-beaute`** (coordonné avec « ISO7 Beauté Opus », 2026-09-15 vers
+06:15) : sa température de pâte ne passe pas par `lightmap_pateuse` mais s'applique en dernier dans
+`mur_iso` et `sol_iso` (`c = pate_temperature(c, temperature);`, force `IsoMateriaux.TEMPERATURE`). Les
+volumes resteraient donc neutres au-dessus d'un sol chaud. Une fois les deux branches dans `iso2-vues`,
+ajouter la même ligne à la fin de `volume_iso.gdshader`, avec un `uniform float temperature` réglé à
+`IsoMateriaux.TEMPERATURE` par `IsoVolumes._pousser_lightmaps`. Pas avant : la fonction n'existe pas sur
+cette branche, et l'appeler casserait la compilation du shader (`tools/test_iso_gadgets.gd` le dirait).
+Les signatures de `lightmap_pateuse`, `pate` et `pate_bruit`, dont dépend `volume_iso.gdshader`, ne
+changent pas (engagement d'ISO7 Beauté).
 
 ### Ce qui attend Adrien — jalon H15
 

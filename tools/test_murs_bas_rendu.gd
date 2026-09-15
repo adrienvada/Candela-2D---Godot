@@ -141,7 +141,12 @@ func _test_shaders_incluent_la_regle() -> void:
 	var inc := FileAccess.get_file_as_string("res://murs_bas_zone.gdshaderinc")
 	_check("l'uniforme a la taille de MURS_MAX",
 		inc.contains("uniform vec4 mb_murs[%d];" % MursBasRendu.MURS_MAX))
-	_check("une lampe à hauteur non nulle est exemptée", inc.contains("source.z > 0.0"))
+	# Gadgets et lumières (2026-09-15) : la hauteur choisit la règle — 0 celle du jeu,
+	# une hauteur réelle celle de la source, au-delà du seuil aucune (le bandeau LED).
+	_check("une lampe sans point d'origine est exemptée (par un seuil, pas une égalité)",
+		inc.contains("if (source.z >= mb_z_sans_origine)"))
+	_check("une lampe à hauteur réelle suit la règle de la hauteur",
+		inc.contains("bool par_hauteur = source.z > 0.0;"))
 	for chemin in ["res://murs_bas_sol.gdshader", "res://murs_bas_decor.gdshader",
 			"res://player_rim_light.gdshader", "res://player_enemy_light.gdshader"]:
 		var s := load(chemin) as Shader
@@ -163,7 +168,12 @@ func _test_hauteur_des_lampes() -> void:
 	for fichier in DirAccess.open("res://").get_files():
 		if fichier.ends_with(".gd") and motif.search(FileAccess.get_file_as_string("res://" + fichier)) != null:
 			coupables.append(fichier)
-	_check("aucun autre script ne pose la hauteur d'une lampe", coupables == ["mur_led.gd"], str(coupables))
+	# Gadgets et lumières : `MursBasRendu.poser_hauteur_source` est le seul autre écrivain,
+	# parce qu'il pose la hauteur ET le masque d'ombre qui va avec.
+	_check("aucun autre script ne pose la hauteur d'une lampe",
+		coupables == ["mur_led.gd", "murs_bas_rendu.gd"], str(coupables))
+	_check("la marque « sans origine » dépasse de loin toute hauteur de source",
+		MursBasRendu.HAUTEUR_SANS_ORIGINE * 0.5 > MursBas.en_pixels(MursBasRendu.HAUTEUR_FUSEE_LANCER) * 10.0)
 	for scene in ["res://player.tscn"]:
 		_check("%s : aucune hauteur de lampe" % scene.get_file(),
 			not FileAccess.get_file_as_string(scene).contains("height ="))

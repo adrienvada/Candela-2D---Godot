@@ -5120,3 +5120,41 @@ mode isométrique […] tu peux prendre toutes les décisions »). Le jalon H-IS
 Conflits seulement dans la ROADMAP et ce journal (deux ajouts au même endroit, gardés). `iso_pate.*`
 identiques à `0cc300e`. Crochets d'ISO7 (`IsoMateriaux.accorder_*`, `sol_iso.gdshader`) et fonctions
 d'ISO5/E2/G relus. Deux imports sans erreur de script ni de shader, puis lot complet.
+### Session « ISO7 Gadgets et lumière Opus » (Gadgets et lumières en iso, branche `iso-gadgets-lumieres`) — ajoutée le 2026-09-15 vers 06:00 (Paris)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », relayé par la Concierge à 05:18, sur mandat
+d'Adrien de 05:00. Branche créée depuis `iso2-vues` (`953ead3`) dans son propre worktree ; le harnais
+refusant d'écrire hors du worktree de départ de la session, entrée par `EnterWorktree` (précédent d'ISO5).
+**Inventaire** écrit d'abord dans la ROADMAP (22 sources et gadgets). **Hauteur des sources** : la hauteur
+d'une `Light2D` choisit sa règle dans `murs_bas_zone.gdshaderinc` (0 : la bande constante du jeu ; une
+hauteur réelle : `D × (h_mur − c) / (h − h_mur)` ; au-delà d'un seuil : sans origine, le bandeau LED dont la
+marque passe de 1,0 à 4096 px) ; `MursBasRendu.poser_hauteur_source` pose la hauteur et le bit d'ombre des
+murets ensemble ; fusée en vol `1,5 · (1 − (1 − élan)²)`, posée 0,15, braises et mine 0,05 ; les lampes du
+joueur et la torche fantôme gardent la règle du jeu (écart au brief, motivé). **Volumes, lueurs, miroirs** :
+`iso_volumes.gd`, `volume_iso.gdshader`, `halo_iso.gdshader` neufs, branchés par `MiroirsIso` — aucune ligne
+dans `presentation_3d.gd`, `game_state.gd` ni `player.gd`. **Trouvé** : la mine et l'ombre habitée n'avaient pas
+de voxel en match (slugs du jeu contre clés du catalogue), invisible aux suites d'ISO4 qui posaient sous les
+clés du catalogue ; corrigé par une table dans `MiroirsIso`. `tools/test_iso_gadgets.gd` neuve, 99
+vérifications, gadgets posés par `GameState._do_spawn_gadget` ; sabotée une fois (table vidée : 2 rouges),
+restaurée. Signalé : le champ de murets de `uniformes_de_vue` est agrandi de la bande du jeu, pas de la zone
+d'une source haute et lointaine.
+
+**Étape 6, 2026-09-15 vers 07:30 — le banc fenêtré et les planches.** `tools/banc_iso_gadgets.gd` : zone
+morte au pixel dans les deux lightmaps pour 0,05 / 0,70 / 1,50 tuile (infinie ; 93 px pour 94 attendus ;
+25 pour 26 ; J1 = J2 ; 0 désaccord sur 825 points), noir absolu 0/255 pour les dix gadgets, 139 → 149
+appels de dessin avec les images d'une fusée posée. Trois passages de banc pour que la mesure mesure (joueurs
+hors des vues, débord de 3 px de la tuile rentrée, silhouette de soi dans le noir), un quatrième pour
+recadrer la planche des gadgets. Le harnais refuse de poser `HOME` : banc dans le foyer d'Adrien, sans
+écriture de réglages. File du Mac tenue par messages avec Habillage, ISO7 Beauté et ISO Corps. Coordonné
+avec ISO7 Beauté : sa température de pâte à reporter sur `volume_iso.gdshader` après la fusion. Refusé :
+les fumées additives d'ISO Assets (brilleraient dans le noir).
+
+**Fusions de la vague — 2/4 : `iso-gadgets-lumieres` (`e280015`), 2026-09-15 vers 10:05.** Hauteur des
+sources dans la lightmap, volumes et lueurs iso, miroirs revus (`iso_volumes.gd`, `volume_iso.gdshader`,
+`halo_iso.gdshader`, `test_iso_gadgets`). Trois conflits, tous des ajouts parallèles : `run_suites.sh`
+(une ligne de suites portant `test_iso_beaute` ET `test_iso_gadgets`), la ROADMAP et ce journal (sections
+gardées). `iso_pate.*` toujours identiques à `0cc300e` — la base de Gadgets portait une pâte sans les
+ajouts d'ISO7, rien n'a été repris de ce côté. Ancrages de Gadgets relus (`poser_hauteur_source`,
+`zone_morte_source`, `eclaire_par_hauteur`, `mb_z_sans_origine`, `hauteur_de_vol`, `SLUG_DU_CATALOGUE`,
+`volumes.suivre`, `anneau_a`, `HAUTEUR_AU_RAS_DU_SOL`), ceux d'ISO7 et d'ISO5 aussi. Deux imports, lot
+complet.

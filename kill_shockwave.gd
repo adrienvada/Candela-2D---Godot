@@ -81,13 +81,24 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	var t := clampf(_age / DURATION, 0.0, 1.0)
+	var anneau := anneau_a(_age)
+	if anneau.y <= 0.0:
+		return # Toute première frame, ou trait déjà effacé : rien à tracer.
+	# Sans anticrénelage : le bord est franc, comme celui d'un trait de plume.
+	draw_arc(Vector2.ZERO, anneau.x, 0.0, TAU, SEGMENTS + 1, RING_COLOR, anneau.y, false)
+
+
+## L'anneau à l'âge `age` : (rayon, épaisseur), en pixels ; épaisseur 0 quand il n'y a rien à tracer.
+##
+## Gadgets et lumières (2026-09-15) — une fonction PURE, parce que deux dessins la lisent : ce trait 2D
+## et l'anneau couché au sol de la vue iso (`IsoVolumes._suivre_onde`). Deux copies de la courbe
+## finiraient par ne plus s'effacer au même instant.
+static func anneau_a(age: float) -> Vector2:
+	var t := clampf(age / DURATION, 0.0, 1.0)
 	# Ease-out cubique sur le rayon : le front jaillit du corps puis décélère,
 	# comme une détonation — un rayon linéaire paraîtrait mécanique.
 	var inv := 1.0 - t
 	var radius := MAX_RADIUS * (1.0 - inv * inv * inv)
 	if radius < 1.0 or t >= PLEIN_JUSQUA:
-		return # Toute première frame, ou trait déjà effacé : rien à tracer.
-	var width := lerpf(WIDTH_START, WIDTH_END, t)
-	# Sans anticrénelage : le bord est franc, comme celui d'un trait de plume.
-	draw_arc(Vector2.ZERO, radius, 0.0, TAU, SEGMENTS + 1, RING_COLOR, width, false)
+		return Vector2(radius, 0.0)
+	return Vector2(radius, lerpf(WIDTH_START, WIDTH_END, t))
