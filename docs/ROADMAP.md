@@ -3197,6 +3197,20 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un shader qui DÉCLARE la texture d'écran fait copier l'écran, qu'il la lise ou non (2026-09-15)
+
+ISO10, 1a : la frange chromatique d'un pixel sur tous les bords de la vue unique, au repos, venait de l'aberration
+du voile d'éblouissement. La rétrodiffusion de sa propre torche le tient à 0,06 en permanence. Le premier réflexe
+aurait été de cacher la copie plein cadre (`_voile_bb`) sous un seuil, ou de mettre un `if` dans le shader. Ni
+l'un ni l'autre n'aurait rien éteint : **Godot copie l'écran pour tout objet dont le shader déclare
+`hint_screen_texture`**, avec ou sans `BackBufferCopy` visible, et quelle que soit la branche prise à cette
+image. **Règle : pour qu'un effet d'écran ne coûte rien quand il ne montre rien, il faut un SECOND shader sans
+la déclaration**, et basculer de matériau.
+Ici : le corps du voile vit dans `voile_eblouissement.gdshaderinc`, inclus par `voile_eblouissement.gdshader`
+(`#define VOILE_LIT_L_ECRAN`, lit l'écran) et par `voile_eblouissement_calme.gdshader` (sans lecture) ;
+`ui._poser_voile` choisit au seuil `aberration_debut`, lu dans le shader. Ce que la copie coûtait au repos :
+0,53 ms par image à 2560×1440.
+
 ### Une valeur de lumière par point ne dit pas d'où elle vient (2026-09-15)
 
 ISO7b a donné aux faces des murs et aux corps la « direction de la lumière » lue dans le gradient de la lightmap.
@@ -25108,7 +25122,35 @@ unique, au repos, rien en scindé ni sur le HUD.
 - ⚠️ **Piège de lecture** : une frange « au repos » n'est pas forcément un effet oublié. C'était un effet
   légitime, alimenté par un niveau que personne ne regardait. Le voile d'éblouissement vit en permanence dès
   qu'une torche est allumée.
-- Lot complet vert à 16:46 : 127 OK en 412 s.
+- Lot complet vert à 16:46 : 127 OK en 412 s. Commit `0bfb838`, accepté par la session cloud sur ses mesures
+  (16:48). La bande de rampe (cinq loupes au cadrage `loupe-led`, niveau forcé à 0,12 / 0,2 / 0,35 / 0,6 / 1,0)
+  vient avec le tour 2 ; d'ici là 0,12 et 0,35 restent, réglages qu'Adrien pourra toucher au test final.
+- **Point ouvert, antérieur à ISO10** : en sortie de chaque séance du photographe, Godot imprime « 1 shaders of
+  type CanvasShaderGLES3 were never freed ». Présent dès les séances de 15:20, avant 1a ; non élucidé, sans effet
+  visible relevé.
+
+**1e — la torche fantôme : close SANS code de jeu.** Le verdict (défaut 7) : « un trait sépia fin et faible pour tout
+cône, elle ne trompe personne ». La loupe du tour 1 la montrait pourtant à côté du PISTOLET de J1 (35°), alors
+qu'elle porte le cône de la classe qui la pose : le Braconnier, à l'arbalète, demi-cône 5°. Spécification (CLASSES,
+étape 11) : « même faisceau, même température, même découpe des corps ». Défaut suspendu par la session cloud
+(16:28) en attendant la loupe à côté d'un vrai Braconnier.
+- **Plan `loupe-torche-braconnier`** : J1 équipé du Braconnier, torche allumée, visée au nord, dans un coin sombre ; sa
+  torche fantôme posée à 150 px, même visée, balayage FIGÉ dans l'axe (`_physics_process` coupé, `rotation =
+  _angle_depart`). Les deux loupes tiennent entières à l'écran : au premier essai, la loupe du leurre butait contre le
+  bord, et la mesure ne comparait rien.
+- **Les deux lumières, propriété par propriété à la prise** : même cookie (`cookie_arbalete.png`, 1024²), même
+  échelle (1,3125, portée ×0,75 comprise), énergie 2,50 contre 2,505 (le souffle), même couleur, hauteur 0, même filtre
+  d'ombre, même masque de portée (7). Deux différences, voulues toutes les deux :
+  - le masque d'ombre, 15 contre 11 : le leurre est aussi bouché par le corps du joueur local (étape 11, « les deux
+    corps la bouchent ») ;
+  - l'origine : 14 px devant le trépied pour le leurre, 30 px devant le centre du corps pour le joueur.
+- **La mesure au pixel ne tranche pas**, et elle est dite telle quelle. Faisceau net hors de la ligne de visée : le
+  leurre rend 0,68 de l'original loin de la lampe et moins près d'elle. Mais le fond de l'original tombe dans le halo
+  de rétrodiffusion du corps de J1, et celui du leurre près de murs ; à l'œil, les deux faisceaux sont deux traits
+  étroits et pâles de même allure. La preuve qui compte est l'identité des lumières ci-dessus.
+- **Au passage (1b)** : les paires de points noirs le long du trait de balle (défaut 8) sont les PORES des dalles
+  (`CandelaTileSet._generer_dalle_encre`, un pixel sur deux jamais voisins), grossis 2,4 fois — pas des traces de pas.
+- Lot complet vert à 17:02 : 127 OK en 421 s.
 
 ### Ce qui attend Adrien — jalon H15
 

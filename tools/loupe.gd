@@ -62,6 +62,8 @@ static func catalogue() -> Array[Dictionary]:
 			"Le halo de la fusée au sol et la fumée qui prend sa lumière."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
 			"Le sprite du gadget et son faisceau, dans le noir."],
+		["loupe-torche-braconnier", "La torche fantôme à côté d'un vrai Braconnier",
+			"ISO10, 1e : le leurre et l'original côte à côte, même arme, même visée, même nuit — les deux cônes doivent se confondre."],
 		["loupe-scinde", "Pilier, corps et bord du cône en écran scindé",
 			"Les loupes 1, 3 et 4 dans la vue 3D de J1."],
 		["loupe-fluidite", "Trente images consécutives à 60 Hz",
@@ -164,6 +166,8 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-torche-fantome : aucun second lieu dégagé à l'écran")
 		else:
 			await _loupe_torche_fantome(plans, lieu)
+	if p._demande(plans, "loupe-torche-braconnier"):
+		await _loupe_torche_braconnier(plans, lieux)
 	if fusee != null and is_instance_valid(fusee):
 		fusee.queue_free()
 	await p._ranger_les_gadgets()
@@ -447,6 +451,91 @@ func _loupe_torche_fantome(plans: Array[Dictionary], lieu: Vector2) -> void:
 	print("  · loupe-torche-fantome : posée en %s" % str(lieu))
 	await _prise(plans, "loupe-torche-fantome", [["", func(img: Image) -> Vector2:
 		return _pixel(img, lieu + Vector2(0.0, -40.0), 8.0)]], false, 1.0)
+	if arme_avant != null:
+		m.p1.equip_weapon(arme_avant)
+
+
+## ISO10, 1e — la torche fantôme contre l'original. Sa spécification (chantier CLASSES, étape 11) : « même
+## faisceau, même température, même découpe des corps » qu'un Braconnier qui fouille la pièce. La loupe du tour 1
+## la montrait à côté du PISTOLET de J1 (35°) ; ici J1 est un vrai Braconnier (arbalète, 5°), torche allumée,
+## et sa torche fantôme est posée 150 px à l'est, même visée, dans le noir.
+##
+## ⚠️ **Son balayage est FIGÉ dans l'axe de pose le temps de la prise** (`_physics_process` coupé,
+## `rotation = _angle_depart`) : elle balaie comme une main, et deux cônes à des angles différents ne se
+## comparent pas. Le figer ne change rien au faisceau lui-même.
+func _loupe_torche_braconnier(plans: Array[Dictionary], lieux: Array[Vector2]) -> void:
+	var m: Node = p._main
+	var classe = p._classe_du_gadget("torche_fantome")
+	if classe == null:
+		printerr("  ✗ loupe-torche-braconnier : aucune classe ne porte la torche fantôme")
+		return
+	var ecart := Vector2(150.0, 0.0)
+	var devant := Vector2(0.0, -120.0)
+	# Un coin sombre où les DEUX lampes ont du sol dégagé devant elles, et où leurs DEUX loupes tiennent entières
+	# dans l'écran : au premier essai, la loupe du leurre butait contre le bord droit, son fond tombait sur un
+	# mur éclairé et la mesure ne comparait plus rien. On essaie le leurre à l'est, puis à l'ouest.
+	var taille := Vector2(DisplayServer.window_get_size())
+	var marge := Vector2(TAILLE_LOUPE) * 0.5 + Vector2(20.0, 20.0)
+	var dans_l_ecran := func(pt: Vector2) -> bool:
+		var q := _pixel_taille(taille, pt)
+		return q.x > marge.x and q.x < taille.x - marge.x and q.y > marge.y and q.y < taille.y - marge.y
+	var depart := Vector2.INF
+	for l in lieux:
+		for sens in [1.0, -1.0]:
+			var e: Vector2 = ecart * sens
+			if p._sol_libre(l + e) and p._sol_libre(l + devant) and p._sol_libre(l + e + devant) \
+					and dans_l_ecran.call(l + devant) and dans_l_ecran.call(l + e + devant):
+				depart = l
+				ecart = e
+				break
+		if depart != Vector2.INF:
+			break
+	if depart == Vector2.INF:
+		printerr("  ✗ loupe-torche-braconnier : aucun coin sombre avec du sol dégagé devant les deux lampes")
+		return
+	var arme_avant = m.p1.current_weapon
+	var j1_avant := _j1
+	var visee_avant := _visee_j1
+	m.p1.equip_weapon(classe)
+	_j1 = depart
+	_visee_j1 = Vector2.UP
+	for n in 20:
+		_tenir_scene()
+		await p.get_tree().process_frame
+	m._do_spawn_gadget(0, _j1 + ecart, -PI / 2.0, "torche_fantome", 9503)
+	var g = p._gadget_de(0)
+	if g == null:
+		printerr("  ✗ loupe-torche-braconnier : la torche fantôme n'a pas été posée")
+	else:
+		g.duree_vie = 0.0
+		g.set_physics_process(false)
+		g.rotation = float(g.get("_angle_depart"))
+	print("  · loupe-torche-braconnier : J1 %s, torche fantôme %s, demi-cône %.0f°, portée %.0f px" % [
+		str(_j1), str(_j1 + ecart), float(classe.torch_angle_deg), float(classe.portee_torche())])
+	# Premier essai : le leurre rendait 0,68 de la lumière de l'original loin de la lampe, à énergie et cookie
+	# égaux dans le code. Les deux lumières, propriété par propriété, telles qu'elles sont à la prise.
+	for _k in 3:
+		_tenir_scene()
+		await p.get_tree().process_frame
+	var lumieres := {"original": m.p1.get("flashlight"), "leurre": g.get("_lumiere") if g != null else null}
+	for nom in lumieres:
+		var l: Light2D = lumieres[nom]
+		if l == null:
+			print("  MESURE lumiere %s absente" % nom)
+			continue
+		var tex_chemin: String = l.texture.resource_path if l.texture != null else "aucune"
+		var tex_taille: Vector2 = l.texture.get_size() if l.texture != null else Vector2.ZERO
+		print("  MESURE lumiere %s texture %s %s echelle %.4f energie %.3f couleur %s hauteur %.2f ombre %s filtre %d lissage %.2f masque_portee %d masque_ombre %d melange %d decalage %s position %s rotation %.3f active %s" % [
+			nom, tex_chemin, str(tex_taille), float(l.get("texture_scale")), l.energy, str(l.color), l.height,
+			str(l.shadow_enabled), int(l.shadow_filter), l.shadow_filter_smooth, l.range_item_cull_mask,
+			l.shadow_item_cull_mask, int(l.blend_mode), str(l.get("offset")), str(l.global_position),
+			l.global_rotation, str(l.enabled)])
+	await _prise(plans, "loupe-torche-braconnier", [
+		["original", func(img: Image) -> Vector2: return _pixel(img, _j1 + devant)],
+		["leurre", func(img: Image) -> Vector2: return _pixel(img, _j1 + ecart + devant)]], false, 1.0)
+	await p._ranger_les_gadgets()
+	_j1 = j1_avant
+	_visee_j1 = visee_avant
 	if arme_avant != null:
 		m.p1.equip_weapon(arme_avant)
 

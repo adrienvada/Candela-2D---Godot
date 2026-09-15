@@ -5612,3 +5612,13 @@ l'aberration du voile en dépend ; ±1 px radial sur toutes les loupes de la vue
 Après : 0 px sur pilier, corps et LED ; la frange reste sous un éblouissement réel. La copie et le voile plein coûtaient 0,53 ms par image au repos
 (14,35 contre 13,82 ms, blocs alternés).
 Lot complet vert à 16:46 : 127 OK en 412 s.
+
+**ISO10, lot 1, 1e — la torche fantôme contre un vrai Braconnier, 2026-09-15 vers 17:00.** Session « Iso 1 Opus ».
+Close sans code de jeu : la torche fantôme porte le cône de sa classe (Braconnier, arbalète, 5°), et la loupe du
+tour 1 la comparait au pistolet de J1. Nouveau plan `loupe-torche-braconnier` : les deux lampes côte à côte, le
+balayage du leurre figé dans l'axe. Les deux lumières sont identiques propriété par propriété (cookie, échelle,
+énergie, couleur, hauteur, filtre, masque de portée) ; seuls diffèrent, par dessein, le masque d'ombre et l'origine.
+La mesure au pixel reste contaminée (halo du corps, murs voisins) et le dit. Au passage : les points noirs du trait
+de balle sont les pores des dalles. Dans le même commit, les deux ajouts demandés par la session cloud : le piège de
+la texture d'écran et le point ouvert du shader jamais libéré.
+Lot complet vert à 17:02 : 127 OK en 421 s.
