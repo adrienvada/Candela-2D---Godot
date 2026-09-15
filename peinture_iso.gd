@@ -111,6 +111,16 @@ func point_plancher() -> Vector2:
 	return cadre.position + Vector2(ETALON_COTE * 2.5, ETALON_COTE * 0.5)
 
 
+## ISO12, lot 0 — les deux aplats du damier (`CandelaTileSet.SOL_DESSIN_A`, puis `_B`), peints comme les deux étalons de 1f : le
+## sol éclairé divise la peinture par l'aplat de SA case, lu dans le même espace de couleur qu'elle.
+func point_aplat_a() -> Vector2:
+	return cadre.position + Vector2(ETALON_COTE * 4.5, ETALON_COTE * 0.5)
+
+
+func point_aplat_b() -> Vector2:
+	return cadre.position + Vector2(ETALON_COTE * 6.5, ETALON_COTE * 0.5)
+
+
 ## La couleur de l'étalon de référence : la moyenne des deux tons du sol dessiné, telle que le sol la peint.
 static func couleur_reference() -> Color:
 	return CandelaTileSet.SOL_DESSIN_A.lerp(CandelaTileSet.SOL_DESSIN_B, 0.5)
@@ -140,7 +150,8 @@ func _ready() -> void:
 		if nom.begins_with("ArenaDecor"):
 			_decor_source = source
 			_decor_copie = copie
-	for paire in [[point_reference(), couleur_reference()], [point_plancher(), couleur_plancher()]]:
+	for paire in [[point_reference(), couleur_reference()], [point_plancher(), couleur_plancher()],
+			[point_aplat_a(), CandelaTileSet.SOL_DESSIN_A], [point_aplat_b(), CandelaTileSet.SOL_DESSIN_B]]:
 		_statiques.append(_etalon(paire[0], paire[1]))
 	for groupe in TRACES:
 		for n in get_tree().get_nodes_in_group(groupe):

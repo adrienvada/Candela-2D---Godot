@@ -336,6 +336,15 @@ func _test_shaders_lisent_l_energie() -> void:
 		var trouve := corps.search(source)
 		if trouve == null:
 			continue
+		# ISO12, lot 0 — un shader SPATIAL n'a pas de `LIGHT_ENERGY` dans son `light()` (il ne compilerait pas) : son
+		# `LIGHT_COLOR` y est déjà la couleur de la lumière multipliée par son énergie (et par PI). La règle d'Adrien du
+		# 2026-09-10 porte sur les shaders CANVAS, où `LIGHT_COLOR` ne la contient pas ; pour un spatial, la garde est donc
+		# que `light()` lise `LIGHT_COLOR` — sans quoi l'énergie ne passerait plus. Mesuré au banc de la lumière 3D : les
+		# constantes d'énergie par type de source changent bien la luminance des sols et murs éclairés.
+		if source.contains("shader_type spatial"):
+			_check("%s (spatial) : light() lit LIGHT_COLOR, qui porte l'énergie" % fichier,
+				trouve.get_string().contains("LIGHT_COLOR"))
+			continue
 		var lit_energie := trouve.get_string().contains("LIGHT_ENERGY")
 		if fichier in LIGHT_SANS_ENERGIE:
 			_check("%s : exception connue, toujours sans énergie" % fichier, not lit_energie,

@@ -3231,6 +3231,29 @@ Ici : le corps du voile vit dans `voile_eblouissement.gdshaderinc`, inclus par `
 `ui._poser_voile` choisit au seuil `aberration_debut`, lu dans le shader. Ce que la copie coûtait au repos :
 0,53 ms par image à 2560×1440.
 
+### Une bride empêche d'en montrer plus, jamais d'en montrer moins (2026-09-15)
+
+ISO12, lot 0. La lumière 3D multipliée par `smoothstep(L2D)` ne peut rien allumer que la 2D laisse noir : c'était la seule
+preuve demandée. La première passe du banc a montré l'autre moitié : la vue 3D laissait NOIRS le halo de rétrodiffusion du
+porteur, le corps adverse qu'il trahit, et toute la bande de sol que le bandeau de LED des murs éclaire — trois lumières 2D
+qu'aucune `Light3D` ne recopiait (`BodyLight`, écartée au plan ; `MurLed`, sans point d'origine, que personne n'avait
+listée). **Règle : une traduction de lumière se prouve dans les deux sens** — rien de plus que la source (pixels rouges), rien
+de moins (pixels bleus) — et la liste des sources se dresse depuis ce qui éclaire l'image, pas depuis ce qu'on pense avoir
+posé. Le bandeau est sorti d'une recherche sur « ce qui éclaire le sol le long des murs sans joueur à proximité ».
+
+### L'espace de couleur d'une texture de sous-vue ne se devine pas : une référence se PEINT dans la texture (2026-09-15)
+
+ISO12, lot 0. Le sol éclairé prend son albédo dans la peinture de la carte (`peinture_iso.gd`) et devait y effacer le damier
+à deux tons. Trois essais ont raisonné sur l'espace de couleur de la texture, et les trois ont échoué au banc : le rapport
+des tons tel quel, puis le même porté à la puissance 2,2, laissaient le damier franc sous la lampe ; les deux aplats
+`CandelaTileSet.SOL_DESSIN_A/_B` convertis en linéaire côté processeur rendaient le sol cinq à neuf fois trop clair. **La
+texture n'était dans l'espace supposé par aucun des trois.** Ce qui a marché est ce qui marchait déjà en ISO10 1f : les
+deux aplats PEINTS dans la texture, comme deux étalons de plus, et lus par le shader dans le même espace que la peinture.
+Damier effacé, luminance du sol à 1,06 à 1,29 fois la 2D. **Règle : une couleur de référence pour une texture rendue se
+peint dans cette texture ; elle ne se calcule pas sur le processeur et ne se déduit pas d'un exposant.** C'est le même
+piège que celui de 1f (« une référence calculée côté processeur en linéaire assombrissait les faces de six fois »), payé
+une seconde fois faute d'avoir relu le premier.
+
 ### Un cercle qui dit « déjà dessus » doit être celui du corps, pas celui de son point le plus long (2026-09-15)
 
 ISO11, L1 : au premier test, Adrien escaladait tout mur bas frôlé « juste avec le joystick », sans « croix ». La règle
@@ -25574,6 +25597,91 @@ réseau local, entraînement : `_entree_preparer`, en miroir de `_entree_changer
 carte et rien ne bouge pour lui. `map_chosen` ne part que d'un choix du joueur (vignette pressée, code importé), jamais
 d'une restauration. Preuve : `test_audit_menus`, section « Choisir une carte enchaîne sur les armes », par le vrai
 chemin d'une vignette pressée sur les quatre écrans, et l'écran d'un invité inchangé. Sur le `ui.gd` d'avant, les quatre écrans échouent : la carte change, le cadre reste sur la galerie (`cartes`) et le curseur de J1 sur une vignette. Lot complet vert à 22:32 : 112 suites, sans erreur de script, 434 s.
+
+### ISO12 — la lumière 3D, bridée par la lightmap 🟡 (ouvert le 2026-09-15 au soir, branche `iso12-lumiere3d`)
+
+**D'où il vient.** Adrien, 21:5x : « est-ce qu'on ne se fourvoie pas à persévérer en 2D ? Vu les images de référence
+générées, est-ce qu'on ne devrait pas faire la 3D ? » ; puis 22:0x : « Ok pour ISO12, enchaîne avec les lumières 3D ».
+Brief `briefs/iso12_lumiere3d.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (branche-signal `claude/reveil`).
+Le jeu reste 2D — simulation, réseau, hitbox, rejeu — et la présentation est déjà 3D ; ce qui plafonnait, c'est la lumière
+restée 2D (ISO7b a prouvé que le gradient de la lightmap ne dit pas la direction). **La règle « pas de Light3D » de l'étude
+tombe, à une condition : la vue 3D ne montre NI PLUS NI MOINS que la 2D.**
+
+**Ni plus : la bride.** `couleur = lumière 3D × albédo × smoothstep(bride_bas, bride_haut, L2D)`. L2D se lit où le jeu la lit
+déjà : au sol et au pied des faces, la lightmap divisée par la peinture de la carte (ISO10 1f) ; sur un corps, son capteur
+(ISO2/ISO3). Là où la lightmap de la vue dit 0, la couleur vaut 0. Par vue sans masque de lumière : chaque vue lit SA
+lightmap (murs et corps sont des maillages partagés, un `light_cull_mask` ne les séparerait pas).
+
+**Ni moins : le miroir complet des sources.** La bride n'empêchait pas la 3D d'en montrer MOINS, et la première passe du
+banc l'a montré : le halo de rétrodiffusion autour du porteur, le corps de J2 et toute la bande de sol le long des murs
+passaient au noir. D'où la rétrodiffusion au miroir, et le bandeau de LED des murs en émission (voir le lot 0), et la
+preuve inverse au banc (session cloud, 22:48).
+
+**Invariants** : simulation, protocole (VERSION 18), hitbox, rejeu, voile, encre intacts ; aucune lumière ambiante ni
+d'environnement ; les constantes d'énergie par type de source sont les mêmes pour tous (aucun curseur ne touche la bride) ;
+rendu `gl_compatibility` (ombres positionnelles oui, SSAO et brouillard non) ; cible 1 % bas ≥ 60 dans les deux vues,
+mesurée au banc.
+
+#### Lot 0 — le branchement, derrière un drapeau éteint, et le banc
+
+- **Plan-delta** envoyé avant tout code, accepté à 22:15 avec trois arbitrages : la pâte en variantes au banc ((a) paliers sur
+  la bride, (c) sans palier ; (b), une passe d'écran, écartée tant que (a) et (c) ne sont pas jugées) ; sol et murs éclairés
+  en shaders DISTINCTS au lot 0 ; le plafond de huit lumières par maillage levé par le réglage de projet avant toute découpe.
+  Et cinq précisions : la torche fantôme est une `SpotLight3D` identique à la torche de sa classe ; le cône 3D dépasse le
+  cône 2D de cinq degrés et la portée 3D la portée 2D (le bord visible appartient à la bride) ; la silhouette de soi et
+  l'effacement restent un terme d'ÉMISSION par vue ; énergies identiques pour tous ; `contact_des_corps` en variante.
+- **Le miroir** (`lumieres_iso.gd`) : une `Light3D` par source `Light2D` du jeu, liste FERMÉE — torche et flash de chaque
+  joueur et de leurs fantômes de killcam, halo des fusées, lueur des braises, embrasement de la mine, faisceau de la torche
+  fantôme, et la RÉTRODIFFUSION (`BodyLight` des joueurs, `Halo` de la torche fantôme : écartée au plan, rendue après la
+  première passe, accord de la session cloud à 22:48). Jamais la lumière de la silhouette de soi (`ambient_light`), privée
+  d'une vue. Hauteurs en pixels du monde 3D : le canon de la posture (`MursBas.hauteur_de_posture`), la hauteur de source
+  posée par Gadgets (`MursBasRendu.hauteur_source`). La torche vise le point du sol à mi-portée.
+- **Le bandeau de LED des murs** (`Arena/MurLed`) : une `PointLight2D` sans point d'origine, texture cuite depuis la distance
+  au mur le plus proche, sans ombre, qui respire. Aucune `Light3D` ne la reproduit : elle entre dans le sol et les murs
+  éclairés en ÉMISSION — la même texture lue au même endroit du monde (intensité dans l'alpha), × l'albédo bridé × sa couleur
+  de l'image × un gain calibré au banc. Ni ombre, ni place au plafond des lumières.
+- **Les matériaux éclairés** (`sol_iso_eclaire`, `mur_iso_eclaire`, `corps_iso_eclaire`) : `light()` Lambert sans
+  spéculaire, la bride sur l'ALBEDO. Murs : matière d'ISO7, encre, contact au pied et liseré gardés, le lambert tiré de la
+  lightmap retiré. Sol : l'albédo est la peinture de la carte divisée par l'aplat de SA case (le sang et les douilles gardent
+  leur écart, le damier s'efface), les deux aplats étant peints dans la texture comme les étalons de 1f (voir « Pièges
+  connus »). Corps : la silhouette de soi passe en émission.
+- **Le branchement** (`Presentation3D.poser_lumiere_3d`, drapeau `lumiere_3d` ÉTEINT par défaut) : tant qu'il l'est, la vue
+  iso est exactement celle d'ISO11 et les suites ne voient rien. Allumé : matériaux basculés, ombres portées par les boîtes
+  des murs et les boîtes de COULEUR des corps (jamais leurs doubles de profondeur), la peinture donnée aux deux sols, le
+  miroir et le bandeau suivis après les corps. Les ombres des omni sont en CUBE : le double paraboloïde est refusé par le
+  rendu Compatibility, avec une erreur à chaque image.
+- **Le banc** (`tools/banc_lumiere3d.tscn`, fenêtre 2560×1440) : carte d'essai des murs bas et Cloître ; J1 au pistolet, J2
+  au Braconnier ; fusée posée, flash de tir rejoué ; vue unique et écran scindé ; référence ISO11 lumière éteinte ; variantes
+  ombres, atlas 1024/2048/4096, deux brides, pâte (a)/(c), contact, rétrodiffusion ; l'échelle des économies du brief (atlas
+  réduit ; pas d'ombre sur les omni ; seules les torches des joueurs ombrées ; ombres en vue unique seulement) ; plafond de
+  lumières 8 puis 16 (`override.cfg` temporaire) ; `--energies` pour la calibration. Relevés par prise : médiane, 1 % bas,
+  pire image, appels de dessin, lumières allumées. La preuve dans les deux sens sous huit visées et dans les deux vues,
+  rétrodiffusion oui et non (`analyse_lumiere3d.py`) : ROUGE, un pixel lumineux où L2D = 0, il en faut zéro ; BLEU, un pixel
+  éclairé en 2D resté noir en 3D, moins de 1 % des pixels éclairés. Et la case de la silhouette de soi dans le noir.
+
+**Premier banc complet (2026-09-15, 23:17 à 23:34, plafond de lumières 8 puis 16, bandeau de LED figé)** — ce qu'il dit, et
+ce qu'il ne dit PAS encore :
+- **Image** : calibrée sur une passe rapide, la luminance moyenne là où la 2D est éclairée vaut 1,06 à 1,29 fois la 2D sur le
+  cône de torche, 0,77 à 0,84 sur le halo de fusée, 1,10 sur la rétrodiffusion ; damier effacé ; la bande de LED revenue.
+- **Cadence : NON MESURÉE.** Les médianes collent à 60,0 image/s sur presque toutes les prises, référence lumière éteinte
+  comprise, et le 1 % bas de cette référence est lui-même sous 60 (42,8 / 41,5 / 44,9 / 47,5 selon carte et vue, plafond 8) :
+  la fenêtre a été cadencée à 60 Hz pendant le banc (Mac partagé, fenêtre sans doute pas au premier plan). Les écarts entre
+  variantes sont dans le bruit. Aucune conclusion de coût n'est tirée de ces chiffres ; le banc est à refaire Mac libre.
+- **Appels de dessin** (indépendants de la cadence) : murs bas, vue unique 107 → 136 avec ombres, 109 sans ombre des omni ;
+  écran scindé 186 → 237 avec ombres, 193 sans ombre des omni, 183 ombres en vue unique seulement ; Cloître, vue unique
+  123 → 164 avec ombres, 132 sans ombre des omni. Le plafond levé à 16 ne change pas ces comptes (au plus six lumières
+  allumées dans la scène).
+- **Preuve : NON CONCLUANTE, par défaut de l'instrument, pas du rendu.** Rouge (lumineux où L2D = 0) : ~6 000 pixels par paire
+  au Cloître — la silhouette de soi de chaque corps, émise en prise normale et oubliée par le mode masque ; sur les murs bas,
+  une ligne de 1 à 2 px au bord haut de la vue de J2, et rien sans rétrodiffusion. Bleu (visible en 2D, noir en 3D) : 35 à
+  69 % — surtout la frange où la lightmap vaut à peine plus que zéro et où la référence 2D est elle-même noire à l'œil, le
+  masque comptant « éclairé » tout L2D > 0 ; et la paire normale / masque ne compare pas toujours la même scène (le flash
+  rejoué toutes les 0,5 s tombe dans l'une et pas dans l'autre). Corrections préparées : masque de la silhouette, flash coupé
+  pendant la preuve, bleu jugé contre une prise de référence 2D par visée ; à rejouer.
+- **Écran scindé du Cloître, prises avec ombres : INVALIDES** — torches éteintes, une seule lumière au miroir : la manche de
+  cinq minutes s'est terminée pendant le banc, qui ne tenait pas l'horloge. À rejouer.
+- **Silhouette de soi : tenue** — dans le noir, torches éteintes, J1 à 63 dans sa vue et 0 dans celle de J2, sur les deux cartes.
+ Lot complet vert à 23:41 (drapeau éteint) : 112 suites, sans erreur de script, 432 s.
 
 ### Ce qui attend Adrien — jalon H15
 

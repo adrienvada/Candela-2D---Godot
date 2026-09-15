@@ -88,6 +88,13 @@ const IsoPate := preload("res://iso_pate.gd")
 ## ISO7 — le sol habillé : `sol_projete.gdshader` (ISO1) plus la matière du sol, force 0 sans beauté.
 const SHADER_SOL := preload("res://sol_iso.gdshader")
 const SHADER_MUR := preload("res://mur_iso.gdshader")
+## ISO12, lot 0 — les matériaux ÉCLAIRÉS (lumière 3D × bride), et le miroir des sources. Préchargés comme les autres : aucun
+## shader compilé à la volée au premier allumage.
+const SHADER_SOL_ECLAIRE := preload("res://sol_iso_eclaire.gdshader")
+const SHADER_MUR_ECLAIRE := preload("res://mur_iso_eclaire.gdshader")
+const SHADER_CORPS_ECLAIRE := preload("res://corps_iso_eclaire.gdshader")
+const SHADER_CORPS_VOXEL := preload("res://corps_iso.gdshader")
+const LumieresIsoT := preload("res://lumieres_iso.gd")
 const SHADER_CORPS := preload("res://corps_grossier_iso.gdshader")
 ## ISO2b — la passe de profondeur des corps, avant leur couleur (voir le shader).
 const SHADER_CORPS_PROFONDEUR := preload("res://corps_profondeur_iso.gdshader")
@@ -216,6 +223,30 @@ var corps_voxel := true
 var _voxels: Array = []
 var _etats_corps: Array = []
 var _miroirs: MiroirsIso
+
+## ISO12, lot 0 — **la lumière 3D, bridée par la lightmap.** Éteinte par défaut : tant qu'elle l'est, la vue iso est
+## exactement celle d'ISO11. Allumée (`poser_lumiere_3d`), sol, murs et corps passent aux matériaux éclairés, le miroir des
+## sources (`lumieres_iso.gd`) pose une Light3D par Light2D du jeu, et chaque matériau porte la bride
+## `smoothstep(bride.x, bride.y, L2D)` : là où la lightmap de la vue dit 0, la couleur vaut 0. Aucun curseur de joueur ne
+## touche la bride (équité) ; seul le banc (`tools/banc_lumiere3d.gd`) la fait varier.
+var lumiere_3d := false
+var bride := Vector2(0.0, 0.05)
+## 0 : (a) la bride en paliers de pâte ; 1 : (c) continue.
+var variante_pate_3d := 0
+## 1 : le masque de la preuve (blanc là où L2D > 0), pour le compte de pixels du banc.
+var masque_preuve := 0
+var ombres_3d := true
+var atlas_ombres := 2048
+## ISO12 — la rétrodiffusion au miroir (accord de la session cloud, 22:48), et les économies du brief (voir `lumieres_iso.gd`).
+var retrodiffusion_3d := true
+var ombres_omni_3d := true
+var ombres_torches_joueurs_seules_3d := false
+## Économie ultime du brief : les ombres en vue unique seulement ; l'écran scindé garde la bride sans ombre.
+var ombres_vue_unique_seulement := false
+## ISO12 — le gain du bandeau de LED des murs en émission (`MurLed`), calibré au banc ; commun à tous.
+## Calibré au banc (cinquième passe rapide) : la bande de sol le long des murs sortait 1,57 fois la 2D avec 0,3.
+var gain_led_3d := 0.11
+var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
 const DUREE_TOUCHE_CORPS := 0.6
@@ -734,6 +765,9 @@ func _suivre() -> void:
 	for vue in _vues:
 		ids.append(_id_de(vue))
 	_miroirs.suivre(_main, ids, style_pate, self)
+	if _lumieres != null:
+		_lumieres.call("suivre", _main, _voxels)
+		_accorder_la_led()
 
 
 func variante_lightmap() -> String:
@@ -872,6 +906,13 @@ func _poser_peinture() -> void:
 	add_child(_peinture)
 	IsoMateriaux.accorder_peinture(_mat_mur, _peinture.get_texture(), _peinture.cadre,
 		_peinture.point_reference(), _peinture.point_plancher())
+	# ISO12 — la même peinture pour les deux sols : sans effet sur `sol_iso`, qui ne la déclare pas ; l'albédo et le
+	# normaliseur de L2D pour `sol_iso_eclaire`.
+	for m in _mat_sols:
+		IsoMateriaux.accorder_peinture(m, _peinture.get_texture(), _peinture.cadre,
+			_peinture.point_reference(), _peinture.point_plancher())
+		m.set_shader_parameter("peinture_aplat_a_px", _peinture.point_aplat_a())
+		m.set_shader_parameter("peinture_aplat_b_px", _peinture.point_aplat_b())
 
 
 func _retirer_peinture() -> void:
@@ -881,6 +922,8 @@ func _retirer_peinture() -> void:
 	_peinture = null
 	if _mat_mur != null:
 		IsoMateriaux.accorder_peinture(_mat_mur, null, Rect2())
+	for m in _mat_sols:
+		IsoMateriaux.accorder_peinture(m, null, Rect2())
 
 
 ## La peinture en place, pour la mesure (`tools/loupe.gd`) ; `null` quand la vue iso est éteinte.
@@ -981,6 +1024,9 @@ func _accorder_le_slug(j: int, slug: String) -> void:
 	IsoMateriaux.accorder_corps(mat)
 	_mat_corps[j] = mat
 	_mat_profondeur[j] = voxel.materiau_profondeur()
+	if lumiere_3d:
+		_eclairer_le_corps(j)
+		_accorder_la_bride()
 	for id in 2:
 		var c = _capteurs[id][j]
 		if c != null:
@@ -1620,6 +1666,114 @@ func _construire_la_scene() -> void:
 		_affichages.append(affichage)
 
 
+## ISO12 — allume ou éteint la lumière 3D. Idempotent ; peut s'appeler vue éteinte (les matériaux et le miroir attendent).
+func poser_lumiere_3d(active: bool) -> void:
+	lumiere_3d = active
+	if _scene == null:
+		return
+	if _mat_mur != null:
+		_mat_mur.shader = SHADER_MUR_ECLAIRE if active else SHADER_MUR
+		# Les réglages d'ISO7 reposés après le changement de shader : rien ne doit dépendre de ce que le moteur garde.
+		IsoMateriaux.accorder_mur(_mat_mur)
+		# Le lambert tiré du gradient de la lightmap (ISO7b) cède la direction à la vraie lampe.
+		if active:
+			_mat_mur.set_shader_parameter("lambert_plancher", 1.0)
+	for m in _mat_sols:
+		m.shader = SHADER_SOL_ECLAIRE if active else SHADER_SOL
+		IsoMateriaux.accorder_sol(m)
+	if _peinture != null and is_instance_valid(_peinture):
+		for m in _mat_sols:
+			IsoMateriaux.accorder_peinture(m, _peinture.get_texture(), _peinture.cadre,
+				_peinture.point_reference(), _peinture.point_plancher())
+			m.set_shader_parameter("peinture_aplat_a_px", _peinture.point_aplat_a())
+			m.set_shader_parameter("peinture_aplat_b_px", _peinture.point_aplat_b())
+		if _mat_mur != null:
+			IsoMateriaux.accorder_peinture(_mat_mur, _peinture.get_texture(), _peinture.cadre,
+				_peinture.point_reference(), _peinture.point_plancher())
+	for j in _voxels.size():
+		_eclairer_le_corps(j)
+	if _murs != null:
+		for boite in _murs.get_children():
+			(boite as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if active \
+				else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if active and _lumieres == null:
+		_lumieres = LumieresIsoT.new()
+		_lumieres.name = "LumieresIso"
+		_scene.add_child(_lumieres)
+	elif not active and _lumieres != null:
+		_scene.remove_child(_lumieres)
+		_lumieres.queue_free()
+		_lumieres = null
+	_accorder_la_bride()
+
+
+## ISO12 — la bride, sa variante et le masque de la preuve sur tous les matériaux éclairés ; les ombres et leur atlas.
+func _accorder_la_bride() -> void:
+	for m in _materiaux():
+		if m == null:
+			continue
+		m.set_shader_parameter("bride_bas", bride.x)
+		m.set_shader_parameter("bride_haut", bride.y)
+		m.set_shader_parameter("variante_pate", variante_pate_3d)
+		m.set_shader_parameter("masque_preuve", masque_preuve)
+	if _lumieres != null:
+		_lumieres.set("ombres", ombres_3d and not (ombres_vue_unique_seulement and _scinde))
+		_lumieres.set("retrodiffusion", retrodiffusion_3d)
+		_lumieres.set("ombres_omni", ombres_omni_3d)
+		_lumieres.set("ombres_torches_joueurs_seules", ombres_torches_joueurs_seules_3d)
+	var racine := get_tree().root if is_inside_tree() else null
+	if racine != null:
+		racine.positional_shadow_atlas_size = atlas_ombres
+	for vue in _vues3d:
+		(vue as SubViewport).positional_shadow_atlas_size = atlas_ombres
+
+
+## ISO12 — le corps voxel `j` passe au matériau éclairé (ou en revient), et ses boîtes de COULEUR portent ombre ; leurs
+## doubles de profondeur (`materiau_profondeur`) jamais, sinon chaque corps s'ombrerait deux fois.
+func _eclairer_le_corps(j: int) -> void:
+	if j >= _voxels.size() or _mat_corps[j] == null:
+		return
+	var mat := _mat_corps[j] as ShaderMaterial
+	mat.shader = SHADER_CORPS_ECLAIRE if lumiere_3d else SHADER_CORPS_VOXEL
+	IsoMateriaux.accorder_corps(mat)
+	if lumiere_3d:
+		mat.set_shader_parameter("modele", 0.0)
+	var reglage := GeometryInstance3D.SHADOW_CASTING_SETTING_ON if lumiere_3d \
+		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for boite in (_voxels[j] as Node).find_children("*", "MeshInstance3D", true, false):
+		var mi := boite as MeshInstance3D
+		mi.cast_shadow = reglage if mi.material_override == mat else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## ISO12 — le bandeau de LED des murs (`Arena/MurLed`) sur le sol et les murs éclairés : sa texture, le rectangle du monde
+## qu'elle couvre (centré sur la lumière, `texture_scale` fois sa taille) et sa couleur de CETTE image — noire s'il est éteint.
+func _accorder_la_led() -> void:
+	var led: PointLight2D = null
+	if _main != null and _main.arena != null:
+		led = _main.arena.get_node_or_null(^"MurLed") as PointLight2D
+	var active := led != null and led.texture != null
+	var taille := Vector2.ONE
+	var origine := Vector2.ZERO
+	var couleur := Vector3.ZERO
+	if active:
+		taille = Vector2(led.texture.get_size()) * led.texture_scale
+		origine = led.global_position - taille * 0.5
+		if led.enabled and led.is_visible_in_tree():
+			couleur = Vector3(led.color.r, led.color.g, led.color.b) * led.energy
+	var mats: Array = [_mat_mur]
+	mats.append_array(_mat_sols)
+	for m in mats:
+		if m == null:
+			continue
+		(m as ShaderMaterial).set_shader_parameter("led_active", active)
+		if active:
+			(m as ShaderMaterial).set_shader_parameter("led_texture", led.texture)
+		(m as ShaderMaterial).set_shader_parameter("led_origine_px", origine)
+		(m as ShaderMaterial).set_shader_parameter("led_taille_px", taille)
+		(m as ShaderMaterial).set_shader_parameter("led_couleur", couleur)
+		(m as ShaderMaterial).set_shader_parameter("led_gain", gain_led_3d)
+
+
 func _construire_les_murs() -> void:
 	if _murs != null:
 		_scene.remove_child(_murs)
@@ -1631,6 +1785,8 @@ func _construire_les_murs() -> void:
 	IsoMateriaux.accorder_grille(_mat_mur, data)
 	for boite in _murs.get_children():
 		(boite as MeshInstance3D).layers = CALQUE_COMMUN
+		if lumiere_3d:
+			(boite as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_scene.add_child(_murs)
 	_reconstruire = false
 

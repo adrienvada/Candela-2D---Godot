@@ -5722,3 +5722,14 @@ J1 sur sa première arme, sur les quatre écrans où la carte se choisit ; l'inv
 `test_audit_menus`. Sur le `ui.gd` d'avant, les quatre écrans échouent : la carte change, le cadre reste sur la galerie (`cartes`) et le curseur de J1 sur une vignette. Lot complet vert à 22:32 : 112 suites, sans erreur de script, 434 s.
 sur le code d'avant, saut de 210,7 px à la première image et pas de 396 px. Bande du photographe (`killcam-bande`,
 une prise toutes les ~0,37 s, pas trente images consécutives) : zoom 1,800 → 1,543 puis immobile. Lot complet vert à 22:06 : 112 suites, sans erreur de script, 435 s.
+
+**ISO12, lot 0 — la lumière 3D bridée, branchement et banc, 2026-09-15 au soir.** Session « Iso 1 Opus », branche
+`iso12-lumiere3d` depuis `affe959`. Plan-delta accepté à 22:15. Miroir fermé des sources Light2D en Light3D, matériaux
+éclairés du sol, des murs et des corps avec la bride sur l'albédo, derrière un drapeau éteint par défaut. Trois passes rapides
+du banc avant le banc complet : ombres omni en cube (le double paraboloïde est refusé), torche visant le sol à mi-portée,
+rétrodiffusion rendue au miroir et bandeau de LED des murs en émission (la 3D en montrait MOINS que la 2D), damier du sol
+effacé par deux aplats peints dans la peinture (trois essais par l'espace de couleur avaient échoué) ; bandeau figé pour
+calibrer ; énergies par type de source posées dans le code. Premier banc complet : image calibrée ; cadence non mesurée (fenêtre cadencée à 60 Hz, référence elle-même sous 60 au 1 %
+bas) ; appels de dessin +29 en vue unique et +51 en écran scindé avec ombres ; preuve non concluante par défaut de
+l'instrument (silhouette oubliée par le masque, flash rejoué entre deux prises, frange sous le seuil) et écran scindé du
+Cloître invalide (fin de manche) — corrections préparées, à rejouer ; silhouette de soi tenue. Lot complet vert à 23:41 (drapeau éteint) : 112 suites, sans erreur de script, 432 s.
