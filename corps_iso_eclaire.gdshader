@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back, fog_disabled, specular_disabled, blend_mix, depth_draw_always;
+render_mode cull_back, fog_disabled, blend_mix, depth_draw_always;
 
 // ISO12, lot 0 — LE CORPS ÉCLAIRÉ : `corps_iso.gdshader` passé à la lumière 3D, derrière le drapeau `Presentation3D.lumiere_3d`.
 //
@@ -93,6 +93,7 @@ render_mode cull_back, fog_disabled, specular_disabled, blend_mix, depth_draw_al
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
+#include "res://iso_relief.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -283,9 +284,21 @@ void fragment() {
 		EMISSION = (silhouette.rgb * s + c * o * (1.0 - s) * gain_corps_propre) / a;
 		ALPHA = a;
 	}
+
+	// ISO12 v27 — le dénominateur du relief : calculé ici (sans ombre, sur la liste fermée des lampes) parce que `light()` ne
+	// voit aucune variable de `fragment()`, et transporté vers lui par ce canal. Posé après les deux branches, donc dans les
+	// deux cas.
+	SPECULAR = relief_encoder(monde);
 }
 
-// ISO12 — Lambert seul, sans spéculaire.
+// ISO12 v27 — le relief normalisé, sans spéculaire.
 void light() {
-	DIFFUSE_LIGHT += ATTENUATION * LIGHT_COLOR * max(dot(NORMAL, LIGHT), 0.0);
+	// ISO12 v27 — LE RELIEF : le numérateur (ce qu'on accumulait ici, l'ombre portée par ATTENUATION) divisé par le
+	// dénominateur commun, calculé sans ombre dans `fragment()` et transporté par SPECULAR. Le rapport vaut 1 sur un sol plat
+	// quel que soit le nombre de lampes, plus sur une face tournée vers la lampe, moins dans l'ombre : l'intensité vient de la
+	// 2D (ALBEDO porte déjà albédo × L2D), la 3D n'apporte que le modelé.
+	//
+	// ⚠️ Ce `light()` n'écrit JAMAIS SPECULAR_LIGHT, et c'est ce qui éteint la passe spéculaire du moteur maintenant que
+	// `specular_disabled` a sauté. Le supprimer rallumerait les reflets.
+	DIFFUSE_LIGHT += relief_contribution(LIGHT_COLOR, ATTENUATION, dot(NORMAL, LIGHT), SPECULAR_AMOUNT);
 }

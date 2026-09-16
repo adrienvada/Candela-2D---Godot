@@ -213,3 +213,40 @@ func _bout(corps: Variant, joueur: Node2D, hauteur_px: float) -> Vector3:
 	var bouche := joueur.get_node_or_null(^"Muzzle") as Node2D
 	var p := bouche.global_position if bouche != null else joueur.global_position
 	return Vector3(p.x, hauteur_px, p.y)
+
+
+## ISO12 v27 — LES LAMPES, POUR LE DÉNOMINATEUR DU RELIEF : la liste FERMÉE, telle qu'elle est cette image.
+##
+## Le relief divise ce que `light()` accumule par ce que les mêmes lampes donneraient sur un sol plat, SANS ombre. Ce
+## dénominateur se calcule dans le shader, donc il faut lui passer les lampes : position, intensité, portée, atténuation, et
+## pour un spot son cône et sa direction.
+##
+## ⚠️ **Huit au plus, triées par intensité décroissante** : le moteur n'en fait passer que huit par objet
+## (`rendering/limits/opengl/max_lights_per_object`), et un dénominateur qui porterait sur d'autres lampes que le numérateur
+## donnerait un rapport faux — plus lumineux là où le dénominateur oublie une lampe, plus sombre là où il en ajoute une.
+func decrire_pour_relief() -> Array:
+	var out: Array = []
+	for l in _pool.values():
+		if not is_instance_valid(l):
+			continue
+		var lumiere := l as Light3D
+		if not lumiere.visible:
+			continue
+		var spot := lumiere is SpotLight3D
+		var c := lumiere.light_color
+		var luminance := 0.299 * c.r + 0.587 * c.g + 0.114 * c.b
+		var intensite := lumiere.light_energy * luminance
+		if intensite <= 0.0:
+			continue
+		var avant := -(lumiere as Node3D).global_transform.basis.z
+		out.append({
+			"pos": (lumiere as Node3D).global_position,
+			"intensite": intensite,
+			"portee": (lumiere as SpotLight3D).spot_range if spot else (lumiere as OmniLight3D).omni_range,
+			"attenuation": (lumiere as SpotLight3D).spot_attenuation if spot else (lumiere as OmniLight3D).omni_attenuation,
+			"cos_demi": cos(deg_to_rad((lumiere as SpotLight3D).spot_angle)) if spot else -1.0,
+			"direction": avant if spot else Vector3.ZERO,
+			"exposant_cone": (lumiere as SpotLight3D).spot_angle_attenuation if spot else 1.0,
+		})
+	out.sort_custom(func(a, b) -> bool: return float(a["intensite"]) > float(b["intensite"]))
+	return out.slice(0, 8)

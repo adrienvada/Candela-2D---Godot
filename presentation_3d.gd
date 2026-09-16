@@ -1752,6 +1752,7 @@ func _accorder_la_bride() -> void:
 		racine.positional_shadow_atlas_size = atlas_ombres
 	for vue in _vues3d:
 		(vue as SubViewport).positional_shadow_atlas_size = atlas_ombres
+	_accorder_le_relief()
 
 
 ## ISO12 — le corps voxel `j` passe au matériau éclairé (ou en revient), et ses boîtes de COULEUR portent ombre ; leurs
@@ -1983,3 +1984,35 @@ func stick_au_sol(joueur: Node, stick: Vector2) -> Vector2:
 	var pid := indice_du_joueur(joueur)
 	var cam := _camera_de(pid) if pid >= 0 else null
 	return CameraIso.stick_au_sol(stick, cam.lacet_deg) if cam != null else stick
+
+
+## ISO12 v27 — les lampes posées dans les trois matériaux éclairés, pour le dénominateur du relief.
+##
+## À chaque image, comme la bride : la liste change à chaque tir, chaque fusée, chaque pas.
+func _accorder_le_relief() -> void:
+	var mats: Array = _materiaux()
+	## ⚠️ `.call()` et non l'appel direct : `_lumieres` est typé `Node3D`, qui n'a pas cette méthode — l'appel direct ne
+	## compilerait pas. C'est déjà pourquoi la bride écrit `_lumieres.set("ombres", …)`.
+	var lampes: Array = _lumieres.call("decrire_pour_relief") if _lumieres != null else []
+	var pos := PackedVector4Array()
+	var portee := PackedVector4Array()
+	var direction := PackedVector4Array()
+	for lampe in lampes:
+		var p: Vector3 = lampe["pos"]
+		pos.append(Vector4(p.x, p.y, p.z, float(lampe["intensite"])))
+		portee.append(Vector4(float(lampe["portee"]), float(lampe["cos_demi"]),
+			float(lampe["attenuation"]), float(lampe["exposant_cone"])))
+		var d: Vector3 = lampe["direction"]
+		direction.append(Vector4(d.x, d.y, d.z, 0.0))
+	while pos.size() < 8:
+		pos.append(Vector4.ZERO)
+		portee.append(Vector4.ZERO)
+		direction.append(Vector4.ZERO)
+	for m in mats:
+		if m == null:
+			continue
+		var mat := m as ShaderMaterial
+		mat.set_shader_parameter("relief_nb", lampes.size())
+		mat.set_shader_parameter("relief_pos_intensite", pos)
+		mat.set_shader_parameter("relief_portee_cone", portee)
+		mat.set_shader_parameter("relief_direction", direction)
