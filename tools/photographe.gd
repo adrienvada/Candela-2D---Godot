@@ -149,6 +149,33 @@ const VISEE := Vector2(1.0, 0.36)
 const FAMILLES: Array[String] = ["menus", "illustrations", "cartes", "jeu", "fins", "loupe"]
 const Loupe := preload("res://tools/loupe.gd")
 
+## ISO12 — la lumière 3D pour la séance : lue ici, posée par chaque famille APRÈS sa mise en scène (voir `Loupe.famille`).
+var lumiere3d := false
+var lumiere3d_sans_ombres := false
+var lumiere3d_echelle := 1.0
+
+
+## ISO12 — allume la lumière 3D bridée sur la présentation en place, et rend vrai si elle l'est.
+##
+## ⚠️ À appeler APRÈS la mise en scène : `poser_lumiere_3d()` échange les shaders de matériaux DÉJÀ construits. Appelé avant,
+## il ne trouve ni murs ni sols et ne fait rien, EN SILENCE — et la séance « avec lumière 3D » photographierait la vue d'ISO11
+## sous un autre nom. Piège payé au banc de cadence.
+func _poser_la_lumiere_3d() -> bool:
+	if not lumiere3d:
+		return false
+	var iso := Presentation3D.instance()
+	if iso == null:
+		printerr("  ✗ --lumiere3d : aucune Presentation3D en place")
+		return false
+	iso.set("bride_mode_3d", 1)
+	iso.set("bride_echelle_3d", lumiere3d_echelle)
+	iso.set("ombres_3d", not lumiere3d_sans_ombres)
+	iso.poser_lumiere_3d(true)
+	await get_tree().process_frame
+	print("  · lumière 3D allumée : bride identité échelle %.2f, ombres %s"
+		% [lumiere3d_echelle, "non" if lumiere3d_sans_ombres else "oui"])
+	return true
+
 var _main: Node
 var _ui: Node
 var _dossier := DOSSIER_DEFAUT
@@ -493,6 +520,11 @@ func _ready() -> void:
 	_sans_hud = _drapeau(args, "--sans-hud")
 	_zoom = maxf(0.2, float(_valeur(args, "--zoom", "1.0")))
 	_carte_duel = _valeur(args, "--carte-duel", CARTE_MURS_BAS)
+	# ISO12 — la lumière 3D bridée pendant la séance, éteinte par défaut comme dans le jeu. Sans ces drapeaux, le photographe
+	# prend la vue d'ISO11, ce qu'il a toujours fait.
+	lumiere3d = _drapeau(args, "--lumiere3d")
+	lumiere3d_sans_ombres = _drapeau(args, "--sans-ombres-3d")
+	lumiere3d_echelle = float(_valeur(args, "--echelle-3d", "1"))
 	_taille =_lire_taille(_valeur(args, "--taille", "%dx%d" % [TAILLE_DEFAUT.x, TAILLE_DEFAUT.y]))
 
 	print("=== Le photographe ===")

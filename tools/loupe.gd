@@ -132,6 +132,8 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 	var portee: float = float(arme.portee_torche()) if arme != null else 300.0
 	print("  · loupe : pilier %s, J1 %s, J2 %s, demi-cône %.0f°, portée %.0f px" % [
 		str(_pilier), str(_j1), str(_j2), rad_to_deg(demi), portee])
+	# ISO12 — la lumière 3D APRÈS la mise en scène, jamais avant : elle échange les shaders des matériaux déjà construits.
+	await p._poser_la_lumiere_3d()
 
 	var face := Vector2(_pilier.get_center().x, _pilier.end.y)
 	await _prise(plans, "loupe-pilier", [["", func(img: Image) -> Vector2:

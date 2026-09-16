@@ -187,6 +187,20 @@ func _run() -> void:
 	var vides_photo: Array[String] = Photo.preconditions_manquantes(null, null)
 	_check("et il sait dire quand ils manquent", not vides_photo.is_empty())
 
+	# ISO12 — le crochet que la LOUPE appelle chez le photographe (`p._poser_la_lumiere_3d()`, `tools/loupe.gd`), pour allumer
+	# la lumière 3D bridée pendant les cadrages de l'adversaire. L'appel est inter-fichier sur une variable typée `Node` :
+	# GDScript le résout dynamiquement, donc **rien ne le vérifie avant la séance**, et un renommage sortirait des images de
+	# la vue d'ISO11 sous le nom « avec lumière 3D ». La garde ne couvre que le CALLEE : elle attrape le renommage du
+	# photographe, pas une faute de frappe dans la loupe.
+	var texte_photo := FileAccess.get_file_as_string("res://tools/photographe.gd")
+	_check("le photographe expose encore _poser_la_lumiere_3d() pour la loupe",
+		texte_photo.contains("func _poser_la_lumiere_3d("),
+		"la loupe l'appelle en inter-fichier, sans contrôle à la compilation")
+	var texte_loupe := FileAccess.get_file_as_string("res://tools/loupe.gd")
+	_check("et la loupe l'appelle encore",
+		texte_loupe.contains("_poser_la_lumiere_3d("),
+		"sans cet appel, les cadrages « adversaire » sortent en vue d'ISO11")
+
 	# Le catalogue lui-même. **Une image dont l'identifiant est en double
 	# écraserait l'autre en silence** : les deux fichiers portent le nom de leur
 	# identifiant, et le manifeste décrirait la survivante sous les deux fiches.

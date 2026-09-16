@@ -43,8 +43,18 @@ const TYPES := ["torche", "flash", "fusee", "braise", "mine", "torche_fantome", 
 var energie_par_type := {"torche": 3.6, "flash": 3.6, "fusee": 52.0, "braise": 52.0, "mine": 52.0, "torche_fantome": 3.6,
 	"retrodiffusion": 0.8}
 var retrodiffusion := true
-## ISO12, lot 0 ter — l'atténuation des omni par type (`OmniLight3D.omni_attenuation`, 1 = défaut). La fusée, plus plate : à 1, l'inverse
-## du carré explosait près de la source et son cœur sortait blanc-rose (234 au Cloître), là où FU2.1 dit rouge de détresse, jamais blanc.
+## ISO12 — l'atténuation par type (`omni_attenuation` / `spot_attenuation`, 1 = inverse du carré, 0 = plat).
+##
+## ⚠️ **L'ATTÉNUATION PLATE A ÉTÉ ESSAYÉE PUIS RÉFUTÉE PAR LA MESURE (lot 0 quater).** Elle venait du principe « la 2D donne
+## l'intensité, la 3D ne donne que le relief », et le principe est juste — c'est le mécanisme qui ne l'était pas. Aplatir
+## supprime ce qui empêche plusieurs lampes de s'additionner au-delà du blanc : la fusée est passée à **42 932 pixels blancs
+## contre 14 en 2D**, dès l'énergie ×1,0 (donc pas à cause d'un niveau trop haut). Et le rapport 3D/2D ne pouvait pas devenir
+## constant : `lumière3D(x)` dépend du nombre de lampes qui atteignent le point, si bien que +70 % d'énergie a ÉLARGI l'écart
+## entre cadrages (0,36-0,77 → 0,40-0,99) au lieu de le refermer.
+##
+## La décroissance de Godot revient donc, et elle est NÉCESSAIRE à la forme retenue : le relief divise la lumière par ce
+## qu'elle donnerait au même point sur un sol plat, et la décroissance se simplifie dans ce rapport — elle doit être des deux
+## côtés. Les valeurs sont celles du lot 0 ter ; elles seront rejugées une fois le relief en place.
 var attenuation_par_type := {"fusee": 0.35, "braise": 0.6, "mine": 0.6}
 var ombres := true
 ## Économies du brief, dans l'ordre : `ombres_omni` faux — pas d'ombre sur les omni (fusées, flashs, braises, mine,

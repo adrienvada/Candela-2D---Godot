@@ -577,6 +577,11 @@ func _les_cadrages(carte: String) -> void:
 		else:
 			_retirer_la_fusee()
 		var nom := "%s_%s" % [carte, cadrage["id"]]
+		# ⚠️ LES IMAGES DE REPOS D'ABORD, LA MESURE ENSUITE. `_tenir()` applique `_scene["p2"]` à l'image suivante : mesurer
+		# ici sans attendre, c'est décrire le cadrage PRÉCÉDENT sous le nom du cadrage courant. C'est ce qui a produit des
+		# opacités « inversées » (0,648 de face, 0,000 de profil) et des corps aux DÉPARTS de la carte, à 665 px l'un de
+		# l'autre, quand le cadrage les veut à 105.
+		await _images(IMAGES_DE_REPOS)
 		_dire_l_etat_du_rejeu(nom)
 		await _prendre(nom, "scinde", {"lumiere": false})
 		if _capteurs_en_image:
@@ -647,6 +652,57 @@ func _dire_l_etat_du_rejeu(nom: String) -> void:
 	var p1_visible := is_instance_valid(_main.p1) and bool(_main.p1.get("visual").visible)
 	print("BANC_LUMIERE3D rejeu carte=%s en_lecture=%s fantome1=%s fantome2=%s visuel_j1=%s"
 		% [nom, str(en_lecture), str(v1), str(v2), str(p1_visible)])
+	_dire_l_opacite_des_corps(nom)
+
+
+## ISO12, lot 0 quater — L'OPACITÉ RENDUE DU SPRITE ADVERSE, la dernière quantité en jeu.
+##
+## `Presentation3D.opacite_du_corps(joueur, le_sien)` rend `opacite_rendue()` du sprite que ce corps remplace : `visual` pour
+## le sien, `visual_enemy` pour celui d'en face. Cette valeur part telle quelle dans `opacite_N` du shader des corps. Si elle
+## vaut 0 pour J2 vu par J1, le corps voxel est TRANSPARENT par construction — et ses trois entrées disent alors pourquoi,
+## puisque `opacite_rendue` rend zéro dès qu'un ancêtre de canevas est caché.
+func _dire_l_opacite_des_corps(nom: String) -> void:
+	for j in 2:
+		var joueur = _main.p1 if j == 0 else _main.p2
+		if not is_instance_valid(joueur):
+			continue
+		var sien: float = Presentation3D.opacite_du_corps(joueur, true)
+		var adverse: float = Presentation3D.opacite_du_corps(joueur, false)
+		var sprite = joueur.get("visual_enemy")
+		var visible := is_instance_valid(sprite) and bool((sprite as CanvasItem).visible)
+		var self_a := float((sprite as CanvasItem).self_modulate.a) if is_instance_valid(sprite) else -1.0
+		var mod_a := float((sprite as CanvasItem).modulate.a) if is_instance_valid(sprite) else -1.0
+		var parent_cache := false
+		if is_instance_valid(sprite):
+			var n: Node = (sprite as Node).get_parent()
+			while n is CanvasItem:
+				if not (n as CanvasItem).visible:
+					parent_cache = true
+					break
+				n = n.get_parent()
+		print("BANC_LUMIERE3D opacite carte=%s corps=%d sien=%.3f adverse=%.3f sprite_visible=%s self_a=%.3f modulate_a=%.3f parent_cache=%s"
+			% [nom, j + 1, sien, adverse, str(visible), self_a, mod_a, str(parent_cache)])
+		# ⚠️ L'ÉBLOUISSEMENT LUI-MÊME, et la visée réelle du pantin. `visual_enemy.modulate.a` vaut
+		# `Brouillage.opacite(dazzle_du_REGARDEUR)` : pour le corps de J2, c'est le dazzle de J1. Les valeurs mesurées sont
+		# à l'envers de la géométrie (de face 0,648, de profil 0,000), donc on lit la quantité au lieu de la raconter.
+		var dazzle := float(joueur.get("dazzle_amount"))
+		var visee_pantin := Vector2.ZERO
+		if j < _pantins.size() and _pantins[j] != null:
+			visee_pantin = (_pantins[j] as Pantin).visee
+		# Et le corps voxel : un alpha de 0,648 devrait laisser une forme visible ; si le nœud est caché, le compte est ailleurs.
+		var voxels = _p.get("_voxels")
+		var voxel_visible := false
+		var voxel_pos := Vector3.ZERO
+		if voxels != null and j < (voxels as Array).size() and voxels[j] != null:
+			var noeud = voxels[j]
+			if is_instance_valid(noeud) and noeud is Node3D:
+				voxel_visible = bool((noeud as Node3D).visible)
+				voxel_pos = (noeud as Node3D).global_position
+		var pos_joueur := (joueur as Node2D).global_position
+		var voulu: Vector2 = _scene.get("p%d" % (j + 1), Vector2.ZERO)
+		print("BANC_LUMIERE3D dazzle carte=%s joueur=%d dazzle=%.3f visee=(%.2f,%.2f) voxel_visible=%s voxel_pos=(%.1f,%.1f,%.1f) joueur_pos=(%.1f,%.1f) voulu=(%.1f,%.1f)"
+			% [nom, j + 1, dazzle, visee_pantin.x, visee_pantin.y, str(voxel_visible),
+			voxel_pos.x, voxel_pos.y, voxel_pos.z, pos_joueur.x, pos_joueur.y, voulu.x, voulu.y])
 
 
 ## ISO12, lot 0 quater — LES QUATRE CAPTEURS, EN IMAGE.

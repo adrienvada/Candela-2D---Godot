@@ -258,7 +258,9 @@ var gain_led_3d := 0.25
 var gain_halo_soi_3d := 0.25
 ## ISO12, lot 0 ter — la bride de gradient (`bride_mode_3d` 0 smoothstep, 1 identité × `bride_echelle_3d`), la lumière d'un corps
 ## par sa propre lampe en émission (`gain_corps_propre_3d`), le pied de la lampe au sol (`gain_pied_lampe_3d`). À calibrer au banc.
-var bride_mode_3d := 0
+## ISO12, lot 0 quater — la bride IDENTITÉ par défaut, à l'échelle 1 : avec une atténuation plate, c'est elle qui porte toute la
+## décroissance, et elle la prend de la 2D. Le mode 0 (smoothstep) reste pour comparer au banc.
+var bride_mode_3d := 1
 var bride_echelle_3d := 1.0
 var gain_corps_propre_3d := 0.0
 var gain_pied_lampe_3d := 0.0
