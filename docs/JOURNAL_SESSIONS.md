@@ -5722,3 +5722,14 @@ J1 sur sa première arme, sur les quatre écrans où la carte se choisit ; l'inv
 `test_audit_menus`. Sur le `ui.gd` d'avant, les quatre écrans échouent : la carte change, le cadre reste sur la galerie (`cartes`) et le curseur de J1 sur une vignette. Lot complet vert à 22:32 : 112 suites, sans erreur de script, 434 s.
 sur le code d'avant, saut de 210,7 px à la première image et pas de 396 px. Bande du photographe (`killcam-bande`,
 une prise toutes les ~0,37 s, pas trente images consécutives) : zoom 1,800 → 1,543 puis immobile. Lot complet vert à 22:06 : 112 suites, sans erreur de script, 435 s.
+
+**ISO11, pas 7 — la pose des vingt illustrations voxel, 2026-09-16 dans la nuit.** Session « Iso 1 Opus », branche
+`iso11-retours`. Vingt fichiers d'`assets/ui` remplacés par les illustrations voxel d'ISO Assets (19 PNG + `fin_defaite.jpg`,
+dont quatre en `_v4`), réimportés, captures des écrans touchés. ⚠️ Le dossier de livraison contenait trois générations par
+emplacement et **le nom nu était l'état d'avant, identique au dépôt au md5** : poser les noms nus aurait donné un commit sans
+un octet de changement d'image. `fond_hub_iso` écarté sur refus de la session cloud ; `ill_personnalisation.png`,
+`ill_creer.png` et `ill_rejoindre.png` laissés tels quels, leurs clés pointant ailleurs dans `ILLUSTRATIONS`. Vérifié en image :
+accueil, affiche de défaite et illustrations d'intro au voxel. **Aucune correction de `ui.gd` n'était nécessaire** — le défaut
+de L6 tenait au fichier et non au câblage. L5 (annulé) et L6 (l'inventaire) consignés au passage : ils n'avaient jamais été
+écrits dans la ROADMAP. Lot complet vert à 02:31 : « tout passe, sans erreur de script (430 s) », sans nombre de suites — le
+lanceur n'imprime aucun total et le compte de 112 des entrées précédentes ne se retrouve pas dans sa sortie.
