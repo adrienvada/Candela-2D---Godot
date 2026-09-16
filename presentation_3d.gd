@@ -256,6 +256,12 @@ var ombres_vue_unique_seulement := false
 var gain_led_3d := 0.25
 ## ISO12 — le gain du halo de proximité en émission par vue (`ambient_light`), commun à tous, à calibrer au banc.
 var gain_halo_soi_3d := 0.25
+## ISO12, lot 0 ter — la bride de gradient (`bride_mode_3d` 0 smoothstep, 1 identité × `bride_echelle_3d`), la lumière d'un corps
+## par sa propre lampe en émission (`gain_corps_propre_3d`), le pied de la lampe au sol (`gain_pied_lampe_3d`). À calibrer au banc.
+var bride_mode_3d := 0
+var bride_echelle_3d := 1.0
+var gain_corps_propre_3d := 0.0
+var gain_pied_lampe_3d := 0.0
 var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
@@ -1728,6 +1734,9 @@ func _accorder_la_bride() -> void:
 		m.set_shader_parameter("bride_haut", bride.y)
 		m.set_shader_parameter("variante_pate", 1 if variante_pate_3d == 2 else variante_pate_3d)
 		m.set_shader_parameter("masque_preuve", masque_preuve)
+		m.set_shader_parameter("bride_mode", bride_mode_3d)
+		m.set_shader_parameter("bride_echelle", bride_echelle_3d)
+		m.set_shader_parameter("gain_corps_propre", gain_corps_propre_3d)
 	if _lumieres != null:
 		_lumieres.set("ombres", ombres_3d and not (ombres_vue_unique_seulement and _scinde))
 		_lumieres.set("retrodiffusion", retrodiffusion_3d)
@@ -1785,6 +1794,7 @@ func _accorder_la_led() -> void:
 		(m as ShaderMaterial).set_shader_parameter("led_couleur", couleur)
 		(m as ShaderMaterial).set_shader_parameter("led_gain", gain_led_3d)
 	_accorder_le_halo_soi(mats)
+	_accorder_le_pied_des_lampes()
 
 
 ## ISO12 — la pâte (b) : posée seulement lumière 3D allumée et `variante_pate_3d` 2. En écran scindé, un matériau sur l'affichage
@@ -1848,6 +1858,35 @@ func _accorder_le_halo_soi(mats: Array) -> void:
 		(m as ShaderMaterial).set_shader_parameter("halo_soi_empreinte_px", empreinte)
 		(m as ShaderMaterial).set_shader_parameter("halo_soi_couleur", couleur)
 		(m as ShaderMaterial).set_shader_parameter("halo_soi_gain", gain_halo_soi_3d)
+
+
+## ISO12, lot 0 ter — le pied de la lampe de chaque joueur au sol, les deux vues : la texture de sa rétrodiffusion (`BodyLight`), sa
+## position et son énergie de CETTE image, 0 si elle est éteinte.
+func _accorder_le_pied_des_lampes() -> void:
+	var pieds := [Vector3.ZERO, Vector3.ZERO]
+	var texture: Texture2D = null
+	var empreinte := 96.0
+	var couleur := Vector3.ONE
+	for j in 2:
+		var joueur = _main.p1 if j == 0 else _main.p2
+		if not is_instance_valid(joueur):
+			continue
+		var lampe := joueur.get_node_or_null(^"BodyLight") as PointLight2D
+		if lampe == null or lampe.texture == null:
+			continue
+		texture = lampe.texture
+		empreinte = float(lampe.texture.get_width()) * lampe.texture_scale
+		couleur = Vector3(lampe.color.r, lampe.color.g, lampe.color.b)
+		if lampe.enabled and lampe.is_visible_in_tree():
+			pieds[j] = Vector3(lampe.global_position.x, lampe.global_position.y, lampe.energy)
+	for m in _mat_sols:
+		if texture != null:
+			m.set_shader_parameter("pied_lampe_texture", texture)
+		m.set_shader_parameter("pied_lampe_1", pieds[0])
+		m.set_shader_parameter("pied_lampe_2", pieds[1])
+		m.set_shader_parameter("pied_lampe_empreinte_px", empreinte)
+		m.set_shader_parameter("pied_lampe_couleur", couleur)
+		m.set_shader_parameter("pied_lampe_gain", gain_pied_lampe_3d)
 
 
 func _construire_les_murs() -> void:

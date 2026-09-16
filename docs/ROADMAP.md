@@ -3254,6 +3254,40 @@ peint dans cette texture ; elle ne se calcule pas sur le processeur et ne se dé
 piège que celui de 1f (« une référence calculée côté processeur en linéaire assombrissait les faces de six fois »), payé
 une seconde fois faute d'avoir relu le premier.
 
+### Un bouton écrêté ne se règle pas : vérifier qu'il BOUGE la mesure (2026-09-16)
+
+ISO12, lot 0 ter. Pour remonter le niveau de la 3D sous une bride identité, j'ai balayé l'ÉNERGIE des lumières, en raisonnant
+que l'échelle de la bride « ressaturerait la bride ». Tripler l'énergie des torches n'a pas bougé le rapport moyen (0,33 →
+0,33), et n'a monté celui d'une autre bride que de 1,61 à 1,96 pour +200 % : `DIFFUSE_LIGHT` sature déjà à 1 sur la plupart des
+pixels éclairés, donc ce qu'on ajoute est jeté à l'écriture. Le bouton vivant était l'échelle, et trois passes de banc l'ont dit
+avant que je le comprenne. **Règle : avant de balayer un réglage, vérifier sur deux points qu'il DÉPLACE la mesure ; un bouton
+derrière une saturation est muet, et son silence ressemble à un réglage mal choisi.**
+
+### Un raccord de nom qui ne se fait pas supprime une sortie EN SILENCE (2026-09-16)
+
+ISO12, lot 0 ter. Trois fois la même nuit, une case vide au lieu d'une erreur. (1) La ligne `prise=` imprimait le VECTEUR de la
+bride ; la bride identité n'en a pas et sortait « (0.0, 0.05) », comme une autre bride — seul le nom de fichier les
+distinguait, et la planche, elle, choisit ses colonnes sur les champs. (2) `_id_variante` écrit la bride sur deux chiffres (05,
+30, 60) et la liste des variantes sur trois (005, 030, 060) : la colonne « 3D avec ombres » a disparu de toutes les planches des
+cadrages. (3) La planche cherchait la vue `unique` pour toute ligne d'ancre, alors que les cadrages sont tournés en écran scindé
+SEULEMENT : toutes les lignes d'ancre, la loupe ×4 comprise, ont sauté. **Règle : une sélection qui ne trouve rien doit se
+PLAINDRE.** Un tableau qui se remplit à moitié se lit comme un résultat, pas comme une panne.
+
+### Une sonde d'instrument se dimensionne sur le jeu (2026-09-16)
+
+ISO12, lot 0 ter. `_libre()` du banc teste un disque de 40 px de RAYON — 80 de diamètre — dans un jeu dont la tuile fait 35 px :
+un passage d'une tuile ne peut JAMAIS l'accepter. Les dix cadrages demandés ont été refusés « place occupée », ce qui se lit
+comme « la carte est pleine » et non comme « ma sonde est trop grosse ». **Règle : une sonde prend la dimension que la
+simulation utilise** (ici `MursBas.RAYON_ENCOMBREMENT`), et un refus systématique se soupçonne d'abord côté instrument.
+
+### Un masque d'exclusion se mesure, s'annonce et se scinde (2026-09-16)
+
+ISO12, lot 0 ter. Pour sortir l'encre du compte bleu, le premier masque cachait `MurEncre` ET tout le calque de décor : jusqu'à
+33 % des pixels éclairés en sortaient. Un masque de cette taille ne s'appelle plus « l'encre » et peut cacher un vrai manque.
+Scindé en deux niveaux — liseré seul, puis liseré et décor — le vrai coupable apparaît : le liseré pèse 4,28 % des 4,45 % de
+bleu, le décor 0,01 à 0,07 %. **Règle : un masque d'exclusion se mesure contre une prise de référence, se publie avec le compte
+NON exclu à côté, et se scinde jusqu'à ce qu'il ne couvre que ce qu'il nomme.**
+
 ### Un cercle qui dit « déjà dessus » doit être celui du corps, pas celui de son point le plus long (2026-09-15)
 
 ISO11, L1 : au premier test, Adrien escaladait tout mur bas frôlé « juste avec le joystick », sans « croix ». La règle
@@ -25744,6 +25778,72 @@ bride (0 ; 0,05) :
   partagé). Et le temps GPU ajouté au banc rend 0,00 partout : le rendu Compatibility ne fournit pas cette mesure. Le relevé
   demandé (Mac libre, fenêtre au premier plan) reste à faire.
  Lot complet vert à 00:21 (drapeau éteint) : 112 suites, sans erreur de script, 436 s.
+
+#### Lot 0 ter — la bride qui suit le gradient, la preuve d'intensité, et ce qu'elles ont montré
+
+Verdict de la session cloud sur le lot 0 bis (00:25) : la 3D montre PLUS que la 2D **en intensité** là où elle en montre le même
+support. Le rouge et le bleu disent le support ; ils ne disent rien du niveau. D'où ce lot.
+
+- **La bride suit le GRADIENT** : `bride_mode` 0 = `smoothstep(bride_bas, bride_haut, L2D)`, 1 = identité (`L2D × bride_echelle`,
+  plafonné à 1), dans les trois shaders éclairés.
+- **La preuve d'intensité**, par cadrage, les deux luminances normalisées sur le maximum du cadrage : la part des pixels où la 3D
+  dépasse 1,5 fois la 2D (cible < 1 %) et le rapport des moyennes dans la zone éclairée en 2D (cible 1,0 ± 0,1).
+- **L'encre hors du compte bleu, mesurée et en DEUX niveaux** : une référence 2D `MurEncre` caché, une autre décor caché aussi ;
+  un pixel est de l'encre là où les références diffèrent. Le bleu sans exclusion est imprimé à côté.
+- **La lumière d'un corps par sa propre lampe en ÉMISSION** (`gain_corps_propre`) et **le pied de la lampe en émission au sol**
+  (`gain_pied_lampe`), bridés, visibles des deux vues — une light() posée dans le corps l'éclairait par l'intérieur.
+- **L'atténuation des omni par type** (`attenuation_par_type`), pour la fusée.
+- Au banc : les quatre brides sous la preuve, les cadrages de l'adversaire dans le cône, `bride_nom` dans la ligne `prise=`.
+  À la planche : trois colonnes de brides, deux lignes de corps agrandis ×4 au plus proche voisin.
+
+**L'intensité : deux critères qui tirent en sens contraire.** Sur les prises du lot 0 bis, 25 à 45 % des pixels éclairés en 2D
+dépassent 1,5 fois la 2D (pire 67,3 %) pour un rapport moyen de 1,00 à 1,22 : la moyenne était à peu près juste, la distribution
+franchement fausse. Balayage de la bride identité (Cloître, visée 0) :
+
+| échelle | bleu hors encre | part > 1,5× | rapport moyen |
+|---|---|---|---|
+| 1 | — | 1,04 % | 0,30 |
+| 3 | 6,45 % | 8,54 % | 0,81 |
+| 4 | 0,68 % | 14,99 % | 0,89 |
+| 5 | **0,16 %** | 24,79 % | **1,09** |
+| 6 | 0,10 % | 31,1 % | 1,15 |
+| 10 | 0,02 % | 37,9 % | 1,25 |
+
+À l'échelle 5 : rouge 0, bleu hors encre 0,16 %, rapport moyen 1,09 — **deux critères sur trois**, le bleu passant sous 1 % pour
+la première fois. Le troisième échoue d'un facteur vingt. **Et ce n'est pas un réglage manqué** : la 3D rend
+`L2D × lumière3D(x) × albédo` quand la 2D rend `L2D × albédo`, donc le rapport 3D/2D VAUT `lumière3D(x)`, qui varie dans le
+cadrage — c'est le relief lui-même. Pris à la lettre, le critère interdit le modelé qu'ISO12 existe pour ajouter. **Question
+posée à la session cloud, non tranchée ici.**
+
+**La fusée sans blanc : obtenue à l'énergie 5.** Boîte de 60 px autour de l'ancre, les deux cartes, les deux vues : énergie 52
+donnait 53 307 à 81 806 pixels blancs (saturation 0,12) ; 18 en donnait 2 310 à 14 512 ; **5 en donne zéro**, saturation 0,22 à
+0,24 contre 0,29 à 0,35 pour la 2D. La teinte n'a jamais été en cause (le miroir recopie `COULEUR_DETRESSE`) : c'était
+l'énergie, et l'atténuation par type seule n'y suffisait pas. Reste un écart de saturation, dit tel quel.
+
+**L'encre, c'est le liseré.** À l'échelle 5, Cloître visée 0 : 4,45 % de bleu, dont 4,28 % de liseré (`MurEncre`) et 0,01 à
+0,07 % de décor.
+
+**Le rouge, localisé.** Quatre traits d'UN pixel (deux horizontaux, un vertical, deux diagonales), luminance 7 à 29, tous sur les
+murs bas et rétrodiffusion allumée seulement. La coupe perpendiculaire montre le masque qui tombe à 0 un pixel AVANT que la
+frange de la prise 3D ne s'éteigne : ce sont les pixels où L2D passe sous le seuil du masque (`step(0.0005)`) alors que la bride
+(0 ; 0,05) ouvre encore assez pour les éclairer. Ils décroissent avec les brides plus hautes (87 → 38). **C'est la frange de la
+bride, pas une lumière montrée là où la 2D n'en montre pas.**
+
+**Ce qui N'EST PAS livré, et qu'il ne faut pas croire livré :**
+- **les cadrages de l'adversaire dans le cône.** Trois passes, l'adversaire sur aucune image. Établi par élimination : le sprite
+  adverse existe et est opaque (`visual_enemy`, `Charte.ADVERSAIRE`) ; la torche porte le canal ennemi
+  (`range_item_cull_mask = 1 | 2 | 4`) ; la vue est dégagée (ajouter `_mur_entre` n'a rien changé, les ancres des deux passes
+  sont identiques) ; les ancres et la loupe marchent (la loupe ×4 sur `j1` montre J1 net). J2 est donc posé à trois tuiles
+  devant J1, dans un cône allumé, et n'est pas ÉCLAIRÉ. **Cause non identifiée.**
+- **l'émission du corps et du pied de lampe**, posée mais NON VÉRIFIÉE : les chiffres que j'en avais tirés mesuraient du sol
+  éclairé, pas un corps, faute de corps sur l'image. Retirés.
+- **la cadence**, non mesurable cette nuit : `bench_framerate.gd` porte sa propre règle (« un banc de cadence lancé en boucle
+  mesure sa propre chaleur » ; machine refroidie, UN relevé long de 60 s). Après une nuit de bancs enchaînés sur ce Mac partagé,
+  deux passes cohérentes seraient deux mesures de la chaleur de mes propres bancs.
+
+**Et une anomalie, signalée sans explication : les ombres ALLUMÉES ajoutent de la lumière.** Corps à 146 contre 124 sans ombres ;
+fusée à 9 161–14 512 pixels blancs contre 2 310–4 196. Une ombre ne peut qu'enlever de la lumière : quelque chose d'autre voyage
+dans la variante « ombres », et je ne sais pas quoi. Lot complet vert à 01:58 (drapeau éteint) : « tout passe, sans erreur de script (433 s) », la ligne du lanceur telle quelle. **Sans nombre de suites** : le compte de 112 inscrit au lot 0 bis ne se retrouve pas dans la sortie de ce lot, et `run_suites.sh` n'imprime aucun total (92 suites déclarées dans `SUITES`, une dans `SUITES_2D`, plus les scénarios à deux instances et le contrôle de démarrage). Un chiffre invérifiable ne se recopie pas.
 
 ### Ce qui attend Adrien — jalon H15
 

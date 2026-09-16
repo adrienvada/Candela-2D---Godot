@@ -80,6 +80,41 @@ uniform float bride_bas : hint_range(0.0, 1.0) = 0.0;
 uniform float bride_haut : hint_range(0.0, 1.0) = 0.05;
 uniform int variante_pate = 0;
 uniform int masque_preuve = 0;
+// ISO12, lot 0 ter — la bride SUIT LE GRADIENT 2D (session cloud, 00:25). 0 : smoothstep(bride_bas, bride_haut, L2D) ; 1 : identité,
+// L2D × bride_echelle plafonné à 1 — l'intensité de la 3D suit celle de la 2D, l'énergie 3D étant recalibrée derrière.
+uniform int bride_mode = 0;
+uniform float bride_echelle = 1.0;
+
+float bride_valeur(float l) {
+	if (bride_mode == 1) {
+		return clamp(l * bride_echelle, 0.0, 1.0);
+	}
+	return smoothstep(bride_bas, bride_haut, l);
+}
+// ISO12, lot 0 ter — le pied de la lampe de chaque joueur en émission au sol, les DEUX vues, bridé : la texture de sa
+// rétrodiffusion (`BodyLight`) sous lui (xy : position en px de monde, z : énergie). Le spot de la torche ne couvre pas son pied.
+uniform sampler2D pied_lampe_texture : filter_linear, repeat_disable;
+uniform vec3 pied_lampe_1 = vec3(0.0);
+uniform vec3 pied_lampe_2 = vec3(0.0);
+uniform float pied_lampe_empreinte_px = 96.0;
+uniform vec3 pied_lampe_couleur = vec3(1.0);
+uniform float pied_lampe_gain = 0.0;
+
+vec3 lire_pied_lampe(vec2 px) {
+	vec3 somme = vec3(0.0);
+	for (int k = 0; k < 2; k++) {
+		vec3 h = k == 0 ? pied_lampe_1 : pied_lampe_2;
+		if (h.z <= 0.0) {
+			continue;
+		}
+		vec2 uv = (px - h.xy) / pied_lampe_empreinte_px + vec2(0.5);
+		if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+			continue;
+		}
+		somme += texture(pied_lampe_texture, uv).a * pied_lampe_couleur * h.z * pied_lampe_gain;
+	}
+	return somme;
+}
 // ISO12 — le bandeau de LED des murs (`MurLed`) en émission : la texture cuite de la lumière 2D, en coordonnées du monde
 // (`led_origine_px`, `led_taille_px` : le rectangle de la carte bordure comprise), sa couleur courante (0 quand il est
 // éteint) et un gain calibré au banc. Commun aux deux vues, comme la lumière 2D.
@@ -248,7 +283,7 @@ void fragment() {
 	vec3 ref = lire_etalon(peinture_etalon_px);
 	float plancher = lire_etalon(peinture_plancher_px).g;
 	vec3 brute = lire_lumiere_sol(px_lu, deux, ref, plancher);
-	float b = smoothstep(bride_bas, bride_haut, pate_luminance(brute));
+	float b = bride_valeur(pate_luminance(brute));
 	vec3 c = variante_pate == 1 ? vec3(b) : pate(vec3(b), b, style, px, vec2(0.0), b, aa);
 	if (style == PATE_BRUTE || b <= 0.0) {
 		c = vec3(b);
@@ -269,7 +304,7 @@ void fragment() {
 		EMISSION = vec3(step(0.0005, pate_luminance(brute)));
 	} else {
 		ALBEDO = c * albedo;
-		EMISSION = c * albedo * (lire_led(px_lu) + lire_halo_soi(px_lu, deux));
+		EMISSION = c * albedo * (lire_led(px_lu) + lire_halo_soi(px_lu, deux) + lire_pied_lampe(px_lu));
 	}
 }
 

@@ -43,6 +43,9 @@ const TYPES := ["torche", "flash", "fusee", "braise", "mine", "torche_fantome", 
 var energie_par_type := {"torche": 3.6, "flash": 3.6, "fusee": 52.0, "braise": 52.0, "mine": 52.0, "torche_fantome": 3.6,
 	"retrodiffusion": 0.8}
 var retrodiffusion := true
+## ISO12, lot 0 ter — l'atténuation des omni par type (`OmniLight3D.omni_attenuation`, 1 = défaut). La fusée, plus plate : à 1, l'inverse
+## du carré explosait près de la source et son cœur sortait blanc-rose (234 au Cloître), là où FU2.1 dit rouge de détresse, jamais blanc.
+var attenuation_par_type := {"fusee": 0.35, "braise": 0.6, "mine": 0.6}
 var ombres := true
 ## Économies du brief, dans l'ordre : `ombres_omni` faux — pas d'ombre sur les omni (fusées, flashs, braises, mine,
 ## rétrodiffusion : six faces par omni et par image) ; `ombres_torches_joueurs_seules` vrai — une seule lumière ombrée par
@@ -161,6 +164,7 @@ func _omni(source: Light2D, type: String, position_3d: Variant, vus: Dictionary)
 	if source.texture != null:
 		rayon = float(source.texture.get_width()) * source.texture_scale * 0.5
 	l.omni_range = rayon * PORTEE_EN_PLUS
+	l.omni_attenuation = float(attenuation_par_type.get(type, 1.0))
 	l.omni_shadow_mode = mode_ombre_omni
 
 

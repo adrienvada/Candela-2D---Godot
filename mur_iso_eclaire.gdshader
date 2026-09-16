@@ -62,6 +62,17 @@ uniform float bride_bas : hint_range(0.0, 1.0) = 0.0;
 uniform float bride_haut : hint_range(0.0, 1.0) = 0.05;
 uniform int variante_pate = 0;
 uniform int masque_preuve = 0;
+// ISO12, lot 0 ter — la bride SUIT LE GRADIENT 2D (session cloud, 00:25). 0 : smoothstep(bride_bas, bride_haut, L2D) ; 1 : identité,
+// L2D × bride_echelle plafonné à 1 — l'intensité de la 3D suit celle de la 2D, l'énergie 3D étant recalibrée derrière.
+uniform int bride_mode = 0;
+uniform float bride_echelle = 1.0;
+
+float bride_valeur(float l) {
+	if (bride_mode == 1) {
+		return clamp(l * bride_echelle, 0.0, 1.0);
+	}
+	return smoothstep(bride_bas, bride_haut, l);
+}
 // ISO12 — le bandeau de LED des murs (`MurLed`) en émission : la texture cuite de la lumière 2D, en coordonnées du monde
 // (`led_origine_px`, `led_taille_px` : le rectangle de la carte bordure comprise), sa couleur courante (0 quand il est
 // éteint) et un gain calibré au banc. Commun aux deux vues, comme la lumière 2D.
@@ -214,7 +225,7 @@ vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa) {
 // ISO12 — ce que devient une lumière lue : sa BRIDE, rangée en paliers par la pâte (variante a) ou continue (variante c).
 // 0 reste 0 dans les deux cas : la pâte est purement multiplicative (invariant d'`iso_pate.gdshaderinc`).
 vec3 bride_de(vec3 brute, vec2 motif, float aa) {
-	float b = smoothstep(bride_bas, bride_haut, pate_luminance(brute));
+	float b = bride_valeur(pate_luminance(brute));
 	if (variante_pate == 1) {
 		return vec3(b);
 	}

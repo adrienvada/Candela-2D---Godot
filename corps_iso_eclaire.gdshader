@@ -162,6 +162,21 @@ uniform float bride_bas : hint_range(0.0, 1.0) = 0.0;
 uniform float bride_haut : hint_range(0.0, 1.0) = 0.05;
 uniform int variante_pate = 0;
 uniform int masque_preuve = 0;
+// ISO12, lot 0 ter — la bride SUIT LE GRADIENT 2D (session cloud, 00:25). 0 : smoothstep(bride_bas, bride_haut, L2D) ; 1 : identité,
+// L2D × bride_echelle plafonné à 1 — l'intensité de la 3D suit celle de la 2D, l'énergie 3D étant recalibrée derrière.
+uniform int bride_mode = 0;
+uniform float bride_echelle = 1.0;
+
+float bride_valeur(float l) {
+	if (bride_mode == 1) {
+		return clamp(l * bride_echelle, 0.0, 1.0);
+	}
+	return smoothstep(bride_bas, bride_haut, l);
+}
+// ISO12, lot 0 ter — la lumière du corps par sa PROPRE lampe, en émission : la couleur bridée du corps (qui lit son capteur, donc
+// sa rétrodiffusion telle que la 2D la montre), × ce gain, visible des deux vues. Une light() posée dans le corps l'éclairait par
+// l'intérieur, dot(N, L) négatif sur toutes ses faces : J2 vu de loin restait noir en 3D, gris en 2D.
+uniform float gain_corps_propre = 0.0;
 
 varying vec3 monde;
 varying vec3 local;             // VERTEX, repère du modèle — voir `pate_encre_boite()`
@@ -223,7 +238,7 @@ void fragment() {
 	} else {
 		recue = lumiere_recue;
 	}
-	float b = smoothstep(bride_bas, bride_haut, recue);
+	float b = bride_valeur(recue);
 	vec3 base = couleur_fiche.rgb * b;
 	vec3 c = (variante_pate == 1 || b <= 0.0) ? base
 		: min(pate(base, pate_luminance(base), style, motif, vec2(0.0), b, aa), base);
@@ -261,7 +276,7 @@ void fragment() {
 		// La couleur éclairée par la lampe, la silhouette de soi en émission : les deux composées par le même alpha
 		// qu'avant (`a = 1 - (1-o)(1-s)`), mais seule la première passe par light().
 		ALBEDO = c * o * (1.0 - s) / a;
-		EMISSION = silhouette.rgb * s / a;
+		EMISSION = (silhouette.rgb * s + c * o * (1.0 - s) * gain_corps_propre) / a;
 		ALPHA = a;
 	}
 }

@@ -5742,3 +5742,14 @@ vue), corps effacés opaques dans le masque (alpha gardé). Pâte (b) posée ; �
 visées à 1,0 ; temps GPU au banc. Quatrième preuve : rouge 87 px, bleu sous 1 % sur 12 paires sur 32 (pire 3,86 %) ; planche de 98 PNG en galerie ; pâte (b)
 écartée à l'œil ; appels de dessin +8 à +14 % avec ombres ; cadence toujours non mesurée (fenêtre cadencée, temps GPU non fourni
 par Compatibility). Lot complet vert à 00:21 (drapeau éteint) : 112 suites, sans erreur de script, 436 s.
+
+**ISO12, lot 0 ter — la bride de gradient et la preuve d'intensité, 2026-09-16 dans la nuit.** Session « Iso 1 Opus », branche
+`iso12-lumiere3d`. Bride de gradient (`bride_mode`, `bride_echelle`), preuve d'intensité (part au-dessus de 1,5× et rapport des
+moyennes), encre hors du compte bleu en deux niveaux, émission du corps par sa propre lampe et du pied de la lampe, atténuation
+des omni par type, cadrages de l'adversaire au banc, `bride_nom` et colonnes de brides à la planche. Mesuré : à l'échelle 5,
+rouge 0, bleu hors encre 0,16 % et rapport moyen 1,09 — deux critères sur trois, le troisième (24,79 % au-dessus de 1,5 ×)
+échouant par construction, puisque le rapport 3D/2D vaut la lumière 3D elle-même. Fusée sans blanc obtenue à l'énergie 5 (zéro
+pixel blanc, saturation 0,22–0,24 contre 0,29–0,35 en 2D). L'encre, c'est le liseré (4,28 sur 4,45 %). Les 87 rouges localisés :
+la frange de la bride. **Non livrés** : les cadrages de l'adversaire (posé, non éclairé, cause non identifiée), donc l'émission
+du corps non vérifiée, et la cadence (le banc de cadence mesurerait sa propre chaleur). Anomalie signalée : les ombres allumées
+ajoutent de la lumière. Lot complet vert à 01:58 (drapeau éteint) : « tout passe, sans erreur de script (433 s) ». Sans nombre de suites : le compte de 112 du lot 0 bis ne se retrouve pas dans la sortie, et le lanceur n'imprime aucun total.
