@@ -5782,4 +5782,17 @@ sprite adverse, le corps voxel suit cet alpha (0,648 → mannequin franc, 0,015 
 `loupe-corps` (torche de J2 éteinte). L'atténuation plate est réfutée par deux calibrations : +70 % d'énergie élargit l'écart
 (0,36-0,77 → 0,40-0,99) et la fusée monte à 42 932 pixels blancs contre 14 en 2D dès ×1,0 — aplatir supprime ce qui empêche
 plusieurs lampes de dépasser le blanc. Décroissance de Godot rendue. Forme de la v27 arrêtée : relief en MOYENNE PONDÉRÉE, plan
-complet dans le brouillon, rien d'implémenté. Drapeau `lumiere_3d` toujours éteint.  Lot complet vert à 07:05 : « tout passe, sans erreur de script (431 s) ».
+complet dans le brouillon, rien d'implémenté.
+
+**ISO12 v27 — le relief normalisé écrit, et deux défauts trouvés dans ma propre forme, 2026-09-16 au matin.** Session « Iso 1
+Opus », branche `iso12-lumiere3d` (fusion `9102a3e` depuis `iso12-relief`). Le relief est en place dans les trois shaders
+éclairés, l'include, l'accesseur du miroir et la pose des uniformes ; `lumiere_3d` reste éteint et **rien n'est mesuré**. Deux
+défauts trouvés avant tout banc, par le calcul et non par l'image : le dénominateur vide rendait un aplat blanc au plafond
+(il rend désormais le Lambert d'avant la v27), et surtout le plafond du canal valait 8,0 quand une fusée porte le dénominateur
+vers 36 — `light()` aurait divisé par 8 au lieu de 36, soit un disque blanc et plat autour de chaque fusée, **le défaut même
+que la v27 doit guérir, et invisible sur tout cadrage à la seule torche**. Borne portée à 256. Une garde croisée protège
+`decrire_pour_relief`, appelé par son nom en texte, d'une disparition muette qui aurait laissé le lot vert. Trois lots pour un
+vert, et la leçon est à mon débit : un worktree neuf n'a pas de `.godot/`, donc toutes les suites accusent le code — **cette
+règle était déjà écrite deux fois dans « Pièges connus », avec son contrôle exact**, et je ne l'avais pas lue. Ce que la
+redécouverte ajoute, en corollaire : recopier le cache d'un autre arbre donne un lot « presque vert », pire qu'un rouge, parce
+qu'un échec partiel désigne le fichier qu'on vient de modifier au lieu de l'environnement. Drapeau `lumiere_3d` toujours éteint.  Lot complet vert à 07:05 : « tout passe, sans erreur de script (431 s) ».

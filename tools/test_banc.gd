@@ -201,6 +201,27 @@ func _run() -> void:
 		texte_loupe.contains("_poser_la_lumiere_3d("),
 		"sans cet appel, les cadrages « adversaire » sortent en vue d'ISO11")
 
+	# ISO12 v27 — LE RELIEF, même faiblesse et pire conséquence. `presentation_3d.gd` demande au miroir la liste des lampes
+	# pour le dénominateur du relief, et il ne peut le faire QUE par son nom, en texte : `_lumieres` est typé `Node3D`, et
+	# `lumieres_iso.gd` ne déclare aucun `class_name` — il n'existe aucun type à écrire. Rien ne vérifie donc cet appel avant
+	# l'exécution.
+	#
+	# ⚠️ **Et l'échec serait MUET.** `call()` sur une méthode absente rend `null` : `lampes` vide, `relief_nb` à 0, et la garde
+	# du dénominateur vide rend alors proprement le Lambert d'avant la v27. Le relief aurait DISPARU, le lot resterait vert, et
+	# les planches auraient seulement l'air « un peu plates ». C'est la forme exacte du `has_method()` du 2026-09-09.
+	var texte_miroir := FileAccess.get_file_as_string("res://lumieres_iso.gd")
+	_check("le miroir expose encore decrire_pour_relief() pour le relief",
+		texte_miroir.contains("func decrire_pour_relief("),
+		"sans elle, relief_nb tombe à 0 et le relief disparaît SANS rougir le lot")
+	var texte_pose := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	_check("et la présentation la demande encore",
+		texte_pose.contains("decrire_pour_relief"),
+		"sans cet appel, les lampes ne sont jamais posées et le relief est muet")
+	# Le troisième fil : la pose doit être APPELÉE. Une fonction juste, jamais appelée, ne rougit rien non plus.
+	_check("et _accorder_le_relief() est bien appelée à chaque pose de bride",
+		texte_pose.contains("\t_accorder_le_relief()"),
+		"posée une seule fois à l'allumage, la liste des lampes serait celle d'une autre image")
+
 	# Le catalogue lui-même. **Une image dont l'identifiant est en double
 	# écraserait l'autre en silence** : les deux fichiers portent le nom de leur
 	# identifiant, et le manifeste décrirait la survivante sous les deux fiches.

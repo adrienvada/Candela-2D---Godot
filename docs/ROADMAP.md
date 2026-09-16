@@ -6528,6 +6528,27 @@ lot. Le contrôle qui le prouve ne coûte rien :
 Zéro veut dire que le lot va rougir, et il rougira **ailleurs** — sur la suite
 qui charge la scène, jamais sur le fichier fautif.
 
+#### Corollaire : RECOPIER le cache d'un autre arbre donne un lot « presque vert » (2026-09-16)
+
+ISO12 v27, et le piège ci-dessus a été repayé en entier — **deux lots perdus** — faute d'avoir lu cette section avant d'agir.
+La règle était là, son contrôle aussi. Ce qui suit n'est donc pas une découverte : c'est ce que la redécouverte a ajouté.
+
+Le worktree neuf rougissait partout ; plutôt que d'importer, j'ai **recopié le `.godot/` de l'arbre principal**, pour épargner
+quelques minutes de CPU à une machine partagée qu'un relevé de cadence attendait froide. Le lot suivant n'a pas rougi partout :
+il est devenu **presque** vert — la plupart des suites passaient, quelques-unes échouaient sur `Identifier "Presentation3D" not
+declared`, parce que le cache recopié datait de la veille du chantier et ignorait sept de ses classes.
+
+⚠️ **Un lot presque vert est pire qu'un lot rouge.** Le rouge général désigne l'environnement ; l'échec partiel désigne le
+fichier cité — que je venais justement de modifier — et envoie chercher la faute dans le code. **Donc : importer, jamais
+copier.** L'importation a pris quelques secondes et non des minutes, la partie coûteuse (`imported/`) étant déjà là : ce qu'une
+copie fait légitimement gagner, ce sont les assets ; le registre des classes, jamais.
+
+Deux détails qui ont failli tromper la vérification elle-même. Après un `cp -R`, **la date du fichier de cache est celle de la
+copie**, pas celle de son écriture par Godot : elle ne dit RIEN de sa fraîcheur, seul son contenu le dit. Et **l'inverse
+compte autant** : `lumieres_iso.gd`, `brouillage.gd` et `eblouissement.gd` ne déclarent aucun `class_name`, donc leur absence
+du registre est normale et n'annonce rien. Chercher une classe au cache ne prouve quelque chose **qu'après** avoir vérifié que
+le fichier en déclare une — sans quoi le contrôle fabrique sa propre fausse alerte.
+
 
 ### Le plugin Godot AI se met à jour tout seul, et hors de git (2026-09-14)
 
@@ -26049,6 +26070,42 @@ et jamais la moyenne — c'est une moyenne à 1,09 qui avait caché la flaque ; 
 2D ; le triangle du cône qui se lit ; les cadrages « adversaire » à `loupe-corps`. 
 
 Lot complet vert à 07:05, sur l'arbre exact de ce commit : « tout passe, sans erreur de script (431 s) ».
+
+#### La v27 est ÉCRITE (et rien n'est mesuré) — fusion `9102a3e`
+
+Le relief est en place dans les trois shaders éclairés, l'include `iso_relief.gdshaderinc`, l'accesseur du miroir
+(`decrire_pour_relief`, huit lampes triées par intensité comme le moteur) et la pose des uniformes, appelée en fin
+d'`_accorder_la_bride()` — donc à chaque image, partout où la bride est posée. Le drapeau `lumiere_3d` reste ÉTEINT.
+**Aucune mesure n'a encore été prise** : les bancs attendent que le Mac soit libre ET qu'Adrien ne relève pas sa cadence.
+
+**Deux défauts ont été trouvés dans la forme elle-même, avant tout banc, et le second fabriquait le défaut qu'on soigne.**
+
+1. **Le dénominateur vide.** Si le miroir ne connaît aucune lampe alors que le moteur éclaire quand même le fragment,
+   `d_total` tombait sur son plancher et CHAQUE lampe rendait le plafond : un aplat blanc à `relief_max`, qu'on aurait lu
+   comme un relief cassé au lieu d'une liste vide. La garde rend désormais le Lambert d'avant la v27 — le rendu redevient
+   celui d'hier, jamais un débordement.
+
+2. **Le plafond du canal.** `SPECULAR` vit dans [0 ; 1] : le dénominateur est divisé par une borne, et **tout ce qui la
+   dépasse se lit COMME elle**. Cette borne valait 8,0, posée avant d'avoir les grandeurs. Or `energie_par_type` donne
+   **52,0 à une fusée** (3,6 à une torche) : sous une fusée, le dénominateur culmine vers **36**. `light()` aurait divisé par
+   8 au lieu de 36 — relief multiplié par 4,5, collé à `relief_max`, **un disque blanc et plat autour de chaque fusée**.
+   ⚠️ **Et cela ne se serait vu sur AUCUN cadrage à la seule torche** : ils auraient mesuré (a) ≈ 1,0 et conclu au succès —
+   la forme exacte du piège de la moyenne à 1,09 qui cachait la flaque. La borne passe à **256** (sept fois le pic d'une
+   fusée, parce que le dénominateur ADDITIONNE les lampes) et le calcul est écrit dans l'include.
+
+**Donc le premier cadrage mesuré est celui qui CUMULE** — une fusée ET les deux torches, rapport relevé au centre du halo, là
+où le dénominateur est le plus grand. C'est lui qui juge le plafond ; un cadrage à la torche seule ne peut pas.
+
+**Approximations assumées, à mesurer et non à supposer** : `relief_max` borne CHAQUE contribution et non R total (un shader
+spatial n'offre aucun point après la boucle des lampes) ; la courbe d'atténuation recopie celle de Godot à quelques pour cent
+près — une erreur s'y voit comme un modelé un peu plus ou un peu moins marqué, jamais comme une fuite.
+
+**Une garde croisée protège le relief d'une disparition MUETTE** (`tools/test_banc.gd`). `presentation_3d.gd` demande les
+lampes au miroir par une chaîne de caractères — `_lumieres.call("decrire_pour_relief")` —, seule forme possible puisque
+`_lumieres` est typé `Node3D` et que `lumieres_iso.gd` ne déclare aucun `class_name`. Un renommage rendrait `null`, donc
+`relief_nb = 0`, donc — par la garde ci-dessus — le Lambert d'avant la v27 : **le relief aurait disparu, le lot serait resté
+vert, et les planches auraient seulement l'air « un peu plates »**. C'est la forme exacte du `has_method()` du 2026-09-09. La
+garde vérifie les trois fils : la méthode existe, elle est demandée, et la pose est APPELÉE.
 
 ### Ce qui attend Adrien — jalon H15
 
