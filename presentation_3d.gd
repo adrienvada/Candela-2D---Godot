@@ -262,6 +262,8 @@ var bride_mode_3d := 0
 var bride_echelle_3d := 1.0
 var gain_corps_propre_3d := 0.0
 var gain_pied_lampe_3d := 0.0
+## ISO12, lot 0 quater — la bride des corps forcée à 1 (coup un du diagnostic). Instrument, éteint par défaut.
+var bride_corps_forcee := false
 var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
@@ -1737,6 +1739,7 @@ func _accorder_la_bride() -> void:
 		m.set_shader_parameter("bride_mode", bride_mode_3d)
 		m.set_shader_parameter("bride_echelle", bride_echelle_3d)
 		m.set_shader_parameter("gain_corps_propre", gain_corps_propre_3d)
+		m.set_shader_parameter("bride_forcee", bride_corps_forcee)
 	if _lumieres != null:
 		_lumieres.set("ombres", ombres_3d and not (ombres_vue_unique_seulement and _scinde))
 		_lumieres.set("retrodiffusion", retrodiffusion_3d)

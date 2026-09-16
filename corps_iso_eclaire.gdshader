@@ -177,6 +177,10 @@ float bride_valeur(float l) {
 // sa rétrodiffusion telle que la 2D la montre), × ce gain, visible des deux vues. Une light() posée dans le corps l'éclairait par
 // l'intérieur, dot(N, L) négatif sur toutes ses faces : J2 vu de loin restait noir en 3D, gris en 2D.
 uniform float gain_corps_propre = 0.0;
+// ISO12, lot 0 quater — LE COUP UN du diagnostic : la bride du corps forcée à 1, éteinte par défaut, jamais une règle.
+// `bride_mode`/`bride_echelle` ne savent pas le faire : quand le capteur est noir, L2D vaut 0 et tout multiple de 0 reste
+// 0. Si le corps s'allume ainsi, c'est la LECTURE de L2D qui est en cause, pas la lumière 3D.
+uniform bool bride_forcee = false;
 
 varying vec3 monde;
 varying vec3 local;             // VERTEX, repère du modèle — voir `pate_encre_boite()`
@@ -238,7 +242,7 @@ void fragment() {
 	} else {
 		recue = lumiere_recue;
 	}
-	float b = bride_valeur(recue);
+	float b = bride_forcee ? 1.0 : bride_valeur(recue);
 	vec3 base = couleur_fiche.rgb * b;
 	vec3 c = (variante_pate == 1 || b <= 0.0) ? base
 		: min(pate(base, pate_luminance(base), style, motif, vec2(0.0), b, aa), base);

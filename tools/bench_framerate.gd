@@ -91,6 +91,10 @@ var _ui: Node
 ## est la signature du défaut — un percentile sur des doublons est un minimum.
 var _samples: Array[float] = []
 var _seconds := 15.0
+## ISO12 — la lumière 3D bridée pendant le relevé, et sa variante.
+var _lumiere3d := false
+var _lumiere3d_sans_ombres := false
+var _lumiere3d_echelle := 1.0
 var _peak_particles := 0
 var _peak_bullets := 0
 ## Les compteurs du serveur de rendu, relevés à chaque image mesurée : appels
@@ -209,6 +213,18 @@ func _ready() -> void:
 		return
 	_iso = not args.has("--2d")
 	_lightmap = _value(args, "--lightmap", "")
+	# ISO12 — la lumière 3D bridée, éteinte par défaut comme dans le jeu. Sans ces drapeaux, ce banc mesure la vue iso d'ISO11.
+	_lumiere3d = args.has("--lumiere3d")
+	_lumiere3d_sans_ombres = args.has("--sans-ombres")
+	_lumiere3d_echelle = float(_value(args, "--echelle", "1"))
+	if (_lumiere3d_sans_ombres or args.has("--echelle")) and not _lumiere3d:
+		printerr("✗ --sans-ombres et --echelle se prennent avec --lumiere3d")
+		_sortir(2)
+		return
+	if _lumiere3d and not _iso:
+		printerr("✗ --lumiere3d est une variante de la vue iso : pas avec --2d")
+		_sortir(2)
+		return
 	if _lightmap != "" and not (_iso and Presentation3D.LIGHTMAPS.has(_lightmap)):
 		printerr("✗ --lightmap se prend avec la vue iso (pas avec --2d) et attend %s (reçu « %s »)"
 			% [" | ".join(Presentation3D.LIGHTMAPS), _lightmap])
@@ -280,6 +296,21 @@ func _ready() -> void:
 	if _iso and not await _vue_iso_tenue():
 		_sortir(1)
 		return
+	# ⚠️ ICI et pas à la lecture des options : `poser_lumiere_3d()` échange les shaders des matériaux DÉJÀ construits. Appelé
+	# avant que la vue iso ne soit tenue, il ne trouve rien à échanger et ne fait rien, sans le dire.
+	if _lumiere3d:
+		var iso3d := Presentation3D.instance()
+		if iso3d == null:
+			printerr("✗ --lumiere3d : pas de Presentation3D une fois la vue iso tenue")
+			_sortir(1)
+			return
+		iso3d.set("bride_mode_3d", 1)
+		iso3d.set("bride_echelle_3d", _lumiere3d_echelle)
+		iso3d.set("ombres_3d", not _lumiere3d_sans_ombres)
+		iso3d.poser_lumiere_3d(true)
+		await get_tree().process_frame
+		print("Lumière 3D    : allumée, bride identité échelle %.2f, ombres %s"
+			% [_lumiere3d_echelle, "non" if _lumiere3d_sans_ombres else "oui"])
 	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
 	await _stress(WARMUP_SEC, false)

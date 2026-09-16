@@ -5753,3 +5753,13 @@ pixel blanc, saturation 0,22–0,24 contre 0,29–0,35 en 2D). L'encre, c'est le
 la frange de la bride. **Non livrés** : les cadrages de l'adversaire (posé, non éclairé, cause non identifiée), donc l'émission
 du corps non vérifiée, et la cadence (le banc de cadence mesurerait sa propre chaleur). Anomalie signalée : les ombres allumées
 ajoutent de la lumière. Lot complet vert à 01:58 (drapeau éteint) : « tout passe, sans erreur de script (433 s) ». Sans nombre de suites : le compte de 112 du lot 0 bis ne se retrouve pas dans la sortie, et le lanceur n'imprime aucun total.
+
+**ISO12, lot 0 quater — l'instrument du diagnostic, 2026-09-16 à l'aube.** Session « Iso 1 Opus », branche `iso12-lumiere3d`.
+Rien de changé au rendu (drapeau toujours éteint) : `bride_forcee` sur les corps, `--capteurs` et `--bride-corps-forcee` au banc,
+l'état du rejeu imprimé par prise, et `--lumiere3d` / `--sans-ombres` / `--echelle` au banc de cadence pour le relevé d'Adrien
+(allumage APRÈS que la vue iso est tenue, sinon il ne fait rien sans le dire). Quatre hypothèses éliminées par la mesure, dont
+deux miennes : coup un négatif (bride forcée à 1, le corps ne bouge pas), capteurs éclairés (croissant franc, max 1,0), rejeu
+inactif (`en_lecture=false` partout, fantômes cachés), et l'opacité du corps ne vient pas du capteur mais de l'alpha rendu du
+sprite 2D. Le corps de J2 manque toujours dans la vue de J1 ; la référence 2D du banc étant la présentation iso éteinte, la
+prise qui départage est au photographe sur scène réelle. Cloître sans muret (`low_walls` vide) ; cône de 36° corrigé. Lot
+complet vert à 04:53 : « tout passe, sans erreur de script (433 s) ».

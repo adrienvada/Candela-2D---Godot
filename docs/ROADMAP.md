@@ -25845,6 +25845,50 @@ bride, pas une lumière montrée là où la 2D n'en montre pas.**
 fusée à 9 161–14 512 pixels blancs contre 2 310–4 196. Une ombre ne peut qu'enlever de la lumière : quelque chose d'autre voyage
 dans la variante « ombres », et je ne sais pas quoi. Lot complet vert à 01:58 (drapeau éteint) : « tout passe, sans erreur de script (433 s) », la ligne du lanceur telle quelle. **Sans nombre de suites** : le compte de 112 inscrit au lot 0 bis ne se retrouve pas dans la sortie de ce lot, et `run_suites.sh` n'imprime aucun total (92 suites déclarées dans `SUITES`, une dans `SUITES_2D`, plus les scénarios à deux instances et le contrôle de démarrage). Un chiffre invérifiable ne se recopie pas.
 
+#### Lot 0 quater — l'instrument du diagnostic, et quatre hypothèses éliminées
+
+Ce commit **ne change rien au rendu** : le drapeau `lumiere_3d` reste éteint, et les drapeaux ajoutés ne font rien sans qu'on
+les passe. Il pose de quoi répondre par la mesure à « l'adversaire n'est pas éclairé dans le cône », et il consigne ce que la
+mesure a **écarté**.
+
+**Ce qui est posé.**
+- `bride_forcee` sur le shader des corps (éteint par défaut) : le « coup un » de la session cloud, forcer la bride à 1.
+  `bride_mode`/`bride_echelle` ne savent pas le faire — quand le capteur est noir, L2D vaut 0 et tout multiple de 0 reste 0.
+- `--capteurs` au banc : les quatre `CapteurCorps` enregistrés en PNG, avec leur luminance moyenne et leur maximum.
+- `--bride-corps-forcee` au banc, et l'état du rejeu imprimé à chaque cadrage (`en_lecture`, les deux fantômes, le visuel de J1).
+- Au banc de CADENCE (`tools/bench_framerate.gd`) : `--lumiere3d`, `--sans-ombres`, `--echelle=N`, pour qu'Adrien puisse faire le
+  relevé long que le banc de lumière ne sait pas faire (300 images, ~5 s, sans garde-fou de focus).
+  ⚠️ **L'allumage se fait APRÈS `_vue_iso_tenue()`, jamais à la lecture des options** : `poser_lumiere_3d()` échange les shaders
+  de matériaux DÉJÀ construits ; appelé trop tôt, il ne trouve rien et ne fait rien, **sans le dire** — et le relevé « avec
+  lumière 3D » aurait mesuré la vue d'ISO11 sous un autre nom.
+
+**Ce que la mesure a ÉLIMINÉ** — c'est l'essentiel de ce lot, et c'est négatif :
+1. **Le coup un est négatif.** Bride du corps forcée à 1, tout le reste identique : J2 vu par J1 à trois tuiles 146,3 → 146,1 ;
+   six tuiles 85,7 → 85,6 ; profil 68,5 → 68,2. **Ce n'est pas la lecture de L2D**, et le remède « lire au capteur » ne
+   s'applique pas : la bride était hors circuit et le corps n'a pas bougé.
+2. **Les capteurs sont éclairés.** Les quatre, moyenne 0,016 à 0,062, maximum 1,0000 — y compris « vue 1, corps 2 », celui qui
+   décide. Son image montre un CROISSANT ÉCLAIRÉ franc, celui que décrit l'en-tête du shader. La torche de J1 atteint donc le
+   capteur de J2 : **l'occluder en étoile de J2 ne l'étouffe pas**, contrairement à ce que cette session avait supposé.
+3. **Le rejeu ne tourne pas.** `en_lecture=false` sur les neuf cadrages, les deux fantômes cachés, le visuel de J1 vrai. Donc
+   `hide_all_visuals()` — qui cache `visual_enemy` et ferait disparaître le corps adverse — **n'a jamais été appelé**. L'autre
+   supposition de cette session tombe aussi.
+4. **L'opacité du corps ne vient PAS du capteur.** `opacite_du_corps` rend `opacite_rendue(visual_enemy)` pour le corps d'en
+   face : l'alpha RENDU du sprite 2D (son `self_modulate`, fois le `modulate` de chaque parent, zéro si l'un est caché), poussé
+   tel quel dans `opacite_N`. Aucun seuil, aucune moyenne de capteur. La première branche du diagnostic de la session cloud est
+   donc écartée elle aussi.
+
+**Ce qui reste, et qui n'est pas tranché** : le corps de J2 n'apparaît pas dans la vue de J1, capteur éclairé et bride hors
+circuit. ⚠️ **Et la « référence 2D » de ce banc est la PRÉSENTATION ISO lumière éteinte, pas la vue de dessus** — le manque est
+donc peut-être dans la présentation iso (ISO2/ISO3), pas dans le jeu 2D ni dans ISO12. La prise qui départage est au
+PHOTOGRAPHE sur une scène de jeu réelle, pas au banc à pantins.
+
+**Deux faits de carte, au passage.** Le Cloître n'a **aucun** muret (`low_walls` vide dans son json) : le cadrage « fusée
+derrière un muret » ne peut exister que sur la carte d'essai des murs bas, et le banc qui répondait « aucun muret » disait vrai
+là-bas. Sur les murs bas, il disait faux : ma recherche exigeait un muret dans un cône de 36° autour d'une direction choisie
+pour de tout autres raisons, alors que la carte en porte cinq suites, dont une droit entre les deux départs.
+
+Lot complet vert à 04:53 (drapeau éteint) : « tout passe, sans erreur de script (433 s) », la ligne du lanceur telle quelle.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

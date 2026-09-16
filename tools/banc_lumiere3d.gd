@@ -106,6 +106,9 @@ var _contact_rayon := -1.0
 var _echelle_identite := 1.0
 var _brides_seules := false
 var _cadrages_seuls := false
+## ISO12, lot 0 quater — le coup un (bride du corps forcée à 1) et l'enregistrement des quatre capteurs.
+var _bride_corps_forcee := false
+var _capteurs_en_image := false
 var _echecs := 0
 var _prises := 0
 
@@ -125,6 +128,8 @@ func _ready() -> void:
 	_dossier = args[i + 1]
 	_rapide = args.has("--rapide")
 	_preuve_seule = args.has("--preuve-seule")
+	_bride_corps_forcee = args.has("--bride-corps-forcee")
+	_capteurs_en_image = args.has("--capteurs")
 	_brides_seules = args.has("--brides-seules")
 	_cadrages_seuls = args.has("--cadrages-seuls")
 	for a in args:
@@ -302,6 +307,7 @@ func _poser_la_variante(v: Dictionary) -> void:
 	_p.bride_echelle_3d = float(v.get("bride_echelle", _echelle_identite))
 	_p.gain_corps_propre_3d = float(_energies.get("corps_propre", 0.0))
 	_p.gain_pied_lampe_3d = float(_energies.get("pied_lampe", 0.0))
+	_p.bride_corps_forcee = _bride_corps_forcee
 	_p.variante_pate_3d = int(v.get("pate", 0))
 	_p.masque_preuve = int(v.get("masque", 0))
 	_p.ombres_3d = bool(v.get("ombres", true))
@@ -562,11 +568,19 @@ func _les_cadrages(carte: String) -> void:
 			if muret.size == Vector2.ZERO:
 				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=%s raison=aucun_muret" % [carte, cadrage["id"]])
 				continue
-			_poser_la_fusee(muret.get_center() + dir * (muret.size.length() * 0.5 + MursBas.TUILE))
+			# Derrière la pierre VUE DE J1 : on prolonge la ligne J1 → muret, pour que la lueur monte de l'autre côté.
+			var vers_muret: Vector2 = (muret.get_center() - p1).normalized()
+			_poser_la_fusee(muret.get_center() + vers_muret * (muret.size.length() * 0.5 + MursBas.TUILE))
+			# Et J1 regarde la pierre : sans cela le cadrage montre une fusée hors champ.
+			_scene["v1"] = vers_muret
+			(_pantins[0] as Pantin).visee = vers_muret
 		else:
 			_retirer_la_fusee()
 		var nom := "%s_%s" % [carte, cadrage["id"]]
+		_dire_l_etat_du_rejeu(nom)
 		await _prendre(nom, "scinde", {"lumiere": false})
+		if _capteurs_en_image:
+			await _enregistrer_les_capteurs(nom)
 		await _prendre(nom, "scinde", {"lumiere": true, "ombres": false})
 		await _prendre(nom, "scinde", {"lumiere": true, "ombres": true, "atlas": 2048})
 	_scene["p2"] = p2_origine
@@ -597,21 +611,81 @@ func _direction_libre(depart: Vector2, visee: Vector2, distance: float) -> Vecto
 	return Vector2.ZERO
 
 
-## Le muret le mieux aligné sur la visée de J1, à portée : celui derrière lequel poser une fusée pour la voir du côté sombre.
-func _muret_devant(depart: Vector2, sens: Vector2) -> Rect2:
+## Le muret le plus PROCHE à portée, quel que soit son relèvement : celui derrière lequel poser une fusée pour la voir du côté
+## sombre.
+##
+## ⚠️ **Il exigeait avant un muret dans un cône de 36° autour de la direction du cadrage, ET il n'en trouvait aucun sur les deux
+## cartes.** La carte d'essai en porte pourtant cinq suites, dont une droit entre les deux départs : la direction du cadrage est
+## celle où l'adversaire a trouvé une PLACE LIBRE, qui n'a aucune raison de pointer vers une pierre. Le cadrage demande un muret
+## ATTEIGNABLE, pas un muret droit devant — et un banc qui répond « aucun muret » sur une carte qui en porte accuse la carte à
+## la place de sa propre recherche.
+func _muret_devant(depart: Vector2, _sens: Vector2) -> Rect2:
 	var meilleur := Rect2()
-	var meilleure_note := 0.8
+	var meilleure_distance := 12.0 * MursBas.TUILE
 	for m in _main.murs_bas as Array:
 		var r := m as Rect2
-		var vers: Vector2 = r.get_center() - depart
-		var d := vers.length()
-		if d < MursBas.TUILE or d > 10.0 * MursBas.TUILE:
+		var d: float = (r.get_center() - depart).length()
+		if d < MursBas.TUILE or d > meilleure_distance:
 			continue
-		var note := sens.dot(vers.normalized())
-		if note > meilleure_note:
-			meilleure_note = note
-			meilleur = r
+		meilleure_distance = d
+		meilleur = r
 	return meilleur
+
+
+## ISO12, lot 0 quater — LE REJEU TOURNE-T-IL ? Imprimé par la prise, jamais déduit.
+##
+## `game_state.gd` cache les visuels des DEUX joueurs (`hide_all_visuals`, qui emporte `visual_enemy`) et montre les fantômes
+## à leur place tant que `ReplaySystem.playing_back` est vrai. Si cela arrivait pendant un cadrage, le corps visible serait un
+## fantôme, l'ancre `j2` pointerait sur un sprite caché, et « l'adversaire n'est pas éclairé » serait un défaut d'instrument.
+func _dire_l_etat_du_rejeu(nom: String) -> void:
+	var rejeu := get_node_or_null(^"/root/ReplaySystem")
+	var en_lecture := bool(rejeu.get("playing_back")) if rejeu != null else false
+	var g1 = _main.get("ghost_p1")
+	var g2 = _main.get("ghost_p2")
+	var v1 := is_instance_valid(g1) and bool((g1 as Node2D).visible)
+	var v2 := is_instance_valid(g2) and bool((g2 as Node2D).visible)
+	var p1_visible := is_instance_valid(_main.p1) and bool(_main.p1.get("visual").visible)
+	print("BANC_LUMIERE3D rejeu carte=%s en_lecture=%s fantome1=%s fantome2=%s visuel_j1=%s"
+		% [nom, str(en_lecture), str(v1), str(v2), str(p1_visible)])
+
+
+## ISO12, lot 0 quater — LES QUATRE CAPTEURS, EN IMAGE.
+##
+## `CapteurCorps` est un `SubViewport` de 256 texels couvrant 128 px de monde, centré sur un corps, où un disque de rayon 18 px
+## reçoit la lumière 2D par `masque_capteur(vue, corps)`. Le shader du corps y lit sa lumière (`capteur_N`). Enregistrer la
+## texture telle quelle dit, sans raisonnement, si le corps est noir PARCE QUE son capteur l'est.
+##
+## Le capteur qui décide est « vue 1, corps 2 » : ce que la vue de J1 sait de la lumière sur le corps de J2.
+func _enregistrer_les_capteurs(nom: String) -> void:
+	var capteurs = _p.get("_capteurs")
+	if capteurs == null:
+		print("BANC_LUMIERE3D capteurs carte=%s raison=aucun_capteur" % nom)
+		return
+	for id in 2:
+		for j in 2:
+			var c = capteurs[id][j]
+			if c == null or not is_instance_valid(c):
+				continue
+			var texture := (c as SubViewport).get_texture()
+			if texture == null:
+				continue
+			var img := texture.get_image()
+			if img == null:
+				continue
+			var fichier := "%s_capteur_vue%d_corps%d.png" % [nom, id + 1, j + 1]
+			img.save_png(_dossier.path_join(fichier))
+			# La luminance moyenne et le maximum : un capteur noir se lit au chiffre, pas seulement à l'œil.
+			var somme := 0.0
+			var haut := 0.0
+			for y in img.get_height():
+				for x in img.get_width():
+					var p := img.get_pixel(x, y)
+					var l := 0.299 * p.r + 0.587 * p.g + 0.114 * p.b
+					somme += l
+					haut = maxf(haut, l)
+			var n := float(img.get_width() * img.get_height())
+			print("BANC_LUMIERE3D capteur carte=%s vue=%d corps=%d moyenne=%.4f max=%.4f fichier=%s"
+				% [nom, id + 1, j + 1, somme / maxf(n, 1.0), haut, fichier])
 
 
 func _retirer_la_fusee() -> void:
