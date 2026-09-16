@@ -26093,34 +26093,43 @@ d'`_accorder_la_bride()` — donc à chaque image, partout où la bride est pos�
    la forme exacte du piège de la moyenne à 1,09 qui cachait la flaque. La borne passe à **256** (sept fois le pic d'une
    fusée, parce que le dénominateur ADDITIONNE les lampes) et le calcul est écrit dans l'include.
 
-**L'ENVELOPPE MESURÉE — où R sort de 1, et pourquoi ce n'est PAS un défaut.** Calculée hors machine en rejouant les formules
-exactes de l'include, pendant que le Mac restait froid pour les relevés d'Adrien. Elle est écrite ICI, **avant la première
-mesure** : trouvée après coup, elle passerait pour une explication inventée pour excuser un mauvais chiffre.
+**L'ENVELOPPE MESURÉE — ce que R vaut hors du sol plat, et pourquoi.** Calculée hors machine en rejouant les formules exactes
+de l'include, pendant que le Mac restait froid pour les relevés d'Adrien. Elle est écrite ICI, **avant la première mesure** :
+trouvée après coup, elle passerait pour une explication inventée pour excuser un mauvais chiffre.
 
-D'abord ce qui tient : **R = 1,0000 exactement sur sol plat** pour une torche, deux torches, et deux torches + une fusée — le
-nombre de lampes et leur énergie se simplifient, comme voulu. Dans l'ombre de toutes, 0. Le dénominateur d'une scène à trois
-feux culmine à 37,7 contre un plafond de canal à 256 : moins de 15 % du canal, aucune saturation.
+⚠️ **ε vaut désormais 0,02 et non 0,2** (décidé par la session cloud, 2026-09-16) : la valeur citée plus haut est celle du
+premier jet. **0,2 faisait manquer la règle à sa promesse** — un sol plat éclairé doit rendre la 2D, sous une fusée posée comme
+sous une torche, et à 0,2 ce sol tombait à 0,661 / 0,399 / 0,266 à 60, 100 et 150 px. Ce n'était pas une signature à accepter :
+c'était la règle qui se démentait, sur le cadrage même qui avait cassé l'atténuation plate. Abaisser ε est sans danger parce que
+`relief_max` écrête déjà CHAQUE contribution — ε n'avait que ce rôle, et il est tenu ailleurs.
 
-Puis les deux bords, tous deux par CONSTRUCTION :
-
-| cas | ce que R fait | pourquoi |
+| cas | R (ε = 0,02) | pourquoi |
 |---|---|---|
-| lampe basse (fusée/braise/mine à 8 px), sol plat | 0,661 à 60 px ; **0,399 à 100 px** ; 0,266 à 150 px | ε = 0,2 mord sous 11,5° au-dessus de l'horizon |
-| lampe à 32 px et plus, sol plat | 1,000 partout | ε inactif, l'identité tient |
-| mur vertical, lampe à 10-50 px de hauteur | R brut 4,98 / 4,00 / 2,00 → **écrêté à 1,5** | `relief_max`, appliqué PAR LAMPE |
-| mur vertical, lampe à 100 px | 1,000 | le croisement, à dot(haut, L) ≈ 0,707 |
-| mur vertical, lampe à 150-200 px | 0,667 / 0,500 | au-dessus du croisement, le mur lit MOINS que le sol |
+| sol plat, torche haute / fusée posée (8 px) / braise (16 px) | **1,0000** à 30, 60, 100 et 150 px | l'identité tient : la 2D est rendue |
+| sol plat, lampe à 3 px et plus | **1,0000** | ε ne mord plus qu'en dessous de **1,15°** au-dessus de l'horizon |
+| sol plat, lampe à 2 px / 1 px | 0,9998 / 0,5000 | régime borné — une géométrie que le jeu ne produit pas |
+| mur vertical, lampe à 10 / 25 / 50 px | **1,5000**, écrêté | `relief_max`, appliqué PAR LAMPE (R brut 4,98 / 4,00 / 2,00) |
+| mur vertical, lampe à 75 px | 1,3333 | l'écrêtage cesse |
+| mur vertical, lampe à 100 px | 1,0000 | le croisement, à dot(haut, L) ≈ 0,707 |
+| mur vertical, lampe à 150 / 200 px | 0,6667 / 0,5000 | **le modelé voulu** — voir ci-dessous |
+| ombre de toutes | 0,0000 | (b) vaut zéro par construction |
 
-**Trois conséquences pour la recette.** (1) Sur un cadrage dont la lampe est au ras du sol, **(a) < 1 est attendu et ne vaut pas
-échec** — une fusée posée donne 0,4 à 100 px, par ε et non par défaut de relief. (2) **L'écrêtage à `relief_max` n'est pas
-théorique** : il se produit dès qu'un mur reçoit une lampe sous 75 px de hauteur, et comme il s'applique par lampe, deux lampes
-rasantes peuvent rendre chacune 1,5 — c'est l'approximation annoncée, et le banc la RENCONTRERA. (3) La torche visant le sol à
-45° est à dot(haut, L) = 0,707, loin au-dessus d'ε : **le régime normal du duel est intact**, les écarts sont confinés à la
-lumière rasante.
+**LE DÉPASSEMENT PAR LAMPE, CHIFFRÉ — et il compte pour le dosage.** `light()` accumule lampe par lampe, donc `relief_max`
+borne chaque contribution et non R total. Sur le cadrage cumulé lui-même — la fusée posée ENTRE les deux torches —, un mur face
+à la fusée donne des contributions brutes de 0,16 / 4,04 / 0,00 : le terme de la fusée est écrêté de 4,04 à 1,50, **et les deux
+torches s'ajoutent par-dessus**, pour un total de **1,659**. L'approximation n'est donc pas théorique : elle est franchie de
+~11 % sur le premier cadrage de la recette. ε n'y est pour rien (1,6562 à 0,2 ; 1,6587 à 0,02).
 
-⚠️ **Et une question ouverte, qui n'est pas tranchable par le calcul** : sous une lampe HAUTE, un mur lit moins que le sol. Est-ce
-le modelé voulu, ou la « flaque au pied » du défaut deux sous un autre nom ? La mesure doit la poser, et le dernier mot est à
-Adrien — c'est une question de rendu, pas d'algèbre.
+⚠️ **Conséquence pratique** : le maximum VISIBLE sur une face à plusieurs lampes n'est pas `relief_max`, il lui reste supérieur
+d'environ 11 % — 1,3 → 1,459 ; 1,4 → 1,559 ; 1,5 → 1,659. Le dosage à l'œil entre 1,3 et 1,5 reste donc valable, puisque le
+résultat suit le réglage de façon monotone et proportionnée : il faut seulement savoir que « 1,5 » se lit ~1,66 sur ces faces.
+Borne théorique : `relief_max` × N, soit 4,5 à trois lampes et 12,0 aux huit du moteur.
+
+**UN MUR PLUS SOMBRE QUE LE SOL SOUS UNE LAMPE HAUTE EST LE MODELÉ VOULU** (tranché par la session cloud, 2026-09-16). Une face
+tournée de côté reçoit moins d'une lampe placée au-dessus : c'est Lambert, et c'est précisément ce que la 2D ne sait pas dire —
+ce qu'ISO12 existe pour ajouter. **La flaque du défaut deux était un sol trop CLAIR, jamais un mur trop sombre** : les deux ne se
+confondent pas. Ce n'est donc pas une question à poser à Adrien ; c'est une image de la planche, et son œil dira si le dosage
+lui plaît.
 
 **Donc le premier cadrage mesuré est celui qui CUMULE** — une fusée ET les deux torches, rapport relevé au centre du halo, là
 où le dénominateur est le plus grand. C'est lui qui juge le plafond ; un cadrage à la torche seule ne peut pas.

@@ -15,9 +15,18 @@ uniform int relief_nb = 0;
 uniform vec4 relief_pos_intensite[8];   // xyz : position monde ; w : énergie × luminance de la couleur
 uniform vec4 relief_portee_cone[8];     // x : portée ; y : cos(demi-angle), < 0 pour une omni ; z : exposant d'atténuation ; w : exposant de cône
 uniform vec4 relief_direction[8];       // xyz : direction du spot (vers l'avant)
-// ⚠️ Sans ce plancher, une lampe rasante (dot(haut, L) proche de 0) ferait exploser R. 0,2 : les torches visent le sol à 45°,
-// où dot(haut, L) vaut environ 0,7 en régime.
-uniform float relief_epsilon = 0.2;
+// LE PLANCHER DU DÉNOMINATEUR. Sans lui, une lampe rasante (dot(haut, L) proche de 0) ferait exploser le rapport.
+//
+// ⚠️ **Il valait 0,2, et 0,2 faisait manquer la règle à sa promesse** (session cloud, 2026-09-16). Un sol plat éclairé doit
+// rendre la 2D — sous une fusée posée comme sous une torche, c'est le principe même. Or à 0,2 le sol sous une fusée au ras du
+// sol tombait à **0,661 à 60 px, 0,399 à 100 px, 0,266 à 150 px**, là où la 2D est pleine : ce n'était pas une signature à
+// accepter, c'était la règle qui se démentait, et sur le cadrage même qui avait cassé l'atténuation plate.
+//
+// À 0,02, le sol rend **1,0000 à ces trois distances**, et ε ne mord plus qu'en dessous de **1,15°** au-dessus de l'horizon.
+// Aucun danger à le baisser : `relief_max` écrête déjà CHAQUE contribution, donc le rapport reste borné quelle que soit la
+// rasance — abaisser ε ne fait qu'élargir le domaine où l'identité « sol plat = 1 » tient. Les murs ne bougent pas d'un
+// millième (1,5000 à 10, 25 et 50 px de hauteur, avec 0,2 comme avec 0,02) : ils étaient déjà écrêtés.
+uniform float relief_epsilon = 0.02;
 // « Ni plus » borné sur les faces ; « ni moins » reste libre dans les ombres.
 uniform float relief_max = 1.5;
 // L'ÉCHELLE DU CANAL : le dénominateur voyage de `fragment()` à `light()` dans SPECULAR, qui vit dans [0 ; 1] — il faut donc

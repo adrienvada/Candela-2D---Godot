@@ -372,7 +372,13 @@ void light() {
 	// croise le sol à dot(haut, L) ≈ 0,707 — exactement le régime d'une torche visant le sol à 45°. Sous une lampe plus haute
 	// le mur lit MOINS que le sol (0,667 à 150 px de hauteur, 0,500 à 200), et sous une lampe basse il sature : R brut 4,98 à
 	// 10 px, 4,00 à 25, 2,00 à 50, tous ramenés à `relief_max`. L'écrêtage n'est donc pas théorique, et il s'applique PAR
-	// LAMPE. À trancher au banc, et par Adrien : modelé voulu, ou « flaque » déguisée ?
+	// LAMPE — et ce dépassement est CHIFFRÉ : sur le cadrage cumulé (fusée posée entre deux torches), un mur face à la fusée
+	// rend 0,16 + 1,50 (écrêté de 4,04) + 0,00 = **1,659**, soit ~11 % au-dessus de `relief_max`. Le maximum visible suit donc
+	// le plafond sans lui être égal.
+	//
+	// Qu'un mur lise MOINS que le sol sous une lampe haute est le MODELÉ VOULU (tranché le 2026-09-16) : une face tournée de
+	// côté reçoit moins d'une lampe placée au-dessus, c'est Lambert, et c'est ce que la 2D ne sait pas dire. La « flaque » du
+	// défaut deux était un sol trop CLAIR, jamais un mur trop sombre.
 	//
 	// ⚠️ Ce `light()` n'écrit JAMAIS SPECULAR_LIGHT, et c'est ce qui éteint la passe spéculaire du moteur maintenant que
 	// `specular_disabled` a sauté. Le supprimer rallumerait les reflets.
