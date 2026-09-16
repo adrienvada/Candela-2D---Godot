@@ -50,10 +50,11 @@
 // Défauts : force de matière 0, aucune encre, aucun liseré, grille inactive — le mur d'ISO1.
 // `unshaded`, aucune Light3D.
 shader_type spatial;
-render_mode cull_back, fog_disabled, specular_disabled;
+render_mode cull_back, fog_disabled;
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
+#include "res://iso_relief.gdshaderinc"
 
 uniform float pied = 8.0;
 
@@ -353,9 +354,21 @@ void fragment() {
 		ALBEDO = c;
 		EMISSION = c * led_ici;
 	}
+
+	// ISO12 v27 — le dénominateur du relief : calculé ici (sans ombre, sur la liste fermée des lampes) parce que `light()` ne
+	// voit aucune variable de `fragment()`, et transporté vers lui par ce canal. Posé après les deux branches, donc dans les
+	// deux cas.
+	SPECULAR = relief_encoder(monde);
 }
 
-// ISO12 — Lambert seul, sans spéculaire : la lumière 3D module l'albédo bridé.
+// ISO12 v27 — le relief normalisé, sans spéculaire : la lumière 3D ne donne que le modelé, l'albédo bridé porte l'intensité.
 void light() {
-	DIFFUSE_LIGHT += ATTENUATION * LIGHT_COLOR * max(dot(NORMAL, LIGHT), 0.0);
+	// ISO12 v27 — LE RELIEF : le numérateur (ce qu'on accumulait ici, l'ombre portée par ATTENUATION) divisé par le
+	// dénominateur commun, calculé sans ombre dans `fragment()` et transporté par SPECULAR. Le rapport vaut 1 sur un sol plat
+	// quel que soit le nombre de lampes, plus sur une face tournée vers la lampe, moins dans l'ombre : l'intensité vient de la
+	// 2D (ALBEDO porte déjà albédo × L2D), la 3D n'apporte que le modelé.
+	//
+	// ⚠️ Ce `light()` n'écrit JAMAIS SPECULAR_LIGHT, et c'est ce qui éteint la passe spéculaire du moteur maintenant que
+	// `specular_disabled` a sauté. Le supprimer rallumerait les reflets.
+	DIFFUSE_LIGHT += relief_contribution(LIGHT_COLOR, ATTENUATION, dot(NORMAL, LIGHT), SPECULAR_AMOUNT);
 }
