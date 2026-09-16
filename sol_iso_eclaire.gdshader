@@ -317,9 +317,15 @@ void fragment() {
 // ISO12 v27 — le relief normalisé, sans spéculaire.
 void light() {
 	// ISO12 v27 — LE RELIEF : le numérateur (ce qu'on accumulait ici, l'ombre portée par ATTENUATION) divisé par le
-	// dénominateur commun, calculé sans ombre dans `fragment()` et transporté par SPECULAR. Le rapport vaut 1 sur un sol plat
-	// quel que soit le nombre de lampes, plus sur une face tournée vers la lampe, moins dans l'ombre : l'intensité vient de la
-	// 2D (ALBEDO porte déjà albédo × L2D), la 3D n'apporte que le modelé.
+	// dénominateur commun, calculé sans ombre dans `fragment()` et transporté par SPECULAR. Le rapport vaut 1 sur un sol plat,
+	// quel que soit le nombre de lampes, et moins dans l'ombre : l'intensité vient de la 2D (ALBEDO porte déjà albédo × L2D),
+	// la 3D n'apporte que le modelé.
+	//
+	// ⚠️ **« Plus sur une face tournée vers la lampe » n'est vrai que sous une lampe RASANTE** (calculé, 2026-09-16). Le mur
+	// croise le sol à dot(haut, L) ≈ 0,707 — exactement le régime d'une torche visant le sol à 45°. Sous une lampe plus haute
+	// le mur lit MOINS que le sol (0,667 à 150 px de hauteur, 0,500 à 200), et sous une lampe basse il sature : R brut 4,98 à
+	// 10 px, 4,00 à 25, 2,00 à 50, tous ramenés à `relief_max`. L'écrêtage n'est donc pas théorique, et il s'applique PAR
+	// LAMPE. À trancher au banc, et par Adrien : modelé voulu, ou « flaque » déguisée ?
 	//
 	// ⚠️ Ce `light()` n'écrit JAMAIS SPECULAR_LIGHT, et c'est ce qui éteint la passe spéculaire du moteur maintenant que
 	// `specular_disabled` a sauté. Le supprimer rallumerait les reflets.

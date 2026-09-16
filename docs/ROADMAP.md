@@ -26093,6 +26093,35 @@ d'`_accorder_la_bride()` — donc à chaque image, partout où la bride est pos�
    la forme exacte du piège de la moyenne à 1,09 qui cachait la flaque. La borne passe à **256** (sept fois le pic d'une
    fusée, parce que le dénominateur ADDITIONNE les lampes) et le calcul est écrit dans l'include.
 
+**L'ENVELOPPE MESURÉE — où R sort de 1, et pourquoi ce n'est PAS un défaut.** Calculée hors machine en rejouant les formules
+exactes de l'include, pendant que le Mac restait froid pour les relevés d'Adrien. Elle est écrite ICI, **avant la première
+mesure** : trouvée après coup, elle passerait pour une explication inventée pour excuser un mauvais chiffre.
+
+D'abord ce qui tient : **R = 1,0000 exactement sur sol plat** pour une torche, deux torches, et deux torches + une fusée — le
+nombre de lampes et leur énergie se simplifient, comme voulu. Dans l'ombre de toutes, 0. Le dénominateur d'une scène à trois
+feux culmine à 37,7 contre un plafond de canal à 256 : moins de 15 % du canal, aucune saturation.
+
+Puis les deux bords, tous deux par CONSTRUCTION :
+
+| cas | ce que R fait | pourquoi |
+|---|---|---|
+| lampe basse (fusée/braise/mine à 8 px), sol plat | 0,661 à 60 px ; **0,399 à 100 px** ; 0,266 à 150 px | ε = 0,2 mord sous 11,5° au-dessus de l'horizon |
+| lampe à 32 px et plus, sol plat | 1,000 partout | ε inactif, l'identité tient |
+| mur vertical, lampe à 10-50 px de hauteur | R brut 4,98 / 4,00 / 2,00 → **écrêté à 1,5** | `relief_max`, appliqué PAR LAMPE |
+| mur vertical, lampe à 100 px | 1,000 | le croisement, à dot(haut, L) ≈ 0,707 |
+| mur vertical, lampe à 150-200 px | 0,667 / 0,500 | au-dessus du croisement, le mur lit MOINS que le sol |
+
+**Trois conséquences pour la recette.** (1) Sur un cadrage dont la lampe est au ras du sol, **(a) < 1 est attendu et ne vaut pas
+échec** — une fusée posée donne 0,4 à 100 px, par ε et non par défaut de relief. (2) **L'écrêtage à `relief_max` n'est pas
+théorique** : il se produit dès qu'un mur reçoit une lampe sous 75 px de hauteur, et comme il s'applique par lampe, deux lampes
+rasantes peuvent rendre chacune 1,5 — c'est l'approximation annoncée, et le banc la RENCONTRERA. (3) La torche visant le sol à
+45° est à dot(haut, L) = 0,707, loin au-dessus d'ε : **le régime normal du duel est intact**, les écarts sont confinés à la
+lumière rasante.
+
+⚠️ **Et une question ouverte, qui n'est pas tranchable par le calcul** : sous une lampe HAUTE, un mur lit moins que le sol. Est-ce
+le modelé voulu, ou la « flaque au pied » du défaut deux sous un autre nom ? La mesure doit la poser, et le dernier mot est à
+Adrien — c'est une question de rendu, pas d'algèbre.
+
 **Donc le premier cadrage mesuré est celui qui CUMULE** — une fusée ET les deux torches, rapport relevé au centre du halo, là
 où le dénominateur est le plus grand. C'est lui qui juge le plafond ; un cadrage à la torche seule ne peut pas.
 
