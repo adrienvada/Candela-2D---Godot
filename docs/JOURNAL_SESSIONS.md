@@ -5774,3 +5774,12 @@ inactif (`en_lecture=false` partout, fantômes cachés), et l'opacité du corps 
 sprite 2D. Le corps de J2 manque toujours dans la vue de J1 ; la référence 2D du banc étant la présentation iso éteinte, la
 prise qui départage est au photographe sur scène réelle. Cloître sans muret (`low_walls` vide) ; cône de 36° corrigé. Lot
 complet vert à 04:53 : « tout passe, sans erreur de script (433 s) ».
+
+**ISO12, lot 0 quater (suite) — l'adversaire élucidé et l'atténuation plate réfutée, 2026-09-16 au matin.** Session « Iso 1
+Opus », branche `iso12-lumiere3d`. L'adversaire manquant n'était pas un défaut de rendu : l'éblouissement du REGARDEUR efface le
+sprite adverse, le corps voxel suit cet alpha (0,648 → mannequin franc, 0,015 → rien), et le banc à pantins tient cet
+éblouissement à 0,558-0,812 parce que les deux torches ne se quittent jamais. Cadrages « adversaire » déplacés vers
+`loupe-corps` (torche de J2 éteinte). L'atténuation plate est réfutée par deux calibrations : +70 % d'énergie élargit l'écart
+(0,36-0,77 → 0,40-0,99) et la fusée monte à 42 932 pixels blancs contre 14 en 2D dès ×1,0 — aplatir supprime ce qui empêche
+plusieurs lampes de dépasser le blanc. Décroissance de Godot rendue. Forme de la v27 arrêtée : relief en MOYENNE PONDÉRÉE, plan
+complet dans le brouillon, rien d'implémenté. Drapeau `lumiere_3d` toujours éteint.  Lot complet vert à 07:05 : « tout passe, sans erreur de script (431 s) ».

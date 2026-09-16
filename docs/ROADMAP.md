@@ -9016,6 +9016,27 @@ fait vérifiable se vérifie. `git merge-base --is-ancestor`, `list_sessions`, u
 `grep` dans le fichier — trois secondes, contre une demi-journée de travail bâti
 sur un état qui n'existe pas.
 
+### Un banc à pantins figés produit des états que le jeu ne produit jamais (2026-09-16)
+
+ISO12, lot 0 quater. Trois heures pour comprendre qu'un adversaire « non éclairé » était un adversaire ÉBLOUISSANT : deux
+pantins qui se regardent torche allumée, sans jamais bouger, tiennent un éblouissement à 0,8 pendant toute une passe, et le jeu
+efface alors le sprite adverse — règle correcte, scène impossible. **Un état que seul un banc produit ressemble à un défaut de
+rendu, et rien ne le distingue de l'extérieur.** Et c'est l'ÉLIMINATION méthodique qui a rendu la vraie cause trouvable :
+capteur éclairé (croissant franc, max 1,0000), bride hors circuit (forcée à 1, le corps ne bouge pas), rejeu inactif, opacité
+sans seuil de capteur, occluder innocent — cinq portes fermées avant la bonne. **Règle : avant d'accuser le rendu, vérifier que
+la scène du banc est une scène que le jeu peut produire.**
+
+### Une sonde posée juste après une écriture mesure l'état d'AVANT (2026-09-16)
+
+ISO12, lot 0 quater, et c'est le piège le plus cher de la nuit. Le banc posait `_scene["p2"]` puis mesurait immédiatement — or
+`_tenir()` n'applique les positions qu'à l'image SUIVANTE, il tourne dans `_process`. **Deux heures de chiffres ont décrit le
+cadrage précédent**, et j'en avais envoyé la conclusion. Rien ne le signalait : les nombres étaient plausibles, ils variaient
+d'un cadrage à l'autre, ils composaient une histoire cohérente. Ce qui l'a fait tomber n'est aucune mesure prise seule, mais
+**l'incohérence entre deux d'entre elles** — une géométrie qui disait le contraire de l'autre. **Règle : une mesure et une image
+qui portent le même nom doivent décrire le même instant ; une sonde se pose APRÈS le repos, et elle imprime la valeur VOULUE à
+côté de la valeur RÉELLE.** Ici, les corps étaient aux départs de la carte, à 665 px l'un de l'autre, quand le cadrage les
+voulait à 105 : la première ligne l'aurait dit.
+
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 
 ISO11, pas 7. Le dossier des vingt illustrations voxel contenait TROIS générations par emplacement — le nom nu, `_v3`, `_v4`.
@@ -25976,6 +25997,58 @@ là-bas. Sur les murs bas, il disait faux : ma recherche exigeait un muret dans 
 pour de tout autres raisons, alors que la carte en porte cinq suites, dont une droit entre les deux départs.
 
 Lot complet vert à 04:53 (drapeau éteint) : « tout passe, sans erreur de script (433 s) », la ligne du lanceur telle quelle.
+
+#### Lot 0 quater (suite) — l'adversaire élucidé, l'atténuation plate réfutée, et la forme de la v27
+
+**L'ADVERSAIRE MANQUANT N'ÉTAIT PAS UN DÉFAUT DE RENDU.** Il était effacé par l'ÉBLOUISSEMENT DU REGARDEUR, que le banc à
+pantins tenait à demeure. La chaîne, mesurée de bout en bout sur les deux cartes :
+`visual_enemy.modulate.a = Brouillage.opacite(dazzle_du_REGARDEUR)` → `opacite_du_corps` → `opacite_N` → le corps voxel rendu à
+cet alpha exact.
+
+| cadrage | dazzle J1 | dazzle J2 | J2 vu par J1 |
+|---|---|---|---|
+| 3 tuiles, de face | 0,369 | 0,558 | **0,015** |
+| 3 tuiles, de profil | 0,060 | 0,812 | **0,648** |
+| 6 tuiles, de face | 0,324 | 0,557 | 0,038 |
+
+Le Cloître reproduit la même relation. Et les deux loupes ×4 de la même passe la confirment à l'œil : **à 0,648 le mannequin
+voxel est franc** — torse, tête, membres, son ombre portée sur le sol —, **à 0,015 il n'y a que du sol**. Le corps suit l'alpha,
+sans seuil ni courbe cachée. Le banc tient l'éblouissement de J2 entre 0,558 et 0,812 parce que la torche de J1 ne quitte jamais
+son visage pendant des minutes : **aucun échange réel ne tient cela**. Les cadrages « adversaire » passent donc à la LOUPE
+(`tools/loupe.gd`, `loupe-corps`), qui pose J2 dans le cône **torche éteinte** et connaît ce piège depuis toujours.
+
+**L'ATTÉNUATION PLATE EST RÉFUTÉE PAR LA MESURE.** Elle venait du principe « la 2D donne l'intensité, la 3D ne donne que le
+relief » — le principe est juste, le mécanisme ne l'était pas. Deux calibrations : +70 % d'énergie déplace la moyenne de 10 à
+20 % et **élargit** l'écart entre cadrages (0,36-0,77 → 0,40-0,99), la part au-dessus de 1,5× monte partout, et la fusée passe à
+**42 932 pixels blancs contre 14 en 2D — dès l'énergie ×1,0**, donc ce n'est pas le niveau. Cause : aplatir supprime ce qui
+empêche plusieurs lampes de s'additionner au-delà du blanc, et `lumière3D(x)` dépend du nombre de lampes qui atteignent le
+point, si bien qu'aucune énergie ne rend le rapport constant. Le code est revenu à la décroissance de Godot, et le commentaire
+de `lumieres_iso.gd` porte la réfutation pour que personne ne la réessaie.
+
+#### La forme de la v27 : le relief comme MOYENNE PONDÉRÉE
+
+Arrêtée avec la session cloud. `couleur = albédo × L2D × R`, avec
+
+    R(x) = Σᵢ Iᵢ · sᵢ · max(dot(N, Lᵢ), 0) / Σᵢ Iᵢ · max(dot(haut, Lᵢ), ε)
+
+⚠️ **Une moyenne pondérée, JAMAIS une somme** : si chaque lampe ajoutait son propre relief, deux lampes sur un sol plat
+donneraient 2 — exactement le débordement mesuré ci-dessus. Sur un sol plat sans ombre R vaut 1 quel que soit le nombre de
+lampes et leur énergie ; dans l'ombre de toutes, 0 ; sur une face tournée vers la lampe dominante, plus de 1. Le numérateur est
+ce que `light()` accumule déjà ; le dénominateur, sans ombres, se calcule dans `fragment()` depuis la liste fermée du miroir
+(`LumieresIso._pool`) passée en uniformes, et voyage vers `light()` par `SPECULAR` → `SPECULAR_AMOUNT`. Bornes : ε = 0,2 par
+lampe (une lampe rasante ferait exploser R), R plafonné à 1,5. **Alors (a) vaut 1,0 par construction sur sol plat, (b) vaut zéro
+par construction, et il n'y a plus ni échelle ni énergie à balayer.**
+
+**Plan d'implémentation complet, prêt à appliquer** : cinq morceaux (accesseur sur `_pool`, include `iso_relief.gdshaderinc`,
+canal `SPECULAR`, pose des uniformes, retrait de `specular_disabled`), les approximations à surveiller (le plafond s'applique par
+lampe et non à R total ; le dénominateur doit prendre les MÊMES huit lampes que le moteur) et les commandes de banc — dans le
+brouillon de session `scratchpad/iso12/PLAN_RELIEF_v27.md`. **Rien n'en est implémenté à ce commit.**
+
+**Acceptation de la v27, inchangée** : (a) 1,0 ± 0,15 et (b) < 1 % **sur chaque cadrage, loupes ×4 comprises**, tableau complet
+et jamais la moyenne — c'est une moyenne à 1,09 qui avait caché la flaque ; fusée sans pixel blanc, teinte et forme contre la
+2D ; le triangle du cône qui se lit ; les cadrages « adversaire » à `loupe-corps`. 
+
+Lot complet vert à 07:05, sur l'arbre exact de ce commit : « tout passe, sans erreur de script (431 s) ».
 
 ### Ce qui attend Adrien — jalon H15
 
