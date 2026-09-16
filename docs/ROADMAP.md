@@ -9016,6 +9016,32 @@ fait vérifiable se vérifie. `git merge-base --is-ancestor`, `list_sessions`, u
 `grep` dans le fichier — trois secondes, contre une demi-journée de travail bâti
 sur un état qui n'existe pas.
 
+### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
+
+ISO11, pas 7. Le dossier des vingt illustrations voxel contenait TROIS générations par emplacement — le nom nu, `_v3`, `_v4`.
+**Le nom nu était l'état d'AVANT**, octet pour octet identique à ce que le dépôt portait déjà. Poser « les fichiers livrés »
+aurait rempli un commit de vingt fichiers inchangés sous un titre qui affirmait le contraire, et **rien ne l'aurait signalé** :
+ni `git status` (il ne voit aucune différence), ni le jeu (il montre la même image), ni aucune suite. **Règle : comparer les
+empreintes AVANT de copier, imprimer l'avant et l'après de chaque fichier, compter les inchangés, et refuser une pose qui n'en
+change aucun.** Le compte final se lit dans le journal du lot : vingt posées, zéro inchangée.
+
+### Une image remplacée n'est pas une image affichée : il faut réimporter (2026-09-16)
+
+ISO11, pas 7. Godot sert ses textures depuis son cache (`.godot/imported/`), indexé sur l'empreinte de la source. Remplacer les
+octets d'un PNG sans `godot --headless --import` laisse le jeu afficher l'ANCIEN dessin pendant que le dépôt montre le nouveau.
+Le changement est alors invisible partout : au `git status` (les fichiers ont bien changé), à l'œil sur les fichiers (ils sont
+bons), et en jeu (il ne s'est rien passé). **Règle : toute pose d'image se termine par une réimportation, et la réimportation
+se vérifie à son compte** — « Ré-importation des assets (20 steps) » pour vingt fichiers.
+
+### Un défaut transmis avec un numéro de ligne devient un ordre de modifier cette ligne (2026-09-16)
+
+ISO11, pas 7. Le défaut « l'homme au bandana encore en fond flou de l'accueil (`ui.gd:4306`) » a été relevé par une session,
+relayé par une deuxième, transmis à une troisième — et il en est revenu comme la consigne « corrige `ui.gd:4306` ». Or la ligne
+4306 est un `set_screen_panel`, les fonds flous (4312 à 4324) pointaient déjà sur les bons chemins, et le défaut tenait au
+FICHIER : remplacer l'image l'a effacé sans toucher une ligne de code. **Modifier `ui.gd` aurait cassé un écran correct pour
+satisfaire une consigne dont la prémisse avait disparu.** Règle : un symptôme se re-vérifie dans le code avant d'être corrigé,
+**surtout quand c'est soi-même qui l'a décrit la veille** — un numéro de ligne vieillit en une nuit, le symptôme non.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -25631,6 +25657,68 @@ réseau local, entraînement : `_entree_preparer`, en miroir de `_entree_changer
 carte et rien ne bouge pour lui. `map_chosen` ne part que d'un choix du joueur (vignette pressée, code importé), jamais
 d'une restauration. Preuve : `test_audit_menus`, section « Choisir une carte enchaîne sur les armes », par le vrai
 chemin d'une vignette pressée sur les quatre écrans, et l'écran d'un invité inchangé. Sur le `ui.gd` d'avant, les quatre écrans échouent : la carte change, le cadre reste sur la galerie (`cartes`) et le curseur de J1 sur une vignette. Lot complet vert à 22:32 : 112 suites, sans erreur de script, 434 s.
+
+#### L5 et L6 — ce qui a été fait sans être consigné
+
+**L5, le banc de variantes des corps : ANNULÉ** par la session cloud (relais du 2026-09-15 au soir), remplacé par le chantier
+ISO12. Rien n'a été codé.
+
+**L6, l'inventaire de l'habillage : FAIT et ENVOYÉ, jamais écrit ici.** Il recensait, écran par écran, l'art de menu qui n'était
+pas encore au voxel — c'est lui qui a déclenché la commande des vingt illustrations à la session « ISO Assets Sonnet ». ⚠️ **Un
+inventaire qui ne vit que dans un message inter-session n'existe pas pour la session suivante** : celle-ci a dû le reconstituer
+depuis son propre journal de conversation pour retrouver le défaut qu'elle avait elle-même relevé (« l'homme au bandana encore
+en fond flou de l'accueil »), et ISO Assets, en le relayant, a renvoyé un numéro de ligne devenu faux. Le constat est consigné
+ici, c'est tout l'objet de ce paragraphe.
+
+#### Pas 7 — la pose des vingt illustrations voxel
+
+Les vingt illustrations livrées par « ISO Assets Sonnet » (générées par Gemini, détourées, calibrées) remplacent l'art de menu
+2D par les mannequins voxel du jeu. **Vingt emplacements, tous des fichiers que le jeu charge vraiment.**
+
+- **Ce qu'on pose** : 19 PNG (1024×640) et `fin_defaite.jpg` (1920×1080). Quatre emplacements prennent une `_v4` plus récente
+  que la `_v3` (`ill_amical`, `ill_ecran_scinde`, `ill_intro_dotation`, `ill_intro_prix`).
+- ⚠️ **Ce qu'on NE pose PAS, et pourquoi.** Le dossier de livraison contient TROIS générations par emplacement : le nom nu,
+  la `_v3`, la `_v4`. **Le nom nu est l'état d'AVANT** — vérifié au md5, identique octet pour octet à ce qui était déjà dans
+  `assets/ui/`. Poser les noms nus aurait produit un commit sans un seul octet de changement d'image, sous le titre « vingt
+  illustrations posées ». Le script de pose (`poser_illustrations.py`) imprime l'empreinte avant et après de chaque fichier et
+  compte les inchangés : **vingt posées, zéro inchangée.**
+- ⚠️ **`fond_hub_iso_v3.jpg` est écarté**, sur refus de la session cloud : géométrie modifiée par rapport à l'original,
+  éclairage uniforme, et le fond du hub est masqué à 70-75 % par la vitrine — les mannequins y seraient invisibles. Le fond du
+  hub reste celui d'avant.
+- ⚠️ **`ill_personnalisation.png` n'est pas servi, et ce n'est pas un oubli** : le dictionnaire `ILLUSTRATIONS` de `ui.gd` fait
+  pointer la clé `ill_personnalisation` vers `apercu_personnalisation.png`. Le fichier de ce nom n'est lu par personne. Même
+  chose pour `ill_creer.png` et `ill_rejoindre.png`, dont les clés pointent vers les fichiers `_ligne`. Trois fichiers restent
+  donc à l'ancien dessin sur le disque sans que rien ne les affiche — à supprimer par le chantier qui tient `assets/ui`, pas
+  ici.
+- **La réimportation n'est pas facultative** : Godot sert les textures depuis son cache (`.godot/imported/`), indexé sur
+  l'empreinte de la source. Remplacer les octets sans réimporter laisse le jeu afficher l'ANCIEN dessin pendant que le dépôt
+  montre le nouveau — un changement invisible, qui ne se voit ni au `git status` ni à l'œil sur les fichiers.
+  `godot --headless --import` a repris les vingt (« Ré-importation des assets (20 steps) »). Les `.import` suivis par git ne
+  bougent pas : le commit ne contient que les vingt images.
+
+**Vérifié en image** (photographe, 107 prises, commit `affe959`, 02:19 à 02:21 — le photographe a tourné son catalogue entier,
+pas seulement les plans demandés) :
+- **l'accueil** montre les deux mannequins voxel du nouveau `ill_ecran_scinde`, torche chaude contre torche froide dans le
+  couloir de béton. **L'homme au bandana a disparu du panneau ET du fond flouté** ;
+- **l'affiche de défaite** est composée sur le nouveau `fin_defaite.jpg` : un mannequin démonté, ses blocs épars, la lampe
+  tombée encore allumée ;
+- **les illustrations d'intro passent au voxel à travers le shader du jeu** (`artworks-ill_intro_allumage` : le faisceau sur un
+  pilier de béton, une ombre humaine au mur).
+
+⚠️ **Aucune correction de `ui.gd` n'était nécessaire, et c'est le fond de l'affaire.** Le défaut relevé à L6 tenait au FICHIER,
+pas au câblage : la ligne « `ui.gd:4306` » citée dans le relais est un `set_screen_panel`, les fonds flous (4312 à 4324)
+pointaient déjà sur les bons chemins, et remplacer l'octet a suffi. **Un défaut décrit par son symptôme et transmis avec un
+numéro de ligne se transforme en ordre de modifier ce numéro** — ici, modifier `ui.gd` aurait cassé un écran correct pour
+satisfaire une consigne dont la prémisse avait disparu.
+
+**Ce qui reste à faire, et qui n'est pas de ce chantier** : la table « Les ressources d'`assets/ui` » de la section Habillage
+décrit la famille `ill_*.png` comme « roman graphique 2D ». Dix-neuf d'entre elles sont désormais au voxel. La correction
+revient à la session qui tient cette section ; elle lui est signalée.
+
+Lot complet vert à 02:31 : « tout passe, sans erreur de script (430 s) », la ligne du lanceur telle quelle. **Sans nombre de
+suites** : `run_suites.sh` n'imprime aucun total, et le compte de 112 inscrit aux entrées précédentes ne se retrouve pas dans
+sa sortie (92 suites déclarées dans `SUITES`, une dans `SUITES_2D`, plus les scénarios à deux instances et le contrôle de
+démarrage). Un chiffre invérifiable ne se recopie pas d'une entrée à l'autre.
 
 ### ISO12 — la lumière 3D, bridée par la lightmap 🟡 (ouvert le 2026-09-15 au soir, branche `iso12-lumiere3d`)
 
