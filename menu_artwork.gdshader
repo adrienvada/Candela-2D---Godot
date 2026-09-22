@@ -28,6 +28,29 @@ uniform float torch_intensity : hint_range(0.0, 2.0) = 1.0;
 // --- Transition de fondu doux (0.0 = masqué, 1.0 = pleinement révélé) ---
 uniform float reveal_progress : hint_range(0.0, 1.0) = 1.0;
 
+// --- Le réglage de l'art : 0 = ancien (illustration à l'encre), 1 = voxel (défaut) ---
+//
+// ⚠️ **Ce shader avait été réglé pour l'art à l'encre, et il éteignait l'art voxel.** Mesuré le 16/09
+// sur les vingt illustrations posées (commit 50076d7) : luminance médiane ×0,87 (de ×0,64 à ×1,26) et
+// énergie d'arêtes ×0,48 à ×0,76 par rapport à la source. Les deux causes sont le FLOU DU PIED et
+// l'ENCRE DU PIED, qui montent dès 55 % de la hauteur, là où l'art voxel porte ses arêtes franches.
+//
+// Le réglage voxel ne change ni l'identité ni la règle du menu — sombre par défaut, révélé par la torche
+// du curseur, effets asservis à la luminance. Il change deux choses : le pied commence plus bas et pèse
+// moins ; et **là où la torche révèle, le flou et l'encre du pied s'effacent**, si bien qu'au centre de la
+// torche l'illustration est sa source, à sa luminosité et à sa netteté (cible : ≥ 0,95 et ≥ 0,90).
+//
+// ⚠️ Ces valeurs vivent ICI, pas dans les uniformes `pied_debut`/`pied_fin` : `menu_hub.gd` et
+// `intro_planches.gd` les posent explicitement pour l'ancien art, et les y mettre les ferait écraser.
+uniform int reglage_art : hint_range(0, 1) = 1;
+const float VOXEL_PIED_DEBUT = 0.72;
+const float VOXEL_PIED_FIN = 0.96;
+// Ce que le pied garde, en fraction de l'ancien : assez pour que le texte posé dessus reste lisible.
+const float VOXEL_PART_FLOU = 0.15;
+const float VOXEL_PART_ENCRE = 0.55;
+// La somme des neuf poids du noyau de flou (0,227027 + 4 × 0,1945946 + 4 × 0,1216216).
+const float POIDS_NOYAU = 1.4918918;
+
 // --- Effets vivants spécifiques (asservis au dessin) ---
 uniform int effect_mode = 0;
 uniform float effect_time = 0.0;
@@ -37,9 +60,22 @@ void fragment() {
 	vec2 tex_size = vec2(textureSize(TEXTURE, 0));
 	float aspect = tex_size.x / max(tex_size.y, 1.0);
 	
+	// --- 0. La torche, calculée AVANT l'échantillonnage ---
+	// Elle décide du flou du pied en réglage voxel : ce qu'elle révèle est net.
+	bool voxel = reglage_art == 1;
+	vec2 delta_torch = (UV - torch_pos) * vec2(aspect, 1.0);
+	float dist_torch = length(delta_torch);
+	float torch_light = smoothstep(torch_radius, 0.0, dist_torch) * torch_intensity;
+
 	// --- 1. Échantillonnage avec flou conditionnel ---
-	float k_pied = smoothstep(pied_debut, pied_fin, UV.y);
-	float k_effet_flou = mix(k_pied * 0.35, 1.0, mode_flou_total);
+	float k_pied = smoothstep(voxel ? VOXEL_PIED_DEBUT : pied_debut,
+		voxel ? VOXEL_PIED_FIN : pied_fin, UV.y);
+	if (voxel) {
+		// Sous la torche, le pied s'efface : l'illustration y est rendue telle quelle.
+		k_pied *= clamp(1.0 - torch_light, 0.0, 1.0);
+	}
+	float part_flou = voxel ? VOXEL_PART_FLOU : 0.35;
+	float k_effet_flou = mix(k_pied * part_flou, 1.0, mode_flou_total);
 	float blur_actuel = blur_amount * k_effet_flou;
 	vec2 ps = 1.0 / max(tex_size, vec2(1.0)) * blur_actuel;
 	
@@ -52,12 +88,18 @@ void fragment() {
 	col += texture(TEXTURE, UV - vec2(ps.x, ps.y) * 0.707) * 0.1216216;
 	col += texture(TEXTURE, UV + vec2(-ps.x, ps.y) * 0.707) * 0.1216216;
 	col += texture(TEXTURE, UV + vec2(ps.x, -ps.y) * 0.707) * 0.1216216;
+
+	// ⚠️ **Les neuf poids totalisent 1,4919, et rien ne les normalisait** : l'illustration sortait
+	// éclaircie de moitié avant toute exposition. L'art à l'encre l'encaissait — c'est ainsi qu'il a été
+	// réglé —, l'art voxel SATURE, et une zone saturée perd ses arêtes : quatre illustrations mesurées à
+	// 0,65-0,86 d'énergie d'arêtes au centre de la torche, avant comme après la correction du pied.
+	// Normalisé, le centre de la torche rend exactement la source. **Les couleurs seulement** : diviser
+	// l'alpha rendrait l'illustration translucide.
+	if (voxel) {
+		col.rgb /= POIDS_NOYAU;
+	}
 	
-	// --- 2. Rendu sombre par défaut & Révélation torche ---
-	vec2 delta_torch = (UV - torch_pos) * vec2(aspect, 1.0);
-	float dist_torch = length(delta_torch);
-	float torch_light = smoothstep(torch_radius, 0.0, dist_torch) * torch_intensity;
-	
+	// --- 2. Rendu sombre par défaut & Révélation torche (la torche est calculée plus haut) ---
 	// Percée éclatante des hautes lumières du dessin (faisceaux, lampes, néons)
 	float luma = dot(col.rgb, vec3(0.299, 0.587, 0.114));
 	float highlight_breakthrough = smoothstep(0.35, 0.78, luma);
@@ -172,7 +214,8 @@ void fragment() {
 	base_rgb *= smoothstep(0.0, 1.0, reveal_progress);
 	
 	// --- 5. Application finale du flou et assombrissement de pied de page ---
-	float darken_actuel = mix(k_pied * 0.85, darken, mode_flou_total);
+	float part_encre = voxel ? VOXEL_PART_ENCRE : 0.85;
+	float darken_actuel = mix(k_pied * part_encre, darken, mode_flou_total);
 	vec3 final_rgb = mix(base_rgb, tint.rgb, darken_actuel);
 	
 	COLOR = vec4(max(vec3(0.0), final_rgb), col.a);

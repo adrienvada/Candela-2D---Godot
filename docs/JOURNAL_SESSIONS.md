@@ -5796,3 +5796,22 @@ vert, et la leçon est à mon débit : un worktree neuf n'a pas de `.godot/`, do
 règle était déjà écrite deux fois dans « Pièges connus », avec son contrôle exact**, et je ne l'avais pas lue. Ce que la
 redécouverte ajoute, en corollaire : recopier le cache d'un autre arbre donne un lot « presque vert », pire qu'un rouge, parce
 qu'un échec partiel désigne le fichier qu'on vient de modifier au lieu de l'environnement. Drapeau `lumiere_3d` toujours éteint.  Lot complet vert à 07:05 : « tout passe, sans erreur de script (431 s) ».
+
+### Session « ISO7 Gadgets et lumière Opus » (Q18, le shader des menus sur l'art voxel, branche `iso11-menus`) — ajoutée le 2026-09-23 vers 00:10 (Paris)
+
+Brief de la session cloud du 2026-09-22 à 23:48, relayé par la Concierge : le shader des menus, réglé pour
+l'illustration à l'encre, assombrit et adoucit les vingt illustrations voxel. Branche depuis `72a2364`.
+**Deux causes, et la seconde n'était pas dans le brief** : le flou et l'encre du pied de page (qui montent
+dès 55 % de la hauteur) ; et surtout le noyau de flou **non normalisé** (neuf poids pour 1,4919), qui
+éclaircissait toute illustration de moitié et faisait SATURER l'art voxel sous la torche — une zone saturée
+perd ses arêtes, et c'est ce que mesuraient les quatre illustrations restées molles, identiques avant et
+après la correction du pied. En réglage voxel : pied plus bas et plus léger, effacé là où la torche révèle,
+noyau normalisé sur les couleurs seules. `--menus=ancien` rend l'ancien réglage.
+**Piège payé** : le plan « artworks » du photographe posait tous les uniformes du shader SAUF le neuf — les
+deux premières séries avant/après sont sorties identiques, et ma comparaison n'aurait rien prouvé. Corrigé
+dans `tools/photographe.gd` (une ligne, avec l'accord d'Iso 1 qui tient le fichier).
+**Mesuré** (21 illustrations, deux séries du photographe, chaque capture rapportée à sa source dans le
+disque du point d'intérêt) : au centre de la torche, luminance médiane 1,50 → 1,07 et pire 0,55 → 0,95 ;
+arêtes médianes 1,11 → 0,94. `ill_quitter` passe de 0,24 à 0,80 d'arêtes. Le pire cas des arêtes (0,67) est
+une limite de la mesure sur une illustration sombre, pas un défaut du shader : capture filtrée par le jeu
+contre source agrandie par la mesure. Suite neuve `tools/test_menus_voxel.gd` (33 vérifications).

@@ -26528,6 +26528,60 @@ illustration générée occupe tout le cadre sous du texte. À 55 %, le mot se l
 valeur de cette étape réglée à la capture plutôt que par un calcul.
 
 
+### Q18 — le shader des menus sur l'art voxel ✅ (2026-09-22/23, branche `iso11-menus` depuis `72a2364`)
+
+Question posée par la page Réveil : le shader des menus, réglé pour l'illustration à l'encre, assombrit et
+adoucit les vingt illustrations voxel posées au pas 7. Brief de la session cloud (2026-09-22, 23:48) : un
+réglage « voxel » qui garde l'identité du menu — sombre par défaut, révélé par la torche du curseur, effets
+asservis à la luminance — mais qui, là où la torche révèle, rende l'illustration à sa luminosité et à sa
+netteté de source (≥ 0,95 et ≥ 0,90 au centre), le flou du pied limité à ce qu'exige la lisibilité du texte.
+
+**Les deux causes, et la seconde n'était pas dans le brief.**
+1. **Le pied de page.** Le flou et l'encre du pied montent dès 55 % de la hauteur, là où l'art voxel porte
+   ses arêtes franches. En réglage voxel ils commencent à 72 %, pèsent moins (0,55 de l'encre, 0,15 du flou)
+   et **s'effacent là où la torche révèle** (`k_pied *= clamp(1.0 - torch_light, 0.0, 1.0)`).
+2. ⚠️ **Le noyau de flou n'était pas normalisé.** Ses neuf poids totalisent 1,4919 : toute illustration
+   sortait éclaircie de moitié avant même l'exposition. L'art à l'encre l'encaissait — il a été réglé
+   dessus —, l'art voxel SATURE sous la torche, et une zone saturée perd ses arêtes. C'est la vraie cause
+   des illustrations molles : quatre d'entre elles mesuraient 0,65 à 0,86 d'énergie d'arêtes au centre de la
+   torche, **identiques avant et après la correction du pied**. Normalisé (couleurs seulement : diviser
+   l'alpha rendrait l'illustration translucide), le centre de la torche rend la source.
+
+**Mesuré au photographe** (`--plan=artworks`, les 21 illustrations, deux séries : `--menus=ancien` puis le
+réglage voxel), chaque capture rapportée à son fichier source, dans le disque du point d'intérêt :
+
+| Au centre de la torche (rayon 0,02) | Ancien réglage | Réglage voxel |
+|---|---|---|
+| Luminance, médiane | 1,50 | **1,07** |
+| Luminance, pire | 0,55 (`ill_quitter`) | **0,95** |
+| Énergie d'arêtes, médiane | 1,11 | **0,94** |
+| Énergie d'arêtes, pire | 0,24 (`ill_quitter`) | 0,67 (`ill_intro_extinction`) |
+
+La cible de luminance (≥ 0,95) est tenue par les vingt et une illustrations ; celle des arêtes (≥ 0,90) est
+tenue en médiane. ⚠️ **Le pire cas des arêtes n'est pas un défaut du shader mais une limite de la mesure** :
+la capture est filtrée par le jeu, la source est agrandie par la mesure, et les deux ne lissent pas de la
+même façon — sur une illustration sombre, dont les arêtes sont faibles, le rapport s'effondre. Ce que la
+mesure dit sûrement est l'ÉCART entre les deux réglages, sur la même image : `ill_quitter` passe de 0,24 à
+0,80 d'arêtes et de 0,55 à 0,97 de luminance ; `ill_competitif` de 0,90 à 0,97 ; `ill_amical_local` de 0,65
+à 0,90. Les illustrations dont le point d'intérêt est haut dans l'image ne changent que par la
+normalisation.
+
+**Fichiers.** `menu_artwork.gdshader` (uniforme `reglage_art`, constantes voxel, torche calculée avant
+l'échantillonnage, noyau normalisé) ; `menu_artwork.gd` (`reglage_art()`, `--menus=ancien`, lu une fois) ;
+`menu_hub.gd`, `intro_planches.gd` et `tools/photographe.gd` (une ligne chacun : poser le réglage).
+⚠️ **Le plan « artworks » du photographe posait tous les uniformes SAUF le neuf** : les deux premières
+séries avant/après sont sorties identiques, et la comparaison n'aurait rien prouvé. Règle : **un plan de
+banc qui construit lui-même son matériau doit poser tout ce que le shader attend**, sinon il mesure le
+défaut.
+
+**Preuves.** `tools/test_menus_voxel.gd` (neuve, au lot, 33 vérifications) : le réglage voxel par défaut et
+`--menus=ancien` ; la torche calculée avant le flou ; le pied qui recule sous la torche (jumelle GDScript de
+`k_pied`) ; le noyau normalisé sur les couleurs seules ; le pied qui tient encore la lisibilité hors torche ;
+l'identité du menu intacte (exposition ambiante, révélation par la torche, effets asservis à la luminance,
+mode flou total des panneaux, aucun uniforme retiré) ; le câblage aux trois endroits. Captures :
+`docs/iso/captures_menus/` (six paires, les plus parlantes) ; les deux séries complètes sont dans
+`user://menus_v3_avant` et `user://menus_v3_apres`.
+
 ## Chantier — murs bas et accroupi (inscrit le 2026-09-14)
 
 **Vue de dessus, sur `main`.** Né du jalon H15 de la vue isométrique (tranché le

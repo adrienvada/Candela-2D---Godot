@@ -291,6 +291,8 @@ func _fabriquer_materiau() -> ShaderMaterial:
 	mat.shader = shader
 	mat.set_shader_parameter("mode_flou_total", 0.0)
 	mat.set_shader_parameter("ambient_exposure", 0.28)
+	# Q18 — les six planches d'intro suivent le même réglage que les menus (`--menus=ancien` pour comparer).
+	mat.set_shader_parameter("reglage_art", MenuArtwork.reglage_art())
 	mat.set_shader_parameter("torch_radius", 0.45)
 	mat.set_shader_parameter("torch_intensity", 1.0)
 	mat.set_shader_parameter("reveal_progress", 1.0)
