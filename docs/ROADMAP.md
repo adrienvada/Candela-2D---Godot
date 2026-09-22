@@ -347,6 +347,13 @@ ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
 La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
 reçoivent la leur par variable d'environnement.
 
+**Réveil automatique** (inscrit le 2026-09-22) — le plan gratuit suspend le
+projet après une semaine sans requête. `.github/workflows/keep-supabase-awake.yml`
+ping l'API REST toutes les trois jours (`workflow_dispatch` possible en plus).
+Secrets `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` posés dans le dépôt GitHub —
+mêmes valeurs que `supabase_config.gd`, la clé publiable étant conçue pour être
+partageable une fois RLS en place (voir plus haut).
+
 ### Étape 1 — identité vérifiée (`673c0e9`) ✅ CLOSE
 
 **Aucun ELO n'est calculé à cette étape.** Elle établit qui est qui, de façon
