@@ -447,6 +447,9 @@ func _build_blur_material() -> ShaderMaterial:
 		mat.set_shader_parameter("pied_debut", 0.55)
 		mat.set_shader_parameter("pied_fin", 0.88)
 		mat.set_shader_parameter("ambient_exposure", 0.28)
+		# Q18 — le réglage de l'art : voxel par défaut, l'ancien par `--menus=ancien`. Les deux lignes
+		# ci-dessus restent celles de l'ancien art : le réglage voxel porte les siennes dans le shader.
+		mat.set_shader_parameter("reglage_art", MenuArtwork.reglage_art())
 		mat.set_shader_parameter("torch_radius", 0.45)
 		mat.set_shader_parameter("torch_intensity", 1.0)
 		mat.set_shader_parameter("reveal_progress", 1.0)

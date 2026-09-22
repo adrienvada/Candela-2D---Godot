@@ -783,6 +783,10 @@ func _famille_illustrations(plans: Array[Dictionary]) -> void:
 		rect.texture = tex
 		var cle := MenuArtwork.cle_canonique(chemin)
 		mat.set_shader_parameter("ambient_exposure", 0.28)
+		# Q18 — le réglage de l'art (voxel par défaut, l'ancien par `--menus=ancien`). ⚠️ Sans cette ligne,
+		# ce plan posait tous les autres uniformes et laissait CELUI-LÀ à son défaut : les deux séries
+		# avant/après sortaient identiques, et la comparaison n'aurait rien prouvé (trouvé le 2026-09-22).
+		mat.set_shader_parameter("reglage_art", MenuArtwork.reglage_art())
 		mat.set_shader_parameter("torch_pos", MenuArtwork.poi_pour(chemin))
 		mat.set_shader_parameter("torch_radius", 0.45)
 		mat.set_shader_parameter("torch_intensity", 1.0)
