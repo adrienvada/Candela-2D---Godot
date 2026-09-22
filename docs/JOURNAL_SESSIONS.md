@@ -5815,3 +5815,27 @@ disque du point d'intérêt) : au centre de la torche, luminance médiane 1,50 �
 arêtes médianes 1,11 → 0,94. `ill_quitter` passe de 0,24 à 0,80 d'arêtes. Le pire cas des arêtes (0,67) est
 une limite de la mesure sur une illustration sombre, pas un défaut du shader : capture filtrée par le jeu
 contre source agrandie par la mesure. Suite neuve `tools/test_menus_voxel.gd` (33 vérifications).
+
+### Session « ISO7 Gadgets et lumière Opus » (plan du lot L4 d'ISO12, sans code ni Godot) — ajoutée le 2026-09-23 vers 01:10 (Paris)
+
+Chantier de lecture seule demandé par la session cloud : préparer L4 (fusées, flashs de tir, braises, mine,
+lampes des gadgets) sous la lumière 3D bridée. **Aucun fichier du chantier d'Iso 1 n'a été touché** — son
+correctif n'est pas commité, ses trois fichiers sont à elle, et les correctifs ci-dessous lui sont transmis
+en diffs par message plutôt qu'écrits dans son arbre.
+
+**Deux défauts de forme trouvés par lecture, avant toute mesure**, tous deux propres aux sources de L4 et
+invisibles sur un cadrage à la torche : la portée 3D est une sphère quand le rayon 2D est un disque au sol
+(le flash de tir n'atteint le sol qu'à 11,4 px pour un rayon 2D de 32) ; et ε = 0,02 mord dès 87,5 px sur
+une lampe posée à 1,75 px, ce qui laisse le bord du halo des braises à 0,52 de la 2D et celui de la mine à
+0,34. Détail, chiffres et remèdes dans la ROADMAP, section « Lot L4 ».
+**La table d'enveloppe du 2026-09-16 calculait sur des hauteurs (8 px, 16 px) que le code ne pose pas**
+(5,25 et 1,75) : troisième calcul hors machine à reposer sur des entrées qui ne sont pas celles du code.
+**Écart assumé sur la consigne** : ε par lampe pris en `min(h/portée, ε_global)` et non brut — la valeur
+brute (0,477 pour le flash) ne mord jamais sur le sol mais assombrirait d'un facteur vingt-quatre un mur
+situé au-dessus de la lampe. Le `min` ne peut qu'abaisser le plancher, donc ne peut pas créer de défaut.
+
+**Livré dans cette branche** : `docs/iso/iso12/profil_radial.py`, le profil radial par anneaux de 10 px
+(Pillow seul, rapport pris en linéaire, médiane et déciles, pixels éclairés en 2D seulement), avec un
+`--autotest` qui rejoue le défaut B sur des images fabriquées et vérifie que le script le retrouve. Rien à
+mesurer encore : il tournera sur les captures du banc d'Iso 1. Les valeurs attendues après correctif sont
+écrites dans la ROADMAP **avant** la première mesure.
