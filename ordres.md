@@ -4,7 +4,7 @@ Branche-signal poussée par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED �
 
 Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse ListAgents de la cible> » : ` et le texte à transmettre mot pour mot, qui court jusqu'au titre de l'ordre suivant. Si l'adresse n'apparaît pas dans ListAgents, essayer le titre entre parenthèses, puis répondre « cible introuvable » avec la liste des noms visibles. La porteuse du suivi s'appelle « candela-2d-3b » dans ListAgents.
 
-**PAUSE — 16/09 09:08.** Adrien arrête tout le chantier jusqu'à la semaine prochaine (quota). Les ordres 109 à 112 sont les derniers de cette session ; après eux, plus rien n'est poussé ici jusqu'à la reprise.
+**REPRISE — 22/09 22:40.** Adrien reprend le chantier après la pause du 16/09 (09:08). La Concierge reprend sa veille quand Adrien la relance depuis sa fenêtre ; elle relaie alors chaque ordre nouveau à partir du 113. Les ordres 109 à 112 étaient ceux de l'arrêt.
 
 ## ORDRE 1 — 15/09 04:49 (relayé 04:56)
 ## ORDRE 2 — 15/09 05:15 (relayé 05:18)
@@ -113,16 +113,8 @@ Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse Lis
 ## ORDRE 105 — 16/09 07:47 (relayé 07:51 ; recette cumulée actée, approximations à mesurer ; Iso 1 a répondu à 07:5x : --echelle=5 agit encore (L2D × 5 écrêté, image cramée, modelé effacé, coût inchangé), à retirer des six lignes plutôt que passer à 1 : FAIT sur la page Réveil v40 ; enveloppe du relief écrite avant mesure (b94decd, commentaires et doc seuls) ; réponse par l'ordre 107)
 ## ORDRE 106 — 16/09 07:47 (relayé 07:51 ; la porteuse a republié v248 à 08:00 avec la Synthèse 110 en plus, vérifiée par diff)
 ## ORDRE 107 — 16/09 07:53 (relayé 07:57 ; EXÉCUTÉ à 08:0x : ε = 0,02 posé (72a2364, non certifié par un lot), enveloppe réécrite : sol plat 1,0000 sous toute lampe, murs inchangés, écrêtage par lampe 1,659 sur une face à trois lampes, note de dosage 1,35 ; décision « mur = modelé voulu » reprise dans la ROADMAP ; aucun banc avant les relevés d'Adrien)
-## ORDRE 108 — 16/09 09:01 (relayé 09:05 ; la porteuse a republié v249 à 09:06, tête 72a2364 lue par elle ; non vérifiée par diff : arrêt demandé par Adrien à 09:0x)
-
-## ORDRE 109 — 16/09 09:08
-RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 09:08. ARRÊT : Adrien arrête tout le chantier jusqu'à la semaine prochaine (fin de quota) ; c'est son mot, à l'instant. Ne lance aucun banc, aucun photographe, aucun lot ; ne touche plus au worktree ; désarme tout Monitor et toute veille ; ne réponds pas à ce message (ni à moi, ni à la Concierge) et finis ton tour. État que tu laisses, et qui est le bon : iso12-lumiere3d à 72a2364, arbre propre, lumière 3D éteinte par défaut ; ed70eb6 vert certifié, b94decd et 72a2364 non certifiés ; recette v27 et décision GO / NON-GO reportées à la reprise. Si ton tour est déjà fini, ne fais rien. Merci pour la nuit.
-
-## ORDRE 110 — 16/09 09:08
-RELAIS → « ISO Assets Sonnet » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 09:08. ARRÊT : Adrien arrête tout le chantier jusqu'à la semaine prochaine (fin de quota). Ne génère ni ne republie plus rien ; désarme tout Monitor ; ne réponds pas à ce message et finis ton tour. Ta galerie (version 2 de 03:03) reste la référence. Merci.
-
-## ORDRE 111 — 16/09 09:08
-RELAIS → « candela-2d-3b » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 09:08. ARRÊT : Adrien arrête tout le chantier jusqu'à la semaine prochaine (fin de quota). Ta v249 de 09:06 est la dernière ; elle n'est pas vérifiée par diff, l'arrêt d'Adrien est arrivé avant : je le note tel quel. Ne republie rien de plus, désarme tout Monitor, ne réponds pas à ce message et finis ton tour. À la reprise, la page Réveil (https://claude.ai/code/artifact/54d1e18b-320c-4320-8bba-321bffff362b) porte l'état et la marche à suivre. Merci pour la nuit.
-
-## ORDRE 112 — 16/09 09:08
-RELAIS → « Concierge, à toi-même, sans relais » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 09:08, pour la Concierge elle-même. Après avoir relayé les ordres 109, 110 et 111 : ARRÊT. Adrien arrête tout jusqu'à la semaine prochaine ; plus aucun ordre ne sera poussé ici avant la reprise. Envoie-moi un seul message « ORDRES 109 à 111 relayés, Concierge arrêtée à HH:MM », puis désarme ton Monitor (plus de fetch) et finis ton tour. Merci.
+## ORDRE 108 — 16/09 09:01 (relayé 09:05 ; la porteuse a republié v249 à 09:06, tête 72a2364 lue par elle ; vérifiée par diff le 22/09 : fidèle)
+## ORDRE 109 — 16/09 09:08 (relayé avant 09:14 ; arrêt d'Iso 1, sans réponse comme demandé)
+## ORDRE 110 — 16/09 09:08 (relayé avant 09:14 ; arrêt d'ISO Assets)
+## ORDRE 111 — 16/09 09:08 (relayé avant 09:14 ; arrêt de la porteuse ; sa v249 de 09:06 vérifiée par diff le 22/09 : fidèle)
+## ORDRE 112 — 16/09 09:08 (la Concierge a relayé 109 à 111 et s'est arrêtée à 09:14)
