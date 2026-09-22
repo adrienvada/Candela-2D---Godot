@@ -139,6 +139,12 @@ func _run() -> void:
 	_test_la_table_des_graisses()
 	_test_la_pate_descend_de_deux_couleurs()
 	_test_la_pate_se_lit()
+	_test_le_voxel_descend_de_la_vitrine()
+	_test_la_patine_ne_mange_pas_le_texte()
+	_test_l_interrupteur_de_charte()
+	_test_les_plaques_de_bloc()
+	_test_les_plaques_sont_partagees()
+	_test_l_habillage_va_jusqu_au_style()
 	_test_la_matiere_est_posee()
 	_test_le_voile_de_killcam_porte_son_crochet()
 	_test_le_menu_est_empate()
@@ -537,6 +543,7 @@ func _test_le_menu_est_empate() -> void:
 		return
 	var empatees := 0
 	var lettres_grainees := 0
+	var blocs := 0
 	var rangees := 0
 	var rangees_sans_verre := 0
 	var pile: Array[Node] = [racine]
@@ -546,12 +553,26 @@ func _test_le_menu_est_empate() -> void:
 			empatees += 1
 			if n is Button and (n as Button).text != "":
 				lettres_grainees += 1
+		if n is Control:
+			for style: String in MenuWidgets._STYLES_DE_PLAQUE:
+				if (n as Control).has_theme_stylebox_override(style) \
+						and (n as Control).get_theme_stylebox(style) is StyleBoxTexture:
+					blocs += 1
+					break
 		if n is PanelContainer and String(n.name).begins_with(MenuGlass.PREFIXE_RANGEE):
 			rangees += 1
 			if (n as CanvasItem).material == null or (n as CanvasItem).material == pate:
 				rangees_sans_verre += 1
 		pile.append_array(n.get_children())
-	_check(empatees >= 8, "le menu n'est pas empâté : %d plaques seulement" % empatees)
+	# **La matière change de support avec l'habillage, l'exigence non.** En pâte,
+	# elle est un grain posé par un matériau ; en voxel, elle est DANS la texture
+	# de la plaque, et poser le grain par-dessus la mangerait. On compte donc les
+	# plaques habillées, pas les plaques empâtées — sans quoi ce contrôle
+	# rougirait précisément parce que l'habillage voxel marche.
+	if C.voxel_actif():
+		_check(blocs >= 8, "le menu n'est pas en blocs : %d plaques seulement" % blocs)
+	else:
+		_check(empatees >= 8, "le menu n'est pas empâté : %d plaques seulement" % empatees)
 	_check(lettres_grainees == 0,
 		"%d boutons portent la pâte sur leur propre texte : le grain passe sur les lettres" % lettres_grainees)
 	var droite: Control = hub.right_panel()
@@ -759,19 +780,34 @@ func _test_le_hud_parle_la_pate() -> void:
 	_check(vu_debut and vu_fin,
 		"les marqueurs de la plage du HUD ont disparu d'ui.gd : le contrôle ne relit plus rien")
 
-	# Les panneaux joueur et le chrono portent la pâte. Le panneau du chrono se
-	# retrouve par le parent du chrono, comme le fait `test_hud_style`.
+	# Les panneaux joueur et le chrono portent la matière de leur habillage : le
+	# grain de la pâte, ou RIEN en voxel — la plaque du bloc porte la sienne dans
+	# sa texture, et un grain par-dessus repeindrait aussi le liseré du joueur,
+	# qui est une information.
 	var pate := MenuWidgets.materiau_pate()
+	var attendu: Material = null if C.voxel_actif() else pate
 	for champ: String in ["p1_panel", "p2_panel"]:
 		var panneau = _ui.get(champ)
-		_check(panneau != null and (panneau as CanvasItem).material == pate,
-			"ui.%s ne porte pas la pâte" % champ)
+		_check(panneau != null and (panneau as CanvasItem).material == attendu,
+			"ui.%s ne porte pas la matière de son habillage" % champ)
 	var chrono = _ui.get("time_label")
 	var cartouche: Node = chrono
 	while cartouche != null and not cartouche.get("is_center_panel"):
 		cartouche = cartouche.get_parent()
-	_check(cartouche != null and (cartouche as CanvasItem).material == pate,
-		"la cartouche du chrono ne porte pas la pâte")
+	_check(cartouche != null and (cartouche as CanvasItem).material == attendu,
+		"la cartouche du chrono ne porte pas la matière de son habillage")
+
+	# ⚠️ **Et le HUD reste un DESSIN, pas une image de cadre.** `test_hud_style`
+	# refuse une `StyleBoxTexture` sur les panneaux joueur depuis l'éradication de
+	# `cadre_hud.png` ; l'habillage voxel dessine son bloc par `StyleBox.draw()`
+	# et laisse le thème vide. Ce contrôle-ci fige l'accord entre les deux : si un
+	# jour quelqu'un pose la plaque en override, les deux suites le diront.
+	for champ: String in ["p1_panel", "p2_panel"]:
+		var panneau = _ui.get(champ)
+		if panneau != null:
+			var boite = (panneau as Control).get_theme_stylebox("panel")
+			_check(not (boite is StyleBoxTexture),
+				"ui.%s a repris une image de cadre : %s" % [champ, boite])
 
 
 ## La killcam — étape 5 : le voile reçoit la pâte par son crochet, les bandes de
@@ -853,3 +889,296 @@ func _test_l_affiche_pose_son_illustration() -> void:
 			if ill != null:
 				_check(ill.flip_h, "l'illustration de fin n'est pas retournée : le mot tomberait sur la lumière")
 		affiche.free()
+
+
+## La luma perceptuelle sur les valeurs sRGB TELLES QUELLES — la formule avec
+## laquelle le rapport 2,46 a été relevé sur la vitrine (Rec. 709 appliqué aux
+## octets de l'image, sans linéarisation).
+##
+## ⚠️ **Distincte de `_lum`, et les deux doivent le rester.** `_lum` linéarise
+## parce que les seuils de lecture l'exigent ; celle-ci ne linéarise pas parce
+## que la mesure d'origine ne l'a pas fait. Les confondre donnerait 4,9 au lieu
+## de 2,46 — un rapport juste qu'on rougirait, ou un faux qu'on laisserait passer.
+static func _luma_srgb(c: Color) -> float:
+	return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+
+
+## Le voxel tient-il de la vitrine, ou d'un goût ?
+##
+## Chaque constante de la famille est soit la mesure elle-même, soit une dérivée
+## que ce contrôle REFAIT. Sans lui, les littéraux de `charte.gd` seraient des
+## affirmations : ils disent « lerp(ENCRE, PAPIER, 0.41) » en toutes lettres, et
+## rien n'obligerait ce commentaire à rester vrai après une retouche à l'œil.
+func _test_le_voxel_descend_de_la_vitrine() -> void:
+	for d: Array in [[C.VOXEL_FLANC, 0.11, "VOXEL_FLANC"], [C.VOXEL_DESSUS, 0.41, "VOXEL_DESSUS"]]:
+		var attendu: Color = C.ENCRE.lerp(C.PAPIER, d[1])
+		_check(_ecart(d[0], attendu) < 0.0005,
+			"%s n'est plus lerp(ENCRE, PAPIER, %.2f) : %s contre %s" % [d[2], d[1], d[0], attendu])
+
+	# Le rapport RELEVÉ sur le cube de la vitrine, recalculé sur les constantes.
+	var rapport := _luma_srgb(C.VOXEL_DESSUS) / _luma_srgb(C.VOXEL_FLANC)
+	_check(absf(rapport - C.VOXEL_RAPPORT_ECLAIRE) <= 0.05,
+		"le dessus n'éclaire plus le flanc dans le rapport mesuré : %.2f contre %.2f"
+		% [rapport, C.VOXEL_RAPPORT_ECLAIRE])
+
+	# Une plaque ne porte qu'UNE couleur : son flanc doit tomber du dessus par un
+	# simple facteur, sinon la texture devrait porter deux teintes et la matière
+	# cesserait d'être un facteur de la lumière.
+	var flanc_calcule := Color(C.VOXEL_DESSUS.r * C.VOXEL_FACTEUR_FLANC,
+		C.VOXEL_DESSUS.g * C.VOXEL_FACTEUR_FLANC, C.VOXEL_DESSUS.b * C.VOXEL_FACTEUR_FLANC)
+	_check(_ecart(flanc_calcule, C.VOXEL_FLANC) < 0.004,
+		"le flanc n'est plus le dessus × %.2f : %s contre %s"
+		% [C.VOXEL_FACTEUR_FLANC, flanc_calcule, C.VOXEL_FLANC])
+
+	# La plaque effleurée : le bord du faisceau, pas le faisceau. Son plafond est
+	# un seuil de lecture — au-delà de 0,30, le papier d'une entrée de menu ne
+	# tient plus ses 4,5:1, et une entrée de menu ne peut pas changer de couleur
+	# de texte (son libellé est un enfant).
+	var survol := C.VOXEL_DESSUS.lerp(C.PAPIER, 0.30)
+	survol.a = 0.94
+	_check(_ecart(C.VOXEL_PLAQUE_SURVOL, survol) < 0.0005,
+		"VOXEL_PLAQUE_SURVOL n'est plus lerp(VOXEL_DESSUS, PAPIER, 0.30) : %s contre %s"
+		% [C.VOXEL_PLAQUE_SURVOL, survol])
+	# ⚠️ **Le texte ne se pose pas sur la LUMIÈRE d'une plaque, mais sur son
+	# CORPS** — et le corps ne garde que `VOXEL_FACTEUR_FLANC` de cette lumière.
+	# Mesurer le contraste sur la teinte elle-même juge une surface qui n'existe
+	# à aucun endroit de l'écran : ce contrôle a d'abord rougi à 2,67:1 sur une
+	# plaque parfaitement lisible, et c'est le contrôle qui avait tort.
+	var corps := Color(C.VOXEL_PLAQUE_SURVOL.r * C.VOXEL_FACTEUR_FLANC,
+		C.VOXEL_PLAQUE_SURVOL.g * C.VOXEL_FACTEUR_FLANC,
+		C.VOXEL_PLAQUE_SURVOL.b * C.VOXEL_FACTEUR_FLANC, C.VOXEL_PLAQUE_SURVOL.a)
+	_check(_contraste(C.PATE_TEXTE, _sur_le_noir(corps)) >= 4.5,
+		"le texte courant ne tient plus sur le corps d'une plaque effleurée : %.2f:1"
+		% _contraste(C.PATE_TEXTE, _sur_le_noir(corps)))
+
+	var arete := Color(C.VOXEL_FLANC.r * C.VOXEL_ARETE_RESTE,
+		C.VOXEL_FLANC.g * C.VOXEL_ARETE_RESTE, C.VOXEL_FLANC.b * C.VOXEL_ARETE_RESTE)
+	_check(_ecart(C.VOXEL_ARETE, arete) < 0.0005,
+		"VOXEL_ARETE n'est plus le flanc × %.2f : %s contre %s"
+		% [C.VOXEL_ARETE_RESTE, C.VOXEL_ARETE, arete])
+
+	# ⚠️ Le doublon assumé avec le jeu : `charte.gd` recopie `ENCRE_ARETE_RESTE`
+	# plutôt que de charger les textures du duel pour le lire. Un doublon qu'on
+	# accepte est un doublon qu'on surveille.
+	var iso: Script = load("res://iso_materiaux.gd") as Script
+	_check(iso != null, "iso_materiaux.gd ne se charge pas — l'arête du jeu n'est plus comparée")
+	if iso != null:
+		var reste: float = iso.get_script_constant_map().get("ENCRE_ARETE_RESTE", -1.0)
+		_check(absf(reste - C.VOXEL_ARETE_RESTE) < 0.0001,
+			"l'encre de l'interface a divergé de celle du jeu : %.3f contre %.3f"
+			% [C.VOXEL_ARETE_RESTE, reste])
+
+	# Les règles dures de la charte, et la bande de teinte PROPRE au voxel : la
+	# rouille de l'ombre est plus rouge (19°) que le papier de la lumière (30°),
+	# donc la bande 20-40° de la pâte ne peut pas s'y appliquer telle quelle.
+	var famille := {"ROUILLE": C.ROUILLE, "VOXEL_FLANC": C.VOXEL_FLANC, "VOXEL_DESSUS": C.VOXEL_DESSUS}
+	for nom: String in famille.keys():
+		var c: Color = famille[nom]
+		_check(c.s <= 0.7501, "%s dépasse le plafond de saturation : %.3f" % [nom, c.s])
+		for canal: float in [c.r, c.g, c.b]:
+			_check(canal > 0.0 and canal < 1.0, "%s porte une valeur pure : %s" % [nom, c])
+		var teinte := c.h * 360.0
+		# ⚠️ La bande monte à 34° et non à 32, et le surplus n'est pas du jeu : un
+		# `lerp` RGB entre deux couleurs à 30° ne rend pas 30°. `VOXEL_DESSUS`
+		# ressort à 32,8° — mesuré, pas choisi. La borne basse, elle, est celle de
+		# la rouille de la vitrine (19°).
+		_check(teinte >= 18.0 and teinte <= 34.0,
+			"%s sort des teintes relevées sur la vitrine (18-34°) : %.1f°" % [nom, teinte])
+
+	# Les rôles : la plaque est sa face du dessus, l'enfoncée est son propre flanc.
+	_check(_ecart(C.VOXEL_PLAQUE, Color(C.VOXEL_DESSUS, 0.94)) < 0.0005,
+		"VOXEL_PLAQUE n'est plus le dessus à 94 %% : %s" % C.VOXEL_PLAQUE)
+	_check(_ecart(C.VOXEL_ENFONCE, Color(C.VOXEL_FLANC, 0.94)) < 0.0005,
+		"VOXEL_ENFONCE n'est plus le flanc à 94 %% : %s" % C.VOXEL_ENFONCE)
+	_check(_ecart(C.VOXEL_ALLUME, C.PATE_SURVOL) < 0.0005,
+		"la plaque allumée a quitté le survol de la pâte : le contraste du texte survolé n'est plus celui vérifié")
+
+	# Les deux tailles que `charte.gd` annonce comme REPRISES d'ailleurs. Une
+	# valeur qu'on dit héritée et qui ne l'est plus est un commentaire qui ment.
+	_check(C.VOXEL_ARETE_PX == MenuWidgets.BORDER_WIDTH_CONTROL,
+		"l'arête du bloc ne vaut plus la bordure des contrôles : %d contre %d"
+		% [C.VOXEL_ARETE_PX, MenuWidgets.BORDER_WIDTH_CONTROL])
+	var chute := int(MenuWidgets.SHADOW_OFFSET_BUTTON.y - MenuWidgets.SHADOW_OFFSET_PRESSED.y)
+	_check(C.VOXEL_ENFONCEMENT_PX == chute,
+		"l'enfoncement ne vaut plus la chute d'ombre d'un bouton : %d contre %d"
+		% [C.VOXEL_ENFONCEMENT_PX, chute])
+
+
+## Ce que la plaque peut se permettre de patine, et pourquoi il y a un plafond.
+##
+## La rouille mesurée est CLAIRE (luma 76) à côté du flanc (35) : une tache de
+## patine remonte la luminance locale, donc RAPPROCHE la plaque du papier écrit
+## dessus. Le seuil n'est donc pas un goût, c'est la limite où le texte cesse de
+## se lire — et `tools/fabrique_bloc_ui.py` la fait respecter pixel par pixel.
+func _test_la_patine_ne_mange_pas_le_texte() -> void:
+	var plafond := (_lum(C.PAPIER) + 0.05) / 4.5 - 0.05
+	_check(absf(C.VOXEL_PATINE_LUM_MAX - plafond) < 0.0005,
+		"le plafond de patine n'est plus celui du seuil 4,5:1 : %.4f contre %.4f"
+		% [C.VOXEL_PATINE_LUM_MAX, plafond])
+	_check(_lum(C.VOXEL_FLANC) < C.VOXEL_PATINE_LUM_MAX,
+		"la plaque au repos dépasse déjà le plafond de patine : il ne resterait rien à tacher")
+	_check(_lum(C.ROUILLE) > C.VOXEL_PATINE_LUM_MAX,
+		"la rouille ne dépasse plus le plafond : il ne protège plus de rien, ou la mesure a changé")
+	_check(_contraste(C.PAPIER, C.VOXEL_FLANC) >= 7.0,
+		"le texte courant ne tient plus 7:1 sur une plaque au repos : %.2f:1"
+		% _contraste(C.PAPIER, C.VOXEL_FLANC))
+
+
+## L'interrupteur répond-il, et répond-il la bonne chose quand on lui ment ?
+func _test_l_interrupteur_de_charte() -> void:
+	var cas := [
+		[PackedStringArray(), C.HABILLAGE_VOXEL, "sans drapeau, l'habillage de la branche"],
+		[PackedStringArray(["--charte=voxel"]), C.HABILLAGE_VOXEL, "--charte=voxel"],
+		[PackedStringArray(["--charte=pate"]), C.HABILLAGE_PATE, "--charte=pate"],
+		[PackedStringArray(["--iso", "--charte=pate", "--zoom=1.5"]), C.HABILLAGE_PATE,
+			"--charte=pate au milieu d'autres drapeaux"],
+		[PackedStringArray(["--charte=voxal"]), C.HABILLAGE_VOXEL, "une valeur inconnue"],
+		[PackedStringArray(["--charte"]), C.HABILLAGE_VOXEL, "le drapeau sans sa valeur"],
+	]
+	for c: Array in cas:
+		var lu: String = C.habillage_par_argument(c[0])
+		_check(lu == c[1], "%s donne « %s » au lieu de « %s »" % [c[2], lu, c[1]])
+	_check(C.habillage() == C.HABILLAGE_VOXEL or C.habillage() == C.HABILLAGE_PATE,
+		"l'habillage en vigueur n'est ni voxel ni pâte : « %s »" % C.habillage())
+	_check(C.voxel_actif() == (C.habillage() == C.HABILLAGE_VOXEL),
+		"voxel_actif() ne dit plus la même chose que habillage()")
+
+
+## Les quatre plaques : le fichier, sa taille, et ce qu'on lit dessus.
+##
+## ⚠️ **C'est le contrôle qui vaut, parce qu'il MESURE l'image livrée.** Tout le
+## reste de la famille voxel vérifie des constantes entre elles — un accord des
+## chiffres, qui resterait vert si `tools/fabrique_bloc_ui.py` écrivait du noir.
+## Celui-ci ouvre les PNG, lit leur corps au pixel, le compose avec la couleur que
+## l'habillage lui donnera, et exige les seuils de lecture sur le résultat.
+func _test_les_plaques_de_bloc() -> void:
+	var etats := {
+		C.CHEMIN_VOXEL_PLAQUE: "au repos",
+		C.CHEMIN_VOXEL_PLAQUE_ALLUMEE: "allumée",
+		C.CHEMIN_VOXEL_PLAQUE_ENFONCEE: "enfoncée",
+		C.CHEMIN_VOXEL_PLAQUE_RENTREE: "rentrée",
+	}
+	var largeur := C.VOXEL_FLANC_PX * 2 + C.VOXEL_TUILE_PX
+	var hauteur := C.VOXEL_DESSUS_PX + C.VOXEL_TUILE_PX + C.VOXEL_BAS_PX
+	for chemin: String in etats.keys():
+		var nom: String = etats[chemin]
+		_check(ResourceLoader.exists(chemin), "la plaque %s n'existe pas : %s" % [nom, chemin])
+		var tex := load(chemin) as Texture2D
+		_check(tex != null, "la plaque %s ne se charge pas (cache d'import construit ?)" % nom)
+		if tex == null:
+			continue
+		# La taille n'est pas décorative : les neuf tranches sont posées en dur
+		# depuis la charte (`texture_margin_*`). Une image d'une autre taille
+		# étirerait le centre au lieu de le répéter, sans une erreur.
+		_check(tex.get_width() == largeur and tex.get_height() == hauteur,
+			"la plaque %s fait %d×%d au lieu de %d×%d — les neuf tranches ne tomberaient plus juste"
+			% [nom, tex.get_width(), tex.get_height(), largeur, hauteur])
+
+	# Le corps d'une plaque, lu au centre de l'image : c'est le facteur que la
+	# matière applique là où le texte se pose.
+	var corps_repos := _facteur_au_centre(C.CHEMIN_VOXEL_PLAQUE)
+	var corps_allume := _facteur_au_centre(C.CHEMIN_VOXEL_PLAQUE_ALLUMEE)
+	_check(corps_repos != Color.BLACK, "la plaque au repos est NOIRE en son centre — matière perdue")
+	if corps_repos == Color.BLACK or corps_allume == Color.BLACK:
+		return
+
+	# Le texte courant sur une plaque au repos, et le texte sombre sur une plaque
+	# allumée : les deux sens de lecture de l'habillage, mesurés sur l'image.
+	var au_repos := _composer(corps_repos, C.VOXEL_PLAQUE)
+	var allumee := _composer(corps_allume, C.VOXEL_ALLUME)
+	var r1 := _contraste(C.PATE_TEXTE, au_repos)
+	_check(r1 >= 4.5, "le texte courant ne tient pas sur une plaque au repos : %.2f:1" % r1)
+	var r2 := _contraste(C.PATE_TEXTE_SUR_PAPIER, allumee)
+	_check(r2 >= 4.5, "le texte d'une plaque allumée ne tient pas : %.2f:1" % r2)
+
+	# **Chaque rôle doit rester lisible**, et c'est là que la teinte de rôle peut
+	# faire une faute silencieuse : un bloc éclairé en bleu est plus clair qu'un
+	# bloc neutre, donc plus près du papier écrit dessus.
+	for r: Array in [[C.BLEU, "joueur 1"], [C.ROUGE, "joueur 2"], [C.AMBRE, "le filament"],
+			[C.ETAT_OK, "ce qui est prêt"], [C.ETAT_FAUTE, "ce qui a échoué"]]:
+		var teinte: Color = MenuWidgets.teinte_de_bloc(r[0], MenuWidgets.Bloc.REPOS)
+		var plaque := _composer(corps_repos, teinte)
+		var ratio := _contraste(C.PATE_TEXTE, plaque)
+		_check(ratio >= 4.5,
+			"le texte courant ne tient plus sur une plaque éclairée par %s : %.2f:1" % [r[1], ratio])
+
+
+## Le facteur de matière au centre d'une plaque, lu dans le fichier.
+##
+## Rend `Color.BLACK` si l'image ne peut pas être lue — un cas qu'il faut
+## distinguer d'une plaque noire, d'où le contrôle qui suit chaque appel.
+func _facteur_au_centre(chemin: String) -> Color:
+	var tex := load(chemin) as Texture2D
+	if tex == null:
+		return Color.BLACK
+	var img := tex.get_image()
+	if img == null:
+		return Color.BLACK
+	if img.is_compressed():
+		# ⚠️ Une texture compressée ne se lit pas au pixel. On la décompresse
+		# plutôt que de rendre une valeur fausse en silence.
+		if img.decompress() != OK:
+			return Color.BLACK
+	return img.get_pixel(img.get_width() / 2, img.get_height() / 2)
+
+
+## La plaque telle qu'elle s'affiche : le facteur de la texture multiplié par la
+## teinte, le tout composé sur le noir de la vue (la plaque est translucide).
+func _composer(facteur: Color, teinte: Color) -> Color:
+	var r := facteur.r * teinte.r
+	var g := facteur.g * teinte.g
+	var b := facteur.b * teinte.b
+	return Color(r * teinte.a, g * teinte.a, b * teinte.a)
+
+
+## Une plaque est-elle bien UNE texture partagée ?
+##
+## ⚠️ **C'est la condition du « aucun coût par image notable ».** Deux boutons
+## dont les plaques sont deux instances de la même image sont dessinés en deux
+## lots ; le menu en compte des dizaines. La texture doit donc être chargée une
+## fois et rendue telle quelle — et c'est justement ce qu'un cache mal écrit
+## perd sans que rien ne le dise.
+func _test_les_plaques_sont_partagees() -> void:
+	for etat: int in [MenuWidgets.Bloc.REPOS, MenuWidgets.Bloc.ALLUME,
+			MenuWidgets.Bloc.ENFONCE, MenuWidgets.Bloc.RENTRE]:
+		var a := MenuWidgets.plaque(etat)
+		var b := MenuWidgets.plaque(etat)
+		_check(a != null and a == b,
+			"la plaque de l'état %d n'est pas partagée : chaque bouton ferait son propre lot" % etat)
+	var styles: Array[StyleBoxTexture] = [
+		MenuWidgets.style_de_bloc(C.BLEU, MenuWidgets.Bloc.REPOS),
+		MenuWidgets.style_de_bloc(C.ROUGE, MenuWidgets.Bloc.REPOS),
+	]
+	_check(styles[0].texture == styles[1].texture,
+		"deux plaques de rôles différents ne partagent plus leur texture — la couleur doit venir de la teinte, pas d'une image par rôle")
+
+
+## L'interrupteur tient-il jusqu'au bout de la chaîne ?
+##
+## La charte peut dire « voxel » et les styles rendre des aplats : entre les deux
+## il y a `Charte.voxel_actif()`, lu dans trois fabriques. Ce contrôle part du
+## style rendu et remonte — le sens dans lequel un joueur le verrait.
+func _test_l_habillage_va_jusqu_au_style() -> void:
+	var attendu_bloc := C.voxel_actif()
+	var panneau := MenuWidgets.make_panel_style()
+	_check((panneau is StyleBoxTexture) == attendu_bloc,
+		"le panneau ne suit pas l'habillage : %s pour un habillage « %s »"
+		% [panneau.get_class(), C.habillage()])
+	var modale := MenuWidgets.make_modal_style()
+	_check((modale is StyleBoxTexture) == attendu_bloc,
+		"la modale ne suit pas l'habillage : %s" % modale.get_class())
+	var bouton := MenuWidgets.make_button("ESSAI")
+	var repos := bouton.get_theme_stylebox("normal")
+	_check((repos is StyleBoxTexture) == attendu_bloc,
+		"le bouton ne suit pas l'habillage : %s" % repos.get_class())
+
+	if attendu_bloc:
+		# Le geste du bloc : le libellé DESCEND quand la plaque s'enfonce.
+		var enfonce := bouton.get_theme_stylebox("pressed")
+		var descente := enfonce.content_margin_top - repos.content_margin_top
+		_check(is_equal_approx(descente, float(C.VOXEL_ENFONCEMENT_PX)),
+			"le libellé ne descend pas de l'enfoncement : %.1f px pour %d attendus"
+			% [descente, C.VOXEL_ENFONCEMENT_PX])
+		_check(enfonce.texture != repos.texture,
+			"le bouton enfoncé porte la même plaque qu'au repos : l'enfoncement ne se verrait pas")
+	bouton.queue_free()

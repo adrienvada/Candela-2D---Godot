@@ -483,9 +483,29 @@ class ComicHudPanel extends PanelContainer:
 		# Habillage iso : la matière de la pâte sur ce que le panneau DESSINE (son
 		# fond, ses filets) — pas une `StyleBoxTexture`, que `test_hud_style` refuse.
 		# Les libellés, enfants, restent nets.
-		MenuWidgets.poser_pate(self)
+		#
+		# En voxel, la plaque porte sa matière DANS sa texture : un grain de lavis
+		# par-dessus la mangerait, et le matériau repeindrait aussi le liseré du
+		# joueur — une information, qui ne se grainte pas.
+		if not Charte.voxel_actif():
+			MenuWidgets.poser_pate(self)
 		var empty := StyleBoxEmpty.new()
 		add_theme_stylebox_override("panel", empty)
+
+	## La plaque de bloc du panneau, construite une fois.
+	##
+	## ⚠️ **Dessinée par `StyleBox.draw()`, et surtout pas posée en override de
+	## thème.** `tools/test_hud_style.gd` exige qu'aucun panneau du HUD ne porte
+	## de `StyleBoxTexture` — l'éradication du vieux cadre 3D `cadre_hud.png`. La
+	## règle vaut toujours : ce que ce panneau refuse, c'est une IMAGE DE CADRE
+	## qui remplace son dessin. Ici, le panneau dessine toujours lui-même, et ce
+	## qu'il dessine est un bloc de la même matière que les murs du duel.
+	var _plaque: StyleBoxTexture = null
+
+	func _bloc() -> StyleBoxTexture:
+		if _plaque == null:
+			_plaque = MenuWidgets.style_de_bloc(accent_color, MenuWidgets.Bloc.REPOS)
+		return _plaque
 
 	func _draw() -> void:
 		var w := size.x
@@ -493,14 +513,22 @@ class ComicHudPanel extends PanelContainer:
 		if w <= 0.0 or h <= 0.0:
 			return
 
-		# 1. Ombre d'encrage noire pure portée en décalage franc (3 px bas-droite)
-		draw_rect(Rect2(3.0, 3.0, w, h), Charte.PATE_OMBRE)
+		if Charte.voxel_actif():
+			# Le bloc remplace les trois premiers gestes — l'ombre portée, l'aplat
+			# d'encre et le filet — parce qu'il les porte déjà : son rebord du bas
+			# rentre dans l'ombre et son arête d'encre cerne la plaque. Tout ce qui
+			# vient ensuite (liseré du joueur, onglet, repères) est de
+			# l'INFORMATION et ne bouge pas d'un pixel.
+			_bloc().draw(get_canvas_item(), Rect2(0.0, 0.0, w, h))
+		else:
+			# 1. Ombre d'encrage noire pure portée en décalage franc (3 px bas-droite)
+			draw_rect(Rect2(3.0, 3.0, w, h), Charte.PATE_OMBRE)
 
-		# 2. Fond de panneau en Charte.PATE_FOND (96% opaque)
-		draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.PATE_FOND.r, Charte.PATE_FOND.g, Charte.PATE_FOND.b, 0.96))
+			# 2. Fond de panneau en Charte.PATE_FOND (96% opaque)
+			draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.PATE_FOND.r, Charte.PATE_FOND.g, Charte.PATE_FOND.b, 0.96))
 
-		# 3. Filet d'encrage extérieur et d'acier (cadre net de 1 px)
-		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.PATE_FILET, false, 1.0)
+			# 3. Filet d'encrage extérieur et d'acier (cadre net de 1 px)
+			draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.PATE_FILET, false, 1.0)
 
 		# 4. Traitement du liseré d'accent et des repères de massicot
 		if is_center_panel:
@@ -817,7 +845,7 @@ enum Registre {
 }
 
 var dialog_panel: PanelContainer
-var _dialog_style: StyleBoxFlat
+var _dialog_style: StyleBox
 var dialog_title: Label
 var dialog_message: Label
 var dialog_btn: Button
@@ -2796,7 +2824,9 @@ func _create_torch_indicator() -> PanelContainer:
 	_set_torch_style(panel, false, Charte.HALOGENE)
 	# La cartouche prend la pâte. Son style est REMPLACÉ à chaque image
 	# (`_set_torch_style`) ; le matériau, lui, vit sur le nœud et reste.
-	MenuWidgets.poser_pate(panel)
+	# En voxel, la matière est dans la plaque : pas de grain par-dessus.
+	if not Charte.voxel_actif():
+		MenuWidgets.poser_pate(panel)
 	return panel
 
 ## MB2 — la marque « accroupi » du panneau d'un joueur.
@@ -2941,9 +2971,11 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	Charte.appareil(gadget, T_MENTION)
 	vbox_g.add_child(gadget)
 	_set_gadget_style(panel_gadget, false, Charte.HALOGENE)
-	# Les deux cartouches prennent la pâte, comme celle de la torche.
-	MenuWidgets.poser_pate(panel_fusees)
-	MenuWidgets.poser_pate(panel_gadget)
+	# Les deux cartouches prennent la pâte, comme celle de la torche — sauf en
+	# voxel, où leur plaque porte déjà sa matière (voir `_plaques_de_cartouche`).
+	if not Charte.voxel_actif():
+		MenuWidgets.poser_pate(panel_fusees)
+		MenuWidgets.poser_pate(panel_gadget)
 
 	# Agencement selon le joueur pour la symétrie du HUD
 	if player == 0:
@@ -3180,8 +3212,51 @@ class VerrouTorche extends Control:
 		draw_rect(corps, Charte.AMBRE)
 
 
+## Les deux plaques d'une cartouche de torche, GARDÉES sur le panneau.
+##
+## ⚠️ **Cette fonction est appelée à chaque image, pour les deux joueurs.** Le
+## style d'origine fabrique une `StyleBoxFlat` par appel, soit cent vingt par
+## seconde pour un état qui change deux ou trois fois par manche. Les blocs, eux,
+## sont construits au premier appel et retrouvés ensuite : l'habillage voxel doit
+## être invisible dans le budget par image, pas seulement acceptable.
+##
+## La teinte du joueur peut changer après coup (la cartouche naît en halogène,
+## puis prend la couleur de son joueur) : on la garde, et les deux plaques sont
+## refaites quand elle bouge — jamais autrement.
+## ⚠️ **Les deux plaques restent SOMBRES, et c'est l'icône qui l'impose.** Une
+## cartouche porte un pictogramme clair — le disque halogène de la torche, les
+## glyphes des gadgets — et un libellé en papier. Sur une plaque allumée, les
+## deux disparaissent. L'état actif se dit donc comme le disait déjà la version
+## pâte : une plaque un peu plus claire, et la couleur du joueur — ici portée par
+## la lumière du bloc plutôt que par une bordure.
+func _plaques_de_cartouche(panel: PanelContainer, active: bool, player_color: Color) -> StyleBox:
+	if panel.get_meta("bloc_teinte", Color.TRANSPARENT) != player_color:
+		panel.set_meta("bloc_teinte", player_color)
+		panel.set_meta("bloc_actif", MenuWidgets.style_de_bloc(player_color,
+			MenuWidgets.Bloc.REPOS, Charte.VOXEL_PLAQUE_SURVOL))
+		panel.set_meta("bloc_eteint",
+			MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.REPOS))
+	return panel.get_meta("bloc_actif" if active else "bloc_eteint")
+
+
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
 		verrouillee: bool = false) -> void:
+	if Charte.voxel_actif():
+		# **La cartouche de torche s'allume comme un bloc sous une torche** —
+		# c'est le seul endroit du HUD où l'habillage dit littéralement ce que le
+		# jeu fait. Éteinte, elle retombe dans l'ombre, neutre.
+		panel.add_theme_stylebox_override("panel", _plaques_de_cartouche(panel, active, player_color))
+		var hb := panel.get_child(0).get_child(0)
+		var lb := hb.get_child(1) as Label
+		# Le libellé garde EXACTEMENT ses deux couleurs d'origine : la plaque
+		# reste sombre dans les deux états, donc rien ne justifie de l'inverser.
+		lb.add_theme_color_override("font_color",
+			COLOR_LUMIERE if active else Charte.PATE_TEXTE_SECOND)
+		var v := panel.find_child("Verrou", true, false) as Control
+		if v != null:
+			v.visible = active and verrouillee
+		return
+
 	var style := StyleBoxFlat.new()
 	style.set_corner_radius_all(0)
 	style.set_border_width_all(2)
@@ -3226,8 +3301,33 @@ func _torche_verrouillee(joueur: Node) -> bool:
 	var fournisseur := joueur.get("input_provider") as InputProvider
 	return fournisseur != null and fournisseur.is_flashlight_locked()
 
+## Les deux cartouches de RÉSERVE (fusées, gadget) en blocs. Mêmes plaques que la
+## torche, et le même geste : la réserve disponible est sous la lumière, la
+## réserve vide est dans l'ombre.
+##
+## L'icône garde son opacité d'origine (pleine ou 30 %) : c'est elle qui dit
+## « il en reste » ou « il n'en reste plus », et cette information ne change pas
+## d'habillage.
+func _habiller_la_reserve(panel: PanelContainer, active: bool, player_color: Color) -> void:
+	panel.add_theme_stylebox_override("panel", _plaques_de_cartouche(panel, active, player_color))
+	var marge := panel.get_child(0)
+	if marge.get_child_count() == 0:
+		return
+	var hbox := marge.get_child(0)
+	var label: Label = hbox.get_node_or_null("Label")
+	if label != null:
+		label.add_theme_color_override("font_color",
+			COLOR_LUMIERE if active else Charte.PATE_TEXTE_SECOND)
+	var icon: TextureRect = hbox.get_node_or_null("Icon")
+	if icon != null:
+		icon.modulate = Color.WHITE if active else Color(Color.WHITE, 0.3)
+
+
 func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	if panel == null or panel.get_child_count() == 0:
+		return
+	if Charte.voxel_actif():
+		_habiller_la_reserve(panel, active, player_color)
 		return
 	var style := StyleBoxFlat.new()
 	style.set_corner_radius_all(0)
@@ -3263,6 +3363,9 @@ func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) 
 
 func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	if panel == null or panel.get_child_count() == 0:
+		return
+	if Charte.voxel_actif():
+		_habiller_la_reserve(panel, active, player_color)
 		return
 	var style := StyleBoxFlat.new()
 	style.set_corner_radius_all(0)
@@ -3760,12 +3863,63 @@ const KEY_ART := "res://assets/ui/fond_hub_iso.jpg"
 const PRESENCE_KEY_ART := 0.40
 
 
+## Où tombe le SUJET de la planche, en fraction de l'écran : la torche du bunker.
+##
+## ⚠️ **Elle était invisible, et la seule partie visible du fond était noire.**
+## Mesuré le 2026-09-23 sur `fond_hub_iso.jpg` : la torche et son halo ont leur
+## barycentre à **64,7 % de la largeur** et 36,7 % de la hauteur — c'est-à-dire
+## en plein sous le cadre de droite, qui couvre le hub de 550 px à 1 840 px. La
+## colonne de gauche, la seule que le joueur voie, mesure **0,5 sur 255** de
+## luminance moyenne. Le fond du hub ne montrait donc rien du tout : ni au
+## joueur, qui voyait du noir, ni au dossier de presse.
+##
+## Le sujet est ramené en bas à gauche, sous les entrées : le bloc du menu est
+## posé sur un sol éclairé par une torche debout, ce qui est exactement le sujet
+## du jeu. Signalé par la session cloud (complément à l'ordre 127, 23/09 00:30).
+const KEY_ART_SUJET := Vector2(0.14, 0.84)
+## Où le sujet se trouve DANS l'image, mesuré (voir ci-dessus).
+const KEY_ART_SUJET_DANS_IMAGE := Vector2(0.647, 0.367)
+## De combien la planche déborde de l'écran. Au-delà de 1, elle est agrandie et
+## recadrée : c'est ce qui permet de déplacer le sujet sans découvrir un bord.
+const KEY_ART_DEBORD := 1.25
+
+
+## Cadre la planche par ses ANCRES, jamais par des décalages en pixels : un
+## décalage calculé pour 1920 de large mettrait le sujet ailleurs sur un autre
+## écran, et le hub se joue de 1280 à 3840.
+func _cadrer_le_key_art(art: TextureRect) -> void:
+	var coin := KEY_ART_SUJET - KEY_ART_DEBORD * KEY_ART_SUJET_DANS_IMAGE
+	art.anchor_left = coin.x
+	art.anchor_top = coin.y
+	art.anchor_right = coin.x + KEY_ART_DEBORD
+	art.anchor_bottom = coin.y + KEY_ART_DEBORD
+	art.offset_left = 0.0
+	art.offset_top = 0.0
+	art.offset_right = 0.0
+	art.offset_bottom = 0.0
+
+
 func _poser_le_key_art() -> void:
 	if not ResourceLoader.exists(KEY_ART):
 		push_error("ui : key art absent — %s " % KEY_ART
 			+ "(cuire avec tools/fabrique_keyart.gd, puis : "
 			+ "godot --headless --path . --import)")
 		return
+	# ⚠️ **`game_over_panel` est un CONTENEUR, et un conteneur ignore les ancres
+	# de ses enfants** : il leur impose position et taille à chaque disposition.
+	# Cadrer la planche directement ne faisait donc **rien**, sans la moindre
+	# erreur — mesuré le 2026-09-23 : la torche n'avait pas bougé d'un pixel, et
+	# seule la comparaison des deux captures l'a dit. On interpose un `Control`
+	# nu : le conteneur l'étale comme il l'entend, et c'est DANS lui que la
+	# planche se cadre, ancres comprises.
+	var cadre := Control.new()
+	cadre.name = "CadreKeyArt"
+	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# La planche déborde volontairement de son cadre : on la coupe au bord de
+	# l'écran plutôt que de la laisser peindre sous les panneaux voisins.
+	cadre.clip_contents = true
+	game_over_panel.add_child(cadre)
+
 	var art := TextureRect.new()
 	art.name = "KeyArt"
 	art.texture = load(KEY_ART)
@@ -3774,10 +3928,11 @@ func _poser_le_key_art() -> void:
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cadrer_le_key_art(art)
 	art.modulate = Color(1.0, 1.0, 1.0, PRESENCE_KEY_ART)
 	# Sans ça, la planche avale les clics destinés au menu.
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	game_over_panel.add_child(art)
+	cadre.add_child(art)
 
 
 ## L'avis de phase de test, mot pour mot comme Adrien l'a écrit le 2026-09-10.
@@ -8715,7 +8870,7 @@ func show_dialog_message(title: String, message: String,
 		Registre.FAUTE: teinte = Charte.ETAT_FAUTE
 	dialog_title.add_theme_color_override("font_color", teinte)
 	if _dialog_style != null:
-		_dialog_style.border_color = teinte
+		MenuWidgets.reteindre(_dialog_style, teinte)
 	dialog_message.text = message
 	dialog_panel.show()
 	_previous_focus = p1_focus

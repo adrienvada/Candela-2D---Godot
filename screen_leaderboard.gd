@@ -338,7 +338,7 @@ func _build_refresh_button() -> Button:
 	btn.pressed.connect(refresh)
 	return btn
 
-func _row_style(mine: bool) -> StyleBoxFlat:
+func _row_style(mine: bool) -> StyleBox:
 	var bg := Color(MenuTheme.P1.r, MenuTheme.P1.g, MenuTheme.P1.b, 0.10) if mine else MenuTheme.SURFACE
 	return MenuWidgets.make_panel_style(MenuTheme.P1 if mine else MenuTheme.LINE, 8, 1, bg)
 

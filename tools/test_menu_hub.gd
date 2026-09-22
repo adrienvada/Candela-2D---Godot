@@ -297,29 +297,46 @@ func _test_panneau_indisponible() -> void:
 ##
 ## Ce qui est vérifié n'est donc pas « c'est joli » mais **une couleur ne dit
 ## qu'une chose** : au repos, aucune entrée ne porte la couleur d'un curseur.
+## Les couleurs qu'une plaque MONTRE, quel que soit l'habillage : le fond et le
+## cadre d'un aplat, la lumière d'un bloc.
+##
+## ⚠️ **Ce contrôle portait sur `StyleBoxFlat`, et l'habillage voxel l'a fait
+## rougir sans qu'une seule règle soit enfreinte** : un transtypage raté rendait
+## `null`, et la suite concluait « pas de style au repos ». Ce qu'elle veut
+## vérifier n'a pourtant rien à voir avec la classe qui dessine — c'est qu'une
+## couleur de curseur ne se porte pas au repos. On lit donc ce que l'œil voit.
+func _teintes(style: StyleBox) -> Array:
+	if style is StyleBoxFlat:
+		return [(style as StyleBoxFlat).bg_color, (style as StyleBoxFlat).border_color]
+	if style is StyleBoxTexture:
+		return [(style as StyleBoxTexture).modulate_color]
+	return []
+
+
 func _test_style_lanceur() -> void:
 	print("\n[Le style d'un lanceur]")
 	var ordinaire := _hub.make_entry("ORDINAIRE", "", "", MenuTheme.P1)
 	var lanceur := _hub.make_entry("LANCEUR", "", "", MenuTheme.P1, "lancer", "", true)
 
-	var s_ord := ordinaire.get_theme_stylebox("normal") as StyleBoxFlat
-	var s_lan := lanceur.get_theme_stylebox("normal") as StyleBoxFlat
+	var s_ord := ordinaire.get_theme_stylebox("normal")
+	var s_lan := lanceur.get_theme_stylebox("normal")
 	_check("les deux ont bien un style au repos", s_ord != null and s_lan != null)
 	if s_ord == null or s_lan == null:
 		return
 
-	_check("au repos, le lanceur a le fond commun", s_lan.bg_color == s_ord.bg_color,
-		"%s contre %s" % [s_lan.bg_color, s_ord.bg_color])
-	_check("et le cadre commun", s_lan.border_color == s_ord.border_color,
-		"%s contre %s" % [s_lan.border_color, s_ord.border_color])
+	_check("au repos, le lanceur montre les mêmes teintes que l'ordinaire",
+		_teintes(s_lan) == _teintes(s_ord),
+		"%s contre %s" % [_teintes(s_lan), _teintes(s_ord)])
 	# LE test. Ni P1 ni P2 au repos, sur aucune entrée : ces deux teintes
 	# appartiennent aux curseurs et à personne d'autre.
 	for couple in [[s_ord, "ordinaire"], [s_lan, "lanceur"]]:
-		var st: StyleBoxFlat = couple[0]
+		var teintes: Array = _teintes(couple[0])
+		var propre := true
+		for c: Color in teintes:
+			if c == MenuTheme.P1 or c == MenuTheme.P2:
+				propre = false
 		_check("l'entrée %s ne porte la couleur d'aucun curseur" % couple[1],
-			st.border_color != MenuTheme.P1 and st.border_color != MenuTheme.P2
-			and st.bg_color != MenuTheme.P1 and st.bg_color != MenuTheme.P2,
-			"fond %s, cadre %s" % [st.bg_color, st.border_color])
+			propre, "teintes %s" % [teintes])
 
 	# Ce qui distingue un lanceur a remplacé la couleur : le gras.
 	_check("le lanceur se reconnaît à son gras",
