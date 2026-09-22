@@ -90,6 +90,10 @@ var _ui: Node
 ## comme une seconde à 150 fps. Le relevé rendait `1 % bas == minimum`, ce qui
 ## est la signature du défaut — un percentile sur des doublons est un minimum.
 var _samples: Array[float] = []
+## ISO12 — l'instant (s depuis le début de la mesure) de chaque image de `_samples`, pour DATER les pires ; et la pire image
+## de l'échauffement, qui dit si un hoquet de compilation y est tombé plutôt que dans la mesure.
+var _samples_t: Array[float] = []
+var _pire_echauffement := 0.0
 var _seconds := 15.0
 ## ISO12 — la lumière 3D bridée pendant le relevé, et sa variante.
 var _lumiere3d := false
@@ -311,9 +315,16 @@ func _ready() -> void:
 		await get_tree().process_frame
 		print("Lumière 3D    : allumée, bride identité échelle %.2f, ombres %s"
 			% [_lumiere3d_echelle, "non" if _lumiere3d_sans_ombres else "oui"])
+		# ISO12 — trois secondes rendues AVANT le chronomètre, la lumière 3D allumée : ses shaders et leurs variantes compilent
+		# ici, pas dans la mesure. La pire image de ce préchauffage est imprimée : si le hoquet y tombe, c'était une compilation.
+		_pire_echauffement = 0.0
+		await _stress(3.0, false)
+		print("Préchauffage lumière 3D : 3 s, pire image %.1f ms" % (_pire_echauffement * 1000.0))
 	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
+	_pire_echauffement = 0.0
 	await _stress(WARMUP_SEC, false)
+	print("  pire image de l'échauffement : %.1f ms" % (_pire_echauffement * 1000.0))
 
 	print("Mesure sur %.0f s…" % _seconds)
 	await _stress(_seconds, true)
@@ -490,6 +501,8 @@ func _stress(duration: float, sampling: bool) -> void:
 		_main.p1.rotation = (_main.p2.global_position - _main.p1.global_position).angle()
 		_main.p2.rotation = (_main.p1.global_position - _main.p2.global_position).angle()
 
+		if not sampling:
+			_pire_echauffement = maxf(_pire_echauffement, get_process_delta_time())
 		if sampling:
 			# Le temps de CETTE image. La première après l'échauffement peut
 			# porter le coût d'un changement d'état ; elle compte quand même,
@@ -497,6 +510,7 @@ func _stress(duration: float, sampling: bool) -> void:
 			var dt := get_process_delta_time()
 			if dt > 0.0:
 				_samples.append(dt)
+				_samples_t.append(elapsed)
 			if not get_window().has_focus():
 				_images_hors_focus += 1
 			# Relevés au vol : lus après la boucle ils vaudraient zéro, et le
@@ -778,6 +792,14 @@ func _report() -> void:
 		% [low1, lents])
 	print("  Image la plus lente : %.1f ms  (soit %.0f fps)"
 		% [sorted[sorted.size() - 1] * 1000.0, 1.0 / sorted[sorted.size() - 1]])
+	# ISO12 — les cinq pires, DATÉES : un hoquet unique au début (compilation) ne se lit pas comme un régime.
+	var ordre: Array = range(_samples.size())
+	ordre.sort_custom(func(a, b) -> bool: return _samples[a] > _samples[b])
+	var pires: PackedStringArray = []
+	for k in mini(5, ordre.size()):
+		var i: int = ordre[k]
+		pires.append("%.1f ms à %.2f s" % [_samples[i] * 1000.0, _samples_t[i] if i < _samples_t.size() else -1.0])
+	print("  Cinq pires images : %s" % ", ".join(pires))
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
 	if not _appels.is_empty():

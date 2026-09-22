@@ -26,6 +26,8 @@
 // Exige `iso_pate.gdshaderinc` inclus AVANT.
 
 uniform sampler2D lumiere_1 : source_color, filter_linear, repeat_disable;
+// ISO12 v27 — le point noir de la 2D (voir `lire_lightmap`). 0 : aucun seuil.
+uniform float seuil_noir_2d = 0.0;
 uniform vec2 canevas_1_x = vec2(1.0, 0.0);
 uniform vec2 canevas_1_y = vec2(0.0, 1.0);
 uniform vec2 canevas_1_o = vec2(0.0);
@@ -54,7 +56,16 @@ vec3 lire_lightmap(vec2 px, bool deux) {
 	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
 		return vec3(0.0);
 	}
-	return deux ? texture(lumiere_2, uv).rgb : texture(lumiere_1, uv).rgb;
+	vec3 c = deux ? texture(lumiere_2, uv).rgb : texture(lumiere_1, uv).rgb;
+	// ISO12 v27 — LE POINT NOIR DE LA 2D, PAR CONSTRUCTION (session cloud, 2026-09-23, 00:30) : ce que la 2D affiche à 8 sur
+	// 255 ou moins est NOIR pour la 3D, seuillé ICI, avant toute division par la peinture. Un niveau quantifié divisé par une
+	// peinture sombre devenait une L2D visible, et la garde du relief (R = 1) le rallumait : sous une fusée seule, 5,1 % des
+	// pixels noirs en 2D sortaient entre 12 et 30 sur 255 en 3D. Marche franche, aucun seuil statistique. 0 : aucun seuil — le
+	// défaut, pour les vues d'ISO11 qui partagent cet include ; les trois matériaux éclairés reçoivent 8/255.
+	if (seuil_noir_2d > 0.0 && pate_luminance(c) <= seuil_noir_2d) {
+		return vec3(0.0);
+	}
+	return c;
 }
 
 // La lumière du point `px`, passée à la pâte. `motif` : là où hachure, trame ou lavis

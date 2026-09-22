@@ -217,10 +217,35 @@ func _run() -> void:
 	_check("et la présentation la demande encore",
 		texte_pose.contains("decrire_pour_relief"),
 		"sans cet appel, les lampes ne sont jamais posées et le relief est muet")
-	# Le troisième fil : la pose doit être APPELÉE. Une fonction juste, jamais appelée, ne rougit rien non plus.
-	_check("et _accorder_le_relief() est bien appelée à chaque pose de bride",
-		texte_pose.contains("\t_accorder_le_relief()"),
-		"posée une seule fois à l'allumage, la liste des lampes serait celle d'une autre image")
+	# Le troisième fil : la pose doit être APPELÉE, et À CHAQUE IMAGE, juste après que le miroir a suivi ses lampes. La première
+	# version de ce contrôle vérifiait « appelée depuis la bride » : c'était vrai, et ne prouvait rien — la bride ne tourne pas
+	# à chaque image, la liste restait vide ou figée (revue d'ISO7 Beauté, 2026-09-22). Un texte ne prouve pas l'image : le
+	# juge du relief est le banc (`--v27`), ceci n'empêche qu'une régression textuelle.
+	var i_suivre := texte_pose.find("_lumieres.call(\"suivre\", _main, _voxels)")
+	var i_relief := texte_pose.find("_accorder_le_relief()", i_suivre) if i_suivre >= 0 else -1
+	var i_led := texte_pose.find("_accorder_la_led()", i_suivre) if i_suivre >= 0 else -1
+	_check("et _accorder_le_relief() est appelée à chaque image, après le suivi des lampes",
+		i_suivre >= 0 and i_relief > i_suivre and i_relief < i_led,
+		"posée ailleurs qu'à chaque image, la liste des lampes serait celle d'une autre image")
+	# Le canal mort ne doit pas revenir : SPECULAR_AMOUNT est la propriété de la LAMPE, pas une sortie de fragment().
+	for nom_shader in ["sol_iso_eclaire", "mur_iso_eclaire", "corps_iso_eclaire"]:
+		var texte_shader := FileAccess.get_file_as_string("res://%s.gdshader" % nom_shader)
+		_check("%s passe le dénominateur par le varying, jamais par SPECULAR_AMOUNT" % nom_shader,
+			texte_shader.contains("relief_d = relief_denominateur(") and not texte_shader.contains("SPECULAR_AMOUNT"),
+			"SPECULAR_AMOUNT vaut 2 × light_specular de la lampe : le relief y serait éteint sans erreur")
+	# Les poids de luminance du miroir doivent être ceux de la pâte : sinon R ne vaut plus 1 sur un sol plat.
+	var texte_pate := FileAccess.get_file_as_string("res://iso_pate.gdshaderinc")
+	_check("le miroir mesure l'intensité aux poids de la pâte",
+		texte_pate.contains("vec3(0.2126, 0.7152, 0.0722)") and texte_miroir.contains("Vector3(0.2126, 0.7152, 0.0722)"),
+		"des poids différents décaleraient R de la couleur des lampes")
+	# ε par lampe (L4) : le miroir plafonne h/portée au plancher global, qui doit valoir le défaut de l'include ; et l'include
+	# doit le LIRE dans direction.w, sans quoi ε par lampe serait calculé puis ignoré sans erreur.
+	var texte_relief := FileAccess.get_file_as_string("res://iso_relief.gdshaderinc")
+	_check("le plancher ε du miroir vaut celui de l'include, et l'include lit ε par lampe",
+		texte_miroir.contains("const RELIEF_EPSILON := 0.02") and texte_relief.contains("uniform float relief_epsilon = 0.02;")
+		and texte_relief.contains("relief_direction[i].w > 0.0 ? relief_direction[i].w : relief_epsilon")
+		and texte_pose.contains("lampe.get(\"epsilon\", 0.0)"),
+		"braises et mine, posées à 1,75 px, retomberaient à 0,515 et 0,337 au bord de leur halo")
 
 	# Le catalogue lui-même. **Une image dont l'identifiant est en double
 	# écraserait l'autre en silence** : les deux fichiers portent le nom de leur

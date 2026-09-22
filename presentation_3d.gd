@@ -266,6 +266,16 @@ var gain_corps_propre_3d := 0.0
 var gain_pied_lampe_3d := 0.0
 ## ISO12, lot 0 quater — la bride des corps forcée à 1 (coup un du diagnostic). Instrument, éteint par défaut.
 var bride_corps_forcee := false
+## ISO12 v27 — INSTRUMENT DE BANC, comme `masque_preuve` : vrai, le relief ne reçoit AUCUNE lampe, donc la garde rend R = 1
+## partout (la 2D seule, par l'émission). La même prise relief allumé puis neutralisé donne R LU À L'IMAGE, sans passer par la
+## référence 2D — dont le rendu de base (pâte, chroma) diffère de la 3D pour d'autres raisons que le relief. Jamais vrai en jeu.
+var relief_neutre := false
+## ISO12 v27 — LE POINT NOIR DE LA 2D, PAR CONSTRUCTION : ce que la 2D affiche à 8 sur 255 ou moins est noir pour la 3D —
+## seuillé à la LECTURE de la lightmap (sol, murs), avant la division par la peinture, et à la lecture du capteur (corps).
+## ⚠️ Il a d'abord été un seuil STATISTIQUE sur la L2D du sol (0,11, mesuré), et posé aussi sur les corps, où il bridait la
+## luminance du capteur — une autre échelle ; or le capteur lit bas justement la rétrodiffusion faible des furtifs, et la 3D
+## aurait pu effacer un corps que la 2D montre (revue d'ISO7 Beauté, arbitrage de la session cloud, 2026-09-23).
+var seuil_noir_2d_3d := 8.0 / 255.0
 var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
@@ -787,6 +797,9 @@ func _suivre() -> void:
 	_miroirs.suivre(_main, ids, style_pate, self)
 	if _lumieres != null:
 		_lumieres.call("suivre", _main, _voxels)
+		# ISO12 v27 — le relief APRÈS `suivre` : les lampes de CETTE image, celles que le moteur rend. Il n'était posé qu'à la
+		# bascule du drapeau (liste vide) et à la pose d'un corps (liste figée) — défaut 2 de la revue d'ISO7 Beauté.
+		_accorder_le_relief()
 		_accorder_la_led()
 	# La passe de pâte suit la vue (unique ou scindée) à chaque image : la vue peut basculer après la variante.
 	_accorder_la_pate_ecran()
@@ -1742,6 +1755,7 @@ func _accorder_la_bride() -> void:
 		m.set_shader_parameter("bride_echelle", bride_echelle_3d)
 		m.set_shader_parameter("gain_corps_propre", gain_corps_propre_3d)
 		m.set_shader_parameter("bride_forcee", bride_corps_forcee)
+		m.set_shader_parameter("seuil_noir_2d", seuil_noir_2d_3d)
 	if _lumieres != null:
 		_lumieres.set("ombres", ombres_3d and not (ombres_vue_unique_seulement and _scinde))
 		_lumieres.set("retrodiffusion", retrodiffusion_3d)
@@ -1752,7 +1766,6 @@ func _accorder_la_bride() -> void:
 		racine.positional_shadow_atlas_size = atlas_ombres
 	for vue in _vues3d:
 		(vue as SubViewport).positional_shadow_atlas_size = atlas_ombres
-	_accorder_le_relief()
 
 
 ## ISO12 — le corps voxel `j` passe au matériau éclairé (ou en revient), et ses boîtes de COULEUR portent ombre ; leurs
@@ -1988,12 +2001,14 @@ func stick_au_sol(joueur: Node, stick: Vector2) -> Vector2:
 
 ## ISO12 v27 — les lampes posées dans les trois matériaux éclairés, pour le dénominateur du relief.
 ##
-## À chaque image, comme la bride : la liste change à chaque tir, chaque fusée, chaque pas.
+## À CHAQUE IMAGE, depuis `_process`, juste après `_lumieres.suivre` : la liste change à chaque tir, chaque fusée, chaque pas.
+## ⚠️ La première version l'appelait depuis `_accorder_la_bride()`, qui ne tourne PAS à chaque image : la liste restait vide
+## ou figée, et aucune suite ne pouvait le voir.
 func _accorder_le_relief() -> void:
 	var mats: Array = _materiaux()
 	## ⚠️ `.call()` et non l'appel direct : `_lumieres` est typé `Node3D`, qui n'a pas cette méthode — l'appel direct ne
 	## compilerait pas. C'est déjà pourquoi la bride écrit `_lumieres.set("ombres", …)`.
-	var lampes: Array = _lumieres.call("decrire_pour_relief") if _lumieres != null else []
+	var lampes: Array = _lumieres.call("decrire_pour_relief") if _lumieres != null and not relief_neutre else []
 	var pos := PackedVector4Array()
 	var portee := PackedVector4Array()
 	var direction := PackedVector4Array()
@@ -2003,7 +2018,8 @@ func _accorder_le_relief() -> void:
 		portee.append(Vector4(float(lampe["portee"]), float(lampe["cos_demi"]),
 			float(lampe["attenuation"]), float(lampe["exposant_cone"])))
 		var d: Vector3 = lampe["direction"]
-		direction.append(Vector4(d.x, d.y, d.z, 0.0))
+		# w : ε de CETTE lampe (L4). 0 = « pas d'ε fourni » — l'include retombe alors sur l'uniforme global.
+		direction.append(Vector4(d.x, d.y, d.z, float(lampe.get("epsilon", 0.0))))
 	while pos.size() < 8:
 		pos.append(Vector4.ZERO)
 		portee.append(Vector4.ZERO)

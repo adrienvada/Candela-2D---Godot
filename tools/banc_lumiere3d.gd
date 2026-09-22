@@ -42,6 +42,8 @@ const PERIODE_FLASH_S := 0.5
 const ATLAS := [1024, 2048, 4096]
 const BRIDES := [Vector2(0.0, 0.05), Vector2(0.0, 0.2)]
 const VISEES_PREUVE := 8
+## ISO12 v27 — la hauteur visée d'un corps, en pixels de monde (celle de la loupe).
+const HAUTEUR_CORPS := 16.0
 ## ISO12, lot 0 ter — les brides à trancher. La bride ne doit pas seulement suivre le SUPPORT de la lumière 2D mais son
 ## GRADIENT : à (0 ; 0,05), tout souffle de 2D ouvrait la 3D en grand, et la 3D montrait plus que la 2D en intensité. La
 ## (0 ; 0,05) reste en tête de liste — c'est celle du lot 0 bis, la comparaison se fait contre elle.
@@ -67,6 +69,11 @@ const CADRAGES := [
 class Pantin extends InputProvider:
 	var visee := Vector2.UP
 	var torche := true
+	## ISO12 v27 — l'accroupi, pour le cas limite 8a de la revue : la torche basse d'un accroupi face à un muret.
+	var accroupi := false
+
+	func is_crouch_pressed() -> bool:
+		return accroupi
 
 	func get_movement_vector() -> Vector2:
 		return Vector2.ZERO
@@ -109,6 +116,36 @@ var _cadrages_seuls := false
 ## ISO12, lot 0 quater — le coup un (bride du corps forcée à 1) et l'enregistrement des quatre capteurs.
 var _bride_corps_forcee := false
 var _capteurs_en_image := false
+## ISO12 v27 — la recette du relief normalisé (`--v27`) : cadrages en bride IDENTITÉ, celle du jeu. Le banc gardait par défaut
+## la bride (0 ; 0,05) du lot 0 : une recette du relief prise sous une autre bride que celle du jeu jugerait un rendu que
+## personne ne verra. `--relief-max=1.35` pose le plafond du relief sur les trois matériaux éclairés.
+var _v27 := false
+var _bride_mode_defaut := 0
+var _relief_max := -1.0
+## `--v27-cadrage=<id>[,<id>…]` : les cadrages de la v27 à prendre (cumul, recouvrement, une_lumiere, deux_distances,
+## deux_lumieres, torche, torche_stricte, torche_retro, fusee_seule, torche_et_fusee, adversaire_arbalete, accroupi_muret,
+## neuf_lampes).
+var _v27_filtre := ""
+## `--diag-gain=4` : ajoute à chaque cadrage v27 les deux prises de l'instrument du relief (numérateur seul, dénominateur seul).
+var _diag_gain := -1.0
+## `--biais-ombre=2.0` : le `shadow_bias` des lampes 3D, en unités du monde — ici des PIXELS. Les défauts de Godot sont pensés en
+## mètres : ici ils valent une fraction de pixel, moins qu'un texel de la carte d'ombre, d'où l'acné qu'on soupçonne sur les
+## faces (la face qui regarde la torche noire, rayée de lignes). Essai de banc seulement.
+var _biais_ombre := -1.0
+## `--energies-neutres` : toutes les énergies de type du miroir à 1,0 (`LumieresIso.energies_neutres`). Depuis la v27 elles ne
+## sont plus une luminosité mais un POIDS entre lampes dans R : 52 contre 3,6 fait peser une fusée quarante fois son poids 2D
+## face à une torche. La prise dit si le triangle du cône revient là où une fusée et une torche se rencontrent (L4).
+var _energies_neutres := false
+## `--biais-normal=2.0` : le `shadow_normal_bias` des lampes 3D, qui suit la taille du texel d'ombre (essai de banc).
+var _biais_normal := -1.0
+## `--torche-decroissance=0` : `spot_attenuation` des spots, pour isoler au banc le terme de distance du terme de cône.
+var _torche_decroissance := -1.0
+## `--decroissance-nulle` : TOUTES les lampes du miroir à décroissance 0 (spots et omnis). Essai de banc : le moteur n'applique
+## pas d^(−décroissance) comme la formule publiée dans nos unités, et à 0 moteur et dénominateur coïncident (mesuré).
+var _decroissance_nulle := false
+## `--seuil-noir=0` : le point noir de la 2D posé sur les trois matériaux éclairés (voir `Presentation3D.seuil_noir_2d_3d`).
+var _seuil_noir := -1.0
+var _fusees_v27: Array[Node2D] = []
 var _echecs := 0
 var _prises := 0
 
@@ -132,6 +169,12 @@ func _ready() -> void:
 	_capteurs_en_image = args.has("--capteurs")
 	_brides_seules = args.has("--brides-seules")
 	_cadrages_seuls = args.has("--cadrages-seuls")
+	_v27 = args.has("--v27")
+	_decroissance_nulle = args.has("--decroissance-nulle")
+	if _decroissance_nulle:
+		_torche_decroissance = 0.0
+	if _v27:
+		_bride_mode_defaut = 1
 	for a in args:
 		if a.begins_with("--carte="):
 			_carte_seule = a.trim_prefix("--carte=")
@@ -139,6 +182,22 @@ func _ready() -> void:
 			_vue_seule = a.trim_prefix("--vue=")
 		elif a.begins_with("--echelle="):
 			_echelle_identite = a.trim_prefix("--echelle=").to_float()
+		elif a.begins_with("--v27-cadrage="):
+			_v27_filtre = a.trim_prefix("--v27-cadrage=")
+		elif a.begins_with("--torche-decroissance="):
+			_torche_decroissance = a.trim_prefix("--torche-decroissance=").to_float()
+		elif a.begins_with("--seuil-noir="):
+			_seuil_noir = a.trim_prefix("--seuil-noir=").to_float()
+		elif a.begins_with("--biais-normal="):
+			_biais_normal = a.trim_prefix("--biais-normal=").to_float()
+		elif a == "--energies-neutres":
+			_energies_neutres = true
+		elif a.begins_with("--biais-ombre="):
+			_biais_ombre = a.trim_prefix("--biais-ombre=").to_float()
+		elif a.begins_with("--diag-gain="):
+			_diag_gain = a.trim_prefix("--diag-gain=").to_float()
+		elif a.begins_with("--relief-max="):
+			_relief_max = a.trim_prefix("--relief-max=").to_float()
 	var e := args.find("--energies")
 	if e >= 0 and e + 1 < args.size():
 		for paire in args[e + 1].split(","):
@@ -218,7 +277,7 @@ func _une_carte(carte: Dictionary) -> void:
 	var vues := ["unique"] if _rapide else ["unique", "scinde"]
 	if _vue_seule != "":
 		vues = [_vue_seule]
-	if _preuve_seule or _brides_seules or _cadrages_seuls:
+	if _preuve_seule or _brides_seules or _cadrages_seuls or _v27:
 		vues = []
 	for vue in vues:
 		_poser_la_vue(vue == "scinde")
@@ -250,7 +309,11 @@ func _une_carte(carte: Dictionary) -> void:
 		await _les_brides(nom)
 	if _cadrages_seuls:
 		await _les_cadrages(nom)
-	if not _rapide and not _brides_seules and not _cadrages_seuls:
+	if _v27:
+		await _la_v27(nom)
+		if _v27_filtre == "" or _v27_veut("cadrages"):
+			await _les_cadrages(nom)
+	if not _rapide and not _brides_seules and not _cadrages_seuls and not _v27:
 		await _les_brides(nom)
 		await _les_cadrages(nom)
 		await _la_preuve(nom)
@@ -288,13 +351,13 @@ func _prendre(carte: String, vue: String, v: Dictionary) -> void:
 	var lumieres := int(_p.get("_lumieres").call("allumees")) if _p.get("_lumieres") != null else 0
 	# ISO12, lot 0 ter — le NOM de la bride à côté de son vecteur : la bride identité n'a pas de vecteur et s'imprimait
 	# comme la (0 ; 0,05). Les colonnes de la planche se choisissent sur ces champs, pas sur le nom de fichier.
-	var bride_nom := "identite" if int(v.get("bride_mode", 0)) == 1 \
+	var bride_nom := "identite" if int(v.get("bride_mode", _bride_mode_defaut)) == 1 \
 		else "%02d" % roundi((v.get("bride", Vector2(0.0, 0.05)) as Vector2).y * 100.0)
-	print("BANC_LUMIERE3D prise=%s carte=%s vue=%s lumiere=%s ombres=%s atlas=%d bride=%s bride_nom=%s pate=%s contact=%s omni=%s torches_seules=%s ombres_vue_unique=%s retro=%s gpu_ms=%.2f fps_median=%.1f fps_1pc_bas=%.1f pire_ms=%.1f appels=%d lumieres3d=%d fichier=%s ancres=%s"
+	print("BANC_LUMIERE3D prise=%s carte=%s vue=%s lumiere=%s ombres=%s atlas=%d bride=%s bride_nom=%s pate=%s contact=%s omni=%s torches_seules=%s ombres_vue_unique=%s retro=%s energies_neutres=%s gpu_ms=%.2f fps_median=%.1f fps_1pc_bas=%.1f pire_ms=%.1f appels=%d lumieres3d=%d fichier=%s ancres=%s"
 		% [id, carte, vue, str(v.get("lumiere", false)), str(v.get("ombres", false)), int(v.get("atlas", 0)),
 		str(v.get("bride", Vector2(0.0, 0.05))), bride_nom, ["a", "c", "b"][int(v.get("pate", 0))],
 		str(v.get("contact", true)), str(v.get("omni", true)), str(v.get("torches_seules", false)),
-		str(v.get("vue_unique_seulement", false)), str(v.get("retro", true)), gpu[gpu.size() / 2],
+		str(v.get("vue_unique_seulement", false)), str(v.get("retro", true)), str(_energies_neutres), gpu[gpu.size() / 2],
 		float(s["fps_median"]), float(s["fps_1pc_bas"]), float(s["pire_image_ms"]),
 		appels[appels.size() / 2], lumieres, fichier, JSON.stringify(_ancres(vue == "scinde"))])
 
@@ -303,11 +366,14 @@ func _poser_la_variante(v: Dictionary) -> void:
 	_p.bride = v.get("bride", Vector2(0.0, 0.05))
 	# ISO12, lot 0 ter — la bride de gradient et les deux émissions du lot (la lumière d'un corps par sa propre lampe, le pied
 	# de la lampe au sol) : posées à chaque variante, pour qu'une prise ne traîne jamais le réglage de la précédente.
-	_p.bride_mode_3d = int(v.get("bride_mode", 0))
+	_p.bride_mode_3d = int(v.get("bride_mode", _bride_mode_defaut))
 	_p.bride_echelle_3d = float(v.get("bride_echelle", _echelle_identite))
 	_p.gain_corps_propre_3d = float(_energies.get("corps_propre", 0.0))
 	_p.gain_pied_lampe_3d = float(_energies.get("pied_lampe", 0.0))
 	_p.bride_corps_forcee = _bride_corps_forcee
+	_p.relief_neutre = bool(v.get("neutre", false))
+	if _seuil_noir >= 0.0:
+		_p.seuil_noir_2d_3d = _seuil_noir
 	_p.variante_pate_3d = int(v.get("pate", 0))
 	_p.masque_preuve = int(v.get("masque", 0))
 	_p.ombres_3d = bool(v.get("ombres", true))
@@ -316,12 +382,41 @@ func _poser_la_variante(v: Dictionary) -> void:
 	_p.ombres_omni_3d = bool(v.get("omni", true))
 	_p.ombres_torches_joueurs_seules_3d = bool(v.get("torches_seules", false))
 	_p.ombres_vue_unique_seulement = bool(v.get("vue_unique_seulement", false))
+	# ISO12 v27 — LE SABOTAGE du contrôle rouge (g) : la bride COUPÉE, et le rouge doit monter. smoothstep(-1 ; -0,5) vaut 1
+	# pour toute L2D ≥ 0, donc sol et murs prennent la lumière 3D là où la 2D est noire ; le corps a son propre court-circuit.
+	# Un contrôle qui resterait à zéro sous ce sabotage ne mesurerait rien. La variante suivante repose tout.
+	if bool(v.get("sabotage", false)):
+		_p.bride = Vector2(-1.0, -0.5)
+		_p.bride_mode_3d = 0
+		_p.bride_corps_forcee = true
 	_p.poser_lumiere_3d(bool(v.get("lumiere", false)))
+	_poser_le_biais()
+	for m in _p.call("_materiaux"):
+		if m == null:
+			continue
+		if _relief_max > 0.0:
+			(m as ShaderMaterial).set_shader_parameter("relief_max", _relief_max)
+		# L'instrument du relief (numérateur seul, dénominateur seul) : remis à 0 à chaque variante qui ne le demande pas.
+		(m as ShaderMaterial).set_shader_parameter("relief_diagnostic", int(v.get("diagnostic", 0)))
+		(m as ShaderMaterial).set_shader_parameter("relief_diagnostic_gain", float(v.get("gain", 1.0)))
 	if _energies.has("led"):
 		_p.gain_led_3d = float(_energies["led"])
 	if _energies.has("halo_soi"):
 		_p.gain_halo_soi_3d = float(_energies["halo_soi"])
 	var lumieres: Node = _p.get("_lumieres")
+	# La décroissance se pose par la TABLE du miroir : `_torche` et `_omni` la réécrivent à chaque image, une propriété posée sur
+	# la lampe serait écrasée à l'image suivante.
+	# Le biais d'ombre se pose par la VARIABLE du miroir, pour la même raison que la décroissance.
+	if lumieres != null and _biais_ombre >= 0.0:
+		lumieres.set("biais_ombre", _biais_ombre)
+	if lumieres != null:
+		lumieres.set("energies_neutres", _energies_neutres)
+	if lumieres != null and (_decroissance_nulle or _torche_decroissance >= 0.0):
+		var table_att: Dictionary = lumieres.get("attenuation_par_type")
+		for type in lumieres.get("TYPES"):
+			table_att[type] = 0.0
+		if _torche_decroissance >= 0.0:
+			table_att["torche"] = _torche_decroissance
 	if lumieres != null and not _energies.is_empty():
 		var table: Dictionary = lumieres.get("energie_par_type")
 		for type in _energies:
@@ -432,7 +527,7 @@ func _id_variante(carte: String, vue: String, v: Dictionary) -> String:
 	if not bool(v.get("lumiere", false)):
 		return "%s_%s_reference2d" % [carte, vue]
 	var b: Vector2 = v.get("bride", Vector2(0.0, 0.05))
-	var nom_bride := "identite" if int(v.get("bride_mode", 0)) == 1 else "%02d" % roundi(b.y * 100.0)
+	var nom_bride := "identite" if int(v.get("bride_mode", _bride_mode_defaut)) == 1 else "%02d" % roundi(b.y * 100.0)
 	var suffixe := ""
 	if not bool(v.get("omni", true)):
 		suffixe += "_omni0"
@@ -453,14 +548,20 @@ func _poser_la_fusee(ou := Vector2.INF) -> void:
 	if ou == Vector2.INF:
 		lieu = _main.p1.global_position + Vector2(_scene["v1"]) * 2.2 * MursBas.TUILE \
 			+ Vector2(_scene["v1"]).orthogonal() * 1.5 * MursBas.TUILE
-	_fusee = (load("res://fusee.gd") as GDScript).new()
-	_fusee.set("depart", lieu)
-	_fusee.set("direction", Vector2.DOWN)
-	_fusee.set("joueurs", [_main.p1, _main.p2])
-	_main.bullet_container.add_child(_fusee)
-	_fusee.set_physics_process(false)
-	_fusee.global_position = lieu
-	_fusee.call("forcer_age", 1.0)
+	_fusee = _une_fusee(lieu)
+
+
+## Une fusée POSÉE à cet endroit, à l'âge d'une fusée tombée (`forcer_age`), sans physique : elle ne bouge plus.
+func _une_fusee(lieu: Vector2) -> Node2D:
+	var f := (load("res://fusee.gd") as GDScript).new() as Node2D
+	f.set("depart", lieu)
+	f.set("direction", Vector2.DOWN)
+	f.set("joueurs", [_main.p1, _main.p2])
+	_main.bullet_container.add_child(f)
+	f.set_physics_process(false)
+	f.global_position = lieu
+	f.call("forcer_age", 1.0)
+	return f
 
 
 ## ISO12, lot 0 ter — LES BRIDES DE GRADIENT, sous la preuve et sous la preuve d'intensité.
@@ -548,6 +649,9 @@ func _les_cadrages(carte: String) -> void:
 	var v2_origine: Vector2 = _scene["v2"]
 	var p1: Vector2 = _scene["p1"]
 	var v1 := Vector2(_scene["v1"])
+	# ISO12 v27 — la torche de J2 ÉTEINTE, comme au photographe (`loupe-corps`). Allumée, elle tient J1 ébloui à demeure et le
+	# jeu efface le sprite adverse, donc le corps voxel : le lot 0 quater a payé trois heures pour ce faux défaut.
+	(_pantins[1] as Pantin).torche = not _v27
 	for cadrage in CADRAGES:
 		var distance := float(cadrage["distance"]) * MursBas.TUILE
 		var dir := _direction_libre(p1, v1, distance)
@@ -583,6 +687,14 @@ func _les_cadrages(carte: String) -> void:
 		# l'autre, quand le cadrage les veut à 105.
 		await _images(IMAGES_DE_REPOS)
 		_dire_l_etat_du_rejeu(nom)
+		if _v27:
+			# `j2_pied` : le pied de J2 AU SOL, d'où part son ombre — le décollement d'un biais d'ombre trop fort s'y mesure.
+			var ancres := {"j1": [p1, HAUTEUR_CORPS], "j2": [place, HAUTEUR_CORPS], "j2_pied": [place, 0.0],
+				"au_dela": [place + dir * 1.2 * MursBas.TUILE, 0.0]}
+			if is_instance_valid(_fusee):
+				ancres["fusee"] = [_fusee.global_position, 0.0]
+			await _serie_v27(nom, ancres)
+			continue
 		await _prendre(nom, "scinde", {"lumiere": false})
 		if _capteurs_en_image:
 			await _enregistrer_les_capteurs(nom)
@@ -592,6 +704,7 @@ func _les_cadrages(carte: String) -> void:
 	_scene["v2"] = v2_origine
 	_scene["v1"] = v1
 	(_pantins[0] as Pantin).visee = v1
+	(_pantins[1] as Pantin).torche = true
 	_poser_la_fusee()
 	_flash_actif = true
 
@@ -744,6 +857,330 @@ func _enregistrer_les_capteurs(nom: String) -> void:
 				% [nom, id + 1, j + 1, somme / maxf(n, 1.0), haut, fichier])
 
 
+## ISO12 v27 — LA RECETTE DU RELIEF NORMALISÉ, dans l'ordre acté avec la session cloud (ordres 105 et 107).
+##
+## Vue unique : toute la fenêtre pour J1, donc la résolution la plus haute sur chaque face. Flash coupé : un tir rejoué
+## tomberait dans une prise et pas dans l'autre. Chaque cadrage passe par `_serie_v27` : référence 2D, masque L2D > 0,
+## 3D sans ombres, 3D avec ombres, et pour le cumul le SABOTAGE qui doit faire rougir le contrôle.
+##
+## a. le CUMUL — une fusée posée entre les deux torches, toutes deux braquées sur la face sud du mur : le rapport au centre du
+##    halo, et la face, que le calcul donne à 1,659 (la fusée écrêtée à `relief_max`, les torches par-dessus) ;
+## b. la COURBE — la torche seule sur un sol dégagé, (a) à trois distances : près, milieu, bord de portée ;
+## c. le RECOUVREMENT — deux fusées au pied de la face, torches éteintes : l'écrêtage par contribution, lu sur la face ;
+## h. UNE lumière puis DEUX, rétrodiffusion coupée, ombres oui contre non : les ombres ajoutent-elles de la lumière ?
+func _la_v27(carte: String) -> void:
+	_poser_la_vue(false)
+	_flash_actif = false
+	_retirer_la_fusee()
+	var origine := _scene.duplicate()
+	var t := MursBas.TUILE
+	var p1: Vector2 = origine["p1"]
+	# J2 hors de la scène : sa place d'origine est DERRIÈRE le mur, et sa torche est éteinte.
+	var loin: Vector2 = origine["p2"]
+	var h_face := IsoGeometrie.hauteur_mur_haut() * t * 0.5
+	var arme: WeaponData = _main.p1.get("current_weapon")
+	var portee := arme.portee_torche() if arme != null else 300.0
+	var demi := deg_to_rad(arme.torch_angle_deg if arme != null else 30.0)
+	print("BANC_LUMIERE3D v27_debut carte=%s relief_max=%s portee=%.0f demi_cone=%.1f hauteur_face_visee=%.1f"
+		% [carte, _relief_max_dit(), portee, rad_to_deg(demi), h_face])
+	if not origine.has("face"):
+		print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_face raison=aucun_mur_haut" % carte)
+	else:
+		var face: Vector2 = origine["face"]
+		if _v27_veut("cumul"):
+			var c1 := face + Vector2(-1.2 * t, 3.5 * t)
+			var c2 := face + Vector2(1.2 * t, 3.5 * t)
+			var cf := face + Vector2(0.0, 1.8 * t)
+			if _libre(c1, MursBas.RAYON_ENCOMBREMENT) and _libre(c2, MursBas.RAYON_ENCOMBREMENT):
+				_placer(c1, Vector2.UP, true, c2, Vector2.UP, true)
+				_fusees_v27.append(_une_fusee(cf))
+				await _serie_v27(carte + "_v27_cumul", {"fusee": [cf, 0.0], "face": [face, h_face],
+					"face_gauche": [face + Vector2(-t, 0.0), h_face], "face_droite": [face + Vector2(t, 0.0), h_face],
+					"sol_devant": [face + Vector2(0.0, 0.8 * t), 0.0], "j1": [c1, HAUTEUR_CORPS],
+					"j2": [c2, HAUTEUR_CORPS]}, true)
+				_retirer_fusees_v27()
+			else:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_cumul raison=place_occupee" % carte)
+		if _v27_veut("recouvrement"):
+			var r1 := face + Vector2(-0.9 * t, 0.7 * t)
+			var r2 := face + Vector2(0.9 * t, 0.7 * t)
+			_placer(p1, Vector2.UP, false, loin, Vector2.UP, false)
+			_fusees_v27.append(_une_fusee(r1))
+			_fusees_v27.append(_une_fusee(r2))
+			await _serie_v27(carte + "_v27_recouvrement", {"face": [face, h_face],
+				"face_f1": [Vector2(r1.x, face.y), h_face], "face_f2": [Vector2(r2.x, face.y), h_face],
+				"fusee": [r1, 0.0], "fusee2": [r2, 0.0]})
+			_retirer_fusees_v27()
+		var ancres_une := {"face": [face, h_face], "sol_devant": [face + Vector2(0.0, 1.5 * t), 0.0],
+			"j1": [p1, HAUTEUR_CORPS]}
+		if _v27_veut("une_lumiere"):
+			_placer(p1, Vector2.UP, true, loin, Vector2.UP, false)
+			await _serie_v27(carte + "_v27_une_lumiere", ancres_une, false, {"retro": false})
+		# Condition de la décroissance nulle (session cloud, 23:46) : une face atteinte par DEUX lampes à DEUX distances — la
+		# torche proche, de face, et une fusée loin, de biais. Décroissance nulle, la lointaine pèse autant que la proche dans sa
+		# portée : l'œil juge si le modelé de la face suit la bonne lampe.
+		if _v27_veut("deux_distances"):
+			var pp := face + Vector2(0.0, 2.0 * t)
+			_placer(pp, Vector2.UP, true, loin, Vector2.UP, false)
+			var fl := face + Vector2(2.2 * t, 1.6 * t)
+			_fusees_v27.append(_une_fusee(fl))
+			await _serie_v27(carte + "_v27_deux_distances", {"face": [face, h_face],
+				"face_gauche": [face + Vector2(-t, 0.0), h_face], "face_droite": [face + Vector2(t, 0.0), h_face],
+				"sol_devant": [face + Vector2(0.0, 0.8 * t), 0.0], "fusee": [fl, 0.0], "j1": [pp, HAUTEUR_CORPS]})
+			_retirer_fusees_v27()
+		if _v27_veut("deux_lumieres"):
+			_placer(p1, Vector2.UP, true, loin, Vector2.UP, false)
+			var df := face + Vector2(1.5 * t, 2.0 * t)
+			_fusees_v27.append(_une_fusee(df))
+			var ancres_deux := ancres_une.duplicate()
+			ancres_deux["fusee"] = [df, 0.0]
+			await _serie_v27(carte + "_v27_deux_lumieres", ancres_deux, false, {"retro": false})
+			_retirer_fusees_v27()
+	var dir := _direction_libre(p1, Vector2.DOWN, portee * 0.9)
+	if dir == Vector2.ZERO:
+		print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_torche raison=aucun_sol_degage" % carte)
+	else:
+		if _v27_veut("torche"):
+			_placer(p1, dir, true, loin, Vector2.UP, false)
+			await _serie_v27(carte + "_v27_torche", {"pres": [p1 + dir * 1.5 * t, 0.0],
+				"milieu": [p1 + dir * portee * 0.5, 0.0], "bord": [p1 + dir * portee * 0.85, 0.0],
+				"bord_cone": [p1 + dir.rotated(demi) * portee * 0.6, 0.0], "j1": [p1, HAUTEUR_CORPS]})
+		# La torche SEULE au sens strict : rétrodiffusion coupée, une lampe, et l'axe échantillonné tous les 30 px.
+		if _v27_veut("torche_stricte"):
+			_placer(p1, dir, true, loin, Vector2.UP, false)
+			var axe := {"j1": [p1, HAUTEUR_CORPS]}
+			for k in range(1, 10):
+				axe["d%03d" % (k * 30)] = [p1 + dir * float(k * 30), 0.0]
+			axe["travers_g"] = [p1 + dir * portee * 0.4 + dir.orthogonal() * 40.0, 0.0]
+			axe["travers_d"] = [p1 + dir * portee * 0.4 - dir.orthogonal() * 40.0, 0.0]
+			await _serie_v27(carte + "_v27_torche_stricte", axe, false, {"retro": false})
+		# La même, rétrodiffusion ALLUMÉE : isole ce que la rétrodiffusion change à R (l'écart de torche + fusée à 160-200 px).
+		if _v27_veut("torche_retro"):
+			_placer(p1, dir, true, loin, Vector2.UP, false)
+			var axe_r := {"j1": [p1, HAUTEUR_CORPS]}
+			for k in range(1, 10):
+				axe_r["d%03d" % (k * 30)] = [p1 + dir * float(k * 30), 0.0]
+			await _serie_v27(carte + "_v27_torche_retro", axe_r)
+		# LA VALIDATION DU CORRECTIF (session cloud) : sur sol plat, R LU AU BANC doit valoir 1 ± 0,05 sous une torche seule (le
+		# cadrage `torche` ci-dessus), sous une fusée seule, et sous les deux — d'un bout à l'autre du cône et du halo.
+		var fv := p1 + dir * 3.0 * t
+		if _v27_veut("fusee_seule"):
+			_placer(p1, dir, false, loin, Vector2.UP, false)
+			_fusees_v27.append(_une_fusee(fv))
+			await _serie_v27(carte + "_v27_fusee_seule", {"fusee": [fv, 0.0],
+				"a30": [fv + dir * 30.0, 0.0], "a60": [fv + dir * 60.0, 0.0], "a100": [fv + dir * 100.0, 0.0],
+				"a150": [fv + dir * 150.0, 0.0]})
+			_retirer_fusees_v27()
+		if _v27_veut("torche_et_fusee"):
+			_placer(p1, dir, true, loin, Vector2.UP, false)
+			var ft := fv + dir.orthogonal() * 1.0 * t
+			_fusees_v27.append(_une_fusee(ft))
+			await _serie_v27(carte + "_v27_torche_et_fusee", {"fusee": [ft, 0.0], "pres": [p1 + dir * 1.5 * t, 0.0],
+				"milieu": [p1 + dir * portee * 0.5, 0.0], "bord": [p1 + dir * portee * 0.85, 0.0],
+				"entre": [p1 + dir * 3.0 * t, 0.0]})
+			_retirer_fusees_v27()
+		# LE SEUIL AU POINT NOIR NE DOIT EFFACER AUCUN CORPS (arbitrage de la session cloud, 2026-09-23, 00:30) : l'adversaire à
+		# l'ARBALÈTE, torche allumée, vu DEPUIS LA VUE DE J1 — tout pixel de son corps que la 2D montre doit rester visible en 3D
+		# (« moins » dans sa fenêtre : zéro). Sa torche vise de côté, pour que le corps ne soit lu que par sa rétrodiffusion, la
+		# lumière la plus faible que le capteur lise ; puis la torche de J1 le prend de face.
+		if _v27_veut("adversaire_arbalete"):
+			var pa2 := p1 + dir * 2.5 * t
+			if _libre(pa2, MursBas.RAYON_ENCOMBREMENT):
+				var ancres_adv := {"j2": [pa2, HAUTEUR_CORPS], "j2_pied": [pa2, 0.0], "j1": [p1, HAUTEUR_CORPS]}
+				_placer(p1, dir, false, pa2, dir.orthogonal(), true)
+				await _serie_v27(carte + "_v27_adversaire_arbalete", ancres_adv)
+				_placer(p1, dir, true, pa2, dir.orthogonal(), true)
+				await _serie_v27(carte + "_v27_adversaire_arbalete_eclaire", ancres_adv)
+			else:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_adversaire_arbalete raison=place_occupee" % carte)
+		# Cas limite 8a de la revue : la torche d'un ACCROUPI (≈ 14 px du sol) face à un muret. Au-dessus de la lampe, haut·L ≤ 0,
+		# donc ε, donc R = N·L / 0,02 : Beauté prédit la face ENTIÈRE au plafond, et non plus une bande. Chiffré ici, sur la carte
+		# qui porte des murets (le Cloître n'en a aucun).
+		if _v27_veut("accroupi_muret"):
+			var muret := _muret_devant(p1, dir)
+			if muret.size == Vector2.ZERO or muret.size.x < muret.size.y:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_accroupi_muret raison=aucun_muret_horizontal" % carte)
+			else:
+				var pied := Vector2(muret.get_center().x, muret.end.y)
+				var pa := pied + Vector2(0.0, 1.6 * t)
+				var h_muret := IsoGeometrie.hauteur_mur_bas() * t
+				if _libre(pa, MursBas.RAYON_ENCOMBREMENT):
+					_placer(pa, Vector2.UP, true, loin, Vector2.UP, false)
+					(_pantins[0] as Pantin).accroupi = true
+					await _images(IMAGES_DE_REPOS)
+					await _serie_v27(carte + "_v27_accroupi_muret", {"face_bas": [pied, h_muret * 0.25],
+						"face_milieu": [pied, h_muret * 0.5], "face_haut": [pied, h_muret * 0.85],
+						"face_cote": [pied + Vector2(0.6 * t, 0.0), h_muret * 0.5], "sol": [pied + Vector2(0.0, 0.7 * t), 0.0],
+						"j1": [pa, 8.0]}, false, {"retro": false})
+					(_pantins[0] as Pantin).accroupi = false
+				else:
+					print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_accroupi_muret raison=place_occupee" % carte)
+		# Défaut 7 de la revue d'ISO7 Beauté : NEUF lampes et plus. Le dénominateur n'en décrit que huit, triées par intensité
+		# sur toute la carte ; le moteur, lui, apparie par maillage. Sept fusées posées LOIN de J1 (derrière le mur, hors de
+		# portée de ses pieds) et les deux torches : la lumière aux pieds de J1 ne devrait pas dépendre d'une fusée à l'autre
+		# bout de la carte. Même prise à huit lampes (une fusée retirée) : l'écart aux pieds de J1 se lit entre les deux.
+		if _v27_veut("neuf_lampes"):
+			_placer(p1, dir, true, loin, Vector2.UP, true)
+			for k in 7:
+				_fusees_v27.append(_une_fusee(loin + Vector2((float(k) - 3.0) * 0.8 * t, -2.5 * t)))
+			var ancres_neuf := {"pieds_j1": [p1 + dir * 0.6 * t, 0.0], "pres": [p1 + dir * 1.5 * t, 0.0],
+				"milieu": [p1 + dir * portee * 0.5, 0.0], "j1": [p1, HAUTEUR_CORPS]}
+			await _serie_v27(carte + "_v27_neuf_lampes", ancres_neuf)
+			var derniere: Node2D = _fusees_v27.pop_back()
+			derniere.queue_free()
+			await _serie_v27(carte + "_v27_huit_lampes", ancres_neuf)
+			_retirer_fusees_v27()
+	_scene = origine
+	(_pantins[0] as Pantin).torche = true
+	(_pantins[1] as Pantin).torche = true
+	_flash_actif = true
+	_poser_la_fusee()
+
+
+## Un cadrage de la v27, en quatre prises (cinq avec le sabotage), toutes à la bride IDENTITÉ du jeu.
+##
+## ⚠️ Les ancres sont projetées UNE fois, après le repos : les corps ne bougent plus, la caméra non plus. Elles portent une
+## HAUTEUR (`CameraIso.vers_ecran`) : une face de mur se vise à mi-hauteur, pas à son pied, sinon on mesure le sol devant.
+func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {}) -> void:
+	await _images(IMAGES_DE_REPOS)
+	# ⚠️ LA CAMÉRA D'ABORD. Elle glisse vers l'avant de la visée de J1 (le décalage de visée), et ce glissement dure bien plus
+	# que trente images quand la visée vient de changer. Projeter les ancres avant qu'elle soit posée, c'est viser à côté —
+	# et pire, comparer pixel à pixel des prises prises sous deux caméras. Vécu au premier passage du correctif (2026-09-22) :
+	# l'ancre de J1 à (960 ; 560), J1 à l'image vers (600 ; 280), et des « R ≈ 0,44 » mesurés à côté du cône. On attend donc
+	# que l'ancre de J1 ne bouge plus d'un pixel sur dix images, six secondes au plus.
+	var avant := _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+	var posee := false
+	for essai in 60:
+		await _images(10)
+		var ici := _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+		if ici == avant:
+			posee = true
+			break
+		avant = ici
+	if not posee:
+		_echouer("%s : la caméra ne s'est pas posée en 600 images" % nom)
+	# Les lampes nées pendant le repos (une fusée posée juste avant) reçoivent le biais d'essai elles aussi.
+	_poser_le_biais()
+	_dire_l_etat_du_rejeu(nom)
+	var ecran := {}
+	for k in ancres:
+		var a: Array = ancres[k]
+		ecran[k] = _a_l_ecran_h(0, a[0], float(a[1]))
+	var variantes := [
+		["reference2d", {"lumiere": false}],
+		["masque", {"lumiere": true, "ombres": true, "atlas": 2048, "masque": 1}],
+		["sans_ombres", {"lumiere": true, "ombres": false}],
+		["ombres", {"lumiere": true, "ombres": true, "atlas": 2048}],
+		# R = 1 forcé (aucune lampe au relief, la garde émet la 2D) : le diviseur qui donne R LU À L'IMAGE.
+		["neutre", {"lumiere": true, "ombres": false, "neutre": true}],
+	]
+	if _diag_gain > 0.0:
+		# L'instrument : le numérateur seul, puis le dénominateur seul, à la même échelle — leur rapport pixel par pixel est R.
+		variantes.append(["diag_num", {"lumiere": true, "ombres": false, "diagnostic": 1, "gain": _diag_gain}])
+		variantes.append(["diag_den", {"lumiere": true, "ombres": false, "diagnostic": 2, "gain": _diag_gain}])
+		# Et chaque terme du dénominateur pour la lampe 0, sur le sol : distance, fenêtre, décroissance, cône, incidence.
+		for mode in [3, 4, 5, 6, 7]:
+			variantes.append(["terme%d" % mode, {"lumiere": true, "ombres": false, "diagnostic": mode}])
+		# La L2D brute, pour mesurer le point noir de la 2D contre la référence.
+		variantes.append(["l2d", {"lumiere": true, "ombres": false, "diagnostic": 10}])
+		# Le varying tel que `light()` le reçoit (une lampe : l'image vaut relief_d × gain, comme la prise diag_den).
+		variantes.append(["diag_recu", {"lumiere": true, "ombres": false, "diagnostic": 9, "gain": _diag_gain}])
+		for c in [0.25, 0.5, 1.0]:
+			variantes.append(["constante_%03d" % roundi(c * 100.0), {"lumiere": true, "ombres": false, "diagnostic": 8, "gain": c}])
+	if sabotage:
+		variantes.append(["sabotage", {"lumiere": true, "ombres": true, "atlas": 2048, "sabotage": true}])
+	for e in variantes:
+		var v: Dictionary = (e[1] as Dictionary).duplicate()
+		v["bride_mode"] = 1
+		v.merge(extra, false)
+		_poser_la_variante(v)
+		await _images(IMAGES_DE_REPOS)
+		var id := "%s_%s" % [nom, e[0]]
+		var fichier := await _capturer(id)
+		var lumieres := int(_p.get("_lumieres").call("allumees")) if _p.get("_lumieres") != null else 0
+		# Les lampes du dénominateur, telles que le miroir les décrit CETTE image, et toutes les Light3D de la scène : une lampe
+		# que le moteur rend et que la liste ignore se voit ici, pas à l'image.
+		if e[0] == "diag_num" and _p.get("_lumieres") != null:
+			# Les ÉCHELLES : le moteur éclaire dans l'espace de la CAMÉRA. Une caméra ou une scène mise à l'échelle déforme ses
+			# distances sans toucher aux portées des lampes, et le dénominateur, en monde, ne le voit pas.
+			var cam3: Camera3D = _p._camera_de(0)
+			var lum_parent := (_p.get("_lumieres") as Node3D)
+			print("BANC_LUMIERE3D v27_echelles cadrage=%s camera_globale=%s camera_parent=%s lumieres=%s vue_camera_active=%s"
+				% [nom, str(cam3.global_transform.basis.get_scale()) if cam3 != null else "?",
+				str((cam3.get_parent() as Node3D).global_transform.basis.get_scale()) if cam3 != null and cam3.get_parent() is Node3D else "pas_node3d",
+				str(lum_parent.global_transform.basis.get_scale()), str(get_viewport().get_camera_3d())])
+			for mi in get_tree().root.find_children("*", "MeshInstance3D", true, false):
+				var m3 := mi as MeshInstance3D
+				if m3.get_surface_override_material(0) is ShaderMaterial or m3.material_override is ShaderMaterial:
+					var sm: ShaderMaterial = m3.material_override if m3.material_override is ShaderMaterial else m3.get_surface_override_material(0)
+					if sm.shader != null and sm.shader.resource_path.ends_with("sol_iso_eclaire.gdshader"):
+						print("BANC_LUMIERE3D v27_sol cadrage=%s nom=%s echelle=%s origine=%s"
+							% [nom, m3.name, str(m3.global_transform.basis.get_scale()), str(m3.global_position)])
+						break
+			for lampe in (_p.get("_lumieres") as Node).call("decrire_pour_relief"):
+				print("BANC_LUMIERE3D v27_lampe cadrage=%s %s" % [nom, str(lampe)])
+			for l3 in get_tree().root.find_children("*", "Light3D", true, false):
+				var lum3 := l3 as Light3D
+				print("BANC_LUMIERE3D v27_light3d cadrage=%s nom=%s type=%s visible=%s energie=%.3f pos=%s"
+					% [nom, lum3.name, lum3.get_class(), str(lum3.is_visible_in_tree()), lum3.light_energy,
+					str(lum3.global_position)])
+		# La caméra DE CETTE PRISE : l'analyse refuse de comparer deux prises dont J1 n'est pas au même pixel.
+		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s camera=%d,%d fichier=%s ancres=%s"
+			% [nom, e[0], lumieres, _relief_max_dit(), str(_energies_neutres), int(camera[0]), int(camera[1]), fichier,
+			JSON.stringify(ecran)])
+	# Le sabotage ne doit jamais survivre à sa prise : on repose l'état du jeu, lumière éteinte.
+	_poser_la_variante({"lumiere": false})
+
+
+func _placer(p1: Vector2, v1: Vector2, torche1: bool, p2: Vector2, v2: Vector2, torche2: bool) -> void:
+	_scene["p1"] = p1
+	_scene["v1"] = v1
+	_scene["p2"] = p2
+	_scene["v2"] = v2
+	(_pantins[0] as Pantin).visee = v1
+	(_pantins[0] as Pantin).torche = torche1
+	(_pantins[1] as Pantin).visee = v2
+	(_pantins[1] as Pantin).torche = torche2
+
+
+## `_a_l_ecran` avec une HAUTEUR au-dessus du sol, en pixels de monde.
+func _a_l_ecran_h(pid: int, monde: Vector2, hauteur: float) -> Array:
+	var cam: CameraIso = _p._camera_de(pid)
+	var ecran := _p.viewport_ecran(pid)
+	if cam == null or ecran == null:
+		return [0, 0]
+	var local := cam.vers_ecran(monde, ecran.get_visible_rect().size, hauteur)
+	var cadre: Rect2 = _p._cadre(pid)
+	var fenetre := Vector2(DisplayServer.window_get_size())
+	var echelle := fenetre / Vector2(get_viewport().get_visible_rect().size)
+	var p := (local + cadre.position) * echelle
+	return [roundi(p.x), roundi(p.y)]
+
+
+func _poser_le_biais() -> void:
+	if (_biais_ombre < 0.0 and _biais_normal < 0.0) or _p == null or _p.get("_lumieres") == null:
+		return
+	for l in (_p.get("_lumieres") as Node).find_children("*", "Light3D", true, false):
+		if _biais_normal >= 0.0:
+			(l as Light3D).shadow_normal_bias = _biais_normal
+
+
+func _v27_veut(id: String) -> bool:
+	return _v27_filtre == "" or id in _v27_filtre.split(",")
+
+
+func _relief_max_dit() -> String:
+	return ("%.2f" % _relief_max) if _relief_max > 0.0 else "1.50(defaut)"
+
+
+func _retirer_fusees_v27() -> void:
+	for f in _fusees_v27:
+		if is_instance_valid(f):
+			f.queue_free()
+	_fusees_v27.clear()
+
+
 func _retirer_la_fusee() -> void:
 	if is_instance_valid(_fusee):
 		_fusee.queue_free()
@@ -789,7 +1226,8 @@ func _mise_en_scene(data: Dictionary) -> Dictionary:
 		var p1 := Vector2(r.get_center().x, r.end.y + 3.5 * t)
 		var p2 := Vector2(r.get_center().x, r.position.y - 1.2 * t)
 		if _libre(p1) and _libre(p2) and _mur_entre(p1, p2):
-			return {"p1": p1, "v1": Vector2.UP, "p2": p2, "v2": Vector2.UP}
+			# `face` : le milieu de la face SUD du mur, celle que la caméra voit et que la torche de J1 éclaire (v27).
+			return {"p1": p1, "v1": Vector2.UP, "p2": p2, "v2": Vector2.UP, "face": Vector2(r.get_center().x, r.end.y)}
 	var muret := Rect2()
 	for m in _main.murs_bas as Array:
 		var rect := m as Rect2

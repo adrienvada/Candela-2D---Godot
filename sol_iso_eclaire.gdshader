@@ -39,7 +39,7 @@
 //
 // Défauts : force 0, dalles éteintes — le sol d'ISO1 exactement.
 shader_type spatial;
-render_mode cull_back, fog_disabled;
+render_mode cull_back, fog_disabled, specular_disabled;
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
@@ -308,32 +308,29 @@ void fragment() {
 		EMISSION = c * albedo * (lire_led(px_lu) + lire_halo_soi(px_lu, deux) + lire_pied_lampe(px_lu));
 	}
 
-	// ISO12 v27 — le dénominateur du relief : calculé ici (sans ombre, sur la liste fermée des lampes) parce que `light()` ne
-	// voit aucune variable de `fragment()`, et transporté vers lui par ce canal. Posé après les deux branches, donc dans les
-	// deux cas.
-	SPECULAR = relief_encoder(monde);
+	// ISO12 v27 — le dénominateur du relief, vers `light()` par un VARYING : le seul canal réel (voir l'include —
+	// SPECULAR ne passait pas, et la v27 affichait la v26 sans que rien ne le dise).
+	relief_d = relief_denominateur(monde);
+	// La garde : aucune lampe connue ici ⇒ R = 1, LA 2D SEULE — jamais le Lambert brut de la v26, jamais du noir.
+	if (relief_diagnostic != 0) {
+		// Instrument de banc : albédo BLANC et aucune autre émission — la prise montre le terme seul, en absolu (mode 1 : le
+		// numérateur du moteur, par `light()` ; mode 2 : le dénominateur, en émission). Jamais en jeu.
+		ALBEDO = vec3(1.0);
+		EMISSION = relief_diagnostic == 2 ? vec3(relief_d * relief_diagnostic_gain)
+			: (relief_diagnostic >= 3 && relief_diagnostic <= 8 ? vec3(relief_diag_terme(relief_diagnostic, monde)) : vec3(0.0));
+		if (relief_diagnostic == 10) {
+			// Instrument : la L2D BRUTE (avant toute bride), pour mesurer le point noir contre la référence 2D.
+			EMISSION = vec3(pate_luminance(brute));
+		}
+	} else if (relief_vide(relief_d)) {
+		EMISSION += ALBEDO;
+	}
 }
 
-// ISO12 v27 — le relief normalisé, sans spéculaire.
+// ISO12 v27 — LE RELIEF NORMALISÉ : la contribution d'une lampe, divisée par le dénominateur que `fragment()` a posé dans
+// `relief_d`, plafonnée à `relief_max` PAR LAMPE. L'intensité vient de la 2D (ALBEDO porte déjà albédo × L2D), la 3D n'apporte
+// que le modelé : un sol plat lit 1 quel que soit le nombre de lampes, une face de côté sous une lampe haute lit moins que le
+// sol (c'est Lambert, le modelé voulu), une face sous une lampe rasante sature au plafond.
 void light() {
-	// ISO12 v27 — LE RELIEF : le numérateur (ce qu'on accumulait ici, l'ombre portée par ATTENUATION) divisé par le
-	// dénominateur commun, calculé sans ombre dans `fragment()` et transporté par SPECULAR. Le rapport vaut 1 sur un sol plat,
-	// quel que soit le nombre de lampes, et moins dans l'ombre : l'intensité vient de la 2D (ALBEDO porte déjà albédo × L2D),
-	// la 3D n'apporte que le modelé.
-	//
-	// ⚠️ **« Plus sur une face tournée vers la lampe » n'est vrai que sous une lampe RASANTE** (calculé, 2026-09-16). Le mur
-	// croise le sol à dot(haut, L) ≈ 0,707 — exactement le régime d'une torche visant le sol à 45°. Sous une lampe plus haute
-	// le mur lit MOINS que le sol (0,667 à 150 px de hauteur, 0,500 à 200), et sous une lampe basse il sature : R brut 4,98 à
-	// 10 px, 4,00 à 25, 2,00 à 50, tous ramenés à `relief_max`. L'écrêtage n'est donc pas théorique, et il s'applique PAR
-	// LAMPE — et ce dépassement est CHIFFRÉ : sur le cadrage cumulé (fusée posée entre deux torches), un mur face à la fusée
-	// rend 0,16 + 1,50 (écrêté de 4,04) + 0,00 = **1,659**, soit ~11 % au-dessus de `relief_max`. Le maximum visible suit donc
-	// le plafond sans lui être égal.
-	//
-	// Qu'un mur lise MOINS que le sol sous une lampe haute est le MODELÉ VOULU (tranché le 2026-09-16) : une face tournée de
-	// côté reçoit moins d'une lampe placée au-dessus, c'est Lambert, et c'est ce que la 2D ne sait pas dire. La « flaque » du
-	// défaut deux était un sol trop CLAIR, jamais un mur trop sombre.
-	//
-	// ⚠️ Ce `light()` n'écrit JAMAIS SPECULAR_LIGHT, et c'est ce qui éteint la passe spéculaire du moteur maintenant que
-	// `specular_disabled` a sauté. Le supprimer rallumerait les reflets.
-	DIFFUSE_LIGHT += relief_contribution(LIGHT_COLOR, ATTENUATION, dot(NORMAL, LIGHT), SPECULAR_AMOUNT);
+	DIFFUSE_LIGHT += relief_contribution(LIGHT_COLOR, ATTENUATION, dot(NORMAL, LIGHT), relief_d);
 }

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-15
+> Dernière mise à jour : 2026-09-23
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -9057,6 +9057,34 @@ d'un cadrage à l'autre, ils composaient une histoire cohérente. Ce qui l'a fai
 qui portent le même nom doivent décrire le même instant ; une sonde se pose APRÈS le repos, et elle imprime la valeur VOULUE à
 côté de la valeur RÉELLE.** Ici, les corps étaient aux départs de la carte, à 665 px l'un de l'autre, quand le cadrage les
 voulait à 105 : la première ligne l'aurait dit.
+
+⚠️ **Repayé le 2026-09-22, sous une autre forme** : la caméra iso GLISSE vers l'avant de la visée pendant bien plus de trente
+images après un changement de visée. Des ancres projetées trop tôt visaient à côté du cône, et des prises comparées pixel à pixel
+l'étaient sous deux caméras. Le banc attend désormais que l'ancre de J1 ne bouge plus d'un pixel sur dix images, et imprime la
+caméra de CHAQUE prise ; l'analyse refuse deux prises de caméras différentes.
+
+### La vue 3D écrit la valeur du shader TELLE QUELLE sur l'octet : décoder une capture en sRGB élève tout rapport à la puissance 2,2 (2026-09-22)
+
+ISO12 v27, validation du relief. Mesuré en faisant émettre au sol des constantes connues : 0,25 / 0,5 / 1,0 émis se relisent
+0,25 / 0,5 / 1,0 en octets BRUTS — et 0,050 / 0,216 / 1,0 si l'on décode en sRGB, soit la puissance 2,2 exacte. La vue 3D
+n'encode donc pas sa sortie en sRGB. **Toute analyse qui décode les captures avant de faire un rapport élève ce rapport à la
+puissance 2,2** : un R vrai de 0,8 se lit 0,61, un R de 1,2 se lit 1,49. La première lecture du correctif en a tiré des
+« R ≈ 0,44 » et des anneaux autour des fusées qui n'étaient que l'instrument. **Règle : un rapport de luminances d'une capture de
+la vue 3D se fait sur les octets bruts** ; et avant de croire un instrument, lui faire rendre une constante connue.
+
+Conséquence qui n'est pas de l'instrument : le moteur linéarise la couleur des lampes (`light_color` → linéaire) puis la vue
+l'affiche sans la réencoder — d'où, entre autres, un halo de fusée plus rouge en 3D qu'en 2D.
+
+### Le bandeau de LED RESPIRE : une prise de banc qui ne le fige pas compare deux instants au hasard (2026-09-23)
+
+ISO12, contrôles du seuil au point noir. La LED des murs (`mur_led.gd`) monte et descend lentement, et sa lueur éclaire le sol en
+2D. Un banc qui prend sa référence 2D puis ses prises 3D laisse donc la LED à un point différent de sa respiration à chaque
+cadrage : la même recette, rejouée à une heure d'écart, a vu la référence d'`une_lumiere` éclairer **27 % de l'écran au lieu de
+2 %**, et celle de `fusee_seule` 4,7 % au lieu de 30 %. Rien ne l'a signalé — le banc était vert, la caméra posée, les chiffres
+seulement absurdes (« plus » à 20 % sur un cadrage, « moins » à 34 % sur un autre). Soupçonnés d'abord : le seuil qu'on venait
+de poser, puis les fusées. **Règle : toute comparaison 2D/3D au banc passe `--sans-led-murs` (la recette) ou
+`--led-murs-fige=f` (juger la LED elle-même)** ; et un chiffre qui saute d'un ordre de grandeur entre deux passes se regarde en
+IMAGE avant d'accuser le dernier changement.
 
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 
@@ -26105,14 +26133,25 @@ c'était la règle qui se démentait, sur le cadrage même qui avait cassé l'at
 
 | cas | R (ε = 0,02) | pourquoi |
 |---|---|---|
-| sol plat, torche haute / fusée posée (8 px) / braise (16 px) | **1,0000** à 30, 60, 100 et 150 px | l'identité tient : la 2D est rendue |
+| sol plat, torche haute / fusée posée (8 px) / braise (16 px) ⚠️ hauteurs FAUSSES, voir dessous | **1,0000** à 30, 60, 100 et 150 px | l'identité tient : la 2D est rendue |
 | sol plat, lampe à 3 px et plus | **1,0000** | ε ne mord plus qu'en dessous de **1,15°** au-dessus de l'horizon |
-| sol plat, lampe à 2 px / 1 px | 0,9998 / 0,5000 | régime borné — une géométrie que le jeu ne produit pas |
+| sol plat, lampe à 2 px / 1 px | 0,9998 / 0,5000 | régime borné — ⚠️ « une géométrie que le jeu ne produit pas » était FAUX, voir dessous |
 | mur vertical, lampe à 10 / 25 / 50 px | **1,5000**, écrêté | `relief_max`, appliqué PAR LAMPE (R brut 4,98 / 4,00 / 2,00) |
 | mur vertical, lampe à 75 px | 1,3333 | l'écrêtage cesse |
 | mur vertical, lampe à 100 px | 1,0000 | le croisement, à dot(haut, L) ≈ 0,707 |
 | mur vertical, lampe à 150 / 200 px | 0,6667 / 0,5000 | **le modelé voulu** — voir ci-dessous |
 | ombre de toutes | 0,0000 | (b) vaut zéro par construction |
+
+⚠️ **LES ENTRÉES DE CETTE TABLE ÉTAIENT FAUSSES, LA MÉTHODE NON** (ISO7 Gadgets, en préparant L4, 2026-09-23) : le miroir pose la
+fusée à **5,25 px** et les braises et la mine à **1,75 px**, pas à 8 et 16. À 1,75 px, ε = 0,02 mord dès 87,5 px quand leurs
+halos vont à 170 et 260 px : le bord du halo tombait à **0,515** (braises) et **0,337** (mine). Corrigé par un **ε PAR LAMPE**,
+min(h / portée, 0,02) — la plus petite élévation de la lampe dans sa propre portée, donc un plancher qui ne mord jamais sur le sol
+qu'elle éclaire ; le `min` empêche la valeur brute (0,477 pour un flash) de multiplier par vingt-quatre le dénominateur d'un mur
+situé au-dessus de la lampe. Et dans le même relevé, **la portée d'une omni est une SPHÈRE quand le rayon 2D est un DISQUE AU
+SOL** : `rayon × 1,15` n'atteignait le sol que sur sqrt(portée² − h²) — le flash de tir éclairait 11,4 px au sol pour 32 en 2D,
+et au-delà la garde rendait albédo × L2D × 0, du NOIR là où la 2D éclaire. Portée désormais sqrt(rayon² + h²) × 1,15.
+**Leçon** : une table calculée « avec les formules exactes » ne vaut que ses entrées ; les hauteurs se lisent dans le miroir,
+pas dans le souvenir d'une constante.
 
 **LE DÉPASSEMENT PAR LAMPE, CHIFFRÉ — et il compte pour le dosage.** `light()` accumule lampe par lampe, donc `relief_max`
 borne chaque contribution et non R total. Sur le cadrage cumulé lui-même — la fusée posée ENTRE les deux torches —, un mur face
@@ -26144,6 +26183,126 @@ lampes au miroir par une chaîne de caractères — `_lumieres.call("decrire_pou
 `relief_nb = 0`, donc — par la garde ci-dessus — le Lambert d'avant la v27 : **le relief aurait disparu, le lot serait resté
 vert, et les planches auraient seulement l'air « un peu plates »**. C'est la forme exacte du `has_method()` du 2026-09-09. La
 garde vérifie les trois fils : la méthode existe, elle est demandée, et la pose est APPELÉE.
+
+#### ⚠️ La v27 n'était appliquée NULLE PART — le correctif, et ce que le banc en dit (2026-09-22)
+
+**Tout ce qui précède, depuis « La v27 est ÉCRITE », décrivait un relief qui ne s'appliquait pas.** Revue d'ISO7 Beauté (ordre
+114), arbitrée par la session cloud : deux défauts l'éteignaient chacun à lui seul — le dénominateur voyageait par `SPECULAR` →
+`SPECULAR_AMOUNT`, canal qui n'existe pas (dans `light()`, `SPECULAR_AMOUNT` vaut 2 × `light_specular` **de la lampe**, et le
+miroir pose 0 : le dénominateur valait 0 partout, la garde rendait le Lambert brut, **la v27 affichait la v26**) ; et la liste
+des lampes n'était posée qu'à la bascule du drapeau et à la pose d'un corps, jamais à chaque image. Trois autres l'auraient
+faussée : décroissance de Godot 3, cône en smoothstep, π manquant. **Les « 1,0000 » et « 1,659 » de l'enveloppe ci-dessus sont
+donc des calculs hors machine sur des formules qui n'étaient pas celles du moteur : ils ne valent rien tant que le banc ne les a
+pas refaits.** Aucune suite ne pouvait le voir : elles vérifient le TEXTE des shaders, jamais l'image.
+
+**La preuve, prise avant le correctif** (torche seule) : `relief_max` à 0,1 puis à 1,5 → images identiques (rapport 1,000 avec
+ombres, 0,998 sans ; 137 et 203 px diffèrent, contre 5 274 de simple bruit d'animation entre deux références 2D).
+
+**Le correctif** : un `varying float relief_d` écrit dans `fragment()` et lu dans `light()` (`specular_disabled` revient) ; la
+pose appelée à chaque image, après `_lumieres.suivre` ; décroissance, cône et π recopiés **mot pour mot** de `scene.glsl`
+(Compatibility, relu dans le source) ; l'intensité en couleur linéaire aux poids de la pâte ; la garde rend R = 1 ;
+`pixels_par_unite` au banc des corps. Il compile et tourne. **Le varying est transmis intact** : ce que `light()` reçoit vaut ce
+que `fragment()` a écrit, à 1,00-1,03 près (mesuré, mode 9 de l'instrument).
+
+**L'INSTRUMENT** (`relief_diagnostic`, uniforme de banc comme `masque_preuve`, jamais posé en jeu) : albédo blanc et aucune autre
+émission ; mode 1 = le numérateur du moteur ; 2 = le dénominateur ; 3 à 7 = chaque terme du dénominateur de la lampe 0 ; 8 = une
+constante ; 9 = le varying tel que `light()` le reçoit. Plus `relief_neutre` (R = 1 forcé). R se lit alors **sur le sol seul**,
+pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), rangé par distance à la lampe.
+
+**CE QUE LE BANC A MESURÉ, ET CE QUE LA SESSION CLOUD A TRANCHÉ** (2026-09-22 au soir, puis 23:46 et 23:48) :
+
+1. **DÉCROISSANCE NULLE pour toutes les lampes du miroir — tranché, posé.** Mon dénominateur est juste (1,07 / 0,97 / 1,00 de sa
+   valeur calculée sur le sol), mais le numérateur du moteur ne suit pas d^(−décroissance) dans nos unités : même lampe,
+   décroissance 0 puis 1, le rapport des numérateurs ne suit pas 1/d. Une passe à gain réduit a écarté la saturation (octets
+   max 218 et 187) : le rapport vaut 0,10 de 40 à 80 px puis 0,33 à 0,55 de 100 à 300 px — il CROÎT avec la distance. **Cause
+   non expliquée.** Sous le relief, l'intensité vient de L2D et la décroissance ne fait que pondérer les lampes entre elles ;
+   la fenêtre de portée du moteur efface toujours une lampe au bord de sa portée. Ce n'est PAS l'atténuation plate réfutée au
+   lot 0 quater (qui laissait les lampes s'additionner sous le Lambert brut). Condition de la session cloud : un cadrage de plus
+   à la recette, une face atteinte par deux lampes à deux distances.
+2. **R ACHROMATIQUE — tranché, posé.** La contribution se calcule sur la luminance de LIGHT_COLOR (poids PATE_POIDS) et rend
+   ce scalaire sur les trois canaux. Par canal, R teignait l'image deux fois : (1,16 ; 0,98 ; 0,73) sous l'halogène,
+   (1,50 ; 0,28 ; 0,36) écrêté sous la fusée — le halo plus rouge. ⚠️ **Conséquence à juger** : la bride du sol est un
+   SCALAIRE (la luminance de L2D), donc avec R achromatique la teinte de la lumière 2D ne passe plus nulle part dans la 3D —
+   elle ne garde que la couleur de l'albédo.
+3. **Validation du sol plat, R LU AU BANC** (décroissance 0, R achromatique, sol seul pixel par pixel) : torche seule
+   0,95-1,00 de 20 à 240 px, 0,93 / 0,91 au bord de portée (260 / 280) ; fusée seule 0,95-1,02 de 60 à 240 px (en deçà, sa
+   fumée et son sprite couvrent le sol) ; torche + fusée 0,99-1,04 de 80 à 150 px — **mais 1,09-1,13 de 160 à 200 px**.
+4. **Le 1,13 vient de la RÉTRODIFFUSION**, isolée par un cadrage torche + rétrodiffusion : seule, hors du cône de la torche,
+   elle suit son dénominateur à 60 px (1,08) puis le dépasse de plus en plus vers le bout de sa portée déclarée de 147 px
+   (1,18 / 1,53 / 2,54 / 5,84 à 80 / 100 / 120 / 140 px) : le moteur l'éclaire plus loin que sa portée. La fusée, construite
+   par la même fonction (`_omni`), n'a pas cet écart. Même lampe dans les deux listes (vérifié). **Cause non trouvée.**
+5. **LE BIAIS D'OMBRE EN PIXELS — tranché, posé à 16.** La face qui regarde la torche était noire sous ombres (0,007) : le
+   miroir ne posait aucun `shadow_bias`, et les défauts de Godot valent ici une fraction de pixel. Balayage (face avec ombres
+   sur face sans ; rayures = écart-type des moyennes de lignes, 1,7 sans ombres) : 12 px 0,816 rayée (51,6) ; 14 px 1,025
+   encore rayée (36,2) ; **16 px 1,063 sans rayure (1,7)** ; 20 px 1,052 ; 40 px 1,070. Le biais normal n'y suffit pas (4 px
+   seul : 0,047 ; 2 avec 4 de profondeur : 0,137). Décollement de l'ombre d'un corps à 16 px : 1 px à l'écran (34 → 33, accepté
+   jusqu'à 3), identique à l'œil au zoom ×2.
+6. **LES OMBRES AJOUTENT ENCORE UN PEU DE LUMIÈRE, et ce n'est pas l'acné.** Au biais 16, une SEULE lampe ombrée (la torche) :
+   20 % des pixels éclairés sont plus clairs avec ombres, rapport médian 1,055 (1,148 au 90ᵉ centile) ; deux lampes : médiane
+   0,969 ; fusée seule : 0,974 (38 px plus clairs). Pas un doublement par passes additives (qui donnerait × 2), et pas
+   l'émission ajoutée deux fois (les pixels plus clairs sont répartis comme tous les pixels éclairés : 201 px de J1 en médiane
+   contre 198). **Non expliqué.**
+7. **LA GARDE ET LE NOIR — tranché : la portée 3D couvre la 2D, et un SEUIL AU POINT NOIR DE LA 2D, PAR CONSTRUCTION.** La L2D
+   (lightmap ÷ peinture) gardait un résidu là où la 2D affichée est noire, et la garde (R = 1) le rallumait : sous une fusée
+   seule, 5,1 % des pixels noirs en 2D sortaient entre 12 et 30 sur 255. **Le résidu naît de la division** : un niveau quantifié
+   de la lightmap, divisé par une peinture sombre, devient une L2D visible. Le seuil porte donc sur ce que la 2D AFFICHE :
+   `seuil_noir_2d` = 8/255, sur la valeur lue dans la lightmap AVANT la division (`lire_lightmap`, sol et murs), et sur la
+   valeur lue au capteur (`recue`, corps) — marche franche, aucun réglage (`Presentation3D.seuil_noir_2d_3d` ; défaut 0 dans
+   l'include, que les vues d'ISO11 partagent inchangées). ⚠️ **Il a d'abord été un seuil STATISTIQUE** (`bride_noir`, 0,11,
+   mesuré sur la L2D du sol : jusqu'à 26/255 de L2D la 2D était noire dans 81 à 99 % des pixels), qui ramenait la fuite sous la
+   fusée de 130 168 px à 0 — mais il était posé aussi sur les corps, où il bridait la luminance du CAPTEUR, une autre échelle ;
+   or le capteur lit bas justement la rétrodiffusion faible des furtifs, et la 3D pouvait effacer un corps que la 2D montre
+   (revue d'ISO7 Beauté ; arbitrage de la session cloud, 2026-09-23, 00:30, qui retient la voie proposée par Beauté).
+   **Contrôles, dans les deux sens, à chaque cadrage** — « moins » (2D > 8 et 3D ≤ 2) et « plus » (2D ≤ 8 et 3D > 12) :
+   mesurés le 2026-09-23 à 01:03, LED éteinte (voir le piège « Le bandeau de LED RESPIRE »), quatorze cadrages sur les deux cartes. **« Plus » passe PARTOUT** : 0 à 0,008 % des pixels noirs en 2D
+   (cible < 0,01 %). **« Moins » ne passe pas** : 0 à 4,9 % des pixels visibles en 2D sans ombres, jusqu'à 12,9 % avec — la
+   preuve inverse (< 1 %, ombres allumées) n'est tenue que sur trois cadrages sur quatorze. **Mais le seuil n'y est pour
+   rien, mesuré** : LED figée à 30 %, trois cadrages avec seuil 8/255 puis seuil 0 → « moins » identique à 0,1 % près (corps de
+   J2 527 / 521 px, lueur de la LED 29 287 / 29 275) ; le seuil n'ôte que des pixels « plus » (une lumière 377 → 209, fusée
+   1 039 → 888 et 169 → 113). Le « moins » vient de ce que le seuil ne touche pas : la lueur de la LED au sol, que la 3D ne rend
+   pas (17 à 31 % des pixels visibles à 30 % de son sommet) ; les ombres 3D, plus longues que les 2D (murs à hauteur) ; et le
+   MODELÉ DES CORPS (point 12).
+   ⚠️ La « lueur ambiante ambre » du sol du Cloître, notée ici la veille comme venant d'ailleurs que la L2D, **était la LED** à
+   un haut de sa respiration. **LIMITE CONNUE, actée** : les impacts et étincelles ne sont pas miroirés et sortent NOIRS dans une ombre 3D. La
+   preuve inverse (éclairé en 2D, noir en 3D : moins de 1 % des pixels éclairés, ombres allumées) figure pour chaque cadrage au
+   tableau de la planche.
+8. **Couleur, lecture des captures** : voir le piège « la vue 3D écrit la valeur du shader sur l'octet ».
+9. **Cadence** (six relevés indicatifs sur `72a2364`, Mac au repos, focus stable) : les quatre lignes « lumière 3D » passent sous
+   60 au 1 % bas (56 / 57 / 58 / 49) et portent TOUTES une pire image de 135 à 143 ms, les deux autres jamais. Le banc de cadence
+   préchauffe désormais 3 s la lumière 3D allumée, imprime la pire image du préchauffage et DATE les cinq pires images de la
+   mesure : c'est ce qui dira s'il s'agit d'une compilation au premier usage d'une variante (le piège du premier mort) — auquel
+   cas il faudra préchauffer les variantes à la construction de l'arène (noté pour le plan des lots, pas fait ici).
+
+10. **`duo_reconnexion` est INTERMITTENT** (constaté en validant ce correctif) : dans cet arbre, un lot complet puis deux
+    passages seuls → échec, échec, succès avec le correctif ; succès sans lui ; vert dans le lot d'ISO7 Gadgets (72a2364 sans le
+    correctif) ; et ISO7 Beauté l'avait vu rougir une fois le 2026-09-15 puis passer à la relance, sans changement de réseau.
+    Symptôme : « le salon rouvert accepte le retour » → 0 manche, l'hôte levant « No multiplayer peer is assigned » dans
+    `_annoncer_deconnexion` (`game_state.gd`) depuis `_do_end_round`. Rien du correctif ne touche ce chemin (la pose du relief ne
+    tourne que lumière 3D allumée). **Un rouge de cette suite se relance avant d'être attribué** — et reste à comprendre, hors
+    périmètre ISO12.
+11. **LES QUATRE CORRECTIFS L4 D'ISO7 GADGETS — posés** (écrits par Gadgets contre cet arbre, ordre 130 de la session cloud,
+    appliqués ici puisque les fichiers sont ceux du correctif). Trouvés par le calcul sur les constantes du miroir, et aucun ne
+    tenait à la courbe d'atténuation ni au canal : (A) **la portée d'une omni est une sphère**, le rayon 2D un disque au sol —
+    `sqrt(rayon² + h²) × 1,15` au lieu de `rayon × 1,15` (le flash de tir n'éclairait que 11,4 px au sol pour 32) ; (B) **ε par
+    lampe**, min(h / portée, 0,02), porté par `relief_direction[i].w` (voir la note sous la table d'enveloppe) ; (C) **le flash de
+    tir ne s'ombre plus** : la 2D a la règle nommée « la torche et le flash d'un joueur n'ombrent jamais son propre corps », que
+    le miroir ne reproduisait pas ; (D) `energies_neutres`, interrupteur de banc (`--energies-neutres`) : depuis la v27,
+    `energie_par_type` n'est plus une luminosité mais un POIDS entre lampes, et une fusée pèse ~43 fois son poids 2D face à une
+    torche. **Jugé au banc** (cumul, deux lumières, torche + fusée) : à énergies neutres le cône de la torche ressort un peu
+    mieux dans le halo de la fusée, sans rien de franc ; les contrôles bougent de moins de 0,1 point. Le défaut reste 52 / 3,6 —
+    c'est une image de planche, pas un chiffre. Garde croisée dans `tools/test_banc.gd` : le plancher du miroir vaut le défaut de
+    l'include, et l'include lit bien `direction.w` (sans quoi ε par lampe serait calculé puis ignoré sans erreur).
+12. **UN CORPS QUE LA 2D MONTRE EN ENTIER, LA 3D EN MONTRE LES TROIS QUARTS — NON TRANCHÉ, porté à la session cloud.** Cadrage
+    neuf `adversaire_arbalete` : J2 à l'Arbalète, torche allumée de côté, vu depuis la vue de J1 à 2,5 tuiles. **~555 px de son
+    corps sont éclairés en 2D et NOIRS en 3D** — jambes, bas du torse, une partie de l'arme, environ un quart de la silhouette ;
+    torche de J1 braquée sur lui, il en reste ~316. **Identique avec et sans le seuil** (527 / 521 px) : ce n'est pas lui. C'est le
+    relief : les seules lampes qui touchent J2 sont les siennes, posées en son centre, donc les faces tournées vers J1 ont
+    N·L ≤ 0 et R = 0, alors que la 2D éclaire le corps à plat par son capteur. ISO7 Beauté confirme : sa peinture ne fait que
+    teindre la lumière rendue et n'y peut rien. C'est le critère même de la session cloud (« tout pixel de corps que la 2D montre
+    reste visible en 3D ») qui échoue — une question d'honnêteté en compétition, donc pas un dosage à régler seul ici.
+
+**Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
+atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).
 
 ### Ce qui attend Adrien — jalon H15
 

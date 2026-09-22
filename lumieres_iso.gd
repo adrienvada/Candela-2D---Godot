@@ -22,6 +22,9 @@
 extends Node3D
 
 const TUILE := 35.0
+## ISO12 v27 — les poids de luminance de la pâte, recopiés de `PATE_POIDS` (`iso_pate.gdshaderinc`) : l'intensité d'une
+## lampe au dénominateur du relief se mesure avec la luminance même qui lit R. `tools/test_banc.gd` vérifie qu'ils concordent.
+const POIDS_PATE := Vector3(0.2126, 0.7152, 0.0722)
 ## Le cône 3D dépasse le cône 2D de cinq degrés, adouci (décision de la session cloud, 22:15).
 const CONE_EN_PLUS_DEG := 5.0
 ## L'angle plancher d'un spot de torche. ⚠️ Preuve rejouée du 2026-09-15 (23:48) : le faisceau de 5° du Braconnier, en spot de 10°,
@@ -52,11 +55,31 @@ var retrodiffusion := true
 ## constant : `lumière3D(x)` dépend du nombre de lampes qui atteignent le point, si bien que +70 % d'énergie a ÉLARGI l'écart
 ## entre cadrages (0,36-0,77 → 0,40-0,99) au lieu de le refermer.
 ##
-## La décroissance de Godot revient donc, et elle est NÉCESSAIRE à la forme retenue : le relief divise la lumière par ce
-## qu'elle donnerait au même point sur un sol plat, et la décroissance se simplifie dans ce rapport — elle doit être des deux
-## côtés. Les valeurs sont celles du lot 0 ter ; elles seront rejugées une fois le relief en place.
-var attenuation_par_type := {"fusee": 0.35, "braise": 0.6, "mine": 0.6}
+## ⚠️ **ET POURTANT : DÉCROISSANCE NULLE, SOUS LE RELIEF NORMALISÉ** (session cloud, 2026-09-22, 23:46). Ce n'est pas le retour
+## de l'atténuation plate réfutée ci-dessus : celle-là laissait les lampes s'ADDITIONNER au-delà du blanc sous le Lambert brut.
+## Sous le relief, la couleur vaut albédo × L2D × R — l'intensité vient de L2D, et la décroissance ne fait plus que PONDÉRER les
+## lampes entre elles dans R ; la fenêtre de portée du moteur, (1 − (d/r)⁴)², efface toujours une lampe au bord de sa portée.
+## Et c'est mesuré : à décroissance 1, le numérateur du moteur ne suivait pas d^(−1) dans nos unités (R croissait de 1,1 à 11,5
+## le long d'un cône) ; à 0, moteur et dénominateur coïncident sur le sol à 5 % près. La table reste la poignée : un type absent
+## vaut 0, spots compris (`spot_attenuation`, posé à chaque image dans `_torche`).
+var attenuation_par_type := {}
 var ombres := true
+## ISO12 L4 — INSTRUMENT DE BANC : toutes les énergies de type à 1,0. Depuis la v27, `energie_par_type` n'est plus une
+## luminosité — elle se simplifie dans R pour une lampe seule — mais un POIDS entre lampes : 52 contre 3,6 fait peser une
+## fusée quarante fois ce qu'elle pèse en 2D face à une torche, et le modelé du cône peut disparaître là où les deux se
+## rencontrent. Le défaut se décide sur la planche, pas ici (ISO7 Gadgets, session cloud, 2026-09-23).
+var energies_neutres := false
+## Le plancher global du dénominateur, en GDScript : vaut le défaut de `relief_epsilon` dans l'include (garde croisée dans
+## `tools/test_banc.gd`).
+const RELIEF_EPSILON := 0.02
+## ISO12 v27 — LE BIAIS D'OMBRE, EN PIXELS. Les défauts de Godot sont pensés en mètres ; ici une unité vaut un pixel, et ils
+## valaient une fraction de pixel, moins qu'un texel de carte d'ombre : la face d'un mur qui REGARDE la torche se faisait de
+## l'ombre à elle-même — noire, rayée. Balayé au banc le 2026-09-22 (face avec ombres sur face sans ombres ; « rayures » =
+## écart-type des moyennes de lignes, 1,7 sans ombres) : défaut 0,007 ; 12 px 0,816 rayée (51,6) ; 14 px 1,025 encore rayée
+## (36,2) ; **16 px 1,063 sans rayure (1,7)** ; 20 px 1,052 ; 40 px 1,070. Le biais normal seul n'y suffit pas (4 px : 0,047).
+## Le décollement de l'ombre d'un corps à 16 px : 1 px à l'écran (34 → 33), accepté jusqu'à 3. Posé à chaque image dans
+## `_recopier` : une valeur posée sur la lampe ailleurs serait écrasée à l'image suivante.
+var biais_ombre := 16.0
 ## Économies du brief, dans l'ordre : `ombres_omni` faux — pas d'ombre sur les omni (fusées, flashs, braises, mine,
 ## rétrodiffusion : six faces par omni et par image) ; `ombres_torches_joueurs_seules` vrai — une seule lumière ombrée par
 ## joueur, sa torche (la torche fantôme perd la sienne).
@@ -152,6 +175,7 @@ func _torche(source: Light2D, arme: WeaponData, hauteur_px: float, type: String,
 	l.look_at(cible, Vector3.UP)
 	l.spot_angle = clampf(maxf(arme.torch_angle_deg + CONE_EN_PLUS_DEG, CONE_PLANCHER_DEG), 1.0, 89.0)
 	l.spot_angle_attenuation = ATTENUATION_ANGULAIRE
+	l.spot_attenuation = float(attenuation_par_type.get(type, 0.0))
 	l.spot_range = arme.portee_torche() * PORTEE_EN_PLUS
 
 
@@ -163,7 +187,13 @@ func _omni(source: Light2D, type: String, position_3d: Variant, vus: Dictionary)
 		return
 	# La rétrodiffusion ne s'ombre pas : c'est la lumière qui revient sur le porteur, que son propre corps ne bouche pas. ⚠️ Preuve
 	# rejouée (23:48) : ombrée, l'omni posée contre le corps voxel de J2 plongeait son propre halo dans l'ombre de ce corps.
-	l.shadow_enabled = ombres and ombres_omni and not ombres_torches_joueurs_seules and type != "retrodiffusion"
+	# ⚠️ Le FLASH DE TIR non plus (L4, ISO7 Gadgets). La 2D porte une règle NOMMÉE — « la torche et le flash de tir d'un joueur
+	# n'ombrent jamais son propre corps » (`fait_ombre_aux_lumieres_de`, masque `1 | COUCHE_OCCLUDER_ADVERSE`) — que le miroir
+	# ne reproduisait nulle part. Or `_eclairer_le_corps` fait porter ombre à toutes les boîtes de couleur dès la lumière 3D
+	# allumée : l'omni posée AU BOUT DE L'ARME plongeait le tireur et le sol devant lui dans l'ombre de son propre corps —
+	# le défaut de la rétrodiffusion du 2026-09-15 (23:48), sur la source la plus décisive du duel.
+	l.shadow_enabled = ombres and ombres_omni and not ombres_torches_joueurs_seules \
+		and type != "retrodiffusion" and type != "flash"
 	if position_3d is Vector3:
 		l.global_position = position_3d
 	else:
@@ -173,8 +203,14 @@ func _omni(source: Light2D, type: String, position_3d: Variant, vus: Dictionary)
 	var rayon := 64.0
 	if source.texture != null:
 		rayon = float(source.texture.get_width()) * source.texture_scale * 0.5
-	l.omni_range = rayon * PORTEE_EN_PLUS
-	l.omni_attenuation = float(attenuation_par_type.get(type, 1.0))
+	# ISO12 L4 — LA PORTÉE EST UNE SPHÈRE, LE RAYON 2D UN DISQUE AU SOL (ISO7 Gadgets) : à la hauteur h, la sphère n'atteint le
+	# sol que sur sqrt(portée² − h²), et `rayon × 1,15` laissait un anneau NOIR là où la 2D éclaire (flash 11,4 px au sol pour
+	# 32 de rayon ; fusée au lancer 75,5 pour 80) — la garde rendait R = 1 sur une lumière nulle. La sphère doit CONTENIR le
+	# disque. Sous le relief normalisé, agrandir une portée ne change rien à l'image déjà éclairée (l'atténuation se simplifie
+	# dans R) : cela n'ajoute que l'anneau manquant.
+	var h_px := l.global_position.y
+	l.omni_range = sqrt(rayon * rayon + h_px * h_px) * PORTEE_EN_PLUS
+	l.omni_attenuation = float(attenuation_par_type.get(type, 0.0))
 	l.omni_shadow_mode = mode_ombre_omni
 
 
@@ -185,8 +221,9 @@ func _recopier(source: Light2D, l: Light3D, type: String) -> bool:
 	if not allumee:
 		return false
 	l.light_color = source.color
-	l.light_energy = source.energy * float(energie_par_type.get(type, 1.0))
+	l.light_energy = source.energy * (1.0 if energies_neutres else float(energie_par_type.get(type, 1.0)))
 	l.shadow_enabled = ombres
+	l.shadow_bias = biais_ombre
 	l.light_specular = 0.0
 	return true
 
@@ -233,16 +270,27 @@ func decrire_pour_relief() -> Array:
 		if not lumiere.visible:
 			continue
 		var spot := lumiere is SpotLight3D
-		var c := lumiere.light_color
-		var luminance := 0.299 * c.r + 0.587 * c.g + 0.114 * c.b
+		# ⚠️ En LINÉAIRE, aux poids de la pâte (défaut 6 de la revue) : le moteur éclaire avec la couleur linéarisée, et la pâte
+		# lit la lumière avec `PATE_POIDS`. En sRGB et Rec. 601, le halo de fusée tombait 35 % sous la 2D et le tri des huit
+		# lampes était faussé d'autant.
+		var c := lumiere.light_color.srgb_to_linear()
+		var luminance := POIDS_PATE.dot(Vector3(c.r, c.g, c.b))
 		var intensite := lumiere.light_energy * luminance
 		if intensite <= 0.0:
 			continue
 		var avant := -(lumiere as Node3D).global_transform.basis.z
+		var p3: Vector3 = (lumiere as Node3D).global_position
+		var portee_l: float = (lumiere as SpotLight3D).spot_range if spot else (lumiere as OmniLight3D).omni_range
 		out.append({
-			"pos": (lumiere as Node3D).global_position,
+			"pos": p3,
 			"intensite": intensite,
-			"portee": (lumiere as SpotLight3D).spot_range if spot else (lumiere as OmniLight3D).omni_range,
+			"portee": portee_l,
+			# ISO12 L4 — ε PAR LAMPE (ISO7 Gadgets) : la plus petite élévation que cette lampe puisse avoir DANS SA PROPRE PORTÉE,
+			# h/portée, pour que le plancher ne morde jamais sur le sol qu'elle éclaire. Braises et mine sont posées à 1,75 px :
+			# ε = 0,02 y mordait dès 87,5 px, et le bord de leur halo tombait à 0,515 et 0,337. Le `min` n'est pas un ornement : la
+			# valeur brute vaut 0,477 pour un flash de tir et multiplierait par vingt-quatre le dénominateur d'un mur situé
+			# AU-DESSUS de la lampe. Le plancher ne peut que baisser — braises 0,00895, mine 0,00585, les autres gardent 0,02.
+			"epsilon": maxf(minf(p3.y / maxf(portee_l, 0.0001), RELIEF_EPSILON), 1e-4),
 			"attenuation": (lumiere as SpotLight3D).spot_attenuation if spot else (lumiere as OmniLight3D).omni_attenuation,
 			"cos_demi": cos(deg_to_rad((lumiere as SpotLight3D).spot_angle)) if spot else -1.0,
 			"direction": avant if spot else Vector3.ZERO,
