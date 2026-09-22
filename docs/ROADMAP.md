@@ -26557,8 +26557,18 @@ réglage voxel), chaque capture rapportée à son fichier source, dans le disque
 | Énergie d'arêtes, médiane | 1,11 | **0,94** |
 | Énergie d'arêtes, pire | 0,24 (`ill_quitter`) | 0,67 (`ill_intro_extinction`) |
 
-La cible de luminance (≥ 0,95) est tenue par les vingt et une illustrations ; celle des arêtes (≥ 0,90) est
-tenue en médiane. ⚠️ **Le pire cas des arêtes n'est pas un défaut du shader mais une limite de la mesure** :
+La cible de luminance (≥ 0,95) est tenue par les vingt et une illustrations, **au plus juste** : la plus
+basse vaut exactement 0,95 (`ill_rejoindre_local`), la suivante 0,97. Celle des arêtes (≥ 0,90) est tenue
+en médiane.
+
+⚠️ **Le rayon de mesure change le verdict, et mon premier envoi mélangeait les deux.** Au CENTRE (0,02 de
+la largeur) la torche vaut son intensité pleine et les chiffres ci-dessus s'appliquent ; sur un ANNEAU plus
+large (0,05), l'exposition retombe déjà vers l'ambiante et le pire cas de luminance descend à 0,90
+(`ill_rejoindre_local`) et 0,91 (`ill_creer_local`) — deux illustrations sous 0,95, acceptées telles quelles
+par la session cloud (l'écart est petit, l'image est bonne). La galerie et le tableau publiés sont au centre ;
+c'est l'anneau qui montre le mieux la correction du pied de page (`ill_creer_ligne` : 1,26 → 1,12 de
+luminance et 0,71 → 0,83 d'arêtes, quand le centre ne bouge pas). Règle : **un rapport de mesure dit son
+rayon**, sinon deux tableaux justes se contredisent. ⚠️ **Le pire cas des arêtes n'est pas un défaut du shader mais une limite de la mesure** :
 la capture est filtrée par le jeu, la source est agrandie par la mesure, et les deux ne lissent pas de la
 même façon — sur une illustration sombre, dont les arêtes sont faibles, le rapport s'effondre. Ce que la
 mesure dit sûrement est l'ÉCART entre les deux réglages, sur la même image : `ill_quitter` passe de 0,24 à
