@@ -26304,6 +26304,75 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).
 
+#### Lot L4 — les deux défauts de forme des sources de gadgets, trouvés avant toute mesure (2026-09-23)
+
+Plan de L4 (fusées, flashs de tir, braises, mine, lampes des gadgets) demandé par la session cloud, écrit sans code et sans
+Godot, par lecture du miroir et de l'include. Il a mis au jour **deux défauts qui frappent exactement les sources de L4 et
+qu'aucun cadrage à la torche ne pouvait révéler** — la signature du piège déjà payé deux fois (la moyenne à 1,09, la borne du
+canal à 8,0). Les deux se calculent sur les constantes du code ; ils survivent intacts au correctif de la revue (décroissance
+nulle, varying, intensité linéaire), parce qu'ils ne tiennent ni à la courbe d'atténuation ni au canal.
+
+**A — la portée 3D est une SPHÈRE, le rayon 2D un DISQUE AU SOL.** `_omni` pose `omni_range = rayon_2D × 1,15` ; une lampe à la
+hauteur h n'atteint le sol que sur `sqrt(portée² − h²)`. Invisible tant que h est petit devant le rayon (torche, fusée posée),
+franc dès qu'ils sont du même ordre — ce qui est le cas de toutes les sources de L4 :
+
+| source | h (px) | rayon 2D | atteinte au sol aujourd'hui | après `sqrt(rayon² + h²) × 1,15` |
+|---|---|---|---|---|
+| flash de tir, bout de l'arme voxel | 21,0 | 32 | 30,2 | 38,7 |
+| flash de tir, repli sans corps voxel | 35,0 | 32 | **11,4** | 41,8 |
+| fusée en vol, au lancer | 52,5 | 80 | 75,5 | 96,7 |
+| fusée posée | 5,25 | 220 | 253 | 253 |
+| braises / mine | 1,75 | 170 / 260 | 195 / 299 | idem |
+
+Au-delà de la portée, `light()` ne donne rien, la garde rend R = 1 sur une lumière nulle, et la couleur vaut albédo × L2D × 0 :
+**du NOIR là où la 2D éclaire**, en anneau, autour de la source même qui trahit le tireur. ⚠️ Sous le relief normalisé, agrandir
+une portée ne change RIEN à l'image déjà éclairée (l'atténuation se simplifie dans R) : cela n'ajoute que l'anneau manquant.
+
+**B — ε = 0,02 mord sur les lampes au ras du sol, et sur elles seules.** Sur un sol plat, R = (h/d) / max(h/d, ε) : R = 1 tant
+que d ≤ h/ε = 50h, puis 50h/d. Le miroir pose braises et mine à `HAUTEUR_AU_RAS_DU_SOL` = 1,75 px → ε mord dès **87,5 px**,
+quand leurs halos vont à 170 et 260 px : **R = 0,515 au bord du halo des braises, 0,337 à celui de la mine.** Le sol y est deux
+à trois fois plus sombre que la 2D, là où la règle promet exactement la 2D.
+
+⚠️ **La table d'enveloppe du 2026-09-16 dit « fusée posée (8 px) / braise (16 px) → 1,0000 ». Le code ne pose ni 8 ni 16 : il
+pose 5,25 et 1,75.** La méthode de l'enveloppe était juste, ses entrées n'étaient pas celles du miroir — c'est pourquoi B n'a
+pas été vu. **Troisième fois qu'un calcul hors machine repose sur des entrées qui ne sont pas celles du code** (après les deux
+défauts de la revue de Beauté). La leçon n'est pas « ne pas calculer hors machine » — c'est que **l'entrée d'un calcul hors
+machine se lit dans le code, jamais dans le document qui le décrit**.
+
+**Le remède, et un amendement à la consigne.** La session cloud a arbitré : portée par `sqrt(rayon² + h²) × 1,15` (A) et ε par
+lampe `ε_i = h_i / portée_i` porté par `relief_direction[i].w` (B), flash de tir sans ombre, et un interrupteur de banc mettant
+toutes les énergies de type à 1,0. Les diffs sont écrits contre l'arbre d'Iso 1 et lui sont transmis, puisque les trois fichiers
+sont dans son correctif non commité. **Un écart assumé sur (B) : `ε_i = min(h_i / portée_i, ε_global)`, jamais la valeur brute.**
+La formule brute vaut 0,477 pour le flash de tir contre 0,02 aujourd'hui ; sur le sol elle ne mord jamais (par construction :
+h/d ≥ h/portée partout dans la portée), mais sur un fragment situé AU-DESSUS de la lampe — le mur derrière un tireur — elle
+multiplierait le dénominateur par vingt-quatre et assombrirait ce mur sans qu'aucun cadrage au sol le montre. Le `min` ne peut
+qu'ABAISSER le plancher : seules braises (0,00895) et mine (0,00585) bougent, c'est-à-dire exactement les deux sources que B
+atteint. Corriger un défaut sans pouvoir en créer un autre vaut mieux qu'appliquer une formule à la lettre.
+
+**Le profil radial** (`docs/iso/iso12/profil_radial.py`, script autonome, Pillow seul) : le rapport 3D/2D par anneaux de 10 px
+autour d'une ancre, jusqu'à 1,3 fois le rayon 2D, médiane et déciles, sur les seuls pixels que la 2D éclaire. **Des anneaux et
+non une moyenne**, parce que A et B sont radiaux et qu'une moyenne les confond avec un succès — c'est une moyenne à 1,09 qui
+avait caché la flaque.
+
+⚠️ **Le rapport se prend sur les OCTETS BRUTS, et ce paragraphe a affirmé l'inverse pendant une heure.** Il disait « en
+linéaire, une capture est encodée en sRGB » — vrai en général, faux pour la vue qui nous occupe : **Iso 1 l'a mesuré le
+2026-09-22** en faisant émettre au sol les constantes 0,25 / 0,5 / 1,0, relues 0,25 / 0,5 / 1,0 sur l'octet. La vue 3D écrit la
+valeur du shader telle quelle. Décoder élève tout rapport à la puissance 2,2 : **R = 0,52 se lit 0,24**, et le profil aurait
+accusé le rendu d'un défaut deux fois plus grave que le vrai — sur le chantier même où je venais d'écrire qu'une entrée de
+calcul se lit dans le code et non dans un document. Je l'avais pris dans une règle générale, ce qui est la même faute d'un cran
+plus haut. `--espace3d` et `--espace2d` valent donc `brut` par défaut, le décodage est une option nommée, et **l'étalonnage
+(`--etalonnage`, sur une prise à constantes émises) précède toute mesure** : un auto-test fabrique ses images et ne rencontre
+jamais la chaîne de rendu.
+
+L'`--autotest` vérifie deux choses sur des images brutes : que le script retrouve le défaut B (1,000 près du centre, 0,531
+entre 160 et 170 px), et que le même défaut lu en sRGB donnerait 0,267 — le second contrôle existe pour que personne ne
+« répare » le premier en remettant le décodage.
+
+**Ce que le profil doit rendre APRÈS correctif, écrit avant la première mesure** : R = 1,00 ± 0,10 sur TOUS les anneaux du
+disque 2D, pour les sept sources ; aucun anneau à zéro en deçà du rayon 2D ; et, sur une prise d'AVANT correctif, la
+retrouvaille des chiffres ci-dessus (0,52 au bord des braises, 0,34 à celui de la mine, zéro au-delà de 11 px sous un tireur
+debout sans corps voxel). Si l'avant ne les montre pas, c'est l'instrument qu'il faut mettre en cause avant le rendu.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
@@ -26716,8 +26785,18 @@ réglage voxel), chaque capture rapportée à son fichier source, dans le disque
 | Énergie d'arêtes, médiane | 1,11 | **0,94** |
 | Énergie d'arêtes, pire | 0,24 (`ill_quitter`) | 0,67 (`ill_intro_extinction`) |
 
-La cible de luminance (≥ 0,95) est tenue par les vingt et une illustrations ; celle des arêtes (≥ 0,90) est
-tenue en médiane. ⚠️ **Le pire cas des arêtes n'est pas un défaut du shader mais une limite de la mesure** :
+La cible de luminance (≥ 0,95) est tenue par les vingt et une illustrations, **au plus juste** : la plus
+basse vaut exactement 0,95 (`ill_rejoindre_local`), la suivante 0,97. Celle des arêtes (≥ 0,90) est tenue
+en médiane.
+
+⚠️ **Le rayon de mesure change le verdict, et mon premier envoi mélangeait les deux.** Au CENTRE (0,02 de
+la largeur) la torche vaut son intensité pleine et les chiffres ci-dessus s'appliquent ; sur un ANNEAU plus
+large (0,05), l'exposition retombe déjà vers l'ambiante et le pire cas de luminance descend à 0,90
+(`ill_rejoindre_local`) et 0,91 (`ill_creer_local`) — deux illustrations sous 0,95, acceptées telles quelles
+par la session cloud (l'écart est petit, l'image est bonne). La galerie et le tableau publiés sont au centre ;
+c'est l'anneau qui montre le mieux la correction du pied de page (`ill_creer_ligne` : 1,26 → 1,12 de
+luminance et 0,71 → 0,83 d'arêtes, quand le centre ne bouge pas). Règle : **un rapport de mesure dit son
+rayon**, sinon deux tableaux justes se contredisent. ⚠️ **Le pire cas des arêtes n'est pas un défaut du shader mais une limite de la mesure** :
 la capture est filtrée par le jeu, la source est agrandie par la mesure, et les deux ne lissent pas de la
 même façon — sur une illustration sombre, dont les arêtes sont faibles, le rapport s'effondre. Ce que la
 mesure dit sûrement est l'ÉCART entre les deux réglages, sur la même image : `ill_quitter` passe de 0,24 à
