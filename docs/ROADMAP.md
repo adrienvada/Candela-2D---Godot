@@ -26194,9 +26194,21 @@ atteint. Corriger un défaut sans pouvoir en créer un autre vaut mieux qu'appli
 **Le profil radial** (`docs/iso/iso12/profil_radial.py`, script autonome, Pillow seul) : le rapport 3D/2D par anneaux de 10 px
 autour d'une ancre, jusqu'à 1,3 fois le rayon 2D, médiane et déciles, sur les seuls pixels que la 2D éclaire. **Des anneaux et
 non une moyenne**, parce que A et B sont radiaux et qu'une moyenne les confond avec un succès — c'est une moyenne à 1,09 qui
-avait caché la flaque. Le rapport se prend **en linéaire** (une capture est encodée en sRGB ; le rapport des valeurs encodées
-n'est pas celui des lumières — l'erreur exacte du défaut 6 de la revue). Son `--autotest` rejoue le défaut B sur des images
-fabriquées et vérifie que le script le retrouve : 1,000 près du centre, 0,532 entre 160 et 170 px.
+avait caché la flaque.
+
+⚠️ **Le rapport se prend sur les OCTETS BRUTS, et ce paragraphe a affirmé l'inverse pendant une heure.** Il disait « en
+linéaire, une capture est encodée en sRGB » — vrai en général, faux pour la vue qui nous occupe : **Iso 1 l'a mesuré le
+2026-09-22** en faisant émettre au sol les constantes 0,25 / 0,5 / 1,0, relues 0,25 / 0,5 / 1,0 sur l'octet. La vue 3D écrit la
+valeur du shader telle quelle. Décoder élève tout rapport à la puissance 2,2 : **R = 0,52 se lit 0,24**, et le profil aurait
+accusé le rendu d'un défaut deux fois plus grave que le vrai — sur le chantier même où je venais d'écrire qu'une entrée de
+calcul se lit dans le code et non dans un document. Je l'avais pris dans une règle générale, ce qui est la même faute d'un cran
+plus haut. `--espace3d` et `--espace2d` valent donc `brut` par défaut, le décodage est une option nommée, et **l'étalonnage
+(`--etalonnage`, sur une prise à constantes émises) précède toute mesure** : un auto-test fabrique ses images et ne rencontre
+jamais la chaîne de rendu.
+
+L'`--autotest` vérifie deux choses sur des images brutes : que le script retrouve le défaut B (1,000 près du centre, 0,531
+entre 160 et 170 px), et que le même défaut lu en sRGB donnerait 0,267 — le second contrôle existe pour que personne ne
+« répare » le premier en remettant le décodage.
 
 **Ce que le profil doit rendre APRÈS correctif, écrit avant la première mesure** : R = 1,00 ± 0,10 sur TOUS les anneaux du
 disque 2D, pour les sept sources ; aucun anneau à zéro en deçà du rayon 2D ; et, sur une prise d'AVANT correctif, la

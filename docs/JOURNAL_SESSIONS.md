@@ -5839,3 +5839,10 @@ situé au-dessus de la lampe. Le `min` ne peut qu'abaisser le plancher, donc ne 
 `--autotest` qui rejoue le défaut B sur des images fabriquées et vérifie que le script le retrouve. Rien à
 mesurer encore : il tournera sur les captures du banc d'Iso 1. Les valeurs attendues après correctif sont
 écrites dans la ROADMAP **avant** la première mesure.
+
+**Correction du même soir (01:40)** — `profil_radial.py` lisait les captures en décodant le sRGB, et c'était faux pour la vue
+3D : Iso 1 l'a mesuré (constantes 0,25 / 0,5 / 1,0 émises au sol, relues telles quelles sur l'octet), la session cloud l'a
+tranché. Décoder élève tout rapport à la puissance 2,2 — un R de 0,52 se lirait 0,24. Octets bruts par défaut, décodage en
+option nommée, auto-test sur images brutes qui vérifie AUSSI que le piège se reproduit, et un mode `--etalonnage` qui doit
+rendre les constantes émises avant toute mesure réelle. **J'avais pris cette entrée dans une règle générale au lieu de la
+mesurer** — la faute que je venais de décrire d'un cran plus haut.
