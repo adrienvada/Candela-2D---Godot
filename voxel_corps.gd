@@ -304,6 +304,8 @@ func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_
 	_materiau_profondeur.set_shader_parameter("silhouette_2", Color(0.0, 0.0, 0.0, 0.0))
 
 	_construire_squelette()
+	if VoxelCatalogueT.portraits_actifs():
+		_habiller_en_portrait(slug)
 
 	# Pose de référence : de face, immobile — un corps fraîchement construit
 	# n'est jamais dans un état indéfini avant le premier `poser()` de l'appelant.
@@ -838,6 +840,37 @@ func _boite(parent: Node3D, taille: Vector3, decalage: Vector3) -> MeshInstance3
 	inst.add_child(profondeur)
 
 	return inst
+
+
+## ISO12 — l'aspect des portraits de classe (`--corps=portraits`, voir `iso_corps_portrait.gdshaderinc`) : la palette
+## de la classe dans la matière commune, les demi-tailles qui disent au shader quelle boîte est le torse, l'arme ou la
+## bouteille, et — pour les six classes qui la portent sur leur portrait — la bouteille, une boîte de plus, sous le
+## torse : elle compte donc dans l'empreinte du corps seul (`rayon_empreinte(true)`), comme la règle d'ISO Corps le veut.
+func _habiller_en_portrait(slug: String) -> void:
+	var p := VoxelCatalogueT.palette_portrait(slug)
+	if p.is_empty():
+		return
+	var s := _fiche
+	var e: float = s["echelle"]
+	var torse := Vector3(float(s["largeur_torse"]) * e, s["hauteur_torse"], float(s["profondeur_torse"]) * e)
+	var fa: Dictionary = s["arme"]
+	# `couleur_fiche` reste le gris de la classe : c'est sur lui que la pâte décide où la lumière se voit.
+	_materiau.set_shader_parameter("portrait", 1.0)
+	for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
+		_materiau.set_shader_parameter("portrait_%s" % cle, p[cle])
+	_materiau.set_shader_parameter("portrait_usure", p["usure"])
+	_materiau.set_shader_parameter("portrait_patine", p["patine"])
+	_materiau.set_shader_parameter("portrait_hauteur_px", float(s["hauteur_corps"]) * float(CandelaTileSet.TILE_SIZE.x))
+	_materiau.set_shader_parameter("portrait_demi_torse", torse * 0.5)
+	_materiau.set_shader_parameter("portrait_demi_arme", Vector3(fa["largeur"], fa["hauteur"], fa["longueur"]) * 0.5)
+	if bool(p["bouteille_portee"]):
+		var b: Dictionary = VoxelCatalogueT.BOUTEILLE
+		var taille := Vector3(float(b["largeur"]) * e, b["hauteur"], float(b["profondeur"]) * e)
+		_materiau.set_shader_parameter("portrait_demi_bouteille", taille * 0.5)
+		# Couchée en travers du haut du dos, collée au torse (l'avant du corps est −Z, le dos +Z).
+		var bouteille := _boite(_torse, taille, Vector3(0.0, float(s["hauteur_torse"]) - float(b["haut"]) * 0.5,
+			torse.z * 0.5 + taille.z * 0.5))
+		bouteille.name = "Bouteille"
 
 
 func _pivot(parent: Node3D, nom: String, pos: Vector3) -> Node3D:

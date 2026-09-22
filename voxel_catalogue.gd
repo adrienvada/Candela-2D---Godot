@@ -226,6 +226,127 @@ const EPAISSEUR_REGLAGES := {
 const EPAISSEUR_PAR_DEFAUT := "x1_6"
 
 
+# -----------------------------------------------------------------------------
+# ISO12 — L'ASPECT DES CORPS D'APRÈS LES DIX PORTRAITS DE CLASSE
+# -----------------------------------------------------------------------------
+
+## Le drapeau de comparaison, éteint par défaut : sans lui, les corps restent les aplats gris d'ISO3.
+const DRAPEAU_PORTRAITS := "--corps=portraits"
+
+## Pour les suites (`--script`, sans ligne de commande de jeu) : -1 lit le drapeau, 0 l'éteint, 1 l'allume.
+static var forcer_portraits := -1
+
+
+static func portraits_actifs() -> bool:
+	if forcer_portraits >= 0:
+		return forcer_portraits == 1
+	return OS.get_cmdline_user_args().has(DRAPEAU_PORTRAITS)
+
+
+## Les teintes lues AU PIXEL sur les dix portraits (ISO Assets, `docs/iso/planches_gemini/habillage/portrait_<classe>.png`,
+## fond vert écarté, pixels du corps rangés par clarté, moyennes des quantiles 30-60 % et 60-85 % ; mesure du 2026-09-22).
+## Seule leur TEINTE sert : leur clarté est ramenée à celle de la classe par `palette_portrait()`.
+## - le plâtre des portraits clairs (sept classes) : (237, 150, 55) ; sa rouille : (136, 53, 17) ; le brun des sangles : (66, 24, 6) ;
+## - le plâtre des portraits usés (pistolet, occulteur, spectre) : (202, 115, 55) ; leur rouille : (69, 39, 24).
+const TEINTE_OCRE := Color8(237, 150, 55)
+const TEINTE_ROUILLE := Color8(136, 53, 17)
+const TEINTE_OCRE_USE := Color8(202, 115, 55)
+const TEINTE_ROUILLE_USE := Color8(69, 39, 24)
+const TEINTE_BRUN := Color8(66, 24, 6)
+## La bouteille pâle et les armes brunes des portraits (relevés à la main sur `portrait_allumeur` et `portrait_fusil`).
+const TEINTE_BOUTEILLE := Color8(214, 204, 184)
+const TEINTE_ARME := Color8(110, 62, 30)
+const TEINTE_CARTOUCHE_GRISE := Color8(150, 150, 146)
+const TEINTE_CARTOUCHE_ROUGE := Color8(178, 52, 38)
+
+## Ce que chaque classe porte, lu sur son portrait : la bouteille dans le dos, les cartouches, l'usure.
+const PORTRAITS := {
+	"pistolet": {"bouteille": true, "cartouches": "", "usure": 1.0},
+	"fusil": {"bouteille": false, "cartouches": "", "usure": 0.0},
+	"pompe": {"bouteille": false, "cartouches": "", "usure": 0.0},
+	"arbalete": {"bouteille": false, "cartouches": "", "usure": 0.0},
+	"fumiste": {"bouteille": false, "cartouches": "grise", "usure": 0.0},
+	"incendiaire": {"bouteille": true, "cartouches": "rouge", "usure": 0.0},
+	"sentinelle": {"bouteille": true, "cartouches": "", "usure": 0.0},
+	"occulteur": {"bouteille": true, "cartouches": "", "usure": 1.0},
+	"allumeur": {"bouteille": true, "cartouches": "", "usure": 0.0},
+	"spectre": {"bouteille": true, "cartouches": "", "usure": 1.0},
+}
+
+## La clarté de chaque pièce, en fraction de la luminance de la classe (le plâtre, 1, garde la visibilité du gris d'ISO3).
+## Tout est plus sombre que le plâtre, sauf la bouteille — bornée, elle, par `Charte.DIM` (voir `palette_portrait`).
+## ⚠️ La rouille des portraits est bien plus sombre (0,19 du plâtre, mesuré) ; à 0,19, les pieds de la classe la plus
+## sombre (l'occulteur) tombaient sous la clarté du sol peint (`CandelaTileSet.SOL_DESSIN_B`) — le corps se serait fondu
+## dans les dalles par le bas. 0,55 garde les pieds de l'occulteur à 1,2 fois la clarté sRGB du sol peint (vérifié par
+## `tools/test_corps_portraits.gd` ; 0,5 suffisait tant que la palette se normalisait en linéaire).
+const CLARTE_ROUILLE := 0.55
+const CLARTE_BRUN := 0.22
+const CLARTE_ARME := 0.45
+const CLARTE_CARTOUCHE := 0.7
+const CLARTE_BOUTEILLE := 1.25
+## ⚠️ **La visibilité d'une classe, c'est la clarté MOYENNE de son corps, pas celle de son plâtre.** Posé à la clarté
+## exacte du gris d'ISO3, le plâtre rendait des corps plus sombres de 20 à 26 % au banc des corps à 0,8 (moyennes des
+## pixels du corps, 2026-09-22 23:59) — la rouille et les sangles ne font qu'assombrir. Le plâtre monte donc de ce que la
+## patine retire en moyenne, sans jamais passer `Charte.DIM`. Depuis que le portrait teint après la pâte
+## (`portrait_teindre`), le rapport portrait / gris est exactement celui des clartés affichées, à toute lumière : un seul
+## facteur suffit (1/0,78 et 1/0,74 mesurés : 0,98 à 1,05 du gris à 0,8 au banc des corps, 2026-09-23 01:36).
+const COMPENSATION_PATINE := 1.0 / 0.78
+const COMPENSATION_PATINE_USEE := 1.0 / 0.74
+
+## La bouteille dans le dos, en tuiles (× `echelle` en largeur et en profondeur, comme le reste du corps) : couchée en
+## travers du haut du dos comme sur les portraits.
+const BOUTEILLE := {"largeur": 0.2, "hauteur": 0.085, "profondeur": 0.07, "haut": 0.26}
+
+
+## La clarté À L'ÉCRAN d'une couleur de fiche (poids de `IsoPate`, sur ses valeurs sRGB) : c'est l'espace où
+## `portrait_teindre` fait son rapport, celui des octets de l'image. ⚠️ Normalisée d'abord en luminance linéaire, puis dans
+## l'espace de `pate_vers_affiche`, une teinte saturée sortait plus sombre à l'écran qu'un gris de même « luminance » (au banc
+## des corps, 2026-09-22 23:59 puis 2026-09-23 00:42).
+static func luminance_affichee(c: Color) -> float:
+	return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+
+
+## `teinte` ramenée à la clarté `cible`, sa teinte gardée (échelle de ses valeurs sRGB).
+static func a_luminance(teinte: Color, cible: float) -> Color:
+	var k := cible / maxf(luminance_affichee(teinte), 0.000001)
+	return Color(teinte.r * k, teinte.g * k, teinte.b * k)
+
+
+## Les couleurs d'une classe (valeurs sRGB, posées dans des uniformes `source_color`) : le plâtre à la luminance de son
+## gris d'ISO3 relevée de ce que la patine retire (`COMPENSATION_PATINE`), le reste en fraction de lui ; rien jamais
+## au-dessus de `Charte.DIM`.
+static func palette_portrait(slug: String) -> Dictionary:
+	var f := fiche(slug)
+	if f.is_empty() or not PORTRAITS.has(slug):
+		return {}
+	var p: Dictionary = PORTRAITS[slug]
+	var use := float(p["usure"]) > 0.5
+	var plafond := luminance_affichee(GRIS_PLAFOND)
+	var gris := luminance_affichee(f["couleur"])
+	var compensation: float = COMPENSATION_PATINE_USEE if use else COMPENSATION_PATINE
+	var l: float = minf(gris * compensation, plafond)
+	# ⚠️ Quand le plâtre bute sur `Charte.DIM` (les classes les plus claires : Allumeur, Incendiaire, Spectre), il ne compense
+	# plus toute la patine, et le corps sortait plus sombre qu'aujourd'hui (le Spectre à 0,93 au banc, 2026-09-23 00:52) — ce
+	# que l'équité interdit, surtout aux furtifs. La patine s'allège alors d'autant : la clarté moyenne passe avant l'usure.
+	var patine := clampf((1.0 - gris / l) / (1.0 - 1.0 / compensation), 0.0, 1.0)
+	var cartouche := Color(0, 0, 0, 0)
+	if p["cartouches"] == "grise":
+		cartouche = a_luminance(TEINTE_CARTOUCHE_GRISE, l * CLARTE_CARTOUCHE)
+	elif p["cartouches"] == "rouge":
+		cartouche = a_luminance(TEINTE_CARTOUCHE_ROUGE, l * CLARTE_CARTOUCHE)
+	return {
+		"ocre": a_luminance(TEINTE_OCRE_USE if use else TEINTE_OCRE, l),
+		"rouille": a_luminance(TEINTE_ROUILLE_USE if use else TEINTE_ROUILLE, l * CLARTE_ROUILLE),
+		"brun": a_luminance(TEINTE_BRUN, l * CLARTE_BRUN),
+		"arme": a_luminance(TEINTE_ARME, l * CLARTE_ARME),
+		"bouteille": a_luminance(TEINTE_BOUTEILLE, minf(l * CLARTE_BOUTEILLE, plafond)),
+		"cartouche": cartouche,
+		"usure": float(p["usure"]),
+		"patine": patine,
+		"bouteille_portee": bool(p["bouteille"]),
+	}
+
+
 ## La fiche complète d'une classe : charpente commune + ce qui lui est propre,
 ## couleur calculée, `echelle` élargie par le réglage d'épaisseur (vague 4,
 ## voir `EPAISSEUR_REGLAGES`). Dictionnaire vide et `push_error` si le slug

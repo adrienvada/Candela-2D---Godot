@@ -26145,6 +26145,76 @@ lampes au miroir par une chaîne de caractères — `_lumieres.call("decrire_pou
 vert, et les planches auraient seulement l'air « un peu plates »**. C'est la forme exacte du `has_method()` du 2026-09-09. La
 garde vérifie les trois fils : la méthode existe, elle est demandée, et la pose est APPELÉE.
 
+#### ISO12 — l'aspect des corps d'après les dix portraits de classe 🟡 (ouvert le 2026-09-22 à 23:48, branche `iso12-corps` depuis `72a2364`, session « ISO7 Beauté Opus »)
+
+**D'où il vient.** Brief de la session cloud (22-09, 23:46) : « corps uniformes » est l'un des six retours d'Adrien, et il
+aime beaucoup les dix portraits générés comme icônes de classe (ISO Assets, `docs/iso/planches_gemini/habillage/
+portrait_<classe>.png`) ; le brief d'ISO12 les fixe comme référence du look des corps. Le travail est d'ALBÉDO : il vaut
+avec ou sans la lumière 3D. Derrière le drapeau **`--corps=portraits`, éteint par défaut** : sans lui, le corps d'ISO3 au
+bit près (neuf boîtes, `portrait = 0`).
+
+**Ce qui est fait.**
+- **Les teintes lues au pixel** sur les dix portraits (fond vert écarté, pixels du corps rangés par clarté) : plâtre
+  ocre (237, 150, 55), rouille (136, 53, 17), brun des sangles (66, 24, 6) ; plâtre des trois usés — pistolet,
+  occulteur, spectre — (202, 115, 55), leur rouille (69, 39, 24). Seule leur TEINTE sert (`VoxelCatalogue.palette_portrait`).
+- **`iso_corps_portrait.gdshaderinc`**, partagé par `corps_iso.gdshader` et `corps_iso_eclaire.gdshader`, `fragment()`
+  seul, deux lignes par shader : la couleur du portrait au fragment (`portrait_fiche`), puis `portrait_teindre` sur la
+  lumière déjà rendue. La patine : la rouille monte du sol (38 % du corps, 62 % chez les usés) et borde les arêtes, par
+  taches accrochées au monde ; la ceinture, la bandoulière en diagonale devant et derrière, la poche sur la hanche ; les
+  cartouches le long de la bandoulière, grises au Fumiste, rouges à l'Incendiaire ; l'arme en brun. Les pièces se
+  reconnaissent à la taille de leur maillage (`demi`) : une seule matière pour le corps, comme avant.
+- **La bouteille dans le dos**, couchée en travers du haut du torse, pour les six classes qui la portent (pistolet,
+  sentinelle, allumeur, incendiaire, occulteur, spectre) : une boîte de plus sous le torse (deux instances, couleur et
+  profondeur), pâle, cerclée de brun, vanne sombre sur le dessus. Rien ne change de hauteur.
+
+**⚠️ Le portrait TEINT, il ne décide pas.** Trois formes ont été mesurées avant la bonne, et chacune a appris quelque chose :
+1. la couleur du portrait à la place du gris, normalisée en luminance linéaire : corps plus sombres de 20 à 26 % au banc des
+   corps à 0,8, et en jeu à 0,83 du sol autour d'eux (1,36 au gris) — **la visibilité d'une classe est la clarté MOYENNE de
+   son corps, pas celle de son plâtre**, et la patine ne fait qu'assombrir ;
+2. le plâtre relevé de ce que la patine retire, toujours avant la pâte : la moyenne revenait à 0,87-0,92, mais **un plâtre
+   plus clair que le gris franchit plus tôt les seuils de la pâte D** — sous 0,06 de lumière un Spectre peint se voyait là
+   où le gris était noir, et à 0,15 le Braconnier et le Parasite sortaient plus sombres qu'aujourd'hui (0,97 et 0,93) ;
+3. teint APRÈS la pâte, mais dans l'espace de `pate_vers_affiche` : corps plus sombres d'un quart à 0,8 et d'un tiers à
+   0,2 — **les deux espaces ne coïncident que pour un gris**.
+La forme retenue : la pâte décide, sur le gris de la classe (`couleur_fiche` reste ce gris), OÙ et COMBIEN la lumière se
+voit ; le portrait teint le résultat dans l'espace ENCODÉ, celui des octets de l'image (`e = pate_depuis_affiche`) :
+`e(c') = e(fiche) × clarté(e(c)) / clarté(e(gris))`. Le rapport portrait / gris à l'écran est celui des couleurs de la
+palette en sRGB, à toute lumière ; 0 reste 0.
+
+**L'équité.**
+- **Clarté moyenne** : le plâtre est relevé de ce que la patine retire (`COMPENSATION_PATINE`, 1/0,78 ; 1/0,74 pour les
+  usés), jamais au-dessus de `Charte.DIM`. Où DIM l'arrête (Allumeur, Incendiaire, Spectre), **la patine s'allège d'autant**
+  (0,68, 0,83, 0,83) : la clarté passe avant l'usure — sans quoi le Spectre sortait à 0,93 du gris. Mesures au banc des corps (2026-09-23, 01:36, clarté moyenne des pixels du corps, portrait sur gris) : **0,98 à 1,05 à 0,8**, 1,00 à 1,18 à 0,2, 1,04 à 1,33 à 0,15.
+- **La rétrodiffusion des furtifs** (ordre de la session cloud, 00:30) : un Braconnier ou un Spectre éclairé par sa seule
+  rétrodiffusion ne doit jamais sortir plus sombre qu'aujourd'hui — mesuré aux lumières faibles : le Braconnier à 1,01 / 1,10 / 1,17 / 1,76 à 0,8 / 0,2 / 0,15 / 0,1, le Spectre à 0,98 / 1,00 / 1,04 / 1,28 — jamais plus sombre qu'aujourd'hui au-delà de 2 %.
+- **Empreinte** : corps seul, bouteille comprise, 16,8 à 17,4 px pour 17,5 permis, debout, accroupi, en marche et en
+  enjambement ; l'ensemble, arme comprise, ne s'étend nulle part plus loin qu'avant. Zone de touche : `PLAYER_BODY_RADIUS`
+  18 px, inchangé.
+- **Noir absolu** : au banc des corps à lumière 0, gris comme portraits, pixel maximal **0**. La suite vérifie que le
+  portrait n'entre dans les deux fragments QUE par `portrait_teindre`, après la pâte et avant l'encre, et que l'include
+  n'écrit ni ALBEDO, ni EMISSION, ni `light()`.
+- **Le leurre** prend le corps de la classe de son poseur par le même `construire` : même peinture, même bouteille.
+- `Protocol.VERSION` reste 18.
+
+**Le contraste au sol.** Formules (suite) : le plâtre le plus sombre à plus de deux fois la clarté sRGB du sol peint
+(`SOL_DESSIN_B`), la rouille des pieds à plus de 1,15 fois (d'où la rouille à 0,55 du plâtre, et non 0,19 comme sur les
+portraits). En jeu (`--cadrage corps` de `tools/banc_iso_beaute.gd` : J2 debout dans le faisceau de J1, capturé avec puis
+sans son corps, sol pris dans un anneau de 6 à 30 px autour) : corps / sol **1,10 peint contre 0,89 au gris** dans la même série (01:36). ⚠️ Cette mesure est bruitée d'une passe à l'autre
+(le gris a lu 1,36, 1,10, 0,98, 1,26 et 1,01 sur cinq passes) : elle ne compare que gris et portrait pris dans la même série.
+
+**⚠️ Question ouverte : tout près du noir, le portrait se voit un peu PLUS que le gris.** À 0,1 de lumière la clarté moyenne
+passe à 1,22 – 2,57 du gris, et à 0,06 l'Allumeur peint montre 1 200 pixels là où le gris est entièrement noir. La pâte
+décide toujours sur le gris ; c'est la QUANTIFICATION de l'image, à 1-3 niveaux sur 255 : le gris y arrondit à 0 ou 1, le
+plâtre relevé (×1,28 à ×1,35) à 1 ou 2. Aux lumières utiles le rapport reste à ±5 %. Signalé à la session cloud (plafonner
+la teinte à la clarté du gris sous quelques niveaux, ou l'accepter), pas corrigé seul : c'est un arbitrage de visibilité.
+
+**Preuves.** Suite `tools/test_corps_portraits.gd` (dans le lot) : vue rouge sur deux sabotages de `voxel_catalogue.gd`
+(une bouteille profonde de 0,6 tuile : corps seul 36,6 à 39,6 px ; la rouille des portraits à 0,19 : pieds à 0,49 du sol),
+puis verte (123 vérifications). `test_voxel_corps` (515) et `test_iso_beaute` (154) verts. Planche `docs/iso/planche_corps_portraits.jpg`
+(`docs/iso/planche_corps_portraits.py`) : chaque classe à côté de son portrait, au gris d'ISO3 à 0,8, peinte à 0,8, 0,2 et
+0. Lot complet vert (434 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 01:44). La bouteille ne se voit que de dos ou de profil (au banc, face à la caméra, elle est cachée) ; les
+accessoires peints sont des aplats sur les faces du torse. À trancher par Adrien sur la planche : allumer ou non le drapeau.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

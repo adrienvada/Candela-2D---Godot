@@ -81,6 +81,7 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled, blend_mix, dept
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
+#include "res://iso_corps_portrait.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -194,6 +195,10 @@ void fragment() {
 	vec2 motif = vec2(monde.x + monde.z, -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
 	float px_monde = max(max(fwidth(monde.x), fwidth(monde.y)), fwidth(monde.z));
+	// ISO12 — l'aspect des corps d'après les dix portraits (`iso_corps_portrait.gdshaderinc`) : la couleur du portrait AU
+	// fragment, posée plus bas sur la lumière déjà rendue (`portrait_teindre`). Sans portrait, rien ne change.
+	vec3 fiche = portrait_fiche(couleur_fiche.rgb, local, demi, echelle, normale_locale, monde * pixels_par_unite,
+		pixels_par_unite);
 
 	vec3 c;
 	if (capteur_actif) {
@@ -219,6 +224,9 @@ void fragment() {
 	if (modele > 0.5) {
 		c = min(pate_facteur(c, modele_du_corps(normale_monde)), couleur_fiche.rgb);
 	}
+	// ISO12 — le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, sans jamais décider où elle se voit
+	// (`portrait_teindre`) : les seuils de visibilité restent ceux d'hier, à toute lumière.
+	c = portrait_teindre(c, fiche, couleur_fiche.rgb);
 	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
 	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran
 	// comme f^2,4 (une encre de 0,25 tombait à 1/255, pas à 7/255) ; `pate_facteur`

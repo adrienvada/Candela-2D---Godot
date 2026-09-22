@@ -38,7 +38,7 @@
 ## Vraie fenêtre, jamais headless. Ses appuis sont vérifiés par `tools/test_iso_beaute.gd`.
 extends "res://tools/banc_iso.gd"
 
-const CADRAGES := ["mur", "planche", "e1", "rasante"]
+const CADRAGES := ["mur", "planche", "e1", "rasante", "corps"]
 ## ISO7b — la scène rasante : J1 à une tuile de la face, mesurée sur quatre tuiles de part et d'autre de lui.
 const RASANTE_DISTANCE_PX := 35.0
 const RASANTE_DEMI_FACE_PX := 280.0
@@ -134,6 +134,9 @@ func _controler_la_beaute() -> void:
 				mat.set_shader_parameter(p, _pose[p])
 	if _cadrage == "rasante":
 		await _controler_la_rasante(presentation, materiaux)
+		return
+	if _cadrage == "corps":
+		await _controler_le_contraste(presentation)
 		return
 	_poser_le_cadrage()
 	if _fusee:
@@ -290,6 +293,12 @@ func _poser_le_cadrage() -> void:
 		_face_e1 = _face_sud_de_mur_haut(p1.global_position)
 		p1.global_position = _face_e1 + Vector2(0.0, 160.0)
 		p2.global_position = _face_e1 + Vector2(-150.0, 45.0)
+	elif _cadrage == "corps":
+		# ISO12 — le contraste corps / sol : J1 éclaire la face sud de 160 px (comme « e1 »), J2 debout 90 px devant lui,
+		# dans son faisceau, sur le sol. `--torches j1` : J2 n'ajoute pas sa lumière.
+		_face_e1 = _face_sud_de_mur_haut(p1.global_position)
+		p1.global_position = _face_e1 + Vector2(0.0, 160.0)
+		p2.global_position = _face_e1 + Vector2(0.0, 70.0)
 	elif _cadrage == "rasante":
 		# J1 à une tuile d'une longue face sud ; J2 écarté, torche éteinte (`--torches j1`) : seule la lampe de J1 compte.
 		_face_e1 = _face_sud_longue(p1.global_position)
@@ -349,7 +358,7 @@ func _tenir_le_cadrage() -> void:
 			Input.action_press(voulue, 1.0)
 		_tenir_les_torches()
 		return
-	if _cadrage == "e1":
+	if _cadrage == "e1" or _cadrage == "corps":
 		p1.rotation = -PI / 2.0
 		p2.rotation = 0.0
 		# ⚠️ **La visée se tient par le stick, pas par `rotation`** : `LocalInputProvider.get_aim_direction` rend la
@@ -753,3 +762,105 @@ static func mesurer_face(image: Image, zone: Rect2, exclu: Rect2 = Rect2()) -> D
 				g += p.g
 	return {"moyenne": somme / maxf(1.0, pixels), "eclairee": somme_eclairee / maxf(1.0, eclaires),
 		"eclaires": eclaires, "pixels": pixels, "rg": r / maxf(g, 1e-6)}
+
+
+# ---------------------------------------------------------------------------
+# ISO12 — LE CONTRASTE D'UN CORPS SUR LE SOL
+# ---------------------------------------------------------------------------
+
+## `--cadrage corps` : J2 dans le faisceau de J1, capturé avec son corps, puis sans (le voxel de J2 masqué, rien d'autre
+## ne bouge), puis avec encore (la dérive). Le corps = les pixels qui changent ; le sol = un anneau de 6 à 30 px autour,
+## hors du corps. Mesure : luminance moyenne du corps et du sol autour (Rec. 709 sur les valeurs affichées), leur rapport,
+## et la teinte moyenne du corps. À lancer avec et sans `--corps=portraits`.
+func _controler_le_contraste(presentation: Node) -> void:
+	_poser_le_cadrage()
+	var voxels: Array = presentation.get("_voxels")
+	var corps: Node3D = voxels[1] if voxels.size() > 1 else null
+	if corps == null:
+		printerr("✗ contraste : aucun corps voxel pour J2")
+		_sortir(4)
+		return
+	for i in 240:
+		_tenir_le_cadrage()
+		await get_tree().process_frame
+	var images := []
+	for visible in [true, false, true]:
+		corps.visible = visible
+		for i in 10:
+			_tenir_le_cadrage()
+			await get_tree().process_frame
+		var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+		if image == null:
+			printerr("✗ aucune image rendue en 15 s")
+			_sortir(4)
+			return
+		images.append(image)
+	corps.visible = true
+	(images[0] as Image).save_png(_capture)
+	(images[1] as Image).save_png(_capture.get_basename() + "_sans_corps.png")
+	var m := mesurer_contraste(images[0], images[1], images[2])
+	print("BANC_ISO_CONTRASTE portraits=%s corps=%d px lum=%.1f teinte=%.1f° r/g=%.2f | sol autour=%d px lum=%.1f | rapport corps/sol=%.2f | dérive=%d"
+		% [VoxelCatalogue.portraits_actifs(), m["corps_n"], m["corps_lum"], m["corps_teinte"], m["corps_rg"],
+		m["sol_n"], m["sol_lum"], m["rapport"], m["derive"]])
+	_sortir(0)
+
+
+## Le corps : pixels qui changent de plus de 6/255 entre « avec » et « sans », hors de la dérive (« avec » contre
+## « avec bis »). Le sol : les pixels de l'image « avec » à 6-30 px d'un pixel du corps, hors du corps, éclairés (> 2).
+static func mesurer_contraste(avec: Image, sans: Image, avec_bis: Image) -> Dictionary:
+	var w := avec.get_width()
+	var h := avec.get_height()
+	var masque := {}
+	var x0 := w
+	var y0 := h
+	var x1 := 0
+	var y1 := 0
+	var derive := 0
+	for y in h:
+		for x in w:
+			var a := avec.get_pixel(x, y)
+			if absf(_lum(a) - _lum(avec_bis.get_pixel(x, y))) * 255.0 > 6.0:
+				derive += 1
+				continue
+			if absf(_lum(a) - _lum(sans.get_pixel(x, y))) * 255.0 > 6.0:
+				masque[Vector2i(x, y)] = true
+				x0 = mini(x0, x)
+				y0 = mini(y0, y)
+				x1 = maxi(x1, x)
+				y1 = maxi(y1, y)
+	var somme := 0.0
+	var r := 0.0
+	var g := 0.0
+	var b := 0.0
+	for p: Vector2i in masque:
+		var c := avec.get_pixel(p.x, p.y)
+		somme += _lum(c)
+		r += c.r
+		g += c.g
+		b += c.b
+	var sol := 0.0
+	var n_sol := 0
+	for y in range(maxi(0, y0 - 30), mini(h, y1 + 31)):
+		for x in range(maxi(0, x0 - 30), mini(w, x1 + 31)):
+			if masque.has(Vector2i(x, y)):
+				continue
+			var dx := maxi(maxi(x0 - x, x - x1), 0)
+			var dy := maxi(maxi(y0 - y, y - y1), 0)
+			var d := sqrt(float(dx * dx + dy * dy))
+			if d < 6.0 or d > 30.0:
+				continue
+			var c := avec.get_pixel(x, y)
+			if _lum(c) * 255.0 <= 2.0:
+				continue
+			sol += _lum(c)
+			n_sol += 1
+	var n := maxi(1, masque.size())
+	var moy_corps := somme / float(n) * 255.0
+	var moy_sol := sol / float(maxi(1, n_sol)) * 255.0
+	return {"corps_n": masque.size(), "corps_lum": moy_corps, "sol_n": n_sol, "sol_lum": moy_sol,
+		"rapport": moy_corps / maxf(moy_sol, 0.001), "corps_rg": r / maxf(g, 0.0001),
+		"corps_teinte": Color(r / n, g / n, b / n).h * 360.0, "derive": derive}
+
+
+static func _lum(c: Color) -> float:
+	return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b

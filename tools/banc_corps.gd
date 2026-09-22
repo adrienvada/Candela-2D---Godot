@@ -35,6 +35,7 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn -- --epaisseur=x1_6 --lumiere=0.8 --capture=/chemin/apres.png
 ##   godot --path . tools/banc_corps.tscn -- --encre=0.03 --lumiere=0.8 --capture=/chemin/encre.png
 ##   godot --path . tools/banc_corps.tscn -- --modele --lumiere=0.8 --capture=/chemin/modele.png
+##   godot --path . tools/banc_corps.tscn -- --corps=portraits --lumiere=0.8 --capture=/chemin/portraits.png
 ##
 ## `--epaisseur` (ISO3 vague 4) : `leger` (×1,0, l'ancien gabarit vague 0-3),
 ## `x1_3`, `x1_6` (le réglage par défaut si l'option est omise — voir
@@ -153,6 +154,10 @@ func _lire_arguments(args: PackedStringArray) -> void:
 						% [", ".join(VoxelCatalogueT.EPAISSEUR_REGLAGES.keys()), val])
 			"encre": _encre = maxf(0.0, float(val))
 			"modele": _modele = true
+			# ISO12 — lu par `VoxelCatalogue.portraits_actifs()` : les corps d'après les dix portraits de classe.
+			"corps":
+				if val != "portraits":
+					push_warning("banc_corps : --corps attend portraits (reçu « %s »)" % val)
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:

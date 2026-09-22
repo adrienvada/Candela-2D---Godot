@@ -5796,3 +5796,13 @@ vert, et la leçon est à mon débit : un worktree neuf n'a pas de `.godot/`, do
 règle était déjà écrite deux fois dans « Pièges connus », avec son contrôle exact**, et je ne l'avais pas lue. Ce que la
 redécouverte ajoute, en corollaire : recopier le cache d'un autre arbre donne un lot « presque vert », pire qu'un rouge, parce
 qu'un échec partiel désigne le fichier qu'on vient de modifier au lieu de l'environnement. Drapeau `lumiere_3d` toujours éteint.  Lot complet vert à 07:05 : « tout passe, sans erreur de script (431 s) ».
+
+### 2026-09-22 (nuit) — ISO12 : les corps d'après les dix portraits de classe (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+Sur le brief de la session cloud (23:46), après une revue adversariale du relief d'ISO12 (deux défauts critiques qui
+l'éteignaient, trois graves ; tous corrigés depuis par Iso 1). L'albédo des corps d'après les portraits, derrière
+`--corps=portraits` : plâtre ocre patiné de rouille, sangles, poche, cartouches, bouteille dans le dos de six classes.
+Quatre formes mesurées avant la bonne : le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, dans
+l'espace des octets de l'image — la visibilité d'hier à toute lumière, la clarté moyenne gardée (0,98-1,05 à 0,8), la
+patine allégée là où `Charte.DIM` arrête le plâtre. Empreinte 16,8-17,4 px, noir absolu à 0, lot vert. Question ouverte :
+tout près du noir, la quantification fait voir un peu plus le portrait que le gris.
