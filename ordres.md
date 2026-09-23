@@ -256,18 +256,20 @@ Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse Lis
 
 ## ORDRE 189 — 23/09 06:11 (relayé 06:12 à Gadgets)
 
-## ORDRE 190 — 23/09 06:16
-RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:16. (1) Arrêt bien fait, et ta lecture est la bonne : même rendu dans les quatre prises (175 appels, 1 379 objets), C se dégrade aussi, et le 1 % bas baisse de prise en prise. C'est la machine, pas le 75°. Reprise : tes deux paires C/A. Note l'état du Mac avant et après chaque prise (top -l 1 -o cpu, les cinq premières lignes). J'annonce à toutes les sessions une règle : pendant un relevé de cadence, aucun calcul lourd sur le Mac. Si les deux paires sont conformes (A dans le bruit de ton tableau), commit L1 ; sinon, arrêt et relevé de l'état du Mac.
-(2) Le 75° est accepté sur tes captures : la couture vue à 45° disparaît à 75°, le corps du porteur est identique, le recouvrement torche/fusée est sous le bruit. Ton test des torches (6 406 vérifications, pire cas à 0,31 % hors du spot) le garde.
-(3) L'exception du masque est tranchée, et le piège bien consigné : deux passes ne se comparent qu'au même rang de la série.
-(4) Les halos : confirmé. Deux lampes à ombre, les halos (masques 16 et 32), paient leur passe dans des viewports où elles n'éclairent rien. Mais la passe d'ombre de la fusée valait 0,09 ms, et celle des halos en trop est du même ordre : rangé comme gâchis connu, pas de code maintenant.
-(5) Le haut de la face proche, 174 en A contre 126 en C, identique à 45° et à 75° : c'est le relief face à la lampe, au-dessus de la 2D. Il reste dans la bride (rien d'allumé qui ne le soit en 2D) et il est déjà noté. Je le garde pour la planche finale : Adrien le jugera à l'œil.
+## ORDRE 190 — 23/09 06:16 (relayé 06:17 à Iso 1 Opus)
 
-## ORDRE 191 — 23/09 06:16
-RELAIS → « ISO7 Beauté Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:16. RÈGLE NOUVELLE, pour toutes les sessions, dès maintenant : pendant un relevé de cadence d'une autre session, aucun calcul lourd sur le Mac (analyse d'images en python, lot, import, compilation). On attend la fin du relevé. Le verrou couvre Godot ; la cadence, elle, a besoin d'une machine calme. Iso 1 vient de voir un 1 % bas baisser de prise en prise (79, 73, 66, puis 34), à rendu identique : la machine n'était pas calme. Ta mesure du correctif passera après la reprise d'Iso 1, sous le verrou, comme prévu. Et ton diagnostic est très bon : le domaine était faux, pas le seuil. Ma piste de la couverture du bord était fausse, ton essai opaque l'a montré.
+## ORDRE 191 — 23/09 06:16 (relayé 06:17 à ISO7 Beauté Opus)
 
-## ORDRE 192 — 23/09 06:16
-RELAIS → « ISO7 Gadgets et lumière Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:16. RÈGLE NOUVELLE, pour toutes les sessions, dès maintenant : pendant un relevé de cadence d'une autre session, aucun calcul lourd sur le Mac (analyse d'images en python, lot, import, compilation). On attend la fin du relevé. Le verrou couvre Godot ; la cadence, elle, a besoin d'une machine calme. Iso 1 vient de voir un 1 % bas baisser de prise en prise (79, 73, 66, puis 34), à rendu identique : la machine n'était pas calme. Et pour tes propres relevés : note l'état du Mac avant et après chaque prise (top -l 1 -o cpu, les cinq premières lignes). Pour ta décomposition de 05:32-05:55, dis-moi si d'autres sessions calculaient pendant tes prises ; c'était peut-être la cause de ta prise anormale aux 59 images lentes.
+## ORDRE 192 — 23/09 06:16 (relayé 06:17 à Gadgets)
 
-## ORDRE 193 — 23/09 06:17
-RELAIS → « ISO7 Gadgets et lumière Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:17. Oui : une prise de recensement sur le Cloître, dans ton prochain passage, sans code. Estime le coût à partir de ta propre mesure : une lampe à ombre à huit occulteurs valait 0,09 ms, et le coût est proportionnel au nombre d'occulteurs de l'union. Sous 0,3 ms de dessins inutiles, la question est close pour de bon ; au-dessus, elle concerne tout le jeu, et on la rouvre à part. Tes deux notes de méthode sont justes et je les consigne.
+## ORDRE 193 — 23/09 06:17 (relayé 06:17 à Gadgets)
+
+## ORDRE 194 — 23/09 06:18
+RELAIS → « Can2d - Mise à jour artefact de suivi - Sonnet LOCAL » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:18. Vérification de la v265 par diff : fidèle dans l'ensemble, et le JSON de Gadgets est exact. Six points à corriger dans la v266, tous dans le texte :
+(1) Panneau ISO12 : « Coût total : 3,8 ms par image » → 3,39 ms, le total de la décomposition. 3,8 ms était l'écart médian lu plus tôt dans le tableau d'Iso 1, et les 78 % se rapportent à 3,39.
+(2) « le « 0,77 » qu'on citait était un rapport médian qui cachait des écarts locaux de 100 niveaux » → c'est le « 1,01-1,03 » annoncé après le correctif (ton JSON le dit bien) ; 0,77 était la valeur d'avant le correctif.
+(3) « Les dix-huit hoquets […] : c'était le bruit d'un Mac chaud » → la cause n'est pas établie. Iso 1 les juge vraisemblablement dus à une charge passagère, et le relevé montre surtout le bruit du Mac chaud.
+(4) « jusqu'à 2 % de la silhouette 2D échappait au spot » → de l'empreinte 2D de la torche.
+(5) « ta règle d'équité tient à 0,8 et 0,2 » → la règle d'équité posée par la session cloud (ordre 145), pas par Adrien.
+(6) Récit : « l'hypothèse que t'avait proposée la session cloud » → l'hypothèse de la session cloud : elle a été proposée à Gadgets, pas à Adrien.
+Ta prudence sur les numéros de version des pages d'Adrien est juste. Le reste (le domaine de couleur trouvé par Beauté, les économies du shader de fumée, les halos confirmés, l'arrêt de cadence d'Iso 1) viendra avec la Synthèse 127. Je vérifierai la v266 par diff.
