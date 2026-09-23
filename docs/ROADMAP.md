@@ -26393,6 +26393,24 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     de chaque poste — C, A, B, D et D-léger (ombres sur les seuls spots) alternés dans les quatre scènes. Sa règle, posée avant
     la mesure : la variante retenue garde au moins 90 % du 1 % bas de C dans chaque scène, au banc chaud ; la cible absolue
     (≥ 60) reste celle qu'Adrien certifiera Mac froid, et d'ici là la lumière 3D reste éteinte par défaut.
+22. **LE TABLEAU DE CADENCE DE RÉFÉRENCE — aucune variante ne tient la règle** (9d0e90e, 2026-09-23 04:21-04:43, 60 s par
+    relevé, variantes alternées dans chaque scène, Mac chaud, chauffe par couverture). fps médian / 1 % bas, et la part du 1 %
+    bas de C (le jeu sans lumière 3D) :
+
+    | scène | C | A (sans ombres) | B (ombres) | D (lampe dominante) | D-léger (ombres des spots seuls) |
+    |---|---|---|---|---|---|
+    | vue unique, torche | 105/75 | 84/74 (99 %) | 65/59 (79 %) | 65/55 (73 %) | 61/52 (69 %) |
+    | vue unique, fusée | 75/39 | 61/48 (123 %) | 43/34 (87 %) | 38/31 (79 %) | 45/33 (85 %) |
+    | écran scindé, torche | 80/50 | 72/19 (38 %) | 51/44 (88 %) | 48/34 (68 %) | 47/36 (72 %) |
+    | écran scindé, fusée | 53/44 | 45/36 (82 %) | 32/25 (57 %) | 30/22 (50 %) | 34/28 (64 %) |
+
+    La règle de la session cloud, posée AVANT la mesure : garder au moins 90 % du 1 % bas de C dans les quatre scènes. **Aucune
+    variante ne la tient.** A la tient en vue unique ; en écran scindé à la torche, 18 hoquets de 53 à 111 ms, lampes sans ombre,
+    loin de tout premier allumage, cause non trouvée — à refaire avant de conclure. **Ce qui pèse** (médianes) : les OMBRES (B
+    contre A) −23 à −30 % ; la boucle de dominance (D contre B) 0 à −12 % ; les ombres omni (D-léger contre D) +13 à +18 % sous
+    la fusée seulement. Garder les ombres portées à ce seuil demande donc de rendre l'ombre elle-même moins chère, pas la
+    dominance. Plus aucun hoquet au-dessus de 50 ms dans 19 relevés sur 20 : la chauffe par couverture tient. Décision en
+    attente de la session cloud, et d'Adrien pour les ombres portées (Q20).
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).
