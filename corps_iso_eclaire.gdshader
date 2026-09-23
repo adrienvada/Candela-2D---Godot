@@ -289,7 +289,11 @@ void fragment() {
 	// Un noir déjà nul le reste (0 → 0, garanti par `pate_facteur`). Jamais sur
 	// `silhouette_N`, composée après, plus bas.
 	c = pate_facteur(c, pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde));
-	c = pate_facteur(c, mannequin_segments(local, demi, echelle, normale_locale, pixels_par_unite, px_monde, niveau));
+	// Gardé : sans le drapeau, même un facteur de 1 ferait un aller-retour par l'espace affiché (exact à 1e-7, pas au bit ;
+	// remarque d'Iso 1, 00:58). Le jeu par défaut est inchangé par construction.
+	if (mannequin >= 0.5) {
+		c = pate_facteur(c, mannequin_segments(local, demi, echelle, normale_locale, pixels_par_unite, px_monde, niveau));
+	}
 	// ISO12 — le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, encre comprise, sans jamais décider où
 	// elle se voit (`portrait_teindre`) : les seuils de visibilité restent ceux d'hier, à toute lumière. ⚠️ APRÈS l'encre :
 	// posée avant, la teinte laissait l'encre (un facteur en valeur décodée, canal par canal) assombrir moins le rouge d'un ocre
