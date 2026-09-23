@@ -26543,6 +26543,17 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     Le relevé `top` de la relecture est valable (deux passes, la seconde seule lue — `top -l 1` rend 0,0 % pour tout processus,
     vu par ISO7 Gadgets sur ses propres relevés) : après CHAQUE prise, C comme A, l'indexation Spotlight
     (`spotlightknowledged`) prenait 80 à 87 % d'un cœur.
+    **La prise A de 180 s** (ordre de la session cloud, 07:46 ; sur 7cd18c0, 07:59-08:02 ; verdict posé d'avance : dérive de la
+    machine, accumulation dans A, charge extérieure, ou bruit). Avec la PORTE DE MESURE de la session cloud (07:52) : un `top`
+    continu, un échantillon par 10 s, chacun la moyenne des 10 s écoulées ; la prise ne part que si Spotlight, mds et mdworker
+    restent sous 10 % d'un cœur sur deux échantillons de suite — ouverte au bout de 40 s. Résultat : **médiane plate** sur trois
+    minutes (84 à 88 fps par tranche), **comptes plats** (174-175 appels, 1 378-1 379 objets) : ni dérive de la machine, ni
+    accumulation. Les images du 1 % le plus lent arrivent en PAQUETS (19 entre 20 et 30 s, 60 entre 60 et 70 s, 34 puis 16 entre
+    100 et 120 s, presque rien ailleurs) ; deux coïncident avec une charge extérieure au `top` (PerfPowerService et kernel_task ;
+    une aide de Chrome, puis de Claude), le troisième n'a pas de cause visible à 10 s de résolution. L'indexation n'a pesé
+    qu'une fois (55 % d'un cœur) pendant la chauffe, hors de la fenêtre de mesure. 1 % bas hors 10 s sur 180 s : **71** (78 et 75
+    sur les prises d'une minute) — une prise plus longue ramasse plus de paquets. **Lecture : une charge extérieure par
+    intermittence plus du bruit, pas un défaut de A** ; les paquets pèsent sur le 1 % bas bien plus que sur la médiane.
 27. **L2, LE SOL ET LES MURS — le principe d'identité les porte ; ce qui manquait était une garde et une preuve** (ordre 181,
     2026-09-23). Le brief demandait des matériaux éclairés qui gardent les textures d'ISO7, l'encre, le lavis, le contact au
     pied, et un sang qui module l'albédo. Depuis la v27, le sol et les murs éclairés recopient la couleur du chemin 2D, étape
