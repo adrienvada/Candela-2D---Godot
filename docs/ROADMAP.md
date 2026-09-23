@@ -2427,6 +2427,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **ISO13 — la référence du look devient les 19 illustrations d'ISO Assets posées dans les menus (pas 7) ; là où elles contredisent les planches du DA, elles l'emportent** — nommément la fumée AMBRE de `fumee_03` et le lavis SANS hachures de `face_mur_01` et `sol_01` (2026-09-23 au soir, Adrien, rapporté par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » à 23:58 : « Il faut vraiment à la fin que le visuel du jeu ressemble au plus proche aux visuels générés par assets pour illustrer le jeu dans les menus. Évalue à chaque fois ce qu'il manque. ») | Le jeu doit ressembler à ce que ses menus promettent : un joueur qui voit l'illustration puis la partie ne doit pas changer de monde. « Évalue à chaque fois ce qu'il manque » : chaque lot se juge contre ces illustrations, écart par écart, et non contre une planche du DA qu'elles ont dépassée. Première évaluation de la session cloud (la base, neuf familles, rien de tenu) : https://claude.ai/artifact/YKYXKv4Nc9NqKUYvFmcrLU . Le chantier s'appelle ISO13 ; cette branche intègre les lots d'ISO7 Beauté et d'ISO7 Gadgets à mesure, comme pour ISO12 — un lot vert, les ancrages relus, les drapeaux éteints jusqu'à la mesure. |
 | **Q20 — on garde la lumière 2D d'ISO11 ; la lumière 3D (mode A, sans ombres) reste dans le code telle quelle, éteinte par défaut, sans suite ; pas de mode B (ombres portées)** (2026-09-23 à 19:44, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Ok on suit ton avis », sur son avis C) | **Sous une fusée, la cellule « vue unique » tombe** : 54,8 au 1 % bas pour 60 visés, 74 à 84 % du jeu actuel selon les prises retenues (série propre d'ISO7 Gadgets, 17:37-18:21, 90 s de repos entre les prises, porte d'indexation). **Le relief ne coûte rien de mesurable** (−0,10 ms contre A sans relief) : les **2,69 ms** par image de A sont dans le chemin des matériaux éclairés eux-mêmes (bride, lecture de lightmap, chemin d'identité), et aucun drapeau existant ne les réduit sans changer l'image — `--lampe-dominante` coûte même 1,6 ms de plus, par construction (un correctif d'image conçu pour les ombres). **À l'œil**, la planche d'ISO7 Beauté ne montre qu'un modelé léger des faces sous la torche (+4 à +10 %) et rien sous une fusée : le gain visible ne paie pas le coût. Les ombres portées étaient déjà en NON-GO (23 à 30 % de cadence). Le code reste, éteint : `Presentation3D.lumiere_3d` faux par défaut, éteint en écran scindé, gardé par `test_banc` ; aucune suite ne l'allume en jeu. |
 | **En ligne, le cadrage et la portée sont les mêmes pour tous : zoom ×1,8, décalage 0,25, portée ×0,75, quoi que disent les drapeaux ou `settings.cfg`** (2026-09-15 à 13:58, session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final, en réponse au correctif d'ISO8 sur la portée : « le cadrage serré non plus n'est pas neutre, un flash ou un cône hors champ n'est pas vu, donc un joueur à --zoom=1.0 voit plus qu'un joueur à ×1,8 ») | La lumière est la seule information du jeu, et le cadrage en fait partie : ce qu'une caméra ne montre pas, un joueur ne le voit pas. `GameSettings.accorder_au_mode(en_ligne)`, appelé par `GameState` à chaque départ de manche, pose les constantes pour `ONLINE_HOST` et `ONLINE_CLIENT` — les mêmes dans le même code sur les deux machines, donc **aucun état réseau et `Protocol.VERSION` inchangé** ; les valeurs locales (drapeaux, réglage enregistré) ne valent qu'en écran scindé et à l'entraînement. Les drapeaux `--zoom=`, `--decalage=` et `--torche=` sont ignorés hors build debug, comme `--eos-ephemeral`. ISO9 n'a rien de plus à imposer sur ces trois valeurs. |
 | **Serrer la caméra et raccourcir les torches, pour un duel plus claustrophobe** (2026-09-15 à 12:20, Adrien, à la session cloud : « Si tu juges qu'il faut changer les proportions, zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pas » ; chantier ISO8, brief de la session cloud de 12:25) | Sur les captures d'ISO6, le duel montre toute l'arène et le volume de l'iso ne se voit pas ; les planches du DA sont trois fois plus serrées. Les valeurs ne sont pas choisies par l'agent : un banc photographie les variantes (zoom ×1,0 à ×2,2, portée 1,6 à 1,0, demi-angle 35° et 30°) et la session cloud tranche sur la planche. La caméra est une présentation (aucune simulation) ; la portée des torches est une valeur de jeu que l'éblouissement suit, en un facteur global identique pour tous. Ni protocole ni zone de touche ne changent, et les deux joueurs ont la même caméra et la même torche — en ligne, le facteur doit valoir la même chose des deux côtés (ISO9). |
@@ -9154,7 +9155,31 @@ défaut — ce que le banc disait viser, le cône le plus large, donc le pire ca
 reproduit les séries passées. Le bouton pressé est celui dont l'index de classe est celui du slug (`UI.set_weapon_selection`),
 la garde d'intégrité vérifie ce chemin, et **la prise est REFUSÉE si la classe équipée diffère de la classe voulue** — la
 ligne « armes : » imprime désormais aussi les slugs. **Règle : lire ce que le banc IMPRIME de sa configuration, jamais ce que
-ses constantes annoncent ; et une ligne qui dit la vérité doit décider, pas seulement témoigner.**
+ses constantes annoncent ; et une ligne qui dit la vérité doit décider, pas seulement témoigner.** Première série sur le banc
+corrigé (ISO7 Gadgets, 2026-09-24 00:03-00:34, sur b193420, jeu par défaut — gris, lumière 3D éteinte —, vue unique sous une
+fusée, huit prises en miroir, 90 s de repos) : **au pompe, médiane des médianes 85, médiane des 1 % bas 77, les huit prises
+au-dessus de 60 (la plus basse à 68) ; au fusil 83 / 77.** Les huit lignes « armes : » disaient la classe voulue, sans un
+désaccord. Les séries passées, au fusil sans le savoir, n'étaient donc pas fausses : elles mesuraient une autre classe que celle
+qu'elles nommaient. ⚠️ Et, deuxième série de suite, la porte d'indexation d'AVANT-lancement avait déclaré propres quatre prises
+que la relecture de toute la fenêtre a trouvées indexées (jusqu'à 65 % de Spotlight) — sans effet lisible sur leur cadence ici :
+la porte reste une précaution, la relecture d'après coup est obligatoire.
+
+ISO12 (2026-09-23, 23:04), payé par ISO7 Gadgets, dont la mesure n'a jamais démarré : **`tell application "Godot" to activate`
+RELANCE GODOT S'IL EST DÉJÀ ARRÊTÉ.** Mes lanceurs de prise (hors dépôt) lançaient le banc, attendaient 4 s, puis ramenaient
+Godot au premier plan par `osascript`. Une prise refusée en moins de 4 s (`--classe=licorne`, le refus voulu) avait déjà
+quitté : « activate » a ouvert le GESTIONNAIRE DE PROJETS (parent 1, dossier courant `/`, sans argument), resté ouvert 55 min
+— un Godot qui tourne interdit toute mesure (`pgrep -x Godot`), et il ne ressemblait à aucun banc. **Règle : ne ramener au
+premier plan qu'un processus dont on sait qu'il vit (`kill -0 $pid`) ; un Godot sans argument sur le Mac vient d'un
+« activate » ou d'un double-clic, pas d'un banc — on cherche son parent avant d'y toucher.** Aucun script du dépôt n'utilise
+`osascript` (vérifié).
+
+ISO12 (2026-09-24, 00:45), règle commune tirée par ISO7 Gadgets de la série de la nuit et posée par la session cloud :
+**LES FENÊTRES DE MESURE.** Celui qui mesure annonce sa fenêtre au DÉMARRAGE de sa première prise, pas à la prise du verrou
+— un verrou pris ne dit pas qu'une mesure a commencé, et l'épisode de l'« activate » ci-dessus s'est glissé dans cet écart.
+Il demande « aucune charge lourde », pas seulement « pas de Godot » : ni Godot hors de sa mesure, ni génération d'images, ni
+navigateur actif, ni script d'analyse. Chacun s'abstient jusqu'à l'annonce de fin. Et la relecture d'après coup cherche TOUT
+processus au-dessus de 10 % d'un cœur dans la fenêtre, pas une liste de noms connus — une liste ne voit que ce qu'on a déjà
+rencontré.
 
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 
