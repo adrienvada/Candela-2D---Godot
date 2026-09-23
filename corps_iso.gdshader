@@ -224,9 +224,6 @@ void fragment() {
 	if (modele > 0.5) {
 		c = min(pate_facteur(c, modele_du_corps(normale_monde)), couleur_fiche.rgb);
 	}
-	// ISO12 — le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, sans jamais décider où elle se voit
-	// (`portrait_teindre`) : les seuils de visibilité restent ceux d'hier, à toute lumière.
-	c = portrait_teindre(c, fiche, couleur_fiche.rgb);
 	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
 	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran
 	// comme f^2,4 (une encre de 0,25 tombait à 1/255, pas à 7/255) ; `pate_facteur`
@@ -234,6 +231,11 @@ void fragment() {
 	// Un noir déjà nul le reste (0 → 0, garanti par `pate_facteur`). Jamais sur
 	// `silhouette_N`, composée après, plus bas.
 	c = pate_facteur(c, pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde));
+	// ISO12 — le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, encre comprise, sans jamais décider où
+	// elle se voit (`portrait_teindre`) : les seuils de visibilité restent ceux d'hier, à toute lumière. ⚠️ APRÈS l'encre :
+	// posée avant, la teinte laissait l'encre (un facteur en valeur décodée, canal par canal) assombrir moins le rouge d'un ocre
+	// que le gris, aux faibles lumières — un bord gris à (3, 4, 5) sortait peint à (9, 3, 0) (banc des corps, 2026-09-23 03:26).
+	c = portrait_teindre(c, fiche, couleur_fiche.rgb);
 
 	float o = clamp(deux ? opacite_2 : opacite_1, 0.0, 1.0);
 	vec4 silhouette = deux ? silhouette_2 : silhouette_1;

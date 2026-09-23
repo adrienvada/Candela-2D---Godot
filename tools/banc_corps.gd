@@ -548,6 +548,19 @@ func _capturer_puis_quitter() -> void:
 		push_error("banc_corps : écriture impossible de %s (%s)" % [_capture, error_string(erreur)])
 		get_tree().quit(5)
 		return
+	# ISO12 — avec `--corps=portraits`, la même scène reprise le portrait ÉTEINT sur les mêmes matériaux (`_gris.png`) : la
+	# peinture seule change entre les deux, rien d'autre (deux lancements séparés ne se comparent pas au pixel près).
+	if VoxelCatalogueT.portraits_actifs():
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 0.0)
+		for i in _frames:
+			await get_tree().process_frame
+		var gris: Image = await RenduCommun.capturer(get_tree(), 60000)
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 1.0)
+		if gris != null:
+			gris.save_png(_capture.get_basename() + "_gris.png")
+			print("BANC_CORPS capture du même corps, portrait éteint : %s" % (_capture.get_basename() + "_gris.png"))
 	print("BANC_CORPS capture %s %dx%d (lumière=%.2f, capteur=%s, opacité=%.2f, silhouette=%s)"
 		% [_capture, image.get_width(), image.get_height(), _lumiere,
 			str(_capteur_actif), _opacite, str(_mode_silhouette == 1)])

@@ -2,8 +2,8 @@
 ##
 ## Ce que la suite prouve, sans fenêtre :
 ## - **le drapeau** : sans `--corps=portraits`, rien ne change (neuf boîtes, `portrait` à 0) ;
-## - **l'équité de la couleur** : le plâtre de chaque classe a la luminance de son gris d'ISO3 (sa visibilité ne change
-##   pas), tout le reste est plus sombre, et rien ne dépasse `Charte.DIM`, l'enveloppe des corps ;
+## - **l'équité de la couleur** : toutes les couleurs d'une classe ont la clarté de son gris d'ISO3 — la peinture change la
+##   couleur, jamais la visibilité — et rien ne dépasse `Charte.DIM`, l'enveloppe des corps ;
 ## - **le noir absolu et la visibilité d'hier** : la pâte décide sur le gris de la classe où la lumière se voit, et le
 ##   portrait ne fait que TEINDRE la lumière rendue (`portrait_teindre`) : 0 reste 0, une lumière visible le reste ;
 ##   aucune émission, aucun `light()` touché — dans les deux shaders des corps ;
@@ -11,8 +11,8 @@
 ##   en marche et en enjambement, pour les dix classes ;
 ## - **la zone de touche** : `PLAYER_BODY_RADIUS` reste 18 px, et l'ensemble (arme comprise) ne s'étend pas plus loin
 ##   qu'avant ;
-## - **le contraste au sol** : sous la même lumière, le plâtre et même la rouille des pieds restent plus clairs que le
-##   sol peint ;
+## - **le contraste au sol** : la clarté relative de chaque pièce au sol est celle du gris (l'écart de couleur, lui, se
+##   mesure au banc) ;
 ## - `Protocol.VERSION` reste 18 : rien de ceci ne passe sur le fil.
 ##
 ## Ce qu'elle ne prouve pas : l'image. Le banc des corps (`tools/banc_corps.gd --corps=portraits`) et le banc de la vue
@@ -52,6 +52,7 @@ func _run() -> void:
 	_les_shaders()
 	await _les_corps()
 	_le_contraste_au_sol()
+	_le_banc()
 	_le_fil()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	VoxelCatalogue.forcer_portraits = -1
@@ -90,19 +91,22 @@ func _la_palette() -> void:
 		var p := VoxelCatalogue.palette_portrait(s)
 		var gris: float = VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche(s)["couleur"])
 		var ocre := VoxelCatalogue.luminance_affichee(p["ocre"])
-		var comp := VoxelCatalogue.COMPENSATION_PATINE_USEE if float(VoxelCatalogue.PORTRAITS[s]["usure"]) > 0.5 else VoxelCatalogue.COMPENSATION_PATINE
-		var attendu := minf(gris * comp, plafond)
-		var patine := float(p["patine"])
-		_check("%s : la patine s'allège juste assez quand le plâtre bute sur DIM (%.2f)" % [s, patine],
-			(patine == 1.0 and gris * comp <= plafond + 1e-6) or (patine < 1.0 and absf((1.0 - patine * (1.0 - 1.0 / comp)) * attendu - gris) < 0.002))
-		_check("%s : le plâtre a la luminance de son gris d'ISO3 relevée de la patine (%.4f ≈ %.4f, gris %.4f)" % [s, ocre, attendu, gris],
-			absf(ocre - attendu) < 0.002 and ocre >= gris)
-		var sombres := true
-		for cle in ["rouille", "brun", "arme"]:
-			sombres = sombres and VoxelCatalogue.luminance_affichee(p[cle]) < ocre
-		if (p["cartouche"] as Color).a > 0.0:
-			sombres = sombres and VoxelCatalogue.luminance_affichee(p["cartouche"]) < ocre
-		_check("%s : rouille, sangles, arme et cartouches plus sombres que le plâtre" % s, sombres)
+		# La peinture change la couleur, jamais la visibilité : toutes les couleurs à la clarté du gris (une teinte très saturée
+		# peut y perdre un peu, quand un canal bute sur 1 — jamais y gagner).
+		var egales := true
+		var detail := ""
+		for cle in ["ocre", "rouille", "brun", "arme", "bouteille", "cartouche"]:
+			if cle == "cartouche" and (p[cle] as Color).a <= 0.0:
+				continue
+			var l := VoxelCatalogue.luminance_affichee(p[cle])
+			if not (l <= gris + 0.003 and l >= gris - 0.02):
+				egales = false
+				detail += "%s %.4f " % [cle, l]
+		_check("%s : toutes les couleurs à la clarté du gris (%.4f), jamais au-dessus" % [s, gris], egales, detail)
+		var d_rouille := _ecart_de_teinte(p["ocre"], p["rouille"])
+		var d_sangle := _ecart_de_teinte(p["ocre"], p["brun"])
+		_check("%s : à clarté égale, la rouille et les sangles se détachent du plâtre par la teinte (%.2f, %.2f)" % [s, d_rouille, d_sangle],
+			d_rouille > 0.05 and d_sangle > 0.05)
 		var max_l := 0.0
 		for cle in ["ocre", "rouille", "brun", "arme", "bouteille", "cartouche"]:
 			max_l = maxf(max_l, VoxelCatalogue.luminance_affichee(p[cle]))
@@ -111,9 +115,16 @@ func _la_palette() -> void:
 	var gris_c := VoxelCatalogue.fiche("spectre")["couleur"] as Color
 	var ocre_c := VoxelCatalogue.palette_portrait("spectre")["ocre"] as Color
 	var nul := _teindre(Vector3.ZERO, ocre_c, gris_c)
-	var faible := _teindre(_lin(gris_c) * 0.02, ocre_c, gris_c)
+	var faible := _teindre(_lin(gris_c) * 0.2, ocre_c, gris_c)
 	_check("teinte : 0 reste 0, et une lumière faible sur le gris reste visible peinte (%.5f)" % faible.length(),
 		nul == Vector3.ZERO and faible.length() > 0.0)
+	var seuil := _lin(gris_c) * 0.01
+	_check("teinte : sous le seuil du noir, le gris tel quel (un pixel noir au gris l'est peint)", _teindre(seuil, ocre_c, gris_c) == seuil)
+	var milieu := _lin(gris_c) * 0.5
+	var lum_milieu := IsoPate.luminance(IsoPate.depuis_affiche(_teindre(milieu, ocre_c, gris_c)))
+	var lum_gris_milieu := IsoPate.luminance(IsoPate.depuis_affiche(milieu))
+	_check("teinte : à clarté égale de palette, la clarté à l'écran est celle du gris (%.4f ≈ %.4f)" % [lum_milieu, lum_gris_milieu],
+		absf(lum_milieu - lum_gris_milieu) < 0.004)
 	var plein := _teindre(_lin(gris_c), ocre_c, gris_c)
 	_check("teinte : sous le plafond du gris, jamais au-dessus du portrait", plein.x <= _lin(ocre_c).x + 1e-5
 		and plein.y <= _lin(ocre_c).y + 1e-5 and plein.z <= _lin(ocre_c).z + 1e-5)
@@ -124,6 +135,9 @@ func _la_palette() -> void:
 func _les_shaders() -> void:
 	print("— les shaders : albédo seul, noir absolu")
 	var inc := FileAccess.get_file_as_string("res://iso_corps_portrait.gdshaderinc")
+	_check("l'include laisse le gris tel quel sous 10/255, la teinte en fondu jusqu'à 24/255 (le miroir prend les mêmes seuils)",
+		inc.contains("const float PORTRAIT_SEUIL_NOIR = 10.0 / 255.0;") and inc.contains("const float PORTRAIT_SEUIL_TEINTE = 24.0 / 255.0;")
+		and inc.contains("if (l < PORTRAIT_SEUIL_NOIR) {") and inc.contains("smoothstep(PORTRAIT_SEUIL_NOIR, PORTRAIT_SEUIL_TEINTE, l)"))
 	_check("l'include n'écrit ni ALBEDO, ni EMISSION, ni DIFFUSE_LIGHT", not inc.contains("ALBEDO")
 		and not inc.contains("EMISSION") and not inc.contains("DIFFUSE_LIGHT") and not inc.contains("void light"))
 	for chemin in SHADERS:
@@ -151,9 +165,9 @@ func _les_shaders() -> void:
 				printerr("    usage de la fiche hors teinte : ", l)
 		_check("%s : le portrait n'entre que par portrait_teindre (%d usages)" % [chemin.get_file(), vus], propres and vus == 2)
 		var teinte := frag.find("c = portrait_teindre(c, fiche, couleur_fiche.rgb);")
-		_check("%s : la pâte décide sur le gris (base = couleur_fiche…), le portrait teint après elle, avant l'encre" % chemin.get_file(),
+		_check("%s : la pâte décide sur le gris (base = couleur_fiche…), le portrait teint en dernier, encre comprise" % chemin.get_file(),
 			teinte > frag.find("c = min(c, couleur_fiche.rgb);") and teinte > frag.find("modele_du_corps(normale_monde)), couleur_fiche.rgb);")
-			and teinte < frag.find("pate_encre_boite(local") and frag.contains("couleur_fiche.rgb *"))
+			and teinte > frag.find("pate_encre_boite(local") and frag.contains("couleur_fiche.rgb *"))
 		var lumiere := code.substr(code.find("void light()")) if code.contains("void light()") else ""
 		_check("%s : light() ne connaît pas le portrait" % chemin.get_file(), not lumiere.contains("portrait")
 			and not lumiere.contains("fiche"))
@@ -236,26 +250,31 @@ func _le_contraste_au_sol() -> void:
 	print("— le contraste au sol, sous la même lumière")
 	# Sous la même lampe, la vue iso rend le sol par la lightmap (lumière × le sol peint de la 2D) et le corps par la
 	# lumière × sa fiche : le rapport de leurs luminances ne dépend plus de la lampe. Le sol le plus clair : `SOL_DESSIN_B`.
+	# Toutes les couleurs à la clarté du gris : le rapport de clarté au sol est celui d'aujourd'hui, pour toutes les classes et
+	# toutes les pièces. Ce que la teinte fait à la LISIBILITÉ se mesure au banc, en écart de couleur (ΔE, `--cadrage corps`).
 	var sol := VoxelCatalogue.luminance_affichee(CandelaTileSet.SOL_DESSIN_B)
-	var pire_platre := INF
-	var pire_rouille := INF
-	var pire_classe := ""
+	var ecart := 0.0
 	for s in VoxelCatalogue.slugs():
 		var p := VoxelCatalogue.palette_portrait(s)
-		var platre := VoxelCatalogue.luminance_affichee(p["ocre"]) / sol
-		var rouille := VoxelCatalogue.luminance_affichee(p["rouille"]) / sol
-		if platre < pire_platre:
-			pire_platre = platre
-			pire_classe = s
-		pire_rouille = minf(pire_rouille, rouille)
-	_check("le plâtre le plus sombre (%s) reste au moins deux fois plus clair que le sol (%.2f)" % [pire_classe, pire_platre],
-		pire_platre >= 2.0)
-	_check("la rouille des pieds reste plus claire que le sol (%.2f ≥ 1,15)" % pire_rouille, pire_rouille >= 1.15)
+		var gris: float = VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche(s)["couleur"])
+		ecart = maxf(ecart, absf(VoxelCatalogue.luminance_affichee(p["rouille"]) / sol - gris / sol))
+	_check("au sol, la clarté relative de chaque pièce est celle du gris (écart max %.3f)" % ecart, ecart < 0.05)
 	var encre_continue := IsoMateriaux.ENCRE_VOXEL_PX > 0.0
 	for chemin in SHADERS:
 		encre_continue = encre_continue and (load(chemin) as Shader).code.contains(
 			"c = pate_facteur(c, pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde));")
 	_check("l'encre des arêtes reste posée sur tout le corps, peinture comprise (les deux shaders)", encre_continue)
+
+
+func _le_banc() -> void:
+	print("— le banc du contraste")
+	var banc: GDScript = load("res://tools/banc_iso_beaute.gd")
+	_check("le cadrage « corps » existe", (banc.CADRAGES as Array).has("corps"))
+	var blanc: Vector3 = banc.lab(Color(1, 1, 1))
+	var noir: Vector3 = banc.lab(Color(0, 0, 0))
+	var ocre: Vector3 = banc.lab(VoxelCatalogue.TEINTE_OCRE)
+	_check("CIELAB : blanc (%.1f, %.1f, %.1f), noir 0, l'ocre chaud (b* > 40 : %.1f)" % [blanc.x, blanc.y, blanc.z, ocre.z],
+		absf(blanc.x - 100.0) < 0.5 and blanc.length() < 100.6 and noir.length() < 0.01 and ocre.z > 40.0)
 
 
 func _le_fil() -> void:
@@ -265,10 +284,21 @@ func _le_fil() -> void:
 
 ## Miroir de `portrait_teindre` (valeurs du shader : couleurs déjà décodées par `source_color`).
 static func _teindre(c: Vector3, fiche: Color, gris: Color) -> Vector3:
-	var k: float = IsoPate.luminance(IsoPate.depuis_affiche(c)) / maxf(IsoPate.luminance(IsoPate.depuis_affiche(_lin(gris))), 0.000001)
-	return IsoPate.vers_affiche(IsoPate.depuis_affiche(_lin(fiche)) * k)
+	var l: float = IsoPate.luminance(IsoPate.depuis_affiche(c))
+	if l < 10.0 / 255.0:
+		return c
+	var k: float = l / maxf(IsoPate.luminance(IsoPate.depuis_affiche(_lin(gris))), 0.000001)
+	var teinte: Vector3 = IsoPate.vers_affiche(IsoPate.depuis_affiche(_lin(fiche)) * k)
+	return c.lerp(teinte, smoothstep(10.0 / 255.0, 24.0 / 255.0, l))
 
 
 static func _lin(c: Color) -> Vector3:
 	var l := c.srgb_to_linear()
 	return Vector3(l.r, l.g, l.b)
+
+
+## L'écart de teinte entre deux couleurs à clarté égale : la distance de leurs chromaticités (r, g, b) / (r + g + b).
+static func _ecart_de_teinte(a: Color, b: Color) -> float:
+	var sa := maxf(a.r + a.g + a.b, 0.0001)
+	var sb := maxf(b.r + b.g + b.b, 0.0001)
+	return Vector3(a.r / sa - b.r / sb, a.g / sa - b.g / sb, a.b / sa - b.b / sb).length()

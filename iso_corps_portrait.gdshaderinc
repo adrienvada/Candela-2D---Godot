@@ -7,7 +7,7 @@
 // cartouches grises (le Fumiste) ou rouges (l'Incendiaire). Cet include rend cette peinture en ALBÉDO SEUL :
 //
 // - `portrait_fiche()` rend la couleur du portrait AU FRAGMENT ; `portrait_teindre()` la pose sur la lumière que le
-//   fragment a DÉJÀ rendue sur le gris de sa classe (pâte, plafond, modelé compris), avant l'encre : la couleur rendue
+//   fragment a DÉJÀ rendue sur le gris de sa classe (pâte, plafond, modelé et encre compris), en dernier : la couleur rendue
 //   prend la teinte du portrait, et sa clarté À L'ÉCRAN est celle du gris × le rapport des clartés sRGB portrait / gris.
 // - ⚠️ **Le portrait ne décide jamais OÙ la lumière se voit.** Une première forme posait la couleur du portrait À LA
 //   PLACE du gris, avant la pâte : un plâtre plus clair que le gris franchissait plus tôt les seuils de la pâte D, et au
@@ -16,8 +16,11 @@
 //   un corps est visible exactement où il l'était, à toute lumière — la rétrodiffusion des furtifs comprise.
 // - Noir absolu : une lumière rendue nulle reste nulle (le rapport multiplie 0). Albédo seul : aucune émission, aucun
 //   `light()` ; le relief d'ISO12 n'est pas touché (`tools/test_corps_portraits.gd`).
-// - Les couleurs arrivent normalisées par `VoxelCatalogue.palette_portrait()`, en clarté sRGB : le plâtre relevé de
-//   ce que la patine retire, pour que la clarté MOYENNE du corps reste celle du gris ; rien au-dessus de `Charte.DIM`.
+// - ⚠️ **La peinture change la COULEUR, jamais la VISIBILITÉ** (session cloud, 2026-09-23 01:49). Toutes les couleurs
+//   d'une classe arrivent de `VoxelCatalogue.palette_portrait()` à la clarté sRGB EXACTE de son gris : la patine, la
+//   rouille, les sangles et les cartouches ne jouent que sur la teinte et la saturation, et le rapport portrait / gris vaut
+//   1 en chaque pixel, à toute lumière. Et sous `PORTRAIT_SEUIL_NOIR` (10/255), la teinte ne s'applique pas du tout, puis
+//   arrive en fondu jusqu'à 24/255 : un pixel noir au gris l'est peint, sans que l'arrondi à quelques niveaux en décide.
 // - `portrait = 0` (le défaut, et `--corps=portraits` absent) : `portrait_teindre` rend la couleur telle quelle.
 //
 // Les pièces se reconnaissent à la taille de leur maillage : `demi` (abs(VERTEX), la demi-taille d'une `BoxMesh`, en
@@ -33,9 +36,6 @@ uniform vec4 portrait_arme : source_color = vec4(1.0);
 uniform vec4 portrait_cartouche : source_color = vec4(0.0);
 // 0 : la patine des portraits clairs ; 1 : le pistolet, l'occulteur et le spectre, plus usés.
 uniform float portrait_usure : hint_range(0.0, 1.0) = 0.0;
-// La force de la patine (rouille, sangles, poche) : 1, celle du portrait ; moins quand le plâtre bute sur `Charte.DIM` et ne
-// peut plus compenser ce qu'elle retire (`VoxelCatalogue.palette_portrait`).
-uniform float portrait_patine : hint_range(0.0, 1.0) = 1.0;
 // La hauteur d'un corps debout, en pixels du monde : la rouille monte depuis le sol.
 uniform float portrait_hauteur_px = 35.0;
 uniform vec3 portrait_demi_torse = vec3(0.0);
@@ -74,7 +74,7 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 	float au_bord = 1.0 - smoothstep(0.4, mix(2.2, 3.4, portrait_usure), bord);
 	float rouille = clamp(max(bas * 0.85, au_bord * 0.75) * (0.45 + 0.9 * grain), 0.0, 1.0);
 	rouille = max(rouille, smoothstep(mix(0.78, 0.62, portrait_usure), 0.95, tache) * 0.8);
-	vec3 c = mix(portrait_ocre.rgb, portrait_rouille.rgb, rouille * mix(0.75, 1.0, portrait_usure) * portrait_patine);
+	vec3 c = mix(portrait_ocre.rgb, portrait_rouille.rgb, rouille * mix(0.75, 1.0, portrait_usure));
 
 	if (portrait_est(demi, portrait_demi_arme)) {
 		// L'arme : bois et métal bruns, sans la rouille du plâtre.
@@ -94,7 +94,7 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 		// La bandoulière, en diagonale de l'épaule à la hanche, devant et derrière.
 		float diagonale = an.z > 0.5 ? abs(f.x * 0.9 + f.y) : 9.0;
 		sangle = max(sangle, step(diagonale, 0.24));
-		c = mix(c, portrait_brun.rgb, sangle * portrait_patine);
+		c = mix(c, portrait_brun.rgb, sangle);
 		if (portrait_cartouche.a > 0.0 && an.z > 0.5 && diagonale < 0.17) {
 			// Les cartouches, en rang le long de la bandoulière.
 			float s = (f.x - f.y) * 0.5;
@@ -102,7 +102,7 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 		}
 		if (n.z < -0.5) {
 			// La poche, devant, sur la hanche.
-			c = mix(c, portrait_brun.rgb * 0.8, portrait_rect(f, vec2(0.28, -0.7), vec2(0.82, -0.3)) * portrait_patine);
+			c = mix(c, portrait_brun.rgb, portrait_rect(f, vec2(0.28, -0.7), vec2(0.82, -0.3)));
 		}
 	}
 	return c;
@@ -114,10 +114,23 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 // la palette (en sRGB), à toute lumière. ⚠️ Faite d'abord dans l'autre sens (`pate_vers_affiche`), la teinte assombrissait
 // les corps d'un quart à 0,8 et d'un tiers à 0,2 au banc des corps (2026-09-23, 00:42) : les deux espaces ne coïncident que
 // pour un gris. 0 reste 0 ; c ≤ gris ⇒ résultat ≤ fiche.
+const float PORTRAIT_SEUIL_NOIR = 10.0 / 255.0;
+const float PORTRAIT_SEUIL_TEINTE = 24.0 / 255.0;
+
 vec3 portrait_teindre(vec3 c, vec3 fiche, vec3 gris) {
 	if (portrait < 0.5) {
 		return c;
 	}
-	float k = pate_luminance(pate_depuis_affiche(c)) / max(pate_luminance(pate_depuis_affiche(gris)), 0.000001);
-	return pate_vers_affiche(pate_depuis_affiche(fiche) * k);
+	float l = pate_luminance(pate_depuis_affiche(c));
+	// Tout près du noir, le gris tel quel, puis la teinte en fondu jusqu'à 24/255. ⚠️ Au pied de l'image, la chaîne de rendu
+	// ÉCRASE les trois canaux d'un gris sombre à 0, mais laisse survivre le rouge concentré d'un ocre de même clarté : au banc
+	// des corps (2026-09-23 03:57), 8 000 à 15 000 pixels noirs au gris sortaient peints de (1, 0, 0) à (7, 0, 0) à 0,1-0,2 de
+	// lumière, avec un seuil à 4/255. Sous 10/255, une couleur ne se lit de toute façon pas : le gris y garde la visibilité
+	// d'hier au pixel près. (Ce seuil ne suffit pas : critère 1 ouvert, voir la ROADMAP.)
+	if (l < PORTRAIT_SEUIL_NOIR) {
+		return c;
+	}
+	float k = l / max(pate_luminance(pate_depuis_affiche(gris)), 0.000001);
+	vec3 teinte = pate_vers_affiche(pate_depuis_affiche(fiche) * k);
+	return mix(c, teinte, smoothstep(PORTRAIT_SEUIL_NOIR, PORTRAIT_SEUIL_TEINTE, l));
 }

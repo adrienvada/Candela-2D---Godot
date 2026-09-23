@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Planche ISO12 — les dix corps d'après leurs portraits de classe, au banc des corps.
 
-Pour chaque classe, une ligne : le portrait (ISO Assets, lu par `git show`), le corps gris d'ISO3 à 0,8, puis le corps
-peint d'après son portrait à 0,8, 0,2 et 0 (le noir absolu). Les corps sont repérés sans deviner : ce sont les pixels qui
+Pour chaque classe, une ligne : le portrait (ISO Assets, lu par `git show`), le corps au portrait éteint à 0,8 (le gris
+d'ISO3, pris dans la même partie : `banc_corps --corps=portraits` écrit `_gris.png`), puis le corps peint d'après son
+portrait à 0,8, 0,2 et 0 (le noir absolu). Les corps sont repérés sans deviner : ce sont les pixels qui
 diffèrent entre la capture grise et la capture peinte à 0,8 (seuls les corps changent entre elles), regroupés sur la
 grille du banc (5 colonnes, dans l'ordre de `VoxelCatalogue.slugs()`).
 
@@ -79,7 +80,7 @@ def main(args):
     noms = ["corps_gris_0.8", "corps_portraits_0.8", "corps_portraits_0.2", "corps_portraits_0"]
     images = {n: Image.open("%s/%s.png" % (dossier, n)).convert("RGB") for n in noms}
     cadres = boites(images["corps_gris_0.8"], images["corps_portraits_0.8"])
-    entetes = ["portrait", "gris d'ISO3, 0,8", "portrait, 0,8", "portrait, 0,2", "portrait, 0"]
+    entetes = ["portrait", "portrait éteint, 0,8", "portrait, 0,8", "portrait, 0,2", "portrait, 0"]
     colonnes_par_classe = len(entetes)
     marge, titre_h, legende_h = 14, 96, 22
     largeur_bloc = colonnes_par_classe * (CASE + 6)

@@ -859,7 +859,6 @@ func _habiller_en_portrait(slug: String) -> void:
 	for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
 		_materiau.set_shader_parameter("portrait_%s" % cle, p[cle])
 	_materiau.set_shader_parameter("portrait_usure", p["usure"])
-	_materiau.set_shader_parameter("portrait_patine", p["patine"])
 	_materiau.set_shader_parameter("portrait_hauteur_px", float(s["hauteur_corps"]) * float(CandelaTileSet.TILE_SIZE.x))
 	_materiau.set_shader_parameter("portrait_demi_torse", torse * 0.5)
 	_materiau.set_shader_parameter("portrait_demi_arme", Vector3(fa["largeur"], fa["hauteur"], fa["longueur"]) * 0.5)
