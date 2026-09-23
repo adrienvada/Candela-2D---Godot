@@ -27001,6 +27001,15 @@ Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un comp
 d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
 
+#### ISO13, lot E — le rayon dans l'air (`--faisceau`, éteint par défaut ; ISO7 Gadgets, fusionné en d9942c7)
+
+⚠️ **GARANTIE DÉMENTIE (2026-09-24, 01:37, retirée sur ordre de la session cloud) : « le noir absolu est tenu par construction »,
+écrit avec d8e928a, est FAUX au-delà de la densité 0,08.** Mesure de Gadgets : environ 150 pixels isolés allumés dans le noir à
+0,22, 310 à 0,45, dans les trois visées ; la planche ef2fae1 ne l'avait « vérifié » que dans le seul cas qui passait (0,08, visée de
+composition). Correction en cours chez Gadgets. `--faisceau` est éteint : le jeu par défaut n'est pas touché. Les deux textes qui
+l'affirment encore — `docs/iso/iso13/plan_lots_d_e.md` (§ « Lot E », « tenu par construction ») et le commentaire d'en-tête et du
+faisceau d'`iso_volumes.gd` — sont à Gadgets, et sa correction les reprend ; jusque-là, cette ligne-ci les dément.
+
 #### ISO13, lot A — les personnages lus comme les mannequins des illustrations 🟡 (ouvert le 2026-09-24 à 00:00, branche `iso12-corps`, session « ISO7 Beauté Opus »)
 
 **Pourquoi.** Adrien, 23/09 au soir : « il faut vraiment à la fin que le visuel du jeu ressemble au plus proche aux visuels
