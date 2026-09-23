@@ -110,3 +110,36 @@ Une porte qui moyenne les échantillons de charge sur la fenêtre de mesure lais
 `spotlightknowledged` à 34 % sur un échantillon parmi six donne une moyenne de 5,7 %, sous un seuil
 de 10 %. C'est arrivé à la prise 4 du 2026-09-23, qui s'est retrouvée deuxième plus mauvaise de sa
 série. **Une image lente ne se moyenne pas : elle se voit.** La porte garde donc le maximum.
+
+## 8. LE NOM D'UN DRAPEAU N'EST PAS SON EFFET — lire l'include avant de mesurer
+
+`--lampe-dominante` se lit comme « une seule lampe », donc comme une économie. **C'en est l'inverse :
+c'est un correctif d'IMAGE conçu pour les ombres** (les passes additives des lampes à ombre
+s'additionnent et éclaircissent ; la dominante n'en laisse écrire qu'une par pixel). Son coût, lu
+dans `iso_relief.gdshaderinc` : un tour des huit lampes dans `fragment()` **en plus** du dénominateur,
+puis **pour chaque lampe et chaque pixel** un nouveau tour des huit dans `light()` pour retrouver
+laquelle c'est — soit ~8 évaluations par pixel qui deviennent ~8 + 8 + n × 9.
+
+Mesuré en mode A (sans ombres, donc sans rien à corriger) : **+1,61 ms**, au-dessus du bruit. On paie
+le tri pour rien. ⚠️ Et ce chiffre **ne concerne aucune configuration jouée** : `relief_dominante_3d`
+est faux, la dominante n'ayant de sens qu'avec les ombres, qui sont en NON-GO.
+
+**Troisième variante vide de la même journée**, après `--a-sans-led` et `--a-sans-halo-soi`, qui
+retiraient des émissions que le mode A n'appelle jamais (la branche d'identité est active par défaut
+et émet 0). Le motif est constant : **le drapeau retirait autre chose que ce que son nom disait.**
+
+**Règle** : avant de mesurer une variante, lire ce que le drapeau fait DANS LE SHADER — pas ce que son
+nom suggère, ni ce que son commentaire annonce. Et la règle jumelle, déjà écrite : une variante qui
+mesure zéro se vérifie avant d'être crue. Il faut y ajouter : **une variante qui mesure un résultat
+inattendu aussi** — c'est elle qui a révélé les trois.
+
+## 9. La machine : un MacBook Air M3, sans ventilateur
+
+`sysctl -n hw.model` → `Mac15,13` ; `system_profiler` → **MacBook Air, Apple M3, 8 cœurs (4+4),
+24 Go**. **Un châssis sans ventilateur, à refroidissement passif.** Cela ne prouve rien à soi seul,
+mais c'est le contexte de toutes nos mesures : une charge GPU soutenue s'y bride par construction,
+et c'est l'explication la plus simple du repos de 90 s qui rétablit tout, comme du palier observé
+après une minute de prise longue. L'état thermique se lit sans droits particuliers :
+
+    osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSProcessInfo.processInfo.thermalState'
+    → 0 normal · 1 passable · 2 sérieux · 3 critique   (essayé le 2026-09-23 : rend bien 0)
