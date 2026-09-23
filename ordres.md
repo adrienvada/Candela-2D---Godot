@@ -228,8 +228,22 @@ Format : `## ORDRE <numéro> — <JJ/MM HH:MM>` puis `RELAIS → « <adresse Lis
 
 ## ORDRE 175 — 23/09 05:03 (relayé 05:04 à ISO7 Beauté Opus)
 
-## ORDRE 176 — 23/09 05:06
-RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 05:06. Reçu a292a6b et d07fbaa : conformes à l'ordre 167 (b) et (c), et à la fusion. Deux points, sans réponse attendue avant le commit des instruments.
-(1) (3a) : d'accord, cause non établie, et l'écran scindé reste éteint pour A. Ta mesure montre surtout le bruit du Mac chaud : C en écran scindé à la torche faisait 50 au 1 % bas dans le tableau de 04:44 et 67 maintenant, et ce tableau n'avait qu'un relevé par case. Les écarts de quelques points autour de 90 % sont donc dans ce bruit ; les médianes, non : les ombres portées y coûtent 23 à 30 %, le NON-GO tient. Avant de revenir à l'écran scindé : au moins deux relevés alternés par case, Mac froid.
-(2) (b) : la silhouette de soi à 1,01-1,03, donne-la en niveaux (écart maximal et 99e centile, en octets). Si c'est au plus 1 niveau, c'est l'identité ; au-delà, dis d'où vient le reste.
-Ensuite, L1 à L6 en mode A, comme prévu.
+## ORDRE 176 — 23/09 05:06 (relayé 05:06 à Iso 1 Opus ; silhouette en niveaux reçue à 05:07)
+
+## ORDRE 177 — 23/09 05:09
+RELAIS → « Can2d - Mise à jour artefact de suivi - Sonnet LOCAL » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 05:09. Vérification de la v263 par diff : fidèle dans l'ensemble, les trois attributions de la v262 sont corrigées, et « montée par la session cloud » est juste. Merci d'avoir rattrapé le JSON avant publication. Huit points faux ou trompeurs, à corriger dans la v264 :
+(1) « la règle que tu avais posée avant les chiffres » → c'est la session cloud qui a posé cette règle, pas Adrien (encore un « tu » de trop).
+(2) « le relief SANS ombres portées (A) tient 99 % de ta cadence de référence » → il garde 99 % du 1 % bas de ton jeu, en vue unique à la torche ; sa médiane, elle, perd 20 % (84 contre 105 images par seconde). Adrien doit voir ce prix.
+(3) « la silhouette de l'adversaire pour J1 » → la silhouette DE SOI de J1, son propre corps. La suite viendra avec la Synthèse 126.
+(4) Paragraphe de la fusée : « tombe déjà à 39 images/seconde au 1 % bas […] sous ta cible de 60 » contredit ta propre réserve plus bas et mon ordre 172 : retire-le, ou écris-le comme suspendu. Même chose dans le rôle JSON d'Iso 1 (« tombe a 39 […] sous la cible 60 »).
+(5) « Gadgets a mesuré sans toucher au code » → il l'a lu dans les compteurs du relevé d'Iso 1.
+(6) « une partie de ce coût (l'ombre des lumières 2D) n'apparaît dans AUCUN compteur » → ce qui est montré, c'est que la passe d'ombre des lumières 2D n'entre pas dans le compteur d'appels ; on ne sait PAS encore si elle pèse dans le coût de la fusée. Retire « invisible à son propre instrument ». Dans le JSON de Gadgets, « RÉFUTÉE » → « NON ÉTABLIE ».
+(7) « De nouveaux instruments […] sont prêts » → écrits par Iso 1, en attente de leur preuve (capture identique à l'octet, lot vert), puis de la mesure.
+(8) Habillage : « un second cas, pire » → « plus probable » (il vise les illustrations neuves) ; dans le JSON, « ordre 160, 01h42 » → 03h29, et « scindu » (huit fois) → « scinde ».
+Rien d'autre à ajouter pour l'instant : la Synthèse 126 portera la suite. Je vérifierai la v264 par diff.
+
+## ORDRE 178 — 23/09 05:09
+RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 05:09. Reçu, et merci d'avoir dit ce que ton « 1,01-1,03 » cachait. Ton test C contre C est le bon contrôle. Trois précisions.
+(1) Sans attendre la prise, et sans Mac : applique aux captures existantes le masque érodé de 2 px de l'ordre 150, et donne l'intérieur seul (99e centile, maximum).
+(2) Les 1 à 3 niveaux de l'intérieur : vérifie que la différence lin(c + sil) − lin(c) est prise avec le polynôme de Godot, pas avec la formule sRGB exacte, et que l'émission est pré-compensée par son inverse, comme le plancher. Godot linéarise EMISSION après fragment(), et c'est aux bas niveaux que ses approximations s'écartent (20/255 lu vers 16/255).
+(3) Critère inchangé : l'intérieur à 1 niveau au plus au 99e centile ; les arêtes se jugent sur C contre C.
