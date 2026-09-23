@@ -407,10 +407,41 @@ const TEINTE_CUIR_SOMBRE := Color8(44, 30, 22)
 const TEINTE_METAL_SOMBRE := Color8(70, 76, 84)
 const TEINTE_OS := Color8(214, 204, 184)
 
+## ISO12 — LA TEINTE DES TENUES SOMBRES (ordre de la session cloud, 2026-09-23 21:40), derrière son propre drapeau, éteint :
+## `--teinte=froide`. Seule la chromaticité change ; chaque rôle garde son rapport de clarté (`TENUES_SOMBRES`).
+## Pourquoi : à clarté égale, l'olive et l'os de V1 se détachaient MOINS du sol ocre que le gris bleuté d'aujourd'hui (ΔE76 au
+## centre du cône, −4 à −35 % selon la classe, l'Occulteur de 8,9 à 5,8 ; banc de beauté, 21:13). L'ocre est orangé : ce qui
+## s'en écarte le plus à clarté égale est le bleu. La froide met donc le drap, l'usure, le métal, la tête et le liseré dans les
+## bleus-gris (un ardoise sombre, une tête et un liseré gris perle), et garde les cartouches (grises, rouges) et le cuir brun :
+## ce sont des repères de classe, pas la tenue.
+const DRAPEAU_TEINTE := "--teinte="
+const TEINTES := {
+	"olive": {"tissu": TEINTE_TISSU_SOMBRE, "usure": TEINTE_USURE_SOMBRE, "cuir": TEINTE_CUIR_SOMBRE,
+		"metal": TEINTE_METAL_SOMBRE, "clair": TEINTE_OS},
+	"froide": {"tissu": Color8(48, 58, 76), "usure": Color8(78, 88, 104), "cuir": TEINTE_CUIR_SOMBRE,
+		"metal": Color8(62, 76, 98), "clair": Color8(190, 204, 224)},
+}
+## Pour les suites et les bancs : `""` lit la ligne de commande ; sinon la teinte imposée.
+static var forcer_teinte := ""
+
+
+## La teinte des tenues sombres : `"olive"` (le défaut) ou `"froide"` (`--teinte=froide`).
+static func teinte() -> String:
+	if forcer_teinte != "":
+		return forcer_teinte
+	return teinte_de(OS.get_cmdline_user_args())
+
+
+static func teinte_de(args: PackedStringArray) -> String:
+	for a in args:
+		if a.begins_with(DRAPEAU_TEINTE) and TEINTES.has(a.trim_prefix(DRAPEAU_TEINTE)):
+			return a.trim_prefix(DRAPEAU_TEINTE)
+	return "olive"
+
 
 ## La palette de la tenue `nom` pour la classe `slug`, aux mêmes clés que `palette_portrait()` (plus `tete`, `arete`,
-## `arete_px`, `rapports`) : `{}` pour le gris ou un nom inconnu.
-static func palette_tenue(slug: String, nom: String) -> Dictionary:
+## `arete_px`, `rapports`) : `{}` pour le gris ou un nom inconnu. `nom_teinte` : `""` pour la teinte en cours (`teinte()`).
+static func palette_tenue(slug: String, nom: String, nom_teinte := "") -> Dictionary:
 	if nom == "portraits":
 		return palette_portrait(slug)
 	if not TENUES_SOMBRES.has(nom):
@@ -420,6 +451,7 @@ static func palette_tenue(slug: String, nom: String) -> Dictionary:
 		return {}
 	var p: Dictionary = PORTRAITS[slug]
 	var r: Dictionary = TENUES_SOMBRES[nom]
+	var te: Dictionary = TEINTES.get(nom_teinte if nom_teinte != "" else teinte(), TEINTES["olive"])
 	var l := luminance_affichee(f["couleur"])
 	var plafond := luminance_affichee(GRIS_PLAFOND)
 	var cartouche := Color(0, 0, 0, 0)
@@ -429,15 +461,15 @@ static func palette_tenue(slug: String, nom: String) -> Dictionary:
 		cartouche = a_luminance(TEINTE_CARTOUCHE_ROUGE, l * float(r["cartouche"]))
 	var arete := Color(0, 0, 0, 0)
 	if float(r["arete"]) > 0.0:
-		arete = a_luminance(TEINTE_OS, minf(l * float(r["arete"]), plafond))
+		arete = a_luminance(te["clair"], minf(l * float(r["arete"]), plafond))
 	return {
-		"ocre": a_luminance(TEINTE_TISSU_SOMBRE, l * float(r["tissu"])),
-		"rouille": a_luminance(TEINTE_USURE_SOMBRE, l * float(r["usure"])),
-		"brun": a_luminance(TEINTE_CUIR_SOMBRE, l * float(r["cuir"])),
-		"arme": a_luminance(TEINTE_METAL_SOMBRE, l * float(r["arme"])),
-		"bouteille": a_luminance(TEINTE_METAL_SOMBRE, l * float(r["bouteille"])),
+		"ocre": a_luminance(te["tissu"], l * float(r["tissu"])),
+		"rouille": a_luminance(te["usure"], l * float(r["usure"])),
+		"brun": a_luminance(te["cuir"], l * float(r["cuir"])),
+		"arme": a_luminance(te["metal"], l * float(r["arme"])),
+		"bouteille": a_luminance(te["metal"], l * float(r["bouteille"])),
 		"cartouche": cartouche,
-		"tete": a_luminance(TEINTE_OS if float(r["tete"]) > 1.0 else TEINTE_TISSU_SOMBRE, minf(l * float(r["tete"]), plafond)),
+		"tete": a_luminance(te["clair"] if float(r["tete"]) > 1.0 else te["tissu"], minf(l * float(r["tete"]), plafond)),
 		"arete": arete,
 		"arete_px": float(r["arete_px"]),
 		"sous_seuil": bool(r["sous_seuil"]),

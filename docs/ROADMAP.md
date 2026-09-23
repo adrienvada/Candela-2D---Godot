@@ -26886,8 +26886,28 @@ appliqué, jamais dans sa branche ; le cadrage `planche_tenues` et `--arme-j2` n
 (436 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 21:32).
 
 **À trancher par Adrien** : V1, V2 ou V3 — c'est-à-dire, à visibilité égale, plus sombre de couleur seulement (V1) ; ou un
-adversaire qu'on voit moins, surtout au bord du cône (V2, et V3 qui garde sa silhouette). Puis la teinte (olive chaude
-aujourd'hui) avant les illustrations.
+adversaire qu'on voit moins, surtout au bord du cône (V2, et V3 qui garde sa silhouette). Puis la teinte, olive ou froide
+(voir ci-dessous), avant les illustrations.
+
+**La teinte froide (2026-09-23, 21:40-22:00, ordre de la session cloud après lecture de la page).** À clarté égale, l'olive de
+V1 se détachait moins du sol ocre que le gris. Une teinte froide, derrière son propre drapeau, éteint (`--teinte=froide`,
+`VoxelCatalogue.TEINTES`), change la seule chromaticité des trois tenues : drap ardoise, usure et métal bleu-gris, tête et
+liseré gris perle. Le cuir brun et les cartouches (grises, rouges) ne bougent pas, parce que ce sont des repères de classe. Critères posés AVANT les
+chiffres par la session cloud, et ce qu'ils donnent :
+1. **Clarté à 3 % de l'olive, aux quatre lumières** : V1 à 0,4 % au pire, V3 à 2,3 % ; **V2 tenue partout sauf une case**,
+   l'Occulteur à 0,15 (0,126 contre 0,135 du gris, −6,8 %), dans la zone où V2 s'efface — l'olive et la froide ont été
+   prises dans deux parties du banc des corps, chacune rapportée à son propre gris.
+2. **ΔE76 de V1 froide au sol ocre ≥ celui du gris** : au centre du cône, les dix classes (+0,8 à +1,4 ; l'olive était sous le
+   gris pour les dix) ; **à 90 px, huit sur dix** — l'Occulteur (11,4 contre 11,9) et l'Allumeur (12,3 contre 12,7) restent
+   dessous (même partie, olive et froide côte à côte : `--toutes-teintes`). La froide ne rend donc pas l'écart partout.
+3. **Une tenue sombre à l'œil** : V2 et V3 froides se lisent bleu nuit ; **V1 froide se rapproche du gris d'aujourd'hui**, sa
+   tête gris perle ressemblant au gris bleuté actuel — c'est le prix de la visibilité égale, à juger sur la planche.
+4. Noir absolu : 0 pixel dans les trois tenues froides ; cartouches rouges lisibles ; géométrie inchangée.
+Planche `docs/iso/planche_teinte_froide.jpg` : les trois classes de face et de dos sous la torche, gris / V1 olive / V1, V2,
+V3 froides au même instant, puis les dix corps ; la fusée et le noir ne changent pas par construction (éblouissement, noir).
+Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un complément du patch de banc, écrit contre la tête
+d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
+Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
 
 ### Ce qui attend Adrien — jalon H15
 

@@ -63,6 +63,7 @@ func _run() -> void:
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	VoxelCatalogue.forcer_portraits = -1
 	VoxelCatalogue.forcer_tenue = "-"
+	VoxelCatalogue.forcer_teinte = ""
 	print("%d vérifications, %d échec(s)" % [_verifications, _echecs])
 	quit(1 if _echecs > 0 else 0)
 
@@ -301,6 +302,30 @@ func _les_tenues_sombres() -> void:
 		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre9"])) == ""
 		and VoxelCatalogue.tenue_de(PackedStringArray()) == "")
 	_check("trois variantes", VoxelCatalogue.TENUES_SOMBRES.keys() == ["sombre1", "sombre2", "sombre3"])
+	# La teinte (drapeau séparé, éteint) : la chromaticité seule, les rapports de clarté intacts.
+	VoxelCatalogue.forcer_teinte = ""
+	_check("teinte : olive par défaut, --teinte=froide la choisit, un nom inconnu revient à l'olive",
+		VoxelCatalogue.teinte() == "olive" and VoxelCatalogue.teinte_de(PackedStringArray(["--teinte=froide"])) == "froide"
+		and VoxelCatalogue.teinte_de(PackedStringArray(["--teinte=rose"])) == "olive")
+	var memes := true
+	var bleus := true
+	for nom in VoxelCatalogue.TENUES_SOMBRES:
+		for sl in VoxelCatalogue.slugs():
+			var po := VoxelCatalogue.palette_tenue(sl, nom, "olive")
+			var pf := VoxelCatalogue.palette_tenue(sl, nom, "froide")
+			for cle in ["ocre", "rouille", "brun", "arme", "bouteille", "cartouche", "tete", "arete"]:
+				var co: Color = po[cle]
+				var cf: Color = pf[cle]
+				if absf(VoxelCatalogue.luminance_affichee(co) - VoxelCatalogue.luminance_affichee(cf)) > 0.003 or co.a != cf.a:
+					memes = false
+			for cle in ["ocre", "rouille", "arme", "tete"]:
+				var cf: Color = pf[cle]
+				if not (cf.b > cf.r + 0.02):
+					bleus = false
+			if pf["cartouche"] != po["cartouche"] or pf["brun"] != po["brun"]:
+				memes = false
+	_check("teinte froide : chaque rôle à la clarté de sa version olive, cartouches et cuir inchangés (trois tenues, dix classes)", memes)
+	_check("teinte froide : le drap, l'usure, le métal et la tête dans les bleus (b > r)", bleus)
 	var plafond := VoxelCatalogue.luminance_affichee(VoxelCatalogue.GRIS_PLAFOND)
 	for nom in VoxelCatalogue.TENUES_SOMBRES:
 		var r: Dictionary = VoxelCatalogue.TENUES_SOMBRES[nom]

@@ -174,6 +174,10 @@ func _lire_arguments(args: PackedStringArray) -> void:
 				if val != "portraits" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
 					push_warning("banc_corps : --corps attend portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
 			"toutes-tenues": _toutes_tenues = true
+			"teinte":
+				# Lu par `VoxelCatalogue.teinte()` : la teinte des tenues sombres (`olive`, `froide`).
+				if not VoxelCatalogueT.TEINTES.has(val):
+					push_warning("banc_corps : --teinte attend %s (reçu « %s »)" % [", ".join(VoxelCatalogueT.TEINTES.keys()), val])
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
