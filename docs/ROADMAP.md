@@ -3197,6 +3197,21 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Annoncer une fenêtre de mesure sur la prise du VERROU, pas sur le démarrage de la série (2026-09-23)
+
+Chantier ISO12. Le lanceur prend le verrou à 23:13 ; on annonce « fenêtre ouverte » à toutes les
+sessions. Mais il vérifie aussi `pgrep -x Godot`, voit un Godot tourner, **rend le verrou** et attend
+— quatre-vingts fois, jusqu'à abandonner à 23:52. Le processus était l'**éditeur** (aucun argument,
+parent `launchd`, dossier courant `/` : ouvert depuis le Finder, donc Adrien). La garde a fait
+exactement son travail : on ne prend pas la machine à Adrien, et une cadence prise avec l'éditeur
+ouvert ne vaudrait rien. Mais deux sessions ont gardé le silence quarante minutes pour rien, et un
+ordre est resté sans chiffre alors qu'il avait été annoncé en cours.
+
+**La parade** : une fenêtre s'annonce quand la **première prise part**, jamais quand le verrou est
+pris — entre les deux il y a `pgrep`, l'attente et l'abandon possible. Et la surveillance se met sur
+le DÉMARRAGE autant que sur la fin : un veilleur qui ne regarde que la fin ne distingue pas une série
+qui travaille d'une série qui n'a jamais commencé. Détail : `docs/iso/iso12/mesurer_une_cadence.md` § 13.
+
 ### Un coût derrière un uniforme ne se voit dans aucune comparaison de shaders (2026-09-23)
 
 Chantier ISO12. Les tenues sombres (`--corps=sombre`) et le gris utilisent le **même shader**, même
