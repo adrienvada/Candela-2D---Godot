@@ -26554,6 +26554,10 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     qu'une fois (55 % d'un cœur) pendant la chauffe, hors de la fenêtre de mesure. 1 % bas hors 10 s sur 180 s : **71** (78 et 75
     sur les prises d'une minute) — une prise plus longue ramasse plus de paquets. **Lecture : une charge extérieure par
     intermittence plus du bruit, pas un défaut de A** ; les paquets pèsent sur le 1 % bas bien plus que sur la médiane.
+    **Le protocole des relectures après les économies d'ISO7 Gadgets, décidé AVANT les prises** (session cloud, 08:06) : quatre
+    prises par variante en miroir double (C A A C C A A C), porte d'indexation devant chacune ; verdict sur la moyenne des quatre
+    1 % bas hors 10 s de A contre celle de C (règle des 90 %), médianes et charge extérieure par tranche en regard. Pendant la
+    fenêtre de prises, silence complet des autres sessions sur le Mac : ni sortie, ni calcul, ni lot.
 27. **L2, LE SOL ET LES MURS — le principe d'identité les porte ; ce qui manquait était une garde et une preuve** (ordre 181,
     2026-09-23). Le brief demandait des matériaux éclairés qui gardent les textures d'ISO7, l'encre, le lavis, le contact au
     pied, et un sang qui module l'albédo. Depuis la v27, le sol et les murs éclairés recopient la couleur du chemin 2D, étape
