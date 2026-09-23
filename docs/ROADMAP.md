@@ -26578,6 +26578,18 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
       sol et au pied d'une face, sous la torche de J1). La teinte du sang est celle de la 2D — part du rouge 0,712 contre 0,709
       au sol (témoin C contre C : 0,719), 0,489 contre 0,489 au pied — ; seule la face change, par le relief (+16 à +18 %),
       comme ailleurs.
+28. **LE PIED DE LAMPE À GAIN NUL, ET LE JOURNAL DU BANC HORS DE L'INDEX** (session cloud, 08:39, sur un constat d'ISO7
+    Gadgets). `lire_pied_lampe` (`sol_iso_eclaire.gdshader`) lisait sa texture puis multipliait par `pied_lampe_gain`, qui vaut
+    0 par défaut, les positions des pieds étant posées quel que soit le gain : sortie en tête à gain nul, même pixel par
+    construction. **Portée réelle, à ne pas surestimer** : la fonction n'est appelée que HORS du principe d'identité (l'ancien
+    chemin de l'émission), et ses lectures n'ont lieu que dans le carré de l'empreinte (96 px) autour de chaque joueur — pas
+    « deux lectures par pixel de sol » en mode A, où elle n'est pas appelée du tout. Gardé par `test_banc` (sortie en tête,
+    avant la lecture ; lecture pondérée et appel toujours là), **vu rougir** sur la condition inversée. Et le banc de cadence
+    écrit désormais son journal sous `/tmp` (`--log-file`, accepté par Godot 4.7) dans son lanceur du dépôt
+    (`tools/run_decomposition.sh`) — par l'option de lancement, pas par les réglages du projet : le journal par défaut est vidé
+    à chaque `print`, et l'indexation de Spotlight a pris jusqu'à 99 % d'un cœur pendant des relevés (série d'ISO7 Gadgets de
+    08:16, perdue : sa porte cherchait `spotlightknowledged`, que `top` tronque en `spotlightknowled` — une porte par nom doit
+    comparer par PRÉFIXE de seize caractères au plus).
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).

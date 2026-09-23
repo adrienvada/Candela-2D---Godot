@@ -22,11 +22,15 @@
 set -uo pipefail
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 SECONDES="${SECONDES:-15}"
+# Le journal de Godot sous /tmp, hors de l'index de Spotlight (ISO12, session cloud, 2026-09-23) : le journal par défaut est
+# vidé à CHAQUE print (`run/flush_stdout_on_print`), et son indexation a pris jusqu'à 99 % d'un cœur pendant des relevés de
+# cadence. Par l'option de lancement `--log-file`, jamais par les réglages du projet : le jeu garde son journal.
+JOURNAL="${JOURNAL:-/tmp/candela-banc-cadence.log}"
 
 lancer() {
   local titre="$1"; shift
   local sortie
-  sortie="$("$GODOT" --path . res://tools/bench_framerate.tscn -- \
+  sortie="$("$GODOT" --log-file "$JOURNAL" --path . res://tools/bench_framerate.tscn -- \
     --seconds "$SECONDES" --max-fps 0 "$@" 2>&1)"
   local med bas
   # Extraire APRÈS les deux-points, jamais le premier nombre de la ligne : le

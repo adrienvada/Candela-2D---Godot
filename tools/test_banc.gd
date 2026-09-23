@@ -381,6 +381,17 @@ func _run() -> void:
 			absentes.append("%s : « %s »" % [f[0], l])
 	_check("le principe d'identité : chaque étape du fragment 2D du sol et des murs est dans le fragment éclairé",
 		absentes.is_empty(), "; ".join(absentes))
+	# ISO12 — le pied de lampe : à gain nul, zéro SANS lire les textures (la sortie en tête) ; à gain non nul, il éclaire
+	# encore (la lecture, pondérée par le gain, et l'appel dans l'émission de l'ancien chemin sont toujours là). La condition
+	# inversée — `> 0.0` — éteindrait le pied pour tout gain utile, et la garde la refuse (mutation vue rougir, 2026-09-23).
+	var sol_eclaire := FileAccess.get_file_as_string("res://sol_iso_eclaire.gdshader")
+	var pied := _fonction_de_shader(sol_eclaire, "vec3 lire_pied_lampe(vec2 px)")
+	var tete := pied.find("if (pied_lampe_gain <= 0.0) {\n\t\treturn vec3(0.0);\n\t}")
+	_check("le pied de lampe : zéro sans lecture à gain nul, et il éclaire encore à gain non nul",
+		tete >= 0 and tete < pied.find("texture(pied_lampe_texture")
+		and pied.contains("somme += texture(pied_lampe_texture, uv).a * pied_lampe_couleur * h.z * pied_lampe_gain;")
+		and sol_eclaire.contains("lire_pied_lampe(px_lu)"),
+		"sortie en tête absente, placée après la lecture, ou condition inversée")
 	# Au plus huit lampes miroir (session cloud, 03:50) : le plafond existe, vaut huit, et `suivre` l'applique À CHAQUE IMAGE.
 	# Sans lui, neuf lampes et plus faisaient du dénominateur et des lampes appariées par le moteur deux jeux différents.
 	_check("le miroir plafonne à huit lampes allumées, à chaque image",

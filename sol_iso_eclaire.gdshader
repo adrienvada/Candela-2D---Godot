@@ -102,6 +102,13 @@ uniform vec3 pied_lampe_couleur = vec3(1.0);
 uniform float pied_lampe_gain = 0.0;
 
 vec3 lire_pied_lampe(vec2 px) {
+	// ISO12 — gain nul (le défaut, `gain_pied_lampe_3d`) : zéro sans lire les textures. Le même pixel par construction ; les
+	// positions des pieds sont posées quel que soit le gain, et la multiplication venait APRÈS les lectures (vu par ISO7 Gadgets,
+	// 2026-09-23). ⚠️ La fonction n'est appelée que hors du principe d'identité, et ses lectures n'ont lieu que dans le carré de
+	// l'empreinte autour de chaque joueur : l'économie est sûre, pas forcément mesurable.
+	if (pied_lampe_gain <= 0.0) {
+		return vec3(0.0);
+	}
 	vec3 somme = vec3(0.0);
 	for (int k = 0; k < 2; k++) {
 		vec3 h = k == 0 ? pied_lampe_1 : pied_lampe_2;
