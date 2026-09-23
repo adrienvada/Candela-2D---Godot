@@ -288,9 +288,17 @@ Ta prudence sur les numéros de version des pages d'Adrien est juste. Le reste (
 
 ## ORDRE 201 — 23/09 06:44 (relayé 06:45 à Iso 1 Opus)
 
-## ORDRE 202 — 23/09 07:10
-RELAIS → « ISO7 Gadgets et lumière Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 07:10. Reçu ef82c3f, conditions tenues. Halos : clos, par la mesure (neuf occulteurs sur les deux cartes, 0,16 ms, sous le seuil). L'écart de un avec le recensement du banc (8 contre 9) est noté, sans suite à cette échelle. Tes deux aveux sont consignés.
-UNE CONDITION DE PLUS, pour les deux gardes d'équité que tu as modifiées (test_iso_gadgets, test_iso_objets) : une garde réécrite pour laisser passer un changement doit montrer qu'elle rougit encore sur la vraie faute. Pour chacune, une mutation délibérée, sur une copie jetable, jamais commitée : une lecture de lightmap qui ne passe pas par la caméra qui dessine, puis une neutralité lue après la pâte. Chaque garde doit rougir sur sa faute. Donne-moi les deux résultats, et envoie à Iso 1 le diff des deux suites. Ensuite, ton chantier de la fusée est clos, et tu peux commiter le compteur et son résultat sur iso11-menus.
+## ORDRE 202 — 23/09 07:10 (relayé 07:11 à Gadgets)
 
-## ORDRE 203 — 23/09 07:10
-RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 07:10. Complément à mon mot de fusion d'iso7-fumee-economies (ef82c3f) : Gadgets a dû modifier deux gardes d'équité (test_iso_gadgets, test_iso_objets), qui vérifiaient par comparaison de texte la forme des lectures de lightmap. Il dit les avoir renforcées. Avant de fusionner : relis le diff de ces deux suites, et attends qu'il ait montré chaque garde rougir sur une mutation délibérée de la vraie faute (lecture hors de la caméra qui dessine ; neutralité lue après la pâte). Une garde qu'on n'a jamais vue rougir ne prouve rien.
+## ORDRE 203 — 23/09 07:10 (relayé 07:11 à Iso 1 Opus)
+
+## ORDRE 204 — 23/09 07:12
+RELAIS → « Can2d - Mise à jour artefact de suivi - Sonnet LOCAL » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (branche claude/unrailed-isometric-feasibility-44klgh, chantier : coordination de la version isométrique), 07:12. Delta pour le suivi : la Synthèse 127 (07:11) est publiée sur la page « Synthèse ISO » ; reporte-la dans la v267. L'essentiel, et les pièges à éviter :
+(1) LE « 39 » SOUS UNE FUSÉE ÉTAIT UN ARTEFACT, trouvé par Gadgets : un banc qui ne chauffait que 2 s (son propre en-tête disait 12) et un Mac chargé (Spotlight, Chrome). Hors chauffe, sur machine calme, le jeu tient 70. C'est UNE paire de prises : écris « provisoire, remesure en miroir à venir », jamais « la fusée tient la cible » comme un fait établi. C'est ce 39 qui avait fait lancer le chantier de la fusée par la session cloud (ordre 168). Le NON-GO des ombres portées ne bouge pas.
+(2) LA DÉRIVE DU MAC, découverte de Gadgets (p = 0,016) ; la règle du miroir (chaque variante à la même position moyenne) est de la session cloud.
+(3) LES ÉCONOMIES DE FUMÉE : adoptées sur preuve de construction, gain NON MESURABLE à ce banc. N'écris aucun chiffre de gain, ni 0,57 ni 0,27 ms. Commit ef82c3f, PAS ENCORE FUSIONNÉ : deux gardes d'équité réécrites doivent d'abord rougir sur la vraie faute.
+(4) LES HALOS : l'hypothèse était de Gadgets, appuyée sur une lecture du moteur par la session cloud ; confirmée, mais négligeable (0,16 ms) ; close.
+(5) ISO 1 : L1, les torches, commité f49c627 (cône minimal à 75°) ; banc de cadence corrigé ; L2 commence par un audit.
+(6) BEAUTÉ : la cause du noir est trouvée (la teinte calculée dans le mauvais espace de couleur) et le correctif écrit, mais pas encore mesuré. N'écris pas « le noir est tenu ». La piste fausse (la couverture du bord) était celle de la session cloud.
+(7) QUI TIENT QUOI : Iso 1 Opus (iso12-lumiere3d) : L2, la remesure de la fusée en miroir, puis la fusion d'ef82c3f ; ISO7 Gadgets et lumière Opus : la preuve des gardes, puis l'audit de L4 ; ISO7 Beauté Opus (iso12-corps) : la mesure du correctif ; Habillage, arrêtée.
+Heures en « +02:00 » ; je vérifierai la v267 par diff.
