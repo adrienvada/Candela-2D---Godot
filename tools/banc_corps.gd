@@ -100,6 +100,9 @@ var _opaque := false
 ## peinte et la prise au portrait éteint. Sans lui, 40 000 pixels différaient même au contrôle (palette grise, 2026-09-23 05:56),
 ## et le noir absolu ne se prouve pas au niveau de ce bruit. Aucun shader des corps ne lit TIME : figer `_temps` fige tout.
 var _fige := false
+## ISO12, tenues sombres — `--toutes-tenues` (avec une tenue peinte) : après la prise de la tenue et sa prise grise, la même
+## scène dans chacune des tenues sombres (`_sombre1.png`…), posées par uniformes sur les mêmes matériaux, au temps figé.
+var _toutes_tenues := false
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -168,8 +171,9 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"palette-grise": _palette_grise = true
 			"opaque": _opaque = true
 			"corps":
-				if val != "portraits":
-					push_warning("banc_corps : --corps attend portraits (reçu « %s »)" % val)
+				if val != "portraits" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
+					push_warning("banc_corps : --corps attend portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
+			"toutes-tenues": _toutes_tenues = true
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
@@ -230,6 +234,9 @@ func _construire_scene() -> void:
 			for cle in ["ocre", "rouille", "brun", "bouteille", "arme"]:
 				mg.set_shader_parameter("portrait_%s" % cle, gris)
 			mg.set_shader_parameter("portrait_cartouche", Color(0, 0, 0, 0))
+			for cle in ["tete", "arete"]:
+				if (mg.get_shader_parameter("portrait_%s" % cle) as Color).a > 0.0:
+					mg.set_shader_parameter("portrait_%s" % cle, gris)
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,
@@ -584,6 +591,18 @@ func _capturer_puis_quitter() -> void:
 		if gris != null:
 			gris.save_png(_capture.get_basename() + "_gris.png")
 			print("BANC_CORPS capture du même corps, portrait éteint : %s" % (_capture.get_basename() + "_gris.png"))
+		if _toutes_tenues:
+			for nom in VoxelCatalogueT.TENUES_SOMBRES:
+				for c in _corps:
+					(c["noeud"] as VoxelCorpsT).porter_tenue(nom)
+				for i in _frames:
+					await get_tree().process_frame
+				var prise: Image = await RenduCommun.capturer(get_tree(), 60000)
+				if prise != null:
+					prise.save_png(_capture.get_basename() + "_%s.png" % nom)
+					print("BANC_CORPS capture du même corps, tenue %s : %s" % [nom, _capture.get_basename() + "_%s.png" % nom])
+			for c in _corps:
+				(c["noeud"] as VoxelCorpsT).porter_tenue(VoxelCatalogueT.tenue())
 	print("BANC_CORPS capture %s %dx%d (lumière=%.2f, capteur=%s, opacité=%.2f, silhouette=%s)"
 		% [_capture, image.get_width(), image.get_height(), _lumiere,
 			str(_capteur_actif), _opacite, str(_mode_silhouette == 1)])

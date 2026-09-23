@@ -76,6 +76,9 @@ var _decalage_corps := 0.0
 ## ISO12 — `--toutes-classes` (cadrage « corps », avec `--corps=portraits`) : la peinture de chacune des dix classes posée tour
 ## à tour sur le matériau de J2 — même corps, même lampe, même point de sol —, prise peinte puis grise.
 var _toutes_classes := OS.get_cmdline_user_args().has("--toutes-classes")
+## ISO12, tenues sombres — `--toutes-tenues` (avec `--toutes-classes` et une tenue peinte) : chaque classe prise dans chacune
+## des tenues sombres, en plus de son gris, toujours sur le matériau de J2 et contre la même image sans corps.
+var _toutes_tenues := OS.get_cmdline_user_args().has("--toutes-tenues")
 
 
 func _lire_arguments(args: PackedStringArray) -> bool:
@@ -820,7 +823,7 @@ func _controler_le_contraste(presentation: Node) -> void:
 	(images["avec"] as Image).save_png(_capture)
 	(images["sans"] as Image).save_png(_capture.get_basename() + "_sans_corps.png")
 	if peint and _toutes_classes:
-		await _contraste_par_classe(corps, mat, images["sans"], images["avec_bis"])
+		await _contraste_par_classe(corps, mat, images["sans"], images["avec_bis"], images["avec"])
 		_sortir(0)
 		return
 	var mesures := {"peint" if peint else "gris": mesurer_contraste(images["avec"], images["sans"], images["avec_bis"])}
@@ -837,7 +840,11 @@ func _controler_le_contraste(presentation: Node) -> void:
 
 ## Le corps : pixels qui changent de plus de 6/255 entre « avec » et « sans », hors de la dérive (« avec » contre
 ## « avec bis »). Le sol : les pixels de l'image « avec » à 6-30 px d'un pixel du corps, hors du corps, éclairés (> 2).
-static func mesurer_contraste(avec: Image, sans: Image, avec_bis: Image) -> Dictionary:
+## `impose` (tenues sombres) : le masque du corps donné d'avance — l'union des masques du gris et des tenues — au lieu de
+## celui de cette image. Un corps sombre diffère moins du sol : son propre masque ne garde que ses pixels clairs, et sa
+## clarté moyenne en sortait PLUS haute que celle du gris (V2 : 52 contre 30, 2026-09-23 20:58). `corps_n` reste compté
+## sur cette image : le nombre de pixels où le corps se voit (plus de 6/255 d'écart avec le sol sans lui).
+static func mesurer_contraste(avec: Image, sans: Image, avec_bis: Image, impose: Dictionary = {}) -> Dictionary:
 	var w := avec.get_width()
 	var h := avec.get_height()
 	var masque := {}
@@ -858,6 +865,18 @@ static func mesurer_contraste(avec: Image, sans: Image, avec_bis: Image) -> Dict
 				y0 = mini(y0, y)
 				x1 = maxi(x1, x)
 				y1 = maxi(y1, y)
+	var visibles := masque.size()
+	if not impose.is_empty():
+		masque = impose
+		x0 = w
+		y0 = h
+		x1 = 0
+		y1 = 0
+		for p: Vector2i in masque:
+			x0 = mini(x0, p.x)
+			y0 = mini(y0, p.y)
+			x1 = maxi(x1, p.x)
+			y1 = maxi(y1, p.y)
 	var somme := 0.0
 	var r := 0.0
 	var g := 0.0
@@ -893,7 +912,7 @@ static func mesurer_contraste(avec: Image, sans: Image, avec_bis: Image) -> Dict
 	var moy_sol := sol / float(maxi(1, n_sol)) * 255.0
 	lab_corps /= float(n)
 	lab_sol /= float(maxi(1, n_sol))
-	return {"corps_n": masque.size(), "corps_lum": moy_corps, "sol_n": n_sol, "sol_lum": moy_sol,
+	return {"corps_n": visibles, "masque": masque, "corps_lum": moy_corps, "sol_n": n_sol, "sol_lum": moy_sol,
 		"corps_lab": lab_corps, "sol_lab": lab_sol, "delta_e": lab_corps.distance_to(lab_sol),
 		"rapport": moy_corps / maxf(moy_sol, 0.001), "corps_rg": r / maxf(g, 0.0001),
 		"corps_teinte": Color(r / n, g / n, b / n).h * 360.0, "derive": derive}
@@ -927,32 +946,55 @@ static func _lab_texte(v: Vector3) -> String:
 
 ## `--toutes-classes` : pour chaque classe, sa palette et son gris posés sur le matériau de J2 (la forme reste celle de J2 :
 ## la couleur seule change), une capture peinte, une grise ; mesurées contre la même image sans corps. Rend le matériau de J2.
-func _contraste_par_classe(corps: Node3D, mat: ShaderMaterial, sans: Image, bis: Image) -> void:
+## Avec `--toutes-tenues`, une capture par tenue sombre (`tenue=` dans la ligne imprimée) au lieu de la seule tenue lancée.
+func _contraste_par_classe(corps: Node3D, mat: ShaderMaterial, sans: Image, bis: Image, avec: Image) -> void:
 	var garde := {}
 	for p in ["couleur_fiche", "portrait_ocre", "portrait_rouille", "portrait_brun", "portrait_bouteille", "portrait_arme",
-			"portrait_cartouche", "portrait_usure"]:
+			"portrait_cartouche", "portrait_usure", "portrait_tete", "portrait_arete", "portrait_arete_px", "portrait_sous_seuil", "portrait_seuils"]:
 		garde[p] = mat.get_shader_parameter(p)
+	var tenues: Array = VoxelCatalogue.TENUES_SOMBRES.keys() if _toutes_tenues else [VoxelCatalogue.tenue()]
 	for slug in VoxelCatalogue.slugs():
-		var pal := VoxelCatalogue.palette_portrait(slug)
 		mat.set_shader_parameter("couleur_fiche", VoxelCatalogue.fiche(slug)["couleur"])
-		for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
-			mat.set_shader_parameter("portrait_%s" % cle, pal[cle])
-		mat.set_shader_parameter("portrait_usure", pal["usure"])
 		var prises := {}
-		for etat in [["peint", 1.0], ["gris", 0.0]]:
-			mat.set_shader_parameter("portrait", etat[1])
+		mat.set_shader_parameter("portrait", 0.0)
+		for i in 10:
+			_tenir_le_cadrage()
+			await get_tree().process_frame
+		prises["gris"] = await RenduCommun.capturer(get_tree(), 15000)
+		for nom in tenues:
+			var pal := VoxelCatalogue.palette_tenue(slug, nom)
+			for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
+				mat.set_shader_parameter("portrait_%s" % cle, pal[cle])
+			mat.set_shader_parameter("portrait_usure", pal["usure"])
+			mat.set_shader_parameter("portrait_tete", pal.get("tete", Color(0, 0, 0, 0)))
+			mat.set_shader_parameter("portrait_arete", pal.get("arete", Color(0, 0, 0, 0)))
+			mat.set_shader_parameter("portrait_arete_px", float(pal.get("arete_px", 0.0)))
+			mat.set_shader_parameter("portrait_sous_seuil", 1.0 if bool(pal.get("sous_seuil", true)) else 0.0)
+			mat.set_shader_parameter("portrait_seuils", pal.get("seuils", Vector2(10.0, 24.0) / 255.0))
+			mat.set_shader_parameter("portrait", 1.0)
 			for i in 10:
 				_tenir_le_cadrage()
 				await get_tree().process_frame
-			prises[etat[0]] = await RenduCommun.capturer(get_tree(), 15000)
-		mat.set_shader_parameter("portrait", 1.0)
-		if prises["peint"] == null or prises["gris"] == null:
+			prises[nom] = await RenduCommun.capturer(get_tree(), 15000)
+		if prises.values().has(null):
 			printerr("✗ %s : aucune image" % slug)
 			continue
-		var mp := mesurer_contraste(prises["peint"], sans, bis)
-		var mg := mesurer_contraste(prises["gris"], sans, bis)
-		print("BANC_ISO_CONTRASTE_CLASSE %s distance=%d décalage=%d | ΔE76 peint %.1f gris %.1f | clarté corps/sol peint %.2f gris %.2f | corps %d/%d px"
-			% [slug, roundi(_distance_corps), roundi(_decalage_corps), mp["delta_e"], mg["delta_e"], mp["rapport"], mg["rapport"],
-			mp["corps_n"], mg["corps_n"]])
+		# Le masque commun : l'union des pixels où le gris ou l'une des tenues se voit (voir `mesurer_contraste`), moins la
+		# DÉRIVE de la scène, lue une fois entre les deux prises de la tenue lancée (`avec`, `avec_bis`). ⚠️ Chaque prise se
+		# compare à elle-même pour la dérive : contre `avec_bis`, peint dans la tenue lancée, les pixels du corps d'une AUTRE
+		# tenue passaient pour une dérive et sortaient de la mesure (le gris de l'Occulteur n'y gardait que 180 pixels,
+		# 2026-09-23 21:00).
+		var derive: Dictionary = mesurer_contraste(avec, bis, avec)["masque"]
+		var union := {}
+		for cle in prises:
+			union.merge(mesurer_contraste(prises[cle], sans, prises[cle])["masque"])
+		for p in derive:
+			union.erase(p)
+		var mg := mesurer_contraste(prises["gris"], sans, prises["gris"], union)
+		for nom in tenues:
+			var mp := mesurer_contraste(prises[nom], sans, prises[nom], union)
+			print("BANC_ISO_CONTRASTE_CLASSE %s tenue=%s distance=%d décalage=%d | ΔE76 peint %.1f gris %.1f | clarté corps/sol peint %.2f gris %.2f | corps %d/%d px | lum corps peint %.1f gris %.1f"
+				% [slug, nom, roundi(_distance_corps), roundi(_decalage_corps), mp["delta_e"], mg["delta_e"], mp["rapport"],
+				mg["rapport"], mp["corps_n"], mg["corps_n"], mp["corps_lum"], mg["corps_lum"]])
 	for p in garde:
 		mat.set_shader_parameter(p, garde[p])

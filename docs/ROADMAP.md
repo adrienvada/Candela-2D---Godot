@@ -26234,6 +26234,80 @@ portrait, au portrait éteint à 0,8 (même partie), peinte à 0,8, 0,2 et 0. Lo
 2026-09-23 05:31). La bouteille ne se voit que de dos ou de profil (au banc, face à la caméra, elle est cachée) ; les
 accessoires peints sont des aplats sur les faces du torse. À trancher par Adrien sur la planche : allumer ou non le drapeau.
 
+#### ISO12 — les tenues sombres des dix corps 🟡 (ouvert le 2026-09-23 à 20:43, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi.** Q21 : Adrien a d'abord choisi les corps d'après les portraits (ocre) pour tout le monde, puis s'est repris à
+20:43 : « il faudrait que les personnages soient en tenue sombre. Dans tous les visuels. » La session cloud a commandé des
+tenues sombres en jeu, derrière un drapeau éteint par défaut, en au moins deux variantes pour que le CHOIX DE JEU se voie :
+une V1 sombre à l'œil mais aussi visible qu'aujourd'hui, une V2 vraiment sombre. Les illustrations suivront le choix.
+
+**Le mécanisme est celui des portraits** (la teinte posée après la pâte, dans l'espace des octets de l'image), mais chaque
+rôle porte un RAPPORT de clarté au gris de sa classe au lieu de 1 : tissu, usure, cuir (sangles, poche, cerclage de la
+bouteille), arme, bouteille, cartouches, et deux rôles neufs, la tête entière et un liseré le long des arêtes des boîtes
+(`VoxelCatalogue.TENUES_SOMBRES`, `palette_tenue()`). Drapeaux : `--corps=sombre` (V1), `--corps=sombre2` (V2),
+`--corps=sombre3` (V3) ; `VoxelCorps.porter_tenue()` bascule le gris et les tenues sur la même matière, au même instant.
+Tout corps passe par `construire()` — fantômes de la killcam, leurre, photographe compris : le drapeau vaut partout.
+- **V1 — aussi visible qu'aujourd'hui** : tissu olive sombre (0,62 du gris), tête et liseré couleur d'os à 1,2 ;
+- **V2 — vraiment sombre** : tout plus sombre que le gris (tissu 0,62, tête 0,7), aucun accent clair ;
+- **V3 — sombre, silhouette gardée** (ma proposition, adoptée) : les tissus de V2 et le liseré de V1.
+
+**Trois choses que le banc a apprises, et qui ne se devinaient pas.**
+- ⚠️ **L'image affichée écrase les valeurs très sombres.** Un pixel gris à 1-4 niveaux, assombri de 38 %, sort à 0 ; à 4-8
+  niveaux il garde 22 % de sa valeur au lieu de 62 % (banc des corps, 20:52). Une tenue sombre s'efface donc bien plus que
+  son rapport en lumière faible — c'est tout l'effet de jeu de V2 — et un corps fait de sombre et de clair n'y garde pas sa
+  moyenne : V1 réglé à 1,00 à 0,8 sortait à 0,89-0,97 à 0,2. **D'où la forme de V1** : elle ne teint qu'au-dessus de 16/255
+  (32/255 pour la teinte entière) et laisse le gris tel quel dessous. Elle est sombre en bonne lumière, et d'aujourd'hui là
+  où l'on commence à voir un adversaire.
+- **`Charte.DIM` plafonne tout corps.** La tête et le liseré clairs y sont bornés : l'Allumeur (0,85 du plafond) n'a que
+  1,18 de marge. Mesuré : la tête et le liseré portent 63 à 67 % de la clarté d'un corps (le dessus de la tête est la face
+  la plus éclairée de la vue iso), d'où 1,2 pour tous.
+- **Sous une fusée, la tenue ne change rien.** Qui voit une fusée en est ébloui — à trois tuiles (0,69-0,85) comme à huit
+  (0,27) — et le corps adverse prend l'opacité de cet éblouissement (`Brouillage.opacite`) : près d'elle, il s'efface dans
+  toutes les tenues pareil. La règle du jeu ; la planche le montre et ne compare pas les tenues là.
+
+**Chiffres** (banc des corps au temps figé, gris et tenues dans la même partie ; clarté rapportée au gris, dix classes) :
+
+| | 0,8 | 0,2 | 0,15 | 0,1 |
+|---|---|---|---|---|
+| V1 | 0,979-1,002 | 0,972-1,014 | 0,998-1,016 | 1,000 |
+| V2 | 0,618-0,648 | 0,338-0,454 | 0,135-0,390 | 0,000-0,157 |
+| V3 | 0,862-0,893 | 0,515-0,691 | 0,321-0,568 | 0,136-0,353 |
+
+- **V1 tient le critère 2 aux quatre lumières** (au pire −2,8 %, l'Allumeur à 0,2). **Noir absolu** : aucun pixel noir au gris
+  ne sort non noir, dans aucune tenue, de 0,8 à 0 (0 pixel, seuils 0 et 2/255).
+- **Le seuil de visibilité**, en lumière (le banc des corps, la plus faible lumière où un corps montre au moins 30 pixels) :
+  le gris et V1 apparaissent à 0,08-0,12 selon la classe ; **V2 demande 1,4 à 1,5 fois plus de lumière** (0,12-0,17) ;
+  V3 apparaît à la même lumière que le gris, mais n'en montre que la moitié à 0,15 (2 749 pixels contre 5 414, médiane) et
+  15 % à 0,12.
+- **Le contraste au sol ocre**, dans le cône (banc de beauté, J2 à 90 px de J1, décalé de 0 à 90 px, LED coupée, masque
+  commun à toutes les tenues) : ΔE76 médian gris 14,7-17,9, V1 14,2-16,3, V2 9,8-13,6, V3 12,4-15,2. ⚠️ **V1 se détache
+  moins du sol que le gris, à clarté égale** : au centre du cône, 5,8 contre 8,9 pour l'Occulteur, et plus bas pour toutes
+  les classes. Le tissu olive et la tête couleur d'os sont plus proches de l'ocre que le gris bleuté. Une teinte plus froide
+  rendrait l'écart — piste proposée, pas prise. Au-delà de 90 px, J2 sort du faisceau et le banc ne mesure plus un contraste
+  (ΔE 42 contre quelques pixels de sol encore éclairés) : ces lignes sont écartées.
+- **Empreinte** : la géométrie des portraits, bouteille comprise (16,8-17,4 px, zone de touche 18 px inchangée) ;
+  `Protocol.VERSION` 18.
+
+**Deux défauts du banc de beauté corrigés en chemin** (`_contraste_par_classe`, `mesurer_contraste`) : le masque du corps
+était celui de chaque image, et un corps sombre, qui diffère moins du sol, n'y gardait que ses pixels clairs (V2 sortait
+PLUS clair que le gris) ; et la dérive se lisait contre une prise peinte dans la tenue lancée, si bien que les pixels du corps
+d'une autre tenue passaient pour une dérive (l'Occulteur gris n'y gardait que 180 pixels). Désormais un masque commun, l'union
+des masques du gris et des tenues, moins la dérive lue une fois entre deux prises de la même tenue.
+
+**Preuves.** `tools/test_corps_portraits.gd` étendue aux tenues (150 vérifications : drapeaux, rapports par rôle dans les dix
+classes, rien au-dessus de `Charte.DIM`, V2 sous le gris, le noir absolu dans le miroir de la teinte, la tête reconnue sur une
+seule boîte, la géométrie des portraits). Planche `docs/iso/planche_tenues_sombres.jpg` : trois classes (le Braconnier,
+l'Incendiaire, le Parasite) vues de face et de dos dans la vue de J1, gris / V1 / V2 / V3 au même instant, sous la torche, sous
+une fusée et dans le noir, puis les dix corps au banc. Prise dans un arbre détaché sur la tête d'Iso 1 (`4979484`) avec ce diff
+appliqué, jamais dans sa branche ; le cadrage `planche_tenues` et `--arme-j2` n'existent que dans ce patch
+(`docs/iso/iso12_tenues/banc_lumiere3d_planches.patch`, avec le cadrage `planche_ca` de la planche C contre A), le
+`banc_lumiere3d` de cette branche n'ayant pas la v27. Scripts d'analyse dans `docs/iso/iso12_tenues/`. Lot complet vert
+(436 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 21:32).
+
+**À trancher par Adrien** : V1, V2 ou V3 — c'est-à-dire, à visibilité égale, plus sombre de couleur seulement (V1) ; ou un
+adversaire qu'on voit moins, surtout au bord du cône (V2, et V3 qui garde sa silhouette). Puis la teinte (olive chaude
+aujourd'hui) avant les illustrations.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

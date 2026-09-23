@@ -232,15 +232,43 @@ const EPAISSEUR_PAR_DEFAUT := "x1_6"
 
 ## Le drapeau de comparaison, éteint par défaut : sans lui, les corps restent les aplats gris d'ISO3.
 const DRAPEAU_PORTRAITS := "--corps=portraits"
+## ISO12 — les TENUES SOMBRES (ordre de la session cloud, 2026-09-23 20:43, après la réponse d'Adrien à Q21 : « il faudrait
+## que les personnages soient en tenue sombre. Dans tous les visuels. »), éteintes par défaut elles aussi, en trois variantes
+## (`TENUES_SOMBRES`) : `--corps=sombre` (V1), `--corps=sombre2` (V2), `--corps=sombre3` (V3).
+const DRAPEAU_SOMBRE := "--corps=sombre"
 
 ## Pour les suites (`--script`, sans ligne de commande de jeu) : -1 lit le drapeau, 0 l'éteint, 1 l'allume.
 static var forcer_portraits := -1
+## Pour les suites et les bancs : `"-"` lit la ligne de commande ; sinon la tenue imposée (`""` le gris, `"portraits"`,
+## `"sombre1"`, `"sombre2"`, `"sombre3"`). Prime sur `forcer_portraits`.
+static var forcer_tenue := "-"
 
 
-static func portraits_actifs() -> bool:
+## La tenue des corps : `""` (le gris d'ISO3, le défaut), `"portraits"` ou l'une des `TENUES_SOMBRES`.
+static func tenue() -> String:
+	if forcer_tenue != "-":
+		return forcer_tenue
 	if forcer_portraits >= 0:
-		return forcer_portraits == 1
-	return OS.get_cmdline_user_args().has(DRAPEAU_PORTRAITS)
+		return "portraits" if forcer_portraits == 1 else ""
+	return tenue_de(OS.get_cmdline_user_args())
+
+
+## La tenue que nomme une ligne de commande (la première qui en nomme une) : `""` si aucune.
+static func tenue_de(args: PackedStringArray) -> String:
+	for a in args:
+		if a == DRAPEAU_PORTRAITS:
+			return "portraits"
+		if a == DRAPEAU_SOMBRE:
+			return "sombre1"
+		if a.begins_with(DRAPEAU_SOMBRE) and TENUES_SOMBRES.has("sombre" + a.trim_prefix(DRAPEAU_SOMBRE)):
+			return "sombre" + a.trim_prefix(DRAPEAU_SOMBRE)
+	return ""
+
+
+## Une tenue PEINTE est-elle portée (portraits ou sombre) : c'est ce que lisent `VoxelCorps` et les bancs (temps figé, prise
+## grise sur les mêmes matériaux). Le nom date des portraits.
+static func portraits_actifs() -> bool:
+	return tenue() != ""
 
 
 ## Les teintes lues AU PIXEL sur les dix portraits (ISO Assets, `docs/iso/planches_gemini/habillage/portrait_<classe>.png`,
@@ -332,6 +360,91 @@ static func palette_portrait(slug: String) -> Dictionary:
 		"cartouche": cartouche,
 		"usure": float(p["usure"]),
 		"bouteille_portee": bool(p["bouteille"]),
+	}
+
+
+## ISO12 — LES TENUES SOMBRES. Même mécanisme que les portraits (la teinte posée APRÈS la pâte, en valeurs affichées : la
+## lumière décide seule où un corps se voit), mais chaque rôle porte ici un RAPPORT de clarté au gris de sa classe, au lieu
+## de 1 : c'est ce rapport qui rend une tenue sombre, et c'est lui que le banc des corps chiffre (clarté peinte / grise).
+## Les rôles : `tissu` (le plâtre des portraits), `usure` (sa patine : un tissu passé, par taches, vers le bas et aux arêtes),
+## `cuir` (sangles, ceinture, poche, cerclage et vanne de la bouteille), `arme`, `bouteille`, `cartouche`, et deux rôles
+## neufs : `tete` (la tête entière) et `arete` (un liseré le long des arêtes des boîtes, large de `arete_px` pixels du monde ;
+## rapport 0 = pas de liseré).
+## - **V1 — sombre à l'œil, aussi visible qu'aujourd'hui** : tissus sombres, tête et liseré clairs, réglés pour qu'un corps
+##   garde en moyenne la clarté de son gris (critère 2 : à 3 % près), mesuré au banc des corps.
+## - **V2 — vraiment sombre** : tout plus sombre que le gris, aucun accent clair ; l'adversaire se voit moins.
+## - **V3 — sombre, silhouette gardée** : les tissus de V2 et le liseré clair de V1, sans la tête claire — entre les deux.
+## ⚠️ Un rapport > 1 n'éclaire jamais un pixel noir : `portrait_teindre` ne teint pas sous 10/255 (il n'y fait qu'assombrir,
+## quand le rapport est < 1 et que `sous_seuil` le permet). Le noir absolu tient par construction ; le banc le vérifie.
+## ⚠️ Et rien ne dépasse `Charte.DIM` (`GRIS_PLAFOND`, « aucune classe ne peut être rendue plus claire que ça ») : la tête et
+## le liseré clairs de V1 y sont bornés, ce qui laisse aux classes claires (l'Allumeur est à 0,85 du plafond) bien moins de
+## marge qu'aux sombres (l'Occulteur à 0,55).
+## `sous_seuil` : sous le seuil du noir, le gris assombri du rapport du pixel (V2, V3) ou laissé tel quel (V1 : sa promesse
+## est la visibilité d'aujourd'hui, et c'est là, au pied de l'échelle, qu'on commence à voir un adversaire). `seuils` : où la
+## teinte commence et où elle est entière, en valeurs affichées (10/255 et 24/255 pour les portraits, V2 et V3).
+## ⚠️ **Pourquoi V1 teint plus haut (16/255 → 32/255), mesuré au banc des corps (2026-09-23, 20:52)** : l'image affichée
+## ÉCRASE les valeurs très sombres. Un pixel gris à 1-4 niveaux, assombri de 38 %, sort à 0 ; à 4-8 niveaux il garde 22 % de
+## sa valeur au lieu de 62 %. Dans la bande de fondu, un tissu sombre y perd donc bien plus que son rapport, quand la tête et
+## le liseré clairs gagnent le leur : V1 réglé à 1,00 à 0,8 sortait à 0,89-0,97 à 0,2 (Allumeur, Incendiaire, Spectre, Illusionniste).
+## Teinte plus haut, V1 laisse la lumière faible au gris d'aujourd'hui, et n'est sombre qu'en bonne lumière.
+## Le réglage de V1 (même banc, même soirée) : la part de la clarté d'un corps portée par la tête et le liseré vaut 0,63 à
+## 0,67 selon la classe (le dessus de la tête est la face la plus éclairée de la vue iso) ; avec le reste au rapport de V2,
+## une tête et un liseré à 1,2 fois le gris rendent la clarté du gris à 0,8. L'Allumeur est borné par `Charte.DIM` à 1,18.
+const TENUES_SOMBRES := {
+	"sombre1": {"tissu": 0.62, "usure": 0.74, "cuir": 0.46, "arme": 0.52, "bouteille": 0.9, "cartouche": 0.95,
+		"tete": 1.2, "arete": 1.2, "arete_px": 1.6, "sous_seuil": false, "seuils": Vector2(16.0, 32.0) / 255.0},
+	"sombre2": {"tissu": 0.62, "usure": 0.74, "cuir": 0.46, "arme": 0.52, "bouteille": 0.8, "cartouche": 0.85,
+		"tete": 0.7, "arete": 0.0, "arete_px": 0.0, "sous_seuil": true, "seuils": Vector2(10.0, 24.0) / 255.0},
+	"sombre3": {"tissu": 0.62, "usure": 0.74, "cuir": 0.46, "arme": 0.52, "bouteille": 0.8, "cartouche": 0.85,
+		"tete": 0.7, "arete": 1.2, "arete_px": 1.6, "sous_seuil": true, "seuils": Vector2(10.0, 24.0) / 255.0},
+}
+## Les teintes des tenues sombres (seule leur chromaticité sert : la clarté vient du rapport) : un drap olive éteint, passé
+## vers le brun à l'usure, un cuir brun noir, un métal bleuté pour l'arme et la bouteille, une tête et un liseré couleur d'os
+## (la bouteille pâle des portraits).
+const TEINTE_TISSU_SOMBRE := Color8(58, 62, 50)
+const TEINTE_USURE_SOMBRE := Color8(96, 86, 66)
+const TEINTE_CUIR_SOMBRE := Color8(44, 30, 22)
+const TEINTE_METAL_SOMBRE := Color8(70, 76, 84)
+const TEINTE_OS := Color8(214, 204, 184)
+
+
+## La palette de la tenue `nom` pour la classe `slug`, aux mêmes clés que `palette_portrait()` (plus `tete`, `arete`,
+## `arete_px`, `rapports`) : `{}` pour le gris ou un nom inconnu.
+static func palette_tenue(slug: String, nom: String) -> Dictionary:
+	if nom == "portraits":
+		return palette_portrait(slug)
+	if not TENUES_SOMBRES.has(nom):
+		return {}
+	var f := fiche(slug)
+	if f.is_empty() or not PORTRAITS.has(slug):
+		return {}
+	var p: Dictionary = PORTRAITS[slug]
+	var r: Dictionary = TENUES_SOMBRES[nom]
+	var l := luminance_affichee(f["couleur"])
+	var plafond := luminance_affichee(GRIS_PLAFOND)
+	var cartouche := Color(0, 0, 0, 0)
+	if p["cartouches"] == "grise":
+		cartouche = a_luminance(TEINTE_CARTOUCHE_GRISE, l * float(r["cartouche"]))
+	elif p["cartouches"] == "rouge":
+		cartouche = a_luminance(TEINTE_CARTOUCHE_ROUGE, l * float(r["cartouche"]))
+	var arete := Color(0, 0, 0, 0)
+	if float(r["arete"]) > 0.0:
+		arete = a_luminance(TEINTE_OS, minf(l * float(r["arete"]), plafond))
+	return {
+		"ocre": a_luminance(TEINTE_TISSU_SOMBRE, l * float(r["tissu"])),
+		"rouille": a_luminance(TEINTE_USURE_SOMBRE, l * float(r["usure"])),
+		"brun": a_luminance(TEINTE_CUIR_SOMBRE, l * float(r["cuir"])),
+		"arme": a_luminance(TEINTE_METAL_SOMBRE, l * float(r["arme"])),
+		"bouteille": a_luminance(TEINTE_METAL_SOMBRE, l * float(r["bouteille"])),
+		"cartouche": cartouche,
+		"tete": a_luminance(TEINTE_OS if float(r["tete"]) > 1.0 else TEINTE_TISSU_SOMBRE, minf(l * float(r["tete"]), plafond)),
+		"arete": arete,
+		"arete_px": float(r["arete_px"]),
+		"sous_seuil": bool(r["sous_seuil"]),
+		"seuils": r["seuils"],
+		"usure": float(p["usure"]),
+		"bouteille_portee": bool(p["bouteille"]),
+		"rapports": r,
 	}
 
 
