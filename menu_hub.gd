@@ -979,15 +979,18 @@ func make_entry(label: String, detail: String, target: String = "",
 		# sur du papier. Les états se distinguent ici par la LUMIÈRE REÇUE et par
 		# la POSITION du bloc — jamais en montant jusqu'à la torche.
 		normal = MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.REPOS)
-		# Survolée : le bloc reçoit le bord du faisceau, pas le faisceau.
-		hover = MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.REPOS,
-			Charte.VOXEL_PLAQUE_SURVOL)
-		# **L'entrée choisie est celle qui est RESTÉE RENTRÉE.** Son dessus est
-		# passé à l'ombre et elle est éclairée au filament : c'est le même « vous
-		# êtes ici » que l'ancienne bordure ambre, dit en volume.
-		choisie = MenuWidgets.style_de_bloc(MenuTheme.FILAMENT, MenuWidgets.Bloc.RENTRE)
-		pressed = MenuWidgets.style_de_bloc(MenuTheme.FILAMENT, MenuWidgets.Bloc.RENTRE,
-			Charte.VOXEL_PLAQUE_SURVOL)
+		# **Survolée : la torche touche la face du dessus, pas le corps.** L'écart
+		# avec le repos vaut 3,80:1 sur cette face — au-dessus du seuil de 3:1 des
+		# états d'interface — pendant que le corps DESCEND, si bien que le libellé
+		# y gagne en contraste au lieu d'en perdre. C'est ce qui rend le survol
+		# franc sans toucher à la couleur du libellé, qui est de l'information.
+		hover = MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.EFFLEURE)
+		# **L'entrée choisie est celle que le filament éclaire**, et elle le reste :
+		# c'est le « vous êtes ici » de l'ancienne bordure ambre, dit en lumière.
+		choisie = MenuWidgets.style_de_bloc(MenuTheme.FILAMENT, MenuWidgets.Bloc.EFFLEURE)
+		# L'appui, lui, RENTRE le bloc : son dessus passe à l'ombre. Deux gestes
+		# distincts — on éclaire ce qu'on choisit, on enfonce ce qu'on presse.
+		pressed = MenuWidgets.style_de_bloc(MenuTheme.FILAMENT, MenuWidgets.Bloc.RENTRE)
 		for s: StyleBox in [normal, hover, choisie, pressed]:
 			s.content_margin_left = MenuTheme.GAP_S
 			s.content_margin_right = MenuTheme.GAP_S
@@ -1064,8 +1067,14 @@ func make_entry(label: String, detail: String, target: String = "",
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
-	lbl.add_theme_color_override("font_color",
-		MenuTheme.DIM if btn.disabled else MenuTheme.LUMIERE)
+	# Le corps d'un bloc est plus clair que l'aplat d'encre qu'il remplace, donc ce
+	# qui s'écrit dessus remonte avec lui — mesuré sur les captures, le papier y
+	# perdait 0,40 de contraste. Même règle que partout dans ce chantier : un rôle
+	# de texte est un contraste tenu sur ce qu'il recouvre, pas une couleur fixe.
+	var teinte_du_libelle: Color = MenuWidgets.texte_de_role(MenuTheme.LUMIERE)
+	if btn.disabled:
+		teinte_du_libelle = MenuWidgets.texte_second()
+	lbl.add_theme_color_override("font_color", teinte_du_libelle)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Le gras remplace la couleur pour marquer un geste qui engage : la couleur
 	# est réservée aux deux curseurs, un accent posé ici s'y confondrait au repos.

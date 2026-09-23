@@ -368,6 +368,29 @@ const VOXEL_ALLUME := PAPIER
 ## il prend exactement la valeur de ses propres côtés.
 const VOXEL_ENFONCE := Color(VOXEL_FLANC, 0.94)
 
+## `lerp(ENCRE, PAPIER, 0.75)` — le texte secondaire POSÉ SUR UN BLOC.
+##
+## ⚠️ **Le même rôle, une autre valeur, parce que la surface a changé.** Le béton
+## clair tient 4,8:1 sur l'aplat d'encre de la pâte ; sur le corps d'un bloc de
+## plâtre, qui est deux fois plus clair, il tombe à 3,9:1 — mesuré sur les
+## captures rendues, 4,48:1 avant contre 3,59:1 après, revue de la session cloud
+## du 2026-09-23. Un rôle de texte se règle sur ce qu'il recouvre : celui-ci
+## remonte à 4,9:1 sur le corps d'une plaque au repos.
+const VOXEL_TEXTE_SECOND := Color(0.61875, 0.55575, 0.47775)
+
+## Ce qu'un rôle prend d'halogène quand il est ÉCRIT sur un bloc.
+##
+## Même raison que [constant VOXEL_TEXTE_SECOND], et le cas le plus serré du
+## dépôt : `ROUGE` est une couleur sombre (luminance 0,24). Écrite sur l'aplat
+## d'encre de la pâte, elle tient 5,37:1 ; sur le corps d'un bloc de plâtre, elle
+## tombe à 4,20:1, sous le seuil. Tirée d'un tiers vers l'halogène, elle remonte
+## à 5,95:1 sans cesser d'être rouge — un rouge sous une lampe reste rouge.
+##
+## ⚠️ **Ne vaut que pour le TEXTE.** Le liseré d'un joueur, la lumière d'une
+## plaque et le sang gardent la couleur exacte du rôle : ce sont des signes, et
+## un signe qui change de valeur selon son support cesse d'être un signe.
+const VOXEL_TEXTE_ROLE_HALO := 0.35
+
 # --- Les tailles d'un bloc, en pixels d'interface -----------------------------
 
 ## Hauteur de la face du dessus, la bande éclairée en haut d'une plaque.
@@ -394,17 +417,29 @@ const VOXEL_BAS_PX := 8
 ## « photo de mur » au lieu de « plâtre » (constaté en aperçu le 2026-09-23).
 const VOXEL_TUILE_PX := 70
 
-## La part du rôle dans la lumière d'une plaque. Un bloc de joueur 1 n'est pas un
-## bloc bleu : c'est un bloc éclairé en bleu — la couleur vient de la lumière,
-## jamais de la matière, comme partout ailleurs dans ce jeu.
+## La part du rôle dans la lumière d'une plaque À L'OMBRE. Un bloc de joueur 1
+## n'est pas un bloc bleu : c'est un bloc éclairé en bleu — la couleur vient de
+## la lumière, jamais de la matière, comme partout ailleurs dans ce jeu. Dans
+## l'ombre, il n'en reçoit qu'un quart : la matière domine.
 const VOXEL_TEINTE_ROLE := 0.25
 
-## La plaque effleurée : le bloc n'est pas encore sous la torche, il en reçoit le
-## bord. `lerp(VOXEL_DESSUS, PAPIER, 0.30)`, et pas davantage — au-delà, le texte
-## papier d'une entrée de menu cesserait de tenir ses 4,5:1 sur elle.
-const VOXEL_PLAQUE_SURVOL := Color(0.50058, 0.44866, 0.38500, 0.94)
+## La part du rôle dans la lumière d'une plaque ÉCLAIRÉE.
+##
+## ⚠️ **Un quart ne suffisait pas, et c'est un défaut de jeu, pas de goût.**
+## Posée à 0,25 sur une base papier, la lumière d'un rôle se délavait : la classe
+## choisie de J1 passait d'un bleu franc à un gris cerné de bleu, et le bouton
+## qui lance le match d'un ambre franc à du plâtre beige (revue de la session
+## cloud, 2026-09-23). Dans un duel à deux curseurs, **ce qui est choisi et ce
+## qui lance doivent se voir d'abord**. Une plaque éclairée prend donc la couleur
+## de la lumière qui l'éclaire, et non une teinte de celle-ci.
+##
+## 0,80 et pas 1,00 : à pleine force, l'encre ne tient plus que 4,40:1 sur un
+## bloc éclairé en ROUGE, sous le seuil de 4,5. La part restante de papier ramène
+## le rouge à 4,74:1 sans lui enlever sa franchise. `tools/test_habillage.gd`
+## refait le calcul pour chaque rôle, sur le pixel des plaques livrées.
+const VOXEL_TEINTE_ROLE_ALLUME := 0.80
 
-## Les quatre plaques en neuf tranches, fabriquées par `tools/fabrique_bloc_ui.py`
+## Les cinq plaques en neuf tranches, fabriquées par `tools/fabrique_bloc_ui.py`
 ## depuis `assets/iso/face_mur.png` — la matière que le joueur voit sur les murs
 ## du duel.
 ##
@@ -417,6 +452,13 @@ const CHEMIN_VOXEL_PLAQUE := "res://assets/ui/matiere/bloc_plaque.png"
 const CHEMIN_VOXEL_PLAQUE_ALLUMEE := "res://assets/ui/matiere/bloc_plaque_allumee.png"
 const CHEMIN_VOXEL_PLAQUE_ENFONCEE := "res://assets/ui/matiere/bloc_plaque_enfoncee.png"
 const CHEMIN_VOXEL_PLAQUE_RENTREE := "res://assets/ui/matiere/bloc_plaque_rentree.png"
+## La cinquième : **le bord du faisceau touche le dessus, pas le corps.** L'état
+## de survol des surfaces dont le libellé ne peut pas changer de couleur — les
+## entrées de menu et les cartouches du HUD. Sa face du dessus monte au papier
+## (l'écart avec le repos vaut 3,80:1, au-dessus du seuil de 3:1 des états
+## d'interface) pendant que son corps DESCEND sous celui du repos, si bien que le
+## texte posé dessus gagne en contraste au lieu d'en perdre.
+const CHEMIN_VOXEL_PLAQUE_EFFLEUREE := "res://assets/ui/matiere/bloc_plaque_effleuree.png"
 
 ## Le plafond de luminance d'un pixel de plaque, patine comprise : au-dessus, le
 ## papier n'y tient plus 4,5:1. Vaut `(lum(PAPIER) + 0.05) / 4.5 - 0.05`, et la

@@ -145,6 +145,7 @@ func _run() -> void:
 	_test_les_plaques_de_bloc()
 	_test_les_plaques_sont_partagees()
 	_test_l_habillage_va_jusqu_au_style()
+	_test_les_surcouches_n_ont_pas_de_plaque()
 	_test_la_matiere_est_posee()
 	_test_le_voile_de_killcam_porte_son_crochet()
 	_test_le_menu_est_empate()
@@ -930,26 +931,14 @@ func _test_le_voxel_descend_de_la_vitrine() -> void:
 		"le flanc n'est plus le dessus × %.2f : %s contre %s"
 		% [C.VOXEL_FACTEUR_FLANC, flanc_calcule, C.VOXEL_FLANC])
 
-	# La plaque effleurée : le bord du faisceau, pas le faisceau. Son plafond est
-	# un seuil de lecture — au-delà de 0,30, le papier d'une entrée de menu ne
-	# tient plus ses 4,5:1, et une entrée de menu ne peut pas changer de couleur
-	# de texte (son libellé est un enfant).
-	var survol := C.VOXEL_DESSUS.lerp(C.PAPIER, 0.30)
-	survol.a = 0.94
-	_check(_ecart(C.VOXEL_PLAQUE_SURVOL, survol) < 0.0005,
-		"VOXEL_PLAQUE_SURVOL n'est plus lerp(VOXEL_DESSUS, PAPIER, 0.30) : %s contre %s"
-		% [C.VOXEL_PLAQUE_SURVOL, survol])
-	# ⚠️ **Le texte ne se pose pas sur la LUMIÈRE d'une plaque, mais sur son
-	# CORPS** — et le corps ne garde que `VOXEL_FACTEUR_FLANC` de cette lumière.
-	# Mesurer le contraste sur la teinte elle-même juge une surface qui n'existe
-	# à aucun endroit de l'écran : ce contrôle a d'abord rougi à 2,67:1 sur une
-	# plaque parfaitement lisible, et c'est le contrôle qui avait tort.
-	var corps := Color(C.VOXEL_PLAQUE_SURVOL.r * C.VOXEL_FACTEUR_FLANC,
-		C.VOXEL_PLAQUE_SURVOL.g * C.VOXEL_FACTEUR_FLANC,
-		C.VOXEL_PLAQUE_SURVOL.b * C.VOXEL_FACTEUR_FLANC, C.VOXEL_PLAQUE_SURVOL.a)
-	_check(_contraste(C.PATE_TEXTE, _sur_le_noir(corps)) >= 4.5,
-		"le texte courant ne tient plus sur le corps d'une plaque effleurée : %.2f:1"
-		% _contraste(C.PATE_TEXTE, _sur_le_noir(corps)))
+	# Les deux parts du rôle, et leur ordre. Une plaque éclairée doit porter la
+	# couleur de sa lumière, pas une teinte de celle-ci : c'est ce qui sépare
+	# « choisi » de « posé là », et c'est l'ajustement demandé le 2026-09-23.
+	_check(C.VOXEL_TEINTE_ROLE_ALLUME > C.VOXEL_TEINTE_ROLE * 2.0,
+		"la part du rôle sous lumière n'est plus franchement supérieure à celle de l'ombre : %.2f contre %.2f"
+		% [C.VOXEL_TEINTE_ROLE_ALLUME, C.VOXEL_TEINTE_ROLE])
+	_check(C.VOXEL_TEINTE_ROLE_ALLUME < 1.0,
+		"la part du rôle sous lumière atteint 1,00 : l'encre ne tient plus 4,5:1 sur un bloc éclairé en ROUGE")
 
 	var arete := Color(C.VOXEL_FLANC.r * C.VOXEL_ARETE_RESTE,
 		C.VOXEL_FLANC.g * C.VOXEL_ARETE_RESTE, C.VOXEL_FLANC.b * C.VOXEL_ARETE_RESTE)
@@ -1057,6 +1046,7 @@ func _test_les_plaques_de_bloc() -> void:
 		C.CHEMIN_VOXEL_PLAQUE_ALLUMEE: "allumée",
 		C.CHEMIN_VOXEL_PLAQUE_ENFONCEE: "enfoncée",
 		C.CHEMIN_VOXEL_PLAQUE_RENTREE: "rentrée",
+		C.CHEMIN_VOXEL_PLAQUE_EFFLEUREE: "effleurée",
 	}
 	var largeur := C.VOXEL_FLANC_PX * 2 + C.VOXEL_TUILE_PX
 	var hauteur := C.VOXEL_DESSUS_PX + C.VOXEL_TUILE_PX + C.VOXEL_BAS_PX
@@ -1091,16 +1081,74 @@ func _test_les_plaques_de_bloc() -> void:
 	var r2 := _contraste(C.PATE_TEXTE_SUR_PAPIER, allumee)
 	_check(r2 >= 4.5, "le texte d'une plaque allumée ne tient pas : %.2f:1" % r2)
 
+	# ⚠️ **Le texte SECONDAIRE est le plus exposé, et ce banc ne le regardait pas.**
+	# Il vérifiait le texte courant, qui a de la marge ; le béton clair, lui, est
+	# réglé au plus juste (4,8:1 sur l'aplat d'encre), et c'est lui qui est passé
+	# sous le seuil quand la plaque a changé de clarté — 3,59:1 mesuré sur une
+	# capture, pendant que tous les contrôles restaient verts.
+	# ⚠️ La valeur VOXEL est lue en direct, et non par `MenuWidgets.texte_second()`
+	# qui suit l'habillage actif : sans cela, ce banc rougirait sur un dépôt sain
+	# lancé avec `--charte=pate`. Un contrôle ne doit pas dépendre du drapeau sous
+	# lequel on l'exécute pour dire vrai.
+	var r3 := _contraste(C.VOXEL_TEXTE_SECOND, au_repos)
+	_check(r3 >= 4.5,
+		"le texte secondaire ne tient plus sur le corps d'une plaque au repos : %.2f:1" % r3)
+
 	# **Chaque rôle doit rester lisible**, et c'est là que la teinte de rôle peut
 	# faire une faute silencieuse : un bloc éclairé en bleu est plus clair qu'un
 	# bloc neutre, donc plus près du papier écrit dessus.
-	for r: Array in [[C.BLEU, "joueur 1"], [C.ROUGE, "joueur 2"], [C.AMBRE, "le filament"],
-			[C.ETAT_OK, "ce qui est prêt"], [C.ETAT_FAUTE, "ce qui a échoué"]]:
+	var roles := [[C.BLEU, "joueur 1"], [C.ROUGE, "joueur 2"], [C.AMBRE, "le filament"],
+		[C.ETAT_OK, "ce qui est prêt"], [C.ETAT_FAUTE, "ce qui a échoué"]]
+	for r: Array in roles:
 		var teinte: Color = MenuWidgets.teinte_de_bloc(r[0], MenuWidgets.Bloc.REPOS)
 		var plaque := _composer(corps_repos, teinte)
 		var ratio := _contraste(C.PATE_TEXTE, plaque)
 		_check(ratio >= 4.5,
-			"le texte courant ne tient plus sur une plaque éclairée par %s : %.2f:1" % [r[1], ratio])
+			"le texte courant ne tient plus sur une plaque à l'ombre teintée par %s : %.2f:1" % [r[1], ratio])
+
+	# **Un rôle ÉCRIT sur une plaque de son propre rôle** : le cas le plus serré
+	# du dépôt, parce que la teinte de la plaque et la couleur du texte se
+	# rapprochent. C'est lui qui a montré que `ROUGE`, couleur sombre, ne tenait
+	# plus sur le plâtre — 5,37:1 sur l'aplat d'encre, 4,20:1 sur un bloc.
+	for r: Array in roles:
+		var teinte: Color = MenuWidgets.teinte_de_bloc(r[0], MenuWidgets.Bloc.REPOS)
+		var plaque := _composer(corps_repos, teinte)
+		var ratio := _contraste(r[0].lerp(C.HALOGENE, C.VOXEL_TEXTE_ROLE_HALO), plaque)
+		_check(ratio >= 4.5,
+			"le libellé de %s ne tient plus sur sa propre plaque : %.2f:1" % [r[1], ratio])
+
+	# ⚠️ **Et sur une plaque ÉCLAIRÉE, c'est l'encre qui doit tenir**, parce que
+	# c'est elle qu'on y écrit. Ce contrôle est le garde-fou de la part de rôle
+	# portée à 0,80 : à 1,00, le bloc éclairé en ROUGE tombe à 4,40:1 et ce
+	# contrôle rougit. Il dit donc exactement ce que coûterait un rouge plus franc.
+	for r: Array in roles:
+		var teinte: Color = MenuWidgets.teinte_de_bloc(r[0], MenuWidgets.Bloc.ALLUME)
+		var plaque := _composer(corps_allume, teinte)
+		var ratio := _contraste(C.PATE_TEXTE_SUR_PAPIER, plaque)
+		_check(ratio >= 4.5,
+			"l'encre ne tient plus sur une plaque éclairée par %s : %.2f:1" % [r[1], ratio])
+
+	# L'ÉCART entre le repos et le survol, mesuré sur la face du dessus — la seule
+	# qui bouge pour les surfaces dont le libellé ne peut pas changer de couleur.
+	# Seuil 3:1, celui des états d'interface. Demandé par la session cloud le
+	# 2026-09-23 : « garantis un changement visible, mesure-le et donne-moi l'écart ».
+	var dessus_repos := _composer(_facteur_du_dessus(C.CHEMIN_VOXEL_PLAQUE), C.VOXEL_PLAQUE)
+	var dessus_effleure := _composer(_facteur_du_dessus(C.CHEMIN_VOXEL_PLAQUE_EFFLEUREE),
+		C.VOXEL_ALLUME)
+	var ecart := _contraste(dessus_repos, dessus_effleure)
+	_check(ecart >= 3.0,
+		"le survol ne se voit plus sur la face du dessus : %.2f:1 pour 3:1 exigés" % ecart)
+	print("    · écart repos → survol sur la face du dessus : %.2f:1" % ecart)
+
+
+## Le facteur de matière sur la FACE DU DESSUS d'une plaque — la bande du haut,
+## sous l'arête. C'est elle qui porte l'état d'une surface dont le libellé ne
+## change pas de couleur, donc c'est sur elle que l'écart se mesure.
+func _facteur_du_dessus(chemin: String) -> Color:
+	var img := _image_de_plaque(chemin)
+	if img == null:
+		return Color.BLACK
+	return img.get_pixel(img.get_width() / 2, C.VOXEL_ARETE_PX + 2)
 
 
 ## Le facteur de matière au centre d'une plaque, lu dans le fichier.
@@ -1108,18 +1156,26 @@ func _test_les_plaques_de_bloc() -> void:
 ## Rend `Color.BLACK` si l'image ne peut pas être lue — un cas qu'il faut
 ## distinguer d'une plaque noire, d'où le contrôle qui suit chaque appel.
 func _facteur_au_centre(chemin: String) -> Color:
-	var tex := load(chemin) as Texture2D
-	if tex == null:
-		return Color.BLACK
-	var img := tex.get_image()
+	var img := _image_de_plaque(chemin)
 	if img == null:
 		return Color.BLACK
+	return img.get_pixel(img.get_width() / 2, img.get_height() / 2)
+
+
+## L'image d'une plaque, prête à être lue au pixel.
+func _image_de_plaque(chemin: String) -> Image:
+	var tex := load(chemin) as Texture2D
+	if tex == null:
+		return null
+	var img := tex.get_image()
+	if img == null:
+		return null
 	if img.is_compressed():
 		# ⚠️ Une texture compressée ne se lit pas au pixel. On la décompresse
 		# plutôt que de rendre une valeur fausse en silence.
 		if img.decompress() != OK:
-			return Color.BLACK
-	return img.get_pixel(img.get_width() / 2, img.get_height() / 2)
+			return null
+	return img
 
 
 ## La plaque telle qu'elle s'affiche : le facteur de la texture multiplié par la
@@ -1140,7 +1196,7 @@ func _composer(facteur: Color, teinte: Color) -> Color:
 ## perd sans que rien ne le dise.
 func _test_les_plaques_sont_partagees() -> void:
 	for etat: int in [MenuWidgets.Bloc.REPOS, MenuWidgets.Bloc.ALLUME,
-			MenuWidgets.Bloc.ENFONCE, MenuWidgets.Bloc.RENTRE]:
+			MenuWidgets.Bloc.ENFONCE, MenuWidgets.Bloc.RENTRE, MenuWidgets.Bloc.EFFLEURE]:
 		var a := MenuWidgets.plaque(etat)
 		var b := MenuWidgets.plaque(etat)
 		_check(a != null and a == b,
@@ -1182,3 +1238,45 @@ func _test_l_habillage_va_jusqu_au_style() -> void:
 		_check(enfonce.texture != repos.texture,
 			"le bouton enfoncé porte la même plaque qu'au repos : l'enfoncement ne se verrait pas")
 	bouton.queue_free()
+
+
+## Les fichiers des SURCOUCHES : killcam, affiches de fin, carte de soirée.
+##
+## Aucun ne construit de plaque, et c'est la réponse de l'étape 5 : il n'y a rien
+## à rendre voxel là-dedans. Une killcam est un voile, des bandes, un mot tamponné
+## et un cadre dessiné ; une affiche est une illustration sous un titre. Ce sont
+## des IMAGES, pas des objets d'interface.
+const FICHIERS_SANS_PLAQUE := [
+	"affiche_de_fin.gd", "estampe_de_kill.gd", "panneau_de_soiree.gd",
+	"carte_de_soiree.gd", "cadre_photo.gd",
+]
+
+
+## Le constat de l'étape 5, figé pour qu'il ne se perde pas.
+##
+## ⚠️ **Un contrôle qui dit « rien à faire » vaut mieux qu'un silence.** Sans
+## lui, le jour où quelqu'un pose un panneau dans la killcam ou sur une affiche
+## de fin, personne ne saura que ces écrans avaient été regardés et laissés tels
+## quels : la plaque naîtra en aplat d'encre au milieu d'une interface en blocs,
+## et on ne le verra qu'en capture, des semaines plus tard. Ici, elle rougit tout
+## de suite — avec ce qu'il faut faire : une plaque d'interface est un bloc
+## (`MenuWidgets.style_de_bloc`), ou elle n'est pas une plaque.
+func _test_les_surcouches_n_ont_pas_de_plaque() -> void:
+	for nom: String in FICHIERS_SANS_PLAQUE:
+		var chemin := "res://%s" % nom
+		var fa := FileAccess.open(chemin, FileAccess.READ)
+		_check(fa != null, "%s illisible" % nom)
+		if fa == null:
+			continue
+		var n := 0
+		while not fa.eof_reached():
+			var ligne := fa.get_line()
+			n += 1
+			var code := ligne
+			var diese := ligne.find("#")
+			if diese >= 0:
+				code = ligne.substr(0, diese)
+			if code.contains("StyleBoxFlat") or code.contains("make_panel_style"):
+				_check(false, "%s:%d pose une plaque d'aplat dans une surcouche — "
+					% [nom, n] + "elle doit être un bloc (MenuWidgets.style_de_bloc) : %s"
+					% ligne.strip_edges())

@@ -3233,7 +3233,7 @@ func _plaques_de_cartouche(panel: PanelContainer, active: bool, player_color: Co
 	if panel.get_meta("bloc_teinte", Color.TRANSPARENT) != player_color:
 		panel.set_meta("bloc_teinte", player_color)
 		panel.set_meta("bloc_actif", MenuWidgets.style_de_bloc(player_color,
-			MenuWidgets.Bloc.REPOS, Charte.VOXEL_PLAQUE_SURVOL))
+			MenuWidgets.Bloc.EFFLEURE))
 		panel.set_meta("bloc_eteint",
 			MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.REPOS))
 	return panel.get_meta("bloc_actif" if active else "bloc_eteint")

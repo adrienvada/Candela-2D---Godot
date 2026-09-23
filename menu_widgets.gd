@@ -142,8 +142,14 @@ const SHADOW_COLOR_PANEL := MenuTheme.OMBRE
 ## `Charte.VOXEL_ENFONCEMENT_PX` — la chute d'ombre que l'ancien bouton faisait
 ## déjà, devenue un mouvement de bloc — qui donne le clic sous le doigt.
 static func _poser_les_blocs(btn: Button, accent: Color, primary: bool,
-		marge_x: int, marge_y: int = 10) -> void:
-	var repos := style_de_bloc(accent, Bloc.ALLUME if primary else Bloc.REPOS)
+		marge_x: int, marge_y: int = 10, repos_neutre: bool = false) -> void:
+	# ⚠️ **Une bascule ne porte AUCUN rôle au repos**, et ce n'est pas un détail :
+	# la moindre teinte éclaircit la plaque sous un texte secondaire, qui y perd
+	# le contraste que l'aplat d'encre lui donnait. Mesuré sur les captures :
+	# 4,48:1 avant, 3,59:1 avec une teinte de joueur au repos. L'habillage pâte
+	# ne teintait rien non plus tant que la plaque n'était pas touchée.
+	var repos := style_de_bloc(MenuTheme.LINE if repos_neutre else accent,
+		Bloc.ALLUME if primary else Bloc.REPOS)
 	var survol := style_de_bloc(accent, Bloc.ALLUME)
 	var enfonce := style_de_bloc(accent, Bloc.ENFONCE)
 	# Désactivé : un bloc que la lumière n'atteint jamais — sa face du dessus vaut
@@ -229,7 +235,8 @@ static func make_button(label: String, accent: Color = MenuTheme.ACCENT,
 	if primary:
 		btn.add_theme_color_override("font_color", MenuTheme.TEXTE_SUR_PAPIER)
 	else:
-		btn.add_theme_color_override("font_color", accent if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE)
+		btn.add_theme_color_override("font_color",
+			texte_de_role(accent) if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE)
 
 	btn.add_theme_color_override("font_hover_color", MenuTheme.TEXTE_SUR_PAPIER)
 	btn.add_theme_color_override("font_focus_color", MenuTheme.TEXTE_SUR_PAPIER)
@@ -257,7 +264,7 @@ static func make_choice_button(label: String, accent: Color = MenuTheme.ACCENT,
 		# commande. Le bloc reste rentré tant que l'option est celle qui tient,
 		# et c'est exactement ce que l'ancien style disait déjà en gardant son
 		# ombre courte (`SHADOW_OFFSET_PRESSED`) après le relâchement.
-		_poser_les_blocs(btn, accent, false, Charte.GAP_S, 8)
+		_poser_les_blocs(btn, accent, false, Charte.GAP_S, 8, true)
 	else:
 		var normal := StyleBoxFlat.new()
 		normal.bg_color = MenuTheme.SURFACE
@@ -298,7 +305,7 @@ static func make_choice_button(label: String, accent: Color = MenuTheme.ACCENT,
 		disabled.shadow_offset = Vector2.ZERO
 		btn.add_theme_stylebox_override("disabled", disabled)
 
-	btn.add_theme_color_override("font_color", MenuTheme.DIM)
+	btn.add_theme_color_override("font_color", texte_second())
 	btn.add_theme_color_override("font_hover_color", MenuTheme.TEXTE_SUR_PAPIER)
 	btn.add_theme_color_override("font_focus_color", MenuTheme.TEXTE_SUR_PAPIER)
 	btn.add_theme_color_override("font_pressed_color", MenuTheme.TEXTE_SUR_PAPIER)
@@ -430,14 +437,20 @@ static func make_slider(min_val: float, max_val: float, step: float,
 ## le reste est resté sous la torche. Et `RENTRE` n'est pas `ENFONCE` éteint : il
 ## porte une plaque à lui, parce qu'une entrée choisie doit rester lisible sous un
 ## libellé qui, lui, ne change pas de couleur.
-enum Bloc { REPOS, ALLUME, ENFONCE, RENTRE }
+enum Bloc { REPOS, ALLUME, ENFONCE, RENTRE, EFFLEURE }
 
 const CHEMINS_DE_PLAQUE := {
 	Bloc.REPOS: Charte.CHEMIN_VOXEL_PLAQUE,
 	Bloc.ALLUME: Charte.CHEMIN_VOXEL_PLAQUE_ALLUMEE,
 	Bloc.ENFONCE: Charte.CHEMIN_VOXEL_PLAQUE_ENFONCEE,
 	Bloc.RENTRE: Charte.CHEMIN_VOXEL_PLAQUE_RENTREE,
+	Bloc.EFFLEURE: Charte.CHEMIN_VOXEL_PLAQUE_EFFLEUREE,
 }
+
+## Les états où la lumière touche le bloc. Elle y porte la couleur du rôle
+## presque en entier ; dans l'ombre, la matière domine et le rôle n'est qu'une
+## teinte. C'est la seule chose qui sépare « choisi » de « posé là ».
+const ETATS_ECLAIRES := [Bloc.ALLUME, Bloc.ENFONCE, Bloc.EFFLEURE]
 
 ## La valeur qui veut dire « la teinte que l'état donne », par opposition à une
 ## teinte imposée par l'appelant. Un bloc transparent n'a aucun autre sens :
@@ -473,18 +486,41 @@ static func plaque(etat: int) -> Texture2D:
 ## rôle entre par la lumière, à hauteur de `Charte.VOXEL_TEINTE_ROLE`. Un accent
 ## neutre (le filet, l'accent d'interface) ne teinte rien : il ne désigne personne.
 static func teinte_de_bloc(accent: Color, etat: int, fond: Color = TEINTE_AUTO) -> Color:
+	var eclaire := etat in ETATS_ECLAIRES
 	var base: Color = fond
 	if base == TEINTE_AUTO:
-		# La lumière vient de l'ÉTAT, et deux états sur quatre sont dans l'ombre.
-		var dans_l_ombre := etat == Bloc.REPOS or etat == Bloc.RENTRE
-		base = Charte.VOXEL_PLAQUE if dans_l_ombre else Charte.VOXEL_ALLUME
+		base = Charte.VOXEL_ALLUME if eclaire else Charte.VOXEL_PLAQUE
 	if accent == MenuTheme.LINE or accent == MenuTheme.ACCENT:
 		return base
-	var teinte := base.lerp(accent, Charte.VOXEL_TEINTE_ROLE)
+	# **Un bloc éclairé prend la couleur de la LUMIÈRE qui l'éclaire** ; un bloc à
+	# l'ombre n'en reçoit qu'une teinte. Sans cet écart, la classe choisie de J1
+	# virait au gris cerné de bleu et le bouton qui lance au plâtre beige : dans un
+	# duel à deux curseurs, ce qui est choisi et ce qui lance doivent se voir
+	# d'abord (revue de la session cloud, 2026-09-23).
+	var part := Charte.VOXEL_TEINTE_ROLE_ALLUME if eclaire else Charte.VOXEL_TEINTE_ROLE
+	var teinte := base.lerp(accent, part)
 	# L'opacité appartient à l'état, pas au rôle : un panneau de joueur 2 laisse
 	# voir le monde derrière lui autant qu'un panneau neutre.
 	teinte.a = base.a
 	return teinte
+
+
+## Le texte secondaire, à la clarté que la surface sous lui exige.
+##
+## Un rôle de texte n'est pas une couleur, c'est un contraste tenu sur ce qu'il
+## recouvre. L'aplat d'encre de la pâte et le corps de plâtre d'un bloc n'ont pas
+## la même clarté, donc le même rôle n'y prend pas la même valeur.
+static func texte_second() -> Color:
+	return Charte.VOXEL_TEXTE_SECOND if Charte.voxel_actif() else MenuTheme.DIM
+
+
+## Un rôle ÉCRIT : sa couleur, tirée vers l'halogène le temps qu'il faut pour
+## tenir sur le plâtre d'un bloc. Le rôle lui-même ne bouge pas — seul ce qui
+## s'écrit avec lui s'éclaircit, et seulement là où il y a un bloc dessous.
+static func texte_de_role(role: Color) -> Color:
+	if not Charte.voxel_actif():
+		return role
+	return role.lerp(Charte.HALOGENE, Charte.VOXEL_TEXTE_ROLE_HALO)
 
 
 ## Repeint le RÔLE d'un style déjà posé, quel que soit l'habillage.

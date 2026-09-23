@@ -94,11 +94,25 @@ PATINE_COIN = 0.60
 # le nombre n'est pas choisi — c'est le corps multiplié par `VOXEL_FACTEUR_FLANC`,
 # le rapport mesuré sur la vitrine. Un bloc qui s'enfonce sort de la lumière d'en
 # haut ; sa face du dessus prend exactement la valeur de ses propres côtés.
+#
+# Chaque état dit aussi SOUS QUELLE COULEUR on le mesure et DANS QUEL SENS : une
+# plaque dont le corps reste sombre porte du texte papier (donc un PLAFOND de
+# luminance), une plaque dont le corps est allumé porte du texte d'encre (donc un
+# PLANCHER). Le lier à l'état, et non à la lumière, est ce qui permet à la plaque
+# EFFLEURÉE d'exister : sa face du dessus prend la torche pendant que son corps
+# reste à l'ombre.
 ETATS = {
-	"bloc_plaque": (1.00, VOXEL_FACTEUR_FLANC),
-	"bloc_plaque_allumee": (1.00, 0.90),
-	"bloc_plaque_enfoncee": (0.90 * VOXEL_FACTEUR_FLANC, 0.90),
-	"bloc_plaque_rentree": (VOXEL_FACTEUR_FLANC * VOXEL_FACTEUR_FLANC, VOXEL_FACTEUR_FLANC),
+	"bloc_plaque": (1.00, VOXEL_FACTEUR_FLANC, VOXEL_DESSUS, "plafond"),
+	"bloc_plaque_rentree": (VOXEL_FACTEUR_FLANC * VOXEL_FACTEUR_FLANC,
+		VOXEL_FACTEUR_FLANC, VOXEL_DESSUS, "plafond"),
+	# Effleurée : **le bord du faisceau touche le dessus, pas le corps.** C'est
+	# l'état de survol des surfaces dont le libellé ne peut pas changer de couleur
+	# (entrées de menu, cartouches du HUD) : le bloc doit changer visiblement sans
+	# que le papier écrit dessus perde sa lisibilité. Le corps descend donc à 0,22
+	# — plus sombre qu'au repos — pendant que la face du dessus monte au papier.
+	"bloc_plaque_effleuree": (1.00, 0.22, PAPIER, "plafond"),
+	"bloc_plaque_allumee": (1.00, 0.90, PAPIER, "plancher"),
+	"bloc_plaque_enfoncee": (0.90 * VOXEL_FACTEUR_FLANC, 0.90, PAPIER, "plancher"),
 }
 
 
@@ -305,23 +319,21 @@ def main(argv):
 	# avec sa plaque allumée, sans que rien ne le dise.
 	faute = 0
 	prete = []
-	for nom, (dessus, corps) in ETATS.items():
+	for nom, (dessus, corps, couleur, sens) in ETATS.items():
 		im = fabriquer(nom, dessus, corps, mat, pat, largeur, hauteur, rouille)
-		# Chaque plaque est mesurée SOUS LA COULEUR QU'ELLE PORTERA : les plaques
-		# de l'ombre sous la face du dessus, les allumées sous le papier. Mesurer
-		# les quatre sous la même couleur dirait juste sur une et faux sur l'autre.
-		dans_l_ombre = nom in ("bloc_plaque", "bloc_plaque_rentree")
-		couleur = VOXEL_DESSUS if dans_l_ombre else PAPIER
+		# Chaque plaque est mesurée SOUS LA COULEUR QU'ELLE PORTERA, et dans le
+		# sens que son texte impose. Mesurer les cinq sous la même couleur, ou dans
+		# le même sens, dirait juste sur l'une et faux sur l'autre.
 		lo, hi = mesurer(im, couleur, nom)
-		if dans_l_ombre:
+		if sens == "plafond":
 			depasse = hi > plafond_repos
 			faute += 1 if depasse else 0
-			print("  %-24s luminance du corps %.4f à %.4f — plafond %.4f : %s"
+			print("  %-26s luminance du corps %.4f à %.4f — plafond %.4f : %s"
 				% (nom, lo, hi, plafond_repos, "DÉPASSE" if depasse else "OK"))
 		else:
 			sombre = lo < plancher_allume
 			faute += 1 if sombre else 0
-			print("  %-24s luminance du corps %.4f à %.4f — plancher %.4f : %s"
+			print("  %-26s luminance du corps %.4f à %.4f — plancher %.4f : %s"
 				% (nom, lo, hi, plancher_allume, "TROP SOMBRE" if sombre else "OK"))
 		prete.append((nom, im))
 	if faute:

@@ -26641,7 +26641,7 @@ avant/après étaient identiques.
 | 2 | La plaque de bloc : fabrique, neuf tranches, panneaux et modales | ✅ |
 | 3 | Les boutons et les entrées de hub qui s'enfoncent | ✅ |
 | 4 | Le HUD et ses cartouches, à information strictement inchangée | ✅ |
-| 5 | Les surcouches : killcam, affiches de fin, intro | à faire |
+| 5 | Les surcouches : killcam, affiches de fin, intro | ✅ — rien à basculer, et c'est vérifié |
 | 6 | Le fond du hub, dont la torche était sous le cadre de droite | ✅ |
 | 7 | La planche avant/après, la ROADMAP, le delta | à faire |
 
@@ -26661,6 +26661,70 @@ avant/après étaient identiques.
   `VOXEL_FACTEUR_FLANC` de la lumière : c'est lui qu'il faut mesurer. **C'est le
   contrôle qui avait tort, pas la couleur**, et la tentation était de corriger
   la couleur.
+
+#### La revue de la session cloud, et ce qu'elle a corrigé (2026-09-23, 01:42)
+
+Habillage **accepté**, avec deux ajustements et deux mesures exigées. Les deux
+ajustements se ramènent à une seule règle, meilleure que celle que j'avais
+écrite : **un bloc dans l'ombre n'est que TEINTÉ par son rôle ; un bloc éclairé
+prend la COULEUR de la lumière qui l'éclaire.** À un quart de part, la classe
+choisie de J1 virait au gris cerné de bleu et le bouton qui lance au plâtre
+beige — or dans un duel à deux curseurs, ce qui est choisi et ce qui lance
+doivent se voir d'abord. La part passe donc à 0,80 sous lumière
+(`VOXEL_TEINTE_ROLE_ALLUME`), et pas à 1,00 : à pleine force, l'encre ne tient
+plus que 4,40:1 sur un bloc éclairé en ROUGE.
+
+⚠️ **Et la mesure sur les CAPTURES a trouvé ce que tous les contrôles
+laissaient passer.** Le calcul sur les couleurs pures dit ce que le code
+prévoit ; la capture dit ce que le joueur voit. Relevé sur la bande de texte,
+même méthode des deux côtés :
+
+| | avant | après (avant correction) |
+|---|---|---|
+| entrée de classe non choisie | 4,48:1 | **3,59:1** |
+| entrée du hub au repos | 4,62:1 | **4,22:1** |
+| case de touche, joueur 1 | 1,97:1 | 2,97:1 |
+
+Deux causes, et aucune n'était visible en relisant le code. D'abord, une bascule
+au repos ne portait **aucun** accent dans l'habillage pâte ; j'en avais introduit
+un, et la moindre teinte éclaircit la plaque sous le texte. Ensuite, et c'est le
+fond : **le corps d'un bloc de plâtre est deux fois plus clair qu'un aplat
+d'encre**, donc le rôle « texte secondaire » n'y tient plus ses 4,5:1 — le béton
+clair est réglé au plus juste (4,8:1 sur l'encre), et il est tombé à 3,9:1.
+D'où `VOXEL_TEXTE_SECOND`, le même rôle à une autre valeur parce que la surface a
+changé. Un rôle de texte n'est pas une couleur, c'est un contraste tenu sur ce
+qu'il recouvre.
+
+Le banc ne regardait que le texte COURANT, qui a de la marge. Il regarde
+désormais le secondaire, qui est le plus exposé.
+
+**La cinquième plaque, et l'écart du survol.** Les surfaces dont le libellé est
+un `Label` enfant ne peuvent pas inverser leur texte — la session cloud a
+confirmé qu'il ne faut pas le faire, c'est de l'information. Mais il fallait
+garantir un changement visible au survol et le mesurer. D'où la plaque
+**effleurée** : sa face du dessus monte au papier pendant que son corps DESCEND
+sous celui du repos. Écart mesuré sur la face du dessus : **3,80:1**, au-dessus
+du seuil de 3:1 des états d'interface — et le texte y gagne en contraste au lieu
+d'en perdre.
+
+#### Étape 5 : les surcouches n'ont aucune plaque, et c'est la réponse
+
+La killcam, les affiches de fin et la carte de soirée **ne construisent pas une
+seule `StyleBox`**. Une killcam est un voile, deux bandes, un mot tamponné et un
+cadre dessiné ; une affiche est une illustration sous un titre. Ce sont des
+IMAGES, pas des objets d'interface — il n'y a donc rien à rendre voxel, et
+fabriquer une plaque pour en poser une serait ajouter du mobilier là où le
+chantier devait n'en habiller aucun.
+
+⚠️ **Le constat est FIGÉ par un contrôle plutôt que laissé à la mémoire**
+(`_test_les_surcouches_n_ont_pas_de_plaque`). Sans lui, le jour où quelqu'un
+pose un panneau dans la killcam, personne ne saura que ces écrans ont été
+regardés et laissés tels quels : la plaque naîtra en aplat d'encre au milieu
+d'une interface en blocs, et on ne le verra qu'en capture, des semaines plus
+tard. Un contrôle qui dit « rien à faire » vaut mieux qu'un silence.
+
+L'intro, elle, n'est pas dans ce périmètre : `intro_planches.gd` appartient au
+chantier d'ISO7 Gadgets et lumière.
 
 #### Une décision de périmètre : le récitatif reste du papier
 
