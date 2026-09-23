@@ -182,7 +182,11 @@ sont massées au DÉBUT de la mesure — **53 des 55** au-dessus du 99e centile 
 premières secondes (71 sur 98 dans les dix premières, pour le témoin). Un paquet concentré dans un
 intervalle rend n'importe quelle période « significative ».
 
-**Et ce paquet a un nom, écrit dans l'en-tête du banc** : « Échauffement 2 s », quand l'en-tête
+**Et ce paquet a un nom, écrit dans l'en-tête du banc** : « Échauffement 2 s » — ⚠️ **valeur du
+2026-09-23 au matin, sur `2f06b1b` ; Iso 1 l'a depuis portée à 12 s (`WARMUP_SEC := 12.0`, vérifié
+sur `fd6826d` le même jour à 16:40).** Ce qui suit décrit donc la mesure telle qu'elle a été prise,
+pas l'état du banc aujourd'hui : avec douze secondes de chauffe, le transitoire décrit ici est
+peut-être déjà hors de la fenêtre de mesure, et cela reste à vérifier. L'en-tête
 avertit que « l'échauffement réel en dure DOUZE ». La mesure commence dans la chauffe, et le 1 % bas
 — quarante-huit images — se calcule pour l'essentiel sur des images de chauffe.
 
@@ -198,7 +202,7 @@ que le fameux « 1 % bas à 39 » cumulait le transitoire ET une machine chargé
 93 % et Chrome à 84 %. **Ces chiffres ont été relevés entre 06:21 et 06:26, pas à 04:44** : je les ai
 rattachés à une prise faite une heure et demie plus tôt. **La charge du Mac à 04:44 n'a jamais été
 mesurée.** Le 39 reste expliqué par le transitoire de chauffe — par analogie avec mes deux prises,
-même banc, même échauffement de 2 s — et par rien d'autre. L'erreur n'a pas atteint ce dépôt ; elle
+même banc, même échauffement de 2 s (celui de `2f06b1b`) — et par rien d'autre. L'erreur n'a pas atteint ce dépôt ; elle
 est corrigée ici pour qu'elle ne revienne pas par la mémoire de quelqu'un.
 
 ⚠️ Et « Spotlight tourne en permanence » n'est pas établi non plus : les relevés d'Iso 1 le montrent

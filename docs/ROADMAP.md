@@ -26250,7 +26250,9 @@ que 1 à 5 images. Regroupées, les 105 images lentes semblent calées sur la p�
 banc (p ≈ 0,0000) — mais **59 viennent d'une seule prise, et sans elle le verdict s'inverse**
 (p = 0,90). **RÉSOLU à 06:29, et autrement que prévu** : les images lentes ne sont pas
 calées sur un cycle, elles sont massées au DÉBUT de la mesure — 53 des 55 dans les cinq premières
-secondes. Le banc échauffe 2 s quand son propre en-tête avertit que la chauffe en dure douze : **le
+secondes. Le banc échauffait alors 2 s quand son propre en-tête avertit que la chauffe en dure
+douze (⚠️ **valeur de `2f06b1b` ; portée à 12 s par Iso 1, vérifié sur `fd6826d`** — ce transitoire
+est donc peut-être déjà écarté aujourd'hui, à vérifier) : **le
 1 % bas se calcule pour l'essentiel sur des images de chauffe**. Hors des cinq premières secondes et
 sur machine calme, le 1 % bas passe de 62,1 à **70,1 sous une fusée** (témoin : 76,6 à 84,8) — la
 cible de 60 est tenue avec dix images d'avance. ⚠️ Portée au-delà de ce chantier : **tout 1 % bas de
