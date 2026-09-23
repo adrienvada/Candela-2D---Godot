@@ -77,7 +77,15 @@ const CIBLE_1_POURCENT_BAS := 60.0
 ## et 70,1). D'où, en plus des 12 s : le 1 % bas imprimé DES DEUX FAÇONS (`TRANSITOIRE_SEC`), les images lentes par tranche
 ## de 10 s, et un verdict qui dit lequel il lit — celui HORS TRANSITOIRE. Un hoquet de début de partie est un autre sujet
 ## qu'une cadence : il se rapporte à part, il ne décide pas du verdict.
-const WARMUP_SEC := 12.0
+##
+## ⚠️ **Portée à 30 s PAR DÉFAUT le 2026-09-23 au soir (session cloud, 16:38, sur la trouvaille d'ISO7 Gadgets)**, et pour une
+## raison qui n'est PAS le jeu : **chaque lancement de Godot déclenche l'indexation de macOS** — `spotlightknowledged`, avec
+## `mediaanalysisd`, à 47-83 % d'un cœur pendant 10 à 20 s. Quinze lancements, quinze pics, zéro dans les 30 s qui précèdent
+## le premier ; ni le journal (écrit sous /tmp), ni `user://` (rien écrit pendant la série), ni l'arbre (sous /tmp) n'en sont
+## la cause. Une chauffe plus courte que ce pic fait mesurer la cadence PENDANT l'indexation, à l'insu de qui lance le banc —
+## Adrien compris : c'est pourquoi c'est un DÉFAUT et non une option. La fenêtre du verdict (hors des dix premières secondes
+## de mesure, `TRANSITOIRE_VERDICT_SEC`) ne bouge pas : une chose à la fois.
+const WARMUP_SEC := 30.0
 ## Les premières secondes de la MESURE, rapportées à part (voir `WARMUP_SEC`).
 const TRANSITOIRE_SEC := 5.0
 ## Et DIX, sur lesquelles le verdict se lit depuis le 2026-09-23 (session cloud, 07:43, décidé AVANT les relectures). Les cinq

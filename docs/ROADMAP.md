@@ -9120,7 +9120,18 @@ ISO7 Gadgets l'avait mesuré le matin même sur neuf paires de prises identiques
 1 % bas de 11 (39 au pire).** **Règle : une prise isolée de 1 % bas ne prouve rien sur ce Mac ; on juge sur la médiane, et un
 écart de 1 % bas n'existe que reproduit, en prises EN MIROIR — C A A C et non C A C A (session cloud) : les quatre prises
 baissaient en monotone (79, 73, 66, 34), signature d'une dérive, et en C A C A la variante prise après paie la dérive ; en miroir,
-une dérive linéaire s'annule.** Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
+une dérive linéaire s'annule.**
+
+ISO12 (2026-09-23 au soir), trouvé par ISO7 Gadgets : **CHAQUE LANCEMENT DE GODOT DÉCLENCHE L'INDEXATION DE macOS.**
+`spotlightknowledged`, avec `mediaanalysisd`, monte à 47-83 % d'un cœur pendant 10 à 20 s après chaque lancement — quinze
+lancements, quinze pics, zéro dans les 30 s avant le premier. Ce n'est ni le journal (écrit sous /tmp), ni `user://` (rien
+écrit pendant la série), ni l'arbre de travail (sous /tmp) : c'est le lancement lui-même. La prise de 180 s du matin le
+montrait déjà sans qu'on le lise ainsi : un seul échantillon d'indexation, 55 % à 07:59:25, pendant la chauffe. Une chauffe
+plus courte que ce pic fait mesurer la cadence PENDANT l'indexation — à l'insu de qui lance le banc. **Règle : la chauffe du
+banc de cadence vaut 30 s par défaut (`WARMUP_SEC`), et toute mesure sur ce Mac se prend hors des 20 s qui suivent un
+lancement de Godot.** La fenêtre du verdict (hors des dix premières secondes de mesure) n'a pas bougé. ⚠️ Et une porte qui
+reconnaît un processus par son nom compare par PRÉFIXE : `top` tronque à seize caractères (`spotlightknowled`), et une
+série entière a été perdue sur une porte qui cherchait le nom complet. Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
 session cloud) ; l'état de la machine (`top`) se note avant et après chaque prise.
 
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
