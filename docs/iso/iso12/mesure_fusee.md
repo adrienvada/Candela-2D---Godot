@@ -168,3 +168,39 @@ plus large et plus juste** : *jamais une variante plus tôt ou plus tard EN MOYE
 Ce qui annule une dérive linéaire, c'est l'égalité des positions moyennes — `1…n` puis `n…1` pour
 plusieurs variantes, `C A A C` pour deux (le `A A` du milieu est sans danger : A et C y ont la même
 position moyenne). Ma version interdisait à tort des séquences valides.
+
+## LA QUEUE DU 1 % : RÉSOLUE — c'est l'échauffement du banc, pas un cycle
+
+La section « ce qui n'est PAS établi » ci-dessus a été écrite à 05:55 ; la réponse est venue à 06:29,
+sur deux prises de 60 s avec la série COMPLÈTE des temps d'image (`--seuil-lent 1`, 6 112 et 4 813
+images datées), machine calme, ancien chemin du shader.
+
+**Mon test de phase était inapplicable, et il le disait sans que je l'entende** : il déclarait les
+images lentes « calées » sur 6,5 s pour les deux prises — **fusée ET TÉMOIN**. Or le témoin n'a pas
+de fusée, donc pas de bouclage d'âge : il ne peut rien y avoir à 6,5 s. La cause : les images lentes
+sont massées au DÉBUT de la mesure — **53 des 55** au-dessus du 99e centile tombent dans les cinq
+premières secondes (71 sur 98 dans les dix premières, pour le témoin). Un paquet concentré dans un
+intervalle rend n'importe quelle période « significative ».
+
+**Et ce paquet a un nom, écrit dans l'en-tête du banc** : « Échauffement 2 s », quand l'en-tête
+avertit que « l'échauffement réel en dure DOUZE ». La mesure commence dans la chauffe, et le 1 % bas
+— quarante-huit images — se calcule pour l'essentiel sur des images de chauffe.
+
+| | 1 % bas, toutes images | hors des 5 premières secondes |
+|---|---|---|
+| témoin (sans fusée) | 76,6 | **84,8** |
+| fusée | 62,1 | **70,1** |
+
+**Hors transitoire, le jeu tient la cible de 60 sous une fusée, avec dix images d'avance.**
+
+⚠️ **Et une correction de fait, à mon compte** (session cloud, 07:54). J'ai écrit dans des messages
+que le fameux « 1 % bas à 39 » cumulait le transitoire ET une machine chargée, en citant Spotlight à
+93 % et Chrome à 84 %. **Ces chiffres ont été relevés entre 06:21 et 06:26, pas à 04:44** : je les ai
+rattachés à une prise faite une heure et demie plus tôt. **La charge du Mac à 04:44 n'a jamais été
+mesurée.** Le 39 reste expliqué par le transitoire de chauffe — par analogie avec mes deux prises,
+même banc, même échauffement de 2 s — et par rien d'autre. L'erreur n'a pas atteint ce dépôt ; elle
+est corrigée ici pour qu'elle ne revienne pas par la mémoire de quelqu'un.
+
+⚠️ Et « Spotlight tourne en permanence » n'est pas établi non plus : les relevés d'Iso 1 le montrent
+absent AVANT chaque prise et présent après, retombant en 10 à 15 s. C'est moi qui avais avancé
+« charge permanente » ; je le retire.

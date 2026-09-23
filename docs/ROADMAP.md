@@ -26248,9 +26248,13 @@ que lire puis jeter (~0,57 ms), et réutiliser la lecture centrale déjà faite 
 seuil de détection des images lentes a été posé à 25 : dix-sept prises sur dix-huit n'ont attrapé
 que 1 à 5 images. Regroupées, les 105 images lentes semblent calées sur la période de 6,5 s du
 banc (p ≈ 0,0000) — mais **59 viennent d'une seule prise, et sans elle le verdict s'inverse**
-(p = 0,90). La cellule « vue unique fusée » du GO réduit reste suspendue. La reprise se fera sur
-la série COMPLÈTE des temps d'image, le seuil choisi après coup, hors machine (ordre de la
-session cloud, 06:00).
+(p = 0,90). **RÉSOLU à 06:29, et autrement que prévu** : les images lentes ne sont pas
+calées sur un cycle, elles sont massées au DÉBUT de la mesure — 53 des 55 dans les cinq premières
+secondes. Le banc échauffe 2 s quand son propre en-tête avertit que la chauffe en dure douze : **le
+1 % bas se calcule pour l'essentiel sur des images de chauffe**. Hors des cinq premières secondes et
+sur machine calme, le 1 % bas passe de 62,1 à **70,1 sous une fusée** (témoin : 76,6 à 84,8) — la
+cible de 60 est tenue avec dix images d'avance. ⚠️ Portée au-delà de ce chantier : **tout 1 % bas de
+ce banc contient des images de chauffe**, dans toutes les cellules du tableau.
 
 **Et la question des HALOS PRIVÉS est close, par le comptage.** Le rassemblement des lumières d'une
 vue ne teste pas le masque de cull : le halo de proximité de chaque joueur, qui n'éclaire que son
