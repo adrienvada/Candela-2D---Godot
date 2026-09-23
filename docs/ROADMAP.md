@@ -26677,13 +26677,31 @@ plus que 4,40:1 sur un bloc éclairé en ROUGE.
 ⚠️ **Et la mesure sur les CAPTURES a trouvé ce que tous les contrôles
 laissaient passer.** Le calcul sur les couleurs pures dit ce que le code
 prévoit ; la capture dit ce que le joueur voit. Relevé sur la bande de texte,
-même méthode des deux côtés :
+même méthode des trois côtés :
 
-| | avant | après (avant correction) |
-|---|---|---|
-| entrée de classe non choisie | 4,48:1 | **3,59:1** |
-| entrée du hub au repos | 4,62:1 | **4,22:1** |
-| case de touche, joueur 1 | 1,97:1 | 2,97:1 |
+| | avant | voxel sans correction | corrigé |
+|---|---|---|---|
+| entrée de classe non choisie | 4,73:1 | **3,54:1** | 4,91:1 |
+| entrée du hub au repos | 7,57:1 | 6,54:1 | 7,73:1 |
+| case de touche, joueur 1 | 8,64:1 | 6,58:1 | 8,01:1 |
+| case de touche, joueur 2 | 5,30:1 | **4,20:1** | 5,90:1 |
+
+⚠️⚠️ **CES CHIFFRES SONT LA SECONDE VERSION, ET LA PREMIÈRE A CIRCULÉ.** Le
+premier relevé prenait le cœur des lettres au 94ᵉ centile de luminance de la
+bande. Un glyphe fin couvre **moins de 6 %** de sa bande : le 94ᵉ centile tombe
+donc en plein antialiasing, et l'indice sous-estimait d'un facteur ~4 — il
+annonçait 1,97:1 là où le contraste vrai était 8,64:1. Les valeurs fausses ont
+été transmises à la session cloud, qui a jugé dessus (« les cases de touches
+passent le seuil de 3:1 ») ; elles sont corrigées ici et chez elle. Le cœur se
+prend au **99,5ᵉ centile**, et on vérifie que le pixel trouvé atteint bien la
+couleur attendue du texte — ici (136, 201, 232) contre (135, 200, 232) calculé.
+
+**Ce que l'épisode confirme malgré tout : les deux régressions étaient RÉELLES.**
+Le calcul sur les couleurs pures les avait prédites indépendamment (3,51:1 pour
+le béton clair sur une plaque teintée, 4,33:1 pour un libellé ROUGE sur sa
+propre plaque) et la mesure corrigée les retrouve (3,54:1 et 4,20:1, tous deux
+sous le seuil de 4,5). **Une mesure fausse et un calcul juste pointaient le même
+défaut** — c'est la concordance qui valide, jamais l'un des deux seul.
 
 Deux causes, et aucune n'était visible en relisant le code. D'abord, une bascule
 au repos ne portait **aucun** accent dans l'habillage pâte ; j'en avais introduit
@@ -26725,6 +26743,22 @@ tard. Un contrôle qui dit « rien à faire » vaut mieux qu'un silence.
 
 L'intro, elle, n'est pas dans ce périmètre : `intro_planches.gd` appartient au
 chantier d'ISO7 Gadgets et lumière.
+
+#### Trois fichiers morts supprimés — et la planche d'illustrations en sort juste
+
+`ill_personnalisation.png`, `ill_creer.png` et `ill_rejoindre.png` sont
+supprimés (sur accord de la session cloud, ordre du 2026-09-23 03:29). Le jeu ne
+les chargeait pas : leurs clés pointent ailleurs dans `ILLUSTRATIONS` depuis
+ISO11 pas 7, et aucun chemin littéral ni construit n'y mène.
+
+⚠️ **Mais ils n'étaient pas inertes, et c'est l'inverse de ce qu'on croyait.**
+`tools/photographe.gd` BALAIE le disque (`_illustrations()`) et prend tout
+`ill_*.png` ; deux fichiers qui se ramènent à la même clé canonique sont
+départagés par l'ordre alphabétique, et `ill_creer.png` passe avant
+`ill_creer_ligne.png` (le point vaut moins que le souligné). **La planche
+d'illustrations photographiait donc l'ANCIEN dessin à la place de celui que le
+jeu affiche**, pour « créer » comme pour « rejoindre ». Les supprimer ne range
+pas un dossier : ça répare la planche.
 
 #### Une décision de périmètre : le récitatif reste du papier
 
