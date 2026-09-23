@@ -35,6 +35,7 @@ extends Node3D
 ##   godot --path . tools/banc_corps.tscn -- --epaisseur=x1_6 --lumiere=0.8 --capture=/chemin/apres.png
 ##   godot --path . tools/banc_corps.tscn -- --encre=0.03 --lumiere=0.8 --capture=/chemin/encre.png
 ##   godot --path . tools/banc_corps.tscn -- --modele --lumiere=0.8 --capture=/chemin/modele.png
+##   godot --path . tools/banc_corps.tscn -- --corps=portraits --lumiere=0.8 --capture=/chemin/portraits.png
 ##
 ## `--epaisseur` (ISO3 vague 4) : `leger` (×1,0, l'ancien gabarit vague 0-3),
 ## `x1_3`, `x1_6` (le réglage par défaut si l'option est omise — voir
@@ -89,6 +90,16 @@ var _encre := 0.0                    # ISO3 vague 5 — --encre=X (tuiles) : dé
 ## ISO7b (crochet d'ISO7 Beauté) — `--modele` : le modelé des corps par la caméra (dessus 1,15, face sud 0,9, autres
 ## faces 1), sans aucune lecture de la lumière — décision de la session cloud, 2026-09-15 14:21.
 var _modele := false
+## ISO12 — `--palette-grise` (avec `--corps=portraits`) : toutes les couleurs du portrait remplacées par le gris de la classe.
+## Contrôle : la teinte rend alors exactement le gris, et tout écart entre les deux captures viendrait d'ailleurs.
+var _palette_grise := false
+## ISO12 — `--opaque` : les corps rendus par une copie OPAQUE de leur shader (ni `blend_mix` ni ALPHA : plus aucun mélange
+## au bord), mêmes paramètres. Diagnostic de l'ordre 145 : désigne si le pourtour tient au mélange.
+var _opaque := false
+## ISO12 — le temps du banc FIGÉ pendant les captures (avec `--corps=portraits`) : les corps ne respirent plus entre la prise
+## peinte et la prise au portrait éteint. Sans lui, 40 000 pixels différaient même au contrôle (palette grise, 2026-09-23 05:56),
+## et le noir absolu ne se prouve pas au niveau de ce bruit. Aucun shader des corps ne lit TIME : figer `_temps` fige tout.
+var _fige := false
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -153,6 +164,12 @@ func _lire_arguments(args: PackedStringArray) -> void:
 						% [", ".join(VoxelCatalogueT.EPAISSEUR_REGLAGES.keys()), val])
 			"encre": _encre = maxf(0.0, float(val))
 			"modele": _modele = true
+			# ISO12 — lu par `VoxelCatalogue.portraits_actifs()` : les corps d'après les dix portraits de classe.
+			"palette-grise": _palette_grise = true
+			"opaque": _opaque = true
+			"corps":
+				if val != "portraits":
+					push_warning("banc_corps : --corps attend portraits (reçu « %s »)" % val)
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
 			_:
@@ -204,6 +221,15 @@ func _construire_scene() -> void:
 		if _modele:
 			var m: ShaderMaterial = noeud.materiau()
 			m.set_shader_parameter("modele", 1.0)
+		if _opaque:
+			var mo: ShaderMaterial = noeud.materiau()
+			mo.shader = _shader_opaque(mo.shader)
+		if _palette_grise:
+			var mg: ShaderMaterial = noeud.materiau()
+			var gris: Color = noeud.couleur()
+			for cle in ["ocre", "rouille", "brun", "bouteille", "arme"]:
+				mg.set_shader_parameter("portrait_%s" % cle, gris)
+			mg.set_shader_parameter("portrait_cartouche", Color(0, 0, 0, 0))
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,
@@ -359,7 +385,8 @@ func _imprimer_rapport_boites() -> void:
 # ---------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	_temps += delta
+	if not _fige:
+		_temps += delta
 
 	if _tir_t0 >= 0.0 and _temps - _tir_t0 > DUREE_TIR:
 		_tir_t0 = -1.0
@@ -528,6 +555,7 @@ func _capturer_puis_quitter() -> void:
 		_cone_repere.visible = false
 	get_window().size = _taille
 	await get_tree().process_frame
+	_fige = VoxelCatalogueT.portraits_actifs()
 	for i in _frames:
 		await get_tree().process_frame
 	var image: Image = await RenduCommun.capturer(get_tree(), 60000)
@@ -543,6 +571,19 @@ func _capturer_puis_quitter() -> void:
 		push_error("banc_corps : écriture impossible de %s (%s)" % [_capture, error_string(erreur)])
 		get_tree().quit(5)
 		return
+	# ISO12 — avec `--corps=portraits`, la même scène reprise le portrait ÉTEINT sur les mêmes matériaux (`_gris.png`) : la
+	# peinture seule change entre les deux, rien d'autre (deux lancements séparés ne se comparent pas au pixel près).
+	if VoxelCatalogueT.portraits_actifs():
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 0.0)
+		for i in _frames:
+			await get_tree().process_frame
+		var gris: Image = await RenduCommun.capturer(get_tree(), 60000)
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 1.0)
+		if gris != null:
+			gris.save_png(_capture.get_basename() + "_gris.png")
+			print("BANC_CORPS capture du même corps, portrait éteint : %s" % (_capture.get_basename() + "_gris.png"))
 	print("BANC_CORPS capture %s %dx%d (lumière=%.2f, capteur=%s, opacité=%.2f, silhouette=%s)"
 		% [_capture, image.get_width(), image.get_height(), _lumiere,
 			str(_capteur_actif), _opacite, str(_mode_silhouette == 1)])
@@ -568,3 +609,12 @@ func _valeur_max(img: Image) -> float:
 			var c := img.get_pixel(x, y)
 			maxi = maxf(maxi, maxf(c.r, maxf(c.g, c.b)))
 	return maxi
+
+
+
+## Une copie opaque du shader d'un corps : `blend_mix` et `depth_draw_always` retirés, ALPHA non écrit.
+static func _shader_opaque(source: Shader) -> Shader:
+	var code := source.code.replace(", blend_mix, depth_draw_always", "").replace("ALPHA = a;", "")
+	var copie := Shader.new()
+	copie.code = code
+	return copie

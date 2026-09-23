@@ -94,6 +94,7 @@ render_mode cull_back, fog_disabled, specular_disabled, blend_mix, depth_draw_al
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
 #include "res://iso_relief.gdshaderinc"
+#include "res://iso_corps_portrait.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -232,6 +233,10 @@ void fragment() {
 	vec2 motif = vec2(monde.x + monde.z, -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
 	float px_monde = max(max(fwidth(monde.x), fwidth(monde.y)), fwidth(monde.z));
+	// ISO12 — l'aspect des corps d'après les dix portraits (`iso_corps_portrait.gdshaderinc`) : la couleur du portrait AU
+	// fragment, posée plus bas sur la lumière déjà rendue (`portrait_teindre`). Sans portrait, rien ne change.
+	vec3 fiche = portrait_fiche(couleur_fiche.rgb, local, demi, echelle, normale_locale, monde * pixels_par_unite,
+		pixels_par_unite);
 
 	// ISO12 — la lumière reçue au fragment (le capteur, ou son repli scalaire), puis sa bride.
 	float recue;
@@ -278,6 +283,11 @@ void fragment() {
 	// Un noir déjà nul le reste (0 → 0, garanti par `pate_facteur`). Jamais sur
 	// `silhouette_N`, composée après, plus bas.
 	c = pate_facteur(c, pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde));
+	// ISO12 — le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, encre comprise, sans jamais décider où
+	// elle se voit (`portrait_teindre`) : les seuils de visibilité restent ceux d'hier, à toute lumière. ⚠️ APRÈS l'encre :
+	// posée avant, la teinte laissait l'encre (un facteur en valeur décodée, canal par canal) assombrir moins le rouge d'un ocre
+	// que le gris, aux faibles lumières — un bord gris à (3, 4, 5) sortait peint à (9, 3, 0) (banc des corps, 2026-09-23 03:26).
+	c = portrait_teindre(c, fiche, couleur_fiche.rgb);
 
 	float o = clamp(deux ? opacite_2 : opacite_1, 0.0, 1.0);
 	vec4 silhouette = deux ? silhouette_2 : silhouette_1;

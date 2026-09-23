@@ -226,6 +226,115 @@ const EPAISSEUR_REGLAGES := {
 const EPAISSEUR_PAR_DEFAUT := "x1_6"
 
 
+# -----------------------------------------------------------------------------
+# ISO12 — L'ASPECT DES CORPS D'APRÈS LES DIX PORTRAITS DE CLASSE
+# -----------------------------------------------------------------------------
+
+## Le drapeau de comparaison, éteint par défaut : sans lui, les corps restent les aplats gris d'ISO3.
+const DRAPEAU_PORTRAITS := "--corps=portraits"
+
+## Pour les suites (`--script`, sans ligne de commande de jeu) : -1 lit le drapeau, 0 l'éteint, 1 l'allume.
+static var forcer_portraits := -1
+
+
+static func portraits_actifs() -> bool:
+	if forcer_portraits >= 0:
+		return forcer_portraits == 1
+	return OS.get_cmdline_user_args().has(DRAPEAU_PORTRAITS)
+
+
+## Les teintes lues AU PIXEL sur les dix portraits (ISO Assets, `docs/iso/planches_gemini/habillage/portrait_<classe>.png`,
+## fond vert écarté, pixels du corps rangés par clarté, moyennes des quantiles 30-60 % et 60-85 % ; mesure du 2026-09-22).
+## Seule leur TEINTE sert : leur clarté est ramenée à celle de la classe par `palette_portrait()`.
+## - le plâtre des portraits clairs (sept classes) : (237, 150, 55) ; sa rouille : (136, 53, 17) ; le brun des sangles : (66, 24, 6) ;
+## - le plâtre des portraits usés (pistolet, occulteur, spectre) : (202, 115, 55) ; leur rouille : (69, 39, 24).
+const TEINTE_OCRE := Color8(237, 150, 55)
+const TEINTE_ROUILLE := Color8(136, 53, 17)
+const TEINTE_OCRE_USE := Color8(202, 115, 55)
+const TEINTE_ROUILLE_USE := Color8(69, 39, 24)
+const TEINTE_BRUN := Color8(66, 24, 6)
+## La bouteille pâle et les armes brunes des portraits (relevés à la main sur `portrait_allumeur` et `portrait_fusil`).
+const TEINTE_BOUTEILLE := Color8(214, 204, 184)
+const TEINTE_ARME := Color8(110, 62, 30)
+const TEINTE_CARTOUCHE_GRISE := Color8(150, 150, 146)
+const TEINTE_CARTOUCHE_ROUGE := Color8(178, 52, 38)
+
+## Ce que chaque classe porte, lu sur son portrait : la bouteille dans le dos, les cartouches, l'usure.
+const PORTRAITS := {
+	"pistolet": {"bouteille": true, "cartouches": "", "usure": 1.0},
+	"fusil": {"bouteille": false, "cartouches": "", "usure": 0.0},
+	"pompe": {"bouteille": false, "cartouches": "", "usure": 0.0},
+	"arbalete": {"bouteille": false, "cartouches": "", "usure": 0.0},
+	"fumiste": {"bouteille": false, "cartouches": "grise", "usure": 0.0},
+	"incendiaire": {"bouteille": true, "cartouches": "rouge", "usure": 0.0},
+	"sentinelle": {"bouteille": true, "cartouches": "", "usure": 0.0},
+	"occulteur": {"bouteille": true, "cartouches": "", "usure": 1.0},
+	"allumeur": {"bouteille": true, "cartouches": "", "usure": 0.0},
+	"spectre": {"bouteille": true, "cartouches": "", "usure": 1.0},
+}
+
+## ⚠️ **LA PEINTURE CHANGE LA COULEUR, JAMAIS LA VISIBILITÉ** (exigence d'équité de la session cloud, 2026-09-23 01:49 :
+## « jamais plus sombre », et aussi « jamais plus clair »). Toutes les couleurs d'une classe ont la clarté À L'ÉCRAN exacte
+## du gris de sa classe : plâtre, rouille, sangles, arme, cartouches, bouteille ne diffèrent que par la TEINTE et la
+## SATURATION. Pourquoi pas une patine plus sombre compensée par un plâtre plus clair, de moyenne 1 : la moyenne d'un corps
+## est pondérée par ses pixels les plus éclairés, qui ne sont pas les mêmes à toute lumière (à 0,8 les dessus butent sur le
+## plafond de la fiche, à 0,2 non) — mesuré au banc des corps (2026-09-23 01:36) : 0,98-1,05 du gris à 0,8, mais 1,00-1,18
+## à 0,2 et 1,04-1,33 à 0,15, un écart qui variait d'une classe à l'autre. L'encre et le modelé, identiques au gris, restent
+## les seules variations de clarté.
+## Les sangles, la poche et l'arme sont des bruns DÉSATURÉS (leur teinte mêlée de gris) : à clarté égale, c'est ce qui les
+## détache du plâtre saturé et de la rouille plus rouge.
+const DESATURATION_SANGLE := 0.55
+const DESATURATION_ARME := 0.3
+
+## La bouteille dans le dos, en tuiles (× `echelle` en largeur et en profondeur, comme le reste du corps) : couchée en
+## travers du haut du dos comme sur les portraits.
+const BOUTEILLE := {"largeur": 0.2, "hauteur": 0.085, "profondeur": 0.07, "haut": 0.26}
+
+
+## La clarté À L'ÉCRAN d'une couleur de fiche (poids de `IsoPate`, sur ses valeurs sRGB) : c'est l'espace où
+## `portrait_teindre` fait son rapport, celui des octets de l'image. ⚠️ Normalisée d'abord en luminance linéaire, puis dans
+## l'espace de `pate_vers_affiche`, une teinte saturée sortait plus sombre à l'écran qu'un gris de même « luminance » (au banc
+## des corps, 2026-09-22 23:59 puis 2026-09-23 00:42).
+static func luminance_affichee(c: Color) -> float:
+	return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+
+
+## `teinte` ramenée à la clarté `cible`, sa teinte gardée (échelle de ses valeurs sRGB).
+static func a_luminance(teinte: Color, cible: float) -> Color:
+	var k := cible / maxf(luminance_affichee(teinte), 0.000001)
+	# Un canal ne dépasse jamais 1 : une teinte très saturée y perd un peu de clarté, jamais n'en gagne.
+	return Color(minf(teinte.r * k, 1.0), minf(teinte.g * k, 1.0), minf(teinte.b * k, 1.0))
+
+
+## Les couleurs d'une classe (valeurs sRGB, posées dans des uniformes `source_color`), TOUTES à la clarté à l'écran du gris
+## d'ISO3 de la classe (voir `DESATURATION_SANGLE`) : la visibilité d'un corps peint est celle du gris, à toute lumière.
+static func palette_portrait(slug: String) -> Dictionary:
+	var f := fiche(slug)
+	if f.is_empty() or not PORTRAITS.has(slug):
+		return {}
+	var p: Dictionary = PORTRAITS[slug]
+	var use := float(p["usure"]) > 0.5
+	var gris: Color = f["couleur"]
+	var l := luminance_affichee(gris)
+	var cartouche := Color(0, 0, 0, 0)
+	if p["cartouches"] == "grise":
+		cartouche = a_luminance(TEINTE_CARTOUCHE_GRISE, l)
+	elif p["cartouches"] == "rouge":
+		cartouche = a_luminance(TEINTE_CARTOUCHE_ROUGE, l)
+	return {
+		"ocre": a_luminance(TEINTE_OCRE_USE if use else TEINTE_OCRE, l),
+		# La rouille des usés (69, 39, 24) a presque la chromaticité de leur plâtre (écart 0,04) : à clarté égale elle ne se
+		# verrait plus. La rouille rouge des portraits clairs, pour tous.
+		"rouille": a_luminance(TEINTE_ROUILLE, l),
+		"brun": a_luminance(TEINTE_BRUN.lerp(gris, DESATURATION_SANGLE), l),
+		"arme": a_luminance(TEINTE_ARME.lerp(gris, DESATURATION_ARME), l),
+		"bouteille": a_luminance(TEINTE_BOUTEILLE, l),
+		"cartouche": cartouche,
+		"usure": float(p["usure"]),
+		"bouteille_portee": bool(p["bouteille"]),
+	}
+
+
 ## La fiche complète d'une classe : charpente commune + ce qui lui est propre,
 ## couleur calculée, `echelle` élargie par le réglage d'épaisseur (vague 4,
 ## voir `EPAISSEUR_REGLAGES`). Dictionnaire vide et `push_error` si le slug

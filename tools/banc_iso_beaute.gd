@@ -38,7 +38,7 @@
 ## Vraie fenêtre, jamais headless. Ses appuis sont vérifiés par `tools/test_iso_beaute.gd`.
 extends "res://tools/banc_iso.gd"
 
-const CADRAGES := ["mur", "planche", "e1", "rasante"]
+const CADRAGES := ["mur", "planche", "e1", "rasante", "corps"]
 ## ISO7b — la scène rasante : J1 à une tuile de la face, mesurée sur quatre tuiles de part et d'autre de lui.
 const RASANTE_DISTANCE_PX := 35.0
 const RASANTE_DEMI_FACE_PX := 280.0
@@ -69,6 +69,13 @@ var _visee := "rasante"
 var _distances: Array[float] = [1.0]
 ## La portion de face mesurée (x : son étendue, clippée ; y : la face).
 var _face_rect := Rect2()
+## ISO12 — `--distance-corps N` : J2 à N px devant J1, dans son faisceau (90 par défaut ; plus loin, une lampe plus faible).
+var _distance_corps := 90.0
+## ISO12 — `--decalage-corps N` : J2 décalé de N px de côté, vers le bord du cône (une lampe plus faible sur lui).
+var _decalage_corps := 0.0
+## ISO12 — `--toutes-classes` (cadrage « corps », avec `--corps=portraits`) : la peinture de chacune des dix classes posée tour
+## à tour sur le matériau de J2 — même corps, même lampe, même point de sol —, prise peinte puis grise.
+var _toutes_classes := OS.get_cmdline_user_args().has("--toutes-classes")
 
 
 func _lire_arguments(args: PackedStringArray) -> bool:
@@ -80,6 +87,8 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_fusee = args.has("--fusee")
 	_avant_valeurs = lire_valeurs(_value(args, "--avant", ""))
 	_pose = lire_valeurs(_value(args, "--pose", ""))
+	_distance_corps = float(_value(args, "--distance-corps", "90"))
+	_decalage_corps = float(_value(args, "--decalage-corps", "0"))
 	_distances.clear()
 	for d in _value(args, "--distances", "1").split(",", false):
 		_distances.append(maxf(0.5, d.to_float()))
@@ -134,6 +143,9 @@ func _controler_la_beaute() -> void:
 				mat.set_shader_parameter(p, _pose[p])
 	if _cadrage == "rasante":
 		await _controler_la_rasante(presentation, materiaux)
+		return
+	if _cadrage == "corps":
+		await _controler_le_contraste(presentation)
 		return
 	_poser_le_cadrage()
 	if _fusee:
@@ -290,6 +302,12 @@ func _poser_le_cadrage() -> void:
 		_face_e1 = _face_sud_de_mur_haut(p1.global_position)
 		p1.global_position = _face_e1 + Vector2(0.0, 160.0)
 		p2.global_position = _face_e1 + Vector2(-150.0, 45.0)
+	elif _cadrage == "corps":
+		# ISO12 — le contraste corps / sol : J1 éclaire la face sud de 160 px (comme « e1 »), J2 debout 90 px devant lui,
+		# dans son faisceau, sur le sol. `--torches j1` : J2 n'ajoute pas sa lumière.
+		_face_e1 = _face_sud_de_mur_haut(p1.global_position)
+		p1.global_position = _face_e1 + Vector2(0.0, 160.0)
+		p2.global_position = _face_e1 + Vector2(_decalage_corps, 160.0 - _distance_corps)
 	elif _cadrage == "rasante":
 		# J1 à une tuile d'une longue face sud ; J2 écarté, torche éteinte (`--torches j1`) : seule la lampe de J1 compte.
 		_face_e1 = _face_sud_longue(p1.global_position)
@@ -349,7 +367,7 @@ func _tenir_le_cadrage() -> void:
 			Input.action_press(voulue, 1.0)
 		_tenir_les_torches()
 		return
-	if _cadrage == "e1":
+	if _cadrage == "e1" or _cadrage == "corps":
 		p1.rotation = -PI / 2.0
 		p2.rotation = 0.0
 		# ⚠️ **La visée se tient par le stick, pas par `rotation`** : `LocalInputProvider.get_aim_direction` rend la
@@ -753,3 +771,188 @@ static func mesurer_face(image: Image, zone: Rect2, exclu: Rect2 = Rect2()) -> D
 				g += p.g
 	return {"moyenne": somme / maxf(1.0, pixels), "eclairee": somme_eclairee / maxf(1.0, eclaires),
 		"eclaires": eclaires, "pixels": pixels, "rg": r / maxf(g, 1e-6)}
+
+
+# ---------------------------------------------------------------------------
+# ISO12 — LE CONTRASTE D'UN CORPS SUR LE SOL
+# ---------------------------------------------------------------------------
+
+## `--cadrage corps` : J2 dans le faisceau de J1, capturé avec son corps, puis sans (le voxel de J2 masqué, rien d'autre
+## ne bouge), puis avec encore (la dérive). Le corps = les pixels qui changent ; le sol = un anneau de 6 à 30 px autour,
+## hors du corps. Mesure : luminance moyenne du corps et du sol autour (Rec. 709 sur les valeurs affichées), leur rapport,
+## et la teinte moyenne du corps. À lancer avec et sans `--corps=portraits`.
+func _controler_le_contraste(presentation: Node) -> void:
+	_poser_le_cadrage()
+	var voxels: Array = presentation.get("_voxels")
+	var corps: Node3D = voxels[1] if voxels.size() > 1 else null
+	if corps == null:
+		printerr("✗ contraste : aucun corps voxel pour J2")
+		_sortir(4)
+		return
+	for i in 240:
+		_tenir_le_cadrage()
+		await get_tree().process_frame
+	# ⚠️ **Gris et peint dans la MÊME partie, à la même image près.** Pris dans deux lancements, le sol autour du corps lisait
+	# 79 dans l'un et 39 dans l'autre au bord du cône (2026-09-23 03:26) : la comparaison mesurait la partie, pas la peinture.
+	# Avec `--corps=portraits`, J2 est pris peint, puis gris (le portrait éteint sur son matériau, rien d'autre), puis sans son
+	# corps, puis peint de nouveau (la dérive).
+	var mat: ShaderMaterial = (corps as VoxelCorps).materiau() if corps is VoxelCorps else null
+	var peint := VoxelCatalogue.portraits_actifs() and mat != null
+	var etats: Array = [["avec", 1.0], ["gris", 0.0], ["sans", 1.0], ["avec_bis", 1.0]] if peint \
+		else [["avec", 0.0], ["sans", 0.0], ["avec_bis", 0.0]]
+	var images := {}
+	for e in etats:
+		corps.visible = e[0] != "sans"
+		if peint:
+			mat.set_shader_parameter("portrait", e[1])
+		for i in 10:
+			_tenir_le_cadrage()
+			await get_tree().process_frame
+		var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+		if image == null:
+			printerr("✗ aucune image rendue en 15 s")
+			_sortir(4)
+			return
+		images[e[0]] = image
+	corps.visible = true
+	if peint:
+		mat.set_shader_parameter("portrait", 1.0)
+	(images["avec"] as Image).save_png(_capture)
+	(images["sans"] as Image).save_png(_capture.get_basename() + "_sans_corps.png")
+	if peint and _toutes_classes:
+		await _contraste_par_classe(corps, mat, images["sans"], images["avec_bis"])
+		_sortir(0)
+		return
+	var mesures := {"peint" if peint else "gris": mesurer_contraste(images["avec"], images["sans"], images["avec_bis"])}
+	if peint:
+		(images["gris"] as Image).save_png(_capture.get_basename() + "_gris.png")
+		mesures["gris"] = mesurer_contraste(images["gris"], images["sans"], images["avec_bis"])
+	for nom in mesures:
+		var m: Dictionary = mesures[nom]
+		print("BANC_ISO_CONTRASTE %s distance=%d décalage=%d corps=%d px lum=%.1f teinte=%.1f° r/g=%.2f | sol autour=%d px lum=%.1f | rapport corps/sol=%.2f | ΔE76 corps/sol=%.1f (Lab corps %s, sol %s) | dérive=%d"
+			% [nom, roundi(_distance_corps), roundi(_decalage_corps), m["corps_n"], m["corps_lum"], m["corps_teinte"], m["corps_rg"],
+			m["sol_n"], m["sol_lum"], m["rapport"], m["delta_e"], _lab_texte(m["corps_lab"]), _lab_texte(m["sol_lab"]), m["derive"]])
+	_sortir(0)
+
+
+## Le corps : pixels qui changent de plus de 6/255 entre « avec » et « sans », hors de la dérive (« avec » contre
+## « avec bis »). Le sol : les pixels de l'image « avec » à 6-30 px d'un pixel du corps, hors du corps, éclairés (> 2).
+static func mesurer_contraste(avec: Image, sans: Image, avec_bis: Image) -> Dictionary:
+	var w := avec.get_width()
+	var h := avec.get_height()
+	var masque := {}
+	var x0 := w
+	var y0 := h
+	var x1 := 0
+	var y1 := 0
+	var derive := 0
+	for y in h:
+		for x in w:
+			var a := avec.get_pixel(x, y)
+			if absf(_lum(a) - _lum(avec_bis.get_pixel(x, y))) * 255.0 > 6.0:
+				derive += 1
+				continue
+			if absf(_lum(a) - _lum(sans.get_pixel(x, y))) * 255.0 > 6.0:
+				masque[Vector2i(x, y)] = true
+				x0 = mini(x0, x)
+				y0 = mini(y0, y)
+				x1 = maxi(x1, x)
+				y1 = maxi(y1, y)
+	var somme := 0.0
+	var r := 0.0
+	var g := 0.0
+	var b := 0.0
+	var lab_corps := Vector3.ZERO
+	for p: Vector2i in masque:
+		var c := avec.get_pixel(p.x, p.y)
+		somme += _lum(c)
+		r += c.r
+		g += c.g
+		b += c.b
+		lab_corps += lab(c)
+	var sol := 0.0
+	var n_sol := 0
+	var lab_sol := Vector3.ZERO
+	for y in range(maxi(0, y0 - 30), mini(h, y1 + 31)):
+		for x in range(maxi(0, x0 - 30), mini(w, x1 + 31)):
+			if masque.has(Vector2i(x, y)):
+				continue
+			var dx := maxi(maxi(x0 - x, x - x1), 0)
+			var dy := maxi(maxi(y0 - y, y - y1), 0)
+			var d := sqrt(float(dx * dx + dy * dy))
+			if d < 6.0 or d > 30.0:
+				continue
+			var c := avec.get_pixel(x, y)
+			if _lum(c) * 255.0 <= 2.0:
+				continue
+			sol += _lum(c)
+			n_sol += 1
+			lab_sol += lab(c)
+	var n := maxi(1, masque.size())
+	var moy_corps := somme / float(n) * 255.0
+	var moy_sol := sol / float(maxi(1, n_sol)) * 255.0
+	lab_corps /= float(n)
+	lab_sol /= float(maxi(1, n_sol))
+	return {"corps_n": masque.size(), "corps_lum": moy_corps, "sol_n": n_sol, "sol_lum": moy_sol,
+		"corps_lab": lab_corps, "sol_lab": lab_sol, "delta_e": lab_corps.distance_to(lab_sol),
+		"rapport": moy_corps / maxf(moy_sol, 0.001), "corps_rg": r / maxf(g, 0.0001),
+		"corps_teinte": Color(r / n, g / n, b / n).h * 360.0, "derive": derive}
+
+
+static func _lum(c: Color) -> float:
+	return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+
+
+## CIELAB (D65) d'un pixel sRGB : l'écart de couleur PERCEPTUEL, où une teinte compte autant qu'une clarté (ΔE76 = distance
+## euclidienne). Une paire à ΔE ≈ 2,3 se distingue à peine ; au-delà de 10, deux couleurs se lisent comme différentes.
+static func lab(c: Color) -> Vector3:
+	var l := c.srgb_to_linear()
+	var x := (0.4124 * l.r + 0.3576 * l.g + 0.1805 * l.b) / 0.95047
+	var y := 0.2126 * l.r + 0.7152 * l.g + 0.0722 * l.b
+	var z := (0.0193 * l.r + 0.1192 * l.g + 0.9505 * l.b) / 1.08883
+	var fx := _f_lab(x)
+	var fy := _f_lab(y)
+	var fz := _f_lab(z)
+	return Vector3(116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz))
+
+
+static func _f_lab(t: float) -> float:
+	return pow(t, 1.0 / 3.0) if t > 0.008856 else 7.787 * t + 16.0 / 116.0
+
+
+static func _lab_texte(v: Vector3) -> String:
+	return "%.1f/%.1f/%.1f" % [v.x, v.y, v.z]
+
+
+
+## `--toutes-classes` : pour chaque classe, sa palette et son gris posés sur le matériau de J2 (la forme reste celle de J2 :
+## la couleur seule change), une capture peinte, une grise ; mesurées contre la même image sans corps. Rend le matériau de J2.
+func _contraste_par_classe(corps: Node3D, mat: ShaderMaterial, sans: Image, bis: Image) -> void:
+	var garde := {}
+	for p in ["couleur_fiche", "portrait_ocre", "portrait_rouille", "portrait_brun", "portrait_bouteille", "portrait_arme",
+			"portrait_cartouche", "portrait_usure"]:
+		garde[p] = mat.get_shader_parameter(p)
+	for slug in VoxelCatalogue.slugs():
+		var pal := VoxelCatalogue.palette_portrait(slug)
+		mat.set_shader_parameter("couleur_fiche", VoxelCatalogue.fiche(slug)["couleur"])
+		for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
+			mat.set_shader_parameter("portrait_%s" % cle, pal[cle])
+		mat.set_shader_parameter("portrait_usure", pal["usure"])
+		var prises := {}
+		for etat in [["peint", 1.0], ["gris", 0.0]]:
+			mat.set_shader_parameter("portrait", etat[1])
+			for i in 10:
+				_tenir_le_cadrage()
+				await get_tree().process_frame
+			prises[etat[0]] = await RenduCommun.capturer(get_tree(), 15000)
+		mat.set_shader_parameter("portrait", 1.0)
+		if prises["peint"] == null or prises["gris"] == null:
+			printerr("✗ %s : aucune image" % slug)
+			continue
+		var mp := mesurer_contraste(prises["peint"], sans, bis)
+		var mg := mesurer_contraste(prises["gris"], sans, bis)
+		print("BANC_ISO_CONTRASTE_CLASSE %s distance=%d décalage=%d | ΔE76 peint %.1f gris %.1f | clarté corps/sol peint %.2f gris %.2f | corps %d/%d px"
+			% [slug, roundi(_distance_corps), roundi(_decalage_corps), mp["delta_e"], mg["delta_e"], mp["rapport"], mg["rapport"],
+			mp["corps_n"], mg["corps_n"]])
+	for p in garde:
+		mat.set_shader_parameter(p, garde[p])

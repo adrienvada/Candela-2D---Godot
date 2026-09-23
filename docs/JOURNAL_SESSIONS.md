@@ -5878,3 +5878,13 @@ Fichiers tenus : `charte.gd`, `menu_theme.gd`, `menu_widgets.gd`, `menu_hub.gd`,
 `tools/fabrique_bloc_ui.py`, `tools/test_habillage.gd`. **ISO7 Gadgets a confirmé ne tenir que trois lignes de
 `menu_hub.gd`** (`_build_blur_material`, `reglage_art`), à ne pas effacer en fusion — `tools/test_menus_voxel.gd` les garde.
 `menu_artwork.gdshader` et son câblage ne sont pas touchés.
+
+### 2026-09-22 (nuit) — ISO12 : les corps d'après les dix portraits de classe (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+Sur le brief de la session cloud (23:46), après une revue adversariale du relief d'ISO12 (deux défauts critiques qui
+l'éteignaient, trois graves ; tous corrigés depuis par Iso 1). L'albédo des corps d'après les portraits, derrière
+`--corps=portraits` : plâtre ocre patiné de rouille, sangles, poche, cartouches, bouteille dans le dos de six classes.
+Quatre formes mesurées avant la bonne : le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, dans
+l'espace des octets de l'image — la visibilité d'hier à toute lumière, la clarté moyenne gardée (0,98-1,05 à 0,8), la
+patine allégée là où `Charte.DIM` arrête le plâtre. Empreinte 16,8-17,4 px, noir absolu à 0, lot vert. Question ouverte :
+tout près du noir, la quantification fait voir un peu plus le portrait que le gris.
