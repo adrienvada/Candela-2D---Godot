@@ -453,9 +453,10 @@ func _l_effacement_dans_la_suie(main: Node, p: Node) -> void:
 ## ISO13, lot E — le faisceau dans l'air. Trois garanties qui ne se voient pas à l'œil et qu'aucune
 ## planche ne montrerait : le drapeau est ÉTEINT par défaut ; le masque du rayon est la texture de la
 ## lampe elle-même (donc le cône ne peut pas diverger de la lumière) ; et le rayon passe par les
-## couches ordinaires, qui lisent la lightmap — c'est ce qui lui interdit de rien révéler que le sol
-## ne révèle déjà. Une réécriture qui remplacerait le masque par une forme à soi casserait la
-## deuxième sans casser l'image, et personne ne le verrait.
+## couches ordinaires, qui lisent la lightmap — ce qui le tient à zéro là où le sol est noir DANS LE
+## MONDE. ⚠️ Pas à l'écran : une couche en hauteur y est décalée par la parallaxe (mesuré le
+## 2026-09-24), et aucune garde headless ne voit un pixel. Une réécriture qui remplacerait le masque
+## par une forme à soi casserait la deuxième garantie sans casser l'image.
 func _le_faisceau() -> void:
 	print("\n[Le faisceau dans l'air — lot E]")
 	var v := IsoVolumes.new()
@@ -469,7 +470,11 @@ func _le_faisceau() -> void:
 	_check("le faisceau s'éteint avec la lampe",
 		texte.contains("not lampe.enabled or lampe.energy <= 0.0"))
 	_check("le drapeau se lit sur les arguments UTILISATEUR (après --)",
-		texte.contains("OS.get_cmdline_user_args().has(DRAPEAU_FAISCEAU)"))
+		texte.contains("for arg in OS.get_cmdline_user_args():"))
+	_check("la densité cherchée au photographe revient à la constante si personne ne la force",
+		texte.contains("return densite_faisceau if densite_faisceau > 0.0"))
+	_check("le faisceau dit sa densité au lancement (la preuve que le drapeau a porté)",
+		texte.contains("[faisceau] allumé"))
 
 
 func _des_images_seulement(main: Node, p: Node, poses: Dictionary) -> void:

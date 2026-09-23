@@ -39,7 +39,7 @@ Les trois endroits sont tous dans `fusee.gd` :
    ne brille pas » : il ne peut pas être plus clair que son halo. Un cœur blanc demande de le
    **découpler** de la couleur de la lumière. Les étincelles n'existent pas encore.
 
-## Lot E — le faisceau : la machinerie existe déjà, et elle garantit le noir absolu
+## Lot E — le faisceau : la machinerie existe déjà, et ce qu'elle garantit vraiment
 
 `iso_volumes.gd` élève « ce qui n'a pas de corps mais une épaisseur ou une hauteur » — nuages, nappes,
 sources qui brûlent au-dessus du sol. **Le rayon dans l'air et les grains de poussière sont exactement
@@ -47,9 +47,9 @@ cela.** Trois propriétés de ce fichier en font le bon endroit, et pas un endro
 
 - **Rien n'y est lu par la simulation**, ni la balle, ni l'éblouissement, ni les capteurs, ni les
   lightmaps. Le garde-fou « les règles de l'éblouissement inchangées » est tenu sans vigilance.
-- **Le noir absolu y est tenu par construction** : un volume vaut la lightmap sous lui, donc 0 sans
-  lumière. « Rien hors de la lumière » n'est alors pas une précaution mais une conséquence — et
-  `tools/test_iso_gadgets.gd` le prouve déjà.
+- **Le noir absolu y est tenu DANS LE MONDE** : un volume vaut la lightmap sous lui, donc 0 sans
+  lumière. ⚠️ Ce point a d'abord dit « par construction », sans réserve : **c'est faux à l'écran**, où
+  une couche en hauteur est décalée par la parallaxe. Voir « Mesures du 2026-09-24 » plus bas.
 - **Aucune `Light3D`** : le rayon ne serait pas une lumière de plus, donc pas un coût de lampe.
 
 Le cœur chaud près de la lampe relève en revanche de `player.gd` (`flashlight`, lignes 1187 et 1953),
@@ -71,7 +71,7 @@ paragraphe audio de `CLAUDE.md` : un constat daté vieillit sans prévenir, y co
 ## L'ordre que je propose, et pourquoi
 
 Le faisceau (E) avant la fusée (D). Non par facilité, mais parce que E s'ajoute dans un fichier dont
-les trois règles d'équité sont tenues par construction et sans toucher à la lumière, tandis que D
+les règles d'équité sont tenues dans le monde sans toucher à la lumière (à l'écran, voir plus bas), tandis que D
 modifie une couleur **qui entre dans la lightmap** — donc dans le relief, les capteurs et l'image des
 deux joueurs. Faire E d'abord, c'est livrer une planche et un coût mesuré avant d'ouvrir le sujet qui
 peut déplacer autre chose que lui-même.
@@ -111,13 +111,11 @@ Trois choix, et leurs raisons :
 - **Le drapeau se lit sur les arguments utilisateur**, dans `IsoVolumes._init()`, et non dans un banc :
   il porte ainsi partout — jeu, banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
 
-⚠️ **Le point d'équité, qui était le vrai risque du lot.** Un rayon visible dans l'air pourrait
-révéler où vise l'adversaire là où le sol ne le montre pas. Il ne le peut pas : une couche vaut la
-lightmap sous elle. Le rayon d'un adversaire n'apparaît donc que là où sa lumière est **déjà** dans ma
-lightmap — là où je vois déjà le sol éclairé. Hors du cône et derrière un mur, la couche vaut zéro.
-La garantie vient du fichier, pas de la vigilance, et `tools/test_iso_gadgets.gd` vérifie désormais
-qu'une réécriture ne la casse pas en silence — notamment qu'on ne remplace pas le masque par une forme
-à soi, ce qui casserait l'équité **sans casser l'image**, donc sans que personne le voie.
+⚠️ **Le point d'équité, qui était le vrai risque du lot — et que ce paragraphe a d'abord déclaré
+réglé.** Il disait : « il ne le peut pas : une couche vaut la lightmap sous elle ». C'est vrai dans le
+monde, faux à l'écran, et la mesure l'a montré dès que la densité a monté (plus bas). La garde de
+`tools/test_iso_gadgets.gd` reste utile — elle empêche qu'on remplace le masque par une forme à soi —
+mais elle ne voit aucun pixel, et elle ne prouvait donc pas ce que ce paragraphe lui faisait prouver.
 
 **La mesure attend deux choses**, dans cet ordre, sur ordre de la session cloud : la fusion de la garde
 de Beauté dans `iso12-lumiere3d` — sans elle le chemin par défaut paie un aller-retour `pow` du
@@ -125,3 +123,79 @@ mannequin même éteint, et la référence ne serait plus le jeu d'avant —, pu
 les deux lots : référence, E seul, A seul, E et A ensemble, au pompe sous une fusée, en miroir. Règle
 posée d'avance : une variante tient si le rapport de ses médianes au défaut atteint 0,970 et si la
 médiane de ses 1 % bas dépasse 60.
+
+## Le photographe sait viser (`--visee=x,y`)
+
+Ajouté au photographe le 2026-09-24, **sur autorisation explicite de la session cloud** : c'est le
+fichier d'un autre chantier (DA6), et la règle est de signaler, pas de corriger. Le drapeau est
+strictement additif — sans lui, `VISEE` garde (1,0 ; 0,36) et les cinq usages lisent la même valeur
+qu'avant, donc aucune planche déjà prise ne change.
+
+**Pourquoi il fallait ce drapeau** : le photographe vise dans une seule direction, choisie pour la
+composition (« le cône traverse le cadre en biais, ce qui se recadre en carré sans perdre sa pointe »).
+Or le feuilletage d'un volume fait de plans empilés se juge dans son **pire cas**, le rayon suivant
+l'axe vertical de l'écran, où le décalage des couches s'ajoute à la longueur du rayon. Choisir une
+densité sur la seule visée de composition, c'était choisir deux fois.
+
+⚠️ Une visée nulle ou mal formée **échoue** au lieu de retomber en silence sur la composition : une
+planche prise dans une direction qu'on croit avoir choisie serait un faux résultat crédible.
+
+## Mesures du 2026-09-24, 01:30 → 01:48 : le rayon ne se lit pas, et le noir casse à l'écran
+
+Plan `torche`, trois densités × trois visées (`--visee`, ajouté pour cela), chacune contre une
+référence sans faisceau. « Isolés » : pixels noirs dans la référence, non noirs avec le faisceau, et
+à plus de 2 px de toute lumière de la référence.
+
+    visée   densité   médiane dans le cône   couverture   pixels isolés dans le noir
+    bas     0,08      2/255                   7 %           2
+    bas     0,22      2/255                  10 %         160
+    bas     0,45      3/255                  16 %         313
+    haut    0,08      1/255                   7 %           1
+    haut    0,22      2/255                   9 %         151
+    haut    0,45      3/255                  16 %         307
+    côté    0,08      2/255                   8 %           1
+    côté    0,22      2/255                  11 %         154
+    côté    0,45      3/255                  18 %         307
+
+**Deux conclusions.** Le rayon ne se lit dans aucune : 3/255 de médiane au mieux. Et le noir absolu
+casse d'autant plus que la densité monte, dans les trois visées.
+
+**La cause, établie par intervention et non déduite**, visée haut à 0,45 :
+
+    contrôle, deux références sans faisceau     1     ← le bruit d'un lancement à l'autre
+    faisceau tel quel                          307
+    couches posées au sol                       15    ← la parallaxe retirée
+    lissage de la lightmap coupé               400    ← le flou n'y est pour rien
+
+C'est la **parallaxe** : une couche lit la lightmap du sol sous elle, mais, en hauteur et sous un
+tangage de 52°, elle est dessinée plus haut à l'écran que ce sol — sur des pixels où il peut être
+noir. La lumière du sol la plus proche d'un pixel isolé est trois fois plus souvent **en dessous**
+qu'au-dessus (142 contre 50, 150 contre 46, 138 contre 33), ce qui est la signature attendue.
+
+**Ce que « tenu par construction » voulait dire, et ce qu'il fallait dire.** La lecture de la
+lightmap garantit le noir **dans le monde** : une couche vaut zéro au-dessus d'un sol noir. Elle ne le
+garantit pas **à l'écran**. La planche `ef2fae1` l'avait « vérifié » dans le seul cas qui passait
+(0,08, visée de composition) ; la garde de `tools/test_iso_gadgets.gd` ne voit aucun pixel et ne
+pouvait pas le prouver.
+
+**Une tension avec une décision d'Adrien**, non tranchée ici : les lampes du joueur n'ont pas de
+hauteur face aux murets (ROADMAP, 2026-09-15), sans quoi elles dessinent « vu, pas touché ». Un rayon
+dont les couches montent à 0,45 tuile, au-dessus des murets de 0,40, leur en redonne une à l'image.
+
+**État** : `--faisceau` reste éteint, aucune densité n'est retenue. La densité se règle désormais au
+lancement (`--faisceau=0,22`) et le faisceau l'annonce (« [faisceau] allumé — densité par couche »),
+ce qui prouve que le drapeau a porté.
+
+### La fumée de la fusée, allumée par défaut : question ouverte, deux instruments sans réponse
+
+Elle suit le même patron de couches, et monte à une tuile. Deux tentatives :
+
+- **Entre deux lancements**, la lumière de la fusée elle-même varie : sans aucun volume, deux
+  lancements donnent jusqu'à **253** pixels « isolés ». Les écarts mesurés avec la fumée (0, 1, 1, 99
+  selon la paire) sont dans ce bruit. Indécidable.
+- **Dans le même lancement**, la loupe `loupe-fusee-suie` coupe les volumes à âge figé : 0 pixel
+  isolé — mais **aucun pixel noir dans le cadre**, que la fusée éclaire entièrement. Le zéro est vide.
+
+Pour répondre, il faut une prise **plein cadre, dans le même lancement**, volumes coupés puis
+rétablis, cadrée sur le **bord** de la lumière de la fusée. Ce serait une étape du photographe
+(DA6) : signalé, pas construit.

@@ -96,13 +96,23 @@ var _masques := false
 ## fait sur les arguments UTILISATEUR. Lu ici plutôt que dans un banc pour qu'il porte partout — jeu,
 ## banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
 const DRAPEAU_FAISCEAU := "--faisceau"
+## `--faisceau=0.22` force la densité d'une couche, pour la chercher au photographe sans recompiler.
+## Sans valeur, celle de `VOLUME_FAISCEAU`. La valeur retenue reviendra dans la constante.
+var densite_faisceau := 0.0
 
 
 func _init() -> void:
 	name = "Volumes"
 	_plan.size = Vector2.ONE
 	_quad.size = Vector2.ONE
-	faisceaux_actifs = OS.get_cmdline_user_args().has(DRAPEAU_FAISCEAU)
+	for arg in OS.get_cmdline_user_args():
+		if arg == DRAPEAU_FAISCEAU:
+			faisceaux_actifs = true
+		elif arg.begins_with(DRAPEAU_FAISCEAU + "="):
+			faisceaux_actifs = true
+			densite_faisceau = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU + "=")))
+	if faisceaux_actifs:
+		print("[faisceau] allumé — densité par couche %.3f" % _densite_faisceau())
 
 
 func nombre_de_suivis() -> int:
@@ -292,11 +302,18 @@ func _suivre_lentille(g: Node2D, vus: Dictionary) -> void:
 ## pas des particules : c'est le grain que le shader applique déjà à l'alpha, animé par `age`, donc
 ## sans un seul objet de plus.
 ##
-## ⚠️ **L'équité se tient toute seule, et c'est la raison de faire ça ici plutôt qu'avec une lumière.**
-## Une couche vaut la lightmap sous elle. Le rayon d'un adversaire ne peut donc apparaître que là où sa
-## lumière est DÉJÀ dans ma lightmap, c'est-à-dire là où je vois déjà le sol éclairé : il ne révèle
-## rien que le sol ne révèle. Hors du cône, et derrière un mur, la couche vaut zéro — le noir absolu
-## est une conséquence, pas une précaution.
+## ⚠️ **Ce que la lecture de la lightmap garantit, et ce qu'elle ne garantit PAS.** Ce paragraphe a
+## d'abord affirmé que « le noir absolu est une conséquence, pas une précaution ». C'est vrai DANS LE
+## MONDE et faux À L'ÉCRAN, mesuré le 2026-09-24 (`docs/iso/iso13/plan_lots_d_e.md`) :
+## - dans le monde, une couche vaut la lightmap sous elle, donc zéro là où le sol est noir ;
+## - à l'écran, une couche EN HAUTEUR est dessinée plus haut que le sol qu'elle lit — la parallaxe, sous
+##   le tangage de 52°. Elle tombe donc sur des pixels où le sol est noir. À 0,45 de densité : 307
+##   pixels isolés dans le noir, contre 1 d'un lancement à l'autre sans faisceau, et 15 quand les
+##   couches sont posées au sol. Le lissage de la lightmap n'y est pour rien (le couper donne 400) ;
+## - et c'est une tension avec une décision d'Adrien (ROADMAP, 2026-09-15) : les lampes du joueur n'ont
+##   pas de hauteur face aux murets, sans quoi elles dessinent « vu, pas touché ». Un rayon qui monte à
+##   0,45 tuile, au-dessus des murets de 0,40, leur en redonne une à l'image. Non tranché : c'est pour
+##   cela que `--faisceau` reste éteint.
 func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 	var lampe := j.get_node_or_null(^"Flashlight") as PointLight2D
 	if lampe == null or not lampe.enabled or lampe.energy <= 0.0 or lampe.texture == null:
@@ -311,7 +328,7 @@ func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 	var e := _entree(j, "faisceau", vus, 0)
 	_couches(e, int(VOLUME_FAISCEAU["couches"]))
 	_poser_couches(e, centre, rayon, float(VOLUME_FAISCEAU["hauteur"]),
-		float(VOLUME_FAISCEAU["densite"]) * part, lampe.texture, lampe.global_rotation,
+		_densite_faisceau() * part, lampe.texture, lampe.global_rotation,
 		float(j.get_instance_id() % 97), float(Time.get_ticks_msec()) * 0.001)
 
 	# Le cœur chaud : une lueur à la lampe même, comme la lentille de la torche fantôme.
@@ -319,6 +336,11 @@ func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 	_halos(c, 1)
 	_poser_halo(c, 0, Vector3(centre.x, HAUTEUR_COEUR_LAMPE * TUILE, centre.y),
 		TAILLE_COEUR_LAMPE, lampe.color, part, 1)
+
+
+## La densité d'une couche du faisceau : celle du drapeau si on en cherche une, sinon la constante.
+func _densite_faisceau() -> float:
+	return densite_faisceau if densite_faisceau > 0.0 else float(VOLUME_FAISCEAU["densite"])
 
 
 func _suivre_eclair(g: Node2D, vus: Dictionary) -> void:
