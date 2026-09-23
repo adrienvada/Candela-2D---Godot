@@ -90,6 +90,12 @@ var _encre := 0.0                    # ISO3 vague 5 — --encre=X (tuiles) : dé
 ## ISO7b (crochet d'ISO7 Beauté) — `--modele` : le modelé des corps par la caméra (dessus 1,15, face sud 0,9, autres
 ## faces 1), sans aucune lecture de la lumière — décision de la session cloud, 2026-09-15 14:21.
 var _modele := false
+## ISO12 — `--palette-grise` (avec `--corps=portraits`) : toutes les couleurs du portrait remplacées par le gris de la classe.
+## Contrôle : la teinte rend alors exactement le gris, et tout écart entre les deux captures viendrait d'ailleurs.
+var _palette_grise := false
+## ISO12 — `--opaque` : les corps rendus par une copie OPAQUE de leur shader (ni `blend_mix` ni ALPHA : plus aucun mélange
+## au bord), mêmes paramètres. Diagnostic de l'ordre 145 : désigne si le pourtour tient au mélange.
+var _opaque := false
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -155,6 +161,8 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"encre": _encre = maxf(0.0, float(val))
 			"modele": _modele = true
 			# ISO12 — lu par `VoxelCatalogue.portraits_actifs()` : les corps d'après les dix portraits de classe.
+			"palette-grise": _palette_grise = true
+			"opaque": _opaque = true
 			"corps":
 				if val != "portraits":
 					push_warning("banc_corps : --corps attend portraits (reçu « %s »)" % val)
@@ -209,6 +217,15 @@ func _construire_scene() -> void:
 		if _modele:
 			var m: ShaderMaterial = noeud.materiau()
 			m.set_shader_parameter("modele", 1.0)
+		if _opaque:
+			var mo: ShaderMaterial = noeud.materiau()
+			mo.shader = _shader_opaque(mo.shader)
+		if _palette_grise:
+			var mg: ShaderMaterial = noeud.materiau()
+			var gris: Color = noeud.couleur()
+			for cle in ["ocre", "rouille", "brun", "bouteille", "arme"]:
+				mg.set_shader_parameter("portrait_%s" % cle, gris)
+			mg.set_shader_parameter("portrait_cartouche", Color(0, 0, 0, 0))
 		_corps.append({
 			"slug": slug, "noeud": noeud,
 			"pos_px": Vector2(x_tuiles, z_tuiles) * tuile,
@@ -586,3 +603,12 @@ func _valeur_max(img: Image) -> float:
 			var c := img.get_pixel(x, y)
 			maxi = maxf(maxi, maxf(c.r, maxf(c.g, c.b)))
 	return maxi
+
+
+
+## Une copie opaque du shader d'un corps : `blend_mix` et `depth_draw_always` retirés, ALPHA non écrit.
+static func _shader_opaque(source: Shader) -> Shader:
+	var code := source.code.replace(", blend_mix, depth_draw_always", "").replace("ALPHA = a;", "")
+	var copie := Shader.new()
+	copie.code = code
+	return copie

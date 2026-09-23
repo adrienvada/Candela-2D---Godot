@@ -115,19 +115,19 @@ func _la_palette() -> void:
 	var gris_c := VoxelCatalogue.fiche("spectre")["couleur"] as Color
 	var ocre_c := VoxelCatalogue.palette_portrait("spectre")["ocre"] as Color
 	var nul := _teindre(Vector3.ZERO, ocre_c, gris_c)
-	var faible := _teindre(_lin(gris_c) * 0.2, ocre_c, gris_c)
+	var faible := _teindre(_brut(gris_c) * 0.2, ocre_c, gris_c)
 	_check("teinte : 0 reste 0, et une lumière faible sur le gris reste visible peinte (%.5f)" % faible.length(),
 		nul == Vector3.ZERO and faible.length() > 0.0)
-	var seuil := _lin(gris_c) * 0.01
+	var seuil := _brut(gris_c) * 0.05
 	_check("teinte : sous le seuil du noir, le gris tel quel (un pixel noir au gris l'est peint)", _teindre(seuil, ocre_c, gris_c) == seuil)
-	var milieu := _lin(gris_c) * 0.5
-	var lum_milieu := IsoPate.luminance(IsoPate.depuis_affiche(_teindre(milieu, ocre_c, gris_c)))
-	var lum_gris_milieu := IsoPate.luminance(IsoPate.depuis_affiche(milieu))
+	var milieu := _brut(gris_c) * 0.5
+	var lum_milieu := IsoPate.luminance(_teindre(milieu, ocre_c, gris_c))
+	var lum_gris_milieu := IsoPate.luminance(milieu)
 	_check("teinte : à clarté égale de palette, la clarté à l'écran est celle du gris (%.4f ≈ %.4f)" % [lum_milieu, lum_gris_milieu],
 		absf(lum_milieu - lum_gris_milieu) < 0.004)
-	var plein := _teindre(_lin(gris_c), ocre_c, gris_c)
-	_check("teinte : sous le plafond du gris, jamais au-dessus du portrait", plein.x <= _lin(ocre_c).x + 1e-5
-		and plein.y <= _lin(ocre_c).y + 1e-5 and plein.z <= _lin(ocre_c).z + 1e-5)
+	var plein := _teindre(_brut(gris_c), ocre_c, gris_c)
+	_check("teinte : sous le plafond du gris, jamais au-dessus du portrait", plein.x <= _brut(ocre_c).x + 1e-5
+		and plein.y <= _brut(ocre_c).y + 1e-5 and plein.z <= _brut(ocre_c).z + 1e-5)
 	var r := VoxelCatalogue.palette_portrait("incendiaire")["cartouche"] as Color
 	_check("les cartouches de l'Incendiaire sont rouges (r > 2 g : %.2f / %.2f)" % [r.r, r.g], r.r > 2.0 * r.g)
 
@@ -282,19 +282,18 @@ func _le_fil() -> void:
 	_check("Protocol.VERSION reste 18", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
 
 
-## Miroir de `portrait_teindre` (valeurs du shader : couleurs déjà décodées par `source_color`).
+## Miroir de `portrait_teindre`, dans l'espace brut du shader (valeurs affichées : le rendu Compatibility montre les couleurs
+## de fiche telles quelles — voir l'en-tête de `corps_iso.gdshader`, « Pas de conversion sRGB »).
 static func _teindre(c: Vector3, fiche: Color, gris: Color) -> Vector3:
-	var l: float = IsoPate.luminance(IsoPate.depuis_affiche(c))
+	var l: float = IsoPate.luminance(Vector3(maxf(c.x, 0.0), maxf(c.y, 0.0), maxf(c.z, 0.0)))
 	if l < 10.0 / 255.0:
 		return c
-	var k: float = l / maxf(IsoPate.luminance(IsoPate.depuis_affiche(_lin(gris))), 0.000001)
-	var teinte: Vector3 = IsoPate.vers_affiche(IsoPate.depuis_affiche(_lin(fiche)) * k)
+	var teinte: Vector3 = _brut(fiche) * (l / maxf(IsoPate.luminance(_brut(gris)), 0.000001))
 	return c.lerp(teinte, smoothstep(10.0 / 255.0, 24.0 / 255.0, l))
 
 
-static func _lin(c: Color) -> Vector3:
-	var l := c.srgb_to_linear()
-	return Vector3(l.r, l.g, l.b)
+static func _brut(c: Color) -> Vector3:
+	return Vector3(c.r, c.g, c.b)
 
 
 ## L'écart de teinte entre deux couleurs à clarté égale : la distance de leurs chromaticités (r, g, b) / (r + g + b).

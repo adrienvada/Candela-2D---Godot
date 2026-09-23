@@ -26185,21 +26185,26 @@ change l'équilibre des classes). Cinq formes ont été mesurées avant la bonne
 **La forme retenue** : toutes les couleurs d'une classe (plâtre, rouille, sangles, arme, cartouches, bouteille) ont la
 clarté sRGB EXACTE du gris de sa classe et ne diffèrent que par la teinte et la saturation (les sangles et l'arme sont des
 bruns désaturés, la rouille un rouge plus saturé) ; la pâte décide sur le gris ; l'encre et le modelé s'appliquent au gris ;
-le portrait teint EN DERNIER, dans l'espace encodé, `e(c') = e(fiche) × clarté(e(c)) / clarté(e(gris))` ; sous 4/255 le
-gris tel quel, puis la teinte en fondu jusqu'à 12/255. L'encre et le modelé restent les seules variations de clarté,
-identiques au gris.
+le portrait teint EN DERNIER, dans l'espace BRUT du fragment (ce shader travaille en valeurs affichées : l'écran montre `c`
+tel quel), `c' = fiche × clarté(c) / clarté(gris)` ; sous 10/255 à l'écran le gris tel quel, puis la teinte en fondu
+jusqu'à 24/255. L'encre et le modelé restent les seules variations de clarté, identiques au gris.
 
 **L'équité.** Mesurée au banc des corps, les dix corps pris peints puis le portrait éteint sur les MÊMES matériaux, dans la
-même partie (2026-09-23 05:22, clarté moyenne des pixels du corps, peint sur gris) : **0,990 à 1,001 à 0,8** ; 0,989 à
-1,043 à 0,2 ; 1,014 à 1,054 à 0,15 (Parasite 1,053, Incendiaire 1,054) ; à 0,1, six classes hors de 5 % (Terrassier
-1,45, Occulteur 2,10…) — des corps dont le gris ne vaut là que 0,6 à 2,5 niveaux sur 255 : c'est le critère 1 qui s'y lit.
-- ⚠️ **Critère 1 OUVERT : des pixels noirs au gris ne le sont plus peints.** 8 894 à 0,2, 15 249 à 0,15, 8 287 à 0,1,
-  9 622 à 0,06 (132 à 0,8, sur des corps bien éclairés), en rouge pur de (1, 0, 0) à (4, 0, 0), surtout les classes les
-  plus sombres (Terrassier 2 691, Occulteur 2 511 à 0,2). Relever le seuil de la teinte de 4 à 10/255 n'a rien changé AU
-  PIXEL PRÈS : les pixels fautifs ne naissent pas d'une clarté de fragment basse. Piste de la session cloud (05:34) : un
-  fragment assez clair pour être teint, assombri APRÈS le seuil — couverture du bord ou encre ; à clarté égale, un ocre
-  concentre sa lumière dans le rouge, qui survit à l'arrondi quand les trois canaux d'un gris tombent à 0. Prochain pas :
-  deux interrupteurs au banc (encre coupée ; corps forcé opaque) pour désigner l'étape. Le mot de fusion attend ce critère.
+même partie (2026-09-23 06:43, clarté moyenne des pixels du corps, peint sur gris) : **0,991 à 1,001 à 0,8 ; 0,978 à 1,005
+à 0,2 ; 0,990 à 1,024 à 0,15 ; 0,997 à 1,017 à 0,1** — les dix classes dans les 5 % à toutes les lumières.
+- **Critère 1 : des pixels noirs au gris qui ne le sont plus peints — tombés au niveau du bruit du banc.** 159 à 0,2, 207 à
+  0,15, 205 à 0,1, 10 à 0,06, 0 à 0 (125 à 0,8), contre 8 894, 15 249, 8 287 et 9 622 dans l'espace encodé ; et dans l'autre
+  sens, 186, 411, 163 : les deux sens s'équilibrent. **Le contrôle** — la palette entièrement grise, où la teinte rend
+  exactement le gris — en compte autant entre ses deux captures (105 à 0,2, 139 à 0,1, et 1 791 dans l'autre sens) : les
+  corps respirent d'une capture à l'autre (40 000 pixels y diffèrent). Le zéro exact demande un banc au temps figé entre
+  les deux prises (proposé).
+- ⚠️ **L'étape, désignée par interrupteurs** (même partie, à 0,2 puis 0,1, traits d'encre + pourtour) : normal 5 757 + 3 137
+  puis 8 192 + 164 ; encre coupée 21 + 125 puis 4 649 + 542 ; modelé coupé 6 950 + 3 346 puis 5 040 + 199 ; ni encre ni
+  modelé 0 + 71 puis 0 + 61 ; corps forcé opaque, comme normal ; palette grise, 1 + 104 puis 139 + 0. Le mélange au bord n'y
+  était pour rien ; l'encre, et à 0,1 le modelé, amenaient les pixels au pied de l'échelle, où la teinte — calculée dans
+  l'espace ENCODÉ, qui multiplie les petites valeurs par 12,92 — divergeait de ce que l'écran montre : un gris affiché
+  (0, 1, 2) sortait peint (8, 0, 0), et le seuil, lu lui aussi dans l'espace encodé, ne gardait gris que des pixels déjà
+  noirs. **Relever le seuil n'y changeait rien : c'est le domaine qui était faux.**
 - **Empreinte** : corps seul, bouteille comprise, 16,8 à 17,4 px pour 17,5 permis, debout, accroupi, en marche et en
   enjambement ; l'ensemble, arme comprise, ne s'étend nulle part plus loin qu'avant. Zone de touche : `PLAYER_BODY_RADIUS`
   18 px, inchangé.

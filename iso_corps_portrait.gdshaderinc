@@ -8,7 +8,7 @@
 //
 // - `portrait_fiche()` rend la couleur du portrait AU FRAGMENT ; `portrait_teindre()` la pose sur la lumière que le
 //   fragment a DÉJÀ rendue sur le gris de sa classe (pâte, plafond, modelé et encre compris), en dernier : la couleur rendue
-//   prend la teinte du portrait, et sa clarté À L'ÉCRAN est celle du gris × le rapport des clartés sRGB portrait / gris.
+//   prend la teinte du portrait, et sa clarté à l'écran est celle du gris, pixel par pixel.
 // - ⚠️ **Le portrait ne décide jamais OÙ la lumière se voit.** Une première forme posait la couleur du portrait À LA
 //   PLACE du gris, avant la pâte : un plâtre plus clair que le gris franchissait plus tôt les seuils de la pâte D, et au
 //   banc des corps (2026-09-23, 00:34) un Spectre sous 0,06 de lumière se voyait peint là où le gris était noir, tandis
@@ -17,7 +17,7 @@
 // - Noir absolu : une lumière rendue nulle reste nulle (le rapport multiplie 0). Albédo seul : aucune émission, aucun
 //   `light()` ; le relief d'ISO12 n'est pas touché (`tools/test_corps_portraits.gd`).
 // - ⚠️ **La peinture change la COULEUR, jamais la VISIBILITÉ** (session cloud, 2026-09-23 01:49). Toutes les couleurs
-//   d'une classe arrivent de `VoxelCatalogue.palette_portrait()` à la clarté sRGB EXACTE de son gris : la patine, la
+//   d'une classe arrivent de `VoxelCatalogue.palette_portrait()` à la clarté exacte de son gris : la patine, la
 //   rouille, les sangles et les cartouches ne jouent que sur la teinte et la saturation, et le rapport portrait / gris vaut
 //   1 en chaque pixel, à toute lumière. Et sous `PORTRAIT_SEUIL_NOIR` (10/255), la teinte ne s'applique pas du tout, puis
 //   arrive en fondu jusqu'à 24/255 : un pixel noir au gris l'est peint, sans que l'arrondi à quelques niveaux en décide.
@@ -108,12 +108,17 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 	return c;
 }
 
-// La lumière rendue `c` (calculée sur le gris `gris` de la classe) prend la teinte du portrait `fiche`, dans l'espace ENCODÉ,
-// celui des octets de l'image : e(c') = e(fiche) × clarté(e(c)) / clarté(e(gris)), e = `pate_depuis_affiche` (linéaire →
-// sRGB : la sortie de Godot). Le rapport des clartés À L'ÉCRAN, portrait sur gris, vaut donc exactement celui des couleurs de
-// la palette (en sRGB), à toute lumière. ⚠️ Faite d'abord dans l'autre sens (`pate_vers_affiche`), la teinte assombrissait
-// les corps d'un quart à 0,8 et d'un tiers à 0,2 au banc des corps (2026-09-23, 00:42) : les deux espaces ne coïncident que
-// pour un gris. 0 reste 0 ; c ≤ gris ⇒ résultat ≤ fiche.
+// La lumière rendue `c` (calculée sur le gris `gris` de la classe) prend la teinte du portrait `fiche`, dans l'espace BRUT du
+// fragment : c' = fiche × clarté(c) / clarté(gris). Ce shader travaille en valeurs AFFICHÉES (voir l'en-tête de
+// `corps_iso.gdshader`) : l'écran montre `c` tel quel (au banc des corps, le gris d'un corps passe de 70,6 à 13,2 niveaux
+// quand la lumière va de 0,8 à 0,2 — proportionnel, pâte comprise). À l'écran, la clarté du corps peint est donc celle du
+// gris, pixel par pixel, à toute lumière, et le seuil du noir se lit sur la valeur que l'écran montre.
+// ⚠️ **Deux autres espaces essayés, et faux au pied de l'échelle.** Dans l'espace encodé (`pate_depuis_affiche`), qui
+// multiplie les petites valeurs par 12,92, le seuil ne gardait gris que les pixels déjà noirs, et 8 000 à 15 000 pixels noirs
+// au gris sortaient peints de (1, 0, 0) à (8, 0, 0) à 0,1-0,2 de lumière (banc des corps, même partie, 2026-09-23 05:56 :
+// l'encre et le modelé y amenaient les pixels — encre coupée, 146 au lieu de 8 894 ; corps opaque, rien de changé ; palette
+// grise, 0 à 139). Dans l'espace décodé (`pate_vers_affiche`), un corps gris à pleine lumière aurait valu 3 niveaux sur 255.
+// 0 reste 0 ; c ≤ gris ⇒ résultat ≤ fiche.
 const float PORTRAIT_SEUIL_NOIR = 10.0 / 255.0;
 const float PORTRAIT_SEUIL_TEINTE = 24.0 / 255.0;
 
@@ -121,16 +126,10 @@ vec3 portrait_teindre(vec3 c, vec3 fiche, vec3 gris) {
 	if (portrait < 0.5) {
 		return c;
 	}
-	float l = pate_luminance(pate_depuis_affiche(c));
-	// Tout près du noir, le gris tel quel, puis la teinte en fondu jusqu'à 24/255. ⚠️ Au pied de l'image, la chaîne de rendu
-	// ÉCRASE les trois canaux d'un gris sombre à 0, mais laisse survivre le rouge concentré d'un ocre de même clarté : au banc
-	// des corps (2026-09-23 03:57), 8 000 à 15 000 pixels noirs au gris sortaient peints de (1, 0, 0) à (7, 0, 0) à 0,1-0,2 de
-	// lumière, avec un seuil à 4/255. Sous 10/255, une couleur ne se lit de toute façon pas : le gris y garde la visibilité
-	// d'hier au pixel près. (Ce seuil ne suffit pas : critère 1 ouvert, voir la ROADMAP.)
+	float l = pate_luminance(max(c, vec3(0.0)));
 	if (l < PORTRAIT_SEUIL_NOIR) {
 		return c;
 	}
-	float k = l / max(pate_luminance(pate_depuis_affiche(gris)), 0.000001);
-	vec3 teinte = pate_vers_affiche(pate_depuis_affiche(fiche) * k);
+	vec3 teinte = fiche * (l / max(pate_luminance(gris), 0.000001));
 	return mix(c, teinte, smoothstep(PORTRAIT_SEUIL_NOIR, PORTRAIT_SEUIL_TEINTE, l));
 }
