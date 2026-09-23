@@ -171,3 +171,31 @@ cités nulle part. Ce qu'elles laissent est une **question**, pas un résultat :
 tranche diffèrent énormément (l'une plate à 85,7 jusqu'à 260 s, l'autre creusant à 45 entre 170 et
 200 s avant de remonter), et la première venait d'une machine reposée quand la seconde suivait douze
 prises enchaînées. C'est cohérent avec le § 7, mais cela demande une prise valide pour être affirmé.
+
+## 11. Compter, quand on peut compter : la géométrie des corps habillés
+
+Une tenue peinte (`--corps=portraits`, `sombre`, `sombre2`, `sombre3`) ajoute la bouteille dans le dos
+aux six classes qui la portent. Combien cela coûte-t-il ? La question se **compte**, elle ne se mesure
+pas : `tools/compte_boites_corps.gd`, headless, construit chaque corps dans les deux états et recense
+les `MeshInstance3D` réellement posés. Relevé sur 7a648d2 le 2026-09-23 :
+
+    6 classes sur 10 portent la bouteille, +2 maillages chacune (18 → 20).
+    Un duel où les DEUX joueurs la portent : +4 maillages. Où aucun (le pompe) : +0.
+    portraits, sombre, sombre2, sombre3 : 192 contre 180, les quatre, à l'identique.
+
+**+2 et non +1 parce que `VoxelCorps._boite()` pose deux maillages par boîte** : la boîte visible et son
+jumeau de profondeur (`BoiteProfondeur`). Le chiffre confirme la remarque d'ISO7 Beauté au maillage près.
+
+Trois choses que ce recensement donne et qu'une prise de cadence n'aurait pas données :
+
+- **Il est exact.** Aucun bruit, aucun repos de 90 s, aucune porte d'indexation — dix secondes de Mac.
+- **Il prouve que le drapeau porte**, ce qu'aucune cadence ne prouve : il imprime d'abord ce que
+  `VoxelCatalogue.tenue()` a compris de la ligne de commande (« sombre1 » pour `--corps=sombre`).
+  ⚠️ Le drapeau se passe **après `--`** : la lecture se fait sur `OS.get_cmdline_user_args()`.
+- **Il vérifie que les quatre tenues ont la même géométrie** au lieu de le déduire du code, ce qui
+  autorise à n'en mesurer qu'une.
+
+⚠️ **Et il montre où la moyenne ment.** Douze maillages sur dix classes font « +1,2 par corps », un
+nombre que personne ne paie : six classes paient +2 en entier, quatre paient 0. La première version de
+l'outil imprimait cette moyenne — corrigée avant publication. Un coût qui frappe une partie de la
+population se dit par porteur, jamais par tête.
