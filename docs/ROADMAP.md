@@ -26425,6 +26425,23 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     ms — cause non établie, vraisemblablement une charge passagère ; A y garde 88 et 101 % du 1 % bas de C, ce qui rouvre la
     question de l'écran scindé pour A (à mesurer Mac froid avant d'y revenir). Au banc de cadence : `--seuil-lent 25` date
     toute image lente, pour le chantier de la fusée confié à ISO7 Gadgets.
+24. **LES INSTRUMENTS DE LA FUSÉE, pour ISO7 Gadgets — posés** (OUI de la session cloud, 04:55 ; spécifications de Gadgets). Au
+    banc de cadence, en ligne de commande seulement, éteints par défaut : six drapeaux qui retirent chacun une partie de la fusée
+    (`--fusee-sans-lumiere2d`, `-sans-ombre2d`, `-sans-fumee2d`, `-sans-volume`, `-sans-lueurs`, `--fusee-couches N` ; les trois
+    2D reposés À CHAQUE IMAGE après `appliquer_age`, qui les réécrit, et toujours par `visible`/`enabled`, jamais par l'alpha ;
+    les trois iso sont des variables d'`iso_volumes.gd` lues en un seul endroit) ; `--seuil-lent N` : chaque image lente datée
+    avec l'événement de mise en scène le plus proche (bouclage de l'âge de la fusée, premiers allumages) et l'écart en ms ;
+    `--temps-par-vue` : le temps de rendu CPU et GPU de chaque viewport, médiane et 99e centile ; et le recensement des ombres
+    2D PAR VIEWPORT, lightmaps comprises (lampes à ombre, masque, drapeau « n'éclaire AUCUN objet de ce viewport » testé sur le
+    MASQUE seul — un test par position l'aurait allumé pour toutes les lampes, le sol et les murs ayant leur origine au coin de
+    la carte). **Preuve qu'ils ne changent rien : par le bruit, pas à l'octet** — la fusée est animée, deux exécutions ne sont
+    jamais identiques. L'écart avant/après reste dans le bruit après/après sur onze prises sur douze ; le masque de la carte
+    d'essai y dépasse (27 988 px à ≤ 7 niveaux contre 640 à ≤ 1), mais l'ordre des prises a changé entre les deux passes
+    (le témoin inséré), ce qui décale les phases. **Écart connu, consigné comme tel** (règle de la session cloud) : la silhouette
+    de soi garde un biais de +1 à +2 niveaux sur l'intérieur du corps (médiane), présent SANS aucune lampe, absent du sol,
+    invisible à l'œil. Sa dispersion est celle de l'instant (témoin C contre C au même écart de temps). Ni l'alpha (opaque à
+    l'intérieur), ni l'ambiant (un environnement explicitement noir ne change rien, `--environnement-noir`) : cause non trouvée.
+    La série du banc v27 prend désormais deux témoins consécutifs (`reference2d_ter`, `reference2d_bis`).
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).

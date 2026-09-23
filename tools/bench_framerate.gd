@@ -112,6 +112,29 @@ var _ombres_spots_seules := false
 ## ISO7 Gadgets (2026-09-23) : sous la fusée, la queue du 1 % bas pourrait venir des sauts de l'âge de la fusée tenue par le banc
 ## (période de 6,5 s, voir `_stress`) plutôt que de la fusée — des images lentes rangées sur ses multiples le diraient. 0 : éteint.
 var _seuil_lent_ms := 0.0
+## Les images lentes de la mesure ([instant µs, durée s, instant depuis le début de la mesure s]) et les ÉVÉNEMENTS de mise en
+## scène datés ([instant µs, libellé]) : le rapport range chaque image lente à côté de l'événement le plus proche.
+var _lentes: Array = []
+var _evenements: Array = []
+var _age_fusee_precedent := -1.0
+## ISO12 — `--temps-par-vue` : le temps de rendu CPU et GPU de CHAQUE viewport actif, image par image (`RenderingServer.
+## viewport_set_measure_render_time`), en médiane et au 99e centile. Demandé par la session cloud (04:55) pour répartir le coût
+## de la fusée entre les vues ; éteint par défaut (la mesure elle-même a un coût).
+var _temps_par_vue := false
+## ISO12 — LES SIX DRAPEAUX DE LA FUSÉE (spécification d'ISO7 Gadgets, 2026-09-23 ; OUI de la session cloud, 04:55) : chacun
+## RETIRE une partie de la fusée du banc (`--fusee`) pour répartir son coût. Éteints par défaut, jamais en jeu.
+## ⚠️ Les trois premiers sont reposés À CHAQUE IMAGE, juste après `appliquer_age` (`_poser_les_drapeaux_de_la_fusee`) :
+## `Fusee._appliquer_age` réécrit `Halo.enabled`, `Voile.visible` et `NappeN.visible` à chaque image, et un drapeau posé une seule
+## fois serait annulé à l'image suivante, sans rien dire — le relevé dirait « la lumière 2D ne coûte rien ». Et c'est toujours
+## `visible = false` / `enabled = false`, jamais l'alpha : un quad transparent se rasterise et se mêle comme un autre.
+var _fusee_sans_lumiere2d := false   # --fusee-sans-lumiere2d : la PointLight2D « Halo » éteinte (son énergie reste écrite)
+var _fusee_sans_ombre2d := false     # --fusee-sans-ombre2d : son ombre seule (la passe d'ombre, que le compteur d'appels ne voit pas)
+var _fusee_sans_fumee2d := false     # --fusee-sans-fumee2d : les nappes et le voile (⚠️ change le contenu des lightmaps)
+var _fusee_sans_volume := false      # --fusee-sans-volume : le volume de fumée iso (`IsoVolumes.volumes_actifs`)
+var _fusee_sans_lueurs := false      # --fusee-sans-lueurs : la lueur posée et celles de la comète (`IsoVolumes.lueurs_actives`)
+var _fusee_couches := -1             # --fusee-couches N : les couches du volume de la fusée (`IsoVolumes.couches_fusee`)
+var _vues_mesurees: Array = []
+var _temps_vues: Dictionary = {}
 var _seconds := 15.0
 ## ISO12 — la lumière 3D bridée pendant le relevé, et sa variante.
 var _lumiere3d := false
@@ -242,6 +265,13 @@ func _ready() -> void:
 	_lampe_dominante = args.has("--lampe-dominante")
 	_ombres_spots_seules = args.has("--ombres-spots-seules")
 	_seuil_lent_ms = float(_value(args, "--seuil-lent", "0"))
+	_temps_par_vue = args.has("--temps-par-vue")
+	_fusee_sans_lumiere2d = args.has("--fusee-sans-lumiere2d")
+	_fusee_sans_ombre2d = args.has("--fusee-sans-ombre2d")
+	_fusee_sans_fumee2d = args.has("--fusee-sans-fumee2d")
+	_fusee_sans_volume = args.has("--fusee-sans-volume")
+	_fusee_sans_lueurs = args.has("--fusee-sans-lueurs")
+	_fusee_couches = int(_value(args, "--fusee-couches", "-1"))
 	_lumiere3d_echelle = float(_value(args, "--echelle", "1"))
 	if (_lumiere3d_sans_ombres or args.has("--echelle")) and not _lumiere3d:
 		printerr("✗ --sans-ombres et --echelle se prennent avec --lumiere3d")
@@ -350,6 +380,7 @@ func _ready() -> void:
 		print("Préchauffage lumière 3D : 3 s, pire image %.1f ms" % (_pire_echauffement * 1000.0))
 		if _chauffe_couverture:
 			await _chauffer_par_couverture()
+	_poser_les_drapeaux_des_volumes()
 	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
 	_pire_echauffement = 0.0
@@ -357,6 +388,9 @@ func _ready() -> void:
 	print("  pire image de l'échauffement : %.1f ms" % (_pire_echauffement * 1000.0))
 
 	print("Mesure sur %.0f s…" % _seconds)
+	if _temps_par_vue:
+		_armer_temps_par_vue()
+	_recenser_les_ombres_2d()
 	_debut_mesure_us = Time.get_ticks_usec()
 	await _stress(_seconds, true)
 	_report()
@@ -501,8 +535,15 @@ func _stress(duration: float, sampling: bool) -> void:
 		if _fusee and is_instance_valid(_fusee_banc):
 			# L'âge (de COMBUSTION, depuis FU2.1) boucle DANS la braise : fumée à
 			# pleine densité en continu pendant toute la mesure.
-			_fusee_banc.appliquer_age(FuseeModele.FUMEE_MONTEE
-				+ fmod(elapsed, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5))
+			var age_mis := FuseeModele.FUMEE_MONTEE \
+				+ fmod(elapsed, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5)
+			_fusee_banc.appliquer_age(age_mis)
+			_poser_les_drapeaux_de_la_fusee(_fusee_banc)
+			# Le BOUCLAGE de l'âge (tous les 6,5 s) est un événement de mise en scène : l'âge saute en arrière, et le rayon du
+			# panache, l'alpha et l'échelle des nappes changent d'un coup (lecture d'ISO7 Gadgets, 2026-09-23).
+			if sampling and age_mis < _age_fusee_precedent:
+				_evenements.append([Time.get_ticks_usec(), "bouclage de l'âge de la fusée"])
+			_age_fusee_precedent = age_mis
 		# Étape 28, lot F — la nappe est tenue à son plafond de traces : elles
 		# s'éteignent en 8 s (`GadgetPoudre.DUREE_LUEUR`) et le relevé en dure 15 à 60.
 		# Sans entretien, le banc mesurerait une charge qui fond, et le chiffre ne
@@ -547,8 +588,10 @@ func _stress(duration: float, sampling: bool) -> void:
 				# 132 à 138 ms tombaient à 28 et 46 s de mesure, loin de tout premier allumage (chaque vue a ses matériaux).
 				if dt > 0.05:
 					print("  hoquet %.1f ms à %.2f s — lampes : %s" % [dt * 1000.0, elapsed, _etat_des_lampes()])
-				elif _seuil_lent_ms > 0.0 and dt * 1000.0 > _seuil_lent_ms:
-					print("  lente %.1f ms à %.2f s" % [dt * 1000.0, elapsed])
+				if _seuil_lent_ms > 0.0 and dt * 1000.0 > _seuil_lent_ms:
+					_lentes.append([Time.get_ticks_usec(), dt, elapsed])
+				if _temps_par_vue:
+					_relever_temps_par_vue()
 			if not get_window().has_focus():
 				_images_hors_focus += 1
 			# Relevés au vol : lus après la boucle ils vaudraient zéro, et le
@@ -615,6 +658,192 @@ func _chauffer_par_couverture() -> void:
 	var miroir := _miroir_de_lumiere()
 	if miroir != null:
 		print("Chauffe par couverture — sortes déjà allumées : %s" % ", ".join(PackedStringArray((miroir.get("premiers_allumages") as Dictionary).keys())))
+
+
+## ISO12 — LE RECENSEMENT DES OMBRES 2D, PAR VIEWPORT RENDU, une fois au début de la mesure (demandes d'ISO7 Gadgets, 2026-09-23).
+## Chaque Light2D à ombre redessine les occulteurs qu'elle touche, quatre fois par occulteur, et le compteur d'appels de dessin ne
+## le voit pas. Hypothèse de la session cloud, à vérifier ici : le rassemblement des lumières d'une vue ne teste pas le masque
+## d'éclairage — une lampe dont le rectangle coupe la vue y paierait sa passe d'ombre même sans y éclairer AUCUN objet (le halo
+## de proximité d'un joueur, masqué sur son canal privé, dans la lightmap de l'autre). Le compte se prend sur la scène qui tourne,
+## pas hors machine. Rectangle d'une lampe : sa texture × `texture_scale`, centrée sur elle ; d'un occulteur : son polygone
+## transformé ; d'une vue : son rectangle visible ramené au monde par l'inverse de sa transformation de canevas.
+func _recenser_les_ombres_2d() -> void:
+	var occulteurs: Array = []
+	for n in get_tree().root.find_children("*", "LightOccluder2D", true, false):
+		var o := n as LightOccluder2D
+		if o.occluder == null or not o.is_visible_in_tree():
+			continue
+		var pts := o.occluder.polygon
+		if pts.is_empty():
+			continue
+		var r := Rect2(o.global_transform * pts[0], Vector2.ZERO)
+		for p in pts:
+			r = r.expand(o.global_transform * p)
+		occulteurs.append(r)
+	var lampes: Array = []
+	for n in get_tree().root.find_children("*", "PointLight2D", true, false):
+		var l := n as PointLight2D
+		if not (l.enabled and l.shadow_enabled and l.is_visible_in_tree()):
+			continue
+		var taille := Vector2(64.0, 64.0)
+		if l.texture != null:
+			taille = Vector2(l.texture.get_size()) * l.texture_scale
+		lampes.append([l, Rect2(l.global_position - taille * 0.5, taille)])
+	var objets: Array = []
+	for n in get_tree().root.find_children("*", "CanvasItem", true, false):
+		var ci := n as CanvasItem
+		if ci is Light2D or ci is LightOccluder2D or not ci.is_visible_in_tree() or not (ci is Node2D):
+			continue
+		objets.append(ci)
+	var vues: Array = [get_tree().root]
+	for n in get_tree().root.find_children("*", "SubViewport", true, false):
+		if (n as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED:
+			vues.append(n)
+	print("  Ombres 2D : %d occulteurs dans la scène, %d lampes allumées à ombre" % [occulteurs.size(), lampes.size()])
+	for v in vues:
+		var vp := v as Viewport
+		if vp.disable_2d or vp.world_2d == null:
+			continue
+		var champ: Rect2 = vp.get_canvas_transform().affine_inverse() * Rect2(Vector2.ZERO, vp.get_visible_rect().size)
+		var dedans: Array = []
+		for e in lampes:
+			var l := e[0] as PointLight2D
+			if l.get_world_2d() != vp.world_2d or not (e[1] as Rect2).intersects(champ):
+				continue
+			var eclaire := false
+			for ci in objets:
+				var item := ci as Node2D
+				if item.get_world_2d() != vp.world_2d or (item.visibility_layer & vp.canvas_cull_mask) == 0:
+					continue
+				# Le MASQUE seul, jamais la position (remarque d'ISO7 Gadgets) : le sol et les murs sont des `TileMapLayer` et un
+				# `StaticBody2D` immenses dont l'origine est au coin de la carte — un test par position déclarerait « n'éclaire
+				# rien » TOUTES les lampes. Ici le drapeau ne s'allume que si l'inutilité est PROUVÉE : aucun objet de ce viewport
+				# ne porte un canal que la lampe éclaire.
+				if (item.light_mask & l.range_item_cull_mask) != 0:
+					eclaire = true
+					break
+			dedans.append([l, e[1], eclaire])
+		if dedans.is_empty():
+			continue
+		var n_union := 0
+		for r in occulteurs:
+			for d in dedans:
+				if (r as Rect2).intersects(d[1] as Rect2):
+					n_union += 1
+					break
+		print("  · %s : %d lampes à ombre, %d occulteurs dans leur union — 4 × N × lampes = %d"
+			% [String(vp.get_path()) if vp != get_tree().root else "racine", dedans.size(), n_union,
+			4 * n_union * dedans.size()])
+		for d in dedans:
+			var l := d[0] as PointLight2D
+			var r := d[1] as Rect2
+			print("      %s : %.0f × %.0f px, masque %d%s" % [String(l.get_path()).get_file(), r.size.x, r.size.y,
+				l.range_item_cull_mask, "" if d[2] else " — n'éclaire AUCUN objet de ce viewport"])
+
+
+## Les trois drapeaux de la fusée 2D, reposés à chaque image APRÈS `appliquer_age` (qui les réécrit).
+func _poser_les_drapeaux_de_la_fusee(f: Node) -> void:
+	var halo := f.get_node_or_null(^"Halo") as PointLight2D
+	if halo != null:
+		if _fusee_sans_lumiere2d:
+			halo.enabled = false
+		if _fusee_sans_ombre2d:
+			halo.shadow_enabled = false
+	if _fusee_sans_fumee2d:
+		for n in f.get_children():
+			if n is CanvasItem and (String(n.name).begins_with("Nappe") or String(n.name) == "Voile"):
+				(n as CanvasItem).visible = false
+
+
+## Les trois drapeaux des volumes iso, posés une fois la vue iso tenue, AVANT l'échauffement ; puis les volumes vidés, pour que le
+## nombre de couches s'applique à une fusée déjà suivie (`_couches()` ne fait que créer).
+func _poser_les_drapeaux_des_volumes() -> void:
+	if not (_fusee_sans_volume or _fusee_sans_lueurs or _fusee_couches >= 0):
+		return
+	var iso := Presentation3D.instance()
+	var miroirs: Node = iso.get("_miroirs") as Node if iso != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("✗ drapeaux de la fusée : pas de volumes iso (la vue iso est-elle tenue ?)")
+		_sortir(1)
+		return
+	volumes.set("volumes_actifs", not _fusee_sans_volume)
+	volumes.set("lueurs_actives", not _fusee_sans_lueurs)
+	volumes.set("couches_fusee", _fusee_couches)
+	volumes.call("vider")
+	print("Drapeaux de la fusée : volume %s, lueurs %s, couches %s" % ["non" if _fusee_sans_volume else "oui",
+		"non" if _fusee_sans_lueurs else "oui", "défaut" if _fusee_couches < 0 else str(_fusee_couches)])
+
+
+## Les viewports qui rendent (la racine, et chaque SubViewport dont le rendu n'est pas coupé), mesurés à partir de maintenant.
+func _armer_temps_par_vue() -> void:
+	_vues_mesurees.clear()
+	_temps_vues.clear()
+	var vues: Array = [get_tree().root]
+	for n in get_tree().root.find_children("*", "SubViewport", true, false):
+		if (n as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED:
+			vues.append(n)
+	for v in vues:
+		var rid: RID = (v as Viewport).get_viewport_rid()
+		RenderingServer.viewport_set_measure_render_time(rid, true)
+		var nom := String((v as Node).get_path())
+		_vues_mesurees.append([rid, nom])
+		_temps_vues[nom] = [[], []]
+
+
+func _relever_temps_par_vue() -> void:
+	for e in _vues_mesurees:
+		var t: Array = _temps_vues[e[1]]
+		(t[0] as Array).append(RenderingServer.viewport_get_measured_render_time_cpu(e[0]))
+		(t[1] as Array).append(RenderingServer.viewport_get_measured_render_time_gpu(e[0]))
+
+
+static func _centile(valeurs: Array, q: float) -> float:
+	if valeurs.is_empty():
+		return 0.0
+	var tri := valeurs.duplicate()
+	tri.sort()
+	return float(tri[mini(tri.size() - 1, int(q * tri.size()))])
+
+
+func _rapporter_temps_par_vue() -> void:
+	if not _temps_par_vue or _vues_mesurees.is_empty():
+		return
+	var lignes: Array = []
+	for nom in _temps_vues:
+		var t: Array = _temps_vues[nom]
+		lignes.append([_centile(t[1], 0.5), "  %-60s CPU %.2f / %.2f ms · GPU %.2f / %.2f ms (médiane / 99e centile)"
+			% [nom.right(60), _centile(t[0], 0.5), _centile(t[0], 0.99), _centile(t[1], 0.5), _centile(t[1], 0.99)]])
+	lignes.sort_custom(func(a, b) -> bool: return float(a[0]) > float(b[0]))
+	print("  Temps de rendu par vue (%d vues, triées par GPU médian) :" % lignes.size())
+	for l in lignes:
+		print(l[1])
+
+
+## Chaque image lente de la mesure, avec l'événement de mise en scène le plus proche (bouclage de la fusée, premier allumage
+## d'une sorte de lampe) et l'écart en millisecondes.
+func _rapporter_les_lentes() -> void:
+	if _seuil_lent_ms <= 0.0:
+		return
+	var evenements := _evenements.duplicate()
+	var miroir := _miroir_de_lumiere()
+	if miroir != null:
+		var premiers: Dictionary = miroir.get("premiers_allumages")
+		for sorte in premiers:
+			evenements.append([int(premiers[sorte]), "premier allumage de « %s »" % sorte])
+	print("  Images lentes (> %.0f ms) : %d, événements de mise en scène datés : %d" % [_seuil_lent_ms, _lentes.size(),
+		evenements.size()])
+	for l in _lentes:
+		var proche := "aucun"
+		var ecart := 0.0
+		var meilleur := INF
+		for e in evenements:
+			var d := float(int(e[0]) - int(l[0])) / 1000.0
+			if absf(d) < meilleur:
+				meilleur = absf(d)
+				ecart = d
+				proche = String(e[1])
+		print("  lente %.1f ms à %.2f s — le plus proche : %s (%+.0f ms)" % [float(l[1]) * 1000.0, float(l[2]), proche, ecart])
 
 
 ## L'état des lampes 3D allumées, pour dater un hoquet : combien d'omnis et de spots, et combien portent une ombre.
@@ -927,6 +1156,8 @@ func _report() -> void:
 		pires.append("%.1f ms à %.2f s" % [_samples[i] * 1000.0, _samples_t[i] if i < _samples_t.size() else -1.0])
 	print("  Cinq pires images : %s" % ", ".join(pires))
 	_dater_les_pires(ordre)
+	_rapporter_les_lentes()
+	_rapporter_temps_par_vue()
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
 	if not _appels.is_empty():

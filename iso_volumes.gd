@@ -64,6 +64,16 @@ const HAUTEUR_ECLAIR_MINE := 0.14
 
 ## Tout couper — la preuve que ces images ne sont que des images. Relu à chaque image.
 var images_actives := true
+## ISO12 — INSTRUMENTS DE BANC (spécification d'ISO7 Gadgets, 2026-09-23 ; `tools/bench_framerate.gd`), pour répartir le coût de
+## cadence d'une fusée entre ses parties. Jamais posés en jeu ; chacun est lu en UN seul endroit, nommé.
+## `volumes_actifs` faux : pas de volume de fumée iso (lu dans `_suivre_fusee`).
+var volumes_actifs := true
+## `lueurs_actives` faux : ni la lueur posée ni les deux lueurs de la comète (lu dans `_suivre_fusee` et `_suivre_comete`).
+var lueurs_actives := true
+## `couches_fusee` ≥ 0 : le nombre de couches du volume de la fusée, plafonné à `VOLUME_FUSEE["couches"]` ; −1 : le défaut.
+## ⚠️ `_couches()` ne fait que CRÉER, jamais détruire : à poser AVANT que la fusée soit suivie (ou suivi d'un `vider()`), et à ne
+## jamais changer en cours de relevé — un volume déjà construit garderait ses couches, sans rien dire.
+var couches_fusee := -1
 
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
@@ -172,12 +182,15 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 		return
 	# Posée : la fumée en volume, et une lueur basse qui pulse avec ce qu'elle brûle.
 	var alpha := float(f.call("alpha_fumee")) if f.has_method("alpha_fumee") else 0.0
-	if alpha > 0.0:
+	if volumes_actifs and alpha > 0.0:
 		var e := _entree(f, "fumee", vus)
-		_couches(e, int(VOLUME_FUSEE["couches"]))
+		_couches(e, int(VOLUME_FUSEE["couches"]) if couches_fusee < 0
+			else clampi(couches_fusee, 0, int(VOLUME_FUSEE["couches"])))
 		_poser_couches(e, f.global_position, float(f.call("rayon_fumee")), float(VOLUME_FUSEE["hauteur"]),
 			float(VOLUME_FUSEE["densite"]) * alpha, null, 0.0, float(int(f.get("graine")) % 97),
 			maxf(float(f.call("age_combustion")), 0.0))
+	if not lueurs_actives:
+		return
 	var relative := float(f.call("energie_relative")) if f.has_method("energie_relative") else 0.0
 	var lueur := _entree(f, "lueur", vus, 1)
 	# ISO10, 1c — en mélange : le rouge de détresse ne s'additionne plus au sol rougi (rose, puis blanc).
@@ -192,11 +205,13 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 ## lightmaps pendant le vol (ils y étaient décalés de 18 px factices) ; posée, `MiroirsIso` les reprend.
 func _suivre_comete(f: Node2D, lumiere: Light2D, energie: float, vus: Dictionary) -> void:
 	var e := _entree(f, "comete", vus)
-	_halos(e, 2)
 	for nom in ["Coeur", "Corps"]:
 		var s := f.get_node_or_null(NodePath(nom)) as CanvasItem
 		if s != null:
 			_retirer_dessin(e, s)
+	if not lueurs_actives:
+		return
+	_halos(e, 2)
 	var h := float(f.call("hauteur_source")) * TUILE if f.has_method("hauteur_source") else 0.0
 	var coeur := f.get_node_or_null(^"Coeur") as CanvasItem
 	var couleur := lumiere.color if lumiere != null else Color.WHITE

@@ -144,6 +144,11 @@ var _relief_plancher := -1.0
 var _sans_couleur_l2d := false
 ## `--sans-identite` : l'ancien chemin (albédo peint × L2D bridée) au lieu de la couleur du rendu 2D (`identite_2d`).
 var _sans_identite := false
+## `--environnement-noir` : un Environment EXPLICITEMENT noir (ambiant nul) sur les caméras 3D de la présentation. Test du biais de
+## +1 à +2 niveaux du corps de soi (2026-09-23) : sans environnement, Godot 4.7 (`_setup_environment` de rasterizer_scene_gles3)
+## ne pose AUCUN ambiant et laisse la valeur précédente dans le tampon de scène — un reste d'ambiant éclaircirait tout matériau
+## éclairé (le corps clair de quelques niveaux, le sol sombre de moins d'un), jamais un matériau unshaded (la 2D).
+var _environnement_noir := false
 ## `--plancher-emission` : l'ancien plancher (`ALBEDO × r_min` en émission brute), qui mélangeait deux espaces.
 var _plancher_emission := false
 ## `--lampe-dominante` : le prototype de la lampe dominante (`Presentation3D.relief_dominante_3d`).
@@ -215,6 +220,8 @@ func _ready() -> void:
 			_sans_couleur_l2d = true
 		elif a == "--sans-identite":
 			_sans_identite = true
+		elif a == "--environnement-noir":
+			_environnement_noir = true
 		elif a == "--plancher-emission":
 			_plancher_emission = true
 		elif a == "--lampe-dominante":
@@ -409,6 +416,16 @@ func _poser_la_variante(v: Dictionary) -> void:
 		_p.relief_couleur_l2d_3d = false
 	if _sans_identite:
 		_p.identite_2d_3d = false
+	if _environnement_noir:
+		var env := Environment.new()
+		env.background_mode = Environment.BG_CLEAR_COLOR
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.ambient_light_color = Color.BLACK
+		env.ambient_light_energy = 0.0
+		for pid in 2:
+			var cam3 = _p._camera_de(pid)
+			if cam3 != null:
+				(cam3 as Camera3D).environment = env
 	if _plancher_emission:
 		_p.relief_plancher_lineaire_3d = false
 	if _lampe_dominante:
@@ -1189,13 +1206,18 @@ func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {})
 	for k in ancres:
 		var a: Array = ancres[k]
 		ecran[k] = _a_l_ecran_h(0, a[0], float(a[1]))
+	# ⚠️ L'ORDRE compte (règle de la session cloud, 2026-09-23, 05:11) : un témoin C contre C ne vaut qu'au MÊME écart de temps que
+	# la comparaison qu'il juge. D'où deux paires de prises CONSÉCUTIVES — reference2d puis reference2d_ter (le témoin), sans_ombres
+	# puis reference2d_bis (A contre C à une prise d'écart) — et la prise sans lampe juste après, à une prise de reference2d_bis.
 	var variantes := [
 		["reference2d", {"lumiere": false}],
+		["reference2d_ter", {"lumiere": false}],
 		["masque", {"lumiere": true, "ombres": true, "atlas": 2048, "masque": 1}],
 		["sans_ombres", {"lumiere": true, "ombres": false}],
-		["ombres", {"lumiere": true, "ombres": true, "atlas": 2048}],
+		["reference2d_bis", {"lumiere": false}],
 		# R = 1 forcé (aucune lampe au relief, la garde émet la 2D) : le diviseur qui donne R LU À L'IMAGE.
 		["neutre", {"lumiere": true, "ombres": false, "neutre": true}],
+		["ombres", {"lumiere": true, "ombres": true, "atlas": 2048}],
 	]
 	if _diag_gain > 0.0:
 		# L'instrument : le numérateur seul, puis le dénominateur seul, à la même échelle — leur rapport pixel par pixel est R.
@@ -1212,6 +1234,10 @@ func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {})
 			variantes.append(["constante_%03d" % roundi(c * 100.0), {"lumiere": true, "ombres": false, "diagnostic": 8, "gain": c}])
 	if sabotage:
 		variantes.append(["sabotage", {"lumiere": true, "ombres": true, "atlas": 2048, "sabotage": true}])
+	# LES TÉMOINS DU MOUVEMENT (reference2d_ter, reference2d_bis, plus haut) : entre deux prises successives, un corps peut bouger
+	# d'une fraction de pixel (animation), et ses arêtes s'allument dans toute comparaison pixel à pixel — au banc, des lignes d'un
+	# pixel jusqu'à 150 niveaux sur les arêtes du corps de J1, jusque dans la prise sans lampe (2026-09-23). C contre C, au même
+	# écart de temps, chiffre ce bruit : ce qui le dépasse vient du rendu, le reste de l'instant.
 	for e in variantes:
 		var v: Dictionary = (e[1] as Dictionary).duplicate()
 		v["bride_mode"] = 1
