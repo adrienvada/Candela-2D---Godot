@@ -429,6 +429,8 @@ static var forcer_teinte := ""
 ## indépendant de la tenue. `forcer_mannequin` : -1 lit la ligne de commande, 0 l'éteint, 1 l'allume.
 const DRAPEAU_MANNEQUIN := "--mannequin"
 static var forcer_mannequin := -1
+## La ligne de commande, lue une fois (-1 : pas encore).
+static var _mannequin_ligne := -1
 ## Le contraste du côté de la lumière et le report sur les dessus (voir l'include) ; le plafond est `GRIS_PLAFOND`.
 const MANNEQUIN_CONTRASTE := 0.4
 const MANNEQUIN_REPORT := 1.6
@@ -437,7 +439,11 @@ const MANNEQUIN_REPORT := 1.6
 static func mannequin_actif() -> bool:
 	if forcer_mannequin >= 0:
 		return forcer_mannequin == 1
-	return OS.get_cmdline_user_args().has(DRAPEAU_MANNEQUIN)
+	# Lu une fois : la présentation le demande à chaque image, et `get_cmdline_user_args()` rend un tableau neuf à chaque appel
+	# (question de coût de la session cloud, 01:13 — drapeau éteint, rien ne doit tourner sans servir).
+	if _mannequin_ligne < 0:
+		_mannequin_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_MANNEQUIN) else 0
+	return _mannequin_ligne == 1
 
 
 ## La teinte des tenues sombres : `"olive"` (le défaut) ou `"froide"` (`--teinte=froide`).

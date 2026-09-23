@@ -27067,6 +27067,9 @@ affiché, exact à 1e-7 et non au bit, et payé pour chaque pixel de corps. Elle
 deux shaders des corps. Preuve : au banc des corps, `--temps-fixe` (le temps posé à 0 : deux lancements rendent la même
 pose), le jeu par défaut avant le lot A (`0ae314b`) contre après la garde, identiques à l'octet — gris et V3 froide, à 0,8 et
 0,2 (six images de 1920×1080, et le lot complet vert sur l'arbre exact du commit, 438 s, 2026-09-24 01:12). C'est le piège de l'ordre 255 : un uniforme qui gouverne un chemin coûte même à 0.
+Et côté processeur (question de coût de la session cloud, 01:13) : drapeau éteint, ni lampes relues, ni direction, ni rayon
+de physique ; seul `mannequin_actif()`, demandé à chaque image, relisait la ligne de commande (`get_cmdline_user_args()` rend
+un tableau neuf à chaque appel) — il est désormais lu une fois (lot vert sur l'arbre exact du commit, 443 s, 01:29).
 
 **Ce qui manque encore** (mon paragraphe, demandé par la session cloud) : à l'échelle du jeu, le mannequin se lit à la loupe
 et reste discret à 1:1. Les plaques et les articulations sont des lignes, pas des volumes : les bras et les jambes restent
