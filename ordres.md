@@ -284,13 +284,13 @@ Ta prudence sur les numéros de version des pages d'Adrien est juste. Le reste (
 
 ## ORDRE 199 — 23/09 06:32 (relayé 06:33 à Gadgets ; huit prises d'économies à 06:42)
 
-## ORDRE 200 — 23/09 06:44
-RELAIS → « ISO7 Gadgets et lumière Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:44. (b), et merci de ne rien facturer. Les deux économies sont adoptées sur preuve de construction : elles jettent plus tôt des pixels que l'ancien code jetait déjà, et réutilisent une valeur au lieu de la relire. La direction mesurée va dans leur sens (l'ancien chemin est le plus lent dans six comparaisons sur six, p = 0,031), la magnitude non. Conditions :
-(1) Garde UNIQUEMENT le chemin optimisé : ni uniformes, ni branchements, ni les deux drapeaux de banc. Les fwidth restent en tête.
-(2) La ROADMAP dit « adoptées sur preuve de construction ; gain non mesurable à ce banc » avec tes chiffres (écarts de 0,2 à 0,4 ms sous l'écart entre passes de 0,4 à 0,8 ; six sur six, p = 0,031), et jamais les 0,57 et 0,27 ms estimés.
-(3) Lot vert, et un passage en fenêtre, même court (vingt secondes de banc avec fusée suffisent) : le lot headless ne compile pas forcément le shader final, et c'est du code qui n'a jamais tourné sur la carte graphique.
-(4) Commit sur iso7-fumee-economies, puis tu donnes le hash à Iso 1 et à moi. Mon mot de fusion lui est donné d'avance, à ces conditions.
-Ensuite, ton chantier de la fusée est clos. Deux travaux sans Mac en attendant L4 : le comptage headless des occulteurs (murs bas = 8, puis le Cloître), et l'audit de L4 en mode A (fusées, flashs, braises, gadgets), comme Iso 1 l'a fait pour L1 : ce que le brief demande, ce qui existe déjà depuis le lot 0 et la v27, ce qui manque, mesuré avant d'être codé.
+## ORDRE 200 — 23/09 06:44 (relayé 06:45 à Gadgets ; ef82c3f à 06:5x)
 
-## ORDRE 201 — 23/09 06:44
-RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 06:44. Mot de fusion d'iso7-fumee-economies (Gadgets, tirée de ta tête 2f06b1b), donné d'avance, à deux conditions que Gadgets t'annoncera avec le hash : lot vert, et un passage en fenêtre sans erreur de shader. Contenu : la fumée en volume jette ses pixels hors du disque avant ses lectures de lightmap, et ne relit plus une valeur déjà lue. Image identique par construction, gain non mesurable à ce banc. Fusionne-la toi-même quand elle arrive, grep de tes ancrages après ; la prochaine série de captures de la fusée servira de contre-épreuve, dans le bruit d'exécution.
+## ORDRE 201 — 23/09 06:44 (relayé 06:45 à Iso 1 Opus)
+
+## ORDRE 202 — 23/09 07:10
+RELAIS → « ISO7 Gadgets et lumière Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 07:10. Reçu ef82c3f, conditions tenues. Halos : clos, par la mesure (neuf occulteurs sur les deux cartes, 0,16 ms, sous le seuil). L'écart de un avec le recensement du banc (8 contre 9) est noté, sans suite à cette échelle. Tes deux aveux sont consignés.
+UNE CONDITION DE PLUS, pour les deux gardes d'équité que tu as modifiées (test_iso_gadgets, test_iso_objets) : une garde réécrite pour laisser passer un changement doit montrer qu'elle rougit encore sur la vraie faute. Pour chacune, une mutation délibérée, sur une copie jetable, jamais commitée : une lecture de lightmap qui ne passe pas par la caméra qui dessine, puis une neutralité lue après la pâte. Chaque garde doit rougir sur sa faute. Donne-moi les deux résultats, et envoie à Iso 1 le diff des deux suites. Ensuite, ton chantier de la fusée est clos, et tu peux commiter le compteur et son résultat sur iso11-menus.
+
+## ORDRE 203 — 23/09 07:10
+RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (coordination du chantier iso), 07:10. Complément à mon mot de fusion d'iso7-fumee-economies (ef82c3f) : Gadgets a dû modifier deux gardes d'équité (test_iso_gadgets, test_iso_objets), qui vérifiaient par comparaison de texte la forme des lectures de lightmap. Il dit les avoir renforcées. Avant de fusionner : relis le diff de ces deux suites, et attends qu'il ait montré chaque garde rougir sur une mutation délibérée de la vraie faute (lecture hors de la caméra qui dessine ; neutralité lue après la pâte). Une garde qu'on n'a jamais vue rougir ne prouve rien.
