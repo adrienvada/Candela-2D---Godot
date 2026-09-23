@@ -5888,3 +5888,13 @@ Quatre formes mesurées avant la bonne : le portrait TEINT la lumière que la p�
 l'espace des octets de l'image — la visibilité d'hier à toute lumière, la clarté moyenne gardée (0,98-1,05 à 0,8), la
 patine allégée là où `Charte.DIM` arrête le plâtre. Empreinte 16,8-17,4 px, noir absolu à 0, lot vert. Question ouverte :
 tout près du noir, la quantification fait voir un peu plus le portrait que le gris.
+
+### 2026-09-23 (soir) — ISO12 : les tenues sombres des dix corps (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+Adrien revient sur Q21 à 20:43 : des personnages en tenue sombre, dans tous les visuels. Trois variantes en jeu derrière
+`--corps=sombre`, `sombre2`, `sombre3`, éteintes par défaut, sur le mécanisme des portraits avec un rapport de clarté par
+rôle : V1 aussi visible qu'aujourd'hui (0,97-1,02 du gris aux quatre lumières), V2 vraiment sombre (0,62 à 0,8, mais 0,14-0,39
+à 0,15 : l'image écrase les valeurs très sombres), V3 sombre à liseré clair. Noir absolu tenu partout. Deux leçons : V1 ne
+tient sa promesse qu'en laissant le gris intact sous 16/255, et à clarté égale son olive se détache moins du sol ocre que le
+gris bleuté. Sous une fusée, l'éblouissement du regardeur efface l'adversaire dans toutes les tenues. Deux défauts du banc
+de beauté corrigés (masque et dérive propres à chaque tenue).

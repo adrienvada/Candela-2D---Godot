@@ -15,6 +15,11 @@
 ##   mesure au banc) ;
 ## - `Protocol.VERSION` reste 18 : rien de ceci ne passe sur le fil.
 ##
+## - **les tenues sombres** (`--corps=sombre`, `sombre2`, `sombre3`, 2026-09-23 soir) : éteintes par défaut, chaque rôle à
+##   son rapport de clarté au gris (borné par `Charte.DIM`), V2 jamais au-dessus du gris, le noir absolu dans le miroir de la
+##   teinte (sous le seuil : assombri ou laissé gris, jamais éclairci), la tête reconnue sur une seule boîte, et la même
+##   géométrie que les portraits (bouteille, empreinte).
+##
 ## Ce qu'elle ne prouve pas : l'image. Le banc des corps (`tools/banc_corps.gd --corps=portraits`) et le banc de la vue
 ## (`tools/banc_iso_beaute.gd --cadrage corps`) le mesurent en vraie fenêtre.
 ##
@@ -53,9 +58,11 @@ func _run() -> void:
 	await _les_corps()
 	_le_contraste_au_sol()
 	_le_banc()
+	await _les_tenues_sombres()
 	_le_fil()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	VoxelCatalogue.forcer_portraits = -1
+	VoxelCatalogue.forcer_tenue = "-"
 	print("%d vérifications, %d échec(s)" % [_verifications, _echecs])
 	quit(1 if _echecs > 0 else 0)
 
@@ -119,7 +126,9 @@ func _la_palette() -> void:
 	_check("teinte : 0 reste 0, et une lumière faible sur le gris reste visible peinte (%.5f)" % faible.length(),
 		nul == Vector3.ZERO and faible.length() > 0.0)
 	var seuil := _brut(gris_c) * 0.05
-	_check("teinte : sous le seuil du noir, le gris tel quel (un pixel noir au gris l'est peint)", _teindre(seuil, ocre_c, gris_c) == seuil)
+	var sous := _teindre(seuil, ocre_c, gris_c)
+	_check("teinte : sous le seuil du noir, le gris sans teinte, à l'arrondi des canaux près (%.6f ≈ %.6f)" % [sous.length(), seuil.length()],
+		sous.x <= seuil.x and sous.y <= seuil.y and sous.z <= seuil.z and sous.length() >= seuil.length() * 0.98)
 	var milieu := _brut(gris_c) * 0.5
 	var lum_milieu := IsoPate.luminance(_teindre(milieu, ocre_c, gris_c))
 	var lum_gris_milieu := IsoPate.luminance(milieu)
@@ -137,7 +146,9 @@ func _les_shaders() -> void:
 	var inc := FileAccess.get_file_as_string("res://iso_corps_portrait.gdshaderinc")
 	_check("l'include laisse le gris tel quel sous 10/255, la teinte en fondu jusqu'à 24/255 (le miroir prend les mêmes seuils)",
 		inc.contains("const float PORTRAIT_SEUIL_NOIR = 10.0 / 255.0;") and inc.contains("const float PORTRAIT_SEUIL_TEINTE = 24.0 / 255.0;")
-		and inc.contains("if (l < PORTRAIT_SEUIL_NOIR) {") and inc.contains("smoothstep(PORTRAIT_SEUIL_NOIR, PORTRAIT_SEUIL_TEINTE, l)"))
+		and inc.contains("uniform vec2 portrait_seuils = vec2(0.0392157, 0.0941176);")
+		and inc.contains("float bas = max(portrait_seuils.x, PORTRAIT_SEUIL_NOIR);") and inc.contains("if (l < bas) {")
+		and inc.contains("smoothstep(bas, haut, l)"))
 	_check("l'include n'écrit ni ALBEDO, ni EMISSION, ni DIFFUSE_LIGHT", not inc.contains("ALBEDO")
 		and not inc.contains("EMISSION") and not inc.contains("DIFFUSE_LIGHT") and not inc.contains("void light"))
 	for chemin in SHADERS:
@@ -277,6 +288,135 @@ func _le_banc() -> void:
 		absf(blanc.x - 100.0) < 0.5 and blanc.length() < 100.6 and noir.length() < 0.01 and ocre.z > 40.0)
 
 
+func _les_tenues_sombres() -> void:
+	print("— les tenues sombres")
+	VoxelCatalogue.forcer_tenue = "-"
+	VoxelCatalogue.forcer_portraits = -1
+	_check("éteintes par défaut (aucune tenue sur la ligne de commande : %s)" % VoxelCatalogue.tenue(), VoxelCatalogue.tenue() == "")
+	_check("la ligne de commande : sombre → V1, sombre2, sombre3, portraits ; un nom inconnu → gris",
+		VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre"])) == "sombre1"
+		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre2"])) == "sombre2"
+		and VoxelCatalogue.tenue_de(PackedStringArray(["--x", "--corps=sombre3"])) == "sombre3"
+		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=portraits"])) == "portraits"
+		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre9"])) == ""
+		and VoxelCatalogue.tenue_de(PackedStringArray()) == "")
+	_check("trois variantes", VoxelCatalogue.TENUES_SOMBRES.keys() == ["sombre1", "sombre2", "sombre3"])
+	var plafond := VoxelCatalogue.luminance_affichee(VoxelCatalogue.GRIS_PLAFOND)
+	for nom in VoxelCatalogue.TENUES_SOMBRES:
+		var r: Dictionary = VoxelCatalogue.TENUES_SOMBRES[nom]
+		var justes := true
+		var sous_plafond := true
+		var detail := ""
+		for s in VoxelCatalogue.slugs():
+			var p := VoxelCatalogue.palette_tenue(s, nom)
+			var gris: float = VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche(s)["couleur"])
+			for pair in [["ocre", "tissu"], ["rouille", "usure"], ["brun", "cuir"], ["arme", "arme"], ["bouteille", "bouteille"],
+					["cartouche", "cartouche"], ["tete", "tete"], ["arete", "arete"]]:
+				var c: Color = p[pair[0]]
+				if (pair[0] == "cartouche" or pair[0] == "arete") and c.a <= 0.0:
+					continue
+				var l := VoxelCatalogue.luminance_affichee(c)
+				var voulu := minf(gris * float(r[pair[1]]), plafond)
+				if not (l <= voulu + 0.003 and l >= voulu - 0.02):
+					justes = false
+					detail += "%s/%s %.4f≠%.4f " % [s, pair[0], l, voulu]
+				if l > plafond + 0.001:
+					sous_plafond = false
+		_check("%s : chaque rôle à son rapport au gris de sa classe, dans les dix classes" % nom, justes, detail)
+		_check("%s : rien au-dessus de Charte.DIM" % nom, sous_plafond)
+		var gris_sp := VoxelCatalogue.fiche("spectre")["couleur"] as Color
+		var p_sp := VoxelCatalogue.palette_tenue("spectre", nom)
+		_check("%s : le cuir et l'usure se détachent du tissu par la teinte (%.2f, %.2f)" % [nom,
+			_ecart_de_teinte(p_sp["ocre"], p_sp["brun"]), _ecart_de_teinte(p_sp["ocre"], p_sp["rouille"])],
+			_ecart_de_teinte(p_sp["ocre"], p_sp["brun"]) > 0.03 and _ecart_de_teinte(p_sp["ocre"], p_sp["rouille"]) > 0.03)
+		var r_inc := VoxelCatalogue.palette_tenue("incendiaire", nom)["cartouche"] as Color
+		_check("%s : les cartouches de l'Incendiaire restent rouges (%.2f / %.2f)" % [nom, r_inc.r, r_inc.g], r_inc.r > 2.0 * r_inc.g)
+		# Le noir absolu, dans le miroir de la teinte : sous le seuil, jamais un canal plus haut que le gris.
+		var sous_seuil := bool(r["sous_seuil"])
+		var monte := false
+		for cle in ["ocre", "brun", "tete", "arete"]:
+			var fc: Color = p_sp[cle]
+			if fc.a <= 0.0:
+				continue
+			for k in [0.0, 0.01, 0.03, 0.05]:
+				var c: Vector3 = _brut(gris_sp) * float(k)
+				var t := _teindre(c, fc, gris_sp, sous_seuil, r["seuils"])
+				if IsoPate.luminance(c) < 10.0 / 255.0 and (t.x > c.x + 1e-6 or t.y > c.y + 1e-6 or t.z > c.z + 1e-6):
+					monte = true
+		_check("%s : sous le seuil du noir, aucun canal ne monte (0 reste 0)" % nom, not monte
+			and _teindre(Vector3.ZERO, p_sp["tete"], gris_sp, sous_seuil, r["seuils"]) == Vector3.ZERO)
+		_check("%s : la teinte ne commence jamais sous 10/255 (%.1f/255)" % [nom, (r["seuils"] as Vector2).x * 255.0],
+			(r["seuils"] as Vector2).x >= 10.0 / 255.0 - 1e-6 and (r["seuils"] as Vector2).y > (r["seuils"] as Vector2).x)
+		if sous_seuil:
+			var c5 := _brut(gris_sp) * 0.03
+			var t5 := _teindre(c5, p_sp["ocre"], gris_sp, true)
+			_check("%s : sous le seuil, le tissu assombrit le gris de son rapport (%.3f)" % [nom, t5.length() / c5.length()],
+				absf(t5.length() / c5.length() - float(r["tissu"])) < 0.02)
+	var v2 := VoxelCatalogue.TENUES_SOMBRES["sombre2"] as Dictionary
+	var sous_un := true
+	for cle in ["tissu", "usure", "cuir", "arme", "bouteille", "cartouche", "tete"]:
+		sous_un = sous_un and float(v2[cle]) < 1.0
+	_check("V2 : tous les rôles plus sombres que le gris, aucun liseré", sous_un and float(v2["arete"]) == 0.0)
+	_check("V1 : laisse le gris sous le seuil du noir et teint plus haut (sa promesse est la visibilité d'aujourd'hui)",
+		not bool(VoxelCatalogue.TENUES_SOMBRES["sombre1"]["sous_seuil"])
+		and (VoxelCatalogue.TENUES_SOMBRES["sombre1"]["seuils"] as Vector2).x > 10.0 / 255.0)
+	var gris_v1 := VoxelCatalogue.fiche("occulteur")["couleur"] as Color
+	var tissu_v1 := VoxelCatalogue.palette_tenue("occulteur", "sombre1")["ocre"] as Color
+	var bas_v1 := _brut(gris_v1) * (14.0 / 255.0) / IsoPate.luminance(_brut(gris_v1))
+	_check("V1 : une lumière rendue à 14/255 reste le gris d'aujourd'hui (le tissu sombre n'y mord pas)",
+		_teindre(bas_v1, tissu_v1, gris_v1, false, VoxelCatalogue.TENUES_SOMBRES["sombre1"]["seuils"]) == bas_v1)
+	var inc := FileAccess.get_file_as_string("res://iso_corps_portrait.gdshaderinc")
+	_check("l'include : la tête avant les pièces, le liseré après, l'assombrissement sous le seuil réglé par portrait_sous_seuil",
+		inc.contains("if (portrait_tete.a > 0.0 && portrait_est(demi, portrait_demi_tete)) {")
+		and inc.find("portrait_arete.rgb") > inc.find("portrait_cartouche.rgb")
+		and inc.contains("vec3 sombre = c * mix(1.0, min(1.0, pate_luminance(fiche) / lg), portrait_sous_seuil);"))
+	for chemin in SHADERS:
+		var noms := []
+		for u in (load(chemin) as Shader).get_shader_uniform_list():
+			noms.append(String(u["name"]))
+		_check("%s déclare la tête, le liseré et le seuil" % chemin.get_file(), noms.has("portrait_tete")
+			and noms.has("portrait_demi_tete") and noms.has("portrait_arete") and noms.has("portrait_sous_seuil"))
+	# Les corps : même géométrie que les portraits, la tête reconnue sur UNE boîte, le leurre pareil.
+	var racine := Node3D.new()
+	root.add_child(racine)
+	var bascule_ok := true
+	for s in VoxelCatalogue.slugs():
+		VoxelCatalogue.forcer_tenue = "portraits"
+		var ref := VoxelCorps.new()
+		racine.add_child(ref)
+		ref.construire(s)
+		for nom in VoxelCatalogue.TENUES_SOMBRES:
+			VoxelCatalogue.forcer_tenue = nom
+			var corps := VoxelCorps.new()
+			racine.add_child(corps)
+			corps.construire(s)
+			var m := corps.materiau()
+			var demi_tete: Vector3 = m.get_shader_parameter("portrait_demi_tete")
+			var tetes := 0
+			for mi in corps.find_children("Boite", "MeshInstance3D", true, false):
+				var taille: Vector3 = ((mi as MeshInstance3D).mesh as BoxMesh).size * 0.5
+				var d := (taille - demi_tete).abs()
+				if maxf(d.x, maxf(d.y, d.z)) < 0.0005:
+					tetes += 1
+			var ok: bool = float(m.get_shader_parameter("portrait")) == 1.0 and corps.nombre_de_boites() == ref.nombre_de_boites() \
+				and absf(_pire_empreinte(corps, true) - _pire_empreinte(ref, true)) < EPSILON and tetes == 1 \
+				and m.get_shader_parameter("portrait_ocre") == VoxelCatalogue.palette_tenue(s, nom)["ocre"]
+			if not ok or s == "pistolet":
+				_check("%s en %s : la tenue posée, la géométrie des portraits (%d boîtes), la tête sur une seule boîte (%d)"
+					% [s, nom, corps.nombre_de_boites(), tetes], ok)
+		# Le gris et la bascule par uniformes, qu'emploient les bancs.
+		ref.porter_tenue("")
+		var eteint := float(ref.materiau().get_shader_parameter("portrait")) == 0.0
+		ref.porter_tenue("sombre2")
+		if not eteint or ref.materiau().get_shader_parameter("portrait_tete") != VoxelCatalogue.palette_tenue(s, "sombre2")["tete"]:
+			bascule_ok = false
+			printerr("    porter_tenue ne bascule pas : ", s)
+	_check("porter_tenue bascule le gris et les tenues sur la même matière (dix classes)", bascule_ok)
+	VoxelCatalogue.forcer_tenue = "-"
+	racine.queue_free()
+	await process_frame
+
+
 func _le_fil() -> void:
 	print("— le fil")
 	_check("Protocol.VERSION reste 18", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
@@ -284,12 +424,17 @@ func _le_fil() -> void:
 
 ## Miroir de `portrait_teindre`, dans l'espace brut du shader (valeurs affichées : le rendu Compatibility montre les couleurs
 ## de fiche telles quelles — voir l'en-tête de `corps_iso.gdshader`, « Pas de conversion sRGB »).
-static func _teindre(c: Vector3, fiche: Color, gris: Color) -> Vector3:
+static func _teindre(c: Vector3, fiche: Color, gris: Color, sous_seuil := true,
+		seuils := Vector2(10.0, 24.0) / 255.0) -> Vector3:
 	var l: float = IsoPate.luminance(Vector3(maxf(c.x, 0.0), maxf(c.y, 0.0), maxf(c.z, 0.0)))
-	if l < 10.0 / 255.0:
-		return c
-	var teinte: Vector3 = _brut(fiche) * (l / maxf(IsoPate.luminance(_brut(gris)), 0.000001))
-	return c.lerp(teinte, smoothstep(10.0 / 255.0, 24.0 / 255.0, l))
+	var lg := maxf(IsoPate.luminance(_brut(gris)), 0.000001)
+	var sombre: Vector3 = c * (minf(1.0, IsoPate.luminance(_brut(fiche)) / lg) if sous_seuil else 1.0)
+	var bas := maxf(seuils.x, 10.0 / 255.0)
+	var haut := maxf(seuils.y, bas + 1.0 / 255.0)
+	if l < bas:
+		return sombre
+	var teinte: Vector3 = _brut(fiche) * (l / lg)
+	return sombre.lerp(teinte, smoothstep(bas, haut, l))
 
 
 static func _brut(c: Color) -> Vector3:

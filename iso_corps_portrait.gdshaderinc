@@ -23,6 +23,12 @@
 //   arrive en fondu jusqu'à 24/255 : un pixel noir au gris l'est peint, sans que l'arrondi à quelques niveaux en décide.
 // - `portrait = 0` (le défaut, et `--corps=portraits` absent) : `portrait_teindre` rend la couleur telle quelle.
 //
+// - ISO12, TENUES SOMBRES (`--corps=sombre`, `sombre2`, `sombre3`, 2026-09-23 soir) : le même include, d'autres couleurs
+//   (`VoxelCatalogue.palette_tenue()`), à une clarté qui n'est plus celle du gris mais un RAPPORT à lui, par rôle. Deux rôles
+//   neufs : la tête entière (`portrait_tete`) et un liseré le long des arêtes (`portrait_arete`, `portrait_arete_px`). Et
+//   sous le seuil du noir, `portrait_teindre` assombrit le gris d'un rapport < 1 (jamais ne l'éclaire) : une tenue sombre
+//   l'est jusqu'au noir, qui reste noir.
+//
 // Les pièces se reconnaissent à la taille de leur maillage : `demi` (abs(VERTEX), la demi-taille d'une `BoxMesh`, en
 // tuiles) comparé aux demi-tailles posées par `VoxelCorps`. Une seule matière pour toutes les boîtes, comme avant.
 
@@ -41,6 +47,18 @@ uniform float portrait_hauteur_px = 35.0;
 uniform vec3 portrait_demi_torse = vec3(0.0);
 uniform vec3 portrait_demi_bouteille = vec3(0.0);
 uniform vec3 portrait_demi_arme = vec3(0.0);
+// ISO12, tenues sombres — a > 0 : la tête entière de cette couleur ; le liseré des arêtes, large de `portrait_arete_px`
+// pixels du monde. a = 0 (les portraits) : ni l'un ni l'autre.
+uniform vec4 portrait_tete : source_color = vec4(0.0);
+uniform vec3 portrait_demi_tete = vec3(0.0);
+uniform vec4 portrait_arete : source_color = vec4(0.0);
+uniform float portrait_arete_px = 0.0;
+// 1 : sous le seuil du noir, le gris assombri du rapport du pixel (V2, V3, et sans effet sur les portraits) ; 0 : laissé tel
+// quel (V1, qui promet la visibilité d'aujourd'hui là où l'on commence à voir).
+uniform float portrait_sous_seuil = 1.0;
+// Où la teinte commence et où elle est entière, en valeurs affichées : les seuils ci-dessous pour les portraits, V2 et V3 ;
+// plus haut pour V1 (voir `VoxelCatalogue.TENUES_SOMBRES`).
+uniform vec2 portrait_seuils = vec2(0.0392157, 0.0941176); // 10/255, 24/255 : un littéral (le défaut d'un uniforme)
 
 bool portrait_est(vec3 demi, vec3 ref) {
 	return ref.x > 0.0 && all(lessThan(abs(demi - ref), vec3(0.0005)));
@@ -76,7 +94,10 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 	rouille = max(rouille, smoothstep(mix(0.78, 0.62, portrait_usure), 0.95, tache) * 0.8);
 	vec3 c = mix(portrait_ocre.rgb, portrait_rouille.rgb, rouille * mix(0.75, 1.0, portrait_usure));
 
-	if (portrait_est(demi, portrait_demi_arme)) {
+	if (portrait_tete.a > 0.0 && portrait_est(demi, portrait_demi_tete)) {
+		// La tête entière (tenues sombres) : une cagoule d'os (V1) ou de drap (V2, V3).
+		c = portrait_tete.rgb;
+	} else if (portrait_est(demi, portrait_demi_arme)) {
 		// L'arme : bois et métal bruns, sans la rouille du plâtre.
 		c = portrait_arme.rgb;
 	} else if (portrait_est(demi, portrait_demi_bouteille)) {
@@ -105,6 +126,10 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 			c = mix(c, portrait_brun.rgb, portrait_rect(f, vec2(0.28, -0.7), vec2(0.82, -0.3)));
 		}
 	}
+	if (portrait_arete.a > 0.0 && portrait_arete_px > 0.0) {
+		// Le liseré : le long de chaque arête de chaque boîte, sous l'encre (qui assombrit déjà le premier pixel du bord).
+		c = mix(c, portrait_arete.rgb, 1.0 - smoothstep(portrait_arete_px * 0.6, portrait_arete_px, bord));
+	}
 	return c;
 }
 
@@ -119,6 +144,9 @@ vec3 portrait_fiche(vec3 fiche, vec3 local, vec3 demi, vec3 echelle, vec3 n, vec
 // l'encre et le modelé y amenaient les pixels — encre coupée, 146 au lieu de 8 894 ; corps opaque, rien de changé ; palette
 // grise, 0 à 139). Dans l'espace décodé (`pate_vers_affiche`), un corps gris à pleine lumière aurait valu 3 niveaux sur 255.
 // 0 reste 0 ; c ≤ gris ⇒ résultat ≤ fiche.
+// Sous le seuil, une fiche plus SOMBRE que le gris (tenues sombres) assombrit la lumière rendue du même rapport, sans teinte :
+// `c × k`, k = min(1, clarté(fiche) / clarté(gris)) — un canal n'y monte jamais, un noir reste noir. Une fiche plus claire
+// (la tête et le liseré de V1) y laisse le gris tel quel. Pour les portraits, k vaut 1 à l'arrondi près des canaux plafonnés.
 const float PORTRAIT_SEUIL_NOIR = 10.0 / 255.0;
 const float PORTRAIT_SEUIL_TEINTE = 24.0 / 255.0;
 
@@ -127,9 +155,14 @@ vec3 portrait_teindre(vec3 c, vec3 fiche, vec3 gris) {
 		return c;
 	}
 	float l = pate_luminance(max(c, vec3(0.0)));
-	if (l < PORTRAIT_SEUIL_NOIR) {
-		return c;
+	float lg = max(pate_luminance(gris), 0.000001);
+	vec3 sombre = c * mix(1.0, min(1.0, pate_luminance(fiche) / lg), portrait_sous_seuil);
+	// Jamais sous les seuils des portraits : un rapport > 1 n'éclaire rien sous 10/255.
+	float bas = max(portrait_seuils.x, PORTRAIT_SEUIL_NOIR);
+	float haut = max(portrait_seuils.y, bas + 1.0 / 255.0);
+	if (l < bas) {
+		return sombre;
 	}
-	vec3 teinte = fiche * (l / max(pate_luminance(gris), 0.000001));
-	return mix(c, teinte, smoothstep(PORTRAIT_SEUIL_NOIR, PORTRAIT_SEUIL_TEINTE, l));
+	vec3 teinte = fiche * (l / lg);
+	return mix(sombre, teinte, smoothstep(bas, haut, l));
 }

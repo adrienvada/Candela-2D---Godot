@@ -847,21 +847,19 @@ func _boite(parent: Node3D, taille: Vector3, decalage: Vector3) -> MeshInstance3
 ## bouteille, et — pour les six classes qui la portent sur leur portrait — la bouteille, une boîte de plus, sous le
 ## torse : elle compte donc dans l'empreinte du corps seul (`rayon_empreinte(true)`), comme la règle d'ISO Corps le veut.
 func _habiller_en_portrait(slug: String) -> void:
-	var p := VoxelCatalogueT.palette_portrait(slug)
+	var p := VoxelCatalogueT.palette_tenue(slug, VoxelCatalogueT.tenue())
 	if p.is_empty():
 		return
 	var s := _fiche
 	var e: float = s["echelle"]
 	var torse := Vector3(float(s["largeur_torse"]) * e, s["hauteur_torse"], float(s["profondeur_torse"]) * e)
 	var fa: Dictionary = s["arme"]
-	# `couleur_fiche` reste le gris de la classe : c'est sur lui que la pâte décide où la lumière se voit.
-	_materiau.set_shader_parameter("portrait", 1.0)
-	for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
-		_materiau.set_shader_parameter("portrait_%s" % cle, p[cle])
-	_materiau.set_shader_parameter("portrait_usure", p["usure"])
 	_materiau.set_shader_parameter("portrait_hauteur_px", float(s["hauteur_corps"]) * float(CandelaTileSet.TILE_SIZE.x))
 	_materiau.set_shader_parameter("portrait_demi_torse", torse * 0.5)
 	_materiau.set_shader_parameter("portrait_demi_arme", Vector3(fa["largeur"], fa["hauteur"], fa["longueur"]) * 0.5)
+	var c_tete: float = float(s["cote_tete"]) * e
+	_materiau.set_shader_parameter("portrait_demi_tete", Vector3(c_tete, s["hauteur_tete"], c_tete) * 0.5)
+	porter_tenue(VoxelCatalogueT.tenue())
 	if bool(p["bouteille_portee"]):
 		var b: Dictionary = VoxelCatalogueT.BOUTEILLE
 		var taille := Vector3(float(b["largeur"]) * e, b["hauteur"], float(b["profondeur"]) * e)
@@ -870,6 +868,26 @@ func _habiller_en_portrait(slug: String) -> void:
 		var bouteille := _boite(_torse, taille, Vector3(0.0, float(s["hauteur_torse"]) - float(b["haut"]) * 0.5,
 			torse.z * 0.5 + taille.z * 0.5))
 		bouteille.name = "Bouteille"
+
+
+## ISO12 — les couleurs de la tenue `nom` (`VoxelCatalogue.palette_tenue()`) posées sur la matière de ce corps, `""` pour
+## le gris. Uniformes seuls : la géométrie (la bouteille) est celle que `construire()` a posée, commune à toutes les tenues
+## peintes. Les bancs y passent d'une tenue à l'autre dans la même partie, au même instant.
+func porter_tenue(nom: String) -> void:
+	var p := VoxelCatalogueT.palette_tenue(slug(), nom)
+	if p.is_empty():
+		_materiau.set_shader_parameter("portrait", 0.0)
+		return
+	# `couleur_fiche` reste le gris de la classe : c'est sur lui que la pâte décide où la lumière se voit.
+	_materiau.set_shader_parameter("portrait", 1.0)
+	for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
+		_materiau.set_shader_parameter("portrait_%s" % cle, p[cle])
+	_materiau.set_shader_parameter("portrait_usure", p["usure"])
+	_materiau.set_shader_parameter("portrait_tete", p.get("tete", Color(0, 0, 0, 0)))
+	_materiau.set_shader_parameter("portrait_arete", p.get("arete", Color(0, 0, 0, 0)))
+	_materiau.set_shader_parameter("portrait_arete_px", float(p.get("arete_px", 0.0)))
+	_materiau.set_shader_parameter("portrait_sous_seuil", 1.0 if bool(p.get("sous_seuil", true)) else 0.0)
+	_materiau.set_shader_parameter("portrait_seuils", p.get("seuils", Vector2(10.0, 24.0) / 255.0))
 
 
 func _pivot(parent: Node3D, nom: String, pos: Vector3) -> Node3D:
