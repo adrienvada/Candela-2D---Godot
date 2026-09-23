@@ -5846,3 +5846,27 @@ tranché. Décoder élève tout rapport à la puissance 2,2 — un R de 0,52 se 
 option nommée, auto-test sur images brutes qui vérifie AUSSI que le piège se reproduit, et un mode `--etalonnage` qui doit
 rendre les constantes émises avant toute mesure réelle. **J'avais pris cette entrée dans une règle générale au lieu de la
 mesurer** — la faute que je venais de décrire d'un cran plus haut.
+
+### Session « ISO7 Gadgets et lumière Opus » (coût de cadence de la fusée, décomposition) — ajoutée le 2026-09-23 vers 06:10 (Paris)
+
+18 prises de 60 s au banc de cadence, commit `2f06b1b` d'Iso 1 dans un worktree détaché à moi,
+Mac sous verrou de 05:32 à 05:55, verrou rendu. Neuf variantes en deux passes alternées. **Une
+fusée coûte 3,39 ms ; le volume de fumée iso en fait 2,66, soit 78 %.** Les ombres 2D, la lumière
+2D et les lueurs valent 0,18 ms à elles trois : **trois pistes fermées**, dont celle de la passe
+d'ombre que la session cloud tenait pour la plus prometteuse et celle des nappes 2D que je tenais
+pour la mienne. Détail : ROADMAP, « Le coût de cadence d'une fusée, décomposé ».
+
+**Ce que la prise de validation a évité.** Avant la série, une prise de 10 s a montré que le
+recensement des lampes à ombre plantait sur la fenêtre racine (`disable_2d` n'existe pas sur une
+`Window`). Signalé à Iso 1, corrigé chez elle ; la série est partie sans attendre, le recensement
+n'en étant pas un préalable. **Dix secondes ont protégé vingt minutes de Mac** — et le défaut
+aurait été invisible autrement, puisque la ligne d'en-tête, elle, sortait.
+
+**Deux choses que j'ai mal faites, écrites ici parce qu'elles coûteront moins cher à lire qu'à
+retrouver.** (1) J'avais conclu « le coût est du remplissage » de ce que les appels de dessin ne
+bougeaient pas — la session cloud a montré, sources du moteur à l'appui, que le compteur ne voit
+PAS la passe d'ombre des lumières 2D. La conclusion était juste, le raisonnement faux ; c'est la
+mesure qui l'a établie, pas lui. (2) J'ai posé le seuil de détection des images lentes à 25 ms
+quand la queue vit à 23,8 : dix-sept prises sur dix-huit n'ont rien attrapé, et mon test de phase
+s'est retrouvé sans puissance. Le verdict apparent (« la queue vient du banc ») ne tenait qu'à
+UNE prise anormale ; sans elle il s'inverse. **Rien n'est conclu sur la queue.**

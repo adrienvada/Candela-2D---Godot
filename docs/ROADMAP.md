@@ -26214,6 +26214,43 @@ entre 160 et 170 px), et que le même défaut lu en sRGB donnerait 0,267 — le 
 disque 2D, pour les sept sources ; aucun anneau à zéro en deçà du rayon 2D ; et, sur une prise d'AVANT correctif, la
 retrouvaille des chiffres ci-dessus (0,52 au bord des braises, 0,34 à celui de la mine, zéro au-delà de 11 px sous un tireur
 debout sans corps voxel). Si l'avant ne les montre pas, c'est l'instrument qu'il faut mettre en cause avant le rendu.
+
+#### Le coût de cadence d'une fusée, décomposé (2026-09-23, 18 prises)
+
+Demandé par la session cloud après le tableau de cadence d'Iso 1 : le jeu iso, **sans aucune
+lumière 3D**, tient mal une fusée (vue unique, médiane 105 → 75). Six drapeaux d'instrument
+écrits par Iso 1 sur spécification de Gadgets (une partie de la fusée retirée à la fois), 18
+prises de 60 s en deux passes alternées sur le commit `2f06b1b`. Détail, données brutes et
+économies : [docs/iso/iso12/mesure_fusee.md](iso/iso12/mesure_fusee.md).
+
+**Une fusée coûte 3,39 ms par image, et LE VOLUME DE FUMÉE ISO EN FAIT 78 %** (2,66 ms). Somme
+des parts 3,50 contre 3,25 pour les six retirées ensemble : elles s'additionnent proprement.
+Résidu 0,15 ms — rien n'échappe aux drapeaux.
+
+**Trois pistes sont FERMÉES, et c'est le résultat le plus utile.** La passe d'ombre de la lumière
+2D vaut **0,09 ms**, la lumière elle-même 0,09, les lueurs 0,00 — le tout dans le bruit de leurs
+propres passes (0,35). La piste de la passe d'ombre venait de la session cloud, sources du moteur
+à l'appui (le compteur d'appels de dessin ne voit pas cette passe, ce qui reste vrai) ; celle du
+remplissage des nappes 2D venait de Gadgets. **Aucune des deux n'a survécu à la mesure**, et la
+seule qui tenait n'avait été nommée principale par personne.
+
+Le remplissage est établi **par élimination** : retirer le volume ne change pas le temps CPU par
+vue (2,64/2,93 contre 2,57/2,85) tout en rendant 2,66 ms d'image. ⚠️ Le temps GPU par vue lit
+**0,00 sur ce Mac** — la conclusion ne vient donc pas d'une mesure directe, et c'est dit ainsi.
+
+**Pourquoi c'est si cher** : `volume_iso.gdshader` fait **dix lectures de texture par pixel et par
+couche** (neuf pour la lightmap lissée, une dixième pour la neutralité), soit quarante par pixel
+de fumée. Deux économies à image strictement identique en découlent — jeter avant de lire plutôt
+que lire puis jeter (~0,57 ms), et réutiliser la lecture centrale déjà faite par le lissage
+(~0,27 ms) : **~24 % du coût de la fusée sans toucher un pixel**. Estimations, à mesurer.
+
+**Ce qui n'est PAS établi, et la faute est celle de la mesure.** Le 1 % bas vaut ~23,8 ms et le
+seuil de détection des images lentes a été posé à 25 : dix-sept prises sur dix-huit n'ont attrapé
+que 1 à 5 images. Regroupées, les 105 images lentes semblent calées sur la période de 6,5 s du
+banc (p ≈ 0,0000) — mais **59 viennent d'une seule prise, et sans elle le verdict s'inverse**
+(p = 0,90). La cellule « vue unique fusée » du GO réduit reste suspendue. La reprise se fera sur
+la série COMPLÈTE des temps d'image, le seuil choisi après coup, hors machine (ordre de la
+session cloud, 06:00).
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
