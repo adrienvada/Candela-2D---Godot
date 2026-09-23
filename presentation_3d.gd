@@ -776,6 +776,10 @@ func _suivre() -> void:
 			if capteur != null and is_instance_valid(joueur):
 				capteur.suivre(joueur.global_position, joueur.visible and joueur.visual.visible)
 	_accorder_le_voile_de_killcam()
+	# ISO13 — le mannequin : les lampes du jeu, relues une fois par image (`MannequinIso`), pour le côté de la lumière de
+	# chaque corps. Rien de lu ni de calculé quand le drapeau est éteint.
+	var mannequin := corps_voxel and _main != null and VoxelCatalogue.mannequin_actif()
+	var lampes_mannequin: Array = MannequinIso.lampes_du_jeu(_main) if mannequin else []
 	for j in 2:
 		var joueur = joueurs[j]
 		# ISO5 — **pendant la killcam, c'est le FANTÔME qui porte le corps**, pas le joueur. Le rejeu cache
@@ -799,6 +803,9 @@ func _suivre() -> void:
 			# pure) ; son ancre reste à l'origine, à l'échelle d'une tuile.
 			_accorder_la_classe(j, joueur)
 			(_voxels[j] as VoxelCorps).poser(etat_du_corps(j, joueur))
+			if mannequin:
+				(_voxels[j] as VoxelCorps).eclairer_mannequin(MannequinIso.direction_dominante(p, lampes_mannequin,
+					MannequinIso.occultation(joueur as Node2D)))
 		else:
 			_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.

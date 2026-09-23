@@ -82,6 +82,7 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled, blend_mix, dept
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
 #include "res://iso_corps_portrait.gdshaderinc"
+#include "res://iso_corps_mannequin.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -201,6 +202,8 @@ void fragment() {
 		pixels_par_unite);
 
 	vec3 c;
+	// ISO13 — la lumière reçue par le corps (fiche × lumière, avant la pâte) : le fondu du mannequin.
+	float niveau = 0.0;
 	if (capteur_actif) {
 		vec2 monde_px = monde.xz * pixels_par_unite;
 		// Nommée `capteur_rgb` et non `lumiere` : `iso_lightmap.gdshaderinc` (inclus plus
@@ -210,10 +213,12 @@ void fragment() {
 		vec3 capteur_rgb = lumiere_du_capteur(deux, (monde_px - centre) * echelle_lecture);
 		float recue = pate_luminance(capteur_rgb);
 		vec3 base = couleur_fiche.rgb * capteur_rgb;
+		niveau = pate_luminance(base);
 		c = min(pate(base, pate_luminance(base), style, motif, vec2(0.0), recue, aa), base);
 	} else {
 		vec3 base = couleur_fiche.rgb * lumiere_recue;
 		float l = pate_luminance(base);
+		niveau = l;
 		c = (l <= 0.0) ? vec3(0.0) : pate(base, l, style, motif, vec2(0.0), l, aa);
 		c = min(c, base);
 	}
@@ -224,6 +229,9 @@ void fragment() {
 	if (modele > 0.5) {
 		c = min(pate_facteur(c, modele_du_corps(normale_monde)), couleur_fiche.rgb);
 	}
+	// ISO13 — le mannequin (`iso_corps_mannequin.gdshaderinc`) : le côté dos à la lumière qui éclaire vraiment ce corps
+	// s'assombrit, jamais rien ne s'éclaire, et rien sous le seuil de lumière. Sans `--mannequin`, rien ne change.
+	c = mannequin_modeler(c, normale_monde, niveau);
 	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
 	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran
 	// comme f^2,4 (une encre de 0,25 tombait à 1/255, pas à 7/255) ; `pate_facteur`
@@ -231,11 +239,13 @@ void fragment() {
 	// Un noir déjà nul le reste (0 → 0, garanti par `pate_facteur`). Jamais sur
 	// `silhouette_N`, composée après, plus bas.
 	c = pate_facteur(c, pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde));
+	c = pate_facteur(c, mannequin_segments(local, demi, echelle, normale_locale, pixels_par_unite, px_monde, niveau));
 	// ISO12 — le portrait TEINT la lumière que la pâte a rendue sur le gris de la classe, encre comprise, sans jamais décider où
 	// elle se voit (`portrait_teindre`) : les seuils de visibilité restent ceux d'hier, à toute lumière. ⚠️ APRÈS l'encre :
 	// posée avant, la teinte laissait l'encre (un facteur en valeur décodée, canal par canal) assombrir moins le rouge d'un ocre
 	// que le gris, aux faibles lumières — un bord gris à (3, 4, 5) sortait peint à (9, 3, 0) (banc des corps, 2026-09-23 03:26).
 	c = portrait_teindre(c, fiche, couleur_fiche.rgb);
+	c = mannequin_borner(c);
 
 	float o = clamp(deux ? opacite_2 : opacite_1, 0.0, 1.0);
 	vec4 silhouette = deux ? silhouette_2 : silhouette_1;
