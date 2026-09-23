@@ -257,7 +257,10 @@ porteuse, six sur dix, +4 dans un duel de deux porteuses.
 
 **La classe n'est pas celle qu'on croyait.** Le banc a imprimé « Manche lancée — armes : Fusil /
 Fusil », alors que sa constante s'appelle `SHOTGUN_INDEX` (= 2) et que son propre garde dit « (pompe) ».
-L'un des deux se trompe de nom. La mesure n'en souffre pas — ni le fusil ni le pompe ne portent la
+**La cause, trouvée par Iso 1 le soir même** : le banc presse la PLACE 2 du `ButtonGroup`, or depuis
+`0e43dd4` `ui.gd` range les boutons par rang d'AFFICHAGE — la place 2 y est le Fusil, et l'indice de
+catalogue se lit par `META_CLASSE_INDEX`. Une constante juste le jour où elle a été écrite, rendue
+fausse par un tri ailleurs, sans que rien ne le signale. La mesure n'en souffre pas — ni le fusil ni le pompe ne portent la
 bouteille, donc la comparaison reste bien « shader seul » —, mais c'est le motif du § 8 une fois de
 plus : **le nom d'une constante n'est pas son effet**, et seule la ligne imprimée par le banc dit ce
 qui a tourné. Sans elle, ce rapport aurait nommé la mauvaise classe.
