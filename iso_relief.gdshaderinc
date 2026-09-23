@@ -87,6 +87,12 @@ vec3 emission_pour_lineaire(vec3 y) {
 	return x;
 }
 
+// L'émission qui rend, en linéaire, `emission` + `albedo` d'UNE seule sortie : la garde (R = 1) des corps, dont l'émission porte
+// déjà la silhouette de soi — une somme d'octets linéarisée en deux fois serait plus sombre que la 2D.
+vec3 relief_somme_lineaire(vec3 emission, vec3 albedo) {
+	return emission_pour_lineaire(godot_srgb_vers_lineaire(emission) + godot_srgb_vers_lineaire(albedo));
+}
+
 // Le plancher du relief ajouté à l'émission `emission` d'un fragment d'albédo `albedo` : en linéaire, r_min × lin(albédo),
 // sommé à l'émission existante EN LINÉAIRE aussi (une somme d'octets n'est pas une somme de lumières).
 vec3 relief_emission_plancher(vec3 emission, vec3 albedo) {

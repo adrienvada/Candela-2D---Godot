@@ -298,7 +298,14 @@ void fragment() {
 		// La couleur éclairée par la lampe, la silhouette de soi en émission : les deux composées par le même alpha
 		// qu'avant (`a = 1 - (1-o)(1-s)`), mais seule la première passe par light().
 		ALBEDO = c * o * (1.0 - s) / a;
-		EMISSION = (silhouette.rgb * s + c * o * (1.0 - s) * gain_corps_propre) / a;
+		vec3 soi = (silhouette.rgb * s + c * o * (1.0 - s) * gain_corps_propre) / a;
+		// LE PRINCIPE D'IDENTITÉ, pour la silhouette de soi : `corps_iso` compose corps et silhouette dans UNE sortie, que le
+		// moteur linéarise d'un coup — lin(c + sil). Posés séparément (corps en albédo, silhouette en émission), ils étaient
+		// linéarisés chacun de son côté, lin(c) + lin(sil), plus sombre (la linéarisation est convexe) : le corps de J1 lisait 0,77
+		// de la 2D même à r_min 1 (banc, 2026-09-23). L'émission porte donc lin(c + sil) − lin(c) : à R = 1 le total rend la 2D, et
+		// le relief ne module que la part que les lampes éclairent.
+		EMISSION = identite_2d ? emission_pour_lineaire(max(godot_srgb_vers_lineaire(ALBEDO + soi)
+			- godot_srgb_vers_lineaire(ALBEDO), vec3(0.0))) : soi;
 		ALPHA = a;
 	}
 
@@ -316,10 +323,11 @@ void fragment() {
 	} else if (relief_dominante) {
 		// La lampe dominante : la base n'émet la 2D que là où AUCUNE lampe ne porte ; ailleurs, la passe de la dominante écrit.
 		if (relief_dom < 0.0) {
-			EMISSION += ALBEDO;
+			EMISSION = relief_somme_lineaire(EMISSION, ALBEDO);
 		}
 	} else if (relief_vide(relief_d)) {
-		EMISSION += ALBEDO;
+		// La garde (R = 1) : la somme EN LINÉAIRE, comme le moteur la ferait d'une seule sortie (voir la silhouette de soi).
+		EMISSION = relief_somme_lineaire(EMISSION, ALBEDO);
 	} else {
 		// Le plancher du relief (`relief_plancher`) : r_min × albédo × L2D EN LINÉAIRE, nul là où la 2D est noire.
 		EMISSION = relief_emission_plancher(EMISSION, ALBEDO);

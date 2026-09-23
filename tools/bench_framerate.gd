@@ -108,6 +108,10 @@ var _lampe_dominante := false
 ## ISO12 — `--ombres-spots-seules` (« D-léger ») : les ombres sur les seuls spots, les omnis (fusée, flash, braises) sans ombre,
 ## donc sans cubemap (`Presentation3D.ombres_omni_3d`). Pour chiffrer le prix des ombres omni dans le tableau C/A/B/D.
 var _ombres_spots_seules := false
+## ISO12 — `--seuil-lent 25` : dater TOUTE image mesurée au-dessus de ce seuil (ms), pas seulement les cinq pires. Demandé par
+## ISO7 Gadgets (2026-09-23) : sous la fusée, la queue du 1 % bas pourrait venir des sauts de l'âge de la fusée tenue par le banc
+## (période de 6,5 s, voir `_stress`) plutôt que de la fusée — des images lentes rangées sur ses multiples le diraient. 0 : éteint.
+var _seuil_lent_ms := 0.0
 var _seconds := 15.0
 ## ISO12 — la lumière 3D bridée pendant le relevé, et sa variante.
 var _lumiere3d := false
@@ -237,6 +241,7 @@ func _ready() -> void:
 	_chauffe_couverture = args.has("--chauffe-couverture")
 	_lampe_dominante = args.has("--lampe-dominante")
 	_ombres_spots_seules = args.has("--ombres-spots-seules")
+	_seuil_lent_ms = float(_value(args, "--seuil-lent", "0"))
 	_lumiere3d_echelle = float(_value(args, "--echelle", "1"))
 	if (_lumiere3d_sans_ombres or args.has("--echelle")) and not _lumiere3d:
 		printerr("✗ --sans-ombres et --echelle se prennent avec --lumiere3d")
@@ -329,6 +334,8 @@ func _ready() -> void:
 		iso3d.set("bride_echelle_3d", _lumiere3d_echelle)
 		iso3d.set("ombres_3d", not _lumiere3d_sans_ombres)
 		iso3d.set("relief_dominante_3d", _lampe_dominante)
+		# Le banc mesure aussi l'écran scindé, que le jeu laisse éteint (GO réduit, 2026-09-23).
+		iso3d.set("lumiere_3d_ecran_scinde", true)
 		if _ombres_spots_seules:
 			iso3d.set("ombres_omni_3d", false)
 		iso3d.poser_lumiere_3d(true)
@@ -540,6 +547,8 @@ func _stress(duration: float, sampling: bool) -> void:
 				# 132 à 138 ms tombaient à 28 et 46 s de mesure, loin de tout premier allumage (chaque vue a ses matériaux).
 				if dt > 0.05:
 					print("  hoquet %.1f ms à %.2f s — lampes : %s" % [dt * 1000.0, elapsed, _etat_des_lampes()])
+				elif _seuil_lent_ms > 0.0 and dt * 1000.0 > _seuil_lent_ms:
+					print("  lente %.1f ms à %.2f s" % [dt * 1000.0, elapsed])
 			if not get_window().has_focus():
 				_images_hors_focus += 1
 			# Relevés au vol : lus après la boucle ils vaudraient zéro, et le

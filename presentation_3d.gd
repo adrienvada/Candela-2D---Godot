@@ -233,6 +233,13 @@ var _miroirs: MiroirsIso
 ## `smoothstep(bride.x, bride.y, L2D)` : là où la lightmap de la vue dit 0, la couleur vaut 0. Aucun curseur de joueur ne
 ## touche la bride (équité) ; seul le banc (`tools/banc_lumiere3d.gd`) la fait varier.
 var lumiere_3d := false
+## ISO12 — GO RÉDUIT (session cloud, 2026-09-23, 04:45) : la lumière 3D ne s'allume QU'EN VUE UNIQUE — le jeu en ligne et
+## l'entraînement. En écran scindé, même demandée, elle reste éteinte (la vue d'ISO11) tant que A n'y tient pas la règle de
+## cadence (90 % du 1 % bas du jeu sans elle ; 38 % et 82 % au tableau du 2026-09-23). `lumiere_3d` est l'état EFFECTIF ;
+## `_lumiere_3d_voulue`, ce qui a été demandé — reposé à chaque allumage de la vue, qui peut passer d'unique à scindée.
+## Vrai : le banc la mesure en écran scindé aussi (`tools/banc_lumiere3d.gd`, `tools/bench_framerate.gd`, le photographe).
+var lumiere_3d_ecran_scinde := false
+var _lumiere_3d_voulue := false
 var bride := Vector2(0.0, 0.05)
 ## 0 : (a) la bride en paliers de pâte ; 1 : (c) continue ; 2 : (b) continue dans les matériaux, paliers posés par une passe sur
 ## l'image (`pate_ecran_iso` en vue unique, `pate_vue_iso` en écran scindé).
@@ -241,7 +248,11 @@ var _pate_ecran: CanvasLayer = null
 var _mat_pate_vue: ShaderMaterial = null
 ## 1 : le masque de la preuve (blanc là où L2D > 0), pour le compte de pixels du banc.
 var masque_preuve := 0
-var ombres_3d := true
+## ⚠️ FAUX PAR DÉFAUT depuis le 2026-09-23 (GO réduit de la session cloud, 04:45) : les ombres portées coûtaient 23 à 30 % de la
+## cadence médiane, et aucune variante à ombres (B, D, D-léger) ne gardait 90 % du 1 % bas du jeu sans lumière 3D (tableau de
+## cadence, point 22 de la ROADMAP). La variante retenue est A, le relief sans ombres portées ; les ombres reviennent au banc
+## derrière ce réglage et `relief_dominante_3d`, et Adrien les tranchera (Q20).
+var ombres_3d := false
 var atlas_ombres := 2048
 ## ISO12 — la rétrodiffusion au miroir (accord de la session cloud, 22:48), et les économies du brief (voir `lumieres_iso.gd`).
 var retrodiffusion_3d := true
@@ -578,6 +589,9 @@ func _allumer(vues: Array[SubViewport]) -> void:
 		_cacher_corps(j)
 	_poser_cameras()
 	_scene.visible = true
+	# La vue a pu passer d'unique à scindée (ou l'inverse) : la lumière 3D voulue se repose selon la nouvelle vue.
+	if _lumiere_3d_voulue:
+		poser_lumiere_3d(true)
 	print("[iso] vue isométrique allumée : %s — tangage %s°, murs %s tuile (%s), pâte %s, lightmap %s"
 		% ["écran scindé (vues %s et %s)" % [_vues[0].name, _vues[1].name] if _scinde
 		else "vue unique (%s)" % _vues[0].name,
@@ -1721,6 +1735,9 @@ func _construire_la_scene() -> void:
 
 ## ISO12 — allume ou éteint la lumière 3D. Idempotent ; peut s'appeler vue éteinte (les matériaux et le miroir attendent).
 func poser_lumiere_3d(active: bool) -> void:
+	_lumiere_3d_voulue = active
+	# Le GO réduit : en écran scindé, la lumière 3D ne s'allume que si le banc le demande explicitement.
+	active = active and (not _scinde or lumiere_3d_ecran_scinde)
 	lumiere_3d = active
 	if _scene == null:
 		return

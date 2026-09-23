@@ -170,6 +170,8 @@ func _poser_la_lumiere_3d() -> bool:
 	iso.set("bride_mode_3d", 1)
 	iso.set("bride_echelle_3d", lumiere3d_echelle)
 	iso.set("ombres_3d", not lumiere3d_sans_ombres)
+	# Le photographe montre aussi l'écran scindé, que le jeu laisse éteint (GO réduit, 2026-09-23).
+	iso.set("lumiere_3d_ecran_scinde", true)
 	iso.poser_lumiere_3d(true)
 	await get_tree().process_frame
 	print("  · lumière 3D allumée : bride identité échelle %.2f, ombres %s"

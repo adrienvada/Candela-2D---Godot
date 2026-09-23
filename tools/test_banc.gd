@@ -288,6 +288,13 @@ func _run() -> void:
 	_check("le miroir plafonne à huit lampes allumées, à chaque image",
 		texte_miroir.contains("const LAMPES_MAX := 8") and texte_miroir.contains("	_plafonner(LAMPES_MAX)"),
 		"au-delà de huit lampes, le sol s'éclaircissait de 8 % sans ombres")
+	# LE GO RÉDUIT (session cloud, 2026-09-23, 04:45) : la lumière 3D éteinte par défaut, sans ombres portées par défaut, et
+	# jamais allumée en écran scindé hors banc. Une ligne qui sauterait rallumerait en jeu une variante qui ne tient pas la cadence.
+	_check("la lumière 3D : éteinte par défaut, sans ombres portées, jamais en écran scindé hors banc",
+		texte_pose.contains("var lumiere_3d := false") and texte_pose.contains("var ombres_3d := false")
+		and texte_pose.contains("var lumiere_3d_ecran_scinde := false")
+		and texte_pose.contains("active = active and (not _scinde or lumiere_3d_ecran_scinde)"),
+		"en écran scindé, A gardait 38 à 82 % du 1 % bas du jeu sans lumière 3D")
 	# ε par lampe (L4) : le miroir plafonne h/portée au plancher global, qui doit valoir le défaut de l'include ; et l'include
 	# doit le LIRE dans direction.w, sans quoi ε par lampe serait calculé puis ignoré sans erreur.
 	var texte_relief := FileAccess.get_file_as_string("res://iso_relief.gdshaderinc")

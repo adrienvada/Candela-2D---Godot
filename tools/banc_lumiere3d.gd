@@ -266,6 +266,8 @@ func _ready() -> void:
 		_echouer("pas de Presentation3D")
 		_finir()
 		return
+	# Le banc mesure aussi l'écran scindé, que le jeu laisse éteint (GO réduit, 2026-09-23).
+	_p.lumiere_3d_ecran_scinde = true
 	print("=== Banc de la lumière 3D bridée (ISO12, lot 0) — plafond max_lights_per_object=%s, énergies %s ===" \
 		% [str(ProjectSettings.get_setting("rendering/limits/opengl/max_lights_per_object", "?")), JSON.stringify(_energies)])
 	for carte in (CARTES.slice(0, 1) if _rapide else CARTES):

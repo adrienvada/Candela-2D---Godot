@@ -26411,6 +26411,20 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     la fusée seulement. Garder les ombres portées à ce seuil demande donc de rendre l'ombre elle-même moins chère, pas la
     dominance. Plus aucun hoquet au-dessus de 50 ms dans 19 relevés sur 20 : la chauffe par couverture tient. Décision en
     attente de la session cloud, et d'Adrien pour les ombres portées (Q20).
+23. **LE GO RÉDUIT — posé** (décision de la session cloud, 2026-09-23, 04:45). **NON-GO** pour la lumière 3D avec ombres portées
+    à ce coût ; D reste au banc derrière son interrupteur, et Adrien tranchera les ombres (Q20). **GO** pour A, le relief sans
+    ombres portées, EN VUE UNIQUE — le jeu en ligne et l'entraînement. Dans le code : `ombres_3d` faux par défaut ; la lumière
+    3D ne s'allume jamais en écran scindé hors banc (`lumiere_3d_ecran_scinde`, faux ; l'état voulu est reposé à chaque allumage
+    de la vue, qui peut passer d'unique à scindée) ; la lumière 3D reste ÉTEINTE par défaut en jeu jusqu'aux relevés d'Adrien
+    Mac froid. Gardé par `tools/test_banc.gd`. Les deux bancs et le photographe gardent le droit de mesurer l'écran scindé.
+    **La silhouette de soi rend la 2D** : `corps_iso` compose corps et silhouette dans UNE sortie, que le moteur linéarise d'un
+    coup ; posés séparément (corps en albédo, silhouette en émission), ils étaient linéarisés chacun de son côté — plus sombre,
+    la linéarisation étant convexe : le corps de J1 lisait 0,77 de la 2D même à r_min 1. L'émission porte désormais lin(c + sil)
+    − lin(c), et la garde des corps somme en linéaire : 1,01 à 1,03 à r_min 1 sur tous les cadrages. **Les 18 hoquets de A en
+    écran scindé ne se reproduisent pas** : deux relevés de A (72/59 et 72/68) et un de C (90/67), zéro hoquet au-dessus de 50
+    ms — cause non établie, vraisemblablement une charge passagère ; A y garde 88 et 101 % du 1 % bas de C, ce qui rouvre la
+    question de l'écran scindé pour A (à mesurer Mac froid avant d'y revenir). Au banc de cadence : `--seuil-lent 25` date
+    toute image lente, pour le chantier de la fusée confié à ISO7 Gadgets.
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).
