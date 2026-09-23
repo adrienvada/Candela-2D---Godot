@@ -9121,7 +9121,8 @@ ISO7 Gadgets l'avait mesuré le matin même sur neuf paires de prises identiques
 1 % bas de 11 (39 au pire).** **Règle : une prise isolée de 1 % bas ne prouve rien sur ce Mac ; on juge sur la médiane, et un
 écart de 1 % bas n'existe que reproduit, en prises EN MIROIR — C A A C et non C A C A (session cloud) : les quatre prises
 baissaient en monotone (79, 73, 66, 34), signature d'une dérive, et en C A C A la variante prise après paie la dérive ; en miroir,
-une dérive linéaire s'annule.**
+une dérive linéaire s'annule.** Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
+session cloud) ; l'état de la machine (`top`) se note avant et après chaque prise.
 
 ISO12 (2026-09-23 au soir), trouvé par ISO7 Gadgets : **CHAQUE LANCEMENT DE GODOT DÉCLENCHE L'INDEXATION DE macOS.**
 `spotlightknowledged`, avec `mediaanalysisd`, monte à 47-83 % d'un cœur pendant 10 à 20 s après chaque lancement — quinze
@@ -9139,8 +9140,21 @@ Quatre prises C identiques enchaînées : médianes 86, 75, 73, 73 et 1 % bas 72
 sans Godot : médianes 86, 86, 86 et 1 % bas 71, 78, 67 — navigateurs et indexation constants, écartés. La « dérive » des séries
 du matin (79, 73, 66, 34, prises enchaînées) en porte probablement la signature. **Règle : 90 s sans Godot avant chaque
 lancement d'une prise de cadence sur ce Mac.** Cela coûte la moitié du temps d'une série, et cela vaut mieux qu'une série à
-jeter — deux l'ont été ce jour-là. Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
-session cloud) ; l'état de la machine (`top`) se note avant et après chaque prise.
+jeter — deux l'ont été ce jour-là.
+
+ISO12 (2026-09-23, 22:5x), vu par ISO7 Gadgets dans la sortie même du banc : **« AU POMPE » VALAIT « AU FUSIL ».** Le banc de
+cadence (`tools/bench_framerate.gd`, et `tools/banc_iso.gd` qui le recopie) pressait le bouton de classe à la PLACE 2 du
+râtelier, sous le nom `SHOTGUN_INDEX` ; depuis 0e43dd4 la liste des classes du menu est rangée par RANG d'affichage, et la
+place 2 porte le Fusil — `ui.gd` le disait lui-même : « l'index de classe, pas la place dans la liste ». Le banc imprimait
+« Manche lancée — armes : Fusil / Fusil » à chaque prise, pendant que toutes les séries — celles d'ISO12 comprises, et la
+ROADMAP, et les échanges entre sessions — étaient décrites « au pompe ». **Tous les relevés de cadence pris avec ce banc
+depuis 0e43dd4, ceux du 2026-09-23 compris, sont AU FUSIL : leurs comparaisons tiennent (même classe partout), leur libellé
+« pompe » est faux.** Corrigé (session cloud, 22:58) : la classe se choisit par son SLUG, `--classe=<slug>`, le POMPE par
+défaut — ce que le banc disait viser, le cône le plus large, donc le pire cas qu'il était censé mesurer ; `--classe=fusil`
+reproduit les séries passées. Le bouton pressé est celui dont l'index de classe est celui du slug (`UI.set_weapon_selection`),
+la garde d'intégrité vérifie ce chemin, et **la prise est REFUSÉE si la classe équipée diffère de la classe voulue** — la
+ligne « armes : » imprime désormais aussi les slugs. **Règle : lire ce que le banc IMPRIME de sa configuration, jamais ce que
+ses constantes annoncent ; et une ligne qui dit la vérité doit décider, pas seulement témoigner.**
 
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 

@@ -3,7 +3,7 @@
 ## La passe de performance de l'étape 9 avait été mesurée côté CPU seulement
 ## (`bench_particles.gd`, headless). Déplafonner la cadence d'image déplace la
 ## question sur le GPU : le jeu tient-il réellement sa cadence cible quand les
-## deux vues rendent, torches allumées, pendant un échange au pompe ?
+## deux vues rendent, torches allumées, pendant un échange au pompe (`--classe=<slug>` pour une autre classe) ?
 ## (La cible est `CIBLE_1_POURCENT_BAS`, plus bas — elle a valu 120, elle vaut
 ## 60 depuis le 2026-08-25, et l'écrire en toutes lettres ici l'a déjà périmée
 ## une fois.)
@@ -93,7 +93,17 @@ const TRANSITOIRE_SEC := 5.0
 ## cinq secondes : 92 images lentes dans les dix premières » — venait du compteur par tranche fautif (ex æquo comptés, voir
 ## `_report`) et a été retiré ; la décision des dix secondes, prise avant les chiffres, reste.
 const TRANSITOIRE_VERDICT_SEC := 10.0
-const SHOTGUN_INDEX := 2
+## La classe des deux joueurs, par son SLUG : le POMPE par défaut — le cône le plus large, donc le pire cas que ce banc mesure —,
+## une autre par `--classe=<slug>` (`--classe=fusil` reproduit les séries passées, voir ci-dessous).
+##
+## ⚠️ **Le banc a joué au FUSIL pendant qu'on écrivait « au pompe »** (ISO12, 2026-09-23, vu par ISO7 Gadgets dans la ligne
+## « Manche lancée — armes : Fusil / Fusil » que ce banc imprime). Il pressait le bouton à la PLACE 2 du râtelier
+## (`SHOTGUN_INDEX`), qui était le pompe tant que la liste suivait l'ordre du catalogue ; depuis 0e43dd4, `ui.gd` range les
+## boutons par RANG d'affichage, et la place 2 porte le Fusil — `ui.gd` le disait lui-même (« l'index de classe, pas la place
+## dans la liste »). Toutes les séries prises depuis sont au fusil. Désormais : le bouton dont l'index de classe est celui du
+## slug (`UI.set_weapon_selection`), jamais une place ; et la prise REFUSÉE si la classe équipée n'est pas celle voulue.
+const CLASSE_PAR_DEFAUT := "pompe"
+var _classe := CLASSE_PAR_DEFAUT
 ## Portée utile du pompe : assez près pour que chaque tir touche.
 const DUEL_DISTANCE := 150.0
 
@@ -292,6 +302,9 @@ func _ready() -> void:
 	_ombres_spots_seules = args.has("--ombres-spots-seules")
 	_seuil_lent_ms = float(_value(args, "--seuil-lent", "0"))
 	_temps_par_vue = args.has("--temps-par-vue")
+	for a in args:
+		if a.begins_with("--classe="):
+			_classe = a.trim_prefix("--classe=")
 	_fusee_sans_lumiere2d = args.has("--fusee-sans-lumiere2d")
 	_fusee_sans_ombre2d = args.has("--fusee-sans-ombre2d")
 	_fusee_sans_fumee2d = args.has("--fusee-sans-fumee2d")
@@ -363,8 +376,18 @@ func _ready() -> void:
 	# `_intended_mode`. Le banc n'a pas d'écran à parcourir : il pose l'intention
 	# directement, comme le ferait l'entrée « 1V1 écrans scindés ».
 	_ui._intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
-	_select_shotgun(_ui.p1_weapon_group)
-	_select_shotgun(_ui.p2_weapon_group)
+	# La classe par son INDEX de catalogue, cherché par slug — jamais une place du râtelier (voir `CLASSE_PAR_DEFAUT`).
+	var idx_classe := index_de_classe(_main, _classe)
+	if idx_classe < 0:
+		printerr("✗ --classe=%s : aucune classe de ce slug au catalogue" % _classe)
+		_sortir(1)
+		return
+	_ui.set_weapon_selection(0, idx_classe)
+	_ui.set_weapon_selection(1, idx_classe)
+	if _ui.selected_weapon_index(0) != idx_classe or _ui.selected_weapon_index(1) != idx_classe:
+		printerr("✗ la classe « %s » (index %d) n'a pas de bouton dans les râteliers : prise refusée" % [_classe, idx_classe])
+		_sortir(1)
+		return
 	_main._on_replay_requested()
 
 	if not await _await(func(): return _main.round_active, 15.0):
@@ -372,8 +395,15 @@ func _ready() -> void:
 		_sortir(1)
 		return
 
-	print("Manche lancée — armes : %s / %s" % [
-		_main.p1.current_weapon.name, _main.p2.current_weapon.name])
+	var slug_1 := String(_main.p1.current_weapon.slug())
+	var slug_2 := String(_main.p2.current_weapon.slug())
+	print("Manche lancée — armes : %s / %s (slugs %s / %s ; voulue : %s)" % [
+		_main.p1.current_weapon.name, _main.p2.current_weapon.name, slug_1, slug_2, _classe])
+	# La ligne ci-dessus a été, le 2026-09-23, la seule à dire la vérité : elle décide désormais, elle ne fait plus que témoigner.
+	if slug_1 != _classe or slug_2 != _classe:
+		printerr("✗ la classe équipée (%s / %s) n'est pas celle voulue (%s) : prise refusée" % [slug_1, slug_2, _classe])
+		_sortir(1)
+		return
 	_appliquer_variante()
 	if _iso and not await _vue_iso_tenue():
 		_sortir(1)
@@ -1386,12 +1416,14 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	for action in ["p1_torch", "p2_torch"]:
 		if not InputMap.has_action(action):
 			absents.append("action %s absente de l'Input Map (tenir_la_torche)" % action)
-	for groupe in ["p1_weapon_group", "p2_weapon_group"]:
-		if groupe in ui:
-			var g: ButtonGroup = ui.get(groupe)
-			if g == null or g.get_buttons().size() <= SHOTGUN_INDEX:
-				absents.append("UI.%s n'a plus d'arme à l'indice %d (pompe)"
-					% [groupe, SHOTGUN_INDEX])
+	# Le choix de la classe du banc, par son index de catalogue (voir `CLASSE_PAR_DEFAUT`).
+	for m in ["set_weapon_selection", "selected_weapon_index"]:
+		if not ui.has_method(m):
+			absents.append("UI.%s() a disparu (choix de la classe du banc)" % m)
+	if not main.has_method("classes"):
+		absents.append("GameState.classes() a disparu (choix de la classe du banc)")
+	elif index_de_classe(main, CLASSE_PAR_DEFAUT) < 0:
+		absents.append("la classe du banc « %s » n'est plus au catalogue" % CLASSE_PAR_DEFAUT)
 	return absents
 
 
@@ -1442,10 +1474,16 @@ func _couper_le_son(quand: String) -> void:
 	print("  son coupé (%s) : muet=%s" % [quand, AudioServer.is_bus_mute(maitre)])
 
 
-func _select_shotgun(group: ButtonGroup) -> void:
-	var buttons: Array = group.get_buttons()
-	if SHOTGUN_INDEX < buttons.size():
-		buttons[SHOTGUN_INDEX].button_pressed = true
+## L'index de catalogue d'une classe, par son slug ; -1 si elle n'y est pas. C'est cet index que `UI.set_weapon_selection`
+## attend et qui circule sur le fil — jamais la place d'un bouton dans le râtelier, qui suit le rang d'affichage.
+static func index_de_classe(main: Node, slug: String) -> int:
+	if main == null or not main.has_method("classes"):
+		return -1
+	var classes: Array = main.classes()
+	for i in classes.size():
+		if classes[i] != null and String(classes[i].slug()) == slug:
+			return i
+	return -1
 
 
 func _await(predicate: Callable, timeout: float) -> bool:

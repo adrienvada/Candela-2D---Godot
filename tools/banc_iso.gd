@@ -344,8 +344,11 @@ func _ready() -> void:
 		_main.rendu_racine_autorise = _base
 	_ui._intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
 	if _charge:
-		_select_shotgun(_ui.p1_weapon_group)
-		_select_shotgun(_ui.p2_weapon_group)
+		# La classe du banc de cadence, par son index de catalogue (`BancCadence.CLASSE_PAR_DEFAUT`, le pompe) : la place 2 du
+		# râtelier était le fusil depuis que la liste suit le rang d'affichage (ISO12, 2026-09-23).
+		var idx_classe := BancCadence.index_de_classe(_main, BancCadence.CLASSE_PAR_DEFAUT)
+		_ui.set_weapon_selection(0, idx_classe)
+		_ui.set_weapon_selection(1, idx_classe)
 	_main._on_replay_requested()
 	if not await _attendre(func(): return _main.round_active, 15.0):
 		printerr("✗ la manche n'a pas démarré")
@@ -2454,10 +2457,6 @@ func _couper_le_son(quand: String) -> void:
 	print("  son coupé (%s) : muet=%s" % [quand, AudioServer.is_bus_mute(maitre)])
 
 
-func _select_shotgun(group: ButtonGroup) -> void:
-	var buttons: Array = group.get_buttons()
-	if BancCadence.SHOTGUN_INDEX < buttons.size():
-		buttons[BancCadence.SHOTGUN_INDEX].button_pressed = true
 
 
 func _attendre(predicat: Callable, delai: float) -> bool:
