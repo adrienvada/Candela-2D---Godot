@@ -23,6 +23,9 @@ Pour chaque prise 3D, contre la référence 2D, PIL seul, tous les pixels :
   (> 8) et noir en 3D (≤ 2), rapporté aux pixels visibles en 2D ; attendu ≈ 0 sans ombres, et c'est aussi LA PREUVE INVERSE
   sous ombres, cible < 1 %. « plus » : noir en 2D (≤ 8) et lumineux en 3D (> 12), rapporté aux pixels noirs en 2D ; cible
   < 0,01 %. Ni masque ni séparation : ce sont les deux écarts qu'un seuil mal posé produirait.
+- **L'IDENTITÉ** (principe d'identité, session cloud, 2026-09-23, 02:17) — la prise 3D contre la 2D, PAR CANAL : les pixels
+  dont un canal s'écarte de plus de 1/255, et l'écart maximal. À `--relief-plancher=1`, la 3D EST la 2D : il en faut zéro,
+  avec et sans ombres. C'est la condition de tous les autres chiffres.
 - **LES OMBRES AJOUTENT-ELLES DE LA LUMIÈRE ?** — pixels où la prise « ombres » dépasse « sans ombres » de plus de 4 : une
   ombre ne peut qu'ôter. Lu sur tous les cadrages, et d'abord sur `une_lumiere` et `deux_lumieres`.
 
@@ -172,6 +175,14 @@ def r_banc(l3, ln, visible, w, boite=None):
     return (s3 / sn) if sn > 0 else None
 
 
+def identite(ref, img):
+    """Pixels dont un canal au moins s'écarte de plus de 1/255 entre la 3D et la 2D, et l'écart maximal (octets bruts)."""
+    r, g, b = ImageChops.difference(ref, img).split()
+    ecart = ImageChops.lighter(ImageChops.lighter(r, g), b)
+    h = ecart.histogram()
+    return sum(h[2:]), max(k for k in range(256) if h[k]) if any(h) else 0
+
+
 def teinte(img, l2, w, boite):
     x0, y0, x1, y1 = boite
     crop = img.crop(boite).convert("RGB").getdata()
@@ -238,6 +249,9 @@ for nom in sorted(cadrages):
         img_n = Image.open(os.path.join(captures, prises["neutre"]["fichier"])).convert("RGB")
         neutre_lin = lum_lin(img_n)
         neutre_vis = lum(img_n)
+        # La prise à R = 1 forcé passe par la garde (émission = albédo) : sous le principe d'identité, elle EST la 2D.
+        res["identite_neutre"] = identite(ref, img_n)
+        print("  neutre (R = 1 forcé) — identité : %d px à plus de 1/255 de la 2D, écart max %d" % res["identite_neutre"])
         for nom_a, xy in ancres.items():
             loupe(img_n, xy, "%s__neutre__%s" % (nom, nom_a), True)
     for variante in ("sans_ombres", "ombres", "sabotage"):
@@ -248,6 +262,7 @@ for nom in sorted(cadrages):
         l3 = lum(img)
         m = mesures(l2, l3, masque, w, scinde, max2)
         m["blancs"] = blancs(img)
+        m["identite_px"], m["identite_max"] = identite(ref, img)
         m["zones"] = {}
         l3_lin = lum_lin(img) if neutre_lin is not None else None
         m["R"] = r_banc(l3_lin, neutre_lin, neutre_vis, w) if l3_lin is not None else None
@@ -271,6 +286,8 @@ for nom in sorted(cadrages):
         print("      seuil : moins %d px = %.3f %% des visibles en 2D %s · plus %d px = %.4f %% des noirs en 2D %s"
               % (m["moins_px"], m["moins_part"], "OK" if m["moins_part"] < CIBLE_MOINS else "AU-DESSUS DE 1 %",
                  m["plus_px"], m["plus_part"], "OK" if m["plus_part"] < CIBLE_PLUS else "AU-DESSUS DE 0,01 %"))
+        print("      identité : %d px à plus de 1/255 de la 2D (%.3f %%), écart max %d"
+              % (m["identite_px"], 100.0 * m["identite_px"] / (w * h), m["identite_max"]))
         for nom_a, z in m["zones"].items():
             az = z["a"]
             print("      %-12s R lu %s · (a) %s · (b) %.2f %% de %d px · rouge %d · moins %d · plus %d"

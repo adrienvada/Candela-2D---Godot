@@ -235,6 +235,9 @@ void fragment() {
 
 	// ISO12 — la lumière reçue au fragment (le capteur, ou son repli scalaire), puis sa bride.
 	float recue;
+	// LE PRINCIPE D'IDENTITÉ : la couleur de `corps_iso.gdshader` — la fiche × la lumière du capteur EN COULEUR, passée à la
+	// pâte —, calculée ci-dessous quand `identite_2d` est vrai. L'ancien chemin réduisait le capteur à sa luminance.
+	vec3 c2d = vec3(0.0);
 	if (capteur_actif) {
 		vec2 monde_px = monde.xz * pixels_par_unite;
 		// Nommée `capteur_rgb` et non `lumiere` : `iso_lightmap.gdshaderinc` déclare déjà un uniform `lumiere`.
@@ -243,14 +246,24 @@ void fragment() {
 		// ISO12 v27 — le point noir, au capteur : ce que la 2D affiche à 8 sur 255 ou moins est noir pour le corps aussi.
 		if (seuil_noir_2d > 0.0 && recue <= seuil_noir_2d) {
 			recue = 0.0;
+			capteur_rgb = vec3(0.0);
 		}
+		vec3 base2d = couleur_fiche.rgb * capteur_rgb;
+		c2d = min(pate(base2d, pate_luminance(base2d), style, motif, vec2(0.0), recue, aa), base2d);
 	} else {
 		recue = lumiere_recue;
+		vec3 base2d = couleur_fiche.rgb * lumiere_recue;
+		float l2d = pate_luminance(base2d);
+		c2d = (l2d <= 0.0) ? vec3(0.0) : pate(base2d, l2d, style, motif, vec2(0.0), l2d, aa);
+		c2d = min(c2d, base2d);
 	}
 	float b = bride_forcee ? 1.0 : bride_valeur(recue);
 	vec3 base = couleur_fiche.rgb * b;
 	vec3 c = (variante_pate == 1 || b <= 0.0) ? base
 		: min(pate(base, pate_luminance(base), style, motif, vec2(0.0), b, aa), base);
+	if (identite_2d && !bride_forcee) {
+		c = c2d;
+	}
 	// Le plafond général : jamais plus clair que la fiche, quelle que soit la pâte.
 	c = min(c, couleur_fiche.rgb);
 	// ISO7b — le modelé : la lumière du capteur répartie sur les faces que la caméra voit. Re-plafonné à la fiche : le
@@ -301,6 +314,9 @@ void fragment() {
 		EMISSION = relief_diagnostic == 2 ? vec3(relief_d * relief_diagnostic_gain) : vec3(0.0);
 	} else if (relief_vide(relief_d)) {
 		EMISSION += ALBEDO;
+	} else {
+		// Le plancher du relief (`relief_plancher`) : r_min × albédo × L2D EN LINÉAIRE, nul là où la 2D est noire.
+		EMISSION = relief_emission_plancher(EMISSION, ALBEDO);
 	}
 }
 

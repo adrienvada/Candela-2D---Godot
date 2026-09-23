@@ -9075,6 +9075,16 @@ la vue 3D se fait sur les octets bruts** ; et avant de croire un instrument, lui
 Conséquence qui n'est pas de l'instrument : le moteur linéarise la couleur des lampes (`light_color` → linéaire) puis la vue
 l'affiche sans la réencoder — d'où, entre autres, un halo de fusée plus rouge en 3D qu'en 2D.
 
+⚠️ **COMPLÉTÉ LE 2026-09-23 — la règle ne vaut que pour l'ÉMISSION.** Relu dans le source de Godot 4.7-stable par la session
+cloud (`drivers/gles3/shaders/scene.glsl`, `tonemap_inc.glsl`) : après `fragment()`, l'albédo ET l'émission sont LINÉARISÉS
+(`srgb_to_linear`, un polynôme), la lumière de `light()` multiplie l'albédo en linéaire, et chaque passe finit par
+`linear_to_srgb` (une puissance 0,4167). Une constante émise fait donc l'aller-retour — d'où les 0,25 relus 0,25 —, mais SOUS
+UNE LAMPE l'octet lit ≈ R^(1/2,4)·C, pas R·C (R 0,5 se lit 0,72). Deux conséquences payées : un plancher posé en émission
+mélangeait deux espaces (point 14 d'ISO12), et chaque passe additive d'une lampe à ombre est encodée avant d'être sommée
+(point 15). **Règle complétée** : l'octet brut d'une émission est la valeur du shader ; l'octet d'une surface éclairée est
+`srgb(lin(C) · somme des lumières)` — et un « R lu » sur l'octet sous lampe n'est pas R. Les deux approximations du moteur ne
+s'inversent pas aux faibles niveaux : pour poser une valeur LINÉAIRE par l'émission, inverser le polynôme, pas l'autre.
+
 ### Le bandeau de LED RESPIRE : une prise de banc qui ne le fige pas compare deux instants au hasard (2026-09-23)
 
 ISO12, contrôles du seuil au point noir. La LED des murs (`mur_led.gd`) monte et descend lentement, et sa lueur éclaire le sol en
@@ -26300,6 +26310,44 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     N·L ≤ 0 et R = 0, alors que la 2D éclaire le corps à plat par son capteur. ISO7 Beauté confirme : sa peinture ne fait que
     teindre la lumière rendue et n'y peut rien. C'est le critère même de la session cloud (« tout pixel de corps que la 2D montre
     reste visible en 3D ») qui échoue — une question d'honnêteté en compétition, donc pas un dosage à régler seul ici.
+13. **LE PRINCIPE D'IDENTITÉ, LE PLANCHER ET LA COULEUR — posés** (décisions de la session cloud, 2026-09-23, 01:11 et 02:17 ;
+    mesures du 02:53 au 02:58, LED éteinte, quatorze cadrages). **La 3D = la couleur du rendu 2D × R_final.** L'ALBEDO du sol,
+    des murs et des corps est EXACTEMENT la couleur que `sol_iso`, `mur_iso` et `corps_iso` rendent (pâte, température,
+    lumière du capteur en couleur, contact), par les mêmes fonctions, recopiées au caractère près dans chaque shader éclairé
+    plutôt qu'extraites dans un include — qui aurait touché les shaders de la vue d'ISO11 et ceux des corps, où ISO7 Beauté
+    pose son portrait. `tools/test_banc.gd` compare ces fonctions octet pour octet. Les émissions que la 3D ajoutait (LED, halo,
+    pied de lampe) tombent : la lightmap 2D les porte déjà. L'ancien chemin (albédo peint × L2D bridée, puis une chroma par
+    canal, posée une heure) reste derrière `identite_2d` pour la bissection. ⚠️ **Pourquoi** : la base « albédo peint × L2D »
+    était GRISE là où la 2D est chaude — sous la torche, 2D à 30° et 0,39 à 0,48 de saturation, base à 0,01 à 0,04 : l'orangé
+    du cône vient du chemin 2D lui-même (sa température), pas de la lightmap. **Le plancher r_min** (« le relief ne cache
+    jamais ») : R_final = r_min + (1 − r_min)·R — la forme affine, pas le max demandé d'abord, qu'aucun point du shader ne peut
+    calculer puisque chaque lampe à ombre a sa propre passe. r_min est posé EN LINÉAIRE (voir le piège « la vue 3D écrit la
+    valeur du shader… », complété le 2026-09-23) : une émission pré-compensée, E telle que le polynôme `srgb_to_linear` du
+    moteur rende exactement r_min × lin(C) (inverse par trois pas de Newton, erreur < 1e-5). **Défaut 0,5, provisoire.**
+    **Mesuré** — identité (r_min = 1) : (a) 0,97 à 1,00, 0,002 à 0,34 % des pixels à plus de 1/255 de la 2D, les mêmes écarts
+    sur la prise à R = 1 forcé qui ne dépend d'aucune lampe (donc hors relief : éléments animés entre deux prises) ; « moins »
+    0 à 0,15 % à r_min ≥ 0,5, ombres comprises (l'ancien chemin : 1 à 3 %) ; « plus » sous 0,0031 % partout ; teinte et
+    saturation du halo de la fusée égales à la 2D à ±0,3° et ±0,007 (l'ancien : 0,48 à 0,50 contre 0,41 à 0,43). **Le corps de
+    J2** (point 12) : 424 px noirs sans plancher → 0 à r_min 0,5 sans ombres, 17 avec (18 à r_min 1, donc hors relief) ;
+    modelé du corps, rapport p90/p10 sur l'octet : 2,91 / 2,40 / 2,13 à r_min 0,35 / 0,5 / 0,65 (2D : 1,75) — le critère « côté
+    clair au moins deux fois le côté sombre » tient jusqu'à 0,65. Le seuil au point noir ne pèse plus sous l'identité (écarts
+    182 784 px à seuil 0 contre 184 431 à 8/255, « plus » sous 0,003 % sans lui) : son retrait attend une mesure à r_min 0,5.
+14. **L'ancien plancher MÉLANGEAIT DEUX ESPACES — confirmé au banc** (diagnostic de la session cloud, 02:33, lu dans le source
+    de Godot 4.7-stable) : `ALBEDO × r_min` en émission est linéarisé par le moteur, les lampes éclairent déjà en linéaire.
+    Sol plat, une seule lampe, r_min 0,5 : (a) 0,92 à 0,93 sans ombres et 1,03 à 1,07 avec (prédit 0,85 et 1,2 : la direction,
+    pas l'amplitude) ; le plancher linéaire rend 0,99 à 1,00 sans ombres.
+15. **AVEC OMBRES, L'IMAGE S'ÉCLAIRCIT ENCORE — et c'est le moteur** : chaque lampe à ombre est dessinée dans SA passe
+    additive, encodée en sRGB PUIS additionnée à l'image déjà encodée, et l'encodage est concave. À r_min 1 (les lampes ne
+    comptent plus), les ombres ne changent presque rien (20 à 404 px plus clairs, contre 86 000 sous l'ancien chemin) ; à r_min
+    0,5, (a) passe de 0,96-1,01 sans ombres à 1,06-1,24 avec, 30 000 à 118 000 px plus clairs. Le remède proposé par la session
+    cloud — **la lampe dominante** : en chaque point, une seule passe écrit — se prototype au banc, éteint par défaut. L'autre
+    voie (toutes les lampes sans ombre, somme linéaire exacte) retirerait les ombres portées de la 3D qu'Adrien a approuvées :
+    elle n'est pas prise sans lui.
+16. **LES CAPTURES D'ADRIEN** (« Je veux pouvoir juger avec des screenshots », 02:39) : cinq cadrages en 1920×1080, en C (la 2D
+    d'ISO11), A (identité + relief, sans ombres) et B (avec ombres), au même instant du banc, LED figée à 60 % — publiées
+    (https://claude.ai/artifact/Cirvpqf7EpEm9ixrTtZA4i), montées par la session cloud en page de comparaison pour lui. Banc :
+    `--v27-cadrage=adrien --taille=1920x1080` ; le croisement à angle droit « 1b » ne trouvait pas sa place au premier passage,
+    sa recherche est élargie.
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).

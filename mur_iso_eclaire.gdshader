@@ -284,7 +284,8 @@ void fragment() {
 		if (taille.y < seuil_muret_px) {
 			// Dessus de muret : la lightmap à sa case, cernée d'encre là où le muret finit.
 			brute = lire_lightmap(monde.xz, deux);
-			c = bride_de(brute, motif, aa);
+			// LE PRINCIPE D'IDENTITÉ : la fonction de `mur_iso.gdshader` ; sinon l'ancienne bride.
+			c = identite_2d ? lightmap_pateuse(monde.xz, motif, aa, deux) : bride_de(brute, motif, aa);
 			float fin = 1.0 - max(au_dela.r, au_dela.g);
 			float largeur = max(encre_arete_px, px_monde);
 			c = pate_matiere_et_encre(c, 1.0, encre_arete_reste, fin * pate_trait_de_bord(d_bord, largeur, px_monde), encre_plancher_affiche);
@@ -296,7 +297,7 @@ void fragment() {
 			if (lisere > 0.0) {
 				brute = lire_lumiere_moyenne(monde.xz + sortie * (d_bord + pied), vec2(-sortie.y, sortie.x), deux, peinture_ref, peinture_min);
 				led_ici = lire_led(monde.xz + sortie * (d_bord + pied)) + lire_halo_soi(monde.xz + sortie * (d_bord + pied), deux);
-				c = pate_facteur(bride_de(brute, motif, aa), lisere);
+				c = pate_facteur(identite_2d ? lightmap_pateuse_lue(brute, motif, aa) : bride_de(brute, motif, aa), lisere);
 			}
 		}
 	} else {
@@ -307,7 +308,7 @@ void fragment() {
 		// est le plus petit des deux, jamais leur produit : plancher `encre_arete_reste`.
 		brute = lire_lumiere_moyenne(monde.xz + n * pied, tangente, deux, peinture_ref, peinture_min);
 		led_ici = lire_led(monde.xz + n * pied) + lire_halo_soi(monde.xz + n * pied, deux);
-		c = bride_de(brute, motif, aa);
+		c = identite_2d ? lightmap_pateuse_lue(brute, motif, aa) : bride_de(brute, motif, aa);
 		// ISO7b — **la direction de la lumière se lit dans la lightmap elle-même** (aucune Light3D) : son
 		// gradient DEVANT la face et le long d'elle, jamais derrière — derrière, c'est l'ombre du mur lui-même,
 		// qui ferait croire que toute face regarde la lampe. Composante « vers l'avant » positive : la lumière
@@ -346,12 +347,28 @@ void fragment() {
 		c = pate_matiere_et_encre(c, matiere * lambert * contact, encre_arete_reste, max(encre_h, encre_v),
 			encre_plancher_affiche);
 	}
-	// ISO12 — ni température ni teinte ici : la couleur de la lumière est celle de la Light3D, copiée de la Light2D.
+	// LE PRINCIPE D'IDENTITÉ : la température de `mur_iso.gdshader`, ligne pour ligne ; l'ancien chemin n'en avait pas (« la
+	// couleur de la lumière est celle de la Light3D »), et la face chaude en 2D sortait grise.
+	if (identite_2d) {
+		if (temperature_seuil_haut <= 0.0) {
+			c = pate_temperature(c, temperature);
+		} else if (neutre_avant_pate > 0.5) {
+			c = pate_temperature_graduee_neutre(c, temperature, temperature_seuil_bas, temperature_seuil_haut,
+				pate_poids_neutre(brute));
+		} else {
+			c = pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut);
+		}
+	}
 	if (masque_preuve == 1) {
 		ALBEDO = vec3(0.0);
 		EMISSION = vec3(step(0.0005, pate_luminance(brute)));
-	} else {
+	} else if (identite_2d) {
+		// Aucune émission ajoutée : la LED et le halo de proximité sont dans la lightmap que la 2D affiche.
 		ALBEDO = c;
+		EMISSION = vec3(0.0);
+	} else {
+		// La couleur de la L2D (`relief_chroma`) sur l'albédo seul : la LED porte déjà la sienne.
+		ALBEDO = c * relief_chroma(brute);
 		EMISSION = c * led_ici;
 	}
 
@@ -369,6 +386,9 @@ void fragment() {
 		}
 	} else if (relief_vide(relief_d)) {
 		EMISSION += ALBEDO;
+	} else {
+		// Le plancher du relief (`relief_plancher`) : r_min × albédo × L2D EN LINÉAIRE, nul là où la 2D est noire.
+		EMISSION = relief_emission_plancher(EMISSION, ALBEDO);
 	}
 }
 

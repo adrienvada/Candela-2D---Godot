@@ -126,6 +126,8 @@ var _relief_max := -1.0
 ## deux_lumieres, torche, torche_stricte, torche_retro, fusee_seule, torche_et_fusee, adversaire_arbalete, accroupi_muret,
 ## neuf_lampes).
 var _v27_filtre := ""
+## `--taille=1920x1080` : la taille de la fenêtre, donc des captures (défaut `TAILLE`). Les captures d'Adrien sont en 1920×1080.
+var _taille := TAILLE
 ## `--diag-gain=4` : ajoute à chaque cadrage v27 les deux prises de l'instrument du relief (numérateur seul, dénominateur seul).
 var _diag_gain := -1.0
 ## `--biais-ombre=2.0` : le `shadow_bias` des lampes 3D, en unités du monde — ici des PIXELS. Les défauts de Godot sont pensés en
@@ -136,6 +138,14 @@ var _biais_ombre := -1.0
 ## sont plus une luminosité mais un POIDS entre lampes dans R : 52 contre 3,6 fait peser une fusée quarante fois son poids 2D
 ## face à une torche. La prise dit si le triangle du cône revient là où une fusée et une torche se rencontrent (L4).
 var _energies_neutres := false
+## `--relief-plancher=0.35` : r_min, le plancher du relief (`Presentation3D.relief_plancher_3d`) ; `--sans-couleur-l2d` : la L2D
+## grise d'avant la décision (3), pour comparer la teinte du halo de la fusée.
+var _relief_plancher := -1.0
+var _sans_couleur_l2d := false
+## `--sans-identite` : l'ancien chemin (albédo peint × L2D bridée) au lieu de la couleur du rendu 2D (`identite_2d`).
+var _sans_identite := false
+## `--plancher-emission` : l'ancien plancher (`ALBEDO × r_min` en émission brute), qui mélangeait deux espaces.
+var _plancher_emission := false
 ## `--biais-normal=2.0` : le `shadow_normal_bias` des lampes 3D, qui suit la taille du texel d'ombre (essai de banc).
 var _biais_normal := -1.0
 ## `--torche-decroissance=0` : `spot_attenuation` des spots, pour isoler au banc le terme de distance du terme de cône.
@@ -170,6 +180,11 @@ func _ready() -> void:
 	_brides_seules = args.has("--brides-seules")
 	_cadrages_seuls = args.has("--cadrages-seuls")
 	_v27 = args.has("--v27")
+	for a in args:
+		if a.begins_with("--taille="):
+			var wh := a.trim_prefix("--taille=").split("x")
+			if wh.size() == 2:
+				_taille = Vector2i(wh[0].to_int(), wh[1].to_int())
 	_decroissance_nulle = args.has("--decroissance-nulle")
 	if _decroissance_nulle:
 		_torche_decroissance = 0.0
@@ -192,6 +207,14 @@ func _ready() -> void:
 			_biais_normal = a.trim_prefix("--biais-normal=").to_float()
 		elif a == "--energies-neutres":
 			_energies_neutres = true
+		elif a.begins_with("--relief-plancher="):
+			_relief_plancher = a.trim_prefix("--relief-plancher=").to_float()
+		elif a == "--sans-couleur-l2d":
+			_sans_couleur_l2d = true
+		elif a == "--sans-identite":
+			_sans_identite = true
+		elif a == "--plancher-emission":
+			_plancher_emission = true
 		elif a.begins_with("--biais-ombre="):
 			_biais_ombre = a.trim_prefix("--biais-ombre=").to_float()
 		elif a.begins_with("--diag-gain="):
@@ -210,7 +233,7 @@ func _ready() -> void:
 	GameSettings.mode_iso = true
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-	get_window().size = TAILLE
+	get_window().size = _taille
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
 	DisplayServer.window_move_to_foreground()
 	AudioServer.set_bus_mute(0, true)
@@ -374,6 +397,14 @@ func _poser_la_variante(v: Dictionary) -> void:
 	_p.relief_neutre = bool(v.get("neutre", false))
 	if _seuil_noir >= 0.0:
 		_p.seuil_noir_2d_3d = _seuil_noir
+	if _relief_plancher >= 0.0:
+		_p.relief_plancher_3d = _relief_plancher
+	if _sans_couleur_l2d:
+		_p.relief_couleur_l2d_3d = false
+	if _sans_identite:
+		_p.identite_2d_3d = false
+	if _plancher_emission:
+		_p.relief_plancher_lineaire_3d = false
 	_p.variante_pate_3d = int(v.get("pate", 0))
 	_p.masque_preuve = int(v.get("masque", 0))
 	_p.ombres_3d = bool(v.get("ombres", true))
@@ -1030,11 +1061,93 @@ func _la_v27(carte: String) -> void:
 			derniere.queue_free()
 			await _serie_v27(carte + "_v27_huit_lampes", ancres_neuf)
 			_retirer_fusees_v27()
+	# Les captures d'Adrien : seulement demandées NOMMÉMENT (`--v27-cadrage=adrien`), jamais par un filtre vide.
+	if _v27_filtre.split(",").has("adrien"):
+		await _les_captures_adrien(carte, origine, p1, dir, portee)
+	if _v27_filtre.split(",").has("adrien_1b") and carte == "cloitre" and dir != Vector2.ZERO:
+		await _le_croisement_adrien(carte, p1, dir)
 	_scene = origine
 	(_pantins[0] as Pantin).torche = true
 	(_pantins[1] as Pantin).torche = true
 	_flash_actif = true
 	_poser_la_fusee()
+
+
+## ISO12 — (1b) LE CROISEMENT : les deux torches visent le MÊME point du sol, à angle droit. Le face-à-face de (1) faisait se
+## recouvrir les deux cônes sur une même ligne ; ici ils se coupent, et le relief de leur recouvrement se lit en croix.
+func _le_croisement_adrien(carte: String, p1: Vector2, dir: Vector2) -> void:
+	var t := MursBas.TUILE
+	# Au premier passage, une seule géométrie (3 tuiles devant, 3 de côté) ne trouvait aucune place au Cloître : on cherche
+	# la plus proche du duel, de deux à quatre tuiles devant et de deux à quatre de côté, des deux côtés.
+	for avance in [3.0, 2.5, 3.5, 2.0, 4.0]:
+		var cible: Vector2 = p1 + dir * avance * t
+		if not _libre(cible, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1, cible):
+			continue
+		for ecart in [3.0, 2.5, 3.5, 2.0, 4.0]:
+			for signe in [1.0, -1.0]:
+				var p2: Vector2 = cible + dir.orthogonal() * ecart * t * signe
+				if _libre(p2, MursBas.RAYON_ENCOMBREMENT) and not _mur_entre(p2, cible):
+					_placer(p1, dir, true, p2, (cible - p2).normalized(), true)
+					await _serie_v27("adrien_1b_croisement", {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS],
+						"croisement": [cible, 0.0]})
+					return
+	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=adrien_1b_croisement raison=aucune_place" % carte)
+
+
+## ISO12 — LES CAPTURES D'ADRIEN : cinq cadrages pour juger à l'œil, en vue unique, plein cadre. Chaque cadrage passe par
+## `_serie_v27` : la référence 2D (C), sans ombres (A) et avec ombres (B) sont prises à la suite, corps immobiles, caméra
+## posée et vérifiée — le même instant au sens du banc. Le Cloître porte les murs hauts, la carte d'essai les murets : chaque
+## cadrage dit sur quelle carte il se prend, et `cadrage_ignore` s'il ne trouve pas sa place.
+func _les_captures_adrien(carte: String, origine: Dictionary, p1: Vector2, dir: Vector2, portee: float) -> void:
+	var t := MursBas.TUILE
+	if carte == "cloitre" and dir != Vector2.ZERO:
+		# (1) Le duel : face à face à cinq tuiles, les deux torches se croisent au milieu.
+		var d5 := _direction_libre(p1, dir, 5.0 * t)
+		if d5 != Vector2.ZERO:
+			var p2 := p1 + d5 * 5.0 * t
+			_placer(p1, d5, true, p2, -d5, true)
+			await _serie_v27("adrien_1_duel", {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS],
+				"milieu": [(p1 + p2) * 0.5, 0.0]})
+		else:
+			print("BANC_LUMIERE3D cadrage_ignore carte=%s id=adrien_1_duel raison=aucune_place" % carte)
+		# (2) Une torche et une fusée qui se recouvrent : la fusée posée dans le cône, à mi-portée, un peu de côté.
+		_placer(p1, dir, true, origine["p2"], Vector2.UP, false)
+		var fr := p1 + dir * portee * 0.45 + dir.orthogonal() * 0.8 * t
+		_fusees_v27.append(_une_fusee(fr))
+		await _serie_v27("adrien_2_torche_et_fusee", {"j1": [p1, HAUTEUR_CORPS], "fusee": [fr, 0.0]})
+		_retirer_fusees_v27()
+		# (4) Un corps de près, éclairé de côté : J2 à deux tuiles, la torche de J1 le prend par le flanc, la sienne éteinte.
+		var dc := _direction_libre(p1, Vector2.RIGHT, 2.0 * t)
+		if dc != Vector2.ZERO:
+			var pc := p1 + dc * 2.0 * t
+			_placer(p1, dc, true, pc, Vector2.DOWN, false)
+			await _serie_v27("adrien_4_corps_de_pres", {"j1": [p1, HAUTEUR_CORPS], "j2": [pc, HAUTEUR_CORPS]})
+		else:
+			print("BANC_LUMIERE3D cadrage_ignore carte=%s id=adrien_4_corps_de_pres raison=aucune_place" % carte)
+		# (5) Le long d'un mur haut, sous la torche : les faces lues par l'angle, la torche parallèle au mur.
+		if origine.has("face"):
+			var face: Vector2 = origine["face"]
+			var pm := face + Vector2(-2.5 * t, 1.0 * t)
+			if _libre(pm, MursBas.RAYON_ENCOMBREMENT):
+				_placer(pm, Vector2.RIGHT, true, origine["p2"], Vector2.UP, false)
+				await _serie_v27("adrien_5_mur_haut_rasant", {"j1": [pm, HAUTEUR_CORPS],
+					"face": [face, IsoGeometrie.hauteur_mur_haut() * t * 0.5]})
+			else:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=adrien_5_mur_haut_rasant raison=place_occupee" % carte)
+	if carte == "murs_bas":
+		# (3) L'adversaire derrière un muret, éclairé par la torche de J1 : l'ombre portée de son corps s'y voit, ou non.
+		var muret := _muret_devant(p1, dir)
+		if muret.size == Vector2.ZERO or muret.size.x < muret.size.y:
+			print("BANC_LUMIERE3D cadrage_ignore carte=%s id=adrien_3_derriere_muret raison=aucun_muret_horizontal" % carte)
+		else:
+			var derriere := Vector2(muret.get_center().x, muret.position.y - 0.7 * t)
+			var devant := Vector2(muret.get_center().x, muret.end.y + 3.0 * t)
+			if _libre(derriere, MursBas.RAYON_ENCOMBREMENT) and _libre(devant, MursBas.RAYON_ENCOMBREMENT):
+				_placer(devant, Vector2.UP, true, derriere, Vector2.DOWN, false)
+				await _serie_v27("adrien_3_derriere_muret", {"j1": [devant, HAUTEUR_CORPS], "j2": [derriere, HAUTEUR_CORPS],
+					"muret": [Vector2(muret.get_center().x, muret.end.y), IsoGeometrie.hauteur_mur_bas() * t * 0.5]})
+			else:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=adrien_3_derriere_muret raison=place_occupee" % carte)
 
 
 ## Un cadrage de la v27, en quatre prises (cinq avec le sabotage), toutes à la bride IDENTITÉ du jeu.
@@ -1126,8 +1239,9 @@ func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {})
 					str(lum3.global_position)])
 		# La caméra DE CETTE PRISE : l'analyse refuse de comparer deux prises dont J1 n'est pas au même pixel.
 		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
-		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s camera=%d,%d fichier=%s ancres=%s"
-			% [nom, e[0], lumieres, _relief_max_dit(), str(_energies_neutres), int(camera[0]), int(camera[1]), fichier,
+		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s plancher=%.2f couleur_l2d=%s identite=%s plancher_lineaire=%s camera=%d,%d fichier=%s ancres=%s"
+			% [nom, e[0], lumieres, _relief_max_dit(), str(_energies_neutres), float(_p.relief_plancher_3d),
+			str(_p.relief_couleur_l2d_3d), str(_p.identite_2d_3d), str(_p.relief_plancher_lineaire_3d), int(camera[0]), int(camera[1]), fichier,
 			JSON.stringify(ecran)])
 	# Le sabotage ne doit jamais survivre à sa prise : on repose l'état du jeu, lumière éteinte.
 	_poser_la_variante({"lumiere": false})

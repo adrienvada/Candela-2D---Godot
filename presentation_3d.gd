@@ -276,6 +276,16 @@ var relief_neutre := false
 ## luminance du capteur — une autre échelle ; or le capteur lit bas justement la rétrodiffusion faible des furtifs, et la 3D
 ## aurait pu effacer un corps que la 2D montre (revue d'ISO7 Beauté, arbitrage de la session cloud, 2026-09-23).
 var seuil_noir_2d_3d := 8.0 / 255.0
+## ISO12 v27 — LE RELIEF NE CACHE JAMAIS : r_min, le plancher du relief (voir `relief_plancher` dans l'include). Trois valeurs au
+## banc (0,35 / 0,5 / 0,65), le choix est celui de la session cloud sur les images ; 0,5 est son a priori.
+var relief_plancher_3d := 0.5
+## ISO12 v27 — la L2D porte la couleur de la lightmap (voir `relief_chroma`). Faux : l'ancienne L2D grise, pour le banc.
+var relief_couleur_l2d_3d := true
+## ISO12 v27 — LE PRINCIPE D'IDENTITÉ (voir `identite_2d` dans l'include du relief) : la 3D = la couleur du rendu 2D × R_final.
+## Faux : l'ancien chemin (albédo peint × L2D bridée), pour la bissection au banc.
+var identite_2d_3d := true
+## ISO12 v27 — le plancher du relief en LINÉAIRE (voir `relief_plancher_lineaire`). Faux : l'ancien, pour le banc.
+var relief_plancher_lineaire_3d := true
 var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
@@ -2032,3 +2042,7 @@ func _accorder_le_relief() -> void:
 		mat.set_shader_parameter("relief_pos_intensite", pos)
 		mat.set_shader_parameter("relief_portee_cone", portee)
 		mat.set_shader_parameter("relief_direction", direction)
+		mat.set_shader_parameter("relief_plancher", relief_plancher_3d)
+		mat.set_shader_parameter("relief_couleur_l2d", relief_couleur_l2d_3d)
+		mat.set_shader_parameter("identite_2d", identite_2d_3d)
+		mat.set_shader_parameter("relief_plancher_lineaire", relief_plancher_lineaire_3d)

@@ -6,7 +6,9 @@ Usage : python3 planche_v27.py DOSSIER_ANALYSE DOSSIER_DE_SORTIE [CADENCE_TXT] [
 - Pour chaque cadrage et chaque ancre, UNE BANDE : référence 2D | 3D sans ombres | 3D avec ombres (| sabotage), côte à côte,
   sans aucun redimensionnement pour la bande 1:1, au plus proche voisin pour la bande ×4. Juger « pixel par pixel » veut
   dire comparer le MÊME pixel des trois rendus, donc les poser l'un contre l'autre plutôt que dans trois fichiers.
-- Le tableau (a)/(b)/rouge/blancs de chaque prise et de chaque zone, en texte ET en HTML.
+- Le tableau (a)/(b)/rouge/blancs de chaque prise et de chaque zone, en texte ET en HTML — et les deux contrôles du seuil au
+  point noir : « moins » (visible en 2D, noir en 3D ; sous ombres, c'est la PREUVE INVERSE, cible < 1 %) et « plus » (noir en
+  2D, lumineux en 3D, cible < 0,01 %).
 - `CADENCE_TXT` : les six relevés, recopiés tels quels.
 - `DOSSIER_PHOTOGRAPHE…` : les séances `loupe-corps` du photographe (3D éteinte, sans ombres, avec ombres).
 """
@@ -54,6 +56,16 @@ def verdict_a(a):
     return a is not None and 0.85 <= a <= 1.15
 
 
+def cellules_seuil(p):
+    """« moins » et « plus », avec leur verdict ; vides pour une analyse d'avant le seuil."""
+    if "moins_part" not in p:
+        return "<td></td><td></td>"
+    km = "ok" if p["moins_part"] < 1.0 else "ko"
+    kp = "ok" if p["plus_part"] < 0.01 else "ko"
+    return "<td class='%s'>%.2f %% <small>(%d px)</small></td><td class='%s'>%.4f %% <small>(%d px)</small></td>" \
+        % (km, p["moins_part"], p["moins_px"], kp, p["plus_part"], p["plus_px"])
+
+
 lignes_txt = []
 sections = []
 for cadrage in sorted(donnees):
@@ -67,20 +79,21 @@ for cadrage in sorted(donnees):
         if p is None:
             continue
         ok = verdict_a(p["a"])
-        lignes_txt.append("%-44s %-12s image (a) %s %s · (b) %.2f %% · rouge %d · blancs %d (2D %d)"
+        lignes_txt.append("%-44s %-12s image (a) %s %s · (b) %.2f %% · rouge %d · blancs %d (2D %d) · moins %s %% · plus %s %%"
                           % (cadrage, v, fmt(p["a"]), "OK" if ok else "HORS", p["b_part"], p["rouge"], p["blancs"],
-                             d["blancs_2d"]))
-        rangs.append("<tr class='%s'><th>%s — image</th><td>%s</td><td>%.2f %% <small>(%d px)</small></td><td>%d</td><td>%d <small>(2D %d)</small></td></tr>"
+                             d["blancs_2d"], fmt(p.get("moins_part"), 2), fmt(p.get("plus_part"), 4)))
+        rangs.append("<tr class='%s'><th>%s — image</th><td>%s</td><td>%.2f %% <small>(%d px)</small></td><td>%d</td><td>%d <small>(2D %d)</small></td>%s</tr>"
                      % ("ok" if ok and p["b_part"] < 1.0 else "ko", TITRES[v], fmt(p["a"]), p["b_part"], p["b_population"],
-                        p["rouge"], p["blancs"], d["blancs_2d"]))
+                        p["rouge"], p["blancs"], d["blancs_2d"], cellules_seuil(p)))
         for nom_a in sorted(p.get("zones", {})):
             z = p["zones"][nom_a]
             okz = z["a"] is None or verdict_a(z["a"])
-            lignes_txt.append("%-44s %-12s   %-12s (a) %s · (b) %.2f %% · rouge %d"
-                              % ("", "", nom_a, fmt(z["a"]), z["b_part"], z["rouge"]))
-            rangs.append("<tr class='%s zone'><th>&nbsp;&nbsp;%s</th><td>%s</td><td>%.2f %% <small>(%d px)</small></td><td>%d</td><td></td></tr>"
+            lignes_txt.append("%-44s %-12s   %-12s (a) %s · (b) %.2f %% · rouge %d · moins %s px · plus %s px"
+                              % ("", "", nom_a, fmt(z["a"]), z["b_part"], z["rouge"], z.get("moins_px", "—"),
+                                 z.get("plus_px", "—")))
+            rangs.append("<tr class='%s zone'><th>&nbsp;&nbsp;%s</th><td>%s</td><td>%.2f %% <small>(%d px)</small></td><td>%d</td><td></td><td>%s px</td><td>%s px</td></tr>"
                          % ("ok" if okz and z["b_part"] < 1.0 else "ko", html.escape(nom_a), fmt(z["a"]), z["b_part"],
-                            z["b_population"], z["rouge"]))
+                            z["b_population"], z["rouge"], z.get("moins_px", "—"), z.get("plus_px", "—")))
         for nom_f, t in p.get("fusee", {}).items():
             lignes_txt.append("%-44s %-12s   %-12s teinte/saturation 3D %s · 2D %s" % ("", "", nom_f, t["3d"], t["2d"]))
     if "ombres_plus_claires_px" in d:
@@ -97,7 +110,7 @@ for cadrage in sorted(donnees):
     if "ombres_plus_claires_px" in d:
         ombres = "<p class='ombres'>Ombres : <b>%d</b> px plus CLAIRS avec ombres que sans (il en faut zéro), %d plus sombres.</p>" \
                  % (d["ombres_plus_claires_px"], d["ombres_plus_sombres_px"])
-    sections.append("<section><h2>%s</h2><p class='meta'>%s · 2D : %d px blancs</p><table><tr><th></th><th>(a) 3D/2D</th><th>(b) &lt; 1 %%</th><th>rouge</th><th>blancs</th></tr>%s</table>%s<div class='bandes'>%s</div></section>"
+    sections.append("<section><h2>%s</h2><p class='meta'>%s · 2D : %d px blancs</p><div class='tablewrap'><table><tr><th></th><th>(a) 3D/2D</th><th>(b) &lt; 1 %%</th><th>rouge</th><th>blancs</th><th>moins &lt; 1 %%<br><small>visible 2D, noir 3D</small></th><th>plus &lt; 0,01 %%<br><small>noir 2D, lumineux 3D</small></th></tr>%s</table></div>%s<div class='bandes'>%s</div></section>"
                     % (html.escape(cadrage), "écran scindé" if d["scinde"] else "vue unique", d["blancs_2d"],
                        "".join(rangs), ombres, "".join(images)))
 
@@ -125,13 +138,14 @@ h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 6px;font-family
 .tablewrap{overflow-x:auto}td,th{border-bottom:1px solid var(--ligne);padding:3px 10px;text-align:left}
 tr.ok td:nth-child(2){color:var(--ok)}tr.ko td:nth-child(2),tr.ko td:nth-child(3){color:var(--ko);font-weight:600}
 tr.zone th{font-weight:400;color:var(--doux)}
+td.ok{color:var(--ok)}td.ko{color:var(--ko);font-weight:600}
 .bandes{display:flex;flex-direction:column;gap:14px}figure{margin:0;overflow-x:auto}
 figure img{display:block;max-width:none;image-rendering:pixelated}figcaption{color:var(--doux);font-size:12px;margin-top:3px}
 pre{background:var(--carte);border:1px solid var(--ligne);padding:10px;overflow-x:auto;font-size:12px}
 .ombres{font-weight:500}
 </style>
 <h1>Planche v27 — le relief normalisé</h1>
-<p class='meta'>Chaque bande pose côte à côte, dans l'ordre : 2D de référence · 3D sans ombres · 3D avec ombres · (sabotage). Les bandes ×4 sont au plus proche voisin ; les bandes 1:1 ne sont pas redimensionnées (défiler horizontalement). (a) = rapport des luminances brutes 3D/2D sur les pixels visibles en 2D, cible 1,0 ± 0,15 ; (b) = part des pixels à L2D &lt; 0,15 où la 3D dépasse 0,25 (même échelle), cible &lt; 1 %%.</p>
+<p class='meta'>Chaque bande pose côte à côte, dans l'ordre : 2D de référence · 3D à R = 1 forcé · 3D sans ombres · 3D avec ombres · (sabotage). Les bandes ×4 sont au plus proche voisin ; les bandes 1:1 ne sont pas redimensionnées (défiler horizontalement). (a) = rapport des luminances brutes 3D/2D sur les pixels visibles en 2D, cible 1,0 ± 0,15 ; (b) = part des pixels à L2D &lt; 0,15 où la 3D dépasse 0,25 (même échelle), cible &lt; 1 %%.</p>
 %s
 %s
 %s

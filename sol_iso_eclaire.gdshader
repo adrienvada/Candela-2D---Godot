@@ -303,8 +303,29 @@ void fragment() {
 	if (masque_preuve == 1) {
 		ALBEDO = vec3(0.0);
 		EMISSION = vec3(step(0.0005, pate_luminance(brute)));
+	} else if (identite_2d) {
+		// LE PRINCIPE D'IDENTITÉ (voir l'include du relief) : la couleur de `sol_iso.gdshader`, ligne pour ligne. Aucune émission
+		// ajoutée : la LED, le halo de proximité et le pied de la lampe sont DANS la lightmap que la 2D affiche.
+		vec3 c2d = lightmap_pateuse_sol(px_lu, px, aa, deux);
+		c2d = pate_facteur(c2d, matiere * dalle);
+		// ISO7b — graduée : `temperature_seuil_haut` à 0 rend la température d'ISO7 (teinte chaude partout) ; la
+		// neutralité lue avant la pâte (`neutre_avant_pate`) garde sa teinte à une lumière colorée. Le ton du damier
+		// est un facteur gris : il ne change pas la neutralité, la lecture brute suffit.
+		if (temperature_seuil_haut <= 0.0) {
+			c2d = pate_temperature(c2d, temperature);
+		} else if (neutre_avant_pate > 0.5) {
+			vec3 brute2d = lire_lightmap(px_lu, deux);
+			c2d = pate_temperature_graduee_neutre(c2d, temperature, temperature_seuil_bas, temperature_seuil_haut,
+				pate_poids_neutre(brute2d));
+		} else {
+			c2d = pate_temperature_graduee(c2d, temperature, temperature_seuil_bas, temperature_seuil_haut);
+		}
+		c2d = pate_facteur(c2d, contact_des_corps(px));
+		ALBEDO = c2d;
+		EMISSION = vec3(0.0);
 	} else {
-		ALBEDO = c * albedo;
+		// La couleur de la L2D (`relief_chroma`) sur l'albédo seul : les émissions portent déjà la leur.
+		ALBEDO = c * albedo * relief_chroma(brute);
 		EMISSION = c * albedo * (lire_led(px_lu) + lire_halo_soi(px_lu, deux) + lire_pied_lampe(px_lu));
 	}
 
@@ -324,6 +345,9 @@ void fragment() {
 		}
 	} else if (relief_vide(relief_d)) {
 		EMISSION += ALBEDO;
+	} else {
+		// Le plancher du relief (`relief_plancher`) : r_min × albédo × L2D EN LINÉAIRE, nul là où la 2D est noire.
+		EMISSION = relief_emission_plancher(EMISSION, ALBEDO);
 	}
 }
 

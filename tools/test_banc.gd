@@ -31,6 +31,14 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 func _init() -> void:
 	call_deferred("_run")
 
+## Le corps d'une fonction de shader, de sa signature à l'accolade fermante de colonne 0 ; vide si la signature manque.
+static func _fonction_de_shader(texte: String, signature: String) -> String:
+	var debut := texte.find(signature)
+	if debut < 0:
+		return ""
+	var fin := texte.find("\n}\n", debut)
+	return texte.substr(debut, fin - debut) if fin > 0 else ""
+
 ## Répète `geste` à chaque image jusqu'à ce que `n` pas de physique soient passés :
 ## c'est le rythme du banc (il écrit après `process_frame`), et c'est au pas de
 ## physique que `player.gd` décide de la lampe.
@@ -238,6 +246,43 @@ func _run() -> void:
 	_check("le miroir mesure l'intensité aux poids de la pâte",
 		texte_pate.contains("vec3(0.2126, 0.7152, 0.0722)") and texte_miroir.contains("Vector3(0.2126, 0.7152, 0.0722)"),
 		"des poids différents décaleraient R de la couleur des lampes")
+	# Le plancher du relief et la couleur de la L2D (décisions (2) et (3), 2026-09-23) : posés à chaque image par la présentation,
+	# et lus par les TROIS matériaux éclairés — un shader qui oublierait l'émission du plancher garderait ses faces noires.
+	var plancher_lu := texte_pose.contains("set_shader_parameter(\"relief_plancher\", relief_plancher_3d)") \
+		and texte_pose.contains("set_shader_parameter(\"relief_couleur_l2d\", relief_couleur_l2d_3d)")
+	for nom_eclaire in ["sol_iso_eclaire", "mur_iso_eclaire", "corps_iso_eclaire"]:
+		var texte_eclaire := FileAccess.get_file_as_string("res://%s.gdshader" % nom_eclaire)
+		plancher_lu = plancher_lu and texte_eclaire.contains("EMISSION = relief_emission_plancher(EMISSION, ALBEDO);")
+		if nom_eclaire != "corps_iso_eclaire":
+			plancher_lu = plancher_lu and texte_eclaire.contains("relief_chroma(brute)")
+	_check("le plancher du relief et la couleur de la L2D sont posés, et chaque matériau éclairé les lit", plancher_lu,
+		"sans plancher, un adversaire que la 2D éclaire perd un quart de sa silhouette en 3D")
+	# LE PRINCIPE D'IDENTITÉ (session cloud, 2026-09-23, 02:17) : l'albédo 3D est la couleur du chemin 2D, par les MÊMES
+	# fonctions — recopiées dans les shaders éclairés plutôt qu'extraites dans un include, pour ne toucher ni aux shaders de la
+	# vue d'ISO11 ni à ceux des corps. Une copie qui dériverait d'un seul caractère ferait diverger la 3D de la 2D EN SILENCE :
+	# cette garde la compare octet pour octet, et vérifie que le fragment éclairé l'appelle bien.
+	var paires := [
+		["sol_iso", "sol_iso_eclaire", ["float ton_du_sol(vec2 p)", "vec3 lightmap_pateuse_sol(vec2 p, vec2 motif, float aa, bool deux)",
+			"float contact_des_corps(vec2 p)"], "vec3 c2d = lightmap_pateuse_sol(px_lu, px, aa, deux);"],
+		["mur_iso", "mur_iso_eclaire", ["vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa)"],
+			"identite_2d ? lightmap_pateuse_lue(brute, motif, aa)"],
+		["corps_iso", "corps_iso_eclaire", ["vec3 lumiere_du_capteur("], "c2d = min(pate(base2d, pate_luminance(base2d), style, motif, vec2(0.0), recue, aa), base2d);"],
+	]
+	var identiques := true
+	var ecarts: PackedStringArray = []
+	for paire in paires:
+		var texte_2d := FileAccess.get_file_as_string("res://%s.gdshader" % paire[0])
+		var texte_3d := FileAccess.get_file_as_string("res://%s.gdshader" % paire[1])
+		for signature in paire[2]:
+			var f2 := _fonction_de_shader(texte_2d, signature)
+			if f2 == "" or f2 != _fonction_de_shader(texte_3d, signature):
+				identiques = false
+				ecarts.append("%s / %s : %s" % [paire[0], paire[1], signature])
+		if not texte_3d.contains(paire[3]):
+			identiques = false
+			ecarts.append("%s n'appelle plus le chemin 2D" % paire[1])
+	_check("le principe d'identité : les fonctions du chemin 2D, recopiées dans les shaders éclairés, y sont identiques",
+		identiques, "; ".join(ecarts))
 	# ε par lampe (L4) : le miroir plafonne h/portée au plancher global, qui doit valoir le défaut de l'include ; et l'include
 	# doit le LIRE dans direction.w, sans quoi ε par lampe serait calculé puis ignoré sans erreur.
 	var texte_relief := FileAccess.get_file_as_string("res://iso_relief.gdshaderinc")

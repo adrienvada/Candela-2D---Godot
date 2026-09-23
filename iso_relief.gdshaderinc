@@ -42,6 +42,70 @@ uniform float relief_epsilon = 0.02;
 // « Ni plus » borné, PAR LAMPE : un shader spatial n'offre aucun point après la boucle des lampes, donc une face sous deux lampes
 // fortes peut dépasser ce plafond (le cadrage `recouvrement` du banc le chiffre). « Ni moins » reste libre dans les ombres.
 uniform float relief_max = 1.5;
+// ISO12 v27 — LE RELIEF NE CACHE JAMAIS (décision d'équité de la session cloud, 2026-09-23, 01:11). Sans plancher, une face
+// tournée à l'opposé de toute lampe a R = 0 — au banc, un quart de la silhouette d'un adversaire que la 2D éclaire en entier
+// sortait noir en 3D, et les ombres 3D, plus longues que les 2D, éteignaient du sol que la 2D montre. La règle demandée est
+// R_final = max(R ; r_min) partout où la L2D est non nulle ; mais un shader spatial n'a AUCUN point après la boucle des
+// lampes, donc aucun max sur leur somme. Ce qui s'écrit : R_final = r_min + (1 − r_min) · R — r_min en émission
+// (`ALBEDO × relief_plancher`, nul là où la L2D l'est) et chaque lampe pondérée de (1 − r_min). Mêmes bornes que le max
+// (r_min dans l'ombre, 1 sur le sol plat), un modelé un peu plus doux entre les deux. 0 : aucun plancher.
+uniform float relief_plancher = 0.0;
+// ISO12 v27 — LA 2D DONNE L'INTENSITÉ ET LA COULEUR (décision (3) de la session cloud, 01:11). La L2D était réduite à sa seule
+// luminance avant de toucher l'albédo, et R est achromatique : la couleur de la lumière 2D ne venait plus de nulle part — le
+// halo de la fusée sortait beige (saturation 0,18 contre 0,41 en 2D). `relief_chroma` rend la couleur de la L2D par canal,
+// à luminance 1 : la valeur bridée × chroma redonne la L2D elle-même en bride identité. Faux : l'ancienne L2D grise (banc).
+uniform bool relief_couleur_l2d = true;
+// ISO12 v27 — LE PRINCIPE D'IDENTITÉ (décision de la session cloud, 2026-09-23, 02:17) : la 3D = la couleur du rendu 2D × R_final.
+// L'ALBEDO du sol, des murs et des corps est EXACTEMENT la couleur que `sol_iso`, `mur_iso` et `corps_iso` rendent — pâte,
+// température, couleur de la lumière, capteur des corps —, calculée par les MÊMES fonctions, recopiées au caractère près dans
+// chaque shader éclairé (une garde de `tools/test_banc.gd` le vérifie : l'extraction dans un include aurait touché les shaders
+// de la vue d'ISO11 et ceux des corps, chantiers d'autres sessions). R_final, achromatique, ne fait que la multiplier.
+// ⚠️ Pourquoi : la base « albédo peint × L2D » d'avant était GRISE là où la 2D est chaude (la torche : 30° de teinte et 0,39 à
+// 0,48 de saturation en 2D, 0,01 à 0,04 en base), et le chemin 2D n'y passait pas. Contrôle : `relief_plancher` à 1, la vue 3D
+// égale la 2D. Faux : l'ancien chemin (albédo peint × L2D bridée), gardé pour la bissection au banc.
+uniform bool identite_2d = true;
+// ISO12 v27 — LE PLANCHER EN LINÉAIRE (session cloud, 02:33). Faux : l'ancien plancher, `ALBEDO × r_min` en émission brute, gardé
+// pour la mesure qui a confirmé l'erreur au banc.
+uniform bool relief_plancher_lineaire = true;
+
+// Le polynôme par lequel Godot 4.7 (Compatibility) LINÉARISE l'albédo et l'émission après `fragment()` — recopié de
+// `drivers/gles3/shaders/tonemap_inc.glsl`, `srgb_to_linear`. Ce n'est pas l'inverse exact de son `linear_to_srgb` (une
+// puissance 0,4167) : aux faibles niveaux, l'aller-retour ne se referme pas, d'où l'inverse ci-dessous plutôt que l'autre.
+vec3 godot_srgb_vers_lineaire(vec3 c) {
+	return c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878);
+}
+
+// L'émission dont Godot fera EXACTEMENT la valeur linéaire `y` : l'inverse du polynôme ci-dessus, par Newton (croissant et
+// convexe sur [0 ; 1], trois pas depuis l'approximation en puissance suffisent au 1/255 près).
+vec3 emission_pour_lineaire(vec3 y) {
+	vec3 x = max(vec3(1.055) * pow(max(y, vec3(0.0)), vec3(0.416666667)) - vec3(0.055), vec3(0.0));
+	for (int k = 0; k < 3; k++) {
+		vec3 f = godot_srgb_vers_lineaire(x) - y;
+		vec3 df = x * (x * 0.915918033 + 1.364342222) + 0.012522878;
+		x = max(x - f / max(df, vec3(1e-4)), vec3(0.0));
+	}
+	return x;
+}
+
+// Le plancher du relief ajouté à l'émission `emission` d'un fragment d'albédo `albedo` : en linéaire, r_min × lin(albédo),
+// sommé à l'émission existante EN LINÉAIRE aussi (une somme d'octets n'est pas une somme de lumières).
+vec3 relief_emission_plancher(vec3 emission, vec3 albedo) {
+	if (relief_plancher <= 0.0) {
+		return emission;
+	}
+	if (!relief_plancher_lineaire) {
+		return emission + albedo * relief_plancher;
+	}
+	return emission_pour_lineaire(godot_srgb_vers_lineaire(emission) + relief_plancher * godot_srgb_vers_lineaire(albedo));
+}
+
+vec3 relief_chroma(vec3 l2d) {
+	float l = pate_luminance(l2d);
+	if (!relief_couleur_l2d || l <= 1e-5) {
+		return vec3(1.0);
+	}
+	return l2d / l;
+}
 
 // LE CANAL, cette fois réel : écrit dans `fragment()`, lu dans `light()`. La documentation de Godot 4 le prévoit — un varying
 // donne à `light()` l'accès à ce que `fragment()` a calculé. Aucun encodage, donc aucune borne.
@@ -152,5 +216,6 @@ vec3 relief_contribution(vec3 lumiere, float attenuation, float n_dot_l, float d
 	if (relief_vide(d_total)) {
 		return vec3(0.0);
 	}
-	return vec3(min(lum_lampe * attenuation * max(n_dot_l, 0.0) / d_total, relief_max));
+	// × (1 − r_min) : le plancher est déjà en émission (voir `relief_plancher`).
+	return vec3(min(lum_lampe * attenuation * max(n_dot_l, 0.0) / d_total, relief_max) * (1.0 - relief_plancher));
 }
