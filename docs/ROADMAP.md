@@ -26523,10 +26523,26 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     **La cellule « vue unique, torche », relue au même banc** (07:31-07:39, sur 858a21c, miroir, calme vérifié avant et après
     chaque prise) ; médiane / 1 % bas toutes images / hors transitoire : **C 105/82/85, A 84/78/78, A 84/75/75, C 105/85/84.**
     A garde 90,5 % du 1 % bas hors transitoire de C (76,5 contre 84,5) : **elle tient, de justesse** ; par paire 92 et 89 %,
-    qui encadrent le seuil. En millisecondes, le 1 % le plus lent pèse 12,8 et 13,3 ms en A contre 11,8 et 11,9 en C. Les
-    images lentes de C tombent surtout dans les dix premières secondes (32 et 92), celles de A en fin de prise (A1 : 55 puis 176
-    entre 40 et 60 s ; A2 : 83 puis 106 entre 30 et 50 s), sans une seule au-dessus de 16 ms : une dérive dans la minute, pas
-    des hoquets. Le banc n'imprime pas de 99e centile ; la moyenne du 1 % le plus lent en tient lieu ici.
+    qui encadrent le seuil. En millisecondes, le 1 % le plus lent pèse 12,8 et 13,3 ms en A contre 11,8 et 11,9 en C ; la pire
+    image de A vaut 14,2 et 15,8 ms, celle de C 36,8 et 41,1 : A est plus LISSE que C, bien que son 1 % bas soit moins bon
+    (remarque d'ISO7 Gadgets — le 1 % bas moyenne les cinquante plus lentes, et un à-coup isolé à 41 ms ne pèse que pour un).
+    ⚠️ J'avais lu ici « les images lentes de A se massent en fin de prise : une dérive dans la minute » — **lecture RETIRÉE** : les
+    tranches comptaient les ex æquo du seuil, pas le 1 % (voir la correction du banc juste après). Le banc n'imprime pas de 99e
+    centile ; la moyenne du 1 % le plus lent en tient lieu ici (c'est la statistique même de la cible, session cloud).
+    **Deux corrections du banc après cette relecture** (ordre de la session cloud, 07:43 et 07:46) :
+    - **le verdict se lit hors des DIX premières secondes** (`TRANSITOIRE_VERDICT_SEC`), décidé avant les prochaines prises ;
+      le 1 % bas hors cinq secondes reste imprimé, pour comparer avec les relevés d'avant. Le motif donné alors (« le
+      transitoire de C déborde les cinq secondes : 92 images lentes dans les dix premières ») venait du compteur fautif
+      ci-dessous et a été RETIRÉ par la session cloud (07:52) ; la décision, prise avant les chiffres, reste ;
+    - ⚠️ **les « images lentes par tranche » ne comptaient pas ce que leur étiquette disait** (vu par ISO7 Gadgets) : j'avais
+      compté les images au-dessus du seuil du 1 %, ex æquo compris, et les durées d'image se répètent à l'identique — la
+      somme des tranches valait jusqu'à 5,5 fois le 1 % (A : 261 pour 47). « 55 puis 176 en fin de prise » décrivait donc un
+      autre ensemble que celui annoncé, et ne prouvait pas une dérive. Désormais : exactement les images du 1 %, par RANG, et
+      le nombre d'images au seuil ou au-delà imprimé à part. Et une table par tranche de 10 s (médiane, lentes du 1 %, appels
+      de dessin, objets) : une dérive de la machine baisse la médiane à comptes plats, une accumulation monte les comptes.
+    Le relevé `top` de la relecture est valable (deux passes, la seconde seule lue — `top -l 1` rend 0,0 % pour tout processus,
+    vu par ISO7 Gadgets sur ses propres relevés) : après CHAQUE prise, C comme A, l'indexation Spotlight
+    (`spotlightknowledged`) prenait 80 à 87 % d'un cœur.
 27. **L2, LE SOL ET LES MURS — le principe d'identité les porte ; ce qui manquait était une garde et une preuve** (ordre 181,
     2026-09-23). Le brief demandait des matériaux éclairés qui gardent les textures d'ISO7, l'encre, le lavis, le contact au
     pied, et un sang qui module l'albédo. Depuis la v27, le sol et les murs éclairés recopient la couleur du chemin 2D, étape

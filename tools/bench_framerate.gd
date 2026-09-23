@@ -80,6 +80,11 @@ const CIBLE_1_POURCENT_BAS := 60.0
 const WARMUP_SEC := 12.0
 ## Les premières secondes de la MESURE, rapportées à part (voir `WARMUP_SEC`).
 const TRANSITOIRE_SEC := 5.0
+## Et DIX, sur lesquelles le verdict se lit depuis le 2026-09-23 (session cloud, 07:43, décidé AVANT les relectures). Les cinq
+## restent imprimées, pour la comparaison avec les relevés d'avant. ⚠️ Le motif avancé alors — « le transitoire de C déborde les
+## cinq secondes : 92 images lentes dans les dix premières » — venait du compteur par tranche fautif (ex æquo comptés, voir
+## `_report`) et a été retiré ; la décision des dix secondes, prise avant les chiffres, reste.
+const TRANSITOIRE_VERDICT_SEC := 10.0
 const SHOTGUN_INDEX := 2
 ## Portée utile du pompe : assez près pour que chaque tir touche.
 const DUEL_DISTANCE := 150.0
@@ -158,6 +163,8 @@ var _peak_bullets := 0
 ## d'arène — ils disent où va le temps de rendu, indépendamment du focus).
 var _appels: Array[int] = []
 var _objets: Array[int] = []
+## ISO12 — l'instant de mesure de chaque relevé de rendu, pour la table par tranche de 10 s (`_rapporter_par_tranche`).
+var _rendu_t: Array[float] = []
 var _primitives: Array[int] = []
 ## Postes RETIRÉS de la charge. Les trois drapeaux se composent, ce qui donne les
 ## sept configurations utiles sans en inventer d'autres.
@@ -610,6 +617,7 @@ func _stress(duration: float, sampling: bool) -> void:
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
 			_peak_bullets = maxi(_peak_bullets, _main.bullet_container.get_child_count())
 			_relever_rendu()
+			_rendu_t.append(elapsed)
 			_relever_torches()
 
 	# Étape 28, lot F — on RECOMPTE après coup, et on refuse le chiffre si la nappe a
@@ -1129,6 +1137,62 @@ func _vue_iso_tenue() -> bool:
 	return true
 
 
+## ISO12 — PAR TRANCHE DE 10 s (session cloud, 2026-09-23, 07:46) : la médiane, les images du 1 % le plus lent (par rang), les
+## appels de dessin et les objets médians. Une dérive de la MACHINE fait baisser la médiane à comptes plats ; une ACCUMULATION
+## dans la scène fait monter les comptes. Sans cette table, une minute de banc ne sépare pas les deux.
+func _rapporter_par_tranche(rang_lent: Array, lents: int) -> void:
+	var dt_par: Dictionary = {}
+	var lents_par: Dictionary = {}
+	for i in _samples.size():
+		if i < _samples_t.size():
+			var k := int(_samples_t[i] / 10.0)
+			if not dt_par.has(k):
+				dt_par[k] = []
+			(dt_par[k] as Array).append(_samples[i])
+	for r in mini(lents, rang_lent.size()):
+		var i: int = rang_lent[r]
+		if i < _samples_t.size():
+			var k := int(_samples_t[i] / 10.0)
+			lents_par[k] = int(lents_par.get(k, 0)) + 1
+	var appels_par: Dictionary = {}
+	var objets_par: Dictionary = {}
+	for j in mini(_rendu_t.size(), mini(_appels.size(), _objets.size())):
+		var k := int(_rendu_t[j] / 10.0)
+		if not appels_par.has(k):
+			appels_par[k] = []
+			objets_par[k] = []
+		(appels_par[k] as Array).append(_appels[j])
+		(objets_par[k] as Array).append(_objets[j])
+	var cles := dt_par.keys()
+	cles.sort()
+	print("  Par tranche de 10 s (médiane fps | lentes du 1 % | appels | objets) :")
+	for k in cles:
+		var d: Array = dt_par[k]
+		d.sort()
+		var a: Array = appels_par.get(k, [0])
+		var o: Array = objets_par.get(k, [0])
+		a.sort()
+		o.sort()
+		print("    %3d-%3d s : %5.1f | %4d | %4d | %5d" % [k * 10, k * 10 + 10, 1.0 / float(d[d.size() / 2]),
+			int(lents_par.get(k, 0)), int(a[a.size() / 2]), int(o[o.size() / 2])])
+
+
+## [1 % bas, nombre d'images qui le font] sur les images mesurées APRÈS `depuis_s` secondes de mesure ; [0, 0] s'il n'y en a pas.
+func _un_pour_cent_bas_apres(depuis_s: float) -> Array:
+	var regime: Array = []
+	for i in _samples.size():
+		if i < _samples_t.size() and _samples_t[i] >= depuis_s:
+			regime.append(_samples[i])
+	if regime.is_empty():
+		return [0.0, 0]
+	regime.sort()
+	var lents := maxi(1, int(round(regime.size() * 0.01)))
+	var somme := 0.0
+	for i in range(regime.size() - lents, regime.size()):
+		somme += regime[i]
+	return [float(lents) / somme, lents]
+
+
 func _report() -> void:
 	if _samples.is_empty():
 		printerr("✗ aucun échantillon")
@@ -1151,20 +1215,10 @@ func _report() -> void:
 	for i in range(sorted.size() - lents, sorted.size()):
 		somme_lentes += sorted[i]
 	var low1 := float(lents) / somme_lentes
-	# ISO12 — le même 1 % bas, HORS des `TRANSITOIRE_SEC` premières secondes de la mesure (voir `WARMUP_SEC`).
-	var regime: Array = []
-	for i in _samples.size():
-		if i < _samples_t.size() and _samples_t[i] >= TRANSITOIRE_SEC:
-			regime.append(_samples[i])
-	regime.sort()
-	var low1_regime := low1
-	var lents_regime := 0
-	if not regime.is_empty():
-		lents_regime = maxi(1, int(round(regime.size() * 0.01)))
-		var somme_regime := 0.0
-		for i in range(regime.size() - lents_regime, regime.size()):
-			somme_regime += regime[i]
-		low1_regime = float(lents_regime) / somme_regime
+	# ISO12 — le même 1 % bas, HORS des premières secondes de la mesure (voir `WARMUP_SEC`) : cinq, et dix pour le verdict.
+	var hors_5 := _un_pour_cent_bas_apres(TRANSITOIRE_SEC)
+	var hors_10 := _un_pour_cent_bas_apres(TRANSITOIRE_VERDICT_SEC)
+	var low1_regime: float = hors_10[0] if hors_10[1] > 0 else low1
 
 	print("\n=== RÉSULTAT (%s) ===" % _libelle_charge())
 	print("  Images mesurées  : %d en %.1f s" % [sorted.size(), total])
@@ -1172,20 +1226,35 @@ func _report() -> void:
 	print("  FPS médian       : %.0f" % (1.0 / sorted[sorted.size() / 2]))
 	print("  FPS 1 %% bas      : %.0f  (moyenne des %d images les plus lentes, TOUTES images)"
 		% [low1, lents])
-	print("  FPS 1 %% bas hors transitoire : %.0f  (moyenne des %d plus lentes, hors des %.0f premières secondes) — lu par le verdict"
-		% [low1_regime, lents_regime, TRANSITOIRE_SEC])
+	print("  FPS 1 %% bas hors 5 s  : %.0f  (moyenne des %d plus lentes, hors des %.0f premières secondes)"
+		% [hors_5[0], hors_5[1], TRANSITOIRE_SEC])
+	print("  FPS 1 %% bas hors 10 s : %.0f  (moyenne des %d plus lentes, hors des %.0f premières secondes) — lu par le verdict"
+		% [hors_10[0], hors_10[1], TRANSITOIRE_VERDICT_SEC])
 	# Les images du 1 % le plus lent (toutes images), par tranche de 10 s : où tombe la queue.
+	# ⚠️ EXACTEMENT les `lents` images du 1 %, prises par leur RANG. La première version comptait les images « au-dessus du
+	# seuil », ex æquo compris — et les durées d'image se répètent à l'identique : la somme des tranches valait jusqu'à 5,5 fois
+	# le 1 % annoncé (A : 261 pour 47), et « 55 puis 176 en fin de prise » décrivait un autre ensemble que son étiquette (vu par
+	# ISO7 Gadgets, 2026-09-23). Le nombre d'images au seuil ou au-delà s'imprime à part.
 	var seuil_lent: float = sorted[sorted.size() - lents]
+	var rang_lent: Array = range(_samples.size())
+	rang_lent.sort_custom(func(x, y) -> bool: return _samples[x] > _samples[y])
 	var tranches: PackedInt32Array = []
 	tranches.resize(int(ceil(total / 10.0)) + 1)
-	for i in _samples.size():
-		if _samples[i] >= seuil_lent and i < _samples_t.size():
+	for k in mini(lents, rang_lent.size()):
+		var i: int = rang_lent[k]
+		if i < _samples_t.size():
 			tranches[mini(int(_samples_t[i] / 10.0), tranches.size() - 1)] += 1
+	var au_seuil := 0
+	for v in _samples:
+		if v >= seuil_lent:
+			au_seuil += 1
 	var par_tranche: PackedStringArray = []
 	for k in tranches.size():
 		if k * 10.0 < total:
 			par_tranche.append("%d-%d s : %d" % [k * 10, k * 10 + 10, tranches[k]])
-	print("  Images lentes (1 %% le plus lent) par tranche : %s" % ", ".join(par_tranche))
+	print("  Images lentes (les %d du 1 %% le plus lent) par tranche : %s  — seuil %.2f ms, %d images au seuil ou au-delà"
+		% [lents, ", ".join(par_tranche), seuil_lent * 1000.0, au_seuil])
+	_rapporter_par_tranche(rang_lent, lents)
 	print("  Image la plus lente : %.1f ms  (soit %.0f fps)"
 		% [sorted[sorted.size() - 1] * 1000.0, 1.0 / sorted[sorted.size() - 1]])
 	# ISO12 — les cinq pires, DATÉES : un hoquet unique au début (compilation) ne se lit pas comme un régime.
@@ -1224,8 +1293,9 @@ func _report() -> void:
 			print("    dont %d image(s) mesurées pendant le décompte de départ, où le jeu"
 				% _torches_decompte)
 			print("    éteint les torches lui-même — non comptées comme désaccord")
-	print("  Verdict %.0f fps   : %s  (sur le 1 %% bas hors transitoire)" % [CIBLE_1_POURCENT_BAS,
-		"TENU" if low1_regime >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas hors transitoire à %.0f)" % low1_regime])
+	print("  Verdict %.0f fps   : %s  (sur le 1 %% bas hors des %.0f premières secondes)" % [CIBLE_1_POURCENT_BAS,
+		"TENU" if low1_regime >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas hors 10 s à %.0f)" % low1_regime,
+		TRANSITOIRE_VERDICT_SEC])
 	# **Ce n'est pas le second plan qui casse le 1 % bas, c'est le CHANGEMENT.**
 	#
 	# Mesuré le 2026-08-25, cinq relevés à charge et fenêtre identiques : les
