@@ -26514,6 +26514,19 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     reproduisent au fps près ; même rendu que C (188 appels, 1 392 objets). Le 1 % bas de C varie encore de 61 à 72 d'une prise
     à l'autre : c'est C qui porte le bruit ici, pas A. **À la session cloud de trancher** : le GO réduit tient-il en vue unique
     avec une fusée allumée ?
+    **Tranché (session cloud, 07:33) : la cellule TOMBE, sans passe de plus.** Les rapports par paire encadrent 90 % (95 et 81 %),
+    mais tout l'écart vient du bruit de C, et A, qui se reproduit au fps près, reste sous la cible de 60 quoi que fasse C — de
+    peu : environ 0,6 ms par image au 1 % le plus lent (17,2 contre 16,7). **Le GO réduit n'a donc plus de périmètre où il
+    tient**, la vue unique comprenant la fusée. Rien ne change dans le jeu (lumière 3D éteinte par défaut, éteinte en écran
+    scindé) ; **les lots en mode A s'arrêtent où ils en sont — L1 et L2 commités, pas de L5** ; trouver le temps qui manque sans
+    changer l'image est confié à ISO7 Gadgets, puis la cellule se relira en miroir.
+    **La cellule « vue unique, torche », relue au même banc** (07:31-07:39, sur 858a21c, miroir, calme vérifié avant et après
+    chaque prise) ; médiane / 1 % bas toutes images / hors transitoire : **C 105/82/85, A 84/78/78, A 84/75/75, C 105/85/84.**
+    A garde 90,5 % du 1 % bas hors transitoire de C (76,5 contre 84,5) : **elle tient, de justesse** ; par paire 92 et 89 %,
+    qui encadrent le seuil. En millisecondes, le 1 % le plus lent pèse 12,8 et 13,3 ms en A contre 11,8 et 11,9 en C. Les
+    images lentes de C tombent surtout dans les dix premières secondes (32 et 92), celles de A en fin de prise (A1 : 55 puis 176
+    entre 40 et 60 s ; A2 : 83 puis 106 entre 30 et 50 s), sans une seule au-dessus de 16 ms : une dérive dans la minute, pas
+    des hoquets. Le banc n'imprime pas de 99e centile ; la moyenne du 1 % le plus lent en tient lieu ici.
 27. **L2, LE SOL ET LES MURS — le principe d'identité les porte ; ce qui manquait était une garde et une preuve** (ordre 181,
     2026-09-23). Le brief demandait des matériaux éclairés qui gardent les textures d'ISO7, l'encre, le lavis, le contact au
     pied, et un sang qui module l'albédo. Depuis la v27, le sol et les murs éclairés recopient la couleur du chemin 2D, étape
@@ -26607,6 +26620,27 @@ disque 2D, pour les sept sources ; aucun anneau à zéro en deçà du rayon 2D ;
 retrouvaille des chiffres ci-dessus (0,52 au bord des braises, 0,34 à celui de la mine, zéro au-delà de 11 px sous un tireur
 debout sans corps voxel). Si l'avant ne les montre pas, c'est l'instrument qu'il faut mettre en cause avant le rendu.
 
+
+#### Le shader de fumée fait moins de travail (2026-09-23, branche `iso7-fumee-economies`)
+
+Deux gestes dans `volume_iso.gdshader`, après la décomposition qui a montré que **78 % du coût
+d'une fusée vient de ce shader**, à dix lectures de texture par pixel et par couche : l'opacité se
+calcule AVANT la couleur et le pixel se jette avant les lectures (hors du disque inscrit, les
+21,5 % de coins du quad payaient dix lectures pour être jetés ensuite) ; et le point central de la
+lightmap, déjà lu par le lissage, n'est plus relu par la neutralité.
+
+**Adoptés sur preuve de CONSTRUCTION, pas sur un gain mesuré** (décision de la session cloud,
+06:44). Au banc, huit prises en passes miroir : l'écart mesuré (**0,2 à 0,4 ms**) reste SOUS
+l'écart entre deux passes d'une même variante (**0,4 à 0,8 ms**). La direction est bonne —
+l'ancien chemin est le plus lent dans **six comparaisons sur six, p = 0,031** — la magnitude n'est
+pas mesurable à ce banc. Ce qui les justifie n'est donc pas un gain : c'est qu'ils **suppriment du
+travail inutile** (mêmes pixels jetés, plus tôt ; même valeur passée au lieu d'être relue), donc
+qu'ils ne peuvent pas être plus lents, et que le shader en sort plus court. ⚠️ Les estimations
+écrites avant la mesure (0,57 et 0,27 ms) **ne sont pas confirmées et ne doivent être citées nulle
+part comme un résultat.**
+
+Mesure complète, données brutes et pistes fermées : `docs/iso/iso12/mesure_fusee.md` (branche
+`iso11-menus`).
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
