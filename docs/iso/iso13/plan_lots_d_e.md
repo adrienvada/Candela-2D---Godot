@@ -95,3 +95,33 @@ médiane, 77 au 1 % bas médian — qui est désormais la référence.
 
 Drapeaux éteints dans les deux cas, et chaque lot livre sa planche : la capture 1:1 à côté de
 l'illustration nommée, **avant et après**, avec le paragraphe « ce qui manque encore ».
+
+## État du lot E au 2026-09-24, 01:05 : écrit, lot vert, mesure en attente
+
+Le rayon et le cœur chaud sont dans `iso_volumes.gd`, derrière `--faisceau`, **éteint par défaut**.
+Le lot complet passe (435 s).
+
+Trois choix, et leurs raisons :
+
+- **Le masque du rayon est la texture de la lampe elle-même.** Le cône ne peut donc pas diverger de
+  la lumière : il suit l'arme, la portée et toute modification future sans qu'on revienne ici.
+- **Les grains de poussière ne sont pas des particules.** C'est le grain que `volume_iso.gdshader`
+  applique déjà à l'alpha, animé par `age` : la poussière scintille sans un seul objet de plus, donc
+  sans coût d'objet ni d'appel de dessin.
+- **Le drapeau se lit sur les arguments utilisateur**, dans `IsoVolumes._init()`, et non dans un banc :
+  il porte ainsi partout — jeu, banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
+
+⚠️ **Le point d'équité, qui était le vrai risque du lot.** Un rayon visible dans l'air pourrait
+révéler où vise l'adversaire là où le sol ne le montre pas. Il ne le peut pas : une couche vaut la
+lightmap sous elle. Le rayon d'un adversaire n'apparaît donc que là où sa lumière est **déjà** dans ma
+lightmap — là où je vois déjà le sol éclairé. Hors du cône et derrière un mur, la couche vaut zéro.
+La garantie vient du fichier, pas de la vigilance, et `tools/test_iso_gadgets.gd` vérifie désormais
+qu'une réécriture ne la casse pas en silence — notamment qu'on ne remplace pas le masque par une forme
+à soi, ce qui casserait l'équité **sans casser l'image**, donc sans que personne le voie.
+
+**La mesure attend deux choses**, dans cet ordre, sur ordre de la session cloud : la fusion de la garde
+de Beauté dans `iso12-lumiere3d` — sans elle le chemin par défaut paie un aller-retour `pow` du
+mannequin même éteint, et la référence ne serait plus le jeu d'avant —, puis **une seule fenêtre** pour
+les deux lots : référence, E seul, A seul, E et A ensemble, au pompe sous une fusée, en miroir. Règle
+posée d'avance : une variante tient si le rapport de ses médianes au défaut atteint 0,970 et si la
+médiane de ses 1 % bas dépasse 60.

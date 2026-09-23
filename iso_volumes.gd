@@ -54,6 +54,14 @@ const VOLUMES := {
 }
 const VOLUME_FUSEE := {"hauteur": 1.0, "couches": 4, "densite": 0.26}
 
+## ISO13, lot E — LE FAISCEAU DANS L'AIR. Léger par décision : l'illustration montre un rayon qu'on
+## devine, pas un brouillard. Trois couches basses ; le coût se mesure contre la série au pompe sous
+## une fusée (85 de médiane, 77 au 1 % bas), qui est la référence du chantier.
+const VOLUME_FAISCEAU := {"hauteur": 0.45, "couches": 3, "densite": 0.08}
+## Le cœur chaud à la lampe : sa taille en pixels de monde, et sa hauteur au-dessus du sol.
+const TAILLE_COEUR_LAMPE := 7.0
+const HAUTEUR_COEUR_LAMPE := 0.20
+
 ## La toile du voile, debout : la hauteur de ses piquets (`VoxelObjet.VOILE_PIQUET`).
 const HAUTEUR_TOILE := 0.15
 ## Les points incandescents de la nappe de braises.
@@ -64,6 +72,8 @@ const HAUTEUR_ECLAIR_MINE := 0.14
 
 ## Tout couper — la preuve que ces images ne sont que des images. Relu à chaque image.
 var images_actives := true
+## ISO13, lot E — éteint par défaut, comme tout drapeau d'un lot en cours.
+var faisceaux_actifs := false
 
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
@@ -72,10 +82,17 @@ var _quad := QuadMesh.new()
 var _masques := false
 
 
+## ISO13, lot E — le drapeau du faisceau. ⚠️ Il se passe APRÈS `--`, comme `--corps=` : la lecture se
+## fait sur les arguments UTILISATEUR. Lu ici plutôt que dans un banc pour qu'il porte partout — jeu,
+## banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
+const DRAPEAU_FAISCEAU := "--faisceau"
+
+
 func _init() -> void:
 	name = "Volumes"
 	_plan.size = Vector2.ONE
 	_quad.size = Vector2.ONE
+	faisceaux_actifs = OS.get_cmdline_user_args().has(DRAPEAU_FAISCEAU)
 
 
 func nombre_de_suivis() -> int:
@@ -124,6 +141,10 @@ func suivre(main: Node, vues: Array, style: int, presentation: Node) -> void:
 			if noeud.get_script() == OndeDeMort:
 				_suivre_onde(noeud as Node2D, vus)
 	_suivre_eclats(main, presentation, vus)
+	if faisceaux_actifs:
+		for j in [main.get("p1"), main.get("p2")]:
+			if j is Node2D and not (j as Node).is_queued_for_deletion():
+				_suivre_faisceau(j as Node2D, vus)
 	for id in _suivis.keys():
 		if not vus.has(id):
 			_retirer(id)
@@ -246,6 +267,43 @@ func _suivre_lentille(g: Node2D, vus: Dictionary) -> void:
 	var p := g.to_global(Vector2(10.0, 0.0))
 	_poser_halo(e, 0, Vector3(p.x, HAUTEUR_LENTILLE * TUILE, p.y), 5.0,
 		lentille.get("color") if lentille != null else Charte.HALOGENE, part, 1)
+
+
+## ISO13, lot E — LE RAYON DE LA TORCHE, VISIBLE DANS L'AIR, et le cœur chaud à la lampe.
+##
+## Rien n'est inventé ici : ce sont les couches ordinaires d'un volume, et **le masque est la texture
+## même de la torche**. Le rayon épouse donc le cône par construction — il suit l'arme, la portée et
+## toute modification future de la lampe sans qu'on ait à revenir ici. Les grains de poussière ne sont
+## pas des particules : c'est le grain que le shader applique déjà à l'alpha, animé par `age`, donc
+## sans un seul objet de plus.
+##
+## ⚠️ **L'équité se tient toute seule, et c'est la raison de faire ça ici plutôt qu'avec une lumière.**
+## Une couche vaut la lightmap sous elle. Le rayon d'un adversaire ne peut donc apparaître que là où sa
+## lumière est DÉJÀ dans ma lightmap, c'est-à-dire là où je vois déjà le sol éclairé : il ne révèle
+## rien que le sol ne révèle. Hors du cône, et derrière un mur, la couche vaut zéro — le noir absolu
+## est une conséquence, pas une précaution.
+func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
+	var lampe := j.get_node_or_null(^"Flashlight") as PointLight2D
+	if lampe == null or not lampe.enabled or lampe.energy <= 0.0 or lampe.texture == null:
+		return
+	# La portée du cône, en pixels de monde : la texture, à son échelle, centrée sur la lampe.
+	var rayon := 0.5 * float(lampe.texture.get_width()) * lampe.texture_scale
+	if rayon <= 1.0:
+		return
+	var centre := lampe.global_position
+	var part := clampf(lampe.energy / 2.5, 0.0, 1.0)
+
+	var e := _entree(j, "faisceau", vus, 0)
+	_couches(e, int(VOLUME_FAISCEAU["couches"]))
+	_poser_couches(e, centre, rayon, float(VOLUME_FAISCEAU["hauteur"]),
+		float(VOLUME_FAISCEAU["densite"]) * part, lampe.texture, lampe.global_rotation,
+		float(j.get_instance_id() % 97), float(Time.get_ticks_msec()) * 0.001)
+
+	# Le cœur chaud : une lueur à la lampe même, comme la lentille de la torche fantôme.
+	var c := _entree(j, "coeur_lampe", vus, 1)
+	_halos(c, 1)
+	_poser_halo(c, 0, Vector3(centre.x, HAUTEUR_COEUR_LAMPE * TUILE, centre.y),
+		TAILLE_COEUR_LAMPE, lampe.color, part, 1)
 
 
 func _suivre_eclair(g: Node2D, vus: Dictionary) -> void:
