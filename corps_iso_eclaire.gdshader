@@ -306,12 +306,18 @@ void fragment() {
 	// SPECULAR ne passait pas, et la v27 affichait la v26 sans que rien ne le dise).
 	// `pixels_par_unite` : le banc des corps garde ses corps en TUILES, les lampes sont en pixels (revue, 8c). En jeu, 1.
 	relief_d = relief_denominateur(monde * pixels_par_unite);
+	relief_dom = relief_dominante ? relief_index_dominant(monde * pixels_par_unite) : -1.0;
 	// La garde : aucune lampe connue ici ⇒ R = 1, LA 2D SEULE — jamais le Lambert brut de la v26, jamais du noir.
 	if (relief_diagnostic != 0) {
 		// Instrument de banc : albédo BLANC et aucune autre émission — la prise montre le terme seul, en absolu (mode 1 : le
 		// numérateur du moteur, par `light()` ; mode 2 : le dénominateur, en émission). Jamais en jeu.
 		ALBEDO = vec3(1.0);
 		EMISSION = relief_diagnostic == 2 ? vec3(relief_d * relief_diagnostic_gain) : vec3(0.0);
+	} else if (relief_dominante) {
+		// La lampe dominante : la base n'émet la 2D que là où AUCUNE lampe ne porte ; ailleurs, la passe de la dominante écrit.
+		if (relief_dom < 0.0) {
+			EMISSION += ALBEDO;
+		}
 	} else if (relief_vide(relief_d)) {
 		EMISSION += ALBEDO;
 	} else {
@@ -325,5 +331,10 @@ void fragment() {
 // que le modelé : un sol plat lit 1 quel que soit le nombre de lampes, une face de côté sous une lampe haute lit moins que le
 // sol (c'est Lambert, le modelé voulu), une face sous une lampe rasante sature au plafond.
 void light() {
-	DIFFUSE_LIGHT += relief_contribution(LIGHT_COLOR, ATTENUATION, dot(NORMAL, LIGHT), relief_d);
+	if (relief_dominante) {
+		vec3 l_monde = normalize((INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).xyz);
+		DIFFUSE_LIGHT += relief_contribution_dominante(LIGHT_COLOR, l_monde, monde * pixels_par_unite, ATTENUATION, dot(NORMAL, LIGHT), relief_dom);
+	} else {
+		DIFFUSE_LIGHT += relief_contribution(LIGHT_COLOR, ATTENUATION, dot(NORMAL, LIGHT), relief_d);
+	}
 }

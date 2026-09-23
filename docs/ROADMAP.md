@@ -9085,6 +9085,16 @@ mélangeait deux espaces (point 14 d'ISO12), et chaque passe additive d'une lamp
 `srgb(lin(C) · somme des lumières)` — et un « R lu » sur l'octet sous lampe n'est pas R. Les deux approximations du moteur ne
 s'inversent pas aux faibles niveaux : pour poser une valeur LINÉAIRE par l'émission, inverser le polynôme, pas l'autre.
 
+### Godot passe au shader l'INVERSE de `spot_angle_attenuation` : recopier la propriété d'une lampe n'est pas recopier le moteur (2026-09-23)
+
+ISO12 v27. Le dénominateur du relief recopiait « mot pour mot » la formule du cône de `scene.glsl` — `1 − rim^exposant` — avec
+pour exposant la propriété `spot_angle_attenuation` de la lampe (2). Or `drivers/gles3/rasterizer_scene_gles3.cpp` remplit
+`inv_spot_attenuation = 1 / spot_angle_attenuation` : l'exposant du shader vaut 0,5. La formule était juste, son ENTRÉE non —
+la troisième fois de la nuit qu'un calcul fidèle repose sur une entrée qui n'est pas celle du moteur (après les hauteurs des
+braises et l'octet d'une surface éclairée). Sous la torche, le sol plat sortait 6 à 11 % plus sombre que la 2D ; la fusée,
+omni sans cône, n'était pas touchée, et c'est ce contraste qui a désigné le cône. **Règle : une valeur passée au shader se lit
+là où le moteur REMPLIT sa structure de lampe (`light_data.*`), jamais dans l'inspecteur de la lampe.**
+
 ### Le bandeau de LED RESPIRE : une prise de banc qui ne le fige pas compare deux instants au hasard (2026-09-23)
 
 ISO12, contrôles du seuil au point noir. La LED des murs (`mur_led.gd`) monte et descend lentement, et sa lueur éclaire le sol en
@@ -26348,6 +26358,41 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     (https://claude.ai/artifact/Cirvpqf7EpEm9ixrTtZA4i), montées par la session cloud en page de comparaison pour lui. Banc :
     `--v27-cadrage=adrien --taille=1920x1080` ; le croisement à angle droit « 1b » ne trouvait pas sa place au premier passage,
     sa recherche est élargie.
+17. **LE SPOT NORMALISAIT FAUX : GODOT INVERSE L'EXPOSANT DU CÔNE — corrigé** (mesuré le 2026-09-23 à 04:07, masque de sol).
+    Sous la torche, à r_min 0,5, le sol plat sortait 6 à 11 % plus sombre que la 2D (A/C médian 0,89 à 0,94) quand la fusée le
+    rendait exact. R valait ~0,3 à 60 px de la lampe, ~0,8 à 120 px, 1 seulement près de l'axe au loin, et ~0,3 sur les côtés :
+    une erreur de CÔNE, identique avec et sans rétrodiffusion (soupçonnée d'abord, écartée par la mesure). Godot 4.7
+    (`drivers/gles3/rasterizer_scene_gles3.cpp`) passe au shader `inv_spot_attenuation = 1 / spot_angle_attenuation` : l'exposant
+    est l'INVERSE de la propriété de la lampe, 0,5 pour notre 2. Le miroir décrit désormais `1 / spot_angle_attenuation`. Après :
+    torche stricte, sol égal à la 2D à un niveau près sur 99,3 à 99,4 %, A/C médian 1,00 à tous les niveaux ; axe 1,00 à 1,01 de
+    30 à 270 px. ⚠️ **Mes « 0,95 à 1,00 » de validation du 22/09 (point 3) étaient lus sur l'OCTET d'une surface éclairée** :
+    ils valaient 0,88 à 1,00 en linéaire, et l'erreur de cône y était déjà, masquée par l'encodage.
+18. **LE SEUIL AU POINT NOIR — retiré** (défaut 0, drapeau de banc gardé), comme la session cloud l'avait réglé d'avance : à
+    r_min 0,5 et seuil 0, « plus » sous 0,0027 % partout et l'identité tenue. Sous l'identité, le résidu qu'il bouchait (la
+    division par la peinture) n'existe plus.
+19. **LA LAMPE DOMINANTE — prototype de banc, éteint par défaut, retenu par la session cloud sous réserve de la cadence.** En
+    chaque point, UNE seule passe écrit : celle de la lampe qui y domine (intensité × atténuation × cône, ombres exclues), qui
+    rend r_min + (1 − r_min)·ρ·s en linéaire (ρ = N·L / max(haut·L, ε), s = ATTENUATION ÷ atténuation × cône recalculés, borné) ;
+    la passe de base n'émet la 2D que là où aucune lampe ne porte. Chaque passe reconnaît sa lampe par la direction de `LIGHT`
+    (ramenée au monde) puis, à égalité, par l'intensité que porte `LIGHT_COLOR`. **Mesuré** (quatorze cadrages, LED éteinte) :
+    (a) avec ombres = sans ombres (0,986 / 0,988 au cumul) ; pixels éclaircis par les ombres 7 à 3 079 (30 000 à 118 000 sans
+    elle) ; « moins » 0 à 0,07 % ; aucun pixel noir aux cadrages à huit et neuf lampes. Au-delà de huit lampes, elle éclaircissait
+    encore (15 000 à 70 000 px) — d'où le point 20. Captures D publiées pour Adrien. ⚠️ Dans Compatibility, `fragment()` tourne À
+    CHAQUE PASSE : la boucle de dominance s'exécute 1 + N fois par pixel ; aucune passe additive ne peut lire la passe de base
+    (vérifié dans le source par la session cloud) — la dominance ne peut donc pas être calculée une seule fois sans une carte.
+20. **AU PLUS HUIT LAMPES MIROIR ALLUMÉES** (décision de la session cloud, 03:50) : les huit plus intenses, départagées par
+    ordre d'apparition ; les autres éteintes en 3D, leur lumière restant dans la couleur 2D. Le dénominateur (huit lampes) et les
+    lampes que le moteur apparie (`max_lights_per_object`, 8) redeviennent le même jeu. Garde dans `tools/test_banc.gd`.
+21. **LA CADENCE, premier relevé (indicatif, Mac chaud, 03:48-03:57)** — fps médian / 1 % bas : vue unique torche A 86/73,
+    D 65/60 ; vue unique fusée A 65/54, D 38/31 ; écran scindé torche A 75/19, D 53/44 ; écran scindé fusée A 46/37, D 33/26.
+    **La chauffe PAR COUVERTURE** (`--chauffe-couverture` : fusée posée, torches coupées puis rallumées, premiers allumages datés)
+    prouve que les hoquets de 143 à 150 ms sont des COMPILATIONS au premier allumage d'une sorte de lampe : ils tombent tous
+    dans la chauffe, et les pires images de mesure tombent à 16-40 ms (135 à 143 ms au 22/09). **Sauf en écran scindé** : des
+    hoquets de 132 à 138 ms à 28 et 46 s, loin de tout premier allumage — chaque vue a SES matériaux, et la chauffe ne couvre
+    que ceux de la vue de J1. **Pas de GO sur ce tableau** : la session cloud veut sa référence, C (sans lumière 3D), et le prix
+    de chaque poste — C, A, B, D et D-léger (ombres sur les seuls spots) alternés dans les quatre scènes. Sa règle, posée avant
+    la mesure : la variante retenue garde au moins 90 % du 1 % bas de C dans chaque scène, au banc chaud ; la cible absolue
+    (≥ 60) reste celle qu'Adrien certifiera Mac froid, et d'ici là la lumière 3D reste éteinte par défaut.
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).

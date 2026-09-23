@@ -283,6 +283,11 @@ func _run() -> void:
 			ecarts.append("%s n'appelle plus le chemin 2D" % paire[1])
 	_check("le principe d'identité : les fonctions du chemin 2D, recopiées dans les shaders éclairés, y sont identiques",
 		identiques, "; ".join(ecarts))
+	# Au plus huit lampes miroir (session cloud, 03:50) : le plafond existe, vaut huit, et `suivre` l'applique À CHAQUE IMAGE.
+	# Sans lui, neuf lampes et plus faisaient du dénominateur et des lampes appariées par le moteur deux jeux différents.
+	_check("le miroir plafonne à huit lampes allumées, à chaque image",
+		texte_miroir.contains("const LAMPES_MAX := 8") and texte_miroir.contains("	_plafonner(LAMPES_MAX)"),
+		"au-delà de huit lampes, le sol s'éclaircissait de 8 % sans ombres")
 	# ε par lampe (L4) : le miroir plafonne h/portée au plancher global, qui doit valoir le défaut de l'include ; et l'include
 	# doit le LIRE dans direction.w, sans quoi ε par lampe serait calculé puis ignoré sans erreur.
 	var texte_relief := FileAccess.get_file_as_string("res://iso_relief.gdshaderinc")

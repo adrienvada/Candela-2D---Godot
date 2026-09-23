@@ -146,6 +146,8 @@ var _sans_couleur_l2d := false
 var _sans_identite := false
 ## `--plancher-emission` : l'ancien plancher (`ALBEDO × r_min` en émission brute), qui mélangeait deux espaces.
 var _plancher_emission := false
+## `--lampe-dominante` : le prototype de la lampe dominante (`Presentation3D.relief_dominante_3d`).
+var _lampe_dominante := false
 ## `--biais-normal=2.0` : le `shadow_normal_bias` des lampes 3D, qui suit la taille du texel d'ombre (essai de banc).
 var _biais_normal := -1.0
 ## `--torche-decroissance=0` : `spot_attenuation` des spots, pour isoler au banc le terme de distance du terme de cône.
@@ -215,6 +217,8 @@ func _ready() -> void:
 			_sans_identite = true
 		elif a == "--plancher-emission":
 			_plancher_emission = true
+		elif a == "--lampe-dominante":
+			_lampe_dominante = true
 		elif a.begins_with("--biais-ombre="):
 			_biais_ombre = a.trim_prefix("--biais-ombre=").to_float()
 		elif a.begins_with("--diag-gain="):
@@ -405,6 +409,8 @@ func _poser_la_variante(v: Dictionary) -> void:
 		_p.identite_2d_3d = false
 	if _plancher_emission:
 		_p.relief_plancher_lineaire_3d = false
+	if _lampe_dominante:
+		_p.relief_dominante_3d = true
 	_p.variante_pate_3d = int(v.get("pate", 0))
 	_p.masque_preuve = int(v.get("masque", 0))
 	_p.ombres_3d = bool(v.get("ombres", true))
@@ -1083,9 +1089,11 @@ func _le_croisement_adrien(carte: String, p1: Vector2, dir: Vector2) -> void:
 		var cible: Vector2 = p1 + dir * avance * t
 		if not _libre(cible, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1, cible):
 			continue
+		# Au deuxième passage, l'angle droit strict ne trouvait toujours rien (le départ du Cloître est serré entre deux
+		# murs) : J2 peut venir de 60 à 120° de l'axe de J1, les cônes se coupent encore franchement.
 		for ecart in [3.0, 2.5, 3.5, 2.0, 4.0]:
-			for signe in [1.0, -1.0]:
-				var p2: Vector2 = cible + dir.orthogonal() * ecart * t * signe
+			for angle in [90.0, -90.0, 60.0, -60.0, 120.0, -120.0]:
+				var p2: Vector2 = cible + dir.rotated(deg_to_rad(angle)) * ecart * t
 				if _libre(p2, MursBas.RAYON_ENCOMBREMENT) and not _mur_entre(p2, cible):
 					_placer(p1, dir, true, p2, (cible - p2).normalized(), true)
 					await _serie_v27("adrien_1b_croisement", {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS],
@@ -1239,9 +1247,10 @@ func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {})
 					str(lum3.global_position)])
 		# La caméra DE CETTE PRISE : l'analyse refuse de comparer deux prises dont J1 n'est pas au même pixel.
 		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
-		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s plancher=%.2f couleur_l2d=%s identite=%s plancher_lineaire=%s camera=%d,%d fichier=%s ancres=%s"
+		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s plancher=%.2f couleur_l2d=%s identite=%s plancher_lineaire=%s dominante=%s camera=%d,%d fichier=%s ancres=%s"
 			% [nom, e[0], lumieres, _relief_max_dit(), str(_energies_neutres), float(_p.relief_plancher_3d),
-			str(_p.relief_couleur_l2d_3d), str(_p.identite_2d_3d), str(_p.relief_plancher_lineaire_3d), int(camera[0]), int(camera[1]), fichier,
+			str(_p.relief_couleur_l2d_3d), str(_p.identite_2d_3d), str(_p.relief_plancher_lineaire_3d),
+			str(_p.relief_dominante_3d), int(camera[0]), int(camera[1]), fichier,
 			JSON.stringify(ecran)])
 	# Le sabotage ne doit jamais survivre à sa prise : on repose l'état du jeu, lumière éteinte.
 	_poser_la_variante({"lumiere": false})

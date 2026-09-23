@@ -94,6 +94,20 @@ var _samples: Array[float] = []
 ## de l'échauffement, qui dit si un hoquet de compilation y est tombé plutôt que dans la mesure.
 var _samples_t: Array[float] = []
 var _pire_echauffement := 0.0
+## ISO12 — l'instant absolu (`Time.get_ticks_usec`) de chaque image mesurée, et celui du début de la mesure : la pire image
+## se compare aux premiers allumages du miroir de lumière (`LumieresIso.premiers_allumages`), sur la même horloge.
+var _samples_us: Array[int] = []
+var _debut_mesure_us := 0
+## ISO12 — `--chauffe-couverture` : la chauffe allume une fois CHAQUE sorte de lampe à l'écran avant le chronomètre, au lieu
+## de seulement durer (complément de la session cloud, 02:05 : trois secondes de torche ne compilent ni la fusée ni ce que la
+## torche éteinte laisse). Sans ce drapeau, la chauffe reste par durée — c'est la comparaison demandée.
+var _chauffe_couverture := false
+## ISO12 — `--lampe-dominante` : le prototype de la lampe dominante (`Presentation3D.relief_dominante_3d`), à mesurer contre la
+## lumière 3D sans ombres (A) en relevés alternés (session cloud, 03:13).
+var _lampe_dominante := false
+## ISO12 — `--ombres-spots-seules` (« D-léger ») : les ombres sur les seuls spots, les omnis (fusée, flash, braises) sans ombre,
+## donc sans cubemap (`Presentation3D.ombres_omni_3d`). Pour chiffrer le prix des ombres omni dans le tableau C/A/B/D.
+var _ombres_spots_seules := false
 var _seconds := 15.0
 ## ISO12 — la lumière 3D bridée pendant le relevé, et sa variante.
 var _lumiere3d := false
@@ -220,6 +234,9 @@ func _ready() -> void:
 	# ISO12 — la lumière 3D bridée, éteinte par défaut comme dans le jeu. Sans ces drapeaux, ce banc mesure la vue iso d'ISO11.
 	_lumiere3d = args.has("--lumiere3d")
 	_lumiere3d_sans_ombres = args.has("--sans-ombres")
+	_chauffe_couverture = args.has("--chauffe-couverture")
+	_lampe_dominante = args.has("--lampe-dominante")
+	_ombres_spots_seules = args.has("--ombres-spots-seules")
 	_lumiere3d_echelle = float(_value(args, "--echelle", "1"))
 	if (_lumiere3d_sans_ombres or args.has("--echelle")) and not _lumiere3d:
 		printerr("✗ --sans-ombres et --echelle se prennent avec --lumiere3d")
@@ -311,15 +328,21 @@ func _ready() -> void:
 		iso3d.set("bride_mode_3d", 1)
 		iso3d.set("bride_echelle_3d", _lumiere3d_echelle)
 		iso3d.set("ombres_3d", not _lumiere3d_sans_ombres)
+		iso3d.set("relief_dominante_3d", _lampe_dominante)
+		if _ombres_spots_seules:
+			iso3d.set("ombres_omni_3d", false)
 		iso3d.poser_lumiere_3d(true)
 		await get_tree().process_frame
-		print("Lumière 3D    : allumée, bride identité échelle %.2f, ombres %s"
-			% [_lumiere3d_echelle, "non" if _lumiere3d_sans_ombres else "oui"])
+		print("Lumière 3D    : allumée, bride identité échelle %.2f, ombres %s, lampe dominante %s"
+			% [_lumiere3d_echelle, "non" if _lumiere3d_sans_ombres else ("spots seuls" if _ombres_spots_seules else "oui"),
+			"oui" if _lampe_dominante else "non"])
 		# ISO12 — trois secondes rendues AVANT le chronomètre, la lumière 3D allumée : ses shaders et leurs variantes compilent
 		# ici, pas dans la mesure. La pire image de ce préchauffage est imprimée : si le hoquet y tombe, c'était une compilation.
 		_pire_echauffement = 0.0
 		await _stress(3.0, false)
 		print("Préchauffage lumière 3D : 3 s, pire image %.1f ms" % (_pire_echauffement * 1000.0))
+		if _chauffe_couverture:
+			await _chauffer_par_couverture()
 	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
 	_pire_echauffement = 0.0
@@ -327,6 +350,7 @@ func _ready() -> void:
 	print("  pire image de l'échauffement : %.1f ms" % (_pire_echauffement * 1000.0))
 
 	print("Mesure sur %.0f s…" % _seconds)
+	_debut_mesure_us = Time.get_ticks_usec()
 	await _stress(_seconds, true)
 	_report()
 	_sortir(0)
@@ -511,6 +535,11 @@ func _stress(duration: float, sampling: bool) -> void:
 			if dt > 0.0:
 				_samples.append(dt)
 				_samples_t.append(elapsed)
+				_samples_us.append(Time.get_ticks_usec())
+				# ISO12 — un HOQUET (> 50 ms) se date et s'accompagne de l'état des lampes : en écran scindé, des hoquets de
+				# 132 à 138 ms tombaient à 28 et 46 s de mesure, loin de tout premier allumage (chaque vue a ses matériaux).
+				if dt > 0.05:
+					print("  hoquet %.1f ms à %.2f s — lampes : %s" % [dt * 1000.0, elapsed, _etat_des_lampes()])
 			if not get_window().has_focus():
 				_images_hors_focus += 1
 			# Relevés au vol : lus après la boucle ils vaudraient zéro, et le
@@ -541,6 +570,94 @@ func _stress(duration: float, sampling: bool) -> void:
 			printerr("✗ la nappe a fondu pendant la mesure (%d traces sur %d) : chiffre refusé"
 				% [restantes, GadgetPoudre.MARQUES_MAX])
 			_sortir(1)
+
+
+## ISO12 — LA CHAUFFE PAR COUVERTURE : chaque sorte de lampe du miroir allumée une fois, À L'ÉCRAN (un objet hors champ ne
+## compile rien), sur le sol, les murs et les deux corps, avant le chronomètre. Quatre phases d'une demi-seconde à une seconde,
+## chacune avec sa pire image : si l'une d'elles porte le hoquet, c'est la sorte de lampe qu'elle ajoute qui compilait.
+func _chauffer_par_couverture() -> void:
+	# 1. Une fusée posée entre les deux joueurs : omni à ombre, sur le sol, un mur proche et les deux corps.
+	var chauffe: Fusee = null
+	if not (_fusee and is_instance_valid(_fusee_banc)):
+		chauffe = Fusee.new()
+		chauffe.is_replay = true
+		chauffe.name = "FuseeChauffe"
+		chauffe.depart = _main.p1.global_position + Vector2(DUEL_DISTANCE * 0.5, 24.0)
+		chauffe.graine = 4242
+		chauffe.joueurs = [_main.p1, _main.p2]
+		_main.bullet_container.add_child(chauffe)
+		chauffe.appliquer_age(FuseeModele.FUMEE_MONTEE + 1.0)
+	_pire_echauffement = 0.0
+	await _stress(1.0, false)
+	print("Chauffe par couverture — fusée posée : pire image %.1f ms" % (_pire_echauffement * 1000.0))
+	if chauffe != null:
+		chauffe.queue_free()
+	# 2. Torches coupées : plus de spot ni de rétrodiffusion, les tirs seuls (omni sans ombre) — la variante de base « sans spot ».
+	var torches := _sans_torches
+	_sans_torches = true
+	_pire_echauffement = 0.0
+	await _stress(0.5, false)
+	print("Chauffe par couverture — torches coupées, tirs seuls : pire image %.1f ms" % (_pire_echauffement * 1000.0))
+	# 3. Torches rallumées : le retour du spot à ombre et de la rétrodiffusion.
+	_sans_torches = torches
+	_pire_echauffement = 0.0
+	await _stress(0.5, false)
+	print("Chauffe par couverture — torches rallumées : pire image %.1f ms" % (_pire_echauffement * 1000.0))
+	var miroir := _miroir_de_lumiere()
+	if miroir != null:
+		print("Chauffe par couverture — sortes déjà allumées : %s" % ", ".join(PackedStringArray((miroir.get("premiers_allumages") as Dictionary).keys())))
+
+
+## L'état des lampes 3D allumées, pour dater un hoquet : combien d'omnis et de spots, et combien portent une ombre.
+func _etat_des_lampes() -> String:
+	var miroir := _miroir_de_lumiere()
+	if miroir == null:
+		return "aucune lumière 3D"
+	var omni := 0
+	var spot := 0
+	var ombrees := 0
+	for l in miroir.find_children("*", "Light3D", true, false):
+		var lampe := l as Light3D
+		if not lampe.visible:
+			continue
+		if lampe is SpotLight3D:
+			spot += 1
+		else:
+			omni += 1
+		if lampe.shadow_enabled:
+			ombrees += 1
+	return "%d omni, %d spot, %d à ombre" % [omni, spot, ombrees]
+
+
+## Le miroir de lumière 3D (`LumieresIso`), ou null hors lumière 3D.
+func _miroir_de_lumiere() -> Node:
+	var iso := Presentation3D.instance()
+	return iso.get("_lumieres") as Node if iso != null else null
+
+
+## ISO12 — DATER LES PIRES contre les premiers allumages : pour chacune des cinq pires images, la sorte de lampe allumée pour la
+## première fois dans les 100 ms qui la précèdent, s'il y en a une. Et chaque premier allumage, en secondes depuis le début de
+## la mesure (négatif : pendant la chauffe, donc hors du chiffre).
+func _dater_les_pires(ordre: Array) -> void:
+	var miroir := _miroir_de_lumiere()
+	if miroir == null:
+		return
+	var premiers: Dictionary = miroir.get("premiers_allumages")
+	var lignes: PackedStringArray = []
+	for sorte in premiers:
+		lignes.append("%s %+.2f s" % [sorte, float(int(premiers[sorte]) - _debut_mesure_us) / 1e6])
+	print("  Premiers allumages (depuis le début de la mesure) : %s" % ", ".join(lignes))
+	for k in mini(5, ordre.size()):
+		var i: int = ordre[k]
+		if i >= _samples_us.size():
+			continue
+		var fin_image: int = _samples_us[i]
+		var debut_image: int = fin_image - int(_samples[i] * 1e6)
+		for sorte in premiers:
+			var t: int = int(premiers[sorte])
+			if t >= debut_image - 100000 and t <= fin_image:
+				print("  ⚠️ pire image n° %d (%.1f ms) : PREMIER ALLUMAGE de « %s » — compilation, pas régime"
+					% [k + 1, _samples[i] * 1000.0, sorte])
 
 
 ## Retire UN poste de la charge, une fois la manche lancée.
@@ -800,6 +917,7 @@ func _report() -> void:
 		var i: int = ordre[k]
 		pires.append("%.1f ms à %.2f s" % [_samples[i] * 1000.0, _samples_t[i] if i < _samples_t.size() else -1.0])
 	print("  Cinq pires images : %s" % ", ".join(pires))
+	_dater_les_pires(ordre)
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
 	if not _appels.is_empty():

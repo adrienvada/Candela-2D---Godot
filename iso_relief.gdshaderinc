@@ -31,7 +31,7 @@
 
 uniform int relief_nb = 0;
 uniform vec4 relief_pos_intensite[8];   // xyz : position monde ; w : énergie × luminance linéaire de la couleur
-uniform vec4 relief_portee_cone[8];     // x : portée ; y : cos(demi-angle), < 0 pour une omni ; z : décroissance ; w : exposant de cône
+uniform vec4 relief_portee_cone[8];     // x : portée ; y : cos(demi-angle), < 0 pour une omni ; z : décroissance ; w : exposant de cône, 1 / spot_angle_attenuation comme le moteur
 uniform vec4 relief_direction[8];       // xyz : direction du spot (vers l'avant) ; w : ε de la lampe (0 = non fourni)
 // LE PLANCHER DU DÉNOMINATEUR, contre une lampe rasante (dot(haut, L) proche de 0). Il valait 0,2 et faisait manquer la règle
 // à sa promesse sous une fusée posée ; à 0,02 il ne mord plus que sous 1,15° au-dessus de l'horizon (session cloud).
@@ -120,37 +120,117 @@ const float RELIEF_D_MIN = 1e-7;
 uniform int relief_diagnostic = 0;
 uniform float relief_diagnostic_gain = 1.0;
 
+// L'atténuation × le cône de la lampe `i` au point `monde_px`, SANS ombre — le moteur mot pour mot — et sa direction unitaire.
+// 0 hors de portée. Partagée par le dénominateur et par la lampe dominante : une seule écriture de la formule du moteur.
+float relief_att_cone(int i, vec3 monde_px, out vec3 L) {
+	vec3 vers = relief_pos_intensite[i].xyz - monde_px;
+	float d = length(vers);
+	float portee = max(relief_portee_cone[i].x, 0.0001);
+	L = vers / max(d, 0.0001);
+	if (d >= portee) {
+		return 0.0;
+	}
+	// get_omni_spot_attenuation, mot pour mot.
+	float nd = d / portee;
+	nd *= nd;
+	nd *= nd;
+	nd = max(1.0 - nd, 0.0);
+	nd *= nd;
+	float att = nd * pow(max(d, 0.0001), -relief_portee_cone[i].z);
+	float cone = 1.0;
+	float cos_demi = relief_portee_cone[i].y;
+	if (cos_demi >= 0.0) {
+		// Le cône du spot, mot pour mot : hors du cône, scos = cosA, rim = 1, et le facteur tombe à 0 sans seuil.
+		float scos = max(dot(-L, normalize(relief_direction[i].xyz)), cos_demi);
+		float rim = max(0.0001, (1.0 - scos) / max(1.0 - cos_demi, 0.0001));
+		cone = 1.0 - pow(rim, relief_portee_cone[i].w);
+	}
+	return att * cone;
+}
+
+// ε PAR LAMPE (L4), porté par direction.w ; 0 = non fourni, on retombe sur l'uniforme global.
+float relief_eps(int i) {
+	return relief_direction[i].w > 0.0 ? relief_direction[i].w : relief_epsilon;
+}
+
 float relief_denominateur(vec3 monde_px) {
 	vec3 haut = vec3(0.0, 1.0, 0.0);
 	float d_total = 0.0;
 	for (int i = 0; i < relief_nb; i++) {
-		vec3 vers = relief_pos_intensite[i].xyz - monde_px;
-		float d = length(vers);
-		float portee = max(relief_portee_cone[i].x, 0.0001);
-		if (d >= portee) {
+		vec3 L;
+		float ac = relief_att_cone(i, monde_px, L);
+		if (ac <= 0.0) {
 			continue;
 		}
-		vec3 L = vers / max(d, 0.0001);
-		// get_omni_spot_attenuation, mot pour mot.
-		float nd = d / portee;
-		nd *= nd;
-		nd *= nd;
-		nd = max(1.0 - nd, 0.0);
-		nd *= nd;
-		float att = nd * pow(max(d, 0.0001), -relief_portee_cone[i].z);
-		float cone = 1.0;
-		float cos_demi = relief_portee_cone[i].y;
-		if (cos_demi >= 0.0) {
-			// Le cône du spot, mot pour mot : hors du cône, scos = cosA, rim = 1, et le facteur tombe à 0 sans seuil.
-			float scos = max(dot(-L, normalize(relief_direction[i].xyz)), cos_demi);
-			float rim = max(0.0001, (1.0 - scos) / max(1.0 - cos_demi, 0.0001));
-			cone = 1.0 - pow(rim, relief_portee_cone[i].w);
-		}
-		// ε PAR LAMPE (L4), porté par direction.w ; 0 = non fourni, on retombe sur l'uniforme global.
-		float eps = relief_direction[i].w > 0.0 ? relief_direction[i].w : relief_epsilon;
-		d_total += PI * relief_pos_intensite[i].w * att * cone * max(dot(haut, L), eps);
+		d_total += PI * relief_pos_intensite[i].w * ac * max(dot(haut, L), relief_eps(i));
 	}
 	return d_total;
+}
+
+// ISO12 v27 — PROTOTYPE DE BANC : LA LAMPE DOMINANTE (ordre 152 de la session cloud). Le rendu Compatibility dessine chaque
+// lampe à ombre dans SA passe additive, encodée en sRGB puis additionnée à l'image déjà encodée : deux contributions non nulles
+// sur un pixel s'additionnent APRÈS encodage, et l'encodage étant concave, l'image s'éclaircit (mesuré le 2026-09-23 : (a) 1,06
+// à 1,24 avec ombres, 0,96 à 1,01 sans). Ici, en chaque point, UNE seule passe écrit — celle de la lampe qui y domine
+// (intensité × atténuation × cône, ombres exclues) ; les autres rendent 0, et la passe de base n'émet la 2D que là où aucune
+// lampe ne porte. Coût : une couture là où la dominance bascule (nulle sur un sol plat, où ρ vaut 1 pour toute lampe).
+// ⚠️ Une lampe dominante que le moteur n'apparie pas à l'objet (plus de `max_lights_per_object` lampes) laisserait NOIR ce que
+// la 2D éclaire : le banc compte les lampes. Faux par défaut : jamais posé en jeu avant le GO.
+uniform bool relief_dominante = false;
+varying float relief_dom;
+
+// L'indice de la lampe qui domine en `monde_px`, ou −1 si aucune n'y porte.
+float relief_index_dominant(vec3 monde_px) {
+	float meilleur = 0.0;
+	float indice = -1.0;
+	for (int i = 0; i < relief_nb; i++) {
+		vec3 L;
+		float poids = relief_pos_intensite[i].w * relief_att_cone(i, monde_px, L);
+		if (poids > meilleur) {
+			meilleur = poids;
+			indice = float(i);
+		}
+	}
+	return indice;
+}
+
+// Dans `light()` : la contribution de CETTE passe. Elle reconnaît sa lampe à sa direction (`LIGHT`, ramenée au monde, contre
+// la direction de chaque lampe connue) ; si ce n'est pas la dominante, 0. Sinon r_min + (1 − r_min)·ρ·s, en LINÉAIRE, où
+// ρ = N·L / max(haut·L, ε) — la couleur, l'énergie et l'atténuation se simplifient dans le rapport — et s, l'ombre seule, =
+// ATTENUATION ÷ (atténuation × cône recalculés).
+vec3 relief_contribution_dominante(vec3 lumiere, vec3 L_monde, vec3 monde_px, float attenuation, float n_dot_l,
+		float dominante) {
+	if (dominante < 0.0) {
+		return vec3(0.0);
+	}
+	// ⚠️ DÉPARTAGE DÉTERMINISTE (session cloud, 03:13) : deux lampes vues dans la même direction depuis un fragment (une
+	// fusée devant une torche) se prendraient toutes deux pour la même, et DEUX passes écriraient au même pixel — l'erreur
+	// même que la lampe dominante existe pour ôter. La direction choisit les candidates (cosinus > 0,999), l'INTENSITÉ tranche :
+	// LIGHT_COLOR vaut couleur linéaire × énergie × π, donc sa luminance ÷ π est l'intensité que le miroir a posée. À égalité
+	// exacte des deux (deux lampes identiques au même endroit), le plus petit indice — et les deux passes écriraient :
+	// une géométrie que le jeu ne produit pas.
+	float intensite_passe = dot(lumiere, PATE_POIDS) / PI;
+	int ici = -1;
+	float ecart = 1e30;
+	for (int i = 0; i < relief_nb; i++) {
+		vec3 L;
+		relief_att_cone(i, monde_px, L);
+		if (dot(L, L_monde) <= 0.999) {
+			continue;
+		}
+		float e = abs(relief_pos_intensite[i].w - intensite_passe);
+		if (e < ecart) {
+			ecart = e;
+			ici = i;
+		}
+	}
+	if (ici < 0 || float(ici) != dominante) {
+		return vec3(0.0);
+	}
+	vec3 L;
+	float ac = relief_att_cone(ici, monde_px, L);
+	float s = ac > 1e-6 ? clamp(attenuation / ac, 0.0, 1.0) : 0.0;
+	float rho = min(max(n_dot_l, 0.0) / max(L.y, relief_eps(ici)), relief_max);
+	return vec3(relief_plancher + (1.0 - relief_plancher) * rho * s);
 }
 
 // INSTRUMENT DE BANC (modes 3 à 7) : un terme du dénominateur pour la lampe 0, émis tel quel pour être comparé au calcul.

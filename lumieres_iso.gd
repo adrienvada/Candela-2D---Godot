@@ -93,6 +93,12 @@ const IsoVolumesT := preload("res://iso_volumes.gd")
 
 ## instance_id de la Light2D → Light3D.
 var _pool := {}
+## ISO12 — l'instant (`Time.get_ticks_usec`) du PREMIER allumage de chaque sorte de lampe (clé : le type du miroir). Dans le
+## rendu Compatibility, une lampe sans ombre entre dans la passe de base de chaque objet qu'elle touche et en fait compiler une
+## variante (omni ou spot) ; une lampe à ombre ajoute une passe additive par sorte et sa passe d'ombre (lu dans le source de
+## Godot par la session cloud, 2026-09-23). Le banc de cadence date sa pire image contre ces instants : une pire image qui
+## tombe sur un premier allumage est une COMPILATION, pas un coût de régime — et en match, elle tomberait au premier tir.
+var premiers_allumages := {}
 
 
 ## Une image. `main` : le jeu ; `voxels` : les corps voxel de la présentation (pour le bout de l'arme).
@@ -149,6 +155,40 @@ func suivre(main: Node, voxels: Array) -> void:
 		if not vus.has(id):
 			(_pool[id] as Node).queue_free()
 			_pool.erase(id)
+	_plafonner(LAMPES_MAX)
+
+
+## ISO12 v27 — AU PLUS HUIT LAMPES MIROIR ALLUMÉES À LA FOIS (décision de la session cloud, 2026-09-23, 03:50) : les huit plus
+## intenses, départagées par ordre d'apparition dans le pool ; les autres ÉTEINTES en 3D. Leur lumière reste dans la couleur 2D
+## (principe d'identité) : l'équité n'y perd rien. Au-delà de huit, le dénominateur du relief (huit lampes, triées par intensité)
+## et les lampes que le moteur apparie à chaque objet (`max_lights_per_object`, 8) n'étaient plus le même jeu : au banc, neuf
+## lampes et plus éclaircissaient le sol de 8 % sans ombres, et de 15 000 à 70 000 px avec (lampe dominante comprise).
+const LAMPES_MAX := 8
+
+
+## L'intensité d'une lampe telle que le relief la pèse : énergie × luminance de sa couleur LINÉARISÉE, aux poids de la pâte.
+func _intensite(l: Light3D) -> float:
+	var c := l.light_color.srgb_to_linear()
+	return l.light_energy * POIDS_PATE.dot(Vector3(c.r, c.g, c.b))
+
+
+func _plafonner(n: int) -> void:
+	var allumees: Array = []
+	for l: Light3D in _pool.values():
+		if l.visible:
+			allumees.append(l)
+	if allumees.size() <= n:
+		return
+	# `sort_custom` n'est pas stable : l'ordre d'apparition départage explicitement les égalités d'intensité.
+	var rang := {}
+	for k in allumees.size():
+		rang[allumees[k]] = k
+	allumees.sort_custom(func(a, b) -> bool:
+		var ia := _intensite(a)
+		var ib := _intensite(b)
+		return ia > ib if ia != ib else int(rang[a]) < int(rang[b]))
+	for k in range(n, allumees.size()):
+		(allumees[k] as Light3D).visible = false
 
 
 ## Combien de lumières 3D allumées cette image — le banc le compare au plafond par maillage.
@@ -220,6 +260,8 @@ func _recopier(source: Light2D, l: Light3D, type: String) -> bool:
 	l.visible = allumee
 	if not allumee:
 		return false
+	if not premiers_allumages.has(type):
+		premiers_allumages[type] = Time.get_ticks_usec()
 	l.light_color = source.color
 	l.light_energy = source.energy * (1.0 if energies_neutres else float(energie_par_type.get(type, 1.0)))
 	l.shadow_enabled = ombres
@@ -294,7 +336,13 @@ func decrire_pour_relief() -> Array:
 			"attenuation": (lumiere as SpotLight3D).spot_attenuation if spot else (lumiere as OmniLight3D).omni_attenuation,
 			"cos_demi": cos(deg_to_rad((lumiere as SpotLight3D).spot_angle)) if spot else -1.0,
 			"direction": avant if spot else Vector3.ZERO,
-			"exposant_cone": (lumiere as SpotLight3D).spot_angle_attenuation if spot else 1.0,
+			# ⚠️ L'INVERSE de `spot_angle_attenuation` : Godot 4.7 (Compatibility) passe `inv_spot_attenuation = 1 /
+			# spot_angle_attenuation` au shader (`drivers/gles3/rasterizer_scene_gles3.cpp`), et c'est lui l'exposant du cône.
+			# Recopié tel quel (2 au lieu de 0,5), le dénominateur éclairait bien plus que le moteur loin de l'axe du cône : sous
+			# la torche, R valait ~0,3 à 60 px de la lampe, ~0,8 à 120 px, 1 seulement près de l'axe au loin (mesuré au banc,
+			# 2026-09-23, masque de sol) — le sol plat sous une torche 6 à 11 % plus sombre que la 2D. L'omni (fusée), sans
+			# cône, n'était pas touchée.
+			"exposant_cone": 1.0 / maxf((lumiere as SpotLight3D).spot_angle_attenuation, 0.001) if spot else 1.0,
 		})
 	out.sort_custom(func(a, b) -> bool: return float(a["intensite"]) > float(b["intensite"]))
 	return out.slice(0, 8)

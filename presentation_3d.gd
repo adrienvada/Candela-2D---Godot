@@ -275,7 +275,12 @@ var relief_neutre := false
 ## ⚠️ Il a d'abord été un seuil STATISTIQUE sur la L2D du sol (0,11, mesuré), et posé aussi sur les corps, où il bridait la
 ## luminance du capteur — une autre échelle ; or le capteur lit bas justement la rétrodiffusion faible des furtifs, et la 3D
 ## aurait pu effacer un corps que la 2D montre (revue d'ISO7 Beauté, arbitrage de la session cloud, 2026-09-23).
-var seuil_noir_2d_3d := 8.0 / 255.0
+## ⚠️ **RETIRÉ LE 2026-09-23 (défaut 0)**, comme la session cloud l'avait réglé d'avance : sous le principe d'identité, il ne
+## sert plus. Le résidu qu'il bouchait naissait de la division de la lightmap par la peinture, qui a disparu avec l'ancien
+## chemin ; le « plus » est désormais borné par construction (un noir 2D reste un noir 2D × R_final). Mesuré à r_min 0,5 et
+## seuil 0, LED éteinte : « plus » sous 0,0027 % partout, l'identité tenue (182 784 px d'écart au lieu de 184 431 avec lui).
+## Gardé comme drapeau de banc (`--seuil-noir=`), à 0 partout.
+var seuil_noir_2d_3d := 0.0
 ## ISO12 v27 — LE RELIEF NE CACHE JAMAIS : r_min, le plancher du relief (voir `relief_plancher` dans l'include). Trois valeurs au
 ## banc (0,35 / 0,5 / 0,65), le choix est celui de la session cloud sur les images ; 0,5 est son a priori.
 var relief_plancher_3d := 0.5
@@ -286,6 +291,9 @@ var relief_couleur_l2d_3d := true
 var identite_2d_3d := true
 ## ISO12 v27 — le plancher du relief en LINÉAIRE (voir `relief_plancher_lineaire`). Faux : l'ancien, pour le banc.
 var relief_plancher_lineaire_3d := true
+## ISO12 v27 — PROTOTYPE DE BANC, la lampe dominante (voir `relief_dominante` dans l'include). Faux par défaut, jamais en jeu
+## avant le GO de la session cloud.
+var relief_dominante_3d := false
 var _lumieres: Node3D = null
 ## ISO3a — combien de temps un tir et un coup reçu durent pour le corps, en secondes.
 const DUREE_TIR_CORPS := 0.25
@@ -2046,3 +2054,4 @@ func _accorder_le_relief() -> void:
 		mat.set_shader_parameter("relief_couleur_l2d", relief_couleur_l2d_3d)
 		mat.set_shader_parameter("identite_2d", identite_2d_3d)
 		mat.set_shader_parameter("relief_plancher_lineaire", relief_plancher_lineaire_3d)
+		mat.set_shader_parameter("relief_dominante", relief_dominante_3d)
