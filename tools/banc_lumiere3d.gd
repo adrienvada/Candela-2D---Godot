@@ -144,6 +144,8 @@ var _cone_plancher := -1.0
 ## `--arme-j1=<slug>` : la classe de J1 (défaut : le pistolet), cherchée par son slug dans le catalogue du jeu (`_classes`) —
 ## `arbalete`, `pompe`… ISO12 L1 : le plancher du cône se juge sur un cône fin, un moyen et un large.
 var _arme_j1 := ""
+## Planche des tenues sombres (arbre de planche, jamais la branche d'Iso 1) : `--arme-j2=<slug>`, la classe de J2.
+var _arme_j2 := ""
 ## `--v27-sans-ter` : la série v27 SANS le témoin `reference2d_ter`, soit l'ordre des prises d'avant le 2026-09-23 05:11. Pour
 ## trancher l'exception du masque (ordre 181) : l'ordre seul la reproduit-il, sur le même code ?
 var _v27_sans_ter := false
@@ -227,6 +229,8 @@ func _ready() -> void:
 			_cone_plancher = a.trim_prefix("--cone-plancher=").to_float()
 		elif a.begins_with("--arme-j1="):
 			_arme_j1 = a.trim_prefix("--arme-j1=")
+		elif a.begins_with("--arme-j2="):
+			_arme_j2 = a.trim_prefix("--arme-j2=")
 		elif a == "--v27-sans-ter":
 			_v27_sans_ter = true
 		elif a.begins_with("--relief-plancher="):
@@ -291,8 +295,19 @@ func _ready() -> void:
 			_finir()
 			return
 	_main.p1.equip_weapon(arme_j1)
-	_main.p2.equip_weapon(_main.weapon_arbalete)
-	print("BANC_LUMIERE3D arme_j1=%s" % arme_j1.slug())
+	var arme_j2: WeaponData = _main.weapon_arbalete
+	if _arme_j2 != "":
+		arme_j2 = null
+		for c in _main.get("_classes"):
+			if (c as WeaponData).slug() == _arme_j2:
+				arme_j2 = c
+		# Comme `--arme-j1` : un slug inconnu échoue, il ne retombe pas en silence sur l'Arbalète.
+		if arme_j2 == null:
+			_echouer("--arme-j2=%s : aucune classe de ce slug" % _arme_j2)
+			_finir()
+			return
+	_main.p2.equip_weapon(arme_j2)
+	print("BANC_LUMIERE3D arme_j1=%s arme_j2=%s" % [arme_j1.slug(), arme_j2.slug()])
 	_ui.visible = false
 	_p = Presentation3D.instance()
 	if _p == null:
@@ -1149,6 +1164,12 @@ func _la_v27(carte: String) -> void:
 	# Les captures d'Adrien : seulement demandées NOMMÉMENT (`--v27-cadrage=adrien`), jamais par un filtre vide.
 	if _v27_filtre.split(",").has("adrien"):
 		await _les_captures_adrien(carte, origine, p1, dir, portee)
+	if _v27_filtre.split(",").has("planche_ca") and origine.has("face"):
+		await _la_planche_ca(carte, origine)
+	if _v27_filtre.split(",").has("planche_tenues") and origine.has("face"):
+		await _la_planche_tenues(carte, origine)
+	if _v27_filtre.split(",").has("planche_ca_pied") and origine.has("face"):
+		await _la_planche_ca(carte, origine, true)
 	if _v27_filtre.split(",").has("adrien_1b") and carte == "cloitre" and dir != Vector2.ZERO:
 		await _le_croisement_adrien(carte, p1, dir)
 	_scene = origine
@@ -1156,6 +1177,107 @@ func _la_v27(carte: String) -> void:
 	(_pantins[1] as Pantin).torche = true
 	_flash_actif = true
 	_poser_la_fusee()
+
+
+## ISO12 — LA PLANCHE « C CONTRE A » d'Adrien (ordre de la session cloud, 08:13) : la lumière 3D sans ombres portées (A)
+## contre la 2D d'aujourd'hui (C), au même instant, corps peints allumés (`--corps=portraits`), en vue unique. Un seul lieu,
+## deux lumières : devant la face sud d'un mur haut, J2 dos au mur et tourné vers la caméra, J1 à trois tuiles, de dos. Sous
+## la torche de J1 d'abord (celle de J2 éteinte, comme partout en v27), puis torches éteintes sous une fusée posée entre eux :
+## la même face, les mêmes corps, la seule source change. Demandés NOMMÉMENT (`--v27-cadrage=planche_ca`).
+## `pied` (`--v27-cadrage=planche_ca_pied`, ordre de la session cloud, 17:16) : la fusée au PIED de la face, à 0,7 tuile, là
+## où `recouvrement` pose la sienne — la fusée entre les deux corps n'atteignait presque pas la face (clarté ≤ 4,6).
+func _la_planche_ca(carte: String, origine: Dictionary, pied := false) -> void:
+	var t := MursBas.TUILE
+	var face: Vector2 = origine["face"]
+	var h_face := IsoGeometrie.hauteur_mur_haut() * t * 0.5
+	for decalage in [0.0, -1.0, 1.0, -2.0, 2.0]:
+		var p2 := face + Vector2(decalage * t, 1.0 * t)
+		var p1 := face + Vector2(decalage * t, 4.0 * t)
+		if not _libre(p1, MursBas.RAYON_ENCOMBREMENT) or not _libre(p2, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1, p2):
+			continue
+		var f := face + Vector2(decalage * t, 0.0)
+		var ancres := {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS], "face": [f, h_face],
+			"face_gauche": [f + Vector2(-1.2 * t, 0.0), h_face], "face_droite": [f + Vector2(1.2 * t, 0.0), h_face],
+			"sol": [(p1 + p2) * 0.5, 0.0]}
+		if not pied:
+			_placer(p1, Vector2.UP, true, p2, Vector2.DOWN, false)
+			await _serie_v27("planche_ca_torche", ancres)
+		var lieu: Vector2 = f + Vector2(0.9 * t, 0.7 * t) if pied else (p1 + p2) * 0.5 + Vector2(0.9 * t, 0.0)
+		_placer(p1, Vector2.UP, false, p2, Vector2.DOWN, false)
+		_fusees_v27.append(_une_fusee(lieu))
+		var ancres_f := ancres.duplicate()
+		ancres_f["fusee"] = [lieu, 0.0]
+		await _serie_v27("planche_ca_fusee_pied" if pied else "planche_ca_fusee", ancres_f)
+		_retirer_fusees_v27()
+		return
+	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_ca raison=place_occupee" % carte)
+
+
+## PLANCHE DES TENUES SOMBRES (ordre de la session cloud, 2026-09-23 20:43) : le lieu de la planche C contre A, la 2D du jeu
+## (lumière 3D éteinte), et pour chaque lumière — la torche de J1, une fusée au pied du mur, le noir — les quatre tenues au
+## même instant : le gris d'aujourd'hui, V1, V2, V3, posées par `VoxelCorps.porter_tenue()` sur les corps construits (lancer
+## avec `--corps=sombre` : la bouteille existe ; elle est cachée pour le gris, qui n'en porte pas).
+const TENUES_PLANCHE := ["", "sombre1", "sombre2", "sombre3"]
+
+
+func _la_planche_tenues(carte: String, origine: Dictionary) -> void:
+	var t := MursBas.TUILE
+	var face: Vector2 = origine["face"]
+	for decalage in [0.0, -1.0, 1.0, -2.0, 2.0]:
+		var p2 := face + Vector2(decalage * t, 1.0 * t)
+		var p1 := face + Vector2(decalage * t, 4.0 * t)
+		if not _libre(p1, MursBas.RAYON_ENCOMBREMENT) or not _libre(p2, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1, p2):
+			continue
+		var f := face + Vector2(decalage * t, 0.0)
+		# J1 est le joueur local : son corps se montre en silhouette de soi, la même dans toutes les tenues. C'est J2 qu'on
+		# regarde, de face (tourné vers la caméra) puis de dos (la bouteille).
+		var ancres := {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS]}
+		for sens in [["", Vector2.DOWN], ["_dos", Vector2.UP]]:
+			_placer(p1, Vector2.UP, true, p2, sens[1], false)
+			await _serie_tenues("tenues_torche" + sens[0], ancres)
+		# La fusée à 1,3 tuile devant J2. ⚠️ Le corps adverse prend l'opacité de l'éblouissement de celui qui regarde
+		# (`Brouillage.opacite`, dazzle de J1) : qui voit une fusée en est ébloui, à trois tuiles (0,74) comme à huit (0,27,
+		# 2026-09-23 21:22), et l'adversaire près d'elle s'efface — dans toutes les tenues pareil. La règle du jeu, pas la tenue ;
+		# `tenue_etat` l'imprime à chaque prise.
+		var lieu: Vector2 = p2 + Vector2(0.3 * t, 1.3 * t)
+		_fusees_v27.append(_une_fusee(lieu))
+		for sens in [["", Vector2.DOWN], ["_dos", Vector2.UP]]:
+			_placer(p1, Vector2.UP, false, p2, sens[1], false)
+			await _serie_tenues("tenues_fusee" + sens[0], ancres)
+		_retirer_fusees_v27()
+		_placer(p1, Vector2.UP, false, p2, Vector2.DOWN, false)
+		await _serie_tenues("tenues_noir", ancres)
+		return
+	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_tenues raison=place_occupee" % carte)
+
+
+func _serie_tenues(nom: String, ancres: Dictionary) -> void:
+	_poser_la_variante({"lumiere": false})
+	await _images(IMAGES_DE_REPOS)
+	var avant := _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+	for essai in 60:
+		await _images(10)
+		var ici := _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+		if ici == avant:
+			break
+		avant = ici
+	var ecran := {}
+	for k in ancres:
+		ecran[k] = _a_l_ecran_h(0, ancres[k][0], float(ancres[k][1]))
+	for tenue in TENUES_PLANCHE:
+		for v in _p.get("_voxels"):
+			var corps := v as VoxelCorps
+			corps.porter_tenue(tenue)
+			var bouteille := corps.find_child("Bouteille", true, false) as Node3D
+			if bouteille != null:
+				bouteille.visible = tenue != ""
+		await _images(IMAGES_DE_REPOS)
+		var fichier := await _capturer("%s_%s" % [nom, tenue if tenue != "" else "gris"])
+		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+		print("BANC_LUMIERE3D tenue_etat cadrage=%s dazzle_j1=%.3f opacite_j2=%.3f" % [nom, float(_main.p1.get("dazzle_amount")),
+			Presentation3D.opacite_du_corps(_main.p2, false)])
+		print("BANC_LUMIERE3D tenue cadrage=%s tenue=%s camera=%d,%d fichier=%s ancres=%s"
+			% [nom, tenue if tenue != "" else "gris", int(camera[0]), int(camera[1]), fichier, JSON.stringify(ecran)])
 
 
 ## ISO12 — (1b) LE CROISEMENT : les deux torches visent le MÊME point du sol, à angle droit. Le face-à-face de (1) faisait se

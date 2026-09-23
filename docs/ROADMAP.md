@@ -26622,6 +26622,15 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     à chaque `print`, et l'indexation de Spotlight a pris jusqu'à 99 % d'un cœur pendant des relevés (série d'ISO7 Gadgets de
     08:16, perdue : sa porte cherchait `spotlightknowledged`, que `top` tronque en `spotlightknowled` — une porte par nom doit
     comparer par PRÉFIXE de seize caractères au plus).
+29. **LES TENUES SOMBRES D'ISO7 BEAUTÉ, FUSIONNÉES, ET SON PATCH DU BANC** (session cloud, 21:40 ; Q21 révisée par Adrien à
+    20:43 : « il faudrait que les personnages soient en tenue sombre. Dans tous les visuels. »). `iso12-corps` à 11ce33d
+    fusionnée : `--corps=sombre`, `sombre2`, `sombre3`, éteints par défaut, le gris reste le jeu jusqu'au choix d'Adrien — V2
+    et V3 changent ce que voit un joueur et se jugent en jouant, d'où leur place dans cet arbre. Son patch du banc v27
+    (`docs/iso/iso12_tenues/banc_lumiere3d_planches.patch` : cadrages `planche_ca`, `planche_ca_pied`, `planche_tenues`, et
+    `--arme-j2=<slug>`) est appliqué, jugé sain, avec trois retouches : la doc « (1b) LE CROISEMENT » rendue à sa fonction (le
+    patch s'insérait entre elles) ; un `--arme-j2` inconnu ÉCHOUE, comme `--arme-j1`, au lieu de retomber en silence sur
+    l'Arbalète ; l'arme de J2 imprimée à côté de celle de J1. ⚠️ La bouteille des tenues coûte deux `MeshInstance3D` de plus
+    par corps qui la porte : la cadence des corps habillés n'a pas été mesurée (remarque de Beauté).
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).
