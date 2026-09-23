@@ -274,3 +274,19 @@ prises en fonction du résultat voulu.
 
 ⚠️ **Ces cadences (103-110) ne se comparent à aucune autre série de la journée** : il n'y a pas de
 fusée ici. Les 86 du § 7 valaient pour une scène avec fusée allumée.
+
+### Si la question revient : quelle économie serait sans perte d'image
+
+Rien n'est à changer aujourd'hui — on ne dégrade pas une image pour un coût qu'on n'arrive pas à
+mesurer. Mais si le coût des tenues devenait un jour visible, voici la seule piste **sans perte
+d'image**, et surtout celle qu'il ne faut PAS prendre.
+
+Les deux `pate_bruit` sont calculés **avant** les branches de boîte, donc payés aussi par les pixels
+qui ne s'en servent pas. La tentation est de les descendre dans la branche du torse : **c'est faux**,
+et c'est ISO7 Beauté qui l'a corrigé — la patine habille aussi les jambes et les bras. L'économie
+juste serait de sauter les bruits sur les seules boîtes qui ne les utilisent pas (l'arme, et la tête
+des tenues sombres), ce qui est un gain plus petit.
+
+Le motif mérite d'être retenu au-delà de ce cas : **celui qui a écrit l'image sait quels pixels en
+dépendent, et celui qui mesure ne le sait pas.** Une économie proposée par le mesureur se fait
+valider par l'auteur avant d'être tentée.
