@@ -306,6 +306,8 @@ func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_
 	_construire_squelette()
 	if VoxelCatalogueT.portraits_actifs():
 		_habiller_en_portrait(slug)
+	if VoxelCatalogueT.mannequin_actif():
+		_articuler_en_mannequin()
 
 	# Pose de référence : de face, immobile — un corps fraîchement construit
 	# n'est jamais dans un état indéfini avant le premier `poser()` de l'appelant.
@@ -889,6 +891,31 @@ func porter_tenue(nom: String, nom_teinte := "") -> void:
 	_materiau.set_shader_parameter("portrait_arete_px", float(p.get("arete_px", 0.0)))
 	_materiau.set_shader_parameter("portrait_sous_seuil", 1.0 if bool(p.get("sous_seuil", true)) else 0.0)
 	_materiau.set_shader_parameter("portrait_seuils", p.get("seuils", Vector2(10.0, 24.0) / 255.0))
+
+
+## ISO13 — le mannequin (`--mannequin`) : les demi-tailles qui disent au shader quelle boîte est le torse, un bras, une jambe
+## (pour les lignes de segment), le contraste et le plafond. La direction de la lumière arrive à chaque image par
+## `eclairer_mannequin()`.
+func _articuler_en_mannequin() -> void:
+	var s := _fiche
+	var e: float = s["echelle"]
+	_materiau.set_shader_parameter("mannequin", 1.0)
+	_materiau.set_shader_parameter("mannequin_demi_torse",
+		Vector3(float(s["largeur_torse"]) * e, s["hauteur_torse"], float(s["profondeur_torse"]) * e) * 0.5)
+	var l_bras: float = float(s["largeur_bras"]) * e
+	_materiau.set_shader_parameter("mannequin_demi_bras", Vector3(l_bras, s["longueur_bras"], l_bras) * 0.5)
+	_materiau.set_shader_parameter("mannequin_demi_jambe",
+		Vector3(float(s["largeur_jambe"]) * e, s["hauteur_jambe"], float(s["profondeur_jambe"]) * e) * 0.5)
+	_materiau.set_shader_parameter("mannequin_contraste", VoxelCatalogueT.MANNEQUIN_CONTRASTE)
+	_materiau.set_shader_parameter("mannequin_report", VoxelCatalogueT.MANNEQUIN_REPORT)
+	var p: Color = VoxelCatalogueT.GRIS_PLAFOND
+	_materiau.set_shader_parameter("mannequin_plafond", Vector3(p.r, p.g, p.b))
+
+
+## ISO13 — la direction horizontale vers la lumière qui éclaire ce corps (x, z du monde = x, y de la 2D), longueur 0..1 :
+## `MannequinIso.direction_dominante()`. Sans effet si le mannequin est éteint.
+func eclairer_mannequin(direction: Vector2) -> void:
+	_materiau.set_shader_parameter("mannequin_lumiere", direction)
 
 
 func _pivot(parent: Node3D, nom: String, pos: Vector3) -> Node3D:

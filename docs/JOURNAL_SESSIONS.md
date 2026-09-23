@@ -5820,3 +5820,11 @@ de beauté corrigés (masque et dérive propres à chaque tenue).
 **Suite, 21:40-22:00 — la teinte froide** (`--teinte=froide`, éteinte). Même clarté que l'olive (V1 à 0,4 %, V3 à 2,3 % ;
 V2 à 3 % sauf l'Occulteur à 0,15, −6,8 %), ΔE de V1 au sol ocre rendu au centre du cône pour les dix classes, à 90 px pour
 huit sur dix. V1 froide se rapproche à l'œil du gris d'aujourd'hui ; V2 et V3 froides restent bleu nuit.
+
+### 2026-09-24 (nuit) — ISO13, lot A : les personnages en mannequins (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+Derrière `--mannequin`, éteint : lignes de segment (poitrine, ceinture, coude, genou), contour, et le côté dos à la lumière
+qui éclaire vraiment le corps assombri — une direction calculée depuis les Light2D du jeu, qui ne peut pas s'inverser.
+Trois formes au banc : la répartition sortait du noir des pixels et cassait l'équité sud/nord en lumière faible ; la forme
+retenue n'éclaire jamais, compense le nord par les dessus, et ne s'applique pas sous 12/255. Noir absolu tenu, adversaire
+au bord du cône inchangé. Un défaut du banc des corps corrigé en chemin (le portrait rallumé en blanc sans tenue).

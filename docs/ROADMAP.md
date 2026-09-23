@@ -26328,6 +26328,73 @@ Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un comp
 d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
 
+#### ISO13, lot A — les personnages lus comme les mannequins des illustrations 🟡 (ouvert le 2026-09-24 à 00:00, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi.** Adrien, 23/09 au soir : « il faut vraiment à la fin que le visuel du jeu ressemble au plus proche aux visuels
+générés par assets pour illustrer le jeu dans les menus ». L'évaluation 1 de la session cloud (23:57) : les illustrations
+montrent un mannequin articulé — tête cube, plaques du torse, coudes et genoux marqués —, éclairé d'un côté et noir de
+l'autre, cerné d'encre ; le jeu montre une silhouette plate. Lot A : que les personnages se lisent ainsi à l'échelle du
+jeu, sur le gris ET sur les tenues, derrière `--mannequin`, éteint par défaut, sans rien d'autre qui bouge.
+
+**Ce qui est fait, tout dans le shader des corps (`iso_corps_mannequin.gdshaderinc`)** — aucune boîte de plus : l'empreinte,
+la zone de touche (18 px) et le nombre de maillages ne changent pas.
+- **Les segments** : une ligne d'encre sous la poitrine et à la ceinture du torse, une au coude et au genou, reconnues par
+  la taille des boîtes ; et un contour, seconde encre d'arête plus large par-dessus celle d'ISO3.
+- **Le côté de la lumière** : `MannequinIso.direction_dominante()` calcule, pour chaque corps et à chaque image, la direction
+  HORIZONTALE vers les lampes qui l'éclairent vraiment — les Light2D du jeu (torches, rétrodiffusion, flashs, fusées,
+  braises, mine, faisceaux), pondérées par leur intensité, leur portée, leur cône, et coupées par les murs (un rayon de
+  physique). La rétrodiffusion de sa propre torche (`BodyLight`, 18 px devant lui) éclaire un joueur de face, comme le
+  mannequin de l'accueil par sa propre lampe. **Elle ne peut pas s'inverser** : c'est une géométrie (du corps vers la
+  lampe), pas le gradient de la lightmap qu'ISO7b avait éteint parce qu'il lisait le bord d'une tache et changeait de sens
+  en traversant un cône. La suite le vérifie sur un tour complet, derrière un mur, hors d'un cône, entre deux lampes
+  égales et opposées (le modelé s'efface), et sur un corps qui traverse un faisceau d'un bord à l'autre.
+
+**Trois formes au banc des corps (temps figé, même partie, lumière venue d'aucun côté, du sud, du nord, de l'est, de
+l'ouest), et pourquoi la troisième.**
+1. Un modelé qui RÉPARTISSAIT (la face tournée vers la lumière montait, les dessus rendaient ce que perdait la face sud) :
+   il sortait du noir 1 848 pixels (31 191 en V3) que l'écran arrondissait à 0, et l'équité sud/nord tombait de 0,96 à
+   0,8 de lumière à 0,42 à 0,1 — l'écran écrase les valeurs sombres, la part montée ne compensait plus la part descendue.
+2. Le même en fondu selon la clarté de CHAQUE pixel : l'équité restait à 0,78 à 0,2 (les dessus, plus clairs, pesaient
+   plus que la face sud dans le fondu) et 5 135 pixels sortaient encore du noir.
+3. **La forme retenue : le mannequin n'éclaire jamais.** La face dos à la lumière s'assombrit (× 0,6) ; lumière au sud, ce
+   sont les dessus, rasés, d'autant plus que leur aire vue est petite (`MANNEQUIN_REPORT`) : la perte vue est la même, que
+   la lumière vienne du nord ou du sud. Et tout se fond selon la lumière REÇUE par le corps (la même pour ses dessus et
+   ses faces), de 12/255 à 32/255 : sous ce seuil, là où l'on commence à voir un adversaire, le corps est celui
+   d'aujourd'hui.
+⚠️ **Et un défaut du banc des corps en chemin** : sous `--mannequin` sans tenue, il rallumait `portrait` après sa prise grise,
+et la palette par défaut (blanche) peignait tout le corps — les premières mesures « gris » étaient fausses, et le banc
+rallume désormais le portrait seulement s'il l'était.
+
+**Chiffres de la forme retenue** (clarté rapportée au corps sans mannequin, médiane des dix classes) :
+
+| | encre seule | lumière au sud | lumière au nord | équité sud/nord |
+|---|---|---|---|---|
+| gris, 0,8 | 0,93 | 0,76 | 0,80 | 0,95 |
+| gris, 0,2 | 0,96 | 0,86 | 0,88 | 0,99 |
+| gris, 0,15 et moins | 1,00 | 0,98-1,00 | 0,99-1,00 | 1,00 |
+| V3 froide, 0,8 | 0,92 | 0,73 | 0,79 | 0,93 |
+| V3 froide, 0,2 | 0,95 | 0,81 | 0,85 | 0,95 |
+
+- **Noir absolu** : 0 pixel noir sans mannequin et non noir avec, gris et V3, de 0,8 à 0. **Aucun pixel voyant** : rien au-dessus
+  de `Charte.DIM` ni plus clair qu'avant.
+- **L'adversaire au bord du cône** (pixels où le corps se voit, ≥ 3/255, la mesure d'apparition à 30 px) : à 0,15, 5 414 avant
+  contre 5 377-5 402 après (gris), 2 695 contre 2 649-2 691 (V3) ; à 0,12 et 0,1, identiques. La lumière où un corps
+  apparaît ne change pas.
+- **Le reste** : suite `tools/test_corps_mannequin.gd` (dans le lot) ; `test_corps_portraits`, `test_voxel_corps`,
+  `test_iso_beaute`, `test_iso_corps` verts ; lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 00:52).
+
+**Planche** `docs/iso/iso13/planche_mannequin.jpg` : les illustrations de l'accueil et de l'écran scindé, puis J2 sous la torche
+de J1, de face et de dos, AVANT et APRÈS, en gris et en V3 froide, en loupe 1:1 et ×3, au même instant (prise dans un arbre
+/tmp sur la tête d'Iso 1, `b193420`, ce diff appliqué ; cadrage `planche_mannequin` dans
+`docs/iso/iso13/banc_lumiere3d_planche_mannequin_contre_b193420.patch`).
+
+**Ce qui manque encore** (mon paragraphe, demandé par la session cloud) : à l'échelle du jeu, le mannequin se lit à la loupe
+et reste discret à 1:1. Les plaques et les articulations sont des lignes, pas des volumes : les bras et les jambes restent
+des boîtes droites, sans coude plié. Le côté noir est retenu (0,6, jamais d'éclat) par l'équité et le noir absolu, là où
+les illustrations opposent un côté chaud franc à un noir d'encre. Sous la torche de J1, J2 est rendu à 65 % d'opacité par
+l'éblouissement du regardeur, ce qui lave tout détail. Et la couleur : les illustrations sont rouille, le jeu attend la tenue
+d'Adrien (Q21, Q23). La cadence n'est pas mesurée : à faire par Gadgets avant d'allumer le drapeau.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

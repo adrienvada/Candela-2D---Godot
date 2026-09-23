@@ -103,6 +103,11 @@ var _fige := false
 ## ISO12, tenues sombres — `--toutes-tenues` (avec une tenue peinte) : après la prise de la tenue et sa prise grise, la même
 ## scène dans chacune des tenues sombres (`_sombre1.png`…), posées par uniformes sur les mêmes matériaux, au temps figé.
 var _toutes_tenues := false
+## ISO13 — `--directions-mannequin` (avec `--mannequin`) : après la prise principale, la même scène sans mannequin, puis avec
+## la lumière venue d'aucun côté, du sud, du nord, de l'est et de l'ouest (`_mannequin_<côté>.png`), même partie, temps figé.
+var _directions_mannequin := false
+const DIRECTIONS_MANNEQUIN := [["sans", Vector2.ZERO], ["aucune", Vector2.ZERO], ["sud", Vector2(0, 1)], ["nord", Vector2(0, -1)],
+	["est", Vector2(1, 0)], ["ouest", Vector2(-1, 0)]]
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -174,6 +179,9 @@ func _lire_arguments(args: PackedStringArray) -> void:
 				if val != "portraits" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
 					push_warning("banc_corps : --corps attend portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
 			"toutes-tenues": _toutes_tenues = true
+			"directions-mannequin": _directions_mannequin = true
+			"mannequin":
+				pass  # lu par `VoxelCatalogue.mannequin_actif()`
 			"teinte":
 				# Lu par `VoxelCatalogue.teinte()` : la teinte des tenues sombres (`olive`, `froide`).
 				if not VoxelCatalogueT.TEINTES.has(val):
@@ -566,7 +574,7 @@ func _capturer_puis_quitter() -> void:
 		_cone_repere.visible = false
 	get_window().size = _taille
 	await get_tree().process_frame
-	_fige = VoxelCatalogueT.portraits_actifs()
+	_fige = VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif()
 	for i in _frames:
 		await get_tree().process_frame
 	var image: Image = await RenduCommun.capturer(get_tree(), 60000)
@@ -584,17 +592,34 @@ func _capturer_puis_quitter() -> void:
 		return
 	# ISO12 — avec `--corps=portraits`, la même scène reprise le portrait ÉTEINT sur les mêmes matériaux (`_gris.png`) : la
 	# peinture seule change entre les deux, rien d'autre (deux lancements séparés ne se comparent pas au pixel près).
-	if VoxelCatalogueT.portraits_actifs():
+	if VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif():
 		for c in _corps:
 			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 0.0)
 		for i in _frames:
 			await get_tree().process_frame
 		var gris: Image = await RenduCommun.capturer(get_tree(), 60000)
+		# Le portrait rallumé seulement s'il l'était : sous `--mannequin` sans tenue, le rallumer peignait le corps de la palette
+		# par défaut (blanche) — toutes les prises « gris » du mannequin sortaient blanches (2026-09-24, 00:42).
 		for c in _corps:
-			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 1.0)
+			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 1.0 if VoxelCatalogueT.portraits_actifs() else 0.0)
 		if gris != null:
 			gris.save_png(_capture.get_basename() + "_gris.png")
 			print("BANC_CORPS capture du même corps, portrait éteint : %s" % (_capture.get_basename() + "_gris.png"))
+		if _directions_mannequin:
+			for entree in DIRECTIONS_MANNEQUIN:
+				for c in _corps:
+					var m: ShaderMaterial = (c["noeud"] as VoxelCorpsT).materiau()
+					m.set_shader_parameter("mannequin", 0.0 if entree[0] == "sans" else 1.0)
+					(c["noeud"] as VoxelCorpsT).eclairer_mannequin(entree[1])
+				for i in _frames:
+					await get_tree().process_frame
+				var prise_m: Image = await RenduCommun.capturer(get_tree(), 60000)
+				if prise_m != null:
+					prise_m.save_png(_capture.get_basename() + "_mannequin_%s.png" % entree[0])
+					print("BANC_CORPS capture du même corps, mannequin %s" % entree[0])
+			for c in _corps:
+				(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("mannequin", 1.0)
+				(c["noeud"] as VoxelCorpsT).eclairer_mannequin(Vector2.ZERO)
 		if _toutes_tenues:
 			for nom in VoxelCatalogueT.TENUES_SOMBRES:
 				for c in _corps:

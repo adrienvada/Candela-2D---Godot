@@ -425,6 +425,21 @@ const TEINTES := {
 static var forcer_teinte := ""
 
 
+## ISO13, lot A — LE MANNEQUIN (`iso_corps_mannequin.gdshaderinc`) : segments, côté de la lumière, contour. Éteint par défaut,
+## indépendant de la tenue. `forcer_mannequin` : -1 lit la ligne de commande, 0 l'éteint, 1 l'allume.
+const DRAPEAU_MANNEQUIN := "--mannequin"
+static var forcer_mannequin := -1
+## Le contraste du côté de la lumière et le report sur les dessus (voir l'include) ; le plafond est `GRIS_PLAFOND`.
+const MANNEQUIN_CONTRASTE := 0.4
+const MANNEQUIN_REPORT := 1.6
+
+
+static func mannequin_actif() -> bool:
+	if forcer_mannequin >= 0:
+		return forcer_mannequin == 1
+	return OS.get_cmdline_user_args().has(DRAPEAU_MANNEQUIN)
+
+
 ## La teinte des tenues sombres : `"olive"` (le défaut) ou `"froide"` (`--teinte=froide`).
 static func teinte() -> String:
 	if forcer_teinte != "":
