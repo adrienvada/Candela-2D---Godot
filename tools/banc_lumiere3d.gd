@@ -123,7 +123,7 @@ var _v27 := false
 var _bride_mode_defaut := 0
 var _relief_max := -1.0
 ## `--v27-cadrage=<id>[,<id>…]` : les cadrages de la v27 à prendre (cumul, recouvrement, une_lumiere, deux_distances,
-## deux_lumieres, torche, torche_stricte, torche_retro, fusee_seule, torche_et_fusee, adversaire_arbalete, accroupi_muret,
+## deux_lumieres, torche_face_proche, torche, torche_stricte, torche_retro, fusee_seule, torche_et_fusee, adversaire_arbalete, accroupi_muret,
 ## neuf_lampes).
 var _v27_filtre := ""
 ## `--taille=1920x1080` : la taille de la fenêtre, donc des captures (défaut `TAILLE`). Les captures d'Adrien sont en 1920×1080.
@@ -138,6 +138,15 @@ var _biais_ombre := -1.0
 ## sont plus une luminosité mais un POIDS entre lampes dans R : 52 contre 3,6 fait peser une fusée quarante fois son poids 2D
 ## face à une torche. La prise dit si le triangle du cône revient là où une fusée et une torche se rencontrent (L4).
 var _energies_neutres := false
+## `--cone-plancher=45` : le plancher d'angle des spots de torche (`LumieresIso.cone_plancher_deg`, 75 depuis ISO12 L1). La
+## prise avant/après de la couture de relief au bord du cône 3D, sur une face proche du porteur.
+var _cone_plancher := -1.0
+## `--arme-j1=<slug>` : la classe de J1 (défaut : le pistolet), cherchée par son slug dans le catalogue du jeu (`_classes`) —
+## `arbalete`, `pompe`… ISO12 L1 : le plancher du cône se juge sur un cône fin, un moyen et un large.
+var _arme_j1 := ""
+## `--v27-sans-ter` : la série v27 SANS le témoin `reference2d_ter`, soit l'ordre des prises d'avant le 2026-09-23 05:11. Pour
+## trancher l'exception du masque (ordre 181) : l'ordre seul la reproduit-il, sur le même code ?
+var _v27_sans_ter := false
 ## `--relief-plancher=0.35` : r_min, le plancher du relief (`Presentation3D.relief_plancher_3d`) ; `--sans-couleur-l2d` : la L2D
 ## grise d'avant la décision (3), pour comparer la teinte du halo de la fusée.
 var _relief_plancher := -1.0
@@ -214,6 +223,12 @@ func _ready() -> void:
 			_biais_normal = a.trim_prefix("--biais-normal=").to_float()
 		elif a == "--energies-neutres":
 			_energies_neutres = true
+		elif a.begins_with("--cone-plancher="):
+			_cone_plancher = a.trim_prefix("--cone-plancher=").to_float()
+		elif a.begins_with("--arme-j1="):
+			_arme_j1 = a.trim_prefix("--arme-j1=")
+		elif a == "--v27-sans-ter":
+			_v27_sans_ter = true
 		elif a.begins_with("--relief-plancher="):
 			_relief_plancher = a.trim_prefix("--relief-plancher=").to_float()
 		elif a == "--sans-couleur-l2d":
@@ -265,8 +280,19 @@ func _ready() -> void:
 		pantin.name = "PantinDuBancLumiere3D"
 		_main._set_player_input_provider(j, pantin)
 		_pantins.append(pantin)
-	_main.p1.equip_weapon(_main.weapon_pistolet)
+	var arme_j1: WeaponData = _main.weapon_pistolet
+	if _arme_j1 != "":
+		arme_j1 = null
+		for c in _main.get("_classes"):
+			if (c as WeaponData).slug() == _arme_j1:
+				arme_j1 = c
+		if arme_j1 == null:
+			_echouer("--arme-j1=%s : aucune classe de ce slug" % _arme_j1)
+			_finir()
+			return
+	_main.p1.equip_weapon(arme_j1)
 	_main.p2.equip_weapon(_main.weapon_arbalete)
+	print("BANC_LUMIERE3D arme_j1=%s" % arme_j1.slug())
 	_ui.visible = false
 	_p = Presentation3D.instance()
 	if _p == null:
@@ -467,6 +493,8 @@ func _poser_la_variante(v: Dictionary) -> void:
 		lumieres.set("biais_ombre", _biais_ombre)
 	if lumieres != null:
 		lumieres.set("energies_neutres", _energies_neutres)
+	if lumieres != null and _cone_plancher > 0.0:
+		lumieres.set("cone_plancher_deg", _cone_plancher)
 	if lumieres != null and (_decroissance_nulle or _torche_decroissance >= 0.0):
 		var table_att: Dictionary = lumieres.get("attenuation_par_type")
 		for type in lumieres.get("TYPES"):
@@ -967,6 +995,19 @@ func _la_v27(carte: String) -> void:
 				"face_f1": [Vector2(r1.x, face.y), h_face], "face_f2": [Vector2(r2.x, face.y), h_face],
 				"fusee": [r1, 0.0], "fusee2": [r2, 0.0]})
 			_retirer_fusees_v27()
+		# ISO12 L1 — LA FACE PROCHE : le porteur à 1,3 tuile d'un mur haut, torche droit dessus. C'est là que le plancher de
+		# 45° laissait le haut de la face hors du spot (garde : R = 1) et traçait une couture de relief ; `--cone-plancher=45`
+		# pour l'avant.
+		if _v27_veut("torche_face_proche"):
+			var pf := face + Vector2(0.0, 1.3 * t)
+			if _libre(pf, MursBas.RAYON_ENCOMBREMENT):
+				_placer(pf, Vector2.UP, true, loin, Vector2.UP, false)
+				await _serie_v27(carte + "_v27_torche_face_proche", {"face": [face, h_face],
+					"face_haut": [face, IsoGeometrie.hauteur_mur_haut() * t * 0.9],
+					"face_gauche": [face + Vector2(-t, 0.0), h_face], "face_droite": [face + Vector2(t, 0.0), h_face],
+					"sol_devant": [face + Vector2(0.0, 0.6 * t), 0.0], "j1": [pf, HAUTEUR_CORPS]})
+			else:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_torche_face_proche raison=place_occupee" % carte)
 		var ancres_une := {"face": [face, h_face], "sol_devant": [face + Vector2(0.0, 1.5 * t), 0.0],
 			"j1": [p1, HAUTEUR_CORPS]}
 		if _v27_veut("une_lumiere"):
@@ -1219,6 +1260,8 @@ func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {})
 		["neutre", {"lumiere": true, "ombres": false, "neutre": true}],
 		["ombres", {"lumiere": true, "ombres": true, "atlas": 2048}],
 	]
+	if _v27_sans_ter:
+		variantes.remove_at(1)
 	if _diag_gain > 0.0:
 		# L'instrument : le numérateur seul, puis le dénominateur seul, à la même échelle — leur rapport pixel par pixel est R.
 		variantes.append(["diag_num", {"lumiere": true, "ombres": false, "diagnostic": 1, "gain": _diag_gain}])
@@ -1275,10 +1318,11 @@ func _serie_v27(nom: String, ancres: Dictionary, sabotage := false, extra := {})
 					str(lum3.global_position)])
 		# La caméra DE CETTE PRISE : l'analyse refuse de comparer deux prises dont J1 n'est pas au même pixel.
 		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
-		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s plancher=%.2f couleur_l2d=%s identite=%s plancher_lineaire=%s dominante=%s camera=%d,%d fichier=%s ancres=%s"
+		print("BANC_LUMIERE3D v27 cadrage=%s variante=%s lumieres3d=%d relief_max=%s energies_neutres=%s plancher=%.2f couleur_l2d=%s identite=%s plancher_lineaire=%s dominante=%s cone_plancher=%s camera=%d,%d fichier=%s ancres=%s"
 			% [nom, e[0], lumieres, _relief_max_dit(), str(_energies_neutres), float(_p.relief_plancher_3d),
 			str(_p.relief_couleur_l2d_3d), str(_p.identite_2d_3d), str(_p.relief_plancher_lineaire_3d),
-			str(_p.relief_dominante_3d), int(camera[0]), int(camera[1]), fichier,
+			str(_p.relief_dominante_3d), str(_p.get("_lumieres").get("cone_plancher_deg") if _p.get("_lumieres") != null else "-"),
+			int(camera[0]), int(camera[1]), fichier,
 			JSON.stringify(ecran)])
 	# Le sabotage ne doit jamais survivre à sa prise : on repose l'état du jeu, lumière éteinte.
 	_poser_la_variante({"lumiere": false})

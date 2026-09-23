@@ -9106,6 +9106,23 @@ de poser, puis les fusées. **Règle : toute comparaison 2D/3D au banc passe `--
 `--led-murs-fige=f` (juger la LED elle-même)** ; et un chiffre qui saute d'un ordre de grandeur entre deux passes se regarde en
 IMAGE avant d'accuser le dernier changement.
 
+ISO12 L1 (2026-09-23), l'exception du masque tranchée. Deux passes du banc v27 sur le MÊME code, l'une avec le témoin
+`reference2d_ter` inséré, l'autre sans (`--v27-sans-ter`) : la prise `masque` de la carte d'essai diffère de 28 411 px (≤ 10
+niveaux), quand deux passes au même ordre restent à 275 px (≤ 1) et 705 px (≤ 10). **L'ordre seul suffit.** Et SEULE cette
+prise bouge — la première éclairée de la série, qui suit la ou les prises 2D ; toutes les suivantes restent dans le bruit. Ce
+n'est donc pas l'âge de la fusée qui dérive le long de la série, c'est la première prise éclairée qui dépend de ce qui la
+précède (mécanisme exact non trouvé). **Règle : deux passes ne se comparent qu'au même rang de la série ; changer l'ordre ou
+insérer une prise fait une série nouvelle, dont on reprend le bruit avant de conclure.**
+
+ISO12 L1 (2026-09-23), le bruit de cadence de ce Mac. Une prise A est tombée à 75 / 34 (médiane / 1 % bas) contre 84 / 73 vingt
+minutes plus tôt, sans rien de changé : même rendu (175 appels, 1 379 objets), C se dégradait aussi (79 puis 66 au 1 % bas).
+ISO7 Gadgets l'avait mesuré le matin même sur neuf paires de prises identiques : **la médiane varie de 2 fps (11 au pire), le
+1 % bas de 11 (39 au pire).** **Règle : une prise isolée de 1 % bas ne prouve rien sur ce Mac ; on juge sur la médiane, et un
+écart de 1 % bas n'existe que reproduit, en prises EN MIROIR — C A A C et non C A C A (session cloud) : les quatre prises
+baissaient en monotone (79, 73, 66, 34), signature d'une dérive, et en C A C A la variante prise après paie la dérive ; en miroir,
+une dérive linéaire s'annule.** Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
+session cloud) ; l'état de la machine (`top`) se note avant et après chaque prise.
+
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 
 ISO11, pas 7. Le dossier des vingt illustrations voxel contenait TROIS générations par emplacement — le nom nu, `_v3`, `_v4`.
@@ -26442,6 +26459,42 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     invisible à l'œil. Sa dispersion est celle de l'instant (témoin C contre C au même écart de temps). Ni l'alpha (opaque à
     l'intérieur), ni l'ambiant (un environnement explicitement noir ne change rien, `--environnement-noir`) : cause non trouvée.
     La série du banc v27 prend désormais deux témoins consécutifs (`reference2d_ter`, `reference2d_bis`).
+25. **L1, LES TORCHES EN MODE A — le miroir existait, sa couverture non** (ordre 181 de la session cloud, 2026-09-23 ; OUI au
+    75° à 05:30). L'audit contre le brief trouve le miroir des torches en place depuis le lot 0 : position de la torche 2D,
+    hauteur du canon de la posture, visée, angle et portée de la classe, extinction avec la source, pas d'ombre en mode A. Ce
+    qui manquait se CALCULE, sans fenêtre : le spot vise le sol à mi-portée depuis la hauteur du canon, si bien que le sol
+    juste devant la lampe et le haut des faces proches sont vus sous 50 à 96° de l'axe. **Au plancher de 45°, 0,1 à 2 % de
+    l'empreinte 2D sortait du spot** (sol et faces jusqu'au mur haut), jusqu'à 83 px de la lampe debout et 105 px accroupi.
+    **Pourquoi ça compte malgré le petit pourcentage** : hors du spot, la garde du relief rend R = 1. Sur le sol plat, cela ne
+    se voit pas (R y vaut 1 des deux côtés), mais une face y SAUTE de relief au bord du cône 3D (R_final de 0,65 à 1, par
+    exemple) : une couture que la 3D trace au milieu d'une zone éclairée d'un seul tenant par la 2D. **Plancher porté à 75°** :
+    au plus 0,3 % hors du spot, à moins de 30 px de la lampe, dans le corps du porteur. Tout couvrir demanderait plus de 90° (le
+    haut d'une face collée, au-dessus du canon), ce qu'un spot ne sait pas faire. Élargir ne change pas l'image déjà couverte
+    (le cône se simplifie dans R pour une lampe seule) ; ne bougent que la bande proche et le poids de la torche face aux
+    autres lampes, d'où les captures demandées (le corps du porteur, torche et fusée qui se recouvrent). Gardé par
+    `tools/test_iso_torches3d.gd` (suite neuve : dix classes × seize orientations × deux postures × deux facteurs de portée) ;
+    `--cone-plancher=45` au banc v27 pour l'avant. `test_banc` garde aussi les défauts des instruments de la fusée
+    (`volumes_actifs`, `lueurs_actives`, `couches_fusee` : vrai, vrai, −1), seul morceau de ces instruments qui vit dans le
+    code du jeu (session cloud, 05:30).
+    ⚠️ **Le recensement des ombres 2D du point 24 n'avait jamais imprimé son détail** (trouvé par ISO7 Gadgets à sa prise de
+    validation) : `disable_2d` lu directement sur la `Window` racine, première de la liste, levait une erreur de script après
+    la ligne d'en-tête. La preuve de neutralité des instruments passait par le banc v27, qui n'appelle pas le recensement, et
+    le lot ne lance aucun banc de cadence : ni l'une ni l'autre ne pouvait le voir. Lu désormais par `get`.
+    **Jugé sur image (06:08-06:10, accepté par la session cloud à 06:16)** : cadrage neuf `torche_face_proche` (le porteur à 1,3
+    tuile d'un mur haut), `--arme-j1` pistolet, Arbalète, pompe, 45° contre 75°. La couture prédite se VOIT à 45° pour les trois
+    — un arc en rectangle arrondi autour du faisceau (pistolet, Arbalète), deux diagonales de part et d'autre (pompe) — et
+    disparaît à 75°. Ailleurs l'effet reste sous le bruit C contre C des deux passes : corps du porteur identique (144,5 et
+    144,5 à l'ancre), torche et fusée recouvertes 182 et 738 px contre 1 206 et 1 613 de bruit. Le recensement réparé confirme
+    l'hypothèse des halos privés : les deux halos de proximité (masques 16 et 32, 150 px) paient leur passe d'ombre dans des
+    viewports où ils n'éclairent aucun objet (capteurs des corps, peinture iso, lightmap de l'autre vue) — 64 dessins d'ombre
+    sur 80 pour rien, de l'ordre de 0,14 ms sur la carte d'essai (8 occulteurs, ISO7 Gadgets) : **gâchis connu, rangé sans
+    code** ; à relever sur une carte plus chargée (le coût suit le nombre d'occulteurs).
+    **Cadence (vue unique, torche, 60 s ; médiane / 1 % bas)** : C A C A d'abord — 103/79, 84/73, 103/66, **75/34** —, arrêt sur
+    la règle de la session cloud, puis reprise EN MIROIR C A A C, `top` avant et après chaque prise : **105/68, 86/78, 86/77,
+    110/75**. A tient le tableau de 04:44 (84/74), avec le même rendu que C (175 appels, 1 379 objets) : le plancher de 75° ne
+    coûte rien de mesurable. Pendant la reprise, `top` montrait l'indexation Spotlight (`spotlightknowledged`, 36 à 93 % d'un
+    cœur) et Chrome jusqu'à 84 % : la dérive des quatre premières prises n'est pas expliquée, mais la machine n'était pas au repos.
+    Lot complet vert (06:14-06:21, 439 s, sans erreur de script), sur l'arbre de ce commit hors ROADMAP.
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).

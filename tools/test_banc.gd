@@ -324,6 +324,17 @@ func _run() -> void:
 		and texte_pose.contains("var lumiere_3d_ecran_scinde := false")
 		and texte_pose.contains("active = active and (not _scinde or lumiere_3d_ecran_scinde)"),
 		"en écran scindé, A gardait 38 à 82 % du 1 % bas du jeu sans lumière 3D")
+	# Les instruments de la fusée (ISO7 Gadgets, 2f06b1b) vivent dans le code du JEU, pas du banc : leurs défauts doivent rester
+	# « tout dessiner » (session cloud, 05:30). Un défaut qui sauterait retirerait une part de la fusée en match, sans erreur.
+	var texte_volumes := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	_check("les instruments de la fusée dessinent tout par défaut (volumes, lueurs, toutes les couches)",
+		texte_volumes.contains("var volumes_actifs := true") and texte_volumes.contains("var lueurs_actives := true")
+		and texte_volumes.contains("var couches_fusee := -1"),
+		"un défaut changé couperait le volume, les lueurs ou des couches de la fusée en jeu")
+	# ISO12 L1 : le plancher d'angle des spots de torche, et sa variable de banc qui le vaut par défaut.
+	_check("le plancher des spots de torche vaut 75°, et la variable de banc le reprend par défaut",
+		texte_miroir.contains("const CONE_PLANCHER_DEG := 75.0") and texte_miroir.contains("var cone_plancher_deg := CONE_PLANCHER_DEG"),
+		"à 45°, jusqu'à 2 % de l'empreinte 2D sortait du spot : couture de relief sur les faces proches")
 	# ε par lampe (L4) : le miroir plafonne h/portée au plancher global, qui doit valoir le défaut de l'include ; et l'include
 	# doit le LIRE dans direction.w, sans quoi ε par lampe serait calculé puis ignoré sans erreur.
 	var texte_relief := FileAccess.get_file_as_string("res://iso_relief.gdshaderinc")

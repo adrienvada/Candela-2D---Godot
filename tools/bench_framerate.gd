@@ -702,7 +702,9 @@ func _recenser_les_ombres_2d() -> void:
 	print("  Ombres 2D : %d occulteurs dans la scène, %d lampes allumées à ombre" % [occulteurs.size(), lampes.size()])
 	for v in vues:
 		var vp := v as Viewport
-		if vp.disable_2d or vp.world_2d == null:
+		# `get` et non l'accès direct : sur la `Window` racine, première de la liste, `disable_2d` lève une erreur de script qui
+		# coupait tout le détail après la ligne d'en-tête (trouvé par ISO7 Gadgets à sa prise de validation, 2026-09-23).
+		if vp.get("disable_2d") == true or vp.world_2d == null:
 			continue
 		var champ: Rect2 = vp.get_canvas_transform().affine_inverse() * Rect2(Vector2.ZERO, vp.get_visible_rect().size)
 		var dedans: Array = []

@@ -30,7 +30,21 @@ const CONE_EN_PLUS_DEG := 5.0
 ## L'angle plancher d'un spot de torche. ⚠️ Preuve rejouée du 2026-09-15 (23:48) : le faisceau de 5° du Braconnier, en spot de 10°,
 ## ne touchait le sol qu'à ~130 px devant la lampe et la bande proche restait noire en 3D alors que la 2D la montre. Le bord
 ## visible du cône est celui de la bride : le spot 3D doit seulement COUVRIR toute la zone du cône 2D, de la lampe au bout.
-const CONE_PLANCHER_DEG := 45.0
+##
+## ⚠️ **45° NE LA COUVRAIT PAS, ET LE MANQUE SE PAYAIT EN COUTURE** (ISO12 L1, 2026-09-23, calculé sur les dix classes puis
+## gardé par `tools/test_iso_torches3d.gd`). La lampe est à hauteur de canon et vise le sol à mi-portée : le sol juste devant
+## elle, et le haut des faces proches, sont vus sous 50 à 96° de l'axe. À 45°, 0,1 à 2 % de l'empreinte 2D (sol et faces
+## jusqu'au mur haut) sortait du spot, jusqu'à 83 px de la lampe debout et 105 px accroupi (Incendiaire, Allumeur). Hors du
+## spot aucune lampe connue n'éclaire, et la garde du relief rend R = 1 : sur le sol plat rien ne se voit (R y vaut 1 des deux
+## côtés), mais sur une face le relief SAUTE au bord du cône 3D — une couture tracée par la 3D dans une zone que la 2D éclaire
+## d'un seul tenant. À 75° : au plus 0,3 % hors du spot, à moins de 30 px de la lampe, dans le corps du porteur. Couvrir tout
+## demanderait plus de 90° (le haut d'une face collée, au-dessus du canon), qu'un spot ne sait pas faire.
+## Élargir ne change pas l'image déjà couverte : le cône se simplifie dans R pour une lampe seule (le dénominateur recopie la
+## formule du moteur, `exposant_cone`). Ne bougent que la bande proche et le POIDS de la torche face aux autres lampes.
+const CONE_PLANCHER_DEG := 75.0
+## INSTRUMENT DE BANC (`--cone-plancher=45` de `tools/banc_lumiere3d.gd`) : l'ancien plancher, pour la prise avant/après.
+## Défaut : la constante.
+var cone_plancher_deg := CONE_PLANCHER_DEG
 const ATTENUATION_ANGULAIRE := 2.0
 ## La portée 3D dépasse un peu la portée 2D, pour la même raison.
 const PORTEE_EN_PLUS := 1.15
@@ -213,7 +227,7 @@ func _torche(source: Light2D, arme: WeaponData, hauteur_px: float, type: String,
 	var au_sol := devant * arme.portee_torche() * VISEE_AU_SOL_PORTEE
 	var cible := Vector3(p.x + au_sol.x, 0.0, p.y + au_sol.y)
 	l.look_at(cible, Vector3.UP)
-	l.spot_angle = clampf(maxf(arme.torch_angle_deg + CONE_EN_PLUS_DEG, CONE_PLANCHER_DEG), 1.0, 89.0)
+	l.spot_angle = clampf(maxf(arme.torch_angle_deg + CONE_EN_PLUS_DEG, cone_plancher_deg), 1.0, 89.0)
 	l.spot_angle_attenuation = ATTENUATION_ANGULAIRE
 	l.spot_attenuation = float(attenuation_par_type.get(type, 0.0))
 	l.spot_range = arme.portee_torche() * PORTEE_EN_PLUS
