@@ -323,3 +323,47 @@ l'éditeur ouvert ne vaudrait rien de toute façon.
 La faute est ailleurs : l'annonce était adossée à la **prise du verrou**, pas au **démarrage de la
 série**. Deux sessions ont gardé le silence quarante minutes pour rien. **Une fenêtre s'annonce quand
 la première prise part**, et la surveillance se met sur le démarrage autant que sur la fin.
+
+## 14. Le pompe sous une fusée, enfin mesuré (2026-09-24, 00:03 → 00:34)
+
+Le pompe — cône de 60°, tirs à plombs — était depuis `0e43dd4` ce que le banc **croyait** mesurer
+comme pire cas, et le seul cas qu'il ne mesurait jamais (§ 12). Huit prises de 60 s sur `b193420`,
+vue unique sous une fusée, `--classe=pompe` contre `--classe=fusil`, en miroir **F P P F P F F P**.
+
+    prise   mode  médiane  1 % bas  pire image   indexation sur TOUTE la fenêtre
+    01_F    F       82       69      26,3 ms      0 %
+    02_P    P       84       77      14,0 ms      0 %
+    03_P    P       84       77      20,1 ms      0 %
+    04_F    F       82       77      16,9 ms     45 %  spotlightknowledged
+    05_P    P       86       68      16,1 ms     21 %  spotlightknowledged
+    06_F    F       84       79      18,6 ms     31 %  spotlightknowledged
+    07_F    F       84       77      20,0 ms     65 %  spotlightknowledged 53 %, mediaanalysisd 12 %
+    08_P    P       86       77      19,0 ms      0 %
+
+    F (fusil) : médiane des médianes 83,0 · médiane des 1 % bas 77,0
+    P (pompe) : médiane des médianes 85,0 · médiane des 1 % bas 77,0
+    P/F sur les médianes : 1,024 (pour information, sans seuil)
+
+**LE JEU TIENT AU POMPE SOUS LA FUSÉE** : 1 % bas médian 77, pour un seuil de 60 posé avant les
+chiffres. Et le verdict ne tient pas à une médiane bien choisie — **les huit prises, une par une,
+dépassent 60** : la plus basse est à 68. C'est la forme la plus solide que puisse prendre ce résultat.
+
+### Ce que la série dit de l'instrument, et qui est plus gênant que le verdict
+
+**La porte d'avant-lancement a déclaré les huit prises « propres ». Quatre ne l'étaient pas**, dont
+une à 65 % d'indexation dans sa fenêtre de mesure. Deuxième série de suite où la relecture d'après
+coup trouve ce que la porte ne voit pas, et cette fois elle en rate quatre sur quatre. **La porte
+d'avant-lancement ne protège de rien une fois la prise commencée** ; seule la relecture compte.
+
+**Mais l'indexation ne s'est pas vue dans les chiffres.** `07_F`, la plus polluée des huit (65 %),
+donne 77 au 1 % bas — parmi les meilleures. Il faut le dire aussi franchement que l'inverse : sur
+cette série, la pollution mesurée n'a pas dégradé la cadence de façon lisible. La porte reste utile
+comme précaution, pas comme explication.
+
+⚠️ **Le rapport P/F, lui, ne vaut pas grand-chose ici** : trois des quatre prises F étaient polluées
+contre une des quatre P. 1,024 se lit « pas d'écart visible », jamais « le pompe est plus rapide ».
+
+**Et Adrien était au clavier pendant la fenêtre.** La garde d'inactivité a suspendu la série huit
+minutes entre `05_P` et `06_F`, puis repris quand le clavier a dépassé dix minutes d'inactivité. Le
+miroir survit à une pause : ce qu'il annule, c'est une dérive linéaire, et les positions moyennes
+restent 4,5 des deux côtés.

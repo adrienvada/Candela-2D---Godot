@@ -3197,6 +3197,20 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### `osascript ... to activate` sur un Godot mort le RELANCE (2026-09-24)
+
+Chantier ISO12. Un script de prise lance le banc, attend 4 s, puis réclame le premier plan par
+`osascript -e 'tell application "Godot" to activate'`. Une prise refusée en moins de 4 s laisse donc
+l'`activate` s'appliquer à une application **arrêtée** — et AppleScript la relance : un gestionnaire
+de projets apparaît, sans argument, parent `launchd`, dossier courant `/`. Toutes les signatures d'une
+application ouverte à la main, donc d'Adrien. Coût réel : quarante minutes de machine, une session en
+attente et deux autres au silence, sur un processus que personne n'avait ouvert.
+
+**Le remède** : `activate` seulement si `kill -0 $pid` réussit. **Et la leçon plus générale** : un
+Godot inattendu n'est pas forcément Adrien — mais on ne le tue pas pour autant, on demande. Ce qui a
+identifié la cause n'est pas l'examen du processus (parent, dossier, arguments : tous compatibles avec
+« Adrien »), c'est la session qui a relu son propre script.
+
 ### Annoncer une fenêtre de mesure sur la prise du VERROU, pas sur le démarrage de la série (2026-09-23)
 
 Chantier ISO12. Le lanceur prend le verrou à 23:13 ; on annonce « fenêtre ouverte » à toutes les
