@@ -125,3 +125,19 @@ mannequin même éteint, et la référence ne serait plus le jeu d'avant —, pu
 les deux lots : référence, E seul, A seul, E et A ensemble, au pompe sous une fusée, en miroir. Règle
 posée d'avance : une variante tient si le rapport de ses médianes au défaut atteint 0,970 et si la
 médiane de ses 1 % bas dépasse 60.
+
+## Le photographe sait viser (`--visee=x,y`)
+
+Ajouté au photographe le 2026-09-24, **sur autorisation explicite de la session cloud** : c'est le
+fichier d'un autre chantier (DA6), et la règle est de signaler, pas de corriger. Le drapeau est
+strictement additif — sans lui, `VISEE` garde (1,0 ; 0,36) et les cinq usages lisent la même valeur
+qu'avant, donc aucune planche déjà prise ne change.
+
+**Pourquoi il fallait ce drapeau** : le photographe vise dans une seule direction, choisie pour la
+composition (« le cône traverse le cadre en biais, ce qui se recadre en carré sans perdre sa pointe »).
+Or le feuilletage d'un volume fait de plans empilés se juge dans son **pire cas**, le rayon suivant
+l'axe vertical de l'écran, où le décalage des couches s'ajoute à la longueur du rayon. Choisir une
+densité sur la seule visée de composition, c'était choisir deux fois.
+
+⚠️ Une visée nulle ou mal formée **échoue** au lieu de retomber en silence sur la composition : une
+planche prise dans une direction qu'on croit avoir choisie serait un faux résultat crédible.

@@ -139,6 +139,21 @@ const ECART_DUEL := 260.0
 ## en carré sans perdre sa pointe.
 const VISEE := Vector2(1.0, 0.36)
 
+## ISO13, lot E — la visée peut être FORCÉE : `--visee=0,1` (vers le bas de l'écran), `--visee=0,-1`
+## (vers le haut), `--visee=1,0` (de côté). Sans le drapeau, `VISEE` telle quelle, et les cinq usages
+## lisent la même valeur qu'avant — c'est la seule façon d'ajouter ce réglage sans changer une seule
+## des planches déjà prises.
+##
+## La raison d'être du drapeau : le feuilletage d'un volume fait de plans empilés se juge dans son
+## PIRE cas, le rayon suivant l'axe vertical de l'écran, où le décalage des couches s'ajoute à la
+## longueur du rayon. La visée de composition (en biais) ne le montre pas.
+var _visee := VISEE
+
+
+## La visée de la séance : celle du drapeau si on en force une, sinon celle de la composition.
+func _la_visee() -> Vector2:
+	return _visee.normalized()
+
 ## L'ordre des familles EST l'ordre de la séance, et il n'est pas alphabétique :
 ## chaque famille laisse le jeu dans un état, et la suivante part de là. Les
 ## menus d'abord (état de démarrage), les familles pures ensuite (elles ne
@@ -492,6 +507,7 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
+	_lire_la_visee(args)
 
 	# `--liste` AVANT le refus headless : lire le catalogue ne demande pas
 	# d'écran, et c'est la première chose qu'on veut pouvoir faire.
@@ -964,7 +980,7 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 		# éclats posés ET étincelles encore en l'air.
 		await _prendre(_plan(plans, "impacts"), _duel.bind(120.0, PI), 0.05)
 		for pantin in _pantins:
-			pantin.visee = VISEE.normalized()
+			pantin.visee = _la_visee()
 
 	# Refonte roman graphique — J1 encaisse un coup, sans mourir. La vignette
 	# retombe en 0,6 s : repos court, puis `_vivants()` le remet à 100.
@@ -1251,7 +1267,7 @@ func _face_a_un_mur() -> void:
 	var depart: Vector2 = _main.p1.global_position
 	var espace: PhysicsDirectSpaceState2D = _main.p1.get_world_2d().direct_space_state
 	var meilleur := depart
-	var axe := VISEE.normalized()
+	var axe := _la_visee()
 	var plus_court := INF
 	for i in 24:
 		var a := TAU * float(i) / 24.0
@@ -1537,7 +1553,7 @@ func _plan_leurre(plans: Array[Dictionary]) -> void:
 		# des plans `vue` suivants (rétrodiffusion, flash de tir, sang) : leur
 		# composition dépendait de la présence de CE plan dans la sélection, l'écart
 		# que la Marionnette devait supprimer (trouvé en revue, 2026-09-11).
-		_pantins[1].visee = VISEE.normalized()
+		_pantins[1].visee = _la_visee()
 	Input.action_press("p2_torch")
 	if not _pantins.is_empty():
 		_pantins[0].torche = true
@@ -1597,7 +1613,7 @@ func _prendre_les_commandes() -> void:
 			continue
 		var pantin := Marionnette.new()
 		pantin.name = "MarionnetteDuPhotographe"
-		pantin.visee = VISEE.normalized()
+		pantin.visee = _la_visee()
 		_main._set_player_input_provider(j, pantin)
 		_pantins.append(pantin)
 
@@ -1852,9 +1868,30 @@ func _viser(pid: int, direction: Vector2) -> void:
 		_pantins[pid].visee = direction.normalized()
 
 
+## ⚠️ Une visée nulle ou illisible est REFUSÉE, jamais retombée en silence sur la composition : une
+## planche prise dans une direction qu'on croit avoir choisie serait un faux résultat crédible.
+func _lire_la_visee(args: PackedStringArray) -> void:
+	for a in args:
+		if not a.begins_with("--visee="):
+			continue
+		var bouts := a.trim_prefix("--visee=").split(",")
+		if bouts.size() != 2:
+			printerr("✗ --visee attend « x,y » (reçu « %s »)" % a)
+			_sortir(1)
+			return
+		var v := Vector2(float(bouts[0]), float(bouts[1]))
+		if v.length() < 0.001:
+			printerr("✗ --visee=%s est une direction nulle" % a.trim_prefix("--visee="))
+			_sortir(1)
+			return
+		_visee = v
+		print("[visee] forcée à (%.3f, %.3f)" % [_visee.normalized().x, _visee.normalized().y])
+		return
+
+
 func _viser_par_defaut() -> void:
 	for pantin in _pantins:
-		pantin.visee = VISEE.normalized()
+		pantin.visee = _la_visee()
 
 
 # ---------------------------------------------------------------------------
