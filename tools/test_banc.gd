@@ -195,6 +195,35 @@ func _run() -> void:
 	var vides_photo: Array[String] = Photo.preconditions_manquantes(null, null)
 	_check("et il sait dire quand ils manquent", not vides_photo.is_empty())
 
+	# ⚠️ **DEUX ILLUSTRATIONS POUR UNE MÊME CLÉ : LE PHOTOGRAPHE EN GARDE UNE, ET
+	# C'EST L'ORDRE ALPHABÉTIQUE QUI TRANCHE.** Son garde est juste — sans lui, la
+	# seconde planche écraserait la première. Ce qui manquait, c'est que le
+	# départage est MUET : `ill_creer.png` passait avant `ill_creer_ligne.png`
+	# parce que le point vaut moins que le souligné, et la planche d'illustrations
+	# a montré l'ANCIEN dessin à la place de celui que le jeu affiche, pour
+	# « créer » comme pour « rejoindre ». Une semaine sans que rien ne le dise, et
+	# trouvé par hasard en vérifiant si trois fichiers étaient morts (2026-09-23).
+	#
+	# Le piège revient au prochain fichier oublié, et il a une seconde bouche :
+	# `cle_canonique()` retombe sur `ill_accueil` pour tout nom inconnu, si bien
+	# qu'une illustration ajoutée sans entrée dans `POIS` masque l'accueil ou se
+	# fait masquer par lui, selon son nom.
+	#
+	# La garde lit la liste du photographe LUI-MÊME plutôt que de recopier son
+	# filtre : un filtre recopié diverge le jour où il change le sien.
+	# Typé à la main : `GDScript.new()` rend un `Variant`, et ce dépôt traite
+	# l'inférence depuis un Variant comme une erreur.
+	var photographe: Node = Photo.new()
+	var collisions: Array[String] = _collisions_de_cles(photographe._illustrations())
+	photographe.free()
+	_check("aucune illustration n'en masque une autre sur la planche",
+		collisions.is_empty(), "; ".join(collisions))
+	# Une garde qu'on n'a jamais vue rougir ne prouve rien : on lui repasse le cas
+	# qui a réellement eu lieu.
+	_check("et la garde sait dire quand deux illustrations se masquent",
+		not _collisions_de_cles(["res://assets/ui/ill_creer.png",
+			"res://assets/ui/ill_creer_ligne.png"]).is_empty())
+
 	# ISO12 — le crochet que la LOUPE appelle chez le photographe (`p._poser_la_lumiere_3d()`, `tools/loupe.gd`), pour allumer
 	# la lumière 3D bridée pendant les cadrages de l'adversaire. L'appel est inter-fichier sur une variable typée `Node` :
 	# GDScript le résout dynamiquement, donc **rien ne le vérifie avant la séance**, et un renommage sortirait des images de
@@ -415,3 +444,20 @@ func _run() -> void:
 	else:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	quit(1 if _failures > 0 else 0)
+
+
+## Les illustrations qui se ramènent à une même clé canonique, nommées par paires.
+##
+## Séparée de son appel pour être vérifiable : une garde qui ne peut pas être
+## mise en défaut sur commande ne dit pas si elle marche.
+static func _collisions_de_cles(chemins: Array) -> Array[String]:
+	var par_cle := {}
+	var collisions: Array[String] = []
+	for chemin in chemins:
+		var cle: String = MenuArtwork.cle_canonique(String(chemin))
+		if par_cle.has(cle):
+			collisions.append("%s et %s se ramènent tous deux à « %s »" % [
+				String(par_cle[cle]).get_file(), String(chemin).get_file(), cle])
+		else:
+			par_cle[cle] = chemin
+	return collisions
