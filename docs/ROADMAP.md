@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-15
+> Dernière mise à jour : 2026-09-23
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3196,6 +3196,20 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Le banc de cadence ne peut pas mesurer plus de ~270 s : la manche finit à 300 s (2026-09-23)
+
+Chantier ISO12. Deux prises longues de six minutes, à 18:14 et à 19:47, se sont arrêtées à la **même
+seconde** (272,88 s et 272,84 s) et ont été **refusées par le banc lui-même** (« la lampe n'a pas suivi
+la demande du banc sur 1 image(s) : chiffre refusé »). Les deux n'avaient ni la même cadence ni le même
+nombre d'images — 18 078 contre 23 268 : l'événement est déterministe **dans le temps**, donc ni
+thermique ni machine. `tools/bench_framerate.gd` joue **une vraie manche** et ne gèle pas `time_left` ;
+une manche dure `MatchRecord.ROUND_DURATION` = 300 s. Au bout de cinq minutes la manche finit, les
+torches s'éteignent, et la garde de l'étape 28 refuse — à raison, ne pouvant savoir ce que la fin de
+manche a éteint d'autre. **Plafond utile = 300 s − `WARMUP_SEC` − le montage, soit ~270 s : une mesure
+de durée de match se demande à 240 s, pas à 360.** Coût de l'ignorer : deux fois sept minutes de Mac,
+la seconde après trente minutes de repos qu'il a fallu attendre. Et les chiffres d'une prise refusée
+ne se citent nulle part, même partiellement. Détail : `docs/iso/iso12/mesurer_une_cadence.md` § 10.
 
 ### Une sous-vue à couche dédiée n'affiche rien si les PARENTS de l'élément ne sont pas sur sa couche (2026-09-15)
 

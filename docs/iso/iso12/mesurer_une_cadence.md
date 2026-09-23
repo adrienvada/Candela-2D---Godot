@@ -143,3 +143,31 @@ après une minute de prise longue. L'état thermique se lit sans droits particul
 
     osascript -l JavaScript -e 'ObjC.import("Foundation"); $.NSProcessInfo.processInfo.thermalState'
     → 0 normal · 1 passable · 2 sérieux · 3 critique   (essayé le 2026-09-23 : rend bien 0)
+
+## 10. Le banc ne peut pas mesurer plus de ~270 s : la manche finit
+
+Deux prises longues de six minutes ont été lancées le 2026-09-23, à 18:14 et à 19:47. **Les deux se
+sont arrêtées à la même seconde** — 272,88 s et 272,84 s de mesure — et les deux ont été **refusées
+par le banc lui-même** :
+
+    hoquet 110.6 ms à 272.84 s — lampes : aucune lumière 3D
+    ✗ la lampe n'a pas suivi la demande du banc sur 1 image(s) : chiffre refusé
+
+L'identité des deux instants est ce qui désigne la cause. Les deux prises n'ont ni la même cadence ni
+le même nombre d'images (18 078 contre 23 268) : l'événement est déterministe **dans le temps**, donc
+il n'est ni thermique, ni machine, ni malchance. `tools/bench_framerate.gd:191` le dit d'ailleurs en
+clair — « le banc joue déjà une vraie manche ». Et une manche dure `MatchRecord.ROUND_DURATION`,
+soit **300 s** (`match_record.gd:101`). Le banc ne gèle pas `time_left` : au bout de cinq minutes de
+temps de jeu la manche se termine, les torches s'éteignent, et la garde de l'étape 28 refuse — à
+raison, puisqu'elle ne peut pas savoir ce que la fin de manche a éteint d'autre.
+
+**Plafond utile : `ROUND_DURATION` − `WARMUP_SEC` − le montage, soit ~270 s.** Une mesure de durée de
+match se demande donc à **240 s**, pas à 360. Deux prises de sept minutes de Mac ont été perdues à
+l'ignorer, la seconde après un repos de trente minutes qu'il a fallu attendre.
+
+⚠️ **Et les chiffres d'une prise refusée ne servent à rien, même partiellement** : la garde refuse
+*le chiffre*, pas la dernière image. Les relevés 75/20 et 86/65 de ces deux prises ne doivent être
+cités nulle part. Ce qu'elles laissent est une **question**, pas un résultat : leurs profils par
+tranche diffèrent énormément (l'une plate à 85,7 jusqu'à 260 s, l'autre creusant à 45 entre 170 et
+200 s avant de remonter), et la première venait d'une machine reposée quand la seconde suivait douze
+prises enchaînées. C'est cohérent avec le § 7, mais cela demande une prise valide pour être affirmé.
