@@ -26631,6 +26631,10 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     patch s'insérait entre elles) ; un `--arme-j2` inconnu ÉCHOUE, comme `--arme-j1`, au lieu de retomber en silence sur
     l'Arbalète ; l'arme de J2 imprimée à côté de celle de J1. ⚠️ La bouteille des tenues coûte deux `MeshInstance3D` de plus
     par corps qui la porte : la cadence des corps habillés n'a pas été mesurée (remarque de Beauté).
+    **Puis la teinte froide** (session cloud, 22:18) : `iso12-corps` à 0ae314b fusionnée, `--teinte=froide` éteint, qui ne change
+    que la couleur des trois tenues ; et le complément de son patch, écrit contre 7a648d2 à ma demande pour ne pas défaire les
+    retouches ci-dessus — cadrage `planche_tenues_torche` (la torche seule, V1 olive en cinquième colonne) et des entrées
+    « nom:teinte » —, appliqué tel quel, jugé sain.
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).
