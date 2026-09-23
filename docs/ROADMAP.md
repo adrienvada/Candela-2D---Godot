@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-23
+> Dernière mise à jour : 2026-09-24
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3198,6 +3198,62 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### `osascript ... to activate` sur un Godot mort le RELANCE (2026-09-24)
+
+Chantier ISO12. Un script de prise lance le banc, attend 4 s, puis réclame le premier plan par
+`osascript -e 'tell application "Godot" to activate'`. Une prise refusée en moins de 4 s laisse donc
+l'`activate` s'appliquer à une application **arrêtée** — et AppleScript la relance : un gestionnaire
+de projets apparaît, sans argument, parent `launchd`, dossier courant `/`. Toutes les signatures d'une
+application ouverte à la main, donc d'Adrien. Coût réel : quarante minutes de machine, une session en
+attente et deux autres au silence, sur un processus que personne n'avait ouvert.
+
+**Le remède** : `activate` seulement si `kill -0 $pid` réussit. **Et la leçon plus générale** : un
+Godot inattendu n'est pas forcément Adrien — mais on ne le tue pas pour autant, on demande. Ce qui a
+identifié la cause n'est pas l'examen du processus (parent, dossier, arguments : tous compatibles avec
+« Adrien »), c'est la session qui a relu son propre script.
+
+### Annoncer une fenêtre de mesure sur la prise du VERROU, pas sur le démarrage de la série (2026-09-23)
+
+Chantier ISO12. Le lanceur prend le verrou à 23:13 ; on annonce « fenêtre ouverte » à toutes les
+sessions. Mais il vérifie aussi `pgrep -x Godot`, voit un Godot tourner, **rend le verrou** et attend
+— quatre-vingts fois, jusqu'à abandonner à 23:52. Le processus était l'**éditeur** (aucun argument,
+parent `launchd`, dossier courant `/` : ouvert depuis le Finder, donc Adrien). La garde a fait
+exactement son travail : on ne prend pas la machine à Adrien, et une cadence prise avec l'éditeur
+ouvert ne vaudrait rien. Mais deux sessions ont gardé le silence quarante minutes pour rien, et un
+ordre est resté sans chiffre alors qu'il avait été annoncé en cours.
+
+**La parade** : une fenêtre s'annonce quand la **première prise part**, jamais quand le verrou est
+pris — entre les deux il y a `pgrep`, l'attente et l'abandon possible. Et la surveillance se met sur
+le DÉMARRAGE autant que sur la fin : un veilleur qui ne regarde que la fin ne distingue pas une série
+qui travaille d'une série qui n'a jamais commencé. Détail : `docs/iso/iso12/mesurer_une_cadence.md` § 13.
+
+### Un coût derrière un uniforme ne se voit dans aucune comparaison de shaders (2026-09-23)
+
+Chantier ISO12. Les tenues sombres (`--corps=sombre`) et le gris utilisent le **même shader**, même
+chemin et même empreinte de code, pour la matière visible comme pour celle de profondeur. On en
+conclurait que la tenue ne coûte rien. C'est faux : dans `iso_corps_portrait.gdshaderinc`,
+`portrait_fiche()` et `portrait_teindre()` s'ouvrent par `if (portrait < 0.5) return fiche;`, et
+`portrait` est un **uniforme**. Le gris sort à la première ligne ; la tenue exécute la cinquantaine de
+lignes suivantes par pixel de corps — dont deux `pate_bruit`, soit **huit `sin` par pixel**. Une
+comparaison de shaders répond « identiques » aussi bien quand le travail est absent que quand il est
+seulement éteint. Pour un coût derrière un uniforme il n'y a que deux voies : lire la branche, ou
+mesurer. Mesuré le 2026-09-23 : sous la résolution de la série (3 %), en vue unique sous la torche —
+ce qui n'est pas « nul ». Détail : `docs/iso/iso12/mesurer_une_cadence.md` § 11 et § 12.
+
+### Le banc de cadence ne peut pas mesurer plus de ~270 s : la manche finit à 300 s (2026-09-23)
+
+Chantier ISO12. Deux prises longues de six minutes, à 18:14 et à 19:47, se sont arrêtées à la **même
+seconde** (272,88 s et 272,84 s) et ont été **refusées par le banc lui-même** (« la lampe n'a pas suivi
+la demande du banc sur 1 image(s) : chiffre refusé »). Les deux n'avaient ni la même cadence ni le même
+nombre d'images — 18 078 contre 23 268 : l'événement est déterministe **dans le temps**, donc ni
+thermique ni machine. `tools/bench_framerate.gd` joue **une vraie manche** et ne gèle pas `time_left` ;
+une manche dure `MatchRecord.ROUND_DURATION` = 300 s. Au bout de cinq minutes la manche finit, les
+torches s'éteignent, et la garde de l'étape 28 refuse — à raison, ne pouvant savoir ce que la fin de
+manche a éteint d'autre. **Plafond utile = 300 s − `WARMUP_SEC` − le montage, soit ~270 s : une mesure
+de durée de match se demande à 240 s, pas à 360.** Coût de l'ignorer : deux fois sept minutes de Mac,
+la seconde après trente minutes de repos qu'il a fallu attendre. Et les chiffres d'une prise refusée
+ne se citent nulle part, même partiellement. Détail : `docs/iso/iso12/mesurer_une_cadence.md` § 10.
 
 ### Une sous-vue à couche dédiée n'affiche rien si les PARENTS de l'élément ne sont pas sur sa couche (2026-09-15)
 
@@ -9164,22 +9220,14 @@ qu'elles nommaient. ⚠️ Et, deuxième série de suite, la porte d'indexation 
 que la relecture de toute la fenêtre a trouvées indexées (jusqu'à 65 % de Spotlight) — sans effet lisible sur leur cadence ici :
 la porte reste une précaution, la relecture d'après coup est obligatoire.
 
-ISO12 (2026-09-23, 23:04), payé par ISO7 Gadgets, dont la mesure n'a jamais démarré : **`tell application "Godot" to activate`
-RELANCE GODOT S'IL EST DÉJÀ ARRÊTÉ.** Mes lanceurs de prise (hors dépôt) lançaient le banc, attendaient 4 s, puis ramenaient
-Godot au premier plan par `osascript`. Une prise refusée en moins de 4 s (`--classe=licorne`, le refus voulu) avait déjà
-quitté : « activate » a ouvert le GESTIONNAIRE DE PROJETS (parent 1, dossier courant `/`, sans argument), resté ouvert 55 min
-— un Godot qui tourne interdit toute mesure (`pgrep -x Godot`), et il ne ressemblait à aucun banc. **Règle : ne ramener au
-premier plan qu'un processus dont on sait qu'il vit (`kill -0 $pid`) ; un Godot sans argument sur le Mac vient d'un
-« activate » ou d'un double-clic, pas d'un banc — on cherche son parent avant d'y toucher.** Aucun script du dépôt n'utilise
-`osascript` (vérifié).
-
-ISO12 (2026-09-24, 00:45), règle commune tirée par ISO7 Gadgets de la série de la nuit et posée par la session cloud :
-**LES FENÊTRES DE MESURE.** Celui qui mesure annonce sa fenêtre au DÉMARRAGE de sa première prise, pas à la prise du verrou
-— un verrou pris ne dit pas qu'une mesure a commencé, et l'épisode de l'« activate » ci-dessus s'est glissé dans cet écart.
-Il demande « aucune charge lourde », pas seulement « pas de Godot » : ni Godot hors de sa mesure, ni génération d'images, ni
-navigateur actif, ni script d'analyse. Chacun s'abstient jusqu'à l'annonce de fin. Et la relecture d'après coup cherche TOUT
-processus au-dessus de 10 % d'un cœur dans la fenêtre, pas une liste de noms connus — une liste ne voit que ce qu'on a déjà
-rencontré.
+ISO12 (2026-09-23 et 24) — **« activate » relance un Godot mort** et **une fenêtre de mesure s'annonce au démarrage de la
+première prise** : décrits une seule fois, plus haut, sous leurs titres (ISO7 Gadgets, fusionnés depuis `iso11-menus`). Ce que
+ces deux entrées ne disent pas, posé par la session cloud le 2026-09-24 à 00:45 : celui qui mesure demande « **aucune charge
+lourde** », pas seulement « pas de Godot » — ni Godot hors de sa mesure, ni génération d'images, ni navigateur actif, ni script
+d'analyse —, et **la relecture d'après coup cherche TOUT processus au-dessus de 10 % d'un cœur**, jamais une liste de noms connus.
+⚠️ Et une correction de fait, pour l'entrée des fenêtres : le Godot qui a fait abandonner la série de 23:13 n'était pas
+Adrien — c'était le gestionnaire de projets relancé à 23:04:58 par l'« activate » de mon lanceur de prise (Iso 1), celui que
+décrit l'entrée « activate ».
 
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 
@@ -27018,6 +27066,58 @@ des boîtes droites, sans coude plié. Le côté noir est retenu (0,6, jamais d'
 les illustrations opposent un côté chaud franc à un noir d'encre. Sous la torche de J1, J2 est rendu à 65 % d'opacité par
 l'éblouissement du regardeur, ce qui lave tout détail. Et la couleur : les illustrations sont rouille, le jeu attend la tenue
 d'Adrien (Q21, Q23). La cadence n'est pas mesurée : à faire par Gadgets avant d'allumer le drapeau.
+
+#### Le coût de cadence d'une fusée, décomposé (2026-09-23, 18 prises)
+
+Demandé par la session cloud après le tableau de cadence d'Iso 1 : le jeu iso, **sans aucune
+lumière 3D**, tient mal une fusée (vue unique, médiane 105 → 75). Six drapeaux d'instrument
+écrits par Iso 1 sur spécification de Gadgets (une partie de la fusée retirée à la fois), 18
+prises de 60 s en deux passes alternées sur le commit `2f06b1b`. Détail, données brutes et
+économies : [docs/iso/iso12/mesure_fusee.md](iso/iso12/mesure_fusee.md).
+
+**Une fusée coûte 3,39 ms par image, et LE VOLUME DE FUMÉE ISO EN FAIT 78 %** (2,66 ms). Somme
+des parts 3,50 contre 3,25 pour les six retirées ensemble : elles s'additionnent proprement.
+Résidu 0,15 ms — rien n'échappe aux drapeaux.
+
+**Trois pistes sont FERMÉES, et c'est le résultat le plus utile.** La passe d'ombre de la lumière
+2D vaut **0,09 ms**, la lumière elle-même 0,09, les lueurs 0,00 — le tout dans le bruit de leurs
+propres passes (0,35). La piste de la passe d'ombre venait de la session cloud, sources du moteur
+à l'appui (le compteur d'appels de dessin ne voit pas cette passe, ce qui reste vrai) ; celle du
+remplissage des nappes 2D venait de Gadgets. **Aucune des deux n'a survécu à la mesure**, et la
+seule qui tenait n'avait été nommée principale par personne.
+
+Le remplissage est établi **par élimination** : retirer le volume ne change pas le temps CPU par
+vue (2,64/2,93 contre 2,57/2,85) tout en rendant 2,66 ms d'image. ⚠️ Le temps GPU par vue lit
+**0,00 sur ce Mac** — la conclusion ne vient donc pas d'une mesure directe, et c'est dit ainsi.
+
+**Pourquoi c'est si cher** : `volume_iso.gdshader` fait **dix lectures de texture par pixel et par
+couche** (neuf pour la lightmap lissée, une dixième pour la neutralité), soit quarante par pixel
+de fumée. Deux économies à image strictement identique en découlent — jeter avant de lire plutôt
+que lire puis jeter (~0,57 ms), et réutiliser la lecture centrale déjà faite par le lissage
+(~0,27 ms) : **~24 % du coût de la fusée sans toucher un pixel**. Estimations, à mesurer.
+
+**Ce qui n'est PAS établi, et la faute est celle de la mesure.** Le 1 % bas vaut ~23,8 ms et le
+seuil de détection des images lentes a été posé à 25 : dix-sept prises sur dix-huit n'ont attrapé
+que 1 à 5 images. Regroupées, les 105 images lentes semblent calées sur la période de 6,5 s du
+banc (p ≈ 0,0000) — mais **59 viennent d'une seule prise, et sans elle le verdict s'inverse**
+(p = 0,90). **RÉSOLU à 06:29, et autrement que prévu** : les images lentes ne sont pas
+calées sur un cycle, elles sont massées au DÉBUT de la mesure — 53 des 55 dans les cinq premières
+secondes. Le banc échauffait alors 2 s quand son propre en-tête avertit que la chauffe en dure
+douze (⚠️ **valeur de `2f06b1b` ; portée à 12 s par Iso 1, vérifié sur `fd6826d`** — ce transitoire
+est donc peut-être déjà écarté aujourd'hui, à vérifier) : **le
+1 % bas se calcule pour l'essentiel sur des images de chauffe**. Hors des cinq premières secondes et
+sur machine calme, le 1 % bas passe de 62,1 à **70,1 sous une fusée** (témoin : 76,6 à 84,8) — la
+cible de 60 est tenue avec dix images d'avance. ⚠️ Portée au-delà de ce chantier : **tout 1 % bas de
+ce banc contient des images de chauffe**, dans toutes les cellules du tableau.
+
+**Et la question des HALOS PRIVÉS est close, par le comptage.** Le rassemblement des lumières d'une
+vue ne teste pas le masque de cull : le halo de proximité de chaque joueur, qui n'éclaire que son
+canal privé, paie donc une passe d'ombre là où il n'éclaire rien — **80 dessins d'ombre par image,
+dont 64 pour rien** (recensement d'Iso 1). Mais cela ne pèse que **~0,14 ms**, et
+`tools/compte_occulteurs.gd` ferme la crainte que ce soit pire sur une vraie carte : **le Cloître
+produit 9 occulteurs, exactement comme la carte d'essai** (ses 48 cases de piliers fusionnent en
+cinq rectangles). Sous le seuil de 0,3 ms fixé par la session cloud. ⚠️ Cet outil échoue son
+étalonnage d'une unité (9 contre les 8 du banc), inexpliqué, sans portée à cette échelle.
 
 ### Ce qui attend Adrien — jalon H15
 

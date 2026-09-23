@@ -67,6 +67,7 @@ func _run() -> void:
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
 	_check("Protocol.VERSION reste 18", version == 18, str(version))
 	_les_shaders()
+	_le_faisceau()
 	await _les_deux_lightmaps()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	_sortir()
@@ -449,6 +450,28 @@ func _l_effacement_dans_la_suie(main: Node, p: Node) -> void:
 
 
 ## Couper les images, puis les rendre : aucune valeur de jeu ne bouge.
+## ISO13, lot E — le faisceau dans l'air. Trois garanties qui ne se voient pas à l'œil et qu'aucune
+## planche ne montrerait : le drapeau est ÉTEINT par défaut ; le masque du rayon est la texture de la
+## lampe elle-même (donc le cône ne peut pas diverger de la lumière) ; et le rayon passe par les
+## couches ordinaires, qui lisent la lightmap — c'est ce qui lui interdit de rien révéler que le sol
+## ne révèle déjà. Une réécriture qui remplacerait le masque par une forme à soi casserait la
+## deuxième sans casser l'image, et personne ne le verrait.
+func _le_faisceau() -> void:
+	print("\n[Le faisceau dans l'air — lot E]")
+	var v := IsoVolumes.new()
+	_check("le drapeau du faisceau est éteint par défaut", not bool(v.get("faisceaux_actifs")))
+	v.free()
+	var texte := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	_check("le masque du rayon EST la texture de la lampe",
+		texte.contains("lampe.texture, lampe.global_rotation"))
+	_check("le rayon passe par les couches ordinaires (donc par la lightmap)",
+		texte.contains("_couches(e, int(VOLUME_FAISCEAU[\"couches\"]))"))
+	_check("le faisceau s'éteint avec la lampe",
+		texte.contains("not lampe.enabled or lampe.energy <= 0.0"))
+	_check("le drapeau se lit sur les arguments UTILISATEUR (après --)",
+		texte.contains("OS.get_cmdline_user_args().has(DRAPEAU_FAISCEAU)"))
+
+
 func _des_images_seulement(main: Node, p: Node, poses: Dictionary) -> void:
 	print("\n[Les images ne sont que des images]")
 	var miroirs: Node = p.get("_miroirs")
