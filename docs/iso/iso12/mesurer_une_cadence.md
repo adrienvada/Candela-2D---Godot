@@ -199,3 +199,28 @@ Trois choses que ce recensement donne et qu'une prise de cadence n'aurait pas do
 nombre que personne ne paie : six classes paient +2 en entier, quatre paient 0. La première version de
 l'outil imprimait cette moyenne — corrigée avant publication. Un coût qui frappe une partie de la
 population se dit par porteur, jamais par tête.
+
+### Et le piège qu'il faut nommer : « même shader » ne veut pas dire « même coût »
+
+L'outil compare aussi les shaders des matières du corps, gris contre tenue. Ils sont **identiques**,
+chemin et empreinte du code :
+
+    gris   res://corps_iso.gdshader             code 3381077480  (9 maillages)
+    tenue  res://corps_iso.gdshader             code 3381077480  (10 maillages)
+    gris   res://corps_iso_profondeur.gdshader  code  519987648  (9 maillages)
+    tenue  res://corps_iso_profondeur.gdshader  code  519987648  (10 maillages)
+
+La tentation est d'en conclure que la tenue ne coûte rien au pompe, puisque au pompe les maillages
+sont les mêmes aussi. **C'est faux, et le shader lui-même le dit** : dans
+`iso_corps_portrait.gdshaderinc`, `portrait_fiche()` et `portrait_teindre()` s'ouvrent toutes deux par
+
+    if (portrait < 0.5) { return fiche; }
+
+`portrait` est un **uniforme**. Le gris sort à la première ligne ; la tenue exécute la cinquantaine de
+lignes qui suivent — patine, rouille, `smoothstep`, comparaisons de boîtes, tête, liseré d'arêtes —
+**pour chaque pixel de chaque corps**. La bascule ne laisse donc aucune trace dans le programme : ni le
+chemin, ni l'empreinte du code, ni le nombre de maillages ne bougent.
+
+**La leçon générale** : une comparaison de shaders ne voit pas un coût gouverné par un uniforme. Elle
+répond « identiques » aussi bien quand le travail est absent que quand il est simplement éteint ce
+jour-là. Pour un coût derrière un uniforme, il n'existe que deux voies : lire la branche, ou mesurer.

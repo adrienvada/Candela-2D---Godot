@@ -41,6 +41,7 @@ func _initialize() -> void:
 		if int(l[3]) > 0:
 			porteuses += 1
 			par_porteuse = int(l[3])
+	_shaders_des_matieres(demandee)
 	print("COMPTE  %d classes sur %d portent la bouteille, +%d maillages chacune."
 		% [porteuses, lignes.size(), par_porteuse])
 	print("COMPTE  Un duel où les DEUX joueurs la portent : +%d maillages. Où aucun (le pompe) : +0."
@@ -71,3 +72,45 @@ func _maillages(n: Node) -> int:
 	for e in n.get_children():
 		c += _maillages(e)
 	return c
+
+
+## Les SHADERS des matières d'un corps, gris contre tenue : la tenue change-t-elle le programme, ou
+## seulement des uniformes ? On imprime le chemin de ressource ET une empreinte du code, parce que
+## deux `Shader` distincts peuvent porter le même chemin d'`#include`.
+##
+## ⚠️ Un shader identique ne veut PAS dire un coût identique : `iso_corps_portrait.gdshaderinc` ouvre
+## `portrait_fiche()` et `portrait_teindre()` par `if (portrait < 0.5) return ...;`. Le gris sort à la
+## première ligne ; la tenue exécute tout le reste, par pixel. La bascule est un UNIFORME, invisible
+## à toute comparaison de shaders — d'où cette mise en garde imprimée avec le résultat.
+func _shaders_des_matieres(nom: String) -> void:
+	print("")
+	print("SHADER  (pistolet, une classe porteuse)")
+	for etat in [["gris", ""], ["tenue", nom]]:
+		VoxelCatalogue.forcer_tenue = etat[1]
+		var corps := VoxelCorps.new()
+		root.add_child(corps)
+		corps.construire("pistolet")
+		var vus := {}
+		_recolter(corps, vus)
+		var cles := vus.keys()
+		cles.sort()
+		for k in cles:
+			print("SHADER  %-6s %-34s code %s  (%d maillages)" % [etat[0], k, vus[k][0], vus[k][1]])
+		corps.queue_free()
+		VoxelCatalogue.forcer_tenue = "-"
+	print("SHADER  ⚠️ Même shader ≠ même coût : `portrait` est un UNIFORME, et le gris sort de")
+	print("SHADER     `portrait_fiche()` à sa première ligne quand la tenue exécute tout le corps.")
+
+
+func _recolter(n: Node, vus: Dictionary) -> void:
+	if n is MeshInstance3D:
+		var m := (n as MeshInstance3D).material_override
+		if m is ShaderMaterial and (m as ShaderMaterial).shader != null:
+			var sh: Shader = (m as ShaderMaterial).shader
+			var chemin := sh.resource_path if sh.resource_path != "" else "(sans chemin)"
+			var empreinte := str(sh.code.hash())
+			if not vus.has(chemin):
+				vus[chemin] = [empreinte, 0]
+			vus[chemin][1] += 1
+	for e in n.get_children():
+		_recolter(e, vus)
