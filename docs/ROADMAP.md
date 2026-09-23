@@ -25852,8 +25852,14 @@ démarrage). Un chiffre invérifiable ne se recopie pas d'une entrée à l'autre
 > dans le code, éteinte par défaut, sans suite ; pas de mode B. Pourquoi, en une ligne : sous une fusée, elle tombe à 54,8 au
 > 1 % bas pour 60 visés, pour un modelé que l'œil voit à peine (+4 à +10 % sur les faces sous la torche, rien sous une fusée) ; son
 > coût (2,69 ms) est dans les matériaux éclairés eux-mêmes, pas dans le relief, et aucun réglage ne le retire sans changer l'image.
-> Ce qui reste utile au-delà d'ISO12 : le banc de cadence corrigé (chauffe 30 s, verdict hors 10 s, table par tranche), les
-> pièges du Mac (repos de 90 s entre prises, indexation au lancement, porte par préfixe), les gardes d'identité et du fragment.
+> **« Clos sans suite » ne vaut que pour la lumière 3D.** Vivent dans cette branche, et servent le jeu gardé : les deux économies
+> de la fumée de la fusée (ISO7 Gadgets, ef82c3f, fusionnées en 28005cf), qui allègent la fusée en lumière 2D ; les corps peints
+> d'après les dix portraits (ISO7 Beauté, fusionnés en 4979484), derrière `--corps=portraits`, éteints par défaut — **Q21 :
+> Adrien les a d'abord voulus pour tout le monde (20:41), puis s'est repris (20:43) : « il faudrait que les personnages soient en
+> tenue sombre. Dans tous les visuels. » Ils restent donc éteints ; ISO7 Beauté prépare des variantes de tenue sombre.** Et ce qui reste utile au-delà d'ISO12 : le banc de cadence corrigé
+> (chauffe 30 s, verdict hors 10 s, table par tranche), les pièges du Mac (repos de 90 s entre prises, indexation au lancement,
+> porte par préfixe), les gardes d'identité et du fragment. ⚠️ Le piège du repos de 90 s existe aussi dans la ROADMAP
+> d'`iso11-menus` (b1aabe8, ISO7 Gadgets) : à la fusion des deux branches, n'en garder qu'un.
 
 **D'où il vient.** Adrien, 21:5x : « est-ce qu'on ne se fourvoie pas à persévérer en 2D ? Vu les images de référence
 générées, est-ce qu'on ne devrait pas faire la 3D ? » ; puis 22:0x : « Ok pour ISO12, enchaîne avec les lumières 3D ».
