@@ -68,7 +68,18 @@ const CIBLE_1_POURCENT_BAS := 60.0
 ## courts. Le 1 % bas est de toute façon la moyenne du centile le plus lent — il
 ## trouve toujours une queue, quelle qu'elle soit, donc le multiplier ne le
 ## stabilise pas, ça l'use.
-const WARMUP_SEC := 2.0
+##
+## ⚠️ **Portée à 12 s une seconde fois, le 2026-09-23 (ISO12, session cloud, sur un constat d'ISO7 Gadgets)**, et le détour
+## ci-dessus ne la contredit pas : il réfutait une explication de la DÉRIVE entre relevés (la chaleur), pas le transitoire du
+## début de mesure. Sur deux prises complètes et horodatées, machine calme, **53 des 55 images lentes de la prise fusée
+## tombaient dans les cinq premières secondes de la mesure**, et la moitié de celles du témoin : le 1 % bas se calculait
+## surtout sur des images de chauffe (témoin 76,6 sur toutes les images, 84,8 hors des cinq premières secondes ; fusée 62,1
+## et 70,1). D'où, en plus des 12 s : le 1 % bas imprimé DES DEUX FAÇONS (`TRANSITOIRE_SEC`), les images lentes par tranche
+## de 10 s, et un verdict qui dit lequel il lit — celui HORS TRANSITOIRE. Un hoquet de début de partie est un autre sujet
+## qu'une cadence : il se rapporte à part, il ne décide pas du verdict.
+const WARMUP_SEC := 12.0
+## Les premières secondes de la MESURE, rapportées à part (voir `WARMUP_SEC`).
+const TRANSITOIRE_SEC := 5.0
 const SHOTGUN_INDEX := 2
 ## Portée utile du pompe : assez près pour que chaque tir touche.
 const DUEL_DISTANCE := 150.0
@@ -1140,13 +1151,41 @@ func _report() -> void:
 	for i in range(sorted.size() - lents, sorted.size()):
 		somme_lentes += sorted[i]
 	var low1 := float(lents) / somme_lentes
+	# ISO12 — le même 1 % bas, HORS des `TRANSITOIRE_SEC` premières secondes de la mesure (voir `WARMUP_SEC`).
+	var regime: Array = []
+	for i in _samples.size():
+		if i < _samples_t.size() and _samples_t[i] >= TRANSITOIRE_SEC:
+			regime.append(_samples[i])
+	regime.sort()
+	var low1_regime := low1
+	var lents_regime := 0
+	if not regime.is_empty():
+		lents_regime = maxi(1, int(round(regime.size() * 0.01)))
+		var somme_regime := 0.0
+		for i in range(regime.size() - lents_regime, regime.size()):
+			somme_regime += regime[i]
+		low1_regime = float(lents_regime) / somme_regime
 
 	print("\n=== RÉSULTAT (%s) ===" % _libelle_charge())
 	print("  Images mesurées  : %d en %.1f s" % [sorted.size(), total])
 	print("  FPS moyen        : %.0f" % avg)
 	print("  FPS médian       : %.0f" % (1.0 / sorted[sorted.size() / 2]))
-	print("  FPS 1 %% bas      : %.0f  (moyenne des %d images les plus lentes)"
+	print("  FPS 1 %% bas      : %.0f  (moyenne des %d images les plus lentes, TOUTES images)"
 		% [low1, lents])
+	print("  FPS 1 %% bas hors transitoire : %.0f  (moyenne des %d plus lentes, hors des %.0f premières secondes) — lu par le verdict"
+		% [low1_regime, lents_regime, TRANSITOIRE_SEC])
+	# Les images du 1 % le plus lent (toutes images), par tranche de 10 s : où tombe la queue.
+	var seuil_lent: float = sorted[sorted.size() - lents]
+	var tranches: PackedInt32Array = []
+	tranches.resize(int(ceil(total / 10.0)) + 1)
+	for i in _samples.size():
+		if _samples[i] >= seuil_lent and i < _samples_t.size():
+			tranches[mini(int(_samples_t[i] / 10.0), tranches.size() - 1)] += 1
+	var par_tranche: PackedStringArray = []
+	for k in tranches.size():
+		if k * 10.0 < total:
+			par_tranche.append("%d-%d s : %d" % [k * 10, k * 10 + 10, tranches[k]])
+	print("  Images lentes (1 %% le plus lent) par tranche : %s" % ", ".join(par_tranche))
 	print("  Image la plus lente : %.1f ms  (soit %.0f fps)"
 		% [sorted[sorted.size() - 1] * 1000.0, 1.0 / sorted[sorted.size() - 1]])
 	# ISO12 — les cinq pires, DATÉES : un hoquet unique au début (compilation) ne se lit pas comme un régime.
@@ -1185,8 +1224,8 @@ func _report() -> void:
 			print("    dont %d image(s) mesurées pendant le décompte de départ, où le jeu"
 				% _torches_decompte)
 			print("    éteint les torches lui-même — non comptées comme désaccord")
-	print("  Verdict %.0f fps   : %s" % [CIBLE_1_POURCENT_BAS,
-		"TENU" if low1 >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas à %.0f)" % low1])
+	print("  Verdict %.0f fps   : %s  (sur le 1 %% bas hors transitoire)" % [CIBLE_1_POURCENT_BAS,
+		"TENU" if low1_regime >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas hors transitoire à %.0f)" % low1_regime])
 	# **Ce n'est pas le second plan qui casse le 1 % bas, c'est le CHANGEMENT.**
 	#
 	# Mesuré le 2026-08-25, cinq relevés à charge et fenêtre identiques : les

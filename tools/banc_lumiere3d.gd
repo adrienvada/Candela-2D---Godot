@@ -123,7 +123,7 @@ var _v27 := false
 var _bride_mode_defaut := 0
 var _relief_max := -1.0
 ## `--v27-cadrage=<id>[,<id>…]` : les cadrages de la v27 à prendre (cumul, recouvrement, une_lumiere, deux_distances,
-## deux_lumieres, torche_face_proche, torche, torche_stricte, torche_retro, fusee_seule, torche_et_fusee, adversaire_arbalete, accroupi_muret,
+## deux_lumieres, torche_face_proche, sang, torche, torche_stricte, torche_retro, fusee_seule, torche_et_fusee, adversaire_arbalete, accroupi_muret,
 ## neuf_lampes).
 var _v27_filtre := ""
 ## `--taille=1920x1080` : la taille de la fenêtre, donc des captures (défaut `TAILLE`). Les captures d'Adrien sont en 1920×1080.
@@ -1008,6 +1008,25 @@ func _la_v27(carte: String) -> void:
 					"sol_devant": [face + Vector2(0.0, 0.6 * t), 0.0], "j1": [pf, HAUTEUR_CORPS]})
 			else:
 				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_torche_face_proche raison=place_occupee" % carte)
+		# ISO12 L2 — LE SANG, par le vrai `blood_stain.gd` (celui que pose `bullet.gd`) : une flaque et sa gerbe au sol devant J1,
+		# une autre au PIED de la face (le mur rougi d'ISO10 1f). Sous le principe d'identité, sa couleur est celle de la 2D et
+		# la 3D n'y ajoute que R, ACHROMATIQUE : la teinte de la tache doit rester celle de la 2D (brief L2 : « la peinture module
+		# l'albédo, le mur rougi devient naturel »).
+		if _v27_veut("sang"):
+			var ps := face + Vector2(0.0, 3.2 * t)
+			if _libre(ps, MursBas.RAYON_ENCOMBREMENT):
+				_placer(ps, Vector2.UP, true, loin, Vector2.UP, false)
+				var t_sol := face + Vector2(-0.5 * t, 1.8 * t)
+				var t_pied := face + Vector2(0.6 * t, 0.35 * t)
+				var taches := _poser_du_sang([t_sol, t_pied], Vector2.UP)
+				await _serie_v27(carte + "_v27_sang", {"tache_sol": [t_sol, 0.0], "tache_pied": [t_pied, 0.0],
+					"face_pied": [Vector2(t_pied.x, face.y), IsoGeometrie.hauteur_mur_haut() * t * 0.15],
+					"face": [face, h_face], "j1": [ps, HAUTEUR_CORPS]})
+				for n in taches:
+					if is_instance_valid(n):
+						n.call("release")
+			else:
+				print("BANC_LUMIERE3D cadrage_ignore carte=%s id=v27_sang raison=place_occupee" % carte)
 		var ancres_une := {"face": [face, h_face], "sol_devant": [face + Vector2(0.0, 1.5 * t), 0.0],
 			"j1": [p1, HAUTEUR_CORPS]}
 		if _v27_veut("une_lumiere"):
@@ -1359,6 +1378,19 @@ func _poser_le_biais() -> void:
 	for l in (_p.get("_lumieres") as Node).find_children("*", "Light3D", true, false):
 		if _biais_normal >= 0.0:
 			(l as Light3D).shadow_normal_bias = _biais_normal
+
+
+## ISO12 L2 — du sang posé comme `bullet.gd` le pose (une flaque et sa gerbe par point), et rendu pour être retiré après la prise.
+func _poser_du_sang(points: Array, direction: Vector2) -> Array:
+	var poses: Array = []
+	for p in points:
+		for gerbe in [false, true]:
+			var n := Node2D.new()
+			n.set_script(preload("res://blood_stain.gd"))
+			_main.arena.add_child(n)
+			n.call("setup", p, direction, INF, gerbe)
+			poses.append(n)
+	return poses
 
 
 func _v27_veut(id: String) -> bool:

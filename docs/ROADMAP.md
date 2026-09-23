@@ -26495,6 +26495,45 @@ pixel par pixel (le sol seul émet dans les modes 3 à 7 : c'est le masque), ran
     coûte rien de mesurable. Pendant la reprise, `top` montrait l'indexation Spotlight (`spotlightknowledged`, 36 à 93 % d'un
     cœur) et Chrome jusqu'à 84 % : la dérive des quatre premières prises n'est pas expliquée, mais la machine n'était pas au repos.
     Lot complet vert (06:14-06:21, 439 s, sans erreur de script), sur l'arbre de ce commit hors ROADMAP.
+26. **LE BANC DE CADENCE LISAIT SURTOUT SA PROPRE CHAUFFE** (constat d'ISO7 Gadgets, correctif ordonné par la session cloud à
+    06:32). L'échauffement durait 2 s ; sur deux prises horodatées, machine calme, 53 des 55 images lentes de la prise fusée
+    tombaient dans les cinq premières secondes de la mesure, et la moitié de celles du témoin. Le 1 % bas se calculait donc
+    surtout sur des images de chauffe : témoin 76,6 sur toutes les images contre 84,8 hors des cinq premières secondes ; fusée
+    62,1 contre 70,1. **Correctif** (`bench_framerate.gd`) : échauffement de 12 s ; le 1 % bas imprimé des deux façons, toutes
+    images et HORS TRANSITOIRE (hors des 5 premières secondes), avec les images lentes par tranche de 10 s ; le verdict dit
+    qu'il lit le second. **La règle du GO se lit désormais sur le 1 % bas hors transitoire**, et le transitoire se rapporte à
+    part : un hoquet de début de partie est un autre sujet qu'une cadence. L'en-tête du banc racontait déjà un aller-retour
+    2 → 12 → 2 s (août) : il réfutait une explication de la DÉRIVE entre relevés, pas ce transitoire-ci. **Portée** : le
+    NON-GO des ombres portées tient (il repose sur les médianes), L1 aussi ; la cellule « vue unique, fusée » du tableau est
+    SUSPENDUE jusqu'à sa remesure avec le banc corrigé (C A A C, machine calme vérifiée par `top`). Le banc de la
+    certification d'Adrien est celui-ci : il porte le correctif.
+    **La cellule remesurée** (07:11-07:20, banc corrigé, miroir C A A C, machine calme vérifiée avant chaque prise — 80 % d'inactivité
+    au moins) ; médiane / 1 % bas hors transitoire : **C 77/61, A 64/58, A 64/58, C 80/72.** A garde 82 % de la médiane de C et
+    **87 % de son 1 % bas (58 contre 66,5) : sous la règle des 90 %, et sous la cible absolue de 60.** Le coût de A est un
+    RÉGIME, pas des hoquets : ses images lentes pèsent 17 à 18 ms, réparties sur toute la minute, et ses deux prises se
+    reproduisent au fps près ; même rendu que C (188 appels, 1 392 objets). Le 1 % bas de C varie encore de 61 à 72 d'une prise
+    à l'autre : c'est C qui porte le bruit ici, pas A. **À la session cloud de trancher** : le GO réduit tient-il en vue unique
+    avec une fusée allumée ?
+27. **L2, LE SOL ET LES MURS — le principe d'identité les porte ; ce qui manquait était une garde et une preuve** (ordre 181,
+    2026-09-23). Le brief demandait des matériaux éclairés qui gardent les textures d'ISO7, l'encre, le lavis, le contact au
+    pied, et un sang qui module l'albédo. Depuis la v27, le sol et les murs éclairés recopient la couleur du chemin 2D, étape
+    par étape, et la 3D n'y ajoute que R : tout cela est donc là par construction, et les uniformes des deux chemins sont les
+    mêmes (vérifié : aucun uniforme 2D absent ou différent dans les shaders éclairés). Deux points du brief sont DÉPASSÉS par
+    la décision d'identité, et non oubliés : « la lightmap ne sert plus aux faces que par la bride » (elle donne la couleur,
+    R le modelé) et « le mur rougi devient naturel » (il est celui de la 2D). Le lambert ISO7b tiré du gradient de la lightmap
+    vaut déjà 1 en jeu (`LAMBERT_PLANCHER`) : aucun double modelé. **Ce qui manquait** :
+    - **une garde du CORPS du fragment** : celle de v27 ne comparait que les fonctions recopiées ; une étape ajoutée au
+      fragment de `sol_iso` ou `mur_iso` sans l'être au shader éclairé aurait fait diverger la 3D en silence. `test_banc` exige
+      désormais chaque ligne de code du fragment 2D dans le fragment éclairé, telle quelle ou sous un renommage ou un
+      remplacement déclaré. ⚠️ **La première version ne mordait pas** là où il le fallait : le sol éclairé garde son ancien
+      chemin, qui porte `c = pate_facteur(c, contact_des_corps(px));` mot pour mot, et le contact retiré de la branche
+      d'identité serait passé pour présent. Règle : une ligne que le renommage change ne vaut QUE renommée. **Vue rougir** sur
+      ce sabotage même (contact retiré de la branche d'identité, `test_banc` code 1, la ligne nommée), fichier rendu et
+      vérifié par git ;
+    - **le sang sous la lumière 3D, jamais pris** : cadrage `sang` au banc v27 (taches posées par le vrai `blood_stain.gd`, au
+      sol et au pied d'une face, sous la torche de J1). La teinte du sang est celle de la 2D — part du rouge 0,712 contre 0,709
+      au sol (témoin C contre C : 0,719), 0,489 contre 0,489 au pied — ; seule la face change, par le relief (+16 à +18 %),
+      comme ailleurs.
 
 **Rien de ceci n'est une planche.** La recette v27 suit, avec trois cadrages ajoutés : l'accroupi derrière un muret, une face
 atteinte par deux lampes à deux distances, et l'adversaire à l'Arbalète vu depuis la vue de J1 (tous au banc, `--sans-led-murs`).

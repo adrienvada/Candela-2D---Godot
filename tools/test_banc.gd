@@ -39,6 +39,32 @@ static func _fonction_de_shader(texte: String, signature: String) -> String:
 	var fin := texte.find("\n}\n", debut)
 	return texte.substr(debut, fin - debut) if fin > 0 else ""
 
+## Les lignes de CODE de `void fragment()` d'un shader : sans commentaires, sans espaces de tête, sans les accolades seules.
+## L'accolade de fin se trouve en comptant, pas en cherchant « \n}\n » : un fragment contient des blocs.
+static func _lignes_du_fragment(texte: String) -> PackedStringArray:
+	var debut := texte.find("void fragment() {")
+	if debut < 0:
+		return PackedStringArray()
+	var niveau := 0
+	var fin := -1
+	for i in range(debut, texte.length()):
+		var ch := texte[i]
+		if ch == "{":
+			niveau += 1
+		elif ch == "}":
+			niveau -= 1
+			if niveau == 0:
+				fin = i
+				break
+	if fin < 0:
+		return PackedStringArray()
+	var lignes := PackedStringArray()
+	for l in texte.substr(debut, fin - debut + 1).split("\n"):
+		var code := l.get_slice("//", 0).strip_edges()
+		if code != "" and code not in ["{", "}", "} else {", "void fragment() {"]:
+			lignes.append(code)
+	return lignes
+
 ## Répète `geste` à chaque image jusqu'à ce que `n` pas de physique soient passés :
 ## c'est le rythme du banc (il écrit après `process_frame`), et c'est au pas de
 ## physique que `player.gd` décide de la lampe.
@@ -312,6 +338,49 @@ func _run() -> void:
 			ecarts.append("%s n'appelle plus le chemin 2D" % paire[1])
 	_check("le principe d'identité : les fonctions du chemin 2D, recopiées dans les shaders éclairés, y sont identiques",
 		identiques, "; ".join(ecarts))
+	# ISO12 L2 — LE CORPS DU FRAGMENT, pas seulement ses fonctions. Le sol et les murs éclairés recopient AUSSI les étapes du
+	# fragment 2D : matière, dalles, encre des arêtes, liseré, contact au pied, température, contact des corps. Une étape
+	# ajoutée à `sol_iso` ou `mur_iso` sans l'être au shader éclairé ferait diverger la 3D de la 2D en silence — la garde
+	# ci-dessus ne voit que les fonctions. Ici, chaque ligne de code du fragment 2D doit se retrouver dans le fragment éclairé,
+	# telle quelle ou sous l'un des renommages et remplacements DÉCLARÉS (l'identité y devient un choix `identite_2d ? … :
+	# bride_de(…)`). Ce que la garde ne voit pas : l'ORDRE des étapes, et une ligne présente dans une autre branche.
+	var fragments := [
+		["sol_iso", "sol_iso_eclaire", {"c": "c2d", "brute": "brute2d"}, {}],
+		["mur_iso", "mur_iso_eclaire", {}, {
+			"c = lightmap_pateuse(monde.xz, motif, aa, deux);":
+				"c = identite_2d ? lightmap_pateuse(monde.xz, motif, aa, deux) : bride_de(brute, motif, aa);",
+			"c = pate_facteur(lightmap_pateuse_lue(brute, motif, aa), lisere);":
+				"c = pate_facteur(identite_2d ? lightmap_pateuse_lue(brute, motif, aa) : bride_de(brute, motif, aa), lisere);",
+			"c = lightmap_pateuse_lue(brute, motif, aa);":
+				"c = identite_2d ? lightmap_pateuse_lue(brute, motif, aa) : bride_de(brute, motif, aa);",
+		}],
+	]
+	var absentes: PackedStringArray = []
+	for f in fragments:
+		var lignes_2d := _lignes_du_fragment(FileAccess.get_file_as_string("res://%s.gdshader" % f[0]))
+		var lignes_3d := _lignes_du_fragment(FileAccess.get_file_as_string("res://%s.gdshader" % f[1]))
+		if lignes_2d.is_empty() or lignes_3d.is_empty():
+			absentes.append("%s : fragment introuvable" % f[0])
+			continue
+		for l in lignes_2d:
+			var renommee := l
+			for ancien in (f[2] as Dictionary):
+				var re := RegEx.new()
+				re.compile("\\b%s\\b" % ancien)
+				renommee = re.sub(renommee, String(f[2][ancien]), true)
+			# ⚠️ Une ligne que le renommage CHANGE ne vaut que renommée : le sol éclairé garde son ancien chemin (hors identité),
+			# qui porte `c = pate_facteur(c, contact_des_corps(px));` mot pour mot — retirer le contact de la branche d'identité
+			# serait passé pour présent (vu en écrivant cette garde, sabotage à l'appui).
+			if renommee != l:
+				if renommee in lignes_3d:
+					continue
+			elif l in lignes_3d:
+				continue
+			elif (f[3] as Dictionary).has(l) and String(f[3][l]) in lignes_3d:
+				continue
+			absentes.append("%s : « %s »" % [f[0], l])
+	_check("le principe d'identité : chaque étape du fragment 2D du sol et des murs est dans le fragment éclairé",
+		absentes.is_empty(), "; ".join(absentes))
 	# Au plus huit lampes miroir (session cloud, 03:50) : le plafond existe, vaut huit, et `suivre` l'applique À CHAQUE IMAGE.
 	# Sans lui, neuf lampes et plus faisaient du dénominateur et des lampes appariées par le moteur deux jeux différents.
 	_check("le miroir plafonne à huit lampes allumées, à chaque image",
