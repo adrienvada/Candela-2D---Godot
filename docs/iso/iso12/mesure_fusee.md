@@ -124,3 +124,47 @@ La fusée ajoute donc exactement une lampe à ombre, comme prévu. Mais **2 et n
 prédiction par lecture (torche, rétroéclairage et halo de chacun des deux joueurs) est démentie,
 et je ne sais pas encore pourquoi. **La question des halos privés reste donc entière** : il faut
 une prise sur le commit corrigé d'Iso 1 pour avoir le détail par viewport.
+
+## Les halos privés : question CLOSE, et par le comptage
+
+Rappel du soupçon : le rassemblement des lumières d'une vue ne teste pas le masque de cull (lecture
+du moteur par la session cloud), et le halo de proximité de chaque joueur n'éclaire que son canal
+privé (`CanauxLumiere.canal_de_vue`, `16 << id`). Une vue paierait donc la passe d'ombre d'un halo
+qui n'y éclaire rien.
+
+**Confirmé par le recensement d'Iso 1** (banc de cadence, vue unique) : les deux lampes 2D à ombre
+sont bien les halos (150 px, masques 16 et 32), et le drapeau « n'éclaire AUCUN objet de ce
+viewport » s'allume sur `SubViewport1` (pour le halo de l'autre joueur), sur les deux capteurs et
+sur `PeintureIso`. **80 dessins d'ombre par image, dont 64 pour rien.**
+
+**Et négligeable, par ma propre mesure** : retirer la lampe à ombre de la fusée — une lampe, même
+ordre — a rendu 0,09 ms, dans le bruit. Les deux halos valent donc ~0,18 ms, leur part inutile
+**~0,14 ms** : 4 % du coût d'une fusée, 1 % d'une image.
+
+**Restait la crainte que le coût explose sur une vraie carte**, puisqu'il suit le nombre
+d'occulteurs. `tools/compte_occulteurs.gd` (headless, sans fenêtre ni cadence) répond :
+
+| carte | cases de mur | rectangles fusionnés | occulteurs |
+|---|---|---|---|
+| carte d'essai des murs bas | 348 (aucune à l'intérieur) | 4 murs hauts + 5 murs bas | **9** |
+| Cloître | 372, dont 48 à l'intérieur (les piliers) | 9 murs hauts, aucun mur bas | **9** |
+
+**Le Cloître ne produit pas plus d'occulteurs que la carte d'essai** : ses quarante-huit cases de
+piliers fusionnent en cinq rectangles, pas cinquante. Le gâchis reste à 0,16 ms, sous le seuil de
+0,3 fixé par la session cloud. **Question close.**
+
+⚠️ **Deux avertissements sur cet outil.** (1) Il échoue son étalonnage d'une unité : 9 là où le banc
+compte 8, et je ne l'explique pas. À cette échelle cela ne change rien, mais qui s'en servira pour
+une décision serrée doit le savoir. (2) **J'ai soupçonné cet instrument d'être faux parce que son
+résultat me paraissait invraisemblable** — deux cartes très différentes rendant le même compte. Il
+avait raison ; c'est le diagnostic ajouté à chaque étage (cases lues, rectangles fusionnés,
+occulteurs posés) qui l'a montré. Douter d'un instrument est sain ; le condamner sur une
+invraisemblance ne l'est pas.
+
+## La règle d'ordre des prises, telle que la session cloud l'a corrigée
+
+J'avais proposé « jamais deux prises consécutives de la même variante ». **La bonne formulation est
+plus large et plus juste** : *jamais une variante plus tôt ou plus tard EN MOYENNE que les autres*.
+Ce qui annule une dérive linéaire, c'est l'égalité des positions moyennes — `1…n` puis `n…1` pour
+plusieurs variantes, `C A A C` pour deux (le `A A` du milieu est sans danger : A et C y ont la même
+position moyenne). Ma version interdisait à tort des séquences valides.

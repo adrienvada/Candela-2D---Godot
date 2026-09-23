@@ -26251,6 +26251,15 @@ banc (p ≈ 0,0000) — mais **59 viennent d'une seule prise, et sans elle le ve
 (p = 0,90). La cellule « vue unique fusée » du GO réduit reste suspendue. La reprise se fera sur
 la série COMPLÈTE des temps d'image, le seuil choisi après coup, hors machine (ordre de la
 session cloud, 06:00).
+
+**Et la question des HALOS PRIVÉS est close, par le comptage.** Le rassemblement des lumières d'une
+vue ne teste pas le masque de cull : le halo de proximité de chaque joueur, qui n'éclaire que son
+canal privé, paie donc une passe d'ombre là où il n'éclaire rien — **80 dessins d'ombre par image,
+dont 64 pour rien** (recensement d'Iso 1). Mais cela ne pèse que **~0,14 ms**, et
+`tools/compte_occulteurs.gd` ferme la crainte que ce soit pire sur une vraie carte : **le Cloître
+produit 9 occulteurs, exactement comme la carte d'essai** (ses 48 cases de piliers fusionnent en
+cinq rectangles). Sous le seuil de 0,3 ms fixé par la session cloud. ⚠️ Cet outil échoue son
+étalonnage d'une unité (9 contre les 8 du banc), inexpliqué, sans portée à cette échelle.
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
