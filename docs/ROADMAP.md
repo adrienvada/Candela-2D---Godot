@@ -26388,6 +26388,13 @@ de J1, de face et de dos, AVANT et APRÈS, en gris et en V3 froide, en loupe 1:1
 /tmp sur la tête d'Iso 1, `b193420`, ce diff appliqué ; cadrage `planche_mannequin` dans
 `docs/iso/iso13/banc_lumiere3d_planche_mannequin_contre_b193420.patch`).
 
+**La garde du jeu par défaut** (2026-09-24, 01:00, remarque d'Iso 1 en fusionnant, ordre de la session cloud) : sans le
+drapeau, la ligne des segments faisait encore passer la couleur par `pate_facteur(c, 1,0)` — un aller-retour par l'espace
+affiché, exact à 1e-7 et non au bit, et payé pour chaque pixel de corps. Elle est gardée `if (mannequin >= 0.5)` dans les
+deux shaders des corps. Preuve : au banc des corps, `--temps-fixe` (le temps posé à 0 : deux lancements rendent la même
+pose), le jeu par défaut avant le lot A (`0ae314b`) contre après la garde, identiques à l'octet — gris et V3 froide, à 0,8 et
+0,2 (six images de 1920×1080, et le lot complet vert sur l'arbre exact du commit, 438 s, 2026-09-24 01:12). C'est le piège de l'ordre 255 : un uniforme qui gouverne un chemin coûte même à 0.
+
 **Ce qui manque encore** (mon paragraphe, demandé par la session cloud) : à l'échelle du jeu, le mannequin se lit à la loupe
 et reste discret à 1:1. Les plaques et les articulations sont des lignes, pas des volumes : les bras et les jambes restent
 des boîtes droites, sans coude plié. Le côté noir est retenu (0,6, jamais d'éclat) par l'équité et le noir absolu, là où

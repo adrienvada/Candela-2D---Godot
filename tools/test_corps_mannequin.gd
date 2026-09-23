@@ -241,6 +241,8 @@ func _les_shaders() -> void:
 			modele > 0 and cote > modele and segments > encre and encre > cote and borne > teinte and teinte > segments)
 		var lumiere := code.substr(code.find("void light()")) if code.contains("void light()") else ""
 		_check("%s : light() ne connaît pas le mannequin" % chemin.get_file(), not lumiere.contains("mannequin"))
+		_check("%s : les segments gardés par le drapeau (inchangé au bit sans lui)" % chemin.get_file(),
+			frag.contains("if (mannequin >= 0.5) {\n\t\tc = pate_facteur(c, mannequin_segments("))
 	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
 	_check("la présentation relit les lampes une fois par image et éclaire chaque corps, seulement sous le drapeau",
 		pres.contains("var mannequin := corps_voxel and _main != null and VoxelCatalogue.mannequin_actif()")

@@ -100,6 +100,9 @@ var _opaque := false
 ## peinte et la prise au portrait éteint. Sans lui, 40 000 pixels différaient même au contrôle (palette grise, 2026-09-23 05:56),
 ## et le noir absolu ne se prouve pas au niveau de ce bruit. Aucun shader des corps ne lit TIME : figer `_temps` fige tout.
 var _fige := false
+## ISO13 — `--temps-fixe` : le temps posé à 0 et jamais avancé, pour que deux lancements (deux arbres) rendent la même pose et
+## se comparent à l'octet. Le temps figé seul fige l'instant où il s'arrête, qui varie d'un lancement à l'autre.
+var _temps_fixe := false
 ## ISO12, tenues sombres — `--toutes-tenues` (avec une tenue peinte) : après la prise de la tenue et sa prise grise, la même
 ## scène dans chacune des tenues sombres (`_sombre1.png`…), posées par uniformes sur les mêmes matériaux, au temps figé.
 var _toutes_tenues := false
@@ -179,6 +182,7 @@ func _lire_arguments(args: PackedStringArray) -> void:
 				if val != "portraits" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
 					push_warning("banc_corps : --corps attend portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
 			"toutes-tenues": _toutes_tenues = true
+			"temps-fixe": _temps_fixe = true
 			"directions-mannequin": _directions_mannequin = true
 			"mannequin":
 				pass  # lu par `VoxelCatalogue.mannequin_actif()`
@@ -404,7 +408,7 @@ func _imprimer_rapport_boites() -> void:
 # ---------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	if not _fige:
+	if not _fige and not _temps_fixe:
 		_temps += delta
 
 	if _tir_t0 >= 0.0 and _temps - _tir_t0 > DUREE_TIR:
@@ -574,7 +578,7 @@ func _capturer_puis_quitter() -> void:
 		_cone_repere.visible = false
 	get_window().size = _taille
 	await get_tree().process_frame
-	_fige = VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif()
+	_fige = VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif() or _temps_fixe
 	for i in _frames:
 		await get_tree().process_frame
 	var image: Image = await RenduCommun.capturer(get_tree(), 60000)
