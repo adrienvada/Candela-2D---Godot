@@ -79,3 +79,34 @@ entre variantes, eux, restent valables : la charge frappe toutes les prises éga
 - **Un essai à blanc du lanceur** (Godot remplacé par `echo`) avant d'engager un créneau : vérifier
   la syntaxe d'un script ne prouve pas qu'il tourne. Deux fois le même jour, une variable référencée
   dans sa propre déclaration `local` a fait échouer une série en trois secondes.
+
+## 6. LE REPOS ENTRE PRISES — le piège le plus cher de la journée
+
+**Enchaîner deux prises de cadence sans repos fausse la seconde, et toutes les suivantes.** Mesuré
+le 2026-09-23 sur le même banc, la même scène et la même machine, navigateurs ouverts dans les deux
+cas :
+
+| | médianes | 1 % bas hors 10 s | pires images |
+|---|---|---|---|
+| quatre C **enchaînées** (série de 16:54) | 86, 75, 73, 73 | 72, **30, 35, 16** | 27 à **105 ms** |
+| trois C avec **90 s de repos** (contrôle de 17:20) | **86, 86, 86** | **71, 78, 67** | 13 à 34 ms |
+
+Trois prises reposées tiennent la cible ; trois prises enchaînées la manquent d'un facteur quatre.
+**Et ce ne sont pas les charges extérieures** : `firefox` occupait 19,2 % pendant la première prise
+et 21,2 % pendant la huitième, `WindowServer` 49 puis 46 % — constants. `Google Chrome He` allait
+même à l'envers : la prise la plus RAPIDE est celle où il consommait le PLUS (16,7 %), la plus lente
+celle où il était à zéro.
+
+⚠️ **Conséquence sur les chiffres déjà publiés** : tout écart tiré d'une série enchaînée est suspect,
+même sous protocole miroir. Le miroir n'annule qu'une dérive LINÉAIRE ; celle-ci chute d'un coup
+après la première prise puis se stabilise. Dans la série de 16:54, la seule prise reposée était une
+prise C, ce qui a avantagé C de **0,55 ms sur un écart annoncé de 4,21** (3,67 ms sans elle).
+
+**Règle** : 90 s sans aucun Godot avant chaque lancement, en plus de la porte d'indexation.
+
+## 7. LA PORTE PREND LE MAXIMUM, PAS LA MOYENNE
+
+Une porte qui moyenne les échantillons de charge sur la fenêtre de mesure laisse passer un pic isolé :
+`spotlightknowledged` à 34 % sur un échantillon parmi six donne une moyenne de 5,7 %, sous un seuil
+de 10 %. C'est arrivé à la prise 4 du 2026-09-23, qui s'est retrouvée deuxième plus mauvaise de sa
+série. **Une image lente ne se moyenne pas : elle se voit.** La porte garde donc le maximum.
