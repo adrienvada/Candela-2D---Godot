@@ -1,0 +1,78 @@
+<!doctype html><meta charset="utf-8"><title>ISO13 lot E — le faisceau</title>
+<style>
+:root{color-scheme:dark;--fond:#0d0c0a;--surface:#17150f;--trait:#2c2820;--texte:#ece6d8;--sourd:#a79f8e;--ambre:#e8a33c;--rouille:#d0704a}
+body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:0 16px 4rem}
+main{max-width:1100px;margin:0 auto}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.1;margin:2rem 0 .3rem;text-wrap:balance}
+h2{font-size:21px;margin:2.6rem 0 .8rem;padding-top:1.1rem;border-top:1px solid var(--trait)}
+p,li{max-width:72ch}
+.sourd{color:var(--sourd)}
+.paire{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;margin:1rem 0}
+figure{margin:0}
+figure img{width:100%;height:auto;display:block;border:1px solid var(--trait);border-radius:4px;background:#000}
+figcaption{color:var(--sourd);font-size:.92rem;margin-top:.4rem}
+.loupe img{image-rendering:pixelated}
+table{border-collapse:collapse;width:100%;font-size:.93rem;margin-top:.6rem}
+th,td{padding:.45rem .6rem;border-bottom:1px solid var(--trait);text-align:left;vertical-align:top}
+th{color:var(--sourd);font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.ok{color:var(--ambre)}.manque{color:var(--rouille)}
+code{background:var(--surface);padding:.05em .35em;border-radius:3px;font-size:.9em}
+blockquote{border-left:3px solid var(--ambre);background:var(--surface);margin:1rem 0;padding:.7rem 1rem;border-radius:0 4px 4px 0}
+blockquote p{margin:0}
+</style>
+<main>
+<h1>ISO13, lot E — le faisceau dans l'air</h1>
+<p class="sourd">Plan <code>torche</code> du photographe, 1920×1080, pris deux fois à la suite : sans
+puis avec <code>--faisceau</code>. Tout le reste est identique — même graine, même scène, même commit.
+Le 2026-09-24 à 01:12, sur <code>d8e928a</code>.</p>
+
+<h2>Les deux références</h2>
+<div class="paire">
+<figure><img src="ill_accueil.png" alt="L'illustration de l'accueil : un mannequin éclaire un panneau ARENA, le rayon est un coin de lumière pâle et net."><figcaption>L'accueil : un rayon <b>pâle et net</b>, sans poussière, et un point brillant à la lampe.</figcaption></figure>
+<figure><img src="ill_intro_allumage.png" alt="L'illustration de l'intro allumage : un mannequin éclaire un mur de béton, le rayon est dense et criblé de grains sombres."><figcaption>L'allumage : un rayon <b>dense</b>, criblé de grains sombres, et un cœur franc.</figcaption></figure>
+</div>
+<p>Les deux n'en demandent pas la même chose : « léger », dans le brief, désigne l'accueil. Et les
+grains ne scintillent pas — ce sont des <b>motes sombres</b> silhouettées dans l'air éclairé, ce qui
+est exactement ce que produit le grain du shader, qui module l'alpha vers le bas.</p>
+
+<h2>Le jeu, avant et après</h2>
+<div class="paire">
+<figure><img src="plein_avant.png" alt="Capture du jeu sans le faisceau."><figcaption>Avant — le cône éclaire le sol, l'air est vide.</figcaption></figure>
+<figure><img src="plein_apres.png" alt="Capture du jeu avec le faisceau."><figcaption>Après — <code>--faisceau</code>.</figcaption></figure>
+</div>
+<div class="paire loupe">
+<figure><img src="loupe_avant.png" alt="Loupe 1:1 sur la torche, avant."><figcaption>Loupe 1:1, avant.</figcaption></figure>
+<figure><img src="loupe_apres.png" alt="Loupe 1:1 sur la torche, après."><figcaption>Loupe 1:1, après. Le cœur à la lampe est la seule différence qu'un œil attrape.</figcaption></figure>
+</div>
+
+<h2>Ce que la mesure dit, puisque l'œil ne suffit pas</h2>
+<table>
+<tr><th>Ce qu'on mesure</th><th>Résultat</th><th></th></tr>
+<tr><td>Pixels changés</td><td>32 031 sur 2 073 600, soit 1,54 %</td><td></td></tr>
+<tr><td>Écart médian sur ces pixels</td><td><b>1 / 255</b></td><td class="manque">le rayon est sous le seuil</td></tr>
+<tr><td>Écart maximal</td><td><b>226 / 255</b>, à la lampe : (44, 29, 15) → (255, 255, 229)</td><td class="ok">le cœur éclate</td></tr>
+<tr><td>Pixels à +8/255 ou plus</td><td>5 322, dans la boîte du cône (x 842–1073, y 155–454)</td><td></td></tr>
+<tr><td><b>Noir absolu</b> — pixels noirs devenus non-noirs</td><td>161, de valeur médiane 1/255 et maximale 14/255</td><td></td></tr>
+<tr><td><b>…dont isolés en pleine zone noire</b></td><td><b>0</b> — les 161 sont au bord d'une lumière déjà visible</td><td class="ok">la règle tient</td></tr>
+</table>
+<blockquote><p><b>Le noir absolu n'est pas entamé.</b> Aucun des pixels touchés n'est isolé dans le
+noir : tous bordent une lumière déjà présente. Le faisceau ne <i>crée</i> donc pas de lumière — il
+épaissit d'un pixel ou deux la frange d'une lumière que le sol rendait déjà, de 1/255 en médiane.
+C'est la garantie du fichier (une couche vaut la lightmap sous elle), vérifiée à la mesure et non
+supposée.</p></blockquote>
+
+<h2>Ce qui manque encore</h2>
+<p><b>Le rayon ne se lit pas.</b> C'est le résultat principal, et il est net : à trois couches de
+densité 0,08, l'écart médian est d'<i>un</i> niveau sur 255. Le cœur chaud à la lampe, lui, est là et
+ressemble aux deux illustrations. Autrement dit le lot livre un tiers de sa commande : le cœur, oui ;
+le rayon et ses grains, pas encore visibles. « Léger » a été pris trop au pied de la lettre — il reste
+à trouver la densité qui se lit sans devenir le brouillard que l'accueil ne montre pas, et à la payer
+en cadence contre la référence du chantier (85 de médiane, 77 au 1 % bas, au pompe sous une fusée).</p>
+<p><b>Ce qui ne ressemblera pas, et n'est pas un défaut.</b> Les deux illustrations sont vues à
+hauteur d'homme : le rayon y est un coin vu de côté. Le duel est vu de dessus, et l'angle est gardé
+par équité — au-dessus du cône, des couches d'air se lisent comme un voile, jamais comme un coin. La
+killcam, elle, n'est pas soumise à cette contrainte.</p>
+<p><b>Et le décor hors du faisceau.</b> Dans les deux illustrations on devine les murs, les tuyaux et
+les portes loin de toute lumière. Le jeu tient le noir absolu : c'est une règle, pas un manque, et
+c'est elle qui plafonne la ressemblance de ces deux images.</p>
+</main>
