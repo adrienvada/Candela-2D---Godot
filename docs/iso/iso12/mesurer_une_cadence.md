@@ -293,3 +293,33 @@ des tenues sombres), ce qui est un gain plus petit.
 Le motif mérite d'être retenu au-delà de ce cas : **celui qui a écrit l'image sait quels pixels en
 dépendent, et celui qui mesure ne le sait pas.** Une économie proposée par le mesureur se fait
 valider par l'auteur avant d'être tentée.
+
+## 13. Deux fautes de la même soirée, qui n'ont rien produit mais auraient pu produire pire
+
+### Un drapeau vidé en silence fait jouer au banc son DÉFAUT
+
+Le lanceur assemblait le drapeau de classe par `printf "$DRAPEAU_CLASSE" "$slug"`. **`printf` prend
+`--classe=%s` pour une option** et rend une chaîne vide, sans que rien n'échoue. Les quatre prises
+« fusil » seraient donc parties sans drapeau — et le défaut du banc étant désormais le **pompe**,
+elles auraient joué le pompe. La série aurait comparé le pompe au pompe et conclu « le pompe ne coûte
+rien » : un faux résultat parfaitement crédible, dans le sens qui arrangeait.
+
+Ce qui l'a vu : le contrôle de la ligne « armes : » à chaque prise, et un passage à blanc où le
+mannequin joue **exprès** la mauvaise classe. Remède dans le script : `${DRAPEAU_CLASSE//%s/$slug}`.
+
+**La règle qui en sort** : quand un banc a un DÉFAUT, un drapeau perdu ne se voit pas — il se déguise
+en l'autre branche de la comparaison. Toute série qui compare A à B en passant un drapeau doit
+vérifier, prise par prise, **ce que le banc dit avoir joué**, jamais ce qu'on croit lui avoir demandé.
+
+### Annoncer une fenêtre n'est pas l'ouvrir
+
+À 23:13, le lanceur a pris le verrou et j'ai annoncé « fenêtre ouverte » à toutes les sessions. Mais
+un Godot tournait : le lanceur a rendu le verrou et attendu — quatre-vingts fois, jusqu'à abandonner
+à 23:52. Le processus était l'**éditeur** (aucun argument, parent `launchd`, dossier courant `/` :
+ouvert depuis le Finder ou le Dock, donc Adrien). `pgrep -x Godot` en plus du verrou a fait
+exactement son travail : **on ne prend pas la machine à Adrien**, et une cadence mesurée avec
+l'éditeur ouvert ne vaudrait rien de toute façon.
+
+La faute est ailleurs : l'annonce était adossée à la **prise du verrou**, pas au **démarrage de la
+série**. Deux sessions ont gardé le silence quarante minutes pour rien. **Une fenêtre s'annonce quand
+la première prise part**, et la surveillance se met sur le démarrage autant que sur la fin.
