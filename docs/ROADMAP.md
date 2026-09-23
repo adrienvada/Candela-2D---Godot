@@ -26192,12 +26192,13 @@ jusqu'à 24/255. L'encre et le modelé restent les seules variations de clarté,
 **L'équité.** Mesurée au banc des corps, les dix corps pris peints puis le portrait éteint sur les MÊMES matériaux, dans la
 même partie (2026-09-23 06:43, clarté moyenne des pixels du corps, peint sur gris) : **0,991 à 1,001 à 0,8 ; 0,978 à 1,005
 à 0,2 ; 0,990 à 1,024 à 0,15 ; 0,997 à 1,017 à 0,1** — les dix classes dans les 5 % à toutes les lumières.
-- **Critère 1 : des pixels noirs au gris qui ne le sont plus peints — tombés au niveau du bruit du banc.** 159 à 0,2, 207 à
-  0,15, 205 à 0,1, 10 à 0,06, 0 à 0 (125 à 0,8), contre 8 894, 15 249, 8 287 et 9 622 dans l'espace encodé ; et dans l'autre
-  sens, 186, 411, 163 : les deux sens s'équilibrent. **Le contrôle** — la palette entièrement grise, où la teinte rend
-  exactement le gris — en compte autant entre ses deux captures (105 à 0,2, 139 à 0,1, et 1 791 dans l'autre sens) : les
-  corps respirent d'une capture à l'autre (40 000 pixels y diffèrent). Le zéro exact demande un banc au temps figé entre
-  les deux prises (proposé).
+- **Critère 1 TENU : aucun pixel noir au gris n'est non noir peint, au banc au temps figé** (2026-09-23 08:03 : le temps du
+  banc des corps figé entre la prise peinte et la prise au portrait éteint — sans lui, les corps respiraient d'une capture à
+  l'autre et 40 000 pixels différaient même au contrôle). D'abord le CONTRÔLE, la palette entièrement grise : 0 dans les deux
+  sens à 0,8, 0,2, 0,15, 0,1 et 0,06 — le banc est bien figé. Puis le peint : **0 pixel noir au gris qui sort non noir, et 0
+  dans l'autre sens, aux cinq lumières**, peint sur gris 0,978 à 1,028. Sans temps figé (06:43), 159 à 0,2, 207 à 0,15,
+  205 à 0,1 : le niveau du contrôle (105, 139), équilibré dans les deux sens ; dans l'espace encodé (05:22), 8 894, 15 249,
+  8 287.
 - ⚠️ **L'étape, désignée par interrupteurs** (même partie, à 0,2 puis 0,1, traits d'encre + pourtour) : normal 5 757 + 3 137
   puis 8 192 + 164 ; encre coupée 21 + 125 puis 4 649 + 542 ; modelé coupé 6 950 + 3 346 puis 5 040 + 199 ; ni encre ni
   modelé 0 + 71 puis 0 + 61 ; corps forcé opaque, comme normal ; palette grise, 1 + 104 puis 139 + 0. Le mélange au bord n'y

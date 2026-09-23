@@ -96,6 +96,10 @@ var _palette_grise := false
 ## ISO12 — `--opaque` : les corps rendus par une copie OPAQUE de leur shader (ni `blend_mix` ni ALPHA : plus aucun mélange
 ## au bord), mêmes paramètres. Diagnostic de l'ordre 145 : désigne si le pourtour tient au mélange.
 var _opaque := false
+## ISO12 — le temps du banc FIGÉ pendant les captures (avec `--corps=portraits`) : les corps ne respirent plus entre la prise
+## peinte et la prise au portrait éteint. Sans lui, 40 000 pixels différaient même au contrôle (palette grise, 2026-09-23 05:56),
+## et le noir absolu ne se prouve pas au niveau de ce bruit. Aucun shader des corps ne lit TIME : figer `_temps` fige tout.
+var _fige := false
 
 var _corps: Array = []     # [{ "slug": String, "noeud": VoxelCorps, "pos_px": Vector2, "centre_tuiles": Vector2 }]
 var _temps := 0.0
@@ -381,7 +385,8 @@ func _imprimer_rapport_boites() -> void:
 # ---------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	_temps += delta
+	if not _fige:
+		_temps += delta
 
 	if _tir_t0 >= 0.0 and _temps - _tir_t0 > DUREE_TIR:
 		_tir_t0 = -1.0
@@ -550,6 +555,7 @@ func _capturer_puis_quitter() -> void:
 		_cone_repere.visible = false
 	get_window().size = _taille
 	await get_tree().process_frame
+	_fige = VoxelCatalogueT.portraits_actifs()
 	for i in _frames:
 		await get_tree().process_frame
 	var image: Image = await RenduCommun.capturer(get_tree(), 60000)
