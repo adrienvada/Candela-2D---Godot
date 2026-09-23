@@ -3197,6 +3197,19 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une garantie vraie dans le monde n'est pas vraie à l'écran : la parallaxe des volumes en hauteur (2026-09-24)
+
+Chantier ISO13, lot E. Un volume iso vaut la lightmap sous lui, donc zéro au-dessus d'un sol noir. On
+en a conclu « noir absolu tenu par construction » pour le faisceau (`d8e928a`), et une planche l'a
+« vérifié » dans le seul cas qui passait (`ef2fae1`, densité 0,08). Faux à l'écran : une couche **en
+hauteur** est dessinée plus haut que le sol qu'elle lit (tangage 52°), donc sur des pixels où il peut
+être noir. À 0,45, 307 pixels isolés dans le noir contre 1 de bruit ; couches posées au sol, 15 ;
+lissage coupé, 400. Cause établie par intervention. **Leçon** : une garantie démontrée dans un
+espace (le monde, la lightmap) ne dit rien de l'autre (l'écran) ; et un contrôle « vérifié » dans un
+seul cas n'a vérifié que ce cas. Et une seconde, plus coûteuse à apprendre : **un zéro doit être
+vérifié non vide** — la loupe de la fusée donnait 0 pixel isolé parce qu'elle ne contenait aucun
+pixel noir. Détail : `docs/iso/iso13/plan_lots_d_e.md`, « Mesures du 2026-09-24 ».
+
 ### `osascript ... to activate` sur un Godot mort le RELANCE (2026-09-24)
 
 Chantier ISO12. Un script de prise lance le banc, attend 4 s, puis réclame le premier plan par

@@ -55,7 +55,10 @@ est exactement ce que produit le grain du shader, qui module l'alpha vers le bas
 <tr><td><b>Noir absolu</b> — pixels noirs devenus non-noirs</td><td>161, de valeur médiane 1/255 et maximale 14/255</td><td></td></tr>
 <tr><td><b>…dont isolés en pleine zone noire</b></td><td><b>0</b> — les 161 sont au bord d'une lumière déjà visible</td><td class="ok">la règle tient</td></tr>
 </table>
-<blockquote><p><b>Le noir absolu n'est pas entamé.</b> Aucun des pixels touchés n'est isolé dans le
+<blockquote><p><b>⚠️ Corrigé le 2026-09-24 : cette conclusion ne valait que pour ce cas.</b> Prise à
+0,08 dans la visée de composition, c'est le seul cas qui passait. Dès que la densité monte, les couches
+en hauteur, décalées par la parallaxe, éclairent des pixels isolés dans le noir (307 à 0,45). Voir <code>docs/iso/iso13/plan_lots_d_e.md</code>. Texte d'origine :</p>
+<p><b>Le noir absolu n'est pas entamé.</b> Aucun des pixels touchés n'est isolé dans le
 noir : tous bordent une lumière déjà présente. Le faisceau ne <i>crée</i> donc pas de lumière — il
 épaissit d'un pixel ou deux la frange d'une lumière que le sol rendait déjà, de 1/255 en médiane.
 C'est la garantie du fichier (une couche vaut la lightmap sous elle), vérifiée à la mesure et non
