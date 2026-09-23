@@ -26760,6 +26760,19 @@ d'illustrations photographiait donc l'ANCIEN dessin à la place de celui que le
 jeu affiche**, pour « créer » comme pour « rejoindre ». Les supprimer ne range
 pas un dossier : ça répare la planche.
 
+**Et le piège a une garde**, posée dans `tools/test_banc.gd` à la demande de la
+session cloud : la suite échoue si deux illustrations se ramènent à la même clé,
+en nommant les deux fichiers. Le photographe n'est pas touché — c'est son
+départage qui était muet, pas son comportement qui était faux. La garde lit la
+liste du photographe LUI-MÊME plutôt que de recopier son filtre (un filtre
+recopié diverge), et elle est mise en défaut sur commande avec le cas qui a
+réellement eu lieu : une garde qu'on n'a jamais vue rougir ne prouve rien.
+
+⚠️ **La seconde bouche du piège vise les fichiers NEUFS** : `cle_canonique()`
+retombe sur `ill_accueil` pour tout nom inconnu, donc une illustration ajoutée
+sans entrée dans `POIS` masque l'accueil ou se fait masquer par lui, selon sa
+première lettre. La garde attrape les deux cas.
+
 #### Une décision de périmètre : le récitatif reste du papier
 
 Le cartouche de récitatif (`menu_recitatif.gd`, du papier clair à texte d'encre)
