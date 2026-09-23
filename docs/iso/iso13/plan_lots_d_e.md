@@ -62,8 +62,11 @@ Le cas le plus lourd — **le pompe sous une fusée** — est mesuré depuis le 
 `docs/iso/iso12/mesurer_une_cadence.md`). C'est la référence contre laquelle tout ajout d'image de ces
 deux lots devra se comparer, dans les mêmes conditions et avec le même protocole.
 
-⚠️ L'évaluation de la session cloud dit cette marge « pas encore mesurée » : **elle l'est**, depuis
-00:34. À corriger à sa prochaine mise à jour.
+⚠️ **Ce paragraphe a d'abord dit que l'évaluation se trompait** en appelant cette marge « pas encore
+mesurée ». C'était moi qui me trompais : je lisais la **version 1** (23:57), écrite avant la mesure,
+et la version 2 (00:37) la porte déjà. Une page qui se met à jour à chaque livraison n'a pas de
+« contenu » mais un contenu *daté* — on corrige la version qu'on a lue, pas la page. Même leçon qu'au
+paragraphe audio de `CLAUDE.md` : un constat daté vieillit sans prévenir, y compris en une demi-heure.
 
 ## L'ordre que je propose, et pourquoi
 
@@ -72,6 +75,23 @@ les trois règles d'équité sont tenues par construction et sans toucher à la 
 modifie une couleur **qui entre dans la lightmap** — donc dans le relief, les capteurs et l'image des
 deux joueurs. Faire E d'abord, c'est livrer une planche et un coût mesuré avant d'ouvrir le sujet qui
 peut déplacer autre chose que lui-même.
+
+## La contrainte du lot D, posée par le cloud avant qu'une ligne soit écrite
+
+**Ce que lisent la visibilité, les capteurs et l'éblouissement ne doit pas bouger.** Donc, palier par
+palier, la lumière de la fusée **garde sa luminance dans la lightmap**, et seule la teinte *visible*
+change : les nappes, le décor, et un cœur découplé de sa lumière. Si ce n'est pas tenable — et ce
+n'est pas évident, puisque saturer une couleur à luminance constante contraint fortement la teinte —,
+la marche à suivre est de **mesurer les lectures de ces trois consommateurs, par palier, avant et
+après**, et de laisser le cloud trancher sur les chiffres plutôt que sur une impression.
+
+Les paliers et le rouge de détresse au départ restent : décisions d'Adrien, non rouvertes ici.
+
+## La planche du lot E
+
+La capture 1:1 à côté des illustrations de **l'accueil** et de **l'intro « allumage »**, avant et
+après, le noir absolu vérifié, et le coût mesuré contre la série au pompe sous une fusée — 85 de
+médiane, 77 au 1 % bas médian — qui est désormais la référence.
 
 Drapeaux éteints dans les deux cas, et chaque lot livre sa planche : la capture 1:1 à côté de
 l'illustration nommée, **avant et après**, avec le paragraphe « ce qui manque encore ».
