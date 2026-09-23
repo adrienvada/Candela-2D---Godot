@@ -84,6 +84,33 @@ static func beaute_active() -> bool:
 	return not OS.get_cmdline_user_args().has(DRAPEAU_SANS_BEAUTE)
 
 
+## ISO13, lot B — L'ENCRE EN ESSAI (`--encre-essai`, éteint par défaut) : des hachures dans la pénombre du lavis
+## (`pate_hachures`, voir `iso_pate.gdshaderinc`) sur le sol, les murs et les corps, et l'encre des arêtes des murs plus
+## épaisse et plus noire. Le contour des personnages est celui du mannequin (`--mannequin`). Une planche d'essai, à côté de
+## l'illustration de l'entraînement ; rien n'est allumé en jeu avant l'avis d'Adrien et la mesure de cadence.
+const DRAPEAU_ENCRE_ESSAI := "--encre-essai"
+const HACHURES_ESSAI := 0.7
+const ENCRE_ARETE_PX_ESSAI := 2.4
+const ENCRE_ARETE_RESTE_ESSAI := 0.12
+## Le contour des personnages (`corps_iso_contour.gdshader`), en pixels du monde : l'épaisseur de l'essai, et la seconde
+## essayée sur la planche (ordre de la session cloud, 00:56 : « à deux épaisseurs »).
+const CONTOUR_PX_ESSAI := 1.0
+const CONTOUR_PX_EPAIS := 2.0
+
+
+static func encre_essai_active() -> bool:
+	return OS.get_cmdline_user_args().has(DRAPEAU_ENCRE_ESSAI)
+
+
+## Allume ou éteint l'encre d'essai sur un matériau iso (sol, mur ou corps) : les hachures partout, l'arête épaisse sur un
+## mur. Les bancs y basculent dans la même partie, au même instant.
+static func poser_encre_essai(materiau: ShaderMaterial, allumee: bool, mur := false) -> void:
+	materiau.set_shader_parameter("pate_hachures", HACHURES_ESSAI if allumee else 0.0)
+	if mur and beaute_active():
+		materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX_ESSAI if allumee else ENCRE_ARETE_PX)
+		materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE_ESSAI if allumee else ENCRE_ARETE_RESTE)
+
+
 ## Pose la matière des murs sur le matériau commun des boîtes (`mur_iso.gdshader`). Sans beauté,
 ## force, encre et liseré à zéro : le mur d'ISO1, formule pour formule.
 static func accorder_mur(materiau: ShaderMaterial) -> void:
@@ -106,6 +133,8 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("contact_reste", CONTACT_RESTE)
 	# Sans beauté, aucun muret : tous les dessus redeviennent noirs, comme avant ISO7.
 	materiau.set_shader_parameter("seuil_muret_px", SEUIL_MURET_PX if active else 0.0)
+	if encre_essai_active():
+		poser_encre_essai(materiau, true, true)
 
 
 ## Pose l'encre des arêtes sur le matériau d'un corps voxel (`corps_iso.gdshader`, tenu par ISO Corps).
@@ -117,6 +146,8 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("encre_reste", ENCRE_VOXEL_RESTE)
 	# ISO7b — le modelé des corps : par la caméra, jamais par le gradient (voir `modele_du_corps`).
 	materiau.set_shader_parameter("modele", 1.0 if active else 0.0)
+	if encre_essai_active():
+		poser_encre_essai(materiau, true)
 
 
 ## ISO10, 1f — la lumière d'une face lue SANS la peinture du sol (`mur_iso.gdshader`, `lire_lumiere`) : lightmap ×
@@ -243,6 +274,8 @@ static func accorder_sol(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("contact_corps_rayon_px",
 		CONTACT_CORPS_RAYON_TUILES * float(CandelaTileSet.TILE_SIZE.x) if active else 0.0)
 	materiau.set_shader_parameter("contact_corps_reste", CONTACT_CORPS_RESTE)
+	if encre_essai_active():
+		poser_encre_essai(materiau, true)
 
 
 ## La grille des murs d'une carte, pour que l'encre et le liseré ne tombent que sur les VRAIS

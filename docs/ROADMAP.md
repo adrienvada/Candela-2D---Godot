@@ -26405,6 +26405,44 @@ les illustrations opposent un côté chaud franc à un noir d'encre. Sous la tor
 l'éblouissement du regardeur, ce qui lave tout détail. Et la couleur : les illustrations sont rouille, le jeu attend la tenue
 d'Adrien (Q21, Q23). La cadence n'est pas mesurée : à faire par Gadgets avant d'allumer le drapeau.
 
+#### ISO13, lot B — l'encre en essai : le contour des personnages, les hachures dans la pénombre 🟡 (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi.** Les illustrations cernent tout d'une encre noire épaisse et hachent les demi-teintes ; ISO10 avait retiré les
+hachures, qui s'écartaient alors des planches du DA peintes en lavis — la référence a changé. La session cloud (00:56) a
+précisé l'accent : à l'échelle du jeu, c'est le CONTOUR des personnages qui portera la lecture, plus que des lignes
+intérieures ; à essayer à deux épaisseurs, en gris et en V3 froide, à côté de l'illustration de l'entraînement, puis les
+hachures sur la même planche. Tout derrière `--encre-essai`, éteint : c'est une planche d'essai, rien n'est allumé en jeu.
+
+**Ce qui est fait.**
+- **Le contour de la silhouette** (`corps_iso_contour.gdshader`) : une COQUE — chaque boîte redessinée, faces arrière seules,
+  agrandie de 1 ou 2 px de chaque côté, en noir, en passe suivante (`next_pass`) de la matière des corps : même maillage,
+  aucun nœud de plus. Le corps, devant, en cache l'intérieur ; il reste un liseré noir autour de la silhouette et de chaque
+  membre qui passe devant un autre. ⚠️ **La coque suit l'opacité du corps**, posée à chaque image par la présentation comme
+  celle de la passe de profondeur : un adversaire effacé par l'éblouissement du regardeur ne réapparaît pas par son liseré.
+- **Les hachures dans la pénombre** (`pate_hachures_facteur`, miroir `IsoPate.hachures_facteur`) : posées sur le lavis, en
+  diagonale accrochée au monde, sur le sol, les murs et les corps, et seulement dans la pénombre — nulles sous 1 % de
+  lumière, nulles au-dessus de 32 %. Elles multiplient : une hachure n'éclaire rien, un noir reste noir.
+- **L'arête des murs** plus épaisse et plus noire sous le même drapeau (2,4 px, reste 0,12 contre 1,6 et 0,25).
+
+**Chiffres** (banc des corps, temps fixe, même partie, sans contour contre 1 px et 2 px) :
+- **Noir absolu** : 0 pixel noir sans contour et non noir avec, gris et V3, de 0,8 à 0 ; **rien qui éclaire** : 0 pixel plus clair.
+- **L'apparition** (30 px) ne recule pour aucune classe : celles qui se voient à 0,10 et 0,12 sans contour s'y voient avec.
+- **Mais le corps perd des pixels visibles** à 0,15 : 20 % avec 1 px, 34 % avec 2 px en gris (5 à 20 % en V3 froide). Ce sont
+  surtout les liserés intérieurs — la coque d'une boîte qui ressort devant une autre, à la jonction du torse et des jambes,
+  trace une barre noire au milieu du corps — qui noircissent de la surface éclairée.
+- Sur les captures du jeu, la comparaison au pixel n'est pas au même instant (la torche pulse d'une prise à l'autre : même
+  le contour seul, noir, y montre des pixels « plus clairs ») ; la preuve du noir absolu est celle du banc des corps et de la
+  construction.
+
+**Ce que montre la planche** (`docs/iso/iso13/planche_encre.jpg`, cadrage `planche_encre` dans
+`docs/iso/iso13/banc_lumiere3d_planche_encre_contre_2cdb6e8.patch`) : le contour se lit franchement là où le corps se
+détache sur un sol éclairé (J1 sur sa rétrodiffusion) ; il ne se voit pas là où le sol est noir (J2 dans l'ombre de son
+propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la pénombre du sol et sur la face du mur.
+
+**À trancher** : 1 ou 2 px de contour, et les hachures. Avant d'allumer quoi que ce soit : la barre noire intérieure (limiter la
+coque aux boîtes extérieures, ou la retirer du torse), et la cadence de la coque (une passe de plus par boîte de corps), à
+mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

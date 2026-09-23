@@ -5828,3 +5828,10 @@ qui éclaire vraiment le corps assombri — une direction calculée depuis les L
 Trois formes au banc : la répartition sortait du noir des pixels et cassait l'équité sud/nord en lumière faible ; la forme
 retenue n'éclaire jamais, compense le nord par les dessus, et ne s'applique pas sous 12/255. Noir absolu tenu, adversaire
 au bord du cône inchangé. Un défaut du banc des corps corrigé en chemin (le portrait rallumé en blanc sans tenue).
+
+**Suite, 01:00-01:45 — la garde, le cache, puis le lot B (l'encre en essai).** Deux petits commits d'abord : la garde des
+segments sans le drapeau (e4adc99, preuve à l'octet au banc des corps avec `--temps-fixe`) et le drapeau lu une fois
+(5799ba2). Puis, sous `--encre-essai` : une coque noire en passe suivante trace la silhouette des corps (et suit leur
+opacité), des hachures en diagonale dans la seule pénombre du lavis, l'arête des murs plus épaisse. Noir absolu tenu, rien
+n'éclaire, l'apparition ne recule pas ; mais la coque noircit un cinquième à un tiers des pixels du corps à 0,15, surtout par
+ses liserés intérieurs, et ne se voit pas sur un sol noir.

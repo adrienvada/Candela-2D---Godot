@@ -775,7 +775,11 @@ func _suivre() -> void:
 			var o := opacite_du_corps(joueur, vue_id == j)
 			var sil := silhouette_du_corps(joueur, vue_id == j)
 			forces[vue_id] = o
-			for m in [_mat_corps[j], _mat_profondeur[j]]:
+			# ISO13 — la coque du contour (`next_pass`, sous `--encre-essai`) suit la même opacité : un adversaire effacé ne
+			# réapparaît pas par son liseré.
+			for m in [_mat_corps[j], _mat_profondeur[j], (_mat_corps[j] as ShaderMaterial).next_pass]:
+				if m == null:
+					continue
 				(m as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), o)
 				(m as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
 		_poser_contact(j, p, forces)
@@ -1192,7 +1196,9 @@ func _suivre_le_fantome(j: int, fantome: Node2D) -> void:
 	for vue_id in 2:
 		var vue: SubViewport = _main.vp1 if vue_id == 0 else _main.vp2
 		var sil := silhouette_du_fantome(trace, couche_d_origine(trace), vue.canvas_cull_mask)
-		for m in [_mat_corps[j], _mat_profondeur[j]]:
+		for m in [_mat_corps[j], _mat_profondeur[j], (_mat_corps[j] as ShaderMaterial).next_pass]:
+			if m == null:
+				continue
 			(m as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), 0.0)
 			(m as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
 

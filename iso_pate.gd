@@ -183,6 +183,17 @@ static func encre_boite(local: Vector3, demi: Vector3, echelle: Vector3, normale
 	return lerpf(1.0, clampf(reste, 0.0, 1.0), trait_de_bord(bord, w, px_monde))
 
 
+## ISO13, lot B — miroir de `pate_hachures_facteur` (`iso_pate.gdshaderinc`) : les hachures dans la pénombre, en essai.
+static var hachures := 0.0
+
+
+static func hachures_facteur(l: float, motif: Vector2, aa: float) -> float:
+	if hachures <= 0.0:
+		return 1.0
+	var penombre := smoothstep(0.01, 0.05, l) * (1.0 - smoothstep(0.14, 0.32, l))
+	return 1.0 - hachures * 0.6 * penombre * _trait(motif.x + motif.y, 5.0, 0.28, aa)
+
+
 static func pate(couleur: Vector3, lumiere: float, st: int, motif: Vector2, pente: Vector2,
 		lumiere_decalee: float, aa: float) -> Vector3:
 	if st == BRUTE:
@@ -228,4 +239,4 @@ static func pate(couleur: Vector3, lumiere: float, st: int, motif: Vector2, pent
 		+ 0.4 * smoothstep(e_3 - a, e_3 + a, l)
 	var gris := luminance(couleur)
 	var lave := couleur.lerp(Vector3(gris, gris, gris), 0.35) / maxf(l, PLANCHER)
-	return lave * q * (0.82 + 0.18 * grain)
+	return lave * q * (0.82 + 0.18 * grain) * hachures_facteur(l, motif, aa)

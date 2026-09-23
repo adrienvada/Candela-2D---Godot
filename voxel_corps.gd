@@ -80,6 +80,8 @@ extends Node3D
 const VoxelCatalogueT := preload("res://voxel_catalogue.gd")
 const ShaderCorpsIso := preload("res://corps_iso.gdshader")
 const ShaderCorpsIsoProfondeur := preload("res://corps_iso_profondeur.gdshader")
+## ISO13, lot B — la coque du contour (`corps_iso_contour.gdshader`), passe suivante de la matière, sous `--encre-essai`.
+const ShaderCorpsIsoContour := preload("res://corps_iso_contour.gdshader")
 const IsoPateT := preload("res://iso_pate.gd")
 
 ## Le style par défaut d'un corps neuf — LAVIS, pas GRAVURE (0). Choix trouvé
@@ -230,6 +232,8 @@ const SEUIL_ARME_BAISSEE := 0.1           # l'arme est baissée dès ce niveau d
 var _fiche: Dictionary = {}
 var _materiau: ShaderMaterial
 var _materiau_profondeur: ShaderMaterial
+## ISO13, lot B — la coque du contour ; null hors `--encre-essai`.
+var _materiau_contour: ShaderMaterial = null
 var _nombre_de_boites: int = 0
 var _boites_visibles: Array = []
 
@@ -308,6 +312,8 @@ func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_
 		_habiller_en_portrait(slug)
 	if VoxelCatalogueT.mannequin_actif():
 		_articuler_en_mannequin()
+	if IsoMateriaux.encre_essai_active():
+		definir_contour(IsoMateriaux.CONTOUR_PX_ESSAI)
 
 	# Pose de référence : de face, immobile — un corps fraîchement construit
 	# n'est jamais dans un état indéfini avant le premier `poser()` de l'appelant.
@@ -342,6 +348,24 @@ func materiau() -> ShaderMaterial:
 ## Le double en profondeur seule — voir « La passe de profondeur » dans
 ## l'en-tête de `corps_iso.gdshader`. Exposé pour la suite, qui vérifie que ses
 ## `opacite_N`/`silhouette_N` restent synchronisés avec `materiau()`.
+## ISO13, lot B — le contour de la silhouette, en pixels du monde (0 : aucun). Crée la coque au premier appel et la pose
+## en passe suivante de la matière : même maillage, aucun nœud de plus.
+func definir_contour(px: float) -> void:
+	if _materiau_contour == null:
+		if px <= 0.0:
+			return
+		_materiau_contour = ShaderMaterial.new()
+		_materiau_contour.shader = ShaderCorpsIsoContour
+		_materiau_contour.set_shader_parameter("opacite_1", _materiau.get_shader_parameter("opacite_1"))
+		_materiau_contour.set_shader_parameter("opacite_2", _materiau.get_shader_parameter("opacite_2"))
+		_materiau.next_pass = _materiau_contour
+	_materiau_contour.set_shader_parameter("contour_unites", maxf(px, 0.0) / float(CandelaTileSet.TILE_SIZE.x))
+
+
+func materiau_contour() -> ShaderMaterial:
+	return _materiau_contour
+
+
 func materiau_profondeur() -> ShaderMaterial:
 	return _materiau_profondeur
 
@@ -423,7 +447,7 @@ func definir_lecture_au_bord(v: float) -> void:
 ## n'existe.
 func definir_opacite(o: float, vue: int = 0) -> void:
 	var v := clampf(o, 0.0, 1.0)
-	for mat in [_materiau, _materiau_profondeur]:
+	for mat in [_materiau, _materiau_profondeur, _materiau_contour]:
 		if mat == null:
 			continue
 		if vue != 2:
