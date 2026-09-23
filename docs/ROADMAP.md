@@ -26803,6 +26803,259 @@ jamais uniformément. Partout ailleurs, la pâte évite le texte (`empater()`).
 illustration générée occupe tout le cadre sous du texte. À 55 %, le mot se lit ; c'est la seule
 valeur de cette étape réglée à la capture plutôt que par un calcul.
 
+---
+
+### L'interface au thème iso voxel — les plaques deviennent des blocs 🔄 (ouvert le 2026-09-23)
+
+**D'où il vient.** Ordre 127 de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » (23/09
+00:13, relayé 00:17), complété à 00:30. L'habillage du 15/09 a mis l'interface dans l'encre
+et le papier des planches — une charte de **roman graphique 2D**. Le jeu, lui, est passé au
+voxel : portraits, vingt vitrines, corps et murs. L'interface est donc redevenue le seul
+endroit qui parle une autre langue que le duel. Session « Habillage sonnet », branche
+`iso11-interface` créée depuis `72a2364`.
+
+**La vérification d'entrée, exigée avant toute ligne de code** : `git merge-base --is-ancestor
+1ab8bb1 72a2364` sort à 0 — l'habillage du 15/09 est bien dans la tête de départ. Et l'icône de
+torche du HUD (`0bff2bc`, livraison 49ee29e) y est déjà posée, 13 517 octets : elle n'est pas
+refaite.
+
+#### Ce qui est mesuré, et ce qui en descend
+
+**La matière vient du JEU, pas d'une livraison.** Les plaques sont fabriquées depuis
+`assets/iso/face_mur.png` — la face des murs du duel, déjà aplanie, tuilée et mise en facteur
+par `tools/fabrique_textures_iso.py`. Le menu est donc fait du plâtre que le joueur voit en
+arène, et non d'une imitation. La période de répétition est celle du jeu
+(`IsoMateriaux.PERIODE_FACE_MUR_PX`, 70 px) : essayée à 128, la pierre du menu était deux fois
+plus grosse que la même pierre en duel, et la plaque lisait « photo de mur » au lieu de
+« plâtre ».
+
+**Trois nombres relevés au pixel** sur le cube de tête du mannequin de `ill_ecran_scinde.png`
+(vitrine voxel d'ISO11 pas 7), pixels du cerne d'encre exclus :
+
+| | RGB | luma | saturation | teinte |
+|---|---|---|---|---|
+| face éclairée par la torche | 227, 179, 130 | 186 | 0,43 | 30° |
+| faces à l'ombre | 126, 64, 35 | 76 | 0,72 | 19° |
+| **rapport éclairé / ombre** | | **2,46** | | |
+
+⚠️ **La lumière DÉSATURE, l'ombre concentre l'oxyde.** C'est l'inverse de ce qu'on pose
+d'instinct, et c'est là qu'est le « plâtre ocre patiné de rouille » : la rouille n'est pas une
+couche étalée sur le bloc, c'est ce qui reste quand la lumière s'en va. Un bloc peint en
+rouille uniforme ne donne pas un bloc patiné, il donne un objet neuf en cuivre. D'où une patine
+qui ne peut QU'ASSOMBRIR (teinte multiplicative : le rouge gardé, le vert et le bleu rabattus),
+et qui est franche sur les bords — jamais au centre, qui se répète tous les 70 px.
+
+Tout le reste descend de ces trois nombres : `VOXEL_FLANC` = `lerp(ENCRE, PAPIER, 0.11)`,
+`VOXEL_DESSUS` = `lerp(ENCRE, PAPIER, 0.41)` — le 0,41 n'est pas choisi, c'est celui qui met la
+luminance du dessus à 2,46 fois celle du flanc. `tools/test_habillage.gd` refait chaque calcul.
+
+#### Deux règles reprises du jeu, une divergence assumée
+
+- **Une matière est un FACTEUR de la lumière, jamais une lumière** (`iso_materiaux.gd`). Les
+  quatre images ne portent que des facteurs ; la couleur vient de `modulate_color`. Un bloc de
+  joueur 1 n'est donc pas un bloc bleu : c'est un bloc **éclairé en bleu**. Conséquence
+  pratique : tous les rôles partagent une seule texture, donc un seul lot de dessin.
+- **L'arête d'encre garde ce qu'elle garde en duel** : `VOXEL_ARETE_RESTE` vaut 0,25, le même
+  nombre que `IsoMateriaux.ENCRE_ARETE_RESTE`. Recopié et non lu — lire la constante du jeu
+  forcerait `charte.gd`, préchargée partout, à charger les deux textures du duel. La suite
+  compare les deux valeurs et rougit si l'une bouge sans l'autre.
+- ⚠️ **Divergence : le dessus d'un bloc d'interface s'éclaire, là où le sommet d'un mur du jeu
+  reste noir** (`LISERE_SOMMET_PX` : « le sommet reste une masse noire »). Ce n'est pas une
+  contradiction mais la même règle sous une autre lumière : en arène, la seule source est une
+  torche au ras du sol, qui n'atteint jamais un sommet ; dans les vitrines et les portraits,
+  elle vient d'en haut. L'interface est une vitrine, pas une arène. Confondre les deux donnerait
+  soit un menu en blocs noirs, soit des sommets de murs allumés en duel — et le second
+  donnerait au joueur une information que le noir absolu lui refuse.
+
+#### Quatre plaques, et pourquoi pas trois
+
+Deux lumières croisées avec deux positions : dans l'ombre ou sous la torche, sorti ou rentré.
+Enfoncé, **le dessus devient un flanc** — le bloc sort de la lumière d'en haut et sa face du
+dessus prend exactement la valeur de ses propres côtés (corps × 0,41, le rapport mesuré).
+
+La quatrième plaque (`RENTRE` : dans l'ombre, rentré) n'était pas prévue. Elle a été rendue
+nécessaire par une contrainte découverte en cours de route : **le libellé d'une entrée de menu
+est un `Label` enfant, à couleur fixe**, qui ne s'inverse pas quand la plaque s'éclaire —
+contrairement au texte d'un `Button`, que Godot repeint tout seul. Une entrée survolée en
+plaque allumée écrirait donc du papier sur du papier. Les entrées du hub se distinguent donc
+par la lumière REÇUE et par la POSITION du bloc, sans jamais monter jusqu'à la torche.
+
+#### Le contraste n'est pas promis, il est refusé à l'écriture
+
+`tools/fabrique_bloc_ui.py` compose chaque plaque avec la couleur qu'elle portera, mesure la
+luminance de **chaque pixel de la zone qui peut porter du texte**, et **n'écrit aucun fichier**
+si l'une des quatre sort des seuils. Mesuré au 2026-09-23 : corps au repos 0,0125 à 0,0191 pour
+un plafond de 0,0713 ; corps allumé 0,2596 à 0,4476 pour un plancher de 0,1994. La suite relit
+ensuite les PNG livrés et refait le calcul sur le pixel du centre, pour chaque rôle de couleur.
+
+#### L'interrupteur
+
+`--charte=pate` ramène l'habillage du 15/09 ; `voxel` est le défaut de la branche.
+`Charte.voxel_actif()` n'est lu que dans `menu_widgets.gd`, `menu_hub.gd` et `charte.gd` — les
+deux cents sites d'appel demandent la même chose qu'avant. Un `if` par site aurait fait deux
+habillages à maintenir, la faute que `network_manager.gd` évite pour le transport.
+
+Conséquence méthodologique : **la planche « avant » ne demande pas un second commit ni un
+second arbre.** Les deux séries se prennent dans la même séance de photographe, depuis le même
+code, ce qui rend la comparaison honnête et rend une séance au Mac partagé.
+
+#### Ce que la première mesure a appris
+
+Après avoir basculé les panneaux et les modales, l'accueil a été photographié deux fois — une
+fois par habillage — et comparé au pixel : **139 pixels de différence sur 2 073 600, soit
+0,01 %.** Autrement dit, la fabrique de styles ne dessine presque rien de ce qu'on voit : les
+entrées du hub, la surface la plus regardée du jeu, construisent leurs propres `StyleBoxFlat`
+dans `menu_hub.gd`. Sans cette mesure, le chantier aurait pu être « fini » sans être visible.
+C'est la même prise que celle qui avait montré à ISO7 Gadgets que ses deux premières séries
+avant/après étaient identiques.
+
+#### Étapes
+
+| # | Étape | État |
+|---|---|---|
+| 1 | La charte voxel et l'interrupteur `--charte=` | ✅ |
+| 2 | La plaque de bloc : fabrique, neuf tranches, panneaux et modales | ✅ |
+| 3 | Les boutons et les entrées de hub qui s'enfoncent | ✅ |
+| 4 | Le HUD et ses cartouches, à information strictement inchangée | ✅ |
+| 5 | Les surcouches : killcam, affiches de fin, intro | ✅ — rien à basculer, et c'est vérifié |
+| 6 | Le fond du hub, dont la torche était sous le cadre de droite | ✅ |
+| 7 | La planche avant/après, la ROADMAP, le delta | à faire |
+
+#### Deux pièges rencontrés, et tous deux étaient MUETS
+
+- ⚠️ **Un conteneur ignore les ancres de ses enfants.** Le fond du hub est
+  enfant de `game_over_panel`, qui est un `PanelContainer` : poser des ancres
+  sur la planche ne faisait **rien du tout**, sans une erreur, sans un
+  avertissement. Deux captures comparées au pixel l'ont dit (la torche n'avait
+  pas bougé d'un pixel, 5,1/255 avant comme après) ; à l'œil, on aurait conclu
+  « c'est subtil ». La planche est désormais dans un `Control` nu interposé, que
+  le conteneur étale et qui, lui, laisse ses enfants se cadrer.
+- ⚠️ **Le texte d'une plaque ne se pose pas sur sa lumière, mais sur son corps.**
+  Un contrôle de contraste écrit trop vite comparait le papier à la teinte de
+  modulation — une surface qui n'existe nulle part à l'écran — et rougissait à
+  2,67:1 sur une plaque parfaitement lisible. Le corps ne garde que
+  `VOXEL_FACTEUR_FLANC` de la lumière : c'est lui qu'il faut mesurer. **C'est le
+  contrôle qui avait tort, pas la couleur**, et la tentation était de corriger
+  la couleur.
+
+#### La revue de la session cloud, et ce qu'elle a corrigé (2026-09-23, 01:42)
+
+Habillage **accepté**, avec deux ajustements et deux mesures exigées. Les deux
+ajustements se ramènent à une seule règle, meilleure que celle que j'avais
+écrite : **un bloc dans l'ombre n'est que TEINTÉ par son rôle ; un bloc éclairé
+prend la COULEUR de la lumière qui l'éclaire.** À un quart de part, la classe
+choisie de J1 virait au gris cerné de bleu et le bouton qui lance au plâtre
+beige — or dans un duel à deux curseurs, ce qui est choisi et ce qui lance
+doivent se voir d'abord. La part passe donc à 0,80 sous lumière
+(`VOXEL_TEINTE_ROLE_ALLUME`), et pas à 1,00 : à pleine force, l'encre ne tient
+plus que 4,40:1 sur un bloc éclairé en ROUGE.
+
+⚠️ **Et la mesure sur les CAPTURES a trouvé ce que tous les contrôles
+laissaient passer.** Le calcul sur les couleurs pures dit ce que le code
+prévoit ; la capture dit ce que le joueur voit. Relevé sur la bande de texte,
+même méthode des trois côtés :
+
+| | avant | voxel sans correction | corrigé |
+|---|---|---|---|
+| entrée de classe non choisie | 4,73:1 | **3,54:1** | 4,91:1 |
+| entrée du hub au repos | 7,57:1 | 6,54:1 | 7,73:1 |
+| case de touche, joueur 1 | 8,64:1 | 6,58:1 | 8,01:1 |
+| case de touche, joueur 2 | 5,30:1 | **4,20:1** | 5,90:1 |
+
+⚠️⚠️ **CES CHIFFRES SONT LA SECONDE VERSION, ET LA PREMIÈRE A CIRCULÉ.** Le
+premier relevé prenait le cœur des lettres au 94ᵉ centile de luminance de la
+bande. Un glyphe fin couvre **moins de 6 %** de sa bande : le 94ᵉ centile tombe
+donc en plein antialiasing, et l'indice sous-estimait d'un facteur ~4 — il
+annonçait 1,97:1 là où le contraste vrai était 8,64:1. Les valeurs fausses ont
+été transmises à la session cloud, qui a jugé dessus (« les cases de touches
+passent le seuil de 3:1 ») ; elles sont corrigées ici et chez elle. Le cœur se
+prend au **99,5ᵉ centile**, et on vérifie que le pixel trouvé atteint bien la
+couleur attendue du texte — ici (136, 201, 232) contre (135, 200, 232) calculé.
+
+**Ce que l'épisode confirme malgré tout : les deux régressions étaient RÉELLES.**
+Le calcul sur les couleurs pures les avait prédites indépendamment (3,51:1 pour
+le béton clair sur une plaque teintée, 4,33:1 pour un libellé ROUGE sur sa
+propre plaque) et la mesure corrigée les retrouve (3,54:1 et 4,20:1, tous deux
+sous le seuil de 4,5). **Une mesure fausse et un calcul juste pointaient le même
+défaut** — c'est la concordance qui valide, jamais l'un des deux seul.
+
+Deux causes, et aucune n'était visible en relisant le code. D'abord, une bascule
+au repos ne portait **aucun** accent dans l'habillage pâte ; j'en avais introduit
+un, et la moindre teinte éclaircit la plaque sous le texte. Ensuite, et c'est le
+fond : **le corps d'un bloc de plâtre est deux fois plus clair qu'un aplat
+d'encre**, donc le rôle « texte secondaire » n'y tient plus ses 4,5:1 — le béton
+clair est réglé au plus juste (4,8:1 sur l'encre), et il est tombé à 3,9:1.
+D'où `VOXEL_TEXTE_SECOND`, le même rôle à une autre valeur parce que la surface a
+changé. Un rôle de texte n'est pas une couleur, c'est un contraste tenu sur ce
+qu'il recouvre.
+
+Le banc ne regardait que le texte COURANT, qui a de la marge. Il regarde
+désormais le secondaire, qui est le plus exposé.
+
+**La cinquième plaque, et l'écart du survol.** Les surfaces dont le libellé est
+un `Label` enfant ne peuvent pas inverser leur texte — la session cloud a
+confirmé qu'il ne faut pas le faire, c'est de l'information. Mais il fallait
+garantir un changement visible au survol et le mesurer. D'où la plaque
+**effleurée** : sa face du dessus monte au papier pendant que son corps DESCEND
+sous celui du repos. Écart mesuré sur la face du dessus : **3,80:1**, au-dessus
+du seuil de 3:1 des états d'interface — et le texte y gagne en contraste au lieu
+d'en perdre.
+
+#### Étape 5 : les surcouches n'ont aucune plaque, et c'est la réponse
+
+La killcam, les affiches de fin et la carte de soirée **ne construisent pas une
+seule `StyleBox`**. Une killcam est un voile, deux bandes, un mot tamponné et un
+cadre dessiné ; une affiche est une illustration sous un titre. Ce sont des
+IMAGES, pas des objets d'interface — il n'y a donc rien à rendre voxel, et
+fabriquer une plaque pour en poser une serait ajouter du mobilier là où le
+chantier devait n'en habiller aucun.
+
+⚠️ **Le constat est FIGÉ par un contrôle plutôt que laissé à la mémoire**
+(`_test_les_surcouches_n_ont_pas_de_plaque`). Sans lui, le jour où quelqu'un
+pose un panneau dans la killcam, personne ne saura que ces écrans ont été
+regardés et laissés tels quels : la plaque naîtra en aplat d'encre au milieu
+d'une interface en blocs, et on ne le verra qu'en capture, des semaines plus
+tard. Un contrôle qui dit « rien à faire » vaut mieux qu'un silence.
+
+L'intro, elle, n'est pas dans ce périmètre : `intro_planches.gd` appartient au
+chantier d'ISO7 Gadgets et lumière.
+
+#### Trois fichiers morts supprimés — et la planche d'illustrations en sort juste
+
+`ill_personnalisation.png`, `ill_creer.png` et `ill_rejoindre.png` sont
+supprimés (sur accord de la session cloud, ordre du 2026-09-23 03:29). Le jeu ne
+les chargeait pas : leurs clés pointent ailleurs dans `ILLUSTRATIONS` depuis
+ISO11 pas 7, et aucun chemin littéral ni construit n'y mène.
+
+⚠️ **Mais ils n'étaient pas inertes, et c'est l'inverse de ce qu'on croyait.**
+`tools/photographe.gd` BALAIE le disque (`_illustrations()`) et prend tout
+`ill_*.png` ; deux fichiers qui se ramènent à la même clé canonique sont
+départagés par l'ordre alphabétique, et `ill_creer.png` passe avant
+`ill_creer_ligne.png` (le point vaut moins que le souligné). **La planche
+d'illustrations photographiait donc l'ANCIEN dessin à la place de celui que le
+jeu affiche**, pour « créer » comme pour « rejoindre ». Les supprimer ne range
+pas un dossier : ça répare la planche.
+
+#### Une décision de périmètre : le récitatif reste du papier
+
+Le cartouche de récitatif (`menu_recitatif.gd`, du papier clair à texte d'encre)
+**ne devient pas un bloc**. C'est un procédé de bande dessinée, choisi par Adrien
+au second lot du chantier roman graphique, et ce n'est ni une plaque, ni un
+cadre, ni un bouton, ni un onglet — les quatre objets que l'ordre 127 nomme. Le
+rendre voxel changerait une décision d'auteur sous couvert d'habillage. Signalé
+à la session cloud dans le delta ; elle peut trancher autrement.
+
+#### Périmètre et voisinage
+
+Tenus : `charte.gd`, `menu_theme.gd`, `menu_widgets.gd`, `menu_hub.gd`, `map_gallery.gd`,
+`assets/ui/**`, les blocs d'aspect d'`ui.gd`, `tools/fabrique_bloc_ui.py`,
+`tools/test_habillage.gd`, cette section. **Pas touchés** : `menu_artwork.gdshader` et son
+câblage (chantier d'ISO7 Gadgets et lumière). ISO7 Gadgets ne tient de `menu_hub.gd` que trois
+lignes dans `_build_blur_material()` (`reglage_art`), vérifiées par `tools/test_menus_voxel.gd` :
+**ne pas les effacer à la fusion**, elles sont le câblage sans lequel tout le réglage voxel des
+illustrations ne s'applique nulle part.
+
+
 
 ### Q18 — le shader des menus sur l'art voxel ✅ (2026-09-22/23, branche `iso11-menus` depuis `72a2364`)
 

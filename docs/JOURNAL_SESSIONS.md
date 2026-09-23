@@ -5846,3 +5846,35 @@ tranché. Décoder élève tout rapport à la puissance 2,2 — un R de 0,52 se 
 option nommée, auto-test sur images brutes qui vérifie AUSSI que le piège se reproduit, et un mode `--etalonnage` qui doit
 rendre les constantes émises avant toute mesure réelle. **J'avais pris cette entrée dans une règle générale au lieu de la
 mesurer** — la faute que je venais de décrire d'un cran plus haut.
+
+**ISO11 — l'interface au thème iso voxel, étapes 1 à 4 et 6, 2026-09-23 dans la nuit.** Session « Habillage sonnet »,
+branche `iso11-interface` depuis `72a2364` (vérification d'entrée passée : `1ab8bb1` en est bien un ancêtre). Les plaques
+de l'interface deviennent des blocs de la matière du duel — `assets/iso/face_mur.png`, à la période du jeu (70 px) —, avec
+face du dessus éclairée, flancs dans l'ombre, arête d'encre et patine de rouille. Trois nombres mesurés au pixel sur le cube
+de tête d'`ill_ecran_scinde.png` portent toute la famille : face éclairée luma 186 / saturation 0,43 / teinte 30°, faces à
+l'ombre 76 / 0,72 / 19°, **rapport 2,46**. La lumière désature et l'ombre concentre l'oxyde — d'où une patine qui ne peut
+qu'assombrir, et qui est franche sur les bords, jamais au centre (qui se répète).
+
+**Deux découvertes qui ont changé le chantier, et aucune ne venait d'une intuition.** La première : après avoir basculé
+panneaux et modales, l'accueil photographié dans les deux habillages ne différait que de **139 pixels sur 2 073 600
+(0,01 %)** — les entrées du hub, la surface la plus regardée du jeu, construisent leurs propres `StyleBoxFlat` dans
+`menu_hub.gd` et ne passent pas par la fabrique de styles. Sans cette mesure, le chantier aurait pu être « fini » sans être
+visible. La seconde : une entrée de menu porte son libellé dans un `Label` ENFANT, à couleur fixe, qui ne s'inverse pas
+comme le texte d'un `Button` — une plaque allumée y écrirait du papier sur du papier. D'où une quatrième plaque
+(« rentrée » : dans l'ombre, enfoncée) qui n'était pas prévue, et la règle que les entrées se distinguent par la lumière
+reçue et la position du bloc, jamais en montant jusqu'à la torche. Même piège évité de justesse sur les cartouches du HUD,
+qui portent des icônes claires : elles restent sombres dans les deux états.
+
+**Le fond du hub ne montrait rien**, et c'est mesuré : la torche du bunker a son barycentre à 64,7 % de la largeur, donc
+sous le cadre de droite (qui couvre de 550 à 1 840 px), et la colonne de gauche — la seule visible — pèse **0,5 sur 255**.
+Le sujet est ramené en bas à gauche par des ANCRES (jamais des pixels : le hub se joue de 1280 à 3840).
+
+L'interrupteur `--charte=pate` ramène l'habillage du 15/09 depuis le même commit, ce qui rend la planche avant/après
+prenable en une seule séance de photographe — une séance rendue à la file du Mac. `voxel_actif()` n'est lu que dans
+`charte.gd`, `menu_widgets.gd`, `menu_hub.gd` et les blocs d'aspect d'`ui.gd`.
+
+Fichiers tenus : `charte.gd`, `menu_theme.gd`, `menu_widgets.gd`, `menu_hub.gd`, `map_gallery.gd`, `screen_audio.gd` et
+`screen_leaderboard.gd` (un type de retour chacun), `assets/ui/matiere/**`, les blocs d'aspect d'`ui.gd`,
+`tools/fabrique_bloc_ui.py`, `tools/test_habillage.gd`. **ISO7 Gadgets a confirmé ne tenir que trois lignes de
+`menu_hub.gd`** (`_build_blur_material`, `reglage_art`), à ne pas effacer en fusion — `tools/test_menus_voxel.gd` les garde.
+`menu_artwork.gdshader` et son câblage ne sont pas touchés.

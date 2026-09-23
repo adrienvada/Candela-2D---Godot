@@ -276,6 +276,233 @@ const PATE_POCHOIR_FORCE := 0.28
 const PATE_VIRAGE_KILLCAM := 0.35
 
 # =============================================================================
+# LE VOXEL — l'interface en blocs : la matière du duel portée par les plaques
+# =============================================================================
+#
+# **Une quatrième famille, et elle ne remplace pas la pâte : elle la met en
+# RELIEF.** Ajoutée le 2026-09-23 (chantier ISO11, l'interface au thème iso
+# voxel). La pâte disait l'encre et le papier d'une planche dessinée ; le voxel
+# dit la MATIÈRE d'un bloc — une face du dessus éclairée, des flancs dans
+# l'ombre, une arête d'encre. Les rôles de la pâte restent lus tels quels par
+# tout ce qui est du texte ; le voxel ne parle que des PLAQUES.
+#
+# **Trois nombres mesurés, et presque tout en descend.** Relevé au pixel sur le
+# cube de tête du mannequin de `ill_ecran_scinde.png` — l'une des vingt vitrines
+# voxel posées par ISO11 pas 7 —, pixels du cerne d'encre exclus (luma < 40) :
+#
+#   face éclairée par la torche : RGB 227,179,130 — luma 186, saturation 0,43, teinte 30°
+#   faces à l'ombre             : RGB 126, 64, 35 — luma  76, saturation 0,72, teinte 19°
+#   rapport éclairé / ombre     : 2,46
+#
+# ⚠️ **La lumière DÉSATURE, l'ombre concentre l'oxyde** — l'inverse de ce qu'on
+# pose d'instinct, où l'on éclaire en saturant. C'est pourtant là qu'est le
+# « plâtre ocre patiné de rouille » : la rouille n'est pas une couche étalée sur
+# le bloc, c'est ce qui reste quand la lumière s'en va. Un bloc peint en rouille
+# uniforme ne donne pas un bloc patiné, il donne un objet neuf en cuivre.
+#
+# ⚠️ **Et le dessus d'un bloc d'interface s'éclaire, là où le sommet d'un mur du
+# JEU reste noir** (`IsoMateriaux.LISERE_SOMMET_PX` : « le sommet reste une masse
+# noire ; seul son bord prend la lumière de la face qu'il couronne »). Ce n'est
+# pas une contradiction, c'est la même règle sous une autre lumière : en arène,
+# la seule source est une torche au ras du sol, qui n'atteint jamais un sommet ;
+# dans les vitrines et les portraits, elle vient d'en haut. L'interface est une
+# vitrine, pas une arène. Confondre les deux, c'est soit un menu en blocs noirs,
+# soit des sommets de murs allumés en duel — et le second donnerait au joueur une
+# information que le noir absolu lui refuse.
+
+## La rouille : la couleur MESURÉE des faces à l'ombre du cube de la vitrine.
+## Saturation 0,72 — sous le plafond de 0,75, et volontairement près de lui : la
+## patine est la seule chose saturée de toute l'interface.
+##
+## ⚠️ **Ne peut pas porter de texte, et le plafond de patine en dépend.** Le
+## papier ne tient que 4,1:1 sur une rouille pleine, sous le seuil de 4,5. D'où
+## [constant VOXEL_PATINE_LUM_MAX], que la fabrique de la plaque respecte pixel
+## par pixel : la patine tache la matière, elle ne la recouvre jamais.
+const ROUILLE := Color(0.494, 0.251, 0.137)
+
+## `lerp(ENCRE, PAPIER, 0.11)` — le flanc d'un bloc, dans l'ombre. C'est la
+## couleur de repos de toute plaque : le papier y tient 8,1:1.
+const VOXEL_FLANC := Color(0.15475, 0.13527, 0.11359)
+
+## `lerp(ENCRE, PAPIER, 0.41)` — la face du dessus, éclairée. Le coefficient 0,41
+## n'est pas choisi : c'est celui qui met la luminance du dessus à 2,46 fois
+## celle du flanc, le rapport relevé sur la vitrine.
+const VOXEL_DESSUS := Color(0.37225, 0.33237, 0.28429)
+
+## Le rapport mesuré entre la face éclairée et la face à l'ombre d'un même bloc.
+## `tools/test_habillage.gd` le recalcule sur les deux constantes ci-dessus.
+const VOXEL_RAPPORT_ECLAIRE := 2.46
+
+## Le flanc est le dessus MULTIPLIÉ par ce facteur — à 0,003 près de
+## `lerp(ENCRE, PAPIER, 0.11)`, donc la plaque n'a besoin que d'UNE couleur.
+##
+## C'est la règle du jeu appliquée à l'interface : « une matière est un FACTEUR
+## de la lumière, jamais une lumière » (`iso_materiaux.gd`). La texture de la
+## plaque ne porte que des facteurs ; la couleur, c'est le rôle qui la donne.
+const VOXEL_FACTEUR_FLANC := 0.41
+
+## Ce qu'une arête d'encre laisse passer de la face qu'elle borde.
+##
+## ⚠️ **Le même nombre que `IsoMateriaux.ENCRE_ARETE_RESTE`, recopié et non lu.**
+## Lire la constante du jeu forcerait `charte.gd` — préchargée partout, jusque
+## dans les suites sans arène — à charger les deux textures de matière du duel.
+## Le prix du doublon est qu'il peut diverger : la suite compare les deux valeurs
+## et rougit si l'une bouge sans l'autre.
+const VOXEL_ARETE_RESTE := 0.25
+
+## `VOXEL_FLANC × VOXEL_ARETE_RESTE` — l'arête d'encre au repos, pour ce qui se
+## dessine en code plutôt que dans la texture.
+const VOXEL_ARETE := Color(0.03869, 0.03382, 0.02840)
+
+# --- Les rôles du voxel : ce que porte une plaque ----------------------------
+
+## La plaque au repos : sa face du dessus. Alpha 0,94, comme [constant PATE_FOND] —
+## on doit deviner le monde derrière un menu.
+const VOXEL_PLAQUE := Color(VOXEL_DESSUS, 0.94)
+## La plaque qu'on survole : la torche tombe dessus, et le papier est ce que
+## donne le béton sous la torche. Même valeur que [constant PATE_SURVOL], pour
+## que le contraste du texte survolé reste celui déjà vérifié.
+const VOXEL_ALLUME := PAPIER
+## La plaque enfoncée : **son dessus devient un flanc.** Un bloc qui s'enfonce
+## sort de la lumière d'en haut ; il ne s'assombrit pas d'une quantité choisie,
+## il prend exactement la valeur de ses propres côtés.
+const VOXEL_ENFONCE := Color(VOXEL_FLANC, 0.94)
+
+## `lerp(ENCRE, PAPIER, 0.75)` — le texte secondaire POSÉ SUR UN BLOC.
+##
+## ⚠️ **Le même rôle, une autre valeur, parce que la surface a changé.** Le béton
+## clair tient 4,8:1 sur l'aplat d'encre de la pâte ; sur le corps d'un bloc de
+## plâtre, qui est deux fois plus clair, il tombe à 3,9:1 — mesuré sur les
+## captures rendues, 4,48:1 avant contre 3,59:1 après, revue de la session cloud
+## du 2026-09-23. Un rôle de texte se règle sur ce qu'il recouvre : celui-ci
+## remonte à 4,9:1 sur le corps d'une plaque au repos.
+const VOXEL_TEXTE_SECOND := Color(0.61875, 0.55575, 0.47775)
+
+## Ce qu'un rôle prend d'halogène quand il est ÉCRIT sur un bloc.
+##
+## Même raison que [constant VOXEL_TEXTE_SECOND], et le cas le plus serré du
+## dépôt : `ROUGE` est une couleur sombre (luminance 0,24). Écrite sur l'aplat
+## d'encre de la pâte, elle tient 5,37:1 ; sur le corps d'un bloc de plâtre, elle
+## tombe à 4,20:1, sous le seuil. Tirée d'un tiers vers l'halogène, elle remonte
+## à 5,95:1 sans cesser d'être rouge — un rouge sous une lampe reste rouge.
+##
+## ⚠️ **Ne vaut que pour le TEXTE.** Le liseré d'un joueur, la lumière d'une
+## plaque et le sang gardent la couleur exacte du rôle : ce sont des signes, et
+## un signe qui change de valeur selon son support cesse d'être un signe.
+const VOXEL_TEXTE_ROLE_HALO := 0.35
+
+# --- Les tailles d'un bloc, en pixels d'interface -----------------------------
+
+## Hauteur de la face du dessus, la bande éclairée en haut d'une plaque.
+const VOXEL_DESSUS_PX := 10
+## Largeur d'un flanc, à gauche et à droite.
+const VOXEL_FLANC_PX := 6
+## L'arête d'encre qui cerne le bloc. Deux pixels, comme la bordure que les
+## boutons portaient déjà (`MenuWidgets.BORDER_WIDTH_CONTROL`) : le relief
+## remplace un trait, il n'en ajoute pas un.
+const VOXEL_ARETE_PX := 2
+## De combien le contenu descend quand la plaque s'enfonce. Trois pixels, soit
+## exactement ce que l'ombre portée d'un bouton perdait déjà entre le repos et
+## l'appui (4 → 1) : le geste existait, il devient un mouvement de bloc.
+const VOXEL_ENFONCEMENT_PX := 3
+## Hauteur du rebord du bas : l'arête d'encre plus ce qui rentre dans l'ombre.
+const VOXEL_BAS_PX := 8
+## Période de répétition de la matière au centre d'une plaque. En pixels
+## d'interface et non en fraction : une plaque large et une plaque étroite
+## doivent montrer le même plâtre, jamais le même motif étiré.
+##
+## **C'est la période du JEU** : `IsoMateriaux.PERIODE_FACE_MUR_PX` fait revenir
+## la face des murs tous les 70 px de monde. Essayée à 128, la pierre du menu
+## était deux fois plus grosse que la même pierre en duel, et la plaque lisait
+## « photo de mur » au lieu de « plâtre » (constaté en aperçu le 2026-09-23).
+const VOXEL_TUILE_PX := 70
+
+## La part du rôle dans la lumière d'une plaque À L'OMBRE. Un bloc de joueur 1
+## n'est pas un bloc bleu : c'est un bloc éclairé en bleu — la couleur vient de
+## la lumière, jamais de la matière, comme partout ailleurs dans ce jeu. Dans
+## l'ombre, il n'en reçoit qu'un quart : la matière domine.
+const VOXEL_TEINTE_ROLE := 0.25
+
+## La part du rôle dans la lumière d'une plaque ÉCLAIRÉE.
+##
+## ⚠️ **Un quart ne suffisait pas, et c'est un défaut de jeu, pas de goût.**
+## Posée à 0,25 sur une base papier, la lumière d'un rôle se délavait : la classe
+## choisie de J1 passait d'un bleu franc à un gris cerné de bleu, et le bouton
+## qui lance le match d'un ambre franc à du plâtre beige (revue de la session
+## cloud, 2026-09-23). Dans un duel à deux curseurs, **ce qui est choisi et ce
+## qui lance doivent se voir d'abord**. Une plaque éclairée prend donc la couleur
+## de la lumière qui l'éclaire, et non une teinte de celle-ci.
+##
+## 0,80 et pas 1,00 : à pleine force, l'encre ne tient plus que 4,40:1 sur un
+## bloc éclairé en ROUGE, sous le seuil de 4,5. La part restante de papier ramène
+## le rouge à 4,74:1 sans lui enlever sa franchise. `tools/test_habillage.gd`
+## refait le calcul pour chaque rôle, sur le pixel des plaques livrées.
+const VOXEL_TEINTE_ROLE_ALLUME := 0.80
+
+## Les cinq plaques en neuf tranches, fabriquées par `tools/fabrique_bloc_ui.py`
+## depuis `assets/iso/face_mur.png` — la matière que le joueur voit sur les murs
+## du duel.
+##
+## **Quatre, parce qu'il y a deux lumières et deux positions** : un bloc est dans
+## l'ombre ou sous la torche, sorti ou rentré. Trois suffisaient tant qu'on
+## n'enfonçait que ce qu'on touche ; l'entrée de menu CHOISIE, elle, reste rentrée
+## sans être touchée, et sa plaque doit rester sombre — son libellé est un `Label`
+## enfant à couleur fixe, qui deviendrait illisible sur une plaque allumée.
+const CHEMIN_VOXEL_PLAQUE := "res://assets/ui/matiere/bloc_plaque.png"
+const CHEMIN_VOXEL_PLAQUE_ALLUMEE := "res://assets/ui/matiere/bloc_plaque_allumee.png"
+const CHEMIN_VOXEL_PLAQUE_ENFONCEE := "res://assets/ui/matiere/bloc_plaque_enfoncee.png"
+const CHEMIN_VOXEL_PLAQUE_RENTREE := "res://assets/ui/matiere/bloc_plaque_rentree.png"
+## La cinquième : **le bord du faisceau touche le dessus, pas le corps.** L'état
+## de survol des surfaces dont le libellé ne peut pas changer de couleur — les
+## entrées de menu et les cartouches du HUD. Sa face du dessus monte au papier
+## (l'écart avec le repos vaut 3,80:1, au-dessus du seuil de 3:1 des états
+## d'interface) pendant que son corps DESCEND sous celui du repos, si bien que le
+## texte posé dessus gagne en contraste au lieu d'en perdre.
+const CHEMIN_VOXEL_PLAQUE_EFFLEUREE := "res://assets/ui/matiere/bloc_plaque_effleuree.png"
+
+## Le plafond de luminance d'un pixel de plaque, patine comprise : au-dessus, le
+## papier n'y tient plus 4,5:1. Vaut `(lum(PAPIER) + 0.05) / 4.5 - 0.05`, et la
+## suite le recalcule sur la mesure des pixels du fichier — pas sur sa promesse.
+const VOXEL_PATINE_LUM_MAX := 0.0713
+
+# --- L'interrupteur : quel habillage l'interface porte ------------------------
+#
+# `--charte=pate` ramène l'habillage du 15/09 (encre et papier, sans relief) ;
+# `--charte=voxel`, le défaut, donne les blocs. Un seul chemin de code porte les
+# deux : le style demande sa plaque, et c'est elle qui sait de quoi elle est faite.
+
+const DRAPEAU_CHARTE := "--charte="
+const HABILLAGE_VOXEL := "voxel"
+const HABILLAGE_PATE := "pate"
+
+## Pur, donc vérifiable sans lancer le jeu. Une valeur inconnue ne change rien et
+## le dit : un `--charte=voxal` silencieux laisserait croire à un habillage testé.
+static func habillage_par_argument(args: PackedStringArray) -> String:
+	for a: String in args:
+		if a.begins_with(DRAPEAU_CHARTE):
+			var v := a.substr(DRAPEAU_CHARTE.length())
+			if v == HABILLAGE_PATE or v == HABILLAGE_VOXEL:
+				return v
+			push_warning("charte : habillage inconnu « %s » — voxel gardé" % v)
+	return HABILLAGE_VOXEL
+
+
+static var _habillage := ""
+
+
+## L'habillage en vigueur, lu une fois. Les styles le demandent à chaque
+## construction de menu ; relire la ligne de commande à chaque bouton serait payé
+## des centaines de fois pour une réponse qui ne peut pas changer.
+static func habillage() -> String:
+	if _habillage == "":
+		_habillage = habillage_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+	return _habillage
+
+
+static func voxel_actif() -> bool:
+	return habillage() == HABILLAGE_VOXEL
+
+# =============================================================================
 # TYPOGRAPHIE — une échelle de six, et plus une taille arbitraire
 # =============================================================================
 #

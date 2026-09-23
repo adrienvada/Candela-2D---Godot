@@ -258,7 +258,7 @@ func _step_button(text: String, id: String, direction: int) -> Button:
 	btn.pressed.connect(func() -> void: nudge(id, direction))
 	return btn
 
-func _row_style(focused: bool) -> StyleBoxFlat:
+func _row_style(focused: bool) -> StyleBox:
 	return MenuWidgets.make_panel_style(MenuTheme.P1 if focused else MenuTheme.LINE, MenuWidgets.CORNER_BUTTON, 2)
 
 func _track_style() -> StyleBoxFlat:

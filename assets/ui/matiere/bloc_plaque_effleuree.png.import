@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://jcebemc2jsm6"
-path="res://.godot/imported/ill_rejoindre.png-d3350b52c47f8ef269cd9539ca9c4840.ctex"
+uid="uid://dxwkqtue6dh6v"
+path="res://.godot/imported/bloc_plaque_effleuree.png-7120002f50eb59ac6a402297a2f9768f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ill_rejoindre.png"
-dest_files=["res://.godot/imported/ill_rejoindre.png-d3350b52c47f8ef269cd9539ca9c4840.ctex"]
+source_file="res://assets/ui/matiere/bloc_plaque_effleuree.png"
+dest_files=["res://.godot/imported/bloc_plaque_effleuree.png-7120002f50eb59ac6a402297a2f9768f.ctex"]
 
 [params]
 

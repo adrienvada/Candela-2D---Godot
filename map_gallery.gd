@@ -74,9 +74,9 @@ var _tiles: Array[Button] = []
 var _tile_create: Button
 
 ## Styles partagés. `_style_selected` est animé, d'où une instance dédiée.
-var _style_normal: StyleBoxFlat
-var _style_hover: StyleBoxFlat
-var _style_selected: StyleBoxFlat
+var _style_normal: StyleBox
+var _style_hover: StyleBox
+var _style_selected: StyleBox
 
 var _delete_armed: bool = false
 var _delete_timer: float = 0.0
@@ -251,7 +251,10 @@ func _build_toast() -> Control:
 
 func _build_styles() -> void:
 	_style_normal = MenuWidgets.make_panel_style(Charte.PATE_FILET, MenuWidgets.CORNER_PANEL, 2)
-	_style_hover = MenuWidgets.make_panel_style(Charte.PATE_SURVOL, MenuWidgets.CORNER_PANEL, 2)
+	# Le survol d'une vignette est une plaque ALLUMÉE : en pâte, c'est le fond qui
+	# s'éclaire au papier ; en voxel, c'est la torche qui tombe sur le bloc.
+	_style_hover = MenuWidgets.make_panel_style(Charte.PATE_SURVOL, MenuWidgets.CORNER_PANEL, 2,
+		MenuTheme.SURFACE, MenuWidgets.Bloc.ALLUME)
 	_style_selected = MenuWidgets.make_panel_style(COLOR_P1, MenuWidgets.CORNER_PANEL, 2)
 
 func _make_action_button(label: String, accent: Color) -> Button:
@@ -407,13 +410,16 @@ func _make_create_tile() -> Button:
 	tile.focus_mode = Control.FOCUS_ALL
 	tile.tooltip_text = "Créer une nouvelle carte dans l'éditeur"
 
-	var dashed := MenuWidgets.make_panel_style(Charte.PATE_FILET * 0.7, MenuWidgets.CORNER_PANEL, 2)
-	dashed.bg_color = Color(Charte.PATE_FOND * 0.6, 0.7)
+	# Le fond passe en argument plutôt qu'en retouche : `make_panel_style` rend un
+	# `StyleBox` depuis l'habillage voxel, et seul l'aplat de la pâte a un fond.
+	# L'état dit la même chose aux deux habillages — cette tuile-ci s'allume.
+	var dashed := MenuWidgets.make_panel_style(Charte.PATE_FILET * 0.7, MenuWidgets.CORNER_PANEL, 2,
+		Color(Charte.PATE_FOND * 0.6, 0.7))
 	tile.add_theme_stylebox_override("normal", dashed)
 	tile.add_theme_stylebox_override("focus", dashed)
 
-	var hover := MenuWidgets.make_panel_style(Charte.AMBRE, MenuWidgets.CORNER_PANEL, 2)
-	hover.bg_color = Color(Charte.AMBRE * 0.1, 0.9)
+	var hover := MenuWidgets.make_panel_style(Charte.AMBRE, MenuWidgets.CORNER_PANEL, 2,
+		Color(Charte.AMBRE * 0.1, 0.9), MenuWidgets.Bloc.ALLUME)
 	tile.add_theme_stylebox_override("hover", hover)
 	tile.add_theme_stylebox_override("pressed", hover)
 
@@ -605,7 +611,9 @@ func _process(delta: float) -> void:
 	_pulse += delta
 	if _style_selected != null:
 		var wave := 0.5 + 0.5 * sin(_pulse * 4.0)
-		_style_selected.border_color = COLOR_P1.lerp(Charte.HALOGENE, 0.4 * wave)
+		# La teinte respire là où l'habillage la porte : sur la bordure d'un aplat,
+		# sur la lumière d'un bloc.
+		MenuWidgets.reteindre(_style_selected, COLOR_P1.lerp(Charte.HALOGENE, 0.4 * wave))
 
 	if _delete_armed:
 		_delete_timer -= delta

@@ -131,6 +131,45 @@ const SHADOW_COLOR_PANEL := MenuTheme.OMBRE
 # BOUTONS
 # =============================================================================
 
+## Les quatre états d'un bouton, en blocs — l'habillage voxel de [method make_button].
+##
+## **Un bouton principal est un bloc DÉJÀ sous la torche.** C'est ce que « plein
+## énergisé » voulait dire quand son fond était un aplat de l'accent : l'œil doit
+## le trouver sans le chercher. Les autres attendent dans l'ombre.
+##
+## ⚠️ **Et l'enfoncement DÉPLACE le libellé.** Une plaque enfoncée qui garde son
+## texte à la même hauteur n'est qu'une plaque plus sombre ; c'est la descente de
+## `Charte.VOXEL_ENFONCEMENT_PX` — la chute d'ombre que l'ancien bouton faisait
+## déjà, devenue un mouvement de bloc — qui donne le clic sous le doigt.
+static func _poser_les_blocs(btn: Button, accent: Color, primary: bool,
+		marge_x: int, marge_y: int = 10, repos_neutre: bool = false) -> void:
+	# ⚠️ **Une bascule ne porte AUCUN rôle au repos**, et ce n'est pas un détail :
+	# la moindre teinte éclaircit la plaque sous un texte secondaire, qui y perd
+	# le contraste que l'aplat d'encre lui donnait. Mesuré sur les captures :
+	# 4,48:1 avant, 3,59:1 avec une teinte de joueur au repos. L'habillage pâte
+	# ne teintait rien non plus tant que la plaque n'était pas touchée.
+	var repos := style_de_bloc(MenuTheme.LINE if repos_neutre else accent,
+		Bloc.ALLUME if primary else Bloc.REPOS)
+	var survol := style_de_bloc(accent, Bloc.ALLUME)
+	var enfonce := style_de_bloc(accent, Bloc.ENFONCE)
+	# Désactivé : un bloc que la lumière n'atteint jamais — sa face du dessus vaut
+	# déjà celle de ses flancs, donc il n'a plus de relief à montrer.
+	var eteint := style_de_bloc(MenuTheme.LINE, Bloc.REPOS, Charte.VOXEL_ENFONCE)
+	for s: StyleBoxTexture in [repos, survol, enfonce, eteint]:
+		s.content_margin_left = marge_x
+		s.content_margin_right = marge_x
+		s.content_margin_top = marge_y
+		s.content_margin_bottom = marge_y
+	enfonce.content_margin_top += Charte.VOXEL_ENFONCEMENT_PX
+	enfonce.content_margin_bottom -= Charte.VOXEL_ENFONCEMENT_PX
+	btn.add_theme_stylebox_override("normal", repos)
+	btn.add_theme_stylebox_override("hover", survol)
+	btn.add_theme_stylebox_override("focus", survol)
+	btn.add_theme_stylebox_override("pressed", enfonce)
+	btn.add_theme_stylebox_override("hover_pressed", enfonce)
+	btn.add_theme_stylebox_override("disabled", eteint)
+
+
 ## Crée un bouton standard conforme à la Charte.
 ## `primary` : bouton plein énergisé (action principale / engagement).
 ## `accent` : couleur de rôle (BLEU/J1, ROUGE/J2, ACIER/neutre, AMBRE/titres/or).
@@ -145,54 +184,59 @@ static func make_button(label: String, accent: Color = MenuTheme.ACCENT,
 
 	Charte.appareil(btn, font_size, Charte.POIDS_APPUI if primary else Charte.POIDS_COURANT)
 
-	# --- Style normal ---
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.90) if primary else MenuTheme.SURFACE
-	normal.set_border_width_all(BORDER_WIDTH_CONTROL)
-	normal.border_color = accent if primary else (MenuTheme.LINE if accent == MenuTheme.ACCENT else Color(accent.r, accent.g, accent.b, 0.60))
-	normal.set_corner_radius_all(CORNER_BUTTON)
-	normal.shadow_size = 0
-	normal.shadow_offset = SHADOW_OFFSET_BUTTON
-	normal.shadow_color = SHADOW_COLOR_DEFAULT
-	normal.content_margin_left = Charte.GAP_M if min_size.x > 180 else Charte.GAP_S
-	normal.content_margin_right = Charte.GAP_M if min_size.x > 180 else Charte.GAP_S
-	normal.content_margin_top = 10
-	normal.content_margin_bottom = 10
-	btn.add_theme_stylebox_override("normal", normal)
+	if Charte.voxel_actif():
+		_poser_les_blocs(btn, accent, primary,
+			Charte.GAP_M if min_size.x > 180 else Charte.GAP_S)
+	else:
+		# --- Style normal ---
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = Color(accent.r, accent.g, accent.b, 0.90) if primary else MenuTheme.SURFACE
+		normal.set_border_width_all(BORDER_WIDTH_CONTROL)
+		normal.border_color = accent if primary else (MenuTheme.LINE if accent == MenuTheme.ACCENT else Color(accent.r, accent.g, accent.b, 0.60))
+		normal.set_corner_radius_all(CORNER_BUTTON)
+		normal.shadow_size = 0
+		normal.shadow_offset = SHADOW_OFFSET_BUTTON
+		normal.shadow_color = SHADOW_COLOR_DEFAULT
+		normal.content_margin_left = Charte.GAP_M if min_size.x > 180 else Charte.GAP_S
+		normal.content_margin_right = Charte.GAP_M if min_size.x > 180 else Charte.GAP_S
+		normal.content_margin_top = 10
+		normal.content_margin_bottom = 10
+		btn.add_theme_stylebox_override("normal", normal)
 
-	# --- Style survol & focus (inversion franche de contraste) ---
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = MenuTheme.LUMIERE
-	hover.bg_color = MenuTheme.LUMIERE if (primary or accent == MenuTheme.ACCENT) else accent
-	hover.shadow_size = 0
-	hover.shadow_offset = SHADOW_OFFSET_BUTTON
-	hover.shadow_color = SHADOW_COLOR_DEFAULT
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
+		# --- Style survol & focus (inversion franche de contraste) ---
+		var hover := normal.duplicate() as StyleBoxFlat
+		hover.border_color = MenuTheme.LUMIERE
+		hover.bg_color = MenuTheme.LUMIERE if (primary or accent == MenuTheme.ACCENT) else accent
+		hover.shadow_size = 0
+		hover.shadow_offset = SHADOW_OFFSET_BUTTON
+		hover.shadow_color = SHADOW_COLOR_DEFAULT
+		btn.add_theme_stylebox_override("hover", hover)
+		btn.add_theme_stylebox_override("focus", hover)
 
-	# --- Style pressé / enfoncé (enfoncement mécanique de la plaque) ---
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = hover.bg_color
-	pressed.border_color = MenuTheme.LUMIERE
-	pressed.shadow_size = 0
-	pressed.shadow_offset = SHADOW_OFFSET_PRESSED
-	pressed.shadow_color = SHADOW_COLOR_DEFAULT
-	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_stylebox_override("hover_pressed", pressed)
+		# --- Style pressé / enfoncé (enfoncement mécanique de la plaque) ---
+		var pressed := hover.duplicate() as StyleBoxFlat
+		pressed.bg_color = hover.bg_color
+		pressed.border_color = MenuTheme.LUMIERE
+		pressed.shadow_size = 0
+		pressed.shadow_offset = SHADOW_OFFSET_PRESSED
+		pressed.shadow_color = SHADOW_COLOR_DEFAULT
+		btn.add_theme_stylebox_override("pressed", pressed)
+		btn.add_theme_stylebox_override("hover_pressed", pressed)
 
-	# --- Style désactivé ---
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(MenuTheme.SURFACE.r, MenuTheme.SURFACE.g, MenuTheme.SURFACE.b, 0.5)
-	disabled.border_color = MenuTheme.LINE
-	disabled.shadow_size = 0
-	disabled.shadow_offset = Vector2.ZERO
-	btn.add_theme_stylebox_override("disabled", disabled)
+		# --- Style désactivé ---
+		var disabled := normal.duplicate() as StyleBoxFlat
+		disabled.bg_color = Color(MenuTheme.SURFACE.r, MenuTheme.SURFACE.g, MenuTheme.SURFACE.b, 0.5)
+		disabled.border_color = MenuTheme.LINE
+		disabled.shadow_size = 0
+		disabled.shadow_offset = Vector2.ZERO
+		btn.add_theme_stylebox_override("disabled", disabled)
 
 	# Couleurs de texte
 	if primary:
 		btn.add_theme_color_override("font_color", MenuTheme.TEXTE_SUR_PAPIER)
 	else:
-		btn.add_theme_color_override("font_color", accent if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE)
+		btn.add_theme_color_override("font_color",
+			texte_de_role(accent) if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE)
 
 	btn.add_theme_color_override("font_hover_color", MenuTheme.TEXTE_SUR_PAPIER)
 	btn.add_theme_color_override("font_focus_color", MenuTheme.TEXTE_SUR_PAPIER)
@@ -215,46 +259,53 @@ static func make_choice_button(label: String, accent: Color = MenuTheme.ACCENT,
 
 	Charte.appareil(btn, font_size, Charte.POIDS_COURANT)
 
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(BORDER_WIDTH_CONTROL)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(CORNER_BUTTON)
-	normal.shadow_size = 0
-	normal.shadow_offset = SHADOW_OFFSET_BUTTON
-	normal.shadow_color = SHADOW_COLOR_DEFAULT
-	normal.content_margin_left = Charte.GAP_S
-	normal.content_margin_right = Charte.GAP_S
-	normal.content_margin_top = 8
-	normal.content_margin_bottom = 8
-	btn.add_theme_stylebox_override("normal", normal)
+	if Charte.voxel_actif():
+		# **Ici, « enfoncé » veut dire CHOISI** — c'est une bascule, pas une
+		# commande. Le bloc reste rentré tant que l'option est celle qui tient,
+		# et c'est exactement ce que l'ancien style disait déjà en gardant son
+		# ombre courte (`SHADOW_OFFSET_PRESSED`) après le relâchement.
+		_poser_les_blocs(btn, accent, false, Charte.GAP_S, 8, true)
+	else:
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = MenuTheme.SURFACE
+		normal.set_border_width_all(BORDER_WIDTH_CONTROL)
+		normal.border_color = MenuTheme.LINE
+		normal.set_corner_radius_all(CORNER_BUTTON)
+		normal.shadow_size = 0
+		normal.shadow_offset = SHADOW_OFFSET_BUTTON
+		normal.shadow_color = SHADOW_COLOR_DEFAULT
+		normal.content_margin_left = Charte.GAP_S
+		normal.content_margin_right = Charte.GAP_S
+		normal.content_margin_top = 8
+		normal.content_margin_bottom = 8
+		btn.add_theme_stylebox_override("normal", normal)
 
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = MenuTheme.LUMIERE
-	hover.bg_color = accent if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE
-	hover.shadow_size = 0
-	hover.shadow_offset = SHADOW_OFFSET_BUTTON
-	hover.shadow_color = SHADOW_COLOR_DEFAULT
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
+		var hover := normal.duplicate() as StyleBoxFlat
+		hover.border_color = MenuTheme.LUMIERE
+		hover.bg_color = accent if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE
+		hover.shadow_size = 0
+		hover.shadow_offset = SHADOW_OFFSET_BUTTON
+		hover.shadow_color = SHADOW_COLOR_DEFAULT
+		btn.add_theme_stylebox_override("hover", hover)
+		btn.add_theme_stylebox_override("focus", hover)
 
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.border_color = MenuTheme.LUMIERE
-	pressed.bg_color = accent if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE
-	pressed.shadow_size = 0
-	pressed.shadow_offset = SHADOW_OFFSET_PRESSED
-	pressed.shadow_color = SHADOW_COLOR_DEFAULT
-	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_stylebox_override("hover_pressed", pressed)
+		var pressed := normal.duplicate() as StyleBoxFlat
+		pressed.border_color = MenuTheme.LUMIERE
+		pressed.bg_color = accent if accent != MenuTheme.ACCENT else MenuTheme.LUMIERE
+		pressed.shadow_size = 0
+		pressed.shadow_offset = SHADOW_OFFSET_PRESSED
+		pressed.shadow_color = SHADOW_COLOR_DEFAULT
+		btn.add_theme_stylebox_override("pressed", pressed)
+		btn.add_theme_stylebox_override("hover_pressed", pressed)
 
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(MenuTheme.SURFACE.r, MenuTheme.SURFACE.g, MenuTheme.SURFACE.b, 0.5)
-	disabled.border_color = MenuTheme.LINE * 0.7
-	disabled.shadow_size = 0
-	disabled.shadow_offset = Vector2.ZERO
-	btn.add_theme_stylebox_override("disabled", disabled)
+		var disabled := normal.duplicate() as StyleBoxFlat
+		disabled.bg_color = Color(MenuTheme.SURFACE.r, MenuTheme.SURFACE.g, MenuTheme.SURFACE.b, 0.5)
+		disabled.border_color = MenuTheme.LINE * 0.7
+		disabled.shadow_size = 0
+		disabled.shadow_offset = Vector2.ZERO
+		btn.add_theme_stylebox_override("disabled", disabled)
 
-	btn.add_theme_color_override("font_color", MenuTheme.DIM)
+	btn.add_theme_color_override("font_color", texte_second())
 	btn.add_theme_color_override("font_hover_color", MenuTheme.TEXTE_SUR_PAPIER)
 	btn.add_theme_color_override("font_focus_color", MenuTheme.TEXTE_SUR_PAPIER)
 	btn.add_theme_color_override("font_pressed_color", MenuTheme.TEXTE_SUR_PAPIER)
@@ -273,37 +324,43 @@ static func make_step_button(symbol: String, min_size: Vector2 = Vector2(36, 32)
 
 	Charte.appareil(btn, Charte.T_COURANT, Charte.POIDS_APPUI)
 
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(BORDER_WIDTH_CONTROL)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(CORNER_STEP)
-	normal.shadow_size = 0
-	normal.shadow_offset = SHADOW_OFFSET_BUTTON
-	normal.shadow_color = SHADOW_COLOR_DEFAULT
-	normal.content_margin_left = 6
-	normal.content_margin_right = 6
-	normal.content_margin_top = 2
-	normal.content_margin_bottom = 2
-	btn.add_theme_stylebox_override("normal", normal)
+	if Charte.voxel_actif():
+		# Le plus petit bloc du jeu : 36×32, dont 18 px de tranches fixes. C'est
+		# assez — en dessous, la face du dessus et le rebord se toucheraient et le
+		# bouton n'aurait plus de corps à montrer.
+		_poser_les_blocs(btn, MenuTheme.LINE, false, 6, 2)
+	else:
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = MenuTheme.SURFACE
+		normal.set_border_width_all(BORDER_WIDTH_CONTROL)
+		normal.border_color = MenuTheme.LINE
+		normal.set_corner_radius_all(CORNER_STEP)
+		normal.shadow_size = 0
+		normal.shadow_offset = SHADOW_OFFSET_BUTTON
+		normal.shadow_color = SHADOW_COLOR_DEFAULT
+		normal.content_margin_left = 6
+		normal.content_margin_right = 6
+		normal.content_margin_top = 2
+		normal.content_margin_bottom = 2
+		btn.add_theme_stylebox_override("normal", normal)
 
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = MenuTheme.LUMIERE
-	hover.bg_color = MenuTheme.LUMIERE
-	hover.shadow_size = 0
-	hover.shadow_offset = SHADOW_OFFSET_BUTTON
-	hover.shadow_color = SHADOW_COLOR_DEFAULT
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
+		var hover := normal.duplicate() as StyleBoxFlat
+		hover.border_color = MenuTheme.LUMIERE
+		hover.bg_color = MenuTheme.LUMIERE
+		hover.shadow_size = 0
+		hover.shadow_offset = SHADOW_OFFSET_BUTTON
+		hover.shadow_color = SHADOW_COLOR_DEFAULT
+		btn.add_theme_stylebox_override("hover", hover)
+		btn.add_theme_stylebox_override("focus", hover)
 
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = MenuTheme.LUMIERE
-	pressed.border_color = MenuTheme.LUMIERE
-	pressed.shadow_size = 0
-	pressed.shadow_offset = SHADOW_OFFSET_PRESSED
-	pressed.shadow_color = SHADOW_COLOR_DEFAULT
-	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_stylebox_override("hover_pressed", pressed)
+		var pressed := hover.duplicate() as StyleBoxFlat
+		pressed.bg_color = MenuTheme.LUMIERE
+		pressed.border_color = MenuTheme.LUMIERE
+		pressed.shadow_size = 0
+		pressed.shadow_offset = SHADOW_OFFSET_PRESSED
+		pressed.shadow_color = SHADOW_COLOR_DEFAULT
+		btn.add_theme_stylebox_override("pressed", pressed)
+		btn.add_theme_stylebox_override("hover_pressed", pressed)
 
 	btn.add_theme_color_override("font_color", MenuTheme.LUMIERE)
 	btn.add_theme_color_override("font_hover_color", MenuTheme.TEXTE_SUR_PAPIER)
@@ -353,6 +410,156 @@ static func make_slider(min_val: float, max_val: float, step: float,
 	return slider
 
 # =============================================================================
+# LE BLOC — la plaque en relief de l'habillage voxel
+# =============================================================================
+#
+# **Tout l'habillage voxel passe par ici, et c'est voulu.** `Charte.voxel_actif()`
+# n'est lu que dans ce fichier : les deux cents sites qui demandent un style
+# demandent la même chose qu'avant et reçoivent une plaque de bloc ou un aplat
+# d'encre selon `--charte=`. Un `if` par site d'appel aurait fait deux habillages
+# à maintenir — la faute que `network_manager.gd` évite pour le transport.
+#
+# Une plaque est une image en NEUF TRANCHES (`StyleBoxTexture`) : les quatre
+# coins gardent leur taille, les bords s'étirent le long d'un axe, le centre se
+# répète. C'est ce qui donne à un bouton de 36 px et à un panneau de 600 px la
+# même face du dessus, les mêmes flancs et la même arête — sans un seul shader,
+# et en gardant les plaques dans un même lot de dessin puisqu'elles partagent
+# leur texture.
+
+## Les quatre états d'un bloc : deux lumières croisées avec deux positions.
+##
+## - `REPOS` — dans l'ombre, sorti : l'état de presque tout.
+## - `ALLUME` — sous la torche, sorti : ce qu'on survole, ce qui engage.
+## - `ENFONCE` — sous la torche, rentré : ce qu'on est en train d'appuyer.
+## - `RENTRE` — dans l'ombre, rentré : ce qui **reste** choisi sans être touché.
+##
+## `ENFONCE` n'est pas `ALLUME` assombri : sa face du dessus est passée à l'ombre,
+## le reste est resté sous la torche. Et `RENTRE` n'est pas `ENFONCE` éteint : il
+## porte une plaque à lui, parce qu'une entrée choisie doit rester lisible sous un
+## libellé qui, lui, ne change pas de couleur.
+enum Bloc { REPOS, ALLUME, ENFONCE, RENTRE, EFFLEURE }
+
+const CHEMINS_DE_PLAQUE := {
+	Bloc.REPOS: Charte.CHEMIN_VOXEL_PLAQUE,
+	Bloc.ALLUME: Charte.CHEMIN_VOXEL_PLAQUE_ALLUMEE,
+	Bloc.ENFONCE: Charte.CHEMIN_VOXEL_PLAQUE_ENFONCEE,
+	Bloc.RENTRE: Charte.CHEMIN_VOXEL_PLAQUE_RENTREE,
+	Bloc.EFFLEURE: Charte.CHEMIN_VOXEL_PLAQUE_EFFLEUREE,
+}
+
+## Les états où la lumière touche le bloc. Elle y porte la couleur du rôle
+## presque en entier ; dans l'ombre, la matière domine et le rôle n'est qu'une
+## teinte. C'est la seule chose qui sépare « choisi » de « posé là ».
+const ETATS_ECLAIRES := [Bloc.ALLUME, Bloc.ENFONCE, Bloc.EFFLEURE]
+
+## La valeur qui veut dire « la teinte que l'état donne », par opposition à une
+## teinte imposée par l'appelant. Un bloc transparent n'a aucun autre sens :
+## personne ne demande une plaque invisible.
+const TEINTE_AUTO := Color.TRANSPARENT
+
+static var _plaques: Dictionary = {}
+
+
+## La texture d'un état, chargée au premier appel et gardée.
+##
+## ⚠️ **Le fichier manquant CRIE.** Sans lui, `StyleBoxTexture` dessine… rien :
+## pas de plaque, pas de bordure, et pas la moindre erreur — les menus
+## deviendraient des colonnes de texte flottant sur le noir. Même famille de
+## piège que le grain de la pâte et que les textures du voile.
+static func plaque(etat: int) -> Texture2D:
+	if _plaques.has(etat):
+		return _plaques[etat]
+	var chemin: String = CHEMINS_DE_PLAQUE.get(etat, "")
+	var tex: Texture2D = null
+	if ResourceLoader.exists(chemin):
+		tex = load(chemin) as Texture2D
+	if tex == null:
+		push_error("bloc d'interface : plaque absente — %s" % chemin)
+	_plaques[etat] = tex
+	return tex
+
+
+## La couleur qui éclaire une plaque : son état, teinté par le rôle.
+##
+## **Un bloc de joueur 1 n'est pas un bloc bleu, c'est un bloc éclairé en bleu.**
+## La matière ne porte jamais la couleur — elle n'est qu'un facteur —, donc le
+## rôle entre par la lumière, à hauteur de `Charte.VOXEL_TEINTE_ROLE`. Un accent
+## neutre (le filet, l'accent d'interface) ne teinte rien : il ne désigne personne.
+static func teinte_de_bloc(accent: Color, etat: int, fond: Color = TEINTE_AUTO) -> Color:
+	var eclaire := etat in ETATS_ECLAIRES
+	var base: Color = fond
+	if base == TEINTE_AUTO:
+		base = Charte.VOXEL_ALLUME if eclaire else Charte.VOXEL_PLAQUE
+	if accent == MenuTheme.LINE or accent == MenuTheme.ACCENT:
+		return base
+	# **Un bloc éclairé prend la couleur de la LUMIÈRE qui l'éclaire** ; un bloc à
+	# l'ombre n'en reçoit qu'une teinte. Sans cet écart, la classe choisie de J1
+	# virait au gris cerné de bleu et le bouton qui lance au plâtre beige : dans un
+	# duel à deux curseurs, ce qui est choisi et ce qui lance doivent se voir
+	# d'abord (revue de la session cloud, 2026-09-23).
+	var part := Charte.VOXEL_TEINTE_ROLE_ALLUME if eclaire else Charte.VOXEL_TEINTE_ROLE
+	var teinte := base.lerp(accent, part)
+	# L'opacité appartient à l'état, pas au rôle : un panneau de joueur 2 laisse
+	# voir le monde derrière lui autant qu'un panneau neutre.
+	teinte.a = base.a
+	return teinte
+
+
+## Le texte secondaire, à la clarté que la surface sous lui exige.
+##
+## Un rôle de texte n'est pas une couleur, c'est un contraste tenu sur ce qu'il
+## recouvre. L'aplat d'encre de la pâte et le corps de plâtre d'un bloc n'ont pas
+## la même clarté, donc le même rôle n'y prend pas la même valeur.
+static func texte_second() -> Color:
+	return Charte.VOXEL_TEXTE_SECOND if Charte.voxel_actif() else MenuTheme.DIM
+
+
+## Un rôle ÉCRIT : sa couleur, tirée vers l'halogène le temps qu'il faut pour
+## tenir sur le plâtre d'un bloc. Le rôle lui-même ne bouge pas — seul ce qui
+## s'écrit avec lui s'éclaircit, et seulement là où il y a un bloc dessous.
+static func texte_de_role(role: Color) -> Color:
+	if not Charte.voxel_actif():
+		return role
+	return role.lerp(Charte.HALOGENE, Charte.VOXEL_TEXTE_ROLE_HALO)
+
+
+## Repeint le RÔLE d'un style déjà posé, quel que soit l'habillage.
+##
+## Le cadre d'une modale change de registre à chaque ouverture (`show_dialog_message`)
+## et le style, lui, ne se refabrique pas. Un aplat porte son rôle sur sa bordure,
+## un bloc le porte sur sa lumière : c'est le même geste, et le seul endroit du
+## dépôt qui ait besoin de savoir qu'il y en a deux.
+static func reteindre(style: StyleBox, accent: Color, etat: int = Bloc.REPOS) -> void:
+	if style is StyleBoxFlat:
+		(style as StyleBoxFlat).border_color = accent
+	elif style is StyleBoxTexture:
+		var tex := style as StyleBoxTexture
+		var teinte := teinte_de_bloc(accent, etat)
+		# L'opacité reste celle que le style s'est donnée : une modale est plus
+		# opaque qu'un panneau, et ce n'est pas le registre qui en décide.
+		teinte.a = tex.modulate_color.a
+		tex.modulate_color = teinte
+
+
+## Le style d'une plaque de bloc.
+static func style_de_bloc(accent: Color = MenuTheme.LINE, etat: int = Bloc.REPOS,
+		fond: Color = TEINTE_AUTO) -> StyleBoxTexture:
+	var box := StyleBoxTexture.new()
+	box.texture = plaque(etat)
+	box.texture_margin_top = Charte.VOXEL_DESSUS_PX
+	box.texture_margin_bottom = Charte.VOXEL_BAS_PX
+	box.texture_margin_left = Charte.VOXEL_FLANC_PX
+	box.texture_margin_right = Charte.VOXEL_FLANC_PX
+	# ⚠️ En TILE et non en STRETCH. Étirée, la pierre d'un panneau large serait
+	# quatre fois celle d'un bouton étroit, et la matière cesserait d'être une
+	# matière pour devenir un motif propre à chaque boîte.
+	box.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	box.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	box.modulate_color = teinte_de_bloc(accent, etat, fond)
+	return box
+
+
+# =============================================================================
 # PANNEAUX, CADRES & MODALES
 # =============================================================================
 
@@ -360,7 +567,24 @@ static func make_slider(min_val: float, max_val: float, step: float,
 static func make_panel_style(accent: Color = MenuTheme.LINE,
 		corner_radius: int = CORNER_PANEL,
 		border_width: int = BORDER_WIDTH_PANEL,
-		bg_color: Color = MenuTheme.SURFACE) -> StyleBoxFlat:
+		bg_color: Color = MenuTheme.SURFACE,
+		etat: int = Bloc.REPOS) -> StyleBox:
+	if Charte.voxel_actif():
+		# Le rayon et l'épaisseur ne se perdent pas : un bloc n'a ni coin arrondi
+		# (ils valent 0 depuis le roman graphique) ni bordure dessinée — son arête
+		# d'encre est dans la matière, à la largeur que la charte donne.
+		#
+		# ⚠️ **`bg_color` n'est pas lu ici, et ce n'est pas un oubli.** Un aplat de
+		# fond est une notion de la pâte ; un bloc n'a pas de fond, il a une
+		# matière. Ce qui le distingue, c'est la LUMIÈRE qui le touche (`accent`)
+		# et son ÉTAT. Un site d'appel qui voulait un fond plus clair au survol
+		# demande donc `Bloc.ALLUME`, et les deux habillages le comprennent.
+		var bloc := style_de_bloc(accent, etat)
+		bloc.content_margin_left = Charte.GAP_M
+		bloc.content_margin_right = Charte.GAP_M
+		bloc.content_margin_top = Charte.GAP_M
+		bloc.content_margin_bottom = Charte.GAP_M
+		return bloc
 	var box := StyleBoxFlat.new()
 	box.bg_color = bg_color
 	box.set_border_width_all(border_width)
@@ -377,7 +601,17 @@ static func make_panel_style(accent: Color = MenuTheme.LINE,
 
 
 ## StyleBox standardisé pour une fenêtre modale flottante (Choix d'arme, Dialogue).
-static func make_modal_style(accent: Color = MenuTheme.ACCENT) -> StyleBoxFlat:
+static func make_modal_style(accent: Color = MenuTheme.ACCENT) -> StyleBox:
+	if Charte.voxel_actif():
+		# Une modale est un bloc plus opaque que les autres : elle interrompt.
+		var teinte := teinte_de_bloc(accent, Bloc.REPOS)
+		teinte.a = 0.97
+		var bloc := style_de_bloc(accent, Bloc.REPOS, teinte)
+		bloc.content_margin_left = Charte.GAP_L
+		bloc.content_margin_right = Charte.GAP_L
+		bloc.content_margin_top = Charte.GAP_M
+		bloc.content_margin_bottom = Charte.GAP_M
+		return bloc
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(MenuTheme.SURFACE.r, MenuTheme.SURFACE.g, MenuTheme.SURFACE.b, 0.97)
 	box.set_border_width_all(BORDER_WIDTH_CONTROL)

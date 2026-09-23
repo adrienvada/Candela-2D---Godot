@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0c87mx6q71co"
-path="res://.godot/imported/ill_creer.png-74907222114e2b6e73a6222feef0266e.ctex"
+uid="uid://cp2g2usvvr3b2"
+path="res://.godot/imported/bloc_plaque.png-839d12d1f52af7eeab5b5a0b3050365b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/ill_creer.png"
-dest_files=["res://.godot/imported/ill_creer.png-74907222114e2b6e73a6222feef0266e.ctex"]
+source_file="res://assets/ui/matiere/bloc_plaque.png"
+dest_files=["res://.godot/imported/bloc_plaque.png-839d12d1f52af7eeab5b5a0b3050365b.ctex"]
 
 [params]
 

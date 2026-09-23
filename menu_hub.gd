@@ -969,16 +969,76 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.disabled = reason != ""
 
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(MenuWidgets.CORNER_BUTTON)
-	normal.shadow_size = 0
-	normal.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
-	normal.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
-	normal.content_margin_left = MenuTheme.GAP_S
-	normal.content_margin_right = MenuTheme.GAP_S
+	var normal: StyleBox
+	var hover: StyleBox
+	var choisie: StyleBox
+	var pressed: StyleBox
+
+	if Charte.voxel_actif():
+		# ⚠️ **Les quatre plaques restent SOMBRES, et c'est une contrainte, pas un
+		# goût.** Le libellé d'une entrée est un `Label` enfant, à couleur fixe :
+		# contrairement au texte d'un `Button`, il ne s'inverse pas quand la plaque
+		# s'éclaire. Une entrée survolée en plaque allumée écrirait donc du papier
+		# sur du papier. Les états se distinguent ici par la LUMIÈRE REÇUE et par
+		# la POSITION du bloc — jamais en montant jusqu'à la torche.
+		normal = MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.REPOS)
+		# **Survolée : la torche touche la face du dessus, pas le corps.** L'écart
+		# avec le repos vaut 3,80:1 sur cette face — au-dessus du seuil de 3:1 des
+		# états d'interface — pendant que le corps DESCEND, si bien que le libellé
+		# y gagne en contraste au lieu d'en perdre. C'est ce qui rend le survol
+		# franc sans toucher à la couleur du libellé, qui est de l'information.
+		hover = MenuWidgets.style_de_bloc(MenuTheme.LINE, MenuWidgets.Bloc.EFFLEURE)
+		# **L'entrée choisie est celle que le filament éclaire**, et elle le reste :
+		# c'est le « vous êtes ici » de l'ancienne bordure ambre, dit en lumière.
+		choisie = MenuWidgets.style_de_bloc(MenuTheme.FILAMENT, MenuWidgets.Bloc.EFFLEURE)
+		# L'appui, lui, RENTRE le bloc : son dessus passe à l'ombre. Deux gestes
+		# distincts — on éclaire ce qu'on choisit, on enfonce ce qu'on presse.
+		pressed = MenuWidgets.style_de_bloc(MenuTheme.FILAMENT, MenuWidgets.Bloc.RENTRE)
+		for s: StyleBox in [normal, hover, choisie, pressed]:
+			s.content_margin_left = MenuTheme.GAP_S
+			s.content_margin_right = MenuTheme.GAP_S
+	else:
+		var plat := StyleBoxFlat.new()
+		plat.bg_color = MenuTheme.SURFACE
+		plat.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
+		plat.border_color = MenuTheme.LINE
+		plat.set_corner_radius_all(MenuWidgets.CORNER_BUTTON)
+		plat.shadow_size = 0
+		plat.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+		plat.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+		plat.content_margin_left = MenuTheme.GAP_S
+		plat.content_margin_right = MenuTheme.GAP_S
+		normal = plat
+
+		# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
+		#
+		# Direction Roman Graphique Brutaliste : contraste franc au survol et ombre nette.
+		var survol := plat.duplicate() as StyleBoxFlat
+		survol.border_color = MenuTheme.LUMIERE
+		survol.bg_color = Color(MenuTheme.LUMIERE, 0.15)
+		survol.shadow_size = 0
+		survol.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+		survol.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+		hover = survol
+
+		# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
+		# Bordure ambre énergique et ombre dure Roman Graphique.
+		var prise := plat.duplicate() as StyleBoxFlat
+		prise.border_color = MenuTheme.FILAMENT
+		prise.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
+		prise.bg_color = Color(MenuTheme.FILAMENT, 0.22)
+		prise.shadow_size = 0
+		prise.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+		prise.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+		choisie = prise
+
+		# L'appui, lui, montre un enfoncement mécanique de la plaque.
+		var appui := prise.duplicate() as StyleBoxFlat
+		appui.shadow_size = 0
+		appui.shadow_offset = MenuWidgets.SHADOW_OFFSET_PRESSED
+		appui.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+		pressed = appui
+
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("disabled", normal)
 	# Habillage iso : la plaque de l'entrée prend le grain de la pâte. Son libellé
@@ -986,37 +1046,16 @@ func make_entry(label: String, detail: String, target: String = "",
 	# peint que sa propre StyleBox. Le verre de M14 ne vitre pas les entrées (il
 	# vitre le cadre de droite et les rangées `Row_`) : les deux matériaux ne se
 	# disputent jamais le même nœud.
-	MenuWidgets.poser_pate(btn)
-
-	# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
 	#
-	# Direction Roman Graphique Brutaliste : contraste franc au survol et ombre nette.
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = MenuTheme.LUMIERE
-	hover.bg_color = Color(MenuTheme.LUMIERE, 0.15)
-	hover.shadow_size = 0
-	hover.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
-	hover.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+	# ⚠️ En voxel, la plaque porte déjà sa matière DANS sa texture : un grain de
+	# lavis par-dessus la mangerait. Le bloc s'en passe.
+	if not Charte.voxel_actif():
+		MenuWidgets.poser_pate(btn)
+
 	btn.add_theme_stylebox_override("hover", hover)
-
-	# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
-	# Bordure ambre énergique et ombre dure Roman Graphique.
-	var choisie := normal.duplicate() as StyleBoxFlat
-	choisie.border_color = MenuTheme.FILAMENT
-	choisie.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
-	choisie.bg_color = Color(MenuTheme.FILAMENT, 0.22)
-	choisie.shadow_size = 0
-	choisie.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
-	choisie.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	_entry_styles[btn] = {"repos": normal, "survol": hover, "choisie": choisie}
-
 	btn.add_theme_stylebox_override("focus", normal)
 	btn.add_theme_stylebox_override("focus_hover", hover)
-	# L'appui, lui, montre un enfoncement mécanique de la plaque.
-	var pressed := choisie.duplicate() as StyleBoxFlat
-	pressed.shadow_size = 0
-	pressed.shadow_offset = MenuWidgets.SHADOW_OFFSET_PRESSED
-	pressed.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	btn.add_theme_stylebox_override("pressed", pressed)
 	btn.add_theme_stylebox_override("hover_pressed", pressed)
 
@@ -1031,8 +1070,14 @@ func make_entry(label: String, detail: String, target: String = "",
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
-	lbl.add_theme_color_override("font_color",
-		MenuTheme.DIM if btn.disabled else MenuTheme.LUMIERE)
+	# Le corps d'un bloc est plus clair que l'aplat d'encre qu'il remplace, donc ce
+	# qui s'écrit dessus remonte avec lui — mesuré sur les captures, le papier y
+	# perdait 0,40 de contraste. Même règle que partout dans ce chantier : un rôle
+	# de texte est un contraste tenu sur ce qu'il recouvre, pas une couleur fixe.
+	var teinte_du_libelle: Color = MenuWidgets.texte_de_role(MenuTheme.LUMIERE)
+	if btn.disabled:
+		teinte_du_libelle = MenuWidgets.texte_second()
+	lbl.add_theme_color_override("font_color", teinte_du_libelle)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Le gras remplace la couleur pour marquer un geste qui engage : la couleur
 	# est réservée aux deux curseurs, un accent posé ici s'y confondrait au repos.
