@@ -26515,6 +26515,27 @@ disque 2D, pour les sept sources ; aucun anneau à zéro en deçà du rayon 2D ;
 retrouvaille des chiffres ci-dessus (0,52 au bord des braises, 0,34 à celui de la mine, zéro au-delà de 11 px sous un tireur
 debout sans corps voxel). Si l'avant ne les montre pas, c'est l'instrument qu'il faut mettre en cause avant le rendu.
 
+
+#### Le shader de fumée fait moins de travail (2026-09-23, branche `iso7-fumee-economies`)
+
+Deux gestes dans `volume_iso.gdshader`, après la décomposition qui a montré que **78 % du coût
+d'une fusée vient de ce shader**, à dix lectures de texture par pixel et par couche : l'opacité se
+calcule AVANT la couleur et le pixel se jette avant les lectures (hors du disque inscrit, les
+21,5 % de coins du quad payaient dix lectures pour être jetés ensuite) ; et le point central de la
+lightmap, déjà lu par le lissage, n'est plus relu par la neutralité.
+
+**Adoptés sur preuve de CONSTRUCTION, pas sur un gain mesuré** (décision de la session cloud,
+06:44). Au banc, huit prises en passes miroir : l'écart mesuré (**0,2 à 0,4 ms**) reste SOUS
+l'écart entre deux passes d'une même variante (**0,4 à 0,8 ms**). La direction est bonne —
+l'ancien chemin est le plus lent dans **six comparaisons sur six, p = 0,031** — la magnitude n'est
+pas mesurable à ce banc. Ce qui les justifie n'est donc pas un gain : c'est qu'ils **suppriment du
+travail inutile** (mêmes pixels jetés, plus tôt ; même valeur passée au lieu d'être relue), donc
+qu'ils ne peuvent pas être plus lents, et que le shader en sort plus court. ⚠️ Les estimations
+écrites avant la mesure (0,57 et 0,27 ms) **ne sont pas confirmées et ne doivent être citées nulle
+part comme un résultat.**
+
+Mesure complète, données brutes et pistes fermées : `docs/iso/iso12/mesure_fusee.md` (branche
+`iso11-menus`).
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

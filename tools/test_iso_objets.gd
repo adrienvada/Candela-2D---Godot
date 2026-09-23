@@ -244,7 +244,11 @@ func _les_capteurs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 	_check("les nuages prennent la température de la lumière du sol (IsoMateriaux.TEMPERATURE)",
 		is_equal_approx(float(mat_volume.get_shader_parameter("temperature")),
 			IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
-		and (IsoVolumes.SHADER_VOLUME as Shader).code.contains("pate_temperature_graduee_neutre(c, temperature, 0.0, 0.0, pate_poids_neutre(lire_lightmap(px, deux)))"))
+		# 2026-09-23 — `brute` EST `lire_lightmap(px, deux)`, lue une seule fois en tête du fragment au lieu
+		# d'être relue ici : la règle d'ISO7b (la neutralité se lit sur la lightmap AVANT la pâte) est
+		# inchangée, seule la façon de l'obtenir l'est. La garde vérifie donc les deux morceaux.
+		and (IsoVolumes.SHADER_VOLUME as Shader).code.contains("vec3 brute = lire_lightmap(px, deux);")
+		and (IsoVolumes.SHADER_VOLUME as Shader).code.contains("pate_temperature_graduee_neutre(c, temperature, 0.0, 0.0, pate_poids_neutre(brute))"))
 	volumes.free()
 
 
