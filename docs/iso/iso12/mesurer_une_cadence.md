@@ -367,3 +367,35 @@ contre une des quatre P. 1,024 se lit « pas d'écart visible », jamais « le p
 minutes entre `05_P` et `06_F`, puis repris quand le clavier a dépassé dix minutes d'inactivité. Le
 miroir survit à une pause : ce qu'il annule, c'est une dérive linéaire, et les positions moyennes
 restent 4,5 des deux côtés.
+
+### Quatrième réserve : ma relecture ne suivait que les INDEXEURS
+
+Signalée par la session cloud, et elle a raison. ISO Assets générait des images dans Chrome pendant la
+fenêtre, et ma relecture d'après coup ne cherchait que `spotlight`, `mds`, `mediaanalysisd` — les noms
+de la porte. En la refaisant sur **tout processus étranger au-dessus de 10 %**, hors Godot :
+
+    prise    pire charge étrangère dans la fenêtre de mesure
+    01_F     WindowServer 46 %, kernel_task 17 %, Claude 12 %
+    02_P     WindowServer 47 %, kernel_task 16 %
+    03_P     WindowServer 46 %, kernel_task 15 %
+    04_F     WindowServer 48 %, spotlightknowledged 45 %, kernel_task 15 %
+    05_P     Google (Chrome) 53 %, WindowServer 46 %, kernel_task 22 %
+    06_F     WindowServer 47 %, spotlightknowledged 31 %, kernel_task 15 %
+    07_F     spotlightknowledged 53 %, WindowServer 48 %, Claude 19 %
+    08_P     WindowServer 47 %, kernel_task 15 %
+
+**Chrome n'apparaît que dans une fenêtre, `05_P` — et `05_P` est justement la prise dont le 1 % bas
+est le plus bas de la série (68).** C'est la seule corrélation propre du lot, et elle va dans le sens
+attendu. Elle ne change pas le verdict : 68 dépasse encore 60, et une charge de plus ne peut que
+baisser une cadence, donc **« le jeu tient » est un résultat conservateur** — la vraie cadence du
+pompe est au moins celle-là.
+
+Deux choses que cette relecture élargie montre en passant. **`WindowServer` tourne à 46-48 % dans les
+huit fenêtres** : c'est le compositeur qui affiche la fenêtre de jeu, pas une pollution — que personne
+ne le « découvre » plus tard comme une anomalie. Et **nos propres processus `Claude` pèsent 12 à 19 %**
+dans deux prises : l'agent qui mesure est lui-même une charge.
+
+**La leçon d'instrument** : une relecture qui cherche des noms connus ne trouve que ce qu'elle
+connaît. Chercher **tout processus au-dessus d'un seuil** coûte le même travail et voit ce qu'on
+n'avait pas prévu. Corollaire pratique : annoncer une fenêtre en demandant « pas de Godot » est trop
+étroit — il faut demander **pas de charge lourde**, génération d'images et navigateur compris.
