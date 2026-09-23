@@ -5816,3 +5816,7 @@ rôle : V1 aussi visible qu'aujourd'hui (0,97-1,02 du gris aux quatre lumières)
 tient sa promesse qu'en laissant le gris intact sous 16/255, et à clarté égale son olive se détache moins du sol ocre que le
 gris bleuté. Sous une fusée, l'éblouissement du regardeur efface l'adversaire dans toutes les tenues. Deux défauts du banc
 de beauté corrigés (masque et dérive propres à chaque tenue).
+
+**Suite, 21:40-22:00 — la teinte froide** (`--teinte=froide`, éteinte). Même clarté que l'olive (V1 à 0,4 %, V3 à 2,3 % ;
+V2 à 3 % sauf l'Occulteur à 0,15, −6,8 %), ΔE de V1 au sol ocre rendu au centre du cône pour les dix classes, à 90 px pour
+huit sur dix. V1 froide se rapproche à l'œil du gris d'aujourd'hui ; V2 et V3 froides restent bleu nuit.

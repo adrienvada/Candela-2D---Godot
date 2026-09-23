@@ -79,6 +79,8 @@ var _toutes_classes := OS.get_cmdline_user_args().has("--toutes-classes")
 ## ISO12, tenues sombres — `--toutes-tenues` (avec `--toutes-classes` et une tenue peinte) : chaque classe prise dans chacune
 ## des tenues sombres, en plus de son gris, toujours sur le matériau de J2 et contre la même image sans corps.
 var _toutes_tenues := OS.get_cmdline_user_args().has("--toutes-tenues")
+## `--toutes-teintes` (avec `--toutes-tenues`) : chaque tenue dans chaque teinte (`VoxelCatalogue.TEINTES`), même partie.
+var _toutes_teintes := OS.get_cmdline_user_args().has("--toutes-teintes")
 
 
 func _lire_arguments(args: PackedStringArray) -> bool:
@@ -952,7 +954,10 @@ func _contraste_par_classe(corps: Node3D, mat: ShaderMaterial, sans: Image, bis:
 	for p in ["couleur_fiche", "portrait_ocre", "portrait_rouille", "portrait_brun", "portrait_bouteille", "portrait_arme",
 			"portrait_cartouche", "portrait_usure", "portrait_tete", "portrait_arete", "portrait_arete_px", "portrait_sous_seuil", "portrait_seuils"]:
 		garde[p] = mat.get_shader_parameter(p)
-	var tenues: Array = VoxelCatalogue.TENUES_SOMBRES.keys() if _toutes_tenues else [VoxelCatalogue.tenue()]
+	var tenues: Array = []
+	for nom in (VoxelCatalogue.TENUES_SOMBRES.keys() if _toutes_tenues else [VoxelCatalogue.tenue()]):
+		for te in (VoxelCatalogue.TEINTES.keys() if _toutes_teintes else [VoxelCatalogue.teinte()]):
+			tenues.append([nom, te])
 	for slug in VoxelCatalogue.slugs():
 		mat.set_shader_parameter("couleur_fiche", VoxelCatalogue.fiche(slug)["couleur"])
 		var prises := {}
@@ -961,8 +966,9 @@ func _contraste_par_classe(corps: Node3D, mat: ShaderMaterial, sans: Image, bis:
 			_tenir_le_cadrage()
 			await get_tree().process_frame
 		prises["gris"] = await RenduCommun.capturer(get_tree(), 15000)
-		for nom in tenues:
-			var pal := VoxelCatalogue.palette_tenue(slug, nom)
+		for paire in tenues:
+			var nom := "%s/%s" % paire
+			var pal := VoxelCatalogue.palette_tenue(slug, paire[0], paire[1])
 			for cle in ["ocre", "rouille", "brun", "bouteille", "arme", "cartouche"]:
 				mat.set_shader_parameter("portrait_%s" % cle, pal[cle])
 			mat.set_shader_parameter("portrait_usure", pal["usure"])
@@ -991,7 +997,8 @@ func _contraste_par_classe(corps: Node3D, mat: ShaderMaterial, sans: Image, bis:
 		for p in derive:
 			union.erase(p)
 		var mg := mesurer_contraste(prises["gris"], sans, prises["gris"], union)
-		for nom in tenues:
+		for paire in tenues:
+			var nom := "%s/%s" % paire
 			var mp := mesurer_contraste(prises[nom], sans, prises[nom], union)
 			print("BANC_ISO_CONTRASTE_CLASSE %s tenue=%s distance=%d décalage=%d | ΔE76 peint %.1f gris %.1f | clarté corps/sol peint %.2f gris %.2f | corps %d/%d px | lum corps peint %.1f gris %.1f"
 				% [slug, nom, roundi(_distance_corps), roundi(_decalage_corps), mp["delta_e"], mg["delta_e"], mp["rapport"],

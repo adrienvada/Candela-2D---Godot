@@ -1,0 +1,74 @@
+--- a/tools/banc_lumiere3d.gd
++++ b/tools/banc_lumiere3d.gd
+@@ -1168,6 +1168,8 @@
+ 		await _la_planche_ca(carte, origine)
+ 	if _v27_filtre.split(",").has("planche_tenues") and origine.has("face"):
+ 		await _la_planche_tenues(carte, origine)
++	if _v27_filtre.split(",").has("planche_tenues_torche") and origine.has("face"):
++		await _la_planche_tenues(carte, origine, true)
+ 	if _v27_filtre.split(",").has("planche_ca_pied") and origine.has("face"):
+ 		await _la_planche_ca(carte, origine, true)
+ 	if _v27_filtre.split(",").has("adrien_1b") and carte == "cloitre" and dir != Vector2.ZERO:
+@@ -1218,9 +1220,12 @@
+ ## même instant : le gris d'aujourd'hui, V1, V2, V3, posées par `VoxelCorps.porter_tenue()` sur les corps construits (lancer
+ ## avec `--corps=sombre` : la bouteille existe ; elle est cachée pour le gris, qui n'en porte pas).
+ const TENUES_PLANCHE := ["", "sombre1", "sombre2", "sombre3"]
++## `planche_tenues_torche` (teinte froide, ordre de la session cloud, 21:40) : la torche seule — la fusée et le noir ne changent
++## pas par construction (l'adversaire y est effacé par l'éblouissement, ou noir) —, et V1 olive en cinquième colonne.
++const TENUES_TORCHE := ["", "sombre1:olive", "sombre1", "sombre2", "sombre3"]
+ 
+ 
+-func _la_planche_tenues(carte: String, origine: Dictionary) -> void:
++func _la_planche_tenues(carte: String, origine: Dictionary, torche_seule := false) -> void:
+ 	var t := MursBas.TUILE
+ 	var face: Vector2 = origine["face"]
+ 	for decalage in [0.0, -1.0, 1.0, -2.0, 2.0]:
+@@ -1234,7 +1239,9 @@
+ 		var ancres := {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS]}
+ 		for sens in [["", Vector2.DOWN], ["_dos", Vector2.UP]]:
+ 			_placer(p1, Vector2.UP, true, p2, sens[1], false)
+-			await _serie_tenues("tenues_torche" + sens[0], ancres)
++			await _serie_tenues("tenues_torche" + sens[0], ancres, TENUES_TORCHE if torche_seule else TENUES_PLANCHE)
++		if torche_seule:
++			return
+ 		# La fusée à 1,3 tuile devant J2. ⚠️ Le corps adverse prend l'opacité de l'éblouissement de celui qui regarde
+ 		# (`Brouillage.opacite`, dazzle de J1) : qui voit une fusée en est ébloui, à trois tuiles (0,74) comme à huit (0,27,
+ 		# 2026-09-23 21:22), et l'adversaire près d'elle s'efface — dans toutes les tenues pareil. La règle du jeu, pas la tenue ;
+@@ -1251,7 +1258,7 @@
+ 	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_tenues raison=place_occupee" % carte)
+ 
+ 
+-func _serie_tenues(nom: String, ancres: Dictionary) -> void:
++func _serie_tenues(nom: String, ancres: Dictionary, tenues: Array = TENUES_PLANCHE) -> void:
+ 	_poser_la_variante({"lumiere": false})
+ 	await _images(IMAGES_DE_REPOS)
+ 	var avant := _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+@@ -1264,20 +1271,24 @@
+ 	var ecran := {}
+ 	for k in ancres:
+ 		ecran[k] = _a_l_ecran_h(0, ancres[k][0], float(ancres[k][1]))
+-	for tenue in TENUES_PLANCHE:
++	for entree in tenues:
++		# « nom:teinte » impose une teinte ; sinon celle du lancement (`--teinte=`).
++		var tenue := String(entree).get_slice(":", 0)
++		var te := String(entree).get_slice(":", 1) if String(entree).contains(":") else ""
+ 		for v in _p.get("_voxels"):
+ 			var corps := v as VoxelCorps
+-			corps.porter_tenue(tenue)
++			corps.porter_tenue(tenue, te)
+ 			var bouteille := corps.find_child("Bouteille", true, false) as Node3D
+ 			if bouteille != null:
+ 				bouteille.visible = tenue != ""
+ 		await _images(IMAGES_DE_REPOS)
+-		var fichier := await _capturer("%s_%s" % [nom, tenue if tenue != "" else "gris"])
++		var etiquette := (tenue if tenue != "" else "gris") + ("_" + te if te != "" else "")
++		var fichier := await _capturer("%s_%s" % [nom, etiquette])
+ 		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+ 		print("BANC_LUMIERE3D tenue_etat cadrage=%s dazzle_j1=%.3f opacite_j2=%.3f" % [nom, float(_main.p1.get("dazzle_amount")),
+ 			Presentation3D.opacite_du_corps(_main.p2, false)])
+ 		print("BANC_LUMIERE3D tenue cadrage=%s tenue=%s camera=%d,%d fichier=%s ancres=%s"
+-			% [nom, tenue if tenue != "" else "gris", int(camera[0]), int(camera[1]), fichier, JSON.stringify(ecran)])
++			% [nom, etiquette, int(camera[0]), int(camera[1]), fichier, JSON.stringify(ecran)])
+ 
+ 
+ ## ISO12 — (1b) LE CROISEMENT : les deux torches visent le MÊME point du sol, à angle droit. Le face-à-face de (1) faisait se

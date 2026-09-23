@@ -872,9 +872,10 @@ func _habiller_en_portrait(slug: String) -> void:
 
 ## ISO12 — les couleurs de la tenue `nom` (`VoxelCatalogue.palette_tenue()`) posées sur la matière de ce corps, `""` pour
 ## le gris. Uniformes seuls : la géométrie (la bouteille) est celle que `construire()` a posée, commune à toutes les tenues
-## peintes. Les bancs y passent d'une tenue à l'autre dans la même partie, au même instant.
-func porter_tenue(nom: String) -> void:
-	var p := VoxelCatalogueT.palette_tenue(slug(), nom)
+## peintes. Les bancs y passent d'une tenue à l'autre dans la même partie, au même instant. `nom_teinte` : `""` pour la teinte
+## en cours (`VoxelCatalogue.teinte()`).
+func porter_tenue(nom: String, nom_teinte := "") -> void:
+	var p := VoxelCatalogueT.palette_tenue(slug(), nom, nom_teinte)
 	if p.is_empty():
 		_materiau.set_shader_parameter("portrait", 0.0)
 		return
