@@ -2427,6 +2427,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q20 — on garde la lumière 2D d'ISO11 ; la lumière 3D (mode A, sans ombres) reste dans le code telle quelle, éteinte par défaut, sans suite ; pas de mode B (ombres portées)** (2026-09-23 à 19:44, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Ok on suit ton avis », sur son avis C) | **Sous une fusée, la cellule « vue unique » tombe** : 54,8 au 1 % bas pour 60 visés, 74 à 84 % du jeu actuel selon les prises retenues (série propre d'ISO7 Gadgets, 17:37-18:21, 90 s de repos entre les prises, porte d'indexation). **Le relief ne coûte rien de mesurable** (−0,10 ms contre A sans relief) : les **2,69 ms** par image de A sont dans le chemin des matériaux éclairés eux-mêmes (bride, lecture de lightmap, chemin d'identité), et aucun drapeau existant ne les réduit sans changer l'image — `--lampe-dominante` coûte même 1,6 ms de plus, par construction (un correctif d'image conçu pour les ombres). **À l'œil**, la planche d'ISO7 Beauté ne montre qu'un modelé léger des faces sous la torche (+4 à +10 %) et rien sous une fusée : le gain visible ne paie pas le coût. Les ombres portées étaient déjà en NON-GO (23 à 30 % de cadence). Le code reste, éteint : `Presentation3D.lumiere_3d` faux par défaut, éteint en écran scindé, gardé par `test_banc` ; aucune suite ne l'allume en jeu. |
 | **En ligne, le cadrage et la portée sont les mêmes pour tous : zoom ×1,8, décalage 0,25, portée ×0,75, quoi que disent les drapeaux ou `settings.cfg`** (2026-09-15 à 13:58, session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final, en réponse au correctif d'ISO8 sur la portée : « le cadrage serré non plus n'est pas neutre, un flash ou un cône hors champ n'est pas vu, donc un joueur à --zoom=1.0 voit plus qu'un joueur à ×1,8 ») | La lumière est la seule information du jeu, et le cadrage en fait partie : ce qu'une caméra ne montre pas, un joueur ne le voit pas. `GameSettings.accorder_au_mode(en_ligne)`, appelé par `GameState` à chaque départ de manche, pose les constantes pour `ONLINE_HOST` et `ONLINE_CLIENT` — les mêmes dans le même code sur les deux machines, donc **aucun état réseau et `Protocol.VERSION` inchangé** ; les valeurs locales (drapeaux, réglage enregistré) ne valent qu'en écran scindé et à l'entraînement. Les drapeaux `--zoom=`, `--decalage=` et `--torche=` sont ignorés hors build debug, comme `--eos-ephemeral`. ISO9 n'a rien de plus à imposer sur ces trois valeurs. |
 | **Serrer la caméra et raccourcir les torches, pour un duel plus claustrophobe** (2026-09-15 à 12:20, Adrien, à la session cloud : « Si tu juges qu'il faut changer les proportions, zoomer dans le jeu, réduire la taille des cônes de lumière pour le rendre plus claustrophobique, n'hésite pas » ; chantier ISO8, brief de la session cloud de 12:25) | Sur les captures d'ISO6, le duel montre toute l'arène et le volume de l'iso ne se voit pas ; les planches du DA sont trois fois plus serrées. Les valeurs ne sont pas choisies par l'agent : un banc photographie les variantes (zoom ×1,0 à ×2,2, portée 1,6 à 1,0, demi-angle 35° et 30°) et la session cloud tranche sur la planche. La caméra est une présentation (aucune simulation) ; la portée des torches est une valeur de jeu que l'éblouissement suit, en un facteur global identique pour tous. Ni protocole ni zone de touche ne changent, et les deux joueurs ont la même caméra et la même torche — en ligne, le facteur doit valoir la même chose des deux côtés (ISO9). |
 | **Les étincelles d'impact n'éclairent plus ; l'écho au sol du tir et la lumière de coup restent** (2026-09-15, 12:05, session cloud qui décide pour Adrien, second volet de la décision ci-dessous : « c'est le même mal que celui qu'Adrien a nommé ») | Recensées au banc pendant une rafale près d'une fusée : 60 lumières sur 63 étaient des étincelles d'impact (douze par impact de mur, énergie 1,5) ; éteintes, il en reste 9 et le halo de la fusée revient à sa rondeur seule (0,88). Leur dessin additif non éclairé reste : on les voit toujours jaillir dans le noir. **Gardés, et pourquoi** : l'écho au sol du tir (`ground_flash`, 0,12 s, sans ombre) prolonge le flash de bouche et dit d'où l'on tire — 7 au plus pendant la rafale, sous le plafond ; la lumière de coup (`hit_light`) ne s'allume qu'une fois par coup reçu, dit qui est touché, et porte son propre réglage joueur (« Lumière d'impact », dans `ui.gd`) qu'une suppression laisserait sans effet. Ni l'une ni l'autre n'était allumée en nombre au relevé. |
@@ -9131,7 +9132,14 @@ plus courte que ce pic fait mesurer la cadence PENDANT l'indexation — à l'ins
 banc de cadence vaut 30 s par défaut (`WARMUP_SEC`), et toute mesure sur ce Mac se prend hors des 20 s qui suivent un
 lancement de Godot.** La fenêtre du verdict (hors des dix premières secondes de mesure) n'a pas bougé. ⚠️ Et une porte qui
 reconnaît un processus par son nom compare par PRÉFIXE : `top` tronque à seize caractères (`spotlightknowled`), et une
-série entière a été perdue sur une porte qui cherchait le nom complet. Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
+série entière a été perdue sur une porte qui cherchait le nom complet.
+
+ISO12 (2026-09-23 au soir), mesuré par ISO7 Gadgets : **DES PRISES DE CADENCE ENCHAÎNÉES S'EFFONDRENT, REPOSÉES ELLES TIENNENT.**
+Quatre prises C identiques enchaînées : médianes 86, 75, 73, 73 et 1 % bas 72, **30, 35, 16** ; trois prises C séparées de 90 s
+sans Godot : médianes 86, 86, 86 et 1 % bas 71, 78, 67 — navigateurs et indexation constants, écartés. La « dérive » des séries
+du matin (79, 73, 66, 34, prises enchaînées) en porte probablement la signature. **Règle : 90 s sans Godot avant chaque
+lancement d'une prise de cadence sur ce Mac.** Cela coûte la moitié du temps d'une série, et cela vaut mieux qu'une série à
+jeter — deux l'ont été ce jour-là. Pendant un relevé, aucun calcul lourd sur le Mac (règle de la
 session cloud) ; l'état de la machine (`top`) se note avant et après chaque prise.
 
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
@@ -25838,7 +25846,14 @@ suites** : `run_suites.sh` n'imprime aucun total, et le compte de 112 inscrit au
 sa sortie (92 suites déclarées dans `SUITES`, une dans `SUITES_2D`, plus les scénarios à deux instances et le contrôle de
 démarrage). Un chiffre invérifiable ne se recopie pas d'une entrée à l'autre.
 
-### ISO12 — la lumière 3D, bridée par la lightmap 🟡 (ouvert le 2026-09-15 au soir, branche `iso12-lumiere3d`)
+### ISO12 — la lumière 3D, bridée par la lightmap ⏹ (ouvert le 2026-09-15 au soir, branche `iso12-lumiere3d` ; **clos sans suite le 2026-09-23 à 19:44, décision Q20 d'Adrien**)
+
+> **Q20, décision actée (voir « Décisions actées »)** : on garde la lumière 2D d'ISO11. La lumière 3D sans ombres (mode A) reste
+> dans le code, éteinte par défaut, sans suite ; pas de mode B. Pourquoi, en une ligne : sous une fusée, elle tombe à 54,8 au
+> 1 % bas pour 60 visés, pour un modelé que l'œil voit à peine (+4 à +10 % sur les faces sous la torche, rien sous une fusée) ; son
+> coût (2,69 ms) est dans les matériaux éclairés eux-mêmes, pas dans le relief, et aucun réglage ne le retire sans changer l'image.
+> Ce qui reste utile au-delà d'ISO12 : le banc de cadence corrigé (chauffe 30 s, verdict hors 10 s, table par tranche), les
+> pièges du Mac (repos de 90 s entre prises, indexation au lancement, porte par préfixe), les gardes d'identité et du fragment.
 
 **D'où il vient.** Adrien, 21:5x : « est-ce qu'on ne se fourvoie pas à persévérer en 2D ? Vu les images de référence
 générées, est-ce qu'on ne devrait pas faire la 3D ? » ; puis 22:0x : « Ok pour ISO12, enchaîne avec les lumières 3D ».
