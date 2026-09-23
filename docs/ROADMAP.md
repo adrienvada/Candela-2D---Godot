@@ -3197,6 +3197,19 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un coût derrière un uniforme ne se voit dans aucune comparaison de shaders (2026-09-23)
+
+Chantier ISO12. Les tenues sombres (`--corps=sombre`) et le gris utilisent le **même shader**, même
+chemin et même empreinte de code, pour la matière visible comme pour celle de profondeur. On en
+conclurait que la tenue ne coûte rien. C'est faux : dans `iso_corps_portrait.gdshaderinc`,
+`portrait_fiche()` et `portrait_teindre()` s'ouvrent par `if (portrait < 0.5) return fiche;`, et
+`portrait` est un **uniforme**. Le gris sort à la première ligne ; la tenue exécute la cinquantaine de
+lignes suivantes par pixel de corps — dont deux `pate_bruit`, soit **huit `sin` par pixel**. Une
+comparaison de shaders répond « identiques » aussi bien quand le travail est absent que quand il est
+seulement éteint. Pour un coût derrière un uniforme il n'y a que deux voies : lire la branche, ou
+mesurer. Mesuré le 2026-09-23 : sous la résolution de la série (3 %), en vue unique sous la torche —
+ce qui n'est pas « nul ». Détail : `docs/iso/iso12/mesurer_une_cadence.md` § 11 et § 12.
+
 ### Le banc de cadence ne peut pas mesurer plus de ~270 s : la manche finit à 300 s (2026-09-23)
 
 Chantier ISO12. Deux prises longues de six minutes, à 18:14 et à 19:47, se sont arrêtées à la **même

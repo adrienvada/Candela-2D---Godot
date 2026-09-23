@@ -224,3 +224,53 @@ chemin, ni l'empreinte du code, ni le nombre de maillages ne bougent.
 **La leçon générale** : une comparaison de shaders ne voit pas un coût gouverné par un uniforme. Elle
 répond « identiques » aussi bien quand le travail est absent que quand il est simplement éteint ce
 jour-là. Pour un coût derrière un uniforme, il n'existe que deux voies : lire la branche, ou mesurer.
+
+## 12. Le coût des tenues sombres, mesuré (2026-09-23, 22:29 → 22:54)
+
+Huit prises de 60 s sur 7a648d2, vue unique sous la torche, gris contre `--corps=sombre`, en miroir
+**G H H G H G G H** — positions moyennes 4,5 des deux côtés, donc une dérive linéaire s'annule. Règle
+posée par la session cloud **avant** les chiffres : H tient si la médiane de ses quatre 1 % bas vaut
+au moins 60 **et** si la médiane de ses quatre médianes vaut au moins 97 % de celle de G.
+
+    prise   mode  médiane  1 % bas  pire image   indexation sur TOUTE la fenêtre
+    01_G    G       108      98      11,3 ms     0 %
+    02_H    H       110      96      13,9 ms     0 %
+    03_H    H       110      99      13,7 ms     0 %
+    04_G    G       103      72      17,2 ms     23 %  mds_stores
+    05_H    H       103      94      12,7 ms     35 %  spotlightknowledged
+    06_G    G       103      98      13,3 ms     19 %  spotlightknowledged
+    07_G    G       103      84      12,9 ms     0 %
+    08_H    H       103      95      11,4 ms     0 %
+
+    G : médiane des médianes 103,0 · médiane des 1 % bas 91,0
+    H : médiane des médianes 106,5 · médiane des 1 % bas 95,5
+    H/G sur les médianes : 1,034 (seuil 0,970)   →   **H TIENT**
+
+**Ce que cela dit, et rien de plus** : le coût de shader de la tenue est **sous la résolution de la
+série** (3 % de la médiane), en vue unique sous la torche. Pas « nul » : H est nominalement *plus
+rapide* que G, ce qui est impossible et dit seulement que l'écart réel est noyé dans le bruit.
+
+**La bouteille reste non mesurée en cadence, bornée par le recensement** : +2 maillages par classe
+porteuse, six sur dix, +4 dans un duel de deux porteuses.
+
+### Trois réserves, qui valent plus que le verdict
+
+**La classe n'est pas celle qu'on croyait.** Le banc a imprimé « Manche lancée — armes : Fusil /
+Fusil », alors que sa constante s'appelle `SHOTGUN_INDEX` (= 2) et que son propre garde dit « (pompe) ».
+L'un des deux se trompe de nom. La mesure n'en souffre pas — ni le fusil ni le pompe ne portent la
+bouteille, donc la comparaison reste bien « shader seul » —, mais c'est le motif du § 8 une fois de
+plus : **le nom d'une constante n'est pas son effet**, et seule la ligne imprimée par le banc dit ce
+qui a tourné. Sans elle, ce rapport aurait nommé la mauvaise classe.
+
+**La porte d'avant-lancement laisse passer des fenêtres sales.** Elle n'examine que les derniers
+échantillons **avant** le lancement ; la relecture d'après coup, sur toute la fenêtre de mesure, a
+trouvé de l'indexation dans trois prises, dont **une seule** avait été signalée. C'est la relecture,
+pas la porte, qui a vu 05_H à 35 % et 06_G à 19 %.
+
+**Le verdict y survit, et c'est ce qui compte.** En écartant les trois prises polluées, il reste G à
+105,5 de médiane et 91 de 1 % bas contre H à 110 et 96 : H/G = 1,043. La conclusion ne dépend donc
+pas du traitement des prises sales — vérification faite APRÈS le verdict, pour ne pas choisir les
+prises en fonction du résultat voulu.
+
+⚠️ **Ces cadences (103-110) ne se comparent à aucune autre série de la journée** : il n'y a pas de
+fusée ici. Les 86 du § 7 valaient pour une scène avec fusée allumée.
