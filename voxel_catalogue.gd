@@ -456,6 +456,10 @@ static func mannequin_actif() -> bool:
 	# (question de coût de la session cloud, 01:13 — drapeau éteint, rien ne doit tourner sans servir).
 	if _mannequin_ligne < 0:
 		_mannequin_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_MANNEQUIN) else 0
+		# La preuve, dans le journal, que le drapeau a porté dans CE lancement (demande d'ISO7 Gadgets pour ses séries de
+		# cadence : un drapeau perdu se déguise en l'autre branche d'une comparaison). Même forme que « [faisceau] allumé ».
+		if _mannequin_ligne == 1:
+			print("[mannequin] allumé — les corps en mannequins (ISO13 lot A)")
 	return _mannequin_ligne == 1
 
 

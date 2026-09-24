@@ -218,6 +218,10 @@ var _canaux := false
 ## ISO14 — `--lacet-identique` : les capteurs des corps et l'éblouissement lisent les mêmes valeurs à 0° et à 45°,
 ## pour les deux joueurs et les trois options (voir `_controler_le_lacet`). Avec `--jeu --scinde --capture`.
 var _lacet_identique := false
+## ISO14 — `--vue-client` : LA VUE DU CLIENT EN LIGNE, prouvée en vraie fenêtre (demande de la session cloud, 2026-09-24
+## 20:40) — la vue unique qui regarde J2, en RENDU RACINE, à 225° (option B) puis à 0°. Voir `_controler_la_vue_client`.
+## Avec `--jeu --scinde --torches j2 --capture`.
+var _vue_client := false
 ## `--effacement` : le contrôle du fondu des corps iso (ISO2b, voir `_controler_l_effacement`).
 var _effacement := false
 ## ISO4 — `--objets` : un objet voxel posé devant un corps ne lui cache ni la tête ni le torse (voir
@@ -285,6 +289,10 @@ func _ready() -> void:
 		return
 	if _canaux and (_capture == "" or not _jeu):
 		printerr("✗ banc_iso : --canaux se prend avec --capture et --jeu (vue unique ou --scinde)")
+		_sortir(2)
+		return
+	if _vue_client and (_capture == "" or not _jeu or not _scinde or _torches != "j2"):
+		printerr("✗ banc_iso : --vue-client se prend avec --capture, --jeu, --scinde et --torches j2")
 		_sortir(2)
 		return
 	if _lacet_identique and (_capture == "" or not _jeu or not _scinde):
@@ -408,6 +416,7 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_noir = args.has("--noir")
 	_canaux = args.has("--canaux")
 	_lacet_identique = args.has("--lacet-identique")
+	_vue_client = args.has("--vue-client")
 	_effacement = args.has("--effacement")
 	_objets = args.has("--objets")
 	_killcam = args.has("--killcam")
@@ -966,6 +975,9 @@ func _capturer() -> void:
 		return
 	if _lacet_identique:
 		await _controler_le_lacet(axe)
+		return
+	if _vue_client:
+		await _controler_la_vue_client()
 		return
 	if _objets:
 		await _controler_les_objets()
@@ -2059,6 +2071,101 @@ func _controler_le_lacet(axe: Vector2) -> void:
 		% ["LACET SANS EFFET SUR LES CAPTEURS ET L'ÉBLOUISSEMENT" if faux == 0 else "LE LACET CHANGE CE QUI EST LU",
 		faux, "oui" if revenues else "NON"])
 	_sortir(0 if faux == 0 else 8)
+
+
+## ISO14 — la vue du client en ligne, en vraie fenêtre : la vue unique qui regarde J2. On la monte comme
+## `--killcam --vue j2` (conteneur de J1 caché, celui de J2 montré), puis, pour 225° (option B) et 0° (posés par les
+## réglages, comme `--lacet=45 --lacet-j2=B` les pose) :
+## ⚠️ **En iso, PAS de rendu racine, et c'est voulu** (`presentation_3d.gd`, `_allumer` : `rendu_racine_autorise = false` —
+## la lightmap doit rester une texture à projeter). Premier passage, 2026-09-24 22:15 : ce banc exigeait le rendu racine et
+## sortait « FAUX » sur une image juste. L'image du client est la lightmap de J2 (`vp2`, rendue par `cam2`), projetée par
+## la caméra 3D de la vue unique, qui rend dans la fenêtre. C'est CE chemin que le banc vérifie.
+## 1. les LECTURES, relues dans le jeu : le chemin (rendu racine seulement s'il est autorisé ; sinon `cam2` rend `vp2`), la
+##    rotation de cam2 (−L), et le lacet de la caméra 3D qui rend l'image ;
+## 2. LA PREUVE À L'IMAGE : J2 torche allumée (J1 éteinte), visée tenue vers le haut de SON écran (`p2_aim_up`, que son
+##    fournisseur tourne du lacet de sa caméra). La lumière moyenne d'une bande AU-DESSUS de J2 à l'écran (de 60 à 260 px
+##    logiques) doit dépasser nettement celle de la bande AU-DESSOUS : le faisceau monte à l'écran. Si la racine rendait sans
+##    l'angle, le faisceau partirait en diagonale et les deux bandes se rapprocheraient.
+func _controler_la_vue_client() -> void:
+	var p := Presentation3D.instance()
+	if p == null or not bool(p.get("_actif")):
+		printerr("✗ --vue-client : la vue iso n'est pas allumée")
+		_sortir(4)
+		return
+	var c1 := _main.vp1.get_parent() as Control
+	var c2 := _main.vp2.get_parent() as Control
+	c1.hide()
+	c2.show()
+	_main._accorder_rendu_aux_vues()
+	var reglages := get_node("/root/GameSettings")
+	var lacet_local_avant: float = reglages.get("_lacet_local")
+	var option_avant: String = reglages.get("_option_lacet_locale")
+	var faux := 0
+	for reglage in [[45.0, "B", 225.0], [0.0, "A", 0.0]]:
+		reglages.set("_lacet_local", float(reglage[0]))
+		reglages.set("_option_lacet_locale", String(reglage[1]))
+		reglages.accorder_au_mode(false)
+		Input.action_press("p2_aim_up")
+		for i in 60:
+			_tenir_les_torches()
+			await get_tree().process_frame
+		var cam2: Camera2D = _main.cam2
+		var cam3d = p._camera_de(1)
+		var attendu: float = reglage[2]
+		var autorise: bool = bool(_main.get("rendu_racine_autorise"))
+		var racine: bool = bool(_main.get("_rendu_racine"))
+		# Le chemin attendu : la racine si le rendu racine est autorisé (vue de dessus), sinon la sous-vue de J2 (iso).
+		var chemin_ok: bool = (racine and cam2.custom_viewport == get_tree().root) if autorise \
+			else (not racine and cam2.custom_viewport == _main.vp2)
+		var courante: bool = chemin_ok
+		var rot_ok := absf(angle_difference(cam2.rotation, -deg_to_rad(attendu))) < 1e-3
+		var l3d_ok: bool = cam3d != null and is_equal_approx(fposmod(float(cam3d.lacet_deg), 360.0), fposmod(attendu, 360.0))
+		var image: Image = await RenduCommun.capturer(get_tree(), 15000)
+		Input.action_release("p2_aim_up")
+		if image == null:
+			printerr("✗ --vue-client : aucune image rendue en 15 s")
+			_sortir(4)
+			return
+		var proj: Callable = p.projecteur_ecran(1)
+		var ecran_j2: Vector2 = proj.call(_main.p2.global_position) if proj.is_valid() else Vector2(-1, -1)
+		var logique := get_tree().root.get_visible_rect().size
+		var echelle := float(image.get_width()) / maxf(logique.x, 1.0)
+		var haut := _lumiere_de_bande(image, (ecran_j2 + Vector2(-60, -260)) * echelle, Vector2(120, 200) * echelle)
+		var bas := _lumiere_de_bande(image, (ecran_j2 + Vector2(-60, 60)) * echelle, Vector2(120, 200) * echelle)
+		var monte := haut > bas * 2.0 and haut > 2.0
+		var bon := courante and rot_ok and l3d_ok and monte
+		if not bon:
+			faux += 1
+		print("BANC_ISO vue_client lacet=%d° option=%s : rendu_racine=%s (autorisé : %s) chemin=%s cam2=%.1f° (attendu %.1f°) camera3d=%s° · J2 à l'écran %s · lumière au-dessus %.1f, au-dessous %.1f → %s"
+			% [int(attendu), reglage[1], racine, autorise,
+			("racine" if racine else "sous-vue de J2") + (" (juste)" if chemin_ok else " (FAUX)"),
+			rad_to_deg(cam2.rotation) + 0.0, -attendu,
+			str(cam3d.lacet_deg) if cam3d != null else "?", ecran_j2.round(), haut, bas,
+			"LE FAISCEAU MONTE À L'ÉCRAN" if bon else "FAUX"])
+		var dossier := _capture.get_base_dir()
+		if dossier != "":
+			image.save_png("%s/vue_client_%d.png" % [dossier, int(attendu)])
+	reglages.set("_lacet_local", lacet_local_avant)
+	reglages.set("_option_lacet_locale", option_avant)
+	reglages.accorder_au_mode(false)
+	print("BANC_ISO vue_client verdict=%s (%d réglage(s) faux sur 2)"
+		% ["LA VUE DU CLIENT REND L'ANGLE" if faux == 0 else "LA VUE DU CLIENT NE REND PAS L'ANGLE", faux])
+	_sortir(0 if faux == 0 else 8)
+
+
+## La lumière moyenne (0-255, moyenne des trois canaux) d'un rectangle de l'image, borné à l'image.
+func _lumiere_de_bande(image: Image, coin: Vector2, taille: Vector2) -> float:
+	var r := Rect2i(Vector2i(coin.round()), Vector2i(taille.round())).intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	if r.size.x <= 0 or r.size.y <= 0:
+		return 0.0
+	var somme := 0.0
+	var n := 0
+	for y in range(r.position.y, r.end.y, 2):
+		for x in range(r.position.x, r.end.x, 2):
+			var c := image.get_pixel(x, y)
+			somme += (c.r + c.g + c.b) / 3.0 * 255.0
+			n += 1
+	return somme / float(maxi(n, 1))
 
 
 func _valeur_au_centre(capteur: SubViewport) -> int:

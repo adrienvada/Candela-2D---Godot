@@ -99,6 +99,9 @@ func _les_variantes() -> void:
 	IsoMateriaux.poser_usure_essai(m, true)
 	var allume := m.shader
 	IsoMateriaux.poser_usure_essai(m, false)
+	var mat_src := FileAccess.get_file_as_string("res://iso_materiaux.gd")
+	_check("allumée, l'usure s'annonce une fois dans le journal, attestée par le #define de la variante posée",
+		mat_src.contains('print("[usure] allumée — variante USURE_ESSAI posée (%s)"') and mat_src.contains("if not _usure_annoncee:"))
 	_check("poser puis retirer : la variante reste, l'usure tombe à 0 (bascule du banc dans la même partie)",
 		allume != sol and m.shader == allume and float(m.get_shader_parameter("usure")) == 0.0)
 

@@ -151,6 +151,8 @@ func _le_drapeau() -> void:
 	var cat := FileAccess.get_file_as_string("res://voxel_catalogue.gd")
 	_check("la ligne de commande n'est lue qu'une fois (la présentation demande le drapeau à chaque image)",
 		cat.contains("if _mannequin_ligne < 0:") and cat.count("OS.get_cmdline_user_args().has(DRAPEAU_MANNEQUIN)") == 1)
+	_check("le drapeau lu vrai s'annonce une fois dans le journal : « [mannequin] allumé »",
+		cat.contains('print("[mannequin] allumé') and cat.count("[mannequin] allumé") == 1)
 	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
 	_check("drapeau éteint : ni lampes relues, ni direction, ni rayon de physique (tout derrière `if mannequin`)",
 		pres.contains("MannequinIso.lampes_du_jeu(_main) if mannequin else []") and pres.contains("\t\t\tif mannequin:\n\t\t\t\t(_voxels[j] as VoxelCorps).eclairer_mannequin("))

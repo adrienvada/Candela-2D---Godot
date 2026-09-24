@@ -328,7 +328,9 @@ func _lacet_45_b(main: Node, p: Node, reglages: Node, c1: Control, c2: Control) 
 		_check("vue du client : rendu racine, par la caméra 2D de J2 elle-même",
 			bool(main._rendu_racine) and cam2.custom_viewport == root and cam2.is_current())
 	else:
-		print("  (rendu racine interdit dans ce lot : la vue du client passe par la sous-vue de J2)")
+		# En ISO, toujours : la présentation interdit le rendu racine (la lightmap doit rester une texture à projeter).
+		_check("vue du client en iso : la lightmap de J2 est rendue par cam2, dans la sous-vue de J2",
+			not bool(main._rendu_racine) and cam2.custom_viewport == main.vp2)
 	_check("vue du client : la caméra 2D qui rend l'image est tournée de −225°",
 		absf(angle_difference(cam2.rotation, deg_to_rad(-225.0))) < 1e-3, str(rad_to_deg(cam2.rotation)))
 	_haut_de_l_ecran(main, p, 1, 225.0, "vue du client")

@@ -9270,6 +9270,16 @@ d'analyse —, et **la relecture d'après coup cherche TOUT processus au-dessus 
 Adrien — c'était le gestionnaire de projets relancé à 23:04:58 par l'« activate » de mon lanceur de prise (Iso 1), celui que
 décrit l'entrée « activate ».
 
+### Deux prises à deux moments ne prouvent pas une cause (2026-09-24)
+
+ISO14. L'écran scindé iso a mesuré **60 / 53** à 60 pas de physique (Gadgets, vers 20:10), puis **94 / 78** à 120 pas (Iso 1,
+20:22) : « le rendu est calé sur la physique », écrit comme prouvé ici et dans les messages. Au calme, à 60 pas, le même
+témoin a donné **94 / 90** (22:13), et **72 / 43** avec Firefox en lecture (21:34). L'écart venait de la machine, pas de la
+variable qu'on avait changée. **Règle : avant d'attribuer un écart de cadence au jeu, comparer l'état de la MACHINE des deux
+prises — processus actifs au-dessus de 10 % (deux échantillons de `top`), son ou vidéo en lecture, fenêtre au premier plan,
+écran qui porte la fenêtre — et refaire le témoin dans l'état de la seconde prise.** Une mesure est un fait ; l'attribution
+d'une différence entre deux mesures n'en est un que si rien d'autre n'a changé.
+
 ### Un banc qui dit « vsync : désactivé » ne l'a pas relu — et le jeu la rallumait sous lui (2026-09-24)
 
 ISO14. `tools/bench_framerate.gd` coupait la vsync au départ et imprimait « vsync: désactivé » — une chaîne ÉCRITE, pas une
@@ -27150,7 +27160,7 @@ pose), le jeu par défaut avant le lot A (`0ae314b`) contre après la garde, ide
 0,2 (six images de 1920×1080, et le lot complet vert sur l'arbre exact du commit, 438 s, 2026-09-24 01:12). C'est le piège de l'ordre 255 : un uniforme qui gouverne un chemin coûte même à 0.
 Et côté processeur (question de coût de la session cloud, 01:13) : drapeau éteint, ni lampes relues, ni direction, ni rayon
 de physique ; seul `mannequin_actif()`, demandé à chaque image, relisait la ligne de commande (`get_cmdline_user_args()` rend
-un tableau neuf à chaque appel) — il est désormais lu une fois (lot vert sur l'arbre exact du commit, 443 s, 01:29).
+un tableau neuf à chaque appel) — il est désormais lu une fois ; et, lu vrai, il s'annonce une fois dans le journal par « [mannequin] allumé » (preuve qu'il a porté dans ce lancement, pour les séries de cadence de Gadgets, 2026-09-24) (lot vert sur l'arbre exact du commit, 443 s, 01:29).
 
 **Ce qui manque encore** (mon paragraphe, demandé par la session cloud) : à l'échelle du jeu, le mannequin se lit à la loupe
 et reste discret à 1:1. Les plaques et les articulations sont des lignes, pas des volumes : les bras et les jambes restent
@@ -27300,6 +27310,9 @@ pied, dans le plan du sol —, les fissures et les taches des faces, les gravats
   commentaires mis à part (preuve par le texte, qui rougit bien si l'on définit USURE_ESSAI). `IsoMateriaux.variante_definie`
   généralise la variante de l'encre : les essais se cumulent.
 - Suite `tools/test_iso_usure.gd` (drapeau, variantes, impacts, garanties du shader, présentation).
+- **Allumée, l'usure s'annonce une fois dans le journal** : « [usure] allumée — variante USURE_ESSAI posée », attestée par le
+  `#define` de la variante réellement posée sur le matériau, et non par la lecture des arguments (demande d'ISO7 Gadgets pour la
+  mesure de cadence de Q30, 2026-09-24 20:24).
 
 **La planche** (`docs/iso/iso13/planche_usure.jpg`, 2026-09-24, 16:14 ; cadrage `planche_usure` dans
 `docs/iso/iso13/banc_lumiere3d_planches_iso13_contre_8d1b152.patch`, V3 froide, sept impacts posés comme le jeu les pose) :
@@ -27497,12 +27510,17 @@ après l'intégration : l'écran scindé en `--2d` sur le même arbre ; la ligne
 Ni la vsync, ni le plafond, ni la fréquence de l'écran : **c'est propre au chemin de l'écran scindé ISO**. Cause toujours
 inconnue ; une piste seulement — 60 est aussi la cadence par défaut de la physique, et un chemin qui attendrait un pas de
 physique pour rendre s'y collerait (aucune attente de `physics_frame` dans les fichiers iso, relu).
-**L'hypothèse de la physique est PROUVÉE** (Iso 1, 2026-09-24 20:22, `fe098fe` + l'option `--physique`, une prise
-diagnostique de 30 s, écran scindé iso, pompe) : à **120 pas de physique par seconde**, relus sur « Cadence : », l'écran
-scindé iso monte à une médiane de **94** (tranches 94,1 à 94,3) et **78** au 1 % bas, contre **60 / 53** à 60 pas. Le
-rendu de l'écran scindé iso est donc calé sur la cadence de la physique. **La ligne n'est pas trouvée** : ni attente de
-`physics_frame`, ni relecture de texture GPU par image, dans le jeu ni dans le banc (relus). ⚠️ Cette prise est partie
-40 s après le lot, et non 90 : l'écart (60 → 94) dépasse de loin ce que le repos change. Signalé, pas corrigé.
+⚠️ **RETIRÉ LE 24/09 À 22:15 — l'attribution du verrou à la physique N'EST PAS prouvée.** Ce paragraphe a dit, à 20:32,
+« l'hypothèse de la physique est PROUVÉE » : une prise à **120 pas de physique par seconde** (Iso 1, 20:22, 30 s, écran
+scindé iso, pompe) donnait une médiane de **94** et **78** au 1 % bas, contre les **60 / 53** de Gadgets à 60 pas. Mais c'étaient
+deux prises à deux moments, sans comparer l'état de la machine. **Au calme, le verrou ne se reproduit pas** : témoin à
+60 pas, 2026-09-24 22:13, même configuration relue (vsync 0, max_fps 0, physique 60/s, 5120×2160 à 75 Hz), rien au-dessus
+de 8 % de processeur, Adrien absent depuis 224 s → médianes **94,3 à 96,0**, **90** au 1 % bas. La prise « à 120 » donnait
+donc simplement ce que donne une machine calme ; elle ne prouvait rien. Et à 21:34, avec Firefox à ~90 % et le son actif,
+le même témoin tombait à **72 / 43**. **Piste, à vérifier et non à croire : une condition de la machine** (vidéo ou son en
+lecture, autre fenêtre au premier plan, écran qui porte la fenêtre), pas une pièce du jeu. Les options du banc qui coupent
+les pièces de l'écran scindé iso (`--coupe=`) sont écrites mais gardées HORS du dépôt tant qu'un verrou n'est pas
+reproduit. L'option `--physique N` reste (un instrument). Voir Pièges connus, « Deux prises à deux moments ».
 
 **Deux instruments, posés à l'intégration** (demande de la session cloud et de Gadgets) : `tools/bench_framerate.gd` imprime
 au départ de la mesure une ligne « Cadence : » RELUE dans le jeu — `Engine.max_fps`, `window_get_vsync_mode()`,
@@ -27515,6 +27533,15 @@ divergence, à la jonction de deux chantiers : l'usure du lot C était recopiée
 éclairé, pas dans sa branche d'identité (`c2d`) — la garde du principe d'identité (`test_banc`, ISO12 L2) l'a vue ; la
 branche de Beauté ne la portait pas encore. Recopiée au même rang (après la température, avant le contact), sans effet
 sur le jeu par défaut (usure et lumière 3D éteintes). Second lot vert (434 s, 19:12-19:19).
+
+**La vue du client en ligne, prouvée en fenêtre** (`banc_iso --vue-client`, 2026-09-24 22:24) : la vue unique qui regarde J2,
+à 225° (option B) puis à 0°. ⚠️ **En iso, pas de rendu racine, et c'est voulu** (`presentation_3d.gd`, `_allumer` :
+`rendu_racine_autorise = false`, la lightmap doit rester une texture à projeter) : l'image du client est la lightmap de J2
+(`vp2`, rendue par `cam2`), projetée par la caméra 3D de la vue unique. Relu à chaque réglage : ce chemin (juste), `cam2` à
+−225° puis 0°, la caméra 3D à 225° puis 0° ; et à l'image, J2 visant le haut de SON écran, la lumière d'une bande au-dessus de
+lui **48,4** contre **0,6** au-dessous (0° : 45,2 contre 1,3). Verdict « LA VUE DU CLIENT REND L'ANGLE ». Un premier passage
+(22:15) exigeait le rendu racine et sortait « FAUX » sur une image juste ; l'argument « `_rendre_dans_la_racine` prend cam2 »
+donné à la session cloud ne vaut qu'en vue de dessus. `test_iso_vues` vérifie désormais ce chemin en iso.
 
 ### Ce qui attend Adrien — jalon H15
 

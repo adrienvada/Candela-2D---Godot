@@ -161,9 +161,19 @@ static func usure_essai_active() -> bool:
 
 ## Allume ou éteint l'usure sur un matériau de mur ou de sol. Allumée, le matériau passe à la variante USURE_ESSAI de son
 ## shader ; éteinte, la variante reste (les bancs y basculent dans la même partie) et rend l'image d'avant.
+## Une fois par processus : la ligne qui atteste l'usure dans le journal (demande d'ISO7 Gadgets, 2026-09-24 20:24).
+static var _usure_annoncee := false
+
+
 static func poser_usure_essai(materiau: ShaderMaterial, allumee: bool) -> void:
 	if allumee:
 		materiau.shader = variante_definie(materiau.shader, "USURE_ESSAI")
+		# La preuve par ce que le jeu FAIT, pas par la lecture des arguments : la variante réellement posée sur le matériau,
+		# et le `#define` qu'elle porte. Même forme que « [faisceau] allumé » et « [mannequin] allumé ».
+		if not _usure_annoncee:
+			_usure_annoncee = true
+			print("[usure] allumée — variante USURE_ESSAI posée (%s)" % ("#define USURE_ESSAI dans son code"
+				if materiau.shader.code.contains("#define USURE_ESSAI\n") else "⚠ SANS le #define : variante manquée"))
 	materiau.set_shader_parameter("usure", 1.0 if allumee else 0.0)
 
 
