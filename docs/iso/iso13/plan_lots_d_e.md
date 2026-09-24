@@ -214,3 +214,45 @@ pixels isolés) : il ne salit pas le noir.
 
 Ce qu'il faudrait pour que le rayon revienne est à la ROADMAP (Pièges connus, « Une garantie vraie dans
 le monde n'est pas vraie à l'écran »).
+
+## Mesures du 2026-09-24 après-midi : la fumée en sandwich, et ce que coûtent A et E
+
+### La fumée de la fusée semble salir le noir comme le rayon — non établi
+
+`loupe-fusee-bord` (`f867ad7`), deux lancements sur `76fe78f`, l'instrument étant le diff même de ce
+commit, posé puis retiré. La fenêtre entière, trois fois dans le même lancement : volumes coupés,
+rétablis, recoupés ; la fusée seule, à la braise.
+
+**L'instrument a d'abord rendu un zéro vide, et l'a dit** : les six prises ont 0 pixel noir. Dans la
+scène de la loupe, ~40 % du cadre repose sur un plancher de 2 à 4/255 — très probablement le voile
+d'éblouissement de J1 (0,06). En prenant « noir » = au plus 4/255 (un choix, pas une donnée) :
+
+    lancement   bruit coupé-1 → coupé-2   bruit coupé-2 → coupé-1   fumée contre coupé-1   fumée contre coupé-2
+    1                 89 867                     665                     18 641                  7 598
+    2                101 606                     674                     20 240                  7 296
+
+Contre la prise la plus tardive, la fumée ajoute ~7 400 pixels isolés quand la dérive inverse en donne
+~670 ; et la lumière du sol est deux fois plus souvent **en dessous** de ces pixels qu'au-dessus (4 996
+contre 2 506 ; 4 855 contre 2 333) — la signature de la parallaxe, plus faible que pour le rayon.
+**Deux réserves empêchent de l'affirmer** : le noir redéfini, et une scène qui **dérive** au sein du
+lancement (≈100 000 pixels s'éclaircissent entre la 1re et la 3e prise, toutes deux sans volumes : l'âge
+« figé » de la fusée ne l'est probablement pas). Pour l'établir : une scène sans voile (torche de J1
+éteinte) et une fusée réellement figée. C'est du jeu déjà allumé : signalé, pas corrigé ; la décision
+est à Adrien.
+
+### Les lots A et E ne coûtent rien de mesurable
+
+Quinze prises sur `76fe78f` (témoin T = `b193420`), au pompe sous une fusée, vue unique, dans l'ordre
+T D A E AE E AE T D A A AE D E T (position moyenne 8 pour chaque état). Aucune prise refusée ; le lot A
+prouvé par une vérification initiale dans l'arbre mesuré et par la ligne de commande effective de chaque
+prise, le lot E par la ligne qu'il imprime.
+
+    état   médiane des médianes   1 % bas médian   contre sa référence
+    T             88                   78
+    D             89                   76            D/T = 1,011   tient
+    A             88                   77            A/D = 0,989   tient
+    E             88                   77            E/D = 0,989   tient
+    AE            88                   78           AE/D = 0,989   tient
+
+Spotlight était actif dans neuf fenêtres sur quinze (jusqu'à 91 %) sans effet lisible, et le témoin aux
+positions 1, 8 et 15 donne 88, 88, 88 : aucune dérive.

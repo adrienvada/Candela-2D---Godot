@@ -399,3 +399,25 @@ dans deux prises : l'agent qui mesure est lui-même une charge.
 connaît. Chercher **tout processus au-dessus d'un seuil** coûte le même travail et voit ce qu'on
 n'avait pas prévu. Corollaire pratique : annoncer une fenêtre en demandant « pas de Godot » est trop
 étroit — il faut demander **pas de charge lourde**, génération d'images et navigateur compris.
+
+## 15. Le 45° B, et trois leçons d'une journée d'instruments (2026-09-24)
+
+**Le 45° B ne passe pas la règle.** Six prises sur `6b4789c` (ISO14), au pompe sous une fusée, vue
+unique, D L L D D L, chaque prise vérifiée par la ligne « Rendu : » que le banc imprime, lue sur les
+caméras réelles : 0° à 88, 88, 87 (1 % bas médian 79), 45° à 84, 86, 84 (74). Rapport 0,955 pour un
+seuil de 0,970 : **+0,54 ms par image**. Aucun recouvrement ; la pollution a frappé deux prises à 0° et
+aucune à 45° ; aucune dérive. Le 1 % bas à 45° reste à 74 : jouable, mais refusé par la règle des 3 %.
+
+**Un motif de preuve se tolère sur le FORMAT, jamais sur le SENS.** La ligne « Rendu : » a sorti
+« lacet 45.0° » (et non « 45° ») et « J1 -0.0° » à 0° (la rotation vaut −L). Les deux se déduisaient
+du code — `str()` d'un flottant, et un zéro négatif — et un motif strict aurait refusé les six prises.
+On relit le code qui imprime avant d'écrire le motif qui vérifie.
+
+**Une faute injectée doit être vérifiée injectée.** Pour tester la garde « une prise à 45° retombée à
+0° est refaite », le mannequin devait faire retomber UNE prise L. Il a consommé la faute sur la première
+prise… qui était un D, où elle ne pouvait rien révéler : la série a « passé » sans avoir rien testé.
+C'est le zéro vide, sous une autre forme.
+
+**Et le zéro vide revient toujours par un autre chemin.** Trois fois dans la journée : la loupe de la
+fusée sans pixel noir dans le cadre ; la prise plein cadre sous le voile d'éblouissement ; le mannequin
+ci-dessus. Tout instrument qui peut répondre « zéro » doit imprimer ce qu'il aurait pu trouver.

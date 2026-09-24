@@ -3219,6 +3219,14 @@ pourrait les rallumer en silence ; la garde de `tools/test_iso_gadgets.gd` rougi
 **Pour qu'il revienne** : ses couches devraient rester sous la hauteur des murets (0,40 tuile), puis il
 faudrait établir la cause des 15 pixels isolés qui restent même au sol — à ne pas chercher avant.
 
+**La fumée de la fusée, allumée par défaut, semble faire de même — non établi (2026-09-24, 17:05).**
+Mesurée en sandwich dans un même lancement (`loupe-fusee-bord`, `f867ad7`) : ~7 400 pixels isolés
+ajoutés sur des zones sombres, la lumière du sol deux fois plus souvent en dessous qu'au-dessus — la
+signature de la parallaxe, plus faible que pour le rayon. Mais le « noir » a dû être pris au plancher du
+voile d'éblouissement de J1 (4/255 : rien n'est vraiment noir dans cette scène), et la scène dérive au
+sein du lancement. Signalé, pas corrigé : c'est du jeu déjà en place, la décision est à Adrien. Pour
+l'établir : torche de J1 éteinte, fusée réellement figée. Détail : `docs/iso/iso13/plan_lots_d_e.md`.
+
 ### `osascript ... to activate` sur un Godot mort le RELANCE (2026-09-24)
 
 Chantier ISO12. Un script de prise lance le banc, attend 4 s, puis réclame le premier plan par
