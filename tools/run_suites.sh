@@ -361,7 +361,15 @@ run() {
   fi
 }
 
-for t in "${SUITES[@]}"; do run "$t" --script "res://tools/$t.gd"; done
+# `test_iso_camera` compare deux parties pas pour pas : à pas d'image fixe, sans quoi le moment
+# où une balle éteinte quitte la scène dépend du rendu (voir `_simulation_inchangee`, et les
+# Pièges connus de la ROADMAP). Avant `--script` : c'est un argument du moteur, pas du jeu.
+for t in "${SUITES[@]}"; do
+  case "$t" in
+    test_iso_camera) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    *) run "$t" --script "res://tools/$t.gd" ;;
+  esac
+done
 # ISO6 — les suites de RÉFÉRENCE 2D, sous le drapeau de débogage `--2d`.
 #
 # L'iso est le jeu par défaut depuis ISO6 : toute suite qui monte `main.tscn` tourne donc sous la

@@ -9244,6 +9244,26 @@ d'analyse —, et **la relecture d'après coup cherche TOUT processus au-dessus 
 Adrien — c'était le gestionnaire de projets relancé à 23:04:58 par l'« activate » de mon lanceur de prise (Iso 1), celui que
 décrit l'entrée « activate ».
 
+### Un test « pas pour pas » se lance à pas d'image fixe — et le jeu de base tire au rythme du rendu (2026-09-24)
+
+ISO12. Le témoin de `tools/test_iso_camera.gd` (deux parties sans iso, identiques pas pour pas) est sorti rouge une fois dans un
+lot : « pas 116 : [] ≠ [[(105.0, 429.8408), -3.097222]] », une balle d'un seul côté, iso éteinte. **Cause relevée à la trace**,
+et ce n'est pas celle qu'on soupçonnait d'abord (le cooldown : `shoot()`, que le test appelle, ne le lit pas) : la balle du pas 110
+touche le mur au pas 112 et s'éteint par un tween de 0,08 s (`bullet.gd`, `_fade_and_destroy`), **réglé sur le temps de rendu** —
+4,8 pas physiques. Elle quitte `bullet_container` au pas 116, ou 117 si une image a traîné autour de la marque des 0,08 s. Marge :
+3,3 ms, d'où la rareté — **dix passes libres sur machine calme sont restées vertes**, la preuve « au moins un rouge sur dix »
+demandée par la session cloud n'a pas pu être produite ; la trace pas à pas (balle « en vol » 110-111, « en fondu » 112-115 au
+point d'impact) en tient lieu. **Réparé dans le test seul** : `run_suites.sh` le lance avec `--fixed-fps 60` (chaque image avance
+rendu et physique de 1/60 s ensemble), et le test **refuse** de comparer sans pas fixe — reconnu à son effet, trois images de
+1/60 s tout rond, parce que `OS.get_cmdline_args()` ne rend PAS les arguments du moteur (vérifié). Dix passes à pas fixe : dix
+vertes. **Règle : tout test qui compare deux parties pas pour pas se lance à pas d'image fixe, et le vérifie lui-même.**
+
+⚠️ **Défaut du jeu de base, SIGNALÉ, pas corrigé ici** (relevé par la session cloud, confirmé à la lecture du code, non mesuré) :
+`shoot_cooldown` décroît dans `_process` (`player.gd`, au rythme du rendu) et se lit dans `_physics_process`, qui décide du tir
+détente tenue, de la fusée et du gadget. **Le pas physique où part le tir suivant dépend donc du rendu, à un pas près** — et
+l'hôte comme la prédiction du client décomptent chacun avec leurs propres images : la prédiction peut s'écarter de l'hôte d'autant.
+C'est pour `main`, pas pour l'iso ; la session cloud le porte à Adrien.
+
 ### Une livraison d'images se pose au md5, jamais au nom (2026-09-16)
 
 ISO11, pas 7. Le dossier des vingt illustrations voxel contenait TROIS générations par emplacement — le nom nu, `_v3`, `_v4`.

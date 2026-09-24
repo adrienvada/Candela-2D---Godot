@@ -18,7 +18,8 @@
 ## Ce qu'elle ne voit pas : ce que le GPU fait des shaders. Le noir absolu au pixel se
 ## prouve au banc, dans une vraie fenêtre (`tools/banc_iso.gd --jeu --noir`).
 ##
-## Lancer : godot --headless --path . --script res://tools/test_iso_camera.gd
+## Lancer : godot --headless --path . --fixed-fps 60 --script res://tools/test_iso_camera.gd
+## (le pas d'image fixe est exigé : voir `_simulation_inchangee`).
 extends SceneTree
 
 const EPSILON := 0.001
@@ -399,8 +400,30 @@ func _reglage() -> void:
 ##
 ## ⚠️ **Le témoin d'abord.** Si deux parties sans iso diffèrent déjà, une différence
 ## avec iso ne prouverait rien — et une égalité non plus.
+##
+## ⚠️ **Et un pas d'image FIXE (`--fixed-fps 60`), exigé et vérifié** (2026-09-24). Une balle
+## qui touche un mur s'éteint par un tween de 0,08 s réglé sur le temps de RENDU (`bullet.gd`,
+## `_fade_and_destroy`), soit 4,8 pas physiques : elle reste dans `bullet_container` quatre
+## pas ou cinq selon qu'une image a traîné autour de la marque des 0,08 s. Relevé : la balle
+## du pas 110 touche au pas 112, s'éteint au pas 116 — ou 117 dans une passe d'un lot, et le
+## témoin sortait rouge sans que l'iso y soit pour rien. Rare (3,3 ms de marge), donc jamais
+## vu de près : dix passes libres sur machine calme restent vertes. À pas fixe, chaque image
+## avance le rendu et la physique de 1/60 s ensemble : l'extinction tombe toujours au même pas.
+## La correction est ICI et dans `run_suites.sh`, jamais dans le jeu — et le défaut qu'elle
+## contourne, voir les Pièges connus de la ROADMAP.
 func _simulation_inchangee() -> void:
 	print("\n--- La vue ne change rien à la simulation ---")
+	# Reconnu à son effet, pas à la ligne de commande : `OS.get_cmdline_args()` ne rend pas les
+	# arguments du moteur (vérifié : il répond « absent » même quand `--fixed-fps 60` est passé).
+	# À pas fixe, chaque image dure 1/60 s tout rond ; libre, jamais trois fois de suite.
+	var pas_fixe := true
+	for i in 3:
+		await process_frame
+		pas_fixe = pas_fixe and absf(root.get_process_delta_time() - 1.0 / 60.0) < 1e-9
+	_check("lancé à pas d'image fixe (--fixed-fps 60), sans quoi le témoin dépend du rendu", pas_fixe,
+		"relancer avec : godot --headless --path . --fixed-fps 60 --script res://tools/test_iso_camera.gd")
+	if not pas_fixe:
+		return
 	var reglages := root.get_node("GameSettings")
 	# ⚠️ ISO8 — le décalage de la caméra vers la visée est DÉSARMÉ pendant les parties comparées, puis rendu.
 	# Sans stick tenu, J1 vise la souris, convertie par la caméra (`LocalInputProvider.cible_de_la_souris`) ;
