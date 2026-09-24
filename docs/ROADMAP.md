@@ -27489,6 +27489,12 @@ après l'intégration : l'écran scindé en `--2d` sur le même arbre ; la ligne
 Ni la vsync, ni le plafond, ni la fréquence de l'écran : **c'est propre au chemin de l'écran scindé ISO**. Cause toujours
 inconnue ; une piste seulement — 60 est aussi la cadence par défaut de la physique, et un chemin qui attendrait un pas de
 physique pour rendre s'y collerait (aucune attente de `physics_frame` dans les fichiers iso, relu).
+**L'hypothèse de la physique est PROUVÉE** (Iso 1, 2026-09-24 20:22, `fe098fe` + l'option `--physique`, une prise
+diagnostique de 30 s, écran scindé iso, pompe) : à **120 pas de physique par seconde**, relus sur « Cadence : », l'écran
+scindé iso monte à une médiane de **94** (tranches 94,1 à 94,3) et **78** au 1 % bas, contre **60 / 53** à 60 pas. Le
+rendu de l'écran scindé iso est donc calé sur la cadence de la physique. **La ligne n'est pas trouvée** : ni attente de
+`physics_frame`, ni relecture de texture GPU par image, dans le jeu ni dans le banc (relus). ⚠️ Cette prise est partie
+40 s après le lot, et non 90 : l'écart (60 → 94) dépasse de loin ce que le repos change. Signalé, pas corrigé.
 
 **Deux instruments, posés à l'intégration** (demande de la session cloud et de Gadgets) : `tools/bench_framerate.gd` imprime
 au départ de la mesure une ligne « Cadence : » RELUE dans le jeu — `Engine.max_fps`, `window_get_vsync_mode()`,

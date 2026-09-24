@@ -256,6 +256,10 @@ func _ready() -> void:
 	# poserait son plafond des menus et `--menus` mesurerait 120 au lieu de la charge.
 	GameSettings.pilotage_externe = true
 	Engine.max_fps = int(_value(args, "--max-fps", "0"))
+	# ISO14 — `--physique N` : les pas de physique par seconde, pour une prise DIAGNOSTIQUE (l'écran scindé iso bridé à
+	# 60, hypothèse d'ISO7 Gadgets : un chemin calé sur la physique). Absent, rien ne change ; relu sur « Cadence : ».
+	if args.has("--physique"):
+		Engine.physics_ticks_per_second = int(_value(args, "--physique", "60"))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_couper_le_son("avant la scène")
 	_reclamer_le_premier_plan()
@@ -459,8 +463,8 @@ func _ready() -> void:
 	# 2026-09-24) : l'écran scindé iso plafonnait à 60 exactement alors que la ligne « Plafond / vsync » de l'en-tête
 	# disait « aucun / désactivé » — cette ligne-là dit ce que le banc a DEMANDÉ, celle-ci ce qui s'applique.
 	var ecran := DisplayServer.window_get_current_screen()
-	print("Cadence : max_fps %d · vsync %d (relu ; 0 désactivée, 1 activée, 2 adaptative, 3 mailbox) · plafond_effectif %d · pilotage_externe %s · écran %d/%d, %s px, %.0f Hz"
-		% [Engine.max_fps, DisplayServer.window_get_vsync_mode(), GameSettings.plafond_effectif(),
+	print("Cadence : max_fps %d · vsync %d (relu ; 0 désactivée, 1 activée, 2 adaptative, 3 mailbox) · physique %d/s · plafond_effectif %d · pilotage_externe %s · écran %d/%d, %s px, %.0f Hz"
+		% [Engine.max_fps, DisplayServer.window_get_vsync_mode(), Engine.physics_ticks_per_second, GameSettings.plafond_effectif(),
 		GameSettings.pilotage_externe, ecran + 1, DisplayServer.get_screen_count(), DisplayServer.screen_get_size(ecran),
 		DisplayServer.screen_get_refresh_rate(ecran)])
 	if _temps_par_vue:
