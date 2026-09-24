@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-24
+> Dernière mise à jour : 2026-09-25
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3226,6 +3226,36 @@ signature de la parallaxe, plus faible que pour le rayon. Mais le « noir » a d
 voile d'éblouissement de J1 (4/255 : rien n'est vraiment noir dans cette scène), et la scène dérive au
 sein du lancement. Signalé, pas corrigé : c'est du jeu déjà en place, la décision est à Adrien. Pour
 l'établir : torche de J1 éteinte, fusée réellement figée. Détail : `docs/iso/iso13/plan_lots_d_e.md`.
+
+**Établi le soir même, et la cause n'est pas celle qu'on croyait : le lissage, pas la parallaxe.** Les
+deux torches éteintes (`loupe-fusee-bord-noir`, `cac6e05`), la fumée coupée et rétablie cinq fois dans un
+même lancement, chaque prise avec fumée comparée à la prise coupée **suivante** — la scène dérive, mais
+seulement vers le clair : ~10 700 pixels noirs éclairés, à 0,5 % près d'un lancement à l'autre. La fuite
+déborde dans **toutes** les directions, à l'échelle de `lire_lightmap_lissee`. Une intervention à la fois :
+lissage coupé −75 % ; couches au sol, presque rien ; taire la couche là où la lumière **brute** est nulle,
+**rien du tout** (la lumière y est faible, pas nulle — c'est le sol sombre qui l'affiche noire) ; taire la
+couche là où l'écran **affiché** derrière elle est noir (`hint_screen_texture`) : **zéro**, deux fois, sans
+rien retirer dans la lumière. Son coût, mesuré au calme : **+0,70 ms par image** (0,943, 1 % bas 66),
+hors de la règle des 3 %. Instrument non commité, rien changé dans le jeu : la décision est à Adrien. Détail : `docs/iso/iso13/plan_lots_d_e.md`.
+
+### Une prise polluée ne fait pas que du bruit : elle peut tourner le verdict (2026-09-24)
+
+Chantier ISO13. La série de l'usure a rendu **0,977 — « tient »**, relecture après coup faite, pollution
+vue et notée : deux des trois références avaient tourné sous « Creative Cloud » (47 % et 106 % d'un
+cœur). Refaite au calme : **0,944 — ne tient pas**. La pollution avait abaissé les deux références, pas
+l'essai, et le verdict penchait du côté flatteur. **Relire la fenêtre et nommer le fautif ne suffit pas
+si la prise est comptée quand même.** D'où la **porte stricte** (`/tmp/fusee_mesure/porte_stricte.py`,
+règle de la session cloud) : aucun processus étranger au-dessus de 20 % d'un cœur — `WindowServer`,
+`kernel_task` et `Godot` exceptés, et **aucune liste de suspects** —, relue avant la prise (on attend) et
+sur toute sa fenêtre mesurée (la prise est refaite, jamais comptée). Rejouée sur la série perdue, elle
+refuse exactement les deux prises polluées. Sa première nuit, elle en a refusé quatre sur seize, que
+rien n'aurait fait soupçonner — dont une automatisation de Raccourcis (`BackgroundShortcutRunner` 53 %)
+et Time Machine (`backupd` 201 %). Comme `porte.py`, elle vit hors du dépôt, avec les lanceurs de mesure :
+la règle est ici, le script se réécrit en vingt lignes.
+
+Corollaire payé la même nuit : un script de verdict qui lit des prises refaites doit compter le
+**dernier essai**, pas le premier. Le mien comptait l'essai refusé et imprimait en face la porte de
+l'essai accepté : il a annoncé « tient » sur deux prises que la porte venait de jeter.
 
 ### `osascript ... to activate` sur un Godot mort le RELANCE (2026-09-24)
 
