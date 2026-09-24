@@ -72,6 +72,8 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO10, lot 2, 2a : l'aplat orange de la braise vient-il du lissage ou du nuage de suie posé dans le halo ?"],
 		["loupe-fusee-bord", "Le sandwich de la fumée : volumes coupés, rétablis, recoupés, fenêtre entière",
 			"ISO13 : la fumée de la fusée salit-elle le noir à l'écran, comme le rayon du lot E ? Trois prises dans le même lancement ; les deux coupées donnent le bruit, la rétablie se compte contre les deux."],
+		["loupe-fusee-bord-noir", "Le sandwich de la fumée, torches éteintes : C R C R C, fenêtre entière",
+			"ISO13 : la même question que loupe-fusee-bord, sans le voile d'éblouissement de J1 (qui ne laissait aucun pixel vraiment noir), et chaque prise rétablie jugée contre ses deux voisines coupées."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
 			"Le sprite du gadget et son faisceau, dans le noir."],
 		["loupe-torche-braconnier", "La torche fantôme à côté d'un vrai Braconnier",
@@ -208,6 +210,12 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-fusee-bord : aucun sol dégagé à l'écran hors de la torche")
 		else:
 			await _loupe_fusee_bord(plans, lieux[0])
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-fusee-bord-noir"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-bord-noir : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_bord_noir(plans, lieux[0])
 			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
@@ -634,14 +642,16 @@ func _loupe_fusee_bord(plans: Array[Dictionary], lieu: Vector2) -> void:
 
 
 ## Une prise de la FENÊTRE ENTIÈRE, sans recadrage, qui imprime le nombre de pixels noirs du cadre.
-func _prise_entiere(plans: Array[Dictionary], id: String, suffixe: String, repos: float) -> void:
+func _prise_entiere(plans: Array[Dictionary], id: String, suffixe: String, repos: float,
+		tenir := Callable()) -> void:
 	if p._plan(plans, id).is_empty():
 		return
+	var garde: Callable = tenir if tenir.is_valid() else _tenir_scene
 	var fin := Time.get_ticks_msec() + int(repos * 1000.0)
 	while Time.get_ticks_msec() < fin:
-		_tenir_scene()
+		garde.call()
 		await p.get_tree().process_frame
-	_tenir_scene()
+	garde.call()
 	var img: Image = await _capturer(false)
 	if img == null:
 		p._perdues += 1
@@ -657,6 +667,53 @@ func _prise_entiere(plans: Array[Dictionary], id: String, suffixe: String, repos
 	var sous: Dictionary = p._derive(plans, id, suffixe, "")
 	print("  MESURE %s image %dx%d pixels_noirs %d" % [sous["id"], img.get_width(), img.get_height(), noirs])
 	p._ecrire(sous, img)
+
+
+## ISO13 — LE SANDWICH SANS VOILE (session cloud, 2026-09-24, 18:53). `loupe-fusee-bord` n'avait trouvé aucun pixel
+## noir : la torche de J1, tenue allumée par `_tenir_scene`, pose un voile d'éblouissement (0,06) qui soulève tout
+## l'écran à 2-4/255. Et la scène DÉRIVAIT au sein du lancement, autour de la fusée, sans cause établie — l'âge est
+## pourtant figé (`_physics_process` coupé) et le voile 2D de la fusée ne lit pas TIME. Donc, ici :
+## - les DEUX torches éteintes, et le temps laissé à la rétrodiffusion de s'éteindre, comme le photographe le fait ;
+## - cinq prises serrées, coupé / rétabli / coupé / rétabli / coupé : chaque prise rétablie se juge contre ses deux
+##   voisines coupées, pour que la dérive entre prises voisines, elle, soit petite et mesurée.
+func _loupe_fusee_bord_noir(plans: Array[Dictionary], lieu: Vector2) -> void:
+	var m: Node = p._main
+	var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+	f.set("depart", lieu)
+	f.set("direction", Vector2.DOWN)
+	f.set("joueurs", [m.p1, m.p2])
+	m.bullet_container.add_child(f)
+	await p.get_tree().process_frame
+	f.set_physics_process(false)
+	f.global_position = lieu
+	f.call("forcer_age", AGE_FUSEE_BORD)
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ loupe-fusee-bord-noir : volumes iso introuvables, pas de sandwich")
+		return
+	# Le temps que la rétrodiffusion de J1 s'éteigne (`TORCH_FADE_OUT`), comme `_plan_leurre` du photographe.
+	for i in 40:
+		_tenir_sans_torches()
+		await p.get_tree().physics_frame
+	print("  · loupe-fusee-bord-noir : fusée seule en %s, âge %.1f s, torches éteintes, éblouissement J1 %.3f"
+		% [str(lieu), AGE_FUSEE_BORD, float(m.p1.dazzle_amount)])
+	for etape in [["coupe-1", false], ["retabli-1", true], ["coupe-2", false], ["retabli-2", true], ["coupe-3", false]]:
+		volumes.set("images_actives", etape[1])
+		await _prise_entiere(plans, "loupe-fusee-bord-noir", String(etape[0]), 0.4, _tenir_sans_torches)
+	volumes.set("images_actives", true)
+
+
+## `_tenir_scene`, les deux torches ÉTEINTES : sans elles, aucun voile d'éblouissement ne soulève le noir.
+func _tenir_sans_torches() -> void:
+	_tenir_scene()
+	if p._pantins.size() > 0:
+		p._pantins[0].torche = false
+	Input.action_release("p1_torch")
+	var m: Node = p._main
+	if is_instance_valid(m.p1):
+		m.p1.flashlight_on = false
 
 
 ## ISO10, lot 2, 2a — le banc du rayon de moyenne des couches de fumée (`volume_iso.gdshader`, `lissage_rayon`, défaut
