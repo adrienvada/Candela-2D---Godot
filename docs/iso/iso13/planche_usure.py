@@ -4,7 +4,7 @@ au pixel entre « sans » et « avec » (même instant, même partie) :
   - noir reste noir : aucun pixel noir (≤ 2/255) de « sans » ne s'allume dans « avec » ;
   - jamais plus clair : aucun pixel plus clair de plus d'un niveau ;
   - J2 non caché : dans une boîte autour de J2, la part des pixels visibles (> 6/255) perdue — garde-fou 5 %.
-Usage : planche_usure.py <sortie.jpg> <captures_planche_usure>"""
+Usage : planche_usure.py <sortie.jpg> <captures_planche_usure> [<captures du lacet 45>]"""
 import json, re, sys
 from PIL import Image, ImageDraw, ImageFont
 LIGNE = re.compile(r"BANC_LUMIERE3D tenue cadrage=(\S+) tenue=(\S+) camera=(-?\d+),(-?\d+) fichier=(\S+) ancres=(\{.*\})$")
@@ -57,12 +57,13 @@ def mesurer(sans, avec, j2, j1):
 
 
 def main(a):
-    sortie, dossier = a
+    sortie, dossiers = a[0], a[1:]
     prises = {}
-    for l in open(dossier + "/journal.log", encoding="utf-8", errors="replace"):
-        m = LIGNE.search(l.strip())
-        if m:
-            prises[(m.group(1), m.group(2))] = (m.group(5), json.loads(m.group(6)))
+    for dossier in dossiers:
+        for l in open(dossier + "/journal.log", encoding="utf-8", errors="replace"):
+            m = LIGNE.search(l.strip())
+            if m:
+                prises[(m.group(1), m.group(2))] = (dossier + "/" + m.group(5).split("/")[-1], json.loads(m.group(6)))
     lignes = [("usure", "lacet 0° (le jeu)"), ("usure_lacet45", "lacet 45° (Q14)")]
     CW, CH, marge = 620, 420, 12
     hauteur = 90 + len(lignes) * (CH + 40 + 2 * 230 + 40) + 20
@@ -78,8 +79,8 @@ def main(a):
             continue
         fs, anc = prises[(cadrage, "sans")]
         fa, _ = prises[(cadrage, "avec")]
-        sans = Image.open("%s/%s" % (dossier, fs.split("/")[-1])).convert("RGB")
-        avec = Image.open("%s/%s" % (dossier, fa.split("/")[-1])).convert("RGB")
+        sans = Image.open(fs).convert("RGB")
+        avec = Image.open(fa).convert("RGB")
         allumes, clairs, perte, vis, sombres = mesurer(sans, avec, anc["j2"], anc["j1"])
         rapport.append("%s : décor — noirs allumés %d, plus clairs %d, assombris %d ; J2 : %+.1f %% de %d px du corps" % (titre, allumes, clairs, sombres, -perte, vis))
         d.text((marge, y), "%s — décor : noir allumé %d, plus clair %d, assombri %d px ; J2 : %+.1f %% de pixels du corps (sa respiration)" %

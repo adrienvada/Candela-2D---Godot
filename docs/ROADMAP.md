@@ -27538,10 +27538,15 @@ photographe pour la killcam ; patch du banc : `banc_lumiere3d_planches_contre_ec
 Et le contour de 1 px, sans et avec le détail.
 
 **L'usure refaite, le temps figé** (ordre 307 ; `docs/iso/iso13/planche_usure_temps_fige.jpg`). Le temps du jeu est arrêté
-entre « sans » et « avec » (`Engine.time_scale = 0`, le banc des lumières). Sur le décor (murs et sol) : 0 noir allumé,
-0 pixel plus clair, 6 831 pixels assombris au lacet 0 et 6 743 à 45°. Les seuls écarts restants sont sur les deux corps, que
-l'usure ne dessine pas : leur pose suit l'horloge réelle (`Time.get_ticks_msec`), que le temps figé du jeu n'arrête pas.
-J2 : +0,9 % et −0,2 % de pixels du corps, le même chiffre dans l'image et dans la page.
+entre « sans » et « avec » (`Engine.time_scale = 0`, le banc des lumières). Sur le décor (murs et sol) : 0 noir allumé et
+0 pixel plus clair, au lacet 0 (6 831 pixels assombris) comme à 45° (7 109). Les seuls écarts restants sont sur les deux corps,
+que l'usure ne dessine pas : leur pose suit l'horloge réelle (`Time.get_ticks_msec`), que le temps figé du jeu n'arrête pas.
+J2 : +0,4 % et −0,4 % de pixels du corps, le même chiffre dans l'image et dans la page.
+⚠️ **Le lacet se pose au LANCEMENT, jamais sur la caméra** (piège du 2026-09-24, 19:22). Depuis ISO14, la présentation
+reprend `lacet_deg` dans `GameSettings.lacet_de()` à chaque image : un 45° écrit par le banc sur la caméra était effacé à
+l'image suivante, sans un mot, et la première reprise de cette planche était à 0° des deux côtés (ses chiffres « 45° » étaient
+ceux du 0°). La reprise de 20:13 lance `--lacet=0` puis `--lacet=45` : la caméra iso et la lumière tournent ensemble, et le
+banc imprime le lacet que les réglages rendent vraiment (`usure_lacet=`). Tout banc qui veut un lacet passe par là.
 
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 19:44), empreinte du code identique avant et après. ⚠️ Le lot
 précédent, sur le même état exact (19:36), avait rougi sur `test_arena_matter` (les douilles, leur arrêt physique), hors de ce
