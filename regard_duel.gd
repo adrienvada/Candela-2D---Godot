@@ -31,17 +31,28 @@ static func decalage_vise(visee: Vector2, decalage: float, vue_px: Vector2, zoom
 ## zoom de 1,0** : au zoom d'avant ISO8, la vue de 1920×1080 couvre la largeur des cartes livrées et presque
 ## leur hauteur, et borner l'axe vertical déplacerait le cadrage de toutes les parties d'aujourd'hui. Sur un
 ## axe borné, la caméra peut montrer au plus une `tuile` de hors-carte (le mur de bordure et sa marge).
+##
+## ISO14 — `lacet_deg` : la caméra 2D tournée (`GameState.orienter_camera_2d`, r = −L), les bornes se prennent dans
+## SES axes : le centre et la boîte englobante de la carte passent dans le repère de la caméra (rotation de +L),
+## s'y bornent, et reviennent. À 0° c'est le calcul d'avant, à l'identique.
 static func centre_du_regard(joueur: Vector2, decalage_lisse: Vector2, vue_px: Vector2, zoom: float,
-		carte: Rect2, tuile: float) -> Vector2:
+		carte: Rect2, tuile: float, lacet_deg: float = 0.0) -> Vector2:
 	var c := joueur + decalage_lisse
 	if zoom <= 1.0 or carte.size == Vector2.ZERO:
 		return c
+	var a := deg_to_rad(lacet_deg)
+	var boite := carte
+	if lacet_deg != 0.0:
+		c = c.rotated(a)
+		boite = Rect2(carte.position.rotated(a), Vector2.ZERO)
+		for coin: Vector2 in [Vector2(carte.end.x, carte.position.y), Vector2(carte.position.x, carte.end.y), carte.end]:
+			boite = boite.expand(coin.rotated(a))
 	var visible := etendue_visible(vue_px, zoom)
 	for axe in 2:
-		if visible[axe] < carte.size[axe] + 2.0 * tuile:
+		if visible[axe] < boite.size[axe] + 2.0 * tuile:
 			var demi := visible[axe] * 0.5
-			c[axe] = clampf(c[axe], carte.position[axe] + demi - tuile, carte.end[axe] - demi + tuile)
-	return c
+			c[axe] = clampf(c[axe], boite.position[axe] + demi - tuile, boite.end[axe] - demi + tuile)
+	return c.rotated(-a) if lacet_deg != 0.0 else c
 
 
 ## Le lissage du décalage, indépendant de la cadence (exponentiel) : ~120 ms pour faire le chemin aux deux tiers.

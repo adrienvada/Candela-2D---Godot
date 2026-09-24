@@ -38,22 +38,27 @@ const DUREE_S := 1.6
 
 
 ## Le cadrage qui contient toutes les positions : `{centre, zoom}`, vide sans position.
-static func cible(positions: PackedVector2Array, vue: Vector2, z_duel: float) -> Dictionary:
+##
+## ISO14 — `lacet_deg` : la caméra 2D tournée (r = −L, `GameState.orienter_camera_2d`), la boîte se prend dans SES
+## axes — positions tournées de +L, boîte, centre ramené de −L. À 0° c'est le calcul d'avant, à l'identique.
+static func cible(positions: PackedVector2Array, vue: Vector2, z_duel: float, lacet_deg: float = 0.0) -> Dictionary:
 	if positions.is_empty():
 		return {}
-	var boite := Rect2(positions[0], Vector2.ZERO)
+	var a := deg_to_rad(lacet_deg)
+	var boite := Rect2(positions[0].rotated(a) if lacet_deg != 0.0 else positions[0], Vector2.ZERO)
 	for p in positions:
-		boite = boite.expand(p)
+		boite = boite.expand(p.rotated(a) if lacet_deg != 0.0 else p)
 	var taille := Vector2(maxf(boite.size.x, BOITE_MIN_PX), maxf(boite.size.y, BOITE_MIN_PX))
 	var z := minf(vue.x / (taille.x + MARGE_PX * 2.0), vue.y / (taille.y + MARGE_PX * 2.0))
-	return {"centre": boite.get_center(),
+	var centre := boite.get_center()
+	return {"centre": centre.rotated(-a) if lacet_deg != 0.0 else centre,
 		"zoom": clampf(z, ZOOM_MIN_RELATIF * z_duel, ZOOM_MAX_RELATIF * z_duel)}
 
 
 ## Le mouvement d'une killcam, depuis la caméra du duel telle qu'elle est à la première image du rejeu.
 static func preparer(centre: Vector2, zoom: float, positions: PackedVector2Array, vue: Vector2,
-		z_duel: float) -> Dictionary:
-	var c := cible(positions, vue, z_duel)
+		z_duel: float, lacet_deg: float = 0.0) -> Dictionary:
+	var c := cible(positions, vue, z_duel, lacet_deg)
 	if c.is_empty():
 		c = {"centre": centre, "zoom": zoom}
 	return {"depart_centre": centre, "depart_zoom": zoom,

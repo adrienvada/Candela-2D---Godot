@@ -317,6 +317,12 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "ecran-scinde", "famille": "jeu", "source": "ecran",
 		 "titre": "Les deux vues côte à côte",
 		 "pourquoi": "Le mode canapé, et lui seul : deux joueurs, deux mondes noirs, un seul écran."},
+		# ISO14 — l'écran scindé SUR LA CARTE DU DUEL (`--carte-duel`), J1 face au mur haut et J2 derrière : la scène
+		# d'équité, vue par les deux joueurs au même instant, pour la planche du lacet (`--lacet=45 --lacet-j2=B|C`).
+		# `ecran-scinde` se prend avant le passage sur la carte du duel, donc toujours sur celle de la séance.
+		{"id": "ecran-scinde-duel", "famille": "jeu", "source": "ecran",
+		 "titre": "Les deux vues sur la carte du duel",
+		 "pourquoi": "Chaque joueur depuis son côté, le mur haut entre les deux : ce que l'angle de la caméra cache à l'un et montre à l'autre."},
 		{"id": "entrainement", "famille": "jeu", "source": "ecran",
 		 "titre": "L'entraînement",
 		 "pourquoi": "Le mode solo : la cible, la vue unique, le chrono remplacé par un mot."},
@@ -899,7 +905,7 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 	# ISO6 — les plans du duel se prennent sur la carte d'essai des murs bas (demande de la session
 	# cloud, 2026-09-15, 11:50) : l'Arène standard n'a aucun mur intérieur, et la vague doit montrer des
 	# faces de mur et des volumes. Retour à la carte de la séance avant le sang.
-	if ["duel", "hud", "leurre", "torche", "volume", "retrodiffusion", "flash-de-tir"].any(
+	if ["duel", "hud", "leurre", "torche", "volume", "retrodiffusion", "flash-de-tir", "ecran-scinde-duel"].any(
 			func(id: String) -> bool: return _demande(plans, id)):
 		await _passer_sur_la_carte_des_murs_bas()
 
@@ -907,6 +913,11 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 		await _prendre(_plan(plans, "duel"), _face_au_mur_haut)
 	if _demande(plans, "hud"):
 		await _prendre(_plan(plans, "hud"), _face_au_mur_haut)
+	# ISO14 — l'écran scindé sur la carte du duel (voir le catalogue), puis retour à la vue unique.
+	if _demande(plans, "ecran-scinde-duel"):
+		_deux_vues()
+		await _prendre(_plan(plans, "ecran-scinde-duel"), _face_au_mur_haut)
+		_vue_unique()
 
 	# Étape 28, lot D — AVANT le sang, les impacts et la fusée : ce qu'ils laissent au
 	# sol, ou la lumière qui dure vingt secondes, fausserait la comparaison.

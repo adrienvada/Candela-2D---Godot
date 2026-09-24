@@ -69,8 +69,15 @@ func _setup_inputs() -> void:
 	action_crouch = prefix + "accroupir"
 	action_climb = prefix + "enjamber"
 
+## ISO14 — le déplacement tourné du lacet de la caméra iso de CE joueur, comme la visée au stick (ISO5) : haut =
+## haut de SON écran, au clavier comme au stick. À 0° (le défaut) `stick_au_sol` rend le vecteur tel quel. Rien ne
+## change sur le fil : c'est le fournisseur local qui tourne, la commande reste un vecteur du monde.
 func get_movement_vector() -> Vector2:
-	return Input.get_vector(action_left, action_right, action_up, action_down)
+	var mouvement := Input.get_vector(action_left, action_right, action_up, action_down)
+	if mouvement == Vector2.ZERO:
+		return mouvement
+	var iso := Presentation3D.instance()
+	return iso.stick_au_sol(get_parent(), mouvement) if iso != null else mouvement
 
 func get_aim_direction(player_global_pos: Vector2) -> Vector2:
 	var aim_dir := Input.get_vector(action_aim_left, action_aim_right, action_aim_up, action_aim_down)

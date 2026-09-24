@@ -27247,6 +27247,42 @@ propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la p�
 `main` (J2 dans le cône de J1, sur du sol éclairé ; 2 px marqué hors garde-fou). Lot complet vert (437 s, 02:29). Avant
 d'allumer : la cadence de la coque (une passe de plus par boîte de corps), à mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
 
+#### ISO14 — le lacet à 45° : le banc d'équité et `--lacet=45`, éteint 🟡 (2026-09-24, branche `iso14-lacet45`, partie de `76fe78f`, session « Iso 1 Opus »)
+
+**Pourquoi.** Q14, Adrien (2026-09-24 vers 01:19) : « on passe à 45° ce sera plus intéressant ». Plan, règle d'équité et
+options : [docs/iso/iso14/plan_lacet_45.md](iso/iso14/plan_lacet_45.md) ; la règle elle-même aux Décisions actées. **Le
+défaut ne change pas** : 0°, tant que le banc, la planche et la cadence n'ont pas parlé et qu'Adrien n'a pas choisi une
+option.
+
+**Écrit sans aucun Godot** (le Mac était à Adrien jusqu'à son « Mac libre », ordre de la session cloud, 04:38) — d'abord
+l'algorithme en Python (`docs/iso/iso14/proto_equite.py`, sur les six JSON), qui écrit `reference_prototype.json` : le
+banc imprime, carte par carte, son écart à cette référence (demande de la session cloud, 05:00) :
+- `IsoGeometrie` : `vers_camera`, `traverser` (parcours de grille exact), `point_cache`, `part_cachee_case` — la bande
+  cachée à tout lacet, qui rend **exactement** `longueur_cachee` à 0° (garde de `tools/test_iso_equite.gd`, suite neuve) ;
+- `tools/banc_equite.gd` (headless) : symétries, options A/B/C à 0° et 45°, critères (0), (a), (b), (e) joint et
+  conditionnel, (d), garde (4) ; et `_corps_colle()` — le corps voxel posé, debout et accroupi, collé à un mur haut ;
+- `--lacet=45` et `--lacet-j2=A|B|C` (`settings_manager.gd`) : débogage seulement, 0° et A en ligne ; la caméra iso de
+  chaque vue prend le lacet de son joueur ; la caméra 2D qui rend la lightmap tourne de −L (voie (b), pas de lightmap
+  agrandie) ; le regard et la killcam se bornent dans ses axes ; le déplacement (clavier et stick) est tourné comme la
+  visée ; `mode_rendu()` dit l'angle quand il n'est pas nul ;
+- `tools/banc_iso.gd --lacet-identique` : la condition de la voie (b), capteurs et éblouissement identiques à 0° et 45° ;
+- `docs/iso/iso14/planche_lacet.py` : La Croisée et Le Cloître, 0° / 45° B / 45° C, J1 et J2 au même instant.
+
+**Ce que le prototype PRÉVOIT** (à confirmer par le banc GDScript, sa première vérification) : à 45°, **B équitable sur les
+six cartes, A sur aucune, C sur cinq** (pas La Croisée). ⚠️ **Et deux constats qui valent DÈS 0°, portés à Adrien par la
+session cloud** : le jeu d'aujourd'hui n'est pas équitable sur **La Croisée** (moitiés 7,37 / 11,98 ; apparitions 7,51 /
+18,78 ; abri caché 5,10 / 0,06 — les abris de J1 face à J2 sont cachés sur l'écran de J2, presque jamais l'inverse) ni sur
+**L'Usine** (moitiés 9,68 / 10,71). Le préalable (0) passe partout, mais il juge le DISQUE AU SOL de la zone de touche
+(18 px de rayon, 36 de diamètre, plus que la bande de 34,2) : le corps en hauteur, accroupi surtout, est l'objet de
+`_corps_colle()`.
+
+**Hors de ce chantier, signalé** : le modelé des corps suppose la face sud (`corps_iso*.gdshader`, `iso_materiaux.gd`, le
+mannequin et `MANNEQUIN_REPORT`) — à ISO7 Beauté ; les scènes du photographe et des bancs bâties sur LA face sud ; le
+bandeau FATAL (`player.gd`, un `Rect2` de vue aligné aux axes) n'est pas vérifié à 45°.
+
+**État** : tout est écrit et non commité, en attente d'une chaîne unique au « Mac libre » (import, banc, lot, contrôle du
+lacet, noir absolu à 45° B et C, six prises, planche ; ~20 min). Aucun commit sans lot vert.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

@@ -215,6 +215,9 @@ var _torches := "toutes"
 var _noir_en_cours := false
 ## `--canaux` : le contrôle des canaux des capteurs (voir `_controler_les_canaux`).
 var _canaux := false
+## ISO14 — `--lacet-identique` : les capteurs des corps et l'éblouissement lisent les mêmes valeurs à 0° et à 45°,
+## pour les deux joueurs et les trois options (voir `_controler_le_lacet`). Avec `--jeu --scinde --capture`.
+var _lacet_identique := false
 ## `--effacement` : le contrôle du fondu des corps iso (ISO2b, voir `_controler_l_effacement`).
 var _effacement := false
 ## ISO4 — `--objets` : un objet voxel posé devant un corps ne lui cache ni la tête ni le torse (voir
@@ -282,6 +285,10 @@ func _ready() -> void:
 		return
 	if _canaux and (_capture == "" or not _jeu):
 		printerr("✗ banc_iso : --canaux se prend avec --capture et --jeu (vue unique ou --scinde)")
+		_sortir(2)
+		return
+	if _lacet_identique and (_capture == "" or not _jeu or not _scinde):
+		printerr("✗ banc_iso : --lacet-identique se prend avec --capture, --jeu et --scinde")
 		_sortir(2)
 		return
 	if _killcam and (_capture == "" or not _jeu or not ["j1", "j2"].has(_vue_killcam)):
@@ -400,6 +407,7 @@ func _lire_arguments(args: PackedStringArray) -> bool:
 	_jeu = args.has("--jeu")
 	_noir = args.has("--noir")
 	_canaux = args.has("--canaux")
+	_lacet_identique = args.has("--lacet-identique")
 	_effacement = args.has("--effacement")
 	_objets = args.has("--objets")
 	_killcam = args.has("--killcam")
@@ -955,6 +963,9 @@ func _capturer() -> void:
 		await get_tree().process_frame
 	if _effacement:
 		await _controler_l_effacement()
+		return
+	if _lacet_identique:
+		await _controler_le_lacet(axe)
 		return
 	if _objets:
 		await _controler_les_objets()
@@ -1982,6 +1993,74 @@ func _controler_les_canaux() -> void:
 
 
 ## La valeur la plus haute au centre d'un capteur, sur ±16 px de monde : là où le corps lit.
+## ISO14 — la condition de la voie (b) (session cloud, 2026-09-24, 01:35) : tourner la caméra 2D du lacet ne change
+## RIEN à ce que lisent les capteurs des corps ni à l'éblouissement, pour les deux joueurs. Les capteurs ont leur propre
+## Camera2D, qui ne tourne pas (`capteur_corps.gd`) ; l'éblouissement se calcule dans le monde (`_maj_eblouissement`) :
+## c'est ce que le banc vérifie au lieu de le supposer. Pour chaque réglage — 0° A, puis 45° A, B et C —, 40 images
+## de pose, puis la moyenne sur 20 images des quatre capteurs (valeur max au centre, `_valeur_au_centre`) et de
+## `dazzle_amount` des deux joueurs. Tolérance : 3 niveaux sur 255 et 0,02 d'éblouissement (la torche pulse d'une
+## image à l'autre, et les deux relevés ne tombent pas au même instant). Le noir absolu à 45° se prouve à part, par
+## `--noir` avec `-- --lacet=45 --lacet-j2=B|C` (le même contrôle qu'à 0°).
+## Mise en scène : celle de `--torches eblouir` (J2 dans le faisceau de J1, face à lui).
+func _controler_le_lacet(axe: Vector2) -> void:
+	var p := Presentation3D.instance()
+	if p == null or not bool(p.get("_actif")):
+		printerr("✗ --lacet-identique : la vue iso n'est pas allumée")
+		_sortir(4)
+		return
+	var p1: Node2D = _main.p1
+	var p2: Node2D = _main.p2
+	var reglages: Array = [[0.0, "A"], [45.0, "A"], [45.0, "B"], [45.0, "C"]]
+	var releves: Array = []
+	for r in reglages:
+		GameSettings.lacet_duel = float(r[0])
+		GameSettings.option_lacet = String(r[1])
+		var somme := PackedFloat32Array([0, 0, 0, 0, 0, 0])
+		for i in 60:
+			p1.rotation = axe.angle()
+			p2.rotation = (-axe).angle() if _torches == "eblouir" else axe.angle()
+			await get_tree().process_frame
+			if i < 40:
+				continue
+			var k := 0
+			for id in 2:
+				for j in 2:
+					var c = p.capteurs()[id][j]
+					somme[k] += float(_valeur_au_centre(c as SubViewport)) if c != null else -1.0
+					k += 1
+			somme[4] += float(p1.get("dazzle_amount"))
+			somme[5] += float(p2.get("dazzle_amount"))
+		for k in 6:
+			somme[k] /= 20.0
+		var cams: Array = []
+		for id in 2:
+			var c2d: Camera2D = _main.cam1 if id == 0 else _main.cam2
+			cams.append("J%d cam2D %.1f° iso %.1f°" % [id + 1, rad_to_deg(c2d.rotation), GameSettings.lacet_de(id)])
+		releves.append(somme)
+		print("BANC_ISO lacet %s° %s : capteurs vueJ1/J1=%.1f vueJ1/J2=%.1f vueJ2/J1=%.1f vueJ2/J2=%.1f · éblouissement J1=%.3f J2=%.3f · %s"
+			% [str(r[0]), r[1], somme[0], somme[1], somme[2], somme[3], somme[4], somme[5], " · ".join(cams)])
+	GameSettings.lacet_duel = GameSettings.LACET_DEFAUT
+	GameSettings.option_lacet = GameSettings.OPTION_LACET_DEFAUT
+	for i in 5:
+		await get_tree().process_frame
+	var faux := 0
+	var ref: PackedFloat32Array = releves[0]
+	for n in range(1, releves.size()):
+		var v: PackedFloat32Array = releves[n]
+		for k in 4:
+			if absf(v[k] - ref[k]) > 3.0:
+				faux += 1
+		for k in [4, 5]:
+			if absf(v[k] - ref[k]) > 0.02:
+				faux += 1
+	var revenues := absf(rad_to_deg((_main.cam1 as Camera2D).rotation)) < 1e-3 \
+		and absf(rad_to_deg((_main.cam2 as Camera2D).rotation)) < 1e-3
+	print("BANC_ISO lacet verdict=%s (%d écart(s) hors tolérance ; caméras 2D revenues à 0° : %s)"
+		% ["LACET SANS EFFET SUR LES CAPTEURS ET L'ÉBLOUISSEMENT" if faux == 0 else "LE LACET CHANGE CE QUI EST LU",
+		faux, "oui" if revenues else "NON"])
+	_sortir(0 if faux == 0 else 8)
+
+
 func _valeur_au_centre(capteur: SubViewport) -> int:
 	var t := capteur.size
 	return _valeur_max_dans(capteur.get_texture().get_image(), Rect2i(t / 2 - Vector2i(32, 32), Vector2i(64, 64)))

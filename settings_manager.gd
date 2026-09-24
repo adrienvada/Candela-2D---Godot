@@ -140,6 +140,21 @@ const FACTEUR_PORTEE_DEFAUT := 0.75
 const FACTEUR_PORTEE_MIN := 0.5
 const FACTEUR_PORTEE_MAX := 1.5
 const DRAPEAU_TORCHE := "--torche="
+## ISO14 — le LACET du duel (Q14, Adrien, 2026-09-24 vers 01:19 : « on passe à 45° ce sera plus intéressant »),
+## ÉTEINT par défaut : 0° tant que le banc d'équité (`tools/banc_equite.gd`) et la cadence n'ont pas parlé et
+## qu'Adrien n'a pas choisi une option. `--lacet=45` tourne la caméra de J1 ; `--lacet-j2=A|B|C` dit celle de J2 —
+## A la même, B à + 180°, C le miroir gauche-droite (−L), les trois options du banc. Même patron que le zoom :
+## débogage seulement (`arguments_de_reglage`), et 0° EN LIGNE quoi que disent les drapeaux (`lacet_du_duel`).
+## Rien ne s'enregistre. ⚠️ La vue de dessus (`--2d`) ne tourne jamais : le lacet est une affaire de caméra iso.
+const LACET_DEFAUT := 0.0
+const OPTION_LACET_DEFAUT := "A"
+const OPTIONS_LACET := ["A", "B", "C"]
+const DRAPEAU_LACET := "--lacet="
+const DRAPEAU_LACET_J2 := "--lacet-j2="
+var lacet_duel := LACET_DEFAUT
+var option_lacet := OPTION_LACET_DEFAUT
+var _lacet_local := LACET_DEFAUT
+var _option_lacet_locale := OPTION_LACET_DEFAUT
 var facteur_portee := FACTEUR_PORTEE_DEFAUT
 var zoom_duel := ZOOM_DUEL_DEFAUT
 ## ISO8 — EN LIGNE, les trois valeurs du duel sont les constantes, des deux côtés (décision de la session cloud,
@@ -244,6 +259,8 @@ func _ready() -> void:
 	_zoom_local = zoom_applique(_zoom_duel_choisi, _arguments_de_reglage())
 	_decalage_local = decalage_applique(_arguments_de_reglage())
 	_facteur_local = facteur_portee_applique(_arguments_de_reglage())
+	_lacet_local = lacet_applique(_arguments_de_reglage())
+	_option_lacet_locale = option_lacet_appliquee(_arguments_de_reglage())
 	# Hors match, les valeurs locales ; `GameState` accorde au mode à chaque départ (`accorder_au_mode`).
 	accorder_au_mode(false)
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
@@ -286,8 +303,15 @@ func vue_de_dessus_choisie() -> bool:
 	return _vue_de_dessus_choisie
 
 ## `iso` ou `dessus` — ce qui s'applique, pour les diagnostics.
+##
+## ISO14 — et le lacet quand il n'est pas nul : `iso lacet 45° B`. Un relevé (F3, F6, `ConditionsDeMatch`, manifeste
+## du photographe) qui ne dit pas son angle ne se compare à rien. À 0°, `iso` tout court, comme avant.
 func mode_rendu() -> String:
-	return MODE_RENDU_ISO if mode_iso else MODE_RENDU_DESSUS
+	if not mode_iso:
+		return MODE_RENDU_DESSUS
+	if lacet_duel == 0.0:
+		return MODE_RENDU_ISO
+	return "%s lacet %s° %s" % [MODE_RENDU_ISO, str(lacet_duel), option_lacet]
 
 ## La préséance de l'en-tête : `--2d`, puis `--iso`, puis le réglage de débogage, puis l'iso.
 static func iso_applique(vue_de_dessus: bool, args: PackedStringArray) -> bool:
@@ -332,6 +356,50 @@ func accorder_au_mode(en_ligne: bool) -> void:
 	decalage_visee = v[1]
 	facteur_portee = v[2]
 	WeaponData.facteur_portee = facteur_portee
+	var l := lacet_du_duel(en_ligne, _lacet_local, _option_lacet_locale)
+	lacet_duel = l[0]
+	option_lacet = l[1]
+
+## ISO14 — `[lacet, option]` pour ce mode : 0° et A EN LIGNE, les valeurs locales ailleurs. Calcul pur, vérifié en
+## `--script` par `test_iso_camera`. Le lacet n'est pas une valeur « du duel » au sens de `valeurs_du_duel` (il
+## ne touche aucune règle de jeu), mais il en suit la règle : un joueur en ligne ne choisit pas son angle de vue.
+static func lacet_du_duel(en_ligne: bool, lacet_local: float, option_locale: String) -> Array:
+	if en_ligne:
+		return [LACET_DEFAUT, OPTION_LACET_DEFAUT]
+	return [lacet_local, option_locale]
+
+## ISO14 — le lacet de la caméra iso du joueur `pid` (0 ou 1), selon l'option : A la même pour les deux, B J2 à
+## + 180°, C J2 au miroir (−L). À 0° en A, 0 pour les deux : le jeu d'aujourd'hui.
+static func lacet_du_joueur(pid: int, lacet: float, option: String) -> float:
+	if pid == 0:
+		return lacet
+	match option:
+		"B":
+			return lacet + 180.0
+		"C":
+			return -lacet
+	return lacet
+
+func lacet_de(pid: int) -> float:
+	return lacet_du_joueur(pid, lacet_duel, option_lacet)
+
+## `--lacet=X` en degrés, ramené dans ]−180, 180] ; une valeur illisible est ignorée.
+static func lacet_applique(args: PackedStringArray) -> float:
+	var arg := valeur_par_argument(args, DRAPEAU_LACET)
+	if not arg.is_valid_float():
+		return LACET_DEFAUT
+	var l := fposmod(arg.to_float(), 360.0)
+	return l - 360.0 if l > 180.0 else l
+
+## `--lacet-j2=A|B|C` ; une valeur inconnue retombe sur A, et le dit.
+static func option_lacet_appliquee(args: PackedStringArray) -> String:
+	var arg := valeur_par_argument(args, DRAPEAU_LACET_J2).to_upper()
+	if arg == "":
+		return OPTION_LACET_DEFAUT
+	if not OPTIONS_LACET.has(arg):
+		push_warning("GameSettings : %s%s inconnu, option A" % [DRAPEAU_LACET_J2, arg])
+		return OPTION_LACET_DEFAUT
+	return arg
 
 ## `[zoom, décalage, facteur de portée]` — calcul pur, vérifié en `--script` par `test_iso_camera`.
 static func valeurs_du_duel(en_ligne: bool, zoom_local: float, decalage_local: float, facteur_local: float) -> Array:
@@ -349,7 +417,8 @@ static func arguments_de_reglage(args: PackedStringArray, debug: bool) -> Packed
 	if debug:
 		return args
 	for a in args:
-		if a.begins_with(DRAPEAU_ZOOM) or a.begins_with(DRAPEAU_DECALAGE) or a.begins_with(DRAPEAU_TORCHE):
+		if a.begins_with(DRAPEAU_ZOOM) or a.begins_with(DRAPEAU_DECALAGE) or a.begins_with(DRAPEAU_TORCHE) \
+				or a.begins_with(DRAPEAU_LACET) or a.begins_with(DRAPEAU_LACET_J2):
 			push_warning("GameSettings : %s ignoré hors build debug" % a)
 	return PackedStringArray()
 

@@ -765,10 +765,19 @@ func _suivre() -> void:
 		var rect := CameraIso.rect_couvert(canevas, taille)
 		_sols[id].position = Vector3(rect.get_center().x, 0.0, rect.get_center().y)
 		_sols[id].scale = Vector3(rect.size.x, 1.0, rect.size.y)
+		# ISO14 — le lacet de la caméra de CE joueur (`GameSettings.lacet_de`), posé avant `suivre` : 0° par défaut.
+		# La caméra 2D qui rend la lightmap tourne du même angle (`GameState._suivre_du_regard`), et `canevas` le
+		# porte déjà — c'est la voie (b) du plan ISO14, la lightmap garde sa taille.
+		# ⚠️ Par le chemin du nœud, jamais par le nom de l'autoload : ce fichier se compile aussi dans des suites
+		# `--script`, où `GameSettings` n'est pas un identifiant (première chaîne ISO14 : huit suites rouges).
+		var reglages := get_node_or_null(^"/root/GameSettings")
+		var lacet: float = float(reglages.call("lacet_de", id)) if reglages != null else 0.0
 		if _scinde:
 			_accorder_vue3d(id)
+			_cameras3d[id].lacet_deg = lacet
 			_cameras3d[id].suivre(canevas, taille)
 		else:
+			_camera.lacet_deg = lacet
 			_camera.suivre(canevas, taille)
 		for j in 2:
 			var capteur: CapteurCorps = _capteurs[id][j]

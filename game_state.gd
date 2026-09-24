@@ -408,8 +408,25 @@ func _suivre_du_regard(delta: float) -> void:
 		var vise := RegardDuel.decalage_vise(Vector2.RIGHT.rotated(joueur.rotation), GameSettings.decalage_visee,
 			vue_px, zoom)
 		_regard_decalage[pid] = RegardDuel.lisser(_regard_decalage[pid], vise, delta)
+		var lacet := lacet_de_la_vue(pid)
 		cam.global_position = RegardDuel.centre_du_regard(joueur.global_position, _regard_decalage[pid], vue_px,
-			zoom, _carte_px, float(CandelaTileSet.TILE_SIZE.y))
+			zoom, _carte_px, float(CandelaTileSet.TILE_SIZE.y), lacet)
+		orienter_camera_2d(cam, lacet)
+
+
+## ISO14 — le lacet de la vue du joueur `pid` : celui de sa caméra iso (`GameSettings.lacet_de`), 0° en vue de dessus,
+## qui ne tourne jamais. 0° par défaut partout : le jeu d'aujourd'hui.
+func lacet_de_la_vue(pid: int) -> float:
+	return GameSettings.lacet_de(pid) if GameSettings.mode_iso else 0.0
+
+
+## ISO14 — la caméra 2D qui rend la lightmap tourne AVEC la caméra iso (voie (b) du plan, tranchée par la session
+## cloud le 2026-09-24 à 01:35 : « n'agrandis pas ») : le haut de l'écran iso est, au sol, `−vers_camera(L)` ; celui
+## d'une Camera2D tournée de r est `(sin r, −cos r)` — d'où r = −L. La lightmap garde sa taille et couvre, tourné, le
+## même rectangle de monde. À 0°, `ignore_rotation` reste vrai et rien ne change.
+static func orienter_camera_2d(cam: Camera2D, lacet_deg: float) -> void:
+	cam.ignore_rotation = lacet_deg == 0.0
+	cam.rotation = -deg_to_rad(lacet_deg)
 
 func _ready():
 	add_to_group("game_state")
@@ -1811,7 +1828,8 @@ func _process(delta):
 				var vue := cam_vue.custom_viewport as Viewport
 				var vue_px := vue.get_visible_rect().size if vue != null else Vector2(1920.0, 1080.0)
 				_killcam_cadre = CadrageKillcam.preparer(cam_vue.global_position, GameSettings.zoom_duel,
-					ReplaySystem.positions_de_la_fenetre(), vue_px, GameSettings.zoom_duel)
+					ReplaySystem.positions_de_la_fenetre(), vue_px, GameSettings.zoom_duel,
+					lacet_de_la_vue(1 if cam_vue == cam2 else 0))
 				_first_replay_frame = false
 			var pose: Array = CadrageKillcam.avancer(_killcam_cadre, unscaled_delta)
 			if not pose.is_empty():

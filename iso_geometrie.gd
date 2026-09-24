@@ -174,6 +174,127 @@ static func longueur_cachee(case_sol: Vector2i, murs: Dictionary, bande_px: floa
 	return 0.0
 
 
+# ---------------------------------------------------------------------------
+# ISO14 — LA BANDE CACHÉE À TOUT LACET
+# ---------------------------------------------------------------------------
+#
+# `longueur_cachee` ne vaut qu'à lacet nul : elle balaie la colonne, au sud. Tournée, la caméra
+# regarde en diagonale, la bande l'est aussi, et un mur cache derrière deux faces. Les fonctions
+# ci-dessous suivent les rayons de la caméra dans le plan du sol, quelle que soit leur direction ;
+# **à lacet nul elles rendent exactement `longueur_cachee`** (`tools/test_iso_equite.gd`), et c'est
+# ce qui autorise le banc d'équité (`tools/banc_equite.gd`) à comparer 0° et 45° sur le même calcul.
+
+## La direction, dans le plan du sol (pixels du monde 2D), qui va d'un point VERS la caméra : la
+## projection de `base.z` de `CameraIso.transform_pour` (Euler YXZ : −tangage, lacet). `(0, 1)` à
+## lacet nul — la caméra est au sud.
+static func vers_camera(lacet_deg: float) -> Vector2:
+	var a := deg_to_rad(lacet_deg)
+	return Vector2(sin(a), cos(a))
+
+
+## Les cases que traverse le segment `[o, o + longueur × d]` (`d` unitaire), dans l'ordre, chacune
+## avec la portion du segment qui la traverse : `[case, t_entree, t_sortie]`. Parcours de grille exact
+## (Amanatides-Woo) ; un passage par un coin exact avance des deux axes à la fois.
+static func traverser(o: Vector2, d: Vector2, longueur: float, tuile_px: float) -> Array:
+	var c := Vector2i(floori(o.x / tuile_px), floori(o.y / tuile_px))
+	var pas := Vector2i(1 if d.x > 0.0 else -1, 1 if d.y > 0.0 else -1)
+	var t_max_x := INF
+	var t_max_y := INF
+	var t_delta_x := INF
+	var t_delta_y := INF
+	if absf(d.x) > 1e-12:
+		t_max_x = (float(c.x + (1 if pas.x > 0 else 0)) * tuile_px - o.x) / d.x
+		t_delta_x = tuile_px / absf(d.x)
+	if absf(d.y) > 1e-12:
+		t_max_y = (float(c.y + (1 if pas.y > 0 else 0)) * tuile_px - o.y) / d.y
+		t_delta_y = tuile_px / absf(d.y)
+	var t := 0.0
+	var sortie: Array = []
+	while t < longueur:
+		var suivant := minf(t_max_x, t_max_y)
+		sortie.append([c, t, minf(suivant, longueur)])
+		t = suivant
+		if t_max_x < t_max_y:
+			c.x += pas.x
+			t_max_x += t_delta_x
+		elif t_max_y < t_max_x:
+			c.y += pas.y
+			t_max_y += t_delta_y
+		else:
+			c += pas
+			t_max_x += t_delta_x
+			t_max_y += t_delta_y
+	return sortie
+
+
+## Un point du sol est caché si, en marchant de lui vers la caméra (`d` = `vers_camera`), on entre
+## dans un mur à moins d'une bande.
+static func point_cache(p: Vector2, d: Vector2, murs: Dictionary, bande_px: float, tuile_px: float) -> bool:
+	for passage in traverser(p, d, bande_px, tuile_px):
+		if murs.has(passage[0]) and float(passage[2]) > float(passage[1]) + 1e-9:
+			return true
+	return false
+
+
+## La part cachée d'une case de sol, à tout lacet : `lignes` rayons de la caméra parallèles, qui
+## découpent la case en bandes de même largeur ; sur chacun, la longueur cachée est EXACTE (l'union
+## des intervalles `[entrée − bande, sortie)` des murs rencontrés, bornée à la corde de la case).
+## Rend `Vector2(part de l'aire cachée, plus longue portion cachée d'un rayon en px)`.
+##
+## À lacet nul, tous les rayons sont des colonnes et portent la même longueur : la part vaut
+## `longueur_cachee / tuile` au flottant près, quel que soit `lignes`.
+static func part_cachee_case(case_sol: Vector2i, d: Vector2, murs: Dictionary, bande_px: float,
+		tuile_px: float, lignes: int = 8) -> Vector2:
+	var coin := Vector2(case_sol) * tuile_px
+	var n := Vector2(-d.y, d.x)
+	var u0 := INF
+	var u1 := -INF
+	for k: Vector2 in [Vector2.ZERO, Vector2(tuile_px, 0.0), Vector2(0.0, tuile_px), Vector2(tuile_px, tuile_px)]:
+		var u := (coin + k).dot(n)
+		u0 = minf(u0, u)
+		u1 = maxf(u1, u)
+	var du := (u1 - u0) / float(lignes)
+	var aire := 0.0
+	var plus_longue := 0.0
+	for k in lignes:
+		var base := n * (u0 + (float(k) + 0.5) * du)
+		# La corde de la case sur le rayon {base + t·d}.
+		var ta := -INF
+		var tb := INF
+		var vide := false
+		for axe in 2:
+			var o: float = base[axe]
+			var dd: float = d[axe]
+			var lo: float = coin[axe]
+			var hi: float = lo + tuile_px
+			if absf(dd) < 1e-12:
+				if o < lo or o > hi:
+					vide = true
+				continue
+			var a := (lo - o) / dd
+			var b := (hi - o) / dd
+			ta = maxf(ta, minf(a, b))
+			tb = minf(tb, maxf(a, b))
+		if vide or tb <= ta:
+			continue
+		var intervalles: Array = []
+		for passage in traverser(base + d * ta, d, (tb - ta) + bande_px, tuile_px):
+			if murs.has(passage[0]) and float(passage[2]) > float(passage[1]) + 1e-9:
+				intervalles.append(Vector2(float(passage[1]) - bande_px, float(passage[2])))
+		intervalles.sort_custom(func(x: Vector2, y: Vector2) -> bool: return x.x < y.x)
+		var cache := 0.0
+		var fin := 0.0
+		for iv: Vector2 in intervalles:
+			var a := maxf(maxf(iv.x, fin), 0.0)
+			var b := minf(iv.y, tb - ta)
+			if b > a:
+				cache += b - a
+				fin = b
+		aire += cache * du
+		plus_longue = maxf(plus_longue, cache)
+	return Vector2(aire / (tuile_px * tuile_px), plus_longue)
+
+
 ## Le relevé d'équité d'une carte pour une hauteur de mur et un tangage.
 ##
 ## - `cases_touchees` : cases de sol dont une partie est cachée ;
