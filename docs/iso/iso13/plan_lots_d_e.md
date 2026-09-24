@@ -199,3 +199,18 @@ Elle suit le même patron de couches, et monte à une tuile. Deux tentatives :
 Pour répondre, il faut une prise **plein cadre, dans le même lancement**, volumes coupés puis
 rétablis, cadrée sur le **bord** de la lumière de la fusée. Ce serait une étape du photographe
 (DA6) : signalé, pas construit.
+
+## Décision du 2026-09-24, 02:03 : le rayon s'arrête
+
+La session cloud tranche sur la planche publiée (https://claude.ai/artifact/L3B4q5bD3QKsiiya8NrLmR) :
+**`--faisceau` = le cœur chaud à la lampe, seul.** Le rayon est retiré du code — pas mis à densité
+nulle, ce qui poserait encore des couches, les paierait, et laisserait une réécriture les rallumer sans
+que rien ne rougisse. La garde de `tools/test_iso_gadgets.gd` vérifie désormais qu'aucune couche n'est
+posée sur le chemin du drapeau. Le réglage de densité au lancement (`--faisceau=0,22`) part avec lui.
+
+Le cœur, lui, est posé à 0,20 tuile, **sous** les murets de 0,40 : il ne redonne pas de hauteur à la
+lampe. Et il était déjà allumé dans toutes les prises à 0,08, qui n'ont montré que le bruit (1 à 2
+pixels isolés) : il ne salit pas le noir.
+
+Ce qu'il faudrait pour que le rayon revienne est à la ROADMAP (Pièges connus, « Une garantie vraie dans
+le monde n'est pas vraie à l'écran »).

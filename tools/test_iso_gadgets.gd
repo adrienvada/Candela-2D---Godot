@@ -450,31 +450,29 @@ func _l_effacement_dans_la_suie(main: Node, p: Node) -> void:
 
 
 ## Couper les images, puis les rendre : aucune valeur de jeu ne bouge.
-## ISO13, lot E — le faisceau dans l'air. Trois garanties qui ne se voient pas à l'œil et qu'aucune
-## planche ne montrerait : le drapeau est ÉTEINT par défaut ; le masque du rayon est la texture de la
-## lampe elle-même (donc le cône ne peut pas diverger de la lumière) ; et le rayon passe par les
-## couches ordinaires, qui lisent la lightmap — ce qui le tient à zéro là où le sol est noir DANS LE
-## MONDE. ⚠️ Pas à l'écran : une couche en hauteur y est décalée par la parallaxe (mesuré le
-## 2026-09-24), et aucune garde headless ne voit un pixel. Une réécriture qui remplacerait le masque
-## par une forme à soi casserait la deuxième garantie sans casser l'image.
+## ISO13, lot E — le drapeau `--faisceau`, réduit au cœur chaud à la lampe : le rayon dans l'air s'est
+## arrêté (parallaxe des couches en hauteur, noir absolu, décision d'Adrien du 2026-09-15 ; voir
+## `iso_volumes.gd`). La garde qui compte est la troisième : **aucune couche** sur le chemin du drapeau.
+## Une densité remise à zéro dessinerait encore — elle poserait des couches, coûterait, et une réécriture
+## pourrait les rallumer sans que rien ne rougisse. Ici, une couche rajoutée rougit.
 func _le_faisceau() -> void:
-	print("\n[Le faisceau dans l'air — lot E]")
+	print("\n[Le drapeau du faisceau — lot E, le cœur seul]")
 	var v := IsoVolumes.new()
 	_check("le drapeau du faisceau est éteint par défaut", not bool(v.get("faisceaux_actifs")))
 	v.free()
 	var texte := FileAccess.get_file_as_string("res://iso_volumes.gd")
-	_check("le masque du rayon EST la texture de la lampe",
-		texte.contains("lampe.texture, lampe.global_rotation"))
-	_check("le rayon passe par les couches ordinaires (donc par la lightmap)",
-		texte.contains("_couches(e, int(VOLUME_FAISCEAU[\"couches\"]))"))
-	_check("le faisceau s'éteint avec la lampe",
-		texte.contains("not lampe.enabled or lampe.energy <= 0.0"))
+	var debut := texte.find("func _suivre_faisceau(")
+	var fin := texte.find("\nfunc ", debut + 1)
+	var corps := texte.substr(debut, fin - debut) if debut >= 0 and fin > debut else ""
+	_check("la fonction du drapeau existe", not corps.is_empty())
+	_check("le drapeau ne pose AUCUNE couche : le rayon est arrêté, pas mis à zéro",
+		not corps.is_empty() and not corps.contains("_couches(") and not corps.contains("_poser_couches("))
+	_check("il pose le cœur chaud à la lampe", corps.contains("_poser_halo("))
+	_check("le cœur s'éteint avec la lampe", corps.contains("not lampe.enabled or lampe.energy <= 0.0"))
 	_check("le drapeau se lit sur les arguments UTILISATEUR (après --)",
 		texte.contains("for arg in OS.get_cmdline_user_args():"))
-	_check("la densité cherchée au photographe revient à la constante si personne ne la force",
-		texte.contains("return densite_faisceau if densite_faisceau > 0.0"))
-	_check("le faisceau dit sa densité au lancement (la preuve que le drapeau a porté)",
-		texte.contains("[faisceau] allumé"))
+	_check("le drapeau dit ce qu'il allume (la preuve qu'il a porté)",
+		texte.contains("[faisceau] allumé — le cœur chaud seul"))
 
 
 func _des_images_seulement(main: Node, p: Node, poses: Dictionary) -> void:

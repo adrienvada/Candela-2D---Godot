@@ -15,11 +15,17 @@ extends Node3D
 ## (`halo_iso.gdshader`). Couper `images_actives` retire tout sans qu'aucune de ces valeurs change —
 ## `tools/test_iso_gadgets.gd` le prouve. Aucune `Light3D`.
 ##
-## ## Trois règles d'équité, tenues par construction
+## ## Trois règles d'équité, tenues par construction — dans le MONDE
 ##
 ## - **Noir absolu** : un volume vaut la lightmap sous lui (0 sans lumière) ; une lueur vaut l'énergie de
 ##   sa lumière (0 lumière éteinte). L'anneau de l'onde et la toile sont les seuls dessins sans lumière, et
 ##   ils l'étaient déjà en vue de dessus (l'onde est non éclairée ; la toile recopie la lightmap).
+##   ⚠️ **Tenu dans le monde, pas démontré à l'écran** (corrigé le 2026-09-24). Une couche EN HAUTEUR est
+##   dessinée plus haut que le sol qu'elle lit (parallaxe, tangage 52°) et peut tomber sur un pixel noir :
+##   mesuré pour le faisceau d'ISO13 (307 pixels isolés à 0,45 de densité, 15 couches posées au sol).
+##   Pour la fumée de la fusée et les autres nuages, allumés par défaut, la question est OUVERTE : les
+##   deux instruments essayés n'ont pas su répondre (`docs/iso/iso13/plan_lots_d_e.md`). Cette règle a
+##   été écrite le 2026-09-15 en ne regardant que le monde.
 ## - **Les deux joueurs** : chaque couche lit la lightmap de la caméra qui la dessine, comme le sol ; les
 ##   lueurs sont celles de sources que les deux vues montrent déjà (masques de lumière 1|2|4, dessins non
 ##   éclairés visibles des deux).
@@ -54,10 +60,6 @@ const VOLUMES := {
 }
 const VOLUME_FUSEE := {"hauteur": 1.0, "couches": 4, "densite": 0.26}
 
-## ISO13, lot E — LE FAISCEAU DANS L'AIR. Léger par décision : l'illustration montre un rayon qu'on
-## devine, pas un brouillard. Trois couches basses ; le coût se mesure contre la série au pompe sous
-## une fusée (85 de médiane, 77 au 1 % bas), qui est la référence du chantier.
-const VOLUME_FAISCEAU := {"hauteur": 0.45, "couches": 3, "densite": 0.08}
 ## Le cœur chaud à la lampe : sa taille en pixels de monde, et sa hauteur au-dessus du sol.
 const TAILLE_COEUR_LAMPE := 7.0
 const HAUTEUR_COEUR_LAMPE := 0.20
@@ -96,9 +98,6 @@ var _masques := false
 ## fait sur les arguments UTILISATEUR. Lu ici plutôt que dans un banc pour qu'il porte partout — jeu,
 ## banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
 const DRAPEAU_FAISCEAU := "--faisceau"
-## `--faisceau=0.22` force la densité d'une couche, pour la chercher au photographe sans recompiler.
-## Sans valeur, celle de `VOLUME_FAISCEAU`. La valeur retenue reviendra dans la constante.
-var densite_faisceau := 0.0
 
 
 func _init() -> void:
@@ -108,11 +107,8 @@ func _init() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg == DRAPEAU_FAISCEAU:
 			faisceaux_actifs = true
-		elif arg.begins_with(DRAPEAU_FAISCEAU + "="):
-			faisceaux_actifs = true
-			densite_faisceau = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU + "=")))
 	if faisceaux_actifs:
-		print("[faisceau] allumé — densité par couche %.3f" % _densite_faisceau())
+		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
 
 
 func nombre_de_suivis() -> int:
@@ -294,53 +290,30 @@ func _suivre_lentille(g: Node2D, vus: Dictionary) -> void:
 		lentille.get("color") if lentille != null else Charte.HALOGENE, part, 1)
 
 
-## ISO13, lot E — LE RAYON DE LA TORCHE, VISIBLE DANS L'AIR, et le cœur chaud à la lampe.
+## ISO13, lot E — LE CŒUR CHAUD À LA LAMPE, et lui seul.
 ##
-## Rien n'est inventé ici : ce sont les couches ordinaires d'un volume, et **le masque est la texture
-## même de la torche**. Le rayon épouse donc le cône par construction — il suit l'arme, la portée et
-## toute modification future de la lampe sans qu'on ait à revenir ici. Les grains de poussière ne sont
-## pas des particules : c'est le grain que le shader applique déjà à l'alpha, animé par `age`, donc
-## sans un seul objet de plus.
+## Le lot devait aussi rendre le RAYON visible dans l'air. **Il s'arrête**, sur décision de la session cloud
+## (2026-09-24, 02:03), et il n'en reste rien ici — pas une densité à zéro, qui poserait encore des couches
+## et coûterait sans rien dessiner. Trois raisons, mesurées (`docs/iso/iso13/plan_lots_d_e.md`) :
+## - il ne se lit à aucune densité : 3/255 de médiane dans le cône au mieux ;
+## - il salit le noir dès qu'il commence à se voir : une couche EN HAUTEUR est dessinée plus haut que le
+##   sol qu'elle lit (parallaxe, tangage 52°) — 307 pixels isolés dans le noir à 0,45, 15 couches posées
+##   au sol, 1 de bruit ;
+## - il rendrait à la lampe une hauteur qu'une décision d'Adrien lui refuse face aux murets (2026-09-15).
+## Ce qu'il faudrait pour qu'il revienne est écrit à la ROADMAP.
 ##
-## ⚠️ **Ce que la lecture de la lightmap garantit, et ce qu'elle ne garantit PAS.** Ce paragraphe a
-## d'abord affirmé que « le noir absolu est une conséquence, pas une précaution ». C'est vrai DANS LE
-## MONDE et faux À L'ÉCRAN, mesuré le 2026-09-24 (`docs/iso/iso13/plan_lots_d_e.md`) :
-## - dans le monde, une couche vaut la lightmap sous elle, donc zéro là où le sol est noir ;
-## - à l'écran, une couche EN HAUTEUR est dessinée plus haut que le sol qu'elle lit — la parallaxe, sous
-##   le tangage de 52°. Elle tombe donc sur des pixels où le sol est noir. À 0,45 de densité : 307
-##   pixels isolés dans le noir, contre 1 d'un lancement à l'autre sans faisceau, et 15 quand les
-##   couches sont posées au sol. Le lissage de la lightmap n'y est pour rien (le couper donne 400) ;
-## - et c'est une tension avec une décision d'Adrien (ROADMAP, 2026-09-15) : les lampes du joueur n'ont
-##   pas de hauteur face aux murets, sans quoi elles dessinent « vu, pas touché ». Un rayon qui monte à
-##   0,45 tuile, au-dessus des murets de 0,40, leur en redonne une à l'image. Non tranché : c'est pour
-##   cela que `--faisceau` reste éteint.
+## Le cœur, lui, est une lueur à la lampe même, comme la lentille de la torche fantôme : une source, pas
+## un volume, et il ressemble aux deux illustrations (accueil, intro « allumage »).
 func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 	var lampe := j.get_node_or_null(^"Flashlight") as PointLight2D
-	if lampe == null or not lampe.enabled or lampe.energy <= 0.0 or lampe.texture == null:
-		return
-	# La portée du cône, en pixels de monde : la texture, à son échelle, centrée sur la lampe.
-	var rayon := 0.5 * float(lampe.texture.get_width()) * lampe.texture_scale
-	if rayon <= 1.0:
+	if lampe == null or not lampe.enabled or lampe.energy <= 0.0:
 		return
 	var centre := lampe.global_position
 	var part := clampf(lampe.energy / 2.5, 0.0, 1.0)
-
-	var e := _entree(j, "faisceau", vus, 0)
-	_couches(e, int(VOLUME_FAISCEAU["couches"]))
-	_poser_couches(e, centre, rayon, float(VOLUME_FAISCEAU["hauteur"]),
-		_densite_faisceau() * part, lampe.texture, lampe.global_rotation,
-		float(j.get_instance_id() % 97), float(Time.get_ticks_msec()) * 0.001)
-
-	# Le cœur chaud : une lueur à la lampe même, comme la lentille de la torche fantôme.
 	var c := _entree(j, "coeur_lampe", vus, 1)
 	_halos(c, 1)
 	_poser_halo(c, 0, Vector3(centre.x, HAUTEUR_COEUR_LAMPE * TUILE, centre.y),
 		TAILLE_COEUR_LAMPE, lampe.color, part, 1)
-
-
-## La densité d'une couche du faisceau : celle du drapeau si on en cherche une, sinon la constante.
-func _densite_faisceau() -> float:
-	return densite_faisceau if densite_faisceau > 0.0 else float(VOLUME_FAISCEAU["densite"])
 
 
 func _suivre_eclair(g: Node2D, vus: Dictionary) -> void:

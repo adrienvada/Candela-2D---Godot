@@ -3214,6 +3214,15 @@ seul cas n'a vérifié que ce cas. Et une seconde, plus coûteuse à apprendre :
 vérifié non vide** — la loupe de la fusée donnait 0 pixel isolé parce qu'elle ne contenait aucun
 pixel noir. Détail : `docs/iso/iso13/plan_lots_d_e.md`, « Mesures du 2026-09-24 ».
 
+**Décision (session cloud, 2026-09-24, 02:03) : le rayon s'arrête, `--faisceau` = le cœur chaud à la
+lampe seul.** Trois raisons : il ne se lit à aucune densité (3/255 au mieux) ; il salit le noir dès qu'il
+commence à se voir ; et il rendrait à la lampe une hauteur que la décision d'Adrien du 2026-09-15 lui
+refuse face aux murets — la session cloud porte cette tension devant Adrien. Le rayon est **retiré** du
+code, pas mis à densité nulle : des couches à zéro seraient encore posées et payées, et une réécriture
+pourrait les rallumer en silence ; la garde de `tools/test_iso_gadgets.gd` rougit si une couche revient.
+**Pour qu'il revienne** : ses couches devraient rester sous la hauteur des murets (0,40 tuile), puis il
+faudrait établir la cause des 15 pixels isolés qui restent même au sol — à ne pas chercher avant.
+
 ### `osascript ... to activate` sur un Godot mort le RELANCE (2026-09-24)
 
 Chantier ISO12. Un script de prise lance le banc, attend 4 s, puis réclame le premier plan par
