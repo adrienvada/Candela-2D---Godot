@@ -311,7 +311,9 @@ func mode_rendu() -> String:
 		return MODE_RENDU_DESSUS
 	if lacet_duel == 0.0:
 		return MODE_RENDU_ISO
-	return "%s lacet %s° %s" % [MODE_RENDU_ISO, str(lacet_duel), option_lacet]
+	# « 45° » et non « 45.0° » (relevé par ISO7 Gadgets : un motif strict aurait refusé ses prises).
+	var angle := str(int(lacet_duel)) if is_equal_approx(lacet_duel, roundf(lacet_duel)) else str(lacet_duel)
+	return "%s lacet %s° %s" % [MODE_RENDU_ISO, angle, option_lacet]
 
 ## La préséance de l'en-tête : `--2d`, puis `--iso`, puis le réglage de débogage, puis l'iso.
 static func iso_applique(vue_de_dessus: bool, args: PackedStringArray) -> bool:
@@ -594,12 +596,25 @@ func set_binding(action: String, event: InputEvent) -> void:
 # ---------------------------------------------------------------------------
 
 func _apply_video() -> void:
-	DisplayServer.window_set_vsync_mode(
-		DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED
-	)
+	var vsync := vsync_a_appliquer(pilotage_externe, vsync_enabled)
+	if vsync >= 0:
+		DisplayServer.window_set_vsync_mode(vsync)
 	if pilotage_externe:
 		return
 	Engine.max_fps = plafond_effectif()
+
+## La synchronisation que `_apply_video` pose, ou −1 pour n'y pas toucher.
+##
+## ⚠️ **Sous un BANC (`pilotage_externe`), elle n'est plus réappliquée**, comme le plafond ne l'était déjà plus
+## (ISO14, 2026-09-24, demande de la session cloud). Avant, la vsync enregistrée était reposée AVANT la garde, à chaque
+## `signaler_arene` donc à chaque départ de manche : chez un joueur à la vsync allumée, un banc qui la coupe au départ
+## aurait mesuré avec elle en se croyant sans — et la ligne « vsync: désactivé » du banc, écrite et non relue, ne
+## l'aurait pas dit. Trouvé en cherchant pourquoi l'écran scindé iso plafonnait à 60 (ce n'était pas la cause sur ce
+## Mac : `vsync_enabled=false`). Sans banc, rien ne change : le réglage du joueur s'applique comme avant.
+static func vsync_a_appliquer(pilotage: bool, vsync: bool) -> int:
+	if pilotage:
+		return -1
+	return DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED
 
 ## PE3.1 — le régime change (arène ou menus) : appelé par `game_state.gd` à
 ## chaque bascule, jamais à chaque image.

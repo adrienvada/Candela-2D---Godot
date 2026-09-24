@@ -342,6 +342,8 @@ func _ready() -> void:
 
 	print("=== Banc de cadence d'image ===")
 	print("Charge: %s" % _libelle_charge())
+	# ⚠️ « vsync: désactivé » est ce que ce banc a DEMANDÉ (plus haut), pas une relecture : la vérité est dans la
+	# ligne « Cadence : » imprimée au départ de la mesure.
 	print("Plafond: %s | vsync: désactivé" % ("aucun" if Engine.max_fps == 0 else str(Engine.max_fps)))
 
 	_main = preload("res://main.tscn").instantiate()
@@ -450,8 +452,17 @@ func _ready() -> void:
 	var cams := []
 	for nom in ["cam1", "cam2"]:
 		var c = _main.get(nom) if is_instance_valid(_main) else null
-		cams.append("%.1f°" % rad_to_deg((c as Camera2D).rotation) if c is Camera2D else "absente")
+		# `+ 0.0` : « 0.0° » et non « -0.0° » à lacet nul (relevé par ISO7 Gadgets).
+		cams.append("%.1f°" % (rad_to_deg((c as Camera2D).rotation) + 0.0) if c is Camera2D else "absente")
 	print("Rendu : %s · caméras 2D J1 %s, J2 %s" % [GameSettings.mode_rendu(), cams[0], cams[1]])
+	# ISO14 — ce qui cadence VRAIMENT la mesure, RELU au départ (demande de la session cloud et d'ISO7 Gadgets,
+	# 2026-09-24) : l'écran scindé iso plafonnait à 60 exactement alors que la ligne « Plafond / vsync » de l'en-tête
+	# disait « aucun / désactivé » — cette ligne-là dit ce que le banc a DEMANDÉ, celle-ci ce qui s'applique.
+	var ecran := DisplayServer.window_get_current_screen()
+	print("Cadence : max_fps %d · vsync %d (relu ; 0 désactivée, 1 activée, 2 adaptative, 3 mailbox) · plafond_effectif %d · pilotage_externe %s · écran %d/%d, %s px, %.0f Hz"
+		% [Engine.max_fps, DisplayServer.window_get_vsync_mode(), GameSettings.plafond_effectif(),
+		GameSettings.pilotage_externe, ecran + 1, DisplayServer.get_screen_count(), DisplayServer.screen_get_size(ecran),
+		DisplayServer.screen_get_refresh_rate(ecran)])
 	if _temps_par_vue:
 		_armer_temps_par_vue()
 	_recenser_les_ombres_2d()

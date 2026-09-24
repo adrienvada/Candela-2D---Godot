@@ -261,6 +261,20 @@ func _test_plafond() -> void:
 	s.set_fps_cap(0)
 	_check("pilotage rendu : le plafond des menus revient", Engine.max_fps == Settings.PLAFOND_MENU)
 
+	# ISO14 (2026-09-24) — la VSYNC suit la même règle que le plafond : un banc qui la coupe ne se la fait plus rallumer
+	# par le réglage du joueur à chaque départ de manche. La décision est pure (`vsync_a_appliquer`) : le serveur
+	# d'affichage headless ne rend pas un mode relisible, et c'est la décision qu'on veut éprouver.
+	_check("sous un banc, le réglage vsync=true ne touche pas à la synchronisation",
+		Settings.vsync_a_appliquer(true, true) == -1)
+	_check("sous un banc, vsync=false non plus", Settings.vsync_a_appliquer(true, false) == -1)
+	_check("sans banc, vsync=true s'applique comme avant",
+		Settings.vsync_a_appliquer(false, true) == DisplayServer.VSYNC_ENABLED)
+	_check("sans banc, vsync=false s'applique comme avant",
+		Settings.vsync_a_appliquer(false, false) == DisplayServer.VSYNC_DISABLED)
+	_check("et `_apply_video` passe par cette décision, avant la garde du plafond",
+		FileAccess.get_file_as_string("res://settings_manager.gd").contains(
+			"var vsync := vsync_a_appliquer(pilotage_externe, vsync_enabled)"))
+
 	_check("les deux plafonds sont des VALEURS DE DÉPART lisibles et ordonnées",
 		Settings.PLAFOND_HORS_FOCUS > 0 and Settings.PLAFOND_HORS_FOCUS < Settings.PLAFOND_MENU)
 

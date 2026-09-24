@@ -9261,6 +9261,17 @@ d'analyse —, et **la relecture d'après coup cherche TOUT processus au-dessus 
 Adrien — c'était le gestionnaire de projets relancé à 23:04:58 par l'« activate » de mon lanceur de prise (Iso 1), celui que
 décrit l'entrée « activate ».
 
+### Un banc qui dit « vsync : désactivé » ne l'a pas relu — et le jeu la rallumait sous lui (2026-09-24)
+
+ISO14. `tools/bench_framerate.gd` coupait la vsync au départ et imprimait « vsync: désactivé » — une chaîne ÉCRITE, pas une
+relecture. Et `GameSettings._apply_video()` reposait la vsync ENREGISTRÉE avant sa garde `pilotage_externe`, à chaque
+`signaler_arene`, donc à chaque départ de manche : chez un joueur à la vsync allumée, le banc aurait mesuré avec elle en
+affirmant le contraire. La garde ne couvrait que le plafond. Trouvé en cherchant l'écran scindé bridé à 60 (ce n'en était
+pas la cause sur ce Mac : `vsync_enabled=false`). **Corrigé** : `vsync_a_appliquer(pilotage, vsync)` rend −1 sous un banc,
+le jeu sans banc est inchangé (`test_conditions_de_match`), et le banc imprime une ligne « Cadence : » relue.
+**Règle : une ligne d'en-tête qui décrit les conditions d'une mesure les RELIT dans le moteur ; une garde qui protège un
+réglage du banc protège tous ceux qu'il pose.**
+
 ### Un test « pas pour pas » se lance à pas d'image fixe — et le jeu de base tire au rythme du rendu (2026-09-24)
 
 ISO12. Le témoin de `tools/test_iso_camera.gd` (deux parties sans iso, identiques pas pour pas) est sorti rouge une fois dans un
@@ -27304,7 +27315,29 @@ les parts (écart réel 2,5e-4 à 4,8e-4, simple précision) **à condition dure
 (vérifié en Python sur `reference_prototype.json`). Au banc (16:48) : « MÊME CALCUL, comptes identiques, verdicts
 identiques » sur les six cartes, sortie 0. Et `tools/bench_framerate.gd` imprime au départ de chaque mesure l'angle
 réellement joué (« Rendu : iso lacet 45° B · caméras 2D J1 -45.0°, J2 -225.0° ») — la preuve par prise que demandait
-ISO7 Gadgets pour la série de cadence du 45°. **Q25 = B** (Adrien, 16:43) : la ligne des Décisions actées viendra avec le passage au défaut, qui attend la série de cadence de Gadgets.
+ISO7 Gadgets pour la série de cadence du 45°. **Q25 = B** (Adrien, 16:43) : si le 45° devient le défaut, ce sera B.
+
+**Le passage au défaut est REFUSÉ PAR LA CADENCE** (série d'ISO7 Gadgets, 2026-09-24 17:09-18:16, sur `6b4789c`, pompe sous
+une fusée, vue unique, ordre D L L D D L, chaque prise vérifiée par sa ligne « Rendu : ») : 0° médiane des médianes **88**,
+1 % bas **79** ; 45° B **84** et **74** — rapport **0,955**, sous le 0,970 de la règle (ordre 278), **+0,54 ms par image**,
+et chaque prise à 45° sous chaque prise à 0°. **Le défaut reste 0°** ; B reste derrière `--lacet=45 --lacet-j2=B`. ⚠️ À
+porter avec le verdict et non à sa place : **74 au 1 % bas, bien au-dessus des 60 visés** — le 45° est jouable, c'est la
+règle des 3 % qui le refuse ; passer outre en connaissant ce prix est une décision d'Adrien (Q28, posée par la session
+cloud). Tout est prêt pour ce jour-là, hors de toute branche : la constante 45° B en ligne comprise, les comparaisons
+pas pour pas à 0° (`test_iso_camera`, `test_iso_vues`), le client en ligne prouvé à 225° en vue unique et rendu racine.
+
+⚠️ **L'ÉCRAN SCINDÉ ISO EST BRIDÉ À 60, CAUSE INCONNUE** (même série, écran scindé) : médianes **60, 60, 60** à 0° comme à
+45°, à chaque tranche de 10 s (3 583 images en 60 s), 1 % bas 53 à 55 — alors que le banc disait « Plafond : aucun | vsync :
+désactivé » et que la vue unique montait à 88 juste avant. En vue de dessus, l'écran scindé tenait 140 (ROADMAP, relevés
+d'août). Lu dans le code : rien n'y pose 60 (plafond sous `pilotage_externe`, aucun pas de physique ni mode de mise à jour
+qui cadence). **Signalé, pas corrigé.** Deux conséquences : aucune médiane d'écran scindé ne mesure une capacité tant que
+ce n'est pas expliqué, et **l'écran scindé d'aujourd'hui manque sa cible** (53 au 1 % bas, à 0°). Pistes, pour ISO7 Gadgets
+après l'intégration : l'écran scindé en `--2d` sur le même arbre ; la ligne « Cadence : » (ci-dessous) ; `--max-fps 200`.
+
+**Deux instruments, posés à l'intégration** (demande de la session cloud et de Gadgets) : `tools/bench_framerate.gd` imprime
+au départ de la mesure une ligne « Cadence : » RELUE dans le jeu — `Engine.max_fps`, `window_get_vsync_mode()`,
+`plafond_effectif()`, `pilotage_externe`, l'écran (rang, taille, fréquence) ; et `_apply_video` ne réapplique plus la vsync
+enregistrée sous un banc (voir Pièges connus). « 45° » et « 0.0° » dans les lignes « Rendu : ».
 
 ### Ce qui attend Adrien — jalon H15
 
