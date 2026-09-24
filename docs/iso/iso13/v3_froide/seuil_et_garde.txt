@@ -1,0 +1,51 @@
+pixels du corps visibles (≥ 3/255), médiane des dix classes (corps entier : 8935 px) :
+lumière      gris   sombre1   sombre2   sombre3
+   0.8       8935      8935      8935      8935
+   0.4       8935      8935      8721      8935
+   0.3       8822      8822      6927      8822
+  0.25       7752      7752      5637      7576
+   0.2       6061      6061      4518      5419
+  0.17       5717      5717      2764      3805
+  0.15       5414      5414      1625      2695
+  0.12       4767      4767         0       669
+   0.1       1607      1607         0       319
+  0.08          0         0         0         0
+  0.06          0         0         0         0
+  0.05          0         0         0         0
+  0.04          0         0         0         0
+lumière la plus faible où le corps montre ≥ 30 px :
+  pistolet     gris 0.1  sombre1 0.1  sombre2 0.15  sombre3 0.1
+  fusil        gris 0.1  sombre1 0.1  sombre2 0.15  sombre3 0.1
+  pompe        gris 0.12  sombre1 0.12  sombre2 0.17  sombre3 0.12
+  arbalete     gris 0.1  sombre1 0.1  sombre2 0.15  sombre3 0.1
+  fumiste      gris 0.12  sombre1 0.12  sombre2 0.15  sombre3 0.12
+  incendiaire  gris 0.08  sombre1 0.08  sombre2 0.12  sombre3 0.08
+  sentinelle   gris 0.1  sombre1 0.1  sombre2 0.15  sombre3 0.1
+  occulteur    gris 0.12  sombre1 0.12  sombre2 0.17  sombre3 0.12
+  allumeur     gris 0.08  sombre1 0.08  sombre2 0.12  sombre3 0.08
+  spectre      gris 0.08  sombre1 0.08  sombre2 0.12  sombre3 0.08
+à 0,15 — pixels visibles, gris → V3 froide (écart ; garde 5 %) :
+  pistolet      4992 →  2330  (-53.3 %)  HORS GARDE
+  fusil         5483 →  3404  (-37.9 %)  HORS GARDE
+  pompe         5741 →  1063  (-81.5 %)  HORS GARDE
+  arbalete      5346 →  2930  (-45.2 %)  HORS GARDE
+  fumiste       5559 →  2390  (-57.0 %)  HORS GARDE
+  incendiaire   5816 →  4265  (-26.7 %)  HORS GARDE
+  sentinelle    5103 →  2461  (-51.8 %)  HORS GARDE
+  occulteur     4362 →   563  (-87.1 %)  HORS GARDE
+  allumeur      5928 →  5457  (-7.9 %)  HORS GARDE
+  spectre       5099 →  3905  (-23.4 %)  HORS GARDE
+apparition : V3 plus tard de plus de 10 % de lumière pour aucune classe
+  pistolet     gris 0.1  V3 0.1
+  fusil        gris 0.1  V3 0.1
+  pompe        gris 0.12  V3 0.12
+  arbalete     gris 0.1  V3 0.1
+  fumiste      gris 0.12  V3 0.12
+  incendiaire  gris 0.08  V3 0.08
+  sentinelle   gris 0.1  V3 0.1
+  occulteur    gris 0.12  V3 0.12
+  allumeur     gris 0.08  V3 0.08
+  spectre      gris 0.08  V3 0.08
+apparition (≥ 30 px) : V3 plus TÔT que le gris pour aucune classe ; plus tard pour aucune classe
+noir absolu, lumière 0, gris : pixel maximal 0/255
+noir absolu, lumière 0, sombre3 : pixel maximal 0/255

@@ -545,7 +545,9 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 		var corps3d := (p.get("_corps") as Array)[j] as Node3D
 		if bool(p.get("corps_voxel")):
 			var voxel := (p.get("_voxels") as Array)[j] as VoxelCorps
-			passes_attendues += 9
+			# Mis à jour le 2026-09-24 (V3 froide par défaut) : la bouteille du portrait, chez six classes, a sa passe comme les
+			# neuf autres boîtes — le compte attendu est celui du corps, jamais 9 en dur.
+			passes_attendues += voxel.nombre_de_boites()
 			for b in voxel.boites():
 				var d := (b as Node).get_node_or_null("BoiteProfondeur") as MeshInstance3D
 				if d != null and d.material_override == voxel.materiau_profondeur() \

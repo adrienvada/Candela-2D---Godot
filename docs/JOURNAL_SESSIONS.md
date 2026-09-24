@@ -5845,3 +5845,9 @@ le montre au lacet 0 et à 45°. Les douilles restaient déjà : la peinture de 
 lumière du mannequin (lot A) ne suppose plus la caméra au sud : il la lit dans la matrice de vue, équité tenue à tout lacet
 pour une base carrée. Leçon du jour : une comparaison au pixel entre deux captures successives du banc des lumières ne
 prouve pas le noir absolu — la torche pulse entre elles ; c'est la construction qui le prouve.
+
+**Suite, 16:31-16:47 — V3 froide, la tenue du jeu** (décision d'Adrien, 12:42). Sans drapeau, les deux joueurs portent
+désormais V3 froide ; le gris reste joignable par `--corps=gris`. Quatre conditions posées avant les chiffres, aucune vraie :
+la bouteille ne sort jamais du couloir (le pire, 17,44 px, est celui du gris), personne n'apparaît plus tôt ni plus tard que
+le gris d'ISO3, le noir reste à 0. Quatre suites supposaient le gris ou « neuf boîtes » en dur ; la bouteille a sa passe de
+profondeur comme les autres — c'étaient les comptes qui étaient faux, pas le rendu.

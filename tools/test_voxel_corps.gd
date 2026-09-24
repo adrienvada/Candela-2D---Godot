@@ -117,13 +117,15 @@ func _test_classe(VoxelCorps: GDScript, slug: String, boites_attendues: int,
 		corps.free()
 		return boites_attendues
 
-	_check("neuf boîtes (%d)" % corps.nombre_de_boites(), corps.nombre_de_boites() == 9,
-		"%d" % corps.nombre_de_boites())
+	# Mis à jour le 2026-09-24 (décision d'Adrien : V3 froide, la tenue du jeu par défaut) : six classes portent la bouteille de
+	# leur portrait, une boîte de plus — le corps d'ISO3 en a neuf, celui du jeu neuf ou dix. D'où aussi la fin de « même nombre
+	# que les classes précédentes » : il varie désormais d'une classe à l'autre, par la bouteille seule.
+	var bouteille := VoxelCatalogue.tenue() != "" and bool(VoxelCatalogue.PORTRAITS[slug]["bouteille"])
+	var attendues := 10 if bouteille else 9
+	_check("%d boîtes (%d)%s" % [attendues, corps.nombre_de_boites(), " — la bouteille" if bouteille else ""],
+		corps.nombre_de_boites() == attendues, "%d" % corps.nombre_de_boites())
 	if boites_attendues < 0:
 		boites_attendues = corps.nombre_de_boites()
-	else:
-		_check("même nombre de boîtes que les classes précédentes",
-			corps.nombre_de_boites() == boites_attendues)
 
 	_test_determinisme(corps)
 	_test_hors_du_sol(corps)
@@ -620,8 +622,10 @@ func _test_silhouette_de_soi(corps: Node3D) -> void:
 ## côté, en transform copiée une fois, se figerait à la posture debout.
 func _test_boites_profondeur(corps: Node3D) -> void:
 	var boites: Array = corps.boites()
-	_check("boites() rend les neuf boîtes visibles (%d)" % boites.size(), boites.size() == 9,
-		"%d" % boites.size())
+	# Mis à jour le 2026-09-24 (V3 froide par défaut) : la tenue du jeu ajoute la bouteille chez six classes — boites() rend
+	# toutes les boîtes visibles, neuf ou dix, et c'est ce compte que la suite attend (`nombre_de_boites()`).
+	_check("boites() rend toutes les boîtes visibles (%d)" % boites.size(), boites.size() == corps.nombre_de_boites()
+		and boites.size() >= 9, "%d" % boites.size())
 
 	var mat_p: ShaderMaterial = corps.materiau_profondeur()
 	var toutes_ont_leur_double := true

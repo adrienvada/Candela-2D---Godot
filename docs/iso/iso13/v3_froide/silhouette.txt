@@ -1,0 +1,23 @@
+SILHOUETTE classe | tenue | boîtes | corps seul debout/accroupi (px) | avec arme debout/accroupi (px)
+SILHOUETTE pistolet     gris      9 | 13.03 / 16.90 | 16.99 / 16.99
+SILHOUETTE pistolet     sombre3  10 | 13.03 / 16.90 | 16.99 / 16.99
+SILHOUETTE fusil        gris      9 | 13.42 / 17.05 | 21.67 / 21.67
+SILHOUETTE fusil        sombre3   9 | 13.42 / 17.05 | 21.67 / 21.67
+SILHOUETTE pompe        gris      9 | 14.46 / 17.44 | 20.38 / 20.38
+SILHOUETTE pompe        sombre3   9 | 14.46 / 17.44 | 20.38 / 20.38
+SILHOUETTE arbalete     gris      9 | 13.42 / 17.05 | 19.20 / 19.20
+SILHOUETTE arbalete     sombre3   9 | 13.42 / 17.05 | 19.20 / 19.20
+SILHOUETTE fumiste      gris      9 | 14.07 / 17.29 | 17.38 / 17.38
+SILHOUETTE fumiste      sombre3   9 | 14.07 / 17.29 | 17.38 / 17.38
+SILHOUETTE incendiaire  gris      9 | 13.68 / 17.15 | 17.10 / 17.15
+SILHOUETTE incendiaire  sombre3  10 | 13.68 / 17.15 | 17.10 / 17.15
+SILHOUETTE sentinelle   gris      9 | 13.16 / 16.95 | 24.37 / 24.37
+SILHOUETTE sentinelle   sombre3  10 | 13.16 / 16.95 | 24.37 / 24.37
+SILHOUETTE occulteur    gris      9 | 12.77 / 16.81 | 17.68 / 17.68
+SILHOUETTE occulteur    sombre3  10 | 12.77 / 16.81 | 17.68 / 17.68
+SILHOUETTE allumeur     gris      9 | 13.81 / 17.19 | 21.13 / 21.13
+SILHOUETTE allumeur     sombre3  10 | 13.81 / 17.19 | 21.13 / 21.13
+SILHOUETTE spectre      gris      9 | 12.90 / 16.85 | 19.62 / 19.62
+SILHOUETTE spectre      sombre3  10 | 12.90 / 16.85 | 19.62 / 19.62
+SILHOUETTE VERDICT corps seul (bouteille comprise) : pire 17.44 px — règle ≤ 17.5 : TENUE ; zone de touche 18 px : dedans
+SILHOUETTE avec arme, torche et gadget (information) : pire 24.37 px

@@ -26518,6 +26518,51 @@ voit. Au lacet 0, c'est le modelé d'avant, facteur pour facteur. L'équité tie
 faces vues perdent `contraste × (cos² θ + sin² θ)`, la perte du lacet 0 —, vérifiée par la suite à douze lacets ; pour une base
 allongée, elle varie entre les deux rapports d'aires : à remesurer au banc des corps à 45° quand le duel y passera (Q14).
 
+#### ISO13 — V3 froide, la tenue du jeu ✅ (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**La décision** (Adrien, 2026-09-24, Q21 et Q23, relayée par la session cloud à 12:42). À ISO Assets, en direct : « J'aime bien
+V3 froide », puis « Et en jeu la V3 sombre » ; à la question de la teinte en jeu, à 12:42 : « V3 froide ». V3 — tissu sombre,
+arêtes claires — en teinte froide devient la tenue PAR DÉFAUT, pour les deux joueurs, en écran scindé comme en ligne, comme
+dans les illustrations.
+
+**Ce qui change.** `VoxelCatalogue.TENUE_PAR_DEFAUT = "sombre3"` et `TEINTE_PAR_DEFAUT = "froide"` : sans drapeau, chaque
+corps construit porte V3 froide (la bouteille du portrait comprise, chez les six classes qui la portent). **Le gris d'ISO3
+reste joignable pour comparer** : `--corps=gris` ; l'olive, `--teinte=olive`. Un nom de tenue inconnu revient au défaut du jeu.
+Rien d'autre : la géométrie, l'empreinte (≤ 17,5 px) et la zone de touche (18 px) sont celles que les tenues sombres ont
+déjà prouvées (ISO12) ; le réseau ne transporte aucune tenue — chaque machine peint les deux corps de la même façon.
+
+**Les preuves** (2026-09-24, 16:30-16:45 ; quatre conditions posées AVANT les chiffres par la session cloud : aucune ne devait
+être vraie pour que le défaut soit commité).
+- **La silhouette, bouteille comprise, sous le couloir de 17,5 px** : pour chaque classe, debout et accroupi, à seize visées,
+  le rayon du corps seul est **exactement celui du gris** — la bouteille reste dans l'enveloppe. Le pire : 17,44 px, la Pompe
+  accroupie, en gris comme en V3. Dans la zone de touche de 18 px. Avec l'arme, la torche et le gadget (pour information) :
+  jusqu'à 24,37 px (la Sentinelle), là encore identique au gris.
+- **L'apparition, jamais plus tôt, jamais plus de 10 % plus tard** : la lumière la plus faible où un corps montre 30 px est
+  la même pour les dix classes, en gris et en V3 froide (0,08 à 0,12) — contre le gris d'ISO3 lui-même, sans bouteille
+  (`--corps=gris`, temps fixe), et contre le gris peint sur les mêmes boîtes. La bouteille ne fait apparaître personne plus
+  tôt.
+- **Le noir absolu** : à lumière 0, pixel maximal 0/255, en gris comme en V3 froide.
+- **Le prix, rapporté et non bloquant** (accepté par Adrien en choisissant V3 : « au bord de ta torche, on n'en voit que la
+  moitié, puis une silhouette », Q21, option C) : à 0,15, V3 froide montre de 8 % (l'Allumeur) à 87 % (l'Occulteur) de pixels
+  de moins que le gris ; médiane des dix classes 2 695 contre 5 414. Au-delà de 0,2, l'écart se referme (0,3 : identique).
+
+Relevés et scripts dans `docs/iso/iso13/v3_froide/` (le script de silhouette y est en `.gd.txt` : un `.gd` sous `docs/`
+serait vu par Godot comme un script du projet).
+
+**Les suites qui supposaient le gris par défaut**, mises à jour une à une :
+- `test_corps_portraits` : « éteint par défaut » gardait deux choses à la fois — les portraits éteints sans leur drapeau
+  (toujours vrai, toujours vérifié) et le gris sans drapeau (faux par décision) ; il vérifie désormais V3 par défaut. Les
+  tenues : V3 sans drapeau, `--corps=gris` rend le gris, un nom inconnu rend V3. La teinte : froide par défaut, l'olive par
+  `--teinte=olive`, un nom inconnu rend la froide.
+- `test_voxel_corps` : « neuf boîtes », « même nombre que les classes précédentes » et « boites() rend les neuf boîtes
+  visibles » décrivaient le corps d'ISO3 ; celui du jeu porte la bouteille chez six classes, neuf ou dix boîtes selon la
+  classe. La suite attend le compte de la tenue du jeu (`nombre_de_boites()`).
+- `test_iso_corps` et `test_iso_vues` : « chaque boîte a sa passe de profondeur » comptait 9 en dur ; la bouteille a la sienne
+  comme les autres (10/10 constaté) — le compte attendu est celui du corps. Aucun défaut du rendu : la première passe a
+  montré 10 passes pour 10 boîtes, et c'est le « 9 » qui manquait la bouteille.
+
+Lot complet vert (440 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:47), empreinte du code identique avant et après.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

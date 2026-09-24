@@ -1,0 +1,58 @@
+## V3 froide par défaut (ISO13, 2026-09-24) — le rayon maximal de la silhouette de chaque classe, debout et accroupi, à seize
+## visées, gris contre la tenue du jeu (bouteille comprise), face à la zone de touche de 18 px et à la règle du couloir
+## (≤ 17,5 px). En pixels de monde : le corps est construit à l'échelle d'une tuile (35 px).
+extends SceneTree
+
+const TUILE := 35.0
+const REGLE_PX := 17.5
+const TOUCHE_PX := 18.0
+
+
+func _init() -> void:
+	call_deferred("_run")
+
+
+func _rayons(corps: VoxelCorps, corps_seul: bool) -> Vector2:
+	var debout := 0.0
+	var accroupi := 0.0
+	for k in 16:
+		var visee := Vector2.DOWN.rotated(TAU * float(k) / 16.0)
+		var etat := {"position": Vector2.ZERO, "visee": visee, "vitesse": Vector2.ZERO, "torche": true, "arme": corps.slug(),
+			"tir": false, "touche": false, "mort": false, "t": 0.0}
+		corps.poser(etat)
+		debout = maxf(debout, corps.rayon_empreinte(corps_seul))
+		etat["accroupi"] = true
+		etat["t"] = 1.0
+		corps.poser(etat)
+		accroupi = maxf(accroupi, corps.rayon_empreinte(corps_seul))
+	return Vector2(debout, accroupi) * TUILE
+
+
+func _run() -> void:
+	await process_frame
+	var racine := Node3D.new()
+	root.add_child(racine)
+	var pire_seul := 0.0
+	var pire_tout := 0.0
+	print("SILHOUETTE classe | tenue | boîtes | corps seul debout/accroupi (px) | avec arme debout/accroupi (px)")
+	for s in VoxelCatalogue.slugs():
+		for tenue in ["", VoxelCatalogue.TENUE_PAR_DEFAUT]:
+			VoxelCatalogue.forcer_tenue = tenue
+			var c := VoxelCorps.new()
+			racine.add_child(c)
+			c.construire(s)
+			var seul := _rayons(c, true)
+			var tout := _rayons(c, false)
+			if tenue != "":
+				pire_seul = maxf(pire_seul, maxf(seul.x, seul.y))
+				pire_tout = maxf(pire_tout, maxf(tout.x, tout.y))
+			print("SILHOUETTE %-12s %-8s %2d | %5.2f / %5.2f | %5.2f / %5.2f" % [s, tenue if tenue != "" else "gris",
+				c.nombre_de_boites(), seul.x, seul.y, tout.x, tout.y])
+			c.queue_free()
+			await process_frame
+	VoxelCatalogue.forcer_tenue = "-"
+	print("SILHOUETTE VERDICT corps seul (bouteille comprise) : pire %.2f px — règle ≤ %.1f : %s ; zone de touche %.0f px : %s"
+		% [pire_seul, REGLE_PX, "TENUE" if pire_seul <= REGLE_PX + 0.01 else "DÉPASSÉE", TOUCHE_PX,
+			"dedans" if pire_seul <= TOUCHE_PX else "DÉPASSÉE"])
+	print("SILHOUETTE avec arme, torche et gadget (information) : pire %.2f px" % pire_tout)
+	quit(0)

@@ -71,8 +71,12 @@ func _run() -> void:
 func _le_drapeau() -> void:
 	print("— le drapeau")
 	VoxelCatalogue.forcer_portraits = -1
-	_check("éteint par défaut (aucun %s sur la ligne de commande)" % VoxelCatalogue.DRAPEAU_PORTRAITS,
-		not VoxelCatalogue.portraits_actifs())
+	# Mis à jour le 2026-09-24 (décision d'Adrien : V3 froide, la tenue du jeu) : sans drapeau, les corps sont PEINTS — en V3,
+	# pas d'après les portraits. Ce que ce contrôle gardait (les portraits éteints sans leur drapeau) reste vrai et vérifié.
+	_check("les portraits éteints par défaut (aucun %s sur la ligne de commande) ; la tenue du jeu, peinte, est %s"
+		% [VoxelCatalogue.DRAPEAU_PORTRAITS, VoxelCatalogue.tenue()],
+		VoxelCatalogue.tenue() != "portraits" and VoxelCatalogue.tenue() == VoxelCatalogue.TENUE_PAR_DEFAUT
+		and VoxelCatalogue.portraits_actifs())
 	_check("les dix classes ont leur portrait", VoxelCatalogue.PORTRAITS.size() == 10
 		and Array(VoxelCatalogue.slugs()).all(func(s): return VoxelCatalogue.PORTRAITS.has(s)))
 	var avec_bouteille := []
@@ -293,20 +297,26 @@ func _les_tenues_sombres() -> void:
 	print("— les tenues sombres")
 	VoxelCatalogue.forcer_tenue = "-"
 	VoxelCatalogue.forcer_portraits = -1
-	_check("éteintes par défaut (aucune tenue sur la ligne de commande : %s)" % VoxelCatalogue.tenue(), VoxelCatalogue.tenue() == "")
-	_check("la ligne de commande : sombre → V1, sombre2, sombre3, portraits ; un nom inconnu → gris",
-		VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre"])) == "sombre1"
+	# Mis à jour le 2026-09-24 : la tenue du jeu est V3 (décision d'Adrien, Q21), et non plus le gris ; le gris reste joignable
+	# par `--corps=gris`, et un nom inconnu revient au défaut du jeu comme une ligne sans drapeau.
+	_check("V3 par défaut, décision d'Adrien (aucune tenue sur la ligne de commande : %s)" % VoxelCatalogue.tenue(),
+		VoxelCatalogue.tenue() == "sombre3" and VoxelCatalogue.TENUE_PAR_DEFAUT == "sombre3")
+	_check("la ligne de commande : gris → le gris d'ISO3, sombre → V1, sombre2, sombre3, portraits ; un nom inconnu → V3",
+		VoxelCatalogue.tenue_de(PackedStringArray(["--corps=gris"])) == ""
+		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre"])) == "sombre1"
 		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre2"])) == "sombre2"
 		and VoxelCatalogue.tenue_de(PackedStringArray(["--x", "--corps=sombre3"])) == "sombre3"
 		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=portraits"])) == "portraits"
-		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre9"])) == ""
-		and VoxelCatalogue.tenue_de(PackedStringArray()) == "")
+		and VoxelCatalogue.tenue_de(PackedStringArray(["--corps=sombre9"])) == "sombre3"
+		and VoxelCatalogue.tenue_de(PackedStringArray()) == "sombre3")
 	_check("trois variantes", VoxelCatalogue.TENUES_SOMBRES.keys() == ["sombre1", "sombre2", "sombre3"])
 	# La teinte (drapeau séparé, éteint) : la chromaticité seule, les rapports de clarté intacts.
 	VoxelCatalogue.forcer_teinte = ""
-	_check("teinte : olive par défaut, --teinte=froide la choisit, un nom inconnu revient à l'olive",
-		VoxelCatalogue.teinte() == "olive" and VoxelCatalogue.teinte_de(PackedStringArray(["--teinte=froide"])) == "froide"
-		and VoxelCatalogue.teinte_de(PackedStringArray(["--teinte=rose"])) == "olive")
+	# Mis à jour le 2026-09-24 : la teinte du jeu est la froide (décision d'Adrien, Q23, 12:42) ; l'olive reste joignable.
+	_check("teinte : froide par défaut (décision d'Adrien), --teinte=olive la remet, un nom inconnu revient à la froide",
+		VoxelCatalogue.teinte() == "froide" and VoxelCatalogue.teinte_de(PackedStringArray(["--teinte=olive"])) == "olive"
+		and VoxelCatalogue.teinte_de(PackedStringArray(["--teinte=rose"])) == "froide"
+		and VoxelCatalogue.teinte_de(PackedStringArray()) == "froide")
 	var memes := true
 	var bleus := true
 	for nom in VoxelCatalogue.TENUES_SOMBRES:
