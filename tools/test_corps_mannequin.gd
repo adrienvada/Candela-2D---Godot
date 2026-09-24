@@ -96,6 +96,18 @@ func _l_encre() -> void:
 		inc.contains("float penombre = smoothstep(0.01, 0.05, l) * (1.0 - smoothstep(0.14, 0.32, l));")
 		and inc.contains("return 1.0 - pate_hachures * 0.6 * penombre * pate_trait(motif.x + motif.y, 5.0, 0.28, aa);")
 		and inc.contains("return lave * q * (0.82 + 0.18 * grain) * pate_hachures_facteur(l, motif, aa);"))
+	_check("drapeau éteint, rien à exécuter : les hachures sous #ifdef ENCRE_ESSAI, et le lavis d'avant tel quel sinon",
+		inc.contains("#ifdef ENCRE_ESSAI\nuniform float pate_hachures") and inc.contains("#else\n\treturn lave * q * (0.82 + 0.18 * grain);\n#endif"))
+	var sol := load("res://sol_iso.gdshader") as Shader
+	var variante := IsoMateriaux.variante_encre(sol)
+	var noms := []
+	for u in variante.get_shader_uniform_list():
+		noms.append(String(u["name"]))
+	var noms_sol := []
+	for u in sol.get_shader_uniform_list():
+		noms_sol.append(String(u["name"]))
+	_check("la variante du sol compile et porte pate_hachures ; le shader d'origine ne le porte pas",
+		noms.has("pate_hachures") and not noms_sol.has("pate_hachures") and IsoMateriaux.variante_encre(sol) == variante)
 
 
 func _le_contour() -> void:
@@ -105,7 +117,9 @@ func _le_contour() -> void:
 		sh.contains("cull_front") and sh.contains("VERTEX += sign(VERTEX) * contour_unites;") and sh.contains("ALBEDO = vec3(0.0);")
 		and not sh.contains("EMISSION"))
 	_check("la coque disparaît avec le corps (opacité nulle, ou pas de contour : discard)",
-		sh.contains("if (contour_unites <= 0.0 || o <= 0.0001) {") and sh.contains("ALPHA = o;"))
+		sh.contains("if (contour_unites <= 0.0 || o <= 0.0001 || abs(normale_coque.y) > 0.5) {") and sh.contains("ALPHA = o;"))
+	_check("la coque sans ses faces horizontales (sa face de dessous traçait une ceinture noire devant les jambes)",
+		sh.contains("normale_coque = NORMAL;") and sh.contains("abs(normale_coque.y) > 0.5"))
 	var racine := Node3D.new()
 	root.add_child(racine)
 	var corps := VoxelCorps.new()

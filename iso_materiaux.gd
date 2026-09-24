@@ -102,9 +102,31 @@ static func encre_essai_active() -> bool:
 	return OS.get_cmdline_user_args().has(DRAPEAU_ENCRE_ESSAI)
 
 
+## Les variantes des shaders iso compilées avec ENCRE_ESSAI (voir `iso_pate.gdshaderinc`), une par shader d'origine.
+static var _variantes_encre := {}
+
+
+## La variante d'un shader iso qui porte les hachures : son code, `#define ENCRE_ESSAI` posé juste après `shader_type`. Sans
+## `--encre-essai`, personne ne la demande : le jeu compile les shaders d'avant, sans rien de plus à exécuter.
+static func variante_encre(shader: Shader) -> Shader:
+	if shader == null or shader.code.contains("#define ENCRE_ESSAI"):
+		return shader
+	if _variantes_encre.has(shader):
+		return _variantes_encre[shader]
+	var code := shader.code
+	var fin := code.find(";", code.find("shader_type")) + 1
+	var v := Shader.new()
+	v.code = code.substr(0, fin) + "\n#define ENCRE_ESSAI\n" + code.substr(fin)
+	_variantes_encre[shader] = v
+	return v
+
+
 ## Allume ou éteint l'encre d'essai sur un matériau iso (sol, mur ou corps) : les hachures partout, l'arête épaisse sur un
-## mur. Les bancs y basculent dans la même partie, au même instant.
+## mur. Les bancs y basculent dans la même partie, au même instant. Allumée, le matériau passe à la variante ENCRE_ESSAI de
+## son shader.
 static func poser_encre_essai(materiau: ShaderMaterial, allumee: bool, mur := false) -> void:
+	if allumee:
+		materiau.shader = variante_encre(materiau.shader)
 	materiau.set_shader_parameter("pate_hachures", HACHURES_ESSAI if allumee else 0.0)
 	if mur and beaute_active():
 		materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX_ESSAI if allumee else ENCRE_ARETE_PX)

@@ -26439,9 +26439,25 @@ hachures sur la même planche. Tout derrière `--encre-essai`, éteint : c'est u
 détache sur un sol éclairé (J1 sur sa rétrodiffusion) ; il ne se voit pas là où le sol est noir (J2 dans l'ombre de son
 propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la pénombre du sol et sur la face du mur.
 
-**À trancher** : 1 ou 2 px de contour, et les hachures. Avant d'allumer quoi que ce soit : la barre noire intérieure (limiter la
-coque aux boîtes extérieures, ou la retirer du torse), et la cadence de la coque (une passe de plus par boîte de corps), à
-mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
+**Le correctif (01:49-02:15, ordre de la session cloud après la planche).**
+- **La ceinture noire** venait de la face DE DESSOUS de la coque du torse, qui débordait devant les jambes, moins profondes
+  que lui. La coque ne garde que ses faces verticales. Recul des pixels visibles à 0,15 : 1 px, −3,5 % en gris et −2,2 % en
+  V3 froide (sous les 5 % demandés) ; 2 px, −9,8 % et −5,2 % (au-dessus). Noir absolu 0, aucun pixel plus clair.
+- **Le coût éteint** : les hachures sont passées sous `#ifdef ENCRE_ESSAI`, défini par la seule variante de shader que
+  `IsoMateriaux.variante_encre()` compile sous `--encre-essai` — plus un test d'uniforme par pixel dans la pâte partagée par
+  le sol, les murs et les corps (le piège de l'ordre 255). Preuve par le texte : sans ENCRE_ESSAI, le code prétraité des huit
+  shaders et includes du rendu est celui de `5799ba2`, commentaires mis à part ; preuve par l'image : les six prises du banc
+  des corps, `--temps-fixe`, identiques à l'octet. Côté processeur, la coque n'ajoute qu'une lecture de `next_pass` (nulle).
+- **Caméra en mouvement** (le garde-fou « aucun pixel voyant ») : J1 avançant d'un pixel par image, les images recalées sur le
+  défilement ne diffèrent plus que de 0,8 à 1,3 niveau dans la zone hachée ; les diagonales suivent le monde, sans moiré vu.
+- **Les points blancs isolés** de la première planche sont la poussière du faisceau (V5.5), pas l'encre.
+- ⚠️ **`test_iso_camera` est instable**, et hors de ce chantier : son TÉMOIN (deux parties sans iso) diverge au pas 116 une passe
+  sur deux ou trois — une balle d'un côté, rien de l'autre. Confié à Iso 1 par la session cloud (cause probable : un délai de
+  tir décompté au rythme du rendu, lu au rythme de la physique).
+
+**À trancher** : 1 ou 2 px de contour, et les hachures, sur la planche du duel, à prendre quand le Mac sera libre après la fusion dans
+`main` (J2 dans le cône de J1, sur du sol éclairé ; 2 px marqué hors garde-fou). Lot complet vert (437 s, 02:29). Avant
+d'allumer : la cadence de la coque (une passe de plus par boîte de corps), à mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
 
 ### Ce qui attend Adrien — jalon H15
 
