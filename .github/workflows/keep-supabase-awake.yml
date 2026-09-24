@@ -1,0 +1,34 @@
+# Réveil régulier de la base Supabase (Phase 4, classement/ELO) : les projets
+# gratuits sont suspendus après une semaine sans requête. Une requête REST
+# légère toutes les trois jours suffit à repousser ce seuil indéfiniment,
+# sans toucher aux données.
+#
+# Secrets requis (Settings > Secrets and variables > Actions du dépôt) :
+#   SUPABASE_URL              — même valeur que PROJECT_URL dans supabase_config.gd
+#   SUPABASE_PUBLISHABLE_KEY  — même valeur que PUBLISHABLE_KEY dans supabase_config.gd
+name: Réveil Supabase
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Requête de maintien en activité
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/?select=1" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}")
+          echo "Code de réponse Supabase : $status"
+          if [ "$status" -ge 500 ]; then
+            echo "::error::Supabase a répondu $status"
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
