@@ -70,6 +70,8 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO10, lot 2, 2a : la même fusée juste posée puis à la braise, à quatre rayons de moyenne des couches de fumée — les anneaux (6 à 8 px) doivent rester partis, les volutes (40 à 80 px) revenir."],
 		["loupe-fusee-lissage-sans-suie", "Le même banc du rayon de moyenne, la fusée seule, sans cartouche de suie",
 			"ISO10, lot 2, 2a : l'aplat orange de la braise vient-il du lissage ou du nuage de suie posé dans le halo ?"],
+		["loupe-fusee-bord", "Le sandwich de la fumée : volumes coupés, rétablis, recoupés, fenêtre entière",
+			"ISO13 : la fumée de la fusée salit-elle le noir à l'écran, comme le rayon du lot E ? Trois prises dans le même lancement ; les deux coupées donnent le bruit, la rétablie se compte contre les deux."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
 			"Le sprite du gadget et son faisceau, dans le noir."],
 		["loupe-torche-braconnier", "La torche fantôme à côté d'un vrai Braconnier",
@@ -200,6 +202,12 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-fusee-lissage-sans-suie : aucun sol dégagé à l'écran hors de la torche")
 		else:
 			await _loupe_fusee_lissage(plans, lieux[0], "loupe-fusee-lissage-sans-suie", false)
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-fusee-bord"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-bord : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_bord(plans, lieux[0])
 			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
@@ -584,6 +592,71 @@ func _loupe_fusee_suie(plans: Array[Dictionary], lieu: Vector2) -> Node:
 	await _prise(plans, "loupe-fusee-suie", [["braise", func(img: Image) -> Vector2:
 		return _pixel(img, lieu, 8.0)]], false, 0.8)
 	return f
+
+
+## ISO13 — LE SANDWICH DE LA FUMÉE (ordre de la session cloud, 2026-09-24, 02:03). Le rayon du lot E salissait le
+## noir à l'écran : ses couches EN HAUTEUR sont dessinées plus haut que le sol qu'elles lisent (parallaxe, tangage
+## 52°). La fumée de la fusée suit le même patron, monte à une tuile, et elle est ALLUMÉE par défaut. Deux instruments
+## n'ont pas su répondre : d'un lancement à l'autre la lumière de la fusée varie plus que l'effet cherché (jusqu'à 253
+## pixels « isolés » sans aucun volume) ; et `loupe-fusee-suie`, dans le même lancement, ne contenait AUCUN pixel noir,
+## la fusée éclairant tout son cadre — un zéro vide.
+##
+## D'où ceci : la FENÊTRE ENTIÈRE, qui contient le bord de la lumière de la fusée, prise trois fois dans le MÊME
+## lancement — volumes coupés, rétablis, recoupés. La lumière bouge aussi d'une prise à l'autre dans un même lancement :
+## les deux prises coupées en donnent le bruit, et la rétablie se compte contre les deux. Chaque prise imprime le
+## nombre de pixels NOIRS du cadre, pour qu'un zéro ne soit jamais vide. La fusée est SEULE (sans suie : c'est SA
+## fumée qu'on interroge) et à la braise, où sa fumée est pleine (`FuseeModele.FUMEE_MONTEE`, 3 s).
+const AGE_FUSEE_BORD := 5.0
+
+
+func _loupe_fusee_bord(plans: Array[Dictionary], lieu: Vector2) -> void:
+	var m: Node = p._main
+	var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+	f.set("depart", lieu)
+	f.set("direction", Vector2.DOWN)
+	f.set("joueurs", [m.p1, m.p2])
+	m.bullet_container.add_child(f)
+	await p.get_tree().process_frame
+	f.set_physics_process(false)
+	f.global_position = lieu
+	f.call("forcer_age", AGE_FUSEE_BORD)
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ loupe-fusee-bord : volumes iso introuvables, pas de sandwich")
+		return
+	print("  · loupe-fusee-bord : fusée seule en %s, âge %.1f s" % [str(lieu), AGE_FUSEE_BORD])
+	for etape in [["coupe-1", false], ["retabli", true], ["coupe-2", false]]:
+		volumes.set("images_actives", etape[1])
+		await _prise_entiere(plans, "loupe-fusee-bord", String(etape[0]), 0.5)
+	volumes.set("images_actives", true)
+
+
+## Une prise de la FENÊTRE ENTIÈRE, sans recadrage, qui imprime le nombre de pixels noirs du cadre.
+func _prise_entiere(plans: Array[Dictionary], id: String, suffixe: String, repos: float) -> void:
+	if p._plan(plans, id).is_empty():
+		return
+	var fin := Time.get_ticks_msec() + int(repos * 1000.0)
+	while Time.get_ticks_msec() < fin:
+		_tenir_scene()
+		await p.get_tree().process_frame
+	_tenir_scene()
+	var img: Image = await _capturer(false)
+	if img == null:
+		p._perdues += 1
+		printerr("  ✗ loupe %s-%s : prise perdue" % [id, suffixe])
+		return
+	var rgb := img.duplicate() as Image
+	rgb.convert(Image.FORMAT_RGB8)
+	var d := rgb.get_data()
+	var noirs := 0
+	for i in range(0, d.size(), 3):
+		if d[i] == 0 and d[i + 1] == 0 and d[i + 2] == 0:
+			noirs += 1
+	var sous: Dictionary = p._derive(plans, id, suffixe, "")
+	print("  MESURE %s image %dx%d pixels_noirs %d" % [sous["id"], img.get_width(), img.get_height(), noirs])
+	p._ecrire(sous, img)
 
 
 ## ISO10, lot 2, 2a — le banc du rayon de moyenne des couches de fumée (`volume_iso.gdshader`, `lissage_rayon`, défaut
