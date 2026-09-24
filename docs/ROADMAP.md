@@ -27280,8 +27280,28 @@ session cloud** : le jeu d'aujourd'hui n'est pas équitable sur **La Croisée** 
 mannequin et `MANNEQUIN_REPORT`) — à ISO7 Beauté ; les scènes du photographe et des bancs bâties sur LA face sud ; le
 bandeau FATAL (`player.gd`, un `Rect2` de vue aligné aux axes) n'est pas vérifié à 45°.
 
-**État** : tout est écrit et non commité, en attente d'une chaîne unique au « Mac libre » (import, banc, lot, contrôle du
-lacet, noir absolu à 45° B et C, six prises, planche ; ~20 min). Aucun commit sans lot vert.
+**État (2026-09-24, 13:0x) : commité en `1d5ea64`, l'arbre exact du lot vert** (437 s, 12:49-12:56 ; les 19 fichiers
+modifiés avant le départ du lot, vérifié à l'heure de modification ; arbre `a8e04a7`). Chaîne au « Mac libre » d'Adrien
+(12:28), deux passes dans une seule prise du verrou, **arrêtée sur son ordre à 12:56** (« Interrompt toutes les mesures et
+lancement du jeu ») — la sixième prise (Cloître 45° C) n'a pas été écrite.
+
+**Ce que le banc a CONFIRMÉ** (le prototype, verdict pour verdict et compte pour compte, sur les six cartes) : à 45°,
+**B équitable sur les six, A sur aucune, C sur cinq** (pas La Croisée) ; à 0°, le jeu d'aujourd'hui échoue sur La Croisée
+(a,b,e) et L'Usine (a). Garde (4) tenue (≤ 3,9e-9). **CORPS_COLLE** : 0 pose sur 160 entièrement cachée derrière un mur
+haut, debout comme accroupi, caméra de face comme de biais — l'accroupi de face n'en dépasse que de **4,4 px** au plus
+près (la décision des murs à 1,25 tuile, un fait, pas un défaut). En fenêtre : le lacet ne change **rien** aux capteurs
+des corps ni à l'éblouissement (0 écart, 0° A contre 45° A, B, C) ; noir absolu tenu à 45° en B et en C.
+
+**Trois défauts trouvés par la première passe, corrigés dans le même verrou** : `presentation_3d.gd` nommait l'autoload
+`GameSettings` — huit suites en erreur de compilation, parce que ce fichier se compile aussi en `--script`, où les
+autoloads ne sont pas des identifiants (il passe par `/root/GameSettings`, comme ses voisins) ; `%e` n'existe pas dans
+le formatage de GDScript (`String.num_scientific`) ; le plan photo `ecran-scinde` se prend avant le passage sur la carte
+du duel et ignorait `--carte-duel` (plan additif `ecran-scinde-duel`).
+
+**Non commité, écrit après le lot** (ordre de la session cloud, 13:00) : le seuil du prototype relevé de 1e-4 à 1e-3 sur
+les parts (écart réel 2,5e-4 à 4,8e-4, simple précision) **à condition dure** — un verdict ou un compte qui diffère fait
+échouer quel que soit l'écart ; la règle des verdicts, portée dans `_verdict_de`, redonne les 30 verdicts du banc
+(vérifié en Python sur `reference_prototype.json`). Sera testé au prochain lot. **Aucun Godot jusqu'à un nouvel ordre.**
 
 ### Ce qui attend Adrien — jalon H15
 
