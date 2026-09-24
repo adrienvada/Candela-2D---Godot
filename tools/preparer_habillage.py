@@ -8,7 +8,8 @@ pas la chance de dix générations qui se ressemblent.
 - **fond** : recadrage 16:9 et réduction à 1920×1071 (le format des autres fonds),
   JPEG ; la source est déjà dans la pâte D, elle n'est pas virée.
 - **portrait** : détourage du fond vert, recadrage sur le sujet avec marge,
-  VIRAGE encre/papier commun, réduction à 256 px, PNG avec alpha.
+  VIRAGE encre/papier commun (70 % de la couleur d'origine, voir PART_PORTRAIT),
+  réduction à 256 px, PNG avec alpha.
 - **icone** : même chaîne, 128 px.
 
 Le détourage reprend le principe de `tools/incruster_vert.py` (alpha tiré de la
@@ -22,8 +23,10 @@ de dix nuances différentes deviennent dix planches du même papier.
 
 Usage :
   python3 tools/preparer_habillage.py fond     source.jpg sortie.jpg
-  python3 tools/preparer_habillage.py portrait source.png sortie.png
-  python3 tools/preparer_habillage.py icone    source.png sortie.png
+  python3 tools/preparer_habillage.py portrait source.png sortie.png [--couleur=0.70]
+  python3 tools/preparer_habillage.py icone    source.png sortie.png [--couleur=0.35]
+`--couleur=X` (0 à 1) règle la part de couleur d'origine rendue par le virage ;
+sans lui, le portrait prend PART_PORTRAIT et l'icône PART_ORIGINE.
 Imprime ce qu'il a mesuré (seuils de vert, boîte du sujet), pour qu'on le relise.
 """
 import sys
@@ -36,6 +39,12 @@ ENCRE = (0.075, 0.063, 0.051)
 BETON = (0.4375, 0.3915, 0.3355)
 PAPIER = (0.80, 0.72, 0.62)
 PART_ORIGINE = 0.35
+# Les portraits de classe rendent 70 % de la couleur d'origine, et non 35 % : les
+# corps sont en tenue V3 froide (ardoise bleu nuit très sombre, décision d'Adrien
+# du 2026-09-24, « Portraits : 70% »). À 35 % la luminance pilote presque tout et
+# la teinte froide s'efface en charbon neutre ; à 70 % l'ardoise reste lisible.
+# Les icônes gardent 35 % : leur fond et leur teinte n'ont pas changé.
+PART_PORTRAIT = 0.70
 MARGE = 0.08
 
 
@@ -91,7 +100,7 @@ def detourer(im):
     return out, alpha
 
 
-def virer(im):
+def virer(im, part_origine=PART_ORIGINE):
     p = im.load()
     l, h = im.size
     for y in range(h):
@@ -99,12 +108,12 @@ def virer(im):
             r, g, b = (c / 255.0 for c in p[x, y])
             lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
             base = lerp(ENCRE, BETON, lum * 2.0) if lum < 0.5 else lerp(BETON, PAPIER, (lum - 0.5) * 2.0)
-            c = lerp(base, (r, g, b), PART_ORIGINE)
+            c = lerp(base, (r, g, b), part_origine)
             p[x, y] = tuple(int(round(max(0.0, min(1.0, v)) * 255)) for v in c)
     return im
 
 
-def sujet(source, sortie, cote):
+def sujet(source, sortie, cote, part_origine):
     im = Image.open(source).convert("RGB")
     rgb, alpha = detourer(im)
     boite = alpha.point(lambda v: 255 if v > 40 else 0).getbbox()
@@ -117,13 +126,13 @@ def sujet(source, sortie, cote):
     c = int(round(c * (1 + 2 * MARGE)))
     cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
     carre = (cx - c // 2, cy - c // 2, cx - c // 2 + c, cy - c // 2 + c)
-    rgb = virer(rgb.crop(carre))
+    rgb = virer(rgb.crop(carre), part_origine)
     alpha = alpha.crop(carre)
     rgba = rgb.convert("RGBA")
     rgba.putalpha(alpha)
     rgba = rgba.resize((cote, cote), Image.LANCZOS)
     rgba.save(sortie, optimize=True)
-    print(f"{source} -> {sortie} {cote}x{cote}")
+    print(f"{source} -> {sortie} {cote}x{cote} (couleur d'origine {part_origine:.0%})")
 
 
 def fin(source, sortie):
@@ -183,9 +192,16 @@ def carte(source, sortie):
 
 
 def main():
-    if len(sys.argv) != 4:
+    args = sys.argv[1:]
+    couleur = None
+    for a in [a for a in args if a.startswith("--couleur=")]:
+        couleur = float(a.split("=", 1)[1])
+        if not 0.0 <= couleur <= 1.0:
+            raise SystemExit("--couleur attend un nombre entre 0 et 1")
+        args.remove(a)
+    if len(args) != 3:
         raise SystemExit(__doc__)
-    mode, source, sortie = sys.argv[1:]
+    mode, source, sortie = args
     if mode == "fond":
         fond(source, sortie)
     elif mode == "fin":
@@ -193,9 +209,9 @@ def main():
     elif mode == "carte":
         carte(source, sortie)
     elif mode == "portrait":
-        sujet(source, sortie, 256)
+        sujet(source, sortie, 256, PART_PORTRAIT if couleur is None else couleur)
     elif mode == "icone":
-        sujet(source, sortie, 128)
+        sujet(source, sortie, 128, PART_ORIGINE if couleur is None else couleur)
     else:
         raise SystemExit(__doc__)
 
