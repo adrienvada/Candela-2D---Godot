@@ -182,8 +182,11 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"palette-grise": _palette_grise = true
 			"opaque": _opaque = true
 			"corps":
-				if val != "portraits" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
-					push_warning("banc_corps : --corps attend portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
+				if val != "portraits" and val != "gris" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
+					push_warning("banc_corps : --corps attend gris, portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
+			"equite":
+				# ISO13 — la calibration de l'équité de V3 : le même facteur pour toutes les classes (`VoxelCatalogue.V3_EQUITE`).
+				VoxelCatalogueT.forcer_equite = maxf(0.0, float(val))
 			"toutes-tenues": _toutes_tenues = true
 			"temps-fixe": _temps_fixe = true
 			"directions-mannequin": _directions_mannequin = true

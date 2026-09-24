@@ -5957,3 +5957,9 @@ désormais V3 froide ; le gris reste joignable par `--corps=gris`. Quatre condit
 la bouteille ne sort jamais du couloir (le pire, 17,44 px, est celui du gris), personne n'apparaît plus tôt ni plus tard que
 le gris d'ISO3, le noir reste à 0. Quatre suites supposaient le gris ou « neuf boîtes » en dur ; la bouteille a sa passe de
 profondeur comme les autres — c'étaient les comptes qui étaient faux, pas le rendu.
+
+**Suite, 18:45-18:55 — l'équité de V3 entre les classes.** À 0,15, V3 gardait 13 % des pixels visibles du gris pour
+l'Occulteur, 92 % pour l'Allumeur : le même rapport posé sur des gris de classe inégaux. Un facteur par classe, plafonné au
+gris, ramène les dix classes entre 0,47 et 0,55, sans changer d'un centième la lumière où chacune apparaît. La leçon : la
+réponse au facteur vient par marches (des faces entières passent le seuil de l'écran d'un coup) ; un facteur se vérifie au
+balayage, il ne s'interpole pas — l'Occulteur a demandé trois essais.
