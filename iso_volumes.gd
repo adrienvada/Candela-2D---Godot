@@ -15,11 +15,17 @@ extends Node3D
 ## (`halo_iso.gdshader`). Couper `images_actives` retire tout sans qu'aucune de ces valeurs change —
 ## `tools/test_iso_gadgets.gd` le prouve. Aucune `Light3D`.
 ##
-## ## Trois règles d'équité, tenues par construction
+## ## Trois règles d'équité, tenues par construction — dans le MONDE
 ##
 ## - **Noir absolu** : un volume vaut la lightmap sous lui (0 sans lumière) ; une lueur vaut l'énergie de
 ##   sa lumière (0 lumière éteinte). L'anneau de l'onde et la toile sont les seuls dessins sans lumière, et
 ##   ils l'étaient déjà en vue de dessus (l'onde est non éclairée ; la toile recopie la lightmap).
+##   ⚠️ **Tenu dans le monde, pas démontré à l'écran** (corrigé le 2026-09-24). Une couche EN HAUTEUR est
+##   dessinée plus haut que le sol qu'elle lit (parallaxe, tangage 52°) et peut tomber sur un pixel noir :
+##   mesuré pour le faisceau d'ISO13 (307 pixels isolés à 0,45 de densité, 15 couches posées au sol).
+##   Pour la fumée de la fusée et les autres nuages, allumés par défaut, la question est OUVERTE : les
+##   deux instruments essayés n'ont pas su répondre (`docs/iso/iso13/plan_lots_d_e.md`). Cette règle a
+##   été écrite le 2026-09-15 en ne regardant que le monde.
 ## - **Les deux joueurs** : chaque couche lit la lightmap de la caméra qui la dessine, comme le sol ; les
 ##   lueurs sont celles de sources que les deux vues montrent déjà (masques de lumière 1|2|4, dessins non
 ##   éclairés visibles des deux).
