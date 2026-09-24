@@ -264,6 +264,8 @@ func _run() -> void:
 		bool(p.get("_scinde")) and _capteurs_vivants(p) == 4 and c1.visible and c2.visible)
 	_check("aucun nœud 3D sous GameState ni sous Player*, en scindé", _noeuds_3d_sous(main) == 0)
 
+	await _lacet_45_b(main, p, reglages, c1, c2)
+
 	# Le retour au menu, par le vrai chemin : il remontre les DEUX vues derrière le hub.
 	print("\n--- Retour au menu ---")
 	main._on_main_menu_requested()
@@ -289,6 +291,86 @@ func _run() -> void:
 
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	_sortir()
+
+
+## ISO14 — le drapeau `--lacet=45 --lacet-j2=B` jusqu'aux caméras, EN 1V1 LOCAL (écran scindé), puis dans LA VUE DU CLIENT
+## EN LIGNE (demandes de la session cloud, 2026-09-24, 17:01, 17:04 et 19:47). Le drapeau se lit au démarrage de
+## l'autoload (`lacet_applique`, testé dans `test_iso_equite`) : on pose ce qu'il pose (`_lacet_local`,
+## `_option_lacet_locale`), puis on suit le chemin du jeu. « haut », au clavier comme au stick, doit aller vers le haut
+## de l'écran pour J1 à 45° et pour J2 à 225°. Puis la vue unique qui regarde J2, en rendu racine — celle du client :
+## l'écran scindé ne la couvre pas, J2 y étant la vue d'indice 1 ; si le lacet suivait l'indice d'ordre des vues et non
+## le joueur regardé, le client jouerait à 45° sans que rien le montre. Cette vue se monte sans réseau comme
+## `banc_iso --killcam --vue j2`. Tout est rendu à la fin : le défaut du build reste 0°.
+func _lacet_45_b(main: Node, p: Node, reglages: Node, c1: Control, c2: Control) -> void:
+	print("\n--- Le 45° B : le haut de l'écran pour chacun, et la vue du client en ligne ---")
+	var lacet_local_avant: float = reglages.get("_lacet_local")
+	var option_avant: String = reglages.get("_option_lacet_locale")
+	reglages.set("_lacet_local", 45.0)
+	reglages.set("_option_lacet_locale", "B")
+	reglages.accorder_au_mode(false)
+	for i in 4:
+		await process_frame
+	_haut_de_l_ecran(main, p, 0, 45.0, "1v1 local")
+	_haut_de_l_ecran(main, p, 1, 225.0, "1v1 local")
+	_check("1v1 local : la caméra 2D de J1 est tournée de −45°, celle de J2 de −225°",
+		absf(angle_difference((main.cam1 as Camera2D).rotation, deg_to_rad(-45.0))) < 1e-3
+		and absf(angle_difference((main.cam2 as Camera2D).rotation, deg_to_rad(-225.0))) < 1e-3,
+		"%s / %s" % [rad_to_deg((main.cam1 as Camera2D).rotation), rad_to_deg((main.cam2 as Camera2D).rotation)])
+
+	c1.hide()
+	c2.show()
+	main._accorder_rendu_aux_vues()
+	for i in 4:
+		await process_frame
+	_check("vue du client : vue unique, sur J2", not bool(p.get("_scinde")) and p._vue_de(1) != null)
+	var cam2: Camera2D = main.cam2
+	if main.rendu_racine_autorise:
+		_check("vue du client : rendu racine, par la caméra 2D de J2 elle-même",
+			bool(main._rendu_racine) and cam2.custom_viewport == root and cam2.is_current())
+	else:
+		print("  (rendu racine interdit dans ce lot : la vue du client passe par la sous-vue de J2)")
+	_check("vue du client : la caméra 2D qui rend l'image est tournée de −225°",
+		absf(angle_difference(cam2.rotation, deg_to_rad(-225.0))) < 1e-3, str(rad_to_deg(cam2.rotation)))
+	_haut_de_l_ecran(main, p, 1, 225.0, "vue du client")
+
+	c1.show()
+	main._accorder_rendu_aux_vues()
+	reglages.set("_lacet_local", lacet_local_avant)
+	reglages.set("_option_lacet_locale", option_avant)
+	reglages.accorder_au_mode(false)
+	for i in 4:
+		await process_frame
+	_check("retour : écran scindé, lacet rendu au défaut", bool(p.get("_scinde"))
+		and is_equal_approx(float(reglages.lacet_duel), lacet_local_avant))
+
+
+## Pour le joueur `pid` : sa caméra 3D est au lacet attendu, et move_up puis aim_up, lus dans SON fournisseur local
+## (celui qui calcule ce que le client envoie sur le fil), reprojetés à l'écran par `projecteur_ecran`, vont vers le
+## haut de l'écran : écart latéral sous 5 % de la longueur, et vers le haut ; et le vecteur du monde vaut
+## `stick_au_sol((0, −1), lacet)`.
+func _haut_de_l_ecran(main: Node, p: Node, pid: int, attendu: float, ou: String) -> void:
+	var joueur: Node2D = main.p1 if pid == 0 else main.p2
+	var cam = p._camera_de(pid)
+	_check("%s : la caméra 3D de J%d est à %d°" % [ou, pid + 1, int(attendu)],
+		cam != null and is_equal_approx(fposmod(float(cam.lacet_deg), 360.0), fposmod(attendu, 360.0)),
+		str(cam.lacet_deg) if cam != null else "aucune caméra")
+	var proj: Callable = p.projecteur_ecran(pid)
+	if not proj.is_valid():
+		_check("%s : J%d a un projecteur d'écran" % [ou, pid + 1], false)
+		return
+	var fournisseur = joueur.get("input_provider")
+	var prefixe := "p1_" if pid == 0 else "p2_"
+	for geste in ["move_up", "aim_up"]:
+		Input.action_press(prefixe + geste)
+		var v: Vector2 = fournisseur.get_movement_vector() if geste == "move_up" \
+			else fournisseur.get_aim_direction(joueur.global_position)
+		Input.action_release(prefixe + geste)
+		var d: Vector2 = (proj.call(joueur.global_position + v.normalized() * 60.0) as Vector2) \
+			- (proj.call(joueur.global_position) as Vector2)
+		_check("%s : J%d, %s va vers le haut de SON écran" % [ou, pid + 1, geste],
+			v != Vector2.ZERO and d.y < 0.0 and absf(d.x) < 0.05 * d.length(), "monde %s, écran %s" % [v, d])
+		_check("%s : J%d, %s vaut stick_au_sol((0, −1), %d°) dans le monde" % [ou, pid + 1, geste, int(attendu)],
+			v.normalized().distance_to(CameraIso.stick_au_sol(Vector2(0, -1), attendu)) < 1e-3, str(v))
 
 
 func _sortir() -> void:

@@ -478,6 +478,41 @@ func _simulation_inchangee() -> void:
 		p._input(lettre)
 		_check("une touche de déplacement ne change pas la pâte", int(p.style_pate) == Pate.TRAME)
 
+	# ISO14 — le drapeau `--lacet=45 --lacet-j2=B` jusqu'à la caméra, À L'ENTRAÎNEMENT (demande de la session cloud,
+	# 2026-09-24 19:47, après une planche dont la moitié « 45° » avait le cadrage du 0°). Le drapeau se lit une fois au
+	# démarrage de l'autoload (`lacet_applique` → `_lacet_local`, testé dans `test_iso_equite`) ; on pose donc ce qu'il
+	# pose, puis on suit le chemin du jeu : un départ de manche (`accorder_au_mode`), la caméra 3D de la vue
+	# (`Presentation3D._suivre`, à chaque image) et la caméra 2D qui rend la lightmap (`GameState._suivre_du_regard`).
+	# ⚠️ Écrire `lacet_deg` sur la caméra ne tient PAS : la présentation le réécrit à chaque image depuis les réglages —
+	# c'est ce qui avait effacé le 45° de cette planche. Le contrôle le prouve aussi.
+	if p != null:
+		var lacet_local_avant: float = reglages.get("_lacet_local")
+		var option_avant: String = reglages.get("_option_lacet_locale")
+		reglages.set("_lacet_local", 45.0)
+		reglages.set("_option_lacet_locale", "B")
+		main._on_training_requested()
+		for i in 6:
+			await process_frame
+		var cam3d = p._camera_de(0)
+		_check("entraînement, --lacet=45 : la caméra 3D de J1 est à 45°",
+			cam3d != null and is_equal_approx(float(cam3d.lacet_deg), 45.0), str(cam3d.lacet_deg) if cam3d != null else "aucune")
+		_check("entraînement, --lacet=45 : la caméra 2D de J1 est tournée de −45°",
+			absf(angle_difference((main.cam1 as Camera2D).rotation, deg_to_rad(-45.0))) < 1e-3,
+			str(rad_to_deg((main.cam1 as Camera2D).rotation)))
+		_check("entraînement : mode_rendu() dit l'angle", String(reglages.mode_rendu()) == "iso lacet 45° B",
+			String(reglages.mode_rendu()))
+		if cam3d != null:
+			cam3d.lacet_deg = 0.0
+			for i in 2:
+				await process_frame
+			_check("écrire lacet_deg sur la caméra ne tient pas : la présentation le repose depuis les réglages",
+				is_equal_approx(float(cam3d.lacet_deg), 45.0), str(cam3d.lacet_deg))
+		reglages.set("_lacet_local", lacet_local_avant)
+		reglages.set("_option_lacet_locale", option_avant)
+		reglages.accorder_au_mode(false)
+		for i in 3:
+			await process_frame
+
 	# L'extinction : on retire le réglage, la vue doit tout rendre.
 	reglages.mode_iso = false
 	await process_frame

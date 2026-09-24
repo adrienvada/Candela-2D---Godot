@@ -346,6 +346,9 @@ run() {
   attendus="${attendus:-0}"
   if [ "$code" -ne 0 ]; then
     printf '%-28s ÉCHEC (code %d)\n' "$nom" "$code"; fail=1
+    # Les contrôles qui ont rougi, tant qu'on a la sortie sous la main : une suite qui rougit UNE fois sur sept ne se
+    # relit plus après coup (test_arena_matter, 2026-09-24 : six passes vertes ensuite, la ligne perdue).
+    printf '%s\n' "$sortie" | grep -E '✗' | head -6
   elif [ "$erreurs" -ne 0 ]; then
     printf '%-28s ÉCHEC — %s erreur(s) de script malgré un code 0\n' "$nom" "$erreurs"
     printf '%s\n' "$sortie" | grep -A2 'SCRIPT ERROR' | head -12

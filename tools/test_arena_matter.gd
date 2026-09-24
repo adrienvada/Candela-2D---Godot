@@ -108,7 +108,23 @@ func _test_douilles_atelier() -> void:
 	_check("Douille fusil éjectée", c_fusil != null)
 	_check("Douille pompe éjectée", c_pompe != null)
 	_check("Vélocité initiale d'éjection non nulle", c_pistolet.velocity.length() > 30.0)
-	_check("Vélocité angulaire initiale non nulle", absf(c_pistolet.angular_velocity) > 0.1)
+	# ⚠️ SUR DIX ÉJECTIONS, jamais sur une seule (2026-09-24). `BulletCasing.setup` tire sa rotation d'un
+	# `randf_range(-16, 16)`, et une seule douille exigée à |ω| > 0,1 rougissait une fois sur 160 — c'est arrivé au lot de
+	# 19:36, puis six passes vertes : une douille qui tourne à peine est légitime en jeu, c'est le CONTRÔLE qui était faux.
+	# Pas de `seed()` : le générateur est global, et un test ne doit pas figer ce que le jeu tire. Ce qui compte : que
+	# `setup` tire bien une rotation (au moins une sur dix au-dessus de 0,1 ; toutes dix sous 0,1 : une chance sur 160¹⁰)
+	# et qu'elle reste dans sa plage. Prouvé rouge en forçant `setup` à ne plus tirer de rotation.
+	var tournent := 0
+	var trop := 0
+	for i in 10:
+		var d := BulletCasingScript.eject(arena_root, Vector2(100, 100), Vector2(1, 0), "pistolet")
+		if absf(d.angular_velocity) > 0.1:
+			tournent += 1
+		if absf(d.angular_velocity) > 16.0:
+			trop += 1
+		d.release()
+	_check("Vélocité angulaire initiale : au moins une douille sur dix tourne (> 0,1 rad/s), aucune au-delà de 16",
+		tournent >= 1 and trop == 0, "%d tournent, %d au-delà de 16" % [tournent, trop])
 
 	# 2. Simulation de l'inertie et arrêt complet
 	var dt := 0.05

@@ -27483,6 +27483,12 @@ d'août). Lu dans le code : rien n'y pose 60 (plafond sous `pilotage_externe`, a
 qui cadence). **Signalé, pas corrigé.** Deux conséquences : aucune médiane d'écran scindé ne mesure une capacité tant que
 ce n'est pas expliqué, et **l'écran scindé d'aujourd'hui manque sa cible** (53 au 1 % bas, à 0°). Pistes, pour ISO7 Gadgets
 après l'intégration : l'écran scindé en `--2d` sur le même arbre ; la ligne « Cadence : » (ci-dessous) ; `--max-fps 200`.
+**Les trois pistes mesurées** (ISO7 Gadgets, sur `ec7a51a`, 2026-09-24 vers 20:10, ligne « Cadence : » relue à chaque prise) :
+écran scindé iso **60 / 53** (vsync relue 0, max_fps 0) ; écran scindé **vue de dessus 114 / 106** ; écran scindé iso à
+`--max-fps 200` **60 / 52** (max_fps 200 relu) ; écran relu : 2 écrans, 5120×2160 à **75 Hz** (l'écran externe d'Adrien).
+Ni la vsync, ni le plafond, ni la fréquence de l'écran : **c'est propre au chemin de l'écran scindé ISO**. Cause toujours
+inconnue ; une piste seulement — 60 est aussi la cadence par défaut de la physique, et un chemin qui attendrait un pas de
+physique pour rendre s'y collerait (aucune attente de `physics_frame` dans les fichiers iso, relu).
 
 **Deux instruments, posés à l'intégration** (demande de la session cloud et de Gadgets) : `tools/bench_framerate.gd` imprime
 au départ de la mesure une ligne « Cadence : » RELUE dans le jeu — `Engine.max_fps`, `window_get_vsync_mode()`,
