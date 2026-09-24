@@ -264,7 +264,8 @@ void fragment() {
 	}
 	// ISO13 — le mannequin (`iso_corps_mannequin.gdshaderinc`) : le côté dos à la lumière qui éclaire vraiment ce corps
 	// s'assombrit, jamais rien ne s'éclaire, et rien sous le seuil de lumière. Sans `--mannequin`, rien ne change.
-	c = mannequin_modeler(c, normale_monde, niveau);
+	// La caméra dit quelles faces elle voit (ISO13, 04:38) : `INV_VIEW_MATRIX[2]` pointe vers elle, jamais « sud » en dur.
+	c = mannequin_modeler(c, normale_monde, niveau, INV_VIEW_MATRIX[2].xz);
 	// L'encre des arêtes (ISO3 vague 5) : `pate_facteur`, jamais `c *=` nu — mesuré
 	// au banc par ISO7 Beauté (2026-09-15), un facteur écrit ici se VOIT à l'écran
 	// comme f^2,4 (une encre de 0,25 tombait à 1/255, pas à 7/255) ; `pate_facteur`

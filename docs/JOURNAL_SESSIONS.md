@@ -5835,3 +5835,13 @@ segments sans le drapeau (e4adc99, preuve à l'octet au banc des corps avec `--t
 opacité), des hachures en diagonale dans la seule pénombre du lavis, l'arête des murs plus épaisse. Noir absolu tenu, rien
 n'éclaire, l'apparition ne recule pas ; mais la coque noircit un cinquième à un tiers des pixels du corps à 0,15, surtout par
 ses liserés intérieurs, et ne se voit pas sur un sol noir.
+
+### 2026-09-24 (après-midi) — ISO13, lot C : l'usure en essai ; le lot A pour tout lacet (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+Écrit dans la nuit sans Godot (le Mac était à Adrien), lancé à 16:14 au « tu peux reprendre ». Derrière `--usure-essai`,
+éteint : taches, coulures, fissures et les impacts de balles du jeu sur les faces des murs, gravats au pied des murs. Tout
+est un facteur sur la lumière, effacé sous 12/255 ; rien dans le noir, rien sur les corps, aucune face nommée — la planche
+le montre au lacet 0 et à 45°. Les douilles restaient déjà : la peinture de la carte les copiait au sol iso. Et le côté de la
+lumière du mannequin (lot A) ne suppose plus la caméra au sud : il la lit dans la matrice de vue, équité tenue à tout lacet
+pour une base carrée. Leçon du jour : une comparaison au pixel entre deux captures successives du banc des lumières ne
+prouve pas le noir absolu — la torche pulse entre elles ; c'est la construction qui le prouve.

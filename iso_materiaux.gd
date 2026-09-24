@@ -102,22 +102,30 @@ static func encre_essai_active() -> bool:
 	return OS.get_cmdline_user_args().has(DRAPEAU_ENCRE_ESSAI)
 
 
-## Les variantes des shaders iso compilées avec ENCRE_ESSAI (voir `iso_pate.gdshaderinc`), une par shader d'origine.
-static var _variantes_encre := {}
+## Les variantes des shaders iso compilées avec un `#define` d'essai, une par shader d'origine et par drapeau.
+static var _variantes := {}
 
 
 ## La variante d'un shader iso qui porte les hachures : son code, `#define ENCRE_ESSAI` posé juste après `shader_type`. Sans
 ## `--encre-essai`, personne ne la demande : le jeu compile les shaders d'avant, sans rien de plus à exécuter.
 static func variante_encre(shader: Shader) -> Shader:
-	if shader == null or shader.code.contains("#define ENCRE_ESSAI"):
+	return variante_definie(shader, "ENCRE_ESSAI")
+
+
+## ISO13, lot C — la variante d'un shader iso compilée avec `#define <nom>` posé juste après `shader_type`. Les essais se
+## cumulent : la variante USURE_ESSAI d'une variante ENCRE_ESSAI porte les deux. Même shader, même nom : même variante,
+## compilée une fois.
+static func variante_definie(shader: Shader, nom: String) -> Shader:
+	if shader == null or shader.code.contains("#define %s\n" % nom):
 		return shader
-	if _variantes_encre.has(shader):
-		return _variantes_encre[shader]
+	var cle := "%d:%s" % [shader.get_instance_id(), nom]
+	if _variantes.has(cle):
+		return _variantes[cle]
 	var code := shader.code
 	var fin := code.find(";", code.find("shader_type")) + 1
 	var v := Shader.new()
-	v.code = code.substr(0, fin) + "\n#define ENCRE_ESSAI\n" + code.substr(fin)
-	_variantes_encre[shader] = v
+	v.code = code.substr(0, fin) + "\n#define %s\n" % nom + code.substr(fin)
+	_variantes[cle] = v
 	return v
 
 
@@ -131,6 +139,49 @@ static func poser_encre_essai(materiau: ShaderMaterial, allumee: bool, mur := fa
 	if mur and beaute_active():
 		materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX_ESSAI if allumee else ENCRE_ARETE_PX)
 		materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE_ESSAI if allumee else ENCRE_ARETE_RESTE)
+
+
+## ISO13, lot C — L'USURE EN ESSAI (`--usure-essai`, éteint par défaut) : fissures, taches, coulures et impacts de balles
+## sur les faces des murs, gravats au sol (`iso_usure.gdshaderinc`). Les impacts sont ceux du jeu (`wall_impact.gd`), les
+## plus récents d'abord, posés par la présentation (`Presentation3D`) ; les douilles le sont déjà par la peinture de la carte.
+## Rien n'est allumé en jeu avant l'avis d'Adrien et la mesure de cadence de Gadgets.
+const DRAPEAU_USURE_ESSAI := "--usure-essai"
+## Le rayon d'un impact sur la face, en pixels de monde, et sa hauteur : celle du torse d'un corps debout (le tir part de
+## l'arme, à hauteur de poitrine), avec un écart tiré de la position — le même impact, à la même hauteur, sur chaque machine
+## et à chaque image.
+const USURE_IMPACT_RAYON_PX := 2.2
+const USURE_IMPACT_HAUTEUR_TUILES := 0.62
+const USURE_IMPACT_ECART_TUILES := 0.14
+const USURE_IMPACTS_MAX := 48
+
+
+static func usure_essai_active() -> bool:
+	return OS.get_cmdline_user_args().has(DRAPEAU_USURE_ESSAI)
+
+
+## Allume ou éteint l'usure sur un matériau de mur ou de sol. Allumée, le matériau passe à la variante USURE_ESSAI de son
+## shader ; éteinte, la variante reste (les bancs y basculent dans la même partie) et rend l'image d'avant.
+static func poser_usure_essai(materiau: ShaderMaterial, allumee: bool) -> void:
+	if allumee:
+		materiau.shader = variante_definie(materiau.shader, "USURE_ESSAI")
+	materiau.set_shader_parameter("usure", 1.0 if allumee else 0.0)
+
+
+## Les impacts d'une liste de points (les éclats du jeu, du plus ancien au plus récent) au format du shader : les
+## `USURE_IMPACTS_MAX` plus récents, xy le point, z la hauteur sur la face, w le rayon.
+static func impacts_usure(points: PackedVector2Array) -> PackedVector4Array:
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	var sortie := PackedVector4Array()
+	for i in range(maxi(0, points.size() - USURE_IMPACTS_MAX), points.size()):
+		var p := points[i]
+		sortie.append(Vector4(p.x, p.y, hauteur_impact(p) * tuile, USURE_IMPACT_RAYON_PX))
+	return sortie
+
+
+## La hauteur d'un impact sur la face, en tuiles : un tirage déterministe de la position, jamais `randf()`.
+static func hauteur_impact(p: Vector2) -> float:
+	var h := fposmod(sin(p.x * 12.9898 + p.y * 78.233) * 43758.5453, 1.0)
+	return USURE_IMPACT_HAUTEUR_TUILES + (h - 0.5) * 2.0 * USURE_IMPACT_ECART_TUILES
 
 
 ## Pose la matière des murs sur le matériau commun des boîtes (`mur_iso.gdshader`). Sans beauté,
@@ -157,6 +208,8 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("seuil_muret_px", SEUIL_MURET_PX if active else 0.0)
 	if encre_essai_active():
 		poser_encre_essai(materiau, true, true)
+	if usure_essai_active():
+		poser_usure_essai(materiau, true)
 
 
 ## Pose l'encre des arêtes sur le matériau d'un corps voxel (`corps_iso.gdshader`, tenu par ISO Corps).
@@ -298,6 +351,8 @@ static func accorder_sol(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("contact_corps_reste", CONTACT_CORPS_RESTE)
 	if encre_essai_active():
 		poser_encre_essai(materiau, true)
+	if usure_essai_active():
+		poser_usure_essai(materiau, true)
 
 
 ## La grille des murs d'une carte, pour que l'encre et le liseré ne tombent que sur les VRAIS

@@ -213,6 +213,10 @@ var _sols: Array[MeshInstance3D] = []
 var _murs: Node3D
 var _corps: Array[Node3D] = []
 var _mat_sols: Array[ShaderMaterial] = []
+## ISO13, lot C — l'usure en essai (`--usure-essai`), lue une fois : éteinte, `_process` ne regarde pas un éclat de plus.
+var _usure := IsoMateriaux.usure_essai_active()
+## Le dernier état des éclats posé sur les murs : leur nombre et l'id du plus récent. Rien ne change, rien n'est reposé.
+var _usure_empreinte := Vector2i(-1, -1)
 var _mat_mur: ShaderMaterial
 var _mat_corps: Array[ShaderMaterial] = []
 var _mat_profondeur: Array[ShaderMaterial] = []
@@ -438,6 +442,8 @@ func _process(_delta: float) -> void:
 			_construire_les_murs()
 		_tenir()
 		_suivre()
+		if _usure:
+			_suivre_usure()
 	etat = _decrire(voulues)
 
 
@@ -1917,12 +1923,37 @@ func _construire_les_murs() -> void:
 	_murs = IsoGeometrie.build_meshes(data, _mat_mur)
 	# ISO7 — la grille des murs de CETTE carte : l'encre et le liseré ne tombent que sur les vrais bords.
 	IsoMateriaux.accorder_grille(_mat_mur, data)
+	# ISO13, lot C — les gravats se massent au pied des murs : le sol lit la même grille.
+	if _usure:
+		for m in _mat_sols:
+			IsoMateriaux.accorder_grille(m, data)
+		_usure_empreinte = Vector2i(-1, -1)
 	for boite in _murs.get_children():
 		(boite as MeshInstance3D).layers = CALQUE_COMMUN
 		if lumiere_3d:
 			(boite as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_scene.add_child(_murs)
 	_reconstruire = false
+
+
+## ISO13, lot C — les impacts de balles du jeu (`wall_impact.gd`, les originaux : leurs copies J2 sont au même endroit)
+## posés sur les faces des murs. Seulement quand un éclat arrive ou part : le nombre et l'id du dernier suffisent à le voir.
+func _suivre_usure() -> void:
+	if _mat_mur == null:
+		return
+	var eclats := get_tree().get_nodes_in_group("wall_impact")
+	var dernier := eclats[eclats.size() - 1].get_instance_id() if not eclats.is_empty() else 0
+	var empreinte := Vector2i(eclats.size(), dernier)
+	if empreinte == _usure_empreinte:
+		return
+	_usure_empreinte = empreinte
+	var points := PackedVector2Array()
+	for e in eclats:
+		if e is Node2D and not (e as Node).is_in_group("wall_impact_p2"):
+			points.append((e as Node2D).global_position)
+	var impacts := IsoMateriaux.impacts_usure(points)
+	_mat_mur.set_shader_parameter("usure_impacts", impacts)
+	_mat_mur.set_shader_parameter("usure_impacts_n", impacts.size())
 
 
 ## Un matériau par shader PRÉCHARGÉ : aucun `Shader.new()` à la volée, qui compilerait

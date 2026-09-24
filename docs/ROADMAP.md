@@ -26459,6 +26459,65 @@ propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la p�
 `main` (J2 dans le cône de J1, sur du sol éclairé ; 2 px marqué hors garde-fou). Lot complet vert (437 s, 02:29). Avant
 d'allumer : la cadence de la coque (une passe de plus par boîte de corps), à mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
 
+
+#### ISO13, lot C — l'usure en essai : murs abîmés, sol jonché 🟡 (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi.** L'ordre de la session cloud (2026-09-23, 23:58) : des murs abîmés — fissures, taches, impacts de balles qui
+restent — et un sol jonché — douilles qui restent, gravats —, **visibles seulement dans la lumière, sans cacher aucun
+joueur**, et écrits pour n'importe quel lacet : le duel passe à 45° (Q14), la face vue se déduit de l'axe de la caméra, jamais
+« sud » en dur. Derrière `--usure-essai`, éteint ; chaque ajout mesuré en cadence par Gadgets avant d'être allumé.
+
+**Ce qui existait déjà, et qu'il ne fallait pas refaire.** Les douilles (`bullet_casing.gd`, 120 au plus) et les éclats de mur
+(`wall_impact.gd`, 90 au plus) restent déjà au monde 2D, et la peinture de la carte (`peinture_iso.gd`, ISO10 1f) les copie :
+le sol iso les montre là où la lumière tombe. Ce qui manquait : l'impact sur la FACE du mur en iso — l'éclat 2D est posé au
+pied, dans le plan du sol —, les fissures et les taches des faces, les gravats.
+
+**Ce qui est fait** (`iso_usure.gdshaderinc`, compilé dans la seule variante USURE_ESSAI des shaders de murs et de sols).
+- **Un facteur, jamais un terme** : l'usure multiplie la couleur déjà éclairée, en valeur affichée (`pate_facteur`), bornée à
+  0,22. Dans le noir elle n'existe pas ; rien n'est jamais plus clair qu'avant. Et **allumé reste allumé** : elle s'efface
+  sous 32/255 et disparaît sous 12/255 (les seuils du mannequin) — un pixel à peine éclairé sous le cœur d'un impact
+  tomberait sinon à 0 à l'écran.
+- **Aucune géométrie** : rien ne se lève devant un corps, rien ne peut en cacher un ; au sol, le corps est dessiné par-dessus.
+- **Aucune face nommée** : taches, coulures, fissures et impacts se lisent dans le repère de la face (sa normale, sa
+  tangente, sa hauteur). La caméra ne dessine que les faces qu'elle voit (`cull_back`) : au lacet de 45°, les faces vues
+  changent et leur usure avec elles. La planche le vérifie à 45°.
+- **Les impacts sont ceux du jeu** : la présentation relit les éclats (`wall_impact`, les originaux) seulement quand l'un
+  arrive ou part, et pose les 48 plus récents sur le matériau des murs. Un impact ne marque que la face DEVANT laquelle il
+  est posé (jamais le dos d'un mur mince), à hauteur de torse, avec un écart tiré de sa position — le même sur chaque
+  machine, aucun `randf()`.
+- **Les gravats** se massent au pied des murs : le sol lit la grille des murs (`accorder_grille`, posée aussi sur les sols
+  sous le drapeau). Un éclat anguleux au plus par cellule de 6 px, cerné d'une ombre tout autour — pas décalée : un décalage
+  fixe dirait une lumière venue d'une direction du monde.
+- **Le coût éteint** : sans `--usure-essai`, le code prétraité des murs, des sols et des corps est celui de `9428718`,
+  commentaires mis à part (preuve par le texte, qui rougit bien si l'on définit USURE_ESSAI). `IsoMateriaux.variante_definie`
+  généralise la variante de l'encre : les essais se cumulent.
+- Suite `tools/test_iso_usure.gd` (drapeau, variantes, impacts, garanties du shader, présentation).
+
+**La planche** (`docs/iso/iso13/planche_usure.jpg`, 2026-09-24, 16:14 ; cadrage `planche_usure` dans
+`docs/iso/iso13/banc_lumiere3d_planches_iso13_contre_8d1b152.patch`, V3 froide, sept impacts posés comme le jeu les pose) :
+- **Lu à l'œil** : les impacts se lisent en étoiles sombres sur la face éclairée, une fissure court sur la face de droite ;
+  rien sur les parties noires. Au lacet de 45°, les deux faces vues d'un même mur portent chacune leur usure.
+- **J2 non caché** : les pixels de son corps (bleutés, au-dessus de 6/255) passent de 1 175 à 1 160 au lacet 0 (−1,3 %) et de
+  1 421 à 1 420 à 45° (−0,1 %) — sous la garde de 5 %, et du bruit : l'usure ne se dessine que sur les murs et le sol.
+- ⚠️ **Le noir absolu ne se prouve pas sur ces captures** : « sans » et « avec » sont deux images successives, et la torche
+  pulse entre elles (le même constat qu'au lot B). La comparaison au pixel y compte 1 592 pixels « noirs allumés » et 7 314
+  « plus clairs » au lacet 0, qui suivent le bord du faisceau et non l'usure. La preuve est celle de la construction (un
+  facteur ≤ 1, nul sous 12/255) ; une preuve à l'octet demanderait le temps fixe au banc des lumières, qui ne l'a pas.
+- **À trancher** : l'avis d'Adrien sur la planche, puis la cadence, par Gadgets — la boucle des impacts coûte jusqu'à 48
+  tests par fragment de face.
+- **La garde de `test_iso_beaute` a tenu** : elle n'admet sur la couleur d'un mur que `c = pate_facteur(c, …)` ; un premier
+  appel `c = usure_poser(c, …)` (qui passait bien par `pate_facteur`, mais caché) l'a fait rougir. L'appel est désormais
+  écrit en clair, `c = pate_facteur(c, usure_poids(c, …))` : la garde reste telle quelle et lit la multiplication.
+- Lot complet vert (436 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:30), empreinte du code identique avant et après.
+
+**Et le côté de la lumière du lot A, pour tout lacet** (ordre de la session cloud, 04:38). Le modelé du mannequin supposait la
+caméra au sud : lumière au sud, les DESSUS s'assombrissaient (`max(l.y, 0)`), pour que la perte vue d'un corps soit la même
+qu'il soit au-dessus ou au-dessous de vous à l'écran. La caméra est désormais un argument, lu dans la matrice de vue
+(`INV_VIEW_MATRIX[2].xz`, la direction vers elle) : lumière de son côté, les dessus perdent ; dans son dos, les faces qu'elle
+voit. Au lacet 0, c'est le modelé d'avant, facteur pour facteur. L'équité tient à tout lacet pour une base carrée — les deux
+faces vues perdent `contraste × (cos² θ + sin² θ)`, la perte du lacet 0 —, vérifiée par la suite à douze lacets ; pour une base
+allongée, elle varie entre les deux rapports d'aires : à remesurer au banc des corps à 45° quand le duel y passera (Q14).
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
