@@ -166,6 +166,9 @@ vec2 occupe(vec2 px) {
 	return textureLod(grille_murs, uv, 0.0).rg;
 }
 
+// ISO13, lot C — l'usure en essai (`--usure-essai`) : compilée seulement dans la variante USURE_ESSAI.
+#include "res://iso_usure.gdshaderinc"
+
 void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec3 an = abs(normale);
@@ -261,6 +264,9 @@ void fragment() {
 		// reste de 0,25 se voyait à 0,036 (mesuré au banc).
 		c = pate_matiere_et_encre(c, matiere * lambert * contact, encre_arete_reste, max(encre_h, encre_v),
 			encre_plancher_affiche);
+#ifdef USURE_ESSAI
+		c = pate_facteur(c, usure_poids(c, usure_face(monde.xz, n, tangente, hauteur_face, taille.y, px_monde)));
+#endif
 	}
 	// ISO7, étape 6 — la teinte chaude de la lumière neutre, luminance gardée : 0 reste 0.
 	// ISO7b — graduée : `temperature_seuil_haut` à 0 rend la température d'ISO7 (teinte chaude partout) ; la

@@ -5941,3 +5941,19 @@ mesure qui l'a établie, pas lui. (2) J'ai posé le seuil de détection des imag
 quand la queue vit à 23,8 : dix-sept prises sur dix-huit n'ont rien attrapé, et mon test de phase
 s'est retrouvé sans puissance. Le verdict apparent (« la queue vient du banc ») ne tenait qu'à
 UNE prise anormale ; sans elle il s'inverse. **Rien n'est conclu sur la queue.**
+
+### 2026-09-24 (après-midi) — ISO13, lot C : l'usure en essai ; le lot A pour tout lacet (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+Écrit dans la nuit sans Godot (le Mac était à Adrien), lancé à 16:14 au « tu peux reprendre ». Derrière `--usure-essai`,
+éteint : taches, coulures, fissures et les impacts de balles du jeu sur les faces des murs, gravats au pied des murs. Tout
+est un facteur sur la lumière, effacé sous 12/255 ; rien dans le noir, rien sur les corps, aucune face nommée — la planche
+le montre au lacet 0 et à 45°. Les douilles restaient déjà : la peinture de la carte les copiait au sol iso. Et le côté de la
+lumière du mannequin (lot A) ne suppose plus la caméra au sud : il la lit dans la matrice de vue, équité tenue à tout lacet
+pour une base carrée. Leçon du jour : une comparaison au pixel entre deux captures successives du banc des lumières ne
+prouve pas le noir absolu — la torche pulse entre elles ; c'est la construction qui le prouve.
+
+**Suite, 16:31-16:47 — V3 froide, la tenue du jeu** (décision d'Adrien, 12:42). Sans drapeau, les deux joueurs portent
+désormais V3 froide ; le gris reste joignable par `--corps=gris`. Quatre conditions posées avant les chiffres, aucune vraie :
+la bouteille ne sort jamais du couloir (le pire, 17,44 px, est celui du gris), personne n'apparaît plus tôt ni plus tard que
+le gris d'ISO3, le noir reste à 0. Quatre suites supposaient le gris ou « neuf boîtes » en dur ; la bouteille a sa passe de
+profondeur comme les autres — c'étaient les comptes qui étaient faux, pas le rendu.

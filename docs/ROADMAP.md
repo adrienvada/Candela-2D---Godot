@@ -27259,6 +27259,110 @@ propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la p�
 `main` (J2 dans le cône de J1, sur du sol éclairé ; 2 px marqué hors garde-fou). Lot complet vert (437 s, 02:29). Avant
 d'allumer : la cadence de la coque (une passe de plus par boîte de corps), à mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
 
+
+#### ISO13, lot C — l'usure en essai : murs abîmés, sol jonché 🟡 (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi.** L'ordre de la session cloud (2026-09-23, 23:58) : des murs abîmés — fissures, taches, impacts de balles qui
+restent — et un sol jonché — douilles qui restent, gravats —, **visibles seulement dans la lumière, sans cacher aucun
+joueur**, et écrits pour n'importe quel lacet : le duel passe à 45° (Q14), la face vue se déduit de l'axe de la caméra, jamais
+« sud » en dur. Derrière `--usure-essai`, éteint ; chaque ajout mesuré en cadence par Gadgets avant d'être allumé.
+
+**Ce qui existait déjà, et qu'il ne fallait pas refaire.** Les douilles (`bullet_casing.gd`, 120 au plus) et les éclats de mur
+(`wall_impact.gd`, 90 au plus) restent déjà au monde 2D, et la peinture de la carte (`peinture_iso.gd`, ISO10 1f) les copie :
+le sol iso les montre là où la lumière tombe. Ce qui manquait : l'impact sur la FACE du mur en iso — l'éclat 2D est posé au
+pied, dans le plan du sol —, les fissures et les taches des faces, les gravats.
+
+**Ce qui est fait** (`iso_usure.gdshaderinc`, compilé dans la seule variante USURE_ESSAI des shaders de murs et de sols).
+- **Un facteur, jamais un terme** : l'usure multiplie la couleur déjà éclairée, en valeur affichée (`pate_facteur`), bornée à
+  0,22. Dans le noir elle n'existe pas ; rien n'est jamais plus clair qu'avant. Et **allumé reste allumé** : elle s'efface
+  sous 32/255 et disparaît sous 12/255 (les seuils du mannequin) — un pixel à peine éclairé sous le cœur d'un impact
+  tomberait sinon à 0 à l'écran.
+- **Aucune géométrie** : rien ne se lève devant un corps, rien ne peut en cacher un ; au sol, le corps est dessiné par-dessus.
+- **Aucune face nommée** : taches, coulures, fissures et impacts se lisent dans le repère de la face (sa normale, sa
+  tangente, sa hauteur). La caméra ne dessine que les faces qu'elle voit (`cull_back`) : au lacet de 45°, les faces vues
+  changent et leur usure avec elles. La planche le vérifie à 45°.
+- **Les impacts sont ceux du jeu** : la présentation relit les éclats (`wall_impact`, les originaux) seulement quand l'un
+  arrive ou part, et pose les 48 plus récents sur le matériau des murs. Un impact ne marque que la face DEVANT laquelle il
+  est posé (jamais le dos d'un mur mince), à hauteur de torse, avec un écart tiré de sa position — le même sur chaque
+  machine, aucun `randf()`.
+- **Les gravats** se massent au pied des murs : le sol lit la grille des murs (`accorder_grille`, posée aussi sur les sols
+  sous le drapeau). Un éclat anguleux au plus par cellule de 6 px, cerné d'une ombre tout autour — pas décalée : un décalage
+  fixe dirait une lumière venue d'une direction du monde.
+- **Le coût éteint** : sans `--usure-essai`, le code prétraité des murs, des sols et des corps est celui de `9428718`,
+  commentaires mis à part (preuve par le texte, qui rougit bien si l'on définit USURE_ESSAI). `IsoMateriaux.variante_definie`
+  généralise la variante de l'encre : les essais se cumulent.
+- Suite `tools/test_iso_usure.gd` (drapeau, variantes, impacts, garanties du shader, présentation).
+
+**La planche** (`docs/iso/iso13/planche_usure.jpg`, 2026-09-24, 16:14 ; cadrage `planche_usure` dans
+`docs/iso/iso13/banc_lumiere3d_planches_iso13_contre_8d1b152.patch`, V3 froide, sept impacts posés comme le jeu les pose) :
+- **Lu à l'œil** : les impacts se lisent en étoiles sombres sur la face éclairée, une fissure court sur la face de droite ;
+  rien sur les parties noires. Au lacet de 45°, les deux faces vues d'un même mur portent chacune leur usure.
+- **J2 non caché** : les pixels de son corps (bleutés, au-dessus de 6/255) passent de 1 175 à 1 160 au lacet 0 (−1,3 %) et de
+  1 421 à 1 420 à 45° (−0,1 %) — sous la garde de 5 %, et du bruit : l'usure ne se dessine que sur les murs et le sol.
+- ⚠️ **Le noir absolu ne se prouve pas sur ces captures** : « sans » et « avec » sont deux images successives, et la torche
+  pulse entre elles (le même constat qu'au lot B). La comparaison au pixel y compte 1 592 pixels « noirs allumés » et 7 314
+  « plus clairs » au lacet 0, qui suivent le bord du faisceau et non l'usure. La preuve est celle de la construction (un
+  facteur ≤ 1, nul sous 12/255) ; une preuve à l'octet demanderait le temps fixe au banc des lumières, qui ne l'a pas.
+- **À trancher** : l'avis d'Adrien sur la planche, puis la cadence, par Gadgets — la boucle des impacts coûte jusqu'à 48
+  tests par fragment de face.
+- **La garde de `test_iso_beaute` a tenu** : elle n'admet sur la couleur d'un mur que `c = pate_facteur(c, …)` ; un premier
+  appel `c = usure_poser(c, …)` (qui passait bien par `pate_facteur`, mais caché) l'a fait rougir. L'appel est désormais
+  écrit en clair, `c = pate_facteur(c, usure_poids(c, …))` : la garde reste telle quelle et lit la multiplication.
+- Lot complet vert (436 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:30), empreinte du code identique avant et après.
+
+**Et le côté de la lumière du lot A, pour tout lacet** (ordre de la session cloud, 04:38). Le modelé du mannequin supposait la
+caméra au sud : lumière au sud, les DESSUS s'assombrissaient (`max(l.y, 0)`), pour que la perte vue d'un corps soit la même
+qu'il soit au-dessus ou au-dessous de vous à l'écran. La caméra est désormais un argument, lu dans la matrice de vue
+(`INV_VIEW_MATRIX[2].xz`, la direction vers elle) : lumière de son côté, les dessus perdent ; dans son dos, les faces qu'elle
+voit. Au lacet 0, c'est le modelé d'avant, facteur pour facteur. L'équité tient à tout lacet pour une base carrée — les deux
+faces vues perdent `contraste × (cos² θ + sin² θ)`, la perte du lacet 0 —, vérifiée par la suite à douze lacets ; pour une base
+allongée, elle varie entre les deux rapports d'aires : à remesurer au banc des corps à 45° quand le duel y passera (Q14).
+
+#### ISO13 — V3 froide, la tenue du jeu ✅ (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**La décision** (Adrien, 2026-09-24, Q21 et Q23, relayée par la session cloud à 12:42). À ISO Assets, en direct : « J'aime bien
+V3 froide », puis « Et en jeu la V3 sombre » ; à la question de la teinte en jeu, à 12:42 : « V3 froide ». V3 — tissu sombre,
+arêtes claires — en teinte froide devient la tenue PAR DÉFAUT, pour les deux joueurs, en écran scindé comme en ligne, comme
+dans les illustrations.
+
+**Ce qui change.** `VoxelCatalogue.TENUE_PAR_DEFAUT = "sombre3"` et `TEINTE_PAR_DEFAUT = "froide"` : sans drapeau, chaque
+corps construit porte V3 froide (la bouteille du portrait comprise, chez les six classes qui la portent). **Le gris d'ISO3
+reste joignable pour comparer** : `--corps=gris` ; l'olive, `--teinte=olive`. Un nom de tenue inconnu revient au défaut du jeu.
+Rien d'autre : la géométrie, l'empreinte (≤ 17,5 px) et la zone de touche (18 px) sont celles que les tenues sombres ont
+déjà prouvées (ISO12) ; le réseau ne transporte aucune tenue — chaque machine peint les deux corps de la même façon.
+
+**Les preuves** (2026-09-24, 16:30-16:45 ; quatre conditions posées AVANT les chiffres par la session cloud : aucune ne devait
+être vraie pour que le défaut soit commité).
+- **La silhouette, bouteille comprise, sous le couloir de 17,5 px** : pour chaque classe, debout et accroupi, à seize visées,
+  le rayon du corps seul est **exactement celui du gris** — la bouteille reste dans l'enveloppe. Le pire : 17,44 px, la Pompe
+  accroupie, en gris comme en V3. Dans la zone de touche de 18 px. Avec l'arme, la torche et le gadget (pour information) :
+  jusqu'à 24,37 px (la Sentinelle), là encore identique au gris.
+- **L'apparition, jamais plus tôt, jamais plus de 10 % plus tard** : la lumière la plus faible où un corps montre 30 px est
+  la même pour les dix classes, en gris et en V3 froide (0,08 à 0,12) — contre le gris d'ISO3 lui-même, sans bouteille
+  (`--corps=gris`, temps fixe), et contre le gris peint sur les mêmes boîtes. La bouteille ne fait apparaître personne plus
+  tôt.
+- **Le noir absolu** : à lumière 0, pixel maximal 0/255, en gris comme en V3 froide.
+- **Le prix, rapporté et non bloquant** (accepté par Adrien en choisissant V3 : « au bord de ta torche, on n'en voit que la
+  moitié, puis une silhouette », Q21, option C) : à 0,15, V3 froide montre de 8 % (l'Allumeur) à 87 % (l'Occulteur) de pixels
+  de moins que le gris ; médiane des dix classes 2 695 contre 5 414. Au-delà de 0,2, l'écart se referme (0,3 : identique).
+
+Relevés et scripts dans `docs/iso/iso13/v3_froide/` (le script de silhouette y est en `.gd.txt` : un `.gd` sous `docs/`
+serait vu par Godot comme un script du projet).
+
+**Les suites qui supposaient le gris par défaut**, mises à jour une à une :
+- `test_corps_portraits` : « éteint par défaut » gardait deux choses à la fois — les portraits éteints sans leur drapeau
+  (toujours vrai, toujours vérifié) et le gris sans drapeau (faux par décision) ; il vérifie désormais V3 par défaut. Les
+  tenues : V3 sans drapeau, `--corps=gris` rend le gris, un nom inconnu rend V3. La teinte : froide par défaut, l'olive par
+  `--teinte=olive`, un nom inconnu rend la froide.
+- `test_voxel_corps` : « neuf boîtes », « même nombre que les classes précédentes » et « boites() rend les neuf boîtes
+  visibles » décrivaient le corps d'ISO3 ; celui du jeu porte la bouteille chez six classes, neuf ou dix boîtes selon la
+  classe. La suite attend le compte de la tenue du jeu (`nombre_de_boites()`).
+- `test_iso_corps` et `test_iso_vues` : « chaque boîte a sa passe de profondeur » comptait 9 en dur ; la bouteille a la sienne
+  comme les autres (10/10 constaté) — le compte attendu est celui du corps. Aucun défaut du rendu : la première passe a
+  montré 10 passes pour 10 boîtes, et c'est le « 9 » qui manquait la bouteille.
+
+Lot complet vert (440 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:47), empreinte du code identique avant et après.
+
 #### ISO14 — le lacet à 45° : le banc d'équité et `--lacet=45`, éteint 🟡 (2026-09-24, branche `iso14-lacet45`, partie de `76fe78f`, session « Iso 1 Opus »)
 
 **Pourquoi.** Q14, Adrien (2026-09-24 vers 01:19) : « on passe à 45° ce sera plus intéressant ». Plan, règle d'équité et

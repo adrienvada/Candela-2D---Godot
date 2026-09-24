@@ -157,8 +157,11 @@ func _les_corps(main: Node, p: Node) -> void:
 		_check("J%d : sous SceneIso/Corps%d, ancre à l'échelle d'une tuile (%s px)" % [j + 1, j + 1, str(tuile)],
 			ancre != null and ancre.name == "Corps%d" % (j + 1) and ancre.scale.is_equal_approx(Vector3.ONE * tuile)
 			and ancre.position == Vector3.ZERO)
-		_check("J%d : le corps de sa classe (%s), neuf boîtes" % [j + 1, voxel.slug()],
-			voxel.slug() == p.slug_du_corps(joueur) and voxel.nombre_de_boites() == 9)
+		# Mis à jour le 2026-09-24 (décision d'Adrien : V3 froide par défaut) : la tenue du jeu ajoute la bouteille du portrait
+		# aux six classes qui la portent — neuf boîtes, ou dix.
+		var boites := 10 if VoxelCatalogue.tenue() != "" and bool(VoxelCatalogue.PORTRAITS[voxel.slug()]["bouteille"]) else 9
+		_check("J%d : le corps de sa classe (%s), %d boîtes" % [j + 1, voxel.slug(), boites],
+			voxel.slug() == p.slug_du_corps(joueur) and voxel.nombre_de_boites() == boites)
 		var pos := voxel.global_position
 		_check("J%d : posé à sa position, en pixels de monde" % (j + 1),
 			absf(pos.x - joueur.global_position.x) < 0.05 and absf(pos.z - joueur.global_position.y) < 0.05
@@ -197,8 +200,11 @@ func _les_corps(main: Node, p: Node) -> void:
 			var d := (b as Node).get_node_or_null("BoiteProfondeur") as MeshInstance3D
 			if d != null and d.material_override == voxel.materiau_profondeur() and (b as VisualInstance3D).layers == 1:
 				doubles += 1
+		# Mis à jour le 2026-09-24 (V3 froide par défaut) : la bouteille a sa passe de profondeur comme les autres boîtes — neuf
+		# ou dix selon la classe, jamais un compte fixe.
 		_check("J%d : chaque boîte a sa passe de profondeur, sur le calque commun" % (j + 1),
-			doubles == 9 and voxel.materiau_profondeur().render_priority < voxel.materiau().render_priority, "%d/9" % doubles)
+			doubles == voxel.nombre_de_boites() and voxel.materiau_profondeur().render_priority < voxel.materiau().render_priority,
+			"%d/%d" % [doubles, voxel.nombre_de_boites()])
 
 
 func _les_etats(main: Node, p: Node) -> void:

@@ -230,21 +230,30 @@ const EPAISSEUR_PAR_DEFAUT := "x1_6"
 # ISO12 — L'ASPECT DES CORPS D'APRÈS LES DIX PORTRAITS DE CLASSE
 # -----------------------------------------------------------------------------
 
-## Le drapeau de comparaison, éteint par défaut : sans lui, les corps restent les aplats gris d'ISO3.
+## Le drapeau des corps d'après les dix portraits, éteint par défaut (sans lui, la tenue du jeu : `TENUE_PAR_DEFAUT`).
 const DRAPEAU_PORTRAITS := "--corps=portraits"
 ## ISO12 — les TENUES SOMBRES (ordre de la session cloud, 2026-09-23 20:43, après la réponse d'Adrien à Q21 : « il faudrait
-## que les personnages soient en tenue sombre. Dans tous les visuels. »), éteintes par défaut elles aussi, en trois variantes
-## (`TENUES_SOMBRES`) : `--corps=sombre` (V1), `--corps=sombre2` (V2), `--corps=sombre3` (V3).
+## que les personnages soient en tenue sombre. Dans tous les visuels. »), en trois variantes (`TENUES_SOMBRES`) :
+## `--corps=sombre` (V1), `--corps=sombre2` (V2), `--corps=sombre3` (V3). V3 est la tenue du jeu depuis le 2026-09-24
+## (`TENUE_PAR_DEFAUT`).
 const DRAPEAU_SOMBRE := "--corps=sombre"
 
-## Pour les suites (`--script`, sans ligne de commande de jeu) : -1 lit le drapeau, 0 l'éteint, 1 l'allume.
+## Pour les suites (`--script`, sans ligne de commande de jeu) : -1 lit la ligne de commande, 0 impose le gris, 1 les portraits.
 static var forcer_portraits := -1
 ## Pour les suites et les bancs : `"-"` lit la ligne de commande ; sinon la tenue imposée (`""` le gris, `"portraits"`,
 ## `"sombre1"`, `"sombre2"`, `"sombre3"`). Prime sur `forcer_portraits`.
 static var forcer_tenue := "-"
 
+## LA TENUE DU JEU (décision d'Adrien, 2026-09-24, Q21 et Q23 : « J'aime bien V3 froide », « Et en jeu la V3 sombre », puis
+## pour la teinte en jeu, à 12:42 : « V3 froide ») : V3 — tissu sombre, arêtes claires — en teinte froide, pour les deux
+## joueurs, en écran scindé comme en ligne, comme dans les illustrations. Le gris d'ISO3 reste joignable pour comparer :
+## `--corps=gris` (et `--teinte=olive` pour l'ancienne teinte des tenues sombres).
+const TENUE_PAR_DEFAUT := "sombre3"
+const DRAPEAU_GRIS := "--corps=gris"
 
-## La tenue des corps : `""` (le gris d'ISO3, le défaut), `"portraits"` ou l'une des `TENUES_SOMBRES`.
+
+## La tenue des corps : `TENUE_PAR_DEFAUT` sans drapeau ; `""` (le gris d'ISO3, `--corps=gris`), `"portraits"` ou l'une des
+## `TENUES_SOMBRES`.
 static func tenue() -> String:
 	if forcer_tenue != "-":
 		return forcer_tenue
@@ -253,16 +262,18 @@ static func tenue() -> String:
 	return tenue_de(OS.get_cmdline_user_args())
 
 
-## La tenue que nomme une ligne de commande (la première qui en nomme une) : `""` si aucune.
+## La tenue que nomme une ligne de commande (la première qui en nomme une) : `TENUE_PAR_DEFAUT` si aucune.
 static func tenue_de(args: PackedStringArray) -> String:
 	for a in args:
+		if a == DRAPEAU_GRIS:
+			return ""
 		if a == DRAPEAU_PORTRAITS:
 			return "portraits"
 		if a == DRAPEAU_SOMBRE:
 			return "sombre1"
 		if a.begins_with(DRAPEAU_SOMBRE) and TENUES_SOMBRES.has("sombre" + a.trim_prefix(DRAPEAU_SOMBRE)):
 			return "sombre" + a.trim_prefix(DRAPEAU_SOMBRE)
-	return ""
+	return TENUE_PAR_DEFAUT
 
 
 ## Une tenue PEINTE est-elle portée (portraits ou sombre) : c'est ce que lisent `VoxelCorps` et les bancs (temps figé, prise
@@ -423,6 +434,8 @@ const TEINTES := {
 }
 ## Pour les suites et les bancs : `""` lit la ligne de commande ; sinon la teinte imposée.
 static var forcer_teinte := ""
+## La teinte du jeu (décision d'Adrien, 2026-09-24, 12:42 : « V3 froide »).
+const TEINTE_PAR_DEFAUT := "froide"
 
 
 ## ISO13, lot A — LE MANNEQUIN (`iso_corps_mannequin.gdshaderinc`) : segments, côté de la lumière, contour. Éteint par défaut,
@@ -446,7 +459,8 @@ static func mannequin_actif() -> bool:
 	return _mannequin_ligne == 1
 
 
-## La teinte des tenues sombres : `"olive"` (le défaut) ou `"froide"` (`--teinte=froide`).
+## La teinte des tenues sombres : `"froide"` (le défaut depuis la décision d'Adrien, 2026-09-24 — `TEINTE_PAR_DEFAUT`) ou
+## `"olive"` (`--teinte=olive`, pour comparer).
 static func teinte() -> String:
 	if forcer_teinte != "":
 		return forcer_teinte
@@ -457,7 +471,7 @@ static func teinte_de(args: PackedStringArray) -> String:
 	for a in args:
 		if a.begins_with(DRAPEAU_TEINTE) and TEINTES.has(a.trim_prefix(DRAPEAU_TEINTE)):
 			return a.trim_prefix(DRAPEAU_TEINTE)
-	return "olive"
+	return TEINTE_PAR_DEFAUT
 
 
 ## La palette de la tenue `nom` pour la classe `slug`, aux mêmes clés que `palette_portrait()` (plus `tete`, `arete`,

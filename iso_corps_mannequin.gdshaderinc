@@ -17,7 +17,7 @@
 // lumière et non la direction de sa source — il s'inversait au passage d'un cône. Ici la direction est géométrique (du
 // corps vers chaque lampe, pondérée), et une face tournée vers une lampe ne peut pas s'assombrir à cause d'elle.
 // ⚠️ **L'équité nord / sud, et le mannequin n'éclaire jamais.** La caméra au lacet 0 ne voit que les dessus et les faces
-// tournées vers le sud. Assombrir seule la face sud d'un corps éclairé depuis le nord le rendrait moins visible qu'un corps
+// tournées vers le sud (à tout lacet : les faces tournées vers elle — voir `mannequin_facteur`). Assombrir seule la face sud d'un corps éclairé depuis le nord le rendrait moins visible qu'un corps
 // éclairé depuis le sud : un adversaire plus facile à voir selon qu'il est au-dessus ou au-dessous de vous à l'écran.
 // Lumière au sud, ce sont donc les DESSUS qui s'assombrissent (une lumière rasante venue de la caméra), d'autant plus que
 // leur aire vue est petite (`mannequin_report`) : la perte vue est la même dans les deux cas. Une première forme
@@ -62,8 +62,14 @@ bool mannequin_est(vec3 d, vec3 ref) {
 	return ref.x > 0.0 && all(lessThan(abs(d - ref), vec3(0.0005)));
 }
 
-// Le facteur de modelé d'une face de normale MONDE `n`.
-float mannequin_facteur(vec3 n) {
+// Le facteur de modelé d'une face de normale MONDE `n`. `camera` : la direction HORIZONTALE (x, z du monde) vers la caméra,
+// le côté dont elle voit les faces — lue par l'appelant dans la matrice de vue (`INV_VIEW_MATRIX[2].xz`), jamais « sud » en
+// dur : au lacet 0, (0, 1), et le modelé d'avant ; au lacet de 45° (Q14), la caméra voit deux faces latérales.
+// ⚠️ **L'équité tient à tout lacet** (ISO13, 04:38) : lumière du côté de la caméra, ce sont les dessus qui perdent ; lumière
+// dans son dos, les faces vues, chacune de `contraste × cos` de son angle à la caméra. Pour une boîte de base carrée, la perte
+// vue des faces est `contraste × (cos² θ + sin² θ)` — celle du lacet 0, quel que soit θ : le même `mannequin_report` suffit.
+// Pour une base allongée (largeur ≠ profondeur), elle varie entre les deux rapports d'aires : à remesurer au banc à 45°.
+float mannequin_facteur(vec3 n, vec2 camera) {
 	if (mannequin < 0.5) {
 		return 1.0;
 	}
@@ -72,9 +78,10 @@ float mannequin_facteur(vec3 n) {
 		return 1.0;
 	}
 	vec2 l = mannequin_lumiere / length(mannequin_lumiere);
+	vec2 v = length(camera) > 0.001 ? camera / length(camera) : vec2(0.0, 1.0);
 	if (n.y > 0.5) {
-		// Le dessus : sombre quand la lumière vient du sud (+z), rasante depuis la caméra.
-		return clamp(1.0 - mannequin_contraste * nette * max(l.y, 0.0) * mannequin_report, 0.0, 1.0);
+		// Le dessus : sombre quand la lumière vient du côté de la caméra, rasante depuis elle.
+		return clamp(1.0 - mannequin_contraste * nette * max(dot(l, v), 0.0) * mannequin_report, 0.0, 1.0);
 	}
 	vec2 h = n.xz;
 	float lh = length(h);
@@ -84,12 +91,12 @@ float mannequin_facteur(vec3 n) {
 	return clamp(1.0 - mannequin_contraste * nette * max(-dot(h / lh, l), 0.0), 0.0, 1.0);
 }
 
-vec3 mannequin_modeler(vec3 c, vec3 n, float niveau) {
+vec3 mannequin_modeler(vec3 c, vec3 n, float niveau, vec2 camera) {
 	float w = mannequin_poids(niveau);
 	if (w <= 0.0) {
 		return c;
 	}
-	return pate_facteur(c, mix(1.0, mannequin_facteur(n), w));
+	return pate_facteur(c, mix(1.0, mannequin_facteur(n, camera), w));
 }
 
 // Le facteur des lignes de segment et du contour, au fragment : 1 hors d'une ligne, `mannequin_encre` sur un segment (faces

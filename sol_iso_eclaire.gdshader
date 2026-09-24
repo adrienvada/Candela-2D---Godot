@@ -267,6 +267,10 @@ float contact_des_corps(vec2 p) {
 	return f;
 }
 
+// ISO13, lot C — l'usure en essai (`--usure-essai`) : compilée seulement dans la variante USURE_ESSAI.
+#define USURE_SOL
+#include "res://iso_usure.gdshaderinc"
+
 void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 px = monde.xz;
@@ -298,6 +302,9 @@ void fragment() {
 	}
 	// Les facteurs d'ISO7 sur la valeur AFFICHÉE, comme avant (`pate_facteur`).
 	c = pate_facteur(c, matiere * dalle);
+#ifdef USURE_ESSAI
+	c = pate_facteur(c, usure_poids(c, usure_sol(px, usure_mur_pres(px), px_monde)));
+#endif
 	c = pate_facteur(c, contact_des_corps(px));
 	// Le damier de la peinture ramené au ton sombre (ISO7b) : la case claire est assombrie, jamais la sombre éclaircie.
 	vec2 case_albedo = floor(px_lu / tuile_px);

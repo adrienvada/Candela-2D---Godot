@@ -1,0 +1,13 @@
+corps (px, masque commun) : pistolet 8368, fusil 8872, pompe 9688, arbalete 8783, fumiste 9403, incendiaire 9064, sentinelle 8677, occulteur 8011, allumeur 9319, spectre 8398
+classe        0.15           0.12           0.1            0.08           0.06            apparition gris / V3
+pistolet       4888 →  2226     1618 →   406     1465 →   127        0 →     0        0 →     0     0.1 / 0.1
+fusil          5376 →  3297     4957 →   872     1704 →   348        0 →     0        0 →     0     0.1 / 0.1
+pompe          5571 →   893     2032 →   274        0 →     0        0 →     0        0 →     0     0.12 / 0.12
+arbalete       5238 →  2822     4748 →   649     1765 →   341        0 →     0        0 →     0     0.1 / 0.1
+fumiste        5462 →  2293     1964 →   380        0 →     0        0 →     0        0 →     0     0.12 / 0.12
+incendiaire    5763 →  4212     5412 →  2542     4836 →   530     1758 →   251        0 →     0     0.08 / 0.08
+sentinelle     5026 →  2384     4663 →   567     1593 →   228        0 →     0        0 →     0     0.1 / 0.1
+occulteur      4139 →   464     1340 →    91        0 →     0        0 →     0        0 →     0     0.12 / 0.12
+allumeur       5913 →  5442     5550 →  2728     5196 →   935     1825 →   269        0 →     0     0.08 / 0.08
+spectre        5051 →  3857     4762 →  2016     1589 →   419     1404 →    93        0 →     0     0.08 / 0.08
+V3 (bouteille comprise) apparaît plus TÔT que le gris d'ISO3 pour : aucune classe

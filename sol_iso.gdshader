@@ -120,6 +120,10 @@ float contact_des_corps(vec2 p) {
 	return f;
 }
 
+// ISO13, lot C — l'usure en essai (`--usure-essai`) : compilée seulement dans la variante USURE_ESSAI.
+#define USURE_SOL
+#include "res://iso_usure.gdshaderinc"
+
 void fragment() {
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 px = monde.xz;
@@ -157,6 +161,9 @@ void fragment() {
 		c = pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut);
 	}
 	// ISO10, 1d — sur la valeur affichée, comme la matière : un sol noir reste noir sous un corps.
+#ifdef USURE_ESSAI
+	c = pate_facteur(c, usure_poids(c, usure_sol(px, usure_mur_pres(px), px_monde)));
+#endif
 	c = pate_facteur(c, contact_des_corps(px));
 	ALBEDO = c;
 }

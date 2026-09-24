@@ -255,14 +255,16 @@ func _la_direction() -> void:
 	_check("un corps qui traverse le faisceau d'un bord à l'autre : la lumière vient toujours de la lampe", not inverse)
 
 
-## Miroir de `mannequin_facteur` (iso_corps_mannequin.gdshaderinc).
-static func _facteur(n: Vector3, l: Vector2, contraste: float, report: float) -> float:
+## Miroir de `mannequin_facteur` (iso_corps_mannequin.gdshaderinc). `camera` : la direction horizontale vers la caméra, (0, 1)
+## au lacet 0.
+static func _facteur(n: Vector3, l: Vector2, contraste: float, report: float, camera := Vector2(0, 1)) -> float:
 	var nette := minf(l.length(), 1.0)
 	if nette < 0.001:
 		return 1.0
 	var u := l / l.length()
+	var v := camera.normalized() if camera.length() > 0.001 else Vector2(0, 1)
 	if n.y > 0.5:
-		return clampf(1.0 - contraste * nette * maxf(u.y, 0.0) * report, 0.0, 1.0)
+		return clampf(1.0 - contraste * nette * maxf(u.dot(v), 0.0) * report, 0.0, 1.0)
 	var h := Vector2(n.x, n.z)
 	if h.length() < 0.001:
 		return 1.0
@@ -296,6 +298,29 @@ func _le_modele() -> void:
 			var fa := _facteur(n, l, c, r)
 			if fa > 1.0 or fa < 0.0:
 				jamais_plus = false
+	# ISO13, 04:38 — À TOUT LACET : la caméra tournée de θ voit deux faces latérales, d'aires vues cos θ et sin θ (base carrée).
+	# Lumière dans son dos, elles perdent contraste × cos chacune ; lumière de son côté, les dessus perdent contraste × report.
+	var equitable := true
+	var au_lacet_nul := true
+	for k in 12:
+		var theta := TAU * float(k) / 12.0
+		var v := Vector2(0, 1).rotated(-theta)
+		var perte_faces := 0.0
+		for f in 4:
+			var h := Vector2(0, 1).rotated(-theta + PI * 0.5 * float(f))
+			var aire := maxf(h.dot(v), 0.0)
+			perte_faces += aire * (1.0 - _facteur(Vector3(h.x, 0, h.y), -v, c, r, v))
+		var perte_dessus := (1.0 - _facteur(dessus, v, c, r, v)) / r
+		if absf(perte_faces - perte_dessus) > 1e-5:
+			equitable = false
+		for f in 4:
+			var l := Vector2(0, 1).rotated(PI * 0.5 * float(f))
+			for n in [sud, dessus, Vector3(1, 0, 0)]:
+				if k == 0 and _facteur(n, l, c, r, v) != _facteur(n, l, c, r):
+					au_lacet_nul = false
+	_check("à tout lacet (douze, base carrée) : la perte vue des faces, lumière dans le dos de la caméra, vaut celle des dessus, lumière de son côté",
+		equitable)
+	_check("au lacet 0, la caméra au sud : le modelé d'avant, facteur pour facteur", au_lacet_nul)
 	_check("tout facteur entre 0 et 1, dans toutes les directions : le mannequin n'éclaire jamais — aucun pixel voyant, aucun noir rallumé",
 		jamais_plus)
 	_check("le contraste est modéré (%.2f) : la face dos à la lumière garde %.0f %% de sa lumière" % [c, (1.0 - c) * 100.0],
@@ -308,10 +333,18 @@ func _les_shaders() -> void:
 	_check("l'include n'écrit ni ALBEDO, ni EMISSION, ni DIFFUSE_LIGHT", not inc.contains("ALBEDO") and not inc.contains("EMISSION")
 		and not inc.contains("DIFFUSE_LIGHT") and not inc.contains("void light"))
 	_check("l'include : le miroir de la suite est la formule du shader (dessus et faces latérales)",
-		inc.contains("return clamp(1.0 - mannequin_contraste * nette * max(l.y, 0.0) * mannequin_report, 0.0, 1.0);")
+		inc.contains("return clamp(1.0 - mannequin_contraste * nette * max(dot(l, v), 0.0) * mannequin_report, 0.0, 1.0);")
 		and inc.contains("return clamp(1.0 - mannequin_contraste * nette * max(-dot(h / lh, l), 0.0), 0.0, 1.0);"))
 	_check("l'include : le côté de la lumière passe par pate_facteur, en fondu selon la lumière reçue par le corps",
-		inc.contains("return pate_facteur(c, mix(1.0, mannequin_facteur(n), w));"))
+		inc.contains("return pate_facteur(c, mix(1.0, mannequin_facteur(n, camera), w));"))
+	var t0 := CameraIso.transform_pour(Transform2D.IDENTITY, Vector2(1920, 1080), CameraIso.TANGAGE_DEG, 0.0)
+	var t45 := CameraIso.transform_pour(Transform2D.IDENTITY, Vector2(1920, 1080), CameraIso.TANGAGE_DEG, 45.0)
+	var v0 := Vector2(t0.basis.z.x, t0.basis.z.z).normalized()
+	var v45 := Vector2(t45.basis.z.x, t45.basis.z.z).normalized()
+	_check("la colonne z de la caméra pointe vers elle : (0, 1) au lacet 0 (%s), tournée de 45° au lacet 45 (%s)" % [v0, v45],
+		v0.distance_to(Vector2(0, 1)) < 1e-5 and absf(absf(v45.angle_to(v0)) - PI / 4.0) < 1e-4)
+	_check("l'include : aucun « sud » en dur — la caméra est un argument, lu par l'appelant dans la matrice de vue",
+		not inc.contains("max(l.y, 0.0)") and inc.contains("float mannequin_facteur(vec3 n, vec2 camera) {"))
 	_check("l'include : rien sous le seuil (modelé, segments et contour pèsent mannequin_poids, nul sous 12/255)",
 		inc.contains("uniform vec2 mannequin_seuils = vec2(0.0470588, 0.1254902);")
 		and inc.contains("smoothstep(mannequin_seuils.x, mannequin_seuils.y, niveau)")
@@ -326,7 +359,7 @@ func _les_shaders() -> void:
 		var i := code.find("void fragment()")
 		var frag := code.substr(i)
 		var modele := frag.find("modele_du_corps(normale_monde)")
-		var cote := frag.find("c = mannequin_modeler(c, normale_monde, niveau);")
+		var cote := frag.find("c = mannequin_modeler(c, normale_monde, niveau, INV_VIEW_MATRIX[2].xz);")
 		var encre := frag.find("pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde)")
 		var segments := frag.find("c = pate_facteur(c, mannequin_segments(")
 		var teinte := frag.find("c = portrait_teindre(c, fiche, couleur_fiche.rgb);")
