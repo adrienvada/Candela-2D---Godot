@@ -60,6 +60,7 @@ func _run() -> void:
 	_le_banc()
 	await _les_tenues_sombres()
 	_le_fil()
+	_l_equite()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	VoxelCatalogue.forcer_portraits = -1
 	VoxelCatalogue.forcer_tenue = "-"
@@ -351,7 +352,12 @@ func _les_tenues_sombres() -> void:
 				if (pair[0] == "cartouche" or pair[0] == "arete") and c.a <= 0.0:
 					continue
 				var l := VoxelCatalogue.luminance_affichee(c)
-				var voulu := minf(gris * float(r[pair[1]]), plafond)
+				# Mis à jour le 2026-09-24 (l'équité de V3) : le rapport d'un rôle sombre de V3 est multiplié par le facteur de sa
+				# classe (`VoxelCatalogue.V3_EQUITE`), plafonné à 1 ; le liseré clair (> 1) ne l'est pas.
+				var rr := float(r[pair[1]])
+				if rr <= 1.0:
+					rr = minf(rr * VoxelCatalogue.facteur_equite(s, nom), 1.0)
+				var voulu := minf(gris * rr, plafond)
 				if not (l <= voulu + 0.003 and l >= voulu - 0.02):
 					justes = false
 					detail += "%s/%s %.4f≠%.4f " % [s, pair[0], l, voulu]
@@ -385,8 +391,10 @@ func _les_tenues_sombres() -> void:
 		if sous_seuil:
 			var c5 := _brut(gris_sp) * 0.03
 			var t5 := _teindre(c5, p_sp["ocre"], gris_sp, true)
-			_check("%s : sous le seuil, le tissu assombrit le gris de son rapport (%.3f)" % [nom, t5.length() / c5.length()],
-				absf(t5.length() / c5.length() - float(r["tissu"])) < 0.02)
+			# Mis à jour le 2026-09-24 : le rapport du tissu du Spectre inclut son facteur d'équité en V3.
+			var rt := minf(float(r["tissu"]) * VoxelCatalogue.facteur_equite("spectre", nom), 1.0)
+			_check("%s : sous le seuil, le tissu assombrit le gris de son rapport (%.3f, attendu %.3f)" % [nom, t5.length() / c5.length(), rt],
+				absf(t5.length() / c5.length() - rt) < 0.02)
 	var v2 := VoxelCatalogue.TENUES_SOMBRES["sombre2"] as Dictionary
 	var sous_un := true
 	for cle in ["tissu", "usure", "cuir", "arme", "bouteille", "cartouche", "tete"]:
@@ -450,6 +458,45 @@ func _les_tenues_sombres() -> void:
 	VoxelCatalogue.forcer_tenue = "-"
 	racine.queue_free()
 	await process_frame
+
+
+## ISO13 — l'équité de V3 entre les classes (`VoxelCatalogue.V3_EQUITE`) : le facteur par classe ne sort jamais un rôle au-dessus
+## du gris de sa classe (donc aucune classe visible plus tôt qu'aujourd'hui), ne touche que V3, et laisse le liseré clair.
+func _l_equite() -> void:
+	print("— l'équité de V3")
+	VoxelCatalogue.forcer_equite = -1.0
+	var sous_le_gris := true
+	var pire := ""
+	for sl in VoxelCatalogue.slugs():
+		var l := VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche(sl)["couleur"])
+		var p := VoxelCatalogue.palette_tenue(sl, "sombre3", "froide")
+		for cle in ["ocre", "rouille", "brun", "arme", "bouteille", "tete"]:
+			if VoxelCatalogue.luminance_affichee(p[cle]) > l + 0.002:
+				sous_le_gris = false
+				pire = "%s %s" % [sl, cle]
+	_check("V3 : aucun rôle sombre au-dessus du gris de sa classe, facteur compris (aucune classe visible plus tôt)",
+		sous_le_gris, pire)
+	var hors_v3 := true
+	for nom in ["sombre1", "sombre2", "portraits", ""]:
+		for sl in VoxelCatalogue.slugs():
+			if VoxelCatalogue.facteur_equite(sl, nom) != 1.0:
+				hors_v3 = false
+	_check("le facteur ne touche que V3", hors_v3)
+	# Le liseré clair (rapport > 1) : le même avec et sans facteur.
+	VoxelCatalogue.forcer_equite = 0.5
+	var arete_bas: Color = VoxelCatalogue.palette_tenue("allumeur", "sombre3", "froide")["arete"]
+	var tissu_bas: Color = VoxelCatalogue.palette_tenue("allumeur", "sombre3", "froide")["ocre"]
+	VoxelCatalogue.forcer_equite = 1.0
+	var arete_un: Color = VoxelCatalogue.palette_tenue("allumeur", "sombre3", "froide")["arete"]
+	var tissu_un: Color = VoxelCatalogue.palette_tenue("allumeur", "sombre3", "froide")["ocre"]
+	VoxelCatalogue.forcer_equite = 4.0
+	var tissu_haut: Color = VoxelCatalogue.palette_tenue("occulteur", "sombre3", "froide")["ocre"]
+	var gris_occ := VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche("occulteur")["couleur"])
+	VoxelCatalogue.forcer_equite = -1.0
+	_check("le liseré ne suit pas le facteur ; le tissu, si (0,5 l'assombrit)",
+		arete_bas.is_equal_approx(arete_un) and VoxelCatalogue.luminance_affichee(tissu_bas) < VoxelCatalogue.luminance_affichee(tissu_un))
+	_check("un facteur de 4 plafonne le tissu au gris de la classe (%.4f ≤ %.4f)" % [VoxelCatalogue.luminance_affichee(tissu_haut), gris_occ],
+		VoxelCatalogue.luminance_affichee(tissu_haut) <= gris_occ + 0.002)
 
 
 func _le_fil() -> void:

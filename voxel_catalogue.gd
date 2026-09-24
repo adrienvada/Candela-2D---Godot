@@ -474,6 +474,37 @@ static func teinte_de(args: PackedStringArray) -> String:
 	return TEINTE_PAR_DEFAUT
 
 
+## ISO13 — L'ÉQUITÉ DE V3 ENTRE LES CLASSES (ordre de la session cloud, 2026-09-24 16:52). Les rôles de V3 sont un RAPPORT au
+## gris de la classe, le même pour toutes (tissu 0,62…). Mais les gris des classes vont de 0,55 à 0,85 du plafond
+## (`gris_rang`) : au bord de la lumière, 0,62 fois un gris sombre tombe sous ce que l'écran montre, 0,62 fois un gris clair
+## non. À 0,15, V3 gardait 13 % des pixels visibles du gris pour l'Occulteur, 92 % pour l'Allumeur — un avantage de classe
+## que la tenue avait créé. Un facteur par classe `g` multiplie les rapports sombres de V3 (tissu, usure, cuir, métal,
+## bouteille, cartouches, tête), plafonnés à 1 : jamais plus clair que le gris de la classe, donc jamais visible plus tôt
+## qu'aujourd'hui. Le liseré clair (rapport > 1) n'y est pas soumis. Les valeurs viennent du banc des corps (`--equite=`),
+## rapportées dans la ROADMAP ; une classe absente vaut 1.
+## Calibration du 2026-09-24, 18:45 (banc des corps, `--equite=` de 0,4 à 1,6, gris et V3 dans la même partie, à 0,15) : la
+## réponse vient par marches (des faces entières franchissent le seuil de l'écran d'un coup) ; le g retenu est un point mesuré
+## dans la bande quand il y en a un, interpolé sinon, puis vérifié au balayage complet.
+const V3_EQUITE := {
+	"pistolet": 1.05, "fusil": 0.87, "pompe": 1.26, "arbalete": 1.0, "fumiste": 1.2,
+	"incendiaire": 0.8, "sentinelle": 1.05, "occulteur": 1.35, "allumeur": 0.8, "spectre": 0.83,
+}
+## Pour les bancs : < 0 lit `V3_EQUITE` ; sinon le même facteur pour toutes les classes (la calibration).
+static var forcer_equite := -1.0
+
+
+static func facteur_equite(slug: String, nom: String) -> float:
+	if nom != "sombre3":
+		return 1.0
+	if forcer_equite >= 0.0:
+		return forcer_equite
+	return float(V3_EQUITE.get(slug, 1.0))
+
+
+static func _rapport_equitable(r: float, g: float) -> float:
+	return minf(r * g, maxf(r, 1.0))
+
+
 ## La palette de la tenue `nom` pour la classe `slug`, aux mêmes clés que `palette_portrait()` (plus `tete`, `arete`,
 ## `arete_px`, `rapports`) : `{}` pour le gris ou un nom inconnu. `nom_teinte` : `""` pour la teinte en cours (`teinte()`).
 static func palette_tenue(slug: String, nom: String, nom_teinte := "") -> Dictionary:
@@ -488,23 +519,26 @@ static func palette_tenue(slug: String, nom: String, nom_teinte := "") -> Dictio
 	var r: Dictionary = TENUES_SOMBRES[nom]
 	var te: Dictionary = TEINTES.get(nom_teinte if nom_teinte != "" else teinte(), TEINTES["olive"])
 	var l := luminance_affichee(f["couleur"])
+	# ISO13 — l'équité de V3 : un facteur par classe sur les rôles sombres, jamais au-dessus du gris (voir `V3_EQUITE`).
+	var g := facteur_equite(slug, nom)
 	var plafond := luminance_affichee(GRIS_PLAFOND)
 	var cartouche := Color(0, 0, 0, 0)
 	if p["cartouches"] == "grise":
-		cartouche = a_luminance(TEINTE_CARTOUCHE_GRISE, l * float(r["cartouche"]))
+		cartouche = a_luminance(TEINTE_CARTOUCHE_GRISE, l * _rapport_equitable(float(r["cartouche"]), g))
 	elif p["cartouches"] == "rouge":
-		cartouche = a_luminance(TEINTE_CARTOUCHE_ROUGE, l * float(r["cartouche"]))
+		cartouche = a_luminance(TEINTE_CARTOUCHE_ROUGE, l * _rapport_equitable(float(r["cartouche"]), g))
 	var arete := Color(0, 0, 0, 0)
 	if float(r["arete"]) > 0.0:
 		arete = a_luminance(te["clair"], minf(l * float(r["arete"]), plafond))
 	return {
-		"ocre": a_luminance(te["tissu"], l * float(r["tissu"])),
-		"rouille": a_luminance(te["usure"], l * float(r["usure"])),
-		"brun": a_luminance(te["cuir"], l * float(r["cuir"])),
-		"arme": a_luminance(te["metal"], l * float(r["arme"])),
-		"bouteille": a_luminance(te["metal"], l * float(r["bouteille"])),
+		"ocre": a_luminance(te["tissu"], l * _rapport_equitable(float(r["tissu"]), g)),
+		"rouille": a_luminance(te["usure"], l * _rapport_equitable(float(r["usure"]), g)),
+		"brun": a_luminance(te["cuir"], l * _rapport_equitable(float(r["cuir"]), g)),
+		"arme": a_luminance(te["metal"], l * _rapport_equitable(float(r["arme"]), g)),
+		"bouteille": a_luminance(te["metal"], l * _rapport_equitable(float(r["bouteille"]), g)),
 		"cartouche": cartouche,
-		"tete": a_luminance(te["clair"] if float(r["tete"]) > 1.0 else te["tissu"], minf(l * float(r["tete"]), plafond)),
+		"tete": a_luminance(te["clair"] if float(r["tete"]) > 1.0 else te["tissu"],
+			minf(l * (float(r["tete"]) if float(r["tete"]) > 1.0 else _rapport_equitable(float(r["tete"]), g)), plafond)),
 		"arete": arete,
 		"arete_px": float(r["arete_px"]),
 		"sous_seuil": bool(r["sous_seuil"]),

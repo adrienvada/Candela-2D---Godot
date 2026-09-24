@@ -26563,6 +26563,51 @@ serait vu par Godot comme un script du projet).
 
 Lot complet vert (440 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:47), empreinte du code identique avant et après.
 
+#### ISO13 — l'équité de V3 froide entre les classes ✅ (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (session cloud, 16:52, sur les chiffres de V3 froide). Les rôles de V3 sont un RAPPORT au gris de la classe, le
+même pour toutes (tissu 0,62…). Or les gris vont de 55 à 85 % du plafond (`gris_rang`, commit `4ef787a`, ISO3 vague 0 : aucune
+décision dédiée dans cette feuille de route). Au bord de la lumière, 0,62 fois un gris sombre tombe sous ce que l'écran
+montre, 0,62 fois un gris clair non : à 0,15, V3 gardait 13 % des pixels visibles du gris pour l'Occulteur, 92 % pour
+l'Allumeur. Dans un jeu où la seule information est la lumière, un avantage de classe que la tenue avait créé.
+
+**Ce qui est fait.** Un facteur par classe (`VoxelCatalogue.V3_EQUITE`) multiplie les rapports sombres de V3 (tissu, usure,
+cuir, métal, bouteille, cartouches, tête), **plafonnés à 1** : jamais plus clair que le gris de la classe, donc jamais visible
+plus tôt qu'aujourd'hui. Le liseré clair (rapport > 1) n'y est pas soumis. Le `gris_rang` n'est pas touché (antérieur à V3 :
+la session cloud le porte à Adrien). Facteurs : Parasite 1,05, Illusionniste 0,87, Terrassier 1,26, Braconnier 1,0, Fumiste
+1,2, Incendiaire 0,8, Sentinelle 1,05, Occulteur 1,35, Allumeur 0,8, Spectre 0,83.
+
+**LA RÈGLE** (acceptée par la session cloud, 18:53) : un facteur par classe sur les rôles sombres de V3, plafonné au gris de la
+classe ; à 0,15, la part des pixels visibles du gris gardée par V3 dans la bande 0,52 ± 0,05 pour les dix classes ; aucune
+classe n'apparaît plus tard que la plus sombre d'aujourd'hui (0,12, balayage fin) ni plus tôt que son gris. Toute retouche de
+V3 ou des gris se revérifie contre cette règle.
+
+**Point signalé à Adrien** : le `gris_rang` lui-même (le gris de chaque classe, de 55 à 85 % du plafond) vient du commit `4ef787a`
+(2026-09-14, ISO3 vague 0), sans décision dédiée dans cette feuille de route. Il rend déjà les classes inégales en gris : la
+lumière d'apparition va de 0,08 (Incendiaire, Allumeur, Spectre) à 0,12 (Occulteur). Laissé tel quel ici ; à trancher.
+
+**Calibration** (banc des corps, `--equite=` de 0,4 à 1,6, gris et V3 dans la même partie, temps figé). ⚠️ **La réponse vient
+par marches** : des faces entières franchissent le seuil de l'écran d'un coup, et une interpolation linéaire entre deux
+points ne tient pas. L'Occulteur à 1,33 donnait 0,46 ; à 1,38, 0,57 — et 84 % de ses pixels à 0,12, un nouvel écart au pied de
+l'échelle ; 1,35 donne 0,47. Chaque facteur se VÉRIFIE au balayage complet, jamais ne se déduit.
+
+**Les conditions** (posées avant les chiffres par la session cloud, 16:52 et 17:01), toutes tenues :
+- **la bande à 0,15** (0,52 ± 0,05) : 0,47 à 0,55, médiane 0,512 (avant : 0,13 à 0,92) ;
+- **l'apparition** (30 px, balayage fin de 0,04 à 0,2) : identique au gris pour les dix classes — Parasite 0,10, Illusionniste
+  0,09, Terrassier 0,11, Braconnier 0,09, Fumiste 0,11, Incendiaire 0,08, Sentinelle 0,10, Occulteur 0,12, Allumeur 0,08,
+  Spectre 0,08 ; aucune plus tard que la plus sombre d'aujourd'hui (0,12) ;
+- **le noir** : 0/255 à lumière 0, gris et V3, avant et après ;
+- **la silhouette** : inchangée (17,44 px au pire).
+- À 0,12 l'écart se resserre sans disparaître (0,11-0,49 → 0,13-0,29) : c'est la lumière d'apparition des classes sombres, où
+  le gris lui-même diffère. À 0,2 : 0,55-1,00 → 0,92-0,96 ; à 0,3, 100 % partout.
+
+**Preuves.** `test_corps_portraits` : aucun rôle sombre de V3 au-dessus du gris de sa classe, facteur compris ; le facteur ne
+touche que V3 ; le liseré ne le suit pas ; un facteur de 4 reste plafonné — **vue rougir** en retirant le plafond (l'Occulteur,
+sa bouteille à 1,08 fois son gris), puis verte. Deux contrôles mis à jour, raison écrite : le rapport attendu d'un rôle de V3
+inclut désormais le facteur de sa classe. Planche : `docs/iso/iso13/v3_froide/planche_equite.jpg` ; relevés et scripts dans
+le même dossier.
+Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 19:02), empreinte du code identique avant et après.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
