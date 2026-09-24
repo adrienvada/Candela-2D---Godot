@@ -334,6 +334,12 @@ void fragment() {
 		} else {
 			c2d = pate_temperature_graduee(c2d, temperature, temperature_seuil_bas, temperature_seuil_haut);
 		}
+		// ISO13 lot C, recopié à l'intégration (2026-09-24) : l'usure de `sol_iso.gdshader`, au même rang (après la
+		// température, avant le contact). Elle n'était que dans l'autre branche ; la garde du principe d'identité
+		// (`tools/test_banc.gd`) l'a vue manquer ici, la branche de Beauté ne portant pas encore cette garde.
+#ifdef USURE_ESSAI
+		c2d = pate_facteur(c2d, usure_poids(c2d, usure_sol(px, usure_mur_pres(px), px_monde)));
+#endif
 		c2d = pate_facteur(c2d, contact_des_corps(px));
 		ALBEDO = c2d;
 		EMISSION = vec3(0.0);

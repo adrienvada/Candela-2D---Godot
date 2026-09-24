@@ -27489,6 +27489,13 @@ au départ de la mesure une ligne « Cadence : » RELUE dans le jeu — `Engine.
 `plafond_effectif()`, `pilotage_externe`, l'écran (rang, taille, fréquence) ; et `_apply_video` ne réapplique plus la vsync
 enregistrée sous un banc (voir Pièges connus). « 45° » et « 0.0° » dans les lignes « Rendu : ».
 
+**Intégration du 24/09 au soir** (branche `integration-iso14`, Iso 1) : ma tête, la loupe de Gadgets (`f867ad7`),
+la pose V3 froide d'ISO Assets (`eefb717`), puis Beauté (`26d7253`, `2372d14`, `45bd566`). Le premier lot a trouvé UNE
+divergence, à la jonction de deux chantiers : l'usure du lot C était recopiée dans la branche « ancien chemin » du sol
+éclairé, pas dans sa branche d'identité (`c2d`) — la garde du principe d'identité (`test_banc`, ISO12 L2) l'a vue ; la
+branche de Beauté ne la portait pas encore. Recopiée au même rang (après la température, avant le contact), sans effet
+sur le jeu par défaut (usure et lumière 3D éteintes). Second lot vert (434 s, 19:12-19:19).
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
