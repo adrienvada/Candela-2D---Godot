@@ -444,6 +444,14 @@ func _ready() -> void:
 	print("  pire image de l'échauffement : %.1f ms" % (_pire_echauffement * 1000.0))
 
 	print("Mesure sur %.0f s…" % _seconds)
+	# ISO14 — l'angle de la caméra, LU dans le jeu au départ de la mesure et non supposé du drapeau : `mode_rendu()`
+	# (« iso », ou « iso lacet 45° B ») et la rotation réelle des deux caméras 2D (r = −L). Une prise qui dirait
+	# « lacet 45 » sans l'avoir joué se lit ici (demande d'ISO7 Gadgets, série de cadence du 45°, 2026-09-24).
+	var cams := []
+	for nom in ["cam1", "cam2"]:
+		var c = _main.get(nom) if is_instance_valid(_main) else null
+		cams.append("%.1f°" % rad_to_deg((c as Camera2D).rotation) if c is Camera2D else "absente")
+	print("Rendu : %s · caméras 2D J1 %s, J2 %s" % [GameSettings.mode_rendu(), cams[0], cams[1]])
 	if _temps_par_vue:
 		_armer_temps_par_vue()
 	_recenser_les_ombres_2d()

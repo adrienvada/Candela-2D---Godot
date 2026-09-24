@@ -323,14 +323,48 @@ func _comparer_au_prototype(slug: String, mesures: Dictionary) -> void:
 				ecart_px = maxf(ecart_px, absf(float(a[champ]) - float(b[champ])))
 			else:
 				ecart_part = maxf(ecart_part, absf(float(a[champ]) - float(b[champ])))
-	var tenu := n > 0 and ecart_part <= 1e-4 and ecart_px <= 1e-3 and comptes == 0
+	# LES VERDICTS, recalculés des deux côtés par la même règle (`_verdict_de`), sur les grandeurs du banc et sur
+	# celles du prototype : un seul qui diffère fait échouer, quel que soit l'écart des parts.
+	var verdicts_differents: PackedStringArray = []
+	var ecart_0a_banc := absf(float(mesures.get("0A", {}).get("moitie_j1", 0.0)) - float(mesures.get("0A", {}).get("moitie_j2", 0.0))) * 100.0
+	var ecart_0a_proto := absf(float(ref.get("0A", {}).get("moitie_j1", 0.0)) - float(ref.get("0A", {}).get("moitie_j2", 0.0))) * 100.0
+	for cle: String in mesures:
+		if not ref.has(cle):
+			continue
+		var v_banc := _verdict_de(mesures[cle], ecart_0a_banc)
+		var v_proto := _verdict_de(ref[cle], ecart_0a_proto)
+		if v_banc != v_proto:
+			verdicts_differents.append("%s : banc %s, prototype %s" % [cle, v_banc, v_proto])
+	# ⚠️ SEUIL DES PARTS À 1e-3 (0,1 point), et non plus 1e-4 — accordé par la session cloud (2026-09-24, 13:00) à une
+	# condition DURE : un verdict ou un compte qui diffère fait échouer quel que soit l'écart des parts. Pourquoi 1e-4 ne
+	# tenait pas : la seconde chaîne (12:49) a trouvé 2,5e-4 à 4,8e-4 sur cinq cartes, verdicts et comptes identiques —
+	# des points p en simple précision (`Vector2`) posés sur un bord de case, caché d'un côté, visible de l'autre.
+	var tenu := n > 0 and ecart_part <= 1e-3 and ecart_px <= 1e-3 and comptes == 0 and verdicts_differents.is_empty()
 	# `%e` n'existe pas dans le formatage de GDScript (« unsupported format character », la première chaîne) :
 	# `String.num_scientific`.
-	print("  prototype : %s — %d grandeurs, écart max %s sur les parts, %s px sur les longueurs, comptes %s"
+	print("  prototype : %s — %d grandeurs, écart max %s sur les parts, %s px sur les longueurs, comptes %s, verdicts %s"
 		% ["MÊME CALCUL" if tenu else "ÉCART", n, String.num_scientific(ecart_part), String.num_scientific(ecart_px),
-		"identiques" if comptes == 0 else "DIFFÉRENTS (%d)" % comptes])
+		"identiques" if comptes == 0 else "DIFFÉRENTS (%d)" % comptes,
+		"identiques" if verdicts_differents.is_empty() else "DIFFÉRENTS : " + " ; ".join(verdicts_differents)])
 	if not tenu:
 		_echecs += 1
+
+
+## Le verdict d'une option, depuis ses grandeurs (celles du banc ou celles du prototype) : la MÊME règle que celle
+## imprimée par `_carte`, pour que la comparaison au prototype porte aussi sur les verdicts. `ecart_0a` : l'écart des
+## moitiés à 0° en option A, en points, de la même source.
+static func _verdict_de(g: Dictionary, ecart_0a: float) -> String:
+	var ok0: bool = int(g.get("invisibles_j1", 0)) == 0 and int(g.get("invisibles_j2", 0)) == 0 \
+		and int(g.get("corps_j1", 0)) == 0 and int(g.get("corps_j2", 0)) == 0
+	var ecart := absf(float(g.get("moitie_j1", 0.0)) - float(g.get("moitie_j2", 0.0))) * 100.0
+	var oka := ecart <= 1.0 and ecart <= ecart_0a + 0.5
+	var okb := absf(float(g.get("apparition_j1", 0.0)) - float(g.get("apparition_j2", 0.0))) * 100.0 <= 1.0
+	var oke := absf(float(g.get("abri_j1", 0.0)) - float(g.get("abri_j2", 0.0))) * 100.0 <= 1.0
+	var rates: PackedStringArray = []
+	for paire in [["0", ok0], ["a", oka], ["b", okb], ["e", oke]]:
+		if not paire[1]:
+			rates.append(paire[0])
+	return "ÉQUITABLE" if rates.is_empty() else "NON (%s)" % ",".join(rates)
 
 
 ## La garde (4) : à 0°, option A, le calcul général rend `analyser_equite` (même caméra pour les deux moitiés).

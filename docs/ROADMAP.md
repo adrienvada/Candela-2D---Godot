@@ -27280,7 +27280,7 @@ session cloud** : le jeu d'aujourd'hui n'est pas équitable sur **La Croisée** 
 mannequin et `MANNEQUIN_REPORT`) — à ISO7 Beauté ; les scènes du photographe et des bancs bâties sur LA face sud ; le
 bandeau FATAL (`player.gd`, un `Rect2` de vue aligné aux axes) n'est pas vérifié à 45°.
 
-**État (2026-09-24, 13:0x) : commité en `1d5ea64`, l'arbre exact du lot vert** (437 s, 12:49-12:56 ; les 19 fichiers
+**État (2026-09-24, 13:03) : commité en `1d5ea64`, l'arbre exact du lot vert** (437 s, 12:49-12:56 ; les 19 fichiers
 modifiés avant le départ du lot, vérifié à l'heure de modification ; arbre `a8e04a7`). Chaîne au « Mac libre » d'Adrien
 (12:28), deux passes dans une seule prise du verrou, **arrêtée sur son ordre à 12:56** (« Interrompt toutes les mesures et
 lancement du jeu ») — la sixième prise (Cloître 45° C) n'a pas été écrite.
@@ -27298,10 +27298,13 @@ autoloads ne sont pas des identifiants (il passe par `/root/GameSettings`, comme
 le formatage de GDScript (`String.num_scientific`) ; le plan photo `ecran-scinde` se prend avant le passage sur la carte
 du duel et ignorait `--carte-duel` (plan additif `ecran-scinde-duel`).
 
-**Non commité, écrit après le lot** (ordre de la session cloud, 13:00) : le seuil du prototype relevé de 1e-4 à 1e-3 sur
+**Commité à 16:57, lot vert (435 s, 16:48-16:55)** (ordre de la session cloud, 13:00) : le seuil du prototype relevé de 1e-4 à 1e-3 sur
 les parts (écart réel 2,5e-4 à 4,8e-4, simple précision) **à condition dure** — un verdict ou un compte qui diffère fait
 échouer quel que soit l'écart ; la règle des verdicts, portée dans `_verdict_de`, redonne les 30 verdicts du banc
-(vérifié en Python sur `reference_prototype.json`). Sera testé au prochain lot. **Aucun Godot jusqu'à un nouvel ordre.**
+(vérifié en Python sur `reference_prototype.json`). Au banc (16:48) : « MÊME CALCUL, comptes identiques, verdicts
+identiques » sur les six cartes, sortie 0. Et `tools/bench_framerate.gd` imprime au départ de chaque mesure l'angle
+réellement joué (« Rendu : iso lacet 45° B · caméras 2D J1 -45.0°, J2 -225.0° ») — la preuve par prise que demandait
+ISO7 Gadgets pour la série de cadence du 45°. **Q25 = B** (Adrien, 16:43) : la ligne des Décisions actées viendra avec le passage au défaut, qui attend la série de cadence de Gadgets.
 
 ### Ce qui attend Adrien — jalon H15
 
