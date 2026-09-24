@@ -27239,7 +27239,9 @@ propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la p�
 - **Les points blancs isolés** de la première planche sont la poussière du faisceau (V5.5), pas l'encre.
 - ⚠️ **`test_iso_camera` est instable**, et hors de ce chantier : son TÉMOIN (deux parties sans iso) diverge au pas 116 une passe
   sur deux ou trois — une balle d'un côté, rien de l'autre. Confié à Iso 1 par la session cloud (cause probable : un délai de
-  tir décompté au rythme du rendu, lu au rythme de la physique).
+  tir décompté au rythme du rendu, lu au rythme de la physique). ⚠️ **Cause établie depuis, et c'est une autre** (Iso 1,
+  `2b1fd08`) : le fondu de 0,08 s de la balle après l'impact, qui avance au temps du rendu — pas le délai de tir. Réparé à
+  pas d'image fixe ; voir Pièges connus, « Un test « pas pour pas » se lance à pas d'image fixe ».
 
 **À trancher** : 1 ou 2 px de contour, et les hachures, sur la planche du duel, à prendre quand le Mac sera libre après la fusion dans
 `main` (J2 dans le cône de J1, sur du sol éclairé ; 2 px marqué hors garde-fou). Lot complet vert (437 s, 02:29). Avant
