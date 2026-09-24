@@ -223,6 +223,10 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("modele", 1.0 if active else 0.0)
 	if encre_essai_active():
 		poser_encre_essai(materiau, true)
+	# ISO13 — le personnage détaillé à l'essai (`--corps-detaille`) : la présentation change le shader des corps (lumière 3D)
+	# puis rappelle ce crochet ; la variante CORPS_DETAIL doit y survivre. Sans le drapeau, rien.
+	if VoxelCatalogue.detail_actif():
+		materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL")
 
 
 ## ISO10, 1f — la lumière d'une face lue SANS la peinture du sol (`mur_iso.gdshader`, `lire_lumiere`) : lightmap ×

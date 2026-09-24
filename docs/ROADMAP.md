@@ -27496,6 +27496,57 @@ divergence, à la jonction de deux chantiers : l'usure du lot C était recopiée
 branche de Beauté ne la portait pas encore. Recopiée au même rang (après la température, avant le contact), sans effet
 sur le jeu par défaut (usure et lumière 3D éteintes). Second lot vert (434 s, 19:12-19:19).
 
+#### ISO13 — le personnage détaillé à l'essai : le Parasite (pistolet) 🟡 (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (ordres 305 et 307 de la session cloud). Adrien a demandé si les personnages pouvaient ressembler à leur portrait.
+La réponse attendue : la forme oui, la matière peinte et les petits détails pas à la taille du duel. Il voulait un essai sur
+image avant d'engager les dix classes : une classe, le pistolet, d'après son portrait V3 froide (ISO Assets).
+
+**Ce qui est fait**, derrière `--corps-detaille` (éteint par défaut ; `VoxelCatalogue.detail_actif()`, lu une fois).
+- **Les accessoires modelés** (`VoxelCorps._detailler`) : la bandoulière et ses trois cartouches, l'étui, le manomètre de
+  poitrine, le robinet, son volant, le tuyau et le manomètre de la bouteille, la crosse. Onze petites boîtes de la même matière,
+  collées aux pièces animées, reconnues par le shader à leur demi-taille et peintes en cuir, laiton ou métal
+  (`VoxelCatalogue.palette_details`, à un rapport ≤ 1 du gris de la classe).
+- **La matière peinte** (`iso_corps_detail.gdshaderinc`) : un marbrage large et des pores accrochés à la boîte, qui
+  n'assombrissent que la fiche. Les pores s'effacent quand un pixel d'écran couvre plus d'un demi-pixel du monde (le duel) et
+  reviennent sous 0,3 (bancs, killcam rapprochée).
+- `VoxelCorps.montrer_details()` : le détail se montre et se cache par uniformes, pour les bancs, au même instant.
+- Compilé dans la seule variante CORPS_DETAIL des corps (`IsoMateriaux.variante_definie`, reposée par `accorder_corps` après
+  un changement de shader). Sans le drapeau, le code prétraité des corps est celui d'`ec7a51a`.
+
+**Les règles**, prouvées par `tools/test_corps_detail.gd` (vue rougir puis verte) et au banc des corps :
+- noir absolu 0/255 à lumière 0, au temps figé, avec et sans le détail ;
+- albédo seul, ni `light()` ni relief ; `Protocol.VERSION` 18 ;
+- silhouette du corps seul, accessoires compris : 16,90 px avec comme sans (couloir 17,5, zone de touche 18) — la garde rougit
+  sur un étui déplacé hors du couloir (23,87 px) ;
+- apparition au balayage fin : 0,10 avec comme sans, pas plus tôt.
+
+**Coût** : 11 boîtes de plus par corps, 22 appels de dessin (couleur et profondeur), 264 triangles.
+
+**Ce que montre la planche** (`docs/iso/iso13/pistolet/planche_pistolet.jpg`, banc des lumières en 2560 × 1440, banc des corps,
+photographe pour la killcam ; patch du banc : `banc_lumiere3d_planches_contre_ec7a51a.patch`) :
+- à la taille du duel, le corps fait environ 40 × 60 px : la forme se lit, le détail non, même à ×4 ;
+- au banc des corps, de près, la bandoulière modelée, ses cartouches et les pores se lisent ;
+- le contour de 1 px cerne le corps sur le sol éclairé, sans et avec le détail.
+
+⚠️ **Deux points avant toute adoption.**
+- La matière peinte assombrit : à 0,15, 2 092 pixels visibles contre 2 422 (−14 %), soit 0,42 du gris, sous la bande d'équité
+  de V3 (0,47). Le facteur d'équité du pistolet serait à recalibrer avec elle.
+- La bandoulière modelée déborde du torse d'un côté : sa longueur est à reprendre.
+
+**À trancher par Adrien** : sur la planche, le détail vaut-il son coût à la taille où il se voit (killcam rapprochée, menus) ?
+Et le contour de 1 px, sans et avec le détail.
+
+**L'usure refaite, le temps figé** (ordre 307 ; `docs/iso/iso13/planche_usure_temps_fige.jpg`). Le temps du jeu est arrêté
+entre « sans » et « avec » (`Engine.time_scale = 0`, le banc des lumières). Sur le décor (murs et sol) : 0 noir allumé,
+0 pixel plus clair, 6 831 pixels assombris au lacet 0 et 6 743 à 45°. Les seuls écarts restants sont sur les deux corps, que
+l'usure ne dessine pas : leur pose suit l'horloge réelle (`Time.get_ticks_msec`), que le temps figé du jeu n'arrête pas.
+J2 : +0,9 % et −0,2 % de pixels du corps, le même chiffre dans l'image et dans la page.
+
+Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 19:44), empreinte du code identique avant et après. ⚠️ Le lot
+précédent, sur le même état exact (19:36), avait rougi sur `test_arena_matter` (les douilles, leur arrêt physique), hors de ce
+chantier. Seule, la suite passe six fois sur six, et le lot suivant est vert. Une intermittence, signalée, non corrigée ici.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

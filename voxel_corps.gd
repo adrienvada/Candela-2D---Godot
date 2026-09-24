@@ -234,6 +234,8 @@ var _materiau: ShaderMaterial
 var _materiau_profondeur: ShaderMaterial
 ## ISO13, lot B — la coque du contour ; null hors `--encre-essai`.
 var _materiau_contour: ShaderMaterial = null
+## ISO13 — les accessoires modelés du personnage détaillé à l'essai (`_detailler`), vides sans `--corps-detaille`.
+var _details: Array = []
 var _nombre_de_boites: int = 0
 var _boites_visibles: Array = []
 
@@ -310,6 +312,8 @@ func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_
 	_construire_squelette()
 	if VoxelCatalogueT.portraits_actifs():
 		_habiller_en_portrait(slug)
+	if VoxelCatalogueT.detail_actif() and VoxelCatalogueT.portraits_actifs():
+		_detailler(slug)
 	if VoxelCatalogueT.mannequin_actif():
 		_articuler_en_mannequin()
 	if IsoMateriaux.encre_essai_active():
@@ -829,6 +833,7 @@ func _vider() -> void:
 	_fiche = {}
 	_nombre_de_boites = 0
 	_boites_visibles.clear()
+	_details.clear()
 	position = Vector3.ZERO
 	rotation = Vector3.ZERO
 
@@ -915,6 +920,98 @@ func porter_tenue(nom: String, nom_teinte := "") -> void:
 	_materiau.set_shader_parameter("portrait_arete_px", float(p.get("arete_px", 0.0)))
 	_materiau.set_shader_parameter("portrait_sous_seuil", 1.0 if bool(p.get("sous_seuil", true)) else 0.0)
 	_materiau.set_shader_parameter("portrait_seuils", p.get("seuils", Vector2(10.0, 24.0) / 255.0))
+	_poser_couleurs_details(nom, nom_teinte)
+
+
+## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; une classe : le pistolet, d'après son portrait V3
+## froide). Les accessoires du portrait, MODELÉS en petites boîtes de la même matière, collées aux pièces qui les portent :
+## la bandoulière et ses trois cartouches, l'étui sur la hanche, le manomètre de poitrine (le torse) ; le robinet, son volant,
+## le tuyau et le manomètre de la bouteille ; la crosse du pistolet. Le shader les reconnaît à leur demi-taille — toutes
+## distinctes, à 0,5 millième de tuile près — et leur pose la couleur de leur rôle (`iso_corps_detail.gdshaderinc`). Aucune ne
+## sort de l'enveloppe du corps : la bandoulière et l'étui sont plaqués sur la face avant, le robinet et le tuyau sur le dessus
+## de la bouteille, dans son emprise (la suite le mesure, `tools/test_corps_detail.gd`). Chaque boîte ajoute deux appels de
+## dessin (couleur et profondeur) et 12 triangles chacun.
+func _detailler(slug: String) -> void:
+	if not VoxelCatalogueT.CLASSES_DETAILLEES.has(slug):
+		return
+	var s := _fiche
+	var e: float = s["echelle"]
+	var lt: float = float(s["largeur_torse"]) * e
+	var pt: float = float(s["profondeur_torse"]) * e
+	var ht: float = float(s["hauteur_torse"])
+	var avant := -pt * 0.5
+	# La bandoulière dans l'axe de celle que le portrait peint déjà sur le torse (f.y = −0,9 f.x, en coordonnées de face).
+	var angle := atan(-0.9 * (ht * 0.5) / (lt * 0.5))
+	var sens := Vector3(cos(angle), sin(angle), 0.0)
+	var longueur := lt / cos(angle) * 0.98
+	var centre := Vector3(0.0, ht * 0.5, avant - 0.007)
+	var pieces := [
+		[_torse, "Bandouliere", Vector3(longueur, 0.05, 0.014), centre, angle, 0],
+		[_torse, "Etui", Vector3(0.1, 0.09, 0.05), Vector3(lt * 0.3, ht * 0.2, avant - 0.025), 0.0, 0],
+		[_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0, 1],
+	]
+	for i in 3:
+		var t := (float(i) - 1.0) * 0.26 * longueur
+		pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03), centre + sens * t + Vector3(0.0, 0.0, -0.022),
+			angle, 1])
+	var bouteille := _torse.get_node_or_null("Bouteille") as Node3D
+	if bouteille != null:
+		var b: Dictionary = VoxelCatalogueT.BOUTEILLE
+		var bw := float(b["largeur"]) * e
+		var bh := float(b["hauteur"])
+		pieces.append_array([
+			[bouteille, "RobinetTige", Vector3(0.025, 0.04, 0.025), Vector3(-bw * 0.3, bh * 0.5 + 0.02, 0.0), 0.0, 1],
+			[bouteille, "RobinetVolant", Vector3(0.075, 0.018, 0.022), Vector3(-bw * 0.3, bh * 0.5 + 0.049, 0.0), 0.0, 1],
+			[bouteille, "Tuyau", Vector3(0.024, 0.05, 0.024), Vector3(bw * 0.25, bh * 0.5 + 0.025, 0.0), 0.0, 1],
+			[bouteille, "ManometreBouteille", Vector3(0.016, 0.05, 0.05), Vector3(-bw * 0.5 - 0.008, 0.0, 0.0), 0.0, 1],
+		])
+	var fa: Dictionary = s["arme"]
+	pieces.append([_arme_pivot, "Crosse", Vector3(0.04, 0.075, 0.035), Vector3(0.0, -float(fa["hauteur"]) * 0.5 - 0.0375, -0.03),
+		0.0, 2])
+	var demis := PackedVector3Array()
+	var roles := PackedInt32Array()
+	for p in pieces:
+		var boite := _boite(p[0] as Node3D, p[2], p[3])
+		boite.name = String(p[1])
+		boite.rotation.z = float(p[4])
+		_details.append(boite)
+		if not demis.has((p[2] as Vector3) * 0.5):
+			demis.append((p[2] as Vector3) * 0.5)
+			roles.append(int(p[5]))
+	_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL")
+	_materiau.set_shader_parameter("detail", 1.0)
+	_materiau.set_shader_parameter("detail_demi", demis)
+	_materiau.set_shader_parameter("detail_role", roles)
+	_materiau.set_shader_parameter("detail_n", demis.size())
+	_poser_couleurs_details(VoxelCatalogueT.tenue())
+
+
+## Les couleurs des accessoires dans la tenue `nom` (cuir, laiton, métal) ; sans effet sans accessoires.
+func _poser_couleurs_details(nom: String, nom_teinte := "") -> void:
+	if _details.is_empty():
+		return
+	var p := VoxelCatalogueT.palette_details(slug(), nom, nom_teinte)
+	_materiau.set_shader_parameter("detail", 0.0 if p.is_empty() else 1.0)
+	for cle in p:
+		_materiau.set_shader_parameter("detail_%s" % cle, p[cle])
+
+
+## Les accessoires modelés (vide sans `--corps-detaille`).
+func details() -> Array:
+	return _details
+
+
+## Montre ou cache le détail — accessoires et matière peinte — sans reconstruire le corps : les bancs comparent ainsi le corps
+## d'aujourd'hui et le corps détaillé au même instant, sur la même lumière. Sans accessoires, rien.
+func montrer_details(visible_: bool) -> void:
+	if _details.is_empty():
+		return
+	for b in _details:
+		(b as Node3D).visible = visible_
+	_materiau.set_shader_parameter("detail_matiere", 1.0 if visible_ else 0.0)
+	_poser_couleurs_details(VoxelCatalogueT.tenue() if visible_ else "")
+	if not visible_:
+		_materiau.set_shader_parameter("detail", 0.0)
 
 
 ## ISO13 — le mannequin (`--mannequin`) : les demi-tailles qui disent au shader quelle boîte est le torse, un bras, une jambe

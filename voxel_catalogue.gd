@@ -449,6 +449,41 @@ const MANNEQUIN_CONTRASTE := 0.4
 const MANNEQUIN_REPORT := 1.6
 
 
+## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (ordre de la session cloud, 2026-09-24 16:46, après la question d'Adrien : les
+## personnages peuvent-ils ressembler à leur portrait ?). Derrière `--corps-detaille`, éteint par défaut, une classe d'abord :
+## le pistolet (Le Parasite), d'après son portrait V3 froide. Trois essais : les accessoires MODELÉS (`VoxelCorps._detailler`),
+## une matière peinte douce à la taille du duel (`iso_corps_detail.gdshaderinc`), et le contour du lot B s'il sert.
+## `forcer_detail` : -1 lit la ligne de commande (une fois), 0 l'éteint, 1 l'allume.
+const DRAPEAU_DETAIL := "--corps-detaille"
+static var forcer_detail := -1
+static var _detail_ligne := -1
+## Les classes détaillées à l'essai.
+const CLASSES_DETAILLEES := ["pistolet"]
+## Le laiton des cartouches, des manomètres et du robinet, lu au pixel sur le portrait V3 froide du pistolet (ISO Assets,
+## `portrait_pistolet_v3froide.png`, les cartouches de la bandoulière). Seule sa chromaticité sert : sa clarté est le rapport
+## « cartouche » de la tenue, comme les cartouches des autres classes — jamais plus claire que le gris de la classe.
+const TEINTE_LAITON := Color8(152, 102, 59)
+
+
+static func detail_actif() -> bool:
+	if forcer_detail >= 0:
+		return forcer_detail == 1
+	if _detail_ligne < 0:
+		_detail_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_DETAIL) else 0
+	return _detail_ligne == 1
+
+
+## Les couleurs des accessoires modelés pour une tenue : le cuir (sangle, étui), le laiton (cartouches, manomètres,
+## robinet), le métal (la crosse du pistolet). `{}` pour le gris ou une classe sans portrait.
+static func palette_details(slug: String, nom: String, nom_teinte := "") -> Dictionary:
+	var p := palette_tenue(slug, nom, nom_teinte)
+	if p.is_empty() or not p.has("rapports"):
+		return {}
+	var l := luminance_affichee(fiche(slug)["couleur"])
+	return {"cuir": p["brun"], "laiton": a_luminance(TEINTE_LAITON, l * float((p["rapports"] as Dictionary)["cartouche"])),
+		"metal": p["arme"]}
+
+
 static func mannequin_actif() -> bool:
 	if forcer_mannequin >= 0:
 		return forcer_mannequin == 1

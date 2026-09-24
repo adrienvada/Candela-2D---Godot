@@ -5963,3 +5963,9 @@ l'Occulteur, 92 % pour l'Allumeur : le même rapport posé sur des gris de class
 gris, ramène les dix classes entre 0,47 et 0,55, sans changer d'un centième la lumière où chacune apparaît. La leçon : la
 réponse au facteur vient par marches (des faces entières passent le seuil de l'écran d'un coup) ; un facteur se vérifie au
 balayage, il ne s'interpole pas — l'Occulteur a demandé trois essais.
+
+**Suite, 19:20-19:40 — le Parasite détaillé à l'essai, et l'usure refaite le temps figé.** Onze accessoires modelés et une
+matière peinte, derrière `--corps-detaille`. Le verdict de l'image est celui qu'on attendait : à la taille du duel la forme se
+lit, le détail non ; de près, il se lit. Toutes les règles tiennent (noir, silhouette, apparition), mais la matière peinte
+coûte 14 % de pixels visibles à 0,15. L'usure refaite le temps du jeu arrêté ne montre plus rien sur le décor que des pixels
+assombris ; les corps, eux, bougent encore : ils respirent sur l'horloge réelle.

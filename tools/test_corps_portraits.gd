@@ -175,12 +175,17 @@ func _les_shaders() -> void:
 				continue
 			vus += 1
 			# Les seuls usages permis : la couleur du portrait calculée, puis posée sur la lumière déjà rendue.
+			# ISO13 — le personnage détaillé (`--corps-detaille`) retouche la FICHE avant la teinte, sous #ifdef CORPS_DETAIL :
+			# la couleur des accessoires et la matière peinte, un facteur ≤ 1 (`iso_corps_detail.gdshaderinc`). La fiche n'entre
+			# toujours dans la lumière que par `portrait_teindre` : un troisième usage permis, et lui seul.
 			var ok := l.begins_with("vec3 fiche = portrait_fiche(couleur_fiche.rgb,") \
-				or l == "c = portrait_teindre(c, fiche, couleur_fiche.rgb);"
+				or l == "c = portrait_teindre(c, fiche, couleur_fiche.rgb);" \
+				or l.begins_with("fiche = detail_fiche(fiche, local, demi, echelle, normale_locale,")
 			if not ok:
 				propres = false
 				printerr("    usage de la fiche hors teinte : ", l)
-		_check("%s : le portrait n'entre que par portrait_teindre (%d usages)" % [chemin.get_file(), vus], propres and vus == 2)
+		var attendus := 3 if FileAccess.get_file_as_string(chemin).contains("fiche = detail_fiche(") else 2
+		_check("%s : le portrait n'entre que par portrait_teindre (%d usages)" % [chemin.get_file(), vus], propres and vus == attendus)
 		var teinte := frag.find("c = portrait_teindre(c, fiche, couleur_fiche.rgb);")
 		_check("%s : la pâte décide sur le gris (base = couleur_fiche…), le portrait teint en dernier, encre comprise" % chemin.get_file(),
 			teinte > frag.find("c = min(c, couleur_fiche.rgb);") and teinte > frag.find("modele_du_corps(normale_monde)), couleur_fiche.rgb);")

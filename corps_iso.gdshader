@@ -83,6 +83,8 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled, blend_mix, dept
 #include "res://iso_lightmap.gdshaderinc"
 #include "res://iso_corps_portrait.gdshaderinc"
 #include "res://iso_corps_mannequin.gdshaderinc"
+// ISO13 — le personnage détaillé à l'essai (`--corps-detaille`) : compilé seulement dans la variante CORPS_DETAIL.
+#include "res://iso_corps_detail.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -200,6 +202,10 @@ void fragment() {
 	// fragment, posée plus bas sur la lumière déjà rendue (`portrait_teindre`). Sans portrait, rien ne change.
 	vec3 fiche = portrait_fiche(couleur_fiche.rgb, local, demi, echelle, normale_locale, monde * pixels_par_unite,
 		pixels_par_unite);
+#ifdef CORPS_DETAIL
+	// ISO13 — les accessoires modelés et la matière peinte : la fiche seule, assombrie jamais éclaircie.
+	fiche = detail_fiche(fiche, local, demi, echelle, normale_locale, pixels_par_unite, px_monde);
+#endif
 
 	vec3 c;
 	// ISO13 — la lumière reçue par le corps (fiche × lumière, avant la pâte) : le fondu du mannequin.
