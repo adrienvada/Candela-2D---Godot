@@ -12,6 +12,10 @@
 ## - **les shaders** : le côté de la lumière après le modelé d'ISO7b, les segments et le contour après l'encre, le plafond
 ##   après la teinte ; `light()` ne connaît pas le mannequin.
 ##
+## - **ISO13, lot B — l'encre en essai** (`--encre-essai`, éteint) : les hachures dans la pénombre (`IsoPate.hachures_facteur`,
+##   miroir de `pate_hachures_facteur`) sont nulles dans le noir et en pleine lumière, n'éclairent jamais, et ne touchent le
+##   lavis que sous le drapeau.
+##
 ## Ce qu'elle ne prouve pas : l'image. Le banc des corps (`--mannequin --directions-mannequin`) la mesure en vraie fenêtre.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_corps_mannequin.gd
@@ -45,11 +49,95 @@ func _run() -> void:
 	_la_direction()
 	_le_modele()
 	_les_shaders()
+	_l_encre()
+	_le_contour()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	VoxelCatalogue.forcer_mannequin = -1
 	VoxelCatalogue.forcer_tenue = "-"
 	print("%d vérifications, %d échec(s)" % [_verifications, _echecs])
 	quit(1 if _echecs > 0 else 0)
+
+
+func _l_encre() -> void:
+	print("— l'encre en essai : les hachures dans la pénombre")
+	_check("éteinte par défaut (aucun %s sur la ligne de commande)" % IsoMateriaux.DRAPEAU_ENCRE_ESSAI, not IsoMateriaux.encre_essai_active())
+	var IsoPateT: GDScript = load("res://iso_pate.gd")
+	IsoPateT.set("hachures", 0.0)
+	var motif := Vector2(12.3, 40.1)
+	var sans := IsoPateT.call("pate", Vector3(0.3, 0.3, 0.3), 0.1, 3, motif, Vector2.ZERO, 0.1, 0.05) as Vector3
+	IsoPateT.set("hachures", IsoMateriaux.HACHURES_ESSAI)
+	var jamais_plus := true
+	var nul_au_noir := true
+	var nul_en_pleine := true
+	var mord := false
+	for i in 200:
+		var l := float(i) / 200.0
+		for k in 20:
+			var m := Vector2(float(k) * 0.73, float(k) * 1.31)
+			var fa: float = IsoPateT.call("hachures_facteur", l, m, 0.05)
+			if fa > 1.0 or fa < 0.0:
+				jamais_plus = false
+			if l <= 0.01 and fa != 1.0:
+				nul_au_noir = false
+			if l >= 0.32 and fa != 1.0:
+				nul_en_pleine = false
+			if fa < 0.9:
+				mord = true
+	_check("les hachures n'éclairent jamais (facteur entre 0 et 1, deux cents lumières, vingt lieux)", jamais_plus)
+	_check("nulles dans le noir (lumière ≤ 1 %) et en pleine lumière (≥ 32 %)", nul_au_noir and nul_en_pleine)
+	_check("elles mordent dans la pénombre (un facteur sous 0,9 quelque part entre les deux)", mord)
+	var zero := IsoPateT.call("pate", Vector3.ZERO, 0.1, 3, motif, Vector2.ZERO, 0.1, 0.05) as Vector3
+	_check("0 reste 0 sous les hachures (le contrat du noir absolu de la pâte)", zero == Vector3.ZERO)
+	IsoPateT.set("hachures", 0.0)
+	var encore := IsoPateT.call("pate", Vector3(0.3, 0.3, 0.3), 0.1, 3, motif, Vector2.ZERO, 0.1, 0.05) as Vector3
+	_check("éteintes, le lavis d'avant formule pour formule", encore == sans)
+	var inc := FileAccess.get_file_as_string("res://iso_pate.gdshaderinc")
+	_check("le shader : même pénombre, même trait que le miroir, posés sur le seul lavis",
+		inc.contains("float penombre = smoothstep(0.01, 0.05, l) * (1.0 - smoothstep(0.14, 0.32, l));")
+		and inc.contains("return 1.0 - pate_hachures * 0.6 * penombre * pate_trait(motif.x + motif.y, 5.0, 0.28, aa);")
+		and inc.contains("return lave * q * (0.82 + 0.18 * grain) * pate_hachures_facteur(l, motif, aa);"))
+	_check("drapeau éteint, rien à exécuter : les hachures sous #ifdef ENCRE_ESSAI, et le lavis d'avant tel quel sinon",
+		inc.contains("#ifdef ENCRE_ESSAI\nuniform float pate_hachures") and inc.contains("#else\n\treturn lave * q * (0.82 + 0.18 * grain);\n#endif"))
+	var sol := load("res://sol_iso.gdshader") as Shader
+	var variante := IsoMateriaux.variante_encre(sol)
+	var noms := []
+	for u in variante.get_shader_uniform_list():
+		noms.append(String(u["name"]))
+	var noms_sol := []
+	for u in sol.get_shader_uniform_list():
+		noms_sol.append(String(u["name"]))
+	_check("la variante du sol compile et porte pate_hachures ; le shader d'origine ne le porte pas",
+		noms.has("pate_hachures") and not noms_sol.has("pate_hachures") and IsoMateriaux.variante_encre(sol) == variante)
+
+
+func _le_contour() -> void:
+	print("— le contour des personnages : une coque noire, qui suit l'opacité du corps")
+	var sh := FileAccess.get_file_as_string("res://corps_iso_contour.gdshader")
+	_check("la coque : faces arrière, agrandie axe par axe, noire, jamais d'éclat",
+		sh.contains("cull_front") and sh.contains("VERTEX += sign(VERTEX) * contour_unites;") and sh.contains("ALBEDO = vec3(0.0);")
+		and not sh.contains("EMISSION"))
+	_check("la coque disparaît avec le corps (opacité nulle, ou pas de contour : discard)",
+		sh.contains("if (contour_unites <= 0.0 || o <= 0.0001 || abs(normale_coque.y) > 0.5) {") and sh.contains("ALPHA = o;"))
+	_check("la coque sans ses faces horizontales (sa face de dessous traçait une ceinture noire devant les jambes)",
+		sh.contains("normale_coque = NORMAL;") and sh.contains("abs(normale_coque.y) > 0.5"))
+	var racine := Node3D.new()
+	root.add_child(racine)
+	var corps := VoxelCorps.new()
+	racine.add_child(corps)
+	corps.construire("pistolet")
+	_check("hors essai, aucune coque (la matière n'a pas de passe suivante)", corps.materiau().next_pass == null)
+	corps.definir_contour(IsoMateriaux.CONTOUR_PX_EPAIS)
+	var coque := corps.materiau_contour()
+	_check("definir_contour pose la coque en passe suivante, à l'épaisseur demandée (%.4f tuile)" % float(coque.get_shader_parameter("contour_unites")),
+		corps.materiau().next_pass == coque
+		and absf(float(coque.get_shader_parameter("contour_unites")) - IsoMateriaux.CONTOUR_PX_EPAIS / float(CandelaTileSet.TILE_SIZE.x)) < 1e-6)
+	corps.definir_opacite(0.0)
+	_check("definir_opacite règle aussi la coque (0 : l'adversaire effacé ne montre pas son contour)",
+		float(coque.get_shader_parameter("opacite_1")) == 0.0 and float(coque.get_shader_parameter("opacite_2")) == 0.0)
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	_check("la présentation règle l'opacité de la coque à chaque image, comme celle du corps (joueurs et fantômes)",
+		pres.count("for m in [_mat_corps[j], _mat_profondeur[j], (_mat_corps[j] as ShaderMaterial).next_pass]:") == 2)
+	racine.queue_free()
 
 
 func _le_drapeau() -> void:

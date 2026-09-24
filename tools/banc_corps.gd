@@ -109,6 +109,9 @@ var _toutes_tenues := false
 ## ISO13 — `--directions-mannequin` (avec `--mannequin`) : après la prise principale, la même scène sans mannequin, puis avec
 ## la lumière venue d'aucun côté, du sud, du nord, de l'est et de l'ouest (`_mannequin_<côté>.png`), même partie, temps figé.
 var _directions_mannequin := false
+## ISO13, lot B — `--contours-essai` : la même scène sans contour, puis avec le contour de la silhouette à 1 px et à 2 px
+## (`_contour_<px>.png`), même partie.
+var _contours_essai := false
 const DIRECTIONS_MANNEQUIN := [["sans", Vector2.ZERO], ["aucune", Vector2.ZERO], ["sud", Vector2(0, 1)], ["nord", Vector2(0, -1)],
 	["est", Vector2(1, 0)], ["ouest", Vector2(-1, 0)]]
 
@@ -184,6 +187,7 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"toutes-tenues": _toutes_tenues = true
 			"temps-fixe": _temps_fixe = true
 			"directions-mannequin": _directions_mannequin = true
+			"contours-essai": _contours_essai = true
 			"mannequin":
 				pass  # lu par `VoxelCatalogue.mannequin_actif()`
 			"teinte":
@@ -596,7 +600,7 @@ func _capturer_puis_quitter() -> void:
 		return
 	# ISO12 — avec `--corps=portraits`, la même scène reprise le portrait ÉTEINT sur les mêmes matériaux (`_gris.png`) : la
 	# peinture seule change entre les deux, rien d'autre (deux lancements séparés ne se comparent pas au pixel près).
-	if VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif():
+	if VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif() or _contours_essai:
 		for c in _corps:
 			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("portrait", 0.0)
 		for i in _frames:
@@ -624,6 +628,18 @@ func _capturer_puis_quitter() -> void:
 			for c in _corps:
 				(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("mannequin", 1.0)
 				(c["noeud"] as VoxelCorpsT).eclairer_mannequin(Vector2.ZERO)
+		if _contours_essai:
+			for px in [0.0, IsoMateriaux.CONTOUR_PX_ESSAI, IsoMateriaux.CONTOUR_PX_EPAIS]:
+				for c in _corps:
+					(c["noeud"] as VoxelCorpsT).definir_contour(px)
+				for i in _frames:
+					await get_tree().process_frame
+				var prise_c: Image = await RenduCommun.capturer(get_tree(), 60000)
+				if prise_c != null:
+					prise_c.save_png(_capture.get_basename() + "_contour_%d.png" % roundi(px))
+					print("BANC_CORPS capture du même corps, contour %.1f px" % px)
+			for c in _corps:
+				(c["noeud"] as VoxelCorpsT).definir_contour(0.0)
 		if _toutes_tenues:
 			for nom in VoxelCatalogueT.TENUES_SOMBRES:
 				for c in _corps:

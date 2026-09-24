@@ -1,0 +1,54 @@
+--- a/tools/banc_lumiere3d.gd
++++ b/tools/banc_lumiere3d.gd
+@@ -1172,6 +1172,8 @@
+ 		await _la_planche_tenues(carte, origine, true)
+ 	if _v27_filtre.split(",").has("planche_mannequin") and origine.has("face"):
+ 		await _la_planche_tenues(carte, origine, true, TENUES_MANNEQUIN)
++	if _v27_filtre.split(",").has("planche_encre") and origine.has("face"):
++		await _la_planche_tenues(carte, origine, true, TENUES_ENCRE)
+ 	if _v27_filtre.split(",").has("planche_ca_pied") and origine.has("face"):
+ 		await _la_planche_ca(carte, origine, true)
+ 	if _v27_filtre.split(",").has("adrien_1b") and carte == "cloitre" and dir != Vector2.ZERO:
+@@ -1227,6 +1229,10 @@
+ const TENUES_TORCHE := ["", "sombre1:olive", "sombre1", "sombre2", "sombre3"]
+ ## ISO13, lot A — `planche_mannequin` (lancer avec `--mannequin`) : chaque tenue sans puis avec le mannequin (« +m »).
+ const TENUES_MANNEQUIN := ["", "+m", "sombre3:froide", "sombre3:froide+m"]
++## ISO13, lot B — `planche_encre` (lancer avec `--mannequin --encre-essai`) : le CONTOUR des personnages à deux épaisseurs
++## (« +c1 » : `CONTOUR_PX_ESSAI`, « +c2 » : `CONTOUR_PX_EPAIS`), puis « +c2h » : le contour épais, les hachures dans la
++## pénombre et l'arête épaisse des murs. Chaque tenue sans rien d'abord ; au même instant.
++const TENUES_ENCRE := ["", "+c1", "+c2", "+c2h", "sombre3:froide", "sombre3:froide+c1", "sombre3:froide+c2", "sombre3:froide+c2h"]
+ 
+ 
+ func _la_planche_tenues(carte: String, origine: Dictionary, torche_seule := false, tenues_torche: Array = TENUES_TORCHE) -> void:
+@@ -1277,19 +1283,28 @@
+ 		ecran[k] = _a_l_ecran_h(0, ancres[k][0], float(ancres[k][1]))
+ 	for entree_brute in tenues:
+ 		# « nom:teinte » impose une teinte ; sinon celle du lancement (`--teinte=`). « +m » : le mannequin allumé (ISO13).
+-		var mannequin := String(entree_brute).ends_with("+m")
+-		var entree := String(entree_brute).trim_suffix("+m")
++		var brute := String(entree_brute)
++		var mannequin := brute.ends_with("+m")
++		# ISO13 lot B : le contour (c1, c2) et, avec « h », les hachures et l'arête épaisse des murs.
++		var contour := IsoMateriaux.CONTOUR_PX_EPAIS if brute.ends_with("+c2") or brute.ends_with("+c2h") \
++			else (IsoMateriaux.CONTOUR_PX_ESSAI if brute.ends_with("+c1") else 0.0)
++		var hachures := brute.ends_with("+c2h")
++		var entree := brute.get_slice("+", 0)
++		for m in _p.call("_materiaux"):
++			IsoMateriaux.poser_encre_essai(m as ShaderMaterial, hachures, m == _p.get("_mat_mur"))
+ 		var tenue := entree.get_slice(":", 0)
+ 		var te := entree.get_slice(":", 1) if entree.contains(":") else ""
+ 		for v in _p.get("_voxels"):
+ 			var corps := v as VoxelCorps
+ 			corps.porter_tenue(tenue, te)
+ 			corps.materiau().set_shader_parameter("mannequin", 1.0 if mannequin else 0.0)
++			corps.definir_contour(contour)
+ 			var bouteille := corps.find_child("Bouteille", true, false) as Node3D
+ 			if bouteille != null:
+ 				bouteille.visible = tenue != ""
+ 		await _images(IMAGES_DE_REPOS)
+-		var etiquette := (tenue if tenue != "" else "gris") + ("_" + te if te != "" else "") + ("_mannequin" if mannequin else "")
++		var etiquette := (tenue if tenue != "" else "gris") + ("_" + te if te != "" else "") + ("_mannequin" if mannequin else "") \
++			+ ("_" + brute.get_slice("+", 1) if brute.contains("+") and not mannequin else "")
+ 		var fichier := await _capturer("%s_%s" % [nom, etiquette])
+ 		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+ 		print("BANC_LUMIERE3D tenue_etat cadrage=%s dazzle_j1=%.3f opacite_j2=%.3f" % [nom, float(_main.p1.get("dazzle_amount")),

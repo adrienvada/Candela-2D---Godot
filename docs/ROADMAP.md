@@ -2434,7 +2434,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Tout le chantier iso entre dans `main` LOCAL** (2026-09-24, 02:26, Adrien, relayé par la session cloud : *« Fais en sorte qu'on fusionne tout dans main pour que je puisse y jouer depuis godot. »* ; faite par Iso 1 Opus, branche d'intégration `iso12-lumiere3d`) | Adrien veut jouer à l'iso en ouvrant le projet dans Godot, sans passer par une branche. **Ce qui entre** : tout ce que porte `iso12-lumiere3d` à la fusion — ISO1 à ISO12 et les lots d'ISO13 déjà fusionnés (A, E, garde, correction du faisceau), l'en-tête corrigé des volumes et le rayon retiré d'ISO7 Gadgets (`df0676e`, `4afbc3c`), le témoin de `test_iso_camera` à pas fixe (`2b1fd08`). `main` est d'abord fusionné DANS la branche (les conflits se tranchent là, jamais dans `main`), puis avancé en avance rapide seulement. **Ce que le jeu fait par défaut** : la vue isométrique (tangage 52°, lacet 0°), zoom ×1,5, les corps en aplats gris d'ISO3, la lumière 2D d'ISO11 projetée en iso. **Ce qui reste éteint** et ne change rien au jeu par défaut : la lumière 3D (mode A, aucun drapeau de jeu : seuls les bancs et le photographe l'allument), `--mannequin`, `--corps=portraits` et `--corps=sombre[2,3]`, `--faisceau` (le cœur chaud seul), et `--lacet` à venir (ISO14). `--encre-essai` (lot B de Beauté) n'entre que si son correctif est commité à temps, sinon à la fusion suivante. **Retour à la vue de dessus** : `--2d` pour une exécution, ou le réglage « VUE DE DESSUS (DÉBOGAGE) » (build de débogage, donc lancé depuis l'éditeur). **Rien n'est poussé sur GitHub** : la question (Q8 de la session cloud) reste à Adrien. |
+| **Tout le chantier iso entre dans `main` LOCAL** (2026-09-24, 02:26, Adrien, relayé par la session cloud : *« Fais en sorte qu'on fusionne tout dans main pour que je puisse y jouer depuis godot. »* ; faite par Iso 1 Opus, branche d'intégration `iso12-lumiere3d`) | Adrien veut jouer à l'iso en ouvrant le projet dans Godot, sans passer par une branche. **Ce qui entre** : tout ce que porte `iso12-lumiere3d` à la fusion — ISO1 à ISO12 et les lots d'ISO13 déjà fusionnés (A, E, garde, correction du faisceau), l'en-tête corrigé des volumes et le rayon retiré d'ISO7 Gadgets (`df0676e`, `4afbc3c`), le témoin de `test_iso_camera` à pas fixe (`2b1fd08`), et le lot B d'ISO13 avec son correctif (ISO7 Beauté, `9428718` : la coque des corps sans ceinture, les hachures sous `#ifdef ENCRE_ESSAI`, le coût éteint prouvé à l'octet). `main` est d'abord fusionné DANS la branche (les conflits se tranchent là, jamais dans `main`), puis avancé en avance rapide seulement. **Ce que le jeu fait par défaut** : la vue isométrique (tangage 52°, lacet 0°), zoom ×1,5, les corps en aplats gris d'ISO3, la lumière 2D d'ISO11 projetée en iso. **Ce qui reste éteint** et ne change rien au jeu par défaut : la lumière 3D (mode A, aucun drapeau de jeu : seuls les bancs et le photographe l'allument), `--mannequin`, `--corps=portraits` et `--corps=sombre[2,3]`, `--faisceau` (le cœur chaud seul), `--encre-essai` (le contour et les hachures du lot B), et `--lacet` à venir (ISO14). N'entrent PAS, faute de lot à temps : la ligne `[mannequin] allumé` de Beauté et l'étape « loupe » de Gadgets — à la fusion suivante. **Retour à la vue de dessus** : `--2d` pour une exécution, ou le réglage « VUE DE DESSUS (DÉBOGAGE) » (build de débogage, donc lancé depuis l'éditeur). **Rien n'est poussé sur GitHub** : la question (Q8 de la session cloud) reste à Adrien. |
 | **ISO14 — la règle du banc d'équité, fixée AVANT tout chiffre** (2026-09-24, 01:44, session cloud « Fable 5.1 - CLOUD ISO UNRAILED ») | Trois options chiffrées à 45° : **A** même lacet pour les deux, **B** J2 à lacet + 180°, **C** J2 à −45° (le miroir gauche-droite de la vue de J1). Une option est ÉQUITABLE sur une carte si : **(0)** à 0° comme à 45°, aucune case de sol entièrement invisible et aucune position où un corps (rayon 18 px) soit entièrement caché (longueur cachée maximale imprimée) ; **(a)** écart de part cachée entre les moitiés ≤ 1 point, et ≤ l'écart à 0° + 0,5 ; **(b)** autour de chaque apparition (6 cases), écart ≤ 1 point ; **(e)** L'ABRI CACHÉ — pour chaque joueur, la part des couples (p de sa moitié, q de la moitié adverse) où p est à l'abri de q (le segment [p, q] coupe un mur à moins d'1,5 case de p) ET caché sur l'écran de l'adversaire : écart J1/J2 ≤ 1 point (en A à 45°, les abris du joueur éloigné de la caméra sont cachés, ceux de l'autre non — biais que (a) et (b) ne voient pas). La part cachée totale à 45° contre 0° est une INFORMATION (le prix de l'angle, le même pour les deux ; au-delà de 1,5, image à Adrien). Le banc imprime aussi, par carte, la symétrie qui échange les apparitions et si les murs la respectent — « par construction » se vérifie. Adrien choisit parmi les options équitables sur les six cartes. Plan complet : `docs/iso/iso14/plan_lacet_45.md`. ⚠️ **SIGNALÉ, NON CORRIGÉ (dessin de carte, hors périmètre, devant Adrien) : L'USINE EST INÉGALE DÈS LA 2D** — lecture des JSON par la session cloud, à confirmer par le banc : 4 cases de mur sortent des deux symétries (les deux blocs de 3 au centre, x de 15 à 17, rangées 9-10 et 15-16, décalés d'une colonne vers J2). Et `game_state.gd` pose J1 sur `spawn_p1`, J2 sur `spawn_p2` à chaque manche : un biais de carte ou de caméra favorise le même joueur toute la partie. |
 | **Q14 — ISO14 : le duel et la killcam passent à un LACET DE 45°**, la vraie isométrie des planches du DA et des illustrations, deux faces de mur visibles ; il remplace le 0° choisi à l'étude pour l'équité et confirmé à H15 (2026-09-24, vers 01:19, Adrien, rapporté par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « on passe à 45° ce sera plus intéressant ») | Le jeu doit ressembler à ses illustrations (décision ISO13), et elles sont à 45°. Le 0° avait été choisi pour l'équité : à 45°, la part de sol qu'un mur cache dépend du côté où l'on se tient. D'où l'ordre des étapes, posé par la session cloud : (1) un plan écrit, sans code, de tout ce qui suppose le lacet 0° (caméra et décalage vers la visée, visée souris vers le sol, stick relatif à la caméra — haut du stick = haut de l'écran pour les deux joueurs —, killcam, deux faces de mur au lieu d'une, bande cachée et zone morte des murets, photographe, bancs, suites) et le BANC D'ÉQUITÉ que l'étude demandait « carte par carte » (par carte livrée, la part de sol cachée selon la position, un côté contre l'autre, à 0° et à 45°) avec sa règle, posée avant les chiffres ; (2) le 45° derrière `--lacet=45`, éteint par défaut, la même valeur pour tous en ligne, et une planche 0° contre 45° à côté des illustrations. **Le défaut ne change qu'après le banc d'équité et la mesure de cadence** ; une carte qui échoue au banc se corrige, pas l'angle (plan de la session cloud, qu'Adrien peut contredire). |
 | **ISO13 — la référence du look devient les 19 illustrations d'ISO Assets posées dans les menus (pas 7) ; là où elles contredisent les planches du DA, elles l'emportent** — nommément la fumée AMBRE de `fumee_03` et le lavis SANS hachures de `face_mur_01` et `sol_01` (2026-09-23 au soir, Adrien, rapporté par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » à 23:58 : « Il faut vraiment à la fin que le visuel du jeu ressemble au plus proche aux visuels générés par assets pour illustrer le jeu dans les menus. Évalue à chaque fois ce qu'il manque. ») | Le jeu doit ressembler à ce que ses menus promettent : un joueur qui voit l'illustration puis la partie ne doit pas changer de monde. « Évalue à chaque fois ce qu'il manque » : chaque lot se juge contre ces illustrations, écart par écart, et non contre une planche du DA qu'elles ont dépassée. Première évaluation de la session cloud (la base, neuf familles, rien de tenu) : https://claude.ai/artifact/YKYXKv4Nc9NqKUYvFmcrLU . Le chantier s'appelle ISO13 ; cette branche intègre les lots d'ISO7 Beauté et d'ISO7 Gadgets à mesure, comme pour ISO12 — un lot vert, les ancrages relus, les drapeaux éteints jusqu'à la mesure. |
@@ -27190,6 +27190,60 @@ dont 64 pour rien** (recensement d'Iso 1). Mais cela ne pèse que **~0,14 ms**, 
 produit 9 occulteurs, exactement comme la carte d'essai** (ses 48 cases de piliers fusionnent en
 cinq rectangles). Sous le seuil de 0,3 ms fixé par la session cloud. ⚠️ Cet outil échoue son
 étalonnage d'une unité (9 contre les 8 du banc), inexpliqué, sans portée à cette échelle.
+
+#### ISO13, lot B — l'encre en essai : le contour des personnages, les hachures dans la pénombre 🟡 (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi.** Les illustrations cernent tout d'une encre noire épaisse et hachent les demi-teintes ; ISO10 avait retiré les
+hachures, qui s'écartaient alors des planches du DA peintes en lavis — la référence a changé. La session cloud (00:56) a
+précisé l'accent : à l'échelle du jeu, c'est le CONTOUR des personnages qui portera la lecture, plus que des lignes
+intérieures ; à essayer à deux épaisseurs, en gris et en V3 froide, à côté de l'illustration de l'entraînement, puis les
+hachures sur la même planche. Tout derrière `--encre-essai`, éteint : c'est une planche d'essai, rien n'est allumé en jeu.
+
+**Ce qui est fait.**
+- **Le contour de la silhouette** (`corps_iso_contour.gdshader`) : une COQUE — chaque boîte redessinée, faces arrière seules,
+  agrandie de 1 ou 2 px de chaque côté, en noir, en passe suivante (`next_pass`) de la matière des corps : même maillage,
+  aucun nœud de plus. Le corps, devant, en cache l'intérieur ; il reste un liseré noir autour de la silhouette et de chaque
+  membre qui passe devant un autre. ⚠️ **La coque suit l'opacité du corps**, posée à chaque image par la présentation comme
+  celle de la passe de profondeur : un adversaire effacé par l'éblouissement du regardeur ne réapparaît pas par son liseré.
+- **Les hachures dans la pénombre** (`pate_hachures_facteur`, miroir `IsoPate.hachures_facteur`) : posées sur le lavis, en
+  diagonale accrochée au monde, sur le sol, les murs et les corps, et seulement dans la pénombre — nulles sous 1 % de
+  lumière, nulles au-dessus de 32 %. Elles multiplient : une hachure n'éclaire rien, un noir reste noir.
+- **L'arête des murs** plus épaisse et plus noire sous le même drapeau (2,4 px, reste 0,12 contre 1,6 et 0,25).
+
+**Chiffres** (banc des corps, temps fixe, même partie, sans contour contre 1 px et 2 px) :
+- **Noir absolu** : 0 pixel noir sans contour et non noir avec, gris et V3, de 0,8 à 0 ; **rien qui éclaire** : 0 pixel plus clair.
+- **L'apparition** (30 px) ne recule pour aucune classe : celles qui se voient à 0,10 et 0,12 sans contour s'y voient avec.
+- **Mais le corps perd des pixels visibles** à 0,15 : 20 % avec 1 px, 34 % avec 2 px en gris (5 à 20 % en V3 froide). Ce sont
+  surtout les liserés intérieurs — la coque d'une boîte qui ressort devant une autre, à la jonction du torse et des jambes,
+  trace une barre noire au milieu du corps — qui noircissent de la surface éclairée.
+- Sur les captures du jeu, la comparaison au pixel n'est pas au même instant (la torche pulse d'une prise à l'autre : même
+  le contour seul, noir, y montre des pixels « plus clairs ») ; la preuve du noir absolu est celle du banc des corps et de la
+  construction.
+
+**Ce que montre la planche** (`docs/iso/iso13/planche_encre.jpg`, cadrage `planche_encre` dans
+`docs/iso/iso13/banc_lumiere3d_planche_encre_contre_2cdb6e8.patch`) : le contour se lit franchement là où le corps se
+détache sur un sol éclairé (J1 sur sa rétrodiffusion) ; il ne se voit pas là où le sol est noir (J2 dans l'ombre de son
+propre corps) — un liseré noir sur du noir. Les hachures se lisent dans la pénombre du sol et sur la face du mur.
+
+**Le correctif (01:49-02:15, ordre de la session cloud après la planche).**
+- **La ceinture noire** venait de la face DE DESSOUS de la coque du torse, qui débordait devant les jambes, moins profondes
+  que lui. La coque ne garde que ses faces verticales. Recul des pixels visibles à 0,15 : 1 px, −3,5 % en gris et −2,2 % en
+  V3 froide (sous les 5 % demandés) ; 2 px, −9,8 % et −5,2 % (au-dessus). Noir absolu 0, aucun pixel plus clair.
+- **Le coût éteint** : les hachures sont passées sous `#ifdef ENCRE_ESSAI`, défini par la seule variante de shader que
+  `IsoMateriaux.variante_encre()` compile sous `--encre-essai` — plus un test d'uniforme par pixel dans la pâte partagée par
+  le sol, les murs et les corps (le piège de l'ordre 255). Preuve par le texte : sans ENCRE_ESSAI, le code prétraité des huit
+  shaders et includes du rendu est celui de `5799ba2`, commentaires mis à part ; preuve par l'image : les six prises du banc
+  des corps, `--temps-fixe`, identiques à l'octet. Côté processeur, la coque n'ajoute qu'une lecture de `next_pass` (nulle).
+- **Caméra en mouvement** (le garde-fou « aucun pixel voyant ») : J1 avançant d'un pixel par image, les images recalées sur le
+  défilement ne diffèrent plus que de 0,8 à 1,3 niveau dans la zone hachée ; les diagonales suivent le monde, sans moiré vu.
+- **Les points blancs isolés** de la première planche sont la poussière du faisceau (V5.5), pas l'encre.
+- ⚠️ **`test_iso_camera` est instable**, et hors de ce chantier : son TÉMOIN (deux parties sans iso) diverge au pas 116 une passe
+  sur deux ou trois — une balle d'un côté, rien de l'autre. Confié à Iso 1 par la session cloud (cause probable : un délai de
+  tir décompté au rythme du rendu, lu au rythme de la physique).
+
+**À trancher** : 1 ou 2 px de contour, et les hachures, sur la planche du duel, à prendre quand le Mac sera libre après la fusion dans
+`main` (J2 dans le cône de J1, sur du sol éclairé ; 2 px marqué hors garde-fou). Lot complet vert (437 s, 02:29). Avant
+d'allumer : la cadence de la coque (une passe de plus par boîte de corps), à mesurer par Gadgets. Lot complet vert (439 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 01:45).
 
 ### Ce qui attend Adrien — jalon H15
 

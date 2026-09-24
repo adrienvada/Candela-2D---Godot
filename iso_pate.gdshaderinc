@@ -233,6 +233,25 @@ float pate_encre_boite(vec3 local, vec3 demi, vec3 echelle, vec3 normale, float 
 // pente            gradient de luminance au même point (par pixel de monde) ;
 // lumiere_decalee  luminance lue à côté — l'encre décalée de C ;
 // aa               largeur d'anticrénelage, en fraction de période.
+// ISO13, lot B — LES HACHURES DANS LA PÉNOMBRE (essai d'ISO7 Beauté, 2026-09-24, derrière `--encre-essai`, éteint). La
+// référence a changé depuis ISO10, qui avait retiré les hachures parce qu'elles s'écartaient des planches du DA peintes en
+// lavis : les illustrations des menus hachent les demi-teintes (les murs, le plafond, les ombres portées). Posées sur le
+// lavis, en diagonale accrochée au MONDE, seulement dans la pénombre : nulles dans le noir (elles multiplient, et la
+// pénombre vaut 0 sous 1 % de lumière), nulles en pleine lumière. Une hachure n'éclaire rien.
+// Miroir processeur : `IsoPate.hachures_facteur`.
+// ⚠️ **Sous `#ifdef ENCRE_ESSAI`, et non derrière un uniforme** (question de coût de la session cloud, 01:49 ; condition
+// d'Iso 1 pour fusionner) : un test d'uniforme par pixel dans la pâte partagée par le sol, les murs et les corps est un coût
+// payé drapeau éteint (le piège de l'ordre 255). Seule la variante du shader que `IsoMateriaux.variante_encre()` compile sous
+// `--encre-essai` définit ENCRE_ESSAI ; sans lui, le préprocesseur retire tout, et le shader compilé est le code d'avant.
+#ifdef ENCRE_ESSAI
+uniform float pate_hachures : hint_range(0.0, 1.0) = 0.0;
+
+float pate_hachures_facteur(float l, vec2 motif, float aa) {
+	float penombre = smoothstep(0.01, 0.05, l) * (1.0 - smoothstep(0.14, 0.32, l));
+	return 1.0 - pate_hachures * 0.6 * penombre * pate_trait(motif.x + motif.y, 5.0, 0.28, aa);
+}
+#endif
+
 vec3 pate(vec3 couleur, float lumiere, int st, vec2 motif, vec2 pente,
 		float lumiere_decalee, float aa) {
 	if (st == PATE_BRUTE) {
@@ -291,5 +310,9 @@ vec3 pate(vec3 couleur, float lumiere, int st, vec2 motif, vec2 pente,
 	// Désaturé vers la luminance de la COULEUR reçue, pas vers `l` : une couleur nulle
 	// reste nulle, quelle que soit la lumière annoncée.
 	vec3 lave = mix(couleur, vec3(pate_luminance(couleur)), 0.35) / max(l, PATE_PLANCHER);
+#ifdef ENCRE_ESSAI
+	return lave * q * (0.82 + 0.18 * grain) * pate_hachures_facteur(l, motif, aa);
+#else
 	return lave * q * (0.82 + 0.18 * grain);
+#endif
 }
