@@ -9267,7 +9267,8 @@ rendu et physique de 1/60 s ensemble), et le test **refuse** de comparer sans pa
 1/60 s tout rond, parce que `OS.get_cmdline_args()` ne rend PAS les arguments du moteur (vérifié). Dix passes à pas fixe : dix
 vertes. **Règle : tout test qui compare deux parties pas pour pas se lance à pas d'image fixe, et le vérifie lui-même.**
 
-⚠️ **Défaut du jeu de base, SIGNALÉ, pas corrigé ici** (relevé par la session cloud, confirmé à la lecture du code, non mesuré) :
+⚠️ **Défaut du jeu de base, À PART — il n'est PAS la cause de ce rouge** : signalé, pas corrigé ici (relevé par la session
+cloud, confirmé à la lecture du code, non mesuré, et sans lien avec ce test, qui appelle `shoot()` sans passer par lui) :
 `shoot_cooldown` décroît dans `_process` (`player.gd`, au rythme du rendu) et se lit dans `_physics_process`, qui décide du tir
 détente tenue, de la fusée et du gadget. **Le pas physique où part le tir suivant dépend donc du rendu, à un pas près** — et
 l'hôte comme la prédiction du client décomptent chacun avec leurs propres images : la prédiction peut s'écarter de l'hôte d'autant.
