@@ -27664,6 +27664,18 @@ l'essentiel des rangs. Sur un même gris, les dix classes répondent presque ens
 - **La planche avant / après** : `docs/iso/iso13/q32/planche_q32.jpg` (avant = `4268ed3` dans un arbre détaché, rangs et
   équité du 24/09 ; après = ce commit ; même banc, même lumière, temps figé).
 
+**Note — l'alpha de la couleur d'un corps n'est lu par personne** (vérifié en lisant le code le 2026-09-25, 14:26, à la
+demande de la session cloud ; aucun changement de code). La couleur d'un corps est `GRIS_PLAFOND × facteur` : la
+multiplication d'une `Color` touche aussi son alpha, qui vaut donc 0,65 (0,55 à 0,85 aux rangs, depuis toujours). Rien ne le
+lit :
+- les deux shaders qui la reçoivent (`corps_iso`, `corps_iso_eclaire`, uniform `couleur_fiche` ; les objets voxel passent par
+  les mêmes) n'en lisent que `.rgb`. Leur `ALPHA` vient de l'opacité et de la silhouette de la vue, jamais de la fiche ;
+- les couleurs de tenue qui en dérivent passent par `a_luminance`, qui rend un alpha de 1 ;
+- côté scripts, `couleur()` sert à un plafond relu en `.r/.g/.b` (`banc_iso`), à des couleurs de portrait dont le shader ne lit
+  que `.rgb` (`banc_corps`, palette grise), et à `definir_silhouette(couleur, alpha)`, qui reprend l'alpha dans son second
+  argument et jette celui de la couleur.
+Si un jour un shader lit `couleur_fiche.a`, il faudra d'abord poser l'alpha à 1 dans la fiche.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet
