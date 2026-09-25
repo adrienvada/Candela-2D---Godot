@@ -27579,6 +27579,47 @@ Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 19:44), empreinte du 
 précédent, sur le même état exact (19:36), avait rougi sur `test_arena_matter` (les douilles, leur arrêt physique), hors de ce
 chantier. Seule, la suite passe six fois sur six, et le lot suivant est vert. Une intermittence, signalée, non corrigée ici.
 
+#### ISO13 — les pochoirs de l'illustration, au sol, à l'essai 🟡 (2026-09-25, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (ordre de la session cloud, 08:49). Les illustrations peignent au sol de grandes lettres au pochoir — « ZONE 4 » et
+« DEATHMATCH » dans « créer local ». Derrière `--pochoirs-essai`, éteint : « ZONE n », « DEATHMATCH » et « ARENA » peints sur
+les six cartes livrées (`ArenaDecor.POCHOIRS_ESSAI`), cuits avec le décor existant une fois par carte.
+
+**L'équité d'abord** (règles acceptées par la session cloud, 09:03) : chaque pochoir a son jumeau par la symétrie de la carte
+(miroir gauche-droite ; demi-tour pour la Croisée, où J2 lit son « ZONE 2 » à l'envers au lacet 0, accepté), ou se tient sur
+son axe ; jamais à moins de trois cases d'un départ, jamais en couloir, toujours sur une plage de sol libre qui contient le mot ;
+aucun « ARENA » là où le centre est plein. L'Usine n'a pas de symétrie exacte (son bloc central est décalé d'une case) :
+traitée en miroir. ⚠️ Sur une carte de largeur paire, l'axe tombe ENTRE deux cases, en x = (W − 1) / 2 : la première
+proposition posait les pochoirs « sur l'axe » une demi-case à côté, corrigée avant la moindre image par la garde de la suite.
+
+**La couleur** (décision de la session cloud, 09:03) : une peinture SOMBRE, le sol × 0,55 sous la lettre — l'illustration les
+peint en clair. Une peinture claire ferait mieux ressortir un corps sombre debout dessus : un endroit où l'on serait plus
+visible qu'ailleurs.
+
+**Preuves** (2026-09-25, 09:51-09:59) :
+- `tools/test_pochoirs.gd` : drapeau éteint par défaut ; chaque pochoir a son jumeau par la symétrie RELUE dans le fichier de
+  la carte (la garde rougit sur un pochoir décalé d'une demi-case) ; chaque mot sur le sol libre, à trois cases des départs ;
+  la peinture n'assombrit que ; aucun shader de sol ni de mur ne connaît les pochoirs ; `poser_pochoirs` pose et retire.
+- **La planche au même instant** (`docs/iso/iso13/pochoirs/planche_pochoirs.jpg` ; cadrage `planche_pochoirs` du banc, patch
+  dans le même dossier) : le décor recuit sans puis avec les pochoirs (`ArenaDecor.poser_pochoirs`), le temps du jeu figé, dans
+  la même partie ; au Cloître, « ZONE 1 » sous la torche de J1. Sur le décor, corps exclus : au lacet 0, 0 noir allumé, 0 pixel
+  plus clair, 1 966 assombris ; à 45°, 0 noir allumé, 2 001 assombris, et un pixel (voir la règle ci-dessous).
+- **Le coût, nul** : appels de dessin 93 / 93 (0°) et 79 / 79 (45°), objets 991 / 991 et 977 / 977, mémoire des textures
+  389,41 / 389,41 Mo, avec et sans. Aucune mesure de cadence n'est nécessaire.
+- Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-25 09:59), empreinte du code identique avant et après.
+
+**LA RÈGLE « JAMAIS PLUS CLAIR » SE LIT EN LUMINANCE** (précisée par la session cloud, 10:04, pour ne pas changer de critère
+après les chiffres une autre fois) : la luminance Rec. 709 des valeurs sRGB du pixel, avec, strictement pas plus haute que
+sans. Le compte au canal maximal reste imprimé par les scripts, pour mémoire. La raison : une peinture ne doit ni allumer le noir
+ni faire mieux ressortir un corps sombre, et c'est la luminance qui en décide. Le cas qui l'a fait écrire : à 45°, le pixel
+(569, 599), au bord d'une lettre dans le plein de la torche, passe de (241, 218, 183) à (243, 217, 184) — le rouge monte de 2,
+la luminance BAISSE (220,4 → 220,2). Un glissement de teinte de la pâte au bord de la lettre, sur une petite tache blanche qui
+existe sans pochoir ; pas une lumière.
+
+**Fidèle et pas fidèle** : « ZONE n » et « DEATHMATCH » au sol le sont (« créer local ») ; « ARENA » ne l'est pas — l'illustration
+de l'accueil le porte sur un mur. Il quitte le sol au prochain changement de code de ce lot, sans lot dédié ; d'ici là, il reste
+derrière le drapeau.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

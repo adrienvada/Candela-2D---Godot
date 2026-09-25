@@ -5977,3 +5977,10 @@ préparée une fois par carte. La preuve de « même image » a appris deux chos
 de la grille (le vide hors sol compte pour un mur), et deux lancements du jeu ne rendent jamais la même scène — la seule preuve
 valable est au même instant, dans le même processus, avec un témoin positif qui montre que la bascule atteint l'écran. Elle
 donne 0 pixel d'écart à 0° comme à 45°.
+
+**Suite, 09:00-10:05 — les pochoirs de l'illustration, à l'essai.** « ZONE n », « DEATHMATCH », « ARENA » au sol, en peinture
+sombre, cuits avec le décor ; chaque pochoir a son jumeau par la symétrie de sa carte. La garde d'équité a attrapé ma propre
+erreur avant la moindre image : l'axe d'une carte de largeur paire tombe entre deux cases. Coût nul, prouvé par les appels de
+dessin et la mémoire des textures. Et la règle « jamais plus clair » s'écrit désormais en luminance, après un pixel dont le rouge
+montait de 2 quand sa luminance baissait. Deux faux départs au Mac (un banc qui ne s'analysait pas, puis deux boucles d'attente
+croisées au verrou) : un guetteur doit exiger 90 s CONTINUES sans verrou ni Godot, et mieux vaut attendre le témoin nommé.

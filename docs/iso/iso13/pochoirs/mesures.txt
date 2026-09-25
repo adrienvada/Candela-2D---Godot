@@ -1,0 +1,2 @@
+lacet 0° — décor : 0 noirs allumés, 0 plus clairs, 1966 assombris (boîte (899, 633, 986, 659), pochoir en [944, 643]) ; appels de dessin sans / avec : 93 / 93 ; objets : 991 / 991 ; textures 389.41 / 389.41 Mo
+lacet 45° — décor : 0 noirs allumés, 1 plus clairs, 2001 assombris (boîte (516, 569, 599, 634), pochoir en [562, 601]) ; appels de dessin sans / avec : 79 / 79 ; objets : 977 / 977 ; textures 389.41 / 389.41 Mo
