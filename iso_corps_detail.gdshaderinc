@@ -14,8 +14,8 @@
 //   rend une clarté proportionnelle à celle de la fiche : rien ne sort plus clair qu'aujourd'hui, rien ne s'allume dans le
 //   noir (0 reste 0), l'adversaire n'apparaît pas plus tôt.
 // - **Aucun pixel voyant à la taille du duel** : les pores s'effacent quand un pixel d'écran couvre plus d'un demi-pixel du
-//   monde (le duel, à ×1,5, en couvre 0,67) et reviennent entiers sous 0,3 (killcam, menus, bancs). Le marbrage, large de
-//   plusieurs pixels, reste partout : il ne scintille pas.
+//   monde (le duel, à ×1,5, en couvre 0,67) et reviennent entiers sous 0,3 (bancs, gros plans — pas la killcam, dont le
+//   corps est un aplat : Q33). Le marbrage, large de plusieurs pixels, reste partout : il ne scintille pas.
 // - Albédo seul : ni émission, ni `light()`, ni relief. Compilé dans la seule variante CORPS_DETAIL de `corps_iso` (et de son
 //   jumeau éclairé) : sans le drapeau, le jeu n'exécute pas une instruction de plus.
 

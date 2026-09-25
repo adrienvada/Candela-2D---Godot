@@ -27536,7 +27536,7 @@ image avant d'engager les dix classes : une classe, le pistolet, d'après son po
   (`VoxelCatalogue.palette_details`, à un rapport ≤ 1 du gris de la classe).
 - **La matière peinte** (`iso_corps_detail.gdshaderinc`) : un marbrage large et des pores accrochés à la boîte, qui
   n'assombrissent que la fiche. Les pores s'effacent quand un pixel d'écran couvre plus d'un demi-pixel du monde (le duel) et
-  reviennent sous 0,3 (bancs, killcam rapprochée).
+  reviennent sous 0,3 (bancs ; « killcam rapprochée » écrit ici le 24/09 était faux, voir Q29 plus bas).
 - `VoxelCorps.montrer_details()` : le détail se montre et se cache par uniformes, pour les bancs, au même instant.
 - Compilé dans la seule variante CORPS_DETAIL des corps (`IsoMateriaux.variante_definie`, reposée par `accorder_corps` après
   un changement de shader). Sans le drapeau, le code prétraité des corps est celui d'`ec7a51a`.
@@ -27561,7 +27561,7 @@ photographe pour la killcam ; patch du banc : `banc_lumiere3d_planches_contre_ec
   de V3 (0,47). Le facteur d'équité du pistolet serait à recalibrer avec elle.
 - La bandoulière modelée déborde du torse d'un côté : sa longueur est à reprendre.
 
-**À trancher par Adrien** : sur la planche, le détail vaut-il son coût à la taille où il se voit (killcam rapprochée, menus) ?
+**À trancher par Adrien** : sur la planche, le détail vaut-il son coût à la taille où il se voit (bancs, menus ; pas la killcam, voir Q29) ?
 Et le contour de 1 px, sans et avec le détail.
 
 **L'usure refaite, le temps figé** (ordre 307 ; `docs/iso/iso13/planche_usure_temps_fige.jpg`). Le temps du jeu est arrêté
@@ -27675,6 +27675,39 @@ lit :
   que `.rgb` (`banc_corps`, palette grise), et à `definir_silhouette(couleur, alpha)`, qui reprend l'alpha dans son second
   argument et jette celui de la couleur.
 Si un jour un shader lit `couleur_fiche.a`, il faudra d'abord poser l'alpha à 1 dans la fiche.
+
+#### ISO13, Q29 — le kit commun des six classes à bouteille, à l'essai 🟡 (2026-09-25, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (décision d'Adrien, 2026-09-25 10:28, Q29 = B : le personnage détaillé étendu aux dix classes, après avoir
+réparé deux défauts). **Où le montrer n'est pas tranché** : le plan disait « dans la killcam », sur une phrase fausse de la page
+du pistolet (24/09). Dans la killcam, le corps iso est porté par le fantôme et dessiné en aplat, sans lumière
+(`_suivre_le_fantome` : opacité 0, silhouette seule), et le cadrage ne serre jamais plus que 1,3 fois le zoom du duel (le
+corps y fait 45 à 58 px de haut sur 1080 lignes). La question est repartie chez Adrien (Q33 : garder la killcam, l'éclairer,
+ou un plan à part du vainqueur éclairé). D'ici sa réponse, seul le kit commun avance, derrière `--corps-detaille`, éteint.
+
+**Ce qui est fait.** Les six classes à bouteille (`VoxelCatalogue.PORTRAITS`) portent le kit : le Parasite (déjà à l'essai
+le 24/09) et les cinq de Q29 — Occulteur, Spectre, Sentinelle, Incendiaire, Allumeur. Commun aux six : la bandoulière et ses
+trois cartouches, l'étui, le robinet et son volant, le tuyau. Ce qui change d'une classe à l'autre, lu sur les portraits V3
+froide, est dans `VoxelCatalogue.KIT_DETAIL` : un manomètre (Parasite, Occulteur, Spectre) ou une plaque sans cadran
+(Sentinelle, Incendiaire en métal ; Allumeur en laiton, orange sur son portrait) en haut du torse ; le manomètre sur le flanc
+de la bouteille (les trois premiers seulement) ; la crosse (le Parasite seul). Les quatre classes sans bouteille attendent
+leur tour.
+
+**Premier défaut réparé : la bandoulière débordait du torse.** Sa longueur était `lt / cos(angle) × 0,98` : la diagonale
+tenait, mais la largeur de 0,05 tournée de ~48° ajoutait 0,037 — 0,01 tuile de débord de chaque côté.
+`VoxelCorps.longueur_bandouliere` tient désormais compte de la largeur. Preuve par mutation (2026-09-25, 16:42) : l'ancienne
+formule remise dans le code fait tomber la garde sur les six classes (0,0091 à 0,0102 tuile de débord), 6 échecs sur 51.
+
+**Second défaut, pas encore réparé : la matière peinte assombrit.** Mesuré au banc des corps (17:53, V3 froide, temps figé) :
+à 0,15, les six classes détaillées gardent 0,84 à 0,90 de leurs pixels visibles (le Spectre 0,84, l'Allumeur 0,90) ; les
+quatre autres, 1,00. L'apparition ne bouge pas (0,10 pour les dix, rien à 0,09) et le noir reste 0/255. À recalibrer sur
+l'équité de Q32 avant toute adoption — derrière le drapeau, rien de cela ne touche le jeu.
+
+**Preuves** (`tools/test_corps_detail.gd`, 51 vérifications) : 9 à 11 accessoires par classe, aucune taille confondue avec
+une boîte du corps, toutes connues du shader (7 à 9 sortes pour 10 places) ; 18 à 22 appels de dessin de plus par corps
+détaillé ; silhouette du corps seul, accessoires compris, de 16,81 px (Occulteur) à 17,19 px (Allumeur), jamais plus large
+que sans (couloir 17,5, zone de touche 18) ; la bandoulière dans la face du torse. La planche : portrait, corps d'aujourd'hui
+et corps avec le kit, classe par classe (`docs/iso/iso13/q29/planche_kit.jpg`).
 
 ### Ce qui attend Adrien — jalon H15
 

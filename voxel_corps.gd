@@ -923,17 +923,19 @@ func porter_tenue(nom: String, nom_teinte := "") -> void:
 	_poser_couleurs_details(nom, nom_teinte)
 
 
-## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; une classe : le pistolet, d'après son portrait V3
-## froide). Les accessoires du portrait, MODELÉS en petites boîtes de la même matière, collées aux pièces qui les portent :
-## la bandoulière et ses trois cartouches, l'étui sur la hanche, le manomètre de poitrine (le torse) ; le robinet, son volant,
-## le tuyau et le manomètre de la bouteille ; la crosse du pistolet. Le shader les reconnaît à leur demi-taille — toutes
+## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; les six classes à bouteille depuis Q29, d'après
+## leurs portraits V3 froide). Les accessoires du portrait, MODELÉS en petites boîtes de la même matière, collées aux pièces
+## qui les portent : la bandoulière et ses trois cartouches, l'étui sur la hanche, le manomètre ou la plaque du haut du torse ;
+## le robinet, son volant, le tuyau et, selon la classe, le manomètre de la bouteille ; la crosse du pistolet. Ce qui change
+## d'une classe à l'autre est dans `VoxelCatalogue.KIT_DETAIL`. Le shader les reconnaît à leur demi-taille — toutes
 ## distinctes, à 0,5 millième de tuile près — et leur pose la couleur de leur rôle (`iso_corps_detail.gdshaderinc`). Aucune ne
-## sort de l'enveloppe du corps : la bandoulière et l'étui sont plaqués sur la face avant, le robinet et le tuyau sur le dessus
-## de la bouteille, dans son emprise (la suite le mesure, `tools/test_corps_detail.gd`). Chaque boîte ajoute deux appels de
-## dessin (couleur et profondeur) et 12 triangles chacun.
+## sort de l'enveloppe du corps : la bandoulière et l'étui sont plaqués sur la face avant, DANS le rectangle du torse, le
+## robinet et le tuyau sur le dessus de la bouteille, dans son emprise (la suite le mesure, `tools/test_corps_detail.gd`).
+## Chaque boîte ajoute deux appels de dessin (couleur et profondeur) et 12 triangles chacun.
 func _detailler(slug: String) -> void:
 	if not VoxelCatalogueT.CLASSES_DETAILLEES.has(slug):
 		return
+	var kit: Dictionary = VoxelCatalogueT.KIT_DETAIL[slug]
 	var s := _fiche
 	var e: float = s["echelle"]
 	var lt: float = float(s["largeur_torse"]) * e
@@ -943,13 +945,17 @@ func _detailler(slug: String) -> void:
 	# La bandoulière dans l'axe de celle que le portrait peint déjà sur le torse (f.y = −0,9 f.x, en coordonnées de face).
 	var angle := atan(-0.9 * (ht * 0.5) / (lt * 0.5))
 	var sens := Vector3(cos(angle), sin(angle), 0.0)
-	var longueur := lt / cos(angle) * 0.98
+	var longueur := longueur_bandouliere(lt, ht, angle, LARGEUR_BANDOULIERE)
 	var centre := Vector3(0.0, ht * 0.5, avant - 0.007)
 	var pieces := [
-		[_torse, "Bandouliere", Vector3(longueur, 0.05, 0.014), centre, angle, 0],
+		[_torse, "Bandouliere", Vector3(longueur, LARGEUR_BANDOULIERE, 0.014), centre, angle, 0],
 		[_torse, "Etui", Vector3(0.1, 0.09, 0.05), Vector3(lt * 0.3, ht * 0.2, avant - 0.025), 0.0, 0],
-		[_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0, 1],
 	]
+	if String(kit["tete"]) == "manometre":
+		pieces.append([_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0, 1])
+	else:
+		pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.006), 0.0,
+			int(kit["plaque_role"])])
 	for i in 3:
 		var t := (float(i) - 1.0) * 0.26 * longueur
 		pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03), centre + sens * t + Vector3(0.0, 0.0, -0.022),
@@ -963,11 +969,14 @@ func _detailler(slug: String) -> void:
 			[bouteille, "RobinetTige", Vector3(0.025, 0.04, 0.025), Vector3(-bw * 0.3, bh * 0.5 + 0.02, 0.0), 0.0, 1],
 			[bouteille, "RobinetVolant", Vector3(0.075, 0.018, 0.022), Vector3(-bw * 0.3, bh * 0.5 + 0.049, 0.0), 0.0, 1],
 			[bouteille, "Tuyau", Vector3(0.024, 0.05, 0.024), Vector3(bw * 0.25, bh * 0.5 + 0.025, 0.0), 0.0, 1],
-			[bouteille, "ManometreBouteille", Vector3(0.016, 0.05, 0.05), Vector3(-bw * 0.5 - 0.008, 0.0, 0.0), 0.0, 1],
 		])
-	var fa: Dictionary = s["arme"]
-	pieces.append([_arme_pivot, "Crosse", Vector3(0.04, 0.075, 0.035), Vector3(0.0, -float(fa["hauteur"]) * 0.5 - 0.0375, -0.03),
-		0.0, 2])
+		if bool(kit["manometre_bouteille"]):
+			pieces.append([bouteille, "ManometreBouteille", Vector3(0.016, 0.05, 0.05), Vector3(-bw * 0.5 - 0.008, 0.0, 0.0),
+				0.0, 1])
+	if bool(kit["crosse"]):
+		var fa: Dictionary = s["arme"]
+		pieces.append([_arme_pivot, "Crosse", Vector3(0.04, 0.075, 0.035),
+			Vector3(0.0, -float(fa["hauteur"]) * 0.5 - 0.0375, -0.03), 0.0, 2])
 	var demis := PackedVector3Array()
 	var roles := PackedInt32Array()
 	for p in pieces:
@@ -984,6 +993,26 @@ func _detailler(slug: String) -> void:
 	_materiau.set_shader_parameter("detail_role", roles)
 	_materiau.set_shader_parameter("detail_n", demis.size())
 	_poser_couleurs_details(VoxelCatalogueT.tenue())
+
+
+## La largeur de la bandoulière modelée (en tuiles).
+const LARGEUR_BANDOULIERE := 0.05
+
+
+## Q29 — la longueur de la bandoulière pour qu'elle tienne TOUT ENTIÈRE dans le rectangle `lt` × `ht` de la face du torse,
+## largeur comprise : un rectangle de longueur L et de largeur w tourné de `angle` occupe L·|cos| + w·|sin| en largeur et
+## L·|sin| + w·|cos| en hauteur. ⚠️ **L'essai du 24/09 prenait `lt / cos(angle) × 0,98`** : sa diagonale seule tenait, mais
+## sa largeur de 0,05 tournée de ~48° en ajoutait 0,037 — la bandoulière débordait du torse de 0,02 tuile de chaque côté,
+## visible au banc des corps du côté que le bras ne cache pas. Marge de 2 %, comme avant.
+static func longueur_bandouliere(lt: float, ht: float, angle: float, w: float) -> float:
+	var c := absf(cos(angle))
+	var si := absf(sin(angle))
+	var l := INF
+	if c > 0.0001:
+		l = minf(l, (lt - w * si) / c)
+	if si > 0.0001:
+		l = minf(l, (ht - w * c) / si)
+	return l * 0.98
 
 
 ## Les couleurs des accessoires dans la tenue `nom` (cuir, laiton, métal) ; sans effet sans accessoires.

@@ -5994,3 +5994,9 @@ quitté le sol. Entre-temps, une prise utile en lisant le code avant d'écrire Q
 lumière, et « le détail en gros plan dans la killcam » reposait sur une phrase fausse de ma page du 24/09. La question est
 repartie chez Adrien (Q33). Le Mac a été arrêté de 12:53 à 13:56 à la demande d'Adrien : des fenêtres du jeu s'ouvraient
 devant lui. Aucune n'était de moi, mais mes chaînes s'arrêtent désormais d'elles-mêmes au premier appui de clavier ou de souris.
+
+**Suite, 16:41-18:05 — Q29, le kit commun des six classes à bouteille.** Écrit sans le Mac pendant qu'on attendait Adrien
+sur Q33, lancé en quinze secondes de créneau court : 51 vérifications vertes. La bandoulière qui débordait du torse venait
+d'une longueur qui oubliait sa propre largeur ; la preuve par mutation fait tomber la garde sur les six classes. Le second
+défaut reste ouvert : la matière peinte fait perdre 10 à 16 % des pixels visibles à 0,15, sans avancer ni retarder
+l'apparition. Il sera recalibré une fois qu'Adrien aura dit où le détail doit se voir.

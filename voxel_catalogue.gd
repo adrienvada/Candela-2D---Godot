@@ -490,8 +490,25 @@ const MANNEQUIN_REPORT := 1.6
 const DRAPEAU_DETAIL := "--corps-detaille"
 static var forcer_detail := -1
 static var _detail_ligne := -1
-## Les classes détaillées à l'essai.
-const CLASSES_DETAILLEES := ["pistolet"]
+## Les classes détaillées à l'essai : le pistolet d'abord (24/09), puis les cinq autres classes à bouteille (Q29, décision
+## d'Adrien du 2026-09-25 10:28 — dans l'ordre accepté : Occulteur, Spectre, Sentinelle, Incendiaire, Allumeur).
+const CLASSES_DETAILLEES := ["pistolet", "occulteur", "spectre", "sentinelle", "incendiaire", "allumeur"]
+## Q29 — CE QUI CHANGE D'UNE CLASSE À BOUTEILLE À L'AUTRE, lu sur les six portraits V3 froide (ISO Assets,
+## `portrait_<classe>_v3froide.png`). Le reste du kit est commun aux six : bandoulière et ses cartouches, étui sur la hanche,
+## robinet, volant et tuyau sur la bouteille.
+## - `tete` : ce que porte le haut du torse, côté gauche — `"manometre"` (un cadran de laiton : Parasite, Occulteur, Spectre)
+##   ou `"plaque"` (une plaque carrée, sans cadran : Sentinelle, Incendiaire, Allumeur) ;
+## - `plaque_role` : la couleur de la plaque, 1 laiton (l'Allumeur, orange sur son portrait), 2 métal (sombre) ;
+## - `manometre_bouteille` : le cadran sur le flanc de la bouteille (Parasite, Occulteur, Spectre ; absent des trois autres) ;
+## - `crosse` : la crosse modelée sous l'arme (le seul pistolet : les autres armes sont déjà des boîtes à leur mesure).
+const KIT_DETAIL := {
+	"pistolet": {"tete": "manometre", "manometre_bouteille": true, "crosse": true},
+	"occulteur": {"tete": "manometre", "manometre_bouteille": true, "crosse": false},
+	"spectre": {"tete": "manometre", "manometre_bouteille": true, "crosse": false},
+	"sentinelle": {"tete": "plaque", "plaque_role": 2, "manometre_bouteille": false, "crosse": false},
+	"incendiaire": {"tete": "plaque", "plaque_role": 2, "manometre_bouteille": false, "crosse": false},
+	"allumeur": {"tete": "plaque", "plaque_role": 1, "manometre_bouteille": false, "crosse": false},
+}
 ## Le laiton des cartouches, des manomètres et du robinet, lu au pixel sur le portrait V3 froide du pistolet (ISO Assets,
 ## `portrait_pistolet_v3froide.png`, les cartouches de la bandoulière). Seule sa chromaticité sert : sa clarté est le rapport
 ## « cartouche » de la tenue, comme les cartouches des autres classes — jamais plus claire que le gris de la classe.
