@@ -9300,6 +9300,15 @@ d'analyse —, et **la relecture d'après coup cherche TOUT processus au-dessus 
 Adrien — c'était le gestionnaire de projets relancé à 23:04:58 par l'« activate » de mon lanceur de prise (Iso 1), celui que
 décrit l'entrée « activate ».
 
+### `duo_reconnexion` (famille 4.2) a rougi une fois, sans cause trouvée (2026-09-25)
+
+Iso 1, lot d'intégration sur `c730f00`, 09:00-09:07, machine calme : l'hôte n'a pas accepté le retour dans le salon rouvert
+(« ✗ le salon rouvert accepte le retour », « ✗ la reconnexion produit exactement une manche → 0 démarrage(s) ») ; le revenant
+s'est connecté puis a été déconnecté (« ECHEC: le retour n'a pas abouti »). Rejoué seul deux fois : vert ; lot complet suivant :
+vert (435 s, 09:10-09:17). Le scénario était vert aux trois lots précédents, et la fusion ne touchait pas au réseau.
+**Intermittent, cause inconnue, non corrigé.** Journaux gardés (hôte, client, revenant) hors dépôt, dans le dossier de travail
+d'Iso 1 (`duo_echec_0900`). À rechercher le jour où il revient : l'état du salon rouvert à l'instant du retour.
+
 ### Deux prises à deux moments ne prouvent pas une cause (2026-09-24)
 
 ISO14. L'écran scindé iso a mesuré **60 / 53** à 60 pas de physique (Gadgets, vers 20:10), puis **94 / 78** à 120 pas (Iso 1,
