@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-24
+> Dernière mise à jour : 2026-09-25
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -27619,6 +27619,50 @@ existe sans pochoir ; pas une lumière.
 **Fidèle et pas fidèle** : « ZONE n » et « DEATHMATCH » au sol le sont (« créer local ») ; « ARENA » ne l'est pas — l'illustration
 de l'accueil le porte sur un mur. Il quitte le sol au prochain changement de code de ce lot, sans lot dédié ; d'ici là, il reste
 derrière le drapeau.
+
+**« ARENA » a quitté le sol** (2026-09-25, avec Q32 ci-dessous) : les trois entrées retirées de `POCHOIRS_ESSAI` (cartes
+`00000001`, `map_001`, `map_004`), et une garde dans `test_pochoirs` — aucun « ARENA » dans la table.
+
+#### ISO13, Q32 — les dix classes à la même lumière ✅ (2026-09-25, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (décision d'Adrien, 2026-09-25 10:28, Q32 = A : « les dix classes apparaissent à la même lumière, un seul seuil
+vers 0,10 »). Le gris d'un corps venait de son rang (`gris_rang`, 55 à 85 % du plafond, commit `4ef787a`) : au balayage fin,
+corps gris, l'Incendiaire, l'Allumeur et le Spectre apparaissaient à 0,08, l'Occulteur à 0,12. Quatre marches de lumière
+d'écart : dans le noir, une classe se voyait avant une autre à cause de sa couleur, pas de ce que le joueur faisait.
+
+**Ce qui change** : `VoxelCatalogue.GRIS_EGAUX` donne le facteur de chaque classe ; `gris_rang` ne sert plus qu'à
+`--gris=rangs` (pour comparer). Le plafond (`GRIS_PLAFOND`, Charte.DIM) ne bouge pas.
+
+**La mesure** (banc des corps, corps gris, temps figé, `--gris-facteur=` de 0,60 à 0,75, lumières 0,07 à 0,13, 2026-09-25
+13:59-14:00) : **le seuil répond par marche, et d'un bloc pour les dix classes** — à 0,60 toutes apparaissent à 0,11, à 0,65
+toutes à 0,10, à 0,70 et 0,75 toutes à 0,09. À 0,65, aucune ne montre un pixel à 0,09 ; à 0,10, de 1 410 px (l'Occulteur, le
+plus petit corps) à 2 022 px (le Terrassier, le plus grand). **D'où un seul facteur, 0,65, pour les dix** : la taille d'un
+corps change le NOMBRE de pixels au seuil, pas le seuil, et le gris n'y peut rien — une marche déplace le seuil, jamais la
+surface. Les retouches par taille de corps prévues au plan n'avaient donc pas lieu d'être.
+
+**L'équité de V3 refaite sur ces gris** (`--equite=` de 0,4 à 1,6, à 0,15, 14:01) : l'écart que l'équité compensait venait pour
+l'essentiel des rangs. Sur un même gris, les dix classes répondent presque ensemble (à g = 1 : 0,42 à 0,49 du gris ; à 1,2 :
+0,60 à 0,73). `V3_EQUITE` passe de 0,80-1,35 à **1,03-1,10** (pistolet 1,05, fusil 1,09, pompe 1,09, arbalète 1,06, fumiste
+1,05, incendiaire 1,05, sentinelle 1,10, occulteur 1,03, allumeur 1,07, spectre 1,04), interpolée puis VÉRIFIÉE.
+
+**Preuves** (2026-09-25, 14:02-14:06) :
+- **La bande** : à 0,15, V3 garde 0,49 à 0,52 des pixels visibles du gris (médiane 0,498 ; bande 0,47-0,57, tenue) ; avec
+  g = 1 partout, 0,42 à 0,49.
+- **Le seuil, classe par classe** : 0,10 pour les dix, en gris comme en V3, au balayage fin (0,04 à 0,2) ; avant, 0,08 à 0,12
+  en gris.
+- **Le noir** : 0/255 à lumière 0, gris et V3, avant et après, au temps figé.
+- **La silhouette** : 17,44 px au pire (couloir 17,5, zone de touche 18), inchangée — le gris ne touche pas la géométrie.
+- **Ce qui imite un corps suit son gris.** Le leurre est un `VoxelCorps` de la classe de son poseur (même fiche) ; les
+  fantômes de killcam sont les corps des joueurs ; la plaque de l'ombre habitée prenait son propre rang 0 : elle prend
+  désormais le gris de l'Occulteur (`"imite": "occulteur"` dans `VoxelCatalogueObjets`). Au banc des objets (14:04), la plaque
+  et un corps du même gris apparaissent à la même lumière, 0,12 (le banc des objets n'a ni encre ni modèle : son échelle de
+  lumière n'est pas celle du banc des corps, seule la comparaison dans la même image compte). La torche fantôme n'est pas un
+  corps : elle garde son rang.
+- `tools/test_gris_egaux.gd` (nouvelle suite) : un facteur pour chacune des dix classes, sous le plafond ; la fiche applique la
+  table, pas le rang ; la plaque a la couleur de l'Occulteur ; le leurre se construit sur la classe de son poseur ; les autres
+  objets gardent leur rang. `test_corps_portraits` vert sans retouche (157).
+- **La planche avant / après** : `docs/iso/iso13/q32/planche_q32.jpg` (avant = `4268ed3` dans un arbre détaché, rangs et
+  équité du 24/09 ; après = ce commit ; même banc, même lumière, temps figé).
 
 ### Ce qui attend Adrien — jalon H15
 

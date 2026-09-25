@@ -5984,3 +5984,13 @@ erreur avant la moindre image : l'axe d'une carte de largeur paire tombe entre d
 dessin et la mémoire des textures. Et la règle « jamais plus clair » s'écrit désormais en luminance, après un pixel dont le rouge
 montait de 2 quand sa luminance baissait. Deux faux départs au Mac (un banc qui ne s'analysait pas, puis deux boucles d'attente
 croisées au verrou) : un guetteur doit exiger 90 s CONTINUES sans verrou ni Godot, et mieux vaut attendre le témoin nommé.
+
+**Suite, 11:50-14:10 — Q32, les dix classes à la même lumière.** Adrien voulait un seul seuil d'apparition pour les dix
+classes. Le balayage a répondu plus simplement que prévu : le seuil bouge par marche, et les dix classes franchissent chaque
+marche ensemble. Un seul facteur de gris (0,65) les met toutes à 0,10. La taille d'un corps change le nombre de pixels au seuil,
+pas le seuil. L'équité de V3, qui compensait surtout les rangs, se resserre d'elle-même (1,03-1,10 au lieu de 0,80-1,35). La
+plaque de l'ombre habitée imite un corps : elle suit désormais le gris de l'Occulteur, vérifié au même banc. « ARENA » a
+quitté le sol. Entre-temps, une prise utile en lisant le code avant d'écrire Q29 : dans la killcam, le corps est un aplat sans
+lumière, et « le détail en gros plan dans la killcam » reposait sur une phrase fausse de ma page du 24/09. La question est
+repartie chez Adrien (Q33). Le Mac a été arrêté de 12:53 à 13:56 à la demande d'Adrien : des fenêtres du jeu s'ouvraient
+devant lui. Aucune n'était de moi, mais mes chaînes s'arrêtent désormais d'elles-mêmes au premier appui de clavier ou de souris.

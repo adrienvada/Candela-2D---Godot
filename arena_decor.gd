@@ -50,7 +50,8 @@ var _copies: Array[Node2D] = []
 var _est_copie := false
 
 ## ISO13 — LES POCHOIRS DE L'ILLUSTRATION (`--pochoirs-essai`, éteint par défaut ; ordre de la session cloud, 2026-09-25 08:49) :
-## « ZONE n », « DEATHMATCH », « ARENA » peints au sol, comme sur les illustrations. Posés à la main, carte par carte, sous une
+## « ZONE n », « DEATHMATCH » peints au sol, comme sur les illustrations (« ARENA » en est retiré le 2026-09-25 : dans
+## l'illustration c'est une enseigne murale, pas un pochoir — décision relayée par la session cloud). Posés à la main, carte par carte, sous une
 ## règle d'équité : chaque pochoir a son jumeau par la symétrie de la carte (miroir gauche-droite, ou demi-tour pour la Croisée),
 ## ou se pose sur son axe — les deux joueurs lisent le même décor à la même distance. Jamais à moins de trois cases d'un départ,
 ## toujours sur une plage de sol libre qui contient le mot. Cuits avec le reste du décor : rien de plus à dessiner par image.
@@ -63,15 +64,15 @@ const POCHOIRS_ESSAI := {
 	"00000002": [["DEATHMATCH", Vector2(11.5, 4.5), 0.0], ["DEATHMATCH", Vector2(11.5, 19.5), 0.0],
 		["ZONE 1", Vector2(4, 18), 0.0], ["ZONE 2", Vector2(19, 18), 0.0]],
 	"00000001": [["DEATHMATCH", Vector2(15.5, 6), 0.0], ["DEATHMATCH", Vector2(15.5, 26), 0.0],
-		["ZONE 1", Vector2(8, 23), 0.0], ["ZONE 2", Vector2(23, 23), 0.0], ["ARENA", Vector2(15.5, 16), 0.0]],
+		["ZONE 1", Vector2(8, 23), 0.0], ["ZONE 2", Vector2(23, 23), 0.0]],
 	"map_001": [["DEATHMATCH", Vector2(14.5, 5), 0.0], ["DEATHMATCH", Vector2(14.5, 24), 0.0],
-		["ZONE 1", Vector2(8, 22), 0.0], ["ZONE 2", Vector2(21, 22), 0.0], ["ARENA", Vector2(14.5, 10.5), 0.0]],
+		["ZONE 1", Vector2(8, 22), 0.0], ["ZONE 2", Vector2(21, 22), 0.0]],
 	"map_002": [["DEATHMATCH", Vector2(15.5, 4), 0.0], ["DEATHMATCH", Vector2(15.5, 21), 0.0],
 		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(26, 20), 0.0]],
 	"map_003": [["DEATHMATCH", Vector2(14, 4), 0.0], ["DEATHMATCH", Vector2(13, 23), 180.0],
 		["ZONE 1", Vector2(5, 11), 0.0], ["ZONE 2", Vector2(22, 16), 180.0]],
 	"map_004": [["DEATHMATCH", Vector2(12.5, 4), 0.0], ["DEATHMATCH", Vector2(12.5, 21), 0.0],
-		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(20, 20), 0.0], ["ARENA", Vector2(12.5, 10), 0.0]],
+		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(20, 20), 0.0]],
 }
 ## La taille de fonte : des capitales d'environ 14 pixels du monde (0,4 case), à vérifier sur la planche ; et l'assombrissement
 ## de la peinture (le sol × 0,55 sous la lettre).

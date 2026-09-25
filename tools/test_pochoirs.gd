@@ -5,6 +5,7 @@
 ## - **l'équité** : sur chaque carte livrée, chaque pochoir a son jumeau par la symétrie de la carte (miroir gauche-droite, ou
 ##   demi-tour pour la Croisée), « ZONE 1 » et « ZONE 2 » échangés, ou se tient sur l'axe — la symétrie elle-même est relue dans
 ##   le fichier de la carte, pas supposée ; et la garde rougit sur un pochoir décalé d'une demi-case ;
+## - **« ARENA » n'est pas au sol** (retiré le 2026-09-25 : une enseigne murale dans l'illustration) ;
 ## - **la place** : chaque mot tient sur une plage de sol libre, à plus de trois cases de chaque départ ;
 ## - **la peinture** : noire à demi, elle n'assombrit que (jamais plus clair), et le noir reste noir.
 ##
@@ -77,6 +78,13 @@ func _le_drapeau(cartes: Dictionary) -> void:
 	cl.free()
 	_check("chaque carte livrée a sa table de pochoirs",
 		cartes.keys().all(func(id): return ArenaDecor.POCHOIRS_ESSAI.has(id)))
+	# « ARENA » quitte le sol (2026-09-25) : dans l'illustration, c'est une enseigne murale, pas un pochoir.
+	var arena := []
+	for id in ArenaDecor.POCHOIRS_ESSAI:
+		for p in ArenaDecor.POCHOIRS_ESSAI[id]:
+			if String(p[0]) == "ARENA":
+				arena.append(id)
+	_check("aucun « ARENA » au sol : l'illustration en fait une enseigne murale", arena.is_empty(), str(arena))
 
 
 ## La symétrie d'une carte, relue dans son fichier : « miroir » (x → W−1−x), « demi_tour » (x, y → W−1−x, H−1−y), ou "".
