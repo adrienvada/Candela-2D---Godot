@@ -256,3 +256,71 @@ prise, le lot E par la ligne qu'il imprime.
 
 Spotlight était actif dans neuf fenêtres sur quinze (jusqu'à 91 %) sans effet lisible, et le témoin aux
 positions 1, 8 et 15 donne 88, 88, 88 : aucune dérive.
+
+## Mesures du 2026-09-24 au soir : la fuite de la fumée établie, sa cause prouvée, et un masque à zéro
+
+### La fuite est établie
+
+`loupe-fusee-bord-noir` (`cac6e05`) : les **deux torches éteintes**, pour que la scène ait un vrai noir
+sans voile d'éblouissement, et cinq prises serrées dans le même lancement — fumée coupée, rétablie,
+coupée, rétablie, coupée. La scène dérive, mais **dans un seul sens** : elle s'éclaircit (≈542 000
+pixels dans un sens, 0 dans l'autre). On compare donc chaque prise avec fumée à la prise coupée
+**suivante**, plus éclairée qu'elle : un pixel noir dans celle-ci ne peut pas devoir sa lumière à la
+dérive. Sur `8cf2aa1`, deux lancements : **~10 700 pixels** noirs sans fumée sont éclairés avec elle
+(10/255 en médiane, 31 au plus), à 0,5 % près d'un lancement à l'autre.
+
+### La cause est le lissage, pas la parallaxe
+
+La fuite déborde du disque éclairé dans **toutes** les directions (13 px en médiane, 59 au plus) :
+l'échelle de `lire_lightmap_lissee`, qui lit la lumière sur un cercle de 0,18 × le rayon de la fumée.
+Prouvé par intervention, sur `3a1c799`, un seul changement à la fois, deux lancements chacun :
+
+    intervention                            pixels fautifs (1re prise)   (2e prise)
+    aucune (référence du même tour)            10 222 · 11 154          4 678 · 4 408
+    lissage coupé, couches en hauteur           2 613 ·  2 657          1 203 · 1 248     −75 %
+    couches au sol, lissage gardé              10 665 · 11 756          3 564 · 3 617     parallaxe mineure
+    garde : lumière BRUTE sous la couche nulle 11 750 · 11 693          4 359 · 4 264     aucun effet
+    masque d'écran (sol et murs affichés noirs)     0 ·      0              0 ·     0     zéro
+
+**La garde par la lumière brute ne fait rien**, et je l'avais recommandée sans l'avoir mesurée : sous
+la fuite, la lumière n'est pas nulle, elle est faible — le sol, sombre, l'affiche à 0 ; la fumée, ambre
+et claire, à quelques niveaux. Le **masque d'écran** tait la couche là où l'écran copié derrière elle
+(`hint_screen_texture`, copié après l'opaque, avant le transparent, supporté en `gl_compatibility`) est
+noir. Zéro aux deux lancements, sur une prise où 1,32 à 1,36 million de pixels sont noirs — un zéro non
+vide —, et rien retiré à l'intérieur de la lumière. L'instrument (`poser.py`, quatre modes) n'est pas
+commité : c'est du diagnostic. **Rien n'est changé dans le jeu** : la voie A de Q31 attend la réponse
+d'Adrien et le coût en cadence du masque.
+
+### Ce que coûte le masque : +0,70 ms par image
+
+Six prises sous la porte stricte, pompe sous une fusée tenue en braise par le banc (fumée pleine toute
+la prise), vue unique, M0 M1 M1 M0 M0 M1. **M0 est l'arbre propre** (`3a1c799`), pas l'instrument éteint :
+un shader qui DÉCLARE `hint_screen_texture` fait copier l'écran même quand la branche qui le lit est
+fermée, et un « masque éteint » aurait payé la copie. M1 : la même tête plus `poser.py` (empreinte du
+diff `e78dfc58`), prouvé par la ligne « [diag fumée] mode « ecran » », qu'aucun M0 n'imprime. Deux prises
+refusées et refaites (`duetexpertd` 57 %, `contactsd` 31 %).
+
+    état   médianes        1 % bas         médiane des médianes   1 % bas médian
+    M0     88 · 86 · 87    78 · 76 · 63           87                   76
+    M1     82 · 82 · 82    60 · 66 · 67           82                   66
+
+**0,943 : le masque ne tient pas la règle des 3 %**, et reste au-dessus de 60 au 1 % bas. C'est le coût
+de **cet instrument** — la copie de l'écran, une lecture par pixel de fumée et par couche, et une boucle
+de `set_shader_parameter` par image —, pas celui d'une version travaillée. Il chiffre la voie A de Q31 ;
+il ne la tranche pas.
+
+### L'usure (Q30) ne tient pas au calme
+
+La première série (U0 U1 U1 U0 U0 U1 sur `3a1c799`, pompe sous une fusée, vue unique) rendait 0,977 —
+mais deux des trois U0 avaient tourné sous « Creative Cloud » (47 % et 106 % d'un cœur) : sans verdict.
+**Refaite sous la porte stricte** (voir `docs/iso/iso12/mesurer_une_cadence.md` §16), deux prises
+refusées et refaites (`BackgroundShortcutRunner` 53 %, puis `backupd` 201 % — Time Machine), chaque U1
+prouvé par la ligne « [usure] allumée — variante USURE_ESSAI posée » que le jeu imprime :
+
+    état   médianes        1 % bas         médiane des médianes   1 % bas médian
+    U0     89 · 89 · 89    76 · 69 · 79           89                   76
+    U1     84 · 84 · 84    74 · 66 · 74           84                   74
+
+**0,944 pour un seuil de 0,970 : +0,67 ms par image. L'usure ne tient pas la règle.** Le 1 % bas reste
+à 74, jouable. La première série se trompait **dans le sens flatteur** : la pollution avait abaissé
+deux U0, pas les U1. Une prise polluée ne fait pas que du bruit ; elle peut tourner le verdict.

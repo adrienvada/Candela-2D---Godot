@@ -421,3 +421,41 @@ C'est le zéro vide, sous une autre forme.
 **Et le zéro vide revient toujours par un autre chemin.** Trois fois dans la journée : la loupe de la
 fusée sans pixel noir dans le cadre ; la prise plein cadre sous le voile d'éblouissement ; le mannequin
 ci-dessus. Tout instrument qui peut répondre « zéro » doit imprimer ce qu'il aurait pu trouver.
+
+## 16. La porte stricte, et ce que la soirée du 24/09 a appris sur le calme (2026-09-24, soir)
+
+**Toutes les prises de l'après-midi et du début de soirée ont tourné avec un média en lecture** (un
+navigateur ou un lecteur actif). Les comparaisons **en miroir** tiennent — la charge touche les deux
+états de la même façon —, **pas les chiffres absolus** : ils ne décrivent pas le jeu au calme.
+
+**L'écran scindé iso plafonne à 60, et ce n'est pas un plafond du moteur.** Quatre prises sur la même
+tête, S S2D S200 S, la ligne « Cadence : » relue dans le jeu : iso 60 / 53, vue de dessus 114 / 106,
+iso avec `--max-fps 200` **60 / 52**, iso de nouveau 60 / 53 (médiane / 1 % bas). Aucun plafond posé,
+aucune vsync. Iso 1 relève 94 / 90 au calme et 72 / 43 sous Firefox : le plafond est **corrélé** à
+l'écran scindé iso **plus** un média en lecture. C'est une corrélation, pas une cause.
+
+**Une série de l'usure a été perdue sur deux prises polluées.** Deux des trois U0 ont tourné sous
+« Creative Cloud » (47 % puis 106 % d'un cœur) : 0,977 en les gardant, 0,966 sans elles, de part et
+d'autre du seuil de 0,970. La porte d'indexation ne cherche que l'indexation, et la relecture après
+coup les avait vues — mais sans pouvoir refuser la prise.
+
+**D'où la porte stricte** (`porte_stricte.py`, règle de la session cloud du 24/09, 23:00) : **aucun
+processus étranger au-dessus de 20 % d'un cœur**, `WindowServer`, `kernel_task` et `Godot` exceptés,
+relu **avant** la prise (on attend ; dix minutes sans calme et la série s'arrête en le disant) et sur
+**toute la fenêtre mesurée**, du lancement plus 30 s de chauffe à la sortie (la prise est refaite,
+jamais comptée). Le nom du fautif est écrit dans les repères et dans le rapport. Rejouée sur la série
+perdue, elle refuse exactement les deux prises polluées et accepte les quatre autres : elle rougit sur
+la vraie faute. Elle ne connaît aucun nom de suspect : tout ce que top imprime compte.
+
+**Sa première nuit** (usure refaite, puis coût du masque d'écran, 2026-09-24 → 25) : **quatre prises
+refusées sur seize lancements**, par quatre fautifs que la porte d'indexation n'aurait jamais vus —
+une automatisation de Raccourcis (`BackgroundShortcutRunner` 53 %, `siriactionsd` 26 %), Time Machine
+(`backupd` 201 %, `SystemUIServer` 87 %), `duetexpertd` 57 % avec `mobileassetd` 28 %, et `contactsd`
+31 %. Et sur la série refaite, **l'usure passe de 0,977 « tient » à 0,944 « ne tient pas »** : la
+pollution avait abaissé deux références, et le verdict penchait du côté flatteur. Résultats :
+`docs/iso/iso13/plan_lots_d_e.md`.
+
+**Un verdict qui lit des prises refaites compte le DERNIER essai.** Le lanceur écrit l'essai 1 dans
+`p_<prise>.log`, les suivants dans `p_<prise>_essaiN.log`. Mon premier verdict comptait `p_<prise>.log`
+— l'essai refusé — et imprimait en face la porte de l'essai accepté : une ligne propre sous un chiffre
+pollué. Il a annoncé « l'usure tient, 0,977 » ; recoupé avec les lignes du lanceur avant tout rapport.
