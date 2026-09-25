@@ -96,6 +96,8 @@ render_mode cull_back, fog_disabled, specular_disabled, blend_mix, depth_draw_al
 #include "res://iso_relief.gdshaderinc"
 #include "res://iso_corps_portrait.gdshaderinc"
 #include "res://iso_corps_mannequin.gdshaderinc"
+// ISO13 — le personnage détaillé à l'essai (`--corps-detaille`) : compilé seulement dans la variante CORPS_DETAIL.
+#include "res://iso_corps_detail.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -238,6 +240,10 @@ void fragment() {
 	// fragment, posée plus bas sur la lumière déjà rendue (`portrait_teindre`). Sans portrait, rien ne change.
 	vec3 fiche = portrait_fiche(couleur_fiche.rgb, local, demi, echelle, normale_locale, monde * pixels_par_unite,
 		pixels_par_unite);
+#ifdef CORPS_DETAIL
+	// ISO13 — les accessoires modelés et la matière peinte : la fiche seule, assombrie jamais éclaircie.
+	fiche = detail_fiche(fiche, local, demi, echelle, normale_locale, pixels_par_unite, px_monde);
+#endif
 
 	// ISO12 — la lumière reçue au fragment (le capteur, ou son repli scalaire), puis sa bride.
 	float recue;

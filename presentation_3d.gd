@@ -1982,8 +1982,11 @@ func _construire_les_murs() -> void:
 	IsoMateriaux.accorder_grille(_mat_mur, data)
 	# ISO13, lot C — les gravats se massent au pied des murs : le sol lit la même grille.
 	if _usure:
+		# Levier 1 (2026-09-25) : la proximité des murs, préparée une fois par carte ; le sol ne lit plus la grille huit fois.
+		var proximite := ImageTexture.create_from_image(IsoMateriaux.image_proximite_usure(data))
 		for m in _mat_sols:
 			IsoMateriaux.accorder_grille(m, data)
+			m.set_shader_parameter("usure_proximite", proximite)
 		_usure_empreinte = Vector2i(-1, -1)
 	for boite in _murs.get_children():
 		(boite as MeshInstance3D).layers = CALQUE_COMMUN

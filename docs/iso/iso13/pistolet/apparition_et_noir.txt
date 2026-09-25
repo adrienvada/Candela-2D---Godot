@@ -1,0 +1,20 @@
+pistolet : 8421 pixels de corps (masque commun)
+  sans 0.3 : 8418
+  sans 0.15 : 2422
+  sans 0.12 : 477
+  sans 0.11 : 351
+  sans 0.1 : 157
+  sans 0.09 : 0
+  sans 0.08 : 0
+  sans 0.06 : 0
+  avec 0.3 : 7890
+  avec 0.15 : 2092
+  avec 0.12 : 420
+  avec 0.11 : 290
+  avec 0.1 : 86
+  avec 0.09 : 0
+  avec 0.08 : 0
+  avec 0.06 : 0
+apparition : sans 0.1, avec 0.1 — pas plus tôt
+noir sans : 0/255
+noir avec : 0/255

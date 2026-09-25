@@ -115,28 +115,21 @@ float usure_poids(vec3 c, float f) {
 }
 
 #ifdef USURE_SOL
-// La grille des murs de la carte (`IsoMateriaux.accorder_grille`, posée aussi sur les sols quand l'usure est allumée) : le
-// sol en a besoin pour savoir où sont les pieds de murs. Les shaders de murs la déclarent déjà ; un sol définit USURE_SOL.
-uniform sampler2D grille_murs : filter_nearest, repeat_disable;
+// La proximité des murs, préparée UNE FOIS par carte (`IsoMateriaux.image_proximite_usure`, levier 1 du 2026-09-25) : une
+// lecture par pixel de sol au lieu de huit lectures de la grille. Un texel par pixel du monde, sur l'origine de la grille des
+// murs ; trois niveaux (0, 0,5, 1), relus par seuils : la valeur exacte d'avant, au pixel près. Hors de la grille : 1 (le vide
+// hors sol est solide, comme avant).
+uniform sampler2D usure_proximite : filter_nearest, repeat_disable;
 uniform vec2 grille_origine_px = vec2(0.0);
 uniform vec2 grille_cases = vec2(1.0);
 
-float usure_mur_en(vec2 px) {
+float usure_mur_pres(vec2 px) {
 	vec2 uv = (px - grille_origine_px) / (tuile_px * grille_cases);
 	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
 		return 1.0;
 	}
-	vec2 m = textureLod(grille_murs, uv, 0.0).rg;
-	return max(m.r, m.g);
-}
-
-// 1 au pied d'un mur (à 5 px), 0,5 à 14 px, 0 au-delà ; les quatre directions de la grille, aucune privilégiée.
-float usure_mur_pres(vec2 px) {
-	float pres = max(max(usure_mur_en(px + vec2(5.0, 0.0)), usure_mur_en(px - vec2(5.0, 0.0))),
-		max(usure_mur_en(px + vec2(0.0, 5.0)), usure_mur_en(px - vec2(0.0, 5.0))));
-	float loin = max(max(usure_mur_en(px + vec2(14.0, 0.0)), usure_mur_en(px - vec2(14.0, 0.0))),
-		max(usure_mur_en(px + vec2(0.0, 14.0)), usure_mur_en(px - vec2(0.0, 14.0))));
-	return max(pres, 0.5 * loin);
+	float v = textureLod(usure_proximite, uv, 0.0).r;
+	return v >= 0.75 ? 1.0 : (v >= 0.25 ? 0.5 : 0.0);
 }
 #endif
 

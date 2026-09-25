@@ -1,0 +1,2 @@
+lacet 0° — image entière, corps cachés : texture contre huit lectures, même instant : 0 pixels différents (plus grand écart 0/255) ; témoin positif (huit lectures, usure allumée contre éteinte) : 8459 pixels différents ; texture allumée contre éteinte : 0 noirs allumés, 0 plus clairs
+lacet 45° — image entière, corps cachés : texture contre huit lectures, même instant : 0 pixels différents (plus grand écart 0/255) ; témoin positif (huit lectures, usure allumée contre éteinte) : 8172 pixels différents ; texture allumée contre éteinte : 0 noirs allumés, 0 plus clairs

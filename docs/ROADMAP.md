@@ -27361,6 +27361,33 @@ pied, dans le plan du sol —, les fissures et les taches des faces, les gravats
   écrit en clair, `c = pate_facteur(c, usure_poids(c, …))` : la garde reste telle quelle et lit la multiplication.
 - Lot complet vert (436 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:30), empreinte du code identique avant et après.
 
+**La cadence, et le levier 1** (2026-09-25). Mesurée au calme par Gadgets, l'usure allumée rend 0,944 de la cadence (+0,67 ms
+par image) : hors de la règle des 3 %, refusée par défaut en l'état (Q30, voie C de la session cloud : la rendre moins chère,
+même image, puis remesurer). Le premier levier, ordonné à 00:08 : le sol ne lit plus la grille des murs HUIT fois par pixel
+(`usure_mur_pres` : quatre directions, deux distances), mais une seule texture préparée une fois par carte
+(`IsoMateriaux.image_proximite_usure`, à la construction des murs) — un texel par pixel du monde sur l'origine de la grille,
+trois niveaux relus par seuils. **Même image par construction** : cases de 35 px, écarts de 5 et 14 px, origine entière — toutes
+les frontières tombent sur des pixels entiers, et un texel lu au plus proche rend la valeur exacte des huit lectures.
+`test_iso_usure` le vérifie en 6 000 points par carte livrée (et rougit si l'écart « près » passe de 5 à 8 px). Construite par
+des mélanges d'images natifs, jamais pixel par pixel en GDScript. Drapeau éteint : rien ne change (code prétraité identique).
+**Prouvé le 2026-09-25 au matin** (Mac calme : HIDIdleTime 30 000 s, aucun navigateur ni son au-dessus de 3 %) :
+- `test_iso_usure` : la même valeur qu'avant en 36 000 points sur 36 000 (six cartes), et la preuve rougit sur un écart de 8 px.
+  ⚠️ Au premier départ, 1 903 points différaient, tous dans la case du bord : hors de la grille, l'ancienne lecture rendait un
+  MUR (le vide hors sol est solide). Les masques portent désormais un anneau de murs d'une case, recadré après calcul.
+- **La même image, prouvée dans UN seul processus, au même instant figé** (arbre de planche : l'ancien chemin des huit lectures
+  compilable sous un `#define` que le jeu ne pose jamais ; le code livré en diffère de ce seul bloc). Corps cachés — ils
+  respirent sur l'horloge réelle —, image entière : texture contre huit lectures, **0 pixel différent à 0° comme à 45°**.
+  Témoin positif, pour que ce 0 ne soit pas un changement de matériau resté muet : le shader lié à chaque sol porte bien le
+  `#define` de l'ancien chemin, et sur ce chemin l'usure allumée contre éteinte diffère de 8 459 pixels (0°) et 8 172 (45°).
+  Chaque chemin, allumé contre éteint : 0 noir allumé, 0 plus clair.
+- ⚠️ **Une comparaison entre deux LANCEMENTS ne prouve rien** : même usure éteinte des deux côtés, 86723ca et le levier 1
+  différaient de 64 244 pixels du décor (écart jusqu'à 255), car chaque lancement tire au hasard la texture et la rotation des
+  éclats et la poussière de la torche, et l'instant du gel diffère. Une preuve « même image » se fait au même instant, dans le
+  même processus, avec un témoin positif.
+- Lot complet vert (434 s, 0 SHADER/SCRIPT ERROR, 2026-09-25 08:24), empreinte du code identique avant et après.
+Relevés et patch de l'arbre de planche : `docs/iso/iso13/levier1/`. La cadence, par Gadgets, suit. Les leviers suivants (impacts
+triés par face, coulures) : pas encore.
+
 **Et le côté de la lumière du lot A, pour tout lacet** (ordre de la session cloud, 04:38). Le modelé du mannequin supposait la
 caméra au sud : lumière au sud, les DESSUS s'assombrissaient (`max(l.y, 0)`), pour que la perte vue d'un corps soit la même
 qu'il soit au-dessus ou au-dessous de vous à l'écran. La caméra est désormais un argument, lu dans la matrice de vue
@@ -27572,6 +27599,64 @@ sur le jeu par défaut (usure et lumière 3D éteintes). Second lot vert (434 s,
 lui **48,4** contre **0,6** au-dessous (0° : 45,2 contre 1,3). Verdict « LA VUE DU CLIENT REND L'ANGLE ». Un premier passage
 (22:15) exigeait le rendu racine et sortait « FAUX » sur une image juste ; l'argument « `_rendre_dans_la_racine` prend cam2 »
 donné à la session cloud ne vaut qu'en vue de dessus. `test_iso_vues` vérifie désormais ce chemin en iso.
+
+#### ISO13 — le personnage détaillé à l'essai : le Parasite (pistolet) 🟡 (2026-09-24, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (ordres 305 et 307 de la session cloud). Adrien a demandé si les personnages pouvaient ressembler à leur portrait.
+La réponse attendue : la forme oui, la matière peinte et les petits détails pas à la taille du duel. Il voulait un essai sur
+image avant d'engager les dix classes : une classe, le pistolet, d'après son portrait V3 froide (ISO Assets).
+
+**Ce qui est fait**, derrière `--corps-detaille` (éteint par défaut ; `VoxelCatalogue.detail_actif()`, lu une fois).
+- **Les accessoires modelés** (`VoxelCorps._detailler`) : la bandoulière et ses trois cartouches, l'étui, le manomètre de
+  poitrine, le robinet, son volant, le tuyau et le manomètre de la bouteille, la crosse. Onze petites boîtes de la même matière,
+  collées aux pièces animées, reconnues par le shader à leur demi-taille et peintes en cuir, laiton ou métal
+  (`VoxelCatalogue.palette_details`, à un rapport ≤ 1 du gris de la classe).
+- **La matière peinte** (`iso_corps_detail.gdshaderinc`) : un marbrage large et des pores accrochés à la boîte, qui
+  n'assombrissent que la fiche. Les pores s'effacent quand un pixel d'écran couvre plus d'un demi-pixel du monde (le duel) et
+  reviennent sous 0,3 (bancs, killcam rapprochée).
+- `VoxelCorps.montrer_details()` : le détail se montre et se cache par uniformes, pour les bancs, au même instant.
+- Compilé dans la seule variante CORPS_DETAIL des corps (`IsoMateriaux.variante_definie`, reposée par `accorder_corps` après
+  un changement de shader). Sans le drapeau, le code prétraité des corps est celui d'`ec7a51a`.
+
+**Les règles**, prouvées par `tools/test_corps_detail.gd` (vue rougir puis verte) et au banc des corps :
+- noir absolu 0/255 à lumière 0, au temps figé, avec et sans le détail ;
+- albédo seul, ni `light()` ni relief ; `Protocol.VERSION` 18 ;
+- silhouette du corps seul, accessoires compris : 16,90 px avec comme sans (couloir 17,5, zone de touche 18) — la garde rougit
+  sur un étui déplacé hors du couloir (23,87 px) ;
+- apparition au balayage fin : 0,10 avec comme sans, pas plus tôt.
+
+**Coût** : 11 boîtes de plus par corps, 22 appels de dessin (couleur et profondeur), 264 triangles.
+
+**Ce que montre la planche** (`docs/iso/iso13/pistolet/planche_pistolet.jpg`, banc des lumières en 2560 × 1440, banc des corps,
+photographe pour la killcam ; patch du banc : `banc_lumiere3d_planches_contre_ec7a51a.patch`) :
+- à la taille du duel, le corps fait environ 40 × 60 px : la forme se lit, le détail non, même à ×4 ;
+- au banc des corps, de près, la bandoulière modelée, ses cartouches et les pores se lisent ;
+- le contour de 1 px cerne le corps sur le sol éclairé, sans et avec le détail.
+
+⚠️ **Deux points avant toute adoption.**
+- La matière peinte assombrit : à 0,15, 2 092 pixels visibles contre 2 422 (−14 %), soit 0,42 du gris, sous la bande d'équité
+  de V3 (0,47). Le facteur d'équité du pistolet serait à recalibrer avec elle.
+- La bandoulière modelée déborde du torse d'un côté : sa longueur est à reprendre.
+
+**À trancher par Adrien** : sur la planche, le détail vaut-il son coût à la taille où il se voit (killcam rapprochée, menus) ?
+Et le contour de 1 px, sans et avec le détail.
+
+**L'usure refaite, le temps figé** (ordre 307 ; `docs/iso/iso13/planche_usure_temps_fige.jpg`). Le temps du jeu est arrêté
+entre « sans » et « avec » (`Engine.time_scale = 0`, le banc des lumières). Sur le décor (murs et sol) : 0 noir allumé et
+0 pixel plus clair, au lacet 0 (6 831 pixels assombris) comme à 45° (7 109). Les seuls écarts restants sont sur les deux corps,
+que l'usure ne dessine pas : leur pose suit l'horloge réelle (`Time.get_ticks_msec`), que le temps figé du jeu n'arrête pas.
+J2 : +0,4 % et −0,4 % de pixels du corps, le même chiffre dans l'image et dans la page.
+⚠️ **Le lacet se pose au LANCEMENT, jamais sur la caméra** (piège du 2026-09-24, 19:22). Depuis ISO14, la présentation
+reprend `lacet_deg` dans `GameSettings.lacet_de()` à chaque image : un 45° écrit par le banc sur la caméra était effacé à
+l'image suivante, sans un mot, et la première reprise de cette planche était à 0° des deux côtés (ses chiffres « 45° » étaient
+ceux du 0°). La reprise de 20:13 lance `--lacet=0` puis `--lacet=45` : la caméra iso et la lumière tournent ensemble, et le
+banc imprime le lacet que les réglages rendent vraiment (`usure_lacet=`). Tout banc qui veut un lacet passe par là.
+
+Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 19:44), empreinte du code identique avant et après. ⚠️ Le lot
+précédent, sur le même état exact (19:36), avait rougi sur `test_arena_matter` (les douilles, leur arrêt physique), hors de ce
+chantier. Seule, la suite passe six fois sur six, et le lot suivant est vert. Une intermittence, signalée, non corrigée ici.
+*Note d'Iso 1 Opus, 2026-09-25 : cette intermittence est corrigée depuis `fe098fe` — un tirage de rotation non semé contre
+un seuil (une chance sur 160) ; la suite juge désormais dix éjections, prouvée rouge en forçant l'absence de rotation.*
 
 ### Ce qui attend Adrien — jalon H15
 

@@ -5963,3 +5963,17 @@ l'Occulteur, 92 % pour l'Allumeur : le même rapport posé sur des gris de class
 gris, ramène les dix classes entre 0,47 et 0,55, sans changer d'un centième la lumière où chacune apparaît. La leçon : la
 réponse au facteur vient par marches (des faces entières passent le seuil de l'écran d'un coup) ; un facteur se vérifie au
 balayage, il ne s'interpole pas — l'Occulteur a demandé trois essais.
+
+**Suite, 19:20-19:40 — le Parasite détaillé à l'essai, et l'usure refaite le temps figé.** Onze accessoires modelés et une
+matière peinte, derrière `--corps-detaille`. Le verdict de l'image est celui qu'on attendait : à la taille du duel la forme se
+lit, le détail non ; de près, il se lit. Toutes les règles tiennent (noir, silhouette, apparition), mais la matière peinte
+coûte 14 % de pixels visibles à 0,15. L'usure refaite le temps du jeu arrêté ne montre plus rien sur le décor que des pixels
+assombris ; les corps, eux, bougent encore : ils respirent sur l'horloge réelle.
+
+### 2026-09-25 (matin) — ISO13 : l'usure moins chère, levier 1 (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+L'usure coûtait 0,944 de cadence. Le sol lisait la grille des murs huit fois par pixel ; il lit maintenant une texture
+préparée une fois par carte. La preuve de « même image » a appris deux choses : la texture était fausse dans la case du bord
+de la grille (le vide hors sol compte pour un mur), et deux lancements du jeu ne rendent jamais la même scène — la seule preuve
+valable est au même instant, dans le même processus, avec un témoin positif qui montre que la bascule atteint l'écran. Elle
+donne 0 pixel d'écart à 0° comme à 45°.

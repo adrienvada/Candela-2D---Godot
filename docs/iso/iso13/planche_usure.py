@@ -4,7 +4,7 @@ au pixel entre « sans » et « avec » (même instant, même partie) :
   - noir reste noir : aucun pixel noir (≤ 2/255) de « sans » ne s'allume dans « avec » ;
   - jamais plus clair : aucun pixel plus clair de plus d'un niveau ;
   - J2 non caché : dans une boîte autour de J2, la part des pixels visibles (> 6/255) perdue — garde-fou 5 %.
-Usage : planche_usure.py <sortie.jpg> <captures_planche_usure>"""
+Usage : planche_usure.py <sortie.jpg> <captures_planche_usure> [<captures du lacet 45>]"""
 import json, re, sys
 from PIL import Image, ImageDraw, ImageFont
 LIGNE = re.compile(r"BANC_LUMIERE3D tenue cadrage=(\S+) tenue=(\S+) camera=(-?\d+),(-?\d+) fichier=(\S+) ancres=(\{.*\})$")
@@ -24,34 +24,46 @@ def lum(p):
     return max(p[:3])
 
 
-def mesurer(sans, avec, j2):
+def mesurer(sans, avec, j2, j1):
+    """Le décor (murs et sol) hors des cadres des deux corps : les corps respirent sur l'horloge réelle, que le temps figé du
+    jeu n'arrête pas — ils bougent d'un pixel entre les deux prises, et l'usure ne les dessine pas."""
     w, h = sans.size
     ps, pa = sans.load(), avec.load()
-    allumes = plus_clairs = 0
-    for y in range(0, h, 2):
-        for x in range(0, w, 2):
+    allumes = plus_clairs = assombris = 0
+    def dans_corps(x, y):
+        return any(abs(x - c[0]) <= 40 and c[1] - 45 <= y <= c[1] + 30 for c in (j1, j2))
+    for y in range(h):
+        for x in range(w):
+            if dans_corps(x, y):
+                continue
             a, b = lum(ps[x, y]), lum(pa[x, y])
             if a <= 2 and b > 2:
                 allumes += 1
             if b > a + 1:
                 plus_clairs += 1
+            if b < a:
+                assombris += 1
+    # Les pixels du CORPS de J2 seulement (V3 froide : bleutés, b > r + 4, au-dessus de 6/255) : une boîte autour de lui
+    # compterait aussi le sol et le mur, que l'usure assombrit par dessein.
     x0, y0 = int(j2[0]) - 40, int(j2[1]) - 70
     vis_s = vis_a = 0
     for y in range(max(0, y0), min(h, y0 + 110)):
         for x in range(max(0, x0), min(w, x0 + 80)):
-            vis_s += lum(ps[x, y]) > 6
-            vis_a += lum(pa[x, y]) > 6
+            p, q = ps[x, y], pa[x, y]
+            vis_s += p[2] > p[0] + 4 and max(p) > 6
+            vis_a += q[2] > q[0] + 4 and max(q) > 6
     perte = (vis_s - vis_a) / vis_s * 100.0 if vis_s else 0.0
-    return allumes, plus_clairs, perte, vis_s
+    return allumes, plus_clairs, perte, vis_s, assombris
 
 
 def main(a):
-    sortie, dossier = a
+    sortie, dossiers = a[0], a[1:]
     prises = {}
-    for l in open(dossier + "/journal.log", encoding="utf-8", errors="replace"):
-        m = LIGNE.search(l.strip())
-        if m:
-            prises[(m.group(1), m.group(2))] = (m.group(5), json.loads(m.group(6)))
+    for dossier in dossiers:
+        for l in open(dossier + "/journal.log", encoding="utf-8", errors="replace"):
+            m = LIGNE.search(l.strip())
+            if m:
+                prises[(m.group(1), m.group(2))] = (dossier + "/" + m.group(5).split("/")[-1], json.loads(m.group(6)))
     lignes = [("usure", "lacet 0° (le jeu)"), ("usure_lacet45", "lacet 45° (Q14)")]
     CW, CH, marge = 620, 420, 12
     hauteur = 90 + len(lignes) * (CH + 40 + 2 * 230 + 40) + 20
@@ -59,7 +71,7 @@ def main(a):
     d = ImageDraw.Draw(planche)
     d.text((marge, 10), "L'usure en essai — murs abîmés, sol jonché (ISO13, lot C)", fill=AMBRE, font=police(26))
     d.text((marge, 46), "la 2D du jeu à 1:1, torche de J1 ; J2 torche éteinte à une tuile de la face ; sept impacts posés "
-           "comme le jeu les pose ; sans / avec au même instant", fill=TEXTE, font=police(14))
+           "comme le jeu les pose ; sans / avec, le temps du jeu figé entre les deux prises", fill=TEXTE, font=police(14))
     y = 80
     rapport = []
     for cadrage, titre in lignes:
@@ -67,12 +79,12 @@ def main(a):
             continue
         fs, anc = prises[(cadrage, "sans")]
         fa, _ = prises[(cadrage, "avec")]
-        sans = Image.open("%s/%s" % (dossier, fs.split("/")[-1])).convert("RGB")
-        avec = Image.open("%s/%s" % (dossier, fa.split("/")[-1])).convert("RGB")
-        allumes, clairs, perte, vis = mesurer(sans, avec, anc["j2"])
-        rapport.append("%s : allumés %d, plus clairs %d, J2 perd %.1f %% de %d px visibles" % (titre, allumes, clairs, perte, vis))
-        d.text((marge, y), "%s — noir allumé : %d px ; plus clair : %d px ; J2 : %+.1f %% de pixels visibles" %
-               (titre, allumes, clairs, -perte), fill=(208, 112, 74) if (allumes or clairs or perte > 5) else TEXTE, font=police(15))
+        sans = Image.open(fs).convert("RGB")
+        avec = Image.open(fa).convert("RGB")
+        allumes, clairs, perte, vis, sombres = mesurer(sans, avec, anc["j2"], anc["j1"])
+        rapport.append("%s : décor — noirs allumés %d, plus clairs %d, assombris %d ; J2 : %+.1f %% de %d px du corps" % (titre, allumes, clairs, sombres, -perte, vis))
+        d.text((marge, y), "%s — décor : noir allumé %d, plus clair %d, assombri %d px ; J2 : %+.1f %% de pixels du corps (sa respiration)" %
+               (titre, allumes, clairs, sombres, -perte), fill=(208, 112, 74) if (allumes or clairs or perte > 5) else TEXTE, font=police(15))
         y += 24
         cx, cy = anc["face"]
         for k, (img, nom) in enumerate([(sans, "sans"), (avec, "avec")]):
