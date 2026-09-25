@@ -27703,6 +27703,17 @@ formule remise dans le code fait tomber la garde sur les six classes (0,0091 à 
 quatre autres, 1,00. L'apparition ne bouge pas (0,10 pour les dix, rien à 0,09) et le noir reste 0/255. À recalibrer sur
 l'équité de Q32 avant toute adoption — derrière le drapeau, rien de cela ne touche le jeu.
 
+⚠️ **Au seuil, la perte est bien plus forte, et mon rapport ne le disait pas** (relevé par la session cloud, 18:05, dans mon
+propre tableau). À 0,10, là où Q32 a aligné les dix classes, les six classes détaillées ne gardent que **0,50 à 0,79** de
+leurs pixels visibles : pistolet 157 → 86, incendiaire 222 → 112, sentinelle 188 → 105, occulteur 159 → 126, allumeur
+214 → 146, spectre 185 → 137. Elles apparaissent encore à 0,10, mais avec moitié moins de corps pour certaines. Le chiffre qui
+compte pour l'équité est celui du seuil, pas celui de 0,15.
+
+**Critère de recalibrage, déclaré avant toute adoption** (session cloud, 2026-09-25 18:05) : à 0,10 comme à 0,15, chaque
+classe détaillée garde au moins **0,95** des pixels visibles de son corps sans kit ; l'apparition ne bouge pas (0,10 pour les
+dix, rien à 0,09) ; le noir reste 0/255. Et les pores se lisent aujourd'hui comme des points sombres semés sur tout le corps,
+du bruit plutôt que le métal patiné des portraits : à revoir au même recalibrage.
+
 **Preuves** (`tools/test_corps_detail.gd`, 51 vérifications) : 9 à 11 accessoires par classe, aucune taille confondue avec
 une boîte du corps, toutes connues du shader (7 à 9 sortes pour 10 places) ; 18 à 22 appels de dessin de plus par corps
 détaillé ; silhouette du corps seul, accessoires compris, de 16,81 px (Occulteur) à 17,19 px (Allumeur), jamais plus large
