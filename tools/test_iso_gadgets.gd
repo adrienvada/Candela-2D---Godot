@@ -70,6 +70,7 @@ func _run() -> void:
 	_le_faisceau()
 	_le_masque_de_la_fumee()
 	_les_parametres_existent()
+	_le_coeur_de_la_fusee()
 	await _les_deux_lightmaps()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	_sortir()
@@ -774,6 +775,30 @@ static func _ecart(a: Dictionary, b: Dictionary) -> String:
 		if not b.has(k) or b[k] != a[k]:
 			return "%s : %s → %s" % [k, str(a[k]), str(b.get(k))]
 	return ""
+
+
+## ESSAI (session cloud, 2026-09-25 21:41) — le cœur de la fusée posée, éteint par défaut : le choix d'ISO3 et d'ISO4 (le
+## voxel remplace le cœur, sans émettre) reste le jeu tant qu'Adrien n'a pas tranché. L'essai reprend le cœur de la comète.
+func _le_coeur_de_la_fusee() -> void:
+	print("\n[Le cœur de la fusée posée — essai]")
+	var v := IsoVolumes.new()
+	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	_check("l'essai est éteint par défaut (coeur_fusee = 0) : le voxel remplace le cœur, comme ISO3/ISO4 l'ont voulu",
+		int(v.get("coeur_fusee")) == 0)
+	_check("le cœur ne se pose que si l'essai est allumé",
+		src.contains("\tif coeur_fusee > 0:\n\t\t_suivre_coeur_fusee(f, lumiere, energie, relative, vus)"))
+	_check("le cœur posé est celui de la comète : 10 px, à bord franc, de la couleur de la lumière",
+		is_equal_approx(IsoVolumes.TAILLE_COEUR_FUSEE, 10.0) and src.contains("_poser_halo(e, 0, p, 10.0, couleur, eclat, 1)")
+		and src.contains("TAILLE_COEUR_FUSEE,\n\t\tcouleur, maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite), 1)")
+		and IsoVolumes.HAUTEUR_COEUR_FUSEE_PX > (VoxelObjet.FUSEE_BRAISE_Y0 + VoxelObjet.FUSEE_BRAISE.y) * IsoVolumes.TUILE)
+	# Parité avec la 2D (session cloud, 21:54) : l'éclat ne tombe jamais sous l'opacité du point de braise 2D — au résidu, la
+	# formule de la comète (énergie / 0,8 × opacité) l'effaçait (0,02) là où la 2D le montre encore.
+	_check("l'éclat du cœur ne tombe jamais sous l'opacité du cœur 2D (lisible au résidu, comme en 2D)",
+		src.contains("var opacite := coeur.modulate.a if coeur != null else 1.0"))
+	_check("le presque-blanc ne vient qu'au plein feu et revient au rouge avec l'énergie",
+		src.contains("couleur = couleur.lerp(COULEUR_COEUR_BLANC, smoothstep(0.6, 0.95, relative))")
+		and src.contains("if coeur_fusee >= 2:"))
+	v.free()
 
 
 ## 2026-09-25 — `set_shader_parameter` sur un nom qu'aucun uniforme ne porte ne dit RIEN : ni erreur, ni avertissement,

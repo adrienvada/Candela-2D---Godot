@@ -92,6 +92,13 @@ var faisceaux_actifs := false
 ## l'éteint — la référence de toute série de cadence sur la fumée. À poser AVANT que les couches naissent, comme
 ## `couches_fusee` — une couche déjà créée garde son shader (les bancs basculent par `poser_masque_fumee`).
 var masque_fumee := true
+## ESSAI (session cloud, 2026-09-25 21:41 ; Adrien tranchera sur la planche) — le point de braise de la fusée POSÉE. En 2D, le
+## cœur incandescent (`fusee.gd`, `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est
+## une information de jeu, la position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et
+## ne l'émet pas — le choix reste le défaut. L'essai rend, par un halo d'ici et non par le voxel, le cœur que la comète
+## porte déjà en vol (10 px, de la couleur de la lumière). 0 : éteint (défaut) ; 1 : `--fusee-coeur`, le cœur rouge puis
+## orange ; 2 : `--fusee-coeur-blanc`, presque blanc au plein feu, qui revient au rouge avec la température.
+var coeur_fusee := 0
 
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
@@ -106,6 +113,17 @@ var _masques := false
 const DRAPEAU_FAISCEAU := "--faisceau"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
+const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
+const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
+## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
+## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
+const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
+## La taille du cœur posé : celle du cœur de la comète (`_suivre_comete`), en pixels de monde.
+const TAILLE_COEUR_FUSEE := 10.0
+## Sa hauteur : au sommet de la braise du voxel (`VoxelObjet.FUSEE_BRAISE_Y0` + sa hauteur), un peu au-dessus. À la hauteur de
+## la lumière (0,15 tuile), il tombait DANS le voxel, qui en masquait le centre : un anneau autour de la tige, pas un point
+## (premier essai, 2026-09-25 21:50).
+const HAUTEUR_COEUR_FUSEE_PX := (VoxelObjet.FUSEE_BRAISE_Y0 + VoxelObjet.FUSEE_BRAISE.y) * TUILE + 0.3 * TAILLE_COEUR_FUSEE
 
 
 func _init() -> void:
@@ -119,8 +137,14 @@ func _init() -> void:
 			masque_fumee = true
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
 			masque_fumee = false
+		elif arg == DRAPEAU_COEUR_FUSEE:
+			coeur_fusee = maxi(coeur_fusee, 1)
+		elif arg == DRAPEAU_COEUR_FUSEE_BLANC:
+			coeur_fusee = 2
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
+	if coeur_fusee > 0:
+		print("[fusée cœur] essai allumé — %s" % ("presque blanc au plein feu" if coeur_fusee >= 2 else "rouge puis orange"))
 	# L'état éteint s'imprime aussi : la référence d'une série se prouve par ce que le JEU dit, jamais par la commande.
 	if not masque_fumee:
 		print("[fumée masque] éteint (%s) — le shader des volumes d'avant" % DRAPEAU_SANS_MASQUE_FUMEE)
@@ -241,6 +265,26 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 	var taille := TUILE * (0.6 + 0.6 * relative)
 	_poser_halo(lueur, 0, Vector3(f.global_position.x, h, f.global_position.y), taille,
 		lumiere.color if lumiere != null else Color.WHITE, 0.45 * relative, 0)
+	if coeur_fusee > 0:
+		_suivre_coeur_fusee(f, lumiere, energie, relative, vus)
+
+
+## ESSAI (`coeur_fusee`) — le cœur de la fusée posée, comme celui de la comète : un halo à bord franc (forme 1), de la
+## couleur de la lumière, dont l'éclat suit l'énergie et le cœur 2D (ses sursauts d'agonie, son extinction) — et ne tombe
+## JAMAIS sous l'opacité du cœur 2D : repris tel quel de la comète (énergie / 0,8 × opacité), il s'effaçait au résidu (0,02),
+## là où le point de braise 2D se voit encore — parité avec la 2D (session cloud, 21:54). Au plein feu
+## seulement, la variante 2 le pousse vers le presque-blanc ; il revient au rouge quand l'énergie retombe vers la braise.
+## La lumière du jeu ne change pas : ce halo s'ajoute à l'image 3D, il n'éclaire rien.
+func _suivre_coeur_fusee(f: Node2D, lumiere: Light2D, energie: float, relative: float, vus: Dictionary) -> void:
+	var c := _entree(f, "coeur", vus, 2)
+	_halos(c, 1)
+	var coeur := f.get_node_or_null(^"Coeur") as CanvasItem
+	var opacite := coeur.modulate.a if coeur != null else 1.0
+	var couleur := lumiere.color if lumiere != null else Color.WHITE
+	if coeur_fusee >= 2:
+		couleur = couleur.lerp(COULEUR_COEUR_BLANC, smoothstep(0.6, 0.95, relative))
+	_poser_halo(c, 0, Vector3(f.global_position.x, HAUTEUR_COEUR_FUSEE_PX, f.global_position.y), TAILLE_COEUR_FUSEE,
+		couleur, maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite), 1)
 
 
 ## La comète : la fusée en vol, à la hauteur de sa lumière. Le cœur et le corps dessinés sortent des

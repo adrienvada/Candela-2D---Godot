@@ -27269,6 +27269,34 @@ Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un comp
 d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
 
+#### ISO13 — la fusée comme son illustration : le point de braise en essai 🟡 (2026-09-25, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
+
+Comparée à l'illustration « Créer en ligne » (planche : https://claude.ai/artifact/R7wAtpZyWJakiSdbfaTiGg, plan
+`loupe-fusee-illustration`), la fusée posée à plein feu a le bon sol éclairé, mais **pas de point de braise**.
+
+**Deux choix écrits, rappelés, qui restent le défaut.** ISO3 vague 3 (`d641b48`) : la fusée posée devient un voxel qui
+n'émet jamais rien (`voxel_objets.gd` : « jamais un éclat émis par ce nœud lui-même », sa braise est une boîte d'environ 3 px
+éclairée par le capteur). ISO4 (`77941df`) : ce voxel REMPLACE le cœur incandescent 2D (`miroirs_iso.gd`,
+`SPRITES_REMPLACES["fusee"]`), qui sort des lightmaps. Or en 2D ce point « se voit dans le noir complet parce qu'il EST la
+source » : c'est une information de jeu, la position de la fusée. La comète, elle, garde en vol un cœur de 10 px.
+
+**L'essai, éteint par défaut** : `--fusee-coeur` pose sur la fusée posée le cœur de la comète (un halo des volumes iso, 10 px,
+bord franc, de la couleur de la lumière : rouge puis orange ; le voxel n'émet toujours rien, la lumière du jeu ne change
+pas) ; `--fusee-coeur-blanc`, le même, presque blanc au plein feu, revenu à la couleur à la braise — la règle « jamais de
+blanc » de `fusee.gd` (FU2.1) vaut pour la lumière, le blanc n'est ici qu'un point, et seulement en essai. Deux mises au
+point payées à l'image : posé à la hauteur de la lumière (0,15 tuile), le halo tombait DANS le voxel, qui en masquait le
+centre — un anneau, pas un point ; il est au sommet de la braise. Et son éclat, repris de la comète (énergie × opacité du
+cœur 2D), s'effaçait au résidu là où la 2D montre encore le point : il ne tombe plus sous l'opacité du cœur 2D. Saillie du
+point sur son entourage (défaut / rouge / presque blanc) : plein feu +11 / +48 / +92 ; braise +3 / +94 / +94 ; agonie
++28 / +45 / +50 ; résidu +4 / +23 / +24. **Question à Adrien** (posée par la session cloud) : rien, rouge, ou presque blanc
+au plein feu ; et le rythme — le rouge ne dure que 2 s, la fumée n'est pleine qu'à 3 s, l'illustration montre un instant que
+le jeu n'a jamais.
+
+**Les 8° vers l'orange, mesurés, et rien à corriger** : la lightmap sous la fusée est à 5,5° (126, 36, 27) pour une lumière à
+356° ; divisée par la lumière, elle donne (1 ; 0,94 ; 0,62), le brun des tuiles 2D. C'est la lumière 2D, la seule vérité du
+jeu. La température de la pâte n'y est pour rien : son poids de neutralité est nul pour ce rouge. **Pas d'essai sur la
+couleur de la fumée** : l'assombrir éloignerait la braise de `fumee_03`, qu'elle suit à 1 ou 2° près.
+
 #### ISO13, Q31 — le masque de la fumée : « le noir d'abord » ✅ (2026-09-25, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
 
 La fumée de la fusée se tait là où ce que le pixel montre derrière elle s'affiche noir : **allumé par défaut**,

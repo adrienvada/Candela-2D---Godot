@@ -76,6 +76,8 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO13 : la même question que loupe-fusee-bord, sans le voile d'éblouissement de J1 (qui ne laissait aucun pixel vraiment noir), et chaque prise rétablie jugée contre ses deux voisines coupées."],
 		["loupe-fusee-masque-preuve", "Le masque de la fumée, en un seul processus : A sans fumée, B fumée, C fumée masquée, A' sans",
 			"ISO13, Q31 voie A : là où A est noir, C doit l'être ; là où A montre le sol, C doit valoir B au pixel près. Seule la fumée change : la même couche bascule de shader sur place, rien d'autre ne bouge ; A' dit si l'instant est resté figé."],
+		["loupe-fusee-illustration", "La fusée comme son illustration : plein feu, braise, agonie ; cœur éteint, rouge, presque blanc",
+			"ISO13 (session cloud, 2026-09-25 21:41) : la fusée seule dans le noir puis devant une face de mur, à plusieurs âges, sans les volumes, puis avec l'essai du cœur (IsoVolumes.coeur_fusee) éteint, rouge, presque blanc, basculé sur place. Imprime la lightmap lue sous la fusée."],
 		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
 			"ISO13, Q31 : la sortie 3D de ce renderer écrase tout canal écrit à 7/255 ou moins (rampes du 2026-09-25). Le masque de la fumée en dépend : cette garde, en fenêtre, échoue si 7 ne sort plus à 0 ou si 8 sort à 0."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
@@ -229,6 +231,12 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-rampe-3d"):
 		await _loupe_rampe_3d(plans)
+	if p._demande(plans, "loupe-fusee-illustration"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-illustration : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_illustration(plans, lieux)
+			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
 		for l in lieux:
@@ -911,6 +919,133 @@ func _mur_proche(lieu: Vector2) -> Vector2:
 				return pt
 		d += 5.0
 	return Vector2.INF
+
+
+## ISO13 — LA FUSÉE COMME SON ILLUSTRATION (session cloud, 2026-09-25, 21:36 et 21:41). Un outil : aucun code du jeu ne change.
+## La fusée seule (le défaut : elle ne porte aucune suie), posée dans le noir puis devant la face d'un mur, prise à plusieurs
+## âges — plein feu 1,0 et 1,9 s (la fumée la plus dense encore rouge), braise 8 s, agonie 13 s, résidu 17 s —, chaque fois
+## sans les volumes (la référence du sol), puis avec l'essai du cœur (`IsoVolumes.coeur_fusee`) éteint, rouge, presque blanc,
+## basculé SUR PLACE : seule la chose jugée change entre deux prises. L'âge est figé à chaque image de l'attente. Imprime
+## aussi la LIGHTMAP lue sous la fusée (le rendu 2D de la vue de J1), pour dire d'où viennent les 8° d'écart au rouge de
+## détresse (mesure demandée, aucun essai).
+func _loupe_fusee_illustration(plans: Array[Dictionary], lieux: Array[Vector2]) -> void:
+	var id := "loupe-fusee-illustration"
+	var m: Node = p._main
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ %s : volumes iso introuvables" % id)
+		return
+	MurLed.est_actif()
+	print("  · %s : bandeau LED %s" % [id, "figé à %.2f de son sommet" % MurLed._fige if MurLed._fige >= 0.0
+		else "qui RESPIRE (--led-murs-fige)"])
+	var scenes: Array = [["noir", lieux[0], [1.0, 1.9, 8.0, 13.0, 17.0]]]
+	var face := _lieu_devant_une_face(lieux)
+	if face != Vector2.INF:
+		scenes.append(["face", face, [1.0, 1.9]])
+	else:
+		printerr("  ✗ %s : aucun sol dégagé devant la face sud d'un mur" % id)
+	var coeur_avant: int = int(volumes.get("coeur_fusee"))
+	for sc: Array in scenes:
+		var lieu: Vector2 = sc[1]
+		var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+		f.set("depart", lieu)
+		f.set("direction", Vector2.DOWN)
+		f.set("joueurs", [m.p1, m.p2])
+		m.bullet_container.add_child(f)
+		await p.get_tree().process_frame
+		f.set_physics_process(false)
+		f.global_position = lieu
+		print("  · %s : scène « %s », fusée seule en %s" % [id, sc[0], str(lieu)])
+		var age_fige := [1.0]
+		var tenir := func() -> void:
+			_tenir_scene()
+			if is_instance_valid(f):
+				f.call("forcer_age", age_fige[0])
+		var centre := func(img: Image) -> Vector2: return _pixel(img, lieu, 8.0)
+		for age: float in sc[2]:
+			age_fige[0] = age
+			f.call("forcer_age", age)
+			var nom := "%s-a%s" % [sc[0], str(age)]
+			volumes.set("coeur_fusee", 0)
+			volumes.set("volumes_actifs", false)
+			await _prise(plans, id, [[nom + "-ref", centre]], false, 1.0, tenir)
+			volumes.set("volumes_actifs", true)
+			for k in 3:
+				volumes.set("coeur_fusee", k)
+				await _prise(plans, id, [[nom + "-coeur%d" % k, centre]], false, 1.0, tenir)
+			_imprimer_lightmap(id, nom, lieu, f)
+		f.queue_free()
+		await p.get_tree().process_frame
+	volumes.set("coeur_fusee", coeur_avant)
+	volumes.set("volumes_actifs", true)
+
+
+## Un point de sol dégagé dont le mur est juste au NORD (45 à 80 px) : sa face SUD regarde la caméra iso (vérifié sur la carte
+## des murs de la preuve du masque : la face se voit toujours SOUS le dessus, à l'écran), et la fusée posée là l'éclaire.
+## Cherché d'abord parmi `lieux` (dans le noir), puis, faute de mieux, sur une grille à la demi-tuile de toute la fenêtre, à
+## plus de 200 px de J1 et de 160 px de J2 (la torche de J1 peut alors toucher le cadre : l'image le dira). `Vector2.INF` sinon.
+func _lieu_devant_une_face(lieux: Array[Vector2]) -> Vector2:
+	var espace := (p._main.p1 as Node2D).get_world_2d().direct_space_state
+	var q := PhysicsPointQueryParameters2D.new()
+	q.collision_mask = MapGeometry.WALL_LAYER
+	var candidats: Array[Vector2] = lieux.duplicate()
+	var t := MursBas.TUILE
+	var taille := Vector2(DisplayServer.window_get_size())
+	var marge := Vector2(TAILLE_LOUPE) * 0.5 + Vector2(40.0, 40.0)
+	var grille := Vector2(MapCodec.get_grid_size(MapData.current_map_data)) * t
+	var y := t
+	while y < grille.y:
+		var x := t
+		while x < grille.x:
+			var pt := Vector2(x, y)
+			var e := _pixel_taille(taille, pt)
+			if e.x > marge.x and e.x < taille.x - marge.x and e.y > marge.y and e.y < taille.y - marge.y \
+					and pt.distance_to(_j1) > 200.0 and pt.distance_to(_j2) > 160.0 and p._sol_libre(pt):
+				candidats.append(pt)
+			x += t * 0.5
+		y += t * 0.5
+	for lieu in candidats:
+		var d := 45.0
+		while d <= 80.0:
+			q.position = lieu + Vector2(0.0, -d)
+			if not espace.intersect_point(q, 1).is_empty():
+				return lieu
+			d += 5.0
+	return Vector2.INF
+
+
+## La LIGHTMAP lue sous la fusée : le rendu 2D de la vue de J1 (`vp1`), sur un anneau de 20 à 60 px de monde autour d'elle,
+## en médiane par canal (0-255), à côté de la couleur de la lumière (`Halo`). Ce que la 3D reçoit avant toute pâte.
+func _imprimer_lightmap(id: String, nom: String, lieu: Vector2, f: Node2D) -> void:
+	var vp := p._main.vp1 as SubViewport
+	var img: Image = vp.get_texture().get_image() if vp != null else null
+	if img == null:
+		printerr("  ✗ %s-%s : lightmap illisible" % [id, nom])
+		return
+	var ct: Transform2D = vp.canvas_transform
+	var c: Vector2 = ct * lieu
+	var e: float = ct.x.length()
+	var canaux := [[], [], []]
+	for y in range(int(c.y - 60.0 * e), int(c.y + 60.0 * e) + 1):
+		for x in range(int(c.x - 60.0 * e), int(c.x + 60.0 * e) + 1):
+			if x < 0 or y < 0 or x >= img.get_width() or y >= img.get_height():
+				continue
+			var r := Vector2(x, y).distance_to(c) / e
+			if r < 20.0 or r > 60.0:
+				continue
+			var px := img.get_pixel(x, y)
+			canaux[0].append(px.r)
+			canaux[1].append(px.g)
+			canaux[2].append(px.b)
+	var med := []
+	for ch: Array in canaux:
+		ch.sort()
+		med.append(int(round(float(ch[ch.size() / 2]) * 255.0)) if ch.size() > 0 else -1)
+	var halo := f.get_node_or_null(^"Halo") as Light2D
+	print("  MESURE-LIGHTMAP %s-%s : médiane (%d, %d, %d) sur %d px ; lumière %s énergie %.2f" % [id, nom, med[0], med[1], med[2],
+		canaux[0].size(), str(halo.color) if halo != null else "?", halo.energy if halo != null else 0.0])
 
 
 ## `_tenir_scene`, les deux torches ÉTEINTES : sans elles, aucun voile d'éblouissement ne soulève le noir.
