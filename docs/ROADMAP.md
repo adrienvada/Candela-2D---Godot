@@ -27310,6 +27310,33 @@ pied, dans le plan du sol —, les fissures et les taches des faces, les gravats
   écrit en clair, `c = pate_facteur(c, usure_poids(c, …))` : la garde reste telle quelle et lit la multiplication.
 - Lot complet vert (436 s, 0 SHADER/SCRIPT ERROR, 2026-09-24 16:30), empreinte du code identique avant et après.
 
+**La cadence, et le levier 1** (2026-09-25). Mesurée au calme par Gadgets, l'usure allumée rend 0,944 de la cadence (+0,67 ms
+par image) : hors de la règle des 3 %, refusée par défaut en l'état (Q30, voie C de la session cloud : la rendre moins chère,
+même image, puis remesurer). Le premier levier, ordonné à 00:08 : le sol ne lit plus la grille des murs HUIT fois par pixel
+(`usure_mur_pres` : quatre directions, deux distances), mais une seule texture préparée une fois par carte
+(`IsoMateriaux.image_proximite_usure`, à la construction des murs) — un texel par pixel du monde sur l'origine de la grille,
+trois niveaux relus par seuils. **Même image par construction** : cases de 35 px, écarts de 5 et 14 px, origine entière — toutes
+les frontières tombent sur des pixels entiers, et un texel lu au plus proche rend la valeur exacte des huit lectures.
+`test_iso_usure` le vérifie en 6 000 points par carte livrée (et rougit si l'écart « près » passe de 5 à 8 px). Construite par
+des mélanges d'images natifs, jamais pixel par pixel en GDScript. Drapeau éteint : rien ne change (code prétraité identique).
+**Prouvé le 2026-09-25 au matin** (Mac calme : HIDIdleTime 30 000 s, aucun navigateur ni son au-dessus de 3 %) :
+- `test_iso_usure` : la même valeur qu'avant en 36 000 points sur 36 000 (six cartes), et la preuve rougit sur un écart de 8 px.
+  ⚠️ Au premier départ, 1 903 points différaient, tous dans la case du bord : hors de la grille, l'ancienne lecture rendait un
+  MUR (le vide hors sol est solide). Les masques portent désormais un anneau de murs d'une case, recadré après calcul.
+- **La même image, prouvée dans UN seul processus, au même instant figé** (arbre de planche : l'ancien chemin des huit lectures
+  compilable sous un `#define` que le jeu ne pose jamais ; le code livré en diffère de ce seul bloc). Corps cachés — ils
+  respirent sur l'horloge réelle —, image entière : texture contre huit lectures, **0 pixel différent à 0° comme à 45°**.
+  Témoin positif, pour que ce 0 ne soit pas un changement de matériau resté muet : le shader lié à chaque sol porte bien le
+  `#define` de l'ancien chemin, et sur ce chemin l'usure allumée contre éteinte diffère de 8 459 pixels (0°) et 8 172 (45°).
+  Chaque chemin, allumé contre éteint : 0 noir allumé, 0 plus clair.
+- ⚠️ **Une comparaison entre deux LANCEMENTS ne prouve rien** : même usure éteinte des deux côtés, 86723ca et le levier 1
+  différaient de 64 244 pixels du décor (écart jusqu'à 255), car chaque lancement tire au hasard la texture et la rotation des
+  éclats et la poussière de la torche, et l'instant du gel diffère. Une preuve « même image » se fait au même instant, dans le
+  même processus, avec un témoin positif.
+- Lot complet vert (434 s, 0 SHADER/SCRIPT ERROR, 2026-09-25 08:24), empreinte du code identique avant et après.
+Relevés et patch de l'arbre de planche : `docs/iso/iso13/levier1/`. La cadence, par Gadgets, suit. Les leviers suivants (impacts
+triés par face, coulures) : pas encore.
+
 **Et le côté de la lumière du lot A, pour tout lacet** (ordre de la session cloud, 04:38). Le modelé du mannequin supposait la
 caméra au sud : lumière au sud, les DESSUS s'assombrissaient (`max(l.y, 0)`), pour que la perte vue d'un corps soit la même
 qu'il soit au-dessus ou au-dessous de vous à l'écran. La caméra est désormais un argument, lu dans la matrice de vue

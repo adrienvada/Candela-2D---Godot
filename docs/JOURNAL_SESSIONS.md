@@ -5969,3 +5969,11 @@ matière peinte, derrière `--corps-detaille`. Le verdict de l'image est celui q
 lit, le détail non ; de près, il se lit. Toutes les règles tiennent (noir, silhouette, apparition), mais la matière peinte
 coûte 14 % de pixels visibles à 0,15. L'usure refaite le temps du jeu arrêté ne montre plus rien sur le décor que des pixels
 assombris ; les corps, eux, bougent encore : ils respirent sur l'horloge réelle.
+
+### 2026-09-25 (matin) — ISO13 : l'usure moins chère, levier 1 (session « ISO7 Beauté Opus », branche `iso12-corps`)
+
+L'usure coûtait 0,944 de cadence. Le sol lisait la grille des murs huit fois par pixel ; il lit maintenant une texture
+préparée une fois par carte. La preuve de « même image » a appris deux choses : la texture était fausse dans la case du bord
+de la grille (le vide hors sol compte pour un mur), et deux lancements du jeu ne rendent jamais la même scène — la seule preuve
+valable est au même instant, dans le même processus, avec un témoin positif qui montre que la bascule atteint l'écran. Elle
+donne 0 pixel d'écart à 0° comme à 45°.

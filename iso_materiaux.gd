@@ -378,6 +378,73 @@ static func image_grille(data: Dictionary) -> Image:
 	return image
 
 
+## ISO13, lot C, levier 1 (ordre de la session cloud, 2026-09-25 00:08 : l'usure coûtait 0,944 de cadence) — LA PROXIMITÉ DES
+## MURS, préparée une fois par carte au lieu de huit lectures de la grille par pixel de sol. Un texel par pixel du monde, sur
+## l'origine de la grille (`accorder_grille`) : 1 au pied d'un mur (un mur à 5 px dans l'une des quatre directions), 0,5 à 14 px,
+## 0 au-delà — la formule d'avant, `usure_mur_pres`, calculée ici une fois. ⚠️ **La même image au pixel, par construction** : les
+## cases font 35 px, les écarts 5 et 14 px, l'origine est entière ; toutes les frontières tombent sur des pixels entiers, donc un
+## texel lu au plus proche rend exactement la valeur que les huit lectures rendaient (`tools/test_iso_usure.gd` le vérifie en
+## milliers de points). Trois niveaux, codés 0, 128 et 255 dans un canal ; le shader les relit par seuils, sans arrondi.
+## Construite par des mélanges d'images natifs (`blend_rect`), jamais pixel par pixel en GDScript. Plafonnée comme la peinture
+## de la carte (`COTE_MAX_PROXIMITE`) : au-delà, réduite, et alors seulement approchée.
+const COTE_MAX_PROXIMITE := 4096
+
+
+static func image_proximite_usure(data: Dictionary) -> Image:
+	var grille := image_grille(data)
+	var cases := grille.get_size()
+	var tuile := int(CandelaTileSet.TILE_SIZE.x)
+	# ⚠️ Hors de la grille, l'ancienne lecture rendait un MUR (le vide hors sol est solide) : un point à moins de 14 px du bord
+	# voyait donc un mur au-delà. Les masques portent un anneau de murs d'une case tout autour (35 px, plus que les 14 px de
+	# portée), le calcul se fait sur l'image agrandie, puis on la recadre sur la grille. Au premier passage (2026-09-25, 08:15),
+	# sans cet anneau, 1 903 points sur 36 000 différaient, tous dans la case du bord (`test_iso_usure`).
+	var bord := Vector2i.ONE
+	var plein := Image.create_empty(cases.x + 2, cases.y + 2, false, Image.FORMAT_RGBA8)
+	var moitie := Image.create_empty(cases.x + 2, cases.y + 2, false, Image.FORMAT_RGBA8)
+	plein.fill(Color(1, 1, 1, 1))
+	moitie.fill(Color(0.5, 0.5, 0.5, 1))
+	for x in cases.x:
+		for y in cases.y:
+			var c := grille.get_pixel(x, y)
+			if maxf(c.r, c.g) <= 0.5:
+				plein.set_pixel(x + 1, y + 1, Color(0, 0, 0, 0))
+				moitie.set_pixel(x + 1, y + 1, Color(0, 0, 0, 0))
+	var taille := cases * tuile
+	var grande := (cases + bord * 2) * tuile
+	plein.resize(grande.x, grande.y, Image.INTERPOLATE_NEAREST)
+	moitie.resize(grande.x, grande.y, Image.INTERPOLATE_NEAREST)
+	var sortie := Image.create_empty(grande.x, grande.y, false, Image.FORMAT_RGBA8)
+	sortie.fill(Color(0, 0, 0, 1))
+	# La valeur en p est celle du mur en p + d : l'image du mur, décalée de −d. D'abord le « loin » (0,5), puis le « près » (1)
+	# par-dessus : le résultat est max(près, 0,5 × loin), la formule d'avant.
+	for d in [Vector2i(14, 0), Vector2i(-14, 0), Vector2i(0, 14), Vector2i(0, -14)]:
+		_decaler_sur(sortie, moitie, d, grande)
+	for d in [Vector2i(5, 0), Vector2i(-5, 0), Vector2i(0, 5), Vector2i(0, -5)]:
+		_decaler_sur(sortie, plein, d, grande)
+	sortie = sortie.get_region(Rect2i(bord * tuile, taille))
+	sortie.convert(Image.FORMAT_R8)
+	if maxi(taille.x, taille.y) > COTE_MAX_PROXIMITE:
+		var k := float(COTE_MAX_PROXIMITE) / float(maxi(taille.x, taille.y))
+		sortie.resize(maxi(1, int(taille.x * k)), maxi(1, int(taille.y * k)), Image.INTERPOLATE_NEAREST)
+	return sortie
+
+
+## Pose `source` sur `cible` décalée de −d (la valeur en p devient celle de la source en p + d), par le rectangle source : aucune
+## destination négative, dont le découpage n'est pas à supposer.
+static func _decaler_sur(cible: Image, source: Image, d: Vector2i, taille: Vector2i) -> void:
+	var rect := Rect2i(maxi(d.x, 0), maxi(d.y, 0), taille.x - absi(d.x), taille.y - absi(d.y))
+	cible.blend_rect(source, rect, Vector2i(maxi(-d.x, 0), maxi(-d.y, 0)))
+
+
+## La valeur de proximité lue dans `image_proximite_usure` comme le shader la relit (seuils 0,25 et 0,75).
+static func proximite_lue(image: Image, px: Vector2, origine: Vector2) -> float:
+	var t := Vector2i((px - origine).floor())
+	if t.x < 0 or t.y < 0 or t.x >= image.get_width() or t.y >= image.get_height():
+		return 1.0
+	var v := image.get_pixel(t.x, t.y).r
+	return 1.0 if v >= 0.75 else (0.5 if v >= 0.25 else 0.0)
+
+
 ## Pose la grille des murs de la carte `data` sur le matériau des murs.
 static func accorder_grille(materiau: ShaderMaterial, data: Dictionary) -> void:
 	var image := image_grille(data)

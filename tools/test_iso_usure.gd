@@ -45,6 +45,7 @@ func _run() -> void:
 	_les_impacts()
 	_le_shader()
 	_la_presentation()
+	_la_proximite()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	print("%d vérifications, %d échec(s)" % [_verifications, _echecs])
 	quit(1 if _echecs > 0 else 0)
@@ -86,8 +87,9 @@ func _les_variantes() -> void:
 		_check("%s : une variante par shader, et la variante d'une variante est elle-même" % chemin.get_file(),
 			IsoMateriaux.variante_definie(sh, "USURE_ESSAI") == v and IsoMateriaux.variante_definie(v, "USURE_ESSAI") == v)
 		if sol:
-			_check("%s : le sol gagne la grille des murs sous le drapeau, pas avant" % chemin.get_file(),
-				noms.has("grille_murs") and not _noms(sh).has("grille_murs"))
+			# Levier 1 (2026-09-25) : le sol lit la proximité préparée par carte, plus la grille des murs.
+			_check("%s : le sol gagne la proximité des murs sous le drapeau, pas avant" % chemin.get_file(),
+				noms.has("usure_proximite") and not _noms(sh).has("usure_proximite") and not noms.has("grille_murs"))
 	var sol := load(SOLS[0]) as Shader
 	var deux := IsoMateriaux.variante_definie(IsoMateriaux.variante_encre(sol), "USURE_ESSAI")
 	var noms := _noms(deux)
@@ -162,3 +164,63 @@ func _la_presentation() -> void:
 		pres.contains("if empreinte == _usure_empreinte:\n\t\treturn"))
 	_check("les originaux seulement, pas leurs copies J2",
 		pres.contains("not (e as Node).is_in_group(\"wall_impact_p2\")"))
+
+
+## Levier 1 (ordre de la session cloud, 2026-09-25 00:08) — la proximité des murs préparée une fois par carte rend, point pour
+## point, la valeur des huit lectures de la grille qu'elle remplace : le miroir exact de l'ancien `usure_mur_pres`.
+func _ancienne_proximite(grille: Image, px: Vector2, origine: Vector2, tuile: float, ecart_pres := 5.0) -> float:
+	var mur := func(q: Vector2) -> float:
+		var c := Vector2i(((q - origine) / tuile).floor())
+		if c.x < 0 or c.y < 0 or c.x >= grille.get_width() or c.y >= grille.get_height():
+			return 1.0
+		var v := grille.get_pixel(c.x, c.y)
+		return maxf(v.r, v.g)
+	var pres := 0.0
+	var loin := 0.0
+	for d in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
+		pres = maxf(pres, mur.call(px + d * ecart_pres))
+		loin = maxf(loin, mur.call(px + d * 14.0))
+	return maxf(pres, 0.5 * loin)
+
+
+func _la_proximite() -> void:
+	print("— levier 1 : la proximité des murs, préparée une fois par carte, rend la valeur d'avant")
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	var origine := -Vector2.ONE * float(MapGeometry.BORDER) * tuile
+	var cartes := 0
+	var ecarts := 0
+	var points := 0
+	var mutes := 0
+	var alea := RandomNumberGenerator.new()
+	alea.seed = 13
+	for f in DirAccess.get_files_at("res://assets/maps"):
+		if not f.ends_with(".json"):
+			continue
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://assets/maps/" + f))
+		if not d is Dictionary:
+			continue
+		cartes += 1
+		var grille := IsoMateriaux.image_grille(d)
+		var prox := IsoMateriaux.image_proximite_usure(d)
+		var taille := Vector2(grille.get_size()) * tuile
+		_check("%s : un texel par pixel du monde (%dx%d)" % [f, prox.get_width(), prox.get_height()],
+			prox.get_size() == Vector2i(taille) or maxi(int(taille.x), int(taille.y)) > IsoMateriaux.COTE_MAX_PROXIMITE)
+		for k in 6000:
+			# Des points au hasard dans toute la carte, décimaux (un fragment tombe n'importe où dans son pixel).
+			var px := origine + Vector2(alea.randf() * taille.x, alea.randf() * taille.y)
+			points += 1
+			var attendu := _ancienne_proximite(grille, px, origine, tuile)
+			if not is_equal_approx(IsoMateriaux.proximite_lue(prox, px, origine), attendu):
+				ecarts += 1
+			if k < 600 and not is_equal_approx(IsoMateriaux.proximite_lue(prox, px, origine),
+					_ancienne_proximite(grille, px, origine, tuile, 8.0)):
+				mutes += 1
+	_check("les cartes livrées sont éprouvées (%d)" % cartes, cartes >= 4)
+	_check("la même valeur qu'avant en %d points sur %d, dans toutes les cartes" % [points - ecarts, points], ecarts == 0 and points > 0)
+	_check("la preuve rougit sur une faute : un écart de 8 px au lieu de 5 donne %d points différents" % mutes, mutes > 0)
+	var inc := FileAccess.get_file_as_string("res://iso_usure.gdshaderinc")
+	_check("le sol ne lit plus qu'une texture : une lecture par pixel au lieu de huit",
+		inc.count("textureLod(usure_proximite, uv, 0.0)") == 1 and not inc.contains("usure_mur_en("))
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	_check("la présentation prépare la proximité une fois par carte, avec les murs, sous le drapeau",
+		pres.contains("IsoMateriaux.image_proximite_usure(data)") and pres.contains('m.set_shader_parameter("usure_proximite", proximite)'))
