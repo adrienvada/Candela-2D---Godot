@@ -3210,6 +3210,124 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Recopier le point d'une surface depuis une autre n'est exact qu'à ~0,003 px : les coutures (2026-09-25)
+
+Chantier ISO13, Q31 (le masque de la fumée). La fumée calcule le point du sol que son pixel montre ; le sol le calcule
+lui-même. Mesuré par un instrument qui fait écrire les fractions fines des coordonnées aux deux shaders : le point de la
+fumée est en retrait **uniforme de 0,0026 px de monde** en z — l'arrondi des sommets par le rastériseur, qu'aucun calcul
+ne rattrape. Partout où le sol est continu, c'est sans effet. Mais le sol a des **coutures** — `glisse` fait sauter la
+lecture de la lumière d'un côté du joint 2D à l'autre au bord de chaque tuile et à `marge` de part et d'autre —, et une
+caméra posée sur des coordonnées rondes fait tomber des **rangées d'écran entières** pile dessus : la copie y lisait
+l'autre côté (0 contre 53/255), 16 fuites sur quatre rangées. Remède : à moins de 0,008 px d'une couture, juger les
+deux côtés et laisser le noir l'emporter ; les pertes qui en naissent se comptent comme celles de la frontière, à part
+(règle de la session cloud, 2026-09-25). Pas plus loin que 0,008 : à 0,04, un pixel au bord du seuil se jugeait déjà
+autrement que le sol. **Tout ce qui recopie une surface (masque, ombre, décalque) hérite de ces coutures.**
+
+### Dans une branche, une texture mipmappée n'a pas de dérivées ; après un `discard`, `dFdx` non plus (2026-09-25)
+
+Le masque lit la matière du sol **dans une branche** (après le `discard` de l'opacité, dans le parcours) : là, `texture()`
+prend des dérivées implicites que le GPU ne définit pas, donc un niveau de mipmap qui n'est pas celui du sol — une fuite,
+(1318, 323). Remède commité : le niveau calculé (λ = log2 du plus long gradient, en texels, la formule du trilinéaire ;
+les matières ont dix niveaux et se lisent sans anisotropie) et `textureLod`. Les dérivées, elles, se tirent **de la
+caméra** : orthographique, un pixel d'écran y vaut un vecteur constant (`INV_VIEW_MATRIX` × la taille d'un pixel de
+projection), ramené sur le plan jugé. **Mesuré par un instrument** : égal à `dFdx`/`dFdy` à 10⁻⁵ px près sur 309 000
+pixels, et c'est `dFdx` qui a tort sur les ~1 000 autres, TOUS au bord de la zone dessinée (un voisin jeté par le
+`discard` : le compilateur est libre d'y calculer la dérivée après lui). Les prix, par séries valides : **`textureGrad`
+est cher sur ce GPU Apple**, ≈ 0,30 ms (V1c 0,930 → V1d 0,953), là où `textureLod` au λ calculé lit la même chose ; les
+`dFdx` pris en tête sur tous les fragments ≈ 0,16 ms (→ V1e 0,966). La face lue au niveau 0 (V1f, 0,977) n'a **rien
+d'établi** de plus : V1e et V1f ont la même médiane masquée (84), la différence est dans la référence. **Et isoler UN
+changement avant d'accuser** : j'ai d'abord attribué à
+`textureGrad` treize fuites qui venaient d'ailleurs (le piège suivant) ; le revert ciblé les a « confirmées » par hasard
+de phase.
+
+### Une preuve à l'image doit voir bouger tout ce qui bouge : cinq A, pas trois (2026-09-25)
+
+Le corps de J2, hors de toute lumière, est **noir** : une carte qui ne peint que les murs le classe « sol ». Il frémit
+d'une prise à l'autre, et son ombre de contact avec lui : 13 « fuites » au pied de J2, que trois prises de référence
+tombées dans la même phase ont laissées passer. L'exclure a été **refusé** (c'est l'adversaire : de la fumée allumée sur
+un joueur debout dans le noir est exactement ce que la règle interdit) : A se prend **cinq** fois dans le sandwich
+(deux avant B, une entre B et C, deux après C), et seul ce qui est prouvé instable est exclu, compté à part. Autres
+mouvements au temps figé, voir « Les LED des murs respirent… » et « La caméra 2D glisse encore… ».
+
+### `set_shader_parameter` sur un nom inconnu ne dit rien — et un `#include` peut en rendre un inconnu (2026-09-25)
+
+La variante masquée de la fumée inclut l'usure du mur (`iso_usure.gdshaderinc`), dont les **locales** s'appellent
+`centre`, `rayon`, `angle`, `coeur`, `graine` : cinq uniformes du nuage portaient les mêmes noms, et la variante ne
+compilait plus (« Redefinition of … »), ce qui ne se voit qu'à l'image. Renommés `nuage_*`. Le piège est dans le
+renommage : Godot jette **sans un mot** une valeur posée sous un nom qu'aucun uniforme ne porte. Garde :
+`tools/test_iso_gadgets.gd` vérifie que chaque paramètre posé en dur par `iso_volumes.gd` sur la fumée est un uniforme
+de son shader (prouvée en remettant `"centre"`).
+
+### La sortie 3D a une courbe : un point noir à 7,5/255 ; une rampe, jamais un point, pour la mesurer (2026-09-25)
+
+La chaîne d'écran 3D a un point noir (écrit sous 7,5/255 → affiché 0), une pente d'environ 1,07, des hautes lumières
+tassées (blanc → 230) et un mélange des canaux (vert pur → 0,172,57). Elle se mesure par une **rampe**, jamais par un point
+(43 → 43 ne valait qu'en un endroit de la courbe). Pour le masque de la fumée, j'ai d'abord cru l'écran « décodé » (sur la
+foi d'un commentaire d'`iso_pate` qui voyait en fait ce point noir) : 109 097 pixels de fumée taisés ; puis « tel qu'écrit »
+sur un seul point : 127 fuites à la lisière du noir. Des rampes écrites puis relues l'ont tranché en quatre lancements :
+**canal par canal, sans mélange près du noir** (7 → 0, 8 → 1, 11 → 5, 16 → 10) ; **la même** pour la fumée transparente
+et le sol opaque ; **aucune pour la 2D** (k → k de 0 à 255).
+**Constat, hors périmètre, à ne pas corriger sans décision** : TOUTE la 3D passe par cette courbe — elle pèse sur la
+ressemblance aux illustrations (le cœur blanc de la fusée vaut ~246 dans son illustration, la 3D plafonne à 230), et le
+noir absolu en dépend peut-être. VÉRIFIÉ : aucun `Environment` ni tonemapping ; pas l'anticrénelage 3D ; pas
+`seuil_noir_2d` de `presentation_3d.gd` (0) ; pas `screen_calibration` ; pas le matériau (même courbe opaque et
+transparent). NON VÉRIFIÉ : le format du viewport 3D de la racine et son HDR, les attributs de caméra et l'exposition,
+un matériau ombré. **La rampe est la référence du masque** (`POINT_NOIR_ECRIT`) et une garde en fenêtre la refait :
+`./tools/run_photos.sh --plan=loupe-rampe-3d` échoue si 0-7/255 ne sortent plus à 0 ou si 8 sort à 0. **À refaire après
+tout changement de renderer, de viewport 3D, de caméra ou du matériau du sol** — rien d'headless ne la voit.
+
+### Les LED des murs respirent sur l'horloge de la manche, même au temps figé (2026-09-25)
+
+`MurLed.souffle(t)` (période 8,5 s, calée sur la musique) : ni `forcer_age` ni un `_physics_process` coupé ne l'arrêtent.
+La première preuve du masque de la fumée a vu A' ≠ A sur 830 329 pixels — toute la carte — en deux secondes ; ce que
+les sandwichs du 24/09 appelaient « la dérive à sens unique » était ce souffle. Leurs chiffres tiennent, mais **par chance
+de phase, pas par construction**. Tout sandwich doit figer les LED (`--led-murs-fige[=f]`) ou les couper
+(`--sans-led-murs`) ; le plan de preuve imprime l'état du bandeau et son lanceur le refuse s'il respire.
+
+### La caméra 2D glisse encore au temps figé : le lissage du regard converge sur le delta réel (2026-09-25)
+
+`RegardDuel.lisser` (appelé par `GameState._suivre_du_regard`) ne s'arrête jamais net : au temps figé, la caméra glisse
+d'une fraction de pixel, et la lightmap rééchantillonnée fait sauter les paliers du lavis, jusqu'à 204/255 sur quelques
+centaines de pixels. Signature : toutes les LUMIÈRES bougent, aucune ARÊTE de mur. Tout sandwich attend que le repère 2D
+tienne (0,0001 px, sur des pas de physique) puis le POSE (`_killcam_cadrage_tenu`), et l'imprime (6 décimales) à chaque
+prise. Pas un défaut du jeu — en jeu la caméra bouge de toute façon — : un piège de mesure.
+
+### Parcourir la grille case par case, pas par pas fixes (2026-09-25)
+
+Le masque cherche le premier mur que le rayon de vue rencontre. Huit pas fixes le long du rayon lisaient la grille huit
+fois par pixel et par couche, souvent dans la même case, et ne connaissaient l'entrée d'un mur qu'à un pas près :
+**+0,57 ms** par image (0,953). Un parcours case par case (une frontière franchie par pas, quatre cases au plus : aucune
+couche ne monte au-dessus d'une tuile) : **+0,14 ms** (0,988), et l'entrée exacte.
+
+### Une variante de shader n'est pas « le même shader » pour qui filtre par identité (2026-09-25)
+
+`IsoMateriaux.variante_definie()` fabrique un `Shader` NEUF : tout ce qui reconnaît ses matériaux par
+`mat.shader == SHADER_X` ne reconnaît plus la variante. `IsoVolumes._pousser_lightmaps` choisissait ainsi les couches à qui
+pousser la lightmap : la variante masquée n'en recevait aucune et **s'éclairait partout** (73 609 pixels fautifs contre
+12 855 sans masque). Aucune erreur, aucune suite rouge. Avant de poser une variante, chercher `shader ==` et
+`resource_path ==` sur le shader d'origine (`tools/banc_iso_beaute.gd` filtre encore par `resource_path`).
+
+### Une variante dont le shader ne compile pas paraît gratuite (2026-09-25)
+
+Une variante dont le shader ne compile pas ne dessine rien et **paraît gratuite** ; la garde headless ne compile pas les
+shaders sur le GPU ; seule la garde du lanceur (erreur de shader au journal) l'attrape. Le 25/09, une constante GLSL sans
+son type aurait fait passer V1b sous la règle des 3 % sans rien dessiner ; le lanceur de série refuse désormais toute
+prise dont le journal porte `SHADER ERROR` et arrête la série.
+
+### Une série de cadence n'est valide que si sa référence tient (2026-09-25)
+
+Règle de la session cloud, pour toute série en miroir : les trois prises de référence tiennent dans 5 % (plus rapide sur
+plus lente ≤ 1,05), sinon la série est SANS VERDICT — ni échec ni succès. Le miroir ne compense qu'une dérive régulière ;
+une machine qui sort du repos fait varier la référence elle-même (V1b : 74, 86, 86 — 1,162). Remède : cinq minutes de repos
+sans rien lancer, charge relue, une prise de chauffe non comptée. ⚠️ Le masque étant allumé par défaut, la référence
+d'une série sur la fumée se prend désormais avec `--sans-fumee-masque`.
+
+### Figer en patch chaque variante AU MOMENT où on la mesure (2026-09-25)
+
+Sans commit, une seule variante vit dans l'arbre : la suivante efface la précédente. Le 25/09, V1 du masque (la seule qui
+passait alors la règle) n'était plus restaurable par son seul shader — deux autres fichiers avaient changé avec le
+remède. Chaque variante mesurée se fige en patch (`git add -N` puis `git diff`) avant sa première prise.
+
 ### Une garantie vraie dans le monde n'est pas vraie à l'écran : la parallaxe des volumes en hauteur (2026-09-24)
 
 Chantier ISO13, lot E. Un volume iso vaut la lightmap sous lui, donc zéro au-dessus d'un sol noir. On
@@ -3250,6 +3368,35 @@ lissage coupé −75 % ; couches au sol, presque rien ; taire la couche là où 
 couche là où l'écran **affiché** derrière elle est noir (`hint_screen_texture`) : **zéro**, deux fois, sans
 rien retirer dans la lumière. Son coût, mesuré au calme : **+0,70 ms par image** (0,943, 1 % bas 66),
 hors de la règle des 3 %. Instrument non commité, rien changé dans le jeu : la décision est à Adrien. Détail : `docs/iso/iso13/plan_lots_d_e.md`.
+
+**Tranché le 2026-09-25 — Q31 voie A, Adrien : « le noir d'abord : la fumée s'arrête à la lumière ».** Le masque est
+**allumé par défaut** ; `--sans-fumee-masque` l'éteint (`--fumee-masque` reste accepté, sans effet). Il ne copie pas
+l'écran : chaque couche se tait là où ce que le pixel **montre** derrière elle s'affiche noir. Le rayon de vue (caméra
+orthographique), prolongé de la couche jusqu'au sol, traverse la grille des murs case par case ; la face, le dessus ou le
+sol qu'il rencontre d'abord est jugé **comme son propre shader l'écrit** (`volume_masque.gdshaderinc`, copie gardée ligne
+à ligne contre `sol_iso` et `mur_iso` par `tools/test_iso_gadgets.gd`) ; « noir » veut dire tous les canaux écrits sous
+8/255, le point noir de la sortie 3D (voir le piège de la courbe d'écran). Le sol exact ne se calcule que dans une
+**bande** près de ce seuil ; ailleurs, deux bornes prouvées suffisent (noir sûr si le canal le plus fort de la pâte × 1,4
+reste sous le point noir ; visible sûr si sa luminance × le plancher des facteurs l'atteint).
+
+Prix, règle 278 et règle de validité (séries en miroir du 25/09, pompe sous une fusée, vue unique) : copie d'écran
+0,943 (+0,70 ms) ; huit pas 0,953 ; case par case (V1) 0,988 ; la bande (V1b) 0,988 — mais V1b échouait à l'image ;
+ses corrections (coutures, couche qui démarre dans un mur, dérivées) : V1c 0,930 (`textureGrad`), V1d 0,953 (`textureLod`
+au niveau calculé), V1e 0,966 (dérivées tirées de la caméra), **V1f, la version commitée : 0,977, +0,28 ms par image,
+1 % bas 72 contre 75**, références 86/86/86. Preuve à l'image de V1f (2026-09-25, 20:38, `loupe-fusee-masque-preuve`,
+LED figées au sommet et au creux, caméra posée, A pris cinq fois) : **zéro fuite partout** ; zéro perte sur les faces et
+les dessus ; au sol 0 et 9 pertes, dont 8 à la frontière noir/éclairé et 1 sur une couture ; 4 et 28 « trous » (pixels
+noirs isolés du sol que la fumée couvrait), acceptés sur l'image. Planche : https://claude.ai/artifact/H1syqfk6ygyyf5E2G2hngE.
+**Un écart déclaré** : la face se lit avec l'antialiasing du sol et la matière au niveau 0 de ses mipmaps, là où le mur
+prend les siens sur son propre point — sans faute observée, pas exacte en théorie. **Et ce qu'il rapporte n'est pas
+établi** : V1e (la face exacte, 0,966) et V1f ont la **même médiane masquée, 84** ; la différence tient à la référence
+(87 contre 86), dans la précision de la mesure. La règle déclarée tranche pour V1f, et c'est elle qu'on applique ; V1e,
+exacte, reste la meilleure candidate si une mesure plus fine la place un jour sous les 3 %.
+
+L'usure d'essai est recopiée dans le masque **sous le même interrupteur** qu'`USURE_ESSAI` (garde de parité : l'une
+allumée implique l'autre). **Pour qui touche au sol ou aux murs : la copie doit suivre tout ce qui change leur couleur
+écrite** — sinon le masque juge un sol qui n'existe plus, et rien ne rougit hors de la garde ligne à ligne et d'une
+preuve à l'image. La preuve est à refaire sur l'état intégré (usure, 45°), chez Iso 1.
 
 ### Une prise polluée ne fait pas que du bruit : elle peut tourner le verdict (2026-09-24)
 
@@ -27121,6 +27268,15 @@ V3 froides au même instant, puis les dix corps ; la fusée et le noir ne change
 Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un complément du patch de banc, écrit contre la tête
 d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
+
+#### ISO13, Q31 — le masque de la fumée : « le noir d'abord » ✅ (2026-09-25, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
+
+La fumée de la fusée se tait là où ce que le pixel montre derrière elle s'affiche noir : **allumé par défaut**,
+`--sans-fumee-masque` l'éteint (la référence de toute série sur la fumée). V1f : 0,977 de la cadence (+0,28 ms), preuve à
+l'image passée au sommet et au creux des LED, zéro fuite. Le détail, les prix de chaque variante et l'écart déclaré de la
+face : « Pièges connus », la fumée de la fusée (« Tranché le 2026-09-25 »), et les pièges du 25/09 qui la précèdent.
+**Reste chez Iso 1** : refaire la preuve et le prix sur l'état intégré (usure, 45°) ; ajouter `loupe-rampe-3d` au lot en
+fenêtre.
 
 #### ISO13, lot E — le rayon dans l'air (`--faisceau`, éteint par défaut ; ISO7 Gadgets, fusionné en d9942c7)
 

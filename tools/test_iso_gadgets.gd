@@ -68,6 +68,8 @@ func _run() -> void:
 	_check("Protocol.VERSION reste 18", version == 18, str(version))
 	_les_shaders()
 	_le_faisceau()
+	_le_masque_de_la_fumee()
+	_les_parametres_existent()
 	await _les_deux_lightmaps()
 	_check("assez de vérifications (%d ≥ %d)" % [_verifications, PLANCHER], _verifications >= PLANCHER)
 	_sortir()
@@ -282,12 +284,13 @@ func _les_shaders() -> void:
 	# 2026-09-23 — le lissage reçoit désormais le point central déjà lu (`brute`) au lieu de le relire : la
 	# signature a changé, l'intention de cette garde n'a pas bougé. On vérifie donc EN PLUS que `brute`
 	# est elle-même lue avec `deux` — sans quoi la couche pourrait prendre la lightmap de l'autre joueur
-	# par cette nouvelle porte.
+	# par cette nouvelle porte. 2026-09-25 — `rayon` devient `nuage_rayon` (la variante masquée inclut l'usure, dont une
+	# locale s'appelle `rayon`) : même garde, nom seul changé.
 	_check("une couche lit la lightmap de la caméra qui la dessine (J1 ou J2)",
 		texte.contains("bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);")
 		and texte.contains("lightmap_pateuse(px, px, aa, deux)")
 		and texte.contains("vec3 brute = lire_lightmap(px, deux);")
-		and texte.contains("lire_lightmap_lissee(px, max(rayon * lissage_rayon, 1.0), deux, brute)")
+		and texte.contains("lire_lightmap_lissee(px, max(nuage_rayon * lissage_rayon, 1.0), deux, brute)")
 		and texte.contains("s += lire_lightmap(p + vec2(cos(t), sin(t)) * r, deux);"))
 	_check("une couche recopie la lightmap sans gain : 0 sans lumière, jamais plus claire",
 		texte.contains("ALBEDO = c;") and texte.contains("unshaded"))
@@ -475,6 +478,253 @@ func _le_faisceau() -> void:
 		texte.contains("[faisceau] allumé — le cœur chaud seul"))
 
 
+
+## ISO13, Q31 voie A — le masque de la fumée, allumé par défaut (`--sans-fumee-masque` l'éteint). Éteint, le jeu compile le
+## shader des volumes d'avant ; allumé, chaque couche passe à la variante FUMEE_MASQUE, dont le seul ajout est de TAIRE la
+## couche (jamais de l'éclaircir) là où ce que le pixel montre s'affiche noir.
+func _le_masque_de_la_fumee() -> void:
+	print("\n[Le masque de la fumée — Q31, voie A]")
+	var v := IsoVolumes.new()
+	# ALLUMÉ PAR DÉFAUT depuis le 2026-09-25 (Q31, Adrien : le noir d'abord, au prix de 3 % au plus).
+	_check("le masque est ALLUMÉ par défaut (Q31) ; --sans-fumee-masque l'éteint",
+		bool(v.get("masque_fumee")) and FileAccess.get_file_as_string("res://iso_volumes.gd").contains(
+			"elif arg == DRAPEAU_SANS_MASQUE_FUMEE:\n\t\t\tmasque_fumee = false"))
+	v.set("masque_fumee", false)
+	var eteint: ShaderMaterial = v.call("_materiau_volume")
+	_check("éteint, la couche garde le shader des volumes d'avant", eteint.shader == IsoVolumes.SHADER_VOLUME)
+	v.set("masque_fumee", true)
+	var allume: ShaderMaterial = v.call("_materiau_volume")
+	_check("allumé, la couche passe à la variante FUMEE_MASQUE",
+		allume.shader != IsoVolumes.SHADER_VOLUME and allume.shader.code.contains("#define FUMEE_MASQUE\n"))
+	_check("une seule variante pour toutes les couches (compilée une fois)",
+		(v.call("_materiau_volume") as ShaderMaterial).shader == allume.shader)
+	_check("la variante est retenue pour recevoir les lightmaps", v.get("_shader_masque") == allume.shader)
+	# La variante est un Shader NEUF, sans chemin : un banc qui reconnaît les couches par `==` ou par `resource_path` la
+	# saute en silence (piège du 2026-09-25). Les deux qui le faisaient la reconnaissent à son #define.
+	_check("les bancs reconnaissent la variante masquée (loupe, banc de la beauté)",
+		allume.shader.resource_path == ""
+		and FileAccess.get_file_as_string("res://tools/loupe.gd").contains('sh.code.contains("#define FUMEE_MASQUE\\n")')
+		and FileAccess.get_file_as_string("res://tools/banc_iso_beaute.gd").contains('sh.code.contains("#define FUMEE_MASQUE\\n")'))
+	# La bascule des bancs, sur place : la même couche passe d'un shader à l'autre, sans être recréée.
+	v.set("_suivis", {"essai": {"mats": [eteint, allume], "noeuds": [], "retires": []}})
+	v.call("poser_masque_fumee", false)
+	_check("la bascule éteint le masque sur les couches déjà posées",
+		eteint.shader == IsoVolumes.SHADER_VOLUME and allume.shader == IsoVolumes.SHADER_VOLUME)
+	v.call("poser_masque_fumee", true)
+	_check("la bascule rallume le masque sur les mêmes couches",
+		eteint.shader == v.get("_shader_masque") and allume.shader == v.get("_shader_masque")
+		and eteint.shader.code.contains("#define FUMEE_MASQUE\n"))
+	v.set("_suivis", {})
+	v.free()
+	var code := IsoVolumes.SHADER_VOLUME.code
+	# Le bloc du FRAGMENT qui tait la couche : celui qui appelle le masque (un premier `#ifdef FUMEE_MASQUE`, plus haut, ne
+	# déclare que l'include ; un second, en tête du fragment, ne prend que les dérivées).
+	var debut := code.rfind("#ifdef FUMEE_MASQUE", code.find("masque_montre_noir(monde"))
+	var fin := code.find("#endif", debut)
+	var bloc := code.substr(debut, fin - debut) if debut >= 0 and fin > debut else ""
+	_check("le masque vit sous #ifdef, pas derrière un uniforme : éteint, rien de plus à exécuter", not bloc.is_empty())
+	var decl := code.substr(code.find("#ifdef FUMEE_MASQUE"), 200)
+	_check("ce que le pixel montre n'est compilé que dans la variante (l'include sous #ifdef, avant le fragment)",
+		decl.contains('#include "res://volume_masque.gdshaderinc"') and code.find("#ifdef FUMEE_MASQUE") < code.find("void fragment()"))
+	_check("il ne fait que TAIRE la couche : aucune écriture de couleur ni d'opacité dans le bloc",
+		bloc.contains("discard;") and not bloc.contains("ALBEDO") and not bloc.contains("ALPHA") and not bloc.contains("a ="))
+	_check("il juge ce que le pixel MONTRE, le long du rayon de vue (caméra orthographique)",
+		bloc.contains("masque_montre_noir(monde, -INV_VIEW_MATRIX[2].xyz, deux,"))
+	# V1e — le masque lit dans une branche, où les dérivées implicites ne sont pas définies : il reçoit le pas d'un pixel
+	# d'écran TIRÉ DE LA CAMÉRA (orthographique), calculé dans le bloc, après le discard — plus aucun dFdx dans la fumée
+	# (V1c et V1d en prenaient deux en tête du fragment, sur tous les fragments : +0,43 ms avec le reste).
+	_check("les dérivées du masque sont tirées de la caméra, après le discard ; aucun dFdx/dFdy dans la fumée",
+		bloc.contains("INV_VIEW_MATRIX[0].xyz * (2.0 / (VIEWPORT_SIZE.x * PROJECTION_MATRIX[0][0]))")
+		and bloc.contains("INV_VIEW_MATRIX[1].xyz * (2.0 / (VIEWPORT_SIZE.y * PROJECTION_MATRIX[1][1]))")
+		and not _sans_commentaires(code).contains("dFd")
+		and not _sans_commentaires(FileAccess.get_file_as_string("res://volume_masque.gdshaderinc")).contains("dFd"))
+	# La taille des matières, constante dans le masque (`TAILLE_MATIERE`) : la même que celle des textures du sol et du mur.
+	var tex_sol := load("res://assets/iso/sol.png") as Texture2D
+	var tex_face := load("res://assets/iso/face_mur.png") as Texture2D
+	_check("les deux matières font 512 px, la taille que le masque tient pour constante (niveau de mipmap)",
+		tex_sol != null and tex_face != null and tex_sol.get_width() == 512 and tex_sol.get_height() == 512
+		and tex_face.get_width() == 512 and tex_face.get_height() == 512
+		and FileAccess.get_file_as_string("res://volume_masque.gdshaderinc").contains("const vec2 TAILLE_MATIERE = vec2(512.0);")
+		and IsoMateriaux.TEXTURE_SOL == tex_sol and IsoMateriaux.TEXTURE_FACE_MUR == tex_face)
+	var inc := FileAccess.get_file_as_string("res://volume_masque.gdshaderinc")
+	_check("l'include n'écrit ni couleur ni opacité", not inc.is_empty() and not inc.contains("ALBEDO") and not inc.contains("ALPHA"))
+	_check("le rayon est prolongé jusqu'au sol et traverse la grille CASE PAR CASE, frontière par frontière",
+		inc.contains("float t_sol = monde.y / max(-vue.y, 1e-3);") and inc.contains("for (int i = 0; i < 4; i++) {")
+		and inc.contains("float s_fin = min(min(prochain.x, prochain.y), 1.0);"))
+	_check("quatre cases suffisent : aucune couche ne monte au-dessus d'une tuile (son rayon parcourt moins d'une case)",
+		float(IsoVolumes.VOLUME_FUSEE["hauteur"]) <= 1.0 and IsoVolumes.VOLUMES.values().all(
+			func(v: Dictionary) -> bool: return float(v["hauteur"]) <= 1.0))
+	_check("« noir à l'écran » = TOUS les canaux écrits sous le point noir de la sortie 3D (8/255, rampes du 25/09)",
+		inc.contains("const float POINT_NOIR_ECRIT = 8.0 / 255.0;") and inc.contains("return max(c.r, max(c.g, c.b)) < POINT_NOIR_ECRIT;")
+		and not inc.contains("pate_vers_affiche(pate_c)") and not inc.contains("sol_facteur_min"))
+	_check("le SOL se juge sur la couleur que sol_iso ÉCRIT, et une FACE sur celle que mur_iso écrit",
+		inc.contains("return sol_montre_noir(p_sol, deux, aa_sol, px_monde_sol, g_x, g_y);")
+		and inc.contains("return ecran_noir(face_ecrite(monde + vue * (t_sol * s), n, deux, aa_sol, haut, px_monde_sol));")
+		and inc.contains("vec3 c = pate_facteur(lightmap_pateuse_lue(brute, motif, aa), matiere * contact);")
+		and inc.contains("return mur_temperature_de(c, brute);"))
+	_check("le dessus d'un mur haut est noir strict ; celui d'un muret, la pâte de sa case puis la température",
+		inc.contains("if (haut >= mur_haut_px - 0.5) {") and inc.contains("ecran_noir(mur_temperature_de(pate(l, lum, style, q.xz"))
+	_check("un point du sol tombé dans une case de mur (le pied exact d'un mur) juge la face de cette frontière",
+		inc.contains("return ecran_noir(face_ecrite(vec3(p_sol.x, 0.0, p_sol.y), n, deux, aa_sol, o_fin.r > 0.5 ? mur_haut_px : muret_px,\n\t\t\tpx_monde_sol));"))
+	# V1c — une couche qui DÉMARRE dans la case d'un mur n'y passe la profondeur que sur sa surface : on juge la surface par
+	# où le rayon, remonté vers la caméra, sort de la case — plus jamais « caché » d'office (21 pixels perdus, y = 605).
+	_check("une couche qui démarre dans un mur juge la surface par où le rayon y est entré (face ou dessus), pas « caché »",
+		inc.contains("if (s_haut >= max(s_face.x, s_face.y)) {")
+		and inc.contains("return dessus_montre_noir(monde + vue * (t_sol * s_haut), haut, deux, aa_sol);")
+		and inc.contains("return ecran_noir(face_ecrite(monde + vue * (t_sol * (par_x ? s_face.x : s_face.y)), n_face, deux,")
+		and not inc.contains("// La couche est DANS le mur : le mur la cache, rien à montrer."))
+	# V1c — chaque surface jugée prend les dérivées qu'elle prend elle-même : la face, `fwidth(motif)` et `fwidth(monde)` ;
+	# le sol, `fwidth(px)` ; les mipmaps par `textureGrad` (dans une branche, `texture()` n'a pas de dérivées définies).
+	var mur_face := FileAccess.get_file_as_string("res://mur_iso.gdshader")
+	# V1f — l'écart DÉCLARÉ de la face (session cloud, 2026-09-25 19:58) : l'aa et px_monde du sol, la matière au niveau 0,
+	# là où le mur prend les siens par fwidth. Le sol, lui, garde son niveau de mipmap exact (λ dans la bande).
+	_check("la face : l'écart déclaré (V1f) — aa et px_monde du sol, matière au niveau 0 ; le sol garde λ",
+		mur_face.contains("float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);")
+		and inc.contains("vec3 face_ecrite(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde) {")
+		and inc.contains("float matiere = mix(1.0, textureLod(texture_face, motif / periode_face_px, 0.0).r, force_matiere);")
+		and inc.contains("return max(0.0, log2(max(length(g_x * TAILLE_MATIERE), length(g_y * TAILLE_MATIERE))));")
+		and not inc.contains("texture(sol_texture_sol") and not inc.contains("textureGrad("))
+	_check("le sol : aa et px_monde de sol_iso (fwidth de son point), tirés des mêmes dérivées",
+		FileAccess.get_file_as_string("res://sol_iso.gdshader").contains("float aa = clamp((fwidth(px.x) + fwidth(px.y)) / 6.0, 0.02, 0.5);")
+		and FileAccess.get_file_as_string("res://sol_iso.gdshader").contains("float px_monde = max(fwidth(px.x), fwidth(px.y));")
+		and inc.contains("float aa_sol = clamp((abs(g_x.x) + abs(g_y.x) + abs(g_x.y) + abs(g_y.y)) / 6.0, 0.02, 0.5);")
+		and inc.contains("float px_monde_sol = max(abs(g_x.x) + abs(g_y.x), abs(g_x.y) + abs(g_y.y));"))
+	_check("la dérivée d'un point du plan touché : le rayon voisin, décalé, ramené le long de la vue",
+		inc.contains("return d - vue * (dot(d, n3) / dot(vue, n3));"))
+	# LE SOL, RECOPIÉ de `sol_iso.gdshader` : chaque ligne de son fragment qui fait la couleur se retrouve dans `sol_ecrit`,
+	# au préfixe `sol_` près des réglages que la couche porte sous un autre nom.
+	var sol_src := FileAccess.get_file_as_string("res://sol_iso.gdshader")
+	var corps_sol := _fonction_glsl(inc, "vec3 sol_ecrit(vec2 px, bool deux, float aa, float px_monde, vec2 g_x, vec2 g_y) {")
+	# La matière : le seul écart de lecture, déclaré — `textureGrad` avec les dérivées du sol, là où le sol lit `texture()`
+	# hors de tout branchement (V1c : dans une branche, le niveau de mipmap n'est pas défini).
+	_check("la matière du sol : la même texture, la même adresse, les dérivées du sol (textureGrad)",
+		sol_src.contains("float matiere = mix(1.0, texture(texture_sol, px / periode_sol_px).r, force_matiere);")
+		and corps_sol.contains("float matiere = mix(1.0, textureLod(sol_texture_sol, px / sol_periode_sol_px,\n\t\tniveau_mip(g_x / sol_periode_sol_px, g_y / sol_periode_sol_px)).r, sol_force_matiere);"))
+	var lignes_sol := ["vec2 px_lu = px + glisse * dalles;", "vec2 dans_dalle = abs(fract(px / dalle_px) - 0.5) * dalle_px;",
+		"float au_bord = dalle_px * 0.5 - max(dans_dalle.x, dans_dalle.y);",
+		"float joint = dalles * pate_trait_de_bord(au_bord, max(joint_dalle_px, px_monde), px_monde);",
+		"float dalle = mix(1.0, joint_dalle_reste, joint);", "c = pate_facteur(c, matiere * dalle);",
+		"if (temperature_seuil_haut <= 0.0) {", "c = pate_temperature(c, temperature);",
+		"} else if (neutre_avant_pate > 0.5) {",
+		"c = pate_temperature_graduee_neutre(c, temperature, temperature_seuil_bas, temperature_seuil_haut,",
+		"c = pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut);",
+		"c = pate_facteur(c, contact_des_corps(px));"]
+	var manque_sol: Array = []
+	for ligne: String in lignes_sol:
+		var chez_nous := ligne
+		for nom: String in ["texture_sol", "periode_sol_px", "force_matiere", "joint_dalle_reste", "joint_dalle_px", "dalle_px",
+				"temperature_seuil_bas", "temperature_seuil_haut", "neutre_avant_pate", "temperature"]:
+			chez_nous = RegEx.create_from_string("(?<![A-Za-z_])" + nom + "(?![A-Za-z_])").sub(chez_nous, "sol_" + nom, true)
+		if not sol_src.contains(ligne) or not corps_sol.contains(chez_nous):
+			manque_sol.append(ligne)
+	_check("les %d lignes du sol sont celles de sol_iso.gdshader (au préfixe sol_ près)" % lignes_sol.size(),
+		manque_sol.is_empty(), str(manque_sol))
+	_check("la neutralité se lit sur la lumière déjà lue, à la même adresse que le sol (une lecture de moins)",
+		sol_src.contains("vec3 brute = lire_lightmap(px_lu, deux);") and corps_sol.contains("vec3 lu = lire_lightmap(px_lu, deux);")
+		and corps_sol.contains("vec3 brute = lu;"))
+	_check("V1b : le sol exact ne se calcule que dans la bande — noir sûr sous 1/1,4 du point noir, visible sûr au-dessus",
+		inc.contains("const float SOL_HAUSSE_MAX = 1.4;")
+		and inc.contains("if (max(c.r, max(c.g, c.b)) * SOL_HAUSSE_MAX < POINT_NOIR_ECRIT) {")
+		and inc.contains("float plancher_sol = (1.0 - sol_force_matiere) * dalle * contact_des_corps(px);")
+		and inc.contains("plancher_sol *= mix(1.0, USURE_SOL_PLUS_SOMBRE, usure * smoothstep(USURE_SEUILS.x, USURE_SEUILS.y, pate_luminance(c)));")
+		and inc.contains("if (pate_luminance(c) * plancher_sol >= POINT_NOIR_ECRIT) {")
+		and inc.contains("return ecran_noir(sol_ecrit(px, deux, aa, px_monde, g_x, g_y));"))
+	# V1c — LES COUTURES : à moins de SOL_COUTURE_PX d'un saut du sol (bord de tuile, `marge` de part et d'autre ; les
+	# cellules de 6 px de l'usure d'essai), les deux côtés sont jugés et le noir l'emporte (16 pixels de fuite sans elles).
+	_check("V1c : aux coutures du sol (bord de tuile, marges, cellules de l'usure), les deux côtés jugés, le noir l'emporte",
+		inc.contains("const float SOL_COUTURE_PX = 0.008;")
+		and inc.contains("float c = min(min(d, tuile_px - d), min(abs(d - marge), abs(d - (tuile_px - marge))));")
+		and sol_src.contains("float marge = joint_2d_px + 0.5;") and sol_src.contains("vec2 glisse = step(dans_tuile, vec2(marge)) * marge - step(vec2(tuile_px - marge), dans_tuile) * marge;")
+		and FileAccess.get_file_as_string("res://iso_usure.gdshaderinc").contains("vec2 cellule = floor(px / 6.0);")
+		and inc.contains("float u = mod(x, 6.0);")
+		and inc.contains("return sol_montre_noir_au_point(px + e, deux, aa, px_monde, g_x, g_y)\n\t\t|| sol_montre_noir_au_point(px - e, deux, aa, px_monde, g_x, g_y)"))
+	_check("le contact des corps : la même fonction au caractère près que dans sol_iso.gdshader",
+		_fonction_glsl(inc, "float contact_des_corps(vec2 p) {") != ""
+		and _fonction_glsl(inc, "float contact_des_corps(vec2 p) {") == _fonction_glsl(sol_src, "float contact_des_corps(vec2 p) {"))
+	_check("le ton du damier vaut 1 (TON_EXPOSANT à 0) : la couche peut s'en passer", IsoMateriaux.TON_EXPOSANT == 0.0)
+	# L'USURE, EN PARITÉ avec le sol (Q30) : la même variante, le même interrupteur, les mêmes lignes.
+	var sans_usure: Shader = IsoVolumes.variante_masque(false)
+	var avec_usure: Shader = IsoVolumes.variante_masque(true)
+	_check("parité : sans usure, la variante masquée ne porte pas USURE_ESSAI ; avec, elle la porte (et reste masquée)",
+		sans_usure.code.contains("#define FUMEE_MASQUE\n") and not sans_usure.code.contains("#define USURE_ESSAI\n")
+		and avec_usure.code.contains("#define FUMEE_MASQUE\n") and avec_usure.code.contains("#define USURE_ESSAI\n"))
+	var vol_src := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	var mat_src := FileAccess.get_file_as_string("res://iso_materiaux.gd")
+	_check("parité : la fumée lit l'interrupteur même du sol et des murs (IsoMateriaux.usure_essai_active)",
+		vol_src.contains("mat.shader = variante_masque(IsoMateriaux.usure_essai_active())")
+		and mat_src.contains("if usure_essai_active():\n\t\tposer_usure_essai(materiau, true)"))
+	var usure_src := FileAccess.get_file_as_string("res://iso_usure.gdshaderinc")
+	var ligne_usure := "c = pate_facteur(c, usure_poids(c, usure_sol(px, usure_mur_pres(px), px_monde)));"
+	_check("l'usure du sol : la ligne de sol_iso, à sa place (après la température, avant le contact)",
+		sol_src.contains(ligne_usure) and corps_sol.contains(ligne_usure)
+		and corps_sol.find(ligne_usure) > corps_sol.find("pate_temperature_graduee(c, sol_temperature")
+		and corps_sol.find(ligne_usure) < corps_sol.find("c = pate_facteur(c, contact_des_corps(px));"))
+	_check("la proximité des murs : la fonction de iso_usure au caractère près",
+		_fonction_glsl(inc, "float usure_mur_pres(vec2 px) {") != ""
+		and _fonction_glsl(inc, "float usure_mur_pres(vec2 px) {") == _fonction_glsl(usure_src, "float usure_mur_pres(vec2 px) {"))
+	_check("le plus sombre de l'usure au sol est bien 0,45 (gravats) — le grain ne descend pas sous 0,84",
+		inc.contains("const float USURE_SOL_PLUS_SOMBRE = 0.45;") and usure_src.contains("f = min(f, mix(1.0, 0.45, max(eclat, 0.5 * ombre)));")
+		and usure_src.contains("float f = 1.0 - 0.16 * mur_pres * pate_bruit(px / 6.0);"))
+	_check("l'usure d'une face : l'appel de mur_iso, sur le point montré",
+		FileAccess.get_file_as_string("res://mur_iso.gdshader").contains("c = pate_facteur(c, usure_poids(c, usure_face(monde.xz, n, tangente, hauteur_face, taille.y, px_monde)));")
+		and inc.contains("c = pate_facteur(c, usure_poids(c, usure_face(e.xz, n, tangente, e.y, haut, px_monde)));"))
+	var manque_reglages: Array = []
+	for nom: String in IsoVolumes.PARAMETRES_DU_SOL:
+		if RegEx.create_from_string("uniform [A-Za-z0-9_]+ " + nom + "\\b").search(sol_src) == null \
+				or RegEx.create_from_string("uniform [A-Za-z0-9_]+ " + String(IsoVolumes.PARAMETRES_DU_SOL[nom]) + "\\b").search(inc) == null:
+			manque_reglages.append(nom)
+	var mur_src := FileAccess.get_file_as_string("res://mur_iso.gdshader")
+	for nom: String in IsoVolumes.TEMPERATURE_DU_MUR:
+		if RegEx.create_from_string("uniform [A-Za-z0-9_]+ " + nom + "\\b").search(mur_src) == null \
+				or RegEx.create_from_string("uniform [A-Za-z0-9_]+ " + String(IsoVolumes.TEMPERATURE_DU_MUR[nom]) + "\\b").search(inc) == null:
+			manque_reglages.append("mur:" + nom)
+	for nom: String in IsoVolumes.CONTACT_PAR_IMAGE:
+		if RegEx.create_from_string("uniform [A-Za-z0-9_]+ " + nom + "\\b").search(inc) == null:
+			manque_reglages.append("image:" + nom)
+	_check("les réglages recopiés du sol et du mur sont des uniformes des deux côtés", manque_reglages.is_empty(),
+		str(manque_reglages))
+	# Le glissement de la lecture du sol, RECOPIÉ de `sol_iso.gdshader` : les mêmes trois lignes.
+	var sol_code := FileAccess.get_file_as_string("res://sol_iso.gdshader")
+	var glissement := ["vec2 dans_tuile = fract(p", "float marge = joint_2d_px + 0.5;",
+		"vec2 glisse = step(dans_tuile, vec2(marge)) * marge - step(vec2(tuile_px - marge), dans_tuile) * marge;"]
+	var glisse_ok := true
+	for ligne: String in glissement:
+		glisse_ok = glisse_ok and inc.contains(ligne) and sol_code.contains(ligne)
+	_check("le sol se lit où sol_iso.gdshader le lit : glissé vers le centre de la tuile près d'un joint",
+		glisse_ok and inc.contains("vec3 lu = lire_lightmap(px_lu, deux);") and inc.contains("vec2 px_lu = px + glisse * dalles;")
+		and sol_code.contains("vec2 px_lu = px + glisse * dalles;"))
+	# Les cinq fonctions du mur, RECOPIÉES : elles ne doivent pas diverger de `mur_iso.gdshader`.
+	var mur_code := FileAccess.get_file_as_string("res://mur_iso.gdshader")
+	for sig in ["vec3 lire_etalon(vec2 px) {", "vec3 lire_lumiere(vec2 px, bool deux, vec3 ref, float plancher) {",
+			"vec3 lire_lumiere_moyenne(vec2 p, vec2 le_long, bool deux, vec3 ref, float plancher) {",
+			"vec3 lightmap_pateuse_lue(vec3 c, vec2 motif, float aa) {", "vec2 occupe(vec2 px) {"]:
+		_check("« %s » : la même au caractère près que dans mur_iso.gdshader" % sig.trim_suffix(" {"),
+			_fonction_glsl(inc, sig) != "" and _fonction_glsl(inc, sig) == _fonction_glsl(mur_code, sig))
+	# Les réglages recopiés du mur existent des deux côtés, sous le même nom (sinon la copie est muette).
+	var manquants: Array = []
+	for nom: String in IsoVolumes.PARAMETRES_DU_MUR:
+		var motif := RegEx.create_from_string("uniform [A-Za-z0-9_]+ " + nom + "\\b")
+		if motif.search(mur_code) == null or motif.search(inc) == null:
+			manquants.append(nom)
+	_check("les %d réglages recopiés du mur sont des uniformes du mur ET de l'include" % IsoVolumes.PARAMETRES_DU_MUR.size(),
+		manquants.is_empty(), str(manquants))
+	var texte := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	var pousse := texte.substr(texte.find("func _pousser_lightmaps("), 600)
+	_check("les lightmaps vont AUSSI à la variante masquée (sans elles, la couche lit la texture par défaut et s'éclaire)",
+		pousse.contains("s == SHADER_VOLUME or (s != null and s == _shader_masque)"))
+	_check("le drapeau dit ce qu'il allume, lu sur la variante posée (la preuve qu'il a porté)",
+		texte.contains("[fumée masque] allumé — variante FUMEE_MASQUE posée"))
+
+
+## Le corps d'une fonction GLSL, de sa signature à l'accolade fermante en début de ligne ; "" si absente.
+func _fonction_glsl(code: String, signature: String) -> String:
+	var debut := code.find(signature)
+	if debut < 0:
+		return ""
+	var fin := code.find("\n}\n", debut)
+	return code.substr(debut, fin + 3 - debut) if fin > debut else ""
+
+
 func _des_images_seulement(main: Node, p: Node, poses: Dictionary) -> void:
 	print("\n[Les images ne sont que des images]")
 	var miroirs: Node = p.get("_miroirs")
@@ -524,6 +774,55 @@ static func _ecart(a: Dictionary, b: Dictionary) -> String:
 		if not b.has(k) or b[k] != a[k]:
 			return "%s : %s → %s" % [k, str(a[k]), str(b.get(k))]
 	return ""
+
+
+## 2026-09-25 — `set_shader_parameter` sur un nom qu'aucun uniforme ne porte ne dit RIEN : ni erreur, ni avertissement,
+## la valeur est perdue. Le renommage des uniformes du nuage (`centre`, `rayon`, `angle`, `coeur`, `graine` → `nuage_*`,
+## que l'usure incluse dans la variante masquée déclare aussi en locales) l'aurait laissé passer en silence. Chaque nom
+## posé EN DUR par `iso_volumes.gd` sur un matériau de fumée doit être un uniforme du shader qui le reçoit.
+func _les_parametres_existent() -> void:
+	print("\n[Chaque paramètre posé sur la fumée existe dans son shader]")
+	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
+	var volume := IsoVolumes.SHADER_VOLUME
+	var masque: Shader = IsoVolumes.variante_masque(true)
+	var manque: Array = []
+	var vus := 0
+	for f: Array in [["_suivre_toile", volume], ["_materiau_volume", volume], ["_poser_couches", volume],
+			["_recopier_le_mur", masque]]:
+		var corps := _fonction_gd(src, String(f[0]))
+		if corps.is_empty():
+			manque.append("fonction introuvable : " + String(f[0]))
+			continue
+		for m in RegEx.create_from_string('set_shader_parameter\\("([A-Za-z_0-9]+)"').search_all(corps):
+			vus += 1
+			if not _a_l_uniforme(f[1] as Shader, m.get_string(1)):
+				manque.append("%s : %s" % [f[0], m.get_string(1)])
+	# Les lightmaps, posées par nom calculé sur les couches (et sur la variante masquée) : les noms réels.
+	for nom in ["lumiere_1", "lumiere_2", "canevas_1_x", "canevas_1_y", "canevas_1_o", "canevas_2_x", "canevas_2_y",
+			"canevas_2_o", "taille_1", "taille_2", "style"]:
+		vus += 1
+		if not _a_l_uniforme(volume, nom) or not _a_l_uniforme(masque, nom):
+			manque.append("_pousser_lightmaps : " + nom)
+	_check("les %d paramètres posés en dur sur la fumée sont des uniformes de leur shader" % vus,
+		vus >= 20 and manque.is_empty(), str(manque))
+
+
+## Un code GLSL sans ses commentaires de ligne : une garde qui interdit un appel ne doit pas rougir sur le commentaire qui
+## raconte pourquoi il a été retiré.
+func _sans_commentaires(code: String) -> String:
+	return RegEx.create_from_string("//[^\\n]*").sub(code, "", true)
+
+
+## Le corps d'une fonction GDScript de premier niveau, jusqu'à la suivante.
+func _fonction_gd(code: String, nom: String) -> String:
+	var debut := code.find("\nfunc %s(" % nom)
+	if debut < 0:
+		return ""
+	var fin := code.find("\nfunc ", debut + 1)
+	var fin_statique := code.find("\nstatic func ", debut + 1)
+	if fin_statique >= 0 and (fin < 0 or fin_statique < fin):
+		fin = fin_statique
+	return code.substr(debut, (fin if fin > 0 else code.length()) - debut)
 
 
 func _a_l_uniforme(shader: Shader, nom: String) -> bool:
