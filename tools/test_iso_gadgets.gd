@@ -777,15 +777,16 @@ static func _ecart(a: Dictionary, b: Dictionary) -> String:
 	return ""
 
 
-## ESSAI (session cloud, 2026-09-25 21:41) — le cœur de la fusée posée, éteint par défaut : le choix d'ISO3 et d'ISO4 (le
-## voxel remplace le cœur, sans émettre) reste le jeu tant qu'Adrien n'a pas tranché. L'essai reprend le cœur de la comète.
+## Q34 = C (Adrien, 2026-09-26) — le cœur de la fusée posée, PAR DÉFAUT : presque blanc au plein feu, puis de la couleur
+## de la lumière. `--sans-fusee-coeur` rend le choix d'ISO3 et d'ISO4 (le voxel remplace le cœur, sans émettre).
 func _le_coeur_de_la_fusee() -> void:
-	print("\n[Le cœur de la fusée posée — essai]")
+	print("\n[Le cœur de la fusée posée — Q34]")
 	var v := IsoVolumes.new()
 	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
-	_check("l'essai est éteint par défaut (coeur_fusee = 0) : le voxel remplace le cœur, comme ISO3/ISO4 l'ont voulu",
-		int(v.get("coeur_fusee")) == 0)
-	_check("le cœur ne se pose que si l'essai est allumé",
+	_check("par défaut, le point presque blanc au plein feu (coeur_fusee = 2, Q34 = C) ; --sans-fusee-coeur l'éteint",
+		int(v.get("coeur_fusee")) == 2
+		and src.contains("elif arg == DRAPEAU_SANS_COEUR_FUSEE:\n\t\t\tcoeur_fusee = 0"))
+	_check("le cœur ne se pose que s'il est allumé",
 		src.contains("\tif coeur_fusee > 0:\n\t\t_suivre_coeur_fusee(f, lumiere, energie, relative, vus)"))
 	_check("le cœur posé est celui de la comète : 10 px, à bord franc, de la couleur de la lumière",
 		is_equal_approx(IsoVolumes.TAILLE_COEUR_FUSEE, 10.0) and src.contains("_poser_halo(e, 0, p, 10.0, couleur, eclat, 1)")

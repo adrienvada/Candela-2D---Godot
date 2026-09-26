@@ -27278,7 +27278,7 @@ Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un comp
 d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
 
-#### ISO13 — la fusée comme son illustration : le point de braise en essai 🟡 (2026-09-25, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
+#### ISO13 — la fusée comme son illustration : le point de braise PAR DÉFAUT (Q34 = C) ✅ (2026-09-25/26, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
 
 Comparée à l'illustration « Créer en ligne » (planche : https://claude.ai/artifact/R7wAtpZyWJakiSdbfaTiGg, plan
 `loupe-fusee-illustration`), la fusée posée à plein feu a le bon sol éclairé, mais **pas de point de braise**.
@@ -27297,9 +27297,14 @@ point payées à l'image : posé à la hauteur de la lumière (0,15 tuile), le h
 centre — un anneau, pas un point ; il est au sommet de la braise. Et son éclat, repris de la comète (énergie × opacité du
 cœur 2D), s'effaçait au résidu là où la 2D montre encore le point : il ne tombe plus sous l'opacité du cœur 2D. Saillie du
 point sur son entourage (défaut / rouge / presque blanc) : plein feu +11 / +48 / +92 ; braise +3 / +94 / +94 ; agonie
-+28 / +45 / +50 ; résidu +4 / +23 / +24. **Question à Adrien** (posée par la session cloud) : rien, rouge, ou presque blanc
-au plein feu ; et le rythme — le rouge ne dure que 2 s, la fumée n'est pleine qu'à 3 s, l'illustration montre un instant que
-le jeu n'a jamais.
++28 / +45 / +50 ; résidu +4 / +23 / +24.
+
+**Q34 = C, tranché par Adrien le 2026-09-26 : le point presque blanc au plein feu, puis de la couleur de la lumière, EST LE
+DÉFAUT** (`IsoVolumes.coeur_fusee` = 2) ; `--sans-fusee-coeur` rend le choix d'ISO3/ISO4, `--fusee-coeur` le point sans le
+blanc. La vue de dessus garde son point rouge (rien de la 2D ne change). **L'exception à « jamais de blanc »** (`fusee.gd`,
+FU2.1, « c'est une fusée de marine, pas un projecteur ») : elle ne vaut QUE pour ce point, qui n'éclaire rien ; la règle
+reste entière pour la LUMIÈRE, et le masque de la fumée comme l'éblouissement ne changent pas. Coût : un quad de plus par
+fusée posée et par vue (`_halos(c, 1)`, un appel de dessin ; aucune série de cadence demandée pour ce point).
 
 **Les 8° vers l'orange, mesurés, et rien à corriger** : la lightmap sous la fusée est à 5,5° (126, 36, 27) pour une lumière à
 356° ; divisée par la lumière, elle donne (1 ; 0,94 ; 0,62), le brun des tuiles 2D. C'est la lumière 2D, la seule vérité du

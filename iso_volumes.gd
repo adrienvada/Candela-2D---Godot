@@ -92,13 +92,14 @@ var faisceaux_actifs := false
 ## l'éteint — la référence de toute série de cadence sur la fumée. À poser AVANT que les couches naissent, comme
 ## `couches_fusee` — une couche déjà créée garde son shader (les bancs basculent par `poser_masque_fumee`).
 var masque_fumee := true
-## ESSAI (session cloud, 2026-09-25 21:41 ; Adrien tranchera sur la planche) — le point de braise de la fusée POSÉE. En 2D, le
-## cœur incandescent (`fusee.gd`, `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est
-## une information de jeu, la position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et
-## ne l'émet pas — le choix reste le défaut. L'essai rend, par un halo d'ici et non par le voxel, le cœur que la comète
-## porte déjà en vol (10 px, de la couleur de la lumière). 0 : éteint (défaut) ; 1 : `--fusee-coeur`, le cœur rouge puis
-## orange ; 2 : `--fusee-coeur-blanc`, presque blanc au plein feu, qui revient au rouge avec la température.
-var coeur_fusee := 0
+## Q34 = C (Adrien, 2026-09-26) — le point de braise de la fusée POSÉE, PAR DÉFAUT. En 2D, le cœur incandescent (`fusee.gd`,
+## `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est une information de jeu, la
+## position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et ne l'émet pas ; ce point le
+## rend, par un halo d'ici et non par le voxel, comme la comète en vol (10 px). 2 (défaut) : presque blanc pendant le plein
+## feu, puis de la couleur de la lumière (rouge, orange) ; 1 : `--fusee-coeur`, toujours de la couleur de la lumière ;
+## 0 : `--sans-fusee-coeur`, le choix d'ISO3/ISO4. La règle « jamais de blanc » (`fusee.gd`, FU2.1) reste entière pour la
+## LUMIÈRE : l'exception ne vaut que pour ce point, qui n'éclaire rien. La vue de dessus garde son point rouge.
+var coeur_fusee := 2
 
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
@@ -115,6 +116,7 @@ const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
 const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
+const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"
 ## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
 ## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
 const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
@@ -138,13 +140,16 @@ func _init() -> void:
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
 			masque_fumee = false
 		elif arg == DRAPEAU_COEUR_FUSEE:
-			coeur_fusee = maxi(coeur_fusee, 1)
+			coeur_fusee = 1
 		elif arg == DRAPEAU_COEUR_FUSEE_BLANC:
 			coeur_fusee = 2
+		elif arg == DRAPEAU_SANS_COEUR_FUSEE:
+			coeur_fusee = 0
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
-	if coeur_fusee > 0:
-		print("[fusée cœur] essai allumé — %s" % ("presque blanc au plein feu" if coeur_fusee >= 2 else "rouge puis orange"))
+	if coeur_fusee != 2:
+		print("[fusée cœur] %s" % ("éteint (%s)" % DRAPEAU_SANS_COEUR_FUSEE if coeur_fusee == 0
+			else "de la couleur de la lumière, sans le blanc (%s)" % DRAPEAU_COEUR_FUSEE))
 	# L'état éteint s'imprime aussi : la référence d'une série se prouve par ce que le JEU dit, jamais par la commande.
 	if not masque_fumee:
 		print("[fumée masque] éteint (%s) — le shader des volumes d'avant" % DRAPEAU_SANS_MASQUE_FUMEE)
@@ -269,7 +274,7 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 		_suivre_coeur_fusee(f, lumiere, energie, relative, vus)
 
 
-## ESSAI (`coeur_fusee`) — le cœur de la fusée posée, comme celui de la comète : un halo à bord franc (forme 1), de la
+## Q34 (`coeur_fusee`) — le cœur de la fusée posée, comme celui de la comète : un halo à bord franc (forme 1), de la
 ## couleur de la lumière, dont l'éclat suit l'énergie et le cœur 2D (ses sursauts d'agonie, son extinction) — et ne tombe
 ## JAMAIS sous l'opacité du cœur 2D : repris tel quel de la comète (énergie / 0,8 × opacité), il s'effaçait au résidu (0,02),
 ## là où le point de braise 2D se voit encore — parité avec la 2D (session cloud, 21:54). Au plein feu
