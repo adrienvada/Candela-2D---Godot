@@ -27759,6 +27759,18 @@ la boîte autour de z, et le shader retrouve la normale locale en tournant NORMA
 sommet (la normale retrouvée tombe sur un axe) et refuse toute lecture de CUSTOM1 dans les shaders. La preuve est à refaire
 dans le cloud (0,8 et 0,15, deux classes dont le Parasite), puis au Mac pour le pilote d'Apple.
 
+⚠️ **Ce diagnostic était probablement faux** (ordre 418, 2026-09-26 23:49 : preuve refaite sur `b9f92b8`, trois classes). Les
+triangles noirs restent au même endroit sur le Parasite fusionné, et ils apparaissent maintenant AUSSI sur les boîtes séparées
+(l'Occulteur, l'Illusionniste : bout de bandoulière, barres sous le torse), à des endroits qui changent d'un chemin à l'autre.
+Ce qui s'accorde avec tout : ce sont des triangles ENTIERS, noirs (0,0,0), c'est-à-dire le sol sombre du banc vu au travers.
+Chaque corps a une passe de profondeur (`*Profondeur`, `render_priority -1`, noire à alpha 0) puis sa couleur ; si la couleur
+d'une pièce perd le test de profondeur contre SA propre pré-passe (deux programmes différents, sans `invariant` : rien ne
+garantit qu'ils calculent la même profondeur au bit près), la pièce disparaît, et le torse derrière elle aussi, légitimement
+caché par cette profondeur. Les « traînées » des pores de l'étui étaient sans doute des bandes de ce noir. La lecture du cloud
+(une face mal reconnue par une égalité de position) reste possible ; le moyen de trancher est dans le banc : `--sans-profondeur`
+cache les passes de profondeur des corps. Si les triangles noirs disparaissent, la cause est la pré-passe, et elle concerne
+tous les corps, détaillés ou non. Retirer CUSTOM1 reste sans regret : un attribut de moins.
+
 **D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
 la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le
 marbrage à 0,86, lui, restait à la taille du duel. Deux corrections :
