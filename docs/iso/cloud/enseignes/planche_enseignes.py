@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 RACINE = Path(__file__).resolve().parents[4]
 ILLUSTRATION = {"arena": "assets/ui/ill_accueil.png", "zone": "assets/ui/ill_amical.png"}
 # Là où l'illustration porte l'enseigne (fractions de l'image) : la plaque « ARENA », le « ZONE 4 » du pilier.
-ILL_CADRE = {"arena": (0.50, 0.08, 0.74, 0.30), "zone": (0.72, 0.12, 0.86, 0.40)}
+ILL_CADRE = {"arena": (0.50, 0.08, 0.74, 0.30), "zone": (0.50, 0.14, 0.66, 0.46)}
 L1 = (420, 280)      # le cadre 1:1, autour de l'enseigne
 L3 = (140, 93)       # le cadre ×3 (agrandi au plus proche : les pixels du jeu, pas un lissage)
 

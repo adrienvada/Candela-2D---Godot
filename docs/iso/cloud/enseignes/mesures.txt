@@ -1,0 +1,59 @@
+  · « ARENA », face [0, 18, 15], J1 (505.0, 742.0), lacet 0.0°
+MESURE lacet0_arena bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet0_arena torche allumée : 2200 pixels d'emprise des enseignes à l'écran (1687 sur un mur éclairé au-dessus de 7,5/255), dont 1562 au-dessus de 7,5/255 et 1687 au-dessus de 0 avec elles ; 1687 pixels changés, 1687 assombris
+MESURE lacet0_arena torche allumée : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+MESURE lacet0_arena torches éteintes : 2201 pixels d'emprise des enseignes à l'écran (2201 sur un mur éclairé au-dessus de 7,5/255), dont 176 au-dessus de 7,5/255 et 1373 au-dessus de 0 avec elles ; 2201 pixels changés, 2201 assombris
+MESURE lacet0_arena torches éteintes : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+CADRE 890.6,484.7 978.5,484.7 978.5,502.7 890.6,502.7
+MESURE appels vue unique lacet 0° AVEC enseignes : total 99.3 (min 98, max 100), primitives 6366.6 (min 6364, max 6368), passe visible des vues 3D 32.0 (min 32, max 32)
+MESURE appels vue unique lacet 0° SANS enseignes : total 101.3 (min 100, max 103), primitives 6360.7 (min 6358, max 6364), passe visible des vues 3D 31.0 (min 31, max 31)
+== 0 ZONE exit=0
+  · « ZONE 1 », face [0, 12, 10], J1 (347.5, 532.0), lacet 0.0°
+MESURE lacet0_zone bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet0_zone torche allumée : 2189 pixels d'emprise des enseignes à l'écran (257 sur un mur éclairé au-dessus de 7,5/255), dont 257 au-dessus de 7,5/255 et 257 au-dessus de 0 avec elles ; 257 pixels changés, 257 assombris
+MESURE lacet0_zone torche allumée : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+MESURE lacet0_zone torches éteintes : 2189 pixels d'emprise des enseignes à l'écran (2189 sur un mur éclairé au-dessus de 7,5/255), dont 149 au-dessus de 7,5/255 et 1381 au-dessus de 0 avec elles ; 2189 pixels changés, 2189 assombris
+MESURE lacet0_zone torches éteintes : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+CADRE 908.3,488.5 960.8,488.5 960.8,511.0 908.3,511.0
+MESURE appels vue unique lacet 0° AVEC enseignes : total 98.2 (min 97, max 99), primitives 6354.4 (min 6352, max 6356), passe visible des vues 3D 31.0 (min 31, max 31)
+MESURE appels vue unique lacet 0° SANS enseignes : total 100.3 (min 99, max 102), primitives 6348.7 (min 6346, max 6352), passe visible des vues 3D 30.0 (min 30, max 30)
+== 45 ARENA exit=0
+  · « ARENA », face [0, 18, 15], J1 (505.0, 742.0), lacet 45.0°
+MESURE lacet45_arena bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet45_arena torche allumée : 1523 pixels d'emprise des enseignes à l'écran (1146 sur un mur éclairé au-dessus de 7,5/255), dont 1080 au-dessus de 7,5/255 et 1146 au-dessus de 0 avec elles ; 1146 pixels changés, 1146 assombris
+MESURE lacet45_arena torche allumée : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+MESURE lacet45_arena torches éteintes : 1523 pixels d'emprise des enseignes à l'écran (1523 sur un mur éclairé au-dessus de 7,5/255), dont 68 au-dessus de 7,5/255 et 912 au-dessus de 0 avec elles ; 1523 pixels changés, 1523 assombris
+MESURE lacet45_arena torches éteintes : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+CADRE 923.0,449.9 985.2,498.9 985.2,517.0 923.0,468.0
+MESURE appels vue unique lacet 45° AVEC enseignes : total 100.2 (min 99, max 101), primitives 6378.4 (min 6376, max 6380), passe visible des vues 3D 33.0 (min 33, max 33)
+MESURE appels vue unique lacet 45° SANS enseignes : total 102.3 (min 101, max 104), primitives 6372.7 (min 6370, max 6376), passe visible des vues 3D 32.0 (min 32, max 32)
+== 45 ZONE exit=0
+  · « ZONE 1 », face [0, 12, 10], J1 (347.5, 532.0), lacet 45.0°
+MESURE lacet45_zone bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet45_zone torche allumée : 1536 pixels d'emprise des enseignes à l'écran (191 sur un mur éclairé au-dessus de 7,5/255), dont 191 au-dessus de 7,5/255 et 191 au-dessus de 0 avec elles ; 191 pixels changés, 191 assombris
+MESURE lacet45_zone torche allumée : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+MESURE lacet45_zone torches éteintes : 1535 pixels d'emprise des enseignes à l'écran (1535 sur un mur éclairé au-dessus de 7,5/255), dont 86 au-dessus de 7,5/255 et 971 au-dessus de 0 avec elles ; 1535 pixels changés, 1535 assombris
+MESURE lacet45_zone torches éteintes : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+CADRE 935.7,463.6 972.8,492.9 972.8,515.4 935.7,486.1
+MESURE appels vue unique lacet 45° AVEC enseignes : total 100.2 (min 99, max 101), primitives 6378.4 (min 6376, max 6380), passe visible des vues 3D 33.0 (min 33, max 33)
+MESURE appels vue unique lacet 45° SANS enseignes : total 102.3 (min 101, max 104), primitives 6372.7 (min 6370, max 6376), passe visible des vues 3D 32.0 (min 32, max 32)
+== -135 ARENA exit=0
+  · « ARENA », face [1, 13, 15], J1 (545.0, 308.0), lacet -135.0°
+MESURE lacet-135_arena bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet-135_arena torche allumée : 1523 pixels d'emprise des enseignes à l'écran (1146 sur un mur éclairé au-dessus de 7,5/255), dont 1069 au-dessus de 7,5/255 et 1146 au-dessus de 0 avec elles ; 1146 pixels changés, 1146 assombris
+MESURE lacet-135_arena torche allumée : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+MESURE lacet-135_arena torches éteintes : 1523 pixels d'emprise des enseignes à l'écran (1523 sur un mur éclairé au-dessus de 7,5/255), dont 71 au-dessus de 7,5/255 et 903 au-dessus de 0 avec elles ; 1523 pixels changés, 1523 assombris
+MESURE lacet-135_arena torches éteintes : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+CADRE 923.0,449.9 985.2,498.9 985.2,517.0 923.0,468.0
+MESURE appels vue unique lacet -135° AVEC enseignes : total 100.2 (min 99, max 101), primitives 6378.4 (min 6376, max 6380), passe visible des vues 3D 33.0 (min 33, max 33)
+MESURE appels vue unique lacet -135° SANS enseignes : total 102.3 (min 101, max 104), primitives 6372.7 (min 6370, max 6376), passe visible des vues 3D 32.0 (min 32, max 32)
+== -135 ZONE exit=0
+  · « ZONE 1 », face [1, 19, 10], J1 (387.5, 518.0), lacet -135.0°
+MESURE lacet-135_zone bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet-135_zone torche allumée : 1521 pixels d'emprise des enseignes à l'écran (181 sur un mur éclairé au-dessus de 7,5/255), dont 181 au-dessus de 7,5/255 et 181 au-dessus de 0 avec elles ; 181 pixels changés, 181 assombris
+MESURE lacet-135_zone torche allumée : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+MESURE lacet-135_zone torches éteintes : 1521 pixels d'emprise des enseignes à l'écran (1521 sur un mur éclairé au-dessus de 7,5/255), dont 94 au-dessus de 7,5/255 et 911 au-dessus de 0 avec elles ; 1521 pixels changés, 1521 assombris
+MESURE lacet-135_zone torches éteintes : noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0 en luminance, 0 au canal maximal (+2 ou plus)
+CADRE 1032.8,463.6 1070.0,492.9 1070.0,515.4 1032.8,486.1
+MESURE appels vue unique lacet -135° AVEC enseignes : total 100.2 (min 99, max 101), primitives 6378.4 (min 6376, max 6380), passe visible des vues 3D 33.0 (min 33, max 33)
+MESURE appels vue unique lacet -135° SANS enseignes : total 102.3 (min 101, max 104), primitives 6372.7 (min 6370, max 6376), passe visible des vues 3D 32.0 (min 32, max 32)

@@ -3,7 +3,18 @@
 Branche `claude/cloud-enseignes`, depuis `origin/integration-iso14` (`18f5fdc`). Ordre de la session
 coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED », 2026-09-27.
 
-> État : **plan posé, travail en cours.** Ce fichier est complété au fil des commits.
+## Pour Adrien, en cinq lignes
+
+1. Les murs peuvent maintenant porter « ARENA » sur une plaque de tôle et « ZONE 1 » / « ZONE 2 » peint au pochoir,
+   comme dans les illustrations de l'accueil et d'« amical » — mais **éteint par défaut** (`--enseignes-essai` l'allume).
+2. Contrairement aux dessins, plaques et peinture sont **plus sombres** que le béton : dans le noir elles restent noires,
+   et personne n'est plus visible devant une enseigne qu'ailleurs.
+3. Chaque joueur voit les mêmes enseignes de son côté (« ZONE 1 » près de J1, « ZONE 2 » près de J2), et **aucun texte
+   n'est jamais à l'envers**, y compris pour J2 vu de l'autre côté à 45°.
+4. Coût : un appel de dessin de plus par vue, quelques triangles. La cadence reste à mesurer sur ton Mac.
+5. À toi de juger sur la planche (`planche_enseignes.jpg`) : c'est lisible de près (×3), **petit à taille réelle**.
+
+> État : **fait.** Code, garde, suite complète verte, planche et mesures poussés. Rien d'allumé en jeu.
 
 ## Ce que montrent les illustrations aux murs (relevé AVANT de coder)
 
@@ -48,7 +59,7 @@ le béton, lettres plus sombres encore ; le contraste plaque/lettre reste, inver
    l'arête, ni collision ni occluder), jamais plus clair (shader), sens de lecture.
 6. La planche : éteint / allumé, 1:1 et ×3, à côté de l'illustration, au photographe sous Xvfb.
 
-## Ce qui est construit (état au deuxième commit)
+## Ce qui est construit
 
 - `enseignes_iso.gd` (nouveau) — la classe `EnseignesIso`, le drapeau `--enseignes-essai` (éteint par défaut).
 - `enseignes_iso.gdshader` (nouveau) — la lecture de la face des tuyaux, sans leur modelé.
@@ -115,3 +126,86 @@ de facteurs de la pâte, plafond `matiere_max`, instrument éteint, accordé com
 
 **Éprouvée par six mutations** : axe de lecture inversé → 12 échecs ; « ZONE 1 » décalée de 2 px → 7 ; tôle à 1,1 → 1 ;
 plafond `matiere_max` retiré du shader → 1 ; saillie à 0,8 px → 7 ; enroulement inversé → 6 ; 0 une fois le code remis.
+
+## La planche et ses mesures
+
+`docs/iso/cloud/enseignes/planche_enseignes.jpg` : six rangées — « ARENA » et « ZONE 1 » vues par J1 au lacet 0°, par J1
+à 45°, et par la caméra de J2 à 45° B (225°) — ; dans chacune, le bout d'illustration, **éteint** (sans) et **allumé**
+(avec) à 1:1 puis à ×3 (agrandi au plus proche, les pixels du jeu), et allumé torches éteintes. Carte : le Cloître.
+Chaque rangée sort d'UN lancement, jeu en pause entre les prises (même instant : 0 pixel de bruit entre les deux prises
+« avec »). Mesures brutes : `docs/iso/cloud/enseignes/mesures.txt`.
+
+| Prise | Emprise à l'écran (px) | Noirs allumés (7,5/255 ; strict 0 → plus) | Plus clairs que sans (luminance ; canal +2) |
+|---|---|---|---|
+| ARENA, J1 0° | 2 200 (513 sur mur noir, restés à 0) | 0 ; 0 | 0 ; 0 |
+| ZONE 1, J1 0° | 2 189 (1 932 sur mur noir) | 0 ; 0 | 0 ; 0 |
+| ARENA, J1 45° | 1 523 | 0 ; 0 | 0 ; 0 |
+| ZONE 1, J1 45° | 1 536 | 0 ; 0 | 0 ; 0 |
+| ARENA, J2 45° B | 1 523 | 0 ; 0 | 0 ; 0 |
+| ZONE 1, caméra 225° | 1 521 | 0 ; 0 | 0 ; 0 |
+| les six, torches éteintes | idem | 0 ; 0 | 0 ; 0 |
+
+Chaque pixel changé par une enseigne est **assombri** (1 687 sur 1 687, etc.). Appels de dessin (vue unique, lacet 0°,
+moyenne de 20 images, rendu logiciel) : 99,3 avec contre 101,3 sans au total — du bruit — ; **passe visible des vues
+3D : 32 contre 31, soit +1**, comme prévu ; primitives +6 (deux enseignes à l'écran).
+
+Ce qu'on y voit : la plaque et le mot se lisent nettement à ×3, à 0° comme à 45° (le texte se couche avec la face, dans
+le bon sens) ; à 1:1, « ARENA » fait ~88 × 18 px d'écran, « ZONE / 1 » ~52 × 22 : **lisible si on s'arrête, pas au
+passage**. Agrandir veut dire des cellules plus grosses : « ZONE » ne tiendrait plus sur un pilier d'une case (27,6 px
+sur 35, marges d'encre comprises), et « ARENA » demanderait trois cases. À trancher avec l'image sous les yeux.
+
+## Pour tout refaire
+
+```bash
+git fetch origin claude/cloud-enseignes && git checkout claude/cloud-enseignes
+godot --headless --path . --import
+godot --headless --path . --script res://tools/test_iso_enseignes.gd          # la garde seule (168 vérifications)
+GODOT=/usr/local/bin/godot ./tools/run_suites.sh                                # la suite complète (635 s ici, verte)
+# les prises (vraie fenêtre ; sur le Mac, sans xvfb-run ni --fixed-fps) :
+for p in "0 ARENA" "0 ZONE" "45 ARENA" "45 ZONE" "-135 ARENA" "-135 ZONE"; do set -- $p
+  xvfb-run -a -s "-screen 0 1920x1080x24" godot --fixed-fps 60 --path . res://tools/photo_enseignes.tscn -- \
+    --enseignes-essai --no-eos --lacet=$1 --sorte=$2 --sortie=user://ens | tee -a journal.log
+done
+python3 docs/iso/cloud/enseignes/planche_enseignes.py "$HOME/.local/share/godot/app_userdata/Candela 2D/ens" \
+  journal.log docs/iso/cloud/enseignes/planche_enseignes.jpg
+# en jeu :
+godot --path . -- --enseignes-essai
+```
+
+## Ce que je n'ai PAS pu prouver
+
+- **La cadence.** Le cloud rend en logiciel ; +1 appel de dessin par vue est compté, pas chronométré. La règle des 3 %
+  se mesure au Mac.
+- **L'écran scindé en images.** La garde prouve le calque commun et le tri par caméra ; aucune prise en deux vues.
+- **Cinq des six cartes en images.** Seul le Cloître est photographié ; les autres ne sont prouvées que par la garde.
+- **Les tuyaux et les enseignes allumés ensemble.** Par construction un tuyau passe devant (0,5 px contre 0,3) ; aucune
+  image ne le montre.
+- **L'éblouissement et la lisibilité en mouvement** (le cloud ne vaut pas pour eux).
+- **Les impacts de balle (l'usure) sur une enseigne** : une enseigne relit la lumière de la face mais pas ses impacts ;
+  là où un impact assombrit la face derrière, l'enseigne n'est pas assombrie — la même exception que les tuyaux, non
+  mesurée.
+
+## Pièges et défauts découverts, à reporter dans la feuille de route (hors de ma tâche : signalés, pas corrigés)
+
+1. **`tools/photo_tuyaux.gd` ne tourne pas dans le cloud.** Il attend la manche 20 s à la montre (`_attendre` sans
+   `_lire_l_horloge()` préalable) et tient ses poses en millisecondes (`_tenir_pendant`, `Time.get_ticks_msec`) : sous
+   Xvfb le décompte n'a pas fini à temps (« ✗ le décompte n'a jamais fini »), constaté sur ma copie avant correction.
+   Mon banc appelle `await _lire_l_horloge()` et compte en `_maintenant()` ; le même geste lui manque (lignes 45 et 162
+   de `tools/photo_tuyaux.gd`). Reproduire : `xvfb-run -a -s "-screen 0 1920x1080x24" godot --fixed-fps 60 --path .
+   res://tools/photo_tuyaux.tscn -- --tuyaux-essai --no-eos`.
+2. **Les départs du Cloître ne sont pas exactement symétriques par le demi-tour** : (6, 16) et (25, 16) sur une carte de
+   32 × 32 ; le demi-tour porte la rangée 16 en 15. Le miroir gauche-droite est exact, pas l'option B. Idem pour les
+   cartes aux départs en rangée paire (constaté par la garde, qui tolère une case d'écart et le dit).
+3. **L'Usine n'est équitable pour AUCUNE paire de caméras** au niveau des murs (ni miroir gauche-droite, ni demi-tour
+   exacts : son bloc central est décalé d'une case). Les enseignes n'y tiennent que sur les faces localement symétriques.
+4. **Torches éteintes, le mur n'est pas noir sous les enseignes photographiées** (2 201 pixels d'emprise sur 2 201
+   au-dessus de 7,5/255 dans la prise « sans », ARENA 0°). Quelque chose éclaire encore la face, J1 et J2 torche
+   coupée ; je n'ai pas cherché quoi. La preuve du noir vient donc des prises torche allumée, où 513 à 1 932 pixels
+   d'emprise tombent sur un mur à 0 et y restent. À comprendre avant de dire « torches éteintes = noir » sur ce banc.
+5. **`volume_masque.gdshaderinc.uid` manque au dépôt** : chaque import le crée (non commité ici, pas à moi).
+
+## Commits de la branche
+
+- le relevé et le plan ; la fusion de `70ffafa` (tuyaux) ; le code, le shader, la garde et l'ancrage ; le correctif du
+  photographe (`0c67705`, à part) ; le banc photo et le montage ; ses attentes en images de jeu ; la planche, les mesures
+  et ce rapport.
