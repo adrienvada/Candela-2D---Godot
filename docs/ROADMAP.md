@@ -27736,6 +27736,19 @@ une bandoulière et trois grenades grises, un étui, une plaque orange. `KIT_DET
 facultative. `test_corps_detail` : pour les dix, les tailles distinctes du corps et entre elles, toutes les pièces du torse
 dans sa face, et la silhouette du corps seul de 16,81 à 17,44 px, jamais plus large qu'avant le kit.
 
+**D3 — le coût : les accessoires fusionnés.** Chaque accessoire était une boîte, soit deux appels de dessin (couleur et
+profondeur) : 22 de plus pour un Parasite, 44 sur les 93 du duel pour deux. Ils forment maintenant un seul maillage par pièce
+qui les porte (torse, bouteille, arme) : au plus six appels par corps (Parasite 22 → 6, Occulteur 20 → 4, Illusionniste
+10 → 2). Les sommets sont ceux d'une `BoxMesh` de même taille, tournés et posés dans le repère de la pièce ; la boîte d'origine
+de chaque sommet voyage dans CUSTOM0 (position locale, w = 2) et CUSTOM1 (normale locale), en `RGBA_FLOAT`, et le shader des
+corps les relit sous `#ifdef CORPS_DETAIL` : sans le drapeau, son code prétraité ne change pas. `VoxelCorps.pieces_detail()`
+décrit le kit dans les deux cas ; l'empreinte (`rayon_empreinte`) lit cette description pour les fusionnés.
+⚠️ **Le risque reste à lever sur GPU** (précision de la session cloud, ordre 409) : des attributs CUSTOM en flottants sous
+`gl_compatibility`. La preuve attendue est une image identique au pixel, fusionné contre séparé, au même instant, sur un
+corps : `banc_corps --fusion-ab` construit les deux dessins et bascule de l'un à l'autre (`_boites.png`). Tant qu'elle
+n'est pas faite, la fusion n'est prouvée qu'en headless (même kit, même description, CUSTOM0 et CUSTOM1 en flottants, w = 2
+partout).
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

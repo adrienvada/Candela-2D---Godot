@@ -50,6 +50,7 @@ func _run() -> void:
 	root.add_child(racine)
 	_le_drapeau(racine)
 	_les_accessoires(racine)
+	_la_fusion(racine)
 	_la_bandouliere(racine)
 	_la_silhouette(racine)
 	_la_visibilite()
@@ -116,36 +117,79 @@ func _le_kit(racine: Node3D, slug: String, attendus: int) -> void:
 	var avec := _corps(racine, slug, true)
 	var sans := _corps(racine, slug, false)
 	var n_sans := sans.nombre_de_boites()
-	_check("%s détaillé : %d accessoires (%d boîtes en tout)" % [slug, avec.details().size(), avec.nombre_de_boites()],
-		avec.details().size() == attendus and avec.nombre_de_boites() == n_sans + attendus)
+	var pieces := avec.pieces_detail()
+	var porteurs := {}
+	for p in pieces:
+		porteurs[p["parent"]] = true
+	# Q33 : fusionnés, les accessoires sont un maillage par pièce qui les porte, et aucune boîte de plus.
+	_check("%s détaillé : %d accessoires, en %d maillages fusionnés (un par pièce porteuse), aucune boîte de plus (%d)"
+		% [slug, pieces.size(), avec.details().size(), avec.nombre_de_boites()],
+		pieces.size() == attendus and avec.details().size() == porteurs.size() and avec.nombre_de_boites() == n_sans)
 	# Les demi-tailles : celles des accessoires, et celles des boîtes du corps sans eux.
 	var du_corps := []
 	for b in sans.boites():
 		du_corps.append(((b as MeshInstance3D).mesh as BoxMesh).size * 0.5)
 	var confondues := []
-	for b in avec.details():
-		var d: Vector3 = ((b as MeshInstance3D).mesh as BoxMesh).size * 0.5
+	var tailles := {}
+	for p in pieces:
+		var d: Vector3 = (p["taille"] as Vector3) * 0.5
 		for r in du_corps:
 			if d.distance_to(r) < 0.001:
-				confondues.append(String((b as Node).name))
-	var tailles := {}
-	for b in avec.details():
-		tailles[String((b as Node).name).rstrip("0123456789")] = ((b as MeshInstance3D).mesh as BoxMesh).size
+				confondues.append(String(p["nom"]))
+		tailles[String(p["nom"]).rstrip("0123456789")] = p["taille"]
 	var distinctes := {}
 	for k in tailles:
 		distinctes[str(tailles[k])] = true
 	var n_shader := int(avec.materiau().get_shader_parameter("detail_n"))
-	# Le coût : chaque accessoire, une boîte de couleur et son double de profondeur ; 12 triangles chacune.
+	# Le coût : chaque maillage fusionné, un appel de couleur et un de profondeur.
 	var mi_avec := avec.find_children("*", "MeshInstance3D", true, false).size()
 	var mi_sans := sans.find_children("*", "MeshInstance3D", true, false).size()
-	print("  %s : %d sortes, detail_n = %d ; COÛT %d appels de dessin, %d triangles de plus par corps"
-		% [slug, tailles.size(), n_shader, mi_avec - mi_sans, (mi_avec - mi_sans) * 12])
-	_check("%s : aucune taille confondue avec le corps, une par sorte, toutes connues du shader (%d ≤ 10), %d appels de plus"
+	print("  %s : %d sortes, detail_n = %d ; COÛT %d appels de dessin de plus par corps (%d séparés)"
+		% [slug, tailles.size(), n_shader, mi_avec - mi_sans, 2 * attendus])
+	_check("%s : aucune taille confondue avec le corps, une par sorte, toutes connues du shader (%d ≤ 10), %d appels de plus (≤ 6)"
 		% [slug, n_shader, mi_avec - mi_sans],
 		confondues.is_empty() and tailles.size() == distinctes.size() and n_shader == distinctes.size() and n_shader <= 10
-		and mi_avec - mi_sans == 2 * attendus, str(confondues))
-	_check("%s : chaque accessoire suit une pièce animée (torse, bouteille, arme)" % slug,
-		avec.details().all(func(b): return ["Torse", "Bouteille", "Arme"].has(String((b as Node).get_parent().name))))
+		and mi_avec - mi_sans == 2 * porteurs.size() and mi_avec - mi_sans <= 6, str(confondues))
+	_check("%s : chaque maillage et chaque accessoire suivent une pièce animée (torse, bouteille, arme)" % slug,
+		avec.details().all(func(b): return ["Torse", "Bouteille", "Arme"].has(String((b as Node).get_parent().name)))
+		and pieces.all(func(p): return ["Torse", "Bouteille", "Arme"].has(String((p["parent"] as Node).name))))
+
+
+## Q33 — les deux façons de dessiner le même kit : séparées (une boîte, deux appels chacune) et fusionnées. Même description,
+## même coût annoncé ; le maillage fusionné porte la boîte d'origine de chaque sommet (CUSTOM0, w = 2 ; CUSTOM1).
+func _la_fusion(racine: Node3D) -> void:
+	print("— la fusion des accessoires")
+	VoxelCatalogue.forcer_fusion = 0
+	var separe := _corps(racine, "pistolet", true)
+	VoxelCatalogue.forcer_fusion = -1
+	var fusionne := _corps(racine, "pistolet", true)
+	var sans := _corps(racine, "pistolet", false)
+	var mi := func(c): return c.find_children("*", "MeshInstance3D", true, false).size()
+	var ps: Array = separe.pieces_detail()
+	var pf: Array = fusionne.pieces_detail()
+	var memes := ps.size() == pf.size()
+	for i in mini(ps.size(), pf.size()):
+		memes = memes and String(ps[i]["nom"]) == String(pf[i]["nom"]) and (ps[i]["taille"] as Vector3).is_equal_approx(pf[i]["taille"])
+	_check("séparés et fusionnés : le même kit (%d pièces), %d contre %d appels de dessin de plus" % [pf.size(),
+		mi.call(separe) - mi.call(sans), mi.call(fusionne) - mi.call(sans)],
+		memes and mi.call(separe) - mi.call(sans) == 2 * ps.size() and mi.call(fusionne) - mi.call(sans) == 6)
+	var m: ArrayMesh = (fusionne.details()[0] as MeshInstance3D).mesh
+	var a := m.surface_get_arrays(0)
+	var c0: PackedFloat32Array = a[Mesh.ARRAY_CUSTOM0]
+	var nv: int = (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	var marques := c0.size() == nv * 4
+	for i in nv:
+		marques = marques and c0[i * 4 + 3] == 2.0
+	var fmt := m.surface_get_format(0)
+	_check("le maillage fusionné porte la boîte de chaque sommet : CUSTOM0 et CUSTOM1 en flottants (RGBA_FLOAT), w = 2 partout",
+		marques and ((fmt >> Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) & Mesh.ARRAY_FORMAT_CUSTOM_MASK) == Mesh.ARRAY_CUSTOM_RGBA_FLOAT
+		and ((fmt >> Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) & Mesh.ARRAY_FORMAT_CUSTOM_MASK) == Mesh.ARRAY_CUSTOM_RGBA_FLOAT)
+	for chemin in ["res://corps_iso.gdshader", "res://corps_iso_eclaire.gdshader"]:
+		var code := FileAccess.get_file_as_string(chemin)
+		var v := code.substr(code.find("void vertex()"), code.find("void fragment()") - code.find("void vertex()"))
+		_check("%s : le sommet relit sa boîte sous CORPS_DETAIL seulement (le shader d'origine inchangé sans drapeau)"
+			% chemin.get_file(), v.contains("#ifdef CORPS_DETAIL\n\t// Q33") and v.contains("if (CUSTOM0.w > 1.5) {")
+			and v.contains("demi = abs(CUSTOM0.xyz);"))
 
 
 ## Le débord d'une boîte tournée de `angle` autour de z, centrée en `centre` (repère du torse), hors du rectangle de la face :
@@ -165,13 +209,11 @@ func _la_bandouliere(racine: Node3D) -> void:
 		var ht := float(f["hauteur_torse"])
 		var pire := 0.0
 		var n := 0
-		for nom in ["Bandouliere", "Cartouche1", "Cartouche2", "Cartouche3", "Bretelle1", "Bretelle2", "Etui", "Fiole",
-				"Plaque", "Manometre"]:
-			var b := c.find_child(nom, true, false) as MeshInstance3D
-			if b == null:
+		for p in c.pieces_detail():
+			if String((p["parent"] as Node).name) != "Torse":
 				continue
 			n += 1
-			pire = maxf(pire, _debord((b.mesh as BoxMesh).size, b.position, b.rotation.z, lt, ht))
+			pire = maxf(pire, _debord(p["taille"], p["position"], float(p["angle"]), lt, ht))
 		_check("%s : les %d pièces du torse, largeur comprise, dans sa face (débord %.4f tuile)" % [slug, n, pire],
 			pire <= 0.0001 and n >= 1)
 	# La garde vue rougir : la longueur de l'essai du 24/09 (lt / cos × 0,98, sans la largeur) déborde.
@@ -212,8 +254,9 @@ func _la_silhouette(racine: Node3D) -> void:
 			r_avec <= COULOIR_PX + 0.01 and r_avec < TOUCHE_PX and r_avec <= r_sans + 0.01)
 	# La garde vue rougir : l'étui du pistolet déplacé à 0,6 tuile du centre doit être refusé par la même mesure.
 	var faux := _corps(racine, "pistolet", true)
-	var etui := faux.find_child("Etui", true, false) as Node3D
-	etui.position = Vector3(0.6, etui.position.y, etui.position.z)
+	for p in faux.pieces_detail():
+		if String(p["nom"]) == "Etui":
+			p["position"] = Vector3(0.6, (p["position"] as Vector3).y, (p["position"] as Vector3).z)
 	var r_faux := _pire_rayon(faux)
 	_check("la garde rougit sur une boîte hors du couloir (%.2f px > %.1f)" % [r_faux, COULOIR_PX], r_faux > COULOIR_PX + 0.01)
 

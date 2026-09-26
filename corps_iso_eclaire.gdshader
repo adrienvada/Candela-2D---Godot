@@ -201,6 +201,16 @@ void vertex() {
 	echelle = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
 	normale_locale = NORMAL;
 	normale_monde = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+#ifdef CORPS_DETAIL
+	// Q33 — un accessoire d'un maillage FUSIONNÉ (`VoxelCorps._fusionner`) : ses sommets sont posés dans le repère de la pièce
+	// qui le porte, et sa boîte à lui voyage dans CUSTOM0 (position locale ; w = 2 marque le fusionné) et CUSTOM1 (normale
+	// locale). Tout ce qui lit la boîte — sa demi-taille, l'encre des arêtes, la matière — la retrouve comme avant la fusion.
+	if (CUSTOM0.w > 1.5) {
+		local = CUSTOM0.xyz;
+		demi = abs(CUSTOM0.xyz);
+		normale_locale = CUSTOM1.xyz;
+	}
+#endif
 }
 
 // ISO7b — le facteur de modelé d'une face de normale `n` (monde). Miroir : `IsoMateriaux.modele_du_corps`.

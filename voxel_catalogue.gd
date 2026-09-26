@@ -525,6 +525,17 @@ const KIT_DETAIL := {
 const TEINTE_LAITON := Color8(152, 102, 59)
 
 
+## Q33 — les accessoires en un maillage par pièce (`VoxelCorps._fusionner`) plutôt qu'une boîte chacun. `forcer_fusion` :
+## -1 le défaut (`DETAIL_FUSION`), 0 les boîtes séparées, 1 fusionnés, 2 les deux construits (fusionnés montrés, boîtes
+## cachées : le banc « même image » bascule de l'un à l'autre au même instant, `VoxelCorps.basculer_fusion`).
+const DETAIL_FUSION := true
+static var forcer_fusion := -1
+
+
+static func detail_fusionne() -> bool:
+	return forcer_fusion >= 1 if forcer_fusion >= 0 else DETAIL_FUSION
+
+
 static func detail_actif() -> bool:
 	if forcer_detail >= 0:
 		return forcer_detail == 1
