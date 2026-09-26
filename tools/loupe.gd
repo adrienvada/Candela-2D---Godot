@@ -257,8 +257,9 @@ func _prise(plans: Array[Dictionary], id: String, recadrages: Array, scinde := f
 	if plan.is_empty():
 		return
 	var garde: Callable = tenir if tenir.is_valid() else _tenir_scene
-	var fin := Time.get_ticks_msec() + int(repos * 1000.0)
-	while Time.get_ticks_msec() < fin:
+	# L'heure du photographe, pas la montre : sous `--fixed-fps` (le cloud), une image dure un tiers de seconde.
+	var fin: float = p._maintenant() + repos
+	while p._maintenant() < fin:
 		garde.call()
 		await p.get_tree().process_frame
 	garde.call()

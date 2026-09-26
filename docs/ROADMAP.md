@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-24
+> Dernière mise à jour : 2026-09-26
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3209,6 +3209,20 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une image par tiers de seconde : sous rendu logiciel, la montre n'est plus l'horloge du jeu (2026-09-26)
+
+Le photographe dans le conteneur du cloud (Xvfb, Mesa llvmpipe) rend 1 à 7 images par seconde. Godot n'y
+rattrape que huit pas de physique par image et rabote le `delta` d'autant : le jeu avance à ~40 % de la
+montre. Or les repos du photographe se comptaient à la montre : la fusée n'avait pas quitté la main de
+J1, et le voile du plan `eblouissement` couvrait encore les plans `armes` qui le suivent. Premier remède
+essayé, relever ce plafond : le jeu suit la montre, mais une image vaut alors un tiers de seconde de jeu —
+« l'image qui suit le tir » tombe après l'impact — et une séance de loupe, vingt minutes de montre, voit
+finir en route la manche de cinq minutes : **à partir de la quinzième, les loupes photographiaient le MENU,
+sous les noms des loupes, sans une erreur.** Remède retenu : `--fixed-fps 60`, et les repos comptés dans
+l'horloge du jeu (`_maintenant()` du photographe). **Leçon** : un outil qui attend « un moment » doit dire
+dans quelle horloge ; la montre n'est celle du jeu que sur un poste rapide. Détail : DA6, « Le
+photographe dans le cloud ».
+
 ### Une garantie vraie dans le monde n'est pas vraie à l'écran : la parallaxe des volumes en hauteur (2026-09-24)
 
 Chantier ISO13, lot E. Un volume iso vaut la lightmap sous lui, donc zéro au-dessus d'un sol noir. On
@@ -3733,6 +3747,9 @@ Le prototype a rendu ses premières captures en 1280×720 alors que
 `DisplayServer.window_get_size()` répondait 1920×1080 : sans gestionnaire de
 fenêtres, l'événement `ConfigureNotify` n'arrive jamais et `root.size` reste à
 sa valeur de départ. `Window.size = …` redimensionne la vue immédiatement.
+**Repayé par le photographe le 2026-09-26** — sa console annonçait « fenêtre :
+1920x1080 » pendant que ses images sortaient en 1280×720 ; il retaille
+désormais la vue lui-même et le dit (DA6, « Le photographe dans le cloud »).
 Contexte utile : **Godot 4.7 rend bien en 3D dans le conteneur d'une session
 cloud** (`xvfb-run` + Mesa llvmpipe, `gl_compatibility`, ombres comprises,
 ≈ 4 s par image) — assez pour des captures d'étude, jamais pour une mesure de
@@ -14209,6 +14226,96 @@ main dès le début : le plan `torche` (J2 écarté, torche éteinte) n'a **qu'u
 cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
 
 **Regarder ne dispense pas de vérifier ; ça dispense de deviner.**
+
+#### Le photographe dans le cloud (2026-09-26)
+
+**Pourquoi.** Une session du cloud n'avait que le headless : des états, jamais l'image. Le Mac d'Adrien
+reste le poste des cadences ; les preuves à l'image se font désormais aussi dans le conteneur (Xvfb, Mesa
+llvmpipe, 4 cœurs), en parallèle. Une image y coûte un tiers de seconde : **aucune cadence mesurée là ne
+dit quoi que ce soit du jeu.**
+
+**La commande**, depuis la racine d'un arbre importé (`godot --headless --path . --import`, 30 s) :
+
+```bash
+timeout 1800 xvfb-run -a -s "-screen 0 1920x1080x24" env GODOT=/usr/local/bin/godot \
+  GODOT_ARGS="--fixed-fps 60" ./tools/run_photos.sh --famille=jeu
+```
+
+La loupe : écran `2560x1440x24`, `--taille=2560x1440`, plans choisis (`--plan=loupe-pilier,loupe-sol,…`) —
+les plans « mesure, sans image » n'y mesurent que llvmpipe. Compter 10 à 15 s de montre par plan en
+1920×1080 : cinq minutes pour la famille `jeu`, vingt pour treize loupes en 2560×1440, une demi-heure pour
+`fins` (41 images, toutes prises).
+
+**Ce que l'outil a dû apprendre, et rien d'autre.** (1) La taille : sans gestionnaire de fenêtres, la vue
+restait en 1280×720 pendant que la console annonçait 1920×1080 (piège du 2026-09-13, repayé) ;
+`_poser_la_fenetre` retaille `Window.size` et le dit. (2) L'horloge : voir « Pièges connus », *Une image
+par tiers de seconde*. Sous `--fixed-fps 60`, le cloud rejoue la séance d'un poste à 60 images par
+seconde, repos et attentes comptés en images de jeu (`_maintenant()`) ; sans le drapeau — le Mac — la
+montre, comme avant. Sous rendu logiciel sans le drapeau, l'outil le crie et continue. Les gestes macOS
+(`window_move_to_foreground`, toujours devant) ne font rien sous Xvfb et ne crient pas : rien à sauter ;
+les erreurs ALSA du démarrage non plus (pas de carte son, pilote muet).
+
+**Ce qu'on peut y croire — mesuré contre le Mac au MÊME commit** (arbre extrait par `git archive`, les deux
+correctifs posés, plans rejoués ; écart moyen en /255 sur les trois canaux, « allumé » = luminance > 7,5/255,
+« en plein noir » = allumé d'un seul côté à plus de 6 px de toute lumière de l'autre) :
+
+| plan | commit | écart moyen | pixels > 8/255 | allumés Mac / cloud | en plein noir Mac / cloud | noirs purs Mac / cloud |
+|---|---|---|---|---|---|---|
+| `torche`, plein cadre réduit de moitié | `d8e928a` | 0,05 | 0,14 % | 11 272 / 11 207 | 0 / 0 | 502 713 / 502 455 |
+| `torche`, loupe 1:1 350×430 | `d8e928a` | 0,67 | 1,5 % | 44 947 / 44 845 | 6 / 0 | 89 232 / 88 270 |
+| `loupe-pilier` 800×450 | `1118bff` | 0,67 | 1,4 % | 193 970 / 194 293 | 322 / 37 | — |
+| `loupe-torche-fantome`, scène quasi noire | `1118bff` | 0,26 | 1,3 % | 6 724 / 6 832 | 100 / 45 | — |
+| `loupe-hud-hud` | `1118bff` | 1,01 | 0,4 % | 230 951 / 237 360 | 5 / 2 714 | 1 165 / 1 077 |
+| `loupe-led`, bandeau figé à 0,45 | `1118bff` | 0,47 | 0,5 % | 203 122 / 198 409 | 1 272 / 53 | — |
+| `10-volume`, plein cadre | `3414df1` | 0,85 | 3,2 % | 255 722 / 288 678 | 26 / 19 448 | 1 773 802 / 1 741 666 |
+
+Les autres prises du même passage : 0,9 à 1,7 (`loupe-sol`, la fusée et sa suie, le corps ébloui, l'impact de
+balle), 0,76 pour `02-ecran-scinde` en plein cadre ; 2,7 pour la balle EN VOL — un objet qui file ne tombe
+pas au même pixel à 60 Hz et à plusieurs centaines. Le cloud contre lui-même, deux séances du même plan : 0,01
+d'écart moyen, 0,01 % au-delà de 8/255, quatre pixels allumés d'écart sur 44 845 — les écarts du tableau ne
+sont pas son bruit : ce sont le pilote, et un Mac à plusieurs centaines d'images par seconde quand le cloud
+en joue 60.
+
+- **Le noir absolu** : oui, là où la lumière ne dépend que de l'état du jeu. Noirs purs à 1 % près (0,05 %
+  en plein cadre) ; en plein noir, le cloud seul allume 0 à 45 pixels, le Mac seul 0 à 322. Les 2 714 et
+  19 448 du tableau sont le bandeau LED à une autre phase (plus bas), pas le rendu.
+- **Les couleurs à 1:1** : à 0,3 à 1 niveau sur 255 en moyenne. Les pixels à plus de 8/255 (0,4 à 1,5 %)
+  bordent une arête — ombre portée, contour d'un corps, glissement sous le pixel —, et les grands dégradés
+  sombres montrent des anneaux de ±1 niveau. On y juge une matière, un dégradé, une frange ; pas un écart
+  d'un ou deux niveaux.
+- **Les comptes au bord de la lumière** : à 0,2 à 1,6 % près, la lisière bougeant de quelques centaines de
+  pixels (2,3 % bandeau figé : elle suit le niveau exact de la LED). Un écart plus petit entre deux versions
+  n'est pas une preuve.
+
+**Ce qu'on ne peut pas y croire.**
+- Toute cadence, tout temps d'image, tout coût d'effet — les plans « mesure » de la loupe impriment des
+  millisecondes de llvmpipe, et celles que `killcam-bande` inscrit au manifeste sont de la montre du cloud.
+- Ce qui s'intègre à la cadence réelle : l'éblouissement (piège du 2026-09-14) s'intègre à 60 Hz ici, à
+  plusieurs centaines sur le Mac.
+- Ce que le jeu anime à la MONTRE (`Time.get_ticks_msec`) : les gestes des corps
+  (`presentation_3d.etat_du_corps` — tir, touche, mort, accroupi), le timecode de la killcam. Sous horloge
+  fixe une image dure un tiers de seconde de montre : un geste y court vingt fois plus vite que le jeu.
+- Ce qui suit l'horloge de MANCHE, qui n'a pas le même âge au moment de la prise ici et sur le Mac : la
+  respiration du bandeau LED (`mur_led.gd`, de zéro au sommet en 8,5 s). `loupe-led` : 5,77 d'écart en phase
+  libre, **0,47 bandeau figé à 0,45** (`--led-murs-fige=0.45`) — c'était la phase, pas le pilote ; et
+  `loupe-corps-j1` et `-j2`, deux recadrages d'une même image, y retrouvent la même phase (0,63 et 0,61).
+  Les quatre loupes en écran scindé, les plus éloignées en phase libre (10 à 16), tombent à 1,4 à 2,4 bandeau
+  figé près du sommet, et s'accordent sur la même phase (0,97 à 0,98). Pour comparer une pénombre, figer le
+  bandeau des deux côtés.
+- Ce qui tient au GPU du Mac : précision et pilote de Metal/ANGLE, écran Retina.
+
+**Deux pièges de la comparaison elle-même.** (1) Deux images de commits différents ne mesurent pas le rendu —
+le cadrage, la carte, un réglage ont bougé entre-temps : on extrait l'arbre du commit de la référence (`git
+archive`), on y pose les correctifs de l'outil, et seulement alors on compare. Même au bon commit, le premier
+essai (plafond de physique relevé, sans horloge fixe) donnait à `loupe-pilier` un cône d'une autre forme et
+12,3 d'écart moyen, contre 0,67 sous horloge fixe : c'était l'horloge, pas le pilote. (2) Les planches
+commitées sont souvent réduites (960×540) ou quantifiées (PNG en palette dans `captures_finale/`) : l'écart y
+comprend la compression. Seule une PNG RGB pleine taille est une référence au pixel.
+
+**Signalé, non corrigé** (hors périmètre) : `loupe-led` ne tient PAS le bandeau au sommet. Le `regler(1.0)`
+de la loupe passe à la reprise de `process_frame`, donc AVANT `MurLed._process`, qui le réécrit à chaque image
+depuis l'horloge de manche : la prise montre une phase quelconque, sur le Mac comme ici — celle du Mac du
+2026-09-15 était à ~0,44 du sommet d'après le balayage ci-dessus, pas à 1.
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 

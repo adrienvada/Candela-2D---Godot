@@ -5941,3 +5941,13 @@ mesure qui l'a établie, pas lui. (2) J'ai posé le seuil de détection des imag
 quand la queue vit à 23,8 : dix-sept prises sur dix-huit n'ont rien attrapé, et mon test de phase
 s'est retrouvé sans puissance. Le verdict apparent (« la queue vient du banc ») ne tenait qu'à
 UNE prise anormale ; sans elle il s'inverse. **Rien n'est conclu sur la queue.**
+
+### 2026-09-26 — session cloud « photographe dans le cloud » (branche `claude/cloud-photographe`)
+
+Le photographe et sa loupe tournent dans le conteneur du cloud (Xvfb, Mesa llvmpipe). **Touchés**,
+tous dans `tools/` : `photographe.gd` (la vue retaillée sous Xvfb ; les repos et les attentes comptés
+dans l'horloge du jeu sous `--fixed-fps`), `loupe.gd` (ses repos lisent la même horloge, une ligne),
+`run_photos.sh` (`GODOT_ARGS` pour les drapeaux du moteur, la commande du cloud en en-tête),
+`test_banc.gd` (la garde de l'appel inter-fichier `p._maintenant()`). **Rien du jeu.** Sur le Mac, sans
+`--fixed-fps`, rien ne change : la montre, comme avant. Détail et mesures contre le Mac : ROADMAP, DA6,
+« Le photographe dans le cloud ».

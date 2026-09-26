@@ -264,6 +264,17 @@ func _run() -> void:
 		texte_loupe.contains("_poser_la_lumiere_3d("),
 		"sans cet appel, les cadrages « adversaire » sortent en vue d'ISO11")
 
+	# Le photographe dans le cloud — l'horloge que la LOUPE lit chez le photographe (`p._maintenant()`) pour compter ses
+	# repos. Même faiblesse que ci-dessus : un renommage tuerait la séance de loupe à sa première prise par une erreur
+	# d'exécution, que `run_photos.sh` ne guette pas (il ne lit que les erreurs d'ANALYSE). Et un retour à la montre, sous
+	# `--fixed-fps` dans le conteneur, ne laisserait qu'une ou deux images de jeu par repos.
+	_check("le photographe expose encore _maintenant() pour la loupe",
+		texte_photo.contains("func _maintenant("),
+		"la loupe compte ses repos à cette horloge, en inter-fichier")
+	_check("et la loupe compte encore ses repos à l'horloge du photographe",
+		texte_loupe.contains("p._maintenant("),
+		"à la montre, sous --fixed-fps, un repos de 0,6 s ne vaut qu'une ou deux images de jeu")
+
 	# ISO12 v27 — LE RELIEF, même faiblesse et pire conséquence. `presentation_3d.gd` demande au miroir la liste des lampes
 	# pour le dénominateur du relief, et il ne peut le faire QUE par son nom, en texte : `_lumieres` est typé `Node3D`, et
 	# `lumieres_iso.gd` ne déclare aucun `class_name` — il n'existe aucun type à écrire. Rien ne vérifie donc cet appel avant
