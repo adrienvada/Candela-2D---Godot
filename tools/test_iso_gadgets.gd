@@ -560,19 +560,30 @@ func _le_masque_de_la_fumee() -> void:
 		and not inc.contains("pate_vers_affiche(pate_c)") and not inc.contains("sol_facteur_min"))
 	_check("le SOL se juge sur la couleur que sol_iso ÉCRIT, et une FACE sur celle que mur_iso écrit",
 		inc.contains("return sol_montre_noir(p_sol, deux, aa_sol, px_monde_sol, g_x, g_y);")
-		and inc.contains("return ecran_noir(face_ecrite(monde + vue * (t_sol * s), n, deux, aa_sol, haut, px_monde_sol));")
+		and inc.contains("return face_montre_noir(monde + vue * (t_sol * s), n, deux, aa_sol, haut, px_monde_sol);")
 		and inc.contains("vec3 c = pate_facteur(lightmap_pateuse_lue(brute, motif, aa), matiere * contact);")
-		and inc.contains("return mur_temperature_de(c, brute);"))
+		and inc.contains("return ecran_noir(mur_temperature_de(c, brute));"))
+	# BANDE DES FACES (ordre 417, 2026-09-26) — l'usure d'une face ne se calcule que là où elle peut changer la réponse ;
+	# hors bande, les deux certitudes du sol (ordre 383). Même réponse au pixel ; seul le calcul change.
+	var corps_face := _fonction_glsl(inc, "bool face_montre_noir(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde) {")
+	_check("la bande des faces : noir sûr sous 1/1,4 du point noir, visible sûr au plancher de l'usure, usure exacte entre les deux",
+		corps_face.contains("if (max(c.r, max(c.g, c.b)) * SOL_HAUSSE_MAX < POINT_NOIR_ECRIT) {\n\t\treturn true;")
+		and corps_face.contains("if (pate_luminance(c) * mix(1.0, USURE_RESTE, usure * smoothstep(USURE_SEUILS.x, USURE_SEUILS.y, pate_luminance(c)))\n\t\t\t>= POINT_NOIR_ECRIT) {\n\t\treturn false;")
+		and corps_face.find("SOL_HAUSSE_MAX < POINT_NOIR_ECRIT") < corps_face.find("usure_face(e.xz")
+		and corps_face.find(">= POINT_NOIR_ECRIT) {") < corps_face.find("usure_face(e.xz")
+		and FileAccess.get_file_as_string("res://iso_usure.gdshaderinc").contains("return mix(1.0, max(f, USURE_RESTE), usure);")
+		and FileAccess.get_file_as_string("res://iso_usure.gdshaderinc").contains("\treturn mix(1.0, f, w);")
+		and not inc.contains("face_ecrite("))
 	_check("le dessus d'un mur haut est noir strict ; celui d'un muret, la pâte de sa case puis la température",
 		inc.contains("if (haut >= mur_haut_px - 0.5) {") and inc.contains("ecran_noir(mur_temperature_de(pate(l, lum, style, q.xz"))
 	_check("un point du sol tombé dans une case de mur (le pied exact d'un mur) juge la face de cette frontière",
-		inc.contains("return ecran_noir(face_ecrite(vec3(p_sol.x, 0.0, p_sol.y), n, deux, aa_sol, o_fin.r > 0.5 ? mur_haut_px : muret_px,\n\t\t\tpx_monde_sol));"))
+		inc.contains("return face_montre_noir(vec3(p_sol.x, 0.0, p_sol.y), n, deux, aa_sol, o_fin.r > 0.5 ? mur_haut_px : muret_px,\n\t\t\tpx_monde_sol);"))
 	# V1c — une couche qui DÉMARRE dans la case d'un mur n'y passe la profondeur que sur sa surface : on juge la surface par
 	# où le rayon, remonté vers la caméra, sort de la case — plus jamais « caché » d'office (21 pixels perdus, y = 605).
 	_check("une couche qui démarre dans un mur juge la surface par où le rayon y est entré (face ou dessus), pas « caché »",
 		inc.contains("if (s_haut >= max(s_face.x, s_face.y)) {")
 		and inc.contains("return dessus_montre_noir(monde + vue * (t_sol * s_haut), haut, deux, aa_sol);")
-		and inc.contains("return ecran_noir(face_ecrite(monde + vue * (t_sol * (par_x ? s_face.x : s_face.y)), n_face, deux,")
+		and inc.contains("return face_montre_noir(monde + vue * (t_sol * (par_x ? s_face.x : s_face.y)), n_face, deux,")
 		and not inc.contains("// La couche est DANS le mur : le mur la cache, rien à montrer."))
 	# V1c — chaque surface jugée prend les dérivées qu'elle prend elle-même : la face, `fwidth(motif)` et `fwidth(monde)` ;
 	# le sol, `fwidth(px)` ; les mipmaps par `textureGrad` (dans une branche, `texture()` n'a pas de dérivées définies).
@@ -581,7 +592,7 @@ func _le_masque_de_la_fumee() -> void:
 	# là où le mur prend les siens par fwidth. Le sol, lui, garde son niveau de mipmap exact (λ dans la bande).
 	_check("la face : l'écart déclaré (V1f) — aa et px_monde du sol, matière au niveau 0 ; le sol garde λ",
 		mur_face.contains("float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);")
-		and inc.contains("vec3 face_ecrite(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde) {")
+		and inc.contains("bool face_montre_noir(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde) {")
 		and inc.contains("float matiere = mix(1.0, textureLod(texture_face, motif / periode_face_px, 0.0).r, force_matiere);")
 		and inc.contains("return max(0.0, log2(max(length(g_x * TAILLE_MATIERE), length(g_y * TAILLE_MATIERE))));")
 		and not inc.contains("texture(sol_texture_sol") and not inc.contains("textureGrad("))
