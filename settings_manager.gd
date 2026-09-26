@@ -127,7 +127,9 @@ const MODE_RENDU_DESSUS := "dessus"
 ## Un `settings.cfg` sans zoom réglé suit le nouveau défaut sans rien migrer — c'est pour ce jour-là que le zoom ne
 ## s'enregistre que réglé.
 const ZOOM_DUEL_DEFAUT := 1.5
-const DECALAGE_VISEE_DEFAUT := 0.25
+## Q17 = B (Adrien, 2026-09-25 10:28) : le décalage vers la visée passe de 0,25 à 0,15 de la hauteur visible, le même
+## pour tous en ligne (`valeurs_du_duel`) ; `--decalage=0.25` rend l'ancien cadrage en build de débogage.
+const DECALAGE_VISEE_DEFAUT := 0.15
 const ZOOM_DUEL_MIN := 1.0
 const ZOOM_DUEL_MAX := 3.0
 const DECALAGE_VISEE_MAX := 0.4
@@ -140,14 +142,15 @@ const FACTEUR_PORTEE_DEFAUT := 0.75
 const FACTEUR_PORTEE_MIN := 0.5
 const FACTEUR_PORTEE_MAX := 1.5
 const DRAPEAU_TORCHE := "--torche="
-## ISO14 — le LACET du duel (Q14, Adrien, 2026-09-24 vers 01:19 : « on passe à 45° ce sera plus intéressant »),
-## ÉTEINT par défaut : 0° tant que le banc d'équité (`tools/banc_equite.gd`) et la cadence n'ont pas parlé et
-## qu'Adrien n'a pas choisi une option. `--lacet=45` tourne la caméra de J1 ; `--lacet-j2=A|B|C` dit celle de J2 —
-## A la même, B à + 180°, C le miroir gauche-droite (−L), les trois options du banc. Même patron que le zoom :
-## débogage seulement (`arguments_de_reglage`), et 0° EN LIGNE quoi que disent les drapeaux (`lacet_du_duel`).
-## Rien ne s'enregistre. ⚠️ La vue de dessus (`--2d`) ne tourne jamais : le lacet est une affaire de caméra iso.
-const LACET_DEFAUT := 0.0
-const OPTION_LACET_DEFAUT := "A"
+## ISO14 — le LACET du duel (Q14, Adrien, 2026-09-24 vers 01:19 : « on passe à 45° ce sera plus intéressant »).
+## ALLUMÉ par défaut à 45°, option B, depuis Q28 = A (Adrien, 2026-09-25 10:28 : « le 45° par défaut, prix connu »),
+## EN LIGNE compris : `lacet_du_duel` y impose ces mêmes constantes, sur les deux machines. `--lacet=X` tourne la
+## caméra de J1 ; `--lacet-j2=A|B|C` dit celle de J2 — A la même, B à + 180°, C le miroir gauche-droite (−L), les
+## trois options du banc. Le jeu d'avant Q28 : `--lacet=0 --lacet-j2=A` (`--lacet=0` seul laisse J2 à 180°, option
+## B). Débogage seulement (`arguments_de_reglage`), et rien ne s'enregistre. ⚠️ La vue de dessus (`--2d`) ne tourne
+## jamais : le lacet est une affaire de caméra iso.
+const LACET_DEFAUT := 45.0
+const OPTION_LACET_DEFAUT := "B"
 const OPTIONS_LACET := ["A", "B", "C"]
 const DRAPEAU_LACET := "--lacet="
 const DRAPEAU_LACET_J2 := "--lacet-j2="
@@ -305,11 +308,12 @@ func vue_de_dessus_choisie() -> bool:
 ## `iso` ou `dessus` — ce qui s'applique, pour les diagnostics.
 ##
 ## ISO14 — et le lacet quand il n'est pas nul : `iso lacet 45° B`. Un relevé (F3, F6, `ConditionsDeMatch`, manifeste
-## du photographe) qui ne dit pas son angle ne se compare à rien. À 0°, `iso` tout court, comme avant.
+## du photographe) qui ne dit pas son angle ne se compare à rien. À 0° en A, `iso` tout court, comme avant Q28 ;
+## à 0° en B (`--lacet=0` seul), J2 est tourné de 180° et le relevé le dit.
 func mode_rendu() -> String:
 	if not mode_iso:
 		return MODE_RENDU_DESSUS
-	if lacet_duel == 0.0:
+	if lacet_duel == 0.0 and option_lacet == "A":
 		return MODE_RENDU_ISO
 	# « 45° » et non « 45.0° » (relevé par ISO7 Gadgets : un motif strict aurait refusé ses prises).
 	var angle := str(int(lacet_duel)) if is_equal_approx(lacet_duel, roundf(lacet_duel)) else str(lacet_duel)
@@ -362,7 +366,7 @@ func accorder_au_mode(en_ligne: bool) -> void:
 	lacet_duel = l[0]
 	option_lacet = l[1]
 
-## ISO14 — `[lacet, option]` pour ce mode : 0° et A EN LIGNE, les valeurs locales ailleurs. Calcul pur, vérifié en
+## ISO14 — `[lacet, option]` pour ce mode : le défaut (45° B depuis Q28) EN LIGNE, les valeurs locales ailleurs. Calcul pur, vérifié en
 ## `--script` par `test_iso_camera`. Le lacet n'est pas une valeur « du duel » au sens de `valeurs_du_duel` (il
 ## ne touche aucune règle de jeu), mais il en suit la règle : un joueur en ligne ne choisit pas son angle de vue.
 static func lacet_du_duel(en_ligne: bool, lacet_local: float, option_locale: String) -> Array:
@@ -393,13 +397,13 @@ static func lacet_applique(args: PackedStringArray) -> float:
 	var l := fposmod(arg.to_float(), 360.0)
 	return l - 360.0 if l > 180.0 else l
 
-## `--lacet-j2=A|B|C` ; une valeur inconnue retombe sur A, et le dit.
+## `--lacet-j2=A|B|C` ; une valeur inconnue retombe sur le défaut (B depuis Q28), et le dit.
 static func option_lacet_appliquee(args: PackedStringArray) -> String:
 	var arg := valeur_par_argument(args, DRAPEAU_LACET_J2).to_upper()
 	if arg == "":
 		return OPTION_LACET_DEFAUT
 	if not OPTIONS_LACET.has(arg):
-		push_warning("GameSettings : %s%s inconnu, option A" % [DRAPEAU_LACET_J2, arg])
+		push_warning("GameSettings : %s%s inconnu, option %s" % [DRAPEAU_LACET_J2, arg, OPTION_LACET_DEFAUT])
 		return OPTION_LACET_DEFAUT
 	return arg
 

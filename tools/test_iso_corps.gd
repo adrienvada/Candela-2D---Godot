@@ -48,6 +48,12 @@ func _run() -> void:
 	_check("sans classe, le corps dessiné est une classe du catalogue (repli de RENDU, jamais de statistique)",
 		VoxelCatalogue.slugs().has(Pres.slug_du_corps(null)), Pres.slug_du_corps(null))
 	_la_zone_de_touche()
+	# Q28 (2026-09-26) — le témoin de dessus se compare pas pour pas à 0° A : tourné (45° B, le défaut), l'iso rend les
+	# commandes relatives à l'écran et les parties divergent à dessein. Posé sur les valeurs LOCALES, que chaque manche
+	# recopie (`accorder_au_mode(false)`).
+	reglages.set("_lacet_local", 0.0)
+	reglages.set("_option_lacet_locale", "A")
+	reglages.accorder_au_mode(false)
 
 	# ISO6 — l'iso est le défaut : la vue de dessus du témoin se demande AVANT de monter `Main`, dont
 	# le premier `rebuild_arena()` accroche sinon la présentation.

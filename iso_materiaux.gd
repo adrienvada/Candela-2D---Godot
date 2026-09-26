@@ -141,11 +141,14 @@ static func poser_encre_essai(materiau: ShaderMaterial, allumee: bool, mur := fa
 		materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE_ESSAI if allumee else ENCRE_ARETE_RESTE)
 
 
-## ISO13, lot C — L'USURE EN ESSAI (`--usure-essai`, éteint par défaut) : fissures, taches, coulures et impacts de balles
+## ISO13, lot C — L'USURE (d'abord en essai, `--usure-essai`) : fissures, taches, coulures et impacts de balles
 ## sur les faces des murs, gravats au sol (`iso_usure.gdshaderinc`). Les impacts sont ceux du jeu (`wall_impact.gd`), les
 ## plus récents d'abord, posés par la présentation (`Presentation3D`) ; les douilles le sont déjà par la peinture de la carte.
-## Rien n'est allumé en jeu avant l'avis d'Adrien et la mesure de cadence de Gadgets.
+## ALLUMÉE PAR DÉFAUT depuis Q30 = A (Adrien, 2026-09-25 10:28 : « les murs abîmés par défaut »), dans sa version légère
+## (le levier 1 : la proximité des murs préparée une fois par carte). `--sans-usure` la coupe ; `--usure-essai`, le drapeau
+## d'avant, ne change plus rien. Son prix se mesure sur l'état intégré (règle 278), avec le masque de la fumée et le 45°.
 const DRAPEAU_USURE_ESSAI := "--usure-essai"
+const DRAPEAU_SANS_USURE := "--sans-usure"
 ## Le rayon d'un impact sur la face, en pixels de monde, et sa hauteur : celle du torse d'un corps debout (le tir part de
 ## l'arme, à hauteur de poitrine), avec un écart tiré de la position — le même impact, à la même hauteur, sur chaque machine
 ## et à chaque image.
@@ -155,8 +158,19 @@ const USURE_IMPACT_ECART_TUILES := 0.14
 const USURE_IMPACTS_MAX := 48
 
 
+## Pour les tests et les bancs seulement : −1 lit la ligne de commande, 0 force l'usure éteinte, 1 allumée.
+static var usure_forcee := -1
+
+
 static func usure_essai_active() -> bool:
-	return OS.get_cmdline_user_args().has(DRAPEAU_USURE_ESSAI)
+	if usure_forcee >= 0:
+		return usure_forcee == 1
+	return usure_active(OS.get_cmdline_user_args())
+
+
+## Calcul pur : allumée sauf `--sans-usure` (Q30 = A).
+static func usure_active(args: PackedStringArray) -> bool:
+	return not args.has(DRAPEAU_SANS_USURE)
 
 
 ## Allume ou éteint l'usure sur un matériau de mur ou de sol. Allumée, le matériau passe à la variante USURE_ESSAI de son

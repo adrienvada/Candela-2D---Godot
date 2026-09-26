@@ -557,8 +557,9 @@ func _run_training() -> void:
 	var regard := func() -> Vector2:
 		var vue := _main.cam1.custom_viewport as Viewport
 		var vue_px: Vector2 = vue.get_visible_rect().size if vue != null else Vector2(1920.0, 1080.0)
+		# Q28 (2026-09-26) : au lacet de la vue, comme `GameState` — à 45° par défaut, la boîte du regard tourne avec elle.
 		return RegardDuel.centre_du_regard(_main.p1.global_position, _main._regard_decalage[0], vue_px,
-			_main.cam1.zoom.y, _main._carte_px, float(CandelaTileSet.TILE_SIZE.y))
+			_main.cam1.zoom.y, _main._carte_px, float(CandelaTileSet.TILE_SIZE.y), _main.lacet_de_la_vue(0))
 	_check("la caméra est posée sur le regard du joueur à l'entrée",
 		_main.cam1.global_position.distance_to(regard.call()) < 4.0,
 		"caméra %s, regard prescrit %s, joueur %s" % [_main.cam1.global_position, regard.call(), _main.p1.global_position])

@@ -209,7 +209,10 @@ func _regard_du_duel() -> void:
 		# ISO11, L3 — ×1,8 → ×1,5, amendé par Adrien au test 1 (« un peu moins zoomée »).
 		_check("zoom du duel ×1,5 par défaut (amendé par Adrien au test 1)", is_equal_approx(reglages.zoom_duel, 1.5))
 	if Script.valeur_par_argument(args, "--decalage=").is_empty():
-		_check("décalage de visée d'un quart de la hauteur visible par défaut", is_equal_approx(reglages.decalage_visee, 0.25))
+		# Q17 = B (Adrien, 2026-09-25) : 0,25 → 0,15.
+		_check("décalage de visée de 0,15 de la hauteur visible par défaut (Q17)", is_equal_approx(reglages.decalage_visee, 0.15))
+	_check("EN LIGNE : le décalage est le défaut, 0,15, pour tous",
+		is_equal_approx(float(Script.valeurs_du_duel(true, 1.5, 0.4, 0.75)[1]), 0.15))
 	_check("--zoom=1.0 rend le cadrage d'avant ISO8 pour une exécution",
 		is_equal_approx(Script.zoom_applique(Script.ZOOM_DUEL_DEFAUT, PackedStringArray(["--zoom=1.0"])), 1.0))
 	# ISO8, étape 3 — la portée des torches, en un facteur global.
@@ -225,8 +228,8 @@ func _regard_du_duel() -> void:
 		Script.decalage_applique(PackedStringArray([])),
 		Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"]))]
 	var en_ligne: Array = Script.valeurs_du_duel(true, locales[0], locales[1], locales[2])
-	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,5, décalage 0,25, portée ×0,75 — les défauts",
-		is_equal_approx(en_ligne[0], 1.5) and is_equal_approx(en_ligne[1], 0.25) and is_equal_approx(en_ligne[2], 0.75),
+	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,5, décalage 0,15 (Q17), portée ×0,75 — les défauts",
+		is_equal_approx(en_ligne[0], 1.5) and is_equal_approx(en_ligne[1], 0.15) and is_equal_approx(en_ligne[2], 0.75),
 		str(en_ligne))
 	var en_local: Array = Script.valeurs_du_duel(false, locales[0], locales[1], locales[2])
 	_check("en écran scindé local, les mêmes drapeaux s'appliquent (zoom 1,0, portée 1,0)",
@@ -324,7 +327,9 @@ func _reglage() -> void:
 	if Script.deux_d_par_argument(args):
 		_check("lancée en --2d : la vue de dessus s'applique", reglages.mode_iso == false and reglages.mode_rendu() == "dessus")
 	else:
-		_check("mode_iso est VRAI par défaut (lot lancé sans --2d)", reglages.mode_iso == true and reglages.mode_rendu() == "iso")
+		# Q28 = A (2026-09-25) : l'iso par défaut est à 45° B, et le relevé le dit.
+		_check("mode_iso est VRAI par défaut (lot lancé sans --2d), à 45° B", reglages.mode_iso == true
+			and reglages.mode_rendu() == "iso lacet 45° B", reglages.mode_rendu())
 	var chemin := "user://test_iso_reglages.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(chemin))
 	var neuf: Node = Script.new()
@@ -432,6 +437,15 @@ func _simulation_inchangee() -> void:
 	# avec OU sans iso. Ce que ce contrôle mesure, c'est la vue iso ; le regard est une présentation locale.
 	var decalage_avant: float = reglages.decalage_visee
 	reglages.decalage_visee = 0.0
+	# ⚠️ Q28 (2026-09-26) — et le lacet à 0° A pendant les parties comparées. Tourné, l'iso rend les commandes relatives
+	# à l'ÉCRAN (move_right va vers la droite de l'écran, ISO14) ; la vue de dessus ne tourne jamais. À 45°, les deux
+	# parties diffèrent donc à dessein dès le premier pas : ce contrôle mesure la vue, pas l'angle.
+	# Les valeurs LOCALES : l'entraînement relance `accorder_au_mode(false)`, qui recopie le local dans `lacet_duel`.
+	var lacet_sim_avant: float = reglages.get("_lacet_local")
+	var option_sim_avant: String = reglages.get("_option_lacet_locale")
+	reglages.set("_lacet_local", 0.0)
+	reglages.set("_option_lacet_locale", "A")
+	reglages.accorder_au_mode(false)
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -454,6 +468,9 @@ func _simulation_inchangee() -> void:
 	_check("même rejeu enregistré (%d images)" % (sans["rejeu"] as Array).size(),
 		_ecarts(sans["rejeu"], avec["rejeu"]) == 0 and not (sans["rejeu"] as Array).is_empty())
 	reglages.decalage_visee = decalage_avant
+	reglages.set("_lacet_local", lacet_sim_avant)
+	reglages.set("_option_lacet_locale", option_sim_avant)
+	reglages.accorder_au_mode(false)
 
 	# Les touches de la pâte, pendant que la vue est allumée (la dernière partie l'a laissée
 	# allumée) : F2 seule n'atteint pas le jeu sur un Mac sans `fn`.

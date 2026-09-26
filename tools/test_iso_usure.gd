@@ -59,8 +59,14 @@ func _noms(sh: Shader) -> Array:
 
 
 func _le_drapeau() -> void:
-	print("— le drapeau : éteint par défaut, les shaders d'origine")
-	_check("--usure-essai n'est pas sur la ligne de commande de la suite", not IsoMateriaux.usure_essai_active())
+	# Q30 = A (Adrien, 2026-09-25) : allumée par défaut, `--sans-usure` la coupe ; éteinte, les shaders d'origine.
+	print("— le drapeau : allumée par défaut (Q30), coupée par --sans-usure ; éteinte, les shaders d'origine")
+	_check("sans drapeau : allumée", IsoMateriaux.usure_active(PackedStringArray([])))
+	_check("--sans-usure : éteinte", not IsoMateriaux.usure_active(PackedStringArray(["--sans-usure"])))
+	_check("--usure-essai, le drapeau d'avant : toujours allumée",
+		IsoMateriaux.usure_active(PackedStringArray(["--usure-essai"])))
+	_check("la suite, lancée sans drapeau, a l'usure allumée", IsoMateriaux.usure_essai_active())
+	IsoMateriaux.usure_forcee = 0
 	var mur := ShaderMaterial.new()
 	mur.shader = load(MURS[0])
 	IsoMateriaux.accorder_mur(mur)
@@ -73,6 +79,11 @@ func _le_drapeau() -> void:
 		var noms := _noms(load(chemin))
 		_check("%s d'origine : aucun uniforme de l'usure" % chemin.get_file(),
 			not noms.has("usure") and not noms.has("usure_impacts"))
+	IsoMateriaux.usure_forcee = -1
+	var mur_allume := ShaderMaterial.new()
+	mur_allume.shader = load(MURS[0])
+	IsoMateriaux.accorder_mur(mur_allume)
+	_check("allumée : le mur passe à la variante USURE_ESSAI", mur_allume.shader.code.contains("#define USURE_ESSAI\n"))
 
 
 func _les_variantes() -> void:

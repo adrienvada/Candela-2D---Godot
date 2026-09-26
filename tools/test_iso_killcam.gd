@@ -46,6 +46,12 @@ func _run() -> void:
 	var reglages := root.get_node("GameSettings")
 	_le_fil()
 	_le_lacet()
+	# Q28 (2026-09-26) — le défaut est 45° B ; les contrôles de ce banc (stick « exactement celui de la vue de dessus »,
+	# aller-retour monde → écran → sol) sont écrits à 0° A, et `_le_lacet` couvre le lacet. Posé sur les valeurs LOCALES,
+	# que chaque manche recopie (`accorder_au_mode(false)`).
+	reglages.set("_lacet_local", 0.0)
+	reglages.set("_option_lacet_locale", "A")
+	reglages.accorder_au_mode(false)
 
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)

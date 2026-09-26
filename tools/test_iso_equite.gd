@@ -158,9 +158,11 @@ func _run() -> void:
 func _drapeau_lacet(Geo: GDScript) -> void:
 	print("\n--- Le drapeau --lacet ---")
 	var SM: GDScript = load("res://settings_manager.gd")
-	_check("par défaut : 0°, option A", float(SM.LACET_DEFAUT) == 0.0 and String(SM.OPTION_LACET_DEFAUT) == "A")
-	_check("EN LIGNE : 0° et A quoi que disent les drapeaux", SM.lacet_du_duel(true, 45.0, "B") == [0.0, "A"])
-	_check("hors ligne : les valeurs locales", SM.lacet_du_duel(false, 45.0, "B") == [45.0, "B"])
+	# Q28 = A (Adrien, 2026-09-25) : 45° B par défaut, en ligne compris.
+	_check("par défaut : 45°, option B (Q28)", float(SM.LACET_DEFAUT) == 45.0 and String(SM.OPTION_LACET_DEFAUT) == "B")
+	_check("EN LIGNE : 45° et B quoi que disent les drapeaux", SM.lacet_du_duel(true, 0.0, "A") == [45.0, "B"]
+		and SM.lacet_du_duel(true, 90.0, "C") == [45.0, "B"])
+	_check("hors ligne : les valeurs locales", SM.lacet_du_duel(false, 0.0, "A") == [0.0, "A"])
 	_check("option A : J2 au même lacet", float(SM.lacet_du_joueur(1, 45.0, "A")) == 45.0)
 	_check("option B : J2 à + 180°", float(SM.lacet_du_joueur(1, 45.0, "B")) == 225.0)
 	_check("option C : J2 au miroir, −L", float(SM.lacet_du_joueur(1, 45.0, "C")) == -45.0)
@@ -170,10 +172,14 @@ func _drapeau_lacet(Geo: GDScript) -> void:
 		and float(SM.lacet_du_joueur(1, 0.0, "A")) == 0.0)
 	_check("--lacet=45 → 45", float(SM.lacet_applique(PackedStringArray(["--lacet=45"]))) == 45.0)
 	_check("--lacet=270 → −90 (ramené)", absf(float(SM.lacet_applique(PackedStringArray(["--lacet=270"]))) + 90.0) < 1e-9)
-	_check("--lacet illisible → 0", float(SM.lacet_applique(PackedStringArray(["--lacet=abc"]))) == 0.0)
+	_check("--lacet illisible → le défaut, 45", float(SM.lacet_applique(PackedStringArray(["--lacet=abc"]))) == 45.0)
+	_check("sans --lacet → 45", float(SM.lacet_applique(PackedStringArray([]))) == 45.0)
+	_check("--lacet=0 → 0 (le retour au jeu d'avant Q28, avec --lacet-j2=A)",
+		float(SM.lacet_applique(PackedStringArray(["--lacet=0"]))) == 0.0
+		and String(SM.option_lacet_appliquee(PackedStringArray(["--lacet-j2=A"]))) == "A")
 	_check("--lacet-j2=b → B", String(SM.option_lacet_appliquee(PackedStringArray(["--lacet-j2=b"]))) == "B")
-	_check("sans --lacet-j2 → A", String(SM.option_lacet_appliquee(PackedStringArray([]))) == "A")
-	_check("--lacet-j2 n'est pas lu comme --lacet", float(SM.lacet_applique(PackedStringArray(["--lacet-j2=B"]))) == 0.0)
+	_check("sans --lacet-j2 → B", String(SM.option_lacet_appliquee(PackedStringArray([]))) == "B")
+	_check("--lacet-j2 n'est pas lu comme --lacet", float(SM.lacet_applique(PackedStringArray(["--lacet-j2=A"]))) == 45.0)
 	_check("hors build de débogage, les deux drapeaux sont ignorés",
 		(SM.arguments_de_reglage(PackedStringArray(["--lacet=45", "--lacet-j2=B"]), false) as PackedStringArray).is_empty())
 

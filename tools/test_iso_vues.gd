@@ -59,6 +59,15 @@ func _run() -> void:
 	_check("mode_iso est vrai par défaut depuis ISO6 (lot lancé sans --2d)", reglages.mode_iso == true)
 	_check("la lightmap est en 1080p par défaut", reglages.iso_lightmap == "1080p")
 	_statiques(Reglages, Pres, Canaux)
+	# Q28 (2026-09-26) — le défaut est 45° B, mais les contrôles de ce banc décrivent la géométrie à 0° A (axes du monde
+	# alignés sur l'écran, témoin de dessus comparé pas pour pas : tourné, l'iso rend les commandes relatives à l'écran).
+	# Le 45° B a les siens (`_lacet_45_b`, `test_iso_equite`). Posé sur les valeurs LOCALES : chaque manche relance
+	# `accorder_au_mode(false)`, qui les recopie.
+	_check("le défaut du lacet est 45° B (Q28)", is_equal_approx(float(reglages.get("_lacet_local")), 45.0)
+		and String(reglages.get("_option_lacet_locale")) == "B")
+	reglages.set("_lacet_local", 0.0)
+	reglages.set("_option_lacet_locale", "A")
+	reglages.accorder_au_mode(false)
 
 	# ISO6 — l'iso est le défaut : la vue de dessus du témoin se demande AVANT de monter `Main`, dont
 	# le premier `rebuild_arena()` accroche sinon la présentation.
