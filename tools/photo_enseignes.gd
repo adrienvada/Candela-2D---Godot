@@ -50,6 +50,8 @@ func _ready() -> void:
 	_taille = _lire_taille(_valeur(args, "--taille", "%dx%d" % [TAILLE_DEFAUT.x, TAILLE_DEFAUT.y]))
 	print("=== La planche des enseignes ===")
 	_poser_la_fenetre()
+	# Le cloud (`--fixed-fps 60`, rendu logiciel) : attentes et repos comptés en images de jeu, comme le photographe.
+	await _lire_l_horloge()
 	_mute_avant = AudioServer.is_bus_mute(0)
 	AudioServer.set_bus_mute(0, true)
 	_main = preload("res://main.tscn").instantiate()
@@ -160,8 +162,8 @@ func _tenir() -> void:
 
 
 func _tenir_pendant(secondes: float) -> void:
-	var fin := Time.get_ticks_msec() + int(secondes * 1000.0)
-	while Time.get_ticks_msec() < fin:
+	var fin := _maintenant() + secondes
+	while _maintenant() < fin:
 		_tenir()
 		await get_tree().process_frame
 	_tenir()
