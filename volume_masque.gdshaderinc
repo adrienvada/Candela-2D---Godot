@@ -317,7 +317,19 @@ vec3 mur_temperature_de(vec3 c, vec3 brute) {
 // MÊME médiane masquée (84) : la différence est dans la référence, et ce que la face coûte n'est pas établi. V1e reste la
 // meilleure candidate si une mesure plus fine la place sous 3 %. Aucune preuve à l'image n'a trouvé de faute sur une
 // face lue ainsi (V1b, V1f), hors de la rangée où une couche démarre dans le mur, que le parcours corrige.
-vec3 face_ecrite(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde) {
+// Vrai si la FACE au point `e` s'affiche noire : sa couleur écrite, comme `mur_iso.gdshader` la calcule, jugée au point noir.
+// BANDE DES FACES (ordre 417, 2026-09-26) — avec l'usure d'essai, chaque pixel de fumée devant une face payait `usure_face`
+// entière (cinq bruits, la fissure de travée, jusqu'à 48 impacts avec atan et pow) : le prix du masque sur l'état intégré,
+// usure allumée et 45°, était de 0,863. L'usure ne se calcule plus que là où elle peut changer la réponse. Hors de la
+// bande, deux certitudes, les mêmes que pour le sol (ordre 383), la face SANS usure étant déjà calculée :
+// - NOIR à coup sûr si son canal le plus fort × 1,4 reste sous le point noir : l'usure ne relève aucun canal
+//   (`pate_facteur(x, f) ≤ x`, f ≤ 1) et la température le relève au plus de ×1,384 ;
+// - VISIBLE à coup sûr si sa luminance × le poids d'usure le plus sombre atteint le point noir : `usure_face` rend au moins
+//   mix(1 ; USURE_RESTE ; usure), donc `usure_poids` au moins mix(1 ; USURE_RESTE ; usure × poids) ; `pate_facteur(x, f)
+//   ≥ f·x`, la température garde la luminance, et un canal vaut au moins la luminance.
+// Entre les deux, l'usure exacte. La réponse est la même au pixel près ; seul le calcul change. Sans `USURE_ESSAI`, rien ne
+// change du tout.
+bool face_montre_noir(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde) {
 	vec2 tangente = vec2(-n.y, n.x);
 	vec2 motif = vec2(dot(e.xz, tangente), -e.y);
 	vec3 ref = lire_etalon(peinture_etalon_px);
@@ -327,9 +339,16 @@ vec3 face_ecrite(vec3 e, vec2 n, bool deux, float aa, float haut, float px_monde
 	float contact = contact_px > 0.0 ? mix(contact_reste, 1.0, smoothstep(0.0, contact_px, e.y)) : 1.0;
 	vec3 c = pate_facteur(lightmap_pateuse_lue(brute, motif, aa), matiere * contact);
 #ifdef USURE_ESSAI
+	if (max(c.r, max(c.g, c.b)) * SOL_HAUSSE_MAX < POINT_NOIR_ECRIT) {
+		return true;
+	}
+	if (pate_luminance(c) * mix(1.0, USURE_RESTE, usure * smoothstep(USURE_SEUILS.x, USURE_SEUILS.y, pate_luminance(c)))
+			>= POINT_NOIR_ECRIT) {
+		return false;
+	}
 	c = pate_facteur(c, usure_poids(c, usure_face(e.xz, n, tangente, e.y, haut, px_monde)));
 #endif
-	return mur_temperature_de(c, brute);
+	return ecran_noir(mur_temperature_de(c, brute));
 }
 
 // Vrai si le pixel de la couche au point `monde`, vue le long de `vue` (caméra orthographique, vers la scène), montre du
@@ -392,12 +411,12 @@ bool masque_montre_noir(vec3 monde, vec3 vue, bool deux, vec3 d_x, vec3 d_y) {
 					}
 					bool par_x = s_face.x >= s_face.y;
 					vec2 n_face = par_x ? vec2(-pas.x, 0.0) : vec2(0.0, -pas.y);
-					return ecran_noir(face_ecrite(monde + vue * (t_sol * (par_x ? s_face.x : s_face.y)), n_face, deux,
-						aa_sol, haut, px_monde_sol));
+					return face_montre_noir(monde + vue * (t_sol * (par_x ? s_face.x : s_face.y)), n_face, deux,
+						aa_sol, haut, px_monde_sol);
 				}
 				// Par une FACE, à la frontière franchie : sa normale regarde d'où vient le rayon.
 				vec2 n = axe == 0 ? vec2(-pas.x, 0.0) : vec2(0.0, -pas.y);
-				return ecran_noir(face_ecrite(monde + vue * (t_sol * s), n, deux, aa_sol, haut, px_monde_sol));
+				return face_montre_noir(monde + vue * (t_sol * s), n, deux, aa_sol, haut, px_monde_sol);
 			}
 			// Au-dessus du mur à son bord : il y descend sous sa hauteur avant d'en sortir ? Alors par son DESSUS.
 			float s_dessus = 1.0 - haut / max(monde.y, 1e-3);
@@ -432,8 +451,8 @@ bool masque_montre_noir(vec3 monde, vec3 vue, bool deux, vec3 d_x, vec3 d_y) {
 		float dx = pas.x > 0.0 ? p_sol.x - bord.x : bord.x + tuile_px - p_sol.x;
 		float dz = pas.y > 0.0 ? p_sol.y - bord.y : bord.y + tuile_px - p_sol.y;
 		vec2 n = dx < dz ? vec2(-pas.x, 0.0) : vec2(0.0, -pas.y);
-		return ecran_noir(face_ecrite(vec3(p_sol.x, 0.0, p_sol.y), n, deux, aa_sol, o_fin.r > 0.5 ? mur_haut_px : muret_px,
-			px_monde_sol));
+		return face_montre_noir(vec3(p_sol.x, 0.0, p_sol.y), n, deux, aa_sol, o_fin.r > 0.5 ? mur_haut_px : muret_px,
+			px_monde_sol);
 	}
 	// Le SOL, au bout du rayon, tel que `sol_iso.gdshader` l'écrit — calculé exactement dans la bande seulement (V1b), ses
 	// deux côtés jugés sur une couture (V1c).
