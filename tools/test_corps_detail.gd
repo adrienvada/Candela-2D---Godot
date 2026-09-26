@@ -255,6 +255,18 @@ func _la_bandouliere(racine: Node3D) -> void:
 			pire = maxf(pire, _debord(p["taille"], p["position"], float(p["angle"]), lt, ht))
 		_check("%s : les %d pièces du torse, largeur comprise, dans sa face (débord %.4f tuile)" % [slug, n, pire],
 			pire <= 0.0001 and n >= 1)
+	# Q33 — aucune paire de pièces du torse dont les faces avant se recouvrent à la MÊME profondeur (ordre 426 : la plaque et la
+	# bretelle de l'Illusionniste, face avant à 0,012 toutes deux ; l'ordre de tracé choisissait, et les deux dessins non pareil).
+	var egalites := []
+	for slug in KIT:
+		egalites.append_array(_pieces_a_egalite(_corps(racine, slug, true).pieces_detail(), slug))
+	_check("aucune paire de pièces du torse ne se recouvre à la même profondeur (face avant à 0,5 millième près), pour les dix",
+		egalites.is_empty(), str(egalites))
+	var faux := [{"nom": "Plaque", "parent": null, "taille": Vector3(0.065, 0.065, 0.012), "position": Vector3(-0.1, 0.27, -0.006),
+		"angle": 0.0}, {"nom": "Bretelle1", "parent": null, "taille": Vector3(0.035, 0.32, 0.012), "position": Vector3(-0.11, 0.17, -0.006),
+		"angle": 0.0}]
+	_check("la garde rougit sur l'ancienne plaque de l'Illusionniste (à la profondeur de sa bretelle)",
+		not _pieces_a_egalite(faux, "essai", false).is_empty())
 	# La garde vue rougir : la longueur de l'essai du 24/09 (lt / cos × 0,98, sans la largeur) déborde.
 	var f := VoxelCatalogue.fiche("pistolet")
 	var lt := float(f["largeur_torse"]) * float(f["echelle"])
@@ -264,6 +276,27 @@ func _la_bandouliere(racine: Node3D) -> void:
 	var debord := _debord(Vector3(ancienne, VoxelCorps.LARGEUR_BANDOULIERE, 0.014), Vector3(0, ht * 0.5, 0), angle, lt, ht)
 	_check("la garde rougit sur la longueur de l'essai (%.3f → débord %.4f tuile ; aujourd'hui %.3f)"
 		% [ancienne, debord, VoxelCorps.longueur_bandouliere(lt, ht, angle, VoxelCorps.LARGEUR_BANDOULIERE)], debord > 0.005)
+
+
+## Les paires de pièces du torse dont les rectangles de face (x, y ; boîte englobante de la pièce tournée) se recouvrent et dont
+## les faces avant sont à la même profondeur (z − demi-épaisseur, à 0,5 millième de tuile près).
+func _pieces_a_egalite(pieces: Array, slug: String, filtrer := true) -> Array:
+	var faces := []
+	for p in pieces:
+		if filtrer and String((p["parent"] as Node).name) != "Torse":
+			continue
+		var t: Vector3 = p["taille"]
+		var a := float(p["angle"])
+		var dx := t.x * 0.5 * absf(cos(a)) + t.y * 0.5 * absf(sin(a))
+		var dy := t.x * 0.5 * absf(sin(a)) + t.y * 0.5 * absf(cos(a))
+		var c: Vector3 = p["position"]
+		faces.append([String(p["nom"]), Rect2(c.x - dx, c.y - dy, 2.0 * dx, 2.0 * dy), c.z - t.z * 0.5])
+	var out := []
+	for i in faces.size():
+		for j in range(i + 1, faces.size()):
+			if absf(float(faces[i][2]) - float(faces[j][2])) < 0.0005 and (faces[i][1] as Rect2).intersects(faces[j][1]):
+				out.append("%s : %s / %s" % [slug, faces[i][0], faces[j][0]])
+	return out
 
 
 ## Le pire rayon du corps seul (accessoires compris), debout et accroupi, à seize visées, en pixels du monde.

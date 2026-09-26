@@ -990,7 +990,10 @@ func _detailler(slug: String) -> void:
 			pieces.append([_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0,
 				1])
 		"plaque":
-			pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.006), 0.0,
+			# Posée DEVANT tout ce qui passe sous elle (la bretelle de l'Illusionniste, dont la face avant est à 0,012 du torse) :
+			# face avant à 0,0165, une vraie séparation. À la même profondeur, l'ordre de tracé décidait laquelle se voyait, et
+			# les deux dessins (boîtes, fusionné) tranchaient autrement (preuve du cloud, ordre 426).
+			pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.0105), 0.0,
 				int(kit.get("plaque_role", 2))])
 	var bouteille := _torse.get_node_or_null("Bouteille") as Node3D
 	if bouteille != null:

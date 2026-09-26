@@ -27799,6 +27799,19 @@ changement de shader de la couleur (la lumière 3D passe par `accorder_corps`). 
 pour la couleur, la pré-passe qui suit la lumière 3D (prouvée par mutation : `accorder_corps` sans le suivi fait rougir la
 garde), et la sortie de pré-passe sous `#ifdef` seulement. Le prix d'une pré-passe plus longue se lira à la cadence.
 
+**Après le programme unique** (ordre 426, preuve du cloud sur `3f2b8b4`, trois classes, avec la pré-passe) : zéro pixel noir
+sur les deux chemins, là où il y en avait de 88 à 739. Deux écarts restaient.
+- **La plaque et la bretelle de l'Illusionniste étaient à la même profondeur** (faces avant à 0,012 du torse, rectangles qui se
+  recouvrent) : l'ordre de tracé choisissait laquelle se voyait, et les boîtes et le fusionné tranchaient autrement (208 pixels,
+  jusqu'à 37/255). La plaque passe devant, comme sur le portrait, avec une vraie séparation : face avant à 0,0165. Une garde
+  cherche, pour les dix classes, toute paire de pièces du torse dont les faces se recouvrent à la même profondeur (à 0,5
+  millième près), et elle rougit sur l'ancienne plaque.
+- **Des traits d'un pixel sur les arêtes des poches du Parasite** (24 pixels, jusqu'à 20/255) : le maillage fusionné porte des
+  sommets calculés sur le processeur, les boîtes sont transformées sur la carte graphique ; la couverture d'une arête peut en
+  différer d'un pixel. Le critère de la session cloud, écrit avant la correction, les admet : la même image au pixel, SAUF des
+  pixels isolés ou des traits d'un pixel sur les arêtes des pièces, à 32/255 au plus ; toute pièce devant une autre, toute
+  couleur fausse, tout noir fait échouer la preuve.
+
 **D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
 la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le
 marbrage à 0,86, lui, restait à la taille du duel. Deux corrections :
