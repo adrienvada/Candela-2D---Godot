@@ -3356,6 +3356,22 @@ Sans commit, une seule variante vit dans l'arbre : la suivante efface la précé
 passait alors la règle) n'était plus restaurable par son seul shader — deux autres fichiers avaient changé avec le
 remède. Chaque variante mesurée se fige en patch (`git add -N` puis `git diff`) avant sa première prise.
 
+### Une pré-passe de profondeur et sa couleur doivent être LE MÊME programme (2026-09-27)
+
+Chantier ISO13, Q33 (personnages détaillés). Chaque corps iso se dessine en deux passes : une pré-passe de profondeur
+(`render_priority -1`, noire à alpha 0) puis sa couleur, transparente, qui doit passer le test de profondeur contre elle. Sous
+`--corps-detaille`, la couleur passait par la variante CORPS_DETAIL de son shader, la pré-passe par le shader de profondeur
+ordinaire : **deux programmes**. Rien, en GLSL, ne garantit que deux programmes calculent la même profondeur au bit près (pas
+d'`invariant`) ; sous llvmpipe (le rendu logiciel du cloud), ils ne le faisaient pas. La couleur d'une pièce perdait alors le
+test contre SA propre pré-passe : la pièce disparaissait EN ENTIER, avec le torse derrière elle, légitimement caché — des
+triangles noirs entiers (le sol du banc), des deux côtés d'une comparaison, à des endroits qui changeaient avec la géométrie.
+Prouvé par intervention : pré-passes cachées (`banc_corps --sans-profondeur`), 0 pixel noir au lieu de 88 à 739. **Leçon** :
+une pré-passe prend le programme de sa couleur, avec un uniforme qui la fait sortir tôt (`passe_profondeur`), et suit chaque
+changement de shader de la couleur. Et une seconde : j'avais d'abord accusé un attribut de sommet (CUSTOM1) sur un indice lu
+au zoom ; la preuve refaite sur trois classes a montré le défaut sur la référence elle-même. **Un diagnostic se prouve par
+intervention avant de se corriger.** Trouvé dans le cloud, sous llvmpipe ; le pilote d'Apple peut tomber juste aujourd'hui et
+faux demain.
+
 ### Une garantie vraie dans le monde n'est pas vraie à l'écran : la parallaxe des volumes en hauteur (2026-09-24)
 
 Chantier ISO13, lot E. Un volume iso vaut la lightmap sous lui, donc zéro au-dessus d'un sol noir. On
@@ -28121,6 +28137,93 @@ Cloître : 13 056 sommets, 20 016 triangles), un seul matériau.
 - Non suivis, dits : le lambert des faces (éteint, plancher 1 ; la garde rougit s'il s'allume) et la lumière 3D (close, Q20),
   sous laquelle les tuyaux garderaient la lecture de la lightmap.
 - Hors périmètre, signalé : `volume_masque.gdshaderinc` (fusion `b18cf25`) n'a pas son `.uid` dans le dépôt ; l'import le crée.
+
+#### ISO13, Q33 — les personnages détaillés EN JEU, pour les dix classes 🟡 (ouvert le 2026-09-26, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (décision d'Adrien, 2026-09-26 au soir, Q33 : les personnages détaillés au duel, pour les dix classes ; ordres 408
+et 409 de la session cloud). La killcam reste en aplat. Le chantier passe par cinq garde-fous, dans cet ordre : l'équité au
+bord de la lumière (même part visible au seuil pour les dix classes, à 5 points près ; apparition à 0,10 ; au moins 0,95 du
+corps sans kit à 0,10 comme à 0,15), la silhouette (couloir 17,5, zone de touche 18), le noir absolu, la cadence (règle 278,
+le pompe sous une fusée), puis la killcam inchangée. Tout reste derrière `--corps-detaille` jusqu'aux preuves ; le défaut
+viendra après, avec l'accord de la session cloud, et Adrien le jugera en jouant.
+
+**D1 — les quatre kits manquants.** Lus sur les portraits du dépôt (`assets/ui/portraits/` ; le dossier V3 froide d'ISO
+Assets a disparu de `/tmp` au redémarrage du Mac) : l'Illusionniste porte deux bretelles, un étui, une fiole et une plaque ;
+le Terrassier, la plaque seule ; le Braconnier, une bandoulière sans cartouches, un étui, une fiole, une plaque ; le Fumiste,
+une bandoulière et trois grenades grises, un étui, une plaque orange. `KIT_DETAIL` décrit désormais chaque pièce comme
+facultative. `test_corps_detail` : pour les dix, les tailles distinctes du corps et entre elles, toutes les pièces du torse
+dans sa face, et la silhouette du corps seul de 16,81 à 17,44 px, jamais plus large qu'avant le kit.
+
+**D3 — le coût : les accessoires fusionnés.** Chaque accessoire était une boîte, soit deux appels de dessin (couleur et
+profondeur) : 22 de plus pour un Parasite, 44 sur les 93 du duel pour deux. Ils forment maintenant un seul maillage par pièce
+qui les porte (torse, bouteille, arme) : au plus six appels par corps (Parasite 22 → 6, Occulteur 20 → 4, Illusionniste
+10 → 2). Les sommets sont ceux d'une `BoxMesh` de même taille, tournés et posés dans le repère de la pièce ; la boîte d'origine
+de chaque sommet voyage dans CUSTOM0 (position locale, w = 2) et CUSTOM1 (normale locale), en `RGBA_FLOAT`, et le shader des
+corps les relit sous `#ifdef CORPS_DETAIL` : sans le drapeau, son code prétraité ne change pas. `VoxelCorps.pieces_detail()`
+décrit le kit dans les deux cas ; l'empreinte (`rayon_empreinte`) lit cette description pour les fusionnés.
+⚠️ **Le risque reste à lever sur GPU** (précision de la session cloud, ordre 409) : des attributs CUSTOM en flottants sous
+`gl_compatibility`. La preuve attendue est une image identique au pixel, fusionné contre séparé, au même instant, sur un
+corps : `banc_corps --fusion-ab` construit les deux dessins et bascule de l'un à l'autre (`_boites.png`). Tant qu'elle
+n'est pas faite, la fusion n'est prouvée qu'en headless (même kit, même description, CUSTOM0 et CUSTOM1 en flottants, w = 2
+partout).
+
+**La preuve du cloud a trouvé un défaut, et il est corrigé sans second attribut** (ordre 414, 2026-09-26 22:30 : `--fusion-ab`
+sur `aadea5a`, Godot 4.7, OpenGL 4.5 Mesa llvmpipe, en rendu logiciel). À 0,15, même image au pixel (2 992 pixels allumés,
+0 différent). À 0,8, 180 pixels différents : deux triangles NOIRS sur des dessus de pièces (le haut de la bandoulière, l'étui),
+et, lu au zoom, les pores de la face avant de l'étui en traînées verticales là où les boîtes donnent des points. Les pores se
+calent sur les axes de la face que désigne la normale locale : des traînées disent que la face avant a été lue comme un
+dessus, donc que la normale portée par CUSTOM1 arrivait fausse. Le correctif retire CUSTOM1 : CUSTOM0.w porte 10 + l'angle de
+la boîte autour de z, et le shader retrouve la normale locale en tournant NORMAL de −angle. La suite le vérifie sur chaque
+sommet (la normale retrouvée tombe sur un axe) et refuse toute lecture de CUSTOM1 dans les shaders. La preuve est à refaire
+dans le cloud (0,8 et 0,15, deux classes dont le Parasite), puis au Mac pour le pilote d'Apple.
+
+⚠️ **Ce diagnostic était probablement faux** (ordre 418, 2026-09-26 23:49 : preuve refaite sur `b9f92b8`, trois classes). Les
+triangles noirs restent au même endroit sur le Parasite fusionné, et ils apparaissent maintenant AUSSI sur les boîtes séparées
+(l'Occulteur, l'Illusionniste : bout de bandoulière, barres sous le torse), à des endroits qui changent d'un chemin à l'autre.
+Ce qui s'accorde avec tout : ce sont des triangles ENTIERS, noirs (0,0,0), c'est-à-dire le sol sombre du banc vu au travers.
+Chaque corps a une passe de profondeur (`*Profondeur`, `render_priority -1`, noire à alpha 0) puis sa couleur ; si la couleur
+d'une pièce perd le test de profondeur contre SA propre pré-passe (deux programmes différents, sans `invariant` : rien ne
+garantit qu'ils calculent la même profondeur au bit près), la pièce disparaît, et le torse derrière elle aussi, légitimement
+caché par cette profondeur. Les « traînées » des pores de l'étui étaient sans doute des bandes de ce noir. La lecture du cloud
+(une face mal reconnue par une égalité de position) reste possible ; le moyen de trancher est dans le banc : `--sans-profondeur`
+cache les passes de profondeur des corps. Si les triangles noirs disparaissent, la cause est la pré-passe, et elle concerne
+tous les corps, détaillés ou non. Retirer CUSTOM1 reste sans regret : un attribut de moins.
+
+**La cause est prouvée, et corrigée par un programme unique** (ordres 422-424, 2026-09-27). Sans `--corps-detaille`, aucun
+noir (essai du cloud sur l'Occulteur et l'Illusionniste) : le noir vient avec le drapeau. Avec `--sans-profondeur`, 0 pixel
+noir sur les trois classes, au lieu de 88 à 739. La cause : sous le drapeau, TOUTES les boîtes du corps (torse et jambes
+compris, d'où les barres sous le torse) passent par la variante CORPS_DETAIL de la couleur, alors que leur pré-passe gardait le
+shader de profondeur ordinaire (voir « Pièges connus », même date). Le correctif, accepté par la session cloud (ordre 424) et
+limité au drapeau : la pré-passe d'un corps détaillé porte LE MÊME programme que sa couleur, avec `passe_profondeur = 1`, qui la
+fait sortir en noir à alpha 0 dès le début du fragment ; `IsoMateriaux.accorder_passe_profondeur` la fait suivre à chaque
+changement de shader de la couleur (la lumière 3D passe par `accorder_corps`). Sans le drapeau, la pré-passe garde
+`corps_iso_profondeur.gdshader`. Gardes dans `test_corps_detail` : le même programme, l'uniforme à 1 pour la pré-passe et à 0
+pour la couleur, la pré-passe qui suit la lumière 3D (prouvée par mutation : `accorder_corps` sans le suivi fait rougir la
+garde), et la sortie de pré-passe sous `#ifdef` seulement. Le prix d'une pré-passe plus longue se lira à la cadence.
+
+**Après le programme unique** (ordre 426, preuve du cloud sur `3f2b8b4`, trois classes, avec la pré-passe) : zéro pixel noir
+sur les deux chemins, là où il y en avait de 88 à 739. Deux écarts restaient.
+- **La plaque et la bretelle de l'Illusionniste étaient à la même profondeur** (faces avant à 0,012 du torse, rectangles qui se
+  recouvrent) : l'ordre de tracé choisissait laquelle se voyait, et les boîtes et le fusionné tranchaient autrement (208 pixels,
+  jusqu'à 37/255). La plaque passe devant, comme sur le portrait, avec une vraie séparation : face avant à 0,0165. Une garde
+  cherche, pour les dix classes, toute paire de pièces du torse dont les faces se recouvrent à la même profondeur (à 0,5
+  millième près), et elle rougit sur l'ancienne plaque.
+- **Des traits d'un pixel sur les arêtes des poches du Parasite** (24 pixels, jusqu'à 20/255) : le maillage fusionné porte des
+  sommets calculés sur le processeur, les boîtes sont transformées sur la carte graphique ; la couverture d'une arête peut en
+  différer d'un pixel. Le critère de la session cloud, écrit avant la correction, les admet : la même image au pixel, SAUF des
+  pixels isolés ou des traits d'un pixel sur les arêtes des pièces, à 32/255 au plus ; toute pièce devant une autre, toute
+  couleur fausse, tout noir fait échouer la preuve.
+
+**D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
+la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le
+marbrage à 0,86, lui, restait à la taille du duel. Deux corrections :
+- à la taille du duel, la matière s'efface entièrement, marbrage compris (le facteur entier suit le fondu des pores) : le
+  personnage détaillé ne perd rien au bord de la lumière, et les pores qui se lisaient comme du bruit partent avec ;
+- aucun accessoire n'est plus sombre que le tissu qu'il couvre (`palette_details` relève le cuir et le métal au tissu, jamais
+  au-dessus du gris de la classe).
+Une garde vérifie aussi que la killcam reste en aplat (opacité 0 sur le corps du fantôme). L'étalonnage au seuil (0,15 à
+0,09, gris, V3 et V3 détaillée) dépend du GPU du Mac et se fera au prochain tour ; un facteur par classe ne viendra que si
+l'écart persiste.
 
 ### Ce qui attend Adrien — jalon H15
 

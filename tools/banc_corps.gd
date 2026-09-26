@@ -106,6 +106,10 @@ var _temps_fixe := false
 ## ISO12, tenues sombres — `--toutes-tenues` (avec une tenue peinte) : après la prise de la tenue et sa prise grise, la même
 ## scène dans chacune des tenues sombres (`_sombre1.png`…), posées par uniformes sur les mêmes matériaux, au temps figé.
 var _toutes_tenues := false
+## Q33 — `--fusion-ab` : la prise principale avec les accessoires fusionnés, puis `_boites.png` avec les boîtes séparées.
+var _fusion_ab := false
+## Q33 — `--sans-profondeur` : les passes de profondeur des corps cachées (diagnostic, jamais en jeu).
+var _sans_profondeur := false
 ## ISO13 — `--directions-mannequin` (avec `--mannequin`) : après la prise principale, la même scène sans mannequin, puis avec
 ## la lumière venue d'aucun côté, du sud, du nord, de l'est et de l'ouest (`_mannequin_<côté>.png`), même partie, temps figé.
 var _directions_mannequin := false
@@ -193,6 +197,15 @@ func _lire_arguments(args: PackedStringArray) -> void:
 				# ISO13 — la calibration de l'équité de V3 : le même facteur pour toutes les classes (`VoxelCatalogue.V3_EQUITE`).
 				VoxelCatalogueT.forcer_equite = maxf(0.0, float(val))
 			"toutes-tenues": _toutes_tenues = true
+			# Q33 — la preuve « même image » de la fusion : les deux dessins des accessoires construits, la prise principale
+			# avec le maillage fusionné, puis `_boites.png` avec les boîtes séparées, au même instant.
+			"fusion-ab":
+				VoxelCatalogueT.forcer_fusion = 2
+				_fusion_ab = true
+			# Q33 — le diagnostic de l'ordre 418 : les passes de profondeur des corps (`*Profondeur`, `render_priority -1`)
+			# cachées. Si les triangles noirs de --fusion-ab disparaissent, ils venaient d'une couleur qui perd le test de
+			# profondeur contre SA propre pré-passe (deux programmes, aucune garantie d'invariance), pas du détail.
+			"sans-profondeur": _sans_profondeur = true
 			"temps-fixe": _temps_fixe = true
 			"directions-mannequin": _directions_mannequin = true
 			"contours-essai": _contours_essai = true
@@ -590,6 +603,13 @@ func _capturer_puis_quitter() -> void:
 		_cone_repere.visible = false
 	get_window().size = _taille
 	await get_tree().process_frame
+	if _sans_profondeur:
+		var cachees := 0
+		for c in _corps:
+			for n in (c["noeud"] as Node).find_children("*Profondeur", "MeshInstance3D", true, false):
+				(n as MeshInstance3D).visible = false
+				cachees += 1
+		print("BANC_CORPS --sans-profondeur : %d passes de profondeur cachées" % cachees)
 	_fige = VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif() or _temps_fixe
 	for i in _frames:
 		await get_tree().process_frame
@@ -606,6 +626,17 @@ func _capturer_puis_quitter() -> void:
 		push_error("banc_corps : écriture impossible de %s (%s)" % [_capture, error_string(erreur)])
 		get_tree().quit(5)
 		return
+	if _fusion_ab:
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).basculer_fusion(false)
+		for i in _frames:
+			await get_tree().process_frame
+		var boites: Image = await RenduCommun.capturer(get_tree(), 60000)
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).basculer_fusion(true)
+		if boites != null:
+			boites.save_png(_capture.get_basename() + "_boites.png")
+			print("BANC_CORPS capture du même corps, accessoires en boîtes séparées : %s" % (_capture.get_basename() + "_boites.png"))
 	# ISO12 — avec `--corps=portraits`, la même scène reprise le portrait ÉTEINT sur les mêmes matériaux (`_gris.png`) : la
 	# peinture seule change entre les deux, rien d'autre (deux lancements séparés ne se comparent pas au pixel près).
 	if VoxelCatalogueT.portraits_actifs() or VoxelCatalogueT.mannequin_actif() or _contours_essai:

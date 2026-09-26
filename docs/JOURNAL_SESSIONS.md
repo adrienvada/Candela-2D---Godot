@@ -6000,3 +6000,9 @@ sur Q33, lancé en quinze secondes de créneau court : 51 vérifications vertes.
 d'une longueur qui oubliait sa propre largeur ; la preuve par mutation fait tomber la garde sur les six classes. Le second
 défaut reste ouvert : la matière peinte fait perdre 10 à 16 % des pixels visibles à 0,15, sans avancer ni retarder
 l'apparition. Il sera recalibré une fois qu'Adrien aura dit où le détail doit se voir.
+
+**2026-09-26, 21:37-22:05 — Q33 : les personnages détaillés en jeu, pour les dix classes.** Adrien a tranché pour le duel. Trois
+commits derrière le drapeau : les quatre kits manquants, les accessoires fusionnés en un maillage par pièce porteuse (22 appels
+de dessin de plus devenus 6 pour un Parasite), et la cause de la perte au seuil, trouvée dans le code : la matière peinte passait
+sur tout le corps et son marbrage restait à la taille du duel. Tout cela prouvé en headless ; restent sur le GPU la même image
+fusionné contre séparé, l'étalonnage au seuil et la cadence.
