@@ -3403,7 +3403,12 @@ prend les siens sur son propre point — sans faute observée, pas exacte en th�
 exacte, reste la meilleure candidate si une mesure plus fine la place un jour sous les 3 %.
 
 L'usure d'essai est recopiée dans le masque **sous le même interrupteur** qu'`USURE_ESSAI` (garde de parité : l'une
-allumée implique l'autre). **Pour qui touche au sol ou aux murs : la copie doit suivre tout ce qui change leur couleur
+allumée implique l'autre). **Sur l'état intégré (2026-09-26 : 45° B, usure allumée), le prix est tombé à 0,863**
+(M0 80, M1 69, Iso 1) : le masque a été éteint par défaut, et Q31 revient à Adrien. Cause lue dans le code : aux FACES,
+chaque pixel de fumée payait `usure_face` entière (cinq bruits, la fissure de travée, jusqu'à 48 impacts avec atan et
+pow), sans bande. **La bande des faces** (`face_montre_noir`, ordre 417) ne calcule plus l'usure que là où elle peut
+changer la réponse, avec les deux certitudes du sol (noir sûr sous 1/1,4 du point noir ; visible sûr au plancher de
+l'usure, mix(1 ; 0,22 ; usure × poids)) : même réponse au pixel, calcul réduit. Son prix se remesure sur l'état intégré. **Pour qui touche au sol ou aux murs : la copie doit suivre tout ce qui change leur couleur
 écrite** — sinon le masque juge un sol qui n'existe plus, et rien ne rougit hors de la garde ligne à ligne et d'une
 preuve à l'image. La preuve est à refaire sur l'état intégré (usure, 45°), chez Iso 1.
 
