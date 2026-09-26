@@ -249,7 +249,13 @@ func _etape_local(slug: String) -> void:
 	else:
 		_noter("✗ local %s : pas de killcam" % slug)
 	await _images_de_jeu(90)
-	await _capturer("24_%s_fin" % slug)
+	await _capturer("24_%s_gel" % slug)
+	# L'écran de fin : il suit le gel du kill.
+	var vu := await _attendre(func() -> bool: return _ui.game_over_panel != null and _ui.game_over_panel.is_visible_in_tree(), 25.0)
+	await _images_de_jeu(60)
+	await _capturer("25_%s_fin" % slug)
+	if not vu:
+		_noter("✗ local %s : écran de fin jamais visible en 25 s de jeu" % slug)
 	_noter("local %s : game_over=%s, écran de fin visible=%s" % [slug, _main.game_over,
 		_ui.game_over_panel.visible if _ui.game_over_panel != null else "?"])
 	await _vers_le_menu()
