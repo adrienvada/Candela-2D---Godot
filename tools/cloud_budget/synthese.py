@@ -41,8 +41,13 @@ def lire(dossier):
 
 
 def med(d, cle):
+    """La valeur d'une scène : la médiane de ses images, sauf au pompe sous une fusée où c'est la MOYENNE — ses appels vont
+    du simple au triple d'une image à l'autre ; sur 120 images, la moyenne se reproduit d'un lancement à l'autre à ±1 %,
+    la médiane non (18f5fdc contre la branche intégrée drapeaux éteints : 287,1 et 287,9)."""
     v = d["compteurs"].get(cle)
-    return None if v is None else v["med"]
+    if v is None:
+        return None
+    return v.get("moy", v["med"]) if d["famille"] == "pompe" else v["med"]
 
 
 def fmt(x):
@@ -85,8 +90,8 @@ def main():
     lacets = sorted({int(round(d["lacet"])) for d in releves})
 
     print("## Tableau par configuration\n")
-    print("Six cartes livrées : médiane des six (min–max). Pompe sous une fusée : la carte de la séance. Chaque nombre de scène est"
-          " la médiane de ses images relevées.\n")
+    print("Six cartes livrées : médiane des six (min–max) ; chaque carte vaut la médiane de ses 12 images. Pompe sous une fusée"
+          " (Arène Standard) : la moyenne de ses 120 images.\n")
     for vue, titre in [("unique", "Vue unique"), ("scinde", "Écran scindé")]:
         for lacet in lacets:
             print(f"### {titre}, lacet {lacet}°\n")
@@ -137,6 +142,7 @@ def main():
                         return "—"
                     m = statistics.median(vals)
                     pire = max(vals, key=abs)
+                    m, pire = round(m, 1), round(pire, 1)
                     return f"{m:+g} [{pire:+g}]" if pire != m else f"{m:+g}"
 
                 print(f"| {c} | {lacet}° | {cel(deltas('carte', 'total.appels'))} | {cel(deltas('pompe', 'total.appels'))} | "
