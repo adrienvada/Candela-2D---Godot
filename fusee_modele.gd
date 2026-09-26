@@ -33,6 +33,19 @@ const VITESSE_ARRET := 60.0       # px/s — en dessous, elle se pose et s'allum
 enum Acte { VOL, PLEIN_FEU, BRAISE, AGONIE, RESIDU, MORTE }
 
 const DUREE_PLEIN_FEU := 2.0          # s
+## Q35 = B (Adrien, 2026-09-26) — ESSAI du rouge long, À DURÉE TOTALE ÉGALE (ordre 412) : `--fusee-rouge-long` porte le plein
+## feu à 4 s et retire ces 2 s à la braise ; l'agonie et le résidu ne changent pas, la fusée vit toujours 20 s. La fumée garde
+## donc exactement sa taille et sa densité à chaque âge (`echelle_fumee_a` rapporte l'âge à la durée de combustion), et le rouge
+## dans la fumée pleine existe de 3 à 4 s, l'instant de l'illustration « Créer en ligne ». La première lecture (la braise
+## gardée, la fusée vivant 22 s) a ÉCHOUÉ au banc d'équité sur l'aire cachée × temps : voir la ROADMAP. Lu une fois au
+## chargement. ⚠️ Les deux pairs doivent porter le même drapeau : l'horloge est publique, simulée à l'identique — un essai,
+## pas un réglage de match.
+const DUREE_PLEIN_FEU_LONG := 4.0
+const DRAPEAU_ROUGE_LONG := "--fusee-rouge-long"
+static var duree_plein_feu: float = DUREE_PLEIN_FEU_LONG if OS.get_cmdline_user_args().has(DRAPEAU_ROUGE_LONG) \
+	else DUREE_PLEIN_FEU
+## La braise de l'essai : elle rend au plein feu ce qu'il gagne, pour que la durée totale ne bouge pas.
+static var duree_braise: float = DUREE_BRAISE - (duree_plein_feu - DUREE_PLEIN_FEU)
 const DUREE_BRAISE := 10.0        # s
 const DUREE_AGONIE := 3.0         # s
 const DUREE_RESIDU := 5.0         # s
@@ -134,8 +147,15 @@ static func portee_libre() -> float:
 	return VITESSE_LANCER * VITESSE_LANCER / (2.0 * FROTTEMENT_VOL)
 
 
+## Q35 — l'essai du rouge long, posé ou retiré sur place (les bancs et les suites comparent les deux) : le plein feu et la braise
+## bougent ENSEMBLE, la durée totale jamais.
+static func poser_rouge_long(actif: bool) -> void:
+	duree_plein_feu = DUREE_PLEIN_FEU_LONG if actif else DUREE_PLEIN_FEU
+	duree_braise = DUREE_BRAISE - (duree_plein_feu - DUREE_PLEIN_FEU)
+
+
 static func duree_combustion() -> float:
-	return DUREE_PLEIN_FEU + DUREE_BRAISE + DUREE_AGONIE + DUREE_RESIDU
+	return duree_plein_feu + duree_braise + DUREE_AGONIE + DUREE_RESIDU
 
 
 ## L'acte à un âge de COMBUSTION donné (0 = l'atterrissage ; le vol est géré
@@ -143,11 +163,11 @@ static func duree_combustion() -> float:
 static func acte_a(age: float) -> Acte:
 	if age < 0.0:
 		return Acte.VOL
-	if age < DUREE_PLEIN_FEU:
+	if age < duree_plein_feu:
 		return Acte.PLEIN_FEU
-	if age < DUREE_PLEIN_FEU + DUREE_BRAISE:
+	if age < duree_plein_feu + duree_braise:
 		return Acte.BRAISE
-	if age < DUREE_PLEIN_FEU + DUREE_BRAISE + DUREE_AGONIE:
+	if age < duree_plein_feu + duree_braise + DUREE_AGONIE:
 		return Acte.AGONIE
 	if age < duree_combustion():
 		return Acte.RESIDU
@@ -186,7 +206,7 @@ static func fenetres_agonie(graine: int) -> Array:
 static func lueur_agonie(age: float, fenetres: Array) -> float:
 	if acte_a(age) != Acte.AGONIE:
 		return 0.0
-	var t := age - DUREE_PLEIN_FEU - DUREE_BRAISE
+	var t := age - duree_plein_feu - duree_braise
 	var lueur := 0.0
 	for f in fenetres:
 		var centre: float = (f[0] + f[1]) * 0.5
@@ -213,13 +233,13 @@ static func energie_a(age: float, fenetres: Array, intensite_agonie: float = 1.0
 		Acte.PLEIN_FEU:
 			return ENERGIE_PLEIN_FEU
 		Acte.BRAISE:
-			var t := age - DUREE_PLEIN_FEU
+			var t := age - duree_plein_feu
 			if t < RACCORD_PLEIN_FEU_BRAISE:
 				return lerpf(ENERGIE_PLEIN_FEU, ENERGIE_BRAISE, t / RACCORD_PLEIN_FEU_BRAISE)
 			return ENERGIE_BRAISE
 		Acte.AGONIE:
 			# Le fondu continu que verrait un joueur à intensité 0.
-			var t := age - DUREE_PLEIN_FEU - DUREE_BRAISE
+			var t := age - duree_plein_feu - duree_braise
 			var fondu := lerpf(ENERGIE_BRAISE, ENERGIE_RESIDU, t / DUREE_AGONIE)
 			# Le plancher s'effondre vers le quasi-noir en RAMPE_AGONIE et en
 			# remonte autant avant le résidu : les FRONTIÈRES d'acte aussi sont
@@ -231,7 +251,7 @@ static func energie_a(age: float, fenetres: Array, intensite_agonie: float = 1.0
 				lueur_agonie(age, fenetres)))
 			return lerpf(fondu, sursaut, clampf(intensite_agonie, 0.0, 1.0))
 		Acte.RESIDU:
-			var t := age - DUREE_PLEIN_FEU - DUREE_BRAISE - DUREE_AGONIE
+			var t := age - duree_plein_feu - duree_braise - DUREE_AGONIE
 			return lerpf(ENERGIE_RESIDU, 0.0, t / DUREE_RESIDU)
 		_:
 			return 0.0
@@ -245,7 +265,7 @@ static func temperature_a(age: float) -> float:
 		Acte.VOL, Acte.PLEIN_FEU:
 			return 0.0
 		Acte.BRAISE:
-			var t := age - DUREE_PLEIN_FEU
+			var t := age - duree_plein_feu
 			return clampf(t / RACCORD_PLEIN_FEU_BRAISE, 0.0, 1.0)
 		_:
 			return 1.0
@@ -261,7 +281,7 @@ static func alpha_fumee_a(age: float) -> float:
 		return 0.0
 	var montee := clampf(age / FUMEE_MONTEE, 0.0, 1.0)
 	# La fumée meurt avec le résidu, en fondu sur la durée du résidu.
-	var debut_residu := DUREE_PLEIN_FEU + DUREE_BRAISE + DUREE_AGONIE
+	var debut_residu := duree_plein_feu + duree_braise + DUREE_AGONIE
 	if age >= debut_residu:
 		return lerpf(montee, 0.0, (age - debut_residu) / DUREE_RESIDU)
 	return montee
