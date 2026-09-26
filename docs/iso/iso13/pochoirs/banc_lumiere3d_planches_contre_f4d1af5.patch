@@ -1,0 +1,294 @@
+diff --git a/tools/banc_lumiere3d.gd b/tools/banc_lumiere3d.gd
+index 6f84147..6ea2ab5 100644
+--- a/tools/banc_lumiere3d.gd
++++ b/tools/banc_lumiere3d.gd
+@@ -1172,6 +1172,18 @@ func _la_v27(carte: String) -> void:
+ 		await _la_planche_tenues(carte, origine, true)
+ 	if _v27_filtre.split(",").has("planche_mannequin") and origine.has("face"):
+ 		await _la_planche_tenues(carte, origine, true, TENUES_MANNEQUIN)
++	if _v27_filtre.split(",").has("planche_encre") and origine.has("face"):
++		await _la_planche_tenues(carte, origine, true, TENUES_ENCRE)
++	if _v27_filtre.split(",").has("planche_encre_duel") and origine.has("face"):
++		await _la_planche_encre_duel(carte, origine, p1, dir)
++	if _v27_filtre.split(",").has("planche_pistolet"):
++		await _la_planche_pistolet(carte, p1, dir)
++	if _v27_filtre.split(",").has("planche_pochoirs") and carte == "cloitre":
++		await _la_planche_pochoirs()
++	if _v27_filtre.split(",").has("planche_usure") and origine.has("face"):
++		await _la_planche_usure(carte, origine)
++	if _v27_filtre.split(",").has("encre_mouvement") and origine.has("face"):
++		await _l_encre_en_mouvement(carte, origine)
+ 	if _v27_filtre.split(",").has("planche_ca_pied") and origine.has("face"):
+ 		await _la_planche_ca(carte, origine, true)
+ 	if _v27_filtre.split(",").has("adrien_1b") and carte == "cloitre" and dir != Vector2.ZERO:
+@@ -1227,6 +1239,14 @@ const TENUES_PLANCHE := ["", "sombre1", "sombre2", "sombre3"]
+ const TENUES_TORCHE := ["", "sombre1:olive", "sombre1", "sombre2", "sombre3"]
+ ## ISO13, lot A — `planche_mannequin` (lancer avec `--mannequin`) : chaque tenue sans puis avec le mannequin (« +m »).
+ const TENUES_MANNEQUIN := ["", "+m", "sombre3:froide", "sombre3:froide+m"]
++## ISO13, lot B — `planche_encre` (lancer avec `--mannequin --encre-essai`) : le CONTOUR des personnages à deux épaisseurs
++## (« +c1 » : `CONTOUR_PX_ESSAI`, « +c2 » : `CONTOUR_PX_EPAIS`), puis « +c2h » : le contour épais, les hachures dans la
++## pénombre et l'arête épaisse des murs. Chaque tenue sans rien d'abord ; au même instant.
++## ISO13, lot B — la planche pour Adrien (`planche_encre_duel`) : J2 torche allumée mais tournée de côté (sa rétrodiffusion
++## l'éclaire comme J1, sans éblouir J1), sans contour / 1 px / 2 px, chacun sans puis avec les hachures, gris puis V3 froide.
++const TENUES_ENCRE_DUEL := ["", "+h", "+c1", "+c1h", "+c2", "+c2h", "sombre3:froide", "sombre3:froide+h", "sombre3:froide+c1",
++	"sombre3:froide+c1h", "sombre3:froide+c2", "sombre3:froide+c2h"]
++const TENUES_ENCRE := ["", "+c1", "+c2", "+c2h", "sombre3:froide", "sombre3:froide+c1", "sombre3:froide+c2", "sombre3:froide+c2h"]
+ 
+ 
+ func _la_planche_tenues(carte: String, origine: Dictionary, torche_seule := false, tenues_torche: Array = TENUES_TORCHE) -> void:
+@@ -1262,7 +1282,205 @@ func _la_planche_tenues(carte: String, origine: Dictionary, torche_seule := fals
+ 	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_tenues raison=place_occupee" % carte)
+ 
+ 
+-func _serie_tenues(nom: String, ancres: Dictionary, tenues: Array = TENUES_PLANCHE) -> void:
++## ISO13, lot C — `planche_usure` (lancer avec `--usure-essai`) : le lieu de la planche des tenues, J1 à quatre tuiles sous
++## sa torche, J2 torche éteinte à une tuile de la face — l'usure ne doit cacher personne. Sept impacts posés sur la face comme
++## le jeu les pose (`wall_impact.gd`, sous l'arène : la peinture les copie aussi), puis l'usure éteinte, allumée, et allumée
++## au lacet de 45° (Q14) : la face vue change, l'usure la suit sans une ligne à reprendre.
++func _la_planche_usure(carte: String, origine: Dictionary) -> void:
++	var t := MursBas.TUILE
++	var face: Vector2 = origine["face"]
++	var h_face := IsoGeometrie.hauteur_mur_haut() * t * 0.5
++	for decalage in [0.0, -1.0, 1.0, -2.0, 2.0]:
++		var p2 := face + Vector2(decalage * t, 1.0 * t)
++		var p1 := face + Vector2(decalage * t, 4.0 * t)
++		if not _libre(p1, MursBas.RAYON_ENCOMBREMENT) or not _libre(p2, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1, p2):
++			continue
++		var f := face + Vector2(decalage * t, 0.0)
++		var impacts: Array[Node2D] = []
++		for dx in [-1.6, -1.1, -0.7, -0.2, 0.5, 0.9, 1.4]:
++			var e := Node2D.new()
++			e.set_script(preload("res://wall_impact.gd"))
++			if e.setup(f + Vector2(dx * t, 2.0)):
++				_main.arena.add_child(e)
++				impacts.append(e)
++			else:
++				e.free()
++		var ancres := {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS], "face": [f, h_face],
++			"face_gauche": [f + Vector2(-1.2 * t, 0.0), h_face], "face_droite": [f + Vector2(1.2 * t, 0.0), h_face],
++			"sol": [f + Vector2(0.0, 0.5 * t), 0.0]}
++		_placer(p1, Vector2.UP, true, p2, Vector2.DOWN, false)
++		print("BANC_LUMIERE3D usure_impacts n=%d" % impacts.size())
++		# ⚠️ ISO14 : la présentation reprend le lacet dans `GameSettings.lacet_de()` À CHAQUE IMAGE — un lacet posé ici sur la
++		# caméra était écrasé à l'image suivante, sans un mot (la planche du 24/09 à 19:22 : sa moitié « 45° » était à 0°). Le lacet
++		# se choisit donc au lancement (`--lacet=45`), qui tourne ensemble la caméra iso et la lightmap ; une paire par lancement.
++		var reglages := get_node_or_null(^"/root/GameSettings")
++		var lacet := float(reglages.call("lacet_de", 0)) if reglages != null else 0.0
++		print("BANC_LUMIERE3D usure_lacet=%.1f" % lacet)
++		await _serie_usure("usure" if is_zero_approx(lacet) else "usure_lacet%d" % roundi(lacet), ancres)
++		for e in impacts:
++			e.queue_free()
++		return
++	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_usure raison=place_occupee" % carte)
++
++
++## ISO13 — LA PLANCHE DU PISTOLET DÉTAILLÉ (lancer avec `--corps-detaille --arme-j2=pistolet`, en 2560 × 1440) : J2 dans le cône
++## de J1, torche éteinte, au départ du duel ; la tenue du jeu (V3 froide), puis détaillée, puis détaillée avec le contour
++## de 1 px, puis le contour seul — au même instant, sur la même lumière (le détail se montre et se cache par uniformes).
++const TENUES_PISTOLET := ["sombre3:froide", "sombre3:froide+d", "sombre3:froide+dc1", "sombre3:froide+c1"]
++
++
++func _la_planche_pistolet(carte: String, depart: Vector2, dir: Vector2) -> void:
++	var t := MursBas.TUILE
++	if dir == Vector2.ZERO:
++		print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_pistolet raison=aucune_direction" % carte)
++		return
++	for avance in [3.0, 2.5, 3.5, 2.0]:
++		var p2: Vector2 = depart + dir * avance * t
++		if not _libre(p2, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(depart, p2):
++			continue
++		var ancres := {"j1": [depart, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS]}
++		print("BANC_LUMIERE3D planche_pistolet avance=%.1f" % avance)
++		_placer(depart, dir, true, p2, -dir, false)
++		await _serie_tenues("pistolet", ancres, TENUES_PISTOLET)
++		# J2 de trois quarts : tourné de 45°, la bouteille et le robinet se voient.
++		_placer(depart, dir, true, p2, (-dir).rotated(deg_to_rad(-60.0)), false)
++		await _serie_tenues("pistolet_34", ancres, TENUES_PISTOLET)
++		return
++	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_pistolet raison=place_occupee" % carte)
++
++
++## ISO13 — LA PLANCHE DES POCHOIRS (lancer avec `--pochoirs-essai`, et `--lacet=0` puis `--lacet=45`) : au Cloître, « ZONE 1 » en
++## (8, 22) ; J1 trois cases au sud, torche vers lui ; J2 sur la case jumelle de l'autre côté, torche éteinte. Le décor recuit sans
++## puis avec les pochoirs, le temps du jeu figé : même instant, même partie. Les appels de dessin de l'image sont imprimés aux
++## deux prises (preuve de coût : rien de plus par image).
++func _la_planche_pochoirs() -> void:
++	var t := MursBas.TUILE
++	var z := (Vector2(8, 22) + Vector2(0.5, 0.5)) * t
++	var p1 := z + Vector2(0.0, 3.0 * t)
++	var p2 := (Vector2(21, 22) + Vector2(0.5, 0.5)) * t + Vector2(0.0, 3.0 * t)
++	var ancres := {"j1": [p1, HAUTEUR_CORPS], "j2": [p2, HAUTEUR_CORPS], "pochoir": [z, 0.0]}
++	_placer(p1, Vector2.UP, true, p2, Vector2.UP, false)
++	var reglages := get_node_or_null(^"/root/GameSettings")
++	var lacet := float(reglages.call("lacet_de", 0)) if reglages != null else 0.0
++	var nom := "pochoirs" if is_zero_approx(lacet) else "pochoirs_lacet%d" % roundi(lacet)
++	_poser_la_variante({"lumiere": false})
++	await _images(IMAGES_DE_REPOS)
++	var ecran := {}
++	for k in ancres:
++		ecran[k] = _a_l_ecran_h(0, ancres[k][0], float(ancres[k][1]))
++	var decor: Node = _main.arena.get_node_or_null(^"ArenaDecor")
++	Engine.time_scale = 0.0
++	await _images(IMAGES_DE_REPOS)
++	for avec in [false, true]:
++		await decor.poser_pochoirs(avec)
++		await _images(IMAGES_DE_REPOS)
++		var etiquette := "avec" if avec else "sans"
++		var fichier := await _capturer("%s_%s" % [nom, etiquette])
++		await _images(2)
++		# Le coût : appels de dessin et objets de l'image, et la mémoire des textures (le décor recuit remplace sa texture, de même
++		# taille). Les textures que lit le sol ne changent pas : aucun shader de sol n'est touché (la suite le vérifie).
++		print("BANC_LUMIERE3D pochoirs_cout cadrage=%s %s appels=%d objets=%d textures_mo=%.2f" % [nom, etiquette,
++			int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
++			int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
++			Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0])
++		print("BANC_LUMIERE3D tenue cadrage=%s tenue=%s camera=0,0 fichier=%s ancres=%s" % [nom, etiquette, fichier,
++			JSON.stringify(ecran)])
++	Engine.time_scale = 1.0
++
++
++## Une paire de prises le temps du jeu figé, l'usure éteinte puis allumée, au lacet du lancement (`--lacet=`).
++func _serie_usure(nom: String, ancres: Dictionary) -> void:
++	_poser_la_variante({"lumiere": false})
++	await _images(IMAGES_DE_REPOS)
++	var ecran := {}
++	for k in ancres:
++		ecran[k] = _a_l_ecran_h(0, ancres[k][0], float(ancres[k][1]))
++	# ⚠️ LE TEMPS FIGÉ (session cloud, 16:52) : la torche respire (±3 % sur un bruit lent) et sème sa poussière entre deux
++	# prises ; comparées au pixel, « sans » et « avec » montraient des milliers de pixels « plus clairs » que l'usure ne peut pas
++	# faire. Le temps du jeu est arrêté pendant la paire : seul l'uniforme de l'usure change entre les deux images.
++	Engine.time_scale = 0.0
++	await _images(IMAGES_DE_REPOS)
++	for allumee in [false, true]:
++		for m in _p.call("_materiaux"):
++			if m == _p.get("_mat_mur") or (_p.get("_mat_sols") as Array).has(m):
++				IsoMateriaux.poser_usure_essai(m as ShaderMaterial, allumee)
++		await _images(IMAGES_DE_REPOS)
++		var etiquette := "avec" if allumee else "sans"
++		var fichier := await _capturer("%s_%s" % [nom, etiquette])
++		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
++		print("BANC_LUMIERE3D tenue_etat cadrage=%s dazzle_j1=%.3f opacite_j2=%.3f" % [nom, float(_main.p1.get("dazzle_amount")),
++			Presentation3D.opacite_du_corps(_main.p2, false)])
++		print("BANC_LUMIERE3D tenue cadrage=%s tenue=%s camera=%d,%d fichier=%s ancres=%s"
++			% [nom, etiquette, int(camera[0]), int(camera[1]), fichier, JSON.stringify(ecran)])
++	Engine.time_scale = 1.0
++
++
++## La planche pour Adrien : le lieu de la planche des tenues, J2 face à la caméra, sa torche allumée vers l'est.
++func _la_planche_encre_duel(carte: String, origine: Dictionary, depart := Vector2.ZERO, dir := Vector2.ZERO) -> void:
++	var t := MursBas.TUILE
++	var face: Vector2 = origine["face"]
++	for decalage in [0.0, -1.0, 1.0, -2.0, 2.0]:
++		var p2 := face + Vector2(decalage * t, 1.0 * t)
++		var p1 := face + Vector2(decalage * t, 4.0 * t)
++		if not _libre(p1, MursBas.RAYON_ENCOMBREMENT) or not _libre(p2, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1, p2):
++			continue
++		# J2 DANS LE CÔNE DE J1, sur du sol dégagé, à trois tuiles du mur, torche éteinte. Face au mur, il restait dans une zone
++		# noire (01:49) ; à côté de J1, sa rétrodiffusion ne l'éclaire pas dans la vue de J1 (elle n'éclaire que ses calques
++		# privés, 02:25). Dans le cône, le sol qui l'entoure est éclairé comme celui de J1 : son contour peut s'y détacher.
++		var p1_loin := face + Vector2(decalage * t, 6.5 * t)
++		var p2_cone := face + Vector2(decalage * t, 3.5 * t)
++		if not _libre(p1_loin, MursBas.RAYON_ENCOMBREMENT) or not _libre(p2_cone, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(p1_loin, p2_cone):
++			continue
++		var ancres := {"j1": [p1_loin, HAUTEUR_CORPS], "j2": [p2_cone, HAUTEUR_CORPS]}
++		_placer(p1_loin, Vector2.UP, true, p2_cone, Vector2.DOWN, false)
++		await _serie_tenues("encre_duel", ancres, TENUES_ENCRE_DUEL)
++		# LES DEUX VUES (session cloud, 04:38) : l'écran scindé, J1 à gauche, J2 à droite — chacun voit l'autre comme en jeu.
++		# ⚠️ Dans la vue de J2, la torche de J1 l'éblouit : J1 s'y efface selon la règle du jeu (`tenue_etat` l'imprime).
++		_poser_la_vue(true)
++		await _serie_tenues("encre_duel_scinde", ancres, TENUES_ENCRE_DUEL, true)
++		_poser_la_vue(false)
++		return
++	# Repli (16:20, 24/09 : au Cloître, aucune place devant la face à 6,5 tuiles) : le départ du duel et sa direction libre, J2
++	# de deux à trois tuiles et demie dans le cône de J1, sur le sol qu'il éclaire.
++	if dir != Vector2.ZERO:
++		for avance in [3.0, 2.5, 3.5, 2.0]:
++			var p2_cone: Vector2 = depart + dir * avance * t
++			if not _libre(p2_cone, MursBas.RAYON_ENCOMBREMENT) or _mur_entre(depart, p2_cone):
++				continue
++			var ancres := {"j1": [depart, HAUTEUR_CORPS], "j2": [p2_cone, HAUTEUR_CORPS]}
++			print("BANC_LUMIERE3D planche_encre_duel repli=depart avance=%.1f" % avance)
++			_placer(depart, dir, true, p2_cone, -dir, false)
++			await _serie_tenues("encre_duel", ancres, TENUES_ENCRE_DUEL)
++			_poser_la_vue(true)
++			await _serie_tenues("encre_duel_scinde", ancres, TENUES_ENCRE_DUEL, true)
++			_poser_la_vue(false)
++			return
++	print("BANC_LUMIERE3D cadrage_ignore carte=%s id=planche_encre_duel raison=place_occupee" % carte)
++
++
++## Les hachures caméra en mouvement (le garde-fou « aucun pixel voyant » d'Adrien, 22/09) : J1 avance d'un pixel par image
++## sur deux tuiles, contour 2 px et hachures allumés ; une capture toutes les quatre images.
++func _l_encre_en_mouvement(carte: String, origine: Dictionary) -> void:
++	var t := MursBas.TUILE
++	var face: Vector2 = origine["face"]
++	var p2 := face + Vector2(0.0, 1.0 * t)
++	var p1 := face + Vector2(-1.5 * t, 4.5 * t)
++	_placer(p1, Vector2.UP.rotated(0.35), true, p2, Vector2.RIGHT, true)
++	_poser_la_variante({"lumiere": false})
++	for m in _p.call("_materiaux"):
++		IsoMateriaux.poser_encre_essai(m as ShaderMaterial, true, m == _p.get("_mat_mur"))
++	for v in _p.get("_voxels"):
++		(v as VoxelCorps).definir_contour(IsoMateriaux.CONTOUR_PX_EPAIS)
++	await _images(IMAGES_DE_REPOS)
++	for k in 70:
++		_scene["p1"] = p1 + Vector2(1.0, -0.6) * float(k)
++		await _images(1)
++		if k % 4 == 0:
++			var fichier := await _capturer("mouvement_%02d" % (k / 4))
++			print("BANC_LUMIERE3D mouvement image=%d fichier=%s" % [k / 4, fichier])
++
++
++func _serie_tenues(nom: String, ancres: Dictionary, tenues: Array = TENUES_PLANCHE, scinde := false) -> void:
+ 	_poser_la_variante({"lumiere": false})
+ 	await _images(IMAGES_DE_REPOS)
+ 	var avant := _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+@@ -1275,25 +1493,43 @@ func _serie_tenues(nom: String, ancres: Dictionary, tenues: Array = TENUES_PLANC
+ 	var ecran := {}
+ 	for k in ancres:
+ 		ecran[k] = _a_l_ecran_h(0, ancres[k][0], float(ancres[k][1]))
++		# Écran scindé (ISO13, 04:38 : « les deux vues ») : la même ancre dans la vue de J2, à droite.
++		if scinde:
++			ecran[k + "_vue2"] = _a_l_ecran_h(1, ancres[k][0], float(ancres[k][1]))
+ 	for entree_brute in tenues:
+ 		# « nom:teinte » impose une teinte ; sinon celle du lancement (`--teinte=`). « +m » : le mannequin allumé (ISO13).
+-		var mannequin := String(entree_brute).ends_with("+m")
+-		var entree := String(entree_brute).trim_suffix("+m")
++		var brute := String(entree_brute)
++		var mannequin := brute.ends_with("+m")
++		# ISO13 lot B : le contour (c1, c2) et, avec « h », les hachures et l'arête épaisse des murs.
++		var suffixe := brute.get_slice("+", 1) if brute.contains("+") else ""
++		# ISO13 — le personnage détaillé (`--corps-detaille`) : « d » en tête du suffixe montre le détail, au même instant.
++		var details := suffixe.begins_with("d")
++		suffixe = suffixe.trim_prefix("d")
++		var contour := IsoMateriaux.CONTOUR_PX_EPAIS if suffixe.begins_with("c2") \
++			else (IsoMateriaux.CONTOUR_PX_ESSAI if suffixe.begins_with("c1") else 0.0)
++		var hachures := suffixe.ends_with("h")
++		var entree := brute.get_slice("+", 0)
++		for m in _p.call("_materiaux"):
++			IsoMateriaux.poser_encre_essai(m as ShaderMaterial, hachures, m == _p.get("_mat_mur"))
+ 		var tenue := entree.get_slice(":", 0)
+ 		var te := entree.get_slice(":", 1) if entree.contains(":") else ""
+ 		for v in _p.get("_voxels"):
+ 			var corps := v as VoxelCorps
+ 			corps.porter_tenue(tenue, te)
+ 			corps.materiau().set_shader_parameter("mannequin", 1.0 if mannequin else 0.0)
++			corps.definir_contour(contour)
++			corps.montrer_details(details)
+ 			var bouteille := corps.find_child("Bouteille", true, false) as Node3D
+ 			if bouteille != null:
+ 				bouteille.visible = tenue != ""
+ 		await _images(IMAGES_DE_REPOS)
+-		var etiquette := (tenue if tenue != "" else "gris") + ("_" + te if te != "" else "") + ("_mannequin" if mannequin else "")
++		var etiquette := (tenue if tenue != "" else "gris") + ("_" + te if te != "" else "") + ("_mannequin" if mannequin else "") \
++			+ ("_" + brute.get_slice("+", 1) if brute.contains("+") and not mannequin else "")
+ 		var fichier := await _capturer("%s_%s" % [nom, etiquette])
+ 		var camera: Array = _a_l_ecran_h(0, _scene["p1"], HAUTEUR_CORPS)
+-		print("BANC_LUMIERE3D tenue_etat cadrage=%s dazzle_j1=%.3f opacite_j2=%.3f" % [nom, float(_main.p1.get("dazzle_amount")),
+-			Presentation3D.opacite_du_corps(_main.p2, false)])
++		print("BANC_LUMIERE3D tenue_etat cadrage=%s dazzle_j1=%.3f opacite_j2=%.3f dazzle_j2=%.3f opacite_j1=%.3f" % [nom,
++			float(_main.p1.get("dazzle_amount")), Presentation3D.opacite_du_corps(_main.p2, false),
++			float(_main.p2.get("dazzle_amount")), Presentation3D.opacite_du_corps(_main.p1, false)])
+ 		print("BANC_LUMIERE3D tenue cadrage=%s tenue=%s camera=%d,%d fichier=%s ancres=%s"
+ 			% [nom, etiquette, int(camera[0]), int(camera[1]), fichier, JSON.stringify(ecran)])
+ 

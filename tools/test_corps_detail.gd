@@ -1,13 +1,16 @@
-## ISO13 — le personnage détaillé à l'essai (`--corps-detaille`, une classe : le pistolet ; chantier d'ISO7 Beauté, 2026-09-24).
+## ISO13 — le personnage détaillé à l'essai (`--corps-detaille` ; le pistolet le 2026-09-24, les six classes à bouteille depuis
+## Q29, 2026-09-25 ; chantier d'ISO7 Beauté).
 ##
 ## Ce que la suite prouve, sans fenêtre :
 ## - **le drapeau** : éteint par défaut ; sans lui, le pistolet garde ses dix boîtes et le shader d'origine, qui ne déclare
 ##   rien du détail ;
-## - **les accessoires** : onze boîtes de plus sur le pistolet seul, aucune sur les autres classes ; des demi-tailles
-##   distinctes entre elles et de celles du corps (le shader les reconnaît à leur taille) ; le compte d'appels de dessin et de
-##   triangles ajoutés ;
-## - **la silhouette** : le corps seul, accessoires compris, dans le couloir de 17,5 px (sous la zone de touche de 18 px), debout
-##   et accroupi, à seize visées — et la garde VUE ROUGIR : une boîte posée hors du couloir est bien refusée ;
+## - **les accessoires** : le kit de chaque classe à bouteille (onze boîtes sur le pistolet, dix sur l'Occulteur et le Spectre,
+##   neuf sur les trois autres), aucune sur les quatre classes sans bouteille ; des demi-tailles distinctes entre elles et de
+##   celles du corps (le shader les reconnaît à leur taille) ; le compte d'appels de dessin et de triangles ajoutés ;
+## - **la bandoulière dans le torse** (Q29, le défaut de l'essai) : largeur comprise, dans le rectangle de la face du torse,
+##   pour chaque classe — et la garde VUE ROUGIR sur la longueur de l'essai du 24/09 ;
+## - **la silhouette** : pour chaque classe détaillée, le corps seul, accessoires compris, dans le couloir de 17,5 px (sous la
+##   zone de touche de 18 px), debout et accroupi, à seize visées — et la garde VUE ROUGIR : une boîte posée hors du couloir est bien refusée ;
 ## - **la visibilité** : les couleurs des accessoires, à un rapport ≤ 1 du gris de la classe ; la matière peinte ne fait
 ##   qu'assombrir (pores et marbrage < 1) ; albédo seul, ni `light()` ni émission ; `Protocol.VERSION` 18.
 ##
@@ -16,11 +19,13 @@
 ## Lancer : godot --headless --path . --script res://tools/test_corps_detail.gd
 extends SceneTree
 
-const PLANCHER := 24
+const PLANCHER := 44
 const TUILE_PX := 35.0
 const COULOIR_PX := 17.5
 const TOUCHE_PX := 18.0
-const ACCESSOIRES := 11
+## Q29 — le kit de chaque classe détaillée (voir `VoxelCatalogue.KIT_DETAIL`).
+const KIT := {"pistolet": 11, "occulteur": 10, "spectre": 10, "sentinelle": 9, "incendiaire": 9, "allumeur": 9}
+const SANS_BOUTEILLE := ["fusil", "pompe", "arbalete", "fumiste"]
 
 var _echecs := 0
 var _verifications := 0
@@ -46,6 +51,7 @@ func _run() -> void:
 	root.add_child(racine)
 	_le_drapeau(racine)
 	_les_accessoires(racine)
+	_la_bandouliere(racine)
 	_la_silhouette(racine)
 	_la_visibilite()
 	VoxelCatalogue.forcer_detail = -1
@@ -100,16 +106,24 @@ func _le_drapeau(racine: Node3D) -> void:
 
 func _les_accessoires(racine: Node3D) -> void:
 	print("— les accessoires modelés")
-	var avec := _corps(racine, "pistolet", true)
-	_check("le pistolet détaillé porte %d accessoires (%d boîtes en tout)" % [avec.details().size(), avec.nombre_de_boites()],
-		avec.details().size() == ACCESSOIRES and avec.nombre_de_boites() == 10 + ACCESSOIRES)
-	var autres := true
-	for s in ["fusil", "occulteur", "allumeur"]:
-		var c := _corps(racine, s, true)
-		autres = autres and c.details().is_empty()
-	_check("les autres classes n'en portent aucun (l'essai est d'une classe)", autres)
+	_check("les classes détaillées sont les six classes à bouteille, et chacune a son kit",
+		VoxelCatalogue.CLASSES_DETAILLEES.size() == KIT.size()
+		and KIT.keys().all(func(k): return VoxelCatalogue.CLASSES_DETAILLEES.has(k) and VoxelCatalogue.KIT_DETAIL.has(k)))
+	var sans_rien := true
+	for c in SANS_BOUTEILLE:
+		sans_rien = sans_rien and _corps(racine, c, true).details().is_empty()
+	_check("les quatre classes sans bouteille n'en portent aucun (leur tour vient après)", sans_rien)
+	for slug in KIT:
+		_le_kit(racine, slug, int(KIT[slug]))
+
+
+func _le_kit(racine: Node3D, slug: String, attendus: int) -> void:
+	var avec := _corps(racine, slug, true)
+	var sans := _corps(racine, slug, false)
+	var n_sans := sans.nombre_de_boites()
+	_check("%s détaillé : %d accessoires (%d boîtes en tout)" % [slug, avec.details().size(), avec.nombre_de_boites()],
+		avec.details().size() == attendus and avec.nombre_de_boites() == n_sans + attendus)
 	# Les demi-tailles : celles des accessoires, et celles des boîtes du corps sans eux.
-	var sans := _corps(racine, "pistolet", false)
 	var du_corps := []
 	for b in sans.boites():
 		du_corps.append(((b as MeshInstance3D).mesh as BoxMesh).size * 0.5)
@@ -119,26 +133,56 @@ func _les_accessoires(racine: Node3D) -> void:
 		for r in du_corps:
 			if d.distance_to(r) < 0.001:
 				confondues.append(String((b as Node).name))
-	_check("aucun accessoire n'a la taille d'une boîte du corps (le shader les distingue)", confondues.is_empty(), str(confondues))
 	var tailles := {}
 	for b in avec.details():
 		tailles[String((b as Node).name).rstrip("0123456789")] = ((b as MeshInstance3D).mesh as BoxMesh).size
 	var distinctes := {}
 	for k in tailles:
 		distinctes[str(tailles[k])] = true
-	_check("une taille par sorte d'accessoire (%d sortes, %d tailles)" % [tailles.size(), distinctes.size()],
-		tailles.size() == distinctes.size())
-	_check("le shader connaît chaque taille (detail_n = %d)" % int(avec.materiau().get_shader_parameter("detail_n")),
-		int(avec.materiau().get_shader_parameter("detail_n")) == distinctes.size() and distinctes.size() <= 10)
+	var n_shader := int(avec.materiau().get_shader_parameter("detail_n"))
 	# Le coût : chaque accessoire, une boîte de couleur et son double de profondeur ; 12 triangles chacune.
 	var mi_avec := avec.find_children("*", "MeshInstance3D", true, false).size()
 	var mi_sans := sans.find_children("*", "MeshInstance3D", true, false).size()
-	print("  COÛT appels de dessin ajoutés par corps : %d (couleur et profondeur) ; triangles ajoutés : %d"
-		% [mi_avec - mi_sans, (mi_avec - mi_sans) * 12])
-	_check("le coût annoncé : %d appels de dessin de plus par corps, %d triangles" % [mi_avec - mi_sans, (mi_avec - mi_sans) * 12],
-		mi_avec - mi_sans == 2 * ACCESSOIRES)
-	_check("les accessoires suivent le corps : chacun est l'enfant d'une pièce animée (torse, bouteille, arme)",
+	print("  %s : %d sortes, detail_n = %d ; COÛT %d appels de dessin, %d triangles de plus par corps"
+		% [slug, tailles.size(), n_shader, mi_avec - mi_sans, (mi_avec - mi_sans) * 12])
+	_check("%s : aucune taille confondue avec le corps, une par sorte, toutes connues du shader (%d ≤ 10), %d appels de plus"
+		% [slug, n_shader, mi_avec - mi_sans],
+		confondues.is_empty() and tailles.size() == distinctes.size() and n_shader == distinctes.size() and n_shader <= 10
+		and mi_avec - mi_sans == 2 * attendus, str(confondues))
+	_check("%s : chaque accessoire suit une pièce animée (torse, bouteille, arme)" % slug,
 		avec.details().all(func(b): return ["Torse", "Bouteille", "Arme"].has(String((b as Node).get_parent().name))))
+
+
+## Le débord d'une boîte tournée de `angle` autour de z, centrée en `centre` (repère du torse), hors du rectangle de la face :
+## x dans [−lt/2, lt/2], y dans [0, ht]. 0 si elle tient.
+func _debord(taille: Vector3, centre: Vector3, angle: float, lt: float, ht: float) -> float:
+	var dx := taille.x * 0.5 * absf(cos(angle)) + taille.y * 0.5 * absf(sin(angle))
+	var dy := taille.x * 0.5 * absf(sin(angle)) + taille.y * 0.5 * absf(cos(angle))
+	return maxf(0.0, maxf(maxf(absf(centre.x) + dx - lt * 0.5, centre.y + dy - ht), -(centre.y - dy)))
+
+
+func _la_bandouliere(racine: Node3D) -> void:
+	print("— la bandoulière dans le torse (le défaut de l'essai)")
+	for slug in KIT:
+		var c := _corps(racine, slug, true)
+		var f := VoxelCatalogue.fiche(slug)
+		var lt := float(f["largeur_torse"]) * float(f["echelle"])
+		var ht := float(f["hauteur_torse"])
+		var pire := 0.0
+		for nom in ["Bandouliere", "Cartouche1", "Cartouche2", "Cartouche3"]:
+			var b := c.find_child(nom, true, false) as MeshInstance3D
+			pire = maxf(pire, _debord((b.mesh as BoxMesh).size, b.position, b.rotation.z, lt, ht))
+		_check("%s : la bandoulière et ses cartouches, largeur comprise, dans la face du torse (débord %.4f tuile)" % [slug, pire],
+			pire <= 0.0001)
+	# La garde vue rougir : la longueur de l'essai du 24/09 (lt / cos × 0,98, sans la largeur) déborde.
+	var f := VoxelCatalogue.fiche("pistolet")
+	var lt := float(f["largeur_torse"]) * float(f["echelle"])
+	var ht := float(f["hauteur_torse"])
+	var angle := atan(-0.9 * (ht * 0.5) / (lt * 0.5))
+	var ancienne := lt / cos(angle) * 0.98
+	var debord := _debord(Vector3(ancienne, VoxelCorps.LARGEUR_BANDOULIERE, 0.014), Vector3(0, ht * 0.5, 0), angle, lt, ht)
+	_check("la garde rougit sur la longueur de l'essai (%.3f → débord %.4f tuile ; aujourd'hui %.3f)"
+		% [ancienne, debord, VoxelCorps.longueur_bandouliere(lt, ht, angle, VoxelCorps.LARGEUR_BANDOULIERE)], debord > 0.005)
 
 
 ## Le pire rayon du corps seul (accessoires compris), debout et accroupi, à seize visées, en pixels du monde.
@@ -159,13 +203,13 @@ func _pire_rayon(c: VoxelCorps) -> float:
 
 func _la_silhouette(racine: Node3D) -> void:
 	print("— la silhouette dans le couloir")
-	var sans := _corps(racine, "pistolet", false)
-	var avec := _corps(racine, "pistolet", true)
-	var r_sans := _pire_rayon(sans)
-	var r_avec := _pire_rayon(avec)
-	print("  SILHOUETTE pistolet, corps seul : %.2f px sans accessoires, %.2f px avec" % [r_sans, r_avec])
-	_check("accessoires compris, le corps seul reste dans le couloir (%.2f ≤ %.1f px) et sous la zone de touche (%.0f px)"
-		% [r_avec, COULOIR_PX, TOUCHE_PX], r_avec <= COULOIR_PX + 0.01 and r_avec < TOUCHE_PX)
+	for slug in KIT:
+		var r_sans := _pire_rayon(_corps(racine, slug, false))
+		var r_avec := _pire_rayon(_corps(racine, slug, true))
+		print("  SILHOUETTE %s, corps seul : %.2f px sans accessoires, %.2f px avec" % [slug, r_sans, r_avec])
+		_check("%s : accessoires compris, dans le couloir (%.2f ≤ %.1f px), sous la zone de touche (%.0f px), pas plus large (%.2f)"
+			% [slug, r_avec, COULOIR_PX, TOUCHE_PX, r_sans],
+			r_avec <= COULOIR_PX + 0.01 and r_avec < TOUCHE_PX and r_avec <= r_sans + 0.01)
 	# La garde vue rougir : l'étui du pistolet déplacé à 0,6 tuile du centre doit être refusé par la même mesure.
 	var faux := _corps(racine, "pistolet", true)
 	var etui := faux.find_child("Etui", true, false) as Node3D
@@ -176,12 +220,14 @@ func _la_silhouette(racine: Node3D) -> void:
 
 func _la_visibilite() -> void:
 	print("— la visibilité : la couleur, jamais plus claire")
-	var l := VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche("pistolet")["couleur"])
-	var p := VoxelCatalogue.palette_details("pistolet", "sombre3", "froide")
 	var sous := true
-	for cle in p:
-		sous = sous and VoxelCatalogue.luminance_affichee(p[cle]) <= l + 0.002
-	_check("cuir, laiton et métal à un rapport ≤ 1 du gris du pistolet", sous and p.size() == 3)
+	for slug in KIT:
+		var l := VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche(slug)["couleur"])
+		var p := VoxelCatalogue.palette_details(slug, "sombre3", "froide")
+		sous = sous and p.size() == 3
+		for cle in p:
+			sous = sous and VoxelCatalogue.luminance_affichee(p[cle]) <= l + 0.002
+	_check("cuir, laiton et métal à un rapport ≤ 1 du gris de leur classe, pour les six", sous)
 	_check("aucune couleur d'accessoire en gris ni en portraits (l'essai est celui de la V3)",
 		VoxelCatalogue.palette_details("pistolet", "").is_empty() and VoxelCatalogue.palette_details("pistolet", "portraits").is_empty())
 	var inc := FileAccess.get_file_as_string("res://iso_corps_detail.gdshaderinc")

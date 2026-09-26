@@ -114,10 +114,10 @@ const SQUELETTE := {
 
 ## Les dix classes, dans l'ordre de `game_state.gd:_batir_catalogue()`. Chaque
 ## forme (`arme`, `gadget`) est en tuiles : `largeur` = X, `hauteur` = Y,
-## `longueur` = profondeur tenue en avant (Z). `gris_rang` fixe la place de la
-## classe entre 0 (la plus sombre) et 9 (la plus proche du plafond) — c'est lui,
-## pas l'indice dans le tableau, qui pilote le gris, pour pouvoir réordonner le
-## tableau sans redistribuer les gris.
+## `longueur` = profondeur tenue en avant (Z). `gris_rang` fixait la place de la
+## classe entre 0 (la plus sombre) et 9 (la plus proche du plafond). ⚠️ Depuis Q32
+## (2026-09-25), le gris d'un corps vient de `GRIS_EGAUX` — les dix classes à la
+## même lumière ; le rang ne sert plus qu'à `--gris=rangs`, pour comparer.
 const CLASSES: Array[Dictionary] = [
 	{
 		"slug": "pistolet", "libelle": "Le Parasite", "gris_rang": 3, "echelle": 0.97,
@@ -184,6 +184,39 @@ const CLASSES: Array[Dictionary] = [
 ## Facteur de gris pour un rang 0..9 : de 55 % à 85 % du plafond, linéaire.
 static func _facteur_gris(rang: int) -> float:
 	return lerpf(0.55, 0.85, float(rang) / 9.0)
+
+
+## ISO13 — Q32 (décision d'Adrien, 2026-09-25 10:28 : « les dix classes à la même lumière, un seul seuil vers 0,10 »). Le gris
+## d'un corps ne vient plus de son rang (55 à 85 % du plafond, commit `4ef787a`) : chaque classe reçoit le facteur qui la fait
+## apparaître (30 px, balayage fin) à 0,10, la même lumière pour les dix. Les valeurs viennent du banc des corps
+## (`--gris-facteur=`), rapportées dans la ROADMAP ; une classe absente garde son rang. `--gris=rangs` rend l'ancien gris,
+## pour comparer. Les objets (`VoxelCatalogueObjets`) gardent leur propre rang.
+##
+## Mesuré le 2026-09-25 (13:59-14:00, corps gris, temps figé, balayage 0,07-0,13) : le seuil répond PAR MARCHE, et d'un bloc
+## pour les dix classes — à 0,60 toutes apparaissent à 0,11, à 0,65 toutes à 0,10, à 0,70 et 0,75 toutes à 0,09. À 0,65,
+## aucune ne montre un pixel à 0,09, et toutes en montrent 1 410 (Occulteur, le plus petit corps) à 2 022 (Terrassier, le plus
+## grand) à 0,10. D'où un seul facteur : la taille d'un corps change le NOMBRE de pixels au seuil, pas le seuil, et le gris
+## n'y peut rien (la réponse est une marche : il déplace le seuil, jamais la surface). Les retouches par taille de corps
+## prévues au plan n'ont donc pas lieu d'être. Aux rangs, le même balayage donnait 0,08 (Incendiaire, Allumeur, Spectre) à 0,12
+## (Occulteur) : quatre marches d'écart.
+const GRIS_EGAUX := {
+	"pistolet": 0.65, "fusil": 0.65, "pompe": 0.65, "arbalete": 0.65, "fumiste": 0.65,
+	"incendiaire": 0.65, "sentinelle": 0.65, "occulteur": 0.65, "allumeur": 0.65, "spectre": 0.65,
+}
+const DRAPEAU_GRIS_RANGS := "--gris=rangs"
+## Pour les bancs : < 0 lit `GRIS_EGAUX` ; sinon le même facteur pour toutes les classes (la calibration).
+static var forcer_gris_facteur := -1.0
+static var _gris_rangs_ligne := -1
+
+
+static func facteur_gris_de(slug: String, rang: int) -> float:
+	if forcer_gris_facteur >= 0.0:
+		return forcer_gris_facteur
+	if _gris_rangs_ligne < 0:
+		_gris_rangs_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_GRIS_RANGS) else 0
+	if _gris_rangs_ligne == 1 or not GRIS_EGAUX.has(slug):
+		return _facteur_gris(rang)
+	return float(GRIS_EGAUX[slug])
 
 ## Les dix slugs, dans l'ordre du catalogue.
 static func slugs() -> PackedStringArray:
@@ -457,8 +490,25 @@ const MANNEQUIN_REPORT := 1.6
 const DRAPEAU_DETAIL := "--corps-detaille"
 static var forcer_detail := -1
 static var _detail_ligne := -1
-## Les classes détaillées à l'essai.
-const CLASSES_DETAILLEES := ["pistolet"]
+## Les classes détaillées à l'essai : le pistolet d'abord (24/09), puis les cinq autres classes à bouteille (Q29, décision
+## d'Adrien du 2026-09-25 10:28 — dans l'ordre accepté : Occulteur, Spectre, Sentinelle, Incendiaire, Allumeur).
+const CLASSES_DETAILLEES := ["pistolet", "occulteur", "spectre", "sentinelle", "incendiaire", "allumeur"]
+## Q29 — CE QUI CHANGE D'UNE CLASSE À BOUTEILLE À L'AUTRE, lu sur les six portraits V3 froide (ISO Assets,
+## `portrait_<classe>_v3froide.png`). Le reste du kit est commun aux six : bandoulière et ses cartouches, étui sur la hanche,
+## robinet, volant et tuyau sur la bouteille.
+## - `tete` : ce que porte le haut du torse, côté gauche — `"manometre"` (un cadran de laiton : Parasite, Occulteur, Spectre)
+##   ou `"plaque"` (une plaque carrée, sans cadran : Sentinelle, Incendiaire, Allumeur) ;
+## - `plaque_role` : la couleur de la plaque, 1 laiton (l'Allumeur, orange sur son portrait), 2 métal (sombre) ;
+## - `manometre_bouteille` : le cadran sur le flanc de la bouteille (Parasite, Occulteur, Spectre ; absent des trois autres) ;
+## - `crosse` : la crosse modelée sous l'arme (le seul pistolet : les autres armes sont déjà des boîtes à leur mesure).
+const KIT_DETAIL := {
+	"pistolet": {"tete": "manometre", "manometre_bouteille": true, "crosse": true},
+	"occulteur": {"tete": "manometre", "manometre_bouteille": true, "crosse": false},
+	"spectre": {"tete": "manometre", "manometre_bouteille": true, "crosse": false},
+	"sentinelle": {"tete": "plaque", "plaque_role": 2, "manometre_bouteille": false, "crosse": false},
+	"incendiaire": {"tete": "plaque", "plaque_role": 2, "manometre_bouteille": false, "crosse": false},
+	"allumeur": {"tete": "plaque", "plaque_role": 1, "manometre_bouteille": false, "crosse": false},
+}
 ## Le laiton des cartouches, des manomètres et du robinet, lu au pixel sur le portrait V3 froide du pistolet (ISO Assets,
 ## `portrait_pistolet_v3froide.png`, les cartouches de la bandoulière). Seule sa chromaticité sert : sa clarté est le rapport
 ## « cartouche » de la tenue, comme les cartouches des autres classes — jamais plus claire que le gris de la classe.
@@ -524,10 +574,12 @@ static func teinte_de(args: PackedStringArray) -> String:
 ## Calibration du 2026-09-24, 18:45 (banc des corps, `--equite=` de 0,4 à 1,6, gris et V3 dans la même partie, à 0,15) : la
 ## réponse vient par marches (des faces entières franchissent le seuil de l'écran d'un coup) ; le g retenu est un point mesuré
 ## dans la bande quand il y en a un, interpolé sinon, puis vérifié au balayage complet.
-const V3_EQUITE := {
-	"pistolet": 1.05, "fusil": 0.87, "pompe": 1.26, "arbalete": 1.0, "fumiste": 1.2,
-	"incendiaire": 0.8, "sentinelle": 1.05, "occulteur": 1.35, "allumeur": 0.8, "spectre": 0.83,
-}
+## ⚠️ **Recalibrée le 2026-09-25 (14:01) sur les gris égaux de Q32** : l'écart que l'équité compensait venait pour l'essentiel
+## des rangs. Sur un même gris, les dix classes répondent presque ensemble (à g = 1 : 0,42 à 0,49 du gris ; à 1,2 : 0,60 à
+## 0,73) et la table passe de 0,80-1,35 à 1,03-1,10. La table du 24/09 : pistolet 1,05, fusil 0,87, pompe 1,26, arbalète 1,0,
+## fumiste 1,2, incendiaire 0,8, sentinelle 1,05, occulteur 1,35, allumeur 0,8, spectre 0,83.
+const V3_EQUITE := {"pistolet": 1.05, "fusil": 1.09, "pompe": 1.09, "arbalete": 1.06, "fumiste": 1.05, "incendiaire": 1.05,
+	"sentinelle": 1.1, "occulteur": 1.03, "allumeur": 1.07, "spectre": 1.04}
 ## Pour les bancs : < 0 lit `V3_EQUITE` ; sinon le même facteur pour toutes les classes (la calibration).
 static var forcer_equite := -1.0
 
@@ -604,7 +656,7 @@ static func fiche(slug: String, epaisseur: String = EPAISSEUR_PAR_DEFAUT) -> Dic
 			var f := SQUELETTE.duplicate(true)
 			for cle in c:
 				f[cle] = c[cle]
-			f["couleur"] = GRIS_PLAFOND * _facteur_gris(c["gris_rang"])
+			f["couleur"] = GRIS_PLAFOND * facteur_gris_de(String(c["slug"]), int(c["gris_rang"]))
 			f["echelle"] = float(f["echelle"]) * float(EPAISSEUR_REGLAGES[epaisseur])
 			return f
 	push_error("VoxelCatalogue : classe inconnue « %s » (connues : %s)"

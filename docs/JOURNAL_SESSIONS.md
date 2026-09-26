@@ -5977,3 +5977,26 @@ préparée une fois par carte. La preuve de « même image » a appris deux chos
 de la grille (le vide hors sol compte pour un mur), et deux lancements du jeu ne rendent jamais la même scène — la seule preuve
 valable est au même instant, dans le même processus, avec un témoin positif qui montre que la bascule atteint l'écran. Elle
 donne 0 pixel d'écart à 0° comme à 45°.
+
+**Suite, 09:00-10:05 — les pochoirs de l'illustration, à l'essai.** « ZONE n », « DEATHMATCH », « ARENA » au sol, en peinture
+sombre, cuits avec le décor ; chaque pochoir a son jumeau par la symétrie de sa carte. La garde d'équité a attrapé ma propre
+erreur avant la moindre image : l'axe d'une carte de largeur paire tombe entre deux cases. Coût nul, prouvé par les appels de
+dessin et la mémoire des textures. Et la règle « jamais plus clair » s'écrit désormais en luminance, après un pixel dont le rouge
+montait de 2 quand sa luminance baissait. Deux faux départs au Mac (un banc qui ne s'analysait pas, puis deux boucles d'attente
+croisées au verrou) : un guetteur doit exiger 90 s CONTINUES sans verrou ni Godot, et mieux vaut attendre le témoin nommé.
+
+**Suite, 11:50-14:10 — Q32, les dix classes à la même lumière.** Adrien voulait un seul seuil d'apparition pour les dix
+classes. Le balayage a répondu plus simplement que prévu : le seuil bouge par marche, et les dix classes franchissent chaque
+marche ensemble. Un seul facteur de gris (0,65) les met toutes à 0,10. La taille d'un corps change le nombre de pixels au seuil,
+pas le seuil. L'équité de V3, qui compensait surtout les rangs, se resserre d'elle-même (1,03-1,10 au lieu de 0,80-1,35). La
+plaque de l'ombre habitée imite un corps : elle suit désormais le gris de l'Occulteur, vérifié au même banc. « ARENA » a
+quitté le sol. Entre-temps, une prise utile en lisant le code avant d'écrire Q29 : dans la killcam, le corps est un aplat sans
+lumière, et « le détail en gros plan dans la killcam » reposait sur une phrase fausse de ma page du 24/09. La question est
+repartie chez Adrien (Q33). Le Mac a été arrêté de 12:53 à 13:56 à la demande d'Adrien : des fenêtres du jeu s'ouvraient
+devant lui. Aucune n'était de moi, mais mes chaînes s'arrêtent désormais d'elles-mêmes au premier appui de clavier ou de souris.
+
+**Suite, 16:41-18:05 — Q29, le kit commun des six classes à bouteille.** Écrit sans le Mac pendant qu'on attendait Adrien
+sur Q33, lancé en quinze secondes de créneau court : 51 vérifications vertes. La bandoulière qui débordait du torse venait
+d'une longueur qui oubliait sa propre largeur ; la preuve par mutation fait tomber la garde sur les six classes. Le second
+défaut reste ouvert : la matière peinte fait perdre 10 à 16 % des pixels visibles à 0,15, sans avancer ni retarder
+l'apparition. Il sera recalibré une fois qu'Adrien aura dit où le détail doit se voir.

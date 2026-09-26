@@ -49,6 +49,58 @@ var _cuit: Texture2D = null
 var _copies: Array[Node2D] = []
 var _est_copie := false
 
+## ISO13 — LES POCHOIRS DE L'ILLUSTRATION (`--pochoirs-essai`, éteint par défaut ; ordre de la session cloud, 2026-09-25 08:49) :
+## « ZONE n », « DEATHMATCH » peints au sol, comme sur les illustrations (« ARENA » en est retiré le 2026-09-25 : dans
+## l'illustration c'est une enseigne murale, pas un pochoir — décision relayée par la session cloud). Posés à la main, carte par carte, sous une
+## règle d'équité : chaque pochoir a son jumeau par la symétrie de la carte (miroir gauche-droite, ou demi-tour pour la Croisée),
+## ou se pose sur son axe — les deux joueurs lisent le même décor à la même distance. Jamais à moins de trois cases d'un départ,
+## toujours sur une plage de sol libre qui contient le mot. Cuits avec le reste du décor : rien de plus à dessiner par image.
+## Une peinture SOMBRE : le sol assombri sous la lettre, jamais éclairci — noire dans le noir comme le sol, lisible dans la
+## lumière. Une carte absente de la table (cartes des joueurs) n'en porte aucun.
+const DRAPEAU_POCHOIRS := "--pochoirs-essai"
+## [texte, centre (cases, x puis y ; x,5 = entre deux cases : l'axe d'une carte de largeur paire), rotation en degrés]. L'Usine n'a pas de symétrie exacte (son bloc central est décalé d'une
+## case) : traitée en miroir gauche-droite.
+const POCHOIRS_ESSAI := {
+	"00000002": [["DEATHMATCH", Vector2(11.5, 4.5), 0.0], ["DEATHMATCH", Vector2(11.5, 19.5), 0.0],
+		["ZONE 1", Vector2(4, 18), 0.0], ["ZONE 2", Vector2(19, 18), 0.0]],
+	"00000001": [["DEATHMATCH", Vector2(15.5, 6), 0.0], ["DEATHMATCH", Vector2(15.5, 26), 0.0],
+		["ZONE 1", Vector2(8, 23), 0.0], ["ZONE 2", Vector2(23, 23), 0.0]],
+	"map_001": [["DEATHMATCH", Vector2(14.5, 5), 0.0], ["DEATHMATCH", Vector2(14.5, 24), 0.0],
+		["ZONE 1", Vector2(8, 22), 0.0], ["ZONE 2", Vector2(21, 22), 0.0]],
+	"map_002": [["DEATHMATCH", Vector2(15.5, 4), 0.0], ["DEATHMATCH", Vector2(15.5, 21), 0.0],
+		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(26, 20), 0.0]],
+	"map_003": [["DEATHMATCH", Vector2(14, 4), 0.0], ["DEATHMATCH", Vector2(13, 23), 180.0],
+		["ZONE 1", Vector2(5, 11), 0.0], ["ZONE 2", Vector2(22, 16), 180.0]],
+	"map_004": [["DEATHMATCH", Vector2(12.5, 4), 0.0], ["DEATHMATCH", Vector2(12.5, 21), 0.0],
+		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(20, 20), 0.0]],
+}
+## La taille de fonte : des capitales d'environ 14 pixels du monde (0,4 case), à vérifier sur la planche ; et l'assombrissement
+## de la peinture (le sol × 0,55 sous la lettre).
+const POCHOIR_TAILLE_FONTE := 20
+const POCHOIR_PEINTURE := Color(0.0, 0.0, 0.0, 0.45)
+## Les pochoirs posés sur CETTE carte : [texte, centre en pixels du monde, rotation en radians].
+var _pochoirs: Array = []
+
+
+static func pochoirs_actifs() -> bool:
+	return OS.get_cmdline_user_args().has(DRAPEAU_POCHOIRS)
+
+
+## Les pochoirs de la table pour CETTE carte, en pixels du monde (le tableau est partagé avec les copies par vue).
+func _lister_pochoirs() -> void:
+	for p in POCHOIRS_ESSAI.get(String(_map_data.get("id", "")), []):
+		_pochoirs.append([String(p[0]), (Vector2(p[1]) + Vector2(0.5, 0.5)) * TILE_SIZE, deg_to_rad(float(p[2]))])
+
+
+## Pour les bancs : pose ou retire les pochoirs de l'essai et recuit le décor, sur la même carte, dans la même partie — la planche
+## compare ainsi avec et sans au même instant (deux lancements ne rendent jamais la même scène). Les copies par vue partagent le
+## tableau et reçoivent la texture recuite ; la peinture de la carte la reprend d'elle-même (`PeintureIso._process`).
+func poser_pochoirs(avec: bool) -> void:
+	_pochoirs.clear()
+	if avec:
+		_lister_pochoirs()
+	await _cuire()
+
 
 ## Le peintre de la cuisson : un nœud jetable dans le SubViewport, qui dessine
 ## le décor une fois, décalé pour que le cadre commence en (0, 0).
@@ -105,6 +157,7 @@ func _duplicate_for_player(parent: Node2D, player_idx: int, vis_mask: int, lt_ma
 	# `duplicate()` ne recopie pas les variables de script (piège du 2026-08-25).
 	copy._danger_edges = _danger_edges
 	copy._stencils = _stencils
+	copy._pochoirs = _pochoirs
 	copy._cadre = _cadre
 	copy._cuit = _cuit
 	copy._est_copie = true
@@ -165,6 +218,9 @@ func _cuire() -> void:
 func _analyser_carte() -> void:
 	_danger_edges.clear()
 	_stencils.clear()
+	_pochoirs.clear()
+	if pochoirs_actifs():
+		_lister_pochoirs()
 
 	var grid := MapCodec.get_grid_size(_map_data)
 	_cadre = Rect2(Vector2(-TILE_SIZE, -TILE_SIZE), (Vector2(grid) + Vector2(2, 2)) * TILE_SIZE)
@@ -272,6 +328,24 @@ func _draw() -> void:
 func _dessiner_direct(sur: CanvasItem) -> void:
 	_dessiner_bandes_danger(sur)
 	_dessiner_pochoirs(sur)
+	_dessiner_pochoirs_essai(sur)
+
+
+## ISO13 — les pochoirs de l'illustration, à la fonte d'enseigne (condensée), centrés sur leur point, tournés de leur angle.
+func _dessiner_pochoirs_essai(sur: CanvasItem) -> void:
+	if _pochoirs.is_empty():
+		return
+	var fonte: Font = Charte.police_display(Charte.POIDS_ENSEIGNE)
+	if fonte == null:
+		fonte = ThemeDB.fallback_font
+	for p in _pochoirs:
+		var texte: String = p[0]
+		var taille := fonte.get_string_size(texte, HORIZONTAL_ALIGNMENT_LEFT, -1, POCHOIR_TAILLE_FONTE)
+		sur.draw_set_transform(p[1], p[2])
+		# La ligne de base sous le centre : le mot centré sur son point, dans les deux sens.
+		sur.draw_string(fonte, Vector2(-taille.x * 0.5, fonte.get_ascent(POCHOIR_TAILLE_FONTE) * 0.5), texte,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, POCHOIR_TAILLE_FONTE, POCHOIR_PEINTURE)
+		sur.draw_set_transform(Vector2.ZERO, 0.0)
 
 
 ## Bandes de sécurité en chevrons noir / ambre d'atelier le long des gouffres

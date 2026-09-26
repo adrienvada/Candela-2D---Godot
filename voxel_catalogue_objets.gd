@@ -103,6 +103,9 @@ const OBJETS: Dictionary = {
 		# diagonale réelle : sqrt(18² + 3²) ≈ 18,25 px.
 		"rayon_px": 18.2477,
 		"gris_rang": 0,
+		# ISO13, Q32 : la plaque IMITE un corps — celui de l'Occulteur, son poseur. Elle suit donc le gris de ce corps
+		# (`VoxelCatalogue.facteur_gris_de`), jamais son propre rang : sa clarté ne doit pas la trahir.
+		"imite": "occulteur",
 	},
 	"gresillement": {
 		"libelle": "La bobine du grésillement",
@@ -145,7 +148,10 @@ static func fiche(slug: String) -> Dictionary:
 	if OBJETS.has(slug):
 		var f: Dictionary = OBJETS[slug].duplicate(true)
 		f["slug"] = slug
-		f["couleur"] = GRIS_PLAFOND * _facteur_gris(f["gris_rang"])
+		# ISO13, Q32 — un objet qui imite un corps prend le gris de ce corps (les gris égaux), jamais son rang.
+		var facteur := VoxelCatalogue.facteur_gris_de(String(f["imite"]), int(f["gris_rang"])) if f.has("imite") \
+			else _facteur_gris(f["gris_rang"])
+		f["couleur"] = GRIS_PLAFOND * facteur
 		return f
 	push_error("VoxelCatalogueObjets : objet inconnu « %s » (connus : %s)"
 		% [slug, ", ".join(slugs())])

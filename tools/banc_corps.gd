@@ -184,6 +184,11 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			"corps":
 				if val != "portraits" and val != "gris" and not VoxelCatalogueT.TENUES_SOMBRES.has(val if val != "sombre" else "sombre1"):
 					push_warning("banc_corps : --corps attend gris, portraits, sombre, sombre2 ou sombre3 (reçu « %s »)" % val)
+			"gris-facteur":
+				# ISO13, Q32 — la calibration des gris égaux : le même facteur pour toutes les classes (`VoxelCatalogue.GRIS_EGAUX`).
+				VoxelCatalogueT.forcer_gris_facteur = clampf(float(val), 0.0, 1.0)
+			"gris":
+				pass  # `--gris=rangs` : lu par `VoxelCatalogue.facteur_gris_de`
 			"equite":
 				# ISO13 — la calibration de l'équité de V3 : le même facteur pour toutes les classes (`VoxelCatalogue.V3_EQUITE`).
 				VoxelCatalogueT.forcer_equite = maxf(0.0, float(val))

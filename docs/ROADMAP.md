@@ -27622,7 +27622,7 @@ image avant d'engager les dix classes : une classe, le pistolet, d'après son po
   (`VoxelCatalogue.palette_details`, à un rapport ≤ 1 du gris de la classe).
 - **La matière peinte** (`iso_corps_detail.gdshaderinc`) : un marbrage large et des pores accrochés à la boîte, qui
   n'assombrissent que la fiche. Les pores s'effacent quand un pixel d'écran couvre plus d'un demi-pixel du monde (le duel) et
-  reviennent sous 0,3 (bancs, killcam rapprochée).
+  reviennent sous 0,3 (bancs ; « killcam rapprochée » écrit ici le 24/09 était faux, voir Q29 plus bas).
 - `VoxelCorps.montrer_details()` : le détail se montre et se cache par uniformes, pour les bancs, au même instant.
 - Compilé dans la seule variante CORPS_DETAIL des corps (`IsoMateriaux.variante_definie`, reposée par `accorder_corps` après
   un changement de shader). Sans le drapeau, le code prétraité des corps est celui d'`ec7a51a`.
@@ -27647,7 +27647,7 @@ photographe pour la killcam ; patch du banc : `banc_lumiere3d_planches_contre_ec
   de V3 (0,47). Le facteur d'équité du pistolet serait à recalibrer avec elle.
 - La bandoulière modelée déborde du torse d'un côté : sa longueur est à reprendre.
 
-**À trancher par Adrien** : sur la planche, le détail vaut-il son coût à la taille où il se voit (killcam rapprochée, menus) ?
+**À trancher par Adrien** : sur la planche, le détail vaut-il son coût à la taille où il se voit (bancs, menus ; pas la killcam, voir Q29) ?
 Et le contour de 1 px, sans et avec le détail.
 
 **L'usure refaite, le temps figé** (ordre 307 ; `docs/iso/iso13/planche_usure_temps_fige.jpg`). Le temps du jeu est arrêté
@@ -27666,6 +27666,147 @@ précédent, sur le même état exact (19:36), avait rougi sur `test_arena_matte
 chantier. Seule, la suite passe six fois sur six, et le lot suivant est vert. Une intermittence, signalée, non corrigée ici.
 *Note d'Iso 1 Opus, 2026-09-25 : cette intermittence est corrigée depuis `fe098fe` — un tirage de rotation non semé contre
 un seuil (une chance sur 160) ; la suite juge désormais dix éjections, prouvée rouge en forçant l'absence de rotation.*
+
+#### ISO13 — les pochoirs de l'illustration, au sol, à l'essai 🟡 (2026-09-25, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (ordre de la session cloud, 08:49). Les illustrations peignent au sol de grandes lettres au pochoir — « ZONE 4 » et
+« DEATHMATCH » dans « créer local ». Derrière `--pochoirs-essai`, éteint : « ZONE n », « DEATHMATCH » et « ARENA » peints sur
+les six cartes livrées (`ArenaDecor.POCHOIRS_ESSAI`), cuits avec le décor existant une fois par carte.
+
+**L'équité d'abord** (règles acceptées par la session cloud, 09:03) : chaque pochoir a son jumeau par la symétrie de la carte
+(miroir gauche-droite ; demi-tour pour la Croisée, où J2 lit son « ZONE 2 » à l'envers au lacet 0, accepté), ou se tient sur
+son axe ; jamais à moins de trois cases d'un départ, jamais en couloir, toujours sur une plage de sol libre qui contient le mot ;
+aucun « ARENA » là où le centre est plein. L'Usine n'a pas de symétrie exacte (son bloc central est décalé d'une case) :
+traitée en miroir. ⚠️ Sur une carte de largeur paire, l'axe tombe ENTRE deux cases, en x = (W − 1) / 2 : la première
+proposition posait les pochoirs « sur l'axe » une demi-case à côté, corrigée avant la moindre image par la garde de la suite.
+
+**La couleur** (décision de la session cloud, 09:03) : une peinture SOMBRE, le sol × 0,55 sous la lettre — l'illustration les
+peint en clair. Une peinture claire ferait mieux ressortir un corps sombre debout dessus : un endroit où l'on serait plus
+visible qu'ailleurs.
+
+**Preuves** (2026-09-25, 09:51-09:59) :
+- `tools/test_pochoirs.gd` : drapeau éteint par défaut ; chaque pochoir a son jumeau par la symétrie RELUE dans le fichier de
+  la carte (la garde rougit sur un pochoir décalé d'une demi-case) ; chaque mot sur le sol libre, à trois cases des départs ;
+  la peinture n'assombrit que ; aucun shader de sol ni de mur ne connaît les pochoirs ; `poser_pochoirs` pose et retire.
+- **La planche au même instant** (`docs/iso/iso13/pochoirs/planche_pochoirs.jpg` ; cadrage `planche_pochoirs` du banc, patch
+  dans le même dossier) : le décor recuit sans puis avec les pochoirs (`ArenaDecor.poser_pochoirs`), le temps du jeu figé, dans
+  la même partie ; au Cloître, « ZONE 1 » sous la torche de J1. Sur le décor, corps exclus : au lacet 0, 0 noir allumé, 0 pixel
+  plus clair, 1 966 assombris ; à 45°, 0 noir allumé, 2 001 assombris, et un pixel (voir la règle ci-dessous).
+- **Le coût, nul** : appels de dessin 93 / 93 (0°) et 79 / 79 (45°), objets 991 / 991 et 977 / 977, mémoire des textures
+  389,41 / 389,41 Mo, avec et sans. Aucune mesure de cadence n'est nécessaire.
+- Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-25 09:59), empreinte du code identique avant et après.
+
+**LA RÈGLE « JAMAIS PLUS CLAIR » SE LIT EN LUMINANCE** (précisée par la session cloud, 10:04, pour ne pas changer de critère
+après les chiffres une autre fois) : la luminance Rec. 709 des valeurs sRGB du pixel, avec, strictement pas plus haute que
+sans. Le compte au canal maximal reste imprimé par les scripts, pour mémoire. La raison : une peinture ne doit ni allumer le noir
+ni faire mieux ressortir un corps sombre, et c'est la luminance qui en décide. Le cas qui l'a fait écrire : à 45°, le pixel
+(569, 599), au bord d'une lettre dans le plein de la torche, passe de (241, 218, 183) à (243, 217, 184) — le rouge monte de 2,
+la luminance BAISSE (220,4 → 220,2). Un glissement de teinte de la pâte au bord de la lettre, sur une petite tache blanche qui
+existe sans pochoir ; pas une lumière.
+
+**Fidèle et pas fidèle** : « ZONE n » et « DEATHMATCH » au sol le sont (« créer local ») ; « ARENA » ne l'est pas — l'illustration
+de l'accueil le porte sur un mur. Il quitte le sol au prochain changement de code de ce lot, sans lot dédié ; d'ici là, il reste
+derrière le drapeau.
+
+**« ARENA » a quitté le sol** (2026-09-25, avec Q32 ci-dessous) : les trois entrées retirées de `POCHOIRS_ESSAI` (cartes
+`00000001`, `map_001`, `map_004`), et une garde dans `test_pochoirs` — aucun « ARENA » dans la table.
+
+#### ISO13, Q32 — les dix classes à la même lumière ✅ (2026-09-25, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (décision d'Adrien, 2026-09-25 10:28, Q32 = A : « les dix classes apparaissent à la même lumière, un seul seuil
+vers 0,10 »). Le gris d'un corps venait de son rang (`gris_rang`, 55 à 85 % du plafond, commit `4ef787a`) : au balayage fin,
+corps gris, l'Incendiaire, l'Allumeur et le Spectre apparaissaient à 0,08, l'Occulteur à 0,12. Quatre marches de lumière
+d'écart : dans le noir, une classe se voyait avant une autre à cause de sa couleur, pas de ce que le joueur faisait.
+
+**Ce qui change** : `VoxelCatalogue.GRIS_EGAUX` donne le facteur de chaque classe ; `gris_rang` ne sert plus qu'à
+`--gris=rangs` (pour comparer). Le plafond (`GRIS_PLAFOND`, Charte.DIM) ne bouge pas.
+
+**La mesure** (banc des corps, corps gris, temps figé, `--gris-facteur=` de 0,60 à 0,75, lumières 0,07 à 0,13, 2026-09-25
+13:59-14:00) : **le seuil répond par marche, et d'un bloc pour les dix classes** — à 0,60 toutes apparaissent à 0,11, à 0,65
+toutes à 0,10, à 0,70 et 0,75 toutes à 0,09. À 0,65, aucune ne montre un pixel à 0,09 ; à 0,10, de 1 410 px (l'Occulteur, le
+plus petit corps) à 2 022 px (le Terrassier, le plus grand). **D'où un seul facteur, 0,65, pour les dix** : la taille d'un
+corps change le NOMBRE de pixels au seuil, pas le seuil, et le gris n'y peut rien — une marche déplace le seuil, jamais la
+surface. Les retouches par taille de corps prévues au plan n'avaient donc pas lieu d'être.
+
+**L'équité de V3 refaite sur ces gris** (`--equite=` de 0,4 à 1,6, à 0,15, 14:01) : l'écart que l'équité compensait venait pour
+l'essentiel des rangs. Sur un même gris, les dix classes répondent presque ensemble (à g = 1 : 0,42 à 0,49 du gris ; à 1,2 :
+0,60 à 0,73). `V3_EQUITE` passe de 0,80-1,35 à **1,03-1,10** (pistolet 1,05, fusil 1,09, pompe 1,09, arbalète 1,06, fumiste
+1,05, incendiaire 1,05, sentinelle 1,10, occulteur 1,03, allumeur 1,07, spectre 1,04), interpolée puis VÉRIFIÉE.
+
+**Preuves** (2026-09-25, 14:02-14:06) :
+- **La bande** : à 0,15, V3 garde 0,49 à 0,52 des pixels visibles du gris (médiane 0,498 ; bande 0,47-0,57, tenue) ; avec
+  g = 1 partout, 0,42 à 0,49.
+- **Le seuil, classe par classe** : 0,10 pour les dix, en gris comme en V3, au balayage fin (0,04 à 0,2) ; avant, 0,08 à 0,12
+  en gris.
+- **Le noir** : 0/255 à lumière 0, gris et V3, avant et après, au temps figé.
+- **La silhouette** : 17,44 px au pire (couloir 17,5, zone de touche 18), inchangée — le gris ne touche pas la géométrie.
+- **Ce qui imite un corps suit son gris.** Le leurre est un `VoxelCorps` de la classe de son poseur (même fiche) ; les
+  fantômes de killcam sont les corps des joueurs ; la plaque de l'ombre habitée prenait son propre rang 0 : elle prend
+  désormais le gris de l'Occulteur (`"imite": "occulteur"` dans `VoxelCatalogueObjets`). Au banc des objets (14:04), la plaque
+  et un corps du même gris apparaissent à la même lumière, 0,12 (le banc des objets n'a ni encre ni modèle : son échelle de
+  lumière n'est pas celle du banc des corps, seule la comparaison dans la même image compte). La torche fantôme n'est pas un
+  corps : elle garde son rang.
+- `tools/test_gris_egaux.gd` (nouvelle suite) : un facteur pour chacune des dix classes, sous le plafond ; la fiche applique la
+  table, pas le rang ; la plaque a la couleur de l'Occulteur ; le leurre se construit sur la classe de son poseur ; les autres
+  objets gardent leur rang. `test_corps_portraits` vert sans retouche (157).
+- **La planche avant / après** : `docs/iso/iso13/q32/planche_q32.jpg` (avant = `4268ed3` dans un arbre détaché, rangs et
+  équité du 24/09 ; après = ce commit ; même banc, même lumière, temps figé).
+
+**Note — l'alpha de la couleur d'un corps n'est lu par personne** (vérifié en lisant le code le 2026-09-25, 14:26, à la
+demande de la session cloud ; aucun changement de code). La couleur d'un corps est `GRIS_PLAFOND × facteur` : la
+multiplication d'une `Color` touche aussi son alpha, qui vaut donc 0,65 (0,55 à 0,85 aux rangs, depuis toujours). Rien ne le
+lit :
+- les deux shaders qui la reçoivent (`corps_iso`, `corps_iso_eclaire`, uniform `couleur_fiche` ; les objets voxel passent par
+  les mêmes) n'en lisent que `.rgb`. Leur `ALPHA` vient de l'opacité et de la silhouette de la vue, jamais de la fiche ;
+- les couleurs de tenue qui en dérivent passent par `a_luminance`, qui rend un alpha de 1 ;
+- côté scripts, `couleur()` sert à un plafond relu en `.r/.g/.b` (`banc_iso`), à des couleurs de portrait dont le shader ne lit
+  que `.rgb` (`banc_corps`, palette grise), et à `definir_silhouette(couleur, alpha)`, qui reprend l'alpha dans son second
+  argument et jette celui de la couleur.
+Si un jour un shader lit `couleur_fiche.a`, il faudra d'abord poser l'alpha à 1 dans la fiche.
+
+#### ISO13, Q29 — le kit commun des six classes à bouteille, à l'essai 🟡 (2026-09-25, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (décision d'Adrien, 2026-09-25 10:28, Q29 = B : le personnage détaillé étendu aux dix classes, après avoir
+réparé deux défauts). **Où le montrer n'est pas tranché** : le plan disait « dans la killcam », sur une phrase fausse de la page
+du pistolet (24/09). Dans la killcam, le corps iso est porté par le fantôme et dessiné en aplat, sans lumière
+(`_suivre_le_fantome` : opacité 0, silhouette seule), et le cadrage ne serre jamais plus que 1,3 fois le zoom du duel (le
+corps y fait 45 à 58 px de haut sur 1080 lignes). La question est repartie chez Adrien (Q33 : garder la killcam, l'éclairer,
+ou un plan à part du vainqueur éclairé). D'ici sa réponse, seul le kit commun avance, derrière `--corps-detaille`, éteint.
+
+**Ce qui est fait.** Les six classes à bouteille (`VoxelCatalogue.PORTRAITS`) portent le kit : le Parasite (déjà à l'essai
+le 24/09) et les cinq de Q29 — Occulteur, Spectre, Sentinelle, Incendiaire, Allumeur. Commun aux six : la bandoulière et ses
+trois cartouches, l'étui, le robinet et son volant, le tuyau. Ce qui change d'une classe à l'autre, lu sur les portraits V3
+froide, est dans `VoxelCatalogue.KIT_DETAIL` : un manomètre (Parasite, Occulteur, Spectre) ou une plaque sans cadran
+(Sentinelle, Incendiaire en métal ; Allumeur en laiton, orange sur son portrait) en haut du torse ; le manomètre sur le flanc
+de la bouteille (les trois premiers seulement) ; la crosse (le Parasite seul). Les quatre classes sans bouteille attendent
+leur tour.
+
+**Premier défaut réparé : la bandoulière débordait du torse.** Sa longueur était `lt / cos(angle) × 0,98` : la diagonale
+tenait, mais la largeur de 0,05 tournée de ~48° ajoutait 0,037 — 0,01 tuile de débord de chaque côté.
+`VoxelCorps.longueur_bandouliere` tient désormais compte de la largeur. Preuve par mutation (2026-09-25, 16:42) : l'ancienne
+formule remise dans le code fait tomber la garde sur les six classes (0,0091 à 0,0102 tuile de débord), 6 échecs sur 51.
+
+**Second défaut, pas encore réparé : la matière peinte assombrit.** Mesuré au banc des corps (17:53, V3 froide, temps figé) :
+à 0,15, les six classes détaillées gardent 0,84 à 0,90 de leurs pixels visibles (le Spectre 0,84, l'Allumeur 0,90) ; les
+quatre autres, 1,00. L'apparition ne bouge pas (0,10 pour les dix, rien à 0,09) et le noir reste 0/255. À recalibrer sur
+l'équité de Q32 avant toute adoption — derrière le drapeau, rien de cela ne touche le jeu.
+
+⚠️ **Au seuil, la perte est bien plus forte, et mon rapport ne le disait pas** (relevé par la session cloud, 18:05, dans mon
+propre tableau). À 0,10, là où Q32 a aligné les dix classes, les six classes détaillées ne gardent que **0,50 à 0,79** de
+leurs pixels visibles : pistolet 157 → 86, incendiaire 222 → 112, sentinelle 188 → 105, occulteur 159 → 126, allumeur
+214 → 146, spectre 185 → 137. Elles apparaissent encore à 0,10, mais avec moitié moins de corps pour certaines. Le chiffre qui
+compte pour l'équité est celui du seuil, pas celui de 0,15.
+
+**Critère de recalibrage, déclaré avant toute adoption** (session cloud, 2026-09-25 18:05) : à 0,10 comme à 0,15, chaque
+classe détaillée garde au moins **0,95** des pixels visibles de son corps sans kit ; l'apparition ne bouge pas (0,10 pour les
+dix, rien à 0,09) ; le noir reste 0/255. Et les pores se lisent aujourd'hui comme des points sombres semés sur tout le corps,
+du bruit plutôt que le métal patiné des portraits : à revoir au même recalibrage.
+
+**Preuves** (`tools/test_corps_detail.gd`, 51 vérifications) : 9 à 11 accessoires par classe, aucune taille confondue avec
+une boîte du corps, toutes connues du shader (7 à 9 sortes pour 10 places) ; 18 à 22 appels de dessin de plus par corps
+détaillé ; silhouette du corps seul, accessoires compris, de 16,81 px (Occulteur) à 17,19 px (Allumeur), jamais plus large
+que sans (couloir 17,5, zone de touche 18) ; la bandoulière dans la face du torse. La planche : portrait, corps d'aujourd'hui
+et corps avec le kit, classe par classe (`docs/iso/iso13/q29/planche_kit.jpg`).
 
 ### Ce qui attend Adrien — jalon H15
 
