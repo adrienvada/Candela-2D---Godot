@@ -1043,8 +1043,10 @@ func _detailler(slug: String) -> void:
 ## chacun. Chaque boîte coûtait deux appels de dessin (couleur et profondeur) : 18 à 22 de plus pour une classe à bouteille,
 ## 44 sur les 93 du duel pour deux Parasites. Fusionnés, au plus trois maillages, donc six appels. Les sommets sont ceux d'une
 ## `BoxMesh` de la même taille (même enroulement, mêmes normales), tournés et posés dans le repère de la pièce ; la boîte
-## d'origine de chaque sommet voyage dans CUSTOM0 (position locale, w = 2) et CUSTOM1 (normale locale), que le shader des
-## corps relit sous `CORPS_DETAIL` : sa demi-taille, qui dit au shader quel accessoire il dessine, reste la même.
+## d'origine de chaque sommet voyage dans CUSTOM0 (position locale ; w = 10 + l'angle de la boîte autour de z), que le shader
+## des corps relit sous `CORPS_DETAIL` : sa demi-taille, qui dit au shader quel accessoire il dessine, reste la même, et sa
+## normale locale se retrouve en tournant NORMAL de −angle. ⚠️ Un second attribut (CUSTOM1) pour cette normale a été essayé :
+## sous gl_compatibility, il arrivait faux (preuve du cloud, 2026-09-26 22:30 : pores en traînées, triangles noirs).
 func _fusionner() -> void:
 	var par_parent := {}
 	for p in _pieces:
@@ -1058,7 +1060,6 @@ func _fusionner() -> void:
 		var tan := PackedFloat32Array()
 		var uv := PackedVector2Array()
 		var c0 := PackedFloat32Array()
-		var c1 := PackedFloat32Array()
 		var idx := PackedInt32Array()
 		for p in par_parent[parent]:
 			var cube := BoxMesh.new()
@@ -1075,8 +1076,7 @@ func _fusionner() -> void:
 				nor.append(base * nv[i])
 				var t := base * Vector3(tv[i * 4], tv[i * 4 + 1], tv[i * 4 + 2])
 				tan.append_array([t.x, t.y, t.z, tv[i * 4 + 3]])
-				c0.append_array([v[i].x, v[i].y, v[i].z, 2.0])
-				c1.append_array([nv[i].x, nv[i].y, nv[i].z, 0.0])
+				c0.append_array([v[i].x, v[i].y, v[i].z, 10.0 + float(p["angle"])])
 			uv.append_array(a[Mesh.ARRAY_TEX_UV])
 			for k in (a[Mesh.ARRAY_INDEX] as PackedInt32Array):
 				idx.append(k + depart)
@@ -1087,12 +1087,10 @@ func _fusionner() -> void:
 		tableaux[Mesh.ARRAY_TANGENT] = tan
 		tableaux[Mesh.ARRAY_TEX_UV] = uv
 		tableaux[Mesh.ARRAY_CUSTOM0] = c0
-		tableaux[Mesh.ARRAY_CUSTOM1] = c1
 		tableaux[Mesh.ARRAY_INDEX] = idx
 		var maillage := ArrayMesh.new()
 		maillage.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tableaux, [], {},
-			(Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
-			| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT))
+			Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
 		var inst := MeshInstance3D.new()
 		inst.name = "Details"
 		inst.mesh = maillage

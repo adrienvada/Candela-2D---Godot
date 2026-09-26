@@ -165,12 +165,17 @@ void vertex() {
 	normale_monde = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 #ifdef CORPS_DETAIL
 	// Q33 — un accessoire d'un maillage FUSIONNÉ (`VoxelCorps._fusionner`) : ses sommets sont posés dans le repère de la pièce
-	// qui le porte, et sa boîte à lui voyage dans CUSTOM0 (position locale ; w = 2 marque le fusionné) et CUSTOM1 (normale
-	// locale). Tout ce qui lit la boîte — sa demi-taille, l'encre des arêtes, la matière — la retrouve comme avant la fusion.
-	if (CUSTOM0.w > 1.5) {
+	// qui le porte, et sa boîte à lui voyage dans CUSTOM0 : la position locale, et en w, 10 + l'angle dont la boîte est tournée
+	// autour de z (w > 5 marque le fusionné). La normale locale se retrouve en tournant NORMAL de −angle. Tout ce qui lit la
+	// boîte — sa demi-taille, l'encre des arêtes, la matière — la retrouve comme avant la fusion.
+	// ⚠️ Pas de CUSTOM1 : porter la normale locale dans un second attribut a donné, sous gl_compatibility (llvmpipe, preuve
+	// --fusion-ab du cloud, 2026-09-26 22:30), des faces lues comme une autre — pores en traînées, un triangle noir sur un dessus.
+	if (CUSTOM0.w > 5.0) {
 		local = CUSTOM0.xyz;
 		demi = abs(CUSTOM0.xyz);
-		normale_locale = CUSTOM1.xyz;
+		float angle = CUSTOM0.w - 10.0;
+		normale_locale = vec3(cos(angle) * NORMAL.x + sin(angle) * NORMAL.y, -sin(angle) * NORMAL.x + cos(angle) * NORMAL.y,
+			NORMAL.z);
 	}
 #endif
 }

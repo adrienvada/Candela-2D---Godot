@@ -27749,6 +27749,16 @@ corps : `banc_corps --fusion-ab` construit les deux dessins et bascule de l'un �
 n'est pas faite, la fusion n'est prouvée qu'en headless (même kit, même description, CUSTOM0 et CUSTOM1 en flottants, w = 2
 partout).
 
+**La preuve du cloud a trouvé un défaut, et il est corrigé sans second attribut** (ordre 414, 2026-09-26 22:30 : `--fusion-ab`
+sur `aadea5a`, Godot 4.7, OpenGL 4.5 Mesa llvmpipe, en rendu logiciel). À 0,15, même image au pixel (2 992 pixels allumés,
+0 différent). À 0,8, 180 pixels différents : deux triangles NOIRS sur des dessus de pièces (le haut de la bandoulière, l'étui),
+et, lu au zoom, les pores de la face avant de l'étui en traînées verticales là où les boîtes donnent des points. Les pores se
+calent sur les axes de la face que désigne la normale locale : des traînées disent que la face avant a été lue comme un
+dessus, donc que la normale portée par CUSTOM1 arrivait fausse. Le correctif retire CUSTOM1 : CUSTOM0.w porte 10 + l'angle de
+la boîte autour de z, et le shader retrouve la normale locale en tournant NORMAL de −angle. La suite le vérifie sur chaque
+sommet (la normale retrouvée tombe sur un axe) et refuse toute lecture de CUSTOM1 dans les shaders. La preuve est à refaire
+dans le cloud (0,8 et 0,15, deux classes dont le Parasite), puis au Mac pour le pilote d'Apple.
+
 **D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
 la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le
 marbrage à 0,86, lui, restait à la taille du duel. Deux corrections :

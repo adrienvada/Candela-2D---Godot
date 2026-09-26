@@ -179,16 +179,25 @@ func _la_fusion(racine: Node3D) -> void:
 	var nv: int = (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
 	var marques := c0.size() == nv * 4
 	for i in nv:
-		marques = marques and c0[i * 4 + 3] == 2.0
+		marques = marques and c0[i * 4 + 3] > 5.0 and absf(c0[i * 4 + 3] - 10.0) <= PI
 	var fmt := m.surface_get_format(0)
-	_check("le maillage fusionné porte la boîte de chaque sommet : CUSTOM0 et CUSTOM1 en flottants (RGBA_FLOAT), w = 2 partout",
-		marques and ((fmt >> Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) & Mesh.ARRAY_FORMAT_CUSTOM_MASK) == Mesh.ARRAY_CUSTOM_RGBA_FLOAT
-		and ((fmt >> Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) & Mesh.ARRAY_FORMAT_CUSTOM_MASK) == Mesh.ARRAY_CUSTOM_RGBA_FLOAT)
+	# Et la normale locale se retrouve en tournant NORMAL de −angle : vérifié ici sur chaque sommet, contre la BoxMesh d'origine.
+	var nor: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+	var retrouvees := true
+	for i in nv:
+		var ang := c0[i * 4 + 3] - 10.0
+		var n := nor[i]
+		var nl := Vector3(cos(ang) * n.x + sin(ang) * n.y, -sin(ang) * n.x + cos(ang) * n.y, n.z)
+		retrouvees = retrouvees and absf(absf(nl.x) + absf(nl.y) + absf(nl.z) - 1.0) < 0.001
+	_check("le maillage fusionné porte la boîte de chaque sommet : CUSTOM0 en flottants (RGBA_FLOAT), w = 10 + angle ; pas de CUSTOM1 ; la normale locale retrouvée sur un axe",
+		marques and retrouvees and ((fmt >> Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) & Mesh.ARRAY_FORMAT_CUSTOM_MASK) == Mesh.ARRAY_CUSTOM_RGBA_FLOAT
+		and (fmt & Mesh.ARRAY_FORMAT_CUSTOM1) == 0)
 	for chemin in ["res://corps_iso.gdshader", "res://corps_iso_eclaire.gdshader"]:
 		var code := FileAccess.get_file_as_string(chemin)
 		var v := code.substr(code.find("void vertex()"), code.find("void fragment()") - code.find("void vertex()"))
 		_check("%s : le sommet relit sa boîte sous CORPS_DETAIL seulement (le shader d'origine inchangé sans drapeau)"
-			% chemin.get_file(), v.contains("#ifdef CORPS_DETAIL\n\t// Q33") and v.contains("if (CUSTOM0.w > 1.5) {")
+			% chemin.get_file(), v.contains("#ifdef CORPS_DETAIL\n\t// Q33") and v.contains("if (CUSTOM0.w > 5.0) {")
+			and not v.contains("CUSTOM1.")
 			and v.contains("demi = abs(CUSTOM0.xyz);"))
 
 
