@@ -25,9 +25,11 @@ extends SceneTree
 const EPSILON := 0.001
 const PLANCHER := 80
 const PAS_SIMULES := 150
-## Q28, ordre 421 — l'écart admis entre deux parties iso identiques à 45° B, sur les seules positions : dix fois l'écart
-## maximal mesuré (x86 : à remplir par la mesure du cloud ; Mac, 2026-09-27 : voir la ligne imprimée), sous 0,01 px.
-## PROVISOIRE à 1e-3 px en attendant la mesure x86.
+## Q28, ordres 421 et 423 — l'écart admis entre deux parties iso identiques à 45° B, sur les seules positions. Mesuré le
+## 2026-09-27 : x86 (Linux, Godot 4.7 officiel, 18f5fdc, quatre lancements) 3,05e-5 px ; Mac 0 px ; avec une partie de
+## chauffe avant A (un autre passé du moteur), environ 2e-4 px. L'écart varie d'un ordre de grandeur selon l'historique :
+## la borne est donc 1e-3 px — 33 fois la mesure x86, 5 fois le pire cas vu, un millième de pixel —, et non dix fois la
+## mesure (3e-4 px ne laisserait que 1,5 fois de marge sur le cas de la chauffe).
 const ECART_MAX_45_PX := 0.001
 
 var _failures := 0
