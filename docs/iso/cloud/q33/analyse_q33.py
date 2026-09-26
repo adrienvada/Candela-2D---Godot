@@ -22,7 +22,8 @@ import numpy as np
 from PIL import Image
 
 SRC, DST = sys.argv[1], sys.argv[2]
-FEN = (140, 170)  # demi-largeur, demi-hauteur de la fenêtre de mesure autour du corps (pixels d'écran)
+FEN = (60, 75)  # demi-largeur, demi-hauteur de la fenêtre de mesure autour du corps (pixels d'écran ; le corps et
+# son arme tiennent dans ±35 × ±35 : une fenêtre plus large ramassait des taches du sol étrangères au corps)
 LOUPE = (60, 70)  # demi-fenêtre de la loupe ×3
 JEU = (240, 135)  # demi-fenêtre « taille du jeu » (1:1, 480×270)
 NOMS = {"pistolet": "Parasite", "fusil": "Illusionniste", "pompe": "Terrassier", "arbalete": "Braconnier",
@@ -118,8 +119,9 @@ for slug in ORDRE:
 
 # Contrôle : deux prises `mi` du même mode, à la suite.
 controle = {}
-for slug in ORDRE:
-    a, b = f"{slug}_mi_d0_reel.png", f"{slug}_mi_d0_ctl_reel.png"
+for slug, a, b in [(f"{s}/{sc}/{c}", f"{s}_{ref}_d0_reel.png", f"{s}_{sc}_d0_{c}_reel.png") for s in ORDRE
+                   for sc, ref, c in [("mi", "mi", "ctl"), ("mi", "mi_d0_ctl", "ctl2"), ("b10", "b10", "ctl")]]:
+    a = a.replace("_mi_d0_ctl_d0_reel", "_mi_d0_ctl_reel")
     if a in prises and b in prises:
         w = fenetre(prises[a]["ecran"], FEN, img(a).shape)
         dd = np.abs(img(a)[w] - img(b)[w]).max(axis=2)

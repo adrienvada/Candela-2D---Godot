@@ -26,24 +26,30 @@ extends "res://tools/photographe.gd"
 ##
 ## ## Le même instant
 ## Deux choses du jeu bougent seules entre deux prises, et les deux sont figées ici, pour les deux modes :
-## - la respiration des corps (`VoxelCorps._poser_repos`, lue sur l'horloge murale `Time.get_ticks_msec`) : reposée à t = 0
-##   juste avant chaque rendu (`frame_pre_draw`), comme le banc des corps le fait avec `--temps-fixe` ;
+## - la pose des corps : respiration lue sur l'horloge murale (`Time.get_ticks_msec`), position et rotation repassées
+##   par la physique. Chaque corps est reposé juste avant chaque rendu (`frame_pre_draw`) à sa position et sa visée
+##   EXACTES, immobile, à t = 0 — comme le banc des corps avec `--temps-fixe` ;
 ## - le souffle de la torche (±3 %, `player.gd`, un bruit à graine aléatoire) : sa fréquence posée à 0, énergie constante.
 ## - la respiration du bandeau LED des murs, qui éclaire aussi les marquages du sol : tenue par le drapeau du jeu
 ##   `--led-murs-fige=0.5` (à passer sur la ligne de commande, voir plus haut) ;
-## - la poussière du faisceau, tirée au hasard à chaque image : la graine reposée avant chaque prise.
+## - la poussière du faisceau (`player.gd`, un grain tiré au hasard toutes les `DUST_INTERVAL`, qui vit plusieurs
+##   secondes) : plus aucun grain émis pendant la séance (`_dust_accum` repoussé à chaque image), et cinq secondes de jeu
+##   pour que les grains déjà posés s'éteignent. Reposer la graine avant chaque prise ne suffisait pas (321 pixels du
+##   corps différaient encore entre deux prises identiques) : les grains vivent d'une prise à l'autre. La poussière est
+##   un effet MONDE, que les réglages ne coupent pas ; la retirer est un choix de mise en scène, écrit ici.
 ## Un contrôle (`ctl`) reprend la scène `mi` deux fois dans le même mode : l'écart entre ces deux prises est le bruit de fond.
 ##
 ## ## Le niveau de lumière
 ## Lu dans le capteur du corps dans la vue de J1 (`CapteurCorps`, 256 texels pour 128 px) : la moyenne, sur l'anneau où
-## le shader des corps lit (`lecture_au_bord`, `rayon_lu_px`), du plus fort des trois canaux. C'est l'équivalent en jeu du
-## `lumiere_recue` du banc des corps, pas une identité : le corps lit chaque fragment dans SA direction, et au bord du
+## le shader des corps lit (`lecture_au_bord`, `rayon_lu_px`), de la luminance (`pate_luminance`, poids Rec. 709). C'est l'équivalent en jeu du
+## `lumiere_recue` du banc des corps (un capteur blanc uniforme de valeur L y a la luminance L), pas une identité : le corps lit chaque fragment dans SA direction, et au bord du
 ## cône l'anneau n'est pas uniforme. Le rapport imprime aussi le maximum de l'anneau.
 
 const SLUGS := ["pistolet", "fusil", "pompe", "arbalete", "occulteur", "fumiste", "incendiaire", "sentinelle",
 	"allumeur", "spectre"]
 const NIVEAUX := {"b15": 0.15, "b10": 0.10}
 const IMAGES_POSE := 6
+const IMAGES_REPOS := 40
 
 var _iso: Presentation3D
 var _cache_corps := [false, false]      # le corps j caché au prochain rendu
@@ -52,6 +58,9 @@ var _journal: Array = []
 var _j1 := Vector2.ZERO
 var _axe := Vector2.RIGHT
 var _positions := {}
+## Les poses exactes des deux corps au prochain rendu : [position, visée] (voir `_avant_le_rendu`).
+var _derniere_place := Vector2.INF
+var _poses := [[Vector2.ZERO, Vector2.RIGHT], [Vector2.ZERO, Vector2.RIGHT]]
 
 
 func _ready() -> void:
@@ -133,7 +142,11 @@ func _ready() -> void:
 			for scene in ["mi", "b15", "b10", "noir"]:
 				await _prises_adversaire(slug, mode, scene)
 			if mode == 0:
+				# Le bruit de fond : la scène `mi` reprise après les autres (`ctl`), puis aussitôt, sans rien bouger
+				# (`ctl2`) ; et la scène `b10` reprise (`ctl`).
 				await _prises_adversaire(slug, mode, "mi", "ctl")
+				await _prises_adversaire(slug, mode, "mi", "ctl2")
+				await _prises_adversaire(slug, mode, "b10", "ctl")
 		_equiper(1, "pistolet")
 		_equiper(0, slug)
 		for mode in [0, 1]:
@@ -211,6 +224,8 @@ func _ligne_libre(a: Vector2, b: Vector2) -> bool:
 
 
 func _poser(p2: Vector2, j2_dans_le_cadre := true) -> void:
+	_poses[0] = [_j1, _axe]
+	_poses[1] = [p2 if j2_dans_le_cadre else _j1 - _axe * 3000.0, _axe.orthogonal()]
 	_main.p1.global_position = _j1
 	_viser(0, _axe)
 	_main.p2.global_position = p2 if j2_dans_le_cadre else _j1 - _axe * 3000.0
@@ -227,6 +242,8 @@ func _poser(p2: Vector2, j2_dans_le_cadre := true) -> void:
 func _tenir(p2: Vector2, n: int, j2_dans_le_cadre := true) -> void:
 	for i in n:
 		_poser(p2, j2_dans_le_cadre)
+		for j in [_main.p1, _main.p2]:
+			j.set("_dust_accum", -1.0e9)
 		await get_tree().process_frame
 
 
@@ -245,7 +262,9 @@ func _niveau(j: int) -> Array:
 	for a in 64:
 		var q := centre + Vector2.from_angle(TAU * float(a) / 64.0) * r
 		var px := img.get_pixelv(Vector2i(q))
-		var v := maxf(px.r, maxf(px.g, px.b))
+		# La luminance du shader des corps (`pate_luminance`, poids Rec. 709) : c'est elle que le corps compare, pas le
+		# plus fort canal — sous une torche orangée, le plus fort canal surestimait la lumière reçue.
+		var v := px.r * 0.2126 + px.g * 0.7152 + px.b * 0.0722
 		somme += v
 		haut = maxf(haut, v)
 		n += 1
@@ -263,6 +282,8 @@ func _trouver_les_positions(portee: float) -> void:
 	_positions["mi"] = _vers(_j1 + _axe * portee * 0.5)
 	var releve := []
 	var d := portee * 0.5
+	# Les grains de poussière déjà posés s'éteignent (voir l'en-tête).
+	await _tenir(_j1 + _axe * d, 300)
 	# Le premier relevé suivait un saut de J2 : le capteur n'avait pas encore suivi (0,65 lu, 0,26 juste après).
 	await _tenir(_j1 + _axe * d, 20)
 	var precedent := (await _niveau_a(_j1 + _axe * d))[0] as float
@@ -331,7 +352,15 @@ func _avant_le_rendu() -> void:
 	for j in 2:
 		var voxel := _iso._voxels[j] as VoxelCorps
 		if voxel != null and _iso._corps[j].visible:
-			voxel._poser_repos(0.0, 0.0)
+			# La pose EXACTE, pas celle du joueur : sa position et sa rotation repassent par la physique (glissement,
+			# rotation lissée vers la visée), et le corps bougeait d'une fraction de pixel d'une prise à l'autre — 467
+			# pixels du contour différaient entre deux prises identiques (essai 3).
+			var etat: Dictionary = _iso.etat_du_corps(j, _main.p1 if j == 0 else _main.p2)
+			etat["position"] = _poses[j][0]
+			etat["visee"] = _poses[j][1]
+			etat["vitesse"] = Vector2.ZERO
+			etat["t"] = 0.0
+			voxel.poser(etat)
 		if _cache_corps[j]:
 			_iso._corps[j].visible = false
 		var mat := _iso._mat_corps[j] as ShaderMaterial
@@ -352,7 +381,11 @@ func _prise(nom: String, p2: Vector2, j2_dans_le_cadre: bool, regarde: int, info
 	# que deux prises du même instant tirent les mêmes grains. Premier essai sans elle : 184 pixels différaient autour du
 	# corps entre deux prises identiques.
 	seed(33)
-	await _tenir(p2, IMAGES_POSE, j2_dans_le_cadre)
+	# J2 déplacé : son effacement (l'opacité de son sprite, que le corps suit) remonte ou retombe en plusieurs images.
+	# Avec six images seulement, la prise de contrôle faite après la scène `noir` différait sur 481 pixels du corps.
+	var place := p2 if j2_dans_le_cadre else Vector2(-1, -1)
+	await _tenir(p2, IMAGES_POSE if place == _derniere_place else IMAGES_REPOS, j2_dans_le_cadre)
+	_derniere_place = place
 	var niv := _niveau(regarde)
 	var img: Image = await _capturer("vue")
 	if img == null:
@@ -366,10 +399,14 @@ func _prise(nom: String, p2: Vector2, j2_dans_le_cadre: bool, regarde: int, info
 	var cible: Vector2 = _j1 if regarde == 0 else p2
 	var ecran: Vector2 = cam.vers_ecran(cible, logique, 16.0) * taille / logique
 	var ligne := info.duplicate()
+	var mat := _iso._mat_corps[regarde] as ShaderMaterial
+	ligne.merge({"opacite": mat.get_shader_parameter("opacite_1") if mat != null else -1.0,
+		"joueur": [(_main.p1 if regarde == 0 else _main.p2).global_position.x,
+			(_main.p1 if regarde == 0 else _main.p2).global_position.y]})
 	ligne.merge({"fichier": nom + ".png", "niveau": niv[0], "niveau_max": niv[1], "ecran": [ecran.x, ecran.y],
 		"corps": [cible.x, cible.y], "taille": [img.get_width(), img.get_height()]})
 	_journal.append(ligne)
-	print("  · %s  capteur %.3f  écran (%.0f, %.0f)" % [nom, niv[0], ecran.x, ecran.y])
+	print("  · %s  capteur %.3f  écran (%.0f, %.0f)  opacité %s" % [nom, niv[0], ecran.x, ecran.y, str(ligne["opacite"])])
 
 
 func _prises_adversaire(slug: String, mode: int, scene: String, suffixe := "") -> void:
