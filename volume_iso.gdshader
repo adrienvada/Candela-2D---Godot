@@ -32,16 +32,19 @@ render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, shadows_disabl
 // La forme du nuage : l'alpha de son image 2D (tournée comme elle), sinon un disque bruité.
 uniform sampler2D masque : filter_linear, repeat_disable;
 uniform bool avec_masque = false;
-// Centre et rayon du nuage, en pixels de monde ; angle de son image.
-uniform vec2 centre = vec2(0.0);
-uniform float rayon = 100.0;
-uniform float angle = 0.0;
+// Centre et rayon du nuage, en pixels de monde ; angle de son image. Préfixés `nuage_` (2026-09-25) : la variante
+// masquée inclut l'usure du mur (`iso_usure.gdshaderinc`), dont les locales s'appellent `centre`, `rayon`, `angle`,
+// `coeur` et `graine` — un uniforme du même nom et la variante ne compile plus (« Redefinition of … »), ce qui ne se
+// voit qu'à l'image : elle ne dessine alors rien.
+uniform vec2 nuage_centre = vec2(0.0);
+uniform float nuage_rayon = 100.0;
+uniform float nuage_angle = 0.0;
 // L'opacité de CETTE couche au cœur du nuage.
 uniform float densite = 0.3;
 // Le bord adouci, en fraction du rayon (0,45 : le cœur plein occupe presque la moitié).
-uniform float coeur = 0.45;
+uniform float nuage_coeur = 0.45;
 // Le grain qui empêche les couches de se lire comme des disques identiques empilés.
-uniform float graine = 0.0;
+uniform float nuage_graine = 0.0;
 uniform float age = 0.0;
 // Un ruban (la toile du voile) : ni disque ni bord, une densité pleine le long du maillage.
 uniform bool ruban = false;
@@ -56,6 +59,10 @@ uniform float temperature = 0.0;
 // nappes, au sol, une seule fois. Le ruban (la toile du voile, debout) garde sa lecture nette. Noir absolu tenu : une
 // moyenne de lectures nulles est nulle ; jamais plus clair que la plus claire des lectures.
 uniform float lissage_rayon = 0.18;
+#ifdef FUMEE_MASQUE
+// ISO13, Q31 — ce que le pixel montre derrière la couche (sol, face ou dessus de mur), jugé comme son propre shader le calcule.
+#include "res://volume_masque.gdshaderinc"
+#endif
 
 // ## Deux gestes qui font MOINS de travail pour la même image (2026-09-23)
 //
@@ -105,9 +112,9 @@ void fragment() {
 	// à des pixels jetés juste après.
 	float a = densite;
 	if (!ruban) {
-		vec2 d = (px - centre) / max(rayon, 1.0);
+		vec2 d = (px - nuage_centre) / max(nuage_rayon, 1.0);
 		float r = length(d);
-		float forme = 1.0 - smoothstep(coeur, 1.0, r);
+		float forme = 1.0 - smoothstep(nuage_coeur, 1.0, r);
 		// Au-delà du disque inscrit, la forme vaut zéro et le bruit ne peut pas la relever : on jette
 		// avant même de le calculer.
 		if (forme <= 0.0) {
@@ -115,8 +122,8 @@ void fragment() {
 		}
 		a *= forme;
 		if (avec_masque) {
-			float ca = cos(angle);
-			float sa = sin(angle);
+			float ca = cos(nuage_angle);
+			float sa = sin(nuage_angle);
 			// L'image 2D tourne de `angle` : on lit son repère propre, donc la rotation inverse.
 			vec2 local = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y);
 			a *= texture(masque, local * 0.5 + vec2(0.5)).a;
@@ -124,16 +131,46 @@ void fragment() {
 		// ISO10, 1c — le grain du bord à l'échelle de l'ÉCRAN (cellules de trois pixels), plus en
 		// cellules de 20 px de monde grossies 2,4 fois : c'étaient les « blocs » de la fumée. Ancré
 		// dans le monde (px divisé par une constante de zoom) : il ne glisse pas avec la caméra.
-		a *= 0.7 + 0.3 * pate_bruit(px / (3.0 * px_ecran) + vec2(graine * 13.1, age * 0.35));
+		a *= 0.7 + 0.3 * pate_bruit(px / (3.0 * px_ecran) + vec2(nuage_graine * 13.1, age * 0.35));
 	}
 	a = clamp(a, 0.0, 1.0);
 	if (a <= 0.003) {
 		discard;
 	}
+#ifdef FUMEE_MASQUE
+	// ISO13, Q31 voie A — LE MASQUE SANS COPIE D'ÉCRAN (allumé par défaut, `--sans-fumee-masque` l'éteint ; ISO7 Gadgets, 2026-09-25) : la couche se tait là
+	// où ce que le pixel MONTRE derrière elle s'affiche noir (`masque_montre_noir`, `volume_masque.gdshaderinc`) — le sol,
+	// la face ou le dessus d'un mur que le rayon de vue, prolongé au-delà de la couche, rencontre d'abord.
+	// Pourquoi pas la lumière brute : le sol (`lightmap_pateuse_sol`) passe la lumière dans la pâte, et le lavis n'allume sa
+	// première eau qu'au-dessus de 2 à 5 % — en dessous, le sol est noir sur une lumière qui ne l'est pas. La garde par la
+	// lumière brute ne voyait donc rien (11 750 pixels fautifs contre 10 222 sans elle), et la couche, qui passe dans la
+	// même pâte une lumière LISSÉE, plus claire au bord du disque, franchissait le seuil que le sol ne franchit pas.
+	// Quatre fautes de la première journée, chacune vue à l'image et non par une suite :
+	// - juger le point SOUS la couche au lieu du point montré (sans parallaxe 5 422 et 5 620 pixels fautifs, inversée
+	//   7 665 et 5 861, au lieu de 120 et 2 512) ;
+	// - la juger DÉCODÉE (`pate_vers_affiche`) alors que l'écran montre la valeur écrite : 109 097 pixels de fumée perdue sur
+	//   l'anneau éclairé par les LED (preuve de 14:49 ; les « fuites » qui avaient inspiré ce faux remède, à 13:58, venaient
+	//   d'une caméra qui glissait encore) ;
+	// - juger sur le sol un pixel qui montre la face d'un mur : 12 114 pixels de fumée perdue devant les faces éclairées ;
+	// - croire que l'écran montre la valeur écrite au-dessus de 0,5/255 : la sortie 3D écrase tout canal écrit sous 8/255
+	//   (rampes du 2026-09-25) — 127 pixels de fuite à la lisière du noir, sur un sol écrit à quelques /255.
+	// Sous `#ifdef` et non derrière un uniforme : masque éteint, le shader compilé est celui d'avant (piège de l'ordre 255).
+	// V1e — les dérivées d'écran TIRÉES DE LA CAMÉRA, après le discard de l'opacité : caméra orthographique, un pixel
+	// d'écran vaut dans le monde un vecteur constant par vue (la base de la caméra × la taille d'un pixel de projection).
+	// Ce n'est pas `dFdx(monde)`, qui glisse le long de la couche ; les deux ne diffèrent que le long de la vue, composante
+	// que `derivee_sur_plan` retire : les dérivées sur le sol et sur les faces sont les mêmes. Plus aucun dFdx vivant à
+	// travers le shader (V1c et V1d les prenaient en tête du fragment, sur tous les fragments). Le signe de y peut différer
+	// de `dFdy` : seules des longueurs et des valeurs absolues en dépendent (aa, px_monde, niveau de mipmap).
+	if (!ruban && masque_montre_noir(monde, -INV_VIEW_MATRIX[2].xyz, deux,
+			INV_VIEW_MATRIX[0].xyz * (2.0 / (VIEWPORT_SIZE.x * PROJECTION_MATRIX[0][0])),
+			INV_VIEW_MATRIX[1].xyz * (2.0 / (VIEWPORT_SIZE.y * PROJECTION_MATRIX[1][1])))) {
+		discard;
+	}
+#endif
 
 	// LA COULEUR ENSUITE, le point central lu UNE fois pour ses deux usages.
 	vec3 brute = lire_lightmap(px, deux);
-	vec3 lue = ruban ? brute : lire_lightmap_lissee(px, max(rayon * lissage_rayon, 1.0), deux, brute);
+	vec3 lue = ruban ? brute : lire_lightmap_lissee(px, max(nuage_rayon * lissage_rayon, 1.0), deux, brute);
 	vec3 c;
 	if (ruban) {
 		c = lightmap_pateuse(px, px, aa, deux);

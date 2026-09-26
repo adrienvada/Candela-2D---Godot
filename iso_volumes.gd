@@ -86,6 +86,19 @@ var lueurs_actives := true
 var couches_fusee := -1
 ## ISO13, lot E — éteint par défaut, comme tout drapeau d'un lot en cours.
 var faisceaux_actifs := false
+## ISO13, Q31 voie A — le masque de la fumée : chaque couche de volume passe à la variante FUMEE_MASQUE
+## de son shader, qui la tait là où ce que le pixel montre est affiché noir (voir `volume_iso.gdshader`). ALLUMÉ PAR DÉFAUT
+## depuis le 2026-09-25 (Q31 : « le noir d'abord », prix 3 % au plus, preuve à l'image passée) ; `--sans-fumee-masque`
+## l'éteint — la référence de toute série de cadence sur la fumée. À poser AVANT que les couches naissent, comme
+## `couches_fusee` — une couche déjà créée garde son shader (les bancs basculent par `poser_masque_fumee`).
+var masque_fumee := true
+## ESSAI (session cloud, 2026-09-25 21:41 ; Adrien tranchera sur la planche) — le point de braise de la fusée POSÉE. En 2D, le
+## cœur incandescent (`fusee.gd`, `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est
+## une information de jeu, la position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et
+## ne l'émet pas — le choix reste le défaut. L'essai rend, par un halo d'ici et non par le voxel, le cœur que la comète
+## porte déjà en vol (10 px, de la couleur de la lumière). 0 : éteint (défaut) ; 1 : `--fusee-coeur`, le cœur rouge puis
+## orange ; 2 : `--fusee-coeur-blanc`, presque blanc au plein feu, qui revient au rouge avec la température.
+var coeur_fusee := 0
 
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
@@ -98,6 +111,19 @@ var _masques := false
 ## fait sur les arguments UTILISATEUR. Lu ici plutôt que dans un banc pour qu'il porte partout — jeu,
 ## banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
 const DRAPEAU_FAISCEAU := "--faisceau"
+const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
+const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
+const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
+const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
+## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
+## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
+const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
+## La taille du cœur posé : celle du cœur de la comète (`_suivre_comete`), en pixels de monde.
+const TAILLE_COEUR_FUSEE := 10.0
+## Sa hauteur : au sommet de la braise du voxel (`VoxelObjet.FUSEE_BRAISE_Y0` + sa hauteur), un peu au-dessus. À la hauteur de
+## la lumière (0,15 tuile), il tombait DANS le voxel, qui en masquait le centre : un anneau autour de la tige, pas un point
+## (premier essai, 2026-09-25 21:50).
+const HAUTEUR_COEUR_FUSEE_PX := (VoxelObjet.FUSEE_BRAISE_Y0 + VoxelObjet.FUSEE_BRAISE.y) * TUILE + 0.3 * TAILLE_COEUR_FUSEE
 
 
 func _init() -> void:
@@ -107,8 +133,21 @@ func _init() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg == DRAPEAU_FAISCEAU:
 			faisceaux_actifs = true
+		elif arg == DRAPEAU_MASQUE_FUMEE:
+			masque_fumee = true
+		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
+			masque_fumee = false
+		elif arg == DRAPEAU_COEUR_FUSEE:
+			coeur_fusee = maxi(coeur_fusee, 1)
+		elif arg == DRAPEAU_COEUR_FUSEE_BLANC:
+			coeur_fusee = 2
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
+	if coeur_fusee > 0:
+		print("[fusée cœur] essai allumé — %s" % ("presque blanc au plein feu" if coeur_fusee >= 2 else "rouge puis orange"))
+	# L'état éteint s'imprime aussi : la référence d'une série se prouve par ce que le JEU dit, jamais par la commande.
+	if not masque_fumee:
+		print("[fumée masque] éteint (%s) — le shader des volumes d'avant" % DRAPEAU_SANS_MASQUE_FUMEE)
 
 
 func nombre_de_suivis() -> int:
@@ -226,6 +265,26 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 	var taille := TUILE * (0.6 + 0.6 * relative)
 	_poser_halo(lueur, 0, Vector3(f.global_position.x, h, f.global_position.y), taille,
 		lumiere.color if lumiere != null else Color.WHITE, 0.45 * relative, 0)
+	if coeur_fusee > 0:
+		_suivre_coeur_fusee(f, lumiere, energie, relative, vus)
+
+
+## ESSAI (`coeur_fusee`) — le cœur de la fusée posée, comme celui de la comète : un halo à bord franc (forme 1), de la
+## couleur de la lumière, dont l'éclat suit l'énergie et le cœur 2D (ses sursauts d'agonie, son extinction) — et ne tombe
+## JAMAIS sous l'opacité du cœur 2D : repris tel quel de la comète (énergie / 0,8 × opacité), il s'effaçait au résidu (0,02),
+## là où le point de braise 2D se voit encore — parité avec la 2D (session cloud, 21:54). Au plein feu
+## seulement, la variante 2 le pousse vers le presque-blanc ; il revient au rouge quand l'énergie retombe vers la braise.
+## La lumière du jeu ne change pas : ce halo s'ajoute à l'image 3D, il n'éclaire rien.
+func _suivre_coeur_fusee(f: Node2D, lumiere: Light2D, energie: float, relative: float, vus: Dictionary) -> void:
+	var c := _entree(f, "coeur", vus, 2)
+	_halos(c, 1)
+	var coeur := f.get_node_or_null(^"Coeur") as CanvasItem
+	var opacite := coeur.modulate.a if coeur != null else 1.0
+	var couleur := lumiere.color if lumiere != null else Color.WHITE
+	if coeur_fusee >= 2:
+		couleur = couleur.lerp(COULEUR_COEUR_BLANC, smoothstep(0.6, 0.95, relative))
+	_poser_halo(c, 0, Vector3(f.global_position.x, HAUTEUR_COEUR_FUSEE_PX, f.global_position.y), TAILLE_COEUR_FUSEE,
+		couleur, maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite), 1)
 
 
 ## La comète : la fusée en vol, à la hauteur de sa lumière. Le cœur et le corps dessinés sortent des
@@ -470,13 +529,108 @@ func _entree(source: Object, genre: String, vus: Dictionary, cle: int = 0) -> Di
 	return e
 
 
+## Une fois par processus : la ligne qui atteste le masque dans le journal, lue sur la variante réellement posée — même forme
+## que « [usure] allumée ».
+static var _masque_annonce := false
+## La variante masquée des volumes, une fois posée. ⚠️ `_pousser_lightmaps` choisit ses matériaux PAR LEUR SHADER : sans elle
+## dans son filtre, une couche masquée ne reçoit AUCUNE lightmap et lit la texture par défaut — la fumée s'éclaire partout
+## (premier sandwich, 2026-09-25 09:21 : 73 609 pixels fautifs contre 12 855 sans masque, la fumée presque trois fois plus
+## claire dans la lumière).
+var _shader_masque: Shader = null
+
+
 func _materiau_volume() -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER_VOLUME
+	if masque_fumee:
+		_poser_masque(mat, true)
 	mat.render_priority = PRIORITE_VOLUME
 	# Raccords de la vague — la teinte chaude du sol et des murs (ISO7), nulle sans beauté.
 	mat.set_shader_parameter("temperature", IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
 	return mat
+
+
+## ISO13, Q31 — le masque posé sur une couche (ou retiré), sur place : la variante, son facteur, et la ligne qui l'atteste.
+func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
+	if not actif:
+		mat.shader = SHADER_VOLUME
+		return
+	mat.shader = variante_masque(IsoMateriaux.usure_essai_active())
+	_shader_masque = mat.shader
+	_recopier_le_mur(mat)
+	if not _masque_annonce:
+		_masque_annonce = true
+		print("[fumée masque] allumé — variante FUMEE_MASQUE posée (%s) ; point noir de l'écran 3D : %s ; usure %s"
+			% ["#define FUMEE_MASQUE dans son code" if mat.shader.code.contains("#define FUMEE_MASQUE\n")
+			else "⚠ SANS le #define : variante manquée", POINT_NOIR_ANNONCE,
+			"recopiée (#define USURE_ESSAI, comme le sol)" if mat.shader.code.contains("#define USURE_ESSAI\n")
+			else "éteinte, comme le sol"])
+
+
+## Le point noir de la sortie 3D, tel que la couche le prend (`POINT_NOIR_ECRIT` de `volume_masque.gdshaderinc`) : imprimé
+## avec la ligne du masque, pour qu'une prise dise quelle règle a porté.
+const POINT_NOIR_ANNONCE := "écrit sous 8/255 → noir (rampes du 2026-09-25 : 7 → 0, 8 → 1)"
+## Les réglages du SOL (`sol_iso.gdshader`) que la couche recopie, sous le nom qu'ils portent chez elle (préfixe `sol_`, le
+## mur et la fumée ayant déjà une matière et une température) ; et la température des MURS (préfixe `mur_`).
+const PARAMETRES_DU_SOL := {"texture_sol": "sol_texture_sol", "periode_sol_px": "sol_periode_sol_px",
+	"force_matiere": "sol_force_matiere", "dalle_px": "sol_dalle_px", "joint_dalle_px": "sol_joint_dalle_px",
+	"joint_dalle_reste": "sol_joint_dalle_reste", "temperature": "sol_temperature",
+	"temperature_seuil_bas": "sol_temperature_seuil_bas", "temperature_seuil_haut": "sol_temperature_seuil_haut",
+	"neutre_avant_pate": "sol_neutre_avant_pate", "dalles": "dalles", "joint_2d_px": "joint_2d_px",
+	"contact_corps_rayon_px": "contact_corps_rayon_px", "contact_corps_reste": "contact_corps_reste"}
+const TEMPERATURE_DU_MUR := {"temperature": "mur_temperature", "temperature_seuil_bas": "mur_temperature_seuil_bas",
+	"temperature_seuil_haut": "mur_temperature_seuil_haut", "neutre_avant_pate": "mur_neutre_avant_pate"}
+## Le contact des corps bouge à chaque image : recopié par `_pousser_lightmaps`.
+const CONTACT_PAR_IMAGE := ["contact_corps_1", "contact_corps_2"]
+## L'USURE, quand elle est allumée : l'interrupteur et la proximité des murs viennent du SOL ; les impacts viennent du MUR, qui
+## les reçoit à chaque éclat — recopiés à chaque image avec le contact.
+const USURE_DU_SOL := ["usure", "usure_proximite"]
+const USURE_DU_MUR := ["usure_impacts", "usure_impacts_n"]
+## Les réglages du mur, RECOPIÉS depuis le matériau même des murs de la présentation (la grille de la carte, la peinture, la
+## matière des faces, leur pied et leur contact) : la couche juge une face comme `mur_iso.gdshader` la calcule, avec les
+## MÊMES valeurs. Sans présentation (une suite headless), la grille reste inactive et seul le sol est jugé.
+const PARAMETRES_DU_MUR := ["pied", "texture_face", "periode_face_px", "force_matiere", "contact_px", "contact_reste",
+	"grille_murs", "grille_active", "grille_origine_px", "grille_cases", "tuile_px", "peinture", "peinture_active",
+	"peinture_origine_px", "peinture_taille_px", "peinture_etalon_px", "peinture_plancher_px"]
+
+
+func _recopier_le_mur(mat: ShaderMaterial) -> void:
+	mat.set_shader_parameter("mur_haut_px", MapGeometry.HAUTEUR_MUR_HAUT * TUILE)
+	mat.set_shader_parameter("muret_px", MapGeometry.HAUTEUR_MUR_BAS * TUILE)
+	var pres := Presentation3D.instance()
+	var mur: ShaderMaterial = pres.get("_mat_mur") if pres != null else null
+	if mur == null:
+		return
+	for nom: String in PARAMETRES_DU_MUR:
+		mat.set_shader_parameter(nom, mur.get_shader_parameter(nom))
+	for nom: String in TEMPERATURE_DU_MUR:
+		mat.set_shader_parameter(TEMPERATURE_DU_MUR[nom], mur.get_shader_parameter(nom))
+	# Et le SOL de la vue de J1 (`_mat_sols[0]`) : la couche calcule la couleur qu'il écrit.
+	var sols: Array = pres.get("_mat_sols")
+	if not sols.is_empty() and sols[0] != null:
+		for nom: String in PARAMETRES_DU_SOL:
+			mat.set_shader_parameter(PARAMETRES_DU_SOL[nom], (sols[0] as ShaderMaterial).get_shader_parameter(nom))
+		for nom: String in USURE_DU_SOL:
+			mat.set_shader_parameter(nom, (sols[0] as ShaderMaterial).get_shader_parameter(nom))
+
+
+## La variante masquée des volumes, avec ou sans l'usure. ⚠️ PARITÉ : elle porte USURE_ESSAI si et seulement si le sol la
+## porte — le même interrupteur (`IsoMateriaux.usure_essai_active`), lu au même endroit. Sans elle, une usure allumée au sol
+## (Q30) assombrirait un sol que la fumée croirait éclairé : la fumée resterait sur un pixel que l'écran montre noir.
+static func variante_masque(usure: bool) -> Shader:
+	var v := IsoMateriaux.variante_definie(SHADER_VOLUME, "FUMEE_MASQUE")
+	return IsoMateriaux.variante_definie(v, "USURE_ESSAI") if usure else v
+
+
+## ISO13, Q31 — la bascule des bancs : le masque allumé ou éteint sur les couches DÉJÀ posées, au même instant, sans rien
+## recréer (la preuve en un seul processus compare la même fumée avec et sans lui).
+func poser_masque_fumee(actif: bool) -> void:
+	masque_fumee = actif
+	for e: Dictionary in _suivis.values():
+		for m in e["mats"]:
+			var s := (m as ShaderMaterial).shader
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque):
+				_poser_masque(m as ShaderMaterial, actif)
 
 
 func _couches(e: Dictionary, n: int) -> void:
@@ -506,13 +660,13 @@ func _poser_couches(e: Dictionary, centre: Vector2, rayon: float, hauteur: float
 		mi.scale = Vector3(r * 2.0, 1.0, r * 2.0)
 		mi.visible = densite > 0.0
 		var mat: ShaderMaterial = e["mats"][i]
-		mat.set_shader_parameter("centre", centre)
-		mat.set_shader_parameter("rayon", r)
-		mat.set_shader_parameter("angle", angle)
+		mat.set_shader_parameter("nuage_centre", centre)
+		mat.set_shader_parameter("nuage_rayon", r)
+		mat.set_shader_parameter("nuage_angle", angle)
 		mat.set_shader_parameter("densite", densite * (1.0 - 0.45 * f))
 		mat.set_shader_parameter("masque", masque)
 		mat.set_shader_parameter("avec_masque", masque != null)
-		mat.set_shader_parameter("graine", graine + float(i) * 7.0)
+		mat.set_shader_parameter("nuage_graine", graine + float(i) * 7.0)
 		mat.set_shader_parameter("age", age)
 
 
@@ -573,10 +727,24 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 	var mats: Array = []
 	for e: Dictionary in _suivis.values():
 		for m in e["mats"]:
-			if (m as ShaderMaterial).shader == SHADER_VOLUME:
+			var s := (m as ShaderMaterial).shader
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque):
 				mats.append(m)
 	if mats.is_empty():
 		return
+	# Le contact des corps change à chaque image : recopié du sol de la vue de J1 sur les couches masquées.
+	if _shader_masque != null:
+		var pres := Presentation3D.instance()
+		var sols: Array = pres.get("_mat_sols") if pres != null else []
+		if not sols.is_empty() and sols[0] != null:
+			var mur: ShaderMaterial = pres.get("_mat_mur")
+			for m in mats:
+				if (m as ShaderMaterial).shader == _shader_masque:
+					for nom: String in CONTACT_PAR_IMAGE:
+						(m as ShaderMaterial).set_shader_parameter(nom, (sols[0] as ShaderMaterial).get_shader_parameter(nom))
+					if mur != null and _shader_masque.code.contains("#define USURE_ESSAI\n"):
+						for nom: String in USURE_DU_MUR:
+							(m as ShaderMaterial).set_shader_parameter(nom, mur.get_shader_parameter(nom))
 	var textures := [main.vp1.get_texture(), main.vp2.get_texture()]
 	for id in vues:
 		var vue: SubViewport = main.vp1 if id == 0 else main.vp2

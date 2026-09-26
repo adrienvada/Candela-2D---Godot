@@ -74,6 +74,12 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO13 : la fumée de la fusée salit-elle le noir à l'écran, comme le rayon du lot E ? Trois prises dans le même lancement ; les deux coupées donnent le bruit, la rétablie se compte contre les deux."],
 		["loupe-fusee-bord-noir", "Le sandwich de la fumée, torches éteintes : C R C R C, fenêtre entière",
 			"ISO13 : la même question que loupe-fusee-bord, sans le voile d'éblouissement de J1 (qui ne laissait aucun pixel vraiment noir), et chaque prise rétablie jugée contre ses deux voisines coupées."],
+		["loupe-fusee-masque-preuve", "Le masque de la fumée, en un seul processus : A sans fumée, B fumée, C fumée masquée, A' sans",
+			"ISO13, Q31 voie A : là où A est noir, C doit l'être ; là où A montre le sol, C doit valoir B au pixel près. Seule la fumée change : la même couche bascule de shader sur place, rien d'autre ne bouge ; A' dit si l'instant est resté figé."],
+		["loupe-fusee-illustration", "La fusée comme son illustration : plein feu, braise, agonie ; cœur éteint, rouge, presque blanc",
+			"ISO13 (session cloud, 2026-09-25 21:41) : la fusée seule dans le noir puis devant une face de mur, à plusieurs âges, sans les volumes, puis avec l'essai du cœur (IsoVolumes.coeur_fusee) éteint, rouge, presque blanc, basculé sur place. Imprime la lightmap lue sous la fusée."],
+		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
+			"ISO13, Q31 : la sortie 3D de ce renderer écrase tout canal écrit à 7/255 ou moins (rampes du 2026-09-25). Le masque de la fumée en dépend : cette garde, en fenêtre, échoue si 7 ne sort plus à 0 ou si 8 sort à 0."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
 			"Le sprite du gadget et son faisceau, dans le noir."],
 		["loupe-torche-braconnier", "La torche fantôme à côté d'un vrai Braconnier",
@@ -216,6 +222,20 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-fusee-bord-noir : aucun sol dégagé à l'écran hors de la torche")
 		else:
 			await _loupe_fusee_bord_noir(plans, lieux[0])
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-fusee-masque-preuve"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-masque-preuve : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_masque_preuve(plans, lieux[0])
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-rampe-3d"):
+		await _loupe_rampe_3d(plans)
+	if p._demande(plans, "loupe-fusee-illustration"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-illustration : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_illustration(plans, lieux)
 			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
@@ -677,6 +697,7 @@ func _prise_entiere(plans: Array[Dictionary], id: String, suffixe: String, repos
 ## - cinq prises serrées, coupé / rétabli / coupé / rétabli / coupé : chaque prise rétablie se juge contre ses deux
 ##   voisines coupées, pour que la dérive entre prises voisines, elle, soit petite et mesurée.
 func _loupe_fusee_bord_noir(plans: Array[Dictionary], lieu: Vector2) -> void:
+	var id := "loupe-fusee-bord-noir"
 	var m: Node = p._main
 	var f: Node2D = (load("res://fusee.gd") as GDScript).new()
 	f.set("depart", lieu)
@@ -691,18 +712,340 @@ func _loupe_fusee_bord_noir(plans: Array[Dictionary], lieu: Vector2) -> void:
 	var miroirs: Object = pres.get("_miroirs") if pres != null else null
 	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
 	if volumes == null:
-		printerr("  ✗ loupe-fusee-bord-noir : volumes iso introuvables, pas de sandwich")
+		printerr("  ✗ %s : volumes iso introuvables, pas de sandwich" % id)
 		return
 	# Le temps que la rétrodiffusion de J1 s'éteigne (`TORCH_FADE_OUT`), comme `_plan_leurre` du photographe.
 	for i in 40:
 		_tenir_sans_torches()
 		await p.get_tree().physics_frame
-	print("  · loupe-fusee-bord-noir : fusée seule en %s, âge %.1f s, torches éteintes, éblouissement J1 %.3f"
-		% [str(lieu), AGE_FUSEE_BORD, float(m.p1.dazzle_amount)])
+	print("  · %s : fusée seule en %s, âge %.1f s, torches éteintes, éblouissement J1 %.3f"
+		% [id, str(lieu), AGE_FUSEE_BORD, float(m.p1.dazzle_amount)])
+	# ISO13, Q31 — l'ombre 2D d'un mur DANS la portée de la fusée, sous sa fumée : la portée seule ne dit rien des occulteurs.
+	var mur := _mur_proche(lieu)
+	var taille := Vector2(DisplayServer.window_get_size())
+	print("  · %s : mur le plus proche %s ; à l'écran, fusée %s%s" % [id,
+		"à %.0f px (%s)" % [lieu.distance_to(mur), str(mur)] if mur != Vector2.INF else "au-delà de 90 px",
+		str(_pixel_taille(taille, lieu).round()),
+		", mur %s" % str(_pixel_taille(taille, mur).round()) if mur != Vector2.INF else ""])
 	for etape in [["coupe-1", false], ["retabli-1", true], ["coupe-2", false], ["retabli-2", true], ["coupe-3", false]]:
 		volumes.set("images_actives", etape[1])
-		await _prise_entiere(plans, "loupe-fusee-bord-noir", String(etape[0]), 0.4, _tenir_sans_torches)
+		await _prise_entiere(plans, id, String(etape[0]), 0.4, _tenir_sans_torches)
 	volumes.set("images_actives", true)
+
+
+## ISO13, Q31 voie A — LA PREUVE DU MASQUE EN UN SEUL PROCESSUS (session cloud, 2026-09-25 09:32). Le sandwich comparait
+## des prises où `images_actives` coupe la fumée ET rend ses dessins 2D aux lightmaps : le sol lui-même y changeait. Ici seule
+## la fumée change. A : la fumée de la fusée coupée (`volumes_actifs`, qui ne touche ni aux dessins ni aux lueurs) ; B : la
+## fumée, sans masque ; C : la MÊME fumée, ses couches passées sur place à la variante masquée (`poser_masque_fumee`) ; A' :
+## coupée de nouveau — A' = A dit que l'instant est resté figé. Critères écrits d'avance : là où A est noir, C l'est ; là où A
+## montre le sol, C = B au pixel près ; B ≠ A et C ≠ B quelque part (les deux témoins positifs).
+func _loupe_fusee_masque_preuve(plans: Array[Dictionary], lieu: Vector2) -> void:
+	var id := "loupe-fusee-masque-preuve"
+	var m: Node = p._main
+	var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+	f.set("depart", lieu)
+	f.set("direction", Vector2.DOWN)
+	f.set("joueurs", [m.p1, m.p2])
+	m.bullet_container.add_child(f)
+	await p.get_tree().process_frame
+	f.set_physics_process(false)
+	f.global_position = lieu
+	f.call("forcer_age", AGE_FUSEE_BORD)
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ %s : volumes iso introuvables, pas de preuve" % id)
+		return
+	var masque_avant: bool = volumes.get("masque_fumee")
+	volumes.call("poser_masque_fumee", false)
+	for i in 40:
+		_tenir_sans_torches()
+		await p.get_tree().physics_frame
+	var mur := _mur_proche(lieu)
+	var taille := Vector2(DisplayServer.window_get_size())
+	print("  · %s : fusée seule en %s, âge %.1f s, torches éteintes, éblouissement J1 %.3f ; mur le plus proche %s ; à l'écran, fusée %s"
+		% [id, str(lieu), AGE_FUSEE_BORD, float(m.p1.dazzle_amount),
+		"à %.0f px" % lieu.distance_to(mur) if mur != Vector2.INF else "au-delà de 90 px",
+		str(_pixel_taille(taille, lieu).round())])
+	# LA CAMÉRA 2D CONVERGE ENCORE : `RegardDuel.lisser` rapproche le regard de sa cible image après image, avec le delta
+	# réel, sans jamais s'arrêter net — la lightmap glissait d'une fraction de pixel entre A et A' (premier essai LED
+	# figées, 2026-09-25 13:58 : les paliers du lavis sautaient sur tout le disque de la fusée, aucune arête de mur ne
+	# bougeait). On attend que son repère ne bouge PLUS DU TOUT, au bit près, dix images de suite : le lissage finit par
+	# atteindre son point fixe en flottant. Un seuil de 0,0001 px par image ne suffisait pas — des pas plus petits
+	# s'additionnaient, et le repère différait encore d'un dix-millième entre A et C (14:57). Et l'immobilité se juge sur
+	# des PAS DE PHYSIQUE, pas sur des images : la rotation du joueur, dont dépend la visée, ne change qu'à eux, et à
+	# plusieurs centaines d'images par seconde dix images tenaient entre deux pas (« tenue après 142 images », puis le
+	# repère bougeait encore pendant les prises, 15:00). Trente pas de suite, une demi-seconde de jeu.
+	var repere_prec: Vector2 = (m.vp1 as SubViewport).canvas_transform.origin
+	var tenues := 0
+	var images := 0
+	while tenues < 30 and images < 1200:
+		_tenir_sans_torches()
+		await p.get_tree().physics_frame
+		await p.get_tree().process_frame
+		images += 1
+		var o: Vector2 = (m.vp1 as SubViewport).canvas_transform.origin
+		tenues = tenues + 1 if o == repere_prec else 0
+		repere_prec = o
+	# Puis POSÉE : même tenue trente pas, le repère reprenait encore deux dix-millièmes de pixel pendant les prises (15:03).
+	# Le suivi du regard est suspendu par l'interrupteur même de la killcam (`_killcam_cadrage_tenu`, qui ne sert qu'à lui),
+	# et rendu à la fin : la caméra reste exactement à la cible qu'elle vient d'atteindre, dans les quatre prises.
+	var regard_avant: bool = m.get("_killcam_cadrage_tenu")
+	m.set("_killcam_cadrage_tenu", true)
+	print("  · %s : caméra 2D %s après %d pas de physique, puis posée (suivi du regard suspendu)"
+		% [id, "tenue" if tenues >= 30 else "ENCORE EN MOUVEMENT", images])
+	# Le bandeau LED des murs RESPIRE sur l'horloge de la manche (`MurLed.souffle`, 8,5 s) : il éclairait toute la carte
+	# entre A et A' (830 000 pixels, premier essai du 2026-09-25). `--led-murs-fige` le tient ; la ligne dit ce qui a porté.
+	MurLed.est_actif()
+	print("  · %s : bandeau LED %s" % [id, "figé à %.2f de son sommet" % MurLed._fige if MurLed._fige >= 0.0
+		else "qui RESPIRE — l'instant ne sera pas figé (--led-murs-fige)"])
+	# A CINQ FOIS — deux avant B, une entre B et C, deux après C (session cloud, 2026-09-25 16:11, puis 18:34) : l'union de
+	# leurs écarts, dilatée d'un pixel, est l'ensemble INSTABLE, exclu et compté à part ; rien d'autre n'est exclu. Trois ne
+	# suffisaient pas : le corps de J2, éteint donc noir, frémit d'une prise à l'autre, et trois A tombées dans la même phase
+	# l'avaient laissé passer pour 13 « fuites » au sol (preuve du 18:19).
+	for etape in [["a", false, false], ["a1", false, false], ["b", true, false], ["a2", false, false], ["c", true, true],
+			["a3", false, false], ["a4", false, false]]:
+		volumes.set("volumes_actifs", etape[1])
+		volumes.call("poser_masque_fumee", etape[2])
+		await _prise_entiere(plans, id, String(etape[0]), 0.4, _tenir_sans_torches)
+		# Le repère de la lightmap à cet instant : un glissement de la caméra 2D d'une fraction de pixel entre A et A' ferait
+		# bouger toutes les lumières (lightmap rééchantillonnée) sans bouger aucun mur (géométrie 3D).
+		var ct: Transform2D = (m.vp1 as SubViewport).canvas_transform
+		print("  · %s-%s : fumée %s, masque %s ; repère 2D de J1 origine (%.6f, %.6f) échelle %.6f"
+			% [id, etape[0], "oui" if etape[1] else "non", "oui" if etape[2] else "non", ct.origin.x, ct.origin.y,
+			ct.x.length()])
+	# La CARTE DES MURS, pour juger chaque surface à part : les FACES en blanc, le DESSUS des murs hauts en rouge (le masque
+	# les compte noirs strict, liseré compris : exception déclarée le 2026-09-25, 14:16), le dessus des murets en vert, le
+	# sol en noir — le temps d'une prise, puis les vrais shaders remis. Rien d'autre ne change ; la fumée est coupée comme en A.
+	var mat_mur: ShaderMaterial = pres.get("_mat_mur")
+	var sols: Array = pres.get("_mat_sols")
+	if mat_mur != null:
+		var blanc := Shader.new()
+		blanc.code = "shader_type spatial;\nrender_mode unshaded;\nvarying vec3 w;\n" \
+			+ "void vertex() { w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }\n" \
+			+ "void fragment() { vec3 n = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;\n" \
+			+ "ALBEDO = n.y > 0.5 ? (w.y > %.1f ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)) : vec3(1.0); }\n" \
+			% (0.5 * (MapGeometry.HAUTEUR_MUR_HAUT + MapGeometry.HAUTEUR_MUR_BAS) * MursBas.TUILE)
+		var noir := Shader.new()
+		noir.code = "shader_type spatial;\nrender_mode unshaded;\nvoid fragment() { ALBEDO = vec3(0.0); }\n"
+		var shader_mur := mat_mur.shader
+		var shaders_sols: Array = []
+		for s in sols:
+			shaders_sols.append((s as ShaderMaterial).shader)
+			(s as ShaderMaterial).shader = noir
+		mat_mur.shader = blanc
+		await _prise_entiere(plans, id, "murs", 0.4, _tenir_sans_torches)
+		mat_mur.shader = shader_mur
+		for k in sols.size():
+			(sols[k] as ShaderMaterial).shader = shaders_sols[k]
+		print("  · %s-murs : faces en blanc, dessus des murs hauts en rouge, dessus des murets en vert, sol en noir" % id)
+	volumes.set("volumes_actifs", true)
+	volumes.call("poser_masque_fumee", masque_avant)
+	m.set("_killcam_cadrage_tenu", regard_avant)
+
+
+## ISO13, Q31 — LA GARDE DE LA COURBE DE LA SORTIE 3D. Le masque de la fumée (`volume_masque.gdshaderinc`,
+## `POINT_NOIR_ECRIT`) tient qu'un pixel est noir à l'écran si tous ses canaux ÉCRITS sont sous 8/255 : c'est une propriété
+## du moteur dans ce renderer, mesurée par des rampes le 2026-09-25, qu'aucun code du jeu ne pose. Rien d'headless ne peut
+## la vérifier ; ce plan la refait en fenêtre. Le sol reçoit, le temps d'une prise, un shader qui écrit la bande de 8 px
+## d'écran n° k à k/255 ; la valeur affichée la plus fréquente de chaque bande, sur le sol, donne la courbe. Échec si un
+## niveau de 0 à 7 sort au-dessus de 0, ou si 8 sort à 0 : le masque se tairait alors au mauvais endroit.
+## ⚠️ À refaire après tout changement de renderer, de viewport 3D, de caméra ou du matériau du sol.
+func _loupe_rampe_3d(plans: Array[Dictionary]) -> void:
+	var id := "loupe-rampe-3d"
+	var pres := Presentation3D.instance()
+	var sols: Array = pres.get("_mat_sols") if pres != null else []
+	if sols.is_empty():
+		printerr("  ✗ %s : aucun sol iso, pas de rampe" % id)
+		return
+	var rampe := Shader.new()
+	rampe.code = "shader_type spatial;\nrender_mode unshaded;\n" \
+		+ "void fragment() { ALBEDO = vec3(mod(floor(FRAGCOORD.x / 8.0), 64.0) / 255.0); }\n"
+	var avant: Array = []
+	for s in sols:
+		avant.append((s as ShaderMaterial).shader)
+		(s as ShaderMaterial).shader = rampe
+	await _prise_entiere(plans, id, "", 0.4, _tenir_scene)
+	var img: Image = await _capturer(false)
+	for k in sols.size():
+		(sols[k] as ShaderMaterial).shader = avant[k]
+	if img == null:
+		printerr("  ✗ %s : prise perdue" % id)
+		return
+	var comptes: Array = []
+	for k in 64:
+		comptes.append({})
+	var h := img.get_height()
+	for y in range(int(h * 0.25), int(h * 0.95), 3):
+		for x in img.get_width():
+			var v := int(round(img.get_pixel(x, y).r * 255.0))
+			var bande: Dictionary = comptes[(x / 8) % 64]
+			bande[v] = int(bande.get(v, 0)) + 1
+	var courbe: Array = []
+	for k in 40:
+		var meilleur := -1
+		var n := -1
+		for v in comptes[k]:
+			if int(comptes[k][v]) > n:
+				n = int(comptes[k][v])
+				meilleur = int(v)
+		courbe.append(meilleur)
+	var ok: bool = int(courbe[8]) >= 1
+	for k in 8:
+		ok = ok and int(courbe[k]) == 0
+	print("  · %s : écrit → affiché %s" % [id, str(courbe)])
+	if ok:
+		print("  · %s : point noir tenu — 0 à 7/255 sortent à 0, 8/255 sort à %d" % [id, courbe[8]])
+	else:
+		p._perdues += 1
+		printerr("  ✗ %s : LE POINT NOIR A BOUGÉ (0-7 → %s, 8 → %d) — le masque de la fumée ne tient plus"
+			% [id, str(courbe.slice(0, 8)), courbe[8]])
+
+
+## ISO13, Q31 — un point de mur à 45-90 px de `lieu` (seize directions), ou `Vector2.INF`. Assez près pour que la fusée posée en
+## `lieu` éclaire le mur et que son ombre 2D tombe dans sa portée, sous sa fumée (rayon 200 px) ; assez loin pour que le sol
+## soit dégagé (`_sol_libre` garde 40 px).
+func _mur_proche(lieu: Vector2) -> Vector2:
+	var espace := (p._main.p1 as Node2D).get_world_2d().direct_space_state
+	var q := PhysicsPointQueryParameters2D.new()
+	q.collision_mask = MapGeometry.WALL_LAYER
+	var d := 45.0
+	while d <= 90.0:
+		for k in 16:
+			var pt := lieu + Vector2.RIGHT.rotated(TAU * float(k) / 16.0) * d
+			q.position = pt
+			if not espace.intersect_point(q, 1).is_empty():
+				return pt
+		d += 5.0
+	return Vector2.INF
+
+
+## ISO13 — LA FUSÉE COMME SON ILLUSTRATION (session cloud, 2026-09-25, 21:36 et 21:41). Un outil : aucun code du jeu ne change.
+## La fusée seule (le défaut : elle ne porte aucune suie), posée dans le noir puis devant la face d'un mur, prise à plusieurs
+## âges — plein feu 1,0 et 1,9 s (la fumée la plus dense encore rouge), braise 8 s, agonie 13 s, résidu 17 s —, chaque fois
+## sans les volumes (la référence du sol), puis avec l'essai du cœur (`IsoVolumes.coeur_fusee`) éteint, rouge, presque blanc,
+## basculé SUR PLACE : seule la chose jugée change entre deux prises. L'âge est figé à chaque image de l'attente. Imprime
+## aussi la LIGHTMAP lue sous la fusée (le rendu 2D de la vue de J1), pour dire d'où viennent les 8° d'écart au rouge de
+## détresse (mesure demandée, aucun essai).
+func _loupe_fusee_illustration(plans: Array[Dictionary], lieux: Array[Vector2]) -> void:
+	var id := "loupe-fusee-illustration"
+	var m: Node = p._main
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ %s : volumes iso introuvables" % id)
+		return
+	MurLed.est_actif()
+	print("  · %s : bandeau LED %s" % [id, "figé à %.2f de son sommet" % MurLed._fige if MurLed._fige >= 0.0
+		else "qui RESPIRE (--led-murs-fige)"])
+	var scenes: Array = [["noir", lieux[0], [1.0, 1.9, 8.0, 13.0, 17.0]]]
+	var face := _lieu_devant_une_face(lieux)
+	if face != Vector2.INF:
+		scenes.append(["face", face, [1.0, 1.9]])
+	else:
+		printerr("  ✗ %s : aucun sol dégagé devant la face sud d'un mur" % id)
+	var coeur_avant: int = int(volumes.get("coeur_fusee"))
+	for sc: Array in scenes:
+		var lieu: Vector2 = sc[1]
+		var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+		f.set("depart", lieu)
+		f.set("direction", Vector2.DOWN)
+		f.set("joueurs", [m.p1, m.p2])
+		m.bullet_container.add_child(f)
+		await p.get_tree().process_frame
+		f.set_physics_process(false)
+		f.global_position = lieu
+		print("  · %s : scène « %s », fusée seule en %s" % [id, sc[0], str(lieu)])
+		var age_fige := [1.0]
+		var tenir := func() -> void:
+			_tenir_scene()
+			if is_instance_valid(f):
+				f.call("forcer_age", age_fige[0])
+		var centre := func(img: Image) -> Vector2: return _pixel(img, lieu, 8.0)
+		for age: float in sc[2]:
+			age_fige[0] = age
+			f.call("forcer_age", age)
+			var nom := "%s-a%s" % [sc[0], str(age)]
+			volumes.set("coeur_fusee", 0)
+			volumes.set("volumes_actifs", false)
+			await _prise(plans, id, [[nom + "-ref", centre]], false, 1.0, tenir)
+			volumes.set("volumes_actifs", true)
+			for k in 3:
+				volumes.set("coeur_fusee", k)
+				await _prise(plans, id, [[nom + "-coeur%d" % k, centre]], false, 1.0, tenir)
+			_imprimer_lightmap(id, nom, lieu, f)
+		f.queue_free()
+		await p.get_tree().process_frame
+	volumes.set("coeur_fusee", coeur_avant)
+	volumes.set("volumes_actifs", true)
+
+
+## Un point de sol dégagé dont le mur est juste au NORD (45 à 80 px) : sa face SUD regarde la caméra iso (vérifié sur la carte
+## des murs de la preuve du masque : la face se voit toujours SOUS le dessus, à l'écran), et la fusée posée là l'éclaire.
+## Cherché d'abord parmi `lieux` (dans le noir), puis, faute de mieux, sur une grille à la demi-tuile de toute la fenêtre, à
+## plus de 200 px de J1 et de 160 px de J2 (la torche de J1 peut alors toucher le cadre : l'image le dira). `Vector2.INF` sinon.
+func _lieu_devant_une_face(lieux: Array[Vector2]) -> Vector2:
+	var espace := (p._main.p1 as Node2D).get_world_2d().direct_space_state
+	var q := PhysicsPointQueryParameters2D.new()
+	q.collision_mask = MapGeometry.WALL_LAYER
+	var candidats: Array[Vector2] = lieux.duplicate()
+	var t := MursBas.TUILE
+	var taille := Vector2(DisplayServer.window_get_size())
+	var marge := Vector2(TAILLE_LOUPE) * 0.5 + Vector2(40.0, 40.0)
+	var grille := Vector2(MapCodec.get_grid_size(MapData.current_map_data)) * t
+	var y := t
+	while y < grille.y:
+		var x := t
+		while x < grille.x:
+			var pt := Vector2(x, y)
+			var e := _pixel_taille(taille, pt)
+			if e.x > marge.x and e.x < taille.x - marge.x and e.y > marge.y and e.y < taille.y - marge.y \
+					and pt.distance_to(_j1) > 200.0 and pt.distance_to(_j2) > 160.0 and p._sol_libre(pt):
+				candidats.append(pt)
+			x += t * 0.5
+		y += t * 0.5
+	for lieu in candidats:
+		var d := 45.0
+		while d <= 80.0:
+			q.position = lieu + Vector2(0.0, -d)
+			if not espace.intersect_point(q, 1).is_empty():
+				return lieu
+			d += 5.0
+	return Vector2.INF
+
+
+## La LIGHTMAP lue sous la fusée : le rendu 2D de la vue de J1 (`vp1`), sur un anneau de 20 à 60 px de monde autour d'elle,
+## en médiane par canal (0-255), à côté de la couleur de la lumière (`Halo`). Ce que la 3D reçoit avant toute pâte.
+func _imprimer_lightmap(id: String, nom: String, lieu: Vector2, f: Node2D) -> void:
+	var vp := p._main.vp1 as SubViewport
+	var img: Image = vp.get_texture().get_image() if vp != null else null
+	if img == null:
+		printerr("  ✗ %s-%s : lightmap illisible" % [id, nom])
+		return
+	var ct: Transform2D = vp.canvas_transform
+	var c: Vector2 = ct * lieu
+	var e: float = ct.x.length()
+	var canaux := [[], [], []]
+	for y in range(int(c.y - 60.0 * e), int(c.y + 60.0 * e) + 1):
+		for x in range(int(c.x - 60.0 * e), int(c.x + 60.0 * e) + 1):
+			if x < 0 or y < 0 or x >= img.get_width() or y >= img.get_height():
+				continue
+			var r := Vector2(x, y).distance_to(c) / e
+			if r < 20.0 or r > 60.0:
+				continue
+			var px := img.get_pixel(x, y)
+			canaux[0].append(px.r)
+			canaux[1].append(px.g)
+			canaux[2].append(px.b)
+	var med := []
+	for ch: Array in canaux:
+		ch.sort()
+		med.append(int(round(float(ch[ch.size() / 2]) * 255.0)) if ch.size() > 0 else -1)
+	var halo := f.get_node_or_null(^"Halo") as Light2D
+	print("  MESURE-LIGHTMAP %s-%s : médiane (%d, %d, %d) sur %d px ; lumière %s énergie %.2f" % [id, nom, med[0], med[1], med[2],
+		canaux[0].size(), str(halo.color) if halo != null else "?", halo.energy if halo != null else 0.0])
 
 
 ## `_tenir_scene`, les deux torches ÉTEINTES : sans elles, aucun voile d'éblouissement ne soulève le noir.
@@ -794,7 +1137,9 @@ func _poser_lissage(volumes: Object, valeur: float) -> void:
 		return
 	for e in (suivis as Dictionary).values():
 		for mat in e["mats"]:
-			if mat is ShaderMaterial and (mat as ShaderMaterial).shader == SHADER_VOLUME_ISO:
+			# La variante masquée (allumée par défaut) est un Shader neuf : elle se reconnaît à son #define.
+			var sh: Shader = (mat as ShaderMaterial).shader if mat is ShaderMaterial else null
+			if sh != null and (sh == SHADER_VOLUME_ISO or sh.code.contains("#define FUMEE_MASQUE\n")):
 				(mat as ShaderMaterial).set_shader_parameter("lissage_rayon", valeur)
 
 

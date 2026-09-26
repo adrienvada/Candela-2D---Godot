@@ -421,8 +421,7 @@ static func _materiaux_iso(presentation: Node, volumes := 0) -> Array[ShaderMate
 			for e in vol.call("suivis"):
 				for m in (e as Dictionary).get("mats", []):
 					# Par le chemin du shader : nommer `IsoVolumes` compilerait ses dépendances dans la suite.
-					if m is ShaderMaterial and (m as ShaderMaterial).shader != null \
-							and (m as ShaderMaterial).shader.resource_path == "res://volume_iso.gdshader":
+					if m is ShaderMaterial and _est_volume((m as ShaderMaterial).shader):
 						tous.append(m)
 	return tous
 
@@ -430,9 +429,15 @@ static func _materiaux_iso(presentation: Node, volumes := 0) -> Array[ShaderMate
 static func _compter_volumes(materiaux: Array[ShaderMaterial]) -> int:
 	var n := 0
 	for m in materiaux:
-		if m.shader != null and m.shader.resource_path == "res://volume_iso.gdshader":
+		if _est_volume(m.shader):
 			n += 1
 	return n
+
+
+## Le shader d'une couche de fumée : `volume_iso.gdshader`, ou sa variante masquée — allumée par défaut depuis le
+## 2026-09-25, un Shader NEUF sans chemin, qui se reconnaît à son `#define` (comparer le chemin seul la sautait en silence).
+static func _est_volume(sh: Shader) -> bool:
+	return sh != null and (sh.resource_path == "res://volume_iso.gdshader" or sh.code.contains("#define FUMEE_MASQUE\n"))
 
 
 ## Les paramètres de l'habillage, et la valeur qui rend ISO1-ISO5.
