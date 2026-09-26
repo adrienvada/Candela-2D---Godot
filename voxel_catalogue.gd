@@ -490,24 +490,34 @@ const MANNEQUIN_REPORT := 1.6
 const DRAPEAU_DETAIL := "--corps-detaille"
 static var forcer_detail := -1
 static var _detail_ligne := -1
-## Les classes détaillées à l'essai : le pistolet d'abord (24/09), puis les cinq autres classes à bouteille (Q29, décision
-## d'Adrien du 2026-09-25 10:28 — dans l'ordre accepté : Occulteur, Spectre, Sentinelle, Incendiaire, Allumeur).
-const CLASSES_DETAILLEES := ["pistolet", "occulteur", "spectre", "sentinelle", "incendiaire", "allumeur"]
-## Q29 — CE QUI CHANGE D'UNE CLASSE À BOUTEILLE À L'AUTRE, lu sur les six portraits V3 froide (ISO Assets,
-## `portrait_<classe>_v3froide.png`). Le reste du kit est commun aux six : bandoulière et ses cartouches, étui sur la hanche,
-## robinet, volant et tuyau sur la bouteille.
-## - `tete` : ce que porte le haut du torse, côté gauche — `"manometre"` (un cadran de laiton : Parasite, Occulteur, Spectre)
-##   ou `"plaque"` (une plaque carrée, sans cadran : Sentinelle, Incendiaire, Allumeur) ;
-## - `plaque_role` : la couleur de la plaque, 1 laiton (l'Allumeur, orange sur son portrait), 2 métal (sombre) ;
-## - `manometre_bouteille` : le cadran sur le flanc de la bouteille (Parasite, Occulteur, Spectre ; absent des trois autres) ;
+## Les classes détaillées à l'essai : le pistolet d'abord (24/09), les cinq autres classes à bouteille (Q29, 2026-09-25), puis
+## les quatre sans bouteille (Q33 : Adrien veut les personnages détaillés EN JEU, au duel, pour les dix classes — 2026-09-26).
+const CLASSES_DETAILLEES := ["pistolet", "occulteur", "spectre", "sentinelle", "incendiaire", "allumeur",
+	"fusil", "pompe", "arbalete", "fumiste"]
+## CE QUE PORTE CHAQUE CLASSE, lu sur son portrait (V3 froide pour les six à bouteille ; `assets/ui/portraits/` pour les
+## quatre autres, dont les accessoires sont les mêmes). Chaque pièce est facultative :
+## - `bandouliere` : la sangle en diagonale du torse, et `cartouches` le nombre de cartouches qu'elle porte (0 ou 3) ;
+##   `cartouche_role` leur couleur, 1 laiton, 2 métal (les grenades grises du Fumiste) ;
+## - `bretelles` : deux sangles verticales, d'épaule à ceinture (l'Illusionniste) ;
+## - `etui` : la poche sur la hanche ; `fiole` : le petit flacon de ceinture (Illusionniste, Braconnier) ;
+## - `tete` : le haut du torse, côté gauche — `"manometre"` (cadran de laiton : Parasite, Occulteur, Spectre) ou `"plaque"`
+##   (plaque carrée sans cadran : toutes les autres) ; `plaque_role` : 1 laiton (orange sur le portrait : Allumeur, Fumiste),
+##   2 métal (sombre) ;
+## - `manometre_bouteille` : le cadran sur le flanc de la bouteille (Parasite, Occulteur, Spectre) — le robinet, son volant et
+##   le tuyau suivent la bouteille, sur les six classes qui en portent une ;
 ## - `crosse` : la crosse modelée sous l'arme (le seul pistolet : les autres armes sont déjà des boîtes à leur mesure).
 const KIT_DETAIL := {
-	"pistolet": {"tete": "manometre", "manometre_bouteille": true, "crosse": true},
-	"occulteur": {"tete": "manometre", "manometre_bouteille": true, "crosse": false},
-	"spectre": {"tete": "manometre", "manometre_bouteille": true, "crosse": false},
-	"sentinelle": {"tete": "plaque", "plaque_role": 2, "manometre_bouteille": false, "crosse": false},
-	"incendiaire": {"tete": "plaque", "plaque_role": 2, "manometre_bouteille": false, "crosse": false},
-	"allumeur": {"tete": "plaque", "plaque_role": 1, "manometre_bouteille": false, "crosse": false},
+	"pistolet": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "manometre", "manometre_bouteille": true,
+		"crosse": true},
+	"occulteur": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "manometre", "manometre_bouteille": true},
+	"spectre": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "manometre", "manometre_bouteille": true},
+	"sentinelle": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "plaque", "plaque_role": 2},
+	"incendiaire": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "plaque", "plaque_role": 2},
+	"allumeur": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "plaque", "plaque_role": 1},
+	"fusil": {"bretelles": true, "etui": true, "fiole": true, "tete": "plaque", "plaque_role": 2},
+	"pompe": {"tete": "plaque", "plaque_role": 2},
+	"arbalete": {"bandouliere": true, "etui": true, "fiole": true, "tete": "plaque", "plaque_role": 2},
+	"fumiste": {"bandouliere": true, "cartouches": 3, "cartouche_role": 2, "etui": true, "tete": "plaque", "plaque_role": 1},
 }
 ## Le laiton des cartouches, des manomètres et du robinet, lu au pixel sur le portrait V3 froide du pistolet (ISO Assets,
 ## `portrait_pistolet_v3froide.png`, les cartouches de la bandoulière). Seule sa chromaticité sert : sa clarté est le rapport

@@ -1,11 +1,10 @@
-## ISO13 — le personnage détaillé à l'essai (`--corps-detaille` ; le pistolet le 2026-09-24, les six classes à bouteille depuis
-## Q29, 2026-09-25 ; chantier d'ISO7 Beauté).
+## ISO13 — le personnage détaillé à l'essai (`--corps-detaille` ; le pistolet le 2026-09-24, les six classes à bouteille le
+## 2026-09-25 (Q29), les dix classes depuis Q33, 2026-09-26 ; chantier d'ISO7 Beauté).
 ##
 ## Ce que la suite prouve, sans fenêtre :
 ## - **le drapeau** : éteint par défaut ; sans lui, le pistolet garde ses dix boîtes et le shader d'origine, qui ne déclare
 ##   rien du détail ;
-## - **les accessoires** : le kit de chaque classe à bouteille (onze boîtes sur le pistolet, dix sur l'Occulteur et le Spectre,
-##   neuf sur les trois autres), aucune sur les quatre classes sans bouteille ; des demi-tailles distinctes entre elles et de
+## - **les accessoires** : le kit de chacune des dix classes (Q33), d'une boîte (le Terrassier, sa plaque) à onze (le Parasite) ; des demi-tailles distinctes entre elles et de
 ##   celles du corps (le shader les reconnaît à leur taille) ; le compte d'appels de dessin et de triangles ajoutés ;
 ## - **la bandoulière dans le torse** (Q29, le défaut de l'essai) : largeur comprise, dans le rectangle de la face du torse,
 ##   pour chaque classe — et la garde VUE ROUGIR sur la longueur de l'essai du 24/09 ;
@@ -24,8 +23,8 @@ const TUILE_PX := 35.0
 const COULOIR_PX := 17.5
 const TOUCHE_PX := 18.0
 ## Q29 — le kit de chaque classe détaillée (voir `VoxelCatalogue.KIT_DETAIL`).
-const KIT := {"pistolet": 11, "occulteur": 10, "spectre": 10, "sentinelle": 9, "incendiaire": 9, "allumeur": 9}
-const SANS_BOUTEILLE := ["fusil", "pompe", "arbalete", "fumiste"]
+const KIT := {"pistolet": 11, "occulteur": 10, "spectre": 10, "sentinelle": 9, "incendiaire": 9, "allumeur": 9,
+	"fusil": 5, "pompe": 1, "arbalete": 4, "fumiste": 6}
 
 var _echecs := 0
 var _verifications := 0
@@ -106,13 +105,9 @@ func _le_drapeau(racine: Node3D) -> void:
 
 func _les_accessoires(racine: Node3D) -> void:
 	print("— les accessoires modelés")
-	_check("les classes détaillées sont les six classes à bouteille, et chacune a son kit",
-		VoxelCatalogue.CLASSES_DETAILLEES.size() == KIT.size()
+	_check("les dix classes sont détaillées (Q33), et chacune a son kit",
+		VoxelCatalogue.CLASSES_DETAILLEES.size() == 10 and VoxelCatalogue.slugs().size() == 10
 		and KIT.keys().all(func(k): return VoxelCatalogue.CLASSES_DETAILLEES.has(k) and VoxelCatalogue.KIT_DETAIL.has(k)))
-	var sans_rien := true
-	for c in SANS_BOUTEILLE:
-		sans_rien = sans_rien and _corps(racine, c, true).details().is_empty()
-	_check("les quatre classes sans bouteille n'en portent aucun (leur tour vient après)", sans_rien)
 	for slug in KIT:
 		_le_kit(racine, slug, int(KIT[slug]))
 
@@ -162,18 +157,23 @@ func _debord(taille: Vector3, centre: Vector3, angle: float, lt: float, ht: floa
 
 
 func _la_bandouliere(racine: Node3D) -> void:
-	print("— la bandoulière dans le torse (le défaut de l'essai)")
+	print("— les pièces du torse dans sa face (la bandoulière : le défaut de l'essai)")
 	for slug in KIT:
 		var c := _corps(racine, slug, true)
 		var f := VoxelCatalogue.fiche(slug)
 		var lt := float(f["largeur_torse"]) * float(f["echelle"])
 		var ht := float(f["hauteur_torse"])
 		var pire := 0.0
-		for nom in ["Bandouliere", "Cartouche1", "Cartouche2", "Cartouche3"]:
+		var n := 0
+		for nom in ["Bandouliere", "Cartouche1", "Cartouche2", "Cartouche3", "Bretelle1", "Bretelle2", "Etui", "Fiole",
+				"Plaque", "Manometre"]:
 			var b := c.find_child(nom, true, false) as MeshInstance3D
+			if b == null:
+				continue
+			n += 1
 			pire = maxf(pire, _debord((b.mesh as BoxMesh).size, b.position, b.rotation.z, lt, ht))
-		_check("%s : la bandoulière et ses cartouches, largeur comprise, dans la face du torse (débord %.4f tuile)" % [slug, pire],
-			pire <= 0.0001)
+		_check("%s : les %d pièces du torse, largeur comprise, dans sa face (débord %.4f tuile)" % [slug, n, pire],
+			pire <= 0.0001 and n >= 1)
 	# La garde vue rougir : la longueur de l'essai du 24/09 (lt / cos × 0,98, sans la largeur) déborde.
 	var f := VoxelCatalogue.fiche("pistolet")
 	var lt := float(f["largeur_torse"]) * float(f["echelle"])
@@ -227,7 +227,7 @@ func _la_visibilite() -> void:
 		sous = sous and p.size() == 3
 		for cle in p:
 			sous = sous and VoxelCatalogue.luminance_affichee(p[cle]) <= l + 0.002
-	_check("cuir, laiton et métal à un rapport ≤ 1 du gris de leur classe, pour les six", sous)
+	_check("cuir, laiton et métal à un rapport ≤ 1 du gris de leur classe, pour les dix", sous)
 	_check("aucune couleur d'accessoire en gris ni en portraits (l'essai est celui de la V3)",
 		VoxelCatalogue.palette_details("pistolet", "").is_empty() and VoxelCatalogue.palette_details("pistolet", "portraits").is_empty())
 	var inc := FileAccess.get_file_as_string("res://iso_corps_detail.gdshaderinc")

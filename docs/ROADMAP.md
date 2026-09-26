@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-25
+> Dernière mise à jour : 2026-09-26
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -27719,6 +27719,22 @@ une boîte du corps, toutes connues du shader (7 à 9 sortes pour 10 places) ; 1
 détaillé ; silhouette du corps seul, accessoires compris, de 16,81 px (Occulteur) à 17,19 px (Allumeur), jamais plus large
 que sans (couloir 17,5, zone de touche 18) ; la bandoulière dans la face du torse. La planche : portrait, corps d'aujourd'hui
 et corps avec le kit, classe par classe (`docs/iso/iso13/q29/planche_kit.jpg`).
+
+#### ISO13, Q33 — les personnages détaillés EN JEU, pour les dix classes 🟡 (ouvert le 2026-09-26, branche `iso12-corps`, session « ISO7 Beauté Opus »)
+
+**Pourquoi** (décision d'Adrien, 2026-09-26 au soir, Q33 : les personnages détaillés au duel, pour les dix classes ; ordres 408
+et 409 de la session cloud). La killcam reste en aplat. Le chantier passe par cinq garde-fous, dans cet ordre : l'équité au
+bord de la lumière (même part visible au seuil pour les dix classes, à 5 points près ; apparition à 0,10 ; au moins 0,95 du
+corps sans kit à 0,10 comme à 0,15), la silhouette (couloir 17,5, zone de touche 18), le noir absolu, la cadence (règle 278,
+le pompe sous une fusée), puis la killcam inchangée. Tout reste derrière `--corps-detaille` jusqu'aux preuves ; le défaut
+viendra après, avec l'accord de la session cloud, et Adrien le jugera en jouant.
+
+**D1 — les quatre kits manquants.** Lus sur les portraits du dépôt (`assets/ui/portraits/` ; le dossier V3 froide d'ISO
+Assets a disparu de `/tmp` au redémarrage du Mac) : l'Illusionniste porte deux bretelles, un étui, une fiole et une plaque ;
+le Terrassier, la plaque seule ; le Braconnier, une bandoulière sans cartouches, un étui, une fiole, une plaque ; le Fumiste,
+une bandoulière et trois grenades grises, un étui, une plaque orange. `KIT_DETAIL` décrit désormais chaque pièce comme
+facultative. `test_corps_detail` : pour les dix, les tailles distinctes du corps et entre elles, toutes les pièces du torse
+dans sa face, et la silhouette du corps seul de 16,81 à 17,44 px, jamais plus large qu'avant le kit.
 
 ### Ce qui attend Adrien — jalon H15
 

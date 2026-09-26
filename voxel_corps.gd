@@ -923,7 +923,7 @@ func porter_tenue(nom: String, nom_teinte := "") -> void:
 	_poser_couleurs_details(nom, nom_teinte)
 
 
-## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; les six classes à bouteille depuis Q29, d'après
+## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; les dix classes depuis Q33, d'après
 ## leurs portraits V3 froide). Les accessoires du portrait, MODELÉS en petites boîtes de la même matière, collées aux pièces
 ## qui les portent : la bandoulière et ses trois cartouches, l'étui sur la hanche, le manomètre ou la plaque du haut du torse ;
 ## le robinet, son volant, le tuyau et, selon la classe, le manomètre de la bouteille ; la crosse du pistolet. Ce qui change
@@ -947,19 +947,31 @@ func _detailler(slug: String) -> void:
 	var sens := Vector3(cos(angle), sin(angle), 0.0)
 	var longueur := longueur_bandouliere(lt, ht, angle, LARGEUR_BANDOULIERE)
 	var centre := Vector3(0.0, ht * 0.5, avant - 0.007)
-	var pieces := [
-		[_torse, "Bandouliere", Vector3(longueur, LARGEUR_BANDOULIERE, 0.014), centre, angle, 0],
-		[_torse, "Etui", Vector3(0.1, 0.09, 0.05), Vector3(lt * 0.3, ht * 0.2, avant - 0.025), 0.0, 0],
-	]
-	if String(kit["tete"]) == "manometre":
-		pieces.append([_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0, 1])
-	else:
-		pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.006), 0.0,
-			int(kit["plaque_role"])])
-	for i in 3:
-		var t := (float(i) - 1.0) * 0.26 * longueur
-		pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03), centre + sens * t + Vector3(0.0, 0.0, -0.022),
-			angle, 1])
+	var pieces := []
+	if bool(kit.get("bandouliere", false)):
+		pieces.append([_torse, "Bandouliere", Vector3(longueur, LARGEUR_BANDOULIERE, 0.014), centre, angle, 0])
+		var cr := int(kit.get("cartouche_role", 1))
+		for i in int(kit.get("cartouches", 0)):
+			var t := (float(i) - 1.0) * 0.26 * longueur
+			pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03),
+				centre + sens * t + Vector3(0.0, 0.0, -0.022), angle, cr])
+	if bool(kit.get("bretelles", false)):
+		# Deux sangles verticales, d'épaule à ceinture, plaquées sur la face avant, dans le rectangle du torse.
+		for k in 2:
+			var x := (-1.0 if k == 0 else 1.0) * lt * 0.3
+			pieces.append([_torse, "Bretelle%d" % (k + 1), Vector3(0.035, ht * 0.96, 0.012), Vector3(x, ht * 0.5, avant - 0.006),
+				0.0, 0])
+	if bool(kit.get("etui", false)):
+		pieces.append([_torse, "Etui", Vector3(0.1, 0.09, 0.05), Vector3(lt * 0.3, ht * 0.2, avant - 0.025), 0.0, 0])
+	if bool(kit.get("fiole", false)):
+		pieces.append([_torse, "Fiole", Vector3(0.03, 0.055, 0.028), Vector3(lt * 0.08, ht * 0.16, avant - 0.014), 0.0, 2])
+	match String(kit.get("tete", "")):
+		"manometre":
+			pieces.append([_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0,
+				1])
+		"plaque":
+			pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.006), 0.0,
+				int(kit.get("plaque_role", 2))])
 	var bouteille := _torse.get_node_or_null("Bouteille") as Node3D
 	if bouteille != null:
 		var b: Dictionary = VoxelCatalogueT.BOUTEILLE
@@ -970,10 +982,10 @@ func _detailler(slug: String) -> void:
 			[bouteille, "RobinetVolant", Vector3(0.075, 0.018, 0.022), Vector3(-bw * 0.3, bh * 0.5 + 0.049, 0.0), 0.0, 1],
 			[bouteille, "Tuyau", Vector3(0.024, 0.05, 0.024), Vector3(bw * 0.25, bh * 0.5 + 0.025, 0.0), 0.0, 1],
 		])
-		if bool(kit["manometre_bouteille"]):
+		if bool(kit.get("manometre_bouteille", false)):
 			pieces.append([bouteille, "ManometreBouteille", Vector3(0.016, 0.05, 0.05), Vector3(-bw * 0.5 - 0.008, 0.0, 0.0),
 				0.0, 1])
-	if bool(kit["crosse"]):
+	if bool(kit.get("crosse", false)):
 		var fa: Dictionary = s["arme"]
 		pieces.append([_arme_pivot, "Crosse", Vector3(0.04, 0.075, 0.035),
 			Vector3(0.0, -float(fa["hauteur"]) * 0.5 - 0.0375, -0.03), 0.0, 2])
