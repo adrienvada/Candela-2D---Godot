@@ -551,8 +551,14 @@ static func palette_details(slug: String, nom: String, nom_teinte := "") -> Dict
 	if p.is_empty() or not p.has("rapports"):
 		return {}
 	var l := luminance_affichee(fiche(slug)["couleur"])
-	return {"cuir": p["brun"], "laiton": a_luminance(TEINTE_LAITON, l * float((p["rapports"] as Dictionary)["cartouche"])),
-		"metal": p["arme"]}
+	# Q33 — AUCUN ACCESSOIRE PLUS SOMBRE QUE LE TISSU QU'IL COUVRE (`ocre`, le rapport « tissu » de la tenue, équité comprise) :
+	# le cuir (0,46) et le métal (0,52) posés sur un tissu à 0,62 retiraient des pixels au seuil. Relevés au tissu, jamais
+	# au-dessus du gris de la classe (le tissu y est déjà).
+	var plancher := luminance_affichee(p["ocre"])
+	var releve := func(c: Color) -> Color: return c if luminance_affichee(c) >= plancher else a_luminance(c, plancher)
+	return {"cuir": releve.call(p["brun"]),
+		"laiton": releve.call(a_luminance(TEINTE_LAITON, l * float((p["rapports"] as Dictionary)["cartouche"]))),
+		"metal": releve.call(p["arme"])}
 
 
 static func mannequin_actif() -> bool:

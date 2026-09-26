@@ -27749,6 +27749,17 @@ corps : `banc_corps --fusion-ab` construit les deux dessins et bascule de l'un �
 n'est pas faite, la fusion n'est prouvée qu'en headless (même kit, même description, CUSTOM0 et CUSTOM1 en flottants, w = 2
 partout).
 
+**D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
+la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le
+marbrage à 0,86, lui, restait à la taille du duel. Deux corrections :
+- à la taille du duel, la matière s'efface entièrement, marbrage compris (le facteur entier suit le fondu des pores) : le
+  personnage détaillé ne perd rien au bord de la lumière, et les pores qui se lisaient comme du bruit partent avec ;
+- aucun accessoire n'est plus sombre que le tissu qu'il couvre (`palette_details` relève le cuir et le métal au tissu, jamais
+  au-dessus du gris de la classe).
+Une garde vérifie aussi que la killcam reste en aplat (opacité 0 sur le corps du fantôme). L'étalonnage au seuil (0,15 à
+0,09, gris, V3 et V3 détaillée) dépend du GPU du Mac et se fera au prochain tour ; un facteur par classe ne viendra que si
+l'écart persiste.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

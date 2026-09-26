@@ -56,7 +56,7 @@ vec3 detail_fiche(vec3 fiche, vec3 lp, vec3 d, vec3 ech, vec3 n, float px_par_un
 	vec2 f = an.x > 0.5 ? q.zy : (an.y > 0.5 ? q.xz : q.xy);
 	// Chaque face tire sa propre graine : deux faces d'une boîte ne se répètent pas.
 	vec2 graine = n.xz * 13.1 + vec2(n.y * 7.7, d.x * 91.0 + d.y * 37.0);
-	// Le marbrage : large (7 px), doux, toujours là.
+	// Le marbrage : large (7 px), doux — de près seulement, comme les pores (voir plus bas).
 	float marbre = mix(1.0, DETAIL_MARBRE, smoothstep(0.35, 0.85, pate_bruit(f / 7.0 + graine)));
 	// Les pores : au plus un par cellule de 2,4 px, un sur quatre, un disque d'un demi-pixel du monde au plus.
 	float ecran = px_monde * px_par_unite;
@@ -71,7 +71,10 @@ vec3 detail_fiche(vec3 fiche, vec3 lp, vec3 d, vec3 ech, vec3 n, float px_par_un
 			pore = (1.0 - smoothstep(r * 0.6, r, length(f - milieu))) * fondu;
 		}
 	}
-	float k = marbre * mix(1.0, DETAIL_PORE, pore);
+	// Q33 — À LA TAILLE DU DUEL, PLUS DE MATIÈRE DU TOUT, marbrage compris : `detail_fiche` passe sur TOUT le corps, et le
+	// marbrage à 0,86, qui restait, faisait perdre au seuil (0,10) jusqu'à la moitié des pixels visibles (Q29, 2026-09-25).
+	// Le personnage détaillé en jeu ne doit rien perdre au bord de la lumière : la matière ne vit plus que de près.
+	float k = mix(1.0, marbre * mix(1.0, DETAIL_PORE, pore), fondu);
 	return c * mix(1.0, k, detail_matiere);
 }
 

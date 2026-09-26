@@ -281,6 +281,15 @@ func _la_visibilite() -> void:
 		and inc.contains("return c * mix(1.0, k, detail_matiere);"))
 	_check("les pores s'effacent à la taille du duel (entiers sous 0,3 pixel du monde par pixel d'écran, nuls au-dessus de 0,5)",
 		inc.contains("float fondu = 1.0 - smoothstep(0.3, 0.5, ecran);"))
+	_check("Q33 : le marbrage aussi — à la taille du duel, plus de matière du tout (le facteur entier suit le fondu)",
+		inc.contains("float k = mix(1.0, marbre * mix(1.0, DETAIL_PORE, pore), fondu);"))
+	var pas_plus_sombre := true
+	for slug in KIT:
+		var pt := VoxelCatalogue.palette_tenue(slug, "sombre3", "froide")
+		var pd := VoxelCatalogue.palette_details(slug, "sombre3", "froide")
+		for cle in pd:
+			pas_plus_sombre = pas_plus_sombre and VoxelCatalogue.luminance_affichee(pd[cle]) >= VoxelCatalogue.luminance_affichee(pt["ocre"]) - 0.002
+	_check("Q33 : aucun accessoire plus sombre que le tissu qu'il couvre, pour les dix", pas_plus_sombre)
 	_check("albédo seul : l'include n'écrit ni ALBEDO, ni EMISSION, ni light()",
 		not inc.contains("ALBEDO") and not inc.contains("EMISSION") and not inc.contains("void light"))
 	for chemin in ["res://corps_iso.gdshader", "res://corps_iso_eclaire.gdshader"]:
@@ -289,4 +298,10 @@ func _la_visibilite() -> void:
 		_check("%s : le détail sur la fiche seule, sous le drapeau ; light() ne le connaît pas" % chemin.get_file(),
 			code.contains("#ifdef CORPS_DETAIL\n\t// ISO13 — les accessoires modelés et la matière peinte : la fiche seule, assombrie jamais éclaircie.\n\tfiche = detail_fiche(")
 			and not lumiere.contains("detail"))
+	# Q33 — la killcam reste en aplat (décision d'Adrien) : le corps porté par le fantôme n'a aucune part éclairée, détaillé
+	# ou non — sa couleur, accessoires compris, ne s'y voit pas.
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	var suivre := pres.substr(pres.find("func _suivre_le_fantome("), 3000)
+	_check("Q33 : la killcam reste en aplat — le corps du fantôme a une opacité de 0 dans chaque vue",
+		suivre.contains('set_shader_parameter("opacite_%d" % (vue_id + 1), 0.0)'))
 	_check("Protocol.VERSION reste 18 : rien sur le fil", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
