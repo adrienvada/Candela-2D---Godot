@@ -47,3 +47,71 @@ le béton, lettres plus sombres encore ; le contraste plaque/lettre reste, inver
 5. `tools/test_iso_enseignes.gd`, dans la suite : éteint = rien construit ; allumé = symétrie, bornes (rien au-dessus de
    l'arête, ni collision ni occluder), jamais plus clair (shader), sens de lecture.
 6. La planche : éteint / allumé, 1:1 et ×3, à côté de l'illustration, au photographe sous Xvfb.
+
+## Ce qui est construit (état au deuxième commit)
+
+- `enseignes_iso.gd` (nouveau) — la classe `EnseignesIso`, le drapeau `--enseignes-essai` (éteint par défaut).
+- `enseignes_iso.gdshader` (nouveau) — la lecture de la face des tuyaux, sans leur modelé.
+- `tools/test_iso_enseignes.gd` (nouveau), ajouté à `tools/run_suites.sh` (1 ligne changée).
+- `presentation_3d.gd` — **+31 lignes, aucune retirée** : les quatre ancrages des tuyaux, pour les enseignes (le script
+  préchargé, trois variables, la construction avec les murs, la peinture posée et retirée, `_materiaux()`).
+- Fusionnés pour s'en servir : les tuyaux (`70ffafa`, qui apportent `TuyauxIso.faces`, `hacher`, `tirage`,
+  `face_dessinee`, `matiere_max` et le shader de base) et les correctifs du photographe sous Xvfb (`0c67705`, commit à part).
+
+### Appels de dessin et primitives ajoutés
+
+Allumé : **un** `MeshInstance3D` par carte, **une** surface, **un** matériau → **+1 appel de dessin par vue 3D**
+(deux en écran scindé), quelle que soit la carte. Primitives : **deux triangles par enseigne**, de 2 (la carte par
+défaut) à 8 enseignes (l'Arène circulaire), soit **4 à 16 triangles** et 8 à 32 sommets. Une texture de 256 × 128 RGBA8
+avec ses mipmaps (~170 Ko). Éteint : rien — ni nœud, ni matériau, ni texture (prouvé par la garde).
+
+### Les décisions, et leur pourquoi
+
+1. **Un quadrilatère texturé, pas des lettres en volume.** Une plaque de tôle et une peinture sont plates ; un quad collé
+   à 0,2-0,3 px de la face ne recouvre à l'écran que sa face (la parallaxe des volumes, qui a coûté aux tuyaux, y est
+   de 0,5 px au pire) et coûte deux triangles.
+2. **Les lettres dessinées en code (fonte 5 × 7 pochoir), pas une fonte rastérisée.** Headless, rien ne se rastérise :
+   un atlas tiré d'une `Font` serait vide sous la suite, et la garde ne pourrait rien lire. Une fonte à cellules se
+   dessine au texel près, identique partout, et à l'échelle du jeu (~1 pixel d'écran par cellule) une fonte plus fine ne
+   se verrait pas. Les ponts du pochoir (O, A, R) sont dans les glyphes.
+3. **Plus sombre que le mur, contrairement à l'illustration.** Tôle × 0,55, bord × 0,40, rivets × 0,25, lettres de plaque
+   × 0,14 ; peinture × 0,45 (lettre usée × 0,70). Tous ces facteurs sont en plus plafonnés par la matière la plus sombre
+   qu'une face porte. Le contraste lettre/fond de l'illustration reste, inversé en valeur par rapport au béton.
+4. **Deux sortes seulement : « ARENA » (plaque) et « ZONE n » (peint, sur deux lignes comme `ill_amical`).** Ce sont
+   les deux seules enseignes lisibles de l'illustration qui disent quelque chose du jeu ; « VAULT 07 », « RESTRICTED »,
+   « MAIN FEED » nommeraient des lieux qui n'existent pas dans le duel. Une plaque muette rouillée est possible avec
+   le même atlas, non faite (pas demandée, et un décor de plus à juger).
+5. **Le placement par orbites, calculé, pas une table écrite à la main.** Les pochoirs du sol ont une table ; ici, une
+   face exposée n'est retenue que si **toutes** ses images par le groupe de la carte sont aussi des faces exposées. Le
+   groupe : la symétrie qui porte le départ de J1 sur celui de J2 (`sigma` : le miroir gauche-droite sur cinq cartes, le
+   demi-tour sur la Croisée) et le demi-tour (celui de l'option B, le défaut en ligne, où J2 regarde de l'autre côté).
+   Une orbite d'« ARENA » (la plus proche du centre), une de « ZONE n » (la plus proche des départs, chaque face à deux
+   cases au moins plus près d'un départ que de l'autre, et à trois cases au moins de tout départ). L'orbite doit porter
+   une face SUD — du côté de J1 pour « ZONE » — : J1 la voit à 0° et à 45°, et J2 voit son image (une face nord) à 180°
+   et à 225°. Calculé, le placement se prouve pour toute carte, et une carte de joueur en recevrait un correct — mais
+   **seules les cartes livrées sont vérifiées**, et c'est un essai : on peut restreindre aux cartes livrées si Adrien le
+   veut.
+6. **Jamais à l'envers, par construction.** L'axe du texte est `(n.y, −n.x)` : la droite de quiconque regarde la face de
+   face. Une caméra qui voit la face de dos ne la dessine pas (le tri des tuyaux) ; donc aucun texte n'est jamais vu en
+   miroir, et, le monde n'ayant pas de roulis, jamais la tête en bas. La garde le vérifie à dix lacets, dont 225° (J2 à
+   45° B).
+7. **Sous le jour des tuyaux.** Une enseigne avance de 0,3 px au plus, un tuyau commence à 0,5 : les deux essais allumés
+   ensemble, un tuyau passe DEVANT une plaque, jamais au travers. Ils ne se connaissent pas : un tuyau peut barrer une
+   enseigne. À juger si les deux sont gardés.
+
+### Ce que la garde prouve (`tools/test_iso_enseignes.gd`, 168 vérifications)
+
+Drapeau éteint : ni nœud, ni matériau. Allumé : un nœud, calque commun, sans ombre ni enfant, une surface, l'atlas posé,
+retiré quand on éteint. Aucune classe de collision, d'occluder ou de lumière dans le script. Atlas : identique deux
+fois, chaque texel ≤ 0,70, lettres présentes, peinture transparente hors des lettres, lettre de plaque plus sombre que
+la tôle. Par carte : même construction deux fois, empreinte figée ; chaque coin sous l'arête (moins une saillie vue sous
+le tangage), au-dessus de la bande de sol, devant sa face à 0,3 px au plus, à 3,5 px au moins de ses bouts (l'encre des
+arêtes) ; une enseigne par face ; chaque enseigne a ses jumelles par tout le groupe, « ZONE » échangée par `sigma`,
+chaque « ZONE n » du côté de Jn ; pour chaque paire de caméras (A 0°, B 0°, A 45°, B 45°, C 45°) dont les MURS sont
+équitables, ce que dessine J2 est l'image exacte de ce que dessine J1 ; à 0° et 45° en option B, chaque joueur a « ARENA »
+et sa « ZONE » sous les yeux ; aucun texte à l'envers à dix lacets ; enroulement comme une `BoxMesh`. Shader : lecture
+de la face copiée mot pour mot de `mur_iso`, `unshaded`, ni lumière ni émission, `ALBEDO = c` venu de la lumière lue et
+de facteurs de la pâte, plafond `matiere_max`, instrument éteint, accordé comme les murs.
+
+**Éprouvée par six mutations** : axe de lecture inversé → 12 échecs ; « ZONE 1 » décalée de 2 px → 7 ; tôle à 1,1 → 1 ;
+plafond `matiere_max` retiré du shader → 1 ; saillie à 0,8 px → 7 ; enroulement inversé → 6 ; 0 une fois le code remis.
