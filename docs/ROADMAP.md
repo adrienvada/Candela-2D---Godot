@@ -27278,7 +27278,7 @@ Le cadrage `planche_tenues_torche` et les colonnes « nom:teinte » sont un comp
 d'Iso 1 qui l'a déjà appliqué avec trois retouches (`7a648d2`) : `docs/iso/iso12_tenues/banc_lumiere3d_teinte_contre_7a648d2.patch`.
 Lot complet vert (435 s, 0 SHADER/SCRIPT ERROR, 2026-09-23 22:12).
 
-#### ISO13 — la fusée comme son illustration : le point de braise PAR DÉFAUT (Q34 = C) ✅ (2026-09-25/26, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
+#### ISO13 — la fusée comme son illustration : le point de braise PAR DÉFAUT (Q34 = C) ✅, le rouge long en essai (Q35 = B) 🟡 (2026-09-25/26, branche `iso11-menus`, session « ISO7 Gadgets et lumière Opus »)
 
 Comparée à l'illustration « Créer en ligne » (planche : https://claude.ai/artifact/R7wAtpZyWJakiSdbfaTiGg, plan
 `loupe-fusee-illustration`), la fusée posée à plein feu a le bon sol éclairé, mais **pas de point de braise**.
@@ -27305,6 +27305,29 @@ blanc. La vue de dessus garde son point rouge (rien de la 2D ne change). **L'exc
 FU2.1, « c'est une fusée de marine, pas un projecteur ») : elle ne vaut QUE pour ce point, qui n'éclaire rien ; la règle
 reste entière pour la LUMIÈRE, et le masque de la fumée comme l'éblouissement ne changent pas. Coût : un quad de plus par
 fusée posée et par vue (`_halos(c, 1)`, un appel de dessin ; aucune série de cadence demandée pour ce point).
+
+**Q35 = B, tranché le 2026-09-26 : l'ESSAI du rouge long**, `--fusee-rouge-long`, À DURÉE TOTALE ÉGALE (ordre 412) : le plein
+feu passe de 2 à 4 s (`FuseeModele.duree_plein_feu`), la braise en perd 2 (`duree_braise`), l'agonie et le résidu ne changent
+pas, la fusée vit toujours 20 s (`FuseeModele.poser_rouge_long`). La fumée garde donc sa taille et sa densité à chaque âge,
+et le rouge dans la fumée pleine existe de 3 à 4 s, l'instant de l'illustration — le sens premier de Q35 : « la fusée
+éclairerait fort plus longtemps », pas « elle dure plus longtemps ». ⚠️ L'horloge de la fusée est publique et simulée à
+l'identique chez les deux pairs : **le drapeau doit être le même des deux côtés** — un essai, pas un réglage de match. Si le
+rouge long devient le défaut, **la question de `Protocol.VERSION` se pose** (deux builds simuleraient deux fusées
+différentes) : ne pas la changer avant, la signaler ce jour-là.
+
+**Le banc d'équité** (`tools/banc_equite_fusee.gd`, headless, sur le modèle pur ; verdict fixé par la session cloud AVANT
+les chiffres, ordre 410) : (a) symétrie exacte, le lanceur et l'adversaire à distances égales ont les mêmes valeurs ligne
+par ligne (le modèle ne dépend que de la distance ; murs, lignes de vue et choix de la position ne sont pas mesurés) ;
+(b) chaque durée change au plus de 2 s, chaque aire × temps au plus de ce que donnent 2 s de plein feu de plus, calculé à
+part. **Première lecture — la braise gardée, la fusée vivant 22 s : ÉCHOUE.** Toutes les durées +2 s, l'aire éclairée
++195,04 tuiles²·s pour une borne de 195,04, mais l'aire cachée × temps +155,18 pour une borne de 131,31 : `echelle_fumee_a`
+rapporte l'âge à la durée de combustion, les 2 s de plus se vivaient avec une fumée plus large que celle de 3 s. La borne
+n'a pas été déplacée après les chiffres (à la plus grande taille, elle aurait valu 192,54). **Le repli, à durée totale
+égale : PASSE.** Aires éclairée et cachée, durées lisibles et cachées : inchangées (+0,00 ; au seuil 0,10, la braise éclaire
+aussi loin que le plein feu) ; seul l'éblouissement gagne, de 2 s au plus (au-dessus de 0,25 à 200 px 4,58 → 6,57 s, à
+300 px 1,81 → 3,81 ; au-dessus de 0,5 à 100 px 3,18 → 5,18 ; au-dessus de 0,75 à 100 px 1,41 → 3,41). **Avant le défaut**,
+au Mac après le hash d'Iso 1 : la cadence sous fusée au pompe (règle 278) et la planche de l'illustration à côté du jeu à
+3,5 s ; puis Adrien le juge en jouant.
 
 **Les 8° vers l'orange, mesurés, et rien à corriger** : la lightmap sous la fusée est à 5,5° (126, 36, 27) pour une lumière à
 356° ; divisée par la lumière, elle donne (1 ; 0,94 ; 0,62), le brun des tuiles 2D. C'est la lumière 2D, la seule vérité du
