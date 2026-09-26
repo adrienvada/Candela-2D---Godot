@@ -143,6 +143,8 @@ const COUCHES_HORS_LIGHTMAP := COUCHES_CAPTEURS | COUCHE_PEINTURE
 const PeintureIsoT := preload("res://peinture_iso.gd")
 ## Les tuyaux et les câbles des murs, en essai (`--tuyaux-essai`) : leur script par son chemin, comme la peinture.
 const TuyauxIsoT := preload("res://tuyaux_iso.gd")
+## Les enseignes et les panneaux muraux, en essai (`--enseignes-essai`) : leur script par son chemin, comme les tuyaux.
+const EnseignesIsoT := preload("res://enseignes_iso.gd")
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
 const CALQUE_VUE_1 := 2
@@ -224,6 +226,10 @@ var _usure_empreinte := Vector2i(-1, -1)
 var _tuyaux := TuyauxIsoT.essai_actif()
 var _mat_tuyaux: ShaderMaterial = null
 var _noeud_tuyaux: MeshInstance3D = null
+## Les enseignes murales en essai (`--enseignes-essai`, `enseignes_iso.gd`), lues une fois : éteintes, rien de construit.
+var _enseignes := EnseignesIsoT.essai_actif()
+var _mat_enseignes: ShaderMaterial = null
+var _noeud_enseignes: MeshInstance3D = null
 var _mat_mur: ShaderMaterial
 var _mat_corps: Array[ShaderMaterial] = []
 var _mat_profondeur: Array[ShaderMaterial] = []
@@ -1010,6 +1016,9 @@ func _poser_peinture() -> void:
 	if _mat_tuyaux != null:
 		IsoMateriaux.accorder_peinture(_mat_tuyaux, _peinture.get_texture(), _peinture.cadre,
 			_peinture.point_reference(), _peinture.point_plancher())
+	if _mat_enseignes != null:
+		IsoMateriaux.accorder_peinture(_mat_enseignes, _peinture.get_texture(), _peinture.cadre,
+			_peinture.point_reference(), _peinture.point_plancher())
 	# ISO12 — la même peinture pour les deux sols : sans effet sur `sol_iso`, qui ne la déclare pas ; l'albédo et le
 	# normaliseur de L2D pour `sol_iso_eclaire`.
 	for m in _mat_sols:
@@ -1028,6 +1037,8 @@ func _retirer_peinture() -> void:
 		IsoMateriaux.accorder_peinture(_mat_mur, null, Rect2())
 	if _mat_tuyaux != null:
 		IsoMateriaux.accorder_peinture(_mat_tuyaux, null, Rect2())
+	if _mat_enseignes != null:
+		IsoMateriaux.accorder_peinture(_mat_enseignes, null, Rect2())
 	for m in _mat_sols:
 		IsoMateriaux.accorder_peinture(m, null, Rect2())
 
@@ -2007,6 +2018,7 @@ func _construire_les_murs() -> void:
 			(boite as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_scene.add_child(_murs)
 	_construire_les_tuyaux(data)
+	_construire_les_enseignes(data)
 	_reconstruire = false
 
 
@@ -2027,6 +2039,23 @@ func _construire_les_tuyaux(data: Dictionary) -> void:
 	if _noeud_tuyaux != null:
 		_noeud_tuyaux.layers = CALQUE_COMMUN
 		_scene.add_child(_noeud_tuyaux)
+
+
+## Les enseignes de CETTE carte (`enseignes_iso.gd`), refaites avec les murs, comme les tuyaux et hors de `_murs` comme eux.
+func _construire_les_enseignes(data: Dictionary) -> void:
+	if _noeud_enseignes != null:
+		_scene.remove_child(_noeud_enseignes)
+		_noeud_enseignes.queue_free()
+		_noeud_enseignes = null
+	if not _enseignes:
+		return
+	if _mat_enseignes == null:
+		_mat_enseignes = _materiau(EnseignesIsoT.SHADER)
+		EnseignesIsoT.accorder(_mat_enseignes)
+	_noeud_enseignes = EnseignesIsoT.creer_noeud(data, _mat_enseignes)
+	if _noeud_enseignes != null:
+		_noeud_enseignes.layers = CALQUE_COMMUN
+		_scene.add_child(_noeud_enseignes)
 
 
 ## ISO13, lot C — les impacts de balles du jeu (`wall_impact.gd`, les originaux : leurs copies J2 sont au même endroit)
@@ -2064,6 +2093,8 @@ func _materiaux() -> Array[ShaderMaterial]:
 	tous.append_array(_mat_corps)
 	if _mat_tuyaux != null:
 		tous.append(_mat_tuyaux)
+	if _mat_enseignes != null:
+		tous.append(_mat_enseignes)
 	return tous
 
 
