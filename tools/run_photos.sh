@@ -29,9 +29,25 @@
 #
 # Les images sortent dans `user://photos/`, dont le chemin réel est imprimé à la
 # fin. C'est `planche.html` qu'on ouvre, pas le dossier.
+#
+# **Dans le conteneur du cloud** (Linux, Xvfb, Mesa llvmpipe), la fenêtre est un
+# écran virtuel à la taille des images, et l'horloge est fixe :
+#
+#   timeout 1800 xvfb-run -a -s "-screen 0 1920x1080x24" env GODOT=/usr/local/bin/godot \
+#     GODOT_ARGS="--fixed-fps 60" ./tools/run_photos.sh --plan=torche
+#
+# Ce qu'on peut croire d'une image qui en sort, et ce qu'on ne peut pas : ROADMAP,
+# « Le photographe dans le cloud ». Aucune cadence mesurée là ne vaut quoi que ce soit.
 set -uo pipefail
 
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+
+# Drapeaux du MOTEUR, posés avant `--path` — ce qui suit `--` va au photographe,
+# pas à Godot. Vide par défaut : sur le Mac, rien ne change. Dans le conteneur du
+# cloud (Xvfb + rendu logiciel), `GODOT_ARGS="--fixed-fps 60"` : une image y dure
+# un tiers de seconde, et seule une horloge fixe rend au jeu le temps d'un poste
+# à 60 images par seconde (ROADMAP, « Le photographe dans le cloud »).
+GODOT_ARGS="${GODOT_ARGS:-}"
 
 # `--liste` n'a besoin d'aucune fenêtre : on l'exécute en headless pour qu'il
 # soit instantané et utilisable dans un terminal distant.
@@ -48,7 +64,8 @@ journal="$(mktemp)"
 if [ "$sans_fenetre" = "1" ]; then
   "$GODOT" --headless --path . res://tools/photographe.tscn -- "$@" 2>&1 | tee "$journal"
 else
-  "$GODOT" --path . res://tools/photographe.tscn -- "$@" 2>&1 | tee "$journal"
+  # shellcheck disable=SC2086 # découpe voulue : plusieurs drapeaux dans une chaîne
+  "$GODOT" $GODOT_ARGS --path . res://tools/photographe.tscn -- "$@" 2>&1 | tee "$journal"
 fi
 code=${PIPESTATUS[0]}
 
