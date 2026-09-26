@@ -480,16 +480,16 @@ func _le_faisceau() -> void:
 
 
 
-## ISO13, Q31 voie A — le masque de la fumée, allumé par défaut (`--sans-fumee-masque` l'éteint). Éteint, le jeu compile le
+## ISO13, Q31 voie A — le masque de la fumée, éteint par défaut depuis le 2026-09-26 (`--fumee-masque` l'allume). Éteint, le jeu compile le
 ## shader des volumes d'avant ; allumé, chaque couche passe à la variante FUMEE_MASQUE, dont le seul ajout est de TAIRE la
 ## couche (jamais de l'éclaircir) là où ce que le pixel montre s'affiche noir.
 func _le_masque_de_la_fumee() -> void:
 	print("\n[Le masque de la fumée — Q31, voie A]")
 	var v := IsoVolumes.new()
-	# ALLUMÉ PAR DÉFAUT depuis le 2026-09-25 (Q31, Adrien : le noir d'abord, au prix de 3 % au plus).
-	_check("le masque est ALLUMÉ par défaut (Q31) ; --sans-fumee-masque l'éteint",
-		bool(v.get("masque_fumee")) and FileAccess.get_file_as_string("res://iso_volumes.gd").contains(
-			"elif arg == DRAPEAU_SANS_MASQUE_FUMEE:\n\t\t\tmasque_fumee = false"))
+	# ÉTEINT PAR DÉFAUT depuis le 2026-09-26 (ordre 416) : le prix échoue sur l'état intégré (0,863), Q31 revient à Adrien.
+	_check("le masque est ÉTEINT par défaut (ordre 416) ; --fumee-masque l'allume",
+		not bool(v.get("masque_fumee")) and FileAccess.get_file_as_string("res://iso_volumes.gd").contains(
+			"elif arg == DRAPEAU_MASQUE_FUMEE:\n\t\t\tmasque_fumee = true"))
 	v.set("masque_fumee", false)
 	var eteint: ShaderMaterial = v.call("_materiau_volume")
 	_check("éteint, la couche garde le shader des volumes d'avant", eteint.shader == IsoVolumes.SHADER_VOLUME)

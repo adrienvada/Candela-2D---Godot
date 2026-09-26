@@ -87,11 +87,13 @@ var couches_fusee := -1
 ## ISO13, lot E — éteint par défaut, comme tout drapeau d'un lot en cours.
 var faisceaux_actifs := false
 ## ISO13, Q31 voie A — le masque de la fumée : chaque couche de volume passe à la variante FUMEE_MASQUE
-## de son shader, qui la tait là où ce que le pixel montre est affiché noir (voir `volume_iso.gdshader`). ALLUMÉ PAR DÉFAUT
-## depuis le 2026-09-25 (Q31 : « le noir d'abord », prix 3 % au plus, preuve à l'image passée) ; `--sans-fumee-masque`
-## l'éteint — la référence de toute série de cadence sur la fumée. À poser AVANT que les couches naissent, comme
-## `couches_fusee` — une couche déjà créée garde son shader (les bancs basculent par `poser_masque_fumee`).
-var masque_fumee := true
+## de son shader, qui la tait là où ce que le pixel montre est affiché noir (voir `volume_iso.gdshader`). ÉTEINT PAR DÉFAUT
+## depuis le 2026-09-26 (ordre 416 du cloud) : allumé le 2026-09-25 (Q31 : « le noir d'abord », prix 3 % au plus), il
+## échoue au prix sur l'état intégré — 45° B et usure au défaut, il rend 0,863 de la cadence (M0 80, M1 69) — et Q31
+## revient à Adrien avec ce prix. La preuve à l'image reste acquise. `--fumee-masque` l'allume ; `--sans-fumee-masque`
+## reste accepté et ne change rien. À poser AVANT que les couches naissent, comme `couches_fusee` — une couche déjà créée
+## garde son shader (les bancs basculent par `poser_masque_fumee`).
+var masque_fumee := false
 ## ESSAI (session cloud, 2026-09-25 21:41 ; Adrien tranchera sur la planche) — le point de braise de la fusée POSÉE. En 2D, le
 ## cœur incandescent (`fusee.gd`, `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est
 ## une information de jeu, la position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et
@@ -147,7 +149,8 @@ func _init() -> void:
 		print("[fusée cœur] essai allumé — %s" % ("presque blanc au plein feu" if coeur_fusee >= 2 else "rouge puis orange"))
 	# L'état éteint s'imprime aussi : la référence d'une série se prouve par ce que le JEU dit, jamais par la commande.
 	if not masque_fumee:
-		print("[fumée masque] éteint (%s) — le shader des volumes d'avant" % DRAPEAU_SANS_MASQUE_FUMEE)
+		print("[fumée masque] éteint (le défaut depuis le 2026-09-26 ; %s l'allume) — le shader des volumes d'avant"
+			% DRAPEAU_MASQUE_FUMEE)
 
 
 func nombre_de_suivis() -> int:

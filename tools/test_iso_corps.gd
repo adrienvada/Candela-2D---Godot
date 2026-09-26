@@ -48,12 +48,11 @@ func _run() -> void:
 	_check("sans classe, le corps dessiné est une classe du catalogue (repli de RENDU, jamais de statistique)",
 		VoxelCatalogue.slugs().has(Pres.slug_du_corps(null)), Pres.slug_du_corps(null))
 	_la_zone_de_touche()
-	# Q28 (2026-09-26) — le témoin de dessus se compare pas pour pas à 0° A : tourné (45° B, le défaut), l'iso rend les
-	# commandes relatives à l'écran et les parties divergent à dessein. Posé sur les valeurs LOCALES, que chaque manche
-	# recopie (`accorder_au_mode(false)`).
-	reglages.set("_lacet_local", 0.0)
-	reglages.set("_option_lacet_locale", "A")
-	reglages.accorder_au_mode(false)
+	# Q28 (2026-09-26, ordre 413) — les corps, leurs états, leur silhouette et leur classe se vérifient au DÉFAUT, 45° B.
+	# Seule la comparaison pas pour pas au témoin de dessus se fait à 0° A (plus bas) : tourné, l'iso rend les commandes
+	# relatives à l'écran et les parties divergent à dessein.
+	_check("le banc tourne au défaut du lacet, 45° B (Q28)", is_equal_approx(float(reglages.get("_lacet_local")), 45.0)
+		and String(reglages.get("_option_lacet_locale")) == "B")
 
 	# ISO6 — l'iso est le défaut : la vue de dessus du témoin se demande AVANT de monter `Main`, dont
 	# le premier `rebuild_arena()` accroche sinon la présentation.
@@ -87,7 +86,17 @@ func _run() -> void:
 	_les_etats(main, p)
 	await _la_classe_changee(main, p)
 	_rien_de_plus(main, p, vp1, vp2)
+	var cam1 = p._camera_de(0)
+	_check("les corps ont été vérifiés à 45° (caméra 3D de J1)", cam1 != null
+		and is_equal_approx(fposmod(float(cam1.lacet_deg), 360.0), 45.0), str(cam1.lacet_deg) if cam1 != null else "")
 
+	# La comparaison au témoin de dessus, à 0° A (valeurs LOCALES, que `accorder_au_mode` recopie ; la caméra suit à
+	# l'image suivante).
+	reglages.set("_lacet_local", 0.0)
+	reglages.set("_option_lacet_locale", "A")
+	reglages.accorder_au_mode(false)
+	for i in 3:
+		await process_frame
 	var avec: Dictionary = await _jouer(main)
 	_check("avec corps voxel, la partie a tenu ses %d pas" % PAS_SIMULES, (avec["etats"] as Array).size() == PAS_SIMULES)
 	_check("simulation identique pas pour pas, avec et sans corps voxel",

@@ -467,6 +467,28 @@ func _simulation_inchangee() -> void:
 		_ecarts(sans["etats"], avec["etats"]) == 0, _premier_ecart(sans["etats"], avec["etats"]))
 	_check("même rejeu enregistré (%d images)" % (sans["rejeu"] as Array).size(),
 		_ecarts(sans["rejeu"], avec["rejeu"]) == 0 and not (sans["rejeu"] as Array).is_empty())
+	# Q28 (ordre 413) — et au DÉFAUT, 45° B : la vue tournée ne rend pas la simulation dépendante du rythme des images
+	# (deux parties iso identiques pas pour pas, la même garde que le témoin), et le lacet s'applique bien aux commandes
+	# (la partie tournée n'est pas celle de 0° : « haut » y va vers le haut de l'écran, pas vers le nord du monde).
+	reglages.set("_lacet_local", 45.0)
+	reglages.set("_option_lacet_locale", "B")
+	reglages.accorder_au_mode(false)
+	var tournee_a: Dictionary = await _jouer(main, true)
+	var tournee_b: Dictionary = await _jouer(main, true)
+	_check("à 45° B, la vue iso était allumée et tournée", bool(tournee_a["iso_allumee"])
+		and is_equal_approx(float(main.lacet_de_la_vue(0)), 45.0), str(main.lacet_de_la_vue(0)))
+	_check("à 45° B : deux parties iso identiques pas pour pas, rejeu compris",
+		_ecarts(tournee_a["etats"], tournee_b["etats"]) == 0 and _ecarts(tournee_a["rejeu"], tournee_b["rejeu"]) == 0,
+		_premier_ecart(tournee_a["etats"], tournee_b["etats"]))
+	# Le premier pas, touche « droite » : à 45°, le même déplacement qu'à 0°, tourné comme `CameraIso.stick_au_sol` le
+	# dit (prouvé juste à l'écran par `test_iso_killcam`). « Différent de 0° » ne suffisait pas : une mutation qui ôtait
+	# la rotation des commandes laissait les parties différer par ailleurs (2026-09-26).
+	var d0: Vector2 = (avec["etats"][0][0] as Vector2) - Vector2(300, 300)
+	var d45: Vector2 = (tournee_a["etats"][0][0] as Vector2) - Vector2(300, 300)
+	_check("à 45° B, le premier pas est celui de 0°, tourné du lacet (les commandes suivent l'écran)",
+		d0.length() > 0.5 and absf(d45.length() - d0.length()) < 1e-3
+		and d45.normalized().distance_to(CameraIso.stick_au_sol(d0.normalized(), 45.0)) < 1e-3,
+		"0° %s, 45° %s, attendu %s" % [d0, d45, CameraIso.stick_au_sol(d0, 45.0)])
 	reglages.decalage_visee = decalage_avant
 	reglages.set("_lacet_local", lacet_sim_avant)
 	reglages.set("_option_lacet_locale", option_sim_avant)

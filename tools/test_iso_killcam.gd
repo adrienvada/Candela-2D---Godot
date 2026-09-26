@@ -46,12 +46,11 @@ func _run() -> void:
 	var reglages := root.get_node("GameSettings")
 	_le_fil()
 	_le_lacet()
-	# Q28 (2026-09-26) — le défaut est 45° B ; les contrôles de ce banc (stick « exactement celui de la vue de dessus »,
-	# aller-retour monde → écran → sol) sont écrits à 0° A, et `_le_lacet` couvre le lacet. Posé sur les valeurs LOCALES,
-	# que chaque manche recopie (`accorder_au_mode(false)`).
-	reglages.set("_lacet_local", 0.0)
-	reglages.set("_option_lacet_locale", "A")
-	reglages.accorder_au_mode(false)
+	# Q28 (2026-09-26) — ce banc tourne au DÉFAUT, 45° B : la killcam (cadrage, fantômes, voile) et les entrées y sont
+	# gardées à l'angle du jeu. Seul le stick dépend du lacet ; il se compare à `CameraIso.stick_au_sol`, que `_le_lacet`
+	# prouve juste à l'écran.
+	_check("le banc tourne au défaut du lacet, 45° B (Q28)", is_equal_approx(float(reglages.get("_lacet_local")), 45.0)
+		and String(reglages.get("_option_lacet_locale")) == "B")
 
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
@@ -154,15 +153,19 @@ func _les_entrees(main: Node, p: Presentation3D) -> void:
 		absf(visee_iso.angle_to(visee_2d)) < 0.005 and visee_iso.length() > 0.99,
 		"%s contre %s" % [visee_iso, visee_2d])
 
-	# Le stick, par le vrai chemin de LocalInputProvider : à 0° la commande est celle de l'Input Map.
+	# Le stick, par le vrai chemin de LocalInputProvider : la commande de l'Input Map tournée du lacet de SA vue — à 0°,
+	# exactement celle de la vue de dessus ; au défaut (45° B, Q28), celle que `_le_lacet` prouve juste à l'écran.
 	Input.action_press("p1_aim_right", 1.0)
 	Input.action_press("p1_aim_down", 0.5)
 	var brut := Input.get_vector(prov.action_aim_left, prov.action_aim_right, prov.action_aim_up, prov.action_aim_down)
 	var par_le_chemin := prov.get_aim_direction(main.p1.global_position)
 	Input.action_release("p1_aim_right")
 	Input.action_release("p1_aim_down")
-	_check("le stick en vue iso : la commande est exactement celle de la vue de dessus (lacet 0°)",
-		brut.length() > 0.1 and par_le_chemin == brut, "%s contre %s" % [par_le_chemin, brut])
+	var lacet_j1: float = main.lacet_de_la_vue(0)
+	var attendu := CameraIso.stick_au_sol(brut, lacet_j1)
+	_check("le stick en vue iso : la commande de l'Input Map tournée du lacet de sa vue (%.0f°)" % lacet_j1,
+		brut.length() > 0.1 and par_le_chemin.distance_to(attendu) < 1e-5 and not is_zero_approx(lacet_j1)
+		and par_le_chemin.distance_to(brut) > 0.1, "%s contre %s (brut %s)" % [par_le_chemin, attendu, brut])
 	for joueur in [main.p1, main.p2]:
 		(joueur as Node).set_physics_process(true)
 

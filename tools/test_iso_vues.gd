@@ -325,6 +325,14 @@ func _lacet_45_b(main: Node, p: Node, reglages: Node, c1: Control, c2: Control) 
 		absf(angle_difference((main.cam1 as Camera2D).rotation, deg_to_rad(-45.0))) < 1e-3
 		and absf(angle_difference((main.cam2 as Camera2D).rotation, deg_to_rad(-225.0))) < 1e-3,
 		"%s / %s" % [rad_to_deg((main.cam1 as Camera2D).rotation), rad_to_deg((main.cam2 as Camera2D).rotation)])
+	# Q28 (ordre 413) — ce que ce banc garde à 0° A, regardé aussi au DÉFAUT : la vue et le masque de l'adversaire
+	# (sous-vues, masques miroir, capteurs par vue et par corps), les canaux de lumière, et la projection du monde vers
+	# l'écran, tournée du lacet.
+	print("\n--- Au défaut, 45° B : les vues, les masques et les canaux de l'écran scindé ---")
+	var Canaux45: GDScript = load("res://canaux_lumiere.gd")
+	_scinde(main, p, Canaux45)
+	_canaux(main, p, Canaux45)
+	_effets_suivent_la_vue(main, p, true)
 
 	c1.hide()
 	c2.show()
@@ -802,8 +810,12 @@ func _effets_suivent_la_vue(main: Node, p: Node, scinde: bool) -> void:
 	var milieu: Vector2 = b1.get_viewport().get_visible_rect().size * 0.5
 	_check("le projecteur envoie le centre de la vue 2D de J1 au centre de l'écran qui la rend (%s pour %s)"
 		% [str(ecran.round()), str(milieu.round())], ecran.distance_to(milieu) < 2.0)
-	var haut: Vector2 = proj.call(centre + Vector2(0, -100))
-	var droite: Vector2 = proj.call(centre + Vector2(100, 0))
+	# Q28 (2026-09-26) — au lacet L de la vue : la caméra 2D est tournée de −L, un vecteur du monde w paraît à l'écran
+	# comme w tourné de +L, puis la largeur s'étire. Les vecteurs du monde qui vont vers le HAUT et vers la DROITE de
+	# l'écran sont donc (0, −100) et (100, 0) tournés de −L. À 0°, le contrôle d'avant, à l'identique.
+	var lacet_rad := deg_to_rad(float(main.lacet_de_la_vue(0)))
+	var haut: Vector2 = proj.call(centre + Vector2(0, -100).rotated(-lacet_rad))
+	var droite: Vector2 = proj.call(centre + Vector2(100, 0).rotated(-lacet_rad))
 	# H15 : la caméra GARDE LA PROFONDEUR de la vue de dessus (`size = 1080 × sin θ`) ; c'est
 	# la largeur qui s'étire de 1 / sin θ — l'iso voit 1513 px de large au lieu de 1920.
 	# ISO8 — au zoom du duel (×1,5 par défaut depuis ISO11) : 100 px de monde font 100 × zoom px d'écran. Le zoom est lu
@@ -813,8 +825,10 @@ func _effets_suivent_la_vue(main: Node, p: Node, scinde: bool) -> void:
 		% [ecran.y - haut.y, z, droite.x - ecran.x],
 		absf((ecran.y - haut.y) - 100.0 * z) < 1.0 and absf((droite.x - ecran.x) - 100.0 * z / sin(deg_to_rad(52.0))) < 1.0)
 	var angle: float = p.angle_ecran(0, centre, centre + Vector2(100, -100))
-	_check("l'angle du voile est projeté : −45° dans le monde devient %.1f° à l'écran" % rad_to_deg(angle),
-		absf(angle - atan2(-100.0, 100.0 / sin(deg_to_rad(52.0)))) < 0.01)
+	var s := Vector2(100, -100).rotated(lacet_rad)
+	_check("l'angle du voile est projeté : −45° dans le monde, au lacet %.0f°, devient %.1f° à l'écran"
+		% [rad_to_deg(lacet_rad), rad_to_deg(angle)],
+		absf(angle_difference(angle, atan2(s.y, s.x / sin(deg_to_rad(52.0))))) < 0.01)
 	_check("hors de la vue de J2 en vue unique, angle_ecran rend NAN",
 		scinde or is_nan(p.angle_ecran(1, centre, centre + Vector2(1, 0))))
 
