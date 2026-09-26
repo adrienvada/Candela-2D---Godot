@@ -39,8 +39,13 @@ const CARTES_LIVREES: Array[String] = [
 ]
 ## Images de chauffe avant chaque relevé (le changement de carte ou de vue recompile, réalloue, retaille), puis images
 ## relevées. Les compteurs d'une scène immobile ne bougent presque pas : 12 suffisent à voir min et max.
-const CHAUFFE := 20
+const CHAUFFE := 12
 const IMAGES := 12
+## Le pompe sous une fusée n'est pas immobile : plombs, impacts, flashs, la fusée qui vieillit. D'une image à l'autre les
+## appels vont du simple au double (251 à 459 au premier essai) ; 12 images ne donnaient pas deux fois la même médiane. On
+## relève donc plus longtemps, et on garde la moyenne et le 9e décile à côté de la médiane.
+const IMAGES_POMPE := 120
+const CARTE_POMPE := "res://assets/maps/default.json"
 ## La mise en scène du pompe, celle du banc de cadence (`bench_framerate.gd`, `DUEL_DISTANCE`).
 const DUEL_POMPE := 150.0
 
@@ -49,11 +54,14 @@ var _classe_cartes := "pistolet"
 var _classe_pompe := "pompe"
 var _scenes: Array[String] = ["cartes", "pompe"]
 var _images := IMAGES
+var _images_pompe := IMAGES_POMPE
 var _lacet_joue := 0.0
 var _j1 := Vector2.ZERO
 var _j2 := Vector2.ZERO
 var _fusee: Fusee = null
 var _pompe_actif := false
+var _tuyaux_actif := false
+var _visee_j1 := Vector2.UP
 var _age := 0.0
 ## Le code de chaque shader, `#include` résolus, par chemin (ou par identifiant pour un shader sans chemin).
 var _codes := {}
@@ -70,6 +78,7 @@ func _ready() -> void:
 	_classe_cartes = _valeur(args, "--classe-cartes", _classe_cartes)
 	_classe_pompe = _valeur(args, "--classe", _classe_pompe)
 	_images = maxi(1, int(_valeur(args, "--images", str(IMAGES))))
+	_images_pompe = maxi(1, int(_valeur(args, "--images-pompe", str(IMAGES_POMPE))))
 	var scenes := _valeur(args, "--scenes", "cartes,pompe")
 	_scenes.clear()
 	for s in scenes.split(","):
@@ -95,11 +104,16 @@ func _ready() -> void:
 	_lacet_joue = float(reglages.call("lacet_de", 0)) if reglages != null and reglages.has_method("lacet_de") else 0.0
 	print("  lacet joué (J1) : %s°" % str(_lacet_joue))
 
+	if "tuyaux" in _scenes:
+		if not await _valider_sur_les_tuyaux():
+			_sortir(1)
+			return
+
 	if "cartes" in _scenes:
 		var cartes := CARTES_LIVREES.duplicate()
 		if cartes_voulues != "":
 			cartes = cartes.filter(func(c: String) -> bool: return cartes_voulues.split(",").has(c.get_file().get_basename()))
-		if not await _demarrer_une_manche(_classe_cartes):
+		if not _main.round_active and not await _demarrer_une_manche(_classe_cartes):
 			_sortir(1)
 			return
 		for chemin in cartes:
@@ -116,9 +130,11 @@ func _ready() -> void:
 		_vue_unique()
 
 	if "pompe" in _scenes:
-		# La carte que le banc de cadence joue : celle de la séance, reposée depuis le catalogue.
-		MapData.current_map_data = MapData.get_selected()
-		_main.rebuild_arena()
+		# La carte du banc de cadence est celle que le poste a sélectionnée ; un `user://` neuf (le cloud) sélectionne l'Arène
+		# Standard. On la pose EXPLICITEMENT : après la famille `cartes`, la carte courante serait la dernière relevée.
+		if not _poser_la_carte(CARTE_POMPE):
+			_sortir(1)
+			return
 		await _attendre_images(5)
 		if not await _demarrer_une_manche(_classe_pompe):
 			_sortir(1)
@@ -130,7 +146,7 @@ func _ready() -> void:
 				_vue_unique()
 			else:
 				_deux_vues()
-			await _relever("pompe", "pompe_sous_fusee:%s" % str(MapData.current_map_data.get("name", "?")), vue)
+			await _relever("pompe", "pompe_sous_fusee:%s" % CARTE_POMPE.get_file().get_basename(), vue, _images_pompe)
 		_pompe_actif = false
 		_vue_unique()
 
@@ -209,6 +225,16 @@ func _tenir() -> void:
 	if _pompe_actif:
 		_tenir_le_pompe()
 		return
+	if _tuyaux_actif:
+		_main.p1.global_position = _j1
+		_main.p2.global_position = _j1 + Vector2(0.0, 4000.0)
+		_viser(0, _visee_j1)
+		_viser(1, Vector2.RIGHT)
+		if _pantins.size() > 1:
+			_pantins[0].torche = true
+			_pantins[1].torche = false
+		_vivants()
+		return
 	_main.p1.global_position = _j1
 	_main.p2.global_position = _j2
 	_viser(0, _j2 - _j1)
@@ -249,13 +275,15 @@ func _poser_la_fusee() -> void:
 # LE RELEVÉ
 # ---------------------------------------------------------------------------
 
-func _relever(famille: String, scene: String, vue: String) -> void:
+func _relever(famille: String, scene: String, vue: String, images := -1) -> void:
+	if images < 0:
+		images = _images
 	for i in CHAUFFE:
 		_tenir()
 		await get_tree().process_frame
 	var series := {}
 	var passes := {}
-	for i in _images:
+	for i in images:
 		_tenir()
 		await get_tree().process_frame
 		# Les compteurs d'une image se lisent APRÈS qu'elle est rendue : ceux lus ici sont ceux de l'image précédente, rendue
@@ -270,10 +298,14 @@ func _relever(famille: String, scene: String, vue: String) -> void:
 	for cle in series:
 		var v: Array = series[cle]
 		v.sort()
-		resume[cle] = {"med": v[v.size() / 2], "min": v[0], "max": v[v.size() - 1]}
+		var somme := 0.0
+		for x in v:
+			somme += float(x)
+		resume[cle] = {"med": v[v.size() / 2], "min": v[0], "max": v[v.size() - 1],
+			"moy": snappedf(somme / float(v.size()), 0.01), "p90": v[mini(v.size() - 1, int(v.size() * 0.9))]}
 	var ligne := {
 		"config": _config, "famille": famille, "scene": scene, "vue": vue, "lacet": _lacet_joue,
-		"fenetre": [get_window().size.x, get_window().size.y], "images": _images,
+		"fenetre": [get_window().size.x, get_window().size.y], "images": images,
 		"j1": [snappedf(_j1.x, 0.1), snappedf(_j1.y, 0.1)], "j2": [snappedf(_j2.x, 0.1), snappedf(_j2.y, 0.1)],
 		"compteurs": resume, "passes": passes,
 	}
@@ -486,3 +518,83 @@ func _resoudre(code: String, vus: Dictionary) -> String:
 		if inc != null:
 			sortie += "\n" + _resoudre(inc.code, vus)
 	return sortie
+
+
+# ---------------------------------------------------------------------------
+# LA VALIDATION SUR LES TUYAUX
+# ---------------------------------------------------------------------------
+
+## La mise en scène de `tools/photo_tuyaux.gd` (branche `claude/cloud-tuyaux`, 70ffafa), refaite ici pour valider
+## l'instrument sur un chiffre connu : au Cloître, cadrage ×2,5, J1 à 3,2 tuiles de la face sud intérieure la plus meublée,
+## torche en biais de 28°, J2 à 4 000 px ; le nœud des tuyaux montré puis caché DANS LE MÊME LANCEMENT. Leur relevé : la
+## passe visible des vues 3D (racine + sous-vues iso actives) à 28 → 29 en vue unique et 50 → 52 en écran scindé, lacet 0°.
+## Exige `--tuyaux-essai` ; absent (18f5fdc n'a pas `tuyaux_iso.gd`), la famille est sautée et le dit.
+func _valider_sur_les_tuyaux() -> bool:
+	if not ResourceLoader.exists("res://tuyaux_iso.gd"):
+		print("  · tuyaux : tuyaux_iso.gd absent de cet arbre, validation sautée")
+		return true
+	var TuyauxT = load("res://tuyaux_iso.gd")
+	if not TuyauxT.essai_actif():
+		print("  · tuyaux : --tuyaux-essai absent, validation sautée")
+		return true
+	if not _poser_la_carte("res://assets/maps/map_001_le_cloitre.json"):
+		return false
+	await _attendre_images(5)
+	if not _main.round_active and not await _demarrer_une_manche(_classe_cartes):
+		return false
+	var face := _face_des_tuyaux(TuyauxT, MapData.current_map_data)
+	if face.is_empty():
+		printerr("✗ tuyaux : aucune face meublée tournée vers la caméra")
+		return false
+	var n: Vector2 = face["n"]
+	var t := Vector2(-n.y, n.x)
+	var milieu := (float(face["s0"]) + float(face["s1"])) * 0.5
+	var pied := n * float(face["d"]) + t * milieu
+	_j1 = pied + n * (3.2 * float(CandelaTileSet.TILE_SIZE.x)) + t * 20.0
+	_j2 = _j1 + Vector2(0.0, 4000.0)
+	_visee_j1 = (-n).rotated(deg_to_rad(28.0))
+	var iso := Presentation3D.instance()
+	var noeud: MeshInstance3D = iso.get("_noeud_tuyaux") if iso != null else null
+	if noeud == null:
+		printerr("✗ tuyaux : aucun nœud de tuyaux dans la présentation")
+		return false
+	var zoom_avant := _zoom
+	_zoom = 2.5
+	_tuyaux_actif = true
+	for vue in ["unique", "scinde"]:
+		if vue == "unique":
+			_vue_unique()
+		else:
+			_deux_vues()
+		for montre in [true, false]:
+			noeud.visible = montre
+			await _relever("tuyaux", "cloitre_face_%s:%s" % [str(face["cle"]), "avec" if montre else "sans"], vue)
+	noeud.visible = true
+	_tuyaux_actif = false
+	_zoom = zoom_avant
+	for cam in [_main.cam1, _main.cam2]:
+		if is_instance_valid(cam):
+			cam.zoom = Vector2.ONE
+	_vue_unique()
+	return true
+
+
+## `photo_tuyaux.gd`, `_choisir_la_face`, recopiée : la face sud intérieure qui porte le plus de sortes de pièces.
+func _face_des_tuyaux(TuyauxT, data: Dictionary) -> Dictionary:
+	var faces: Array = TuyauxT.faces(data)
+	var grille := Vector2(MapCodec.get_grid_size(data)) * float(CandelaTileSet.TILE_SIZE.x)
+	var rang_de := {1: 3, 3: 2, 0: 1, 2: 1}
+	var meilleure := {}
+	var meilleur := -1
+	for f in faces:
+		var n: Vector2 = f["n"]
+		if n != Vector2(0, 1) or int(f["cases"]) < 3:
+			continue
+		var d := float(f["d"])
+		if d < 4.0 * 35.0 or d > grille.y - 6.0 * 35.0:
+			continue
+		var rang := int(rang_de.get(TuyauxT.programme_de(f), 0)) * 100 + int(f["cases"])
+		if rang > meilleur:
+			meilleur = rang
+			meilleure = f
+	return meilleure
