@@ -3210,6 +3210,15 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un outil de mesure qui vit dans /tmp disparaît au redémarrage du Mac (2026-09-26)
+
+Le lanceur et l'analyse de la preuve du masque de la fumée, le lanceur des séries de cadence (`serie.sh`, `verdict.py`), la
+porte stricte et le contrôle de présence vivaient dans `/tmp` (et les patchs figés des variantes, dans le scratchpad d'une
+session, sous `/private/tmp`). Le Mac a redémarré dans la nuit du 25 au 26 : tout a disparu, alors que l'ordre 407 disait
+à Iso 1 de juger la preuve intégrée « selon le script de Gadgets ». La preuve est réécrite DANS le dépôt
+(`tools/preuve_masque_fumee.sh` et `.py`, mêmes critères). **Un outil dont un verdict dépend vit dans le dépôt, commité ;
+`/tmp` ne garde que ce qu'on accepte de perdre.**
+
 ### Recopier le point d'une surface depuis une autre n'est exact qu'à ~0,003 px : les coutures (2026-09-25)
 
 Chantier ISO13, Q31 (le masque de la fumée). La fumée calcule le point du sol que son pixel montre ; le sol le calcule
