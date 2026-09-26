@@ -97,7 +97,7 @@ def schema(carte, scene, prises, classes, sortie):
     """Vue de dessus de la carte : les murs, le cône de J1 et la portée des classes, et l'empreinte au sol de
     l'écran de J1 à chaque zoom (la vraie caméra iso, lacet 45° : un losange dans le repère de la carte)."""
     rects, (lx, ly) = murs(carte)
-    marge, echelle = 380.0, 0.62
+    marge, echelle = 560.0, 0.55
     w, h = int((lx + 2 * marge) * echelle), int((ly + 2 * marge) * echelle)
     im = Image.new("RGB", (w, h + 70), (14, 14, 18))
     dr = ImageDraw.Draw(im, "RGBA")
@@ -188,6 +188,17 @@ def main():
     for nom, (_, demi, portee) in classes.items():
         lignes.append(("| %s | %.0f | ×%.2f / ×%.2f |" % (nom, portee, DEVANT_V / portee, DEVANT_H * s52 / portee))
                       .replace(".", ","))
+    lignes += ["", "Jusqu'où l'écran 1920×1080 montre le sol autour du joueur, en pixels de MONDE, hors bornes de la carte "
+               "(calcul : caméra iso KEEP_HEIGHT, tangage 52°, décalage 0,15 ; vérifié contre la vraie caméra, écart 0 px) :", "",
+               "| Zoom | Visée verticale : devant / derrière / côtés | Visée horizontale : devant / derrière / côtés | "
+               "Pistolet 307 px : part de la portée visible devant (vert. / horiz.) | Arbalète 672 px : idem |",
+               "|---|---|---|---|---|"]
+    for z in ZOOMS:
+        dv, rv, cv = DEVANT_V / z, (540 - 162) / z, LARGEUR_ISO / 2 / z
+        dh, rh, ch = DEVANT_H * s52 / z, (960 - 162 / s52) * s52 / z, 540 / z
+        pct = lambda d, r: "%.0f %%" % (100 * min(1.0, d / r))
+        lignes.append("| ×%s | %.0f / %.0f / %.0f | %.0f / %.0f / %.0f | %s / %s | %s / %s |" % (
+            str(z).replace(".", ","), dv, rv, cv, dh, rh, ch, pct(dv, 307.2), pct(dh, 307.2), pct(dv, 672), pct(dh, 672)))
     lignes += ["", "| Carte | Zoom | Part de la carte à l'écran de J1 / de J2 | J1 voit devant / derrière / à gauche / à droite "
                "(px de monde, jusqu'au bord de l'image) | J2 idem | J1 a J2 à l'écran | J2 a J1 à l'écran | Scindé : J1 / J2 ont l'autre |",
                "|---|---|---|---|---|---|---|---|"]
@@ -208,6 +219,81 @@ def main():
                                                     for n, v in classes.items())]
     open(os.path.join(ICI, "chiffres.md"), "w", encoding="utf-8").write("\n".join(lignes) + "\n")
     print("\n".join(lignes))
+    planche(scenes, lignes)
+
+
+def md_vers_html(lignes):
+    """Les tableaux et paragraphes de `chiffres.md` en HTML (sous-ensemble : tableaux, gras, code)."""
+    import html
+    out, table = [], []
+    enrichir = lambda t: re.sub(r"`([^`]+)`", r"<code>\1</code>", re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", html.escape(t)))
+    def vider():
+        if table:
+            tete, corps = table[0], table[2:]
+            cell = lambda l: [c.strip() for c in l.strip().strip("|").split("|")]
+            out.append("<table><tr>" + "".join("<th>%s</th>" % enrichir(c) for c in cell(tete)) + "</tr>" +
+                       "".join("<tr>" + "".join("<td>%s</td>" % enrichir(c) for c in cell(l)) + "</tr>" for l in corps) +
+                       "</table>")
+            table.clear()
+    for l in lignes:
+        if l.startswith("|"):
+            table.append(l)
+            continue
+        vider()
+        if l.strip() and not l.startswith("<!--"):
+            out.append("<p>%s</p>" % enrichir(l))
+    vider()
+    return "\n".join(out)
+
+
+def planche(scenes, lignes):
+    conclusion = open(os.path.join(ICI, "conclusion.html"), encoding="utf-8").read() \
+        if os.path.exists(os.path.join(ICI, "conclusion.html")) else ""
+    z_txt = lambda z: str(z).replace(".", ",")
+    blocs = []
+    for carte in scenes:
+        nom = CARTES[carte][1]
+        for vue, titre in [("unique", "Vue unique 1920×1080 — ce que voit J1 (bandeau LED au creux)"),
+                           ("unique-sommet", "La même, bandeau LED des murs au sommet de sa respiration"),
+                           ("scinde", "Écran scindé au même instant — J1 à gauche, J2 à droite")]:
+            cases = "".join('<figure><a href="%s_%s_z%.2f.jpg"><img src="%s_%s_z%.2f.jpg" loading="lazy" alt=""></a>'
+                            '<figcaption>×%s%s</figcaption></figure>' % (carte, vue, z, carte, vue, z, z_txt(z),
+                                                                       " — défaut" if z == 1.5 else "")
+                            for z in ZOOMS)
+            blocs.append("<h3>%s — %s</h3><div class=grille>%s</div>" % (nom, titre, cases))
+        blocs.append('<h3>%s — jusqu\'où voit J1</h3><a href="schema_%s.jpg"><img class=schema src="schema_%s.jpg" '
+                     'alt=""></a>' % (nom, carte, carte))
+    page = """<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoom du duel — Q15</title>
+<style>
+:root { --fond:#0e0e12; --texte:#e6e1d8; --doux:#a39c90; --ambre:#e0a64a; --ligne:#2a2a30; }
+body { margin:0; background:var(--fond); color:var(--texte); font:15px/1.5 system-ui, sans-serif; }
+main { max-width:1500px; margin:0 auto; padding:16px; }
+h1 { font-size:24px; margin:8px 0; } h2 { color:var(--ambre); margin-top:36px; } h3 { color:var(--doux); font-weight:600; }
+.grille { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+@media (max-width:800px) { .grille { grid-template-columns:1fr; } }
+figure { margin:0; } figure img, img.schema { width:100%; display:block; border:1px solid var(--ligne); }
+img.schema { max-width:900px; }
+figcaption { color:var(--doux); font-size:13px; padding:2px 0 6px; }
+table { border-collapse:collapse; margin:10px 0; font-size:13px; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--ligne); padding:4px 8px; text-align:left; vertical-align:top; }
+th { background:#18181e; } code { color:var(--ambre); }
+.note { color:var(--doux); font-size:13px; }
+</style></head><body><main>
+<h1>Le zoom du duel — ×1,25, ×1,5 (défaut), ×1,75, ×2,0</h1>
+<p class=note>Q15 · session cloud « zoom » · lacet 45° (option B), regard décalé 0,15, portée des torches ×0,75 — les
+défauts du jeu, seul le zoom change. Images du rendu logiciel du cloud (llvmpipe) : fidèles pour le noir, les couleurs
+et les tailles, pas pour la cadence. Cliquer une image l'ouvre en 1920×1080.</p>
+@@CONCLUSION@@
+<h2>Les images</h2>
+@@IMAGES@@
+<h2>Les chiffres</h2>
+@@CHIFFRES@@
+</main></body></html>
+""".replace("@@CONCLUSION@@", conclusion).replace("@@IMAGES@@", "\n".join(blocs)).replace(
+        "@@CHIFFRES@@", md_vers_html(lignes))
+    open(os.path.join(ICI, "planche.html"), "w", encoding="utf-8").write(page)
 
 
 if __name__ == "__main__":

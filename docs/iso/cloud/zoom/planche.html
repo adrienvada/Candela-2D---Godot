@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoom du duel — Q15</title>
+<style>
+:root { --fond:#0e0e12; --texte:#e6e1d8; --doux:#a39c90; --ambre:#e0a64a; --ligne:#2a2a30; }
+body { margin:0; background:var(--fond); color:var(--texte); font:15px/1.5 system-ui, sans-serif; }
+main { max-width:1500px; margin:0 auto; padding:16px; }
+h1 { font-size:24px; margin:8px 0; } h2 { color:var(--ambre); margin-top:36px; } h3 { color:var(--doux); font-weight:600; }
+.grille { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+@media (max-width:800px) { .grille { grid-template-columns:1fr; } }
+figure { margin:0; } figure img, img.schema { width:100%; display:block; border:1px solid var(--ligne); }
+img.schema { max-width:900px; }
+figcaption { color:var(--doux); font-size:13px; padding:2px 0 6px; }
+table { border-collapse:collapse; margin:10px 0; font-size:13px; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--ligne); padding:4px 8px; text-align:left; vertical-align:top; }
+th { background:#18181e; } code { color:var(--ambre); }
+.note { color:var(--doux); font-size:13px; }
+</style></head><body><main>
+<h1>Le zoom du duel — ×1,25, ×1,5 (défaut), ×1,75, ×2,0</h1>
+<p class=note>Q15 · session cloud « zoom » · lacet 45° (option B), regard décalé 0,15, portée des torches ×0,75 — les
+défauts du jeu, seul le zoom change. Images du rendu logiciel du cloud (llvmpipe) : fidèles pour le noir, les couleurs
+et les tailles, pas pour la cadence. Cliquer une image l'ouvre en 1920×1080.</p>
+<h2>Ce que chaque zoom gagne et perd, d'après les images</h2>
+<p class=note>Pas de recommandation : c'est ta décision. Ce qui suit décrit les images et les chiffres plus bas.</p>
+<table>
+<tr><th>Zoom</th><th>Ce qu'il gagne</th><th>Ce qu'il perd</th></tr>
+<tr><td><b>×1,25</b></td>
+<td>La vue d'ensemble : on voit 562 px de sol devant soi (un pistolet porte à 307) et 302 derrière. Au sommet de la
+respiration des LED, tout Le Cloître tient à l'écran. L'arbalète voit 84 % de son faisceau.</td>
+<td>Les corps sont petits (39 × 44 px sur un écran 1080p). L'adversaire au bord du cône n'est qu'une tache sombre.
+Beaucoup d'écran noir. Sur La Croisée (28 cases), la caméra ne se borne plus en largeur : près d'un bord, une grande part de l'image est du vide hors carte. C'est la
+vue la moins étouffante.</td></tr>
+<tr><td><b>×1,5</b> (défaut)</td>
+<td>Un corps de 47 × 52 px. La torche du pistolet occupe les deux tiers de l'espace devant soi. On voit encore 468 px
+devant et 252 derrière, et à peu près la moitié de la carte (54 à 57 %).</td>
+<td>Un adversaire posté derrière toi à portée de pistolet est hors de l'image. L'arbalète ne voit que 70 % de son
+faisceau quand elle vise vers le haut de l'écran.</td></tr>
+<tr><td><b>×1,75</b></td>
+<td>Des corps nettement plus lisibles (55 × 60 px), des murs qui prennent du volume. Deux cinquièmes de la carte à
+l'écran : le duel se resserre.</td>
+<td>Plus que 216 px de vue derrière soi. Le faisceau du pistolet remplit les trois quarts de l'espace devant. L'arbalète
+ne voit que 60 % de sa portée.</td></tr>
+<tr><td><b>×2,0</b></td>
+<td>Le plus gros plan : un corps de 62 × 69 px (83 × 92 sur ton écran 1440), la matière des murs et du sol se lit, moins
+de vide hors de la carte à l'image. La vue la plus étouffante.</td>
+<td>Le bout du faisceau du pistolet frôle le bord de l'écran (88 %). Le fusil y arrive tout juste (sa limite est
+×2,03). L'arbalète voit la moitié de son faisceau. Il reste 189 px de vue derrière soi, moins que la portée de
+la pompe (192 px) : une pompe peut t'éclairer depuis un point hors de ton cadre. Un tiers de la carte à l'écran.</td></tr>
+</table>
+<p><b>Qui voit l'autre en premier.</b> Au lacet 45° option B, les deux joueurs sont cadrés de la même façon à chaque zoom
+(la même règle pour les deux écrans ; dans les huit scènes, chacun a l'autre dans son cadre) : le zoom ne rompt pas l'équité. Ce qui décide, c'est le regard décalé :
+celui qui <i>regarde vers</i> l'autre voit 1,86 fois plus loin que celui qui lui tourne le dos (visée vers le haut de
+l'écran : 702 px d'écran devant, 378 derrière ; 1,55 fois en visée horizontale). Ce rapport ne change pas avec le zoom. Le zoom change la distance, en pixels du monde. Face à face,
+l'autre entre dans ton cadre à 562 px à ×1,25, à 468 à ×1,5, à 401 à ×1,75 et à 351 à ×2,0. De dos, on perd l'autre de vue
+au-delà de 302, 252, 216 et 189 px. À tous ces zooms, un tireur posté derrière toi à portée de pistolet est donc hors
+de ton écran (à ×1,25, de justesse).</p>
+<p><b>Ce que le zoom ne change pas.</b> La portée des torches est la même à tous les zooms (×0,75, un réglage à part).
+Le regard décalé fait toujours 162 px d'écran. Il n'ajoute aucune lumière : il agrandit ce que les torches montrent déjà. Sur ton écran 2560×1440, le
+cadrage est le même : tout est un tiers plus grand en pixels.</p>
+
+<h2>Les images</h2>
+<h3>Le Cloître — Vue unique 1920×1080 — ce que voit J1 (bandeau LED au creux)</h3><div class=grille><figure><a href="cloitre_unique_z1.25.jpg"><img src="cloitre_unique_z1.25.jpg" loading="lazy" alt=""></a><figcaption>×1,25</figcaption></figure><figure><a href="cloitre_unique_z1.50.jpg"><img src="cloitre_unique_z1.50.jpg" loading="lazy" alt=""></a><figcaption>×1,5 — défaut</figcaption></figure><figure><a href="cloitre_unique_z1.75.jpg"><img src="cloitre_unique_z1.75.jpg" loading="lazy" alt=""></a><figcaption>×1,75</figcaption></figure><figure><a href="cloitre_unique_z2.00.jpg"><img src="cloitre_unique_z2.00.jpg" loading="lazy" alt=""></a><figcaption>×2,0</figcaption></figure></div>
+<h3>Le Cloître — La même, bandeau LED des murs au sommet de sa respiration</h3><div class=grille><figure><a href="cloitre_unique-sommet_z1.25.jpg"><img src="cloitre_unique-sommet_z1.25.jpg" loading="lazy" alt=""></a><figcaption>×1,25</figcaption></figure><figure><a href="cloitre_unique-sommet_z1.50.jpg"><img src="cloitre_unique-sommet_z1.50.jpg" loading="lazy" alt=""></a><figcaption>×1,5 — défaut</figcaption></figure><figure><a href="cloitre_unique-sommet_z1.75.jpg"><img src="cloitre_unique-sommet_z1.75.jpg" loading="lazy" alt=""></a><figcaption>×1,75</figcaption></figure><figure><a href="cloitre_unique-sommet_z2.00.jpg"><img src="cloitre_unique-sommet_z2.00.jpg" loading="lazy" alt=""></a><figcaption>×2,0</figcaption></figure></div>
+<h3>Le Cloître — Écran scindé au même instant — J1 à gauche, J2 à droite</h3><div class=grille><figure><a href="cloitre_scinde_z1.25.jpg"><img src="cloitre_scinde_z1.25.jpg" loading="lazy" alt=""></a><figcaption>×1,25</figcaption></figure><figure><a href="cloitre_scinde_z1.50.jpg"><img src="cloitre_scinde_z1.50.jpg" loading="lazy" alt=""></a><figcaption>×1,5 — défaut</figcaption></figure><figure><a href="cloitre_scinde_z1.75.jpg"><img src="cloitre_scinde_z1.75.jpg" loading="lazy" alt=""></a><figcaption>×1,75</figcaption></figure><figure><a href="cloitre_scinde_z2.00.jpg"><img src="cloitre_scinde_z2.00.jpg" loading="lazy" alt=""></a><figcaption>×2,0</figcaption></figure></div>
+<h3>Le Cloître — jusqu'où voit J1</h3><a href="schema_cloitre.jpg"><img class=schema src="schema_cloitre.jpg" alt=""></a>
+<h3>La Croisée — Vue unique 1920×1080 — ce que voit J1 (bandeau LED au creux)</h3><div class=grille><figure><a href="croisee_unique_z1.25.jpg"><img src="croisee_unique_z1.25.jpg" loading="lazy" alt=""></a><figcaption>×1,25</figcaption></figure><figure><a href="croisee_unique_z1.50.jpg"><img src="croisee_unique_z1.50.jpg" loading="lazy" alt=""></a><figcaption>×1,5 — défaut</figcaption></figure><figure><a href="croisee_unique_z1.75.jpg"><img src="croisee_unique_z1.75.jpg" loading="lazy" alt=""></a><figcaption>×1,75</figcaption></figure><figure><a href="croisee_unique_z2.00.jpg"><img src="croisee_unique_z2.00.jpg" loading="lazy" alt=""></a><figcaption>×2,0</figcaption></figure></div>
+<h3>La Croisée — La même, bandeau LED des murs au sommet de sa respiration</h3><div class=grille><figure><a href="croisee_unique-sommet_z1.25.jpg"><img src="croisee_unique-sommet_z1.25.jpg" loading="lazy" alt=""></a><figcaption>×1,25</figcaption></figure><figure><a href="croisee_unique-sommet_z1.50.jpg"><img src="croisee_unique-sommet_z1.50.jpg" loading="lazy" alt=""></a><figcaption>×1,5 — défaut</figcaption></figure><figure><a href="croisee_unique-sommet_z1.75.jpg"><img src="croisee_unique-sommet_z1.75.jpg" loading="lazy" alt=""></a><figcaption>×1,75</figcaption></figure><figure><a href="croisee_unique-sommet_z2.00.jpg"><img src="croisee_unique-sommet_z2.00.jpg" loading="lazy" alt=""></a><figcaption>×2,0</figcaption></figure></div>
+<h3>La Croisée — Écran scindé au même instant — J1 à gauche, J2 à droite</h3><div class=grille><figure><a href="croisee_scinde_z1.25.jpg"><img src="croisee_scinde_z1.25.jpg" loading="lazy" alt=""></a><figcaption>×1,25</figcaption></figure><figure><a href="croisee_scinde_z1.50.jpg"><img src="croisee_scinde_z1.50.jpg" loading="lazy" alt=""></a><figcaption>×1,5 — défaut</figcaption></figure><figure><a href="croisee_scinde_z1.75.jpg"><img src="croisee_scinde_z1.75.jpg" loading="lazy" alt=""></a><figcaption>×1,75</figcaption></figure><figure><a href="croisee_scinde_z2.00.jpg"><img src="croisee_scinde_z2.00.jpg" loading="lazy" alt=""></a><figcaption>×2,0</figcaption></figure></div>
+<h3>La Croisée — jusqu'où voit J1</h3><a href="schema_croisee.jpg"><img class=schema src="schema_croisee.jpg" alt=""></a>
+<h2>Les chiffres</h2>
+<p>Réglages du banc : <code>BANC_ZOOM reglages lacet_j1=45 lacet_j2=225 option=B decalage=0.15 facteur_portee=0.75 fenetre=(1920, 1080) vue=(1920, 1080)</code></p>
+<table><tr><th>Zoom</th><th>Corps de J1 sur l&#x27;image, 1080 lignes (L × H, px)</th><th>Corps sur 1440 lignes (×4/3)</th><th>Zone de touche (disque de 18 px) à l&#x27;écran, 1080 lignes</th><th>Torche du pistolet à l&#x27;écran, visée verticale / horizontale</th><th>…en part de la demi-hauteur / de la demi-largeur</th><th>…en part de l&#x27;écran DEVANT J1 (702 / 1166 px)</th></tr><tr><td>×1,25</td><td>39 × 43 ; 39 × 44</td><td>52 × 57 ; 52 × 59</td><td>57 × 45 px</td><td>384 / 487 px</td><td>71 % / 51 %</td><td>55 % / 42 %</td></tr><tr><td>×1,5</td><td>47 × 52 ; 47 × 52</td><td>63 × 69 ; 63 × 69</td><td>69 × 54 px</td><td>461 / 585 px</td><td>85 % / 61 %</td><td>66 % / 50 %</td></tr><tr><td>×1,75</td><td>55 × 60 ; 54 × 60</td><td>73 × 80 ; 72 × 80</td><td>80 × 63 px</td><td>538 / 682 px</td><td>100 % / 71 %</td><td>77 % / 59 %</td></tr><tr><td>×2,0</td><td>62 × 69 ; 63 × 70</td><td>83 × 92 ; 84 × 93</td><td>91 × 72 px</td><td>614 / 780 px</td><td>114 % / 81 %</td><td>88 % / 67 %</td></tr></table>
+<p>Le regard décalé avance la caméra de 0,15 de la hauteur VISIBLE : à l&#x27;écran, c&#x27;est toujours 162 px, quel que soit le zoom. J1 se tient donc à 702 px du bord vers lequel il vise (visée verticale), à 1166 px en visée horizontale (162 / sin 52° = 206 px de décalage) — hors bornes de la carte. Le zoom grandit la torche, pas cet espace.</p>
+<table><tr><th>Classe</th><th>Portée (px de monde)</th><th>Zoom au-delà duquel le bout de la torche sort de l&#x27;écran : visée verticale / horizontale</th></tr><tr><td>Pistolet</td><td>307</td><td>×2,29 / ×2,99</td></tr><tr><td>Fusil</td><td>346</td><td>×2,03 / ×2,66</td></tr><tr><td>Pompe</td><td>192</td><td>×3,66 / ×4,78</td></tr><tr><td>Arbalète</td><td>672</td><td>×1,04 / ×1,37</td></tr></table>
+<p>Jusqu&#x27;où l&#x27;écran 1920×1080 montre le sol autour du joueur, en pixels de MONDE, hors bornes de la carte (calcul : caméra iso KEEP_HEIGHT, tangage 52°, décalage 0,15 ; vérifié contre la vraie caméra, écart 0 px) :</p>
+<table><tr><th>Zoom</th><th>Visée verticale : devant / derrière / côtés</th><th>Visée horizontale : devant / derrière / côtés</th><th>Pistolet 307 px : part de la portée visible devant (vert. / horiz.)</th><th>Arbalète 672 px : idem</th></tr><tr><td>×1,25</td><td>562 / 302 / 605</td><td>735 / 476 / 432</td><td>100 % / 100 %</td><td>84 % / 100 %</td></tr><tr><td>×1,5</td><td>468 / 252 / 504</td><td>612 / 396 / 360</td><td>100 % / 100 %</td><td>70 % / 91 %</td></tr><tr><td>×1,75</td><td>401 / 216 / 432</td><td>525 / 340 / 309</td><td>100 % / 100 %</td><td>60 % / 78 %</td></tr><tr><td>×2,0</td><td>351 / 189 / 378</td><td>459 / 297 / 270</td><td>100 % / 100 %</td><td>52 % / 68 %</td></tr></table>
+<table><tr><th>Carte</th><th>Zoom</th><th>Part de la carte à l&#x27;écran de J1 / de J2</th><th>J1 voit devant / derrière / à gauche / à droite (px de monde, jusqu&#x27;au bord de l&#x27;image)</th><th>J2 idem</th><th>J1 a J2 à l&#x27;écran</th><th>J2 a J1 à l&#x27;écran</th><th>Scindé : J1 / J2 ont l&#x27;autre</th></tr><tr><td>Le Cloître</td><td>×1,25</td><td>72 % / 76 %</td><td>562 / 302 / 744 / 466</td><td>723 / 565 / 507 / 413</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>Le Cloître</td><td>×1,5</td><td>54 % / 60 %</td><td>468 / 252 / 515 / 493</td><td>645 / 429 / 422 / 344</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>Le Cloître</td><td>×1,75</td><td>42 % / 47 %</td><td>401 / 216 / 432 / 432</td><td>553 / 367 / 362 / 295</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>Le Cloître</td><td>×2,0</td><td>33 % / 37 %</td><td>351 / 189 / 378 / 378</td><td>484 / 322 / 317 / 258</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>La Croisée</td><td>×1,25</td><td>71 % / 63 %</td><td>562 / 302 / 605 / 605</td><td>774 / 514 / 413 / 507</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>La Croisée</td><td>×1,5</td><td>57 % / 63 %</td><td>468 / 252 / 540 / 469</td><td>409 / 664 / 344 / 422</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>La Croisée</td><td>×1,75</td><td>44 % / 48 %</td><td>401 / 216 / 432 / 432</td><td>430 / 490 / 295 / 362</td><td>oui</td><td>oui</td><td>oui / oui</td></tr><tr><td>La Croisée</td><td>×2,0</td><td>36 % / 36 %</td><td>351 / 189 / 378 / 378</td><td>445 / 360 / 258 / 317</td><td>oui</td><td>oui</td><td>oui / oui</td></tr></table>
+<p>Classes relevées : Pistolet 307 px (demi-angle 35°) ; Fusil 346 px (demi-angle 10°) ; Pompe 192 px (demi-angle 60°) ; Arbalète 672 px (demi-angle 5°)</p>
+</main></body></html>
