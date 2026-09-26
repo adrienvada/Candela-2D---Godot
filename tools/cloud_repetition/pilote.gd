@@ -256,6 +256,11 @@ func _etape_local(slug: String) -> void:
 	await _capturer("25_%s_fin" % slug)
 	if not vu:
 		_noter("✗ local %s : écran de fin jamais visible en 25 s de jeu" % slug)
+	# L'affiche se congédie à la touche, comme le joueur le fait ; dessous, le menu de fin.
+	await _touche(KEY_SPACE)
+	await _attendre(func() -> bool: return _main._affiche_de_fin == null, 5.0)
+	await _images_de_jeu(30)
+	await _capturer("26_%s_menu_de_fin" % slug)
 	_noter("local %s : game_over=%s, écran de fin visible=%s" % [slug, _main.game_over,
 		_ui.game_over_panel.visible if _ui.game_over_panel != null else "?"])
 	await _vers_le_menu()
@@ -453,7 +458,11 @@ func _tuer(pantins: Array, slug: String) -> void:
 
 
 func _vers_le_menu() -> void:
-	if _main.has_method("_on_main_menu_requested"):
+	# Le bouton « MENU PRINCIPAL » du menu de fin quand il est là, sinon le même geste que lui.
+	var b: Button = _ui.get("btn_main_menu")
+	if b != null and b.is_visible_in_tree() and not b.disabled:
+		b.pressed.emit()
+	elif _main.has_method("_on_main_menu_requested"):
 		_main._on_main_menu_requested()
 	await _images_de_jeu(30)
 	get_tree().paused = false
