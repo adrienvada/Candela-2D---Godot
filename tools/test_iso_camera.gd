@@ -25,9 +25,14 @@ extends SceneTree
 const EPSILON := 0.001
 const PLANCHER := 80
 const PAS_SIMULES := 150
+## Q28, ordre 421 — l'écart admis entre deux parties iso identiques à 45° B, sur les seules positions : dix fois l'écart
+## maximal mesuré (x86 : à remplir par la mesure du cloud ; Mac, 2026-09-27 : voir la ligne imprimée), sous 0,01 px.
+## PROVISOIRE à 1e-3 px en attendant la mesure x86.
+const ECART_MAX_45_PX := 0.001
 
 var _failures := 0
 var _verifications := 0
+var _ecart_max := 0.0
 
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
@@ -477,9 +482,22 @@ func _simulation_inchangee() -> void:
 	var tournee_b: Dictionary = await _jouer(main, true)
 	_check("à 45° B, la vue iso était allumée et tournée", bool(tournee_a["iso_allumee"])
 		and is_equal_approx(float(main.lacet_de_la_vue(0)), 45.0), str(main.lacet_de_la_vue(0)))
-	_check("à 45° B : deux parties iso identiques pas pour pas, rejeu compris",
-		_ecarts(tournee_a["etats"], tournee_b["etats"]) == 0 and _ecarts(tournee_a["rejeu"], tournee_b["rejeu"]) == 0,
-		_premier_ecart(tournee_a["etats"], tournee_b["etats"]))
+	# ⚠️ Les positions à 1e-3 px près, tout le reste EXACT (ordre 420, 2026-09-26). En glissant contre un mur EN DIAGONALE,
+	# la résolution du contact dépend du passé du moteur physique, pas seulement des commandes : sur x86 (Linux, Godot 4.7
+	# officiel), A et B divergeaient au pas 62, de façon déterministe et à caméra égale (p1y 124,865661621 contre
+	# 124,865653992 ; vy 0,059143066 contre 0,059112549 ; ≈ 1,5e-5 px ensuite). Le Mac passait par hasard d'arrondi : une
+	# partie de chauffe identique avant A l'y fait diverger au même pas 62. Aucun passé ne se rend égal d'une partie à
+	# l'autre dans le même processus. À 0°, la marche est parallèle aux axes et ces arrondis tombent juste : le témoin de
+	# dessus reste comparé au bit.
+	# La borne : dix fois l'écart maximal mesuré, sous 0,01 px (ordre 421). Les balles naissent à la position du joueur :
+	# leurs positions portent le même écart, leur nombre et leur rotation restent exacts.
+	_ecart_max = 0.0
+	var ok_etats := _ecarts_tolerants(tournee_a["etats"], tournee_b["etats"], ECART_MAX_45_PX) == 0
+	var ok_rejeu := _ecarts_tolerants(tournee_a["rejeu"], tournee_b["rejeu"], ECART_MAX_45_PX) == 0
+	print("  écart maximal des positions entre A et B à 45° B : %.7f px (borne %.4f px)" % [_ecart_max, ECART_MAX_45_PX])
+	_check("à 45° B : deux parties iso identiques pas pour pas, rejeu compris (positions à %.4f px, le reste exact)"
+		% ECART_MAX_45_PX, ok_etats and ok_rejeu,
+		"écart max %.7f px ; %s" % [_ecart_max, _premier_ecart(tournee_a["etats"], tournee_b["etats"])])
 	# Le premier pas, touche « droite » : à 45°, le même déplacement qu'à 0°, tourné comme `CameraIso.stick_au_sol` le
 	# dit (prouvé juste à l'écran par `test_iso_killcam`). « Différent de 0° » ne suffisait pas : une mutation qui ôtait
 	# la rotation des commandes laissait les parties différer par ailleurs (2026-09-26).
@@ -582,6 +600,26 @@ func _ecarts(a: Array, b: Array) -> int:
 		if str(a[i]) != str(b[i]):
 			n += 1
 	return n
+
+
+## Comme `_ecarts`, mais les POSITIONS (les Vector2 : joueur, balles, rejeu) à `tol` près ; tout le reste — rotation,
+## vie, torche, visibilité, nombre de balles — à l'identique.
+func _ecarts_tolerants(a: Array, b: Array, tol: float) -> int:
+	var n := absi(a.size() - b.size())
+	for i in mini(a.size(), b.size()):
+		if not _egaux_tolerants(a[i], b[i], tol):
+			n += 1
+	return n
+
+
+func _egaux_tolerants(x: Variant, y: Variant, tol: float) -> bool:
+	if x is Vector2 and y is Vector2:
+		var d := (x as Vector2).distance_to(y as Vector2)
+		_ecart_max = maxf(_ecart_max, d)
+		return d <= tol
+	if x is Array and y is Array:
+		return _ecarts_tolerants(x as Array, y as Array, tol) == 0
+	return typeof(x) == typeof(y) and x == y
 
 
 func _jouer(main: Node, iso: bool) -> Dictionary:

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-26
+> Dernière mise à jour : 2026-09-27
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3216,6 +3216,18 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un glissement en diagonale contre un mur dépend du passé du moteur physique, pas seulement des commandes (2026-09-27)
+
+À 45° B, « haut » va en diagonale dans le monde. Deux parties d'entraînement identiques, jouées l'une après l'autre dans le
+même processus, divergent au pas 62, **au glissement contre un mur**, de 1,5e-5 px sur x86 (Linux, Godot 4.7 officiel ;
+p1y 124,865661621 contre 124,865653992). L'écart est déterministe, et la caméra n'y est pour rien : prouvé sur x86 par
+le patch de diagnostic de l'ordre 419, qui rend à B la caméra de A. Le Mac passait **par hasard d'arrondi** : une partie
+de chauffe identique avant A l'y fait diverger au même pas (2e-4 px), et sur x86 aussi. Aucun passé ne se rend égal d'une
+partie à l'autre (ordre des identifiants du moteur, ou état équivalent). À 0°, la marche est parallèle aux axes et ces
+arrondis tombent juste : le témoin de dessus reste comparé au bit. **Une garde « deux parties identiques » en diagonale
+compare les positions à une borne mesurée** (`ECART_MAX_45_PX`, dix fois l'écart maximal mesuré, sous 0,01 px), et tout
+le reste au bit. En jeu, c'est sans effet : l'hôte simule seul, et le rejeu enregistre, il ne resimule pas.
 
 ### Un outil de mesure qui vit dans /tmp disparaît au redémarrage du Mac (2026-09-26)
 
