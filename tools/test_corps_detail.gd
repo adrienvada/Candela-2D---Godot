@@ -51,6 +51,7 @@ func _run() -> void:
 	_le_drapeau(racine)
 	_les_accessoires(racine)
 	_la_fusion(racine)
+	_la_pre_passe(racine)
 	_la_bandouliere(racine)
 	_la_silhouette(racine)
 	_la_visibilite()
@@ -199,6 +200,35 @@ func _la_fusion(racine: Node3D) -> void:
 			% chemin.get_file(), v.contains("#ifdef CORPS_DETAIL\n\t// Q33") and v.contains("if (CUSTOM0.w > 5.0) {")
 			and not v.contains("CUSTOM1.")
 			and v.contains("demi = abs(CUSTOM0.xyz);"))
+
+
+## Q33 — la pré-passe de profondeur d'un corps détaillé est LE MÊME programme que sa couleur (ordre 424 : avec deux
+## programmes, llvmpipe effaçait des pièces entières). Elle le reste quand la lumière 3D change le shader de la couleur.
+func _la_pre_passe(racine: Node3D) -> void:
+	print("— la pré-passe : le même programme que la couleur")
+	var sans := _corps(racine, "occulteur", false)
+	_check("sans drapeau : la pré-passe garde le shader de profondeur ordinaire",
+		sans.materiau_profondeur().shader == load("res://corps_iso_profondeur.gdshader"))
+	var avec := _corps(racine, "occulteur", true)
+	var m := avec.materiau()
+	var mp := avec.materiau_profondeur()
+	_check("détaillé : la pré-passe porte le programme de la couleur (variante CORPS_DETAIL), passe_profondeur 1 pour elle, 0 pour la couleur",
+		mp.shader == m.shader and m.shader.code.contains("#define CORPS_DETAIL\n")
+		and mp.get_shader_parameter("passe_profondeur") == 1.0
+		and (m.get_shader_parameter("passe_profondeur") == null or m.get_shader_parameter("passe_profondeur") == 0.0)
+		and mp.render_priority == -1)
+	# La lumière 3D : la présentation pose le shader éclairé puis rappelle `accorder_corps` ; la pré-passe doit suivre.
+	VoxelCatalogue.forcer_detail = 1
+	m.shader = load("res://corps_iso_eclaire.gdshader")
+	IsoMateriaux.accorder_corps(m)
+	_check("la lumière 3D : après accorder_corps, la pré-passe porte encore le programme de la couleur (la variante éclairée)",
+		mp.shader == m.shader and m.shader.code.contains("#define CORPS_DETAIL\n") and m.shader.code.contains("void light()"))
+	for chemin in ["res://corps_iso.gdshader", "res://corps_iso_eclaire.gdshader"]:
+		var code := FileAccess.get_file_as_string(chemin)
+		var debut := code.substr(code.find("void fragment() {"), 200)
+		_check("%s : le fragment commence par la sortie de pré-passe, sous CORPS_DETAIL seulement" % chemin.get_file(),
+			debut.begins_with("void fragment() {\n#ifdef CORPS_DETAIL") and code.contains("	if (passe_profondeur > 0.5) {")
+			and code.contains("		ALPHA = 0.0;\n	} else {\n#endif") and code.contains("#ifdef CORPS_DETAIL\n	}\n#endif\n}"))
 
 
 ## Le débord d'une boîte tournée de `angle` autour de z, centrée en `centre` (repère du torse), hors du rectangle de la face :

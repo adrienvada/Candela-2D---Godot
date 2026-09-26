@@ -31,6 +31,12 @@ uniform vec4 detail_laiton : source_color = vec4(1.0);
 uniform vec4 detail_metal : source_color = vec4(1.0);
 // La force des pores et du marbrage : 0 les éteint (la bascule des bancs, même partie).
 uniform float detail_matiere = 1.0;
+// Q33 — LA PRÉ-PASSE DE PROFONDEUR EST CE MÊME PROGRAMME (ordre 424) : le matériau de profondeur d'un corps détaillé porte la
+// variante CORPS_DETAIL de sa couleur, avec `passe_profondeur = 1`, et sort en noir à alpha 0 dès le début du fragment. Un seul
+// programme pour les deux passes : la même profondeur par construction. Avec deux programmes (la variante pour la couleur, le
+// shader de profondeur ordinaire pour la pré-passe), llvmpipe calculait des profondeurs différentes au bit près ; la couleur
+// d'une pièce perdait le test contre sa propre pré-passe, et la pièce disparaissait en entier (triangles noirs, ordres 414-424).
+uniform float passe_profondeur = 0.0;
 
 // Le pire assombrissement de la matière peinte : un pore au plus profond, sur un marbrage sombre.
 const float DETAIL_PORE = 0.62;

@@ -209,6 +209,23 @@ vec3 lumiere_du_capteur(bool deux, vec2 decalage_px) {
 }
 
 void fragment() {
+#ifdef CORPS_DETAIL
+	// Q33 — la pré-passe de profondeur d'un corps détaillé : ce même programme, qui s'arrête ici (voir `passe_profondeur` dans
+	// `iso_corps_detail.gdshaderinc`). Même règle que `corps_iso_profondeur.gdshader` : jetée là où le corps n'est pas dessiné.
+	// Tout le reste du fragment est dans le `else` (Godot refuse `return` dans `fragment()`), ouvert et fermé sous le même
+	// `#ifdef` : sans le drapeau, le code compilé est celui d'avant.
+	if (passe_profondeur > 0.5) {
+		bool deux_p = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
+		float o_p = clamp(deux_p ? opacite_2 : opacite_1, 0.0, 1.0);
+		vec4 s_p = deux_p ? silhouette_2 : silhouette_1;
+		float a_p = 1.0 - (1.0 - o_p) * (1.0 - clamp(s_p.a, 0.0, 1.0));
+		if (a_p <= 0.0001) {
+			discard;
+		}
+		ALBEDO = vec3(0.0);
+		ALPHA = 0.0;
+	} else {
+#endif
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 motif = vec2(monde.x + monde.z, -monde.y);
 	float aa = clamp((fwidth(motif.x) + fwidth(motif.y)) / 6.0, 0.02, 0.5);
@@ -282,4 +299,7 @@ void fragment() {
 	}
 	ALBEDO = (c * o * (1.0 - s) + silhouette.rgb * s) / a;
 	ALPHA = a;
+#ifdef CORPS_DETAIL
+	}
+#endif
 }

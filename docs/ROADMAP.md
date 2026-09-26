@@ -3210,6 +3210,22 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une pré-passe de profondeur et sa couleur doivent être LE MÊME programme (2026-09-27)
+
+Chantier ISO13, Q33 (personnages détaillés). Chaque corps iso se dessine en deux passes : une pré-passe de profondeur
+(`render_priority -1`, noire à alpha 0) puis sa couleur, transparente, qui doit passer le test de profondeur contre elle. Sous
+`--corps-detaille`, la couleur passait par la variante CORPS_DETAIL de son shader, la pré-passe par le shader de profondeur
+ordinaire : **deux programmes**. Rien, en GLSL, ne garantit que deux programmes calculent la même profondeur au bit près (pas
+d'`invariant`) ; sous llvmpipe (le rendu logiciel du cloud), ils ne le faisaient pas. La couleur d'une pièce perdait alors le
+test contre SA propre pré-passe : la pièce disparaissait EN ENTIER, avec le torse derrière elle, légitimement caché — des
+triangles noirs entiers (le sol du banc), des deux côtés d'une comparaison, à des endroits qui changeaient avec la géométrie.
+Prouvé par intervention : pré-passes cachées (`banc_corps --sans-profondeur`), 0 pixel noir au lieu de 88 à 739. **Leçon** :
+une pré-passe prend le programme de sa couleur, avec un uniforme qui la fait sortir tôt (`passe_profondeur`), et suit chaque
+changement de shader de la couleur. Et une seconde : j'avais d'abord accusé un attribut de sommet (CUSTOM1) sur un indice lu
+au zoom ; la preuve refaite sur trois classes a montré le défaut sur la référence elle-même. **Un diagnostic se prouve par
+intervention avant de se corriger.** Trouvé dans le cloud, sous llvmpipe ; le pilote d'Apple peut tomber juste aujourd'hui et
+faux demain.
+
 ### Une garantie vraie dans le monde n'est pas vraie à l'écran : la parallaxe des volumes en hauteur (2026-09-24)
 
 Chantier ISO13, lot E. Un volume iso vaut la lightmap sous lui, donc zéro au-dessus d'un sol noir. On
@@ -27770,6 +27786,18 @@ caché par cette profondeur. Les « traînées » des pores de l'étui étaient 
 (une face mal reconnue par une égalité de position) reste possible ; le moyen de trancher est dans le banc : `--sans-profondeur`
 cache les passes de profondeur des corps. Si les triangles noirs disparaissent, la cause est la pré-passe, et elle concerne
 tous les corps, détaillés ou non. Retirer CUSTOM1 reste sans regret : un attribut de moins.
+
+**La cause est prouvée, et corrigée par un programme unique** (ordres 422-424, 2026-09-27). Sans `--corps-detaille`, aucun
+noir (essai du cloud sur l'Occulteur et l'Illusionniste) : le noir vient avec le drapeau. Avec `--sans-profondeur`, 0 pixel
+noir sur les trois classes, au lieu de 88 à 739. La cause : sous le drapeau, TOUTES les boîtes du corps (torse et jambes
+compris, d'où les barres sous le torse) passent par la variante CORPS_DETAIL de la couleur, alors que leur pré-passe gardait le
+shader de profondeur ordinaire (voir « Pièges connus », même date). Le correctif, accepté par la session cloud (ordre 424) et
+limité au drapeau : la pré-passe d'un corps détaillé porte LE MÊME programme que sa couleur, avec `passe_profondeur = 1`, qui la
+fait sortir en noir à alpha 0 dès le début du fragment ; `IsoMateriaux.accorder_passe_profondeur` la fait suivre à chaque
+changement de shader de la couleur (la lumière 3D passe par `accorder_corps`). Sans le drapeau, la pré-passe garde
+`corps_iso_profondeur.gdshader`. Gardes dans `test_corps_detail` : le même programme, l'uniforme à 1 pour la pré-passe et à 0
+pour la couleur, la pré-passe qui suit la lumière 3D (prouvée par mutation : `accorder_corps` sans le suivi fait rougir la
+garde), et la sortie de pré-passe sous `#ifdef` seulement. Le prix d'une pré-passe plus longue se lira à la cadence.
 
 **D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
 la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le

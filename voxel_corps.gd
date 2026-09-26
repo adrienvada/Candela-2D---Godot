@@ -1032,6 +1032,10 @@ func _detailler(slug: String) -> void:
 			else:
 				_details.append(boite)
 	_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL")
+	# Q33 — la pré-passe prend ce même programme (voir `IsoMateriaux.accorder_passe_profondeur`), et le suivra à chaque
+	# changement de shader de la couleur.
+	_materiau.set_meta(IsoMateriaux.MATERIAU_PROFONDEUR, _materiau_profondeur)
+	IsoMateriaux.accorder_passe_profondeur(_materiau)
 	_materiau.set_shader_parameter("detail", 1.0)
 	_materiau.set_shader_parameter("detail_demi", demis)
 	_materiau.set_shader_parameter("detail_role", roles)
