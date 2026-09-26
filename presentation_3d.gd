@@ -141,6 +141,8 @@ const COUCHE_PEINTURE := 512
 ## Tout ce que les lightmaps ne lisent pas pendant que la vue iso tient.
 const COUCHES_HORS_LIGHTMAP := COUCHES_CAPTEURS | COUCHE_PEINTURE
 const PeintureIsoT := preload("res://peinture_iso.gd")
+## Les tuyaux et les câbles des murs, en essai (`--tuyaux-essai`) : leur script par son chemin, comme la peinture.
+const TuyauxIsoT := preload("res://tuyaux_iso.gd")
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
 const CALQUE_VUE_1 := 2
@@ -217,6 +219,11 @@ var _mat_sols: Array[ShaderMaterial] = []
 var _usure := IsoMateriaux.usure_essai_active()
 ## Le dernier état des éclats posé sur les murs : leur nombre et l'id du plus récent. Rien ne change, rien n'est reposé.
 var _usure_empreinte := Vector2i(-1, -1)
+## Les tuyaux et les câbles des murs en essai (`--tuyaux-essai`, `tuyaux_iso.gd`), lus une fois : éteints, ni matériau, ni
+## maillage, ni nœud — rien de plus à dessiner.
+var _tuyaux := TuyauxIsoT.essai_actif()
+var _mat_tuyaux: ShaderMaterial = null
+var _noeud_tuyaux: MeshInstance3D = null
 var _mat_mur: ShaderMaterial
 var _mat_corps: Array[ShaderMaterial] = []
 var _mat_profondeur: Array[ShaderMaterial] = []
@@ -999,6 +1006,10 @@ func _poser_peinture() -> void:
 	add_child(_peinture)
 	IsoMateriaux.accorder_peinture(_mat_mur, _peinture.get_texture(), _peinture.cadre,
 		_peinture.point_reference(), _peinture.point_plancher())
+	# Les tuyaux relisent la lumière de la face comme elle : la même peinture, les mêmes étalons.
+	if _mat_tuyaux != null:
+		IsoMateriaux.accorder_peinture(_mat_tuyaux, _peinture.get_texture(), _peinture.cadre,
+			_peinture.point_reference(), _peinture.point_plancher())
 	# ISO12 — la même peinture pour les deux sols : sans effet sur `sol_iso`, qui ne la déclare pas ; l'albédo et le
 	# normaliseur de L2D pour `sol_iso_eclaire`.
 	for m in _mat_sols:
@@ -1015,6 +1026,8 @@ func _retirer_peinture() -> void:
 	_peinture = null
 	if _mat_mur != null:
 		IsoMateriaux.accorder_peinture(_mat_mur, null, Rect2())
+	if _mat_tuyaux != null:
+		IsoMateriaux.accorder_peinture(_mat_tuyaux, null, Rect2())
 	for m in _mat_sols:
 		IsoMateriaux.accorder_peinture(m, null, Rect2())
 
@@ -1993,7 +2006,27 @@ func _construire_les_murs() -> void:
 		if lumiere_3d:
 			(boite as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_scene.add_child(_murs)
+	_construire_les_tuyaux(data)
 	_reconstruire = false
+
+
+## Les tuyaux et les câbles de CETTE carte, un maillage fusionné (`tuyaux_iso.gd`), refaits avec les murs. Hors de `_murs` :
+## ceux-là prennent les ombres quand la lumière 3D s'allume, un tuyau n'en porte jamais. Le matériau naît au premier appel,
+## AVANT que `_allumer` ne pose les lightmaps sur `_materiaux()`.
+func _construire_les_tuyaux(data: Dictionary) -> void:
+	if _noeud_tuyaux != null:
+		_scene.remove_child(_noeud_tuyaux)
+		_noeud_tuyaux.queue_free()
+		_noeud_tuyaux = null
+	if not _tuyaux:
+		return
+	if _mat_tuyaux == null:
+		_mat_tuyaux = _materiau(TuyauxIsoT.SHADER)
+		TuyauxIsoT.accorder(_mat_tuyaux)
+	_noeud_tuyaux = TuyauxIsoT.creer_noeud(data, _mat_tuyaux)
+	if _noeud_tuyaux != null:
+		_noeud_tuyaux.layers = CALQUE_COMMUN
+		_scene.add_child(_noeud_tuyaux)
 
 
 ## ISO13, lot C — les impacts de balles du jeu (`wall_impact.gd`, les originaux : leurs copies J2 sont au même endroit)
@@ -2029,6 +2062,8 @@ func _materiaux() -> Array[ShaderMaterial]:
 	var tous: Array[ShaderMaterial] = [_mat_mur]
 	tous.append_array(_mat_sols)
 	tous.append_array(_mat_corps)
+	if _mat_tuyaux != null:
+		tous.append(_mat_tuyaux)
 	return tous
 
 

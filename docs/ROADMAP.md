@@ -28007,6 +28007,75 @@ détaillé ; silhouette du corps seul, accessoires compris, de 16,81 px (Occulte
 que sans (couloir 17,5, zone de touche 18) ; la bandoulière dans la face du torse. La planche : portrait, corps d'aujourd'hui
 et corps avec le kit, classe par classe (`docs/iso/iso13/q29/planche_kit.jpg`).
 
+#### ISO13 — les tuyaux et les câbles des murs, à l'essai 🟡 (2026-09-26, branche `claude/cloud-tuyaux`, session cloud « tuyaux »)
+
+**Pourquoi** (ordre de la session cloud, 2026-09-26 au soir) : les illustrations des menus portent sur leurs murs des conduites
+cerclées de colliers et des câbles qui pendent d'un crochet à l'autre (`ill_entrainement.png`, `ill_accueil.png`) ; l'usure
+(béton, fissures, taches, impacts) ne les avait pas. Derrière **`--tuyaux-essai`, éteint** : sans lui, ni matériau, ni
+maillage, ni nœud — rien de plus à dessiner. Rien ne s'allume avant l'avis d'Adrien et la cadence au Mac.
+
+**Ce qui est fait.** `tuyaux_iso.gd` (placement et maillage), `tuyaux_iso.gdshader` (son matériau à lui : ni le shader des
+murs, ni celui de l'usure, ni celui des corps ne sont touchés) et quatre ancrages dans `presentation_3d.gd`
+(`_construire_les_tuyaux`, appelé avec les murs ; `_materiaux()` ; la peinture posée et retirée). Sur chaque longueur continue
+de face de mur haut qui a du SOL devant elle — ni muret, ni fosse, ni la ceinture : le dos des murs d'enceinte ne porte rien —,
+un programme tiré d'un hachage entier de sa case : une conduite à colliers, un à trois câbles en chaînette, les deux, une
+conduite et sa descente, ou rien ; parfois une colonne sur une face d'une case. Un seul maillage fusionné par carte (au
+Cloître : 13 056 sommets, 20 016 triangles), un seul matériau.
+
+**Les garde-fous, et pourquoi chacun est construit ainsi.**
+- **Le noir, à l'ÉCRAN.** Un tuyau n'a pas de lumière à lui : chaque fragment prolonge le rayon de la caméra jusqu'au plan de
+  sa face et y relit la lumière exactement comme la face (`lire_lumiere_moyenne` et `lightmap_pateuse_lue`, copiées de
+  `mur_iso.gdshader` ; la garde compare les textes), puis ne fait que la multiplier. Lire au point d'attache, dans le monde,
+  ne suffisait pas : à 45°, un tuyau couvre à l'écran un point de face décalé de sa saillie — la parallaxe des volumes des
+  « Pièges connus ».
+- **Jamais plus clair que la face qu'il recouvre** — la règle de l'usure. Sa matière est plafonnée par la plus sombre qu'une
+  face porte (0,545 : `mix(1, PLANCHER, 0,8)`), et le modelé passe par l'encre, avec son plancher (« allumé reste allumé »).
+  ⚠️ Le premier jet, sans plafond, mettait un collier à 1 sur un béton à 0,54 : 6 pixels passaient de 0 à 1-2/255, 36 de 7 à
+  8-10/255 — de la lumière réelle, mais que la face affichait sous le seuil : le compte des « noirs allumés » ne prouvait plus
+  rien. Et les descentes s'arrêtent à 15 px du sol (`hauteur_bas_px`) : menées jusqu'au sol, elles couvraient à l'écran la
+  bande de sol au pied du mur, où les hachures de `MurEncre` sont noires, et les auraient allumées de la lumière de la face.
+- **Rien qui cache un joueur.** Aucune collision, aucun occulteur, aucune ombre (`unshaded`, `cast_shadow` éteint, et hors de
+  `_murs`, dont les boîtes prennent les ombres de la lumière 3D). Une caméra ne dessine que les tuyaux des faces qu'elle voit
+  à moins de 60° de biais ; les autres sont écrasés en un point dans le vertex shader. Derrière chaque sommet dessiné, le
+  rayon de la caméra tombe sur SA face : un tuyau ne cache que son mur. Saillie de 5,1 px au plus, 10 px de marge aux bouts
+  (le décalage d'une saillie vue à 60° : 8,8 px), aucun sommet au-dessus de 37,2 px — l'arête (43,75) moins une saillie vue
+  sous le tangage : même le tuyau d'une face cachée ne dépasserait pas du sommet.
+- **L'équité.** Un seul nœud, sur le calque commun : les deux joueurs voient les mêmes tuyaux, chacun sur les faces que SA
+  caméra voit (au 45° B, J2 à 225° voit les faces nord et ouest). Le placement ne lit que les cases de la carte : le même à
+  chaque lancement ; l'empreinte des six cartes livrées est figée dans la garde.
+
+**Prouvé** (2026-09-26, sur `ffb9911` : 45° B, usure et décalage 0,15 par défaut).
+- `tools/test_iso_tuyaux.gd` (200 vérifications, dans la suite) : le drapeau — éteint, ni nœud ni matériau ; allumé, un nœud
+  sur le calque commun, une surface, sans ombre ; rééteint, retiré. Sur les six cartes : rien au-dessus de 37,2 px ni sous
+  15 px, rien hors de l'emprise, rien hors de sa face ; à neuf lacets dont 0° et 45°, le tri du shader d'accord avec la base
+  réelle de `CameraIso`, et le rayon derrière chaque sommet dessiné sur sa face ; la même construction deux fois au bit près,
+  l'empreinte figée ; l'enroulement contre celui d'une `BoxMesh` ; le shader (lecture copiée, facteurs seuls, plafond,
+  instrument éteint). **Mutations** : tuyaux 2 px au-dessus de l'arête → 52 échecs ; `randi()` dans le programme → 13 ;
+  faces de profil dessinées (`SEUIL_FACE` à 0) → 70 ; drapeau toujours allumé → 3. Code remis : 0 échec.
+- **La planche** (`docs/iso/tuyaux/planche_tuyaux.jpg`, tuiles et `mesures.txt` dans le même dossier ; `tools/photo_tuyaux.gd`,
+  qui hérite du photographe sans le toucher). Cloître, pilier 3 × 3, zoom ×2,5 ; quatre séances, chacune dans UN lancement,
+  jeu en pause entre ses prises : avec, sans (le nœud caché), torches éteintes, et l'emprise des tuyaux en blanc. Bruit entre
+  deux prises « avec » : 0 pixel. **Torche allumée** : 0 noir allumé, au seuil de 7,5/255 comme au pixel strict (0 → plus),
+  0 pixel plus clair que sans, à 0° (1 551 pixels de tuyaux éclairés) comme à 45° (1 808). **Torches éteintes** : sur 3 228
+  pixels d'emprise (0°) et 10 802 (45°), **0 au-dessus de 7,5/255, 0 au-dessus de 0** ; l'image entière garde ses 47 220 et
+  44 244 pixels au-dessus de 7,5 (le halo de proximité de J1, son corps, la visée), avec comme sans. La séance « face
+  entière » à 0° a pris ses torches éteintes dans la lumière faible des LED des murs (173 pixels de tuyaux entre 1 et 7/255) :
+  même là, 0 noir allumé, 0 plus clair.
+- **Le coût, compté** au cas le plus chargé trouvé (le Cloître, le plus meublé des six) : **+1 appel de dessin par vue 3D**
+  (passe visible 28 → 29 en vue unique à 0°, 30 → 31 à 45° ; écran scindé 50 → 52) et **+20 015 primitives par vue** (vue
+  unique 5 372 → 25 387 ; écran scindé 9 436 → 49 464). Les trois quarts de ces triangles sont écrasés en un point (faces
+  tournées ailleurs) : un coût de sommets, pas de pixels.
+
+**Ce qui reste.**
+- **La cadence, au Mac** — aucune dans le cloud (rendu logiciel). Règle des 3 % : `bench_framerate` avec et sans
+  `--tuyaux-essai`, au Cloître, en vue unique au 45° B et en écran scindé. S'il faut gagner : un maillage par direction de
+  face, pour ne plus soumettre les triangles écrasés.
+- **L'avis d'Adrien sur l'image** : des tuyaux sombres, jamais plus clairs que le béton — plus discrets que ceux des
+  illustrations ; au cadrage du duel (×1,5), une conduite fait 3 à 4 pixels.
+- Non suivis, dits : le lambert des faces (éteint, plancher 1 ; la garde rougit s'il s'allume) et la lumière 3D (close, Q20),
+  sous laquelle les tuyaux garderaient la lecture de la lightmap.
+- Hors périmètre, signalé : `volume_masque.gdshaderinc` (fusion `b18cf25`) n'a pas son `.uid` dans le dépôt ; l'import le crée.
+
 ### Ce qui attend Adrien — jalon H15
 
 Go / no-go ; ou la voie « vitrines seulement » ; tangage (60-65°), lacet

@@ -1,0 +1,40 @@
+# l0_bord
+MESURE lacet0 bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet0 torche allumée : 3268 pixels d'emprise des tuyaux à l'écran, dont 1551 au-dessus de 7,5/255 et 1822 au-dessus de 0 ; 1848 pixels changés par les tuyaux
+MESURE lacet0 torche allumée : image entière, 105055 pixels au-dessus de 7,5/255 avec les tuyaux, 105226 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE lacet0 torches éteintes : 3228 pixels d'emprise des tuyaux à l'écran, dont 0 au-dessus de 7,5/255 et 0 au-dessus de 0 ; 0 pixels changés par les tuyaux
+MESURE lacet0 torches éteintes : image entière, 47220 pixels au-dessus de 7,5/255 avec les tuyaux, 47220 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE appels vue unique lacet 0° AVEC tuyaux : total 102.3 (min 99, max 104), primitives 25386.6 (min 25380, max 25390), passe visible des vues 3D 29.0 (min 29, max 29)
+MESURE appels vue unique lacet 0° SANS tuyaux : total 101.9 (min 100, max 104), primitives 5371.8 (min 5368, max 5376), passe visible des vues 3D 28.0 (min 28, max 28)
+MESURE appels écran scindé lacet 0° AVEC tuyaux : total 176.2 (min 174, max 180), primitives 49464.3 (min 49460, max 49472), passe visible des vues 3D 52.0 (min 52, max 52)
+MESURE appels écran scindé lacet 0° SANS tuyaux : total 176.2 (min 173, max 179), primitives 9436.4 (min 9430, max 9442), passe visible des vues 3D 50.0 (min 50, max 50)
+# l45_bord
+MESURE lacet45 bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet45 torche allumée : 10602 pixels d'emprise des tuyaux à l'écran, dont 1808 au-dessus de 7,5/255 et 2091 au-dessus de 0 ; 2105 pixels changés par les tuyaux
+MESURE lacet45 torche allumée : image entière, 103349 pixels au-dessus de 7,5/255 avec les tuyaux, 103537 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE lacet45 torches éteintes : 10802 pixels d'emprise des tuyaux à l'écran, dont 0 au-dessus de 7,5/255 et 0 au-dessus de 0 ; 0 pixels changés par les tuyaux
+MESURE lacet45 torches éteintes : image entière, 44244 pixels au-dessus de 7,5/255 avec les tuyaux, 44244 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE appels vue unique lacet 45° AVEC tuyaux : total 104.2 (min 101, max 106), primitives 26370.4 (min 26364, max 26374), passe visible des vues 3D 31.0 (min 31, max 31)
+MESURE appels vue unique lacet 45° SANS tuyaux : total 103.5 (min 102, max 105), primitives 6355.1 (min 6352, max 6358), passe visible des vues 3D 30.0 (min 30, max 30)
+MESURE appels écran scindé lacet 45° AVEC tuyaux : total 147.7 (min 147, max 149), primitives 49049.3 (min 49048, max 49052), passe visible des vues 3D 30.0 (min 30, max 30)
+MESURE appels écran scindé lacet 45° SANS tuyaux : total 144.4 (min 143, max 146), primitives 9014.8 (min 9012, max 9018), passe visible des vues 3D 28.0 (min 28, max 28)
+# l0_face
+MESURE lacet0 bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet0 torche allumée : 2789 pixels d'emprise des tuyaux à l'écran, dont 1779 au-dessus de 7,5/255 et 1814 au-dessus de 0 ; 1822 pixels changés par les tuyaux
+MESURE lacet0 torche allumée : image entière, 79646 pixels au-dessus de 7,5/255 avec les tuyaux, 79676 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE lacet0 torches éteintes : 2786 pixels d'emprise des tuyaux à l'écran, dont 0 au-dessus de 7,5/255 et 173 au-dessus de 0 ; 1249 pixels changés par les tuyaux
+MESURE lacet0 torches éteintes : image entière, 54480 pixels au-dessus de 7,5/255 avec les tuyaux, 54480 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE appels vue unique lacet 0° AVEC tuyaux : total 102.0 (min 99, max 104), primitives 25386.1 (min 25380, max 25390), passe visible des vues 3D 29.0 (min 29, max 29)
+MESURE appels vue unique lacet 0° SANS tuyaux : total 101.7 (min 99, max 103), primitives 5371.4 (min 5366, max 5374), passe visible des vues 3D 28.0 (min 28, max 28)
+MESURE appels écran scindé lacet 0° AVEC tuyaux : total 175.6 (min 173, max 178), primitives 49071.2 (min 49066, max 49076), passe visible des vues 3D 52.0 (min 52, max 52)
+MESURE appels écran scindé lacet 0° SANS tuyaux : total 173.2 (min 171, max 177), primitives 9038.4 (min 9034, max 9046), passe visible des vues 3D 50.0 (min 50, max 50)
+# l45_face
+MESURE lacet45 bruit (A1 contre A2, même instant) : 0 pixels différents
+MESURE lacet45 torche allumée : 11423 pixels d'emprise des tuyaux à l'écran, dont 1691 au-dessus de 7,5/255 et 1723 au-dessus de 0 ; 1723 pixels changés par les tuyaux
+MESURE lacet45 torche allumée : image entière, 71968 pixels au-dessus de 7,5/255 avec les tuyaux, 71990 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE lacet45 torches éteintes : 11483 pixels d'emprise des tuyaux à l'écran, dont 0 au-dessus de 7,5/255 et 0 au-dessus de 0 ; 0 pixels changés par les tuyaux
+MESURE lacet45 torches éteintes : image entière, 48823 pixels au-dessus de 7,5/255 avec les tuyaux, 48823 sans ; noirs allumés 0 (seuil 7,5), 0 (stricts, 0 → plus) ; plus clairs que sans 0
+MESURE appels vue unique lacet 45° AVEC tuyaux : total 105.3 (min 102, max 107), primitives 26382.6 (min 26376, max 26386), passe visible des vues 3D 32.0 (min 32, max 32)
+MESURE appels vue unique lacet 45° SANS tuyaux : total 104.7 (min 103, max 107), primitives 6367.3 (min 6364, max 6372), passe visible des vues 3D 31.0 (min 31, max 31)
+MESURE appels écran scindé lacet 45° AVEC tuyaux : total 148.2 (min 146, max 151), primitives 49050.5 (min 49046, max 49056), passe visible des vues 3D 30.0 (min 30, max 30)
+MESURE appels écran scindé lacet 45° SANS tuyaux : total 145.9 (min 144, max 147), primitives 9017.9 (min 9014, max 9020), passe visible des vues 3D 28.0 (min 28, max 28)
