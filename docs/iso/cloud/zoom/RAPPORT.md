@@ -148,6 +148,12 @@ xvfb-run -a -s "-screen 0 1920x1080x24" godot --fixed-fps 60 --path . res://tool
   (lacet B), à tous les zooms (voir `*_scinde_*.jpg`, moitié droite). Je ne sais pas si c'est voulu (volume de torche
   vu de face ?) : à regarder sur le Mac.
 
+## La suite
+
+`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur la branche, après le dernier changement d'outil : **vert,
+137 suites, sans erreur de script, 592 s** (x86, cloud). Le banc n'entre dans aucune suite, car il exige une vraie
+fenêtre.
+
 ## Ce que je n'ai PAS pu prouver
 
 - **Rien sur la cadence** : le rendu logiciel du cloud ne mesure rien là-dessus. Le zoom ne change pas la taille de la
