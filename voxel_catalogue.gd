@@ -496,8 +496,8 @@ const CLASSES_DETAILLEES := ["pistolet", "occulteur", "spectre", "sentinelle", "
 	"fusil", "pompe", "arbalete", "fumiste"]
 ## CE QUE PORTE CHAQUE CLASSE, lu sur son portrait (V3 froide pour les six à bouteille ; `assets/ui/portraits/` pour les
 ## quatre autres, dont les accessoires sont les mêmes). Chaque pièce est facultative :
-## - `bandouliere` : la sangle en diagonale du torse, et `cartouches` le nombre de cartouches qu'elle porte (0 ou 3) ;
-##   `cartouche_role` leur couleur, 1 laiton, 2 métal (les grenades grises du Fumiste) ;
+## - `bandouliere` : la sangle en diagonale du torse, et `cartouches` le nombre de cartouches qu'elle porte (0 ou 3) ; leur
+##   couleur est le rôle 3, celle des cartouches de la tenue (grises, rouges), ou le laiton si la tenue n'en peint pas ;
 ## - `bretelles` : deux sangles verticales, d'épaule à ceinture (l'Illusionniste) ;
 ## - `etui` : la poche sur la hanche ; `fiole` : le petit flacon de ceinture (Illusionniste, Braconnier) ;
 ## - `tete` : le haut du torse, côté gauche — `"manometre"` (cadran de laiton : Parasite, Occulteur, Spectre) ou `"plaque"`
@@ -517,7 +517,7 @@ const KIT_DETAIL := {
 	"fusil": {"bretelles": true, "etui": true, "fiole": true, "tete": "plaque", "plaque_role": 2},
 	"pompe": {"tete": "plaque", "plaque_role": 2},
 	"arbalete": {"bandouliere": true, "etui": true, "fiole": true, "tete": "plaque", "plaque_role": 2},
-	"fumiste": {"bandouliere": true, "cartouches": 3, "cartouche_role": 2, "etui": true, "tete": "plaque", "plaque_role": 1},
+	"fumiste": {"bandouliere": true, "cartouches": 3, "etui": true, "tete": "plaque", "plaque_role": 1},
 }
 ## Le laiton des cartouches, des manomètres et du robinet, lu au pixel sur le portrait V3 froide du pistolet (ISO Assets,
 ## `portrait_pistolet_v3froide.png`, les cartouches de la bandoulière). Seule sa chromaticité sert : sa clarté est le rapport
@@ -534,6 +534,17 @@ static var forcer_fusion := -1
 
 static func detail_fusionne() -> bool:
 	return forcer_fusion >= 1 if forcer_fusion >= 0 else DETAIL_FUSION
+
+
+## Q33 (ordre 435, 2026-09-27) — LA MATIÈRE PEINTE (marbrage, pores) HORS DU JEU : elle ne se montre jamais au duel ni en
+## killcam (le fondu l'efface dès qu'un pixel d'écran couvre 0,5 pixel du monde), mais son code tournait dans le fragment de
+## chaque corps détaillé, et la série au Parasite mesurait 3,5 à 6 % de coût. Elle n'est plus compilée que sous
+## CORPS_DETAIL_MATIERE, que les bancs et les portraits allument. `forcer_matiere` : -1 ou 0 éteinte (le jeu), 1 allumée.
+static var forcer_matiere := -1
+
+
+static func matiere_detail_active() -> bool:
+	return forcer_matiere == 1
 
 
 static func detail_actif() -> bool:
@@ -556,9 +567,14 @@ static func palette_details(slug: String, nom: String, nom_teinte := "") -> Dict
 	# au-dessus du gris de la classe (le tissu y est déjà).
 	var plancher := luminance_affichee(p["ocre"])
 	var releve := func(c: Color) -> Color: return c if luminance_affichee(c) >= plancher else a_luminance(c, plancher)
-	return {"cuir": releve.call(p["brun"]),
-		"laiton": releve.call(a_luminance(TEINTE_LAITON, l * float((p["rapports"] as Dictionary)["cartouche"]))),
-		"metal": releve.call(p["arme"])}
+	var laiton: Color = releve.call(a_luminance(TEINTE_LAITON, l * float((p["rapports"] as Dictionary)["cartouche"])))
+	# Q33 — les cartouches du kit prennent la couleur des cartouches que la tenue peint déjà sur le torse (grises pour le
+	# Fumiste, rouges pour l'Incendiaire), au même rapport, équité comprise : en métal relevé au tissu, elles couvraient ces
+	# cartouches plus claires, et le Fumiste perdait 6 % de ses pixels visibles à 0,15 (2026-09-27, 03:08). Les classes dont la
+	# tenue ne peint pas de cartouches gardent le laiton.
+	var cartouche: Color = p.get("cartouche", Color(0, 0, 0, 0))
+	return {"cuir": releve.call(p["brun"]), "laiton": laiton, "metal": releve.call(p["arme"]),
+		"cartouche": releve.call(Color(cartouche.r, cartouche.g, cartouche.b, 1.0)) if cartouche.a > 0.0 else laiton}
 
 
 static func mannequin_actif() -> bool:

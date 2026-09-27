@@ -970,7 +970,7 @@ func _detailler(slug: String) -> void:
 	var pieces := []
 	if bool(kit.get("bandouliere", false)):
 		pieces.append([_torse, "Bandouliere", Vector3(longueur, LARGEUR_BANDOULIERE, 0.014), centre, angle, 0])
-		var cr := int(kit.get("cartouche_role", 1))
+		var cr := int(kit.get("cartouche_role", 3))
 		for i in int(kit.get("cartouches", 0)):
 			var t := (float(i) - 1.0) * 0.26 * longueur
 			pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03),
@@ -1035,6 +1035,8 @@ func _detailler(slug: String) -> void:
 			else:
 				_details.append(boite)
 	_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL")
+	if VoxelCatalogueT.matiere_detail_active():
+		_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL_MATIERE")
 	# Q33 — la pré-passe prend ce même programme (voir `IsoMateriaux.accorder_passe_profondeur`), et le suivra à chaque
 	# changement de shader de la couleur.
 	_materiau.set_meta(IsoMateriaux.MATERIAU_PROFONDEUR, _materiau_profondeur)

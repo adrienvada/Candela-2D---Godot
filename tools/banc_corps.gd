@@ -110,6 +110,8 @@ var _toutes_tenues := false
 var _fusion_ab := false
 ## Q33 — `--sans-profondeur` : les passes de profondeur des corps cachées (diagnostic, jamais en jeu).
 var _sans_profondeur := false
+## Q33 — `--sans-matiere` : la matière peinte éteinte, comme au duel (voir l'option).
+var _sans_matiere := false
 ## ISO13 — `--directions-mannequin` (avec `--mannequin`) : après la prise principale, la même scène sans mannequin, puis avec
 ## la lumière venue d'aucun côté, du sud, du nord, de l'est et de l'ouest (`_mannequin_<côté>.png`), même partie, temps figé.
 var _directions_mannequin := false
@@ -142,6 +144,8 @@ var _cone_repere: MeshInstance3D
 
 func _ready() -> void:
 	_lire_arguments(OS.get_cmdline_user_args())
+	# Q33 (ordre 435) — le banc montre la matière peinte, que le jeu ne compile plus ; `--sans-matiere` la retire, comme au duel.
+	VoxelCatalogueT.forcer_matiere = 0 if _sans_matiere else 1
 	_construire_scene()
 	_imprimer_rapport_boites()
 	if _capture != "":
@@ -206,6 +210,10 @@ func _lire_arguments(args: PackedStringArray) -> void:
 			# cachées. Si les triangles noirs de --fusion-ab disparaissent, ils venaient d'une couleur qui perd le test de
 			# profondeur contre SA propre pré-passe (deux programmes, aucune garantie d'invariance), pas du détail.
 			"sans-profondeur": _sans_profondeur = true
+			# Q33 — la matière peinte retirée, comme au jeu (depuis l'ordre 435, le jeu ne la compile plus) : ce banc dessine les
+			# corps environ deux fois plus grands qu'au duel (un pixel d'écran y couvre ~0,3 pixel du monde, le fondu de la
+			# matière est à 0,5), donc il la montrait. L'équité au seuil se mesure sans elle.
+			"sans-matiere": _sans_matiere = true
 			"temps-fixe": _temps_fixe = true
 			"directions-mannequin": _directions_mannequin = true
 			"contours-essai": _contours_essai = true
@@ -603,6 +611,10 @@ func _capturer_puis_quitter() -> void:
 		_cone_repere.visible = false
 	get_window().size = _taille
 	await get_tree().process_frame
+	if _sans_matiere:
+		for c in _corps:
+			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("detail_matiere", 0.0)
+		print("BANC_CORPS --sans-matiere : matière peinte éteinte sur %d corps" % _corps.size())
 	if _sans_profondeur:
 		var cachees := 0
 		for c in _corps:

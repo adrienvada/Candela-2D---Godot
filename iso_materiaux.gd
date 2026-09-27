@@ -227,6 +227,8 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	# puis rappelle ce crochet ; la variante CORPS_DETAIL doit y survivre. Sans le drapeau, rien.
 	if VoxelCatalogue.detail_actif():
 		materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL")
+		if VoxelCatalogue.matiere_detail_active():
+			materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL_MATIERE")
 		accorder_passe_profondeur(materiau)
 
 

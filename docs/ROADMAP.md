@@ -27812,6 +27812,50 @@ sur les deux chemins, là où il y en avait de 88 à 739. Deux écarts restaient
   pixels isolés ou des traits d'un pixel sur les arêtes des pièces, à 32/255 au plus ; toute pièce devant une autre, toute
   couleur fausse, tout noir fait échouer la preuve.
 
+**Au Mac, la nuit du 27/09** (tour de Beauté, 03:06-05:13, ordres 427 à 434).
+- **La preuve `--fusion-ab` passe sur le pilote d'Apple** (trois classes, 0,8 et 0,15, `f38e5f7`) : le Parasite a 24 pixels
+  différents à 0,8, tous en traits d'arête, 20/255 au plus ; l'Occulteur et l'Illusionniste sont identiques au pixel ; aucun
+  noir, aucun bloc 2×2.
+- **Le banc des corps ne montre pas le duel.** Il dessine les corps environ deux fois plus grands qu'au duel : un pixel d'écran
+  y couvre ~0,3 pixel du monde, et la matière peinte ne s'efface qu'à 0,5. Mesurée au banc, elle retire au seuil les mêmes
+  pixels qu'à Q29, au pixel près ; au duel, elle n'existe pas. L'option `--sans-matiere` du banc éteint la matière, comme la
+  taille du duel le fait d'elle-même. Ainsi mesurée : **à 0,10, détaillée = V3 pour les dix classes** (mêmes comptes), la part
+  au gris sur 2,9 points (≤ 5), apparition à 0,10, rien à 0,09, noir 0/255 ; **à 0,15, huit classes à 0,98-1,00**, le
+  Fumiste à 0,942 et l'Incendiaire vers 0,95 — leurs cartouches de kit, en métal relevé au tissu, couvraient les cartouches
+  plus claires que la tenue peint déjà. Corrigé par la couleur : les cartouches du kit prennent celle de la tenue (rôle 3),
+  à remesurer.
+- **La cadence au Parasite, sous une fusée, vue unique** (règle 278, série M0 M1 M1 M0 M0 M1, 04:33-04:54, Claude Helper
+  admis selon l'ordre 432) : M0 85, 88, 87 → 87 ; M1 82, 82, 82 → 82 ; **rapport 0,943** (seuil 0,970) ; 1 % bas M1 à 75
+  (seuil > 60). Pas de verdict au sens de la règle : les charges de Claude Helper diffèrent de 5 points entre les bras
+  (≤ 2 requis). Mais la seule prise M0 faite à la même charge que les M1 donne 85, soit 0,965 : **le détail coûte 3,5 à 6 %
+  au Parasite, au-dessus du seuil**. Le 1 % bas reste loin au-dessus de 60. La paire au pompe n'a pas été faite (Spotlight à
+  92 % juste après, puis l'heure limite de 05:15). Pistes, à mesurer une à une : couper la matière peinte au jeu (elle ne s'y
+  montre jamais, mais son code tourne sur chaque pixel des corps détaillés), puis la pré-passe plus longue, puis le nombre
+  de pièces.
+- Deux corrections du lanceur de série repris d'Iso 1 (dites à la session cloud avant les chiffres) : une prise refusée par la
+  porte se refait (ordre 433), et la porte ne juge que la fenêtre mesurée, après les 30 s de chauffe du banc.
+
+**La matière peinte hors du jeu** (ordre 435, 2026-09-27, accepté par la session cloud). Le marbrage et les pores ne sont plus
+compilés que sous `CORPS_DETAIL_MATIERE`, que les bancs allument (`VoxelCatalogue.forcer_matiere`, `banc_corps` par défaut,
+`--sans-matiere` pour la retirer) ; au jeu, le corps détaillé ne porte que ses accessoires et leurs couleurs. Elle ne s'y
+montrait jamais, mais son code tournait sur chaque pixel des corps détaillés : c'est la première piste du coût de 3,5 à 6 %
+mesuré au Parasite. Et **les cartouches du kit prennent la couleur de celles que la tenue peint** (rôle 3 : grises pour le
+Fumiste, rouges pour l'Incendiaire, laiton ailleurs) : l'équité à 0,15. Les deux sont à remesurer : la suite, puis la série (la
+matière seule d'abord, puis la paire au pompe).
+
+**Une question d'équité posée par la planche cloud des dix classes** (ordre 435 : sans détail, au même endroit et sous la même
+torche, le capteur du corps adverse lit 0,092 à 0,104 selon la classe). Lu dans le code, sans mesure :
+- le disque du capteur est le même pour toutes les classes (rayon 18) ; mais la torche porte dans ses ombres l'occluder de
+  l'adversaire (`flashlight.shadow_item_cull_mask = 1 | 2 | COUCHE_OCCLUDER_ADVERSE`), et cet occluder épouse la SILHOUETTE
+  de la classe (`_accorder_occluder_a_la_silhouette`, décision du 2026-09-11 : l'ombre d'un joueur a la forme de son arme).
+  La part du disque qui tombe dans cette ombre dépend donc de la largeur et de la longueur de la silhouette : un effet
+  géométrique de cette décision, pas une discrétion voulue par classe. La vue de dessus a le même effet sous une autre forme
+  (son sprite est la silhouette elle-même). Pour le prouver : la même scène avec, pour toutes les classes, l'occluder rond du
+  torse à la place de la silhouette ; l'écart doit disparaître.
+- l'opacité de l'adversaire à 0,6475 dans la vue de J1 n'est pas une affaire de classe : le corps iso recopie l'opacité rendue
+  du sprite adverse, `min(éblouissement du REGARDEUR, suie)` (`Brouillage.opacite(dazzle_amount)`, `player.gd`) — la même quelle
+  que soit la classe regardée.
+
 **D2 — l'équité au seuil : la cause, et le correctif (pas encore mesuré).** Au seuil (0,10), le kit de Q29 retirait jusqu'à
 la moitié des pixels visibles. La cause : `detail_fiche` passe sur TOUT le corps, pas seulement sur les accessoires, et le
 marbrage à 0,86, lui, restait à la taille du duel. Deux corrections :

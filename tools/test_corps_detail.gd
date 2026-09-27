@@ -339,10 +339,15 @@ func _la_visibilite() -> void:
 	for slug in KIT:
 		var l := VoxelCatalogue.luminance_affichee(VoxelCatalogue.fiche(slug)["couleur"])
 		var p := VoxelCatalogue.palette_details(slug, "sombre3", "froide")
-		sous = sous and p.size() == 3
+		sous = sous and p.size() == 4
 		for cle in p:
 			sous = sous and VoxelCatalogue.luminance_affichee(p[cle]) <= l + 0.002
-	_check("cuir, laiton et métal à un rapport ≤ 1 du gris de leur classe, pour les dix", sous)
+	_check("cuir, laiton, métal et cartouches à un rapport ≤ 1 du gris de leur classe, pour les dix", sous)
+	var pf := VoxelCatalogue.palette_details("fumiste", "sombre3", "froide")
+	var tf := VoxelCatalogue.palette_tenue("fumiste", "sombre3", "froide")
+	_check("Q33 : les cartouches du kit ont la couleur des cartouches de la tenue (grises pour le Fumiste), pas le métal",
+		(pf["cartouche"] as Color).is_equal_approx(Color((tf["cartouche"] as Color).r, (tf["cartouche"] as Color).g, (tf["cartouche"] as Color).b, 1.0))
+		or VoxelCatalogue.luminance_affichee(pf["cartouche"]) >= VoxelCatalogue.luminance_affichee(tf["cartouche"]) - 0.002)
 	_check("aucune couleur d'accessoire en gris ni en portraits (l'essai est celui de la V3)",
 		VoxelCatalogue.palette_details("pistolet", "").is_empty() and VoxelCatalogue.palette_details("pistolet", "portraits").is_empty())
 	var inc := FileAccess.get_file_as_string("res://iso_corps_detail.gdshaderinc")
@@ -353,6 +358,23 @@ func _la_visibilite() -> void:
 		and inc.contains("return c * mix(1.0, k, detail_matiere);"))
 	_check("les pores s'effacent à la taille du duel (entiers sous 0,3 pixel du monde par pixel d'écran, nuls au-dessus de 0,5)",
 		inc.contains("float fondu = 1.0 - smoothstep(0.3, 0.5, ecran);"))
+	# Q33 (ordre 435) — la matière peinte hors du jeu : compilée sous CORPS_DETAIL_MATIERE seulement, que le jeu n'allume pas.
+	var debut_mat := inc.find("#ifdef CORPS_DETAIL_MATIERE")
+	_check("Q33 : la matière peinte (marbrage et pores) n'est compilée que sous CORPS_DETAIL_MATIERE ; sans lui, la couleur de l'accessoire seule",
+		debut_mat > 0 and inc.find("float marbre") > debut_mat and inc.find("#else\n\treturn c;\n#endif") > inc.find("float marbre"))
+	var racine_m := Node3D.new()
+	root.add_child(racine_m)
+	VoxelCatalogue.forcer_matiere = -1
+	var au_jeu := _corps(racine_m, "pistolet", true)
+	VoxelCatalogue.forcer_matiere = 1
+	var au_banc := _corps(racine_m, "pistolet", true)
+	VoxelCatalogue.forcer_matiere = -1
+	_check("Q33 : au jeu, le corps détaillé ne compile pas la matière ; au banc (forcer_matiere = 1), si — et sa pré-passe suit",
+		not au_jeu.materiau().shader.code.contains("#define CORPS_DETAIL_MATIERE\n")
+		and au_banc.materiau().shader.code.contains("#define CORPS_DETAIL_MATIERE\n")
+		and au_banc.materiau_profondeur().shader == au_banc.materiau().shader
+		and au_jeu.materiau_profondeur().shader == au_jeu.materiau().shader)
+	racine_m.queue_free()
 	_check("Q33 : le marbrage aussi — à la taille du duel, plus de matière du tout (le facteur entier suit le fondu)",
 		inc.contains("float k = mix(1.0, marbre * mix(1.0, DETAIL_PORE, pore), fondu);"))
 	var pas_plus_sombre := true

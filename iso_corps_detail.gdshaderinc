@@ -22,13 +22,15 @@
 #ifdef CORPS_DETAIL
 
 uniform float detail = 0.0;
-// Les demi-tailles des accessoires (tuiles) et leur rôle : 0 cuir, 1 laiton, 2 métal. `detail_n` : combien sont posés.
+// Les demi-tailles des accessoires (tuiles) et leur rôle : 0 cuir, 1 laiton, 2 métal, 3 cartouches de la tenue. `detail_n` : combien sont posés.
 uniform vec3 detail_demi[10];
 uniform int detail_role[10];
 uniform int detail_n = 0;
 uniform vec4 detail_cuir : source_color = vec4(1.0);
 uniform vec4 detail_laiton : source_color = vec4(1.0);
 uniform vec4 detail_metal : source_color = vec4(1.0);
+// Q33 — rôle 3 : les cartouches, à la couleur de celles que la tenue peint (voir `VoxelCatalogue.palette_details`).
+uniform vec4 detail_cartouche : source_color = vec4(1.0);
 // La force des pores et du marbrage : 0 les éteint (la bascule des bancs, même partie).
 uniform float detail_matiere = 1.0;
 // Q33 — LA PRÉ-PASSE DE PROFONDEUR EST CE MÊME PROGRAMME (ordre 424) : le matériau de profondeur d'un corps détaillé porte la
@@ -52,10 +54,15 @@ vec3 detail_fiche(vec3 fiche, vec3 lp, vec3 d, vec3 ech, vec3 n, float px_par_un
 			break;
 		}
 		if (portrait_est(d, detail_demi[i])) {
-			c = detail_role[i] == 0 ? detail_cuir.rgb : (detail_role[i] == 1 ? detail_laiton.rgb : detail_metal.rgb);
+			c = detail_role[i] == 0 ? detail_cuir.rgb : (detail_role[i] == 1 ? detail_laiton.rgb
+				: (detail_role[i] == 2 ? detail_metal.rgb : detail_cartouche.rgb));
 			break;
 		}
 	}
+#ifdef CORPS_DETAIL_MATIERE
+	// Q33 (ordre 435) — LA MATIÈRE PEINTE HORS DU JEU : compilée seulement sous CORPS_DETAIL_MATIERE, que les bancs et les
+	// portraits allument (`VoxelCatalogue.matiere_detail_active`). Au duel comme en killcam, elle s'effaçait de toute façon
+	// (un pixel d'écran y couvre au moins 0,5 pixel du monde) ; son code, lui, tournait sur chaque pixel des corps détaillés.
 	// Les coordonnées de la face, en pixels du monde, accrochées à la boîte : horizontale, verticale.
 	vec3 q = lp * ech * px_par_unite;
 	vec3 an = abs(n);
@@ -82,6 +89,9 @@ vec3 detail_fiche(vec3 fiche, vec3 lp, vec3 d, vec3 ech, vec3 n, float px_par_un
 	// Le personnage détaillé en jeu ne doit rien perdre au bord de la lumière : la matière ne vit plus que de près.
 	float k = mix(1.0, marbre * mix(1.0, DETAIL_PORE, pore), fondu);
 	return c * mix(1.0, k, detail_matiere);
+#else
+	return c;
+#endif
 }
 
 #endif
