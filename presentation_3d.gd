@@ -441,7 +441,7 @@ func _ready() -> void:
 	# Après la caméra 2D et l'interpolation des joueurs : sinon le sol et la lightmap
 	# auraient une image d'écart, et le sol tremblerait à chaque pas.
 	process_priority = 10000
-	var args := OS.get_cmdline_user_args()
+	var args := DrapeauxDeLancement.arguments()
 	var i := args.find(DRAPEAU_PATE)
 	if i >= 0 and i + 1 < args.size():
 		var st := IsoPate.style_depuis_nom(args[i + 1])

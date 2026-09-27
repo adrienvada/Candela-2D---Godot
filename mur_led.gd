@@ -139,7 +139,7 @@ var _f7_tenue := false
 static func est_actif() -> bool:
 	if not _actif_lu:
 		_actif_lu = true
-		var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+		var args := DrapeauxDeLancement.arguments()
 		for arg in args:
 			if arg == DRAPEAU_FIGE:
 				_fige = 1.0

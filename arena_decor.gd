@@ -83,7 +83,7 @@ var _pochoirs: Array = []
 
 
 static func pochoirs_actifs() -> bool:
-	return OS.get_cmdline_user_args().has(DRAPEAU_POCHOIRS)
+	return DrapeauxDeLancement.present(DRAPEAU_POCHOIRS)
 
 
 ## Les pochoirs de la table pour CETTE carte, en pixels du monde (le tableau est partagé avec les copies par vue).

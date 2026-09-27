@@ -42,7 +42,7 @@ const DUREE_PLEIN_FEU := 2.0          # s
 ## pas un réglage de match.
 const DUREE_PLEIN_FEU_LONG := 4.0
 const DRAPEAU_ROUGE_LONG := "--fusee-rouge-long"
-static var duree_plein_feu: float = DUREE_PLEIN_FEU_LONG if OS.get_cmdline_user_args().has(DRAPEAU_ROUGE_LONG) \
+static var duree_plein_feu: float = DUREE_PLEIN_FEU_LONG if DrapeauxDeLancement.present(DRAPEAU_ROUGE_LONG) \
 	else DUREE_PLEIN_FEU
 ## La braise de l'essai : elle rend au plein feu ce qu'il gagne, pour que la durée totale ne bouge pas.
 static var duree_braise: float = DUREE_BRAISE - (duree_plein_feu - DUREE_PLEIN_FEU)

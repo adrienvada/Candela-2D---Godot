@@ -747,4 +747,4 @@ func _load_config() -> bool:
 	return true
 
 func _flag_present(flag: String) -> bool:
-	return flag in OS.get_cmdline_user_args() or flag in OS.get_cmdline_args()
+	return DrapeauxDeLancement.present(flag)

@@ -213,7 +213,7 @@ static func facteur_gris_de(slug: String, rang: int) -> float:
 	if forcer_gris_facteur >= 0.0:
 		return forcer_gris_facteur
 	if _gris_rangs_ligne < 0:
-		_gris_rangs_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_GRIS_RANGS) else 0
+		_gris_rangs_ligne = 1 if DrapeauxDeLancement.present(DRAPEAU_GRIS_RANGS) else 0
 	if _gris_rangs_ligne == 1 or not GRIS_EGAUX.has(slug):
 		return _facteur_gris(rang)
 	return float(GRIS_EGAUX[slug])
@@ -292,7 +292,7 @@ static func tenue() -> String:
 		return forcer_tenue
 	if forcer_portraits >= 0:
 		return "portraits" if forcer_portraits == 1 else ""
-	return tenue_de(OS.get_cmdline_user_args())
+	return tenue_de(DrapeauxDeLancement.arguments())
 
 
 ## La tenue que nomme une ligne de commande (la première qui en nomme une) : `TENUE_PAR_DEFAUT` si aucune.
@@ -519,7 +519,7 @@ static func detail_actif() -> bool:
 	if forcer_detail >= 0:
 		return forcer_detail == 1
 	if _detail_ligne < 0:
-		_detail_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_DETAIL) else 0
+		_detail_ligne = 1 if DrapeauxDeLancement.present(DRAPEAU_DETAIL) else 0
 	return _detail_ligne == 1
 
 
@@ -537,10 +537,10 @@ static func palette_details(slug: String, nom: String, nom_teinte := "") -> Dict
 static func mannequin_actif() -> bool:
 	if forcer_mannequin >= 0:
 		return forcer_mannequin == 1
-	# Lu une fois : la présentation le demande à chaque image, et `get_cmdline_user_args()` rend un tableau neuf à chaque appel
+	# Lu une fois : la présentation le demande à chaque image, et `DrapeauxDeLancement.arguments()` rend un tableau neuf à chaque appel
 	# (question de coût de la session cloud, 01:13 — drapeau éteint, rien ne doit tourner sans servir).
 	if _mannequin_ligne < 0:
-		_mannequin_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_MANNEQUIN) else 0
+		_mannequin_ligne = 1 if DrapeauxDeLancement.present(DRAPEAU_MANNEQUIN) else 0
 		# La preuve, dans le journal, que le drapeau a porté dans CE lancement (demande d'ISO7 Gadgets pour ses séries de
 		# cadence : un drapeau perdu se déguise en l'autre branche d'une comparaison). Même forme que « [faisceau] allumé ».
 		if _mannequin_ligne == 1:
@@ -553,7 +553,7 @@ static func mannequin_actif() -> bool:
 static func teinte() -> String:
 	if forcer_teinte != "":
 		return forcer_teinte
-	return teinte_de(OS.get_cmdline_user_args())
+	return teinte_de(DrapeauxDeLancement.arguments())
 
 
 static func teinte_de(args: PackedStringArray) -> String:

@@ -134,7 +134,7 @@ func _init() -> void:
 	name = "Volumes"
 	_plan.size = Vector2.ONE
 	_quad.size = Vector2.ONE
-	for arg in OS.get_cmdline_user_args():
+	for arg in DrapeauxDeLancement.arguments():
 		if arg == DRAPEAU_FAISCEAU:
 			faisceaux_actifs = true
 		elif arg == DRAPEAU_MASQUE_FUMEE:
