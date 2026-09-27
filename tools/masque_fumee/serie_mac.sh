@@ -135,4 +135,9 @@ for b in ("M0", "M1", "V1", "V2", "V3"):
           % (b, meds, statistics.median(meds), r, ms, bas, "—" if b == "M0" else ("PASSE" if ok else "ÉCHOUE")))
 if not tient:
     print("SÉRIE SANS VERDICT : la référence ne tient pas dans 5 % (repos de cinq minutes, charge relue, puis relancer).")
+if len(ref) < 3:
+    print("⚠ moins de trois prises de référence : vérification des gardes seulement, AUCUN verdict (ORDRE_COURT).")
 EOF
+if [ "$SECONDES" -lt 20 ]; then
+  echo "⚠ SECONDES=$SECONDES : le 1 % bas « hors 10 s » n'a presque aucune image — ces chiffres ne valent rien." | tee -a "$OUT/serie.txt"
+fi

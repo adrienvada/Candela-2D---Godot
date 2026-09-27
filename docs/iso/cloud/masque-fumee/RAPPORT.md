@@ -1,9 +1,10 @@
 # Un masque de la fumée qui ne coûte pas 2,4 ms — rapport de la session cloud « masque-fumée »
 
 > Branche `claude/cloud-masque-fumee`, partie de `origin/integration-iso14` (`60e5c6d`), 2026-09-27, à partir de 06:08
-> (Paris). **État : fait côté cloud.** Trois formes moins chères du masque, éteintes par défaut, prouvées à l'image
-> (0 fuite, et hors du corps de J1 qui frémit, 0 pixel d'écart au masque de Gadgets) ; la cause du prix établie par des
-> comptes ; la série pour le Mac prête. **Reste le chronomètre, qui ne se lit que sur le Mac.**
+> (Paris), fin vers 08:30. **État : fait côté cloud.** Trois formes moins chères du masque, éteintes par défaut, prouvées
+> à l'image (0 fuite, et hors du corps de J1 qui frémit, 0 pixel d'écart au masque de Gadgets) ; la cause la plus probable du
+> prix établie par des comptes ; la série pour le Mac prête. Suite complète verte. **Reste le chronomètre, qui ne se lit que
+> sur le Mac.** Branche poussée ; pas de pull request (consigne de la session coordinatrice).
 
 ## Pour Adrien, en cinq lignes
 
@@ -13,7 +14,8 @@
 2. J'ai écrit **trois versions moins chères** du même masque, chacune derrière son propre interrupteur, **éteintes** : le
    jeu par défaut ne change pas d'un octet (vérifié dans le code que la carte graphique reçoit).
 3. **Les trois donnent la même image que le masque d'aujourd'hui** (0 pixel de différence hors du joueur qui respire) et
-   **ne salissent pas le noir** : 0 pixel allumé dans le noir, pour J1 comme pour J2, en vue unique et en écran scindé.
+   **ne salissent pas le noir** : 0 pixel allumé dans le noir, à 45° comme à 0°, en vue unique et en écran scindé. Chez J2
+   en écran scindé, le masque agit aux mêmes endroits, mais sa vue, éblouie par la fusée, n'a pas pu être comparée au pixel.
 4. La plus prometteuse, le **« pochoir »**, pose la question une fois par pixel au lieu de près de quatre (une par couche
    de fumée), et ne refait le calcul du sol que pour 3 % des pixels au lieu de 41 % : sur le papier, beaucoup moins de
    travail — mais seul ton Mac dira combien de millisecondes.
@@ -263,6 +265,12 @@ Et pour toutes : `Rendu : iso lacet 45° B`, `[usure] allumée`, aucune `SHADER 
 position moyenne pour chaque bras (10,5), quatre prises chacun. **Verdict imprimé** : série VALIDE si les quatre M0 tiennent
 dans 5 % ; un bras PASSE si sa médiane des médianes ≥ 0,970 × M0 et son 1 % bas médian (hors 10 s) ≥ 60.
 
+**Le lanceur vérifié dans le cloud** (pas la cadence) : `ORDRE_COURT="M0 M1 V1 V2 V3" SECONDES=5` avec un Godot sous Xvfb
+à horloge fixe — les cinq bras lancent le VRAI banc (`bench_framerate.tscn --fusee --vue-unique --classe=pompe`), chacun
+imprime sa ligne d'état attendue, `Rendu : iso lacet 45° B · caméras 2D J1 -45.0°, J2 -225.0°`, `[usure] allumée`, et
+aucune erreur de shader ni de script (le GPU logiciel compile les cinq variantes). Les chiffres de cadence de cet essai ne
+valent rien (horloge fixe, 5 s).
+
 ## Les images
 
 `planche.html` (dans ce dossier, autonome, images en chemins relatifs) : pour la fumée sans masque, le masque de Gadgets et
@@ -330,3 +338,10 @@ première image.
    référence.
 7. **Le stencil marche en `gl_compatibility` 4.7** (`stencil_mode`), et il est vidé à chaque image : un outil de plus
    pour faire une seule fois par pixel ce qu'un empilement de couches fait N fois.
+8. **Dans une preuve en écran scindé, un joueur proche d'une fusée en est ÉBLOUI** : son voile et son flou animés font
+   différer deux prises identiques de sa vue jusqu'à 226/255, et aucun pixel n'y est noir. Le remettre à zéro à chaque image
+   ne suffit pas (un pas d'intégration relève tout à 1/255). Une preuve au pixel de la vue de J2 demande une mise en scène
+   où il voit la fusée sans en être ébloui.
+9. **Un outil qui compile ses variantes à l'exécution relit les includes À CE MOMENT-LÀ** : changer un `.gdshaderinc`
+   pendant qu'une prise tourne contamine la prise (payé ici : une forme compilée pendant un découpage de commits, 1,17
+   million de pixels noirs). Découper ses commits dans un worktree à part.
