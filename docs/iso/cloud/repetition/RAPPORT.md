@@ -8,7 +8,7 @@
 4. Si tu ajoutes des options au lancement, **mets-les après deux tirets** (`godot --path . -- --sans-usure`). Sans les tirets, `--lacet=0` marche, mais `--sans-usure` et d'autres sont ignorés sans rien dire.
 5. Deux messages d'erreur rouges apparaîtront dans la console : l'un en ouvrant l'éditeur après un match, l'autre en le quittant par Échap. Ils ne cassent rien de visible ; les corrections sont proposées plus bas.
 
-> Base : `origin/integration-iso14` à `18f5fdc`, puis à `60e5c6d` (la nouvelle tête poussée cette nuit, voir la fin). Session du 2026-09-27, de 01:10 à 04:xx (Paris). Rendu logiciel (llvmpipe) sous Xvfb en 1920×1080 : les images valent pour ce qui est affiché et pour les couleurs, **pas** pour la cadence ni l'éblouissement. Aucun chiffre d'images par seconde de ce rapport n'est une mesure.
+> Base : `origin/integration-iso14` à `18f5fdc`, puis à `60e5c6d` (la nouvelle tête poussée cette nuit, voir la fin). Session du 2026-09-27, de 01:10 à 04:15 (Paris). Rendu logiciel (llvmpipe) sous Xvfb en 1920×1080 : les images valent pour ce qui est affiché et pour les couleurs, **pas** pour la cadence ni l'éblouissement. Aucun chiffre d'images par seconde de ce rapport n'est une mesure.
 
 ## 1. Ce que le jeu fait VRAIMENT par défaut sur `18f5fdc` (lu dans le code, puis vu à l'exécution)
 
@@ -137,12 +137,24 @@ godot --headless --path . --script res://tools/cloud_repetition/drapeaux.gd -- -
 grep -n "SCRIPT ERROR\|ERROR:\|WARNING:\|leaked" $R/pilote.log | grep -v "V-Sync\|audio drivers\|ERR_CANT_OPEN"
 ```
 
-## 6. La nouvelle tête `60e5c6d`
+## 6. La nouvelle tête `60e5c6d` — la répétition refaite dessus
 
-(à compléter)
+Iso 1 a poussé cette nuit quatre commits sur `integration-iso14` (`ef758bd`, `170ad78`, `efca0fe`, `60e5c6d`) : la bande des faces du masque de la fumée, **le point de braise de la fusée posée presque blanc PAR DÉFAUT (Q34 = C, `iso_volumes.gd:104`, `coeur_fusee := 2` ; `--sans-fusee-coeur` l'éteint)**, l'essai du rouge long et un banc d'équité de la fusée. Fusionnée dans cette branche (`2fde379`), puis :
+
+- **Suite complète : verte**, 137 suites, sans erreur de script, 573 s.
+- **Parcours complet refait** (menus, six cartes en écrans scindés, six entraînements, F3/F5/F6, éditeur, QUITTER), avec en plus **une fusée lancée par J1 sur chaque carte, torches éteintes** (`images/passe2_60e5c6d/22c_*`, planche `planche_fusees_60e5c6d.jpg`).
+- **Comparaison avec `18f5fdc` : aucune différence de comportement.** Les six matchs vont au bout, mêmes valeurs par défaut (45° B, ×1,5, 0,15), mêmes défauts (D1 à D4), mêmes deux erreurs de console (E1 à l'ouverture de l'éditeur, E2 à Échap), aucune erreur nouvelle, aucune fuite à la sortie du pilote.
+- La fusée : lumière rouge, point de braise blanc visible au sol, dans les deux vues. Sur Le Cloître et L'Usine, elle retombe près de J1 et l'image sature en blanc avec la frange de l'éblouissement : **le cloud ne juge ni l'éblouissement ni son dosage** — c'est l'image à regarder sur le Mac, avec et sans `--sans-fusee-coeur` (après `--`, voir D3).
+- Le nouveau défaut ne s'imprime pas : à `2`, `iso_volumes.gd` se tait (`if coeur_fusee != 2`), donc la console n'atteste plus l'état par défaut du cœur, à l'inverse de `[fumée masque] éteint` et `[usure] allumée`. Cosmétique (C5), mais c'est la règle que le code se donne l. 149 (« la référence d'une série se prouve par ce que le JEU dit »).
 
 ## 7. À reporter dans la feuille de route (par l'intégration)
 
 - Piège : **les drapeaux se lisent de deux façons** (D3) — `--lacet=` passe avant `--`, `--sans-usure` non.
 - Piège de banc : **un banc en fenêtre dans un foyer neuf joue l'intro par-dessus le salon** ; `test_online_match` y cherche PRÊT sous l'intro et échoue (« aucun bouton PRÊT visible »). Déjà consigné pour le photographe (« Un banc qui monte main.tscn dans un foyer neuf photographie l'intro ») ; vaut aussi pour `test_online_match` hors headless.
 - Correction de `CLAUDE.md` : F5 (D2).
+- Les correctifs proposés, à confier aux sessions qui tiennent les fichiers : D1 (`game_state.gd:901` ou `ui.gd:4343-4346`), D4 (`presentation_3d.gd:2039`), E1 (`audio_manager.gd:2394`), E2 (`map_editor.gd:385-387`), E3 (`game_state.gd`, `_brouillages`).
+
+## 8. Note de fonctionnement de cette session
+
+- **Aucune poussée n'a pu être faite depuis cette session** : la première `git push` (vers `claude/cloud-repetition`) a été refusée par le garde des permissions de l'environnement, et la consigne du garde interdit de la retenter par un autre chemin. Tout est commité **localement** sur `claude/cloud-repetition` ; la poussée reste à faire par qui en a le droit.
+- Un faux défaut évité : un premier parcours a cru que JOUER ne lançait rien après un match. C'était le pilote, qui revenait au menu sans congédier l'affiche de fin — l'affiche refuse alors JOUER par conception (`game_state.gd:4991`). Le pilote congédie désormais l'affiche d'une touche, comme un joueur.
