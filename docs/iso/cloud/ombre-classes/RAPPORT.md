@@ -1,5 +1,9 @@
 # L'équité du capteur entre les dix classes — la cause (session cloud ombre-classes, 2026-09-27)
 
+> **État : terminé.** Suite complète verte dans le cloud (`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` : « tout
+> passe, sans erreur de script (614s) », code 0, `test_ombre_ronde` compris). Tous les commits sont poussés sur
+> `claude/cloud-ombre-classes`.
+
 ## Pour Adrien, en cinq lignes
 
 1. Au même endroit, sous la même torche, certaines classes reçoivent jusqu'à 11 % de lumière de moins que d'autres
