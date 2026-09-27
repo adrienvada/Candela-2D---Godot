@@ -109,7 +109,6 @@ def main():
             m["eteint"] = sol_eteint(e, ids)
             racine = os.path.join(args.sortie, nom, e["nom"])
             Image.open(ids[0]).convert("RGB").save(racine + "-plein.jpg", quality=85)
-            Image.open(ids[1]).convert("RGB").save(racine + "-eteint.jpg", quality=85)
             base.loupe(ids[0], e["geometrie"]["centre"], racine + "-loupe.jpg")
             base.loupe(ids[1], e["geometrie"]["centre"], racine + "-loupe-eteint.jpg")
             e2 = {k: e[k] for k in e if k not in ("geometrie", "ids")}
