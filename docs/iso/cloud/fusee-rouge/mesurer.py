@@ -76,6 +76,11 @@ def noir_croise(e_ref, ids_ref, e_var, ids_var):
     return out
 
 
+def ecart(v, r):
+    """Écart relatif en %, ou None si la référence n'a rien d'allumé."""
+    return round(100.0 * (v / r - 1.0), 2) if r else None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--variante", action="append", required=True)
@@ -111,8 +116,8 @@ def main():
             lignes.append(e2)
             brut[nom].append((e, ids))
             print(nom, e["nom"], "âge lu %.4f" % e["age_lu"], e["acte"],
-                  "sol %.1f° %.2f L%.1f | éteint %s" % (m["sol_teinte"], m["sol_saturation"], m["sol_luminance"],
-                                                         json.dumps(m["eteint"])))
+                  "sol %s° %s L%s | éteint %s" % (m["sol_teinte"], m["sol_saturation"], m["sol_luminance"],
+                                                   json.dumps(m["eteint"])))
         tout["variantes"][nom] = lignes
     for var, ref in PAIRES:
         if var not in brut or ref not in brut:
@@ -123,8 +128,8 @@ def main():
             c = {
                 "age": er["age_demande"],
                 "meme_age": abs(ev["age_lu"] - er["age_lu"]) < 1e-9,
-                "lum_joueur": round(100.0 * (mv["sol_luminance"] / mr["sol_luminance"] - 1.0), 2),
-                "lum_eteint": round(100.0 * (mv["eteint"]["luminance"] / mr["eteint"]["luminance"] - 1.0), 2),
+                "lum_joueur": ecart(mv["sol_luminance"], mr["sol_luminance"]),
+                "lum_eteint": ecart(mv["eteint"]["luminance"], mr["eteint"]["luminance"]),
                 "noir": noir_croise(er, ir, ev, iv),
             }
             rangs.append(c)
@@ -135,22 +140,26 @@ def main():
     ecrire_planche(tout, args.sortie)
 
 
+def n(x, fmt="%.1f"):
+    return "—" if x is None else fmt % x
+
+
 def legende(e, croise):
     m = e["mesures"]
     t = m["eteint"]
     lignes = [
         '<div class="k">âge lu %.3f s · %s · énergie %.2f</div><table>' % (
             e["age_lu"], e["acte"].replace("_", " ").lower(), e["energie_relative"]),
-        '<tr><th>sol, vue de J1</th><td><b>%.1f°</b> · sat. <b>%.2f</b> · lum. %.1f</td></tr>' % (
-            m["sol_teinte"], m["sol_saturation"], m["sol_luminance"]),
-        '<tr><th>sol, torches éteintes</th><td><b>%.1f°</b> · sat. <b>%.2f</b> · lum. %.1f</td></tr>' % (
-            t["teinte"], t["saturation"], t["luminance"]),
+        '<tr><th>sol, vue de J1</th><td><b>%s°</b> · sat. <b>%s</b> · lum. %s</td></tr>' % (
+            n(m["sol_teinte"]), n(m["sol_saturation"], "%.2f"), n(m["sol_luminance"])),
+        '<tr><th>sol, torches éteintes</th><td><b>%s°</b> · sat. <b>%s</b> · lum. %s</td></tr>' % (
+            n(t["teinte"]), n(t["saturation"], "%.2f"), n(t["luminance"])),
     ]
     if croise is not None:
-        n = croise["noir"]
-        allumes = sum(n[k]["allumes_par_la_variante"] for k in n)
-        lignes.append('<tr><th>écart de luminance</th><td>%+.2f %% (J1) · %+.2f %% (éteintes)</td></tr>' % (
-            croise["lum_joueur"], croise["lum_eteint"]))
+        noir = croise["noir"]
+        allumes = sum(noir[k]["allumes_par_la_variante"] for k in noir)
+        lignes.append('<tr><th>écart de luminance</th><td>%s %% (J1) · %s %% (éteintes)</td></tr>' % (
+            n(croise["lum_joueur"], "%+.2f"), n(croise["lum_eteint"], "%+.2f")))
         lignes.append('<tr><th>noir absolu</th><td>%s</td></tr>' % (
             "✅ 0 pixel noir allumé (A, B, A')" if allumes == 0 else "⚠️ %d pixels noirs allumés" % allumes))
     lignes.append('</table>')
