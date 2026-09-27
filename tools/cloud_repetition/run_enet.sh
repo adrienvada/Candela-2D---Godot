@@ -11,6 +11,13 @@ HOTE="--$MODE"
 INVITE="--${MODE/host/join}"
 cd "$(dirname "$0")/../.."
 mkdir -p "$SORTIE/home_hote" "$SORTIE/home_invite"
+# Un foyer neuf joue l'intro PAR-DESSUS le salon (piège « Un banc qui monte main.tscn dans un
+# foyer neuf photographie l'intro ») : SETTINGS_VU, un settings.cfg où l'intro est vue, est recopié.
+if [ -n "${SETTINGS_VU:-}" ]; then
+  for h in home_hote home_invite; do
+    d="$SORTIE/$h/.local/share/godot/app_userdata/Candela 2D"; mkdir -p "$d"; cp "$SETTINGS_VU" "$d/settings.cfg"
+  done
+fi
 export CANDELA_PORT="${CANDELA_PORT:-29417}"
 HOME="$SORTIE/home_hote" xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --fixed-fps 60 --resolution 1920x1080 \
   --path . res://tools/cloud_repetition/en_ligne.tscn -- $HOTE --transport enet --no-eos \

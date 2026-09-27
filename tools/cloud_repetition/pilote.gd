@@ -29,6 +29,7 @@ class Marionnette extends InputProvider:
 	var torche := true
 	var tir := false
 	var marche := Vector2.ZERO
+	var fusee := false
 
 	func get_movement_vector() -> Vector2:
 		return marche
@@ -43,7 +44,7 @@ class Marionnette extends InputProvider:
 		return torche
 
 	func is_flare_pressed() -> bool:
-		return false
+		return fusee
 
 	func is_reload_pressed() -> bool:
 		return false
@@ -240,6 +241,16 @@ func _etape_local(slug: String) -> void:
 	pantins[1].marche = Vector2.ZERO
 	await _images_de_jeu(10)
 	await _capturer("22_%s_ecran_scinde" % slug)
+	# Une fusée lancée par J1, torches éteintes : la fusée seule éclaire (Q34 : son point de braise).
+	pantins[0].fusee = true
+	await _images_de_jeu(3)
+	pantins[0].fusee = false
+	pantins[0].torche = false
+	pantins[1].torche = false
+	await _images_de_jeu(150)
+	await _capturer("22c_%s_fusee" % slug)
+	pantins[0].torche = true
+	pantins[1].torche = true
 	await _tuer(pantins, slug)
 	# La killcam.
 	if await _attendre(func() -> bool: return ReplaySystem.playing_back, 20.0):
