@@ -39,7 +39,7 @@ CADRAGE = r("Cadrage",
             "Le plan à hauteur d'homme, le personnage à 60-80 % de la hauteur, le plafond et la profondeur d'un couloir.",
             "contredit")
 PERSO = r("Personnages",
-          "Des voxels à la silhouette de mannequin ; J1 bleu glacier CLAIR sous son propre halo, J2 gris sous la torche.",
+          "Des voxels à la silhouette de mannequin ; chacun se voit CLAIR dans sa propre vue, teinté de sa couleur (J1 bleu glacier, J2 rose : voir l'écran scindé) ; l'adversaire sous la torche paraît gris.",
           "Mannequin : segments et côté de la lumière ; encre : un contour noir de 1,5 px d'écran ; corps détaillés : "
           "accessoires modelés (à 60 px, à peine lisibles).",
           "Le corps SOMBRE (ardoise, ~40-60 de luminance) cerné d'un liseré clair du côté de la lumière ; la rouille ; "
