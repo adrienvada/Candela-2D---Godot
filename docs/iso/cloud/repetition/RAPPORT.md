@@ -35,16 +35,16 @@
 
 | Étape | Résultat | Images |
 |---|---|---|
-| Premier lancement, foyer neuf | L'intro en planches joue, se saute à la touche, le menu suit. Console propre. | `images/00_*`, `01_*`, `02_*` |
-| Menus : hub, 1v1 écrans scindés, galerie des cartes, salon des armes, personnalisation (contrôles, affichage, effets, audio), S'entraîner, 1v1 amical | Tous atteints, aucune erreur. | `images/10_*` à `17_*` |
-| Match local 1v1 écrans scindés, **six cartes** (Arène standard, Arène circulaire, Le Cloître, L'Usine, La Croisée, Le Bunker) | Sur les six : la carte choisie est jouée, 45° B, deux vues, J2 **tué par un vrai tir** de J1, killcam, gel du kill, affiche « JOUEUR 1 GAGNE », menu de fin. | `images/2*_<carte>_*` |
-| Entraînement, six fois (une par carte choisie) | Vue unique, part, tire. **Toujours l'Arène standard** (D1). | `images/30_*` |
-| F3 en match | Panneau affiché. Il recouvre le cadre HUD de J1 (cosmétique, C2). | `images/40_f3.jpg` |
-| F6 en match | `user://diagnostic.txt` écrit, contenu cohérent (`mode_rendu iso lacet 45° B`). | `images/diagnostic_f6.txt` |
+| Premier lancement, foyer neuf | L'intro en planches joue, se saute à la touche, le menu suit. Console propre. | `images/passe1_18f5fdc/00_*`, `01_*`, `02_*` |
+| Menus : hub, 1v1 écrans scindés, galerie des cartes, salon des armes, personnalisation (contrôles, affichage, effets, audio), S'entraîner, 1v1 amical | Tous atteints, aucune erreur. | `images/passe1_18f5fdc/10_*` à `17_*` |
+| Match local 1v1 écrans scindés, **six cartes** (Arène standard, Arène circulaire, Le Cloître, L'Usine, La Croisée, Le Bunker) | Sur les six : la carte choisie est jouée, 45° B, deux vues, J2 **tué par un vrai tir** de J1, killcam, gel du kill, affiche « JOUEUR 1 GAGNE », menu de fin. | `images/passe1_18f5fdc/2*_<carte>_*` |
+| Entraînement, six fois (une par carte choisie) | Vue unique, part, tire. **Toujours l'Arène standard** (D1). | `images/passe1_18f5fdc/30_*` |
+| F3 en match | Panneau affiché. Il recouvre le cadre HUD de J1 (cosmétique, C2). | `images/passe1_18f5fdc/40_f3.jpg` |
+| F6 en match | `user://diagnostic.txt` écrit, contenu cohérent (`mode_rendu iso lacet 45° B`). | `images/passe1_18f5fdc/diagnostic_f6.txt` |
 | F5 en match | **N'ouvre rien** (D2). | — |
-| Éditeur (galerie → ÉDITEUR ›), F5 mode test, F5 retour, Échap | S'ouvre, le mode test s'ouvre et se referme, Échap ramène au jeu (l'allumage rejoue). **Deux erreurs de console** (E1, E2). | `images/50_*` à `53_*` |
+| Éditeur (galerie → ÉDITEUR ›), F5 mode test, F5 retour, Échap | S'ouvre, le mode test s'ouvre et se referme, Échap ramène au jeu (l'allumage rejoue). **Deux erreurs de console** (E1, E2). | `images/passe1_18f5fdc/50_*` à `53_*` |
 | QUITTER | Sortie propre, aucune fuite signalée. | — |
-| En ligne, ENet, deux processus en fenêtre sur la même machine | Connexion, poignée de main v18, PRÊT, manche, déplacement du client vu par l'hôte, tirs, killcam, fin, **revanche** : tout passe des deux côtés. Trois vérifications du gadget échouent en fenêtre (N1, non prouvé). | `images/en_ligne_*` |
+| En ligne, ENet, deux processus en fenêtre sur la même machine | Connexion, poignée de main v18, PRÊT, manche, déplacement du client vu par l'hôte, tirs, killcam, fin, **revanche** : tout passe des deux côtés. Trois vérifications du gadget échouent en fenêtre (N1, non prouvé). | `images/passe1_18f5fdc/en_ligne_*` |
 | Suite complète `tools/run_suites.sh` | **Verte** : 137 suites, sans erreur de script, 585 s. | — |
 
 ## 3. Défauts, classés
@@ -84,8 +84,8 @@ Aucun **bloquant**. Chaque ligne : ce qui se passe, la commande qui le reproduit
 ### Cosmétiques
 
 - **C1 — La légende de l'affiche de fin nomme l'arme, pas la classe** : « ARÈNE CIRCULAIRE · 00:02 · PISTOLET / PISTOLET » après un match choisi « Le Parasite / Le Parasite » (`affiche_de_fin.gd:333-336`, clés `arme_j1`/`arme_j2`). L'historique dit lui-même (schéma 4, `game_state.gd:4157`) que l'arme « ne désigne plus le joueur depuis que dix classes se partagent dix armes ». Proposé : la classe. Choix d'Adrien.
-- **C2 — Le panneau F3 recouvre le cadre HUD de J1** en écran scindé (`images/40_f3.jpg`). Outil de diagnostic : sans gravité.
-- **C3 — Le retour de l'éditeur rejoue l'allumage « CANDELA »** (`images/53_apres_editeur.jpg`) : `main.tscn` est rechargé en entier. Voulu ou non : à trancher.
+- **C2 — Le panneau F3 recouvre le cadre HUD de J1** en écran scindé (`images/passe1_18f5fdc/40_f3.jpg`). Outil de diagnostic : sans gravité.
+- **C3 — Le retour de l'éditeur rejoue l'allumage « CANDELA »** (`images/passe1_18f5fdc/53_apres_editeur.jpg`) : `main.tscn` est rechargé en entier. Voulu ou non : à trancher.
 - **C4 — F6 écrit `transport EOS` en écran scindé** et `ecran_hz nan` sous Xvfb ; ce `nan` part ensuite dans l'historique des matchs sous forme de `null` avec un avertissement (`match_record.gd:263`, « NaN found in argument passed to JSON.stringify() »). Sur le Mac la fréquence est connue : sans doute propre au cloud, mais `conditions_de_match.gd:171` gagnerait un `is_finite()`.
 
 ### Non prouvé
