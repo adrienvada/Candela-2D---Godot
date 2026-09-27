@@ -62,6 +62,9 @@ var _captures := ""
 var _sans_tir := false
 var _sans_fusee := false
 var _sans_torches := false
+## `--recensement` : à la fin de chaque relevé, les objets 2D visibles de chaque vue, rangés par sorte (script, sinon classe)
+## et par parent — pour savoir QUI fait les appels. Éteint par défaut.
+var _recensement := false
 var _lacet_joue := 0.0
 var _j1 := Vector2.ZERO
 var _j2 := Vector2.ZERO
@@ -96,6 +99,7 @@ func _ready() -> void:
 	_sans_tir = _drapeau(args, "--pompe-sans-tir")
 	_sans_fusee = _drapeau(args, "--pompe-sans-fusee")
 	_sans_torches = _drapeau(args, "--pompe-sans-torches")
+	_recensement = _drapeau(args, "--recensement")
 	if _captures != "":
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_captures))
 	_sans_hud = true
@@ -310,6 +314,8 @@ func _relever(famille: String, scene: String, vue: String, images := -1) -> void
 				series[cle] = []
 			series[cle].append(echantillon["nombres"][cle])
 		passes = echantillon["passes"]
+	if _recensement:
+		_recenser()
 	var resume := {}
 	for cle in series:
 		var v: Array = series[cle]
@@ -625,3 +631,31 @@ func _face_des_tuyaux(TuyauxT, data: Dictionary) -> Dictionary:
 			meilleur = rang
 			meilleure = f
 	return meilleure
+
+
+func _recenser() -> void:
+	var par_vue := {}
+	var pile: Array[Node] = [get_tree().root]
+	while not pile.is_empty():
+		var n: Node = pile.pop_back()
+		for enfant in n.get_children():
+			pile.append(enfant)
+		if not (n is CanvasItem) or not (n as CanvasItem).is_visible_in_tree():
+			continue
+		var vue := _chemin_court((n as CanvasItem).get_viewport())
+		var script: Script = n.get_script()
+		var sorte := script.resource_path.get_file() if script != null and script.resource_path != "" else n.get_class()
+		var parent := n.get_parent()
+		var parent_sorte: String = parent.name if parent != null else "?"
+		if parent_sorte.begins_with("@"):
+			parent_sorte = parent.get_class()
+		var cle := "%s  (sous %s)" % [sorte, parent_sorte]
+		if not par_vue.has(vue):
+			par_vue[vue] = {}
+		par_vue[vue][cle] = int(par_vue[vue].get(cle, 0)) + 1
+	for vue in par_vue:
+		var liste: Array = []
+		for cle in par_vue[vue]:
+			liste.append([par_vue[vue][cle], cle])
+		liste.sort_custom(func(a, b) -> bool: return a[0] > b[0])
+		print("RECENSEMENT %s : %s" % [vue, ", ".join(liste.slice(0, 12).map(func(x) -> String: return "%d × %s" % [x[0], x[1]]))])
