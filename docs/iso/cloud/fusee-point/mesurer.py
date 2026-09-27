@@ -90,7 +90,7 @@ def mesurer(e, ids):
     }
     if point:
         m["point_teinte"], m["point_saturation"], m["point_valeur"] = ts(point)
-        m["point_rouge"] = rouge(m["point_teinte"], m["point_saturation"])
+        m["point_rouge"] = bool(rouge(m["point_teinte"], m["point_saturation"]))
     if contribution:
         c = [max(0, v) for v in contribution]
         m["contribution_teinte"], m["contribution_saturation"], _ = ts(c)
