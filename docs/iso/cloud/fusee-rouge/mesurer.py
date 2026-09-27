@@ -24,6 +24,7 @@ from PIL import Image
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ICI, "..", "fusee"))
+sys.dont_write_bytecode = True
 import mesurer as base  # noqa: E402  (la session « fusée »)
 
 PAIRES = (("sang", "defaut"), ("longsang", "long"))
