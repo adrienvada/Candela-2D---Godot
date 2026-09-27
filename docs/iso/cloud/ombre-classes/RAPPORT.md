@@ -153,7 +153,7 @@ compte les pixels du sprite de J2 comme Q33 compte ceux du corps.
 ## Les trois voies (pour Adrien — aucune n'est choisie)
 
 Images : `planche.html` (dix classes, places b10 et mi, à 1:1 en 240×240 — le corps et son ombre au sol — puis loupe
-×3) et `apercu_voies.jpg` (le Terrassier à mi-distance, d'un coup d'œil). Toutes prises à 45° B.
+×3) et `apercu_voies.jpg` (le Terrassier à mi-distance, d'un coup d'œil), prises à 45° B ; les mêmes à 0° dans `lacet0/planche.html`.
 
 ### (a) Garder — la décision du 26 août : l'ombre a la forme de l'arme
 
@@ -205,7 +205,13 @@ Images : `planche.html` (dix classes, places b10 et mi, à 1:1 en 240×240 — l
 
 ## 0° et 45°
 
-{{LACET0}}
+Deux passes complètes, même commande, l'une à 45° B (défaut), l'autre avec `--lacet=0` : **les 160 mesures du
+capteur sont identiques au bit près** (écart maximal 0). C'est attendu — le capteur est rendu dans le monde 2D, sous
+le corps, sans caméra iso — et c'est maintenant vérifié : l'écart entre classes (11,4 % au bord 0,10 avec l'étoile) et
+son annulation (0 avec le rond de 12, 0 sans ombre propre) valent aux deux angles. Ce qui change avec l'angle, c'est
+l'image : quelle face du corps et quelle part de l'ombre au sol se voient. Planche à 0° : `lacet0/planche.html`
+(mêmes découpes). J2 en lacet B regarde depuis le côté opposé : sa vue lit ses propres capteurs (`CapteurVue2…`),
+symétriques par construction, non mesurés ici (voir « pas pu prouver »).
 
 ## Pour tout refaire
 
