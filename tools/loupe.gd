@@ -938,9 +938,34 @@ func _loupe_fusee_masque_formes(plans: Array[Dictionary], lieu: Vector2) -> void
 	# dessineraient partout et le masque n'aurait aucun effet — seule une image le prouve. A trois fois (le bruit), B, C
 	# (Gadgets), C3 (le pochoir) ; `formes.py` juge C3 contre A (fuite) et contre C (écart), vue par vue.
 	p._deux_vues()
-	for i in 30:
+	# J2 aussi, tenu : torche éteinte. Proche de la fusée, il en est ÉBLOUI, et le voile et le flou de sa vue
+	# (`brouillage.gd`) variaient d'une prise à l'autre sur toute sa moitié (jusqu'à 226/255, premier essai) : aucune
+	# comparaison au pixel n'y tenait. Le remettre à zéro à chaque image laissait un pas d'intégration, donc un voile à 1/255
+	# partout (deuxième essai). L'éblouissement tend vers un PLAFOND (la lumière reçue, `GameState`), fixe ici (fusée figée) :
+	# on attend qu'il ne bouge plus, avec les caméras. Le masque ne dépend pas de l'éblouissement ; sa vue n'a alors aucun
+	# pixel noir (le voile relève tout) : pour J2, seule l'égalité au masque de Gadgets se juge.
+	var tenir_deux := func() -> void:
 		_tenir_sans_torches()
+		m.p2.flashlight_on = false
+		if p._pantins.size() > 1:
+			p._pantins[1].torche = false
+	# La caméra de J2 n'est pas tenue par `_killcam_cadrage_tenu` : on attend qu'elle ne bouge plus, au bit près, trente pas
+	# de physique de suite, comme celle de J1 plus haut (sa convergence finit au point fixe du lissage).
+	var reperes := [(m.vp1 as SubViewport).canvas_transform.origin, (m.vp2 as SubViewport).canvas_transform.origin,
+		float(m.p2.dazzle_amount)]
+	var tenues_s := 0
+	var images_s := 0
+	while tenues_s < 30 and images_s < 2400:
+		tenir_deux.call()
+		await p.get_tree().physics_frame
 		await p.get_tree().process_frame
+		images_s += 1
+		var o := [(m.vp1 as SubViewport).canvas_transform.origin, (m.vp2 as SubViewport).canvas_transform.origin,
+			float(m.p2.dazzle_amount)]
+		tenues_s = tenues_s + 1 if o == reperes else 0
+		reperes = o
+	print("  · %s : écran scindé, caméras 2D de J1 et J2 et éblouissement de J2 (%.4f) %s après %d pas de physique" % [id,
+		float(m.p2.dazzle_amount), "tenus" if tenues_s >= 30 else "ENCORE EN MOUVEMENT", images_s])
 	for etape in [["s-a", false, -1], ["s-b", true, -1], ["s-a1", false, -1], ["s-c", true, 0], ["s-c3", true, 3],
 			["s-a2", false, -1]]:
 		volumes.set("volumes_actifs", etape[1])
@@ -948,7 +973,7 @@ func _loupe_fusee_masque_formes(plans: Array[Dictionary], lieu: Vector2) -> void
 		if int(etape[2]) >= 0:
 			volumes.set("forme_masque", int(etape[2]))
 			volumes.call("poser_masque_fumee", true)
-		await _prise_entiere(plans, id, String(etape[0]), 0.4, _tenir_sans_torches)
+		await _prise_entiere(plans, id, String(etape[0]), 0.4, tenir_deux)
 		print("  · %s-%s : écran scindé, fumée %s, forme %d" % [id, etape[0], "oui" if etape[1] else "non", int(etape[2])])
 	p._vue_unique()
 	for i in 30:

@@ -78,7 +78,18 @@ c'est la même fumée (quatre couches, même rayon), sans les tirs.
 
 ### 2a. Appels de dessin, passes, copies d'écran, sous-vues (outil de la session Budget)
 
-→ voir « Budget » plus bas (rempli à la fin de la session).
+L'outil de la session Budget (`origin/claude/cloud-budget`, `tools/cloud_budget/`, repris le temps du relevé et non
+commité ici), sa scène du **pompe sous une fusée** (Arène Standard, 120 images, la moyenne), lacet 45° B :
+
+| configuration | appels, vue unique | appels, écran scindé | vues rendues | copies d'écran | lumières 2D à ombre |
+|---|---|---|---|---|---|
+| M0, masque éteint | 290,2 | 620,6 | 5 / 11 | 2 / 4 | 10,9 / 8,4 |
+| M1, `--fumee-masque` | 290,1 | 618,2 | 5 / 11 | 2 / 4 | 10,9 / 8,4 |
+| V3, `--fumee-masque-pochoir` | 291,0 | 623,8 | 5 / 11 | 2 / 4 | 10,9 / 8,4 |
+
+Au bruit près (± 2 appels en vue unique, ± 8 en écran scindé, mesuré par la session Budget), **le masque n'ajoute rien que
+ces compteurs voient** (comme la session Budget l'avait trouvé), et le pochoir **un appel par volume et par vue** (le juge),
+rien d'autre : ni vue, ni copie d'écran, ni ombre. Le prix du masque est donc **par pixel** — ce que comptent les § 2b et 2c.
 
 ### 2b. Les fragments de fumée, et ce que le masque en fait
 
@@ -96,6 +107,10 @@ une bande. (Trois lancements, au fragment près ; `tools/masque_fumee/formes.py`
 | gardés par le masque | 994 957 (95,1 %) | 994 985 |
 | **qui entrent dans une bande et paient le calcul exact** | **430 891 (41,2 %)** | **122 109 (11,7 %)** |
 | … avec la bande resserrée (forme 2) | 33 996 (3,3 %) | 25 293 (2,4 %) |
+
+À **0°** (`--lacet=0 --lacet-j2=A`, même carte, la fusée posée ailleurs par la même règle) : 1 098 578 fragments, 42,4 % dans
+une bande avec le masque de Gadgets, 4,0 % avec la bande resserrée. Le 45° n'est donc pas ce qui élargit la bande : l'usure
+l'est.
 
 **Le fait principal** : la certitude « visible sûr » du sol prend la matière à son PLANCHER (1 − force : la tache la plus
 sombre de la texture), puis, avec l'usure, le poids d'usure le plus sombre (× 0,45). Si prudent que **la bande couvre presque
@@ -123,6 +138,21 @@ donc pas capturé — le vider avant chaque capture.
 Avant inlining, le masque de Gadgets pèse ~24 200 instructions, dont **13 000 pour les cinq copies du sol** (les
 coutures) et 8 200 pour les trois copies de la face. **Et les GLSL de M0 et de M1 capturés sur ma branche sont identiques,
 octet pour octet, à ceux capturés sur la base** (`60e5c6d`) : le jeu par défaut et `--fumee-masque` n'ont pas changé.
+
+### 2c bis. Le travail d'un fragment, chemin par chemin (lu dans le code, pondéré par les comptes du § 2b)
+
+| | lectures de texture | tours de boucle | calcul lourd |
+|---|---|---|---|
+| la couleur de la couche (toutes formes) | 9 (la lightmap lissée : le point + 8 autour) | lissage 8 | pâte (8 hachages à `sin`), température |
+| masque : le parcours | 2 à 3 (`grille_murs`) | 1 à 2 (4 au plus) | — |
+| masque : le sol hors bande (≈ 55 % des fragments) | 1 | contact 2 | pâte (8 `sin`) |
+| masque : le sol DANS la bande (41 % avec usure, 12 % sans) | 1 + 3 | contact 2 × 2 | pâte × 2, température (3 `pow`), usure du sol (≈ 8 hachages, un éclat), 3 `pate_facteur` (18 `pow`) |
+| masque : une couture (≈ 0,5 % des fragments) | × 4 | 4 | × 4 |
+| masque : une face (6,3 %) | 11 | — | pâte, température ; dans sa bande, l'usure d'une face (jusqu'à 48 impacts, `atan`, `pow`) |
+
+En moyenne, un fragment de fumée lit ~9 textures sans masque et ~15 avec (+ 65 %), et fait, dans 41 % des cas, deux fois la
+pâte et une vingtaine de `pow` de plus. Le pochoir fait tout le travail du masque une fois par PIXEL couvert (279 325) au
+lieu d'une fois par FRAGMENT (1 045 958), et la bande resserrée n'en envoie que 3 % au calcul exact.
 
 ### 2d. L'estimation qui explique le mieux 2,4 ms
 
@@ -158,6 +188,22 @@ pochoir) ; `iso_volumes.gd` (drapeaux, variantes, juge). Garde : `tools/test_mas
 | V1 compacte | `--fumee-masque-compact` | le code : 14 649 → 6 079 instructions ; le travail exécuté est le même | **0 pixel** | 0 |
 | V2 bande resserrée | `--fumee-masque-resserre` | + le calcul exact : 430 891 → 33 996 fragments ; 5 759 instructions | **0 pixel** | 0 |
 | V3 pochoir | `--fumee-masque-pochoir` | + le sur-dessin : ~1,05 M exécutions → ~0,28 M (une par pixel couvert) ; couches à 1 966 instructions | **0 pixel** | 0 |
+
+Les mêmes verdicts **à 45° B et à 0°** (deux lancements chacun), **avec et sans usure**. Deux prises du masque de Gadgets
+diffèrent entre elles de 85 à 223 pixels, tous au pied de J1 (son corps frémit, son contact au sol avec lui) : c'est le
+bruit de la scène, et les formes n'en ajoutent aucun ailleurs. Là où il reste un écart hors de cet ensemble, la fumée n'y
+change rien (A = B) : c'est le décor qui a bougé, pas le masque (2 pixels, une fois).
+
+**En écran scindé** (le pochoir y vit dans DEUX sous-vues, chacune avec son tampon de pochoir) :
+- **J1 (sa sous-vue)** : 0 fuite, et le pochoir est égal au masque de Gadgets au pixel près (4 096 pixels de fumée tus par
+  les deux, les mêmes) — le pochoir marche dans une sous-vue, pas seulement dans la racine ;
+- **J2 (l'autre sous-vue, lacet B, qui regarde depuis le côté opposé)** : le pochoir tait la fumée sur 3 503 pixels, le
+  masque de Gadgets sur 3 478, **3 270 en commun** ; le reste est le bruit de SA vue, que je n'ai pas su tenir : proche de la
+  fusée, J2 en est ébloui (0,105), et son voile et son flou animés font différer deux prises identiques jusqu'à 226/255 ; sa
+  vue n'a alors aucun pixel noir. La seconde sous-vue a donc bien son pochoir, et le juge lit bien la lumière de J2 ;
+  l'égalité AU PIXEL chez J2 n'est pas prouvée (voir « non prouvé »).
+- À 0°, un pixel à 1/255 « fuit » chez J1 — avec le masque de Gadgets comme avec le pochoir, là où la fumée sans masque est
+  noire elle aussi, ses voisins éclairés ayant varié de 1 à 2/255 à cet instant : la lumière a bougé entre les prises.
 
 - **V1, la forme compacte.** Le parcours NOMME la surface rencontrée (sol, face ou dessus) au lieu de la juger sur place,
   et chacune n'est jugée qu'à un seul endroit ; les côtés d'une couture passent par une boucle à nombre de tours variable
@@ -217,15 +263,14 @@ Et pour toutes : `Rendu : iso lacet 45° B`, `[usure] allumée`, aucune `SHADER 
 position moyenne pour chaque bras (10,5), quatre prises chacun. **Verdict imprimé** : série VALIDE si les quatre M0 tiennent
 dans 5 % ; un bras PASSE si sa médiane des médianes ≥ 0,970 × M0 et son 1 % bas médian (hors 10 s) ≥ 60.
 
-## Budget
-
-*(à remplir : comptes de l'outil de la session Budget, pompe sous une fusée, lacet 45°)*
-
 ## Les images
 
-`planche.html` (dans ce dossier) : pour la fumée sans masque, le masque de Gadgets et chaque forme — la carte du noir sali
-(rouge : un pixel noir sans fumée qu'elle allume), l'image (gain ×3), l'écart au masque de Gadgets (magenta) ; à 45° B et à
-0° ; et l'écran scindé (J1 et J2).
+`planche.html` (dans ce dossier, autonome, images en chemins relatifs) : pour la fumée sans masque, le masque de Gadgets et
+chaque forme — la carte du NOIR SALI (rouge : un pixel noir sans fumée qu'elle allume ; gris clair : le sol éclairé),
+l'image elle-même (gain ×3 : la fumée éclairée), et l'écart au masque de Gadgets (magenta, quelques pixels au pied de J1) ;
+à 45° B (`45B_*.jpg`) et à 0° (`0A_*.jpg`) ; et l'écran scindé, J1 à gauche, J2 à droite (`*_s-b_noir.jpg`,
+`*_s-c3_noir.jpg` : la moitié de J2 n'a aucun pixel noir, il est ébloui). Sans masque, la couronne rouge ; avec le masque
+de Gadgets et avec chaque forme, aucune.
 
 ## Refaire
 
@@ -238,7 +283,7 @@ MESA_SHADER_CAPTURE_PATH=/tmp/cap GODOT_ARGS="--fixed-fps 60" xvfb-run -a -s "-s
 # (à 0° : ajouter --lacet=0 --lacet-j2=A ; sans usure : --sans-usure)
 python3 tools/masque_fumee/formes.py ~/.local/share/godot/app_userdata/Candela\ 2D/photos/loupe
 python3 tools/masque_fumee/compter_glsl.py /tmp/cap          # apt-get install glslang-tools spirv-tools
-python3 tools/masque_fumee/planche.py <sortie> 45B=<dossier des prises> 0A=<dossier des prises à 0°>
+python3 tools/masque_fumee/planche.py docs/iso/cloud/masque-fumee "45° B=<dossier des prises>" "0° A=<dossier à 0°>"
 # La garde headless, et la suite :
 godot --headless --path . --script res://tools/test_masque_formes.gd
 GODOT=/usr/local/bin/godot ./tools/run_suites.sh
@@ -255,8 +300,14 @@ première image.
 - **Que le compilateur d'Apple profite de la forme compacte** comme `spirv-opt` : il inline sans doute pareil, mais il peut
   aussi dérouler la boucle des coutures ; ce qu'il en fait ne se voit que par la mesure.
 - **Le pochoir sur le Mac** : le stencil marche en `gl_compatibility` 4.7 sous Mesa, dans la vue unique et dans les
-  sous-vues de l'écran scindé ; je n'ai pas pu le voir sous le pilote d'Apple (OpenGL sur Metal). Une prise
-  `loupe-fusee-masque-formes` sur le Mac le montrerait en quelques minutes.
+  deux sous-vues de l'écran scindé ; je n'ai pas pu le voir sous le pilote d'Apple (OpenGL sur Metal). Une prise
+  `loupe-fusee-masque-formes` sur le Mac le montrerait en quelques minutes (`python3 tools/masque_fumee/formes.py` sur ses
+  images).
+- **L'égalité au pixel dans la vue de J2 en écran scindé** : J2, ébloui par la fusée dans cette mise en scène, a une vue
+  voilée et animée ; le pochoir y tait la fumée comme Gadgets (3 270 pixels communs sur ~3 500) sans égalité prouvée au
+  pixel. Pour la prouver : une mise en scène où J2 voit la fusée sans en être ébloui. En vue unique (la racine), la vue
+  prouvée est celle de J1 ; le code de J2 est le même (le juge lit la lightmap de la caméra qui le dessine, comme les
+  couches et le masque de Gadgets).
 - **Les gadgets** (suie, poussière, nappes) sous le pochoir : couverts par la même règle (un juge par volume, disque par
   couche), pas photographiés — la scène de preuve n'a que la fusée.
 - **La scène du banc** (le pompe, ses étincelles) : mes comptes sont sur la scène de la preuve (même fumée, sans les tirs).

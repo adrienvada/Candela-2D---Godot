@@ -54,6 +54,12 @@ preuve() {
   esac
 }
 ORDRE=(M0 M1 V1 V2 V3 V3 V2 V1 M1 M0 M0 M1 V1 V2 V3 V3 V2 V1 M1 M0)
+# Une vérification courte des gardes (une prise par bras, par exemple) : ORDRE_COURT="M0 M1 V1 V2 V3" SECONDES=5. Jamais
+# pour un verdict — le miroir n'y est plus.
+if [ -n "${ORDRE_COURT:-}" ]; then
+  # shellcheck disable=SC2206
+  ORDRE=($ORDRE_COURT)
+fi
 
 present() {
   top -l 2 -s 2 -n 30 -o cpu -stats command,cpu 2>/dev/null | awk '

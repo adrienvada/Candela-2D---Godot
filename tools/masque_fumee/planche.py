@@ -12,7 +12,7 @@
     python3 tools/masque_fumee/planche.py <sortie> <nom>=<dossier des prises> [<nom>=<dossier> …]
 
 Pillow requis."""
-import glob, html, os, sys
+import glob, html, os, re, sys
 from PIL import Image
 
 SORTIE = sys.argv[1]
@@ -68,6 +68,7 @@ def ecart(c, x, boite):
 sections = []
 for paire in sys.argv[2:]:
     nom, dossier = paire.split("=", 1)
+    fichier = re.sub(r"[^A-Za-z0-9]", "", nom) or "prises"   # le titre peut porter « 45° B », pas un nom de fichier
     a = charger(dossier, "a")
     if a is None:
         sys.exit("✗ %s : aucune prise A dans %s" % (nom, dossier))
@@ -78,14 +79,14 @@ for paire in sys.argv[2:]:
         if x is None:
             continue
         carte, rouges = carte_noir(a, x, BOITE)
-        f1 = "%s_%s_noir.jpg" % (nom, k)
+        f1 = "%s_%s_noir.jpg" % (fichier, k)
         carte.save(os.path.join(SORTIE, f1), quality=85)
-        f2 = "%s_%s_image.jpg" % (nom, k)
+        f2 = "%s_%s_image.jpg" % (fichier, k)
         gain(x, BOITE).save(os.path.join(SORTIE, f2), quality=85)
         cellule3, n = "", 0
         if k not in ("b", "c") and c is not None:
             e, n = ecart(c, x, BOITE)
-            f3 = "%s_%s_ecart.jpg" % (nom, k)
+            f3 = "%s_%s_ecart.jpg" % (fichier, k)
             e.save(os.path.join(SORTIE, f3), quality=85)
             cellule3 = '<figure><img src="%s"><figcaption>écart au masque de Gadgets : %d pixels (magenta)</figcaption></figure>' % (f3, n)
         lignes.append('<h3>%s</h3><div class="rang"><figure><img src="%s"><figcaption>noir sali : %d pixels rouges</figcaption>'
@@ -96,7 +97,7 @@ for paire in sys.argv[2:]:
     if sa is not None and s3 is not None:
         for k, img, titre in (("s-b", sb, "Écran scindé, fumée sans masque"), ("s-c3", s3, "Écran scindé, pochoir")):
             carte, rouges = carte_noir(sa, img, (0, 0, sa.size[0], sa.size[1]))
-            f = "%s_%s_noir.jpg" % (nom, k)
+            f = "%s_%s_noir.jpg" % (fichier, k)
             carte.resize((sa.size[0] // 2, sa.size[1] // 2)).save(os.path.join(SORTIE, f), quality=85)
             lignes.append('<h3>%s (J1 à gauche, J2 à droite)</h3><div class="rang"><figure class="large"><img src="%s">'
                           '<figcaption>noir sali : %d pixels rouges</figcaption></figure></div>' % (titre, f, rouges))
