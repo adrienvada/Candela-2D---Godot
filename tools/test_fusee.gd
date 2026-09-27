@@ -101,6 +101,30 @@ func _test_actes() -> void:
 	_check("la durée totale est la somme des actes",
 		is_equal_approx(Modele.duree_combustion(),
 			Modele.DUREE_PLEIN_FEU + Modele.DUREE_BRAISE + Modele.DUREE_AGONIE + Modele.DUREE_RESIDU))
+	# Q35 = B (Adrien, 2026-09-26) — l'ESSAI du rouge long (`--fusee-rouge-long`), éteint par défaut, À DURÉE TOTALE ÉGALE
+	# (ordre 412) : le plein feu passe à 4 s, la braise en perd 2, l'agonie et le résidu ne bougent pas ; la fumée garde sa
+	# taille et sa densité à chaque âge. Posé sur place, puis retiré.
+	_check("par défaut, le plein feu dure 2 s et la braise 10 (l'essai du rouge long est éteint)",
+		is_equal_approx(Modele.duree_plein_feu, 2.0) and is_equal_approx(Modele.duree_braise, Modele.DUREE_BRAISE))
+	var fumee_defaut: Array = []
+	for i in 41:
+		fumee_defaut.append([Modele.alpha_fumee_a(i * 0.5), Modele.echelle_fumee_a(i * 0.5)])
+	Modele.poser_rouge_long(true)
+	_check("rouge long : le plein feu va jusqu'à 4 s, la braise commence à 4 s",
+		Modele.acte_a(3.999) == Modele.Acte.PLEIN_FEU and Modele.acte_a(4.0) == Modele.Acte.BRAISE
+		and is_equal_approx(Modele.energie_a(3.5, []), Modele.ENERGIE_PLEIN_FEU))
+	_check("rouge long : la braise perd 2 s, l'agonie commence toujours à 12 s, la fusée vit toujours 20 s",
+		Modele.acte_a(11.999) == Modele.Acte.BRAISE and Modele.acte_a(12.0) == Modele.Acte.AGONIE
+		and is_equal_approx(Modele.duree_combustion(), 20.0))
+	var fumee_egale := true
+	for i in 41:
+		fumee_egale = fumee_egale and is_equal_approx(Modele.alpha_fumee_a(i * 0.5), fumee_defaut[i][0]) \
+			and is_equal_approx(Modele.echelle_fumee_a(i * 0.5), fumee_defaut[i][1])
+	_check("rouge long : la fumée a la même densité et la même taille à chaque âge, pleine et rouge de 3 à 4 s",
+		fumee_egale and is_equal_approx(Modele.alpha_fumee_a(Modele.FUMEE_MONTEE), 1.0) and Modele.acte_a(3.5) == Modele.Acte.PLEIN_FEU)
+	Modele.poser_rouge_long(false)
+	_check("l'essai retiré rend le défaut exact", is_equal_approx(Modele.duree_plein_feu, 2.0)
+		and is_equal_approx(Modele.duree_braise, Modele.DUREE_BRAISE))
 
 
 # ---------------------------------------------------------------------------
