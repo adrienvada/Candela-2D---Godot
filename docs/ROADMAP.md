@@ -27344,6 +27344,14 @@ au Mac après le hash d'Iso 1 : la cadence sous fusée au pompe (règle 278) et 
 `[fusée] rouge long (--fusee-rouge-long) : plein feu 4.0 s, braise 8.0 s, vie 20.0 s — essai Q35`, et rien au défaut — une
 série de cadence prouve son bras par le journal du jeu, jamais par sa ligne de commande (la même règle que le masque).
 
+**Le prix de cadence du rouge long : TIENT** (2026-09-27, 06:18-06:58, Gadgets Opus, `iso11-menus` à `298dfa6` — masque de
+la fumée éteint, point de braise rouge, caméra à 0°) : règle 278 au pompe, vue unique, sous une fusée dont le banc boucle l'âge
+de 3 à 9,5 s ; M0 le défaut, M1 `--fusee-rouge-long`, chaque prise attestée par le journal du jeu. Après 20 min de repos
+complet, porte de l'ordre 432 : Claude Helper admis (5,1 à 5,3 % par prise, médianes M0 et M1 à 0,0 point) ; aucune prise
+refusée. **M0 85 / 84 / 84, M1 86 / 86 / 84 : rapport 1,024** (seuil 0,970) ; **1 % bas M1 77 / 77 / 78** (cible > 60) ;
+références à 5 %. Le rouge long ne coûte rien de mesurable : il ne change que la durée d'un acte, pas ce qui se dessine.
+Restent, avant le défaut : la planche de l'illustration à 3,5 s, le jugement d'Adrien en jouant, et `Protocol.VERSION` ce jour-là.
+
 **Les 8° vers l'orange, mesurés, et rien à corriger** : la lightmap sous la fusée est à 5,5° (126, 36, 27) pour une lumière à
 356° ; divisée par la lumière, elle donne (1 ; 0,94 ; 0,62), le brun des tuiles 2D. C'est la lumière 2D, la seule vérité du
 jeu. La température de la pâte n'y est pour rien : son poids de neutralité est nul pour ce rouge. **Pas d'essai sur la
