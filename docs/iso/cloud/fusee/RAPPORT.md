@@ -104,7 +104,6 @@ Fichiers : `defaut/` et `long/` — `aX_Y-loupe.jpg` (loupe ×3), `aX_Y-plein.jp
 - **Le mécanisme exact du point jaune** (D1) : hypothèse (additif + couleur orange de la lumière), non isolée.
 - **La scène de l'illustration** (fusée tenue, près de murs éclairés) n'est pas reproduite : la comparaison se fait sur la fusée posée, sur un sol, comme demandé ; les teintes du sol se comparent, pas les compositions.
 - **Le masque de la fumée allumé** n'a pas été photographié ici (hors tâche : il est éteint par défaut, et sa preuve existe déjà).
-- La suite complète : voir la ligne suivante.
 
 ## Suite
-*(en cours)*
+`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur la tête `e8755b2` (x86, Godot 4.7 officiel) : **« tout passe, sans erreur de script (592 s) », code 0.** Le plan de photo, lui, ne peut rejoindre aucune suite (il exige une fenêtre).
