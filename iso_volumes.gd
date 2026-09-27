@@ -120,6 +120,10 @@ const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"
 ## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
 ## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
 const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
+## Le rouge du point après le plein feu (Q34 = C, « puis rouge ») : le rouge de détresse de la lumière au départ,
+## `Fusee.COULEUR_DETRESSE`, recopié et non nommé — `fusee.gd` nomme des autoloads, et le nommer ici empêcherait ce script
+## de compiler sous `--script` (les suites). `test_iso_gadgets` garde l'égalité des deux.
+const COULEUR_COEUR_ROUGE := Color(0.96, 0.293, 0.334)
 ## La taille du cœur posé : celle du cœur de la comète (`_suivre_comete`), en pixels de monde.
 const TAILLE_COEUR_FUSEE := 10.0
 ## Sa hauteur : au sommet de la braise du voxel (`VoxelObjet.FUSEE_BRAISE_Y0` + sa hauteur), un peu au-dessus. À la hauteur de
@@ -271,25 +275,48 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 	_poser_halo(lueur, 0, Vector3(f.global_position.x, h, f.global_position.y), taille,
 		lumiere.color if lumiere != null else Color.WHITE, 0.45 * relative, 0)
 	if coeur_fusee > 0:
-		_suivre_coeur_fusee(f, lumiere, energie, relative, vus)
+		_suivre_coeur_fusee(f, lumiere, energie, vus)
 
 
-## Q34 (`coeur_fusee`) — le cœur de la fusée posée, comme celui de la comète : un halo à bord franc (forme 1), de la
-## couleur de la lumière, dont l'éclat suit l'énergie et le cœur 2D (ses sursauts d'agonie, son extinction) — et ne tombe
-## JAMAIS sous l'opacité du cœur 2D : repris tel quel de la comète (énergie / 0,8 × opacité), il s'effaçait au résidu (0,02),
-## là où le point de braise 2D se voit encore — parité avec la 2D (session cloud, 21:54). Au plein feu
-## seulement, la variante 2 le pousse vers le presque-blanc ; il revient au rouge quand l'énergie retombe vers la braise.
-## La lumière du jeu ne change pas : ce halo s'ajoute à l'image 3D, il n'éclaire rien.
-func _suivre_coeur_fusee(f: Node2D, lumiere: Light2D, energie: float, relative: float, vus: Dictionary) -> void:
+## Q34 (`coeur_fusee`) — le cœur de la fusée posée, comme celui de la comète : un halo à bord franc (forme 1), dont l'éclat
+## suit l'énergie et le cœur 2D (ses sursauts d'agonie, son extinction) — et ne tombe JAMAIS sous l'opacité du cœur 2D :
+## repris tel quel de la comète (énergie / 0,8 × opacité), il s'effaçait au résidu (0,02), là où le point de braise 2D se
+## voit encore — parité avec la 2D (session cloud, 21:54). La lumière du jeu ne change pas : ce halo s'ajoute à l'image
+## 3D, il n'éclaire rien.
+##
+## Q34 = C, la variante 2 (défaut) : presque blanc pendant le plein feu, et SEULEMENT pendant lui, puis ROUGE à tous les
+## âges jusqu'au résidu (`couleur_coeur_fusee`). Session cloud « fusée-point », 2026-09-27 — deux écarts à l'image :
+## - D1, le point sortait JAUNE PÂLE (230, 230, 146) dès la braise : il prenait la couleur de la LUMIÈRE, orange à la
+##   braise (température), et s'ADDITIONNAIT à un sol déjà orange sous un éclat jusqu'à 1,5 — le rouge plafonnait, le
+##   vert montait (le mécanisme de la lueur au sol, ISO10 1c). Il est désormais du rouge de détresse, et en MÉLANGE.
+## - D3, le blanc débordait d'environ 0,5 s : il suivait l'énergie relative (`smoothstep(0.6, 0.95, relative)`), qui
+##   glisse 1,5 s dans la braise, et remontait même sur les sursauts d'agonie (2,5 / 3 = 0,83). Il suit l'ACTE.
+## Le mélange est dosé pour que, sur le NOIR, l'image soit celle d'avant au pixel près : la couverture est
+## `max(éclat, 1)` et la couleur `rouge × min(éclat, 1)`, et comme la forme reste dans [0, 1],
+## `rouge × min(é, 1) × clamp(forme × max(é, 1))` = `rouge × clamp(forme × é)`, ce que l'additif posait sur un fond noir.
+## Même éclat, même taille, même repère à distance ; seul change ce qu'il fait au sol éclairé : il le couvre au lieu de
+## s'y ajouter, et reste rouge (à l'agonie et au résidu, un point rouge sombre, de l'éclat du cœur 2D).
+func _suivre_coeur_fusee(f: Node2D, lumiere: Light2D, energie: float, vus: Dictionary) -> void:
 	var c := _entree(f, "coeur", vus, 2)
-	_halos(c, 1)
+	_halos(c, 1, SHADER_HALO_MELANGE)
 	var coeur := f.get_node_or_null(^"Coeur") as CanvasItem
 	var opacite := coeur.modulate.a if coeur != null else 1.0
-	var couleur := lumiere.color if lumiere != null else Color.WHITE
-	if coeur_fusee >= 2:
-		couleur = couleur.lerp(COULEUR_COEUR_BLANC, smoothstep(0.6, 0.95, relative))
+	var eclat := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)
+	var acte := FuseeModele.acte_a(float(f.call("age_combustion"))) if f.has_method("age_combustion") \
+		else FuseeModele.Acte.BRAISE
+	var couleur := couleur_coeur_fusee(coeur_fusee, acte, lumiere.color if lumiere != null else Color.WHITE)
+	couleur = Color(couleur.r * minf(eclat, 1.0), couleur.g * minf(eclat, 1.0), couleur.b * minf(eclat, 1.0))
 	_poser_halo(c, 0, Vector3(f.global_position.x, HAUTEUR_COEUR_FUSEE_PX, f.global_position.y), TAILLE_COEUR_FUSEE,
-		couleur, maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite), 1)
+		couleur, maxf(eclat, 1.0) if eclat > 0.002 else 0.0, 1)
+
+
+## La couleur du point de braise, avant l'éclat : pure, pour la garde de la suite. Variante 2 (défaut, Q34 = C) : le
+## presque-blanc au plein feu, le rouge de détresse de la lumière (`COULEUR_COEUR_ROUGE`) à tous les actes suivants ;
+## variante 1 (`--fusee-coeur`) : la couleur de la lumière, comme avant.
+static func couleur_coeur_fusee(variante: int, acte: FuseeModele.Acte, couleur_lumiere: Color) -> Color:
+	if variante < 2:
+		return couleur_lumiere
+	return COULEUR_COEUR_BLANC if acte == FuseeModele.Acte.PLEIN_FEU else COULEUR_COEUR_ROUGE
 
 
 ## La comète : la fusée en vol, à la hauteur de sa lumière. Le cœur et le corps dessinés sortent des

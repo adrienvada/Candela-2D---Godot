@@ -27304,8 +27304,11 @@ cœur 2D), s'effaçait au résidu là où la 2D montre encore le point : il ne t
 point sur son entourage (défaut / rouge / presque blanc) : plein feu +11 / +48 / +92 ; braise +3 / +94 / +94 ; agonie
 +28 / +45 / +50 ; résidu +4 / +23 / +24.
 
-**Q34 = C, tranché par Adrien le 2026-09-26 : le point presque blanc au plein feu, puis de la couleur de la lumière, EST LE
-DÉFAUT** (`IsoVolumes.coeur_fusee` = 2) ; `--sans-fusee-coeur` rend le choix d'ISO3/ISO4, `--fusee-coeur` le point sans le
+**Q34 = C, tranché par Adrien le 2026-09-26 : le point presque blanc au plein feu, puis ROUGE, EST LE DÉFAUT** (corrigé le
+2026-09-27 par la session cloud « fusée-point », `78fb380` : après le plein feu, le point sortait jaune pâle, la couleur
+orange de la lumière additionnée au sol orange, et le blanc débordait de 0,5 s sur la braise et les sursauts d'agonie ; le
+blanc suit désormais l'ACTE, le rouge est celui de détresse, et le halo du point passe en MÉLANGE — sur le noir, l'image est
+celle d'avant au pixel près) (`IsoVolumes.coeur_fusee` = 2) ; `--sans-fusee-coeur` rend le choix d'ISO3/ISO4, `--fusee-coeur` le point sans le
 blanc. La vue de dessus garde son point rouge (rien de la 2D ne change). **L'exception à « jamais de blanc »** (`fusee.gd`,
 FU2.1, « c'est une fusée de marine, pas un projecteur ») : elle ne vaut QUE pour ce point, qui n'éclaire rien ; la règle
 reste entière pour la LUMIÈRE, et le masque de la fumée comme l'éblouissement ne changent pas. Coût : un quad de plus par
