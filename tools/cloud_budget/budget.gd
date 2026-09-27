@@ -55,6 +55,13 @@ var _classe_pompe := "pompe"
 var _scenes: Array[String] = ["cartes", "pompe"]
 var _images := IMAGES
 var _images_pompe := IMAGES_POMPE
+## `--captures=<dossier>` : l'image de la fenêtre à la fin de chaque relevé, en JPEG — ce qui a été compté. Éteint par défaut.
+var _captures := ""
+## La décomposition du pompe sous une fusée, par intervention (un lancement par geste retiré) : `--pompe-sans-tir` (personne
+## ne tire), `--pompe-sans-fusee` (aucune fusée posée), `--pompe-sans-torches` (torches éteintes). Éteints par défaut.
+var _sans_tir := false
+var _sans_fusee := false
+var _sans_torches := false
 var _lacet_joue := 0.0
 var _j1 := Vector2.ZERO
 var _j2 := Vector2.ZERO
@@ -85,6 +92,12 @@ func _ready() -> void:
 		if s.strip_edges() != "":
 			_scenes.append(s.strip_edges())
 	var cartes_voulues := _valeur(args, "--cartes", "")
+	_captures = _valeur(args, "--captures", "")
+	_sans_tir = _drapeau(args, "--pompe-sans-tir")
+	_sans_fusee = _drapeau(args, "--pompe-sans-fusee")
+	_sans_torches = _drapeau(args, "--pompe-sans-torches")
+	if _captures != "":
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_captures))
 	_sans_hud = true
 	_taille = _lire_taille(_valeur(args, "--taille", "%dx%d" % [TAILLE_DEFAUT.x, TAILLE_DEFAUT.y]))
 	print("=== Le budget de rendu — configuration « %s » ===" % _config)
@@ -139,7 +152,10 @@ func _ready() -> void:
 		if not await _demarrer_une_manche(_classe_pompe):
 			_sortir(1)
 			return
-		_poser_la_fusee()
+		if not _sans_fusee:
+			_poser_la_fusee()
+		print("  pompe : tir %s, fusée %s, torches %s" % ["non" if _sans_tir else "oui", "non" if _sans_fusee else "oui",
+			"non" if _sans_torches else "oui"])
 		_pompe_actif = true
 		for vue in ["unique", "scinde"]:
 			if vue == "unique":
@@ -255,9 +271,9 @@ func _tenir_le_pompe() -> void:
 			+ fmod(_age, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5))
 	for p in [_main.p1, _main.p2]:
 		p.hp = 100.0
-		if p.shoot_cooldown <= 0.0:
+		if not _sans_tir and p.shoot_cooldown <= 0.0:
 			p.shoot()
-	_torches(true)
+	_torches(not _sans_torches)
 
 
 func _poser_la_fusee() -> void:
@@ -310,6 +326,10 @@ func _relever(famille: String, scene: String, vue: String, images := -1) -> void
 		"compteurs": resume, "passes": passes,
 	}
 	print("BUDGET\t%s" % JSON.stringify(ligne))
+	if _captures != "":
+		var img := get_tree().root.get_texture().get_image()
+		var nom := "%s_%s_%s_%s_l%d.jpg" % [_config, famille, scene.validate_filename().replace(" ", "_"), vue, int(round(_lacet_joue))]
+		img.save_jpg(ProjectSettings.globalize_path(_captures.path_join(nom)), 0.85)
 	var total: Dictionary = resume.get("total.appels", {})
 	print("  · %s / %s / %s : %s appels (min %s, max %s)" % [famille, scene, vue, str(total.get("med")),
 		str(total.get("min")), str(total.get("max"))])
@@ -371,6 +391,7 @@ func _compter() -> Dictionary:
 	var occluders := 0
 	var particules := 0
 	var somme := {"appels": 0, "primitives": 0, "objets": 0}
+	var items_par_vue := {}
 	var pile: Array[Node] = [get_tree().root]
 	while not pile.is_empty():
 		var n: Node = pile.pop_back()
@@ -382,6 +403,8 @@ func _compter() -> Dictionary:
 			var ci := n as CanvasItem
 			if not ci.is_visible_in_tree():
 				continue
+			var vv := _chemin_court(ci.get_viewport())
+			items_par_vue[vv] = int(items_par_vue.get(vv, 0)) + 1
 			if n is BackBufferCopy:
 				bbc += 1
 			elif n is Light2D:
@@ -443,6 +466,10 @@ func _compter() -> Dictionary:
 	nombres["lumieres.3d_ombre"] = lum3d_ombre
 	nombres["occluders.2d"] = occluders
 	nombres["particules.emetteurs"] = particules
+	for vv in items_par_vue:
+		nombres["items2d.%s" % vv] = items_par_vue[vv]
+	if is_instance_valid(_main) and _main.get("bullet_container") != null:
+		nombres["jeu.enfants_bullet_container"] = (_main.bullet_container as Node).get_child_count()
 	copies_ecran.sort()
 	return {"nombres": nombres, "passes": {"vues": detail_vues, "copies_ecran": copies_ecran}}
 
