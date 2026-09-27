@@ -1,0 +1,950 @@
+{
+ "source": "/tmp/claude-0/-home-user-Candela-2D---Godot/faebef4b-e7d9-5a81-a277-bba549594a4e/scratchpad/xdg/godot/app_userdata/Candela 2D/ecart",
+ "illustrations": {
+  "ill_accueil": {
+   "eclaire": 0.5839,
+   "noir_strict": 0.0276,
+   "lum_moy": 35.5,
+   "lum_eclaire": 59.63,
+   "teinte": [
+    69,
+    58,
+    50
+   ],
+   "chroma": 18.9,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_amical": {
+   "eclaire": 0.6448,
+   "noir_strict": 0.0244,
+   "lum_moy": 47.5,
+   "lum_eclaire": 72.16,
+   "teinte": [
+    83,
+    70,
+    61
+   ],
+   "chroma": 21.7,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_amical_ligne": {
+   "eclaire": 0.7244,
+   "noir_strict": 0.0485,
+   "lum_moy": 49.05,
+   "lum_eclaire": 67.27,
+   "teinte": [
+    63,
+    68,
+    71
+   ],
+   "chroma": 7.6,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_amical_local": {
+   "eclaire": 0.6891,
+   "noir_strict": 0.0226,
+   "lum_moy": 60.96,
+   "lum_eclaire": 87.79,
+   "teinte": [
+    73,
+    94,
+    74
+   ],
+   "chroma": 20.2,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_competitif": {
+   "eclaire": 0.7815,
+   "noir_strict": 0.0841,
+   "lum_moy": 37.17,
+   "lum_eclaire": 47.15,
+   "teinte": [
+    46,
+    47,
+    48
+   ],
+   "chroma": 2.5,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_creer_ligne": {
+   "eclaire": 0.7141,
+   "noir_strict": 0.0211,
+   "lum_moy": 36.86,
+   "lum_eclaire": 50.76,
+   "teinte": [
+    86,
+    41,
+    44
+   ],
+   "chroma": 44.7,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_creer_local": {
+   "eclaire": 0.7255,
+   "noir_strict": 0.0219,
+   "lum_moy": 44.68,
+   "lum_eclaire": 60.96,
+   "teinte": [
+    83,
+    57,
+    34
+   ],
+   "chroma": 49.6,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_ecran_scinde": {
+   "eclaire": 0.8462,
+   "noir_strict": 0.0107,
+   "lum_moy": 63.04,
+   "lum_eclaire": 74.26,
+   "teinte": [
+    85,
+    72,
+    66
+   ],
+   "chroma": 19.0,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_entrainement": {
+   "eclaire": 0.6898,
+   "noir_strict": 0.0223,
+   "lum_moy": 51.68,
+   "lum_eclaire": 73.99,
+   "teinte": [
+    86,
+    71,
+    63
+   ],
+   "chroma": 23.8,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_intro_allumage": {
+   "eclaire": 0.5704,
+   "noir_strict": 0.0506,
+   "lum_moy": 55.49,
+   "lum_eclaire": 96.17,
+   "teinte": [
+    107,
+    94,
+    84
+   ],
+   "chroma": 23.2,
+   "taille": [
+    2048,
+    1280
+   ]
+  },
+  "ill_intro_descente": {
+   "eclaire": 0.6409,
+   "noir_strict": 0.0511,
+   "lum_moy": 41.49,
+   "lum_eclaire": 63.59,
+   "teinte": [
+    75,
+    62,
+    49
+   ],
+   "chroma": 26.2,
+   "taille": [
+    2048,
+    1280
+   ]
+  },
+  "ill_intro_dotation": {
+   "eclaire": 0.7023,
+   "noir_strict": 0.0341,
+   "lum_moy": 72.81,
+   "lum_eclaire": 102.36,
+   "teinte": [
+    109,
+    101,
+    97
+   ],
+   "chroma": 12.1,
+   "taille": [
+    2048,
+    1280
+   ]
+  },
+  "ill_intro_extinction": {
+   "eclaire": 0.0751,
+   "noir_strict": 0.0011,
+   "lum_moy": 5.59,
+   "lum_eclaire": 39.99,
+   "teinte": [
+    44,
+    39,
+    43
+   ],
+   "chroma": 5.0,
+   "taille": [
+    2048,
+    1280
+   ]
+  },
+  "ill_intro_prix": {
+   "eclaire": 0.4805,
+   "noir_strict": 0.0701,
+   "lum_moy": 51.85,
+   "lum_eclaire": 106.12,
+   "teinte": [
+    124,
+    103,
+    83
+   ],
+   "chroma": 41.2,
+   "taille": [
+    2048,
+    1280
+   ]
+  },
+  "ill_intro_seuil": {
+   "eclaire": 0.6203,
+   "noir_strict": 0.063,
+   "lum_moy": 49.47,
+   "lum_eclaire": 78.81,
+   "teinte": [
+    97,
+    75,
+    61
+   ],
+   "chroma": 36.0,
+   "taille": [
+    2048,
+    1280
+   ]
+  },
+  "ill_mise_a_jour": {
+   "eclaire": 0.6466,
+   "noir_strict": 0.0606,
+   "lum_moy": 54.35,
+   "lum_eclaire": 82.76,
+   "teinte": [
+    91,
+    82,
+    69
+   ],
+   "chroma": 21.6,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_quitter": {
+   "eclaire": 0.6508,
+   "noir_strict": 0.1394,
+   "lum_moy": 31.21,
+   "lum_eclaire": 47.12,
+   "teinte": [
+    48,
+    47,
+    45
+   ],
+   "chroma": 2.3,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_rejoindre_ligne": {
+   "eclaire": 0.7732,
+   "noir_strict": 0.0932,
+   "lum_moy": 35.57,
+   "lum_eclaire": 45.59,
+   "teinte": [
+    41,
+    46,
+    53
+   ],
+   "chroma": 12.2,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_rejoindre_local": {
+   "eclaire": 0.7255,
+   "noir_strict": 0.0219,
+   "lum_moy": 44.68,
+   "lum_eclaire": 60.96,
+   "teinte": [
+    83,
+    57,
+    34
+   ],
+   "chroma": 49.6,
+   "taille": [
+    1024,
+    640
+   ]
+  },
+  "ill_retour": {
+   "eclaire": 0.6024,
+   "noir_strict": 0.1719,
+   "lum_moy": 42.19,
+   "lum_eclaire": 69.36,
+   "teinte": [
+    79,
+    68,
+    51
+   ],
+   "chroma": 28.7,
+   "taille": [
+    1024,
+    640
+   ]
+  }
+ },
+ "prises": {
+  "defaut/duel": {
+   "eclaire": 0.4514,
+   "noir_strict": 0.5045,
+   "lum_moy": 10.71,
+   "lum_eclaire": 23.52,
+   "teinte": [
+    30,
+    23,
+    10
+   ],
+   "chroma": 20.0
+  },
+  "temoin/duel": {
+   "eclaire": 0.4514,
+   "noir_strict": 0.5045,
+   "lum_moy": 10.71,
+   "lum_eclaire": 23.52,
+   "teinte": [
+    30,
+    23,
+    10
+   ],
+   "chroma": 20.0
+  },
+  "tous/duel": {
+   "eclaire": 0.4463,
+   "noir_strict": 0.5063,
+   "lum_moy": 10.32,
+   "lum_eclaire": 22.89,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.7
+  },
+  "defaut/noir": {
+   "eclaire": 0.4496,
+   "noir_strict": 0.5061,
+   "lum_moy": 9.57,
+   "lum_eclaire": 21.08,
+   "teinte": [
+    28,
+    20,
+    8
+   ],
+   "chroma": 19.4
+  },
+  "temoin/noir": {
+   "eclaire": 0.4496,
+   "noir_strict": 0.5061,
+   "lum_moy": 9.57,
+   "lum_eclaire": 21.08,
+   "teinte": [
+    28,
+    20,
+    8
+   ],
+   "chroma": 19.4
+  },
+  "tous/noir": {
+   "eclaire": 0.4444,
+   "noir_strict": 0.5082,
+   "lum_moy": 9.2,
+   "lum_eclaire": 20.48,
+   "teinte": [
+    27,
+    20,
+    8
+   ],
+   "chroma": 19.1
+  },
+  "defaut/scinde": {
+   "eclaire": 0.5905,
+   "noir_strict": 0.0,
+   "lum_moy": 15.93,
+   "lum_eclaire": 24.63,
+   "teinte": [
+    30,
+    24,
+    13
+   ],
+   "chroma": 16.9
+  },
+  "temoin/scinde": {
+   "eclaire": 0.5905,
+   "noir_strict": 0.0,
+   "lum_moy": 15.93,
+   "lum_eclaire": 24.63,
+   "teinte": [
+    30,
+    24,
+    13
+   ],
+   "chroma": 16.9
+  },
+  "tous/scinde": {
+   "eclaire": 0.5879,
+   "noir_strict": 0.0,
+   "lum_moy": 15.54,
+   "lum_eclaire": 24.07,
+   "teinte": [
+    30,
+    24,
+    13
+   ],
+   "chroma": 16.6
+  },
+  "defaut/sol": {
+   "eclaire": 0.4546,
+   "noir_strict": 0.5017,
+   "lum_moy": 10.7,
+   "lum_eclaire": 23.34,
+   "teinte": [
+    30,
+    23,
+    10
+   ],
+   "chroma": 19.4
+  },
+  "temoin/sol": {
+   "eclaire": 0.4546,
+   "noir_strict": 0.5017,
+   "lum_moy": 10.7,
+   "lum_eclaire": 23.33,
+   "teinte": [
+    30,
+    23,
+    10
+   ],
+   "chroma": 19.4
+  },
+  "tous/sol": {
+   "eclaire": 0.4491,
+   "noir_strict": 0.5038,
+   "lum_moy": 10.31,
+   "lum_eclaire": 22.73,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.1
+  },
+  "defaut/mur": {
+   "eclaire": 0.4253,
+   "noir_strict": 0.5298,
+   "lum_moy": 9.92,
+   "lum_eclaire": 23.1,
+   "teinte": [
+    30,
+    22,
+    10
+   ],
+   "chroma": 19.4
+  },
+  "temoin/mur": {
+   "eclaire": 0.4253,
+   "noir_strict": 0.5298,
+   "lum_moy": 9.92,
+   "lum_eclaire": 23.1,
+   "teinte": [
+    30,
+    22,
+    10
+   ],
+   "chroma": 19.4
+  },
+  "tous/mur": {
+   "eclaire": 0.4197,
+   "noir_strict": 0.5322,
+   "lum_moy": 9.57,
+   "lum_eclaire": 22.55,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.1
+  },
+  "defaut/arena": {
+   "eclaire": 0.4359,
+   "noir_strict": 0.5183,
+   "lum_moy": 10.07,
+   "lum_eclaire": 22.89,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.2
+  },
+  "temoin/arena": {
+   "eclaire": 0.4359,
+   "noir_strict": 0.5183,
+   "lum_moy": 10.07,
+   "lum_eclaire": 22.89,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.2
+  },
+  "tous/arena": {
+   "eclaire": 0.4302,
+   "noir_strict": 0.5207,
+   "lum_moy": 9.72,
+   "lum_eclaire": 22.35,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.0
+  },
+  "defaut/zone": {
+   "eclaire": 0.4604,
+   "noir_strict": 0.4953,
+   "lum_moy": 10.9,
+   "lum_eclaire": 23.49,
+   "teinte": [
+    30,
+    23,
+    10
+   ],
+   "chroma": 19.9
+  },
+  "temoin/zone": {
+   "eclaire": 0.4604,
+   "noir_strict": 0.4953,
+   "lum_moy": 10.91,
+   "lum_eclaire": 23.49,
+   "teinte": [
+    30,
+    23,
+    10
+   ],
+   "chroma": 19.9
+  },
+  "tous/zone": {
+   "eclaire": 0.455,
+   "noir_strict": 0.4971,
+   "lum_moy": 10.51,
+   "lum_eclaire": 22.88,
+   "teinte": [
+    29,
+    22,
+    10
+   ],
+   "chroma": 19.6
+  },
+  "defaut/impacts": {
+   "eclaire": 0.4324,
+   "noir_strict": 0.5225,
+   "lum_moy": 9.68,
+   "lum_eclaire": 22.17,
+   "teinte": [
+    29,
+    22,
+    9
+   ],
+   "chroma": 19.2
+  },
+  "temoin/impacts": {
+   "eclaire": 0.4324,
+   "noir_strict": 0.5225,
+   "lum_moy": 9.68,
+   "lum_eclaire": 22.17,
+   "teinte": [
+    29,
+    22,
+    9
+   ],
+   "chroma": 19.2
+  },
+  "tous/impacts": {
+   "eclaire": 0.4267,
+   "noir_strict": 0.5249,
+   "lum_moy": 9.33,
+   "lum_eclaire": 21.62,
+   "teinte": [
+    28,
+    21,
+    9
+   ],
+   "chroma": 19.0
+  },
+  "defaut/fusee1": {
+   "eclaire": 0.4806,
+   "noir_strict": 0.479,
+   "lum_moy": 19.71,
+   "lum_eclaire": 40.84,
+   "teinte": [
+    56,
+    38,
+    23
+   ],
+   "chroma": 32.6
+  },
+  "temoin/fusee1": {
+   "eclaire": 0.4806,
+   "noir_strict": 0.479,
+   "lum_moy": 19.71,
+   "lum_eclaire": 40.84,
+   "teinte": [
+    56,
+    38,
+    23
+   ],
+   "chroma": 32.6
+  },
+  "tous/fusee1": {
+   "eclaire": 0.4762,
+   "noir_strict": 0.4807,
+   "lum_moy": 19.23,
+   "lum_eclaire": 40.19,
+   "teinte": [
+    55,
+    37,
+    26
+   ],
+   "chroma": 29.3
+  },
+  "defaut/fusee2": {
+   "eclaire": 0.4803,
+   "noir_strict": 0.4793,
+   "lum_moy": 22.03,
+   "lum_eclaire": 45.7,
+   "teinte": [
+    58,
+    44,
+    21
+   ],
+   "chroma": 37.0
+  },
+  "temoin/fusee2": {
+   "eclaire": 0.4803,
+   "noir_strict": 0.4793,
+   "lum_moy": 22.03,
+   "lum_eclaire": 45.7,
+   "teinte": [
+    58,
+    44,
+    21
+   ],
+   "chroma": 37.0
+  },
+  "tous/fusee2": {
+   "eclaire": 0.4762,
+   "noir_strict": 0.4807,
+   "lum_moy": 22.46,
+   "lum_eclaire": 46.98,
+   "teinte": [
+    62,
+    44,
+    29
+   ],
+   "chroma": 33.1
+  },
+  "defaut/entrainement": {
+   "eclaire": 0.2079,
+   "noir_strict": 0.7727,
+   "lum_moy": 5.23,
+   "lum_eclaire": 24.95,
+   "teinte": [
+    33,
+    24,
+    11
+   ],
+   "chroma": 21.8
+  },
+  "temoin/entrainement": {
+   "eclaire": 0.2079,
+   "noir_strict": 0.7727,
+   "lum_moy": 5.23,
+   "lum_eclaire": 24.95,
+   "teinte": [
+    33,
+    24,
+    11
+   ],
+   "chroma": 21.8
+  },
+  "tous/entrainement": {
+   "eclaire": 0.2056,
+   "noir_strict": 0.7732,
+   "lum_moy": 5.03,
+   "lum_eclaire": 24.26,
+   "teinte": [
+    32,
+    23,
+    11
+   ],
+   "chroma": 21.5
+  }
+ },
+ "ecarts": {
+  "duel": {
+   "change": 19075,
+   "plus_clair": 312,
+   "plus_sombre": 14017,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "noir": {
+   "change": 16191,
+   "plus_clair": 44,
+   "plus_sombre": 11508,
+   "noir_allume": 1,
+   "noir_strict_allume": 1
+  },
+  "scinde": {
+   "change": 10102,
+   "plus_clair": 451,
+   "plus_sombre": 7678,
+   "noir_allume": 80,
+   "noir_strict_allume": 0
+  },
+  "sol": {
+   "change": 16110,
+   "plus_clair": 222,
+   "plus_sombre": 12326,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "mur": {
+   "change": 15262,
+   "plus_clair": 196,
+   "plus_sombre": 11542,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "arena": {
+   "change": 14978,
+   "plus_clair": 203,
+   "plus_sombre": 10968,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "zone": {
+   "change": 18384,
+   "plus_clair": 175,
+   "plus_sombre": 13601,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "impacts": {
+   "change": 15197,
+   "plus_clair": 175,
+   "plus_sombre": 11249,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "fusee1": {
+   "change": 166125,
+   "plus_clair": 181,
+   "plus_sombre": 17688,
+   "noir_allume": 5,
+   "noir_strict_allume": 2
+  },
+  "fusee2": {
+   "change": 245096,
+   "plus_clair": 65006,
+   "plus_sombre": 15958,
+   "noir_allume": 876,
+   "noir_strict_allume": 623
+  },
+  "entrainement": {
+   "change": 10129,
+   "plus_clair": 177,
+   "plus_sombre": 7269,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  }
+ },
+ "bruit": {
+  "duel": {
+   "change": 8,
+   "plus_clair": 3,
+   "plus_sombre": 3,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "noir": {
+   "change": 3,
+   "plus_clair": 0,
+   "plus_sombre": 3,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "scinde": {
+   "change": 90,
+   "plus_clair": 45,
+   "plus_sombre": 24,
+   "noir_allume": 4,
+   "noir_strict_allume": 0
+  },
+  "sol": {
+   "change": 280,
+   "plus_clair": 103,
+   "plus_sombre": 145,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "mur": {
+   "change": 228,
+   "plus_clair": 93,
+   "plus_sombre": 119,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "arena": {
+   "change": 230,
+   "plus_clair": 93,
+   "plus_sombre": 127,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "zone": {
+   "change": 364,
+   "plus_clair": 184,
+   "plus_sombre": 145,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "impacts": {
+   "change": 41,
+   "plus_clair": 27,
+   "plus_sombre": 14,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "fusee1": {
+   "change": 172,
+   "plus_clair": 10,
+   "plus_sombre": 16,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "fusee2": {
+   "change": 0,
+   "plus_clair": 0,
+   "plus_sombre": 0,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  },
+  "entrainement": {
+   "change": 69,
+   "plus_clair": 19,
+   "plus_sombre": 40,
+   "noir_allume": 0,
+   "noir_strict_allume": 0
+  }
+ },
+ "loupes": {
+  "duel": [
+   649,
+   365,
+   1289,
+   725
+  ],
+  "noir": [
+   646,
+   350,
+   1286,
+   710
+  ],
+  "scinde": [
+   568,
+   336,
+   1208,
+   696
+  ],
+  "sol": [
+   458,
+   311,
+   1098,
+   671
+  ],
+  "mur": [
+   529,
+   312,
+   1169,
+   672
+  ],
+  "arena": [
+   641,
+   298,
+   1281,
+   658
+  ],
+  "zone": [
+   644,
+   353,
+   1284,
+   713
+  ],
+  "impacts": [
+   527,
+   313,
+   1167,
+   673
+  ],
+  "fusee1": [
+   625,
+   363,
+   1265,
+   723
+  ],
+  "fusee2": [
+   618,
+   360,
+   1258,
+   720
+  ],
+  "entrainement": [
+   361,
+   322,
+   1001,
+   682
+  ]
+ },
+ "manquantes": []
+}

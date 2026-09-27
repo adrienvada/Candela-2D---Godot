@@ -12,6 +12,10 @@ from analyse import ILLUSTRATIONS, SCENES_LIBELLES, VERDICTS
 ICI = os.path.dirname(os.path.abspath(__file__))
 
 
+def nb(n):
+    return f"{n:,}".replace(",", "\u202f")
+
+
 def pct(x):
     return f"{100 * x:.0f} %" if x is not None else "—"
 
@@ -29,6 +33,8 @@ def cellule_image(chemin, legende):
     if chemin and os.path.exists(os.path.join(ICI, chemin)):
         return (f'<figure><a href="{chemin}"><img loading="lazy" src="{chemin}" alt="{html.escape(legende)}"></a>'
                 f'<figcaption>{legende}</figcaption></figure>')
+    if not legende:
+        return "<figure></figure>"
     return f'<figure class="vide"><div>{legende}</div></figure>'
 
 
@@ -55,13 +61,17 @@ def main():
                 cellule_image(f"img/jeu_tous_{scene}.jpg",
                               "Le jeu, tous les essais allumés<br>" + chiffres(m["prises"], f"tous/{scene}")),
             ])
+            figs += "" if scene == "scinde" else "".join([
+                cellule_image("", "") + cellule_image(f"img/loupe_defaut_{scene}.jpg", "Loupe ×2 (un tiers de l’écran) — le jeu par défaut (même cadre)"),
+                cellule_image(f"img/loupe_tous_{scene}.jpg", "Loupe ×2 (un tiers de l’écran) — tous les essais (même cadre)"),
+            ])
             mesure = ""
             if ecart:
-                mesure = (f'<p class="mesure">Des essais au défaut : {ecart["change"]:,} pixels changent '
-                          f'({ecart["plus_clair"]:,} plus clairs, {ecart["plus_sombre"]:,} plus sombres) ; '
-                          f'noirs allumés : {ecart["noir_allume"]:,} (dont noir strict : {ecart["noir_strict_allume"]:,}). '
-                          f'Bruit entre deux lancements par défaut : {bruit.get("change", 0):,} pixels, '
-                          f'noirs allumés {bruit.get("noir_allume", 0):,}.</p>').replace(",", " ")
+                mesure = (f'<p class="mesure">Des essais au défaut : {nb(ecart["change"])} pixels changent '
+                          f'({nb(ecart["plus_clair"])} plus clairs, {nb(ecart["plus_sombre"])} plus sombres) ; '
+                          f'noirs allumés : {nb(ecart["noir_allume"])} (dont noir strict : {nb(ecart["noir_strict_allume"])}). '
+                          f'Bruit entre deux lancements par défaut : {nb(bruit.get("change", 0))} pixels, '
+                          f'noirs allumés {nb(bruit.get("noir_allume", 0))}.</p>')
             if ill.get("note_scene"):
                 mesure += f'<p class="mesure">{html.escape(ill["note_scene"])}</p>'
         else:
@@ -104,7 +114,10 @@ body {{ background:var(--fond); color:var(--texte); font:15px/1.45 system-ui,san
 h1 {{ font-size:1.5em; }} h2 {{ font-size:1.2em; margin-top:2.2em; border-top:1px solid var(--ligne); padding-top:1em; }}
 code {{ color:var(--doux); font-size:.85em; }}
 .desc {{ color:#ccc; max-width:70em; }}
-.trio {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:10px; }}
+.trio {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }}
+@media (max-width:800px) {{ .trio {{ grid-template-columns:1fr; }} .trio figure:empty {{ display:none; }} }}
+code, p, td {{ overflow-wrap:anywhere; }}
+nav {{ display:flex; flex-wrap:wrap; gap:.2em .8em; }}
 figure {{ margin:0; }} img {{ width:100%; height:auto; display:block; border:1px solid var(--ligne); }}
 figcaption {{ font-size:.85em; color:var(--doux); padding:4px 0; }}
 figure.vide div {{ border:1px dashed var(--ligne); color:var(--doux); padding:2em 1em; min-height:8em; }}
@@ -114,7 +127,8 @@ table {{ border-collapse:collapse; width:100%; margin-top:.6em; font-size:.9em; 
 th, td {{ border:1px solid var(--ligne); padding:5px 7px; vertical-align:top; text-align:left; }}
 thead th {{ background:#1c1c1c; }} tbody th {{ white-space:nowrap; }}
 td.v.compatible {{ color:var(--ok); }} td.v.contredit {{ color:var(--non); }} td.v.moitie {{ color:var(--moitie); }}
-nav a {{ color:#bbb; margin-right:.8em; font-size:.85em; }}
+nav a {{ color:#bbb; font-size:.85em; }}
+table {{ display:block; overflow-x:auto; }}
 @media (max-width:700px) {{ tbody th {{ white-space:normal; }} table {{ font-size:.8em; }} }}
 </style></head><body>
 <h1>Le jeu devant ses illustrations</h1>

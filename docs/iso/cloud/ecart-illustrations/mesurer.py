@@ -73,6 +73,18 @@ def jpeg(tableau_ou_chemin, sortie, largeur=None):
     img.save(sortie, quality=85, optimize=True)
 
 
+def boite_loupe(a):
+    """Le cadre 640×360 centré sur la lumière de la prise par défaut (barycentre des pixels de luminance > 60), borné à
+    l'image : la même boîte sert aux deux prises, pour les comparer au même endroit."""
+    lum = 0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2]
+    ys, xs = np.nonzero(lum > 60)
+    h, w = lum.shape
+    cx, cy = (float(xs.mean()), float(ys.mean())) if xs.size else (w / 2, h / 2)
+    x0 = int(min(max(cx - 320, 0), w - 640))
+    y0 = int(min(max(cy - 180, 0), h - 360))
+    return (x0, y0, x0 + 640, y0 + 360)
+
+
 def main():
     os.makedirs(os.path.join(ICI, "img"), exist_ok=True)
     mesures = {"source": SOURCE, "illustrations": {}, "prises": {}, "ecarts": {}, "bruit": {}}
@@ -96,6 +108,13 @@ def main():
             mesures["prises"][f"{lanc}/{scene}"] = stats(images[lanc])
             if lanc != "temoin":
                 jpeg(chemin, os.path.join(ICI, "img", f"jeu_{lanc}_{scene}.jpg"))
+        if "defaut" in images:
+            boite = boite_loupe(images["defaut"])
+            mesures.setdefault("loupes", {})[scene] = list(boite)
+            for lanc in ("defaut", "tous"):
+                if lanc in images:
+                    img = Image.fromarray(images[lanc].astype(np.uint8)).crop(boite).resize((1280, 720), Image.LANCZOS)
+                    jpeg(img, os.path.join(ICI, "img", f"loupe_{lanc}_{scene}.jpg"))
         if "defaut" in images and "temoin" in images:
             mesures["bruit"][scene] = ecart(images["defaut"], images["temoin"])
         if "defaut" in images and "tous" in images:
