@@ -94,6 +94,11 @@ var faisceaux_actifs := false
 ## reste accepté et ne change rien. À poser AVANT que les couches naissent, comme `couches_fusee` — une couche déjà créée
 ## garde son shader (les bancs basculent par `poser_masque_fumee`).
 var masque_fumee := false
+## Session cloud « masque-fumée » (2026-09-27) — LA FORME du masque, quand il est allumé : 0, celle de Gadgets (le masque de
+## `--fumee-masque`, tel quel) ; 1, la forme moins chère de `volume_masque_compact.gdshaderinc`, chacune derrière son
+## drapeau (`FORMES_MASQUE`), qui allume aussi le masque. ÉTEINTES par défaut : sans l'un de ces drapeaux, rien ne change.
+## Chacune ajoute une idée à la précédente, pour qu'une série en miroir attribue le prix à chaque idée.
+var forme_masque := 0
 ## Q34 = C (Adrien, 2026-09-26) — le point de braise de la fusée POSÉE, PAR DÉFAUT. En 2D, le cœur incandescent (`fusee.gd`,
 ## `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est une information de jeu, la
 ## position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et ne l'émet pas ; ce point le
@@ -116,6 +121,11 @@ var _masques := false
 const DRAPEAU_FAISCEAU := "--faisceau"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
+## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
+## surface (MASQUE_COMPACT).
+const FORMES_MASQUE := {"--fumee-masque-compact": 1}
+const DEFINES_FORMES := [[], ["MASQUE_COMPACT"]]
+const NOMS_FORMES := ["celle de Gadgets", "compacte (MASQUE_COMPACT)"]
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
 const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
 const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"
@@ -141,6 +151,9 @@ func _init() -> void:
 			masque_fumee = true
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
 			masque_fumee = false
+		elif FORMES_MASQUE.has(arg):
+			masque_fumee = true
+			forme_masque = int(FORMES_MASQUE[arg])
 		elif arg == DRAPEAU_COEUR_FUSEE:
 			coeur_fusee = 1
 		elif arg == DRAPEAU_COEUR_FUSEE_BLANC:
@@ -545,6 +558,9 @@ static var _masque_annonce := false
 ## (premier sandwich, 2026-09-25 09:21 : 73 609 pixels fautifs contre 12 855 sans masque, la fumée presque trois fois plus
 ## claire dans la lumière).
 var _shader_masque: Shader = null
+## Toutes les variantes des FORMES posées : les filtres qui choisissent les matériaux de fumée par leur
+## shader doivent les reconnaître toutes (même piège que `_shader_masque`). Vide sans drapeau de forme.
+var _formes_posees := {}
 
 
 func _materiau_volume() -> ShaderMaterial:
@@ -564,6 +580,9 @@ func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
 		mat.shader = SHADER_VOLUME
 		return
 	mat.shader = variante_masque(IsoMateriaux.usure_essai_active())
+	if forme_masque > 0:
+		mat.shader = variante_forme(mat.shader, forme_masque)
+		_formes_posees[mat.shader] = true
 	_shader_masque = mat.shader
 	_recopier_le_mur(mat)
 	if not _masque_annonce:
@@ -573,6 +592,8 @@ func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
 			else "⚠ SANS le #define : variante manquée", POINT_NOIR_ANNONCE,
 			"recopiée (#define USURE_ESSAI, comme le sol)" if mat.shader.code.contains("#define USURE_ESSAI\n")
 			else "éteinte, comme le sol"])
+		# La forme, lue elle aussi dans le code de la variante réellement posée : une prise prouve son bras par cette ligne.
+		print("[fumée masque] forme : %s" % forme_annoncee(mat.shader))
 
 
 ## Le point noir de la sortie 3D, tel que la couche le prend (`POINT_NOIR_ECRIT` de `volume_masque.gdshaderinc`) : imprimé
@@ -630,6 +651,24 @@ static func variante_masque(usure: bool) -> Shader:
 	return IsoMateriaux.variante_definie(v, "USURE_ESSAI") if usure else v
 
 
+## La forme du masque (`forme_masque`) sur une variante masquée : ses #define, ajoutés dans l'ordre (chacun compilé une fois).
+static func variante_forme(masque: Shader, forme: int) -> Shader:
+	var v := masque
+	for d: String in DEFINES_FORMES[clampi(forme, 0, DEFINES_FORMES.size() - 1)]:
+		v = IsoMateriaux.variante_definie(v, d)
+	return v
+
+
+## Le nom de la forme que porte un shader de fumée, lu dans son code (jamais dans la ligne de commande).
+static func forme_annoncee(sh: Shader) -> String:
+	var forme := 0
+	for k in range(DEFINES_FORMES.size() - 1, 0, -1):
+		if (DEFINES_FORMES[k] as Array).all(func(d: String) -> bool: return sh.code.contains("#define %s\n" % d)):
+			forme = k
+			break
+	return NOMS_FORMES[forme]
+
+
 ## ISO13, Q31 — la bascule des bancs : le masque allumé ou éteint sur les couches DÉJÀ posées, au même instant, sans rien
 ## recréer (la preuve en un seul processus compare la même fumée avec et sans lui).
 func poser_masque_fumee(actif: bool) -> void:
@@ -637,7 +676,7 @@ func poser_masque_fumee(actif: bool) -> void:
 	for e: Dictionary in _suivis.values():
 		for m in e["mats"]:
 			var s := (m as ShaderMaterial).shader
-			if s == SHADER_VOLUME or (s != null and s == _shader_masque):
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s):
 				_poser_masque(m as ShaderMaterial, actif)
 
 
@@ -736,7 +775,7 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 	for e: Dictionary in _suivis.values():
 		for m in e["mats"]:
 			var s := (m as ShaderMaterial).shader
-			if s == SHADER_VOLUME or (s != null and s == _shader_masque):
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s):
 				mats.append(m)
 	if mats.is_empty():
 		return
@@ -747,10 +786,10 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 		if not sols.is_empty() and sols[0] != null:
 			var mur: ShaderMaterial = pres.get("_mat_mur")
 			for m in mats:
-				if (m as ShaderMaterial).shader == _shader_masque:
+				if (m as ShaderMaterial).shader == _shader_masque or _formes_posees.has((m as ShaderMaterial).shader):
 					for nom: String in CONTACT_PAR_IMAGE:
 						(m as ShaderMaterial).set_shader_parameter(nom, (sols[0] as ShaderMaterial).get_shader_parameter(nom))
-					if mur != null and _shader_masque.code.contains("#define USURE_ESSAI\n"):
+					if mur != null and (m as ShaderMaterial).shader.code.contains("#define USURE_ESSAI\n"):
 						for nom: String in USURE_DU_MUR:
 							(m as ShaderMaterial).set_shader_parameter(nom, mur.get_shader_parameter(nom))
 	var textures := [main.vp1.get_texture(), main.vp2.get_texture()]

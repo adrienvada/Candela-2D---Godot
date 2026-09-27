@@ -137,6 +137,15 @@ void fragment() {
 	if (a <= 0.003) {
 		discard;
 	}
+#ifdef MASQUE_COMPACT
+	// Session cloud « masque-fumée », 2026-09-27 — `--fumee-masque-compact` : la même question, au même endroit, posée au
+	// parcours qui ne recopie chaque surface qu'une fois (`volume_masque_compact.gdshaderinc`).
+	if (!ruban && masque_compact_montre_noir(monde, -INV_VIEW_MATRIX[2].xyz, deux,
+			INV_VIEW_MATRIX[0].xyz * (2.0 / (VIEWPORT_SIZE.x * PROJECTION_MATRIX[0][0])),
+			INV_VIEW_MATRIX[1].xyz * (2.0 / (VIEWPORT_SIZE.y * PROJECTION_MATRIX[1][1])))) {
+		discard;
+	}
+#else
 #ifdef FUMEE_MASQUE
 	// ISO13, Q31 voie A — LE MASQUE SANS COPIE D'ÉCRAN (allumé par défaut, `--sans-fumee-masque` l'éteint ; ISO7 Gadgets, 2026-09-25) : la couche se tait là
 	// où ce que le pixel MONTRE derrière elle s'affiche noir (`masque_montre_noir`, `volume_masque.gdshaderinc`) — le sol,
@@ -166,6 +175,7 @@ void fragment() {
 			INV_VIEW_MATRIX[1].xyz * (2.0 / (VIEWPORT_SIZE.y * PROJECTION_MATRIX[1][1])))) {
 		discard;
 	}
+#endif
 #endif
 
 	// LA COULEUR ENSUITE, le point central lu UNE fois pour ses deux usages.
