@@ -27340,7 +27340,9 @@ n'a pas été déplacée après les chiffres (à la plus grande taille, elle aur
 aussi loin que le plein feu) ; seul l'éblouissement gagne, de 2 s au plus (au-dessus de 0,25 à 200 px 4,58 → 6,57 s, à
 300 px 1,81 → 3,81 ; au-dessus de 0,5 à 100 px 3,18 → 5,18 ; au-dessus de 0,75 à 100 px 1,41 → 3,41). **Avant le défaut**,
 au Mac après le hash d'Iso 1 : la cadence sous fusée au pompe (règle 278) et la planche de l'illustration à côté du jeu à
-3,5 s ; puis Adrien le juge en jouant.
+3,5 s ; puis Adrien le juge en jouant. **Le jeu dit s'il est en essai** : à la première fusée d'un processus, il imprime
+`[fusée] rouge long (--fusee-rouge-long) : plein feu 4.0 s, braise 8.0 s, vie 20.0 s — essai Q35`, et rien au défaut — une
+série de cadence prouve son bras par le journal du jeu, jamais par sa ligne de commande (la même règle que le masque).
 
 **Les 8° vers l'orange, mesurés, et rien à corriger** : la lightmap sous la fusée est à 5,5° (126, 36, 27) pour une lumière à
 356° ; divisée par la lumière, elle donne (1 ; 0,94 ; 0,62), le brun des tuiles 2D. C'est la lumière 2D, la seule vérité du
