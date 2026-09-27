@@ -127,7 +127,7 @@ Format : teinte · saturation · luminance (0-255, Rec. 709), vue de J1. **Illus
   45 429). L'essai n'y ajoute rien et n'en retire rien.
 
 ### 4d. La suite complète
-Voir la fin du rapport (résultat recopié du journal de `run_suites.sh`).
+`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur `3d691c0` (x86, Godot 4.7 officiel) : **« tout passe, sans erreur de script (610 s) », code 0**, 138 suites OK dont `test_fusee_rouge_sang`. Le code du jeu n'a pas changé depuis ce commit : seuls le rapport et les images ont suivi.
 
 ## 5. Verdict sur la règle
 
