@@ -22,7 +22,10 @@ extends RefCounted
 ## fait le reste.
 
 const ID := "loupe-fusee-ages"
-const AGES := [0.5, 1.5, 2.5, 3.0, 3.5, 4.0, 5.0, 8.0]
+## Un demi-pas au-delà des bornes entières (session « fusée-point ») : atteint par pas de 1/60 s, « 4,0 » s'arrêtait à
+## 3,99999999999999, dans l'acte d'avant. « 4,01 » s'arrête au premier pas qui passe 4,0 (4,0167). Les deux derniers
+## âges montrent l'agonie (qui commence à 12 s) et le résidu (15 s).
+const AGES := [0.5, 1.5, 2.01, 2.5, 3.01, 3.5, 4.01, 5.01, 8.01, 13.01, 16.01]
 ## L'anneau du sol éclairé, en px du monde : au-delà du voxel et de son ombre, en deçà du bord de la flaque rouge.
 const ANNEAU := Vector2(24.0, 64.0)
 ## Le temps laissé à la rétrodiffusion de J1 pour s'éteindre ou revenir, en pas de physique (`_tenir_sans_torches`).
@@ -71,6 +74,15 @@ func lancer(plans: Array[Dictionary], lieux: Array[Vector2]) -> void:
 		var lu: float = float(f.call("age_combustion"))
 		var nom := "a%s" % String.num(age, 1).replace(".", "_")
 		await _prendre(plans, "%s-joueur" % nom, 6, l._tenir_scene)
+		# Le même instant SANS le point de braise : ce qui diffère entre les deux prises est le point seul, qu'on mesure
+		# alors là où il est, et non « le pixel le plus lumineux », qui sur un sol orange peut être le sol.
+		var coeur_avant: int = int(volumes.get("coeur_fusee"))
+		volumes.set("coeur_fusee", 0)
+		await _prendre(plans, "%s-joueur-sans-point" % nom, 6, l._tenir_scene)
+		volumes.set("coeur_fusee", coeur_avant)
+		for i in 6:
+			l._tenir_scene()
+			await p.get_tree().process_frame
 		for i in PAS_TORCHE:
 			l._tenir_sans_torches()
 			await p.get_tree().physics_frame
@@ -94,7 +106,7 @@ func lancer(plans: Array[Dictionary], lieux: Array[Vector2]) -> void:
 			"eblouissement_j1": snappedf(float(m.p1.dazzle_amount), 0.001),
 			"geometrie": _geometrie(lieu, float(f.call("rayon_fumee"))),
 			"ids": ["%s-%s-joueur" % [ID, nom], "%s-%s-noir-sans-fumee" % [ID, nom], "%s-%s-noir" % [ID, nom],
-				"%s-%s-noir-sans-fumee-bis" % [ID, nom]],
+				"%s-%s-noir-sans-fumee-bis" % [ID, nom], "%s-%s-joueur-sans-point" % [ID, nom]],
 		}))
 	f.queue_free()
 	await p.get_tree().process_frame
