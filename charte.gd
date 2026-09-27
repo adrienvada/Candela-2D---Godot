@@ -495,7 +495,7 @@ static var _habillage := ""
 ## des centaines de fois pour une réponse qui ne peut pas changer.
 static func habillage() -> String:
 	if _habillage == "":
-		_habillage = habillage_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+		_habillage = habillage_par_argument(DrapeauxDeLancement.arguments())
 	return _habillage
 
 

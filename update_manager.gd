@@ -183,7 +183,7 @@ func _peut_verifier_seul() -> bool:
 		return false
 	if DisplayServer.get_name() == "headless":
 		return false
-	return not OS.get_cmdline_args().has("--sans-maj")
+	return not DrapeauxDeLancement.present("--sans-maj")
 
 func _est_installe() -> bool:
 	return OS.has_feature("template")

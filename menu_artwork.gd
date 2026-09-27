@@ -136,14 +136,14 @@ static func effet_pour(identifiant: String) -> int:
 ## (luminance médiane ×0,87, arêtes ×0,48 à ×0,76). Le réglage voxel rend l'illustration à sa source là où
 ## la torche du curseur la révèle. `--menus=ancien` rend l'ancien réglage, pour comparer en jeu.
 ##
-## ⚠️ Lu UNE fois : `OS.get_cmdline_user_args()` ne change pas en cours d'exécution, et chaque illustration
+## ⚠️ Lu UNE fois : `DrapeauxDeLancement.arguments()` ne change pas en cours d'exécution, et chaque illustration
 ## de l'accueil construit son matériau.
 static var _reglage_art := -1
 
 static func reglage_art() -> int:
 	if _reglage_art < 0:
 		_reglage_art = 1
-		for arg in OS.get_cmdline_user_args():
+		for arg in DrapeauxDeLancement.arguments():
 			if String(arg) == "--menus=ancien":
 				_reglage_art = 0
 	return _reglage_art

@@ -572,8 +572,8 @@ func _le_faisceau() -> void:
 		not corps.is_empty() and not corps.contains("_couches(") and not corps.contains("_poser_couches("))
 	_check("il pose le cœur chaud à la lampe", corps.contains("_poser_halo("))
 	_check("le cœur s'éteint avec la lampe", corps.contains("not lampe.enabled or lampe.energy <= 0.0"))
-	_check("le drapeau se lit sur les arguments UTILISATEUR (après --)",
-		texte.contains("for arg in OS.get_cmdline_user_args():"))
+	_check("le drapeau se lit par la porte commune des drapeaux (avant comme après --, D3)",
+		texte.contains("for arg in DrapeauxDeLancement.arguments():"))
 	_check("le drapeau dit ce qu'il allume (la preuve qu'il a porté)",
 		texte.contains("[faisceau] allumé — le cœur chaud seul"))
 

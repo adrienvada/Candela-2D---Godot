@@ -81,7 +81,7 @@ const DRAPEAU_SANS_BEAUTE := "--sans-beaute"
 
 
 static func beaute_active() -> bool:
-	return not OS.get_cmdline_user_args().has(DRAPEAU_SANS_BEAUTE)
+	return not DrapeauxDeLancement.present(DRAPEAU_SANS_BEAUTE)
 
 
 ## ISO13, lot B — L'ENCRE EN ESSAI (`--encre-essai`, éteint par défaut) : des hachures dans la pénombre du lavis
@@ -99,7 +99,7 @@ const CONTOUR_PX_EPAIS := 2.0
 
 
 static func encre_essai_active() -> bool:
-	return OS.get_cmdline_user_args().has(DRAPEAU_ENCRE_ESSAI)
+	return DrapeauxDeLancement.present(DRAPEAU_ENCRE_ESSAI)
 
 
 ## Les variantes des shaders iso compilées avec un `#define` d'essai, une par shader d'origine et par drapeau.
@@ -165,7 +165,7 @@ static var usure_forcee := -1
 static func usure_essai_active() -> bool:
 	if usure_forcee >= 0:
 		return usure_forcee == 1
-	return usure_active(OS.get_cmdline_user_args())
+	return usure_active(DrapeauxDeLancement.arguments())
 
 
 ## Calcul pur : allumée sauf `--sans-usure` (Q30 = A).

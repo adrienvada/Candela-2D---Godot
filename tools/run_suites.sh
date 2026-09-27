@@ -220,6 +220,10 @@ SUITES=(test_liaisons test_icones_editeur
 # macOS n'a pas `timeout`, d'où le chien de garde à la main.
 PLAFOND_SUITE=${PLAFOND_SUITE:-120}
 
+# Répétition du test d'Adrien (2026-09-27) : une seule lecture des drapeaux de lancement (D3).
+# Posé ici, loin de la liste, pour que ce correctif se reprenne seul sans conflit.
+SUITES+=(test_drapeaux)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

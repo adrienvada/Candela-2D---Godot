@@ -1169,7 +1169,7 @@ func _emit_host_disconnected() -> void:
 # ===========================================================================
 
 func _flag_present(flag: String) -> bool:
-	return flag in OS.get_cmdline_user_args() or flag in OS.get_cmdline_args()
+	return DrapeauxDeLancement.present(flag)
 
 ## Verrou de la Mission C : l'identité jetable est un outil de mise au point.
 ## `OS.is_debug_build()` est faux dans un export release, donc le drapeau y est

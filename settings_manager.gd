@@ -334,7 +334,7 @@ static func deux_d_par_argument(args: PackedStringArray) -> bool:
 	return args.has(DRAPEAU_2D)
 
 static func _arguments() -> PackedStringArray:
-	return OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	return DrapeauxDeLancement.arguments()
 
 ## ISO8 — le zoom du duel choisi au réglage de débogage, enregistré (et marqué comme réglé).
 func set_zoom_duel(zoom: float) -> void:
@@ -457,7 +457,7 @@ func iso_lightmap_choisi() -> String:
 	return _iso_lightmap_choisi
 
 func _lightmap_appliquee() -> String:
-	var arg := lightmap_par_argument(OS.get_cmdline_user_args() + OS.get_cmdline_args())
+	var arg := lightmap_par_argument(DrapeauxDeLancement.arguments())
 	return arg if arg != "" else _iso_lightmap_choisi
 
 ## `--lightmap plein` ou `--lightmap 1080p` → la variante ; sinon une chaîne vide.
