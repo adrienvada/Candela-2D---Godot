@@ -4,10 +4,10 @@
 > 1. Ouvre `planche.html` (dans ce dossier) : le même duel à ×1,25, ×1,5 (aujourd'hui), ×1,75 et ×2, sur le Cloître et la Croisée, en plein écran et en écran partagé.
 > 2. Le zoom ne change pas jusqu'où la torche éclaire : il change la taille des choses à l'écran et ce qu'on voit autour de sa lumière.
 > 3. Plus on zoome, plus les corps sont gros (de ~47 à ~75 px de large) et plus la carte est cachée (de ~73 % à ~35 % de ces cartes à l'écran).
-> 4. Plus on zoome, plus un adversaire peut vous éclairer depuis l'extérieur de votre écran, surtout dans votre dos (4 armes sur 10 à ×1,25, toutes à ×2).
+> 4. Plus on zoome, plus un adversaire peut vous éclairer depuis l'extérieur de votre écran, surtout dans votre dos quand vous visez vers le haut de l'écran (4 armes sur 10 à ×1,25, 7 à ×1,5, toutes à ×2).
 > 5. Rien n'a changé dans le jeu ; le choix reste le tien. La fluidité, elle, n'a pas pu être jugée ici (à mesurer sur ton Mac).
 
-**État : terminé** — 27/09, de 02:20 à ~05:00 (heure de Paris). Branche `claude/cloud-zoom-2`, partie de
+**État : terminé** — 27/09, de 02:20 à 04:40 (heure de Paris). Branche `claude/cloud-zoom-2`, partie de
 `origin/integration-iso14` (`60e5c6d`). Refait la tâche d'une première session dont les commits n'avaient pas pu être poussés.
 
 ## Ce qui a été fait
@@ -21,6 +21,12 @@
 - Les chiffres (`images/mesures-*.json`) sont pris **dans le jeu en marche**, sur la caméra iso réellement posée, avec
   ses propres formules (`CameraIso.vers_ecran` / `vers_sol`), pas recalculés à côté.
 - `planche.html` : autonome, images en chemins relatifs, plans des cartes en SVG.
+- Suite complète verte après mes changements (`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` : « tout passe, sans
+  erreur de script », code 0, 629 s, en x86 sous le rendu du cloud).
+- ⚠️ `tools/planche_zoom.gd` emprunte des membres privés du photographe (`_sol_libre`, `_mur_entre`, `_viser`,
+  `_vue_unique`, `_deux_vues`, `_prendre_les_commandes`, `_torches`, `_vivants`, `_poser_la_fenetre`, `_lire_l_horloge`,
+  `_attendre`, `_attendre_images`, `_valeur`, `_lire_taille`, `_sortir`) : comme pour le cinéaste, un renommage là-bas le
+  casse sans qu'aucune suite ne rougisse (`test_banc.gd` ne garde que ceux du cinéaste). Pas de test ajouté : hors tâche.
 
 ## Comment le zoom s'applique (lu dans le code avant de photographier)
 
@@ -34,7 +40,7 @@
   grossit le cône à l'écran ; la torche éclaire exactement le même sol.
 - **Le regard décalé** (`regard_duel.gd`) avance la caméra de 0,15 × la hauteur VISIBLE vers la visée, soit
   162 / zoom px de monde : plus on zoome, moins il avance dans le monde (130 px à ×1,25, 81 px à ×2). À l'écran, le
-  joueur reste au même endroit (à 162 px du centre) quel que soit le zoom. Au-delà de ×1,0, la caméra s'arrête aux bords
+  joueur reste au même endroit quel que soit le zoom (à 162 px du centre en visée verticale, 206 en horizontale). Au-delà de ×1,0, la caméra s'arrête aux bords
   de la carte (dans ses axes tournés de 45°) : sur ces petites cartes (28 à 30 cases, ~1 000 px), c'est fréquent à ×1,25.
 
 ## Les chiffres
@@ -95,7 +101,7 @@ dessine le plan de tout ce qui est à l'écran : plus on dézoome, plus elle ré
 - **×1,25** — *gagne* : on voit presque toute la carte (73 % de ces deux cartes, caméra souvent arrêtée au bord), on voit
   venir la lumière adverse de loin, seules les armes longues peuvent vous éclairer hors champ ; au sommet de la
   respiration du bandeau, la bande dessine tout le plan. *Perd* : les corps sont les plus petits (~47 × 57 px), le détail
-  des voxels se lit mal, le faisceau n'occupe qu'un quart de l'écran et l'image est surtout du noir autour ; c'est le
+  des voxels se lit mal, le faisceau n'atteint que la moitié de la demi-largeur de l'écran et l'image est surtout du noir autour ; c'est le
   contraire du « plus claustrophobique » demandé en ISO8, et le joueur n'est plus au centre quand la caméra bute au bord.
 - **×1,5 (aujourd'hui)** — *gagne* : un compromis : corps ~56 × 68 px, faisceau à ~60 % de la demi-largeur, environ la
   moitié de la carte visible. *Perd* : 7 armes sur 10 peuvent vous éclairer depuis votre dos sans être à l'écran quand vous
