@@ -1,0 +1,2205 @@
+{
+ "illustration": {
+  "sol_teinte": 353.3,
+  "sol_saturation": 0.689,
+  "zone_sol": "x 240-560, y 480-560",
+  "flamme_moy9": [
+   255,
+   255,
+   255
+  ],
+  "sol_luminance": 67.9
+ },
+ "variantes": {
+  "defaut": [
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 0.5,
+    "age_lu": 0.5,
+    "alpha_fumee": 0.167,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a0_5",
+    "pas_de_vieillissement": 31,
+    "rayon_fumee": 201.3,
+    "mesures": {
+     "sol_teinte": 3.9,
+     "sol_saturation": 0.648,
+     "sol_luminance": 42.7,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.097,
+     "noir_reference": 1699283,
+     "noir_instables": 101708,
+     "noir_fuites": 11730,
+     "noir_fuites_disque_fumee": 11730,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1297,
+      261,
+      1657,
+      551
+     ],
+     "noir_fuite_max": 5,
+     "eteint": {
+      "teinte": 4.5,
+      "saturation": 0.673,
+      "luminance": 45.23,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 1.5,
+    "age_lu": 1.5,
+    "alpha_fumee": 0.5,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a1_5",
+    "pas_de_vieillissement": 91,
+    "rayon_fumee": 203.8,
+    "mesures": {
+     "sol_teinte": 12.4,
+     "sol_saturation": 0.648,
+     "sol_luminance": 105.0,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.255,
+     "noir_reference": 927779,
+     "noir_instables": 38091,
+     "noir_fuites": 13257,
+     "noir_fuites_disque_fumee": 13257,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1204,
+      271,
+      1648,
+      631
+     ],
+     "noir_fuite_max": 22,
+     "eteint": {
+      "teinte": 11.6,
+      "saturation": 0.662,
+      "luminance": 105.92,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 2.5,
+    "age_lu": 2.5,
+    "alpha_fumee": 0.833,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.8,
+    "masque_fumee": false,
+    "nom": "a2_5",
+    "pas_de_vieillissement": 151,
+    "rayon_fumee": 206.3,
+    "mesures": {
+     "sol_teinte": 14.9,
+     "sol_saturation": 0.695,
+     "sol_luminance": 100.8,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.205,
+     "noir_reference": 1834045,
+     "noir_instables": 455,
+     "noir_fuites": 45306,
+     "noir_fuites_disque_fumee": 45306,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1283,
+      250,
+      1664,
+      570
+     ],
+     "noir_fuite_max": 58,
+     "eteint": {
+      "teinte": 13.6,
+      "saturation": 0.718,
+      "luminance": 100.44,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 3.0,
+    "age_lu": 2.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.6,
+    "masque_fumee": false,
+    "nom": "a3_0",
+    "pas_de_vieillissement": 181,
+    "rayon_fumee": 207.5,
+    "mesures": {
+     "sol_teinte": 19.4,
+     "sol_saturation": 0.711,
+     "sol_luminance": 90.7,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      225,
+      168
+     ],
+     "point_moy9": [
+      230,
+      216,
+      152
+     ],
+     "point_teinte": 49.2,
+     "point_saturation": 0.339,
+     "part_fumee": 0.214,
+     "noir_reference": 1813987,
+     "noir_instables": 17954,
+     "noir_fuites": 40460,
+     "noir_fuites_disque_fumee": 40460,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1267,
+      246,
+      1680,
+      571
+     ],
+     "noir_fuite_max": 70,
+     "eteint": {
+      "teinte": 18.8,
+      "saturation": 0.734,
+      "luminance": 96.87,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 3.5,
+    "age_lu": 3.49999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a3_5",
+    "pas_de_vieillissement": 211,
+    "rayon_fumee": 208.8,
+    "mesures": {
+     "sol_teinte": 24.5,
+     "sol_saturation": 0.708,
+     "sol_luminance": 98.4,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.317,
+     "noir_reference": 900041,
+     "noir_instables": 31213,
+     "noir_fuites": 6529,
+     "noir_fuites_disque_fumee": 6528,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      957,
+      242,
+      1695,
+      636
+     ],
+     "noir_fuite_max": 23,
+     "eteint": {
+      "teinte": 24.5,
+      "saturation": 0.727,
+      "luminance": 104.73,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 4.0,
+    "age_lu": 3.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a4_0",
+    "pas_de_vieillissement": 241,
+    "rayon_fumee": 210.0,
+    "mesures": {
+     "sol_teinte": 24.7,
+     "sol_saturation": 0.708,
+     "sol_luminance": 103.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.388,
+     "noir_reference": 1285349,
+     "noir_instables": 184185,
+     "noir_fuites": 16132,
+     "noir_fuites_disque_fumee": 16131,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      992,
+      224,
+      1622,
+      595
+     ],
+     "noir_fuite_max": 32,
+     "eteint": {
+      "teinte": 24.2,
+      "saturation": 0.737,
+      "luminance": 96.88,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 5.0,
+    "age_lu": 4.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a5_0",
+    "pas_de_vieillissement": 301,
+    "rayon_fumee": 212.5,
+    "mesures": {
+     "sol_teinte": 24.6,
+     "sol_saturation": 0.734,
+     "sol_luminance": 69.9,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.152,
+     "noir_reference": 1835561,
+     "noir_instables": 0,
+     "noir_fuites": 31342,
+     "noir_fuites_disque_fumee": 31342,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1292,
+      258,
+      1661,
+      564
+     ],
+     "noir_fuite_max": 33,
+     "eteint": {
+      "teinte": 24.4,
+      "saturation": 0.764,
+      "luminance": 74.71,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 8.0,
+    "age_lu": 7.99999999999998,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a8_0",
+    "pas_de_vieillissement": 481,
+    "rayon_fumee": 220.0,
+    "mesures": {
+     "sol_teinte": 25.3,
+     "sol_saturation": 0.698,
+     "sol_luminance": 110.2,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.312,
+     "noir_reference": 928930,
+     "noir_instables": 45047,
+     "noir_fuites": 7847,
+     "noir_fuites_disque_fumee": 7844,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      953,
+      234,
+      1708,
+      638
+     ],
+     "noir_fuite_max": 24,
+     "eteint": {
+      "teinte": 24.5,
+      "saturation": 0.727,
+      "luminance": 104.8,
+      "pixels": 31618
+     }
+    }
+   }
+  ],
+  "sang": [
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 0.5,
+    "age_lu": 0.5,
+    "alpha_fumee": 0.167,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a0_5",
+    "pas_de_vieillissement": 31,
+    "rayon_fumee": 201.3,
+    "mesures": {
+     "sol_teinte": 350.4,
+     "sol_saturation": 0.624,
+     "sol_luminance": 41.8,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.096,
+     "noir_reference": 1699290,
+     "noir_instables": 101706,
+     "noir_fuites": 11653,
+     "noir_fuites_disque_fumee": 11653,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1297,
+      261,
+      1657,
+      551
+     ],
+     "noir_fuite_max": 5,
+     "eteint": {
+      "teinte": 351.3,
+      "saturation": 0.641,
+      "luminance": 44.28,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 1.5,
+    "age_lu": 1.5,
+    "alpha_fumee": 0.5,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a1_5",
+    "pas_de_vieillissement": 91,
+    "rayon_fumee": 203.8,
+    "mesures": {
+     "sol_teinte": 4.5,
+     "sol_saturation": 0.575,
+     "sol_luminance": 104.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.259,
+     "noir_reference": 927791,
+     "noir_instables": 38080,
+     "noir_fuites": 13292,
+     "noir_fuites_disque_fumee": 13257,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      952,
+      271,
+      1648,
+      631
+     ],
+     "noir_fuite_max": 27,
+     "eteint": {
+      "teinte": 3.4,
+      "saturation": 0.591,
+      "luminance": 105.38,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 2.5,
+    "age_lu": 2.5,
+    "alpha_fumee": 0.833,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.8,
+    "masque_fumee": false,
+    "nom": "a2_5",
+    "pas_de_vieillissement": 151,
+    "rayon_fumee": 206.3,
+    "mesures": {
+     "sol_teinte": 11.0,
+     "sol_saturation": 0.651,
+     "sol_luminance": 100.2,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.204,
+     "noir_reference": 1834048,
+     "noir_instables": 456,
+     "noir_fuites": 45132,
+     "noir_fuites_disque_fumee": 45132,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1283,
+      250,
+      1664,
+      570
+     ],
+     "noir_fuite_max": 57,
+     "eteint": {
+      "teinte": 9.6,
+      "saturation": 0.672,
+      "luminance": 99.68,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 3.0,
+    "age_lu": 2.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.6,
+    "masque_fumee": false,
+    "nom": "a3_0",
+    "pas_de_vieillissement": 181,
+    "rayon_fumee": 207.5,
+    "mesures": {
+     "sol_teinte": 17.9,
+     "sol_saturation": 0.692,
+     "sol_luminance": 90.4,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      224,
+      183
+     ],
+     "point_moy9": [
+      229,
+      219,
+      165
+     ],
+     "point_teinte": 50.6,
+     "point_saturation": 0.279,
+     "part_fumee": 0.214,
+     "noir_reference": 1813985,
+     "noir_instables": 17960,
+     "noir_fuites": 40387,
+     "noir_fuites_disque_fumee": 40387,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1267,
+      246,
+      1680,
+      571
+     ],
+     "noir_fuite_max": 70,
+     "eteint": {
+      "teinte": 17.3,
+      "saturation": 0.715,
+      "luminance": 96.53,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 3.5,
+    "age_lu": 3.49999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a3_5",
+    "pas_de_vieillissement": 211,
+    "rayon_fumee": 208.8,
+    "mesures": {
+     "sol_teinte": 24.5,
+     "sol_saturation": 0.708,
+     "sol_luminance": 98.4,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.317,
+     "noir_reference": 900044,
+     "noir_instables": 31197,
+     "noir_fuites": 6530,
+     "noir_fuites_disque_fumee": 6528,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      953,
+      242,
+      1695,
+      636
+     ],
+     "noir_fuite_max": 23,
+     "eteint": {
+      "teinte": 24.5,
+      "saturation": 0.727,
+      "luminance": 104.73,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 4.0,
+    "age_lu": 3.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a4_0",
+    "pas_de_vieillissement": 241,
+    "rayon_fumee": 210.0,
+    "mesures": {
+     "sol_teinte": 24.7,
+     "sol_saturation": 0.708,
+     "sol_luminance": 103.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.388,
+     "noir_reference": 1285364,
+     "noir_instables": 184172,
+     "noir_fuites": 16153,
+     "noir_fuites_disque_fumee": 16131,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      965,
+      224,
+      1622,
+      591
+     ],
+     "noir_fuite_max": 32,
+     "eteint": {
+      "teinte": 24.2,
+      "saturation": 0.737,
+      "luminance": 96.88,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 5.0,
+    "age_lu": 4.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a5_0",
+    "pas_de_vieillissement": 301,
+    "rayon_fumee": 212.5,
+    "mesures": {
+     "sol_teinte": 24.6,
+     "sol_saturation": 0.734,
+     "sol_luminance": 69.9,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.152,
+     "noir_reference": 1835561,
+     "noir_instables": 0,
+     "noir_fuites": 31342,
+     "noir_fuites_disque_fumee": 31342,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1292,
+      258,
+      1661,
+      564
+     ],
+     "noir_fuite_max": 33,
+     "eteint": {
+      "teinte": 24.4,
+      "saturation": 0.764,
+      "luminance": 74.71,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 8.0,
+    "age_lu": 7.99999999999998,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 2.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a8_0",
+    "pas_de_vieillissement": 481,
+    "rayon_fumee": 220.0,
+    "mesures": {
+     "sol_teinte": 25.3,
+     "sol_saturation": 0.698,
+     "sol_luminance": 110.2,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.312,
+     "noir_reference": 928922,
+     "noir_instables": 45079,
+     "noir_fuites": 7847,
+     "noir_fuites_disque_fumee": 7844,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      952,
+      234,
+      1708,
+      638
+     ],
+     "noir_fuite_max": 24,
+     "eteint": {
+      "teinte": 24.5,
+      "saturation": 0.727,
+      "luminance": 104.8,
+      "pixels": 31618
+     }
+    }
+   }
+  ],
+  "long": [
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 0.5,
+    "age_lu": 0.5,
+    "alpha_fumee": 0.167,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a0_5",
+    "pas_de_vieillissement": 31,
+    "rayon_fumee": 201.3,
+    "mesures": {
+     "sol_teinte": 3.9,
+     "sol_saturation": 0.648,
+     "sol_luminance": 42.7,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.097,
+     "noir_reference": 1699283,
+     "noir_instables": 101708,
+     "noir_fuites": 11730,
+     "noir_fuites_disque_fumee": 11730,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1297,
+      261,
+      1657,
+      551
+     ],
+     "noir_fuite_max": 5,
+     "eteint": {
+      "teinte": 4.5,
+      "saturation": 0.673,
+      "luminance": 45.23,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 1.5,
+    "age_lu": 1.5,
+    "alpha_fumee": 0.5,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a1_5",
+    "pas_de_vieillissement": 91,
+    "rayon_fumee": 203.8,
+    "mesures": {
+     "sol_teinte": 12.4,
+     "sol_saturation": 0.648,
+     "sol_luminance": 105.0,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.255,
+     "noir_reference": 927762,
+     "noir_instables": 38098,
+     "noir_fuites": 13262,
+     "noir_fuites_disque_fumee": 13257,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      952,
+      271,
+      1648,
+      631
+     ],
+     "noir_fuite_max": 22,
+     "eteint": {
+      "teinte": 11.6,
+      "saturation": 0.662,
+      "luminance": 105.92,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 2.5,
+    "age_lu": 2.5,
+    "alpha_fumee": 0.833,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a2_5",
+    "pas_de_vieillissement": 151,
+    "rayon_fumee": 206.3,
+    "mesures": {
+     "sol_teinte": 8.1,
+     "sol_saturation": 0.682,
+     "sol_luminance": 101.7,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.218,
+     "noir_reference": 1833990,
+     "noir_instables": 459,
+     "noir_fuites": 48006,
+     "noir_fuites_disque_fumee": 48006,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1283,
+      249,
+      1675,
+      570
+     ],
+     "noir_fuite_max": 62,
+     "eteint": {
+      "teinte": 6.9,
+      "saturation": 0.702,
+      "luminance": 106.56,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 3.0,
+    "age_lu": 2.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a3_0",
+    "pas_de_vieillissement": 181,
+    "rayon_fumee": 207.5,
+    "mesures": {
+     "sol_teinte": 7.8,
+     "sol_saturation": 0.682,
+     "sol_luminance": 101.8,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.239,
+     "noir_reference": 1813871,
+     "noir_instables": 17931,
+     "noir_fuites": 45689,
+     "noir_fuites_disque_fumee": 45689,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1264,
+      239,
+      1681,
+      586
+     ],
+     "noir_fuite_max": 92,
+     "eteint": {
+      "teinte": 7.6,
+      "saturation": 0.698,
+      "luminance": 112.02,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 3.5,
+    "age_lu": 3.49999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a3_5",
+    "pas_de_vieillissement": 211,
+    "rayon_fumee": 208.8,
+    "mesures": {
+     "sol_teinte": 11.5,
+     "sol_saturation": 0.671,
+     "sol_luminance": 114.1,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.35,
+     "noir_reference": 900032,
+     "noir_instables": 31213,
+     "noir_fuites": 6522,
+     "noir_fuites_disque_fumee": 6522,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1193,
+      242,
+      1695,
+      636
+     ],
+     "noir_fuite_max": 32,
+     "eteint": {
+      "teinte": 14.4,
+      "saturation": 0.662,
+      "luminance": 124.15,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 4.0,
+    "age_lu": 3.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a4_0",
+    "pas_de_vieillissement": 241,
+    "rayon_fumee": 210.0,
+    "mesures": {
+     "sol_teinte": 13.7,
+     "sol_saturation": 0.66,
+     "sol_luminance": 119.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.421,
+     "noir_reference": 1285280,
+     "noir_instables": 184143,
+     "noir_fuites": 16189,
+     "noir_fuites_disque_fumee": 16188,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      992,
+      224,
+      1622,
+      595
+     ],
+     "noir_fuite_max": 68,
+     "eteint": {
+      "teinte": 10.3,
+      "saturation": 0.689,
+      "luminance": 115.34,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 5.0,
+    "age_lu": 4.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.6,
+    "masque_fumee": false,
+    "nom": "a5_0",
+    "pas_de_vieillissement": 301,
+    "rayon_fumee": 212.5,
+    "mesures": {
+     "sol_teinte": 19.3,
+     "sol_saturation": 0.718,
+     "sol_luminance": 89.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      225,
+      167
+     ],
+     "point_moy9": [
+      230,
+      216,
+      151
+     ],
+     "point_teinte": 49.4,
+     "point_saturation": 0.343,
+     "part_fumee": 0.188,
+     "noir_reference": 1835286,
+     "noir_instables": 0,
+     "noir_fuites": 44190,
+     "noir_fuites_disque_fumee": 44190,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1282,
+      250,
+      1665,
+      571
+     ],
+     "noir_fuite_max": 62,
+     "eteint": {
+      "teinte": 18.6,
+      "saturation": 0.738,
+      "luminance": 92.83,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 8.0,
+    "age_lu": 7.99999999999998,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a8_0",
+    "pas_de_vieillissement": 481,
+    "rayon_fumee": 220.0,
+    "mesures": {
+     "sol_teinte": 25.3,
+     "sol_saturation": 0.698,
+     "sol_luminance": 110.2,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.312,
+     "noir_reference": 928843,
+     "noir_instables": 45163,
+     "noir_fuites": 7848,
+     "noir_fuites_disque_fumee": 7844,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      952,
+      234,
+      1708,
+      638
+     ],
+     "noir_fuite_max": 24,
+     "eteint": {
+      "teinte": 24.5,
+      "saturation": 0.727,
+      "luminance": 104.8,
+      "pixels": 31618
+     }
+    }
+   }
+  ],
+  "longsang": [
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 0.5,
+    "age_lu": 0.5,
+    "alpha_fumee": 0.167,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a0_5",
+    "pas_de_vieillissement": 31,
+    "rayon_fumee": 201.3,
+    "mesures": {
+     "sol_teinte": 350.4,
+     "sol_saturation": 0.624,
+     "sol_luminance": 41.8,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.096,
+     "noir_reference": 1699290,
+     "noir_instables": 101706,
+     "noir_fuites": 11653,
+     "noir_fuites_disque_fumee": 11653,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1297,
+      261,
+      1657,
+      551
+     ],
+     "noir_fuite_max": 5,
+     "eteint": {
+      "teinte": 351.3,
+      "saturation": 0.641,
+      "luminance": 44.28,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 1.5,
+    "age_lu": 1.5,
+    "alpha_fumee": 0.5,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a1_5",
+    "pas_de_vieillissement": 91,
+    "rayon_fumee": 203.8,
+    "mesures": {
+     "sol_teinte": 4.5,
+     "sol_saturation": 0.575,
+     "sol_luminance": 104.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.259,
+     "noir_reference": 927763,
+     "noir_instables": 38106,
+     "noir_fuites": 13258,
+     "noir_fuites_disque_fumee": 13257,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      990,
+      271,
+      1648,
+      631
+     ],
+     "noir_fuite_max": 22,
+     "eteint": {
+      "teinte": 3.4,
+      "saturation": 0.591,
+      "luminance": 105.38,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 2.5,
+    "age_lu": 2.5,
+    "alpha_fumee": 0.833,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a2_5",
+    "pas_de_vieillissement": 151,
+    "rayon_fumee": 206.3,
+    "mesures": {
+     "sol_teinte": 0.0,
+     "sol_saturation": 0.609,
+     "sol_luminance": 100.7,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.216,
+     "noir_reference": 1833998,
+     "noir_instables": 455,
+     "noir_fuites": 47813,
+     "noir_fuites_disque_fumee": 47813,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1283,
+      249,
+      1675,
+      570
+     ],
+     "noir_fuite_max": 59,
+     "eteint": {
+      "teinte": 358.6,
+      "saturation": 0.639,
+      "luminance": 105.28,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 3.0,
+    "age_lu": 2.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a3_0",
+    "pas_de_vieillissement": 181,
+    "rayon_fumee": 207.5,
+    "mesures": {
+     "sol_teinte": 359.6,
+     "sol_saturation": 0.609,
+     "sol_luminance": 100.6,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.237,
+     "noir_reference": 1813875,
+     "noir_instables": 17932,
+     "noir_fuites": 45429,
+     "noir_fuites_disque_fumee": 45429,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1264,
+      239,
+      1681,
+      586
+     ],
+     "noir_fuite_max": 89,
+     "eteint": {
+      "teinte": 359.6,
+      "saturation": 0.627,
+      "luminance": 111.34,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 3.5,
+    "age_lu": 3.49999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a3_5",
+    "pas_de_vieillissement": 211,
+    "rayon_fumee": 208.8,
+    "mesures": {
+     "sol_teinte": 4.6,
+     "sol_saturation": 0.603,
+     "sol_luminance": 113.5,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.354,
+     "noir_reference": 900040,
+     "noir_instables": 31208,
+     "noir_fuites": 6529,
+     "noir_fuites_disque_fumee": 6522,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      954,
+      242,
+      1695,
+      636
+     ],
+     "noir_fuite_max": 32,
+     "eteint": {
+      "teinte": 7.0,
+      "saturation": 0.595,
+      "luminance": 122.22,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "PLEIN_FEU",
+    "age_demande": 4.0,
+    "age_lu": 3.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 1.0,
+    "masque_fumee": false,
+    "nom": "a4_0",
+    "pas_de_vieillissement": 241,
+    "rayon_fumee": 210.0,
+    "mesures": {
+     "sol_teinte": 6.9,
+     "sol_saturation": 0.595,
+     "sol_luminance": 118.3,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      229
+     ],
+     "point_moy9": [
+      230,
+      230,
+      229
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.004,
+     "part_fumee": 0.423,
+     "noir_reference": 1285276,
+     "noir_instables": 184133,
+     "noir_fuites": 16189,
+     "noir_fuites_disque_fumee": 16188,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      992,
+      224,
+      1622,
+      595
+     ],
+     "noir_fuite_max": 63,
+     "eteint": {
+      "teinte": 3.0,
+      "saturation": 0.618,
+      "luminance": 114.99,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 5.0,
+    "age_lu": 4.99999999999999,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.6,
+    "masque_fumee": false,
+    "nom": "a5_0",
+    "pas_de_vieillissement": 301,
+    "rayon_fumee": 212.5,
+    "mesures": {
+     "sol_teinte": 17.8,
+     "sol_saturation": 0.699,
+     "sol_luminance": 89.2,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      224,
+      183
+     ],
+     "point_moy9": [
+      230,
+      217,
+      167
+     ],
+     "point_teinte": 47.6,
+     "point_saturation": 0.274,
+     "part_fumee": 0.187,
+     "noir_reference": 1835287,
+     "noir_instables": 0,
+     "noir_fuites": 44119,
+     "noir_fuites_disque_fumee": 44119,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      1282,
+      250,
+      1665,
+      571
+     ],
+     "noir_fuite_max": 61,
+     "eteint": {
+      "teinte": 17.1,
+      "saturation": 0.718,
+      "luminance": 92.52,
+      "pixels": 31618
+     }
+    }
+   },
+   {
+    "acte": "BRAISE",
+    "age_demande": 8.0,
+    "age_lu": 7.99999999999998,
+    "alpha_fumee": 1.0,
+    "coeur_fusee": 2,
+    "duree_plein_feu": 4.0,
+    "eblouissement_j1": 0.06,
+    "energie_relative": 0.4,
+    "masque_fumee": false,
+    "nom": "a8_0",
+    "pas_de_vieillissement": 481,
+    "rayon_fumee": 220.0,
+    "mesures": {
+     "sol_teinte": 25.3,
+     "sol_saturation": 0.698,
+     "sol_luminance": 110.2,
+     "sol_pixels_allumes": 31618,
+     "sol_part_allumee": 1.0,
+     "point_max": [
+      230,
+      230,
+      160
+     ],
+     "point_moy9": [
+      230,
+      230,
+      146
+     ],
+     "point_teinte": 60.0,
+     "point_saturation": 0.365,
+     "part_fumee": 0.312,
+     "noir_reference": 928849,
+     "noir_instables": 45143,
+     "noir_fuites": 7848,
+     "noir_fuites_disque_fumee": 7844,
+     "joueur_pixels_noirs": 0,
+     "noir_fuites_boite": [
+      954,
+      234,
+      1708,
+      638
+     ],
+     "noir_fuite_max": 24,
+     "eteint": {
+      "teinte": 24.5,
+      "saturation": 0.727,
+      "luminance": 104.8,
+      "pixels": 31618
+     }
+    }
+   }
+  ]
+ },
+ "croise": {
+  "sang": [
+   {
+    "age": 0.5,
+    "meme_age": true,
+    "lum_joueur": -2.11,
+    "lum_eteint": -2.1,
+    "noir": {
+     "A": {
+      "noirs_ref": 1800991,
+      "noirs_var": 1800996,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 7,
+      "max_allume": 1,
+      "differences_loin_de_la_fusee": 96
+     },
+     "B": {
+      "noirs_ref": 1761505,
+      "noirs_var": 1761599,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 94,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 75
+     },
+     "A2": {
+      "noirs_ref": 1699283,
+      "noirs_var": 1699290,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 7,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 83
+     }
+    }
+   },
+   {
+    "age": 1.5,
+    "meme_age": true,
+    "lum_joueur": -0.48,
+    "lum_eteint": -0.51,
+    "noir": {
+     "A": {
+      "noirs_ref": 927780,
+      "noirs_var": 927791,
+      "allumes_par_la_variante": 3,
+      "eteints_par_la_variante": 14,
+      "max_allume": 6,
+      "differences_loin_de_la_fusee": 138
+     },
+     "B": {
+      "noirs_ref": 930008,
+      "noirs_var": 929982,
+      "allumes_par_la_variante": 37,
+      "eteints_par_la_variante": 11,
+      "max_allume": 27,
+      "differences_loin_de_la_fusee": 252
+     },
+     "A2": {
+      "noirs_ref": 965869,
+      "noirs_var": 965871,
+      "allumes_par_la_variante": 1,
+      "eteints_par_la_variante": 3,
+      "max_allume": 1,
+      "differences_loin_de_la_fusee": 15
+     }
+    }
+   },
+   {
+    "age": 2.5,
+    "meme_age": true,
+    "lum_joueur": -0.6,
+    "lum_eteint": -0.76,
+    "noir": {
+     "A": {
+      "noirs_ref": 1834045,
+      "noirs_var": 1834048,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 3,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 23
+     },
+     "B": {
+      "noirs_ref": 1789081,
+      "noirs_var": 1789258,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 177,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 91
+     },
+     "A2": {
+      "noirs_ref": 1834500,
+      "noirs_var": 1834504,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 4,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 118
+     }
+    }
+   },
+   {
+    "age": 3.0,
+    "meme_age": true,
+    "lum_joueur": -0.33,
+    "lum_eteint": -0.35,
+    "noir": {
+     "A": {
+      "noirs_ref": 1831941,
+      "noirs_var": 1831945,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 4,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 114
+     },
+     "B": {
+      "noirs_ref": 1781732,
+      "noirs_var": 1781804,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 72,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 89
+     },
+     "A2": {
+      "noirs_ref": 1813987,
+      "noirs_var": 1813985,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 0,
+      "max_allume": 1,
+      "differences_loin_de_la_fusee": 28
+     }
+    }
+   },
+   {
+    "age": 3.5,
+    "meme_age": true,
+    "lum_joueur": 0.0,
+    "lum_eteint": 0.0,
+    "noir": {
+     "A": {
+      "noirs_ref": 931244,
+      "noirs_var": 931233,
+      "allumes_par_la_variante": 16,
+      "eteints_par_la_variante": 5,
+      "max_allume": 13,
+      "differences_loin_de_la_fusee": 161
+     },
+     "B": {
+      "noirs_ref": 906718,
+      "noirs_var": 906709,
+      "allumes_par_la_variante": 14,
+      "eteints_par_la_variante": 5,
+      "max_allume": 14,
+      "differences_loin_de_la_fusee": 155
+     },
+     "A2": {
+      "noirs_ref": 900051,
+      "noirs_var": 900052,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 3,
+      "max_allume": 4,
+      "differences_loin_de_la_fusee": 24
+     }
+    }
+   },
+   {
+    "age": 4.0,
+    "meme_age": true,
+    "lum_joueur": 0.0,
+    "lum_eteint": 0.0,
+    "noir": {
+     "A": {
+      "noirs_ref": 1285349,
+      "noirs_var": 1285366,
+      "allumes_par_la_variante": 3,
+      "eteints_par_la_variante": 20,
+      "max_allume": 3,
+      "differences_loin_de_la_fusee": 173
+     },
+     "B": {
+      "noirs_ref": 1352196,
+      "noirs_var": 1352174,
+      "allumes_par_la_variante": 23,
+      "eteints_par_la_variante": 1,
+      "max_allume": 6,
+      "differences_loin_de_la_fusee": 187
+     },
+     "A2": {
+      "noirs_ref": 1469534,
+      "noirs_var": 1469534,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 0,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 2
+     }
+    }
+   },
+   {
+    "age": 5.0,
+    "meme_age": true,
+    "lum_joueur": 0.0,
+    "lum_eteint": 0.0,
+    "noir": {
+     "A": {
+      "noirs_ref": 1835561,
+      "noirs_var": 1835561,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 0,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 142
+     },
+     "B": {
+      "noirs_ref": 1804219,
+      "noirs_var": 1804219,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 0,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 134
+     },
+     "A2": {
+      "noirs_ref": 1835561,
+      "noirs_var": 1835561,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 0,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 57
+     }
+    }
+   },
+   {
+    "age": 8.0,
+    "meme_age": true,
+    "lum_joueur": 0.0,
+    "lum_eteint": 0.0,
+    "noir": {
+     "A": {
+      "noirs_ref": 928932,
+      "noirs_var": 928954,
+      "allumes_par_la_variante": 11,
+      "eteints_par_la_variante": 33,
+      "max_allume": 7,
+      "differences_loin_de_la_fusee": 244
+     },
+     "B": {
+      "noirs_ref": 940006,
+      "noirs_var": 940008,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 2,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 2
+     },
+     "A2": {
+      "noirs_ref": 973975,
+      "noirs_var": 973969,
+      "allumes_par_la_variante": 8,
+      "eteints_par_la_variante": 2,
+      "max_allume": 11,
+      "differences_loin_de_la_fusee": 182
+     }
+    }
+   }
+  ],
+  "longsang": [
+   {
+    "age": 0.5,
+    "meme_age": true,
+    "lum_joueur": -2.11,
+    "lum_eteint": -2.1,
+    "noir": {
+     "A": {
+      "noirs_ref": 1800991,
+      "noirs_var": 1800996,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 7,
+      "max_allume": 1,
+      "differences_loin_de_la_fusee": 102
+     },
+     "B": {
+      "noirs_ref": 1761505,
+      "noirs_var": 1761599,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 94,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 30
+     },
+     "A2": {
+      "noirs_ref": 1699283,
+      "noirs_var": 1699290,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 7,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 48
+     }
+    }
+   },
+   {
+    "age": 1.5,
+    "meme_age": true,
+    "lum_joueur": -0.48,
+    "lum_eteint": -0.51,
+    "noir": {
+     "A": {
+      "noirs_ref": 927778,
+      "noirs_var": 927784,
+      "allumes_par_la_variante": 5,
+      "eteints_par_la_variante": 11,
+      "max_allume": 6,
+      "differences_loin_de_la_fusee": 102
+     },
+     "B": {
+      "noirs_ref": 929980,
+      "noirs_var": 930000,
+      "allumes_par_la_variante": 14,
+      "eteints_par_la_variante": 34,
+      "max_allume": 17,
+      "differences_loin_de_la_fusee": 244
+     },
+     "A2": {
+      "noirs_ref": 965844,
+      "noirs_var": 965848,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 6,
+      "max_allume": 2,
+      "differences_loin_de_la_fusee": 64
+     }
+    }
+   },
+   {
+    "age": 2.5,
+    "meme_age": true,
+    "lum_joueur": -0.98,
+    "lum_eteint": -1.2,
+    "noir": {
+     "A": {
+      "noirs_ref": 1833990,
+      "noirs_var": 1833998,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 8,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 23
+     },
+     "B": {
+      "noirs_ref": 1786326,
+      "noirs_var": 1786527,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 201,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 43
+     },
+     "A2": {
+      "noirs_ref": 1834449,
+      "noirs_var": 1834453,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 4,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 41
+     }
+    }
+   },
+   {
+    "age": 3.0,
+    "meme_age": true,
+    "lum_joueur": -1.18,
+    "lum_eteint": -0.61,
+    "noir": {
+     "A": {
+      "noirs_ref": 1831802,
+      "noirs_var": 1831807,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 5,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 135
+     },
+     "B": {
+      "noirs_ref": 1776308,
+      "noirs_var": 1776573,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 265,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 110
+     },
+     "A2": {
+      "noirs_ref": 1813871,
+      "noirs_var": 1813875,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 4,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 149
+     }
+    }
+   },
+   {
+    "age": 3.5,
+    "meme_age": true,
+    "lum_joueur": -0.53,
+    "lum_eteint": -1.55,
+    "noir": {
+     "A": {
+      "noirs_ref": 931212,
+      "noirs_var": 931241,
+      "allumes_par_la_variante": 13,
+      "eteints_par_la_variante": 42,
+      "max_allume": 23,
+      "differences_loin_de_la_fusee": 266
+     },
+     "B": {
+      "noirs_ref": 906732,
+      "noirs_var": 906706,
+      "allumes_par_la_variante": 41,
+      "eteints_par_la_variante": 15,
+      "max_allume": 28,
+      "differences_loin_de_la_fusee": 270
+     },
+     "A2": {
+      "noirs_ref": 900065,
+      "noirs_var": 900047,
+      "allumes_par_la_variante": 28,
+      "eteints_par_la_variante": 10,
+      "max_allume": 21,
+      "differences_loin_de_la_fusee": 223
+     }
+    }
+   },
+   {
+    "age": 4.0,
+    "meme_age": true,
+    "lum_joueur": -1.0,
+    "lum_eteint": -0.3,
+    "noir": {
+     "A": {
+      "noirs_ref": 1285280,
+      "noirs_var": 1285276,
+      "allumes_par_la_variante": 5,
+      "eteints_par_la_variante": 1,
+      "max_allume": 2,
+      "differences_loin_de_la_fusee": 47
+     },
+     "B": {
+      "noirs_ref": 1352073,
+      "noirs_var": 1352066,
+      "allumes_par_la_variante": 8,
+      "eteints_par_la_variante": 1,
+      "max_allume": 4,
+      "differences_loin_de_la_fusee": 90
+     },
+     "A2": {
+      "noirs_ref": 1469423,
+      "noirs_var": 1469409,
+      "allumes_par_la_variante": 14,
+      "eteints_par_la_variante": 0,
+      "max_allume": 3,
+      "differences_loin_de_la_fusee": 136
+     }
+    }
+   },
+   {
+    "age": 5.0,
+    "meme_age": true,
+    "lum_joueur": -0.34,
+    "lum_eteint": -0.33,
+    "noir": {
+     "A": {
+      "noirs_ref": 1835286,
+      "noirs_var": 1835287,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 3,
+      "max_allume": 1,
+      "differences_loin_de_la_fusee": 85
+     },
+     "B": {
+      "noirs_ref": 1791096,
+      "noirs_var": 1791168,
+      "allumes_par_la_variante": 0,
+      "eteints_par_la_variante": 72,
+      "max_allume": 0,
+      "differences_loin_de_la_fusee": 125
+     },
+     "A2": {
+      "noirs_ref": 1835286,
+      "noirs_var": 1835287,
+      "allumes_par_la_variante": 2,
+      "eteints_par_la_variante": 3,
+      "max_allume": 1,
+      "differences_loin_de_la_fusee": 112
+     }
+    }
+   },
+   {
+    "age": 8.0,
+    "meme_age": true,
+    "lum_joueur": 0.0,
+    "lum_eteint": 0.0,
+    "noir": {
+     "A": {
+      "noirs_ref": 928959,
+      "noirs_var": 928933,
+      "allumes_par_la_variante": 35,
+      "eteints_par_la_variante": 9,
+      "max_allume": 20,
+      "differences_loin_de_la_fusee": 246
+     },
+     "B": {
+      "noirs_ref": 940006,
+      "noirs_var": 940031,
+      "allumes_par_la_variante": 10,
+      "eteints_par_la_variante": 35,
+      "max_allume": 7,
+      "differences_loin_de_la_fusee": 244
+     },
+     "A2": {
+      "noirs_ref": 973890,
+      "noirs_var": 973908,
+      "allumes_par_la_variante": 86,
+      "eteints_par_la_variante": 104,
+      "max_allume": 47,
+      "differences_loin_de_la_fusee": 285
+     }
+    }
+   }
+  ]
+ }
+}

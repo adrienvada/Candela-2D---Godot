@@ -78,6 +78,8 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO13, Q31 voie A : là où A est noir, C doit l'être ; là où A montre le sol, C doit valoir B au pixel près. Seule la fumée change : la même couche bascule de shader sur place, rien d'autre ne bouge ; A' dit si l'instant est resté figé."],
 		["loupe-fusee-illustration", "La fusée comme son illustration : plein feu, braise, agonie ; cœur éteint, rouge, presque blanc",
 			"ISO13 (session cloud, 2026-09-25 21:41) : la fusée seule dans le noir puis devant une face de mur, à plusieurs âges, sans les volumes, puis avec l'essai du cœur (IsoVolumes.coeur_fusee) éteint, rouge, presque blanc, basculé sur place. Imprime la lightmap lue sous la fusée."],
+		["loupe-fusee-ages", "La fusée posée, vieillie en temps de jeu : 0,5 à 8 s, torche de J1 puis torches éteintes, fumée coupée et rétablie",
+			"Q34 = C et Q35 = B (session cloud « fusée », 2026-09-27) : la planche à 3,5 s. Une fusée vieillit par son propre pas de physique, arrêtée à chaque âge le temps des prises (tools/loupe_fusee_ages.gd). --fusee-rouge-long après -- pour le rouge long."],
 		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
 			"ISO13, Q31 : la sortie 3D de ce renderer écrase tout canal écrit à 7/255 ou moins (rampes du 2026-09-25). Le masque de la fumée en dépend : cette garde, en fenêtre, échoue si 7 ne sort plus à 0 ou si 8 sort à 0."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
@@ -236,6 +238,12 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-fusee-illustration : aucun sol dégagé à l'écran hors de la torche")
 		else:
 			await _loupe_fusee_illustration(plans, lieux)
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-fusee-ages"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-ages : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await (load("res://tools/loupe_fusee_ages.gd") as GDScript).new(self).lancer(plans, lieux)
 			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
