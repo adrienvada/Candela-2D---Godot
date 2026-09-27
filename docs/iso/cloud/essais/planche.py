@@ -49,6 +49,11 @@ def chiffres_intra(r):
         s += (f"<li>Sur l'emprise : luminance moyenne {r['emprise_lum_moy_avec']} avec, {r['emprise_lum_moy_sans']} sans ; "
               f"{round(100 * r['emprise_plus_clairs_part'], 1)} % de ses pixels plus clairs que la surface qu'ils cachent "
               f"(écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : {' / '.join(str(x) for x in r['exces_histo_3_8_16_32_64_255'])})</li>")
+    if "lumiere_pixels" in r:
+        a, b = r["lumiere_avec_p50_p95_max"], r["lumiere_sans_p50_p95_max"]
+        s += (f"<li>Dans la lumière de la torche ({r['lumiere_pixels']} pixels d'emprise) : l'essai médian {a[0]}, "
+              f"ses 5 % les plus clairs ≥ {a[1]}, max {a[2]} — la surface cachée médiane {b[0]}, 5 % ≥ {b[1]}, max {b[2]} ; "
+              f"{r['lumiere_plus_clairs']} pixels plus clairs que la surface qu'ils cachent</li>")
     return s
 
 
@@ -72,8 +77,9 @@ def section(ident, es):
         out.append("</div>")
         if v.get("loupe"):
             out.append('<div class="rang deux">')
-            out.append(fig(v.get("loupe_sans") or v.get("loupe_temoin"), "Loupe ×3 — éteint"))
-            out.append(fig(v.get("loupe"), "Loupe ×3 — allumé"))
+            f = "×2 (sur le gros plan)" if ident == "tuyaux_pres" else "×3"
+            out.append(fig(v.get("loupe_sans") or v.get("loupe_temoin"), f"Loupe {f} — éteint"))
+            out.append(fig(v.get("loupe"), f"Loupe {f} — allumé"))
             out.append("</div>")
         if v.get("carte_exces"):
             out.append('<div class="rang deux">')

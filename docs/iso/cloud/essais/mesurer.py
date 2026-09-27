@@ -136,6 +136,14 @@ def intra(avec, sans, avec2):
         r["emprise_plus_clairs_part"] = round(float((exces[emprise] > 2).mean()), 3)
         hist = np.histogram(exces[emprise & (exces > 2)], bins=[3, 9, 17, 33, 65, 256])[0]
         r["exces_histo_3_8_16_32_64_255"] = [int(h) for h in hist]
+        # Dans la lumière de la torche (le mur caché au-dessus de 40/255) : le reflet (les 5 % les plus clairs du tuyau)
+        # contre le mur caché, pixel à pixel et en répartition.
+        lum = emprise & (m_s > 40)
+        if lum.sum() > 50:
+            r["lumiere_pixels"] = int(lum.sum())
+            r["lumiere_avec_p50_p95_max"] = [int(np.percentile(m_a[lum], q)) for q in (50, 95)] + [int(m_a[lum].max())]
+            r["lumiere_sans_p50_p95_max"] = [int(np.percentile(m_s[lum], q)) for q in (50, 95)] + [int(m_s[lum].max())]
+            r["lumiere_plus_clairs"] = int((exces[lum] > 2).sum())
     return r, emprise, exces
 
 
@@ -216,6 +224,12 @@ def main():
                     ref = t1 if entre_lancements else sans
                     if not entre_lancements:
                         entree["image_temoin"] = entree["image_sans"] = jpeg(sans, f"{ident}_{cle}__sans.jpg")
+                        # Le gros plan recadré ×2 sur les tuyaux dans la lumière.
+                        vus = emprise & (sans.max(2) > 40)
+                        ys, xs = np.nonzero(vus if vus.sum() > 50 else emprise)
+                        c = (int(np.median(xs)), int(np.median(ys))) if len(xs) else (960, 540)
+                        entree["loupe"] = jpeg(loupe(essai, c, 2)[0], f"{ident}_{cle}_loupe2.jpg")
+                        entree["loupe_sans"] = jpeg(loupe(sans, c, 2)[0], f"{ident}_{cle}__sans_loupe2.jpg")
                     else:
                         # La loupe : centrée sur ce que l'essai change (au même instant s'il le peut, sinon contre le
                         # témoin), torches allumées ; la même pour éteint et allumé.

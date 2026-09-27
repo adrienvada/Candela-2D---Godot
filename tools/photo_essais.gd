@@ -113,9 +113,18 @@ func _ready() -> void:
 	if _scenes.has("duel"):
 		await _deux_prises("duel")
 	if _scenes.has("scinde"):
+		# J2 de L'AUTRE côté du mur haut, torche vers lui, le symétrique de J1 : chacun éclaire sa face, aucun n'éblouit
+		# l'autre. Debout dans le cône de J1, J2 voyait sa moitié noyée par l'éblouissement, qui cachait les essais.
+		var j2_duel := _j2
+		var visee_duel := _visee_j2
+		_j2 = scene["p2"]
+		_visee_j2 = Vector2.DOWN
+		print("SCENE scinde : J1 %s · J2 %s, de part et d'autre du mur" % [str(_j1), str(_j2)])
 		_deux_vues()
 		await _deux_prises("scinde")
 		_vue_unique()
+		_j2 = j2_duel
+		_visee_j2 = visee_duel
 
 	# --- sol : le pochoir « ZONE 1 », J1 à 2,5 cases au sud, visée au nord (au nord si le sud est pris).
 	var centre := (POCHOIR_CASE + Vector2(0.5, 0.5)) * t

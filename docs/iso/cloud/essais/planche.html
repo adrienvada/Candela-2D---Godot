@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essais éteints, sur image</title>
+<style>
+:root { --fond:#111; --texte:#ddd; --doux:#999; --trait:#333; --accent:#e0a040; }
+body { background:var(--fond); color:var(--texte); font:15px/1.5 system-ui, sans-serif; margin:0 auto; max-width:1800px; padding:16px; }
+h1 { font-size:1.6em; } h2 { border-top:1px solid var(--trait); padding-top:1em; margin-top:2em; }
+h2 code { color:var(--accent); font-size:.7em; } h3 { font-size:1em; color:var(--doux); }
+.rang { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px; }
+.rang.deux { grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); }
+.rang.petit { max-width:900px; }
+figure { margin:0; } img { width:100%; height:auto; display:block; border:1px solid var(--trait); }
+figcaption { font-size:.85em; color:var(--doux); } figure.cible figcaption { color:var(--accent); }
+.quoi { color:var(--doux); } .cle { margin:.8em 0 0; font-weight:600; } ul { margin:.2em 0; }
+nav { font-size:.9em; } a { color:var(--accent); }
+@media (max-width:700px) { .rang, .rang.deux { grid-template-columns:1fr; } }
+</style></head><body>
+<h1>Les essais éteints, sur image</h1>
+
+<nav><a href="#faisceau">Le cœur chaud à la lampe</a> · <a href="#mannequin">Le mannequin</a> · <a href="#pochoirs">Les pochoirs au sol</a> · <a href="#encre">L&#x27;encre : hachures, arêtes, contour de 1 px</a> · <a href="#tuyaux">Les tuyaux et câbles des murs</a> · <a href="#tuyaux_pres">Les tuyaux de près (caméra ×4,5, trois fois le zoom du duel)</a> · <a href="#corps">Les personnages détaillés</a></nav>
+<section id="faisceau"><h2>Le cœur chaud à la lampe <code>--faisceau</code></h2><p class="quoi">Une lueur posée à la lampe même de chaque torche allumée (iso_volumes.gd, _suivre_faisceau), de la couleur de la lumière, sans rayon.</p>
+<h3>Scène « duel », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_intro_allumage.jpg"><img loading="lazy" src="img/ill_intro_allumage.jpg" alt="Cible : Intro, « allumage »"></a><figcaption>Cible : Intro, « allumage »</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/faisceau_duel_allumees__sans.jpg"><img loading="lazy" src="img/faisceau_duel_allumees__sans.jpg" alt="Éteint — même instant, l&#x27;essai caché"></a><figcaption>Éteint — même instant, l'essai caché</figcaption></figure>
+<figure class=""><a href="img/faisceau_duel_allumees.jpg"><img loading="lazy" src="img/faisceau_duel_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/faisceau_duel_allumees__sans_loupe3.jpg"><img loading="lazy" src="img/faisceau_duel_allumees__sans_loupe3.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/faisceau_duel_allumees_loupe3.jpg"><img loading="lazy" src="img/faisceau_duel_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Scène « scinde », torches allumées, en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_intro_allumage.jpg"><img loading="lazy" src="img/ill_intro_allumage.jpg" alt="Cible : Intro, « allumage »"></a><figcaption>Cible : Intro, « allumage »</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/faisceau_scinde_allumees__sans.jpg"><img loading="lazy" src="img/faisceau_scinde_allumees__sans.jpg" alt="Éteint — même instant, l&#x27;essai caché"></a><figcaption>Éteint — même instant, l'essai caché</figcaption></figure>
+<figure class=""><a href="img/faisceau_scinde_allumees.jpg"><img loading="lazy" src="img/faisceau_scinde_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/faisceau_scinde_allumees__sans_loupe3.jpg"><img loading="lazy" src="img/faisceau_scinde_allumees__sans_loupe3.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/faisceau_scinde_allumees_loupe3.jpg"><img loading="lazy" src="img/faisceau_scinde_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 2311 changés · 0 noirs allumés · 270 plus clairs (max 233) — un 3ᵉ témoin, sans aucun essai, y fait 1977 changés, 24 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 272 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>262</b> plus clairs que la surface derrière (écart max 233/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 191.1 avec, 54.5 sans ; 96.3 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 8 / 14 / 17 / 18 / 205)</li><li>Dans la lumière de la torche (71 pixels d'emprise) : l'essai médian 255, ses 5 % les plus clairs ≥ 255, max 255 — la surface cachée médiane 158, 5 % ≥ 183, max 184 ; 67 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 274 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 137 changés, 0 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/faisceau_duel_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/faisceau_duel_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/faisceau_duel_eteintes_loupe3.jpg"><img loading="lazy" src="img/faisceau_duel_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">sol — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1357 changés · 0 noirs allumés · 179 plus clairs (max 227) — un 3ᵉ témoin, sans aucun essai, y fait 1239 changés, 104 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 140 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>131</b> plus clairs que la surface derrière (écart max 227/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 203.8 avec, 87.7 sans ; 93.6 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 2 / 11 / 11 / 16 / 91)</li><li>Dans la lumière de la torche (78 pixels d'emprise) : l'essai médian 255, ses 5 % les plus clairs ≥ 255, max 255 — la surface cachée médiane 153, 5 % ≥ 236, max 245 ; 74 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 73 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 116 changés, 8 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1257 changés · 0 noirs allumés · 177 plus clairs (max 222) — un 3ᵉ témoin, sans aucun essai, y fait 376 changés, 1 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 136 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>129</b> plus clairs que la surface derrière (écart max 222/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 199.7 avec, 61.7 sans ; 94.9 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 5 / 7 / 2 / 14 / 101)</li><li>Dans la lumière de la torche (90 pixels d'emprise) : l'essai médian 255, ses 5 % les plus clairs ≥ 255, max 255 — la surface cachée médiane 52, 5 % ≥ 180, max 255 ; 84 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 59 changés · 0 noirs allumés · 28 plus clairs (max 60) — un 3ᵉ témoin, sans aucun essai, y fait 153 changés, 94 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 4229 changés · 0 noirs allumés · 854 plus clairs (max 218) — un 3ᵉ témoin, sans aucun essai, y fait 1953 changés, 3 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 406 pixels changés · <b>0</b> noirs allumés, 133 au seuil · <b>395</b> plus clairs que la surface derrière (écart max 218/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 173.6 avec, 56.3 sans ; 97.3 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 20 / 16 / 30 / 38 / 291)</li><li>Dans la lumière de la torche (226 pixels d'emprise) : l'essai médian 230, ses 5 % les plus clairs ≥ 230, max 230 — la surface cachée médiane 59, 5 % ≥ 166, max 212 ; 220 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">scinde — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 186 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 87 changés, 26 plus clairs, 1 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/faisceau_scinde_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/faisceau_scinde_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/faisceau_scinde_eteintes_loupe3.jpg"><img loading="lazy" src="img/faisceau_scinde_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+<section id="mannequin"><h2>Le mannequin <code>--mannequin</code></h2><p class="quoi">Les corps en segments articulés, le côté de la lumière contrasté (MANNEQUIN_CONTRASTE 0,4, report 1,6) et un contour (voxel_catalogue.gd).</p>
+<h3>Scène « duel », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_duel_allumees.jpg"><img loading="lazy" src="img/temoin_duel_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/mannequin_duel_allumees.jpg"><img loading="lazy" src="img/mannequin_duel_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/mannequin_duel_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/mannequin_duel_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/mannequin_duel_allumees_loupe3.jpg"><img loading="lazy" src="img/mannequin_duel_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Scène « scinde », torches allumées, en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_scinde_allumees.jpg"><img loading="lazy" src="img/temoin_scinde_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/mannequin_scinde_allumees.jpg"><img loading="lazy" src="img/mannequin_scinde_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/mannequin_scinde_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/mannequin_scinde_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/mannequin_scinde_allumees_loupe3.jpg"><img loading="lazy" src="img/mannequin_scinde_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 3239 changés · 0 noirs allumés · 0 plus clairs (max 1) — un 3ᵉ témoin, sans aucun essai, y fait 1977 changés, 24 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 209 changés · 0 noirs allumés · 1 plus clairs (max 18) — un 3ᵉ témoin, sans aucun essai, y fait 137 changés, 0 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/mannequin_duel_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/mannequin_duel_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/mannequin_duel_eteintes_loupe3.jpg"><img loading="lazy" src="img/mannequin_duel_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">sol — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1672 changés · 0 noirs allumés · 5 plus clairs (max 34) — un 3ᵉ témoin, sans aucun essai, y fait 1239 changés, 104 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 52 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 116 changés, 8 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1293 changés · 0 noirs allumés · 4 plus clairs (max 33) — un 3ᵉ témoin, sans aucun essai, y fait 376 changés, 1 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 151 changés · 0 noirs allumés · 93 plus clairs (max 112) — un 3ᵉ témoin, sans aucun essai, y fait 153 changés, 94 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 5624 changés · 0 noirs allumés · 146 plus clairs (max 34) — un 3ᵉ témoin, sans aucun essai, y fait 1953 changés, 3 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 258 changés · 10 noirs allumés · 83 plus clairs (max 54) — un 3ᵉ témoin, sans aucun essai, y fait 87 changés, 26 plus clairs, 1 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/mannequin_scinde_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/mannequin_scinde_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/mannequin_scinde_eteintes_loupe3.jpg"><img loading="lazy" src="img/mannequin_scinde_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+<section id="pochoirs"><h2>Les pochoirs au sol <code>--pochoirs-essai</code></h2><p class="quoi">« ZONE n » et « DEATHMATCH » peints au sol, symétriques par carte ; une peinture sombre : le sol × 0,55 sous la lettre (arena_decor.gd, POCHOIR_PEINTURE alpha 0,45).</p>
+<h3>Scène « sol », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_creer_local.jpg"><img loading="lazy" src="img/ill_creer_local.jpg" alt="Cible : Créer en local"></a><figcaption>Cible : Créer en local</figcaption></figure>
+<figure class=""><a href="img/temoin_sol_allumees.jpg"><img loading="lazy" src="img/temoin_sol_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/pochoirs_sol_allumees.jpg"><img loading="lazy" src="img/pochoirs_sol_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/pochoirs_sol_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/pochoirs_sol_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/pochoirs_sol_allumees_loupe3.jpg"><img loading="lazy" src="img/pochoirs_sol_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Scène « scinde », torches allumées, en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_creer_local.jpg"><img loading="lazy" src="img/ill_creer_local.jpg" alt="Cible : Créer en local"></a><figcaption>Cible : Créer en local</figcaption></figure>
+<figure class=""><a href="img/temoin_scinde_allumees.jpg"><img loading="lazy" src="img/temoin_scinde_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/pochoirs_scinde_allumees.jpg"><img loading="lazy" src="img/pochoirs_scinde_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/pochoirs_scinde_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/pochoirs_scinde_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/pochoirs_scinde_allumees_loupe3.jpg"><img loading="lazy" src="img/pochoirs_scinde_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 2721 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 2160 changés · 0 noirs allumés · 73 plus clairs (max 39) — un 3ᵉ témoin, sans aucun essai, y fait 1977 changés, 24 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 2719 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 82 changés · 0 noirs allumés · 1 plus clairs (max 28) — un 3ᵉ témoin, sans aucun essai, y fait 137 changés, 0 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">sol — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 5746 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 1/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1205 changés · 0 noirs allumés · 6 plus clairs (max 38) — un 3ᵉ témoin, sans aucun essai, y fait 1239 changés, 104 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 5851 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 43 changés · 0 noirs allumés · 26 plus clairs (max 29) — un 3ᵉ témoin, sans aucun essai, y fait 116 changés, 8 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/pochoirs_sol_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/pochoirs_sol_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/pochoirs_sol_eteintes_loupe3.jpg"><img loading="lazy" src="img/pochoirs_sol_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">mur — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 5769 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1196 changés · 0 noirs allumés · 55 plus clairs (max 74) — un 3ᵉ témoin, sans aucun essai, y fait 376 changés, 1 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 5780 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 188 changés · 0 noirs allumés · 74 plus clairs (max 91) — un 3ᵉ témoin, sans aucun essai, y fait 153 changés, 94 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 457 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 3712 changés · 0 noirs allumés · 219 plus clairs (max 35) — un 3ᵉ témoin, sans aucun essai, y fait 1953 changés, 3 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 397 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 375 changés · 0 noirs allumés · 103 plus clairs (max 51) — un 3ᵉ témoin, sans aucun essai, y fait 87 changés, 26 plus clairs, 1 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/pochoirs_scinde_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/pochoirs_scinde_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/pochoirs_scinde_eteintes_loupe3.jpg"><img loading="lazy" src="img/pochoirs_scinde_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+<section id="encre"><h2>L&#x27;encre : hachures, arêtes, contour de 1 px <code>--encre-essai</code></h2><p class="quoi">Hachures dans la pénombre (HACHURES_ESSAI 0,7) sur le sol, les murs et les corps ; arêtes des murs à 2,4 px et plus noires (reste 0,12) ; contour des personnages de 1 px du monde, soit 1,5 px d&#x27;écran au zoom ×1,5 (iso_materiaux.gd, CONTOUR_PX_ESSAI 1,0 ; voxel_corps.gd l&#x27;applique sous ce seul drapeau).</p>
+<h3>Scène « duel », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_duel_allumees.jpg"><img loading="lazy" src="img/temoin_duel_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/encre_duel_allumees.jpg"><img loading="lazy" src="img/encre_duel_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/encre_duel_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/encre_duel_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/encre_duel_allumees_loupe3.jpg"><img loading="lazy" src="img/encre_duel_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Scène « mur », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_mur_allumees.jpg"><img loading="lazy" src="img/temoin_mur_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/encre_mur_allumees.jpg"><img loading="lazy" src="img/encre_mur_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/encre_mur_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/encre_mur_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/encre_mur_allumees_loupe3.jpg"><img loading="lazy" src="img/encre_mur_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Scène « scinde », torches allumées, en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_scinde_allumees.jpg"><img loading="lazy" src="img/temoin_scinde_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/encre_scinde_allumees.jpg"><img loading="lazy" src="img/encre_scinde_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/encre_scinde_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/encre_scinde_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/encre_scinde_allumees_loupe3.jpg"><img loading="lazy" src="img/encre_scinde_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 219758 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 9002 changés · 0 noirs allumés · 5 plus clairs (max 5) — un 3ᵉ témoin, sans aucun essai, y fait 1977 changés, 24 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 219615 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 7199 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 137 changés, 0 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/encre_duel_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/encre_duel_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/encre_duel_eteintes_loupe3.jpg"><img loading="lazy" src="img/encre_duel_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">sol — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 225369 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 4873 changés · 0 noirs allumés · 61 plus clairs (max 47) — un 3ᵉ témoin, sans aucun essai, y fait 1239 changés, 104 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 218900 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 3833 changés · 0 noirs allumés · 40 plus clairs (max 58) — un 3ᵉ témoin, sans aucun essai, y fait 116 changés, 8 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 213407 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 4761 changés · 0 noirs allumés · 28 plus clairs (max 15) — un 3ᵉ témoin, sans aucun essai, y fait 376 changés, 1 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 213112 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 3444 changés · 0 noirs allumés · 2 plus clairs (max 29) — un 3ᵉ témoin, sans aucun essai, y fait 153 changés, 94 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/encre_mur_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/encre_mur_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/encre_mur_eteintes_loupe3.jpg"><img loading="lazy" src="img/encre_mur_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">scinde — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 247914 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 14973 changés · 0 noirs allumés · 10 plus clairs (max 24) — un 3ᵉ témoin, sans aucun essai, y fait 1953 changés, 3 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 246359 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 11522 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 87 changés, 26 plus clairs, 1 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/encre_scinde_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/encre_scinde_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/encre_scinde_eteintes_loupe3.jpg"><img loading="lazy" src="img/encre_scinde_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+<section id="tuyaux"><h2>Les tuyaux et câbles des murs <code>--tuyaux-essai</code></h2><p class="quoi">Conduites cerclées de colliers, descentes et câbles sur les faces de mur (tuyaux_iso.gd), relisant la lumière de la face qu&#x27;ils recouvrent à l&#x27;écran ; fusionné depuis origin/claude/cloud-tuyaux (70ffafa).</p>
+<h3>Scène « mur », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_entrainement.jpg"><img loading="lazy" src="img/ill_entrainement.jpg" alt="Cible : Entraînement"></a><figcaption>Cible : Entraînement</figcaption></figure>
+<figure class=""><a href="img/tuyaux_mur_allumees__sans.jpg"><img loading="lazy" src="img/tuyaux_mur_allumees__sans.jpg" alt="Éteint — même instant, l&#x27;essai caché"></a><figcaption>Éteint — même instant, l'essai caché</figcaption></figure>
+<figure class=""><a href="img/tuyaux_mur_allumees.jpg"><img loading="lazy" src="img/tuyaux_mur_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_mur_allumees__sans_loupe3.jpg"><img loading="lazy" src="img/tuyaux_mur_allumees__sans_loupe3.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_mur_allumees_loupe3.jpg"><img loading="lazy" src="img/tuyaux_mur_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_mur_allumees_carte.jpg"><img loading="lazy" src="img/tuyaux_mur_allumees_carte.jpg" alt="Carte : en bleu l&#x27;emprise de l&#x27;essai, en ROUGE ses pixels plus clairs que le mur qu&#x27;ils cachent"></a><figcaption>Carte : en bleu l'emprise de l'essai, en ROUGE ses pixels plus clairs que le mur qu'ils cachent</figcaption></figure>
+<figure class=""><a href="img/tuyaux_mur_allumees_carte_loupe3.jpg"><img loading="lazy" src="img/tuyaux_mur_allumees_carte_loupe3.jpg" alt="La même carte, loupe ×3"></a><figcaption>La même carte, loupe ×3</figcaption></figure>
+</div>
+<h3>Scène « duel », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_entrainement.jpg"><img loading="lazy" src="img/ill_entrainement.jpg" alt="Cible : Entraînement"></a><figcaption>Cible : Entraînement</figcaption></figure>
+<figure class=""><a href="img/tuyaux_duel_allumees__sans.jpg"><img loading="lazy" src="img/tuyaux_duel_allumees__sans.jpg" alt="Éteint — même instant, l&#x27;essai caché"></a><figcaption>Éteint — même instant, l'essai caché</figcaption></figure>
+<figure class=""><a href="img/tuyaux_duel_allumees.jpg"><img loading="lazy" src="img/tuyaux_duel_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_duel_allumees__sans_loupe3.jpg"><img loading="lazy" src="img/tuyaux_duel_allumees__sans_loupe3.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_duel_allumees_loupe3.jpg"><img loading="lazy" src="img/tuyaux_duel_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_duel_allumees_carte.jpg"><img loading="lazy" src="img/tuyaux_duel_allumees_carte.jpg" alt="Carte : en bleu l&#x27;emprise de l&#x27;essai, en ROUGE ses pixels plus clairs que le mur qu&#x27;ils cachent"></a><figcaption>Carte : en bleu l'emprise de l'essai, en ROUGE ses pixels plus clairs que le mur qu'ils cachent</figcaption></figure>
+<figure class=""><a href="img/tuyaux_duel_allumees_carte_loupe3.jpg"><img loading="lazy" src="img/tuyaux_duel_allumees_carte_loupe3.jpg" alt="La même carte, loupe ×3"></a><figcaption>La même carte, loupe ×3</figcaption></figure>
+</div>
+<h3>Scène « scinde », torches allumées, en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_entrainement.jpg"><img loading="lazy" src="img/ill_entrainement.jpg" alt="Cible : Entraînement"></a><figcaption>Cible : Entraînement</figcaption></figure>
+<figure class=""><a href="img/tuyaux_scinde_allumees__sans.jpg"><img loading="lazy" src="img/tuyaux_scinde_allumees__sans.jpg" alt="Éteint — même instant, l&#x27;essai caché"></a><figcaption>Éteint — même instant, l'essai caché</figcaption></figure>
+<figure class=""><a href="img/tuyaux_scinde_allumees.jpg"><img loading="lazy" src="img/tuyaux_scinde_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_scinde_allumees__sans_loupe3.jpg"><img loading="lazy" src="img/tuyaux_scinde_allumees__sans_loupe3.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_scinde_allumees_loupe3.jpg"><img loading="lazy" src="img/tuyaux_scinde_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_scinde_allumees_carte.jpg"><img loading="lazy" src="img/tuyaux_scinde_allumees_carte.jpg" alt="Carte : en bleu l&#x27;emprise de l&#x27;essai, en ROUGE ses pixels plus clairs que le mur qu&#x27;ils cachent"></a><figcaption>Carte : en bleu l'emprise de l'essai, en ROUGE ses pixels plus clairs que le mur qu'ils cachent</figcaption></figure>
+<figure class=""><a href="img/tuyaux_scinde_allumees_carte_loupe3.jpg"><img loading="lazy" src="img/tuyaux_scinde_allumees_carte_loupe3.jpg" alt="La même carte, loupe ×3"></a><figcaption>La même carte, loupe ×3</figcaption></figure>
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 35823 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>51</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 2539 changés · 0 noirs allumés · 20 plus clairs (max 7) — un 3ᵉ témoin, sans aucun essai, y fait 1977 changés, 24 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 36375 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>51</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 29.8 avec, 37.5 sans ; 0.1 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 51 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (895 pixels d'emprise) : l'essai médian 88, ses 5 % les plus clairs ≥ 121, max 140 — la surface cachée médiane 140, 5 % ≥ 153, max 159 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 35883 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>51</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 772 changés · 0 noirs allumés · 0 plus clairs (max 0) — un 3ᵉ témoin, sans aucun essai, y fait 137 changés, 0 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 36379 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>51</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 28.5 avec, 35.3 sans ; 0.1 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 51 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (167 pixels d'emprise) : l'essai médian 31, ses 5 % les plus clairs ≥ 38, max 39 — la surface cachée médiane 41, 5 % ≥ 42, max 42 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/tuyaux_duel_eteintes__sans_loupe3.jpg"><img loading="lazy" src="img/tuyaux_duel_eteintes__sans_loupe3.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_duel_eteintes_loupe3.jpg"><img loading="lazy" src="img/tuyaux_duel_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">sol — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 23921 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>34</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1067 changés · 0 noirs allumés · 9 plus clairs (max 35) — un 3ᵉ témoin, sans aucun essai, y fait 1239 changés, 104 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 23921 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>34</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 30.6 avec, 38.6 sans ; 0.1 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 34 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (949 pixels d'emprise) : l'essai médian 85, ses 5 % les plus clairs ≥ 120, max 142 — la surface cachée médiane 136, 5 % ≥ 151, max 158 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 23921 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>34</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 98 changés · 0 noirs allumés · 65 plus clairs (max 61) — un 3ᵉ témoin, sans aucun essai, y fait 116 changés, 8 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 23921 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>34</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 28.5 avec, 35.4 sans ; 0.1 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 34 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (105 pixels d'emprise) : l'essai médian 31, ses 5 % les plus clairs ≥ 37, max 38 — la surface cachée médiane 41, 5 % ≥ 41, max 42 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">mur — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 21007 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>21</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1094 changés · 0 noirs allumés · 2 plus clairs (max 20) — un 3ᵉ témoin, sans aucun essai, y fait 376 changés, 1 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 21007 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>21</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 33.7 avec, 43.7 sans ; 0.1 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 21 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (2092 pixels d'emprise) : l'essai médian 87, ses 5 % les plus clairs ≥ 117, max 139 — la surface cachée médiane 135, 5 % ≥ 151, max 159 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 21007 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>21</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 135 changés · 0 noirs allumés · 83 plus clairs (max 91) — un 3ᵉ témoin, sans aucun essai, y fait 153 changés, 94 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 21007 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>21</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 28.6 avec, 35.6 sans ; 0.1 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 21 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (101 pixels d'emprise) : l'essai médian 31, ses 5 % les plus clairs ≥ 36, max 38 — la surface cachée médiane 41, 5 % ≥ 41, max 42 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/tuyaux_mur_eteintes__sans_loupe3.jpg"><img loading="lazy" src="img/tuyaux_mur_eteintes__sans_loupe3.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_mur_eteintes_loupe3.jpg"><img loading="lazy" src="img/tuyaux_mur_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">scinde — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 28419 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>69</b> plus clairs que sans (écart max 7/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 2059 changés · 0 noirs allumés · 40 plus clairs (max 34) — un 3ᵉ témoin, sans aucun essai, y fait 1953 changés, 3 plus clairs, 0 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 28550 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>69</b> plus clairs que la surface derrière (écart max 7/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 33.4 avec, 41.0 sans ; 0.2 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 69 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (3208 pixels d'emprise) : l'essai médian 83, ses 5 % les plus clairs ≥ 106, max 134 — la surface cachée médiane 99, 5 % ≥ 140, max 148 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">scinde — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 28420 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>73</b> plus clairs que sans (écart max 6/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 479 changés · 16 noirs allumés · 122 plus clairs (max 76) — un 3ᵉ témoin, sans aucun essai, y fait 87 changés, 26 plus clairs, 1 noirs allumés</li>
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 28548 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>73</b> plus clairs que la surface derrière (écart max 6/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 26.3 avec, 32.5 sans ; 0.3 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 73 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (423 pixels d'emprise) : l'essai médian 76, ses 5 % les plus clairs ≥ 94, max 105 — la surface cachée médiane 95, 5 % ≥ 112, max 116 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/tuyaux_scinde_eteintes__sans_loupe3.jpg"><img loading="lazy" src="img/tuyaux_scinde_eteintes__sans_loupe3.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_scinde_eteintes_loupe3.jpg"><img loading="lazy" src="img/tuyaux_scinde_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+<section id="tuyaux_pres"><h2>Les tuyaux de près (caméra ×4,5, trois fois le zoom du duel) <code>--tuyaux-essai --zoom-photo=4.5</code></h2><p class="quoi">Le même essai rendu de près (un vrai rendu, pas un agrandissement), comparé au même instant sans les tuyaux.</p>
+<h3>Scène « mur », torches allumées, de près : caméra ×4,5, un vrai rendu</h3><div class="rang">
+<figure class="cible"><a href="img/ill_entrainement.jpg"><img loading="lazy" src="img/ill_entrainement.jpg" alt="Cible : Entraînement"></a><figcaption>Cible : Entraînement</figcaption></figure>
+<figure class=""><a href="img/tuyaux_pres_mur_allumees__sans.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_allumees__sans.jpg" alt="Éteint — même instant, l&#x27;essai caché"></a><figcaption>Éteint — même instant, l'essai caché</figcaption></figure>
+<figure class=""><a href="img/tuyaux_pres_mur_allumees.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_pres_mur_allumees__sans_loupe2.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_allumees__sans_loupe2.jpg" alt="Loupe ×2 (sur le gros plan) — éteint"></a><figcaption>Loupe ×2 (sur le gros plan) — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_pres_mur_allumees_loupe2.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_allumees_loupe2.jpg" alt="Loupe ×2 (sur le gros plan) — allumé"></a><figcaption>Loupe ×2 (sur le gros plan) — allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/tuyaux_pres_mur_allumees_carte.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_allumees_carte.jpg" alt="Carte : en bleu l&#x27;emprise de l&#x27;essai, en ROUGE ses pixels plus clairs que le mur qu&#x27;ils cachent"></a><figcaption>Carte : en bleu l'emprise de l'essai, en ROUGE ses pixels plus clairs que le mur qu'ils cachent</figcaption></figure>
+
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 20385 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>88</b> plus clairs que la surface derrière (écart max 10/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 46.5 avec, 66.8 sans ; 0.4 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 66 / 22 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (6180 pixels d'emprise) : l'essai médian 89, ses 5 % les plus clairs ≥ 107, max 141 — la surface cachée médiane 143, 5 % ≥ 155, max 160 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 20379 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>88</b> plus clairs que la surface derrière (écart max 10/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 27.9 avec, 35.1 sans ; 0.4 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 67 / 21 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (149 pixels d'emprise) : l'essai médian 31, ses 5 % les plus clairs ≥ 34, max 39 — la surface cachée médiane 41, 5 % ≥ 41, max 41 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">sol — torches allumées</p><ul>
+
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 14351 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>0</b> plus clairs que la surface derrière (écart max 1/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 54.8 avec, 79.0 sans ; 0.0 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 0 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (7008 pixels d'emprise) : l'essai médian 85, ses 5 % les plus clairs ≥ 106, max 140 — la surface cachée médiane 137, 5 % ≥ 151, max 159 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 14351 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>0</b> plus clairs que la surface derrière (écart max 1/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 27.8 avec, 34.7 sans ; 0.0 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 0 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (53 pixels d'emprise) : l'essai médian 31, ses 5 % les plus clairs ≥ 35, max 36 — la surface cachée médiane 41, 5 % ≥ 41, max 41 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">mur — torches allumées</p><ul>
+
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 29823 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>0</b> plus clairs que la surface derrière (écart max 0/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 55.9 avec, 81.5 sans ; 0.0 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 0 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (14347 pixels d'emprise) : l'essai médian 87, ses 5 % les plus clairs ≥ 109, max 140 — la surface cachée médiane 138, 5 % ≥ 152, max 160 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+
+<li><b>Même instant, sans l'essai</b> (jeu en pause, seul l'essai caché) : 29789 pixels changés · <b>0</b> noirs allumés, 0 au seuil · <b>0</b> plus clairs que la surface derrière (écart max 1/255) · bruit (l'essai contre lui-même) : 0</li><li>Sur l'emprise : luminance moyenne 28.0 avec, 35.2 sans ; 0.0 % de ses pixels plus clairs que la surface qu'ils cachent (écarts 3-8 / 9-16 / 17-32 / 33-64 / 65+ : 0 / 0 / 0 / 0 / 0)</li><li>Dans la lumière de la torche (226 pixels d'emprise) : l'essai médian 31, ses 5 % les plus clairs ≥ 36, max 38 — la surface cachée médiane 41, 5 % ≥ 41, max 42 ; 0 pixels plus clairs que la surface qu'ils cachent</li>
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/tuyaux_pres_mur_eteintes__sans_loupe2.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_eteintes__sans_loupe2.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/tuyaux_pres_mur_eteintes_loupe2.jpg"><img loading="lazy" src="img/tuyaux_pres_mur_eteintes_loupe2.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+<section id="corps"><h2>Les personnages détaillés <code>--corps-detaille</code></h2><p class="quoi">Accessoires modelés (bandoulière, cartouches, plaques…) et matière peinte, pour les dix classes (voxel_catalogue.gd, CLASSES_DETAILLEES) ; fusionné depuis origin/iso12-corps (f38e5f7).</p>
+<h3>Scène « duel », torches allumées, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_duel_allumees.jpg"><img loading="lazy" src="img/temoin_duel_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/corps_duel_allumees.jpg"><img loading="lazy" src="img/corps_duel_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/corps_duel_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/corps_duel_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/corps_duel_allumees_loupe3.jpg"><img loading="lazy" src="img/corps_duel_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Scène « scinde », torches allumées, en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)</h3><div class="rang">
+<figure class="cible"><a href="img/ill_ecran_scinde.jpg"><img loading="lazy" src="img/ill_ecran_scinde.jpg" alt="Cible : Écran scindé"></a><figcaption>Cible : Écran scindé</figcaption></figure>
+<figure class="cible"><a href="img/ill_accueil.jpg"><img loading="lazy" src="img/ill_accueil.jpg" alt="Cible : Accueil"></a><figcaption>Cible : Accueil</figcaption></figure>
+<figure class=""><a href="img/temoin_scinde_allumees.jpg"><img loading="lazy" src="img/temoin_scinde_allumees.jpg" alt="Éteint — lancement témoin"></a><figcaption>Éteint — lancement témoin</figcaption></figure>
+<figure class=""><a href="img/corps_scinde_allumees.jpg"><img loading="lazy" src="img/corps_scinde_allumees.jpg" alt="Allumé"></a><figcaption>Allumé</figcaption></figure>
+</div>
+<div class="rang deux">
+<figure class=""><a href="img/corps_scinde_allumees_loupe3_temoin.jpg"><img loading="lazy" src="img/corps_scinde_allumees_loupe3_temoin.jpg" alt="Loupe ×3 — éteint"></a><figcaption>Loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/corps_scinde_allumees_loupe3.jpg"><img loading="lazy" src="img/corps_scinde_allumees_loupe3.jpg" alt="Loupe ×3 — allumé"></a><figcaption>Loupe ×3 — allumé</figcaption></figure>
+</div>
+<h3>Les chiffres</h3>
+<p class="cle">duel — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1979 changés · 0 noirs allumés · 57 plus clairs (max 124) — un 3ᵉ témoin, sans aucun essai, y fait 1977 changés, 24 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">duel — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 178 changés · 0 noirs allumés · 10 plus clairs (max 102) — un 3ᵉ témoin, sans aucun essai, y fait 137 changés, 0 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/corps_duel_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/corps_duel_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/corps_duel_eteintes_loupe3.jpg"><img loading="lazy" src="img/corps_duel_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+<p class="cle">sol — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1151 changés · 0 noirs allumés · 11 plus clairs (max 123) — un 3ᵉ témoin, sans aucun essai, y fait 1239 changés, 104 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">sol — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 83 changés · 0 noirs allumés · 12 plus clairs (max 101) — un 3ᵉ témoin, sans aucun essai, y fait 116 changés, 8 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 1085 changés · 0 noirs allumés · 45 plus clairs (max 128) — un 3ᵉ témoin, sans aucun essai, y fait 376 changés, 1 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">mur — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 38 changés · 0 noirs allumés · 34 plus clairs (max 105) — un 3ᵉ témoin, sans aucun essai, y fait 153 changés, 94 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches allumées</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 3381 changés · 0 noirs allumés · 101 plus clairs (max 107) — un 3ᵉ témoin, sans aucun essai, y fait 1953 changés, 3 plus clairs, 0 noirs allumés</li>
+
+</ul>
+<p class="cle">scinde — torches éteintes</p><ul>
+<li><b>Hors des corps</b> (entre lancements, bruit mesuré 0) : 0 pixels changés · <b>0</b> noirs allumés (0 → plus), 0 au seuil 7,5/255 · <b>0</b> plus clairs que sans (écart max 0/255)</li><li><b>Zone des corps</b> (le souffle des corps diffère d'un lancement à l'autre) : 389 changés · 16 noirs allumés · 143 plus clairs (max 92) — un 3ᵉ témoin, sans aucun essai, y fait 87 changés, 26 plus clairs, 1 noirs allumés</li>
+
+</ul>
+<div class="rang deux petit">
+<figure class=""><a href="img/corps_scinde_eteintes_loupe3_temoin.jpg"><img loading="lazy" src="img/corps_scinde_eteintes_loupe3_temoin.jpg" alt="Torches éteintes, loupe ×3 — éteint"></a><figcaption>Torches éteintes, loupe ×3 — éteint</figcaption></figure>
+<figure class=""><a href="img/corps_scinde_eteintes_loupe3.jpg"><img loading="lazy" src="img/corps_scinde_eteintes_loupe3.jpg" alt="Torches éteintes, loupe ×3 — allumé"></a><figcaption>Torches éteintes, loupe ×3 — allumé</figcaption></figure>
+</div>
+</section>
+</body></html>
