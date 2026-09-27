@@ -1,0 +1,2121 @@
+{
+ "prises": "/root/.local/share/godot/app_userdata/Candela 2D/essais",
+ "scenes": {
+  "duel_allumees": {
+   "bruit_pixels": 2113,
+   "bruit_max": 111,
+   "zone_corps_pixels": 32369,
+   "boite_bruit": [
+    793,
+    530,
+    994,
+    653
+   ],
+   "t1_allumes": 1027544,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 1977,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 24,
+     "exces_max": 7
+    }
+   }
+  },
+  "duel_eteintes": {
+   "bruit_pixels": 281,
+   "bruit_max": 119,
+   "zone_corps_pixels": 30952,
+   "boite_bruit": [
+    793,
+    530,
+    985,
+    651
+   ],
+   "t1_allumes": 1024083,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 137,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    }
+   }
+  },
+  "sol_allumees": {
+   "bruit_pixels": 1200,
+   "bruit_max": 117,
+   "zone_corps_pixels": 16121,
+   "boite_bruit": [
+    422,
+    604,
+    472,
+    653
+   ],
+   "t1_allumes": 1033317,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 1239,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 104,
+     "exces_max": 79
+    }
+   }
+  },
+  "sol_eteintes": {
+   "bruit_pixels": 104,
+   "bruit_max": 61,
+   "zone_corps_pixels": 15540,
+   "boite_bruit": [
+    422,
+    604,
+    472,
+    651
+   ],
+   "t1_allumes": 1005799,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 116,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 8,
+     "exces_max": 29
+    }
+   }
+  },
+  "mur_allumees": {
+   "bruit_pixels": 1094,
+   "bruit_max": 118,
+   "zone_corps_pixels": 16050,
+   "boite_bruit": [
+    531,
+    559,
+    580,
+    609
+   ],
+   "t1_allumes": 975024,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 376,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 1,
+     "exces_max": 35
+    }
+   }
+  },
+  "mur_eteintes": {
+   "bruit_pixels": 13,
+   "bruit_max": 29,
+   "zone_corps_pixels": 13909,
+   "boite_bruit": [
+    534,
+    560,
+    578,
+    599
+   ],
+   "t1_allumes": 974014,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 153,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 94,
+     "exces_max": 112
+    }
+   }
+  },
+  "scinde_allumees": {
+   "bruit_pixels": 3511,
+   "bruit_max": 101,
+   "zone_corps_pixels": 63960,
+   "boite_bruit": [
+    311,
+    318,
+    1673,
+    653
+   ],
+   "t1_allumes": 2073600,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 1953,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 3,
+     "exces_max": 8
+    }
+   }
+  },
+  "scinde_eteintes": {
+   "bruit_pixels": 218,
+   "bruit_max": 54,
+   "zone_corps_pixels": 56991,
+   "boite_bruit": [
+    311,
+    318,
+    1672,
+    650
+   ],
+   "t1_allumes": 1201125,
+   "temoin3": {
+    "hors_corps": {
+     "changes": 0,
+     "noirs_allumes_stricts": 0,
+     "noirs_allumes_seuil": 0,
+     "plus_clairs": 0,
+     "exces_max": 0
+    },
+    "zone_corps": {
+     "changes": 87,
+     "noirs_allumes_stricts": 1,
+     "noirs_allumes_seuil": 6,
+     "plus_clairs": 26,
+     "exces_max": 27
+    }
+   }
+  }
+ },
+ "essais": {
+  "faisceau": {
+   "drapeau": "--faisceau",
+   "titre": "Le cœur chaud à la lampe",
+   "quoi": "Une lueur posée à la lampe même de chaque torche allumée (iso_volumes.gd, _suivre_faisceau), de la couleur de la lumière, sans rayon.",
+   "cibles": [
+    "ill_intro_allumage",
+    "ill_accueil"
+   ],
+   "montrees": [
+    "duel",
+    "scinde"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 2311,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 270,
+       "exces_max": 233
+      }
+     },
+     "intra": {
+      "changes": 272,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 262,
+      "plus_clairs_1": 272,
+      "exces_max": 233,
+      "emprise_lum_moy_avec": 191.1,
+      "emprise_lum_moy_sans": 54.5,
+      "emprise_plus_clairs_part": 0.963,
+      "exces_histo_3_8_16_32_64_255": [
+       8,
+       14,
+       17,
+       18,
+       205
+      ],
+      "lumiere_pixels": 71,
+      "lumiere_avec_p50_p95_max": [
+       255,
+       255,
+       255
+      ],
+      "lumiere_sans_p50_p95_max": [
+       158,
+       183,
+       184
+      ],
+      "lumiere_plus_clairs": 67
+     },
+     "image": "img/faisceau_duel_allumees.jpg",
+     "loupe": "img/faisceau_duel_allumees_loupe3.jpg",
+     "loupe_temoin": "img/faisceau_duel_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      540,
+      429,
+      640,
+      360
+     ],
+     "image_sans": "img/faisceau_duel_allumees__sans.jpg",
+     "loupe_sans": "img/faisceau_duel_allumees__sans_loupe3.jpg"
+    },
+    "duel_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 274,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     },
+     "image": "img/faisceau_duel_eteintes.jpg",
+     "loupe": "img/faisceau_duel_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/faisceau_duel_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      540,
+      429,
+      640,
+      360
+     ]
+    },
+    "sol_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1357,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 179,
+       "exces_max": 227
+      }
+     },
+     "intra": {
+      "changes": 140,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 131,
+      "plus_clairs_1": 137,
+      "exces_max": 227,
+      "emprise_lum_moy_avec": 203.8,
+      "emprise_lum_moy_sans": 87.7,
+      "emprise_plus_clairs_part": 0.936,
+      "exces_histo_3_8_16_32_64_255": [
+       2,
+       11,
+       11,
+       16,
+       91
+      ],
+      "lumiere_pixels": 78,
+      "lumiere_avec_p50_p95_max": [
+       255,
+       255,
+       255
+      ],
+      "lumiere_sans_p50_p95_max": [
+       153,
+       236,
+       245
+      ],
+      "lumiere_plus_clairs": 74
+     }
+    },
+    "sol_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 73,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     }
+    },
+    "mur_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1257,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 177,
+       "exces_max": 222
+      }
+     },
+     "intra": {
+      "changes": 136,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 129,
+      "plus_clairs_1": 133,
+      "exces_max": 222,
+      "emprise_lum_moy_avec": 199.7,
+      "emprise_lum_moy_sans": 61.7,
+      "emprise_plus_clairs_part": 0.949,
+      "exces_histo_3_8_16_32_64_255": [
+       5,
+       7,
+       2,
+       14,
+       101
+      ],
+      "lumiere_pixels": 90,
+      "lumiere_avec_p50_p95_max": [
+       255,
+       255,
+       255
+      ],
+      "lumiere_sans_p50_p95_max": [
+       52,
+       180,
+       255
+      ],
+      "lumiere_plus_clairs": 84
+     }
+    },
+    "mur_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 59,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 28,
+       "exces_max": 60
+      }
+     }
+    },
+    "scinde_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 4229,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 146,
+       "plus_clairs": 854,
+       "exces_max": 218
+      }
+     },
+     "intra": {
+      "changes": 406,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 133,
+      "plus_clairs": 395,
+      "plus_clairs_1": 405,
+      "exces_max": 218,
+      "emprise_lum_moy_avec": 173.6,
+      "emprise_lum_moy_sans": 56.3,
+      "emprise_plus_clairs_part": 0.973,
+      "exces_histo_3_8_16_32_64_255": [
+       20,
+       16,
+       30,
+       38,
+       291
+      ],
+      "lumiere_pixels": 226,
+      "lumiere_avec_p50_p95_max": [
+       230,
+       230,
+       230
+      ],
+      "lumiere_sans_p50_p95_max": [
+       59,
+       166,
+       212
+      ],
+      "lumiere_plus_clairs": 220
+     },
+     "image": "img/faisceau_scinde_allumees.jpg",
+     "loupe": "img/faisceau_scinde_allumees_loupe3.jpg",
+     "loupe_temoin": "img/faisceau_scinde_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      1015,
+      432,
+      640,
+      360
+     ],
+     "image_sans": "img/faisceau_scinde_allumees__sans.jpg",
+     "loupe_sans": "img/faisceau_scinde_allumees__sans_loupe3.jpg"
+    },
+    "scinde_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 186,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     },
+     "image": "img/faisceau_scinde_eteintes.jpg",
+     "loupe": "img/faisceau_scinde_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/faisceau_scinde_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      1015,
+      432,
+      640,
+      360
+     ]
+    }
+   },
+   "centre": {
+    "duel": [
+     860,
+     609
+    ],
+    "scinde": [
+     1335,
+     612
+    ]
+   }
+  },
+  "mannequin": {
+   "drapeau": "--mannequin",
+   "titre": "Le mannequin",
+   "quoi": "Les corps en segments articulés, le côté de la lumière contrasté (MANNEQUIN_CONTRASTE 0,4, report 1,6) et un contour (voxel_catalogue.gd).",
+   "cibles": [
+    "ill_ecran_scinde",
+    "ill_accueil"
+   ],
+   "montrees": [
+    "duel",
+    "scinde"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 3239,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 1
+      }
+     },
+     "image": "img/mannequin_duel_allumees.jpg",
+     "loupe": "img/mannequin_duel_allumees_loupe3.jpg",
+     "loupe_temoin": "img/mannequin_duel_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      520,
+      427,
+      640,
+      360
+     ]
+    },
+    "duel_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 209,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 1,
+       "exces_max": 18
+      }
+     },
+     "image": "img/mannequin_duel_eteintes.jpg",
+     "loupe": "img/mannequin_duel_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/mannequin_duel_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      520,
+      427,
+      640,
+      360
+     ]
+    },
+    "sol_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1672,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 5,
+       "exces_max": 34
+      }
+     }
+    },
+    "sol_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 52,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     }
+    },
+    "mur_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1293,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 4,
+       "exces_max": 33
+      }
+     }
+    },
+    "mur_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 151,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 93,
+       "exces_max": 112
+      }
+     }
+    },
+    "scinde_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 5624,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 9,
+       "plus_clairs": 146,
+       "exces_max": 34
+      }
+     },
+     "image": "img/mannequin_scinde_allumees.jpg",
+     "loupe": "img/mannequin_scinde_allumees_loupe3.jpg",
+     "loupe_temoin": "img/mannequin_scinde_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      385,
+      440,
+      640,
+      360
+     ]
+    },
+    "scinde_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 258,
+       "noirs_allumes_stricts": 10,
+       "noirs_allumes_seuil": 18,
+       "plus_clairs": 83,
+       "exces_max": 54
+      }
+     },
+     "image": "img/mannequin_scinde_eteintes.jpg",
+     "loupe": "img/mannequin_scinde_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/mannequin_scinde_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      385,
+      440,
+      640,
+      360
+     ]
+    }
+   },
+   "centre": {
+    "duel": [
+     840,
+     607
+    ],
+    "scinde": [
+     705,
+     620
+    ]
+   }
+  },
+  "pochoirs": {
+   "drapeau": "--pochoirs-essai",
+   "titre": "Les pochoirs au sol",
+   "quoi": "« ZONE n » et « DEATHMATCH » peints au sol, symétriques par carte ; une peinture sombre : le sol × 0,55 sous la lettre (arena_decor.gd, POCHOIR_PEINTURE alpha 0,45).",
+   "cibles": [
+    "ill_creer_local"
+   ],
+   "montrees": [
+    "sol",
+    "scinde"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 2721,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 2160,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 73,
+       "exces_max": 39
+      }
+     }
+    },
+    "duel_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 2719,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 82,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 1,
+       "exces_max": 28
+      }
+     }
+    },
+    "sol_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 5746,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 1
+      },
+      "zone_corps": {
+       "changes": 1205,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 6,
+       "exces_max": 38
+      }
+     },
+     "image": "img/pochoirs_sol_allumees.jpg",
+     "loupe": "img/pochoirs_sol_allumees_loupe3.jpg",
+     "loupe_temoin": "img/pochoirs_sol_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      217,
+      397,
+      640,
+      360
+     ]
+    },
+    "sol_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 5851,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 43,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 26,
+       "exces_max": 29
+      }
+     },
+     "image": "img/pochoirs_sol_eteintes.jpg",
+     "loupe": "img/pochoirs_sol_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/pochoirs_sol_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      217,
+      397,
+      640,
+      360
+     ]
+    },
+    "mur_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 5769,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1196,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 55,
+       "exces_max": 74
+      }
+     }
+    },
+    "mur_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 5780,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 188,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 74,
+       "exces_max": 91
+      }
+     }
+    },
+    "scinde_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 457,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 3712,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 9,
+       "plus_clairs": 219,
+       "exces_max": 35
+      }
+     },
+     "image": "img/pochoirs_scinde_allumees.jpg",
+     "loupe": "img/pochoirs_scinde_allumees_loupe3.jpg",
+     "loupe_temoin": "img/pochoirs_scinde_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      386,
+      439,
+      640,
+      360
+     ]
+    },
+    "scinde_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 397,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 375,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 4,
+       "plus_clairs": 103,
+       "exces_max": 51
+      }
+     },
+     "image": "img/pochoirs_scinde_eteintes.jpg",
+     "loupe": "img/pochoirs_scinde_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/pochoirs_scinde_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      386,
+      439,
+      640,
+      360
+     ]
+    }
+   },
+   "centre": {
+    "sol": [
+     537,
+     577
+    ],
+    "scinde": [
+     706,
+     619
+    ]
+   }
+  },
+  "encre": {
+   "drapeau": "--encre-essai",
+   "titre": "L'encre : hachures, arêtes, contour de 1 px",
+   "quoi": "Hachures dans la pénombre (HACHURES_ESSAI 0,7) sur le sol, les murs et les corps ; arêtes des murs à 2,4 px et plus noires (reste 0,12) ; contour des personnages de 1 px du monde, soit 1,5 px d'écran au zoom ×1,5 (iso_materiaux.gd, CONTOUR_PX_ESSAI 1,0 ; voxel_corps.gd l'applique sous ce seul drapeau).",
+   "cibles": [
+    "ill_ecran_scinde",
+    "ill_accueil"
+   ],
+   "montrees": [
+    "duel",
+    "mur",
+    "scinde"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 219758,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 9002,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 5,
+       "exces_max": 5
+      }
+     },
+     "image": "img/encre_duel_allumees.jpg",
+     "loupe": "img/encre_duel_allumees_loupe3.jpg",
+     "loupe_temoin": "img/encre_duel_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      628,
+      403,
+      640,
+      360
+     ]
+    },
+    "duel_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 219615,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 7199,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     },
+     "image": "img/encre_duel_eteintes.jpg",
+     "loupe": "img/encre_duel_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/encre_duel_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      628,
+      403,
+      640,
+      360
+     ]
+    },
+    "sol_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 225369,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 4873,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 61,
+       "exces_max": 47
+      }
+     }
+    },
+    "sol_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 218900,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 3833,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 40,
+       "exces_max": 58
+      }
+     }
+    },
+    "mur_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 213407,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 4761,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 28,
+       "exces_max": 15
+      }
+     },
+     "image": "img/encre_mur_allumees.jpg",
+     "loupe": "img/encre_mur_allumees_loupe3.jpg",
+     "loupe_temoin": "img/encre_mur_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      510,
+      367,
+      640,
+      360
+     ]
+    },
+    "mur_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 213112,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 3444,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 2,
+       "exces_max": 29
+      }
+     },
+     "image": "img/encre_mur_eteintes.jpg",
+     "loupe": "img/encre_mur_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/encre_mur_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      510,
+      367,
+      640,
+      360
+     ]
+    },
+    "scinde_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 247914,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 14973,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 10,
+       "exces_max": 24
+      }
+     },
+     "image": "img/encre_scinde_allumees.jpg",
+     "loupe": "img/encre_scinde_allumees_loupe3.jpg",
+     "loupe_temoin": "img/encre_scinde_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      782,
+      382,
+      640,
+      360
+     ]
+    },
+    "scinde_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 246359,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 11522,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     },
+     "image": "img/encre_scinde_eteintes.jpg",
+     "loupe": "img/encre_scinde_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/encre_scinde_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      782,
+      382,
+      640,
+      360
+     ]
+    }
+   },
+   "centre": {
+    "duel": [
+     948,
+     583
+    ],
+    "mur": [
+     830,
+     547
+    ],
+    "scinde": [
+     1102,
+     562
+    ]
+   }
+  },
+  "tuyaux": {
+   "drapeau": "--tuyaux-essai",
+   "titre": "Les tuyaux et câbles des murs",
+   "quoi": "Conduites cerclées de colliers, descentes et câbles sur les faces de mur (tuyaux_iso.gd), relisant la lumière de la face qu'ils recouvrent à l'écran ; fusionné depuis origin/claude/cloud-tuyaux (70ffafa).",
+   "cibles": [
+    "ill_entrainement"
+   ],
+   "montrees": [
+    "mur",
+    "duel",
+    "scinde"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 35823,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 51,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 2539,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 20,
+       "exces_max": 7
+      }
+     },
+     "intra": {
+      "changes": 36375,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 51,
+      "plus_clairs_1": 97,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 29.8,
+      "emprise_lum_moy_sans": 37.5,
+      "emprise_plus_clairs_part": 0.001,
+      "exces_histo_3_8_16_32_64_255": [
+       51,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 895,
+      "lumiere_avec_p50_p95_max": [
+       88,
+       121,
+       140
+      ],
+      "lumiere_sans_p50_p95_max": [
+       140,
+       153,
+       159
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_duel_allumees.jpg",
+     "loupe": "img/tuyaux_duel_allumees_loupe3.jpg",
+     "loupe_temoin": "img/tuyaux_duel_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      637,
+      297,
+      640,
+      360
+     ],
+     "image_sans": "img/tuyaux_duel_allumees__sans.jpg",
+     "loupe_sans": "img/tuyaux_duel_allumees__sans_loupe3.jpg",
+     "carte_exces": "img/tuyaux_duel_allumees_carte.jpg",
+     "carte_exces_loupe": "img/tuyaux_duel_allumees_carte_loupe3.jpg"
+    },
+    "duel_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 35883,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 51,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 772,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      }
+     },
+     "intra": {
+      "changes": 36379,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 51,
+      "plus_clairs_1": 97,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 28.5,
+      "emprise_lum_moy_sans": 35.3,
+      "emprise_plus_clairs_part": 0.001,
+      "exces_histo_3_8_16_32_64_255": [
+       51,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 167,
+      "lumiere_avec_p50_p95_max": [
+       31,
+       38,
+       39
+      ],
+      "lumiere_sans_p50_p95_max": [
+       41,
+       42,
+       42
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_duel_eteintes.jpg",
+     "loupe": "img/tuyaux_duel_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/tuyaux_duel_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      637,
+      297,
+      640,
+      360
+     ],
+     "image_sans": "img/tuyaux_duel_eteintes__sans.jpg",
+     "loupe_sans": "img/tuyaux_duel_eteintes__sans_loupe3.jpg"
+    },
+    "sol_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 23921,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 34,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 1067,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 9,
+       "exces_max": 35
+      }
+     },
+     "intra": {
+      "changes": 23921,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 34,
+      "plus_clairs_1": 72,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 30.6,
+      "emprise_lum_moy_sans": 38.6,
+      "emprise_plus_clairs_part": 0.001,
+      "exces_histo_3_8_16_32_64_255": [
+       34,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 949,
+      "lumiere_avec_p50_p95_max": [
+       85,
+       120,
+       142
+      ],
+      "lumiere_sans_p50_p95_max": [
+       136,
+       151,
+       158
+      ],
+      "lumiere_plus_clairs": 0
+     }
+    },
+    "sol_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 23921,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 34,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 98,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 65,
+       "exces_max": 61
+      }
+     },
+     "intra": {
+      "changes": 23921,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 34,
+      "plus_clairs_1": 72,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 28.5,
+      "emprise_lum_moy_sans": 35.4,
+      "emprise_plus_clairs_part": 0.001,
+      "exces_histo_3_8_16_32_64_255": [
+       34,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 105,
+      "lumiere_avec_p50_p95_max": [
+       31,
+       37,
+       38
+      ],
+      "lumiere_sans_p50_p95_max": [
+       41,
+       41,
+       42
+      ],
+      "lumiere_plus_clairs": 0
+     }
+    },
+    "mur_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 21007,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 21,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 1094,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 2,
+       "exces_max": 20
+      }
+     },
+     "intra": {
+      "changes": 21007,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 21,
+      "plus_clairs_1": 43,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 33.7,
+      "emprise_lum_moy_sans": 43.7,
+      "emprise_plus_clairs_part": 0.001,
+      "exces_histo_3_8_16_32_64_255": [
+       21,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 2092,
+      "lumiere_avec_p50_p95_max": [
+       87,
+       117,
+       139
+      ],
+      "lumiere_sans_p50_p95_max": [
+       135,
+       151,
+       159
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_mur_allumees.jpg",
+     "loupe": "img/tuyaux_mur_allumees_loupe3.jpg",
+     "loupe_temoin": "img/tuyaux_mur_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      437,
+      324,
+      640,
+      360
+     ],
+     "image_sans": "img/tuyaux_mur_allumees__sans.jpg",
+     "loupe_sans": "img/tuyaux_mur_allumees__sans_loupe3.jpg",
+     "carte_exces": "img/tuyaux_mur_allumees_carte.jpg",
+     "carte_exces_loupe": "img/tuyaux_mur_allumees_carte_loupe3.jpg"
+    },
+    "mur_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 21007,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 21,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 135,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 83,
+       "exces_max": 91
+      }
+     },
+     "intra": {
+      "changes": 21007,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 21,
+      "plus_clairs_1": 43,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 28.6,
+      "emprise_lum_moy_sans": 35.6,
+      "emprise_plus_clairs_part": 0.001,
+      "exces_histo_3_8_16_32_64_255": [
+       21,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 101,
+      "lumiere_avec_p50_p95_max": [
+       31,
+       36,
+       38
+      ],
+      "lumiere_sans_p50_p95_max": [
+       41,
+       41,
+       42
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_mur_eteintes.jpg",
+     "loupe": "img/tuyaux_mur_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/tuyaux_mur_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      437,
+      324,
+      640,
+      360
+     ],
+     "image_sans": "img/tuyaux_mur_eteintes__sans.jpg",
+     "loupe_sans": "img/tuyaux_mur_eteintes__sans_loupe3.jpg"
+    },
+    "scinde_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 28419,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 69,
+       "exces_max": 7
+      },
+      "zone_corps": {
+       "changes": 2059,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 3,
+       "plus_clairs": 40,
+       "exces_max": 34
+      }
+     },
+     "intra": {
+      "changes": 28550,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 69,
+      "plus_clairs_1": 147,
+      "exces_max": 7,
+      "emprise_lum_moy_avec": 33.4,
+      "emprise_lum_moy_sans": 41.0,
+      "emprise_plus_clairs_part": 0.002,
+      "exces_histo_3_8_16_32_64_255": [
+       69,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 3208,
+      "lumiere_avec_p50_p95_max": [
+       83,
+       106,
+       134
+      ],
+      "lumiere_sans_p50_p95_max": [
+       99,
+       140,
+       148
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_scinde_allumees.jpg",
+     "loupe": "img/tuyaux_scinde_allumees_loupe3.jpg",
+     "loupe_temoin": "img/tuyaux_scinde_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      321,
+      345,
+      640,
+      360
+     ],
+     "image_sans": "img/tuyaux_scinde_allumees__sans.jpg",
+     "loupe_sans": "img/tuyaux_scinde_allumees__sans_loupe3.jpg",
+     "carte_exces": "img/tuyaux_scinde_allumees_carte.jpg",
+     "carte_exces_loupe": "img/tuyaux_scinde_allumees_carte_loupe3.jpg"
+    },
+    "scinde_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 28420,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 73,
+       "exces_max": 6
+      },
+      "zone_corps": {
+       "changes": 479,
+       "noirs_allumes_stricts": 16,
+       "noirs_allumes_seuil": 25,
+       "plus_clairs": 122,
+       "exces_max": 76
+      }
+     },
+     "intra": {
+      "changes": 28548,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 73,
+      "plus_clairs_1": 150,
+      "exces_max": 6,
+      "emprise_lum_moy_avec": 26.3,
+      "emprise_lum_moy_sans": 32.5,
+      "emprise_plus_clairs_part": 0.003,
+      "exces_histo_3_8_16_32_64_255": [
+       73,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 423,
+      "lumiere_avec_p50_p95_max": [
+       76,
+       94,
+       105
+      ],
+      "lumiere_sans_p50_p95_max": [
+       95,
+       112,
+       116
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_scinde_eteintes.jpg",
+     "loupe": "img/tuyaux_scinde_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/tuyaux_scinde_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      321,
+      345,
+      640,
+      360
+     ],
+     "image_sans": "img/tuyaux_scinde_eteintes__sans.jpg",
+     "loupe_sans": "img/tuyaux_scinde_eteintes__sans_loupe3.jpg"
+    }
+   },
+   "centre": {
+    "duel": [
+     957,
+     477
+    ],
+    "mur": [
+     757,
+     504
+    ],
+    "scinde": [
+     641,
+     525
+    ]
+   }
+  },
+  "tuyaux_pres": {
+   "drapeau": "--tuyaux-essai --zoom-photo=4.5",
+   "titre": "Les tuyaux de près (caméra ×4,5, trois fois le zoom du duel)",
+   "quoi": "Le même essai rendu de près (un vrai rendu, pas un agrandissement), comparé au même instant sans les tuyaux.",
+   "cibles": [
+    "ill_entrainement"
+   ],
+   "montrees": [
+    "mur"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "intra": {
+      "changes": 20385,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 88,
+      "plus_clairs_1": 109,
+      "exces_max": 10,
+      "emprise_lum_moy_avec": 46.5,
+      "emprise_lum_moy_sans": 66.8,
+      "emprise_plus_clairs_part": 0.004,
+      "exces_histo_3_8_16_32_64_255": [
+       66,
+       22,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 6180,
+      "lumiere_avec_p50_p95_max": [
+       89,
+       107,
+       141
+      ],
+      "lumiere_sans_p50_p95_max": [
+       143,
+       155,
+       160
+      ],
+      "lumiere_plus_clairs": 0
+     }
+    },
+    "duel_eteintes": {
+     "intra": {
+      "changes": 20379,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 88,
+      "plus_clairs_1": 109,
+      "exces_max": 10,
+      "emprise_lum_moy_avec": 27.9,
+      "emprise_lum_moy_sans": 35.1,
+      "emprise_plus_clairs_part": 0.004,
+      "exces_histo_3_8_16_32_64_255": [
+       67,
+       21,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 149,
+      "lumiere_avec_p50_p95_max": [
+       31,
+       34,
+       39
+      ],
+      "lumiere_sans_p50_p95_max": [
+       41,
+       41,
+       41
+      ],
+      "lumiere_plus_clairs": 0
+     }
+    },
+    "sol_allumees": {
+     "intra": {
+      "changes": 14351,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 0,
+      "plus_clairs_1": 5,
+      "exces_max": 1,
+      "emprise_lum_moy_avec": 54.8,
+      "emprise_lum_moy_sans": 79.0,
+      "emprise_plus_clairs_part": 0.0,
+      "exces_histo_3_8_16_32_64_255": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 7008,
+      "lumiere_avec_p50_p95_max": [
+       85,
+       106,
+       140
+      ],
+      "lumiere_sans_p50_p95_max": [
+       137,
+       151,
+       159
+      ],
+      "lumiere_plus_clairs": 0
+     }
+    },
+    "sol_eteintes": {
+     "intra": {
+      "changes": 14351,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 0,
+      "plus_clairs_1": 5,
+      "exces_max": 1,
+      "emprise_lum_moy_avec": 27.8,
+      "emprise_lum_moy_sans": 34.7,
+      "emprise_plus_clairs_part": 0.0,
+      "exces_histo_3_8_16_32_64_255": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 53,
+      "lumiere_avec_p50_p95_max": [
+       31,
+       35,
+       36
+      ],
+      "lumiere_sans_p50_p95_max": [
+       41,
+       41,
+       41
+      ],
+      "lumiere_plus_clairs": 0
+     }
+    },
+    "mur_allumees": {
+     "intra": {
+      "changes": 29823,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 0,
+      "plus_clairs_1": 0,
+      "exces_max": 0,
+      "emprise_lum_moy_avec": 55.9,
+      "emprise_lum_moy_sans": 81.5,
+      "emprise_plus_clairs_part": 0.0,
+      "exces_histo_3_8_16_32_64_255": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 14347,
+      "lumiere_avec_p50_p95_max": [
+       87,
+       109,
+       140
+      ],
+      "lumiere_sans_p50_p95_max": [
+       138,
+       152,
+       160
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_pres_mur_allumees.jpg",
+     "image_temoin": "img/tuyaux_pres_mur_allumees__sans.jpg",
+     "image_sans": "img/tuyaux_pres_mur_allumees__sans.jpg",
+     "loupe": "img/tuyaux_pres_mur_allumees_loupe2.jpg",
+     "loupe_sans": "img/tuyaux_pres_mur_allumees__sans_loupe2.jpg",
+     "carte_exces": "img/tuyaux_pres_mur_allumees_carte.jpg"
+    },
+    "mur_eteintes": {
+     "intra": {
+      "changes": 29789,
+      "bruit_avec_contre_avec2": 0,
+      "noirs_allumes_stricts": 0,
+      "noirs_allumes_seuil": 0,
+      "plus_clairs": 0,
+      "plus_clairs_1": 5,
+      "exces_max": 1,
+      "emprise_lum_moy_avec": 28.0,
+      "emprise_lum_moy_sans": 35.2,
+      "emprise_plus_clairs_part": 0.0,
+      "exces_histo_3_8_16_32_64_255": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "lumiere_pixels": 226,
+      "lumiere_avec_p50_p95_max": [
+       31,
+       36,
+       38
+      ],
+      "lumiere_sans_p50_p95_max": [
+       41,
+       41,
+       42
+      ],
+      "lumiere_plus_clairs": 0
+     },
+     "image": "img/tuyaux_pres_mur_eteintes.jpg",
+     "image_temoin": "img/tuyaux_pres_mur_eteintes__sans.jpg",
+     "image_sans": "img/tuyaux_pres_mur_eteintes__sans.jpg",
+     "loupe": "img/tuyaux_pres_mur_eteintes_loupe2.jpg",
+     "loupe_sans": "img/tuyaux_pres_mur_eteintes__sans_loupe2.jpg"
+    }
+   }
+  },
+  "corps": {
+   "drapeau": "--corps-detaille",
+   "titre": "Les personnages détaillés",
+   "quoi": "Accessoires modelés (bandoulière, cartouches, plaques…) et matière peinte, pour les dix classes (voxel_catalogue.gd, CLASSES_DETAILLEES) ; fusionné depuis origin/iso12-corps (f38e5f7).",
+   "cibles": [
+    "ill_ecran_scinde",
+    "ill_accueil"
+   ],
+   "montrees": [
+    "duel",
+    "scinde"
+   ],
+   "scenes": {
+    "duel_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1979,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 57,
+       "exces_max": 124
+      }
+     },
+     "image": "img/corps_duel_allumees.jpg",
+     "loupe": "img/corps_duel_allumees_loupe3.jpg",
+     "loupe_temoin": "img/corps_duel_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      512,
+      430,
+      640,
+      360
+     ]
+    },
+    "duel_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 178,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 10,
+       "exces_max": 102
+      }
+     },
+     "image": "img/corps_duel_eteintes.jpg",
+     "loupe": "img/corps_duel_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/corps_duel_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      512,
+      430,
+      640,
+      360
+     ]
+    },
+    "sol_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1151,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 11,
+       "exces_max": 123
+      }
+     }
+    },
+    "sol_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 83,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 12,
+       "exces_max": 101
+      }
+     }
+    },
+    "mur_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 1085,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 45,
+       "exces_max": 128
+      }
+     }
+    },
+    "mur_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 38,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 34,
+       "exces_max": 105
+      }
+     }
+    },
+    "scinde_allumees": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 3381,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 14,
+       "plus_clairs": 101,
+       "exces_max": 107
+      }
+     },
+     "image": "img/corps_scinde_allumees.jpg",
+     "loupe": "img/corps_scinde_allumees_loupe3.jpg",
+     "loupe_temoin": "img/corps_scinde_allumees_loupe3_temoin.jpg",
+     "boite_loupe": [
+      383,
+      439,
+      640,
+      360
+     ]
+    },
+    "scinde_eteintes": {
+     "chiffres": {
+      "hors_corps": {
+       "changes": 0,
+       "noirs_allumes_stricts": 0,
+       "noirs_allumes_seuil": 0,
+       "plus_clairs": 0,
+       "exces_max": 0
+      },
+      "zone_corps": {
+       "changes": 389,
+       "noirs_allumes_stricts": 16,
+       "noirs_allumes_seuil": 25,
+       "plus_clairs": 143,
+       "exces_max": 92
+      }
+     },
+     "image": "img/corps_scinde_eteintes.jpg",
+     "loupe": "img/corps_scinde_eteintes_loupe3.jpg",
+     "loupe_temoin": "img/corps_scinde_eteintes_loupe3_temoin.jpg",
+     "boite_loupe": [
+      383,
+      439,
+      640,
+      360
+     ]
+    }
+   },
+   "centre": {
+    "duel": [
+     832,
+     610
+    ],
+    "scinde": [
+     703,
+     619
+    ]
+   }
+  }
+ }
+}
