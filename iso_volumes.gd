@@ -95,7 +95,7 @@ var faisceaux_actifs := false
 ## garde son shader (les bancs basculent par `poser_masque_fumee`).
 var masque_fumee := false
 ## Session cloud « masque-fumée » (2026-09-27) — LA FORME du masque, quand il est allumé : 0, celle de Gadgets (le masque de
-## `--fumee-masque`, tel quel) ; 1, la forme moins chère de `volume_masque_compact.gdshaderinc`, chacune derrière son
+## `--fumee-masque`, tel quel) ; 1 et 2, les formes moins chères de `volume_masque_compact.gdshaderinc`, chacune derrière son
 ## drapeau (`FORMES_MASQUE`), qui allume aussi le masque. ÉTEINTES par défaut : sans l'un de ces drapeaux, rien ne change.
 ## Chacune ajoute une idée à la précédente, pour qu'une série en miroir attribue le prix à chaque idée.
 var forme_masque := 0
@@ -122,10 +122,10 @@ const DRAPEAU_FAISCEAU := "--faisceau"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
 ## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
-## surface (MASQUE_COMPACT).
-const FORMES_MASQUE := {"--fumee-masque-compact": 1}
-const DEFINES_FORMES := [[], ["MASQUE_COMPACT"]]
-const NOMS_FORMES := ["celle de Gadgets", "compacte (MASQUE_COMPACT)"]
+## surface (MASQUE_COMPACT) ; 2, + la bande du sol resserrée (MASQUE_RESSERRE).
+const FORMES_MASQUE := {"--fumee-masque-compact": 1, "--fumee-masque-resserre": 2}
+const DEFINES_FORMES := [[], ["MASQUE_COMPACT"], ["MASQUE_COMPACT", "MASQUE_RESSERRE"]]
+const NOMS_FORMES := ["celle de Gadgets", "compacte (MASQUE_COMPACT)", "compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE)"]
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
 const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
 const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"

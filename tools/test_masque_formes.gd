@@ -8,7 +8,8 @@
 ##   `tools/masque_fumee/compter_glsl.py`, et au pixel à l'image, planche de la session) ;
 ## - chaque drapeau (`IsoVolumes.FORMES_MASQUE`) allume le masque et pose EXACTEMENT les #define de sa forme, que la ligne
 ##   du journal relit dans le code de la variante (une prise prouve son bras par ce que le jeu dit) ;
-## - la forme compacte ne recopie qu'une fois chaque surface (un seul appel au sol, à la face, au dessus) ;
+## - la forme compacte ne recopie qu'une fois chaque surface (un seul appel au sol, à la face, au dessus) ; la bande
+##   resserrée finit le sol exact par les lignes mêmes de `sol_ecrit`, et sa matière est la lecture même du sol exact ;
 ## - rien sur le fil : `Protocol.VERSION` reste 18.
 ##
 ## Ce qu'elle ne prouve pas : que le GPU compile les variantes (le lanceur de série refuse toute prise dont le journal porte
@@ -38,6 +39,7 @@ func _run() -> void:
 	_eteintes_rien_ne_change()
 	_chaque_drapeau_sa_forme()
 	_la_forme_compacte()
+	_la_bande_resserree()
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
 	_check("Protocol.VERSION reste 18", version == 18, str(version))
 	_check("assez de vérifications (%d ≥ 20)" % _verifications, _verifications >= 20)
@@ -110,7 +112,8 @@ func _eteintes_rien_ne_change() -> void:
 func _chaque_drapeau_sa_forme() -> void:
 	print("\n[Chaque drapeau, sa forme]")
 	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
-	_check("le drapeau de la forme compacte", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1})
+	_check("les deux drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
+		"--fumee-masque-resserre": 2})
 	_check("un drapeau de forme allume le masque et pose sa forme",
 		src.contains("\t\telif FORMES_MASQUE.has(arg):\n\t\t\tmasque_fumee = true\n\t\t\tforme_masque = int(FORMES_MASQUE[arg])"))
 	for usure in [false, true]:
@@ -128,7 +131,7 @@ func _chaque_drapeau_sa_forme() -> void:
 				IsoVolumes.variante_forme(base, k) == sh)
 	var v := IsoVolumes.new()
 	v.masque_fumee = true
-	v.forme_masque = 1
+	v.forme_masque = 2
 	var mat: ShaderMaterial = v.call("_materiau_volume")
 	_check("posée, la forme est retenue pour les lightmaps (les filtres par shader la reconnaissent)",
 		(v.get("_formes_posees") as Dictionary).has(mat.shader) and src.contains(
@@ -168,6 +171,32 @@ func _la_forme_compacte() -> void:
 			manque.append(l)
 	_check("les lignes de calcul du parcours de Gadgets sont dans le compact (hors les %d qui deviennent la cible)" % permises.size(),
 		manque.is_empty(), str(manque))
+
+
+func _la_bande_resserree() -> void:
+	print("\n[La bande du sol resserrée : même réponse]")
+	var c := FileAccess.get_file_as_string("res://volume_masque_compact.gdshaderinc")
+	var inc := FileAccess.get_file_as_string("res://volume_masque.gdshaderinc")
+	var ecrit := _fonction(inc, "vec3 sol_ecrit(")
+	var depuis := _fonction(c, "vec3 sol_ecrit_depuis(")
+	var fin_gadgets := ecrit.substr(ecrit.find("\tc = pate_facteur(c, matiere * dalle);"))
+	var fin_ici := depuis.substr(depuis.find("\tc = pate_facteur(c, matiere * dalle);"))
+	_check("le sol exact finit par les lignes mêmes de sol_ecrit (matière, température, usure, contact)",
+		not fin_gadgets.is_empty() and fin_gadgets == fin_ici, "%d / %d caractères" % [fin_gadgets.length(), fin_ici.length()])
+	var point := _fonction(c, "bool sol_montre_noir_resserre_au_point(")
+	_check("la matière de la certitude est la lecture même de sol_ecrit (texture, adresse, niveau de mipmap)",
+		point.contains("float matiere = mix(1.0, textureLod(sol_texture_sol, px / sol_periode_sol_px,\n\t\tniveau_mip(g_x / sol_periode_sol_px, g_y / sol_periode_sol_px)).r, sol_force_matiere);")
+		and ecrit.contains("float matiere = mix(1.0, textureLod(sol_texture_sol, px / sol_periode_sol_px,\n\t\tniveau_mip(g_x / sol_periode_sol_px, g_y / sol_periode_sol_px)).r, sol_force_matiere);"))
+	_check("la certitude « visible sûr » prend la matière exacte au lieu de son plancher, le reste inchangé",
+		point.contains("float plancher_sol = matiere * dalle * contact_des_corps(px);")
+		and inc.contains("float plancher_sol = (1.0 - sol_force_matiere) * dalle * contact_des_corps(px);")
+		and point.contains("plancher_sol *= mix(1.0, USURE_SOL_PLUS_SOMBRE, usure * smoothstep(USURE_SEUILS.x, USURE_SEUILS.y, pate_luminance(c)));"))
+	_check("le noir sûr et la lecture de la lumière sont ceux de Gadgets", point.contains(
+		"if (max(c.r, max(c.g, c.b)) * SOL_HAUSSE_MAX < POINT_NOIR_ECRIT) {\n\t\treturn true;")
+		and point.contains("vec3 lu = lire_lightmap(px + glisse * dalles, deux);"))
+
+
+
 
 
 func _fonction(code: String, signature: String) -> String:
