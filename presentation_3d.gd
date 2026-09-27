@@ -173,6 +173,15 @@ const LIGHTMAPS := ["1080p", "plein"]
 ## de l'Input Map ni aucun script du jeu ne la prend.
 const TOUCHE_PATE := KEY_F2
 const TOUCHES_DIRECTES := {KEY_1: 0, KEY_2: 1, KEY_3: 2, KEY_4: 3, KEY_0: -1}
+
+## ⚠️ **Ces touches ne changent la pâte qu'en build de débogage**, comme F7 le bandeau
+## LED (`mur_led.gd`). Sans ce garde, 1, 2, 3, 4, 0 et F2 changeaient la pâte en plein
+## match, en build publié ET en ligne (répétition du test d'Adrien, D4, 2026-09-27) :
+## un appui par mégarde change l'image sans explication, et une pâte montre autrement la
+## lumière faible — un joueur pouvait donc choisir sa pâte contre l'autre. Question
+## d'équité, pas de confort. `tools/test_touches_pate.gd` échoue si le garde disparaît.
+static func touches_de_pate_actives() -> bool:
+	return OS.is_debug_build()
 ## **D, lavis et pochoir — décision d'Adrien, 2026-09-14** (jalon H-ISO1), sur la planche
 ## et la mesure de fidélité : la seule pâte qui garde la lueur faible au niveau de la vue
 ## de dessus.
@@ -2040,7 +2049,7 @@ func _input(event: InputEvent) -> void:
 	if not _actif:
 		return
 	var touche := event as InputEventKey
-	if touche != null and touche.pressed and not touche.echo:
+	if touche != null and touche.pressed and not touche.echo and touches_de_pate_actives():
 		var choisie := -2
 		if TOUCHES_DIRECTES.has(touche.physical_keycode):
 			choisie = TOUCHES_DIRECTES[touche.physical_keycode]

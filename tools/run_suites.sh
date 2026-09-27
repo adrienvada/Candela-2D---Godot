@@ -208,6 +208,8 @@ SUITES=(test_liaisons test_icones_editeur
         test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte
         test_telemetrie_gadgets test_murs_bas test_murs_bas_rendu
         test_proto_iso test_voxel_corps test_voxel_objets test_banc_iso test_iso_geometrie test_iso_equite test_iso_camera test_iso_vues test_iso_corps test_iso_murs_bas test_iso_objets test_iso_killcam test_killcam_calme test_iso_beaute test_iso_gadgets test_iso_torches3d test_corps_portraits test_corps_mannequin test_menus_voxel test_iso_usure test_corps_detail test_pochoirs test_gris_egaux)
+# Répétition du test d'Adrien (2026-09-27) : le garde des touches de pâte (D4).
+SUITES+=(test_touches_pate)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.
