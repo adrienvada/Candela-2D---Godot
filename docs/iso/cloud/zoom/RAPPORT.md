@@ -40,17 +40,22 @@
 ## Les chiffres
 
 Pixels d'écran pour 1080 lignes ; sur 1440 lignes le jeu se rastérise à la fenêtre (`stretch = keep`), tout est ×4/3
-(vérifié par une prise en 2560×1440, voir plus bas). Moyenne des deux cartes quand elles diffèrent.
+(vérifié : la prise en 2560×1440 de ×1,5 à la Croisée, réduite à 1080 lignes, coïncide avec la prise 1080 à 0,3/255
+d'écart moyen, contre 0,67 dès qu'on la décale de 2 px ; même cadrage, même contenu, rastérisé plus fin). Moyenne des deux cartes quand elles diffèrent.
 
 | Zoom | Corps (l × h), 1080 | Corps, 1440 | Zone de touche Ø36 à l'écran | Torche (pistolet) à l'écran, au plus long | part de la demi-largeur | Carte visible, Cloître / Croisée | Écran scindé (vue de J1) |
 |---|---|---|---|---|---|---|---|
-| ×1,25 | CORPS125 | CORPS125_1440 | TOUCHE125 | TORCHE125 | PART125 | VIS125 | VISS125 |
-| **×1,5** | CORPS150 | CORPS150_1440 | TOUCHE150 | TORCHE150 | PART150 | VIS150 | VISS150 |
-| ×1,75 | CORPS175 | CORPS175_1440 | TOUCHE175 | TORCHE175 | PART175 | VIS175 | VISS175 |
-| ×2,0 | CORPS200 | CORPS200_1440 | TOUCHE200 | TORCHE200 | PART200 | VIS200 | VISS200 |
+| ×1,25 | 47 × 57 | 63 × 77 | 57 × 45 | 487 px | 51 % | 73 % / 73 % | 40 % / 47 % |
+| **×1,5** | 56 × 68 | 75 × 91 | 68 × 54 | 585 px | 61 % | 55 % / 59 % | 29 % / 34 % |
+| ×1,75 | 66 × 80 | 88 × 107 | 80 × 63 | 682 px | 71 % | 40 % / 46 % | 22 % / 26 % |
+| ×2,0 | 75 × 92 | 100 × 122 | 91 × 72 | 780 px | 81 % | 32 % / 37 % | 17 % / 20 % |
 
 - **Corps** : la boîte des maillages voxel de J2, projetée par la caméra (c'est l'encombrement, pas un compte de pixels
   allumés). Elle varie d'une carte à l'autre de ~5 px parce que J2 n'y a pas la même orientation.
+- **Écran scindé** : chaque joueur a une vue de 957 × 1080 ; les corps et la torche y ont la même taille qu'en vue
+  unique (même échelle), seule la largeur de monde montrée diminue — d'où la dernière colonne.
+- **Zone de touche** : le disque de 18 px de rayon au sol, à l'écran (largeur × hauteur : le sol est raccourci en
+  profondeur).
 - **Carte visible** : la part de la surface de la carte que couvre l'empreinte au sol de l'écran, dans la scène
   photographiée (caméra arrêtée aux bords comprise). Ces deux cartes sont petites : ailleurs la part serait plus faible.
 
@@ -82,18 +87,23 @@ Lecture :
 
 ## Conclusion, d'après les images (sans recommandation)
 
+Ce que montrent toutes les images, avant le détail par zoom : **à 45°, une carte carrée devient un losange**, et la
+caméra ne s'arrête qu'au rectangle qui l'englobe. Près d'un bord (le Cloître, ici), un triangle entier de l'écran tombe
+hors carte, dans le noir — d'autant plus grand qu'on dézoome. Et **au sommet de la respiration du bandeau LED**, la bande
+dessine le plan de tout ce qui est à l'écran : plus on dézoome, plus elle révèle de carte.
+
 - **×1,25** — *gagne* : on voit presque toute la carte (73 % de ces deux cartes, caméra souvent arrêtée au bord), on voit
   venir la lumière adverse de loin, seules les armes longues peuvent vous éclairer hors champ ; au sommet de la
   respiration du bandeau, la bande dessine tout le plan. *Perd* : les corps sont les plus petits (~47 × 57 px), le détail
   des voxels se lit mal, le faisceau n'occupe qu'un quart de l'écran et l'image est surtout du noir autour ; c'est le
   contraire du « plus claustrophobique » demandé en ISO8, et le joueur n'est plus au centre quand la caméra bute au bord.
-- **×1,5 (aujourd'hui)** — *gagne* : un compromis : corps ~56 × 69 px, faisceau à ~60 % de la demi-largeur, environ la
+- **×1,5 (aujourd'hui)** — *gagne* : un compromis : corps ~56 × 68 px, faisceau à ~60 % de la demi-largeur, environ la
   moitié de la carte visible. *Perd* : 7 armes sur 10 peuvent vous éclairer depuis votre dos sans être à l'écran quand vous
   visez vers le haut ; les armes longues sortent de l'écran devant.
 - **×1,75** — *gagne* : des corps nettement plus lisibles (~66 × 80 px), un faisceau qui remplit l'écran, le sentiment
   d'enfermement. *Perd* : 40 à 46 % de la carte visible, 9 armes sur 10 éclairent hors champ dans le dos, la marge devant
   sur le pistolet tombe à ~94 px de monde.
-- **×2,0** — *gagne* : les plus gros corps (~75 × 91 px, ~100 × 121 sur un écran 1440), l'image la plus « serrée ».
+- **×2,0** — *gagne* : les plus gros corps (~75 × 92 px, ~100 × 122 sur un écran 1440), l'image la plus « serrée ».
   *Perd* : un tiers de la carte visible, toutes les armes peuvent vous éclairer hors champ, et devant l'écran s'arrête à
   peine plus loin que la torche du pistolet (351 contre 307) : on voit la lumière adverse presque en même temps qu'on
   l'éclaire. En écran scindé (957 px de large par joueur), c'est là que la vue est la plus étroite.

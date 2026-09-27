@@ -8,16 +8,16 @@
 main{max-width:1500px;margin:0 auto;padding:24px 16px 64px}
 h1{font-size:1.7rem;margin:0 0 4px}h2{margin:40px 0 8px;font-size:1.3rem}h3{margin:24px 0 8px;font-size:1.05rem}
 p,li{max-width:80ch}.doux{color:var(--doux)}
-.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:12px}
 figure{margin:0;background:var(--carte);border:1px solid var(--trait);border-radius:8px;overflow:hidden}
 figure img{display:block;width:100%;height:auto}figcaption{padding:6px 10px;font-size:.9rem}
 .pastille{display:inline-block;width:.8em;height:.8em;border-radius:50%;margin-right:.4em;vertical-align:-.05em}
 .tableau{overflow-x:auto;border:1px solid var(--trait);border-radius:8px;background:var(--carte)}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.93rem}
 th,td{padding:7px 10px;border-bottom:1px solid var(--trait);text-align:right;white-space:nowrap}
-th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--carte)}
+th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--carte);white-space:normal;vertical-align:bottom}
 .defaut{outline:2px solid var(--accent);outline-offset:-2px}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
 .plans svg{width:100%;height:auto;display:block;background:#050506}
 .corps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media (max-width:700px){.corps{grid-template-columns:repeat(2,1fr)}}
@@ -34,9 +34,9 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 <p class="doux">Pixels d'écran en 1920×1080 ; sur un écran de 1440 lignes le jeu se rastérise à la fenêtre, tout est ×4/3. « Corps » : la boîte du corps voxel de J2 projetée par la caméra iso (largeur × hauteur). « Carte visible » : la part de la surface de la carte que couvre l'écran dans la scène photographiée.</p>
 <div class="tableau"><table><thead><tr><th>Zoom</th><th>Corps 1080</th><th>Corps 1440</th><th>Zone de touche (Ø 36 px)</th><th>Torche à l'écran (au plus long)</th><th>… en part de la demi-largeur</th><th>Carte visible — Cloître</th><th>— Croisée</th><th>Écran scindé — Cloître / Croisée</th></tr></thead><tbody>
 <tr><td><span class="pastille" style="background:#5aa9e6"></span>×1,25</td><td>47 × 57</td><td>63 × 77</td><td>57 × 45</td><td>487 px</td><td>51 %</td><td>73 %</td><td>73 %</td><td>40 % / 47 %</td></tr>
-<tr class="defaut"><td><span class="pastille" style="background:#f2c14e"></span>×1,50</td><td>56 × 69</td><td>75 × 92</td><td>68 × 54</td><td>585 px</td><td>61 %</td><td>55 %</td><td>59 %</td><td>29 % / 34 %</td></tr>
+<tr class="defaut"><td><span class="pastille" style="background:#f2c14e"></span>×1,50</td><td>56 × 68</td><td>75 × 91</td><td>68 × 54</td><td>585 px</td><td>61 %</td><td>55 %</td><td>59 %</td><td>29 % / 34 %</td></tr>
 <tr><td><span class="pastille" style="background:#e07a5f"></span>×1,75</td><td>66 × 80</td><td>88 × 107</td><td>80 × 63</td><td>682 px</td><td>71 %</td><td>40 %</td><td>46 %</td><td>22 % / 26 %</td></tr>
-<tr><td><span class="pastille" style="background:#b388eb"></span>×2,00</td><td>75 × 91</td><td>100 × 121</td><td>91 × 72</td><td>780 px</td><td>81 %</td><td>32 %</td><td>37 %</td><td>17 % / 20 %</td></tr>
+<tr><td><span class="pastille" style="background:#b388eb"></span>×2,00</td><td>75 × 92</td><td>100 × 122</td><td>91 × 72</td><td>780 px</td><td>81 %</td><td>32 %</td><td>37 %</td><td>17 % / 20 %</td></tr>
 </tbody></table></div>
 <h3>Jusqu'où l'écran montre, comparé aux torches</h3>
 <p class="doux">Depuis le joueur, en pixels du monde, en terrain ouvert (loin des bords de carte, où la caméra s'arrête). La caméra avance de 0,15 × la hauteur visible vers la visée : on voit plus loin devant que derrière. Deux cas, selon que la visée monte vers le haut de l'écran (le plus serré : l'image est moins haute que large) ou part vers la droite. <strong>Devant</strong> : si l'écran montre plus loin que votre torche, la lumière d'un adversaire qui arrive en face apparaît avant qu'il n'entre dans votre faisceau. <strong>Derrière</strong> : si une torche porte plus loin que ce que votre écran montre, son porteur peut vous éclairer — vous voir — depuis hors de votre écran ; vous voyez la lumière vous toucher, pas d'où elle vient.</p>
@@ -48,12 +48,18 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 </tbody></table></div>
 <p class="doux">Portées des torches (px de monde, ×0,75 compris) : pompe 192 · allumeur 230 · occulteur 250 · incendiaire 269 · spectre 269 · fumiste 288 · pistolet 307 · fusil 346 · sentinelle 499 · arbalete 672.</p>
 <h2>Le Cloître</h2>
-<h3>Vue unique, 1920×1080</h3><p class="doux">J1 (bleu) au centre du bas, torche vers l'avant ; J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même instant, même position, à chaque zoom.</p>
+<h3>Vue unique, 1920×1080, au creux de la respiration du bandeau</h3><p class="doux">J1 (bleu), torche vers l'avant ; J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même position et même instant de la manche à chaque zoom. Là où la caméra touche le bord de la carte, elle s'arrête : J1 n'est plus au milieu de l'écran (c'est le jeu, pas la prise de vue).</p>
 <div class="grille">
 <figure><a href="images/z125-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z125-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×1,25, vue unique"></a><figcaption><span class="pastille" style="background:#5aa9e6"></span>×1,25</figcaption></figure>
 <figure><a href="images/z150-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z150-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×1,50, vue unique"></a><figcaption><span class="pastille" style="background:#f2c14e"></span>×1,50 — défaut</figcaption></figure>
 <figure><a href="images/z175-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z175-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×1,75, vue unique"></a><figcaption><span class="pastille" style="background:#e07a5f"></span>×1,75</figcaption></figure>
 <figure><a href="images/z200-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z200-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×2,00, vue unique"></a><figcaption><span class="pastille" style="background:#b388eb"></span>×2,00</figcaption></figure>
+</div>
+<h3>La même vue au sommet de la respiration du bandeau LED</h3><p class="doux">Le bandeau des murs (<code>mur_led.gd</code>) respire toutes les 8,5 s et allume le sol le long des murs. Les vues ci-dessus sont prises au creux, celles-ci au sommet, au même endroit : ce que la bande révèle dépend aussi du zoom.</p><div class="grille">
+<figure><a href="images/z125-map_001_le_cloitre-unique-led.jpg"><img loading="lazy" src="images/z125-map_001_le_cloitre-unique-led.jpg" alt="Le Cloître, zoom ×1,25, bandeau au sommet"></a><figcaption>×1,25</figcaption></figure>
+<figure><a href="images/z150-map_001_le_cloitre-unique-led.jpg"><img loading="lazy" src="images/z150-map_001_le_cloitre-unique-led.jpg" alt="Le Cloître, zoom ×1,50, bandeau au sommet"></a><figcaption>×1,50</figcaption></figure>
+<figure><a href="images/z175-map_001_le_cloitre-unique-led.jpg"><img loading="lazy" src="images/z175-map_001_le_cloitre-unique-led.jpg" alt="Le Cloître, zoom ×1,75, bandeau au sommet"></a><figcaption>×1,75</figcaption></figure>
+<figure><a href="images/z200-map_001_le_cloitre-unique-led.jpg"><img loading="lazy" src="images/z200-map_001_le_cloitre-unique-led.jpg" alt="Le Cloître, zoom ×2,00, bandeau au sommet"></a><figcaption>×2,00</figcaption></figure>
 </div>
 <h3>Le corps de J2, recadré 1:1 (320 px de côté)</h3><div class="corps">
 <figure><img loading="lazy" src="images/z125-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×1,25"><figcaption>×1,25</figcaption></figure>
@@ -61,19 +67,25 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 <figure><img loading="lazy" src="images/z175-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×1,75"><figcaption>×1,75</figcaption></figure>
 <figure><img loading="lazy" src="images/z200-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×2,00"><figcaption>×2,00</figcaption></figure>
 </div>
-<h3>Écran scindé, au même instant</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile blanc est son éblouissement, pas un défaut d'image.</p><div class="grille">
+<h3>Écran scindé, même scène, au creux suivant de la respiration</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile blanc est son éblouissement, pas un défaut d'image.</p><div class="grille">
 <figure><a href="images/z125-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z125-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×1,25, écran scindé"></a><figcaption>×1,25</figcaption></figure>
 <figure><a href="images/z150-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z150-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×1,50, écran scindé"></a><figcaption>×1,50</figcaption></figure>
 <figure><a href="images/z175-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z175-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×1,75, écran scindé"></a><figcaption>×1,75</figcaption></figure>
 <figure><a href="images/z200-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z200-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×2,00, écran scindé"></a><figcaption>×2,00</figcaption></figure>
 </div>
 <h2>La Croisée</h2>
-<h3>Vue unique, 1920×1080</h3><p class="doux">J1 (bleu) au centre du bas, torche vers l'avant ; J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même instant, même position, à chaque zoom.</p>
+<h3>Vue unique, 1920×1080, au creux de la respiration du bandeau</h3><p class="doux">J1 (bleu), torche vers l'avant ; J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même position et même instant de la manche à chaque zoom. Là où la caméra touche le bord de la carte, elle s'arrête : J1 n'est plus au milieu de l'écran (c'est le jeu, pas la prise de vue).</p>
 <div class="grille">
 <figure><a href="images/z125-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z125-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×1,25, vue unique"></a><figcaption><span class="pastille" style="background:#5aa9e6"></span>×1,25</figcaption></figure>
 <figure><a href="images/z150-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z150-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×1,50, vue unique"></a><figcaption><span class="pastille" style="background:#f2c14e"></span>×1,50 — défaut</figcaption></figure>
 <figure><a href="images/z175-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z175-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×1,75, vue unique"></a><figcaption><span class="pastille" style="background:#e07a5f"></span>×1,75</figcaption></figure>
 <figure><a href="images/z200-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z200-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×2,00, vue unique"></a><figcaption><span class="pastille" style="background:#b388eb"></span>×2,00</figcaption></figure>
+</div>
+<h3>La même vue au sommet de la respiration du bandeau LED</h3><p class="doux">Le bandeau des murs (<code>mur_led.gd</code>) respire toutes les 8,5 s et allume le sol le long des murs. Les vues ci-dessus sont prises au creux, celles-ci au sommet, au même endroit : ce que la bande révèle dépend aussi du zoom.</p><div class="grille">
+<figure><a href="images/z125-map_003_la_croisee-unique-led.jpg"><img loading="lazy" src="images/z125-map_003_la_croisee-unique-led.jpg" alt="La Croisée, zoom ×1,25, bandeau au sommet"></a><figcaption>×1,25</figcaption></figure>
+<figure><a href="images/z150-map_003_la_croisee-unique-led.jpg"><img loading="lazy" src="images/z150-map_003_la_croisee-unique-led.jpg" alt="La Croisée, zoom ×1,50, bandeau au sommet"></a><figcaption>×1,50</figcaption></figure>
+<figure><a href="images/z175-map_003_la_croisee-unique-led.jpg"><img loading="lazy" src="images/z175-map_003_la_croisee-unique-led.jpg" alt="La Croisée, zoom ×1,75, bandeau au sommet"></a><figcaption>×1,75</figcaption></figure>
+<figure><a href="images/z200-map_003_la_croisee-unique-led.jpg"><img loading="lazy" src="images/z200-map_003_la_croisee-unique-led.jpg" alt="La Croisée, zoom ×2,00, bandeau au sommet"></a><figcaption>×2,00</figcaption></figure>
 </div>
 <h3>Le corps de J2, recadré 1:1 (320 px de côté)</h3><div class="corps">
 <figure><img loading="lazy" src="images/z125-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×1,25"><figcaption>×1,25</figcaption></figure>
@@ -81,7 +93,7 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 <figure><img loading="lazy" src="images/z175-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×1,75"><figcaption>×1,75</figcaption></figure>
 <figure><img loading="lazy" src="images/z200-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×2,00"><figcaption>×2,00</figcaption></figure>
 </div>
-<h3>Écran scindé, au même instant</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile blanc est son éblouissement, pas un défaut d'image.</p><div class="grille">
+<h3>Écran scindé, même scène, au creux suivant de la respiration</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile blanc est son éblouissement, pas un défaut d'image.</p><div class="grille">
 <figure><a href="images/z125-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z125-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×1,25, écran scindé"></a><figcaption>×1,25</figcaption></figure>
 <figure><a href="images/z150-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z150-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×1,50, écran scindé"></a><figcaption>×1,50</figcaption></figure>
 <figure><a href="images/z175-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z175-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×1,75, écran scindé"></a><figcaption>×1,75</figcaption></figure>
@@ -91,7 +103,8 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 <p class="doux">Chaque carte vue de dessus (murs clairs, sol brun). Le contour coloré est ce que l'écran de J1 montre au sol, à chaque zoom, dans la scène photographiée (vue unique, lacet 45°, regard avancé, caméra arrêtée aux bords). Le cône jaune est sa torche, le cercle pointillé sa portée : ils ne changent pas avec le zoom. Point bleu J1, point rouge J2.</p>
 <p><span class="pastille" style="background:#5aa9e6"></span>×1,25&nbsp;&nbsp; <span class="pastille" style="background:#f2c14e"></span>×1,50&nbsp;&nbsp; <span class="pastille" style="background:#e07a5f"></span>×1,75&nbsp;&nbsp; <span class="pastille" style="background:#b388eb"></span>×2,00&nbsp;&nbsp;</p>
 <div class="plans">
-<figure><svg viewBox="-60 -60 1170 1170" role="img" aria-label="Plan de map_001_le_cloitre et ce que montre l'écran à chaque zoom">
+<figure><svg viewBox="-115 -128 1546 1546" shape-rendering="crispEdges" role="img" aria-label="Plan de map_001_le_cloitre et ce que montre l'écran à chaque zoom">
+<rect x="-115" y="-128" width="1546" height="1546" fill="#050506"/>
 <rect x="0" y="0" width="1050" height="1050" fill="#0b0b0d"/>
 <rect x="105" y="105" width="840" height="35" fill="#2a2620"/>
 <rect x="105" y="140" width="840" height="35" fill="#2a2620"/>
@@ -207,16 +220,17 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 <rect x="0" y="945" width="1050" height="35" fill="#6b6255"/>
 <rect x="0" y="980" width="1050" height="35" fill="#6b6255"/>
 <rect x="0" y="1015" width="1050" height="35" fill="#6b6255"/>
-<polygon points="-75.4,767.1 780.5,-88.7 1391.5,522.2 535.6,1378.1" fill="none" stroke="#5aa9e6" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="151.5,670.3 864.7,-42.9 1373.8,466.2 660.6,1179.4" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="306.0,608.7 917.4,-2.7 1353.8,433.7 742.4,1045.0" fill="none" stroke="#e07a5f" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="376.0,608.4 910.9,73.5 1292.7,455.3 757.8,990.3" fill="none" stroke="#b388eb" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="865.3,606.7 606.2,441.6 616.8,426.1 628.3,411.3 640.7,397.2 653.9,383.9 667.9,371.4 682.6,359.8 698.0,349.1 714.1,339.3 730.7,330.6 747.8,322.9 765.3,316.2 783.2,310.7 801.5,306.2 819.9,302.9 838.6,300.7 857.3,299.6 876.1,299.7 894.8,300.9 913.4,303.3 931.8,306.8" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2"/>
+<polygon points="-75.4,767.1 780.5,-88.7 1391.4,522.2 535.6,1378.1" fill="none" stroke="#5aa9e6" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="151.5,670.3 864.7,-42.9 1373.8,466.2 660.6,1179.4" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="306.0,608.7 917.4,-2.7 1353.8,433.7 742.4,1045.0" fill="none" stroke="#e07a5f" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="376.0,608.4 910.9,73.5 1292.7,455.3 757.8,990.3" fill="none" stroke="#b388eb" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="865.3,606.7 606.2,441.6 616.8,426.1 628.3,411.3 640.7,397.2 653.9,383.9 667.9,371.4 682.6,359.8 698.0,349.1 714.1,339.3 730.7,330.6 747.8,322.9 765.3,316.2 783.2,310.7 801.5,306.2 819.9,302.9 838.6,300.7 857.3,299.6 876.1,299.7 894.8,300.9 913.4,303.3 931.8,306.8" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2" shape-rendering="geometricPrecision"/>
 <circle cx="865.3" cy="606.7" r="307.2" fill="none" stroke="#f7e3a1" stroke-width="2" stroke-dasharray="10 8"/>
 <circle cx="865.3" cy="606.7" r="16" fill="#5aa9e6" stroke="#fff" stroke-width="3"/>
 <circle cx="866.4" cy="360.9" r="16" fill="#e5484d" stroke="#fff" stroke-width="3"/>
 </svg><figcaption>Le Cloître</figcaption></figure>
-<figure><svg viewBox="-60 -60 1100 1100" role="img" aria-label="Plan de map_003_la_croisee et ce que montre l'écran à chaque zoom">
+<figure><svg viewBox="-51 -241 1546 1546" shape-rendering="crispEdges" role="img" aria-label="Plan de map_003_la_croisee et ce que montre l'écran à chaque zoom">
+<rect x="-51" y="-241" width="1546" height="1546" fill="#050506"/>
 <rect x="0" y="0" width="980" height="980" fill="#0b0b0d"/>
 <rect x="105" y="105" width="770" height="35" fill="#2a2620"/>
 <rect x="105" y="140" width="770" height="35" fill="#2a2620"/>
@@ -326,15 +340,18 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
 <rect x="0" y="875" width="980" height="35" fill="#6b6255"/>
 <rect x="0" y="910" width="980" height="35" fill="#6b6255"/>
 <rect x="0" y="945" width="980" height="35" fill="#6b6255"/>
-<polygon points="-11.7,654.8 844.2,-201.1 1455.1,409.8 599.3,1265.7" fill="none" stroke="#5aa9e6" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="93.3,682.1 806.5,-31.1 1315.7,478.0 602.4,1191.3" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="224.0,646.0 835.4,34.6 1271.8,471.0 660.4,1082.3" fill="none" stroke="#e07a5f" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="297.7,643.2 832.6,108.3 1214.5,490.1 679.5,1025.0" fill="none" stroke="#b388eb" stroke-width="5" stroke-linejoin="round"/>
-<polygon points="813.4,623.9 510.8,570.6 514.6,552.2 519.6,534.1 525.6,516.4 532.7,499.0 540.9,482.1 550.0,465.7 560.2,449.9 571.3,434.8 583.3,420.4 596.1,406.7 609.8,393.9 624.2,381.9 639.4,370.8 655.1,360.6 671.5,351.4 688.4,343.3 705.8,336.2 723.5,330.2 741.6,325.2 760.0,321.4" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2"/>
+<polygon points="-11.7,654.8 844.2,-201.1 1455.1,409.8 599.3,1265.7" fill="none" stroke="#5aa9e6" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="93.3,682.1 806.5,-31.1 1315.7,478.0 602.4,1191.3" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="224.0,646.0 835.4,34.6 1271.8,471.0 660.4,1082.3" fill="none" stroke="#e07a5f" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="297.7,643.2 832.6,108.3 1214.5,490.1 679.5,1025.0" fill="none" stroke="#b388eb" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+<polygon points="813.4,623.9 510.8,570.6 514.6,552.2 519.6,534.1 525.6,516.4 532.7,499.0 540.9,482.1 550.0,465.7 560.2,449.9 571.3,434.8 583.3,420.4 596.1,406.7 609.8,393.9 624.2,381.9 639.4,370.8 655.1,360.6 671.5,351.4 688.4,343.3 705.8,336.2 723.5,330.2 741.6,325.2 760.0,321.4" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2" shape-rendering="geometricPrecision"/>
 <circle cx="813.4" cy="623.9" r="307.2" fill="none" stroke="#f7e3a1" stroke-width="2" stroke-dasharray="10 8"/>
 <circle cx="813.4" cy="623.9" r="16" fill="#5aa9e6" stroke="#fff" stroke-width="3"/>
 <circle cx="720.3" cy="396.5" r="16" fill="#e5484d" stroke="#fff" stroke-width="3"/>
 </svg><figcaption>La Croisée</figcaption></figure>
+</div>
+<h2>Contrôle en 2560×1440</h2><div class="grille">
+<figure><a href="images/z150-1440p-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z150-1440p-map_003_la_croisee-unique.jpg" alt="1440 lignes"></a><figcaption>×1,50, map_003_la_croisee, 2560×1440</figcaption></figure>
 </div>
 <p class="doux">Refaire : <code>docs/iso/cloud/zoom/refaire.sh</code> puis <code>python3 docs/iso/cloud/zoom/fabrique_planche.py</code>. Détails et limites : RAPPORT.md.</p>
 </main></body></html>

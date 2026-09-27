@@ -1,0 +1,259 @@
+[
+  {
+    "angle_ecran_deg": -90.0000025044782,
+    "arme": "pistolet",
+    "bout_du_cone_a_l_ecran": true,
+    "cam_size": 486.315246582031,
+    "carte": "map_003_la_croisee",
+    "carte_px": [
+      980.0,
+      980.0
+    ],
+    "carte_visible": 0.456,
+    "classes": [
+      {
+        "demi_angle_deg": 35.0,
+        "portee": 307.2,
+        "slug": "pistolet"
+      },
+      {
+        "demi_angle_deg": 10.0,
+        "portee": 345.6,
+        "slug": "fusil"
+      },
+      {
+        "demi_angle_deg": 60.0,
+        "portee": 192.0,
+        "slug": "pompe"
+      },
+      {
+        "demi_angle_deg": 5.0,
+        "portee": 672.0,
+        "slug": "arbalete"
+      },
+      {
+        "demi_angle_deg": 30.0,
+        "portee": 288.0,
+        "slug": "fumiste"
+      },
+      {
+        "demi_angle_deg": 40.0,
+        "portee": 268.8,
+        "slug": "incendiaire"
+      },
+      {
+        "demi_angle_deg": 8.0,
+        "portee": 499.2,
+        "slug": "sentinelle"
+      },
+      {
+        "demi_angle_deg": 25.0,
+        "portee": 249.6,
+        "slug": "occulteur"
+      },
+      {
+        "demi_angle_deg": 45.0,
+        "portee": 230.4,
+        "slug": "allumeur"
+      },
+      {
+        "demi_angle_deg": 20.0,
+        "portee": 268.8,
+        "slug": "spectre"
+      }
+    ],
+    "corps_px": [
+      68.6,
+      82.8
+    ],
+    "demi_angle_deg": 35.0,
+    "empreinte": [
+      [
+        224.0,
+        646.0
+      ],
+      [
+        835.4,
+        34.6
+      ],
+      [
+        1271.8,
+        471.0
+      ],
+      [
+        660.4,
+        1082.3
+      ]
+    ],
+    "empreinte_aire": 533557.215681317,
+    "image_px": [
+      1920,
+      1080
+    ],
+    "j1": [
+      813.357788085938,
+      623.939208984375
+    ],
+    "j1_ecran": "(959.9995, 701.9999)",
+    "j2": [
+      720.301086425781,
+      396.478393554688
+    ],
+    "j2_ecran": "(1171.058, 305.3798)",
+    "phase_led": 0.991666666665765,
+    "phase_led_sommet": 0.491435185183829,
+    "regard_px": {
+      "0": 402.0,
+      "135": 306.0,
+      "180": 218.0,
+      "225": 306.0,
+      "270": 434.0,
+      "315": 568.0,
+      "45": 568.0,
+      "90": 434.0
+    },
+    "scinde": {
+      "angle_ecran_deg": -90.0000025044782,
+      "arme": "pistolet",
+      "bout_du_cone_a_l_ecran": true,
+      "cam_size": 486.315246582031,
+      "carte_px": [
+        980.0,
+        980.0
+      ],
+      "carte_visible": 0.257,
+      "classes": [
+        {
+          "demi_angle_deg": 35.0,
+          "portee": 307.2,
+          "slug": "pistolet"
+        },
+        {
+          "demi_angle_deg": 10.0,
+          "portee": 345.6,
+          "slug": "fusil"
+        },
+        {
+          "demi_angle_deg": 60.0,
+          "portee": 192.0,
+          "slug": "pompe"
+        },
+        {
+          "demi_angle_deg": 5.0,
+          "portee": 672.0,
+          "slug": "arbalete"
+        },
+        {
+          "demi_angle_deg": 30.0,
+          "portee": 288.0,
+          "slug": "fumiste"
+        },
+        {
+          "demi_angle_deg": 40.0,
+          "portee": 268.8,
+          "slug": "incendiaire"
+        },
+        {
+          "demi_angle_deg": 8.0,
+          "portee": 499.2,
+          "slug": "sentinelle"
+        },
+        {
+          "demi_angle_deg": 25.0,
+          "portee": 249.6,
+          "slug": "occulteur"
+        },
+        {
+          "demi_angle_deg": 45.0,
+          "portee": 230.4,
+          "slug": "allumeur"
+        },
+        {
+          "demi_angle_deg": 20.0,
+          "portee": 268.8,
+          "slug": "spectre"
+        }
+      ],
+      "corps_px": [
+        68.6,
+        82.1
+      ],
+      "demi_angle_deg": 35.0,
+      "empreinte": [
+        [
+          377.4,
+          492.6
+        ],
+        [
+          682.1,
+          187.9
+        ],
+        [
+          1118.4,
+          624.3
+        ],
+        [
+          813.7,
+          929.0
+        ]
+      ],
+      "empreinte_aire": 265944.833074792,
+      "j1": [
+        813.357788085938,
+        623.939208984375
+      ],
+      "j1_ecran": "(478.4995, 701.9999)",
+      "j2": [
+        720.301086425781,
+        396.478393554688
+      ],
+      "j2_ecran": "(689.5577, 305.3798)",
+      "phase_led": 0.991203703701893,
+      "regard_px": {
+        "0": 402.0,
+        "135": 306.0,
+        "180": 218.0,
+        "225": 306.0,
+        "270": 216.0,
+        "315": 306.0,
+        "45": 306.0,
+        "90": 216.0
+      },
+      "torche_ecran_max_px": 682.2,
+      "torche_monde_px": 307.2,
+      "torche_part_demi_largeur": 1.426,
+      "torche_visee_px": 537.6,
+      "touche_px": [
+        79.9,
+        63.0
+      ],
+      "visee": [
+        -0.707106828689575,
+        -0.707106709480286
+      ],
+      "vue_px": [
+        957.0,
+        1080.0
+      ],
+      "zoom_cam2d": 1.75
+    },
+    "torche_ecran_max_px": 682.2,
+    "torche_monde_px": 307.2,
+    "torche_part_demi_largeur": 0.711,
+    "torche_visee_px": 537.6,
+    "touche_px": [
+      79.9,
+      63.0
+    ],
+    "visee": [
+      -0.707106828689575,
+      -0.707106709480286
+    ],
+    "vue_px": [
+      1920.0,
+      1080.0
+    ],
+    "zoom": 1.75,
+    "zoom_cam2d": 1.75
+  }
+]

@@ -47,11 +47,21 @@ def plan_svg(carte, mesures):
     data = json.load(open(os.path.join(RACINE, "assets/maps/%s.json" % carte)))
     t = data.get("tile_size", 35)
     gx, gy = data["grid_size"]["x"], data["grid_size"]["y"]
-    marge = 60
+    marge = 40
     w, h = gx * t, gy * t
+    xs, ys = [0, w], [0, h]
+    for z in ZOOMS:
+        m = mesures.get((z, carte, (1920, 1080)))
+        if m:
+            xs += [a for a, _ in m["empreinte"]]
+            ys += [b for _, b in m["empreinte"]]
+    x0, y0 = min(xs) - marge, min(ys) - marge
     p = []
-    p.append('<svg viewBox="%d %d %d %d" role="img" aria-label="Plan de %s et ce que montre l\'écran à chaque zoom">'
-             % (-marge, -marge, w + 2 * marge, h + 2 * marge, html.escape(carte)))
+    p.append('<svg viewBox="%d %d %d %d" shape-rendering="crispEdges" role="img" '
+             'aria-label="Plan de %s et ce que montre l\'écran à chaque zoom">'
+             % (x0, y0, max(xs) + marge - x0, max(ys) + marge - y0, html.escape(carte)))
+    p.append('<rect x="%d" y="%d" width="%d" height="%d" fill="#050506"/>' % (x0, y0, max(xs) + marge - x0,
+                                                                             max(ys) + marge - y0))
     p.append('<rect x="0" y="0" width="%d" height="%d" fill="#0b0b0d"/>' % (w, h))
     for x, y, n in runs(data.get("floor", "")):
         p.append('<rect x="%d" y="%d" width="%d" height="%d" fill="#2a2620"/>' % (x * t, y * t, n * t, t))
@@ -65,7 +75,7 @@ def plan_svg(carte, mesures):
         if not m:
             continue
         pts = " ".join("%.1f,%.1f" % (a, b) for a, b in m["empreinte"])
-        p.append('<polygon points="%s" fill="none" stroke="%s" stroke-width="5" stroke-linejoin="round"/>'
+        p.append('<polygon points="%s" fill="none" stroke="%s" stroke-width="6" stroke-linejoin="round" shape-rendering="geometricPrecision"/>'
                  % (pts, COULEURS[z]))
         j1, j2 = m["j1"], m["j2"]
         visee, portee, demi = m["visee"], m["torche_monde_px"], math.radians(m["demi_angle_deg"])
@@ -75,7 +85,7 @@ def plan_svg(carte, mesures):
         for k in range(21):
             a = a0 - demi + 2 * demi * k / 20
             cone.append((j1[0] + portee * math.cos(a), j1[1] + portee * math.sin(a)))
-        p.append('<polygon points="%s" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2"/>'
+        p.append('<polygon points="%s" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2" shape-rendering="geometricPrecision"/>'
                  % " ".join("%.1f,%.1f" % c for c in cone))
         p.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="none" stroke="#f7e3a1" stroke-width="2" '
                  'stroke-dasharray="10 8"/>' % (j1[0], j1[1], portee))
@@ -143,16 +153,16 @@ def main():
 main{max-width:1500px;margin:0 auto;padding:24px 16px 64px}
 h1{font-size:1.7rem;margin:0 0 4px}h2{margin:40px 0 8px;font-size:1.3rem}h3{margin:24px 0 8px;font-size:1.05rem}
 p,li{max-width:80ch}.doux{color:var(--doux)}
-.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:12px}
 figure{margin:0;background:var(--carte);border:1px solid var(--trait);border-radius:8px;overflow:hidden}
 figure img{display:block;width:100%;height:auto}figcaption{padding:6px 10px;font-size:.9rem}
 .pastille{display:inline-block;width:.8em;height:.8em;border-radius:50%;margin-right:.4em;vertical-align:-.05em}
 .tableau{overflow-x:auto;border:1px solid var(--trait);border-radius:8px;background:var(--carte)}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.93rem}
 th,td{padding:7px 10px;border-bottom:1px solid var(--trait);text-align:right;white-space:nowrap}
-th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--carte)}
+th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--carte);white-space:normal;vertical-align:bottom}
 .defaut{outline:2px solid var(--accent);outline-offset:-2px}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
 .plans svg{width:100%;height:auto;display:block;background:#050506}
 .corps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media (max-width:700px){.corps{grid-template-columns:repeat(2,1fr)}}
