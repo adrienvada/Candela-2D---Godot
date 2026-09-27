@@ -27843,15 +27843,28 @@ mesuré au Parasite. Et **les cartouches du kit prennent la couleur de celles qu
 Fumiste, rouges pour l'Incendiaire, laiton ailleurs) : l'équité à 0,15. Les deux sont à remesurer : la suite, puis la série (la
 matière seule d'abord, puis la paire au pompe).
 
+**La cadence, remesurée sur `1c800d6` : ELLE TIENT** (2026-09-27, 07:09-08:31, suite cloud verte sur cet état, 137 suites ;
+vue unique, sous une fusée ; porte de l'ordre 432, Claude Helper admis sous 30 %).
+- **Au Parasite (le pire cas du détail), règle 278** : M0 84, 82, 84 → 84 ; M1 82, 84, 82 → 82 ; **rapport 0,976** (seuil
+  0,970) ; 1 % bas M1 74, 76, 76 → 76 (seuil > 60) ; références à 5 % près. Charge de Claude Helper : 5,0 contre 5,1 (écart
+  0,1 point, ≤ 2 requis). **VERDICT : TIENT.** Une prise M0 refusée pendant la mesure (contactsd à 139 %) a été refaite à sa
+  place. La même série avec la matière compilée donnait 0,943 : retirer la matière du jeu a rendu le coût du détail.
+- **Au pompe (la cible absolue, paire)** : M0 86, 85 ; M1 84, 84 ; 1 % bas M1 79 et 78 (> 60 sur les deux). **TIENT.**
+- Reste avant le défaut : l'équité à 0,15 après la couleur des cartouches (à remesurer au banc, `--sans-matiere`), la planche
+  des dix classes au duel (session cloud « Q33 · dix classes »), et l'accord de la session cloud ; Adrien le jugera en jouant.
+
 **Une question d'équité posée par la planche cloud des dix classes** (ordre 435 : sans détail, au même endroit et sous la même
 torche, le capteur du corps adverse lit 0,092 à 0,104 selon la classe). Lu dans le code, sans mesure :
 - le disque du capteur est le même pour toutes les classes (rayon 18) ; mais la torche porte dans ses ombres l'occluder de
   l'adversaire (`flashlight.shadow_item_cull_mask = 1 | 2 | COUCHE_OCCLUDER_ADVERSE`), et cet occluder épouse la SILHOUETTE
-  de la classe (`_accorder_occluder_a_la_silhouette`, décision du 2026-09-11 : l'ombre d'un joueur a la forme de son arme).
+  de la classe (`_accorder_occluder_a_la_silhouette`, décision d'Adrien du 2026-08-26, `aa392a8` : l'ombre d'un joueur a la
+  forme de son sprite ; le 2026-09-11, `af237ac`, la forme a seulement déménagé dans `Charte`, pour le leurre — correction de
+  date de la session cloud, ordre 438).
   La part du disque qui tombe dans cette ombre dépend donc de la largeur et de la longueur de la silhouette : un effet
   géométrique de cette décision, pas une discrétion voulue par classe. La vue de dessus a le même effet sous une autre forme
-  (son sprite est la silhouette elle-même). Pour le prouver : la même scène avec, pour toutes les classes, l'occluder rond du
-  torse à la place de la silhouette ; l'écart doit disparaître.
+  (son sprite est la silhouette elle-même). Une session cloud le mesure (branche `claude/cloud-ombre-classes`, drapeau
+  d'essai `--ombre-ronde`, l'occluder rond du torse, 12 px — l'anneau du capteur est à 15 px, un cercle de 18 l'aurait
+  entièrement couvert) ; la décision sera d'Adrien.
 - l'opacité de l'adversaire à 0,6475 dans la vue de J1 n'est pas une affaire de classe : le corps iso recopie l'opacité rendue
   du sprite adverse, `min(éblouissement du REGARDEUR, suie)` (`Brouillage.opacite(dazzle_amount)`, `player.gd`) — la même quelle
   que soit la classe regardée.
