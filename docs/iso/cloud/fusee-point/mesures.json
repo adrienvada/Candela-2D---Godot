@@ -1,0 +1,1836 @@
+{
+ "defaut-avant": [
+  {
+   "nom": "a0_5",
+   "age_demande": 0.5,
+   "age_lu": 0.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.167,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 268,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     170,
+     165,
+     159
+    ],
+    "sol_sous_le_point": [
+     175,
+     85,
+     84
+    ],
+    "noir_reference": 1492200,
+    "noir_fuites": 9778,
+    "noir_fuite_max": 5,
+    "diff_hors_point_avec_sans": 489,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 32.7,
+    "contribution_saturation": 0.065,
+    "sol_teinte": 0.7,
+    "sol_saturation": 0.52
+   }
+  },
+  {
+   "nom": "a1_5",
+   "age_demande": 1.5,
+   "age_lu": 1.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.5,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 261,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     170,
+     165,
+     159
+    ],
+    "sol_sous_le_point": [
+     171,
+     93,
+     81
+    ],
+    "noir_reference": 1009721,
+    "noir_fuites": 13679,
+    "noir_fuite_max": 22,
+    "diff_hors_point_avec_sans": 336,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 32.7,
+    "contribution_saturation": 0.065,
+    "sol_teinte": 8.0,
+    "sol_saturation": 0.526
+   }
+  },
+  {
+   "nom": "a2_0",
+   "age_demande": 2.01,
+   "age_lu": 2.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.993,
+   "alpha_fumee": 0.672,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 260,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     169,
+     164,
+     159
+    ],
+    "sol_sous_le_point": [
+     178,
+     91,
+     81
+    ],
+    "noir_reference": 1834467,
+    "noir_fuites": 43567,
+    "noir_fuite_max": 43,
+    "diff_hors_point_avec_sans": 7948,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 30.0,
+    "contribution_saturation": 0.059,
+    "sol_teinte": 6.2,
+    "sol_saturation": 0.545
+   }
+  },
+  {
+   "nom": "a2_5",
+   "age_demande": 2.5,
+   "age_lu": 2.5,
+   "acte": "BRAISE",
+   "energie_relative": 0.8,
+   "alpha_fumee": 0.833,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 261,
+    "point": [
+     230,
+     227,
+     222
+    ],
+    "contribution": [
+     169,
+     161,
+     151
+    ],
+    "sol_sous_le_point": [
+     176,
+     105,
+     75
+    ],
+    "noir_reference": 1769285,
+    "noir_fuites": 29350,
+    "noir_fuite_max": 55,
+    "diff_hors_point_avec_sans": 279,
+    "point_teinte": 37.5,
+    "point_saturation": 0.035,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 33.3,
+    "contribution_saturation": 0.107,
+    "sol_teinte": 17.8,
+    "sol_saturation": 0.574
+   }
+  },
+  {
+   "nom": "a3_0",
+   "age_demande": 3.01,
+   "age_lu": 3.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.593,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 269,
+    "point": [
+     230,
+     190,
+     130
+    ],
+    "contribution": [
+     169,
+     125,
+     60
+    ],
+    "sol_sous_le_point": [
+     182,
+     132,
+     79
+    ],
+    "noir_reference": 879040,
+    "noir_fuites": 5558,
+    "noir_fuite_max": 28,
+    "diff_hors_point_avec_sans": 24831,
+    "point_teinte": 36.0,
+    "point_saturation": 0.435,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 35.8,
+    "contribution_saturation": 0.645,
+    "sol_teinte": 30.9,
+    "sol_saturation": 0.566
+   }
+  },
+  {
+   "nom": "a3_5",
+   "age_demande": 3.5,
+   "age_lu": 3.49999999999999,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 294,
+    "point": [
+     230,
+     219,
+     123
+    ],
+    "contribution": [
+     170,
+     154,
+     53
+    ],
+    "sol_sous_le_point": [
+     167,
+     109,
+     62
+    ],
+    "noir_reference": 1773052,
+    "noir_fuites": 23795,
+    "noir_fuite_max": 42,
+    "diff_hors_point_avec_sans": 42568,
+    "point_teinte": 53.8,
+    "point_saturation": 0.465,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 51.8,
+    "contribution_saturation": 0.688,
+    "sol_teinte": 26.9,
+    "sol_saturation": 0.629
+   }
+  },
+  {
+   "nom": "a4_0",
+   "age_demande": 4.01,
+   "age_lu": 4.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 262,
+    "point": [
+     230,
+     219,
+     123
+    ],
+    "contribution": [
+     170,
+     154,
+     53
+    ],
+    "sol_sous_le_point": [
+     166,
+     107,
+     61
+    ],
+    "noir_reference": 1834413,
+    "noir_fuites": 31546,
+    "noir_fuite_max": 32,
+    "diff_hors_point_avec_sans": 56,
+    "point_teinte": 53.8,
+    "point_saturation": 0.465,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 51.8,
+    "contribution_saturation": 0.688,
+    "sol_teinte": 26.3,
+    "sol_saturation": 0.633
+   }
+  },
+  {
+   "nom": "a5_0",
+   "age_demande": 5.01,
+   "age_lu": 5.01666666666665,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 304,
+    "point": [
+     230,
+     219,
+     123
+    ],
+    "contribution": [
+     169,
+     153,
+     53
+    ],
+    "sol_sous_le_point": [
+     170,
+     112,
+     63
+    ],
+    "noir_reference": 891154,
+    "noir_fuites": 5932,
+    "noir_fuite_max": 24,
+    "diff_hors_point_avec_sans": 44433,
+    "point_teinte": 53.8,
+    "point_saturation": 0.465,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 51.7,
+    "contribution_saturation": 0.686,
+    "sol_teinte": 27.5,
+    "sol_saturation": 0.629
+   }
+  },
+  {
+   "nom": "a8_0",
+   "age_demande": 8.01,
+   "age_lu": 8.01666666666664,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 263,
+    "point": [
+     230,
+     219,
+     123
+    ],
+    "contribution": [
+     170,
+     153,
+     53
+    ],
+    "sol_sous_le_point": [
+     166,
+     107,
+     62
+    ],
+    "noir_reference": 1835557,
+    "noir_fuites": 32491,
+    "noir_fuite_max": 34,
+    "diff_hors_point_avec_sans": 84,
+    "point_teinte": 53.8,
+    "point_saturation": 0.465,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 51.3,
+    "contribution_saturation": 0.688,
+    "sol_teinte": 26.0,
+    "sol_saturation": 0.627
+   }
+  },
+  {
+   "nom": "a13_0",
+   "age_demande": 13.01,
+   "age_lu": 13.0166666666669,
+   "acte": "AGONIE",
+   "energie_relative": 0.799,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 260,
+    "point": [
+     230,
+     230,
+     216
+    ],
+    "contribution": [
+     169,
+     164,
+     145
+    ],
+    "sol_sous_le_point": [
+     191,
+     169,
+     87
+    ],
+    "noir_reference": 1831686,
+    "noir_fuites": 60779,
+    "noir_fuite_max": 95,
+    "diff_hors_point_avec_sans": 17526,
+    "point_teinte": 60.0,
+    "point_saturation": 0.061,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 47.5,
+    "contribution_saturation": 0.142,
+    "sol_teinte": 47.3,
+    "sol_saturation": 0.545
+   }
+  },
+  {
+   "nom": "a16_0",
+   "age_demande": 16.01,
+   "age_lu": 16.016666666667,
+   "acte": "RESIDU",
+   "energie_relative": 0.066,
+   "alpha_fumee": 0.797,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 204,
+    "point": [
+     82,
+     55,
+     26
+    ],
+    "contribution": [
+     35,
+     25,
+     8
+    ],
+    "sol_sous_le_point": [
+     46,
+     27,
+     13
+    ],
+    "noir_reference": 885301,
+    "noir_fuites": 6994,
+    "noir_fuite_max": 13,
+    "diff_hors_point_avec_sans": 34887,
+    "point_teinte": 31.1,
+    "point_saturation": 0.683,
+    "point_valeur": 0.322,
+    "point_rouge": false,
+    "contribution_teinte": 37.8,
+    "contribution_saturation": 0.771,
+    "sol_teinte": 25.5,
+    "sol_saturation": 0.717
+   }
+  }
+ ],
+ "defaut-apres": [
+  {
+   "nom": "a0_5",
+   "age_demande": 0.5,
+   "age_lu": 0.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.167,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 259,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     170,
+     149,
+     143
+    ],
+    "sol_sous_le_point": [
+     175,
+     85,
+     84
+    ],
+    "noir_reference": 1492185,
+    "noir_fuites": 9778,
+    "noir_fuite_max": 5,
+    "diff_hors_point_avec_sans": 846,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.3,
+    "contribution_saturation": 0.159,
+    "sol_teinte": 0.7,
+    "sol_saturation": 0.52,
+    "avant_apres_hors_point": 92,
+    "avant_apres_hors_point_max": 56,
+    "avant_apres_noir_allume": 1
+   }
+  },
+  {
+   "nom": "a1_5",
+   "age_demande": 1.5,
+   "age_lu": 1.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.5,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 252,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     169,
+     149,
+     143
+    ],
+    "sol_sous_le_point": [
+     170,
+     92,
+     81
+    ],
+    "noir_reference": 1009721,
+    "noir_fuites": 13679,
+    "noir_fuite_max": 22,
+    "diff_hors_point_avec_sans": 53,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.8,
+    "contribution_saturation": 0.154,
+    "sol_teinte": 7.4,
+    "sol_saturation": 0.524,
+    "avant_apres_hors_point": 162,
+    "avant_apres_hors_point_max": 55,
+    "avant_apres_noir_allume": 16
+   }
+  },
+  {
+   "nom": "a2_0",
+   "age_demande": 2.01,
+   "age_lu": 2.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.993,
+   "alpha_fumee": 0.672,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 223,
+    "point": [
+     221,
+     71,
+     79
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     173,
+     90,
+     81
+    ],
+    "noir_reference": 1834467,
+    "noir_fuites": 43567,
+    "noir_fuite_max": 43,
+    "diff_hors_point_avec_sans": 7598,
+    "point_teinte": 356.8,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 5.9,
+    "sol_saturation": 0.532,
+    "avant_apres_hors_point": 122,
+    "avant_apres_hors_point_max": 57,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a2_5",
+   "age_demande": 2.5,
+   "age_lu": 2.5,
+   "acte": "BRAISE",
+   "energie_relative": 0.8,
+   "alpha_fumee": 0.833,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 238,
+    "point": [
+     221,
+     71,
+     80
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     173,
+     104,
+     75
+    ],
+    "noir_reference": 1769285,
+    "noir_fuites": 29350,
+    "noir_fuite_max": 55,
+    "diff_hors_point_avec_sans": 211,
+    "point_teinte": 356.4,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 17.8,
+    "sol_saturation": 0.566,
+    "avant_apres_hors_point": 126,
+    "avant_apres_hors_point_max": 82,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a3_0",
+   "age_demande": 3.01,
+   "age_lu": 3.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.593,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 257,
+    "point": [
+     221,
+     71,
+     80
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     181,
+     131,
+     79
+    ],
+    "noir_reference": 879048,
+    "noir_fuites": 5562,
+    "noir_fuite_max": 28,
+    "diff_hors_point_avec_sans": 24659,
+    "point_teinte": 356.4,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 30.6,
+    "sol_saturation": 0.564,
+    "avant_apres_hors_point": 266,
+    "avant_apres_hors_point_max": 81,
+    "avant_apres_noir_allume": 13
+   }
+  },
+  {
+   "nom": "a3_5",
+   "age_demande": 3.5,
+   "age_lu": 3.49999999999999,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 270,
+    "point": [
+     221,
+     70,
+     79
+    ],
+    "contribution": [
+     161,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     165,
+     108,
+     62
+    ],
+    "noir_reference": 1773052,
+    "noir_fuites": 23795,
+    "noir_fuite_max": 42,
+    "diff_hors_point_avec_sans": 43005,
+    "point_teinte": 356.4,
+    "point_saturation": 0.683,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 26.8,
+    "sol_saturation": 0.624,
+    "avant_apres_hors_point": 60,
+    "avant_apres_hors_point_max": 56,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a4_0",
+   "age_demande": 4.01,
+   "age_lu": 4.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 238,
+    "point": [
+     221,
+     70,
+     79
+    ],
+    "contribution": [
+     161,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     164,
+     106,
+     62
+    ],
+    "noir_reference": 1834413,
+    "noir_fuites": 31546,
+    "noir_fuite_max": 32,
+    "diff_hors_point_avec_sans": 34,
+    "point_teinte": 356.4,
+    "point_saturation": 0.683,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 25.9,
+    "sol_saturation": 0.622,
+    "avant_apres_hors_point": 48,
+    "avant_apres_hors_point_max": 29,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a5_0",
+   "age_demande": 5.01,
+   "age_lu": 5.01666666666665,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 283,
+    "point": [
+     221,
+     71,
+     80
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     169,
+     112,
+     64
+    ],
+    "noir_reference": 891155,
+    "noir_fuites": 5935,
+    "noir_fuite_max": 24,
+    "diff_hors_point_avec_sans": 44119,
+    "point_teinte": 356.4,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 27.4,
+    "sol_saturation": 0.621,
+    "avant_apres_hors_point": 228,
+    "avant_apres_hors_point_max": 79,
+    "avant_apres_noir_allume": 29
+   }
+  },
+  {
+   "nom": "a8_0",
+   "age_demande": 8.01,
+   "age_lu": 8.01666666666664,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 237,
+    "point": [
+     221,
+     70,
+     79
+    ],
+    "contribution": [
+     161,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     164,
+     106,
+     62
+    ],
+    "noir_reference": 1835557,
+    "noir_fuites": 32491,
+    "noir_fuite_max": 34,
+    "diff_hors_point_avec_sans": 176,
+    "point_teinte": 356.4,
+    "point_saturation": 0.683,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 25.9,
+    "sol_saturation": 0.622,
+    "avant_apres_hors_point": 62,
+    "avant_apres_hors_point_max": 56,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a13_0",
+   "age_demande": 13.01,
+   "age_lu": 13.0166666666669,
+   "acte": "AGONIE",
+   "energie_relative": 0.799,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 253,
+    "point": [
+     221,
+     71,
+     79
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     190,
+     168,
+     87
+    ],
+    "noir_reference": 1831686,
+    "noir_fuites": 60779,
+    "noir_fuite_max": 95,
+    "diff_hors_point_avec_sans": 17508,
+    "point_teinte": 356.8,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 47.2,
+    "sol_saturation": 0.542,
+    "avant_apres_hors_point": 50,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a16_0",
+   "age_demande": 16.01,
+   "age_lu": 16.016666666667,
+   "acte": "RESIDU",
+   "energie_relative": 0.066,
+   "alpha_fumee": 0.797,
+   "duree_plein_feu": 2.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 174,
+    "point": [
+     39,
+     10,
+     12
+    ],
+    "contribution": [
+     -10,
+     -24,
+     -11
+    ],
+    "sol_sous_le_point": [
+     46,
+     27,
+     13
+    ],
+    "noir_reference": 885319,
+    "noir_fuites": 7013,
+    "noir_fuite_max": 21,
+    "diff_hors_point_avec_sans": 35248,
+    "point_teinte": 355.9,
+    "point_saturation": 0.744,
+    "point_valeur": 0.153,
+    "point_rouge": true,
+    "contribution_teinte": 0.0,
+    "contribution_saturation": 0.0,
+    "sol_teinte": 25.5,
+    "sol_saturation": 0.717,
+    "avant_apres_hors_point": 269,
+    "avant_apres_hors_point_max": 109,
+    "avant_apres_noir_allume": 40
+   }
+  }
+ ],
+ "long-avant": [
+  {
+   "nom": "a0_5",
+   "age_demande": 0.5,
+   "age_lu": 0.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.167,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 268,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     170,
+     165,
+     159
+    ],
+    "sol_sous_le_point": [
+     175,
+     85,
+     84
+    ],
+    "noir_reference": 1492209,
+    "noir_fuites": 9778,
+    "noir_fuite_max": 5,
+    "diff_hors_point_avec_sans": 471,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 32.7,
+    "contribution_saturation": 0.065,
+    "sol_teinte": 0.7,
+    "sol_saturation": 0.52
+   }
+  },
+  {
+   "nom": "a1_5",
+   "age_demande": 1.5,
+   "age_lu": 1.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.5,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 261,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     170,
+     165,
+     159
+    ],
+    "sol_sous_le_point": [
+     171,
+     93,
+     81
+    ],
+    "noir_reference": 1009716,
+    "noir_fuites": 13683,
+    "noir_fuite_max": 22,
+    "diff_hors_point_avec_sans": 413,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 32.7,
+    "contribution_saturation": 0.065,
+    "sol_teinte": 8.0,
+    "sol_saturation": 0.526
+   }
+  },
+  {
+   "nom": "a2_0",
+   "age_demande": 2.01,
+   "age_lu": 2.01666666666666,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.672,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 261,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     169,
+     164,
+     159
+    ],
+    "sol_sous_le_point": [
+     178,
+     91,
+     81
+    ],
+    "noir_reference": 1834468,
+    "noir_fuites": 43628,
+    "noir_fuite_max": 43,
+    "diff_hors_point_avec_sans": 7788,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 30.0,
+    "contribution_saturation": 0.059,
+    "sol_teinte": 6.2,
+    "sol_saturation": 0.545
+   }
+  },
+  {
+   "nom": "a2_5",
+   "age_demande": 2.5,
+   "age_lu": 2.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.833,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 261,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     169,
+     164,
+     159
+    ],
+    "sol_sous_le_point": [
+     180,
+     91,
+     81
+    ],
+    "noir_reference": 1769255,
+    "noir_fuites": 30931,
+    "noir_fuite_max": 59,
+    "diff_hors_point_avec_sans": 543,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 30.0,
+    "contribution_saturation": 0.059,
+    "sol_teinte": 6.1,
+    "sol_saturation": 0.55
+   }
+  },
+  {
+   "nom": "a3_0",
+   "age_demande": 3.01,
+   "age_lu": 3.01666666666666,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 273,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     169,
+     164,
+     159
+    ],
+    "sol_sous_le_point": [
+     188,
+     114,
+     93
+    ],
+    "noir_reference": 879053,
+    "noir_fuites": 5573,
+    "noir_fuite_max": 33,
+    "diff_hors_point_avec_sans": 21993,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 30.0,
+    "contribution_saturation": 0.059,
+    "sol_teinte": 13.3,
+    "sol_saturation": 0.505
+   }
+  },
+  {
+   "nom": "a3_5",
+   "age_demande": 3.5,
+   "age_lu": 3.49999999999999,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 270,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     170,
+     165,
+     159
+    ],
+    "sol_sous_le_point": [
+     189,
+     112,
+     93
+    ],
+    "noir_reference": 1772860,
+    "noir_fuites": 32882,
+    "noir_fuite_max": 80,
+    "diff_hors_point_avec_sans": 42175,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 32.7,
+    "contribution_saturation": 0.065,
+    "sol_teinte": 11.9,
+    "sol_saturation": 0.508
+   }
+  },
+  {
+   "nom": "a4_0",
+   "age_demande": 4.01,
+   "age_lu": 4.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.993,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 260,
+    "point": [
+     230,
+     230,
+     229
+    ],
+    "contribution": [
+     170,
+     165,
+     159
+    ],
+    "sol_sous_le_point": [
+     189,
+     100,
+     86
+    ],
+    "noir_reference": 1833990,
+    "noir_fuites": 50518,
+    "noir_fuite_max": 82,
+    "diff_hors_point_avec_sans": 367,
+    "point_teinte": 60.0,
+    "point_saturation": 0.004,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 32.7,
+    "contribution_saturation": 0.065,
+    "sol_teinte": 8.2,
+    "sol_saturation": 0.545
+   }
+  },
+  {
+   "nom": "a5_0",
+   "age_demande": 5.01,
+   "age_lu": 5.01666666666665,
+   "acte": "BRAISE",
+   "energie_relative": 0.593,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 273,
+    "point": [
+     230,
+     190,
+     130
+    ],
+    "contribution": [
+     169,
+     124,
+     60
+    ],
+    "sol_sous_le_point": [
+     184,
+     131,
+     78
+    ],
+    "noir_reference": 891147,
+    "noir_fuites": 5927,
+    "noir_fuite_max": 27,
+    "diff_hors_point_avec_sans": 43882,
+    "point_teinte": 36.0,
+    "point_saturation": 0.435,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 35.2,
+    "contribution_saturation": 0.645,
+    "sol_teinte": 30.0,
+    "sol_saturation": 0.576
+   }
+  },
+  {
+   "nom": "a8_0",
+   "age_demande": 8.01,
+   "age_lu": 8.01666666666664,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 263,
+    "point": [
+     230,
+     219,
+     123
+    ],
+    "contribution": [
+     170,
+     153,
+     53
+    ],
+    "sol_sous_le_point": [
+     166,
+     107,
+     62
+    ],
+    "noir_reference": 1835557,
+    "noir_fuites": 32491,
+    "noir_fuite_max": 34,
+    "diff_hors_point_avec_sans": 401,
+    "point_teinte": 53.8,
+    "point_saturation": 0.465,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 51.3,
+    "contribution_saturation": 0.688,
+    "sol_teinte": 26.0,
+    "sol_saturation": 0.627
+   }
+  },
+  {
+   "nom": "a13_0",
+   "age_demande": 13.01,
+   "age_lu": 13.0166666666669,
+   "acte": "AGONIE",
+   "energie_relative": 0.799,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 260,
+    "point": [
+     230,
+     230,
+     216
+    ],
+    "contribution": [
+     169,
+     164,
+     145
+    ],
+    "sol_sous_le_point": [
+     191,
+     169,
+     87
+    ],
+    "noir_reference": 1831686,
+    "noir_fuites": 60779,
+    "noir_fuite_max": 95,
+    "diff_hors_point_avec_sans": 17813,
+    "point_teinte": 60.0,
+    "point_saturation": 0.061,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 47.5,
+    "contribution_saturation": 0.142,
+    "sol_teinte": 47.3,
+    "sol_saturation": 0.545
+   }
+  },
+  {
+   "nom": "a16_0",
+   "age_demande": 16.01,
+   "age_lu": 16.016666666667,
+   "acte": "RESIDU",
+   "energie_relative": 0.066,
+   "alpha_fumee": 0.797,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 204,
+    "point": [
+     82,
+     55,
+     26
+    ],
+    "contribution": [
+     35,
+     25,
+     8
+    ],
+    "sol_sous_le_point": [
+     46,
+     27,
+     13
+    ],
+    "noir_reference": 885305,
+    "noir_fuites": 6992,
+    "noir_fuite_max": 13,
+    "diff_hors_point_avec_sans": 35138,
+    "point_teinte": 31.1,
+    "point_saturation": 0.683,
+    "point_valeur": 0.322,
+    "point_rouge": false,
+    "contribution_teinte": 37.8,
+    "contribution_saturation": 0.771,
+    "sol_teinte": 25.5,
+    "sol_saturation": 0.717
+   }
+  }
+ ],
+ "long-apres": [
+  {
+   "nom": "a0_5",
+   "age_demande": 0.5,
+   "age_lu": 0.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.167,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 259,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     170,
+     149,
+     143
+    ],
+    "sol_sous_le_point": [
+     175,
+     85,
+     84
+    ],
+    "noir_reference": 1492194,
+    "noir_fuites": 9778,
+    "noir_fuite_max": 5,
+    "diff_hors_point_avec_sans": 848,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.3,
+    "contribution_saturation": 0.159,
+    "sol_teinte": 0.7,
+    "sol_saturation": 0.52,
+    "avant_apres_hors_point": 20,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a1_5",
+   "age_demande": 1.5,
+   "age_lu": 1.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.5,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 252,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     169,
+     149,
+     143
+    ],
+    "sol_sous_le_point": [
+     170,
+     92,
+     81
+    ],
+    "noir_reference": 1009723,
+    "noir_fuites": 13683,
+    "noir_fuite_max": 22,
+    "diff_hors_point_avec_sans": 39,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.8,
+    "contribution_saturation": 0.154,
+    "sol_teinte": 7.4,
+    "sol_saturation": 0.524,
+    "avant_apres_hors_point": 225,
+    "avant_apres_hors_point_max": 83,
+    "avant_apres_noir_allume": 28
+   }
+  },
+  {
+   "nom": "a2_0",
+   "age_demande": 2.01,
+   "age_lu": 2.01666666666666,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.672,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 252,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     169,
+     148,
+     143
+    ],
+    "sol_sous_le_point": [
+     178,
+     91,
+     81
+    ],
+    "noir_reference": 1834468,
+    "noir_fuites": 43628,
+    "noir_fuite_max": 43,
+    "diff_hors_point_avec_sans": 7837,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 11.5,
+    "contribution_saturation": 0.154,
+    "sol_teinte": 6.2,
+    "sol_saturation": 0.545,
+    "avant_apres_hors_point": 28,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a2_5",
+   "age_demande": 2.5,
+   "age_lu": 2.5,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 0.833,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 252,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     169,
+     148,
+     142
+    ],
+    "sol_sous_le_point": [
+     179,
+     91,
+     81
+    ],
+    "noir_reference": 1769255,
+    "noir_fuites": 30931,
+    "noir_fuite_max": 59,
+    "diff_hors_point_avec_sans": 498,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.3,
+    "contribution_saturation": 0.16,
+    "sol_teinte": 6.1,
+    "sol_saturation": 0.547,
+    "avant_apres_hors_point": 129,
+    "avant_apres_hors_point_max": 57,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a3_0",
+   "age_demande": 3.01,
+   "age_lu": 3.01666666666666,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 264,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     169,
+     148,
+     142
+    ],
+    "sol_sous_le_point": [
+     187,
+     113,
+     93
+    ],
+    "noir_reference": 879052,
+    "noir_fuites": 5558,
+    "noir_fuite_max": 33,
+    "diff_hors_point_avec_sans": 22309,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.3,
+    "contribution_saturation": 0.16,
+    "sol_teinte": 12.8,
+    "sol_saturation": 0.503,
+    "avant_apres_hors_point": 206,
+    "avant_apres_hors_point_max": 77,
+    "avant_apres_noir_allume": 10
+   }
+  },
+  {
+   "nom": "a3_5",
+   "age_demande": 3.5,
+   "age_lu": 3.49999999999999,
+   "acte": "PLEIN_FEU",
+   "energie_relative": 1.0,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 261,
+    "point": [
+     230,
+     214,
+     213
+    ],
+    "contribution": [
+     170,
+     149,
+     143
+    ],
+    "sol_sous_le_point": [
+     188,
+     111,
+     92
+    ],
+    "noir_reference": 1772860,
+    "noir_fuites": 32882,
+    "noir_fuite_max": 80,
+    "diff_hors_point_avec_sans": 41649,
+    "point_teinte": 3.5,
+    "point_saturation": 0.074,
+    "point_valeur": 0.902,
+    "point_rouge": false,
+    "contribution_teinte": 13.3,
+    "contribution_saturation": 0.159,
+    "sol_teinte": 11.9,
+    "sol_saturation": 0.511,
+    "avant_apres_hors_point": 83,
+    "avant_apres_hors_point_max": 57,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a4_0",
+   "age_demande": 4.01,
+   "age_lu": 4.01666666666666,
+   "acte": "BRAISE",
+   "energie_relative": 0.993,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 234,
+    "point": [
+     221,
+     70,
+     79
+    ],
+    "contribution": [
+     161,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     185,
+     99,
+     86
+    ],
+    "noir_reference": 1833990,
+    "noir_fuites": 50518,
+    "noir_fuite_max": 82,
+    "diff_hors_point_avec_sans": 428,
+    "point_teinte": 356.4,
+    "point_saturation": 0.683,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 7.9,
+    "sol_saturation": 0.535,
+    "avant_apres_hors_point": 133,
+    "avant_apres_hors_point_max": 83,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a5_0",
+   "age_demande": 5.01,
+   "age_lu": 5.01666666666665,
+   "acte": "BRAISE",
+   "energie_relative": 0.593,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 262,
+    "point": [
+     221,
+     71,
+     80
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     183,
+     131,
+     78
+    ],
+    "noir_reference": 891145,
+    "noir_fuites": 5926,
+    "noir_fuite_max": 27,
+    "diff_hors_point_avec_sans": 44129,
+    "point_teinte": 356.4,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 30.3,
+    "sol_saturation": 0.574,
+    "avant_apres_hors_point": 56,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 4
+   }
+  },
+  {
+   "nom": "a8_0",
+   "age_demande": 8.01,
+   "age_lu": 8.01666666666664,
+   "acte": "BRAISE",
+   "energie_relative": 0.4,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 237,
+    "point": [
+     221,
+     70,
+     79
+    ],
+    "contribution": [
+     161,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     164,
+     106,
+     62
+    ],
+    "noir_reference": 1835557,
+    "noir_fuites": 32491,
+    "noir_fuite_max": 34,
+    "diff_hors_point_avec_sans": 546,
+    "point_teinte": 356.4,
+    "point_saturation": 0.683,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 25.9,
+    "sol_saturation": 0.622,
+    "avant_apres_hors_point": 3,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a13_0",
+   "age_demande": 13.01,
+   "age_lu": 13.0166666666669,
+   "acte": "AGONIE",
+   "energie_relative": 0.799,
+   "alpha_fumee": 1.0,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 253,
+    "point": [
+     221,
+     71,
+     79
+    ],
+    "contribution": [
+     160,
+     5,
+     9
+    ],
+    "sol_sous_le_point": [
+     190,
+     168,
+     87
+    ],
+    "noir_reference": 1831686,
+    "noir_fuites": 60779,
+    "noir_fuite_max": 95,
+    "diff_hors_point_avec_sans": 17720,
+    "point_teinte": 356.8,
+    "point_saturation": 0.679,
+    "point_valeur": 0.867,
+    "point_rouge": true,
+    "contribution_teinte": 358.5,
+    "contribution_saturation": 0.969,
+    "sol_teinte": 47.2,
+    "sol_saturation": 0.542,
+    "avant_apres_hors_point": 42,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 0
+   }
+  },
+  {
+   "nom": "a16_0",
+   "age_demande": 16.01,
+   "age_lu": 16.016666666667,
+   "acte": "RESIDU",
+   "energie_relative": 0.066,
+   "alpha_fumee": 0.797,
+   "duree_plein_feu": 4.0,
+   "coeur_fusee": 2,
+   "mesures": {
+    "point_pixels": 174,
+    "point": [
+     39,
+     10,
+     12
+    ],
+    "contribution": [
+     -10,
+     -24,
+     -11
+    ],
+    "sol_sous_le_point": [
+     46,
+     27,
+     13
+    ],
+    "noir_reference": 885301,
+    "noir_fuites": 6992,
+    "noir_fuite_max": 13,
+    "diff_hors_point_avec_sans": 35113,
+    "point_teinte": 355.9,
+    "point_saturation": 0.744,
+    "point_valeur": 0.153,
+    "point_rouge": true,
+    "contribution_teinte": 0.0,
+    "contribution_saturation": 0.0,
+    "sol_teinte": 25.5,
+    "sol_saturation": 0.717,
+    "avant_apres_hors_point": 28,
+    "avant_apres_hors_point_max": 28,
+    "avant_apres_noir_allume": 2
+   }
+  }
+ ]
+}
