@@ -1099,7 +1099,9 @@ func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 		return
 	# La forme se lit dans la charte depuis le 2026-09-11 : le leurre doit faire
 	# exactement le même trou, et une seule fonction le garantit.
-	var pts := Charte.ombre_de_silhouette(sil)
+	# `ombre_du_corps` : la silhouette, sauf l'essai `--ombre-ronde` (débogage, hors ligne).
+	var pts := Charte.ombre_du_corps(sil,
+		NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN)
 	if pts.is_empty():
 		return
 	var occ := get_node("LightOccluder2D")

@@ -1094,6 +1094,58 @@ static func ombre_de_torse() -> PackedVector2Array:
 		pts.append(Vector2(cos(ang), sin(ang)) * RAYON_TORSE)
 	return pts
 
+
+## ESSAI (session cloud ombre-classes, 2026-09-27) — `--ombre-ronde[=R]` rend à TOUTES les
+## classes un occluder rond de rayon R à la place de l'étoile de leur silhouette.
+## `--ombre-ronde` seul vaut `RAYON_TORSE` (12) ; `--ombre-ronde=18` rend le cercle d'avant
+## le 2026-08-26 (`aa392a8`), qui n'avait jamais été vu sous une torche.
+##
+## Il sert à UNE question : l'écart du capteur entre classes, au même endroit sous la même
+## torche (planche Q33), vient-il de la forme de l'ombre que chaque corps jette sur son
+## propre capteur ? Ce n'est PAS une voie de jeu choisie.
+##
+## ⚠️ **Débogage seulement, et jamais en ligne** : un joueur ne doit pas pouvoir changer
+## l'ombre que l'autre voit — même règle que `--zoom` (`GameSettings.valeurs_du_duel`).
+## Éteint, rien ne bouge : la forme reste `ombre_de_silhouette()`, au sommet près
+## (garde : `tools/test_ombre_ronde.gd`). Aucun masque de lumière, aucune simulation,
+## `Protocol.VERSION` inchangé : l'occluder d'un corps est purement visuel.
+const DRAPEAU_OMBRE_RONDE := "--ombre-ronde"
+const OMBRE_RONDE_MIN := 3.0
+const OMBRE_RONDE_MAX := 30.0
+## Posé par un outil (planche) pour basculer dans le même processus ; négatif = la ligne
+## de commande décide. Soumis aux mêmes deux verrous (débogage, hors ligne).
+static var ombre_ronde_forcee := -1.0
+
+## Le rayon d'essai, ou 0 (éteint). Calcul pur, vérifié en `--script`.
+static func rayon_ombre_ronde(args: PackedStringArray, debug: bool, en_ligne: bool,
+		forcee: float = -1.0) -> float:
+	if not debug or en_ligne:
+		return 0.0
+	if forcee >= 0.0:
+		return 0.0 if forcee == 0.0 else clampf(forcee, OMBRE_RONDE_MIN, OMBRE_RONDE_MAX)
+	for a in args:
+		if a == DRAPEAU_OMBRE_RONDE:
+			return RAYON_TORSE
+		if a.begins_with(DRAPEAU_OMBRE_RONDE + "="):
+			var v := a.substr(DRAPEAU_OMBRE_RONDE.length() + 1)
+			return clampf(v.to_float(), OMBRE_RONDE_MIN, OMBRE_RONDE_MAX) if v.is_valid_float() \
+				else RAYON_TORSE
+	return 0.0
+
+## L'occluder rond d'essai : 32 sommets, autant que l'étoile qu'il remplace.
+static func ombre_ronde(rayon: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 32:
+		var ang := (float(i) / 32.0) * TAU
+		pts.append(Vector2(cos(ang), sin(ang)) * rayon)
+	return pts
+
+## L'ombre d'un corps pour ce lancement : l'étoile de la silhouette, ou le rond d'essai.
+static func ombre_du_corps(sil: Texture2D, en_ligne: bool) -> PackedVector2Array:
+	var r := rayon_ombre_ronde(OS.get_cmdline_user_args() + OS.get_cmdline_args(),
+		OS.is_debug_build(), en_ligne, ombre_ronde_forcee)
+	return ombre_ronde(r) if r > 0.0 else ombre_de_silhouette(sil)
+
 const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],
 	Courbe.SORTIE: [0.55, 0.0, 0.85, 0.30],
