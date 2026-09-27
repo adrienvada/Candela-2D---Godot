@@ -151,18 +151,56 @@ func _deux_prises(nom: String) -> void:
 		_tenir()
 		get_tree().paused = true
 		await _attendre_images(3)
-		var img: Image = await _capturer("vue")
-		get_tree().paused = false
 		var cle := "%s_%s" % [nom, "allumees" if allumees else "eteintes"]
-		if img == null:
-			printerr("  ✗ prise %s perdue" % cle)
-			continue
-		img.convert(Image.FORMAT_RGB8)
-		var chemin := ProjectSettings.globalize_path("%s/%s.png" % [_dossier, cle])
-		img.save_png(chemin)
-		print("PRISE %s %dx%d %s" % [cle, img.get_width(), img.get_height(), chemin])
+		_ecrire_prise(await _capturer("vue"), cle)
+		# Le MÊME instant sans l'essai, quand l'essai est un nœud qu'on peut cacher : jeu en pause, rien d'autre ne bouge
+		# (ni le souffle des corps). `__sans` : l'image où seul l'essai manque ; `__avec2` : l'essai remis, pour le bruit.
+		var caches := _noeuds_de_l_essai()
+		if not caches.is_empty():
+			for n in caches:
+				n.visible = false
+			await _attendre_images(3)
+			_ecrire_prise(await _capturer("vue"), cle + "__sans")
+			for n in caches:
+				n.visible = true
+			await _attendre_images(3)
+			_ecrire_prise(await _capturer("vue"), cle + "__avec2")
+		get_tree().paused = false
 	_torches_allumees = true
 	_torches(true)
+
+
+func _ecrire_prise(img: Image, cle: String) -> void:
+	if img == null:
+		printerr("  ✗ prise %s perdue" % cle)
+		return
+	img.convert(Image.FORMAT_RGB8)
+	var chemin := ProjectSettings.globalize_path("%s/%s.png" % [_dossier, cle])
+	img.save_png(chemin)
+	print("PRISE %s %dx%d %s" % [cle, img.get_width(), img.get_height(), chemin])
+
+
+## Les nœuds visibles qui portent l'essai, quand il en a : les lueurs du cœur chaud (`--faisceau`, entrées « coeur_lampe »
+## d'`IsoVolumes`) et le maillage des tuyaux (`--tuyaux-essai`). Les autres essais sont dans les matériaux ou la peinture
+## cuite : ils ne se comparent qu'entre lancements.
+func _noeuds_de_l_essai() -> Array[Node3D]:
+	var sortie: Array[Node3D] = []
+	var args := OS.get_cmdline_user_args()
+	if args.has("--faisceau"):
+		var volumes := get_tree().root.find_child("Volumes", true, false)
+		if volumes != null:
+			var suivis: Dictionary = volumes.get("_suivis")
+			for e in suivis.values():
+				if String(e["genre"]) == "coeur_lampe":
+					for n in e["noeuds"]:
+						if (n as Node3D).visible:
+							sortie.append(n)
+	if args.has("--tuyaux-essai"):
+		var iso := Presentation3D.instance()
+		var noeud: Node3D = iso.get("_noeud_tuyaux") if iso != null else null
+		if noeud != null and noeud.visible:
+			sortie.append(noeud)
+	return sortie
 
 
 func _tenir() -> void:
