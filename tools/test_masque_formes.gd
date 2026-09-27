@@ -9,7 +9,9 @@
 ## - chaque drapeau (`IsoVolumes.FORMES_MASQUE`) allume le masque et pose EXACTEMENT les #define de sa forme, que la ligne
 ##   du journal relit dans le code de la variante (une prise prouve son bras par ce que le jeu dit) ;
 ## - la forme compacte ne recopie qu'une fois chaque surface (un seul appel au sol, à la face, au dessus) ; la bande
-##   resserrée finit le sol exact par les lignes mêmes de `sol_ecrit`, et sa matière est la lecture même du sol exact ;
+##   resserrée finit le sol exact par les lignes mêmes de `sol_ecrit` ; le juge du pochoir n'existe que sous le pochoir,
+##   est dessiné avant les couches, couvre leurs disques tant que le tangage dépasse 45°, et chaque paramètre qu'il reçoit
+##   est un uniforme de son shader ; le ruban (la toile) ne passe jamais sous le pochoir ;
 ## - rien sur le fil : `Protocol.VERSION` reste 18.
 ##
 ## Ce qu'elle ne prouve pas : que le GPU compile les variantes (le lanceur de série refuse toute prise dont le journal porte
@@ -40,6 +42,7 @@ func _run() -> void:
 	_chaque_drapeau_sa_forme()
 	_la_forme_compacte()
 	_la_bande_resserree()
+	_le_pochoir()
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
 	_check("Protocol.VERSION reste 18", version == 18, str(version))
 	_check("assez de vérifications (%d ≥ 20)" % _verifications, _verifications >= 20)
@@ -112,8 +115,8 @@ func _eteintes_rien_ne_change() -> void:
 func _chaque_drapeau_sa_forme() -> void:
 	print("\n[Chaque drapeau, sa forme]")
 	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
-	_check("les deux drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
-		"--fumee-masque-resserre": 2})
+	_check("les trois drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
+		"--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3} and IsoVolumes.FORME_POCHOIR == 3)
 	_check("un drapeau de forme allume le masque et pose sa forme",
 		src.contains("\t\telif FORMES_MASQUE.has(arg):\n\t\t\tmasque_fumee = true\n\t\t\tforme_masque = int(FORMES_MASQUE[arg])"))
 	for usure in [false, true]:
@@ -196,7 +199,60 @@ func _la_bande_resserree() -> void:
 		and point.contains("vec3 lu = lire_lightmap(px + glisse * dalles, deux);"))
 
 
-
+func _le_pochoir() -> void:
+	print("\n[Le pochoir : le masque une fois par pixel]")
+	_check("le juge est dessiné avant les couches", IsoVolumes.PRIORITE_JUGE < IsoVolumes.PRIORITE_VOLUME)
+	_check("le carré du juge (rayon + hauteur) contient les disques des couches tant que le tangage dépasse 45°",
+		CameraIso.TANGAGE_DEG >= 45.0, str(CameraIso.TANGAGE_DEG))
+	var src := FileAccess.get_file_as_string("res://volume_iso.gdshader")
+	var juge := _preprocesser(src, ["FUMEE_MASQUE", "MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_POCHOIR_JUGE"])
+	var couche := _preprocesser(src, ["FUMEE_MASQUE", "MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR"])
+	_check("le juge écrit 1 dans le pochoir, ne peint rien (opacité nulle) et pose la question du masque",
+		juge.contains("stencil_mode write, compare_always, 1;") and juge.contains("ALPHA = 0.0;")
+		and juge.contains("masque_compact_montre_noir(monde") and not juge.contains("ALBEDO = c;"))
+	_check("les couches lisent le pochoir et ne posent plus la question",
+		couche.contains("stencil_mode read, compare_not_equal, 1;") and not couche.contains("masque_compact_montre_noir(monde")
+		and not couche.contains("masque_montre_noir(monde") and couche.contains("ALBEDO = c;"))
+	var v := IsoVolumes.new()
+	var e := {"genre": "fumee", "noeuds": [], "mats": [], "retires": []}
+	v.call("_couches", e, 4)
+	v.call("_poser_couches", e, Vector2(100, 200), 80.0, 1.0, 0.3, null, 0.0, 0.0, 0.0)
+	_check("forme de Gadgets : aucun juge", not e.has("juge"))
+	v.masque_fumee = true
+	v.forme_masque = IsoVolumes.FORME_POCHOIR
+	var e2 := {"genre": "fumee", "noeuds": [], "mats": [], "retires": []}
+	v.call("_couches", e2, 4)
+	v.call("_poser_couches", e2, Vector2(100, 200), 80.0, 1.0, 0.3, null, 0.0, 0.0, 0.0)
+	var j: MeshInstance3D = e2.get("juge")
+	_check("pochoir : un juge par volume, à la hauteur de la plus haute couche, qui les couvre",
+		j != null and j.visible and is_equal_approx(j.position.y, IsoVolumes.TUILE)
+		and is_equal_approx(j.scale.x, 2.0 * (80.0 + IsoVolumes.TUILE)))
+	var mj := j.material_override as ShaderMaterial if j != null else null
+	_check("le juge porte la variante juge et la priorité juge",
+		mj != null and mj.shader.code.contains("#define MASQUE_POCHOIR_JUGE\n") and mj.render_priority == IsoVolumes.PRIORITE_JUGE)
+	var couches_ok := (e2["mats"] as Array).all(func(m: ShaderMaterial) -> bool:
+		return m.shader.code.contains("#define MASQUE_POCHOIR\n") and not m.shader.code.contains("#define MASQUE_POCHOIR_JUGE\n"))
+	_check("pochoir : les couches portent la variante qui lit le pochoir", couches_ok)
+	var manque: Array = []
+	var corps := _fonction_gd(FileAccess.get_file_as_string("res://iso_volumes.gd"), "_poser_juge")
+	for m in RegEx.create_from_string('set_shader_parameter\\("([A-Za-z_0-9]+)"').search_all(corps):
+		if mj == null or not _a_l_uniforme(mj.shader, m.get_string(1)):
+			manque.append(m.get_string(1))
+	_check("chaque paramètre posé sur le juge est un uniforme de son shader", manque.is_empty() and corps != "", str(manque))
+	var rayons: Vector4 = mj.get_shader_parameter("juge_rayons") if mj != null else Vector4.ZERO
+	_check("le juge connaît le disque de chaque couche (rayon × (1 − 0,22 f), comme les couches)",
+		is_equal_approx(rayons.x, 80.0) and is_equal_approx(rayons.w, 80.0 * 0.78))
+	# Le ruban (la toile) : jamais sous le pochoir, il garde la forme d'avant.
+	var ruban := ShaderMaterial.new()
+	ruban.shader = IsoVolumes.SHADER_VOLUME
+	ruban.set_shader_parameter("ruban", true)
+	v.call("_poser_masque", ruban, true)
+	_check("le ruban ne passe jamais sous le pochoir", not ruban.shader.code.contains("#define MASQUE_POCHOIR\n")
+		and ruban.shader.code.contains("#define MASQUE_RESSERRE\n"))
+	v.masque_fumee = false
+	v.call("_poser_couches", e2, Vector2(100, 200), 80.0, 1.0, 0.3, null, 0.0, 0.0, 0.0)
+	_check("masque éteint : le juge se cache", not j.visible)
+	v.free()
 
 
 func _fonction(code: String, signature: String) -> String:
