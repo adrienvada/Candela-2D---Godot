@@ -61,7 +61,10 @@ def section(ident, es):
             continue
         eteint = v.get("image_sans") or f"img/temoin_{cle}.jpg"
         leg_eteint = "Éteint — même instant, l'essai caché" if v.get("image_sans") else "Éteint — lancement témoin"
-        out.append(f'<h3>Scène « {e(s)} », {ETAT["allumees"]}, à la taille du jeu (1920×1080, zoom ×1,5, 45° B)</h3><div class="rang">')
+        cadre = ("en écran scindé : J1 à gauche, J2 à droite depuis le côté opposé (lacet B)" if s == "scinde"
+                 else "à la taille du jeu (1920×1080, zoom ×1,5, 45° B)" if ident != "tuyaux_pres"
+                 else "de près : caméra ×4,5, un vrai rendu")
+        out.append(f'<h3>Scène « {e(s)} », {ETAT["allumees"]}, {cadre}</h3><div class="rang">')
         for ill in es["cibles"]:
             out.append(fig(f"img/{ill}.jpg", f"Cible : {NOM_ILL.get(ill, ill)}", "cible"))
         out.append(fig(eteint, leg_eteint))

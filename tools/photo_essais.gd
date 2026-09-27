@@ -35,6 +35,9 @@ var _j2 := Vector2.ZERO
 var _visee_j2 := Vector2.RIGHT
 var _j2_present := true
 var _torches_allumees := true
+## Les scènes demandées (`--scenes=duel,sol,mur,scinde`) ; `scinde` : le duel en écran scindé, la vue de J2 depuis le côté
+## opposé (lacet B) à côté de celle de J1 — la prise de l'écran entier, HUD retiré.
+var _scenes := PackedStringArray()
 
 
 func _ready() -> void:
@@ -47,6 +50,7 @@ func _ready() -> void:
 		_sortir(1)
 		return
 	_dossier = _valeur(args, "--sortie", "user://essais")
+	_scenes = _valeur(args, "--scenes", "duel,sol,mur").split(",")
 	_sans_hud = true
 	_carte_duel = CARTE_ESSAIS
 	_zoom = maxf(0.2, float(_valeur(args, "--zoom-photo", "1.0")))
@@ -106,7 +110,12 @@ func _ready() -> void:
 	_visee_j2 = Vector2.RIGHT
 	_j2_present = true
 	print("SCENE duel : %s · J1 %s · J2 %s" % [scene["mur"], str(_j1), str(_j2)])
-	await _deux_prises("duel")
+	if _scenes.has("duel"):
+		await _deux_prises("duel")
+	if _scenes.has("scinde"):
+		_deux_vues()
+		await _deux_prises("scinde")
+		_vue_unique()
 
 	# --- sol : le pochoir « ZONE 1 », J1 à 2,5 cases au sud, visée au nord (au nord si le sud est pris).
 	var centre := (POCHOIR_CASE + Vector2(0.5, 0.5)) * t
@@ -118,11 +127,14 @@ func _ready() -> void:
 	_j2_present = false
 	print("SCENE sol : pochoir %s · J1 %s · visée %s · sol libre %s" % [str(centre), str(_j1), str(_visee_j1),
 		str(_sol_libre(_j1))])
-	await _deux_prises("sol")
+	if _scenes.has("sol"):
+		await _deux_prises("sol")
 
 	# --- mur : la face la plus meublée de tuyaux (même choix que `photo_tuyaux.gd`, le cône à 20° de biais).
 	var face := _choisir_la_face(MapData.current_map_data)
-	if face.is_empty():
+	if not _scenes.has("mur"):
+		pass
+	elif face.is_empty():
 		printerr("  ! aucune face meublée : pas de scène mur")
 	else:
 		var n: Vector2 = face["n"]
@@ -142,6 +154,7 @@ func _ready() -> void:
 ## La scène, torches allumées puis éteintes. Chaque prise : repos de `REPOS_IMAGES` images à tenir la scène, puis l'arbre en
 ## pause, trois images, la prise.
 func _deux_prises(nom: String) -> void:
+	var source := "ecran" if nom == "scinde" else "vue"
 	for allumees in [true, false]:
 		_torches_allumees = allumees
 		_torches(allumees)
@@ -152,7 +165,7 @@ func _deux_prises(nom: String) -> void:
 		get_tree().paused = true
 		await _attendre_images(3)
 		var cle := "%s_%s" % [nom, "allumees" if allumees else "eteintes"]
-		_ecrire_prise(await _capturer("vue"), cle)
+		_ecrire_prise(await _capturer(source), cle)
 		# Le MÊME instant sans l'essai, quand l'essai est un nœud qu'on peut cacher : jeu en pause, rien d'autre ne bouge
 		# (ni le souffle des corps). `__sans` : l'image où seul l'essai manque ; `__avec2` : l'essai remis, pour le bruit.
 		var caches := _noeuds_de_l_essai()
@@ -160,11 +173,11 @@ func _deux_prises(nom: String) -> void:
 			for n in caches:
 				n.visible = false
 			await _attendre_images(3)
-			_ecrire_prise(await _capturer("vue"), cle + "__sans")
+			_ecrire_prise(await _capturer(source), cle + "__sans")
 			for n in caches:
 				n.visible = true
 			await _attendre_images(3)
-			_ecrire_prise(await _capturer("vue"), cle + "__avec2")
+			_ecrire_prise(await _capturer(source), cle + "__avec2")
 		get_tree().paused = false
 	_torches_allumees = true
 	_torches(true)

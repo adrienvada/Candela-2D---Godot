@@ -33,33 +33,33 @@ RACINE = os.path.abspath(os.path.join(ICI, "..", "..", "..", ".."))
 ILLUS = os.path.join(RACINE, "assets", "ui")
 IMG = os.path.join(ICI, "img")
 MARGE_CORPS = 40
-SCENES = ["duel", "sol", "mur"]
+SCENES = ["duel", "sol", "mur", "scinde"]
 ETATS = ["allumees", "eteintes"]
 QUALITE = 85
 
 # id, drapeau, titre, scènes montrées, illustrations cibles, ce que c'est (réglage lu dans le code)
 ESSAIS = [
-    ("faisceau", "--faisceau", "Le cœur chaud à la lampe", ["duel"], ["ill_intro_allumage", "ill_accueil"],
+    ("faisceau", "--faisceau", "Le cœur chaud à la lampe", ["duel", "scinde"], ["ill_intro_allumage", "ill_accueil"],
      "Une lueur posée à la lampe même de chaque torche allumée (iso_volumes.gd, _suivre_faisceau), de la couleur de "
      "la lumière, sans rayon."),
-    ("mannequin", "--mannequin", "Le mannequin", ["duel"], ["ill_ecran_scinde", "ill_accueil"],
+    ("mannequin", "--mannequin", "Le mannequin", ["duel", "scinde"], ["ill_ecran_scinde", "ill_accueil"],
      "Les corps en segments articulés, le côté de la lumière contrasté (MANNEQUIN_CONTRASTE 0,4, report 1,6) et un "
      "contour (voxel_catalogue.gd)."),
-    ("pochoirs", "--pochoirs-essai", "Les pochoirs au sol", ["sol"], ["ill_creer_local"],
+    ("pochoirs", "--pochoirs-essai", "Les pochoirs au sol", ["sol", "scinde"], ["ill_creer_local"],
      "« ZONE n » et « DEATHMATCH » peints au sol, symétriques par carte ; une peinture sombre : le sol × 0,55 sous la "
      "lettre (arena_decor.gd, POCHOIR_PEINTURE alpha 0,45)."),
-    ("encre", "--encre-essai", "L'encre : hachures, arêtes, contour de 1 px", ["duel", "mur"],
+    ("encre", "--encre-essai", "L'encre : hachures, arêtes, contour de 1 px", ["duel", "mur", "scinde"],
      ["ill_ecran_scinde", "ill_accueil"],
      "Hachures dans la pénombre (HACHURES_ESSAI 0,7) sur le sol, les murs et les corps ; arêtes des murs à 2,4 px et "
      "plus noires (reste 0,12) ; contour des personnages de 1 px du monde, soit 1,5 px d'écran au zoom ×1,5 "
      "(iso_materiaux.gd, CONTOUR_PX_ESSAI 1,0 ; voxel_corps.gd l'applique sous ce seul drapeau)."),
-    ("tuyaux", "--tuyaux-essai", "Les tuyaux et câbles des murs", ["mur", "duel"], ["ill_entrainement"],
+    ("tuyaux", "--tuyaux-essai", "Les tuyaux et câbles des murs", ["mur", "duel", "scinde"], ["ill_entrainement"],
      "Conduites cerclées de colliers, descentes et câbles sur les faces de mur (tuyaux_iso.gd), relisant la lumière "
      "de la face qu'ils recouvrent à l'écran ; fusionné depuis origin/claude/cloud-tuyaux (70ffafa)."),
     ("tuyaux_pres", "--tuyaux-essai --zoom-photo=4.5", "Les tuyaux de près (caméra ×4,5, trois fois le zoom du duel)",
      ["mur"], ["ill_entrainement"],
      "Le même essai rendu de près (un vrai rendu, pas un agrandissement), comparé au même instant sans les tuyaux."),
-    ("corps", "--corps-detaille", "Les personnages détaillés", ["duel"], ["ill_ecran_scinde", "ill_accueil"],
+    ("corps", "--corps-detaille", "Les personnages détaillés", ["duel", "scinde"], ["ill_ecran_scinde", "ill_accueil"],
      "Accessoires modelés (bandoulière, cartouches, plaques…) et matière peinte, pour les dix classes "
      "(voxel_catalogue.gd, CLASSES_DETAILLEES) ; fusionné depuis origin/iso12-corps (f38e5f7)."),
 ]
@@ -221,7 +221,9 @@ def main():
                         # témoin), torches allumées ; la même pour éteint et allumé.
                         if e == "allumees" or s not in m.get("centre", {}):
                             base = emprise if emprise is not None and emprise.any() else change
-                            ys, xs = np.nonzero(base)
+                            # Là où l'essai se VOIT : les pixels changés dans la lumière, s'il y en a.
+                            vus = base & (np.maximum(essai.max(2), ref.max(2)) > 40)
+                            ys, xs = np.nonzero(vus if vus.sum() > 50 else base)
                             m.setdefault("centre", {})[s] = (int(np.median(xs)), int(np.median(ys))) if len(xs) else (960, 540)
                         centre = m["centre"][s]
                         l_e, boite = loupe(essai, centre)
