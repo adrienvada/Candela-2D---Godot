@@ -244,6 +244,13 @@ func _tenir(p2: Vector2, n: int, j2_dans_le_cadre := true) -> void:
 		_poser(p2, j2_dans_le_cadre)
 		for j in [_main.p1, _main.p2]:
 			j.set("_dust_accum", -1.0e9)
+			j.velocity = Vector2.ZERO
+		# La caméra 2D rejoint J1 par lissage, sans jamais l'atteindre tout à fait, et la caméra iso la suit : d'une prise
+		# à l'autre, un dixième de pixel de dérive ne change rien au sol (doux) mais bascule les arêtes franches des corps
+		# (1 412 pixels des deux corps différaient entre deux prises faites à la suite, rien bougé : essai 6).
+		for cam in [_main.cam1, _main.cam2]:
+			if is_instance_valid(cam):
+				cam.reset_smoothing()
 		await get_tree().process_frame
 
 
