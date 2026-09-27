@@ -6,8 +6,8 @@
 
 | Réglage | Valeur par défaut | Où c'est décidé | Vu à l'exécution |
 |---|---|---|---|
-| Vue | **isométrique** (tangage 52°) ; la vue de dessus seulement avec `--2d` ou le réglage « VUE DE DESSUS (DÉBOGAGE) » (build de débogage) | `settings_manager.gd:101` (`mode_iso := true`), `iso_applique` l. 322 ; `camera_iso.gd:19` | `[iso] vue isométrique allumée : écran scindé … tangage 52.0°, murs 1.25 tuile, pâte D — lavis et pochoir, lightmap 1080p` |
-| Lacet | **45°, option B** : J1 à 45°, J2 à 225° (+180°), en local ET en ligne (imposé en ligne) | `settings_manager.gd:152-153`, `lacet_du_duel` l. 372, `lacet_du_joueur` l. 380 | `mode_rendu=iso lacet 45° B, lacet J1=45 J2=225` |
+| Vue | **isométrique** (tangage 52°) ; la vue de dessus seulement avec `--2d` ou le réglage « VUE DE DESSUS (DÉBOGAGE) » (build de débogage) | `settings_manager.gd:101` (`mode_iso := true`), `iso_applique` l. 323 ; `camera_iso.gd:19` | `[iso] vue isométrique allumée : écran scindé … tangage 52.0°, murs 1.25 tuile, pâte D — lavis et pochoir, lightmap 1080p` |
+| Lacet | **45°, option B** : J1 à 45°, J2 à 225° (+180°), en local ET en ligne (imposé en ligne) | `settings_manager.gd:152-153`, `lacet_du_duel` l. 372, `lacet_du_joueur` l. 379 | `mode_rendu=iso lacet 45° B, lacet J1=45 J2=225` |
 | Zoom du duel | **×1,5** (en ligne imposé ; en local, sauf zoom enregistré au réglage de débogage) | `settings_manager.gd:129`, `valeurs_du_duel` l. 411 | `zoom=1.50` |
 | Décalage du regard vers la visée | **0,15** de la hauteur visible | `settings_manager.gd:132` | `décalage=0.15` |
 | Portée des torches | **×0,75** | `settings_manager.gd:141` | — |
