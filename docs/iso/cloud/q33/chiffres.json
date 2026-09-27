@@ -1,0 +1,1931 @@
+{
+ "chiffres": {
+  "pistolet/mi": {
+   "niveau": 0.279,
+   "sil_d0": 1539,
+   "sil_d1": 1545,
+   "vis_d0": 1190,
+   "vis_d1": 1193,
+   "part_d0": 0.773,
+   "part_d1": 0.772,
+   "sil_d0_seul": 29,
+   "sil_d1_seul": 35,
+   "diff_n": 505,
+   "diff_max": 82,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 15,
+   "hors_sil_d1": 39,
+   "plus_clair_d0": 51,
+   "plus_clair_d1": 51,
+   "sur_noir_d0": 48,
+   "sur_noir_d1": 48,
+   "boite_d0": [
+    41,
+    44,
+    90,
+    105
+   ],
+   "boite_d1": [
+    41,
+    45,
+    90,
+    105
+   ]
+  },
+  "pistolet/b15": {
+   "niveau": 0.15,
+   "sil_d0": 1541,
+   "sil_d1": 1545,
+   "vis_d0": 1189,
+   "vis_d1": 1191,
+   "part_d0": 0.772,
+   "part_d1": 0.771,
+   "sil_d0_seul": 37,
+   "sil_d1_seul": 41,
+   "diff_n": 348,
+   "diff_max": 18,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 6,
+   "hors_sil_d1": 38,
+   "plus_clair_d0": 45,
+   "plus_clair_d1": 45,
+   "sur_noir_d0": 45,
+   "sur_noir_d1": 45,
+   "boite_d0": [
+    41,
+    43,
+    90,
+    105
+   ],
+   "boite_d1": [
+    41,
+    44,
+    90,
+    105
+   ]
+  },
+  "pistolet/b10": {
+   "niveau": 0.1,
+   "sil_d0": 1531,
+   "sil_d1": 1568,
+   "vis_d0": 1135,
+   "vis_d1": 1153,
+   "part_d0": 0.741,
+   "part_d1": 0.735,
+   "sil_d0_seul": 6,
+   "sil_d1_seul": 43,
+   "diff_n": 247,
+   "diff_max": 12,
+   "noir_d1_seul": 12,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 36,
+   "hors_sil_d1": 35,
+   "plus_clair_d0": 9,
+   "plus_clair_d1": 9,
+   "sur_noir_d0": 9,
+   "sur_noir_d1": 9,
+   "boite_d0": [
+    42,
+    45,
+    91,
+    106
+   ],
+   "boite_d1": [
+    42,
+    45,
+    91,
+    106
+   ]
+  },
+  "pistolet/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1545,
+   "sil_d1": 1562,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 10,
+   "sil_d1_seul": 27,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    41,
+    44,
+    90,
+    105
+   ],
+   "boite_d1": [
+    41,
+    44,
+    90,
+    105
+   ]
+  },
+  "pistolet/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1883,
+   "sil_d1": 1906,
+   "vis_d0": 1883,
+   "vis_d1": 1906,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 12,
+   "sil_d1_seul": 35,
+   "diff_n": 1045,
+   "diff_max": 80,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 8,
+   "hors_sil_d1": 10,
+   "plus_clair_d0": 1872,
+   "plus_clair_d1": 1877,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    36,
+    44,
+    83,
+    102
+   ],
+   "boite_d1": [
+    36,
+    43,
+    83,
+    102
+   ]
+  },
+  "fusil/mi": {
+   "niveau": 0.279,
+   "sil_d0": 1944,
+   "sil_d1": 1945,
+   "vis_d0": 1257,
+   "vis_d1": 1258,
+   "part_d0": 0.647,
+   "part_d1": 0.647,
+   "sil_d0_seul": 17,
+   "sil_d1_seul": 18,
+   "diff_n": 393,
+   "diff_max": 36,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 13,
+   "hors_sil_d1": 13,
+   "plus_clair_d0": 42,
+   "plus_clair_d1": 42,
+   "sur_noir_d0": 39,
+   "sur_noir_d1": 39,
+   "boite_d0": [
+    43,
+    44,
+    119,
+    106
+   ],
+   "boite_d1": [
+    43,
+    44,
+    119,
+    106
+   ]
+  },
+  "fusil/b15": {
+   "niveau": 0.15,
+   "sil_d0": 1966,
+   "sil_d1": 1979,
+   "vis_d0": 1244,
+   "vis_d1": 1257,
+   "part_d0": 0.633,
+   "part_d1": 0.635,
+   "sil_d0_seul": 4,
+   "sil_d1_seul": 17,
+   "diff_n": 177,
+   "diff_max": 15,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 10,
+   "hors_sil_d1": 1,
+   "plus_clair_d0": 46,
+   "plus_clair_d1": 45,
+   "sur_noir_d0": 46,
+   "sur_noir_d1": 45,
+   "boite_d0": [
+    43,
+    43,
+    119,
+    105
+   ],
+   "boite_d1": [
+    43,
+    43,
+    119,
+    105
+   ]
+  },
+  "fusil/b10": {
+   "niveau": 0.1,
+   "sil_d0": 1942,
+   "sil_d1": 1956,
+   "vis_d0": 1207,
+   "vis_d1": 1222,
+   "part_d0": 0.622,
+   "part_d1": 0.625,
+   "sil_d0_seul": 13,
+   "sil_d1_seul": 27,
+   "diff_n": 310,
+   "diff_max": 10,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 2,
+   "hors_sil_d1": 22,
+   "plus_clair_d0": 9,
+   "plus_clair_d1": 9,
+   "sur_noir_d0": 9,
+   "sur_noir_d1": 9,
+   "boite_d0": [
+    43,
+    44,
+    119,
+    107
+   ],
+   "boite_d1": [
+    43,
+    44,
+    119,
+    107
+   ]
+  },
+  "fusil/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1613,
+   "sil_d1": 1631,
+   "vis_d0": 1,
+   "vis_d1": 1,
+   "part_d0": 0.001,
+   "part_d1": 0.001,
+   "sil_d0_seul": 18,
+   "sil_d1_seul": 36,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    42,
+    44,
+    100,
+    106
+   ],
+   "boite_d1": [
+    42,
+    43,
+    100,
+    106
+   ]
+  },
+  "fusil/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1967,
+   "sil_d1": 1975,
+   "vis_d0": 1967,
+   "vis_d1": 1975,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 8,
+   "sil_d1_seul": 16,
+   "diff_n": 1241,
+   "diff_max": 161,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 44,
+   "hors_sil_d1": 14,
+   "plus_clair_d0": 1941,
+   "plus_clair_d1": 1946,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    35,
+    44,
+    84,
+    103
+   ],
+   "boite_d1": [
+    35,
+    43,
+    84,
+    103
+   ]
+  },
+  "pompe/mi": {
+   "niveau": 0.253,
+   "sil_d0": 2353,
+   "sil_d1": 2370,
+   "vis_d0": 1372,
+   "vis_d1": 1392,
+   "part_d0": 0.583,
+   "part_d1": 0.587,
+   "sil_d0_seul": 23,
+   "sil_d1_seul": 40,
+   "diff_n": 303,
+   "diff_max": 35,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 53,
+   "hors_sil_d1": 10,
+   "plus_clair_d0": 55,
+   "plus_clair_d1": 55,
+   "sur_noir_d0": 50,
+   "sur_noir_d1": 50,
+   "boite_d0": [
+    33,
+    43,
+    119,
+    149
+   ],
+   "boite_d1": [
+    33,
+    43,
+    119,
+    149
+   ]
+  },
+  "pompe/b15": {
+   "niveau": 0.136,
+   "sil_d0": 2377,
+   "sil_d1": 2385,
+   "vis_d0": 1323,
+   "vis_d1": 1331,
+   "part_d0": 0.557,
+   "part_d1": 0.558,
+   "sil_d0_seul": 5,
+   "sil_d1_seul": 13,
+   "diff_n": 184,
+   "diff_max": 10,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 29,
+   "hors_sil_d1": 10,
+   "plus_clair_d0": 41,
+   "plus_clair_d1": 41,
+   "sur_noir_d0": 41,
+   "sur_noir_d1": 41,
+   "boite_d0": [
+    34,
+    42,
+    119,
+    149
+   ],
+   "boite_d1": [
+    34,
+    42,
+    119,
+    149
+   ]
+  },
+  "pompe/b10": {
+   "niveau": 0.093,
+   "sil_d0": 2174,
+   "sil_d1": 2166,
+   "vis_d0": 1264,
+   "vis_d1": 1255,
+   "part_d0": 0.581,
+   "part_d1": 0.579,
+   "sil_d0_seul": 16,
+   "sil_d1_seul": 8,
+   "diff_n": 211,
+   "diff_max": 9,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 11,
+   "hors_sil_d1": 19,
+   "plus_clair_d0": 18,
+   "plus_clair_d1": 18,
+   "sur_noir_d0": 18,
+   "sur_noir_d1": 18,
+   "boite_d0": [
+    34,
+    43,
+    119,
+    128
+   ],
+   "boite_d1": [
+    34,
+    43,
+    119,
+    128
+   ]
+  },
+  "pompe/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1759,
+   "sil_d1": 1737,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 45,
+   "sil_d1_seul": 23,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    41,
+    42,
+    97,
+    107
+   ],
+   "boite_d1": [
+    41,
+    43,
+    97,
+    107
+   ]
+  },
+  "pompe/soi": {
+   "niveau": 0.92,
+   "sil_d0": 2132,
+   "sil_d1": 2145,
+   "vis_d0": 2132,
+   "vis_d1": 2145,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 20,
+   "sil_d1_seul": 33,
+   "diff_n": 1122,
+   "diff_max": 121,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 24,
+   "hors_sil_d1": 20,
+   "plus_clair_d0": 2116,
+   "plus_clair_d1": 2112,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    33,
+    43,
+    86,
+    103
+   ],
+   "boite_d1": [
+    33,
+    42,
+    86,
+    103
+   ]
+  },
+  "arbalete/mi": {
+   "niveau": 0.259,
+   "sil_d0": 1942,
+   "sil_d1": 1966,
+   "vis_d0": 1313,
+   "vis_d1": 1339,
+   "part_d0": 0.676,
+   "part_d1": 0.681,
+   "sil_d0_seul": 14,
+   "sil_d1_seul": 38,
+   "diff_n": 430,
+   "diff_max": 54,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 26,
+   "hors_sil_d1": 18,
+   "plus_clair_d0": 102,
+   "plus_clair_d1": 103,
+   "sur_noir_d0": 83,
+   "sur_noir_d1": 83,
+   "boite_d0": [
+    36,
+    44,
+    119,
+    106
+   ],
+   "boite_d1": [
+    36,
+    44,
+    119,
+    106
+   ]
+  },
+  "arbalete/b15": {
+   "niveau": 0.139,
+   "sil_d0": 1928,
+   "sil_d1": 1957,
+   "vis_d0": 1286,
+   "vis_d1": 1317,
+   "part_d0": 0.667,
+   "part_d1": 0.673,
+   "sil_d0_seul": 26,
+   "sil_d1_seul": 55,
+   "diff_n": 176,
+   "diff_max": 15,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 36,
+   "hors_sil_d1": 24,
+   "plus_clair_d0": 83,
+   "plus_clair_d1": 83,
+   "sur_noir_d0": 78,
+   "sur_noir_d1": 78,
+   "boite_d0": [
+    37,
+    44,
+    119,
+    105
+   ],
+   "boite_d1": [
+    37,
+    43,
+    119,
+    105
+   ]
+  },
+  "arbalete/b10": {
+   "niveau": 0.092,
+   "sil_d0": 1898,
+   "sil_d1": 1926,
+   "vis_d0": 1226,
+   "vis_d1": 1255,
+   "part_d0": 0.646,
+   "part_d1": 0.652,
+   "sil_d0_seul": 21,
+   "sil_d1_seul": 49,
+   "diff_n": 299,
+   "diff_max": 13,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 52,
+   "hors_sil_d1": 29,
+   "plus_clair_d0": 38,
+   "plus_clair_d1": 38,
+   "sur_noir_d0": 35,
+   "sur_noir_d1": 35,
+   "boite_d0": [
+    37,
+    45,
+    119,
+    109
+   ],
+   "boite_d1": [
+    37,
+    44,
+    119,
+    109
+   ]
+  },
+  "arbalete/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1603,
+   "sil_d1": 1632,
+   "vis_d0": 1,
+   "vis_d1": 1,
+   "part_d0": 0.001,
+   "part_d1": 0.001,
+   "sil_d0_seul": 18,
+   "sil_d1_seul": 47,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    42,
+    44,
+    95,
+    106
+   ],
+   "boite_d1": [
+    42,
+    43,
+    95,
+    106
+   ]
+  },
+  "arbalete/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1962,
+   "sil_d1": 1972,
+   "vis_d0": 1962,
+   "vis_d1": 1972,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 3,
+   "sil_d1_seul": 13,
+   "diff_n": 1121,
+   "diff_max": 81,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 9,
+   "hors_sil_d1": 16,
+   "plus_clair_d0": 1960,
+   "plus_clair_d1": 1960,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    35,
+    44,
+    84,
+    102
+   ],
+   "boite_d1": [
+    35,
+    43,
+    84,
+    102
+   ]
+  },
+  "occulteur/mi": {
+   "niveau": 0.273,
+   "sil_d0": 1839,
+   "sil_d1": 1825,
+   "vis_d0": 1268,
+   "vis_d1": 1252,
+   "part_d0": 0.69,
+   "part_d1": 0.686,
+   "sil_d0_seul": 43,
+   "sil_d1_seul": 29,
+   "diff_n": 124,
+   "diff_max": 44,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 15,
+   "hors_sil_d1": 41,
+   "plus_clair_d0": 61,
+   "plus_clair_d1": 61,
+   "sur_noir_d0": 54,
+   "sur_noir_d1": 54,
+   "boite_d0": [
+    35,
+    44,
+    119,
+    149
+   ],
+   "boite_d1": [
+    35,
+    45,
+    119,
+    149
+   ]
+  },
+  "occulteur/b15": {
+   "niveau": 0.147,
+   "sil_d0": 1818,
+   "sil_d1": 1806,
+   "vis_d0": 1202,
+   "vis_d1": 1189,
+   "part_d0": 0.661,
+   "part_d1": 0.658,
+   "sil_d0_seul": 46,
+   "sil_d1_seul": 34,
+   "diff_n": 425,
+   "diff_max": 19,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 2,
+   "hors_sil_d0": 22,
+   "hors_sil_d1": 53,
+   "plus_clair_d0": 51,
+   "plus_clair_d1": 51,
+   "sur_noir_d0": 51,
+   "sur_noir_d1": 51,
+   "boite_d0": [
+    36,
+    44,
+    117,
+    149
+   ],
+   "boite_d1": [
+    36,
+    45,
+    117,
+    149
+   ]
+  },
+  "occulteur/b10": {
+   "niveau": 0.1,
+   "sil_d0": 1665,
+   "sil_d1": 1666,
+   "vis_d0": 1121,
+   "vis_d1": 1119,
+   "part_d0": 0.673,
+   "part_d1": 0.672,
+   "sil_d0_seul": 25,
+   "sil_d1_seul": 26,
+   "diff_n": 351,
+   "diff_max": 13,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 1,
+   "hors_sil_d0": 18,
+   "hors_sil_d1": 34,
+   "plus_clair_d0": 16,
+   "plus_clair_d1": 16,
+   "sur_noir_d0": 16,
+   "sur_noir_d1": 16,
+   "boite_d0": [
+    39,
+    45,
+    119,
+    107
+   ],
+   "boite_d1": [
+    39,
+    45,
+    119,
+    107
+   ]
+  },
+  "occulteur/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1515,
+   "sil_d1": 1511,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 33,
+   "sil_d1_seul": 29,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    41,
+    44,
+    92,
+    105
+   ],
+   "boite_d1": [
+    41,
+    45,
+    92,
+    105
+   ]
+  },
+  "occulteur/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1821,
+   "sil_d1": 1837,
+   "vis_d0": 1821,
+   "vis_d1": 1837,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 21,
+   "sil_d1_seul": 37,
+   "diff_n": 985,
+   "diff_max": 79,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 18,
+   "hors_sil_d1": 22,
+   "plus_clair_d0": 1813,
+   "plus_clair_d1": 1799,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    36,
+    45,
+    83,
+    102
+   ],
+   "boite_d1": [
+    36,
+    44,
+    83,
+    102
+   ]
+  },
+  "fumiste/mi": {
+   "niveau": 0.26,
+   "sil_d0": 2178,
+   "sil_d1": 2196,
+   "vis_d0": 1273,
+   "vis_d1": 1292,
+   "part_d0": 0.584,
+   "part_d1": 0.588,
+   "sil_d0_seul": 8,
+   "sil_d1_seul": 26,
+   "diff_n": 409,
+   "diff_max": 58,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 35,
+   "hors_sil_d1": 19,
+   "plus_clair_d0": 53,
+   "plus_clair_d1": 53,
+   "sur_noir_d0": 47,
+   "sur_noir_d1": 47,
+   "boite_d0": [
+    33,
+    44,
+    119,
+    149
+   ],
+   "boite_d1": [
+    33,
+    44,
+    119,
+    149
+   ]
+  },
+  "fumiste/b15": {
+   "niveau": 0.14,
+   "sil_d0": 2207,
+   "sil_d1": 2211,
+   "vis_d0": 1232,
+   "vis_d1": 1235,
+   "part_d0": 0.558,
+   "part_d1": 0.559,
+   "sil_d0_seul": 5,
+   "sil_d1_seul": 9,
+   "diff_n": 380,
+   "diff_max": 15,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 38,
+   "hors_sil_d1": 19,
+   "plus_clair_d0": 39,
+   "plus_clair_d1": 39,
+   "sur_noir_d0": 39,
+   "sur_noir_d1": 39,
+   "boite_d0": [
+    34,
+    43,
+    119,
+    149
+   ],
+   "boite_d1": [
+    34,
+    43,
+    119,
+    149
+   ]
+  },
+  "fumiste/b10": {
+   "niveau": 0.095,
+   "sil_d0": 2054,
+   "sil_d1": 2045,
+   "vis_d0": 1210,
+   "vis_d1": 1196,
+   "part_d0": 0.589,
+   "part_d1": 0.585,
+   "sil_d0_seul": 31,
+   "sil_d1_seul": 22,
+   "diff_n": 362,
+   "diff_max": 12,
+   "noir_d1_seul": 2,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 2,
+   "hors_sil_d1": 4,
+   "plus_clair_d0": 15,
+   "plus_clair_d1": 15,
+   "sur_noir_d0": 15,
+   "sur_noir_d1": 15,
+   "boite_d0": [
+    34,
+    43,
+    119,
+    128
+   ],
+   "boite_d1": [
+    34,
+    44,
+    119,
+    128
+   ]
+  },
+  "fumiste/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1663,
+   "sil_d1": 1644,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 47,
+   "sil_d1_seul": 28,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    42,
+    43,
+    92,
+    107
+   ],
+   "boite_d1": [
+    42,
+    44,
+    92,
+    107
+   ]
+  },
+  "fumiste/soi": {
+   "niveau": 0.92,
+   "sil_d0": 2057,
+   "sil_d1": 2078,
+   "vis_d0": 2057,
+   "vis_d1": 2078,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 18,
+   "sil_d1_seul": 39,
+   "diff_n": 1162,
+   "diff_max": 80,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 9,
+   "hors_sil_d1": 15,
+   "plus_clair_d0": 2041,
+   "plus_clair_d1": 2046,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    34,
+    43,
+    85,
+    103
+   ],
+   "boite_d1": [
+    34,
+    42,
+    85,
+    103
+   ]
+  },
+  "incendiaire/mi": {
+   "niveau": 0.279,
+   "sil_d0": 1953,
+   "sil_d1": 1957,
+   "vis_d0": 1290,
+   "vis_d1": 1292,
+   "part_d0": 0.661,
+   "part_d1": 0.66,
+   "sil_d0_seul": 5,
+   "sil_d1_seul": 9,
+   "diff_n": 553,
+   "diff_max": 69,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 9,
+   "hors_sil_d1": 52,
+   "plus_clair_d0": 42,
+   "plus_clair_d1": 41,
+   "sur_noir_d0": 40,
+   "sur_noir_d1": 40,
+   "boite_d0": [
+    38,
+    44,
+    119,
+    106
+   ],
+   "boite_d1": [
+    38,
+    44,
+    119,
+    106
+   ]
+  },
+  "incendiaire/b15": {
+   "niveau": 0.15,
+   "sil_d0": 1914,
+   "sil_d1": 1939,
+   "vis_d0": 1257,
+   "vis_d1": 1283,
+   "part_d0": 0.657,
+   "part_d1": 0.662,
+   "sil_d0_seul": 13,
+   "sil_d1_seul": 38,
+   "diff_n": 511,
+   "diff_max": 20,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 1,
+   "hors_sil_d0": 18,
+   "hors_sil_d1": 23,
+   "plus_clair_d0": 46,
+   "plus_clair_d1": 46,
+   "sur_noir_d0": 46,
+   "sur_noir_d1": 46,
+   "boite_d0": [
+    38,
+    44,
+    119,
+    106
+   ],
+   "boite_d1": [
+    38,
+    43,
+    119,
+    106
+   ]
+  },
+  "incendiaire/b10": {
+   "niveau": 0.1,
+   "sil_d0": 1879,
+   "sil_d1": 1914,
+   "vis_d0": 1192,
+   "vis_d1": 1228,
+   "part_d0": 0.634,
+   "part_d1": 0.642,
+   "sil_d0_seul": 23,
+   "sil_d1_seul": 58,
+   "diff_n": 103,
+   "diff_max": 11,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 25,
+   "hors_sil_d1": 14,
+   "plus_clair_d0": 9,
+   "plus_clair_d1": 9,
+   "sur_noir_d0": 9,
+   "sur_noir_d1": 9,
+   "boite_d0": [
+    39,
+    44,
+    119,
+    107
+   ],
+   "boite_d1": [
+    39,
+    43,
+    119,
+    107
+   ]
+  },
+  "incendiaire/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1653,
+   "sil_d1": 1690,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 26,
+   "sil_d1_seul": 63,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    40,
+    44,
+    91,
+    106
+   ],
+   "boite_d1": [
+    40,
+    43,
+    91,
+    106
+   ]
+  },
+  "incendiaire/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1981,
+   "sil_d1": 1990,
+   "vis_d0": 1981,
+   "vis_d1": 1990,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 4,
+   "sil_d1_seul": 13,
+   "diff_n": 1294,
+   "diff_max": 162,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 37,
+   "hors_sil_d1": 13,
+   "plus_clair_d0": 1961,
+   "plus_clair_d1": 1959,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    34,
+    43,
+    84,
+    102
+   ],
+   "boite_d1": [
+    34,
+    43,
+    84,
+    102
+   ]
+  },
+  "sentinelle/mi": {
+   "niveau": 0.273,
+   "sil_d0": 1801,
+   "sil_d1": 1808,
+   "vis_d0": 1278,
+   "vis_d1": 1284,
+   "part_d0": 0.71,
+   "part_d1": 0.71,
+   "sil_d0_seul": 2,
+   "sil_d1_seul": 9,
+   "diff_n": 280,
+   "diff_max": 35,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 52,
+   "hors_sil_d1": 52,
+   "plus_clair_d0": 50,
+   "plus_clair_d1": 50,
+   "sur_noir_d0": 48,
+   "sur_noir_d1": 48,
+   "boite_d0": [
+    38,
+    45,
+    119,
+    106
+   ],
+   "boite_d1": [
+    38,
+    45,
+    119,
+    106
+   ]
+  },
+  "sentinelle/b15": {
+   "niveau": 0.146,
+   "sil_d0": 1795,
+   "sil_d1": 1798,
+   "vis_d0": 1237,
+   "vis_d1": 1240,
+   "part_d0": 0.689,
+   "part_d1": 0.69,
+   "sil_d0_seul": 16,
+   "sil_d1_seul": 19,
+   "diff_n": 431,
+   "diff_max": 15,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 1,
+   "hors_sil_d0": 7,
+   "hors_sil_d1": 42,
+   "plus_clair_d0": 43,
+   "plus_clair_d1": 44,
+   "sur_noir_d0": 43,
+   "sur_noir_d1": 44,
+   "boite_d0": [
+    38,
+    44,
+    117,
+    105
+   ],
+   "boite_d1": [
+    38,
+    44,
+    117,
+    105
+   ]
+  },
+  "sentinelle/b10": {
+   "niveau": 0.097,
+   "sil_d0": 1803,
+   "sil_d1": 1812,
+   "vis_d0": 1194,
+   "vis_d1": 1202,
+   "part_d0": 0.662,
+   "part_d1": 0.663,
+   "sil_d0_seul": 2,
+   "sil_d1_seul": 11,
+   "diff_n": 363,
+   "diff_max": 12,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 22,
+   "hors_sil_d1": 47,
+   "plus_clair_d0": 9,
+   "plus_clair_d1": 9,
+   "sur_noir_d0": 9,
+   "sur_noir_d1": 9,
+   "boite_d0": [
+    39,
+    45,
+    119,
+    107
+   ],
+   "boite_d1": [
+    39,
+    45,
+    119,
+    107
+   ]
+  },
+  "sentinelle/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1605,
+   "sil_d1": 1629,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 11,
+   "sil_d1_seul": 35,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    41,
+    44,
+    104,
+    106
+   ],
+   "boite_d1": [
+    41,
+    44,
+    104,
+    106
+   ]
+  },
+  "sentinelle/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1971,
+   "sil_d1": 1964,
+   "vis_d0": 1971,
+   "vis_d1": 1964,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 16,
+   "sil_d1_seul": 9,
+   "diff_n": 1094,
+   "diff_max": 80,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 15,
+   "hors_sil_d1": 20,
+   "plus_clair_d0": 1944,
+   "plus_clair_d1": 1930,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    35,
+    43,
+    83,
+    106
+   ],
+   "boite_d1": [
+    35,
+    44,
+    83,
+    106
+   ]
+  },
+  "allumeur/mi": {
+   "niveau": 0.279,
+   "sil_d0": 2094,
+   "sil_d1": 2098,
+   "vis_d0": 1367,
+   "vis_d1": 1370,
+   "part_d0": 0.653,
+   "part_d1": 0.653,
+   "sil_d0_seul": 6,
+   "sil_d1_seul": 10,
+   "diff_n": 503,
+   "diff_max": 68,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 1,
+   "hors_sil_d0": 5,
+   "hors_sil_d1": 45,
+   "plus_clair_d0": 60,
+   "plus_clair_d1": 60,
+   "sur_noir_d0": 49,
+   "sur_noir_d1": 49,
+   "boite_d0": [
+    38,
+    44,
+    119,
+    106
+   ],
+   "boite_d1": [
+    38,
+    44,
+    119,
+    106
+   ]
+  },
+  "allumeur/b15": {
+   "niveau": 0.15,
+   "sil_d0": 2100,
+   "sil_d1": 2114,
+   "vis_d0": 1341,
+   "vis_d1": 1355,
+   "part_d0": 0.639,
+   "part_d1": 0.641,
+   "sil_d0_seul": 9,
+   "sil_d1_seul": 23,
+   "diff_n": 450,
+   "diff_max": 15,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 44,
+   "hors_sil_d1": 48,
+   "plus_clair_d0": 54,
+   "plus_clair_d1": 54,
+   "sur_noir_d0": 51,
+   "sur_noir_d1": 51,
+   "boite_d0": [
+    38,
+    44,
+    119,
+    106
+   ],
+   "boite_d1": [
+    38,
+    44,
+    119,
+    106
+   ]
+  },
+  "allumeur/b10": {
+   "niveau": 0.1,
+   "sil_d0": 2084,
+   "sil_d1": 2099,
+   "vis_d0": 1289,
+   "vis_d1": 1302,
+   "part_d0": 0.619,
+   "part_d1": 0.62,
+   "sil_d0_seul": 10,
+   "sil_d1_seul": 25,
+   "diff_n": 117,
+   "diff_max": 11,
+   "noir_d1_seul": 2,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 44,
+   "hors_sil_d1": 28,
+   "plus_clair_d0": 12,
+   "plus_clair_d1": 12,
+   "sur_noir_d0": 12,
+   "sur_noir_d1": 12,
+   "boite_d0": [
+    39,
+    44,
+    119,
+    107
+   ],
+   "boite_d1": [
+    39,
+    44,
+    119,
+    107
+   ]
+  },
+  "allumeur/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1767,
+   "sil_d1": 1775,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 5,
+   "sil_d1_seul": 13,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    40,
+    43,
+    99,
+    106
+   ],
+   "boite_d1": [
+    40,
+    43,
+    99,
+    106
+   ]
+  },
+  "allumeur/soi": {
+   "niveau": 0.92,
+   "sil_d0": 2065,
+   "sil_d1": 2069,
+   "vis_d0": 2065,
+   "vis_d1": 2069,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 4,
+   "sil_d1_seul": 8,
+   "diff_n": 1332,
+   "diff_max": 125,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 46,
+   "hors_sil_d1": 5,
+   "plus_clair_d0": 2039,
+   "plus_clair_d1": 2060,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    34,
+    43,
+    85,
+    103
+   ],
+   "boite_d1": [
+    34,
+    43,
+    85,
+    103
+   ]
+  },
+  "spectre/mi": {
+   "niveau": 0.286,
+   "sil_d0": 1717,
+   "sil_d1": 1739,
+   "vis_d0": 1338,
+   "vis_d1": 1359,
+   "part_d0": 0.779,
+   "part_d1": 0.781,
+   "sil_d0_seul": 16,
+   "sil_d1_seul": 38,
+   "diff_n": 416,
+   "diff_max": 31,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 48,
+   "hors_sil_d1": 10,
+   "plus_clair_d0": 202,
+   "plus_clair_d1": 201,
+   "sur_noir_d0": 149,
+   "sur_noir_d1": 149,
+   "boite_d0": [
+    36,
+    45,
+    102,
+    149
+   ],
+   "boite_d1": [
+    36,
+    44,
+    102,
+    149
+   ]
+  },
+  "spectre/b15": {
+   "niveau": 0.15,
+   "sil_d0": 1617,
+   "sil_d1": 1642,
+   "vis_d0": 1216,
+   "vis_d1": 1241,
+   "part_d0": 0.752,
+   "part_d1": 0.756,
+   "sil_d0_seul": 8,
+   "sil_d1_seul": 33,
+   "diff_n": 349,
+   "diff_max": 15,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 36,
+   "hors_sil_d1": 8,
+   "plus_clair_d0": 79,
+   "plus_clair_d1": 79,
+   "sur_noir_d0": 72,
+   "sur_noir_d1": 72,
+   "boite_d0": [
+    37,
+    44,
+    106,
+    105
+   ],
+   "boite_d1": [
+    37,
+    44,
+    106,
+    105
+   ]
+  },
+  "spectre/b10": {
+   "niveau": 0.104,
+   "sil_d0": 1638,
+   "sil_d1": 1660,
+   "vis_d0": 1210,
+   "vis_d1": 1232,
+   "part_d0": 0.739,
+   "part_d1": 0.742,
+   "sil_d0_seul": 13,
+   "sil_d1_seul": 35,
+   "diff_n": 275,
+   "diff_max": 11,
+   "noir_d1_seul": 1,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 35,
+   "hors_sil_d1": 21,
+   "plus_clair_d0": 94,
+   "plus_clair_d1": 94,
+   "sur_noir_d0": 93,
+   "sur_noir_d1": 93,
+   "boite_d0": [
+    36,
+    45,
+    99,
+    128
+   ],
+   "boite_d1": [
+    36,
+    44,
+    99,
+    128
+   ]
+  },
+  "spectre/noir": {
+   "niveau": 0.0,
+   "sil_d0": 1554,
+   "sil_d1": 1572,
+   "vis_d0": 0,
+   "vis_d1": 0,
+   "part_d0": 0.0,
+   "part_d1": 0.0,
+   "sil_d0_seul": 15,
+   "sil_d1_seul": 33,
+   "diff_n": 0,
+   "diff_max": 0,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 0,
+   "hors_sil_d1": 0,
+   "plus_clair_d0": 0,
+   "plus_clair_d1": 0,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    41,
+    44,
+    96,
+    105
+   ],
+   "boite_d1": [
+    41,
+    44,
+    96,
+    105
+   ]
+  },
+  "spectre/soi": {
+   "niveau": 0.92,
+   "sil_d0": 1873,
+   "sil_d1": 1854,
+   "vis_d0": 1873,
+   "vis_d1": 1854,
+   "part_d0": 1.0,
+   "part_d1": 1.0,
+   "sil_d0_seul": 45,
+   "sil_d1_seul": 26,
+   "diff_n": 273,
+   "diff_max": 33,
+   "noir_d1_seul": 0,
+   "noir_d0_seul": 0,
+   "hors_sil_d0": 1,
+   "hors_sil_d1": 42,
+   "plus_clair_d0": 1870,
+   "plus_clair_d1": 1829,
+   "sur_noir_d0": 0,
+   "sur_noir_d1": 0,
+   "boite_d0": [
+    36,
+    44,
+    83,
+    102
+   ],
+   "boite_d1": [
+    36,
+    45,
+    83,
+    102
+   ]
+  }
+ },
+ "controle": {
+  "pistolet/mi/ctl": [
+   503,
+   82,
+   1613
+  ],
+  "pistolet/mi/ctl2": [
+   418,
+   42,
+   1378
+  ],
+  "pistolet/b10/ctl": [
+   174,
+   8,
+   929
+  ],
+  "fusil/mi/ctl": [
+   383,
+   36,
+   1262
+  ],
+  "fusil/mi/ctl2": [
+   346,
+   36,
+   1174
+  ],
+  "fusil/b10/ctl": [
+   176,
+   9,
+   921
+  ],
+  "pompe/mi/ctl": [
+   466,
+   58,
+   1507
+  ],
+  "pompe/mi/ctl2": [
+   476,
+   65,
+   1538
+  ],
+  "pompe/b10/ctl": [
+   315,
+   10,
+   1288
+  ],
+  "arbalete/mi/ctl": [
+   444,
+   51,
+   1465
+  ],
+  "arbalete/mi/ctl2": [
+   469,
+   51,
+   1537
+  ],
+  "arbalete/b10/ctl": [
+   69,
+   8,
+   520
+  ],
+  "occulteur/mi/ctl": [
+   392,
+   40,
+   1364
+  ],
+  "occulteur/mi/ctl2": [
+   69,
+   14,
+   284
+  ],
+  "occulteur/b10/ctl": [
+   339,
+   13,
+   1414
+  ],
+  "fumiste/mi/ctl": [
+   349,
+   34,
+   1258
+  ],
+  "fumiste/mi/ctl2": [
+   433,
+   46,
+   1506
+  ],
+  "fumiste/b10/ctl": [
+   354,
+   12,
+   1445
+  ],
+  "incendiaire/mi/ctl": [
+   527,
+   69,
+   1607
+  ],
+  "incendiaire/mi/ctl2": [
+   529,
+   69,
+   1622
+  ],
+  "incendiaire/b10/ctl": [
+   324,
+   12,
+   1322
+  ],
+  "sentinelle/mi/ctl": [
+   246,
+   35,
+   861
+  ],
+  "sentinelle/mi/ctl2": [
+   526,
+   57,
+   1602
+  ],
+  "sentinelle/b10/ctl": [
+   337,
+   12,
+   1337
+  ],
+  "allumeur/mi/ctl": [
+   533,
+   61,
+   1581
+  ],
+  "allumeur/mi/ctl2": [
+   367,
+   30,
+   1149
+  ],
+  "allumeur/b10/ctl": [
+   368,
+   12,
+   1378
+  ],
+  "spectre/mi/ctl": [
+   413,
+   41,
+   1238
+  ],
+  "spectre/mi/ctl2": [
+   227,
+   33,
+   774
+  ],
+  "spectre/b10/ctl": [
+   262,
+   9,
+   1166
+  ]
+ },
+ "positions": {
+  "b10": [
+   705.62939453125,
+   551.526611328125
+  ],
+  "b15": [
+   677.402770996094,
+   541.364990234375
+  ],
+  "mi": [
+   582.020324707031,
+   507.027313232422
+  ],
+  "noir": [
+   826.651062011719,
+   595.094360351562
+  ],
+  "releve": [
+   [
+    153.6,
+    0.279411771800369
+   ],
+   [
+    161.6,
+    0.266850497107953
+   ],
+   [
+    169.6,
+    0.256372555624694
+   ],
+   [
+    177.6,
+    0.246139712631702
+   ],
+   [
+    185.6,
+    0.237254908774048
+   ],
+   [
+    193.6,
+    0.227512260433286
+   ],
+   [
+    201.6,
+    0.218566179741174
+   ],
+   [
+    209.6,
+    0.214889709837735
+   ],
+   [
+    217.6,
+    0.204779416322708
+   ],
+   [
+    225.6,
+    0.189338240306824
+   ],
+   [
+    233.6,
+    0.178370103705674
+   ],
+   [
+    241.6,
+    0.171384810004383
+   ],
+   [
+    249.6,
+    0.155024515232071
+   ],
+   [
+    257.6,
+    0.14705882803537
+   ],
+   [
+    265.6,
+    0.130882356781512
+   ],
+   [
+    273.6,
+    0.120772060705349
+   ],
+   [
+    281.6,
+    0.106250001816079
+   ],
+   [
+    289.6,
+    0.0941789242206141
+   ],
+   [
+    297.6,
+    0.0808210810646415
+   ],
+   [
+    305.6,
+    0.0667279434856027
+   ],
+   [
+    313.6,
+    0.0537990203592926
+   ],
+   [
+    321.6,
+    0.0400122559804004
+   ],
+   [
+    329.6,
+    0.0265931381945848
+   ],
+   [
+    337.6,
+    0.0141544122161577
+   ],
+   [
+    345.6,
+    0.00386029429500923
+   ],
+   [
+    353.6,
+    0.0
+   ]
+  ]
+ },
+ "commit": "e0ab2e3"
+}

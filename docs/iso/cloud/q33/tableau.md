@@ -1,0 +1,54 @@
+| Classe | Scène | niveau | silhouette d0 → d1 | visibles d0 → d1 | part d0 → d1 | contour (d0 seul / d1 seul) | écart d0/d1 (px, max) | noir d1 seul / d0 seul | plus clair que le sol d0/d1 | allumé sur sol noir d0/d1 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Parasite | mi | 0,28 | 1539 → 1545 | 1190 → 1193 | 0,77 → 0,77 | 29 / 35 | 505, 82 | 0 / 0 | 51 / 51 | 48 / 48 |
+| Parasite | b15 | 0,15 | 1541 → 1545 | 1189 → 1191 | 0,77 → 0,77 | 37 / 41 | 348, 18 | 0 / 0 | 45 / 45 | 45 / 45 |
+| Parasite | b10 | 0,10 | 1531 → 1568 | 1135 → 1153 | 0,74 → 0,73 | 6 / 43 | 247, 12 | 12 / 0 | 9 / 9 | 9 / 9 |
+| Parasite | noir | 0,00 | 1545 → 1562 | 0 → 0 | 0,00 → 0,00 | 10 / 27 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Parasite | soi | 0,92 | 1883 → 1906 | 1883 → 1906 | 1,00 → 1,00 | 12 / 35 | 1045, 80 | 0 / 0 | 1872 / 1877 | 0 / 0 |
+| Illusionniste | mi | 0,28 | 1944 → 1945 | 1257 → 1258 | 0,65 → 0,65 | 17 / 18 | 393, 36 | 0 / 0 | 42 / 42 | 39 / 39 |
+| Illusionniste | b15 | 0,15 | 1966 → 1979 | 1244 → 1257 | 0,63 → 0,64 | 4 / 17 | 177, 15 | 1 / 0 | 46 / 45 | 46 / 45 |
+| Illusionniste | b10 | 0,10 | 1942 → 1956 | 1207 → 1222 | 0,62 → 0,62 | 13 / 27 | 310, 10 | 0 / 0 | 9 / 9 | 9 / 9 |
+| Illusionniste | noir | 0,00 | 1613 → 1631 | 1 → 1 | 0,00 → 0,00 | 18 / 36 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Illusionniste | soi | 0,92 | 1967 → 1975 | 1967 → 1975 | 1,00 → 1,00 | 8 / 16 | 1241, 161 | 0 / 0 | 1941 / 1946 | 0 / 0 |
+| Terrassier | mi | 0,25 | 2353 → 2370 | 1372 → 1392 | 0,58 → 0,59 | 23 / 40 | 303, 35 | 0 / 0 | 55 / 55 | 50 / 50 |
+| Terrassier | b15 | 0,14 | 2377 → 2385 | 1323 → 1331 | 0,56 → 0,56 | 5 / 13 | 184, 10 | 0 / 0 | 41 / 41 | 41 / 41 |
+| Terrassier | b10 | 0,09 | 2174 → 2166 | 1264 → 1255 | 0,58 → 0,58 | 16 / 8 | 211, 9 | 1 / 0 | 18 / 18 | 18 / 18 |
+| Terrassier | noir | 0,00 | 1759 → 1737 | 0 → 0 | 0,00 → 0,00 | 45 / 23 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Terrassier | soi | 0,92 | 2132 → 2145 | 2132 → 2145 | 1,00 → 1,00 | 20 / 33 | 1122, 121 | 0 / 0 | 2116 / 2112 | 0 / 0 |
+| Braconnier | mi | 0,26 | 1942 → 1966 | 1313 → 1339 | 0,68 → 0,68 | 14 / 38 | 430, 54 | 0 / 0 | 102 / 103 | 83 / 83 |
+| Braconnier | b15 | 0,14 | 1928 → 1957 | 1286 → 1317 | 0,67 → 0,67 | 26 / 55 | 176, 15 | 0 / 0 | 83 / 83 | 78 / 78 |
+| Braconnier | b10 | 0,09 | 1898 → 1926 | 1226 → 1255 | 0,65 → 0,65 | 21 / 49 | 299, 13 | 0 / 0 | 38 / 38 | 35 / 35 |
+| Braconnier | noir | 0,00 | 1603 → 1632 | 1 → 1 | 0,00 → 0,00 | 18 / 47 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Braconnier | soi | 0,92 | 1962 → 1972 | 1962 → 1972 | 1,00 → 1,00 | 3 / 13 | 1121, 81 | 0 / 0 | 1960 / 1960 | 0 / 0 |
+| Occulteur | mi | 0,27 | 1839 → 1825 | 1268 → 1252 | 0,69 → 0,69 | 43 / 29 | 124, 44 | 0 / 0 | 61 / 61 | 54 / 54 |
+| Occulteur | b15 | 0,15 | 1818 → 1806 | 1202 → 1189 | 0,66 → 0,66 | 46 / 34 | 425, 19 | 0 / 2 | 51 / 51 | 51 / 51 |
+| Occulteur | b10 | 0,10 | 1665 → 1666 | 1121 → 1119 | 0,67 → 0,67 | 25 / 26 | 351, 13 | 1 / 1 | 16 / 16 | 16 / 16 |
+| Occulteur | noir | 0,00 | 1515 → 1511 | 0 → 0 | 0,00 → 0,00 | 33 / 29 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Occulteur | soi | 0,92 | 1821 → 1837 | 1821 → 1837 | 1,00 → 1,00 | 21 / 37 | 985, 79 | 0 / 0 | 1813 / 1799 | 0 / 0 |
+| Fumiste | mi | 0,26 | 2178 → 2196 | 1273 → 1292 | 0,58 → 0,59 | 8 / 26 | 409, 58 | 0 / 0 | 53 / 53 | 47 / 47 |
+| Fumiste | b15 | 0,14 | 2207 → 2211 | 1232 → 1235 | 0,56 → 0,56 | 5 / 9 | 380, 15 | 1 / 0 | 39 / 39 | 39 / 39 |
+| Fumiste | b10 | 0,10 | 2054 → 2045 | 1210 → 1196 | 0,59 → 0,58 | 31 / 22 | 362, 12 | 2 / 0 | 15 / 15 | 15 / 15 |
+| Fumiste | noir | 0,00 | 1663 → 1644 | 0 → 0 | 0,00 → 0,00 | 47 / 28 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Fumiste | soi | 0,92 | 2057 → 2078 | 2057 → 2078 | 1,00 → 1,00 | 18 / 39 | 1162, 80 | 0 / 0 | 2041 / 2046 | 0 / 0 |
+| Incendiaire | mi | 0,28 | 1953 → 1957 | 1290 → 1292 | 0,66 → 0,66 | 5 / 9 | 553, 69 | 0 / 0 | 42 / 41 | 40 / 40 |
+| Incendiaire | b15 | 0,15 | 1914 → 1939 | 1257 → 1283 | 0,66 → 0,66 | 13 / 38 | 511, 20 | 0 / 1 | 46 / 46 | 46 / 46 |
+| Incendiaire | b10 | 0,10 | 1879 → 1914 | 1192 → 1228 | 0,63 → 0,64 | 23 / 58 | 103, 11 | 1 / 0 | 9 / 9 | 9 / 9 |
+| Incendiaire | noir | 0,00 | 1653 → 1690 | 0 → 0 | 0,00 → 0,00 | 26 / 63 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Incendiaire | soi | 0,92 | 1981 → 1990 | 1981 → 1990 | 1,00 → 1,00 | 4 / 13 | 1294, 162 | 0 / 0 | 1961 / 1959 | 0 / 0 |
+| Sentinelle | mi | 0,27 | 1801 → 1808 | 1278 → 1284 | 0,71 → 0,71 | 2 / 9 | 280, 35 | 0 / 0 | 50 / 50 | 48 / 48 |
+| Sentinelle | b15 | 0,15 | 1795 → 1798 | 1237 → 1240 | 0,69 → 0,69 | 16 / 19 | 431, 15 | 0 / 1 | 43 / 44 | 43 / 44 |
+| Sentinelle | b10 | 0,10 | 1803 → 1812 | 1194 → 1202 | 0,66 → 0,66 | 2 / 11 | 363, 12 | 0 / 0 | 9 / 9 | 9 / 9 |
+| Sentinelle | noir | 0,00 | 1605 → 1629 | 0 → 0 | 0,00 → 0,00 | 11 / 35 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Sentinelle | soi | 0,92 | 1971 → 1964 | 1971 → 1964 | 1,00 → 1,00 | 16 / 9 | 1094, 80 | 0 / 0 | 1944 / 1930 | 0 / 0 |
+| Allumeur | mi | 0,28 | 2094 → 2098 | 1367 → 1370 | 0,65 → 0,65 | 6 / 10 | 503, 68 | 0 / 1 | 60 / 60 | 49 / 49 |
+| Allumeur | b15 | 0,15 | 2100 → 2114 | 1341 → 1355 | 0,64 → 0,64 | 9 / 23 | 450, 15 | 0 / 0 | 54 / 54 | 51 / 51 |
+| Allumeur | b10 | 0,10 | 2084 → 2099 | 1289 → 1302 | 0,62 → 0,62 | 10 / 25 | 117, 11 | 2 / 0 | 12 / 12 | 12 / 12 |
+| Allumeur | noir | 0,00 | 1767 → 1775 | 0 → 0 | 0,00 → 0,00 | 5 / 13 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Allumeur | soi | 0,92 | 2065 → 2069 | 2065 → 2069 | 1,00 → 1,00 | 4 / 8 | 1332, 125 | 0 / 0 | 2039 / 2060 | 0 / 0 |
+| Spectre | mi | 0,29 | 1717 → 1739 | 1338 → 1359 | 0,78 → 0,78 | 16 / 38 | 416, 31 | 1 / 0 | 202 / 201 | 149 / 149 |
+| Spectre | b15 | 0,15 | 1617 → 1642 | 1216 → 1241 | 0,75 → 0,76 | 8 / 33 | 349, 15 | 0 / 0 | 79 / 79 | 72 / 72 |
+| Spectre | b10 | 0,10 | 1638 → 1660 | 1210 → 1232 | 0,74 → 0,74 | 13 / 35 | 275, 11 | 1 / 0 | 94 / 94 | 93 / 93 |
+| Spectre | noir | 0,00 | 1554 → 1572 | 0 → 0 | 0,00 → 0,00 | 15 / 33 | 0, 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Spectre | soi | 0,92 | 1873 → 1854 | 1873 → 1854 | 1,00 → 1,00 | 45 / 26 | 273, 33 | 0 / 0 | 1870 / 1829 | 0 / 0 |
+
+ Contrôle (mi, d0 deux fois) : pistolet/mi/ctl 503 px autour du corps (max 82), 1613 sur l'image entière, pistolet/mi/ctl2 418 px autour du corps (max 42), 1378 sur l'image entière, pistolet/b10/ctl 174 px autour du corps (max 8), 929 sur l'image entière, fusil/mi/ctl 383 px autour du corps (max 36), 1262 sur l'image entière, fusil/mi/ctl2 346 px autour du corps (max 36), 1174 sur l'image entière, fusil/b10/ctl 176 px autour du corps (max 9), 921 sur l'image entière, pompe/mi/ctl 466 px autour du corps (max 58), 1507 sur l'image entière, pompe/mi/ctl2 476 px autour du corps (max 65), 1538 sur l'image entière, pompe/b10/ctl 315 px autour du corps (max 10), 1288 sur l'image entière, arbalete/mi/ctl 444 px autour du corps (max 51), 1465 sur l'image entière, arbalete/mi/ctl2 469 px autour du corps (max 51), 1537 sur l'image entière, arbalete/b10/ctl 69 px autour du corps (max 8), 520 sur l'image entière, occulteur/mi/ctl 392 px autour du corps (max 40), 1364 sur l'image entière, occulteur/mi/ctl2 69 px autour du corps (max 14), 284 sur l'image entière, occulteur/b10/ctl 339 px autour du corps (max 13), 1414 sur l'image entière, fumiste/mi/ctl 349 px autour du corps (max 34), 1258 sur l'image entière, fumiste/mi/ctl2 433 px autour du corps (max 46), 1506 sur l'image entière, fumiste/b10/ctl 354 px autour du corps (max 12), 1445 sur l'image entière, incendiaire/mi/ctl 527 px autour du corps (max 69), 1607 sur l'image entière, incendiaire/mi/ctl2 529 px autour du corps (max 69), 1622 sur l'image entière, incendiaire/b10/ctl 324 px autour du corps (max 12), 1322 sur l'image entière, sentinelle/mi/ctl 246 px autour du corps (max 35), 861 sur l'image entière, sentinelle/mi/ctl2 526 px autour du corps (max 57), 1602 sur l'image entière, sentinelle/b10/ctl 337 px autour du corps (max 12), 1337 sur l'image entière, allumeur/mi/ctl 533 px autour du corps (max 61), 1581 sur l'image entière, allumeur/mi/ctl2 367 px autour du corps (max 30), 1149 sur l'image entière, allumeur/b10/ctl 368 px autour du corps (max 12), 1378 sur l'image entière, spectre/mi/ctl 413 px autour du corps (max 41), 1238 sur l'image entière, spectre/mi/ctl2 227 px autour du corps (max 33), 774 sur l'image entière, spectre/b10/ctl 262 px autour du corps (max 9), 1166 sur l'image entière
