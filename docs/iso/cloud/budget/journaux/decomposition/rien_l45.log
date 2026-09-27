@@ -1,121 +1,12 @@
-Shutdown handler: initialize.
-Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
-WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
-     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
-OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
-libpulse.so.0: cannot open shared object file: No such file or directory
-libpulse.so.0: cannot open shared object file: No such file or directory
-ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
-ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
-ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
-ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
-ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
-ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
-ALSA lib conf.c:5727:(snd_config_expand) Evaluate error: No such file or directory
-ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
-ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
-   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
-WARNING: All audio drivers failed, falling back to the dummy driver.
-     at: initialize (servers/audio/audio_server.cpp:258)
-
-Connected joypads: []
-Assigning Device 0 to Player 1
-Assigning Device 1 to Player 2
-[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
-RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
 === Le budget de rendu — configuration « rien » ===
   arguments : --no-eos --lacet=45 --config=rien --scenes=pompe --sans-fusee-coeur --pompe-sans-tir --pompe-sans-fusee --pompe-sans-torches
-  la vue est restée en 1280x720 (pas de gestionnaire de fenêtres ?) : retaillée à la main
-  fenêtre : 1920x1080 (demandé 1920x1080)
-  horloge fixe : 0.0167 s de jeu par image — repos et attentes comptés en images
 [fusée cœur] éteint (--sans-fusee-coeur)
 [fumée masque] éteint (le défaut depuis le 2026-09-26 ; --fumee-masque l'allume) — le shader des volumes d'avant
-[usure] allumée — variante USURE_ESSAI posée (#define USURE_ESSAI dans son code)
   lacet joué (J1) : 45.0°
---- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-27T00:50:09) ---
-[audio] auditeurs : SubViewport1, SubViewport2
-[audio] oreilles  : principale=oui seconde=oui
-[audio]   principale sur Player1, courante=true, viewport=SubViewport1
-[audio] pool chez : Players
-[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
-[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
-[audio] bus Master :    COUPE, +0.0 dB, 1 effet(s)
-[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
-[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
-[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
-[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
-[audio] replis hors physique : 0
-[audio] crete Master : G -200.0 dB / D -200.0 dB
-[audio] crete SFX : G -200.0 dB / D -200.0 dB
-[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
-[audio] sons positionnels lances : 0
-[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
-[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
-
-[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
-[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
   armes équipées : ["pompe", "pompe"] (voulue : pompe)
   pompe : tir non, fusée non, torches non
-[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false
-[iso] peinture retirée : 2 rendus en 155.5 s (0.01 par seconde), 0 traces peintes
-[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
-[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
-[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
 BUDGET	{"compteurs":{"items2d.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1":{"max":102,"med":102,"min":102,"moy":102.0,"p90":102},"items2d.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2":{"max":3,"med":3,"min":3,"moy":3.0,"p90":3},"items2d.Presentation3D/CapteurVue1Corps1":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/CapteurVue1Corps2":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/PeintureIso":{"max":7,"med":7,"min":7,"moy":7.0,"p90":7},"items2d.racine":{"max":13,"med":13,"min":13,"moy":13.0,"p90":13},"jeu.enfants_bullet_container":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"lumieres.2d":{"max":3,"med":3,"min":2,"moy":2.78,"p90":3},"lumieres.2d_ombre":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"lumieres.3d":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"lumieres.3d_ombre":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"mem.tampons_mo":{"max":12.43,"med":12.43,"min":12.43,"moy":12.43,"p90":12.43},"mem.textures_mo":{"max":390.48,"med":390.48,"min":390.48,"moy":390.48,"p90":390.48},"mem.video_mo":{"max":402.91,"med":402.91,"min":402.91,"moy":402.91,"p90":402.91},"occluders.2d":{"max":8,"med":8,"min":8,"moy":8.0,"p90":8},"particules.emetteurs":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"passes.backbuffercopy":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"passes.copies_ecran":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"passes.vues_rendues":{"max":4,"med":4,"min":4,"moy":4.0,"p90":4},"somme_vues.appels":{"max":83,"med":77,"min":77,"moy":78.35,"p90":83},"somme_vues.objets":{"max":1099,"med":1099,"min":1099,"moy":1099.0,"p90":1099},"somme_vues.primitives":{"max":6170,"med":6170,"min":6170,"moy":6170.0,"p90":6170},"total.appels":{"max":83,"med":77,"min":77,"moy":78.35,"p90":83},"total.objets":{"max":1099,"med":1099,"min":1099,"moy":1099.0,"p90":1099},"total.primitives":{"max":6170,"med":6170,"min":6170,"moy":6170.0,"p90":6170},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.canevas.appels":{"max":19,"med":13,"min":13,"moy":14.35,"p90":19},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.canevas.primitives":{"max":4386,"med":4386,"min":4386,"moy":4386.0,"p90":4386},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/CapteurVue1Corps1.canevas.primitives":{"max":30,"med":30,"min":30,"moy":30.0,"p90":30},"vue.Presentation3D/CapteurVue1Corps1.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/CapteurVue1Corps2.canevas.primitives":{"max":30,"med":30,"min":30,"moy":30.0,"p90":30},"vue.Presentation3D/CapteurVue1Corps2.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.racine.canevas.appels":{"max":23,"med":23,"min":23,"moy":23.0,"p90":23},"vue.racine.canevas.primitives":{"max":1286,"med":1286,"min":1286,"moy":1286.0,"p90":1286},"vue.racine.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.racine.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.racine.visible.appels":{"max":39,"med":39,"min":39,"moy":39.0,"p90":39},"vue.racine.visible.primitives":{"max":438,"med":438,"min":438,"moy":438.0,"p90":438}},"config":"rien","famille":"pompe","fenetre":[1920,1080],"images":120,"j1":[0.0,0.0],"j2":[0.0,0.0],"lacet":45.0,"passes":{"copies_ecran":["voile_eblouissement_calme.gdshader @ racine"],"vues":[{"canevas":[23,1286,23],"ombres":[0,0,0],"rendue":true,"taille":[1920,1080],"visible":[39,438,39],"vue":"racine"},{"rendue":false,"taille":[1190,1190],"vue":"Presentation3D/PeintureIso"},{"canevas":[1,30,1],"ombres":[0,0,0],"rendue":true,"taille":[256,256],"visible":[0,0,0],"vue":"Presentation3D/CapteurVue1Corps2"},{"canevas":[1,30,1],"ombres":[0,0,0],"rendue":true,"taille":[256,256],"visible":[0,0,0],"vue":"Presentation3D/CapteurVue1Corps1"},{"rendue":false,"taille":[958,1080],"vue":"Presentation3D/VueIso2"},{"rendue":false,"taille":[957,1080],"vue":"Presentation3D/VueIso1"},{"rendue":false,"taille":[958,1080],"vue":"Budget/Main/SplitScreen/ViewportContainer2/SubViewport2"},{"canevas":[13,4386,1035],"ombres":[0,0,0],"rendue":true,"taille":[1920,1080],"visible":[0,0,0],"vue":"Budget/Main/SplitScreen/ViewportContainer1/SubViewport1"}]},"scene":"pompe_sous_fusee:default","vue":"unique"}
   · pompe / pompe_sous_fusee:default / unique : 77 appels (min 77, max 83)
-[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=true
-[iso] peinture retirée : 1 rendus en 81.2 s (0.01 par seconde), 0 traces peintes
-[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 1 bascule(s))
-[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
-[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
 BUDGET	{"compteurs":{"items2d.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1":{"max":102,"med":102,"min":102,"moy":102.0,"p90":102},"items2d.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/CapteurVue1Corps1":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/CapteurVue1Corps2":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/CapteurVue2Corps1":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/CapteurVue2Corps2":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"items2d.Presentation3D/PeintureIso":{"max":7,"med":7,"min":7,"moy":7.0,"p90":7},"items2d.Presentation3D/VueIso1":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"items2d.Presentation3D/VueIso2":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"items2d.racine":{"max":17,"med":17,"min":17,"moy":17.0,"p90":17},"jeu.enfants_bullet_container":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"lumieres.2d":{"max":3,"med":3,"min":3,"moy":3.0,"p90":3},"lumieres.2d_ombre":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"lumieres.3d":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"lumieres.3d_ombre":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"mem.tampons_mo":{"max":12.43,"med":12.43,"min":12.43,"moy":12.43,"p90":12.43},"mem.textures_mo":{"max":320.27,"med":320.27,"min":320.27,"moy":320.27,"p90":320.27},"mem.video_mo":{"max":332.69,"med":332.69,"min":332.69,"moy":332.69,"p90":332.69},"occluders.2d":{"max":8,"med":8,"min":8,"moy":8.0,"p90":8},"particules.emetteurs":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"passes.backbuffercopy":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"passes.copies_ecran":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"passes.vues_rendues":{"max":9,"med":9,"min":9,"moy":9.0,"p90":9},"somme_vues.appels":{"max":136,"med":136,"min":136,"moy":136.0,"p90":136},"somme_vues.objets":{"max":2208,"med":2208,"min":2208,"moy":2208.0,"p90":2208},"somme_vues.primitives":{"max":11092,"med":11092,"min":11092,"moy":11092.0,"p90":11092},"total.appels":{"max":136,"med":136,"min":136,"moy":136.0,"p90":136},"total.objets":{"max":2208,"med":2208,"min":2208,"moy":2208.0,"p90":2208},"total.primitives":{"max":11092,"med":11092,"min":11092,"moy":11092.0,"p90":11092},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.canevas.appels":{"max":13,"med":13,"min":13,"moy":13.0,"p90":13},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.canevas.primitives":{"max":4386,"med":4386,"min":4386,"moy":4386.0,"p90":4386},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer1/SubViewport1.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2.canevas.appels":{"max":13,"med":13,"min":13,"moy":13.0,"p90":13},"vue.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2.canevas.primitives":{"max":4386,"med":4386,"min":4386,"moy":4386.0,"p90":4386},"vue.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Budget/Main/SplitScreen/ViewportContainer2/SubViewport2.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/CapteurVue1Corps1.canevas.primitives":{"max":30,"med":30,"min":30,"moy":30.0,"p90":30},"vue.Presentation3D/CapteurVue1Corps1.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps1.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/CapteurVue1Corps2.canevas.primitives":{"max":30,"med":30,"min":30,"moy":30.0,"p90":30},"vue.Presentation3D/CapteurVue1Corps2.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue1Corps2.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps1.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/CapteurVue2Corps1.canevas.primitives":{"max":30,"med":30,"min":30,"moy":30.0,"p90":30},"vue.Presentation3D/CapteurVue2Corps1.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps1.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps1.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps1.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps2.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/CapteurVue2Corps2.canevas.primitives":{"max":30,"med":30,"min":30,"moy":30.0,"p90":30},"vue.Presentation3D/CapteurVue2Corps2.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps2.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps2.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/CapteurVue2Corps2.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/VueIso1.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/VueIso1.canevas.primitives":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"vue.Presentation3D/VueIso1.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/VueIso1.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/VueIso1.visible.appels":{"max":39,"med":39,"min":39,"moy":39.0,"p90":39},"vue.Presentation3D/VueIso1.visible.primitives":{"max":438,"med":438,"min":438,"moy":438.0,"p90":438},"vue.Presentation3D/VueIso2.canevas.appels":{"max":1,"med":1,"min":1,"moy":1.0,"p90":1},"vue.Presentation3D/VueIso2.canevas.primitives":{"max":2,"med":2,"min":2,"moy":2.0,"p90":2},"vue.Presentation3D/VueIso2.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/VueIso2.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.Presentation3D/VueIso2.visible.appels":{"max":39,"med":39,"min":39,"moy":39.0,"p90":39},"vue.Presentation3D/VueIso2.visible.primitives":{"max":438,"med":438,"min":438,"moy":438.0,"p90":438},"vue.racine.canevas.appels":{"max":26,"med":26,"min":26,"moy":26.0,"p90":26},"vue.racine.canevas.primitives":{"max":1320,"med":1320,"min":1320,"moy":1320.0,"p90":1320},"vue.racine.ombres.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.racine.ombres.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.racine.visible.appels":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0},"vue.racine.visible.primitives":{"max":0,"med":0,"min":0,"moy":0.0,"p90":0}},"config":"rien","famille":"pompe","fenetre":[1920,1080],"images":120,"j1":[0.0,0.0],"j2":[0.0,0.0],"lacet":45.0,"passes":{"copies_ecran":["voile_eblouissement_calme.gdshader @ racine","voile_eblouissement_calme.gdshader @ racine"],"vues":[{"canevas":[26,1320,54],"ombres":[0,0,0],"rendue":true,"taille":[1920,1080],"visible":[0,0,0],"vue":"racine"},{"rendue":false,"taille":[1190,1190],"vue":"Presentation3D/PeintureIso"},{"canevas":[1,30,1],"ombres":[0,0,0],"rendue":true,"taille":[256,256],"visible":[0,0,0],"vue":"Presentation3D/CapteurVue2Corps2"},{"canevas":[1,30,1],"ombres":[0,0,0],"rendue":true,"taille":[256,256],"visible":[0,0,0],"vue":"Presentation3D/CapteurVue2Corps1"},{"canevas":[1,30,1],"ombres":[0,0,0],"rendue":true,"taille":[256,256],"visible":[0,0,0],"vue":"Presentation3D/CapteurVue1Corps2"},{"canevas":[1,30,1],"ombres":[0,0,0],"rendue":true,"taille":[256,256],"visible":[0,0,0],"vue":"Presentation3D/CapteurVue1Corps1"},{"canevas":[1,2,1],"ombres":[0,0,0],"rendue":true,"taille":[958,1080],"visible":[39,438,39],"vue":"Presentation3D/VueIso2"},{"canevas":[1,2,1],"ombres":[0,0,0],"rendue":true,"taille":[957,1080],"visible":[39,438,39],"vue":"Presentation3D/VueIso1"},{"canevas":[13,4386,1035],"ombres":[0,0,0],"rendue":true,"taille":[958,1080],"visible":[0,0,0],"vue":"Budget/Main/SplitScreen/ViewportContainer2/SubViewport2"},{"canevas":[13,4386,1035],"ombres":[0,0,0],"rendue":true,"taille":[957,1080],"visible":[0,0,0],"vue":"Budget/Main/SplitScreen/ViewportContainer1/SubViewport1"}]},"scene":"pompe_sous_fusee:default","vue":"scinde"}
   · pompe / pompe_sous_fusee:default / scinde : 136 appels (min 136, max 136)
 === fin du budget « rien » ===
-[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false
-[iso] peinture retirée : 1 rendus en 83.0 s (0.01 par seconde), 0 traces peintes
-[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 2 bascule(s))
-[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
-[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
-[iso] peinture retirée : 0 rendus en 0.9 s (0.00 par seconde), 0 traces peintes
-[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 3 bascule(s))
-ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
-   at: get_world_2d (scene/main/canvas_item.cpp:1267)
-   GDScript backtrace (most recent call first):
-       [0] diagnostic_ecoute (res://audio_manager.gd:2395)
-       [1] _tracer_ecoute (res://audio_manager.gd:2488)
-       [2] rendre_oreille (res://audio_manager.gd:2543)
---- ecoute : oreille rendue (2026-09-27T00:55:30) ---
-[audio] auditeurs : racine (SANS oreille — point fixe)
-[audio] oreilles  : principale=non seconde=non
-[audio] pool chez : Players
-[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
-[audio] l'auditeur est-il dans le monde du pool ? racine:NON
-[audio] bus Master :    actif, +0.0 dB, 1 effet(s)
-[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
-[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
-[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
-[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
-[audio] replis hors physique : 0
-[audio] crete Master : G -7.2 dB / D -5.6 dB
-[audio] crete SFX : G -200.0 dB / D -200.0 dB
-[audio] filtre SFX (EtouffementMonde) : coupure 5000 Hz   <<<< FERME, le bus est etouffe
-[audio] sons positionnels lances : 0
-[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
-[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
-
-WARNING: 2 RIDs of type "Canvas" were leaked.
-   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
-WARNING: 3 RIDs of type "CanvasItem" were leaked.
-   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
-ERROR: 1 shaders of type CanvasShaderGLES3 were never freed
-   at: ~ShaderGLES3 (drivers/gles3/shader_gles3.cpp:838)
-ERROR: Texture with GL ID of 103: leaked 1398100 bytes.
-   at: ~Utilities (drivers/gles3/storage/utilities.cpp:82)
-WARNING: 16 ObjectDB instances were leaked at exit (run with `--verbose` for details).
-   at: cleanup (core/object/object.cpp:2535)
-ERROR: 3 resources still in use at exit (run with --verbose for details).
-   at: clear (core/io/resource.cpp:822)
-ERROR: 1 RID allocations of type 'N5GLES38MaterialE' were leaked at exit.
-ERROR: 1 RID allocations of type 'N5GLES36ShaderE' were leaked at exit.
-ERROR: 1 RID allocations of type 'N5GLES37TextureE' were leaked at exit.
-Shutdown handler: cleanup.

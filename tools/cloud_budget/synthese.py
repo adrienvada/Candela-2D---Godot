@@ -112,7 +112,12 @@ def main():
                     print(f"| {c} | 6 cartes | " + " | ".join(cellules) + " |")
                 pompes = [d for k, d in par.items() if k[0] == c and k[1] == "pompe" and k[3] == vue and k[4] == lacet]
                 for d in pompes:
-                    print(f"| {c} | pompe + fusée | " + " | ".join(fmt(med(d, cle)) for cle, _ in CLES) + " |")
+                    # Le 1 % bas se joue sur les pires images (les salves) : l'appel de dessin moyen, puis son 9e décile et
+                    # son maximum.
+                    a = d["compteurs"]["total.appels"]
+                    cellules = [f"{fmt(med(d, 'total.appels'))} (p90 {a['p90']}, max {a['max']})"]
+                    cellules += [fmt(med(d, cle)) for cle, _ in CLES[1:]]
+                    print(f"| {c} | pompe + fusée | " + " | ".join(cellules) + " |")
             print()
 
     print("## Écarts à la référence « %s »\n" % reference)

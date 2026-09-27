@@ -7,7 +7,7 @@
 #   ./tools/cloud_budget/run_budget.sh /tmp/budget "defaut=" "corps=--corps-detaille" "tous=--corps-detaille --tuyaux-essai"
 #
 # Variables : GODOT (binaire, défaut `godot`), PROJET (dossier du projet, défaut : celui de ce script), LACETS (défaut
-# « 0 45 »), SCENES (défaut « cartes,pompe »). Chaque lancement écrit <sortie>/<nom>_l<lacet>.log ; les lignes `BUDGET`
+# « 0 45 »), SCENES (défaut « cartes,pompe »), PLAFOND (secondes par lancement, défaut 2400). Chaque lancement écrit <sortie>/<nom>_l<lacet>.log ; les lignes `BUDGET`
 # s'y lisent par `synthese.py`. Aucun chiffre de cadence : sous llvmpipe le temps ne vaut rien, seuls les comptes valent.
 set -u
 SORTIE="${1:?dossier de sortie}"
@@ -23,8 +23,10 @@ for paire in "$@"; do
 	for lacet in $LACETS; do
 		journal="$SORTIE/${nom}_l${lacet}.log"
 		echo "→ $nom, lacet $lacet : $drapeaux"
+		# ⚠️ Un plafond : un script qui ne compile pas laisse Godot ouvert pour toujours, sans rien imprimer d'autre que
+		# l'erreur (payé le 2026-09-27 : un lancement fantôme a tourné une heure et demie à côté de la matrice).
 		# shellcheck disable=SC2086
-		xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --fixed-fps 60 --path "$PROJET" \
+		timeout "${PLAFOND:-2400}" xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --fixed-fps 60 --path "$PROJET" \
 			res://tools/cloud_budget/budget.tscn -- --no-eos --lacet="$lacet" --config="$nom" --scenes="$SCENES" \
 			$drapeaux > "$journal" 2>&1
 		code=$?
