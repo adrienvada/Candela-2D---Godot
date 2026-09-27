@@ -81,6 +81,14 @@ Aucun **bloquant**. Chaque ligne : ce qui se passe, la commande qui le reproduit
 - Reproduire : ouvrir l'éditeur sans rien modifier, Échap.
 - Correctif proposé : prendre la vue AVANT `_go_back()` (`var vue := get_viewport()`… `if vue: vue.set_input_as_handled()`), ou marquer l'entrée traitée avant d'appeler `_go_back()`. Tient à `map_editor.gd`.
 
+**E3 — Après un match EN LIGNE, la sortie laisse fuir des objets** (`WARNING: 14 ObjectDB instances were leaked at exit`, `ERROR: 2 resources still in use at exit`, une texture de 1,4 Mo, un shader, un matériau). Vu sur les deux processus ENet, en fenêtre ET en headless sans ma surcouche ; la sortie du pilote (QUITTER après des matchs LOCAUX) n'en montre aucune. `--verbose` nomme les fuyards :
+- un trio orphelin `CanvasLayer` + `BackBufferCopy` + `Node` avec son `Shader` : c'est un appareil de brouillage (`brouillage_vue.gd:66`). En vue unique, celui de la vue non regardée est retiré de l'arbre (`game_state.gd:5494-5496`, `_accorder_brouillage_aux_vues`) et gardé dans `_brouillages` ; orphelin, rien ne le libère quand `GameState` part. Correctif proposé : à la sortie de `GameState` (`_exit_tree` ou `NOTIFICATION_PREDELETE`), `for app in _brouillages: if is_instance_valid(app) and app.get_parent() == null: app.free()`. Tient à `game_state.gd`.
+- la musique interactive (`AudioStreamSynchronized`, sept `OggPacketSequencePlayback`) encore en lecture : probablement `audio_manager.gd` ; proposé : arrêter la musique dans le chemin de sortie (`NetworkManager.quit_game`). Non localisé plus précisément.
+- Sans effet pour le joueur (le processus se termine) ; c'est une fuite de sortie, pas une fuite en jeu.
+- Reproduire (headless, 2 min) : deux foyers où l'intro est vue, puis
+  `CANDELA_PORT=29420 HOME=<foyer1> godot --verbose --headless --path . res://tools/test_online_match.tscn -- --host --transport enet --no-eos`
+  et, 8 s plus tard, `HOME=<foyer2> godot --headless --path . res://tools/test_online_match.tscn -- --join 127.0.0.1 --transport enet --no-eos`.
+
 ### Cosmétiques
 
 - **C1 — La légende de l'affiche de fin nomme l'arme, pas la classe** : « ARÈNE CIRCULAIRE · 00:02 · PISTOLET / PISTOLET » après un match choisi « Le Parasite / Le Parasite » (`affiche_de_fin.gd:333-336`, clés `arme_j1`/`arme_j2`). L'historique dit lui-même (schéma 4, `game_state.gd:4157`) que l'arme « ne désigne plus le joueur depuis que dix classes se partagent dix armes ». Proposé : la classe. Choix d'Adrien.
@@ -91,6 +99,8 @@ Aucun **bloquant**. Chaque ligne : ce qui se passe, la commande qui le reproduit
 ### Non prouvé
 
 - **N1 — En fenêtre, l'hôte ENet ne pose pas son gadget dans le banc** (`test_online_match.gd:1447-1450`, `[0, 0]`), alors que la même vérification passe en headless dans la suite (verte). Hypothèse : l'horloge (`--fixed-fps 60` sous rendu logiciel, attentes du banc en temporisateurs), pas le jeu. Rien ne le prouve dans un sens ou dans l'autre ; à regarder seulement si Adrien voit un gadget refusé en ligne.
+
+- **N2 — La variante killcam du banc en ligne (`--host-killcam` / `--join-killcam`) échoue en fenêtre** : « la manche n'a jamais commencé », l'invité est coupé après la poignée de main. Même lecture que N1 (horloge du rendu logiciel), non prouvée ; la variante passe en headless dans la suite (famille 4.1/4.2 de `run_duo.sh`). La killcam en ligne, elle, a été vue dans le match simple (photos `en_ligne_*_killcam`).
 
 ## 4. Ce que je n'ai PAS pu prouver
 
