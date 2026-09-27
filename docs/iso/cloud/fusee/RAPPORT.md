@@ -75,7 +75,7 @@ Vue de J1, lacet 45° (J2 en B), zoom ×1,5, 1920×1080, carte du Cloître (la c
 5. **`run_photos.sh` sort en 0 sur une erreur d'exécution de script** (`SCRIPT ERROR` au premier passage : l'argument typé `Node` d'un `RefCounted`) : il ne détecte que les erreurs d'analyse. Premier passage « réussi » sans une image. Signalé, non corrigé (hors tâche) : `tools/run_photos.sh`, ligne du `grep -qE 'Parse Error|Failed to load script'`.
 
 ## Hors tâche, signalé
-- `tools/banc_equite_fusee.gd.uid` et `volume_masque.gdshaderinc.uid` sont générés par l'import mais pas dans le dépôt (venus d'iso11-menus sans leur `.uid`). Non committés ici.
+- `tools/banc_equite_fusee.gd.uid` et `volume_masque.gdshaderinc.uid` : générés par l'import, absents d'iso11-menus ; committés ici (comme les autres `.uid` du dépôt). Une autre branche qui les génère aura un conflit trivial à l'intégration.
 
 ## Refaire
 ```bash
