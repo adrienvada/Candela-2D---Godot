@@ -18,6 +18,8 @@ const VOILE_SHADER := preload("res://fumee_fusee.gdshader")
 ## Préchargé comme tous les shaders du jeu : un `Shader.new()` à la volée
 ## compile au premier usage, donc pile sur l'action (règle de `player.gd`).
 const NAPPE_SHADER := preload("res://nappe_fusee.gdshader")
+## La couleur de la lumière à chaque température, et l'essai `--fusee-rouge-sang` (éteint par défaut).
+const FuseeCouleur := preload("res://fusee_couleur.gd")
 
 ## Le rouge de détresse. Dérivé : CARMIN (0.551, 0.168, 0.191) porté à la
 ## valeur de l'AMBRE (× 0.96/0.551 ≈ 1.74) — même rouge, mais assez lumineux
@@ -201,7 +203,7 @@ func _ready() -> void:
 	_lumiere = PointLight2D.new()
 	_lumiere.name = "Halo"
 	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, EMPREINTE_VOL)
-	_lumiere.color = COULEUR_DETRESSE
+	_lumiere.color = FuseeCouleur.couleur_a(0.0, COULEUR_DETRESSE)
 	_lumiere.energy = FuseeModele.ENERGIE_VOL
 	# 1 = décor, 2 = sprites ennemis, 4 = sprites du joueur local : la fusée est
 	# une lumière NEUTRE, elle éclaire tout le monde dans les deux vues.
@@ -232,7 +234,7 @@ func _ready() -> void:
 	_coeur.texture = tex_coeur
 	_coeur.scale = Vector2.ONE * _echelle_pour(tex_coeur, EMPREINTE_COEUR)
 	_coeur.material = _materiau_incandescent()
-	_coeur.modulate = COULEUR_DETRESSE
+	_coeur.modulate = FuseeCouleur.couleur_a(0.0, COULEUR_DETRESSE)
 	_coeur.z_index = 12
 	add_child(_coeur)
 
@@ -616,8 +618,8 @@ func _appliquer_age(age_combustion: float) -> void:
 	var energie := FuseeModele.energie_a(age_combustion, _fenetres, intensite)
 	var temperature := FuseeModele.temperature_a(age_combustion)
 	# Rouge de détresse au départ, orange de braise ensuite — jamais de blanc :
-	# c'est une fusée de marine, pas un projecteur (Adrien, FU2.1).
-	var couleur := COULEUR_DETRESSE.lerp(Charte.AMBRE, temperature)
+	# c'est une fusée de marine, pas un projecteur (Adrien, FU2.1). `--fusee-rouge-sang` : voir `fusee_couleur.gd`.
+	var couleur := FuseeCouleur.couleur_a(temperature, COULEUR_DETRESSE)
 	_lumiere.energy = energie
 	_lumiere.color = couleur
 	_lumiere.enabled = energie > 0.005
