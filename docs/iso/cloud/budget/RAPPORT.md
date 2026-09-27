@@ -2,7 +2,7 @@
 
 > Branche `claude/cloud-budget`, partie de `origin/integration-iso14` (`18f5fdc`), 2026-09-27, de 01:10 à ~05:15 (Paris).
 > **État : fait.** Instrument validé sur les deux chiffres connus, matrice complète (11 configurations × 2 lacets × 6 cartes
-> × 2 vues, plus le pompe sous une fusée), décomposition du cas lourd. Suite complète : voir « Suite ».
+> × 2 vues, plus le pompe sous une fusée), décomposition du cas lourd. Suite complète verte sur la branche intégrée.
 
 ## Pour Adrien, en cinq lignes
 
@@ -220,7 +220,9 @@ ci-dessus) — aucun des trois ne coûte quoi que ce soit tant que son drapeau e
 
 ## Suite
 
-SUITE_A_REMPLIR
+`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur la branche intégrée (`3b6602d` : les trois fusions et l'outil) :
+**tout passe, sans erreur de script, en 618 s** (Godot 4.7 officiel, x86, Xvfb), 0 échec. L'outil ne touche à aucun fichier
+du jeu ; ce sont les fusions qui demandaient la suite.
 
 ## Ce que je n'ai PAS pu prouver
 
