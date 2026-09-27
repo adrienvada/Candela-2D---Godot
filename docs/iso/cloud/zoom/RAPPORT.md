@@ -164,7 +164,5 @@ fenêtre.
   Voir l'autre suppose encore qu'il soit éclairé. Aucun match n'a été joué.
 - **Deux cartes, une visée, une classe (pistolet)** : les autres cartes et les autres visées sont couvertes par le
   calcul, pas par des images.
-- **Le push de la branche a été refusé** par le garde-fou de permissions de cette session, dès le premier commit du
-  plan (« Modify Shared Resources »). Le travail est commité **en local** sur `claude/cloud-zoom`, mais n'est pas
-  poussé. Pour le publier, il faut qu'Adrien autorise `git push -u origin claude/cloud-zoom` dans cette session, ou
-  qu'il le lance lui-même.
+- **Le push** a d'abord été refusé par le garde-fou de permissions de la session. Adrien l'a autorisé le
+  2026-09-27, et la branche est poussée depuis.
