@@ -26,8 +26,6 @@ def etiquette(z):
 def lire_mesures():
     out = {}
     for f in glob.glob(os.path.join(ICI, "images", "mesures-z*.json")):
-        if "p-" in os.path.basename(f).split("-")[1] + "-":
-            pass
         for m in json.load(open(f)):
             cle = (round(float(m["zoom"]), 2), m["carte"], tuple(m.get("image_px", [1920, 1080])))
             out[cle] = m
@@ -221,8 +219,10 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
     # Les images.
     for carte, nom in CARTES:
         H.append("<h2>%s</h2>" % nom)
-        H.append('<h3>Vue unique, 1920×1080</h3><p class="doux">J1 (bleu) au centre du bas, torche vers l\'avant ; J2 au bord de '
-                 'son faisceau, torche allumée, qui regarde de côté. Même instant, même position, à chaque zoom.</p>')
+        H.append('<h3>Vue unique, 1920×1080, au creux de la respiration du bandeau</h3><p class="doux">J1 (bleu), torche vers l\'avant ; '
+                 'J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même position et même instant de la '
+                 'manche à chaque zoom. Là où la caméra touche le bord de la carte, elle s\'arrête : J1 n\'est plus au '
+                 'milieu de l\'écran (c\'est le jeu, pas la prise de vue).</p>')
         H.append('<div class="grille">')
         for z in ZOOMS:
             f = "images/%s-%s-unique.jpg" % (etiquette(z), carte)
@@ -231,6 +231,16 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
                          '<figcaption><span class="pastille" style="background:%s"></span>×%s%s</figcaption></figure>'
                          % (f, f, nom, fmt(z, 2), COULEURS[z], fmt(z, 2), " — défaut" if z == 1.5 else ""))
         H.append("</div>")
+        H.append('<h3>La même vue au sommet de la respiration du bandeau LED</h3><p class="doux">Le bandeau des murs '
+                 '(<code>mur_led.gd</code>) respire toutes les 8,5 s et allume le sol le long des murs. Les vues ci-dessus sont '
+                 'prises au creux, celles-ci au sommet, au même endroit : ce que la bande révèle dépend aussi du zoom.</p>'
+                 '<div class="grille">')
+        for z in ZOOMS:
+            f = "images/%s-%s-unique-led.jpg" % (etiquette(z), carte)
+            if os.path.exists(os.path.join(ICI, f)):
+                H.append('<figure><a href="%s"><img loading="lazy" src="%s" alt="%s, zoom ×%s, bandeau au sommet"></a>'
+                         '<figcaption>×%s</figcaption></figure>' % (f, f, nom, fmt(z, 2), fmt(z, 2)))
+        H.append("</div>")
         H.append('<h3>Le corps de J2, recadré 1:1 (320 px de côté)</h3><div class="corps">')
         for z in ZOOMS:
             f = "images/%s-%s-corps.jpg" % (etiquette(z), carte)
@@ -238,7 +248,7 @@ ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--z
                 H.append('<figure><img loading="lazy" src="%s" alt="Corps de J2 à ×%s"><figcaption>×%s</figcaption></figure>'
                          % (f, fmt(z, 2), fmt(z, 2)))
         H.append("</div>")
-        H.append('<h3>Écran scindé, au même instant</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile '
+        H.append('<h3>Écran scindé, même scène, au creux suivant de la respiration</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile '
                  'blanc est son éblouissement, pas un défaut d\'image.</p><div class="grille">')
         for z in ZOOMS:
             f = "images/%s-%s-scinde.jpg" % (etiquette(z), carte)

@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoom du duel</title>
+<style>
+:root{--fond:#111214;--carte:#1b1c1f;--texte:#e8e6e1;--doux:#a19d94;--trait:#2e2f33;--accent:#f2c14e}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--fond:#f6f4ef;--carte:#fff;--texte:#1d1c1a;--doux:#5f5b53;--trait:#dcd8cf;--accent:#9a6a00}}
+*{box-sizing:border-box}body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1500px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.7rem;margin:0 0 4px}h2{margin:40px 0 8px;font-size:1.3rem}h3{margin:24px 0 8px;font-size:1.05rem}
+p,li{max-width:80ch}.doux{color:var(--doux)}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+figure{margin:0;background:var(--carte);border:1px solid var(--trait);border-radius:8px;overflow:hidden}
+figure img{display:block;width:100%;height:auto}figcaption{padding:6px 10px;font-size:.9rem}
+.pastille{display:inline-block;width:.8em;height:.8em;border-radius:50%;margin-right:.4em;vertical-align:-.05em}
+.tableau{overflow-x:auto;border:1px solid var(--trait);border-radius:8px;background:var(--carte)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.93rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--trait);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--carte)}
+.defaut{outline:2px solid var(--accent);outline-offset:-2px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.plans svg{width:100%;height:auto;display:block;background:#050506}
+.corps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:700px){.corps{grid-template-columns:repeat(2,1fr)}}
+.encadre{background:var(--carte);border:1px solid var(--trait);border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin:16px 0}
+a{color:inherit}
+</style></head><body><main>
+<h1>Le zoom du duel — Q15, sur image</h1>
+<p class="doux">Vue isométrique, lacet 45° (J2 à +180°, option B), décalage vers la visée 0,15, torche ×0,75 (pistolet, la classe
+de départ). Rendu logiciel du cloud (llvmpipe) : les couleurs et le noir valent, <strong>pas la cadence</strong>. Aucune
+ligne du jeu n'a changé : les images viennent du drapeau de débogage <code>--zoom=X</code>. Le défaut actuel, ×1,5, est encadré.</p>
+
+<div class="encadre"><strong>Ce qu'il faut savoir avant de regarder.</strong> Le zoom ne change PAS ce que la torche éclaire dans le monde : sa portée reste la même (307 px de monde au pistolet). Il change la taille des choses à l'écran, et ce que l'écran montre <em>au-delà</em> de la lumière : là où s'allume la lumière de l'adversaire. En ligne, tout le monde a le même zoom.</div>
+<h2>Les chiffres</h2>
+<p class="doux">Pixels d'écran en 1920×1080 ; sur un écran de 1440 lignes le jeu se rastérise à la fenêtre, tout est ×4/3. « Corps » : la boîte du corps voxel de J2 projetée par la caméra iso (largeur × hauteur). « Carte visible » : la part de la surface de la carte que couvre l'écran dans la scène photographiée.</p>
+<div class="tableau"><table><thead><tr><th>Zoom</th><th>Corps 1080</th><th>Corps 1440</th><th>Zone de touche (Ø 36 px)</th><th>Torche à l'écran (au plus long)</th><th>… en part de la demi-largeur</th><th>Carte visible — Cloître</th><th>— Croisée</th><th>Écran scindé — Cloître / Croisée</th></tr></thead><tbody>
+<tr><td><span class="pastille" style="background:#5aa9e6"></span>×1,25</td><td>47 × 57</td><td>63 × 77</td><td>57 × 45</td><td>487 px</td><td>51 %</td><td>73 %</td><td>73 %</td><td>40 % / 47 %</td></tr>
+<tr class="defaut"><td><span class="pastille" style="background:#f2c14e"></span>×1,50</td><td>56 × 69</td><td>75 × 92</td><td>68 × 54</td><td>585 px</td><td>61 %</td><td>55 %</td><td>59 %</td><td>29 % / 34 %</td></tr>
+<tr><td><span class="pastille" style="background:#e07a5f"></span>×1,75</td><td>66 × 80</td><td>88 × 107</td><td>80 × 63</td><td>682 px</td><td>71 %</td><td>40 %</td><td>46 %</td><td>22 % / 26 %</td></tr>
+<tr><td><span class="pastille" style="background:#b388eb"></span>×2,00</td><td>75 × 91</td><td>100 × 121</td><td>91 × 72</td><td>780 px</td><td>81 %</td><td>32 %</td><td>37 %</td><td>17 % / 20 %</td></tr>
+</tbody></table></div>
+<h3>Jusqu'où l'écran montre, comparé aux torches</h3>
+<p class="doux">Depuis le joueur, en pixels du monde, en terrain ouvert (loin des bords de carte, où la caméra s'arrête). La caméra avance de 0,15 × la hauteur visible vers la visée : on voit plus loin devant que derrière. Deux cas, selon que la visée monte vers le haut de l'écran (le plus serré : l'image est moins haute que large) ou part vers la droite. <strong>Devant</strong> : si l'écran montre plus loin que votre torche, la lumière d'un adversaire qui arrive en face apparaît avant qu'il n'entre dans votre faisceau. <strong>Derrière</strong> : si une torche porte plus loin que ce que votre écran montre, son porteur peut vous éclairer — vous voir — depuis hors de votre écran ; vous voyez la lumière vous toucher, pas d'où elle vient.</p>
+<div class="tableau"><table><thead><tr><th>Zoom</th><th>Visée vers le haut : devant</th><th>derrière</th><th>côtés</th><th>Visée vers la droite : devant</th><th>derrière</th><th>côtés</th><th>Classes qui éclairent depuis hors écran (dans le dos, visée haute)</th></tr></thead><tbody>
+<tr><td>×1,25</td><td>562</td><td>302</td><td>605</td><td>735</td><td>476</td><td>432</td><td style="text-align:left;white-space:normal">4 sur 10 : pistolet, fusil, sentinelle, arbalete</td></tr>
+<tr class="defaut"><td>×1,50</td><td>468</td><td>252</td><td>504</td><td>612</td><td>396</td><td>360</td><td style="text-align:left;white-space:normal">7 sur 10 : incendiaire, spectre, fumiste, pistolet, fusil, sentinelle, arbalete</td></tr>
+<tr><td>×1,75</td><td>401</td><td>216</td><td>432</td><td>525</td><td>340</td><td>309</td><td style="text-align:left;white-space:normal">9 sur 10 : allumeur, occulteur, incendiaire, spectre, fumiste, pistolet, fusil, sentinelle, arbalete</td></tr>
+<tr><td>×2,00</td><td>351</td><td>189</td><td>378</td><td>459</td><td>297</td><td>270</td><td style="text-align:left;white-space:normal">10 sur 10 : pompe, allumeur, occulteur, incendiaire, spectre, fumiste, pistolet, fusil, sentinelle, arbalete</td></tr>
+</tbody></table></div>
+<p class="doux">Portées des torches (px de monde, ×0,75 compris) : pompe 192 · allumeur 230 · occulteur 250 · incendiaire 269 · spectre 269 · fumiste 288 · pistolet 307 · fusil 346 · sentinelle 499 · arbalete 672.</p>
+<h2>Le Cloître</h2>
+<h3>Vue unique, 1920×1080</h3><p class="doux">J1 (bleu) au centre du bas, torche vers l'avant ; J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même instant, même position, à chaque zoom.</p>
+<div class="grille">
+<figure><a href="images/z125-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z125-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×1,25, vue unique"></a><figcaption><span class="pastille" style="background:#5aa9e6"></span>×1,25</figcaption></figure>
+<figure><a href="images/z150-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z150-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×1,50, vue unique"></a><figcaption><span class="pastille" style="background:#f2c14e"></span>×1,50 — défaut</figcaption></figure>
+<figure><a href="images/z175-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z175-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×1,75, vue unique"></a><figcaption><span class="pastille" style="background:#e07a5f"></span>×1,75</figcaption></figure>
+<figure><a href="images/z200-map_001_le_cloitre-unique.jpg"><img loading="lazy" src="images/z200-map_001_le_cloitre-unique.jpg" alt="Le Cloître, zoom ×2,00, vue unique"></a><figcaption><span class="pastille" style="background:#b388eb"></span>×2,00</figcaption></figure>
+</div>
+<h3>Le corps de J2, recadré 1:1 (320 px de côté)</h3><div class="corps">
+<figure><img loading="lazy" src="images/z125-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×1,25"><figcaption>×1,25</figcaption></figure>
+<figure><img loading="lazy" src="images/z150-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×1,50"><figcaption>×1,50</figcaption></figure>
+<figure><img loading="lazy" src="images/z175-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×1,75"><figcaption>×1,75</figcaption></figure>
+<figure><img loading="lazy" src="images/z200-map_001_le_cloitre-corps.jpg" alt="Corps de J2 à ×2,00"><figcaption>×2,00</figcaption></figure>
+</div>
+<h3>Écran scindé, au même instant</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile blanc est son éblouissement, pas un défaut d'image.</p><div class="grille">
+<figure><a href="images/z125-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z125-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×1,25, écran scindé"></a><figcaption>×1,25</figcaption></figure>
+<figure><a href="images/z150-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z150-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×1,50, écran scindé"></a><figcaption>×1,50</figcaption></figure>
+<figure><a href="images/z175-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z175-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×1,75, écran scindé"></a><figcaption>×1,75</figcaption></figure>
+<figure><a href="images/z200-map_001_le_cloitre-scinde.jpg"><img loading="lazy" src="images/z200-map_001_le_cloitre-scinde.jpg" alt="Le Cloître, zoom ×2,00, écran scindé"></a><figcaption>×2,00</figcaption></figure>
+</div>
+<h2>La Croisée</h2>
+<h3>Vue unique, 1920×1080</h3><p class="doux">J1 (bleu) au centre du bas, torche vers l'avant ; J2 au bord de son faisceau, torche allumée, qui regarde de côté. Même instant, même position, à chaque zoom.</p>
+<div class="grille">
+<figure><a href="images/z125-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z125-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×1,25, vue unique"></a><figcaption><span class="pastille" style="background:#5aa9e6"></span>×1,25</figcaption></figure>
+<figure><a href="images/z150-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z150-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×1,50, vue unique"></a><figcaption><span class="pastille" style="background:#f2c14e"></span>×1,50 — défaut</figcaption></figure>
+<figure><a href="images/z175-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z175-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×1,75, vue unique"></a><figcaption><span class="pastille" style="background:#e07a5f"></span>×1,75</figcaption></figure>
+<figure><a href="images/z200-map_003_la_croisee-unique.jpg"><img loading="lazy" src="images/z200-map_003_la_croisee-unique.jpg" alt="La Croisée, zoom ×2,00, vue unique"></a><figcaption><span class="pastille" style="background:#b388eb"></span>×2,00</figcaption></figure>
+</div>
+<h3>Le corps de J2, recadré 1:1 (320 px de côté)</h3><div class="corps">
+<figure><img loading="lazy" src="images/z125-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×1,25"><figcaption>×1,25</figcaption></figure>
+<figure><img loading="lazy" src="images/z150-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×1,50"><figcaption>×1,50</figcaption></figure>
+<figure><img loading="lazy" src="images/z175-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×1,75"><figcaption>×1,75</figcaption></figure>
+<figure><img loading="lazy" src="images/z200-map_003_la_croisee-corps.jpg" alt="Corps de J2 à ×2,00"><figcaption>×2,00</figcaption></figure>
+</div>
+<h3>Écran scindé, au même instant</h3><p class="doux">À droite, J2 est pris dans le faisceau de J1 : le voile blanc est son éblouissement, pas un défaut d'image.</p><div class="grille">
+<figure><a href="images/z125-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z125-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×1,25, écran scindé"></a><figcaption>×1,25</figcaption></figure>
+<figure><a href="images/z150-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z150-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×1,50, écran scindé"></a><figcaption>×1,50</figcaption></figure>
+<figure><a href="images/z175-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z175-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×1,75, écran scindé"></a><figcaption>×1,75</figcaption></figure>
+<figure><a href="images/z200-map_003_la_croisee-scinde.jpg"><img loading="lazy" src="images/z200-map_003_la_croisee-scinde.jpg" alt="La Croisée, zoom ×2,00, écran scindé"></a><figcaption>×2,00</figcaption></figure>
+</div>
+<h2>Jusqu'où voit un joueur</h2>
+<p class="doux">Chaque carte vue de dessus (murs clairs, sol brun). Le contour coloré est ce que l'écran de J1 montre au sol, à chaque zoom, dans la scène photographiée (vue unique, lacet 45°, regard avancé, caméra arrêtée aux bords). Le cône jaune est sa torche, le cercle pointillé sa portée : ils ne changent pas avec le zoom. Point bleu J1, point rouge J2.</p>
+<p><span class="pastille" style="background:#5aa9e6"></span>×1,25&nbsp;&nbsp; <span class="pastille" style="background:#f2c14e"></span>×1,50&nbsp;&nbsp; <span class="pastille" style="background:#e07a5f"></span>×1,75&nbsp;&nbsp; <span class="pastille" style="background:#b388eb"></span>×2,00&nbsp;&nbsp;</p>
+<div class="plans">
+<figure><svg viewBox="-60 -60 1170 1170" role="img" aria-label="Plan de map_001_le_cloitre et ce que montre l'écran à chaque zoom">
+<rect x="0" y="0" width="1050" height="1050" fill="#0b0b0d"/>
+<rect x="105" y="105" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="140" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="175" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="210" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="245" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="280" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="315" width="210" height="35" fill="#2a2620"/>
+<rect x="420" y="315" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="315" width="210" height="35" fill="#2a2620"/>
+<rect x="105" y="350" width="210" height="35" fill="#2a2620"/>
+<rect x="420" y="350" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="350" width="210" height="35" fill="#2a2620"/>
+<rect x="105" y="385" width="210" height="35" fill="#2a2620"/>
+<rect x="420" y="385" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="385" width="210" height="35" fill="#2a2620"/>
+<rect x="105" y="420" width="385" height="35" fill="#2a2620"/>
+<rect x="560" y="420" width="385" height="35" fill="#2a2620"/>
+<rect x="105" y="455" width="385" height="35" fill="#2a2620"/>
+<rect x="560" y="455" width="385" height="35" fill="#2a2620"/>
+<rect x="105" y="490" width="385" height="35" fill="#2a2620"/>
+<rect x="560" y="490" width="385" height="35" fill="#2a2620"/>
+<rect x="105" y="525" width="385" height="35" fill="#2a2620"/>
+<rect x="560" y="525" width="385" height="35" fill="#2a2620"/>
+<rect x="105" y="560" width="385" height="35" fill="#2a2620"/>
+<rect x="560" y="560" width="385" height="35" fill="#2a2620"/>
+<rect x="105" y="595" width="385" height="35" fill="#2a2620"/>
+<rect x="560" y="595" width="385" height="35" fill="#2a2620"/>
+<rect x="105" y="630" width="210" height="35" fill="#2a2620"/>
+<rect x="420" y="630" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="630" width="210" height="35" fill="#2a2620"/>
+<rect x="105" y="665" width="210" height="35" fill="#2a2620"/>
+<rect x="420" y="665" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="665" width="210" height="35" fill="#2a2620"/>
+<rect x="105" y="700" width="210" height="35" fill="#2a2620"/>
+<rect x="420" y="700" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="700" width="210" height="35" fill="#2a2620"/>
+<rect x="105" y="735" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="770" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="805" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="840" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="875" width="840" height="35" fill="#2a2620"/>
+<rect x="105" y="910" width="840" height="35" fill="#2a2620"/>
+<rect x="0" y="0" width="1050" height="35" fill="#6b6255"/>
+<rect x="0" y="35" width="1050" height="35" fill="#6b6255"/>
+<rect x="0" y="70" width="1050" height="35" fill="#6b6255"/>
+<rect x="0" y="105" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="105" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="140" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="140" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="175" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="175" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="210" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="210" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="245" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="245" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="280" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="280" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="315" width="105" height="35" fill="#6b6255"/>
+<rect x="315" y="315" width="105" height="35" fill="#6b6255"/>
+<rect x="630" y="315" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="315" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="350" width="105" height="35" fill="#6b6255"/>
+<rect x="315" y="350" width="105" height="35" fill="#6b6255"/>
+<rect x="630" y="350" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="350" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="385" width="105" height="35" fill="#6b6255"/>
+<rect x="315" y="385" width="105" height="35" fill="#6b6255"/>
+<rect x="630" y="385" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="385" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="420" width="105" height="35" fill="#6b6255"/>
+<rect x="490" y="420" width="70" height="35" fill="#6b6255"/>
+<rect x="945" y="420" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="455" width="105" height="35" fill="#6b6255"/>
+<rect x="490" y="455" width="70" height="35" fill="#6b6255"/>
+<rect x="945" y="455" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="490" width="105" height="35" fill="#6b6255"/>
+<rect x="490" y="490" width="70" height="35" fill="#6b6255"/>
+<rect x="945" y="490" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="525" width="105" height="35" fill="#6b6255"/>
+<rect x="490" y="525" width="70" height="35" fill="#6b6255"/>
+<rect x="945" y="525" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="560" width="105" height="35" fill="#6b6255"/>
+<rect x="490" y="560" width="70" height="35" fill="#6b6255"/>
+<rect x="945" y="560" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="595" width="105" height="35" fill="#6b6255"/>
+<rect x="490" y="595" width="70" height="35" fill="#6b6255"/>
+<rect x="945" y="595" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="630" width="105" height="35" fill="#6b6255"/>
+<rect x="315" y="630" width="105" height="35" fill="#6b6255"/>
+<rect x="630" y="630" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="630" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="665" width="105" height="35" fill="#6b6255"/>
+<rect x="315" y="665" width="105" height="35" fill="#6b6255"/>
+<rect x="630" y="665" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="665" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="700" width="105" height="35" fill="#6b6255"/>
+<rect x="315" y="700" width="105" height="35" fill="#6b6255"/>
+<rect x="630" y="700" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="700" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="735" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="735" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="770" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="770" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="805" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="805" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="840" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="840" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="875" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="875" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="910" width="105" height="35" fill="#6b6255"/>
+<rect x="945" y="910" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="945" width="1050" height="35" fill="#6b6255"/>
+<rect x="0" y="980" width="1050" height="35" fill="#6b6255"/>
+<rect x="0" y="1015" width="1050" height="35" fill="#6b6255"/>
+<polygon points="-75.4,767.1 780.5,-88.7 1391.5,522.2 535.6,1378.1" fill="none" stroke="#5aa9e6" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="151.5,670.3 864.7,-42.9 1373.8,466.2 660.6,1179.4" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="306.0,608.7 917.4,-2.7 1353.8,433.7 742.4,1045.0" fill="none" stroke="#e07a5f" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="376.0,608.4 910.9,73.5 1292.7,455.3 757.8,990.3" fill="none" stroke="#b388eb" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="865.3,606.7 606.2,441.6 616.8,426.1 628.3,411.3 640.7,397.2 653.9,383.9 667.9,371.4 682.6,359.8 698.0,349.1 714.1,339.3 730.7,330.6 747.8,322.9 765.3,316.2 783.2,310.7 801.5,306.2 819.9,302.9 838.6,300.7 857.3,299.6 876.1,299.7 894.8,300.9 913.4,303.3 931.8,306.8" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2"/>
+<circle cx="865.3" cy="606.7" r="307.2" fill="none" stroke="#f7e3a1" stroke-width="2" stroke-dasharray="10 8"/>
+<circle cx="865.3" cy="606.7" r="16" fill="#5aa9e6" stroke="#fff" stroke-width="3"/>
+<circle cx="866.4" cy="360.9" r="16" fill="#e5484d" stroke="#fff" stroke-width="3"/>
+</svg><figcaption>Le Cloître</figcaption></figure>
+<figure><svg viewBox="-60 -60 1100 1100" role="img" aria-label="Plan de map_003_la_croisee et ce que montre l'écran à chaque zoom">
+<rect x="0" y="0" width="980" height="980" fill="#0b0b0d"/>
+<rect x="105" y="105" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="140" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="175" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="210" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="245" width="140" height="35" fill="#2a2620"/>
+<rect x="385" y="245" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="245" width="140" height="35" fill="#2a2620"/>
+<rect x="105" y="280" width="140" height="35" fill="#2a2620"/>
+<rect x="385" y="280" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="280" width="140" height="35" fill="#2a2620"/>
+<rect x="105" y="315" width="140" height="35" fill="#2a2620"/>
+<rect x="385" y="315" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="315" width="140" height="35" fill="#2a2620"/>
+<rect x="105" y="350" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="385" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="420" width="315" height="35" fill="#2a2620"/>
+<rect x="455" y="420" width="70" height="35" fill="#2a2620"/>
+<rect x="560" y="420" width="315" height="35" fill="#2a2620"/>
+<rect x="105" y="455" width="315" height="35" fill="#2a2620"/>
+<rect x="560" y="455" width="315" height="35" fill="#2a2620"/>
+<rect x="105" y="490" width="315" height="35" fill="#2a2620"/>
+<rect x="560" y="490" width="315" height="35" fill="#2a2620"/>
+<rect x="105" y="525" width="315" height="35" fill="#2a2620"/>
+<rect x="455" y="525" width="70" height="35" fill="#2a2620"/>
+<rect x="560" y="525" width="315" height="35" fill="#2a2620"/>
+<rect x="105" y="560" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="595" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="630" width="140" height="35" fill="#2a2620"/>
+<rect x="385" y="630" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="630" width="140" height="35" fill="#2a2620"/>
+<rect x="105" y="665" width="140" height="35" fill="#2a2620"/>
+<rect x="385" y="665" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="665" width="140" height="35" fill="#2a2620"/>
+<rect x="105" y="700" width="140" height="35" fill="#2a2620"/>
+<rect x="385" y="700" width="210" height="35" fill="#2a2620"/>
+<rect x="735" y="700" width="140" height="35" fill="#2a2620"/>
+<rect x="105" y="735" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="770" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="805" width="770" height="35" fill="#2a2620"/>
+<rect x="105" y="840" width="770" height="35" fill="#2a2620"/>
+<rect x="0" y="0" width="980" height="35" fill="#6b6255"/>
+<rect x="0" y="35" width="980" height="35" fill="#6b6255"/>
+<rect x="0" y="70" width="980" height="35" fill="#6b6255"/>
+<rect x="0" y="105" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="105" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="140" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="140" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="175" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="175" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="210" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="210" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="245" width="105" height="35" fill="#6b6255"/>
+<rect x="245" y="245" width="140" height="35" fill="#6b6255"/>
+<rect x="595" y="245" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="245" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="280" width="105" height="35" fill="#6b6255"/>
+<rect x="245" y="280" width="140" height="35" fill="#6b6255"/>
+<rect x="595" y="280" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="280" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="315" width="105" height="35" fill="#6b6255"/>
+<rect x="245" y="315" width="140" height="35" fill="#6b6255"/>
+<rect x="595" y="315" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="315" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="350" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="350" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="385" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="385" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="420" width="105" height="35" fill="#6b6255"/>
+<rect x="420" y="420" width="35" height="35" fill="#6b6255"/>
+<rect x="525" y="420" width="35" height="35" fill="#6b6255"/>
+<rect x="875" y="420" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="455" width="105" height="35" fill="#6b6255"/>
+<rect x="420" y="455" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="455" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="490" width="105" height="35" fill="#6b6255"/>
+<rect x="420" y="490" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="490" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="525" width="105" height="35" fill="#6b6255"/>
+<rect x="420" y="525" width="35" height="35" fill="#6b6255"/>
+<rect x="525" y="525" width="35" height="35" fill="#6b6255"/>
+<rect x="875" y="525" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="560" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="560" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="595" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="595" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="630" width="105" height="35" fill="#6b6255"/>
+<rect x="245" y="630" width="140" height="35" fill="#6b6255"/>
+<rect x="595" y="630" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="630" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="665" width="105" height="35" fill="#6b6255"/>
+<rect x="245" y="665" width="140" height="35" fill="#6b6255"/>
+<rect x="595" y="665" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="665" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="700" width="105" height="35" fill="#6b6255"/>
+<rect x="245" y="700" width="140" height="35" fill="#6b6255"/>
+<rect x="595" y="700" width="140" height="35" fill="#6b6255"/>
+<rect x="875" y="700" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="735" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="735" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="770" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="770" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="805" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="805" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="840" width="105" height="35" fill="#6b6255"/>
+<rect x="875" y="840" width="105" height="35" fill="#6b6255"/>
+<rect x="0" y="875" width="980" height="35" fill="#6b6255"/>
+<rect x="0" y="910" width="980" height="35" fill="#6b6255"/>
+<rect x="0" y="945" width="980" height="35" fill="#6b6255"/>
+<polygon points="-11.7,654.8 844.2,-201.1 1455.1,409.8 599.3,1265.7" fill="none" stroke="#5aa9e6" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="93.3,682.1 806.5,-31.1 1315.7,478.0 602.4,1191.3" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="224.0,646.0 835.4,34.6 1271.8,471.0 660.4,1082.3" fill="none" stroke="#e07a5f" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="297.7,643.2 832.6,108.3 1214.5,490.1 679.5,1025.0" fill="none" stroke="#b388eb" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="813.4,623.9 510.8,570.6 514.6,552.2 519.6,534.1 525.6,516.4 532.7,499.0 540.9,482.1 550.0,465.7 560.2,449.9 571.3,434.8 583.3,420.4 596.1,406.7 609.8,393.9 624.2,381.9 639.4,370.8 655.1,360.6 671.5,351.4 688.4,343.3 705.8,336.2 723.5,330.2 741.6,325.2 760.0,321.4" fill="#f7e3a1" fill-opacity="0.35" stroke="#f7e3a1" stroke-width="2"/>
+<circle cx="813.4" cy="623.9" r="307.2" fill="none" stroke="#f7e3a1" stroke-width="2" stroke-dasharray="10 8"/>
+<circle cx="813.4" cy="623.9" r="16" fill="#5aa9e6" stroke="#fff" stroke-width="3"/>
+<circle cx="720.3" cy="396.5" r="16" fill="#e5484d" stroke="#fff" stroke-width="3"/>
+</svg><figcaption>La Croisée</figcaption></figure>
+</div>
+<p class="doux">Refaire : <code>docs/iso/cloud/zoom/refaire.sh</code> puis <code>python3 docs/iso/cloud/zoom/fabrique_planche.py</code>. Détails et limites : RAPPORT.md.</p>
+</main></body></html>

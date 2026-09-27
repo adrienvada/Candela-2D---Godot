@@ -10,16 +10,20 @@ extends "res://tools/photographe.gd"
 ## ⚠️ **Le rendu reste celui du joueur** (`rendu_racine_autorise` laissé vrai, contrairement au photographe) : en vue
 ## unique la racine rend le duel aux pixels de la fenêtre, et la capture est la fenêtre, HUD compris.
 ##
-## ⚠️ **Une carte par lancement** (`--cartes=res://…json`). Poser une seconde carte dans la même manche
-## (`rebuild_arena()` une deuxième fois) la laisse faiblement éclairée PARTOUT — sol et murs à ~18/255 au lieu du
-## noir — quel que soit l'ordre des cartes (constaté le 2026-09-27, voir le rapport). Le jeu ne change jamais de carte
-## en pleine manche ; l'outil, si. D'où un lancement par couple (zoom, carte).
+## ⚠️ **Le bandeau LED des murs respire** (`mur_led.gd`, 8,5 s, sur l'horloge de manche) : au sommet, le sol le long
+## des murs s'allume, et sur une carte en couloirs c'est presque tout le sol. Deux prises à deux instants différents
+## ne se comparent donc pas. Chaque image est prise à une PHASE choisie de la respiration (creux ou sommet), la même à
+## tous les zooms. Le premier jet prenait « 90 images après » : la vue unique tombait au creux, l'écran scindé près du
+## sommet, et la différence passait pour un défaut du changement de carte.
+##
+## Une carte par lancement (`--cartes=res://…json`) : chaque carte part d'une manche neuve, à la même horloge.
 ##
 ## Pour la carte :
 ## - la scène : J1 sur un sol dégagé près du centre, visée choisie pour que son faisceau ait la place ; J2 AU BORD DU
 ##   CÔNE de J1 (0,65 × le demi-angle, 0,8 × la portée), torche allumée, qui regarde de côté. Les positions ne
 ##   dépendent PAS du zoom : les quatre exécutions montrent le même instant ;
-## - trois images : la vue unique, l'écran scindé au même instant, un recadrage 1:1 autour de J2 ;
+## - quatre images : la vue unique au creux de la respiration du bandeau, la même au sommet, l'écran scindé au creux
+##   suivant, un recadrage 1:1 autour de J2 ;
 ## - les mesures (JSON), par la caméra iso réellement posée (`CameraIso.vers_ecran` / `vers_sol`).
 ##
 ## Lancer (cloud) :
@@ -97,23 +101,31 @@ func _ready() -> void:
 			printerr("  ✗ %s : aucune scène valable" % nom)
 			continue
 		var tenir := _tenir.bind(scene)
-		# 1. La vue unique.
+		# 1. La vue unique, au CREUX de la respiration du bandeau LED (voir l'en-tête) : le noir du duel.
 		_vue_unique()
-		await _tenir_pendant(tenir, REPOS_IMAGES)
+		await _tenir_jusqu_a_la_phase(tenir, 0.0)
 		var m := _mesurer(scene, false)
 		m["carte"] = nom
 		m["zoom"] = zoom
+		m["phase_led"] = _phase_led()
 		var img: Image = await Commun.capturer(get_tree(), 8000)
 		if img != null:
 			_enregistrer(img, "%s-%s-unique" % [etiquette, nom])
 			var j2: Vector2 = m["j2_ecran"]
-			_enregistrer(_recadrer(img, j2 * float(img.get_height()) / 1080.0, 320),
+			_enregistrer(_recadrer(img, j2 * float(img.get_height()) / 1080.0, 320 * img.get_height() / 1080),
 				"%s-%s-corps" % [etiquette, nom])
 			m["image_px"] = [img.get_width(), img.get_height()]
-		# 2. L'écran scindé, au même instant.
+		# 2. La même vue au SOMMET de la respiration : ce que la bande révèle le long des murs.
+		await _tenir_jusqu_a_la_phase(tenir, 0.5)
+		m["phase_led_sommet"] = _phase_led()
+		var img_led: Image = await Commun.capturer(get_tree(), 8000)
+		if img_led != null:
+			_enregistrer(img_led, "%s-%s-unique-led" % [etiquette, nom])
+		# 3. L'écran scindé, au creux suivant.
 		_deux_vues()
-		await _tenir_pendant(tenir, REPOS_IMAGES)
+		await _tenir_jusqu_a_la_phase(tenir, 0.0)
 		m["scinde"] = _mesurer(scene, true)
+		m["scinde"]["phase_led"] = _phase_led()
 		var img2: Image = await Commun.capturer(get_tree(), 8000)
 		if img2 != null:
 			_enregistrer(img2, "%s-%s-scinde" % [etiquette, nom])
@@ -205,6 +217,23 @@ func _tenir(scene: Dictionary) -> void:
 	_viser(0, scene["v1"])
 	_viser(1, scene["v2"])
 	_vivants()
+
+
+## La phase de la respiration du bandeau LED, de 0 (creux) à 1 : l'horloge de manche du jeu (`_horloge_led`) sur la
+## période de `MurLed`.
+func _phase_led() -> float:
+	return fposmod(float(_main._horloge_led()), MurLed.PERIODE) / MurLed.PERIODE
+
+
+## Tient la scène au moins `REPOS_IMAGES` images, puis jusqu'à ce que la respiration arrive à `cible` (à 1 % près).
+func _tenir_jusqu_a_la_phase(tenir: Callable, cible: float) -> void:
+	await _tenir_pendant(tenir, REPOS_IMAGES)
+	var garde := 0
+	while absf(angle_difference(TAU * _phase_led(), TAU * cible)) > TAU * 0.01 and garde < 1200:
+		tenir.call()
+		await get_tree().process_frame
+		garde += 1
+	tenir.call()
 
 
 func _tenir_pendant(tenir: Callable, images: int) -> void:
