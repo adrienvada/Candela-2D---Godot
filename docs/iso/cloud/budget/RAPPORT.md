@@ -1,6 +1,6 @@
 # Le budget de rendu de ce qui arrive — rapport de la session cloud « budget »
 
-> Branche `claude/cloud-budget`, partie de `origin/integration-iso14` (`18f5fdc`), 2026-09-27, de 01:10 à ~05:15 (Paris).
+> Branche `claude/cloud-budget`, partie de `origin/integration-iso14` (`18f5fdc`), 2026-09-27, de 01:10 à 04:45 (Paris).
 > **État : fait.** Instrument validé sur les deux chiffres connus, matrice complète (11 configurations × 2 lacets × 6 cartes
 > × 2 vues, plus le pompe sous une fusée), décomposition du cas lourd. Suite complète verte sur la branche intégrée.
 
