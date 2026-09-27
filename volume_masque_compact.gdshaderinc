@@ -1,7 +1,7 @@
 // ISO13, Q31 — LES FORMES MOINS CHÈRES DU MASQUE DE LA FUMÉE (session cloud « masque-fumée », 2026-09-27). Inclus par
 // `volume_masque.gdshaderinc` sous `MASQUE_COMPACT` seulement : ni le jeu par défaut (masque éteint) ni `--fumee-masque`
-// (le masque de Gadgets tel quel) ne compilent une ligne de ce fichier. Deux drapeaux, éteints par défaut ; le second AJOUTE
-// une idée au premier (voir `IsoVolumes.FORMES_MASQUE`), pour qu'une série en miroir attribue le prix à chaque idée.
+// (le masque de Gadgets tel quel) ne compilent une ligne de ce fichier. Trois drapeaux, éteints par défaut ; chacun AJOUTE
+// une idée à la précédente (voir `IsoVolumes.FORMES_MASQUE`), pour qu'une série en miroir attribue le prix à chaque idée.
 // Aucune ne change la RÈGLE de Gadgets (« la couche se tait là où ce que le pixel montre s'affiche noir »), ni ses
 // certitudes, ni le point noir : seulement combien de fois, et avec combien de code, on la calcule.
 //
@@ -22,6 +22,13 @@
 //   côté sombre), la bande se resserre à ce que l'usure et la courbe peuvent encore faire basculer. Et dans la bande, le sol
 //   exact ne relit plus la lightmap ni ne refait la pâte : il reprend celles que la certitude vient de calculer (mêmes
 //   adresses, mêmes valeurs).
+// - `--fumee-masque-pochoir` (+ MASQUE_POCHOIR) : LE MASQUE UNE FOIS PAR PIXEL, pas une fois par couche. Tout le rayon de
+//   vue d'un pixel est une seule droite (caméra orthographique) : les quatre couches d'une fusée y voient la MÊME surface
+//   derrière elles. Le compte à l'image dit 3,7 fragments de fumée par pixel couvert. Un JUGE — un plan à la hauteur de la
+//   plus haute couche, dessiné juste avant elles (`IsoVolumes.PRIORITE_JUGE`) — pose la question une fois par pixel et
+//   écrit 1 dans le pochoir (stencil) où la réponse est « noir », sans rien peindre ; les couches, sans masque, ne sont pas
+//   dessinées là où le pochoir vaut 1 (le test se fait avant leur shader). Les couches retrouvent le code de la fumée
+//   sans masque.
 
 #ifdef MASQUE_RESSERRE
 // Le sol exact À PARTIR de ce que la certitude a déjà lu : la fin de `sol_ecrit` de Gadgets, ligne pour ligne (garde :
@@ -193,3 +200,24 @@ bool masque_compact_montre_noir(vec3 monde, vec3 vue, bool deux, vec3 d_x, vec3 
 	}
 	return face_montre_noir(q, n_cible, deux, aa_sol, h_cible, px_monde_sol);
 }
+
+#ifdef MASQUE_POCHOIR
+// Le JUGE du pochoir (`--fumee-masque-pochoir`) : un point du plan du juge (à la hauteur de la plus haute couche) couvre-t-il
+// une couche ? Le rayon de vue, prolongé du juge jusqu'à la hauteur de chaque couche, y tombe-t-il dans son disque ? C'est
+// le disque où la couche peut dessiner (hors de lui, son opacité est nulle et elle se jette) : un pixel jugé en trop ne
+// coûte que le jugement, jamais une erreur — « ce que le pixel montre est noir » ne dépend pas de la couche.
+uniform vec4 juge_rayons = vec4(0.0);
+uniform vec4 juge_hauteurs = vec4(0.0);
+bool juge_couvre(vec3 p, vec3 vue) {
+	for (int k = 0; k < 4; k++) {
+		if (juge_rayons[k] <= 0.0) {
+			continue;
+		}
+		vec2 q = p.xz + vue.xz * ((p.y - juge_hauteurs[k]) / max(-vue.y, 1e-3));
+		if (length(q - nuage_centre) < juge_rayons[k]) {
+			return true;
+		}
+	}
+	return false;
+}
+#endif
