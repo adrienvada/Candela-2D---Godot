@@ -1,0 +1,13 @@
+=== LA PEINTURE EN LIGNE — HÔTE, port 24124 ===
+TRACES HÔTE manche 1 : { "blood_stain": 0, "blood_p2": 0, "wall_impact": 0, "wall_impact_p2": 0, "bullet_casing": 0, "casing_p2": 0 }
+  J2 abattu sous les balles de l'hôte (pv 0, à (388.0, 543.0) pour une cible en (388.0, 543.0), J1 en (228.0, 543.0) tourné à -0.00 rad)
+TRACES HÔTE après les tirs : { "blood_stain": 4, "blood_p2": 4, "wall_impact": 0, "wall_impact_p2": 0, "bullet_casing": 3, "casing_p2": 3 }
+TRACES HÔTE écran de fin : { "blood_stain": 8, "blood_p2": 8, "wall_impact": 0, "wall_impact_p2": 0, "bullet_casing": 3, "casing_p2": 3 }
+TRACES HÔTE manche 2 : { "blood_stain": 0, "blood_p2": 0, "wall_impact": 0, "wall_impact_p2": 0, "bullet_casing": 0, "casing_p2": 0 }
+VERDICT HÔTE : map_001 → map_003 ; 0 traces de la manche 1 (sur 11) restent sous la manche 2
+=== LA PEINTURE EN LIGNE — INVITÉ, port 24124 ===
+TRACES INVITÉ manche 1 : { "blood_stain": 0, "blood_p2": 0, "wall_impact": 0, "wall_impact_p2": 0, "bullet_casing": 0, "casing_p2": 0 }
+TRACES INVITÉ écran de fin : { "blood_stain": 6, "blood_p2": 6, "wall_impact": 1, "wall_impact_p2": 1, "bullet_casing": 2, "casing_p2": 2 }
+TRACES INVITÉ manche 2 : { "blood_stain": 0, "blood_p2": 0, "wall_impact": 0, "wall_impact_p2": 0, "bullet_casing": 0, "casing_p2": 0 }
+VERDICT INVITÉ : map_001 → map_003 ; 0 traces de la manche 1 (sur 9) restent sous la manche 2
+FINI
