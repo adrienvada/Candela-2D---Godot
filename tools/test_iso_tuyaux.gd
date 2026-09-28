@@ -28,17 +28,20 @@
 extends SceneTree
 
 const TuyauxIsoT := preload("res://tuyaux_iso.gd")
+const DemiTour := preload("res://tools/demi_tour.gd")
 const PLANCHER := 60
 ## L'empreinte du placement de chaque carte livrée (`_empreinte`). Un changement VOULU du placement la change : la recopier
 ## depuis la sortie de la suite, en le disant dans le commit. Un changement non voulu (un tirage glissé, un ordre de parcours
-## qui dépend d'autre chose que la carte) la change aussi — c'est pour lui qu'elle est là.
+## qui dépend d'autre chose que la carte) la change aussi — c'est pour lui qu'elle est là. Recopiées le 2026-09-28 (session
+## cloud « décor demi-tour ») : le hachage lit désormais une graine commune à une face et à sa jumelle par le demi-tour, et
+## une face sans jumelle (l'Usine) ne porte rien.
 const EMPREINTES := {
-	"arene_circulaire.json": 3023601092,
-	"default.json": 3162301926,
-	"map_001_le_cloitre.json": 406132178,
-	"map_002_l_usine.json": 3601754003,
-	"map_003_la_croisee.json": 3954334292,
-	"map_004_le_bunker.json": 2374969690,
+	"arene_circulaire.json": 4030773133,
+	"default.json": 419362923,
+	"map_001_le_cloitre.json": 1790141769,
+	"map_002_l_usine.json": 2279119213,
+	"map_003_la_croisee.json": 1516579125,
+	"map_004_le_bunker.json": 704633861,
 }
 const LACETS := [0.0, 45.0, -45.0, 30.0, 60.0, 90.0, 135.0, 180.0, -120.0]
 const EPS := 0.01
@@ -165,6 +168,15 @@ func _les_constructions() -> void:
 			_check("%s : l'empreinte du placement est celle figée" % nom, int(EMPREINTES[nom]) == empreinte,
 				"%d au lieu de %d" % [empreinte, int(EMPREINTES[nom])])
 		_une_carte(nom, data, c, h_mur, h_max, h_bas, tres_dessinees)
+		# À 45° B, J2 regarde depuis le côté opposé : chaque sommet a son image par le demi-tour, sur la face jumelle.
+		var sans := DemiTour.orphelins_tuyaux(data, c)
+		_check("%s : chaque tuyau a son jumeau par le demi-tour — ce que J2 voit à 45° B" % nom, sans.is_empty(),
+			str(sans.slice(0, 4)))
+		if nom == "default.json" or nom == "map_002_l_usine.json":
+			# La construction d'avant : chaque face tirait sa propre clé, et l'Usine meublait aussi ses faces sans jumelle.
+			var avant := _construction_d_avant(data, h_mur, h_max)
+			_check("%s : la garde rougit sur la construction d'avant (chaque face sa propre clé)" % nom,
+				not DemiTour.orphelins_tuyaux(data, avant).is_empty())
 	_check("les cartes livrées portent des tuyaux (%d sommets)" % total_sommets, total_sommets > 1000)
 	_check("à 0° de lacet, la caméra ne dessine que les tuyaux des faces SUD",
 		tres_dessinees.get(0.0, []) == [Vector2(0, 1)], str(tres_dessinees.get(0.0, [])))
@@ -173,6 +185,18 @@ func _les_constructions() -> void:
 		and a45.has(Vector2(1, 0)), str(a45))
 	_check("à 180° (l'option B de J2), ceux des faces NORD seules", tres_dessinees.get(180.0, []) == [Vector2(0, -1)],
 		str(tres_dessinees.get(180.0, [])))
+
+
+## La construction telle qu'elle était avant la graine commune (f4039a0) : chaque face hachée par sa propre clé, toutes
+## meublées. La mutation qui prouve que la règle du demi-tour rougit.
+func _construction_d_avant(data: Dictionary, h_mur: float, h_max: float) -> Dictionary:
+	var c := TuyauxIsoT.Chantier.new()
+	c.faces = TuyauxIsoT.faces(data)
+	for f in c.faces:
+		f["graine"] = f["cle"]
+	for i in c.faces.size():
+		TuyauxIsoT._meubler(c, i, h_mur, h_max)
+	return {"faces": c.faces, "sommets": c.sommets, "face_de_sommet": c.face_de_sommet}
 
 
 ## L'empreinte du PLACEMENT : la clé, le programme et le nombre de sommets de chaque face meublée, en texte — ni trigonométrie

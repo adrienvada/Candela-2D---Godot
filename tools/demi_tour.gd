@@ -101,9 +101,24 @@ static func nom_face(f: Dictionary) -> String:
 	return "%s(%d,%d)×%d" % [sens, floori(m.x / tuile), floori(m.y / tuile), int(f["cases"])]
 
 
-## Les sommets d'une construction arrondis au dixième de pixel, en clés.
-static func _cle_sommet(v: Vector3) -> Vector3i:
-	return Vector3i(roundi(v.x * 10.0), roundi(v.y * 10.0), roundi(v.z * 10.0))
+## Les sommets d'une construction rangés par case d'un pixel, pour une recherche à tolérance : un arrondi fixe mettrait
+## un sommet et son image de part et d'autre d'une limite (le flottant du demi-tour, L − x, n'est pas exact au bit).
+const TOLERANCE_PX := 0.02
+
+
+static func _case_px(v: Vector3) -> Vector3i:
+	return Vector3i(floori(v.x), floori(v.y), floori(v.z))
+
+
+static func _a_un_voisin(ensemble: Dictionary, v: Vector3) -> bool:
+	var c := _case_px(v)
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			for dz in [-1, 0, 1]:
+				for w in ensemble.get(c + Vector3i(dx, dy, dz), []):
+					if (w as Vector3).distance_to(v) <= TOLERANCE_PX:
+						return true
+	return false
 
 
 ## LES TUYAUX — la construction entière, sommet par sommet : l'image par le demi-tour de chaque sommet (x → L − x,
@@ -115,12 +130,15 @@ static func orphelins_tuyaux(data: Dictionary, c: Dictionary = {}) -> Array:
 	var sommets: PackedVector3Array = c["sommets"]
 	var ensemble := {}
 	for v in sommets:
-		ensemble[_cle_sommet(v)] = true
+		var k := _case_px(v)
+		if not ensemble.has(k):
+			ensemble[k] = []
+		(ensemble[k] as Array).append(v)
 	var faces_orphelines := {}
 	var face_de: PackedInt32Array = c["face_de_sommet"]
 	for k in sommets.size():
 		var v := sommets[k]
-		if not ensemble.has(_cle_sommet(Vector3(dim.x - v.x, v.y, dim.y - v.z))):
+		if not _a_un_voisin(ensemble, Vector3(dim.x - v.x, v.y, dim.y - v.z)):
 			faces_orphelines[face_de[k]] = true
 	var sortie := []
 	for i in faces_orphelines:

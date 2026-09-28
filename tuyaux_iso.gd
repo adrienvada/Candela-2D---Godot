@@ -24,7 +24,9 @@
 ##   sommet). Aucune saillie de plus de `SAILLIE_MAX` hors de l'emprise du mur, et `MARGE_BOUT` aux bouts de chaque face.
 ## - **L'équité.** Placement tiré des seules cases de la carte par un hachage entier (aucun `randf`, aucune graine) : le même
 ##   à chaque lancement, sur chaque machine. Un seul maillage dans le monde 3D commun (calque 1) : les deux joueurs voient les
-##   mêmes tuyaux, chacun sur les faces que SA caméra voit — à 0° de lacet une face par mur, à 45° deux.
+##   mêmes tuyaux, chacun sur les faces que SA caméra voit — à 0° de lacet une face par mur, à 45° deux. Et ces faces portent
+##   le même mobilier : à l'option B, J2 voit au DEMI-TOUR de ce que voit J1, la face de normale −n ; une face et sa jumelle
+##   partagent leur graine (`graine`), et une face sans jumelle exacte ne porte rien (`faces_jumelles`).
 ## - **Le coût.** Un seul maillage fusionné par carte, un seul matériau : un appel de dessin de plus par vue 3D, quelle que
 ##   soit la carte.
 ##
@@ -159,12 +161,19 @@ static func faces(data: Dictionary) -> Array[Dictionary]:
 				if expose and debut < 0:
 					debut = k
 				elif not expose and debut >= 0:
-					sortie.append(_face(n, sens, ligne, debut, k, tuile))
+					sortie.append(_face(n, sens, ligne, debut, k, tuile, lignes, cases_par_ligne))
 					debut = -1
 	return sortie
 
 
-static func _face(n: Vector2, sens: int, ligne: int, debut: int, fin: int, tuile: float) -> Dictionary:
+## `graine` : ce que le hachage lit. La MÊME pour une face et sa jumelle par le demi-tour (la plus petite de leurs deux
+## clés) : à 45° B, J2 regarde depuis le côté opposé et voit, au demi-tour, la face de normale −n que J1 voit de face ; elle
+## doit porter le même mobilier (session cloud « décor demi-tour », 2026-09-28 ; avant, chaque face tirait sa propre clé et
+## aucune carte n'était juste : à l'Arène Standard, les faces d'enceinte S, E et O étaient meublées, la N — celle que J2
+## voit — ne l'était pas). Le long d'une face, le demi-tour garde le sens de la tangente `(−n.y, n.x)` : le même tirage y
+## pose donc chaque pièce exactement à l'image de l'autre. Sens : 0 S, 1 N, 2 E, 3 O — l'opposé est `sens ^ 1`.
+static func _face(n: Vector2, sens: int, ligne: int, debut: int, fin: int, tuile: float, lignes: int,
+		cases_par_ligne: int) -> Dictionary:
 	var bord := MapGeometry.BORDER
 	var t := Vector2(-n.y, n.x)
 	# Le plan : la ligne de cases, décalée d'une case vers l'extérieur pour les faces sud et est.
@@ -176,7 +185,16 @@ static func _face(n: Vector2, sens: int, ligne: int, debut: int, fin: int, tuile
 	var s_a := p_a.dot(t)
 	var s_b := p_b.dot(t)
 	return {"n": n, "d": p_a.dot(n), "s0": minf(s_a, s_b), "s1": maxf(s_a, s_b), "cases": fin - debut,
-		"cle": [sens, ligne, debut]}
+		"cle": [sens, ligne, debut], "graine": graine_demi_tour([sens, ligne, debut],
+			[sens ^ 1, lignes - 1 - ligne, cases_par_ligne - fin])}
+
+
+## La plus petite de deux clés, dans l'ordre lexicographique : commune à une face et à sa jumelle.
+static func graine_demi_tour(a: Array, b: Array) -> Array:
+	for k in a.size():
+		if int(a[k]) != int(b[k]):
+			return a if int(a[k]) < int(b[k]) else b
+	return a
 
 
 # ---------------------------------------------------------------------------
@@ -290,22 +308,53 @@ static func construire(data: Dictionary) -> Dictionary:
 	c.faces = faces(data)
 	var h_mur := hauteur_mur_px()
 	var h_max := hauteur_max_px()
+	var jumelles := faces_jumelles(data, c.faces)
 	for i in c.faces.size():
-		_meubler(c, i, h_mur, h_max)
+		# Une face sans jumelle exacte par le demi-tour ne porte rien : son mobilier ne serait vu que d'un joueur. N'arrive
+		# que sur une carte sans demi-tour (l'Usine, dont le bloc central est décalé d'une case) — la règle des enseignes
+		# et des murs meublés, qui refusent tout objet sans image.
+		if jumelles[i]:
+			_meubler(c, i, h_mur, h_max)
 	return {"faces": c.faces, "sommets": c.sommets, "normales": c.normales, "uv": c.uv, "uv2": c.uv2,
 		"indices": c.indices, "face_de_sommet": c.face_de_sommet, "compte": c.compte}
+
+
+## Pour chaque face, a-t-elle sa jumelle EXACTE par le demi-tour — la face de normale −n, au demi-tour de son plan et de son
+## étendue ? Les plans et les bouts sont des multiples de la tuile : la comparaison se fait en pixels entiers.
+static func faces_jumelles(data: Dictionary, liste: Array[Dictionary]) -> Array[bool]:
+	var hauts := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+	var sortie: Array[bool] = []
+	if hauts.is_empty():
+		return sortie
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	var dim := Vector2(hauts.size() - 2 * MapGeometry.BORDER,
+		(hauts[0] as Array).size() - 2 * MapGeometry.BORDER) * tuile
+	var cles := {}
+	for f in liste:
+		cles[_cle_plan(f["n"], float(f["d"]), float(f["s0"]), float(f["s1"]))] = true
+	for f in liste:
+		var n: Vector2 = f["n"]
+		var t := Vector2(-n.y, n.x)
+		# Le demi-tour : p → dim − p, n → −n ; la tangente se retourne avec n, l'abscisse se décale de −dim·t.
+		sortie.append(cles.has(_cle_plan(-n, float(f["d"]) - dim.dot(n), float(f["s0"]) - dim.dot(t),
+			float(f["s1"]) - dim.dot(t))))
+	return sortie
+
+
+static func _cle_plan(n: Vector2, d: float, s0: float, s1: float) -> Vector4i:
+	return Vector4i(roundi(n.x) * 3 + roundi(n.y), roundi(d), roundi(s0), roundi(s1))
 
 
 ## Le programme d'une face de deux cases et plus, tiré de sa clé : 0 une conduite, 1 une conduite et des câbles, 2 des câbles,
 ## 3 une conduite et sa descente (une conduite seule sous trois cases), 4 rien.
 static func programme_de(f: Dictionary) -> int:
-	return int(tirage(hacher(f["cle"]), 0) * 5.0)
+	return int(tirage(hacher(f["graine"]), 0) * 5.0)
 
 
 ## Le mobilier d'une face selon son programme. Une case seule (un pilier, un bout de mur) : parfois une colonne montante.
 static func _meubler(c: Chantier, i: int, h_mur: float, h_max: float) -> void:
 	var f: Dictionary = c.faces[i]
-	var h := hacher(f["cle"])
+	var h := hacher(f["graine"])
 	var s0: float = float(f["s0"]) + MARGE_BOUT
 	var s1: float = float(f["s1"]) - MARGE_BOUT
 	var cases: int = f["cases"]
