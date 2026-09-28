@@ -145,6 +145,8 @@ const PeintureIsoT := preload("res://peinture_iso.gd")
 const TuyauxIsoT := preload("res://tuyaux_iso.gd")
 ## Les enseignes et les panneaux muraux, en essai (`--enseignes-essai`) : leur script par son chemin, comme les tuyaux.
 const EnseignesIsoT := preload("res://enseignes_iso.gd")
+## Les murs meublés, en essai (`--murs-meubles-essai`) : leur script par son chemin, comme les enseignes.
+const MursMeublesIsoT := preload("res://murs_meubles_iso.gd")
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
 const CALQUE_VUE_1 := 2
@@ -230,6 +232,11 @@ var _noeud_tuyaux: MeshInstance3D = null
 var _enseignes := EnseignesIsoT.essai_actif()
 var _mat_enseignes: ShaderMaterial = null
 var _noeud_enseignes: MeshInstance3D = null
+## Les murs meublés en essai (`--murs-meubles-essai`, `murs_meubles_iso.gd`), lus une fois : éteints, rien de construit. Un
+## matériau par famille (portes, grilles, boîtiers, faisceaux), un nœud par famille présente sur la carte.
+var _murs_meubles := MursMeublesIsoT.essai_actif()
+var _mats_murs_meubles: Dictionary = {}
+var _noeuds_murs_meubles: Array[MeshInstance3D] = []
 var _mat_mur: ShaderMaterial
 var _mat_corps: Array[ShaderMaterial] = []
 var _mat_profondeur: Array[ShaderMaterial] = []
@@ -1019,6 +1026,9 @@ func _poser_peinture() -> void:
 	if _mat_enseignes != null:
 		IsoMateriaux.accorder_peinture(_mat_enseignes, _peinture.get_texture(), _peinture.cadre,
 			_peinture.point_reference(), _peinture.point_plancher())
+	for m in _mats_murs_meubles.values():
+		IsoMateriaux.accorder_peinture(m, _peinture.get_texture(), _peinture.cadre,
+			_peinture.point_reference(), _peinture.point_plancher())
 	# ISO12 — la même peinture pour les deux sols : sans effet sur `sol_iso`, qui ne la déclare pas ; l'albédo et le
 	# normaliseur de L2D pour `sol_iso_eclaire`.
 	for m in _mat_sols:
@@ -1039,6 +1049,8 @@ func _retirer_peinture() -> void:
 		IsoMateriaux.accorder_peinture(_mat_tuyaux, null, Rect2())
 	if _mat_enseignes != null:
 		IsoMateriaux.accorder_peinture(_mat_enseignes, null, Rect2())
+	for m in _mats_murs_meubles.values():
+		IsoMateriaux.accorder_peinture(m, null, Rect2())
 	for m in _mat_sols:
 		IsoMateriaux.accorder_peinture(m, null, Rect2())
 
@@ -2019,6 +2031,7 @@ func _construire_les_murs() -> void:
 	_scene.add_child(_murs)
 	_construire_les_tuyaux(data)
 	_construire_les_enseignes(data)
+	_construire_les_murs_meubles(data)
 	_reconstruire = false
 
 
@@ -2058,6 +2071,26 @@ func _construire_les_enseignes(data: Dictionary) -> void:
 		_scene.add_child(_noeud_enseignes)
 
 
+## Les murs meublés de CETTE carte (`murs_meubles_iso.gd`) : un maillage par famille, refaits avec les murs, hors de `_murs`
+## comme les tuyaux. Les matériaux naissent au premier appel, avant que `_allumer` ne pose les lightmaps sur `_materiaux()`.
+func _construire_les_murs_meubles(data: Dictionary) -> void:
+	for noeud in _noeuds_murs_meubles:
+		_scene.remove_child(noeud)
+		noeud.queue_free()
+	_noeuds_murs_meubles.clear()
+	if not _murs_meubles:
+		return
+	if _mats_murs_meubles.is_empty():
+		for famille in MursMeublesIsoT.FAMILLES:
+			var m := _materiau(MursMeublesIsoT.shader_de(famille))
+			MursMeublesIsoT.accorder(m, famille)
+			_mats_murs_meubles[famille] = m
+	for noeud in MursMeublesIsoT.creer_noeuds(data, _mats_murs_meubles):
+		noeud.layers = CALQUE_COMMUN
+		_scene.add_child(noeud)
+		_noeuds_murs_meubles.append(noeud)
+
+
 ## ISO13, lot C — les impacts de balles du jeu (`wall_impact.gd`, les originaux : leurs copies J2 sont au même endroit)
 ## posés sur les faces des murs. Seulement quand un éclat arrive ou part : le nombre et l'id du dernier suffisent à le voir.
 func _suivre_usure() -> void:
@@ -2095,6 +2128,8 @@ func _materiaux() -> Array[ShaderMaterial]:
 		tous.append(_mat_tuyaux)
 	if _mat_enseignes != null:
 		tous.append(_mat_enseignes)
+	for m in _mats_murs_meubles.values():
+		tous.append(m)
 	return tous
 
 
