@@ -11,5 +11,18 @@
   ],
   "noirs de B allumés dans A": 1127,
   "bruit B→B2 (>0)": 0
+ },
+ "carte_iso_avant": {
+  "A≠B (>7)": 30925,
+  "A≠B (>0)": 47210,
+  "écart max": 230,
+  "boîte": [
+   103,
+   284,
+   1892,
+   1079
+  ],
+  "noirs de B allumés dans A": 92,
+  "bruit B→B2 (>0)": 0
  }
 }
