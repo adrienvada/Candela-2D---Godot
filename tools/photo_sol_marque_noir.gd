@@ -148,17 +148,21 @@ func _poser_la_carte(chemin: String, fraiche := true) -> bool:
 
 ## La peinture iso de la carte, avec puis sans les marques, puis les marques remises : ce que les murs divisent.
 func _vider_la_peinture(carte: String) -> void:
-	var peinture: SubViewport = null
-	for n in get_tree().root.find_children("*", "SubViewport", true, false):
-		if n.get_script() == preload("res://peinture_iso.gd"):
-			peinture = n
+	# Relue après chaque attente : un changement de vue (scindée → unique) éteint et rallume la présentation, qui refait
+	# alors sa peinture — la sous-vue d'avant l'attente peut être libérée (vu au premier lancement des six cartes).
+	await _attendre_images(3)
+	var peinture := _la_peinture()
 	if peinture == null:
 		printerr("  ! pas de peinture iso")
 		return
-	await _attendre_images(3)
 	var img := peinture.get_texture().get_image()
 	img.save_png(ProjectSettings.globalize_path("%s/%s_peinture_A.png" % [_dossier, carte]))
 	await _marques(false)
+	peinture = _la_peinture()
+	if peinture == null:
+		printerr("  ! pas de peinture iso")
+		await _marques(true)
+		return
 	img = peinture.get_texture().get_image()
 	img.save_png(ProjectSettings.globalize_path("%s/%s_peinture_B.png" % [_dossier, carte]))
 	await _marques(true)
@@ -169,3 +173,9 @@ func _vider_la_peinture(carte: String) -> void:
 	print("PEINTURE %s %dx%d cadre %s · lue par les murs : taille %s · carte posée : %s px (+ 2 cases de bordure)" % [carte,
 		img.get_width(), img.get_height(), str(peinture.cadre),
 		str(mat.get_shader_parameter("peinture_taille_px")) if mat != null else "?", str(grille)])
+
+
+## La peinture que la présentation iso tient en ce moment (celle que les murs lisent), ou `null`.
+func _la_peinture() -> SubViewport:
+	var iso := Presentation3D.instance()
+	return iso.peinture() if iso != null else null
