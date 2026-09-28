@@ -14,7 +14,7 @@
 //   jamais plus claire que la fiche), pondérée par l'orientation du bord vers `soi_lumiere` : la direction horizontale vers
 //   la lumière qui éclaire vraiment ce corps, calculée par `MannequinIso.direction_dominante()` (torche, rétrodiffusion,
 //   fusée, torche adverse, murs compris) — la même que le mannequin, réutilisée telle quelle. Pas de lumière, pas de liseré ;
-// - **dans le noir complet, un repère** : la même bande, sur tous les bords, à la valeur de la silhouette de soi
+// - **dans le noir complet, un repère** : la même bande, sur les bords des dessus, à la valeur de la silhouette de soi
 //   d'aujourd'hui (`silhouette.rgb × s`, aucune constante neuve pour la couleur) — le joueur se retrouve toujours, par un
 //   trait et non plus par une tache.
 //
@@ -64,6 +64,9 @@ vec3 soi_sombre_composer(vec3 c, vec3 sil, float s, vec3 lp, vec3 d, vec3 ech, v
 	}
 	vec3 corps = pate_facteur(c, soi_sombre_facteur);
 	corps = mix(corps, c, bande * face);
-	return max(corps, sil * s * bande);
+	// Le repère sur les bords des DESSUS seulement : posé sur toutes les arêtes, il dessinait le corps en fil de fer (première
+	// prise, 2026-09-28) ; les dessus, vus d'en haut, en font le contour.
+	float dessus = step(0.5, n_locale.y);
+	return max(corps, sil * s * bande * dessus);
 }
 #endif

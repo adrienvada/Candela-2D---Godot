@@ -11,6 +11,8 @@
 ## - **la règle de l'essai**, sur un miroir de `soi_sombre_composer` écrit ici : dans le noir, rien hors de la bande du
 ##   repère ; le repère à la valeur de la silhouette d'aujourd'hui, jamais plus ; sans lumière dominante, aucun liseré ;
 ##   jamais plus clair que le corps éclairé d'aujourd'hui ou que la silhouette ; le liseré du côté de la lumière seulement ;
+## - **la direction du liseré voit la propre torche du joueur** : le rayon « derrière un mur ? » exclut son corps, qui est
+##   sur la couche des murs (`Presentation3D.direction_du_lisere`) — sans l'exclure, sa rétrodiffusion ne compte jamais ;
 ## - `Protocol.VERSION` reste 18 ; aucun fichier de simulation ne connaît le drapeau.
 ##
 ## Ce qu'elle ne prouve pas : l'image. La planche (`docs/iso/cloud/corps-sombre/`) la mesure, vue de l'adversaire comprise.
@@ -50,6 +52,7 @@ func _run() -> void:
 	_le_drapeau(racine)
 	_le_texte()
 	_la_regle()
+	await _la_direction(racine)
 	VoxelCatalogue.forcer_soi_sombre = -1
 	VoxelCatalogue.forcer_detail = -1
 	racine.queue_free()
@@ -221,3 +224,47 @@ func _la_regle() -> void:
 	var milieu_plein := IsoPate.luminance(_composer(pleine, bleu, 0.5, 0.0, 1.0))
 	_check("en pleine lumière, le corps vaut ~0,4 de sa lumière d'aujourd'hui en valeur affichée (%.3f)" % milieu_plein,
 		milieu_plein < IsoPate.luminance(pleine) * 0.75)
+
+
+func _la_direction(racine: Node3D) -> void:
+	print("— la direction du liseré : sa propre torche compte")
+	var monde := Node2D.new()
+	root.add_child(monde)
+	var joueur := CharacterBody2D.new()
+	joueur.collision_layer = MapGeometry.WALL_LAYER  # comme le joueur du jeu (couche par défaut, celle des murs)
+	var forme := CollisionShape2D.new()
+	var cercle := CircleShape2D.new()
+	cercle.radius = 18.0
+	forme.shape = cercle
+	joueur.add_child(forme)
+	joueur.position = Vector2(200, 200)
+	monde.add_child(joueur)
+	await physics_frame
+	await physics_frame
+	# Sa rétrodiffusion, 18 px devant lui (`BodyLight`), comme `MannequinIso.lampes_du_jeu` la décrit.
+	var lampes := [{"position": Vector2(200, 182), "intensite": 0.55, "rayon": 128.0, "cone": Vector2.ZERO,
+		"demi_angle": PI}]
+	var d := Presentation3D.direction_du_lisere(joueur, lampes)
+	_check("sous sa propre torche, le liseré regarde vers elle (%s)" % str(d), d.y < -0.9)
+	# ⚠️ Ce cercle seul ne reproduit PAS le blocage vu en jeu (un rayon qui part de l'intérieur d'une forme ne la touche pas) :
+	# en jeu, sans l'exclusion, la direction sous sa propre torche valait (0, 0) — journal du photographe, rapport Q39.
+	var mur := StaticBody2D.new()
+	mur.collision_layer = MapGeometry.WALL_LAYER
+	var fm := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(40, 4)
+	fm.shape = rect
+	mur.add_child(fm)
+	mur.position = Vector2(200, 170)
+	monde.add_child(mur)
+	await physics_frame
+	await physics_frame
+	var loin := [{"position": Vector2(200, 120), "intensite": 1.0, "rayon": 300.0, "cone": Vector2.ZERO, "demi_angle": PI}]
+	_check("une lampe derrière un mur ne compte pas", Presentation3D.direction_du_lisere(joueur, loin) == Vector2.ZERO)
+	var nue := Node2D.new()
+	monde.add_child(nue)
+	nue.position = Vector2(500, 500)
+	_check("un nœud sans corps de physique : rien à exclure, pas d'erreur",
+		Presentation3D.direction_du_lisere(nue, [{"position": Vector2(500, 480), "intensite": 1.0, "rayon": 100.0,
+			"cone": Vector2.ZERO, "demi_angle": PI}]).y < -0.9)
+	monde.queue_free()

@@ -820,13 +820,11 @@ func _suivre() -> void:
 			# pure) ; son ancre reste à l'origine, à l'échelle d'une tuile.
 			_accorder_la_classe(j, joueur)
 			(_voxels[j] as VoxelCorps).poser(etat_du_corps(j, joueur))
-			if mannequin or soi_sombre:
-				var vers_la_lumiere := MannequinIso.direction_dominante(p, lampes_mannequin,
-					MannequinIso.occultation(joueur as Node2D))
-				if mannequin:
-					(_voxels[j] as VoxelCorps).eclairer_mannequin(vers_la_lumiere)
-				if soi_sombre:
-					_mat_corps[j].set_shader_parameter("soi_lumiere", vers_la_lumiere)
+			if mannequin:
+				(_voxels[j] as VoxelCorps).eclairer_mannequin(MannequinIso.direction_dominante(p, lampes_mannequin,
+					MannequinIso.occultation(joueur as Node2D)))
+			if soi_sombre:
+				_mat_corps[j].set_shader_parameter("soi_lumiere", direction_du_lisere(joueur as Node2D, lampes_mannequin))
 		else:
 			_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
@@ -1425,6 +1423,16 @@ static func opacite_rendue(item: Variant) -> float:
 		a *= (n as CanvasItem).modulate.a
 		n = n.get_parent()
 	return clampf(a, 0.0, 1.0)
+
+
+## Q39 — la direction du liseré de `--corps-soi-sombre` : celle du mannequin (`MannequinIso.direction_dominante`), à un
+## geste près. ⚠️ **Le rayon « derrière un mur ? » exclut le corps du joueur** : il part de son centre, et le joueur est
+## lui-même sur la couche des murs — sans l'exclure, le rayon vers sa propre rétrodiffusion (18 px devant lui) est coupé
+## par son propre corps, et sa torche ne compte jamais (constaté au photographe, 2026-09-28 : (0, 0) sous sa torche, (0, −1)
+## sans les murs). Le mannequin, lui, garde son appel d'hier : hors de cette tâche, signalé dans le rapport.
+static func direction_du_lisere(joueur: Node2D, lampes: Array) -> Vector2:
+	var exclus: Array = [joueur.get_rid()] if joueur is CollisionObject2D else []
+	return MannequinIso.direction_dominante(joueur.global_position, lampes, MannequinIso.occultation(joueur, exclus))
 
 
 ## La silhouette qui recouvre son propre corps, chez son propre joueur seulement (brief d'Adrien,
