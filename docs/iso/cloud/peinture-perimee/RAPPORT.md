@@ -12,7 +12,8 @@ Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
    kill, un hasard (la killcam qui change l'affichage) l'efface.
 4. La correction tient en une ligne (refaire la « peinture » des murs en même temps que les murs) ; elle est prête sur
    cette branche, testée, et **pas appliquée au jeu** : elle attend ton accord.
-5. Les chiffres de l'évaluation 11 sur la Croisée et le Bunker sont refaits avec la bonne peinture (§ 4).
+5. L'évaluation 11 refaite avec la bonne peinture : les taches du « sol marqué » disparaissent (1 et 0 pixel au lieu de 8
+   et 34), et c'était le jeu par défaut lui-même qui s'allumait dans son banc (524 et 716 pixels) (§ 4).
 
 ## État
 
