@@ -1,0 +1,3670 @@
+{
+ "arene_circulaire_duel": {
+  "bruit_px": 0,
+  "changes_px": 105009,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   117.9,
+   186.4
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 35.2,
+    "saturation": 0.405,
+    "rgb": [
+     160,
+     133,
+     95
+    ]
+   },
+   {
+    "teinte_deg": 35.7,
+    "saturation": 0.253,
+    "rgb": [
+     230,
+     207,
+     172
+    ]
+   }
+  ],
+  "torche_tout": {
+   "defaut": {
+    "n": 145002,
+    "mediane": 27.3,
+    "p99": 141.7,
+    "couleur": {
+     "teinte_deg": 33.9,
+     "saturation": 0.451,
+     "rgb": [
+      52,
+      42,
+      29
+     ]
+    }
+   },
+   "essai": {
+    "n": 145002,
+    "mediane": 28.5,
+    "p99": 220.9,
+    "couleur": {
+     "teinte_deg": 34.5,
+     "saturation": 0.344,
+     "rgb": [
+      68,
+      58,
+      44
+     ]
+    }
+   }
+  },
+  "coeur_tout": {
+   "defaut": {
+    "n": 26530,
+    "mediane": 121.8,
+    "p99": 193.5,
+    "couleur": {
+     "teinte_deg": 34.4,
+     "saturation": 0.36,
+     "rgb": [
+      138,
+      117,
+      88
+     ]
+    }
+   },
+   "essai": {
+    "n": 26530,
+    "mediane": 205.4,
+    "p99": 235.6,
+    "couleur": {
+     "teinte_deg": 36.2,
+     "saturation": 0.218,
+     "rgb": [
+      209,
+      191,
+      163
+     ]
+    }
+   }
+  }
+ },
+ "arene_circulaire_noir": {
+  "bruit_px": 0,
+  "changes_px": 15825,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   33.8,
+   33.9
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.3,
+    "saturation": 0.503,
+    "rgb": [
+     96,
+     78,
+     48
+    ]
+   },
+   {
+    "teinte_deg": 37.3,
+    "saturation": 0.495,
+    "rgb": [
+     94,
+     77,
+     48
+    ]
+   }
+  ]
+ },
+ "arene_circulaire_scinde": {
+  "bruit_px": 0,
+  "changes_px": 87114,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   118.9,
+   186.9
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.5,
+    "saturation": 0.343,
+    "rgb": [
+     152,
+     132,
+     100
+    ]
+   },
+   {
+    "teinte_deg": 37.0,
+    "saturation": 0.231,
+    "rgb": [
+     213,
+     194,
+     164
+    ]
+   }
+  ],
+  "torche_vue_j1": {
+   "defaut": {
+    "n": 122978,
+    "mediane": 21.3,
+    "p99": 144.5,
+    "couleur": {
+     "teinte_deg": 37.8,
+     "saturation": 0.356,
+     "rgb": [
+      47,
+      41,
+      30
+     ]
+    }
+   },
+   "essai": {
+    "n": 122978,
+    "mediane": 21.3,
+    "p99": 202.7,
+    "couleur": {
+     "teinte_deg": 37.6,
+     "saturation": 0.273,
+     "rgb": [
+      62,
+      56,
+      45
+     ]
+    }
+   }
+  },
+  "coeur_vue_j1": {
+   "defaut": {
+    "n": 29697,
+    "mediane": 117.2,
+    "p99": 194.4,
+    "couleur": {
+     "teinte_deg": 38.1,
+     "saturation": 0.316,
+     "rgb": [
+      129,
+      114,
+      88
+     ]
+    }
+   },
+   "essai": {
+    "n": 29697,
+    "mediane": 185.6,
+    "p99": 219.2,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.217,
+     "rgb": [
+      189,
+      174,
+      148
+     ]
+    }
+   }
+  },
+  "torche_vue_j2": {
+   "defaut": {
+    "n": 130425,
+    "mediane": 14.1,
+    "p99": 125.3,
+    "couleur": {
+     "teinte_deg": 36.1,
+     "saturation": 0.379,
+     "rgb": [
+      33,
+      28,
+      21
+     ]
+    }
+   },
+   "essai": {
+    "n": 130425,
+    "mediane": 14.1,
+    "p99": 198.2,
+    "couleur": {
+     "teinte_deg": 36.1,
+     "saturation": 0.311,
+     "rgb": [
+      41,
+      36,
+      28
+     ]
+    }
+   }
+  },
+  "coeur_vue_j2": {
+   "defaut": {
+    "n": 16915,
+    "mediane": 110.7,
+    "p99": 131.7,
+    "couleur": {
+     "teinte_deg": 33.7,
+     "saturation": 0.351,
+     "rgb": [
+      123,
+      104,
+      80
+     ]
+    }
+   },
+   "essai": {
+    "n": 16915,
+    "mediane": 178.0,
+    "p99": 202.5,
+    "couleur": {
+     "teinte_deg": 33.8,
+     "saturation": 0.242,
+     "rgb": [
+      178,
+      159,
+      135
+     ]
+    }
+   }
+  }
+ },
+ "arene_circulaire_scinde_noir": {
+  "bruit_px": 0,
+  "changes_px": 39056,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   58.0,
+   65.2
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 35.4,
+    "saturation": 0.456,
+    "rgb": [
+     125,
+     101,
+     68
+    ]
+   },
+   {
+    "teinte_deg": 35.3,
+    "saturation": 0.43,
+    "rgb": [
+     134,
+     111,
+     77
+    ]
+   }
+  ]
+ },
+ "default_duel": {
+  "bruit_px": 0,
+  "changes_px": 93662,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   128.4,
+   208.9
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.6,
+    "saturation": 0.376,
+    "rgb": [
+     171,
+     147,
+     107
+    ]
+   },
+   {
+    "teinte_deg": 37.1,
+    "saturation": 0.238,
+    "rgb": [
+     237,
+     215,
+     180
+    ]
+   }
+  ],
+  "torche_tout": {
+   "defaut": {
+    "n": 121178,
+    "mediane": 45.4,
+    "p99": 204.2,
+    "couleur": {
+     "teinte_deg": 36.5,
+     "saturation": 0.39,
+     "rgb": [
+      79,
+      67,
+      48
+     ]
+    }
+   },
+   "essai": {
+    "n": 121178,
+    "mediane": 55.0,
+    "p99": 228.5,
+    "couleur": {
+     "teinte_deg": 36.5,
+     "saturation": 0.281,
+     "rgb": [
+      111,
+      99,
+      80
+     ]
+    }
+   }
+  },
+  "coeur_tout": {
+   "defaut": {
+    "n": 51896,
+    "mediane": 121.2,
+    "p99": 216.4,
+    "couleur": {
+     "teinte_deg": 37.2,
+     "saturation": 0.353,
+     "rgb": [
+      136,
+      118,
+      88
+     ]
+    }
+   },
+   "essai": {
+    "n": 51896,
+    "mediane": 202.0,
+    "p99": 242.2,
+    "couleur": {
+     "teinte_deg": 37.3,
+     "saturation": 0.233,
+     "rgb": [
+      205,
+      187,
+      158
+     ]
+    }
+   }
+  }
+ },
+ "default_noir": {
+  "bruit_px": 0,
+  "changes_px": 5514,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   33.6,
+   33.6
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.1,
+    "saturation": 0.52,
+    "rgb": [
+     119,
+     95,
+     57
+    ]
+   },
+   {
+    "teinte_deg": 37.1,
+    "saturation": 0.52,
+    "rgb": [
+     119,
+     95,
+     57
+    ]
+   }
+  ]
+ },
+ "map_001_le_cloitre_duel": {
+  "bruit_px": 0,
+  "changes_px": 39244,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   125.3,
+   140.6
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.9,
+    "saturation": 0.429,
+    "rgb": [
+     172,
+     144,
+     98
+    ]
+   },
+   {
+    "teinte_deg": 37.2,
+    "saturation": 0.284,
+    "rgb": [
+     225,
+     201,
+     161
+    ]
+   }
+  ],
+  "torche_tout": {
+   "defaut": {
+    "n": 32294,
+    "mediane": 104.2,
+    "p99": 168.1,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.323,
+     "rgb": [
+      95,
+      83,
+      64
+     ]
+    }
+   },
+   "essai": {
+    "n": 32294,
+    "mediane": 143.5,
+    "p99": 229.7,
+    "couleur": {
+     "teinte_deg": 37.9,
+     "saturation": 0.221,
+     "rgb": [
+      137,
+      125,
+      106
+     ]
+    }
+   }
+  },
+  "coeur_tout": {
+   "defaut": {
+    "n": 18735,
+    "mediane": 128.2,
+    "p99": 189.8,
+    "couleur": {
+     "teinte_deg": 37.6,
+     "saturation": 0.301,
+     "rgb": [
+      139,
+      123,
+      97
+     ]
+    }
+   },
+   "essai": {
+    "n": 18735,
+    "mediane": 211.7,
+    "p99": 238.9,
+    "couleur": {
+     "teinte_deg": 37.8,
+     "saturation": 0.195,
+     "rgb": [
+      210,
+      195,
+      169
+     ]
+    }
+   }
+  }
+ },
+ "map_001_le_cloitre_noir": {
+  "bruit_px": 0,
+  "changes_px": 17083,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   53.8,
+   54.1
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.4,
+    "saturation": 0.532,
+    "rgb": [
+     161,
+     127,
+     75
+    ]
+   },
+   {
+    "teinte_deg": 36.4,
+    "saturation": 0.532,
+    "rgb": [
+     161,
+     127,
+     75
+    ]
+   }
+  ]
+ },
+ "map_001_le_cloitre_scinde": {
+  "bruit_px": 0,
+  "changes_px": 88757,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   121.8,
+   190.6
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.1,
+    "saturation": 0.371,
+    "rgb": [
+     161,
+     138,
+     101
+    ]
+   },
+   {
+    "teinte_deg": 37.0,
+    "saturation": 0.233,
+    "rgb": [
+     215,
+     196,
+     165
+    ]
+   }
+  ],
+  "torche_vue_j1": {
+   "defaut": {
+    "n": 168255,
+    "mediane": 21.8,
+    "p99": 134.3,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.388,
+     "rgb": [
+      40,
+      34,
+      24
+     ]
+    }
+   },
+   "essai": {
+    "n": 168255,
+    "mediane": 21.8,
+    "p99": 201.7,
+    "couleur": {
+     "teinte_deg": 37.6,
+     "saturation": 0.315,
+     "rgb": [
+      49,
+      43,
+      33
+     ]
+    }
+   }
+  },
+  "coeur_vue_j1": {
+   "defaut": {
+    "n": 24929,
+    "mediane": 120.0,
+    "p99": 186.9,
+    "couleur": {
+     "teinte_deg": 37.9,
+     "saturation": 0.307,
+     "rgb": [
+      132,
+      117,
+      91
+     ]
+    }
+   },
+   "essai": {
+    "n": 24929,
+    "mediane": 190.9,
+    "p99": 218.6,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.209,
+     "rgb": [
+      191,
+      176,
+      151
+     ]
+    }
+   }
+  },
+  "torche_vue_j2": {
+   "defaut": {
+    "n": 158740,
+    "mediane": 20.6,
+    "p99": 127.9,
+    "couleur": {
+     "teinte_deg": 36.7,
+     "saturation": 0.426,
+     "rgb": [
+      36,
+      30,
+      20
+     ]
+    }
+   },
+   "essai": {
+    "n": 158740,
+    "mediane": 20.6,
+    "p99": 199.4,
+    "couleur": {
+     "teinte_deg": 36.7,
+     "saturation": 0.373,
+     "rgb": [
+      41,
+      35,
+      26
+     ]
+    }
+   }
+  },
+  "coeur_vue_j2": {
+   "defaut": {
+    "n": 16783,
+    "mediane": 114.3,
+    "p99": 137.4,
+    "couleur": {
+     "teinte_deg": 33.6,
+     "saturation": 0.348,
+     "rgb": [
+      125,
+      106,
+      82
+     ]
+    }
+   },
+   "essai": {
+    "n": 16783,
+    "mediane": 166.7,
+    "p99": 203.7,
+    "couleur": {
+     "teinte_deg": 33.9,
+     "saturation": 0.253,
+     "rgb": [
+      172,
+      153,
+      129
+     ]
+    }
+   }
+  }
+ },
+ "map_001_le_cloitre_scinde_noir": {
+  "bruit_px": 0,
+  "changes_px": 40334,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   87.6,
+   96.3
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.6,
+    "saturation": 0.506,
+    "rgb": [
+     147,
+     118,
+     73
+    ]
+   },
+   {
+    "teinte_deg": 36.7,
+    "saturation": 0.465,
+    "rgb": [
+     152,
+     125,
+     81
+    ]
+   }
+  ]
+ },
+ "map_002_l_usine_duel": {
+  "bruit_px": 0,
+  "changes_px": 71776,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   138.4,
+   207.9
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 39.4,
+    "saturation": 0.492,
+    "rgb": [
+     221,
+     183,
+     112
+    ]
+   },
+   {
+    "teinte_deg": 39.4,
+    "saturation": 0.307,
+    "rgb": [
+     241,
+     215,
+     167
+    ]
+   }
+  ],
+  "torche_tout": {
+   "defaut": {
+    "n": 75032,
+    "mediane": 53.8,
+    "p99": 206.5,
+    "couleur": {
+     "teinte_deg": 38.4,
+     "saturation": 0.358,
+     "rgb": [
+      83,
+      72,
+      53
+     ]
+    }
+   },
+   "essai": {
+    "n": 75032,
+    "mediane": 75.7,
+    "p99": 240.6,
+    "couleur": {
+     "teinte_deg": 38.1,
+     "saturation": 0.257,
+     "rgb": [
+      118,
+      107,
+      88
+     ]
+    }
+   }
+  },
+  "coeur_tout": {
+   "defaut": {
+    "n": 35733,
+    "mediane": 122.1,
+    "p99": 218.7,
+    "couleur": {
+     "teinte_deg": 38.4,
+     "saturation": 0.329,
+     "rgb": [
+      135,
+      119,
+      90
+     ]
+    }
+   },
+   "essai": {
+    "n": 35733,
+    "mediane": 203.7,
+    "p99": 242.3,
+    "couleur": {
+     "teinte_deg": 37.9,
+     "saturation": 0.22,
+     "rgb": [
+      204,
+      187,
+      159
+     ]
+    }
+   }
+  }
+ },
+ "map_002_l_usine_noir": {
+  "bruit_px": 0,
+  "changes_px": 17741,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   131.6,
+   131.6
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 38.5,
+    "saturation": 0.557,
+    "rgb": [
+     220,
+     176,
+     98
+    ]
+   },
+   {
+    "teinte_deg": 38.5,
+    "saturation": 0.557,
+    "rgb": [
+     220,
+     176,
+     98
+    ]
+   }
+  ]
+ },
+ "map_002_l_usine_scinde": {
+  "bruit_px": 0,
+  "changes_px": 129267,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   122.7,
+   188.5
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.0,
+    "saturation": 0.389,
+    "rgb": [
+     165,
+     141,
+     101
+    ]
+   },
+   {
+    "teinte_deg": 37.2,
+    "saturation": 0.239,
+    "rgb": [
+     215,
+     195,
+     163
+    ]
+   }
+  ],
+  "torche_vue_j1": {
+   "defaut": {
+    "n": 231419,
+    "mediane": 21.3,
+    "p99": 132.5,
+    "couleur": {
+     "teinte_deg": 37.5,
+     "saturation": 0.382,
+     "rgb": [
+      37,
+      32,
+      23
+     ]
+    }
+   },
+   "essai": {
+    "n": 231419,
+    "mediane": 21.3,
+    "p99": 200.9,
+    "couleur": {
+     "teinte_deg": 37.4,
+     "saturation": 0.315,
+     "rgb": [
+      45,
+      40,
+      31
+     ]
+    }
+   }
+  },
+  "coeur_vue_j1": {
+   "defaut": {
+    "n": 30204,
+    "mediane": 117.5,
+    "p99": 187.0,
+    "couleur": {
+     "teinte_deg": 38.0,
+     "saturation": 0.313,
+     "rgb": [
+      128,
+      113,
+      88
+     ]
+    }
+   },
+   "essai": {
+    "n": 30204,
+    "mediane": 184.5,
+    "p99": 218.5,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.214,
+     "rgb": [
+      188,
+      173,
+      148
+     ]
+    }
+   }
+  },
+  "torche_vue_j2": {
+   "defaut": {
+    "n": 208731,
+    "mediane": 20.6,
+    "p99": 126.5,
+    "couleur": {
+     "teinte_deg": 37.1,
+     "saturation": 0.413,
+     "rgb": [
+      38,
+      32,
+      22
+     ]
+    }
+   },
+   "essai": {
+    "n": 208731,
+    "mediane": 20.6,
+    "p99": 198.2,
+    "couleur": {
+     "teinte_deg": 37.1,
+     "saturation": 0.354,
+     "rgb": [
+      45,
+      39,
+      29
+     ]
+    }
+   }
+  },
+  "coeur_vue_j2": {
+   "defaut": {
+    "n": 26795,
+    "mediane": 107.2,
+    "p99": 134.1,
+    "couleur": {
+     "teinte_deg": 35.3,
+     "saturation": 0.356,
+     "rgb": [
+      121,
+      103,
+      78
+     ]
+    }
+   },
+   "essai": {
+    "n": 26795,
+    "mediane": 165.7,
+    "p99": 202.9,
+    "couleur": {
+     "teinte_deg": 35.3,
+     "saturation": 0.258,
+     "rgb": [
+      172,
+      153,
+      127
+     ]
+    }
+   }
+  }
+ },
+ "map_002_l_usine_scinde_noir": {
+  "bruit_px": 0,
+  "changes_px": 40806,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   94.6,
+   103.6
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.5,
+    "saturation": 0.523,
+    "rgb": [
+     155,
+     123,
+     74
+    ]
+   },
+   {
+    "teinte_deg": 36.2,
+    "saturation": 0.516,
+    "rgb": [
+     163,
+     129,
+     79
+    ]
+   }
+  ]
+ },
+ "map_003_la_croisee_duel": {
+  "bruit_px": 0,
+  "changes_px": 77964,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   129.5,
+   206.0
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.3,
+    "saturation": 0.417,
+    "rgb": [
+     178,
+     150,
+     104
+    ]
+   },
+   {
+    "teinte_deg": 37.5,
+    "saturation": 0.252,
+    "rgb": [
+     236,
+     214,
+     176
+    ]
+   }
+  ],
+  "torche_tout": {
+   "defaut": {
+    "n": 86745,
+    "mediane": 43.8,
+    "p99": 169.5,
+    "couleur": {
+     "teinte_deg": 37.8,
+     "saturation": 0.362,
+     "rgb": [
+      79,
+      68,
+      50
+     ]
+    }
+   },
+   "essai": {
+    "n": 86745,
+    "mediane": 51.5,
+    "p99": 224.3,
+    "couleur": {
+     "teinte_deg": 37.6,
+     "saturation": 0.263,
+     "rgb": [
+      112,
+      101,
+      83
+     ]
+    }
+   }
+  },
+  "coeur_tout": {
+   "defaut": {
+    "n": 35858,
+    "mediane": 123.7,
+    "p99": 205.0,
+    "couleur": {
+     "teinte_deg": 37.8,
+     "saturation": 0.325,
+     "rgb": [
+      135,
+      119,
+      91
+     ]
+    }
+   },
+   "essai": {
+    "n": 35858,
+    "mediane": 207.6,
+    "p99": 241.3,
+    "couleur": {
+     "teinte_deg": 37.5,
+     "saturation": 0.214,
+     "rgb": [
+      209,
+      192,
+      164
+     ]
+    }
+   }
+  }
+ },
+ "map_003_la_croisee_noir": {
+  "bruit_px": 0,
+  "changes_px": 11639,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   96.2,
+   96.2
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.4,
+    "saturation": 0.535,
+    "rgb": [
+     171,
+     135,
+     79
+    ]
+   },
+   {
+    "teinte_deg": 36.4,
+    "saturation": 0.535,
+    "rgb": [
+     171,
+     135,
+     79
+    ]
+   }
+  ]
+ },
+ "map_003_la_croisee_scinde": {
+  "bruit_px": 0,
+  "changes_px": 70375,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   121.4,
+   188.7
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.8,
+    "saturation": 0.377,
+    "rgb": [
+     163,
+     139,
+     102
+    ]
+   },
+   {
+    "teinte_deg": 37.1,
+    "saturation": 0.239,
+    "rgb": [
+     215,
+     195,
+     164
+    ]
+   }
+  ],
+  "torche_vue_j1": {
+   "defaut": {
+    "n": 152135,
+    "mediane": 22.6,
+    "p99": 138.7,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.386,
+     "rgb": [
+      40,
+      34,
+      25
+     ]
+    }
+   },
+   "essai": {
+    "n": 152135,
+    "mediane": 22.6,
+    "p99": 202.7,
+    "couleur": {
+     "teinte_deg": 37.6,
+     "saturation": 0.312,
+     "rgb": [
+      49,
+      44,
+      34
+     ]
+    }
+   }
+  },
+  "coeur_vue_j1": {
+   "defaut": {
+    "n": 22607,
+    "mediane": 120.7,
+    "p99": 195.5,
+    "couleur": {
+     "teinte_deg": 37.9,
+     "saturation": 0.299,
+     "rgb": [
+      133,
+      119,
+      93
+     ]
+    }
+   },
+   "essai": {
+    "n": 22607,
+    "mediane": 191.8,
+    "p99": 219.1,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.201,
+     "rgb": [
+      195,
+      180,
+      156
+     ]
+    }
+   }
+  },
+  "torche_vue_j2": {
+   "defaut": {
+    "n": 143513,
+    "mediane": 20.2,
+    "p99": 127.9,
+    "couleur": {
+     "teinte_deg": 36.5,
+     "saturation": 0.428,
+     "rgb": [
+      35,
+      29,
+      20
+     ]
+    }
+   },
+   "essai": {
+    "n": 143513,
+    "mediane": 20.2,
+    "p99": 199.7,
+    "couleur": {
+     "teinte_deg": 36.6,
+     "saturation": 0.375,
+     "rgb": [
+      40,
+      34,
+      25
+     ]
+    }
+   }
+  },
+  "coeur_vue_j2": {
+   "defaut": {
+    "n": 14049,
+    "mediane": 114.3,
+    "p99": 134.9,
+    "couleur": {
+     "teinte_deg": 32.6,
+     "saturation": 0.343,
+     "rgb": [
+      126,
+      106,
+      83
+     ]
+    }
+   },
+   "essai": {
+    "n": 14049,
+    "mediane": 179.5,
+    "p99": 202.9,
+    "couleur": {
+     "teinte_deg": 33.1,
+     "saturation": 0.246,
+     "rgb": [
+      175,
+      156,
+      132
+     ]
+    }
+   }
+  }
+ },
+ "map_003_la_croisee_scinde_noir": {
+  "bruit_px": 0,
+  "changes_px": 37306,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   90.9,
+   96.3
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.6,
+    "saturation": 0.51,
+    "rgb": [
+     150,
+     120,
+     73
+    ]
+   },
+   {
+    "teinte_deg": 36.2,
+    "saturation": 0.516,
+    "rgb": [
+     158,
+     126,
+     76
+    ]
+   }
+  ]
+ },
+ "map_004_le_bunker_duel": {
+  "bruit_px": 0,
+  "changes_px": 114362,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   128.5,
+   207.9
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 37.1,
+    "saturation": 0.395,
+    "rgb": [
+     171,
+     145,
+     103
+    ]
+   },
+   {
+    "teinte_deg": 37.0,
+    "saturation": 0.241,
+    "rgb": [
+     236,
+     214,
+     179
+    ]
+   }
+  ],
+  "torche_tout": {
+   "defaut": {
+    "n": 128739,
+    "mediane": 36.8,
+    "p99": 147.9,
+    "couleur": {
+     "teinte_deg": 36.7,
+     "saturation": 0.386,
+     "rgb": [
+      69,
+      59,
+      42
+     ]
+    }
+   },
+   "essai": {
+    "n": 128739,
+    "mediane": 42.7,
+    "p99": 223.3,
+    "couleur": {
+     "teinte_deg": 36.9,
+     "saturation": 0.281,
+     "rgb": [
+      96,
+      86,
+      69
+     ]
+    }
+   }
+  },
+  "coeur_tout": {
+   "defaut": {
+    "n": 41586,
+    "mediane": 123.4,
+    "p99": 204.7,
+    "couleur": {
+     "teinte_deg": 36.8,
+     "saturation": 0.343,
+     "rgb": [
+      137,
+      119,
+      90
+     ]
+    }
+   },
+   "essai": {
+    "n": 41586,
+    "mediane": 206.7,
+    "p99": 241.3,
+    "couleur": {
+     "teinte_deg": 37.1,
+     "saturation": 0.22,
+     "rgb": [
+      211,
+      193,
+      164
+     ]
+    }
+   }
+  }
+ },
+ "map_004_le_bunker_noir": {
+  "bruit_px": 0,
+  "changes_px": 16309,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   46.6,
+   53.9
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.6,
+    "saturation": 0.514,
+    "rgb": [
+     149,
+     119,
+     72
+    ]
+   },
+   {
+    "teinte_deg": 36.6,
+    "saturation": 0.499,
+    "rgb": [
+     155,
+     125,
+     77
+    ]
+   }
+  ]
+ },
+ "map_004_le_bunker_scinde": {
+  "bruit_px": 0,
+  "changes_px": 72640,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   122.7,
+   189.5
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.9,
+    "saturation": 0.394,
+    "rgb": [
+     169,
+     143,
+     102
+    ]
+   },
+   {
+    "teinte_deg": 37.3,
+    "saturation": 0.242,
+    "rgb": [
+     215,
+     196,
+     163
+    ]
+   }
+  ],
+  "torche_vue_j1": {
+   "defaut": {
+    "n": 166297,
+    "mediane": 23.5,
+    "p99": 134.8,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.411,
+     "rgb": [
+      40,
+      34,
+      24
+     ]
+    }
+   },
+   "essai": {
+    "n": 166297,
+    "mediane": 23.5,
+    "p99": 201.7,
+    "couleur": {
+     "teinte_deg": 37.6,
+     "saturation": 0.338,
+     "rgb": [
+      49,
+      43,
+      32
+     ]
+    }
+   }
+  },
+  "coeur_vue_j1": {
+   "defaut": {
+    "n": 22498,
+    "mediane": 120.1,
+    "p99": 190.2,
+    "couleur": {
+     "teinte_deg": 37.8,
+     "saturation": 0.299,
+     "rgb": [
+      132,
+      117,
+      92
+     ]
+    }
+   },
+   "essai": {
+    "n": 22498,
+    "mediane": 191.7,
+    "p99": 218.7,
+    "couleur": {
+     "teinte_deg": 37.7,
+     "saturation": 0.201,
+     "rgb": [
+      193,
+      179,
+      154
+     ]
+    }
+   }
+  },
+  "torche_vue_j2": {
+   "defaut": {
+    "n": 162171,
+    "mediane": 19.7,
+    "p99": 129.2,
+    "couleur": {
+     "teinte_deg": 36.4,
+     "saturation": 0.437,
+     "rgb": [
+      33,
+      28,
+      19
+     ]
+    }
+   },
+   "essai": {
+    "n": 162171,
+    "mediane": 19.7,
+    "p99": 199.7,
+    "couleur": {
+     "teinte_deg": 36.5,
+     "saturation": 0.388,
+     "rgb": [
+      37,
+      32,
+      23
+     ]
+    }
+   }
+  },
+  "coeur_vue_j2": {
+   "defaut": {
+    "n": 13144,
+    "mediane": 117.8,
+    "p99": 161.4,
+    "couleur": {
+     "teinte_deg": 32.1,
+     "saturation": 0.33,
+     "rgb": [
+      127,
+      108,
+      85
+     ]
+    }
+   },
+   "essai": {
+    "n": 13144,
+    "mediane": 182.5,
+    "p99": 204.7,
+    "couleur": {
+     "teinte_deg": 32.7,
+     "saturation": 0.237,
+     "rgb": [
+      176,
+      157,
+      134
+     ]
+    }
+   }
+  }
+ },
+ "map_004_le_bunker_scinde_noir": {
+  "bruit_px": 0,
+  "changes_px": 39676,
+  "noir_allume_px": 0,
+  "plus_sombre_px": 0,
+  "image_p99": [
+   96.8,
+   108.6
+  ],
+  "image_1pc_couleur": [
+   {
+    "teinte_deg": 36.1,
+    "saturation": 0.556,
+    "rgb": [
+     163,
+     127,
+     73
+    ]
+   },
+   {
+    "teinte_deg": 36.4,
+    "saturation": 0.505,
+    "rgb": [
+     167,
+     134,
+     83
+    ]
+   }
+  ]
+ },
+ "classes": {
+  "map_001_le_cloitre_classe0": {
+   "corps_px": 1815,
+   "corps_propre_px": 1642,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 24,
+   "ombre_au_sol_changee_px": 173
+  },
+  "map_001_le_cloitre_classe1": {
+   "corps_px": 1918,
+   "corps_propre_px": 1721,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 17,
+   "ombre_au_sol_changee_px": 197
+  },
+  "map_001_le_cloitre_classe2": {
+   "corps_px": 2104,
+   "corps_propre_px": 1904,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 16,
+   "ombre_au_sol_changee_px": 200
+  },
+  "map_001_le_cloitre_classe3": {
+   "corps_px": 1923,
+   "corps_propre_px": 1731,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 13,
+   "ombre_au_sol_changee_px": 192
+  },
+  "map_001_le_cloitre_classe4": {
+   "corps_px": 2005,
+   "corps_propre_px": 1799,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 18,
+   "ombre_au_sol_changee_px": 206
+  },
+  "map_001_le_cloitre_classe5": {
+   "corps_px": 1924,
+   "corps_propre_px": 1733,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 19,
+   "ombre_au_sol_changee_px": 191
+  },
+  "map_001_le_cloitre_classe6": {
+   "corps_px": 1882,
+   "corps_propre_px": 1689,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 15,
+   "ombre_au_sol_changee_px": 193
+  },
+  "map_001_le_cloitre_classe7": {
+   "corps_px": 1767,
+   "corps_propre_px": 1604,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 18,
+   "ombre_au_sol_changee_px": 163
+  },
+  "map_001_le_cloitre_classe8": {
+   "corps_px": 2006,
+   "corps_propre_px": 1797,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 23,
+   "ombre_au_sol_changee_px": 209
+  },
+  "map_001_le_cloitre_classe9": {
+   "corps_px": 1820,
+   "corps_propre_px": 1632,
+   "corps_propre_ecart_max": 1.0,
+   "corps_propre_ecart_px": 18,
+   "ombre_au_sol_changee_px": 188
+  }
+ },
+ "capteurs_identiques": {
+  "arene_circulaire_duel": true,
+  "arene_circulaire_noir": true,
+  "arene_circulaire_scinde": true,
+  "arene_circulaire_scinde_noir": true,
+  "default_duel": true,
+  "default_noir": true,
+  "map_001_le_cloitre_classe0": true,
+  "map_001_le_cloitre_classe1": true,
+  "map_001_le_cloitre_classe2": true,
+  "map_001_le_cloitre_classe3": true,
+  "map_001_le_cloitre_classe4": true,
+  "map_001_le_cloitre_classe5": true,
+  "map_001_le_cloitre_classe6": true,
+  "map_001_le_cloitre_classe7": true,
+  "map_001_le_cloitre_classe8": true,
+  "map_001_le_cloitre_classe9": true,
+  "map_001_le_cloitre_duel": true,
+  "map_001_le_cloitre_noir": true,
+  "map_001_le_cloitre_scinde": true,
+  "map_001_le_cloitre_scinde_noir": true,
+  "map_002_l_usine_duel": true,
+  "map_002_l_usine_noir": true,
+  "map_002_l_usine_scinde": true,
+  "map_002_l_usine_scinde_noir": true,
+  "map_003_la_croisee_duel": true,
+  "map_003_la_croisee_noir": true,
+  "map_003_la_croisee_scinde": true,
+  "map_003_la_croisee_scinde_noir": true,
+  "map_004_le_bunker_duel": true,
+  "map_004_le_bunker_noir": true,
+  "map_004_le_bunker_scinde": true,
+  "map_004_le_bunker_scinde_noir": true
+ },
+ "capteurs": {
+  "arene_circulaire_duel": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.641688952017709
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "arene_circulaire_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "arene_circulaire_scinde": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3834.85491490364
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3834.85491490364
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.06
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3834.85491490364
+     ]
+    ]
+   ]
+  },
+  "arene_circulaire_scinde_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ]
+  },
+  "default_duel": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.641688952017709
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "default_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe0": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe1": {
+   "arme_j2": "Fusil",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe2": {
+   "arme_j2": "Pompe",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1085.87451079488
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1085.87451079488
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1085.87451079488
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe3": {
+   "arme_j2": "Arbalète",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1142.9137275517
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1142.9137275517
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1142.9137275517
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe4": {
+   "arme_j2": "Pistolet lourd",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1095.3137268126
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1095.3137268126
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1095.3137268126
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe5": {
+   "arme_j2": "Fusil de détresse",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1096.16470718384
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1096.16470718384
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1096.16470718384
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe6": {
+   "arme_j2": "Fusil à verrou",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe7": {
+   "arme_j2": "Pistolet-mitrailleur",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1120.10196267068
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1120.10196267068
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1120.10196267068
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe8": {
+   "arme_j2": "Carabine double",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1129.41176663339
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_classe9": {
+   "arme_j2": "Pistolet silencieux",
+   "defaut": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1144.39608085155
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1144.39608085155
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.280056021761229
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3835.007856071
+     ],
+     [
+      1.0,
+      1144.39608085155
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_duel": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.641688952017709
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_001_le_cloitre_scinde": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3996.46274840832
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3996.46274840832
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.06
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3996.46274840832
+     ]
+    ]
+   ]
+  },
+  "map_001_le_cloitre_scinde_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ]
+  },
+  "map_002_l_usine_duel": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.641688952017709
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_002_l_usine_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_002_l_usine_scinde": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3916.93726295233
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3916.93726295233
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.06
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3916.93726295233
+     ]
+    ]
+   ]
+  },
+  "map_002_l_usine_scinde_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ]
+  },
+  "map_003_la_croisee_duel": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.641688952017709
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_003_la_croisee_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_003_la_croisee_scinde": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3996.46274840832
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3996.46274840832
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.06
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      3996.46274840832
+     ]
+    ]
+   ]
+  },
+  "map_003_la_croisee_scinde_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ]
+  },
+  "map_004_le_bunker_duel": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.641688952017709
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      4052.0
+     ],
+     [
+      1.0,
+      1760.435303092
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_004_le_bunker_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.333333343267441,
+      111.000003367662
+     ]
+    ],
+    [
+     -1.0,
+     -1.0
+    ]
+   ]
+  },
+  "map_004_le_bunker_scinde": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      4051.6862745285
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      4051.6862745285
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.06,
+    0.06
+   ],
+   "essai": [
+    [
+     [
+      1.0,
+      3834.85491490364
+     ],
+     [
+      1.0,
+      1054.0156866312
+     ]
+    ],
+    [
+     [
+      1.0,
+      1054.0156866312
+     ],
+     [
+      1.0,
+      4051.6862745285
+     ]
+    ]
+   ]
+  },
+  "map_004_le_bunker_scinde_noir": {
+   "arme_j2": "Pistolet",
+   "defaut": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "defaut2": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ],
+   "eblouissement": [
+    0.0,
+    0.0
+   ],
+   "essai": [
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ],
+    [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   ]
+  }
+ }
+}

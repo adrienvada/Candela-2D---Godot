@@ -1,0 +1,115 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lampe claire (Q40)</title>
+<style>
+:root { --fond:#111; --texte:#ddd; --trait:#333; }
+body { background:var(--fond); color:var(--texte); font:15px/1.45 system-ui, sans-serif; margin:0 auto; max-width:1340px; padding:16px; }
+h1,h2,h3 { font-weight:600; } code { color:#f5d9a8; }
+.paire { display:flex; gap:8px; flex-wrap:wrap; } .paire figure { flex:1 1 320px; margin:0; }
+figure img { width:100%; height:auto; display:block; image-rendering:pixelated; border:1px solid var(--trait); }
+figure.plein { margin:6px 0; } figcaption { font-size:13px; color:#aaa; margin:2px 0 8px; }
+.ills { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:8px; } .ill { margin:0; }
+table { border-collapse:collapse; margin:6px 0 18px; font-size:13px; width:100%; }
+td,th { border:1px solid var(--trait); padding:3px 6px; text-align:left; vertical-align:top; }
+.pastille { display:inline-block; width:14px; height:14px; border:1px solid #555; vertical-align:middle; }
+section { border-top:1px solid var(--trait); padding-top:6px; }
+</style></head><body>
+<h1>La lampe plus claire et plus pâle — Q40, l'essai <code>--lampe-claire</code></h1>
+<p>Même instant, jeu en pause : la seule différence entre « aujourd'hui » et « l'essai » est la courbe à la sortie du sol
+et des murs. Rien d'autre du jeu ne change : ni la lumière, ni sa portée, ni ce que le jeu en lit. Images du cloud
+(rendu logiciel) : elles valent pour les couleurs et les comptes de pixels, pas pour la cadence. Détail et preuves :
+<a href="RAPPORT.md">RAPPORT.md</a>.</p>
+<h2>Les illustrations qui montrent une lampe</h2>
+<div class="ills"><figure class="ill"><img src="img/ill_accueil.jpg"><figcaption>accueil — 1 % le plus clair : <span class="pastille" style="background:rgb(221,180,130)"></span>
+170, 33° · sat. 0.41</figcaption></figure><figure class="ill"><img src="img/ill_amical.jpg"><figcaption>amical — 1 % le plus clair : <span class="pastille" style="background:rgb(224,196,164)"></span>
+185, 32° · sat. 0.27</figcaption></figure><figure class="ill"><img src="img/ill_ecran_scinde.jpg"><figcaption>ecran_scinde — 1 % le plus clair : <span class="pastille" style="background:rgb(244,205,147)"></span>
+201, 36° · sat. 0.40</figcaption></figure><figure class="ill"><img src="img/ill_entrainement.jpg"><figcaption>entrainement — 1 % le plus clair : <span class="pastille" style="background:rgb(245,222,188)"></span>
+211, 35° · sat. 0.23</figcaption></figure><figure class="ill"><img src="img/ill_intro_allumage.jpg"><figcaption>intro_allumage — 1 % le plus clair : <span class="pastille" style="background:rgb(254,237,221)"></span>
+235, 30° · sat. 0.13</figcaption></figure><figure class="ill"><img src="img/ill_intro_prix.jpg"><figcaption>intro_prix — 1 % le plus clair : <span class="pastille" style="background:rgb(253,228,197)"></span>
+225, 33° · sat. 0.22</figcaption></figure><figure class="ill"><img src="img/ill_intro_seuil.jpg"><figcaption>intro_seuil — 1 % le plus clair : <span class="pastille" style="background:rgb(251,197,138)"></span>
+201, 31° · sat. 0.45</figcaption></figure><figure class="ill"><img src="img/ill_quitter.jpg"><figcaption>quitter — 1 % le plus clair : <span class="pastille" style="background:rgb(205,175,141)"></span>
+163, 32° · sat. 0.31</figcaption></figure><figure class="ill"><img src="img/ill_creer_local.jpg"><figcaption>creer_local — 1 % le plus clair : <span class="pastille" style="background:rgb(249,196,108)"></span>
+191, 37° · sat. 0.57</figcaption></figure><figure class="ill"><img src="img/ill_intro_descente.jpg"><figcaption>intro_descente — 1 % le plus clair : <span class="pastille" style="background:rgb(236,194,127)"></span>
+183, 37° · sat. 0.46</figcaption></figure></div>
+<h2>Les six cartes</h2>
+
+<section><h3>Le Cloître — duel, 45° B</h3>
+<div class="paire"><figure><img src="img/map_001_le_cloitre_duel_defaut_1x1.jpg"><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src="img/map_001_le_cloitre_duel_essai_1x1.jpg"><figcaption>l'essai <code>--lampe-claire</code>, 1:1</figcaption></figure></div>
+<div class="paire"><figure><img src="img/map_001_le_cloitre_duel_defaut_loupe3.jpg"><figcaption>aujourd'hui, loupe ×3</figcaption></figure>
+<figure><img src="img/map_001_le_cloitre_duel_essai_loupe3.jpg"><figcaption>l'essai, loupe ×3</figcaption></figure></div>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>cœur du cône (≥ 60 aujourd'hui)</td><td><span class="pastille" style="background:rgb(139,123,97)"></span> méd <b>128</b> · p99 190 · 38° · sat. 0.30</td>
+<td><span class="pastille" style="background:rgb(210,195,169)"></span> méd <b>212</b> · p99 239 · 38° · sat. 0.20</td></tr>
+<tr><td>tout ce que la torche éclaire</td><td>méd <b>104</b> · p99 168 · 38° · sat. 0.32</td><td>méd <b>144</b> · p99 230 · 38° · sat. 0.22</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">39244 · <b>0</b> · 0 · 0</td></tr>
+</table></section>
+<section><h3>L&#x27;Usine — duel, 45° B</h3>
+<div class="paire"><figure><img src="img/map_002_l_usine_duel_defaut_1x1.jpg"><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src="img/map_002_l_usine_duel_essai_1x1.jpg"><figcaption>l'essai <code>--lampe-claire</code>, 1:1</figcaption></figure></div>
+<div class="paire"><figure><img src="img/map_002_l_usine_duel_defaut_loupe3.jpg"><figcaption>aujourd'hui, loupe ×3</figcaption></figure>
+<figure><img src="img/map_002_l_usine_duel_essai_loupe3.jpg"><figcaption>l'essai, loupe ×3</figcaption></figure></div>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>cœur du cône (≥ 60 aujourd'hui)</td><td><span class="pastille" style="background:rgb(135,119,90)"></span> méd <b>122</b> · p99 219 · 38° · sat. 0.33</td>
+<td><span class="pastille" style="background:rgb(204,187,159)"></span> méd <b>204</b> · p99 242 · 38° · sat. 0.22</td></tr>
+<tr><td>tout ce que la torche éclaire</td><td>méd <b>54</b> · p99 206 · 38° · sat. 0.36</td><td>méd <b>76</b> · p99 241 · 38° · sat. 0.26</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">71776 · <b>0</b> · 0 · 0</td></tr>
+</table></section>
+<section><h3>La Croisée — duel, 45° B</h3>
+<div class="paire"><figure><img src="img/map_003_la_croisee_duel_defaut_1x1.jpg"><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src="img/map_003_la_croisee_duel_essai_1x1.jpg"><figcaption>l'essai <code>--lampe-claire</code>, 1:1</figcaption></figure></div>
+<div class="paire"><figure><img src="img/map_003_la_croisee_duel_defaut_loupe3.jpg"><figcaption>aujourd'hui, loupe ×3</figcaption></figure>
+<figure><img src="img/map_003_la_croisee_duel_essai_loupe3.jpg"><figcaption>l'essai, loupe ×3</figcaption></figure></div>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>cœur du cône (≥ 60 aujourd'hui)</td><td><span class="pastille" style="background:rgb(135,119,91)"></span> méd <b>124</b> · p99 205 · 38° · sat. 0.33</td>
+<td><span class="pastille" style="background:rgb(209,192,164)"></span> méd <b>208</b> · p99 241 · 38° · sat. 0.21</td></tr>
+<tr><td>tout ce que la torche éclaire</td><td>méd <b>44</b> · p99 170 · 38° · sat. 0.36</td><td>méd <b>52</b> · p99 224 · 38° · sat. 0.26</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">77964 · <b>0</b> · 0 · 0</td></tr>
+</table></section>
+<section><h3>Le Bunker — duel, 45° B</h3>
+<div class="paire"><figure><img src="img/map_004_le_bunker_duel_defaut_1x1.jpg"><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src="img/map_004_le_bunker_duel_essai_1x1.jpg"><figcaption>l'essai <code>--lampe-claire</code>, 1:1</figcaption></figure></div>
+<div class="paire"><figure><img src="img/map_004_le_bunker_duel_defaut_loupe3.jpg"><figcaption>aujourd'hui, loupe ×3</figcaption></figure>
+<figure><img src="img/map_004_le_bunker_duel_essai_loupe3.jpg"><figcaption>l'essai, loupe ×3</figcaption></figure></div>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>cœur du cône (≥ 60 aujourd'hui)</td><td><span class="pastille" style="background:rgb(137,119,90)"></span> méd <b>123</b> · p99 205 · 37° · sat. 0.34</td>
+<td><span class="pastille" style="background:rgb(211,193,164)"></span> méd <b>207</b> · p99 241 · 37° · sat. 0.22</td></tr>
+<tr><td>tout ce que la torche éclaire</td><td>méd <b>37</b> · p99 148 · 37° · sat. 0.39</td><td>méd <b>43</b> · p99 223 · 37° · sat. 0.28</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">114362 · <b>0</b> · 0 · 0</td></tr>
+</table></section>
+<section><h3>L&#x27;Arène circulaire — duel, 45° B</h3>
+<div class="paire"><figure><img src="img/arene_circulaire_duel_defaut_1x1.jpg"><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src="img/arene_circulaire_duel_essai_1x1.jpg"><figcaption>l'essai <code>--lampe-claire</code>, 1:1</figcaption></figure></div>
+<div class="paire"><figure><img src="img/arene_circulaire_duel_defaut_loupe3.jpg"><figcaption>aujourd'hui, loupe ×3</figcaption></figure>
+<figure><img src="img/arene_circulaire_duel_essai_loupe3.jpg"><figcaption>l'essai, loupe ×3</figcaption></figure></div>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>cœur du cône (≥ 60 aujourd'hui)</td><td><span class="pastille" style="background:rgb(138,117,88)"></span> méd <b>122</b> · p99 194 · 34° · sat. 0.36</td>
+<td><span class="pastille" style="background:rgb(209,191,163)"></span> méd <b>205</b> · p99 236 · 36° · sat. 0.22</td></tr>
+<tr><td>tout ce que la torche éclaire</td><td>méd <b>27</b> · p99 142 · 34° · sat. 0.45</td><td>méd <b>28</b> · p99 221 · 34° · sat. 0.34</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">105009 · <b>0</b> · 0 · 0</td></tr>
+</table></section>
+<section><h3>La carte d&#x27;essai — duel, 45° B</h3>
+<div class="paire"><figure><img src="img/default_duel_defaut_1x1.jpg"><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src="img/default_duel_essai_1x1.jpg"><figcaption>l'essai <code>--lampe-claire</code>, 1:1</figcaption></figure></div>
+<div class="paire"><figure><img src="img/default_duel_defaut_loupe3.jpg"><figcaption>aujourd'hui, loupe ×3</figcaption></figure>
+<figure><img src="img/default_duel_essai_loupe3.jpg"><figcaption>l'essai, loupe ×3</figcaption></figure></div>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>cœur du cône (≥ 60 aujourd'hui)</td><td><span class="pastille" style="background:rgb(136,118,88)"></span> méd <b>121</b> · p99 216 · 37° · sat. 0.35</td>
+<td><span class="pastille" style="background:rgb(205,187,158)"></span> méd <b>202</b> · p99 242 · 37° · sat. 0.23</td></tr>
+<tr><td>tout ce que la torche éclaire</td><td>méd <b>45</b> · p99 204 · 36° · sat. 0.39</td><td>méd <b>55</b> · p99 228 · 36° · sat. 0.28</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">93662 · <b>0</b> · 0 · 0</td></tr>
+</table></section>
+<h2>Écran scindé et noir</h2>
+
+<section><h3>écran scindé, J1 à gauche, J2 à droite (vu du côté opposé, lacet B)</h3>
+<figure class="plein"><img src="img/map_001_le_cloitre_scinde_defaut.jpg"><figcaption>aujourd'hui</figcaption></figure>
+<figure class="plein"><img src="img/map_001_le_cloitre_scinde_essai.jpg"><figcaption>l'essai</figcaption></figure>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr><tr><td>cœur du cône, vue de J1</td><td>méd <b>120</b> · p99 187 · 38° · sat. 0.31</td><td>méd <b>191</b> · p99 219 · 38° · sat. 0.21</td></tr><tr><td>cœur du cône, vue de J2</td><td>méd <b>114</b> · p99 137 · 34° · sat. 0.35</td><td>méd <b>167</b> · p99 204 · 34° · sat. 0.25</td></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">88757 · <b>0</b> · 0 · 0</td></tr></table>
+</section>
+<section><h3>torches éteintes (vue unique)</h3>
+<figure class="plein"><img src="img/map_001_le_cloitre_noir_defaut.jpg"><figcaption>aujourd'hui</figcaption></figure>
+<figure class="plein"><img src="img/map_001_le_cloitre_noir_essai.jpg"><figcaption>l'essai</figcaption></figure>
+<table><tr><th></th><th>aujourd'hui</th><th>l'essai</th></tr>
+<tr><td>pixels changés · noirs allumés · plus sombres · bruit</td><td colspan="2">17083 · <b>0</b> · 0 · 0</td></tr></table>
+</section>
+</body></html>
