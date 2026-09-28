@@ -99,7 +99,7 @@ func _ready() -> void:
 				_tenir()
 				await get_tree().process_frame
 			print("PAR %s, vue iso tenue 30 images" % par)
-		if not await _poser_la_carte("res://assets/maps/%s.json" % carte):
+		if not await _poser_la_carte("res://assets/maps/%s.json" % carte, par == ""):
 			continue
 		var decor := _decor()
 		print("CARTE %s : %d marques · %s" % [carte, (decor.get("_marques") as Array).size() if decor != null else -1,
@@ -126,7 +126,10 @@ func _ready() -> void:
 
 
 ## Pose une carte livrée et recalcule la mise en scène du duel (le geste de `photo_ecart.gd` à l'évaluation 11).
-func _poser_la_carte(chemin: String) -> bool:
+## ⚠️ `fraiche` : la présentation iso ne refait PAS sa peinture quand la carte change vue allumée (`presentation_3d.gd`,
+## `_process` : les murs seulement ; RAPPORT sol-marque-2 § 1) — les murs de la nouvelle carte diviseraient par la peinture
+## de l'ancienne. Le banc la refait donc lui-même (`_poser_peinture`, le geste de `_allumer`), sauf pour montrer le défaut.
+func _poser_la_carte(chemin: String, fraiche := true) -> bool:
 	var json := JSON.new()
 	if json.parse(FileAccess.get_file_as_string(chemin)) != OK or not (json.data is Dictionary):
 		printerr("  ! carte illisible : %s" % chemin)
@@ -135,6 +138,10 @@ func _poser_la_carte(chemin: String) -> bool:
 	MapData.current_map_data = data
 	_main.rebuild_arena()
 	await _attendre_images(5)
+	var iso := Presentation3D.instance()
+	if fraiche and iso != null and bool(iso.get("_actif")):
+		iso.call("_poser_peinture")
+		await _attendre_images(5)
 	_scene_duel = _mise_en_scene_du_duel(data)
 	return true
 

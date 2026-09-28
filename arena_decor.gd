@@ -100,9 +100,11 @@ var _pochoirs: Array = []
 ##   scindé : 713 pixels assombris dans le cône de J1, 27 dans celui de J2). Les cadres suivent les pochoirs qu'ils
 ##   encadrent (miroir seulement). Cadres, bandes et lettres sont symétriques par construction : posés sur un axe, ils
 ##   sont leur propre jumeau ;
-## - **la place** : sur le sol libre, à trois cases au moins d'un départ, et à 12 px au moins de tout mur — la face d'un mur
-##   iso lit sa lumière 12 px devant elle (`mur_iso.gdshader`, `lire_lumiere`) : une marque plus près changerait la
-##   lumière lue par le mur. D'où des tas « au pied » des murs, mais à une demi-case d'eux ;
+## - **la place** : sur le sol libre, à trois cases au moins d'un départ, et à 13 px au moins de tout mur — la face d'un mur
+##   iso et le liseré de son sommet lisent leur lumière À `IsoMateriaux.PIED_FACE_PX` (12 px) devant l'arête, en la divisant
+##   par la peinture de la carte (`mur_iso.gdshader`, `lire_lumiere`), et le filtrage bilinéaire de la peinture porte un
+##   texel plus loin : une marque plus près gonflerait la lumière lue par le mur (une peinture plus sombre au dénominateur).
+##   D'où des tas « au pied » des murs, mais à une demi-case d'eux, et jamais à plus de 4,5 px de leur axe ;
 ## - **la lisibilité du duel** : rien qui ressemble à un corps, à une arme, à un gadget posé ni à du sang (aucun rouge,
 ##   aucune tache ronde) ; ni douille (une douille au sol dit « on a tiré ici » : c'est une information du jeu), ni marquage
 ##   clair (le « ZONE 4 » blanc serait plus clair que le sol). Ni flèche : une flèche montrerait un chemin.
@@ -700,19 +702,21 @@ func _eclat(sur: CanvasItem, centre: Vector2, r: float, alpha: float, rng: Rando
 
 
 ## Un tas allongé le long de l'axe x, de longueur `l` : plus dense et plus gros au cœur, effilé aux bouts, jamais à plus
-## de 5 px de son axe (2,2 + 2,6) (la place en travers, que la garde vérifie).
+## de 4,5 px de son axe (1,9 + 2,6 ; les grains d'un pixel entre −4,5 et 4,5) : posé à une demi-case d'un mur (17,5 px), il
+## en reste à 13 px, hors de portée des lectures du mur (sol marqué 2 ; la place en travers, que la garde vérifie).
 func _dessiner_gravats(sur: CanvasItem, l: float, rng: RandomNumberGenerator) -> void:
 	var n := int(l / TILE_SIZE * 8.0) + rng.randi_range(1, 3)
 	for i in n:
 		var x := rng.randf_range(-0.5, 0.5) * l
 		var coeur := 1.0 - pow(2.0 * x / l, 2.0)
-		var y := clampf(rng.randfn(0.0, 1.1) * coeur, -2.2, 2.2)
+		var y := clampf(rng.randfn(0.0, 1.1) * coeur, -1.9, 1.9)
 		# Des éclats de 0,8 à 2,6 px : plus gros, ils se soudaient en une tache (vu à la première planche).
 		var r := lerpf(0.8, 2.6, coeur * rng.randf())
 		_eclat(sur, Vector2(x, y), r, lerpf(MARQUE_GRAVATS_ALPHA.x, MARQUE_GRAVATS_ALPHA.y, rng.randf()), rng)
-	# La poussière de gravats : des grains d'un pixel, dans la même bande.
+	# La poussière de gravats : des grains d'un pixel, dans la même bande (le coin du grain entre −4,5 et 3,5 : le grain
+	# entier entre −4,5 et 4,5, centré sur l'axe).
 	for i in n:
-		var p := Vector2(rng.randf_range(-0.5, 0.5) * l, rng.randf_range(-4.0, 4.0))
+		var p := Vector2(rng.randf_range(-0.5, 0.5) * l, rng.randf_range(-4.5, 3.5))
 		sur.draw_rect(Rect2(p, Vector2.ONE), Color(0.0, 0.0, 0.0, MARQUE_ECLATS_ALPHA.x))
 
 

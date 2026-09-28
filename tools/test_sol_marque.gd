@@ -10,8 +10,9 @@
 ##   son jumeau par le DEMI-TOUR : à 45° B, J2 regarde depuis le côté opposé, il voit au demi-tour de ce que voit J1. La
 ##   garde rougit sur une marque décalée d'une demi-case, sur un jumeau qui a oublié de se retourner, et sur une table
 ##   fermée par le miroir seul ;
-## - **la place** : chaque marque sur le sol libre, à 12 px au moins de tout mur (la face iso lit sa lumière 12 px devant
-##   elle) et à trois cases au moins de chaque départ ;
+## - **la place** : chaque marque sur le sol libre, à 13 px au moins de tout mur — la face iso et le liseré de son sommet
+##   lisent la lumière du sol À `IsoMateriaux.PIED_FACE_PX` (12 px) devant l'arête, en la divisant par la peinture, et le
+##   filtrage bilinéaire de la peinture porte un texel plus loin (sol marqué 2) — et à trois cases au moins de chaque départ ;
 ## - **la peinture** : noire à demi, partout (jamais plus clair que le sol, noire dans le noir) ;
 ## - **la lisibilité** : aucune famille interdite (douilles, sang, flèches), aucun mot du jeu (« ZONE », « ARENA »,
 ##   « DEATHMATCH » : ce sont les pochoirs), aucun chiffre de départ seul (« 1 », « 2 ») ;
@@ -25,9 +26,14 @@ extends SceneTree
 
 const PLANCHER := 22
 const TUILE := 35.0
-## La place en travers de chaque famille : la demi-emprise locale (le long de l'angle, en travers), en pixels, que le dessin
-## ne doit jamais dépasser. Écrite ici à la main, pas relue dans le décor : c'est la promesse, le dessin la tient.
-const DEGAGEMENT_MUR := 12.0
+## Le dégagement d'une marque à tout mur : là où la face et le liseré du sommet lisent la lumière du sol (`pied`), plus le
+## texel que le filtrage bilinéaire de la peinture atteint au-delà. ⚠️ **`pied` vaut 12 en jeu, pas 8** : `mur_iso.gdshader`
+## le déclare à 8 et `presentation_3d.gd` pose 8, mais `IsoMateriaux.accorder_mur` repose `PIED_FACE_PX` juste après
+## (l'évaluation 11 a lu le 8). Avec 12 seulement, une marque tenant sa promesse pouvait peser d'un demi-texel dans la
+## lecture ; la table ne passait que parce que le dessin n'atteignait pas l'emprise promise (`docs/iso/cloud/sol-marque-2`).
+## Lu dans la constante du jeu : si `pied` grandit, la garde rougit.
+const FILTRE_TEXEL := 1.0
+const DEGAGEMENT_MUR := IsoMateriaux.PIED_FACE_PX + FILTRE_TEXEL
 
 var _echecs := 0
 var _verifications := 0
@@ -189,7 +195,7 @@ func _l_equite(cartes: Dictionary) -> void:
 func _demi_emprise(p: Array, fonte: Font) -> Vector2:
 	match String(p[0]):
 		"gravats":
-			return Vector2(float(p[3]) * TUILE * 0.5 + 4.0, 5.0)
+			return Vector2(float(p[3]) * TUILE * 0.5 + 4.0, 4.5)
 		"eclats":
 			return Vector2.ONE * (float(p[3]) * TUILE * 0.5 + 3.0)
 		"chaine":
@@ -205,7 +211,7 @@ func _demi_emprise(p: Array, fonte: Font) -> Vector2:
 
 
 func _la_place(cartes: Dictionary) -> void:
-	print("— la place : sur le sol libre, à 12 px des murs, loin des départs")
+	print("— la place : sur le sol libre, à %s px des murs (pied %s + filtre %s), loin des départs" % [DEGAGEMENT_MUR, IsoMateriaux.PIED_FACE_PX, FILTRE_TEXEL])
 	var fonte: Font = Charte.police_display(Charte.POIDS_ENSEIGNE)
 	if fonte == null:
 		fonte = ThemeDB.fallback_font
@@ -224,13 +230,7 @@ func _la_place(cartes: Dictionary) -> void:
 			var a := deg_to_rad(float(p[2]))
 			var boite := Vector2(demi.x * absf(cos(a)) + demi.y * absf(sin(a)), demi.x * absf(sin(a)) + demi.y * absf(cos(a)))
 			var centre := (Vector2(p[1]) + Vector2(0.5, 0.5)) * TUILE
-			# Toute case qui touche la boîte élargie de 12 px doit être du sol libre.
-			var a0 := Vector2i(((centre - boite - Vector2.ONE * DEGAGEMENT_MUR) / TUILE).floor())
-			var b0 := Vector2i(((centre + boite + Vector2.ONE * DEGAGEMENT_MUR) / TUILE).ceil()) - Vector2i.ONE
-			for x in range(a0.x, b0.x + 1):
-				for y in range(a0.y, b0.y + 1):
-					if not sol.has(Vector2i(x, y)):
-						fautes.append("%s %s à moins de 12 px du non-sol (%d, %d)" % [p[0], p[1], x, y])
+			fautes.append_array(_trop_pres_des_murs(p, demi, sol))
 			var a1 := Vector2i(((centre - boite) / TUILE).floor())
 			var b1 := Vector2i(((centre + boite) / TUILE).floor())
 			for x in range(a1.x, b1.x + 1):
@@ -238,8 +238,35 @@ func _la_place(cartes: Dictionary) -> void:
 					for s in departs:
 						if maxi(absi(x - s.x), absi(y - s.y)) < 3:
 							fautes.append("%s %s à moins de 3 cases du départ %s" % [p[0], p[1], s])
-		_check("%s : chaque marque sur le sol libre, à 12 px des murs et à trois cases des départs" % String(d.get("name", id)),
+		_check("%s : chaque marque sur le sol libre, hors de portée des lectures des murs et à trois cases des départs" % String(d.get("name", id)),
 			fautes.is_empty(), str(fautes.slice(0, 4)))
+	# La garde elle-même : un tas d'une case, posé où la table pose celui du pied sud du pilier nord-ouest du Cloître
+	# ((10, 12), angle 0, à une demi-case du pilier) — elle rougit s'il déborde de 5 px de son axe (l'emprise d'avant le sol
+	# marqué 2 : 12,5 px du mur), pas à 4,5 px (13 px).
+	var sol_cloitre := {}
+	for c in MapCodec.get_floor_cells(cartes.get("map_001", {})):
+		sol_cloitre[c] = true
+	for c in MapCodec.get_wall_cells(cartes.get("map_001", {})):
+		sol_cloitre.erase(c)
+	var tas := ["gravats", Vector2(10.0, 12.0), 0.0, 1.0, 41, false]
+	_check("la garde rougit sur un tas à 12,5 px d'un mur (5 px en travers), et pas à 13 (4,5 px)",
+		not _trop_pres_des_murs(tas, Vector2(21.5, 5.0), sol_cloitre).is_empty()
+		and _trop_pres_des_murs(tas, Vector2(21.5, 4.5), sol_cloitre).is_empty())
+
+
+## Les cases non-sol que touche la boîte d'une marque (sa demi-emprise `demi`, tournée de son angle) élargie du dégagement.
+func _trop_pres_des_murs(p: Array, demi: Vector2, sol: Dictionary) -> Array:
+	var fautes := []
+	var a := deg_to_rad(float(p[2]))
+	var boite := Vector2(demi.x * absf(cos(a)) + demi.y * absf(sin(a)), demi.x * absf(sin(a)) + demi.y * absf(cos(a)))
+	var centre := (Vector2(p[1]) + Vector2(0.5, 0.5)) * TUILE
+	var a0 := Vector2i(((centre - boite - Vector2.ONE * DEGAGEMENT_MUR) / TUILE).floor())
+	var b0 := Vector2i(((centre + boite + Vector2.ONE * DEGAGEMENT_MUR) / TUILE).ceil()) - Vector2i.ONE
+	for x in range(a0.x, b0.x + 1):
+		for y in range(a0.y, b0.y + 1):
+			if not sol.has(Vector2i(x, y)):
+				fautes.append("%s %s à moins de %s px du non-sol (%d, %d)" % [p[0], p[1], DEGAGEMENT_MUR, x, y])
+	return fautes
 
 
 func _la_peinture() -> void:

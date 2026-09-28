@@ -91,11 +91,48 @@ texture cuite comme dans la peinture vidée en jeu : les marques les plus proche
   à refaire, carte posée directement, ou après la correction.
 - Dans l'essai, je rends la marge explicite au lieu de la laisser au hasard (§ 2).
 
+## 2. Dans l'essai : la marge rendue explicite (le défaut n'y est pas, la marge l'était par hasard)
+
+Le sol marqué ne cause pas les taches (§ 1) ; il n'y a donc rien à « corriger » dans ce qu'il peint. Mais sa garde
+promettait moins qu'il ne fallait, et la table ne passait que par chance :
+
+- la garde tenait les marques à **12 px** de tout mur (`DEGAGEMENT_MUR`, écrit à la main), alors que la face et le liseré
+  lisent la peinture **à** 12 px de l'arête et que le filtrage bilinéaire en prend un texel au-delà : une marque tenant sa
+  promesse pouvait peser d'un demi-texel dans la lecture ;
+- les gravats promettaient 5 px en travers, posés à une demi-case (17,5 px) d'un mur : leur bord promis tombait à 12,5 px.
+
+**Ce qui change** (`arena_decor.gd`, `tools/test_sol_marque.gd`) :
+
+1. La garde lit le dégagement dans la constante du jeu : `IsoMateriaux.PIED_FACE_PX` (12) + 1 texel de filtre = **13 px**.
+   Si `pied` grandit un jour, elle rougit.
+2. Les gravats se resserrent à **4,5 px** de leur axe (éclats à ±1,9 au lieu de ±2,2 ; grains d'un pixel entre −4,5 et
+   4,5 au lieu de −4 et 5). **Même nombre de tirages** : chaque tas garde son motif, décalé d'un demi-pixel au plus, et son
+   jumeau reste son image exacte. Les autres familles tenaient déjà 13 px.
+3. Une vérification de plus : la garde rougit sur un tas à 12,5 px d'un mur (l'ancienne emprise), pas à 13 px — 35
+   vérifications, 0 échec.
+
+**Mesuré sur les textures cuites** (`distance.py`, `lecture.py`) : drapeau éteint, les empreintes md5 des six cartes sont
+**identiques** à celles de la base (`docs/iso/cloud/sol-marque/cuisson_md5.txt`) — rien ne change au bit. Drapeau allumé, le
+texel marqué le plus proche d'une case non-sol est à 13,5 px (centre) sur les six cartes, et **0 arête** de mur haut sur 1 552
+ne lit autrement.
+
+**Ce que la correction ne fait PAS** : protéger contre la peinture périmée. Aucune place de marque ne le peut — sur une
+peinture étrangère, les murs, l'encre et le sol de l'autre carte gonflent déjà la lecture (§ 1, 822 pixels sans essai).
+
+## 3. Les pochoirs (`--pochoirs-essai`)
+
+Même calcul (`lecture.py`, `distance.py`, `croise.py`). **Sur leur propre carte, ils ne peuvent pas faire la tache** : le texel
+de pochoir le plus proche d'une case non-sol en est à 42,5 px (l'Usine et le Bunker ; 45,5 au Cloître et à la Croisée, 59,5
+et 77,5 aux deux arènes), 0 arête lue autrement. **Par une peinture périmée, si**, comme le sol marqué et plus fort (ils sont
+plus sombres et plus larges) : jusqu'à ×2,93 sur une lecture (`croise.txt`, 36 couples de cartes : Arène Standard → Cloître,
+Usine ou Bunker ; Cloître → Arène Circulaire ou Croisée ; Usine → Arène Circulaire ; Bunker → Arène Circulaire). Signalé,
+pas corrigé : la cause est la même, dans `presentation_3d.gd`.
+
 ## État
 
 - [x] reproduction (sur cette branche et sur celle de l'évaluation 11)
 - [x] cause établie
-- [ ] correction et garde
-- [ ] pochoirs
+- [x] correction et garde (la marge explicite ; la cause, hors de l'essai, signalée)
+- [x] pochoirs
 - [ ] preuves six cartes
 - [ ] suite complète
