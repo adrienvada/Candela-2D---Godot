@@ -34,6 +34,7 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled;
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
+#include "res://lampe_claire.gdshaderinc"
 
 uniform sampler2D texture_sol : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform float periode_sol_px = 140.0;
@@ -165,5 +166,7 @@ void fragment() {
 	c = pate_facteur(c, usure_poids(c, usure_sol(px, usure_mur_pres(px), px_monde)));
 #endif
 	c = pate_facteur(c, contact_des_corps(px));
+	// Q40 — la lampe claire, à l'essai (`--lampe-claire`, éteint : `c` tel quel). En DERNIER : rien ne relit ce qui suit.
+	c = lampe_claire_au_sol(c, px_lu, deux);
 	ALBEDO = c;
 }

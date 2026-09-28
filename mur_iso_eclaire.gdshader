@@ -54,6 +54,7 @@ render_mode cull_back, fog_disabled, specular_disabled;
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
+#include "res://lampe_claire.gdshaderinc"
 #include "res://iso_relief.gdshaderinc"
 
 uniform float pied = 8.0;
@@ -364,6 +365,8 @@ void fragment() {
 		} else {
 			c = pate_temperature_graduee(c, temperature, temperature_seuil_bas, temperature_seuil_haut);
 		}
+		// Q40 — la lampe claire, à l'essai (`--lampe-claire`, éteint : `c` tel quel). En DERNIER : rien ne relit ce qui suit.
+		c = lampe_claire_sur(c, brute);
 	}
 	if (masque_preuve == 1) {
 		ALBEDO = vec3(0.0);

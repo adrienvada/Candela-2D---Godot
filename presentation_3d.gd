@@ -92,6 +92,8 @@ const SHADER_MUR := preload("res://mur_iso.gdshader")
 ## shader compilé à la volée au premier allumage.
 const SHADER_SOL_ECLAIRE := preload("res://sol_iso_eclaire.gdshader")
 const SHADER_MUR_ECLAIRE := preload("res://mur_iso_eclaire.gdshader")
+## Q40 — la lampe claire, à l'essai (`--lampe-claire`, éteint par défaut) : une courbe à la sortie du sol et des murs.
+const LampeClaire := preload("res://lampe_claire.gd")
 const SHADER_CORPS_ECLAIRE := preload("res://corps_iso_eclaire.gdshader")
 const SHADER_CORPS_VOXEL := preload("res://corps_iso.gdshader")
 const LumieresIsoT := preload("res://lumieres_iso.gd")
@@ -215,6 +217,9 @@ var _corps: Array[Node3D] = []
 var _mat_sols: Array[ShaderMaterial] = []
 ## ISO13, lot C — l'usure en essai (`--usure-essai`), lue une fois : éteinte, `_process` ne regarde pas un éclat de plus.
 var _usure := IsoMateriaux.usure_essai_active()
+## Q40 — la lampe claire (`LampeClaire`), posée sur le sol et les murs à chaque changement de leur shader. Le banc la
+## bascule à chaud par `poser_lampe_claire`, jeu en pause, pour comparer les deux images au même instant.
+var lampe_claire := LampeClaire.demandee()
 ## Le dernier état des éclats posé sur les murs : leur nombre et l'id du plus récent. Rien ne change, rien n'est reposé.
 var _usure_empreinte := Vector2i(-1, -1)
 var _mat_mur: ShaderMaterial
@@ -1674,12 +1679,14 @@ func _construire_la_scene() -> void:
 	_mat_mur.set_shader_parameter("pied", PIED_PX)
 	# ISO7 — la matière et l'encre des murs viennent du catalogue (`iso_materiaux.gd`).
 	IsoMateriaux.accorder_mur(_mat_mur)
+	LampeClaire.accorder(_mat_mur, lampe_claire)
 
 	var plan := PlaneMesh.new()
 	plan.size = Vector2.ONE
 	for id in 2:
 		var mat := _materiau(SHADER_SOL)
 		IsoMateriaux.accorder_sol(mat)
+		LampeClaire.accorder(mat, lampe_claire)
 		_mat_sols.append(mat)
 		var sol := MeshInstance3D.new()
 		sol.name = "Sol%d" % (id + 1)
@@ -1773,12 +1780,14 @@ func poser_lumiere_3d(active: bool) -> void:
 		_mat_mur.shader = SHADER_MUR_ECLAIRE if active else SHADER_MUR
 		# Les réglages d'ISO7 reposés après le changement de shader : rien ne doit dépendre de ce que le moteur garde.
 		IsoMateriaux.accorder_mur(_mat_mur)
+		LampeClaire.accorder(_mat_mur, lampe_claire)
 		# Le lambert tiré du gradient de la lightmap (ISO7b) cède la direction à la vraie lampe.
 		if active:
 			_mat_mur.set_shader_parameter("lambert_plancher", 1.0)
 	for m in _mat_sols:
 		m.shader = SHADER_SOL_ECLAIRE if active else SHADER_SOL
 		IsoMateriaux.accorder_sol(m)
+		LampeClaire.accorder(m, lampe_claire)
 	if _peinture != null and is_instance_valid(_peinture):
 		for m in _mat_sols:
 			IsoMateriaux.accorder_peinture(m, _peinture.get_texture(), _peinture.cadre,
@@ -1803,6 +1812,14 @@ func poser_lumiere_3d(active: bool) -> void:
 		_lumieres.queue_free()
 		_lumieres = null
 	_accorder_la_bride()
+
+
+## Q40 — allume ou éteint la lampe claire sur le sol et les murs (banc, photographe). Rien d'autre ne bouge.
+func poser_lampe_claire(active: bool) -> void:
+	lampe_claire = active
+	LampeClaire.accorder(_mat_mur, active)
+	for m in _mat_sols:
+		LampeClaire.accorder(m, active)
 
 
 ## ISO12 — la bride, sa variante et le masque de la preuve sur tous les matériaux éclairés ; les ombres et leur atlas.
