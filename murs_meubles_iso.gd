@@ -164,8 +164,8 @@ const SAILLIES := {"portes": ECART_PLAT, "grilles": ECART_PLAT, "boitiers": JOUR
 ## caoutchouc, le fer des étriers.
 const ALBEDO_BOITIER := 1.0
 const ALBEDO_DETAIL := 0.6
-const ALBEDO_CABLE := 0.85
-const ALBEDO_ETRIER := 0.75
+const ALBEDO_CABLE := 0.6
+const ALBEDO_ETRIER := 0.5
 ## Le modelé des boîtiers : leurs faces planes ne se tournent jamais pleinement vers la caméra (le reflet des tuyaux ne s'y
 ## allume pas) ; un corps moins encré qu'un tuyau garde la façade lisible, le contour des côtés reste. Celui des faisceaux
 ## est celui des tuyaux (des tubes).

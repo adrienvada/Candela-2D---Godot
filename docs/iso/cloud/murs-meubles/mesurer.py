@@ -11,7 +11,7 @@ Conventions (celles des planches des enseignes et de l'écart) : luminance Rec. 
 - A, B, A2 : les murs meublés cachés, montrés, cachés de nouveau, au MÊME instant (jeu en pause) ; M leur emprise en blanc.
 - « plus clair que sans » : lum(B) − lum(A) > 0,5 ; et, pour mémoire, un canal qui monte de plus de 2.
 - « noir allumé » (torches éteintes) : max(A) = max(A2) = 0 et max(B) > 0 (strict) ; et au seuil 7,5/255.
-- l'emprise : les pixels blancs de M (≥ 250 sur les trois canaux) qui ne le sont pas dans A.
+- l'emprise : les pixels que M change par rapport à A (le blanc des objets et leurs bords).
 """
 import json
 import os
@@ -47,9 +47,9 @@ def lum(a):
 
 
 def emprise(m, a):
-    blanc_m = (m >= 250).all(axis=-1)
-    blanc_a = (a >= 250).all(axis=-1)
-    return blanc_m & ~blanc_a
+    # Tout pixel que l'instrument change : le blanc des objets, et leurs bords mêlés au mur par la mise à l'échelle de la vue
+    # (un seuil à 250 en laissait 1 700 à 1 950 par prise hors de l'emprise, relevé le 2026-09-28).
+    return (m != a).any(axis=-1)
 
 
 def mesurer_serie(dossier, cle):
