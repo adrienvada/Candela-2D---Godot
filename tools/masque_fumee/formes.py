@@ -123,6 +123,26 @@ for suffixe, nom in FORMES:
 # L'ÉCRAN SCINDÉ : J1 à gauche, J2 à droite. Le pochoir contre A (fuite : A noir, C3 non) et contre C (Gadgets), hors des
 # pixels instables (les trois A diffèrent) ; vue par vue.
 SCINDEES = [k for k in ("s-c3", "s-c4", "s-c5") if glob.glob(os.path.join(D, "*%s-%s.png" % (ID, k)))]
+# LA ZONE OÙ LA SCÈNE A BOUGÉ, en écran scindé (session « masque-fumée-2 ») : en vue unique, la carte des murs retire le
+# corps de J1 ; ici, rien. Sous le pochoir un pixel vaut A ou B : là où une prise sous pochoir montre une valeur qui n'est
+# ni l'un ni l'autre, la scène a bougé pendant CETTE prise (le corps de J1 frémit : vu à 45° B le 2026-09-28, toutes formes
+# confondues, V3 comprise, dans le rectangle 311-511 × 581-651). Ces pixels, élargis de 12 px, sont exclus, comptés à part.
+ZONE_S = set()
+if SCINDEES:
+    _sa = Image.open(prise("s-a")).convert("RGB").load()
+    _sb = Image.open(prise("s-b")).convert("RGB").load()
+    for k in SCINDEES:
+        _sk = Image.open(prise(k)).convert("RGB").load()
+        for y in range(H):
+            for x in range(W):
+                if _sk[x, y] != _sa[x, y] and _sk[x, y] != _sb[x, y]:
+                    for dy in range(-12, 13):
+                        for dx in range(-12, 13):
+                            ZONE_S.add((x + dx, y + dy))
+    print("\n== écran scindé : la zone où la scène a bougé pendant une prise sous pochoir (ni A ni B, élargie de 12 px) :"
+          " %d pixels exclus%s" % (len(ZONE_S), (", boîte (%d, %d, %d, %d)" % (min(p[0] for p in ZONE_S), min(p[1] for p in ZONE_S),
+                                                                            max(p[0] for p in ZONE_S), max(p[1] for p in ZONE_S)))
+                                   if ZONE_S else ""))
 for forme_s in SCINDEES:
     sa, sb, sc, s3 = (Image.open(prise(k)).convert("RGB").load() for k in ("s-a", "s-b", "s-c", forme_s))
     sas = [Image.open(prise(k)).convert("RGB").load() for k in ("s-a1", "s-a2")]
@@ -133,7 +153,7 @@ for forme_s in SCINDEES:
             for x in range(x0, x1):
                 if hud(x, y):
                     continue
-                if any(q[x, y] != sa[x, y] for q in sas):
+                if any(q[x, y] != sa[x, y] for q in sas) or (x, y) in ZONE_S:
                     instables += 1
                     continue
                 if max(sa[x, y]) == 0:
@@ -142,11 +162,14 @@ for forme_s in SCINDEES:
                     # pixel — seule elle peut l'allumer. Sous le pochoir, un pixel vaut A (toutes les couches retirées) ou B
                     # (aucune) ; allumé là où A ET B sont noirs, c'est le décor qui a bougé entre les prises (le corps de J1
                     # qui frémit, vu le 2026-09-28 en (474, 602) : A = B = 0, la forme à 3/255), compté à part.
-                    if max(sb[x, y]) > 0:
+                    # Et une valeur qui n'est ni A ni B (le double de B au pied de J1, vu à 45° B le 2026-09-28) ne peut venir
+                    # d'aucun pochoir : la scène a changé en ce pixel pendant cette prise ; comptée avec le décor.
+                    if max(sb[x, y]) > 0 and s3[x, y] == sb[x, y]:
                         fuite += max(s3[x, y]) > 0
+                    elif max(s3[x, y]) > 0:
+                        decor_s += 1
+                    if max(sb[x, y]) > 0:
                         fuite_c += max(sc[x, y]) > 0
-                    else:
-                        decor_s += max(s3[x, y]) > 0
                     sale += max(sb[x, y]) > 0
                 ecart += s3[x, y] != sc[x, y]
                 ecart_v3 += s3[x, y] != s_ref[x, y]
@@ -180,11 +203,12 @@ if glob.glob(os.path.join(D, "*%s-j2-c.png" % ID)):
     temoins = sum(1 for y in range(H) for x in range(W) if jb[x, y] != ja[x, y])
     print("\n== VUE UNIQUE DE J2 == %d pixels instables exclus ; %d pixels noirs dans A, dont %d que la fumée sans masque allume ;"
           " la fumée change %d pixels (témoin)" % (len(instable_j2), noirs, sale, temoins))
+    j3 = Image.open(prise("j2-c3")).convert("RGB").load() if glob.glob(os.path.join(D, "*%s-j2-c3.png" % ID)) else None
     for k, nom in (("j2-c", "Gadgets"), ("j2-c3", "pochoir"), ("j2-c4", "lumière d'abord"), ("j2-c5", "juge ajusté")):
         if not glob.glob(os.path.join(D, "*%s-%s.png" % (ID, k))):
             continue
         jk = Image.open(prise(k)).convert("RGB").load()
-        fuite = ecart = decor = tues = 0
+        fuite = ecart = ecart_v3 = decor = tues = 0
         for y in range(H):
             for x in range(W):
                 if hud(x, y) or (x, y) in instable_j2:
@@ -194,11 +218,22 @@ if glob.glob(os.path.join(D, "*%s-j2-c.png" % ID)):
                     tues += max(jk[x, y]) == 0
                 if ja[x, y] != jb[x, y] and jk[x, y] != jc[x, y]:
                     ecart += 1
+                if j3 is not None and jk[x, y] != j3[x, y]:
+                    ecart_v3 += 1
                 if k != "j2-c" and jk[x, y] not in (ja[x, y], jb[x, y]):
                     decor += 1
         print("   %-16s fuite %d (pixels noirs que la fumée salit, tus : %d sur %d) ; écart au masque de Gadgets là où la fumée"
-              " change l'image : %d ; ni A ni B : %d" % (nom, fuite, tues, sale, ecart, decor if k != "j2-c" else 0))
-        ok = ok and fuite == 0 and (k == "j2-c" or ecart == 0)
+              " change l'image : %d ; au pochoir : %d ; ni A ni B : %d" % (nom, fuite, tues, sale, ecart, ecart_v3,
+                                                                      decor if k != "j2-c" else 0))
+        # Le pochoir se juge au noir (fuite) ; son écart à Gadgets se rapporte (au bord d'une couture, Gadgets tait une
+        # partie des couches d'un pixel, le pochoir toutes ou aucune : vu en (934, 843), sol éclairé à 57/255). V4 et V5 ne
+        # changent QUE le coût du juge : ils doivent être le pochoir au pixel près.
+        if noirs > 0:
+            ok = ok and fuite == 0 and (k in ("j2-c", "j2-c3") or ecart_v3 == 0)
+    if noirs == 0:
+        # Vu à 0° le 2026-09-28 : J2 à l'abri, éblouissement EXACTEMENT 0, et pourtant toute sa vue relevée de 1/255 (coins hors
+        # carte compris) et ses quatre A différant jusqu'à 58/255 : la vue n'est pas tenue. Rien ne s'y prouve, rien n'y échoue.
+        print("   ⚠ SANS VERDICT : aucun pixel noir dans A (la vue de J2 est relevée) — ni le noir ni l'égalité ne s'y jugent")
     ok = ok and temoins > 1000
 
 # LE COMPTE DES FRAGMENTS

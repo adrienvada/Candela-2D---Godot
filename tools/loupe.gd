@@ -1081,7 +1081,11 @@ func _vue_unique_de_j2(plans: Array[Dictionary], id: String, volumes: Object, fu
 	var espace := (m.p2 as Node2D).get_world_2d().direct_space_state
 	var cercle := CircleShape2D.new()
 	cercle.radius = 16.0
-	var choisi := Vector2.INF
+	# Les places candidates : à l'abri d'un mur (le rayon depuis la fusée coupé), aucun mur sous les pieds. Une place n'est
+	# retenue que si l'éblouissement de J2 y retombe EXACTEMENT à 0 : à 0°, la première place (837, 392) le laissait à un reste
+	# que l'affichage à quatre décimales disait nul, et le voile relevait toute sa vue de 1/255 (aucun pixel noir, le test du
+	# noir vide) — 2026-09-28.
+	var candidates: Array[Vector2] = []
 	for r in [260.0, 300.0, 340.0, 380.0, 420.0]:
 		for k in 48:
 			var q: Vector2 = fusee + Vector2.from_angle(TAU * float(k) / 48.0) * r
@@ -1094,14 +1098,13 @@ func _vue_unique_de_j2(plans: Array[Dictionary], id: String, volumes: Object, fu
 			var rayon := PhysicsRayQueryParameters2D.create(fusee, q, MapGeometry.WALL_LAYER)
 			if espace.intersect_ray(rayon).is_empty():
 				continue
-			choisi = q
-			break
-		if choisi != Vector2.INF:
-			break
-	if choisi == Vector2.INF:
+			# Deux candidates d'un même anneau à moins de 80 px l'une de l'autre ne disent rien de plus.
+			if candidates.any(func(c: Vector2) -> bool: return c.distance_to(q) < 80.0):
+				continue
+			candidates.append(q)
+	if candidates.is_empty():
 		printerr("  ✗ %s : aucune place à l'abri pour J2 autour de la fusée" % id)
 		return
-	_j2 = choisi
 	var c1 := (m.vp1 as SubViewport).get_parent() as Control
 	var c2 := (m.vp2 as SubViewport).get_parent() as Control
 	c1.hide()
@@ -1113,17 +1116,33 @@ func _vue_unique_de_j2(plans: Array[Dictionary], id: String, volumes: Object, fu
 		m.p2.flashlight_on = false
 		if p._pantins.size() > 1:
 			p._pantins[1].torche = false
-	var reperes := [(m.vp2 as SubViewport).canvas_transform.origin, float(m.p2.dazzle_amount)]
+	var choisi := Vector2.INF
 	var tenues := 0
 	var images := 0
-	while tenues < 30 and images < 2400:
-		tenir_j2.call()
-		await p.get_tree().physics_frame
-		await p.get_tree().process_frame
-		images += 1
-		var o := [(m.vp2 as SubViewport).canvas_transform.origin, float(m.p2.dazzle_amount)]
-		tenues = tenues + 1 if o == reperes else 0
-		reperes = o
+	for q in candidates.slice(0, 8):
+		_j2 = q
+		var reperes := [(m.vp2 as SubViewport).canvas_transform.origin, float(m.p2.dazzle_amount)]
+		tenues = 0
+		images = 0
+		while tenues < 30 and images < 2400:
+			tenir_j2.call()
+			await p.get_tree().physics_frame
+			await p.get_tree().process_frame
+			images += 1
+			var o := [(m.vp2 as SubViewport).canvas_transform.origin, float(m.p2.dazzle_amount)]
+			tenues = tenues + 1 if o == reperes else 0
+			reperes = o
+		print("  · %s : J2 essayé en %s, éblouissement %.6f" % [id, str(q), float(m.p2.dazzle_amount)])
+		if float(m.p2.dazzle_amount) == 0.0:
+			choisi = q
+			break
+	if choisi == Vector2.INF:
+		printerr("  ✗ %s : aucune place où l'éblouissement de J2 retombe à 0" % id)
+		_j2 = j2_avant
+		c2.hide()
+		c1.show()
+		m._accorder_rendu_aux_vues()
+		return
 	var pres := Presentation3D.instance()
 	var cam = pres._camera_de(1) if pres != null else null
 	var vue: Viewport = pres.viewport_ecran(1) if pres != null else null
@@ -1131,7 +1150,7 @@ func _vue_unique_de_j2(plans: Array[Dictionary], id: String, volumes: Object, fu
 	if cam != null and vue != null:
 		var logique := vue.get_visible_rect().size
 		ecran = cam.vers_ecran(fusee, logique, 0.0) * Vector2(DisplayServer.window_get_size()) / logique
-	print("  · %s : vue unique de J2 en %s (%.0f px de la fusée, à l'abri d'un mur), caméra et éblouissement (%.4f) %s après %d pas ;"
+	print("  · %s : vue unique de J2 en %s (%.0f px de la fusée, à l'abri d'un mur), caméra et éblouissement (%.6f) %s après %d pas ;"
 		% [id, str(choisi), choisi.distance_to(fusee), float(m.p2.dazzle_amount), "tenus" if tenues >= 30 else "ENCORE EN MOUVEMENT",
 		images] + " fusée à l'écran en %s ; lacet de J2 %.1f°" % [str(ecran.round()),
 		float(m.call("lacet_de_la_vue", 1)) if m.has_method("lacet_de_la_vue") else 0.0])
@@ -1143,7 +1162,7 @@ func _vue_unique_de_j2(plans: Array[Dictionary], id: String, volumes: Object, fu
 			volumes.set("forme_masque", int(etape[2]))
 			volumes.call("poser_masque_fumee", true)
 		await _prise_entiere(plans, id, String(etape[0]), 0.4, tenir_j2)
-		print("  · %s-%s : vue unique de J2, fumée %s, forme %d ; éblouissement de J2 %.4f" % [id, etape[0],
+		print("  · %s-%s : vue unique de J2, fumée %s, forme %d ; éblouissement de J2 %.6f" % [id, etape[0],
 			"oui" if etape[1] else "non", int(etape[2]), float(m.p2.dazzle_amount)])
 	volumes.set("volumes_actifs", true)
 	volumes.call("poser_masque_fumee", false)
