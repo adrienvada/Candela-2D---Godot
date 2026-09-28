@@ -86,6 +86,16 @@ var _frames := 3
 var _capteur_force := false          # --capteur : capteur synthétique dès le départ
 var _opacite_force := -1.0           # --opacite=X : sinon 1.0
 var _silhouette_force := false       # --silhouette : mode_silhouette=1 dès le départ
+## Q39 (2) — `--silhouette=A` : l'alpha de la silhouette de soi (1 par défaut, le banc d'origine ; 0,5 au jeu, chez soi).
+var _silhouette_alpha := 1.0
+## Q39 (2) — `--passe-ancienne` (avec `--corps-soi-sombre`) : la pré-passe remise dans l'état d'AVANT le correctif de Beauté
+## (celui de la branche corps-sombre littérale) — le programme de la couleur AVANT CORPS_SOI_SOMBRE, c'est-à-dire la variante
+## CORPS_DETAIL sous `--corps-detaille`, `corps_iso_profondeur.gdshader` sans. Diagnostic : deux programmes, exprès.
+var _passe_ancienne := false
+## Q39 (2) — `--temoin-trou` : le TÉMOIN POSITIF de la preuve. La COULEUR d'une boîte du torse cachée, sa pré-passe laissée :
+## exactement ce que fait le défaut (une pièce qui perd le test contre sa propre pré-passe disparaît, et ce qu'elle cachait
+## avec). La mesure doit l'y voir ; sinon, ses zéros ne prouvent rien (« un zéro doit être vérifié non vide »).
+var _temoin_trou := false
 var _encre := 0.0                    # ISO3 vague 5 — --encre=X (tuiles) : définir_encre(X), sinon 0.0 (défaut)
 ## ISO7b (crochet d'ISO7 Beauté) — `--modele` : le modelé des corps par la caméra (dessus 1,15, face sud 0,9, autres
 ## faces 1), sans aucune lecture de la lumière — décision de la session cloud, 2026-09-15 14:21.
@@ -177,7 +187,12 @@ func _lire_arguments(args: PackedStringArray) -> void:
 					push_warning("banc_corps : --taille attend LxH (reçu « %s »)" % val)
 			"capteur": _capteur_force = true
 			"opacite": _opacite_force = clampf(float(val), 0.0, 1.0)
-			"silhouette": _silhouette_force = true
+			"silhouette":
+				_silhouette_force = true
+				if val != "":
+					_silhouette_alpha = clampf(float(val), 0.0, 1.0)
+			"passe-ancienne": _passe_ancienne = true
+			"temoin-trou": _temoin_trou = true
 			"epaisseur":
 				if VoxelCatalogueT.EPAISSEUR_REGLAGES.has(val):
 					_epaisseur = val
@@ -225,6 +240,8 @@ func _lire_arguments(args: PackedStringArray) -> void:
 					push_warning("banc_corps : --teinte attend %s (reçu « %s »)" % [", ".join(VoxelCatalogueT.TEINTES.keys()), val])
 			"no-eos", "sans-maj", "eos-ephemeral":
 				pass
+			"corps-detaille", "corps-soi-sombre":
+				pass  # lus par `VoxelCatalogue.detail_actif()` / `soi_sombre_actif()`
 			_:
 				push_warning("banc_corps : argument inconnu --%s" % cle)
 
@@ -274,6 +291,23 @@ func _construire_scene() -> void:
 		if _modele:
 			var m: ShaderMaterial = noeud.materiau()
 			m.set_shader_parameter("modele", 1.0)
+		# Q39 (2) — sous `--corps-soi-sombre`, le crochet du JEU (`IsoMateriaux.accorder_corps`, que la présentation appelle
+		# après la construction) pose la variante et accorde la pré-passe : c'est lui que la preuve éprouve. Il repose aussi
+		# l'encre et le modelé à leurs valeurs de jeu (en pixels) ; le banc remet ensuite les siennes (en tuiles).
+		if VoxelCatalogueT.soi_sombre_actif():
+			var ms: ShaderMaterial = noeud.materiau()
+			var avant: Shader = ms.shader
+			IsoMateriaux.accorder_corps(ms)
+			ms.set_shader_parameter("encre_arete", _encre)
+			ms.set_shader_parameter("modele", 1.0 if _modele else 0.0)
+			if _passe_ancienne:
+				noeud.materiau_profondeur().shader = avant if IsoMateriaux.porte_passe_unique(avant) \
+					else IsoMateriaux.SHADER_PROFONDEUR_ORDINAIRE
+			print("BANC_CORPS %s : couleur %s ; pré-passe %s" % [slug,
+				"variante " + ",".join(_defines(ms.shader)) if ms.shader.resource_path == "" else ms.shader.resource_path.get_file(),
+				"LE MÊME programme" if noeud.materiau_profondeur().shader == ms.shader else "un AUTRE programme (%s)"
+				% (",".join(_defines(noeud.materiau_profondeur().shader)) if noeud.materiau_profondeur().shader.resource_path == ""
+				else noeud.materiau_profondeur().shader.resource_path.get_file())])
 		if _opaque:
 			var mo: ShaderMaterial = noeud.materiau()
 			mo.shader = _shader_opaque(mo.shader)
@@ -304,6 +338,15 @@ func _construire_scene() -> void:
 	if _capteur_actif:
 		_regenerer_capteur()
 	_rafraichir_poses()
+
+
+## Les defines d'une variante (`IsoMateriaux.variante_definie`), pour le journal.
+func _defines(sh: Shader) -> PackedStringArray:
+	var out := PackedStringArray()
+	for l in sh.code.split("\n"):
+		if l.begins_with("#define CORPS_"):
+			out.append(l.trim_prefix("#define "))
+	return out
 
 
 func _construire_environnement() -> void:
@@ -513,7 +556,7 @@ func _rafraichir_poses() -> void:
 			noeud.effacer_capteur()
 		noeud.definir_opacite(_opacite)
 		if _mode_silhouette == 1:
-			noeud.definir_silhouette(noeud.couleur() * 0.5, 1.0)
+			noeud.definir_silhouette(noeud.couleur() * 0.5, _silhouette_alpha)
 		else:
 			noeud.definir_silhouette(Color(0.0, 0.0, 0.0, 0.0), 0.0)
 
@@ -615,6 +658,19 @@ func _capturer_puis_quitter() -> void:
 		for c in _corps:
 			(c["noeud"] as VoxelCorpsT).materiau().set_shader_parameter("detail_matiere", 0.0)
 		print("BANC_CORPS --sans-matiere : matière peinte éteinte sur %d corps" % _corps.size())
+	if _temoin_trou:
+		for c in _corps:
+			var plus_grande: MeshInstance3D = null
+			var aire := 0.0
+			for n in (c["noeud"] as Node).find_children("Boite", "MeshInstance3D", true, false):
+				var mi := n as MeshInstance3D
+				var t := mi.get_aabb().size
+				if mi.visible and t.x * t.y > aire:
+					aire = t.x * t.y
+					plus_grande = mi
+			if plus_grande != null:
+				plus_grande.visible = false
+				print("BANC_CORPS --temoin-trou : couleur de %s cachée, sa pré-passe laissée" % plus_grande.get_parent().name)
 	if _sans_profondeur:
 		var cachees := 0
 		for c in _corps:

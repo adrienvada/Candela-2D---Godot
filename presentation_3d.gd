@@ -802,7 +802,10 @@ func _suivre() -> void:
 	# ISO13 — le mannequin : les lampes du jeu, relues une fois par image (`MannequinIso`), pour le côté de la lumière de
 	# chaque corps. Rien de lu ni de calculé quand le drapeau est éteint.
 	var mannequin := corps_voxel and _main != null and VoxelCatalogue.mannequin_actif()
+	# Q39 — le corps de soi sombre (`--corps-soi-sombre`) lit la même direction pour son liseré.
+	var soi_sombre := corps_voxel and _main != null and VoxelCatalogue.soi_sombre_actif()
 	var lampes_mannequin: Array = MannequinIso.lampes_du_jeu(_main) if mannequin else []
+	var lampes_soi: Array = lampes_mannequin if mannequin else (MannequinIso.lampes_du_jeu(_main) if soi_sombre else [])
 	for j in 2:
 		var joueur = joueurs[j]
 		# ISO5 — **pendant la killcam, c'est le FANTÔME qui porte le corps**, pas le joueur. Le rejeu cache
@@ -829,6 +832,8 @@ func _suivre() -> void:
 			if mannequin:
 				(_voxels[j] as VoxelCorps).eclairer_mannequin(MannequinIso.direction_dominante(p, lampes_mannequin,
 					MannequinIso.occultation(joueur as Node2D)))
+			if soi_sombre:
+				_mat_corps[j].set_shader_parameter("soi_lumiere", direction_du_lisere(joueur as Node2D, lampes_soi))
 		else:
 			_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
@@ -1133,6 +1138,13 @@ func _accorder_le_slug(j: int, slug: String) -> void:
 		var c = _capteurs[id][j]
 		if c != null:
 			mat.set_shader_parameter("capteur_%d" % (id + 1), (c as CapteurCorps).get_texture())
+	# Q39 (2) — le même relais pour les lightmaps : `_activer` ne les pose qu'une fois, sur les matériaux qui existent alors.
+	# Un corps reconstruit (changement de classe, fantôme de killcam) n'en avait aucune. Aucun shader des corps ne les lit
+	# par défaut ; l'essai B (`--corps-soi-sombre=fondu`) y lit le sol autour du joueur — sans ce relais, seule la classe
+	# présente à l'allumage de la vue le voyait (session cloud corps-sombre-2 : Terrassier et Fumiste, fusée ratée).
+	if _main != null:
+		mat.set_shader_parameter("lumiere_1", _main.vp1.get_texture())
+		mat.set_shader_parameter("lumiere_2", _main.vp2.get_texture())
 
 
 ## Le corps voxel d'un joueur : celui de sa classe (`ClassData.slug()`, la lecture de
@@ -1428,6 +1440,16 @@ static func opacite_rendue(item: Variant) -> float:
 		a *= (n as CanvasItem).modulate.a
 		n = n.get_parent()
 	return clampf(a, 0.0, 1.0)
+
+
+## Q39 — la direction du liseré de `--corps-soi-sombre` : celle du mannequin (`MannequinIso.direction_dominante`), à un
+## geste près. ⚠️ **Le rayon « derrière un mur ? » exclut le corps du joueur** : il part de son centre, et le joueur est
+## lui-même sur la couche des murs — sans l'exclure, le rayon vers sa propre rétrodiffusion (18 px devant lui) est coupé
+## par son propre corps, et sa torche ne compte jamais (constaté au photographe, 2026-09-28 : (0, 0) sous sa torche, (0, −1)
+## sans les murs). Le mannequin, lui, garde son appel d'hier : hors de cette tâche, signalé dans le rapport.
+static func direction_du_lisere(joueur: Node2D, lampes: Array) -> Vector2:
+	var exclus: Array = [joueur.get_rid()] if joueur is CollisionObject2D else []
+	return MannequinIso.direction_dominante(joueur.global_position, lampes, MannequinIso.occultation(joueur, exclus))
 
 
 ## La silhouette qui recouvre son propre corps, chez son propre joueur seulement (brief d'Adrien,

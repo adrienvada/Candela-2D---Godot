@@ -19,6 +19,22 @@
 // - Albédo seul : ni émission, ni `light()`, ni relief. Compilé dans la seule variante CORPS_DETAIL de `corps_iso` (et de son
 //   jumeau éclairé) : sans le drapeau, le jeu n'exécute pas une instruction de plus.
 
+// Q33 — LA PRÉ-PASSE DE PROFONDEUR EST CE MÊME PROGRAMME (ordre 424) : le matériau de profondeur d'un corps porte la variante
+// de sa couleur, avec `passe_profondeur = 1`, et sort en noir à alpha 0 dès le début du fragment. Un seul programme pour les
+// deux passes : la même profondeur par construction. Avec deux programmes (la variante pour la couleur, le shader de
+// profondeur ordinaire pour la pré-passe), llvmpipe calculait des profondeurs différentes au bit près ; la couleur d'une pièce
+// perdait le test contre sa propre pré-passe, et la pièce disparaissait en entier (triangles noirs, ordres 414-424).
+// Q39, deuxième tour (relecture de Beauté, 2026-09-28) : la règle vaut pour TOUTE variante de la couleur, pas pour le détail
+// seul — sous `--corps-soi-sombre` sans `--corps-detaille`, la couleur passait à CORPS_SOI_SOMBRE et la pré-passe restait
+// sur `corps_iso_profondeur.gdshader`. CORPS_PASSE_UNIQUE marque un programme qui porte la sortie de pré-passe ;
+// `IsoMateriaux.accorder_passe_profondeur` ne recopie la couleur dans la pré-passe que s'il la porte. Déclaré ici, hors du
+// bloc CORPS_DETAIL, parce que ce fichier est inclus par les deux shaders des corps (`corps_iso`, `corps_iso_eclaire`) avant
+// leur `fragment()`. Sans aucune variante, rien n'est défini : le code compilé est celui d'avant.
+#if defined(CORPS_DETAIL) || defined(CORPS_SOI_SOMBRE)
+#define CORPS_PASSE_UNIQUE
+uniform float passe_profondeur = 0.0;
+#endif
+
 #ifdef CORPS_DETAIL
 
 uniform float detail = 0.0;
@@ -33,12 +49,6 @@ uniform vec4 detail_metal : source_color = vec4(1.0);
 uniform vec4 detail_cartouche : source_color = vec4(1.0);
 // La force des pores et du marbrage : 0 les éteint (la bascule des bancs, même partie).
 uniform float detail_matiere = 1.0;
-// Q33 — LA PRÉ-PASSE DE PROFONDEUR EST CE MÊME PROGRAMME (ordre 424) : le matériau de profondeur d'un corps détaillé porte la
-// variante CORPS_DETAIL de sa couleur, avec `passe_profondeur = 1`, et sort en noir à alpha 0 dès le début du fragment. Un seul
-// programme pour les deux passes : la même profondeur par construction. Avec deux programmes (la variante pour la couleur, le
-// shader de profondeur ordinaire pour la pré-passe), llvmpipe calculait des profondeurs différentes au bit près ; la couleur
-// d'une pièce perdait le test contre sa propre pré-passe, et la pièce disparaissait en entier (triangles noirs, ordres 414-424).
-uniform float passe_profondeur = 0.0;
 
 // Le pire assombrissement de la matière peinte : un pore au plus profond, sur un marbrage sombre.
 const float DETAIL_PORE = 0.62;

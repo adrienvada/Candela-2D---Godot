@@ -226,9 +226,10 @@ func _la_pre_passe(racine: Node3D) -> void:
 	for chemin in ["res://corps_iso.gdshader", "res://corps_iso_eclaire.gdshader"]:
 		var code := FileAccess.get_file_as_string(chemin)
 		var debut := code.substr(code.find("void fragment() {"), 200)
-		_check("%s : le fragment commence par la sortie de pré-passe, sous CORPS_DETAIL seulement" % chemin.get_file(),
-			debut.begins_with("void fragment() {\n#ifdef CORPS_DETAIL") and code.contains("	if (passe_profondeur > 0.5) {")
-			and code.contains("		ALPHA = 0.0;\n	} else {\n#endif") and code.contains("#ifdef CORPS_DETAIL\n	}\n#endif\n}"))
+		# Q39 (2) : sous CORPS_PASSE_UNIQUE, que CORPS_DETAIL définit (et CORPS_SOI_SOMBRE aussi : `test_passe_unique`).
+		_check("%s : le fragment commence par la sortie de pré-passe, sous une variante seulement (CORPS_PASSE_UNIQUE)" % chemin.get_file(),
+			debut.begins_with("void fragment() {\n#ifdef CORPS_PASSE_UNIQUE") and code.contains("	if (passe_profondeur > 0.5) {")
+			and code.contains("		ALPHA = 0.0;\n	} else {\n#endif") and code.contains("#ifdef CORPS_PASSE_UNIQUE\n	}\n#endif\n}"))
 
 
 ## Le débord d'une boîte tournée de `angle` autour de z, centrée en `centre` (repère du torse), hors du rectangle de la face :

@@ -253,15 +253,41 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 		materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL")
 		if VoxelCatalogue.matiere_detail_active():
 			materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL_MATIERE")
-		accorder_passe_profondeur(materiau)
+	# Q39 — son propre corps sombre avec un liseré (`--corps-soi-sombre`) : même règle, la variante doit survivre au changement
+	# de shader. Sans le drapeau, rien. ⚠️ Le shader éclairé (lumière 3D, éteinte par défaut) ne porte pas l'essai.
+	if VoxelCatalogue.soi_sombre_actif():
+		materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_SOMBRE")
+		# Q39 (2) — l'essai B, « fondu » (`--corps-soi-sombre=fondu`) : l'essai A seulement là où le corps d'aujourd'hui se
+		# fond dans le sol. Toujours avec CORPS_SOI_SOMBRE, qui porte déjà la sortie de pré-passe.
+		if VoxelCatalogue.soi_fondu_actif():
+			materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_FONDU")
+	# Q39, deuxième tour (relecture de Beauté, 2026-09-28) — la pré-passe suit la couleur UNE fois, APRÈS la dernière
+	# variante. Appelée plus tôt (après CORPS_DETAIL, avant CORPS_SOI_SOMBRE), elle gardait un programme sans le define
+	# suivant : deux programmes, le piège de l'ordre 424. Toute variante ajoutée à ce crochet se pose AU-DESSUS de cette
+	# ligne ; `test_passe_unique` le vérifie sur toutes les combinaisons de drapeaux.
+	accorder_passe_profondeur(materiau)
 
 
-## Q33 — la pré-passe de profondeur d'un corps détaillé porte LE MÊME programme que sa couleur (ordre 424 : avec deux
-## programmes, un pilote peut calculer deux profondeurs différentes au bit près, et effacer une pièce entière). Le matériau de
-## couleur connaît son matériau de profondeur par la méta `MATERIAU_PROFONDEUR` (posée par `VoxelCorps`) ; chaque changement
-## de shader de la couleur (la lumière 3D passe par `accorder_corps`) est recopié ici. Sans le drapeau, jamais appelé : la
-## pré-passe garde `corps_iso_profondeur.gdshader`.
+## Q33 — la pré-passe de profondeur d'un corps porte LE MÊME programme que sa couleur (ordre 424 : avec deux programmes, un
+## pilote peut calculer deux profondeurs différentes au bit près, et effacer une pièce entière). Le matériau de couleur connaît
+## son matériau de profondeur par la méta `MATERIAU_PROFONDEUR`, posée par `VoxelCorps` à la construction de TOUT corps ;
+## chaque changement de shader de la couleur (les variantes, la lumière 3D) passe par `accorder_corps`, qui finit ici.
+## Q39 (2) : la règle est « dès que la couleur n'est plus le shader ordinaire », pas « sous le détail » — la pré-passe prend
+## le programme de la couleur dès qu'il porte la sortie de pré-passe (`porte_passe_unique`, toute variante qui définit
+## CORPS_PASSE_UNIQUE), et revient à `corps_iso_profondeur.gdshader` sinon (drapeaux éteints : le jeu d'avant, au bit).
 const MATERIAU_PROFONDEUR := &"materiau_profondeur"
+const SHADER_PROFONDEUR_ORDINAIRE := preload("res://corps_iso_profondeur.gdshader")
+## Les variantes qui allument CORPS_PASSE_UNIQUE (`iso_corps_detail.gdshaderinc`) : une de plus s'ajoute ici ET là.
+const VARIANTES_PASSE_UNIQUE := ["CORPS_DETAIL", "CORPS_SOI_SOMBRE"]
+
+
+static func porte_passe_unique(shader: Shader) -> bool:
+	if shader == null:
+		return false
+	for nom in VARIANTES_PASSE_UNIQUE:
+		if shader.code.contains("#define %s\n" % nom):
+			return true
+	return false
 
 
 static func accorder_passe_profondeur(materiau: ShaderMaterial) -> void:
@@ -270,9 +296,11 @@ static func accorder_passe_profondeur(materiau: ShaderMaterial) -> void:
 	var profondeur := materiau.get_meta(MATERIAU_PROFONDEUR) as ShaderMaterial
 	if profondeur == null:
 		return
-	profondeur.shader = materiau.shader
-	profondeur.set_shader_parameter("passe_profondeur", 1.0)
-
+	if porte_passe_unique(materiau.shader):
+		profondeur.shader = materiau.shader
+		profondeur.set_shader_parameter("passe_profondeur", 1.0)
+	elif profondeur.shader != SHADER_PROFONDEUR_ORDINAIRE:
+		profondeur.shader = SHADER_PROFONDEUR_ORDINAIRE
 
 ## ISO10, 1f — la lumière d'une face lue SANS la peinture du sol (`mur_iso.gdshader`, `lire_lumiere`) : lightmap ×
 ## référence ÷ max(peinture, plancher), canal par canal. La référence est la couleur moyenne du sol dessiné
