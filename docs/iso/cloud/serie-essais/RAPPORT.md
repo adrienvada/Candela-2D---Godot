@@ -1,5 +1,56 @@
 # La cadence de tous les essais, en une commande pour le Mac — rapport de la session cloud « série-essais »
 
+> ## ⛔ TÂCHE ARRÊTÉE (28/09, ~12:45, Paris)
+>
+> Arrêtée par la décision d'Adrien du 28/09 vers 06:35 : « Mesurons par version, plus par nouveauté. Trions avec le cloud
+> avant le Mac. Faisons des séries plus courtes. » La session « Cadence par version » (`origin/claude/cloud-cadence-version`)
+> a repris ce qui servait de plan ici. **Le lanceur de cette branche n'est PAS prêt pour le Mac** et ne doit pas y être lancé
+> tel quel : ni garde headless, ni suite complète, ni essai `ESSAI_CLOUD=1` du lanceur lui-même.
+>
+> ### Ce qui reste utile
+>
+> 1. **Huit lignes d'état**, une par essai, imprimées seulement drapeau allumé, là où l'essai S'APPLIQUE (variante posée,
+>    triangles posés) : `[encre] allumée — variante ENCRE_ESSAI posée (#define …)`, `[corps soi sombre] allumé — variante
+>    CORPS_SOI_SOMBRE posée (#define …)` (`iso_materiaux.gd`) ; `[lampe claire] allumée — posée sur le sol et les murs`
+>    (`lampe_claire.gd`) ; `[pochoirs] allumés — N pochoir(s) sur la carte « id »`, `[sol marqué] allumé — N marque(s) …`
+>    (`arena_decor.gd`) ; `[tuyaux]`, `[enseignes]`, `[murs meublés] allumés — N triangles sur la carte « id »`
+>    (`TuyauxIsoT.ligne_etat`). Avec `[faisceau]` et `[mannequin]` (déjà là), les dix essais se prouvent par le journal.
+>    ⚠ **Sans garde headless et non passées par la suite complète** : à faire avant de les fusionner.
+> 2. **Les dix essais, lancés SEULS, marchent sur le vrai banc sous Xvfb** : ligne imprimée, vue iso tenue, « iso lacet 45° B »,
+>    Arène Standard (`00000001`, la carte que le banc prend toujours : `MapData` ne garde pas la sélection). Comptes du banc
+>    (valables dans le cloud) plus bas : **pochoirs et sol marqué n'ajoutent ni appel, ni objet, ni primitive** ; tuyaux
+>    +10 384 primitives (18 080 contre 7 696), murs meublés +7 560 (15 256) et +4 appels, faisceau +2 appels, enseignes +1 ;
+>    encre, lampe claire, mannequin, corps sombre : aucun compte ne bouge (leur prix est dans le shader, Mac seulement).
+> 3. **Le bras « tout » éteint la vue iso dans le cloud** (un seul lancement, non refait). Commande exacte :
+>
+>    ```
+>    xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . res://tools/bench_framerate.tscn -- --seconds 5 --max-fps 0 \
+>      --fusee --vue-unique --classe=pompe --faisceau --mannequin --pochoirs-essai --encre-essai --tuyaux-essai \
+>      --enseignes-essai --murs-meubles-essai --sol-marque-essai --corps-soi-sombre --lampe-claire
+>    ```
+>
+>    Symptôme (journal dans `releves/tout_extinction.txt`) : la vue iso s'allume normalement, puis PENDANT les 30 s
+>    d'échauffement le jeu imprime `[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true,
+>    menu=true, SubViewport1=true, SubViewport2=false` — c'est **`menu=true`** (`ui._is_main_menu` vrai : l'interface se croit
+>    revenue au menu principal) qui fait retirer la vue (`[iso] peinture retirée`, `[iso] vue isométrique éteinte`) ; la mesure
+>    tourne ensuite en 2D et le banc refuse lui-même son chiffre : `✗ --iso : la vue isométrique était éteinte sur 54 image(s)
+>    mesurée(s) : chiffre refusé`. **Aucune erreur de script ni de shader.** Le même banc SANS essai (M0) et chacun des dix
+>    essais seul gardent la vue iso. Ce n'est donc pas un essai isolé ; soit une combinaison, soit la lenteur du rendu logiciel
+>    (≈ 8 à 11 images/s ici) qui ferait passer le banc par un état de menu — **non tranché**. Ce lancement avait lieu AVANT
+>    l'ajout des lignes d'état (elles n'y sont pour rien). À refaire d'abord (le reproduire), puis par moitiés.
+> 4. **Le lanceur** `tools/serie_essais/serie_mac_essais.sh` (séries A par pixel, B géométrie + TOUT, C écran scindé ; porte
+>    de l'ordre 432 ; vérification de 5 s AVANT les 20 min de repos ; chaque bras prouvé par ses lignes et par l'ABSENCE des
+>    autres) : essai à blanc de la série A passé ; jamais lancé sur le vrai banc. Réutilisable pour les séries « par version ».
+>
+> ### Ce que je n'ai pas pu prouver
+> - Aucune cadence (le cloud ne mesure pas le temps).
+> - La cause de l'extinction du bras « tout », ni même qu'elle se reproduit.
+> - Les lignes d'état ne sont couvertes par aucune garde ; la suite complète n'a pas tourné sur elles.
+>
+> **Piège à reporter** : un banc qui repasse au menu en cours de chauffe ne crie pas — seule la ligne `✗ --iso … chiffre
+> refusé`, en fin de sortie, le dit. Un lanceur doit refuser toute prise qui contient une ligne `✗` du banc.
+
+
 > Branche `claude/cloud-serie-essais`, partie de `1dc5ec8` (`origin/claude/cloud-ecart-11`), 2026-09-28.
 > **État : en cours — premier commit, le plan.** Rien ne change par défaut.
 
