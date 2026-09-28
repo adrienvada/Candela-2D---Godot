@@ -35,9 +35,11 @@ def img(src_dir, nom, etiq):
     src = os.path.join(src_dir, nom)
     if not os.path.exists(src):
         return None
-    dst = os.path.join(DOSSIER, "img", "%s_%s" % (etiq, nom))
+    # Un nom de fichier sûr dans une URL : l'étiquette (« 45° B ») réduite à ses lettres et chiffres.
+    sur = "".join(ch for ch in etiq if ch.isalnum())
+    dst = os.path.join(DOSSIER, "img", "%s_%s" % (sur, nom))
     shutil.copyfile(src, dst)
-    return "img/%s_%s" % (etiq, nom)
+    return "img/%s_%s" % (sur, nom)
 
 
 def fig(src, legende, classe=""):
@@ -74,11 +76,11 @@ for etiq, src in LACETS:
     h.append("<h2>%s</h2>" % html.escape(etiq))
     h.append(textes.get("lacet_" + etiq, ""))
     h.append("<table><tr><th>bloc</th><th>prise</th><th>pixels noirs (A)</th><th>fuite</th><th>B−A médiane</th><th>p90</th>"
-             "<th>max</th><th>milieu du cône B−A</th><th>bord B−A</th><th>max rayon / max sol</th></tr>")
+             "<th>max</th><th>cœur du cône : B−A</th><th>bord du cône : B−A</th><th>max rayon / max sol</th></tr>")
     for bloc, r in m.items():
         for b, pr in r["prises"].items():
-            mil = "; ".join("%s" % v["B-A"] for k, v in pr.items() if isinstance(v, dict) and k.endswith("milieu"))
-            bord = "; ".join("%s" % v["B-A"] for k, v in pr.items() if isinstance(v, dict) and k.endswith("bord"))
+            mil = "%s (sol %s)" % (pr["coeur"]["B-A"], pr["coeur"]["A"]) if "coeur" in pr else "—"
+            bord = "%s (sol %s)" % (pr["bord_image"]["B-A"], pr["bord_image"]["A"]) if "bord_image" in pr else "—"
             h.append("<tr><td>%s</td><td>%s</td><td>%d</td><td class='%s'>%d</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
                      "<td>%s</td><td>%s / %s</td></tr>" % (bloc, b, r["pixels_noirs_A"], "ok" if pr["fuite"] == 0 else "ko",
                      pr["fuite"], pr.get("gain_median", "—"), pr.get("gain_p90", "—"), pr.get("gain_max", "—"), mil, bord,
@@ -107,7 +109,7 @@ for etiq, src in LACETS:
                 if a and b:
                     h.append(fig(a, "loupe ×3, milieu du cône de J%d, vue %d — sans" % (j, v + 1), "loupe"))
                     h.append(fig(b, "loupe ×3, même endroit — avec", "loupe"))
-        for d in ["b15", "b30", "b45", "b80"]:
+        for d in (["b15", "b30", "b45", "b80"] if bloc == "adv" else []):
             x = img(src, "%s_%s.jpg" % (bloc, d), etiq)
             if x:
                 h.append(fig(x, "densité 0,%s" % d[1:]))

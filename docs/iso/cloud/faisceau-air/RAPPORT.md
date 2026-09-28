@@ -1,14 +1,16 @@
 # Le faisceau visible dans l'air, sans salir le noir (Q41) — rapport de la session cloud « faisceau-air »
 
 > Branche `claude/cloud-faisceau-air`, partie de `origin/claude/cloud-masque-fumee` (`b5af7b6`), 2026-09-28, à partir de
-> 02:10 (Paris). **État : fait côté cloud.** Un essai derrière `--faisceau-air`, ÉTEINT par défaut ; sa garde ; les prises à
+> 02:10 (Paris). **État : fait côté cloud.** Suite complète verte (652 s). Un essai derrière `--faisceau-air`, ÉTEINT par défaut ; sa garde ; les prises à
 > 45° B et à 0°, en vue unique et en écran scindé ; la question d'équité à l'image ; la planche. **Rien ne change par
 > défaut.** La cadence reste à mesurer sur le Mac.
 
 ## Pour Adrien, en cinq lignes
 
-1. **Le rayon peut revenir sans salir le noir** : dans toutes mes prises, il n'allume **aucun** pixel noir. Il reste sous la
-   hauteur des murets et ne montre jamais plus de lumière que le sol n'en reçoit.
+1. **Le rayon peut revenir sans salir le noir** : sur le sol et les murs, il n'allume **aucun** pixel noir, à 45° comme à
+   0°, en vue unique et en écran scindé. Seuls quelques pixels gris sur les jambes du joueur qui porte la lampe ont bougé
+   dans deux prises, sans suivre la densité : c'est le corps qui frémit, pas le rayon (vérifié, pas prouvé). Il reste sous
+   la hauteur des murets et ne montre jamais plus de lumière que le sol n'en reçoit.
 2. **Mais il ne ressemble pas aux illustrations.** Là-bas, le faisceau est une lame de lumière plus claire que tout le reste.
    Ici, avec tes règles, il ne peut être qu'**un voile qui ternit la tache de lumière** : le cœur du cône s'assombrit
    (de 14 à 19 sur 255 à la densité essayée), les dalles claires et sombres se rapprochent, des stries suivent la visée ; au
@@ -103,7 +105,28 @@ où les A diffèrent entre elles (dilatés d'un pixel) sont l'ensemble instable,
 | `eq-est`, `eq-sud-ouest` | J2 au nord du pilier, lampe allumée, J1 lampe éteinte | 899 407, 924 486 | **0**, **0** (0,45) |
 | `sien` | son propre rayon (vue unique, lampe de J1) | **0** : le voile d'éblouissement de sa propre torche (0,06) relève tout l'écran | non jugeable au noir |
 
-**0° (lacet 0, J2 en A)** : voir § 3a bis (ajouté à la fin de la séance).
+**0° (lacet 0, J2 en A)**, deux séances (la seconde, `r0b`, prend aussi l'écran scindé aux quatre densités) :
+
+| bloc | pixels noirs dans les A | fuite, 1re séance | fuite, 2e séance (0,15 / 0,30 / 0,45 / 0,80, puis b) |
+|---|---|---|---|
+| `adv` | 901 908 | 0 / 0 / 0 / 0 | **0 / 0 / 0 / 0**, 0 |
+| `s1` (moitié de J2) | 357 555 | **4** (b) | **1** / 0 / 0 / 0, **0** |
+| `s2` (moitié de J1) | 305 253 | 0 (b) | **0 / 0 / 0 / 0**, 0 |
+| `eq-est`, `eq-sud-ouest` | 882 210, 917 700 | 0, 0 | **0**, **0** |
+| `sien` | 0 (le voile) | non jugeable | non jugeable |
+
+**La fuite de `s1`, et pourquoi ce n'est pas le rayon.** La première séance a trouvé 4 pixels allumés dans le noir, dans la
+moitié de J2 : gris froids (9 à 38/255, le bleu au-dessus du rouge), tous sur la silhouette de J1, à moins de 30 px de sa
+lampe — les jambes de son corps voxel. Deux causes possibles : le corps qui frémit (piège connu du 25/09) sans qu'aucune A
+l'ait attrapé ; ou le rayon vu à travers le bord du corps (le pochoir juge le sol derrière la couche, pas le corps). Une
+fuite du RAYON grandirait avec la densité ; celle du CORPS sauterait au hasard. La contre-épreuve (même séance, quatre
+densités) : **la même prise `b` donne 0** ; il reste **1 pixel, à 0,15** (gris froid 10, 12, 15, à 42 px de la lampe, sur
+les jambes), **0 à 0,30, 0,45 et 0,80**. La fuite ne suit pas la densité, n'a jamais la teinte chaude du rayon, et ne tombe
+que sur le corps : c'est le corps qui frémit. Établi par cette intervention, pas prouvé au sens strict (voir « non
+prouvé »).
+
+La densité à 0° (bloc `adv`, 2e séance) : cœur du cône −5,6 / −9,8 / −13,5 / −20,3 à 0,15 / 0,30 / 0,45 / 0,80, bord
++0,5 / +0,7 / +0,9 / +1,3 — les mêmes qu'à 45° B au dixième près. Le plus clair du rayon, 229 ; celui du sol, 230.
 
 Le propre rayon d'un joueur ne peut pas se juger au noir : sa torche l'éblouit à 0,06 et le voile soulève tout son écran
 (aucun pixel noir, ni avec ni sans le rayon). C'est pour cela que le rayon est jugé **vu de l'autre** : en vue unique (J1
@@ -175,7 +198,24 @@ J2.
 
 ## 5. Les comptes de dessin (outil de la session Budget)
 
-Voir § 5 bis (ajouté à la fin du relevé).
+L'outil de la session Budget (`origin/claude/cloud-budget`, `tools/cloud_budget/`, repris le temps du relevé dans un worktree,
+non commité ici), scène `cartes` : les six cartes livrées, J1 et J2 à 260 px, **les deux torches allumées**, chacun visant
+l'autre ; 12 images par carte ; `defaut` contre `air` (`--faisceau-air`). Synthèse complète : `budget.md`.
+
+| | lacet | Δ appels de dessin (médiane des 6 cartes) [pire carte] | Δ primitives | Δ vues rendues | Δ copies d'écran | Δ lumières à ombre |
+|---|---|---|---|---|---|---|
+| vue unique | 0° | **+8,5** [+10] | +17 [+20] | 0 | 0 | 0 |
+| vue unique | 45° | **+8,5** [+10] | +17 [+20] | 0 | 0 | 0 |
+| écran scindé | 0° | **+13** [+16] | +26 [+32] | 0 | 0 | 0 |
+| écran scindé | 45° | **+16** [+18] | +32 [+36] | 0 | 0 | 0 |
+
+C'est ce que dit le code : par lampe allumée, **trois couches et un juge**, soit quatre appels par vue (deux lampes : 8 ;
+deux vues : 16), deux triangles chacun. Rien d'autre : ni vue, ni copie d'écran, ni ombre, ni lumière. Le prix réel est
+**par pixel** : le juge pose la question du masque (forme compacte, bande resserrée) une fois par pixel couvert par le
+carré du juge (demi-côté = portée de la torche + 12,6 px, soit ~320 px de monde), et les trois couches, compilées sans
+masque, ne se dessinent que là où le pochoir le permet. **La cadence reste à mesurer sur le Mac** : la série en miroir du
+banc (le pompe sous une fusée, où les deux torches sont allumées), `--faisceau-air` contre rien, avec la règle des 3 %.
+Rien de ce qui précède n'est une mesure de temps.
 
 ## 6. La planche
 
@@ -197,9 +237,10 @@ cp ~/.local/share/godot/app_userdata/Candela\ 2D/photos/loupe/*.png photos45/
 GODOT_ARGS="--fixed-fps 60" xvfb-run -a -s "-screen 0 1920x1080x24" env GODOT=/usr/local/bin/godot \
   ./tools/run_photos.sh --plan=loupe-faisceau-air --led-murs-fige --lacet=0 --lacet-j2=A > r0.log 2>&1
 # Le jugement, puis la planche :
-python3 tools/faisceau_air/preuve.py photos45 r45.log p45 45B_
-python3 tools/faisceau_air/preuve.py photos0 r0.log p0 0A_
-python3 tools/faisceau_air/planche.py docs/iso/cloud/faisceau-air "45° B=p45" "0° A=p0"
+cp ~/.local/share/godot/app_userdata/Candela\ 2D/photos/loupe/*.png photos0/
+python3 tools/faisceau_air/preuve.py photos45 r45.log p45     # sort 1 : le bloc « sien » n'a aucun pixel noir (le voile)
+python3 tools/faisceau_air/preuve.py photos0 r0.log p0
+python3 tools/faisceau_air/planche.py docs/iso/cloud/faisceau-air "45° B=p45" "0° A=p0"   # textes : planche_textes.json
 # Les comptes de dessin (outil de origin/claude/cloud-budget, tools/cloud_budget/, non commité ici) :
 GODOT=/usr/local/bin/godot LACETS="45 0" SCENES=cartes ./tools/cloud_budget/run_budget.sh budget "defaut=" "air=--faisceau-air"
 python3 tools/cloud_budget/synthese.py budget
@@ -216,6 +257,9 @@ partie d'un `user://` où l'intro était déjà vue ; première image vérifiée
   des 3 %.
 - **Le rayon de celui qui le porte, jugé au noir** : son propre voile d'éblouissement ne laisse aucun pixel noir dans sa
   vue. Le même code est jugé vu de l'autre, dans les deux sens ; pas vu de soi.
+- **Que la fuite de `s1` à 0° soit le corps et non le rayon** : établi par la contre-épreuve (elle ne suit pas la densité,
+  n'a jamais la teinte du rayon, ne tombe que sur les jambes de J1), pas prouvé. Pour le prouver : la même prise, le corps de
+  J1 caché (`visible = false` sur son voxel) — si la fuite disparaît, c'est le corps.
 - **La symétrie au pixel près** entre le rayon de J1 et celui de J2 : les deux ont zéro fuite et la même allure, mais ils
   ne sont pas posés sur le même sol ; une mise en scène en miroir de la carte le prouverait.
 - **Un joueur caché derrière un mur** : à 45° B, le pilier ne cache pas J2 à la caméra de J1 ; la règle (rien hors de la
@@ -238,5 +282,7 @@ partie d'un `user://` où l'intro était déjà vue ; première image vérifiée
    de la lumière (la texture de la lampe s'éteint avant). Lire le bord du cône sur l'image, pas sur l'angle.
 4. **La poussière de faisceau du jeu (V5.5) pose des grains clairs au hasard** : deux prises « identiques » peuvent différer
    de plus de 100/255 sur quelques pixels du cône. Un écart isolé dans la lumière se vérifie sur plusieurs prises.
-5. **Son propre rayon ne se juge pas au noir** : sa torche éblouit son porteur (0,06), et le voile relève toute sa vue.
+5. **Une fuite de quelques pixels sur un corps se juge par la DENSITÉ** : si elle vient du rayon, elle grandit avec lui ; si
+   elle saute au hasard entre les prises, c'est le corps qui frémit. Prendre toujours plusieurs densités, dans chaque vue.
+6. **Son propre rayon ne se juge pas au noir** : sa torche éblouit son porteur (0,06), et le voile relève toute sa vue.
    Juger une image de lampe depuis l'AUTRE joueur (vue unique de l'autre, ou la moitié non éblouie de l'écran scindé).

@@ -1,0 +1,209 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faisceau dans l'air</title><style>
+:root{--fond:#111;--texte:#e8e4dc;--trait:#333;--doux:#9a958c;--accent:#f0b35a}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--fond:#f6f4ef;--texte:#1c1b19;--trait:#d6d2c8;--doux:#6b675f;--accent:#a8661b}}
+body{background:var(--fond);color:var(--texte);font:15px/1.5 system-ui,sans-serif;margin:0 auto;max-width:1400px;padding:16px}
+h1{font-size:1.5em}h2{margin-top:2em;border-bottom:1px solid var(--trait);padding-bottom:.2em}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}
+figure{margin:0}figure img{width:100%;height:auto;display:block;border:1px solid var(--trait);border-radius:4px;background:#000}
+.loupe img{image-rendering:pixelated}figcaption{color:var(--doux);font-size:.9em;margin-top:4px}
+table{border-collapse:collapse;font-size:.9em;margin:8px 0;display:block;overflow-x:auto}
+td,th{border:1px solid var(--trait);padding:3px 8px;text-align:right}th{text-align:center}td:first-child{text-align:left}
+.ok{color:#4caf50}.ko{color:#e53935}p.note{color:var(--doux)}
+</style></head><body>
+<h1>Le faisceau dans l'air (Q41) — à l'image</h1>
+<p>Le rayon de <code>--faisceau-air</code> (éteint par défaut), basculé sur place dans un même lancement : A sans lui (cinq prises), B avec lui, aux densités 0,15 / 0,30 / 0,45 / 0,80. Ses trois couches restent sous les murets (0,36 tuile) et portent toujours le masque pochoir.</p><p><b>Le verdict, en deux phrases.</b> Le rayon n'allume <b>aucun</b> pixel noir, vu de l'autre joueur, à 45° B comme à 0°, en vue unique comme en écran scindé (un seul pixel gris froid sur les jambes de J1, à 0,15, qui ne suit pas la densité : le corps qui frémit). Mais il se lit comme un <b>voile qui ternit la tache de lumière</b> — le cœur du cône fonce de 14 à 19/255 à 0,45, le bord bouge de moins d'un — et jamais comme la lame claire des illustrations : une couche qui ne montre que la lumière lissée sous elle, sans gain, ne peut que ramener le sol vers la moyenne.</p><p class='note'>Colonnes : « pixels noirs (A) », le zéro vérifié non vide ; « fuite », les pixels noirs dans toutes les A que B allume ; cœur et bord du cône, le quart le plus clair et le plus sombre du sol éclairé que le rayon change (sol sans lui entre parenthèses, /255) ; « max rayon / max sol », le plus clair du rayon contre le plus clair du sol du cône sans lui. Cliquer une image l'ouvre à 1:1. Rapport : <code>RAPPORT.md</code>.</p>
+<h2>Les neuf illustrations à faisceau</h2><div class='grille'>
+<figure class=""><a href="img/ill_accueil.jpg"><img src="img/ill_accueil.jpg" alt="ill_accueil" loading="lazy"></a><figcaption>ill_accueil</figcaption></figure>
+<figure class=""><a href="img/ill_amical.jpg"><img src="img/ill_amical.jpg" alt="ill_amical" loading="lazy"></a><figcaption>ill_amical</figcaption></figure>
+<figure class=""><a href="img/ill_amical_ligne.jpg"><img src="img/ill_amical_ligne.jpg" alt="ill_amical_ligne" loading="lazy"></a><figcaption>ill_amical_ligne</figcaption></figure>
+<figure class=""><a href="img/ill_competitif.jpg"><img src="img/ill_competitif.jpg" alt="ill_competitif" loading="lazy"></a><figcaption>ill_competitif</figcaption></figure>
+<figure class=""><a href="img/ill_creer_local.jpg"><img src="img/ill_creer_local.jpg" alt="ill_creer_local" loading="lazy"></a><figcaption>ill_creer_local</figcaption></figure>
+<figure class=""><a href="img/ill_ecran_scinde.jpg"><img src="img/ill_ecran_scinde.jpg" alt="ill_ecran_scinde" loading="lazy"></a><figcaption>ill_ecran_scinde</figcaption></figure>
+<figure class=""><a href="img/ill_intro_allumage.jpg"><img src="img/ill_intro_allumage.jpg" alt="ill_intro_allumage" loading="lazy"></a><figcaption>ill_intro_allumage</figcaption></figure>
+<figure class=""><a href="img/ill_intro_dotation.jpg"><img src="img/ill_intro_dotation.jpg" alt="ill_intro_dotation" loading="lazy"></a><figcaption>ill_intro_dotation</figcaption></figure>
+<figure class=""><a href="img/ill_intro_prix.jpg"><img src="img/ill_intro_prix.jpg" alt="ill_intro_prix" loading="lazy"></a><figcaption>ill_intro_prix</figcaption></figure>
+</div>
+<h2>45° B</h2>
+
+<table><tr><th>bloc</th><th>prise</th><th>pixels noirs (A)</th><th>fuite</th><th>B−A médiane</th><th>p90</th><th>max</th><th>cœur du cône : B−A</th><th>bord du cône : B−A</th><th>max rayon / max sol</th></tr>
+<tr><td>adv</td><td>b</td><td>904820</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>22</td><td>-14.03 (sol 135.7)</td><td>0.78 (sol 29.1)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b15</td><td>904820</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>156</td><td>-6.02 (sol 141.2)</td><td>0.36 (sol 35.9)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b30</td><td>904820</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>14</td><td>-10.38 (sol 137.6)</td><td>0.61 (sol 31.2)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b45</td><td>904820</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>37</td><td>-14.01 (sol 135.7)</td><td>0.78 (sol 29.1)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b80</td><td>904820</td><td class='ok'>0</td><td>0.0</td><td>2.0</td><td>80</td><td>-20.84 (sol 133.2)</td><td>1.08 (sol 26.2)</td><td>229 / 230</td></tr>
+<tr><td>eq-est</td><td>b</td><td>899407</td><td class='ok'>0</td><td>0.0</td><td>2.0</td><td>109</td><td>-16.03 (sol 123.7)</td><td>1.18 (sol 23.9)</td><td>212 / 230</td></tr>
+<tr><td>eq-sud-ouest</td><td>b</td><td>924486</td><td class='ok'>0</td><td>0.0</td><td>2.0</td><td>24</td><td>-11.71 (sol 123.3)</td><td>0.97 (sol 26.2)</td><td>229 / 230</td></tr>
+<tr><td>s1</td><td>b</td><td>526053</td><td class='ok'>0</td><td>0.0</td><td>1.0</td><td>28</td><td>-18.64 (sol 141.4)</td><td>0.91 (sol 22.5)</td><td>230 / 255</td></tr>
+<tr><td>s2</td><td>b</td><td>272532</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>86</td><td>-15.89 (sol 139.9)</td><td>0.92 (sol 30.5)</td><td>230 / 242</td></tr>
+<tr><td>sien</td><td>b</td><td>0</td><td class='ok'>0</td><td>-11.0</td><td>1.0</td><td>29</td><td>-20.91 (sol 150.5)</td><td>0.85 (sol 44.9)</td><td>230 / 248</td></tr>
+<tr><td>sien</td><td>b15</td><td>0</td><td class='ok'>0</td><td>-4.0</td><td>0.0</td><td>9</td><td>-8.01 (sol 152.1)</td><td>0.15 (sol 50.9)</td><td>230 / 255</td></tr>
+<tr><td>sien</td><td>b30</td><td>0</td><td class='ok'>0</td><td>-8.0</td><td>1.0</td><td>20</td><td>-14.93 (sol 151.4)</td><td>0.52 (sol 46.8)</td><td>230 / 255</td></tr>
+<tr><td>sien</td><td>b45</td><td>0</td><td class='ok'>0</td><td>-11.0</td><td>1.0</td><td>39</td><td>-20.88 (sol 150.5)</td><td>0.8 (sol 45.3)</td><td>229 / 231</td></tr>
+<tr><td>sien</td><td>b80</td><td>0</td><td class='ok'>0</td><td>-17.0</td><td>1.0</td><td>50</td><td>-32.89 (sol 150.5)</td><td>1.26 (sol 42.1)</td><td>226 / 231</td></tr>
+</table>
+<h3>Le rayon ADVERSE vu de J1 (lampe de J2 seule, J1 lampe éteinte)</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/45B_adv_a.jpg"><img src="img/45B_adv_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b.jpg"><img src="img/45B_adv_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b_diffx8.jpg"><img src="img/45B_adv_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b_noir.jpg"><img src="img/45B_adv_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/45B_adv_a_loupe_J2_v0.jpg"><img src="img/45B_adv_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_adv_b_loupe_J2_v0.jpg"><img src="img/45B_adv_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b15.jpg"><img src="img/45B_adv_b15.jpg" alt="densité 0,15" loading="lazy"></a><figcaption>densité 0,15</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b30.jpg"><img src="img/45B_adv_b30.jpg" alt="densité 0,30" loading="lazy"></a><figcaption>densité 0,30</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b45.jpg"><img src="img/45B_adv_b45.jpg" alt="densité 0,45" loading="lazy"></a><figcaption>densité 0,45</figcaption></figure>
+<figure class=""><a href="img/45B_adv_b80.jpg"><img src="img/45B_adv_b80.jpg" alt="densité 0,80" loading="lazy"></a><figcaption>densité 0,80</figcaption></figure>
+</div>
+<h3>Son propre rayon (lampe de J1 seule, voile d'éblouissement compris)</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/45B_sien_a.jpg"><img src="img/45B_sien_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/45B_sien_b.jpg"><img src="img/45B_sien_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/45B_sien_b_diffx8.jpg"><img src="img/45B_sien_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/45B_sien_b_noir.jpg"><img src="img/45B_sien_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/45B_sien_a_loupe_J1_v0.jpg"><img src="img/45B_sien_a_loupe_J1_v0.jpg" alt="loupe ×3, milieu du cône de J1, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J1, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_sien_b_loupe_J1_v0.jpg"><img src="img/45B_sien_b_loupe_J1_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Écran scindé, la lampe de J1 seule (J1 à gauche, J2 à droite)</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/45B_s1_a.jpg"><img src="img/45B_s1_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/45B_s1_b.jpg"><img src="img/45B_s1_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/45B_s1_b_diffx8.jpg"><img src="img/45B_s1_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/45B_s1_b_noir.jpg"><img src="img/45B_s1_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s1_a_loupe_J1_v0.jpg"><img src="img/45B_s1_a_loupe_J1_v0.jpg" alt="loupe ×3, milieu du cône de J1, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J1, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s1_b_loupe_J1_v0.jpg"><img src="img/45B_s1_b_loupe_J1_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s1_a_loupe_J1_v1.jpg"><img src="img/45B_s1_a_loupe_J1_v1.jpg" alt="loupe ×3, milieu du cône de J1, vue 2 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J1, vue 2 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s1_b_loupe_J1_v1.jpg"><img src="img/45B_s1_b_loupe_J1_v1.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Écran scindé, la lampe de J2 seule</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/45B_s2_a.jpg"><img src="img/45B_s2_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/45B_s2_b.jpg"><img src="img/45B_s2_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/45B_s2_b_diffx8.jpg"><img src="img/45B_s2_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/45B_s2_b_noir.jpg"><img src="img/45B_s2_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s2_a_loupe_J2_v0.jpg"><img src="img/45B_s2_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s2_b_loupe_J2_v0.jpg"><img src="img/45B_s2_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s2_a_loupe_J2_v1.jpg"><img src="img/45B_s2_a_loupe_J2_v1.jpg" alt="loupe ×3, milieu du cône de J2, vue 2 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 2 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_s2_b_loupe_J2_v1.jpg"><img src="img/45B_s2_b_loupe_J2_v1.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Équité : J2 derrière le pilier, lampe vers l'est — ce que voit J1</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/45B_eq-est_a.jpg"><img src="img/45B_eq-est_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/45B_eq-est_b.jpg"><img src="img/45B_eq-est_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/45B_eq-est_b_diffx8.jpg"><img src="img/45B_eq-est_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/45B_eq-est_b_noir.jpg"><img src="img/45B_eq-est_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/45B_eq-est_a_loupe_J2_v0.jpg"><img src="img/45B_eq-est_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_eq-est_b_loupe_J2_v0.jpg"><img src="img/45B_eq-est_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Équité : J2 derrière le pilier, lampe vers le sud-ouest — ce que voit J1</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/45B_eq-sud-ouest_a.jpg"><img src="img/45B_eq-sud-ouest_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/45B_eq-sud-ouest_b.jpg"><img src="img/45B_eq-sud-ouest_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/45B_eq-sud-ouest_b_diffx8.jpg"><img src="img/45B_eq-sud-ouest_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/45B_eq-sud-ouest_b_noir.jpg"><img src="img/45B_eq-sud-ouest_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/45B_eq-sud-ouest_a_loupe_J2_v0.jpg"><img src="img/45B_eq-sud-ouest_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/45B_eq-sud-ouest_b_loupe_J2_v0.jpg"><img src="img/45B_eq-sud-ouest_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h2>0° A</h2>
+
+<table><tr><th>bloc</th><th>prise</th><th>pixels noirs (A)</th><th>fuite</th><th>B−A médiane</th><th>p90</th><th>max</th><th>cœur du cône : B−A</th><th>bord du cône : B−A</th><th>max rayon / max sol</th></tr>
+<tr><td>adv</td><td>b</td><td>901908</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>138</td><td>-13.46 (sol 135.5)</td><td>0.94 (sol 28.0)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b15</td><td>901908</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>143</td><td>-5.59 (sol 140.4)</td><td>0.45 (sol 35.2)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b30</td><td>901908</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>115</td><td>-9.78 (sol 137.2)</td><td>0.71 (sol 30.1)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b45</td><td>901908</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>65</td><td>-13.46 (sol 135.5)</td><td>0.9 (sol 28.0)</td><td>229 / 230</td></tr>
+<tr><td>adv</td><td>b80</td><td>901908</td><td class='ok'>0</td><td>-1.0</td><td>3.0</td><td>39</td><td>-20.33 (sol 133.1)</td><td>1.26 (sol 25.8)</td><td>229 / 230</td></tr>
+<tr><td>eq-est</td><td>b</td><td>882210</td><td class='ok'>0</td><td>0.0</td><td>2.0</td><td>15</td><td>-13.66 (sol 127.7)</td><td>1.13 (sol 24.0)</td><td>229 / 230</td></tr>
+<tr><td>eq-sud-ouest</td><td>b</td><td>917700</td><td class='ok'>0</td><td>0.0</td><td>2.0</td><td>39</td><td>-14.11 (sol 130.6)</td><td>1.06 (sol 26.1)</td><td>230 / 230</td></tr>
+<tr><td>s1</td><td>b</td><td>357555</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>36</td><td>-18.87 (sol 143.0)</td><td>0.66 (sol 24.2)</td><td>226 / 255</td></tr>
+<tr><td>s1</td><td>b15</td><td>357555</td><td class='ko'>1</td><td>-2.0</td><td>1.0</td><td>58</td><td>-7.14 (sol 146.1)</td><td>0.26 (sol 31.2)</td><td>230 / 255</td></tr>
+<tr><td>s1</td><td>b30</td><td>357555</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>32</td><td>-13.39 (sol 144.1)</td><td>0.49 (sol 26.2)</td><td>230 / 248</td></tr>
+<tr><td>s1</td><td>b45</td><td>357555</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>138</td><td>-18.88 (sol 143.0)</td><td>0.66 (sol 24.2)</td><td>230 / 255</td></tr>
+<tr><td>s1</td><td>b80</td><td>357555</td><td class='ok'>0</td><td>0.0</td><td>1.0</td><td>43</td><td>-29.1 (sol 140.6)</td><td>0.95 (sol 21.9)</td><td>231 / 255</td></tr>
+<tr><td>s2</td><td>b</td><td>305253</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>21</td><td>-14.27 (sol 142.3)</td><td>0.88 (sol 28.0)</td><td>230 / 255</td></tr>
+<tr><td>s2</td><td>b15</td><td>305253</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>7</td><td>-5.86 (sol 146.1)</td><td>0.42 (sol 36.0)</td><td>230 / 255</td></tr>
+<tr><td>s2</td><td>b30</td><td>305253</td><td class='ok'>0</td><td>-1.0</td><td>1.0</td><td>201</td><td>-10.28 (sol 143.4)</td><td>0.73 (sol 30.5)</td><td>230 / 255</td></tr>
+<tr><td>s2</td><td>b45</td><td>305253</td><td class='ok'>0</td><td>-1.0</td><td>2.0</td><td>79</td><td>-14.3 (sol 142.3)</td><td>0.88 (sol 28.0)</td><td>230 / 242</td></tr>
+<tr><td>s2</td><td>b80</td><td>305253</td><td class='ok'>0</td><td>-1.0</td><td>3.0</td><td>38</td><td>-21.62 (sol 140.0)</td><td>1.21 (sol 25.2)</td><td>230 / 255</td></tr>
+<tr><td>sien</td><td>b</td><td>0</td><td class='ok'>0</td><td>-12.0</td><td>1.0</td><td>24</td><td>-19.95 (sol 154.4)</td><td>0.32 (sol 48.5)</td><td>217 / 231</td></tr>
+<tr><td>sien</td><td>b15</td><td>0</td><td class='ok'>0</td><td>-5.0</td><td>0.0</td><td>8</td><td>-7.47 (sol 155.8)</td><td>-0.05 (sol 52.5)</td><td>230 / 255</td></tr>
+<tr><td>sien</td><td>b30</td><td>0</td><td class='ok'>0</td><td>-9.0</td><td>0.0</td><td>15</td><td>-13.97 (sol 154.4)</td><td>0.12 (sol 49.6)</td><td>230 / 231</td></tr>
+<tr><td>sien</td><td>b45</td><td>0</td><td class='ok'>0</td><td>-12.0</td><td>1.0</td><td>21</td><td>-19.94 (sol 154.4)</td><td>0.3 (sol 47.7)</td><td>230 / 231</td></tr>
+<tr><td>sien</td><td>b80</td><td>0</td><td class='ok'>0</td><td>-19.0</td><td>1.0</td><td>39</td><td>-31.33 (sol 154.4)</td><td>0.88 (sol 43.6)</td><td>230 / 231</td></tr>
+</table>
+<h3>Le rayon ADVERSE vu de J1 (lampe de J2 seule, J1 lampe éteinte)</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/0A_adv_a.jpg"><img src="img/0A_adv_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b.jpg"><img src="img/0A_adv_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b_diffx8.jpg"><img src="img/0A_adv_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b_noir.jpg"><img src="img/0A_adv_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/0A_adv_a_loupe_J2_v0.jpg"><img src="img/0A_adv_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_adv_b_loupe_J2_v0.jpg"><img src="img/0A_adv_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b15.jpg"><img src="img/0A_adv_b15.jpg" alt="densité 0,15" loading="lazy"></a><figcaption>densité 0,15</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b30.jpg"><img src="img/0A_adv_b30.jpg" alt="densité 0,30" loading="lazy"></a><figcaption>densité 0,30</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b45.jpg"><img src="img/0A_adv_b45.jpg" alt="densité 0,45" loading="lazy"></a><figcaption>densité 0,45</figcaption></figure>
+<figure class=""><a href="img/0A_adv_b80.jpg"><img src="img/0A_adv_b80.jpg" alt="densité 0,80" loading="lazy"></a><figcaption>densité 0,80</figcaption></figure>
+</div>
+<h3>Son propre rayon (lampe de J1 seule, voile d'éblouissement compris)</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/0A_sien_a.jpg"><img src="img/0A_sien_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/0A_sien_b.jpg"><img src="img/0A_sien_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/0A_sien_b_diffx8.jpg"><img src="img/0A_sien_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/0A_sien_b_noir.jpg"><img src="img/0A_sien_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/0A_sien_a_loupe_J1_v0.jpg"><img src="img/0A_sien_a_loupe_J1_v0.jpg" alt="loupe ×3, milieu du cône de J1, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J1, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_sien_b_loupe_J1_v0.jpg"><img src="img/0A_sien_b_loupe_J1_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Écran scindé, la lampe de J1 seule (J1 à gauche, J2 à droite)</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/0A_s1_a.jpg"><img src="img/0A_s1_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/0A_s1_b.jpg"><img src="img/0A_s1_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/0A_s1_b_diffx8.jpg"><img src="img/0A_s1_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/0A_s1_b_noir.jpg"><img src="img/0A_s1_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s1_a_loupe_J1_v0.jpg"><img src="img/0A_s1_a_loupe_J1_v0.jpg" alt="loupe ×3, milieu du cône de J1, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J1, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s1_b_loupe_J1_v0.jpg"><img src="img/0A_s1_b_loupe_J1_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s1_a_loupe_J1_v1.jpg"><img src="img/0A_s1_a_loupe_J1_v1.jpg" alt="loupe ×3, milieu du cône de J1, vue 2 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J1, vue 2 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s1_b_loupe_J1_v1.jpg"><img src="img/0A_s1_b_loupe_J1_v1.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Écran scindé, la lampe de J2 seule</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/0A_s2_a.jpg"><img src="img/0A_s2_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/0A_s2_b.jpg"><img src="img/0A_s2_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/0A_s2_b_diffx8.jpg"><img src="img/0A_s2_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/0A_s2_b_noir.jpg"><img src="img/0A_s2_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s2_a_loupe_J2_v0.jpg"><img src="img/0A_s2_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s2_b_loupe_J2_v0.jpg"><img src="img/0A_s2_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s2_a_loupe_J2_v1.jpg"><img src="img/0A_s2_a_loupe_J2_v1.jpg" alt="loupe ×3, milieu du cône de J2, vue 2 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 2 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_s2_b_loupe_J2_v1.jpg"><img src="img/0A_s2_b_loupe_J2_v1.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Équité : J2 derrière le pilier, lampe vers l'est — ce que voit J1</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/0A_eq-est_a.jpg"><img src="img/0A_eq-est_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/0A_eq-est_b.jpg"><img src="img/0A_eq-est_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/0A_eq-est_b_diffx8.jpg"><img src="img/0A_eq-est_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/0A_eq-est_b_noir.jpg"><img src="img/0A_eq-est_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/0A_eq-est_a_loupe_J2_v0.jpg"><img src="img/0A_eq-est_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_eq-est_b_loupe_J2_v0.jpg"><img src="img/0A_eq-est_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h3>Équité : J2 derrière le pilier, lampe vers le sud-ouest — ce que voit J1</h3>
+
+<div class='deux'>
+<figure class=""><a href="img/0A_eq-sud-ouest_a.jpg"><img src="img/0A_eq-sud-ouest_a.jpg" alt="sans le rayon (A)" loading="lazy"></a><figcaption>sans le rayon (A)</figcaption></figure>
+<figure class=""><a href="img/0A_eq-sud-ouest_b.jpg"><img src="img/0A_eq-sud-ouest_b.jpg" alt="avec le rayon (B, densité par défaut)" loading="lazy"></a><figcaption>avec le rayon (B, densité par défaut)</figcaption></figure>
+<figure class=""><a href="img/0A_eq-sud-ouest_b_diffx8.jpg"><img src="img/0A_eq-sud-ouest_b_diffx8.jpg" alt="B − A, ×8 : ce que le rayon change" loading="lazy"></a><figcaption>B − A, ×8 : ce que le rayon change</figcaption></figure>
+<figure class=""><a href="img/0A_eq-sud-ouest_b_noir.jpg"><img src="img/0A_eq-sud-ouest_b_noir.jpg" alt="le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable" loading="lazy"></a><figcaption>le noir : rouge = un pixel noir dans toutes les A que B allume ; gris = non noir dans les A ; bleu = instable</figcaption></figure>
+<figure class="loupe"><a href="img/0A_eq-sud-ouest_a_loupe_J2_v0.jpg"><img src="img/0A_eq-sud-ouest_a_loupe_J2_v0.jpg" alt="loupe ×3, milieu du cône de J2, vue 1 — sans" loading="lazy"></a><figcaption>loupe ×3, milieu du cône de J2, vue 1 — sans</figcaption></figure>
+<figure class="loupe"><a href="img/0A_eq-sud-ouest_b_loupe_J2_v0.jpg"><img src="img/0A_eq-sud-ouest_b_loupe_J2_v0.jpg" alt="loupe ×3, même endroit — avec" loading="lazy"></a><figcaption>loupe ×3, même endroit — avec</figcaption></figure>
+</div>
+<h2>Ce qui n'est pas ici</h2><p>La cadence (à mesurer sur le Mac) ; le stencil sous le pilote d'Apple ; une carte avec des murets ; le mouvement. Voir « Ce que je n'ai PAS pu prouver » dans <code>RAPPORT.md</code>.</p>
+</body></html>
