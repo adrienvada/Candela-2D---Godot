@@ -137,6 +137,11 @@ func _test_machine() -> void:
 			"plein_ecran", "ecran_hz",
 			"vram_mo", "textures_mo"]:
 		_check("clé « %s » présente" % cle, m.has(cle))
+	_check("la fréquence d'écran est un nombre fini (−1 si inconnue)",
+		is_finite(float(m.get("ecran_hz", 0.0))), str(m.get("ecran_hz")))
+	_check("hz_fini : NaN et l'infini deviennent −1, 59,94 reste 59,9",
+		ConditionsDeMatch.hz_fini(NAN) == -1.0 and ConditionsDeMatch.hz_fini(INF) == -1.0
+		and is_equal_approx(ConditionsDeMatch.hz_fini(59.94), 59.9))
 	_check("le système est nommé", String(m.get("os", "")) != "")
 	_check("la version est celle du projet",
 		String(m.get("version", "")) == String(ProjectSettings.get_setting("application/config/version", "")),

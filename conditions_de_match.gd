@@ -168,12 +168,19 @@ static func machine() -> Dictionary:
 		"pilote": RenderingServer.get_current_rendering_driver_name(),
 		"fenetre": "%dx%d" % [fenetre.x, fenetre.y],
 		"plein_ecran": DisplayServer.window_get_mode() >= DisplayServer.WINDOW_MODE_FULLSCREEN,
-		"ecran_hz": snappedf(DisplayServer.screen_get_refresh_rate(), 0.1),
+		"ecran_hz": hz_fini(DisplayServer.screen_get_refresh_rate()),
 		# 0 quand le moteur de rendu ne le compte pas : lire « non mesuré »,
 		# jamais « aucune texture chargée ».
 		"vram_mo": snappedf(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0, 0.1),
 		"textures_mo": snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0, 0.1),
 	}
+
+## La fréquence d'écran, ou −1 (la convention de `screen_get_refresh_rate` pour « inconnue »)
+## quand elle n'est pas un nombre fini. ⚠️ Sous Xvfb elle vaut NaN : F6 écrivait `ecran_hz
+## nan`, et l'historique des matchs recevait un `null` avec « NaN found in argument passed to
+## JSON.stringify() » (`match_record.gd`). Répétition du test d'Adrien, C4.
+static func hz_fini(hz: float) -> float:
+	return snappedf(hz, 0.1) if is_finite(hz) else -1.0
 
 ## Le diagnostic lisible, à coller dans un message. `blocs` : une liste de
 ## paires `[titre, dictionnaire]` ; un dictionnaire imbriqué s'aplatit en
