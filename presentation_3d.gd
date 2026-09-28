@@ -1129,6 +1129,13 @@ func _accorder_le_slug(j: int, slug: String) -> void:
 		var c = _capteurs[id][j]
 		if c != null:
 			mat.set_shader_parameter("capteur_%d" % (id + 1), (c as CapteurCorps).get_texture())
+	# Q39 (2) — le même relais pour les lightmaps : `_activer` ne les pose qu'une fois, sur les matériaux qui existent alors.
+	# Un corps reconstruit (changement de classe, fantôme de killcam) n'en avait aucune. Aucun shader des corps ne les lit
+	# par défaut ; l'essai B (`--corps-soi-sombre=fondu`) y lit le sol autour du joueur — sans ce relais, seule la classe
+	# présente à l'allumage de la vue le voyait (session cloud corps-sombre-2 : Terrassier et Fumiste, fusée ratée).
+	if _main != null:
+		mat.set_shader_parameter("lumiere_1", _main.vp1.get_texture())
+		mat.set_shader_parameter("lumiere_2", _main.vp2.get_texture())
 
 
 ## Le corps voxel d'un joueur : celui de sa classe (`ClassData.slug()`, la lecture de

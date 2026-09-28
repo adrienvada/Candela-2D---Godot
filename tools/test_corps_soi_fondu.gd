@@ -48,6 +48,7 @@ func _run() -> void:
 	_le_drapeau()
 	_le_texte()
 	_la_regle()
+	_le_relais()
 	_le_reste_du_jeu()
 	VoxelCatalogue.forcer_soi_sombre = -1
 	VoxelCatalogue.forcer_soi_fondu = -1
@@ -188,6 +189,16 @@ func _la_regle() -> void:
 			if r[k] > maxf(hier[k], a[k]) + 1e-6 or r[k] < minf(hier[k], a[k]) - 1e-6:
 				jamais_plus_clair = false
 	_check("500 tirages : le mélange reste entre le corps d'aujourd'hui et l'essai A, canal par canal", jamais_plus_clair)
+
+
+func _le_relais() -> void:
+	print("— la lightmap relayée à tout corps reconstruit")
+	var pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	var f := pres.substr(pres.find("func _accorder_le_slug("), 4000)
+	f = f.substr(0, f.find("\n\n\n"))
+	_check("Presentation3D._accorder_le_slug pose lumiere_1 et lumiere_2 sur le matériau neuf (sinon B ne lit que du vide "
+		+ "après un changement de classe)", f.contains("mat.set_shader_parameter(\"lumiere_1\", _main.vp1.get_texture())")
+		and f.contains("mat.set_shader_parameter(\"lumiere_2\", _main.vp2.get_texture())"))
 
 
 func _le_reste_du_jeu() -> void:
