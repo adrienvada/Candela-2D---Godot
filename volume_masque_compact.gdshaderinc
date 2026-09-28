@@ -51,6 +51,60 @@ vec3 sol_ecrit_depuis(vec2 px, vec3 lu, vec3 c, float matiere, float dalle, floa
 	return c;
 }
 
+#ifdef MASQUE_LUMIERE
+// Session cloud « masque-fumée-2 », 2026-09-28 — `--fumee-masque-lumiere` (V4) : LES DEUX CERTITUDES DU SOL, TIRÉES DE LA
+// LUMIÈRE LUE SEULE, avant la pâte et avant la matière. Compté sur le pochoir (rapport de la session, § 1) : sur chaque pixel
+// couvert, le juge paie la pâte du lavis (deux bruits, huit hachages à `sin`) puis la matière du sol (`textureLod` et son
+// niveau de mipmap), même là où la lumière est si franche que rien ne peut la rendre noire. Or le lavis ne dépend du bruit
+// que par ses trois seuils (`e_i = s_i + k_i·b`, `b` dans [0 ; 1[, `k_i` > 0) et par son grain (facteur dans [0,82 ; 1[) :
+// - les seuils pris à b = 0 donnent la pâte la PLUS CLAIRE possible (chaque `smoothstep` décroît quand son seuil monte),
+//   grain à 1 ; ceux pris à b = 1, la plus SOMBRE, grain à 0,82 ;
+// - le lavis écrit `lave · q · grain`, où `lave = mix(lu, luminance(lu), 0,35) / max(l, 0,25)` ne dépend pas du bruit : son
+//   canal le plus fort vaut (0,65 · max(lu) + 0,35 · l) / max(l, 0,25), sa luminance l / max(l, 0,25) (les poids font 1).
+// D'où deux BORNES des certitudes de Gadgets, prises sur la même lumière (`lu`, lue à la même adresse) :
+// - NOIR à coup sûr si le canal le plus fort de la pâte la plus claire × 1,4 reste sous le point noir : celui de la vraie
+//   pâte aussi, et la certitude de Gadgets aurait dit « noir » ;
+// - VISIBLE à coup sûr si la luminance de la pâte la plus sombre × le plancher de Gadgets (la matière à 1 − sa force, le
+//   joint et le contact exacts, l'usure la plus sombre, × 0,45) atteint le point noir : la certitude de la bande resserrée
+//   (matière exacte ≥ 1 − force, usure lue ≥ usure la plus sombre) aurait dit « visible » — et jamais « noir » avant, les
+//   deux certitudes s'excluant (luminance ≤ canal le plus fort, plancher ≤ 1).
+// Entre les deux, rien ne change : la suite de la bande resserrée, telle quelle. MÊME RÉPONSE AU PIXEL, par construction ;
+// une marge relative de 1e-4 envoie au calcul d'avant les cas qu'un arrondi pourrait faire basculer. Seulement pour la pâte
+// du jeu (le lavis) et sans l'encre d'essai (dont les hachures ne se bornent pas ici) : ailleurs, aucune borne.
+const float BORNE_MARGE = 1e-4;
+// Le `q` du lavis (`pate`, PATE_LAVIS) pour un bruit `b` donné : ses trois seuils, ses trois poids, sa demi-largeur.
+float lavis_q(float l, float b) {
+	float a = 0.01;
+	float e_1 = 0.02 + 0.03 * b;
+	float e_2 = 0.16 + 0.08 * b;
+	float e_3 = 0.42 + 0.1 * b;
+	return 0.3 * smoothstep(e_1 - a, e_1 + a, l) + 0.3 * smoothstep(e_2 - a, e_2 + a, l)
+		+ 0.4 * smoothstep(e_3 - a, e_3 + a, l);
+}
+// 1 : noir à coup sûr ; 2 : visible à coup sûr ; 0 : la lumière seule ne tranche pas. `plancher` : (1 − force) × joint ×
+// contact, calculés comme Gadgets les calcule.
+int sol_borne_lumiere(vec3 lu, float l, float plancher) {
+#ifdef ENCRE_ESSAI
+	return 0;
+#else
+	if (style != PATE_LAVIS) {
+		return 0;
+	}
+	float lc = clamp(l, 0.0, 1.0);
+	float m = max(lc, PATE_PLANCHER);
+	if (lavis_q(lc, 0.0) * (0.65 * max(lu.r, max(lu.g, lu.b)) + 0.35 * l) / m * SOL_HAUSSE_MAX * (1.0 + BORNE_MARGE)
+			< POINT_NOIR_ECRIT) {
+		return 1;
+	}
+	float bas = lavis_q(lc, 1.0) * 0.82 * l / m * plancher;
+#ifdef USURE_ESSAI
+	bas *= mix(1.0, USURE_SOL_PLUS_SOMBRE, usure);
+#endif
+	return bas * (1.0 - BORNE_MARGE) >= POINT_NOIR_ECRIT ? 2 : 0;
+#endif
+}
+#endif
+
 // `sol_montre_noir_au_point` de Gadgets, la certitude du « visible sûr » prise sur la matière EXACTE (la même lecture que
 // `sol_ecrit` : même texture, même adresse, même niveau de mipmap) au lieu de son plancher.
 bool sol_montre_noir_resserre_au_point(vec2 px, bool deux, float aa, float px_monde, vec2 g_x, vec2 g_y) {
@@ -62,6 +116,18 @@ bool sol_montre_noir_resserre_au_point(vec2 px, bool deux, float aa, float px_mo
 	if (l <= 0.0) {
 		return true;
 	}
+#ifdef MASQUE_LUMIERE
+	// V4 : les deux certitudes sur la lumière seule (voir `sol_borne_lumiere`) ; le joint et le contact, par les lignes
+	// mêmes de la certitude plus bas.
+	vec2 dans_dalle_l = abs(fract(px / sol_dalle_px) - 0.5) * sol_dalle_px;
+	float au_bord_l = sol_dalle_px * 0.5 - max(dans_dalle_l.x, dans_dalle_l.y);
+	float dalle_l = mix(1.0, sol_joint_dalle_reste,
+		dalles * pate_trait_de_bord(au_bord_l, max(sol_joint_dalle_px, px_monde), px_monde));
+	int borne = sol_borne_lumiere(lu, l, (1.0 - sol_force_matiere) * dalle_l * contact_des_corps(px));
+	if (borne != 0) {
+		return borne == 1;
+	}
+#endif
 	vec3 c = pate(lu, l, style, px, vec2(0.0), l, aa);
 	if (max(c.r, max(c.g, c.b)) * SOL_HAUSSE_MAX < POINT_NOIR_ECRIT) {
 		return true;

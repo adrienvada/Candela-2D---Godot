@@ -12,11 +12,16 @@
 ##   resserrée finit le sol exact par les lignes mêmes de `sol_ecrit` ; le juge du pochoir n'existe que sous le pochoir,
 ##   est dessiné avant les couches, couvre leurs disques tant que le tangage dépasse 45°, et chaque paramètre qu'il reçoit
 ##   est un uniforme de son shader ; le ruban (la toile) ne passe jamais sous le pochoir ;
+## - (session « masque-fumée-2 », 2026-09-28) V4, la lumière d'abord : ses bornes sont celles du lavis (mêmes seuils, même
+##   grain, même lavage), placées avant la pâte, et, rejouées sur la pâte du processeur (`IsoPate`, son miroir formule pour
+##   formule) en des dizaines de milliers de points, elles ne tranchent JAMAIS autrement que les certitudes de Gadgets ;
 ## - rien sur le fil : `Protocol.VERSION` reste 18.
 ##
 ## Ce qu'elle ne prouve pas : que le GPU compile les variantes (le lanceur de série refuse toute prise dont le journal porte
 ## une erreur de shader) ni la réponse au pixel — `loupe-fusee-masque-formes` et `tools/masque_fumee/formes.py`.
 extends SceneTree
+
+const IsoPate := preload("res://iso_pate.gd")
 
 var _verifications := 0
 var _failures := 0
@@ -43,6 +48,7 @@ func _run() -> void:
 	_la_forme_compacte()
 	_la_bande_resserree()
 	_le_pochoir()
+	_la_lumiere_d_abord()
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
 	_check("Protocol.VERSION reste 18", version == 18, str(version))
 	_check("assez de vérifications (%d ≥ 20)" % _verifications, _verifications >= 20)
@@ -85,7 +91,7 @@ func _eteintes_rien_ne_change() -> void:
 	_check("sans drapeau : aucun juge (le pochoir n'existe pas)", v.get_child_count() == 0)
 	v.masque_fumee = true
 	var gadgets: ShaderMaterial = v.call("_materiau_volume")
-	var marques := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_POCHOIR_JUGE"]
+	var marques := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_POCHOIR_JUGE", "MASQUE_LUMIERE"]
 	_check("--fumee-masque seul : le masque de Gadgets, sans aucun #define de forme",
 		gadgets.shader.code.contains("#define FUMEE_MASQUE\n")
 		and marques.all(func(d: String) -> bool: return not gadgets.shader.code.contains("#define %s\n" % d)))
@@ -115,8 +121,9 @@ func _eteintes_rien_ne_change() -> void:
 func _chaque_drapeau_sa_forme() -> void:
 	print("\n[Chaque drapeau, sa forme]")
 	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
-	_check("les trois drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
-		"--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3} and IsoVolumes.FORME_POCHOIR == 3)
+	_check("les quatre drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
+		"--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3, "--fumee-masque-lumiere": 4}
+		and IsoVolumes.FORME_POCHOIR == 3)
 	_check("un drapeau de forme allume le masque et pose sa forme",
 		src.contains("\t\telif FORMES_MASQUE.has(arg):\n\t\t\tmasque_fumee = true\n\t\t\tforme_masque = int(FORMES_MASQUE[arg])"))
 	for usure in [false, true]:
@@ -124,7 +131,7 @@ func _chaque_drapeau_sa_forme() -> void:
 		for k in range(1, IsoVolumes.DEFINES_FORMES.size()):
 			var sh := IsoVolumes.variante_forme(base, k)
 			var attendus: Array = IsoVolumes.DEFINES_FORMES[k]
-			var tous := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR"]
+			var tous := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE"]
 			var ok: bool = sh.code.contains("#define FUMEE_MASQUE\n") and sh.code.contains("#define USURE_ESSAI\n") == usure
 			for d: String in tous:
 				ok = ok and sh.code.contains("#define %s\n" % d) == attendus.has(d)
@@ -253,6 +260,91 @@ func _le_pochoir() -> void:
 	v.call("_poser_couches", e2, Vector2(100, 200), 80.0, 1.0, 0.3, null, 0.0, 0.0, 0.0)
 	_check("masque éteint : le juge se cache", not j.visible)
 	v.free()
+
+
+func _la_lumiere_d_abord() -> void:
+	print("\n[V4, la lumière d'abord : les certitudes du sol tirées de la lumière lue seule]")
+	var c := FileAccess.get_file_as_string("res://volume_masque_compact.gdshaderinc")
+	var pate := _fonction(FileAccess.get_file_as_string("res://iso_pate.gdshaderinc"), "vec3 pate(vec3 couleur,")
+	var q := _fonction(c, "float lavis_q(")
+	var lavis := pate.substr(pate.find("// PATE_LAVIS"))
+	var memes := ["float a = 0.01;", "float e_1 = 0.02 + 0.03 * b;", "float e_2 = 0.16 + 0.08 * b;",
+		"float e_3 = 0.42 + 0.1 * b;", "float q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)",
+		"+ 0.3 * smoothstep(e_2 - a, e_2 + a, l)", "+ 0.4 * smoothstep(e_3 - a, e_3 + a, l);"]
+	var manque := memes.filter(func(l: String) -> bool:
+		return not lavis.contains(l) or not q.replace("return 0.3", "float q = 0.3").contains(l))
+	_check("le q de la borne est celui du lavis : mêmes seuils, mêmes poids, même demi-largeur", manque.is_empty(), str(manque))
+	_check("le lavis que la borne suppose : grain dans [0,82 ; 1[, lavage à 0,35 vers la luminance, plancher 0,25",
+		lavis.contains("* (0.82 + 0.18 * grain)") and lavis.contains(
+		"vec3 lave = mix(couleur, vec3(pate_luminance(couleur)), 0.35) / max(l, PATE_PLANCHER);")
+		and pate.contains("float l = clamp(lumiere, 0.0, 1.0);"))
+	var borne := _fonction(c, "int sol_borne_lumiere(")
+	_check("la borne : lavis seulement, aucune sous l'encre d'essai, marge vers le calcul d'avant",
+		borne.contains("if (style != PATE_LAVIS) {\n\t\treturn 0;") and borne.contains("#ifdef ENCRE_ESSAI\n\treturn 0;")
+		and borne.contains("* (1.0 + BORNE_MARGE)") and borne.contains("bas * (1.0 - BORNE_MARGE) >= POINT_NOIR_ECRIT")
+		and borne.contains("bas *= mix(1.0, USURE_SOL_PLUS_SOMBRE, usure);"))
+	var point := _fonction(c, "bool sol_montre_noir_resserre_au_point(")
+	var i_borne := point.find("int borne = sol_borne_lumiere(")
+	_check("la borne est posée APRÈS la lecture de la lumière et AVANT la pâte et la matière",
+		i_borne > point.find("vec3 lu = lire_lightmap(px + glisse * dalles, deux);") and i_borne < point.find("vec3 c = pate(")
+		and i_borne < point.find("textureLod(sol_texture_sol"))
+	_check("son joint et son contact sont ceux de la certitude de Gadgets",
+		point.contains("\tvec2 dans_dalle_l = abs(fract(px / sol_dalle_px) - 0.5) * sol_dalle_px;")
+		and point.contains("\tfloat au_bord_l = sol_dalle_px * 0.5 - max(dans_dalle_l.x, dans_dalle_l.y);")
+		and point.contains("dalles * pate_trait_de_bord(au_bord_l, max(sol_joint_dalle_px, px_monde), px_monde));")
+		and point.contains("(1.0 - sol_force_matiere) * dalle_l * contact_des_corps(px));"))
+	# Rejouée sur la pâte du processeur : la borne (même arithmétique que le GLSL) ne contredit jamais la certitude exacte.
+	var pn := 8.0 / 255.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260928
+	var contredit := 0
+	var noirs := 0
+	var visibles := 0
+	var n := 40000
+	for i in n:
+		var l_cible := pow(rng.randf(), 2.5)
+		var teinte := Vector3(rng.randf(), rng.randf(), rng.randf())
+		if rng.randf() < 0.3:
+			teinte = Vector3(1.0, rng.randf() * 0.3, rng.randf() * 0.15)
+		var lu := (teinte * (l_cible / maxf(IsoPate.luminance(teinte), 1e-4))).clamp(Vector3.ZERO, Vector3.ONE)
+		var l := IsoPate.luminance(lu)
+		if l <= 0.0:
+			continue
+		var plancher := (1.0 - 0.5) * (0.6 if rng.randf() < 0.2 else 1.0) * (0.25 + 0.75 * rng.randf() if rng.randf() < 0.2 else 1.0)
+		var usure := 1.0 if rng.randf() < 0.7 else 0.0
+		var motif := Vector2(rng.randf_range(-3000.0, 3000.0), rng.randf_range(-3000.0, 3000.0))
+		var cc := IsoPate.pate(lu, l, IsoPate.LAVIS, motif, Vector2.ZERO, l, 0.3)
+		var r := _borne_lumiere(lu, l, plancher, usure)
+		# La certitude exacte de Gadgets, au plancher le plus sombre que la borne suppose (usure lue au pire) : « noir » si le
+		# canal le plus fort × 1,4 est sous le point noir ; « visible » si luminance × plancher (matière ≥ 1 − force) l'atteint.
+		var noir_vrai := maxf(cc.x, maxf(cc.y, cc.z)) * 1.4 < pn
+		var visible_vrai := IsoPate.luminance(cc) * plancher * lerpf(1.0, 0.45, usure) >= pn
+		if r == 1:
+			noirs += 1
+			contredit += 0 if noir_vrai else 1
+		elif r == 2:
+			visibles += 1
+			contredit += 0 if visible_vrai else 1
+	_check("rejouée en %d points sur la pâte du processeur, la borne ne contredit jamais la certitude exacte (%d noirs, %d visibles tranchés)"
+		% [n, noirs, visibles], contredit == 0 and noirs > 1000 and visibles > 1000, "%d contradictions" % contredit)
+
+
+## La borne de V4 (`sol_borne_lumiere`), même arithmétique que le GLSL.
+func _borne_lumiere(lu: Vector3, l: float, plancher: float, usure: float) -> int:
+	var lc := clampf(l, 0.0, 1.0)
+	var m := maxf(lc, 0.25)
+	if _lavis_q(lc, 0.0) * (0.65 * maxf(lu.x, maxf(lu.y, lu.z)) + 0.35 * l) / m * 1.4 * (1.0 + 1e-4) < 8.0 / 255.0:
+		return 1
+	var bas := _lavis_q(lc, 1.0) * 0.82 * l / m * plancher * lerpf(1.0, 0.45, usure)
+	return 2 if bas * (1.0 - 1e-4) >= 8.0 / 255.0 else 0
+
+
+func _lavis_q(l: float, b: float) -> float:
+	var a := 0.01
+	var e_1 := 0.02 + 0.03 * b
+	var e_2 := 0.16 + 0.08 * b
+	var e_3 := 0.42 + 0.1 * b
+	return 0.3 * smoothstep(e_1 - a, e_1 + a, l) + 0.3 * smoothstep(e_2 - a, e_2 + a, l) + 0.4 * smoothstep(e_3 - a, e_3 + a, l)
 
 
 func _fonction(code: String, signature: String) -> String:
