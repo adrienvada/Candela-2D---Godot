@@ -198,6 +198,9 @@ var _ui: Node
 var _dossier := DOSSIER_DEFAUT
 var _taille := TAILLE_DEFAUT
 var _repos := REPOS_DEFAUT
+## Le pas d'une horloge FIXE (`--fixed-fps`), en secondes, ou 0 en temps réel :
+## voir `_lire_l_horloge()`.
+var _pas_fixe := 0.0
 var _decoupes := false
 var _sans_hud := false
 var _zoom := 1.0
@@ -553,6 +556,7 @@ func _ready() -> void:
 
 	print("=== Le photographe ===")
 	_poser_la_fenetre()
+	await _lire_l_horloge()
 	# Une séance dure une minute et tire une trentaine de coups de feu. On coupe
 	# le son au niveau du serveur audio et non des réglages : `GameSettings`
 	# écrit dans `user://settings.cfg`, et un outil n'a pas à laisser le jeu
@@ -1920,8 +1924,8 @@ func _prendre(plan: Dictionary, tenir := Callable(), repos := -1.0) -> void:
 	if plan.is_empty():
 		return
 	var duree: float = _repos if repos < 0.0 else repos
-	var fin := Time.get_ticks_msec() + int(duree * 1000.0)
-	while Time.get_ticks_msec() < fin:
+	var fin := _maintenant() + duree
+	while _maintenant() < fin:
 		if tenir.is_valid():
 			tenir.call()
 		await get_tree().process_frame
@@ -2260,6 +2264,16 @@ func _poser_la_fenetre() -> void:
 			_taille.x, _taille.y, ecran.x, ecran.y, voulue.x, voulue.y])
 	DisplayServer.window_set_size(voulue)
 	var reelle := DisplayServer.window_get_size()
+	# ⚠️ Sous Xvfb sans gestionnaire de fenêtres (le conteneur du cloud), la
+	# fenêtre X change de taille mais la VUE ne suit pas : l'événement qui la
+	# retaillerait (`ConfigureNotify`) n'arrive jamais. `window_get_size()`
+	# répond alors la taille demandée pendant que la racine rastérise toujours
+	# en 1280×720 — et la ligne « fenêtre » ci-dessous mentait. `Window.size`
+	# retaille la vue sur-le-champ ; là où elle a déjà suivi, rien ne change.
+	if get_window().size != reelle:
+		print("  la vue est restée en %dx%d (pas de gestionnaire de fenêtres ?) : retaillée à la main"
+			% [get_window().size.x, get_window().size.y])
+		get_window().size = reelle
 	print("  fenêtre : %dx%d (demandé %dx%d)" % [reelle.x, reelle.y, _taille.x, _taille.y])
 	# La mise en page du jeu vit à la résolution de référence ; au-delà, les
 	# plans `vue` sont suréchantillonnés pour rejoindre l'écran. On le DIT, parce
@@ -2272,6 +2286,47 @@ func _poser_la_fenetre() -> void:
 			% [reference.x, reference.y,
 			clampi(int(round(float(reelle.y) / float(reference.y))), 1, 4)])
 	_taille = reelle
+
+
+## ⚠️ **Sous rendu logiciel (Mesa llvmpipe, le conteneur du cloud), une image
+## dure 0,2 à 1 s, et le temps réel cesse d'être le temps du jeu.** Godot n'y
+## rattrape que huit pas de physique par image et rabote le `delta` d'autant :
+## à trois images par seconde, le jeu n'avance que de 0,4 s par seconde réelle.
+## Les repos, comptés à la montre, photographiaient donc un jeu en retard — la
+## fusée de `fusee`, lancée 1,2 s avant la prise, n'avait pas quitté la main de
+## J1 — et « l'image qui suit le tir » tombait un tiers de seconde plus tard.
+##
+## Le remède est `--fixed-fps 60` : chaque image avance le jeu d'exactement
+## 1/60 s, et le cloud rejoue la séance d'un poste à 60 images par seconde, en
+## plus lent. Il reste à compter les repos et les attentes dans CETTE horloge,
+## sans quoi 0,6 s de montre ne vaudraient plus qu'une ou deux images de jeu.
+## Le drapeau ne se lit pas dans `OS.get_cmdline_args()` (le moteur le consomme,
+## voir `loupe.gd`) : il se reconnaît à son effet, un `delta` qui ne varie pas.
+## Sans lui — le Mac —, rien ne change : la montre, comme avant.
+func _lire_l_horloge() -> void:
+	var pas := -1.0
+	var fixe := true
+	for i in 4:
+		await get_tree().process_frame
+		var d := get_process_delta_time()
+		if pas < 0.0:
+			pas = d
+		elif absf(d - pas) > 1e-6:
+			fixe = false
+	_pas_fixe = pas if fixe and pas > 0.0 else 0.0
+	var carte := RenderingServer.get_video_adapter_name()
+	if _pas_fixe > 0.0:
+		print("  horloge fixe : %.4f s de jeu par image — repos et attentes comptés en images" % _pas_fixe)
+	elif "llvmpipe" in carte or "softpipe" in carte or "SwiftShader" in carte:
+		printerr("  ! rendu logiciel (%s) en temps réel : les repos photographieront un jeu en retard. "
+			% carte + "Relancer avec GODOT_ARGS=\"--fixed-fps 60\" (ROADMAP, « Le photographe dans le cloud »)")
+
+
+## L'heure du photographe : celle du JEU sous horloge fixe, la montre sinon.
+func _maintenant() -> float:
+	if _pas_fixe > 0.0:
+		return float(Engine.get_process_frames()) * _pas_fixe
+	return float(Time.get_ticks_msec()) / 1000.0
 
 
 func _preparer_le_dossier() -> void:
@@ -2290,8 +2345,8 @@ func _preparer_le_dossier() -> void:
 
 
 func _attendre(predicat: Callable, plafond: float) -> bool:
-	var fin := Time.get_ticks_msec() + int(plafond * 1000.0)
-	while Time.get_ticks_msec() < fin:
+	var fin := _maintenant() + plafond
+	while _maintenant() < fin:
 		# ⚠️ **Un `Callable` dont une capture a été libérée n'est plus
 		# appelable**, et l'appeler quand même tue la coroutine SUR PLACE : pas
 		# d'exception qu'on puisse rattraper, pas de valeur de retour, la
