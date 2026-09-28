@@ -1,0 +1,20 @@
+# Sources de l'intro v2, récit A « Qui allume se montre » (2026-09-28).
+#
+# Ce que `tools/monter_intro.py` lit pour refaire le film :
+#
+#   clips/p2_faisceau.mp4 … p8_torche.mp4 → quatre clips Veo 3.1 Fast (Google
+#       Flow, image-vers-vidéo, 720p, 8 s). p2 est l'essai « e0 » : les deux
+#       essais au prompt complet ont ignoré l'image de départ.
+#   cles/p2 … p8.png → les images-clés Gemini, 1920×1080, DÉJÀ passées à la
+#       courbe commune (gamma 1,35). Ce sont aussi les images de départ données
+#       à Flow, et la source des images de repli.
+#   jeu/p4_retrodiffusion.png → capture du photographe 0.7.0, `--zoom=4`.
+#
+# ⚠️ **Rien n'est versionné ici, et c'est la règle déjà suivie par les rushes de
+# la première intro** (`/assets/video/intro/*.mp4`, DA6.6) : 17 Mo de sources
+# pour un film de quelques Mo, reconstructibles depuis Flow et Gemini. Le jeu
+# ne lit que `assets/video/intro/intro_a.ogv` et `assets/ui/intro/*.jpg`.
+# `.gdignore` empêche Godot de les importer (et donc de les exporter).
+*
+!.gitignore
+!.gdignore

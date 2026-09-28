@@ -1,199 +1,119 @@
-# L'intro en planches — storyboard et commande d'images
+# L'intro — récit A, « Qui allume se montre »
 
-*Inscrit le 2026-09-09. Item **DA6.6**, voir `ROADMAP.md`.*
+*Refaite de A à Z le 2026-09-28, à la demande d'Adrien : « elle est nulle et plus
+du tout dans le thème ». Remplace l'intro en planches de DA6.6 (voir la fin de ce
+document). Page de travail, avec le storyboard des quatre récits proposés, les
+images et le prémontage : https://claude.ai/artifact/QCqBo76ASmSLR8GCZH7xkP*
 
-> ⚠️ **Le principe central de ce document — « l'intro ne se regarde pas, elle
-> s'éclaire » — ne correspond plus au comportement livré.** Depuis le
-> 2026-09-10 (décision d'Adrien, détail dans `ROADMAP.md`), les six planches
-> sont des clips vidéo Veo 3.1 lus en `VideoStreamPlayer`, plus des images
-> fixes révélées au curseur. Le storyboard, le texte gravé, la cadence et le
-> raccord de sortie ci-dessous restent d'actualité ; la section « Le principe »
-> qui suit décrit une mécanique abandonnée, gardée ici pour la raison du choix
-> initial et parce que `intro_planches.gd` y retombe en repli si un fichier
-> vidéo manque.
+## Le récit
 
-Six planches de bande dessinée, dans le style des illustrations de menu, qui
-racontent l'arrivée d'un homme dans un lieu sombre. On ne sait pas pourquoi il
-est là et **on ne le saura pas** : pas de camp, pas de commanditaire, pas de
-récit expliqué. La seule chose que l'intro enseigne est la règle du jeu, et elle
-l'enseigne en image.
+Un mannequin allume sa torche pour chercher l'autre, et c'est précisément ce qui
+le perd. L'autre attendait dans le noir, derrière le pilier ZONE 4.
 
-## Le principe : l'intro ne se regarde pas, elle s'éclaire
+C'est la règle du jeu en dix plans, sans une ligne d'explication : **qui allume
+voit, et se montre.** Le spectateur comprend avant d'avoir joué pourquoi on hésite
+à allumer — et il a envie d'être celui qui attend.
 
-Le jeu a déjà tout le vocabulaire, et il n'a jamais servi à raconter :
+Quatre récits ont été proposés (A « Qui allume se montre », B « La fusée », C « Dix
+façons de disparaître », D « Deux moitiés ») ; Adrien a choisi A.
 
-| brique existante | ce qu'elle apporte à l'intro |
-|---|---|
-| `menu_comic_panel.gd` | le cadre d'encre, les repères de massicot, l'ouverture au volet (*Comic Panel Reveal*) |
-| `menu_artwork.gdshader` | le noir d'encre à 85 %, la percée des hautes lumières à 100 %, **et le halo de torche asservi au curseur** |
-| `menu_particles_ambiance.gd` | les poussières de faisceau, les braises |
+## Le découpage
 
-La conséquence est la seule idée de conception qui compte ici : **le curseur est
-déjà la torche.** Chaque planche s'ouvre presque noire et ne se lit que là où le
-joueur passe le faisceau. Elle s'enchaîne quand elle a été balayée, ou après son
-délai si le joueur ne bouge pas.
+Coupé sur les mesures de la musique du jeu : 170 BPM, quatre temps, **une mesure =
+1,4118 s**. 18 mesures, **25,41 s**.
 
-Le joueur apprend donc le verbe du jeu — *éclairer pour voir* — avant le premier
-match, sans une ligne de tutoriel. Et une intro qu'on **fait** n'a pas le même
-statut qu'une intro qu'on subit : c'est ce qui la rend compatible avec
-« immédiat, intuitif, addictif ».
+| # | Mesures | Temps (s) | Image | Son |
+|---|---|---|---|---|
+| 1 | 2 | 0,00 – 2,82 | Noir. | Ambiance, quatre pas lents. |
+| 2 | 2 | 2,82 – 5,65 | Le faisceau ambre s'ouvre ; le mannequin, de dos, avance dans le couloir. **Clip Flow.** | `torch_on`, les pas se rapprochent. |
+| 3 | 2 | 5,65 – 8,47 | Le faisceau glisse vers le pilier ZONE 4 ; le caché, torche éteinte, ne bouge pas. **Clip Flow.** | Les pas arrivent tout près. |
+| 4 | 2 | 8,47 – 11,29 | **Le jeu** : capture 0.7.0 (photographe, zoom 4) — un mannequin dans son cône, l'autre dans le noir contre le mur. | La pulsation du match, trois mesures en crescendo. |
+| 5 | 1 | 11,29 – 12,71 | Le caché lève son arme, à contre-jour. **Clip Flow.** | Le clic de l'arme. |
+| 6 | 1 | 12,71 – 14,12 | Un coup de feu éclaire les deux le temps de trois images, puis noir. | Le tir, le sifflement d'oreille. |
+| 7 | 1 | 14,12 – 15,53 | Noir. | Une douille tombe. |
+| 8 | 2 | 15,53 – 18,35 | La torche tombée roule, son faisceau rase les douilles et le sang. **Clip Flow.** | Frottements, une douille heurtée. |
+| 9 | 2 | 18,35 – 21,18 | **VOIR SANS ÊTRE VU.** | Frappe d'imprimerie ; la musique d'intro du jeu démarre. |
+| 10 | 3 | 21,18 – 25,41 | CANDELA s'allume en deux ratés, puis fondu sur le panneau ARENA de l'accueil. | `ui_power_on`, puis la musique du menu. |
 
-## Les six planches
+Tous les sons sont ceux du jeu (`assets/audio/`). Le jeu n'a pas de fichier de
+respiration : les pas en tiennent lieu. `weapon_reload_pistolet.wav` est presque
+muet (−63 dB en moyenne) : c'est le clic à vide qui fait le cran de l'arme.
 
-| # | Fichier | Planche | Percée lumineuse | POI (u,v) | `EffectMode` | Profil de particules |
-|---|---|---|---|---|---|---|
-| 1 | `ill_intro_descente` | **La descente** — un homme de dos, sac à l'épaule, descend un escalier de béton. Une ampoule nue au-dessus de lui, la dernière allumée. | ampoule vacillante, `AMBRE` faible | 0.38, 0.18 | `FLICKER_DUST` | `ATMOSPHERIC_DUST` |
-| 2 | `ill_intro_seuil` | **Le seuil** — sa main pousse une porte lourde. Derrière : du noir absolu, plein cadre. Au-dessus, un panneau rouillé dont un seul mot se lit. | fente verticale de la porte | 0.55, 0.45 | `ABYSS_VORTEX` | `ABYSS_GOLD` |
-| 3 | `ill_intro_dotation` | **La dotation** — une table de béton. Une torche, un pistolet. Rien d'autre. Sa main prend les deux. | lampe d'atelier rasante | 0.46, 0.62 | `BREATHING_HALO` | `WORKBENCH_AMBER` |
-| 4 | `ill_intro_allumage` | **L'allumage** — le faisceau s'ouvre. Premier vrai percement de lumière de la séquence : il frappe le béton ébréché, les douilles, le sang séché. | le cône, net et tranché | 0.34, 0.50 | `VAULT_BEAMS` | `ATMOSPHERIC_DUST` |
-| 5 | `ill_intro_prix` | **Le prix** — le cône révèle une silhouette au loin. Et le même cône projette **son ombre à lui**, immense, sur le mur derrière. | le cône, et rien d'autre | 0.74, 0.44 | `HEARTBEAT_FLARE` | `ATMOSPHERIC_DUST` |
-| 6 | `ill_intro_extinction` | **L'extinction** — il éteint. Noir presque total. Ne survit qu'une braise. | la braise seule | 0.50, 0.52 | `DYING_EMBER` | `DYING_EMBERS` |
+## Ce que le jeu joue
 
-**Aucun mode d'effet neuf, aucun profil de particules neuf.** Les six planches se
-câblent en douze lignes de dictionnaire dans `menu_artwork.gd` et six dans
-`menu_particles_ambiance.gd`. C'est délibéré : un effet écrit pour six images
-vues quinze secondes serait du code que personne ne rejuge jamais.
+- **Un seul film**, `assets/video/intro/intro_a.ogv` : Theora 1920×1080 + Vorbis
+  stéréo, 5,3 Mo. Image ET son, tel que validé. Pourquoi un seul fichier : les
+  coupes tombent sur les temps et la musique traverse les plans ; deux lecteurs
+  qui se relaient perdent une image à chaque raccord.
+- **La musique du jeu se tait pendant le film** (`AudioManager.suspendre_musique`),
+  puis reprend où elle était : au lancement, sur son clip d'intro, qui enchaîne
+  seul sur le menu.
+- **Le repli** : si le film manque, les six images de `assets/ui/intro/`
+  (1280×720) défilent en coupes franches à la même cadence ; le texte et le logo
+  sont posés par le jeu. Muet.
+- Inchangé : n'importe quelle touche (clavier, bouton de souris ou de manette) la
+  passe, un mouvement de souris non ; jouée une fois (`intro_vue`, posé au
+  démarrage), rejouable depuis l'accueil ; nœud `IntroPlanches`, signal `terminee`.
+- Les joueurs qui ont vu l'ancienne intro ne verront pas la nouvelle d'eux-mêmes
+  (Adrien, 2026-09-28 : pas de rejeu forcé) ; elle reste accessible depuis
+  l'accueil.
 
-### La planche 5 est la seule qui compte
+## La fabrication
 
-Les cinq autres installent ; celle-là **est** le jeu. Un seul cône y porte les
-deux moitiés de la mécanique — il montre l'adversaire *et* il dessine l'ombre qui
-désigne celui qui éclaire. C'est l'image à réussir en premier, et celle qu'on
-garde si le reste tombe.
+Tout se refait avec **`python3 tools/monter_intro.py`** (`--repere` incruste le plan
+et le temps, pour relire). Le script dessine chaque image en PIL, mixe les sons du
+jeu avec ffmpeg (−16 LUFS, limité), encode avec `ffmpeg2theora` et écrit les
+images de repli. Ses sources vivent dans `assets/sources/intro/`, **hors dépôt**
+(voir son `.gitignore`), comme les rushes de l'ancienne intro.
 
-### Le raccord de sortie
+Le découpage est écrit deux fois — `plans` dans le monteur, `PLANS` dans
+`intro_planches.gd` — et `tools/test_intro_planches.gd` vérifie qu'ils sont
+d'accord, plan par plan.
 
-La planche 6 se dissout dans `ill_accueil` : **même couloir, même panneau
-*ARENA*.** L'illustration d'accueil cesse d'être un décor et devient la dernière
-image de l'histoire — le menu commence exactement là où l'intro s'arrête. C'est
-aussi pourquoi le POI de la planche 2 (0.55, 0.45) est voisin de celui
-d'`ill_accueil` (0.62, 0.25) : c'est le même panneau, vu deux fois.
+### Les images (Gemini)
 
-## Le texte
+Treize images générées dans l'appli Gemini, toujours avec des références jointes,
+toujours relues avant d'être gardées. Le bloc de prompt commun exige le mannequin
+à tête cubique sans visage en armure gris-bleu sombre, 85 % de noir d'encre et une
+seule source de lumière nommée. Les images retenues passent ensuite par **une même
+courbe (gamma 1,35)** : 83 à 95 % de pixels sous 30/255, pour une cible de 85 %.
+Une courbe commune a été plus fiable que des relances, comme en DA6.6.
 
-Quatre mots, gravés à l'encre dans la planche, **jamais en voix off, jamais en
-bulle** :
+⚠️ L'envoi à Gemini d'illustrations du dépôt a été refusé une fois par le garde-fou
+de Claude Code (« exfiltration ») : Adrien a tranché que seules des images déjà
+produites par Gemini servent de référence.
 
-> **VOIR SANS ÊTRE VU.** *(planche 5)*
-> **TUER SANS ÊTRE TUÉ.** *(carton final, sur le noir de la planche 6)*
+### Les clips (Google Flow, Veo 3.1 Fast)
 
-Le jeu n'a pas de dialogue et n'a pas de lore écrit ; une intro bavarde lui en
-inventerait un. Quatre mots, c'est aussi quatre mots à traduire le jour où le
-jeu sort ailleurs, pas quarante.
+Image-vers-vidéo depuis les images-clés, 16:9, 720p (le 1080p n'est pas offert
+pour ce modèle ; Adrien : « 720p ça va »). **200 crédits sur 1 050** (cinq envois à
+40 crédits, deux sorties chacun ; deux envois ratés n'ont rien coûté). Runway :
+rien.
 
-## Cadence et règles
+Ce que Veo a fait, et qu'on ne voit qu'image par image :
 
-- **6 planches × 2,5 s ≈ 15 s.** Le balayage à la torche peut raccourcir, jamais
-  rallonger.
-- **Passable à tout moment**, n'importe quelle touche. Une intro non passable
-  contredit la thèse du jeu.
-- **Jouée une fois** (drapeau dans `user://settings.cfg`), puis rejouable depuis
-  le menu — elle ne doit pas s'imposer au deuxième lancement.
-- **Chaque planche montre quelque chose que le moteur fait vraiment** : le cône,
-  l'ombre portée, les douilles, le sang existent dans l'arène. Une intro qui
-  promet un plan que le jeu ne rend pas, c'est le défaut « généré par défaut »
-  transposé en récit — exactement ce que tout le chantier DA existe pour fermer.
+- **Il peut ignorer l'image de départ.** Les deux essais « propres » du plan 2 ont
+  changé de décor, de style et d'armure dès la première image. Le retenu est un
+  essai lancé par erreur avec le seul bloc commun : il est fidèle. **Contrôle
+  obligatoire : comparer la première image du clip à l'image-clé.**
+- **Il dédouble un objet en mouvement.** Plan 5 : deux pistolets superposés
+  pendant la montée du bras. 0,45 → 0,85 s sont retirés ; l'arme monte à mi-course
+  puis se retrouve pointée d'un coup sec.
+- **Il dérive après 3 s** : torche qui flotte (plan 3), torche qui se redresse
+  (plan 8). Chaque plan n'utilise que les 1,4 à 2,8 premières secondes.
 
-## La commande d'images
+## L'ancienne intro (DA6.6, 2026-09-09 → 2026-09-28)
 
-Format **1024×640**, comme les quinze autres. Même procédé de génération que
-DA1.5 et MV3, **et même langue de prompt** : deux images faites par deux procédés
-différents jurent comme deux artistes différents (décision du 2026-08-24), et la
-langue du prompt fait partie du procédé.
+Six planches (« la descente », « le seuil », « la dotation », « l'allumage », « le
+prix », « l'extinction ») : un homme arrive dans un lieu souterrain, s'équipe,
+allume sa torche. Les illustrations `ill_intro_*.png` montraient des mannequins,
+mais les six clips Veo en avaient fait **un homme réaliste en sweat à capuche** —
+la première raison du « plus du tout dans le thème ». Et le récit ne montrait ni
+adversaire, ni tir, ni vue de jeu. Ses six `.ogv` et `tools/convert_intro_videos.sh`
+sont retirés.
 
-### Bloc invariant — à mettre en tête des six prompts, sans le modifier
-
-> Illustration de roman graphique sombre, encrage noir franc au trait, hachures
-> serrées, arêtes géométriques vives du béton brut. Cadre 1024×640, pleine page,
-> sans bordure ni marge blanche. Clair-obscur radical : 80 à 85 % du cadre est
-> plongé dans un noir d'encre profond, luminosité sous 10 %, pénombre
-> claustrophobe absolue d'où émerge violemment **une seule** source de lumière
-> nette et tranchée, à pleine luminosité. Palette limitée : noir d'encre, gris
-> béton désaturés, ambre chaud (#F5B03D) pour toute flamme ou filament, blanc
-> cassé chaud (#FAE8CC) pour le cœur du faisceau. Aucune couleur saturée, aucun
-> vert, aucun néon froid, aucune teinte au-delà de 75 % de saturation. Décor :
-> arène clandestine souterraine en béton ébréché, douilles au sol, sang séché
-> des affrontements précédents. Personnage : homme seul, tenue noire sobre —
-> sweat à capuche, pantalon sombre — sans armure, sans casque, sans électronique,
-> équipé uniquement d'une lampe torche et d'un pistolet standard. Aucun texte
-> ni logo hormis ce que la scène précise ci-dessous.
-
-### Les six scènes
-
-**1 — `ill_intro_descente`**
-> Vue de trois quarts arrière. Un homme descend un escalier de béton droit et
-> étroit, sac de sport à l'épaule, main libre sur la rampe métallique. Il est vu
-> de dos : on ne verra pas son visage. Au-dessus de lui, une ampoule nue au bout
-> d'un fil, la seule allumée de la cage d'escalier — les autres douilles de
-> plafond sont vides ou brisées. Sa lumière est faible, jaune, vacillante ; elle
-> découpe ses épaules et laisse le bas des marches dans le noir total. Poussière
-> en suspension dans le cône de l'ampoule. Peinture écaillée sur les murs,
-> traces d'humidité. On ne sait pas d'où il vient.
-
-**2 — `ill_intro_seuil`**
-> Plan rapproché sur une porte industrielle lourde en acier, vue de face,
-> entrouverte de quelques centimètres. Une main gantée la pousse par la tranche.
-> Par la fente s'échappe une lumière ambre rasante, unique percée du cadre :
-> derrière la porte, le noir est absolu et occupe presque toute l'image. Au-dessus
-> du linteau, un panneau indicateur rouillé et cabossé sur lequel un seul mot
-> reste lisible, en capitales : **ARENA**. Les autres inscriptions du panneau sont
-> effacées, criblées ou noyées dans l'ombre. Rivets, rouille, béton ébréché
-> autour de l'encadrement.
-
-**3 — `ill_intro_dotation`**
-> Plan serré en légère plongée sur une table de béton brut. Posés dessus,
-> exactement deux objets et rien d'autre : une lampe torche cylindrique en métal
-> usé, éteinte, et un pistolet semi-automatique standard, sans accessoire. Une
-> main entre dans le cadre par la droite et se referme sur la torche. Éclairage
-> unique : une lampe d'atelier hors champ, rasante, qui allume la tranche des
-> deux objets et la texture granuleuse du béton, et laisse le fond dans le noir
-> complet. Quelques douilles vides roulées contre le bord de la table. Aucun
-> autre équipement visible : c'est toute la dotation.
-
-**4 — `ill_intro_allumage`**
-> L'homme, debout de profil, vient d'allumer sa torche. Le faisceau s'ouvre vers
-> la droite du cadre en un cône net, aux bords tranchés, à pleine luminosité —
-> c'est le premier vrai percement de lumière de la séquence, et il est violent.
-> Le cône frappe un mur de béton ébréché et le sol : il révèle des douilles
-> éparses, une large tache de sang séché, brun, ancienne, et les impacts de
-> balles dans le béton. Le reste du cadre, y compris la majeure partie du corps
-> de l'homme, reste dans le noir d'encre. Poussière dense visible dans le
-> faisceau. Contraste maximal entre le cône et l'obscurité.
-
-**5 — `ill_intro_prix`**
-> Plan large. L'homme, torche allumée, de dos au premier plan à gauche. Son
-> faisceau traverse toute la largeur du cadre et révèle, au loin, une deuxième
-> silhouette debout dans le cône — nette, immobile, tenue noire identique, encore
-> anonyme. Et la même torche projette derrière lui, sur le mur de gauche, **son
-> ombre à lui**, démesurée et parfaitement lisible. Les deux informations
-> coexistent dans une seule image : ce que le faisceau montre, et ce qu'il
-> trahit. Aucune autre source de lumière. Béton, poussière, douilles au sol.
-
-**6 — `ill_intro_extinction`**
-> Cadre presque entièrement noir, à 95 %. La torche vient d'être éteinte : il ne
-> reste que la rémanence orange mourante du filament, un point de braise unique,
-> légèrement décentré, qui éclaire à peine le contour d'une main et une arête de
-> béton. Fumée ténue. Aucune autre forme identifiable. Le noir doit être un noir
-> d'encre plein, pas un gris sombre : l'image se lit comme la fin d'une planche
-> de bande dessinée, sur laquelle un titre pourra être posé.
-
-## Ce que l'intro ferme, et ce qu'elle nourrit
-
-- **Elle ferme DA6.5** (« la séquence power-on — logo, souffle, lumière ») : la
-  planche 4 *est* l'allumage, et la planche 6 pose le wordmark.
-- **Elle alimente quatre fiches de DA7 sans commande supplémentaire.** Les
-  planches 4 et 5 sont la capsule de boutique (DA7.1), l'ouverture du trailer
-  (DA7.2), l'en-tête du site d'une page (DA7.4) et les images d'ambiance du
-  presskit (DA7.3). **Une commande, quatre usages** — c'est l'argument principal
-  pour faire l'intro avant le reste de DA7, et non après.
-
-## Ce qui reste à trancher par Adrien
-
-1. **La formule.** « Voir, tuer, sans être vu, ni tuer » se lit dans deux sens.
-   Le chiasme fermé proposé ici est *VOIR SANS ÊTRE VU. TUER SANS ÊTRE TUÉ.*
-2. **Le visage.** Le storyboard ne le montre jamais (planches 1, 2, 3, 5 de dos
-   ou hors champ) alors qu'`ill_accueil` le montre. À décider : anonymat tenu
-   jusqu'au bout, ou raccord de personnage avec l'accueil.
-3. **Le son.** L'intro est muette dans ce document. Le stem de menu à 170 BPM
-   existe ; un rythme de planche calé dessus (une planche toutes les 4 mesures =
-   1,41 s) serait une autre cadence que les 2,5 s proposées.
+⚠️ **Restent au dépôt, et ne servent plus à l'intro** : les six `ill_intro_*.png`
+(20 Mo en tout). `ill_intro_allumage.png` illustre encore l'entrée « rejouer l'intro » de
+l'accueil (`ui.gd`) ; les cinq autres ne sont plus lus que par les tables de
+`menu_artwork.gd` et `menu_particles_ambiance.gd`. Les retirer allégerait chaque
+téléchargement d’environ 17 Mo — décision laissée à Adrien.

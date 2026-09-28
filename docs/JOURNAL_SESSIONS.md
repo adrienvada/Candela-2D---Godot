@@ -6042,3 +6042,32 @@ d'Adrien (réversible ; leurs branches et rapports restent sur GitHub).
 
 **Ce que la 0.7.0 n'a pas** : une mesure de cadence de l'ensemble sur le Mac (la série courte suit la publication) ; une
 preuve sous le pilote d'Apple de ce qui est prouvé sous Mesa ; les réponses à Q15, Q37, Q38 et Q42.
+
+### 2026-09-28 (soir) — L'intro refaite : récit A « Qui allume se montre » (session « Candela intro redesign », branche `intro-v2`)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui ne pilote pas Chrome ; demande d'Adrien du jour :
+« Il faut qu'on refasse toute l'intro, elle est nulle et plus du tout dans le thème. » Quatre étapes, un arrêt à chacune,
+une page de travail : https://claude.ai/artifact/QCqBo76ASmSLR8GCZH7xkP.
+
+1. **Récits** (19:00-20:55) : quatre récits storyboardés, 35 plans, dix images Gemini et des captures du photographe
+   0.7.0. Adrien choisit A, sans rejeu forcé pour qui a vu l'ancienne intro.
+2. **Animatique** (21:30-22:30) : trois images-clés refaites, montage minuté sur les mesures (170 BPM) avec les sons du
+   jeu. Le plan en jeu est une capture au zoom 4 de la vraie caméra (net, pas un agrandissement).
+3. **Vidéos** (22:40-23:10) : quatre clips Veo 3.1 Fast dans Flow, 200 crédits sur 1 050, relus image par image (voir
+   « Pièges connus », 2026-09-28 : Veo peut ignorer l'image de départ).
+4. **Intégration** (23:15-23:45) : un film Theora de 5,3 Mo, image et son ; `intro_planches.gd` réécrit, gardes de
+   `test_intro_planches.gd` réécrites (preuve par mutation : un plan allongé d'une mesure rougit deux contrôles).
+
+**En propre :** `intro_planches.gd`, `tools/test_intro_planches.gd`, `tools/monter_intro.py` (créé), `docs/INTRO_PLANCHES.md`,
+`assets/video/intro/`, `assets/ui/intro/` (créé), `assets/sources/intro/` (créé, hors dépôt sauf ses deux fichiers de règles).
+**Retirés :** les six `.ogv` de DA6.6, `tools/convert_intro_videos.sh`.
+**Partagés, touchés par insertion :** `audio_manager.gd` (domaine « game feel » : une fonction, `suspendre_musique`),
+`tools/test_menus_voxel.gd` (sa garde listait `intro_planches.gd` parmi les scripts qui construisent le matériau des
+menus ; elle les cherche désormais elle-même).
+
+Le Mac : trois lancements de Godot, chacun sous le verrou et avec l'accord d'Adrien (photographe à 20:50 et 22:08, import
+et lot complet à 23:28). Lot complet vert, 454 s.
+
+**Ce qui n'est pas prouvé** : le film n'a pas été vu JOUER dans le jeu, fenêtre ouverte — ni l'image, ni le son Vorbis
+par le `VideoStreamPlayer`, ni la reprise de la musique après la pause. Les suites le chargent et le lancent en headless,
+où rien n'est rendu ni entendu.
