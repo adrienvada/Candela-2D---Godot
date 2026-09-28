@@ -79,7 +79,7 @@ for bloc in blocs:
     instable = d
     noir_stable = noir & ~instable
     h, w = noir.shape
-    moities = [("fenêtre", slice(0, w))] if not bloc.startswith("s") else [("J1 (gauche)", slice(0, w // 2)),
+    moities = [("fenêtre", slice(0, w))] if bloc not in ("s1", "s2") else [("J1 (gauche)", slice(0, w // 2)),
                                                                          ("J2 (droite)", slice(w // 2, w))]
     r = {"pixels_noirs_A": int(noir_stable.sum()), "instables": int(instable.sum()), "prises": {}}
     print("\n== %s %s : %d pixels noirs dans les %d A (hors instables), %d instables (A entre elles, dilaté 1 px)"
@@ -149,7 +149,7 @@ for bloc in blocs:
     Image.fromarray(a0.astype(np.uint8)).save(os.path.join(S, "%s%s_a.jpg" % (ETIQ, bloc)), quality=88)
     if noir_stable.sum() == 0:
         print("   ✗ le zéro est VIDE : aucun pixel noir dans les A de ce bloc — la fuite n'y est pas jugeable")
-        if not bloc.startswith("sien"):
+        if bloc != "sien":
             ok = False
     rapport[bloc] = r
 
