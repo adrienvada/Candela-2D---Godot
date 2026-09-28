@@ -1,0 +1,165 @@
+{
+ "reference": "A",
+ "temoin": {
+  "comptes": {
+   "carte/unique": {
+    "appels": -0.5,
+    "primitives": -1.0,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 136.5,
+    "ref_primitives": 6210.0,
+    "max_appels": 2.0,
+    "n": 6
+   },
+   "carte/scinde": {
+    "appels": 0.0,
+    "primitives": 0.0,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 252.5,
+    "ref_primitives": 11184.0,
+    "max_appels": 3.0,
+    "n": 6
+   },
+   "pompe/unique": {
+    "appels": 1.169999999999959,
+    "primitives": 33.220000000000255,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 290.54,
+    "ref_primitives": 7118.95,
+    "max_appels": 1.169999999999959,
+    "n": 1
+   },
+   "pompe/scinde": {
+    "appels": 1.6499999999999773,
+    "primitives": -27.590000000000146,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 611.08,
+    "ref_primitives": 12459.72,
+    "max_appels": 1.6499999999999773,
+    "n": 1
+   }
+  },
+  "shaders": {
+   "nouveaux": 0,
+   "disparus": 0,
+   "total_ref": 108,
+   "total": 108,
+   "detail": []
+  },
+  "part": {
+   "map_004_le_bunker_unique": 0.0005396412037037037,
+   "map_002_l_usine_scinde": 0.00042582947530864196,
+   "map_003_la_croisee_scinde": 0.0005666473765432099,
+   "default_scinde": 0.0003308256172839506,
+   "arene_circulaire_scinde": 0.0008825231481481481,
+   "default_unique": 0.0005246913580246914,
+   "arene_circulaire_unique": 0.0003940007716049383,
+   "map_002_l_usine_unique": 0.0005888310185185185,
+   "map_001_le_cloitre_unique": 0.000519386574074074,
+   "map_001_le_cloitre_scinde": 0.0006544174382716049,
+   "map_003_la_croisee_unique": 0.0005396412037037037,
+   "map_004_le_bunker_scinde": 0.0006983024691358025
+  }
+ },
+ "bruit": {
+  "carte/unique": 3.0,
+  "carte/scinde": 7.0,
+  "pompe/unique": 3.0,
+  "pompe/scinde": 20.0
+ },
+ "bruit_part": 0.0008825231481481481,
+ "essais": {
+  "B": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 0.0,
+     "primitives": 0.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 136.5,
+     "ref_primitives": 6210.0,
+     "max_appels": 2.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 2.0,
+     "primitives": 4.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.5,
+     "ref_primitives": 11184.0,
+     "max_appels": 7.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": 0.6299999999999955,
+     "primitives": 32.029999999999745,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 290.54,
+     "ref_primitives": 7118.95,
+     "max_appels": 0.6299999999999955,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 18.819999999999936,
+     "primitives": 6.75,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 611.08,
+     "ref_primitives": 12459.72,
+     "max_appels": 18.819999999999936,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "detail": []
+   },
+   "part": {
+    "map_003_la_croisee_unique": 0.0006066743827160494,
+    "map_004_le_bunker_unique": 0.0005463927469135803,
+    "default_unique": 0.0003255208333333333,
+    "map_003_la_croisee_scinde": 0.0006558641975308642,
+    "map_001_le_cloitre_unique": 0.0004894868827160494,
+    "arene_circulaire_scinde": 0.0008858989197530864,
+    "map_002_l_usine_scinde": 0.0005733989197530864,
+    "default_scinde": 0.00035493827160493826,
+    "map_004_le_bunker_scinde": 0.0005054012345679013,
+    "map_002_l_usine_unique": 0.0003525270061728395,
+    "map_001_le_cloitre_scinde": 0.0004060570987654321,
+    "arene_circulaire_unique": 0.00039303626543209875
+   },
+   "classe": "neutre",
+   "raisons": [],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  }
+ }
+}

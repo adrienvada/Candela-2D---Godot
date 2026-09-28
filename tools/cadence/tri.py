@@ -27,9 +27,14 @@ import sys
 
 # ─── LES SEUILS, et d'où ils viennent (mesures du Mac, règle 278 : pompe sous une fusée, vue unique) ───
 # Le bruit des comptes, relevé par la session « Budget » (deux lancements de la même chose) : ±3 appels par carte en vue
-# unique, ±7 en écran scindé ; au pompe, la moyenne de 120 images à ±2 et ±8. Un témoin (--temoin) le remplace s'il est
-# plus grand.
-BRUIT = {"carte/unique": 3.0, "carte/scinde": 7.0, "pompe/unique": 2.0, "pompe/scinde": 8.0}
+# unique, ±7 en écran scindé ; au pompe, la moyenne de 120 images à ±2 et ±8. ⚠️ Relevé de nouveau ici (2026-09-28, deux
+# lancements de a30a407) : +1,8 et **+11,4** au pompe — les salves du pompe sont tirées au hasard, et en écran scindé chaque
+# étincelle est dessinée deux fois. Et 244cb88 contre a30a407 : **+18,8** au pompe en écran scindé, +0,6 en vue unique,
+# +0 et +2 sur les cartes — tout entier dans le monde 2D des deux lightmaps (+9,7 chacune), là où vivent les étincelles ;
+# une nouveauté qui dessine en plus le ferait aussi en vue unique. D'où ±3 et ±20 au pompe, et une règle : l'écart du
+# pompe en écran scindé ne compte que s'il est CONFIRMÉ par la vue unique du pompe ou par l'écran scindé des cartes.
+# Un témoin (--temoin) relève ces bruits s'il trouve plus.
+BRUIT = {"carte/unique": 3.0, "carte/scinde": 7.0, "pompe/unique": 3.0, "pompe/scinde": 20.0}
 # Les personnages détaillés : +12 appels par carte en vue unique (+9 %), +24 en écran scindé, et 0,976 au Mac (ROADMAP,
 # Q33, `cef9d93`) — ils TIENNENT, à 0,6 point de la barre. Au-delà de +12 appels en vue unique (ou +24 en écran scindé),
 # on n'a aucune preuve que la règle tienne : « lourde ». Entre le bruit et +12 : « à surveiller ».
@@ -230,13 +235,27 @@ def part_ecran(nom_ref, nom):
     return out
 
 
+# ─── CE QUE LE JEU DIT : ses lignes d'état (« [ … »), chiffres ôtés — la preuve que le drapeau a porté ───
+def etat(nom):
+    chemin = os.path.join(SORTIE, "journaux", nom + ".log")
+    if not os.path.exists(chemin):
+        return set()
+    return {re.sub(r"[0-9][0-9.,]*", "#", l.strip()) for l in open(chemin, encoding="utf-8", errors="replace")
+            if l.startswith("[") and not l.startswith("[godot_ai") and not l.startswith("[iso] peinture")
+            and not l.startswith("[iso] vue isométrique") and not l.startswith("[iso] les vues")}
+
+
 # ─── LE CLASSEMENT ───
 def classer(c, sh, part, bruit):
     raisons_l, raisons_s = [], []
     geometrie = False
+    def depasse(fam):
+        return fam in c and c[fam]["appels"] > bruit.get(fam, 3.0)
     for fam, e in c.items():
         b = bruit.get(fam, 3.0)
         da = e["appels"]
+        if fam == "pompe/scinde" and not (depasse("pompe/unique") or depasse("carte/scinde")):
+            da = min(da, b)   # non confirmé : le hasard des salves (voir BRUIT)
         if da > APPELS_LOURDS[fam]:
             raisons_l.append("%+.1f appels en %s (> %+g, le détail des corps qui tient à 0,976)" % (da, fam, APPELS_LOURDS[fam]))
             geometrie = True
@@ -293,7 +312,9 @@ for nom in NOMS:
     part = part_ecran(REF, nom) or {}
     classe, raisons, geometrie = classer(c, sh, part, bruit)
     resultats["essais"][nom] = {"comptes": c, "shaders": sh, "part": part, "classe": classe, "raisons": raisons,
-                                "geometrie": geometrie}
+                                "geometrie": geometrie, "etat_plus": sorted(etat(nom) - etat(REF)),
+                                "etat_moins": sorted(etat(REF) - etat(nom)),
+                                "releves": len(releves(nom)), "releves_ref": len(ref_r)}
 
 json.dump(resultats, open(os.path.join(SORTIE, "tri.json"), "w"), indent=1, ensure_ascii=False)
 
@@ -327,6 +348,12 @@ L.append("")
 for nom, r in resultats["essais"].items():
     L.append("**%s — %s.** %s" % (nom, r["classe"], " ; ".join(r["raisons"]) or "rien au-delà du bruit, aucun programme de "
                                                                                       "shader nouveau."))
+    if r["releves"] != r["releves_ref"]:
+        L.append("  - ⚠ %d relevés contre %d à la référence : lancement incomplet, comparaison partielle" % (r["releves"],
+                                                                                                          r["releves_ref"]))
+    L.append("  - le jeu dit : %s" % (" ; ".join(["+ " + x for x in r["etat_plus"]] + ["− " + x for x in r["etat_moins"]])
+                                      or "rien de différent (aucune ligne d'état ne distingue ce lancement de la "
+                                         "référence : le drapeau ne s'annonce pas)"))
     for p in r["shaders"]["detail"][:4]:
         if "erreur" in p:
             continue

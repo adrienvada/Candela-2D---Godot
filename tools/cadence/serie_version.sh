@@ -57,7 +57,9 @@ cd "$DEPOT" || exit 1
 BLANC="${ESSAI_A_BLANC:-0}"
 CLOUD="${ESSAI_CLOUD:-0}"
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
-ARBRES="${ARBRES:-$HOME/candela-arbres}"
+# « .noindex » : Spotlight n'indexe pas un dossier qui porte ce suffixe (un import écrit des milliers de fichiers, et
+# l'indexation est la charge la mieux connue du Mac : § 1 du document de mesure).
+ARBRES="${ARBRES:-$HOME/candela-arbres.noindex}"
 SECONDES="${SECONDES:-60}"
 if [ "$BLANC" = "1" ] || [ "$CLOUD" = "1" ]; then
   REPOS_INITIAL="${REPOS_INITIAL:-3}"; REPOS_PRISE="${REPOS_PRISE:-1}"
@@ -88,7 +90,7 @@ if [ "${1:-}" = "--preparer" ]; then
     if [ -d "$a" ]; then
       echo "arbre déjà là : $a ($(git -C "$a" log --oneline -1 | cut -c1-60))"
     else
-      git worktree add --detach "$a" "$h" > /dev/null || { echo "✗ worktree $a"; exit 1; }
+      git worktree add --detach "$a" "$h" > /dev/null 2>&1 || { echo "✗ worktree $a"; exit 1; }
       echo "arbre posé : $a ($(git -C "$a" log --oneline -1 | cut -c1-60))"
     fi
     if [ "$BLANC" = "1" ]; then mkdir -p "$a/.godot"; continue; fi
@@ -127,8 +129,9 @@ arbre_faux() {
 godot_ouvert() {
   if [ "$BLANC" = "1" ]; then return 1; fi
   if [ "$CLOUD" = "1" ]; then
-    pgrep -x "$(basename "$GODOT" | cut -c1-15)" > /dev/null \
-      || pgrep -x "$(basename "$(readlink -f "$(command -v "$GODOT")")" | cut -c1-15)" > /dev/null
+    # Dans le cloud, d'autres Godot tournent (le tri, sous llvmpipe) et la cadence n'y vaut rien : on ne guette que les
+    # Godot lancés sur NOS arbres. Sur le Mac, TOUT Godot compte (l'éditeur d'Adrien compris, § 13 du document de mesure).
+    pgrep -f -- "--path $ARBRES/" > /dev/null
   else
     pgrep -x Godot > /dev/null
   fi
