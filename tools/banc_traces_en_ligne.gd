@@ -47,11 +47,13 @@ func _ready() -> void:
 		_ui.join_input.text = "127.0.0.1"
 		_ui.join_requested.emit()
 	if not await _attendre(func() -> bool: return not multiplayer.get_peers().is_empty(), 60.0):
-		return _fin("aucun pair")
+		await _fin("aucun pair")
+		return
 	await _attendre_secondes(1.0)
 	_main._on_replay_requested()
 	if not await _attendre(func() -> bool: return _main.round_active and _main.countdown_left <= 0.0, 60.0):
-		return _fin("la manche 1 n'a pas démarré")
+		await _fin("la manche 1 n'a pas démarré")
+		return
 	await _images(10)
 	_journal("manche 1")
 	_traces("manche 1")
@@ -59,7 +61,8 @@ func _ready() -> void:
 		await _attendre_secondes(1.0)
 		await _abattre_j2()
 	if not await _attendre(func() -> bool: return _main.game_over and not _main._end_sequence_active, 90.0):
-		return _fin("l'écran de fin n'est jamais venu")
+		await _fin("l'écran de fin n'est jamais venu")
+		return
 	if is_instance_valid(_main._affiche_de_fin):
 		_main._affiche_de_fin.congedier()
 	await _images(10)
@@ -81,7 +84,8 @@ func _ready() -> void:
 	var manche_2 := func() -> bool: return _main.round_active and MapData.selected_map_id == attendue \
 			and _main.countdown_left <= 0.0
 	if not await _attendre(manche_2, 60.0):
-		return _fin("la manche 2 n'a pas démarré sur %s (carte %s)" % [attendue, MapData.selected_map_id])
+		await _fin("la manche 2 n'a pas démarré sur %s (carte %s)" % [attendue, MapData.selected_map_id])
+		return
 	await _images(10)
 	_journal("manche 2")
 	var apres := _traces("manche 2")
@@ -158,11 +162,20 @@ func _abattre_j2() -> void:
 	var p2: Node2D = _main.p2
 	p1.current_ammo = 0
 	p1.start_reload()
-	await _attendre_secondes(0.5)
+	# J2 posé devant J1 et tenu IMMOBILE une seconde avant le premier tir : la compensation de latence de l'hôte juge
+	# chaque balle contre la position de J2 d'il y a RTT/2 + 100 ms (historique de 400 ms). Téléporté à chaque image,
+	# il n'était jamais là où l'historique le cherchait : 75 traces peintes, J2 toujours debout (premier essai).
+	var cible := p1.global_position + Vector2.from_angle(p1.rotation) * 160.0
+	var tenue := Time.get_ticks_msec() + 1000
+	while Time.get_ticks_msec() < tenue:
+		p2.global_position = cible
+		p2.velocity = Vector2.ZERO
+		await get_tree().physics_frame
 	var fin := Time.get_ticks_msec() + 8000
 	while not p2.dead and Time.get_ticks_msec() < fin:
 		p1.hp = 100.0
-		p2.global_position = p1.global_position + Vector2.from_angle(p1.rotation) * 160.0
+		p2.global_position = cible
+		p2.velocity = Vector2.ZERO
 		if p1.shoot_cooldown <= 0.0:
 			p1.current_ammo = maxi(p1.current_ammo, 1)
 			p1.shoot()
