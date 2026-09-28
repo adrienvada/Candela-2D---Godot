@@ -59,7 +59,7 @@ func _run() -> void:
 	_check("le shader : force 0 par défaut", inc.contains("uniform float lampe_claire : hint_range(0.0, 1.0) = 0.0;"))
 	var sur := TestBanc._fonction_de_shader(inc, "vec3 lampe_claire_sur(vec3 c, vec3 brute)")
 	var tete := sur.find("if (lampe_claire <= 0.0) {\n\t\treturn c;\n\t}")
-	_check("le shader : la force testée EN TÊTE, `c` rendu tel quel avant toute conversion",
+	_check("le shader : la force testée EN TÊTE, `c` rendu tel quel avant tout calcul",
 		tete >= 0 and tete < sur.find("pate_luminance"), "test absent ou placé après la première mesure")
 	var genou := sur.find("if (w <= 0.0 || x <= 0.0) {\n\t\treturn c;\n\t}")
 	_check("le shader : sous le genou (poids nul), `c` rendu tel quel",
