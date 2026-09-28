@@ -66,7 +66,11 @@ func viser(joueur: int, centre: Variant, teinte: Color) -> void:
 	if _intensite <= 0.0:
 		return
 	if centre == null:
-		_cibles.erase(joueur)
+		# ⚠️ **Le redessin est indispensable** : `_draw` ne tourne que sur demande, et sans lui la flaque
+		# éteinte restait peinte à l'écran. Seulement si elle était allumée : `ui.gd` éteint à chaque image
+		# hors menu, et le match ne doit rien redessiner pour une lampe déjà éteinte.
+		if _cibles.erase(joueur):
+			queue_redraw()
 		return
 	_cibles[joueur] = {"pos": centre as Vector2, "teinte": teinte}
 	if not _positions.has(joueur):

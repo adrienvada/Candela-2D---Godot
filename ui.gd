@@ -1629,6 +1629,13 @@ func _update_focus_rings() -> void:
 	if not menu_open:
 		p1_cursor.hide()
 		p2_cursor.hide()
+		# M9 — « hors menu, il n'y a pas de lampe » (`MenuTorch.viser`) : la flaque s'éteint avec le liseré.
+		# ⚠️ Elle restait allumée au dernier bouton visé, par-dessus le match : J1 bleu + J2 rouge au même
+		# point, un disque violacé ≈ 19/255 dans le noir, dans la moitié d'UN joueur en écran scindé
+		# (docs/iso/cloud/disque-violace/RAPPORT.md ; garde : tools/test_torche_hors_menu.gd).
+		if menu_torch != null:
+			menu_torch.viser(0, null, Color.BLACK)
+			menu_torch.viser(1, null, Color.BLACK)
 		return
 
 	if not _is_focus_usable(p1_focus):
