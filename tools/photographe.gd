@@ -564,8 +564,19 @@ func _ready() -> void:
 	_mute_avant = AudioServer.is_bus_mute(0)
 	AudioServer.set_bus_mute(0, true)
 
+	# ⚠️ **Un `user://` neuf joue l'INTRO en planches PAR-DESSUS la scène** (premier
+	# lancement : conteneur du cloud, `XDG_DATA_HOME` neuf, Mac nettoyé) : sans ce passage,
+	# le photographe photographiait l'intro — piège payé deux fois la nuit du 2026-09-27,
+	# trente-cinq minutes de prises inutilisables la seconde. Le jeu décide dans
+	# `_ready()` de `main.tscn` ; on lui dit « intro vue » EN MÉMOIRE seulement le temps de
+	# ce `_ready()`, puis on rend la valeur : rien n'est écrit dans `user://settings.cfg`
+	# (le joueur n'a pas vu l'intro, il la verra à son prochain lancement). L'allumage
+	# prend alors sa place, et `_traiter_l_allumage` le congédie comme toujours.
+	var intro_vue_avant: bool = GameSettings.intro_vue
+	GameSettings.intro_vue = true
 	_main = preload("res://main.tscn").instantiate()
 	add_child(_main)
+	GameSettings.intro_vue = intro_vue_avant
 	await get_tree().process_frame
 	_ui = _main.get_node_or_null("UI")
 
