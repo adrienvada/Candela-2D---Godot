@@ -34,7 +34,7 @@ for carte in ("croisee", "bunker"):
             continue
         st = m.stats(duel)
         corps = m.corps_local(duel, sans) if sans is not None else None
-        ancien_st = anciens["prises"].get(lancement, {}).get(f"{carte}_duel", {})
+        ancien_st = anciens["prises"].get(f"{lancement}/{carte}_duel", {})
         ancien_corps = anciens["corps"].get(f"{lancement}/{carte}_duel", {})
         sortie[f"{lancement}/{carte}_duel"] = {"top1": st["top1"], "top1_rgb": st["top1_rgb"], "corps": corps,
                                               "ancien_top1": ancien_st.get("top1"), "ancien_top1_rgb": ancien_st.get("top1_rgb"),
