@@ -1,7 +1,7 @@
 # Ce qui survit à un changement de carte ou à la fermeture d'un menu
 
 Session cloud, branche `claude/cloud-restes`, partie d'`origin/integration-iso14` (a30a407), le 28/09/2026 de 09:18 à
-~11:30 (heure de Paris). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
+~10:55 (heure de Paris). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
 
 ## Pour Adrien, en cinq lignes
 
@@ -187,7 +187,8 @@ correction. Dans la vignette, 4 883 pixels allumés avant contre 4 805 après : 
 - **En vue unique** (entraînement lancé de l'accueil, `--mode=unique`) : même défaut à l'image. Le regard vient à
   **25,6 s** de jeu, **82 pixels** allumés dans le noir (moyenne (62, 18, 21), 137/255 au plus) en (86, 607) et
   (97, 607) ; le reste de la fuite (108 144 px) est le HUD seul (`img/regard_unique_avant_yeux_x5.jpg`). En ligne, la
-  vue unique est la même (par le code ; pas d'image à deux fenêtres).
+  vue unique est la même (par le code ; pas d'image à deux fenêtres). **Après la correction** : regard jamais venu en
+  40 s de jeu, fuite 108 144 px à 8 s comme à 40 s, le HUD seul (`img/regard_unique_avant_apres_x5.jpg`).
 
 **Classement : arrive en vraie partie**, dans tout match de plus de ~25 s, par défaut (`regard_du_noir` vaut 1,0 tant
 que le joueur ne l'a pas baissé dans les réglages de la vitrine) ; en ligne comme en local ; la pause (un menu) le
