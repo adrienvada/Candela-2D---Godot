@@ -110,8 +110,17 @@ for bloc in blocs:
                 z = zone.copy(); z[1:] |= zone[:-1]; z[:-1] |= zone[1:]; z[:, 1:] |= zone[:, :-1]; z[:, :-1] |= zone[:, 1:]
                 zone = z
             pr["max_B_rayon"] = int(lum_b.max()); pr["max_A_cone"] = int(lum_a[zone].max())
+            # Le cœur et le bord du cône, lus sur l'image : parmi les pixels que le rayon change et que le sol éclaire (A ≥ 8),
+            # le quart le plus clair du sol sans rayon (le cœur) et le quart le plus sombre (le bord). Les points projetés
+            # (`FAISCEAU … bord`) tombaient hors du cône : il est plus étroit que le demi-angle de l'arme (la texture s'éteint).
+            eclaire = change & (lum_a >= 8)
+            if eclaire.sum() > 100:
+                va = lum_a[eclaire]; dg = diff.max(axis=2)[eclaire]
+                q1, q3 = np.percentile(va, 25), np.percentile(va, 75)
+                pr["coeur"] = {"A": round(float(va[va >= q3].mean()), 1), "B-A": round(float(dg[va >= q3].mean()), 2)}
+                pr["bord_image"] = {"A": round(float(va[va <= q1].mean()), 1), "B-A": round(float(dg[va <= q1].mean()), 2)}
         for pt in points.get("%s-%s" % (bloc, b_nom), []):
-            for cle in ["milieu", "bord"]:
+            for cle in ["milieu"]:
                 xy = pt[cle]
                 if 0 <= xy[0] < w and 0 <= xy[1] < h:
                     pb, pa = patch(B, xy), patch(a0, xy)
@@ -126,7 +135,10 @@ for bloc in blocs:
               % (verdict, b_nom, pr["fuite"], (" (max %d/255)" % pr["fuite_max"]) if pr["fuite"] else "",
                  pr["pixels_changes"], pr.get("gain_median"), pr.get("gain_p90"), pr.get("gain_max"), pr.get("gain_min"),
                  " ; ".join("%s : B−A %s (A %s → B %s)" % (k, v["B-A"], v["A"], v["B"]) for k, v in pr.items()
-                            if isinstance(v, dict))))
+                            if isinstance(v, dict) and "B" in v)))
+        if "coeur" in pr:
+            print("      cœur du cône (A %s) : B−A %s /255 ; bord du cône (A %s) : B−A %s /255"
+                  % (pr["coeur"]["A"], pr["coeur"]["B-A"], pr["bord_image"]["A"], pr["bord_image"]["B-A"]))
         if "max_B_rayon" in pr:
             print("      le plus clair du rayon %d/255, le plus clair du sol du cône sans lui %d/255 (%s)"
                   % (pr["max_B_rayon"], pr["max_A_cone"], "pas plus clair" if pr["max_B_rayon"] <= pr["max_A_cone"]
