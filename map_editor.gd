@@ -377,14 +377,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 
 	# Échap : d'abord fermer ce qui est ouvert, seulement ensuite quitter.
+	#
+	# ⚠️ L'entrée est marquée traitée AVANT d'agir : `_go_back()` change de scène, le nœud
+	# quitte l'arbre, et `get_viewport()` rend alors `null` — « Cannot call method
+	# 'set_input_as_handled' on a null value » à chaque sortie par Échap (répétition du
+	# test d'Adrien, E2).
 	if key.keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
 		if hud.is_modal_open():
 			hud.close_dialog()
 		elif _sandbox_active:
 			_toggle_sandbox()
 		else:
 			_go_back()
-		get_viewport().set_input_as_handled()
 		return
 
 	if _modal_open:
