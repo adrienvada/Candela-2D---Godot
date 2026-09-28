@@ -249,5 +249,5 @@ Sur le Mac : `ENVELOPPE= GODOT=/Applications/Godot.app/Contents/MacOS/Godot ./do
 - [x] cause établie
 - [x] correction et garde (la marge explicite ; la cause, hors de l'essai, signalée)
 - [x] pochoirs
-- [ ] preuves six cartes
-- [ ] suite complète
+- [x] preuves six cartes (seul et tous les essais : 0 pixel noir allumé, 0 bruit, rien de plus clair de 2/255)
+- [x] suite complète : « tout passe, sans erreur de script (765s) », EXIT 0, sur l'état final du code
