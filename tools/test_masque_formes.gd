@@ -15,6 +15,7 @@
 ## - (session « masque-fumée-2 », 2026-09-28) V4, la lumière d'abord : ses bornes sont celles du lavis (mêmes seuils, même
 ##   grain, même lavage), placées avant la pâte, et, rejouées sur la pâte du processeur (`IsoPate`, son miroir formule pour
 ##   formule) en des dizaines de milliers de points, elles ne tranchent JAMAIS autrement que les certitudes de Gadgets ;
+##   V5, le juge ajusté : son polygone contient le disque de chaque couche vu depuis lui, et il est plus petit que le carré ;
 ## - rien sur le fil : `Protocol.VERSION` reste 18.
 ##
 ## Ce qu'elle ne prouve pas : que le GPU compile les variantes (le lanceur de série refuse toute prise dont le journal porte
@@ -49,6 +50,7 @@ func _run() -> void:
 	_la_bande_resserree()
 	_le_pochoir()
 	_la_lumiere_d_abord()
+	_le_juge_ajuste()
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
 	_check("Protocol.VERSION reste 18", version == 18, str(version))
 	_check("assez de vérifications (%d ≥ 20)" % _verifications, _verifications >= 20)
@@ -91,7 +93,8 @@ func _eteintes_rien_ne_change() -> void:
 	_check("sans drapeau : aucun juge (le pochoir n'existe pas)", v.get_child_count() == 0)
 	v.masque_fumee = true
 	var gadgets: ShaderMaterial = v.call("_materiau_volume")
-	var marques := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_POCHOIR_JUGE", "MASQUE_LUMIERE"]
+	var marques := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_POCHOIR_JUGE", "MASQUE_LUMIERE",
+		"MASQUE_AJUSTE"]
 	_check("--fumee-masque seul : le masque de Gadgets, sans aucun #define de forme",
 		gadgets.shader.code.contains("#define FUMEE_MASQUE\n")
 		and marques.all(func(d: String) -> bool: return not gadgets.shader.code.contains("#define %s\n" % d)))
@@ -121,9 +124,9 @@ func _eteintes_rien_ne_change() -> void:
 func _chaque_drapeau_sa_forme() -> void:
 	print("\n[Chaque drapeau, sa forme]")
 	var src := FileAccess.get_file_as_string("res://iso_volumes.gd")
-	_check("les quatre drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
-		"--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3, "--fumee-masque-lumiere": 4}
-		and IsoVolumes.FORME_POCHOIR == 3)
+	_check("les cinq drapeaux, dans l'ordre des formes", IsoVolumes.FORMES_MASQUE == {"--fumee-masque-compact": 1,
+		"--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3, "--fumee-masque-lumiere": 4, "--fumee-masque-ajuste": 5}
+		and IsoVolumes.FORME_POCHOIR == 3 and IsoVolumes.FORME_AJUSTEE == 5)
 	_check("un drapeau de forme allume le masque et pose sa forme",
 		src.contains("\t\telif FORMES_MASQUE.has(arg):\n\t\t\tmasque_fumee = true\n\t\t\tforme_masque = int(FORMES_MASQUE[arg])"))
 	for usure in [false, true]:
@@ -131,7 +134,7 @@ func _chaque_drapeau_sa_forme() -> void:
 		for k in range(1, IsoVolumes.DEFINES_FORMES.size()):
 			var sh := IsoVolumes.variante_forme(base, k)
 			var attendus: Array = IsoVolumes.DEFINES_FORMES[k]
-			var tous := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE"]
+			var tous := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE", "MASQUE_AJUSTE"]
 			var ok: bool = sh.code.contains("#define FUMEE_MASQUE\n") and sh.code.contains("#define USURE_ESSAI\n") == usure
 			for d: String in tous:
 				ok = ok and sh.code.contains("#define %s\n" % d) == attendus.has(d)
@@ -345,6 +348,55 @@ func _lavis_q(l: float, b: float) -> float:
 	var e_2 := 0.16 + 0.08 * b
 	var e_3 := 0.42 + 0.1 * b
 	return 0.3 * smoothstep(e_1 - a, e_1 + a, l) + 0.3 * smoothstep(e_2 - a, e_2 + a, l) + 0.4 * smoothstep(e_3 - a, e_3 + a, l)
+
+
+func _le_juge_ajuste() -> void:
+	print("\n[V5, le juge ajusté : un disque au lieu du carré]")
+	var v := IsoVolumes.new()
+	v.masque_fumee = true
+	v.forme_masque = IsoVolumes.FORME_AJUSTEE
+	var e := {"genre": "fumee", "noeuds": [], "mats": [], "retires": []}
+	v.call("_couches", e, 4)
+	var rayon := 80.0
+	v.call("_poser_couches", e, Vector2(100, 200), rayon, 1.0, 0.3, null, 0.0, 0.0, 0.0)
+	var j: MeshInstance3D = e.get("juge")
+	var mj := j.material_override as ShaderMaterial if j != null else null
+	_check("forme 5 : le juge porte MASQUE_AJUSTE et le polygone", mj != null and mj.shader.code.contains("#define MASQUE_AJUSTE\n")
+		and mj.shader.code.contains("#define MASQUE_POCHOIR_JUGE\n") and j.mesh is ArrayMesh)
+	# Le polygone : son apothème vaut 0,5 (à l'échelle 1) — il contient le disque de diamètre 1.
+	var sommets: PackedVector3Array = (j.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_VERTEX] if j != null else []
+	var apotheme := INF
+	for k in range(0, sommets.size(), 3):
+		var a := Vector2(sommets[k + 1].x, sommets[k + 1].z)
+		var b := Vector2(sommets[k + 2].x, sommets[k + 2].z)
+		apotheme = minf(apotheme, absf(a.cross(b)) / (b - a).length())
+	_check("le polygone du juge contient le disque de diamètre 1 (apothème %.6f)" % apotheme,
+		sommets.size() == 3 * IsoVolumes.COTES_JUGE and apotheme >= 0.5 - 1e-6)
+	# Le disque de chaque couche, vu depuis le juge (décalé de (haut − h) / tan(tangage), au pire dans n'importe quelle
+	# direction), tient dans le disque du juge.
+	var rayons: Vector4 = mj.get_shader_parameter("juge_rayons")
+	var hauteurs: Vector4 = mj.get_shader_parameter("juge_hauteurs")
+	var portee := j.scale.x * 0.5
+	var decalage := 1.0 / tan(deg_to_rad(CameraIso.TANGAGE_DEG))
+	var tient := true
+	for k in 4:
+		tient = tient and rayons[k] + (j.position.y - hauteurs[k]) * decalage <= portee + 1e-4
+	_check("chaque couche vue depuis le juge tient dans son disque (portée %.1f, tangage %.0f°)" % [portee, CameraIso.TANGAGE_DEG],
+		tient and portee < rayon + IsoVolumes.TUILE)
+	_check("le disque du juge ajusté est plus petit que le carré du pochoir (%.0f contre %.0f px² de monde)"
+		% [PI * portee * portee, pow(2.0 * (rayon + IsoVolumes.TUILE), 2.0)],
+		IsoVolumes.COTES_JUGE * portee * portee * tan(PI / IsoVolumes.COTES_JUGE) < pow(2.0 * (rayon + IsoVolumes.TUILE), 2.0))
+	_check("le juge ajusté n'ajoute aucun code GLSL : MASQUE_AJUSTE n'apparaît dans aucun shader",
+		not FileAccess.get_file_as_string("res://volume_masque_compact.gdshaderinc").contains("MASQUE_AJUSTE")
+		and not FileAccess.get_file_as_string("res://volume_iso.gdshader").contains("MASQUE_AJUSTE")
+		and not FileAccess.get_file_as_string("res://volume_masque.gdshaderinc").contains("MASQUE_AJUSTE"))
+	v.forme_masque = 4
+	v.call("_poser_couches", e, Vector2(100, 200), rayon, 1.0, 0.3, null, 0.0, 0.0, 0.0)
+	_check("revenu à la forme 4 : le juge reprend le carré et sa variante", j.mesh is PlaneMesh
+		and is_equal_approx(j.scale.x, 2.0 * (rayon + IsoVolumes.TUILE))
+		and not (j.material_override as ShaderMaterial).shader.code.contains("#define MASQUE_AJUSTE\n")
+		and (j.material_override as ShaderMaterial).shader.code.contains("#define MASQUE_LUMIERE\n"))
+	v.free()
 
 
 func _fonction(code: String, signature: String) -> String:
