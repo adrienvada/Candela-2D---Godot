@@ -111,6 +111,7 @@ var coeur_fusee := 2
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
 var _plan := PlaneMesh.new()
+var _disque_juge: ArrayMesh = null
 var _quad := QuadMesh.new()
 var _masques := false
 
@@ -124,16 +125,25 @@ const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
 ## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
 ## surface (MASQUE_COMPACT) ; 2, + la bande du sol resserrée (MASQUE_RESSERRE) ; 3, + le pochoir : un juge par volume pose la
 ## question une fois par pixel, les couches ne la posent plus (MASQUE_POCHOIR). Session cloud « masque-fumée-2 » (2026-09-28) :
-## 4, + les certitudes du sol tirées de la lumière lue seule, avant la pâte et la matière (MASQUE_LUMIERE).
+## 4, + les certitudes du sol tirées de la lumière lue seule, avant la pâte et la matière (MASQUE_LUMIERE) ; 5, + le juge
+## ajusté à son volume : un disque, au lieu du carré, qui ne rastérise plus les coins où aucune couche ne dessine
+## (MASQUE_AJUSTE : aucun code GLSL à lui ; il nomme la variante, pour qu'une prise prouve son bras par ce que le jeu dit).
 const FORMES_MASQUE := {"--fumee-masque-compact": 1, "--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3,
-	"--fumee-masque-lumiere": 4}
+	"--fumee-masque-lumiere": 4, "--fumee-masque-ajuste": 5}
 const FORME_POCHOIR := 3
+const FORME_AJUSTEE := 5
+## Le juge ajusté est un polygone régulier CIRCONSCRIT à son disque (apothème 0,5 à l'échelle 1, comme le plan de côté 1) :
+## seize côtés, 1,9 % de plus que le disque en rayon, 1,3 % en aire.
+const COTES_JUGE := 16
 const DEFINES_FORMES := [[], ["MASQUE_COMPACT"], ["MASQUE_COMPACT", "MASQUE_RESSERRE"],
 	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR"],
-	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE"]]
+	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE"],
+	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE", "MASQUE_AJUSTE"]]
 const NOMS_FORMES := ["celle de Gadgets", "compacte (MASQUE_COMPACT)", "compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE)",
 	"pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR)",
-	"lumière d'abord, pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR, MASQUE_LUMIERE)"]
+	"lumière d'abord, pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR, MASQUE_LUMIERE)",
+	"juge ajusté, lumière d'abord, pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR, "
+	+ "MASQUE_LUMIERE, MASQUE_AJUSTE)"]
 ## Le juge du pochoir est dessiné juste AVANT les couches : il doit avoir écrit le pochoir quand elles le lisent.
 const PRIORITE_JUGE := PRIORITE_VOLUME - 1
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
@@ -770,19 +780,49 @@ func _poser_juge(e: Dictionary, centre: Vector2, rayon: float, hauteur: float, d
 		e["juge_forme"] = forme_masque
 	var haut := maxf(PLANCHER_PX, hauteur * TUILE)
 	var demi := rayon + haut
-	juge.position = Vector3(centre.x, haut, centre.y)
-	juge.scale = Vector3(demi * 2.0, 1.0, demi * 2.0)
-	juge.visible = densite > 0.0
 	var rayons := Vector4.ZERO
 	var hauteurs := Vector4.ZERO
+	# V5 (juge ajusté) : le disque de la couche i, vu depuis le juge, est décalé de (haut − h_i) / tan(tangage), moins que
+	# haut − h_i tant que le tangage dépasse 45° ; il tient donc dans le disque de rayon r_i + (haut − h_i) autour du centre.
+	var portee := 0.0
 	for i in mini(n, 4):
 		var f := float(i) / float(maxi(n - 1, 1))
 		rayons[i] = rayon * (1.0 - 0.22 * f)
 		hauteurs[i] = maxf(PLANCHER_PX, hauteur * TUILE * float(i + 1) / float(n))
+		portee = maxf(portee, rayons[i] + haut - hauteurs[i])
+	var ajuste := forme_masque >= FORME_AJUSTEE
+	if ajuste:
+		demi = portee
+	juge.mesh = _disque() if ajuste else _plan
+	juge.position = Vector3(centre.x, haut, centre.y)
+	juge.scale = Vector3(demi * 2.0, 1.0, demi * 2.0)
+	juge.visible = densite > 0.0
 	var m := juge.material_override as ShaderMaterial
 	m.set_shader_parameter("nuage_centre", centre)
 	m.set_shader_parameter("juge_rayons", rayons)
 	m.set_shader_parameter("juge_hauteurs", hauteurs)
+
+
+## Session cloud « masque-fumée-2 » (2026-09-28) — V5 : le polygone du juge ajusté, construit une fois, dans le plan horizontal,
+## centré, d'apothème 0,5 (le même repère que le plan de côté 1 : l'échelle est le diamètre).
+func _disque() -> ArrayMesh:
+	if _disque_juge != null:
+		return _disque_juge
+	var sommets := PackedVector3Array()
+	var normales := PackedVector3Array()
+	var r := 0.5 / cos(PI / COTES_JUGE)
+	for k in COTES_JUGE:
+		var a0 := TAU * float(k) / float(COTES_JUGE)
+		var a1 := TAU * float(k + 1) / float(COTES_JUGE)
+		sommets.append_array([Vector3.ZERO, Vector3(cos(a0) * r, 0.0, sin(a0) * r), Vector3(cos(a1) * r, 0.0, sin(a1) * r)])
+		normales.append_array([Vector3.UP, Vector3.UP, Vector3.UP])
+	var tableaux := []
+	tableaux.resize(Mesh.ARRAY_MAX)
+	tableaux[Mesh.ARRAY_VERTEX] = sommets
+	tableaux[Mesh.ARRAY_NORMAL] = normales
+	_disque_juge = ArrayMesh.new()
+	_disque_juge.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tableaux)
+	return _disque_juge
 
 
 ## La variante du juge : la forme (pochoir ou au-delà), plus MASQUE_POCHOIR_JUGE (il écrit le pochoir au lieu de le lire).
