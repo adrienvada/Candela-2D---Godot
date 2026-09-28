@@ -1,6 +1,6 @@
 # Une lampe plus claire et plus pâle — essai `--lampe-claire` (session cloud « lampe-claire », Q40)
 
-*28/09/2026, 02:05 → ~04:00 (heure de Paris). Branche `claude/cloud-lampe-claire`, base `origin/integration-iso14` (a30a407).
+*28/09/2026, 02:05 → 04:10 (heure de Paris). Branche `claude/cloud-lampe-claire`, base `origin/integration-iso14` (a30a407).
 Planche : [`planche.html`](planche.html) (autonome, images en chemins relatifs). Chiffres : [`mesures.json`](mesures.json).*
 
 ## Pour Adrien, en cinq lignes
@@ -185,8 +185,11 @@ clair **paraît** plus éblouissant à l'œil (voir « Ce que je n'ai pas pu pro
   le halo de proximité a été pris (torches éteintes, +1 niveau) ; le flash de tir, non.
 - **La lumière 3D** (`--lumiere-3d`, éteinte par défaut) : la courbe y est branchée (branche d'identité) mais n'a pas été
   photographiée.
-- **Le drapeau lui-même en jeu** : les prises basculent l'essai à chaud (`poser_lampe_claire`) ; le chemin du drapeau
-  (`--lampe-claire` → `LampeClaire.demandee()` → `accorder`) est gardé textuellement, pas photographié.
+- **Le drapeau lui-même, jusqu'à l'image** : lancé avec `--lampe-claire`, la présentation démarre bien essai allumé
+  (`lampe claire au départ : true`, carte d'essai, 04:00) ; mais les prises basculent l'essai à chaud
+  (`poser_lampe_claire`), et deux lancements ne se comparent pas au pixel (les corps respirent sur l'horloge murale :
+  53 000 pixels d'écart entre deux lancements, essai comme défaut). Le chemin drapeau → `accorder` est gardé
+  textuellement, pas prouvé au pixel.
 - **Le lacet 0°** : pris à 45° B seulement (la consigne), à 0° non.
 
 ## 6. Pièges à reporter dans la feuille de route
@@ -220,4 +223,7 @@ godot --path . -- --lampe-claire
 
 - `f39d5d5` le plan ; `456fc1b` les deux corrections du photographe pour Xvfb (reprises de `claude/cloud-photographe`) ;
 - `cac94de` l'essai, la garde, l'outil de prises ;
-- le commit final : mesures, planche, images, rapport.
+- `54655ad` mesures, planche, images, rapport ; `00fbe59` la ligne ajoutée à `test_iso_beaute` (suite complète verte, 633 s) ;
+- le dernier : le message de l'outil sur le drapeau, et ce rapport.
+
+**Poussés** sur `claude/cloud-lampe-claire` (aucun n'attend d'accord). Aucun fichier de secret ; 1,8 Mo d'images.

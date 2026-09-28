@@ -18,6 +18,7 @@ extends "res://tools/photographe.gd"
 ##
 ## Il EXIGE une vraie fenêtre, comme le photographe.
 
+const LampeClaireT := preload("res://lampe_claire.gd")
 const CARTES := [
 	"res://assets/maps/map_001_le_cloitre.json",
 	"res://assets/maps/map_002_l_usine.json",
@@ -103,7 +104,9 @@ func _ready() -> void:
 		printerr("✗ la vue iso n'est pas là")
 		_sortir(1)
 		return
-	print("  lampe claire au départ : %s (le drapeau n'est pas posé : l'outil la bascule lui-même)" % str(iso.lampe_claire))
+	# Le drapeau n'est pas nécessaire : l'outil bascule l'essai lui-même. Posé, il se lit ici (`true`).
+	print("  lampe claire au départ : %s (drapeau %s)" % [str(iso.lampe_claire),
+		"posé" if args.has(LampeClaireT.DRAPEAU) else "absent"])
 
 	var t := float(CandelaTileSet.TILE_SIZE.x)
 	for chemin in CARTES:
