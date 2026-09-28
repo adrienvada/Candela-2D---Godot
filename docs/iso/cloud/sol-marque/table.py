@@ -23,28 +23,28 @@ DEMI = {
   ("gravats", (7, 11.5), 90, 1.0, 11), ("gravats", (8, 9.5), 90, 1.0, 12), ("gravats", (6, 2), 0, 1.6, 13),
   ("gravats", (2, 16), 90, 1.6, 14), ("eclats", (5, 6), 0, 1.0, 15), ("eclats", (7.5, 17.5), 0, 1.0, 16),
   ("chaine", (6.5, 20.5), -8, 2.0, 17), ("lettres", (6, 15.5), 0, "07", 0),
-  ("cadre", (11.5, 4.5), 0, (5.2, 1.4), 18), ("cadre", (11.5, 19.5), 0, (5.2, 1.4), 19),
+  ("cadre", (11.5, 4.5), 0, (5.2, 1.4), 18),
  ],
  "00000001": [  # Arène Standard, miroir x → 31 − x
   ("gravats", (5, 3), 0, 1.8, 21), ("gravats", (11, 3), 0, 1.2, 22), ("gravats", (3, 8), 90, 2.0, 23),
   ("gravats", (3, 24), 90, 1.6, 24), ("gravats", (6, 28), 0, 2.0, 25), ("eclats", (9, 11), 0, 1.2, 26),
   ("eclats", (12, 19), 0, 1.0, 27), ("eclats", (7, 6), 0, 1.0, 28), ("chaine", (10, 26), 20, 2.4, 29),
   ("chaine", (11.5, 8.5), -30, 1.8, 30), ("lettres", (5, 11), 90, "07", 0),
-  ("cadre", (15.5, 6), 0, (5.2, 1.4), 31), ("cadre", (15.5, 26), 0, (5.2, 1.4), 32), ("bande", (15.5, 16), 90, 4.0, 33),
+  ("cadre", (15.5, 6), 0, (5.2, 1.4), 31), ("bande", (15.5, 16), 90, 4.0, 33),
  ],
  "map_001": [  # Le Cloître, miroir x → 29 − x
   ("gravats", (10, 12), 0, 2.2, 41), ("gravats", (8, 10), 90, 1.6, 42), ("gravats", (6, 3), 0, 1.4, 43),
   ("gravats", (3, 20), 90, 1.8, 44), ("gravats", (13, 13), 90, 1.5, 45), ("eclats", (5.5, 6.5), 0, 1.2, 46),
   ("eclats", (12, 23), 0, 1.0, 47), ("chaine", (5.5, 25), 15, 2.2, 48), ("chaine", (7, 6), -20, 1.8, 49),
   ("lettres", (4.5, 10), 90, "B-07", 0),
-  ("cadre", (14.5, 5), 0, (5.2, 1.4), 50), ("cadre", (14.5, 24), 0, (5.2, 1.4), 51), ("bande", (14.5, 8), 90, 2.0, 52),
+  ("cadre", (14.5, 5), 0, (5.2, 1.4), 50), ("bande", (14.5, 8), 90, 2.0, 52),
  ],
  "map_002": [  # L'Usine, miroir x → 31 − x (symétrie approchée : rien près du bloc central décalé)
   ("gravats", (7, 7.5), 90, 1.6, 61), ("gravats", (4, 3), 0, 1.6, 62), ("gravats", (8.5, 10), 0, 1.0, 63),
   ("gravats", (10, 17.5), 90, 1.6, 64), ("gravats", (7, 22), 0, 1.6, 65), ("gravats", (11, 12.5), 90, 1.0, 66),
   ("eclats", (5, 7), 0, 1.0, 67), ("eclats", (11, 21), 0, 1.0, 68), ("chaine", (11.5, 5), 10, 2.0, 69),
   ("chaine", (4.5, 17), 80, 1.8, 70), ("lettres", (4.5, 8.5), 90, "C3", 0),
-  ("cadre", (15.5, 4), 0, (5.2, 1.4), 71), ("cadre", (15.5, 21), 0, (5.2, 1.4), 72),
+  ("cadre", (15.5, 4), 0, (5.2, 1.4), 71),
  ],
  "map_003": [  # La Croisée, demi-tour (x, y) → (27 − x, 27 − y)
   ("gravats", (8.5, 10), 0, 2.4, 81), ("gravats", (18.5, 6), 0, 2.4, 82), ("gravats", (10, 3), 0, 1.6, 83),
@@ -56,7 +56,7 @@ DEMI = {
   ("gravats", (10, 7), 0, 2.0, 101), ("gravats", (7, 8.8), 90, 1.0, 102), ("gravats", (9, 10), 90, 1.4, 103),
   ("gravats", (11, 12.5), 90, 1.0, 104), ("gravats", (6, 22), 0, 1.8, 105), ("eclats", (5, 6), 0, 1.0, 106),
   ("eclats", (10.5, 15), 0, 1.0, 107), ("chaine", (8, 5), 10, 2.0, 108), ("lettres", (4, 16), 90, "C3", 0),
-  ("cadre", (12.5, 4), 0, (5.2, 1.4), 109), ("cadre", (12.5, 21), 0, (5.2, 1.4), 110),
+  ("cadre", (12.5, 4), 0, (5.2, 1.4), 109),
  ],
 }
 SYM = {"00000002": "miroir", "00000001": "miroir", "map_001": "miroir", "map_002": "miroir", "map_003": "demi_tour",
@@ -66,8 +66,8 @@ SYM = {"00000002": "miroir", "00000001": "miroir", "map_001": "miroir", "map_002
 # a pour jumeau-miroir un autre pied sud : caché derrière le pilier dans la vue de J2 (mesuré : 713 pixels assombris
 # dans le cône de J1, 27 dans celui de J2, écran scindé du 28/09). La table est donc fermée par le demi-tour AUSSI :
 # pour une carte en miroir, par les deux miroirs et le demi-tour (les six cartes livrées ont les deux symétries —
-# l'Usine à une case près). Les cadres suivent les pochoirs qu'ils encadrent (miroir gauche-droite seulement) : sur deux
-# cartes, les « DEATHMATCH » ne sont pas à des places échangées par le miroir haut-bas (défaut des pochoirs, signalé).
+# l'Usine à une case près). Les cadres suivent les pochoirs qu'ils encadrent — fermés par le demi-tour eux aussi depuis la
+# session « décor demi-tour » (2026-09-28) : un seul cadre par carte dans la demi-table, son jumeau en est l'image.
 GROUPE = {"miroir": ("mx", "my", "r"), "demi_tour": ("r",)}
 SYMETRIQUES = ("cadre", "bande", "lettres")
 
@@ -156,12 +156,17 @@ def verifier(cid, marques, carte):
 
 
 POCHOIRS = {  # recopiés d'arena_decor.gd (POCHOIRS_ESSAI) : [texte, centre (cases), angle]
-    "00000002": [("DEATHMATCH", (11.5, 4.5), 0), ("DEATHMATCH", (11.5, 19.5), 0), ("ZONE 1", (4, 18), 0), ("ZONE 2", (19, 18), 0)],
-    "00000001": [("DEATHMATCH", (15.5, 6), 0), ("DEATHMATCH", (15.5, 26), 0), ("ZONE 1", (8, 23), 0), ("ZONE 2", (23, 23), 0)],
-    "map_001": [("DEATHMATCH", (14.5, 5), 0), ("DEATHMATCH", (14.5, 24), 0), ("ZONE 1", (8, 22), 0), ("ZONE 2", (21, 22), 0)],
-    "map_002": [("DEATHMATCH", (15.5, 4), 0), ("DEATHMATCH", (15.5, 21), 0), ("ZONE 1", (5, 20), 0), ("ZONE 2", (26, 20), 0)],
+    "00000002": [("DEATHMATCH", (11.5, 4.5), 0), ("DEATHMATCH", (11.5, 18.5), 180), ("ZONE 1", (4, 18), 0), ("ZONE 2", (19, 18), 0),
+                 ("ZONE 2", (19, 5), 180), ("ZONE 1", (4, 5), 180)],
+    "00000001": [("DEATHMATCH", (15.5, 6), 0), ("DEATHMATCH", (15.5, 25), 180), ("ZONE 1", (8, 23), 0), ("ZONE 2", (23, 23), 0),
+                 ("ZONE 2", (23, 8), 180), ("ZONE 1", (8, 8), 180)],
+    "map_001": [("DEATHMATCH", (14.5, 5), 0), ("DEATHMATCH", (14.5, 24), 180), ("ZONE 1", (8, 22), 0), ("ZONE 2", (21, 22), 0),
+                ("ZONE 2", (21, 7), 180), ("ZONE 1", (8, 7), 180)],
+    "map_002": [("DEATHMATCH", (15.5, 4), 0), ("DEATHMATCH", (15.5, 21), 180), ("ZONE 1", (5, 20), 0), ("ZONE 2", (26, 20), 0),
+                ("ZONE 2", (26, 5), 180), ("ZONE 1", (5, 5), 180)],
     "map_003": [("DEATHMATCH", (14, 4), 0), ("DEATHMATCH", (13, 23), 180), ("ZONE 1", (5, 11), 0), ("ZONE 2", (22, 16), 180)],
-    "map_004": [("DEATHMATCH", (12.5, 4), 0), ("DEATHMATCH", (12.5, 21), 0), ("ZONE 1", (5, 20), 0), ("ZONE 2", (20, 20), 0)],
+    "map_004": [("DEATHMATCH", (12.5, 4), 0), ("DEATHMATCH", (12.5, 21), 180), ("ZONE 1", (5, 20), 0), ("ZONE 2", (20, 20), 0),
+                ("ZONE 2", (20, 5), 180), ("ZONE 1", (5, 5), 180)],
 }
 
 
@@ -208,7 +213,7 @@ def main():
         toutes = []
         for m in demi:
             m = m + (False,)
-            transfos = (("mx",) if sym == "miroir" else ("r",)) if m[0] == "cadre" else GROUPE[sym]
+            transfos = GROUPE[sym]
             for q in [m] + [image(m, g, t) for t in transfos]:
                 if not any(meme(q, r) for r in toutes):
                     toutes.append(q)

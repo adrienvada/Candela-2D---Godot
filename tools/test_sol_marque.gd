@@ -160,11 +160,10 @@ func _l_equite(cartes: Dictionary) -> void:
 		_check("%s (%s, symétrie %s) : %d marques, chacune a son jumeau" % [String(d.get("name", id)), id,
 			sym if sym != "" else "aucune exacte — miroir", table.size()], orphelins.is_empty() and table.size() >= 12,
 			str(orphelins))
-		# À 45° B, J2 voit au DEMI-TOUR de ce que voit J1 : la table (hors cadres, qui suivent les pochoirs) doit aussi
-		# être fermée par le demi-tour, même sur une carte en miroir.
-		var hors_cadres := table.filter(func(p): return String(p[0]) != "cadre")
-		var sans_demi_tour := _orphelins(hors_cadres, MapCodec.get_grid_size(d), "demi_tour")
-		_check("%s : chaque marque (hors cadres) a aussi son jumeau par le demi-tour — ce que J2 voit à 45° B" \
+		# À 45° B, J2 voit au DEMI-TOUR de ce que voit J1 : la table doit aussi être fermée par le demi-tour, même sur une
+		# carte en miroir. Cadres compris depuis que les pochoirs qu'ils encadrent le sont (session « décor demi-tour »).
+		var sans_demi_tour := _orphelins(table, MapCodec.get_grid_size(d), "demi_tour")
+		_check("%s : chaque marque, cadres compris, a aussi son jumeau par le demi-tour — ce que J2 voit à 45° B" \
 			% String(d.get("name", id)), sans_demi_tour.is_empty(), str(sans_demi_tour.slice(0, 4)))
 	print("  (%d marques en tout)" % total)
 	var g := MapCodec.get_grid_size(cartes["map_001"])
@@ -178,6 +177,12 @@ func _l_equite(cartes: Dictionary) -> void:
 			break
 	_check("la garde rougit sur un jumeau qui ne se retourne pas (le même tas, pas son image)",
 		not _orphelins(oubli, g, "miroir").is_empty())
+	# Les cadres d'avant (ISO14, première version) : à la Standard, autour des « DEATHMATCH » de y = 6 et 26, graines 31 et
+	# 32, tous deux à 0°. Le demi-tour les rougit.
+	var cadres_avant := [["cadre", Vector2(15.5, 6.0), 0.0, Vector2(5.2, 1.4), 31, false],
+		["cadre", Vector2(15.5, 26.0), 0.0, Vector2(5.2, 1.4), 32, false]]
+	_check("la garde rougit sur les cadres d'avant de l'Arène Standard (hors du demi-tour)",
+		_orphelins(cadres_avant, MapCodec.get_grid_size(cartes["00000001"]), "demi_tour").size() == 2)
 	# Une table fermée par le miroir seul (la première version de l'essai) : le demi-tour la rougit.
 	var miroir_seul := (ArenaDecor.SOL_MARQUE_ESSAI["map_001"] as Array).filter(
 		func(p): return String(p[0]) != "cadre" and Vector2(p[1]).y < 14.5)

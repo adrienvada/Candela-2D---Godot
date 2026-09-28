@@ -53,26 +53,36 @@ var _est_copie := false
 ## « ZONE n », « DEATHMATCH » peints au sol, comme sur les illustrations (« ARENA » en est retiré le 2026-09-25 : dans
 ## l'illustration c'est une enseigne murale, pas un pochoir — décision relayée par la session cloud). Posés à la main, carte par carte, sous une
 ## règle d'équité : chaque pochoir a son jumeau par la symétrie de la carte (miroir gauche-droite, ou demi-tour pour la Croisée),
-## ou se pose sur son axe — les deux joueurs lisent le même décor à la même distance. Jamais à moins de trois cases d'un départ,
+## ou se pose sur son axe — les deux joueurs lisent le même décor à la même distance. ⚠️ ET son jumeau par le DEMI-TOUR, tourné
+## de 180° exactement, sur toutes les cartes (session cloud « décor demi-tour », 2026-09-28) : à 45° B, J2 regarde depuis le
+## côté opposé et voit au demi-tour de ce que voit J1. La première table fermée par le miroir seul mettait « ZONE 1 » et
+## « ZONE 2 » tous deux au sud, derrière J2 ; d'où quatre « ZONE » sur une carte en miroir (le groupe des deux miroirs et du
+## demi-tour), « ZONE 1 » côté J1, « ZONE 2 » côté J2, et deux « DEATHMATCH » tournés l'un de l'autre, chacun lu à
+## l'endroit par un joueur. La règle : `tools/demi_tour.gd`. Jamais à moins de trois cases d'un départ,
 ## toujours sur une plage de sol libre qui contient le mot. Cuits avec le reste du décor : rien de plus à dessiner par image.
 ## Une peinture SOMBRE : le sol assombri sous la lettre, jamais éclairci — noire dans le noir comme le sol, lisible dans la
 ## lumière. Une carte absente de la table (cartes des joueurs) n'en porte aucun.
 const DRAPEAU_POCHOIRS := "--pochoirs-essai"
 ## [texte, centre (cases, x puis y ; x,5 = entre deux cases : l'axe d'une carte de largeur paire), rotation en degrés]. L'Usine n'a pas de symétrie exacte (son bloc central est décalé d'une
-## case) : traitée en miroir gauche-droite.
+## case) : traitée en miroir gauche-droite ET par le demi-tour, comme si elle les avait (ses murs n'ont que le miroir haut-bas).
 const POCHOIRS_ESSAI := {
-	"00000002": [["DEATHMATCH", Vector2(11.5, 4.5), 0.0], ["DEATHMATCH", Vector2(11.5, 19.5), 0.0],
-		["ZONE 1", Vector2(4, 18), 0.0], ["ZONE 2", Vector2(19, 18), 0.0]],
-	"00000001": [["DEATHMATCH", Vector2(15.5, 6), 0.0], ["DEATHMATCH", Vector2(15.5, 26), 0.0],
-		["ZONE 1", Vector2(8, 23), 0.0], ["ZONE 2", Vector2(23, 23), 0.0]],
-	"map_001": [["DEATHMATCH", Vector2(14.5, 5), 0.0], ["DEATHMATCH", Vector2(14.5, 24), 0.0],
-		["ZONE 1", Vector2(8, 22), 0.0], ["ZONE 2", Vector2(21, 22), 0.0]],
-	"map_002": [["DEATHMATCH", Vector2(15.5, 4), 0.0], ["DEATHMATCH", Vector2(15.5, 21), 0.0],
-		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(26, 20), 0.0]],
+	"00000002": [["DEATHMATCH", Vector2(11.5, 4.5), 0.0], ["DEATHMATCH", Vector2(11.5, 18.5), 180.0],
+		["ZONE 1", Vector2(4, 18), 0.0], ["ZONE 2", Vector2(19, 18), 0.0],
+		["ZONE 2", Vector2(19, 5), 180.0], ["ZONE 1", Vector2(4, 5), 180.0]],
+	"00000001": [["DEATHMATCH", Vector2(15.5, 6), 0.0], ["DEATHMATCH", Vector2(15.5, 25), 180.0],
+		["ZONE 1", Vector2(8, 23), 0.0], ["ZONE 2", Vector2(23, 23), 0.0],
+		["ZONE 2", Vector2(23, 8), 180.0], ["ZONE 1", Vector2(8, 8), 180.0]],
+	"map_001": [["DEATHMATCH", Vector2(14.5, 5), 0.0], ["DEATHMATCH", Vector2(14.5, 24), 180.0],
+		["ZONE 1", Vector2(8, 22), 0.0], ["ZONE 2", Vector2(21, 22), 0.0],
+		["ZONE 2", Vector2(21, 7), 180.0], ["ZONE 1", Vector2(8, 7), 180.0]],
+	"map_002": [["DEATHMATCH", Vector2(15.5, 4), 0.0], ["DEATHMATCH", Vector2(15.5, 21), 180.0],
+		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(26, 20), 0.0],
+		["ZONE 2", Vector2(26, 5), 180.0], ["ZONE 1", Vector2(5, 5), 180.0]],
 	"map_003": [["DEATHMATCH", Vector2(14, 4), 0.0], ["DEATHMATCH", Vector2(13, 23), 180.0],
 		["ZONE 1", Vector2(5, 11), 0.0], ["ZONE 2", Vector2(22, 16), 180.0]],
-	"map_004": [["DEATHMATCH", Vector2(12.5, 4), 0.0], ["DEATHMATCH", Vector2(12.5, 21), 0.0],
-		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(20, 20), 0.0]],
+	"map_004": [["DEATHMATCH", Vector2(12.5, 4), 0.0], ["DEATHMATCH", Vector2(12.5, 21), 180.0],
+		["ZONE 1", Vector2(5, 20), 0.0], ["ZONE 2", Vector2(20, 20), 0.0],
+		["ZONE 2", Vector2(20, 5), 180.0], ["ZONE 1", Vector2(5, 5), 180.0]],
 }
 ## La taille de fonte : des capitales d'environ 14 pixels du monde (0,4 case), à vérifier sur la planche ; et l'assombrissement
 ## de la peinture (le sol × 0,55 sous la lettre).
@@ -98,7 +108,7 @@ var _pochoirs: Array = []
 ##   depuis le côté opposé, donc ce que J1 voit en p, J2 le voit au demi-tour de p — pas au miroir. Un tas au pied sud
 ##   d'un pilier a pour jumeau-miroir un autre pied sud, caché derrière son pilier dans la vue de J2 (mesuré à l'écran
 ##   scindé : 713 pixels assombris dans le cône de J1, 27 dans celui de J2). Les cadres suivent les pochoirs qu'ils
-##   encadrent (miroir seulement). Cadres, bandes et lettres sont symétriques par construction : posés sur un axe, ils
+##   encadrent, par le demi-tour aussi (même graine pour les deux, depuis la session « décor demi-tour »). Cadres, bandes et lettres sont symétriques par construction : posés sur un axe, ils
 ##   sont leur propre jumeau ;
 ## - **la place** : sur le sol libre, à trois cases au moins d'un départ, et à 12 px au moins de tout mur — la face d'un mur
 ##   iso lit sa lumière 12 px devant elle (`mur_iso.gdshader`, `lire_lumiere`) : une marque plus près changerait la
@@ -146,7 +156,7 @@ const SOL_MARQUE_ESSAI := {
 		["lettres", Vector2(6.0, 7.5), 180.0, "07", 0, false],
 		["lettres", Vector2(17.0, 7.5), 180.0, "07", 0, false],
 		["cadre", Vector2(11.5, 4.5), 0.0, Vector2(5.2, 1.4), 18, false],
-		["cadre", Vector2(11.5, 19.5), 0.0, Vector2(5.2, 1.4), 19, false],
+		["cadre", Vector2(11.5, 18.5), 180.0, Vector2(5.2, 1.4), 18, false],
 	],
 	"00000001": [
 		["gravats", Vector2(5.0, 3.0), 0.0, 1.8, 21, false],
@@ -194,7 +204,7 @@ const SOL_MARQUE_ESSAI := {
 		["lettres", Vector2(5.0, 20.0), 90.0, "07", 0, false],
 		["lettres", Vector2(26.0, 20.0), 270.0, "07", 0, false],
 		["cadre", Vector2(15.5, 6.0), 0.0, Vector2(5.2, 1.4), 31, false],
-		["cadre", Vector2(15.5, 26.0), 0.0, Vector2(5.2, 1.4), 32, false],
+		["cadre", Vector2(15.5, 25.0), 180.0, Vector2(5.2, 1.4), 31, false],
 		["bande", Vector2(15.5, 16.0), 90.0, 4.0, 33, false],
 		["bande", Vector2(15.5, 15.0), 90.0, 4.0, 33, false],
 	],
@@ -240,7 +250,7 @@ const SOL_MARQUE_ESSAI := {
 		["lettres", Vector2(4.5, 19.0), 90.0, "B-07", 0, false],
 		["lettres", Vector2(24.5, 19.0), 270.0, "B-07", 0, false],
 		["cadre", Vector2(14.5, 5.0), 0.0, Vector2(5.2, 1.4), 50, false],
-		["cadre", Vector2(14.5, 24.0), 0.0, Vector2(5.2, 1.4), 51, false],
+		["cadre", Vector2(14.5, 24.0), 180.0, Vector2(5.2, 1.4), 50, false],
 		["bande", Vector2(14.5, 8.0), 90.0, 2.0, 52, false],
 		["bande", Vector2(14.5, 21.0), 90.0, 2.0, 52, false],
 	],
@@ -290,7 +300,7 @@ const SOL_MARQUE_ESSAI := {
 		["lettres", Vector2(4.5, 16.5), 90.0, "C3", 0, false],
 		["lettres", Vector2(26.5, 16.5), 270.0, "C3", 0, false],
 		["cadre", Vector2(15.5, 4.0), 0.0, Vector2(5.2, 1.4), 71, false],
-		["cadre", Vector2(15.5, 21.0), 0.0, Vector2(5.2, 1.4), 72, false],
+		["cadre", Vector2(15.5, 21.0), 180.0, Vector2(5.2, 1.4), 71, false],
 	],
 	"map_003": [
 		["gravats", Vector2(8.5, 10.0), 0.0, 2.4, 81, false],
@@ -354,7 +364,7 @@ const SOL_MARQUE_ESSAI := {
 		["lettres", Vector2(4.0, 9.0), 90.0, "C3", 0, false],
 		["lettres", Vector2(21.0, 9.0), 270.0, "C3", 0, false],
 		["cadre", Vector2(12.5, 4.0), 0.0, Vector2(5.2, 1.4), 109, false],
-		["cadre", Vector2(12.5, 21.0), 0.0, Vector2(5.2, 1.4), 110, false],
+		["cadre", Vector2(12.5, 21.0), 180.0, Vector2(5.2, 1.4), 109, false],
 	],
 }
 ## Les familles symétriques par construction (leur usure est tirée sur un quart et reportée) : sur l'axe, leur propre jumeau.

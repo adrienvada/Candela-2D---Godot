@@ -14,6 +14,8 @@
 ## Lancer : godot --headless --path . --script res://tools/test_pochoirs.gd
 extends SceneTree
 
+const DemiTour := preload("res://tools/demi_tour.gd")
+
 const PLANCHER := 12
 const TUILE := 35.0
 
@@ -145,6 +147,23 @@ func _l_equite(cartes: Dictionary) -> void:
 		var orphelins := _orphelins(ArenaDecor.POCHOIRS_ESSAI.get(id, []), MapCodec.get_grid_size(d), sym_pochoirs)
 		_check("%s (%s, symétrie %s) : chaque pochoir a son jumeau" % [String(d.get("name", id)), id, sym if sym != "" else "aucune exacte — miroir"],
 			orphelins.is_empty(), str(orphelins))
+	# À 45° B (le défaut), J2 regarde depuis le côté opposé : il voit au DEMI-TOUR de ce que voit J1. Chaque pochoir a donc
+	# AUSSI son jumeau par le demi-tour — le mot jumeau, tourné de 180° exactement, pour que J2 le lise dans le sens où J1
+	# lit l'original (`tools/demi_tour.gd`, session cloud « décor demi-tour », 2026-09-28).
+	for id in cartes:
+		var d: Dictionary = cartes[id]
+		var sans := DemiTour.orphelins_pochoirs(ArenaDecor.POCHOIRS_ESSAI.get(id, []), MapCodec.get_grid_size(d))
+		_check("%s : chaque pochoir a aussi son jumeau par le demi-tour — ce que J2 lit à 45° B" % String(d.get("name", id)),
+			sans.is_empty(), str(sans))
+	# La table d'avant (ISO13) : les deux « ZONE » au sud, les « DEATHMATCH » de la Standard hors du demi-tour. Elle rougit.
+	var avant := [["DEATHMATCH", Vector2(15.5, 6), 0.0], ["DEATHMATCH", Vector2(15.5, 26), 0.0],
+		["ZONE 1", Vector2(8, 23), 0.0], ["ZONE 2", Vector2(23, 23), 0.0]]
+	_check("la garde rougit sur la table d'avant de l'Arène Standard (4 orphelins par le demi-tour)",
+		DemiTour.orphelins_pochoirs(avant, MapCodec.get_grid_size(cartes["00000001"])).size() == 4)
+	var endroit: Array = (ArenaDecor.POCHOIRS_ESSAI["map_001"] as Array).duplicate(true)
+	endroit[1] = [endroit[1][0], endroit[1][1], 0.0]
+	_check("la garde rougit sur un jumeau par le demi-tour qui ne se retourne pas (lu à l'envers par J2)",
+		not DemiTour.orphelins_pochoirs(endroit, MapCodec.get_grid_size(cartes["map_001"])).is_empty())
 	# La garde rougit : un « DEATHMATCH » du Cloître décalé d'une demi-case perd son jumeau.
 	var faux: Array = (ArenaDecor.POCHOIRS_ESSAI["map_001"] as Array).duplicate(true)
 	faux[0] = ["DEATHMATCH", Vector2(15, 5), 0.0]
