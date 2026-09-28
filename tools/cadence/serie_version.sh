@@ -52,6 +52,10 @@
 #     ESSAI_CLOUD=1 SECONDES=5 GODOT=godot xvfb-run -a -s "-screen 0 1920x1080x24" \
 #       tools/cadence/serie_version.sh <A> <B> /tmp/essai-cloud             # le VRAI banc sous Xvfb, charges simulées
 set -uo pipefail
+# Tout le script est dans un bloc : bash le lit EN ENTIER avant d'en exécuter la première ligne. Sans lui, modifier
+# le fichier pendant une série fait exécuter à bash du texte décalé (payé le 2026-09-28 dans le cloud : « rendre:
+# command not found », puis une septième prise qui n'était pas dans l'ordre).
+{
 DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$DEPOT" || exit 1
 BLANC="${ESSAI_A_BLANC:-0}"
@@ -435,3 +439,5 @@ fi
 if [ "$SECONDES" -lt 20 ]; then
   echo "⚠ SECONDES=$SECONDES : le 1 % bas « hors 10 s » n'a presque aucune image — ces chiffres ne valent rien." | tee -a "$OUT/serie.txt"
 fi
+exit
+}

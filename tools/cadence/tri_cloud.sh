@@ -19,8 +19,12 @@
 # commit n'y est écrit. Environ 4 min par lancement sous llvmpipe ; lancer en parallèle n'accélère rien (rapport Budget).
 #
 # Variables : GODOT (défaut `godot`), ARBRES (défaut /tmp/candela-arbres), PLAFOND (secondes par lancement, 1800),
-# TEMOIN (1), SCENES (cartes,pompe).
+# TEMOIN (1), SCENES (cartes,pompe), PLIER (voir plus bas : les coûts derrière un uniforme).
 set -u
+# Tout le script est dans un bloc : bash le lit EN ENTIER avant d'en exécuter la première ligne. Sans lui, modifier
+# le fichier pendant une série fait exécuter à bash du texte décalé (payé le 2026-09-28 dans le cloud : « rendre:
+# command not found », puis une septième prise qui n'était pas dans l'ordre).
+{
 DEPOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$DEPOT" || exit 1
 GODOT="${GODOT:-godot}"
@@ -87,7 +91,11 @@ if [ "${1:-}" = "--essais" ]; then
     lancer "$nom" "$ARBRE" $drapeaux
     NOMS+=("$nom")
   done
-  python3 "$DEPOT/tools/cadence/tri.py" "$SORTIE" ref $([ "${TEMOIN:-1}" = "1" ] && echo --temoin=temoin) "${NOMS[@]}"
+  # PLIER="<nom>:<uniforme>[,<uniforme>] …" : les essais dont le coût est derrière un UNIFORME (aucun programme nouveau :
+  # `--mannequin`, `--lampe-claire`…). `tri.py` compile alors leurs programmes uniforme à 0 puis à 1 et compte la branche.
+  # shellcheck disable=SC2046
+  python3 "$DEPOT/tools/cadence/tri.py" "$SORTIE" ref $([ "${TEMOIN:-1}" = "1" ] && echo --temoin=temoin) \
+    $(for x in ${PLIER:-}; do echo "--plier=$x"; done) "${NOMS[@]}"
 else
   A="${1:?tête A}"; B="${2:?tête B}"; SORTIE="${3:?sortie}"
   mkdir -p "$SORTIE"; SORTIE="$(cd "$SORTIE" && pwd)"; XDG="$SORTIE/.xdg"
@@ -110,6 +118,10 @@ else
     echo
     echo "Et les scripts qui les allument (défauts) : $(git diff --stat "$A" "$B" -- '*.gd' ':!tools/*' | tail -1)"
   } > "$SORTIE/shaders_git.md"
-  python3 "$DEPOT/tools/cadence/tri.py" "$SORTIE" A $([ "${TEMOIN:-1}" = "1" ] && echo --temoin=temoin) B
+  # shellcheck disable=SC2046
+  python3 "$DEPOT/tools/cadence/tri.py" "$SORTIE" A $([ "${TEMOIN:-1}" = "1" ] && echo --temoin=temoin) \
+    $(for x in ${PLIER:-}; do echo "--plier=$x"; done) B
   cat "$SORTIE/shaders_git.md"
 fi
+exit
+}

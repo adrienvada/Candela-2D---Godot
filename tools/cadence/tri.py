@@ -64,9 +64,13 @@ SORTIE = sys.argv[1]
 REF = sys.argv[2]
 TEMOIN = None
 NOMS = []
+PLIER = {}
 for a in sys.argv[3:]:
     if a.startswith("--temoin="):
         TEMOIN = a.split("=", 1)[1]
+    elif a.startswith("--plier="):
+        n, u = a.split("=", 1)[1].split(":", 1)
+        PLIER[n] = [x for x in u.split(",") if x]
     else:
         NOMS.append(a)
 
@@ -171,6 +175,48 @@ def compter(frag):
                 pass
     json.dump(c, open(memo, "w"))
     return c
+
+
+def plier(frag, uniformes, valeur):
+    """Le fragment avec chaque USAGE des uniformes remplacé par une constante (la déclaration gardée) : spirv-opt élague
+    alors la branche morte, et la différence des comptes à 0 et à 1 est le code que l'uniforme allume. Un float vaut
+    0.0 / 1.0, un int 0 / 1, un bool false / true."""
+    lignes = frag.split("\n")
+    for u in uniformes:
+        m = re.search(r"^\s*(?:highp |mediump |lowp )?(float|int|uint|bool) m_%s;" % re.escape(u), frag, re.M)
+        if not m:
+            continue
+        typ = m.group(1)
+        cst = {"float": ("0.0", "1.0"), "int": ("0", "1"), "uint": ("0u", "1u"), "bool": ("false", "true")}[typ][valeur]
+        motif = re.compile(r"\bm_%s\b" % re.escape(u))
+        # Les accès passent par le bloc des uniformes de matière (`material.m_x` ou `m_x`, selon Godot) : on remplace
+        # l'expression entière, préfixe compris.
+        motif_acces = re.compile(r"\b(?:\w+\.)?m_%s\b" % re.escape(u))
+        lignes = [l if motif.search(l) and re.match(r"^\s*(?:highp |mediump |lowp )?\w+ m_%s;" % re.escape(u), l)
+                  else motif_acces.sub("(%s)" % cst, l) for l in lignes]
+    return "\n".join(lignes)
+
+
+def branche_uniforme(nom, uniformes):
+    """Pour chaque programme du lancement <nom> qui lit un de ces uniformes : les comptes du programme uniforme à 1, et
+    leur écart à l'uniforme à 0 — le coût de la branche qu'il allume, PAR PIXEL de ce programme."""
+    out = []
+    vus = set()
+    for h, (chemin, frag) in programmes(nom).items():
+        if not any(re.search(r"\bm_%s\b" % re.escape(u), frag) for u in uniformes):
+            continue
+        a, b = compter(plier(frag, uniformes, 0)), compter(plier(frag, uniformes, 1))
+        if "erreur" in a or "erreur" in b:
+            out.append({"programme": os.path.basename(chemin), "erreur": (a.get("erreur") or b.get("erreur"))[:120]})
+            continue
+        cle = (b["instructions"] - a["instructions"], b["lectures"] - a["lectures"], b["boucles"] - a["boucles"])
+        if cle in vus:
+            continue
+        vus.add(cle)
+        out.append({"programme": os.path.basename(chemin), "instructions": b["instructions"],
+                    "d_instructions": cle[0], "d_lectures": cle[1], "d_boucles": cle[2],
+                    "famille": sorted(i for i in identifiants(frag) if i.startswith("m_"))[:3]})
+    return sorted(out, key=lambda x: -x.get("d_instructions", 0))
 
 
 def identifiants(frag):
@@ -310,7 +356,22 @@ for nom in NOMS:
         sh["detail"] = [p for p in sh["detail"] if (p.get("d_instructions"), p.get("d_lectures"), p.get("d_boucles"),
                                                      tuple(p.get("nouveau_code", []))) not in vus_t]
     part = part_ecran(REF, nom) or {}
+    if nom in PLIER:
+        # Le coût derrière un uniforme : compté comme un programme nouveau (la branche allumée contre la branche éteinte).
+        for b in branche_uniforme(nom, PLIER[nom]):
+            if "erreur" not in b:
+                sh["detail"].append({"programme": b["programme"] + " (uniforme " + ",".join(PLIER[nom]) + " plié)",
+                                     "proche": "le même, uniforme à 0", "ressemblance": 1.0,
+                                     "instructions": b["instructions"], "lectures": 0, "boucles": 0,
+                                     "d_instructions": b["d_instructions"], "d_lectures": b["d_lectures"],
+                                     "d_boucles": b["d_boucles"], "nouveau_code": ["uniforme " + ",".join(PLIER[nom])],
+                                     "famille": b["famille"]})
+        sh["detail"].sort(key=lambda x: -x.get("d_instructions", 0))
     classe, raisons, geometrie = classer(c, sh, part, bruit)
+    if not sh["detail"] and nom not in PLIER and part and max(part.values()) > 2 * max(bruit_part, PART_NEGLIGEABLE):
+        raisons.append("ⓘ l'image change (%.2f %% de l'écran) sans programme nouveau : un coût derrière un UNIFORME est "
+                       "possible, que la comparaison des programmes ne voit pas (--plier=%s:<uniforme>)"
+                       % (100 * max(part.values()), nom))
     resultats["essais"][nom] = {"comptes": c, "shaders": sh, "part": part, "classe": classe, "raisons": raisons,
                                 "geometrie": geometrie, "etat_plus": sorted(etat(nom) - etat(REF)),
                                 "etat_moins": sorted(etat(REF) - etat(nom)),
