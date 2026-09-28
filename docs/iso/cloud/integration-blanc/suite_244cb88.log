@@ -1,0 +1,178 @@
+── Le jeu démarre-t-il ? ──
+demarrage                    OK
+
+test_liaisons                OK
+test_icones_editeur          OK
+test_map_codec               OK
+test_map_geometry            OK
+test_mur_led                 OK
+test_arena_build             OK
+test_editor_tools            OK
+test_classes                 OK
+test_match_format            OK
+test_pause_menu              OK
+test_menu_hub                OK
+test_comic_panel             OK
+test_audio_settings          OK
+test_match_history_view      OK
+test_effect_policy           OK
+test_screen_leaderboard      OK
+test_screen_profile          OK
+test_screen_historique       OK
+test_arsenal                 OK
+test_matchmaking             OK
+test_screen_matchmaking      OK
+test_screen_audio            OK
+test_screen_calibration      OK
+test_match_banner            OK
+test_carte_partagee          OK
+test_rejeu_journal           OK
+test_pseudo                  OK
+test_protocole               OK
+test_vitrine_menus           OK
+test_menu_artworks           OK
+test_intro_planches          OK
+test_enseigne                OK
+test_audit_menus             OK
+test_pool_sfx                OK
+test_musique                 OK
+test_oreille                 OK
+test_ecran_de_fin            OK
+test_serie_de_session        OK
+test_vision                  OK
+test_eblouissement           OK
+test_brouillage              OK
+test_rejeu                   OK
+test_releve_balistique       OK
+test_curseur_systeme         OK
+test_curseur_joystick        OK
+test_banc                    OK
+test_rendu_racine            OK
+test_prediction_tir          OK
+test_mise_a_jour             OK
+test_charte                  OK
+test_habillage               OK
+test_bandeau_fatal           OK
+test_autoloads               OK
+test_torches                 OK
+test_torche_bouton           OK
+test_lumieres                OK
+test_viseur                  OK
+test_marche                  OK
+test_sprites                 OK
+test_dosage_audio            OK
+test_planche_marche          OK
+test_fusee                   OK
+test_munitions_recharge      OK
+test_sang_au_sol             OK
+test_bilan_de_soiree         OK
+test_hatch_shader            OK
+test_inked_icons             OK
+test_arena_matter            OK
+test_arena_lighting          OK
+test_hud_style               OK
+test_menus_finitions         OK
+test_conditions_de_match     OK
+test_encrage                 OK
+test_curseurs_branches       OK
+test_calques_joueur          OK
+test_fusee_eteinte           OK
+test_telemetrie_gadgets      OK
+test_murs_bas                OK
+test_murs_bas_rendu          OK
+test_proto_iso               OK
+test_voxel_corps             OK
+test_voxel_objets            OK
+test_banc_iso                OK
+test_iso_geometrie           OK
+test_iso_equite              OK
+test_iso_camera              OK
+test_iso_vues                OK
+test_iso_corps               OK
+test_iso_murs_bas            OK
+test_iso_objets              OK
+test_iso_killcam             OK
+test_killcam_calme           OK
+test_iso_beaute              OK
+test_iso_gadgets             OK
+test_iso_torches3d           OK
+test_corps_portraits         OK
+test_corps_mannequin         OK
+test_menus_voxel             OK
+test_iso_usure               OK
+test_corps_detail            OK
+test_pochoirs                OK
+test_gris_egaux              OK
+test_tir_et_reserves         OK
+test_netcode                 OK
+test_halo_proximite          OK
+test_accroupi                OK
+test_fin_de_match            OK
+test_entrainement            OK
+test_fenetre_de_choix        OK
+test_depart_apparie          OK
+test_eblouissement_en_jeu    OK
+── Match en ligne à deux instances (ENet, 127.0.0.1) ──  (port 25133)
+hôte prêt : CODE: 25133
+TÉLÉMÉTRIE OK — les deux archives disent la même chose
+HÔTE    OK
+CLIENT   OK
+--- le match à deux instances passe ---
+duo_enet                     OK
+── Départ d'un match apparié, sans porte PRÊT ──  (port 25133)
+hôte prêt : CODE: 25133
+HÔTE    OK
+CLIENT   OK
+--- le match à deux instances passe ---
+duo_apparie                  OK
+── Coupure de l'adversaire pendant le décompte (famille 3) ──  (port 25133)
+hôte prêt : CODE: 25133
+./tools/run_duo.sh: line 296:  7315 Killed                  "$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet --no-eos > "$CLIENT_LOG" 2>&1
+HÔTE    OK
+CLIENT   OK (coupé, code 137)
+--- le match à deux instances passe ---
+duo_coupure                  OK
+── La pause en ligne ne gèle rien (famille 1) ──  (port 25133)
+hôte prêt : CODE: 25133
+HÔTE    OK
+CLIENT   OK
+--- le match à deux instances passe ---
+duo_pause                    OK
+── RPC pendant la killcam (famille 2) ──  (port 25133)
+hôte prêt : CODE: 25133
+HÔTE    OK
+CLIENT   OK
+--- le match à deux instances passe ---
+duo_killcam                  OK
+── Coupure pendant le ralenti (famille 5.3) ──  (port 25133)
+hôte prêt : CODE: 25133
+./tools/run_duo.sh: line 296:  7535 Killed                  "$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet --no-eos > "$CLIENT_LOG" 2>&1
+HÔTE    OK
+CLIENT   OK (coupé, code 137)
+--- le match à deux instances passe ---
+duo_ralenti                  OK
+── Martèlement de « prêt » des deux côtés (famille 6) ──  (port 25133)
+hôte prêt : CODE: 25133
+HÔTE    OK
+CLIENT   OK
+--- le match à deux instances passe ---
+duo_spam                     OK
+── Il quitte pendant la killcam et revient PENDANT (famille 4.1) ──  (port 25133)
+hôte prêt : CODE: 25133
+./tools/run_duo.sh: line 296:  7688 Killed                  "$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet --no-eos > "$CLIENT_LOG" 2>&1
+HÔTE    OK
+CLIENT   OK (coupé, code 137)
+REVENANT OK
+--- le match à deux instances passe ---
+duo_reconnexion              OK
+── Il quitte pendant la killcam et revient APRÈS (famille 4.2) ──  (port 25133)
+hôte prêt : CODE: 25133
+./tools/run_duo.sh: line 296:  7974 Killed                  "$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet --no-eos > "$CLIENT_LOG" 2>&1
+HÔTE    OK
+CLIENT   OK (coupé, code 137)
+REVENANT OK
+--- le match à deux instances passe ---
+duo_reconnexion_tardive      OK
+user:// de ce lot : /tmp/tmp.s7nUbAXvrX (ce script n'y supprime rien)
+port UDP de ce lot : 25133 (dérivé du foyer, jamais recalculé)
+--- tout passe, sans erreur de script (594s) ---
