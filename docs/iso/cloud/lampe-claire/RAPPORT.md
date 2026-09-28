@@ -207,7 +207,7 @@ clair **paraît** plus éblouissant à l'œil (voir « Ce que je n'ai pas pu pro
 - **`pgrep -f <motif>` dans une boucle d'attente se trouve lui-même** (le motif est dans sa propre ligne de commande) :
   la boucle ne finit jamais. Piège d'outillage, payé ici trois fois.
 
-- **Deux `.uid` manquent à la base** (hors de ma tâche, signalé, non corrigé) : `godot --headless --path . --import` sur
+- **Deux `.uid` manquaient à la base** (hors de ma tâche ; ajoutés tels que l’import les engendre, pour laisser l’arbre propre) : `godot --headless --path . --import` sur
   a30a407 engendre `tools/banc_equite_fusee.gd.uid` et `volume_masque.gdshaderinc.uid`, absents du dépôt. Sans effet sur
   la suite ; ils réapparaîtront dans chaque arbre neuf.
 
