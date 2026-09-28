@@ -1,0 +1,98 @@
+spécialisation comparée : APPLY_TONEMAPPING BASE_PASS DISABLE_REFLECTION_PROBE DO_SIDE_CHECK FOG_DISABLED FRAGMENT_CODE_USED MATERIAL_UNIFORMS_USED MODE_UNSHADED SHADOWS_DISABLED USE_GLES_OVER_GL USE_HALF2FLOAT USE_RADIANCE_MAP VERTEX_CODE_USED ViewIndex ViewIndex samplerExternalOES
+forme du masque        | usure      | instr. optimisées | lectures (statiques) | branchements | boucles | math | fichier
+Gadgets                | usure      |             14649 |                   98 |          659 |      15 | 2289 | 319.shader_test
+bande resserrée        | usure      |              5759 |                   40 |          274 |       6 |  705 | 349.shader_test
+compacte               | usure      |              6079 |                   42 |          288 |       6 |  759 | 334.shader_test
+pochoir : le juge      | usure      |              4242 |                   23 |          190 |       6 |  557 | 364.shader_test
+pochoir : le juge, lumière d'abord | usure      |              4373 |                   23 |          197 |       7 |  572 | 394.shader_test
+pochoir : les couches  | sans usure |              1966 |                   17 |           92 |       1 |  156 | 379.shader_test
+sans masque            | sans usure |              1964 |                   17 |           92 |       1 |  156 | 299.shader_test
+
+— Gadgets, usure : les fonctions du masque AVANT inlining (propre / recopiée à chaque appel / lectures recopiées)
+  main                                   445    27123    98   appelle m_masque_montre_noir×1, m_lightmap_pateuse×1, m_pate×1, srgb_to_linear×2
+  m_masque_montre_noir                   700    24207    81   appelle m_derivee_sur_plan×2, m_occupe×2, m_dessus_montre_noir×2, m_face_montre_noir×3, m_sol_montre_noir×1
+  m_sol_montre_noir                      156    13061    30   appelle m_sol_couture×2, m_sol_montre_noir_au_point×5
+  m_face_montre_noir                     157     2744    15   appelle m_lire_etalon×2, m_lire_lumiere_moyenne×1, m_lightmap_pateuse_lue×1, m_pate_facteur×2, m_pate_luminance×2, m_usure_face×1
+  m_sol_montre_noir_au_point             174     2567     6   appelle m_pate_luminance×3, m_pate×1, m_sol_ecrit×1
+  m_sol_ecrit                            235     1702     4   appelle m_pate×1, m_pate_facteur×3
+  m_lightmap_pateuse                      98     1283    12   appelle m_lire_lightmap×6, m_pate_luminance×6, m_pate×1
+  m_dessus_montre_noir                    53     1038     2   appelle m_pate×1
+  m_lire_lumiere_moyenne                  58      802    12   appelle m_lire_lumiere×4
+  m_usure_face                           327      746     0   appelle m_pate_bruit×5, m_pate_hash×3
+  m_lightmap_pateuse_lue                  35      516     0   appelle m_pate×1
+  m_pate                                 271      477     0   appelle m_pate_trait×2, m_pate_bruit×2
+  m_mur_temperature_de                    50      379     0   appelle 
+  m_usure_sol                            138      250     0   appelle m_pate_hash×5
+
+— bande resserrée, usure : les fonctions du masque AVANT inlining (propre / recopiée à chaque appel / lectures recopiées)
+  main                                   445     9589    40   appelle m_masque_compact_montre_noir×1, m_lightmap_pateuse×1, m_pate×1, srgb_to_linear×2
+  m_masque_compact_montre_noir           701     6673    23   appelle m_derivee_sur_plan×2, m_occupe×2, m_sol_montre_noir_compact×1, m_dessus_montre_noir×1, m_face_montre_noir×1
+  m_face_montre_noir                     157     2744    15   appelle m_lire_etalon×2, m_lire_lumiere_moyenne×1, m_lightmap_pateuse_lue×1, m_pate_facteur×2, m_pate_luminance×2, m_usure_face×1
+  m_sol_montre_noir_compact              140     2052     4   appelle m_sol_couture×2, m_sol_montre_noir_resserre_au_point×1
+  m_sol_montre_noir_resserre_au_point    197     1842     4   appelle m_pate_luminance×3, m_pate×1, m_sol_ecrit_depuis×1
+  m_lightmap_pateuse                      98     1283    12   appelle m_lire_lightmap×6, m_pate_luminance×6, m_pate×1
+  m_dessus_montre_noir                    53     1038     2   appelle m_pate×1
+  m_sol_ecrit_depuis                      95      942     1   appelle m_pate_facteur×3
+  m_lire_lumiere_moyenne                  58      802    12   appelle m_lire_lumiere×4
+  m_usure_face                           327      746     0   appelle m_pate_bruit×5, m_pate_hash×3
+  m_lightmap_pateuse_lue                  35      516     0   appelle m_pate×1
+  m_pate                                 271      477     0   appelle m_pate_trait×2, m_pate_bruit×2
+  m_mur_temperature_de                    50      379     0   appelle 
+  m_usure_sol                            138      250     0   appelle m_pate_hash×5
+
+— compacte, usure : les fonctions du masque AVANT inlining (propre / recopiée à chaque appel / lectures recopiées)
+  main                                   445    10314    42   appelle m_masque_compact_montre_noir×1, m_lightmap_pateuse×1, m_pate×1, srgb_to_linear×2
+  m_masque_compact_montre_noir           701     7398    25   appelle m_derivee_sur_plan×2, m_occupe×2, m_sol_montre_noir_compact×1, m_dessus_montre_noir×1, m_face_montre_noir×1
+  m_sol_montre_noir_compact              140     2777     6   appelle m_sol_couture×2, m_sol_montre_noir_au_point×1
+  m_face_montre_noir                     157     2744    15   appelle m_lire_etalon×2, m_lire_lumiere_moyenne×1, m_lightmap_pateuse_lue×1, m_pate_facteur×2, m_pate_luminance×2, m_usure_face×1
+  m_sol_montre_noir_au_point             174     2567     6   appelle m_pate_luminance×3, m_pate×1, m_sol_ecrit×1
+  m_sol_ecrit                            235     1702     4   appelle m_pate×1, m_pate_facteur×3
+  m_lightmap_pateuse                      98     1283    12   appelle m_lire_lightmap×6, m_pate_luminance×6, m_pate×1
+  m_dessus_montre_noir                    53     1038     2   appelle m_pate×1
+  m_lire_lumiere_moyenne                  58      802    12   appelle m_lire_lumiere×4
+  m_usure_face                           327      746     0   appelle m_pate_bruit×5, m_pate_hash×3
+  m_lightmap_pateuse_lue                  35      516     0   appelle m_pate×1
+  m_pate                                 271      477     0   appelle m_pate_trait×2, m_pate_bruit×2
+  m_mur_temperature_de                    50      379     0   appelle 
+  m_usure_sol                            138      250     0   appelle m_pate_hash×5
+
+— pochoir : le juge, usure : les fonctions du masque AVANT inlining (propre / recopiée à chaque appel / lectures recopiées)
+  main                                   214     7170    23   appelle m_masque_compact_montre_noir×1, srgb_to_linear×2
+  m_masque_compact_montre_noir           701     6673    23   appelle m_derivee_sur_plan×2, m_occupe×2, m_sol_montre_noir_compact×1, m_dessus_montre_noir×1, m_face_montre_noir×1
+  m_face_montre_noir                     157     2744    15   appelle m_lire_etalon×2, m_lire_lumiere_moyenne×1, m_lightmap_pateuse_lue×1, m_pate_facteur×2, m_pate_luminance×2, m_usure_face×1
+  m_sol_montre_noir_compact              140     2052     4   appelle m_sol_couture×2, m_sol_montre_noir_resserre_au_point×1
+  m_sol_montre_noir_resserre_au_point    197     1842     4   appelle m_pate_luminance×3, m_pate×1, m_sol_ecrit_depuis×1
+  m_dessus_montre_noir                    53     1038     2   appelle m_pate×1
+  m_sol_ecrit_depuis                      95      942     1   appelle m_pate_facteur×3
+  m_lire_lumiere_moyenne                  58      802    12   appelle m_lire_lumiere×4
+  m_usure_face                           327      746     0   appelle m_pate_bruit×5, m_pate_hash×3
+  m_lightmap_pateuse_lue                  35      516     0   appelle m_pate×1
+  m_pate                                 271      477     0   appelle m_pate_trait×2, m_pate_bruit×2
+  m_mur_temperature_de                    50      379     0   appelle 
+  m_usure_sol                            138      250     0   appelle m_pate_hash×5
+
+— pochoir : le juge, lumière d'abord, usure : les fonctions du masque AVANT inlining (propre / recopiée à chaque appel / lectures recopiées)
+  main                                   214     7463    23   appelle m_masque_compact_montre_noir×1, srgb_to_linear×2
+  m_masque_compact_montre_noir           701     6966    23   appelle m_derivee_sur_plan×2, m_occupe×2, m_sol_montre_noir_compact×1, m_dessus_montre_noir×1, m_face_montre_noir×1
+  m_face_montre_noir                     157     2744    15   appelle m_lire_etalon×2, m_lire_lumiere_moyenne×1, m_lightmap_pateuse_lue×1, m_pate_facteur×2, m_pate_luminance×2, m_usure_face×1
+  m_sol_montre_noir_compact              140     2345     4   appelle m_sol_couture×2, m_sol_montre_noir_resserre_au_point×1
+  m_sol_montre_noir_resserre_au_point    260     2135     4   appelle m_pate_luminance×3, m_pate_trait_de_bord×2, m_contact_des_corps×2, m_pate×1, m_sol_ecrit_depuis×1
+  m_dessus_montre_noir                    53     1038     2   appelle m_pate×1
+  m_sol_ecrit_depuis                      95      942     1   appelle m_pate_facteur×3
+  m_lire_lumiere_moyenne                  58      802    12   appelle m_lire_lumiere×4
+  m_usure_face                           327      746     0   appelle m_pate_bruit×5, m_pate_hash×3
+  m_lightmap_pateuse_lue                  35      516     0   appelle m_pate×1
+  m_pate                                 271      477     0   appelle m_pate_trait×2, m_pate_bruit×2
+  m_mur_temperature_de                    50      379     0   appelle 
+  m_usure_sol                            138      250     0   appelle m_pate_hash×5
+
+— pochoir : les couches, sans usure : les fonctions du masque AVANT inlining (propre / recopiée à chaque appel / lectures recopiées)
+  main                                   402     2873    17   appelle m_lightmap_pateuse×1, m_pate×1, srgb_to_linear×2
+  m_lightmap_pateuse                      98     1283    12   appelle m_lire_lightmap×6, m_pate_luminance×6, m_pate×1
+  m_pate                                 271      477     0   appelle m_pate_trait×2, m_pate_bruit×2
+  m_lire_lightmap_lissee                  42      156     2   appelle 
+  m_lire_lightmap                        110      114     2   appelle 
+  m_pate_temperature_graduee_neutre       64       97     0   appelle m_pate_luminance×4
+  m_pate_bruit                            49       77     0   appelle m_pate_hash×4
+  m_pate_poids_neutre                     32       32     0   appelle 
+  m_pate_trait                            24       24     0   appelle 

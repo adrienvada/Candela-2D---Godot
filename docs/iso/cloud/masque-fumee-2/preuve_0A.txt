@@ -1,0 +1,176 @@
+
+== Gadgets (--fumee-masque) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 9 « fuites » et 301 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10333 pixels
+   VERDICT : PASSE
+
+== Gadgets, seconde prise (le bruit entre deux prises) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 3 « fuites » et 250 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10276 pixels
+   VERDICT : PASSE
+   écart au masque de Gadgets : 128 pixels (écart max 54/255) — fumée perdue 61, gardée en plus 0, autre 67 ; dont 8 sur un pixel noir dans A, 57 égaux à B (la fumée sans masque)
+   HORS de l'ensemble instable, là où la fumée change l'image (A ≠ B) : 0 pixels diffèrent du masque de Gadgets, dont 0 sur un pixel noir dans A ; et 0 où A = B (le décor a bougé, pas le masque)
+
+== compacte (--fumee-masque-compact) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 5 « fuites » et 191 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10182 pixels
+   VERDICT : PASSE
+   écart au masque de Gadgets : 207 pixels (écart max 108/255) — fumée perdue 85, gardée en plus 17, autre 105 ; dont 14 sur un pixel noir dans A, 151 égaux à B (la fumée sans masque)
+   HORS de l'ensemble instable, là où la fumée change l'image (A ≠ B) : 0 pixels diffèrent du masque de Gadgets, dont 0 sur un pixel noir dans A ; et 0 où A = B (le décor a bougé, pas le masque)
+
+== bande resserrée (--fumee-masque-resserre) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 4 « fuites » et 183 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10175 pixels
+   VERDICT : PASSE
+   écart au masque de Gadgets : 208 pixels (écart max 108/255) — fumée perdue 80, gardée en plus 18, autre 110 ; dont 13 sur un pixel noir dans A, 158 égaux à B (la fumée sans masque)
+   HORS de l'ensemble instable, là où la fumée change l'image (A ≠ B) : 0 pixels diffèrent du masque de Gadgets, dont 0 sur un pixel noir dans A ; et 0 où A = B (le décor a bougé, pas le masque)
+
+== pochoir (--fumee-masque-pochoir) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 9 « fuites » et 317 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10349 pixels
+   VERDICT : PASSE
+   écart au masque de Gadgets : 80 pixels (écart max 27/255) — fumée perdue 61, gardée en plus 0, autre 19 ; dont 1 sur un pixel noir dans A, 0 égaux à B (la fumée sans masque)
+   HORS de l'ensemble instable, là où la fumée change l'image (A ≠ B) : 0 pixels diffèrent du masque de Gadgets, dont 0 sur un pixel noir dans A ; et 0 où A = B (le décor a bougé, pas le masque)
+
+== lumière d'abord (--fumee-masque-lumiere) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 6 « fuites » et 131 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10113 pixels
+   VERDICT : PASSE
+   écart au masque de Gadgets : 300 pixels (écart max 108/255) — fumée perdue 134, gardée en plus 49, autre 117 ; dont 15 sur un pixel noir dans A, 236 égaux à B (la fumée sans masque)
+   HORS de l'ensemble instable, là où la fumée change l'image (A ≠ B) : 0 pixels diffèrent du masque de Gadgets, dont 0 sur un pixel noir dans A ; et 0 où A = B (le décor a bougé, pas le masque)
+
+== juge ajusté (--fumee-masque-ajuste) ==
+   exclus : 425 pixels instables (cinq A), 8973 du corps de J1 — dont 0 « fuites » et 259 « pertes », comptées à part
+   1. fuite : 0
+   2. perte : 0, dont 0 à un pixel d'une frontière noir/non-noir, 0 sur une couture (aucune) — ensemble ≤ 200 admis — et 0 ailleurs
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte : 0
+   1. fuite : 0
+   2. perte (exception déclarée, comptée à part) : 0
+   trous (sol noir isolé, fumée tue en C, visible en B) : 2 · boîte (1293, 233, 1305, 252)
+   3. témoins : B ≠ A sur 233417 pixels · C ≠ B sur 10272 pixels
+   VERDICT : PASSE
+   écart au masque de Gadgets : 251 pixels (écart max 108/255) — fumée perdue 241, gardée en plus 0, autre 10 ; dont 9 sur un pixel noir dans A, 77 égaux à B (la fumée sans masque)
+   HORS de l'ensemble instable, là où la fumée change l'image (A ≠ B) : 0 pixels diffèrent du masque de Gadgets, dont 0 sur un pixel noir dans A ; et 0 où A = B (le décor a bougé, pas le masque)
+
+== écran scindé : la zone où la scène a bougé pendant une prise sous pochoir (ni A ni B, élargie de 12 px) : 1032169 pixels exclus, boîte (443, -12, 1931, 1091)
+
+== écran scindé, s-c3, J1 (gauche) == 252906 pixels noirs dans A (16979 instables exclus) ; la fumée sans masque en allume 1402 ; fuite : Gadgets 0, cette forme 0 ; elle diffère de Gadgets sur 0 pixels, du pochoir (s-c3) sur 0 ; allumés là où B est noir aussi (le décor, pas la fumée) : 0
+
+== écran scindé, s-c3, J2 (droite) == 0 pixels noirs dans A (967266 instables exclus) ; la fumée sans masque en allume 0 ; fuite : Gadgets 0, cette forme 0 ; elle diffère de Gadgets sur 7 pixels, du pochoir (s-c3) sur 0 ; allumés là où B est noir aussi (le décor, pas la fumée) : 0
+
+== écran scindé, s-c4, J1 (gauche) == 252906 pixels noirs dans A (16979 instables exclus) ; la fumée sans masque en allume 1402 ; fuite : Gadgets 0, cette forme 0 ; elle diffère de Gadgets sur 0 pixels, du pochoir (s-c3) sur 0 ; allumés là où B est noir aussi (le décor, pas la fumée) : 0
+
+== écran scindé, s-c4, J2 (droite) == 0 pixels noirs dans A (967266 instables exclus) ; la fumée sans masque en allume 0 ; fuite : Gadgets 0, cette forme 0 ; elle diffère de Gadgets sur 7 pixels, du pochoir (s-c3) sur 0 ; allumés là où B est noir aussi (le décor, pas la fumée) : 0
+
+== écran scindé, s-c5, J1 (gauche) == 252906 pixels noirs dans A (16979 instables exclus) ; la fumée sans masque en allume 1402 ; fuite : Gadgets 0, cette forme 0 ; elle diffère de Gadgets sur 0 pixels, du pochoir (s-c3) sur 0 ; allumés là où B est noir aussi (le décor, pas la fumée) : 0
+
+== écran scindé, s-c5, J2 (droite) == 0 pixels noirs dans A (967266 instables exclus) ; la fumée sans masque en allume 0 ; fuite : Gadgets 0, cette forme 0 ; elle diffère de Gadgets sur 9 pixels, du pochoir (s-c3) sur 2 ; allumés là où B est noir aussi (le décor, pas la fumée) : 0
+
+== VUE UNIQUE DE J2 == 473119 pixels instables exclus ; 0 pixels noirs dans A, dont 0 que la fumée sans masque allume ; la fumée change 228615 pixels (témoin)
+   Gadgets          fuite 0 (pixels noirs que la fumée salit, tus : 0 sur 0) ; écart au masque de Gadgets là où la fumée change l'image : 0 ; au pochoir : 952 ; ni A ni B : 0
+   pochoir          fuite 0 (pixels noirs que la fumée salit, tus : 0 sur 0) ; écart au masque de Gadgets là où la fumée change l'image : 333 ; au pochoir : 0 ; ni A ni B : 1609
+   lumière d'abord  fuite 0 (pixels noirs que la fumée salit, tus : 0 sur 0) ; écart au masque de Gadgets là où la fumée change l'image : 320 ; au pochoir : 1715 ; ni A ni B : 1759
+   juge ajusté      fuite 0 (pixels noirs que la fumée salit, tus : 0 sur 0) ; écart au masque de Gadgets là où la fumée change l'image : 354 ; au pochoir : 1709 ; ni A ni B : 1766
+   ⚠ SANS VERDICT : aucun pixel noir dans A (la vue de J2 est relevée) — ni le noir ni l'égalité ne s'y jugent
+
+== compte == niveaux lus [11, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [376, 44108, 155, 252378] ; FRAGMENTS 1098569 (3.70 par pixel couvert) ; par surface montrée : {'sol': 1048914, 'face': 49528, 'dessus': 127} ; exclus (allumés sans fumée) 160046
+
+== compte-visible == niveaux lus [11, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [376, 42995, 155, 248792] ; FRAGMENTS 1081999 (3.70 par pixel couvert) ; par surface montrée : {'sol': 1032344, 'face': 49528, 'dessus': 127} ; exclus (allumés sans fumée) 160046
+
+== compte-masque == niveaux lus [11, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [395, 37959, 132, 234829] ; FRAGMENTS 1016025 (3.72 par pixel couvert) ; par surface montrée : {'sol': 966380, 'face': 49528, 'dessus': 117} ; exclus (allumés sans fumée) 160046
+
+== compte-bande-tait == niveaux lus [22, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [216, 11580, 83, 134549] ; FRAGMENTS 561821 (3.84 par pixel couvert) ; par surface montrée : {'sol': 518059, 'face': 43686, 'dessus': 76} ; exclus (allumés sans fumée) 160046
+
+== compte-bande-garde == niveaux lus [11, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [386, 38903, 142, 237355] ; FRAGMENTS 1028038 (3.71 par pixel couvert) ; par surface montrée : {'sol': 978393, 'face': 49528, 'dessus': 117} ; exclus (allumés sans fumée) 160046
+
+== compte-resserre-tait == niveaux lus [11, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [249, 35512, 111, 228210] ; FRAGMENTS 984446 (3.73 par pixel couvert) ; par surface montrée : {'sol': 940608, 'face': 43721, 'dessus': 117} ; exclus (allumés sans fumée) 160046
+
+== compte-resserre-garde == niveaux lus [11, 44, 66, 88] ; pixels sous 1/2/3/4 couches : [382, 38907, 142, 237355] ; FRAGMENTS 1028042 (3.71 par pixel couvert) ; par surface montrée : {'sol': 978397, 'face': 49528, 'dessus': 117} ; exclus (allumés sans fumée) 160046
+
+== LE TRAVAIL DU MASQUE DE GADGETS == 1098569 fragments de fumée, dont 1016025 gardés par le masque (92.5 %) ; 466217 entrent dans une bande et paient le calcul exact (42.4 % des fragments ; comptés par différence, au moins)
+== LA BANDE RESSERRÉE (forme 2) == 43596 fragments paient le calcul exact (4.0 % des fragments)
+   juge-noir-3                 28280 pixels
+   juge-noir-4                 28280 pixels
+   juge-noir-5                 28289 pixels
+   juge-tout-3                482786 pixels
+   juge-couvre-3              324190 pixels
+   juge-tout-5                384627 pixels
+   juge-couvre-5              324172 pixels
+   juge-pate-tait-3           301443 pixels
+   juge-pate-garde-3             211 pixels
+   juge-matiere-tait-3        301443 pixels
+   juge-matiere-garde-3        24354 pixels
+   juge-pate-tait-4           195157 pixels
+   juge-pate-garde-4           10075 pixels
+   juge-matiere-tait-4        195170 pixels
+   juge-matiere-garde-4        24376 pixels
+
+== LE TRAVAIL DU JUGE ==
+forme 3 : 482786 fragments rastérisés, dont 324190 couvrent une couche et posent la question (67.1 %) ; 158596 pour rien
+forme 5 : 384627 fragments rastérisés, dont 324172 couvrent une couche et posent la question (84.3 %) ; 60455 pour rien
+forme 3 : 301232 pixels couverts paient la pâte du sol (92.9 % des 324190 couverts)
+forme 3 : 277089 pixels couverts paient la matière du sol (85.5 % des 324190 couverts)
+forme 4 : 185082 pixels couverts paient la pâte du sol (57.1 % des 324190 couverts)
+forme 4 : 170794 pixels couverts paient la matière du sol (52.7 % des 324190 couverts)
+pochoir écrit par la forme 4 contre la forme 3 : 29 pixels diffèrent, dont 0 hors de l'ensemble instable (le corps de J1) — MÊME RÉPONSE
+pochoir écrit par la forme 5 contre la forme 3 : 19 pixels diffèrent, dont 0 hors de l'ensemble instable (le corps de J1) — MÊME RÉPONSE
+
+VERDICT GLOBAL : toutes les formes passent la preuve
+code 0
