@@ -1,0 +1,1289 @@
+{
+ "fumiste_adverse": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 2,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1954,
+  "aujourd_hui": {
+   "pixels": 1965,
+   "corps_moyenne": 169.0,
+   "corps_p90": 180.5,
+   "corps_max": 190.7,
+   "derriere_moyenne": 122.3,
+   "sol_autour": 120.2,
+   "lisibles": 1764,
+   "part_lisible": 0.898,
+   "contraste_moyen": 47.1
+  },
+  "essai": {
+   "pixels": 1965,
+   "corps_moyenne": 120.6,
+   "corps_p90": 149.0,
+   "corps_max": 164.6,
+   "derriere_moyenne": 122.3,
+   "sol_autour": 120.2,
+   "lisibles": 887,
+   "part_lisible": 0.451,
+   "contraste_moyen": 18.5
+  }
+ },
+ "fumiste_fusee": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1945,
+  "aujourd_hui": {
+   "pixels": 1945,
+   "corps_moyenne": 118.5,
+   "corps_p90": 125.1,
+   "corps_max": 135.1,
+   "derriere_moyenne": 121.1,
+   "sol_autour": 124.3,
+   "lisibles": 397,
+   "part_lisible": 0.204,
+   "contraste_moyen": 6.1
+  },
+  "essai": {
+   "pixels": 1945,
+   "corps_moyenne": 50.6,
+   "corps_p90": 85.4,
+   "corps_max": 127.2,
+   "derriere_moyenne": 121.1,
+   "sol_autour": 124.3,
+   "lisibles": 1943,
+   "part_lisible": 0.999,
+   "contraste_moyen": 70.5
+  }
+ },
+ "fumiste_lisiere": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1945,
+  "aujourd_hui": {
+   "pixels": 1950,
+   "corps_moyenne": 131.7,
+   "corps_p90": 147.6,
+   "corps_max": 157.2,
+   "derriere_moyenne": 45.0,
+   "sol_autour": 46.9,
+   "lisibles": 1944,
+   "part_lisible": 0.997,
+   "contraste_moyen": 86.7
+  },
+  "essai": {
+   "pixels": 1950,
+   "corps_moyenne": 57.0,
+   "corps_p90": 111.6,
+   "corps_max": 126.8,
+   "derriere_moyenne": 45.0,
+   "sol_autour": 46.9,
+   "lisibles": 902,
+   "part_lisible": 0.463,
+   "contraste_moyen": 18.9
+  }
+ },
+ "fumiste_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1745,
+  "aujourd_hui": {
+   "pixels": 1977,
+   "corps_moyenne": 103.9,
+   "corps_p90": 107.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.5,
+   "sol_autour": 22.3,
+   "lisibles": 1977,
+   "part_lisible": 1.0,
+   "contraste_moyen": 82.3
+  },
+  "essai": {
+   "pixels": 1977,
+   "corps_moyenne": 19.0,
+   "corps_p90": 105.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.5,
+   "sol_autour": 22.3,
+   "lisibles": 1842,
+   "part_lisible": 0.932,
+   "contraste_moyen": 29.5
+  }
+ },
+ "fumiste_scinde": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 80,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 3036,
+     "corps_moyenne": 155.9,
+     "corps_p90": 177.3,
+     "corps_max": 182.4,
+     "derriere_moyenne": 121.5,
+     "sol_autour": 125.6,
+     "lisibles": 2019,
+     "part_lisible": 0.665,
+     "contraste_moyen": 34.4
+    },
+    "essai": {
+     "pixels": 3036,
+     "corps_moyenne": 130.4,
+     "corps_p90": 144.4,
+     "corps_max": 164.4,
+     "derriere_moyenne": 121.5,
+     "sol_autour": 125.6,
+     "lisibles": 952,
+     "part_lisible": 0.314,
+     "contraste_moyen": 8.9
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 2045,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 826,
+     "corps_moyenne": 101.2,
+     "corps_p90": 123.1,
+     "corps_max": 129.7,
+     "derriere_moyenne": 29.9,
+     "sol_autour": 31.4,
+     "lisibles": 759,
+     "part_lisible": 0.919,
+     "contraste_moyen": 71.4
+    },
+    "essai": {
+     "pixels": 826,
+     "corps_moyenne": 51.7,
+     "corps_p90": 81.2,
+     "corps_max": 91.3,
+     "derriere_moyenne": 29.9,
+     "sol_autour": 31.4,
+     "lisibles": 579,
+     "part_lisible": 0.701,
+     "contraste_moyen": 23.0
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "fumiste_scinde_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 1949,
+     "corps_moyenne": 93.6,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.2,
+     "sol_autour": 20.0,
+     "lisibles": 1949,
+     "part_lisible": 1.0,
+     "contraste_moyen": 74.4
+    },
+    "essai": {
+     "pixels": 1949,
+     "corps_moyenne": 17.0,
+     "corps_p90": 92.6,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.2,
+     "sol_autour": 20.0,
+     "lisibles": 1834,
+     "part_lisible": 0.941,
+     "contraste_moyen": 26.7
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 634,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 686,
+     "corps_moyenne": 79.7,
+     "corps_p90": 85.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.1,
+     "sol_autour": 30.1,
+     "lisibles": 680,
+     "part_lisible": 0.991,
+     "contraste_moyen": 57.6
+    },
+    "essai": {
+     "pixels": 686,
+     "corps_moyenne": 13.7,
+     "corps_p90": 64.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.1,
+     "sol_autour": 30.1,
+     "lisibles": 616,
+     "part_lisible": 0.898,
+     "contraste_moyen": 23.7
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "fumiste_torche": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1998,
+  "aujourd_hui": {
+   "pixels": 1998,
+   "corps_moyenne": 131.6,
+   "corps_p90": 144.6,
+   "corps_max": 154.7,
+   "derriere_moyenne": 23.5,
+   "sol_autour": 22.9,
+   "lisibles": 1998,
+   "part_lisible": 1.0,
+   "contraste_moyen": 108.0
+  },
+  "essai": {
+   "pixels": 1998,
+   "corps_moyenne": 44.1,
+   "corps_p90": 106.0,
+   "corps_max": 113.3,
+   "derriere_moyenne": 23.5,
+   "sol_autour": 22.9,
+   "lisibles": 1116,
+   "part_lisible": 0.559,
+   "contraste_moyen": 22.2
+  }
+ },
+ "fumiste_vide": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1961,
+  "aujourd_hui": {
+   "pixels": 1961,
+   "corps_moyenne": 134.1,
+   "corps_p90": 144.6,
+   "corps_max": 152.4,
+   "derriere_moyenne": 22.8,
+   "sol_autour": 23.7,
+   "lisibles": 1961,
+   "part_lisible": 1.0,
+   "contraste_moyen": 111.3
+  },
+  "essai": {
+   "pixels": 1961,
+   "corps_moyenne": 53.3,
+   "corps_p90": 107.7,
+   "corps_max": 108.7,
+   "derriere_moyenne": 22.8,
+   "sol_autour": 23.7,
+   "lisibles": 1618,
+   "part_lisible": 0.825,
+   "contraste_moyen": 30.6
+  }
+ },
+ "pistolet_adverse": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1769,
+  "aujourd_hui": {
+   "pixels": 1776,
+   "corps_moyenne": 170.0,
+   "corps_p90": 181.7,
+   "corps_max": 189.9,
+   "derriere_moyenne": 126.1,
+   "sol_autour": 120.8,
+   "lisibles": 1578,
+   "part_lisible": 0.889,
+   "contraste_moyen": 44.3
+  },
+  "essai": {
+   "pixels": 1776,
+   "corps_moyenne": 124.0,
+   "corps_p90": 152.9,
+   "corps_max": 166.6,
+   "derriere_moyenne": 126.1,
+   "sol_autour": 120.8,
+   "lisibles": 857,
+   "part_lisible": 0.483,
+   "contraste_moyen": 19.0
+  }
+ },
+ "pistolet_fusee": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1749,
+  "aujourd_hui": {
+   "pixels": 1749,
+   "corps_moyenne": 119.0,
+   "corps_p90": 125.4,
+   "corps_max": 137.3,
+   "derriere_moyenne": 120.6,
+   "sol_autour": 124.1,
+   "lisibles": 343,
+   "part_lisible": 0.196,
+   "contraste_moyen": 6.0
+  },
+  "essai": {
+   "pixels": 1749,
+   "corps_moyenne": 52.7,
+   "corps_p90": 85.4,
+   "corps_max": 128.5,
+   "derriere_moyenne": 120.6,
+   "sol_autour": 124.1,
+   "lisibles": 1749,
+   "part_lisible": 1.0,
+   "contraste_moyen": 67.9
+  }
+ },
+ "pistolet_lisiere": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1751,
+  "aujourd_hui": {
+   "pixels": 1754,
+   "corps_moyenne": 133.2,
+   "corps_p90": 147.9,
+   "corps_max": 157.1,
+   "derriere_moyenne": 44.9,
+   "sol_autour": 46.8,
+   "lisibles": 1749,
+   "part_lisible": 0.997,
+   "contraste_moyen": 88.3
+  },
+  "essai": {
+   "pixels": 1754,
+   "corps_moyenne": 62.1,
+   "corps_p90": 114.0,
+   "corps_max": 126.5,
+   "derriere_moyenne": 44.9,
+   "sol_autour": 46.8,
+   "lisibles": 913,
+   "part_lisible": 0.521,
+   "contraste_moyen": 22.1
+  }
+ },
+ "pistolet_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1508,
+  "aujourd_hui": {
+   "pixels": 1760,
+   "corps_moyenne": 104.0,
+   "corps_p90": 107.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.5,
+   "sol_autour": 22.1,
+   "lisibles": 1760,
+   "part_lisible": 1.0,
+   "contraste_moyen": 82.5
+  },
+  "essai": {
+   "pixels": 1760,
+   "corps_moyenne": 24.0,
+   "corps_p90": 107.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.5,
+   "sol_autour": 22.1,
+   "lisibles": 1636,
+   "part_lisible": 0.93,
+   "contraste_moyen": 31.8
+  }
+ },
+ "pistolet_scinde": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 2798,
+     "corps_moyenne": 152.5,
+     "corps_p90": 175.3,
+     "corps_max": 180.4,
+     "derriere_moyenne": 117.5,
+     "sol_autour": 121.7,
+     "lisibles": 1836,
+     "part_lisible": 0.656,
+     "contraste_moyen": 35.0
+    },
+    "essai": {
+     "pixels": 2798,
+     "corps_moyenne": 127.8,
+     "corps_p90": 144.4,
+     "corps_max": 159.5,
+     "derriere_moyenne": 117.5,
+     "sol_autour": 121.7,
+     "lisibles": 1136,
+     "part_lisible": 0.406,
+     "contraste_moyen": 10.4
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 1773,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 738,
+     "corps_moyenne": 111.1,
+     "corps_p90": 123.9,
+     "corps_max": 131.8,
+     "derriere_moyenne": 33.1,
+     "sol_autour": 39.9,
+     "lisibles": 734,
+     "part_lisible": 0.995,
+     "contraste_moyen": 78.1
+    },
+    "essai": {
+     "pixels": 738,
+     "corps_moyenne": 56.4,
+     "corps_p90": 91.0,
+     "corps_max": 103.5,
+     "derriere_moyenne": 33.1,
+     "sol_autour": 39.9,
+     "lisibles": 577,
+     "part_lisible": 0.782,
+     "contraste_moyen": 25.2
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "pistolet_scinde_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 1785,
+     "corps_moyenne": 92.9,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.2,
+     "sol_autour": 19.8,
+     "lisibles": 1785,
+     "part_lisible": 1.0,
+     "contraste_moyen": 73.7
+    },
+    "essai": {
+     "pixels": 1785,
+     "corps_moyenne": 21.2,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.2,
+     "sol_autour": 19.8,
+     "lisibles": 1660,
+     "part_lisible": 0.93,
+     "contraste_moyen": 28.3
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 577,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 688,
+     "corps_moyenne": 79.6,
+     "corps_p90": 85.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.1,
+     "sol_autour": 30.0,
+     "lisibles": 681,
+     "part_lisible": 0.99,
+     "contraste_moyen": 57.5
+    },
+    "essai": {
+     "pixels": 688,
+     "corps_moyenne": 13.6,
+     "corps_p90": 64.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.1,
+     "sol_autour": 30.0,
+     "lisibles": 621,
+     "part_lisible": 0.903,
+     "contraste_moyen": 23.6
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "pistolet_torche": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1783,
+  "aujourd_hui": {
+   "pixels": 1783,
+   "corps_moyenne": 132.6,
+   "corps_p90": 144.8,
+   "corps_max": 154.7,
+   "derriere_moyenne": 23.6,
+   "sol_autour": 22.8,
+   "lisibles": 1783,
+   "part_lisible": 1.0,
+   "contraste_moyen": 109.0
+  },
+  "essai": {
+   "pixels": 1783,
+   "corps_moyenne": 48.7,
+   "corps_p90": 107.7,
+   "corps_max": 113.3,
+   "derriere_moyenne": 23.6,
+   "sol_autour": 22.8,
+   "lisibles": 1098,
+   "part_lisible": 0.616,
+   "contraste_moyen": 26.1
+  }
+ },
+ "pistolet_vide": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1788,
+  "aujourd_hui": {
+   "pixels": 1788,
+   "corps_moyenne": 134.1,
+   "corps_p90": 144.6,
+   "corps_max": 152.4,
+   "derriere_moyenne": 22.8,
+   "sol_autour": 23.7,
+   "lisibles": 1788,
+   "part_lisible": 1.0,
+   "contraste_moyen": 111.3
+  },
+  "essai": {
+   "pixels": 1788,
+   "corps_moyenne": 54.1,
+   "corps_p90": 107.7,
+   "corps_max": 108.7,
+   "derriere_moyenne": 22.8,
+   "sol_autour": 23.7,
+   "lisibles": 1516,
+   "part_lisible": 0.848,
+   "contraste_moyen": 31.5
+  }
+ },
+ "pompe_adverse": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 4,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 2094,
+  "aujourd_hui": {
+   "pixels": 2125,
+   "corps_moyenne": 167.1,
+   "corps_p90": 180.1,
+   "corps_max": 190.7,
+   "derriere_moyenne": 119.9,
+   "sol_autour": 116.2,
+   "lisibles": 1891,
+   "part_lisible": 0.89,
+   "contraste_moyen": 47.6
+  },
+  "essai": {
+   "pixels": 2125,
+   "corps_moyenne": 119.8,
+   "corps_p90": 149.0,
+   "corps_max": 165.6,
+   "derriere_moyenne": 119.9,
+   "sol_autour": 116.2,
+   "lisibles": 928,
+   "part_lisible": 0.437,
+   "contraste_moyen": 18.0
+  }
+ },
+ "pompe_fusee": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 2,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 2072,
+  "aujourd_hui": {
+   "pixels": 2075,
+   "corps_moyenne": 119.0,
+   "corps_p90": 125.9,
+   "corps_max": 136.3,
+   "derriere_moyenne": 121.6,
+   "sol_autour": 124.6,
+   "lisibles": 424,
+   "part_lisible": 0.204,
+   "contraste_moyen": 6.1
+  },
+  "essai": {
+   "pixels": 2075,
+   "corps_moyenne": 51.4,
+   "corps_p90": 85.9,
+   "corps_max": 130.9,
+   "derriere_moyenne": 121.6,
+   "sol_autour": 124.6,
+   "lisibles": 2060,
+   "part_lisible": 0.993,
+   "contraste_moyen": 70.2
+  }
+ },
+ "pompe_lisiere": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 1,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 2044,
+  "aujourd_hui": {
+   "pixels": 2060,
+   "corps_moyenne": 131.3,
+   "corps_p90": 147.8,
+   "corps_max": 157.2,
+   "derriere_moyenne": 44.8,
+   "sol_autour": 46.5,
+   "lisibles": 2033,
+   "part_lisible": 0.987,
+   "contraste_moyen": 86.6
+  },
+  "essai": {
+   "pixels": 2060,
+   "corps_moyenne": 57.5,
+   "corps_p90": 111.8,
+   "corps_max": 127.5,
+   "derriere_moyenne": 44.8,
+   "sol_autour": 46.5,
+   "lisibles": 996,
+   "part_lisible": 0.483,
+   "contraste_moyen": 19.6
+  }
+ },
+ "pompe_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1804,
+  "aujourd_hui": {
+   "pixels": 2060,
+   "corps_moyenne": 104.6,
+   "corps_p90": 107.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.5,
+   "sol_autour": 22.3,
+   "lisibles": 2060,
+   "part_lisible": 1.0,
+   "contraste_moyen": 83.1
+  },
+  "essai": {
+   "pixels": 2060,
+   "corps_moyenne": 20.0,
+   "corps_p90": 106.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.5,
+   "sol_autour": 22.3,
+   "lisibles": 1947,
+   "part_lisible": 0.945,
+   "contraste_moyen": 30.4
+  }
+ },
+ "pompe_scinde": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 3188,
+     "corps_moyenne": 153.7,
+     "corps_p90": 175.6,
+     "corps_max": 181.1,
+     "derriere_moyenne": 118.1,
+     "sol_autour": 125.5,
+     "lisibles": 2135,
+     "part_lisible": 0.67,
+     "contraste_moyen": 35.6
+    },
+    "essai": {
+     "pixels": 3188,
+     "corps_moyenne": 127.6,
+     "corps_p90": 143.8,
+     "corps_max": 167.4,
+     "derriere_moyenne": 118.1,
+     "sol_autour": 125.5,
+     "lisibles": 1115,
+     "part_lisible": 0.35,
+     "contraste_moyen": 9.5
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 2058,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 749,
+     "corps_moyenne": 110.6,
+     "corps_p90": 123.9,
+     "corps_max": 138.3,
+     "derriere_moyenne": 32.9,
+     "sol_autour": 39.8,
+     "lisibles": 743,
+     "part_lisible": 0.992,
+     "contraste_moyen": 77.8
+    },
+    "essai": {
+     "pixels": 749,
+     "corps_moyenne": 56.4,
+     "corps_p90": 91.0,
+     "corps_max": 124.3,
+     "derriere_moyenne": 32.9,
+     "sol_autour": 39.8,
+     "lisibles": 583,
+     "part_lisible": 0.778,
+     "contraste_moyen": 25.2
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "pompe_scinde_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 2048,
+     "corps_moyenne": 93.2,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.3,
+     "sol_autour": 19.9,
+     "lisibles": 2048,
+     "part_lisible": 1.0,
+     "contraste_moyen": 73.9
+    },
+    "essai": {
+     "pixels": 2048,
+     "corps_moyenne": 18.2,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.3,
+     "sol_autour": 19.9,
+     "lisibles": 1903,
+     "part_lisible": 0.929,
+     "contraste_moyen": 27.3
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 639,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 679,
+     "corps_moyenne": 79.9,
+     "corps_p90": 85.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.3,
+     "sol_autour": 30.2,
+     "lisibles": 670,
+     "part_lisible": 0.987,
+     "contraste_moyen": 57.6
+    },
+    "essai": {
+     "pixels": 679,
+     "corps_moyenne": 13.5,
+     "corps_p90": 64.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.3,
+     "sol_autour": 30.2,
+     "lisibles": 614,
+     "part_lisible": 0.904,
+     "contraste_moyen": 23.7
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "pompe_torche": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 2055,
+  "aujourd_hui": {
+   "pixels": 2055,
+   "corps_moyenne": 132.8,
+   "corps_p90": 144.7,
+   "corps_max": 154.8,
+   "derriere_moyenne": 23.5,
+   "sol_autour": 24.0,
+   "lisibles": 2055,
+   "part_lisible": 1.0,
+   "contraste_moyen": 109.3
+  },
+  "essai": {
+   "pixels": 2055,
+   "corps_moyenne": 45.6,
+   "corps_p90": 107.7,
+   "corps_max": 115.0,
+   "derriere_moyenne": 23.5,
+   "sol_autour": 24.0,
+   "lisibles": 1210,
+   "part_lisible": 0.589,
+   "contraste_moyen": 23.8
+  }
+ },
+ "pompe_vide": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 2051,
+  "aujourd_hui": {
+   "pixels": 2051,
+   "corps_moyenne": 134.0,
+   "corps_p90": 144.6,
+   "corps_max": 152.4,
+   "derriere_moyenne": 23.0,
+   "sol_autour": 23.7,
+   "lisibles": 2051,
+   "part_lisible": 1.0,
+   "contraste_moyen": 111.0
+  },
+  "essai": {
+   "pixels": 2051,
+   "corps_moyenne": 54.0,
+   "corps_p90": 107.7,
+   "corps_max": 108.9,
+   "derriere_moyenne": 23.0,
+   "sol_autour": 23.7,
+   "lisibles": 1686,
+   "part_lisible": 0.822,
+   "contraste_moyen": 31.1
+  }
+ },
+ "spectre_adverse": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 2,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1786,
+  "aujourd_hui": {
+   "pixels": 1804,
+   "corps_moyenne": 169.1,
+   "corps_p90": 181.8,
+   "corps_max": 190.0,
+   "derriere_moyenne": 124.0,
+   "sol_autour": 117.7,
+   "lisibles": 1603,
+   "part_lisible": 0.889,
+   "contraste_moyen": 45.4
+  },
+  "essai": {
+   "pixels": 1804,
+   "corps_moyenne": 123.5,
+   "corps_p90": 151.8,
+   "corps_max": 164.6,
+   "derriere_moyenne": 124.0,
+   "sol_autour": 117.7,
+   "lisibles": 892,
+   "part_lisible": 0.494,
+   "contraste_moyen": 18.8
+  }
+ },
+ "spectre_lisiere": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1743,
+  "aujourd_hui": {
+   "pixels": 1750,
+   "corps_moyenne": 133.2,
+   "corps_p90": 148.8,
+   "corps_max": 159.0,
+   "derriere_moyenne": 44.8,
+   "sol_autour": 46.1,
+   "lisibles": 1739,
+   "part_lisible": 0.994,
+   "contraste_moyen": 88.5
+  },
+  "essai": {
+   "pixels": 1750,
+   "corps_moyenne": 62.8,
+   "corps_p90": 113.0,
+   "corps_max": 126.5,
+   "derriere_moyenne": 44.8,
+   "sol_autour": 46.1,
+   "lisibles": 907,
+   "part_lisible": 0.518,
+   "contraste_moyen": 22.0
+  }
+ },
+ "spectre_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1498,
+  "aujourd_hui": {
+   "pixels": 1749,
+   "corps_moyenne": 104.3,
+   "corps_p90": 107.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.4,
+   "sol_autour": 21.9,
+   "lisibles": 1749,
+   "part_lisible": 1.0,
+   "contraste_moyen": 82.9
+  },
+  "essai": {
+   "pixels": 1749,
+   "corps_moyenne": 24.0,
+   "corps_p90": 107.7,
+   "corps_max": 107.7,
+   "derriere_moyenne": 21.4,
+   "sol_autour": 21.9,
+   "lisibles": 1636,
+   "part_lisible": 0.935,
+   "contraste_moyen": 31.9
+  }
+ },
+ "spectre_scinde": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 2812,
+     "corps_moyenne": 151.3,
+     "corps_p90": 174.7,
+     "corps_max": 179.7,
+     "derriere_moyenne": 116.4,
+     "sol_autour": 121.0,
+     "lisibles": 1829,
+     "part_lisible": 0.65,
+     "contraste_moyen": 34.9
+    },
+    "essai": {
+     "pixels": 2812,
+     "corps_moyenne": 128.0,
+     "corps_p90": 143.5,
+     "corps_max": 158.7,
+     "derriere_moyenne": 116.4,
+     "sol_autour": 121.0,
+     "lisibles": 1409,
+     "part_lisible": 0.501,
+     "contraste_moyen": 11.7
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 1774,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 740,
+     "corps_moyenne": 110.3,
+     "corps_p90": 123.6,
+     "corps_max": 131.1,
+     "derriere_moyenne": 32.0,
+     "sol_autour": 38.8,
+     "lisibles": 738,
+     "part_lisible": 0.997,
+     "contraste_moyen": 78.4
+    },
+    "essai": {
+     "pixels": 740,
+     "corps_moyenne": 55.5,
+     "corps_p90": 86.5,
+     "corps_max": 103.2,
+     "derriere_moyenne": 32.0,
+     "sol_autour": 38.8,
+     "lisibles": 580,
+     "part_lisible": 0.784,
+     "contraste_moyen": 25.4
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "spectre_scinde_noir": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "vue_j1": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j2_pixels": 0,
+   "adversaire_j2_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 1770,
+     "corps_moyenne": 92.9,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.2,
+     "sol_autour": 19.7,
+     "lisibles": 1770,
+     "part_lisible": 1.0,
+     "contraste_moyen": 73.7
+    },
+    "essai": {
+     "pixels": 1770,
+     "corps_moyenne": 21.1,
+     "corps_p90": 96.3,
+     "corps_max": 96.3,
+     "derriere_moyenne": 19.2,
+     "sol_autour": 19.7,
+     "lisibles": 1630,
+     "part_lisible": 0.921,
+     "contraste_moyen": 28.2
+    }
+   }
+  },
+  "vue_j2": {
+   "essai_hors_du_corps_de_soi": 0,
+   "adversaire_j1_pixels": 570,
+   "adversaire_j1_change": 0,
+   "soi": {
+    "aujourd_hui": {
+     "pixels": 685,
+     "corps_moyenne": 79.8,
+     "corps_p90": 85.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.1,
+     "sol_autour": 30.0,
+     "lisibles": 678,
+     "part_lisible": 0.99,
+     "contraste_moyen": 57.7
+    },
+    "essai": {
+     "pixels": 685,
+     "corps_moyenne": 13.6,
+     "corps_p90": 64.4,
+     "corps_max": 85.4,
+     "derriere_moyenne": 22.1,
+     "sol_autour": 30.0,
+     "lisibles": 613,
+     "part_lisible": 0.895,
+     "contraste_moyen": 23.6
+    }
+   }
+  },
+  "noir_rallume_hors_des_corps": 0
+ },
+ "spectre_torche": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1776,
+  "aujourd_hui": {
+   "pixels": 1776,
+   "corps_moyenne": 132.6,
+   "corps_p90": 144.7,
+   "corps_max": 154.5,
+   "derriere_moyenne": 23.5,
+   "sol_autour": 22.8,
+   "lisibles": 1776,
+   "part_lisible": 1.0,
+   "contraste_moyen": 109.0
+  },
+  "essai": {
+   "pixels": 1776,
+   "corps_moyenne": 48.5,
+   "corps_p90": 107.7,
+   "corps_max": 113.0,
+   "derriere_moyenne": 23.5,
+   "sol_autour": 22.8,
+   "lisibles": 1080,
+   "part_lisible": 0.608,
+   "contraste_moyen": 25.9
+  }
+ },
+ "spectre_vide": {
+  "taille": [
+   1920,
+   1080
+  ],
+  "bruit_defaut_defaut2": 0,
+  "essai_hors_du_corps": 0,
+  "essai_allume_hors_du_corps": 0,
+  "noir_rallume_hors_du_corps": 0,
+  "essai_dans_le_corps": 1769,
+  "aujourd_hui": {
+   "pixels": 1769,
+   "corps_moyenne": 132.9,
+   "corps_p90": 144.6,
+   "corps_max": 152.4,
+   "derriere_moyenne": 22.9,
+   "sol_autour": 23.8,
+   "lisibles": 1769,
+   "part_lisible": 1.0,
+   "contraste_moyen": 110.0
+  },
+  "essai": {
+   "pixels": 1769,
+   "corps_moyenne": 54.1,
+   "corps_p90": 107.7,
+   "corps_max": 108.9,
+   "derriere_moyenne": 22.9,
+   "sol_autour": 23.8,
+   "lisibles": 1456,
+   "part_lisible": 0.823,
+   "contraste_moyen": 31.3
+  }
+ }
+}

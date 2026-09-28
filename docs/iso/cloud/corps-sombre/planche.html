@@ -1,0 +1,241 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q39 — le corps de soi</title>
+<style>
+:root{--fond:#111;--texte:#ddd;--pale:#999;--cadre:#333;--accent:#8fc4e8}
+body{background:var(--fond);color:var(--texte);font:15px/1.5 system-ui,sans-serif;margin:0 auto;max-width:1560px;padding:16px}
+h1{font-size:24px}h2{margin-top:40px;border-bottom:1px solid var(--cadre)}h3{margin:24px 0 6px}
+.rang{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+figure{margin:0}figcaption{color:var(--pale);font-size:13px;max-width:480px}
+img{max-width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--cadre)}
+.ill img{image-rendering:auto;max-width:500px}
+table{border-collapse:collapse;font-size:13px}td,th{border:1px solid var(--cadre);padding:3px 8px;text-align:right}
+th{text-align:left}.ok{color:#7c7}.ko{color:#e77}.note{color:var(--pale)}
+</style></head><body>
+<h1>Q39 — ton propre corps : aujourd'hui (silhouette bleue) et l'essai (sombre, liseré)</h1>
+<p>Chaque paire est prise <b>au même instant</b> (jeu gelé, l'essai basculé en direct) : seul le corps de soi change. Rendu logiciel du cloud (llvmpipe) : les couleurs et les comptes de pixels valent, pas la cadence ni l'éblouissement. Lacet 45° (B pour J2), zoom du duel, 1920×1080. Luminances Rec. 709, 0..255. « Lisible » : un pixel du corps qui diffère d'au moins 10/255 de ce qu'il cache.</p>
+<h2>Les illustrations qui montrent des personnages sombres</h2><div class='rang ill'>
+<figure><img src='img/ill_accueil.jpg' alt='accueil'><figcaption><b>ill_accueil</b> — L'accueil : deux silhouettes sombres dans l'arène, le liseré du côté de la lampe.</figcaption></figure>
+<figure><img src='img/ill_ecran_scinde.jpg' alt='ecran_scinde'><figcaption><b>ill_ecran_scinde</b> — L'écran scindé : chaque joueur sombre, cerné de la couleur de sa lampe.</figcaption></figure>
+<figure><img src='img/ill_entrainement.jpg' alt='entrainement'><figcaption><b>ill_entrainement</b> — L'entraînement : le personnage de dos, sombre, découpé par la lumière du plafond.</figcaption></figure>
+<figure><img src='img/ill_amical.jpg' alt='amical'><figcaption><b>ill_amical</b> — Le mode amical : deux silhouettes en tenue noire autour du pilier.</figcaption></figure>
+<figure><img src='img/ill_intro_prix.jpg' alt='intro_prix'><figcaption><b>ill_intro_prix</b> — Le prix : le corps noir, le liseré seul dit où il est.</figcaption></figure>
+</div>
+<h2>La lisibilité, en chiffres</h2><table><tr><th>classe</th><th>scène</th><th>corps aujourd'hui</th><th>corps essai</th><th>liseré essai (p90)</th><th>sol autour</th><th>lisible aujourd'hui</th><th>lisible essai</th><th>changés hors du corps</th></tr>
+<tr><th>pistolet</th><th>Dans le noir</th><td>104</td><td>24</td><td>108</td><td>22</td><td>100 %</td><td>93 %</td><td class='ok'>0</td></tr>
+<tr><th>pistolet</th><th>Au bord de sa lumière</th><td>134</td><td>54</td><td>108</td><td>24</td><td>100 %</td><td>85 %</td><td class='ok'>0</td></tr>
+<tr><th>pistolet</th><th>Sa pleine lumière</th><td>133</td><td>49</td><td>108</td><td>23</td><td>100 %</td><td>62 %</td><td class='ok'>0</td></tr>
+<tr><th>pistolet</th><th>Au bord du cône adverse</th><td>133</td><td>62</td><td>114</td><td>47</td><td>100 %</td><td>52 %</td><td class='ok'>0</td></tr>
+<tr><th>pistolet</th><th>Dans la torche adverse</th><td>170</td><td>124</td><td>153</td><td>121</td><td>89 %</td><td>48 %</td><td class='ok'>0</td></tr>
+<tr><th>pistolet</th><th>Sous une fusée</th><td>119</td><td>53</td><td>85</td><td>124</td><td>20 %</td><td>100 %</td><td class='ok'>0</td></tr>
+<tr><th>pompe</th><th>Dans le noir</th><td>105</td><td>20</td><td>107</td><td>22</td><td>100 %</td><td>94 %</td><td class='ok'>0</td></tr>
+<tr><th>pompe</th><th>Au bord de sa lumière</th><td>134</td><td>54</td><td>108</td><td>24</td><td>100 %</td><td>82 %</td><td class='ok'>0</td></tr>
+<tr><th>pompe</th><th>Sa pleine lumière</th><td>133</td><td>46</td><td>108</td><td>24</td><td>100 %</td><td>59 %</td><td class='ok'>0</td></tr>
+<tr><th>pompe</th><th>Au bord du cône adverse</th><td>131</td><td>58</td><td>112</td><td>46</td><td>99 %</td><td>48 %</td><td class='ok'>1</td></tr>
+<tr><th>pompe</th><th>Dans la torche adverse</th><td>167</td><td>120</td><td>149</td><td>116</td><td>89 %</td><td>44 %</td><td class='ok'>4</td></tr>
+<tr><th>pompe</th><th>Sous une fusée</th><td>119</td><td>51</td><td>86</td><td>125</td><td>20 %</td><td>99 %</td><td class='ok'>2</td></tr>
+<tr><th>fumiste</th><th>Dans le noir</th><td>104</td><td>19</td><td>106</td><td>22</td><td>100 %</td><td>93 %</td><td class='ok'>0</td></tr>
+<tr><th>fumiste</th><th>Au bord de sa lumière</th><td>134</td><td>53</td><td>108</td><td>24</td><td>100 %</td><td>82 %</td><td class='ok'>0</td></tr>
+<tr><th>fumiste</th><th>Sa pleine lumière</th><td>132</td><td>44</td><td>106</td><td>23</td><td>100 %</td><td>56 %</td><td class='ok'>0</td></tr>
+<tr><th>fumiste</th><th>Au bord du cône adverse</th><td>132</td><td>57</td><td>112</td><td>47</td><td>100 %</td><td>46 %</td><td class='ok'>0</td></tr>
+<tr><th>fumiste</th><th>Dans la torche adverse</th><td>169</td><td>121</td><td>149</td><td>120</td><td>90 %</td><td>45 %</td><td class='ok'>2</td></tr>
+<tr><th>fumiste</th><th>Sous une fusée</th><td>118</td><td>51</td><td>85</td><td>124</td><td>20 %</td><td>100 %</td><td class='ok'>0</td></tr>
+<tr><th>spectre</th><th>Dans le noir</th><td>104</td><td>24</td><td>108</td><td>22</td><td>100 %</td><td>94 %</td><td class='ok'>0</td></tr>
+<tr><th>spectre</th><th>Au bord de sa lumière</th><td>133</td><td>54</td><td>108</td><td>24</td><td>100 %</td><td>82 %</td><td class='ok'>0</td></tr>
+<tr><th>spectre</th><th>Sa pleine lumière</th><td>133</td><td>48</td><td>108</td><td>23</td><td>100 %</td><td>61 %</td><td class='ok'>0</td></tr>
+<tr><th>spectre</th><th>Au bord du cône adverse</th><td>133</td><td>63</td><td>113</td><td>46</td><td>99 %</td><td>52 %</td><td class='ok'>0</td></tr>
+<tr><th>spectre</th><th>Dans la torche adverse</th><td>169</td><td>124</td><td>152</td><td>118</td><td>89 %</td><td>49 %</td><td class='ok'>2</td></tr>
+</table><p class='note'>Changés hors du corps : au plus 4 pixels, tous collés au bord du corps, plus sombres d'1/255 et égaux au fond dans l'image d'aujourd'hui (l'arrondi de la couverture du bord). <b>Aucun ne s'allume.</b> Le Spectre n'a pas de fusée (par dessein).</p>
+<h2>Le Parasite (pistolet)</h2>
+<h3>Dans le noir <span class='note'>— torches éteintes ; le sol ne doit sa clarté qu'aux bandeaux LED des murs</span></h3><div class='rang'>
+<figure><img src='img/pistolet_noir_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_noir_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_noir_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 104 (liseré p90 108) · derrière 22 · sol autour 22 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_noir_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 24 (liseré p90 108) · derrière 22 · sol autour 22 · <b>93 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord de sa lumière <span class='note'>— sa torche vers le sud, dans le vide : son corps à la naissance du cône</span></h3><div class='rang'>
+<figure><img src='img/pistolet_vide_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_vide_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_vide_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 134 (liseré p90 145) · derrière 23 · sol autour 24 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_vide_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 54 (liseré p90 108) · derrière 23 · sol autour 24 · <b>85 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sa pleine lumière <span class='note'>— sa torche vers le mur haut, à 1,5 case : la rétrodiffusion</span></h3><div class='rang'>
+<figure><img src='img/pistolet_torche_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_torche_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_torche_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 133 (liseré p90 145) · derrière 24 · sol autour 23 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_torche_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 49 (liseré p90 108) · derrière 24 · sol autour 23 · <b>62 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord du cône adverse <span class='note'>— sa torche éteinte, J2 le braque de biais</span></h3><div class='rang'>
+<figure><img src='img/pistolet_lisiere_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_lisiere_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_lisiere_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 133 (liseré p90 148) · derrière 45 · sol autour 47 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_lisiere_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 62 (liseré p90 114) · derrière 45 · sol autour 47 · <b>52 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Dans la torche adverse <span class='note'>— sa torche éteinte, J2 le braque droit (J1 ébloui : le voile laiteux)</span></h3><div class='rang'>
+<figure><img src='img/pistolet_adverse_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_adverse_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_adverse_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 170 (liseré p90 182) · derrière 126 · sol autour 121 · <b>89 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_adverse_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 124 (liseré p90 153) · derrière 126 · sol autour 121 · <b>48 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sous une fusée <span class='note'>— sa torche éteinte, sa fusée lancée 1,5 s plus tôt</span></h3><div class='rang'>
+<figure><img src='img/pistolet_fusee_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_fusee_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pistolet_fusee_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 119 (liseré p90 125) · derrière 121 · sol autour 124 · <b>20 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_fusee_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 53 (liseré p90 85) · derrière 121 · sol autour 124 · <b>100 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h2>Le Terrassier (pompe)</h2>
+<h3>Dans le noir <span class='note'>— torches éteintes ; le sol ne doit sa clarté qu'aux bandeaux LED des murs</span></h3><div class='rang'>
+<figure><img src='img/pompe_noir_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pompe_noir_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pompe_noir_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 105 (liseré p90 108) · derrière 22 · sol autour 22 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_noir_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 20 (liseré p90 107) · derrière 22 · sol autour 22 · <b>94 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord de sa lumière <span class='note'>— sa torche vers le sud, dans le vide : son corps à la naissance du cône</span></h3><div class='rang'>
+<figure><img src='img/pompe_vide_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pompe_vide_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pompe_vide_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 134 (liseré p90 145) · derrière 23 · sol autour 24 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_vide_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 54 (liseré p90 108) · derrière 23 · sol autour 24 · <b>82 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sa pleine lumière <span class='note'>— sa torche vers le mur haut, à 1,5 case : la rétrodiffusion</span></h3><div class='rang'>
+<figure><img src='img/pompe_torche_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pompe_torche_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pompe_torche_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 133 (liseré p90 145) · derrière 24 · sol autour 24 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_torche_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 46 (liseré p90 108) · derrière 24 · sol autour 24 · <b>59 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord du cône adverse <span class='note'>— sa torche éteinte, J2 le braque de biais</span></h3><div class='rang'>
+<figure><img src='img/pompe_lisiere_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pompe_lisiere_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pompe_lisiere_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 131 (liseré p90 148) · derrière 45 · sol autour 46 · <b>99 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_lisiere_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 58 (liseré p90 112) · derrière 45 · sol autour 46 · <b>48 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>1</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Dans la torche adverse <span class='note'>— sa torche éteinte, J2 le braque droit (J1 ébloui : le voile laiteux)</span></h3><div class='rang'>
+<figure><img src='img/pompe_adverse_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pompe_adverse_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pompe_adverse_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 167 (liseré p90 180) · derrière 120 · sol autour 116 · <b>89 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_adverse_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 120 (liseré p90 149) · derrière 120 · sol autour 116 · <b>44 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>4</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sous une fusée <span class='note'>— sa torche éteinte, sa fusée lancée 1,5 s plus tôt</span></h3><div class='rang'>
+<figure><img src='img/pompe_fusee_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/pompe_fusee_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/pompe_fusee_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 119 (liseré p90 126) · derrière 122 · sol autour 125 · <b>20 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_fusee_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 51 (liseré p90 86) · derrière 122 · sol autour 125 · <b>99 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>2</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h2>Le Fumiste</h2>
+<h3>Dans le noir <span class='note'>— torches éteintes ; le sol ne doit sa clarté qu'aux bandeaux LED des murs</span></h3><div class='rang'>
+<figure><img src='img/fumiste_noir_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_noir_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_noir_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 104 (liseré p90 108) · derrière 22 · sol autour 22 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_noir_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 19 (liseré p90 106) · derrière 22 · sol autour 22 · <b>93 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord de sa lumière <span class='note'>— sa torche vers le sud, dans le vide : son corps à la naissance du cône</span></h3><div class='rang'>
+<figure><img src='img/fumiste_vide_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_vide_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_vide_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 134 (liseré p90 145) · derrière 23 · sol autour 24 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_vide_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 53 (liseré p90 108) · derrière 23 · sol autour 24 · <b>82 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sa pleine lumière <span class='note'>— sa torche vers le mur haut, à 1,5 case : la rétrodiffusion</span></h3><div class='rang'>
+<figure><img src='img/fumiste_torche_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_torche_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_torche_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 132 (liseré p90 145) · derrière 24 · sol autour 23 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_torche_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 44 (liseré p90 106) · derrière 24 · sol autour 23 · <b>56 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord du cône adverse <span class='note'>— sa torche éteinte, J2 le braque de biais</span></h3><div class='rang'>
+<figure><img src='img/fumiste_lisiere_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_lisiere_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_lisiere_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 132 (liseré p90 148) · derrière 45 · sol autour 47 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_lisiere_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 57 (liseré p90 112) · derrière 45 · sol autour 47 · <b>46 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Dans la torche adverse <span class='note'>— sa torche éteinte, J2 le braque droit (J1 ébloui : le voile laiteux)</span></h3><div class='rang'>
+<figure><img src='img/fumiste_adverse_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_adverse_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_adverse_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 169 (liseré p90 180) · derrière 122 · sol autour 120 · <b>90 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_adverse_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 121 (liseré p90 149) · derrière 122 · sol autour 120 · <b>45 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>2</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sous une fusée <span class='note'>— sa torche éteinte, sa fusée lancée 1,5 s plus tôt</span></h3><div class='rang'>
+<figure><img src='img/fumiste_fusee_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_fusee_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/fumiste_fusee_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 118 (liseré p90 125) · derrière 121 · sol autour 124 · <b>20 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_fusee_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 51 (liseré p90 85) · derrière 121 · sol autour 124 · <b>100 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h2>Le Spectre</h2>
+<h3>Dans le noir <span class='note'>— torches éteintes ; le sol ne doit sa clarté qu'aux bandeaux LED des murs</span></h3><div class='rang'>
+<figure><img src='img/spectre_noir_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/spectre_noir_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/spectre_noir_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 104 (liseré p90 108) · derrière 21 · sol autour 22 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_noir_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 24 (liseré p90 108) · derrière 21 · sol autour 22 · <b>94 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord de sa lumière <span class='note'>— sa torche vers le sud, dans le vide : son corps à la naissance du cône</span></h3><div class='rang'>
+<figure><img src='img/spectre_vide_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/spectre_vide_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/spectre_vide_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 133 (liseré p90 145) · derrière 23 · sol autour 24 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_vide_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 54 (liseré p90 108) · derrière 23 · sol autour 24 · <b>82 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Sa pleine lumière <span class='note'>— sa torche vers le mur haut, à 1,5 case : la rétrodiffusion</span></h3><div class='rang'>
+<figure><img src='img/spectre_torche_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/spectre_torche_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/spectre_torche_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 133 (liseré p90 145) · derrière 24 · sol autour 23 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_torche_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 48 (liseré p90 108) · derrière 24 · sol autour 23 · <b>61 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Au bord du cône adverse <span class='note'>— sa torche éteinte, J2 le braque de biais</span></h3><div class='rang'>
+<figure><img src='img/spectre_lisiere_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/spectre_lisiere_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/spectre_lisiere_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 133 (liseré p90 149) · derrière 45 · sol autour 46 · <b>99 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_lisiere_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 63 (liseré p90 113) · derrière 45 · sol autour 46 · <b>52 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>0</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h3>Dans la torche adverse <span class='note'>— sa torche éteinte, J2 le braque droit (J1 ébloui : le voile laiteux)</span></h3><div class='rang'>
+<figure><img src='img/spectre_adverse_defaut_1x.jpg' alt='aujourd'hui 1:1'><figcaption>aujourd'hui, 1:1</figcaption></figure>
+<figure><img src='img/spectre_adverse_essai_1x.jpg' alt='l'essai 1:1'><figcaption>l'essai, 1:1</figcaption></figure>
+<figure><img src='img/spectre_adverse_defaut_x3.jpg' alt='aujourd'hui ×3'><figcaption>aujourd'hui, loupe ×3 — corps 169 (liseré p90 182) · derrière 124 · sol autour 118 · <b>89 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_adverse_essai_x3.jpg' alt='l'essai ×3'><figcaption>l'essai, loupe ×3 — corps 124 (liseré p90 152) · derrière 124 · sol autour 118 · <b>49 %</b> du corps lisible</figcaption></figure>
+</div><p class='note'>Pixels que l'essai change hors du corps de soi : <b>2</b> (dont allumés 0) · bruit défaut/défaut recapturé : 0</p>
+<h2>L'écran scindé : deux couleurs de joueur, et la vue de l'adversaire au pixel</h2>
+<p>J1 à gauche (lacet 45°), J2 à droite (lacet B, 225°). Les deux torches allumées, J2 braque J1 de biais. Chaque joueur est local, donc chacun voit SON corps à l'essai ; dans la vue d'en face, le corps de l'autre doit rester celui d'aujourd'hui, au pixel.</p>
+<h3>Le Parasite (pistolet)</h3><div class='rang'>
+<figure><img src='img/pistolet_scinde_defaut_ecran.jpg' alt='aujourd'hui'><figcaption>aujourd'hui, l'écran entier (réduit)</figcaption></figure>
+<figure><img src='img/pistolet_scinde_essai_ecran.jpg' alt='l'essai'><figcaption>l'essai, l'écran entier (réduit)</figcaption></figure>
+</div><div class='rang'>
+<figure><img src='img/pistolet_scinde_j1_defaut_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), aujourd'hui ×3 — corps 152 (liseré p90 175) · derrière 118 · sol autour 122 · <b>66 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_scinde_j1_essai_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), l'essai ×3 — corps 128 (liseré p90 144) · derrière 118 · sol autour 122 · <b>41 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_scinde_j2_defaut_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), aujourd'hui ×3 — corps 111 (liseré p90 124) · derrière 33 · sol autour 40 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_scinde_j2_essai_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), l'essai ×3 — corps 56 (liseré p90 91) · derrière 33 · sol autour 40 · <b>78 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pistolet_scinde_j1_chez_j2_defaut_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), aujourd'hui ×3</figcaption></figure>
+<figure><img src='img/pistolet_scinde_j1_chez_j2_essai_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), l'essai ×3</figcaption></figure>
+</div>
+<p class='ok'>Vue de J2 : J1 y occupe 1773 pixels, <b>0</b> changés par l'essai ; vue de J1 : J2 y occupe 0 pixels, <b>0</b> changés. Hors du corps de soi : 0 (vue de J1), 0 (vue de J2). Noir rallumé hors des corps : 0. Bruit : 0.</p>
+<h3>Le Terrassier (pompe)</h3><div class='rang'>
+<figure><img src='img/pompe_scinde_defaut_ecran.jpg' alt='aujourd'hui'><figcaption>aujourd'hui, l'écran entier (réduit)</figcaption></figure>
+<figure><img src='img/pompe_scinde_essai_ecran.jpg' alt='l'essai'><figcaption>l'essai, l'écran entier (réduit)</figcaption></figure>
+</div><div class='rang'>
+<figure><img src='img/pompe_scinde_j1_defaut_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), aujourd'hui ×3 — corps 154 (liseré p90 176) · derrière 118 · sol autour 126 · <b>67 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_scinde_j1_essai_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), l'essai ×3 — corps 128 (liseré p90 144) · derrière 118 · sol autour 126 · <b>35 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_scinde_j2_defaut_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), aujourd'hui ×3 — corps 111 (liseré p90 124) · derrière 33 · sol autour 40 · <b>99 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_scinde_j2_essai_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), l'essai ×3 — corps 56 (liseré p90 91) · derrière 33 · sol autour 40 · <b>78 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/pompe_scinde_j1_chez_j2_defaut_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), aujourd'hui ×3</figcaption></figure>
+<figure><img src='img/pompe_scinde_j1_chez_j2_essai_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), l'essai ×3</figcaption></figure>
+</div>
+<p class='ok'>Vue de J2 : J1 y occupe 2058 pixels, <b>0</b> changés par l'essai ; vue de J1 : J2 y occupe 0 pixels, <b>0</b> changés. Hors du corps de soi : 0 (vue de J1), 0 (vue de J2). Noir rallumé hors des corps : 0. Bruit : 0.</p>
+<h3>Le Fumiste</h3><div class='rang'>
+<figure><img src='img/fumiste_scinde_defaut_ecran.jpg' alt='aujourd'hui'><figcaption>aujourd'hui, l'écran entier (réduit)</figcaption></figure>
+<figure><img src='img/fumiste_scinde_essai_ecran.jpg' alt='l'essai'><figcaption>l'essai, l'écran entier (réduit)</figcaption></figure>
+</div><div class='rang'>
+<figure><img src='img/fumiste_scinde_j1_defaut_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), aujourd'hui ×3 — corps 156 (liseré p90 177) · derrière 122 · sol autour 126 · <b>66 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_scinde_j1_essai_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), l'essai ×3 — corps 130 (liseré p90 144) · derrière 122 · sol autour 126 · <b>31 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_scinde_j2_defaut_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), aujourd'hui ×3 — corps 101 (liseré p90 123) · derrière 30 · sol autour 31 · <b>92 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_scinde_j2_essai_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), l'essai ×3 — corps 52 (liseré p90 81) · derrière 30 · sol autour 31 · <b>70 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/fumiste_scinde_j1_chez_j2_defaut_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), aujourd'hui ×3</figcaption></figure>
+<figure><img src='img/fumiste_scinde_j1_chez_j2_essai_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), l'essai ×3</figcaption></figure>
+</div>
+<p class='ok'>Vue de J2 : J1 y occupe 2045 pixels, <b>0</b> changés par l'essai ; vue de J1 : J2 y occupe 0 pixels, <b>0</b> changés. Hors du corps de soi : 0 (vue de J1), 0 (vue de J2). Noir rallumé hors des corps : 0. Bruit : 80.</p>
+<h3>Le Spectre</h3><div class='rang'>
+<figure><img src='img/spectre_scinde_defaut_ecran.jpg' alt='aujourd'hui'><figcaption>aujourd'hui, l'écran entier (réduit)</figcaption></figure>
+<figure><img src='img/spectre_scinde_essai_ecran.jpg' alt='l'essai'><figcaption>l'essai, l'écran entier (réduit)</figcaption></figure>
+</div><div class='rang'>
+<figure><img src='img/spectre_scinde_j1_defaut_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), aujourd'hui ×3 — corps 151 (liseré p90 175) · derrière 116 · sol autour 121 · <b>65 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_scinde_j1_essai_x3.jpg' alt=''><figcaption>J1 dans sa vue (bleu), l'essai ×3 — corps 128 (liseré p90 144) · derrière 116 · sol autour 121 · <b>50 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_scinde_j2_defaut_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), aujourd'hui ×3 — corps 110 (liseré p90 124) · derrière 32 · sol autour 39 · <b>100 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_scinde_j2_essai_x3.jpg' alt=''><figcaption>J2 dans sa vue (rouge), l'essai ×3 — corps 56 (liseré p90 86) · derrière 32 · sol autour 39 · <b>78 %</b> du corps lisible</figcaption></figure>
+<figure><img src='img/spectre_scinde_j1_chez_j2_defaut_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), aujourd'hui ×3</figcaption></figure>
+<figure><img src='img/spectre_scinde_j1_chez_j2_essai_x3.jpg' alt=''><figcaption>J1 vu par J2 (l'adversaire), l'essai ×3</figcaption></figure>
+</div>
+<p class='ok'>Vue de J2 : J1 y occupe 1774 pixels, <b>0</b> changés par l'essai ; vue de J1 : J2 y occupe 0 pixels, <b>0</b> changés. Hors du corps de soi : 0 (vue de J1), 0 (vue de J2). Noir rallumé hors des corps : 0. Bruit : 0.</p>
+</body></html>

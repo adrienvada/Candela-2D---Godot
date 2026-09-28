@@ -254,6 +254,11 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 		if VoxelCatalogue.matiere_detail_active():
 			materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL_MATIERE")
 		accorder_passe_profondeur(materiau)
+	# Q39 — son propre corps sombre avec un liseré (`--corps-soi-sombre`) : même règle, la variante doit survivre au changement
+	# de shader. Sans le drapeau, rien. ⚠️ Le shader éclairé (lumière 3D, éteinte par défaut) ne porte pas l'essai.
+	if VoxelCatalogue.soi_sombre_actif():
+		materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_SOMBRE")
+		accorder_passe_profondeur(materiau)
 
 
 ## Q33 — la pré-passe de profondeur d'un corps détaillé porte LE MÊME programme que sa couleur (ordre 424 : avec deux

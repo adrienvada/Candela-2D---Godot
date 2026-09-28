@@ -85,6 +85,8 @@ render_mode unshaded, cull_back, fog_disabled, shadows_disabled, blend_mix, dept
 #include "res://iso_corps_mannequin.gdshaderinc"
 // ISO13 — le personnage détaillé à l'essai (`--corps-detaille`) : compilé seulement dans la variante CORPS_DETAIL.
 #include "res://iso_corps_detail.gdshaderinc"
+// Q39 — son propre corps sombre avec un liseré (`--corps-soi-sombre`) : compilé seulement dans la variante CORPS_SOI_SOMBRE.
+#include "res://iso_corps_soi_sombre.gdshaderinc"
 
 uniform vec4 couleur_fiche : source_color = vec4(0.5, 0.53, 0.57, 1.0);
 uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
@@ -298,6 +300,22 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = (c * o * (1.0 - s) + silhouette.rgb * s) / a;
+#ifdef CORPS_SOI_SOMBRE
+	// Q39 — le corps de soi, dans sa propre vue seulement (s > 0) : sombre, liseré côté lumière, repère dans le noir. Même
+	// alpha qu'aujourd'hui : le corps de soi reste aussi opaque, seule sa couleur change. La vue d'en face (s = 0) n'entre pas.
+	if (s > 0.0) {
+		// Les axes x et z du modèle, à l'horizontale du monde (le côté d'un bord de dessus), lus ici et non passés en varying :
+		// deux varyings de plus décalaient les autres interpolants sous `gl_compatibility` et changeaient le corps dans la
+		// vue d'en face (mesuré au pixel, 2026-09-28).
+		vec2 ax = MODEL_MATRIX[0].xz;
+		vec2 az = MODEL_MATRIX[2].xz;
+		ax = length(ax) > 0.0001 ? normalize(ax) : vec2(1.0, 0.0);
+		az = length(az) > 0.0001 ? normalize(az) : vec2(0.0, 1.0);
+		vec3 soi = soi_sombre_composer(c, silhouette.rgb, s, local, demi, echelle, normale_locale, normale_monde,
+			ax, az, px_monde);
+		ALBEDO = soi;  // (soi·o·(1−s) + soi·s) / a, puisque o(1−s) + s = a
+	}
+#endif
 	ALPHA = a;
 #ifdef CORPS_DETAIL
 	}
