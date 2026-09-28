@@ -60,5 +60,15 @@ if grep -qE 'Parse Error|Failed to load script' "$journal"; then
   grep -E 'Parse Error|Failed to load script' "$journal" | head -4
   code=1
 fi
+# ⚠️ **Et une erreur d'EXÉCUTION non plus** : le script analysé, une `SCRIPT ERROR` en
+# cours de séance (appel sur `null`, fonction disparue) interrompt la prise en cours
+# et le processus sort quand même en 0. Seule l'analyse était cherchée ici ; la nuit
+# du 2026-09-27 a payé des séances « réussies » qui n'avaient rien pris (répétition
+# du test d'Adrien, outils). Même contrôle que `run_suites.sh`.
+if grep -q 'SCRIPT ERROR' "$journal"; then
+  echo "--- erreur de script PENDANT la séance : des prises peuvent manquer ou mentir ---"
+  grep -A1 'SCRIPT ERROR' "$journal" | head -8
+  code=1
+fi
 rm -f "$journal"
 exit $code
