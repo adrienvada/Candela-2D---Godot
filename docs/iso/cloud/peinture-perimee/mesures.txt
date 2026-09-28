@@ -1,0 +1,23 @@
+# AVANT la correction (b678553^)
+carte_temps
+  A ← B      différents    44487 (écart max 227) · noirs allumés   1125 (> 30 :   870, > 100 :  292, max 230)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+entrainement
+  A ← B      différents     6810 (écart max 208) · noirs allumés    226 (> 30 :   138, > 100 :   15, max 210)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+revanche_temps
+  A ← B      différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+# APRÈS la correction
+carte_temps
+  A ← B      différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+entrainement
+  A ← B      différents      329 (écart max   4) · noirs allumés      2 (> 30 :     0, > 100 :    0, max   8)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+revanche_temps
+  A ← B      différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+direct
+  A ← B      différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)
+  B2 ← B     différents        0 (écart max   0) · noirs allumés      0 (> 30 :     0, > 100 :    0, max   0)

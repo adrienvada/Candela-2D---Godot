@@ -1,0 +1,12 @@
+=== LA PEINTURE EN LIGNE — HÔTE, port 24123 ===
+PEINTURE HÔTE manche 1 : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false · peinture [P: (-35.0, -35.0), S: (1120.0, 1120.0)] · carte map_001, cadre attendu [P: (-35.0, -35.0), S: (1120.0, 1120.0)] → à jour
+PEINTURE HÔTE écran de fin : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false · peinture [P: (-35.0, -35.0), S: (1120.0, 1120.0)] · carte map_001, cadre attendu [P: (-35.0, -35.0), S: (1120.0, 1120.0)] → à jour
+  entrée CHANGER DE CARTE sur l'écran de fin (local_hote) : true
+PEINTURE HÔTE carte choisie par l'hôte à l'écran de fin : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false · peinture [P: (-35.0, -35.0), S: (1120.0, 1120.0)] · carte map_003, cadre attendu [P: (-35.0, -35.0), S: (1050.0, 1050.0)] → PÉRIMÉE
+PEINTURE HÔTE manche 2 : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false · peinture [P: (-35.0, -35.0), S: (1050.0, 1050.0)] · carte map_003, cadre attendu [P: (-35.0, -35.0), S: (1050.0, 1050.0)] → à jour
+VERDICT HÔTE : la peinture en place couvre la carte posée à la manche 2
+=== LA PEINTURE EN LIGNE — INVITÉ, port 24123 ===
+PEINTURE INVITÉ manche 1 : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=false, SubViewport2=true · peinture [P: (-35.0, -35.0), S: (1120.0, 1120.0)] · carte map_001, cadre attendu [P: (-35.0, -35.0), S: (1120.0, 1120.0)] → à jour
+PEINTURE INVITÉ écran de fin : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=false, SubViewport2=true · peinture [P: (-35.0, -35.0), S: (1120.0, 1120.0)] · carte map_001, cadre attendu [P: (-35.0, -35.0), S: (1120.0, 1120.0)] → à jour
+PEINTURE INVITÉ manche 2 : vue iso allumée (bascules 0), mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=false, SubViewport2=true · peinture [P: (-35.0, -35.0), S: (1050.0, 1050.0)] · carte map_003, cadre attendu [P: (-35.0, -35.0), S: (1050.0, 1050.0)] → à jour
+VERDICT INVITÉ : la peinture en place couvre la carte posée à la manche 2

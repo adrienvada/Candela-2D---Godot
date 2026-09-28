@@ -1,0 +1,4 @@
+carte_temps COUT _poser_peinture : 7435 µs (processeur du cloud) · appels de dessin par image, avant [286, 286, 286], après [335, 286, 286, 286, 286, 286]
+direct COUT _poser_peinture : 9337 µs (processeur du cloud) · appels de dessin par image, avant [286, 286, 286], après [335, 286, 286, 286, 286, 286]
+entrainement COUT _poser_peinture : 5148 µs (processeur du cloud) · appels de dessin par image, avant [95, 95, 95], après [111, 95, 95, 95, 95, 95]
+revanche_temps COUT _poser_peinture : 5469 µs (processeur du cloud) · appels de dessin par image, avant [266, 266, 266], après [307, 266, 266, 266, 266, 266]
