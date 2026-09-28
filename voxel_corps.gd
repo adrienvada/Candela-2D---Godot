@@ -312,6 +312,11 @@ func construire(slug: String, epaisseur: String = VoxelCatalogueT.EPAISSEUR_PAR_
 	_materiau_profondeur.set_shader_parameter("opacite_2", 1.0)
 	_materiau_profondeur.set_shader_parameter("silhouette_1", Color(0.0, 0.0, 0.0, 0.0))
 	_materiau_profondeur.set_shader_parameter("silhouette_2", Color(0.0, 0.0, 0.0, 0.0))
+	# Q39, deuxième tour (relecture de Beauté, 2026-09-28) — la couleur connaît sa pré-passe dès la construction, et non plus
+	# au seul `_detailler` d'un corps détaillé : sans cela, un corps que seul `--corps-soi-sombre` passe à une variante
+	# (`IsoMateriaux.accorder_corps`) garderait une pré-passe à l'autre programme. Poser la méta ne change rien tant que la
+	# couleur est le shader ordinaire (`accorder_passe_profondeur` laisse alors `corps_iso_profondeur.gdshader`).
+	_materiau.set_meta(IsoMateriaux.MATERIAU_PROFONDEUR, _materiau_profondeur)
 
 	_construire_squelette()
 	if VoxelCatalogueT.portraits_actifs():
@@ -1038,8 +1043,7 @@ func _detailler(slug: String) -> void:
 	if VoxelCatalogueT.matiere_detail_active():
 		_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL_MATIERE")
 	# Q33 — la pré-passe prend ce même programme (voir `IsoMateriaux.accorder_passe_profondeur`), et le suivra à chaque
-	# changement de shader de la couleur.
-	_materiau.set_meta(IsoMateriaux.MATERIAU_PROFONDEUR, _materiau_profondeur)
+	# changement de shader de la couleur. La méta est posée à la construction (Q39, deuxième tour).
 	IsoMateriaux.accorder_passe_profondeur(_materiau)
 	_materiau.set_shader_parameter("detail", 1.0)
 	_materiau.set_shader_parameter("detail_demi", demis)

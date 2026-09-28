@@ -211,8 +211,8 @@ vec3 lumiere_du_capteur(bool deux, vec2 decalage_px) {
 }
 
 void fragment() {
-#ifdef CORPS_DETAIL
-	// Q33 — la pré-passe de profondeur d'un corps détaillé : ce même programme, qui s'arrête ici (voir `passe_profondeur` dans
+#ifdef CORPS_PASSE_UNIQUE
+	// Q33 — la pré-passe de profondeur d'un corps (toute variante, Q39 (2)) : ce même programme, qui s'arrête ici (voir `passe_profondeur` dans
 	// `iso_corps_detail.gdshaderinc`). Même règle que `corps_iso_profondeur.gdshader` : jetée là où le corps n'est pas dessiné.
 	// Tout le reste du fragment est dans le `else` (Godot refuse `return` dans `fragment()`), ouvert et fermé sous le même
 	// `#ifdef` : sans le drapeau, le code compilé est celui d'avant.
@@ -317,7 +317,7 @@ void fragment() {
 	}
 #endif
 	ALPHA = a;
-#ifdef CORPS_DETAIL
+#ifdef CORPS_PASSE_UNIQUE
 	}
 #endif
 }
