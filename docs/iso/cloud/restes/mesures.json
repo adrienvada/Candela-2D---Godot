@@ -1,0 +1,15 @@
+{
+ "carte_2d_avant": {
+  "A≠B (>7)": 36271,
+  "A≠B (>0)": 42733,
+  "écart max": 194,
+  "boîte": [
+   130,
+   171,
+   1213,
+   677
+  ],
+  "noirs de B allumés dans A": 1127,
+  "bruit B→B2 (>0)": 0
+ }
+}
