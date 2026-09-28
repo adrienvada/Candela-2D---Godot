@@ -65,6 +65,10 @@ Ce que le tri décide :
 - Le classement est une présomption, pas un verdict. Le cloud ne voit pas le temps : **zéro appel n'est pas gratuit** (le
   masque de la fumée ne change aucun compte et coûtait 0,838). C'est pourquoi un shader qui ajoute une boucle ou des
   lectures de texture est « lourd » même à zéro appel.
+- **Un coût derrière un uniforme ne se voit pas dans les programmes** (`--mannequin` n'en fait naître aucun). Quand une
+  nouveauté allume un uniforme, on le **nomme** au tri (`PLIER=<nom>:<uniforme>`) : l'outil compile le programme uniforme
+  à 0 puis à 1 et compte la branche. Seul le code dit quel uniforme un drapeau allume : c'est à l'auteur de la nouveauté de
+  l'écrire dans son rapport.
 
 Le tri sert aussi à Adrien **avant** de dire oui à un essai : s'il est neutre, l'allumer ne demande qu'une série de version ;
 s'il est lourd, il sait d'avance qu'il faudra peut-être choisir.

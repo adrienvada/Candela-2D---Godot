@@ -1,0 +1,21 @@
+série courte d'une version — 2026-09-28 08:25:37 (Paris)
+A (référence) : a30a407a0c20229090af7160d63648bbce848830  Défaut D4 : les touches de la pâte ne changent le rendu qu'en build 
+B (candidate) : 244cb88c073cd5a88051cf75e8f1e504033c7b73  Fusion d'iso12-corps (cef9d93, ISO7 Beauté) : les personnages détail
+arbres : /root/candela-arbres.noindex/a30a407a0c20 · /root/candela-arbres.noindex/244cb88c073c
+scène : bench_framerate.tscn -- --seconds 60 --max-fps 0 --fusee --vue-unique --classe=pompe · rendu attendu « iso lacet 45° B »
+ordre : chauffe A, puis A B B A A B · prolongation d'UN bloc B A si le rapport tombe dans [0.958 ; 0.982]
+repos initial 3 s, avant chaque prise 1 s · porte : étranger ≤ 20 %, Claude Helper ≤ 30 %, équilibre 2 points, 4 reprises au plus
+⚠ ESSAI À BLANC : ni Godot ni top — fausses prises, fausses charges
+repos initial : 3 s sans rien lancer (08:25:37)
+Claude Helper pendant le repos : médiane 45.0 %, max 57.0 %
+chauffe    A  médiane   84   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE Claude Helper à 55.0 % (> 30) ; helper 53.0 55.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 3 échantillons
+01_A       A  médiane   85   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE Claude Helper à 57.0 % (> 30) ; helper 51.0 57.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 1 (A) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+01_A_r1    A  médiane   85   1 % bas (hors 10 s)   70   thermique 0   porte FERMÉE Claude Helper à 56.0 % (> 30) ; helper 52.0 56.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 1 (A) refusée par la porte : refaite à sa place (reprise 2 sur 4)
+01_A_r2    A  médiane   84   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE Claude Helper à 53.0 % (> 30) ; helper 46.0 53.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 1 (A) refusée par la porte : refaite à sa place (reprise 3 sur 4)
+01_A_r3    A  médiane   85   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE Claude Helper à 58.0 % (> 30) ; helper 51.0 58.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 1 (A) refusée par la porte : refaite à sa place (reprise 4 sur 4)
+01_A_r4    A  médiane   84   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE Claude Helper à 53.0 % (> 30) ; helper 50.0 53.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 3 échantillons
+✗ prise 1 (A) refusée 5 fois : SÉRIE ARRÊTÉE, SANS VERDICT

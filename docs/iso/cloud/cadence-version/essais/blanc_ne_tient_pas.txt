@@ -1,0 +1,28 @@
+série courte d'une version — 2026-09-28 08:24:14 (Paris)
+A (référence) : a30a407a0c20229090af7160d63648bbce848830  Défaut D4 : les touches de la pâte ne changent le rendu qu'en build 
+B (candidate) : 244cb88c073cd5a88051cf75e8f1e504033c7b73  Fusion d'iso12-corps (cef9d93, ISO7 Beauté) : les personnages détail
+arbres : /root/candela-arbres.noindex/a30a407a0c20 · /root/candela-arbres.noindex/244cb88c073c
+scène : bench_framerate.tscn -- --seconds 60 --max-fps 0 --fusee --vue-unique --classe=pompe · rendu attendu « iso lacet 45° B »
+ordre : chauffe A, puis A B B A A B · prolongation d'UN bloc B A si le rapport tombe dans [0.958 ; 0.982]
+repos initial 3 s, avant chaque prise 1 s · porte : étranger ≤ 20 %, Claude Helper ≤ 30 %, équilibre 2 points, 4 reprises au plus
+⚠ ESSAI À BLANC : ni Godot ni top — fausses prises, fausses charges
+repos initial : 3 s sans rien lancer (08:24:14)
+Claude Helper pendant le repos : médiane 17.0 %, max 19.0 %
+chauffe    A  médiane   85   1 % bas (hors 10 s)   70   thermique 0   porte OUVERTE - ; helper 24.0 25.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+01_A       A  médiane   85   1 % bas (hors 10 s)   67   thermique 0   porte OUVERTE - ; helper 15.0 27.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+02_B       B  médiane   82   1 % bas (hors 10 s)   67   thermique 0   porte OUVERTE - ; helper 11.0 21.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+03_B       B  médiane   81   1 % bas (hors 10 s)   70   thermique 0   porte OUVERTE - ; helper 25.0 28.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+04_A       A  médiane   85   1 % bas (hors 10 s)   69   thermique 0   porte OUVERTE - ; helper 15.0 28.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+05_A       A  médiane   84   1 % bas (hors 10 s)   67   thermique 0   porte OUVERTE - ; helper 26.0 27.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+06_B       B  médiane   81   1 % bas (hors 10 s)   68   thermique 0   porte OUVERTE - ; helper 16.0 23.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+
+A  prises 01_A 04_A 05_A               médianes [85, 85, 84]     1 % bas [67, 69, 67]     → médiane  85.0 · 1 % bas médian  67.0 · Claude Helper 15.0 % (max 28.0)
+B  prises 02_B 03_B 06_B               médianes [82, 81, 81]     1 % bas [67, 70, 68]     → médiane  81.0 · 1 % bas médian  68.0 · Claude Helper 16.0 % (max 28.0)
+A tient dans 5 % : oui (plus rapide / plus lente 1.012) · bras équilibrés : oui (écart 1.0 points)
+rapport B/A 0.953 (+0.58 ms par image) · 1 % bas médian de B 68.0
+VERDICT : B NE TIENT PAS (règle 278 : rapport ≥ 0,970 ET 1 % bas médian > 60)
+
+lignes d'état propres à A (« < ») et à B (« > ») — ce que la version change, dit par le jeu :
+< [fusée cœur] halo (#)
+> [fusée cœur] point de braise rouge (#)
+fin : 2026-09-28 08:24:55 (Paris)

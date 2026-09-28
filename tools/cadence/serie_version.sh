@@ -48,7 +48,8 @@
 #
 # Essais sans le Mac :
 #     ESSAI_A_BLANC=1 tools/cadence/serie_version.sh A B /tmp/essai        # ni Godot ni top : fausses prises, fausses charges
-#       (FAUX_RAPPORT=0.97 : la médiane simulée de B ; FAUX_HELPER / FAUX_ETRANGER : % de chance d'un pic par échantillon)
+#       (FAUX_RAPPORT=0.97 : la médiane simulée de B ; FAUX_HELPER / FAUX_ETRANGER : % de chance d'un pic par échantillon ;
+#        FAUX_HELPER_FIXE=15 : Claude Helper constant, bras toujours équilibrés ; FAUX_THERMIQUE=2 : un Mac qui chauffe)
 #     ESSAI_CLOUD=1 SECONDES=5 GODOT=godot xvfb-run -a -s "-screen 0 1920x1080x24" \
 #       tools/cadence/serie_version.sh <A> <B> /tmp/essai-cloud             # le VRAI banc sous Xvfb, charges simulées
 set -uo pipefail
@@ -163,7 +164,7 @@ releve() {
   while [ ! -e "$stop" ]; do
     if [ "$BLANC" = "1" ] || [ "$CLOUD" = "1" ]; then
       local t; t=$(date +%s)
-      printf '%s\tClaude Helper (R\t%s\n' "$t" "$((8 + RANDOM % 19))" >> "$sortie"
+      printf '%s\tClaude Helper (R\t%s\n' "$t" "${FAUX_HELPER_FIXE:-$((8 + RANDOM % 19))}" >> "$sortie"
       printf '%s\tClaude Helper (G\t%s\n' "$t" "$((RANDOM % 3))" >> "$sortie"
       printf '%s\tWindowServer\t%s\n' "$t" "$((30 + RANDOM % 20))" >> "$sortie"
       if [ $((RANDOM % 100)) -lt "${FAUX_HELPER:-3}" ]; then printf '%s\tClaude Helper\t%s\n' "$t" 31 >> "$sortie"; fi

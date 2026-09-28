@@ -1,0 +1,48 @@
+série courte d'une version — 2026-09-28 08:31:37 (Paris)
+A (référence) : a30a407a0c20229090af7160d63648bbce848830  Défaut D4 : les touches de la pâte ne changent le rendu qu'en build 
+B (candidate) : 244cb88c073cd5a88051cf75e8f1e504033c7b73  Fusion d'iso12-corps (cef9d93, ISO7 Beauté) : les personnages détail
+arbres : /root/candela-arbres.noindex/a30a407a0c20 · /root/candela-arbres.noindex/244cb88c073c
+scène : bench_framerate.tscn -- --seconds 60 --max-fps 0 --fusee --vue-unique --classe=pompe · rendu attendu « iso lacet 45° B »
+ordre : chauffe A, puis A B B A A B · prolongation d'UN bloc B A si le rapport tombe dans [0.958 ; 0.982]
+repos initial 3 s, avant chaque prise 1 s · porte : étranger ≤ 20 %, Claude Helper ≤ 30 %, équilibre 2 points, 4 reprises au plus
+⚠ ESSAI À BLANC : ni Godot ni top — fausses prises, fausses charges
+repos initial : 3 s sans rien lancer (08:31:37)
+Claude Helper pendant le repos : médiane 17.0 %, max 17.0 %
+chauffe    A  médiane   85   1 % bas (hors 10 s)   70   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 16.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+01_A       A  médiane   85   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 1 (A) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+01_A_r1    A  médiane   84   1 % bas (hors 10 s)   68   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 1 (A) refusée par la porte : refaite à sa place (reprise 2 sur 4)
+01_A_r2    A  médiane   85   1 % bas (hors 10 s)   69   thermique 0   porte OUVERTE - ; helper 16.0 16.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+02_B       B  médiane   83   1 % bas (hors 10 s)   68   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 2 (B) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+02_B_r1    B  médiane   83   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 17.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 2 (B) refusée par la porte : refaite à sa place (reprise 2 sur 4)
+02_B_r2    B  médiane   83   1 % bas (hors 10 s)   67   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 2 (B) refusée par la porte : refaite à sa place (reprise 3 sur 4)
+02_B_r3    B  médiane   83   1 % bas (hors 10 s)   70   thermique 0   porte OUVERTE - ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+03_B       B  médiane   84   1 % bas (hors 10 s)   68   thermique 0   porte OUVERTE - ; helper 15.5 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+04_A       A  médiane   85   1 % bas (hors 10 s)   67   thermique 0   porte OUVERTE - ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+05_A       A  médiane   85   1 % bas (hors 10 s)   67   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+  ↻ prise 5 (A) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+05_A_r1    A  médiane   84   1 % bas (hors 10 s)   70   thermique 0   porte OUVERTE - ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 3 échantillons
+06_B       B  médiane   83   1 % bas (hors 10 s)   70   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 17.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 6 (B) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+06_B_r1    B  médiane   84   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.5 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 6 (B) refusée par la porte : refaite à sa place (reprise 2 sur 4)
+06_B_r2    B  médiane   84   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 17.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 6 (B) refusée par la porte : refaite à sa place (reprise 3 sur 4)
+06_B_r3    B  médiane   84   1 % bas (hors 10 s)   69   thermique 0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 16.0 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+  ↻ prise 6 (B) refusée par la porte : refaite à sa place (reprise 4 sur 4)
+06_B_r4    B  médiane   84   1 % bas (hors 10 s)   70   thermique 0   porte OUVERTE - ; helper 16.5 17.0 ; Claude Helper (G,Claude Helper (R ; 4 échantillons
+
+A  prises 01_A_r2 04_A 05_A_r1         médianes [85, 85, 84]     1 % bas [69, 67, 70]     → médiane  85.0 · 1 % bas médian  69.0 · Claude Helper 16.0 % (max 17.0)
+B  prises 02_B_r3 03_B 06_B_r4         médianes [83, 84, 84]     1 % bas [70, 68, 70]     → médiane  84.0 · 1 % bas médian  70.0 · Claude Helper 16.0 % (max 17.0)
+A tient dans 5 % : oui (plus rapide / plus lente 1.012) · bras équilibrés : oui (écart 0.0 points)
+rapport B/A 0.988 (+0.14 ms par image) · 1 % bas médian de B 70.0
+VERDICT : B TIENT (règle 278 : rapport ≥ 0,970 ET 1 % bas médian > 60)
+
+lignes d'état propres à A (« < ») et à B (« > ») — ce que la version change, dit par le jeu :
+< [fusée cœur] halo (#)
+> [fusée cœur] point de braise rouge (#)
+fin : 2026-09-28 08:33:18 (Paris)

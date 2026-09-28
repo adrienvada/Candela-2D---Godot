@@ -1,0 +1,14 @@
+série courte d'une version — 2026-09-28 08:26:10 (Paris)
+A (référence) : a30a407a0c20229090af7160d63648bbce848830  Défaut D4 : les touches de la pâte ne changent le rendu qu'en build
+B (candidate) : 244cb88c073cd5a88051cf75e8f1e504033c7b73  Fusion d'iso12-corps (cef9d93, ISO7 Beauté) : les personnages détail
+arbres : /root/candela-arbres.noindex/a30a407a0c20 · /root/candela-arbres.noindex/244cb88c073c
+scène : bench_framerate.tscn -- --seconds 60 --max-fps 0 --fusee --vue-unique --classe=pompe · rendu attendu « iso lacet 45° B »
+ordre : chauffe A, puis A B B A A B · prolongation d'UN bloc B A si le rapport tombe dans [0.958 ; 0.982]
+repos initial 3 s, avant chaque prise 1 s · porte : étranger ≤ 20 %, Claude Helper ≤ 30 %, équilibre 2 points, 4 reprises au plus
+⚠ ESSAI À BLANC : ni Godot ni top — fausses prises, fausses charges
+repos initial : 3 s sans rien lancer (08:26:11)
+Claude Helper pendant le repos : médiane 21.0 %, max 22.0 %
+  … chauffe : état thermique 2, on attend
+  (… la même ligne, vingt fois, toutes les 30 s …)
+  … chauffe : état thermique 2, on attend
+✗ chauffe : le Mac ne revient pas à l'état thermique normal (2) en dix minutes : arrêt
