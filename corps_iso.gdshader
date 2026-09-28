@@ -313,6 +313,18 @@ void fragment() {
 		az = length(az) > 0.0001 ? normalize(az) : vec2(0.0, 1.0);
 		vec3 soi = soi_sombre_composer(c, silhouette.rgb, s, local, demi, echelle, normale_locale, normale_monde,
 			ax, az, px_monde);
+#ifdef CORPS_SOI_FONDU
+		// Q39 (2), essai B : l'essai A seulement là où le corps d'aujourd'hui se fond dans le sol (voir `soi_fondu_poids`).
+		// Le corps d'aujourd'hui estimé pour le corps entier : la fiche sous la lumière du capteur, en quatre points au rayon lu.
+		vec3 recue_corps = vec3(lumiere_recue);
+		if (capteur_actif) {
+			recue_corps = (lumiere_du_capteur(deux, vec2(rayon_lu_px, 0.0)) + lumiere_du_capteur(deux, vec2(-rayon_lu_px, 0.0))
+				+ lumiere_du_capteur(deux, vec2(0.0, rayon_lu_px)) + lumiere_du_capteur(deux, vec2(0.0, -rayon_lu_px))) * 0.25;
+		}
+		vec3 corps_hier = min(couleur_fiche.rgb * recue_corps, couleur_fiche.rgb);
+		float fondu = soi_fondu_poids((corps_hier * o * (1.0 - s) + silhouette.rgb * s) / a, soi_sol_autour(centre, deux));
+		soi = mix((c * o * (1.0 - s) + silhouette.rgb * s) / a, soi, fondu);
+#endif
 		ALBEDO = soi;  // (soi·o·(1−s) + soi·s) / a, puisque o(1−s) + s = a
 	}
 #endif

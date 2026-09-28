@@ -257,6 +257,10 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	# de shader. Sans le drapeau, rien. ⚠️ Le shader éclairé (lumière 3D, éteinte par défaut) ne porte pas l'essai.
 	if VoxelCatalogue.soi_sombre_actif():
 		materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_SOMBRE")
+		# Q39 (2) — l'essai B, « fondu » (`--corps-soi-sombre=fondu`) : l'essai A seulement là où le corps d'aujourd'hui se
+		# fond dans le sol. Toujours avec CORPS_SOI_SOMBRE, qui porte déjà la sortie de pré-passe.
+		if VoxelCatalogue.soi_fondu_actif():
+			materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_FONDU")
 	# Q39, deuxième tour (relecture de Beauté, 2026-09-28) — la pré-passe suit la couleur UNE fois, APRÈS la dernière
 	# variante. Appelée plus tôt (après CORPS_DETAIL, avant CORPS_SOI_SOMBRE), elle gardait un programme sans le define
 	# suivant : deux programmes, le piège de l'ordre 424. Toute variante ajoutée à ce crochet se pose AU-DESSUS de cette

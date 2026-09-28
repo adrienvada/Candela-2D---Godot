@@ -560,8 +560,29 @@ static func soi_sombre_actif() -> bool:
 	if forcer_soi_sombre >= 0:
 		return forcer_soi_sombre == 1
 	if _soi_sombre_ligne < 0:
-		_soi_sombre_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_SOI_SOMBRE) else 0
+		var args := OS.get_cmdline_user_args()
+		_soi_sombre_ligne = 1 if args.has(DRAPEAU_SOI_SOMBRE) or args.has(DRAPEAU_SOI_FONDU) else 0
 	return _soi_sombre_ligne == 1
+
+
+## Q39, deuxième tour — L'ESSAI B, « FONDU » (avis de jeu de Beauté, session cloud corps-sombre-2, 2026-09-28), derrière
+## `--corps-soi-sombre=fondu`, éteint par défaut : l'essai A (le corps de soi sombre à liseré) seulement là où le corps
+## d'aujourd'hui se fond dans le sol autour de lui ; ailleurs, le corps d'aujourd'hui (`iso_corps_soi_sombre.gdshaderinc`,
+## CORPS_SOI_FONDU). Le drapeau allume aussi `soi_sombre_actif()` : B se compose sur A. `forcer_soi_fondu` : -1 lit la ligne
+## de commande (une fois), 0 l'éteint, 1 l'allume (avec `forcer_soi_sombre = 1`).
+const DRAPEAU_SOI_FONDU := "--corps-soi-sombre=fondu"
+static var forcer_soi_fondu := -1
+static var _soi_fondu_ligne := -1
+
+
+static func soi_fondu_actif() -> bool:
+	if not soi_sombre_actif():
+		return false
+	if forcer_soi_fondu >= 0:
+		return forcer_soi_fondu == 1
+	if _soi_fondu_ligne < 0:
+		_soi_fondu_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_SOI_FONDU) else 0
+	return _soi_fondu_ligne == 1
 
 
 static func detail_actif() -> bool:

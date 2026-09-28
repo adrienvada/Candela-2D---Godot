@@ -44,6 +44,10 @@ var _shaders_hier: Array = []
 ## Le define posé par la bascule : `CORPS_SOI_SOMBRE`, ou `--define-temoin=NOM` (un define qu'aucun code ne lit : le témoin
 ## de la bascule elle-même, qui doit ne rien changer).
 var _define_essai := "CORPS_SOI_SOMBRE"
+## Q39 (2) — `--fondu` : après l'essai A, l'essai B (`--corps-soi-sombre=fondu`, CORPS_SOI_SOMBRE + CORPS_SOI_FONDU), pris
+## au même instant (`<prise>_fondu.png`). Et, dans les deux cas, la pré-passe suit la couleur comme au jeu
+## (`IsoMateriaux.accorder_passe_profondeur`, le correctif de Beauté) : c'est ce que le jeu rend sous le drapeau.
+var _fondu := false
 
 
 func _ready() -> void:
@@ -54,12 +58,13 @@ func _ready() -> void:
 		printerr("✗ la planche du corps sombre exige une vraie fenêtre : ", refus)
 		_sortir(1)
 		return
-	if args.has(VoxelCatalogue.DRAPEAU_SOI_SOMBRE):
+	if args.has(VoxelCatalogue.DRAPEAU_SOI_SOMBRE) or args.has(VoxelCatalogue.DRAPEAU_SOI_FONDU):
 		printerr("✗ lancer SANS --corps-soi-sombre : la séance bascule l'essai elle-même, au même instant")
 		_sortir(1)
 		return
 	_dossier = _valeur(args, "--sortie", "user://corps_sombre")
 	_define_essai = _valeur(args, "--define-temoin", "CORPS_SOI_SOMBRE")
+	_fondu = args.has("--fondu")
 	_scenes = _valeur(args, "--scenes", "noir,torche,vide,adverse,lisiere,fusee,scinde,scinde_noir").split(",")
 	var classes := _valeur(args, "--classes", CLASSES_DEFAUT).split(",")
 	_sans_hud = true
@@ -213,6 +218,11 @@ func _geler_et_basculer(nom: String, source: String) -> void:
 	await _attendre_images(3)
 	_ecrire_prise(await _capturer(source), nom + "_essai")
 	_essai(iso, false)
+	if _fondu:
+		_essai(iso, true, true)
+		await _attendre_images(3)
+		_ecrire_prise(await _capturer(source), nom + "_fondu")
+		_essai(iso, false)
 	await _attendre_images(3)
 	_ecrire_prise(await _capturer(source), nom + "_defaut2")
 	var corps: Array = iso.get("_corps")
@@ -230,11 +240,12 @@ func _geler_et_basculer(nom: String, source: String) -> void:
 
 ## L'essai posé ou retiré sur les deux corps, jeu gelé : la variante du shader et la direction de la lumière, telles que
 ## `accorder_corps` et `Presentation3D._suivre` les poseraient sous `--corps-soi-sombre`.
-func _essai(iso: Presentation3D, allume: bool) -> void:
+func _essai(iso: Presentation3D, allume: bool, fondu := false) -> void:
 	var mats: Array = iso.get("_mat_corps")
 	if allume:
 		_shaders_hier.clear()
 		VoxelCatalogue.forcer_soi_sombre = 1
+		VoxelCatalogue.forcer_soi_fondu = 1 if fondu else 0
 		var lampes := MannequinIso.lampes_du_jeu(_main)
 		for j in mats.size():
 			var m := mats[j] as ShaderMaterial
@@ -245,7 +256,11 @@ func _essai(iso: Presentation3D, allume: bool) -> void:
 			# après la construction — l'appeler ici changeait les arêtes des DEUX corps dans les deux vues (vu à la première
 			# séance : 791 pixels du corps de J1 changés dans la vue de J2). En jeu, `accorder_corps` pose la variante à la
 			# construction, avant ces réglages : la variante seule est ce que le jeu rend sous le drapeau.
-			_changer_de_shader(m, IsoMateriaux.variante_definie(m.shader, _define_essai))
+			var sh := IsoMateriaux.variante_definie(m.shader, _define_essai)
+			if fondu:
+				sh = IsoMateriaux.variante_definie(sh, "CORPS_SOI_FONDU")
+			_changer_de_shader(m, sh)
+			_accorder_pre_passe(m)
 			var joueur: Node2D = _main.p1 if j == 0 else _main.p2
 			var dir := Presentation3D.direction_du_lisere(joueur, lampes)
 			m.set_shader_parameter("soi_lumiere", dir)
@@ -257,10 +272,12 @@ func _essai(iso: Presentation3D, allume: bool) -> void:
 				MannequinIso.occultation(joueur))), str(coup.get("collider")) if not coup.is_empty() else "rien"])
 	else:
 		VoxelCatalogue.forcer_soi_sombre = 0
+		VoxelCatalogue.forcer_soi_fondu = 0
 		for j in mats.size():
 			var m := mats[j] as ShaderMaterial
 			if m != null and j < _shaders_hier.size():
 				_changer_de_shader(m, _shaders_hier[j])
+				_accorder_pre_passe(m)
 
 
 ## Change le shader d'un matériau en reposant chacun de ses paramètres : en jeu, la variante est posée à la construction,
@@ -274,6 +291,21 @@ func _changer_de_shader(m: ShaderMaterial, sh: Shader) -> void:
 	for nom in valeurs:
 		if valeurs[nom] != null:
 			m.set_shader_parameter(nom, valeurs[nom])
+
+
+## La pré-passe suit la couleur (`IsoMateriaux.accorder_passe_profondeur`), ses paramètres reposés comme ceux de la couleur :
+## jeu gelé, la présentation ne les réécrit pas avant la prise.
+func _accorder_pre_passe(m: ShaderMaterial) -> void:
+	var mp := m.get_meta(IsoMateriaux.MATERIAU_PROFONDEUR, null) as ShaderMaterial
+	if mp == null:
+		return
+	var valeurs := {}
+	for u in mp.shader.get_shader_uniform_list():
+		valeurs[String(u["name"])] = mp.get_shader_parameter(String(u["name"]))
+	IsoMateriaux.accorder_passe_profondeur(m)
+	for nom in valeurs:
+		if valeurs[nom] != null:
+			mp.set_shader_parameter(nom, valeurs[nom])
 
 
 func _ecrire_prise(img: Image, cle: String) -> void:

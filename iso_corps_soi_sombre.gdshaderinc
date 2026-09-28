@@ -69,4 +69,47 @@ vec3 soi_sombre_composer(vec3 c, vec3 sil, float s, vec3 lp, vec3 d, vec3 ech, v
 	float dessus = step(0.5, n_locale.y);
 	return max(corps, sil * s * bande * dessus);
 }
+
+#ifdef CORPS_SOI_FONDU
+// Q39, DEUXIÈME TOUR — L'ESSAI B, « FONDU » (avis de jeu de Beauté, 2026-09-28 ; session cloud corps-sombre-2), derrière
+// `--corps-soi-sombre=fondu`, éteint par défaut. L'essai A perd le plus là où le joueur a le plus besoin de se trouver (sous
+// sa propre torche, au bord du cône adverse, ébloui) ; il ne gagne franchement que là où le corps d'aujourd'hui se FOND dans
+// le sol (la fusée, les sols éclairés). B n'assombrit donc QUE là : il mêle le corps d'aujourd'hui et celui de l'essai A,
+// avec un poids qui dit « le corps d'aujourd'hui se fond-il dans le sol autour de lui ? ».
+//
+// Ce que le shader lit pour en décider, et pourquoi c'est juste pour les deux joueurs :
+// - **le sol autour du corps** : la lightmap de LA VUE QUI DESSINE (`lire_lightmap(px, deux)`, la même que lisent le sol et
+//   les murs iso), en huit points d'un cercle de `soi_fondu_rayon_px` autour de la position 2D du joueur (`centre`). La
+//   lightmap d'une vue ne contient que les lumières que son joueur a le droit de voir (règle d'équité d'ISO2) : chacun juge
+//   son propre corps sur son propre sol, avec la même règle ; le cercle est posé dans le MONDE 2D, pas à l'écran, donc le
+//   lacet de la caméra (0°, 45°, le côté B de J2) ne change pas la décision ;
+// - **le corps d'aujourd'hui, estimé pour le corps entier** (et non fragment par fragment, qui marbrerait le corps) : la
+//   fiche × la lumière du capteur lue en quatre points au rayon lu (celle qui éclaire le corps aujourd'hui), composée avec la
+//   silhouette de soi exactement comme aujourd'hui ;
+// - **le contraste relatif** des deux luminances (|corps − sol| / la plus grande) : sous `soi_fondu_bas`, le corps se fond,
+//   il prend l'essai A en entier ; au-dessus de `soi_fondu_haut`, il reste celui d'aujourd'hui ; entre les deux, un fondu.
+// Rien d'autre : ni la position de l'adversaire, ni le réseau, ni l'état du jeu. Le calcul ne tourne que dans la vue de soi
+// (sous `s > 0`, comme l'essai A) et ne sort jamais du corps. Noir absolu et règle des pochoirs tenus par construction : la
+// couleur rendue est un mélange de celle d'aujourd'hui et de celle de l'essai A, jamais plus claire que la plus claire.
+uniform float soi_fondu_rayon_px = 30.0;
+uniform float soi_fondu_bas = 0.3;
+uniform float soi_fondu_haut = 0.5;
+
+// La luminance moyenne du sol autour du joueur, dans la lightmap de la vue qui dessine.
+float soi_sol_autour(vec2 centre_px, bool deux) {
+	float somme = 0.0;
+	for (int i = 0; i < 8; i++) {
+		float t = float(i) * 0.785398;
+		somme += pate_luminance(lire_lightmap(centre_px + vec2(cos(t), sin(t)) * soi_fondu_rayon_px, deux));
+	}
+	return somme * 0.125;
+}
+
+// Le poids de l'essai A : 1 quand le corps d'aujourd'hui (`hier`, estimé pour le corps entier) se fond dans le sol.
+float soi_fondu_poids(vec3 hier, float sol) {
+	float l = pate_luminance(hier);
+	float contraste = abs(l - sol) / max(max(l, sol), 0.0001);
+	return 1.0 - smoothstep(soi_fondu_bas, soi_fondu_haut, contraste);
+}
+#endif
 #endif

@@ -54,9 +54,11 @@ func _run() -> void:
 	_la_meta(racine)
 	_les_combinaisons(racine)
 	_le_retour(racine)
+	_le_fondu(racine)
 	_le_texte()
 	_la_mutation(racine)
 	VoxelCatalogue.forcer_soi_sombre = -1
+	VoxelCatalogue.forcer_soi_fondu = -1
 	VoxelCatalogue.forcer_detail = -1
 	VoxelCatalogue.forcer_matiere = -1
 	VoxelCatalogue.forcer_tenue = "-"
@@ -193,6 +195,23 @@ func _le_retour(racine: Node3D) -> void:
 	IsoMateriaux.accorder_corps(c.materiau())
 	_check("soi sombre allumé puis éteint : la pré-passe avait suivi, puis revient à corps_iso_profondeur",
 		suivi and c.materiau_profondeur().shader == load(SHADER_PROFONDEUR))
+
+
+## L'essai B (`--corps-soi-sombre=fondu`) ajoute CORPS_SOI_FONDU APRÈS CORPS_SOI_SOMBRE : la pré-passe doit le suivre aussi.
+func _le_fondu(racine: Node3D) -> void:
+	print("— l'essai B (fondu) : la pré-passe suit aussi CORPS_SOI_FONDU")
+	for detail in [false, true]:
+		_poser(detail, false, true)
+		VoxelCatalogue.forcer_soi_fondu = 1
+		var c := _corps(racine, "occulteur")
+		var m := c.materiau()
+		var mp := c.materiau_profondeur()
+		IsoMateriaux.accorder_corps(m)
+		var e := _ecart(m, mp, load(SHADER_COULEUR), detail, false, true)
+		if e == "" and not (m.shader.code.contains("#define CORPS_SOI_FONDU\n") and mp.shader == m.shader):
+			e = "la couleur n'a pas CORPS_SOI_FONDU, ou la pré-passe ne l'a pas suivie"
+		_check("occulteur, détail %s, essai B — corps_iso" % ("oui" if detail else "non"), e == "", e)
+		VoxelCatalogue.forcer_soi_fondu = -1
 
 
 func _le_texte() -> void:
