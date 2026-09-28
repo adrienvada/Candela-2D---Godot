@@ -1,0 +1,150 @@
+{
+ "avant": {
+  "pochoirs": {
+   "j1": {
+    "decor": 2864,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 739638,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 1043,
+    "img_A": "img/avant_pochoirs_j1_A.jpg",
+    "img_carte": "img/avant_pochoirs_j1_carte.jpg"
+   },
+   "j2": {
+    "decor": 0,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 778107,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 0,
+    "img_A": "img/avant_pochoirs_j2_A.jpg",
+    "img_carte": "img/avant_pochoirs_j2_carte.jpg"
+   }
+  },
+  "cadres": {
+   "j1": {
+    "decor": 4335,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 735592,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 2175,
+    "img_A": "img/avant_cadres_j1_A.jpg",
+    "img_carte": "img/avant_cadres_j1_carte.jpg"
+   },
+   "j2": {
+    "decor": 6455,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 793218,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 5206,
+    "img_A": "img/avant_cadres_j2_A.jpg",
+    "img_carte": "img/avant_cadres_j2_carte.jpg"
+   }
+  },
+  "tuyaux": {
+   "j1": {
+    "decor": 15937,
+    "bruit": 0,
+    "plus_clair": 85,
+    "noirs_de_B": 731628,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 15933,
+    "img_A": "img/avant_tuyaux_j1_A.jpg",
+    "img_carte": "img/avant_tuyaux_j1_carte.jpg"
+   },
+   "j2": {
+    "decor": 0,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 788839,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 0,
+    "img_A": "img/avant_tuyaux_j2_A.jpg",
+    "img_carte": "img/avant_tuyaux_j2_carte.jpg"
+   }
+  }
+ },
+ "apres": {
+  "pochoirs": {
+   "j1": {
+    "decor": 1818,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 751040,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 0,
+    "img_A": "img/apres_pochoirs_j1_A.jpg",
+    "img_carte": "img/apres_pochoirs_j1_carte.jpg"
+   },
+   "j2": {
+    "decor": 2065,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 778107,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 0,
+    "img_A": "img/apres_pochoirs_j2_A.jpg",
+    "img_carte": "img/apres_pochoirs_j2_carte.jpg"
+   }
+  },
+  "cadres": {
+   "j1": {
+    "decor": 4341,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 785254,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 2175,
+    "img_A": "img/apres_cadres_j1_A.jpg",
+    "img_carte": "img/apres_cadres_j1_carte.jpg"
+   },
+   "j2": {
+    "decor": 4502,
+    "bruit": 0,
+    "plus_clair": 0,
+    "noirs_de_B": 792413,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 2339,
+    "img_A": "img/apres_cadres_j2_A.jpg",
+    "img_carte": "img/apres_cadres_j2_carte.jpg"
+   }
+  },
+  "tuyaux": {
+   "j1": {
+    "decor": 15936,
+    "bruit": 0,
+    "plus_clair": 83,
+    "noirs_de_B": 758662,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 15933,
+    "img_A": "img/apres_tuyaux_j1_A.jpg",
+    "img_carte": "img/apres_tuyaux_j1_carte.jpg"
+   },
+   "j2": {
+    "decor": 15961,
+    "bruit": 0,
+    "plus_clair": 54,
+    "noirs_de_B": 788583,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "noir_decor": 15955,
+    "img_A": "img/apres_tuyaux_j2_A.jpg",
+    "img_carte": "img/apres_tuyaux_j2_carte.jpg"
+   }
+  }
+ }
+}
