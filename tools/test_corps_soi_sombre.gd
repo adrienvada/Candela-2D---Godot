@@ -157,7 +157,11 @@ func _le_texte() -> void:
 			dehors.append(l)
 	_check("corps_iso.gdshader : aucune ligne de l'essai hors de #ifdef CORPS_SOI_SOMBRE", dehors.is_empty(), str(dehors))
 	_check("corps_iso.gdshader : l'essai n'est atteint que sous s > 0 (le corps de soi dans sa vue)",
-		code.contains("#ifdef CORPS_SOI_SOMBRE\n\t// Q39") and code.contains("\tif (s > 0.0) {\n\t\tvec3 soi = soi_sombre_composer("))
+		code.contains("#ifdef CORPS_SOI_SOMBRE\n\t// Q39") and code.find("\tif (s > 0.0) {\n") >= 0
+		and code.find("\tif (s > 0.0) {\n") < code.find("vec3 soi = soi_sombre_composer(")
+		and code.find("vec3 soi = soi_sombre_composer(") < code.find("\tALPHA = a;"))
+	_check("corps_iso.gdshader : aucun varying de l'essai (deux varyings de plus changeaient la vue d'en face)",
+		not code.contains("varying vec2 axe_"))
 	_check("corps_iso.gdshader : l'alpha d'hier, posé après l'essai et hors de lui",
 		code.find("ALPHA = a;") > code.find("vec3 soi = soi_sombre_composer("))
 	_check("le shader éclairé (lumière 3D) ne porte pas l'essai — dit dans le rapport",

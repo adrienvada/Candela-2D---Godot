@@ -157,10 +157,6 @@ varying vec3 demi;              // abs(VERTEX), constant par sommet sur nos BoxM
 varying vec3 echelle;           // longueur des colonnes de MODEL_MATRIX
 varying vec3 normale_locale;    // NORMAL, repère du modèle
 varying vec3 normale_monde;     // ISO7b — NORMAL dans le monde : un corps tourne
-#ifdef CORPS_SOI_SOMBRE
-varying vec2 axe_x_monde;       // Q39 — les axes x et z du modèle, à l'horizontale du monde : le côté d'un bord de dessus
-varying vec2 axe_z_monde;
-#endif
 
 void vertex() {
 	monde = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -169,12 +165,6 @@ void vertex() {
 	echelle = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
 	normale_locale = NORMAL;
 	normale_monde = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
-#ifdef CORPS_SOI_SOMBRE
-	vec2 ax = MODEL_MATRIX[0].xz;
-	vec2 az = MODEL_MATRIX[2].xz;
-	axe_x_monde = length(ax) > 0.0001 ? normalize(ax) : vec2(1.0, 0.0);
-	axe_z_monde = length(az) > 0.0001 ? normalize(az) : vec2(0.0, 1.0);
-#endif
 }
 
 // ISO7b — le facteur de modelé d'une face de normale `n` (monde). Miroir : `IsoMateriaux.modele_du_corps`.
@@ -282,8 +272,15 @@ void fragment() {
 	// Q39 — le corps de soi, dans sa propre vue seulement (s > 0) : sombre, liseré côté lumière, repère dans le noir. Même
 	// alpha qu'aujourd'hui : le corps de soi reste aussi opaque, seule sa couleur change. La vue d'en face (s = 0) n'entre pas.
 	if (s > 0.0) {
+		// Les axes x et z du modèle, à l'horizontale du monde (le côté d'un bord de dessus), lus ici et non passés en varying :
+		// deux varyings de plus décalaient les autres interpolants sous `gl_compatibility` et changeaient le corps dans la
+		// vue d'en face (mesuré au pixel, 2026-09-28).
+		vec2 ax = MODEL_MATRIX[0].xz;
+		vec2 az = MODEL_MATRIX[2].xz;
+		ax = length(ax) > 0.0001 ? normalize(ax) : vec2(1.0, 0.0);
+		az = length(az) > 0.0001 ? normalize(az) : vec2(0.0, 1.0);
 		vec3 soi = soi_sombre_composer(c, silhouette.rgb, s, local, demi, echelle, normale_locale, normale_monde,
-			axe_x_monde, axe_z_monde, px_monde);
+			ax, az, px_monde);
 		ALBEDO = soi;  // (soi·o·(1−s) + soi·s) / a, puisque o(1−s) + s = a
 	}
 #endif
