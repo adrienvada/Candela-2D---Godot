@@ -136,6 +136,7 @@ func _ready() -> void:
 				await _attendre_images(5)
 				_journal("retour à l'accueil (écran du hub : %s)" % _ui.hub.current_id())
 				_ui._on_hub_action("entrainement")
+				await _attendre(func() -> bool: return _main.training_mode and _main.sandbox_mode, 30.0)
 		if not await _manche_prete():
 			return
 		_journal("manche 2 (%s)" % MapData.selected_map_id)
@@ -189,7 +190,12 @@ func _ready() -> void:
 ## Attend que la manche tourne et que le décompte soit fini, puis reprend les commandes (le démarrage d'une manche repose
 ## les fournisseurs d'entrées du mode).
 func _manche_prete() -> bool:
-	if not await _attendre(func() -> bool: return _main.round_active, 30.0):
+	# L'entraînement n'arme pas de manche (`_on_training_requested` : `round_active` faux, bac à sable, aucun décompte).
+	if _main.training_mode and _main.sandbox_mode:
+		_prendre_les_commandes()
+		await _attendre_images(10)
+		return true
+	if not await _attendre(func() -> bool: return _main.round_active or (_main.training_mode and _main.sandbox_mode), 30.0):
 		printerr("✗ la manche n'a jamais démarré")
 		_sortir(1)
 		return false
