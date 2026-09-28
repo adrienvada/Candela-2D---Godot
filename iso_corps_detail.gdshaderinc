@@ -22,15 +22,23 @@
 #ifdef CORPS_DETAIL
 
 uniform float detail = 0.0;
-// Les demi-tailles des accessoires (tuiles) et leur rôle : 0 cuir, 1 laiton, 2 métal. `detail_n` : combien sont posés.
+// Les demi-tailles des accessoires (tuiles) et leur rôle : 0 cuir, 1 laiton, 2 métal, 3 cartouches de la tenue. `detail_n` : combien sont posés.
 uniform vec3 detail_demi[10];
 uniform int detail_role[10];
 uniform int detail_n = 0;
 uniform vec4 detail_cuir : source_color = vec4(1.0);
 uniform vec4 detail_laiton : source_color = vec4(1.0);
 uniform vec4 detail_metal : source_color = vec4(1.0);
+// Q33 — rôle 3 : les cartouches, à la couleur de celles que la tenue peint (voir `VoxelCatalogue.palette_details`).
+uniform vec4 detail_cartouche : source_color = vec4(1.0);
 // La force des pores et du marbrage : 0 les éteint (la bascule des bancs, même partie).
 uniform float detail_matiere = 1.0;
+// Q33 — LA PRÉ-PASSE DE PROFONDEUR EST CE MÊME PROGRAMME (ordre 424) : le matériau de profondeur d'un corps détaillé porte la
+// variante CORPS_DETAIL de sa couleur, avec `passe_profondeur = 1`, et sort en noir à alpha 0 dès le début du fragment. Un seul
+// programme pour les deux passes : la même profondeur par construction. Avec deux programmes (la variante pour la couleur, le
+// shader de profondeur ordinaire pour la pré-passe), llvmpipe calculait des profondeurs différentes au bit près ; la couleur
+// d'une pièce perdait le test contre sa propre pré-passe, et la pièce disparaissait en entier (triangles noirs, ordres 414-424).
+uniform float passe_profondeur = 0.0;
 
 // Le pire assombrissement de la matière peinte : un pore au plus profond, sur un marbrage sombre.
 const float DETAIL_PORE = 0.62;
@@ -46,17 +54,22 @@ vec3 detail_fiche(vec3 fiche, vec3 lp, vec3 d, vec3 ech, vec3 n, float px_par_un
 			break;
 		}
 		if (portrait_est(d, detail_demi[i])) {
-			c = detail_role[i] == 0 ? detail_cuir.rgb : (detail_role[i] == 1 ? detail_laiton.rgb : detail_metal.rgb);
+			c = detail_role[i] == 0 ? detail_cuir.rgb : (detail_role[i] == 1 ? detail_laiton.rgb
+				: (detail_role[i] == 2 ? detail_metal.rgb : detail_cartouche.rgb));
 			break;
 		}
 	}
+#ifdef CORPS_DETAIL_MATIERE
+	// Q33 (ordre 435) — LA MATIÈRE PEINTE HORS DU JEU : compilée seulement sous CORPS_DETAIL_MATIERE, que les bancs et les
+	// portraits allument (`VoxelCatalogue.matiere_detail_active`). Au duel comme en killcam, elle s'effaçait de toute façon
+	// (un pixel d'écran y couvre au moins 0,5 pixel du monde) ; son code, lui, tournait sur chaque pixel des corps détaillés.
 	// Les coordonnées de la face, en pixels du monde, accrochées à la boîte : horizontale, verticale.
 	vec3 q = lp * ech * px_par_unite;
 	vec3 an = abs(n);
 	vec2 f = an.x > 0.5 ? q.zy : (an.y > 0.5 ? q.xz : q.xy);
 	// Chaque face tire sa propre graine : deux faces d'une boîte ne se répètent pas.
 	vec2 graine = n.xz * 13.1 + vec2(n.y * 7.7, d.x * 91.0 + d.y * 37.0);
-	// Le marbrage : large (7 px), doux, toujours là.
+	// Le marbrage : large (7 px), doux — de près seulement, comme les pores (voir plus bas).
 	float marbre = mix(1.0, DETAIL_MARBRE, smoothstep(0.35, 0.85, pate_bruit(f / 7.0 + graine)));
 	// Les pores : au plus un par cellule de 2,4 px, un sur quatre, un disque d'un demi-pixel du monde au plus.
 	float ecran = px_monde * px_par_unite;
@@ -71,8 +84,14 @@ vec3 detail_fiche(vec3 fiche, vec3 lp, vec3 d, vec3 ech, vec3 n, float px_par_un
 			pore = (1.0 - smoothstep(r * 0.6, r, length(f - milieu))) * fondu;
 		}
 	}
-	float k = marbre * mix(1.0, DETAIL_PORE, pore);
+	// Q33 — À LA TAILLE DU DUEL, PLUS DE MATIÈRE DU TOUT, marbrage compris : `detail_fiche` passe sur TOUT le corps, et le
+	// marbrage à 0,86, qui restait, faisait perdre au seuil (0,10) jusqu'à la moitié des pixels visibles (Q29, 2026-09-25).
+	// Le personnage détaillé en jeu ne doit rien perdre au bord de la lumière : la matière ne vit plus que de près.
+	float k = mix(1.0, marbre * mix(1.0, DETAIL_PORE, pore), fondu);
 	return c * mix(1.0, k, detail_matiere);
+#else
+	return c;
+#endif
 }
 
 #endif

@@ -251,6 +251,27 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	# puis rappelle ce crochet ; la variante CORPS_DETAIL doit y survivre. Sans le drapeau, rien.
 	if VoxelCatalogue.detail_actif():
 		materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL")
+		if VoxelCatalogue.matiere_detail_active():
+			materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL_MATIERE")
+		accorder_passe_profondeur(materiau)
+
+
+## Q33 — la pré-passe de profondeur d'un corps détaillé porte LE MÊME programme que sa couleur (ordre 424 : avec deux
+## programmes, un pilote peut calculer deux profondeurs différentes au bit près, et effacer une pièce entière). Le matériau de
+## couleur connaît son matériau de profondeur par la méta `MATERIAU_PROFONDEUR` (posée par `VoxelCorps`) ; chaque changement
+## de shader de la couleur (la lumière 3D passe par `accorder_corps`) est recopié ici. Sans le drapeau, jamais appelé : la
+## pré-passe garde `corps_iso_profondeur.gdshader`.
+const MATERIAU_PROFONDEUR := &"materiau_profondeur"
+
+
+static func accorder_passe_profondeur(materiau: ShaderMaterial) -> void:
+	if not materiau.has_meta(MATERIAU_PROFONDEUR):
+		return
+	var profondeur := materiau.get_meta(MATERIAU_PROFONDEUR) as ShaderMaterial
+	if profondeur == null:
+		return
+	profondeur.shader = materiau.shader
+	profondeur.set_shader_parameter("passe_profondeur", 1.0)
 
 
 ## ISO10, 1f — la lumière d'une face lue SANS la peinture du sol (`mur_iso.gdshader`, `lire_lumiere`) : lightmap ×

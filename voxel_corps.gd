@@ -236,6 +236,10 @@ var _materiau_profondeur: ShaderMaterial
 var _materiau_contour: ShaderMaterial = null
 ## ISO13 — les accessoires modelés du personnage détaillé à l'essai (`_detailler`), vides sans `--corps-detaille`.
 var _details: Array = []
+## Q33 — les accessoires du kit, décrits une fois (voir `pieces_detail()`).
+var _pieces: Array = []
+## Les boîtes séparées du banc « même image » (`forcer_fusion = 2`), cachées tant qu'on ne bascule pas.
+var _details_ab: Array = []
 var _nombre_de_boites: int = 0
 var _boites_visibles: Array = []
 
@@ -571,6 +575,20 @@ func rayon_empreinte(corps_seul: bool = false) -> float:
 					var coin_monde: Vector3 = inst.global_transform * coin_local
 					var d := Vector2(coin_monde.x - origine.x, coin_monde.z - origine.z).length()
 					r = maxf(r, d)
+	# Q33 — les accessoires fusionnés ne sont pas des boîtes : leurs coins viennent de leur description, dans le repère de la
+	# pièce qui les porte. Séparés, ils sont déjà comptés ci-dessus.
+	if VoxelCatalogueT.detail_fusionne():
+		for p in _pieces:
+			var parent: Node3D = p["parent"]
+			if corps_seul and ["Arme", "Torche", "Gadget"].has(String(parent.name)):
+				continue
+			var t := parent.global_transform * Transform3D(Basis(Vector3(0, 0, 1), float(p["angle"])), p["position"])
+			var dp: Vector3 = (p["taille"] as Vector3) * 0.5
+			for sx in [-1.0, 1.0]:
+				for sy in [-1.0, 1.0]:
+					for sz in [-1.0, 1.0]:
+						var cm: Vector3 = t * Vector3(dp.x * sx, dp.y * sy, dp.z * sz)
+						r = maxf(r, Vector2(cm.x - origine.x, cm.z - origine.z).length())
 	return r
 
 
@@ -834,6 +852,8 @@ func _vider() -> void:
 	_nombre_de_boites = 0
 	_boites_visibles.clear()
 	_details.clear()
+	_pieces.clear()
+	_details_ab.clear()
 	position = Vector3.ZERO
 	rotation = Vector3.ZERO
 
@@ -923,7 +943,7 @@ func porter_tenue(nom: String, nom_teinte := "") -> void:
 	_poser_couleurs_details(nom, nom_teinte)
 
 
-## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; les six classes à bouteille depuis Q29, d'après
+## ISO13 — LE PERSONNAGE DÉTAILLÉ À L'ESSAI (`--corps-detaille`, éteint ; les dix classes depuis Q33, d'après
 ## leurs portraits V3 froide). Les accessoires du portrait, MODELÉS en petites boîtes de la même matière, collées aux pièces
 ## qui les portent : la bandoulière et ses trois cartouches, l'étui sur la hanche, le manomètre ou la plaque du haut du torse ;
 ## le robinet, son volant, le tuyau et, selon la classe, le manomètre de la bouteille ; la crosse du pistolet. Ce qui change
@@ -947,19 +967,34 @@ func _detailler(slug: String) -> void:
 	var sens := Vector3(cos(angle), sin(angle), 0.0)
 	var longueur := longueur_bandouliere(lt, ht, angle, LARGEUR_BANDOULIERE)
 	var centre := Vector3(0.0, ht * 0.5, avant - 0.007)
-	var pieces := [
-		[_torse, "Bandouliere", Vector3(longueur, LARGEUR_BANDOULIERE, 0.014), centre, angle, 0],
-		[_torse, "Etui", Vector3(0.1, 0.09, 0.05), Vector3(lt * 0.3, ht * 0.2, avant - 0.025), 0.0, 0],
-	]
-	if String(kit["tete"]) == "manometre":
-		pieces.append([_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0, 1])
-	else:
-		pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.006), 0.0,
-			int(kit["plaque_role"])])
-	for i in 3:
-		var t := (float(i) - 1.0) * 0.26 * longueur
-		pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03), centre + sens * t + Vector3(0.0, 0.0, -0.022),
-			angle, 1])
+	var pieces := []
+	if bool(kit.get("bandouliere", false)):
+		pieces.append([_torse, "Bandouliere", Vector3(longueur, LARGEUR_BANDOULIERE, 0.014), centre, angle, 0])
+		var cr := int(kit.get("cartouche_role", 3))
+		for i in int(kit.get("cartouches", 0)):
+			var t := (float(i) - 1.0) * 0.26 * longueur
+			pieces.append([_torse, "Cartouche%d" % (i + 1), Vector3(0.04, 0.07, 0.03),
+				centre + sens * t + Vector3(0.0, 0.0, -0.022), angle, cr])
+	if bool(kit.get("bretelles", false)):
+		# Deux sangles verticales, d'épaule à ceinture, plaquées sur la face avant, dans le rectangle du torse.
+		for k in 2:
+			var x := (-1.0 if k == 0 else 1.0) * lt * 0.3
+			pieces.append([_torse, "Bretelle%d" % (k + 1), Vector3(0.035, ht * 0.96, 0.012), Vector3(x, ht * 0.5, avant - 0.006),
+				0.0, 0])
+	if bool(kit.get("etui", false)):
+		pieces.append([_torse, "Etui", Vector3(0.1, 0.09, 0.05), Vector3(lt * 0.3, ht * 0.2, avant - 0.025), 0.0, 0])
+	if bool(kit.get("fiole", false)):
+		pieces.append([_torse, "Fiole", Vector3(0.03, 0.055, 0.028), Vector3(lt * 0.08, ht * 0.16, avant - 0.014), 0.0, 2])
+	match String(kit.get("tete", "")):
+		"manometre":
+			pieces.append([_torse, "Manometre", Vector3(0.055, 0.055, 0.016), Vector3(-lt * 0.28, ht * 0.8, avant - 0.008), 0.0,
+				1])
+		"plaque":
+			# Posée DEVANT tout ce qui passe sous elle (la bretelle de l'Illusionniste, dont la face avant est à 0,012 du torse) :
+			# face avant à 0,0165, une vraie séparation. À la même profondeur, l'ordre de tracé décidait laquelle se voyait, et
+			# les deux dessins (boîtes, fusionné) tranchaient autrement (preuve du cloud, ordre 426).
+			pieces.append([_torse, "Plaque", Vector3(0.065, 0.065, 0.012), Vector3(-lt * 0.28, ht * 0.8, avant - 0.0105), 0.0,
+				int(kit.get("plaque_role", 2))])
 	var bouteille := _torse.get_node_or_null("Bouteille") as Node3D
 	if bouteille != null:
 		var b: Dictionary = VoxelCatalogueT.BOUTEILLE
@@ -970,29 +1005,129 @@ func _detailler(slug: String) -> void:
 			[bouteille, "RobinetVolant", Vector3(0.075, 0.018, 0.022), Vector3(-bw * 0.3, bh * 0.5 + 0.049, 0.0), 0.0, 1],
 			[bouteille, "Tuyau", Vector3(0.024, 0.05, 0.024), Vector3(bw * 0.25, bh * 0.5 + 0.025, 0.0), 0.0, 1],
 		])
-		if bool(kit["manometre_bouteille"]):
+		if bool(kit.get("manometre_bouteille", false)):
 			pieces.append([bouteille, "ManometreBouteille", Vector3(0.016, 0.05, 0.05), Vector3(-bw * 0.5 - 0.008, 0.0, 0.0),
 				0.0, 1])
-	if bool(kit["crosse"]):
+	if bool(kit.get("crosse", false)):
 		var fa: Dictionary = s["arme"]
 		pieces.append([_arme_pivot, "Crosse", Vector3(0.04, 0.075, 0.035),
 			Vector3(0.0, -float(fa["hauteur"]) * 0.5 - 0.0375, -0.03), 0.0, 2])
 	var demis := PackedVector3Array()
 	var roles := PackedInt32Array()
 	for p in pieces:
-		var boite := _boite(p[0] as Node3D, p[2], p[3])
-		boite.name = String(p[1])
-		boite.rotation.z = float(p[4])
-		_details.append(boite)
+		_pieces.append({"nom": String(p[1]), "parent": p[0], "taille": p[2], "position": p[3], "angle": float(p[4]),
+			"role": int(p[5])})
 		if not demis.has((p[2] as Vector3) * 0.5):
 			demis.append((p[2] as Vector3) * 0.5)
 			roles.append(int(p[5]))
+	var boites := not VoxelCatalogueT.detail_fusionne() or VoxelCatalogueT.forcer_fusion == 2
+	if VoxelCatalogueT.detail_fusionne():
+		_fusionner()
+	if boites:
+		for p in _pieces:
+			var boite := _boite(p["parent"] as Node3D, p["taille"], p["position"])
+			boite.name = String(p["nom"])
+			boite.rotation.z = float(p["angle"])
+			# Sous `forcer_fusion = 2` (le banc « même image »), les boîtes séparées existent AUSSI, cachées.
+			if VoxelCatalogueT.forcer_fusion == 2:
+				boite.visible = false
+				_details_ab.append(boite)
+			else:
+				_details.append(boite)
 	_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL")
+	if VoxelCatalogueT.matiere_detail_active():
+		_materiau.shader = IsoMateriaux.variante_definie(_materiau.shader, "CORPS_DETAIL_MATIERE")
+	# Q33 — la pré-passe prend ce même programme (voir `IsoMateriaux.accorder_passe_profondeur`), et le suivra à chaque
+	# changement de shader de la couleur.
+	_materiau.set_meta(IsoMateriaux.MATERIAU_PROFONDEUR, _materiau_profondeur)
+	IsoMateriaux.accorder_passe_profondeur(_materiau)
 	_materiau.set_shader_parameter("detail", 1.0)
 	_materiau.set_shader_parameter("detail_demi", demis)
 	_materiau.set_shader_parameter("detail_role", roles)
 	_materiau.set_shader_parameter("detail_n", demis.size())
 	_poser_couleurs_details(VoxelCatalogueT.tenue())
+
+
+## Q33 — LES ACCESSOIRES FUSIONNÉS : un seul maillage par pièce qui les porte (torse, bouteille, arme), au lieu d'une boîte
+## chacun. Chaque boîte coûtait deux appels de dessin (couleur et profondeur) : 18 à 22 de plus pour une classe à bouteille,
+## 44 sur les 93 du duel pour deux Parasites. Fusionnés, au plus trois maillages, donc six appels. Les sommets sont ceux d'une
+## `BoxMesh` de la même taille (même enroulement, mêmes normales), tournés et posés dans le repère de la pièce ; la boîte
+## d'origine de chaque sommet voyage dans CUSTOM0 (position locale ; w = 10 + l'angle de la boîte autour de z), que le shader
+## des corps relit sous `CORPS_DETAIL` : sa demi-taille, qui dit au shader quel accessoire il dessine, reste la même, et sa
+## normale locale se retrouve en tournant NORMAL de −angle. ⚠️ Un second attribut (CUSTOM1) pour cette normale a été essayé :
+## sous gl_compatibility, il arrivait faux (preuve du cloud, 2026-09-26 22:30 : pores en traînées, triangles noirs).
+func _fusionner() -> void:
+	var par_parent := {}
+	for p in _pieces:
+		var parent: Node3D = p["parent"]
+		if not par_parent.has(parent):
+			par_parent[parent] = []
+		(par_parent[parent] as Array).append(p)
+	for parent in par_parent:
+		var pos := PackedVector3Array()
+		var nor := PackedVector3Array()
+		var tan := PackedFloat32Array()
+		var uv := PackedVector2Array()
+		var c0 := PackedFloat32Array()
+		var idx := PackedInt32Array()
+		for p in par_parent[parent]:
+			var cube := BoxMesh.new()
+			cube.size = p["taille"]
+			var a := cube.get_mesh_arrays()
+			var base := Basis(Vector3(0, 0, 1), float(p["angle"]))
+			var decal: Vector3 = p["position"]
+			var depart := pos.size()
+			var v: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var nv: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+			var tv: PackedFloat32Array = a[Mesh.ARRAY_TANGENT]
+			for i in v.size():
+				pos.append(base * v[i] + decal)
+				nor.append(base * nv[i])
+				var t := base * Vector3(tv[i * 4], tv[i * 4 + 1], tv[i * 4 + 2])
+				tan.append_array([t.x, t.y, t.z, tv[i * 4 + 3]])
+				c0.append_array([v[i].x, v[i].y, v[i].z, 10.0 + float(p["angle"])])
+			uv.append_array(a[Mesh.ARRAY_TEX_UV])
+			for k in (a[Mesh.ARRAY_INDEX] as PackedInt32Array):
+				idx.append(k + depart)
+		var tableaux := []
+		tableaux.resize(Mesh.ARRAY_MAX)
+		tableaux[Mesh.ARRAY_VERTEX] = pos
+		tableaux[Mesh.ARRAY_NORMAL] = nor
+		tableaux[Mesh.ARRAY_TANGENT] = tan
+		tableaux[Mesh.ARRAY_TEX_UV] = uv
+		tableaux[Mesh.ARRAY_CUSTOM0] = c0
+		tableaux[Mesh.ARRAY_INDEX] = idx
+		var maillage := ArrayMesh.new()
+		maillage.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tableaux, [], {},
+			Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
+		var inst := MeshInstance3D.new()
+		inst.name = "Details"
+		inst.mesh = maillage
+		inst.material_override = _materiau
+		(parent as Node3D).add_child(inst)
+		var profondeur := MeshInstance3D.new()
+		profondeur.name = "DetailsProfondeur"
+		profondeur.mesh = maillage
+		profondeur.material_override = _materiau_profondeur
+		inst.add_child(profondeur)
+		_details.append(inst)
+
+
+## Pour le banc « même image » (`forcer_fusion = 2`, les deux dessins construits) : montre le maillage fusionné ou les boîtes
+## séparées, au même instant, sans reconstruire le corps. Sans effet hors de ce mode.
+func basculer_fusion(fusion: bool) -> void:
+	if _details_ab.is_empty():
+		return
+	for b in _details:
+		(b as Node3D).visible = fusion
+	for b in _details_ab:
+		(b as Node3D).visible = not fusion
+
+
+## Les accessoires tels que le kit les pose, quelle que soit la façon de les dessiner : `{nom, parent, taille, position,
+## angle, role}`, dans le repère de la pièce qui les porte (vide sans `--corps-detaille`).
+func pieces_detail() -> Array:
+	return _pieces
 
 
 ## La largeur de la bandoulière modelée (en tuiles).
@@ -1025,7 +1160,8 @@ func _poser_couleurs_details(nom: String, nom_teinte := "") -> void:
 		_materiau.set_shader_parameter("detail_%s" % cle, p[cle])
 
 
-## Les accessoires modelés (vide sans `--corps-detaille`).
+## Les nœuds qui dessinent les accessoires : une boîte chacun, ou un maillage fusionné par pièce qui les porte (Q33). Vide
+## sans `--corps-detaille`.
 func details() -> Array:
 	return _details
 
