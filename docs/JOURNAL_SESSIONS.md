@@ -6023,3 +6023,22 @@ masque est éteint par défaut depuis l'ordre 416 (26/09, 23:29) — un ordre qu
 l'auteur de la décision.
 
 Le suivi : une seule page légère au lieu de six (ROADMAP, Décisions actées ; protocole dans README.md). Suite complète verte sur le candidat (710 s), avant le commit de version.
+
+Vers 15:25, `main` portait déjà la version (`57abe96`) mais le tag n'était pas posé — le poussoir du cloud refuse les
+étiquettes (HTTP 403), Adrien le pose de sa main. Ses réponses sont arrivées dans cet intervalle : « Q35 : oui / Q31 :
+peu importe prends le plus leger / Q39 : sombre / Q40 : j'aime bien l'ocre / Q41 : faisceau visible dans l'air / Q36 : le
+rouge le plus proche de l'illustration / Pas d'essaie metal pour l'instant ». **La version n'était pas partie, elles y
+entrent** : le tag attendra le commit qui les porte. Rouge long, masque V5, corps sombre et rouge de l'illustration
+passent au défaut (`511c459`) ; le rouge long change l'horloge publique de la fusée, il entre sous le protocole 18, qu'aucun
+tag n'avait encore figé. Six suites disaient encore « éteint par défaut » : réécrites pour prouver le nouveau défaut, en
+gardant la preuve de l'état éteint (`bc6e8fb`).
+
+Q41 demandait du travail neuf : sous « rien de plus clair que la surface », le rayon ne pouvait qu'assombrir la tache.
+Une session cloud (« faisceau-visible ») a fait passer ses couches du mélange à l'ajout, choisi la densité à l'image
+(1,20) et trouvé en route le piège du jour — un masque juste pour un mélange ne l'est pas pour un ajout (« Pièges
+connus »). Cueilli ici avec ses gardes, sans les images de sa planche : elles restent sur sa branche, `res://docs` étant
+exporté avec le jeu. Pendant l'attente, les trente et une sessions cloud terminées ont été archivées, à la demande
+d'Adrien (réversible ; leurs branches et rapports restent sur GitHub).
+
+**Ce que la 0.7.0 n'a pas** : une mesure de cadence de l'ensemble sur le Mac (la série courte suit la publication) ; une
+preuve sous le pilote d'Apple de ce qui est prouvé sous Mesa ; les réponses à Q15, Q37, Q38 et Q42.
