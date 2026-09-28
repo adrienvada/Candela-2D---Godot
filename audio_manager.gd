@@ -2391,7 +2391,14 @@ func diagnostic_ecoute() -> String:
 	# auditeurs de SON `World2D`. Le diagnostic pouvait donc afficher un etat
 	# parfait pendant que rien ne sortait — c'est exactement ce qu'il a fait le
 	# 2026-09-09, et j'ai conclu « configuration correcte » sur cette foi.
-	if voix != null:
+	#
+	# ⚠️ **Et seulement d'une voix DANS l'arbre** : `get_world_2d()` hors de l'arbre crie
+	# `Condition "!is_inside_tree()"`. C'est le cas au changement de scène, quand
+	# `rendre_oreille` trace l'écoute pendant que le pool déménage (ouvrir l'éditeur
+	# après un match, sortie de l'hôte ENet ; répétition du test d'Adrien, E1).
+	if voix != null and not voix.is_inside_tree():
+		lignes.append("[audio] le pool est hors de l'arbre (changement de scène) : monde non lu")
+	elif voix != null:
 		var monde_pool := voix.get_world_2d()
 		var accord := PackedStringArray()
 		for v in ([arbre.root] as Array):
