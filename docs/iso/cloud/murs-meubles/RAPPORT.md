@@ -16,7 +16,7 @@ illustrations (`docs/iso/cloud/ecart-illustrations/RAPPORT.md`).
 5. À toi de juger sur `planche.html` : ça se voit de près, c'est **discret à taille réelle** ; et si tu gardes aussi les
    tuyaux, les deux essais se chevauchent aujourd'hui (voir « À décider »).
 
-> État : **fait.** ⟨ÉTAT⟩
+> État : **fait.** Code, garde, suite complète verte, trois séances de prises, mesures, comptes de dessin et planche poussés. Rien d'allumé en jeu.
 
 ## Ce que les illustrations posent aux murs (relevé AVANT de coder)
 
@@ -124,11 +124,89 @@ posée sur « ARENA » → 1 (refusée). Décaler une entrée de 0,3 case ne la 
 
 ## Les preuves en images
 
-⟨MESURES⟩
+`planche.html` (images dans `img/`, mesures brutes dans `mesures.json`). Carte : le Cloître, 1920×1080, lacet 45° B,
+zoom du duel. Trois lancements de `tools/photo_murs_meubles.gd`, chacun avec `--murs-meubles-essai` :
+
+- **seul** : le seul drapeau des murs meublés (`--led-murs-fige`) ;
+- **tous** : plus les neuf drapeaux des essais de la nuit (`--faisceau --mannequin --pochoirs-essai --encre-essai
+  --tuyaux-essai --corps-detaille --enseignes-essai --fusee-rouge-long --fusee-rouge-sang`) ;
+- **contrôle** : `--sans-usure --sans-led-murs` — sans l'usure des murs ni le bandeau LED, pour isoler ce que les deux
+  premiers ne tranchent pas.
+
+Pour chaque famille, J1 devant un objet que sa caméra dessine, torche dessus ; puis, jeu en pause (même instant), **A**
+les murs meublés cachés, **B** montrés, **A'** cachés de nouveau, **M** leur emprise en blanc — torches allumées, puis
+éteintes. Luminance Rec. 709 des valeurs sRGB. Bruit A contre A' : **0 pixel** dans toutes les séries.
+
+### Noir absolu (torches éteintes, prises A, B, A')
+
+| séance | famille | emprise à l'écran (px) | dont sur un pixel noir en A et A' | noirs allumés par B (0 → plus) | au seuil 7,5/255 |
+|---|---|---|---|---|---|
+| seul | portes / grilles / boîtiers / faisceaux | 13 924 / 12 482 / 8 691 / 12 483 | 0 / 17 / 0 / 232 | **0 / 0 / 0 / 0** | 0 / 0 / 0 / 0 |
+| tous | idem | 10 933 / 9 693 / 6 827 / 10 042 | 0 / 17 / 0 / 190 | **0 / 0 / 0 / 0** | 0 / 0 / 0 / 0 |
+| contrôle | idem | 13 924 / 12 482 / 8 691 / 12 483 | **13 924 / 12 482 / 8 691 / 12 483** | **0 / 0 / 0 / 0** | 0 / 0 / 0 / 0 |
+
+Sur l'écran entier, les ~1,0 à 2,0 millions de pixels noirs en A et A' restent noirs en B, partout. **Le contrôle est la
+vraie preuve** : torches éteintes et sans le bandeau LED, les murs sont noirs, TOUTE l'emprise des objets est sur du noir
+— et aucun de ses pixels ne s'allume. Dans les deux autres séances, le bandeau LED au pied des murs éclaire faiblement
+toutes les faces : les objets n'y sont presque jamais sur du noir (voir « Pièges », n° 1).
+
+### Jamais plus clair que la face (au pixel, B contre A)
+
+| séance, torches | portes | grilles | boîtiers | faisceaux | clarté avec / sans sur l'emprise éclairée (médiane ; max) |
+|---|---|---|---|---|---|
+| seul, allumées | 2 | 2 | 22 | 13 | 0,72-0,73 ; 1,12 à 1,38 |
+| seul, éteintes | 2 | 2 | 22 | 13 | idem |
+| tous, allumées | 6 | 4 | 232 | 20 | 0,75-0,78 ; 1,19 à 1,47 |
+| tous, éteintes | 6 | 4 | 15 | 13 | idem |
+| **contrôle, allumées** | **0** | **0** | **0** | **0** | 0,42-0,76 ; **0,88 à 0,97** |
+
+(pixels dont la luminance monte de plus de 0,5 ; chaque pixel changé par l'essai l'est DANS son emprise : 0 hors d'elle.)
+Les quelques pixels plus clairs de « seul » (2 à 22 sur 8 700 à 13 900, de +1 à +5 niveaux sur 255) sont alignés en
+traits verticaux : les **fissures et taches de l'usure**, qui assombrissent la face derrière l'objet sans que l'objet,
+qui relit la lumière et non l'usure, les suive — l'exception déjà écrite pour les tuyaux et les enseignes. Sans usure (le
+contrôle), il n'en reste **aucun**, et le plus clair des pixels d'objet vaut 0,97 fois la face. Dans « tous », le tableau
+électrique monte à 232 pixels torches allumées (15 éteintes) : **non localisé** ; l'hypothèse est l'encre des arêtes et
+les hachures de `--encre-essai`, qui assombrissent la face comme l'usure, mais je ne l'ai pas vérifiée pixel à pixel. ⚠️ Le contrôle coupe aussi le bandeau LED : il prouve que l'écart vient de l'usure OU du bandeau ; le
+bandeau n'assombrit rien, et l'alignement sur les fissures désigne l'usure, mais aucune séance ne coupe l'un sans l'autre.
+
+### Symétrie J1 / J2 à 45° B
+
+Écran scindé, J1 devant un faisceau, J2 à son image par le demi-tour (dimension de la carte moins la position, visée
+opposée), caméras à 45° et 225° (lues dans le journal). Emprise des murs meublés : **7 122 px dans la moitié de J1, 7 109
+dans celle de J2** ; 511 pixels d'une seule moitié au meilleur recalage (2 px en x, la ligne de séparation), c'est-à-dire
+le liseré des bords ; luminance moyenne sur l'emprise **33,8 contre 33,45**. La garde, elle, prouve l'égalité exacte des
+ensembles d'objets par le groupe de chaque carte.
+
+### Ce qu'on y voit
+
+À ×3, la porte (deux battants, joint, bandes), la grille à lames, le tableau et la nappe de câbles avec ses étriers se
+lisent. À 1:1 : une porte ~29 × 61 px d'écran, une grille ~22 × 29, le tableau ~32 × 53, un faisceau de six cases une
+bande de ~6 px de haut. Discret, plus sombre que le béton comme le veut la règle ; dans la vue d'ensemble, à peine visible
+hors du cône.
 
 ## Les comptes de dessin
 
-⟨BUDGET⟩
+`tools/cloud_budget/` (de la session « Budget »), six cartes livrées, J1 et J2 immobiles torches allumées, lacet 45°,
+vue unique et écran scindé ; `eteint` (sans drapeau) contre `meubles` (`--murs-meubles-essai`). Tableaux complets dans
+`budget/TABLEAUX.md`, journaux dans `budget/`.
+
+| carte | passe visible 3D, appels (vue unique) | passe visible 3D, primitives | total primitives |
+|---|---|---|---|
+| par défaut | 47 → **51** | 534 → 8 094 | 6 378 → 13 838 |
+| le Cloître | 52 → **56** | 594 → 9 570 | 6 734 → 15 610 |
+| l'Usine | 54 → **58** | 618 → 9 590 | 6 838 → 15 708 |
+| la Croisée | 53 → **57** | 606 → 4 802 | 6 244 → 10 338 |
+| le Bunker | 54 → **58** | 618 → 7 446 | 6 126 → 12 842 |
+| l'Arène circulaire | 52 → **56** | 594 → 5 934 | 5 408 → 10 648 |
+
+**+4 appels exactement par vue 3D, sur les six cartes** (un par famille) ; en écran scindé, +4 dans chacune des deux vues
+(+8). Le total des appels de l'image ne bouge pas au-delà de son bruit (médiane −2,5 en vue unique, +1 en scindé) : les
+4 appels sont noyés dans les variations d'un relevé logiciel ; la passe 3D, elle, est exacte. Ni copie d'écran, ni vue,
+ni lumière à ombre de plus. **Les primitives doublent** (+7 088 en médiane, +8 876 au pire, vue unique) : presque toutes
+viennent des faisceaux (sept tubes à quatre côtés par nappe ; 4 000 à 8 600 triangles par carte, contre 336 pour tous
+les boîtiers et 16 pour les portes). Un tube dessiné pour une face qu'aucune caméra ne voit est écrasé en un point par
+le shader, mais ses triangles sont soumis quand même. Si la cadence le demande au Mac, c'est là qu'on coupe : trois côtés
+au lieu de quatre, ou cinq câbles au lieu de sept.
 
 ## À décider (Adrien)
 
@@ -173,16 +251,39 @@ godot --path . -- --murs-meubles-essai
   faisceaux (des milliers de triangles) se mesure au Mac.
 - **Cinq des six cartes en images.** Seul le Cloître est photographié ; les autres ne sont prouvées que par la garde
   (bornes, symétrie, zéro refus).
-- **L'écran scindé au pixel près.** ⟨SYM⟩
+- **L'écran scindé au pixel près.** L'emprise des deux moitiés diffère de 13 pixels sur 7 100 et de 511 pixels de bord au meilleur recalage ; je n'ai pas cherché d'où vient ce liseré (placement sous-pixel de la caméra ou de la ligne de séparation), ni fait la même mesure sans les murs meublés pour savoir si les murs nus en ont autant.
 - **L'éblouissement et la lisibilité en mouvement** (le cloud ne vaut pas pour eux), ni l'impression d'ensemble à la
   vraie taille d'un écran de jeu.
+- **La cause des 232 pixels plus clairs du tableau dans la séance « tous »** (hypothèse : l'encre de `--encre-essai`),
+  ni la part de l'usure contre celle du bandeau LED dans l'écart de « seul » (le contrôle coupe les deux à la fois).
+- **La densité.** Sept à neuf entrées par carte, un choix à l'œil : ni plus ni moins meublé n'a été essayé.
 - **Les impacts de balle sur un objet.** Comme les tuyaux et les enseignes, un objet relit la lumière de la face mais pas
   son usure : là où une fissure, une tache ou un impact assombrit la face derrière, l'objet ne l'est pas (voir les mesures).
 
 ## Pièges et défauts découverts, à reporter dans la feuille de route
 
-⟨PIEGES⟩
+1. **Torches éteintes, le mur n'est pas noir : c'est le bandeau LED.** La session « enseignes » (son piège n° 4) avait
+   vu la face rester allumée sous ses enseignes torches coupées, sans en trouver la cause. Avec `--sans-led-murs`, les
+   mêmes faces tombent à 0 (contrôle : 100 % de l'emprise sur du noir). Le bandeau au pied des murs (`mur_led.gd`, au
+   défaut depuis le 2026-09-11) éclaire faiblement TOUTES les faces : une preuve du noir sur un objet mural doit donc
+   couper le bandeau, sinon elle ne teste presque rien. Reproduire : les séries `*_eteintes` de `seul` et de `controle`.
+2. **L'emprise d'un instrument ne se compte pas au seuil 250.** La vue mise à l'échelle mêle les bords de l'objet au mur :
+   au seuil, 1 700 à 1 950 pixels changés par l'essai tombaient « hors de l'emprise ». Compter tout pixel que
+   l'instrument change (M ≠ A) : il n'en reste aucun.
+3. **Les murs meublés et les tuyaux s'ignorent** (voir « À décider ») : 10 à 22 objets par carte croisent un tuyau.
+   Mesuré par un script jetable, sommet de tuyau par rectangle d'objet ; non corrigé (l'essai des tuyaux n'est pas à moi).
+4. **Tuer un lancement par `pkill -f` depuis l'outil Bash peut tuer le shell de l'outil lui-même** (code 144) quand le
+   motif figure dans sa propre ligne de commande : viser les numéros de processus (`ps`, puis `kill`).
+5. **`tools/photo_ecart.gd.uid` manquait** à `claude/cloud-ecart-illustrations` : l'import le crée ; committé ici
+   (`4ad83d9`), il faudra le garder à l'intégration.
+6. **`--scenes=` d'un outil du photographe ne dit rien d'une scène inconnue** : une faute de frappe donne une séance vide
+   et EXIT 0. Pas corrigé (hors tâche) ; relire la liste des `SCENE` du journal.
 
 ## Commits de la branche
 
-⟨COMMITS⟩
+- `92fd1bb` le relevé des onze illustrations et le plan ;
+- `e55839d` le drapeau, la table, les quatre familles et leur garde ;
+- `f1662ec` l'outil de prise, les mesures et la planche ; l'outil « Budget » repris ;
+- `52f64e2` câbles et étriers assombris ; l'emprise comptée sur tout pixel changé ;
+- `39ac267` le rapport rédigé ; `cdf0804` les comptes de dessin ; `4ad83d9` une première planche ;
+- le dernier : les trois séances, la planche complète et ce rapport.

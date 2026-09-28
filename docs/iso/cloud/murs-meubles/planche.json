@@ -47,7 +47,8 @@
     "rapport_B_sur_A_max": 1.121,
     "pixels_allumes_B": 863424,
     "pixels_allumes_A": 863570
-   }
+   },
+   "tous": "img/portes_tous.jpg"
   },
   {
    "famille": "grilles",
@@ -96,7 +97,8 @@
     "rapport_B_sur_A_max": 1.121,
     "pixels_allumes_B": 677472,
     "pixels_allumes_A": 677618
-   }
+   },
+   "tous": "img/grilles_tous.jpg"
   },
   {
    "famille": "boitiers",
@@ -145,7 +147,8 @@
     "rapport_B_sur_A_max": 1.315,
     "pixels_allumes_B": 1055723,
     "pixels_allumes_A": 1055834
-   }
+   },
+   "tous": "img/boitiers_tous.jpg"
   },
   {
    "famille": "faisceaux",
@@ -194,12 +197,15 @@
     "rapport_B_sur_A_max": 1.381,
     "pixels_allumes_B": 620285,
     "pixels_allumes_A": 620480
-   }
+   },
+   "tous": "img/faisceaux_tous.jpg"
   }
  ],
  "vues": {
   "seul__a": "img/ensemble_seul__a.jpg",
   "seul__b": "img/ensemble_seul__b.jpg",
+  "tous__a": "img/ensemble_tous__a.jpg",
+  "tous__b": "img/ensemble_tous__b.jpg",
   "sym": "img/sym_ecran_scinde.jpg",
   "sym_m": "img/sym_emprise.jpg"
  }

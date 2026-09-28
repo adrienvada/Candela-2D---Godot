@@ -150,7 +150,8 @@ def main():
     journal_tous = sys.argv[3] if len(sys.argv) > 3 else ""
     seul = os.path.join(racine, "seul")
     tous = os.path.join(racine, "tous")
-    mesures = {"seul": {}, "tous": {}}
+    controle = os.path.join(racine, "controle")
+    mesures = {"seul": {}, "tous": {}, "controle": {}}
     cad = cadres(journal_seul)
     lignes = []
     for fam in FAMILLES:
@@ -158,11 +159,13 @@ def main():
             r = mesurer_serie(seul, "%s_%s" % (fam, etat))
             if r is not None:
                 mesures["seul"]["%s_%s" % (fam, etat)] = r
-        if os.path.isdir(tous):
+        for d, nom in ((tous, "tous"), (controle, "controle")):
+            if not os.path.isdir(d):
+                continue
             for etat in ("allumees", "eteintes"):
-                r = mesurer_serie(tous, "%s_%s" % (fam, etat))
+                r = mesurer_serie(d, "%s_%s" % (fam, etat))
                 if r is not None:
-                    mesures["tous"]["%s_%s" % (fam, etat)] = r
+                    mesures[nom]["%s_%s" % (fam, etat)] = r
     mesures["seul"]["sym"] = symetrie(seul)
     for d, nom in ((seul, "seul"), (tous, "tous")):
         r = mesurer_serie(d, "ensemble") if os.path.isdir(d) else None
