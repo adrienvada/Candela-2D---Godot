@@ -1,8 +1,8 @@
 # L'ombre des classes, suite : l'orientation, et une compensation par classe (session cloud ombre-orientation, 2026-09-27/28)
 
-> ⚠️ **Rien n'est poussé.** Le garde-fou de permissions de cette session a refusé `git push` (« Out-of-Place
-> Publication »), dès le premier commit. Je ne l'ai pas contourné. Les commits sont prêts sur la branche locale
-> `claude/cloud-ombre-orientation` (base `cdd18fd`) et attendent l'accord d'Adrien, ou une session qui peut pousser.
+> **Poussé le 2026-09-28 (vers 12:50, heure de Paris).** Le garde-fou de permissions avait refusé `git push` pendant
+> la séance (« Out-of-Place Publication ») ; je ne l'ai pas contourné. La branche est partie après le feu vert d'Adrien,
+> relayé par la session coordinatrice : « Fais en sorte que les sessions cloud 30h qui n'ont pas fini terminent ».
 
 ## Pour Adrien, en cinq lignes
 
