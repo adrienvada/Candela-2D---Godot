@@ -551,7 +551,12 @@ static func matiere_detail_active() -> bool:
 ## éteint par défaut : ce que le joueur voit de LUI-MÊME seulement (`iso_corps_soi_sombre.gdshaderinc`). La vue d'en face,
 ## la simulation et le protocole ne changent pas. `forcer_soi_sombre` : -1 lit la ligne de commande (une fois), 0 l'éteint,
 ## 1 l'allume.
+##
+## **Q39 (Adrien, 2026-09-28 : « Q39 : sombre ») — A, LE CORPS DE SOI SOMBRE, EST LE DÉFAUT depuis la 0.7.0.** Il ne change que la
+## vue du joueur sur lui-même : l'adversaire le voit comme avant, au pixel. `--sans-corps-soi-sombre` rend la silhouette claire
+## d'avant ; `--corps-soi-sombre` reste accepté, sans effet ; la variante B (`--corps-soi-sombre=fondu`) reste à l'essai.
 const DRAPEAU_SOI_SOMBRE := "--corps-soi-sombre"
+const DRAPEAU_SANS_SOI_SOMBRE := "--sans-corps-soi-sombre"
 static var forcer_soi_sombre := -1
 static var _soi_sombre_ligne := -1
 
@@ -560,8 +565,7 @@ static func soi_sombre_actif() -> bool:
 	if forcer_soi_sombre >= 0:
 		return forcer_soi_sombre == 1
 	if _soi_sombre_ligne < 0:
-		var args := OS.get_cmdline_user_args()
-		_soi_sombre_ligne = 1 if args.has(DRAPEAU_SOI_SOMBRE) or args.has(DRAPEAU_SOI_FONDU) else 0
+		_soi_sombre_ligne = 0 if DrapeauxDeLancement.present(DRAPEAU_SANS_SOI_SOMBRE) else 1
 	return _soi_sombre_ligne == 1
 
 
@@ -581,7 +585,7 @@ static func soi_fondu_actif() -> bool:
 	if forcer_soi_fondu >= 0:
 		return forcer_soi_fondu == 1
 	if _soi_fondu_ligne < 0:
-		_soi_fondu_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_SOI_FONDU) else 0
+		_soi_fondu_ligne = 1 if DrapeauxDeLancement.present(DRAPEAU_SOI_FONDU) else 0
 	return _soi_fondu_ligne == 1
 
 

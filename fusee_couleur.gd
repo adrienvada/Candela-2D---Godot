@@ -30,8 +30,13 @@ const Ch := preload("res://charte.gd")
 
 const COULEUR_SANG := Color(0.96, 0.272, 0.54)
 const DRAPEAU_ROUGE_SANG := "--fusee-rouge-sang"
-## Lu une fois au chargement, comme `FuseeModele.duree_plein_feu`. Un essai visuel : la simulation n'en dépend pas.
-static var rouge_sang: bool = OS.get_cmdline_user_args().has(DRAPEAU_ROUGE_SANG)
+## **Q36 (Adrien, 2026-09-28 : « le rouge le plus proche de l'illustration ») — LE DÉFAUT depuis la 0.7.0.** Lu une fois au
+## chargement, comme `FuseeModele.duree_plein_feu`. Visuel seulement : la simulation n'en dépend pas, la luminance du sol non
+## plus (seule la teinte bouge). `--sans-fusee-rouge-sang` rend le corail d'avant, en build de débogage seulement ;
+## `--fusee-rouge-sang` reste accepté, sans effet. Le rouge vraiment SOMBRE de l'illustration n'est pas celui-ci : il
+## changerait ce que le jeu montre (un sol plus sombre montre moins), et n'a pas été proposé.
+const DRAPEAU_SANS_ROUGE_SANG := "--sans-fusee-rouge-sang"
+static var rouge_sang: bool = not (OS.is_debug_build() and DrapeauxDeLancement.present(DRAPEAU_SANS_ROUGE_SANG))
 
 
 ## Pour les gardes : posé ou retiré sur place.

@@ -87,10 +87,14 @@ func _preprocesser(code: String, definis: Array) -> String:
 func _eteintes_rien_ne_change() -> void:
 	print("\n[Éteintes, rien ne change]")
 	var v := IsoVolumes.new()
-	_check("sans drapeau : masque éteint, forme 0", not v.masque_fumee and v.forme_masque == 0)
+	# Q31 (Adrien, 2026-09-28, « peu importe, prends le plus léger ») : depuis la 0.7.0, le masque est ALLUMÉ par défaut, dans
+	# la forme 5 (V5, le juge ajusté). Le reste de ce bloc garde la preuve d'hier sur le masque ÉTEINT, posé à la main.
+	_check("par défaut depuis la 0.7.0 : masque allumé, forme 5 (V5, Q31)", v.masque_fumee and v.forme_masque == 5)
+	v.masque_fumee = false
+	v.forme_masque = 0
 	var mat: ShaderMaterial = v.call("_materiau_volume")
-	_check("sans drapeau : la couche garde le shader des volumes d'avant", mat.shader == IsoVolumes.SHADER_VOLUME)
-	_check("sans drapeau : aucun juge (le pochoir n'existe pas)", v.get_child_count() == 0)
+	_check("éteint : la couche garde le shader des volumes d'avant", mat.shader == IsoVolumes.SHADER_VOLUME)
+	_check("éteint : aucun juge (le pochoir n'existe pas)", v.get_child_count() == 0)
 	v.masque_fumee = true
 	var gadgets: ShaderMaterial = v.call("_materiau_volume")
 	var marques := ["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_POCHOIR_JUGE", "MASQUE_LUMIERE",

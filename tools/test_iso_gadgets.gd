@@ -664,16 +664,19 @@ func _le_faisceau_air_dans_le_texte(texte: String) -> void:
 
 
 
-## ISO13, Q31 voie A — le masque de la fumée, éteint par défaut depuis le 2026-09-26 (`--fumee-masque` l'allume). Éteint, le jeu compile le
+## ISO13, Q31 voie A — le masque de la fumée, allumé par défaut depuis la 0.7.0 (V5 ; éteint du 2026-09-26 à la 0.7.0). Éteint, le jeu compile le
 ## shader des volumes d'avant ; allumé, chaque couche passe à la variante FUMEE_MASQUE, dont le seul ajout est de TAIRE la
 ## couche (jamais de l'éclaircir) là où ce que le pixel montre s'affiche noir.
 func _le_masque_de_la_fumee() -> void:
 	print("\n[Le masque de la fumée — Q31, voie A]")
 	var v := IsoVolumes.new()
-	# ÉTEINT PAR DÉFAUT depuis le 2026-09-26 (ordre 416) : le prix échoue sur l'état intégré (0,863), Q31 revient à Adrien.
-	_check("le masque est ÉTEINT par défaut (ordre 416) ; --fumee-masque l'allume",
-		not bool(v.get("masque_fumee")) and FileAccess.get_file_as_string("res://iso_volumes.gd").contains(
-			"elif arg == DRAPEAU_MASQUE_FUMEE:\n\t\t\tmasque_fumee = true"))
+	# Éteint le 2026-09-26 (ordre 416) pour son prix ; ALLUMÉ PAR DÉFAUT depuis la 0.7.0 dans sa forme la plus légère, V5
+	# (Q31, Adrien, 2026-09-28 : « peu importe, prends le plus léger »). `--sans-fumee-masque` l'éteint en débogage SEULEMENT :
+	# éteint, la fumée allume des pixels hors de la lumière, ce qu'un joueur ne doit pas pouvoir choisir.
+	_check("le masque est ALLUMÉ par défaut, forme V5 (Q31) ; --sans-fumee-masque ne l'éteint qu'en build de débogage",
+		bool(v.get("masque_fumee")) and int(v.get("forme_masque")) == 5
+		and FileAccess.get_file_as_string("res://iso_volumes.gd").contains(
+			"elif arg == DRAPEAU_SANS_MASQUE_FUMEE and OS.is_debug_build():\n\t\t\tmasque_fumee = false"))
 	v.set("masque_fumee", false)
 	var eteint: ShaderMaterial = v.call("_materiau_volume")
 	_check("éteint, la couche garde le shader des volumes d'avant", eteint.shader == IsoVolumes.SHADER_VOLUME)

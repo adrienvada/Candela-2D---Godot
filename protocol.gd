@@ -286,6 +286,13 @@ class_name Protocol
 ##     parce qu'aucun tag n'a figé ce numéro depuis sa montée en MB1.
 ## 18 (suite) — `rpc_send_inputs` gagne un dixième argument, le geste d'ENJAMBER
 ##     tenu (MB3b, 2026-09-14). Même raisonnement, même numéro : non publié.
+## 18 (suite) — la fusée garde son PLEIN FEU 4 s par défaut (Q35 = oui, Adrien,
+##     2026-09-28), la braise en rendant 2 : la durée totale ne bouge pas. Aucun
+##     RPC ne change de forme, mais l'horloge de la fusée est publique et simulée
+##     à l'identique chez les deux pairs (`FuseeModele`) : deux jeux qui ne
+##     l'auraient pas en commun ne verraient pas la même fusée. Cumulée sous 18,
+##     encore libre ce jour-là — c'est pourquoi elle entre AVANT le tag, et non
+##     dans une 0.7.x. `--sans-fusee-rouge-long` ne vaut qu'en build de débogage.
 ##
 ## ## ⛔ LA v18 EST PUBLIÉE — depuis **v0.7.0, le 2026-09-28**
 ##

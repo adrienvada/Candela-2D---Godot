@@ -69,21 +69,29 @@ func _noms(sh: Shader) -> Array:
 
 
 func _le_drapeau(racine: Node3D) -> void:
-	print("— le drapeau : éteint par défaut, rien ne change")
+	# Q39 = A (Adrien, 2026-09-28, « Q39 : sombre ») : ALLUMÉ PAR DÉFAUT depuis la 0.7.0. Éteint (`--sans-corps-soi-sombre`,
+	# ici forcé à 0), il ne change toujours rien au bit : c'est la garde d'hier, gardée pour le retour en arrière.
+	print("— le drapeau : allumé par défaut depuis la 0.7.0 (Q39) ; éteint, rien ne change")
 	VoxelCatalogue.forcer_soi_sombre = -1
-	_check("--corps-soi-sombre n'est pas sur la ligne de commande de la suite", not VoxelCatalogue.soi_sombre_actif())
+	_check("par défaut, sans rien sur la ligne de commande de la suite : actif (Q39 = A)", VoxelCatalogue.soi_sombre_actif())
 	_check("le drapeau s'écrit --corps-soi-sombre", VoxelCatalogue.DRAPEAU_SOI_SOMBRE == "--corps-soi-sombre")
+	_check("le retour s'écrit --sans-corps-soi-sombre", VoxelCatalogue.DRAPEAU_SANS_SOI_SOMBRE == "--sans-corps-soi-sombre")
 	var origine: Shader = load(SHADER)
 	_check("le shader d'origine ne déclare aucun uniforme de l'essai",
 		not _noms(origine).has("soi_lumiere") and not _noms(origine).has("soi_sombre_facteur"))
+	var md := ShaderMaterial.new()
+	md.shader = origine
+	IsoMateriaux.accorder_corps(md)
+	_check("par défaut : accorder_corps pose la variante", md.shader.code.contains("#define CORPS_SOI_SOMBRE\n"))
+	VoxelCatalogue.forcer_soi_sombre = 0
 	var c := VoxelCorps.new()
 	racine.add_child(c)
 	c.construire("pistolet")
-	_check("sans drapeau : un corps construit garde le shader d'origine", c.materiau().shader == origine)
+	_check("éteint : un corps construit garde le shader d'origine", c.materiau().shader == origine)
 	var m := ShaderMaterial.new()
 	m.shader = origine
 	IsoMateriaux.accorder_corps(m)
-	_check("sans drapeau : accorder_corps laisse le shader d'origine", m.shader == origine)
+	_check("éteint : accorder_corps laisse le shader d'origine", m.shader == origine)
 
 	print("— allumé : la variante")
 	VoxelCatalogue.forcer_soi_sombre = 1

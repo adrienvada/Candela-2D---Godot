@@ -104,12 +104,17 @@ var densite_faisceau_air := 0.0
 ## revient à Adrien avec ce prix. La preuve à l'image reste acquise. `--fumee-masque` l'allume ; `--sans-fumee-masque`
 ## reste accepté et ne change rien. À poser AVANT que les couches naissent, comme `couches_fusee` — une couche déjà créée
 ## garde son shader (les bancs basculent par `poser_masque_fumee`).
-var masque_fumee := false
+## **Q31 (Adrien, 2026-09-28 : « peu importe, prends le plus léger ») — ALLUMÉ PAR DÉFAUT depuis la 0.7.0, dans la forme qui
+## fait le moins de travail : V5, « le juge ajusté » (`forme_masque = 5`, session cloud masque-fumée-2 : même image que le
+## pochoir, V5 contient V4 qui contient le pochoir).** `--sans-fumee-masque` l'éteint, en build de débogage seulement : éteint,
+## la fumée allume des pixels hors de la lumière, ce qu'un joueur ne doit pas pouvoir choisir.
+var masque_fumee := true
 ## Session cloud « masque-fumée » (2026-09-27) — LA FORME du masque, quand il est allumé : 0, celle de Gadgets (le masque de
 ## `--fumee-masque`, tel quel) ; 1 à 3, les formes moins chères de `volume_masque_compact.gdshaderinc`, chacune derrière son
 ## drapeau (`FORMES_MASQUE`), qui allume aussi le masque. ÉTEINTES par défaut : sans l'un de ces drapeaux, rien ne change.
 ## Chacune ajoute une idée à la précédente, pour qu'une série en miroir attribue le prix à chaque idée.
-var forme_masque := 0
+## Depuis la 0.7.0 (Q31), la forme par défaut est 5 (V5) ; les drapeaux de forme choisissent toujours la leur.
+var forme_masque := 5
 ## Q34 = C (Adrien, 2026-09-26) — le point de braise de la fusée POSÉE, PAR DÉFAUT. En 2D, le cœur incandescent (`fusee.gd`,
 ## `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est une information de jeu, la
 ## position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et ne l'émet pas ; ce point le
@@ -191,7 +196,7 @@ func _init() -> void:
 			densite_faisceau_air = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU_AIR + "=")))
 		elif arg == DRAPEAU_MASQUE_FUMEE:
 			masque_fumee = true
-		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
+		elif arg == DRAPEAU_SANS_MASQUE_FUMEE and OS.is_debug_build():
 			masque_fumee = false
 		elif FORMES_MASQUE.has(arg):
 			masque_fumee = true
@@ -213,8 +218,7 @@ func _init() -> void:
 			else "de la couleur de la lumière, sans le blanc (%s)" % DRAPEAU_COEUR_FUSEE))
 	# L'état éteint s'imprime aussi : la référence d'une série se prouve par ce que le JEU dit, jamais par la commande.
 	if not masque_fumee:
-		print("[fumée masque] éteint (le défaut depuis le 2026-09-26 ; %s l'allume) — le shader des volumes d'avant"
-			% DRAPEAU_MASQUE_FUMEE)
+		print("[fumée masque] éteint (%s, build de débogage) — le shader des volumes d'avant" % DRAPEAU_SANS_MASQUE_FUMEE)
 
 
 func nombre_de_suivis() -> int:

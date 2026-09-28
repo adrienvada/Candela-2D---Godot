@@ -78,7 +78,9 @@ func _run() -> void:
 		_alpha.append(img.get_pixel(x, img.get_height() / 2).a)
 	var d := _detresse()
 	_check("la couleur de détresse se lit dans fusee.gd (%s)" % str(d), d.r > 0.5)
-	_check("éteint par défaut (aucun drapeau sur la ligne de commande)", not Couleur.rouge_sang)
+	# Q36 (Adrien, 2026-09-28, « le rouge le plus proche de l'illustration ») : ALLUMÉ PAR DÉFAUT depuis la 0.7.0.
+	_check("allumé par défaut depuis la 0.7.0 (Q36 ; aucun drapeau sur la ligne de commande)", Couleur.rouge_sang)
+	_check("le retour s'écrit --sans-fusee-rouge-sang", Couleur.DRAPEAU_SANS_ROUGE_SANG == "--sans-fusee-rouge-sang")
 	_check("fusee.gd passe par FuseeCouleur partout où il posait la détresse",
 		not FileAccess.get_file_as_string("res://fusee.gd").contains("COULEUR_DETRESSE.lerp")
 		and not FileAccess.get_file_as_string("res://fusee.gd").contains("= COULEUR_DETRESSE\n"))

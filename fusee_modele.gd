@@ -40,10 +40,16 @@ const DUREE_PLEIN_FEU := 2.0          # s
 ## gardée, la fusée vivant 22 s) a ÉCHOUÉ au banc d'équité sur l'aire cachée × temps : voir la ROADMAP. Lu une fois au
 ## chargement. ⚠️ Les deux pairs doivent porter le même drapeau : l'horloge est publique, simulée à l'identique — un essai,
 ## pas un réglage de match.
+##
+## **Q35 = OUI (Adrien, 2026-09-28 : « Avant de publier 0.7 : Q35 : oui ») — le rouge long est LE DÉFAUT depuis la 0.7.0.**
+## Il entre sous le protocole 18, que rien n'avait encore publié : tous les jeux 0.7 ont la même horloge de fusée.
+## `--sans-fusee-rouge-long` rend le plein feu de 2 s, en build de débogage SEULEMENT (les bancs qui comparent) : en build
+## publié, un joueur qui le passerait lirait une autre horloge que son adversaire. `--fusee-rouge-long` reste accepté, sans effet.
 const DUREE_PLEIN_FEU_LONG := 4.0
 const DRAPEAU_ROUGE_LONG := "--fusee-rouge-long"
-static var duree_plein_feu: float = DUREE_PLEIN_FEU_LONG if DrapeauxDeLancement.present(DRAPEAU_ROUGE_LONG) \
-	else DUREE_PLEIN_FEU
+const DRAPEAU_SANS_ROUGE_LONG := "--sans-fusee-rouge-long"
+static var duree_plein_feu: float = DUREE_PLEIN_FEU \
+	if OS.is_debug_build() and DrapeauxDeLancement.present(DRAPEAU_SANS_ROUGE_LONG) else DUREE_PLEIN_FEU_LONG
 ## La braise de l'essai : elle rend au plein feu ce qu'il gagne, pour que la durée totale ne bouge pas.
 static var duree_braise: float = DUREE_BRAISE - (duree_plein_feu - DUREE_PLEIN_FEU)
 const DUREE_BRAISE := 10.0        # s
