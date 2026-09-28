@@ -3,7 +3,16 @@
 Session cloud, branche `claude/cloud-restes`, partie d'`origin/integration-iso14` (a30a407), le 28/09/2026 à 09:20
 (heure de Paris). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
 
-**Rapport en cours — plan de travail.**
+**Rapport en cours.** État à 10:30 :
+
+- [x] § 1, le sang : **établi**. 19 traces du Cloître (8 taches de sang, 5 éclats de mur, 6 douilles) restent sur la
+  Croisée après l'écran de fin → CHANGER DE CARTE → REJOUER, en vue iso (séance `photo_restes`, vrais tirs). Correction
+  proposée `dd14620`, garde `tools/test_traces_carte.gd` (3 échecs avant, 13/13 après), cueillie à blanc sur les deux bases.
+- [x] § 2, le regard du noir (M3) : **établi par l'état du jeu** (en match : visible, traité, son silence compte), image
+  en cours. Correction proposée `baf4ca1`, garde `tools/test_regard_hors_menu.gd` (4 échecs avant, 11/11 après),
+  cueillie à blanc sur les deux bases. Le fond de menu (`menu_backdrop`) : écarté par le code (un matériau, rien dessiné
+  hors des panneaux) — mesure à l'image en cours.
+- [ ] images avant/après, en ligne, vue unique, suite complète, rapport final.
 
 ## Plan
 
