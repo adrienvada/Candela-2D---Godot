@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Murs meublés</title>
+<style>
+:root { --fond:#141210; --carte:#1f1b17; --texte:#e8e0d4; --doux:#a39888; --trait:#3a332b; --accent:#d9a65a; }
+body { margin:0; background:var(--fond); color:var(--texte); font:15px/1.5 system-ui, sans-serif; }
+main { max-width:1500px; margin:0 auto; padding:24px 16px 64px; }
+h1 { font-size:26px; margin:0 0 4px; } h2 { font-size:19px; margin:36px 0 10px; color:var(--accent); }
+p.doux, .doux { color:var(--doux); }
+.rangee { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; align-items:start; }
+figure { margin:0; background:var(--carte); border:1px solid var(--trait); border-radius:6px; padding:6px; }
+figure img { width:100%; height:auto; display:block; image-rendering:pixelated; border-radius:3px; }
+figcaption { font-size:12.5px; color:var(--doux); margin-top:4px; }
+table { border-collapse:collapse; margin:10px 0; font-size:13.5px; width:100%; }
+td, th { border-bottom:1px solid var(--trait); padding:4px 8px; text-align:right; }
+th:first-child, td:first-child { text-align:left; }
+.ok { color:#8fc98f; } .ko { color:#e07a6a; }
+.large { grid-column:1 / -1; }
+@media (max-width:800px) { .rangee { grid-template-columns:1fr 1fr; } }
+</style></head><body><main>
+<h1>Les murs meublés, à l'essai</h1>
+<p class="doux">Drapeau <code>--murs-meubles-essai</code>, éteint par défaut. Carte : le Cloître, cadrage du jeu (1920×1080,
+lacet 45° B). « Sans » et « avec » sont pris au MÊME instant (jeu en pause, l'essai caché puis montré). Les loupes sont
+agrandies trois fois au plus proche : ce sont les pixels du jeu. Rendu logiciel du cloud : les couleurs et les comptes de
+pixels valent, pas la cadence.</p>
+
+<h2>Les portes rivetées</h2><div class='rangee'>
+<figure><img src='img/portes_illustration.jpg' alt='illustration'><figcaption>L'illustration (ill_intro_seuil.png)</figcaption></figure>
+<figure><img src='img/portes_sans.jpg' alt='sans'><figcaption>Le jeu sans, 1:1</figcaption></figure>
+<figure><img src='img/portes_avec.jpg' alt='avec'><figcaption>Le jeu avec, 1:1</figcaption></figure>
+<figure><img src='img/portes_sans_x3.jpg' alt='sans x3'><figcaption>Sans, ×3</figcaption></figure>
+<figure><img src='img/portes_avec_x3.jpg' alt='avec x3'><figcaption>Avec, ×3</figcaption></figure>
+<figure><img src='img/portes_eteintes_avec.jpg' alt='torches éteintes'><figcaption>Avec, torches éteintes, 1:1</figcaption></figure>
+</div>
+<table><tr><th>mesure</th><th>torches allumées</th><th>torches éteintes</th></tr>
+<tr><td>emprise à l'écran (px)</td><td>13 923</td><td>13 924</td></tr>
+<tr><td>dont sur une face éclairée</td><td>13 923</td><td>13 924</td></tr>
+<tr><td>dont sur un pixel noir (A et A2)</td><td>0</td><td>0</td></tr>
+<tr><td>pixels changés par l'essai</td><td>13 923</td><td>13 924</td></tr>
+<tr><td>dont hors de l'emprise</td><td>0</td><td>0</td></tr>
+<tr><td>plus clairs que sans (luminance +0,5)</td><td>2</td><td>2</td></tr>
+<tr><td>un canal +2 (pour mémoire)</td><td>0</td><td>0</td></tr>
+<tr><td>noirs allumés (0 → plus, A = A2 = 0)</td><td>0</td><td>0</td></tr>
+<tr><td>noirs allumés (seuil 7,5/255)</td><td>0</td><td>0</td></tr>
+<tr><td>clarté avec / sans, sur l'emprise éclairée (médiane)</td><td>0.73</td><td>0.729</td></tr>
+<tr><td>idem, maximum</td><td>1.121</td><td>1.121</td></tr>
+<tr><td>bruit : A contre A2</td><td>0</td><td>0</td></tr>
+</table><p><span class='ko'>plus clair par endroits</span> · <span class='ok'>noir resté noir</span></p>
+<h2>Les grilles</h2><div class='rangee'>
+<figure><img src='img/grilles_illustration.jpg' alt='illustration'><figcaption>L'illustration (ill_accueil.png)</figcaption></figure>
+<figure><img src='img/grilles_sans.jpg' alt='sans'><figcaption>Le jeu sans, 1:1</figcaption></figure>
+<figure><img src='img/grilles_avec.jpg' alt='avec'><figcaption>Le jeu avec, 1:1</figcaption></figure>
+<figure><img src='img/grilles_sans_x3.jpg' alt='sans x3'><figcaption>Sans, ×3</figcaption></figure>
+<figure><img src='img/grilles_avec_x3.jpg' alt='avec x3'><figcaption>Avec, ×3</figcaption></figure>
+<figure><img src='img/grilles_eteintes_avec.jpg' alt='torches éteintes'><figcaption>Avec, torches éteintes, 1:1</figcaption></figure>
+</div>
+<table><tr><th>mesure</th><th>torches allumées</th><th>torches éteintes</th></tr>
+<tr><td>emprise à l'écran (px)</td><td>12 482</td><td>12 482</td></tr>
+<tr><td>dont sur une face éclairée</td><td>12 465</td><td>12 465</td></tr>
+<tr><td>dont sur un pixel noir (A et A2)</td><td>17</td><td>17</td></tr>
+<tr><td>pixels changés par l'essai</td><td>12 465</td><td>12 465</td></tr>
+<tr><td>dont hors de l'emprise</td><td>0</td><td>0</td></tr>
+<tr><td>plus clairs que sans (luminance +0,5)</td><td>2</td><td>2</td></tr>
+<tr><td>un canal +2 (pour mémoire)</td><td>0</td><td>0</td></tr>
+<tr><td>noirs allumés (0 → plus, A = A2 = 0)</td><td>0</td><td>0</td></tr>
+<tr><td>noirs allumés (seuil 7,5/255)</td><td>0</td><td>0</td></tr>
+<tr><td>clarté avec / sans, sur l'emprise éclairée (médiane)</td><td>0.729</td><td>0.729</td></tr>
+<tr><td>idem, maximum</td><td>1.121</td><td>1.121</td></tr>
+<tr><td>bruit : A contre A2</td><td>0</td><td>0</td></tr>
+</table><p><span class='ko'>plus clair par endroits</span> · <span class='ok'>noir resté noir</span></p>
+<h2>Les boîtiers électriques</h2><div class='rangee'>
+<figure><img src='img/boitiers_illustration.jpg' alt='illustration'><figcaption>L'illustration (ill_competitif.png)</figcaption></figure>
+<figure><img src='img/boitiers_sans.jpg' alt='sans'><figcaption>Le jeu sans, 1:1</figcaption></figure>
+<figure><img src='img/boitiers_avec.jpg' alt='avec'><figcaption>Le jeu avec, 1:1</figcaption></figure>
+<figure><img src='img/boitiers_sans_x3.jpg' alt='sans x3'><figcaption>Sans, ×3</figcaption></figure>
+<figure><img src='img/boitiers_avec_x3.jpg' alt='avec x3'><figcaption>Avec, ×3</figcaption></figure>
+<figure><img src='img/boitiers_eteintes_avec.jpg' alt='torches éteintes'><figcaption>Avec, torches éteintes, 1:1</figcaption></figure>
+</div>
+<table><tr><th>mesure</th><th>torches allumées</th><th>torches éteintes</th></tr>
+<tr><td>emprise à l'écran (px)</td><td>8 690</td><td>8 691</td></tr>
+<tr><td>dont sur une face éclairée</td><td>8 690</td><td>8 691</td></tr>
+<tr><td>dont sur un pixel noir (A et A2)</td><td>0</td><td>0</td></tr>
+<tr><td>pixels changés par l'essai</td><td>8 690</td><td>8 691</td></tr>
+<tr><td>dont hors de l'emprise</td><td>0</td><td>0</td></tr>
+<tr><td>plus clairs que sans (luminance +0,5)</td><td>22</td><td>22</td></tr>
+<tr><td>un canal +2 (pour mémoire)</td><td>9</td><td>9</td></tr>
+<tr><td>noirs allumés (0 → plus, A = A2 = 0)</td><td>0</td><td>0</td></tr>
+<tr><td>noirs allumés (seuil 7,5/255)</td><td>0</td><td>0</td></tr>
+<tr><td>clarté avec / sans, sur l'emprise éclairée (médiane)</td><td>0.729</td><td>0.724</td></tr>
+<tr><td>idem, maximum</td><td>1.315</td><td>1.315</td></tr>
+<tr><td>bruit : A contre A2</td><td>0</td><td>0</td></tr>
+</table><p><span class='ko'>plus clair par endroits</span> · <span class='ok'>noir resté noir</span></p>
+<h2>Les faisceaux de câbles serrés</h2><div class='rangee'>
+<figure><img src='img/faisceaux_illustration.jpg' alt='illustration'><figcaption>L'illustration (ill_rejoindre_ligne.png)</figcaption></figure>
+<figure><img src='img/faisceaux_sans.jpg' alt='sans'><figcaption>Le jeu sans, 1:1</figcaption></figure>
+<figure><img src='img/faisceaux_avec.jpg' alt='avec'><figcaption>Le jeu avec, 1:1</figcaption></figure>
+<figure><img src='img/faisceaux_sans_x3.jpg' alt='sans x3'><figcaption>Sans, ×3</figcaption></figure>
+<figure><img src='img/faisceaux_avec_x3.jpg' alt='avec x3'><figcaption>Avec, ×3</figcaption></figure>
+<figure><img src='img/faisceaux_eteintes_avec.jpg' alt='torches éteintes'><figcaption>Avec, torches éteintes, 1:1</figcaption></figure>
+</div>
+<table><tr><th>mesure</th><th>torches allumées</th><th>torches éteintes</th></tr>
+<tr><td>emprise à l'écran (px)</td><td>12 483</td><td>12 483</td></tr>
+<tr><td>dont sur une face éclairée</td><td>12 243</td><td>12 243</td></tr>
+<tr><td>dont sur un pixel noir (A et A2)</td><td>232</td><td>232</td></tr>
+<tr><td>pixels changés par l'essai</td><td>12 245</td><td>12 246</td></tr>
+<tr><td>dont hors de l'emprise</td><td>0</td><td>0</td></tr>
+<tr><td>plus clairs que sans (luminance +0,5)</td><td>13</td><td>13</td></tr>
+<tr><td>un canal +2 (pour mémoire)</td><td>11</td><td>11</td></tr>
+<tr><td>noirs allumés (0 → plus, A = A2 = 0)</td><td>0</td><td>0</td></tr>
+<tr><td>noirs allumés (seuil 7,5/255)</td><td>0</td><td>0</td></tr>
+<tr><td>clarté avec / sans, sur l'emprise éclairée (médiane)</td><td>0.722</td><td>0.729</td></tr>
+<tr><td>idem, maximum</td><td>1.381</td><td>1.381</td></tr>
+<tr><td>bruit : A contre A2</td><td>0</td><td>0</td></tr>
+</table><p><span class='ko'>plus clair par endroits</span> · <span class='ok'>noir resté noir</span></p>
+<h2>La symétrie J1 / J2 à 45° B</h2><p class='doux'>Écran scindé : J1 devant un faisceau, J2 à son image par le demi-tour, sa caméra à 225°. À droite, l'emprise des murs meublés en blanc : les deux moitiés doivent coïncider.</p><div class='rangee'>
+<figure class='large'><img src='img/sym_ecran_scinde.jpg' alt=''><figcaption>l'écran scindé, avec</figcaption></figure>
+<figure class='large'><img src='img/sym_emprise.jpg' alt=''><figcaption>l'emprise</figcaption></figure>
+</div><table><tr><th>mesure</th><th>valeur</th></tr>
+<tr><td>emprise, moitié de J1</td><td>7 122</td></tr>
+<tr><td>emprise, moitié de J2</td><td>7 109</td></tr>
+<tr><td>pixels d'une seule moitié</td><td>2 477</td></tr>
+<tr><td>idem, au meilleur recalage ±3 px</td><td>511</td></tr>
+<tr><td>recalage x</td><td>-2</td></tr>
+<tr><td>recalage y</td><td>0</td></tr>
+<tr><td>luminance moyenne sur l'emprise, J1</td><td>33.8</td></tr>
+<tr><td>idem, J2</td><td>33.45</td></tr>
+</table>
+<h2>La vue d'ensemble</h2><div class='rangee'>
+<figure class='large'><img src='img/ensemble_seul__a.jpg' alt=''><figcaption>le jeu par défaut (l'essai caché)</figcaption></figure>
+<figure class='large'><img src='img/ensemble_seul__b.jpg' alt=''><figcaption>les murs meublés seuls</figcaption></figure>
+</div></main></body></html>
