@@ -311,4 +311,9 @@ fenêtre au premier plan.
 
 ## État final
 
-- Suite complète sur l'état final (après l'outil de prise) : voir la ligne suivante, mise à jour à la fin de la séance.
+- Suite complète sur l'état final (1dc5ec8 et suivants, outil de prise compris) : **145 bancs OK, « tout passe, sans
+  erreur de script (634 s) », EXIT 0.**
+- Aucun défaut du jeu ne change ; la seule ligne de jeu écrite est la résolution Q33 × Q39 (§ 1), sous drapeau.
+- Images : 13 Mo pour `docs/iso/cloud/ecart-11/` (JPEG qualité 85, aucun fichier au-dessus de 5 Mo) ; le reste du poids
+  de la branche vient des branches fusionnées.
+- Aucun fichier de clés ni secret dans le diff (`git diff origin/integration-iso14...HEAD`, vérifié avant chaque push).
