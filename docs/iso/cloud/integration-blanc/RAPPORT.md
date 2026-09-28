@@ -1,7 +1,16 @@
 # Intégration à blanc — iso11-menus + iso12-corps dans integration-iso14
 
-> Session cloud, branche `claude/cloud-integration-blanc`, 2026-09-28 (heures de Paris).
-> **En cours** : fusions faites et vérifiées ; suite et planche à venir.
+> Session cloud, branche `claude/cloud-integration-blanc`, 2026-09-28, de 02:04 à ~03:20 (heures de Paris).
+> **Terminée.** Base `a30a407` ; fusions `8f81a53` (iso11) et `244cb88` (iso12) ; commit du photographe `fde7346`
+> (à NE PAS reprendre).
+
+## Pour Adrien, en cinq lignes
+
+1. Les deux chantiers en attente (les gadgets de la fusée et les personnages détaillés) se rassemblent sans casse avec l'état d'aujourd'hui.
+2. Il y a eu quatre petits désaccords entre les fichiers, tous tranchés sans rien jeter ; le détail est écrit ci-dessous pour qu'Iso 1 refasse les mêmes gestes sur ton Mac.
+3. Rien n'a été perdu : j'ai vérifié ligne à ligne que tout ce que chaque chantier ajoutait est encore là.
+4. Le jeu par défaut ne change pas : vue à 45° avec le joueur 2 de l'autre côté, murs abîmés, caméra comme avant ; les personnages détaillés et la fusée « rouge long » restent éteints.
+5. Tous les tests automatiques passent, et les images montrent le jeu à 45° avec le nouveau point rouge de la fusée quand elle retombe en braise.
 
 ## Pour Iso 1 — les gestes, dans l'ordre
 
@@ -113,3 +122,95 @@ settings_manager.gd presentation_3d.gd` est vide).
 **137 suites OK, code 0, « tout passe, sans erreur de script (594s) »**. Journal complet :
 [`suite_244cb88.log`](suite_244cb88.log). Les `CLIENT OK (coupé, code 137)` des bancs duo sont le client tué à
 dessein par le lanceur (ils sortent OK).
+
+## La planche (photographe, sous Xvfb, 1920×1080)
+
+Deux séances, toutes deux sur l'arbre fusionné plus le commit du photographe (manifeste : `commit 90327e8`,
+`mode_rendu "iso lacet 45° B"`). La première image de chaque séance a été regardée **avant** toute mesure : pas d'intro
+(le `user://` neuf a été préparé avec `intro_vue=true`, voir les commandes).
+
+| Image | Ce qu'elle prouve |
+|---|---|
+| [`1_duel_45B_torches_allumees.jpg`](img/1_duel_45B_torches_allumees.jpg) | Le duel à 45° (les murs en diagonale), corps en aplats gris-bleu (le personnage détaillé est éteint), le noir hors des lumières. |
+| [`2_ecran_scinde_45B_J2_cote_oppose.jpg`](img/2_ecran_scinde_45B_J2_cote_oppose.jpg) | L'option B : la vue de J2 (à droite) tournée de 180° par rapport à celle de J1. |
+| [`3_torche_seule.jpg`](img/3_torche_seule.jpg) | La torche seule dans le noir, à 45°. |
+| [`4_torches_eteintes_repere.jpg`](img/4_torches_eteintes_repere.jpg) | Torches éteintes (plan « repère ») : il ne reste que le HUD, les repères du poseur et le halo du joueur. |
+| [`5_fusee_plein_feu.jpg`](img/5_fusee_plein_feu.jpg) | La fusée à 1,2 s, au plein feu : lumière rouge, cœur presque blanc. |
+| [`6_fusee_braise_point_rouge.jpg`](img/6_fusee_braise_point_rouge.jpg) et [`7_point_rouge_loupe_x6.jpg`](img/7_point_rouge_loupe_x6.jpg) | La même fusée plus tard (dernier plan de la séance 2, « arbalète »), lumière passée à l'orange de la braise : **le point est ROUGE** sur le sol jaune-orange. Mesure : cœur (rayon 4 px) **(238, 174, 114)**, anneau à 20-30 px (252, 219, 115) : le point baisse le vert de 45 et le rouge de 14 par rapport à son entourage. Avant `88dbfb0` il était jaune pâle (D1 de la ROADMAP) : un point additif sur ce sol aurait monté le vert, pas baissé. |
+
+Le jeu dit lui-même ses défauts dans le journal ([`photos_seance1.log`](photos_seance1.log),
+[`photos_seance2.log`](photos_seance2.log)) : `[usure] allumée`, `[fumée masque] éteint (le défaut depuis le
+2026-09-26 …)`, **aucune** ligne `[fusée] rouge long` (imprimée à la première fusée quand l'essai est allumé), **aucune**
+ligne `[fusée cœur]` (imprimée seulement hors du défaut 2).
+
+## Commandes exactes pour tout refaire (cloud)
+
+```bash
+git fetch origin integration-iso14 iso11-menus iso12-corps
+git checkout -B claude/cloud-integration-blanc origin/integration-iso14
+git merge --no-ff origin/iso11-menus     # résoudre comme au tableau de la fusion 1
+git merge --no-ff origin/iso12-corps     # résoudre comme au tableau de la fusion 2
+godot --headless --path . --import
+GODOT=/usr/local/bin/godot ./tools/run_suites.sh                     # 137 OK, ~10 min
+# Le photographe pour le cloud (commit à part, pas pour le Mac) :
+git fetch origin claude/cloud-photographe main
+git diff 76fe78f 0c67705 -- tools/photographe.gd tools/loupe.gd tools/run_photos.sh | git apply
+# Un user:// neuf où l'intro est déjà vue (sinon elle recouvre les prises) :
+export XDG_DATA_HOME=$PWD/../xdg ; U="$XDG_DATA_HOME/godot/app_userdata/Candela 2D"; mkdir -p "$U"
+printf '[display]\n\nintro_vue=true\n' > "$U/settings.cfg"
+GODOT=/usr/local/bin/godot GODOT_ARGS="--fixed-fps 60" xvfb-run -a -s "-screen 0 1920x1080x24" \
+  ./tools/run_photos.sh --plan=duel,ecran-scinde-duel,torche,repere,fusee,loupe-fusee-lissage-sans-suie --sortie=user://blanc
+GODOT=/usr/local/bin/godot GODOT_ARGS="--fixed-fps 60" xvfb-run -a -s "-screen 0 1920x1080x24" \
+  ./tools/run_photos.sh --plan=fusee,armes,impacts --sortie=user://blanc2
+```
+
+Sur le Mac, pour Iso 1 : seulement les deux `git merge` et leurs résolutions, puis `./tools/run_suites.sh`. **Ne pas
+reprendre `fde7346`** (le photographe du cloud) ni le dossier `docs/iso/cloud/integration-blanc/`.
+
+## Décisions prises seules, et pourquoi
+
+- **Pas d'approfondissement du clone** : `git merge-base` a trouvé les ancêtres communs (28152c5, 5d9ef55) du premier coup.
+- **Des « résolutions iso11 » qui ne sont pas des prises en bloc** : integration-iso14 porte des commits d'iso11 recopiés
+  (cherry-pick), git les croit différents ; là où iso11 les a réécrits ensuite, sa version est la suite du même texte. Vérifié
+  par `git show <commit d'origine>:docs/ROADMAP.md | grep` pour chacune des quatre lignes (§ Anti-perte).
+- **La planche sans `photo_essais.gd`** : l'outil de `claude/cloud-essais` ne compile pas sur cette base (il précharge
+  `res://tuyaux_iso.gd`, absent d'integration-iso14). Je ne l'ai pas committé ni corrigé (aucun code de moi) ; le photographe
+  du dépôt suffit, et le `user://` préparé remplace le congé de l'intro.
+- **Le point rouge pris sur un plan « armes »** : le photographe n'a pas de plan « fusée à la braise » en vue de jeu, et
+  la loupe `loupe-fusee-lissage-sans-suie` ne montre pas le point (voir plus bas). Les plans qui suivent la fusée la
+  gardent dans le cadre pendant sa vie de 20 s : le dernier tombe dans la braise.
+
+## Ce que je n'ai PAS pu prouver
+
+- **La cadence** : aucun chiffre ici, le cloud n'en donne pas (llvmpipe). Les deux branches l'ont mesurée sur le Mac chacune
+  de son côté (iso11 : 1,024 ; iso12 : 0,976) ; **la cadence de l'état fusionné n'est pas mesurée**.
+- **L'âge exact de la fusée** sur l'image 6 : le photographe ne l'écrit pas au manifeste. Je sais qu'elle est après le
+  plein feu (lumière orange, et 4 prises après celle d’1,2 s), pas à quel acte (braise ou agonie).
+- **Le blanc du plein feu au pixel** : sur l'image 5, la fumée couvre le point ; « presque blanc » s'y lit à l'œil, pas au pixel.
+  La couleur exacte (blanc au plein feu, `COULEUR_COEUR_ROUGE` après) reste prouvée par la suite (`test_iso_gadgets`).
+- **Le personnage détaillé ALLUMÉ** et le **rouge long ALLUMÉ** n'ont pas été photographiés : la tâche demandait le défaut.
+  Leurs suites (`test_corps_detail`, `test_fusee`, `test_iso_gadgets`) passent sur la fusion.
+- **Le noir absolu au pixel** (0 pixel allumé hors lumière) n'a pas été compté ; il n'est constaté qu'à l'œil sur les images 1 à 4.
+
+## Signalés, non corrigés (hors de ma tâche)
+
+1. **`tools/banc_equite_fusee.gd.uid` et `volume_masque.gdshaderinc.uid` n'existent dans aucune branche** : l'import les
+   crée, non suivis (`git status` après `godot --headless --path . --import`). Les 531 autres `.uid` sont suivis ; un
+   `.uid` régénéré diffère d'une machine à l'autre. À committer une fois, par qui tient ces fichiers (Gadgets).
+2. **Commentaire périmé** dans `iso_volumes.gd:101` (fusion, venu d'iso11 tel quel) : « 2 (défaut) : presque blanc pendant le
+   plein feu, puis de la couleur de la lumière (rouge, orange) » — depuis `88dbfb0`, c'est « puis ROUGE »
+   (`COULEUR_COEUR_ROUGE`). Reproduire : `grep -n "rouge, orange" iso_volumes.gd`.
+3. **La loupe `loupe-fusee-lissage-sans-suie` ne montre pas le point de braise** (ni blanc au plein feu, ni rouge à la braise) :
+   on n'y voit que le voxel bleu. Soit le plan gèle la fusée d'une façon qui court-circuite `_suivre_coeur_fusee`, soit le halo
+   est derrière le voxel à ce cadrage — non diagnostiqué. Reproduire : la première commande photo ci-dessus, images
+   `loupe/01-…-ref-posee.png` et `04-…-ref-braise.png`.
+4. **`tools/photo_essais.gd` (branche `claude/cloud-essais`) ne compile pas sur integration-iso14** : `Preload file
+   "res://tuyaux_iso.gd" does not exist`. Il ne vaut que sur la branche qui porte les tuyaux.
+
+## À reporter dans la ROADMAP (par l'intégration)
+
+- **Piège : un commit recopié (cherry-pick) puis réécrit sur sa branche d'origine se lit, à la fusion, comme un conflit
+  entre deux textes.** C'est l'ancienne version contre la nouvelle ; la résolution est la nouvelle, mais seulement après avoir
+  prouvé que l'ancienne est bien l'ancêtre (`git show <commit d'origine>:fichier | grep`). Sinon, on garde les deux.
+- **Une fusion se prouve sans perte mécaniquement** : chaque ligne ajoutée par chaque côté depuis l'ancêtre commun doit
+  exister dans le fichier fusionné (script en § Anti-perte). Chaque absence doit avoir son explication écrite.

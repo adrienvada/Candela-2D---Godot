@@ -1,0 +1,220 @@
+Shutdown handler: initialize.
+Godot Engine v4.7.stable.official.5b4e0cb0f - https://godotengine.org
+WARNING: Could not set V-Sync mode, as changing V-Sync mode is not supported by the graphics driver.
+     at: set_use_vsync (platform/linuxbsd/x11/gl_manager_x11.cpp:372)
+OpenGL API 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.1 - Compatibility - Using Device: Mesa - llvmpipe (LLVM 20.1.2, 256 bits)
+libpulse.so.0: cannot open shared object file: No such file or directory
+libpulse.so.0: cannot open shared object file: No such file or directory
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5727:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
+ERROR: Condition "status < 0" is true. Returning: ERR_CANT_OPEN
+   at: init_output_device (drivers/alsa/audio_driver_alsa.cpp:97)
+WARNING: All audio drivers failed, falling back to the dummy driver.
+     at: initialize (servers/audio/audio_server.cpp:258)
+
+Connected joypads: []
+Assigning Device 0 to Player 1
+Assigning Device 1 to Player 2
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+RankedIdentity: classement non configuré (res://supabase_config.gd absent ou incomplet)
+=== Le photographe ===
+  la vue est restée en 1280x720 (pas de gestionnaire de fenêtres ?) : retaillée à la main
+  fenêtre : 1920x1080 (demandé 1920x1080)
+NetworkManager: init EOS — lecture de res://eos_credentials.gd (exists=false)
+NetworkManager: EOS non configuré (res://eos_credentials.gd absent ou incomplet)
+  horloge fixe : 0.0167 s de jeu par image — repos et attentes comptés en images
+[fumée masque] éteint (le défaut depuis le 2026-09-26 ; --fumee-masque l'allume) — le shader des volumes d'avant
+[usure] allumée — variante USURE_ESSAI posée (#define USURE_ESSAI dans son code)
+
+--- jeu ---
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-28T00:29:31) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, +0.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 0
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance
+
+[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  · 01-repere                          
+  MESURE mine_J1_r72 vueJ1 657.1 603.0 cadre 0 0 957 1080 echelle 1.0000 dans-le-cadre
+  MESURE mine_J1_r72 vueJ2 1071.2 956.9 cadre 962 0 958 1080 echelle 1.0000 dans-le-cadre
+  MESURE poudre_J2_r110 vueJ1 394.7 991.2 cadre 0 0 957 1080 echelle 1.0000 dans-le-cadre
+  MESURE poudre_J2_r110 vueJ2 1333.7 568.6 cadre 962 0 958 1080 echelle 1.0000 dans-le-cadre
+  · 02-repere-braises                  Les braises de J1 à 85 % de leur vie : le repère passe SOUS la nappe, et ne se voit que là où elle ne couvre pas ou pâlit.
+  MESURE braises_J1_r68 vueJ1 657.5 602.7 cadre 0 0 957 1080 echelle 1.0000 dans-le-cadre
+  MESURE braises_J1_r68 vueJ2 1070.9 956.9 cadre 962 0 958 1080 echelle 1.0000 dans-le-cadre
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false
+[iso] peinture retirée : 2 rendus en 57.7 s (0.03 par seconde), 0 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
+[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  · carte du duel posée : res://tools/cartes/murs_bas_essai.json (5 murets) · bordure nord, J2 derrière le muret [P: (665.0, 280.0), S: (175.0, 35.0)]
+  · 03-duel                            
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=true
+[iso] peinture retirée : 2 rendus en 12.6 s (0.16 par seconde), 0 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 1 bascule(s))
+[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  · 04-ecran-scinde-duel               
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false
+[iso] peinture retirée : 1 rendus en 11.8 s (0.09 par seconde), 0 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 2 bascule(s))
+[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  · 05-torche                          
+  · carte du duel posée : res://tools/cartes/murs_bas_essai.json (5 murets) · bordure nord, J2 derrière le muret [P: (665.0, 280.0), S: (175.0, 35.0)]
+  · 06-fusee                           
+
+--- loupe ---
+  ! loupe : fenêtre 1920x1080, pas 2560x1440 — chaque loupe reste 1:1, mais de CETTE fenêtre
+--- ecoute : oreille rendue (2026-09-28T00:31:34) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    COUPE, +0.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 7
+[audio]   par famille : footstep_a=2 footstep_b=1 wall_brush=1 fusee_lancer=1 fusee_rebond=1 fusee_atterrit=1
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : fusee_atterrit
+[audio]   source=(785.3084, 150.3197) oreille=(560.0, 227.5) distance=238 px
+[audio]   portee=1996 px  volume=-4.0 dB  bus=SFX  playing=true
+
+--- ecoute : deux oreilles posees — ecran partage (somme) (2026-09-28T00:31:34) ---
+[audio] auditeurs : SubViewport1, SubViewport2
+[audio] oreilles  : principale=oui seconde=oui
+[audio]   principale sur Player1, courante=true, viewport=SubViewport1
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON SubViewport1:OUI SubViewport2:OUI
+[audio] bus Master :    COUPE, +0.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -200.0 dB / D -200.0 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 7
+[audio]   par famille : footstep_a=2 footstep_b=1 wall_brush=1 fusee_lancer=1 fusee_rebond=1 fusee_atterrit=1
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : fusee_atterrit
+[audio]   source=(785.3084, 150.3197) oreille=(560.0, 227.5) distance=238 px
+[audio]   portee=1996 px  volume=-4.0 dB  bus=SFX  playing=true
+
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=true
+[iso] peinture retirée : 1 rendus en 40.4 s (0.02 par seconde), 0 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 3 bascule(s))
+[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : écran scindé (vues SubViewport1 et SubViewport2) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+[iso] les vues à projeter changent : mode_iso=true, jeu=true, joueurs=true, caméras=true, menu=false, SubViewport1=true, SubViewport2=false
+[iso] peinture retirée : 2 rendus en 31.7 s (0.06 par seconde), 0 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 4 bascule(s))
+[iso] peinture : 1120×1120 texels (1.00 texel par pixel de monde), 4.8 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+  · carte du duel posée : res://assets/maps/map_001_le_cloitre.json (0 murets) · mur haut intérieur [P: (315.0, 315.0), S: (105.0, 105.0)]
+  · loupe : pilier [P: (315.0, 315.0), S: (105.0, 105.0)], J1 (367.5, 542.5), J2 (415.5, 472.5), demi-cône 35°, portée 307 px
+  · loupe-fusee-lissage-sans-suie : rayon 0.18, fusée seule neuve en (507.5, 192.5)
+  MESURE loupe-fusee-lissage-sans-suie-ref-posee centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 01-loupe-fusee-lissage-sans-suie-ref-posee 
+  MESURE loupe-fusee-lissage-sans-suie-018-posee centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 02-loupe-fusee-lissage-sans-suie-018-posee 
+  MESURE loupe-fusee-lissage-sans-suie-018-braise centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 03-loupe-fusee-lissage-sans-suie-018-braise 
+  MESURE loupe-fusee-lissage-sans-suie-ref-braise centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 04-loupe-fusee-lissage-sans-suie-ref-braise 
+  · loupe-fusee-lissage-sans-suie : rayon 0.09, fusée seule neuve en (507.5, 192.5)
+  MESURE loupe-fusee-lissage-sans-suie-009-posee centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 05-loupe-fusee-lissage-sans-suie-009-posee 
+  MESURE loupe-fusee-lissage-sans-suie-009-braise centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 06-loupe-fusee-lissage-sans-suie-009-braise 
+  · loupe-fusee-lissage-sans-suie : rayon 0.04, fusée seule neuve en (507.5, 192.5)
+  MESURE loupe-fusee-lissage-sans-suie-004-posee centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 07-loupe-fusee-lissage-sans-suie-004-posee 
+  MESURE loupe-fusee-lissage-sans-suie-004-braise centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 08-loupe-fusee-lissage-sans-suie-004-braise 
+  · loupe-fusee-lissage-sans-suie : rayon 0.02, fusée seule neuve en (507.5, 192.5)
+  MESURE loupe-fusee-lissage-sans-suie-002-posee centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 09-loupe-fusee-lissage-sans-suie-002-posee 
+  MESURE loupe-fusee-lissage-sans-suie-002-braise centre 1474 422 image 1920x1080 eblouissement_j1 0.060
+  · 10-loupe-fusee-lissage-sans-suie-002-braise 
+
+16 image(s) écrite(s) dans :
+  /tmp/claude-0/-home-user-Candela-2D---Godot/d7edf9ee-7752-54e1-855e-64f40dc8c520/scratchpad/xdg/godot/app_userdata/Candela 2D/blanc
+Ouvrez `planche.html` : c'est la planche, pas le dossier.
+[iso] peinture retirée : 2 rendus en 229.8 s (0.01 par seconde), 0 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 5 bascule(s))
+ERROR: Condition "!is_inside_tree()" is true. Returning: Ref<World2D>()
+   at: get_world_2d (scene/main/canvas_item.cpp:1267)
+   GDScript backtrace (most recent call first):
+       [0] diagnostic_ecoute (res://audio_manager.gd:2395)
+       [1] _tracer_ecoute (res://audio_manager.gd:2488)
+       [2] rendre_oreille (res://audio_manager.gd:2543)
+--- ecoute : oreille rendue (2026-09-28T00:35:56) ---
+[audio] auditeurs : racine (SANS oreille — point fixe)
+[audio] oreilles  : principale=non seconde=non
+[audio] pool chez : Players
+[audio] portee d'un pas=1711 px, d'un tir=2423 px (carte 1584, facteur 1.80)
+[audio] l'auditeur est-il dans le monde du pool ? racine:NON
+[audio] bus Master :    actif, +0.0 dB, 1 effet(s)
+[audio] bus Music :     actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX :       actif, +0.0 dB, 2 effet(s)
+[audio] bus SFX_Occlus : actif, -4.5 dB, 2 effet(s)
+[audio] bus Speaker :   actif, +0.0 dB, 0 effet(s)
+[audio] replis hors physique : 0
+[audio] crete Master : G -7.9 dB / D -9.7 dB
+[audio] crete SFX : G -200.0 dB / D -200.0 dB
+[audio] filtre SFX (EtouffementMonde) : coupure 20500 Hz
+[audio] sons positionnels lances : 12
+[audio]   par famille : footstep_a=2 footstep_b=1 wall_brush=1 fusee_lancer=5 fusee_rebond=1 fusee_atterrit=1 ambience=1
+[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe
+[audio] dernier son 2D : fusee_lancer
+[audio]   source=(507.5, 192.5) oreille=(367.5, 542.5) distance=377 px
+[audio]   portee=1737 px  volume=-6.0 dB  bus=SFX  playing=true
+
+WARNING: 2 RIDs of type "Canvas" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 3 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+ERROR: 1 shaders of type CanvasShaderGLES3 were never freed
+   at: ~ShaderGLES3 (drivers/gles3/shader_gles3.cpp:838)
+ERROR: Texture with GL ID of 148: leaked 1398100 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:82)
+WARNING: 16 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2535)
+ERROR: 3 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: 1 RID allocations of type 'N5GLES38MaterialE' were leaked at exit.
+ERROR: 1 RID allocations of type 'N5GLES36ShaderE' were leaked at exit.
+ERROR: 1 RID allocations of type 'N5GLES37TextureE' were leaked at exit.
+Shutdown handler: cleanup.
