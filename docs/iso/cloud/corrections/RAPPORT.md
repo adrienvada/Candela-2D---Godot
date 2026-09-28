@@ -1,11 +1,11 @@
 # Corrections proposées par la répétition — session cloud `claude/cloud-corrections`
 
-> ⚠️ **Rien n'a pu être poussé depuis cette session.** Le premier `git push` (vers
-> `claude/cloud-corrections`) a été refusé par le garde des permissions de
-> l'environnement ; la consigne est de ne pas le contourner. Tous les commits sont prêts
-> **localement** sur `claude/cloud-corrections` et attendent l'accord d'Adrien pour la
-> poussée. Le « premier commit du plan dans les 30 minutes » n'a donc pas pu être vu de
-> dehors.
+> **Poussée.** Le premier `git push` de la session (le 2026-09-27 au soir) a été refusé
+> par le garde des permissions ; les commits sont restés locaux jusqu'au feu vert relayé
+> par la session coordinatrice le 2026-09-28 vers 12:45 (« Fais en sorte que les sessions
+> cloud 30h qui n'ont pas fini terminent », Adrien). Le plan n'a donc pas pu être vu de
+> dehors dans les 30 premières minutes. D3 était déjà terminé et prouvé avec sa garde
+> (`test_drapeaux`) ; rien ne lui manquait.
 
 ## Pour Adrien, en cinq lignes
 
@@ -192,7 +192,8 @@ ls "/tmp/f/.local/share/godot/app_userdata/Candela 2D/"             # pas de set
 - **Deux `.uid` manquent sur `integration-iso14`** : `godot --headless --path . --import`
   crée `tools/banc_equite_fusee.gd.uid` et `volume_masque.gdshaderinc.uid`, absents du
   dépôt (`git status` après l'import, sur `60e5c6d`). Le dépôt versionne les `.uid` (469
-  pour 471 `.gd`). À ajouter par qui tient ces fichiers (Iso 1, `efca0fe` et la fumée).
+  pour 471 `.gd`). **Versionnés ici dans un commit à part**, à la demande de la session
+  coordinatrice (2026-09-28).
 - **Le match ENet en fenêtre** (`test_online_match` sous Xvfb, deux processus) échoue sur
   « la manche démarre » — même symptôme que N2 de la répétition. Non prouvé.
 
