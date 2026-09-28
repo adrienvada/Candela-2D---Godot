@@ -29,3 +29,23 @@
   refus refaits à leur place, verdict imprimé (« SANS VERDICT » par déséquilibre des fausses charges, comme prévu).
 - **À éclaircir** : le bras TOUT, dans le cloud, a vu la vue iso s'éteindre pendant la chauffe (le banc a refusé son chiffre
   par « ✗ --iso ») ; M0 tient. Essais seuls en cours : faisceau, mannequin, pochoirs sans défaut ; les sept autres non faits.
+
+### Les dix essais, chacun seul, sur le vrai banc sous Xvfb (5 s, cadences sans valeur)
+
+Tous lancent, impriment leur ligne, restent en vue iso (aucun « ✗ » du banc), vue « iso lacet 45° B », sur l'Arène Standard
+(`00000001`). Comptes du banc (médiane par image ; le cloud vaut pour les comptes, pas pour le temps), relevés dans `releves/` :
+
+| essai | ligne imprimée | appels | objets | primitives |
+|---|---|---|---|---|
+| (référence de ces lancements) | — | 245 | 1 460 | 7 696 |
+| pochoirs | 4 pochoir(s) | 245 | 1 460 | 7 696 |
+| sol marqué | 48 marque(s) | 245 | 1 460 | 7 696 |
+| encre, lampe claire, mannequin, corps soi sombre | variante posée / allumée | 245 | 1 460 | 7 696 |
+| faisceau | allumé | 247 | 1 462 | 7 700 |
+| enseignes | 4 triangles | 246 | 1 461 | 7 700 |
+| tuyaux | 10 384 triangles | 246 | 1 461 | 18 080 |
+| murs meublés | 7 560 triangles en 4 nœuds | 249 | 1 464 | 15 256 |
+
+**Pochoirs et sol marqué : zéro appel, zéro objet, zéro primitive de plus** — ce qui justifie qu'ils n'aient pas de bras à eux
+(ils sont dans TOUT). Les essais par pixel (encre, lampe, mannequin, corps sombre) ne changent aucun compte : leur prix est
+dans le shader, que seul le Mac chiffrera. Reste inexpliqué : l'extinction de la vue iso dans le bras TOUT (un seul lancement).

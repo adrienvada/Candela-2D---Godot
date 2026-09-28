@@ -1,0 +1,12 @@
+[godot_ai game_helper] registered mcp capture (debugger active=false, logger=true)
+[fumée masque] éteint (le défaut depuis le 2026-09-26 ; --fumee-masque l'allume) — le shader des volumes d'avant
+[encre] allumée — variante ENCRE_ESSAI posée (#define ENCRE_ESSAI dans son code)
+[usure] allumée — variante USURE_ESSAI posée (#define USURE_ESSAI dans son code)
+VUE UNIQUE: seconde vue fermee, rendu par la RACINE
+[iso] peinture : 1190×1190 texels (1.00 texel par pixel de monde), 5.4 Mo, 7 calques, 0 traces
+[iso] vue isométrique allumée : vue unique (SubViewport1) — tangage 52.0°, murs 1.25 tuile (map_geometry.gd), pâte D — lavis et pochoir, lightmap 1080p
+Rendu : iso lacet 45° B · caméras 2D J1 -45.0°, J2 -225.0°
+  FPS médian       : 8
+  Rendu (médiane par image) : 245 appels de dessin, 1460 objets, 7696 primitives
+[iso] peinture retirée : 19 rendus en 67.1 s (0.28 par seconde), 34 traces peintes
+[iso] vue isométrique éteinte (0 corps recachés, 0 lightmap(s) reposée(s), 0 masque(s) reposé(s), 0 bascule(s))
