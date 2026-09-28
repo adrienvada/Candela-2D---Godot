@@ -536,6 +536,14 @@ func _simulation_inchangee() -> void:
 		lettre.pressed = true
 		p._input(lettre)
 		_check("une touche de déplacement ne change pas la pâte", int(p.style_pate) == Pate.TRAME)
+	# Défaut D4 (2026-09-27) : ces touches ne valent qu'en build de DÉBOGAGE, comme F7. La suite tourne en débogage : le
+	# garde se lit dans le texte de `_input`, avant toute lecture de touche.
+	var src_pres := FileAccess.get_file_as_string("res://presentation_3d.gd")
+	var i_input := src_pres.find("func _input(event: InputEvent) -> void:")
+	var i_garde := src_pres.find("\tif not OS.is_debug_build():\n\t\treturn\n", i_input)
+	var i_touche := src_pres.find("var touche := event as InputEventKey", i_input)
+	_check("les touches de la pâte ne valent qu'en build de débogage (défaut D4)",
+		i_input >= 0 and i_garde > i_input and i_touche > i_garde)
 
 	# ISO14 — le drapeau `--lacet=45 --lacet-j2=B` jusqu'à la caméra, À L'ENTRAÎNEMENT (demande de la session cloud,
 	# 2026-09-24 19:47, après une planche dont la moitié « 45° » avait le cadrage du 0°). Le drapeau se lit une fois au

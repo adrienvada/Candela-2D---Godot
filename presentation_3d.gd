@@ -2105,6 +2105,11 @@ func _materiaux() -> Array[ShaderMaterial]:
 func _input(event: InputEvent) -> void:
 	if not _actif:
 		return
+	# ⚠️ Débogage seulement, comme F7 (`mur_led.gd`) : en build publié, les touches 1 à 4, 0 et F2 changeaient la pâte
+	# du rendu EN PLEIN MATCH, en ligne compris — un joueur pouvait passer au rendu qui lui montre le plus (défaut D4 de
+	# la répétition du test dans le cloud, branche claude/cloud-repetition, 2026-09-27).
+	if not OS.is_debug_build():
+		return
 	var touche := event as InputEventKey
 	if touche != null and touche.pressed and not touche.echo:
 		var choisie := -2

@@ -3217,6 +3217,16 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un drapeau passé sans `--` est lu par certains scripts et ignoré en silence par d'autres (2026-09-27)
+
+Défaut D3 de la répétition du test dans le cloud (branche `claude/cloud-repetition`, `RAPPORT.md`). `settings_manager.gd` lit
+`OS.get_cmdline_user_args() + OS.get_cmdline_args()` : `--lacet=45`, `--zoom=…` ou `--lightmap …` y valent qu'ils soient
+passés avant ou après `--`. Mais `iso_materiaux.gd` (beauté, encre, usure), `arena_decor.gd` (pochoirs) et `iso_volumes.gd`
+(faisceau, masque de la fumée, point de braise) ne lisent que `OS.get_cmdline_user_args()`, c'est-à-dire APRÈS `--`. Passé
+avant, `--sans-usure` ou `--fumee-masque` ne font RIEN, sans un mot : une prise croit mesurer une variante et mesure le
+défaut. **Tout drapeau de jeu se passe après `--`**, et une série se prouve par ce que le JEU imprime (`[usure] allumée`,
+`[fumée masque] allumé`, « Rendu : »), jamais par la ligne de commande.
+
 ### Un glissement en diagonale contre un mur dépend du passé du moteur physique, pas seulement des commandes (2026-09-27)
 
 À 45° B, « haut » va en diagonale dans le monde. Deux parties d'entraînement identiques, jouées l'une après l'autre dans le
