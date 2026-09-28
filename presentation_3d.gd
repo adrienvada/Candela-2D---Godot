@@ -318,6 +318,8 @@ var _cameras3d: Array[CameraIso] = []
 var _affichages: Array[TextureRect] = []
 ## `[vue_id][corps_id]` → `CapteurCorps`, ou `null` quand la vue n'est pas regardée.
 var _capteurs := [[null, null], [null, null]]
+## ESSAI `--ombre-compensee` : un facteur a-t-il été posé sur le corps j (pour rendre 1,0 quand l'essai s'éteint) ?
+var _compensation_posee := [false, false]
 ## ISO5 — par joueur, ce que son fantôme de killcam a laissé d'une image à l'autre (points de vie, éclair
 ## du tir, posture, position à l'horloge du rejeu) ; vidé dès que le fantôme n'est plus montré.
 var _etats_fantomes := [{}, {}]
@@ -825,6 +827,16 @@ func _suivre() -> void:
 			_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
 		_mat_corps[j].set_shader_parameter("centre", p)
+		# ESSAI `--ombre-compensee` (session cloud ombre-orientation) : la lumière lue × le facteur de la classe
+		# (`OmbreCompensee`). Éteint, rien n'est posé : l'uniforme reste à 1,0 et le shader ne multiplie pas. Un essai
+		# éteint en cours de route (un banc qui bascule) rend le 1,0 qu'il avait trouvé.
+		var m_ombre := OmbreCompensee.mode_du_lancement(false)
+		if m_ombre > 0:
+			m_ombre = OmbreCompensee.mode_du_lancement(_en_ligne())
+		if m_ombre > 0 or _compensation_posee[j]:
+			_mat_corps[j].set_shader_parameter("compensation_ombre",
+				OmbreCompensee.facteur_du_joueur(m_ombre, joueur, joueurs[1 - j]))
+			_compensation_posee[j] = m_ombre > 0
 		# ISO2b — l'effacement et la silhouette de la vue de dessus, PAR VUE, lus sur les sprites
 		# que ce corps remplace tels que `player.gd` les a posés cette image. Aucun recalcul.
 		var forces := [0.0, 0.0]
@@ -960,6 +972,13 @@ func _lightmap_en_place(vue: SubViewport) -> bool:
 	if not plein and not conteneur.size.is_equal_approx(cadre.size):
 		return false
 	return vue.size_2d_override == logique and vue.size == _taille_lightmap(logique)
+
+
+## En ligne ? Par le chemin du nœud, jamais par le nom de l'autoload (voir le lacet, plus haut) : 0 = LOCAL_SPLITSCREEN.
+## Sans NetworkManager (suites `--script`), « en ligne » : un essai ne s'allume jamais faute de savoir.
+func _en_ligne() -> bool:
+	var reseau := get_node_or_null(^"/root/NetworkManager")
+	return reseau == null or int(reseau.get("current_mode")) != 0
 
 
 static func _sans_capteurs(masque: int) -> int:

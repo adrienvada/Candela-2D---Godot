@@ -91,6 +91,10 @@ uniform float lumiere_recue : hint_range(0.0, 1.0) = 0.0;
 
 uniform sampler2D capteur_1 : source_color, filter_linear, repeat_disable;
 uniform sampler2D capteur_2 : source_color, filter_linear, repeat_disable;
+// ESSAI (session cloud ombre-orientation, 2026-09-27) — `--ombre-compensee` (`OmbreCompensee`) : la lumière lue dans le
+// capteur × le facteur de la classe, pour que chaque classe lise ce que lirait le Parasite malgré la forme de son ombre
+// propre. Posé par la présentation SEULEMENT sous le drapeau (débogage, hors ligne) ; 1,0 sinon, et rien n'est multiplié.
+uniform float compensation_ombre = 1.0;
 uniform bool capteur_actif = false;
 uniform vec2 centre = vec2(0.0);           // position 2D du joueur, en PIXELS, posée à chaque image
 uniform float monde_capteur_px = 128.0;    // CapteurCorps.MONDE_PX
@@ -205,7 +209,12 @@ vec3 lumiere_du_capteur(bool deux, vec2 decalage_px) {
 		decalage_px *= rayon_lu_px / r;
 	}
 	vec2 uv = vec2(0.5) + decalage_px / monde_capteur_px;
-	return deux ? texture(capteur_2, uv).rgb : texture(capteur_1, uv).rgb;
+	vec3 lu = deux ? texture(capteur_2, uv).rgb : texture(capteur_1, uv).rgb;
+	// ESSAI `--ombre-compensee` : gardé, pour qu'éteint (1,0) la lecture soit celle d'avant au bit près.
+	if (compensation_ombre != 1.0) {
+		lu *= compensation_ombre;
+	}
+	return lu;
 }
 
 void fragment() {
