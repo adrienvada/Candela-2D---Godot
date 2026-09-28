@@ -1,7 +1,7 @@
 # Ce qui survit à un changement de carte ou à la fermeture d'un menu
 
 Session cloud, branche `claude/cloud-restes`, partie d'`origin/integration-iso14` (a30a407), le 28/09/2026 de 09:18 à
-~10:55 (heure de Paris). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
+10:45 (heure de Paris). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
 
 ## Pour Adrien, en cinq lignes
 
