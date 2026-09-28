@@ -6006,3 +6006,20 @@ commits derrière le drapeau : les quatre kits manquants, les accessoires fusion
 de dessin de plus devenus 6 pour un Parasite), et la cause de la perte au seuil, trouvée dans le code : la matière peinte passait
 sur tout le corps et son marbrage restait à la taille du duel. Tout cela prouvé en headless ; restent sur le GPU la même image
 fusionné contre séparé, l'étalonnage au seuil et la cadence.
+
+## 2026-09-28 — La 0.7.0, montée et publiée depuis le cloud (session « Fable 5.1 - CLOUD ISO UNRAILED », worktree du cloud, `main`)
+
+Demande d'Adrien, vers 14:00 : « Termine l'intégralité de tous les travaux en cours, et fais en sorte qu'on publie la
+version 0.7.0 du jeu avec toutes les nouveautés. Simplifie TOUS les artefacts de suivi du projet. »
+
+Le candidat part de l'intégration à blanc du cloud (`244cb88` : `a30a407` + `iso11-menus` + `iso12-corps`, conflits déjà
+résolus, suite verte), plus treize cueillettes, toutes sans conflit : les quatre corrections du jeu par défaut et huit de la
+répétition. D4 n'est pas reprise : Iso 1 avait posé le même garde dans `a30a407`, par un autre chemin. Aucune branche de
+chantier touchée : `integration-iso14` reste à Iso 1, qui y fusionnera `main` lui-même.
+
+Une erreur évitée en écrivant la page : j'allais compter « la fumée qui ne salit plus le noir » parmi les nouveautés. Le
+masque est éteint par défaut depuis l'ordre 416 (26/09, 23:29) — un ordre que j'avais moi-même donné. Lu dans le code
+(`masque_fumee := false`) avant de publier : **un souvenir de décision n'est pas un état du code**, même quand on est
+l'auteur de la décision.
+
+Le suivi : une seule page légère au lieu de six (ROADMAP, Décisions actées ; protocole dans README.md). Suite complète verte sur le candidat (710 s), avant le commit de version.

@@ -286,6 +286,17 @@ class_name Protocol
 ##     parce qu'aucun tag n'a figé ce numéro depuis sa montée en MB1.
 ## 18 (suite) — `rpc_send_inputs` gagne un dixième argument, le geste d'ENJAMBER
 ##     tenu (MB3b, 2026-09-14). Même raisonnement, même numéro : non publié.
+##
+## ## ⛔ LA v18 EST PUBLIÉE — depuis **v0.7.0, le 2026-09-28**
+##
+## Même encadré que pour la v17, pour la même raison. Les trois entrées 18
+## ci-dessus disent « non publiée » et « cumulée sous 18 » : c'était vrai à
+## l'écriture, c'est faux depuis le tag, et ce n'est plus une permission. Le fil
+## de la v18 est installé chez des joueurs : **toute modification de FORME — un
+## argument ajouté, retiré, réordonné, changé de type, ou le codec de carte —
+## impose `VERSION = 19`**, donc la mineure suivante (0.7.x → 0.8.0), et coupe la
+## population en deux jusqu'à ce que les deux côtés aient mis à jour.
+## `tools/verifier_publication.sh`, lancé AVANT le tag, refuse la mineure figée.
 const VERSION := 18
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.

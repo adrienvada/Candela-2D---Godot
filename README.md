@@ -96,6 +96,24 @@ conflits de version essuyés le 2026-08-18 avant que cette règle existe.
 Une session qui ouvre et ne trouve **aucune session déjà chargée de la
 republication** en devient responsable pour la suite, et le dit aux autres.
 
+**Le suivi est une seule page légère** (demande d'Adrien, 2026-09-28 : « Simplifie
+TOUS les artefacts de suivi du projet. […] Allège au maximum. Je dois voir les
+décisions à prendre facilement, et quelles sont les éventuelles prochaines
+étapes. »). Quatre blocs, rien de plus : **l'état de la version** en cours, **les
+décisions à prendre** (une ligne chacune, l'avis de la session quand elle en a
+un, un lien vers les images), **les gestes que seul Adrien peut faire**, **la
+suite**. Plus de cartes de chantier, de frise, de galerie ni de journal :
+l'histoire vit dans la ROADMAP et dans le journal des sessions, qui sont
+versionnés. Une ligne qui ne sert ni à décider ni à agir n'y entre pas. Ce qui
+suit sur les puces de session (`data-session`) et le tableau « Qui travaille sur
+quoi » décrit la page d'avant : le nom de session reste obligatoire en tête de
+chaque delta, il n'a simplement plus de carte où s'afficher.
+
+> **Porteur au 2026-09-28** : la session cloud « Fable 5.1 - CLOUD ISO
+> UNRAILED », qui a allégé la page ce jour-là à la demande d'Adrien ; la
+> porteuse du Mac ne répondait plus. Prévenue par l'ordre 449 de `claude/reveil` :
+> elle ne republie plus l'ancienne page.
+
 **Chaque delta dit qui l'envoie** (décidé le 2026-09-09, avec Adrien). Le
 message au porteur commence par le **nom de la session** tel que `ListAgents`
 ou `list_sessions` l'affiche, sa branche, et le chantier concerné. Le porteur
