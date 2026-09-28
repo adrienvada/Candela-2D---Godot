@@ -84,6 +84,12 @@ sur la valeur écrite, elle atteint 205-212. (2) La pâleur à 0,6 laissait une 
 - **Le noir** : 8/255 × 1,4 (la hausse maximale que le masque de la fumée prévoit) = 0,044 < genou 0,08.
 - `Protocol.VERSION` = 18.
 
+**Une garde voisine adaptée, d'une ligne.** `tools/test_iso_beaute.gd` (« toute couleur de mur naît d'une lecture de
+lightmap ou du noir ») tient la liste des réécritures permises de `c` dans `mur_iso.gdshader` ; elle a rougi sur
+`c = lampe_claire_sur(c, brute);` (trois vérifications, un seul drapeau interne). Cette ligne rejoint la température dans
+la liste, **mot pour mot** : elle réécrit `c` à partir de `c`, 0 → 0, identité sous le genou, jamais plus sombre — ce que
+garde `test_lampe_claire`. Toute autre réécriture reste refusée.
+
 **Elle rougit** (mutations faites puis annulées, 2026-09-28) : test de force inversé (`<` au lieu de `<=`) → 1 échec ;
 appel déplacé avant le contact des corps → 1 ; genou à 0,02, sous le noir → 2 ; neutralité ouverte à 0,15 → 5 (fusée, LED).
 

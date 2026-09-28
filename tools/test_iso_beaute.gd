@@ -733,7 +733,10 @@ func _l_equite_du_shader() -> void:
 		# La température (étape 6) réécrit `c` à partir de `c` lui-même, luminance gardée : pas une source.
 		# ISO7b — la température graduée réécrit `c` à partir de `c`, luminance gardée : pas une source non plus.
 		# ISO7b — `lightmap_pateuse_lue(brute` : la pâte d'une lecture moyennée, `brute` n'étant qu'une lecture (voir plus bas).
+		# Q40 — la lampe claire à l'essai (`--lampe-claire`, éteinte par défaut) réécrit `c` à partir de `c` : 0 → 0, l'identité
+		# sous son genou, jamais plus sombre (`tools/test_lampe_claire.gd`) — pas une source. La ligne exacte, rien d'autre.
 		if not (a.contains("lightmap_pateuse(") or a.contains("lightmap_pateuse_lue(brute,") or a.contains("vec3(0.0)") or a == "c = pate_temperature(c, temperature);"
+				or a == "c = lampe_claire_sur(c, brute);"
 				or a.begins_with("c = pate_facteur(c, ") or a.begins_with("c = pate_matiere_et_encre(c, ")
 				or a.begins_with("c = pate_temperature_graduee(c, ") or a.begins_with("c = pate_temperature_graduee_neutre(c, ")):
 			sources_propres = false
