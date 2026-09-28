@@ -1,0 +1,661 @@
+{
+ "source": "/tmp/claude-0/-home-user-Candela-2D---Godot/66fde2c8-da01-5887-afed-4b078e86413d/scratchpad/xdg/godot/app_userdata/Candela 2D/sol-marque",
+ "seances": {
+  "seul": {
+   "gravats": {
+    "essai": {
+     "pixels_changes": 10816,
+     "plus_sombres": 10029,
+     "plus_clairs_1": 16,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 6.04,
+     "assombrissement_somme": 65308.5
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1044357,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/seul_gravats_sans.jpg",
+    "jeu_avec": "img/seul_gravats_avec.jpg",
+    "loupe_sans": "img/seul_gravats_loupe_sans.jpg",
+    "loupe_avec": "img/seul_gravats_loupe_avec.jpg",
+    "cadre_1_1": [
+     613,
+     371,
+     640,
+     360
+    ],
+    "img_plein_avec": "img/seul_gravats_plein_avec.jpg",
+    "img_plein_sans": "img/seul_gravats_plein_sans.jpg"
+   },
+   "eclats": {
+    "essai": {
+     "pixels_changes": 8396,
+     "plus_sombres": 7810,
+     "plus_clairs_1": 6,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 11.22,
+     "assombrissement_somme": 94244.1
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1401439,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/seul_eclats_sans.jpg",
+    "jeu_avec": "img/seul_eclats_avec.jpg",
+    "loupe_sans": "img/seul_eclats_loupe_sans.jpg",
+    "loupe_avec": "img/seul_eclats_loupe_avec.jpg",
+    "cadre_1_1": [
+     722,
+     280,
+     640,
+     360
+    ]
+   },
+   "chaine": {
+    "essai": {
+     "pixels_changes": 12301,
+     "plus_sombres": 11486,
+     "plus_clairs_1": 9,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 7.88,
+     "assombrissement_somme": 96984.7
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1084167,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/seul_chaine_sans.jpg",
+    "jeu_avec": "img/seul_chaine_avec.jpg",
+    "loupe_sans": "img/seul_chaine_loupe_sans.jpg",
+    "loupe_avec": "img/seul_chaine_loupe_avec.jpg",
+    "cadre_1_1": [
+     58,
+     325,
+     640,
+     360
+    ]
+   },
+   "cadre": {
+    "essai": {
+     "pixels_changes": 11227,
+     "plus_sombres": 10533,
+     "plus_clairs_1": 7,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 9.8,
+     "assombrissement_somme": 110060.6
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1138515,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/seul_cadre_sans.jpg",
+    "jeu_avec": "img/seul_cadre_avec.jpg",
+    "loupe_sans": "img/seul_cadre_loupe_sans.jpg",
+    "loupe_avec": "img/seul_cadre_loupe_avec.jpg",
+    "cadre_1_1": [
+     858,
+     331,
+     640,
+     360
+    ]
+   },
+   "bande": {
+    "essai": {
+     "pixels_changes": 13949,
+     "plus_sombres": 13003,
+     "plus_clairs_1": 6,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.64,
+     "assombrissement_somme": 78705.0
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1054810,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/seul_bande_sans.jpg",
+    "jeu_avec": "img/seul_bande_avec.jpg",
+    "loupe_sans": "img/seul_bande_loupe_sans.jpg",
+    "loupe_avec": "img/seul_bande_loupe_avec.jpg",
+    "cadre_1_1": [
+     756,
+     380,
+     640,
+     360
+    ]
+   },
+   "lettres": {
+    "essai": {
+     "pixels_changes": 7267,
+     "plus_sombres": 6699,
+     "plus_clairs_1": 29,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 9.28,
+     "assombrissement_somme": 67475.1
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1407961,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/seul_lettres_sans.jpg",
+    "jeu_avec": "img/seul_lettres_avec.jpg",
+    "loupe_sans": "img/seul_lettres_loupe_sans.jpg",
+    "loupe_avec": "img/seul_lettres_loupe_avec.jpg",
+    "cadre_1_1": [
+     613,
+     341,
+     640,
+     360
+    ]
+   },
+   "noir": {
+    "essai": {
+     "pixels_changes": 10984,
+     "plus_sombres": 10197,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 5.16,
+     "assombrissement_somme": 56637.7
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1046120,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "img_avec": "img/seul_noir_avec.jpg"
+   },
+   "scinde": {
+    "essai": {
+     "pixels_changes": 10247,
+     "plus_sombres": 9423,
+     "plus_clairs_1": 24,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.91,
+     "assombrissement_somme": 60548.0
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 0,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "j1": {
+     "pixels_changes": 5164,
+     "plus_sombres": 4746,
+     "plus_clairs_1": 13,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.96,
+     "assombrissement_somme": 30804.7
+    },
+    "j2": {
+     "pixels_changes": 5083,
+     "plus_sombres": 4677,
+     "plus_clairs_1": 11,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.85,
+     "assombrissement_somme": 29743.3
+    },
+    "j1_cone": {
+     "pixels_cone": 39199,
+     "assombris": 299,
+     "somme": 9109.9
+    },
+    "j2_cone": {
+     "pixels_cone": 39840,
+     "assombris": 292,
+     "somme": 7938.8
+    },
+    "empreinte_iou": 0.49,
+    "img_avec": "img/seul_scinde_avec.jpg",
+    "img_sans": "img/seul_scinde_sans.jpg"
+   },
+   "contraste4": {
+    "corps_px": 12798,
+    "anneau_px": 4080,
+    "centre": [
+     1131,
+     420
+    ],
+    "marque": {
+     "corps": 14.71,
+     "anneau": 36.21,
+     "difference": -21.5,
+     "michelson": -0.422,
+     "anneau_sans_j2": 49.01
+    },
+    "nu": {
+     "corps": 15.09,
+     "anneau": 37.0,
+     "difference": -21.91,
+     "michelson": -0.421,
+     "anneau_sans_j2": 50.03
+    },
+    "img_marque": "img/seul_contraste4_marque.jpg",
+    "img_nu": "img/seul_contraste4_nu.jpg"
+   },
+   "contraste7": {
+    "corps_px": 6603,
+    "anneau_px": 3464,
+    "centre": [
+     1177,
+     368
+    ],
+    "marque": {
+     "corps": 25.67,
+     "anneau": 43.11,
+     "difference": -17.43,
+     "michelson": -0.253,
+     "anneau_sans_j2": 43.92
+    },
+    "nu": {
+     "corps": 26.15,
+     "anneau": 44.17,
+     "difference": -18.02,
+     "michelson": -0.256,
+     "anneau_sans_j2": 45.02
+    },
+    "img_marque": "img/seul_contraste7_marque.jpg",
+    "img_nu": "img/seul_contraste7_nu.jpg"
+   }
+  },
+  "tous": {
+   "gravats": {
+    "essai": {
+     "pixels_changes": 10816,
+     "plus_sombres": 10004,
+     "plus_clairs_1": 12,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.89,
+     "assombrissement_somme": 63684.2
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1048166,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/tous_gravats_sans.jpg",
+    "jeu_avec": "img/tous_gravats_avec.jpg",
+    "loupe_sans": "img/tous_gravats_loupe_sans.jpg",
+    "loupe_avec": "img/tous_gravats_loupe_avec.jpg",
+    "cadre_1_1": [
+     613,
+     371,
+     640,
+     360
+    ],
+    "img_plein_avec": "img/tous_gravats_plein_avec.jpg",
+    "img_plein_sans": "img/tous_gravats_plein_sans.jpg"
+   },
+   "eclats": {
+    "essai": {
+     "pixels_changes": 8389,
+     "plus_sombres": 7802,
+     "plus_clairs_1": 4,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 11.08,
+     "assombrissement_somme": 92989.4
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1403388,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/tous_eclats_sans.jpg",
+    "jeu_avec": "img/tous_eclats_avec.jpg",
+    "loupe_sans": "img/tous_eclats_loupe_sans.jpg",
+    "loupe_avec": "img/tous_eclats_loupe_avec.jpg",
+    "cadre_1_1": [
+     722,
+     280,
+     640,
+     360
+    ]
+   },
+   "chaine": {
+    "essai": {
+     "pixels_changes": 12297,
+     "plus_sombres": 11448,
+     "plus_clairs_1": 9,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 7.73,
+     "assombrissement_somme": 95080.3
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1089481,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/tous_chaine_sans.jpg",
+    "jeu_avec": "img/tous_chaine_avec.jpg",
+    "loupe_sans": "img/tous_chaine_loupe_sans.jpg",
+    "loupe_avec": "img/tous_chaine_loupe_avec.jpg",
+    "cadre_1_1": [
+     58,
+     325,
+     640,
+     360
+    ]
+   },
+   "cadre": {
+    "essai": {
+     "pixels_changes": 11197,
+     "plus_sombres": 10492,
+     "plus_clairs_1": 7,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 9.69,
+     "assombrissement_somme": 108512.5
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1141324,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/tous_cadre_sans.jpg",
+    "jeu_avec": "img/tous_cadre_avec.jpg",
+    "loupe_sans": "img/tous_cadre_loupe_sans.jpg",
+    "loupe_avec": "img/tous_cadre_loupe_avec.jpg",
+    "cadre_1_1": [
+     860,
+     329,
+     640,
+     360
+    ]
+   },
+   "bande": {
+    "essai": {
+     "pixels_changes": 13914,
+     "plus_sombres": 12964,
+     "plus_clairs_1": 8,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.49,
+     "assombrissement_somme": 76422.1
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1058559,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/tous_bande_sans.jpg",
+    "jeu_avec": "img/tous_bande_avec.jpg",
+    "loupe_sans": "img/tous_bande_loupe_sans.jpg",
+    "loupe_avec": "img/tous_bande_loupe_avec.jpg",
+    "cadre_1_1": [
+     757,
+     381,
+     640,
+     360
+    ]
+   },
+   "lettres": {
+    "essai": {
+     "pixels_changes": 7269,
+     "plus_sombres": 6714,
+     "plus_clairs_1": 21,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 9.17,
+     "assombrissement_somme": 66638.5
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1410057,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "jeu_sans": "img/tous_lettres_sans.jpg",
+    "jeu_avec": "img/tous_lettres_avec.jpg",
+    "loupe_sans": "img/tous_lettres_loupe_sans.jpg",
+    "loupe_avec": "img/tous_lettres_loupe_avec.jpg",
+    "cadre_1_1": [
+     613,
+     341,
+     640,
+     360
+    ]
+   },
+   "noir": {
+    "essai": {
+     "pixels_changes": 10953,
+     "plus_sombres": 10143,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 5.0,
+     "assombrissement_somme": 54795.0
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 1050000,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "img_avec": "img/tous_noir_avec.jpg"
+   },
+   "scinde": {
+    "essai": {
+     "pixels_changes": 10258,
+     "plus_sombres": 9415,
+     "plus_clairs_1": 21,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.8,
+     "assombrissement_somme": 59481.5
+    },
+    "bruit": {
+     "pixels_changes": 0,
+     "plus_sombres": 0,
+     "plus_clairs_1": 0,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 0,
+     "assombrissement_moyen": 0.0,
+     "assombrissement_somme": 0.0
+    },
+    "noirs_de_B": 0,
+    "noirs_allumes_A": 0,
+    "noirs_allumes_A2": 0,
+    "j1": {
+     "pixels_changes": 5180,
+     "plus_sombres": 4757,
+     "plus_clairs_1": 11,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.85,
+     "assombrissement_somme": 30301.5
+    },
+    "j2": {
+     "pixels_changes": 5078,
+     "plus_sombres": 4658,
+     "plus_clairs_1": 10,
+     "plus_clairs_2": 0,
+     "eclaircissement_max": 1,
+     "assombrissement_moyen": 5.75,
+     "assombrissement_somme": 29180.0
+    },
+    "j1_cone": {
+     "pixels_cone": 38625,
+     "assombris": 320,
+     "somme": 9244.4
+    },
+    "j2_cone": {
+     "pixels_cone": 39094,
+     "assombris": 312,
+     "somme": 8096.4
+    },
+    "empreinte_iou": 0.488,
+    "img_avec": "img/tous_scinde_avec.jpg",
+    "img_sans": "img/tous_scinde_sans.jpg"
+   },
+   "contraste4": {
+    "corps_px": 12749,
+    "anneau_px": 4080,
+    "centre": [
+     1130,
+     421
+    ],
+    "marque": {
+     "corps": 14.08,
+     "anneau": 35.13,
+     "difference": -21.05,
+     "michelson": -0.428,
+     "anneau_sans_j2": 47.4
+    },
+    "nu": {
+     "corps": 14.45,
+     "anneau": 35.93,
+     "difference": -21.48,
+     "michelson": -0.426,
+     "anneau_sans_j2": 48.45
+    },
+    "img_marque": "img/tous_contraste4_marque.jpg",
+    "img_nu": "img/tous_contraste4_nu.jpg"
+   },
+   "contraste7": {
+    "corps_px": 6828,
+    "anneau_px": 3464,
+    "centre": [
+     1172,
+     369
+    ],
+    "marque": {
+     "corps": 23.38,
+     "anneau": 41.13,
+     "difference": -17.75,
+     "michelson": -0.275,
+     "anneau_sans_j2": 41.92
+    },
+    "nu": {
+     "corps": 23.86,
+     "anneau": 42.18,
+     "difference": -18.32,
+     "michelson": -0.277,
+     "anneau_sans_j2": 43.0
+    },
+    "img_marque": "img/tous_contraste7_marque.jpg",
+    "img_nu": "img/tous_contraste7_nu.jpg"
+   }
+  }
+ }
+}
