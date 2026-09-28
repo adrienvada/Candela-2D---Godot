@@ -1,0 +1,534 @@
+{
+ "detail_fumiste_0.15": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fumiste_0.15_boites": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fumiste_0.8": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fumiste_0.8_boites": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fusil_0.15": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fusil_0.15_boites": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fusil_0.8": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_fusil_0.8_boites": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_occulteur_0.15": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_occulteur_0.15_boites": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_occulteur_0.8": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_occulteur_0.8_boites": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_pistolet_0.15": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_pistolet_0.15_boites": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "detail_pistolet_0.8_boites": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_fumiste_0.15": {
+  "corps": 2308,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_fumiste_0.8": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_fusil_0.15": {
+  "corps": 2705,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_fusil_0.8": {
+  "corps": 58381,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_occulteur_0.15": {
+  "corps": 2274,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_occulteur_0.8": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_pistolet_0.15": {
+  "corps": 2278,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_fumiste_0.15": {
+  "corps": 2308,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_fumiste_0.8": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_fusil_0.15": {
+  "corps": 2705,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_fusil_0.8": {
+  "corps": 58381,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_occulteur_0.15": {
+  "corps": 2274,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_occulteur_0.8": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_pistolet_0.15": {
+  "corps": 2278,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39anc_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fumiste_0.15": {
+  "corps": 3131,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fumiste_0.15_boites": {
+  "corps": 3131,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fumiste_0.8": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fumiste_0.8_boites": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fusil_0.15": {
+  "corps": 2918,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fusil_0.15_boites": {
+  "corps": 2918,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fusil_0.8": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_fusil_0.8_boites": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_occulteur_0.15": {
+  "corps": 3042,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_occulteur_0.15_boites": {
+  "corps": 3042,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_occulteur_0.8": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_occulteur_0.8_boites": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_pistolet_0.15": {
+  "corps": 3037,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_pistolet_0.15_boites": {
+  "corps": 3037,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39det_pistolet_0.8_boites": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fumiste_0.15": {
+  "corps": 3131,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fumiste_0.15_boites": {
+  "corps": 3131,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fumiste_0.8": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fumiste_0.8_boites": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fusil_0.15": {
+  "corps": 2918,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fusil_0.15_boites": {
+  "corps": 2918,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fusil_0.8": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_fusil_0.8_boites": {
+  "corps": 58385,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_occulteur_0.15": {
+  "corps": 3042,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_occulteur_0.15_boites": {
+  "corps": 3042,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_occulteur_0.8": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_occulteur_0.8_boites": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_pistolet_0.15": {
+  "corps": 3037,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_pistolet_0.15_boites": {
+  "corps": 3037,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "q39detanc_pistolet_0.8_boites": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_fumiste_0.15": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_fumiste_0.8": {
+  "corps": 61890,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_fusil_0.15": {
+  "corps": 58381,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_fusil_0.8": {
+  "corps": 58381,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_occulteur_0.15": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_occulteur_0.8": {
+  "corps": 54234,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_pistolet_0.15": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "rien_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 0,
+  "blocs2x2": 0,
+  "diff": 0,
+  "ecart_max": 0
+ },
+ "temoinq39_pistolet_0.15": {
+  "corps": 2278,
+  "noirs": 420,
+  "blocs2x2": 186,
+  "diff": 420,
+  "ecart_max": 21
+ },
+ "temoinq39_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 1,
+  "blocs2x2": 0,
+  "diff": 11295,
+  "ecart_max": 55
+ },
+ "temoinrien_pistolet_0.15": {
+  "corps": 55882,
+  "noirs": 7060,
+  "blocs2x2": 6660,
+  "diff": 7060,
+  "ecart_max": 29
+ },
+ "temoinrien_pistolet_0.8": {
+  "corps": 55882,
+  "noirs": 1,
+  "blocs2x2": 0,
+  "diff": 11221,
+  "ecart_max": 67
+ }
+}
