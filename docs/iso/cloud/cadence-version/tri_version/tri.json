@@ -56,6 +56,10 @@
    "disparus": 0,
    "total_ref": 108,
    "total": 108,
+   "plus_lourd_ref": {
+    "instructions": 3770,
+    "lectures": 51
+   },
    "detail": []
   },
   "part": {
@@ -137,6 +141,10 @@
     "disparus": 0,
     "total_ref": 108,
     "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3770,
+     "lectures": 51
+    },
     "detail": []
    },
    "part": {

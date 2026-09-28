@@ -1,0 +1,3285 @@
+{
+ "reference": "ref",
+ "temoin": {
+  "comptes": {
+   "carte/unique": {
+    "appels": 0.5,
+    "primitives": 1.0,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 135.5,
+    "ref_primitives": 6209.0,
+    "max_appels": 2.0,
+    "n": 6
+   },
+   "carte/scinde": {
+    "appels": 1.0,
+    "primitives": 2.0,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 252.0,
+    "ref_primitives": 11185.0,
+    "max_appels": 5.0,
+    "n": 6
+   },
+   "pompe/unique": {
+    "appels": -0.4900000000000091,
+    "primitives": 29.829999999999927,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 291.35,
+    "ref_primitives": 7120.57,
+    "max_appels": -0.4900000000000091,
+    "n": 1
+   },
+   "pompe/scinde": {
+    "appels": 5.219999999999914,
+    "primitives": 41.30999999999949,
+    "vues": 0.0,
+    "copies": 0.0,
+    "ombres2d": 0.0,
+    "ombres3d": 0.0,
+    "ref_appels": 613.95,
+    "ref_primitives": 12434.57,
+    "max_appels": 5.219999999999914,
+    "n": 1
+   }
+  },
+  "shaders": {
+   "nouveaux": 0,
+   "disparus": 0,
+   "total_ref": 108,
+   "total": 108,
+   "plus_lourd_ref": {
+    "instructions": 3846,
+    "lectures": 51
+   },
+   "detail": []
+  },
+  "part": {
+   "map_004_le_bunker_unique": 0.0003935185185185185,
+   "map_002_l_usine_scinde": 0.0006023341049382716,
+   "map_003_la_croisee_scinde": 0.0008275462962962963,
+   "default_scinde": 0.00036265432098765433,
+   "arene_circulaire_scinde": 0.0005478395061728395,
+   "default_unique": 0.0005227623456790124,
+   "arene_circulaire_unique": 0.00039207175925925927,
+   "map_002_l_usine_unique": 0.0003409529320987654,
+   "map_001_le_cloitre_unique": 0.00043595679012345677,
+   "map_001_le_cloitre_scinde": 0.00044560185185185187,
+   "map_003_la_croisee_unique": 0.0005410879629629629,
+   "map_004_le_bunker_scinde": 0.0005849729938271604
+  }
+ },
+ "bruit": {
+  "carte/unique": 3.0,
+  "carte/scinde": 7.0,
+  "pompe/unique": 3.0,
+  "pompe/scinde": 20.0
+ },
+ "bruit_part": 0.0008275462962962963,
+ "essais": {
+  "faisceau": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 3.0,
+     "primitives": 6.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 6.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 5.0,
+     "primitives": 10.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 8.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": 1.2699999999999818,
+     "primitives": 2.4600000000000364,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": 1.2699999999999818,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 7.719999999999914,
+     "primitives": 46.30999999999949,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 7.719999999999914,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": []
+   },
+   "part": {
+    "map_002_l_usine_unique": 0.000705054012345679,
+    "map_001_le_cloitre_unique": 0.0005767746913580247,
+    "map_004_le_bunker_scinde": 0.0006341628086419753,
+    "map_002_l_usine_scinde": 0.0006891396604938271,
+    "default_scinde": 0.0007204861111111111,
+    "arene_circulaire_unique": 0.0005762924382716049,
+    "map_003_la_croisee_unique": 0.000777391975308642,
+    "map_004_le_bunker_unique": 0.0006066743827160494,
+    "default_unique": 0.0006293402777777778,
+    "arene_circulaire_scinde": 0.0007508680555555555,
+    "map_001_le_cloitre_scinde": 0.0006954089506172839,
+    "map_003_la_croisee_scinde": 0.0010363618827160493
+   },
+   "classe": "neutre",
+   "raisons": [],
+   "geometrie": false,
+   "etat_plus": [
+    "[faisceau] allumé — le cœur chaud seul, sans rayon"
+   ],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "mannequin": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 0.0,
+     "primitives": 0.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 3.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 0.5,
+     "primitives": 1.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 6.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.6400000000000432,
+     "primitives": -1.2899999999999636,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.6400000000000432,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 3.8799999999999955,
+     "primitives": 7.760000000000218,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 3.8799999999999955,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "211.shader_test (uniforme mannequin plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 1441,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 252,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme mannequin"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     },
+     {
+      "programme": "220.shader_test (uniforme mannequin plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 36,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme mannequin"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     }
+    ]
+   },
+   "part": {
+    "arene_circulaire_scinde": 0.0005796682098765432,
+    "map_003_la_croisee_unique": 0.0005372299382716049,
+    "map_001_le_cloitre_scinde": 0.0003616898148148148,
+    "arene_circulaire_unique": 0.0003949652777777778,
+    "map_003_la_croisee_scinde": 0.000939429012345679,
+    "default_unique": 0.0005179398148148148,
+    "map_002_l_usine_unique": 0.0005772569444444445,
+    "map_004_le_bunker_unique": 0.0004118441358024691,
+    "map_001_le_cloitre_unique": 0.0003824266975308642,
+    "default_scinde": 0.0005078125,
+    "map_002_l_usine_scinde": 0.0004755015432098765,
+    "map_004_le_bunker_scinde": 0.0003669945987654321
+   },
+   "classe": "à surveiller",
+   "raisons": [
+    "shader : +252 instructions (uniforme mannequin)"
+   ],
+   "geometrie": false,
+   "etat_plus": [
+    "[mannequin] allumé — les corps en mannequins (ISO# lot A)"
+   ],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "pochoirs": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 0.5,
+     "primitives": 1.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 2.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 1.5,
+     "primitives": 3.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 6.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.6700000000000159,
+     "primitives": -1.1199999999998909,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.6700000000000159,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": -0.8500000000000227,
+     "primitives": -1.6999999999989086,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": -0.8500000000000227,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": []
+   },
+   "part": {
+    "map_001_le_cloitre_unique": 0.0004523533950617284,
+    "arene_circulaire_scinde": 0.0005304783950617284,
+    "map_003_la_croisee_unique": 0.0006336805555555555,
+    "map_002_l_usine_unique": 0.0005565200617283951,
+    "map_001_le_cloitre_scinde": 0.0007002314814814815,
+    "map_003_la_croisee_scinde": 0.0009331597222222223,
+    "map_004_le_bunker_scinde": 0.00038290895061728395,
+    "map_004_le_bunker_unique": 0.0005126350308641975,
+    "arene_circulaire_unique": 0.0003915895061728395,
+    "default_scinde": 0.00020736882716049384,
+    "default_unique": 0.0003713348765432099,
+    "map_002_l_usine_scinde": 0.00044126157407407406
+   },
+   "classe": "neutre",
+   "raisons": [],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "encre": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 20.0,
+     "primitives": 240.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 22.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 40.5,
+     "primitives": 481.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 44.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -1.32000000000005,
+     "primitives": -2.639999999999418,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -1.32000000000005,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 2.7799999999999727,
+     "primitives": 5.559999999999491,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 2.7799999999999727,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 22,
+    "disparus": 17,
+    "total_ref": 108,
+    "total": 113,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "211.shader_test",
+      "sorte": "neuf",
+      "proche": "193.shader_test",
+      "ressemblance": 0.36,
+      "instructions": 170,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 170,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_contour_unites",
+       "m_normale_coque"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "223.shader_test",
+      "sorte": "neuf",
+      "proche": "205.shader_test",
+      "ressemblance": 0.37,
+      "instructions": 170,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 170,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_contour_unites",
+       "m_normale_coque"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "214.shader_test",
+      "sorte": "neuf",
+      "proche": "196.shader_test",
+      "ressemblance": 0.36,
+      "instructions": 170,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 170,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_contour_unites",
+       "m_normale_coque"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "160.shader_test",
+      "sorte": "modifié",
+      "proche": "142.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3912,
+      "lectures": 51,
+      "boucles": 1,
+      "d_instructions": 66,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "190.shader_test",
+      "sorte": "modifié",
+      "proche": "172.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3912,
+      "lectures": 51,
+      "boucles": 1,
+      "d_instructions": 66,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "163.shader_test",
+      "sorte": "modifié",
+      "proche": "145.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3912,
+      "lectures": 51,
+      "boucles": 1,
+      "d_instructions": 66,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "160.shader_test (uniforme pate_hachures plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 3903,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 54,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme pate_hachures"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     },
+     {
+      "programme": "229.shader_test",
+      "sorte": "modifié",
+      "proche": "196.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1517,
+      "lectures": 2,
+      "boucles": 0,
+      "d_instructions": 44,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "238.shader_test",
+      "sorte": "modifié",
+      "proche": "205.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1517,
+      "lectures": 2,
+      "boucles": 0,
+      "d_instructions": 44,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "226.shader_test",
+      "sorte": "modifié",
+      "proche": "193.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1517,
+      "lectures": 2,
+      "boucles": 0,
+      "d_instructions": 44,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "229.shader_test (uniforme pate_hachures plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 1511,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 36,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme pate_hachures"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     },
+     {
+      "programme": "220.shader_test",
+      "sorte": "neuf",
+      "proche": "202.shader_test",
+      "ressemblance": 0.36,
+      "instructions": 34,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 34,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_contour_unites",
+       "m_normale_coque"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "217.shader_test",
+      "sorte": "neuf",
+      "proche": "199.shader_test",
+      "ressemblance": 0.36,
+      "instructions": 34,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 34,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_contour_unites",
+       "m_normale_coque"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "193.shader_test",
+      "sorte": "modifié",
+      "proche": "175.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1727,
+      "lectures": 18,
+      "boucles": 1,
+      "d_instructions": 22,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "175.shader_test",
+      "sorte": "modifié",
+      "proche": "157.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1727,
+      "lectures": 18,
+      "boucles": 1,
+      "d_instructions": 22,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "178.shader_test",
+      "sorte": "modifié",
+      "proche": "160.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1727,
+      "lectures": 18,
+      "boucles": 1,
+      "d_instructions": 22,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "193.shader_test (uniforme pate_hachures plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 1724,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 18,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme pate_hachures"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     },
+     {
+      "programme": "187.shader_test",
+      "sorte": "modifié",
+      "proche": "169.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "232.shader_test",
+      "sorte": "modifié",
+      "proche": "199.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 36,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "172.shader_test",
+      "sorte": "modifié",
+      "proche": "154.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "166.shader_test",
+      "sorte": "modifié",
+      "proche": "148.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "184.shader_test",
+      "sorte": "modifié",
+      "proche": "166.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "235.shader_test",
+      "sorte": "modifié",
+      "proche": "202.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 36,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "181.shader_test",
+      "sorte": "modifié",
+      "proche": "163.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "169.shader_test",
+      "sorte": "modifié",
+      "proche": "151.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_pate_hachures",
+       "m_pate_hachures_facteur",
+       "m_penombre"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "187.shader_test (uniforme pate_hachures plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme pate_hachures"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     }
+    ]
+   },
+   "part": {
+    "map_001_le_cloitre_scinde": 0.0011120756172839506,
+    "default_unique": 0.0008082561728395062,
+    "map_004_le_bunker_scinde": 0.0013667052469135803,
+    "map_001_le_cloitre_unique": 0.0008839699074074074,
+    "map_002_l_usine_scinde": 0.0013970871913580247,
+    "map_003_la_croisee_unique": 0.0010209297839506174,
+    "default_scinde": 0.0012374614197530865,
+    "map_002_l_usine_unique": 0.00099633487654321,
+    "arene_circulaire_scinde": 0.0013387345679012346,
+    "map_003_la_croisee_scinde": 0.0015012538580246914,
+    "arene_circulaire_unique": 0.000626929012345679,
+    "map_004_le_bunker_unique": 0.0010349151234567901
+   },
+   "classe": "lourde",
+   "raisons": [
+    "+20.0 appels en carte/unique (> +15 : le détail des corps, qui tient à 0,976, plus le bruit)",
+    "+40.5 appels en carte/scinde (> +31 : le détail des corps, qui tient à 0,976, plus le bruit)",
+    "shader neuf : 170 instructions, 0 lectures (m_contour_unites, m_normale_coque ; le plus lourd déjà à l'écran : 3846, 51)"
+   ],
+   "geometrie": true,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "tuyaux": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 1.0,
+     "primitives": 13775.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 4.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 5.0,
+     "primitives": 27553.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 8.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": 0.18999999999999773,
+     "primitives": 10413.3,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": 0.18999999999999773,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 11.719999999999914,
+     "primitives": 20787.43,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 11.719999999999914,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 6,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 114,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "193.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1156,
+      "lectures": 14,
+      "boucles": 0,
+      "d_instructions": 1156,
+      "d_lectures": 14,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "190.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1156,
+      "lectures": 14,
+      "boucles": 0,
+      "d_instructions": 1156,
+      "d_lectures": 14,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "211.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 1156,
+      "lectures": 14,
+      "boucles": 0,
+      "d_instructions": 1156,
+      "d_lectures": 14,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "202.shader_test",
+      "sorte": "neuf",
+      "proche": "154.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 3,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "196.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 3,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "199.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 3,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     }
+    ]
+   },
+   "part": {
+    "map_002_l_usine_unique": 0.0003414351851851852,
+    "arene_circulaire_unique": 0.00038532021604938273,
+    "map_004_le_bunker_unique": 0.000464891975308642,
+    "map_003_la_croisee_unique": 0.0005386766975308642,
+    "map_002_l_usine_scinde": 0.001103395061728395,
+    "arene_circulaire_scinde": 0.001084104938271605,
+    "default_unique": 0.0005232445987654321,
+    "map_001_le_cloitre_scinde": 0.0010103202160493827,
+    "default_scinde": 0.00021508487654320989,
+    "map_001_le_cloitre_unique": 0.0004118441358024691,
+    "map_004_le_bunker_scinde": 0.0014443479938271604,
+    "map_003_la_croisee_scinde": 0.0008342978395061728
+   },
+   "classe": "lourde",
+   "raisons": [
+    "primitives +222 % en carte/unique (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "primitives +246 % en carte/scinde (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "primitives +146 % en pompe/unique (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "primitives +167 % en pompe/scinde (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "shader neuf : 1156 instructions, 14 lectures (m_albedo, m_contour, m_corps_sombre, m_couvert, m_emprise_preuve, m_encre_reste ; le plus lourd déjà à l'écran : 3846, 51)"
+   ],
+   "geometrie": true,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "enseignes": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 1.0,
+     "primitives": 12.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 3.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 3.5,
+     "primitives": 27.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 6.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.11000000000001364,
+     "primitives": 1.7800000000006548,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.11000000000001364,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 5.519999999999982,
+     "primitives": 45.909999999999854,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 5.519999999999982,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 6,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 114,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "193.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1138,
+      "lectures": 15,
+      "boucles": 0,
+      "d_instructions": 1138,
+      "d_lectures": 15,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "190.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1138,
+      "lectures": 15,
+      "boucles": 0,
+      "d_instructions": 1138,
+      "d_lectures": 15,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "211.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 1138,
+      "lectures": 15,
+      "boucles": 0,
+      "d_instructions": 1138,
+      "d_lectures": 15,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "202.shader_test",
+      "sorte": "neuf",
+      "proche": "154.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 11,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 11,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "196.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 11,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 11,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "199.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 11,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 11,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     }
+    ]
+   },
+   "part": {
+    "map_001_le_cloitre_scinde": 0.0003824266975308642,
+    "default_scinde": 0.0005025077160493827,
+    "map_003_la_croisee_unique": 0.0007272376543209876,
+    "map_004_le_bunker_scinde": 0.0008767361111111111,
+    "map_002_l_usine_scinde": 0.00036024305555555554,
+    "map_003_la_croisee_scinde": 0.0010112847222222222,
+    "map_001_le_cloitre_unique": 0.00045187114197530864,
+    "arene_circulaire_scinde": 0.000751832561728395,
+    "map_002_l_usine_unique": 0.0003505979938271605,
+    "arene_circulaire_unique": 0.0006139081790123457,
+    "default_unique": 0.0003771219135802469,
+    "map_004_le_bunker_unique": 0.00047743055555555554
+   },
+   "classe": "à surveiller",
+   "raisons": [
+    "shader neuf : 1138 instructions, 15 lectures (m_atlas, m_couvert, m_emprise_preuve, m_face_n, m_matiere_max, m_place ; le plus lourd déjà à l'écran : 3846, 51)",
+    "shader neuf : 11 instructions, 1 lectures (m_atlas, m_couvert, m_emprise_preuve, m_face_n, m_matiere_max, m_place ; le plus lourd déjà à l'écran : 3846, 51)"
+   ],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "murs-meubles": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 5.5,
+     "primitives": 7197.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 7.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 9.0,
+     "primitives": 14393.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 14.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": 3.6899999999999977,
+     "primitives": 7528.800000000001,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": 3.6899999999999977,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 20.579999999999927,
+     "primitives": 15145.16,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 20.579999999999927,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 12,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 120,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "208.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1156,
+      "lectures": 14,
+      "boucles": 0,
+      "d_instructions": 1156,
+      "d_lectures": 14,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "229.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 1156,
+      "lectures": 14,
+      "boucles": 0,
+      "d_instructions": 1156,
+      "d_lectures": 14,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "205.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1156,
+      "lectures": 14,
+      "boucles": 0,
+      "d_instructions": 1156,
+      "d_lectures": 14,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "193.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1138,
+      "lectures": 15,
+      "boucles": 0,
+      "d_instructions": 1138,
+      "d_lectures": 15,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "190.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1138,
+      "lectures": 15,
+      "boucles": 0,
+      "d_instructions": 1138,
+      "d_lectures": 15,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "226.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 1138,
+      "lectures": 15,
+      "boucles": 0,
+      "d_instructions": 1138,
+      "d_lectures": 15,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "202.shader_test",
+      "sorte": "neuf",
+      "proche": "154.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 11,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 11,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "196.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 11,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 11,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "199.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 11,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 11,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_atlas",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_face_n",
+       "m_matiere_max",
+       "m_place"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "217.shader_test",
+      "sorte": "neuf",
+      "proche": "154.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 3,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "211.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 3,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "214.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 3,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_albedo",
+       "m_contour",
+       "m_corps_sombre",
+       "m_couvert",
+       "m_emprise_preuve",
+       "m_encre_reste"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     }
+    ]
+   },
+   "part": {
+    "map_003_la_croisee_unique": 0.0009485918209876543,
+    "map_002_l_usine_scinde": 0.000386766975308642,
+    "map_004_le_bunker_unique": 0.0019251543209876543,
+    "default_unique": 0.0003409529320987654,
+    "default_scinde": 0.0002044753086419753,
+    "map_002_l_usine_unique": 0.0003414351851851852,
+    "map_001_le_cloitre_scinde": 0.0003940007716049383,
+    "map_004_le_bunker_scinde": 0.0012847222222222223,
+    "arene_circulaire_unique": 0.0005068479938271605,
+    "arene_circulaire_scinde": 0.0005994405864197531,
+    "map_001_le_cloitre_unique": 0.00045283564814814817,
+    "map_003_la_croisee_scinde": 0.0011636766975308642
+   },
+   "classe": "lourde",
+   "raisons": [
+    "primitives +116 % en carte/unique (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "primitives +129 % en carte/scinde (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "primitives +106 % en pompe/unique (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "primitives +122 % en pompe/scinde (géométrie : au-delà de +50 %, aucune mesure du Mac ne dit que la règle tienne)",
+    "+5.5 appels en carte/unique (bruit ±3)",
+    "+9.0 appels en carte/scinde (bruit ±7)",
+    "+3.7 appels en pompe/unique (bruit ±3)",
+    "+20.6 appels en pompe/scinde (bruit ±20)",
+    "shader neuf : 1156 instructions, 14 lectures (m_albedo, m_contour, m_corps_sombre, m_couvert, m_emprise_preuve, m_encre_reste ; le plus lourd déjà à l'écran : 3846, 51)",
+    "shader neuf : 1138 instructions, 15 lectures (m_atlas, m_couvert, m_emprise_preuve, m_face_n, m_matiere_max, m_place ; le plus lourd déjà à l'écran : 3846, 51)",
+    "shader neuf : 11 instructions, 1 lectures (m_atlas, m_couvert, m_emprise_preuve, m_face_n, m_matiere_max, m_place ; le plus lourd déjà à l'écran : 3846, 51)"
+   ],
+   "geometrie": true,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "sol-marque": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 1.0,
+     "primitives": 2.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 2.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 1.5,
+     "primitives": 3.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 7.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.22000000000002728,
+     "primitives": -0.4499999999998181,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.22000000000002728,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 8.649999999999977,
+     "primitives": 17.30000000000109,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 8.649999999999977,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": []
+   },
+   "part": {
+    "default_unique": 0.00035300925925925924,
+    "map_001_le_cloitre_unique": 0.0004523533950617284,
+    "map_001_le_cloitre_scinde": 0.0005613425925925926,
+    "map_004_le_bunker_unique": 0.00041377314814814814,
+    "map_003_la_croisee_scinde": 0.0008424961419753087,
+    "map_003_la_croisee_unique": 0.0005367476851851851,
+    "arene_circulaire_scinde": 0.000787037037037037,
+    "map_002_l_usine_scinde": 0.00036506558641975306,
+    "default_scinde": 0.0005425347222222222,
+    "map_004_le_bunker_scinde": 0.0005078125,
+    "map_002_l_usine_unique": 0.00034384645061728397,
+    "arene_circulaire_unique": 0.000394483024691358
+   },
+   "classe": "neutre",
+   "raisons": [],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "corps-soi-sombre": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 0.0,
+     "primitives": 0.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 1.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 1.5,
+     "primitives": 3.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 5.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.6299999999999955,
+     "primitives": -1.269999999999527,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.6299999999999955,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 6.529999999999973,
+     "primitives": 43.93000000000029,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 6.529999999999973,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 5,
+    "disparus": 5,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "211.shader_test",
+      "sorte": "modifié",
+      "proche": "193.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1609,
+      "lectures": 2,
+      "boucles": 0,
+      "d_instructions": 136,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_ax",
+       "m_axe_x",
+       "m_axe_z",
+       "m_az",
+       "m_bande",
+       "m_corps"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "223.shader_test",
+      "sorte": "modifié",
+      "proche": "205.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1609,
+      "lectures": 2,
+      "boucles": 0,
+      "d_instructions": 136,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_ax",
+       "m_axe_x",
+       "m_axe_z",
+       "m_az",
+       "m_bande",
+       "m_corps"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "214.shader_test",
+      "sorte": "modifié",
+      "proche": "196.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1609,
+      "lectures": 2,
+      "boucles": 0,
+      "d_instructions": 136,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_ax",
+       "m_axe_x",
+       "m_axe_z",
+       "m_az",
+       "m_bande",
+       "m_corps"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "220.shader_test",
+      "sorte": "modifié",
+      "proche": "202.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 36,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_ax",
+       "m_axe_x",
+       "m_axe_z",
+       "m_az",
+       "m_bande",
+       "m_corps"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "217.shader_test",
+      "sorte": "modifié",
+      "proche": "199.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 36,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_ax",
+       "m_axe_x",
+       "m_axe_z",
+       "m_az",
+       "m_bande",
+       "m_corps"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": true
+     }
+    ]
+   },
+   "part": {
+    "map_001_le_cloitre_scinde": 0.0026538387345679012,
+    "map_002_l_usine_unique": 0.0016097608024691359,
+    "arene_circulaire_unique": 0.001331983024691358,
+    "arene_circulaire_scinde": 0.0025043402777777776,
+    "map_002_l_usine_scinde": 0.0026586612654320987,
+    "map_003_la_croisee_scinde": 0.0028125,
+    "default_unique": 0.0013980516975308642,
+    "map_001_le_cloitre_unique": 0.0015104166666666666,
+    "default_scinde": 0.002494212962962963,
+    "map_004_le_bunker_unique": 0.001595775462962963,
+    "map_004_le_bunker_scinde": 0.0026316550925925926,
+    "map_003_la_croisee_unique": 0.0016039737654320989
+   },
+   "classe": "neutre",
+   "raisons": [],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "lampe-claire": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 1.0,
+     "primitives": 2.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 2.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 0.5,
+     "primitives": 1.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 8.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.37000000000000455,
+     "primitives": -0.819999999999709,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.37000000000000455,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 10.5,
+     "primitives": 21.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 10.5,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "193.shader_test (uniforme lampe_claire plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 1691,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 156,
+      "d_lectures": 2,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme lampe_claire"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     },
+     {
+      "programme": "160.shader_test (uniforme lampe_claire plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 3839,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 69,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme lampe_claire"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     },
+     {
+      "programme": "187.shader_test (uniforme lampe_claire plié)",
+      "sorte": "branche d'uniforme",
+      "proche": "le même, uniforme à 0",
+      "ressemblance": 1.0,
+      "instructions": 3,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 0,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "uniforme lampe_claire"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ]
+     }
+    ]
+   },
+   "part": {
+    "default_unique": 0.019575617283950617,
+    "arene_circulaire_scinde": 0.05093123070987654,
+    "arene_circulaire_unique": 0.023498263888888888,
+    "map_002_l_usine_scinde": 0.048090760030864196,
+    "default_scinde": 0.039927662037037036,
+    "map_001_le_cloitre_scinde": 0.042956693672839504,
+    "map_003_la_croisee_unique": 0.02000096450617284,
+    "map_001_le_cloitre_unique": 0.019229841820987654,
+    "map_004_le_bunker_scinde": 0.0632103587962963,
+    "map_004_le_bunker_unique": 0.031479070216049385,
+    "map_003_la_croisee_scinde": 0.04637635030864198,
+    "map_002_l_usine_unique": 0.020650559413580245
+   },
+   "classe": "à surveiller",
+   "raisons": [
+    "shader : +2 lecture(s) de texture (uniforme lampe_claire)"
+   ],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "masque-V5": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 1.0,
+     "primitives": 2.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 4.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 2.0,
+     "primitives": 4.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 7.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": 0.5,
+     "primitives": 45.850000000000364,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": 0.5,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 5.289999999999964,
+     "primitives": 38.57999999999993,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 5.289999999999964,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 10,
+    "disparus": 5,
+    "total_ref": 108,
+    "total": 113,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "298.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.79,
+      "instructions": 3486,
+      "lectures": 23,
+      "boucles": 7,
+      "d_instructions": 3486,
+      "d_lectures": 23,
+      "d_boucles": 7,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "307.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.79,
+      "instructions": 3486,
+      "lectures": 23,
+      "boucles": 7,
+      "d_instructions": 3486,
+      "d_lectures": 23,
+      "d_boucles": 7,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "295.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.79,
+      "instructions": 3486,
+      "lectures": 23,
+      "boucles": 7,
+      "d_instructions": 3486,
+      "d_lectures": 23,
+      "d_boucles": 7,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "301.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.79,
+      "instructions": 3351,
+      "lectures": 23,
+      "boucles": 7,
+      "d_instructions": 3351,
+      "d_lectures": 23,
+      "d_boucles": 7,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "304.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.79,
+      "instructions": 3351,
+      "lectures": 23,
+      "boucles": 7,
+      "d_instructions": 3351,
+      "d_lectures": 23,
+      "d_boucles": 7,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "310.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1472,
+      "lectures": 17,
+      "boucles": 1,
+      "d_instructions": 1472,
+      "d_lectures": 17,
+      "d_boucles": 1,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "322.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.65,
+      "instructions": 1472,
+      "lectures": 17,
+      "boucles": 1,
+      "d_instructions": 1472,
+      "d_lectures": 17,
+      "d_boucles": 1,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "313.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 1472,
+      "lectures": 17,
+      "boucles": 1,
+      "d_instructions": 1472,
+      "d_lectures": 17,
+      "d_boucles": 1,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "319.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 115,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 115,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "316.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.64,
+      "instructions": 115,
+      "lectures": 1,
+      "boucles": 0,
+      "d_instructions": 115,
+      "d_lectures": 1,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_BORNE_MARGE",
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE"
+      ],
+      "famille": [
+       "m_BORNE_MARGE",
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX"
+      ],
+      "corps": false
+     }
+    ]
+   },
+   "part": {
+    "map_003_la_croisee_scinde": 0.000589795524691358,
+    "map_001_le_cloitre_unique": 0.000437403549382716,
+    "map_003_la_croisee_unique": 0.0006867283950617284,
+    "map_001_le_cloitre_scinde": 0.000388695987654321,
+    "arene_circulaire_scinde": 0.000546875,
+    "map_004_le_bunker_unique": 0.00046199845679012344,
+    "default_unique": 0.0005237268518518518,
+    "arene_circulaire_unique": 0.00046440972222222223,
+    "map_004_le_bunker_scinde": 0.0004986496913580246,
+    "map_002_l_usine_unique": 0.0003409529320987654,
+    "map_002_l_usine_scinde": 0.0003587962962962963,
+    "default_scinde": 0.00020495756172839505
+   },
+   "classe": "lourde",
+   "raisons": [
+    "shader neuf : 3486 instructions, 23 lectures, 7 boucles (m_BORNE_MARGE, m_POINT_NOIR_ECRIT, m_SOL_COUTURE_PX, m_SOL_HAUSSE_MAX, m_TAILLE_MATIERE, m_USURE_SOL_PLUS_SOMBRE)",
+    "shader neuf : 3351 instructions, 23 lectures, 7 boucles (m_BORNE_MARGE, m_POINT_NOIR_ECRIT, m_SOL_COUTURE_PX, m_SOL_HAUSSE_MAX, m_TAILLE_MATIERE, m_USURE_SOL_PLUS_SOMBRE)",
+    "shader neuf : 1472 instructions, 17 lectures, 1 boucles (m_BORNE_MARGE, m_POINT_NOIR_ECRIT, m_SOL_COUTURE_PX, m_SOL_HAUSSE_MAX, m_TAILLE_MATIERE, m_USURE_SOL_PLUS_SOMBRE)",
+    "shader neuf : 115 instructions, 1 lectures (m_BORNE_MARGE, m_POINT_NOIR_ECRIT, m_SOL_COUTURE_PX, m_SOL_HAUSSE_MAX, m_TAILLE_MATIERE, m_USURE_SOL_PLUS_SOMBRE ; le plus lourd déjà à l'écran : 3846, 51)"
+   ],
+   "geometrie": false,
+   "etat_plus": [
+    "[fumée masque] allumé — variante FUMEE_MASQUE posée (#define FUMEE_MASQUE dans son code) ; point noir de l'écran #D : écrit sous #/# → noir (rampes du #-#-# : # → # # → #) ; usure recopiée (#define USURE_ESSAI, comme le sol)",
+    "[fumée masque] forme : juge ajusté, lumière d'abord, pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR, MASQUE_LUMIERE, MASQUE_AJUSTE)"
+   ],
+   "etat_moins": [
+    "[fumée masque] éteint (le défaut depuis le #-#-# ; --fumee-masque l'allume) — le shader des volumes d'avant"
+   ],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "calib-masque-bande": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 2.0,
+     "primitives": 4.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 4.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 3.5,
+     "primitives": 7.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 7.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -1.6100000000000136,
+     "primitives": -64.61999999999989,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -1.6100000000000136,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 12.949999999999932,
+     "primitives": 25.899999999999636,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 12.949999999999932,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 5,
+    "disparus": 5,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "298.shader_test",
+      "sorte": "neuf",
+      "proche": "145.shader_test",
+      "ressemblance": 0.81,
+      "instructions": 12514,
+      "lectures": 98,
+      "boucles": 15,
+      "d_instructions": 12514,
+      "d_lectures": 98,
+      "d_boucles": 15,
+      "nouveau_code": [
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE",
+       "m_a0"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "307.shader_test",
+      "sorte": "neuf",
+      "proche": "172.shader_test",
+      "ressemblance": 0.81,
+      "instructions": 12514,
+      "lectures": 98,
+      "boucles": 15,
+      "d_instructions": 12514,
+      "d_lectures": 98,
+      "d_boucles": 15,
+      "nouveau_code": [
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE",
+       "m_a0"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "295.shader_test",
+      "sorte": "neuf",
+      "proche": "142.shader_test",
+      "ressemblance": 0.81,
+      "instructions": 12514,
+      "lectures": 98,
+      "boucles": 15,
+      "d_instructions": 12514,
+      "d_lectures": 98,
+      "d_boucles": 15,
+      "nouveau_code": [
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE",
+       "m_a0"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "301.shader_test",
+      "sorte": "neuf",
+      "proche": "148.shader_test",
+      "ressemblance": 0.81,
+      "instructions": 11161,
+      "lectures": 82,
+      "boucles": 14,
+      "d_instructions": 11161,
+      "d_lectures": 82,
+      "d_boucles": 14,
+      "nouveau_code": [
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE",
+       "m_a0"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     },
+     {
+      "programme": "304.shader_test",
+      "sorte": "neuf",
+      "proche": "151.shader_test",
+      "ressemblance": 0.81,
+      "instructions": 11161,
+      "lectures": 82,
+      "boucles": 14,
+      "d_instructions": 11161,
+      "d_lectures": 82,
+      "d_boucles": 14,
+      "nouveau_code": [
+       "m_POINT_NOIR_ECRIT",
+       "m_SOL_COUTURE_PX",
+       "m_SOL_HAUSSE_MAX",
+       "m_TAILLE_MATIERE",
+       "m_USURE_SOL_PLUS_SOMBRE",
+       "m_a0"
+      ],
+      "famille": [
+       "m_LIGHTMAP_CALQUE_VUE_2",
+       "m_LIGHTMAP_PAS_PX",
+       "m_PATE_BRUTE"
+      ],
+      "corps": false
+     }
+    ]
+   },
+   "part": {
+    "map_001_le_cloitre_scinde": 0.00036506558641975306,
+    "default_unique": 0.00033227237654320985,
+    "default_scinde": 0.0005102237654320988,
+    "map_002_l_usine_scinde": 0.00038483796296296297,
+    "map_003_la_croisee_unique": 0.0006230709876543209,
+    "map_002_l_usine_unique": 0.0003414351851851852,
+    "map_003_la_croisee_scinde": 0.0005709876543209877,
+    "map_004_le_bunker_scinde": 0.00036844135802469133,
+    "map_004_le_bunker_unique": 0.0004070216049382716,
+    "arene_circulaire_scinde": 0.0006428433641975309,
+    "map_001_le_cloitre_unique": 0.0004533179012345679,
+    "arene_circulaire_unique": 0.00040798611111111114
+   },
+   "classe": "lourde",
+   "raisons": [
+    "shader neuf : 12514 instructions, 98 lectures, 15 boucles (m_POINT_NOIR_ECRIT, m_SOL_COUTURE_PX, m_SOL_HAUSSE_MAX, m_TAILLE_MATIERE, m_USURE_SOL_PLUS_SOMBRE, m_a0)",
+    "shader neuf : 11161 instructions, 82 lectures, 14 boucles (m_POINT_NOIR_ECRIT, m_SOL_COUTURE_PX, m_SOL_HAUSSE_MAX, m_TAILLE_MATIERE, m_USURE_SOL_PLUS_SOMBRE, m_a0)"
+   ],
+   "geometrie": false,
+   "etat_plus": [
+    "[fumée masque] allumé — variante FUMEE_MASQUE posée (#define FUMEE_MASQUE dans son code) ; point noir de l'écran #D : écrit sous #/# → noir (rampes du #-#-# : # → # # → #) ; usure recopiée (#define USURE_ESSAI, comme le sol)",
+    "[fumée masque] forme : celle de Gadgets"
+   ],
+   "etat_moins": [
+    "[fumée masque] éteint (le défaut depuis le #-#-# ; --fumee-masque l'allume) — le shader des volumes d'avant"
+   ],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "calib-corps-detaille": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 12.0,
+     "primitives": 528.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 15.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": 24.5,
+     "primitives": 1057.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 27.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": 2.7099999999999795,
+     "primitives": 45.45000000000073,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": 2.7099999999999795,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 13.169999999999959,
+     "primitives": 137.21000000000095,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 13.169999999999959,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 5,
+    "disparus": 5,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": [
+     {
+      "programme": "208.shader_test",
+      "sorte": "modifié",
+      "proche": "205.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1699,
+      "lectures": 2,
+      "boucles": 1,
+      "d_instructions": 226,
+      "d_lectures": 0,
+      "d_boucles": 1,
+      "nouveau_code": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_a_p",
+       "m_cellule",
+       "m_detail",
+       "m_detail_cuir"
+      ],
+      "famille": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_LIGHTMAP_CALQUE_VUE_2"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "196.shader_test",
+      "sorte": "modifié",
+      "proche": "193.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1699,
+      "lectures": 2,
+      "boucles": 1,
+      "d_instructions": 226,
+      "d_lectures": 0,
+      "d_boucles": 1,
+      "nouveau_code": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_a_p",
+       "m_cellule",
+       "m_detail",
+       "m_detail_cuir"
+      ],
+      "famille": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_LIGHTMAP_CALQUE_VUE_2"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "199.shader_test",
+      "sorte": "modifié",
+      "proche": "196.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 1699,
+      "lectures": 2,
+      "boucles": 1,
+      "d_instructions": 226,
+      "d_lectures": 0,
+      "d_boucles": 1,
+      "nouveau_code": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_a_p",
+       "m_cellule",
+       "m_detail",
+       "m_detail_cuir"
+      ],
+      "famille": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_LIGHTMAP_CALQUE_VUE_2"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "202.shader_test",
+      "sorte": "modifié",
+      "proche": "199.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 76,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 40,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_a_p",
+       "m_cellule",
+       "m_detail",
+       "m_detail_cuir"
+      ],
+      "famille": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_LIGHTMAP_CALQUE_VUE_2"
+      ],
+      "corps": true
+     },
+     {
+      "programme": "205.shader_test",
+      "sorte": "modifié",
+      "proche": "202.shader_test",
+      "ressemblance": 1.0,
+      "instructions": 76,
+      "lectures": 0,
+      "boucles": 0,
+      "d_instructions": 40,
+      "d_lectures": 0,
+      "d_boucles": 0,
+      "nouveau_code": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_a_p",
+       "m_cellule",
+       "m_detail",
+       "m_detail_cuir"
+      ],
+      "famille": [
+       "m_DETAIL_MARBRE",
+       "m_DETAIL_PORE",
+       "m_LIGHTMAP_CALQUE_VUE_2"
+      ],
+      "corps": true
+     }
+    ]
+   },
+   "part": {
+    "arene_circulaire_unique": 0.0005208333333333333,
+    "map_002_l_usine_unique": 0.000544945987654321,
+    "map_004_le_bunker_unique": 0.0005285493827160494,
+    "map_001_le_cloitre_unique": 0.0004923804012345679,
+    "map_003_la_croisee_unique": 0.000669849537037037,
+    "arene_circulaire_scinde": 0.0008232060185185185,
+    "map_002_l_usine_scinde": 0.0005319251543209877,
+    "map_003_la_croisee_scinde": 0.0007957175925925925,
+    "default_scinde": 0.00024546682098765434,
+    "map_001_le_cloitre_scinde": 0.0006553819444444444,
+    "default_unique": 0.00032937885802469135,
+    "map_004_le_bunker_scinde": 0.0005931712962962963
+   },
+   "classe": "à surveiller",
+   "raisons": [
+    "+12.0 appels en carte/unique (bruit ±3)",
+    "+24.5 appels en carte/scinde (bruit ±7)",
+    "shader des corps : +1 boucle(s), +226 instructions (m_DETAIL_MARBRE, m_DETAIL_PORE, m_a_p, m_cellule, m_detail, m_detail_cuir ; le détail des corps, +1 boucle, tient à 0,976)"
+   ],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  },
+  "calib-rouge-long": {
+   "comptes": {
+    "carte/unique": {
+     "appels": 0.5,
+     "primitives": 1.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 135.5,
+     "ref_primitives": 6209.0,
+     "max_appels": 1.0,
+     "n": 6
+    },
+    "carte/scinde": {
+     "appels": -1.0,
+     "primitives": -2.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 252.0,
+     "ref_primitives": 11185.0,
+     "max_appels": 4.0,
+     "n": 6
+    },
+    "pompe/unique": {
+     "appels": -0.5900000000000318,
+     "primitives": 30.0,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 291.35,
+     "ref_primitives": 7120.57,
+     "max_appels": -0.5900000000000318,
+     "n": 1
+    },
+    "pompe/scinde": {
+     "appels": 14.599999999999909,
+     "primitives": 29.200000000000728,
+     "vues": 0.0,
+     "copies": 0.0,
+     "ombres2d": 0.0,
+     "ombres3d": 0.0,
+     "ref_appels": 613.95,
+     "ref_primitives": 12434.57,
+     "max_appels": 14.599999999999909,
+     "n": 1
+    }
+   },
+   "shaders": {
+    "nouveaux": 0,
+    "disparus": 0,
+    "total_ref": 108,
+    "total": 108,
+    "plus_lourd_ref": {
+     "instructions": 3846,
+     "lectures": 51
+    },
+    "detail": []
+   },
+   "part": {
+    "default_unique": 0.00035493827160493826,
+    "map_003_la_croisee_unique": 0.0005415702160493827,
+    "map_004_le_bunker_scinde": 0.0004190779320987654,
+    "map_001_le_cloitre_scinde": 0.0005372299382716049,
+    "arene_circulaire_unique": 0.000509741512345679,
+    "map_001_le_cloitre_unique": 0.00041087962962962964,
+    "map_003_la_croisee_scinde": 0.0009924768518518518,
+    "map_002_l_usine_scinde": 0.0005767746913580247,
+    "map_002_l_usine_unique": 0.0005227623456790124,
+    "default_scinde": 0.00019917052469135802,
+    "arene_circulaire_scinde": 0.000822241512345679,
+    "map_004_le_bunker_unique": 0.00048755787037037035
+   },
+   "classe": "neutre",
+   "raisons": [],
+   "geometrie": false,
+   "etat_plus": [],
+   "etat_moins": [],
+   "releves": 14,
+   "releves_ref": 14
+  }
+ }
+}

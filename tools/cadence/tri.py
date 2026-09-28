@@ -36,9 +36,17 @@ import sys
 # Un témoin (--temoin) relève ces bruits s'il trouve plus.
 BRUIT = {"carte/unique": 3.0, "carte/scinde": 7.0, "pompe/unique": 3.0, "pompe/scinde": 20.0}
 # Les personnages détaillés : +12 appels par carte en vue unique (+9 %), +24 en écran scindé, et 0,976 au Mac (ROADMAP,
-# Q33, `cef9d93`) — ils TIENNENT, à 0,6 point de la barre. Au-delà de +12 appels en vue unique (ou +24 en écran scindé),
-# on n'a aucune preuve que la règle tienne : « lourde ». Entre le bruit et +12 : « à surveiller ».
-APPELS_LOURDS = {"carte/unique": 12.0, "carte/scinde": 24.0, "pompe/unique": 12.0, "pompe/scinde": 24.0}
+# Q33, `cef9d93`) — ils TIENNENT, à 0,6 point de la barre. Au-delà de leur écart PLUS le bruit (+15 en vue unique, +31 en
+# écran scindé), on n'a aucune preuve que la règle tienne : « lourde ». Entre le bruit et ce seuil : « à surveiller ».
+# (Recalé le 2026-09-28 : posé à +12 / +24 tout juste, le tri classait « lourd » le détail des corps lui-même, relevé
+# à +12 / +24,5 — un demi-appel de bruit.)
+APPELS_LOURDS = {"carte/unique": 15.0, "carte/scinde": 31.0, "pompe/unique": 15.0, "pompe/scinde": 31.0}
+# Une boucle ne coûte que sur les pixels du programme qui la porte. Calibrage : le détail des corps ajoute une boucle au
+# programme des CORPS (+226 instructions) et tient (0,976) ; l'usure en ajoute une au sol et aux murs (+344) et ne tient
+# pas (0,944) ; le masque de la fumée, quinze, sur les volumes (0,838). Une boucle dans le programme des corps (quelques
+# pour cent de l'écran) est donc « à surveiller » ; ailleurs, « lourde ». Le programme des corps se reconnaît à ses
+# uniformes (MARQUES_CORPS).
+MARQUES_CORPS = ("m_mannequin", "m_portrait")
 # Les tuyaux : +1 appel, mais les primitives de la scène 3D ×3 (Budget), jamais mesurés au Mac. Une hausse des primitives
 # de plus de 10 % se surveille ; au-delà de +50 %, c'est une nouveauté de GÉOMÉTRIE lourde (et l'écran scindé se mesure).
 PRIMITIVES_SURVEILLER = 0.10
@@ -225,6 +233,11 @@ def identifiants(frag):
 
 
 def comparer_shaders(ref_p, var_p):
+    """Les programmes du lancement qui n'existent pas dans la référence. Chacun est apparié au programme de la référence qui
+    partage avec lui le PLUS d'identifiants du jeu (fonctions, uniformes, en `m_…`) : c'est le même shader, compilé autrement.
+    Si ce programme de la référence est contenu à 90 % au moins dans le nouveau, le nouveau est une MODIFICATION (le masque
+    ajouté au shader des volumes, une variante `#define`) : on compte l'écart. Sinon c'est un shader NEUF (les tuyaux, les
+    enseignes) : on le compte en entier, et on le compare au plus lourd des programmes déjà à l'écran."""
     nouveaux = [h for h in var_p if h not in ref_p]
     disparus = [h for h in ref_p if h not in var_p]
     ref_ids = {h: identifiants(f) for h, (_, f) in ref_p.items()}
@@ -232,31 +245,39 @@ def comparer_shaders(ref_p, var_p):
     for h in nouveaux:
         chemin, frag = var_p[h]
         ids = identifiants(frag)
-        # Le programme le plus proche de la référence : le plus d'identifiants communs (Jaccard).
-        meilleur, score = None, -1.0
+        meilleur, commun = None, -1
         for hr, ir in ref_ids.items():
-            u = len(ids | ir)
-            s = len(ids & ir) / u if u else 0.0
-            if s > score:
-                meilleur, score = hr, s
+            n = len(ids & ir)
+            if n > commun or (n == commun and meilleur is not None and len(ir) < len(ref_ids[meilleur])):
+                meilleur, commun = hr, n
+        contenu = commun / len(ref_ids[meilleur]) if meilleur and ref_ids[meilleur] else 0.0
         c = compter(frag)
         if "erreur" in c:
             lignes.append({"programme": os.path.basename(chemin), "erreur": c["erreur"]})
             continue
-        p = compter(ref_p[meilleur][1]) if meilleur and score >= 0.5 else {"instructions": 0, "lectures": 0, "boucles": 0}
+        modifie = contenu >= 0.9
+        p = compter(ref_p[meilleur][1]) if modifie else {"instructions": 0, "lectures": 0, "boucles": 0}
         if "erreur" in p:
-            p = {"instructions": 0, "lectures": 0, "boucles": 0}
-        propres = sorted(i for i in ids - (ref_ids.get(meilleur, set()) if score >= 0.5 else set()) if i.startswith("m_"))
-        famille = sorted(i for i in ids if i.startswith("m_"))[:3]
+            p, modifie = {"instructions": 0, "lectures": 0, "boucles": 0}, False
+        propres = sorted(i for i in ids - (ref_ids[meilleur] if meilleur else set()) if i.startswith("m_"))
         lignes.append({
-            "programme": os.path.basename(chemin), "proche": os.path.basename(ref_p[meilleur][0]) if meilleur else "-",
-            "ressemblance": round(score, 2), "instructions": c["instructions"], "lectures": c["lectures"],
-            "boucles": c["boucles"], "d_instructions": c["instructions"] - p["instructions"],
-            "d_lectures": c["lectures"] - p["lectures"], "d_boucles": c["boucles"] - p["boucles"],
-            "nouveau_code": propres[:6], "famille": famille,
+            "programme": os.path.basename(chemin), "sorte": "modifié" if modifie else "neuf",
+            "proche": os.path.basename(ref_p[meilleur][0]) if meilleur else "-", "ressemblance": round(contenu, 2),
+            "instructions": c["instructions"], "lectures": c["lectures"], "boucles": c["boucles"],
+            "d_instructions": c["instructions"] - p["instructions"], "d_lectures": c["lectures"] - p["lectures"],
+            "d_boucles": c["boucles"] - p["boucles"], "nouveau_code": propres[:6],
+            "famille": sorted(i for i in ids if i.startswith("m_"))[:3],
+            "corps": any(m in ids for m in MARQUES_CORPS),
         })
+    # Le plus lourd des programmes de la référence (instructions, lectures) : l'aune d'un shader neuf.
+    lourd = {"instructions": 0, "lectures": 0}
+    for _, (_, f) in ref_p.items():
+        c = compter(f)
+        if "erreur" not in c:
+            lourd["instructions"] = max(lourd["instructions"], c["instructions"])
+            lourd["lectures"] = max(lourd["lectures"], c["lectures"])
     return {"nouveaux": len(nouveaux), "disparus": len(disparus), "total_ref": len(ref_p), "total": len(var_p),
-            "detail": sorted(lignes, key=lambda x: -x.get("d_instructions", 0))}
+            "plus_lourd_ref": lourd, "detail": sorted(lignes, key=lambda x: -x.get("d_instructions", 0))}
 
 
 # ─── 3. LA PART DE L'ÉCRAN ───
@@ -303,13 +324,15 @@ def classer(c, sh, part, bruit):
         if fam == "pompe/scinde" and not (depasse("pompe/unique") or depasse("carte/scinde")):
             da = min(da, b)   # non confirmé : le hasard des salves (voir BRUIT)
         if da > APPELS_LOURDS[fam]:
-            raisons_l.append("%+.1f appels en %s (> %+g, le détail des corps qui tient à 0,976)" % (da, fam, APPELS_LOURDS[fam]))
+            raisons_l.append("%+.1f appels en %s (> %+g : le détail des corps, qui tient à 0,976, plus le bruit)"
+                             % (da, fam, APPELS_LOURDS[fam]))
             geometrie = True
         elif da > b:
             raisons_s.append("%+.1f appels en %s (bruit ±%g)" % (da, fam, b))
         rp = e["primitives"] / e["ref_primitives"] if e["ref_primitives"] else 0.0
         if rp > PRIMITIVES_LOURDES:
-            raisons_l.append("primitives %+.0f %% en %s (géométrie : les tuyaux, ×3, jamais mesurés)" % (100 * rp, fam))
+            raisons_l.append("primitives %+.0f %% en %s (géométrie : au-delà de +50 %%, aucune mesure du Mac ne dit que la "
+                             "règle tienne)" % (100 * rp, fam))
             geometrie = True
         elif rp > PRIMITIVES_SURVEILLER:
             raisons_s.append("primitives %+.0f %% en %s" % (100 * rp, fam))
@@ -322,7 +345,24 @@ def classer(c, sh, part, bruit):
             raisons_s.append("programme %s non compilé par glslang (compte impossible)" % p["programme"])
             continue
         qui = ", ".join(p["nouveau_code"] or p["famille"]) or "?"
-        if p["d_boucles"] >= 1:
+        if p.get("sorte") == "neuf":
+            # Un shader neuf paie son programme entier sur les pixels qu'il couvre, EN PLUS de ce qu'il recouvre (les
+            # tuyaux sont dessinés devant le mur, pas à sa place) : « à surveiller » au moins ; « lourd » s'il porte une
+            # boucle ou s'il est plus lourd que tout ce qui est déjà à l'écran.
+            pl = sh.get("plus_lourd_ref", {})
+            if p["boucles"] >= 1 or p["instructions"] > pl.get("instructions", 1 << 30) \
+                    or p["lectures"] > pl.get("lectures", 1 << 30):
+                raisons_l.append("shader neuf : %d instructions, %d lectures, %d boucles (%s)"
+                                 % (p["instructions"], p["lectures"], p["boucles"], qui))
+            elif p["instructions"] >= INSTR_SURVEILLER or p["lectures"] >= 1:
+                raisons_s.append("shader neuf : %d instructions, %d lectures (%s ; le plus lourd déjà à l'écran : %d, %d)"
+                                 % (p["instructions"], p["lectures"], qui, pl.get("instructions", 0),
+                                    pl.get("lectures", 0)))
+            continue
+        if p["d_boucles"] >= 1 and p.get("corps"):
+            raisons_s.append("shader des corps : +%d boucle(s), %+d instructions (%s ; le détail des corps, +1 boucle, "
+                             "tient à 0,976)" % (p["d_boucles"], p["d_instructions"], qui))
+        elif p["d_boucles"] >= 1:
             raisons_l.append("shader : +%d boucle(s) (%s)" % (p["d_boucles"], qui))
         elif p["d_lectures"] >= LECTURES_LOURDES:
             raisons_l.append("shader : +%d lectures de texture (%s)" % (p["d_lectures"], qui))
@@ -331,7 +371,7 @@ def classer(c, sh, part, bruit):
         elif p["d_instructions"] >= INSTR_SURVEILLER:
             raisons_s.append("shader : +%d instructions (%s)" % (p["d_instructions"], qui))
     classe = "lourde" if raisons_l else ("à surveiller" if raisons_s else "neutre")
-    return classe, raisons_l + raisons_s, geometrie
+    return classe, list(dict.fromkeys(raisons_l + raisons_s)), geometrie
 
 
 ref_r = releves(REF)
@@ -361,6 +401,7 @@ for nom in NOMS:
         for b in branche_uniforme(nom, PLIER[nom]):
             if "erreur" not in b:
                 sh["detail"].append({"programme": b["programme"] + " (uniforme " + ",".join(PLIER[nom]) + " plié)",
+                                     "sorte": "branche d'uniforme",
                                      "proche": "le même, uniforme à 0", "ressemblance": 1.0,
                                      "instructions": b["instructions"], "lectures": 0, "boucles": 0,
                                      "d_instructions": b["d_instructions"], "d_lectures": b["d_lectures"],
@@ -418,10 +459,10 @@ for nom, r in resultats["essais"].items():
     for p in r["shaders"]["detail"][:4]:
         if "erreur" in p:
             continue
-        L.append("  - programme %s (proche : %s, ressemblance %.2f) : %d instructions, %d lectures, %d boucles ; Δ %+d / %+d / "
-                 "%+d ; code propre : %s" % (p["programme"], p["proche"], p["ressemblance"], p["instructions"],
-                                              p["lectures"], p["boucles"], p["d_instructions"], p["d_lectures"],
-                                              p["d_boucles"], ", ".join(p["nouveau_code"]) or "—"))
+        L.append("  - programme %s, %s (apparié à %s, contenu à %.2f) : %d instructions, %d lectures, %d boucles ; Δ %+d / %+d / "
+                 "%+d ; code propre : %s" % (p["programme"], p.get("sorte", "?"), p["proche"], p["ressemblance"],
+                                              p["instructions"], p["lectures"], p["boucles"], p["d_instructions"],
+                                              p["d_lectures"], p["d_boucles"], ", ".join(p["nouveau_code"]) or "—"))
     L.append("")
 if temoin:
     L.append("**Témoin** (la référence relancée) : Δ appels %s ; programmes nouveaux %d ; part de l'écran %.2f %% au plus "
