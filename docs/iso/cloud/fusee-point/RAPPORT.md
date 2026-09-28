@@ -16,7 +16,7 @@
 - **Garde** : `tools/test_iso_gadgets.gd`, « Le point de braise, acte par acte » (dans une suite déjà au lot de `run_suites.sh`).
 - **Suite complète** : `GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur `78fb380` → **« tout passe, sans erreur de script (621 s) »**.
 - **Planche** avant/après, défaut et rouge long, 11 âges de 0,5 à 16 s : ce dossier.
-- **Poussé** jusqu'à `2898277`. Le rapport, la planche et ce qui suit sont **committés, pas poussés** : Adrien a demandé en cours de session d'attendre le feu vert de la session gestionnaire pour pousser.
+- **Tout est poussé.** Adrien avait demandé en cours de session d'attendre le feu vert de la session gestionnaire avant de pousser la suite (`53d0f72` et ce qui suit) ; ce feu vert est arrivé le 28/09 vers 12:45 (« Fais en sorte que les sessions cloud 30h qui n'ont pas fini terminent », relayé par la session coordinatrice).
 
 ## Les deux écarts, établis
 
