@@ -61,9 +61,9 @@ func jouer(loupe: RefCounted, plans: Array[Dictionary]) -> void:
 	# L'ÉCRAN SCINDÉ : la lampe de J1 seule, puis celle de J2 seule — chaque moitié voit les deux rayons tour à tour.
 	p._deux_vues()
 	_poser(j1, j1 + Vector2(-3.0 * t, 0.0), Vector2(-0.6, -1.0), Vector2(-0.6, -1.0), true, false)
-	await _bloc(plans, "s1", true, false)
+	await _bloc(plans, "s1", true, true)
 	_poser(j1, j1 + Vector2(-3.0 * t, 0.0), Vector2(-0.6, -1.0), Vector2(-0.6, -1.0), false, true)
-	await _bloc(plans, "s2", true, false)
+	await _bloc(plans, "s2", true, true)
 	p._vue_unique()
 	# L'ÉQUITÉ : J2 derrière le pilier (au nord de sa face nord), hors de vue de J1 ; deux visées.
 	var derriere := Vector2(pilier.get_center().x, pilier.position.y - 0.8 * t)
