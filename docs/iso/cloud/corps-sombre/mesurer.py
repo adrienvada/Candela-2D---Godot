@@ -111,7 +111,7 @@ def mesurer(dossier, sortie):
         m2 = differe(a, s2) if s2 is not None else np.zeros_like(m1)
         change = differe(a, b)
         la, lb = lum(a.astype(float)), lum(b.astype(float))
-        scinde = nom.endswith("_scinde")
+        scinde = nom.endswith("_scinde") or nom.endswith("_scinde_noir")
         if not scinde:
             hors = change & ~m1
             r["essai_hors_du_corps"] = int(hors.sum())

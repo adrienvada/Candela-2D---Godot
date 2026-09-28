@@ -18,6 +18,7 @@ extends "res://tools/photographe.gd"
 ##   adverse — sa torche éteinte, J2 à 2,6 cases qui le braque : la torche d'en face ;
 ##   lisiere — la même, J2 le braque de biais : J1 au bord du cône adverse ;
 ##   fusee   — sa torche éteinte, une fusée lancée devant lui, prise 1,5 s après le lancer ;
+##   scinde_noir — l'écran scindé, les deux torches éteintes : chacun ne doit voir que son propre repère ;
 ##   scinde  — l'écran scindé, J2 (vue de l'autre côté, lacet B) braque J1 de biais, les deux torches allumées : la vue de
 ##             l'adversaire se compare au pixel, et chaque joueur se voit dans sa couleur.
 ##
@@ -40,6 +41,9 @@ var _torche1 := true
 var _torche2 := true
 var _scenes := PackedStringArray()
 var _shaders_hier: Array = []
+## Le define posé par la bascule : `CORPS_SOI_SOMBRE`, ou `--define-temoin=NOM` (un define qu'aucun code ne lit : le témoin
+## de la bascule elle-même, qui doit ne rien changer).
+var _define_essai := "CORPS_SOI_SOMBRE"
 
 
 func _ready() -> void:
@@ -55,7 +59,8 @@ func _ready() -> void:
 		_sortir(1)
 		return
 	_dossier = _valeur(args, "--sortie", "user://corps_sombre")
-	_scenes = _valeur(args, "--scenes", "noir,torche,vide,adverse,lisiere,fusee,scinde").split(",")
+	_define_essai = _valeur(args, "--define-temoin", "CORPS_SOI_SOMBRE")
+	_scenes = _valeur(args, "--scenes", "noir,torche,vide,adverse,lisiere,fusee,scinde,scinde_noir").split(",")
 	var classes := _valeur(args, "--classes", CLASSES_DEFAUT).split(",")
 	_sans_hud = true
 	_carte_duel = CARTE
@@ -141,6 +146,12 @@ func _ready() -> void:
 			_regler(base, Vector2.UP, true, j2, vers_j1.rotated(deg_to_rad(24.0)), true)
 			_deux_vues()
 			await _prise(p + "_scinde", "ecran")
+			_vue_unique()
+		if _scenes.has("scinde_noir"):
+			# Les deux torches éteintes, en écran scindé : chacun ne doit voir que SON repère.
+			_regler(base, Vector2.UP, false, j2, vers_j1.rotated(deg_to_rad(24.0)), false)
+			_deux_vues()
+			await _prise(p + "_scinde_noir", "ecran")
 			_vue_unique()
 		if _scenes.has("fusee"):
 			_regler(base + Vector2(0.0, 1.5 * t), Vector2.UP, false, Vector2.INF, Vector2.RIGHT, false)
@@ -234,7 +245,7 @@ func _essai(iso: Presentation3D, allume: bool) -> void:
 			# après la construction — l'appeler ici changeait les arêtes des DEUX corps dans les deux vues (vu à la première
 			# séance : 791 pixels du corps de J1 changés dans la vue de J2). En jeu, `accorder_corps` pose la variante à la
 			# construction, avant ces réglages : la variante seule est ce que le jeu rend sous le drapeau.
-			m.shader = IsoMateriaux.variante_definie(m.shader, "CORPS_SOI_SOMBRE")
+			_changer_de_shader(m, IsoMateriaux.variante_definie(m.shader, _define_essai))
 			var joueur: Node2D = _main.p1 if j == 0 else _main.p2
 			var dir := Presentation3D.direction_du_lisere(joueur, lampes)
 			m.set_shader_parameter("soi_lumiere", dir)
@@ -249,7 +260,20 @@ func _essai(iso: Presentation3D, allume: bool) -> void:
 		for j in mats.size():
 			var m := mats[j] as ShaderMaterial
 			if m != null and j < _shaders_hier.size():
-				m.shader = _shaders_hier[j]
+				_changer_de_shader(m, _shaders_hier[j])
+
+
+## Change le shader d'un matériau en reposant chacun de ses paramètres : en jeu, la variante est posée à la construction,
+## AVANT que les capteurs et la lightmap ne soient réglés ; changée en direct, elle doit les retrouver tous.
+func _changer_de_shader(m: ShaderMaterial, sh: Shader) -> void:
+	var valeurs := {}
+	for u in m.shader.get_shader_uniform_list():
+		var nom := String(u["name"])
+		valeurs[nom] = m.get_shader_parameter(nom)
+	m.shader = sh
+	for nom in valeurs:
+		if valeurs[nom] != null:
+			m.set_shader_parameter(nom, valeurs[nom])
 
 
 func _ecrire_prise(img: Image, cle: String) -> void:
