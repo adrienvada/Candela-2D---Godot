@@ -75,9 +75,11 @@ pilier nord-ouest et son jumeau au pied SUD du pilier nord-est : visible pour J1
 cinq cartes en miroir ont AUSSI la symétrie haut-bas (l'Usine à une case près) : la table est désormais fermée par les deux
 miroirs et le demi-tour, et la garde headless l'exige (et rougit sur la première table). **À reporter dans la feuille de
 route, au-delà de cet essai** : tout décor posé « avec son jumeau par la symétrie de la carte » doit aussi avoir son jumeau
-par le demi-tour pour être équitable à 45° B. Les pochoirs ne l'ont pas (« ZONE 1 » et « ZONE 2 » sont au sud sur les six
-cartes, les « DEATHMATCH » de l'Arène Standard et de l'Arène Circulaire ne sont pas à des places échangées par le miroir
-haut-bas) : signalé, pas corrigé. Les cadres de cet essai, qui encadrent ces « DEATHMATCH », en héritent. Cadres, bandes et lettres sont symétriques par construction (leur usure
+par le demi-tour pour être équitable à 45° B. Les pochoirs ne l'ont pas (« ZONE 1 » et « ZONE 2 » sont tous deux au sud sur les cinq cartes en miroir — la Croisée,
+en demi-tour, est juste ; les « DEATHMATCH » de l'Arène Standard et de l'Arène Circulaire ne sont pas à des places échangées par le miroir
+haut-bas) : signalé, pas corrigé. Les cadres de cet essai, qui encadrent ces « DEATHMATCH », en héritent.
+
+Cadres, bandes et lettres sont symétriques par construction (leur usure
 est tirée sur un quart et reportée) : posés sur l'axe, ils sont leur propre jumeau. L'Usine n'a pas de symétrie exacte
 (son bloc central est décalé d'une case) : traitée en miroir, comme les pochoirs, et **rien n'est posé près du bloc
 décalé**.
