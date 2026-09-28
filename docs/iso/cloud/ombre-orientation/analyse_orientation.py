@@ -46,7 +46,7 @@ def part_parallele(poly, w):
     ss = [x * w[0] + y * w[1] for x, y in poly]
     lit = 0
     for k in range(POINTS):
-        a = 2 * math.pi * k / POINTS
+        a = 2 * math.pi * (k + 0.5) / POINTS  # décalés d'un demi-pas, comme `ombre_compensee.gd`
         px, py = math.cos(a) * R_LU, math.sin(a) * R_LU
         t, s = px * o[0] + py * o[1], px * w[0] + py * w[1]
         ombre = False
@@ -68,14 +68,16 @@ _tables = {}
 
 def table(cle, poly):
     if cle not in _tables:
-        _tables[cle] = [part_parallele(poly, (math.cos(2 * math.pi * i / DIRECTIONS), math.sin(2 * math.pi * i / DIRECTIONS)))
+        # Décalée d'un demi-pas, comme `OmbreCompensee.direction_de_case`.
+        _tables[cle] = [part_parallele(poly, (math.cos(2 * math.pi * (i + 0.5) / DIRECTIONS),
+                                              math.sin(2 * math.pi * (i + 0.5) / DIRECTIONS)))
                         for i in range(DIRECTIONS)]
     return _tables[cle]
 
 
 def part_table(cle, poly, w):
     t = table(cle, poly)
-    x = (math.atan2(w[1], w[0]) % (2 * math.pi)) / (2 * math.pi) * DIRECTIONS
+    x = (math.atan2(w[1], w[0]) / (2 * math.pi) * DIRECTIONS - 0.5) % DIRECTIONS
     i = int(math.floor(x)) % DIRECTIONS
     f = x - math.floor(x)
     return t[i] + (t[(i + 1) % DIRECTIONS] - t[i]) * f

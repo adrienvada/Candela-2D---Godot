@@ -74,8 +74,8 @@ static func part_eclairee(poly: PackedVector2Array, vers_torche: Vector2) -> flo
 		return 1.0
 	var w := vers_torche.normalized()
 	var o := w.orthogonal()
-	var ts := PackedFloat32Array()
-	var ss := PackedFloat32Array()
+	var ts := PackedFloat64Array()
+	var ss := PackedFloat64Array()
 	ts.resize(n)
 	ss.resize(n)
 	for i in n:
@@ -83,7 +83,9 @@ static func part_eclairee(poly: PackedVector2Array, vers_torche: Vector2) -> flo
 		ss[i] = poly[i].dot(w)
 	var eclaires := 0
 	for k in POINTS:
-		var p := Vector2.from_angle(TAU * float(k) / float(POINTS)) * RAYON_LU
+		# Décalés d'un demi-pas : aux angles k/64, les points tombent sur les rayons de l'étoile (k/32), et un sommet à 15 px
+		# pile est SUR l'anneau — un point ni éclairé ni dans l'ombre, que les arrondis tranchaient au hasard.
+		var p := Vector2.from_angle(TAU * (float(k) + 0.5) / float(POINTS)) * RAYON_LU
 		var t := p.dot(o)
 		var s := p.dot(w)
 		var ombre := false
@@ -106,7 +108,7 @@ static func part_eclairee(poly: PackedVector2Array, vers_torche: Vector2) -> flo
 ## La part éclairée pour une direction quelconque, interpolée dans la table de cette forme (remplie à la demande).
 static func part_table(poly: PackedVector2Array, vers_torche: Vector2) -> float:
 	var t := _table(poly)
-	var x := fposmod(vers_torche.angle(), TAU) / TAU * float(DIRECTIONS)
+	var x := fposmod(vers_torche.angle() / TAU * float(DIRECTIONS) - 0.5, float(DIRECTIONS))
 	var i := int(floorf(x)) % DIRECTIONS
 	var f := x - floorf(x)
 	var j := (i + 1) % DIRECTIONS
@@ -122,6 +124,14 @@ static func part_moyenne(poly: PackedVector2Array) -> float:
 	return somme / float(DIRECTIONS)
 
 
+## La direction de la case i : décalée d'un demi-pas. ⚠️ Sans ce décalage, les directions de la table tombent pile sur
+## les rayons de l'étoile et sur des points de l'anneau (même pas angulaire, 32 et 64) : des égalités exactes, que
+## l'arrondi tranchait d'un côté en 32 bits et de l'autre en 64 — jusqu'à 0,05 d'écart sur un facteur (Braconnier 0,893
+## ici, 0,920 dans l'analyse Python, même polygone au millième). Projections en 64 bits pour la même raison.
+static func direction_de_case(i: int) -> Vector2:
+	return Vector2.from_angle(TAU * (float(i) + 0.5) / float(DIRECTIONS))
+
+
 static func _table(poly: PackedVector2Array) -> Array:
 	var cle := hash(poly)
 	if not _tables.has(cle):
@@ -134,7 +144,7 @@ static func _table(poly: PackedVector2Array) -> Array:
 
 static func _case(poly: PackedVector2Array, t: Array, i: int) -> float:
 	if float(t[i]) < 0.0:
-		t[i] = part_eclairee(poly, Vector2.from_angle(TAU * float(i) / float(DIRECTIONS)))
+		t[i] = part_eclairee(poly, direction_de_case(i))
 	return float(t[i])
 
 

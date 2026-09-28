@@ -7,8 +7,8 @@ extends "res://tools/planche_orientation.gd"
 ##    quelle classe dans n'importe quelle orientation, donc où son premier pixel s'allume (`analyse_orientation.py`).
 ## 2. `recherche` — à l'IMAGE, pour quelques cas (`--cas=pompe:profil_d,occulteur:diag_face_d,…`) et chaque mode de
 ##    `--ombre-compensee` (0 aujourd'hui, 1, 2) : la plus grande distance à J1 où le corps de J2 montre au moins un pixel
-##    allumé, par dichotomie au pixel entre `b10` et `noir`. Compté comme Q33 : masque = |silhouette − vide| > 2 (le
-##    corps forcé à la pleine lumière contre le corps caché), visible = masque ∧ réel > 0.
+##    allumé, par dichotomie au pixel entre `b10` et `noir`. Compté contre le « zéro » (voir `_trois_images`) :
+##    masque = |silhouette − zéro| > 2, visible = masque ∧ réel plus clair que le zéro sur un canal.
 ## 3. `planche` — les dix classes (orientation `--orientation-planche`, profil de la base par défaut) aux places `b10`
 ##    et `mi`, en trois modes, plus la silhouette et le vide : de quoi dire ce que la compensation change au pixel.
 ##
@@ -23,6 +23,8 @@ var _planche := true
 var _balayage := true
 ## Le corps de J2 rendu OPAQUE dans la prise réelle, sa lumière intacte (voir `_avant_le_rendu`).
 var _opaque := false
+## Le corps de J2 opaque et SANS lumière lue (capteur coupé, lumière reçue 0) : la référence du compte.
+var _zero := false
 
 
 func _ready() -> void:
@@ -164,23 +166,31 @@ func _mettre_en_scene() -> bool:
 ## seule décision de l'éclairage du corps (le shader, capteur actif), opacité 1 et sans liseré de silhouette.
 func _avant_le_rendu() -> void:
 	super._avant_le_rendu()
-	if not _opaque or _iso == null:
+	if not (_opaque or _zero) or _iso == null:
 		return
 	var mat := _iso._mat_corps[1] as ShaderMaterial
 	if mat != null:
-		mat.set_shader_parameter("capteur_actif", true)
+		mat.set_shader_parameter("capteur_actif", not _zero)
+		mat.set_shader_parameter("lumiere_recue", 0.0)
 		for k in [1, 2]:
 			mat.set_shader_parameter("opacite_%d" % k, 1.0)
 			mat.set_shader_parameter("silhouette_%d" % k, Color(0, 0, 0, 0))
 
 
-## Trois images au même instant : le vide (corps caché), la silhouette (corps en pleine lumière), le réel.
+## Trois images au même instant : le zéro (corps opaque, aucune lumière lue), la silhouette (corps en pleine lumière),
+## le réel (corps opaque, sa lumière lue).
+##
+## ⚠️ **Le zéro, pas le vide.** Le second essai comptait encore des pixels à 377-393 px, capteur à 0, et pas les mêmes
+## d'un mode à l'autre pour un même facteur : le masque « silhouette − vide » prenait aussi le sol autour du corps (son
+## ombre de contact n'existe pas quand il est caché), un sol faiblement éclairé qui bouge d'une prise à l'autre. Contre
+## le même corps, opaque, sans lumière lue, le masque est le corps seul, et un pixel « visible » est un pixel que la
+## lecture du capteur a rendu plus clair — la seule chose que la voie (d) change.
 func _trois_images(p2: Vector2) -> Array:
 	await _tenir(p2, 6)
-	_cache_corps[1] = true
+	_zero = true
 	await _tenir(p2, 3)
 	var vide: Image = await _capturer("vue")
-	_cache_corps[1] = false
+	_zero = false
 	_sil_corps[1] = true
 	await _tenir(p2, 3)
 	var sil: Image = await _capturer("vue")
@@ -219,7 +229,8 @@ func _compter(p2: Vector2, images: Array) -> Array:
 			n_sil += 1
 			var r := reel.get_pixel(x, y)
 			var rm := int(round(maxf(maxf(r.r, r.g), r.b) * 255.0))
-			if rm > 0:
+			var hausse := int(round(maxf(maxf(r.r - v.r, r.g - v.g), r.b - v.b) * 255.0))
+			if hausse > 0:
 				n_vis += 1
 				haut = maxi(haut, rm)
 				if maxf(maxf(v.r, v.g), v.b) == 0.0:
@@ -275,8 +286,14 @@ func _prises_planche(slug: String, o: String, scene: String) -> void:
 	await _tenir(p2, IMAGES_REPOS)
 	var imgs := await _trois_images(p2)
 	var base := "%s_%s_%s" % [slug, scene, o]
-	imgs[0].save_png("%s/%s_vide.png" % [_dossier, base])
+	imgs[0].save_png("%s/%s_zero.png" % [_dossier, base])
 	imgs[1].save_png("%s/%s_sil.png" % [_dossier, base])
+	# Le sol seul (corps caché) : pour « rien de plus clair que la surface qui le porte ».
+	_cache_corps[1] = true
+	await _tenir(p2, 3)
+	var sol: Image = await _capturer("vue")
+	_cache_corps[1] = false
+	sol.save_png("%s/%s_vide.png" % [_dossier, base])
 	var ecran := _ecran(p2, imgs[2])
 	for m in MODES_D:
 		OmbreCompensee.mode_force = m
@@ -290,7 +307,7 @@ func _prises_planche(slug: String, o: String, scene: String) -> void:
 		var niv := _niveau(1)
 		var compte := _compter(p2, [imgs[0], imgs[1], reel])
 		_journal.append({"partie": "planche", "classe": slug, "orientation": o, "scene": scene, "mode_d": m,
-			"fichier": "%s_d%d.png" % [base, m], "vide": base + "_vide.png", "sil": base + "_sil.png",
+			"fichier": "%s_d%d.png" % [base, m], "vide": base + "_vide.png", "zero": base + "_zero.png", "sil": base + "_sil.png",
 			"ecran": [ecran.x, ecran.y], "niveau": niv[0], "niveau_max": niv[1],
 			"compensation": float(comp) if comp != null else 1.0, "silhouette": compte[0], "visibles": compte[1],
 			"haut": compte[3]})

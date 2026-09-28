@@ -90,7 +90,7 @@ func _test_geometrie() -> void:
 	var pompe: PackedVector2Array = CharteS.ombre_de_silhouette(load("res://assets/sprites/pompe_silhouette.png"))
 	var tenue := true
 	for i in OC.DIRECTIONS:
-		var d := Vector2.from_angle(TAU * float(i) / float(OC.DIRECTIONS))
+		var d: Vector2 = OC.direction_de_case(i)
 		tenue = tenue and is_equal_approx(OC.part_table(pompe, d), OC.part_eclairee(pompe, d))
 	_check("la table retombe sur le calcul direct à ses directions", tenue)
 	_check("Parasite, (d1) : 1 exactement", OC.facteur_constant(ref) == 1.0)

@@ -18,7 +18,7 @@ import json, math, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../ombre-classes"))
 from analyse_ombre import eclaire, anneau, NOMS, ORDRE  # noqa: E402
-from analyse_orientation import (local, part_table, rapport, ORIENTS, NOMS_O, R_LU)  # noqa: E402
+from analyse_orientation import (local, part_table, table, rapport, ORIENTS, NOMS_O, R_LU)  # noqa: E402
 
 THETA = {"face": 0, "diag_face_g": 45, "profil_g": 90, "diag_dos_g": 135, "dos": 180, "diag_dos_d": 225,
          "profil_d": 270, "diag_face_d": 315}
@@ -51,8 +51,7 @@ def predire(j, polys, T):
     axe = j["axe"]
     bal = [p for p in j["prises"] if p.get("partie") == "balayage"]
     ref = polys["pistolet"]
-    moy = {c: sum(part_table(c, polys[c], (math.cos(2 * math.pi * i / 64), math.sin(2 * math.pi * i / 64)))
-                  for i in range(64)) / 64 for c in polys}
+    moy = {c: sum(table(c, polys[c])) / 64 for c in polys}
     res = {}
     for c in polys:
         for o in ORIENTS:
@@ -170,9 +169,10 @@ def planche_images(src, j, dst, nom):
         a = np.asarray(Image.open(f).convert("RGB")).astype(int)
         V = np.asarray(Image.open(os.path.join(src, p["vide"])).convert("RGB")).astype(int)
         S = np.asarray(Image.open(os.path.join(src, p["sil"])).convert("RGB")).astype(int)
+        Z = np.asarray(Image.open(os.path.join(src, p["zero"])).convert("RGB")).astype(int)
         ref_nom = p["fichier"].replace("_d%d.png" % p["mode_d"], "_d0.png")
         R0 = np.asarray(Image.open(os.path.join(src, ref_nom)).convert("RGB")).astype(int)
-        masque = np.abs(S - V).max(axis=2) > 2
+        masque = np.abs(S - Z).max(axis=2) > 2
         diff = (a - R0).max(axis=2)
         dedans = masque & (np.abs(a - R0).max(axis=2) > 0)
         dehors = (~masque) & (np.abs(a - R0).max(axis=2) > 0)
