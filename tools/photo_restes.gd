@@ -33,6 +33,9 @@ const GROUPES := ["blood_stain", "blood_p2", "wall_impact", "wall_impact_p2", "b
 const ORIGINAUX := ["blood_stain", "wall_impact", "bullet_casing"]
 
 var _carte_depart: Dictionary = {}
+## Où était la première tache de sang à l'écran de fin : la cible des prises quand plus rien n'est au sol (avec la
+## correction), pour que l'avant et l'après cadrent le même endroit.
+var _lieu_du_sang := Vector2.INF
 
 
 func _ready() -> void:
@@ -107,6 +110,9 @@ func _ready() -> void:
 			and _main._affiche_de_fin.est_active()), 10.0)
 	await _attendre_images(10)
 	_compter("écran de fin (écran du hub : %s)" % _ui.hub.current_id())
+	var taches := get_tree().get_nodes_in_group("blood_stain")
+	if not taches.is_empty():
+		_lieu_du_sang = (taches[0] as Node2D).global_position
 	match _chemin:
 		"carte":
 			var entree = _ui._entree_changer_carte.get(_ui.hub.current_id(), null)
@@ -136,6 +142,9 @@ func _ready() -> void:
 
 	# --- La photographie : J1 à 70 px au sud de la tache, torche braquée dessus, J2 loin, torche éteinte.
 	var data: Dictionary = MapData.get_selected()
+	if cible == Vector2.INF and _lieu_du_sang != Vector2.INF:
+		print("  aucune tache au sol : prises là où était le sang à l'écran de fin, %s" % str(_lieu_du_sang))
+		cible = _lieu_du_sang
 	if cible == Vector2.INF:
 		print("  aucune trace à photographier : prises sur la mise en scène du duel")
 		cible = _mise_en_scene_du_duel(data)["p1"] + Vector2(0, -70)
