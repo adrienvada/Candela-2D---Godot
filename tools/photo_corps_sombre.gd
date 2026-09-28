@@ -230,7 +230,11 @@ func _essai(iso: Presentation3D, allume: bool) -> void:
 			_shaders_hier.append(m.shader if m != null else null)
 			if m == null:
 				continue
-			IsoMateriaux.accorder_corps(m)
+			# La variante seule, pas `accorder_corps` : celui-ci repose aussi l'encre et le modelé, que le jeu règle autrement
+			# après la construction — l'appeler ici changeait les arêtes des DEUX corps dans les deux vues (vu à la première
+			# séance : 791 pixels du corps de J1 changés dans la vue de J2). En jeu, `accorder_corps` pose la variante à la
+			# construction, avant ces réglages : la variante seule est ce que le jeu rend sous le drapeau.
+			m.shader = IsoMateriaux.variante_definie(m.shader, "CORPS_SOI_SOMBRE")
 			var joueur: Node2D = _main.p1 if j == 0 else _main.p2
 			var dir := Presentation3D.direction_du_lisere(joueur, lampes)
 			m.set_shader_parameter("soi_lumiere", dir)
