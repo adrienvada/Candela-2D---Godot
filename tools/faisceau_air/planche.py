@@ -109,10 +109,15 @@ for etiq, src in LACETS:
                 if a and b:
                     h.append(fig(a, "loupe ×3, milieu du cône de J%d, vue %d — sans" % (j, v + 1), "loupe"))
                     h.append(fig(b, "loupe ×3, même endroit — avec", "loupe"))
-        for d in (["b15", "b30", "b45", "b80"] if bloc == "adv" else []):
-            x = img(src, "%s_%s.jpg" % (bloc, d), etiq)
-            if x:
-                h.append(fig(x, "densité 0,%s" % d[1:]))
+        # Les densités prises (`b<centièmes>`), lues dans les fichiers : la liste suit `DENSITES` du plan.
+        import glob, re
+        for f in sorted(glob.glob(os.path.join(src, "%s_b[0-9]*.jpg" % bloc)),
+                        key=lambda f: int(re.search(r"_b(\d+)\.jpg$", f).group(1)) if re.search(r"_b(\d+)\.jpg$", f) else 0):
+            m_d = re.search(r"_b(\d+)\.jpg$", f)
+            if not m_d or bloc not in ("adv", "s1", "s2"):
+                continue
+            x = img(src, os.path.basename(f), etiq)
+            h.append(fig(x, "densité %s" % ("%.2f" % (int(m_d.group(1)) / 100.0)).replace(".", ",")))
         h.append("</div>")
 h.append(textes.get("fin", ""))
 h.append("</body></html>")

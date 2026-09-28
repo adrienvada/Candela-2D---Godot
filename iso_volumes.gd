@@ -70,7 +70,7 @@ const HAUTEUR_COEUR_LAMPE := 0.20
 ## lumière du sol à l'écran) ; sa densité se règle (`--faisceau-air=<densité>`). Elle vaut ici l'opacité d'une couche en
 ## mélange ADDITIF : trois couches ajoutent chacune la lumière lue sous elles × cette densité (dosée à l'image, voir
 ## `docs/iso/cloud/faisceau-visible/RAPPORT.md`).
-const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 0.10}
+const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 0.70}
 ## Sa clé de suivi, à côté du cœur chaud (1) : un joueur porte les deux.
 const CLE_FAISCEAU_AIR := 3
 
