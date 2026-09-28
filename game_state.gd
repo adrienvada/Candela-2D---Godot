@@ -953,6 +953,45 @@ func _on_debug_light_toggled(toggled_on: bool):
 	if mod:
 		mod.color = Charte.NOIR.lerp(Charte.ACIER, 0.38) if toggled_on else Charte.NOIR
 
+## Les traces qui durent (sang, éclats de mur, douilles) : groupes des originaux puis de leurs copies de la vue de J2.
+## Les mêmes que `peinture_iso.gd` (`TRACES`).
+const GROUPES_DES_TRACES := ["blood_stain", "blood_p2", "wall_impact", "wall_impact_p2", "bullet_casing", "casing_p2"]
+
+## L'empreinte (`Dictionary.hash()`) de la carte sur laquelle les traces au sol ont été posées ; 0 avant la première.
+var _carte_des_traces := 0
+
+
+## Balaie les traces qui durent quand la CARTE change, les garde quand c'est la même (session cloud « restes »,
+## 2026-09-28). Rend le nombre de nœuds retirés.
+##
+## Les traces racontent le match, revanche comprise (`blood_stain.gd`) : c'est vrai sur la même carte. Mais l'écran de
+## fin permet de CHANGER DE CARTE sans repasser par le menu principal (le seul qui les balayait) : sang, éclats et
+## douilles du Cloître restaient à leurs coordonnées sur le sol de la Croisée — au milieu d'une salle, dans un mur, un
+## éclat de mur flottant sur du sol nu —, peints aussi dans la peinture iso que lisent les murs.
+##
+## L'empreinte est celle du CONTENU de la carte, pas de son identifiant : l'invité en ligne adopte la carte de l'hôte
+## (`_adopt_host_map`) sans qu'elle soit forcément à son catalogue, et c'est la géométrie qui décide si une trace a
+## encore un sol sous elle. Seuls les enfants directs de l'arène sont retirés : les copies de la peinture iso vivent dans
+## sa sous-vue et partent avec leur original (`peinture_iso.gd`, `_depart`). Retirés de leur groupe et de l'arbre tout de
+## suite : `queue_free()` n'agit qu'en fin d'image, et les plafonds comptent les groupes.
+func balayer_les_traces_si_la_carte_change(data: Dictionary) -> int:
+	var empreinte := data.hash()
+	var ancienne := _carte_des_traces
+	_carte_des_traces = empreinte
+	if ancienne == 0 or ancienne == empreinte or arena == null:
+		return 0
+	var n := 0
+	for groupe in GROUPES_DES_TRACES:
+		for trace in get_tree().get_nodes_in_group(groupe):
+			if trace.get_parent() != arena:
+				continue
+			trace.remove_from_group(groupe)
+			arena.remove_child(trace)
+			trace.queue_free()
+			n += 1
+	return n
+
+
 ## Construit l'arène depuis la carte sélectionnée.
 ##
 ## Tout passe par le pipeline JSON, y compris l'arène standard : le double
@@ -967,6 +1006,7 @@ func rebuild_arena() -> void:
 	if data.is_empty():
 		push_error("GameState: aucune carte à charger")
 		return
+	balayer_les_traces_si_la_carte_change(data)
 
 	# S2 — la portée des sons se dérive de la carte qu'on vient de choisir, ici
 	# et nulle part ailleurs : c'est le seul endroit qui connaît sa taille et qui

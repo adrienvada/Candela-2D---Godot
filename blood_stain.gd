@@ -8,9 +8,11 @@ const Charte := preload("res://charte.gd")
 ## en enfant direct de l'arène. Persistance voulue sur toute la session :
 ## rebuild_arena() ne purge que ses calques nommés et _do_start_round() ne
 ## touche pas aux enfants anonymes de l'arène — les taches racontent donc le
-## match entier, manche après manche, rematch compris. Seul le retour au menu
-## principal les balaie (game_state.gd, _on_main_menu_requested, liste
-## ARENA_KEEP).
+## match entier, manche après manche, rematch compris — sur la même carte.
+## Le retour au menu principal les balaie (game_state.gd,
+## _on_main_menu_requested, liste ARENA_KEEP), et un changement de carte aussi
+## (`balayer_les_traces_si_la_carte_change`, appelé par rebuild_arena() :
+## l'écran de fin permet de changer de carte sans repasser par le menu).
 ##
 ## Cette accumulation sans fin est plafonnée ici, à la source : au-delà de
 ## MAX_STAINS, la doyenne s'efface AVANT que la nouvelle n'apparaisse. Un
