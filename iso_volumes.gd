@@ -68,9 +68,10 @@ const HAUTEUR_COEUR_LAMPE := 0.20
 ## Les conditions de son retour (ROADMAP, 2026-09-24) tiennent : ses couches restent SOUS la hauteur des murets (0,40 tuile :
 ## 0,12 / 0,24 / 0,36), donc aucune hauteur rendue à la lampe ; il porte TOUJOURS le masque pochoir (rien ne tombe hors de la
 ## lumière du sol à l'écran) ; sa densité se règle (`--faisceau-air=<densité>`). Elle vaut ici l'opacité d'une couche en
-## mélange ADDITIF : trois couches ajoutent chacune la lumière lue sous elles × cette densité (dosée à l'image, voir
-## `docs/iso/cloud/faisceau-visible/RAPPORT.md`).
-const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 0.70}
+## mélange ADDITIF : trois couches ajoutent chacune la lumière lue sous elles × cette densité. 1,20, choisie à l'image parmi
+## 0,35 / 0,70 / 1,20 / 2,0 (session « faisceau-visible », 2026-09-28) : le cœur du cône gagne ~36/255, le bord ~4 ; à 0,70 le
+## rayon se devinait à peine, à 2,0 il lavait la tache. Voir `docs/iso/cloud/faisceau-visible/RAPPORT.md`.
+const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 1.20}
 ## Sa clé de suivi, à côté du cœur chaud (1) : un joueur porte les deux.
 const CLE_FAISCEAU_AIR := 3
 
