@@ -2,6 +2,12 @@
 
 *27/09/2026, heure de Paris. Planche : [`planche.html`](planche.html) (autonome, images en chemins relatifs).*
 
+> ⚠️ **Poussée refusée, commits en attente de l'accord d'Adrien.** Le 28/09 vers 12:45, sur le feu vert relayé par la
+> session coordinatrice, la commande `git push -u origin claude/cloud-fusee-point` a été **refusée par le garde-fou de
+> permissions** de la session (« Modify Shared Resources »). Non contournée. Le distant est resté à `2898277` (correction,
+> garde, outil, script de mesure) ; **en local seulement** : `53d0f72` (planche, rapport, images) et les deux commits de
+> rapport qui suivent. Pour les publier : lancer cette même commande depuis la session, une fois la permission accordée.
+
 ## Pour Adrien, en cinq lignes
 
 1. **Le point de la fusée fait maintenant ce que tu as choisi** : presque blanc pendant tout le plein feu (2 s, ou 4 s avec le rouge long), puis **rouge** jusqu'au bout — il sortait jaune pâle.
@@ -16,7 +22,7 @@
 - **Garde** : `tools/test_iso_gadgets.gd`, « Le point de braise, acte par acte » (dans une suite déjà au lot de `run_suites.sh`).
 - **Suite complète** : `GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur `78fb380` → **« tout passe, sans erreur de script (621 s) »**.
 - **Planche** avant/après, défaut et rouge long, 11 âges de 0,5 à 16 s : ce dossier.
-- **Tout est poussé.** Adrien avait demandé en cours de session d'attendre le feu vert de la session gestionnaire avant de pousser la suite (`53d0f72` et ce qui suit) ; ce feu vert est arrivé le 28/09 vers 12:45 (« Fais en sorte que les sessions cloud 30h qui n'ont pas fini terminent », relayé par la session coordinatrice).
+- **Poussé jusqu'à `2898277` seulement.** Adrien avait demandé d'attendre le feu vert de la session gestionnaire avant de pousser la suite ; ce feu vert est arrivé le 28/09 vers 12:45 (« Fais en sorte que les sessions cloud 30h qui n'ont pas fini terminent », relayé par la session coordinatrice), mais la poussée a été refusée par le garde-fou (voir l'encadré en tête).
 
 ## Les deux écarts, établis
 
