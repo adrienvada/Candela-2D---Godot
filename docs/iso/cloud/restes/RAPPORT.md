@@ -24,8 +24,8 @@ Session cloud, branche `claude/cloud-restes`, partie d'`origin/integration-iso14
 - [x] § 2, le regard du noir pendant le match : **établi, vraie partie**, à l'image en écran scindé ; correction
   `baf4ca1` ; garde rouge avant / verte après ; images avant/après ; cueillie à blanc sur les deux bases.
 - [x] § 2, les autres effets de menu : **écartés**, par le code et à l'image (§ 2.3).
-- [x] suite complète (§ 5).
-- [ ] vue unique à l'image (§ 2.2) : voir § 7 selon l'heure de fin de la séance.
+- [x] suite complète, verte (§ 5).
+- [x] vue unique (entraînement) à l'image, avant et après (§ 2.2).
 
 ### Les commits à cueillir
 
@@ -184,8 +184,10 @@ correction. Dans la vignette, 4 883 pixels allumés avant contre 4 805 après : 
 - **Où** : dans les marges de l'ÉCRAN (12 % de la largeur à gauche ou à droite, de 25 à 85 % de la hauteur), tirées au
   sort ; en écran scindé, donc toujours chez un seul des deux joueurs, et jamais au même endroit. **Équité** : un effet
   tiré au sort chez un seul joueur, rouge — la couleur de J2 —, en forme d'yeux, dans le noir du duel.
-- **En vue unique** (en ligne, entraînement) : même mécanisme par le code (le regard est un enfant de l'UI, visible en
-  vue unique comme en écran scindé, et le match n'appelle pas `_set_focus`). Séance à l'image : § 7.
+- **En vue unique** (entraînement lancé de l'accueil, `--mode=unique`) : même défaut à l'image. Le regard vient à
+  **25,6 s** de jeu, **82 pixels** allumés dans le noir (moyenne (62, 18, 21), 137/255 au plus) en (86, 607) et
+  (97, 607) ; le reste de la fuite (108 144 px) est le HUD seul (`img/regard_unique_avant_yeux_x5.jpg`). En ligne, la
+  vue unique est la même (par le code ; pas d'image à deux fenêtres).
 
 **Classement : arrive en vraie partie**, dans tout match de plus de ~25 s, par défaut (`regard_du_noir` vaut 1,0 tant
 que le joueur ne l'a pas baissé dans les réglages de la vitrine) ; en ligne comme en local ; la pause (un menu) le
@@ -236,8 +238,9 @@ minute de match n'en rallume aucun, plus aucun redessin ; menu rouvert, il recom
 
 ## 5. Suite complète
 
-`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur l'état final de la branche (les deux corrections comprises) :
-voir la ligne ajoutée ci-dessous en fin de séance.
+`GODOT=/usr/local/bin/godot ./tools/run_suites.sh` sur la branche, les deux corrections comprises (le code du jeu et des
+outils n'a plus changé ensuite, seulement la documentation et les images) : **« tout passe, sans erreur de script
+(710 s) », EXIT 0** — `test_traces_carte` et `test_regard_hors_menu` compris.
 
 ## 6. Pièges à reporter dans la feuille de route
 
