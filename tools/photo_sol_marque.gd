@@ -10,8 +10,9 @@ extends "res://tools/photo_ecart.gd"
 ## Les scènes, sur le Cloître, au cadrage du jeu (1920×1080, lacet 45° B, zoom du duel) :
 ##   gravats, eclats, chaine, cadre, bande, lettres — J1 à ~2,5 cases d'une marque de la famille, torche vers elle ;
 ##   noir     — la scène des gravats, torches éteintes (le noir absolu : 0 pixel allumé en A, B et A') ;
-##   scinde   — l'écran scindé, J1 devant un tas de gravats, J2 devant son JUMEAU (vue de J2 depuis le côté opposé,
-##              lacet B) : la symétrie mesurée à l'image ;
+##   scinde   — l'écran scindé, J1 devant un tas de gravats, J2 au DEMI-TOUR de J1, devant le jumeau du tas par le
+##              demi-tour (la vue de J2 est prise depuis le côté opposé, lacet B : c'est le demi-tour, pas le miroir, qui
+##              lui montre ce que J1 voit) — la symétrie mesurée à l'image ;
 ##   contraste4, contraste7 — J2, torche éteinte, debout sur des marques à 4 puis 7 cases dans le cône de J1 : quatre prises,
 ##              marques × J2 (présent, puis sorti de la carte), pour mesurer le contraste du corps sur sol marqué et nu.
 ##
@@ -23,15 +24,15 @@ extends "res://tools/photo_ecart.gd"
 ## [J1 en cases, visée] par scène de famille (les marques visées : `ArenaDecor.SOL_MARQUE_ESSAI["map_001"]`).
 const SCENES_FAMILLES := {
 	"gravats": [Vector2(10, 14.6), Vector2.UP],    # le tas au pied sud du pilier nord-ouest, (10, 12)
-	"eclats": [Vector2(6, 9.6), Vector2.UP],       # les éclats de (6, 7)
+	"eclats": [Vector2(5.5, 9.1), Vector2.UP],     # les éclats de (5,5, 6,5)
 	"chaine": [Vector2(5.5, 22.4), Vector2.DOWN],  # la chaîne de (5,5, 25)
 	"cadre": [Vector2(14.5, 7.6), Vector2.UP],     # le cadre du « DEATHMATCH » nord, (14,5, 5)
-	"bande": [Vector2(12, 8), Vector2.RIGHT],      # la bande de l'axe, (14,5, 8)
-	"lettres": [Vector2(7.2, 11), Vector2.LEFT],   # « B-07 », (4,5, 11)
+	"bande": [Vector2(12.3, 7.3), Vector2.RIGHT],  # la bande de l'axe, (14,5, 8)
+	"lettres": [Vector2(7.2, 10), Vector2.LEFT],   # « B-07 », (4,5, 10)
 }
 ## [J1, J2] en cases : J2 debout sur des marques, dans le cône de J1.
 const SCENES_CONTRASTE := {
-	"contraste4": [Vector2(6, 11), Vector2(6, 7)],    # J2 sur les éclats de (6, 7), à 4 cases
+	"contraste4": [Vector2(5.5, 10.5), Vector2(5.5, 6.5)],  # J2 sur les éclats de (5,5, 6,5), à 4 cases
 	"contraste7": [Vector2(6, 10.6), Vector2(6, 3.6)],  # J2 sur les gravats du mur nord, (6, 3), à 7 cases
 }
 
@@ -111,9 +112,9 @@ func _ready() -> void:
 			print("SCENE noir : J1 %s, torches éteintes" % str(_j1))
 			await _trois_prises(nom, false, "vue")
 		elif nom == "scinde":
-			# J2 devant le jumeau du même tas, par le miroir du Cloître (x → 29 − x).
+			# J2 au demi-tour de J1 sur le Cloître ((x, y) → (29 − x, 29 − y)), visée retournée.
 			var j1: Vector2 = SCENES_FAMILLES["gravats"][0]
-			_poser(_px(j1), Vector2.UP, _px(Vector2(29.0 - j1.x, j1.y)), Vector2.UP)
+			_poser(_px(j1), Vector2.UP, _px(Vector2(29.0 - j1.x, 29.0 - j1.y)), Vector2.DOWN)
 			print("SCENE scinde : J1 %s · J2 %s" % [str(_j1), str(_j2)])
 			_deux_vues()
 			await _trois_prises(nom, true, "ecran")

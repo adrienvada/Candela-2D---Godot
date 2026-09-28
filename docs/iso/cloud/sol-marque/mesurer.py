@@ -163,6 +163,16 @@ def main():
                 w = a.shape[1] // 2
                 m["j1"] = ecart(a[:, :w], b[:, :w])
                 m["j2"] = ecart(a[:, w:], b[:, w:])
+                # Dans le cône de chacun (le sol que SA torche éclaire, luminance > 40 sans les marques) : ce que chaque
+                # joueur voit de la marque qu'il regarde. Et l'empreinte de l'essai d'une vue sur l'autre (J2 est au
+                # demi-tour de J1 : les deux moitiés devraient montrer la même chose).
+                dl = np.clip(lum(b) - lum(a), 0, None)
+                for j, sl in (("j1", slice(0, w)), ("j2", slice(w, 2 * w))):
+                    cone = lum(b)[:, sl] > 40
+                    m[j + "_cone"] = {"pixels_cone": int(cone.sum()), "assombris": int((dl[:, sl][cone] > 0.5).sum()),
+                                      "somme": round(float(dl[:, sl][cone].sum()), 1)}
+                e1, e2 = dl[:, :w] > 0.5, dl[:, w:2 * w] > 0.5
+                m["empreinte_iou"] = round(float((e1 & e2).sum()) / max(float((e1 | e2).sum()), 1.0), 3)
                 m["img_avec"] = jpeg(a, f"{seance}_scinde_avec")
                 m["img_sans"] = jpeg(b, f"{seance}_scinde_sans")
             if nom == "noir":
@@ -190,6 +200,7 @@ def main():
             if nom == "scinde":
                 print(f"      scinde J1 : {m['j1']['plus_sombres']} px, somme {m['j1']['assombrissement_somme']} · "
                       f"J2 : {m['j2']['plus_sombres']} px, somme {m['j2']['assombrissement_somme']}")
+                print(f"      dans le cône : J1 {m['j1_cone']} · J2 {m['j2_cone']} · empreinte commune (IoU) {m['empreinte_iou']}")
             if nom.startswith("contraste") and "marque" in m:
                 print(f"      {nom} corps {m['corps_px']} px · marqué : corps {m['marque']['corps']} anneau "
                       f"{m['marque']['anneau']} (Δ {m['marque']['difference']}) · nu : corps {m['nu']['corps']} anneau "

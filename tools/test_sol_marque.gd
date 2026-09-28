@@ -6,8 +6,10 @@
 ##   (`poser_marques`) pose puis retire la table ;
 ## - **l'équité** : sur chaque carte livrée, chaque marque a son jumeau par la symétrie de la carte (relue dans son fichier,
 ##   pas supposée) — même famille, même paramètre, même graine, centre et angle transformés, motif retourné pour le miroir ;
-##   ou, pour une famille symétrique par construction (cadre, bande, lettres), elle se tient sur l'axe. La garde rougit sur
-##   une marque décalée d'une demi-case, et sur un jumeau qui a oublié de se retourner ;
+##   ou, pour une famille symétrique par construction (cadre, bande, lettres), elle se tient sur l'axe. ET, hors cadres,
+##   son jumeau par le DEMI-TOUR : à 45° B, J2 regarde depuis le côté opposé, il voit au demi-tour de ce que voit J1. La
+##   garde rougit sur une marque décalée d'une demi-case, sur un jumeau qui a oublié de se retourner, et sur une table
+##   fermée par le miroir seul ;
 ## - **la place** : chaque marque sur le sol libre, à 12 px au moins de tout mur (la face iso lit sa lumière 12 px devant
 ##   elle) et à trois cases au moins de chaque départ ;
 ## - **la peinture** : noire à demi, partout (jamais plus clair que le sol, noire dans le noir) ;
@@ -21,7 +23,7 @@
 ## Lancer : godot --headless --path . --script res://tools/test_sol_marque.gd
 extends SceneTree
 
-const PLANCHER := 16
+const PLANCHER := 22
 const TUILE := 35.0
 ## La place en travers de chaque famille : la demi-emprise locale (le long de l'angle, en travers), en pixels, que le dessin
 ## ne doit jamais dépasser. Écrite ici à la main, pas relue dans le décor : c'est la promesse, le dessin la tient.
@@ -158,6 +160,12 @@ func _l_equite(cartes: Dictionary) -> void:
 		_check("%s (%s, symétrie %s) : %d marques, chacune a son jumeau" % [String(d.get("name", id)), id,
 			sym if sym != "" else "aucune exacte — miroir", table.size()], orphelins.is_empty() and table.size() >= 12,
 			str(orphelins))
+		# À 45° B, J2 voit au DEMI-TOUR de ce que voit J1 : la table (hors cadres, qui suivent les pochoirs) doit aussi
+		# être fermée par le demi-tour, même sur une carte en miroir.
+		var hors_cadres := table.filter(func(p): return String(p[0]) != "cadre")
+		var sans_demi_tour := _orphelins(hors_cadres, MapCodec.get_grid_size(d), "demi_tour")
+		_check("%s : chaque marque (hors cadres) a aussi son jumeau par le demi-tour — ce que J2 voit à 45° B" \
+			% String(d.get("name", id)), sans_demi_tour.is_empty(), str(sans_demi_tour.slice(0, 4)))
 	print("  (%d marques en tout)" % total)
 	var g := MapCodec.get_grid_size(cartes["map_001"])
 	var faux: Array = (ArenaDecor.SOL_MARQUE_ESSAI["map_001"] as Array).duplicate(true)
@@ -170,6 +178,11 @@ func _l_equite(cartes: Dictionary) -> void:
 			break
 	_check("la garde rougit sur un jumeau qui ne se retourne pas (le même tas, pas son image)",
 		not _orphelins(oubli, g, "miroir").is_empty())
+	# Une table fermée par le miroir seul (la première version de l'essai) : le demi-tour la rougit.
+	var miroir_seul := (ArenaDecor.SOL_MARQUE_ESSAI["map_001"] as Array).filter(
+		func(p): return String(p[0]) != "cadre" and Vector2(p[1]).y < 14.5)
+	_check("la garde rougit sur une table fermée par le miroir seul (le jumeau de J2 caché derrière son pilier)",
+		not _orphelins(miroir_seul, g, "demi_tour").is_empty())
 
 
 ## La demi-emprise locale d'une marque : (le long de son angle, en travers), en pixels.
