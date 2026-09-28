@@ -98,7 +98,7 @@ for etiq, src in LACETS:
         h.append(textes.get("%s_%s" % (etiq, bloc), ""))
         h.append("<div class='deux'>")
         h.append(fig(img(src, "%s_a.jpg" % bloc, etiq), "sans le rayon (A)"))
-        h.append(fig(img(src, "%s_b.jpg" % bloc, etiq), "avec le rayon (B, densité par défaut)"))
+        h.append(fig(img(src, "%s_b.jpg" % bloc, etiq), "avec le rayon (B : 0,70 en vue unique, 1,20 en écran scindé)"))
         h.append(fig(img(src, "%s_b_diffx8.jpg" % bloc, etiq), "B − A, ×8 : ce que le rayon change"))
         h.append(fig(img(src, "%s_b_noir.jpg" % bloc, etiq), "le noir : rouge = un pixel noir dans toutes les A que B allume ; "
                      "gris = non noir dans les A ; bleu = instable"))
@@ -107,8 +107,8 @@ for etiq, src in LACETS:
                 a = img(src, "%s_a_loupe_J%d_v%d.jpg" % (bloc, j, v), etiq)
                 b = img(src, "%s_b_loupe_J%d_v%d.jpg" % (bloc, j, v), etiq)
                 if a and b:
-                    h.append(fig(a, "loupe ×3, milieu du cône de J%d, vue %d — sans" % (j, v + 1), "loupe"))
-                    h.append(fig(b, "loupe ×3, même endroit — avec", "loupe"))
+                    h.append(fig(a, "loupe ×3 sur le cône de J%d, vue de J%d — sans le rayon" % (j, v + 1), "loupe"))
+                    h.append(fig(b, "loupe ×3, même endroit — avec le rayon (1,20 ; 0,70 pour « eq »)", "loupe"))
         # Les densités prises (`b<centièmes>`), lues dans les fichiers : la liste suit `DENSITES` du plan.
         import glob, re
         for f in sorted(glob.glob(os.path.join(src, "%s_b[0-9]*.jpg" % bloc)),

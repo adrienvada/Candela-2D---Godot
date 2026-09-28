@@ -10,7 +10,8 @@
 1. **Le faisceau est allumé par défaut, et il éclaire l'air** : ses couches AJOUTENT maintenant la lumière au lieu de la
    mélanger. La tache de ta lampe gagne un coin clair, plus fort près de toi, comme sur les illustrations.
 2. **Le noir reste noir** : dans toutes les prises (quatre densités, J1 et J2, vue unique et écran scindé, 45° et 0°), il
-   n'allume aucun pixel noir du sol ni des murs. Il n'apparaît que par-dessus la lumière que la lampe pose déjà au sol.
+   n'allume aucun pixel noir. Une seule faute trouvée en route — quelques pixels à 1-7/255 à la lisière de la lumière, en
+   écran scindé — corrigée (le rayon se tait sur la frange très sombre) et revérifiée : zéro.
 3. **J'ai choisi la densité 1,20 à l'image** : à 0,70 on le devinait, à 2,0 il lavait la tache ; à 1,20 on voit un faisceau
    clair et le carrelage reste lisible dessous.
 4. **Il ne dit rien de plus à l'adversaire** que la tache de lumière au sol, qu'il voyait déjà ; il ne change ni le jeu, ni
@@ -82,7 +83,58 @@ B l'est. ⚠️ Les images sortent en **1280×720** : la base `candidat-0.7.0` n
 fenêtre sous Xvfb (`claude/cloud-photographe`, `0c67705`) — signalé, pas corrigé (hors de ma tâche). La preuve du noir vaut à
 cette taille de fenêtre ; la planche n'est pas au 1:1 de 1920×1080.
 
-<!-- RESULTATS -->
+### 4a. Le noir, bloc par bloc (zéro vérifié non vide : pixels noirs dans les cinq A)
+
+| bloc | ce qu'on juge | 45° B : noirs / fuite aux 4 densités + `b` | 0° : noirs / fuite |
+|---|---|---|---|
+| `adv` | le rayon de J2 vu par J1, vue unique | 405 298 / **0 0 0 0 · 0** | 407 309 / **0 0 0 0 · 0** |
+| `eq-est`, `eq-sud-ouest` | J2 au nord du pilier, lampe allumée ; J1 lampe éteinte | 404 950, 414 984 / **0**, **0** | 407 172, 416 904 / **0**, **0** |
+| `s1` | écran scindé, lampe de J1 : la moitié de J2 | 231 856 / **0 0 0 0 · 0** (après la marge) | 156 704 / **0 0 0 0 · 0** (après) |
+| `s2` | écran scindé, lampe de J2 : la moitié de J1 | 129 087 / **0 0 0 0 · 0** (après la marge) | 147 470 / **0 0 0 0 · 0** (après) |
+| `sien` | sa propre lampe, sa propre vue | 0 noir (son voile d'éblouissement relève tout) | non jugeable au noir |
+
+**La fuite de l'écran scindé, et sa correction** (la seule faute trouvée). Avant la marge, les sous-vues de l'écran scindé
+allumaient quelques pixels noirs : à 45° B, `s1` **5 / 14 / 22 / 31** pixels à 0,35 / 0,70 / 1,20 / 2,0 (1 à 7/255), `s2`
+0 / 4 / 7 / 11 (1/255) ; à 0°, 1 à 8 pixels (1/255). **Leur nombre suivait la densité : c'était le rayon.** Tous à la
+lisière de la lumière (des pixels affichés noirs au milieu d'une frange à 8-12/255) : le juge les croyait visibles (écrits
+au-dessus de 8/255), l'écran de la sous-vue les montrait noirs. En mélange, une couche ne changeait rien à un tel pixel ; en
+additif, elle y ajoute. Jamais en vue unique. **Correction** : le juge du faisceau seul prend `FAISCEAU_LUMINEUX_JUGE`, un
+point noir à 16/255 au lieu de 8 (`volume_masque.gdshaderinc`) ; le rayon se tait sur la frange très sombre, où il
+n'ajoutait que ~3/255. La fumée garde son juge à 8. **Contre-épreuve** (mêmes scènes, écran scindé seul, `--faisceau-blocs=s1,s2`) :
+**0 fuite** aux quatre densités, à 45° B et à 0°, dans les deux moitiés — et le rayon reste aussi visible (+54/255 au cœur à
+1,20 en `s1`).
+
+⚠️ Les blocs en vue unique (`adv`, `eq-*`, `sien`) ont été pris AVANT la marge (ils ne fuyaient pas) ; la marge ne peut que
+taire davantage le rayon (un seuil plus haut dit « noir » plus souvent), jamais l'allumer ailleurs. Leur prise `b` est à la
+densité de ce moment (0,70) ; les prises à 1,20 sont les `b120`.
+
+### 4b. Ce que le rayon ajoute (densité 1,20)
+
+| | 45° B | 0° |
+|---|---|---|
+| `adv`, cœur / bord | +36,4 / +4,1 | +38,0 / +4,6 |
+| `s1` (J1 vu de J2), cœur / bord | +54,2 / +3,9 | +55,5 / +3,1 |
+| `s2` (J2 vu de J1), cœur / bord | +43,3 / +4,9 | +37,1 / +4,7 |
+| `sien` (J1, voile compris), cœur / bord | +58,1 / +17,0 | +56,7 / +14,8 |
+
+Le rayon adverse (`adv`, `s2`) et le sien vu de l'autre (`s1`) ont la même allure ; l'écart tient au sol sous chaque cône (J1
+et J2 ne visent pas le même carrelage). Le plus clair du rayon ne dépasse pas le plafond de l'écran (230 à 255/255 dans les
+deux cas) : il éclaire le cône sans le brûler.
+
+### 4c. L'équité
+
+Le rayon ne se dessine que par-dessus ce que l'écran montre déjà éclairé (le pochoir) : dans les prises d'équité, **0 pixel
+noir allumé** ; il change 40 000 à 45 000 pixels, tous dans la tache de lumière. Il ne dit donc rien de plus que la tache
+(d'où part la lumière, où elle va) : il la rend plus lisible, à égalité pour les deux joueurs (chaque vue lit sa lightmap).
+Ce qu'un rayon SANS masque aurait dit — une lueur au-dessus d'un sol noir, derrière un mur ou au-delà d'un muret — il ne le
+dit pas.
+
+### 4d. La planche
+
+`planche.html` (dans ce dossier, images sous `img/`, 8 Mo) : les neuf illustrations à faisceau ; puis, à 45° B et à 0° :
+le tableau des mesures ; pour chaque bloc, sans / avec le rayon, la différence ×8, la carte du noir (rouge = fuite : il n'y en
+a pas), les loupes ×3 sur le cône (centrées sur ce que le rayon change), et les quatre densités (`adv`, `s1`, `s2`). Regardée
+avant d'écrire ses légendes.
 
 ## 5. Le prix
 
