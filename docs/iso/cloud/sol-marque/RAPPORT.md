@@ -1,8 +1,20 @@
-# Le sol marqué, à l'essai — rapport (en cours)
+# Le sol marqué, à l'essai — rapport
 
 Session cloud, branche `claude/cloud-sol-marque`, partie d'`origin/claude/cloud-ecart-illustrations` (f4039a0), le
 28/09/2026. Lancée par la session coordinatrice « CLOUD ISO UNRAILED ». Tâche : le manque n° 5 de
 `docs/iso/cloud/ecart-illustrations/RAPPORT.md` — un sol jonché et marqué.
+
+## Pour Adrien, en cinq lignes
+
+1. Ouvre `planche.html` : pour chaque sorte de marque, le dessin, le jeu sans, le jeu avec, et une loupe.
+2. L'essai pose au sol des gravats, des débris, des chaînes, des bandes peintes et quelques lettres, tous sombres, sur les
+   six cartes. Il est éteint : sans le drapeau `--sol-marque-essai`, le jeu est identique au bit près.
+3. Rien ne s'allume dans le noir, rien n'est plus clair que le sol, et ça ne coûte rien à l'image (tout est peint une fois
+   par carte, avec les pochoirs).
+4. Une leçon d'équité en chemin : à 45°, ton adversaire voit la carte à l'envers, donc chaque marque doit avoir son double
+   « retourné », pas seulement son double « en miroir ». Les pochoirs actuels ne l'ont pas tous.
+5. À toi de juger à l'œil, sur ton écran : est-ce que ça habille le sol sans gêner la lecture d'un adversaire ? Mesuré ici,
+   un corps au bord de la lumière perd 2 à 3 % de contraste sur sol marqué.
 
 ## 1. Le relevé, illustration par illustration (écrit avant le code)
 
@@ -83,6 +95,34 @@ Cadres, bandes et lettres sont symétriques par construction (leur usure
 est tirée sur un quart et reportée) : posés sur l'axe, ils sont leur propre jumeau. L'Usine n'a pas de symétrie exacte
 (son bloc central est décalé d'une case) : traitée en miroir, comme les pochoirs, et **rien n'est posé près du bloc
 décalé**.
+
+## 3. Les preuves
+
+Mesures : `mesurer.py` → `mesures.json`, sur les prises de `tools/photo_sol_marque.gd`. Le Cloître, 1920×1080, lacet 45° B,
+zoom du duel. **Chaque prise est triple, au même instant, jeu en pause** : A (les marques), B (retirées, décor recuit), A'
+(remises). A − B est l'essai et lui seul ; A − A' le bruit — **nul, 0 pixel, dans toutes les scènes**. Deux séances : l'essai
+seul, et tous les essais de la nuit allumés (`--faisceau --mannequin --pochoirs-essai --encre-essai --tuyaux-essai
+--corps-detaille --enseignes-essai --fusee-rouge-long --fusee-rouge-sang`) ; les chiffres ci-dessous sont ceux de l'essai
+seul, ceux de « tous » sont à quelques pixels près (`mesures.json`).
+
+| preuve | résultat |
+|---|---|
+| **éteint : rien ne change au bit** | les textures cuites du décor, les six cartes : md5 **identiques** à la base f4039a0 drapeau éteint, **toutes différentes** drapeau allumé (`cuisson_md5.txt`, `cuisson.gd`). C'est la seule texture que l'essai touche (le reste du diff : une table, des fonctions appelées seulement quand la table est posée, un test) |
+| **le noir absolu** | torches éteintes (scène `noir`) : sur 1 046 120 pixels noirs sans marques, **0** s'allume avec (A), **0** en A'. Et dans les huit scènes, 0 pixel noir allumé |
+| **jamais plus clair que le sol** | aucun pixel plus clair de **2/255 ou plus**, dans aucune scène. Des pixels plus clairs d'**1/255 sur un canal** : 6 à 29 par scène (sur 7 000 à 14 000 changés), au bord des marques, en pleine lumière — la division lightmap ÷ peinture du sol éclairé (`sol_iso_eclaire.gdshader`), à l'arrondi près. 0 dans le noir. Dans la texture cuite elle-même : **0 texel éclairci** (`emprises.py`) |
+| **les emprises** | chaque texel touché par l'essai tombe dans l'emprise que promet la garde headless (0 hors, sur les six cartes : `emprises.py`) |
+| **la symétrie J1/J2 à 45° B** | écran scindé, J1 devant un tas de gravats, J2 au demi-tour de J1 : **4 746 pixels assombris dans la vue de J1, 4 677 dans celle de J2** (somme de l'assombrissement 30 805 / 29 743, −3,4 %) ; dans le cône de chacun, 299 / 292. Avant la correction du demi-tour : 713 / 27 |
+| **les comptes de dessin** | voir ci-dessous |
+| **la lisibilité d'un corps adverse** | J2, torche éteinte, debout sur des marques dans le cône de J1. À 4 cases : corps 15,1 contre sol 37,0 (Δ −21,9) sur sol nu ; 14,7 contre 36,2 (Δ −21,5) sur sol marqué. À 7 cases : Δ −18,0 nu, −17,4 marqué. **Le contraste baisse de 2 % (4 cases) et 3 % (7 cases)** : le sol s'assombrit un peu, le corps aussi (son ombre porte sur les marques) |
+
+**Assombrissement moyen** des pixels touchés, en luminance 0..255 : gravats 6,0 ; éclats 11,2 ; chaîne 7,9 ; cadre 9,8 ;
+bande 5,6 ; lettres 9,3. **À la taille du jeu, ça se voit peu** (comme les pochoirs) : la chaîne et les cadres se lisent
+à 1:1, les gravats et les éclats il faut la loupe. C'est le prix de la règle « jamais plus clair que le sol ».
+
+**Le contraste, lu avec prudence.** Le « corps » est ce que J2 change à l'image (J2 présent − J2 absent, marques retirées) :
+son corps ET l'ombre qu'il porte dans le cône de J1 — le masque fait 12 800 pixels à 4 cases, surtout de l'ombre. Le chiffre
+dit donc « la silhouette de J2, ombre comprise, se détache 2 à 3 % moins d'un sol marqué » ; il ne dit rien de l'œil
+(llvmpipe, et un seul placement). C'est la question à trancher sur le Mac.
 
 ## État
 
