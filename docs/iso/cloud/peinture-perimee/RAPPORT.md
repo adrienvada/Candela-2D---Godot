@@ -1,7 +1,7 @@
 # La peinture iso périmée — arrive-t-elle en vraie partie ? Et la correction
 
 Session cloud, branche `claude/cloud-peinture-perimee`, partie d'`origin/integration-iso14` (a30a407), le 28/09/2026.
-Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
+Lancée par la session coordinatrice « CLOUD ISO UNRAILED ». Terminée vers 10:15 (heure de Paris).
 
 ## Pour Adrien, en cinq lignes
 
@@ -21,7 +21,8 @@ Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
 - [x] la correction, sa garde rouge avant / verte après, cueillie à blanc sur les deux bases (§ 3)
 - [x] le coût compté (§ 3)
 - [x] l'évaluation 11 en petit (§ 4)
-- [ ] la suite complète
+- [x] la suite complète, sur l'état final du code (commit `b678553` et suivants) : **143 bancs OK, « tout passe, sans
+  erreur de script (664 s) », code 0**, `test_iso_peinture_carte` compris (sous `XDG_DATA_HOME` neuf, dans le cloud)
 
 Les commits, dans l'ordre (tous sur `claude/cloud-peinture-perimee`) :
 
