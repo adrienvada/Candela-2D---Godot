@@ -532,8 +532,13 @@ func _le_faisceau_air_en_iso(main: Node, p: Node) -> void:
 	var lampe := main.p1.get_node(^"Flashlight") as PointLight2D
 	_check("la lampe de J1 est allumée (sinon rien ne se juge ici)", lampe.enabled and lampe.energy > 0.0,
 		"enabled=%s energy=%.2f" % [lampe.enabled, lampe.energy])
-	_check("drapeau ÉTEINT, lampe allumée : aucune couche posée", volumes.get("faisceau_air") == false
-		and volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty())
+	# Q41 — ALLUMÉ PAR DÉFAUT (Adrien, 2026-09-28) : la manche le pose sans qu'aucun drapeau soit passé.
+	_check("PAR DÉFAUT, lampe allumée : le rayon est posé", volumes.get("faisceau_air") == true
+		and not volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty())
+	volumes.faisceau_air = false
+	await _tenir_la_lampe(main, true)
+	_check("éteint (--sans-faisceau-air), lampe allumée : aucune couche posée",
+		volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty())
 	var masque_avant: bool = volumes.masque_fumee
 	volumes.faisceau_air = true
 	await _tenir_la_lampe(main, true)
@@ -552,10 +557,13 @@ func _le_faisceau_air_en_iso(main: Node, p: Node) -> void:
 			and mat.get_shader_parameter("avec_masque") == true)
 		_check("ses couches portent le pochoir (le test du stencil précède leur shader)",
 			mat.shader.code.contains("#define MASQUE_POCHOIR\n") and not mat.shader.code.contains("#define MASQUE_POCHOIR_JUGE\n"))
+		_check("ses couches sont LUMINEUSES (FAISCEAU_LUMINEUX : mélange additif)",
+			mat.shader.code.contains("#define FAISCEAU_LUMINEUX\n"))
 		var juge: Variant = e.get("juge")
 		_check("son juge est posé, visible, et ÉCRIT le pochoir", juge != null and is_instance_valid(juge)
 			and (juge as MeshInstance3D).visible
-			and ((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define MASQUE_POCHOIR_JUGE\n"))
+			and ((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define MASQUE_POCHOIR_JUGE\n")
+			and not ((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define FAISCEAU_LUMINEUX\n"))
 		_check("ses couches lisent la lightmap de chaque vue (J1 et J2), comme le sol",
 			mat.get_shader_parameter("lumiere_1") == main.vp1.get_texture()
 			and mat.get_shader_parameter("lumiere_2") == main.vp2.get_texture())
@@ -569,7 +577,8 @@ func _le_faisceau_air_en_iso(main: Node, p: Node) -> void:
 		await _tenir_la_lampe(main, false)
 	_check("la lampe éteinte, le rayon part (noir absolu)", volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty(),
 		"enabled=%s energy=%.2f" % [lampe.enabled, lampe.energy])
-	volumes.faisceau_air = false
+	# Rendu à son défaut : allumé.
+	volumes.faisceau_air = true
 
 
 ## La lampe de J1 tenue comme le banc la tient (`tenir_la_torche`), six pas de physique : écrire `flashlight_on` ne l'allume pas.
@@ -640,15 +649,16 @@ func _le_faisceau() -> void:
 	_le_faisceau_air_dans_le_texte(texte)
 
 
-## Q41 (session cloud « faisceau-air », 2026-09-28) — le rayon dans l'air, à l'essai derrière `--faisceau-air`, ÉTEINT. Ce qui
-## ne se voit à aucune image et qu'une réécriture casserait en silence : le drapeau éteint par défaut ; les couches SOUS les
+## Q41 — le rayon dans l'air, ALLUMÉ PAR DÉFAUT et LUMINEUX depuis le 2026-09-28 (Adrien : « faisceau visible dans l'air »). Ce
+## qui ne se voit à aucune image et qu'une réécriture casserait en silence : allumé par défaut, éteint seulement en build de
+## débogage ; la variante lumineuse sous `#ifdef` (le shader des autres volumes reste en mélange normal) ; les couches SOUS les
 ## murets (la décision d'Adrien du 2026-09-15 refuse une hauteur à la lampe) ; la forme = la texture de la lampe ; et le
 ## masque pochoir IMPOSÉ au rayon, quel que soit le masque de la fumée. Le chemin vivant se juge dans la manche
 ## (`_le_faisceau_air_en_iso`).
 func _le_faisceau_air_dans_le_texte(texte: String) -> void:
 	print("\n[Le rayon dans l'air — Q41, --faisceau-air]")
 	var v := IsoVolumes.new()
-	_check("le drapeau du rayon dans l'air est éteint par défaut", v.get("faisceau_air") == false)
+	_check("le rayon dans l'air est ALLUMÉ par défaut", v.get("faisceau_air") == true)
 	v.free()
 	var spec: Dictionary = IsoVolumes.VOLUME_FAISCEAU_AIR
 	_check("ses couches restent SOUS la hauteur des murets (%.2f < %.2f tuile)" % [float(spec["hauteur"]),
@@ -656,8 +666,24 @@ func _le_faisceau_air_dans_le_texte(texte: String) -> void:
 	var corps := _fonction_gd(texte, "_suivre_faisceau_air")
 	_check("la fonction du rayon existe", not corps.is_empty())
 	_check("sa forme EST la texture de la lampe, tournée comme elle", corps.contains("lampe.texture, lampe.global_rotation"))
-	_check("ses couches portent le masque POCHOIR, imposé",
-		corps.contains("_couches(e, int(VOLUME_FAISCEAU_AIR[\"couches\"]), FORME_POCHOIR)"))
+	_check("ses couches portent le masque POCHOIR, imposé, et la variante lumineuse",
+		corps.contains("_couches(e, int(VOLUME_FAISCEAU_AIR[\"couches\"]), FORME_POCHOIR, true)"))
+	_check("--sans-faisceau-air ne l'éteint qu'en build de débogage",
+		texte.contains("elif arg == DRAPEAU_SANS_FAISCEAU_AIR and OS.is_debug_build():\n\t\t\tfaisceau_air = false"))
+	# Le mélange ADDITIF ne vit que sous le define : le shader compilé sans lui (fumée, suie, poussière…) reste en mélange normal.
+	var code := IsoVolumes.SHADER_VOLUME.code
+	var si := code.find("#ifdef FAISCEAU_LUMINEUX\n")
+	var sinon := code.find("#else\n", si)
+	var fin := code.find("#endif\n", sinon)
+	var lumineux := code.substr(si, sinon - si) if si >= 0 and sinon > si else ""
+	var normal := code.substr(sinon, fin - sinon) if sinon > si and fin > sinon else ""
+	_check("l'additif n'est QUE sous FAISCEAU_LUMINEUX ; sans lui, le mélange normal",
+		lumineux.contains("blend_add") and not lumineux.contains("blend_mix") and normal.contains("blend_mix")
+		and not normal.contains("blend_add") and code.count("blend_add") == 1)
+	var sh := IsoMateriaux.variante_definie(IsoVolumes.SHADER_VOLUME, "FAISCEAU_LUMINEUX")
+	_check("le define est posé AVANT le choix du mélange (sinon la variante mélangerait en silence)",
+		sh.code.find("#define FAISCEAU_LUMINEUX\n") >= 0
+		and sh.code.find("#define FAISCEAU_LUMINEUX\n") < sh.code.find("#ifdef FAISCEAU_LUMINEUX\n"))
 	_check("il s'éteint avec la lampe", corps.contains("not lampe.enabled or lampe.energy <= 0.0"))
 	var suivre := _fonction_gd(texte, "suivre")
 	_check("seul le drapeau l'appelle", suivre.contains("\tif faisceau_air:\n") and suivre.count("_suivre_faisceau_air(") == 1)

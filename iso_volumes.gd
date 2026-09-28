@@ -63,11 +63,14 @@ const VOLUME_FUSEE := {"hauteur": 1.0, "couches": 4, "densite": 0.26}
 ## Le cœur chaud à la lampe : sa taille en pixels de monde, et sa hauteur au-dessus du sol.
 const TAILLE_COEUR_LAMPE := 7.0
 const HAUTEUR_COEUR_LAMPE := 0.20
-## Session cloud « faisceau-air » (Q41, 2026-09-28) — LE RAYON DANS L'AIR, à l'essai derrière `--faisceau-air`, ÉTEINT.
-## Les trois conditions de son retour, écrites à la ROADMAP le 2026-09-24 : ses couches restent SOUS la hauteur des murets
-## (0,40 tuile : 0,12 / 0,24 / 0,36), donc aucune hauteur rendue à la lampe ; il porte TOUJOURS le masque pochoir (rien ne
-## tombe hors de la lumière du sol à l'écran) ; et sa densité se cherche à l'image (`--faisceau-air=<densité>`).
-const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 0.45}
+## Q41 — LE RAYON DANS L'AIR, ALLUMÉ PAR DÉFAUT (Adrien, 2026-09-28 vers 15:25 : « Q41 : faisceau visible dans l'air ») ; essai
+## de la session cloud « faisceau-air », rendu LUMINEUX par la session « faisceau-visible » (`FAISCEAU_LUMINEUX`).
+## Les conditions de son retour (ROADMAP, 2026-09-24) tiennent : ses couches restent SOUS la hauteur des murets (0,40 tuile :
+## 0,12 / 0,24 / 0,36), donc aucune hauteur rendue à la lampe ; il porte TOUJOURS le masque pochoir (rien ne tombe hors de la
+## lumière du sol à l'écran) ; sa densité se règle (`--faisceau-air=<densité>`). Elle vaut ici l'opacité d'une couche en
+## mélange ADDITIF : trois couches ajoutent chacune la lumière lue sous elles × cette densité (dosée à l'image, voir
+## `docs/iso/cloud/faisceau-visible/RAPPORT.md`).
+const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 0.10}
 ## Sa clé de suivi, à côté du cœur chaud (1) : un joueur porte les deux.
 const CLE_FAISCEAU_AIR := 3
 
@@ -93,8 +96,9 @@ var lueurs_actives := true
 var couches_fusee := -1
 ## ISO13, lot E — éteint par défaut, comme tout drapeau d'un lot en cours.
 var faisceaux_actifs := false
-## Q41 (`--faisceau-air`) — le rayon dans l'air, éteint par défaut ; relu à chaque image (un banc peut le basculer sur place).
-var faisceau_air := false
+## Q41 — le rayon dans l'air, ALLUMÉ par défaut ; `--sans-faisceau-air` l'éteint (build de débogage seulement). Relu à chaque
+## image (un banc peut le basculer sur place).
+var faisceau_air := true
 ## `--faisceau-air=0.3` force la densité d'une couche (au cœur, lampe à pleine énergie) ; 0 : celle de `VOLUME_FAISCEAU_AIR`.
 var densite_faisceau_air := 0.0
 ## ISO13, Q31 voie A — le masque de la fumée : chaque couche de volume passe à la variante FUMEE_MASQUE
@@ -138,6 +142,8 @@ var _masques := false
 const DRAPEAU_FAISCEAU := "--faisceau"
 ## Q41 — le rayon dans l'air, distinct du cœur seul : la garde de `--faisceau` (aucune couche) reste vraie mot pour mot.
 const DRAPEAU_FAISCEAU_AIR := "--faisceau-air"
+## Q41 — l'éteindre : build de débogage seulement, comme `--sans-fumee-masque` (un joueur ne choisit pas l'image de l'adversaire).
+const DRAPEAU_SANS_FAISCEAU_AIR := "--sans-faisceau-air"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
 ## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
@@ -194,6 +200,8 @@ func _init() -> void:
 		elif arg.begins_with(DRAPEAU_FAISCEAU_AIR + "="):
 			faisceau_air = true
 			densite_faisceau_air = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU_AIR + "=")))
+		elif arg == DRAPEAU_SANS_FAISCEAU_AIR and OS.is_debug_build():
+			faisceau_air = false
 		elif arg == DRAPEAU_MASQUE_FUMEE:
 			masque_fumee = true
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE and OS.is_debug_build():
@@ -209,10 +217,13 @@ func _init() -> void:
 			coeur_fusee = 0
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
+	# Les deux états s'impriment : une prise prouve le sien par ce que le JEU dit, jamais par la commande.
 	if faisceau_air:
-		print("[faisceau air] allumé — %d couches sous %.2f tuile (murets %.2f), densité %.3f, masque pochoir forcé"
+		print("[faisceau air] allumé — %d couches lumineuses (additives) sous %.2f tuile (murets %.2f), densité %.3f, masque pochoir forcé"
 			% [int(VOLUME_FAISCEAU_AIR["couches"]), float(VOLUME_FAISCEAU_AIR["hauteur"]), MapGeometry.HAUTEUR_MUR_BAS,
 			densite_du_faisceau_air()])
+	else:
+		print("[faisceau air] éteint (%s)" % DRAPEAU_SANS_FAISCEAU_AIR)
 	if coeur_fusee != 2:
 		print("[fusée cœur] %s" % ("éteint (%s)" % DRAPEAU_SANS_COEUR_FUSEE if coeur_fusee == 0
 			else "de la couleur de la lumière, sans le blanc (%s)" % DRAPEAU_COEUR_FUSEE))
@@ -473,7 +484,10 @@ func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 		TAILLE_COEUR_LAMPE, lampe.color, part, 1)
 
 
-## Q41 (session cloud « faisceau-air », 2026-09-28) — LE RAYON DE LA TORCHE DANS L'AIR, à l'essai (`--faisceau-air`, éteint).
+## Q41 — LE RAYON DE LA TORCHE DANS L'AIR, ALLUMÉ PAR DÉFAUT et LUMINEUX (Adrien, 2026-09-28 ; `--sans-faisceau-air` l'éteint
+## en build de débogage). Essai de la session cloud « faisceau-air », rendu lumineux par la session « faisceau-visible » :
+## ses couches AJOUTENT la lumière lue sous elles (`FAISCEAU_LUMINEUX`, mélange additif) — l'exception qu'Adrien accorde au
+## faisceau seul à « rien de plus clair que la surface qui le porte ».
 ##
 ## Le rayon retiré le 2026-09-24 (`d8e928a`, `4afbc3c`), repris avec ce qui l'avait fait retirer :
 ## - **la forme est la texture de la lampe elle-même**, tournée comme elle : le cône ne peut pas diverger de la lumière ;
@@ -495,7 +509,7 @@ func _suivre_faisceau_air(j: Node2D, vus: Dictionary) -> void:
 		return
 	var part := clampf(lampe.energy / 2.5, 0.0, 1.0)
 	var e := _entree(j, "faisceau_air", vus, CLE_FAISCEAU_AIR)
-	_couches(e, int(VOLUME_FAISCEAU_AIR["couches"]), FORME_POCHOIR)
+	_couches(e, int(VOLUME_FAISCEAU_AIR["couches"]), FORME_POCHOIR, true)
 	_poser_couches(e, lampe.global_position, rayon, float(VOLUME_FAISCEAU_AIR["hauteur"]),
 		densite_du_faisceau_air() * part, lampe.texture, lampe.global_rotation,
 		float(j.get_instance_id() % 97), float(Time.get_ticks_msec()) * 0.001)
@@ -677,11 +691,11 @@ var _formes_posees := {}
 
 ## `forme` ≥ 0 : une forme du masque IMPOSÉE à ces couches, quel que soit le masque de la fumée (le rayon de Q41) ; −1 : le
 ## masque de la fumée décide, comme avant.
-func _materiau_volume(forme := -1) -> ShaderMaterial:
+func _materiau_volume(forme := -1, lumineux := false) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER_VOLUME
 	if forme >= 0:
-		_poser_forme_imposee(mat, forme)
+		_poser_forme_imposee(mat, forme, lumineux)
 	elif masque_fumee:
 		_poser_masque(mat, true)
 	mat.render_priority = PRIORITE_VOLUME
@@ -722,8 +736,12 @@ func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
 static var _forme_imposee_annoncee := false
 
 
-func _poser_forme_imposee(mat: ShaderMaterial, forme: int) -> void:
+## `lumineux` : Q41, le rayon de la lampe — la variante `FAISCEAU_LUMINEUX` (mélange additif) par-dessus la forme ; le juge du
+## pochoir, lui, garde la sienne (il n'écrit aucune couleur).
+func _poser_forme_imposee(mat: ShaderMaterial, forme: int, lumineux := false) -> void:
 	mat.shader = variante_forme(variante_masque(IsoMateriaux.usure_essai_active()), forme)
+	if lumineux:
+		mat.shader = IsoMateriaux.variante_definie(mat.shader, "FAISCEAU_LUMINEUX")
 	_formes_posees[mat.shader] = true
 	_recopier_le_mur(mat)
 	if not _forme_imposee_annoncee:
@@ -818,7 +836,7 @@ func poser_masque_fumee(actif: bool) -> void:
 				_poser_masque(m as ShaderMaterial, actif)
 
 
-func _couches(e: Dictionary, n: int, forme := -1) -> void:
+func _couches(e: Dictionary, n: int, forme := -1, lumineux := false) -> void:
 	if forme >= 0:
 		e["forme_imposee"] = forme
 	while (e["noeuds"] as Array).size() < n:
@@ -827,7 +845,7 @@ func _couches(e: Dictionary, n: int, forme := -1) -> void:
 		mi.mesh = _plan
 		mi.layers = CALQUE
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		var mat := _materiau_volume(forme)
+		var mat := _materiau_volume(forme, lumineux)
 		mi.material_override = mat
 		add_child(mi)
 		e["noeuds"].append(mi)

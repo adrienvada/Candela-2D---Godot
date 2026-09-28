@@ -24,7 +24,17 @@
 // jamais un corps plus que la vue de dessus, où l'effacement dans un nuage passe par l'opacité du
 // corps (ISO2b), pas par la masse posée dessus.
 shader_type spatial;
+#ifdef FAISCEAU_LUMINEUX
+// Q41 (Adrien, 2026-09-28 : « faisceau visible dans l'air ») — LE RAYON DE LA LAMPE, et lui seul : la même couleur (la lumière
+// lissée sous la couche, dans la pâte), AJOUTÉE au lieu d'être mélangée. Mélangée, elle ne pouvait que ramener la tache de
+// lumière vers sa moyenne (−14/255 au cœur du cône, session « faisceau-air ») ; ajoutée, elle éclaire l'air comme les
+// illustrations. C'est l'exception qu'Adrien accorde au faisceau à « rien de plus clair que la surface qui le porte ». Le noir
+// reste tenu par le pochoir (les couches ne se dessinent pas où ce que le pixel montre est noir) ; hors du cône, la texture de
+// la lampe vaut zéro. Sous `#ifdef` : sans ce define, le shader compilé est celui d'avant, octet pour octet.
+render_mode unshaded, cull_disabled, blend_add, depth_draw_never, shadows_disabled, fog_disabled;
+#else
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, shadows_disabled, fog_disabled;
+#endif
 #ifdef MASQUE_POCHOIR
 // Session cloud « masque-fumée », 2026-09-27 — `--fumee-masque-pochoir` : le JUGE écrit 1 où ce que le pixel montre est noir ;
 // les couches ne se dessinent pas là (le test du pochoir précède leur shader). Voir `volume_masque_compact.gdshaderinc`.
