@@ -1356,10 +1356,30 @@ func _process(delta: float) -> void:
 	_update_network_status()
 	_sync_launch_entries()
 	_update_focus_rings()
+	_endormir_le_regard_hors_menu()
 	_update_health_trails(delta)
 	_update_shake(delta)
 	_update_debug(delta)
 	_update_killcam(delta)
+
+## M3 — le regard du noir n'a rien à faire hors d'un menu (session cloud « restes », 2026-09-28).
+##
+## `MenuWatcher` vit en `PROCESS_MODE_ALWAYS` au niveau des curseurs, visible tant que l'interface l'est — donc pendant
+## le match, sous le HUD. Son silence ne se rompait qu'à `_set_focus`, que le match n'appelle jamais : 25 s après le
+## lancement, puis toutes les 25 s, deux yeux rouges s'allumaient dans les marges, PAR-DESSUS le noir du duel. Hors
+## menu, il s'endort : plus de traitement (zéro coût en match, la règle de la vitrine), et `reveiller()` efface des yeux
+## déjà ouverts et remet le compte à zéro. Le même critère « menu ouvert » que `_update_focus_rings`, recopié plutôt que
+## factorisé pour ne pas toucher à ses lignes. Ne bascule qu'au changement : aucun appel par image en match.
+func _endormir_le_regard_hors_menu() -> void:
+	if menu_watcher == null or game_over_panel == null:
+		return
+	var menu_open := _panneau_ouvert(game_over_panel) \
+		or _panneau_ouvert(pause_panel) \
+		or (dialog_panel != null and dialog_panel.visible)
+	if menu_watcher.is_processing() == menu_open:
+		return
+	menu_watcher.set_process(menu_open)
+	menu_watcher.reveiller()
 
 ## La flèche du système suit l'écran affiché (DA2.11).
 ##
