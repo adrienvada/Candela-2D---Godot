@@ -80,6 +80,8 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO13 (session cloud, 2026-09-25 21:41) : la fusée seule dans le noir puis devant une face de mur, à plusieurs âges, sans les volumes, puis avec l'essai du cœur (IsoVolumes.coeur_fusee) éteint, rouge, presque blanc, basculé sur place. Imprime la lightmap lue sous la fusée."],
 		["loupe-fusee-masque-formes", "Le masque de la fumée et ses formes moins chères, en un seul processus, plus le compte des fragments",
 			"Session cloud « masque-fumée » (2026-09-27) : A sans fumée (cinq fois), B fumée, C la fumée masquée par Gadgets (deux fois : le bruit entre deux prises), C1 à C3 les formes compacte, bande resserrée, pochoir (IsoVolumes.FORMES_MASQUE) ; puis, sol et murs peints en noir, chaque fragment de fumée compté : tous, ceux dont la couleur se verrait, ceux qui survivent au masque, et ceux qui entrent dans la bande du sol ou de l'usure des faces (le calcul exact)."],
+		["loupe-faisceau-air", "Le rayon de la lampe dans l'air (--faisceau-air, Q41), basculé sur place : A cinq fois, B à plusieurs densités",
+			"Session cloud « faisceau-air » (2026-09-28) : le rayon adverse vu de J1, le sien, les deux en écran scindé, et J2 caché derrière un pilier lampe allumée — là où toutes les A sont noires, chaque B doit l'être (tools/faisceau_air/preuve.py). Voir tools/loupe_faisceau_air.gd."],
 		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
 			"ISO13, Q31 : la sortie 3D de ce renderer écrase tout canal écrit à 7/255 ou moins (rampes du 2026-09-25). Le masque de la fumée en dépend : cette garde, en fenêtre, échoue si 7 ne sort plus à 0 ou si 8 sort à 0."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
@@ -245,6 +247,8 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 		else:
 			await _loupe_fusee_illustration(plans, lieux)
 			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-faisceau-air"):
+		await (load("res://tools/loupe_faisceau_air.gd") as GDScript).new().jouer(self, plans)
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
 		for l in lieux:
