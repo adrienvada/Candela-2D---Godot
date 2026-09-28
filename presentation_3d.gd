@@ -796,7 +796,8 @@ func _suivre() -> void:
 	var mannequin := corps_voxel and _main != null and VoxelCatalogue.mannequin_actif()
 	# Q39 — le corps de soi sombre (`--corps-soi-sombre`) lit la même direction pour son liseré.
 	var soi_sombre := corps_voxel and _main != null and VoxelCatalogue.soi_sombre_actif()
-	var lampes_mannequin: Array = MannequinIso.lampes_du_jeu(_main) if (mannequin or soi_sombre) else []
+	var lampes_mannequin: Array = MannequinIso.lampes_du_jeu(_main) if mannequin else []
+	var lampes_soi: Array = lampes_mannequin if mannequin else (MannequinIso.lampes_du_jeu(_main) if soi_sombre else [])
 	for j in 2:
 		var joueur = joueurs[j]
 		# ISO5 — **pendant la killcam, c'est le FANTÔME qui porte le corps**, pas le joueur. Le rejeu cache
@@ -824,7 +825,7 @@ func _suivre() -> void:
 				(_voxels[j] as VoxelCorps).eclairer_mannequin(MannequinIso.direction_dominante(p, lampes_mannequin,
 					MannequinIso.occultation(joueur as Node2D)))
 			if soi_sombre:
-				_mat_corps[j].set_shader_parameter("soi_lumiere", direction_du_lisere(joueur as Node2D, lampes_mannequin))
+				_mat_corps[j].set_shader_parameter("soi_lumiere", direction_du_lisere(joueur as Node2D, lampes_soi))
 		else:
 			_corps[j].position = Vector3(p.x, 0.0, p.y)
 		# Le centre que suit son capteur, à la même image : le corps y lit sa lumière.
