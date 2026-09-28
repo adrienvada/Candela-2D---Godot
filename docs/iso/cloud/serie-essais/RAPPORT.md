@@ -17,3 +17,15 @@
    deux séries (A et B), chacune avec SA référence M0.
 5. **Les essais à blanc** (`ESSAI_A_BLANC=1`), puis **sur le vrai banc sous Xvfb** (`ESSAI_CLOUD=1`).
 6. **La fiche pour le Mac**, en tête de ce rapport.
+
+## État à l'interruption (2026-09-28, travail en cours, commité pour ne rien perdre)
+
+- **Lignes d'état ajoutées** (une par essai, là où l'essai s'applique) : `[encre] allumée`, `[corps soi sombre] allumé`
+  (`iso_materiaux.gd`), `[lampe claire] allumée` (`lampe_claire.gd`), `[pochoirs] allumés — N pochoir(s)`, `[sol marqué]
+  allumé — N marque(s)` (`arena_decor.gd`), `[tuyaux]` / `[enseignes]` / `[murs meublés] allumés — N triangles sur la carte
+  « id »` (leurs fichiers). **La garde headless n'est pas encore écrite ; la suite complète n'a pas tourné sur ces lignes.**
+- **Le lanceur** `tools/serie_essais/serie_mac_essais.sh` : séries A (par pixel : M0 FA MA EN CS LC, ~1 h 45), B (géométrie
+  et TOUT : M0 TU EG MM TOUT, ~1 h 30), C facultative (écran scindé). Essai à blanc de la série A : 24 prises et la chauffe,
+  refus refaits à leur place, verdict imprimé (« SANS VERDICT » par déséquilibre des fausses charges, comme prévu).
+- **À éclaircir** : le bras TOUT, dans le cloud, a vu la vue iso s'éteindre pendant la chauffe (le banc a refusé son chiffre
+  par « ✗ --iso ») ; M0 tient. Essais seuls en cours : faisceau, mannequin, pochoirs sans défaut ; les sept autres non faits.

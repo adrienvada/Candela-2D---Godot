@@ -25,6 +25,10 @@ const CREME := Color(0.98, 0.91, 0.80)
 const NEUTRE := Vector2(0.36, 0.50)
 
 
+## La ligne « [lampe claire] allumée » n'est imprimée qu'une fois (l'essai se pose sur chaque matériau du sol et des murs).
+static var _annoncee := false
+
+
 ## Le drapeau est-il posé sur la ligne de commande ?
 static func demandee() -> bool:
 	return OS.get_cmdline_user_args().has(DRAPEAU)
@@ -38,6 +42,10 @@ static func accorder(mat: ShaderMaterial, active: bool) -> void:
 	mat.set_shader_parameter("lampe_claire", 1.0 if active else 0.0)
 	if not active:
 		return
+	# La preuve pour la série de cadence des essais (session cloud « série-essais ») : posée, une fois par lancement.
+	if not _annoncee:
+		_annoncee = true
+		print("[lampe claire] allumée — posée sur le sol et les murs (force 1)")
 	mat.set_shader_parameter("lampe_claire_genou", GENOU)
 	mat.set_shader_parameter("lampe_claire_gamma", GAMMA)
 	mat.set_shader_parameter("lampe_claire_plafond", PLAFOND)

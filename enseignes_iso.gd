@@ -503,6 +503,8 @@ static func maillage(c: Dictionary) -> ArrayMesh:
 ## la carte ne porte aucune enseigne.
 static func creer_noeud(data: Dictionary, materiau: ShaderMaterial) -> MeshInstance3D:
 	var m := maillage(construire(data))
+	# La preuve pour la série de cadence des essais, même forme que « [tuyaux] allumés ».
+	print(TuyauxIsoT.ligne_etat("[enseignes] allumées", [m], data))
 	if m == null:
 		return null
 	if materiau.get_shader_parameter("atlas") == null:

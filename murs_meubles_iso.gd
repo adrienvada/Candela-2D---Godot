@@ -663,8 +663,10 @@ static func maillage(c: Dictionary, famille: String) -> ArrayMesh:
 static func creer_noeuds(data: Dictionary, materiaux: Dictionary) -> Array[MeshInstance3D]:
 	var c := construire(data)
 	var sortie: Array[MeshInstance3D] = []
+	var maillages := []
 	for famille in FAMILLES:
 		var m := maillage(c, famille)
+		maillages.append(m)
 		if m == null:
 			continue
 		var noeud := MeshInstance3D.new()
@@ -675,6 +677,8 @@ static func creer_noeuds(data: Dictionary, materiaux: Dictionary) -> Array[MeshI
 		noeud.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 		noeud.layers = 1
 		sortie.append(noeud)
+	# La preuve pour la série de cadence des essais, même forme que « [tuyaux] allumés » ; et combien de nœuds (d'appels).
+	print(TuyauxIsoT.ligne_etat("[murs meublés] allumés", maillages, data) + " en %d nœud(s)" % sortie.size())
 	return sortie
 
 

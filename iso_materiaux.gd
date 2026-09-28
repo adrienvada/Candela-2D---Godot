@@ -98,6 +98,10 @@ const CONTOUR_PX_ESSAI := 1.0
 const CONTOUR_PX_EPAIS := 2.0
 
 
+## La ligne « [encre] allumée » n'est imprimée qu'une fois (la variante se pose sur chaque matériau du sol, des murs, des corps).
+static var _encre_annoncee := false
+
+
 static func encre_essai_active() -> bool:
 	return OS.get_cmdline_user_args().has(DRAPEAU_ENCRE_ESSAI)
 
@@ -135,6 +139,12 @@ static func variante_definie(shader: Shader, nom: String) -> Shader:
 static func poser_encre_essai(materiau: ShaderMaterial, allumee: bool, mur := false) -> void:
 	if allumee:
 		materiau.shader = variante_encre(materiau.shader)
+		# La preuve, pour la série de cadence des essais (session cloud « série-essais », 2026-09-28) : la variante réellement
+		# posée, une fois par lancement. Même forme que « [usure] allumée ».
+		if not _encre_annoncee:
+			_encre_annoncee = true
+			print("[encre] allumée — variante ENCRE_ESSAI posée (%s)" % ("#define ENCRE_ESSAI dans son code"
+				if materiau.shader.code.contains("#define ENCRE_ESSAI\n") else "⚠ SANS le #define : variante manquée"))
 	materiau.set_shader_parameter("pate_hachures", HACHURES_ESSAI if allumee else 0.0)
 	if mur and beaute_active():
 		materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX_ESSAI if allumee else ENCRE_ARETE_PX)
@@ -177,6 +187,8 @@ static func usure_active(args: PackedStringArray) -> bool:
 ## shader ; éteinte, la variante reste (les bancs y basculent dans la même partie) et rend l'image d'avant.
 ## Une fois par processus : la ligne qui atteste l'usure dans le journal (demande d'ISO7 Gadgets, 2026-09-24 20:24).
 static var _usure_annoncee := false
+## Même règle pour « [corps soi sombre] allumé » (Q39) : une fois, à la première variante posée sur un corps.
+static var _soi_sombre_annonce := false
 
 
 static func poser_usure_essai(materiau: ShaderMaterial, allumee: bool) -> void:
@@ -256,6 +268,11 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	# de shader. Sans le drapeau, rien. ⚠️ Le shader éclairé (lumière 3D, éteinte par défaut) ne porte pas l'essai.
 	if VoxelCatalogue.soi_sombre_actif():
 		materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_SOMBRE")
+		# La preuve pour la série de cadence des essais, une fois : la variante réellement posée.
+		if not _soi_sombre_annonce:
+			_soi_sombre_annonce = true
+			print("[corps soi sombre] allumé — variante CORPS_SOI_SOMBRE posée (%s)" % ("#define CORPS_SOI_SOMBRE dans son code"
+				if materiau.shader.code.contains("#define CORPS_SOI_SOMBRE\n") else "⚠ SANS le #define : variante manquée"))
 		# Fusion écart 11 — Q33 : la pré-passe de profondeur doit porter le même programme que la couleur, variante
 		# comprise (sinon deux programmes, et une pièce effacée). Sans méta de profondeur, l'appel ne fait rien.
 		accorder_passe_profondeur(materiau)

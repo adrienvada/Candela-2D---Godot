@@ -416,9 +416,24 @@ static func maillage(c: Dictionary) -> ArrayMesh:
 	return m
 
 
+## La ligne d'état d'un essai de géométrie murale (tuyaux, enseignes, murs meublés) : « <tête> — N triangles sur la carte
+## « id » », les maillages nuls comptant pour 0. Lue par la série de cadence des essais (`tools/serie_essais/`).
+static func ligne_etat(tete: String, maillages: Array, data: Dictionary) -> String:
+	var n := 0
+	for m in maillages:
+		if m == null:
+			continue
+		for s in (m as ArrayMesh).get_surface_count():
+			var k := (m as ArrayMesh).surface_get_array_index_len(s)
+			n += (k if k > 0 else (m as ArrayMesh).surface_get_array_len(s)) / 3
+	return "%s — %d triangles sur la carte « %s »" % [tete, n, String(data.get("id", ""))]
+
+
 ## Le nœud de la carte `data` : un `MeshInstance3D` sans ombre, sur le calque commun aux deux caméras. `null` si rien.
 static func creer_noeud(data: Dictionary, materiau: Material) -> MeshInstance3D:
 	var m := maillage(construire(data))
+	# La preuve pour la série de cadence des essais (session cloud « série-essais ») : ce que l'essai pose sur CETTE carte.
+	print(ligne_etat("[tuyaux] allumés", [m], data))
 	if m == null:
 		return null
 	var noeud := MeshInstance3D.new()

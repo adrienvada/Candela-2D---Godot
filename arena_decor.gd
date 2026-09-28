@@ -380,6 +380,8 @@ static func pochoirs_actifs() -> bool:
 func _lister_pochoirs() -> void:
 	for p in POCHOIRS_ESSAI.get(String(_map_data.get("id", "")), []):
 		_pochoirs.append([String(p[0]), (Vector2(p[1]) + Vector2(0.5, 0.5)) * TILE_SIZE, deg_to_rad(float(p[2]))])
+	# La preuve pour la série de cadence des essais : combien la table en pose ici (0 : l'essai ne coûte rien sur cette carte).
+	print("[pochoirs] allumés — %d pochoir(s) sur la carte « %s »" % [_pochoirs.size(), String(_map_data.get("id", ""))])
 
 
 ## Pour les bancs : pose ou retire les pochoirs de l'essai et recuit le décor, sur la même carte, dans la même partie — la planche
@@ -401,6 +403,8 @@ func _lister_marques() -> void:
 	for m in SOL_MARQUE_ESSAI.get(String(_map_data.get("id", "")), []):
 		_marques.append([String(m[0]), (Vector2(m[1]) + Vector2(0.5, 0.5)) * TILE_SIZE, deg_to_rad(float(m[2])), m[3],
 			int(m[4]), bool(m[5])])
+	# La preuve pour la série de cadence des essais, comme « [pochoirs] allumés ».
+	print("[sol marqué] allumé — %d marque(s) sur la carte « %s »" % [_marques.size(), String(_map_data.get("id", ""))])
 
 
 ## Pour les bancs, comme `poser_pochoirs` : pose ou retire les marques de l'essai et recuit le décor, au même instant.
