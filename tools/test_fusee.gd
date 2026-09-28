@@ -87,6 +87,14 @@ func _test_rebond() -> void:
 # ---------------------------------------------------------------------------
 func _test_actes() -> void:
 	print("\n— les actes —")
+	# Q35 = OUI (Adrien, 2026-09-28) : le rouge long est LE DÉFAUT depuis la 0.7.0 — plein feu 4 s, braise 8 s, 20 s en tout.
+	_check("par défaut depuis la 0.7.0 (Q35) : plein feu 4 s, braise 8 s, la fusée vit toujours 20 s",
+		is_equal_approx(Modele.duree_plein_feu, Modele.DUREE_PLEIN_FEU_LONG)
+		and is_equal_approx(Modele.duree_braise, Modele.DUREE_BRAISE - (Modele.DUREE_PLEIN_FEU_LONG - Modele.DUREE_PLEIN_FEU))
+		and is_equal_approx(Modele.duree_combustion(), 20.0))
+	# Les frontières qui suivent sont celles du plein feu de 2 s (`--sans-fusee-rouge-long`, build de débogage), posé sur place
+	# comme le font les bancs ; le reste du fichier garde ce réglage, comme avant la 0.7.0.
+	Modele.poser_rouge_long(false)
 	_check("avant l'atterrissage : le vol", Modele.acte_a(-0.1) == Modele.Acte.VOL)
 	_check("0 s : le plein feu", Modele.acte_a(0.0) == Modele.Acte.PLEIN_FEU)
 	_check("la frontière plein feu→braise est à DUREE_PLEIN_FEU",
@@ -104,7 +112,7 @@ func _test_actes() -> void:
 	# Q35 = B (Adrien, 2026-09-26) — l'ESSAI du rouge long (`--fusee-rouge-long`), éteint par défaut, À DURÉE TOTALE ÉGALE
 	# (ordre 412) : le plein feu passe à 4 s, la braise en perd 2, l'agonie et le résidu ne bougent pas ; la fumée garde sa
 	# taille et sa densité à chaque âge. Posé sur place, puis retiré.
-	_check("par défaut, le plein feu dure 2 s et la braise 10 (l'essai du rouge long est éteint)",
+	_check("sans le rouge long : le plein feu dure 2 s et la braise 10",
 		is_equal_approx(Modele.duree_plein_feu, 2.0) and is_equal_approx(Modele.duree_braise, Modele.DUREE_BRAISE))
 	var fumee_defaut: Array = []
 	for i in 41:
@@ -123,7 +131,7 @@ func _test_actes() -> void:
 	_check("rouge long : la fumée a la même densité et la même taille à chaque âge, pleine et rouge de 3 à 4 s",
 		fumee_egale and is_equal_approx(Modele.alpha_fumee_a(Modele.FUMEE_MONTEE), 1.0) and Modele.acte_a(3.5) == Modele.Acte.PLEIN_FEU)
 	Modele.poser_rouge_long(false)
-	_check("l'essai retiré rend le défaut exact", is_equal_approx(Modele.duree_plein_feu, 2.0)
+	_check("le rouge long retiré rend le plein feu de 2 s exact", is_equal_approx(Modele.duree_plein_feu, 2.0)
 		and is_equal_approx(Modele.duree_braise, Modele.DUREE_BRAISE))
 
 

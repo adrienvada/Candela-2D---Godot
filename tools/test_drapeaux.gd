@@ -20,8 +20,9 @@ extends SceneTree
 
 const SONDE := "--sonde-drapeaux"
 const DRAPEAUX := ["--sans-usure", "--sans-beaute", "--encre-essai", "--pochoirs-essai",
-	"--fusee-rouge-long", "--mannequin", "--corps-detaille", "--corps=portraits",
-	"--menus=ancien", "--sans-led-murs", "--faisceau", "--fumee-masque", "--lacet=0"]
+	"--sans-fusee-rouge-long", "--mannequin", "--corps-detaille", "--corps=portraits",
+	"--menus=ancien", "--sans-led-murs", "--faisceau", "--sans-fumee-masque", "--lacet=0",
+	"--sans-corps-soi-sombre", "--sans-fusee-rouge-sang"]
 
 var _failures := 0
 
@@ -55,6 +56,8 @@ func _sonder() -> void:
 		"led": MurLed.est_actif(),
 		"faisceau": volumes.faisceaux_actifs,
 		"fumee_masque": volumes.masque_fumee,
+		"soi_sombre": VoxelCatalogue.soi_sombre_actif(),
+		"rouge_sang": load("res://fusee_couleur.gd").rouge_sang,
 		"lacet": load("res://settings_manager.gd").lacet_applique(DrapeauxDeLancement.arguments()),
 	}
 	volumes.free()

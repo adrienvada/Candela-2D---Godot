@@ -99,10 +99,14 @@ func _le_drapeau(racine: Node3D) -> void:
 	IsoMateriaux.accorder_corps(m)
 	_check("accorder_corps garde la variante après un changement de shader (la lumière 3D)", m.shader.code.contains("#define CORPS_DETAIL\n"))
 	VoxelCatalogue.forcer_detail = 0
+	# Depuis la 0.7.0, le corps de soi sombre (Q39) est allumé par défaut et pose sa propre variante : éteint ici, pour que
+	# la garde dise toujours ce qu'elle disait — sans le détail, le détail ne pose rien.
+	VoxelCatalogue.forcer_soi_sombre = 0
 	var m2 := ShaderMaterial.new()
 	m2.shader = load("res://corps_iso.gdshader")
 	IsoMateriaux.accorder_corps(m2)
 	_check("drapeau éteint : accorder_corps laisse le shader d'origine", m2.shader == load("res://corps_iso.gdshader"))
+	VoxelCatalogue.forcer_soi_sombre = -1
 
 
 func _les_accessoires(racine: Node3D) -> void:

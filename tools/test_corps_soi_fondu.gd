@@ -77,13 +77,16 @@ func _le_drapeau() -> void:
 	print("— le drapeau : éteint par défaut, jamais sans l'essai A")
 	VoxelCatalogue.forcer_soi_sombre = -1
 	VoxelCatalogue.forcer_soi_fondu = -1
-	_check("ni --corps-soi-sombre ni --corps-soi-sombre=fondu sur la ligne de commande de la suite",
-		not VoxelCatalogue.soi_sombre_actif() and not VoxelCatalogue.soi_fondu_actif())
+	# Depuis la 0.7.0 (Q39 = A), l'essai A est allumé par défaut ; B reste un essai éteint.
+	_check("par défaut : l'essai A allumé (Q39, 0.7.0), l'essai B éteint",
+		VoxelCatalogue.soi_sombre_actif() and not VoxelCatalogue.soi_fondu_actif())
 	_check("le drapeau s'écrit --corps-soi-sombre=fondu", VoxelCatalogue.DRAPEAU_SOI_FONDU == "--corps-soi-sombre=fondu")
 	var src := FileAccess.get_file_as_string("res://voxel_catalogue.gd")
-	var f := src.substr(src.find("static func soi_sombre_actif()"), 500)
-	_check("--corps-soi-sombre=fondu allume aussi l'essai A (B se compose sur lui)",
-		f.contains("args.has(DRAPEAU_SOI_SOMBRE) or args.has(DRAPEAU_SOI_FONDU)"))
+	var f := src.substr(src.find("static func soi_fondu_actif()"), 300)
+	var a_src := src.substr(src.find("static func soi_sombre_actif()"), 400)
+	_check("B se compose sur A : sans A (--sans-corps-soi-sombre), pas de B ; A allumé par défaut",
+		f.contains("if not soi_sombre_actif():\n\t\treturn false")
+		and a_src.contains("DrapeauxDeLancement.present(DRAPEAU_SANS_SOI_SOMBRE)"))
 	var sans := _accorde(0, 0)
 	_check("drapeaux éteints : accorder_corps laisse le shader d'origine", sans == load(SHADER))
 	var a := _accorde(1, 0)

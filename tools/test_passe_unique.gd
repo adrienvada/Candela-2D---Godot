@@ -142,8 +142,9 @@ func _les_drapeaux_de_la_suite() -> void:
 	print("— les drapeaux de la suite")
 	VoxelCatalogue.forcer_soi_sombre = -1
 	VoxelCatalogue.forcer_detail = -1
-	_check("ni --corps-detaille ni --corps-soi-sombre sur la ligne de commande de la suite",
-		not VoxelCatalogue.detail_actif() and not VoxelCatalogue.soi_sombre_actif())
+	# Depuis la 0.7.0 (Q39 = A), le corps de soi sombre est allumé par défaut ; le détail reste un essai.
+	_check("par défaut : pas de --corps-detaille, le corps de soi sombre allumé (Q39, 0.7.0)",
+		not VoxelCatalogue.detail_actif() and VoxelCatalogue.soi_sombre_actif())
 
 
 func _la_meta(racine: Node3D) -> void:

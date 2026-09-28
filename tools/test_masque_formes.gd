@@ -228,6 +228,9 @@ func _le_pochoir() -> void:
 		couche.contains("stencil_mode read, compare_not_equal, 1;") and not couche.contains("masque_compact_montre_noir(monde")
 		and not couche.contains("masque_montre_noir(monde") and couche.contains("ALBEDO = c;"))
 	var v := IsoVolumes.new()
+	# Depuis la 0.7.0 (Q31), un IsoVolumes naît avec le masque allumé en forme 5 : la forme de Gadgets (0) se pose à la main.
+	v.masque_fumee = true
+	v.forme_masque = 0
 	var e := {"genre": "fumee", "noeuds": [], "mats": [], "retires": []}
 	v.call("_couches", e, 4)
 	v.call("_poser_couches", e, Vector2(100, 200), 80.0, 1.0, 0.3, null, 0.0, 0.0, 0.0)
