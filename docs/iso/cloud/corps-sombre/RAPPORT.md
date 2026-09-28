@@ -59,7 +59,8 @@ derrière `--corps-soi-sombre`, éteint.
    Un **témoin** (`--define-temoin=NOM` : un define qu'aucun code ne lit) prouve que la bascule seule ne change rien
    (0 pixel, vue de J2 comprise).
 6. **Les mesures** (`mesurer.py` → `mesures.json`) et **la planche** (`planche.py` → `planche.html`, images JPEG q85 dans
-   `img/`, ~3 Mo).
+   `img/`, 3,5 Mo). Les prises : le Parasite d'une première séance complète ; les trois autres classes d'une seconde
+   séance sans fusée, puis une séance par fusée (la fumée de la fusée précédente couvrait J1, piège 3).
 
 ## Les chiffres
 
@@ -67,28 +68,49 @@ Cloître, la place du duel du photographe, 1920×1080, lacet 45° (J2 : 225°, l
 Rec. 709 des valeurs sRGB, 0..255. « Lisible » : pixel du corps qui diffère d'au moins 10/255 de ce qu'il cache.
 « Corps » : moyenne sur l'empreinte du corps ; « liseré » : son 90ᵉ centile.
 
-TABLEAU_CHIFFRES
+| lumière | classes | sol autour | corps aujourd'hui | lisible aujourd'hui | corps essai | liseré essai | lisible essai | changés hors du corps |
+|---|---|---|---|---|---|---|---|---|
+| Dans le noir | 4 | 22 | 104–105 | 100 % | 19–24 | 106–108 | 93–94 % | 0 (allumés : 0) |
+| Au bord de sa lumière | 4 | 24 | 133–134 | 100 % | 53–54 | 108 | 82–85 % | 0 (allumés : 0) |
+| Sa pleine lumière | 4 | 23–24 | 132–133 | 100 % | 44–49 | 106–108 | 56–62 % | 0 (allumés : 0) |
+| Au bord du cône adverse | 4 | 46–47 | 131–133 | 99–100 % | 57–63 | 112–114 | 46–52 % | 0–1 (allumés : 0) |
+| Dans la torche adverse (ébloui) | 4 | 116–121 | 167–170 | 89–90 % | 120–124 | 149–153 | 44–49 % | 0–4 (allumés : 0) |
+| Sous une fusée | 3 | 124–125 | 118–119 | 20 % | 51–53 | 85–86 | 99–100 % | 0–2 (allumés : 0) |
+
+| écran scindé | J1 (bleu) aujourd'hui → essai | lisible | J2 (rouge) aujourd'hui → essai | lisible | J1 vu par J2 : pixels / changés | changés hors du corps de soi |
+|---|---|---|---|---|---|---|
+| torches éteintes | 93–94 → 17–21 | 100 % → 92–94 % | 80 → 14 | 99 % → 90 % | 570–639 / **0** | 0 |
+| torches allumées, J2 braque J1 | 151–156 → 128–130 | 65–67 % → 31–50 % | 101–111 → 52–56 | 92–100 % → 70–78 % | 1773–2058 / **0** | 0 |
 
 **Lecture.**
 - **Dans le noir** (torches éteintes ; le sol n'y est pas à 0 : les bandeaux LED des murs le tiennent vers 22) : aujourd'hui
-  le corps entier à ~104, lisible à 100 % ; l'essai, un contour seulement (liseré à ~108, le reste noir), lisible à ~93 %.
-  On se retrouve : le contour a la clarté de la silhouette d'aujourd'hui.
-- **Sous sa torche / au bord de sa lumière** : le corps descend de ~133 à ~50, le liseré reste vers 108. Lisible de 62 à
-  85 %. Moins voyant qu'aujourd'hui, mais la question n'est pas « voyant » : sur un sol à ~23, un corps à 50 cerné de
-  bleu se lit.
-- **Dans la torche adverse** (J1 ébloui : le voile laiteux s'ajoute au corps comme au sol) : la part lisible tombe de
-  ~60-89 % à ~35-48 %. C'est le cas le moins favorable à l'essai : un corps sombre sous un voile clair se rapproche du
-  sol éclairé. À juger au Mac, où l'éblouissement n'est pas celui de llvmpipe.
-- **Sous une fusée** : aujourd'hui, le bleu clair (~119) vaut presque le sol rougi (~124) — **20 % du corps lisible** ; avec
-  l'essai, le corps sombre (~52) se détache — **~100 %**. C'est la scène où l'essai gagne le plus, et la plus proche des
-  illustrations (un corps noir sur une lumière).
-- **Écran scindé, deux couleurs** : J1 (bleu) et J2 (rouge) chacun dans sa vue. Dans le noir, les deux contours restent
-  lisibles à ~90 % ; J2 (rouge) descend de ~109 à ~55 sous sa lampe.
+  le corps entier à ~104, lisible à 100 % ; l'essai, un contour seulement (liseré ~107, l'intérieur ~20, presque le sol),
+  lisible à 93-94 %. **On se retrouve** : le contour a la clarté de la silhouette d'aujourd'hui.
+- **Sous sa torche, au bord de sa lumière** : le corps descend de ~133 à 44-54, le contour reste vers 108. Lisible de 56 à
+  85 % : moins voyant qu'aujourd'hui, mais un corps à 50 cerné de bleu sur un sol à ~23 se lit.
+- **Au bord du cône adverse, dans la torche adverse** : l'essai perd le plus (46-52 %, puis 44-49 % contre ~90-100 %
+  aujourd'hui). Le corps sombre se rapproche du sol éclairé ; sous la torche adverse s'ajoute le voile d'éblouissement
+  (llvmpipe), qui éclaire corps et sol pareillement. À juger au Mac.
+- **Sous une fusée** : aujourd'hui, le bleu clair (~119) vaut le sol rougi (~124) — **20 % du corps lisible** ; avec
+  l'essai, le corps sombre (~52) se détache — **99-100 %**. C'est la scène où l'essai gagne le plus, et la plus proche
+  des illustrations (un corps noir découpé sur une lumière). (Trois classes : le Spectre n'a pas de fusée, par dessein —
+  `game_state.gd:4637`.)
+- **Écran scindé, deux couleurs** : J1 (bleu) et J2 (rouge) chacun dans sa vue. Torches éteintes, les deux contours
+  restent lisibles à 90-94 %. Torches allumées, J2 (qui éclaire devant lui) passe de ~106 à ~54 et reste lisible à
+  70-78 % ; J1, ébloui par la torche de J2, tombe de ~66 % à 31-50 %.
+- **Le liseré « côté lumière » se voit peu à la taille du jeu** : c'est le contour du dessus (le repère) qui porte
+  l'essentiel de la lisibilité ; le liseré latéral n'ajoute que quelques pixels clairs du côté de la lampe (visible à la
+  loupe ×3, surtout sous la fusée et au bord du cône adverse).
 
 ## Le noir absolu et la vue de l'adversaire
 
-- **Hors du corps de soi, l'essai ne change rien** : 0 pixel sur toutes les prises propres, 0 pixel noir rallumé, dans
-  les scènes à une vue comme dans les deux moitiés de l'écran scindé.
+- **Hors du corps de soi, l'essai n'allume rien** : 0 pixel allumé, 0 pixel noir rallumé, dans les scènes à une vue
+  comme dans les deux moitiés de l'écran scindé. Au plus 4 pixels par prise changent hors de l'empreinte mesurée : tous
+  **collés au bord du corps**, **plus sombres d'1/255**, et égaux au fond dans l'image d'aujourd'hui — des pixels de
+  bord où la couverture du corps s'arrondissait déjà à « rien » ; l'essai, plus sombre, déplace cet arrondi.
+- **Le bruit** (défaut recapturé après l'essai) : 0 pixel sur toutes les prises sauf `fumiste_scinde` (80 pixels,
+  jusqu'à 12/255, groupés dans un rectangle de 18×7 px de la vue de J2, loin des deux corps — quelque chose qui vit
+  encore, jeu gelé ; non identifié).
 - **La vue de l'adversaire est identique au pixel** : en écran scindé, le corps de J1 dans la vue de J2 — 546 à 2 059
   pixels selon la classe et la lumière — n'a **aucun** pixel changé ; celui de J2 dans la vue de J1 non plus (quand il
   y est visible).
@@ -107,8 +129,6 @@ TABLEAU_CHIFFRES
    joueur qui le coupe. Remède probable : passer `[joueur.get_rid()]` à `occultation`, comme `direction_du_lisere`.
 2. **`volume_masque.gdshaderinc.uid` n'est pas suivi** sur la base : l'import le crée à chaque conteneur neuf (fichier
    non suivi dans `git status`). Je l'ai effacé plutôt que de le committer (pas ma tâche).
-3. **Pas de fusée pour une 4ᵉ classe dans la même manche** : la 4ᵉ `lancer_fusee()` d'une séance ne part pas (quota de la
-   manche, je suppose — non vérifié). Contourné par une séance par fusée.
 
 ## Pièges découverts, à reporter dans la feuille de route
 
@@ -122,8 +142,8 @@ TABLEAU_CHIFFRES
    pixel ; et **`accorder_corps` n'est pas une bascule** : le rappeler repose l'encre et le modelé (première séance : des
    arêtes changées sur les deux corps). L'outil ne change que le shader, puis repose chaque paramètre.
 3. ⚠️ **Une fusée brûle plus de 10 s de jeu, et sa fumée efface les corps** : une séance qui enchaîne des prises au même
-   endroit après une fusée photographie la fumée, pas le corps (corps « introuvable » : empreinte vide). Fusées en
-   dernier, ou une séance par fusée.
+   endroit après une fusée photographie la fumée, pas le corps (corps « introuvable » : empreinte vide — payé une fois
+   ici, trois classes à refaire). Une séance par fusée. Et le Spectre n'en a aucune (`spectre.fusees = _fusees(0, 0.0)`).
 4. ⚠️ **« Dans le noir » n'est pas noir sur le Cloître** : les bandeaux LED des murs tiennent le sol vers 22/255 torches
    éteintes. Toute mesure « dans le noir » est une mesure sur ce sol-là.
 

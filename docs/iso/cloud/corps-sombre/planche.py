@@ -97,9 +97,11 @@ th{text-align:left}.ok{color:#7c7}.ko{color:#e77}.note{color:var(--pale)}
             h.append("<tr><th>%s</th><th>%s</th><td>%.0f</td><td>%.0f</td><td>%.0f</td><td>%.0f</td><td>%d %%</td>"
                      "<td>%d %%</td><td class='%s'>%d</td></tr>" % (
                          slug, nom_sc, a["corps_moyenne"], e["corps_moyenne"], e["corps_p90"], a["sol_autour"],
-                         round(100 * a["part_lisible"]), round(100 * e["part_lisible"]), "ok" if hors == 0 else "ko",
-                         hors))
-    h.append("</table>")
+                         round(100 * a["part_lisible"]), round(100 * e["part_lisible"]),
+                         "ok" if m["essai_allume_hors_du_corps"] == 0 else "ko", hors))
+    h.append("</table><p class='note'>Changés hors du corps : au plus 4 pixels, tous collés au bord du corps, plus sombres "
+             "d'1/255 et égaux au fond dans l'image d'aujourd'hui (l'arrondi de la couverture du bord). <b>Aucun ne "
+             "s'allume.</b> Le Spectre n'a pas de fusée (par dessein).</p>")
 
     for slug, titre in CLASSES:
         h.append("<h2>%s</h2>" % titre)
