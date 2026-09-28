@@ -5473,6 +5473,20 @@ func _accorder_la_peinture_de_la_racine() -> void:
 			peintre.modulate.a = alpha
 
 
+## ⚠️ **L'appareil de la vue non regardée est ORPHELIN** : `_accorder_brouillage_aux_vues`
+## le retire de l'arbre et le garde dans `_brouillages`. Rien ne le libérait quand
+## `GameState` part — après un match en ligne (vue unique), la sortie signalait le trio
+## `CanvasLayer` + `BackBufferCopy` + `Node` et son `Shader` en fuite (« ObjectDB
+## instances were leaked at exit » ; répétition du test d'Adrien, E3). Ceux qui sont dans
+## l'arbre partent avec leur parent ; seuls les orphelins sont libérés ici.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		for app in _brouillages:
+			if is_instance_valid(app) and (app as Node).get_parent() == null:
+				(app as Node).free()
+		_brouillages.clear()
+
+
 ## Chaque appareil de brouillage rejoint la vue qui le rend.
 ##
 ## ⚠️ **Il suit le rendu, pas l'affichage.** En vue unique, le conteneur de la
