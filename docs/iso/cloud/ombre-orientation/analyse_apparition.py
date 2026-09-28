@@ -46,10 +46,9 @@ def polygones(orient_journal):
     return polys
 
 
-def predire(j, polys, T):
+def predire(j, polys, T, bal):
     """Pour chaque classe × orientation × mode : la dernière distance du balayage où facteur × max(éclairé) ≥ T."""
     axe = j["axe"]
-    bal = [p for p in j["prises"] if p.get("partie") == "balayage"]
     ref = polys["pistolet"]
     moy = {c: sum(table(c, polys[c])) / 64 for c in polys}
     res = {}
@@ -78,10 +77,10 @@ def predire(j, polys, T):
     return res
 
 
-def seuil(j, rech):
-    """T : le maximum de l'anneau (sans ombre propre, balayage) à la distance où le Parasite (profil) s'éteint à l'image."""
+def seuil(rech, bal):
+    """T : le maximum de l'anneau (sans ombre propre, balayage) là où le Parasite (profil) s'allume encore / s'éteint."""
     p = rech.get(("pistolet", "profil_g", 0))
-    bal = sorted([b for b in j["prises"] if b.get("partie") == "balayage"], key=lambda b: b["distance"])
+    bal = sorted(bal, key=lambda b: b["distance"])
     if not p or not bal:
         return None, None
     d_on, d_off = p["distance"], p["distance_eteint"]
@@ -102,8 +101,11 @@ def main():
     dossiers = sys.argv[3:]
     lignes = ["# Où un corps apparaît — aujourd'hui, (d1), (d2)", ""]
     sortie = {}
-    for d, nom in zip(dossiers, ["45° B", "0°"]):
-        j = charger(d)
+    journaux = [charger(d) for d in dossiers]
+    # Le balayage n'est fait qu'une fois : le capteur est le même à 0° et à 45° (vérifié au bit, orientation.json).
+    bal = next(([p for p in jj["prises"] if p.get("partie") == "balayage"] for jj in journaux
+                if any(p.get("partie") == "balayage" for p in jj["prises"])), [])
+    for d, nom, j in zip(dossiers, ["45° B", "0°"], journaux):
         rech = recherches(j)
         lignes += ["## %s" % nom, "", "### À l'image : le dernier pixel allumé (distance à J1, en px)", "",
                    "| Classe | orientation | aujourd'hui | (d1) | (d2) |", "|---|---|---|---|---|"]
@@ -115,12 +117,12 @@ def main():
                 cel.append("—" if not p else ("aucun dès b10" if p["distance"] < 0 else "%.0f" % p["distance"]))
             lignes.append("| %s | %s | %s |" % (NOMS[c], o, " | ".join(cel)))
         lignes.append("")
-        t_on, t_off = seuil(j, rech)
+        t_on, t_off = seuil(rech, bal)
         sortie[nom] = {"recherches": {"%s|%s|%d" % k: v for k, v in rech.items()}, "seuil": [t_on, t_off]}
         if orient is not None and t_on is not None:
             polys = polygones(orient)
             T = (t_on + t_off) / 2
-            pred = predire(j, polys, T)
+            pred = predire(j, polys, T, bal)
             sortie[nom]["prediction"] = {"%s|%s" % k: v for k, v in pred.items()}
             lignes += ["### Prédiction, toutes classes × orientations (seuil T = %.4f, lu sur le Parasite)" % T, "",
                        "Dernière distance du balayage (pas de 2 px) où facteur × maximum de l'anneau éclairé ≥ T ;",
@@ -147,6 +149,10 @@ def main():
             lignes.append("")
         imgs = planche_images(d, j, dst, nom)
         sortie[nom]["planche"] = imgs
+    # Les prises « noir » (une autre orientation, un autre dossier) : APPARITION_NOIR=<dossier>.
+    noir = os.environ.get("APPARITION_NOIR")
+    if noir:
+        sortie["noir"] = {"planche": planche_images(noir, charger(noir), dst, "45° B")}
     open(os.path.join(dst, "apparition.md"), "w").write("\n".join(lignes) + "\n")
     json.dump(sortie, open(os.path.join(dst, "apparition.json"), "w"), indent=1, ensure_ascii=False)
     html(dst, sortie)
@@ -230,6 +236,27 @@ def html(dst, sortie):
                                     v["niveau"] * v["compensation"], v["pixels_changes_corps"], v["hausse_max"],
                                     v["pixels_changes_hors_corps"], v["plus_clair_que_le_sol"]))
             t.append("</tr></table></div>")
+    pn = sortie.get("noir", {}).get("planche", {})
+    if pn:
+        t += ["<h2>Torche du côté de l'arme : un corps entièrement noir</h2>",
+              "<p>J2 en diagonale, face à la torche, la torche à sa droite. Fumiste puis Spectre, à b10 et à mi-distance, "
+              "aujourd'hui / (d1) / (d2). Le Fumiste ne montre <b>aucun</b> pixel, même à mi-portée : son anneau est tout "
+              "entier dans l'ombre de sa propre arme, et aucun facteur n'y change rien. (d2) assombrit le Spectre (×0,30), "
+              "parce que le Parasite, dans cette direction, est encore plus sombre que lui.</p>"]
+        for c in ["fumiste", "spectre"]:
+            for s_ in ["b10", "mi"]:
+                t.append("<div class=defile><table><tr>")
+                for m, nm in [(0, "aujourd'hui"), (1, "(d1)"), (2, "(d2)")]:
+                    k = [kk for kk, v in pn.items() if v["classe"] == c and v["scene"] == s_ and v["mode"] == m]
+                    if not k:
+                        continue
+                    v = pn[k[0]]
+                    t.append("<td><figure><img src='%s' width=240 height=240 alt=''><img src='%s' width=300 height=300 "
+                             "alt=''><figcaption>%s · %s · %s · facteur ×%.3f · capteur %.4f · pixels allumés %d / %d"
+                             "</figcaption></figure></td>" % (v["fichier"], v["fichier"].replace(".jpg", "_x3.jpg"),
+                                                             NOMS[c], s_, nm, v["compensation"], v["niveau"],
+                                                             v["visibles"], v["silhouette"]))
+                t.append("</tr></table></div>")
     t.append("</body></html>")
     open(os.path.join(dst, "planche.html"), "w").write("\n".join(t))
 

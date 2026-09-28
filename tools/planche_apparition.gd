@@ -66,6 +66,8 @@ func _ready() -> void:
 
 	# 2. Les recherches à l'image.
 	for c in cas:
+		if String(c).strip_edges() == "":
+			continue
 		var bouts: PackedStringArray = String(c).split(":")
 		var slug := bouts[0]
 		var o := bouts[1] if bouts.size() > 1 else "profil_g"
@@ -185,21 +187,35 @@ func _avant_le_rendu() -> void:
 ## ombre de contact n'existe pas quand il est caché), un sol faiblement éclairé qui bouge d'une prise à l'autre. Contre
 ## le même corps, opaque, sans lumière lue, le masque est le corps seul, et un pixel « visible » est un pixel que la
 ## lecture du capteur a rendu plus clair — la seule chose que la voie (d) change.
+##
+## ⚠️ **Deux fois chaque, en alternance.** Même contre le zéro, des pixels jusqu'à 62/255 s'allumaient au hasard, capteur
+## à 0 : 47 pixels à 325 px, 0 à 326 px pour le même capteur. Quelque chose d'animé passe DEVANT le corps (J2 est posé
+## dans l'axe du faisceau de J1). Un pixel ne compte que s'il est plus clair dans les deux réels que dans les deux zéros.
+##
+## ⚠️ **Et la graine reposée avant chaque prise** (`_prise_graine`), comme `planche_q33._prise` : la poussière du faisceau
+## tire au hasard à chaque image. Sans elle, le Parasite (facteur 1, rien ne change) montrait 343 pixels du corps et 1 078
+## hors du corps différents d'une prise à l'autre, jusqu'à +119/255 : le « au pixel » de la planche était du bruit.
+func _prise_graine(p2: Vector2, n: int) -> Image:
+	seed(33)
+	await _tenir(p2, n)
+	return await _capturer("vue")
+
+
 func _trois_images(p2: Vector2) -> Array:
 	await _tenir(p2, 6)
-	_zero = true
-	await _tenir(p2, 3)
-	var vide: Image = await _capturer("vue")
-	_zero = false
+	var zeros := []
+	var reels := []
+	for k in 2:
+		_zero = true
+		zeros.append(await _prise_graine(p2, 3))
+		_zero = false
+		_opaque = true
+		reels.append(await _prise_graine(p2, 3))
+		_opaque = false
 	_sil_corps[1] = true
-	await _tenir(p2, 3)
-	var sil: Image = await _capturer("vue")
+	var sil: Image = await _prise_graine(p2, 3)
 	_sil_corps[1] = false
-	_opaque = true
-	await _tenir(p2, 3)
-	var reel: Image = await _capturer("vue")
-	_opaque = false
-	return [vide, sil, reel]
+	return [zeros[0], sil, reels[0], zeros[1], reels[1]]
 
 
 func _ecran(p2: Vector2, img: Image) -> Vector2:
@@ -210,29 +226,34 @@ func _ecran(p2: Vector2, img: Image) -> Vector2:
 
 ## [silhouette, visibles, visibles sur sol noir, plus haut canal du corps] dans la fenêtre autour de J2.
 func _compter(p2: Vector2, images: Array) -> Array:
-	var vide: Image = images[0]
+	for im in images:
+		if im == null:
+			return [-1, -1, -1, -1]
+	var z1: Image = images[0]
 	var sil: Image = images[1]
-	var reel: Image = images[2]
-	if vide == null or sil == null or reel == null:
-		return [-1, -1, -1, -1]
-	var c := Vector2i(_ecran(p2, reel))
+	var r1: Image = images[2]
+	var z2: Image = images[3] if images.size() > 3 else z1
+	var r2: Image = images[4] if images.size() > 4 else r1
+	var c := Vector2i(_ecran(p2, r1))
 	var n_sil := 0
 	var n_vis := 0
 	var n_noir := 0
 	var haut := 0
-	for y in range(maxi(0, c.y - DEMI_FENETRE), mini(reel.get_height(), c.y + DEMI_FENETRE)):
-		for x in range(maxi(0, c.x - DEMI_FENETRE), mini(reel.get_width(), c.x + DEMI_FENETRE)):
-			var v := vide.get_pixel(x, y)
+	for y in range(maxi(0, c.y - DEMI_FENETRE), mini(r1.get_height(), c.y + DEMI_FENETRE)):
+		for x in range(maxi(0, c.x - DEMI_FENETRE), mini(r1.get_width(), c.x + DEMI_FENETRE)):
+			var v := z1.get_pixel(x, y)
 			var s := sil.get_pixel(x, y)
 			if maxf(maxf(absf(s.r - v.r), absf(s.g - v.g)), absf(s.b - v.b)) * 255.0 <= 2.0:
 				continue
 			n_sil += 1
-			var r := reel.get_pixel(x, y)
-			var rm := int(round(maxf(maxf(r.r, r.g), r.b) * 255.0))
-			var hausse := int(round(maxf(maxf(r.r - v.r, r.g - v.g), r.b - v.b) * 255.0))
-			if hausse > 0:
+			var a := r1.get_pixel(x, y)
+			var b := r2.get_pixel(x, y)
+			var w := z2.get_pixel(x, y)
+			var hausse := minf(maxf(maxf(minf(a.r, b.r) - maxf(v.r, w.r), minf(a.g, b.g) - maxf(v.g, w.g)),
+				minf(a.b, b.b) - maxf(v.b, w.b)), 1.0)
+			if int(round(hausse * 255.0)) > 0:
 				n_vis += 1
-				haut = maxi(haut, rm)
+				haut = maxi(haut, int(round(maxf(maxf(a.r, a.g), a.b) * 255.0)))
 				if maxf(maxf(v.r, v.g), v.b) == 0.0:
 					n_noir += 1
 	return [n_sil, n_vis, n_noir, haut]
@@ -290,22 +311,21 @@ func _prises_planche(slug: String, o: String, scene: String) -> void:
 	imgs[1].save_png("%s/%s_sil.png" % [_dossier, base])
 	# Le sol seul (corps caché) : pour « rien de plus clair que la surface qui le porte ».
 	_cache_corps[1] = true
-	await _tenir(p2, 3)
-	var sol: Image = await _capturer("vue")
+	var sol: Image = await _prise_graine(p2, 3)
 	_cache_corps[1] = false
 	sol.save_png("%s/%s_vide.png" % [_dossier, base])
 	var ecran := _ecran(p2, imgs[2])
 	for m in MODES_D:
 		OmbreCompensee.mode_force = m
 		_opaque = true
-		await _tenir(p2, 6)
-		var reel: Image = await _capturer("vue")
+		await _tenir(p2, 3)
+		var reel: Image = await _prise_graine(p2, 3)
 		_opaque = false
 		reel.save_png("%s/%s_d%d.png" % [_dossier, base, m])
 		var mat := _iso._mat_corps[1] as ShaderMaterial
 		var comp = mat.get_shader_parameter("compensation_ombre")
 		var niv := _niveau(1)
-		var compte := _compter(p2, [imgs[0], imgs[1], reel])
+		var compte := _compter(p2, [imgs[0], imgs[1], reel, imgs[3], reel])
 		_journal.append({"partie": "planche", "classe": slug, "orientation": o, "scene": scene, "mode_d": m,
 			"fichier": "%s_d%d.png" % [base, m], "vide": base + "_vide.png", "zero": base + "_zero.png", "sil": base + "_sil.png",
 			"ecran": [ecran.x, ecran.y], "niveau": niv[0], "niveau_max": niv[1],
