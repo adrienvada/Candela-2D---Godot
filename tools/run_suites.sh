@@ -198,7 +198,7 @@ export CANDELA_PORT
 SUITES=(test_liaisons test_icones_editeur
 	test_map_codec test_map_geometry test_mur_led test_arena_build test_editor_tools
         test_classes test_match_format test_pause_menu test_menu_hub test_comic_panel test_audio_settings
-        test_match_history_view test_effect_policy test_screen_leaderboard
+        test_match_history_view test_effect_policy test_screen_leaderboard test_regard_hors_menu
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
         test_vitrine_menus test_menu_artworks test_intro_planches test_enseigne test_audit_menus test_pool_sfx test_musique test_oreille test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_brouillage test_rejeu test_releve_balistique test_curseur_systeme test_curseur_joystick test_banc test_rendu_racine test_prediction_tir
