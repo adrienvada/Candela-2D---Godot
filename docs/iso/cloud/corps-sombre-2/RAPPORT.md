@@ -27,6 +27,12 @@ binaire tourne depuis `/tmp/Godot_v4.7-stable_linux.x86_64`, passé aux scripts 
 `git push -u origin claude/cloud-corps-sombre-2` vers 13:05 ; je ne l'ai pas retenté. **La branche a été poussée vers 14:00,
 sur la demande directe d'Adrien dans cette session (« push »)**, puis de nouveau à la fin. Aucune pull request (consigne).
 
+## La suite
+
+**Suite complète verte sur l'état final** : `GODOT=/tmp/Godot_v4.7-stable_linux.x86_64 ./tools/run_suites.sh` — « tout passe,
+sans erreur de script (623 s) », EXIT 0, `test_passe_unique` et `test_corps_soi_fondu` compris. (Une première fois verte
+aussi, 657 s, avant le relais des lightmaps.)
+
 ## 1. La fusion (7493c82)
 
 Deux conflits, résolus comme l'évaluation 11 (`docs/iso/cloud/ecart-11/RAPPORT.md`, § 1), sans rien jeter :
