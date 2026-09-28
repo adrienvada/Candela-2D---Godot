@@ -1,7 +1,7 @@
 # Q39 sur image — ton propre corps, sombre avec un liseré (session cloud corps-sombre, 2026-09-28)
 
 Branche `claude/cloud-corps-sombre`, partie d'`origin/integration-iso14` (a30a407), le 28/09/2026 entre ~02:05 et ~04:30
-(heure de Paris). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ». **Rien ne change par défaut** : l'essai est
+(heure de Paris ; horloge du conteneur). Lancée par la session coordinatrice « CLOUD ISO UNRAILED ». **Rien ne change par défaut** : l'essai est
 derrière `--corps-soi-sombre`, éteint.
 
 ## Pour Adrien, en cinq lignes
@@ -61,6 +61,12 @@ derrière `--corps-soi-sombre`, éteint.
 6. **Les mesures** (`mesurer.py` → `mesures.json`) et **la planche** (`planche.py` → `planche.html`, images JPEG q85 dans
    `img/`, 3,5 Mo). Les prises : le Parasite d'une première séance complète ; les trois autres classes d'une seconde
    séance sans fusée, puis une séance par fusée (la fumée de la fusée précédente couvrait J1, piège 3).
+
+## La suite
+
+**Suite complète verte** : `GODOT=/usr/local/bin/godot ./tools/run_suites.sh` — 112 bancs OK, « tout passe, sans erreur de
+script (575 s) », EXIT 0, sur le dernier état du code. Un premier passage avait rougi sur `test_corps_mannequin`, qui garde
+au texte la ligne des lampes du mannequin : rendue telle quelle, l'essai relit ses lampes à part.
 
 ## Les chiffres
 
