@@ -251,6 +251,10 @@ static func accorder_corps(materiau: ShaderMaterial) -> void:
 	# puis rappelle ce crochet ; la variante CORPS_DETAIL doit y survivre. Sans le drapeau, rien.
 	if VoxelCatalogue.detail_actif():
 		materiau.shader = variante_definie(materiau.shader, "CORPS_DETAIL")
+	# Q39 — son propre corps sombre avec un liseré (`--corps-soi-sombre`) : même règle, la variante doit survivre au changement
+	# de shader. Sans le drapeau, rien. ⚠️ Le shader éclairé (lumière 3D, éteinte par défaut) ne porte pas l'essai.
+	if VoxelCatalogue.soi_sombre_actif():
+		materiau.shader = variante_definie(materiau.shader, "CORPS_SOI_SOMBRE")
 
 
 ## ISO10, 1f — la lumière d'une face lue SANS la peinture du sol (`mur_iso.gdshader`, `lire_lumiere`) : lightmap ×
