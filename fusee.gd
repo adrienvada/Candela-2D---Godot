@@ -191,6 +191,12 @@ func _ready() -> void:
 	global_position = depart
 	_fenetres = FuseeModele.fenetres_agonie(graine)
 	add_to_group("fusees")
+	# Q35 — l'essai du rouge long se prouve par ce que le JEU imprime (les séries de cadence le relisent), une fois par processus.
+	if not _rouge_long_annonce and FuseeModele.duree_plein_feu > FuseeModele.DUREE_PLEIN_FEU:
+		_rouge_long_annonce = true
+		print("[fusée] rouge long (%s) : plein feu %.1f s, braise %.1f s, vie %.1f s — essai Q35"
+			% [FuseeModele.DRAPEAU_ROUGE_LONG, FuseeModele.duree_plein_feu, FuseeModele.duree_braise,
+				FuseeModele.duree_combustion()])
 
 	_lumiere = PointLight2D.new()
 	_lumiere.name = "Halo"
@@ -317,6 +323,7 @@ static func _materiau_incandescent() -> CanvasItemMaterial:
 
 
 static var _voile_rechauffe := false
+static var _rouge_long_annonce := false
 
 ## Paie hors action ce que le premier lancer paierait pile sur l'action :
 ## la génération des textures de volutes (3 × 16 384 set_pixel — 8,5 ms
