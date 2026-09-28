@@ -18,6 +18,10 @@ extends "res://tools/photo_essais.gd"
 ##   impacts  — trois tirs dans la face des tuyaux, étincelles en l'air (competitif, intro_allumage) ;
 ##   fusee1/2 — une fusée lancée vers le mur haut, prise à 1,5 s puis 4 s de jeu (creer_ligne) ;
 ##   entrainement — le mode solo, la cible (entrainement).
+## Évaluation 11 (2026-09-28) : deux cartes de plus, pour ne pas juger les essais sur le seul Cloître — `croisee_duel`,
+## `croisee_noir`, `bunker_duel`, `bunker_noir` (scènes `croisee` et `bunker`) : la même mise en scène que `duel` et `noir`
+## (règle du photographe, `_mise_en_scene_du_duel`, sur leur mur haut intérieur), puis le Cloître reposé avant les
+## impacts. Elles viennent avant les scènes à traces : une fusée brûle ~20 s et survivrait au changement de carte.
 ## Les scènes qui laissent des traces (impacts, fusée) viennent après les autres ; l'entraînement, qui change de carte, en
 ## dernier.
 ##
@@ -41,7 +45,7 @@ func _ready() -> void:
 		return
 	_dossier = _valeur(args, "--sortie", "user://ecart")
 	_scenes = _valeur(args, "--scenes",
-		"duel,noir,scinde,sol,mur,arena,zone,impacts,fusee,entrainement").split(",")
+		"duel,noir,scinde,equite,sol,mur,arena,zone,croisee,bunker,impacts,fusee,entrainement").split(",")
 	_sans_hud = true
 	_carte_duel = CARTE_ESSAIS
 	_zoom = 1.0
@@ -99,13 +103,31 @@ func _ready() -> void:
 	_poser(j1_duel, Vector2.UP, j1_duel + Vector2(0.6 * t, -2.6 * t), Vector2.RIGHT)
 	print("SCENE duel : J1 %s · J2 %s" % [str(_j1), str(_j2)])
 	if _scenes.has("duel"):
-		await _une_prise("duel", true)
+		await _une_prise("duel", true, "vue", true)
 	if _scenes.has("noir"):
 		await _une_prise("noir", false)
 	if _scenes.has("scinde"):
 		_poser(j1_duel, Vector2.UP, scene["p2"], Vector2.DOWN)
 		_deux_vues()
 		await _une_prise("scinde", true, "ecran")
+		_vue_unique()
+
+	# --- equite (évaluation 11) : l'écran scindé, J1 et J2 aux places symétriques par le centre du Cloître (la carte l'est,
+	# en x comme en y), torche vers le pilier central ; au lacet B, la vue de J2 devrait être celle de J1 tournée d'un demi-tour.
+	# Deux prises au même instant de jeu : avec les corps, puis les corps 3D cachés (`Presentation3D._corps`), pour compter
+	# les pixels de corps de chaque moitié par différence.
+	if _scenes.has("equite"):
+		var centre_carte := Vector2(MapCodec.get_grid_size(MapData.current_map_data)) * t * 0.5
+		var pj1 := Vector2(8.0 * t, centre_carte.y)
+		_poser(pj1, Vector2.RIGHT, 2.0 * centre_carte - pj1, Vector2.LEFT)
+		_deux_vues()
+		print("SCENE equite : J1 %s · J2 %s" % [str(_j1), str(_j2)])
+		_torches_allumees = true
+		_torches(true)
+		for i in REPOS_IMAGES:
+			_tenir()
+			await get_tree().process_frame
+		await _geler_et_prendre("equite", "ecran", true)
 		_vue_unique()
 
 	# --- sol : le pochoir « ZONE 1 », la règle de `photo_essais.gd`.
@@ -152,6 +174,26 @@ func _ready() -> void:
 		_poser(place["j1"], place["visee"])
 		print("SCENE %s : « %s » · J1 %s" % [nom, place["sorte"], str(_j1)])
 		await _une_prise(nom, true)
+
+	# --- croisee, bunker : duel et torches éteintes sur deux autres cartes, puis retour au Cloître.
+	var ailleurs := false
+	for autre in [["croisee", CARTE_CROISEE], ["bunker", CARTE_BUNKER]]:
+		if not _scenes.has(autre[0]):
+			continue
+		ailleurs = true
+		if not await _poser_la_carte(autre[1]):
+			continue
+		var sc: Dictionary = _scene_duel
+		if not sc.has("rect"):
+			printerr("  ! %s : pas de mur haut intérieur (%s)" % [autre[0], sc.get("mur", "?")])
+			continue
+		var p: Vector2 = sc["p1"]
+		_poser(p, Vector2.UP, p + Vector2(0.6 * t, -2.6 * t), Vector2.RIGHT)
+		print("SCENE %s : %s · J1 %s · J2 %s" % [autre[0], sc["mur"], str(_j1), str(_j2)])
+		await _une_prise("%s_duel" % autre[0], true, "vue", true)
+		await _une_prise("%s_noir" % autre[0], false)
+	if ailleurs:
+		await _poser_la_carte(CARTE_ESSAIS)
 
 	# --- impacts : trois tirs dans la face des tuyaux, étincelles encore en l'air.
 	if _scenes.has("impacts") and not face.is_empty():
@@ -207,6 +249,26 @@ func _ready() -> void:
 	_sortir(0)
 
 
+const CARTE_CROISEE := "res://assets/maps/map_003_la_croisee.json"
+const CARTE_BUNKER := "res://assets/maps/map_004_le_bunker.json"
+
+
+## Pose une carte livrée et recalcule la mise en scène du duel (comme `_passer_sur_la_carte_des_murs_bas`, sans retenir la
+## carte de la séance : on ne revient qu'au Cloître).
+func _poser_la_carte(chemin: String) -> bool:
+	var json := JSON.new()
+	if json.parse(FileAccess.get_file_as_string(chemin)) != OK or not (json.data is Dictionary):
+		printerr("  ! carte illisible : %s" % chemin)
+		return false
+	var data: Dictionary = MapCodec.validate(json.data as Dictionary)["data"]
+	MapData.current_map_data = data
+	_main.rebuild_arena()
+	await _attendre_images(5)
+	_scene_duel = _mise_en_scene_du_duel(data)
+	print("  · carte posée : %s · %s" % [chemin, _scene_duel.get("mur", "aucune mise en scène")])
+	return true
+
+
 func _poser(j1: Vector2, visee_j1: Vector2, j2 := Vector2.INF, visee_j2 := Vector2.RIGHT) -> void:
 	_j1 = j1
 	_visee_j1 = visee_j1
@@ -217,22 +279,39 @@ func _poser(j1: Vector2, visee_j1: Vector2, j2 := Vector2.INF, visee_j2 := Vecto
 
 
 ## Une prise : torches dans l'état demandé, repos, gel, trois images, la prise.
-func _une_prise(nom: String, allumees: bool, source := "vue") -> void:
+func _une_prise(nom: String, allumees: bool, source := "vue", sans_corps := false) -> void:
 	_torches_allumees = allumees
 	_torches(allumees)
 	for i in REPOS_IMAGES:
 		_tenir()
 		await get_tree().process_frame
-	await _geler_et_prendre(nom, source)
+	await _geler_et_prendre(nom, source, sans_corps)
 	_torches_allumees = true
 	_torches(true)
 
 
-func _geler_et_prendre(nom: String, source: String) -> void:
+## `sans_corps` (évaluation 11) : une seconde prise au MÊME instant gelé, les corps 3D cachés (`Presentation3D._corps`) —
+## la différence des deux donne les pixels de corps, pour mesurer le corps du joueur local et l'équité.
+func _geler_et_prendre(nom: String, source: String, sans_corps := false) -> void:
 	_tenir()
 	get_tree().paused = true
 	await _attendre_images(3)
 	_ecrire_prise(await _capturer(source), nom)
+	if sans_corps:
+		var iso := Presentation3D.instance()
+		var corps: Array = iso.get("_corps") if iso != null else []
+		# `_suivre` réécrit `visible` à chaque image : la présentation est suspendue le temps de cette prise.
+		var suivait := iso != null and iso.is_processing()
+		if iso != null:
+			iso.set_process(false)
+		for c in corps:
+			(c as Node3D).visible = false
+		await _attendre_images(3)
+		_ecrire_prise(await _capturer(source), nom + "_sans_corps")
+		for c in corps:
+			(c as Node3D).visible = true
+		if iso != null:
+			iso.set_process(suivait)
 	get_tree().paused = false
 
 
