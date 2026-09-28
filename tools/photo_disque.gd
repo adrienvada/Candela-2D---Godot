@@ -27,7 +27,41 @@ func _geler_et_prendre(nom: String, source: String, sans_corps := false) -> void
 	if nom != "equite":
 		await super(nom, source, sans_corps)
 		return
-	await _enquete()
+	if OS.get_cmdline_user_args().has("--prises"):
+		await _prises()
+	else:
+		await _enquete()
+
+
+## `--prises` : les images avant/après, sans enquête. `equite` telle que la prend `photo_ecart.gd` (jeu gelé), puis
+## `eblouis` : l'éblouissement LÉGITIME — J1 et J2 face à face sur la rangée 7 du Cloître (dégagée d'un mur à l'autre),
+## miroir gauche-droite l'un de l'autre, chacun dans le faisceau de l'autre. Aucune position symétrique par le CENTRE ne
+## se voit : le pilier central coupe toutes les droites qui y passent.
+func _prises() -> void:
+	_tenir()
+	get_tree().paused = true
+	await _attendre_images(3)
+	var img: Image = await _capturer("ecran")
+	_ecrire_prise(img, "equite")
+	var c := _compter(img)
+	print("PRISE_MESURE equite j1=%d j2=%d dazzle_j1=%.3f dazzle_j2=%.3f" % [c.x, c.y,
+		float(_main.p1.dazzle_amount), float(_main.p2.dazzle_amount)])
+	get_tree().paused = false
+	var t := float(CandelaTileSet.TILE_SIZE.x)
+	_poser(Vector2(8.5 * t, 7.5 * t), Vector2.RIGHT, Vector2(21.5 * t, 7.5 * t), Vector2.LEFT)
+	for i in REPOS_IMAGES:
+		_tenir()
+		await get_tree().process_frame
+	_tenir()
+	get_tree().paused = true
+	await _attendre_images(3)
+	var img2: Image = await _capturer("ecran")
+	_ecrire_prise(img2, "eblouis")
+	var c2 := _compter(img2)
+	print("PRISE_MESURE eblouis j1=%d j2=%d dazzle_j1=%.3f dazzle_j2=%.3f voile_j1=%s voile_j2=%s" % [c2.x, c2.y,
+		float(_main.p1.dazzle_amount), float(_main.p2.dazzle_amount),
+		str(_ui.p1_dazzle.visible), str(_ui.p2_dazzle.visible)])
+	get_tree().paused = false
 
 
 func _enquete() -> void:
