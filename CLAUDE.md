@@ -279,4 +279,6 @@ ROADMAP. Les plus destructeurs :
   propre — un journal tronqué vient d'un build antérieur.
 - **F6** en jeu copie le diagnostic (machine, réglages, réseau, conditions du
   dernier match) dans le presse-papiers et `user://diagnostic.txt` (PE2.2).
-  F4 est la trace d'écoute audio, F5 l'éditeur de cartes.
+  F4 est la trace d'écoute audio. F5 n'agit que DANS l'éditeur de cartes, où il
+  lance le mode test ; l'éditeur s'ouvre par la galerie (« CHANGER DE CARTE »,
+  puis « ÉDITEUR › »).
