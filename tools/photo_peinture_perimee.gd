@@ -159,8 +159,23 @@ func _ready() -> void:
 	get_tree().paused = true
 	await _attendre_images(3)
 	await _prise("A")
+	# Le coût du geste que la correction ajoute à chaque reconstruction : le temps de `_poser_peinture` (processeur du
+	# cloud : un ordre de grandeur, pas une mesure de cadence) et les appels de dessin des images qui suivent, contre
+	# ceux des images d'avant (jeu en pause : rien d'autre ne change).
+	var avant: Array[int] = []
+	for i in 3:
+		await get_tree().process_frame
+		avant.append(_appels_de_dessin())
+	var t0 := Time.get_ticks_usec()
 	iso.call("_poser_peinture")
-	await _attendre_images(10)
+	var duree := Time.get_ticks_usec() - t0
+	var apres: Array[int] = []
+	for i in 6:
+		await get_tree().process_frame
+		apres.append(_appels_de_dessin())
+	print("COUT _poser_peinture : %d µs (processeur du cloud) · appels de dessin par image, avant %s, après %s"
+		% [duree, str(avant), str(apres)])
+	await _attendre_images(4)
 	_journal("peinture refaite à la main")
 	await _prise("B")
 	await _attendre_images(10)
@@ -237,3 +252,7 @@ func _journal(etape: String) -> void:
 		str(peinture.size) if peinture != null else "aucune", str(peinture.cadre) if peinture != null else "-",
 		str(peinture.get_instance_id()) if peinture != null else "-",
 		str(mat.get_shader_parameter("peinture_taille_px")) if mat != null else "?", str(grille)])
+
+
+func _appels_de_dessin() -> int:
+	return int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
