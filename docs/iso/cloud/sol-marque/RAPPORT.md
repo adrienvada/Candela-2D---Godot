@@ -112,8 +112,13 @@ seul, ceux de « tous » sont à quelques pixels près (`mesures.json`).
 | **jamais plus clair que le sol** | aucun pixel plus clair de **2/255 ou plus**, dans aucune scène. Des pixels plus clairs d'**1/255 sur un canal** : 6 à 29 par scène (sur 7 000 à 14 000 changés), au bord des marques, en pleine lumière — la division lightmap ÷ peinture du sol éclairé (`sol_iso_eclaire.gdshader`), à l'arrondi près. 0 dans le noir. Dans la texture cuite elle-même : **0 texel éclairci** (`emprises.py`) |
 | **les emprises** | chaque texel touché par l'essai tombe dans l'emprise que promet la garde headless (0 hors, sur les six cartes : `emprises.py`) |
 | **la symétrie J1/J2 à 45° B** | écran scindé, J1 devant un tas de gravats, J2 au demi-tour de J1 : **4 746 pixels assombris dans la vue de J1, 4 677 dans celle de J2** (somme de l'assombrissement 30 805 / 29 743, −3,4 %) ; dans le cône de chacun, 299 / 292. Avant la correction du demi-tour : 713 / 27 |
-| **les comptes de dessin** | voir ci-dessous |
+| **les comptes de dessin** | outil de la session « Budget » (`tools/cloud_budget/`, repris tel quel), six cartes, lacet 45°, vue unique et écran scindé, deux lancements par configuration : contre le témoin, **+0 appel, +0 primitive** (médiane des six cartes), pire carte ±2 appels, ±8 primitives — l'écart entre deux lancements identiques. Mêmes vues rendues, copies d'écran, lumières à ombre (`budget.md`) |
 | **la lisibilité d'un corps adverse** | J2, torche éteinte, debout sur des marques dans le cône de J1. À 4 cases : corps 15,1 contre sol 37,0 (Δ −21,9) sur sol nu ; 14,7 contre 36,2 (Δ −21,5) sur sol marqué. À 7 cases : Δ −18,0 nu, −17,4 marqué. **Le contraste baisse de 2 % (4 cases) et 3 % (7 cases)** : le sol s'assombrit un peu, le corps aussi (son ombre porte sur les marques) |
+
+**Un piège de l'instrument, au passage** : le TOUT PREMIER lancement de la série (`defaut`) comptait +6 appels et +100
+primitives de plus que tous les suivants, et 30 Mo de mémoire vidéo de plus — un effet de premier lancement (caches à
+froid dans un `user://` neuf). Pris seul, il faisait paraître le sol marqué **moins** cher que le défaut. La référence est
+donc le témoin `defaut2`, lancé après. À retenir pour toute matrice : jeter le premier lancement, ou le refaire à la fin.
 
 **Assombrissement moyen** des pixels touchés, en luminance 0..255 : gravats 6,0 ; éclats 11,2 ; chaîne 7,9 ; cadre 9,8 ;
 bande 5,6 ; lettres 9,3. **À la taille du jeu, ça se voit peu** (comme les pochoirs) : la chaîne et les cadres se lisent
@@ -141,7 +146,9 @@ dit donc « la silhouette de J2, ombre comprise, se détache 2 à 3 % moins d'un
 4. **Au bord d'une marque sombre, le sol éclairé iso peut sortir plus clair d'1/255 sur un canal** (6 à 29 pixels par
    scène) : la division lightmap ÷ peinture de `sol_iso_eclaire.gdshader`, à l'arrondi. Pas au-delà d'1/255 ; jamais dans
    le noir. Vaut sans doute aussi pour les pochoirs, le sang, les douilles (non mesuré).
-5. **`tools/photo_ecart.gd.uid` manquait** à la base (engendré par l'import) : ajouté ici.
+5. **Le premier lancement d'une matrice de l'outil « Budget » compte plus que les suivants** (+6 appels, +100 primitives,
+   +30 Mo, ici) : un `user://` neuf. Le jeter, ou le refaire à la fin (`budget.md`, lignes `defaut` et `defaut2`).
+6. **`tools/photo_ecart.gd.uid` manquait** à la base (engendré par l'import) : ajouté ici.
 
 ## 5. Pour tout refaire
 
@@ -191,6 +198,6 @@ fenêtre au premier plan.
 - [x] garde headless (`tools/test_sol_marque.gd`, 27 vérifications)
 - [x] prises et mesures
 - [x] preuve de cuisson (éteint = base, au bit : `cuisson_md5.txt`) et emprises tenues (`emprises.py` : 0 texel hors)
-- [ ] comptes de dessin (outil « Budget »)
+- [x] comptes de dessin (outil « Budget ») : +0 appel, +0 primitive
 - [x] planche (`planche.html`)
 - [x] suite complète : « tout passe, sans erreur de script (641 s) », EXIT 0
