@@ -22,6 +22,7 @@ extends SceneTree
 const MursMeublesIsoT := preload("res://murs_meubles_iso.gd")
 const EnseignesIsoT := preload("res://enseignes_iso.gd")
 const TuyauxIsoT := preload("res://tuyaux_iso.gd")
+const DemiTour := preload("res://tools/demi_tour.gd")
 const PLANCHER := 150
 const EPS := 0.01
 const PAIRES := [["B 0°", 0.0, 180.0], ["B 45°", 45.0, 225.0]]
@@ -238,6 +239,14 @@ func _les_constructions() -> void:
 					manquants += 1
 		_check("%s : chaque objet a ses jumeaux par tout le groupe %s (%d manquants)" % [nom, str(c["groupe"]),
 			manquants], manquants == 0)
+		# La règle commune des décors (`tools/demi_tour.gd`), indépendante du groupe que la construction se donne ; et elle
+		# rougit sur une construction privée des objets des faces nord (celles que J2 voit à 180° et 225°).
+		_check("%s : chaque objet a son jumeau par le demi-tour (règle commune des décors)" % nom,
+			DemiTour.orphelins_murs_meubles(data, c).is_empty(), str(DemiTour.orphelins_murs_meubles(data, c).slice(0, 4)))
+		var sans_nord := c.duplicate()
+		sans_nord["objets"] = objets.filter(func(o: Dictionary) -> bool: return (o["n"] as Vector2) != Vector2(0, -1))
+		_check("%s : la garde rougit sans les objets des faces nord" % nom,
+			not DemiTour.orphelins_murs_meubles(data, sans_nord).is_empty())
 		for paire in PAIRES:
 			for famille in MursMeublesIsoT.FAMILLES:
 				var vus := [0, 0]

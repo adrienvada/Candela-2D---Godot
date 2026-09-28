@@ -23,6 +23,7 @@ extends SceneTree
 
 const EnseignesIsoT := preload("res://enseignes_iso.gd")
 const TuyauxIsoT := preload("res://tuyaux_iso.gd")
+const DemiTour := preload("res://tools/demi_tour.gd")
 const PLANCHER := 120
 ## L'empreinte du placement de chaque carte livrée (`_empreinte`, du texte : ni trigonométrie ni flottant). Un changement
 ## VOULU du placement la change : la recopier depuis la sortie de la suite, en le disant dans le commit.
@@ -239,6 +240,16 @@ func _les_constructions() -> void:
 			avec_zone += 1
 		_bornes(nom, c, h_max, h_bas)
 		_symetrie(nom, data, c)
+		# La règle commune des décors (`tools/demi_tour.gd`), indépendante du groupe que la construction se donne : à 45° B,
+		# J2 voit au demi-tour de ce que voit J1. Et elle rougit sur une construction privée des enseignes des faces nord
+		# (celles que J2 voit à 180° et 225°).
+		_check("%s : chaque enseigne a sa jumelle par le demi-tour (règle commune des décors)" % nom,
+			DemiTour.orphelins_enseignes(data, c).is_empty(), str(DemiTour.orphelins_enseignes(data, c)))
+		var sans_nord := c.duplicate()
+		sans_nord["enseignes"] = (c["enseignes"] as Array).filter(
+			func(e: Dictionary) -> bool: return (c["faces"][int(e["face"])]["n"] as Vector2) != Vector2(0, -1))
+		_check("%s : la garde rougit sans les enseignes des faces nord" % nom,
+			not DemiTour.orphelins_enseignes(data, sans_nord).is_empty())
 		_lisible(nom, c)
 	_check("les cartes livrées portent des enseignes (%d), « ZONE n » sur cinq d'entre elles au moins (%d)" % [total,
 		avec_zone], total >= 12 and avec_zone >= 5)
