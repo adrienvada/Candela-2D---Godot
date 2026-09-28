@@ -536,6 +536,23 @@ static func detail_fusionne() -> bool:
 	return forcer_fusion >= 1 if forcer_fusion >= 0 else DETAIL_FUSION
 
 
+## Q39 — SON PROPRE CORPS, SOMBRE AVEC UN LISERÉ (session cloud corps-sombre, 2026-09-28), derrière `--corps-soi-sombre`,
+## éteint par défaut : ce que le joueur voit de LUI-MÊME seulement (`iso_corps_soi_sombre.gdshaderinc`). La vue d'en face,
+## la simulation et le protocole ne changent pas. `forcer_soi_sombre` : -1 lit la ligne de commande (une fois), 0 l'éteint,
+## 1 l'allume.
+const DRAPEAU_SOI_SOMBRE := "--corps-soi-sombre"
+static var forcer_soi_sombre := -1
+static var _soi_sombre_ligne := -1
+
+
+static func soi_sombre_actif() -> bool:
+	if forcer_soi_sombre >= 0:
+		return forcer_soi_sombre == 1
+	if _soi_sombre_ligne < 0:
+		_soi_sombre_ligne = 1 if OS.get_cmdline_user_args().has(DRAPEAU_SOI_SOMBRE) else 0
+	return _soi_sombre_ligne == 1
+
+
 static func detail_actif() -> bool:
 	if forcer_detail >= 0:
 		return forcer_detail == 1
