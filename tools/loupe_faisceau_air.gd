@@ -19,7 +19,7 @@ extends RefCounted
 ## (pixels de l'image), où `preuve.py` mesure la densité en /255 (au milieu du cône et à son bord) et recadre ses loupes.
 
 const ID := "loupe-faisceau-air"
-const DENSITES := [0.05, 0.1, 0.2, 0.35]
+const DENSITES := [0.35, 0.7, 1.2, 2.0]
 
 var l: RefCounted   # la loupe (`tools/loupe.gd`)
 var p: Node         # le photographe
