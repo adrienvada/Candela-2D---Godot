@@ -19,7 +19,7 @@ Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
 - [x] les chemins, par le code puis à l'image (§ 1, § 2)
 - [x] la correction, sa garde rouge avant / verte après, cueillie à blanc sur les deux bases (§ 3)
 - [x] le coût compté (§ 3)
-- [ ] l'évaluation 11 en petit (§ 4) — en cours
+- [x] l'évaluation 11 en petit (§ 4)
 - [ ] la suite complète
 
 Les commits, dans l'ordre (tous sur `claude/cloud-peinture-perimee`) :
@@ -182,9 +182,41 @@ murs 3D) n'est pas compté ici. **La cadence au changement de manche se mesure s
 
 ## 4. L'évaluation 11, en petit, avec les bons chiffres
 
-*En cours : `tools/photo_ecart.gd` tel quel, `--scenes=croisee,bunker`, dans un worktree d'`origin/claude/cloud-ecart-11`
-où la correction est cueillie ; lancements `defaut`, `temoin`, `tout` ; puis `defaut` et `tout` sans la correction, pour
-mesurer ce que la peinture du Cloître y allumait.*
+`tools/photo_ecart.gd` **tel quel**, `--scenes=croisee,bunker`, dans un worktree jetable d'`origin/claude/cloud-ecart-11`
+(2a2c099) où la correction est cueillie (seul `tools/run_suites.sh` y demandait une résolution, `presentation_3d.gd` est
+propre) ; lancements `defaut`, `temoin`, `tout` (les quatorze drapeaux de son `lancer.sh`), même graine, `--fixed-fps 60`,
+1920×1080 ; et `defaut` SANS la correction, dans un second worktree, pour mesurer ce que la peinture du Cloître allumait.
+Les mesures sont CELLES de l'évaluation 11 : son `mesurer.py`, chargé tel quel par `ecart11.py` ; les anciens chiffres
+lus dans son `mesures.json`. **Rien n'est poussé sur sa branche** ; tout est ici (`ecart11.json`). Première image regardée
+à chaque lancement : aucune intro.
+
+| | carte | ancien (peinture du Cloître) | **juste (sa propre peinture)** |
+|---|---|---|---|
+| noir allumé, `tout` contre `defaut` et `temoin` | Croisée | 8 pixels (max 51), bruit 1 | **1 pixel (max 15), bruit 4** |
+| | Bunker | 34 pixels (max 43), bruit 37 | **0 pixel, bruit 4** |
+| clarté du corps (luminance, couleur, pixels), `defaut` | Croisée | 135,4 (114, 140, 157), 1 805 px | 135,4 (114, 140, 157), 1 799 px |
+| | Bunker | 136,1 (114, 140, 158), 1 784 px | 135,9 (114, 140, 158), 1 811 px |
+| clarté du corps, `tout` | Croisée | 37,8 (32, 39, 45), 2 147 px | 37,8 (32, 39, 45), 2 150 px |
+| | Bunker | 38,0 (33, 39, 45), 2 170 px | 37,9 (33, 39, 45), 2 164 px |
+| 1 % le plus clair (duel), `defaut` | Croisée | 138,7, (217, 181, 114) | **131,4, (179, 151, 106)** |
+| | Bunker | 137,8, (212, 179, 114) | **130,2, (172, 147, 107)** |
+| 1 % le plus clair, `tout` | Croisée | 212,1, (240, 218, 177) | 210,6, (237, 216, 180) |
+| | Bunker | 212,1, (239, 218, 179) | 211,0, (237, 216, 182) |
+
+**Lecture.**
+- **Les taches du sol marqué n'existent pas** : sur sa propre peinture, « tout » n'allume plus rien au-dessus du bruit
+  (1 pixel à 15/255 à la Croisée, contre 8 à 51). C'est ce qu'annonçait « Sol marqué (2) ».
+- **Le jeu PAR DÉFAUT de l'évaluation 11 était lui-même faussé** : même lancement `defaut`, prise `noir`, la peinture
+  du Cloître allumait **524 pixels noirs à la Croisée et 716 au Bunker** que la bonne peinture laisse noirs (33 000 et
+  42 000 pixels changés de plus de 8/255 ; entre deux lancements différents, donc bruit de lancement compris) :
+  `img/ecart11_croisee_noir.jpg`, `img/ecart11_bunker_noir.jpg`. Des faces entières de murs y sont blanches.
+- **Le « 1 % le plus clair » du défaut baisse de 7 à 8 points** (et sa couleur de ~40 en rouge) : la peinture périmée
+  gonflait aussi les faces ÉCLAIRÉES. Avec « tout », l'écart est d'un ou deux points — la lampe crème domine ce 1 %.
+- **Le corps ne bouge pas** (≤ 0,2 de luminance) : il ne lit pas la peinture.
+- Le lancement `tout` sans la correction n'a pas été refait (arrêté pour laisser la suite complète tourner) : les anciens
+  chiffres de l'évaluation 11 en tiennent lieu, pris dans la même situation.
+
+![la Croisée de l'évaluation 11, noir, défaut](img/ecart11_croisee_noir.jpg)
 
 ## 5. Défauts hors de ma tâche — signalés, pas corrigés
 

@@ -87,6 +87,35 @@
    "autres_composantes": 1
   }
  },
+ "tout/croisee_noir": {
+  "noir_allume": 1,
+  "bruit": 4,
+  "max_allume": 15,
+  "boite": [
+   947,
+   551,
+   947,
+   551
+  ],
+  "ancien": {
+   "noir_allume": 8,
+   "bruit": 1,
+   "max_allume": 51,
+   "boite": [
+    944,
+    301,
+    1051,
+    574
+   ]
+  }
+ },
+ "peinture_perimee/defaut/croisee_noir": {
+  "change": 33342,
+  "plus_clair": 32003,
+  "plus_sombre": 1035,
+  "noir_allume": 524,
+  "noir_strict_allume": 356
+ },
  "defaut/bunker_duel": {
   "top1": 130.2,
   "top1_rgb": [
@@ -174,5 +203,28 @@
    ],
    "autres_composantes": 1
   }
+ },
+ "tout/bunker_noir": {
+  "noir_allume": 0,
+  "bruit": 4,
+  "max_allume": 0,
+  "ancien": {
+   "noir_allume": 34,
+   "bruit": 37,
+   "max_allume": 43,
+   "boite": [
+    316,
+    176,
+    1809,
+    995
+   ]
+  }
+ },
+ "peinture_perimee/defaut/bunker_noir": {
+  "change": 42535,
+  "plus_clair": 40706,
+  "plus_sombre": 1342,
+  "noir_allume": 716,
+  "noir_strict_allume": 490
  }
 }
