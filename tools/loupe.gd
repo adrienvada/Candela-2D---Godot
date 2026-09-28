@@ -80,6 +80,8 @@ static func catalogue() -> Array[Dictionary]:
 			"ISO13 (session cloud, 2026-09-25 21:41) : la fusée seule dans le noir puis devant une face de mur, à plusieurs âges, sans les volumes, puis avec l'essai du cœur (IsoVolumes.coeur_fusee) éteint, rouge, presque blanc, basculé sur place. Imprime la lightmap lue sous la fusée."],
 		["loupe-fusee-ages", "La fusée posée, vieillie en temps de jeu : 0,5 à 8 s, torche de J1 puis torches éteintes, fumée coupée et rétablie",
 			"Q34 = C et Q35 = B (session cloud « fusée », 2026-09-27) : la planche à 3,5 s. Une fusée vieillit par son propre pas de physique, arrêtée à chaque âge le temps des prises (tools/loupe_fusee_ages.gd). --fusee-rouge-long après -- pour le rouge long."],
+		["loupe-fusee-masque-formes", "Le masque de la fumée et ses formes moins chères, en un seul processus, plus le compte des fragments",
+			"Session cloud « masque-fumée » (2026-09-27) : A sans fumée (cinq fois), B fumée, C la fumée masquée par Gadgets (deux fois : le bruit entre deux prises), C1 à C3 les formes compacte, bande resserrée, pochoir, C4 et C5 la lumière d'abord et le juge ajusté (session « masque-fumée-2 ») (IsoVolumes.FORMES_MASQUE) ; puis, sol et murs peints en noir, chaque fragment de fumée compté : tous, ceux dont la couleur se verrait, ceux qui survivent au masque, et ceux qui entrent dans la bande du sol ou de l'usure des faces (le calcul exact)."],
 		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
 			"ISO13, Q31 : la sortie 3D de ce renderer écrase tout canal écrit à 7/255 ou moins (rampes du 2026-09-25). Le masque de la fumée en dépend : cette garde, en fenêtre, échoue si 7 ne sort plus à 0 ou si 8 sort à 0."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
@@ -230,6 +232,12 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 			printerr("  ✗ loupe-fusee-masque-preuve : aucun sol dégagé à l'écran hors de la torche")
 		else:
 			await _loupe_fusee_masque_preuve(plans, lieux[0])
+			await p._ranger_les_gadgets()
+	if p._demande(plans, "loupe-fusee-masque-formes"):
+		if lieux.is_empty():
+			printerr("  ✗ loupe-fusee-masque-formes : aucun sol dégagé à l'écran hors de la torche")
+		else:
+			await _loupe_fusee_masque_formes(plans, lieux[0])
 			await p._ranger_les_gadgets()
 	if p._demande(plans, "loupe-rampe-3d"):
 		await _loupe_rampe_3d(plans)
@@ -852,6 +860,419 @@ func _loupe_fusee_masque_preuve(plans: Array[Dictionary], lieu: Vector2) -> void
 	volumes.set("volumes_actifs", true)
 	volumes.call("poser_masque_fumee", masque_avant)
 	m.set("_killcam_cadrage_tenu", regard_avant)
+
+
+## Session cloud « masque-fumée » (2026-09-27) — LE MASQUE ET SES FORMES, EN UN SEUL PROCESSUS. La mise en scène de
+## `loupe-fusee-masque-preuve`, à l'identique (fusée seule, âge fixe, torches éteintes, caméra posée, LED figées par
+## `--led-murs-fige`), et ses prises dans le même ordre, A cinq fois ; C est prise pour CHAQUE forme du masque (0, celle de
+## Gadgets ; 1 à 3, `IsoVolumes.FORMES_MASQUE`), la même couche basculée sur place. Chaque C se juge par
+## `tools/preuve_masque_fumee.py` (fuite zéro là où A est noir ; B au pixel là où A montre le sol) et contre C (l'écart au
+## masque de Gadgets, au pixel) : `tools/masque_fumee/formes.py`.
+## Puis le COMPTE : le sol et les murs peints en noir (comme la prise « murs »), les lueurs coupées, chaque fragment de fumée
+## qui passe l'opacité écrit 50/255 en mélange additif — l'écran montre combien de couches le recouvrent (0 à 4). Prises :
+## « compte-zero », la fumée coupée (ce qui reste allumé sans elle) ; « compte », tous les fragments ; « compte-visible », ceux
+## dont la couleur se verrait (un canal écrit au-dessus du point noir) ; « compte-masque », ceux que le masque de Gadgets
+## garde ; « compte-bande-tait » et « compte-bande-garde », le même masque dont le calcul EXACT (le sol `sol_ecrit`, l'usure
+## d'une face) est remplacé par « noir », puis par « visible » : leur différence compte les fragments qui entrent dans une
+## bande — ceux qui paient le calcul exact. Le masque y est recopié dans le code du double, modifié en texte ; rien du jeu
+## n'est touché.
+func _loupe_fusee_masque_formes(plans: Array[Dictionary], lieu: Vector2) -> void:
+	var id := "loupe-fusee-masque-formes"
+	var m: Node = p._main
+	var f: Node2D = (load("res://fusee.gd") as GDScript).new()
+	f.set("depart", lieu)
+	f.set("direction", Vector2.DOWN)
+	f.set("joueurs", [m.p1, m.p2])
+	m.bullet_container.add_child(f)
+	await p.get_tree().process_frame
+	f.set_physics_process(false)
+	f.global_position = lieu
+	f.call("forcer_age", AGE_FUSEE_BORD)
+	var pres := Presentation3D.instance()
+	var miroirs: Object = pres.get("_miroirs") if pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null:
+		printerr("  ✗ %s : volumes iso introuvables" % id)
+		return
+	var masque_avant: bool = volumes.get("masque_fumee")
+	var forme_avant: int = volumes.get("forme_masque")
+	volumes.call("poser_masque_fumee", false)
+	for i in 40:
+		_tenir_sans_torches()
+		await p.get_tree().physics_frame
+	var taille := Vector2(DisplayServer.window_get_size())
+	print("  · %s : fusée seule en %s, âge %.1f s, torches éteintes, éblouissement J1 %.3f ; à l'écran, fusée %s ; lacet J1 %.1f°"
+		% [id, str(lieu), AGE_FUSEE_BORD, float(m.p1.dazzle_amount), str(_pixel_taille(taille, lieu).round()),
+		float(m.call("lacet_de_la_vue", 0)) if m.has_method("lacet_de_la_vue") else 0.0])
+	# La caméra tenue puis posée, comme la preuve de Gadgets (voir `_loupe_fusee_masque_preuve`).
+	var repere_prec: Vector2 = (m.vp1 as SubViewport).canvas_transform.origin
+	var tenues := 0
+	var images := 0
+	while tenues < 30 and images < 1200:
+		_tenir_sans_torches()
+		await p.get_tree().physics_frame
+		await p.get_tree().process_frame
+		images += 1
+		var o: Vector2 = (m.vp1 as SubViewport).canvas_transform.origin
+		tenues = tenues + 1 if o == repere_prec else 0
+		repere_prec = o
+	var regard_avant: bool = m.get("_killcam_cadrage_tenu")
+	m.set("_killcam_cadrage_tenu", true)
+	print("  · %s : caméra 2D %s après %d pas de physique, puis posée" % [id, "tenue" if tenues >= 30 else "ENCORE EN MOUVEMENT",
+		images])
+	MurLed.est_actif()
+	print("  · %s : bandeau LED %s" % [id, "figé à %.2f de son sommet" % MurLed._fige if MurLed._fige >= 0.0
+		else "qui RESPIRE — l'instant ne sera pas figé (--led-murs-fige)"])
+	var etapes := [["a", false, -1], ["a1", false, -1], ["b", true, -1], ["a2", false, -1], ["c", true, 0], ["c1", true, 1],
+		["c2", true, 2], ["c3", true, 3], ["c4", true, 4], ["c5", true, 5], ["c0", true, 0], ["a3", false, -1], ["a4", false, -1]]
+	for etape in etapes:
+		volumes.set("volumes_actifs", etape[1])
+		volumes.call("poser_masque_fumee", false)
+		if int(etape[2]) >= 0:
+			volumes.set("forme_masque", int(etape[2]))
+			volumes.call("poser_masque_fumee", true)
+		await _prise_entiere(plans, id, String(etape[0]), 0.4, _tenir_sans_torches)
+		var ct: Transform2D = (m.vp1 as SubViewport).canvas_transform
+		var sh: Shader = null
+		for e: Dictionary in volumes.call("suivis"):
+			if String(e["genre"]) == "fumee" and not (e["mats"] as Array).is_empty():
+				sh = (e["mats"][0] as ShaderMaterial).shader
+		print("  · %s-%s : fumée %s, masque %s ; repère 2D de J1 origine (%.6f, %.6f) échelle %.6f"
+			% [id, etape[0], "oui" if etape[1] else "non",
+			("forme « %s »" % IsoVolumes.forme_annoncee(sh)) if sh != null and sh.code.contains("#define FUMEE_MASQUE\n")
+			else "non", ct.origin.x, ct.origin.y, ct.x.length()])
+	# L'ÉCRAN SCINDÉ : les deux vues dans la même fenêtre, J1 à gauche, J2 à droite (lacet B : J2 regarde depuis le côté
+	# opposé). Le pochoir y vit dans DEUX sous-vues, chacune avec son propre tampon de pochoir : sans lui, les couches s'y
+	# dessineraient partout et le masque n'aurait aucun effet — seule une image le prouve. A trois fois (le bruit), B, C
+	# (Gadgets), C3 (le pochoir) ; `formes.py` juge C3 contre A (fuite) et contre C (écart), vue par vue.
+	p._deux_vues()
+	# J2 aussi, tenu : torche éteinte. Proche de la fusée, il en est ÉBLOUI, et le voile et le flou de sa vue
+	# (`brouillage.gd`) variaient d'une prise à l'autre sur toute sa moitié (jusqu'à 226/255, premier essai) : aucune
+	# comparaison au pixel n'y tenait. Le remettre à zéro à chaque image laissait un pas d'intégration, donc un voile à 1/255
+	# partout (deuxième essai). L'éblouissement tend vers un PLAFOND (la lumière reçue, `GameState`), fixe ici (fusée figée) :
+	# on attend qu'il ne bouge plus, avec les caméras. Le masque ne dépend pas de l'éblouissement ; sa vue n'a alors aucun
+	# pixel noir (le voile relève tout) : pour J2, seule l'égalité au masque de Gadgets se juge.
+	var tenir_deux := func() -> void:
+		_tenir_sans_torches()
+		m.p2.flashlight_on = false
+		if p._pantins.size() > 1:
+			p._pantins[1].torche = false
+	# La caméra de J2 n'est pas tenue par `_killcam_cadrage_tenu` : on attend qu'elle ne bouge plus, au bit près, trente pas
+	# de physique de suite, comme celle de J1 plus haut (sa convergence finit au point fixe du lissage).
+	var reperes := [(m.vp1 as SubViewport).canvas_transform.origin, (m.vp2 as SubViewport).canvas_transform.origin,
+		float(m.p2.dazzle_amount)]
+	var tenues_s := 0
+	var images_s := 0
+	while tenues_s < 30 and images_s < 2400:
+		tenir_deux.call()
+		await p.get_tree().physics_frame
+		await p.get_tree().process_frame
+		images_s += 1
+		var o := [(m.vp1 as SubViewport).canvas_transform.origin, (m.vp2 as SubViewport).canvas_transform.origin,
+			float(m.p2.dazzle_amount)]
+		tenues_s = tenues_s + 1 if o == reperes else 0
+		reperes = o
+	print("  · %s : écran scindé, caméras 2D de J1 et J2 et éblouissement de J2 (%.4f) %s après %d pas de physique" % [id,
+		float(m.p2.dazzle_amount), "tenus" if tenues_s >= 30 else "ENCORE EN MOUVEMENT", images_s])
+	for etape in [["s-a", false, -1], ["s-b", true, -1], ["s-a1", false, -1], ["s-c", true, 0], ["s-c3", true, 3],
+			["s-c4", true, 4], ["s-c5", true, 5], ["s-a2", false, -1]]:
+		volumes.set("volumes_actifs", etape[1])
+		volumes.call("poser_masque_fumee", false)
+		if int(etape[2]) >= 0:
+			volumes.set("forme_masque", int(etape[2]))
+			volumes.call("poser_masque_fumee", true)
+		await _prise_entiere(plans, id, String(etape[0]), 0.4, tenir_deux)
+		print("  · %s-%s : écran scindé, fumée %s, forme %d" % [id, etape[0], "oui" if etape[1] else "non", int(etape[2])])
+	await _vue_unique_de_j2(plans, id, volumes, lieu)
+	p._vue_unique()
+	for i in 30:
+		_tenir_sans_torches()
+		await p.get_tree().process_frame
+	volumes.call("poser_masque_fumee", false)
+	var mat_mur: ShaderMaterial = pres.get("_mat_mur")
+	var sols: Array = pres.get("_mat_sols")
+	if mat_mur != null:
+		# La carte des murs, comme la preuve de Gadgets : faces en blanc, dessus des murs hauts en rouge, des murets en vert.
+		var blanc := Shader.new()
+		blanc.code = "shader_type spatial;\nrender_mode unshaded;\nvarying vec3 w;\n" \
+			+ "void vertex() { w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }\n" \
+			+ "void fragment() { vec3 n = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;\n" \
+			+ "ALBEDO = n.y > 0.5 ? (w.y > %.1f ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)) : vec3(1.0); }\n" \
+			% (0.5 * (MapGeometry.HAUTEUR_MUR_HAUT + MapGeometry.HAUTEUR_MUR_BAS) * MursBas.TUILE)
+		var noir := Shader.new()
+		noir.code = "shader_type spatial;\nrender_mode unshaded;\nvoid fragment() { ALBEDO = vec3(0.0); }\n"
+		var shader_mur := mat_mur.shader
+		var shaders_sols: Array = []
+		for s in sols:
+			shaders_sols.append((s as ShaderMaterial).shader)
+			(s as ShaderMaterial).shader = noir
+		volumes.set("volumes_actifs", false)
+		mat_mur.shader = blanc
+		await _prise_entiere(plans, id, "murs", 0.4, _tenir_sans_torches)
+		# LE COMPTE : les murs noirs aussi, les lueurs coupées ; la fumée remplacée par son double qui compte.
+		mat_mur.shader = noir
+		var lueurs_avant: bool = volumes.get("lueurs_actives")
+		volumes.set("lueurs_actives", false)
+		await _prise_entiere(plans, id, "compte-zero", 0.4, _tenir_sans_torches)
+		volumes.set("volumes_actifs", true)
+		var usure := IsoMateriaux.usure_essai_active()
+		var masque_src := FileAccess.get_file_as_string("res://volume_masque.gdshaderinc")
+		var sol_exact := "\treturn ecran_noir(sol_ecrit(px, deux, aa, px_monde, g_x, g_y));"
+		var face_exacte := "\tc = pate_facteur(c, usure_poids(c, usure_face(e.xz, n, tangente, e.y, haut, px_monde)));"
+		# La bande RESSERRÉE (forme 2) : le même compte, sur le masque compact dont le sol exact reprend la pâte déjà calculée.
+		var compact_src := FileAccess.get_file_as_string("res://volume_masque_compact.gdshaderinc")
+		var inclus_compact := '#include "res://volume_masque_compact.gdshaderinc"'
+		var sol_resserre := "\treturn ecran_noir(sol_ecrit_depuis(px, lu, c, matiere, dalle, px_monde));"
+		if not masque_src.contains(sol_exact) or not masque_src.contains(face_exacte) or not compact_src.contains(sol_resserre) \
+				or not masque_src.contains(inclus_compact):
+			printerr("  ✗ %s : le masque a changé, le compte de la bande ne sait plus où couper" % id)
+		for spec in [["compte", "vec3(50.0 / 255.0)", ""],
+				["compte-visible", "(max(c.r, max(c.g, c.b)) < 8.0 / 255.0 ? vec3(0.0) : vec3(50.0 / 255.0))", ""],
+				["compte-masque", "vec3(50.0 / 255.0)", masque_src],
+				["compte-bande-tait", "vec3(50.0 / 255.0)", masque_src.replace(sol_exact, "\treturn true;").replace(
+					face_exacte, "\treturn true;")],
+				["compte-bande-garde", "vec3(50.0 / 255.0)", masque_src.replace(sol_exact, "\treturn false;").replace(
+					face_exacte, "\treturn false;")],
+				["compte-resserre-tait", "vec3(50.0 / 255.0)", masque_src.replace(face_exacte, "\treturn true;").replace(
+					inclus_compact, compact_src.replace(sol_resserre, "\treturn true;"))],
+				["compte-resserre-garde", "vec3(50.0 / 255.0)", masque_src.replace(face_exacte, "\treturn false;").replace(
+					inclus_compact, compact_src.replace(sol_resserre, "\treturn false;"))]]:
+			var compte := Shader.new()
+			var variante: Shader = IsoVolumes.variante_forme(IsoVolumes.variante_masque(usure), 2) \
+				if String(spec[0]).begins_with("compte-resserre") else IsoVolumes.variante_masque(usure)
+			var base: String = IsoVolumes.SHADER_VOLUME.code if String(spec[2]).is_empty() \
+				else variante.code.replace('#include "res://volume_masque.gdshaderinc"', String(spec[2]))
+			compte.code = base.replace("blend_mix", "blend_add").replace(
+				"\tALBEDO = c;\n\tALPHA = a;", "\tALBEDO = %s;\n\tALPHA = 1.0;" % spec[1])
+			var remplaces: Array = []
+			# Retenu comme « variante masquée » le temps du compte : `_pousser_lightmaps` choisit ses matériaux par leur shader,
+			# et un double inconnu d'elle lirait la texture par défaut (piège du 2026-09-25) — la couleur comptée serait fausse.
+			var retenu: Shader = volumes.get("_shader_masque")
+			volumes.set("_shader_masque", compte)
+			for i in 4:
+				for e: Dictionary in volumes.call("suivis"):
+					if String(e["genre"]) != "fumee":
+						continue
+					for mm in e["mats"]:
+						if (mm as ShaderMaterial).shader == IsoVolumes.SHADER_VOLUME:
+							(mm as ShaderMaterial).shader = compte
+							volumes.call("_recopier_le_mur", mm)
+							remplaces.append(mm)
+				_tenir_sans_torches()
+				await p.get_tree().process_frame
+			await _prise_entiere(plans, id, String(spec[0]), 0.4, _tenir_sans_torches)
+			print("  · %s-%s : %d couche(s) de fumée comptées (%s)" % [id, spec[0], remplaces.size(), spec[1]])
+			for mm in remplaces:
+				(mm as ShaderMaterial).shader = IsoVolumes.SHADER_VOLUME
+			volumes.set("_shader_masque", retenu)
+		await _compter_le_juge(plans, id, volumes, usure)
+		volumes.set("lueurs_actives", lueurs_avant)
+		mat_mur.shader = shader_mur
+		for k in sols.size():
+			(sols[k] as ShaderMaterial).shader = shaders_sols[k]
+	volumes.set("volumes_actifs", true)
+	volumes.set("forme_masque", forme_avant)
+	volumes.call("poser_masque_fumee", masque_avant)
+	m.set("_killcam_cadrage_tenu", regard_avant)
+
+
+## Session cloud « masque-fumée-2 » (2026-09-28) — LA VUE UNIQUE DE J2, au pixel. En écran scindé, J2, proche de la fusée,
+## en est ÉBLOUI : son voile et son flou animés font différer deux prises identiques, et l'égalité au pixel n'y a jamais été
+## prouvée (session « masque-fumée », « non prouvé »). L'éblouissement de proximité exige une LIGNE DE VUE vers la source
+## (`GameState._plafond_de_source`) ; la caméra iso, elle, voit par-dessus les murs. J2 est donc posé À L'ABRI d'un mur, à
+## portée de vue de la fusée (250 à 420 px, le rayon depuis la fusée coupé par un mur, aucun mur sous ses pieds), et la
+## fenêtre montre SA vue seule (la racine rend la vue de J2, lacet B : il regarde depuis le côté opposé). Prises « j2-a »
+## (quatre fois : le bruit), « j2-b », « j2-c » (Gadgets), « j2-c3 » à « j2-c5 » ; `formes.py` les juge comme la vue de J1.
+func _vue_unique_de_j2(plans: Array[Dictionary], id: String, volumes: Object, fusee: Vector2) -> void:
+	var m: Node = p._main
+	var j2_avant := _j2
+	var espace := (m.p2 as Node2D).get_world_2d().direct_space_state
+	var cercle := CircleShape2D.new()
+	cercle.radius = 16.0
+	# Les places candidates : à l'abri d'un mur (le rayon depuis la fusée coupé), aucun mur sous les pieds. Une place n'est
+	# retenue que si l'éblouissement de J2 y retombe EXACTEMENT à 0 : à 0°, la première place (837, 392) le laissait à un reste
+	# que l'affichage à quatre décimales disait nul, et le voile relevait toute sa vue de 1/255 (aucun pixel noir, le test du
+	# noir vide) — 2026-09-28.
+	var candidates: Array[Vector2] = []
+	for r in [260.0, 300.0, 340.0, 380.0, 420.0]:
+		for k in 48:
+			var q: Vector2 = fusee + Vector2.from_angle(TAU * float(k) / 48.0) * r
+			var libre := PhysicsShapeQueryParameters2D.new()
+			libre.shape = cercle
+			libre.transform = Transform2D(0.0, q)
+			libre.collision_mask = MapGeometry.WALL_LAYER
+			if not espace.intersect_shape(libre, 1).is_empty():
+				continue
+			var rayon := PhysicsRayQueryParameters2D.create(fusee, q, MapGeometry.WALL_LAYER)
+			if espace.intersect_ray(rayon).is_empty():
+				continue
+			# Deux candidates d'un même anneau à moins de 80 px l'une de l'autre ne disent rien de plus.
+			if candidates.any(func(c: Vector2) -> bool: return c.distance_to(q) < 80.0):
+				continue
+			candidates.append(q)
+	if candidates.is_empty():
+		printerr("  ✗ %s : aucune place à l'abri pour J2 autour de la fusée" % id)
+		return
+	var c1 := (m.vp1 as SubViewport).get_parent() as Control
+	var c2 := (m.vp2 as SubViewport).get_parent() as Control
+	c1.hide()
+	c2.show()
+	p._ui.center_line.hide()
+	m._accorder_rendu_aux_vues()
+	var tenir_j2 := func() -> void:
+		_tenir_sans_torches()
+		m.p2.flashlight_on = false
+		if p._pantins.size() > 1:
+			p._pantins[1].torche = false
+	var choisi := Vector2.INF
+	var tenues := 0
+	var images := 0
+	for q in candidates.slice(0, 8):
+		_j2 = q
+		var reperes := [(m.vp2 as SubViewport).canvas_transform.origin, float(m.p2.dazzle_amount)]
+		tenues = 0
+		images = 0
+		while tenues < 30 and images < 2400:
+			tenir_j2.call()
+			await p.get_tree().physics_frame
+			await p.get_tree().process_frame
+			images += 1
+			var o := [(m.vp2 as SubViewport).canvas_transform.origin, float(m.p2.dazzle_amount)]
+			tenues = tenues + 1 if o == reperes else 0
+			reperes = o
+		print("  · %s : J2 essayé en %s, éblouissement %.6f" % [id, str(q), float(m.p2.dazzle_amount)])
+		if float(m.p2.dazzle_amount) == 0.0:
+			choisi = q
+			break
+	if choisi == Vector2.INF:
+		printerr("  ✗ %s : aucune place où l'éblouissement de J2 retombe à 0" % id)
+		_j2 = j2_avant
+		c2.hide()
+		c1.show()
+		m._accorder_rendu_aux_vues()
+		return
+	var pres := Presentation3D.instance()
+	var cam = pres._camera_de(1) if pres != null else null
+	var vue: Viewport = pres.viewport_ecran(1) if pres != null else null
+	var ecran := Vector2(-1, -1)
+	if cam != null and vue != null:
+		var logique := vue.get_visible_rect().size
+		ecran = cam.vers_ecran(fusee, logique, 0.0) * Vector2(DisplayServer.window_get_size()) / logique
+	print("  · %s : vue unique de J2 en %s (%.0f px de la fusée, à l'abri d'un mur), caméra et éblouissement (%.6f) %s après %d pas ;"
+		% [id, str(choisi), choisi.distance_to(fusee), float(m.p2.dazzle_amount), "tenus" if tenues >= 30 else "ENCORE EN MOUVEMENT",
+		images] + " fusée à l'écran en %s ; lacet de J2 %.1f°" % [str(ecran.round()),
+		float(m.call("lacet_de_la_vue", 1)) if m.has_method("lacet_de_la_vue") else 0.0])
+	for etape in [["j2-a", false, -1], ["j2-a1", false, -1], ["j2-b", true, -1], ["j2-a2", false, -1], ["j2-c", true, 0],
+			["j2-c3", true, 3], ["j2-c4", true, 4], ["j2-c5", true, 5], ["j2-c0", true, 0], ["j2-a3", false, -1]]:
+		volumes.set("volumes_actifs", etape[1])
+		volumes.call("poser_masque_fumee", false)
+		if int(etape[2]) >= 0:
+			volumes.set("forme_masque", int(etape[2]))
+			volumes.call("poser_masque_fumee", true)
+		await _prise_entiere(plans, id, String(etape[0]), 0.4, tenir_j2)
+		print("  · %s-%s : vue unique de J2, fumée %s, forme %d ; éblouissement de J2 %.6f" % [id, etape[0],
+			"oui" if etape[1] else "non", int(etape[2]), float(m.p2.dazzle_amount)])
+	volumes.set("volumes_actifs", true)
+	volumes.call("poser_masque_fumee", false)
+	_j2 = j2_avant
+	c2.hide()
+	c1.show()
+	m._accorder_rendu_aux_vues()
+
+
+## Session cloud « masque-fumée-2 » (2026-09-28) — LE COMPTE DU JUGE du pochoir (formes 3 à 5), sol et murs déjà peints en noir,
+## lueurs coupées : les couches ne dessinent rien, le juge écrit 50/255 (mélange additif) là où il écrirait le pochoir, ou
+## là où il passe à un point donné de son calcul. Prises « juge-tout-k » (chaque fragment rastérisé du juge de la forme k),
+## « juge-couvre-k » (ceux qui couvrent une couche et posent la question), « juge-noir-k » (la réponse « noir » : le pochoir
+## écrit — les formes 3, 4 et 5 doivent l'écrire aux mêmes pixels), et, par différence de deux prises (le point remplacé
+## par « noir », puis par « visible »), les pixels couverts qui paient la PÂTE du sol et ceux qui lisent sa MATIÈRE.
+## Le masque y est recopié dans le code du double, modifié en texte ; rien du jeu n'est touché.
+func _compter_le_juge(plans: Array[Dictionary], id: String, volumes: Object, usure: bool) -> void:
+	var rien := Shader.new()
+	rien.code = "shader_type spatial;\nrender_mode unshaded;\nvoid fragment() { discard; }\n"
+	var masque_src := FileAccess.get_file_as_string("res://volume_masque.gdshaderinc")
+	var compact_src := FileAccess.get_file_as_string("res://volume_masque_compact.gdshaderinc")
+	var inclus_compact := '#include "res://volume_masque_compact.gdshaderinc"'
+	var inclus_masque := '#include "res://volume_masque.gdshaderinc"'
+	var pate := "\tvec3 c = pate(lu, l, style, px, vec2(0.0), l, aa);\n\tif (max(c.r"
+	var matiere := "\tfloat matiere = mix(1.0, textureLod(sol_texture_sol, px / sol_periode_sol_px,"
+	var question := "\tif (!juge_couvre(monde, -INV_VIEW_MATRIX[2].xyz) || !masque_compact_montre_noir(monde, -INV_VIEW_MATRIX[2].xyz,"
+	var fin_question := "PROJECTION_MATRIX[1][1])))) {\n\t\tdiscard;"
+	var sortie := "\tALBEDO = vec3(0.0);\n\tALPHA = 0.0;\n#else"
+	if compact_src.count(pate) != 1 or compact_src.count(matiere) != 1 \
+			or not IsoVolumes.SHADER_VOLUME.code.contains(question) or not IsoVolumes.SHADER_VOLUME.code.contains(sortie):
+		printerr("  ✗ %s : le juge a changé, le compte ne sait plus où couper" % id)
+		return
+	var avant := func(point: String, reponse: String) -> String:
+		return compact_src.replace(point, "\tif (l > -1.0) {\n\t\treturn %s;\n\t}\n" % reponse + point)
+	var specs := []
+	for k in [3, 4, 5]:
+		specs.append(["juge-noir-%d" % k, k, "", ""])
+	for k in [3, 5]:
+		specs.append(["juge-tout-%d" % k, k, "", "tout"])
+		specs.append(["juge-couvre-%d" % k, k, "", "couvre"])
+	for k in [3, 4]:
+		specs.append(["juge-pate-tait-%d" % k, k, avant.call(pate, "true"), ""])
+		specs.append(["juge-pate-garde-%d" % k, k, avant.call(pate, "false"), ""])
+		specs.append(["juge-matiere-tait-%d" % k, k, avant.call(matiere, "true"), ""])
+		specs.append(["juge-matiere-garde-%d" % k, k, avant.call(matiere, "false"), ""])
+	var forme_avant: int = volumes.get("forme_masque")
+	var formes_posees: Dictionary = volumes.get("_formes_posees")
+	for spec in specs:
+		volumes.call("poser_masque_fumee", false)
+		volumes.set("forme_masque", int(spec[1]))
+		volumes.call("poser_masque_fumee", true)
+		for i in 3:
+			_tenir_sans_torches()
+			await p.get_tree().process_frame
+		var juges: Array = []
+		var couches: Array = []
+		for e: Dictionary in volumes.call("suivis"):
+			if String(e["genre"]) != "fumee":
+				continue
+			if is_instance_valid(e.get("juge")):
+				juges.append(e["juge"])
+			for mm in e["mats"]:
+				couches.append([mm, (mm as ShaderMaterial).shader])
+		if juges.is_empty():
+			printerr("  ✗ %s-%s : aucun juge" % [id, spec[0]])
+			continue
+		var mj := (juges[0] as MeshInstance3D).material_override as ShaderMaterial
+		var code: String = IsoVolumes.variante_juge(usure, int(spec[1])).code
+		if not String(spec[2]).is_empty():
+			code = code.replace(inclus_masque, masque_src.replace(inclus_compact, String(spec[2])))
+		var i0 := code.find(question)
+		var i1 := code.find(fin_question, i0)
+		var q := code.substr(i0, i1 + fin_question.length() - i0)
+		if spec[3] == "tout":
+			q = q.replace("\tif (!juge_couvre(", "\tif (false && (!juge_couvre(").replace(fin_question,
+				"PROJECTION_MATRIX[1][1]))))) {\n\t\tdiscard;")
+		elif spec[3] == "couvre":
+			q = q.replace("|| !masque_compact_montre_noir(", "|| (false && !masque_compact_montre_noir(").replace(fin_question,
+				"PROJECTION_MATRIX[1][1]))))) {\n\t\tdiscard;")
+		code = code.substr(0, i0) + q + code.substr(i1 + fin_question.length())
+		var compte := Shader.new()
+		compte.code = code.replace("blend_mix", "blend_add").replace(sortie,
+			"\tALBEDO = vec3(50.0 / 255.0);\n\tALPHA = 1.0;\n#else")
+		var shader_juge := mj.shader
+		formes_posees[compte] = true
+		mj.shader = compte
+		for c in couches:
+			(c[0] as ShaderMaterial).shader = rien
+		for i in 4:
+			_tenir_sans_torches()
+			await p.get_tree().process_frame
+		await _prise_entiere(plans, id, String(spec[0]), 0.4, _tenir_sans_torches)
+		print("  · %s-%s : juge de la forme %d, %s ; maillage %s, échelle %.1f" % [id, spec[0], int(spec[1]),
+			"point remplacé" if not String(spec[2]).is_empty() else (String(spec[3]) if spec[3] != "" else "sa réponse"),
+			(juges[0] as MeshInstance3D).mesh.get_class(),
+			(juges[0] as MeshInstance3D).scale.x])
+		for c in couches:
+			(c[0] as ShaderMaterial).shader = c[1]
+		mj.shader = shader_juge
+		formes_posees.erase(compte)
+	volumes.call("poser_masque_fumee", false)
+	volumes.set("forme_masque", forme_avant)
 
 
 ## ISO13, Q31 — LA GARDE DE LA COURBE DE LA SORTIE 3D. Le masque de la fumée (`volume_masque.gdshaderinc`,

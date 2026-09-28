@@ -1,0 +1,25 @@
+base : af7c2b3 Masque de la fumée 2 : les outils — V4 et V5 dans le plan l · diff :  3 files changed, 347 insertions(+), 79 deletions(-)
+début : 2026-09-28 03:11:02 (Paris) · SECONDES=5 · repos initial 3 s, avant chaque prise 1 s · porte : étranger ≤ 20 %, Claude Helper ≤ 30 %, équilibre 2 points, 4 reprises au plus
+⚠ ESSAI DU CLOUD : le vrai banc, des charges SIMULÉES ; la cadence ne vaut rien ici
+repos complet : 3 s sans rien lancer (03:11:02)
+Claude Helper pendant le repos : médiane 19.0 %, max 24.0 % ; premier tiers 19.0, dernier tiers 24.0 ; processus : Claude Helper (G (max 2.0), Claude Helper (R (max 23.0)
+chauffe    M0  médiane    8   1 % bas (hors 10 s)    0   porte OUVERTE - ; helper 17.5 28.0 ; Claude Helper (G,Claude Helper (R ; 14 échantillons
+01_M0      M0  médiane    8   1 % bas (hors 10 s)    0   porte OUVERTE - ; helper 22.5 27.0 ; Claude Helper (G,Claude Helper (R ; 14 échantillons
+02_V3      V3  médiane    7   1 % bas (hors 10 s)    0   porte FERMÉE Claude Helper à 56.0 % (> 30) ; helper 16.5 56.0 ; Claude Helper,Claude Helper (G,Claude Helper (R ; 14 échantillons
+  ↻ prise 2 (V3) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+02_V3_r1   V3  médiane    8   1 % bas (hors 10 s)    0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 21.5 26.0 ; Claude Helper (G,Claude Helper (R ; 14 échantillons
+  ↻ prise 2 (V3) refusée par la porte : refaite à sa place (reprise 2 sur 4)
+02_V3_r2   V3  médiane    8   1 % bas (hors 10 s)    0   porte OUVERTE - ; helper 17.5 27.0 ; Claude Helper (G,Claude Helper (R ; 14 échantillons
+03_V4      V4  médiane    7   1 % bas (hors 10 s)    0   porte FERMÉE spotlightknowled à 47.0 % (> 20) ; helper 14.0 27.0 ; Claude Helper (G,Claude Helper (R ; 15 échantillons
+  ↻ prise 3 (V4) refusée par la porte : refaite à sa place (reprise 1 sur 4)
+03_V4_r1   V4  médiane    8   1 % bas (hors 10 s)    0   porte OUVERTE - ; helper 21.5 26.0 ; Claude Helper (G,Claude Helper (R ; 14 échantillons
+04_V5      V5  médiane    8   1 % bas (hors 10 s)    0   porte OUVERTE - ; helper 19.0 26.0 ; Claude Helper (G,Claude Helper (R ; 14 échantillons
+
+référence M0 : [8] — tient (plus rapide / plus lente 1.000, seuil 1,05)
+M0  médianes [8]                médiane des médianes   8.0 · rapport 1.000 (+0.00 ms) · 1 % bas médian  0.0 · Claude Helper médiane 22.5 % (max 27.0) · —
+V3  médianes [8]                médiane des médianes   8.0 · rapport 1.000 (+0.00 ms) · 1 % bas médian  0.0 · Claude Helper médiane 17.5 % (max 27.0) ⚠ DÉSÉQUILIBRÉ · ÉCHOUE
+V4  médianes [8]                médiane des médianes   8.0 · rapport 1.000 (+0.00 ms) · 1 % bas médian  0.0 · Claude Helper médiane 21.5 % (max 26.0) · ÉCHOUE
+V5  médianes [8]                médiane des médianes   8.0 · rapport 1.000 (+0.00 ms) · 1 % bas médian  0.0 · Claude Helper médiane 19.0 % (max 26.0) ⚠ DÉSÉQUILIBRÉ · ÉCHOUE
+SÉRIE SANS VERDICT : la charge de Claude Helper diffère de plus de 2 points entre bras
+⚠ moins de trois prises de référence : vérification de la mécanique seulement, AUCUN verdict (ORDRE_COURT).
+⚠ SECONDES=5 : le 1 % bas « hors 10 s » n'a presque aucune image — ces chiffres ne valent rien.

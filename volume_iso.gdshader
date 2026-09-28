@@ -25,6 +25,15 @@
 // corps (ISO2b), pas par la masse posée dessus.
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, shadows_disabled, fog_disabled;
+#ifdef MASQUE_POCHOIR
+// Session cloud « masque-fumée », 2026-09-27 — `--fumee-masque-pochoir` : le JUGE écrit 1 où ce que le pixel montre est noir ;
+// les couches ne se dessinent pas là (le test du pochoir précède leur shader). Voir `volume_masque_compact.gdshaderinc`.
+#ifdef MASQUE_POCHOIR_JUGE
+stencil_mode write, compare_always, 1;
+#else
+stencil_mode read, compare_not_equal, 1;
+#endif
+#endif
 
 #include "res://iso_pate.gdshaderinc"
 #include "res://iso_lightmap.gdshaderinc"
@@ -99,6 +108,18 @@ void vertex() {
 }
 
 void fragment() {
+#ifdef MASQUE_POCHOIR_JUGE
+	// Le JUGE du pochoir : la question de Gadgets (forme compacte, bande resserrée), une fois par pixel ; « noir » écrit 1 dans
+	// le pochoir sans rien peindre (opacité nulle), sinon le fragment se jette et le pochoir reste à 0.
+	if (!juge_couvre(monde, -INV_VIEW_MATRIX[2].xyz) || !masque_compact_montre_noir(monde, -INV_VIEW_MATRIX[2].xyz,
+			lightmap_de_j2(CAMERA_VISIBLE_LAYERS),
+			INV_VIEW_MATRIX[0].xyz * (2.0 / (VIEWPORT_SIZE.x * PROJECTION_MATRIX[0][0])),
+			INV_VIEW_MATRIX[1].xyz * (2.0 / (VIEWPORT_SIZE.y * PROJECTION_MATRIX[1][1])))) {
+		discard;
+	}
+	ALBEDO = vec3(0.0);
+	ALPHA = 0.0;
+#else
 	bool deux = lightmap_de_j2(CAMERA_VISIBLE_LAYERS);
 	vec2 px = monde.xz;
 	float aa = clamp((fwidth(px.x) + fwidth(px.y)) / 6.0, 0.02, 0.5);
@@ -137,6 +158,16 @@ void fragment() {
 	if (a <= 0.003) {
 		discard;
 	}
+#ifndef MASQUE_POCHOIR
+#ifdef MASQUE_COMPACT
+	// Session cloud « masque-fumée », 2026-09-27 — `--fumee-masque-compact` : la même question, au même endroit, posée au
+	// parcours qui ne recopie chaque surface qu'une fois (`volume_masque_compact.gdshaderinc`).
+	if (!ruban && masque_compact_montre_noir(monde, -INV_VIEW_MATRIX[2].xyz, deux,
+			INV_VIEW_MATRIX[0].xyz * (2.0 / (VIEWPORT_SIZE.x * PROJECTION_MATRIX[0][0])),
+			INV_VIEW_MATRIX[1].xyz * (2.0 / (VIEWPORT_SIZE.y * PROJECTION_MATRIX[1][1])))) {
+		discard;
+	}
+#else
 #ifdef FUMEE_MASQUE
 	// ISO13, Q31 voie A — LE MASQUE SANS COPIE D'ÉCRAN (allumé par défaut, `--sans-fumee-masque` l'éteint ; ISO7 Gadgets, 2026-09-25) : la couche se tait là
 	// où ce que le pixel MONTRE derrière elle s'affiche noir (`masque_montre_noir`, `volume_masque.gdshaderinc`) — le sol,
@@ -167,6 +198,8 @@ void fragment() {
 		discard;
 	}
 #endif
+#endif
+#endif
 
 	// LA COULEUR ENSUITE, le point central lu UNE fois pour ses deux usages.
 	vec3 brute = lire_lightmap(px, deux);
@@ -187,4 +220,5 @@ void fragment() {
 	c = pate_temperature_graduee_neutre(c, temperature, 0.0, 0.0, pate_poids_neutre(brute));
 	ALBEDO = c;
 	ALPHA = a;
+#endif
 }

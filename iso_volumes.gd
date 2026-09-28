@@ -94,6 +94,11 @@ var faisceaux_actifs := false
 ## reste accepté et ne change rien. À poser AVANT que les couches naissent, comme `couches_fusee` — une couche déjà créée
 ## garde son shader (les bancs basculent par `poser_masque_fumee`).
 var masque_fumee := false
+## Session cloud « masque-fumée » (2026-09-27) — LA FORME du masque, quand il est allumé : 0, celle de Gadgets (le masque de
+## `--fumee-masque`, tel quel) ; 1 à 3, les formes moins chères de `volume_masque_compact.gdshaderinc`, chacune derrière son
+## drapeau (`FORMES_MASQUE`), qui allume aussi le masque. ÉTEINTES par défaut : sans l'un de ces drapeaux, rien ne change.
+## Chacune ajoute une idée à la précédente, pour qu'une série en miroir attribue le prix à chaque idée.
+var forme_masque := 0
 ## Q34 = C (Adrien, 2026-09-26) — le point de braise de la fusée POSÉE, PAR DÉFAUT. En 2D, le cœur incandescent (`fusee.gd`,
 ## `EMPREINTE_COEUR`, 16 px) « se voit dans le noir complet parce qu'il EST la source » : c'est une information de jeu, la
 ## position de la fusée. En iso, le voxel le remplace (ISO3 vague 3, d641b48 ; ISO4, 77941df) et ne l'émet pas ; ce point le
@@ -106,6 +111,7 @@ var coeur_fusee := 2
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
 var _plan := PlaneMesh.new()
+var _disque_juge: ArrayMesh = null
 var _quad := QuadMesh.new()
 var _masques := false
 
@@ -116,6 +122,30 @@ var _masques := false
 const DRAPEAU_FAISCEAU := "--faisceau"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
+## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
+## surface (MASQUE_COMPACT) ; 2, + la bande du sol resserrée (MASQUE_RESSERRE) ; 3, + le pochoir : un juge par volume pose la
+## question une fois par pixel, les couches ne la posent plus (MASQUE_POCHOIR). Session cloud « masque-fumée-2 » (2026-09-28) :
+## 4, + les certitudes du sol tirées de la lumière lue seule, avant la pâte et la matière (MASQUE_LUMIERE) ; 5, + le juge
+## ajusté à son volume : un disque, au lieu du carré, qui ne rastérise plus les coins où aucune couche ne dessine
+## (MASQUE_AJUSTE : aucun code GLSL à lui ; il nomme la variante, pour qu'une prise prouve son bras par ce que le jeu dit).
+const FORMES_MASQUE := {"--fumee-masque-compact": 1, "--fumee-masque-resserre": 2, "--fumee-masque-pochoir": 3,
+	"--fumee-masque-lumiere": 4, "--fumee-masque-ajuste": 5}
+const FORME_POCHOIR := 3
+const FORME_AJUSTEE := 5
+## Le juge ajusté est un polygone régulier CIRCONSCRIT à son disque (apothème 0,5 à l'échelle 1, comme le plan de côté 1) :
+## seize côtés, 1,9 % de plus que le disque en rayon, 1,3 % en aire.
+const COTES_JUGE := 16
+const DEFINES_FORMES := [[], ["MASQUE_COMPACT"], ["MASQUE_COMPACT", "MASQUE_RESSERRE"],
+	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR"],
+	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE"],
+	["MASQUE_COMPACT", "MASQUE_RESSERRE", "MASQUE_POCHOIR", "MASQUE_LUMIERE", "MASQUE_AJUSTE"]]
+const NOMS_FORMES := ["celle de Gadgets", "compacte (MASQUE_COMPACT)", "compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE)",
+	"pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR)",
+	"lumière d'abord, pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR, MASQUE_LUMIERE)",
+	"juge ajusté, lumière d'abord, pochoir, compacte, bande resserrée (MASQUE_COMPACT, MASQUE_RESSERRE, MASQUE_POCHOIR, "
+	+ "MASQUE_LUMIERE, MASQUE_AJUSTE)"]
+## Le juge du pochoir est dessiné juste AVANT les couches : il doit avoir écrit le pochoir quand elles le lisent.
+const PRIORITE_JUGE := PRIORITE_VOLUME - 1
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
 const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
 const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"
@@ -141,6 +171,9 @@ func _init() -> void:
 			masque_fumee = true
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
 			masque_fumee = false
+		elif FORMES_MASQUE.has(arg):
+			masque_fumee = true
+			forme_masque = int(FORMES_MASQUE[arg])
 		elif arg == DRAPEAU_COEUR_FUSEE:
 			coeur_fusee = 1
 		elif arg == DRAPEAU_COEUR_FUSEE_BLANC:
@@ -500,6 +533,8 @@ func _suivre_toile(g: Node2D, vus: Dictionary) -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var mat := _materiau_volume()
 		mat.set_shader_parameter("ruban", true)
+		if masque_fumee and forme_masque >= FORME_POCHOIR:
+			_poser_masque(mat, true)
 		mat.set_shader_parameter("densite", 0.92)
 		mi.material_override = mat
 		add_child(mi)
@@ -545,6 +580,9 @@ static var _masque_annonce := false
 ## (premier sandwich, 2026-09-25 09:21 : 73 609 pixels fautifs contre 12 855 sans masque, la fumée presque trois fois plus
 ## claire dans la lumière).
 var _shader_masque: Shader = null
+## Toutes les variantes des FORMES posées (couches, juges, rubans) : les filtres qui choisissent les matériaux de fumée par leur
+## shader doivent les reconnaître toutes (même piège que `_shader_masque`). Vide sans drapeau de forme.
+var _formes_posees := {}
 
 
 func _materiau_volume() -> ShaderMaterial:
@@ -564,6 +602,14 @@ func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
 		mat.shader = SHADER_VOLUME
 		return
 	mat.shader = variante_masque(IsoMateriaux.usure_essai_active())
+	if forme_masque > 0:
+		# Le ruban (la toile du voile) ne se masque dans aucune forme (`!ruban`) : sous le pochoir, il garde la forme d'avant,
+		# sans test de pochoir — le juge ne le connaît pas.
+		var forme := forme_masque
+		if forme >= FORME_POCHOIR and mat.get_shader_parameter("ruban") == true:
+			forme = FORME_POCHOIR - 1
+		mat.shader = variante_forme(mat.shader, forme)
+		_formes_posees[mat.shader] = true
 	_shader_masque = mat.shader
 	_recopier_le_mur(mat)
 	if not _masque_annonce:
@@ -573,6 +619,8 @@ func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
 			else "⚠ SANS le #define : variante manquée", POINT_NOIR_ANNONCE,
 			"recopiée (#define USURE_ESSAI, comme le sol)" if mat.shader.code.contains("#define USURE_ESSAI\n")
 			else "éteinte, comme le sol"])
+		# La forme, lue elle aussi dans le code de la variante réellement posée : une prise prouve son bras par cette ligne.
+		print("[fumée masque] forme : %s" % forme_annoncee(mat.shader))
 
 
 ## Le point noir de la sortie 3D, tel que la couche le prend (`POINT_NOIR_ECRIT` de `volume_masque.gdshaderinc`) : imprimé
@@ -630,6 +678,24 @@ static func variante_masque(usure: bool) -> Shader:
 	return IsoMateriaux.variante_definie(v, "USURE_ESSAI") if usure else v
 
 
+## La forme du masque (`forme_masque`) sur une variante masquée : ses #define, ajoutés dans l'ordre (chacun compilé une fois).
+static func variante_forme(masque: Shader, forme: int) -> Shader:
+	var v := masque
+	for d: String in DEFINES_FORMES[clampi(forme, 0, DEFINES_FORMES.size() - 1)]:
+		v = IsoMateriaux.variante_definie(v, d)
+	return v
+
+
+## Le nom de la forme que porte un shader de fumée, lu dans son code (jamais dans la ligne de commande).
+static func forme_annoncee(sh: Shader) -> String:
+	var forme := 0
+	for k in range(DEFINES_FORMES.size() - 1, 0, -1):
+		if (DEFINES_FORMES[k] as Array).all(func(d: String) -> bool: return sh.code.contains("#define %s\n" % d)):
+			forme = k
+			break
+	return NOMS_FORMES[forme]
+
+
 ## ISO13, Q31 — la bascule des bancs : le masque allumé ou éteint sur les couches DÉJÀ posées, au même instant, sans rien
 ## recréer (la preuve en un seul processus compare la même fumée avec et sans lui).
 func poser_masque_fumee(actif: bool) -> void:
@@ -637,7 +703,7 @@ func poser_masque_fumee(actif: bool) -> void:
 	for e: Dictionary in _suivis.values():
 		for m in e["mats"]:
 			var s := (m as ShaderMaterial).shader
-			if s == SHADER_VOLUME or (s != null and s == _shader_masque):
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s):
 				_poser_masque(m as ShaderMaterial, actif)
 
 
@@ -676,6 +742,93 @@ func _poser_couches(e: Dictionary, centre: Vector2, rayon: float, hauteur: float
 		mat.set_shader_parameter("avec_masque", masque != null)
 		mat.set_shader_parameter("nuage_graine", graine + float(i) * 7.0)
 		mat.set_shader_parameter("age", age)
+	_poser_juge(e, centre, rayon, hauteur, densite, n)
+
+
+## Session cloud « masque-fumée » (2026-09-27) — LE JUGE DU POCHOIR (`--fumee-masque-pochoir`), un par volume : un plan à la
+## hauteur de la plus haute couche, qui pose la question du masque une fois par pixel et écrit le pochoir (voir
+## `volume_masque_compact.gdshaderinc`). Il couvre le disque de chaque couche vu depuis sa hauteur : le rayon de vue s'y
+## décale de Δh / tan(tangage), moins que Δh tant que le tangage dépasse 45° (52° aujourd'hui, gardé par la suite) ; un carré
+## de demi-côté rayon + hauteur les contient donc toutes, dans les deux vues. Sans la forme pochoir, aucun juge n'existe.
+func _poser_juge(e: Dictionary, centre: Vector2, rayon: float, hauteur: float, densite: float, n: int) -> void:
+	var juge: MeshInstance3D = e.get("juge") if is_instance_valid(e.get("juge")) else null
+	if not (masque_fumee and forme_masque >= FORME_POCHOIR and n > 0):
+		if juge != null:
+			juge.visible = false
+		return
+	if juge == null:
+		juge = MeshInstance3D.new()
+		juge.name = "Juge"
+		juge.mesh = _plan
+		juge.layers = CALQUE
+		juge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var mat := ShaderMaterial.new()
+		mat.shader = variante_juge(IsoMateriaux.usure_essai_active(), forme_masque)
+		mat.render_priority = PRIORITE_JUGE
+		_formes_posees[mat.shader] = true
+		_recopier_le_mur(mat)
+		juge.material_override = mat
+		add_child(juge)
+		e["juge"] = juge
+		e["juge_forme"] = forme_masque
+	elif int(e.get("juge_forme", FORME_POCHOIR)) != forme_masque:
+		# Session cloud « masque-fumée-2 » : la forme a changé sous un juge déjà posé (les bancs basculent sur place, entre
+		# le pochoir et ce qui s'y ajoute) — il prend la variante de la nouvelle forme ; ses paramètres restent.
+		var mj := juge.material_override as ShaderMaterial
+		mj.shader = variante_juge(IsoMateriaux.usure_essai_active(), forme_masque)
+		_formes_posees[mj.shader] = true
+		e["juge_forme"] = forme_masque
+	var haut := maxf(PLANCHER_PX, hauteur * TUILE)
+	var demi := rayon + haut
+	var rayons := Vector4.ZERO
+	var hauteurs := Vector4.ZERO
+	# V5 (juge ajusté) : le disque de la couche i, vu depuis le juge, est décalé de (haut − h_i) / tan(tangage), moins que
+	# haut − h_i tant que le tangage dépasse 45° ; il tient donc dans le disque de rayon r_i + (haut − h_i) autour du centre.
+	var portee := 0.0
+	for i in mini(n, 4):
+		var f := float(i) / float(maxi(n - 1, 1))
+		rayons[i] = rayon * (1.0 - 0.22 * f)
+		hauteurs[i] = maxf(PLANCHER_PX, hauteur * TUILE * float(i + 1) / float(n))
+		portee = maxf(portee, rayons[i] + haut - hauteurs[i])
+	var ajuste := forme_masque >= FORME_AJUSTEE
+	if ajuste:
+		demi = portee
+	juge.mesh = _disque() if ajuste else _plan
+	juge.position = Vector3(centre.x, haut, centre.y)
+	juge.scale = Vector3(demi * 2.0, 1.0, demi * 2.0)
+	juge.visible = densite > 0.0
+	var m := juge.material_override as ShaderMaterial
+	m.set_shader_parameter("nuage_centre", centre)
+	m.set_shader_parameter("juge_rayons", rayons)
+	m.set_shader_parameter("juge_hauteurs", hauteurs)
+
+
+## Session cloud « masque-fumée-2 » (2026-09-28) — V5 : le polygone du juge ajusté, construit une fois, dans le plan horizontal,
+## centré, d'apothème 0,5 (le même repère que le plan de côté 1 : l'échelle est le diamètre).
+func _disque() -> ArrayMesh:
+	if _disque_juge != null:
+		return _disque_juge
+	var sommets := PackedVector3Array()
+	var normales := PackedVector3Array()
+	var r := 0.5 / cos(PI / COTES_JUGE)
+	for k in COTES_JUGE:
+		var a0 := TAU * float(k) / float(COTES_JUGE)
+		var a1 := TAU * float(k + 1) / float(COTES_JUGE)
+		sommets.append_array([Vector3.ZERO, Vector3(cos(a0) * r, 0.0, sin(a0) * r), Vector3(cos(a1) * r, 0.0, sin(a1) * r)])
+		normales.append_array([Vector3.UP, Vector3.UP, Vector3.UP])
+	var tableaux := []
+	tableaux.resize(Mesh.ARRAY_MAX)
+	tableaux[Mesh.ARRAY_VERTEX] = sommets
+	tableaux[Mesh.ARRAY_NORMAL] = normales
+	_disque_juge = ArrayMesh.new()
+	_disque_juge.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tableaux)
+	return _disque_juge
+
+
+## La variante du juge : la forme (pochoir ou au-delà), plus MASQUE_POCHOIR_JUGE (il écrit le pochoir au lieu de le lire).
+static func variante_juge(usure: bool, forme: int = FORME_POCHOIR) -> Shader:
+	return IsoMateriaux.variante_definie(variante_forme(variante_masque(usure), maxi(forme, FORME_POCHOIR)),
+		"MASQUE_POCHOIR_JUGE")
 
 
 func _halos(e: Dictionary, n: int, shader: Shader = SHADER_HALO) -> void:
@@ -726,6 +879,8 @@ func _retirer(id: String) -> void:
 	for mi in e["noeuds"]:
 		if is_instance_valid(mi):
 			(mi as Node).queue_free()
+	if is_instance_valid(e.get("juge")):
+		(e["juge"] as Node).queue_free()
 	_suivis.erase(id)
 
 
@@ -736,8 +891,11 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 	for e: Dictionary in _suivis.values():
 		for m in e["mats"]:
 			var s := (m as ShaderMaterial).shader
-			if s == SHADER_VOLUME or (s != null and s == _shader_masque):
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s):
 				mats.append(m)
+		var juge: Variant = e.get("juge")
+		if juge != null and is_instance_valid(juge) and (juge as MeshInstance3D).visible:
+			mats.append((juge as MeshInstance3D).material_override)
 	if mats.is_empty():
 		return
 	# Le contact des corps change à chaque image : recopié du sol de la vue de J1 sur les couches masquées.
@@ -747,10 +905,10 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 		if not sols.is_empty() and sols[0] != null:
 			var mur: ShaderMaterial = pres.get("_mat_mur")
 			for m in mats:
-				if (m as ShaderMaterial).shader == _shader_masque:
+				if (m as ShaderMaterial).shader == _shader_masque or _formes_posees.has((m as ShaderMaterial).shader):
 					for nom: String in CONTACT_PAR_IMAGE:
 						(m as ShaderMaterial).set_shader_parameter(nom, (sols[0] as ShaderMaterial).get_shader_parameter(nom))
-					if mur != null and _shader_masque.code.contains("#define USURE_ESSAI\n"):
+					if mur != null and (m as ShaderMaterial).shader.code.contains("#define USURE_ESSAI\n"):
 						for nom: String in USURE_DU_MUR:
 							(m as ShaderMaterial).set_shader_parameter(nom, mur.get_shader_parameter(nom))
 	var textures := [main.vp1.get_texture(), main.vp2.get_texture()]

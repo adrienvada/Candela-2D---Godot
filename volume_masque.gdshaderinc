@@ -458,3 +458,9 @@ bool masque_montre_noir(vec3 monde, vec3 vue, bool deux, vec3 d_x, vec3 d_y) {
 	// deux côtés jugés sur une couture (V1c).
 	return sol_montre_noir(p_sol, deux, aa_sol, px_monde_sol, g_x, g_y);
 }
+
+#ifdef MASQUE_COMPACT
+// Les formes moins chères du même masque (session cloud « masque-fumée », 2026-09-27), chacune derrière son drapeau
+// (`IsoVolumes.FORMES_MASQUE`), éteintes par défaut : ni le jeu par défaut ni `--fumee-masque` ne compilent ce fichier.
+#include "res://volume_masque_compact.gdshaderinc"
+#endif
