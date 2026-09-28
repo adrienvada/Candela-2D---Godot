@@ -1,0 +1,110 @@
+{
+ "equite_45": {
+  "violaces_avant_j1_j2": [
+   9107,
+   0
+  ],
+  "violaces_apres_j1_j2": [
+   0,
+   0
+  ],
+  "differents_gt7_j1_j2": [
+   13762,
+   194
+  ],
+  "allumes_par_le_disque_j1_j2": [
+   12377,
+   97
+  ],
+  "differents_gt0_hors_disque": 72675,
+  "luminance_apres_j1_j2": [
+   19.51,
+   19.72
+  ],
+  "luminance_avant_j1_j2": [
+   19.77,
+   19.72
+  ]
+ },
+ "eblouis_45": {
+  "violaces_avant_j1_j2": [
+   11598,
+   6830
+  ],
+  "violaces_apres_j1_j2": [
+   11927,
+   6830
+  ],
+  "differents_gt7_j1_j2": [
+   8187,
+   309
+  ],
+  "allumes_par_le_disque_j1_j2": [
+   4240,
+   41
+  ],
+  "differents_gt0_hors_disque": 76924,
+  "luminance_apres_j1_j2": [
+   58.52,
+   58.09
+  ],
+  "luminance_avant_j1_j2": [
+   58.72,
+   58.09
+  ]
+ },
+ "equite_0": {
+  "violaces_avant_j1_j2": [
+   2265,
+   0
+  ],
+  "violaces_apres_j1_j2": [
+   0,
+   0
+  ],
+  "differents_gt7_j1_j2": [
+   13646,
+   0
+  ],
+  "allumes_par_le_disque_j1_j2": [
+   8890,
+   0
+  ],
+  "differents_gt0_hors_disque": 69034,
+  "luminance_apres_j1_j2": [
+   17.43,
+   17.51
+  ],
+  "luminance_avant_j1_j2": [
+   17.68,
+   17.51
+  ]
+ },
+ "eblouis_0": {
+  "violaces_avant_j1_j2": [
+   10560,
+   8193
+  ],
+  "violaces_apres_j1_j2": [
+   10551,
+   8193
+  ],
+  "differents_gt7_j1_j2": [
+   7089,
+   0
+  ],
+  "allumes_par_le_disque_j1_j2": [
+   4530,
+   0
+  ],
+  "differents_gt0_hors_disque": 77090,
+  "luminance_apres_j1_j2": [
+   60.34,
+   60.02
+  ],
+  "luminance_avant_j1_j2": [
+   60.53,
+   60.02
+  ]
+ }
+}

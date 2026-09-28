@@ -35,7 +35,8 @@ func _geler_et_prendre(nom: String, source: String, sans_corps := false) -> void
 
 ## `--prises` : les images avant/après, sans enquête. `equite` telle que la prend `photo_ecart.gd` (jeu gelé), puis
 ## `eblouis` : l'éblouissement LÉGITIME — J1 et J2 face à face sur la rangée 7 du Cloître (dégagée d'un mur à l'autre),
-## miroir gauche-droite l'un de l'autre, chacun dans le faisceau de l'autre. Aucune position symétrique par le CENTRE ne
+## à 5 cases (175 px : la torche cesse d'éblouir vers 400 px, `Eblouissement.intensite_proximite`), miroir gauche-droite
+## l'un de l'autre, chacun dans le faisceau de l'autre. Aucune position symétrique par le CENTRE ne
 ## se voit : le pilier central coupe toutes les droites qui y passent.
 func _prises() -> void:
 	_tenir()
@@ -48,7 +49,7 @@ func _prises() -> void:
 		float(_main.p1.dazzle_amount), float(_main.p2.dazzle_amount)])
 	get_tree().paused = false
 	var t := float(CandelaTileSet.TILE_SIZE.x)
-	_poser(Vector2(8.5 * t, 7.5 * t), Vector2.RIGHT, Vector2(21.5 * t, 7.5 * t), Vector2.LEFT)
+	_poser(Vector2(12.5 * t, 7.5 * t), Vector2.RIGHT, Vector2(17.5 * t, 7.5 * t), Vector2.LEFT)
 	for i in REPOS_IMAGES:
 		_tenir()
 		await get_tree().process_frame
@@ -211,6 +212,15 @@ func _decrire(n: Node) -> void:
 				str((c as Control).get_global_rect()), str((c as Control).get_global_rect().get_center()),
 				str((c as Control).is_visible_in_tree())])
 	print("  souris : %s" % str(get_viewport().get_mouse_position()))
+	# Quel contrôle a son centre sous la flaque : le dernier bouton visé avant la manche.
+	var positions: Dictionary = n.get("_positions") if "_positions" in n else {}
+	for j in positions.keys():
+		for c in _ui.find_children("*", "Control", true, false):
+			var r := (c as Control).get_global_rect()
+			if r.size.x > 4.0 and r.get_center().distance_to(positions[j]) < 1.5:
+				var texte := str(c.get("text")) if "text" in c else ""
+				print("  sous la flaque J%d : %s · rect %s · « %s » · visible %s" % [j + 1, str(c.get_path()), str(r),
+					texte, str((c as Control).is_visible_in_tree())])
 	if n.get("material") is ShaderMaterial:
 		var m: ShaderMaterial = n.get("material")
 		print("  shader : %s" % m.shader.resource_path)
