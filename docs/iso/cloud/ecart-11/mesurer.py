@@ -143,19 +143,32 @@ def moities(a):
 
 
 def equite(avec, sans):
+    """Au lacet B, la vue de J2 à la place symétrique est déjà dans le même sens que celle de J1 : les deux moitiés se
+    comparent telles quelles, pixel à pixel. Le « disque » : la plus grande tache éclairée d'un seul côté (voir
+    RAPPORT.md, défaut du défaut) — compté à part, puis retiré des comptes de décor."""
     sortie = {}
     ga, da = moities(avec)
     gs, ds = moities(sans)
-    for nom, x, y in (("j1", ga, gs), ("j2", da, ds)):
+    lg, ld = gs.max(axis=2) > SEUIL_NOIR, ds.max(axis=2) > SEUIL_NOIR
+    disque = np.zeros_like(lg)
+    for seul in (lg & ~ld, ld & ~lg):
+        lab, n = ndimage.label(ndimage.binary_opening(seul, iterations=2))
+        if n:
+            tailles = ndimage.sum(seul, lab, range(1, n + 1))
+            k = int(np.argmax(tailles)) + 1
+            if tailles[k - 1] >= 2000:
+                disque |= ndimage.binary_dilation(lab == k, iterations=3)
+    for nom, x, y, l in (("j1", ga, gs, lg), ("j2", da, ds, ld)):
         sortie[nom] = {
-            "decor_eclaire": int((y.max(axis=2) > SEUIL_NOIR).sum()),
+            "decor_eclaire": int(l.sum()),
+            "decor_hors_disque": int((l & ~disque).sum()),
+            "decor_net": int((y.max(axis=2) > 16).sum()),
+            "disque": int((l & disque).sum()),
             "lumiere": int((lum(y) > SEUIL_LUMIERE).sum()),
             "corps": int(masque_corps(x, y).sum()),
             "lum_moy": round(float(lum(x).mean()), 2),
         }
-    tourne = ds[::-1, ::-1]
-    diff = np.abs(gs - tourne).max(axis=2) > SEUIL_CHANGE
-    sortie["demi_tour_differe"] = int(diff.sum())
+    sortie["moities_different"] = int((np.abs(gs - ds).max(axis=2) > SEUIL_CHANGE).sum())
     return sortie
 
 

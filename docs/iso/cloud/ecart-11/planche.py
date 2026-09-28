@@ -123,13 +123,15 @@ def section_equite(m):
         e = m["equite"].get(lanc)
         if not e:
             continue
-        for cle, lib in (("decor_eclaire", "décor éclairé"), ("lumiere", "lumière (> 40)"), ("corps", "corps")):
+        for cle, lib in (("decor_eclaire", "décor éclairé (> 7,5)"), ("disque", "dont le disque violacé"),
+                         ("decor_hors_disque", "décor éclairé hors disque"), ("decor_net", "décor net (> 16)"),
+                         ("lumiere", "lumière (> 40)"), ("corps", "corps")):
             a, b = e["j1"][cle], e["j2"][cle]
-            ecart = (b - a) / max(a, 1)
+            ecart = "—" if cle == "disque" else f"{100 * (b - a) / max(a, 1):+.2f} %"
             lignes.append(f"<tr><td>{lanc}</td><th>{lib}</th><td>{nb(a)}</td><td>{nb(b)}</td>"
-                          f"<td>{100 * ecart:+.2f} %</td></tr>")
+                          f"<td>{ecart}</td></tr>")
         lignes.append(f"<tr><td>{lanc}</td><th>pixels qui diffèrent d'une moitié à l'autre</th>"
-                      f"<td colspan=3>{nb(e['demi_tour_differe'])}</td></tr>")
+                      f"<td colspan=3>{nb(e['moities_different'])}</td></tr>")
     return ('<table><thead><tr><th>lancement</th><th>ce qui est compté</th><th>moitié de J1</th><th>moitié de J2</th>'
             '<th>J2 − J1</th></tr></thead><tbody>' + "".join(lignes) + "</tbody></table>")
 
@@ -202,11 +204,24 @@ l'ouvre en 1:1. Détail : <code>RAPPORT.md</code>.</p>
 <h2>Le noir, torches éteintes</h2>
 <p>A = le défaut, A' = le témoin (le même lancement, refait), B = « hier » ou « tout ». Un pixel compte s'il est noir
 (≤ 7,5/255 au canal maximal) dans A et dans A' et s'allume dans B.</p>{section_noir(m)}
+<p>Au Cloître, 2 pixels (au plus 11/255) contre un bruit de 13 : rien. Au Bunker, 34 contre un bruit de 37 : rien non
+plus. À la Croisée, 8 contre 1, jusqu'à 51/255 : <b>le sol marqué</b> (reproduit avec ce seul drapeau ajouté à ceux
+d'hier) fait briller, torches éteintes, un point de l'arête d'un mur — le liseré du sommet lit la lumière du sol devant
+lui <em>divisée par la peinture du sol</em>, et une marque sombre à cet endroit la gonfle. Idem au Bunker, sous le
+seuil du bruit. Ci-dessous, « hier » à gauche, « tout » à droite, valeurs doublées.</p>
+{fig("img/noir_sol_marque.jpg", "Croisée (haut) et Bunker (bas), torches éteintes : hier | tout, ×2")}
 <h2>L'équité — écran scindé, 45° B, les deux moitiés au même instant</h2>
 <p>J1 et J2 aux places symétriques par le centre du Cloître, torche vers le pilier central ; au lacet B, la vue de J2
 est celle de J1 à la même place de l'autre côté. Décor et lumière sont comptés sur la prise sans les corps, les corps par
 différence entre les deux prises (même instant gelé).</p>
 {rangee_scene(m, "equite")}{section_equite(m)}
+<p>Hors du disque, la moitié de J2 montre 1,2 à 1,3 % de décor éclairé de plus que celle de J1, <b>dans les quatre
+lancements</b>, défaut compris : cet écart vient du jeu tel qu'il est, pas des essais. La lumière (−1,1 % au défaut,
+−0,2 % avec « tout ») et les corps (−0,2 % au défaut, +1,2 % avec « tout », soit 26 pixels) restent dans le bruit ou à
+sa limite. Le seul écart net est <b>le disque violacé</b> : une lueur faible (≈ 19/255) qui ne s'affiche que dans la
+moitié de J1, et change de place d'un lancement à l'autre — au défaut comme avec les essais (blanc : éclairé d'un seul
+côté ; défaut | témoin | tout).</p>
+{fig("img/equite_disque.jpg", "pixels éclairés dans une seule des deux moitiés — défaut | témoin | tout")}
 <h2>Deux autres cartes</h2><p>{AUTRES_CARTES}</p>{autres}
 <h2>Illustration par illustration</h2>
 <nav>{"".join(f'<a href="#{i["nom"]}">{i["nom"][4:]}</a>' for i in ILLUSTRATIONS)}</nav>
