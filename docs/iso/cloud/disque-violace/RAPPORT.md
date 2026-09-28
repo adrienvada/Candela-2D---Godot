@@ -216,5 +216,11 @@ Sur le Mac : les mêmes commandes sans `xvfb-run`, fenêtre au premier plan.
 ## État final
 
 Commits sur `claude/cloud-disque-violace` : b9d5add (plan), ceeca1d (outil d'enquête), **b6f41a9 (garde)**,
-**cd5b300 (correctif proposé)**, puis l'outil de prises, les mesures, les images et ce rapport. Suite complète : voir
-la dernière ligne ci-dessous.
+**cd5b300 (correctif proposé)**, puis l'outil de prises, les mesures, les images et ce rapport.
+
+- **Suite complète sur l'état final (correctif compris) : « tout passe, sans erreur de script (610 s) », EXIT 0** —
+  `test_torche_hors_menu` compris.
+- Le jeu par défaut ne change que par le commit cd5b300, **à reprendre ou non à l'intégration avec l'accord d'Adrien** ;
+  tout le reste est outil, test et documentation. `docs/ROADMAP.md` et `docs/JOURNAL_SESSIONS.md` non touchés.
+- Aucun fichier de clés ni secret dans le diff (`git diff origin/integration-iso14...HEAD`, vérifié avant chaque push) ;
+  images 3,4 Mo, aucune au-dessus de 5 Mo.
