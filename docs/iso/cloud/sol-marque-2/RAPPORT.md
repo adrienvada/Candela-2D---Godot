@@ -128,6 +128,60 @@ plus sombres et plus larges) : jusqu'à ×2,93 sur une lecture (`croise.txt`, 36
 Usine ou Bunker ; Cloître → Arène Circulaire ou Croisée ; Usine → Arène Circulaire ; Bunker → Arène Circulaire). Signalé,
 pas corrigé : la cause est la même, dans `presentation_3d.gd`.
 
+## 5. Défauts hors de ma tâche — signalés, pas corrigés (à reporter dans la feuille de route)
+
+1. **La peinture iso n'est pas refaite quand la carte change vue allumée** (le défaut de fond, jeu par défaut). Fichier :
+   `presentation_3d.gd:493` (`_process` : `if _reconstruire: _construire_les_murs()`) ; la peinture n'est posée que par
+   `_allumer` (l. 606). Effet : les faces et les liserés de la nouvelle carte divisent leur lumière par la peinture de
+   l'ancienne — pans de faces éclairés à tort (822 pixels noirs allumés à la Croisée par le Cloître, SANS essai, jusqu'à
+   255/255), et toute peinture sombre de l'ancienne carte (marques, pochoirs, encre, sang) devient une tache.
+   Reproduire : `XDG_DATA_HOME=$PWD/.xdg ./docs/iso/cloud/sol-marque-2/lancer.sh cause`, puis
+   `python3 docs/iso/cloud/sol-marque-2/entre.py "<user://>/sm2/direct_temoin" "<user://>/sm2/par_temoin"`.
+   Correction proposée (une ligne, non appliquée) : refaire la peinture avec les murs,
+   `if _reconstruire: _construire_les_murs(); _poser_peinture()` — `_poser_peinture` retire l'ancienne d'abord. À qui tient
+   le rendu iso (Gadgets, selon la session coordinatrice). **Chemin en jeu : non établi.** `_do_start_round` appelle
+   `rebuild_arena()` à chaque manche ; tant que le changement de carte passe par le menu principal (où la vue iso s'éteint,
+   `_vues_a_projeter`), la peinture est refaite à l'allumage. Les bancs qui changent de carte en cours de partie
+   (`photo_ecart.gd` de l'évaluation 11, `_poser_la_carte`) y tombent à coup sûr. Le commentaire de `presentation_3d.gd:491`
+   cite lui-même « un salon en ligne adopte celle de l'hôte » : ce cas-là est à vérifier.
+   Même carte (revanche) : les copies d'un décor libéré restent, au même contenu — non mesuré au-delà.
+2. **Les mesures Croisée et Bunker de l'évaluation 11 (duel et noir) sont faites sur la peinture du Cloître** : à refaire,
+   carte posée directement (ou après la correction 1). Le § 4 de son rapport attribue les taches au sol marqué ; c'est faux.
+3. **`pied` a deux valeurs écrites et une seule vraie** : `mur_iso.gdshader:46` (8) et `presentation_3d.gd:158`
+   (`PIED_PX` = 8, posé l. 1698) sont écrasés par `IsoMateriaux.accorder_mur` (`PIED_FACE_PX` = 12, l. 226) juste après.
+   Une lecture du shader ou de la présentation donne 8 : c'est ce qui a égaré l'évaluation 11.
+4. **Les pochoirs** : même exposition que le sol marqué à la peinture périmée (jusqu'à ×2,93), aucune sur leur carte (§ 3).
+
+## 6. Pour tout refaire
+
+```bash
+git fetch origin claude/cloud-sol-marque-2 && git checkout claude/cloud-sol-marque-2
+godot --headless --path . --import                                   # la première fois
+pip install numpy pillow
+export XDG_DATA_HOME=$PWD/.xdg                                        # un user:// à soi (l'intro est congédiée par le banc)
+U="$XDG_DATA_HOME/godot/app_userdata/Candela 2D"
+# La garde headless, et la suite complète :
+godot --headless --path . --script res://tools/test_sol_marque.gd
+GODOT=/usr/local/bin/godot ./tools/run_suites.sh
+# La géométrie des six cartes, les textures cuites (sans, sol marqué, pochoirs), et les calculs :
+godot --headless --path . --script res://docs/iso/cloud/sol-marque-2/grilles.gd -- --sortie=/tmp/sm2/grilles.json
+for v in base: sol:--sol-marque-essai poch:--pochoirs-essai; do mkdir -p /tmp/sm2/${v%%:*}
+  xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --script res://docs/iso/cloud/sol-marque/cuisson.gd -- ${v#*:} --sortie=/tmp/sm2/${v%%:*}; done
+python3 docs/iso/cloud/sol-marque-2/distance.py /tmp/sm2/grilles.json /tmp/sm2/base /tmp/sm2/sol      # ≥ 13 px partout
+python3 docs/iso/cloud/sol-marque-2/lecture.py  /tmp/sm2/grilles.json /tmp/sm2/base /tmp/sm2/sol      # 0 arête
+(cd docs/iso/cloud/sol-marque-2 && python3 croise.py /tmp/sm2/grilles.json /tmp/sm2/base /tmp/sm2/sol /tmp/sm2/poch)
+# La cause en jeu (quatre lancements, la Croisée), puis la preuve (six cartes, deux lancements) :
+./docs/iso/cloud/sol-marque-2/lancer.sh cause
+python3 docs/iso/cloud/sol-marque-2/entre.py "$U/sm2/direct_temoin" "$U/sm2/par_temoin"
+python3 docs/iso/cloud/sol-marque-2/entre.py "$U/sm2/par_temoin" "$U/sm2/par_avec"
+./docs/iso/cloud/sol-marque-2/lancer.sh preuve
+python3 docs/iso/cloud/sol-marque-2/noir.py "$U/sm2/seul"; python3 docs/iso/cloud/sol-marque-2/noir.py "$U/sm2/tout"
+python3 docs/iso/cloud/sol-marque-2/images.py "$U/sm2" cause
+python3 docs/iso/cloud/sol-marque-2/images.py "$U/sm2/seul" preuve
+```
+
+Sur le Mac : `ENVELOPPE= GODOT=/Applications/Godot.app/Contents/MacOS/Godot ./docs/iso/cloud/sol-marque-2/lancer.sh …`.
+
 ## État
 
 - [x] reproduction (sur cette branche et sur celle de l'évaluation 11)
