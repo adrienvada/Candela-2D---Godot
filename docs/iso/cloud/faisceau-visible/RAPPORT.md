@@ -167,3 +167,37 @@ python3 tools/faisceau_air/preuve.py ~/.local/share/godot/app_userdata/Candela\ 
 python3 tools/faisceau_air/planche.py docs/iso/cloud/faisceau-visible "45° B=p45" "0° A=p0"
 # Sur le jeu : il est allumé ; godot --path . -- --sans-faisceau-air l'éteint (débogage) ; --faisceau-air=0.7 règle la densité.
 ```
+
+## État final
+
+**Suite complète** (`./tools/run_suites.sh`, 756 s, au calme) : toutes les suites passent, dont `test_iso_gadgets` (196
+vérifications) et les neuf matchs à deux instances, **sauf six qui échouent déjà sur la base `511c459`**, sans mon travail
+(vérifié en les relançant dans un worktree de la base) : `test_fusee`, `test_masque_formes`, `test_corps_detail`,
+`test_passe_unique`, `test_corps_soi_fondu`, `test_drapeaux` — elles attendent encore l'ancien défaut des autres réponses
+d'Adrien (rouge long, masque V5, corps sombre). Signalées, pas corrigées (hors de ma tâche). Une suite lancée pendant que deux
+séances du photographe chargeaient la machine a aussi fait échouer `duo_apparie` (« la manche part à l'arrivée de l'invité ») :
+relancé seul deux fois, il passe ; au calme, dans la suite complète, il passe.
+
+## Ce que je n'ai PAS pu prouver
+
+- **La cadence.** Aucune mesure de temps ici. Le Mac : le défaut contre `--sans-faisceau-air`, au pompe sous une fusée.
+- **Le rendu sous le pilote d'Apple** : le stencil et le mélange additif sont prouvés sous Mesa ; une prise
+  `loupe-faisceau-air` sur le Mac (une demi-heure) dirait s'il en va de même là-bas — et en particulier si la lisière des
+  sous-vues y demande une marge différente de 16/255.
+- **La vue unique APRÈS la marge** : prise avant (0 fuite) ; la marge ne peut que taire davantage le rayon. Pas repris.
+- **Les images en 1920×1080** : la base sort ses prises en 1280×720 (correctif du photographe absent de `candidat-0.7.0`).
+- **Une carte avec des murets, la fumée d'une fusée dans le cône, le mouvement** : une seule carte (le Cloître), scène figée.
+- **Les appels de dessin re-relevés** sur cette base : repris de la session « faisceau-air » (même géométrie), non recomptés.
+
+## Pièges découverts (à reporter dans la feuille de route)
+
+1. **Un masque juste pour un MÉLANGE ne l'est pas pour un AJOUT.** Une couche mélangée sur un pixel que le juge croit visible
+   mais que l'écran montre noir y reste invisible (elle y montre la même lumière faible) ; ajoutée, elle l'allume. Le passage
+   à l'additif a fait apparaître, dans les sous-vues de l'écran scindé, une lisière que le mélange cachait. Un seuil de
+   silence se revérifie à chaque changement de mode de mélange.
+2. **Une fuite qui suit la densité est le rayon ; une qui saute au hasard est le corps** (déjà vu par la session
+   « faisceau-air ») : ici elle suivait (5 / 14 / 22 / 31), et c'était bien le rayon.
+3. **La base `candidat-0.7.0` sort les prises du photographe en 1280×720 sous Xvfb** : le correctif de la fenêtre
+   (`claude/cloud-photographe`, `0c67705`) n'y est pas. Les points projetés d'un plan, calculés pour la taille de fenêtre
+   annoncée, tombent alors à côté ; recadrer sur ce que l'image montre.
+4. **Un test chronométré à deux instances échoue sous charge** : ne lancer la suite complète qu'au calme.
