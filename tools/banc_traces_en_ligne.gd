@@ -15,6 +15,24 @@ extends Node
 const DEPART := "map_001"
 const ARRIVEE := "map_003"
 const GROUPES := ["blood_stain", "blood_p2", "wall_impact", "wall_impact_p2", "bullet_casing", "casing_p2"]
+## J1 de l'hôte vise J2 : sans souris, son fournisseur d'entrées local viserait ailleurs, et la rotation posée à la main
+## serait réécrite au pas suivant.
+class Visee extends InputProvider:
+	var visee := Vector2.RIGHT
+	func get_movement_vector() -> Vector2:
+		return Vector2.ZERO
+	func get_aim_direction(_pos: Vector2) -> Vector2:
+		return visee
+	func is_shoot_pressed() -> bool:
+		return false
+	func is_flashlight_pressed() -> bool:
+		return false
+	func is_flare_pressed() -> bool:
+		return false
+	func is_reload_pressed() -> bool:
+		return false
+
+
 var _main: Node
 var _ui: Node
 var _hote := false
@@ -165,7 +183,10 @@ func _abattre_j2() -> void:
 	# J2 posé devant J1 et tenu IMMOBILE une seconde avant le premier tir : la compensation de latence de l'hôte juge
 	# chaque balle contre la position de J2 d'il y a RTT/2 + 100 ms (historique de 400 ms). Téléporté à chaque image,
 	# il n'était jamais là où l'historique le cherchait : 75 traces peintes, J2 toujours debout (premier essai).
-	var cible := p1.global_position + Vector2.from_angle(p1.rotation) * 160.0
+	var marionnette := Visee.new()
+	marionnette.name = "ViseeDuBanc"
+	_main._set_player_input_provider(p1, marionnette)
+	var cible := p1.global_position + marionnette.visee * 160.0
 	var tenue := Time.get_ticks_msec() + 1000
 	while Time.get_ticks_msec() < tenue:
 		p2.global_position = cible
@@ -180,4 +201,7 @@ func _abattre_j2() -> void:
 			p1.current_ammo = maxi(p1.current_ammo, 1)
 			p1.shoot()
 		await get_tree().physics_frame
-	print("  J2 %s sous les balles de l'hôte" % ("abattu" if p2.dead else "TOUJOURS DEBOUT"))
+	print("  J2 %s sous les balles de l'hôte (pv %.0f, à %s pour une cible en %s, J1 en %s tourné à %.2f rad)" % [
+		"abattu" if p2.dead else "TOUJOURS DEBOUT", p2.hp, str(p2.global_position.round()), str(cible.round()),
+		str(p1.global_position.round()), p1.rotation])
+	_traces("après les tirs")
