@@ -83,7 +83,16 @@ uniform sampler2D usure_proximite : filter_nearest, repeat_disable;
 const float USURE_SOL_PLUS_SOMBRE = 0.45;
 #endif
 // Le point noir de l'écran 3D, en valeur ÉCRITE (voir l'en-tête) : 7/255 → 0, 8/255 → 1 ; pris à 8 (vers le silence).
+#ifdef FAISCEAU_LUMINEUX_JUGE
+// Q41 — le juge du faisceau LUMINEUX seul (session « faisceau-visible », 2026-09-28) : une marge, 16/255. En mélange, une
+// couche posée sur un pixel que le juge croit visible mais que l'écran affiche noir ne changeait rien (elle y montrait la même
+// lumière faible) ; en ADDITIF, elle y ajoute 1 à 7/255. Mesuré dans les sous-vues de l'écran scindé, à la lisière de la
+// lumière (5 à 31 pixels par prise, croissant avec la densité), jamais en vue unique. Le rayon se tait donc sur toute la frange
+// très sombre, où il n'ajoutait de toute façon que ~3/255. La fumée garde son juge à 8.
+const float POINT_NOIR_ECRIT = 16.0 / 255.0;
+#else
 const float POINT_NOIR_ECRIT = 8.0 / 255.0;
+#endif
 // Le glissement de la lecture du sol près des joints de tuile (`sol_iso.gdshader`, `px_lu`) : recopiés du matériau du sol.
 uniform float dalles : hint_range(0.0, 1.0) = 0.0;
 uniform float joint_2d_px = 1.0;

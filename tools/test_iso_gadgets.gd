@@ -564,6 +564,10 @@ func _le_faisceau_air_en_iso(main: Node, p: Node) -> void:
 			and (juge as MeshInstance3D).visible
 			and ((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define MASQUE_POCHOIR_JUGE\n")
 			and not ((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define FAISCEAU_LUMINEUX\n"))
+		_check("son juge prend la MARGE du faisceau lumineux (FAISCEAU_LUMINEUX_JUGE : point noir à 16/255)",
+			((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define FAISCEAU_LUMINEUX_JUGE\n")
+			and FileAccess.get_file_as_string("res://volume_masque.gdshaderinc").contains(
+				"#ifdef FAISCEAU_LUMINEUX_JUGE\n"))
 		_check("ses couches lisent la lightmap de chaque vue (J1 et J2), comme le sol",
 			mat.get_shader_parameter("lumiere_1") == main.vp1.get_texture()
 			and mat.get_shader_parameter("lumiere_2") == main.vp2.get_texture())
