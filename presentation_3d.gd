@@ -198,7 +198,7 @@ var bascules := 0
 var _main: Node
 var _actif := false
 var _reconstruire := true
-## ISO10, 1f — la peinture de la carte sans lumière (`peinture_iso.gd`), refaite à chaque allumage.
+## ISO10, 1f — la peinture de la carte sans lumière (`peinture_iso.gd`), refaite à chaque allumage et avec les murs.
 var _peinture: SubViewport = null
 ## Les vues regardées, dans l'ordre `vp1` puis `vp2` ; une ou deux.
 var _vues: Array[SubViewport] = []
@@ -330,8 +330,8 @@ const CALQUE_VOILE_KILLCAM := -1
 
 
 ## Le crochet du jeu — appelé par `GameState.rebuild_arena()`, sous garde `mode_iso`.
-## Crée le nœud au premier appel, puis demande seulement de reconstruire les murs :
-## la carte vient peut-être de changer.
+## Crée le nœud au premier appel, puis demande seulement de reconstruire les murs et la
+## peinture : la carte vient peut-être de changer.
 static func accrocher(main: Node) -> Presentation3D:
 	if not is_instance_valid(_instance):
 		_instance = Presentation3D.new()
@@ -477,8 +477,16 @@ func _process(_delta: float) -> void:
 			_allumer(voulues)
 		# Une manche neuve rappelle le crochet (`rebuild_arena`) pendant que la vue tient :
 		# la carte a peut-être changé — un salon en ligne adopte celle de l'hôte.
+		# ⚠️ **Les murs ET la peinture, toujours ensemble.** Les murs divisent leur lumière par la
+		# peinture (`mur_iso.gdshader`, `lire_lumiere`) ; refaits seuls, ceux de la nouvelle carte
+		# lisaient la peinture de l'ancienne — son cadre, ses murs, son encre — et s'allumaient
+		# dans le noir, jusqu'à 255/255 (RAPPORT peinture-perimee, 2026-09-28 : fin de match au
+		# temps puis CHANGER DE CARTE, ou le salon en ligne). À carte égale, la peinture gardait des
+		# copies de calques libérés : refaite, elle suit l'arène en place. `_poser_peinture` retire
+		# l'ancienne d'abord.
 		if _reconstruire:
 			_construire_les_murs()
+			_poser_peinture()
 		_tenir()
 		_suivre()
 		if _usure:
@@ -985,7 +993,8 @@ static func couche_capteur(vue_id: int, corps_id: int) -> int:
 	return COUCHE_CAPTEUR << (vue_id * 2 + corps_id)
 
 
-## ISO10, 1f — la peinture de la carte sans lumière (`peinture_iso.gd`), refaite à chaque allumage : ses copies vivent dans
+## ISO10, 1f — la peinture de la carte sans lumière (`peinture_iso.gd`), refaite à chaque allumage et à chaque reconstruction
+## des murs (`_process`) : ses copies vivent dans
 ## l'arène, et une arène reconstruite n'en garde rien. `remove_child` avant `queue_free` : l'ancienne rend ses copies tout
 ## de suite, pas en fin d'image à côté de celles de la nouvelle.
 func _poser_peinture() -> void:
