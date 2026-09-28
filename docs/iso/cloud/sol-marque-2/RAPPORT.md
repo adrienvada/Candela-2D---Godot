@@ -3,6 +3,19 @@
 Session cloud, branche `claude/cloud-sol-marque-2`, partie d'`origin/claude/cloud-sol-marque` (9e398d5), le 28/09/2026.
 Lancée par la session coordinatrice « CLOUD ISO UNRAILED ».
 
+## Pour Adrien, en cinq lignes
+
+1. Les petits points jaunes vus dans le noir ne venaient pas du sol marqué : l'outil de photo changeait de carte en pleine
+   partie, et les murs de la nouvelle carte gardaient la « peinture » du sol de l'ancienne.
+2. Ce défaut est dans le jeu lui-même, pas dans l'essai, et il existe aussi sans aucun essai : des pans de murs s'allument à
+   tort. Je ne l'ai pas corrigé (ce n'était pas ma tâche) ; la correction tient en une ligne, elle est écrite au § 5.
+3. On ne sait pas encore si un joueur peut tomber dessus (par exemple en changeant de carte dans un salon en ligne) :
+   c'est à vérifier.
+4. Sur ses propres cartes, le sol marqué n'allume rien : 0 point dans le noir sur les six cartes, en vue simple comme en
+   écran partagé. J'ai quand même élargi sa marge de sécurité près des murs, sans rien changer de visible.
+5. Les pochoirs (les grandes inscriptions au sol) sont sûrs sur leur propre carte, mais ils seraient touchés de la même
+   façon par le défaut du changement de carte.
+
 ## Plan (écrit à 07:25, avant tout code)
 
 1. **Reproduire** le défaut de l'évaluation 11 (`docs/iso/cloud/ecart-11/RAPPORT.md` § 4 : torches éteintes, Croisée,
@@ -128,6 +141,39 @@ plus sombres et plus larges) : jusqu'à ×2,93 sur une lecture (`croise.txt`, 36
 Usine ou Bunker ; Cloître → Arène Circulaire ou Croisée ; Usine → Arène Circulaire ; Bunker → Arène Circulaire). Signalé,
 pas corrigé : la cause est la même, dans `presentation_3d.gd`.
 
+## 4. La preuve, six cartes, 45° B, vue unique et écran scindé
+
+`lancer.sh preuve` : deux lancements (`seul` : `--sol-marque-essai` ; `tout` : les neuf essais d'hier + le sol marqué),
+chacun sur les six cartes livrées posées l'une après l'autre, **la peinture refaite à chaque carte** (le banc la refait, § 1 ;
+la ligne `PEINTURE` du journal donne, carte par carte, la taille que les murs lisent : 910, 1190, 1120, 1190 × 980, 1050, 980
+— chaque fois la carte posée plus 70). Quatre scènes par carte, la mise en scène du duel de l'évaluation 11 : `noir`
+(vue unique, torches éteintes), `noir_scinde` (écran scindé, J2 au demi-tour de J1), `allume`, `allume_scinde`. Chaque
+scène est une prise triple au même instant, jeu en pause (A marques, B marques retirées et décor recuit, A' remises).
+Mesures : `noir.py` (seuil du noir : 7 au canal max, celui de l'évaluation 11).
+
+**Sol marqué seul** (`mesures_seul.json`) — 24 scènes :
+
+| mesure | résultat |
+|---|---|
+| pixels noirs allumés par l'essai (noirs en B, allumés en A) | **0** dans les 24 scènes |
+| bruit (noirs en A, allumés en A') | **0** dans les 24 scènes |
+| plus clair que sans l'essai de 2/255 ou plus | **0** pixel dans les 24 scènes |
+| plus clair d'1/255 sur un canal | 0 à 27 pixels par scène (sur 6 500 à 19 600 changés) : l'arrondi de la division du sol éclairé, déjà relevé par le premier passage (son piège 4) ; aucun ne franchit le seuil du noir |
+
+Les planches (éclaircies ×4 pour le noir, sinon brutes ; marques à gauche, sans à droite) : `img/preuve_noir.jpg`,
+`img/preuve_noir_scinde.jpg`, `img/preuve_allume.jpg`, `img/preuve_allume_scinde.jpg`. En écran scindé, les deux moitiés sont
+la même image : J2 est au demi-tour de J1, sa vue tournée d'un demi-tour, et les cartes sont symétriques par le centre.
+
+**Tous les essais** (`mesures_tout.json`, les neuf d'hier + le sol marqué ; A et B ne diffèrent que par les marques) — 24
+scènes : **0** pixel noir allumé par l'essai, **0** de bruit, **0** pixel plus clair de 2/255 ou plus ; +1/255 sur un canal
+sur 0 à 30 pixels par scène, comme seul.
+
+**La peinture lue en jeu** (vidée par le banc, marques et sans, carte par carte, séance `tout`) : `lecture.py` sur les six
+cartes, **0 arête** sur 1 552 ne lit autrement ; `distance.py`, le texel marqué le plus proche d'une case non-sol à 13,5 px.
+
+**La garde headless, drapeau éteint** : `tools/test_sol_marque.gd`, 35 vérifications, 0 échec ; textures cuites identiques
+au bit à la base (§ 2).
+
 ## 5. Défauts hors de ma tâche — signalés, pas corrigés (à reporter dans la feuille de route)
 
 1. **La peinture iso n'est pas refaite quand la carte change vue allumée** (le défaut de fond, jeu par défaut). Fichier :
@@ -181,6 +227,21 @@ python3 docs/iso/cloud/sol-marque-2/images.py "$U/sm2/seul" preuve
 ```
 
 Sur le Mac : `ENVELOPPE= GODOT=/Applications/Godot.app/Contents/MacOS/Godot ./docs/iso/cloud/sol-marque-2/lancer.sh …`.
+
+## 7. Ce que je n'ai PAS pu prouver
+
+- **Qu'un joueur tombe sur la peinture périmée.** Prouvé sur le chemin des bancs (changer de carte vue allumée) ; pas
+  établi en jeu (salon en ligne qui adopte la carte de l'hôte, entraînement puis duel, revanche). À vérifier par qui tient
+  `presentation_3d.gd`.
+- **Que la correction proposée d'une ligne suffit** : non appliquée (jeu par défaut, hors de ma tâche), donc non mesurée.
+  Le banc la simule (`_poser_peinture` après chaque carte) et la peinture lue est alors la bonne sur les six cartes.
+- **L'œil et la cadence** : rien ici n'est une mesure d'images par seconde ; le cloud rend en llvmpipe (couleurs à ~1/255
+  du Mac). Le resserrement des gravats (un demi-pixel au plus) n'a pas été regardé sur un vrai écran.
+- **Le 0°** : toutes les prises sont à 45° B. La marge des marques ne dépend pas de l'angle de vue (elle se joue dans la
+  peinture, en espace monde), mais ce n'est pas photographié.
+- **Une seule mise en scène par carte** (celle du duel de l'évaluation 11) : la preuve à l'image couvre ce que ces cadrages
+  voient ; le reste des murs est couvert par le calcul (`lecture.py`, 1 552 arêtes, 0 touchée), pas par l'image.
+- **Les traces d'une manche précédente** (sang, douilles) dans une peinture gardée à la revanche : non mesuré.
 
 ## État
 
