@@ -1,0 +1,178 @@
+{
+ "defaut/croisee_duel": {
+  "top1": 131.4,
+  "top1_rgb": [
+   179,
+   151,
+   106
+  ],
+  "corps": {
+   "pixels": 1799,
+   "rgb": [
+    114,
+    140,
+    157
+   ],
+   "lum": 135.4,
+   "lum_p90": 147.0,
+   "centre": [
+    815,
+    632
+   ],
+   "autres_composantes": 1
+  },
+  "ancien_top1": 138.7,
+  "ancien_top1_rgb": [
+   217,
+   181,
+   114
+  ],
+  "ancien_corps": {
+   "pixels": 1805,
+   "rgb": [
+    114,
+    140,
+    157
+   ],
+   "lum": 135.4,
+   "lum_p90": 147.1,
+   "centre": [
+    815,
+    632
+   ],
+   "autres_composantes": 1
+  }
+ },
+ "tout/croisee_duel": {
+  "top1": 210.6,
+  "top1_rgb": [
+   237,
+   216,
+   180
+  ],
+  "corps": {
+   "pixels": 2150,
+   "rgb": [
+    32,
+    39,
+    45
+   ],
+   "lum": 37.8,
+   "lum_p90": 102.9,
+   "centre": [
+    815,
+    631
+   ],
+   "autres_composantes": 1
+  },
+  "ancien_top1": 212.1,
+  "ancien_top1_rgb": [
+   240,
+   218,
+   177
+  ],
+  "ancien_corps": {
+   "pixels": 2147,
+   "rgb": [
+    32,
+    39,
+    45
+   ],
+   "lum": 37.8,
+   "lum_p90": 102.0,
+   "centre": [
+    815,
+    631
+   ],
+   "autres_composantes": 1
+  }
+ },
+ "defaut/bunker_duel": {
+  "top1": 130.2,
+  "top1_rgb": [
+   172,
+   147,
+   107
+  ],
+  "corps": {
+   "pixels": 1811,
+   "rgb": [
+    114,
+    140,
+    158
+   ],
+   "lum": 135.9,
+   "lum_p90": 146.9,
+   "centre": [
+    633,
+    632
+   ],
+   "autres_composantes": 1
+  },
+  "ancien_top1": 137.8,
+  "ancien_top1_rgb": [
+   212,
+   179,
+   114
+  ],
+  "ancien_corps": {
+   "pixels": 1784,
+   "rgb": [
+    114,
+    140,
+    158
+   ],
+   "lum": 136.1,
+   "lum_p90": 147.3,
+   "centre": [
+    633,
+    633
+   ],
+   "autres_composantes": 1
+  }
+ },
+ "tout/bunker_duel": {
+  "top1": 211.0,
+  "top1_rgb": [
+   237,
+   216,
+   182
+  ],
+  "corps": {
+   "pixels": 2164,
+   "rgb": [
+    33,
+    39,
+    45
+   ],
+   "lum": 37.9,
+   "lum_p90": 100.1,
+   "centre": [
+    633,
+    630
+   ],
+   "autres_composantes": 1
+  },
+  "ancien_top1": 212.1,
+  "ancien_top1_rgb": [
+   239,
+   218,
+   179
+  ],
+  "ancien_corps": {
+   "pixels": 2170,
+   "rgb": [
+    33,
+    39,
+    45
+   ],
+   "lum": 38.0,
+   "lum_p90": 102.2,
+   "centre": [
+    633,
+    630
+   ],
+   "autres_composantes": 1
+  }
+ }
+}
