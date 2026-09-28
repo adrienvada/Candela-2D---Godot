@@ -34,6 +34,9 @@ def prise(suffixe):
 FORMES = [("c", "Gadgets (--fumee-masque)"), ("c0", "Gadgets, seconde prise (le bruit entre deux prises)"),
           ("c1", "compacte (--fumee-masque-compact)"), ("c2", "bande resserrée (--fumee-masque-resserre)"),
           ("c3", "pochoir (--fumee-masque-pochoir)")]
+# Session cloud « masque-fumée-2 » (2026-09-28) : V4 et V5, quand le plan les a prises.
+FORMES += [(k, n) for k, n in (("c4", "lumière d'abord (--fumee-masque-lumiere)"), ("c5", "juge ajusté (--fumee-masque-ajuste)"))
+           if glob.glob(os.path.join(D, "*%s-%s.png" % (ID, k)))]
 ok = True
 a = Image.open(prise("a")).convert("RGB")
 b = Image.open(prise("b")).convert("RGB")
@@ -119,11 +122,13 @@ for suffixe, nom in FORMES:
 
 # L'ÉCRAN SCINDÉ : J1 à gauche, J2 à droite. Le pochoir contre A (fuite : A noir, C3 non) et contre C (Gadgets), hors des
 # pixels instables (les trois A diffèrent) ; vue par vue.
-if glob.glob(os.path.join(D, "*%s-s-c3.png" % ID)):
-    sa, sb, sc, s3 = (Image.open(prise(k)).convert("RGB").load() for k in ("s-a", "s-b", "s-c", "s-c3"))
+SCINDEES = [k for k in ("s-c3", "s-c4", "s-c5") if glob.glob(os.path.join(D, "*%s-%s.png" % (ID, k)))]
+for forme_s in SCINDEES:
+    sa, sb, sc, s3 = (Image.open(prise(k)).convert("RGB").load() for k in ("s-a", "s-b", "s-c", forme_s))
     sas = [Image.open(prise(k)).convert("RGB").load() for k in ("s-a1", "s-a2")]
+    s_ref = Image.open(prise("s-c3")).convert("RGB").load()
     for nom, x0, x1 in (("J1 (gauche)", 0, W // 2), ("J2 (droite)", W // 2, W)):
-        fuite = fuite_c = ecart = sale = noirs = instables = 0
+        fuite = fuite_c = ecart = sale = noirs = instables = ecart_v3 = decor_s = 0
         for y in range(H):
             for x in range(x0, x1):
                 if hud(x, y):
@@ -133,17 +138,68 @@ if glob.glob(os.path.join(D, "*%s-s-c3.png" % ID)):
                     continue
                 if max(sa[x, y]) == 0:
                     noirs += 1
-                    fuite += max(s3[x, y]) > 0
-                    fuite_c += max(sc[x, y]) > 0
+                    # Session « masque-fumée-2 » : une « fuite » n'est comptée que là où la fumée sans masque (B) allume le
+                    # pixel — seule elle peut l'allumer. Sous le pochoir, un pixel vaut A (toutes les couches retirées) ou B
+                    # (aucune) ; allumé là où A ET B sont noirs, c'est le décor qui a bougé entre les prises (le corps de J1
+                    # qui frémit, vu le 2026-09-28 en (474, 602) : A = B = 0, la forme à 3/255), compté à part.
+                    if max(sb[x, y]) > 0:
+                        fuite += max(s3[x, y]) > 0
+                        fuite_c += max(sc[x, y]) > 0
+                    else:
+                        decor_s += max(s3[x, y]) > 0
                     sale += max(sb[x, y]) > 0
                 ecart += s3[x, y] != sc[x, y]
-        print("\n== écran scindé, %s == %d pixels noirs dans A (%d instables exclus) ; la fumée sans masque en allume %d ;"
-              " fuite : Gadgets %d, pochoir %d ; le pochoir diffère de Gadgets sur %d pixels"
-              % (nom, noirs, instables, sale, fuite_c, fuite, ecart))
+                ecart_v3 += s3[x, y] != s_ref[x, y]
+        print("\n== écran scindé, %s, %s == %d pixels noirs dans A (%d instables exclus) ; la fumée sans masque en allume %d ;"
+              " fuite : Gadgets %d, cette forme %d ; elle diffère de Gadgets sur %d pixels, du pochoir (s-c3) sur %d ;"
+              " allumés là où B est noir aussi (le décor, pas la fumée) : %d"
+              % (forme_s, nom, noirs, instables, sale, fuite_c, fuite, ecart, ecart_v3, decor_s))
         # Le pochoir ne doit pas allumer un pixel que le masque de Gadgets laisse noir. Une « fuite » commune aux deux, là où la
         # fumée sans masque (B) est noire elle aussi, vient de la lumière qui a varié entre les prises (vu à 0°, 1/255 sur un
         # pixel au bord d'une zone éclairée qui avait bougé de 1 à 2/255), pas d'un masque : elle est rapportée, pas comptée.
         ok = ok and fuite <= fuite_c
+
+# LA VUE UNIQUE DE J2 (session « masque-fumée-2 ») : J2 à l'abri d'un mur, non ébloui, sa vue seule à l'écran. L'ensemble
+# instable : les écarts entre les quatre A et entre les deux prises de Gadgets (c, c0), dilatés d'un pixel — les corps qui
+# frémissent. Pour chaque forme : la fuite (A noir, la fumée sans masque l'allume, la forme aussi), l'écart au masque de
+# Gadgets là où la fumée change l'image, et, sous le pochoir, les pixels qui ne valent ni A ni B (le décor a bougé).
+if glob.glob(os.path.join(D, "*%s-j2-c.png" % ID)):
+    ja, jb, jc = (Image.open(prise(k)).convert("RGB").load() for k in ("j2-a", "j2-b", "j2-c"))
+    jas = [Image.open(prise(k)).convert("RGB").load() for k in ("j2-a1", "j2-a2", "j2-a3")]
+    jc0 = Image.open(prise("j2-c0")).convert("RGB").load()
+    instable_j2 = set()
+    for y in range(H):
+        for x in range(W):
+            if any(q[x, y] != ja[x, y] for q in jas) or jc0[x, y] != jc[x, y]:
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        instable_j2.add((x + dx, y + dy))
+    noirs = sum(1 for y in range(H) for x in range(W) if not hud(x, y) and (x, y) not in instable_j2 and max(ja[x, y]) == 0)
+    sale = sum(1 for y in range(H) for x in range(W) if not hud(x, y) and (x, y) not in instable_j2 and max(ja[x, y]) == 0
+               and max(jb[x, y]) > 0)
+    temoins = sum(1 for y in range(H) for x in range(W) if jb[x, y] != ja[x, y])
+    print("\n== VUE UNIQUE DE J2 == %d pixels instables exclus ; %d pixels noirs dans A, dont %d que la fumée sans masque allume ;"
+          " la fumée change %d pixels (témoin)" % (len(instable_j2), noirs, sale, temoins))
+    for k, nom in (("j2-c", "Gadgets"), ("j2-c3", "pochoir"), ("j2-c4", "lumière d'abord"), ("j2-c5", "juge ajusté")):
+        if not glob.glob(os.path.join(D, "*%s-%s.png" % (ID, k))):
+            continue
+        jk = Image.open(prise(k)).convert("RGB").load()
+        fuite = ecart = decor = tues = 0
+        for y in range(H):
+            for x in range(W):
+                if hud(x, y) or (x, y) in instable_j2:
+                    continue
+                if max(ja[x, y]) == 0 and max(jb[x, y]) > 0:
+                    fuite += max(jk[x, y]) > 0
+                    tues += max(jk[x, y]) == 0
+                if ja[x, y] != jb[x, y] and jk[x, y] != jc[x, y]:
+                    ecart += 1
+                if k != "j2-c" and jk[x, y] not in (ja[x, y], jb[x, y]):
+                    decor += 1
+        print("   %-16s fuite %d (pixels noirs que la fumée salit, tus : %d sur %d) ; écart au masque de Gadgets là où la fumée"
+              " change l'image : %d ; ni A ni B : %d" % (nom, fuite, tues, sale, ecart, decor if k != "j2-c" else 0))
+        ok = ok and fuite == 0 and (k == "j2-c" or ecart == 0)
+    ok = ok and temoins > 1000
 
 # LE COMPTE DES FRAGMENTS
 zero = Image.open(prise("compte-zero")).convert("L").load()
@@ -201,5 +257,39 @@ if all(k in FRAG for k in ("compte", "compte-resserre-tait", "compte-resserre-ga
     bande = FRAG["compte-resserre-garde"] - FRAG["compte-resserre-tait"]
     print("== LA BANDE RESSERRÉE (forme 2) == %d fragments paient le calcul exact (%.1f %% des fragments)"
           % (bande, 100.0 * bande / FRAG["compte"]))
+# LE COMPTE DU JUGE (session « masque-fumée-2 ») : un seul plan par volume, donc un pixel écrit (50/255) ou non.
+JUGE = {}
+for f in sorted(glob.glob(os.path.join(D, "*%s-juge-*.png" % ID))):
+    suffixe = re.sub(r"^.*%s-(juge-.*)\.png$" % re.escape(ID), r"\1", f)
+    im = Image.open(f).convert("L").load()
+    JUGE[suffixe] = sum(1 for y in range(H) for x in range(W) if not hud(x, y) and zero[x, y] == 0 and im[x, y] > 0)
+    print("   %-24s %8d pixels" % (suffixe, JUGE[suffixe]))
+if JUGE:
+    print("\n== LE TRAVAIL DU JUGE ==")
+    for k in ("3", "5"):
+        if "juge-tout-" + k in JUGE and "juge-couvre-" + k in JUGE:
+            print("forme %s : %d fragments rastérisés, dont %d couvrent une couche et posent la question (%.1f %%) ; %d pour rien"
+                  % (k, JUGE["juge-tout-" + k], JUGE["juge-couvre-" + k],
+                     100.0 * JUGE["juge-couvre-" + k] / max(1, JUGE["juge-tout-" + k]),
+                     JUGE["juge-tout-" + k] - JUGE["juge-couvre-" + k]))
+    for k in ("3", "4"):
+        for quoi in ("pate", "matiere"):
+            a, b = "juge-%s-garde-%s" % (quoi, k), "juge-%s-tait-%s" % (quoi, k)
+            if a in JUGE and b in JUGE:
+                n = JUGE[b] - JUGE[a]
+                print("forme %s : %d pixels couverts paient la %s du sol (%.1f %% des %d couverts)"
+                      % (k, n, "pâte" if quoi == "pate" else "matière", 100.0 * n / max(1, JUGE.get("juge-couvre-3", 1)),
+                         JUGE.get("juge-couvre-3", 0)))
+    # La réponse du juge : les formes 4 et 5 écrivent le pochoir aux mêmes pixels que la forme 3.
+    ims = {k: Image.open(prise("juge-noir-" + k)).convert("L").load() for k in ("3", "4", "5")
+           if glob.glob(os.path.join(D, "*%s-juge-noir-%s.png" % (ID, k)))}
+    for k in ("4", "5"):
+        if k in ims and "3" in ims:
+            diff = [(x, y) for y in range(H) for x in range(W) if (ims[k][x, y] > 0) != (ims["3"][x, y] > 0)]
+            hors = [q for q in diff if q not in INSTABLE]
+            print("pochoir écrit par la forme %s contre la forme 3 : %d pixels diffèrent, dont %d hors de l'ensemble instable"
+                  " (le corps de J1) — %s%s" % (k, len(diff), len(hors), "MÊME RÉPONSE" if not hors else "À EXAMINER",
+                                                  (" : " + str(hors[:8])) if hors else ""))
+            ok = ok and not hors
 print("\nVERDICT GLOBAL : %s" % ("toutes les formes passent la preuve" if ok else "UNE FORME ÉCHOUE"))
 sys.exit(0 if ok else 1)

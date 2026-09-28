@@ -35,7 +35,8 @@ def forme(glsl):
     def appelle(f):
         return glsl.count(f + "(") >= 2
     if appelle("m_juge_couvre"):
-        return "pochoir : le juge"
+        # Session « masque-fumée-2 » : le juge de V4 (et de V5, dont MASQUE_AJUSTE n'ajoute aucun code) appelle la borne.
+        return "pochoir : le juge, lumière d'abord" if appelle("m_sol_borne_lumiere") else "pochoir : le juge"
     # Godot n'émet que les fonctions appelées, mais TOUS les uniformes : les couches du pochoir se reconnaissent à ceux du juge.
     if "juge_rayons" in glsl and not appelle("m_masque_compact_montre_noir"):
         return "pochoir : les couches"

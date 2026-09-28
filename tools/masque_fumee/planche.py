@@ -21,7 +21,9 @@ ID = "loupe-fusee-masque-formes"
 BOITE = (1000, 130, 1920, 730)
 FORMES = [("b", "Fumée sans masque (le jeu par défaut)"), ("c", "Masque de Gadgets (--fumee-masque)"),
           ("c1", "Forme compacte (--fumee-masque-compact)"), ("c2", "Bande resserrée (--fumee-masque-resserre)"),
-          ("c3", "Pochoir (--fumee-masque-pochoir)")]
+          ("c3", "Pochoir (--fumee-masque-pochoir)"),
+          # Session cloud « masque-fumée-2 » (2026-09-28), quand le plan les a prises.
+          ("c4", "V4, la lumière d'abord (--fumee-masque-lumiere)"), ("c5", "V5, le juge ajusté (--fumee-masque-ajuste)")]
 
 
 def charger(dossier, k):
@@ -95,12 +97,40 @@ for paire in sys.argv[2:]:
     # L'écran scindé, s'il a été pris : J1 à gauche, J2 à droite, le pochoir contre A.
     sa, s3, sb = charger(dossier, "s-a"), charger(dossier, "s-c3"), charger(dossier, "s-b")
     if sa is not None and s3 is not None:
-        for k, img, titre in (("s-b", sb, "Écran scindé, fumée sans masque"), ("s-c3", s3, "Écran scindé, pochoir")):
+        for k, img, titre in (("s-b", sb, "Écran scindé, fumée sans masque"), ("s-c3", s3, "Écran scindé, pochoir"),
+                              ("s-c4", charger(dossier, "s-c4"), "Écran scindé, V4"),
+                              ("s-c5", charger(dossier, "s-c5"), "Écran scindé, V5")):
+            if img is None:
+                continue
             carte, rouges = carte_noir(sa, img, (0, 0, sa.size[0], sa.size[1]))
             f = "%s_%s_noir.jpg" % (fichier, k)
             carte.resize((sa.size[0] // 2, sa.size[1] // 2)).save(os.path.join(SORTIE, f), quality=85)
             lignes.append('<h3>%s (J1 à gauche, J2 à droite)</h3><div class="rang"><figure class="large"><img src="%s">'
                           '<figcaption>noir sali : %d pixels rouges</figcaption></figure></div>' % (titre, f, rouges))
+    # La vue unique de J2 (session « masque-fumée-2 ») : J2 à l'abri d'un mur, non ébloui ; image entière, réduite de moitié.
+    ja, jc = charger(dossier, "j2-a"), charger(dossier, "j2-c")
+    if ja is not None and jc is not None:
+        tout = (0, 0, ja.size[0], ja.size[1])
+        for k, titre in (("j2-b", "Vue unique de J2, fumée sans masque"), ("j2-c", "Vue unique de J2, masque de Gadgets"),
+                         ("j2-c3", "Vue unique de J2, pochoir"), ("j2-c4", "Vue unique de J2, V4"),
+                         ("j2-c5", "Vue unique de J2, V5")):
+            x = charger(dossier, k)
+            if x is None:
+                continue
+            carte, rouges = carte_noir(ja, x, tout)
+            f1 = "%s_%s_noir.jpg" % (fichier, k)
+            carte.resize((ja.size[0] // 2, ja.size[1] // 2)).save(os.path.join(SORTIE, f1), quality=85)
+            f2 = "%s_%s_image.jpg" % (fichier, k)
+            gain(x, tout).resize((ja.size[0] // 2, ja.size[1] // 2)).save(os.path.join(SORTIE, f2), quality=85)
+            cellule3 = ""
+            if k not in ("j2-b", "j2-c"):
+                e, n = ecart(jc, x, tout)
+                f3 = "%s_%s_ecart.jpg" % (fichier, k)
+                e.resize((ja.size[0] // 2, ja.size[1] // 2)).save(os.path.join(SORTIE, f3), quality=85)
+                cellule3 = '<figure><img src="%s"><figcaption>écart au masque de Gadgets : %d pixels (magenta)</figcaption></figure>' % (f3, n)
+            lignes.append('<h3>%s</h3><div class="rang"><figure><img src="%s"><figcaption>noir sali : %d pixels rouges</figcaption>'
+                          '</figure><figure><img src="%s"><figcaption>l\'image (gain ×3)</figcaption></figure>%s</div>'
+                          % (html.escape(titre), f1, rouges, f2, cellule3))
     sections.append('<section><h2>%s</h2>%s</section>' % (html.escape(nom), "".join(lignes)))
 
 open(os.path.join(SORTIE, "planche.html"), "w").write('''<!doctype html>
@@ -117,7 +147,8 @@ figcaption { color: var(--doux); font-size: 13px; }
 p { max-width: 900px; }
 </style></head><body>
 <h1>Le masque de la fumée et ses formes moins chères</h1>
-<p>Session cloud « masque-fumée », 27/09/2026. Torches éteintes, la fusée seule, caméra posée, LED figées : A sans fumée,
+<p>Sessions cloud « masque-fumée » (27/09/2026, formes C1 à C3) et « masque-fumée-2 » (28/09/2026, V4, V5 et la vue
+unique de J2, posé à l'abri d'un mur pour n'être pas ébloui). Torches éteintes, la fusée seule, caméra posée, LED figées : A sans fumée,
 puis la même fumée sans masque, avec le masque de Gadgets, avec chaque forme. <b>Noir sali</b> : en rouge, les pixels noirs
 sans fumée qu'elle allume ; en gris clair, le sol éclairé. <b>Écart</b> : en magenta, les pixels qui diffèrent du masque de
 Gadgets (au pied de J1, le corps frémit d'une prise à l'autre : deux prises de Gadgets y diffèrent autant). Rendu logiciel du
