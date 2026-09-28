@@ -262,6 +262,7 @@ func _les_deux_lightmaps() -> void:
 		var poses: Dictionary = await _les_gadgets_en_iso(main, p)
 		await _la_fusee_en_iso(main, p)
 		await _le_point_par_acte(main, p)
+		await _le_faisceau_air_en_iso(main, p)
 		await _des_images_seulement(main, p, poses)
 		await _l_effacement_dans_la_suie(main, p)
 	reglages.mode_iso = false
@@ -519,6 +520,66 @@ func _le_point_par_acte(main: Node, p: Node) -> void:
 		IsoVolumes.couleur_coeur_fusee(1, FuseeModele.Acte.BRAISE, halo.color) == halo.color
 		and IsoVolumes.couleur_coeur_fusee(1, FuseeModele.Acte.PLEIN_FEU, halo.color) == halo.color)
 	f.queue_free()
+
+
+## Q41 — le rayon dans l'air, sur le vrai chemin : la lampe de J1 tenue allumée comme le banc la tient. Drapeau éteint, aucune
+## couche ; allumé, trois couches sous les murets, la forme de la lampe, le masque pochoir et son juge, les lightmaps des deux
+## vues ; la bascule du masque de la FUMÉE ne le touche pas ; la lampe éteinte, il part.
+func _le_faisceau_air_en_iso(main: Node, p: Node) -> void:
+	print("\n[Le rayon dans l'air en iso — Q41, sur le vrai chemin]")
+	var volumes: IsoVolumes = (p.get("_miroirs") as Node).get("volumes")
+	await _tenir_la_lampe(main, true)
+	var lampe := main.p1.get_node(^"Flashlight") as PointLight2D
+	_check("la lampe de J1 est allumée (sinon rien ne se juge ici)", lampe.enabled and lampe.energy > 0.0,
+		"enabled=%s energy=%.2f" % [lampe.enabled, lampe.energy])
+	_check("drapeau ÉTEINT, lampe allumée : aucune couche posée", volumes.get("faisceau_air") == false
+		and volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty())
+	var masque_avant: bool = volumes.masque_fumee
+	volumes.faisceau_air = true
+	await _tenir_la_lampe(main, true)
+	var e: Dictionary = volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR)
+	var n := int(IsoVolumes.VOLUME_FAISCEAU_AIR["couches"])
+	var ok: bool = not e.is_empty() and e["genre"] == "faisceau_air" and (e["noeuds"] as Array).size() == n
+	_check("drapeau ALLUMÉ : un volume de %d couches à la lampe de J1" % n, ok)
+	if ok:
+		var haut := 0.0
+		for mi in e["noeuds"]:
+			haut = maxf(haut, (mi as Node3D).position.y)
+		_check("ses couches restent sous les murets à l'image aussi (%.1f px < %.1f px)" % [haut,
+			MapGeometry.HAUTEUR_MUR_BAS * IsoVolumes.TUILE], haut < MapGeometry.HAUTEUR_MUR_BAS * IsoVolumes.TUILE)
+		var mat: ShaderMaterial = e["mats"][0]
+		_check("sa forme est la texture de la lampe", mat.get_shader_parameter("masque") == lampe.texture
+			and mat.get_shader_parameter("avec_masque") == true)
+		_check("ses couches portent le pochoir (le test du stencil précède leur shader)",
+			mat.shader.code.contains("#define MASQUE_POCHOIR\n") and not mat.shader.code.contains("#define MASQUE_POCHOIR_JUGE\n"))
+		var juge: Variant = e.get("juge")
+		_check("son juge est posé, visible, et ÉCRIT le pochoir", juge != null and is_instance_valid(juge)
+			and (juge as MeshInstance3D).visible
+			and ((juge as MeshInstance3D).material_override as ShaderMaterial).shader.code.contains("#define MASQUE_POCHOIR_JUGE\n"))
+		_check("ses couches lisent la lightmap de chaque vue (J1 et J2), comme le sol",
+			mat.get_shader_parameter("lumiere_1") == main.vp1.get_texture()
+			and mat.get_shader_parameter("lumiere_2") == main.vp2.get_texture())
+		volumes.poser_masque_fumee(not masque_avant)
+		_check("la bascule du masque de la FUMÉE ne touche pas au rayon", (e["mats"][0] as ShaderMaterial).shader == mat.shader)
+		volumes.poser_masque_fumee(masque_avant)
+	await _tenir_la_lampe(main, false)
+	for k in 30:
+		if volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty():
+			break
+		await _tenir_la_lampe(main, false)
+	_check("la lampe éteinte, le rayon part (noir absolu)", volumes.suivi_de(main.p1, IsoVolumes.CLE_FAISCEAU_AIR).is_empty(),
+		"enabled=%s energy=%.2f" % [lampe.enabled, lampe.energy])
+	volumes.faisceau_air = false
+
+
+## La lampe de J1 tenue comme le banc la tient (`tenir_la_torche`), six pas de physique : écrire `flashlight_on` ne l'allume pas.
+func _tenir_la_lampe(main: Node, allumee: bool) -> void:
+	var Banc := load("res://tools/bench_framerate.gd") as GDScript
+	var cible := Engine.get_physics_frames() + 6
+	while Engine.get_physics_frames() < cible:
+		Banc.tenir_la_torche(main.p1, allumee)
+		await process_frame
+	Banc.tenir_la_torche(main.p1, allumee)
 	await process_frame
 
 
@@ -576,6 +637,30 @@ func _le_faisceau() -> void:
 		texte.contains("for arg in DrapeauxDeLancement.arguments():"))
 	_check("le drapeau dit ce qu'il allume (la preuve qu'il a porté)",
 		texte.contains("[faisceau] allumé — le cœur chaud seul"))
+	_le_faisceau_air_dans_le_texte(texte)
+
+
+## Q41 (session cloud « faisceau-air », 2026-09-28) — le rayon dans l'air, à l'essai derrière `--faisceau-air`, ÉTEINT. Ce qui
+## ne se voit à aucune image et qu'une réécriture casserait en silence : le drapeau éteint par défaut ; les couches SOUS les
+## murets (la décision d'Adrien du 2026-09-15 refuse une hauteur à la lampe) ; la forme = la texture de la lampe ; et le
+## masque pochoir IMPOSÉ au rayon, quel que soit le masque de la fumée. Le chemin vivant se juge dans la manche
+## (`_le_faisceau_air_en_iso`).
+func _le_faisceau_air_dans_le_texte(texte: String) -> void:
+	print("\n[Le rayon dans l'air — Q41, --faisceau-air]")
+	var v := IsoVolumes.new()
+	_check("le drapeau du rayon dans l'air est éteint par défaut", v.get("faisceau_air") == false)
+	v.free()
+	var spec: Dictionary = IsoVolumes.VOLUME_FAISCEAU_AIR
+	_check("ses couches restent SOUS la hauteur des murets (%.2f < %.2f tuile)" % [float(spec["hauteur"]),
+		MapGeometry.HAUTEUR_MUR_BAS], float(spec["hauteur"]) < MapGeometry.HAUTEUR_MUR_BAS)
+	var corps := _fonction_gd(texte, "_suivre_faisceau_air")
+	_check("la fonction du rayon existe", not corps.is_empty())
+	_check("sa forme EST la texture de la lampe, tournée comme elle", corps.contains("lampe.texture, lampe.global_rotation"))
+	_check("ses couches portent le masque POCHOIR, imposé",
+		corps.contains("_couches(e, int(VOLUME_FAISCEAU_AIR[\"couches\"]), FORME_POCHOIR)"))
+	_check("il s'éteint avec la lampe", corps.contains("not lampe.enabled or lampe.energy <= 0.0"))
+	var suivre := _fonction_gd(texte, "suivre")
+	_check("seul le drapeau l'appelle", suivre.contains("\tif faisceau_air:\n") and suivre.count("_suivre_faisceau_air(") == 1)
 
 
 

@@ -63,6 +63,13 @@ const VOLUME_FUSEE := {"hauteur": 1.0, "couches": 4, "densite": 0.26}
 ## Le cœur chaud à la lampe : sa taille en pixels de monde, et sa hauteur au-dessus du sol.
 const TAILLE_COEUR_LAMPE := 7.0
 const HAUTEUR_COEUR_LAMPE := 0.20
+## Session cloud « faisceau-air » (Q41, 2026-09-28) — LE RAYON DANS L'AIR, à l'essai derrière `--faisceau-air`, ÉTEINT.
+## Les trois conditions de son retour, écrites à la ROADMAP le 2026-09-24 : ses couches restent SOUS la hauteur des murets
+## (0,40 tuile : 0,12 / 0,24 / 0,36), donc aucune hauteur rendue à la lampe ; il porte TOUJOURS le masque pochoir (rien ne
+## tombe hors de la lumière du sol à l'écran) ; et sa densité se cherche à l'image (`--faisceau-air=<densité>`).
+const VOLUME_FAISCEAU_AIR := {"hauteur": 0.36, "couches": 3, "densite": 0.45}
+## Sa clé de suivi, à côté du cœur chaud (1) : un joueur porte les deux.
+const CLE_FAISCEAU_AIR := 3
 
 ## La toile du voile, debout : la hauteur de ses piquets (`VoxelObjet.VOILE_PIQUET`).
 const HAUTEUR_TOILE := 0.15
@@ -86,6 +93,10 @@ var lueurs_actives := true
 var couches_fusee := -1
 ## ISO13, lot E — éteint par défaut, comme tout drapeau d'un lot en cours.
 var faisceaux_actifs := false
+## Q41 (`--faisceau-air`) — le rayon dans l'air, éteint par défaut ; relu à chaque image (un banc peut le basculer sur place).
+var faisceau_air := false
+## `--faisceau-air=0.3` force la densité d'une couche (au cœur, lampe à pleine énergie) ; 0 : celle de `VOLUME_FAISCEAU_AIR`.
+var densite_faisceau_air := 0.0
 ## ISO13, Q31 voie A — le masque de la fumée : chaque couche de volume passe à la variante FUMEE_MASQUE
 ## de son shader, qui la tait là où ce que le pixel montre est affiché noir (voir `volume_iso.gdshader`). ÉTEINT PAR DÉFAUT
 ## depuis le 2026-09-26 (ordre 416 du cloud) : allumé le 2026-09-25 (Q31 : « le noir d'abord », prix 3 % au plus), il
@@ -120,6 +131,8 @@ var _masques := false
 ## fait sur les arguments UTILISATEUR. Lu ici plutôt que dans un banc pour qu'il porte partout — jeu,
 ## banc de cadence, photographe — sans qu'aucun d'eux n'ait à le connaître.
 const DRAPEAU_FAISCEAU := "--faisceau"
+## Q41 — le rayon dans l'air, distinct du cœur seul : la garde de `--faisceau` (aucune couche) reste vraie mot pour mot.
+const DRAPEAU_FAISCEAU_AIR := "--faisceau-air"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
 ## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
@@ -171,6 +184,11 @@ func _init() -> void:
 	for arg in DrapeauxDeLancement.arguments():
 		if arg == DRAPEAU_FAISCEAU:
 			faisceaux_actifs = true
+		elif arg == DRAPEAU_FAISCEAU_AIR:
+			faisceau_air = true
+		elif arg.begins_with(DRAPEAU_FAISCEAU_AIR + "="):
+			faisceau_air = true
+			densite_faisceau_air = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU_AIR + "=")))
 		elif arg == DRAPEAU_MASQUE_FUMEE:
 			masque_fumee = true
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE:
@@ -186,6 +204,10 @@ func _init() -> void:
 			coeur_fusee = 0
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
+	if faisceau_air:
+		print("[faisceau air] allumé — %d couches sous %.2f tuile (murets %.2f), densité %.3f, masque pochoir forcé"
+			% [int(VOLUME_FAISCEAU_AIR["couches"]), float(VOLUME_FAISCEAU_AIR["hauteur"]), MapGeometry.HAUTEUR_MUR_BAS,
+			densite_du_faisceau_air()])
 	if coeur_fusee != 2:
 		print("[fusée cœur] %s" % ("éteint (%s)" % DRAPEAU_SANS_COEUR_FUSEE if coeur_fusee == 0
 			else "de la couleur de la lumière, sans le blanc (%s)" % DRAPEAU_COEUR_FUSEE))
@@ -245,6 +267,10 @@ func suivre(main: Node, vues: Array, style: int, presentation: Node) -> void:
 		for j in [main.get("p1"), main.get("p2")]:
 			if j is Node2D and not (j as Node).is_queued_for_deletion():
 				_suivre_faisceau(j as Node2D, vus)
+	if faisceau_air:
+		for j in [main.get("p1"), main.get("p2")]:
+			if j is Node2D and not (j as Node).is_queued_for_deletion():
+				_suivre_faisceau_air(j as Node2D, vus)
 	for id in _suivis.keys():
 		if not vus.has(id):
 			_retirer(id)
@@ -443,6 +469,39 @@ func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 		TAILLE_COEUR_LAMPE, lampe.color, part, 1)
 
 
+## Q41 (session cloud « faisceau-air », 2026-09-28) — LE RAYON DE LA TORCHE DANS L'AIR, à l'essai (`--faisceau-air`, éteint).
+##
+## Le rayon retiré le 2026-09-24 (`d8e928a`, `4afbc3c`), repris avec ce qui l'avait fait retirer :
+## - **la forme est la texture de la lampe elle-même**, tournée comme elle : le cône ne peut pas diverger de la lumière ;
+## - **les couches sont celles de tout volume** : chacune lit la lightmap de la caméra qui la dessine, sans gain — le rayon
+##   d'un adversaire ne montre que la lumière que ce joueur voit déjà au sol, et vaut zéro hors de sa lumière DANS LE MONDE ;
+## - **sous les murets** (`VOLUME_FAISCEAU_AIR`, 0,36 < 0,40 tuile) : il ne rend pas à la lampe la hauteur que la décision
+##   d'Adrien du 2026-09-15 lui refuse ;
+## - **le masque pochoir, toujours** (`FORME_POCHOIR`, quel que soit le masque de la fumée) : À L'ÉCRAN, une couche se tait là
+##   où ce que le pixel montre derrière elle s'affiche noir — c'est ce qui manquait le 24/09 (le lissage et la parallaxe
+##   posaient le rayon sur du noir). La fumée n'en est pas touchée, et la bascule des bancs ne touche pas au rayon.
+## La poussière est le grain que le shader applique déjà à l'alpha, animé par `age` : pas un objet de plus.
+func _suivre_faisceau_air(j: Node2D, vus: Dictionary) -> void:
+	var lampe := j.get_node_or_null(^"Flashlight") as PointLight2D
+	if lampe == null or not lampe.enabled or lampe.energy <= 0.0 or lampe.texture == null:
+		return
+	# La portée du cône, en pixels de monde : la texture, à son échelle, centrée sur la lampe.
+	var rayon := 0.5 * float(lampe.texture.get_width()) * lampe.texture_scale
+	if rayon <= 1.0:
+		return
+	var part := clampf(lampe.energy / 2.5, 0.0, 1.0)
+	var e := _entree(j, "faisceau_air", vus, CLE_FAISCEAU_AIR)
+	_couches(e, int(VOLUME_FAISCEAU_AIR["couches"]), FORME_POCHOIR)
+	_poser_couches(e, lampe.global_position, rayon, float(VOLUME_FAISCEAU_AIR["hauteur"]),
+		densite_du_faisceau_air() * part, lampe.texture, lampe.global_rotation,
+		float(j.get_instance_id() % 97), float(Time.get_ticks_msec()) * 0.001)
+
+
+## La densité d'une couche du rayon : celle du drapeau si on en cherche une, sinon la constante.
+func densite_du_faisceau_air() -> float:
+	return densite_faisceau_air if densite_faisceau_air > 0.0 else float(VOLUME_FAISCEAU_AIR["densite"])
+
+
 func _suivre_eclair(g: Node2D, vus: Dictionary) -> void:
 	var feu := g.get_node_or_null(^"Embrasement") as Light2D
 	var part := clampf(feu.energy / 6.0, 0.0, 1.0) if feu != null and feu.enabled else 0.0
@@ -612,10 +671,14 @@ var _shader_masque: Shader = null
 var _formes_posees := {}
 
 
-func _materiau_volume() -> ShaderMaterial:
+## `forme` ≥ 0 : une forme du masque IMPOSÉE à ces couches, quel que soit le masque de la fumée (le rayon de Q41) ; −1 : le
+## masque de la fumée décide, comme avant.
+func _materiau_volume(forme := -1) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER_VOLUME
-	if masque_fumee:
+	if forme >= 0:
+		_poser_forme_imposee(mat, forme)
+	elif masque_fumee:
 		_poser_masque(mat, true)
 	mat.render_priority = PRIORITE_VOLUME
 	# Raccords de la vague — la teinte chaude du sol et des murs (ISO7), nulle sans beauté.
@@ -648,6 +711,20 @@ func _poser_masque(mat: ShaderMaterial, actif: bool) -> void:
 			else "éteinte, comme le sol"])
 		# La forme, lue elle aussi dans le code de la variante réellement posée : une prise prouve son bras par cette ligne.
 		print("[fumée masque] forme : %s" % forme_annoncee(mat.shader))
+
+
+## Q41 — la forme du masque IMPOSÉE à des couches (le rayon dans l'air) : la variante, sans toucher à `_shader_masque` (qui
+## nomme la variante de la FUMÉE, et que ses filtres reconnaissent) ; `_formes_posees` suffit aux filtres pour la reconnaître.
+static var _forme_imposee_annoncee := false
+
+
+func _poser_forme_imposee(mat: ShaderMaterial, forme: int) -> void:
+	mat.shader = variante_forme(variante_masque(IsoMateriaux.usure_essai_active()), forme)
+	_formes_posees[mat.shader] = true
+	_recopier_le_mur(mat)
+	if not _forme_imposee_annoncee:
+		_forme_imposee_annoncee = true
+		print("[faisceau air] masque : %s" % forme_annoncee(mat.shader))
 
 
 ## Le point noir de la sortie 3D, tel que la couche le prend (`POINT_NOIR_ECRIT` de `volume_masque.gdshaderinc`) : imprimé
@@ -728,20 +805,25 @@ static func forme_annoncee(sh: Shader) -> String:
 func poser_masque_fumee(actif: bool) -> void:
 	masque_fumee = actif
 	for e: Dictionary in _suivis.values():
+		# Le rayon de Q41 porte sa forme imposée : la bascule de la FUMÉE ne le touche pas.
+		if e.has("forme_imposee"):
+			continue
 		for m in e["mats"]:
 			var s := (m as ShaderMaterial).shader
 			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s):
 				_poser_masque(m as ShaderMaterial, actif)
 
 
-func _couches(e: Dictionary, n: int) -> void:
+func _couches(e: Dictionary, n: int, forme := -1) -> void:
+	if forme >= 0:
+		e["forme_imposee"] = forme
 	while (e["noeuds"] as Array).size() < n:
 		var mi := MeshInstance3D.new()
 		mi.name = "Couche%d" % (e["noeuds"] as Array).size()
 		mi.mesh = _plan
 		mi.layers = CALQUE
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		var mat := _materiau_volume()
+		var mat := _materiau_volume(forme)
 		mi.material_override = mat
 		add_child(mi)
 		e["noeuds"].append(mi)
@@ -779,7 +861,8 @@ func _poser_couches(e: Dictionary, centre: Vector2, rayon: float, hauteur: float
 ## de demi-côté rayon + hauteur les contient donc toutes, dans les deux vues. Sans la forme pochoir, aucun juge n'existe.
 func _poser_juge(e: Dictionary, centre: Vector2, rayon: float, hauteur: float, densite: float, n: int) -> void:
 	var juge: MeshInstance3D = e.get("juge") if is_instance_valid(e.get("juge")) else null
-	if not (masque_fumee and forme_masque >= FORME_POCHOIR and n > 0):
+	var pochoir := int(e.get("forme_imposee", -1)) >= FORME_POCHOIR or (masque_fumee and forme_masque >= FORME_POCHOIR)
+	if not (pochoir and n > 0):
 		if juge != null:
 			juge.visible = false
 		return
@@ -926,7 +1009,7 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 	if mats.is_empty():
 		return
 	# Le contact des corps change à chaque image : recopié du sol de la vue de J1 sur les couches masquées.
-	if _shader_masque != null:
+	if _shader_masque != null or not _formes_posees.is_empty():
 		var pres := Presentation3D.instance()
 		var sols: Array = pres.get("_mat_sols") if pres != null else []
 		if not sols.is_empty() and sols[0] != null:
