@@ -510,5 +510,232 @@
     }
    ]
   }
+ },
+ "regard_unique_avant": {
+  "regard": {
+   "fuite totale": 108226,
+   "taches": 9,
+   "petites hors HUD": [
+    {
+     "boite": [
+      83,
+      604,
+      89,
+      610
+     ],
+     "pixels": 41,
+     "max": 137,
+     "couleur_moyenne": [
+      61.5,
+      18.3,
+      21.3
+     ]
+    },
+    {
+     "boite": [
+      94,
+      604,
+      100,
+      610
+     ],
+     "pixels": 41,
+     "max": 137,
+     "couleur_moyenne": [
+      61.5,
+      18.3,
+      21.3
+     ]
+    }
+   ],
+   "grandes": [
+    {
+     "boite": [
+      23,
+      23,
+      572,
+      180
+     ],
+     "pixels": 86234,
+     "max": 255,
+     "couleur_moyenne": [
+      38.7,
+      49.0,
+      53.5
+     ]
+    },
+    {
+     "boite": [
+      1057,
+      23,
+      1410,
+      99
+     ],
+     "pixels": 21884,
+     "max": 255,
+     "couleur_moyenne": [
+      74.4,
+      69.9,
+      65.1
+     ]
+    },
+    {
+     "boite": [
+      1063,
+      97,
+      1071,
+      99
+     ],
+     "pixels": 20,
+     "max": 60,
+     "couleur_moyenne": [
+      30.9,
+      27.1,
+      22.9
+     ]
+    },
+    {
+     "boite": [
+      1056,
+      96,
+      1058,
+      96
+     ],
+     "pixels": 3,
+     "max": 92,
+     "couleur_moyenne": [
+      36.3,
+      32.0,
+      27.0
+     ]
+    },
+    {
+     "boite": [
+      1148,
+      39,
+      1148,
+      39
+     ],
+     "pixels": 1,
+     "max": 36,
+     "couleur_moyenne": [
+      36.0,
+      31.0,
+      26.0
+     ]
+    },
+    {
+     "boite": [
+      1121,
+      54,
+      1121,
+      54
+     ],
+     "pixels": 1,
+     "max": 255,
+     "couleur_moyenne": [
+      255.0,
+      255.0,
+      255.0
+     ]
+    }
+   ]
+  },
+  "t08": {
+   "fuite totale": 108144,
+   "taches": 7,
+   "petites hors HUD": [],
+   "grandes": [
+    {
+     "boite": [
+      23,
+      23,
+      572,
+      180
+     ],
+     "pixels": 86234,
+     "max": 255,
+     "couleur_moyenne": [
+      38.7,
+      49.0,
+      53.5
+     ]
+    },
+    {
+     "boite": [
+      1057,
+      23,
+      1410,
+      99
+     ],
+     "pixels": 21884,
+     "max": 255,
+     "couleur_moyenne": [
+      74.4,
+      69.9,
+      65.1
+     ]
+    },
+    {
+     "boite": [
+      1063,
+      97,
+      1071,
+      99
+     ],
+     "pixels": 20,
+     "max": 60,
+     "couleur_moyenne": [
+      30.9,
+      27.1,
+      22.9
+     ]
+    },
+    {
+     "boite": [
+      1056,
+      96,
+      1058,
+      96
+     ],
+     "pixels": 3,
+     "max": 92,
+     "couleur_moyenne": [
+      36.3,
+      32.0,
+      27.0
+     ]
+    },
+    {
+     "boite": [
+      1148,
+      39,
+      1148,
+      39
+     ],
+     "pixels": 1,
+     "max": 36,
+     "couleur_moyenne": [
+      36.0,
+      31.0,
+      26.0
+     ]
+    },
+    {
+     "boite": [
+      1121,
+      54,
+      1121,
+      54
+     ],
+     "pixels": 1,
+     "max": 255,
+     "couleur_moyenne": [
+      255.0,
+      255.0,
+      255.0
+     ]
+    }
+   ]
+  }
  }
 }
