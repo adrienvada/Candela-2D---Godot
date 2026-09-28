@@ -16,7 +16,7 @@ illustrations (`docs/iso/cloud/ecart-illustrations/RAPPORT.md`).
 5. À toi de juger sur `planche.html` : ça se voit de près, c'est **discret à taille réelle** ; et si tu gardes aussi les
    tuyaux, les deux essais se chevauchent aujourd'hui (voir « À décider »).
 
-> État : **fait.** Code, garde, suite complète verte, trois séances de prises, mesures, comptes de dessin et planche poussés. Rien d'allumé en jeu.
+> État : **fait.** Code, garde, **suite complète verte sur l'état final** (« tout passe, sans erreur de script (741 s) », EXIT 0, `test_iso_murs_meubles` compris), trois séances de prises, mesures, comptes de dessin et planche poussés. Rien d'allumé en jeu.
 
 ## Ce que les illustrations posent aux murs (relevé AVANT de coder)
 
@@ -286,4 +286,4 @@ godot --path . -- --murs-meubles-essai
 - `f1662ec` l'outil de prise, les mesures et la planche ; l'outil « Budget » repris ;
 - `52f64e2` câbles et étriers assombris ; l'emprise comptée sur tout pixel changé ;
 - `39ac267` le rapport rédigé ; `cdf0804` les comptes de dessin ; `4ad83d9` une première planche ;
-- le dernier : les trois séances, la planche complète et ce rapport.
+- `b07a92c` les trois séances, la planche complète et ce rapport ; le suivant, le verdict de la suite.
