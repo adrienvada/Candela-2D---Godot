@@ -147,7 +147,9 @@ def main():
                     NOMS[c], o, m, "%.0f" % p["distance"] if p["distance"] >= 0 else "aucun",
                     "%.0f" % pr if pr is not None else "aucun"))
             lignes.append("")
-        imgs = planche_images(d, j, dst, nom)
+        # Les images de la planche peuvent venir d'une autre passe (APPARITION_PLANCHE=<dossier>, graine reposée).
+        src_pl = os.environ.get("APPARITION_PLANCHE") if nom.startswith("45") else None
+        imgs = planche_images(src_pl, charger(src_pl), dst, nom) if src_pl else planche_images(d, j, dst, nom)
         sortie[nom]["planche"] = imgs
     # Les prises « noir » (une autre orientation, un autre dossier) : APPARITION_NOIR=<dossier>.
     noir = os.environ.get("APPARITION_NOIR")

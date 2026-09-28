@@ -1,0 +1,142 @@
+<!doctype html><html lang=fr><head><meta charset=utf-8><meta name=viewport content='width=device-width'>
+<title>Ombre et orientation</title><style>:root{--bg:#111;--fg:#ddd;--mute:#999}
+body{background:var(--bg);color:var(--fg);font:14px system-ui;margin:16px;max-width:1400px}
+img{image-rendering:pixelated;display:block;max-width:100%}td{vertical-align:top;padding:4px}figure{margin:0}
+figcaption{font-size:12px;color:var(--mute)}h2{margin-top:32px}.defile{overflow-x:auto}</style></head><body>
+<h1>L'ombre des classes — l'orientation, et la voie (d)</h1>
+<p>Vue de J1 (iso 45° B), J1 Parasite torche allumée, J2 de chaque classe, <b>de profil, torche à sa gauche</b> (l'orientation de la session précédente). Trois colonnes : <b>aujourd'hui</b> ; <b>(d1)</b> un facteur constant par classe ; <b>(d2)</b> un facteur recalculé selon la direction de la torche. Corps rendu tel que le jeu le calcule (opacité 1 : l'effacement de la vue de dessus est mis de côté). Découpe 240×240 à 1:1, puis loupe ×3.</p>
+<h2>Pourquoi l'orientation compte : les dix ombres propres</h2>
+<p>Chaque vignette : l'étoile de l'occluder du corps (J2 regarde vers le haut), l'anneau de 15 px où le corps lit sa lumière, en jaune les points que la torche atteint (trait pointillé : d'où elle vient). Le pourcentage est la part éclairée.</p><div class=defile><img src='etoiles.svg' alt='les dix étoiles' width=880></div>
+<h2>Parasite</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/pistolet_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/pistolet_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 364</figcaption></figure></td>
+<td><figure><img src='img/pistolet_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/pistolet_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 1034 (au plus +123/255) · hors du corps : 411 · plus clairs que le sol : 213</figcaption></figure></td>
+<td><figure><img src='img/pistolet_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/pistolet_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 289 (au plus +40/255) · hors du corps : 59 · plus clairs que le sol : 362</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/pistolet_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/pistolet_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 56</figcaption></figure></td>
+<td><figure><img src='img/pistolet_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/pistolet_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 482 (au plus +145/255) · hors du corps : 1168 · plus clairs que le sol : 56</figcaption></figure></td>
+<td><figure><img src='img/pistolet_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/pistolet_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 83 (au plus +15/255) · hors du corps : 166 · plus clairs que le sol : 56</figcaption></figure></td>
+</tr></table></div>
+<h2>Illusionniste</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/fusil_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/fusil_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 358</figcaption></figure></td>
+<td><figure><img src='img/fusil_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/fusil_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×1.006 · capteur lu 0.1003<br>pixels du corps changés : 1073 (au plus +159/255) · hors du corps : 470 · plus clairs que le sol : 174</figcaption></figure></td>
+<td><figure><img src='img/fusil_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/fusil_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 571 (au plus +41/255) · hors du corps : 111 · plus clairs que le sol : 343</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/fusil_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/fusil_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 289</figcaption></figure></td>
+<td><figure><img src='img/fusil_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/fusil_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×1.006 · capteur lu 0.2810<br>pixels du corps changés : 987 (au plus +78/255) · hors du corps : 441 · plus clairs que le sol : 262</figcaption></figure></td>
+<td><figure><img src='img/fusil_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/fusil_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 973 (au plus +118/255) · hors du corps : 479 · plus clairs que le sol : 248</figcaption></figure></td>
+</tr></table></div>
+<h2>Terrassier</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/pompe_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/pompe_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0930<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 346</figcaption></figure></td>
+<td><figure><img src='img/pompe_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/pompe_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×0.983 · capteur lu 0.0914<br>pixels du corps changés : 966 (au plus +80/255) · hors du corps : 298 · plus clairs que le sol : 233</figcaption></figure></td>
+<td><figure><img src='img/pompe_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/pompe_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.145 · capteur lu 0.1064<br>pixels du corps changés : 828 (au plus +40/255) · hors du corps : 82 · plus clairs que le sol : 365</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/pompe_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/pompe_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2529<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 361</figcaption></figure></td>
+<td><figure><img src='img/pompe_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/pompe_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×0.983 · capteur lu 0.2486<br>pixels du corps changés : 1215 (au plus +119/255) · hors du corps : 457 · plus clairs que le sol : 69</figcaption></figure></td>
+<td><figure><img src='img/pompe_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/pompe_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.145 · capteur lu 0.2897<br>pixels du corps changés : 990 (au plus +40/255) · hors du corps : 172 · plus clairs que le sol : 374</figcaption></figure></td>
+</tr></table></div>
+<h2>Braconnier</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/arbalete_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/arbalete_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0920<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 15</figcaption></figure></td>
+<td><figure><img src='img/arbalete_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/arbalete_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×0.913 · capteur lu 0.0839<br>pixels du corps changés : 305 (au plus +10/255) · hors du corps : 468 · plus clairs que le sol : 12</figcaption></figure></td>
+<td><figure><img src='img/arbalete_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/arbalete_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.109 · capteur lu 0.1020<br>pixels du corps changés : 397 (au plus +43/255) · hors du corps : 857 · plus clairs que le sol : 22</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/arbalete_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/arbalete_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2587<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 392</figcaption></figure></td>
+<td><figure><img src='img/arbalete_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/arbalete_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×0.913 · capteur lu 0.2361<br>pixels du corps changés : 1245 (au plus +81/255) · hors du corps : 299 · plus clairs que le sol : 272</figcaption></figure></td>
+<td><figure><img src='img/arbalete_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/arbalete_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.109 · capteur lu 0.2870<br>pixels du corps changés : 1222 (au plus +81/255) · hors du corps : 279 · plus clairs que le sol : 323</figcaption></figure></td>
+</tr></table></div>
+<h2>Occulteur</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/occulteur_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/occulteur_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 183</figcaption></figure></td>
+<td><figure><img src='img/occulteur_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/occulteur_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×1.084 · capteur lu 0.1081<br>pixels du corps changés : 696 (au plus +159/255) · hors du corps : 891 · plus clairs que le sol : 30</figcaption></figure></td>
+<td><figure><img src='img/occulteur_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/occulteur_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.029 · capteur lu 0.1026<br>pixels du corps changés : 548 (au plus +80/255) · hors du corps : 586 · plus clairs que le sol : 155</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/occulteur_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/occulteur_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2729<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 202</figcaption></figure></td>
+<td><figure><img src='img/occulteur_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/occulteur_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×1.084 · capteur lu 0.2959<br>pixels du corps changés : 860 (au plus +156/255) · hors du corps : 823 · plus clairs que le sol : 85</figcaption></figure></td>
+<td><figure><img src='img/occulteur_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/occulteur_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.029 · capteur lu 0.2808<br>pixels du corps changés : 704 (au plus +77/255) · hors du corps : 498 · plus clairs que le sol : 204</figcaption></figure></td>
+</tr></table></div>
+<h2>Fumiste</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/fumiste_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/fumiste_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0955<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 350</figcaption></figure></td>
+<td><figure><img src='img/fumiste_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/fumiste_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×1.184 · capteur lu 0.1131<br>pixels du corps changés : 1108 (au plus +159/255) · hors du corps : 560 · plus clairs que le sol : 103</figcaption></figure></td>
+<td><figure><img src='img/fumiste_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/fumiste_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.164 · capteur lu 0.1111<br>pixels du corps changés : 901 (au plus +79/255) · hors du corps : 187 · plus clairs que le sol : 341</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/fumiste_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/fumiste_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2598<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 252</figcaption></figure></td>
+<td><figure><img src='img/fumiste_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/fumiste_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×1.184 · capteur lu 0.3077<br>pixels du corps changés : 867 (au plus +123/255) · hors du corps : 772 · plus clairs que le sol : 192</figcaption></figure></td>
+<td><figure><img src='img/fumiste_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/fumiste_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.164 · capteur lu 0.3024<br>pixels du corps changés : 766 (au plus +51/255) · hors du corps : 394 · plus clairs que le sol : 254</figcaption></figure></td>
+</tr></table></div>
+<h2>Incendiaire</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/incendiaire_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/incendiaire_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 295</figcaption></figure></td>
+<td><figure><img src='img/incendiaire_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/incendiaire_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×1.089 · capteur lu 0.1086<br>pixels du corps changés : 1018 (au plus +124/255) · hors du corps : 534 · plus clairs que le sol : 110</figcaption></figure></td>
+<td><figure><img src='img/incendiaire_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/incendiaire_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.029 · capteur lu 0.1026<br>pixels du corps changés : 797 (au plus +78/255) · hors du corps : 267 · plus clairs que le sol : 327</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/incendiaire_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/incendiaire_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 135</figcaption></figure></td>
+<td><figure><img src='img/incendiaire_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/incendiaire_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×1.089 · capteur lu 0.3044<br>pixels du corps changés : 764 (au plus +156/255) · hors du corps : 999 · plus clairs que le sol : 69</figcaption></figure></td>
+<td><figure><img src='img/incendiaire_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/incendiaire_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.029 · capteur lu 0.2875<br>pixels du corps changés : 611 (au plus +32/255) · hors du corps : 289 · plus clairs que le sol : 139</figcaption></figure></td>
+</tr></table></div>
+<h2>Sentinelle</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/sentinelle_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/sentinelle_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0972<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 20</figcaption></figure></td>
+<td><figure><img src='img/sentinelle_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/sentinelle_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×0.995 · capteur lu 0.0967<br>pixels du corps changés : 358 (au plus +19/255) · hors du corps : 1086 · plus clairs que le sol : 19</figcaption></figure></td>
+<td><figure><img src='img/sentinelle_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/sentinelle_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.029 · capteur lu 0.1000<br>pixels du corps changés : 296 (au plus +9/255) · hors du corps : 827 · plus clairs que le sol : 24</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/sentinelle_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/sentinelle_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2725<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 66</figcaption></figure></td>
+<td><figure><img src='img/sentinelle_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/sentinelle_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×0.995 · capteur lu 0.2712<br>pixels du corps changés : 497 (au plus +68/255) · hors du corps : 1027 · plus clairs que le sol : 67</figcaption></figure></td>
+<td><figure><img src='img/sentinelle_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/sentinelle_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.029 · capteur lu 0.2804<br>pixels du corps changés : 584 (au plus +77/255) · hors du corps : 1123 · plus clairs que le sol : 68</figcaption></figure></td>
+</tr></table></div>
+<h2>Allumeur</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/allumeur_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/allumeur_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 78</figcaption></figure></td>
+<td><figure><img src='img/allumeur_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/allumeur_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×0.973 · capteur lu 0.0970<br>pixels du corps changés : 488 (au plus +118/255) · hors du corps : 996 · plus clairs que le sol : 78</figcaption></figure></td>
+<td><figure><img src='img/allumeur_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/allumeur_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×1.000 · capteur lu 0.0997<br>pixels du corps changés : 497 (au plus +118/255) · hors du corps : 1016 · plus clairs que le sol : 79</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/allumeur_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/allumeur_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 92</figcaption></figure></td>
+<td><figure><img src='img/allumeur_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/allumeur_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×0.973 · capteur lu 0.2719<br>pixels du corps changés : 629 (au plus +42/255) · hors du corps : 838 · plus clairs que le sol : 96</figcaption></figure></td>
+<td><figure><img src='img/allumeur_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/allumeur_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×1.000 · capteur lu 0.2794<br>pixels du corps changés : 654 (au plus +118/255) · hors du corps : 1013 · plus clairs que le sol : 67</figcaption></figure></td>
+</tr></table></div>
+<h2>Spectre</h2>
+<div class=defile><table><tr>
+<td><figure><img src='img/spectre_b10_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/spectre_b10_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · aujourd'hui · facteur ×1.000 · capteur lu 0.1039<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 258</figcaption></figure></td>
+<td><figure><img src='img/spectre_b10_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/spectre_b10_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d1) · facteur ×0.888 · capteur lu 0.0922<br>pixels du corps changés : 685 (au plus +78/255) · hors du corps : 476 · plus clairs que le sol : 240</figcaption></figure></td>
+<td><figure><img src='img/spectre_b10_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/spectre_b10_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>b10 · (d2) · facteur ×0.973 · capteur lu 0.1010<br>pixels du corps changés : 814 (au plus +123/255) · hors du corps : 583 · plus clairs que le sol : 106</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/spectre_mi_profil_g_45_d0.jpg' width=240 height=240 alt=''><img src='img/spectre_mi_profil_g_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>mi · aujourd'hui · facteur ×1.000 · capteur lu 0.2860<br>pixels du corps changés : 0 (au plus +0/255) · hors du corps : 0 · plus clairs que le sol : 83</figcaption></figure></td>
+<td><figure><img src='img/spectre_mi_profil_g_45_d1.jpg' width=240 height=240 alt=''><img src='img/spectre_mi_profil_g_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d1) · facteur ×0.888 · capteur lu 0.2539<br>pixels du corps changés : 556 (au plus +41/255) · hors du corps : 953 · plus clairs que le sol : 84</figcaption></figure></td>
+<td><figure><img src='img/spectre_mi_profil_g_45_d2.jpg' width=240 height=240 alt=''><img src='img/spectre_mi_profil_g_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>mi · (d2) · facteur ×0.973 · capteur lu 0.2782<br>pixels du corps changés : 562 (au plus +80/255) · hors du corps : 1009 · plus clairs que le sol : 80</figcaption></figure></td>
+</tr></table></div>
+<h2>Torche du côté de l'arme : un corps entièrement noir</h2>
+<p>J2 en diagonale, face à la torche, la torche à sa droite. Fumiste puis Spectre, à b10 et à mi-distance, aujourd'hui / (d1) / (d2). Le Fumiste ne montre <b>aucun</b> pixel, même à mi-portée : son anneau est tout entier dans l'ombre de sa propre arme, et aucun facteur n'y change rien. (d2) assombrit le Spectre (×0,30), parce que le Parasite, dans cette direction, est encore plus sombre que lui.</p>
+<div class=defile><table><tr>
+<td><figure><img src='img/fumiste_b10_diag_face_d_45_d0.jpg' width=240 height=240 alt=''><img src='img/fumiste_b10_diag_face_d_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>Fumiste · b10 · aujourd'hui · facteur ×1.000 · capteur 0.0000 · pixels allumés 0 / 2377</figcaption></figure></td>
+<td><figure><img src='img/fumiste_b10_diag_face_d_45_d1.jpg' width=240 height=240 alt=''><img src='img/fumiste_b10_diag_face_d_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>Fumiste · b10 · (d1) · facteur ×1.184 · capteur 0.0000 · pixels allumés 0 / 2377</figcaption></figure></td>
+<td><figure><img src='img/fumiste_b10_diag_face_d_45_d2.jpg' width=240 height=240 alt=''><img src='img/fumiste_b10_diag_face_d_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>Fumiste · b10 · (d2) · facteur ×1.000 · capteur 0.0000 · pixels allumés 0 / 2377</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/fumiste_mi_diag_face_d_45_d0.jpg' width=240 height=240 alt=''><img src='img/fumiste_mi_diag_face_d_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>Fumiste · mi · aujourd'hui · facteur ×1.000 · capteur 0.0000 · pixels allumés 0 / 2386</figcaption></figure></td>
+<td><figure><img src='img/fumiste_mi_diag_face_d_45_d1.jpg' width=240 height=240 alt=''><img src='img/fumiste_mi_diag_face_d_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>Fumiste · mi · (d1) · facteur ×1.184 · capteur 0.0000 · pixels allumés 0 / 2386</figcaption></figure></td>
+<td><figure><img src='img/fumiste_mi_diag_face_d_45_d2.jpg' width=240 height=240 alt=''><img src='img/fumiste_mi_diag_face_d_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>Fumiste · mi · (d2) · facteur ×1.000 · capteur 0.0000 · pixels allumés 0 / 2386</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/spectre_b10_diag_face_d_45_d0.jpg' width=240 height=240 alt=''><img src='img/spectre_b10_diag_face_d_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>Spectre · b10 · aujourd'hui · facteur ×1.000 · capteur 0.0366 · pixels allumés 104 / 1704</figcaption></figure></td>
+<td><figure><img src='img/spectre_b10_diag_face_d_45_d1.jpg' width=240 height=240 alt=''><img src='img/spectre_b10_diag_face_d_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>Spectre · b10 · (d1) · facteur ×0.888 · capteur 0.0366 · pixels allumés 33 / 1704</figcaption></figure></td>
+<td><figure><img src='img/spectre_b10_diag_face_d_45_d2.jpg' width=240 height=240 alt=''><img src='img/spectre_b10_diag_face_d_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>Spectre · b10 · (d2) · facteur ×0.300 · capteur 0.0366 · pixels allumés 8 / 1704</figcaption></figure></td>
+</tr></table></div>
+<div class=defile><table><tr>
+<td><figure><img src='img/spectre_mi_diag_face_d_45_d0.jpg' width=240 height=240 alt=''><img src='img/spectre_mi_diag_face_d_45_d0_x3.jpg' width=300 height=300 alt=''><figcaption>Spectre · mi · aujourd'hui · facteur ×1.000 · capteur 0.0689 · pixels allumés 134 / 1607</figcaption></figure></td>
+<td><figure><img src='img/spectre_mi_diag_face_d_45_d1.jpg' width=240 height=240 alt=''><img src='img/spectre_mi_diag_face_d_45_d1_x3.jpg' width=300 height=300 alt=''><figcaption>Spectre · mi · (d1) · facteur ×0.888 · capteur 0.0689 · pixels allumés 141 / 1607</figcaption></figure></td>
+<td><figure><img src='img/spectre_mi_diag_face_d_45_d2.jpg' width=240 height=240 alt=''><img src='img/spectre_mi_diag_face_d_45_d2_x3.jpg' width=300 height=300 alt=''><figcaption>Spectre · mi · (d2) · facteur ×0.300 · capteur 0.0689 · pixels allumés 58 / 1607</figcaption></figure></td>
+</tr></table></div>
+</body></html>

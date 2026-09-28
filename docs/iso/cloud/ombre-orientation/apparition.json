@@ -1,0 +1,3341 @@
+{
+ "45° B": {
+  "recherches": {
+   "pistolet|profil_g|0": {
+    "classe": "pistolet",
+    "distance": 331.0,
+    "distance_eteint": 332.0,
+    "mode_d": 0,
+    "orientation": "profil_g",
+    "partie": "apparition"
+   },
+   "pistolet|profil_g|1": {
+    "classe": "pistolet",
+    "distance": 325.0,
+    "distance_eteint": 326.0,
+    "mode_d": 1,
+    "orientation": "profil_g",
+    "partie": "apparition"
+   },
+   "pistolet|profil_g|2": {
+    "classe": "pistolet",
+    "distance": 331.0,
+    "distance_eteint": 332.0,
+    "mode_d": 2,
+    "orientation": "profil_g",
+    "partie": "apparition"
+   },
+   "pompe|profil_d|0": {
+    "classe": "pompe",
+    "distance": 321.0,
+    "distance_eteint": 322.0,
+    "mode_d": 0,
+    "orientation": "profil_d",
+    "partie": "apparition"
+   },
+   "pompe|profil_d|1": {
+    "classe": "pompe",
+    "distance": 316.0,
+    "distance_eteint": 317.0,
+    "mode_d": 1,
+    "orientation": "profil_d",
+    "partie": "apparition"
+   },
+   "pompe|profil_d|2": {
+    "classe": "pompe",
+    "distance": 315.0,
+    "distance_eteint": 316.0,
+    "mode_d": 2,
+    "orientation": "profil_d",
+    "partie": "apparition"
+   }
+  },
+  "seuil": [
+   0.06862745434045794,
+   0.0666666701436043
+  ],
+  "prediction": {
+   "pistolet|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "pistolet|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "pistolet|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "pistolet|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "pistolet|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "pistolet|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 328.0
+    }
+   },
+   "pistolet|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "pistolet|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 326.0,
+     "1": 326.0,
+     "2": 326.0
+    }
+   },
+   "fusil|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "fusil|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "fusil|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "fusil|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "fusil|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "fusil|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 328.0
+    }
+   },
+   "fusil|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "fusil|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 2.2499999999999956
+    },
+    "derniere": {
+     "0": 326.0,
+     "1": 326.0,
+     "2": 340.0
+    }
+   },
+   "pompe|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.8142857142857143
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 324.0
+    }
+   },
+   "pompe|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.103448275862069
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "pompe|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.1451612903225807
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "pompe|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.1612903225806452
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 334.0
+    }
+   },
+   "pompe|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.1818181818181819
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 334.0
+    }
+   },
+   "pompe|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.888888888888889
+    },
+    "derniere": {
+     "0": 326.0,
+     "1": 326.0,
+     "2": 322.0
+    }
+   },
+   "pompe|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.9090909090909097
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 328.0
+    }
+   },
+   "pompe|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.4090909090909083
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 300.0
+    }
+   },
+   "arbalete|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.1875
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "arbalete|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.0491803278688525
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "arbalete|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.109375
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "arbalete|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.125
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "arbalete|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.8227848101265823
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 326.0
+    }
+   },
+   "arbalete|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.7384615384615387
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 322.0
+    }
+   },
+   "arbalete|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.5000000000000002
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 310.0
+    }
+   },
+   "arbalete|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.3749999999999993
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 294.0
+    }
+   },
+   "occulteur|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.1176470588235294
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "occulteur|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.032258064516129
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "occulteur|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0289855072463767
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "occulteur|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0285714285714285
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "occulteur|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0655737704918034
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "occulteur|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.2
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "occulteur|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.3333333333333337
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 324.0
+    }
+   },
+   "occulteur|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "fumiste|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.163265306122449
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "fumiste|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.0666666666666667
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 334.0,
+     "2": 332.0
+    }
+   },
+   "fumiste|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.1639344262295082
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 334.0,
+     "2": 334.0
+    }
+   },
+   "fumiste|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.125
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 334.0,
+     "2": 332.0
+    }
+   },
+   "fumiste|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.1403508771929824
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 334.0,
+     "2": 332.0
+    }
+   },
+   "fumiste|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.3333333333333333
+    },
+    "derniere": {
+     "0": 326.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "fumiste|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 4.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "fumiste|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "incendiaire|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.163265306122449
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "incendiaire|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0666666666666667
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "incendiaire|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0289855072463767
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "incendiaire|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0285714285714285
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "incendiaire|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0317460317460319
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "incendiaire|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.1428571428571428
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 332.0,
+     "2": 332.0
+    }
+   },
+   "incendiaire|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.4285714285714266
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 320.0,
+     "2": 324.0
+    }
+   },
+   "incendiaire|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "sentinelle|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 328.0
+    }
+   },
+   "sentinelle|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0666666666666667
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "sentinelle|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0289855072463767
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "sentinelle|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0285714285714285
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "sentinelle|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0317460317460319
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "sentinelle|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 0.96
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 328.0
+    }
+   },
+   "sentinelle|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 0.8333333333333335
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 326.0
+    }
+   },
+   "sentinelle|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.1249999999999978
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "allumeur|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 0.9661016949152542
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "allumeur|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.032258064516129
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "allumeur|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "allumeur|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 330.0
+    }
+   },
+   "allumeur|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.0317460317460319
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 332.0
+    }
+   },
+   "allumeur|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 0.96
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 328.0
+    }
+   },
+   "allumeur|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 0.8333333333333335
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 330.0,
+     "2": 326.0
+    }
+   },
+   "allumeur|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.1249999999999978
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "spectre|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.9047619047619048
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 328.0
+    }
+   },
+   "spectre|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 1.0158730158730158
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 332.0
+    }
+   },
+   "spectre|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.9726027397260274
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 330.0
+    }
+   },
+   "spectre|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.972972972972973
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 330.0
+    }
+   },
+   "spectre|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 330.0
+    }
+   },
+   "spectre|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.8421052631578949
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 326.0,
+     "2": 324.0
+    }
+   },
+   "spectre|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.5714285714285717
+    },
+    "derniere": {
+     "0": 330.0,
+     "1": 328.0,
+     "2": 312.0
+    }
+   },
+   "spectre|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.29999999999999954
+    },
+    "derniere": {
+     "0": 328.0,
+     "1": 326.0,
+     "2": 280.0
+    }
+   }
+  },
+  "planche": {
+   "pistolet_b10_profil_g_45_d0": {
+    "classe": "pistolet",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 2246,
+    "visibles": 303,
+    "haut": 20,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 364,
+    "plus_clair_que_le_sol_d0": 364,
+    "fichier": "img/pistolet_b10_profil_g_45_d0.jpg"
+   },
+   "pistolet_b10_profil_g_45_d1": {
+    "classe": "pistolet",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 2246,
+    "visibles": 356,
+    "haut": 27,
+    "pixels_changes_corps": 1034,
+    "pixels_changes_hors_corps": 411,
+    "hausse_max": 123,
+    "hausse_moyenne_changes": 0.7611218568665378,
+    "plus_clair_que_le_sol": 213,
+    "plus_clair_que_le_sol_d0": 364,
+    "fichier": "img/pistolet_b10_profil_g_45_d1.jpg"
+   },
+   "pistolet_b10_profil_g_45_d2": {
+    "classe": "pistolet",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 2246,
+    "visibles": 303,
+    "haut": 20,
+    "pixels_changes_corps": 289,
+    "pixels_changes_hors_corps": 59,
+    "hausse_max": 40,
+    "hausse_moyenne_changes": 0.14878892733564014,
+    "plus_clair_que_le_sol": 362,
+    "plus_clair_que_le_sol_d0": 364,
+    "fichier": "img/pistolet_b10_profil_g_45_d2.jpg"
+   },
+   "pistolet_mi_profil_g_45_d0": {
+    "classe": "pistolet",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 1531,
+    "visibles": 503,
+    "haut": 149,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 56,
+    "plus_clair_que_le_sol_d0": 56,
+    "fichier": "img/pistolet_mi_profil_g_45_d0.jpg"
+   },
+   "pistolet_mi_profil_g_45_d1": {
+    "classe": "pistolet",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 1531,
+    "visibles": 505,
+    "haut": 186,
+    "pixels_changes_corps": 482,
+    "pixels_changes_hors_corps": 1168,
+    "hausse_max": 145,
+    "hausse_moyenne_changes": 3.358921161825726,
+    "plus_clair_que_le_sol": 56,
+    "plus_clair_que_le_sol_d0": 56,
+    "fichier": "img/pistolet_mi_profil_g_45_d1.jpg"
+   },
+   "pistolet_mi_profil_g_45_d2": {
+    "classe": "pistolet",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 1531,
+    "visibles": 503,
+    "haut": 149,
+    "pixels_changes_corps": 83,
+    "pixels_changes_hors_corps": 166,
+    "hausse_max": 15,
+    "hausse_moyenne_changes": 0.5662650602409639,
+    "plus_clair_que_le_sol": 56,
+    "plus_clair_que_le_sol_d0": 56,
+    "fichier": "img/pistolet_mi_profil_g_45_d2.jpg"
+   },
+   "fusil_b10_profil_g_45_d0": {
+    "classe": "fusil",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 2305,
+    "visibles": 321,
+    "haut": 20,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 358,
+    "plus_clair_que_le_sol_d0": 358,
+    "fichier": "img/fusil_b10_profil_g_45_d0.jpg"
+   },
+   "fusil_b10_profil_g_45_d1": {
+    "classe": "fusil",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.00558659217877,
+    "silhouette": 2305,
+    "visibles": 411,
+    "haut": 27,
+    "pixels_changes_corps": 1073,
+    "pixels_changes_hors_corps": 470,
+    "hausse_max": 159,
+    "hausse_moyenne_changes": 0.7800559179869525,
+    "plus_clair_que_le_sol": 174,
+    "plus_clair_que_le_sol_d0": 358,
+    "fichier": "img/fusil_b10_profil_g_45_d1.jpg"
+   },
+   "fusil_b10_profil_g_45_d2": {
+    "classe": "fusil",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 2305,
+    "visibles": 326,
+    "haut": 20,
+    "pixels_changes_corps": 571,
+    "pixels_changes_hors_corps": 111,
+    "hausse_max": 41,
+    "hausse_moyenne_changes": 0.4010507880910683,
+    "plus_clair_que_le_sol": 343,
+    "plus_clair_que_le_sol_d0": 358,
+    "fichier": "img/fusil_b10_profil_g_45_d2.jpg"
+   },
+   "fusil_mi_profil_g_45_d0": {
+    "classe": "fusil",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 2144,
+    "visibles": 512,
+    "haut": 132,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 289,
+    "plus_clair_que_le_sol_d0": 289,
+    "fichier": "img/fusil_mi_profil_g_45_d0.jpg"
+   },
+   "fusil_mi_profil_g_45_d1": {
+    "classe": "fusil",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.279411771800369,
+    "compensation": 1.00558659217877,
+    "silhouette": 2144,
+    "visibles": 502,
+    "haut": 128,
+    "pixels_changes_corps": 987,
+    "pixels_changes_hors_corps": 441,
+    "hausse_max": 78,
+    "hausse_moyenne_changes": 3.818642350557244,
+    "plus_clair_que_le_sol": 262,
+    "plus_clair_que_le_sol_d0": 289,
+    "fichier": "img/fusil_mi_profil_g_45_d1.jpg"
+   },
+   "fusil_mi_profil_g_45_d2": {
+    "classe": "fusil",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 2144,
+    "visibles": 503,
+    "haut": 119,
+    "pixels_changes_corps": 973,
+    "pixels_changes_hors_corps": 479,
+    "hausse_max": 118,
+    "hausse_moyenne_changes": 4.292908530318602,
+    "plus_clair_que_le_sol": 248,
+    "plus_clair_que_le_sol_d0": 289,
+    "fichier": "img/fusil_mi_profil_g_45_d2.jpg"
+   },
+   "pompe_b10_profil_g_45_d0": {
+    "classe": "pompe",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0929534332826734,
+    "compensation": 1.0,
+    "silhouette": 2466,
+    "visibles": 344,
+    "haut": 23,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 346,
+    "plus_clair_que_le_sol_d0": 346,
+    "fichier": "img/pompe_b10_profil_g_45_d0.jpg"
+   },
+   "pompe_b10_profil_g_45_d1": {
+    "classe": "pompe",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0929534332826734,
+    "compensation": 0.983009708737864,
+    "silhouette": 2466,
+    "visibles": 378,
+    "haut": 26,
+    "pixels_changes_corps": 966,
+    "pixels_changes_hors_corps": 298,
+    "hausse_max": 80,
+    "hausse_moyenne_changes": 0.6884057971014492,
+    "plus_clair_que_le_sol": 233,
+    "plus_clair_que_le_sol_d0": 346,
+    "fichier": "img/pompe_b10_profil_g_45_d1.jpg"
+   },
+   "pompe_b10_profil_g_45_d2": {
+    "classe": "pompe",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0929534332826734,
+    "compensation": 1.14516126551564,
+    "silhouette": 2466,
+    "visibles": 446,
+    "haut": 22,
+    "pixels_changes_corps": 828,
+    "pixels_changes_hors_corps": 82,
+    "hausse_max": 40,
+    "hausse_moyenne_changes": 2.0386473429951693,
+    "plus_clair_que_le_sol": 365,
+    "plus_clair_que_le_sol_d0": 346,
+    "fichier": "img/pompe_b10_profil_g_45_d2.jpg"
+   },
+   "pompe_mi_profil_g_45_d0": {
+    "classe": "pompe",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.2529411832802,
+    "compensation": 1.0,
+    "silhouette": 2439,
+    "visibles": 495,
+    "haut": 164,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 361,
+    "plus_clair_que_le_sol_d0": 361,
+    "fichier": "img/pompe_mi_profil_g_45_d0.jpg"
+   },
+   "pompe_mi_profil_g_45_d1": {
+    "classe": "pompe",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.2529411832802,
+    "compensation": 0.983009708737864,
+    "silhouette": 2439,
+    "visibles": 520,
+    "haut": 207,
+    "pixels_changes_corps": 1215,
+    "pixels_changes_hors_corps": 457,
+    "hausse_max": 119,
+    "hausse_moyenne_changes": 4.45925925925926,
+    "plus_clair_que_le_sol": 69,
+    "plus_clair_que_le_sol_d0": 361,
+    "fichier": "img/pompe_mi_profil_g_45_d1.jpg"
+   },
+   "pompe_mi_profil_g_45_d2": {
+    "classe": "pompe",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.2529411832802,
+    "compensation": 1.14516134385472,
+    "silhouette": 2439,
+    "visibles": 497,
+    "haut": 166,
+    "pixels_changes_corps": 990,
+    "pixels_changes_hors_corps": 172,
+    "hausse_max": 40,
+    "hausse_moyenne_changes": 3.82020202020202,
+    "plus_clair_que_le_sol": 374,
+    "plus_clair_que_le_sol_d0": 361,
+    "fichier": "img/pompe_mi_profil_g_45_d2.jpg"
+   },
+   "arbalete_b10_profil_g_45_d0": {
+    "classe": "arbalete",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0919730411842465,
+    "compensation": 1.0,
+    "silhouette": 1640,
+    "visibles": 332,
+    "haut": 25,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 15,
+    "plus_clair_que_le_sol_d0": 15,
+    "fichier": "img/arbalete_b10_profil_g_45_d0.jpg"
+   },
+   "arbalete_b10_profil_g_45_d1": {
+    "classe": "arbalete",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0919730411842465,
+    "compensation": 0.912676056338028,
+    "silhouette": 1640,
+    "visibles": 288,
+    "haut": 25,
+    "pixels_changes_corps": 305,
+    "pixels_changes_hors_corps": 468,
+    "hausse_max": 10,
+    "hausse_moyenne_changes": -0.839344262295082,
+    "plus_clair_que_le_sol": 12,
+    "plus_clair_que_le_sol_d0": 15,
+    "fichier": "img/arbalete_b10_profil_g_45_d1.jpg"
+   },
+   "arbalete_b10_profil_g_45_d2": {
+    "classe": "arbalete",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0919730411842465,
+    "compensation": 1.10937497596827,
+    "silhouette": 1640,
+    "visibles": 413,
+    "haut": 26,
+    "pixels_changes_corps": 397,
+    "pixels_changes_hors_corps": 857,
+    "hausse_max": 43,
+    "hausse_moyenne_changes": 2.27455919395466,
+    "plus_clair_que_le_sol": 22,
+    "plus_clair_que_le_sol_d0": 15,
+    "fichier": "img/arbalete_b10_profil_g_45_d2.jpg"
+   },
+   "arbalete_mi_profil_g_45_d0": {
+    "classe": "arbalete",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.258700987324119,
+    "compensation": 1.0,
+    "silhouette": 2373,
+    "visibles": 484,
+    "haut": 131,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 392,
+    "plus_clair_que_le_sol_d0": 392,
+    "fichier": "img/arbalete_mi_profil_g_45_d0.jpg"
+   },
+   "arbalete_mi_profil_g_45_d1": {
+    "classe": "arbalete",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.258700987324119,
+    "compensation": 0.912676056338028,
+    "silhouette": 2373,
+    "visibles": 517,
+    "haut": 148,
+    "pixels_changes_corps": 1245,
+    "pixels_changes_hors_corps": 299,
+    "hausse_max": 81,
+    "hausse_moyenne_changes": 0.6160642570281124,
+    "plus_clair_que_le_sol": 272,
+    "plus_clair_que_le_sol_d0": 392,
+    "fichier": "img/arbalete_mi_profil_g_45_d1.jpg"
+   },
+   "arbalete_mi_profil_g_45_d2": {
+    "classe": "arbalete",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.258700987324119,
+    "compensation": 1.10937505185926,
+    "silhouette": 2373,
+    "visibles": 514,
+    "haut": 148,
+    "pixels_changes_corps": 1222,
+    "pixels_changes_hors_corps": 279,
+    "hausse_max": 81,
+    "hausse_moyenne_changes": 3.2356792144026185,
+    "plus_clair_que_le_sol": 323,
+    "plus_clair_que_le_sol_d0": 392,
+    "fichier": "img/arbalete_mi_profil_g_45_d2.jpg"
+   },
+   "occulteur_b10_profil_g_45_d0": {
+    "classe": "occulteur",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 1774,
+    "visibles": 291,
+    "haut": 20,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 183,
+    "plus_clair_que_le_sol_d0": 183,
+    "fichier": "img/occulteur_b10_profil_g_45_d0.jpg"
+   },
+   "occulteur_b10_profil_g_45_d1": {
+    "classe": "occulteur",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.08433734939759,
+    "silhouette": 1774,
+    "visibles": 407,
+    "haut": 28,
+    "pixels_changes_corps": 696,
+    "pixels_changes_hors_corps": 891,
+    "hausse_max": 159,
+    "hausse_moyenne_changes": 0.8448275862068966,
+    "plus_clair_que_le_sol": 30,
+    "plus_clair_que_le_sol_d0": 183,
+    "fichier": "img/occulteur_b10_profil_g_45_d1.jpg"
+   },
+   "occulteur_b10_profil_g_45_d2": {
+    "classe": "occulteur",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.02898550789247,
+    "silhouette": 1774,
+    "visibles": 337,
+    "haut": 26,
+    "pixels_changes_corps": 548,
+    "pixels_changes_hors_corps": 586,
+    "hausse_max": 80,
+    "hausse_moyenne_changes": 0.6514598540145985,
+    "plus_clair_que_le_sol": 155,
+    "plus_clair_que_le_sol_d0": 183,
+    "fichier": "img/occulteur_b10_profil_g_45_d2.jpg"
+   },
+   "occulteur_mi_profil_g_45_d0": {
+    "classe": "occulteur",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.27291667368263,
+    "compensation": 1.0,
+    "silhouette": 1853,
+    "visibles": 470,
+    "haut": 157,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 202,
+    "plus_clair_que_le_sol_d0": 202,
+    "fichier": "img/occulteur_mi_profil_g_45_d0.jpg"
+   },
+   "occulteur_mi_profil_g_45_d1": {
+    "classe": "occulteur",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.27291667368263,
+    "compensation": 1.08433734939759,
+    "silhouette": 1853,
+    "visibles": 469,
+    "haut": 166,
+    "pixels_changes_corps": 860,
+    "pixels_changes_hors_corps": 823,
+    "hausse_max": 156,
+    "hausse_moyenne_changes": 7.088372093023255,
+    "plus_clair_que_le_sol": 85,
+    "plus_clair_que_le_sol_d0": 202,
+    "fichier": "img/occulteur_mi_profil_g_45_d1.jpg"
+   },
+   "occulteur_mi_profil_g_45_d2": {
+    "classe": "occulteur",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.27291667368263,
+    "compensation": 1.02898550585213,
+    "silhouette": 1853,
+    "visibles": 456,
+    "haut": 152,
+    "pixels_changes_corps": 704,
+    "pixels_changes_hors_corps": 498,
+    "hausse_max": 77,
+    "hausse_moyenne_changes": 1.5213068181818181,
+    "plus_clair_que_le_sol": 204,
+    "plus_clair_que_le_sol_d0": 202,
+    "fichier": "img/occulteur_mi_profil_g_45_d2.jpg"
+   },
+   "fumiste_b10_profil_g_45_d0": {
+    "classe": "fumiste",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0954656882677227,
+    "compensation": 1.0,
+    "silhouette": 2266,
+    "visibles": 355,
+    "haut": 19,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 350,
+    "plus_clair_que_le_sol_d0": 350,
+    "fichier": "img/fumiste_b10_profil_g_45_d0.jpg"
+   },
+   "fumiste_b10_profil_g_45_d1": {
+    "classe": "fumiste",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0954656882677227,
+    "compensation": 1.18421052631579,
+    "silhouette": 2266,
+    "visibles": 497,
+    "haut": 28,
+    "pixels_changes_corps": 1108,
+    "pixels_changes_hors_corps": 560,
+    "hausse_max": 159,
+    "hausse_moyenne_changes": 1.3808664259927799,
+    "plus_clair_que_le_sol": 103,
+    "plus_clair_que_le_sol_d0": 350,
+    "fichier": "img/fumiste_b10_profil_g_45_d1.jpg"
+   },
+   "fumiste_b10_profil_g_45_d2": {
+    "classe": "fumiste",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0954656882677227,
+    "compensation": 1.16393443036289,
+    "silhouette": 2266,
+    "visibles": 438,
+    "haut": 22,
+    "pixels_changes_corps": 901,
+    "pixels_changes_hors_corps": 187,
+    "hausse_max": 79,
+    "hausse_moyenne_changes": 1.5749167591564928,
+    "plus_clair_que_le_sol": 341,
+    "plus_clair_que_le_sol_d0": 350,
+    "fichier": "img/fumiste_b10_profil_g_45_d2.jpg"
+   },
+   "fumiste_mi_profil_g_45_d0": {
+    "classe": "fumiste",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.259803928434849,
+    "compensation": 1.0,
+    "silhouette": 1977,
+    "visibles": 481,
+    "haut": 157,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 252,
+    "plus_clair_que_le_sol_d0": 252,
+    "fichier": "img/fumiste_mi_profil_g_45_d0.jpg"
+   },
+   "fumiste_mi_profil_g_45_d1": {
+    "classe": "fumiste",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.259803928434849,
+    "compensation": 1.18421052631579,
+    "silhouette": 1977,
+    "visibles": 526,
+    "haut": 164,
+    "pixels_changes_corps": 867,
+    "pixels_changes_hors_corps": 772,
+    "hausse_max": 123,
+    "hausse_moyenne_changes": 6.602076124567474,
+    "plus_clair_que_le_sol": 192,
+    "plus_clair_que_le_sol_d0": 252,
+    "fichier": "img/fumiste_mi_profil_g_45_d1.jpg"
+   },
+   "fumiste_mi_profil_g_45_d2": {
+    "classe": "fumiste",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.259803928434849,
+    "compensation": 1.16393441730988,
+    "silhouette": 1977,
+    "visibles": 486,
+    "haut": 159,
+    "pixels_changes_corps": 766,
+    "pixels_changes_hors_corps": 394,
+    "hausse_max": 51,
+    "hausse_moyenne_changes": 4.6122715404699735,
+    "plus_clair_que_le_sol": 254,
+    "plus_clair_que_le_sol_d0": 252,
+    "fichier": "img/fumiste_mi_profil_g_45_d2.jpg"
+   },
+   "incendiaire_b10_profil_g_45_d0": {
+    "classe": "incendiaire",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 2247,
+    "visibles": 332,
+    "haut": 20,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 295,
+    "plus_clair_que_le_sol_d0": 295,
+    "fichier": "img/incendiaire_b10_profil_g_45_d0.jpg"
+   },
+   "incendiaire_b10_profil_g_45_d1": {
+    "classe": "incendiaire",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.08944182918628,
+    "silhouette": 2247,
+    "visibles": 458,
+    "haut": 27,
+    "pixels_changes_corps": 1018,
+    "pixels_changes_hors_corps": 534,
+    "hausse_max": 124,
+    "hausse_moyenne_changes": 1.0569744597249509,
+    "plus_clair_que_le_sol": 110,
+    "plus_clair_que_le_sol_d0": 295,
+    "fichier": "img/incendiaire_b10_profil_g_45_d1.jpg"
+   },
+   "incendiaire_b10_profil_g_45_d2": {
+    "classe": "incendiaire",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.02898550789247,
+    "silhouette": 2247,
+    "visibles": 347,
+    "haut": 20,
+    "pixels_changes_corps": 797,
+    "pixels_changes_hors_corps": 267,
+    "hausse_max": 78,
+    "hausse_moyenne_changes": 2.0577164366373903,
+    "plus_clair_que_le_sol": 327,
+    "plus_clair_que_le_sol_d0": 295,
+    "fichier": "img/incendiaire_b10_profil_g_45_d2.jpg"
+   },
+   "incendiaire_mi_profil_g_45_d0": {
+    "classe": "incendiaire",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 1851,
+    "visibles": 532,
+    "haut": 129,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 135,
+    "plus_clair_que_le_sol_d0": 135,
+    "fichier": "img/incendiaire_mi_profil_g_45_d0.jpg"
+   },
+   "incendiaire_mi_profil_g_45_d1": {
+    "classe": "incendiaire",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.279411771800369,
+    "compensation": 1.08944182918628,
+    "silhouette": 1851,
+    "visibles": 537,
+    "haut": 186,
+    "pixels_changes_corps": 764,
+    "pixels_changes_hors_corps": 999,
+    "hausse_max": 156,
+    "hausse_moyenne_changes": 7.024869109947644,
+    "plus_clair_que_le_sol": 69,
+    "plus_clair_que_le_sol_d0": 135,
+    "fichier": "img/incendiaire_mi_profil_g_45_d1.jpg"
+   },
+   "incendiaire_mi_profil_g_45_d2": {
+    "classe": "incendiaire",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.279411771800369,
+    "compensation": 1.02898550585213,
+    "silhouette": 1851,
+    "visibles": 532,
+    "haut": 129,
+    "pixels_changes_corps": 611,
+    "pixels_changes_hors_corps": 289,
+    "hausse_max": 32,
+    "hausse_moyenne_changes": 1.2962356792144025,
+    "plus_clair_que_le_sol": 139,
+    "plus_clair_que_le_sol_d0": 135,
+    "fichier": "img/incendiaire_mi_profil_g_45_d2.jpg"
+   },
+   "sentinelle_b10_profil_g_45_d0": {
+    "classe": "sentinelle",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0971813746728003,
+    "compensation": 1.0,
+    "silhouette": 1639,
+    "visibles": 291,
+    "haut": 17,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 20,
+    "plus_clair_que_le_sol_d0": 20,
+    "fichier": "img/sentinelle_b10_profil_g_45_d0.jpg"
+   },
+   "sentinelle_b10_profil_g_45_d1": {
+    "classe": "sentinelle",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0971813746728003,
+    "compensation": 0.995085995085995,
+    "silhouette": 1639,
+    "visibles": 314,
+    "haut": 21,
+    "pixels_changes_corps": 358,
+    "pixels_changes_hors_corps": 1086,
+    "hausse_max": 19,
+    "hausse_moyenne_changes": 2.4245810055865924,
+    "plus_clair_que_le_sol": 19,
+    "plus_clair_que_le_sol_d0": 20,
+    "fichier": "img/sentinelle_b10_profil_g_45_d1.jpg"
+   },
+   "sentinelle_b10_profil_g_45_d2": {
+    "classe": "sentinelle",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0971813746728003,
+    "compensation": 1.02898550789247,
+    "silhouette": 1639,
+    "visibles": 307,
+    "haut": 18,
+    "pixels_changes_corps": 296,
+    "pixels_changes_hors_corps": 827,
+    "hausse_max": 9,
+    "hausse_moyenne_changes": 1.0945945945945945,
+    "plus_clair_que_le_sol": 24,
+    "plus_clair_que_le_sol_d0": 20,
+    "fichier": "img/sentinelle_b10_profil_g_45_d2.jpg"
+   },
+   "sentinelle_mi_profil_g_45_d0": {
+    "classe": "sentinelle",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.27254902664572,
+    "compensation": 1.0,
+    "silhouette": 1629,
+    "visibles": 492,
+    "haut": 141,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 66,
+    "plus_clair_que_le_sol_d0": 66,
+    "fichier": "img/sentinelle_mi_profil_g_45_d0.jpg"
+   },
+   "sentinelle_mi_profil_g_45_d1": {
+    "classe": "sentinelle",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.27254902664572,
+    "compensation": 0.995085995085995,
+    "silhouette": 1629,
+    "visibles": 480,
+    "haut": 131,
+    "pixels_changes_corps": 497,
+    "pixels_changes_hors_corps": 1027,
+    "hausse_max": 68,
+    "hausse_moyenne_changes": 0.02414486921529175,
+    "plus_clair_que_le_sol": 67,
+    "plus_clair_que_le_sol_d0": 66,
+    "fichier": "img/sentinelle_mi_profil_g_45_d1.jpg"
+   },
+   "sentinelle_mi_profil_g_45_d2": {
+    "classe": "sentinelle",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.27254902664572,
+    "compensation": 1.02898550585213,
+    "silhouette": 1629,
+    "visibles": 482,
+    "haut": 163,
+    "pixels_changes_corps": 584,
+    "pixels_changes_hors_corps": 1123,
+    "hausse_max": 77,
+    "hausse_moyenne_changes": 1.8647260273972603,
+    "plus_clair_que_le_sol": 68,
+    "plus_clair_que_le_sol_d0": 66,
+    "fichier": "img/sentinelle_mi_profil_g_45_d2.jpg"
+   },
+   "allumeur_b10_profil_g_45_d0": {
+    "classe": "allumeur",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 1868,
+    "visibles": 320,
+    "haut": 17,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 78,
+    "plus_clair_que_le_sol_d0": 78,
+    "fichier": "img/allumeur_b10_profil_g_45_d0.jpg"
+   },
+   "allumeur_b10_profil_g_45_d1": {
+    "classe": "allumeur",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.0996936296578497,
+    "compensation": 0.972972972972973,
+    "silhouette": 1868,
+    "visibles": 305,
+    "haut": 20,
+    "pixels_changes_corps": 488,
+    "pixels_changes_hors_corps": 996,
+    "hausse_max": 118,
+    "hausse_moyenne_changes": 0.5717213114754098,
+    "plus_clair_que_le_sol": 78,
+    "plus_clair_que_le_sol_d0": 78,
+    "fichier": "img/allumeur_b10_profil_g_45_d1.jpg"
+   },
+   "allumeur_b10_profil_g_45_d2": {
+    "classe": "allumeur",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.0996936296578497,
+    "compensation": 1.0,
+    "silhouette": 1868,
+    "visibles": 334,
+    "haut": 21,
+    "pixels_changes_corps": 497,
+    "pixels_changes_hors_corps": 1016,
+    "hausse_max": 118,
+    "hausse_moyenne_changes": 1.0663983903420524,
+    "plus_clair_que_le_sol": 79,
+    "plus_clair_que_le_sol_d0": 78,
+    "fichier": "img/allumeur_b10_profil_g_45_d2.jpg"
+   },
+   "allumeur_mi_profil_g_45_d0": {
+    "classe": "allumeur",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 1870,
+    "visibles": 525,
+    "haut": 129,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 92,
+    "plus_clair_que_le_sol_d0": 92,
+    "fichier": "img/allumeur_mi_profil_g_45_d0.jpg"
+   },
+   "allumeur_mi_profil_g_45_d1": {
+    "classe": "allumeur",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.279411771800369,
+    "compensation": 0.972972972972973,
+    "silhouette": 1870,
+    "visibles": 526,
+    "haut": 157,
+    "pixels_changes_corps": 629,
+    "pixels_changes_hors_corps": 838,
+    "hausse_max": 42,
+    "hausse_moyenne_changes": -0.3163751987281399,
+    "plus_clair_que_le_sol": 96,
+    "plus_clair_que_le_sol_d0": 92,
+    "fichier": "img/allumeur_mi_profil_g_45_d1.jpg"
+   },
+   "allumeur_mi_profil_g_45_d2": {
+    "classe": "allumeur",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.279411771800369,
+    "compensation": 1.0,
+    "silhouette": 1870,
+    "visibles": 532,
+    "haut": 186,
+    "pixels_changes_corps": 654,
+    "pixels_changes_hors_corps": 1013,
+    "hausse_max": 118,
+    "hausse_moyenne_changes": 3.3685015290519877,
+    "plus_clair_que_le_sol": 67,
+    "plus_clair_que_le_sol_d0": 92,
+    "fichier": "img/allumeur_mi_profil_g_45_d2.jpg"
+   },
+   "spectre_b10_profil_g_45_d0": {
+    "classe": "spectre",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.103860296541825,
+    "compensation": 1.0,
+    "silhouette": 2011,
+    "visibles": 283,
+    "haut": 21,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 258,
+    "plus_clair_que_le_sol_d0": 258,
+    "fichier": "img/spectre_b10_profil_g_45_d0.jpg"
+   },
+   "spectre_b10_profil_g_45_d1": {
+    "classe": "spectre",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.103860296541825,
+    "compensation": 0.887671232876712,
+    "silhouette": 2011,
+    "visibles": 222,
+    "haut": 18,
+    "pixels_changes_corps": 685,
+    "pixels_changes_hors_corps": 476,
+    "hausse_max": 78,
+    "hausse_moyenne_changes": 0.9751824817518249,
+    "plus_clair_que_le_sol": 240,
+    "plus_clair_que_le_sol_d0": 258,
+    "fichier": "img/spectre_b10_profil_g_45_d1.jpg"
+   },
+   "spectre_b10_profil_g_45_d2": {
+    "classe": "spectre",
+    "scene": "b10",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.103860296541825,
+    "compensation": 0.972602739148797,
+    "silhouette": 2011,
+    "visibles": 321,
+    "haut": 28,
+    "pixels_changes_corps": 814,
+    "pixels_changes_hors_corps": 583,
+    "hausse_max": 123,
+    "hausse_moyenne_changes": 1.1154791154791155,
+    "plus_clair_que_le_sol": 106,
+    "plus_clair_que_le_sol_d0": 258,
+    "fichier": "img/spectre_b10_profil_g_45_d2.jpg"
+   },
+   "spectre_mi_profil_g_45_d0": {
+    "classe": "spectre",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 0,
+    "niveau": 0.286029418930411,
+    "compensation": 1.0,
+    "silhouette": 1560,
+    "visibles": 499,
+    "haut": 163,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 83,
+    "plus_clair_que_le_sol_d0": 83,
+    "fichier": "img/spectre_mi_profil_g_45_d0.jpg"
+   },
+   "spectre_mi_profil_g_45_d1": {
+    "classe": "spectre",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 1,
+    "niveau": 0.286029418930411,
+    "compensation": 0.887671232876712,
+    "silhouette": 1560,
+    "visibles": 488,
+    "haut": 162,
+    "pixels_changes_corps": 556,
+    "pixels_changes_hors_corps": 953,
+    "hausse_max": 41,
+    "hausse_moyenne_changes": -2.884892086330935,
+    "plus_clair_que_le_sol": 84,
+    "plus_clair_que_le_sol_d0": 83,
+    "fichier": "img/spectre_mi_profil_g_45_d1.jpg"
+   },
+   "spectre_mi_profil_g_45_d2": {
+    "classe": "spectre",
+    "scene": "mi",
+    "orientation": "profil_g",
+    "mode": 2,
+    "niveau": 0.286029418930411,
+    "compensation": 0.972602740971662,
+    "silhouette": 1560,
+    "visibles": 505,
+    "haut": 163,
+    "pixels_changes_corps": 562,
+    "pixels_changes_hors_corps": 1009,
+    "hausse_max": 80,
+    "hausse_moyenne_changes": 1.7758007117437722,
+    "plus_clair_que_le_sol": 80,
+    "plus_clair_que_le_sol_d0": 83,
+    "fichier": "img/spectre_mi_profil_g_45_d2.jpg"
+   }
+  }
+ },
+ "0°": {
+  "recherches": {
+   "pistolet|profil_g|0": {
+    "classe": "pistolet",
+    "distance": 319.0,
+    "distance_eteint": 320.0,
+    "mode_d": 0,
+    "orientation": "profil_g",
+    "partie": "apparition"
+   },
+   "pistolet|profil_g|1": {
+    "classe": "pistolet",
+    "distance": 319.0,
+    "distance_eteint": 320.0,
+    "mode_d": 1,
+    "orientation": "profil_g",
+    "partie": "apparition"
+   },
+   "pistolet|profil_g|2": {
+    "classe": "pistolet",
+    "distance": 321.0,
+    "distance_eteint": 322.0,
+    "mode_d": 2,
+    "orientation": "profil_g",
+    "partie": "apparition"
+   },
+   "pompe|profil_d|0": {
+    "classe": "pompe",
+    "distance": 318.0,
+    "distance_eteint": 319.0,
+    "mode_d": 0,
+    "orientation": "profil_d",
+    "partie": "apparition"
+   },
+   "pompe|profil_d|1": {
+    "classe": "pompe",
+    "distance": 316.0,
+    "distance_eteint": 317.0,
+    "mode_d": 1,
+    "orientation": "profil_d",
+    "partie": "apparition"
+   },
+   "pompe|profil_d|2": {
+    "classe": "pompe",
+    "distance": 315.0,
+    "distance_eteint": 316.0,
+    "mode_d": 2,
+    "orientation": "profil_d",
+    "partie": "apparition"
+   }
+  },
+  "seuil": [
+   0.105882354080677,
+   0.10196078568697
+  ],
+  "prediction": {
+   "pistolet|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "pistolet|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "pistolet|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "pistolet|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "pistolet|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "pistolet|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 316.0
+    }
+   },
+   "pistolet|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "pistolet|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 316.0
+    }
+   },
+   "fusil|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "fusil|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "fusil|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "fusil|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "fusil|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "fusil|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 316.0
+    }
+   },
+   "fusil|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "fusil|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.005586592178771,
+     "2": 2.2499999999999956
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 334.0
+    }
+   },
+   "pompe|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.8142857142857143
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 310.0
+    }
+   },
+   "pompe|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.103448275862069
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "pompe|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.1451612903225807
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 322.0
+    }
+   },
+   "pompe|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.1612903225806452
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 322.0
+    }
+   },
+   "pompe|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 1.1818181818181819
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 322.0
+    }
+   },
+   "pompe|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.888888888888889
+    },
+    "derniere": {
+     "0": 314.0,
+     "1": 314.0,
+     "2": 310.0
+    }
+   },
+   "pompe|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.9090909090909097
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 314.0
+    }
+   },
+   "pompe|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9830097087378641,
+     "2": 0.4090909090909083
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 274.0
+    }
+   },
+   "arbalete|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.1875
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 314.0,
+     "2": 322.0
+    }
+   },
+   "arbalete|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.0491803278688525
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 320.0
+    }
+   },
+   "arbalete|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.109375
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 322.0
+    }
+   },
+   "arbalete|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 1.125
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 322.0
+    }
+   },
+   "arbalete|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.8227848101265823
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 312.0
+    }
+   },
+   "arbalete|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.7384615384615387
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 314.0,
+     "2": 306.0
+    }
+   },
+   "arbalete|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.5000000000000002
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 284.0
+    }
+   },
+   "arbalete|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.9126760563380282,
+     "2": 0.3749999999999993
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 314.0,
+     "2": 264.0
+    }
+   },
+   "occulteur|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.1176470588235294
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 322.0
+    }
+   },
+   "occulteur|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.032258064516129
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "occulteur|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0289855072463767
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "occulteur|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0285714285714285
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "occulteur|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0655737704918034
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "occulteur|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.2
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 320.0,
+     "2": 322.0
+    }
+   },
+   "occulteur|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.3333333333333337
+    },
+    "derniere": {
+     "0": 306.0,
+     "1": 310.0,
+     "2": 316.0
+    }
+   },
+   "occulteur|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.0843373493975903,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "fumiste|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.163265306122449
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 322.0,
+     "2": 322.0
+    }
+   },
+   "fumiste|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.0666666666666667
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 322.0,
+     "2": 320.0
+    }
+   },
+   "fumiste|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.1639344262295082
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 322.0,
+     "2": 322.0
+    }
+   },
+   "fumiste|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.125
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 322.0,
+     "2": 322.0
+    }
+   },
+   "fumiste|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.1403508771929824
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 322.0,
+     "2": 322.0
+    }
+   },
+   "fumiste|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.3333333333333333
+    },
+    "derniere": {
+     "0": 314.0,
+     "1": 318.0,
+     "2": 322.0
+    }
+   },
+   "fumiste|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 4.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "fumiste|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.1842105263157894,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "incendiaire|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.163265306122449
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 322.0
+    }
+   },
+   "incendiaire|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0666666666666667
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "incendiaire|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0289855072463767
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "incendiaire|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0285714285714285
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "incendiaire|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0317460317460319
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 320.0,
+     "2": 320.0
+    }
+   },
+   "incendiaire|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.1428571428571428
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 320.0,
+     "2": 322.0
+    }
+   },
+   "incendiaire|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.4285714285714266
+    },
+    "derniere": {
+     "0": 306.0,
+     "1": 308.0,
+     "2": 316.0
+    }
+   },
+   "incendiaire|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 1.089441829186281,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": null,
+     "1": null,
+     "2": null
+    }
+   },
+   "sentinelle|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "sentinelle|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0666666666666667
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "sentinelle|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0289855072463767
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "sentinelle|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0285714285714285
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "sentinelle|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.0317460317460319
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "sentinelle|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 0.96
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 316.0
+    }
+   },
+   "sentinelle|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 0.8333333333333335
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 312.0
+    }
+   },
+   "sentinelle|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.995085995085995,
+     "2": 1.1249999999999978
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 322.0
+    }
+   },
+   "allumeur|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 0.9661016949152542
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 316.0
+    }
+   },
+   "allumeur|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.032258064516129
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "allumeur|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "allumeur|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 318.0
+    }
+   },
+   "allumeur|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.0317460317460319
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 318.0,
+     "2": 320.0
+    }
+   },
+   "allumeur|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 0.96
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 316.0
+    }
+   },
+   "allumeur|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 0.8333333333333335
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 312.0
+    }
+   },
+   "allumeur|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.972972972972973,
+     "2": 1.1249999999999978
+    },
+    "derniere": {
+     "0": 316.0,
+     "1": 316.0,
+     "2": 322.0
+    }
+   },
+   "spectre|face": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.9047619047619048
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 314.0,
+     "2": 314.0
+    }
+   },
+   "spectre|diag_face_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 1.0158730158730158
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 318.0
+    }
+   },
+   "spectre|profil_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.9726027397260274
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 318.0
+    }
+   },
+   "spectre|diag_dos_g": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.972972972972973
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 318.0
+    }
+   },
+   "spectre|dos": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 1.0
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 318.0
+    }
+   },
+   "spectre|diag_dos_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.8421052631578949
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 314.0,
+     "2": 310.0
+    }
+   },
+   "spectre|profil_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.5714285714285717
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 316.0,
+     "2": 296.0
+    }
+   },
+   "spectre|diag_face_d": {
+    "facteurs": {
+     "0": 1.0,
+     "1": 0.8876712328767123,
+     "2": 0.29999999999999954
+    },
+    "derniere": {
+     "0": 318.0,
+     "1": 314.0,
+     "2": null
+    }
+   }
+  },
+  "planche": {}
+ },
+ "noir": {
+  "planche": {
+   "fumiste_b10_diag_face_d_45_d0": {
+    "classe": "fumiste",
+    "scene": "b10",
+    "orientation": "diag_face_d",
+    "mode": 0,
+    "niveau": 0.0,
+    "compensation": 1.0,
+    "silhouette": 2377,
+    "visibles": 0,
+    "haut": 0,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 339,
+    "plus_clair_que_le_sol_d0": 339,
+    "fichier": "img/fumiste_b10_diag_face_d_45_d0.jpg"
+   },
+   "fumiste_b10_diag_face_d_45_d1": {
+    "classe": "fumiste",
+    "scene": "b10",
+    "orientation": "diag_face_d",
+    "mode": 1,
+    "niveau": 0.0,
+    "compensation": 1.18421052631579,
+    "silhouette": 2377,
+    "visibles": 0,
+    "haut": 0,
+    "pixels_changes_corps": 711,
+    "pixels_changes_hors_corps": 208,
+    "hausse_max": 79,
+    "hausse_moyenne_changes": 0.9156118143459916,
+    "plus_clair_que_le_sol": 356,
+    "plus_clair_que_le_sol_d0": 339,
+    "fichier": "img/fumiste_b10_diag_face_d_45_d1.jpg"
+   },
+   "fumiste_b10_diag_face_d_45_d2": {
+    "classe": "fumiste",
+    "scene": "b10",
+    "orientation": "diag_face_d",
+    "mode": 2,
+    "niveau": 0.0,
+    "compensation": 1.0,
+    "silhouette": 2377,
+    "visibles": 0,
+    "haut": 0,
+    "pixels_changes_corps": 634,
+    "pixels_changes_hors_corps": 156,
+    "hausse_max": 79,
+    "hausse_moyenne_changes": 0.526813880126183,
+    "plus_clair_que_le_sol": 345,
+    "plus_clair_que_le_sol_d0": 339,
+    "fichier": "img/fumiste_b10_diag_face_d_45_d2.jpg"
+   },
+   "fumiste_mi_diag_face_d_45_d0": {
+    "classe": "fumiste",
+    "scene": "mi",
+    "orientation": "diag_face_d",
+    "mode": 0,
+    "niveau": 0.0,
+    "compensation": 1.0,
+    "silhouette": 2386,
+    "visibles": 0,
+    "haut": 0,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 282,
+    "plus_clair_que_le_sol_d0": 282,
+    "fichier": "img/fumiste_mi_diag_face_d_45_d0.jpg"
+   },
+   "fumiste_mi_diag_face_d_45_d1": {
+    "classe": "fumiste",
+    "scene": "mi",
+    "orientation": "diag_face_d",
+    "mode": 1,
+    "niveau": 0.0,
+    "compensation": 1.18421052631579,
+    "silhouette": 2386,
+    "visibles": 0,
+    "haut": 0,
+    "pixels_changes_corps": 796,
+    "pixels_changes_hors_corps": 228,
+    "hausse_max": 106,
+    "hausse_moyenne_changes": 3.864321608040201,
+    "plus_clair_que_le_sol": 312,
+    "plus_clair_que_le_sol_d0": 282,
+    "fichier": "img/fumiste_mi_diag_face_d_45_d1.jpg"
+   },
+   "fumiste_mi_diag_face_d_45_d2": {
+    "classe": "fumiste",
+    "scene": "mi",
+    "orientation": "diag_face_d",
+    "mode": 2,
+    "niveau": 0.0,
+    "compensation": 1.0,
+    "silhouette": 2386,
+    "visibles": 0,
+    "haut": 0,
+    "pixels_changes_corps": 799,
+    "pixels_changes_hors_corps": 233,
+    "hausse_max": 106,
+    "hausse_moyenne_changes": 3.8823529411764706,
+    "plus_clair_que_le_sol": 318,
+    "plus_clair_que_le_sol_d0": 282,
+    "fichier": "img/fumiste_mi_diag_face_d_45_d2.jpg"
+   },
+   "spectre_b10_diag_face_d_45_d0": {
+    "classe": "spectre",
+    "scene": "b10",
+    "orientation": "diag_face_d",
+    "mode": 0,
+    "niveau": 0.0366421579383314,
+    "compensation": 1.0,
+    "silhouette": 1704,
+    "visibles": 104,
+    "haut": 83,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 80,
+    "plus_clair_que_le_sol_d0": 80,
+    "fichier": "img/spectre_b10_diag_face_d_45_d0.jpg"
+   },
+   "spectre_b10_diag_face_d_45_d1": {
+    "classe": "spectre",
+    "scene": "b10",
+    "orientation": "diag_face_d",
+    "mode": 1,
+    "niveau": 0.0366421579383314,
+    "compensation": 0.887671232876712,
+    "silhouette": 1704,
+    "visibles": 33,
+    "haut": 10,
+    "pixels_changes_corps": 343,
+    "pixels_changes_hors_corps": 857,
+    "hausse_max": 116,
+    "hausse_moyenne_changes": 4.816326530612245,
+    "plus_clair_que_le_sol": 95,
+    "plus_clair_que_le_sol_d0": 80,
+    "fichier": "img/spectre_b10_diag_face_d_45_d1.jpg"
+   },
+   "spectre_b10_diag_face_d_45_d2": {
+    "classe": "spectre",
+    "scene": "b10",
+    "orientation": "diag_face_d",
+    "mode": 2,
+    "niveau": 0.0366421579383314,
+    "compensation": 0.299999789797074,
+    "silhouette": 1704,
+    "visibles": 8,
+    "haut": 36,
+    "pixels_changes_corps": 360,
+    "pixels_changes_hors_corps": 898,
+    "hausse_max": 117,
+    "hausse_moyenne_changes": 6.311111111111111,
+    "plus_clair_que_le_sol": 93,
+    "plus_clair_que_le_sol_d0": 80,
+    "fichier": "img/spectre_b10_diag_face_d_45_d2.jpg"
+   },
+   "spectre_mi_diag_face_d_45_d0": {
+    "classe": "spectre",
+    "scene": "mi",
+    "orientation": "diag_face_d",
+    "mode": 0,
+    "niveau": 0.0688725509680808,
+    "compensation": 1.0,
+    "silhouette": 1607,
+    "visibles": 134,
+    "haut": 193,
+    "pixels_changes_corps": 0,
+    "pixels_changes_hors_corps": 0,
+    "hausse_max": 0,
+    "hausse_moyenne_changes": 0.0,
+    "plus_clair_que_le_sol": 41,
+    "plus_clair_que_le_sol_d0": 41,
+    "fichier": "img/spectre_mi_diag_face_d_45_d0.jpg"
+   },
+   "spectre_mi_diag_face_d_45_d1": {
+    "classe": "spectre",
+    "scene": "mi",
+    "orientation": "diag_face_d",
+    "mode": 1,
+    "niveau": 0.0688725509680808,
+    "compensation": 0.887671232876712,
+    "silhouette": 1607,
+    "visibles": 141,
+    "haut": 193,
+    "pixels_changes_corps": 200,
+    "pixels_changes_hors_corps": 619,
+    "hausse_max": 55,
+    "hausse_moyenne_changes": 1.73,
+    "plus_clair_que_le_sol": 29,
+    "plus_clair_que_le_sol_d0": 41,
+    "fichier": "img/spectre_mi_diag_face_d_45_d1.jpg"
+   },
+   "spectre_mi_diag_face_d_45_d2": {
+    "classe": "spectre",
+    "scene": "mi",
+    "orientation": "diag_face_d",
+    "mode": 2,
+    "niveau": 0.0688725509680808,
+    "compensation": 0.299999943602859,
+    "silhouette": 1607,
+    "visibles": 58,
+    "haut": 193,
+    "pixels_changes_corps": 219,
+    "pixels_changes_hors_corps": 705,
+    "hausse_max": 93,
+    "hausse_moyenne_changes": -1.7762557077625571,
+    "plus_clair_que_le_sol": 0,
+    "plus_clair_que_le_sol_d0": 41,
+    "fichier": "img/spectre_mi_diag_face_d_45_d2.jpg"
+   }
+  }
+ }
+}
