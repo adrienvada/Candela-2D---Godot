@@ -27,6 +27,7 @@ var volumes: Object
 var _pos := [Vector2.ZERO, Vector2.ZERO]
 var _visee := [Vector2.UP, Vector2.RIGHT]
 var _torche := [false, false]
+var _seuls: Array = []
 
 
 func jouer(loupe: RefCounted, plans: Array[Dictionary]) -> void:
@@ -51,6 +52,12 @@ func jouer(loupe: RefCounted, plans: Array[Dictionary]) -> void:
 	print("  · %s : bandeau LED %s" % [ID, "figé à %.2f de son sommet" % MurLed._fige if MurLed._fige >= 0.0
 		else "qui RESPIRE — l'instant ne sera pas figé (--led-murs-fige)"])
 
+	# `--faisceau-blocs=s1,s2` : ne prendre que ces blocs (une contre-épreuve ciblée). Sans lui, tous.
+	var seuls: Array = []
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--faisceau-blocs="):
+			seuls = Array(a.trim_prefix("--faisceau-blocs=").split(","))
+	_seuls = seuls
 	# LE RAYON ADVERSE, VU DE J1 (vue unique). J2 à trois tuiles à l'ouest de J1, visée vers le nord-ouest : loin de J1, pour
 	# qu'il n'en soit pas ébloui ; J1 visée au nord, lampe éteinte.
 	_poser(j1, j1 + Vector2(-3.0 * t, 0.0), Vector2.UP, Vector2(-0.6, -1.0), false, true)
@@ -109,6 +116,8 @@ func _tenir() -> void:
 ## Un bloc : la scène tenue jusqu'à ce que les caméras et les éblouissements ne bougent plus (au bit près, trente pas de
 ## physique de suite), la caméra de J1 posée ; puis A a1 | B aux densités | a2 | B à la densité par défaut | a3 a4.
 func _bloc(plans: Array[Dictionary], nom: String, scinde: bool, densites: bool) -> void:
+	if not _seuls.is_empty() and not _seuls.has(nom):
+		return
 	var m: Node = p._main
 	volumes.set("faisceau_air", false)
 	m.set("_killcam_cadrage_tenu", false)

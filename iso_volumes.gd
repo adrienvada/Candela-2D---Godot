@@ -840,6 +840,8 @@ func poser_masque_fumee(actif: bool) -> void:
 func _couches(e: Dictionary, n: int, forme := -1, lumineux := false) -> void:
 	if forme >= 0:
 		e["forme_imposee"] = forme
+	if lumineux:
+		e["lumineux"] = true
 	while (e["noeuds"] as Array).size() < n:
 		var mi := MeshInstance3D.new()
 		mi.name = "Couche%d" % (e["noeuds"] as Array).size()
@@ -896,7 +898,7 @@ func _poser_juge(e: Dictionary, centre: Vector2, rayon: float, hauteur: float, d
 		juge.layers = CALQUE
 		juge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var mat := ShaderMaterial.new()
-		mat.shader = variante_juge(IsoMateriaux.usure_essai_active(), forme_masque)
+		mat.shader = _variante_juge_de(e)
 		mat.render_priority = PRIORITE_JUGE
 		_formes_posees[mat.shader] = true
 		_recopier_le_mur(mat)
@@ -908,7 +910,7 @@ func _poser_juge(e: Dictionary, centre: Vector2, rayon: float, hauteur: float, d
 		# Session cloud « masque-fumée-2 » : la forme a changé sous un juge déjà posé (les bancs basculent sur place, entre
 		# le pochoir et ce qui s'y ajoute) — il prend la variante de la nouvelle forme ; ses paramètres restent.
 		var mj := juge.material_override as ShaderMaterial
-		mj.shader = variante_juge(IsoMateriaux.usure_essai_active(), forme_masque)
+		mj.shader = _variante_juge_de(e)
 		_formes_posees[mj.shader] = true
 		e["juge_forme"] = forme_masque
 	var haut := maxf(PLANCHER_PX, hauteur * TUILE)
@@ -956,6 +958,13 @@ func _disque() -> ArrayMesh:
 	_disque_juge = ArrayMesh.new()
 	_disque_juge.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tableaux)
 	return _disque_juge
+
+
+## Le juge d'une entrée : celui de la forme du moment ; pour le faisceau LUMINEUX (Q41), plus `FAISCEAU_LUMINEUX_JUGE` — sa marge
+## au point noir (16/255 au lieu de 8, `volume_masque.gdshaderinc`) : une couche additive ne pardonne pas la lisière.
+func _variante_juge_de(e: Dictionary) -> Shader:
+	var v := variante_juge(IsoMateriaux.usure_essai_active(), forme_masque)
+	return IsoMateriaux.variante_definie(v, "FAISCEAU_LUMINEUX_JUGE") if e.get("lumineux", false) else v
 
 
 ## La variante du juge : la forme (pochoir ou au-delà), plus MASQUE_POCHOIR_JUGE (il écrit le pochoir au lieu de le lire).
