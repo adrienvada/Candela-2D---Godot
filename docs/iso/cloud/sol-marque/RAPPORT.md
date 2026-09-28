@@ -62,10 +62,22 @@ marque dans ces 12 px entrerait dans ce calcul ; au-delà, la face ne la voit pa
 **Pourquoi ces lettres** : ni « ZONE », ni « ARENA », ni « DEATHMATCH » (ce sont les pochoirs), ni « 1 » ou « 2 »
 (les départs), ni flèche. Des codes de secteur sans sens de jeu, qui font écho au « VAULT 07 » des menus.
 
-**L'équité** : 132 marques sur les six cartes, 18 à 25 par carte. La table est écrite à la main pour une moitié de
-chaque carte (`table.py`, le détail et les raisons de chaque place) ; le script en déduit les jumeaux et imprime la table
-GDScript. Le jumeau d'une marque a la même graine : le même motif, retourné pour un miroir, tourné d'un demi-tour pour la
-Croisée — l'image exacte au pixel du monde près. Cadres, bandes et lettres sont symétriques par construction (leur usure
+**L'équité** : 232 marques sur les six cartes, 22 à 48 par carte. La table est écrite à la main pour une moitié (un
+quart, en pratique) de chaque carte (`table.py`, la place de chaque marque) ; le script en déduit les jumeaux et imprime la
+table GDScript. Le jumeau d'une marque a la même graine : le même motif, retourné pour un miroir, tourné pour un
+demi-tour — l'image exacte au pixel du monde près.
+
+⚠️ **Le jumeau par la symétrie de la carte ne suffit pas à 45° B** — découvert à la première séance, corrigé dans
+`640ea0b`. J2 regarde depuis le côté opposé (lacet + 180°) : ce que J1 voit au point p, J2 le voit au **demi-tour** de p,
+pas à son miroir. La première table (132 marques, fermée par le miroir gauche-droite seul) posait un tas au pied SUD du
+pilier nord-ouest et son jumeau au pied SUD du pilier nord-est : visible pour J1, caché derrière son pilier pour J2. Mesuré
+à l'écran scindé, J1 et J2 chacun devant « son » tas : **713 pixels assombris dans le cône de J1, 27 dans celui de J2**. Les
+cinq cartes en miroir ont AUSSI la symétrie haut-bas (l'Usine à une case près) : la table est désormais fermée par les deux
+miroirs et le demi-tour, et la garde headless l'exige (et rougit sur la première table). **À reporter dans la feuille de
+route, au-delà de cet essai** : tout décor posé « avec son jumeau par la symétrie de la carte » doit aussi avoir son jumeau
+par le demi-tour pour être équitable à 45° B. Les pochoirs ne l'ont pas (« ZONE 1 » et « ZONE 2 » sont au sud sur les six
+cartes, les « DEATHMATCH » de l'Arène Standard et de l'Arène Circulaire ne sont pas à des places échangées par le miroir
+haut-bas) : signalé, pas corrigé. Les cadres de cet essai, qui encadrent ces « DEATHMATCH », en héritent. Cadres, bandes et lettres sont symétriques par construction (leur usure
 est tirée sur un quart et reportée) : posés sur l'axe, ils sont leur propre jumeau. L'Usine n'a pas de symétrie exacte
 (son bloc central est décalé d'une case) : traitée en miroir, comme les pochoirs, et **rien n'est posé près du bloc
 décalé**.
@@ -76,7 +88,7 @@ décalé**.
 - [x] drapeau et table
 - [x] garde headless (`tools/test_sol_marque.gd`, 27 vérifications)
 - [ ] prises et mesures
-- [ ] preuve de cuisson (éteint = base, au bit)
+- [x] preuve de cuisson (éteint = base, au bit : `cuisson_md5.txt`) et emprises tenues (`emprises.py` : 0 texel hors)
 - [ ] comptes de dessin (outil « Budget »)
 - [ ] planche
 - [ ] suite complète
