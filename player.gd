@@ -848,7 +848,12 @@ func _ready():
 	# rétrodiffusion, le canon non.** C'est exactement l'argument que
 	# l'occlusion des torches avait tenu avant qu'Adrien le renverse — il reste
 	# vrai ici, où la lumière est rasante et l'objet mince.
-	body_light.shadow_item_cull_mask = 1 | 2 | COUCHE_TORSE | COUCHE_TORSE_ADVERSE
+	#
+	# Q65 — et le bit RÉCEPTEUR de l'ADVERSAIRE (`CanauxLumiere.recepteur_retro`, jamais le sien) : le capteur de soi de l'autre
+	# joueur le porte, donc reçoit les ombres de cette rétrodiffusion — les murs arrêtent enfin sa lumière jusqu'à son corps —,
+	# et le nôtre ne reçoit jamais celles de la nôtre. Aucun occluder ne porte ce bit : rien ne s'ajoute aux ombres du jeu.
+	body_light.shadow_item_cull_mask = 1 | 2 | COUCHE_TORSE | COUCHE_TORSE_ADVERSE \
+		| CanauxLumiere.recepteur_retro(1 - player_id)
 	body_light.range_item_cull_mask = 2 | 4  # Éclaire le joueur local (4) ET l'écran ennemi (2) quand en ligne de vue
 	
 	# DA2.2 — le halo peint remplace le dégradé parfait.
