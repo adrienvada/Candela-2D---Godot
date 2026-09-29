@@ -100,6 +100,10 @@ var faisceaux_actifs := false
 ## Q41 — le rayon dans l'air, ALLUMÉ par défaut ; `--sans-faisceau-air` l'éteint (build de débogage seulement). Relu à chaque
 ## image (un banc peut le basculer sur place).
 var faisceau_air := true
+## Chantier des lumières de la 0.8.0, L3 (Q46, Adrien, 2026-09-29) — le POINT LUMINEUX à la lentille de chaque torche tenue,
+## ALLUMÉ par défaut ; `--sans-point-lumineux` l'éteint, en build de débogage seulement (un joueur ne choisit pas ce que
+## l'adversaire montre). Relu à chaque image. Voir `_suivre_lentilles_des_joueurs`.
+var point_lumineux := true
 ## `--faisceau-air=0.3` force la densité d'une couche (au cœur, lampe à pleine énergie) ; 0 : celle de `VOLUME_FAISCEAU_AIR`.
 var densite_faisceau_air := 0.0
 ## ISO13, Q31 voie A — le masque de la fumée : chaque couche de volume passe à la variante FUMEE_MASQUE
@@ -145,6 +149,7 @@ const DRAPEAU_FAISCEAU := "--faisceau"
 const DRAPEAU_FAISCEAU_AIR := "--faisceau-air"
 ## Q41 — l'éteindre : build de débogage seulement, comme `--sans-fumee-masque` (un joueur ne choisit pas l'image de l'adversaire).
 const DRAPEAU_SANS_FAISCEAU_AIR := "--sans-faisceau-air"
+const DRAPEAU_SANS_POINT_LUMINEUX := "--sans-point-lumineux"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
 ## Les formes du masque (voir `forme_masque` et `volume_masque_compact.gdshaderinc`) : 1, la même réponse écrite une fois par
@@ -203,6 +208,8 @@ func _init() -> void:
 			densite_faisceau_air = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU_AIR + "=")))
 		elif arg == DRAPEAU_SANS_FAISCEAU_AIR and OS.is_debug_build():
 			faisceau_air = false
+		elif arg == DRAPEAU_SANS_POINT_LUMINEUX and OS.is_debug_build():
+			point_lumineux = false
 		elif arg == DRAPEAU_MASQUE_FUMEE:
 			masque_fumee = true
 		elif arg == DRAPEAU_SANS_MASQUE_FUMEE and OS.is_debug_build():
@@ -279,6 +286,8 @@ func suivre(main: Node, vues: Array, style: int, presentation: Node) -> void:
 			if noeud.get_script() == OndeDeMort:
 				_suivre_onde(noeud as Node2D, vus)
 	_suivre_eclats(main, presentation, vus)
+	if point_lumineux:
+		_suivre_lentilles_des_joueurs(main, presentation, vus)
 	if faisceaux_actifs:
 		for j in [main.get("p1"), main.get("p2")]:
 			if j is Node2D and not (j as Node).is_queued_for_deletion():
@@ -555,6 +564,76 @@ func _suivre_eclats(main: Node, presentation: Node, vus: Dictionary) -> void:
 			bout = Vector3(bouche.global_position.x, MursBas.HAUTEUR_DEBOUT * 0.6 * TUILE, bouche.global_position.y)
 		_poser_halo(e, 0, bout, 30.0, eclat.modulate, 0.8 * part, 0)
 		_poser_halo(e, 1, bout, 8.0, eclat.modulate, part, 1)
+
+
+## Chantier des lumières de la 0.8.0, L3 — LE POINT LUMINEUX À LA LENTILLE (Q46, Adrien, 2026-09-29 : « le point lumineux
+## doit être visible si la source de la lumière est visible dans la vue du joueur […] Si son corps est devant, on ne voit
+## pas le point lumineux »).
+##
+## Deux lueurs (le cœur franc, et un halo doux autour) posées au bout du fût de la torche du corps voxel
+## (`VoxelCorps.pointe_torche`, le point d'où part la lumière depuis L2), à l'énergie de SA lampe : lampe éteinte ou
+## grésillante, point éteint ou faible — le noir absolu tient. Ce qu'on voit, c'est la source elle-même, que la lumière 2D
+## ne dessine pas (une lampe n'éclaire pas sa propre lentille).
+##
+## **Visible seulement si la lentille l'est, depuis la caméra de CE joueur** — deux conditions, chacune tenue là où elle
+## se juge :
+## - **le verre regarde-t-il la caméra ?** Une lampe vue de dos montre son culot, pas sa lumière. Le shader
+##   (`lentille_orientee`, `halo_iso.gdshaderinc`) pèse chaque lueur par l'orientation de la lentille face à la caméra
+##   QUI DESSINE : en écran scindé, chaque vue a sa caméra (J2 à 225°), et chacune juge pour elle — aucune différence J1/J2.
+##   La même formule, en GDScript, pour les gardes : `visibilite_lentille`.
+## - **quelque chose est-il devant ?** La profondeur : les lueurs lisent le tampon de profondeur où le corps voxel, le
+##   fût de la torche et les murs 3D sont déjà écrits. Le corps devant la lampe la cache ; le mur aussi.
+## Ni la simulation, ni l'éblouissement, ni les capteurs ne lisent ces lueurs : une image, comme toutes celles d'ici.
+func _suivre_lentilles_des_joueurs(main: Node, presentation: Node, vus: Dictionary) -> void:
+	var voxels: Array = presentation.get("_voxels") if presentation != null and "_voxels" in presentation else []
+	for j in 2:
+		var joueur = main.p1 if j == 0 else main.p2
+		if not is_instance_valid(joueur) or (joueur as Node).is_queued_for_deletion():
+			continue
+		var lampe := (joueur as Node).get_node_or_null(^"Flashlight") as Light2D
+		var corps: Variant = voxels[j] if j < voxels.size() else null
+		if lampe == null or not (corps is Node3D) or not is_instance_valid(corps) \
+				or not (corps as Node3D).is_visible_in_tree() or not (corps as Node3D).has_method("pointe_torche"):
+			continue
+		var part := clampf(lampe.energy / 2.5, 0.0, 1.0) if lampe.enabled and lampe.is_visible_in_tree() else 0.0
+		var pointe: Dictionary = (corps as Node3D).call("pointe_torche")
+		if part <= 0.0 or pointe.is_empty():
+			continue
+		var e := _entree(joueur as Object, "lentille_joueur", vus, CLE_LENTILLE_JOUEUR)
+		_halos(e, 2)
+		var direction: Vector3 = pointe["direction"]
+		# Posé juste devant le verre : le fût de la torche, derrière, ne le coupe pas.
+		var p: Vector3 = (pointe["position"] as Vector3) + direction * AVANT_DU_VERRE_PX
+		_poser_halo(e, 0, p, TAILLE_HALO_LENTILLE, lampe.color, INTENSITE_HALO_LENTILLE * part, 0)
+		_poser_halo(e, 1, p, TAILLE_POINT_LENTILLE, lampe.color, part, 1)
+		for mat: ShaderMaterial in e["mats"]:
+			mat.set_shader_parameter("lentille_orientee", true)
+			mat.set_shader_parameter("direction_lentille", direction)
+
+
+## L3 — le point : un cœur franc de 5 px (la lentille de la torche fantôme en fait 5 aussi) et un halo doux de 16 px au tiers
+## de sa force. Points de départ, à doser sur les images avec Adrien.
+const TAILLE_POINT_LENTILLE := 5.0
+const TAILLE_HALO_LENTILLE := 16.0
+const INTENSITE_HALO_LENTILLE := 0.35
+## Devant le verre, en pixels : assez pour que le fût (derrière) ne coupe pas le cœur, assez peu pour que le corps, s'il est
+## devant la lampe, le cache encore.
+const AVANT_DU_VERRE_PX := 0.6
+## La clé de suivi du point, à côté du cœur chaud (1) et du rayon (3) : un joueur porte les trois.
+const CLE_LENTILLE_JOUEUR := 4
+## L3 — la LENTILLE vue de face, de profil, de dos : `lisse(DOS, FACE, cos)`, où `cos` est le cosinus entre l'avant de la
+## lentille et la direction qui va vers la caméra. La caméra iso plonge de 52° : même visée droit sur elle, le cosinus ne
+## dépasse pas cos 52° = 0,62. Pleine vue de face et jusqu'à ~45° de côté ; de profil (0), un reste (16 %) — un verre
+## rasant se voit encore, en filet ; de dos (au-delà de −0,1), rien. **Recopié dans le shader** (`halo_iso.gdshaderinc`) :
+## `tools/test_point_lumineux.gd` vérifie que les deux disent la même chose.
+const LENTILLE_DOS := -0.1
+const LENTILLE_FACE := 0.3
+
+
+## L3 — la part visible d'une lentille orientée `direction` vue d'une caméra dont l'axe arrière (vers la caméra, `basis.z`)
+## est `vers_camera` : 1 de face, 0 de dos. La formule du shader, en GDScript.
+static func visibilite_lentille(direction: Vector3, vers_camera: Vector3) -> float:
+	return smoothstep(LENTILLE_DOS, LENTILLE_FACE, direction.normalized().dot(vers_camera.normalized()))
 
 
 ## Le bout de l'arme du corps voxel, en pixels du monde 3D, ou `null`.

@@ -29581,6 +29581,27 @@ k = ln 6 / ln 12 ≈ 0,721 : les deux bornes exactes, chaque rapport entre deux 
   unique, lumière 3D à la lentille au sol et en hauteur ; face à un mur, recul sur le rayon, jamais dans le mur ;
   `Protocol.VERSION` inchangé.
 
+### L3 — le point lumineux à la lentille (Q46)
+
+- **Deux lueurs** (un cœur franc de 5 px, un halo doux de 16 px au tiers de sa force) au bout du fût voxel
+  (`IsoVolumes._suivre_lentilles_des_joueurs`), à l'énergie de SA lampe : éteinte, grésillante, le point suit — le noir
+  absolu tient. C'est la source même, que la lumière 2D ne dessine pas. Allumé par défaut ; `--sans-point-lumineux` en
+  débogage seulement. **Aucune lumière nouvelle** : une image (lueur 3D non éclairée), rien ne l'entend — ni la
+  simulation, ni l'éblouissement, ni les capteurs, ni les masques d'ombre.
+- **Visible seulement si la lentille l'est, depuis la caméra de CE joueur** — deux conditions, chacune jugée là où elle
+  se juge : le verre regarde-t-il la caméra (le shader `halo_iso.gdshaderinc` pèse la lueur par l'orientation de la
+  lentille face à la caméra QUI DESSINE, `lentille_orientee` : de face plein, de profil un filet, de dos rien — en écran
+  scindé chaque vue juge pour elle, J2 à 225° compris) ; quelque chose est-il devant (la profondeur : le corps voxel, le
+  fût, les murs 3D le cachent). La formule, recopiée en GDScript (`IsoVolumes.visibilite_lentille`), est comparée au shader.
+- **Mesuré à l'image** (écran scindé, point basculé sur place, bruit de fond de la respiration du corps mesuré à part) :
+  J1 visant vers le bas de son écran, +204 à +213/255 dans sa vue ; vers le haut, +1 (bruit 8) ; la vue de J2 donne
+  l'inverse (+174 à +230 quand J1 vise vers le haut de son écran). De profil, un filet (+41 à +61).
+- **L'éblouissement et le faisceau visible ne bougent pas** : le halo d'éblouissement est une couche d'écran posée
+  au-dessus de la 3D, centrée sur l'émetteur — ébloui, on voit le halo par-dessus le point, les deux disent « une lampe
+  est là » ; le faisceau de Q41 part de la même lentille. Le « cœur chaud à la lampe » d'ISO13 (`--faisceau`, éteint) fait
+  doublon avec ce point : à retirer si Adrien garde celui-ci.
+- **Preuve** : `tools/test_point_lumineux.gd` (20 vérifications) ; l'occultation au pixel, par le banc
+  (`tools/banc_lumieres.gd --plans=l3`) — rien n'est rastérisé en headless.
 ---
 
 ## Jalons humains — ce qui ne peut pas être automatisé

@@ -226,7 +226,7 @@ SUITES+=(test_drapeaux)
 # Chantier SON VISIBLE (0.8.0, 2026-09-29) : le modèle du liseré, sans scène. Hors de la liste, même raison.
 SUITES+=(test_son_visible test_son_visible_jeu)
 # Chantier des lumières de la 0.8.0 (2026-09-29) : L1, la portée jusqu'au bord de l'écran. Hors de la liste, même raison.
-SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele)
+SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_point_lumineux)
 
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure

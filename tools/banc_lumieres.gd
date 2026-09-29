@@ -507,6 +507,15 @@ func _plans_l3() -> void:
 			await process_frame
 		await RenderingServer.frame_post_draw
 		var avec := root.get_texture().get_image()
+		# Le bruit de fond : le corps voxel respire d'une image à l'autre. Une seconde prise sans le point, après,
+		# mesure ce que la scène change seule autour de la lentille.
+		volumes.set("point_lumineux", false)
+		for i in 3:
+			_tenir_une_image()
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var sans2 := root.get_texture().get_image()
+		volumes.set("point_lumineux", true)
 		var nom := "l3_%d_%s" % [k, noms[k]]
 		avec.save_png(_sortie.path_join(nom + ".png"))
 		sans.save_png(_sortie.path_join(nom + "_sans.png"))
@@ -514,7 +523,8 @@ func _plans_l3() -> void:
 		for pid in 2:
 			var ou := _lentille_a_l_ecran(pid)
 			var ajout := _ajout(sans, avec, ou, 4)
-			mesures.append("vue J%d lentille (%.0f, %.0f) +%.0f/255" % [pid + 1, ou.x, ou.y, ajout])
+			var bruit := maxf(_ajout(sans, sans2, ou, 4), _ajout(sans2, sans, ou, 4))
+			mesures.append("vue J%d lentille (%.0f, %.0f) +%.0f/255 (bruit de fond %.0f)" % [pid + 1, ou.x, ou.y, ajout, bruit])
 		var ligne := " ; ".join(mesures)
 		_plans.append("%s\tJ1 vise %s de SON écran, point allumé (l'image `_sans` : éteint sur place)\t%s" % [nom, noms[k], ligne])
 		print("LUMIERES l3 %s J1 vise %s | %s" % [nom, noms[k], ligne])

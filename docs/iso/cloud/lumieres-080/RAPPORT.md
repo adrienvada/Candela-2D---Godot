@@ -6,7 +6,7 @@
 > aller au bout de l'écran de chaque joueur » ; **Q46** le point lumineux visible seulement si la source l'est (« si son
 > corps est devant, on ne voit pas le point lumineux »). Trois étapes, dans l'ordre, chacune prouvée avant la suivante.
 > **État : L1 faite (`1a1bfe1`), L1bis faite (`3f18dea`)** (les faisceaux concentrés, demandés par Adrien à 15:26 après la
-> planche de L1), **L2 faite** ; L3 suit sur la même branche.
+> planche de L1), **L2 faite (`74bce8d`), L3 faite**.
 >
 > ⚠️ **La fusion de la 0.8.0 (`24abbfc`, Q15 et Q42) dans cette branche n'est PAS faite** : demandée par la session
 > coordinatrice (ordre 457), elle a été **refusée par les permissions de cette session** (« Modify Shared Resources »). Je
@@ -219,6 +219,36 @@ classes ; en jeu, écran scindé à 45° B, J1 et J2 dans huit visées : lampe 2
 **0,000 px**) ; en vue unique, lumière 3D à la lentille au sol et en hauteur ; face à un mur (18 et 15 px), recul sur le
 rayon, jamais dans le mur ; rétrodiffusion comme avant ; `Protocol.VERSION` inchangé.
 
+## L3 — le point lumineux à la source (Q46)
+
+Au bout du fût de la torche du modèle, deux lueurs : un cœur franc (5 px) et un halo doux (16 px, au tiers), à l'énergie de
+la lampe. **On le voit seulement si la lentille est visible depuis la caméra de CE joueur** : de face, plein ; de profil, un
+filet ; de dos, rien — et le corps ou un mur devant le cachent (la profondeur 3D). Chaque vue de l'écran scindé juge avec
+sa caméra : aucune différence J1/J2. Rien d'autre ne le lit (une image, pas une lumière). `--sans-point-lumineux` l'éteint
+en débogage.
+
+**À l'image** (écran scindé, 45° B, J1 seul allumé, huit visées ; chaque ligne : vue de J1 éteint | allumé, vue de J2
+éteint | allumé ; « +x/255 » = ce que le point ajoute autour de la lentille, « bruit » = ce que la scène change seule — le
+corps voxel respire) :
+
+![L3](l3_point_lumineux.jpg)
+
+| J1 vise (de son écran) | vue de J1 | vue de J2 |
+|---|---|---|
+| haut (dos à sa caméra) | +1 (bruit 8) — **caché** | +174 — de face pour J2 |
+| haut-droite / haut-gauche | +31 / +34 (bruit 14 / 19) | +230 / +230 |
+| droite / gauche (de profil) | +61 / +41 — un filet | +59 / +9 |
+| bas-droite / bas / bas-gauche | **+213 / +208 / +204** | +35 / +25 / +33 (bruit ≤ 17) |
+
+**L'éblouissement** (le halo d'écran de `brouillage_vue.gd`) passe au-dessus : ébloui, on voit le halo par-dessus le point.
+Rien à changer, les deux disent « une lampe est là ». **Le faisceau visible** (Q41) part de la même lentille depuis L2.
+**Le « cœur chaud à la lampe »** d'ISO13 (`--faisceau`, éteint par défaut) fait doublon avec ce point : à retirer si tu
+gardes celui-ci (hors de ma tâche, signalé).
+
+**Preuve** : `tools/test_point_lumineux.gd` (20 vérifications : défaut, drapeau de débogage, shader = formule GDScript,
+de face / profil / dos pour les caméras de J1 et J2, équité miroir à 0,000000, le point posé au bout du fût de chaque
+joueur à l'énergie de la lampe, éteint avec elle, sans effet sur les lumières 2D).
+
 ## Questions pour Adrien
 
 1. **Plancher ou facteur ?** Retenu : le plancher — toutes les torches vont au moins au bord (728 px), aucune ne va plus
@@ -238,3 +268,5 @@ rayon, jamais dans le mur ; rétrodiffusion comme avant ; `Protocol.VERSION` inc
    que 5 % de sa force, un tiers en haut ou en bas. Si « au bout » veut dire « bien visible au bord », il faut une portée
    plus longue encore ou un cookie qui garde sa force plus loin.
 6. **Le coût** : à mesurer sur le Mac avant de publier.
+7. **Le point lumineux (L3)** : taille (5 px et un halo de 16 px), force, et le filet de profil (16 %) sont des points de
+   départ, à doser sur l'image. Faut-il aussi un point pour la torche de la killcam (les doubles ne l'ont pas) ?
