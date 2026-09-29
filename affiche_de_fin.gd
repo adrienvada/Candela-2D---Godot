@@ -28,6 +28,18 @@ extends CanvasLayer
 ## double : la photo du gel (DA6.2) montre le monde deux secondes plus tôt,
 ## l'affiche montre le mot.
 ##
+## ⚠️ **Opaque DÈS LA PREMIÈRE IMAGE, et il ne l'a pas été depuis sa création (DA6,
+## 2026-09-09).** Le fond entrait en fondu, de 0 à 1 en 0,34 s sur une courbe qui
+## traîne avant de filer (`SORTIE`) — et `ui.show_game_over()` allume le salon DANS
+## LA MÊME IMAGE que l'affiche se pose. Mesuré image par image le 2026-09-29 (Xvfb, 60 Hz de jeu) :
+## opacité de l'affiche 0,09 huit images après la pose, 0,28 après treize, alors que
+## le rideau du salon était tombé (0,96) dès la huitième et ses cartes de classe se
+## lisaient à la dixième. Pendant une quinzaine d'images, le joueur voyait le menu
+## de rejeu se construire, puis l'affiche le recouvrir : « il arrive que je vois
+## subrepticement le menu de rejeu avant l'affichage du carton » (Adrien). Ce qui
+## entre en fondu, ce sont donc l'illustration et le mot — jamais le noir qui cache
+## le salon. Voir `couverture()`, que la garde suit à chaque image.
+##
 ## **Le mot est à gauche, pas au centre.** Un mot centré sur fond noir est un
 ## écran de chargement. Aligné sur une marge, avec un filet dessous et une
 ## légende sous le filet, il devient un bloc typographique — c'est-à-dire une
@@ -42,10 +54,50 @@ extends CanvasLayer
 ##
 ## ## Elle se congédie de deux façons, et la seconde est une sécurité
 ##
-## Une touche la retire. Et elle se retire seule au bout de `DUREE_MAX` : sous
-## elle peut apparaître un message que le joueur DOIT voir — « l'adversaire a
+## N'importe quel appui la retire. Et elle se retire seule au bout de `DUREE_MAX` :
+## sous elle peut apparaître un message que le joueur DOIT voir — « l'adversaire a
 ## quitté », un échec de connexion. Une affiche qui attend indéfiniment un geste
 ## est une affiche qui peut masquer une mauvaise nouvelle.
+##
+## ## « N'importe quel appui », c'est cinq choses, et l'ancien code n'en tenait que deux
+##
+## (Adrien, 2026-09-29 : « fais en sorte que ce carton soit skippable avec n'importe
+## quelle touche ».) Mesuré sous Xvfb sur le jeu réel, avant cette version :
+## la touche du clavier congédiait ; le CLIC DE SOURIS jamais ; L1 et R1 de la manette
+## jamais ; les GÂCHETTES jamais.
+##
+## 1. **Elle écoute avant l'interface (`_input`), pas après (`_unhandled_input`).**
+##    Son propre fond, `MOUSE_FILTER_STOP`, avale le clic dans la phase de l'interface :
+##    ce qui n'écoute qu'`_unhandled_input` n'en voit jamais la couleur — le commentaire
+##    de ce fond disait « elle avale les clics » sans voir que cela la rendait sourde aux
+##    siens. Et `ui._input`, qui passe avant `_unhandled_input`, mangeait L1 et R1
+##    (« onglet précédent / suivant » du salon) : ils ne congédiaient rien et faisaient
+##    remonter le salon d'un cran DESSOUS.
+## 2. **Le geste qui la congédie est consommé.** Toute autre touche la congédiait ET
+##    déplaçait un curseur du salon caché. Tout appui est donc avalé tant que l'affiche
+##    vit, congédiante ou non — sauf les touches de fonction, qui restent au jeu
+##    (F4 est la trace d'écoute, F2 la pâte : des outils, pas des gestes).
+## 3. **Les gâchettes comptent.** Ce sont des AXES (`InputEventJoypadMotion`), que
+##    `InputEventJoypadButton` ne voit jamais — et R2 est le tir de la manette. Voir
+##    `_gachette_pressee`.
+## 4. **Le geste tenu ne compte pas.** Le bouton de tir enfoncé au moment du coup fatal ne
+##    doit pas passer l'affiche à la première image. Pour une touche, un bouton de
+##    souris, un bouton de manette, c'est acquis : seul un NOUVEL appui produit un
+##    événement (`echo` exclu). Pour une gâchette, dont la valeur tremble tant qu'on la
+##    tient, on retient d'où elle part : tenue à la pose, elle doit d'abord être relâchée.
+## 5. **Une courte garde : l'entrée.** Tant que l'affiche n'a pas fini d'entrer, un appui
+##    est avalé sans la congédier — on ne renvoie pas ce qui n'est pas encore lisible, et
+##    un joueur qui martèle le tir au moment de la mort l'aurait passée avant de la
+##    voir. La garde EST la durée de l'entrée (`est_armee()`), pas un nombre de plus :
+##    la lever à la fin de l'animation la garde honnête si l'animation change.
+##
+## **Ce que « passer » fait, dans chaque mode : rien qu'en local.** Elle retire l'affiche
+## et rend REJOUER — verrouillé tant qu'elle vit (`UI.set_launch_locked`). Rien ne part
+## sur le fil : ni RPC, ni `protocol.gd`. L'écran scindé revoit le salon et REJOUER relance
+## une manche ; en ligne, REJOUER lance la poignée de main de la revanche (les deux camps
+## doivent se déclarer prêts), que passer l'affiche ne précède ni ne remplace, et l'affiche
+## de l'AUTRE machine vit sa vie — six secondes ou son propre geste. À l'entraînement, il
+## n'y a pas d'affiche : aucune manche n'y est armée, aucune mort n'y clôt un match.
 
 const Charte := preload("res://charte.gd")
 
@@ -68,13 +120,29 @@ const D_SORTIE := 0.26
 ## cesse d'être un titre pour devenir un sujet.
 const PART_VERDICT := 0.13
 
+## Une gâchette est « pressée » au-delà de ce seuil — celui de la zone morte du tir dans
+## `project.godot` (0,5, voir « Pièges connus »), pour qu'un appui compte pour l'affiche
+## exactement quand il compte pour le jeu. Elle n'est « relâchée » qu'en dessous du
+## second : entre les deux, une gâchette qui tremble ne change pas d'état.
+const SEUIL_GACHETTE := 0.5
+const SEUIL_RELACHE := 0.3
+## Les manettes dont on relève l'état des gâchettes à la pose. Le jeu en branche deux ; huit
+## couvrent un pupitre de bancs sans qu'un indice hors bornes soit jamais lu.
+const MANETTES_SURVEILLEES := 8
+
+var _fond: ColorRect
 var _racine: Control
 var _invite: Label
 var _congedie := false
+## Vrai quand l'entrée est finie : c'est la garde. Voir « Une courte garde » en tête.
+var _armee := false
+## Par manette et par gâchette : tenue au dernier événement vu (ou à la pose).
+var _gachettes_tenues := {}
 
 
-## Pose l'affiche. `faits` : `carte`, `duree`, `arme_j1`, `arme_j2`, `mode`,
-## `session_j1`, `session_j2`, `serie`, `marge_px`, `local_idx`.
+## Pose l'affiche. `faits` : `carte`, `duree`, `classe_j1`, `classe_j2` (les LIBELLÉS des
+## classes — « Le Parasite » —, jamais le nom de leur arme), `mode`, `session_j1`,
+## `session_j2`, `serie`, `marge_px`, `local_idx`.
 ## `titre` est le nœud dont on lit le verdict — le titre du menu de fin.
 static func poser(parent: Node, faits: Dictionary,
 		titre: Label = null) -> AfficheDeFin:
@@ -93,16 +161,21 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	# traversait l'affiche en travers du mot. Un voile ne compose pas, il
 	# superpose.
 	var fond := ColorRect.new()
+	fond.name = "Fond"
+	_fond = fond
 	fond.color = Charte.NOIR
 	fond.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# L'affiche AVALE les clics : sans ça, un joueur qui la congédie d'un clic
-	# appuierait du même geste sur l'entrée du salon qui se trouve dessous.
+	# appuierait du même geste sur l'entrée du salon qui se trouve dessous. ⚠️ **Et c'est
+	# précisément ce qui la rendait sourde aux siens** tant qu'elle n'écoutait qu'après
+	# l'interface : voir « N'importe quel appui » en tête — elle écoute maintenant avant.
 	fond.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(fond)
-	# Habillage iso (2026-09-15) : l'illustration de fin, ENFANT du fond — elle
-	# hérite de son fondu d'entrée et de sortie sans une ligne de plus. Opaque comme
-	# lui : la décision « le fond est opaque » tient, c'est le noir qui cède la place
-	# à une image entière, jamais à une transparence qui laisserait remonter le salon.
+	# Habillage iso (2026-09-15) : l'illustration de fin, ENFANT du fond — elle hérite de
+	# sa sortie sans une ligne de plus. Opaque comme lui : la décision « le fond est opaque »
+	# tient, c'est le noir qui cède la place à une image entière, jamais à une transparence
+	# qui laisserait remonter le salon. Son ENTRÉE, elle, est la sienne : le fond ne se fond
+	# pas (voir « Opaque DÈS LA PREMIÈRE IMAGE »), c'est l'image qui monte sur le noir.
 	var illustration := _illustration_pour(_verdict_texte(titre, faits))
 	if illustration != null:
 		fond.add_child(illustration)
@@ -147,6 +220,7 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	_racine.add_child(bloc)
 
 	var mot := Label.new()
+	mot.name = "Verdict"
 	mot.text = _verdict_texte(titre, faits)
 	var reglages := LabelSettings.new()
 	reglages.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
@@ -164,8 +238,10 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 
 	var legende := _legende(faits)
 	if legende != "":
-		bloc.add_child(_mention(legende, Color(Charte.PATE_TEXTE_SECOND, 0.72), echelle,
-			Charte.T_TITRE))
+		var ligne := _mention(legende, Color(Charte.PATE_TEXTE_SECOND, 0.72), echelle,
+			Charte.T_TITRE)
+		ligne.name = "Legende"
+		bloc.add_child(ligne)
 
 	# --- la ligne de session ---------------------------------------------
 	var pied := _bande(marge, false)
@@ -176,6 +252,7 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 
 	_invite = _mention("UNE TOUCHE POUR CONTINUER", Color(Charte.PATE_TEXTE_SECOND, 0.38),
 		echelle)
+	_invite.name = "Invite"
 	_invite.modulate.a = 0.0
 	pied.add_child(_invite)
 
@@ -183,8 +260,12 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	# Le mot arrive par le bas de quelques pixels : une affiche qui se pose, pas
 	# un panneau qui apparaît. L'écart est petit — au-delà, on retombe sur le
 	# vocabulaire des menus, où tout glisse.
-	fond.modulate.a = 0.0
+	#
+	# ⚠️ **Le fond, lui, ne bouge pas : il est opaque à la première image.** Ce qui entre en
+	# fondu, c'est l'image et le mot, sur ce noir. Voir « Opaque DÈS LA PREMIÈRE IMAGE ».
 	_racine.modulate.a = 0.0
+	if illustration != null:
+		illustration.modulate.a = 0.0
 	var depart: float = bloc.position.y + 18.0 * echelle
 	bloc.position.y = depart
 	# ⚠️ **Pas de `set_parallel(true)` global ici, et c'est une leçon payée.**
@@ -194,18 +275,24 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	# temps que la tenue. Mesuré à la sonde, invisible à la lecture. On écrit
 	# donc en séquentiel par défaut, et on nomme les parallèles une par une.
 	var tw := create_tween()
-	Charte.animer(tw, fond, "modulate:a", 0.0, 1.0, D_ENTREE, Charte.Courbe.SORTIE)
-	tw.parallel()
 	Charte.animer(tw, _racine, "modulate:a", 0.0, 1.0, D_ENTREE, Charte.Courbe.SORTIE)
+	if illustration != null:
+		tw.parallel()
+		Charte.animer(tw, illustration, "modulate:a", 0.0, 1.0, D_ENTREE, Charte.Courbe.SORTIE)
 	tw.parallel()
 	Charte.animer(tw, bloc, "position:y", depart, depart - 18.0 * echelle,
 		D_ENTREE * 1.4, Charte.Courbe.SORTIE)
+	# L'entrée est finie : un appui compte à partir d'ici (voir « Une courte garde »).
+	tw.tween_callback(func() -> void: _armee = true)
 	tw.tween_interval(DELAI_INVITE)
 	Charte.animer(tw, _invite, "modulate:a", 0.0, 1.0, 0.4, Charte.Courbe.SORTIE)
 	tw.tween_interval(maxf(0.0, DUREE_MAX - DELAI_INVITE - D_ENTREE))
 	tw.tween_callback(congedier)
 
-	set_process_unhandled_input(true)
+	# Avant l'interface, pas après : voir « N'importe quel appui » en tête. Et l'état des
+	# gâchettes À LA POSE : c'est là que se décide si l'une d'elles est déjà tenue.
+	_relever_les_gachettes()
+	set_process_input(true)
 
 
 ## Toujours vraie tant que l'affiche est visible — `game_state` s'en sert pour
@@ -216,13 +303,29 @@ func est_active() -> bool:
 	return not _congedie
 
 
+## L'entrée est-elle finie ? Avant, un appui ne compte pas : voir « Une courte garde » en
+## tête. Vraie ensuite, jusqu'à la sortie.
+func est_armee() -> bool:
+	return _armee
+
+
+## Combien le noir cache ce qui se trouve dessous, de 0 à 1 : l'opacité du fond.
+##
+## **Elle vaut 1 dès la première image, et c'est le contrat de l'entrée** : le salon s'allume
+## dans la MÊME image que l'affiche se pose, et rien de lui ne doit se voir avant que ce
+## noir ne l'ait recouvert. `tools/test_carton_transition.gd` la suit à chaque image de la
+## fin de manche. Elle ne baisse qu'à la sortie — et c'est voulu : le salon se révèle alors.
+func couverture() -> float:
+	return _fond.modulate.a if is_instance_valid(_fond) else 0.0
+
+
 ## Congédier : une seule porte, quel que soit le geste. Deux chemins de sortie
 ## laisseraient un jour l'un des deux oublier de rendre la main aux entrées.
 func congedier() -> void:
 	if _congedie:
 		return
 	_congedie = true
-	set_process_unhandled_input(false)
+	set_process_input(false)
 	var tw := create_tween()
 	var premier := true
 	for enfant in get_children():
@@ -237,19 +340,93 @@ func congedier() -> void:
 	tw.tween_callback(queue_free)
 
 
-func _unhandled_input(evenement: InputEvent) -> void:
-	if _congedie:
+## Tout appui, avant l'interface. Voir « N'importe quel appui » en tête : ce qui suit en est
+## la mécanique, et chaque ligne y répond à un défaut mesuré.
+func _input(evenement: InputEvent) -> void:
+	if _congedie or not is_inside_tree():
 		return
-	# Ni les mouvements de souris ni les relâchements : l'affiche disparaîtrait
-	# avant d'être lue, sur le simple fait de reposer la main sur le clavier.
-	var geste: bool = evenement is InputEventKey and evenement.pressed \
-		and not evenement.echo
-	geste = geste or (evenement is InputEventMouseButton and evenement.pressed)
-	geste = geste or (evenement is InputEventJoypadButton and evenement.pressed)
-	if not geste:
+	if not _est_un_appui(evenement):
 		return
-	get_viewport().set_input_as_handled()
+	# Avalé tant que l'affiche vit, congédiant ou non : ce qui la congédie n'agit pas sur le salon
+	# caché dessous, et un appui pendant l'entrée ne fait pas remonter un menu qu'on ne voit pas.
+	# Les touches de fonction restent au jeu — F4 est la trace d'écoute, F2 la pâte.
+	if not _est_touche_de_fonction(evenement):
+		get_viewport().set_input_as_handled()
+	# La garde : l'entrée n'est pas finie, l'appui est avalé et compte pour rien.
+	if not _armee:
+		return
 	congedier()
+
+
+## Cet événement est-il un APPUI — le début d'un geste, jamais sa suite ?
+##
+## Ni les mouvements de souris ni les relâchements : l'affiche disparaîtrait avant d'être
+## lue, sur le simple fait de reposer la main sur le clavier. Ni la répétition d'une touche
+## tenue (`echo`) : c'est le geste du coup fatal, et il n'est pas nouveau. Ni la molette, que
+## Godot rend comme un bouton pressé puis relâché dans le même souffle : faire défiler
+## n'est pas congédier. Ni un stick : ce n'est pas une touche.
+func _est_un_appui(evenement: InputEvent) -> bool:
+	var touche := evenement as InputEventKey
+	if touche != null:
+		return touche.pressed and not touche.echo
+	var souris := evenement as InputEventMouseButton
+	if souris != null:
+		return souris.pressed and souris.button_index != MOUSE_BUTTON_WHEEL_UP \
+			and souris.button_index != MOUSE_BUTTON_WHEEL_DOWN \
+			and souris.button_index != MOUSE_BUTTON_WHEEL_LEFT \
+			and souris.button_index != MOUSE_BUTTON_WHEEL_RIGHT
+	var bouton := evenement as InputEventJoypadButton
+	if bouton != null:
+		return bouton.pressed
+	var axe := evenement as InputEventJoypadMotion
+	if axe != null:
+		return _gachette_pressee(axe)
+	return false
+
+
+## Une gâchette vient-elle d'être PRESSÉE — passée de relâchée à tenue ?
+##
+## L2 et R2 sont des axes, et la valeur d'un axe tremble tant qu'on le tient : chaque tremblement
+## est un événement, qui ne doit pas passer pour un appui. On retient donc, par manette et par
+## gâchette, si elle est tenue — à la pose (`_relever_les_gachettes`), puis à chaque événement.
+## Une gâchette tenue ne compte pas ; relâchée (sous `SEUIL_RELACHE`), puis pressée
+## (au-delà de `SEUIL_GACHETTE`), elle compte. C'est le tir du coup fatal qui est visé : il
+## se tient encore quand l'affiche apparaît.
+func _gachette_pressee(evenement: InputEventJoypadMotion) -> bool:
+	if evenement.axis != JOY_AXIS_TRIGGER_LEFT and evenement.axis != JOY_AXIS_TRIGGER_RIGHT:
+		return false
+	var cle := _cle_gachette(evenement.device, evenement.axis)
+	if bool(_gachettes_tenues.get(cle, false)):
+		if evenement.axis_value < SEUIL_RELACHE:
+			_gachettes_tenues[cle] = false
+		return false
+	if evenement.axis_value > SEUIL_GACHETTE:
+		_gachettes_tenues[cle] = true
+		return true
+	return false
+
+
+func _cle_gachette(manette: int, axe: int) -> int:
+	return manette * 16 + axe
+
+
+## Ce que le processus sait des gâchettes à l'instant où l'affiche se pose.
+func _relever_les_gachettes() -> void:
+	for manette in MANETTES_SURVEILLEES:
+		for axe in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
+			_gachettes_tenues[_cle_gachette(manette, axe)] = \
+				Input.get_joy_axis(manette, axe) > SEUIL_GACHETTE
+
+
+## F1 à F12 : des outils (trace d'écoute, pâte, diagnostic), pas des gestes du joueur. Elles congédient
+## l'affiche comme toute touche, mais ne lui sont pas confisquées.
+func _est_touche_de_fonction(evenement: InputEvent) -> bool:
+	var touche := evenement as InputEventKey
+	if touche == null:
+		return false
+	var code: int = touche.physical_keycode if touche.physical_keycode != KEY_NONE \
+		else touche.keycode
+	return code >= KEY_F1 and code <= KEY_F12
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +498,18 @@ func _verdict_teinte(titre: Label) -> Color:
 	return Charte.PATE_TEXTE
 
 
-## La carte, la durée, les deux armes. L'ordre va du lieu au geste.
+## La carte, la durée, les deux CLASSES. L'ordre va du lieu au geste.
+##
+## ⚠️ **La classe, pas l'arme** (Adrien, 2026-09-29 : « le carton de fin affiche la classe »). Le
+## carton écrivait `WeaponData.name` — « Pistolet », « Pompe », « Pistolet silencieux » —, le nom de
+## l'ARME, qui n'est pas ce que le joueur a choisi : à l'écran de sélection on choisit « Le Parasite »,
+## pas un pistolet. Deux Parasites se lisaient « PISTOLET / PISTOLET » ; l'Illusionniste, « FUSIL ».
+## Le libellé (`ClassData.libelle` : « Le Parasite », « L'Illusionniste ») est ce que le salon, la
+## fenêtre de choix et la fiche de classe écrivent déjà. J1 d'abord, J2 ensuite, sur chaque
+## machine : l'hôte et le client lisent la même ligne.
+##
+## ⚠️ **Le repli ne redit PAS une arme.** Une classe inconnue se tait ; elle n'emprunte pas le
+## nom de l'arme d'un joueur sans classe — un mauvais nom plausible se prend pour une intention.
 func _legende(faits: Dictionary) -> String:
 	var bouts: Array[String] = []
 	var carte := String(faits.get("carte", "")).strip_edges()
@@ -330,12 +518,14 @@ func _legende(faits: Dictionary) -> String:
 	var duree := float(faits.get("duree", -1.0))
 	if duree >= 0.0:
 		bouts.append(MatchRecord.format_clock(duree))
-	var a1 := String(faits.get("arme_j1", "")).strip_edges()
-	var a2 := String(faits.get("arme_j2", "")).strip_edges()
-	if a1 != "" and a2 != "":
-		bouts.append("%s / %s" % [a1.to_upper(), a2.to_upper()])
-	elif a1 != "":
-		bouts.append(a1.to_upper())
+	var c1 := String(faits.get("classe_j1", "")).strip_edges()
+	var c2 := String(faits.get("classe_j2", "")).strip_edges()
+	if c1 != "" and c2 != "":
+		bouts.append("%s / %s" % [c1.to_upper(), c2.to_upper()])
+	elif c1 != "":
+		bouts.append(c1.to_upper())
+	elif c2 != "":
+		bouts.append(c2.to_upper())
 	return "  ·  ".join(bouts)
 
 

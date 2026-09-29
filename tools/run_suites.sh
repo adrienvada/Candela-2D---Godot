@@ -238,6 +238,13 @@ SUITES+=(test_ombre_propre)
 # deux lignes du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
 SUITES+=(test_point_braise test_usine_symetrie)
 
+# L'écran de fin et le retour de l'éditeur (Adrien, 2026-09-29) : le carton nomme la CLASSE et se passe à n'importe quel appui
+# (`test_carton_de_fin`), le salon ne se voit jamais à travers lui, image par image (`test_carton_transition` — sans fenêtre ; sous
+# Xvfb le même fichier écrit la bande d'images et éprouve un vrai clic), et l'allumage « CANDELA » ne se rejoue pas quand on revient
+# de l'éditeur de cartes (`test_allumage_unique`). Posé ici, comme les lignes du dessus, pour que ce lot se reprenne seul sans
+# conflit avec la liste.
+SUITES+=(test_carton_de_fin test_carton_transition test_allumage_unique)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

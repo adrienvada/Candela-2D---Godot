@@ -1369,6 +1369,16 @@ func _run_client() -> void:
 	# banc restait vert pendant qu'Adrien était bloqué. C'est `_is_main_menu` qui
 	# décrit ce que le joueur PERÇOIT.
 	_check("on est toujours dans le menu", _ui._is_main_menu)
+	# Le client joue une AUTRE classe que l'hôte, le Spectre : le carton de fin nomme les deux classes, J1 puis J2, et
+	# deux Parasites ne diraient pas dans quel ordre (voir `_verify_kill_to_rematch`).
+	var spectre := -1
+	for i in 10:
+		if String(_main.weapon_for_index(i).slug()) == "spectre":
+			spectre = i
+	_check("le catalogue porte le Spectre", spectre >= 0)
+	_ui.set_weapon_selection(1, spectre)
+	_check("le client a choisi le Spectre", _ui.selected_weapon_index(1) == spectre,
+		str(_ui.selected_weapon_index(1)))
 	_press_play()
 	await _verify_round()
 	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
@@ -1494,6 +1504,20 @@ func _verify_kill_to_rematch() -> void:
 	_check("l'écran de fin de match s'affiche",
 		await _await(func(): return _main.game_over and not _main._end_sequence_active, 25.0))
 	print("FIN: %s" % _ui.game_over_title.text)
+	# Le carton de fin nomme la CLASSE des deux joueurs, J1 puis J2 (Adrien, 2026-09-29 : « le carton de fin affiche la
+	# classe »), et l'hôte comme le client lisent la même ligne — c'est la seule vérification de ce fait sur un VRAI lien :
+	# chaque instance a équipé `p1` et `p2` par `rpc_start_round(w1, w2)`, et lit ici ce qu'elle a. `run_duo.sh` compare
+	# les deux lignes imprimées. L'attendu est écrit ici À LA MAIN — l'hôte joue le Parasite par défaut, le client a choisi
+	# le Spectre — et non lu dans le jeu : lire l'accesseur du carton pour vérifier le carton comparerait le code à lui-même.
+	# Le carton est posé dans la même image que `game_over`, sans attente entre les deux.
+	var carton: Node = _main.get_node_or_null("AfficheDeFin")
+	var mention: Node = carton.find_child("Legende", true, false) if carton != null else null
+	var legende := String(mention.get("text")) if mention != null else ""
+	var classes_lues: String = legende.split("  ·  ")[-1] if legende != "" else ""
+	print("CLASSES_AFFICHE: %s" % classes_lues)
+	_check("le carton de fin est posé", carton != null)
+	_check("le carton nomme la classe de J1 puis celle de J2 : LE PARASITE / LE SPECTRE",
+		classes_lues == "LE PARASITE / LE SPECTRE", legende)
 	# Étape 28, lot E — la télémétrie des gadgets de CETTE archive, sur une ligne que
 	# run_duo.sh compare entre l'hôte et le client : les deux doivent dire la même
 	# chose. `joueur_local` retiré, le seul champ qui diffère par construction (0 et
