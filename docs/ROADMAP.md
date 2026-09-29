@@ -29522,6 +29522,42 @@ prouvée avant la suivante.
   ×1,85 en vue unique, deux torches allumées. À mesurer sur le Mac avant de publier : la cible « 1 % bas ≥ 60 » passait de
   deux images par seconde. Quinze lumières : au plus 10 par quadrant avant comme après dans la scène mesurée ; chaque
   torche touche désormais jusqu'à 3 × 3 quadrants (+2 lumières, +3 avec une torche fantôme, là où elle n'entrait pas).
+- **D'où vient le surcoût** (décomposition sous Mesa, même scène) : sans le faisceau visible de Q41, L1 ne coûte que
+  ×1,08 en écran scindé et ×1,12 en vue unique. **C'est le faisceau dans l'air qui paie** : ses couches sont posées sur la
+  texture de la lampe à son échelle (`IsoVolumes._suivre_faisceau_air`), donc leur surface suit le carré de la portée.
+  La lumière 3D miroir n'y est pour rien : elle est éteinte par défaut en jeu.
+
+### L1bis — des faisceaux plus concentrés (Adrien, 2026-09-29, après la planche de L1)
+
+« Il faut que les faisceaux des lumières soient plus concentrés. Faisons en sorte que tu gardes les mêmes rapports
+d'angle, mais tu adaptes pour que le plus petit fasse 10° et le plus grand 60° par exemple. » En ouverture totale (celle
+de la fiche de classe) : 10°-120° → 10°-60°. « Les mêmes rapports » et « 10 à 60 » ne tiennent pas ensemble (rapport 12
+contre 6) : **loi de puissance** (retenue par la session coordinatrice) — `ouverture' = 10° × (ouverture / 10°)^k`,
+k = ln 6 / ln 12 ≈ 0,721 : les deux bornes exactes, chaque rapport entre deux classes élevé à la même puissance
+(`WeaponData.ouverture_concentree`). Braconnier (arbalète) 10°, Sentinelle 14,0°, Illusionniste (fusil) 16,5°, Spectre
+27,2°, Occulteur 31,9°, Fumiste 36,4°, Parasite (pistolet) 40,7°, Incendiaire 44,8°, Allumeur 48,8°, Terrassier (pompe)
+60°. Non faites : tout diviser par deux (5° à 60°, rapports exacts) ; linéaire de 10° à 60°.
+
+- **Les cookies RESSERRÉS, pas recuits** (`tools/concentrer_cookies.gd`) : le demi-angle est cuit dans le cookie, mais
+  les curseurs de la cuisson retenue (`bis04`) ne sont consignés nulle part — recuire aurait changé la matière au hasard.
+  Une déformation polaire exacte du cookie livré (l'écart à l'axe × avant / neuf à la lecture) garde portée, profil,
+  matière et luminosité ; le fondu du bord et le halo court de l'émetteur se resserrent dans la même proportion. L'outil
+  MESURE le demi-angle cuit (`Torches.demi_angle_cuit`, à 0,3° près) et refuse de resserrer deux fois.
+- **Toute la chaîne suit d'elle-même**, parce que tout lit `torch_angle_deg` ou le cookie : l'éblouissement (qui lit le
+  cookie), la fiche de classe, le mannequin, les doubles de killcam, la torche fantôme. La lumière 3D miroir couvre
+  toujours le cône (plancher de 75°, bien au-dessus de 30° + 5°) : rien à y changer.
+- **Preuve** : `tools/test_faisceaux_concentres.gd` — la loi (bornes, puissance), la table des cookies et le catalogue
+  réel (l'image de l'ancien angle), le demi-angle mesuré dans chaque cookie livré, l'ordre des classes gardé,
+  l'éblouissement qui verse dans le cône resserré et plus rien à 3° hors de lui ; `test_torches` et `test_iso_torches3d`
+  lisent la table neuve.
+- **Le halo court de l'émetteur est GARDÉ** (20 % de la portée, 80° à la cuisson) : le premier resserrage le resserrait
+  avec le cône, et « quelqu'un de collé à une torche allumée EST vu, même hors du faisceau » cessait d'être vrai —
+  `test_vision` l'a vu. Deux gardes épinglaient l'ancien angle pour une raison qui tient toujours et sont adaptées
+  (`test_vision` : la cible en plein dans la flaque du pompe passe de 40° à 20° de l'axe ; `test_iso_camera` : le
+  pistolet à 20,34°).
+- **Coût** (Mesa, relatif, zoom ×1,25) : ×0,89 en écran scindé, ×0,91 en vue unique par rapport à L1 — moins, mais peu :
+  les rectangles des lumières et les couches du faisceau visible sont des carrés dont la taille suit la PORTÉE, pas
+  l'ouverture.
 
 ---
 

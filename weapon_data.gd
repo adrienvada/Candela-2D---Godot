@@ -76,7 +76,10 @@ func slug() -> String:
 ## ⚠️ **DEMI-angle**, pas l'ouverture totale : la comparaison est
 ## `abs(dir.angle()) <= deg_to_rad(torch_angle_deg)`, donc 60° ouvre un cône de
 ## 120°. Cuit dans le cookie — le changer oblige à recuire.
-@export var torch_angle_deg: float = 35.0
+##
+## ⚠️ **L1bis (Adrien, 2026-09-29 : « des faisceaux plus concentrés […] le plus petit fait 10° et le plus grand 60° »)** :
+## chaque valeur du catalogue est l'image de l'ancienne par `ouverture_concentree` — 35° → 20,34° pour le pistolet.
+@export var torch_angle_deg: float = 20.34
 @export var torch_scale: float = 1.6
 @export var torch_brightness: float = 1.0
 
@@ -146,6 +149,30 @@ static var facteur_portee := 1.0
 ## `facteur_portee`. EN LIGNE, zoom et décalage sont les constantes du duel sur les deux machines : le plancher aussi,
 ## sans rien sur le fil.
 static var portee_plancher := 0.0
+
+## Chantier des lumières de la 0.8.0, L1bis — LES FAISCEAUX PLUS CONCENTRÉS (Adrien, 2026-09-29, après la planche de L1 :
+## « Il faut que les faisceaux des lumières soient plus concentrés. Faisons en sorte que tu gardes les mêmes rapports
+## d'angle, mais tu adaptes pour que le plus petit fasse 10° et le plus grand 60° »). En OUVERTURE TOTALE (`torch_angle_deg`
+## × 2, celle de la fiche de classe) : de 10°-120° (rapport 12) à 10°-60° (rapport 6).
+##
+## « Les mêmes rapports » et « de 10 à 60 » ne tiennent pas ensemble (60 / 10 = 6, pas 12) : la LOI DE PUISSANCE retenue par
+## la session coordinatrice garde les deux bornes exactes et élève chaque rapport entre deux classes à la même puissance
+## k = ln 6 / ln 12 ≈ 0,721 — l'ordre et les proportions relatives au mieux. Les deux autres lectures, non faites : tout
+## diviser par deux (5° à 60°, rapports exacts) ; linéaire de 10° à 60°.
+##
+## Les demi-angles du catalogue (`game_state.gd`, `tools/torches.gd`) sont écrits EN CLAIR, l'ancienne valeur en
+## commentaire : c'est la forme que `tools/test_torches.gd` sait lire ; `tools/test_faisceaux_concentres.gd` vérifie que
+## chacun est bien l'image de l'ancien par cette fonction, et que le cookie cuit a ce demi-angle.
+const OUVERTURE_MIN_DEG := 10.0
+const OUVERTURE_MAX_AVANT_DEG := 120.0
+const OUVERTURE_MAX_DEG := 60.0
+
+
+## L'ouverture totale concentrée, depuis celle d'avant L1bis : 10° × (ouverture / 10°)^k.
+static func ouverture_concentree(ouverture_avant_deg: float) -> float:
+	var k := log(OUVERTURE_MAX_DEG / OUVERTURE_MIN_DEG) / log(OUVERTURE_MAX_AVANT_DEG / OUVERTURE_MIN_DEG)
+	return OUVERTURE_MIN_DEG * pow(ouverture_avant_deg / OUVERTURE_MIN_DEG, k)
+
 
 ## Demi-angle du faisceau, en radians.
 ##

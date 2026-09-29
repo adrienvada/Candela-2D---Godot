@@ -99,6 +99,14 @@ func _run() -> void:
 		await _plans_l1()
 	if _familles.has("l1-options"):
 		await _plans_l1_options()
+	if _familles.has("classes"):
+		await _plans_classes(0)
+	if _familles.has("classes-j2"):
+		await _plans_classes(1)
+	if _familles.has("l2"):
+		await _plans_l2()
+	if _familles.has("l3"):
+		await _plans_l3()
 	if _familles.has("quinze"):
 		await _plan_quinze()
 	if _familles.has("cadence"):
@@ -446,4 +454,126 @@ func _plan_cadence() -> void:
 		durees.sort()
 		print("LUMIERES cadence %s : médiane %.1f ms, 10e centile %.1f ms, 90e centile %.1f ms (%d images)" % [mode,
 			durees[durees.size() / 2], durees[durees.size() / 10], durees[durees.size() * 9 / 10], durees.size()])
+	await _scinde()
+
+
+# --- L2 : la lampe du modèle ---------------------------------------------------------------------------------------
+
+## Vue unique, J1 seul allumé, dans quatre visées : d'où part la lumière, près du corps. Chaque prise imprime où est
+## J1 à l'écran (`LUMIERES ecran J1 x y`), pour recadrer la loupe.
+func _plans_l2() -> void:
+	var t := MursBas.TUILE
+	await _unique()
+	_classe(0, "pistolet")
+	for v in [["l2_droite", Vector2(1.0, 0.0)], ["l2_bas", Vector2(0.0, 1.0)], ["l2_haut", Vector2(0.0, -1.0)],
+			["l2_gauche_bas", Vector2(-1.0, 0.6)]]:
+		_poser(_libre, _libre + Vector2(-8.0 * t, 5.0 * t), _au_sol(0, v[1]), _au_sol(1, Vector2(0.0, 1.0)), true, false)
+		await _photo(String(v[0]), "vue unique, J1 pistolet vise %s de l'écran : d'où part la lumière" % str(v[1]))
+		var proj: Callable = _pres.projecteur_ecran(0) if _pres != null else Callable()
+		if proj.is_valid():
+			var e: Vector2 = proj.call(_main.p1.global_position)
+			print("LUMIERES ecran J1 %s %.0f %.0f" % [v[0], e.x, e.y])
+	await _scinde()
+
+
+# --- L3 : le point lumineux -----------------------------------------------------------------------------------------
+
+## Écran scindé à 45° B, J1 seul allumé, dans huit visées (de l'écran de J1) : le point basculé SUR PLACE, éteint puis
+## allumé, même scène. Pour chaque vue, ce que le point ajoute à l'écran autour de la lentille (le plus fort écart de
+## luminance, /255, dans un carré de 9 px autour d'elle) : `LUMIERES l3 <plan> vue J1 … vue J2 …`. Dans la vue de J1, la
+## lentille lui fait face quand il vise vers le BAS de son écran ; dans celle de J2 (caméra à l'opposé), quand J1 vise vers
+## le HAUT de l'écran de J1.
+func _plans_l3() -> void:
+	var miroirs: Object = _pres.get("_miroirs") if _pres != null else null
+	var volumes: Object = miroirs.get("volumes") if miroirs != null else null
+	if volumes == null or not ("point_lumineux" in volumes):
+		print("LUMIERES l3 : pas de point lumineux dans cet arbre")
+		return
+	var t := MursBas.TUILE
+	await _scinde()
+	_classe(0, "pistolet")
+	_classe(1, "pistolet")
+	var noms := ["haut", "haut_droite", "droite", "bas_droite", "bas", "bas_gauche", "gauche", "haut_gauche"]
+	for k in 8:
+		var ecran := Vector2.UP.rotated(TAU * float(k) / 8.0)
+		_poser(_libre, _libre + Vector2(-5.0 * t, 4.0 * t), _au_sol(0, ecran), _au_sol(1, Vector2(0.0, 1.0)), true, false)
+		volumes.set("point_lumineux", false)
+		await _tenir()
+		await RenderingServer.frame_post_draw
+		var sans := root.get_texture().get_image()
+		volumes.set("point_lumineux", true)
+		for i in 3:
+			_tenir_une_image()
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var avec := root.get_texture().get_image()
+		var nom := "l3_%d_%s" % [k, noms[k]]
+		avec.save_png(_sortie.path_join(nom + ".png"))
+		sans.save_png(_sortie.path_join(nom + "_sans.png"))
+		var mesures: PackedStringArray = []
+		for pid in 2:
+			var ou := _lentille_a_l_ecran(pid)
+			var ajout := _ajout(sans, avec, ou, 4)
+			mesures.append("vue J%d lentille (%.0f, %.0f) +%.0f/255" % [pid + 1, ou.x, ou.y, ajout])
+		var ligne := " ; ".join(mesures)
+		_plans.append("%s\tJ1 vise %s de SON écran, point allumé (l'image `_sans` : éteint sur place)\t%s" % [nom, noms[k], ligne])
+		print("LUMIERES l3 %s J1 vise %s | %s" % [nom, noms[k], ligne])
+	volumes.set("point_lumineux", true)
+
+
+## La lentille de J1 (bout du fût voxel), en pixels de la FENÊTRE, dans la vue du joueur `pid`.
+func _lentille_a_l_ecran(pid: int) -> Vector2:
+	var corps: Node3D = _pres.get("_voxels")[0]
+	var pointe: Dictionary = corps.call("pointe_torche")
+	var cam: CameraIso = _pres.call("_camera_de", pid)
+	var ecran: Viewport = _pres.viewport_ecran(pid)
+	if pointe.is_empty() or cam == null or ecran == null:
+		return Vector2(-1, -1)
+	var p: Vector3 = pointe["position"]
+	var taille := ecran.get_visible_rect().size
+	var cadre: Rect2 = _pres.call("_cadre", pid)
+	var e := cam.vers_ecran(Vector2(p.x, p.z), taille, p.y)
+	return cadre.position + e * cadre.size / taille
+
+
+## Le plus fort écart de luminance (/255) entre deux images dans un carré de demi-côté `r` autour de `ou`.
+func _ajout(sans: Image, avec: Image, ou: Vector2, r: int) -> float:
+	var m := 0.0
+	for dx in range(-r, r + 1):
+		for dy in range(-r, r + 1):
+			var x := int(ou.x) + dx
+			var y := int(ou.y) + dy
+			if x < 0 or y < 0 or x >= avec.get_width() or y >= avec.get_height():
+				continue
+			m = maxf(m, (avec.get_pixel(x, y).get_luminance() - sans.get_pixel(x, y).get_luminance()) * 255.0)
+	return m
+
+
+# --- L1bis : un faisceau par classe ----------------------------------------------------------------------------------
+
+## Vue unique du joueur `pid` (J1 à 45°, J2 à 225° : l'équité), sa lampe SEULE allumée, visée vers le coin haut-droit de SON
+## écran, pour chacune des dix classes. `classe_<slug>_j<n>.png` ; l'ouverture et la portée s'impriment.
+func _plans_classes(pid: int) -> void:
+	var t := MursBas.TUILE
+	var autre := 1 - pid
+	# La vue de ce joueur seul, comme en ligne (l'hôte voit J1, le client J2).
+	(_main.vp1 if pid == 0 else _main.vp2).get_parent().show()
+	(_main.vp2 if pid == 0 else _main.vp1).get_parent().hide()
+	_main.ui.center_line.hide()
+	_main._accorder_rendu_aux_vues()
+	_main.ui.disposer_hud(true)
+	for i in 4:
+		await process_frame
+	for c in _main._classes:
+		(_main.p1 if pid == 0 else _main.p2).equip_weapon(c)
+		var ici := _libre
+		var loin := _libre + Vector2(-9.0 * t, 6.0 * t)
+		var visee := _au_sol(pid, Vector2(1.0, -0.56))
+		if pid == 0:
+			_poser(ici, loin, visee, Vector2.DOWN, true, false)
+		else:
+			_poser(loin, ici, Vector2.DOWN, visee, false, true)
+		var nom := "classe_%s_j%d" % [c.slug(), pid + 1]
+		await _photo(nom, "%s (J%d, lacet %.0f°) : ouverture %.1f°, portée %.0f px" % [c.libelle if "libelle" in c else c.slug(),
+			pid + 1, float(_main.lacet_de_la_vue(pid)), c.torch_angle_deg * 2.0, c.portee_torche()])
 	await _scinde()

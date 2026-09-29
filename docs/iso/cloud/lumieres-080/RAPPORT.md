@@ -5,10 +5,24 @@
 > soit attachée au modèle 3D de chaque personnage avec un point lumineux là où la source part » ; **Q45** « ça doit au moins
 > aller au bout de l'écran de chaque joueur » ; **Q46** le point lumineux visible seulement si la source l'est (« si son
 > corps est devant, on ne voit pas le point lumineux »). Trois étapes, dans l'ordre, chacune prouvée avant la suivante.
-> **État : L1 faite** (ce commit) ; L2 et L3 suivent sur la même branche.
+> **État : L1 faite (`1a1bfe1`), L1bis faite** (les faisceaux concentrés, demandés par Adrien à 15:26 après la planche de
+> L1) ; L2 et L3 sont écrites et prouvées en headless, elles suivent sur la même branche.
+>
+> ⚠️ **La fusion de la 0.8.0 (`24abbfc`, Q15 et Q42) dans cette branche n'est PAS faite** : demandée par la session
+> coordinatrice (ordre 457), elle a été **refusée par les permissions de cette session** (« Modify Shared Resources »). Je
+> ne l'ai pas contournée et je ne peux pas écrire à la coordinatrice (cette session cloud n'a pas le droit d'envoyer de
+> messages) : **il faut qu'Adrien autorise la fusion ici**, ou qu'elle se fasse autrement selon sa décision. En attendant,
+> tout est prouvé sur la base `2386906`, et la portée à ×1,25 est prouvée par le zoom local (`--zoom=1.25`, et
+> `test_portee_ecran` en jeu). Ce que la fusion devra revérifier : mes gardes (`test_portee_ecran`,
+> `test_faisceaux_concentres`, puis `test_lampe_modele`, `test_point_lumineux`), et par `grep` mes points d'ancrage
+> (`portee_plancher`, `plancher_de_portee`, `ouverture_concentree`, `LENTILLE_LAMPE`, `pointe_torche`,
+> `_suivre_lentilles_des_joueurs`). L2 ne touche ni aux occluders, ni aux capteurs, ni aux masques d'ombre : Q42 et Q55
+> ne devraient pas entrer en conflit.
 
 ## Pour Adrien, en cinq lignes
 
+0. **Les faisceaux sont plus concentrés** (L1bis, ta demande de 15:26) : de 10° (Braconnier) à 60° (Terrassier), les
+   rapports entre classes gardés au mieux ; la planche « un faisceau par classe » est plus bas, avec la vue de J2.
 1. **Ta torche va maintenant jusqu'au bord de ton écran**, dans toutes les directions, pour les dix classes, en écran scindé
    comme en vue unique, J1 comme J2. La portée se calcule depuis le cadrage : si le zoom passe à ×1,25 (Q15), elle suit
    toute seule (728 px aujourd'hui, 873 px à ×1,25).
@@ -95,6 +109,87 @@ aux classes qui portaient déjà plus loin (aucune aujourd'hui). Portées d'avan
   disent que **le changement n'est pas gratuit**. **À mesurer sur le Mac** (`bench_framerate`, série courte, la cible est
   « 1 % bas ≥ 60 » et le jeu la passait de deux images par seconde). La répartition (faisceau visible de Q41, lumières 3D
   miroir) suit, au § « Coût ».
+
+### D'où vient le coût de L1 (décomposition, sous Mesa)
+
+Même scène, une série par variante (médianes, en ms ; `--sans-faisceau-air` coupe le faisceau visible de Q41 ;
+`--banc-sans-lumiere3d` coupe la lumière 3D miroir) :
+
+| | avant, écran scindé | L1, écran scindé | avant, vue unique | L1, vue unique |
+|---|---|---|---|---|
+| tel quel | 502 | 772 (×1,54) | 366 | 642 (×1,75) |
+| sans le faisceau dans l'air | 338 | 367 (**×1,08**) | 282 | 315 (**×1,12**) |
+| sans la lumière 3D | 484 | 698 | 339 | 627 |
+
+**Le surcoût vient presque entièrement du faisceau visible de Q41** : ses couches sont posées sur la texture de la lampe à
+son échelle, donc leur surface croît comme le carré de la portée (×14 pour le Terrassier). La lumière 3D miroir n'y est
+pour rien — elle est d'ailleurs **éteinte par défaut en jeu** (seuls les bancs l'allument). Si le prix se confirme sur le
+Mac, le levier est là (couches du faisceau bornées en longueur, ou moins de couches), pas dans la portée elle-même.
+
+## L1bis — des faisceaux plus concentrés
+
+Adrien, 15:26, après la planche de L1 : « Il faut que les faisceaux des lumières soient plus concentrés. Faisons en sorte
+que tu gardes les mêmes rapports d'angle, mais tu adaptes pour que le plus petit fasse 10° et le plus grand 60° par
+exemple. Fais-moi une planche où on voit le faisceau de chaque classe, après correction. »
+
+**La loi** (retenue par la session coordinatrice) : en ouverture totale, `10° × (ouverture / 10°)^k`, k = ln 6 / ln 12 ≈
+0,721 — les deux bornes exactes, chaque rapport entre deux classes élevé à la même puissance. **Les deux autres lectures,
+non faites** : tout diviser par deux (5° à 60°, rapports exacts) ; ou linéaire de 10° à 60°.
+
+| classe | avant | après |
+|---|---|---|
+| Braconnier (arbalète) | 10° | 10,0° |
+| Sentinelle | 16° | 14,0° |
+| Illusionniste (fusil) | 20° | 16,5° |
+| Spectre | 40° | 27,2° |
+| Occulteur | 50° | 31,9° |
+| Fumiste | 60° | 36,4° |
+| Parasite (pistolet) | 70° | 40,7° |
+| Incendiaire | 80° | 44,8° |
+| Allumeur | 90° | 48,8° |
+| Terrassier (pompe) | 120° | 60,0° |
+
+**Les cookies sont RESSERRÉS, pas recuits** (`tools/concentrer_cookies.gd`). L'angle est cuit dans le cookie, mais les
+réglages de la cuisson retenue (`bis04`) ne sont consignés nulle part : recuire aurait changé la matière au hasard. L'outil
+déforme le cookie livré en polaire (l'écart à l'axe resserré dans le rapport des angles, la distance intacte) : portée,
+profil le long de l'axe, matière et luminosité sont ceux d'avant. **Le halo court de l'émetteur est gardé tel quel** — le
+premier jet le resserrait aussi, et « quelqu'un collé à une torche allumée est vu, même hors du faisceau » cessait d'être
+vrai (`test_vision` l'a vu). L'outil mesure le demi-angle cuit dans l'image et refuse de resserrer deux fois.
+
+**Toute la chaîne suit** parce que tout lit `torch_angle_deg` ou le cookie : l'éblouissement (il lit le cookie : il verse dans
+le cône resserré, plus rien à 3° hors de lui), la fiche de classe (l'ouverture affichée), le mannequin, la killcam, la torche
+fantôme. La lumière 3D miroir couvre toujours le cône (plancher de 75°) : rien à changer. Gardes adaptées :
+`test_vision` (la cible « en plein dans la flaque du pompe » passe de 40° à 20° de l'axe), `test_iso_camera` (le pistolet à
+20,34°). Nouvelle garde : `tools/test_faisceaux_concentres.gd` (56 vérifications).
+
+**La planche** (vue iso à 45° B, zoom ×1,25, la portée de L1 comprise — 873 px —, J1 seul allumé, visée vers le coin
+haut-droit de son écran ; avant = L1, après = L1bis) :
+
+![Braconnier](l1bis_arbalete_j1.jpg)
+![Sentinelle](l1bis_sentinelle_j1.jpg)
+![Illusionniste](l1bis_fusil_j1.jpg)
+![Spectre](l1bis_spectre_j1.jpg)
+![Occulteur](l1bis_occulteur_j1.jpg)
+![Fumiste](l1bis_fumiste_j1.jpg)
+![Parasite](l1bis_pistolet_j1.jpg)
+![Incendiaire](l1bis_incendiaire_j1.jpg)
+![Allumeur](l1bis_allumeur_j1.jpg)
+![Terrassier](l1bis_pompe_j1.jpg)
+
+**Vue de J2** (caméra à 225°, même scène tournée) : ![Terrassier J2](l1bis_pompe_j2.jpg) ![Braconnier J2](l1bis_arbalete_j2.jpg)
+et l'équité, J1 | J2 après correction : ![équité Terrassier](l1bis_equite_pompe.jpg) ![équité Braconnier](l1bis_equite_arbalete.jpg)
+(le panneau du HUD porte « JOUEUR 1 » sur les prises de J2 : c'est le HUD de la vue unique du banc, pas le jeu en ligne.)
+
+**La cadence, L1 → L1bis, sous Mesa** (zoom ×1,25, Terrassier et pistolet allumés, trois séries alternées, médianes en ms) :
+
+| | L1 | L1bis | rapport |
+|---|---|---|---|
+| écran scindé | 658 / 681 / 626 | 591 / 610 / 554 | **× 0,89** |
+| vue unique | 598 / 604 / 567 | 562 / 546 / 498 | **× 0,91** |
+
+Plus étroits, les faisceaux coûtent bien MOINS, mais peu (~10 %) : le rectangle d'une lumière 2D et les couches du faisceau
+visible sont des CARRÉS posés sur la texture de la lampe, dont la taille suit la portée et non l'ouverture ; seule la part
+éclairée dans ces carrés rétrécit. Le prix de L1 (§ « D'où vient le coût ») reste donc à mesurer sur le Mac.
 
 ## Questions pour Adrien
 

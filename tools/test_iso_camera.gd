@@ -268,7 +268,8 @@ func _regard_du_duel() -> void:
 	arbalete.torch_scale = 3.5
 	_check("l'écart entre les classes est gardé : arbalète / pompe vaut toujours 3,5",
 		is_equal_approx(arbalete.portee_torche() / pompe.portee_torche(), 3.5))
-	_check("le demi-angle n'est pas touché (35° pour le pistolet)", is_equal_approx(pistolet.torch_angle_deg, 35.0))
+	_check("le demi-angle n'est pas touché (20,34° pour le pistolet depuis L1bis, 35° avant)",
+		is_equal_approx(pistolet.torch_angle_deg, 20.34))
 	# L1 (Q45) — avec le plancher du bord de l'écran, les deux classes y montent : l'écart de PORTÉE disparaît sous lui,
 	# c'est la conséquence assumée (et posée à Adrien) ; au-dessus du plancher, le facteur garde sa règle.
 	WeaponData.portee_plancher = 728.0
