@@ -434,8 +434,12 @@ func _statiques(Reglages: GDScript, Pres: GDScript, Canaux: GDScript) -> void:
 		union |= c
 	_check("une couche PAR capteur : quatre bits distincts pour les corps, un par vue pour les objets, ni 1, ni 2, ni 4 — ni la couche 0 des sprites retirés",
 		disjointes and union == int(Pres.COUCHES_CAPTEURS) and int(Pres.COUCHE_HORS_VUE) == 0, str(couches_capteurs))
-	_check("masque du capteur de SON corps : JOUEUR_LOCAL",
-		Pres.masque_capteur(0, 0) == Canaux.JOUEUR_LOCAL and Pres.masque_capteur(1, 1) == Canaux.JOUEUR_LOCAL)
+	# Q55 — le capteur de SOI porte JOUEUR_LOCAL et la couche d'ombre de son corps (4 | 4 chez J1, 4 | 8 chez J2) : il reçoit les
+	# ombres de la torche d'en face chez les deux. Le sprite de soi, lui, reste sur JOUEUR_LOCAL seul.
+	_check("masque du capteur de SON corps : JOUEUR_LOCAL et la couche d'ombre de ce corps (Q55) — 4 chez J1, 12 chez J2",
+		Pres.masque_capteur(0, 0) == (Canaux.JOUEUR_LOCAL | Canaux.couche_ombre_corps(0)) and Pres.masque_capteur(0, 0) == 4
+		and Pres.masque_capteur(1, 1) == (Canaux.JOUEUR_LOCAL | Canaux.couche_ombre_corps(1)) and Pres.masque_capteur(1, 1) == 12
+		and Pres.masque_capteur(0, 0) == Canaux.masque_de_soi(0) and Pres.masque_capteur(1, 1) == Canaux.masque_de_soi(1))
 	_check("masque du capteur du corps d'EN FACE : masque_vue_adverse, miroir entre J1 et J2",
 		Pres.masque_capteur(0, 1) == Canaux.masque_vue_adverse(1) and Pres.masque_capteur(0, 1) == (2 | 16)
 		and Pres.masque_capteur(1, 0) == Canaux.masque_vue_adverse(0) and Pres.masque_capteur(1, 0) == (2 | 32))
@@ -568,7 +572,7 @@ func _scinde(main: Node, p: Node, Canaux: GDScript) -> void:
 			var c = capteurs[id][j]
 			if c == null:
 				continue
-			var attendu: int = Canaux.JOUEUR_LOCAL if id == j else Canaux.masque_vue_adverse(j)
+			var attendu: int = Canaux.masque_de_soi(j) if id == j else Canaux.masque_vue_adverse(j)
 			_check("capteur vue J%d corps J%d : masque de lumière %d (%s)" % [id + 1, j + 1, attendu,
 				"le sien" if id == j else "celui que J%d voit d'en face" % (id + 1)],
 				c.masque_lumiere() == attendu, str(c.masque_lumiere()))

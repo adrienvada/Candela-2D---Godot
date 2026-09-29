@@ -229,7 +229,9 @@ func _creer(noeud: Node2D, slug: String, main: Node, vues: Array, parent_capteur
 		var shader: Shader = SHADER_OBJET
 		if slug == "leurre":
 			if id == poseur:
-				masque = 4  # `GadgetLeurre._monter_visuel` : « VisuelPoseur », light_mask 4
+				# Le leurre vu par son poseur est un corps de soi : `GadgetLeurre._monter_visuel`, « VisuelPoseur », light_mask 4
+				# — et, comme le capteur du corps du poseur, la couche d'ombre de ce corps de plus (Q55, `masque_de_soi`).
+				masque = CanauxLumiere.masque_de_soi(poseur)
 			else:
 				masque = CanauxLumiere.masque_vue_adverse(poseur)
 				shader = CapteurCorps.SHADER_ADVERSE

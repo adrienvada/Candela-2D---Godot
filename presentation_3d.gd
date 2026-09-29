@@ -984,11 +984,12 @@ static func _sans_capteurs(masque: int) -> int:
 # ---------------------------------------------------------------------------
 
 ## Le masque de lumière du disque qui remplace, chez le joueur `vue_id`, le sprite du
-## corps `corps_id` : le sien (`JOUEUR_LOCAL`), ou celui d'en face
-## (`masque_vue_adverse`) — la règle des sprites, mot pour mot (`canaux_lumiere.gd`).
+## corps `corps_id` : le sien (`masque_de_soi` : `JOUEUR_LOCAL` et la couche d'ombre de ce corps — Q55), ou celui d'en face
+## (`masque_vue_adverse`) — la règle des sprites (`canaux_lumiere.gd`), sauf ce bit de plus, qui fait recevoir au capteur de
+## soi les ombres de la torche d'en face chez J2 comme chez J1.
 static func masque_capteur(vue_id: int, corps_id: int) -> int:
 	if vue_id == corps_id:
-		return CanauxLumiere.JOUEUR_LOCAL
+		return CanauxLumiere.masque_de_soi(corps_id)
 	return CanauxLumiere.masque_vue_adverse(corps_id)
 
 

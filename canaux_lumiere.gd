@@ -7,7 +7,8 @@ class_name CanauxLumiere
 ## - `DECOR` (1) : sol, murs, décor — commun aux deux vues ;
 ## - `ENNEMI` (2) : les sprites « ennemis », LES DEUX (le mien chez lui, le sien
 ##   chez moi) — torche, reflet, tirs ;
-## - `JOUEUR_LOCAL` (4) : le sprite du joueur tel qu'il se voit ;
+## - `JOUEUR_LOCAL` (4) : le sprite du joueur tel qu'il se voit — et son capteur iso, qui y ajoute la couche d'ombre de son corps
+##   (`masque_de_soi`, Q55) ;
 ## - `canal_de_vue(id)` (16 pour la vue de J1, 32 pour celle de J2) : ce qui
 ##   n'appartient qu'à UNE vue — les copies de sol et de murs de ce joueur, et
 ##   son halo de proximité.
@@ -45,6 +46,27 @@ static func canal_de_vue(id: int) -> int:
 ## `tools/test_halo_proximite.tscn` garde les deux moitiés de la phrase.
 static func masque_vue_adverse(id: int) -> int:
 	return ENNEMI | canal_de_vue(1 - id)
+
+## Le masque de lumière du capteur du corps `id` vu par son PROPRE joueur (`CapteurCorps`, ISO2) — Q55 (Adrien, 2026-09-29,
+## « on suit ton avis » ; l'avis : « que les murs l'assombrissent pour les deux, comme J1 aujourd'hui : la lumière ne
+## traverse pas les murs, personne n'apprend rien à travers eux »).
+##
+## Le sprite de soi vit sur `JOUEUR_LOCAL` (4), et le capteur qui le remplace ne portait que lui. Or ce bit est AUSSI, par
+## coïncidence, la couche d'ombre du corps de J1 (`couche_ombre_corps(0)`) : la torche de J2 (`1 | 2 | 4`) l'y trouve et lui
+## fait recevoir ses ombres, murs compris ; celle de J1 (`1 | 2 | 8`) n'y trouvait rien chez J2, dont le capteur de soi ne
+## recevait alors AUCUNE ombre — pas même celle d'un mur. Un mur entre la torche adverse et le corps l'assombrissait chez J1
+## et pas chez J2 (mesuré : 0,000 contre 0,494).
+##
+## Le capteur de soi porte donc, en plus, la couche d'ombre de SON corps : il reçoit les ombres de tout ce qui ombre ce corps
+## — la torche d'en face en tête —, comme le capteur croisé du même corps. Chez J1 ce masque vaut ce qu'il valait (4 | 4) ;
+## chez J2 il gagne le bit 8. Le sprite de soi, lui, reste sur `JOUEUR_LOCAL` : la vue de dessus ne bouge pas.
+##
+## ⚠️ **Le bit 8 n'est dans la portée (`range_item_cull_mask`) d'AUCUNE lumière, et doit le rester** : une lumière qui l'y
+## mettrait n'éclairerait que le capteur de soi de J2, jamais celui de J1 (le 4 de J1 est déjà dans toutes les portées).
+## `tools/test_ombre_propre.gd` garde le bit (aucune lumière vivante, aucune source ne l'a dans sa portée) ET ce qu'il fait
+## recevoir : un mur assombrit le capteur de soi de J1 comme celui de J2, et le calcul retrouve le défaut avec l'ancien masque.
+static func masque_de_soi(id: int) -> int:
+	return JOUEUR_LOCAL | couche_ombre_corps(id)
 
 
 # ── Les couches d'OMBRE ──────────────────────────────────────────────────────

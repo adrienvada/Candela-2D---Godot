@@ -9,8 +9,9 @@
 ## corps ce que son sprite recevait : une sous-vue de 256×256 partage le `World2D` du duel,
 ## ne dessine qu'un disque blanc posé sous le corps (sur une couche de visibilité À LUI,
 ## `Presentation3D.couche_capteur()`, qu'aucune lightmap ne lit), et ce disque porte le
-## **masque de lumière du sprite qu'il remplace** — `CanauxLumiere.JOUEUR_LOCAL` (4) pour son
-## propre corps, `CanauxLumiere.masque_vue_adverse(id)` pour le corps d'en face. Les lumières
+## **masque de lumière du sprite qu'il remplace** — `CanauxLumiere.masque_de_soi(id)` pour son
+## propre corps (`JOUEUR_LOCAL` (4) et la couche d'ombre de ce corps : Q55, plus bas),
+## `CanauxLumiere.masque_vue_adverse(id)` pour le corps d'en face. Les lumières
 ## et les ombres du jeu font le reste, canal par canal. Il les reçoit par la **courbe du sprite
 ## qu'il remplace** — `capteur_adverse.gdshader` et `capteur_local.gdshader`, miroirs des shaders
 ## des sprites : le corps 3D suit la lampe comme la vue de dessus.
@@ -41,6 +42,14 @@
 ## qu'il lit (`proprietaire`) : voir `EtoileDeCorps`, qui dit pourquoi et comment. Les murs, le disque de torse et l'étoile
 ## de l'AUTRE corps l'ombrent comme avant. Un objet sans étoile (une fusée, une mine) laisse `proprietaire` vide et voit
 ## toutes les étoiles : ce qu'il reçoit ne change pas.
+##
+## ## Le capteur de soi reçoit les ombres de la torche d'en face — chez J2 comme chez J1 (Q55, Adrien, 2026-09-29)
+##
+## Un disque ne reçoit les ombres d'une lumière que si son masque croise le `shadow_item_cull_mask` de cette lumière ; sinon il
+## n'en reçoit AUCUNE, murs compris. Le capteur de soi de J1 (4) croisait celui de la torche de J2 (`1 | 2 | 4`) ; celui de J2
+## (4 aussi) ne croisait pas celui de la torche de J1 (`1 | 2 | 8`) : un mur assombrissait le corps de soi de J1, pas celui de
+## J2. `CanauxLumiere.masque_de_soi` lui rend la couche d'ombre de son corps (8) : mêmes ombres pour les deux, sans qu'aucune
+## lumière éclaire quoi que ce soit de plus — aucune n'a ce bit dans sa portée.
 class_name CapteurCorps
 extends SubViewport
 
