@@ -457,18 +457,26 @@ func _run_invite_apparie() -> void:
 ##     ici polluerait un classement que personne ne saurait plus corriger ;
 ##   • la cible se tient au point d'apparition de J2, pas devant J1 : c'est ce
 ##     qui rend l'exercice transférable à un vrai premier échange ;
-##   • la carte est celle par défaut, quelle qu'ait été la dernière sélection ;
+##   • la carte est celle que le joueur a CHOISIE, et non plus la carte par
+##     défaut (Adrien, 2026-09-29, Q38) — `test_entrainement_carte` la prouve sur
+##     toutes les cartes livrées, et sur le balayage des traces ;
 ##   • on peut tirer alors qu'aucune manche n'est active — sans quoi
 ##     l'entraînement serait un décor.
 func _run_training() -> void:
-	# La sélection est délibérément salie avant : on vérifie que l'entraînement
-	# la remet à la carte par défaut au lieu de la subir.
-	var cartes: Array = MapData.list_maps()
-	for carte in cartes:
+	# Une AUTRE carte que l'arène standard est choisie d'abord : sans elle, une
+	# sélection restée sur l'arène standard passerait pour la règle. Elle se
+	# reconnaît à son identifiant — `DEFAULT_MAP_ID` est un slug, que la sélection
+	# ne retient jamais.
+	var defaut: Dictionary = MapData.get_map_by_slug(MapData.DEFAULT_MAP_ID)
+	var carte_choisie := ""
+	for carte in MapData.list_maps():
 		var id := String((carte as Dictionary).get("id", ""))
-		if id != MapData.DEFAULT_MAP_ID:
+		if id != String(defaut.get("id", "")):
 			MapData.select_map(id)
+			carte_choisie = id
 			break
+	_check("une carte autre que l'arène standard est choisie avant le lancement",
+		carte_choisie != "" and MapData.selected_map_id == carte_choisie, carte_choisie)
 	var journal_avant := _history_size()
 
 	_ui.hub.push(_ui.SCREEN_TRAINING)
@@ -502,11 +510,23 @@ func _run_training() -> void:
 	# `DEFAULT_MAP_ID` est un slug ; la sélection retient un identifiant. Les
 	# comparer directement était l'erreur que ce banc a précisément servi à
 	# trouver dans `map_data.gd` — on passe donc par le catalogue.
-	var defaut: Dictionary = MapData.get_map_by_slug(MapData.DEFAULT_MAP_ID)
 	_check("l'arène livrée par défaut est au catalogue", not defaut.is_empty())
-	_check("la carte revient à celle par défaut",
-		MapData.selected_map_id == String(defaut.get("id", "")),
-		"%s attendu %s" % [MapData.selected_map_id, defaut.get("id", "?")])
+	# **La carte choisie n'est plus ramenée à l'arène standard** (Adrien,
+	# 2026-09-29, Q38) : ce contrôle exigeait l'inverse, et c'était la règle.
+	_check("la carte reste celle que le joueur a choisie",
+		MapData.selected_map_id == carte_choisie,
+		"%s attendu %s" % [MapData.selected_map_id, carte_choisie])
+	# Et l'arène POSÉE est la sienne : la sélection seule pourrait dire vrai
+	# pendant que l'arène standard s'ouvre — c'était le défaut.
+	var choisie: Dictionary = MapData.get_map(carte_choisie)
+	var sol := _main.arena.get_node_or_null("CustomFloor") as TileMapLayer
+	_check("l'arène jouée est celle de la carte choisie, pas l'arène standard",
+		sol != null and not choisie.is_empty() and not defaut.is_empty()
+			and int(choisie["floor_count"]) != int(defaut["floor_count"])
+			and sol.get_used_cells().size() == int(choisie["floor_count"]),
+		"%d cases de sol posées ; choisie %s, standard %s" % [
+			sol.get_used_cells().size() if sol != null else -1,
+			choisie.get("floor_count", "?"), defaut.get("floor_count", "?")])
 	_check("aucune manche n'est active", not _main.round_active)
 	_check("le bac à sable est armé", _main.sandbox_mode)
 	_check("la cible est visible", _main.training_target.visible)

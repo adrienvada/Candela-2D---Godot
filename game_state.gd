@@ -888,8 +888,13 @@ func _accueillir_le_revenant() -> void:
 ## apparaître une cible chez un adversaire qui n'a rien demandé, et le forfait de
 ## départ s'appliquerait à un match qui n'a jamais commencé.
 ##
-## **La carte est celle par défaut** (décision d'Adrien) : on s'entraîne sur le
-## terrain de référence, pas sur la dernière carte custom essayée.
+## **La carte est celle que le joueur a CHOISIE** (Adrien, 2026-09-29, Q38 :
+## « l'entraînement doit se dérouler dans la carte sélectionnée par le joueur »).
+## Elle valait la carte par défaut, « le terrain de référence » — alors que l'écran
+## d'entraînement offre « CHANGER DE CARTE » et que son affiche annonce la carte
+## choisie : le joueur en choisissait une, et l'arène standard s'ouvrait quand même.
+## Les traces au sol ne suivent pas d'une carte à l'autre : `rebuild_arena()` les
+## balaie quand la carte change (`balayer_les_traces_si_la_carte_change`).
 func _on_training_requested() -> void:
 	get_tree().paused = false
 	# Avant toute chose : un match en cours doit se solder normalement, forfait
@@ -898,7 +903,12 @@ func _on_training_requested() -> void:
 		_archive_forfeit(0)
 		NetworkManager.disconnect_from_game()
 	_apply_network_mode()
-	MapData.select_map(MapData.DEFAULT_MAP_ID)
+	# La carte du joueur, RELUE au catalogue plutôt que prise telle quelle :
+	# `current_map_data` peut porter la carte d'un hôte adoptée en ligne
+	# (`MapData.adopt_shared_map`), qui n'est le choix de personne ici. Relue, elle
+	# redevient la version du catalogue ; absente du catalogue, `select_map` retombe
+	# sur l'arène standard, comme avant cette décision.
+	MapData.select_map(MapData.selected_map_id)
 	_matchmade_round = false
 	_matchmade_ranked = false
 	_matchmade_start_pending = false
@@ -4990,9 +5000,10 @@ func _armer_echeance_connexion_appariee() -> void:
 ## classé garde le tirage au sort dans tout le catalogue — la question
 ## d'équité qu'il ouvre (une carte importée par l'adversaire) reste ouverte,
 ## « à trancher par Adrien » selon la ROADMAP, et cette session ne la tranche
-## pas. L'amical, lui, prend systématiquement la carte par défaut : même choix
-## que l'entraînement (`_on_training_requested`), pour la même raison — un
-## terrain connu plutôt qu'une arène surprise pour un match sans enjeu.
+## pas. L'amical, lui, prend systématiquement la carte par défaut — un terrain
+## connu plutôt qu'une arène surprise pour un match sans enjeu. (L'entraînement
+## suivait ce choix jusqu'au 2026-09-29 ; il joue désormais la carte que le
+## joueur a sélectionnée, voir `_on_training_requested`.)
 func _lancer_match_apparie() -> void:
 	_poser_la_carte_appariee()
 	_enter_hosted_game()
