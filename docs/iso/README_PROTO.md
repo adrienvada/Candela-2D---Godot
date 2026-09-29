@@ -46,7 +46,7 @@ Le panneau de gauche règle tout ; `P` le masque.
   bornée à 128, cellules hors grille ignorées comme dans `map_geometry.gd::build_grid`).
   Vérifié : les six cartes donnent dans la page le même nombre de murs, de sols et de
   fosses qu'un décodeur Python indépendant (32×32 / 348 murs pour `default`, 24×24 / 220
-  pour l'Arène Circulaire, 30×30 / 372 pour le Cloître, 32×26 / 372 pour l'Usine,
+  pour l'Arène Circulaire, 30×30 / 372 pour le Cloître, 32×26 / 376 pour l'Usine (372 avant sa correction du 2026-09-29 : quatre murs ajoutés, voir la ROADMAP),
   28×28 / 360 pour la Croisée, 26×26 / 312 pour le Bunker).
 - **Règle de solidité** de `map_geometry.gd` : un mur est une boîte (arrête joueur,
   balles et lumière) ; une case sans sol ni mur est une fosse — pas de dalle, trou noir,

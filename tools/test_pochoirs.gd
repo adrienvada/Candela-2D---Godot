@@ -140,10 +140,13 @@ func _l_equite(cartes: Dictionary) -> void:
 	for id in cartes:
 		var d: Dictionary = cartes[id]
 		var sym := _symetrie(d)
-		# L'Usine n'a pas de symétrie exacte (son bloc central est décalé d'une case) : ses pochoirs suivent le miroir.
-		var sym_pochoirs := sym if sym != "" else "miroir"
-		var orphelins := _orphelins(ArenaDecor.POCHOIRS_ESSAI.get(id, []), MapCodec.get_grid_size(d), sym_pochoirs)
-		_check("%s (%s, symétrie %s) : chaque pochoir a son jumeau" % [String(d.get("name", id)), id, sym if sym != "" else "aucune exacte — miroir"],
+		# L'Usine n'avait pas de symétrie exacte (son bloc central était décalé d'une case) : ses pochoirs suivaient le miroir par
+		# convention, et cette suite s'en accommodait. Corrigée le 2026-09-29 (Adrien : « Oui corrige l'usine » ; `test_usine_symetrie`),
+		# elle a son miroir comme les autres : plus d'exception ici, et une carte livrée sans symétrie exacte rougit.
+		_check("%s (%s) : la carte a une symétrie exacte, que les apparitions échangent" % [String(d.get("name", id)), id],
+			sym != "", "aucune (miroir gauche-droite ni demi-tour)")
+		var orphelins := _orphelins(ArenaDecor.POCHOIRS_ESSAI.get(id, []), MapCodec.get_grid_size(d), sym if sym != "" else "miroir")
+		_check("%s (%s, symétrie %s) : chaque pochoir a son jumeau" % [String(d.get("name", id)), id, sym],
 			orphelins.is_empty(), str(orphelins))
 	# La garde rougit : un « DEATHMATCH » du Cloître décalé d'une demi-case perd son jumeau.
 	var faux: Array = (ArenaDecor.POCHOIRS_ESSAI["map_001"] as Array).duplicate(true)

@@ -230,6 +230,12 @@ SUITES+=(test_son_visible test_son_visible_jeu test_clic_a_vide)
 # ne comptent pas. Posé ici, comme la ligne du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
 SUITES+=(test_ombre_propre)
 
+# Le point de braise de la fusée et l'Usine (0.8.0, 2026-09-29 ; Adrien : « Le point rouge : oui, dans la 0.8.0 » et « Oui corrige
+# l'usine ») : la règle de luminance du point — aussi lumineux que sa lumière, en gardant le rouge —, à chaque pas des vingt secondes de
+# la fusée, sans fenêtre ; et la symétrie de l'Usine, avec l'ancienne comme témoin sur lequel la garde rougit. Posé ici, comme les
+# deux lignes du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
+SUITES+=(test_point_braise test_usine_symetrie)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

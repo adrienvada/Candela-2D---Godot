@@ -181,7 +181,8 @@ Cloître, Bunker — murs symétriques des deux façons, mais apparitions échan
 d'apparition n'est pas la rangée centrale) : B y montrera un petit écart dû à la rangée, C y sera exact ; La Croisée — apparitions
 (5,5) et (22,22), échangées par la symétrie centrale : B exact, C non ; **L'Usine — 4 cases de mur hors des deux symétries (les deux
 blocs de 3 au centre, x de 15 à 17, rangées 9-10 et 15-16, décalés d'une colonne vers J2) : INÉGALE DÈS LA 2D**, avant tout lacet —
-signalé, pas corrigé (dessin de carte, hors périmètre). Et `game_state.gd` pose J1 sur `spawn_p1` et J2 sur `spawn_p2` à chaque
+signalé, pas corrigé (dessin de carte, hors périmètre) — **corrigée depuis, le 2026-09-29, sur le oui d'Adrien** (« Oui corrige l'usine » : blocs de
+4 cases, x de 14 à 17 ; voir la ROADMAP). Et `game_state.gd` pose J1 sur `spawn_p1` et J2 sur `spawn_p2` à chaque
 manche : un biais de caméra favoriserait le même joueur toute la partie.
 
 À l'étape 2, la planche 0° contre 45° montre aussi la vue de J2 dans chaque option déclarée équitable : Adrien juge la sensation
@@ -201,10 +202,10 @@ lancé, le Mac étant à Adrien). **Le banc GDScript doit rendre les mêmes** : 
 - **À 45°, B est équitable sur les six cartes ; A sur aucune ; C sur cinq** (pas La Croisée : moitiés 13,18 / 16,38).
 - **À 0°, le jeu d'aujourd'hui (A) N'EST PAS équitable sur deux cartes** — constat qui ne doit rien au lacet :
   La Croisée (moitiés 7,37 / 11,98, apparitions 7,51 / 18,78, abri caché 5,10 / 0,06) et L'Usine (moitiés 9,68 / 10,71,
-  écart 1,03 > 1).
+  écart 1,03 > 1 — **0,00 depuis la correction de la carte, le 2026-09-29**).
 - (d), le prix de l'angle (part cachée totale 45° / 0°) : 1,29 à 1,48 selon la carte, sous 1,5 partout.
 - Les symétries confirment la lecture de la session cloud : défaut, arène, Cloître, Bunker échangent les apparitions par le
-  miroir gauche-droite ; La Croisée par la symétrie centrale ; L'Usine a 4 murs hors des deux.
+  miroir gauche-droite ; La Croisée par la symétrie centrale ; L'Usine avait 4 murs hors des deux (corrigée le 2026-09-29 : elle échange désormais les apparitions par le miroir gauche-droite).
 
 ## La planche (3) — ce qu'elle montrera
 
