@@ -212,7 +212,8 @@ func _les_capteurs(main: Node, miroirs: MiroirsIso, poses: Dictionary) -> void:
 			var shader_attendu: Shader = MiroirsIso.SHADER_OBJET
 			if slug == "leurre":
 				if id == int(g.get("poseur_id")):
-					masque_attendu = 4
+					# Q55 — un corps de soi : JOUEUR_LOCAL et la couche d'ombre du corps du poseur.
+					masque_attendu = CanauxLumiere.masque_de_soi(id)
 				else:
 					masque_attendu = CanauxLumiere.masque_vue_adverse(int(g.get("poseur_id")))
 					shader_attendu = CapteurCorps.SHADER_ADVERSE

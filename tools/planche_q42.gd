@@ -16,6 +16,18 @@ extends "res://tools/photographe.gd"
 ## (la vue de dessus : les textures de `vp1`, `vp2` et de la racine, à comparer pixel à pixel entre deux arbres).
 ## Avant / après : lancer la même planche dans l'arbre de la base et dans celui de la branche.
 ##
+## ## Q55 — le capteur de SOI (2026-09-29)
+## Le même banc lit aussi ce que le corps reçoit dans SA PROPRE vue (`soi_mean`, `soi_max` du journal : le capteur du corps
+## de la cible dans la vue de la cible, éclairé par la torche du porteur) : avec `--mur`, un mur entre les deux doit le noircir
+## chez J1 comme chez J2. `--vue-unique=0|1` ne regarde que la vue de J1 (l'hôte, l'entraînement) ou celle de J2 (le client) :
+## lancer alors `--porteurs=1` (respectivement `--porteurs=0`), puisque la cible est le joueur regardé. `--soi` écrit, pour
+## chaque prise d'image, le corps découpé dans SA vue (`_soi_vue`), son capteur (`_soi_capteur`) et la vue entière réduite
+## (`_soi_cadre`). `--distance=<px>` remplace la moitié de la portée (le halo et la rétrodiffusion se lisent de près).
+## `--mutuel` : la torche de la cible reste allumée aussi (par défaut, seule celle du porteur l'est) — pour lire si la torche
+## PROPRE éclaire le capteur de soi. Mesuré : la torche allumée et sa rétrodiffusion l'éclairent à elles seules (0,914, un mur entre
+## les deux torches), et la torche adverse s'y ajoute jusqu'à la saturation (1,000, sans mur) — un mur ne retire donc que la part
+## de la torche ADVERSE.
+##
 ## ## Ce qu'il écrit
 ## - `journal.json` : pour chaque prise, le niveau que LIT le corps dans le capteur de la vue du porteur (moyenne et
 ##   maximum de l'anneau où le shader des corps lit, `rayon_lu_px`), et celui de son capteur dans SA propre vue ;
@@ -61,6 +73,12 @@ var _mur: LightOccluder2D
 ## les étoiles doivent ombrer comme avant. Écrit la texture de chaque vue du duel (`vp1`, `vp2`) et, une fois, celle de la racine
 ## en vue unique, pour comparer deux arbres pixel à pixel.
 var _dessus := false
+## Q55 — `--soi` : les images du corps dans SA propre vue. `--vue-unique=N` : la vue iso de N seul (-1 : écran scindé).
+## `--distance=` : l'écart torche → cible en px (0 : la moitié de la portée).
+var _soi_images := false
+var _vue_unique_id := -1
+var _distance_px := 0.0
+var _mutuel := false
 
 
 func _ready() -> void:
@@ -75,6 +93,10 @@ func _ready() -> void:
 	_lampes = _valeur(args, "--lampes", "")
 	_mur_pose = _drapeau(args, "--mur")
 	_dessus = _drapeau(args, "--dessus")
+	_soi_images = _drapeau(args, "--soi")
+	_vue_unique_id = int(_valeur(args, "--vue-unique", "-1"))
+	_distance_px = float(_valeur(args, "--distance", "0"))
+	_mutuel = _drapeau(args, "--mutuel")
 	var classes_voulues := _valeur(args, "--classes", "").strip_edges()
 	var classes: Array = SLUGS if classes_voulues == "" else Array(classes_voulues.split(","))
 	var orientations_voulues := _valeur(args, "--orientations", "").strip_edges()
@@ -135,6 +157,9 @@ func _ready() -> void:
 			printerr("✗ les deux vues iso ne sont pas regardées (écran scindé attendu)")
 			_sortir(1)
 			return
+		if _vue_unique_id >= 0 and not await _passer_en_vue_unique(_vue_unique_id):
+			_sortir(1)
+			return
 		RenderingServer.frame_pre_draw.connect(_avant_le_rendu)
 	elif Presentation3D.instance() != null and bool(Presentation3D.instance().get("_actif")):
 		printerr("✗ --dessus : la vue iso est allumée malgré mode_iso = faux")
@@ -160,7 +185,8 @@ func _ready() -> void:
 		for slug in classes:
 			_equiper(cible, slug)
 			for o in orientations:
-				var images_ici: bool = _images and (slug in CLASSES_IMAGES) and (o in ["profil_d", "diag_face_d", "face"])
+				var images_ici: bool = (_images or _soi_images) and (slug in CLASSES_IMAGES) \
+					and (o in ["profil_d", "diag_face_d", "face"])
 				await _scene(porteur, slug, String(o), images_ici)
 	_equiper(0, "pistolet")
 	_equiper(1, "pistolet")
@@ -247,10 +273,13 @@ func _poser(porteur: int, d: float, theta: float) -> void:
 	p_porteur.global_rotation = _axe.angle()
 	if _pantins.size() > 1:
 		_pantins[porteur].torche = true
-		_pantins[cible].torche = false
-	Input.action_release("p1_torch" if cible == 0 else "p2_torch")
+		_pantins[cible].torche = _mutuel
+	if _mutuel:
+		Input.action_press("p1_torch" if cible == 0 else "p2_torch")
+	else:
+		Input.action_release("p1_torch" if cible == 0 else "p2_torch")
 	Input.action_press("p1_torch" if porteur == 0 else "p2_torch")
-	p_cible.flashlight_on = false
+	p_cible.flashlight_on = _mutuel
 	_vivants()
 
 
@@ -328,7 +357,7 @@ func _avant_le_rendu() -> void:
 func _scene(porteur: int, slug: String, orientation: String, images: bool) -> void:
 	var cible := 1 - porteur
 	var theta := float(ORIENTATIONS[orientation])
-	var d := _portee * 0.5
+	var d := _portee * 0.5 if _distance_px <= 0.0 else _distance_px
 	# Une nouvelle classe ou un nouveau porteur demande un long repos (le corps reconstruit, les effacements qui remontent) ;
 	# un simple changement d'orientation, quelques images : la rotation est posée, le capteur suit la place.
 	var place := "%d/%s" % [porteur, slug]
@@ -347,10 +376,14 @@ func _scene(porteur: int, slug: String, orientation: String, images: bool) -> vo
 	var lampe = _main.p1.flashlight if porteur == 0 else _main.p2.flashlight
 	var ligne := {"porteur": porteur, "cible": cible, "classe": slug, "orientation": orientation, "theta": theta, "mur": _mur_pose,
 		"distance": d, "vue_mean": vue[0], "vue_max": vue[1], "soi_mean": soi[0], "soi_max": soi[1],
-		"energie_torche": lampe.energy, "lampe_x": lampe.position.x, "torche_active": lampe.enabled}
+		"energie_torche": lampe.energy, "lampe_x": lampe.position.x, "torche_active": lampe.enabled,
+		"vue_unique": _vue_unique_id, "lampes": _lampes}
 	if images:
-		var base := "%s_%s_J%d" % [slug, orientation, porteur + 1]
-		await _photographier(porteur, cible, base)
+		var base := "%s_%s_J%d%s" % [slug, orientation, porteur + 1, "_mur" if _mur_pose else ""]
+		if _images and _iso.viewport_ecran(porteur) != null:
+			await _photographier(porteur, cible, base)
+		if _soi_images and _iso.viewport_ecran(cible) != null:
+			await _photographier_soi(cible, base)
 	for k in 2:
 		var jj = _main.p1 if k == 0 else _main.p2
 		ligne["etat_J%d" % (k + 1)] = {"F": [jj.flashlight.enabled, jj.flashlight.visible, jj.flashlight.energy],
@@ -360,6 +393,49 @@ func _scene(porteur: int, slug: String, orientation: String, images: bool) -> vo
 	_journal.append(ligne)
 	print("  · J%d porte, cible %-12s %-12s vue %.4f (max %.4f)   soi %.4f (max %.4f)   torche %.3f (x %.1f)" % [
 		porteur + 1, slug, orientation, vue[0], vue[1], soi[0], soi[1], lampe.energy, lampe.position.x])
+
+
+## Q55 — le corps de la cible dans SA propre vue : le corps découpé, son capteur de soi, la vue entière réduite de moitié.
+func _photographier_soi(cible: int, base: String) -> void:
+	await RenderingServer.frame_post_draw
+	var ecran_vue := _iso.viewport_ecran(cible)
+	var img: Image = ecran_vue.get_texture().get_image()
+	var cam := _iso._camera_de(cible)
+	var logique := ecran_vue.get_visible_rect().size
+	var taille := Vector2(img.get_size())
+	var cible_px: Vector2 = (_poses[cible][0] as Vector2)
+	var ecran: Vector2 = cam.vers_ecran(cible_px, logique, 16.0) * taille / logique
+	var x0 := clampi(int(ecran.x) - DECOUPE_PX / 2, 0, maxi(0, img.get_width() - DECOUPE_PX))
+	var y0 := clampi(int(ecran.y) - DECOUPE_PX / 2, 0, maxi(0, img.get_height() - DECOUPE_PX))
+	img.get_region(Rect2i(x0, y0, DECOUPE_PX, DECOUPE_PX)).save_png("%s/%s_soi_vue.png" % [_dossier, base])
+	var entiere := img.duplicate() as Image
+	entiere.resize(img.get_width() / 2, img.get_height() / 2, Image.INTERPOLATE_BILINEAR)
+	entiere.save_png("%s/%s_soi_cadre.png" % [_dossier, base])
+	var c = _iso._capteurs[cible][cible]
+	if c != null:
+		(c as CapteurCorps).get_texture().get_image().save_png("%s/%s_soi_capteur.png" % [_dossier, base])
+
+
+## Q55 — la vue iso d'UN seul joueur, comme en ligne ou à l'entraînement : l'autre vue est cachée, ses capteurs s'en vont,
+## et le jeu se range tout seul (`_accorder_rendu_aux_vues`, puis la présentation à l'image suivante).
+func _passer_en_vue_unique(n: int) -> bool:
+	var autre := (_main.vp2 if n == 0 else _main.vp1).get_parent() as Control
+	if autre != null:
+		autre.hide()
+	_ui.center_line.hide()
+	_main._accorder_rendu_aux_vues()
+	_ui._voile_scinde = false
+	if _ui.hud_panneau_p2 != null:
+		_ui.hud_panneau_p2.visible = false
+	if _ui.match_hud != null:
+		_ui.match_hud.hide()
+	await _attendre_images(20)
+	if _iso.viewport_ecran(n) == null or _iso.viewport_ecran(1 - n) != null:
+		printerr("✗ --vue-unique=%d : la vue de J%d seule n'est pas en place" % [n, n + 1])
+		return false
+	print("  · vue unique de J%d : %d capteur(s) vivant(s)" % [n + 1, _iso.get("_capteurs").reduce(
+		func(a, ligne): return a + ligne.filter(func(c): return c != null and is_instance_valid(c)).size(), 0)])
+	return true
 
 
 ## Le corps découpé dans la vue du porteur, le capteur brut, et — deux fois — les lightmaps entières.

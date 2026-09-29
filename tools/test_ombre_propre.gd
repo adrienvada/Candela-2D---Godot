@@ -16,7 +16,12 @@
 ##     défaut ;
 ##   • **ce qui doit rester** : un mur entre la torche et le corps l'ombre toujours ; l'étoile de l'AUTRE joueur aussi ;
 ##     l'ombre au sol (les vues du duel voient toutes les étoiles) et le disque de torse ne bougent pas ;
-##   • la vue de dessus (`--2d`), sans capteur : les étoiles y restent visibles de `vp2` et de la racine.
+##   • la vue de dessus (`--2d`), sans capteur : les étoiles y restent visibles de `vp2` et de la racine ;
+##   • **Q55, le capteur de SOI** (Adrien, 2026-09-29 : « on suit ton avis » — que les murs assombrissent le corps de soi pour
+##     les deux) : chez J1 comme chez J2, il porte `JOUEUR_LOCAL` et la couche d'ombre de son corps, donc il reçoit les ombres
+##     de la torche d'en face — un mur l'assombrit, en écran scindé comme en vue unique (J1 puis J2 regardés), le leurre vu par
+##     son poseur compris —, et il lit ce que lit le capteur croisé du même corps. Le même calcul avec le masque d'AVANT
+##     (`JOUEUR_LOCAL` seul) retrouve le défaut : le mur ignoré chez J2. Aucune lumière n'a le bit 8 dans sa portée.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_ombre_propre.gd
 extends SceneTree
@@ -48,7 +53,7 @@ func _init() -> void:
 
 
 func _run() -> void:
-	print("=== Q42 : LE CORPS IGNORE SA PROPRE OMBRE ===")
+	print("=== Q42 : LE CORPS IGNORE SA PROPRE OMBRE — Q55 : LE CAPTEUR DE SOI RECOIT LES OMBRES DES DEUX TORCHES ===")
 	await process_frame
 	_Pres = load("res://presentation_3d.gd")
 	_Capteur = load("res://capteur_corps.gd")
@@ -74,7 +79,9 @@ func _run() -> void:
 	_la_regle_scindee()
 	await _l_effet()
 	await _l_autre_et_le_mur()
+	await _le_soi_et_les_murs()
 	await _le_leurre()
+	await _le_leurre_de_soi()
 	await _vue_unique()
 	await _vue_de_dessus(reglages)
 	_sortir()
@@ -395,6 +402,138 @@ func _l_autre_et_le_mur() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Q55 — LE CAPTEUR DE SOI ET LES MURS
+# ---------------------------------------------------------------------------
+
+## Ce que la règle du moteur donne à un disque : il ne reçoit les ombres d'une lumière que si son masque de lumière croise le
+## `shadow_item_cull_mask` de cette lumière — sinon AUCUNE, les murs non plus. Mesuré sous Godot 4.7 (`tools/planche_q42.gd --mur`,
+## un mur entre la torche adverse et la cible, avant Q55) : le corps de J1 vu par J1 lisait 0,000, celui de J2 vu par J2 0,494 — le mur
+## ignoré, parce que 4 croise le masque d'ombre de la torche de J2 (`1 | 2 | 4`) et pas celui de la torche de J1 (`1 | 2 | 8`).
+## `masque_du_disque` est passé en argument : le contrôle y met l'ancien masque du capteur de soi.
+func _part_eclairee_recue(lampe: Light2D, centre: Vector2, capteur: Viewport, masque_du_disque: int) -> float:
+	if (masque_du_disque & lampe.shadow_item_cull_mask) == 0:
+		return 1.0
+	return _part_eclairee(lampe, centre, capteur, false)
+
+
+## Un mur d'essai posé comme ceux de la carte : la couche du décor, dans le monde partagé, en travers de l'axe.
+func _mur_d_essai(position_du_mur: Vector2) -> LightOccluder2D:
+	var mur := LightOccluder2D.new()
+	var forme := OccluderPolygon2D.new()
+	forme.polygon = PackedVector2Array([Vector2(-6, -80), Vector2(6, -80), Vector2(6, 80), Vector2(-6, 80)])
+	forme.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	mur.occluder = forme
+	mur.occluder_light_mask = 1
+	mur.position = position_du_mur
+	_main.arena.add_child(mur)
+	return mur
+
+
+## Le corps `id` dans SA vue (son capteur de soi), sous la torche de l'ADVERSAIRE à mi-portée : la part de l'anneau que le
+## capteur reçoit sans mur, avec un mur entre la torche et le corps, et — le contrôle — avec le masque d'AVANT Q55 (`JOUEUR_LOCAL`
+## seul). `croise` : le capteur du même corps dans la vue de l'adversaire, quand cette vue est regardée (écran scindé).
+func _le_soi_derriere_un_mur(id: int) -> Dictionary:
+	var murs := _murs_du_monde()
+	var visibles := []
+	for m in murs:
+		visibles.append((m as LightOccluder2D).visible)
+		(m as LightOccluder2D).visible = false
+	var corps: Node2D = _main.p1 if id == 0 else _main.p2
+	var ennemi: Node2D = _main.p2 if id == 0 else _main.p1
+	var capteurs: Array = _pres.capteurs()
+	var soi = capteurs[id][id]
+	var croise = capteurs[1 - id][id]
+	var axe := Vector2.RIGHT
+	ennemi.global_position = Vector2(500.0, 500.0)
+	ennemi.global_rotation = 0.0
+	corps.global_position = ennemi.global_position + axe * 153.6
+	corps.global_rotation = PI
+	var torche: Light2D = ennemi.flashlight
+	var masque_soi: int = soi.masque_lumiere()
+	var r := {"masque_soi": masque_soi, "recoit": (masque_soi & torche.shadow_item_cull_mask) != 0,
+		"sans_mur": _part_eclairee_recue(torche, corps.global_position, soi, masque_soi)}
+	if croise != null:
+		r["sans_mur_croise"] = _part_eclairee_recue(torche, corps.global_position, croise, croise.masque_lumiere())
+	var mur := _mur_d_essai(ennemi.global_position + axe * 90.0)
+	await process_frame
+	r["avec_mur"] = _part_eclairee_recue(torche, corps.global_position, soi, masque_soi)
+	r["avec_mur_avant"] = _part_eclairee_recue(torche, corps.global_position, soi, CanauxLumiere.JOUEUR_LOCAL)
+	if croise != null:
+		r["avec_mur_croise"] = _part_eclairee_recue(torche, corps.global_position, croise, croise.masque_lumiere())
+	mur.queue_free()
+	await process_frame
+	for i in murs.size():
+		(murs[i] as LightOccluder2D).visible = visibles[i]
+	return r
+
+
+## Les vérifications d'UN capteur de soi : c'est la garde de Q55. Elle rougit si le capteur de soi de J1 OU de J2 ignore les murs —
+## et le contrôle prouve qu'elle VOIT le défaut : avec le masque d'avant Q55, le mur était ignoré chez J2 seulement.
+func _verifier_le_soi(r: Dictionary, id: int, contexte: String) -> void:
+	_check("%s : le capteur de soi de J%d porte JOUEUR_LOCAL et la couche d'ombre de son corps (masque %d)" % [contexte, id + 1,
+		r["masque_soi"]], r["masque_soi"] == CanauxLumiere.masque_de_soi(id))
+	_check("%s : ce masque croise le masque d'ombre de la torche d'en face — il en reçoit les ombres" % contexte, r["recoit"])
+	_check("%s : sans mur, la torche d'en face éclaire l'anneau du corps en entier" % contexte,
+		is_equal_approx(r["sans_mur"], 1.0), "%.3f" % r["sans_mur"])
+	_check("%s : un mur entre la torche d'en face et le corps l'assombrit — l'anneau tombe à %.0f %% éclairé" % [contexte,
+		100.0 * r["avec_mur"]], r["avec_mur"] < 0.02, "%.3f" % r["avec_mur"])
+	if r.has("avec_mur_croise"):
+		_check("%s : il lit ce que lit le capteur croisé du même corps, sans mur (%.2f) comme avec un mur (%.2f)" % [contexte,
+			r["sans_mur_croise"], r["avec_mur_croise"]],
+			is_equal_approx(r["sans_mur"], r["sans_mur_croise"]) and is_equal_approx(r["avec_mur"], r["avec_mur_croise"]))
+	if id == 0:
+		_check("%s — AVANT Q55 (masque JOUEUR_LOCAL seul) : J1 était déjà assombri par le mur" % contexte, r["avec_mur_avant"] < 0.02,
+			"%.3f" % r["avec_mur_avant"])
+	else:
+		_check("%s — AVANT Q55 (masque JOUEUR_LOCAL seul) : le mur était IGNORÉ chez J2, l'anneau restait éclairé à %.0f %%" % [contexte,
+			100.0 * r["avec_mur_avant"]], r["avec_mur_avant"] > 0.99, "%.3f" % r["avec_mur_avant"])
+
+
+func _le_soi_et_les_murs() -> void:
+	print("\n--- Q55 : le capteur de SOI reçoit les ombres de la torche d'en face, chez J2 comme chez J1 ---")
+	var r0: Dictionary = await _le_soi_derriere_un_mur(0)
+	var r1: Dictionary = await _le_soi_derriere_un_mur(1)
+	_verifier_le_soi(r0, 0, "écran scindé, J1")
+	_verifier_le_soi(r1, 1, "écran scindé, J2")
+	_check("l'équité : J1 et J2 reçoivent la même part, sans mur (%.2f / %.2f) et avec un mur (%.2f / %.2f)" % [r0["sans_mur"],
+		r1["sans_mur"], r0["avec_mur"], r1["avec_mur"]],
+		is_equal_approx(r0["sans_mur"], r1["sans_mur"]) and is_equal_approx(r0["avec_mur"], r1["avec_mur"]))
+	_check("le sprite de soi reste sur JOUEUR_LOCAL : la vue de dessus ne bouge pas",
+		_main.p1.visual.light_mask == CanauxLumiere.JOUEUR_LOCAL and _main.p2.visual.light_mask == CanauxLumiere.JOUEUR_LOCAL)
+	_aucune_portee_n_a_le_bit_de_j2()
+
+
+## Le bit de plus du capteur de soi de J2 (8, la couche d'ombre de son corps) ne doit être dans la portée d'AUCUNE lumière : elle
+## n'éclairerait que ce capteur-là, jamais celui de J1 (dont le 4 est déjà dans toutes les portées). Les lumières vivantes du
+## duel, puis les sources — une lumière qui naît plus tard (un gadget, une fusée) ne se voit pas dans l'arbre d'une manche.
+func _aucune_portee_n_a_le_bit_de_j2() -> void:
+	var bit := CanauxLumiere.couche_ombre_corps(1)
+	var fautives := []
+	var n := 0
+	for lumiere in root.find_children("*", "Light2D", true, false):
+		n += 1
+		if ((lumiere as Light2D).range_item_cull_mask & bit) != 0:
+			fautives.append(str(lumiere.get_path()))
+	_check("aucune des %d lumières vivantes du duel n'a le bit %d dans sa portée" % [n, bit], n > 4 and fautives.is_empty(), str(fautives))
+	var suspectes := []
+	var huit := RegEx.create_from_string("\\b8\\b")
+	var scripts := 0
+	for f in DirAccess.get_files_at("res://"):
+		if not (f.ends_with(".gd") or f.ends_with(".tscn")):
+			continue
+		scripts += 1
+		for ligne in FileAccess.get_file_as_string("res://" + f).split("\n"):
+			var nette: String = ligne.strip_edges()
+			if nette.begins_with("#") or not nette.contains("range_item_cull_mask") or not nette.contains("="):
+				continue
+			var droite: String = nette.substr(nette.find("=") + 1).split("#")[0]
+			if huit.search(droite) != null or droite.contains("couche_ombre_corps") or droite.contains("COUCHE_OCCLUDER"):
+				suspectes.append("%s : %s" % [f, nette])
+	_check("aucune source (%d fichiers) ne met le bit %d, ni une couche d'ombre de corps, dans une portée" % [scripts, bit],
+		scripts > 50 and suspectes.is_empty(), str(suspectes))
+
+
+# ---------------------------------------------------------------------------
 # LE LEURRE
 # ---------------------------------------------------------------------------
 
@@ -456,6 +595,74 @@ func _le_leurre() -> void:
 		_main.p1.get_node("OmbreDuCorps").vues_rattachees().size() == 5, str(_main.p1.get_node("OmbreDuCorps").vues_rattachees().size()))
 
 
+## Q55 — le leurre vu par son poseur est un corps de soi : même masque que le capteur du corps de ce poseur, mêmes ombres. Un mur
+## entre la torche adverse et le leurre l'assombrit chez J1 comme chez J2 ; et le leurre vu par l'adversaire ne change pas.
+func _le_leurre_de_soi() -> void:
+	print("\n--- Q55 : le leurre vu par son poseur, chez J1 comme chez J2 ---")
+	var murs := _murs_du_monde()
+	var visibles := []
+	for m in murs:
+		visibles.append((m as LightOccluder2D).visible)
+		(m as LightOccluder2D).visible = false
+	for poseur in 2:
+		var joueur: Node2D = _main.p1 if poseur == 0 else _main.p2
+		var ennemi: Node2D = _main.p2 if poseur == 0 else _main.p1
+		_main.round_active = true
+		_main.sandbox_mode = false
+		joueur.equip_weapon(_main.weapon_for_index(1))
+		_main._gadgets_poses_par.fill(0)
+		# La recharge du gadget (une minute) a démarré à la pose précédente : on la rend.
+		_main._gadget_attente.fill(0.0)
+		joueur.global_position = Vector2(700.0, 400.0)
+		joueur.global_rotation = 0.0
+		_main.spawn_gadget(joueur, joueur.global_position + Vector2(90.0, 0.0), 0.0)
+		await process_frame
+		var leurre = null
+		for c in _main.bullet_container.get_children():
+			if c is GadgetLeurre and int(c.get("poseur_id")) == poseur:
+				leurre = c
+		_check("un leurre de J%d est posé" % (poseur + 1), leurre != null)
+		if leurre == null:
+			continue
+		for i in 4:
+			await process_frame
+		# Le poseur s'écarte : son corps n'est pas entre la torche adverse et son leurre.
+		joueur.global_position = Vector2(300.0, 900.0)
+		var capteurs: Array = _pres.get("_miroirs").capteurs_de(leurre)
+		var soi = capteurs[poseur]
+		var croise = capteurs[1 - poseur]
+		_check("le capteur du leurre chez son poseur J%d porte le masque de soi de J%d, celui de l'adversaire le masque d'en face"
+			% [poseur + 1, poseur + 1], soi != null and croise != null
+			and soi.masque_lumiere() == CanauxLumiere.masque_de_soi(poseur)
+			and croise.masque_lumiere() == CanauxLumiere.masque_vue_adverse(poseur))
+		if soi == null:
+			continue
+		ennemi.global_position = leurre.global_position + Vector2(-153.6, 0.0)
+		ennemi.global_rotation = 0.0
+		var torche: Light2D = ennemi.flashlight
+		_check("ce masque croise le masque d'ombre de la torche d'en face — il en reçoit les ombres",
+			(soi.masque_lumiere() & torche.shadow_item_cull_mask) != 0)
+		var sans_mur := _part_eclairee_recue(torche, leurre.global_position, soi, soi.masque_lumiere())
+		var mur := _mur_d_essai(ennemi.global_position + Vector2(90.0, 0.0))
+		await process_frame
+		var avec_mur := _part_eclairee_recue(torche, leurre.global_position, soi, soi.masque_lumiere())
+		var avant := _part_eclairee_recue(torche, leurre.global_position, soi, CanauxLumiere.JOUEUR_LOCAL)
+		var avec_mur_croise := _part_eclairee_recue(torche, leurre.global_position, croise, croise.masque_lumiere())
+		_check("leurre de J%d : sans mur l'anneau est éclairé en entier (%.2f), un mur l'assombrit (%.2f), comme chez l'adversaire (%.2f)"
+			% [poseur + 1, sans_mur, avec_mur, avec_mur_croise],
+			is_equal_approx(sans_mur, 1.0) and avec_mur < 0.02 and avec_mur_croise < 0.02)
+		if poseur == 1:
+			_check("AVANT Q55 (masque JOUEUR_LOCAL seul) : le mur était ignoré par le leurre de J2 vu par J2 (%.2f)" % avant, avant > 0.99)
+		mur.queue_free()
+		leurre.queue_free()
+		for i in 3:
+			await process_frame
+	for i in murs.size():
+		(murs[i] as LightOccluder2D).visible = visibles[i]
+	_main.p1.equip_weapon(_main.weapon_for_index(_index_de("pistolet")))
+	_main.p2.equip_weapon(_main.weapon_for_index(_index_de("pistolet")))
+
+
 # ---------------------------------------------------------------------------
 # LA VUE UNIQUE, LA VUE DE DESSUS
 # ---------------------------------------------------------------------------
@@ -497,6 +704,9 @@ func _vue_unique() -> void:
 			comptes.append(n)
 		_check("vue unique (J%d) : chaque capteur compte exactement une étoile, celle de l'autre corps : %s" % [id + 1, str(comptes)],
 			comptes == [1, 1])
+		# Q55 — et le capteur de soi de la vue regardée reçoit les ombres de la torche d'en face : un mur l'assombrit.
+		var soi_r: Dictionary = await _le_soi_derriere_un_mur(id)
+		_verifier_le_soi(soi_r, id, "vue unique (J%d)" % (id + 1))
 		autre.show()
 		_main._accorder_rendu_aux_vues()
 		for i in 6:
