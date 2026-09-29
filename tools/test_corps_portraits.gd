@@ -13,7 +13,7 @@
 ##   qu'avant ;
 ## - **le contraste au sol** : la clarté relative de chaque pièce au sol est celle du gris (l'écart de couleur, lui, se
 ##   mesure au banc) ;
-## - `Protocol.VERSION` reste 18 : rien de ceci ne passe sur le fil.
+## - `Protocol.VERSION` reste 19 : rien de ceci ne passe sur le fil.
 ##
 ## - **les tenues sombres** (`--corps=sombre`, `sombre2`, `sombre3`, 2026-09-23 soir) : éteintes par défaut, chaque rôle à
 ##   son rapport de clarté au gris (borné par `Charte.DIM`), V2 jamais au-dessus du gris, le noir absolu dans le miroir de la
@@ -506,7 +506,7 @@ func _l_equite() -> void:
 
 func _le_fil() -> void:
 	print("— le fil")
-	_check("Protocol.VERSION reste 18", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
+	_check("Protocol.VERSION reste 19", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 19"))
 
 
 ## Miroir de `portrait_teindre`, dans l'espace brut du shader (valeurs affichées : le rendu Compatibility montre les couleurs

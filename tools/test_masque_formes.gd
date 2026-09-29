@@ -16,7 +16,7 @@
 ##   grain, même lavage), placées avant la pâte, et, rejouées sur la pâte du processeur (`IsoPate`, son miroir formule pour
 ##   formule) en des dizaines de milliers de points, elles ne tranchent JAMAIS autrement que les certitudes de Gadgets ;
 ##   V5, le juge ajusté : son polygone contient le disque de chaque couche vu depuis lui, et il est plus petit que le carré ;
-## - rien sur le fil : `Protocol.VERSION` reste 18.
+## - rien sur le fil : `Protocol.VERSION` reste 19.
 ##
 ## Ce qu'elle ne prouve pas : que le GPU compile les variantes (le lanceur de série refuse toute prise dont le journal porte
 ## une erreur de shader) ni la réponse au pixel — `loupe-fusee-masque-formes` et `tools/masque_fumee/formes.py`.
@@ -52,7 +52,7 @@ func _run() -> void:
 	_la_lumiere_d_abord()
 	_le_juge_ajuste()
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
-	_check("Protocol.VERSION reste 18", version == 18, str(version))
+	_check("Protocol.VERSION reste 19", version == 19, str(version))
 	_check("assez de vérifications (%d ≥ 20)" % _verifications, _verifications >= 20)
 	print("\n%d vérifications, %d échec(s)" % [_verifications, _failures])
 	quit(1 if _failures > 0 else 0)

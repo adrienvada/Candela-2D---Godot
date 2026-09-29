@@ -77,9 +77,25 @@ func _vider() -> void:
 		v.vider()
 
 
-## Laisse passer l'attaque du liseré (90 ms), puis photographie la fenêtre.
-func _photo(nom: String, legende: String, attente := 0.14) -> void:
-	await create_timer(attente).timeout
+## Fige chaque liseré vivant au sommet de sa vie (la fin de l'attaque), et arrête son
+## vieillissement le temps de la photo.
+##
+## ⚠️ **Sous Xvfb, une image dure bien plus que le liseré ne vit à son sommet.** Le
+## premier jet attendait 0,14 s de minuteur : le rendu logiciel mettait plusieurs
+## dixièmes par image, et les liserés photographiés étaient déjà presque éteints —
+## on aurait jugé leur couleur sur une traîne.
+func _figer() -> void:
+	for v in _vues():
+		for t in v._traces:
+			t["age"] = SV.ATTAQUE_S
+		v.set_process(false)
+		v._toile.queue_redraw()
+
+
+func _photo(nom: String, legende: String) -> void:
+	_figer()
+	await process_frame
+	await process_frame
 	await RenderingServer.frame_post_draw
 	var img := root.get_texture().get_image()
 	var chemin := _sortie.path_join(nom + ".png")

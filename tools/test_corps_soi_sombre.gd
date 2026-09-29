@@ -13,7 +13,7 @@
 ##   jamais plus clair que le corps éclairé d'aujourd'hui ou que la silhouette ; le liseré du côté de la lumière seulement ;
 ## - **la direction du liseré voit la propre torche du joueur** : le rayon « derrière un mur ? » exclut son corps, qui est
 ##   sur la couche des murs (`Presentation3D.direction_du_lisere`) — sans l'exclure, sa rétrodiffusion ne compte jamais ;
-## - `Protocol.VERSION` reste 18 ; aucun fichier de simulation ne connaît le drapeau.
+## - `Protocol.VERSION` reste 19 ; aucun fichier de simulation ne connaît le drapeau.
 ##
 ## Ce qu'elle ne prouve pas : l'image. La planche (`docs/iso/cloud/corps-sombre/`) la mesure, vue de l'adversaire comprise.
 ##
@@ -174,8 +174,8 @@ func _le_texte() -> void:
 		code.find("ALPHA = a;") > code.find("vec3 soi = soi_sombre_composer("))
 	_check("le shader éclairé (lumière 3D) ne porte pas l'essai — dit dans le rapport",
 		not FileAccess.get_file_as_string("res://corps_iso_eclaire.gdshader").contains("CORPS_SOI_SOMBRE"))
-	_check("Protocol.VERSION reste 18 : rien sur le fil",
-		FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
+	_check("Protocol.VERSION reste 19 : rien sur le fil",
+		FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 19"))
 	var sim_propre := true
 	for f in ["res://player.gd", "res://game_state.gd", "res://network_manager.gd", "res://protocol.gd"]:
 		sim_propre = sim_propre and not FileAccess.get_file_as_string(f).contains("soi_sombre")

@@ -15,7 +15,7 @@
 ##   murets puis y butant quand elle redescend sous eux ; braises et mine au ras du sol ;
 ## - les deux lightmaps (J1, J2) partagent le même monde 2D, donc les mêmes lumières et les mêmes
 ##   hauteurs, et reçoivent la hauteur des murets et le seuil « sans origine » chacune dans son repère ;
-## - rien sur le fil : `Protocol.VERSION` reste 18.
+## - rien sur le fil : `Protocol.VERSION` reste 19.
 ##
 ## **Les volumes, les lueurs et les miroirs** (étapes 3 à 5), sur une vraie manche iso, gadgets posés par
 ## le VRAI chemin (`GameState._do_spawn_gadget`, sous les slugs du jeu) —
@@ -65,7 +65,7 @@ func _run() -> void:
 	await _la_fusee()
 	_braises_et_mine()
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
-	_check("Protocol.VERSION reste 18", version == 18, str(version))
+	_check("Protocol.VERSION reste 19", version == 19, str(version))
 	_les_shaders()
 	_le_faisceau()
 	_le_masque_de_la_fumee()

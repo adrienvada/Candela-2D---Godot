@@ -244,13 +244,22 @@ const FLOU_REVERB := 2.0
 const LARGEUR_MIN_DEG := 10.0
 const LARGEUR_MAX_DEG := 180.0
 
-## La présence d'un liseré (opacité et épaisseur) suit une puissance du niveau
-## perçu : au-dessus de 1, les sons faibles s'effacent plus vite que les forts.
-const GAMMA_PRESENCE := 1.8
-const ALPHA_MAX := 0.9
+## La présence d'un liseré (opacité et épaisseur), par paliers posés sur les mêmes
+## ancres : le pas accroupi au contact est « très très très léger » (Adrien), le pas
+## de course au contact se lit franchement, le tir est plein.
+##
+## ⚠️ **Une puissance du niveau (γ = 1,8) rendait le pas de course à 0,29 d'opacité à
+## 260 px** : juste pour le modèle, illisible à l'écran — le banc d'images l'a montré
+## le 2026-09-29, un liseré de sable à 30 % sur du noir ne se voit pas en jouant. Les
+## paliers disent directement ce qu'on doit VOIR à chaque ancre.
+const PRESENCE_FLOU := 0.2
+const PRESENCE_NET := 0.7
+const ALPHA_MAX := 0.95
 ## Épaisseur du liseré, en pixels d'une vue de 1080 de haut.
-const EPAISSEUR_MIN_PX := 3.0
-const EPAISSEUR_MAX_PX := 14.0
+const EPAISSEUR_MIN_PX := 6.0
+const EPAISSEUR_MAX_PX := 26.0
+## La part de l'épaisseur qui reste pleine avant le fondu vers l'intérieur.
+const EPAISSEUR_PLEINE := 0.45
 ## La salle allonge aussi la traîne : jusqu'à ce facteur, à pleine réverbération.
 const TRAINE_REVERB := 1.0
 
@@ -288,8 +297,7 @@ static func percevoir(categorie: int, niveau_db: float, distance: float, portee:
 	var r_salle := clampf(distance / diagonale, 0.0, 1.0) if diagonale > 0.0 else r
 	var flou_salle := FLOU_REVERB * maxf(wet, 0.0) * r_salle * resonance
 	largeur = minf(largeur * (1.0 + flou_salle) * (1.0 + FLOU_OCCLUSION * part), LARGEUR_MAX_DEG)
-	var presence := pow(clampf((percu - NIVEAU_SEUIL_DB) / (NIVEAU_FORT_DB - NIVEAU_SEUIL_DB), 0.0, 1.0),
-		GAMMA_PRESENCE)
+	var presence := presence_de(percu)
 	var duree := float(DUREE.get(categorie, 0.5)) * (1.0 + TRAINE_REVERB * maxf(wet, 0.0) * resonance)
 	return {
 		"largeur": largeur,
@@ -299,6 +307,18 @@ static func percevoir(categorie: int, niveau_db: float, distance: float, portee:
 		"douceur": clampf(flou_salle + FLOU_OCCLUSION * part, 0.0, 1.0),
 		"niveau_percu": percu,
 	}
+
+## La présence (0 à 1) d'un son perçu à `niveau_percu` dB : par paliers linéaires,
+## du seuil (0) à l'ancre floue (`PRESENCE_FLOU`), à l'ancre nette (`PRESENCE_NET`),
+## puis au coup de feu (1).
+static func presence_de(niveau_percu: float) -> float:
+	if niveau_percu <= NIVEAU_SEUIL_DB:
+		return 0.0
+	if niveau_percu <= NIVEAU_FLOU_DB:
+		return PRESENCE_FLOU * inverse_lerp(NIVEAU_SEUIL_DB, NIVEAU_FLOU_DB, niveau_percu)
+	if niveau_percu <= NIVEAU_NET_DB:
+		return lerpf(PRESENCE_FLOU, PRESENCE_NET, inverse_lerp(NIVEAU_FLOU_DB, NIVEAU_NET_DB, niveau_percu))
+	return lerpf(PRESENCE_NET, 1.0, clampf(inverse_lerp(NIVEAU_NET_DB, NIVEAU_FORT_DB, niveau_percu), 0.0, 1.0))
 
 ## L'opacité d'un liseré au fil de sa vie : une attaque brève, puis la courbe
 ## d'extinction de la charte (vite au début, une traîne ensuite — comme une
@@ -313,14 +333,25 @@ static func enveloppe(age: float, duree: float) -> float:
 	var t := (age - ATTAQUE_S) / maxf(duree - ATTAQUE_S, 0.001)
 	return 1.0 - Charte.courbe(Charte.Courbe.EXTINCTION, t)
 
-## Le profil d'un liseré en travers de sa largeur : 1 en son centre, 0 à ses
-## bords. `x` va de -1 à 1. Un liseré net a un cœur marqué ; la salle et les
-## murs l'aplatissent (`douceur`), et c'est ainsi qu'un son flou se reconnaît.
+## Le profil d'un liseré en travers de sa largeur : 1 en son cœur, 0 à ses bords.
+## `x` va de -1 à 1. **Un liseré net a un cœur PLEIN** — un plateau sur 55 % de sa
+## largeur, puis un fondu court : on lit sa largeur d'un coup d'œil. La salle et
+## les murs (`douceur`) mangent le plateau jusqu'à n'en laisser qu'un dégradé, et
+## c'est ainsi qu'un son flou se reconnaît.
+##
+## ⚠️ Le premier jet était un cosinus carré : juste en théorie, mais le cœur visible
+## ne couvrait qu'un tiers de la largeur annoncée — un liseré « de 14° » se lisait à
+## 5° (banc d'images du 2026-09-29).
+const PLATEAU := 0.55
+
 static func profil(x: float, douceur: float) -> float:
-	if absf(x) >= 1.0:
+	var ax := absf(x)
+	if ax >= 1.0:
 		return 0.0
-	var c := cos(x * PI * 0.5)
-	return pow(c, lerpf(2.0, 0.6, clampf(douceur, 0.0, 1.0)))
+	var plein := PLATEAU * (1.0 - clampf(douceur, 0.0, 1.0))
+	if ax <= plein:
+		return 1.0
+	return 1.0 - smoothstep(0.0, 1.0, (ax - plein) / (1.0 - plein))
 
 # =============================================================================
 # LA GÉOMÉTRIE — du monde au bord de l'écran
@@ -346,10 +377,11 @@ static func point_du_bord(origine: Vector2, angle: float, cadre: Rect2) -> Vecto
 		return o
 	return o + d * t
 
-## La bande d'un liseré : des couples de points (bord, intérieur), du premier
-## bord angulaire au second, avec le profil de chaque couple. Le point intérieur
-## recule le long du rayon, vers `origine`, de `epaisseur` : la bande reste
-## continue dans les coins, là où une normale au bord sauterait.
+## La bande d'un liseré : des triplets de points (bord, milieu, intérieur), du
+## premier bord angulaire au second, avec le profil de chaque triplet. Les points
+## reculent le long du rayon, vers `origine` — de `EPAISSEUR_PLEINE` × `epaisseur`
+## pour le milieu (jusque-là, plein), de `epaisseur` pour l'intérieur (fondu) : la
+## bande reste continue dans les coins, là où une normale au bord sauterait.
 ##
 ## ⚠️ **Les coins de l'écran sont des échantillons obligés.** Entre deux rayons
 ## réguliers qui tombent de part et d'autre d'un coin, le segment coupe le coin
@@ -361,6 +393,7 @@ static func bande(origine: Vector2, angle_centre: float, largeur_deg: float, cad
 	var demi := deg_to_rad(largeur_deg) * 0.5
 	var n := maxi(2, int(ceil(largeur_deg / maxf(pas_deg, 0.5))))
 	var bords := PackedVector2Array()
+	var milieu := PackedVector2Array()
 	var dedans := PackedVector2Array()
 	var poids := PackedFloat32Array()
 	var o := origine.clamp(cadre.position + Vector2.ONE, cadre.end - Vector2.ONE)
@@ -379,10 +412,12 @@ static func bande(origine: Vector2, angle_centre: float, largeur_deg: float, cad
 		var b := point_du_bord(o, a, cadre)
 		var vers_o := o - b
 		var l := vers_o.length()
+		var dir := vers_o / l if l > 0.001 else Vector2.ZERO
 		bords.append(b)
-		dedans.append(b + vers_o / l * minf(epaisseur, l) if l > 0.001 else b)
+		milieu.append(b + dir * minf(epaisseur * EPAISSEUR_PLEINE, l))
+		dedans.append(b + dir * minf(epaisseur, l))
 		poids.append(profil(x, douceur))
-	return {"bords": bords, "dedans": dedans, "poids": poids}
+	return {"bords": bords, "milieu": milieu, "dedans": dedans, "poids": poids}
 
 ## L'angle à l'écran d'un son, depuis l'auditeur : entre deux points PROJETÉS,
 ## parce qu'en vue inclinée l'angle du monde n'est plus celui de l'écran. NAN si

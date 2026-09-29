@@ -10,7 +10,7 @@
 ##  (b) l'énergie (donc l'éblouissement, `Fusee.energie_relative`) : ne dépend pas du drapeau ;
 ##  (c) le sol éclairé (le brun des tuiles, ROADMAP « Les 8° vers l'orange ») : luminance à ±3 %, teinte à 353° ± 3 ;
 ##  (e) la lumière reste rouge (FU2.1) : le rouge est le canal maximal, saturation ≥ 0,5 ; la pâte la compte colorée
-##      (poids de neutralité nul, comme la détresse) ; `Protocol.VERSION` reste 18.
+##      (poids de neutralité nul, comme la détresse) ; `Protocol.VERSION` reste 19.
 ## Le noir absolu (d) se prouve à l'image (le photographe), pas ici : voir le rapport.
 ## Ne nomme pas `Fusee` (autoloads) : la couleur de détresse se lit dans le TEXTE de fusee.gd, comme `test_iso_beaute.gd`.
 extends SceneTree
@@ -93,7 +93,7 @@ func _run() -> void:
 	Couleur.poser_rouge_sang(false)
 	_sol(d)
 	_reste_rouge(d)
-	_check("Protocol.VERSION reste 18", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
+	_check("Protocol.VERSION reste 19", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 19"))
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:

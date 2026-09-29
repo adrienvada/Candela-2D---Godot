@@ -212,7 +212,23 @@ func _test_enveloppe() -> void:
 	_proche(SV.enveloppe(0.7, 0.5), 0.0, "enveloppe éteinte après le terme")
 	_proche(SV.profil(0.0, 0.0), 1.0, "profil plein au centre")
 	_proche(SV.profil(1.0, 0.0), 0.0, "profil nul au bord")
-	_check(SV.profil(0.6, 1.0) > SV.profil(0.6, 0.0), "un liseré flou a les bords plus pleins")
+	_proche(SV.profil(0.5, 0.0), 1.0, "un liseré net a un cœur plein (plateau)")
+	_check(SV.profil(0.3, 1.0) < SV.profil(0.3, 0.0), "un liseré flou n'a plus de plateau : il fond dès son cœur")
+	_check(SV.profil(0.95, 0.0) < 0.1, "un liseré net fond vite à son bord")
+	# La présence, par paliers sur les ancres.
+	_proche(SV.presence_de(SV.NIVEAU_SEUIL_DB), 0.0, "présence nulle au seuil")
+	_proche(SV.presence_de(SV.NIVEAU_FLOU_DB), SV.PRESENCE_FLOU, "présence du pas accroupi")
+	_proche(SV.presence_de(SV.NIVEAU_NET_DB), SV.PRESENCE_NET, "présence du pas de course")
+	_proche(SV.presence_de(SV.NIVEAU_FORT_DB), 1.0, "présence du tir")
+	_proche(SV.presence_de(SV.NIVEAU_FORT_DB + 6.0), 1.0, "au-delà du tir, la présence plafonne")
+	var prec := -1.0
+	var croissante := true
+	for i in 41:
+		var db := lerpf(SV.NIVEAU_SEUIL_DB - 3.0, SV.NIVEAU_FORT_DB + 3.0, float(i) / 40.0)
+		var pr := SV.presence_de(db)
+		croissante = croissante and pr >= prec - 0.000001
+		prec = pr
+	_check(croissante, "la présence ne décroît jamais quand le son monte")
 
 
 # --- La géométrie du bord ---------------------------------------------------------------
@@ -235,8 +251,16 @@ func _test_geometrie() -> void:
 	var b := SV.bande(o, -PI / 4.0, 90.0, cadre, 12.0, 0.0)
 	var bords: PackedVector2Array = b["bords"]
 	var dedans: PackedVector2Array = b["dedans"]
+	var milieu: PackedVector2Array = b["milieu"]
 	var poids: PackedFloat32Array = b["poids"]
-	_check(bords.size() == dedans.size() and bords.size() == poids.size(), "bande cohérente")
+	_check(bords.size() == dedans.size() and bords.size() == poids.size() and bords.size() == milieu.size(),
+		"bande cohérente")
+	var entre := true
+	for i in bords.size():
+		var d_milieu := bords[i].distance_to(milieu[i])
+		var d_dedans := bords[i].distance_to(dedans[i])
+		entre = entre and d_milieu <= d_dedans + 0.001 and absf(d_milieu - 12.0 * SV.EPAISSEUR_PLEINE) < 0.01
+	_check(entre, "l'anneau plein s'arrête à %.0f %% de l'épaisseur, avant le fondu" % (SV.EPAISSEUR_PLEINE * 100.0))
 	_check(bords.size() >= 31, "bande assez fine (%d points pour 90°)" % bords.size())
 	var sur_le_bord := true
 	var continu := true

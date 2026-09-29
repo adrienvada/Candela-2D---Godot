@@ -6044,3 +6044,26 @@ d'Adrien (réversible ; leurs branches et rapports restent sur GitHub).
 
 **Ce que la 0.7.0 n'a pas** : une mesure de cadence de l'ensemble sur le Mac (la série courte suit la publication) ; une
 preuve sous le pilote d'Apple de ce qui est prouvé sous Mesa ; les réponses à Q15, Q37, Q38 et Q42.
+
+## 2026-09-29 — Le son rendu visible, et une 0.7.1 qui ne touche pas au fil (session « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/unrailed-isometric-feasibility-44klgh`)
+
+Adrien, le matin : « je veux que le bruit ne soit pas seulement sonore […] un liseré sur les bords de l'écran », puis, sur
+le plan : « Je veux qu'on commence par le son rendu visible », et les réponses Q45 à Q49. Le modèle ne crée aucune
+échelle : il pose ses deux cas (10° pour le pas de course tout près, 180° pour l'accroupi) sur les niveaux que le banc audio
+avait déjà jugés, et en dérive le reste. Deux sous-agents en parallèle, chacun sur sa branche : Q38 (fait, suite verte)
+et Q15 + Q42 (en cours).
+
+**Ce qui a coûté.** Le premier tirage d'images ne se lisait pas : un modèle juste peut dessiner un liseré invisible, et
+seul le banc d'images l'a dit — la présence en puissance du niveau et le profil en cosinus carré sont remplacés par des
+paliers et un plateau (« Pièges connus » et chantier). Le cache d'import du dossier principal datait du 13/09 : `charte.gd`
+refusait de compiler en `--script` (« DrapeauxDeLancement not declared ») jusqu'à un `--import`. Et deux heures écrites de
+mémoire dans un ordre et sur le tableau (13:25, 13:20) quand `date` disait 13:02 : **une heure s'écrit en lisant l'horloge,
+jamais en l'estimant** — c'est la Concierge qui l'a relevé.
+
+**Ce que la lecture du code a trouvé en route**, sans le corriger seul : en ligne, personne n'entend le clic à vide de
+l'autre (Q54) ; et le client n'entendait ni les rechargements ni les frôlements de l'hôte — ça, c'était une asymétrie, donc
+corrigé (S6, protocole 19). Sous 30 px/s, aucun pas ne part (Q50).
+
+**La 0.7.1** : `intro-v2` (poussée par la session de l'intro sur le mot d'Adrien) et Q38, sur `candidat-0.7.1`, version
+0.7.1 au protocole 18 — un joueur en 0.7.0 et un en 0.7.1 se trouvent toujours. Q15, Q42 et le point de braise attendent la
+0.8.0 : tout ce qui change ce que voit un joueur de l'autre attend la version qui sépare les populations.

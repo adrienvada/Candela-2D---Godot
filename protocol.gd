@@ -304,7 +304,15 @@ class_name Protocol
 ## impose `VERSION = 19`**, donc la mineure suivante (0.7.x → 0.8.0), et coupe la
 ## population en deux jusqu'à ce que les deux côtés aient mis à jour.
 ## `tools/verifier_publication.sh`, lancé AVANT le tag, refuse la mineure figée.
-const VERSION := 18
+##
+## 19 — `Player.rpc_bruit_de_corps` : l'hôte fait entendre au client les
+##     rechargements et les frôlements de son propre joueur (chantier SON VISIBLE,
+##     étape S6, 2026-09-29). Le client n'interpole que la trajectoire de l'hôte :
+##     il n'entendait jamais ces deux bruits, quand l'hôte, qui simule les deux
+##     joueurs, entendait ceux du client — une asymétrie d'avant que le son rendu
+##     visible aurait dessinée. **Non publiée** : la 0.8.0 (le son rendu visible,
+##     Q15, Q42) peut encore cumuler sous ce numéro tant qu'aucun tag ne l'a figé.
+const VERSION := 19
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -323,7 +331,7 @@ const VERSION := 18
 ## numéro TRANCHÉ d'abord — il reste 18, aucun tag ne l'ayant figé — : la
 ## signature de `rpc_send_inputs` gagne la posture. Et encore en MB3b (même numéro,
 ## même raison) : elle gagne le geste d'enjamber.
-const WIRE_WITNESS := "ebde1452efa216c3"
+const WIRE_WITNESS := "5283c2e846fec404"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

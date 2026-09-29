@@ -99,7 +99,7 @@ func _le_fil() -> void:
 	_check("NetworkInputProvider ignore tout de la vue iso",
 		reseau != "" and not reseau.to_lower().contains("iso") and not reseau.contains("Presentation3D"))
 	var version = (load("res://protocol.gd") as GDScript).get_script_constant_map().get("VERSION")
-	_check("Protocol.VERSION reste 18", version == 18, str(version))
+	_check("Protocol.VERSION reste 19", version == 19, str(version))
 
 
 ## Le stick tourné du lacet : sa droite vise la droite de l'écran, son bas le bas de l'écran, à tout lacet.

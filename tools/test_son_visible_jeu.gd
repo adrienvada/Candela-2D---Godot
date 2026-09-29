@@ -285,6 +285,30 @@ func _en_jeu(audio: Node) -> void:
 	await process_frame
 	await process_frame
 
+	# S6 — les bruits de corps de l'hôte, tels que le client les reçoit.
+	print("\n--- S6 : les bruits de corps de l'hôte arrivent chez le client ---")
+	var reseau := root.get_node("NetworkManager")
+	var modes: Dictionary = reseau.get_script().get_script_constant_map()["GameMode"]
+	_check("l'hôte envoie les bruits de SON joueur, en ligne",
+		p1.bruit_a_repliquer(int(modes["ONLINE_HOST"]), 0, true))
+	_check("… jamais ceux du joueur du client (le client le prédit)",
+		not p1.bruit_a_repliquer(int(modes["ONLINE_HOST"]), 1, true))
+	_check("… jamais depuis le client",
+		not p1.bruit_a_repliquer(int(modes["ONLINE_CLIENT"]), 0, true))
+	_check("… jamais en écran partagé ni sans pair",
+		not p1.bruit_a_repliquer(int(modes["LOCAL_SPLITSCREEN"]), 0, true)
+		and not p1.bruit_a_repliquer(int(modes["ONLINE_HOST"]), 0, false))
+	_vider(vues)
+	p2.global_position = a + Vector2(180, -60)
+	var genres: Dictionary = p1.get_script().get_script_constant_map()["BruitDeCorps"]
+	p1.rpc_bruit_de_corps(int(genres["RECHARGE"]), "pistolet", a + Vector2(8, 0))
+	_check("le rechargement de J1 reçu : J2 le voit, en acier",
+		vues[1].traces_vivantes() == 1 and vues[1].traces()[0]["couleur"] == SV.couleur(SV.Categorie.RECHARGE))
+	_check("… et J1 ne voit pas le sien", vues[0].traces_vivantes() == 0)
+	p1.rpc_bruit_de_corps(int(genres["FROLEMENT"]), "", a)
+	_check("le frôlement de J1 reçu : J2 le voit",
+		vues[1].traces_vivantes() == 2 and vues[1].traces()[1]["couleur"] == SV.couleur(SV.Categorie.FROLEMENT))
+
 	# Fermé : décompte, puis killcam.
 	_vider(vues)
 	main.countdown_left = 1.0

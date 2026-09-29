@@ -11,7 +11,7 @@
 ## - **la silhouette** : pour chaque classe détaillée, le corps seul, accessoires compris, dans le couloir de 17,5 px (sous la
 ##   zone de touche de 18 px), debout et accroupi, à seize visées — et la garde VUE ROUGIR : une boîte posée hors du couloir est bien refusée ;
 ## - **la visibilité** : les couleurs des accessoires, à un rapport ≤ 1 du gris de la classe ; la matière peinte ne fait
-##   qu'assombrir (pores et marbrage < 1) ; albédo seul, ni `light()` ni émission ; `Protocol.VERSION` 18.
+##   qu'assombrir (pores et marbrage < 1) ; albédo seul, ni `light()` ni émission ; `Protocol.VERSION` 19.
 ##
 ## Ce qu'elle ne prouve pas : l'image. La planche du pistolet (banc des lumières et banc des corps) la mesure.
 ##
@@ -403,4 +403,4 @@ func _la_visibilite() -> void:
 	var suivre := pres.substr(pres.find("func _suivre_le_fantome("), 3000)
 	_check("Q33 : la killcam reste en aplat — le corps du fantôme a une opacité de 0 dans chaque vue",
 		suivre.contains('set_shader_parameter("opacite_%d" % (vue_id + 1), 0.0)'))
-	_check("Protocol.VERSION reste 18 : rien sur le fil", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
+	_check("Protocol.VERSION reste 19 : rien sur le fil", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 19"))

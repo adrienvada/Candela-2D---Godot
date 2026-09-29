@@ -3223,6 +3223,15 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un modèle juste peut dessiner un indicateur invisible : le juger à l'image, pas aux nombres (2026-09-29)
+
+Chantier SON VISIBLE. Toutes les suites passaient — largeurs, ancres, équité miroir — et le premier tirage du banc
+d'images ne montrait presque rien : la présence suivait une puissance du niveau (γ = 1,8), juste pour le modèle, qui
+rendait le pas de course à 30 % d'opacité sur 7 px ; le profil en cosinus carré ne laissait visible qu'un tiers de la
+largeur annoncée. Rien de faux dans les nombres, rien de lisible à l'écran. **Un indicateur se dose sur ce qu'on doit VOIR
+à chaque cas de référence** (paliers de présence, cœur en plateau), et une capture sous Xvfb doit figer l'effet à son
+sommet : une image y dure plus longtemps que le sommet d'un liseré, et on aurait jugé une traîne.
+
 ### Un réglage posé sur la voix APRÈS l'entonnoir échappe à tout ce qui lit l'entonnoir (2026-09-29)
 
 Chantier SON VISIBLE. Le pas accroupi (MB2) recevait son écart de niveau et sa portée réduite **sur la voix rendue**, après
@@ -29428,23 +29437,41 @@ salle, plus l'arc est large et léger. Plus on se déplace lentement, moins on f
   haut-parleurs ; le liseré est propre à chaque écran.
 - `--sans-son-visible` (débogage seulement) rend le jeu d'avant.
 
+### Le dosage à l'image (banc `tools/banc_son_visible.gd`, sous Xvfb)
+
+Neuf plans publiés pour Adrien le 2026-09-29 (page « Son rendu visible »). **Le premier tirage ne se lisait pas** : la
+présence suivait une puissance du niveau (γ = 1,8) et le profil un cosinus carré — le pas de course à 260 px sortait à 30 %
+d'opacité sur 7 px, et le cœur visible ne couvrait qu'un tiers de la largeur annoncée. Recalé sur ce qu'on doit VOIR à
+chaque ancre : présence par paliers (accroupi 0,2 ; pas de course 0,7 ; tir 1), bande de 6 à 26 px dont 45 % pleins avant
+le fondu, cœur en plateau sur 55 % de la largeur (la salle et les murs le mangent). Le banc fige chaque liseré au sommet de
+sa vie pour la photo : sous Xvfb, une image dure plus longtemps que ce sommet.
+
+### S6 — les bruits de corps de l'hôte, chez le client
+
+En ligne, l'hôte simule les deux joueurs et entendait les rechargements et les frôlements du client ; le client, qui
+n'interpole que la trajectoire de l'hôte, n'entendait jamais les siens. `Player.rpc_bruit_de_corps` les lui envoie (le
+joueur de l'hôte seulement : celui du client est prédit chez lui et simulé chez l'hôte). **Protocole 19**, non publié.
+Tir, douille, pas, enjambement et souffle étaient déjà symétriques. Neuf suites gardaient « `Protocol.VERSION` reste 18 »
+pour prouver que leur effet visuel ne touche pas au fil (corps, masque, killcam, gadgets, rouge de la fusée) : elles
+passent à 19 — le fil a bougé pour S6, pas pour elles, et c'est ce qu'elles vérifient désormais.
+
 ### Preuves
 
-`test_son_visible` (le modèle, 237 contrôles) et `test_son_visible_jeu` (51 : couverture des familles, ancres liées,
+`test_son_visible` (le modèle, 246 contrôles) et `test_son_visible_jeu` (58 : couverture des familles, ancres liées,
 entonnoir, **équité miroir à 45° B** — J1 entendant J2 à +d et J2 entendant J1 à -d voient le même liseré, même angle à
-l'écran mesuré par la caméra de chacun —, killcam, décompte, vue unique). Suites audio, vues, fusée, accroupi et netcode
-vertes.
+l'écran mesuré par la caméra de chacun —, S6, killcam, décompte, vue unique). Lot complet vert.
 
 ### Ce qui reste
 
-1. **Les images pour Adrien** (banc sous Xvfb) et le dosage à l'œil : toutes les valeurs sont des points de départ.
-2. **À trancher par Adrien** : (a) sous 30 px/s (un stick à 11 %), aucun pas ne se déclenche — debout comme accroupi,
-   `player.gd` ignore les déplacements de moins de 0,5 px par image ; c'était vrai avant, le liseré en fait un mode
-   furtif ; (b) le liseré se coupe-t-il dans les réglages (confort) ou est-il le même pour tous (monde) — défaut : le même
-   pour tous ; (c) les sons de la salle ne dessinent rien, la combustion de la fusée dessine en continu.
-3. **Une asymétrie d'avant, que le liseré rend visible** : en ligne, le client n'entend ni les rechargements, ni les
-   percuteurs, ni les frôlements de l'hôte (non répliqués), quand l'hôte entend ceux du client. À corriger dans la 0.8.0.
-4. Le protocole 19 à la publication.
+1. **Le dosage avec Adrien**, sur les images puis en jouant : toutes les valeurs sont des points de départ.
+2. **À trancher par Adrien** (tableau de bord) : Q50 — sous 30 px/s (un stick à 11 %), aucun pas ne se déclenche, debout
+   comme accroupi (`player.gd` ignore les déplacements de moins de 0,5 px par image) ; c'était vrai avant, le liseré en fait
+   un mode furtif. Q51 — le liseré se coupe-t-il dans les réglages ou est-il le même pour tous (défaut : le même pour tous).
+   Q52 — les sons de la salle ne dessinent rien, la combustion de la fusée dessine en continu. Q54 — **en ligne, personne
+   n'entend le clic à vide de l'autre** (le son est derrière la garde `_percu_ici`, posée pour le retour de refus) ; en
+   écran partagé, les deux l'entendent. V4.4 le voulait audible (« je suis désarmé, et je suis là »). Symétrique, donc
+   équitable : le rendre audible est un choix de jeu, pas une correction.
+3. La publication : `config/version` 0.8.0 (le fil a bougé), avec Q15 et Q42.
 
 ---
 

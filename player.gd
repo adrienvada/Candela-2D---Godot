@@ -1208,7 +1208,7 @@ func start_reload() -> void:
 	is_reloading = true
 	reload_time_left = current_weapon.duree_etape_recharge()
 	var slug: String = current_weapon.slug() if current_weapon.has_method("slug") else "pistolet"
-	AudioManager.play_weapon_reload(slug, global_position, player_id)
+	_bruit_de_corps(BruitDeCorps.RECHARGE, slug)
 	# Éjection de douille d'atelier au sol lors du rechargement
 	if slug != "arbalete":
 		var gs = get_tree().get_first_node_in_group("game_state")
@@ -1829,7 +1829,7 @@ func _physics_process(delta):
 			# un minuteur evite le crepitement d'un joueur immobile colle a une
 			# paroi, qui trahirait une position sans qu'aucun geste soit fait.
 			if get_slide_collision_count() > 0:
-				AudioManager.play_wall_brush(global_position, player_id)
+				_bruit_de_corps(BruitDeCorps.FROLEMENT)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
 			_foot_side = -_foot_side
@@ -2036,8 +2036,7 @@ func _physics_process(delta):
 					is_reloading = false
 				else:
 					reload_time_left = current_weapon.duree_etape_recharge()
-					AudioManager.play_weapon_reload(
-						current_weapon.slug(), global_position, player_id)
+					_bruit_de_corps(BruitDeCorps.RECHARGE, current_weapon.slug())
 			else:
 				is_reloading = false
 				if current_weapon:
@@ -2177,6 +2176,43 @@ func _physics_process(delta):
 ## qu'il est à portée et à découvert. Même règle que pour le passe-bas des
 ## torches : ce qui réagit à l'état d'un joueur doit se demander de qui il tient
 ## cet état.
+## SON VISIBLE, S6 (2026-09-29) — les bruits de corps que l'adversaire interpolé ne
+## peut pas refaire lui-même.
+##
+## ⚠️ **Une asymétrie d'avant, que le liseré rendait visible.** En ligne, l'hôte simule
+## les deux joueurs : il entend les rechargements et les frôlements du client. Le
+## client, lui, n'interpole que la trajectoire de l'hôte — ni `start_reload()` ni
+## `move_and_slide()` ne tournent pour lui, donc il n'entendait JAMAIS ces deux bruits
+## de l'hôte. Le son rendu visible les dessinant, l'hôte aurait vu le client recharger
+## derrière un mur, et jamais l'inverse. Tir, douille, pas, enjambement et souffle
+## étaient déjà symétriques (`trigger_shoot_visuals`, `rpc_update_hp`, la trajectoire).
+##
+## Le joueur de l'hôte (`player_id` 0) envoie donc ces bruits au client ; celui du
+## client n'a rien à envoyer : le client le prédit, et l'hôte le simule.
+enum BruitDeCorps { RECHARGE, FROLEMENT }
+
+## Pure : ce bruit doit-il partir vers le client ? Seulement en ligne, chez l'hôte,
+## pour son propre joueur.
+static func bruit_a_repliquer(mode: int, pid: int, pair_present: bool) -> bool:
+	return pair_present and mode == NetworkManager.GameMode.ONLINE_HOST and pid == 0
+
+func _bruit_de_corps(genre: int, arme: String = "") -> void:
+	_jouer_bruit_de_corps(genre, arme, global_position)
+	if bruit_a_repliquer(NetworkManager.current_mode, player_id, multiplayer.has_multiplayer_peer()):
+		rpc_bruit_de_corps.rpc(genre, arme, global_position)
+
+## [Client] Un bruit de corps de l'hôte, joué à la position où l'hôte l'a fait.
+@rpc("authority", "call_remote", "reliable")
+func rpc_bruit_de_corps(genre: int, arme: String, pos: Vector2) -> void:
+	_jouer_bruit_de_corps(genre, arme, pos)
+
+func _jouer_bruit_de_corps(genre: int, arme: String, pos: Vector2) -> void:
+	match genre:
+		BruitDeCorps.RECHARGE:
+			AudioManager.play_weapon_reload(arme, pos, player_id)
+		BruitDeCorps.FROLEMENT:
+			AudioManager.play_wall_brush(pos, player_id)
+
 func _percu_ici() -> bool:
 	var local := _index_joueur_local()
 	return local < 0 or player_id == local

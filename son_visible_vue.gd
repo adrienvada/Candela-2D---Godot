@@ -179,6 +179,7 @@ func _dessiner() -> void:
 		var b := SonVisible.bande(origine, float(t["angle"]), float(t["largeur"]), cadre,
 			float(t["epaisseur"]) * echelle, float(t["douceur"]))
 		var bords: PackedVector2Array = b["bords"]
+		var milieu: PackedVector2Array = b["milieu"]
 		var dedans: PackedVector2Array = b["dedans"]
 		var poids: PackedFloat32Array = b["poids"]
 		var n := bords.size()
@@ -186,19 +187,25 @@ func _dessiner() -> void:
 			continue
 		var couleur: Color = t["couleur"]
 		var alpha := float(t["alpha"]) * enveloppe
-		# Un ruban de quadrilatères : le bord porte la couleur, l'intérieur fond au
-		# transparent. Un seul appel par liseré, des triangles explicites — un
-		# polygone à triangulation automatique relierait des sommets lointains d'un
-		# ruban aussi fin.
+		# Deux rubans de quadrilatères : du bord au milieu la couleur reste pleine
+		# (à peine adoucie), du milieu à l'intérieur elle fond au transparent. Un
+		# seul appel par liseré, des triangles explicites — un polygone à
+		# triangulation automatique relierait des sommets lointains d'un ruban aussi
+		# fin.
 		var points := PackedVector2Array()
 		var couleurs := PackedColorArray()
 		var indices := PackedInt32Array()
 		for i in n:
+			var a_i := alpha * poids[i]
 			points.append(bords[i])
-			couleurs.append(Color(couleur, alpha * poids[i]))
+			couleurs.append(Color(couleur, a_i))
+			points.append(milieu[i])
+			couleurs.append(Color(couleur, a_i * 0.8))
 			points.append(dedans[i])
 			couleurs.append(Color(couleur, 0.0))
 		for i in n - 1:
-			var a := 2 * i
-			indices.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
+			var a := 3 * i
+			var s := a + 3
+			indices.append_array([a, a + 1, s, a + 1, s + 1, s,
+				a + 1, a + 2, s + 1, a + 2, s + 2, s + 1])
 		RenderingServer.canvas_item_add_triangle_array(toile_rid, indices, points, couleurs)

@@ -14,7 +14,7 @@
 ## - **la règle**, sur un miroir de `soi_fondu_poids` (seuils relus dans le texte) : poids 1 quand le corps d'aujourd'hui
 ##   vaut le sol, 0 au-delà du seuil haut, décroissant entre les deux ; le mélange n'est jamais plus clair que la plus claire
 ##   des deux couleurs (aujourd'hui, essai A) — noir absolu et règle des pochoirs tenus ;
-## - `Protocol.VERSION` reste 18 ; aucun fichier de simulation ne connaît le drapeau.
+## - `Protocol.VERSION` reste 19 ; aucun fichier de simulation ne connaît le drapeau.
 ##
 ## Ce qu'elle ne prouve pas : l'image. `docs/iso/cloud/corps-sombre-2/` la mesure, vue de l'adversaire comprise.
 ##
@@ -206,7 +206,7 @@ func _le_relais() -> void:
 
 func _le_reste_du_jeu() -> void:
 	print("— le reste du jeu n'en sait rien")
-	_check("Protocol.VERSION reste 18", Protocol.VERSION == 18)
+	_check("Protocol.VERSION reste 19", Protocol.VERSION == 19)
 	for chemin in ["res://player.gd", "res://game_state.gd", "res://network_manager.gd", "res://protocol.gd"]:
 		if FileAccess.file_exists(chemin):
 			var t := FileAccess.get_file_as_string(chemin)

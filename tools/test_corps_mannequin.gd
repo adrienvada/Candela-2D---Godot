@@ -200,7 +200,7 @@ func _les_corps() -> void:
 	VoxelCatalogue.forcer_tenue = "-"
 	var balle := FileAccess.get_file_as_string("res://bullet.gd")
 	_check("la zone de touche reste 18 px (bullet.gd)", balle.contains("const PLAYER_BODY_RADIUS := 18.0"))
-	_check("Protocol.VERSION reste 18 : rien sur le fil", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 18"))
+	_check("Protocol.VERSION reste 19 : rien sur le fil", FileAccess.get_file_as_string("res://protocol.gd").contains("const VERSION := 19"))
 	racine.queue_free()
 	await process_frame
 
