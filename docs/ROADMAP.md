@@ -3223,6 +3223,17 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une coupe placée sur une planche échantillonnée rate ce qui dure moins que le pas (2026-09-29)
+
+Intro v2, plan 2 (le pouce). Veo dessinait une étoile d'éclair plate à l'allumage de la lampe ; je l'avais « coupée »
+entre 2,95 et 3,35 s, bornes lues sur une planche à une image toutes les 0,5 s. Toutes les relectures du film passaient
+— planches, raccords, image médiane de chaque plan — et l'étoile était encore là, en grand, à 2,5 s du film : elle
+**grandit** de 2,67 à 3,00 s, et ma coupe n'en retirait que la moitié descendante. C'est l'essai fenêtre ouverte (dix
+images relevées pendant la lecture réelle) qui l'a montrée. **Une borne de coupe se MESURE image par image** (luminance
+de la zone concernée, à la cadence du clip), elle ne se lit pas sur une planche : ici 2,65 → 3,10 s. Et après tout
+montage, un crible de la luminance du film entier (saut > 12 niveaux d'une image à l'autre) liste chaque éclat — ils
+doivent tous tomber sur une coupe ou sur un effet voulu.
+
 ### Veo (Flow, image-vers-vidéo) peut ignorer l'image de départ ; un clip se contrôle contre elle (2026-09-28)
 
 Intro v2, plan 2. Deux des trois essais, faits avec le prompt complet, ont changé de décor, de style (aplats) et
