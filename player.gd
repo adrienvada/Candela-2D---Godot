@@ -302,6 +302,8 @@ var flashlight_on: bool = false
 ## socle des gadgets (`GadgetBase.SEUIL_OMBRE_MASQUEE`) : le leurre le lit aussi.
 const PART_SOI_DANS_LA_SUIE := 0.6
 var _ombre_coupee := false
+## L'étoile de ce corps, dans SA canvas — Q42 : son capteur ne la voit pas (voir `EtoileDeCorps`). `null` avant `_ready()`.
+var _etoile_de_corps: EtoileDeCorps
 ## L'opacité que le brouillage donne au pointeur et aux révélations, posée en
 ## physique ; `_process` la compose à chaque image avec le masque de la suie.
 var _alpha_brouillage := 1.0
@@ -904,6 +906,9 @@ func _ready():
 		# Une couche par joueur : c'est ce qui permet à une torche d'ombrer
 		# l'autre corps sans ombrer le sien. Voir `flashlight.shadow_item_cull_mask`.
 		main_occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
+		# Q42 — l'étoile quitte le monde partagé pour SA canvas : elle ombre toujours le sol, les murs et le corps d'en face,
+		# mais plus le capteur de CE corps. Le nœud reste le même (masque, forme, `visible`) : voir `etoile()`.
+		_etoile_de_corps = EtoileDeCorps.monter(self, main_occ)
 		
 	muzzle_flash.enabled = false
 	muzzle_flash.shadow_enabled = true
@@ -1098,14 +1103,14 @@ func _monter_occluder_de_torse() -> void:
 ## donnent une étoile qui épouse le corps ET le canon, ne peut pas produire de
 ## polygone dégénéré, et se calcule une fois par changement d'arme.
 func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
-	if not has_node("LightOccluder2D") or sil == null:
+	var occ := etoile()
+	if occ == null or sil == null:
 		return
 	# La forme se lit dans la charte depuis le 2026-09-11 : le leurre doit faire
 	# exactement le même trou, et une seule fonction le garantit.
 	var pts := Charte.ombre_de_silhouette(sil)
 	if pts.is_empty():
 		return
-	var occ := get_node("LightOccluder2D")
 	# ⚠️ **Une ressource NEUVE, jamais celle de la scène.** `player.tscn` déclare
 	# l'`OccluderPolygon2D` en sous-ressource, sans `resource_local_to_scene` : J1
 	# et J2 la PARTAGEAIENT, et dans un match entre deux classes les deux corps
@@ -1126,10 +1131,17 @@ func _couper_l_ombre(coupee: bool) -> void:
 	if coupee == _ombre_coupee:
 		return
 	_ombre_coupee = coupee
-	for nom in ["LightOccluder2D", "OccluderTorse"]:
-		var occ := get_node_or_null(nom)
+	for occ in [etoile(), get_node_or_null("OccluderTorse")]:
 		if occ != null:
 			occ.visible = not coupee
+
+
+## L'occluder de l'étoile de ce corps : sa canvas (`EtoileDeCorps`) une fois `_ready()` passé, le nœud de la scène avant.
+## Les gardes et le reste du corps la lisent ici, jamais par un chemin (`get_node("LightOccluder2D")`), qui a changé.
+func etoile() -> LightOccluder2D:
+	if _etoile_de_corps != null:
+		return _etoile_de_corps.occluder
+	return get_node_or_null("LightOccluder2D") as LightOccluder2D
 
 
 ## DA2.11 — le viseur, enfant du joueur donc porté par sa rotation.

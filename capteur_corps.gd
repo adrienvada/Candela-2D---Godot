@@ -34,6 +34,13 @@
 ## Rien du jeu : ni `visible`, ni les sprites, ni `player.gd`. Le disque est un nœud À
 ## LUI, positionné par `Presentation3D` à chaque image après l'interpolation des joueurs.
 ## Le capteur n'est jamais auditeur (`audio_listener_enable_2d` reste faux).
+##
+## ## Le corps ne voit pas sa propre ombre (Q42, Adrien, 2026-09-29)
+##
+## Un capteur ne compte que les occluders des canvas rattachées à sa sous-vue — et il ne compte PAS l'étoile du corps
+## qu'il lit (`proprietaire`) : voir `EtoileDeCorps`, qui dit pourquoi et comment. Les murs, le disque de torse et l'étoile
+## de l'AUTRE corps l'ombrent comme avant. Un objet sans étoile (une fusée, une mine) laisse `proprietaire` vide et voit
+## toutes les étoiles : ce qu'il reçoit ne change pas.
 class_name CapteurCorps
 extends SubViewport
 
@@ -49,12 +56,18 @@ const SHADER_LOCAL := preload("res://capteur_local.gdshader")
 
 var vue_id := 0
 var corps_id := 0
+## Le corps que ce capteur lit, quand il a une étoile : le joueur ou le leurre dont il ne voit pas l'ombre. `null` pour un
+## objet posé, qui n'en projette pas.
+var proprietaire: Node2D
 var _camera: Camera2D
 var _disque: Polygon2D
 
 
-static func creer(vue: int, corps: int, monde: World2D, couche: int, masque_lumiere: int) -> CapteurCorps:
+## `proprietaire` : le corps lu, dont l'étoile sort de ce capteur (`EtoileDeCorps`). Vide pour un objet.
+static func creer(vue: int, corps: int, monde: World2D, couche: int, masque_lumiere: int,
+		proprietaire_du_corps: Node2D = null) -> CapteurCorps:
 	var c := CapteurCorps.new()
+	c.proprietaire = proprietaire_du_corps
 	c.name = "CapteurVue%dCorps%d" % [vue + 1, corps + 1]
 	c.vue_id = vue
 	c.corps_id = corps
@@ -95,6 +108,12 @@ static func creer(vue: int, corps: int, monde: World2D, couche: int, masque_lumi
 	c._disque.material = materiau
 	c.add_child(c._disque)
 	return c
+
+
+func _enter_tree() -> void:
+	# Inscrit AVANT le rapprochement : les étoiles déjà nées le comptent alors parmi leurs vues (sauf la sienne).
+	add_to_group(EtoileDeCorps.GROUPE_CAPTEURS)
+	EtoileDeCorps.rapprocher_tout(get_tree())
 
 
 func _ready() -> void:

@@ -1906,16 +1906,16 @@ func _test_leurre() -> void:
 	_check("sa zone de touche reste celle d'un corps (18)", is_equal_approx(leurre.rayon, 18.0),
 		str(leurre.rayon))
 	_check("il porte donc un occluder",
-		leurre.get_node_or_null("Occluder") != null)
+		leurre.etoile() != null)
 	# ⚠️ **Son OMBRE est celle d'un joueur : l'étoile de la silhouette, pas un
 	# disque.** Adrien le 2026-09-11 : « un cercle comme actuellement ». L'étape 15
 	# avait copié le cercle provisoire du joueur, que l'étoile écrase à l'équipement.
-	var occ_l: LightOccluder2D = leurre.get_node_or_null("Occluder")
+	var occ_l: LightOccluder2D = leurre.etoile()
 	var etoile := Charte.ombre_de_silhouette(load("res://assets/sprites/fusil_silhouette.png"))
 	_check("son ombre est l'étoile de la silhouette de sa classe",
 		occ_l != null and etoile.size() == 32 and occ_l.occluder.polygon == etoile,
 		"%d sommets" % (occ_l.occluder.polygon.size() if occ_l else -1))
-	var occ_j: LightOccluder2D = gs.p1.get_node_or_null("LightOccluder2D")
+	var occ_j: LightOccluder2D = gs.p1.etoile()
 	_check("exactement celle d'un joueur de la même classe",
 		occ_j != null and occ_l != null and occ_j.occluder.polygon == occ_l.occluder.polygon)
 
@@ -1998,7 +1998,7 @@ func _test_leurre() -> void:
 			break
 	if autre != null:
 		gs.p2.equip_weapon(autre)
-	var occ_j2: LightOccluder2D = gs.p2.get_node_or_null("LightOccluder2D")
+	var occ_j2: LightOccluder2D = gs.p2.etoile()
 	_check("J2 équipé d'une autre classe ensuite, J1 garde l'ombre du leurre",
 		autre != null and occ_j != null and occ_l != null
 		and occ_j.occluder.polygon == occ_l.occluder.polygon)

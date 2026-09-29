@@ -1787,7 +1787,7 @@ func _test_suie_masque(gs: Node) -> void:
 	gs.p2._process(0.0)
 	_check("au cœur de la suie, l'autre ne voit plus le corps",
 		gs.p2.visual_enemy.modulate.a < 0.02, "%.3f" % gs.p2.visual_enemy.modulate.a)
-	_check("ni son ombre", not gs.p2.get_node("LightOccluder2D").visible)
+	_check("ni son ombre", not gs.p2.etoile().visible)
 	_check("et soi, on s'y devine encore", gs.p2.visual.modulate.a >= 0.35,
 		"%.3f" % gs.p2.visual.modulate.a)
 	if gs.p2.visual_enemy_ptr != null:
@@ -1859,7 +1859,7 @@ func _test_suie_masque(gs: Node) -> void:
 		gs.p2.equip_weapon(classe_j2)
 	await process_frame
 	await process_frame
-	_check("hors de la suie, l'ombre revient", gs.p2.get_node("LightOccluder2D").visible)
+	_check("hors de la suie, l'ombre revient", gs.p2.etoile().visible)
 	gs.p2._process(0.0)
 	if gs.p2.visual_enemy_ptr != null:
 		_check("et le pointeur réapparaît — il restait invisible après la suie",

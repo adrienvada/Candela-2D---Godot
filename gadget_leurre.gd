@@ -137,8 +137,18 @@ func _monter_occluder() -> void:
 	_etoile = Charte.ombre_de_silhouette(tex)
 	_occluder = _poser_occluder("Occluder", _etoile,
 		CanauxLumiere.couche_ombre_corps(poseur_id))
+	# Q42 — comme celle d'un joueur, l'étoile du leurre vit dans SA canvas : le capteur du leurre ne la voit pas (un corps ne
+	# s'ombre pas lui-même, et le leurre doit se comporter en tout comme le corps qu'il imite), le joueur qu'il imite et la
+	# lightmap oui. Le disque de torse, lui, reste dans le monde, comme celui d'un joueur.
+	EtoileDeCorps.monter(self, _occluder)
 	_occluder_torse = _poser_occluder("OccluderTorse", Charte.ombre_de_torse(),
 		CanauxLumiere.couche_ombre_torse(poseur_id))
+
+
+## L'occluder de l'étoile du leurre — le même geste que `Player.etoile()` : depuis Q42 il vit dans SA canvas
+## (`EtoileDeCorps`), sous un calque, et n'est plus un enfant direct du leurre.
+func etoile() -> LightOccluder2D:
+	return _occluder
 
 
 ## Un occluder du leurre : une forme, une couche d'ombre, et rien d'autre. Les deux

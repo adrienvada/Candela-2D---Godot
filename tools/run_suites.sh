@@ -226,6 +226,10 @@ SUITES+=(test_drapeaux)
 # Chantier SON VISIBLE (0.8.0, 2026-09-29) : le modèle du liseré, sans scène. Hors de la liste, même raison.
 SUITES+=(test_son_visible test_son_visible_jeu test_clic_a_vide)
 
+# Q42 (2026-09-29) — le corps ignore sa propre ombre : l'étoile de chaque corps vit dans SA canvas, que les capteurs de ce corps
+# ne comptent pas. Posé ici, comme la ligne du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
+SUITES+=(test_ombre_propre)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

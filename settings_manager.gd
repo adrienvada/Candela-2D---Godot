@@ -126,7 +126,15 @@ const MODE_RENDU_DESSUS := "dessus"
 ## là (`killcam_cadrage.gd`), le décalage de 0,25 ne bouge pas, et `--zoom=` garde la main en build de débogage.
 ## Un `settings.cfg` sans zoom réglé suit le nouveau défaut sans rien migrer — c'est pour ce jour-là que le zoom ne
 ## s'enregistre que réglé.
-const ZOOM_DUEL_DEFAUT := 1.5
+##
+## ⚠️ **Q15 — ×1,5 → ×1,25, UN ESSAI** (Adrien, 2026-09-29, à la question « le zoom du duel : ×1,25, ×1,5 (aujourd'hui), ×1,75
+## ou ×2 — plus on zoome, moins on voit au-delà de sa propre lumière » : « tentons 1.25 »). Il dit « tentons » : ce n'est pas
+## un choix définitif, c'est une valeur qu'il jugera EN JOUANT — d'où cette constante unique, et rien d'autre à défaire. Elle
+## vaut ce que le duel montre de la carte : à ×1,25 la vue couvre 1,44 fois l'aire d'avant (1,5² / 1,25²), et une tuile
+## de 35 px de monde passe de 52 à 44 px de la vue logique. La règle d'équité ne bouge pas : c'est le défaut COMPILÉ, le
+## même pour tous en ligne (`valeurs_du_duel`), pour la killcam (`killcam_cadrage.gd`, qui repart de lui), et pour tout
+## `settings.cfg` sans zoom réglé. Revenir à ×1,5 : cette ligne.
+const ZOOM_DUEL_DEFAUT := 1.25
 ## Q17 = B (Adrien, 2026-09-25 10:28) : le décalage vers la visée passe de 0,25 à 0,15 de la hauteur visible, le même
 ## pour tous en ligne (`valeurs_du_duel`) ; `--decalage=0.25` rend l'ancien cadrage en build de débogage.
 const DECALAGE_VISEE_DEFAUT := 0.15

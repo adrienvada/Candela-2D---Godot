@@ -233,7 +233,10 @@ func _creer(noeud: Node2D, slug: String, main: Node, vues: Array, parent_capteur
 			else:
 				masque = CanauxLumiere.masque_vue_adverse(poseur)
 				shader = CapteurCorps.SHADER_ADVERSE
-		var c := CapteurCorps.creer(id, 0, main.vp1.world_2d, couche_objets(id), masque)
+		# Q42 — le capteur d'un LEURRE ne voit pas l'étoile de ce leurre (un corps ne s'ombre pas lui-même) ; un objet posé
+		# n'en a pas, et voit toutes les étoiles.
+		var c := CapteurCorps.creer(id, 0, main.vp1.world_2d, couche_objets(id), masque,
+			noeud if slug == "leurre" else null)
 		c.name = "CapteurObjetVue%d_%s" % [id + 1, noeud.name]
 		(c.matiere() as ShaderMaterial).shader = shader
 		parent_capteurs.add_child(c)
