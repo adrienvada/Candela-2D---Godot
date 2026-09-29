@@ -545,6 +545,10 @@ func _ready():
 	
 	# Share the world_2d for split screen
 	vp2.world_2d = vp1.world_2d
+	# Q42 — les deux vues du duel voient toutes les étoiles de corps (`EtoileDeCorps`) ; seuls les capteurs de corps en
+	# ignorent une, celle du corps qu'ils lisent. `vp1` est celle où les étoiles vivent, `vp2` s'y rattache.
+	vp1.add_to_group(EtoileDeCorps.GROUPE_VUES)
+	vp2.add_to_group(EtoileDeCorps.GROUPE_VUES)
 	
 	NetworkManager.player_connected.connect(_on_peer_connected)
 	NetworkManager.player_disconnected.connect(_on_peer_disconnected)
@@ -5599,6 +5603,10 @@ func _rendre_dans_la_racine(vue: SubViewport) -> void:
 	racine.canvas_cull_mask = vue.canvas_cull_mask
 	cam.custom_viewport = racine
 	cam.make_current()
+	# Q42 — la racine rend maintenant le monde du duel : elle voit les étoiles de corps comme les sous-vues, sans quoi le
+	# duel de la vue unique n'aurait plus d'ombre de corps du tout.
+	racine.add_to_group(EtoileDeCorps.GROUPE_VUES)
+	EtoileDeCorps.rapprocher_tout(get_tree())
 	# **L'écoute ne se règle PAS ici, et c'est délibéré.**
 	#
 	# Prêter à la racine le `World2D` du duel en fait bien une seconde oreille —
@@ -5632,6 +5640,9 @@ func _rendre_dans_les_sous_vues() -> void:
 		if _monde_racine != null:
 			racine.world_2d = _monde_racine
 		racine.canvas_cull_mask = MASQUE_CULL_TOUT
+		# Q42 — la racine ne rend plus le monde du duel : les étoiles s'en détachent au prochain rapprochement.
+		racine.remove_from_group(EtoileDeCorps.GROUPE_VUES)
+		EtoileDeCorps.rapprocher_tout(get_tree())
 		# Pas de `audio_listener_enable_2d` ici non plus : `rendre_oreille()` rend
 		# déjà l'écoute à la racine, et c'est son rôle. Voir plus haut.
 	if cam1 != null:

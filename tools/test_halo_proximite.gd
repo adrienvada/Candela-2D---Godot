@@ -114,8 +114,8 @@ func _test_joueurs_reels() -> void:
 			(halo & joueurs[b].visual_enemy.light_mask) != 0)
 		# Et comme la torche : les occluders RÉELLEMENT posés, pas la règle.
 		var ombre: int = joueurs[a].ambient_light.shadow_item_cull_mask
-		var occ_b = joueurs[b].get_node_or_null("LightOccluder2D")
-		var occ_a = joueurs[a].get_node_or_null("LightOccluder2D")
+		var occ_b = joueurs[b].etoile()
+		var occ_a = joueurs[a].etoile()
 		var torse_a = joueurs[a].get_node_or_null("OccluderTorse")
 		_check("nœuds : le corps de J%d fait ombre sous le halo de J%d" % [b + 1, a + 1],
 			occ_b != null and (ombre & occ_b.occluder_light_mask) != 0)

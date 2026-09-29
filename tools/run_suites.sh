@@ -224,6 +224,10 @@ PLAFOND_SUITE=${PLAFOND_SUITE:-120}
 # Posé ici, loin de la liste, pour que ce correctif se reprenne seul sans conflit.
 SUITES+=(test_drapeaux)
 
+# Q42 (2026-09-29) — le corps ignore sa propre ombre : l'étoile de chaque corps vit dans SA canvas, que les capteurs de ce corps
+# ne comptent pas. Posé ici, comme la ligne du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
+SUITES+=(test_ombre_propre)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

@@ -1043,7 +1043,9 @@ func _poser_capteurs() -> void:
 	for vue in _vues:
 		var id := _id_de(vue)
 		for j in 2:
-			var c := CapteurCorps.creer(id, j, _main.vp1.world_2d, couche_capteur(id, j), masque_capteur(id, j))
+			# Q42 — le capteur d'un corps ne voit pas l'étoile de CE corps (`EtoileDeCorps`) : il connaît son porteur.
+			var c := CapteurCorps.creer(id, j, _main.vp1.world_2d, couche_capteur(id, j), masque_capteur(id, j),
+				_main.p1 if j == 0 else _main.p2)
 			add_child(c)
 			_capteurs[id][j] = c
 			_mat_corps[j].set_shader_parameter("capteur_%d" % (id + 1), c.get_texture())
