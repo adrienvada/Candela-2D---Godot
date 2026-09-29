@@ -5,8 +5,8 @@
 > soit attachée au modèle 3D de chaque personnage avec un point lumineux là où la source part » ; **Q45** « ça doit au moins
 > aller au bout de l'écran de chaque joueur » ; **Q46** le point lumineux visible seulement si la source l'est (« si son
 > corps est devant, on ne voit pas le point lumineux »). Trois étapes, dans l'ordre, chacune prouvée avant la suivante.
-> **État : L1 faite (`1a1bfe1`), L1bis faite** (les faisceaux concentrés, demandés par Adrien à 15:26 après la planche de
-> L1) ; L2 et L3 sont écrites et prouvées en headless, elles suivent sur la même branche.
+> **État : L1 faite (`1a1bfe1`), L1bis faite (`3f18dea`)** (les faisceaux concentrés, demandés par Adrien à 15:26 après la
+> planche de L1), **L2 faite** ; L3 suit sur la même branche.
 >
 > ⚠️ **La fusion de la 0.8.0 (`24abbfc`, Q15 et Q42) dans cette branche n'est PAS faite** : demandée par la session
 > coordinatrice (ordre 457), elle a été **refusée par les permissions de cette session** (« Modify Shared Resources »). Je
@@ -190,6 +190,34 @@ et l'équité, J1 | J2 après correction : ![équité Terrassier](l1bis_equite_p
 Plus étroits, les faisceaux coûtent bien MOINS, mais peu (~10 %) : le rectangle d'une lumière 2D et les couches du faisceau
 visible sont des CARRÉS posés sur la texture de la lampe, dont la taille suit la portée et non l'ouverture ; seule la part
 éclairée dans ces carrés rétrécit. Le prix de L1 (§ « D'où vient le coût ») reste donc à mesurer sur le Mac.
+
+## L2 — la lumière part de la lampe tenue par le modèle 3D
+
+**Ce qui a changé.** La lampe 2D — donc tout ce que le jeu éclaire, l'ombre des murs comprise — part du bout du fût de la
+torche que tient le corps voxel : `Player.LENTILLE_LAMPE`, 16,1 px devant le centre et 4,55 px à gauche (la main qui
+n'engage pas la visée), **dérivée du squelette** (`VoxelCatalogue.SQUELETTE`), où la torche est la même pour les dix
+classes. Elle valait (30, 0) : 30 px devant, détachée de la main. **Rien sur le fil** : les deux machines la calculent de la
+position et de la visée qu'elles ont déjà ; `Protocol.VERSION` reste 19.
+
+- **Le recul contre les murs garde sa règle** (« si on est collé à un mur, on peut éclairer derrière », 2026-09-11) : le
+  rayon va du centre à la lentille, et la lampe recule sur lui. La rétrodiffusion garde sa place (18 px droit devant) et son
+  recul d'avant.
+- **La lumière 3D miroir** prend la hauteur de la lentille (`VoxelCorps.pointe_torche`, pose courante : 19,1 px debout, au-
+  dessus du muret, sous le canon de jeu de 35 px). ⚠️ Elle est **éteinte par défaut en jeu** (seuls les bancs l'allument) :
+  ce point-là ne se voit pas dans le jeu livré.
+- **Le faisceau visible (Q41)** part de la lampe 2D : de la lentille, lui aussi.
+- **Ce qui ne bouge pas** : l'éblouissement se mesure toujours depuis le centre du corps ; l'écart entre ce point et
+  l'origine de la lumière passe de 30 à 16,7 px. Le flash de tir reste au canon.
+- **Ce que l'image montre** (vue unique, pistolet, quatre visées ; loupe ×2) : au sol, le cône part maintenant juste sous la
+  torche du modèle, au lieu de 30 px devant le corps. La lumière reste AU SOL (la lightmap est projetée sur le sol) : la
+  lentille, elle, est en l'air, à hauteur de main — c'est ce que L3 dessine.
+
+![L2](l2_lampe_du_modele.jpg)
+
+**Preuve** : `tools/test_lampe_modele.gd` (13 vérifications) — la lentille dérivée du squelette et la même pour les dix
+classes ; en jeu, écran scindé à 45° B, J1 et J2 dans huit visées : lampe 2D et bout du fût voxel au même point (écart
+**0,000 px**) ; en vue unique, lumière 3D à la lentille au sol et en hauteur ; face à un mur (18 et 15 px), recul sur le
+rayon, jamais dans le mur ; rétrodiffusion comme avant ; `Protocol.VERSION` inchangé.
 
 ## Questions pour Adrien
 

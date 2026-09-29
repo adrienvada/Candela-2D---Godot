@@ -127,7 +127,10 @@ func suivre(main: Node, voxels: Array) -> void:
 		# En PIXELS : `MursBas.hauteur_de_posture` rend la hauteur du canon, celle que la balle et la lumière du jeu lisent
 		# (debout, une tuile ; accroupi, sous le muret — « la torche d'un accroupi bute sur le mur »).
 		var hauteur_px := MursBas.hauteur_de_posture(bool(joueur.get("accroupi")))
-		_torche(joueur.get_node_or_null(^"Flashlight") as Light2D, arme, hauteur_px, "torche", vus)
+		# L2 (chantier des lumières de la 0.8.0) — la torche part de la LENTILLE que tient le corps voxel : au sol, la lampe
+		# 2D y est déjà (`Player.LENTILLE_LAMPE`) ; en hauteur, celle du bout du fût, pose courante comprise. Sans corps
+		# voxel, la hauteur de posture, comme avant.
+		_torche(joueur.get_node_or_null(^"Flashlight") as Light2D, arme, _hauteur_lentille(corps, hauteur_px), "torche", vus)
 		_omni(joueur.get_node_or_null(^"MuzzleFlash") as Light2D, "flash", _bout(corps, joueur, hauteur_px), vus)
 		if retrodiffusion:
 			var retro := joueur.get_node_or_null(^"BodyLight") as Light2D
@@ -296,6 +299,16 @@ func _lumiere(source: Light2D, spot: bool, vus: Dictionary) -> Light3D:
 		add_child(l)
 		_pool[id] = l
 	return l
+
+
+## L2 — la hauteur, en pixels, de la lentille de la torche du corps voxel (`VoxelCorps.pointe_torche`) ; à défaut, `defaut`.
+static func _hauteur_lentille(corps: Variant, defaut: float) -> float:
+	if not (corps is Node3D) or not is_instance_valid(corps) or not (corps as Node3D).is_visible_in_tree() \
+			or not (corps as Node3D).has_method("pointe_torche"):
+		return defaut
+	var pointe: Dictionary = (corps as Node3D).call("pointe_torche")
+	var p: Variant = pointe.get("position", null)
+	return (p as Vector3).y if p is Vector3 else defaut
 
 
 ## Le bout de l'arme du corps voxel ; à défaut, le canon à hauteur de posture.

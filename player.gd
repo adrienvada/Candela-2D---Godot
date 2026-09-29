@@ -822,7 +822,7 @@ func _ready():
 	# rien. Fil repéré par la session « assets visuels ».
 	flashlight.color = Charte.HALOGENE
 	flashlight.offset = Vector2.ZERO
-	flashlight.position = Vector2(AVANCEE_LAMPE, 0)
+	flashlight.position = LENTILLE_LAMPE
 
 	_monter_viseur()
 	
@@ -1616,27 +1616,37 @@ func _apply_remote_interpolation() -> void:
 ## [Serveur / Client] Gère la physique (Sandbox autorisé).
 ## Ramène la lampe (et la rétrodiffusion) du bon côté du mur.
 ##
-## Un rayon du centre du corps vers l'avant, sur la couche des murs : s'il
-## touche avant `AVANCEE_LAMPE`, la lampe recule à `RETRAIT_LAMPE` du mur, sans
+## Un rayon du centre du corps vers la lentille, sur la couche des murs : s'il
+## touche avant elle, la lampe recule sur ce rayon à `RETRAIT_LAMPE` du mur, sans
 ## jamais entrer dans le corps (4 px au moins). Sans mur, elle reprend sa place.
-## Un rayon par image et par joueur, torche allumée seulement.
+## La rétrodiffusion garde SA règle d'avant L2 : droit devant, posée à 18, le
+## bord du corps, et reculée devant un mur plus proche. Deux rayons par image et
+## par joueur, torche allumée seulement.
 func _rapprocher_la_lampe() -> void:
-	var x := AVANCEE_LAMPE
+	var lampe := LENTILLE_LAMPE
+	var retro := RETRO_AVANCEE
 	if flashlight_on and is_inside_tree():
 		var espace := get_world_2d().direct_space_state
-		var avant: Vector2 = global_transform.x.normalized()
-		var q := PhysicsRayQueryParameters2D.create(global_position,
-			global_position + avant * (AVANCEE_LAMPE + RETRAIT_LAMPE), MapGeometry.WALL_LAYER)
-		q.exclude = [get_rid()]
-		var coup: Dictionary = espace.intersect_ray(q)
-		if not coup.is_empty():
-			x = clampf(global_position.distance_to(coup["position"]) - RETRAIT_LAMPE,
-				4.0, AVANCEE_LAMPE)
-	if not is_equal_approx(flashlight.position.x, x):
-		flashlight.position.x = x
-		# La rétrodiffusion est posée à 18, le bord du corps : elle recule
-		# avec la lampe, jamais au-delà de sa place.
-		body_light.position.x = minf(18.0, x)
+		var vers_lampe: Vector2 = global_transform.basis_xform(LENTILLE_LAMPE).normalized()
+		var d := _mur_devant(espace, vers_lampe, LENTILLE_LAMPE.length() + RETRAIT_LAMPE)
+		if d >= 0.0:
+			lampe = LENTILLE_LAMPE.normalized() * clampf(d - RETRAIT_LAMPE, 4.0, LENTILLE_LAMPE.length())
+		var r := _mur_devant(espace, global_transform.x.normalized(), RETRO_AVANCEE + RETRAIT_LAMPE)
+		if r >= 0.0:
+			retro = clampf(r - RETRAIT_LAMPE, 4.0, RETRO_AVANCEE)
+	if not flashlight.position.is_equal_approx(lampe):
+		flashlight.position = lampe
+	if not is_equal_approx(body_light.position.x, retro):
+		body_light.position.x = retro
+
+
+## La distance au premier mur dans `direction` (unitaire, monde), jusqu'à `longueur` ; −1 sans mur.
+func _mur_devant(espace: PhysicsDirectSpaceState2D, direction: Vector2, longueur: float) -> float:
+	var q := PhysicsRayQueryParameters2D.create(global_position, global_position + direction * longueur,
+		MapGeometry.WALL_LAYER)
+	q.exclude = [get_rid()]
+	var coup: Dictionary = espace.intersect_ray(q)
+	return -1.0 if coup.is_empty() else global_position.distance_to(coup["position"])
 
 
 func _physics_process(delta):
@@ -2648,14 +2658,27 @@ func trigger_shoot_visuals():
 	tw_g.tween_property(ground_flash, "energy", 0.0, 0.12)
 	tw_g.tween_callback(ground_flash.queue_free)
 
-## Où brûle la lampe, devant le centre du corps, en unités de monde. ⚠️ **Plus
-## loin que le rayon du corps (18)** : collé à un mur, le point d'émission de la
-## torche se retrouvait 12 px À L'INTÉRIEUR du mur, et les ombres — calculées
-## depuis ce point — laissaient passer la lumière de l'autre côté. Adrien, le
-## 2026-09-11 : « si on est collé à un mur, on peut éclairer derrière ».
-## `_rapprocher_la_lampe()` ramène la lampe du côté du corps dès qu'un mur se
-## trouve entre les deux.
-const AVANCEE_LAMPE := 30.0
+## Où brûle la lampe, dans le repère du joueur (x vers la visée, y à sa droite), en unités de monde : **la lentille
+## de la torche que tient le modèle 3D** (chantier des lumières de la 0.8.0, L2 — Adrien, 2026-09-29 : « il faudrait
+## que la source de chaque lumière soit attachée au modèle 3D de chaque personnage »). Le bout du fût de la torche
+## voxel (`VoxelCorps`, pivot `Torse/Torche`) : `avant_main` + la longueur de la torche vers l'avant, `ecart_main`
+## à GAUCHE (la main qui n'engage pas la visée) — 16,1 px devant, 4,55 px à gauche. **Dérivée du squelette**, jamais
+## recopiée : la torche est du « matériel standard, identique pour les dix classes » (`VoxelCatalogue.SQUELETTE`),
+## donc la même lampe pour tous, et une position que les deux machines calculent de ce qu'elles savent déjà
+## (position et visée du joueur) — rien de plus sur le fil. `tools/test_lampe_modele.gd` compare ce point au bout
+## du fût voxel, J1 et J2, dans plusieurs visées.
+##
+## ⚠️ **Elle valait (30, 0) avant L2, plus loin que le rayon du corps (18)** : collé à un mur, le point d'émission de
+## la torche se retrouvait 12 px À L'INTÉRIEUR du mur, et les ombres — calculées depuis ce point — laissaient passer
+## la lumière de l'autre côté (Adrien, 2026-09-11 : « si on est collé à un mur, on peut éclairer derrière »).
+## `_rapprocher_la_lampe()` ramène la lampe du côté du corps dès qu'un mur se trouve entre les deux : c'est lui qui
+## tient cette règle, pas la distance — la lentille, plus proche, reste gardée par lui.
+const LENTILLE_LAMPE := Vector2(
+	(float(VoxelCatalogue.SQUELETTE["avant_main"]) + float(VoxelCatalogue.SQUELETTE["torche"]["longueur"])) * float(CandelaTileSet.TILE_SIZE.x),
+	-float(VoxelCatalogue.SQUELETTE["ecart_main"]) * float(CandelaTileSet.TILE_SIZE.x))
+
+## La rétrodiffusion : droit devant, au bord du corps (sa place d'avant L2, inchangée).
+const RETRO_AVANCEE := 18.0
 
 ## Ce qu'on laisse entre la lampe et le mur qui l'arrête, en unités de monde.
 const RETRAIT_LAMPE := 3.0

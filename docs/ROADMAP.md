@@ -29559,6 +29559,28 @@ k = ln 6 / ln 12 ≈ 0,721 : les deux bornes exactes, chaque rapport entre deux 
   les rectangles des lumières et les couches du faisceau visible sont des carrés dont la taille suit la PORTÉE, pas
   l'ouverture.
 
+### L2 — la lumière part de la lampe tenue par le modèle 3D
+
+- **La lampe 2D (la lightmap, donc tout ce que le jeu éclaire) part du bout du fût de la torche voxel** :
+  `Player.LENTILLE_LAMPE`, 16,1 px devant et 4,55 px à gauche (la main qui n'engage pas la visée), **dérivée du squelette**
+  (`VoxelCatalogue.SQUELETTE` : `avant_main` + longueur de la torche, `ecart_main`), où la torche est « du matériel
+  standard, identique pour les dix classes ». Elle valait (30, 0). **Rien sur le fil** : les deux machines la calculent de
+  la position et de la visée qu'elles ont déjà ; `Protocol.VERSION` reste 19.
+- **Le recul contre les murs garde sa règle** (Adrien, 2026-09-11 : « si on est collé à un mur, on peut éclairer
+  derrière ») : le rayon mène désormais du centre du corps à la lentille, et la lampe recule SUR ce rayon ; la
+  rétrodiffusion garde sa place et son recul d'avant (droit devant, 18 px), avec son propre rayon — deux rayons par image
+  et par joueur, torche allumée.
+- **La lumière 3D miroir** (`lumieres_iso.gd`) prend la hauteur de la lentille (`VoxelCorps.pointe_torche`, pose
+  courante : 19,1 px debout, au-dessus du muret de 14, sous le canon de jeu de 35) ; au sol, elle part déjà du même point
+  que la 2D. ⚠️ **Elle est éteinte par défaut en jeu** (`Presentation3D.poser_lumiere_3d`, que seuls les bancs appellent) :
+  ce changement ne se voit qu'avec elle. Le faisceau visible de Q41 part de la lampe 2D, donc de la lentille aussi.
+- **Ce qui ne bouge pas** : l'éblouissement se mesure toujours depuis le centre du corps (`_lumiere_recue`) — l'écart
+  entre le point d'où il se mesure et celui d'où la lumière part passe de 30 à 16,7 px ; le flash de tir reste au canon.
+- **Preuve** : `tools/test_lampe_modele.gd` — la lentille dérivée du squelette, la même pour les dix classes ; en jeu,
+  écran scindé à 45° B, J1 et J2 dans huit visées : lampe 2D et bout du fût voxel au même point (écart 0,000 px) ; en vue
+  unique, lumière 3D à la lentille au sol et en hauteur ; face à un mur, recul sur le rayon, jamais dans le mur ;
+  `Protocol.VERSION` inchangé.
+
 ---
 
 ## Jalons humains — ce qui ne peut pas être automatisé
