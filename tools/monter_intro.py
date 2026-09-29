@@ -54,7 +54,7 @@ QUALITE_AUDIO = 4
 # intro_planches.gd. La fenêtre [début, fin] de la source est calée sur la durée du plan.
 PLANS = [
     (1, "noir", None, 0, 0, None),
-    (1, "le pouce", "clips/f02_pouce.mp4", 1.2, 3.9, (2.95, 3.35)),      # l'étoile d'éclair plate de Veo, coupée
+    (1, "le pouce", "clips/f02_pouce.mp4", 1.2, 3.9, (2.65, 3.10)),      # l'étoile d'éclair plate de Veo (2,67 → 3,04 s, mesurée), coupée
     (2, "le couloir", "clips/p2_faisceau.mp4", 0.0, 2.82, None),
     (1, "VOIR", "textes/voir.mp4", 0.0, 1.40, None),
     (2, "le pilier", "clips/p3_cache.mp4", 0.0, 2.82, None),
@@ -80,7 +80,7 @@ def m(mes, tps=0.0):
 # (instant, fichier du jeu, gain dB, vitesse)
 SONS = [
     (m(0, 0.2), "sfx/ambience_03.wav", -10, 1), (m(0, 1), "sfx/footstep_a_01.wav", -7, 1), (m(0, 3), "sfx/footstep_a_02.wav", -7, 1),
-    (m(1, 2.9), "sfx/torch_on.wav", 0, 1),                                  # la lampe s'allume (plan 2)
+    (m(1, 2.6), "sfx/torch_on.wav", 0, 1),                                  # la lampe s'allume (plan 2, après la coupe)
     (m(2), "music/music_match_base.ogg", -9, 1),
     (m(2, 1), "sfx/footstep_a_03.wav", -6, 1), (m(2, 3), "sfx/footstep_a_04.wav", -6, 1),
     (m(3, 1), "sfx/footstep_a_01.wav", -6, 1), (m(3, 3), "sfx/footstep_a_02.wav", -6, 1),

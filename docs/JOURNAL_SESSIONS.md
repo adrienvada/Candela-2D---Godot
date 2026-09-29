@@ -6104,3 +6104,9 @@ des six planches de l'ancienne intro retirées (`ill_intro_descente`, `_seuil`, 
 environ 17 Mo par téléchargement). **Partagés, touchés par retrait** : `menu_artwork.gd` et `menu_particles_ambiance.gd`
 (domaine « menus » : dix entrées de table, celles de ces cinq images) ; `docs/CAPSULE.md` et
 `docs/GOOGLE_FLOW_PROMPTS.md` (une mention chacun). `ill_intro_allumage` reste : l'accueil l'affiche.
+
+**Essai fenêtre ouverte** (14:25, Mac libéré par Adrien, verrou passé par « ISO7 Gadgets et lumière Opus ») : le film
+joue en entier (35,23 s), le son sort sur `Master` (crêtes de −8 à −5 dB) pendant que la musique du jeu est en pause,
+et la musique reprend à la fin. Mais une image relevée à 2,5 s montrait encore l'étoile d'éclair du plan 2, que toutes
+les relectures avaient laissée passer : coupe mesurée image par image et corrigée (voir « Pièges connus », 2026-09-29).
+Scène d'essai temporaire, supprimée, non versionnée.
