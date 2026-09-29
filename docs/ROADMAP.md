@@ -3223,6 +3223,15 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une direction lue À L'ÉCRAN n'est pas une direction du sol : la profondeur y est raccourcie de sin 52° (2026-09-29)
+
+Chantier des lumières de la 0.8.0, L1. La distance du joueur au bord de son écran se calcule au sol, dans les axes de la
+caméra ; la première garde lui donnait la direction de la visée telle que la caméra la projette à l'écran, et trouvait la
+formule fausse de 26 px. La formule était juste : à l'écran, la composante de profondeur d'une direction est multipliée par
+sin θ (0,79 à 52°), donc une visée en biais s'y lit plus couchée qu'elle n'est. **Toute direction mesurée à l'écran se
+redresse (`y / sin θ`) avant d'entrer dans un calcul au sol** ; l'écart est nul à l'horizontale et à la verticale de l'écran,
+ce qui le cache à qui ne teste que les axes.
+
 ### Un modèle juste peut dessiner un indicateur invisible : le juger à l'image, pas aux nombres (2026-09-29)
 
 Chantier SON VISIBLE. Toutes les suites passaient — largeurs, ancres, équité miroir — et le premier tirage du banc
@@ -29472,6 +29481,47 @@ l'écran mesuré par la caméra de chacun —, S6, killcam, décompte, vue uniqu
    écran partagé, les deux l'entendent. V4.4 le voulait audible (« je suis désarmé, et je suis là »). Symétrique, donc
    équitable : le rendre audible est un choix de jeu, pas une correction.
 3. La publication : `config/version` 0.8.0 (le fil a bougé), avec Q15 et Q42.
+
+---
+
+## Chantier — les lumières de la 0.8.0 (inscrit le 2026-09-29)
+
+**Tenu par la session cloud « Lumières 0.8.0 »**, branche `claude/lumieres-080` (partie de
+`claude/unrailed-isometric-feasibility-44klgh`, `2386906`). Rapport, images et questions pour Adrien :
+`docs/iso/cloud/lumieres-080/RAPPORT.md`. Décisions d'Adrien du 2026-09-29 : « Je veux augmenter la portée de chaque
+lumière. Il faudrait que la source de chaque lumière soit attachée au modèle 3D de chaque personnage avec un point lumineux
+là où la source part » ; Q45 : « ça doit au moins aller au bout de l'écran de chaque joueur » ; Q46 : le point lumineux
+visible seulement si la source l'est (« si son corps est devant, on ne voit pas le point lumineux »). Trois étapes, chacune
+prouvée avant la suivante.
+
+### L1 — la portée atteint au moins le bord de l'écran
+
+- **Un plancher de portée, DÉRIVÉ du cadrage** (`PorteeEcran`, `WeaponData.portee_plancher`, posé par
+  `GameSettings.accorder_au_mode`) : la plus petite portée qui atteint, dans toutes les directions, le bord de l'écran de
+  la vue unique — le coin : `|demi-empreinte au sol| + décalage × profondeur`. **Jamais un nombre calé sur le zoom du
+  jour** : Q15 (×1,25, à l'essai sur `claude/v080-q15-q42`) ferait d'une constante une portée trop courte sans que rien le
+  dise. ×1,5 → 728 px ; ×1,25 → 873 px. Le lacet ne change aucune distance (J1 à 45°, J2 à 225° ont le même rectangle,
+  tourné).
+- **Un plancher plutôt qu'un facteur, une portée pour tous les modes, la torche seule** : les trois choix que la règle
+  ouvre sont des choix de jeu, posés à Adrien dans le rapport ; le jeu avance avec le plus prudent. Le facteur (tout
+  multiplier pour que le Terrassier atteigne le bord) garderait l'écart entre classes mais pousserait l'arbalète à 2 547 px,
+  plus de trois écrans, et multiplierait le coût des lumières. La portée par mode ferait jouer l'écran scindé autrement
+  que le jeu en ligne — or la portée est une règle (l'éblouissement la lit), pas un cadrage. ⚠️ **Conséquence de jeu** : au
+  zoom d'aujourd'hui, les dix classes portent à 728 px (toutes étaient en dessous, de 192 à 672) : l'écart de PORTÉE entre
+  classes disparaît, leur identité tient à l'ouverture, à la luminosité et à la matière du cookie ; et l'éblouissement
+  (`Vision`, qui lit le cookie à l'échelle de la lampe) porte aussi loin que la lumière.
+- **En ligne**, zoom et décalage sont les constantes du duel sur les deux machines : le plancher aussi, sans rien sur le
+  fil ; `--sans-portee-ecran` (débogage, hors ligne) rend le jeu d'avant.
+- **Ce que la règle ne couvre pas** : la caméra arrêtée au bord de la carte (`RegardDuel.centre_du_regard`) ; le joueur y
+  peut viser un bord d'écran plus lointain, jusqu'à la largeur entière. Question à Adrien.
+- **Preuve** : `tools/test_portee_ecran.gd` — la formule, la règle, et EN JEU sur les vraies caméras iso (écran scindé à
+  45° B, J1 et J2 ; ×1,5 et ×1,25 ; vue unique), huit visées, dix classes : la lumière posée (`texture_scale` × cookie)
+  va au moins jusqu'au point du sol où la visée sort de l'écran, et la formule dit cette distance à 0,00 px. Images
+  avant/après et recensement des quinze lumières : le rapport.
+- **Le coût n'est pas gratuit** : sous Mesa (rendu logiciel, relatif seulement), une image coûte ×1,50 en écran scindé et
+  ×1,85 en vue unique, deux torches allumées. À mesurer sur le Mac avant de publier : la cible « 1 % bas ≥ 60 » passait de
+  deux images par seconde. Quinze lumières : au plus 10 par quadrant avant comme après dans la scène mesurée ; chaque
+  torche touche désormais jusqu'à 3 × 3 quadrants (+2 lumières, +3 avec une torche fantôme, là où elle n'entrait pas).
 
 ---
 

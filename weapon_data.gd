@@ -117,7 +117,7 @@ var _torch_image: Image
 ## mentaient, et c'est ainsi qu'on hérite d'un nombre que plus personne n'ose
 ## toucher. Une seule constante porte désormais cette unité.
 func portee_torche() -> float:
-	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee
+	return maxf(TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee, portee_plancher)
 
 ## ISO8 — la portée de TOUTES les torches, en un seul facteur (brief de la session cloud, 2026-09-15 12:50,
 ## sur mandat d'Adrien de 12:20 : « réduire la taille des cônes de lumière pour le rendre plus
@@ -130,6 +130,22 @@ func portee_torche() -> float:
 ## `WeaponData` se charge dans les suites `--script`, qui compilent avant les autoloads : lire `GameSettings`
 ## d'ici casserait leur compilation. Le demi-angle n'est pas touché (« l'ouverture est une identité de classe »).
 static var facteur_portee := 1.0
+
+## Chantier des lumières de la 0.8.0, L1 — LE PLANCHER DE PORTÉE : aucune torche ne porte moins loin que le bord de
+## l'écran de son porteur (Q45, Adrien, 2026-09-29 : « ça doit au moins aller au bout de l'écran de chaque joueur »).
+## En pixels de monde ; 0 : pas de plancher (le jeu d'avant, `--sans-portee-ecran` en build de débogage).
+##
+## **Un plancher, pas un facteur** : les classes qui portaient moins loin que le bord y montent, celles qui portaient
+## plus loin gardent leur portée. C'est l'option la plus prudente des deux qu'ouvre la règle — l'autre, tout multiplier
+## pour que la plus courte (le Terrassier) atteigne le bord, garde l'écart entre classes mais pousse l'arbalète à
+## plus de trois écrans et multiplie le coût des lumières (`docs/iso/cloud/lumieres-080/RAPPORT.md`, question à
+## Adrien). ⚠️ Le plancher efface donc l'écart de PORTÉE entre les classes qui y montent : leur identité tient à
+## l'ouverture, à la luminosité et à la matière du cookie, qui ne bougent pas.
+##
+## Posé par `GameSettings.accorder_au_mode` depuis le cadrage (`PorteeEcran`), statique pour la même raison que
+## `facteur_portee`. EN LIGNE, zoom et décalage sont les constantes du duel sur les deux machines : le plancher aussi,
+## sans rien sur le fil.
+static var portee_plancher := 0.0
 
 ## Demi-angle du faisceau, en radians.
 ##
@@ -196,10 +212,12 @@ const TAILLE_COOKIE_REFERENCE := 512.0
 ## côté, c'était garantir qu'un seul serait corrigé.
 func echelle_torche() -> float:
 	var tex := get_torch_texture()
-	# ISO8 — le facteur de portée global, ici comme dans `portee_torche()` (voir `facteur_portee`).
+	# ISO8 — le facteur de portée global, et L1 son plancher : l'échelle se DÉRIVE de `portee_torche()`, pour qu'un
+	# seul endroit dise jusqu'où la torche porte (sans plancher, c'est `torch_scale × facteur_portee`, comme avant).
+	var echelle := portee_torche() / (TAILLE_COOKIE_REFERENCE * 0.5)
 	if tex == null or tex.get_width() <= 0:
-		return torch_scale * facteur_portee
-	return torch_scale * facteur_portee * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
+		return echelle
+	return echelle * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
 
 
 ## L'image du faisceau, celle-là même que la lumière projette — pour que

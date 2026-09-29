@@ -256,6 +256,10 @@ func _regard_du_duel() -> void:
 	var pistolet := WeaponData.new()
 	var facteur_avant: float = WeaponData.facteur_portee
 	WeaponData.facteur_portee = 0.75
+	# Le FACTEUR seul (ISO8) : le plancher de portée du chantier des lumières (L1, Q45) est retiré le temps de ces
+	# gardes, puis remis ; ce qu'il change est gardé juste après, et par `tools/test_portee_ecran.gd`.
+	var plancher_avant: float = WeaponData.portee_plancher
+	WeaponData.portee_plancher = 0.0
 	_check("pistolet (1,6) : 307 px de portée au facteur 0,75, au lieu de 410",
 		is_equal_approx(pistolet.portee_torche(), 307.2), str(pistolet.portee_torche()))
 	var pompe := WeaponData.new()
@@ -265,6 +269,12 @@ func _regard_du_duel() -> void:
 	_check("l'écart entre les classes est gardé : arbalète / pompe vaut toujours 3,5",
 		is_equal_approx(arbalete.portee_torche() / pompe.portee_torche(), 3.5))
 	_check("le demi-angle n'est pas touché (35° pour le pistolet)", is_equal_approx(pistolet.torch_angle_deg, 35.0))
+	# L1 (Q45) — avec le plancher du bord de l'écran, les deux classes y montent : l'écart de PORTÉE disparaît sous lui,
+	# c'est la conséquence assumée (et posée à Adrien) ; au-dessus du plancher, le facteur garde sa règle.
+	WeaponData.portee_plancher = 728.0
+	_check("L1 : sous le plancher, arbalète et pompe portent au bord (728 px, l'écart de portée s'efface)",
+		is_equal_approx(arbalete.portee_torche(), 728.0) and is_equal_approx(pompe.portee_torche(), 728.0))
+	WeaponData.portee_plancher = plancher_avant
 	WeaponData.facteur_portee = facteur_avant
 	var Pres8: GDScript = load("res://presentation_3d.gd")
 	_check("F3 : la lightmap 1080p dans une fenêtre de 1440 px vaut 0,75 texel par pixel, quel que soit le zoom",
