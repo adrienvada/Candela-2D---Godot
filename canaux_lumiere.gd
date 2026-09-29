@@ -8,7 +8,7 @@ class_name CanauxLumiere
 ## - `ENNEMI` (2) : les sprites « ennemis », LES DEUX (le mien chez lui, le sien
 ##   chez moi) — torche, reflet, tirs ;
 ## - `JOUEUR_LOCAL` (4) : le sprite du joueur tel qu'il se voit — et son capteur iso, qui y ajoute la couche d'ombre de son corps
-##   (`masque_de_soi`, Q55) ;
+##   (Q55) et le bit récepteur de la rétrodiffusion (Q65) : `masque_de_soi` ;
 ## - `canal_de_vue(id)` (16 pour la vue de J1, 32 pour celle de J2) : ce qui
 ##   n'appartient qu'à UNE vue — les copies de sol et de murs de ce joueur, et
 ##   son halo de proximité.
@@ -61,12 +61,32 @@ static func masque_vue_adverse(id: int) -> int:
 ## — la torche d'en face en tête —, comme le capteur croisé du même corps. Chez J1 ce masque vaut ce qu'il valait (4 | 4) ;
 ## chez J2 il gagne le bit 8. Le sprite de soi, lui, reste sur `JOUEUR_LOCAL` : la vue de dessus ne bouge pas.
 ##
-## ⚠️ **Le bit 8 n'est dans la portée (`range_item_cull_mask`) d'AUCUNE lumière, et doit le rester** : une lumière qui l'y
-## mettrait n'éclairerait que le capteur de soi de J2, jamais celui de J1 (le 4 de J1 est déjà dans toutes les portées).
-## `tools/test_ombre_propre.gd` garde le bit (aucune lumière vivante, aucune source ne l'a dans sa portée) ET ce qu'il fait
-## recevoir : un mur assombrit le capteur de soi de J1 comme celui de J2, et le calcul retrouve le défaut avec l'ancien masque.
+## Q65 (Adrien, 2026-09-29, « ferme-la dans la 0.8.0 ») y ajoute `recepteur_retro(id)` : la rétrodiffusion de l'adversaire
+## éclairait encore le capteur de soi À TRAVERS un mur (0,667 à 70 px), parce que son masque d'ombre ne croisait celui d'aucun
+## capteur de soi — voir `recepteur_retro`.
+##
+## ⚠️ **Ni le bit 8, ni les bits de `recepteur_retro` ne sont dans la portée (`range_item_cull_mask`) d'AUCUNE lumière, et
+## doivent le rester** : une lumière qui les y mettrait n'éclairerait que le capteur de soi d'UN joueur (le 4 de J1 est déjà
+## dans toutes les portées). `tools/test_ombre_propre.gd` garde ces bits (aucune lumière vivante, aucune source ne les a dans sa
+## portée) ET ce qu'ils font recevoir : un mur assombrit le capteur de soi de J1 comme celui de J2, sous la torche comme sous
+## la rétrodiffusion d'en face, et le calcul retrouve le défaut avec l'ancien masque.
 static func masque_de_soi(id: int) -> int:
-	return JOUEUR_LOCAL | couche_ombre_corps(id)
+	return JOUEUR_LOCAL | couche_ombre_corps(id) | recepteur_retro(id)
+
+## Q65 — le bit RÉCEPTEUR de la rétrodiffusion, un par joueur : 128 pour J1, 256 pour J2. Il n'est porté que par le capteur de
+## soi de `id` (`masque_de_soi`) et n'est mis que dans le masque d'ombre de la rétrodiffusion de l'ADVERSAIRE
+## (`Player.body_light`) : le capteur de soi de J2 reçoit alors les ombres de la rétrodiffusion de J1 — les murs, et les disques
+## de torse, comme le capteur croisé du même corps — et JAMAIS celles de la sienne.
+##
+## Pourquoi un bit neuf, et deux : les bits existants n'y suffisent pas. Le masque d'ombre de la rétrodiffusion (`1 | 2 | 16 |
+## 32`) ne croise aucun capteur de soi ; le 16 et le 32 sont aussi les canaux de vue (le halo éclairerait le capteur de soi), le
+## 2 est `ENNEMI` (le flash de tir, qui éclaire l'ennemi et jamais le tireur, éclairerait le corps de son tireur), et la couche
+## d'ombre du corps adverse — la voie de Q55 pour la torche — ferait ombrer la rétrodiffusion de J2 par le torse de J2 sur son
+## propre capteur, le 4 de `JOUEUR_LOCAL` y étant aussi : une asymétrie de plus, et la lumière propre qui baisse (« ma lueur ne
+## me trahit pas », 0,914 mesuré). Un bit par joueur, dans le masque de l'adversaire seulement, ne croise jamais le capteur de
+## son propre corps.
+static func recepteur_retro(id: int) -> int:
+	return 128 << id
 
 
 # ── Les couches d'OMBRE ──────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
 ## ne dessine qu'un disque blanc posé sous le corps (sur une couche de visibilité À LUI,
 ## `Presentation3D.couche_capteur()`, qu'aucune lightmap ne lit), et ce disque porte le
 ## **masque de lumière du sprite qu'il remplace** — `CanauxLumiere.masque_de_soi(id)` pour son
-## propre corps (`JOUEUR_LOCAL` (4) et la couche d'ombre de ce corps : Q55, plus bas),
+## propre corps (`JOUEUR_LOCAL` (4), la couche d'ombre de ce corps — Q55, plus bas — et le bit récepteur de la rétrodiffusion : Q65),
 ## `CanauxLumiere.masque_vue_adverse(id)` pour le corps d'en face. Les lumières
 ## et les ombres du jeu font le reste, canal par canal. Il les reçoit par la **courbe du sprite
 ## qu'il remplace** — `capteur_adverse.gdshader` et `capteur_local.gdshader`, miroirs des shaders
@@ -50,6 +50,10 @@
 ## (4 aussi) ne croisait pas celui de la torche de J1 (`1 | 2 | 8`) : un mur assombrissait le corps de soi de J1, pas celui de
 ## J2. `CanauxLumiere.masque_de_soi` lui rend la couche d'ombre de son corps (8) : mêmes ombres pour les deux, sans qu'aucune
 ## lumière éclaire quoi que ce soit de plus — aucune n'a ce bit dans sa portée.
+##
+## Q65 (Adrien, 2026-09-29) : la rétrodiffusion de l'adversaire (masque d'ombre `1 | 2 | 16 | 32`) ne croisait, elle non plus,
+## aucun capteur de soi, et éclairait le corps À TRAVERS un mur. `CanauxLumiere.recepteur_retro` lui donne un bit à croiser — un
+## par joueur, porté par son capteur de soi, mis dans le masque d'ombre de la rétrodiffusion de l'ADVERSAIRE seulement.
 class_name CapteurCorps
 extends SubViewport
 

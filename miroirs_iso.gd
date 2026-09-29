@@ -230,7 +230,8 @@ func _creer(noeud: Node2D, slug: String, main: Node, vues: Array, parent_capteur
 		if slug == "leurre":
 			if id == poseur:
 				# Le leurre vu par son poseur est un corps de soi : `GadgetLeurre._monter_visuel`, « VisuelPoseur », light_mask 4
-				# — et, comme le capteur du corps du poseur, la couche d'ombre de ce corps de plus (Q55, `masque_de_soi`).
+				# — et, comme le capteur du corps du poseur, la couche d'ombre de ce corps et le bit récepteur de la rétrodiffusion
+				# de plus (Q55 et Q65, `masque_de_soi`).
 				masque = CanauxLumiere.masque_de_soi(poseur)
 			else:
 				masque = CanauxLumiere.masque_vue_adverse(poseur)
