@@ -893,8 +893,10 @@ func _accueillir_le_revenant() -> void:
 ## Elle valait la carte par défaut, « le terrain de référence » — alors que l'écran
 ## d'entraînement offre « CHANGER DE CARTE » et que son affiche annonce la carte
 ## choisie : le joueur en choisissait une, et l'arène standard s'ouvrait quand même.
-## Les traces au sol ne suivent pas d'une carte à l'autre : `rebuild_arena()` les
-## balaie quand la carte change (`balayer_les_traces_si_la_carte_change`).
+## Les traces au sol ne suivent pas d'une rencontre à l'autre : `rebuild_arena()` les
+## balaie quand la carte, le mode de jeu ou l'adversaire change (Q53, même jour) — le
+## sang d'un match n'entre donc pas à l'entraînement, où la cible n'est pas un
+## adversaire (`balayer_les_traces_si_la_carte_change`).
 func _on_training_requested() -> void:
 	get_tree().paused = false
 	# Avant toute chose : un match en cours doit se solder normalement, forfait
@@ -927,7 +929,9 @@ func _on_training_requested() -> void:
 	# entraînement ». Le menu marchait ; c'est ce lancement qui l'ignorait.
 	# On ne réécrit PAS `_hosted_weapon_1_idx` d'ici : c'est un état d'hôte,
 	# celui que `rpc_start_round` envoie.
-	_do_start_round(ui.selected_weapon_index(0), 0)
+	# `true` : l'arène qui se pose est celle d'un entraînement, et les traces d'un match
+	# — contre quelqu'un — ne lui appartiennent pas (`_empreinte_de_la_rencontre`).
+	_do_start_round(ui.selected_weapon_index(0), 0, true)
 
 	round_active = false
 	sandbox_mode = true
@@ -967,27 +971,60 @@ func _on_debug_light_toggled(toggled_on: bool):
 ## Les mêmes que `peinture_iso.gd` (`TRACES`).
 const GROUPES_DES_TRACES := ["blood_stain", "blood_p2", "wall_impact", "wall_impact_p2", "bullet_casing", "casing_p2"]
 
-## L'empreinte (`Dictionary.hash()`) de la carte sur laquelle les traces au sol ont été posées ; 0 avant la première.
-var _carte_des_traces := 0
+## L'empreinte de la RENCONTRE sur laquelle les traces au sol ont été posées (voir `_empreinte_de_la_rencontre`) ; 0 avant
+## la première.
+var _rencontre_des_traces := 0
 
 
-## Balaie les traces qui durent quand la CARTE change, les garde quand c'est la même (session cloud « restes »,
-## 2026-09-28). Rend le nombre de nœuds retirés.
+## L'empreinte de ce que les traces au sol racontent : la carte, le mode de jeu, l'adversaire (Adrien, Q53, 2026-09-29 :
+## « un changement de mode de jeu efface le sang du match. En fait le sang du match ne se conserve que contre un même
+## adversaire »). UNE empreinte, celle que le balayage retenait déjà pour la carte, étendue : un second mécanisme aurait
+## fini par ne plus s'accorder avec le premier.
 ##
-## Les traces racontent le match, revanche comprise (`blood_stain.gd`) : c'est vrai sur la même carte. Mais l'écran de
-## fin permet de CHANGER DE CARTE sans repasser par le menu principal (le seul qui les balayait) : sang, éclats et
-## douilles du Cloître restaient à leurs coordonnées sur le sol de la Croisée — au milieu d'une salle, dans un mur, un
-## éclat de mur flottant sur du sol nu —, peints aussi dans la peinture iso que lisent les murs.
+## - **la carte** : l'empreinte du CONTENU (`Dictionary.hash()`), pas l'identifiant — l'invité en ligne adopte la carte de
+##   l'hôte (`_adopt_host_map`) sans qu'elle soit forcément à son catalogue, et c'est la géométrie qui décide si une trace a
+##   encore un sol sous elle ;
+## - **le mode** : l'entraînement, l'écran scindé, ou le lien en ligne. `entrainement` est passé par l'appelant, jamais lu
+##   dans `training_mode` : `_do_start_round` remet ce drapeau à faux avant de poser l'arène, et `_on_training_requested`
+##   ne le lève qu'après — la lecture aurait toujours répondu « pas d'entraînement » ;
+## - **l'adversaire** : l'AUTRE JOUEUR du lien. À l'hôte, le pair connecté (`client_peer_id`) ; au client, l'hôte, donc
+##   toujours le pair 1 — il ne peut pas rencontrer un autre adversaire sans repasser par le menu principal, qui balaie
+##   tout. Un pair est une connexion : le joueur qui revient est un NOUVEAU pair, et sa série repart à 0-0 de toute façon
+##   (`_solder_le_match`) — le sang suit la série, pas le nom du joueur. Lire l'identité de son compte (PUID Epic) aurait
+##   demandé de toucher `network_manager.gd`, que cette règle d'affichage n'a aucune raison de changer. L'écran scindé a
+##   son autre joueur, le même d'une revanche à l'autre ; **la cible d'entraînement n'est pas un adversaire** : personne.
+func _empreinte_de_la_rencontre(data: Dictionary, entrainement: bool) -> int:
+	var mode := "ecran_scinde"
+	var adversaire := 0
+	if entrainement:
+		mode = "entrainement"
+	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		mode = "en_ligne"
+		adversaire = client_peer_id
+	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		mode = "en_ligne"
+		adversaire = 1
+	return [data.hash(), mode, adversaire].hash()
+
+
+## Balaie les traces qui durent quand la RENCONTRE change, les garde quand c'est la même : la carte, le mode de jeu et
+## l'adversaire (`_empreinte_de_la_rencontre`). Rend le nombre de nœuds retirés. **Le nom date de la première clé, la
+## carte** (session cloud « restes », 2026-09-28) : gardé, parce que c'est l'ancre que les fusions et les bancs cherchent.
 ##
-## L'empreinte est celle du CONTENU de la carte, pas de son identifiant : l'invité en ligne adopte la carte de l'hôte
-## (`_adopt_host_map`) sans qu'elle soit forcément à son catalogue, et c'est la géométrie qui décide si une trace a
-## encore un sol sous elle. Seuls les enfants directs de l'arène sont retirés : les copies de la peinture iso vivent dans
-## sa sous-vue et partent avec leur original (`peinture_iso.gd`, `_depart`). Retirés de leur groupe et de l'arbre tout de
-## suite : `queue_free()` n'agit qu'en fin d'image, et les plafonds comptent les groupes.
-func balayer_les_traces_si_la_carte_change(data: Dictionary) -> int:
-	var empreinte := data.hash()
-	var ancienne := _carte_des_traces
-	_carte_des_traces = empreinte
+## Les traces racontent le match, revanche comprise (`blood_stain.gd`) : c'est vrai contre le même adversaire, sur la
+## même carte. Mais l'écran de fin permet de CHANGER DE CARTE — comme de passer à l'entraînement, à l'écran scindé ou à
+## un match en ligne — sans repasser par le menu principal (le seul qui les balayait) : sang, éclats et douilles du
+## Cloître restaient à leurs coordonnées sur le sol de la Croisée — au milieu d'une salle, dans un mur, un éclat de mur
+## flottant sur du sol nu —, et le sang d'un match contre quelqu'un décorait l'entraînement, ou le duel suivant contre un
+## autre. Ils sont peints aussi dans la peinture iso que lisent les murs.
+##
+## Seuls les enfants directs de l'arène sont retirés : les copies de la peinture iso vivent dans sa sous-vue et partent
+## avec leur original (`peinture_iso.gd`, `_depart`). Retirés de leur groupe et de l'arbre tout de suite : `queue_free()`
+## n'agit qu'en fin d'image, et les plafonds comptent les groupes.
+func balayer_les_traces_si_la_carte_change(data: Dictionary, entrainement: bool = false) -> int:
+	var empreinte := _empreinte_de_la_rencontre(data, entrainement)
+	var ancienne := _rencontre_des_traces
+	_rencontre_des_traces = empreinte
 	if ancienne == 0 or ancienne == empreinte or arena == null:
 		return 0
 	var n := 0
@@ -1011,12 +1048,15 @@ func balayer_les_traces_si_la_carte_change(data: Dictionary) -> int:
 ##
 ## Appelable à volonté — chaque manche la rappelle, ce qui permet de changer
 ## de carte depuis le menu sans redémarrer la partie.
-func rebuild_arena() -> void:
+##
+## `entrainement` dit que cette arène est celle d'un entraînement : voir
+## `_empreinte_de_la_rencontre`, qui ne peut pas le lire dans `training_mode`.
+func rebuild_arena(entrainement: bool = false) -> void:
 	var data: Dictionary = MapData.get_selected()
 	if data.is_empty():
 		push_error("GameState: aucune carte à charger")
 		return
-	balayer_les_traces_si_la_carte_change(data)
+	balayer_les_traces_si_la_carte_change(data, entrainement)
 
 	# S2 — la portée des sons se dérive de la carte qu'on vient de choisir, ici
 	# et nulle part ailleurs : c'est le seul endroit qui connaît sa taille et qui
@@ -1523,7 +1563,9 @@ func _host_map_code() -> String:
 		return MapData.get_map_share_code()
 	return ""
 
-func _do_start_round(w1_idx: int, w2_idx: int):
+## `entrainement` n'est vrai que pour `_on_training_requested`, et il ne sert qu'à la pose de l'arène (les traces au sol
+## dépendent du mode de jeu) : `training_mode` reste écrit par l'appelant, après coup, comme avant.
+func _do_start_round(w1_idx: int, w2_idx: int, entrainement: bool = false):
 	# Une vraie manche met fin à l'entraînement : sans cela, la vue resterait
 	# unique dans un duel en écran partagé.
 	training_mode = false
@@ -1536,7 +1578,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 
 	# Reconstruit l'arène à chaque manche : c'est ce qui rend effectif un
 	# changement de carte depuis le menu, sans redémarrer le jeu.
-	rebuild_arena()
+	rebuild_arena(entrainement)
 	sandbox_mode = false
 	# Un vrai match en ligne commence ici, et ici seulement : l'hôte resté seul
 	# n'atteint jamais ce point, il repart en bac à sable plus haut. À partir de
