@@ -1,20 +1,20 @@
 class_name IntroPlanches
 extends CanvasLayer
 
-## L'intro v2, récit A « Qui allume se montre » (2026-09-28, choisi par Adrien).
+## L'intro v2, récit A « Qui allume se montre » (choisi par Adrien le 2026-09-28,
+## refait le 2026-09-29 : « les animations ne sont pas réalistes, pas cohérentes »).
 ##
 ## Un mannequin allume sa torche pour chercher l'autre, et c'est ce qui le perd :
-## la règle du jeu en dix plans, sans une ligne d'explication. Storyboard, sources
-## et fabrication : `docs/INTRO_PLANCHES.md`.
+## la règle du jeu en dix-sept plans, quatre mots gravés et le titre. Storyboard,
+## sources et fabrication : `docs/INTRO_PLANCHES.md`.
 ##
 ## ## Un film, pas des planches
 ##
 ## L'intro est UN fichier, `intro_a.ogv` (Theora + Vorbis), image ET son, monté
-## par `tools/monter_intro.py`. Pourquoi pas dix vidéos enchaînées comme l'ancienne
-## intro : les coupes tombent sur les mesures de la musique (170 BPM), et la
-## musique traverse les plans. Deux lecteurs qui se relaient perdent une image à
-## chaque raccord et décalent le son ; un seul film ne peut pas se désynchroniser
-## de lui-même.
+## par `tools/monter_intro.py`. Pourquoi pas dix-sept vidéos enchaînées : les
+## coupes tombent sur les mesures de la musique (170 BPM), et la musique traverse
+## les plans. Deux lecteurs qui se relaient perdent une image à chaque raccord et
+## décalent le son ; un seul film ne peut pas se désynchroniser de lui-même.
 ##
 ## Le film porte donc sa propre bande son : pendant qu'il joue, la musique du jeu
 ## est SUSPENDUE (`AudioManager.suspendre_musique`), puis reprend où elle était.
@@ -22,10 +22,11 @@ extends CanvasLayer
 ## ## Le repli
 ##
 ## `PLANS` décrit le même découpage que le film. Il sert quand le film manque (une
-## installation amputée, un format que la plateforme ne lit pas) : les images de
-## repli (`assets/ui/intro/`) défilent en coupes franches à la même cadence, le
-## texte et le logo sont posés par le jeu. Muet : la musique du jeu continue.
-## `tools/test_intro_planches.gd` vérifie que les deux découpages sont d'accord.
+## installation amputée, un format que la plateforme ne lit pas) : une image par
+## plan (`assets/ui/intro/`, tirée du film par le monteur, textes et titre
+## compris) défile en coupes franches à la même cadence. Muet : la musique du jeu
+## continue. `tools/test_intro_planches.gd` vérifie que les deux découpages sont
+## d'accord.
 ##
 ## ## Ce qui n'a pas changé
 ##
@@ -49,19 +50,26 @@ const MESURE := 60.0 / 170.0 * 4.0
 const FILM := "res://assets/video/intro/intro_a.ogv"
 
 ## Le découpage, dans l'ordre. `mesures` : la durée ; `image` : l'image de repli
-## (vide = noir) ; `texte` : gravé par le jeu en repli ; `logo` : le wordmark.
-## ⚠️ Le même que `plans` dans `tools/monter_intro.py` — la suite le vérifie.
+## (vide = noir). Les quatre mots et le titre sont des plans comme les autres.
+## ⚠️ Le même que `PLANS` dans `tools/monter_intro.py` — la suite le vérifie.
 const PLANS: Array[Dictionary] = [
-	{"nom": "noir", "mesures": 2, "image": "", "texte": ""},
-	{"nom": "le faisceau", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p2.jpg", "texte": ""},
-	{"nom": "le caché", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p3.jpg", "texte": ""},
-	{"nom": "en jeu", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p4.jpg", "texte": ""},
-	{"nom": "l'arme se lève", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p5.jpg", "texte": ""},
-	{"nom": "le flash", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p6.jpg", "texte": ""},
-	{"nom": "noir, une douille", "mesures": 1, "image": "", "texte": ""},
-	{"nom": "la torche roule", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p8.jpg", "texte": ""},
-	{"nom": "VOIR SANS ÊTRE VU.", "mesures": 2, "image": "", "texte": "VOIR SANS ÊTRE VU."},
-	{"nom": "CANDELA", "mesures": 3, "image": "", "texte": "", "logo": true},
+	{"nom": "noir", "mesures": 1, "image": ""},
+	{"nom": "le pouce", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p02.jpg"},
+	{"nom": "le couloir", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p03.jpg"},
+	{"nom": "VOIR", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p04.jpg"},
+	{"nom": "le pilier", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p05.jpg"},
+	{"nom": "la tête", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p06.jpg"},
+	{"nom": "le chasseur", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p07.jpg"},
+	{"nom": "SANS ÊTRE VU.", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p08.jpg"},
+	{"nom": "la main", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p09.jpg"},
+	{"nom": "le pilier, vu par J1", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p10.jpg"},
+	{"nom": "la sortie", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p11.jpg"},
+	{"nom": "TUER", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p12.jpg"},
+	{"nom": "la main s'ouvre", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p13.jpg"},
+	{"nom": "la torche roule", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p14.jpg"},
+	{"nom": "le pied", "mesures": 1, "image": "res://assets/ui/intro/intro_a_p15.jpg"},
+	{"nom": "SANS ÊTRE TUÉ.", "mesures": 2, "image": "res://assets/ui/intro/intro_a_p16.jpg"},
+	{"nom": "CANDELA", "mesures": 4, "image": "res://assets/ui/intro/intro_a_p17.jpg"},
 ]
 
 ## Marge avant de rendre la main si le film ne signale jamais sa fin.
@@ -72,8 +80,6 @@ var sans_film := false
 
 var _video: VideoStreamPlayer
 var _image: TextureRect
-var _lettrage: Label
-var _logo: TextureRect
 var _indice: Label
 
 var _en_cours := false
@@ -165,33 +171,6 @@ func _construire() -> void:
 	_video.finished.connect(_terminer)
 	scene.add_child(_video)
 
-	_lettrage = Label.new()
-	_lettrage.name = "Lettrage"
-	_lettrage.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_lettrage.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_lettrage.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_lettrage.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_lettrage.add_theme_color_override("font_color", Charte.PATE_TEXTE)
-	_lettrage.add_theme_font_size_override("font_size", Charte.T_VERDICT * 2)
-	if ResourceLoader.exists(Charte.CHEMIN_DISPLAY):
-		_lettrage.add_theme_font_override("font",
-			Charte.police_display(Charte.graisse_pour(Charte.T_VERDICT, Charte.Registre.ENSEIGNE)))
-	_lettrage.hide()
-	scene.add_child(_lettrage)
-
-	_logo = TextureRect.new()
-	_logo.name = "Logo"
-	_logo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_logo.anchor_left = 0.27
-	_logo.anchor_right = 0.73
-	_logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if ResourceLoader.exists(Charte.CHEMIN_ENSEIGNE):
-		_logo.texture = load(Charte.CHEMIN_ENSEIGNE) as Texture2D
-	_logo.hide()
-	scene.add_child(_logo)
-
 	# Indice permanent de sortie immédiate, hors du cadre 16:9.
 	_indice = Label.new()
 	_indice.name = "IndicePasser"
@@ -271,11 +250,6 @@ func _plan_suivant() -> void:
 		_zoom = create_tween()
 		_zoom.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 		_zoom.tween_property(_image, "scale", Vector2(1.05, 1.05), _reste)
-
-	var texte := String(plan.get("texte", ""))
-	_lettrage.text = texte
-	_lettrage.visible = texte != ""
-	_logo.visible = bool(plan.get("logo", false)) and _logo.texture != null
 
 
 func _process(delta: float) -> void:

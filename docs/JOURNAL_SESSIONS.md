@@ -6071,3 +6071,30 @@ et lot complet à 23:28). Lot complet vert, 454 s.
 **Ce qui n'est pas prouvé** : le film n'a pas été vu JOUER dans le jeu, fenêtre ouverte — ni l'image, ni le son Vorbis
 par le `VideoStreamPlayer`, ni la reprise de la musique après la pause. Les suites le chargent et le lancent en headless,
 où rien n'est rendu ni entendu.
+
+### 2026-09-29 — L'intro refaite une seconde fois (session « Candela intro redesign », branche `intro-v2`)
+
+Adrien a rejeté le film de `51d4ecc9` dans la nuit (« pas du tout réaliste », puis « même style graphique mais les
+animations ne sont pas réalistes pas cohérentes ; ne mets pas de screen de jeu »). Même récit, redécoupé : un
+storyboard de dix-sept plans validé, puis les vidéos, puis le montage, puis l'intégration. Page de travail :
+https://claude.ai/artifact/BW1JypN6UdyKX5ahhWqkG7.
+
+- **Images** : quinze images Gemini (storyboard, images de début et de fin, plaques), toutes relues ; une refaite trois
+  fois (un cône de lumière partait de la main du caché, qui n'en a jamais).
+- **Vidéos** : Flow (Veo 3.1 Fast) et Runway (Kling 3 Pro, Seedance 2) comparés sur les mêmes plans ; Flow égale Kling
+  pour environ trois fois moins cher. 290 crédits Flow, 380 Runway, dont 60 pour un envoi Kling bloqué à 98 % et jamais
+  livré.
+- **Titre** : trois versions montées (Kling, Seedance, Flow) ; Adrien a choisi Flow.
+- **Intégration** : film Theora 9,2 Mo ; `intro_planches.gd` au nouveau découpage, repli à une image par plan ;
+  gardes de `test_intro_planches.gd` réécrites (dix-sept plans, vingt-cinq mesures, les quatre mots de la règle et
+  aucun autre, le même découpage que le monteur).
+
+**En propre :** `intro_planches.gd`, `tools/test_intro_planches.gd`, `tools/monter_intro.py`, `tools/intro_textes.py`
+et `tools/intro_titre.py` (créés), `docs/INTRO_PLANCHES.md`, `assets/video/intro/`, `assets/ui/intro/`,
+`assets/sources/intro/` (hors dépôt sauf ses deux fichiers de règles).
+
+**Incident** : l'application a été quittée pendant le premier passage du monteur (tué au plan 7). L'extraction des
+sources en PNG à 120 images/s avait déjà rempli 4 Go ; elle passe en JPEG à 60 images/s.
+
+**Ce qui n'est pas prouvé** : le film n'a toujours pas été vu JOUER dans le jeu, fenêtre ouverte (image, son Vorbis,
+reprise de la musique). Les sources de `assets/sources/intro/` n'existent que dans ce worktree.

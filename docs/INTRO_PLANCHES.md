@@ -1,106 +1,112 @@
 # L'intro — récit A, « Qui allume se montre »
 
-*Refaite de A à Z le 2026-09-28, à la demande d'Adrien : « elle est nulle et plus
-du tout dans le thème ». Remplace l'intro en planches de DA6.6 (voir la fin de ce
-document). Page de travail, avec le storyboard des quatre récits proposés, les
-images et le prémontage : https://claude.ai/artifact/QCqBo76ASmSLR8GCZH7xkP*
+*Refaite de A à Z le 2026-09-28 à la demande d'Adrien (« elle est nulle et plus du
+tout dans le thème »), puis refaite une seconde fois le 2026-09-29 : le premier
+film (dix plans, une capture du jeu, des images fixes zoomées) a été rejeté —
+« les animations ne sont pas réalistes, pas cohérentes ». Remplace l'intro en
+planches de DA6.6 (voir la fin de ce document). Pages de travail, avec le
+storyboard, les essais et le film :
+https://claude.ai/artifact/BW1JypN6UdyKX5ahhWqkG7 (la version en jeu) et
+https://claude.ai/artifact/QCqBo76ASmSLR8GCZH7xkP (les quatre récits proposés et
+la première version).*
 
 ## Le récit
 
 Un mannequin allume sa torche pour chercher l'autre, et c'est précisément ce qui
 le perd. L'autre attendait dans le noir, derrière le pilier ZONE 4.
 
-C'est la règle du jeu en dix plans, sans une ligne d'explication : **qui allume
-voit, et se montre.** Le spectateur comprend avant d'avoir joué pourquoi on hésite
-à allumer — et il a envie d'être celui qui attend.
+C'est la règle du jeu en images, sans une ligne d'explication : **qui allume
+voit, et se montre.** On comprend avant d'avoir joué pourquoi on hésite à allumer
+— et on a envie d'être celui qui attend.
 
-Quatre récits ont été proposés (A « Qui allume se montre », B « La fusée », C « Dix
-façons de disparaître », D « Deux moitiés ») ; Adrien a choisi A.
+## Les règles qui gardent le film cohérent
+
+Adrien a rejeté le premier film pour ses animations. Les règles qui en sont nées :
+
+- **Chaque plan vidéo a une image de début ET une image de fin** (Flow et Runway
+  savent tenir les deux) : l'outil interpole un geste écrit, il n'en invente pas.
+  Les images de fin sont des retouches Gemini de l'image de début (« change
+  seulement ceci »), donc même décor, même lumière.
+- **Une seule logique de lumière** : la torche de J1, puis l'éclair du tir, puis la
+  torche tombée. J2 n'éclaire jamais.
+- **Un seul sens** : J1 va de gauche à droite, J2 est à droite et regarde à gauche.
+- **On ne garde que les premières secondes** de chaque clip, relues image par image
+  (voir « Pièges connus » de la ROADMAP, 2026-09-28 : Veo peut ignorer l'image de
+  départ, dédoubler un objet en mouvement, dériver après 3 s).
+- **Plus de capture du jeu** (Adrien, 2026-09-29) : elle cassait le style encré.
 
 ## Le découpage
 
 Coupé sur les mesures de la musique du jeu : 170 BPM, quatre temps, **une mesure =
-1,4118 s**. 18 mesures, **25,41 s**.
+1,4118 s**. 25 mesures, **35,29 s**. Écrit deux fois — `PLANS` dans
+`tools/monter_intro.py` et dans `intro_planches.gd` — et vérifié par
+`tools/test_intro_planches.gd`.
 
-| # | Mesures | Temps (s) | Image | Son |
+| # | Mes. | Plan | Ce qu'on voit | Source |
 |---|---|---|---|---|
-| 1 | 2 | 0,00 – 2,82 | Noir. | Ambiance, quatre pas lents. |
-| 2 | 2 | 2,82 – 5,65 | Le faisceau ambre s'ouvre ; le mannequin, de dos, avance dans le couloir. **Clip Flow.** | `torch_on`, les pas se rapprochent. |
-| 3 | 2 | 5,65 – 8,47 | Le faisceau glisse vers le pilier ZONE 4 ; le caché, torche éteinte, ne bouge pas. **Clip Flow.** | Les pas arrivent tout près. |
-| 4 | 2 | 8,47 – 11,29 | **Le jeu** : capture 0.7.0 (photographe, zoom 4) — un mannequin dans son cône, l'autre dans le noir contre le mur. | La pulsation du match, trois mesures en crescendo. |
-| 5 | 1 | 11,29 – 12,71 | Le caché lève son arme, à contre-jour. **Clip Flow.** | Le clic de l'arme. |
-| 6 | 1 | 12,71 – 14,12 | Un coup de feu éclaire les deux le temps de trois images, puis noir. | Le tir, le sifflement d'oreille. |
-| 7 | 1 | 14,12 – 15,53 | Noir. | Une douille tombe. |
-| 8 | 2 | 15,53 – 18,35 | La torche tombée roule, son faisceau rase les douilles et le sang. **Clip Flow.** | Frottements, une douille heurtée. |
-| 9 | 2 | 18,35 – 21,18 | **VOIR SANS ÊTRE VU.** | Frappe d'imprimerie ; la musique d'intro du jeu démarre. |
-| 10 | 3 | 21,18 – 25,41 | CANDELA s'allume en deux ratés, puis fondu sur le panneau ARENA de l'accueil. | `ui_power_on`, puis la musique du menu. |
+| 1 | 1 | noir | On entend avant de voir : ambiance, pas. | — |
+| 2 | 1 | le pouce | Le pouce presse l'interrupteur, la lampe s'allume. | Flow, début → fin |
+| 3 | 2 | le couloir | J1, de dos, avance dans le couloir, faisceau ambre. | Flow (clip du 28/09) |
+| 4 | 1 | **VOIR** | Un pochoir bombé sur un mur, lu seulement là où passe la torche. | texte animé |
+| 5 | 2 | le pilier | Derrière ZONE 4, J2 attend ; le faisceau glisse au sol. | Flow (clip du 28/09) |
+| 6 | 1 | la tête | Un reflet ambre glisse sur une arête de la tête cubique de J2. | Flow |
+| 7 | 1 | le chasseur | J1 de profil marche vers la droite, le faisceau fouille. | Flow |
+| 8 | 1 | **SANS ÊTRE VU.** | Les lettres s'allument en deux ratés, puis meurent une à une. | texte animé |
+| 9 | 1 | la main | L'index de J2 glisse sur la détente. | Flow |
+| 10 | 1 | le pilier, vu par J1 | Par-dessus l'épaule, le faisceau se pose sur ZONE 4. | Flow |
+| 11 | 2 | la sortie | J2 sort de l'ombre, vise, **tire** : le plan finit sur l'éclair de bouche. | Kling 3 Pro, début → fin |
+| 12 | 1 | **TUER** | Une image blanche où le mot est brûlé en noir, l'éclair, la rémanence rouge. | texte animé |
+| 13 | 1 | la main s'ouvre | Touché, J1 lâche sa torche allumée. | Flow, début → fin |
+| 14 | 2 | la torche roule | Elle roule, son faisceau balaie les douilles et le sang. | Flow (clip du 28/09) |
+| 15 | 1 | le pied | Le pied de J2 se pose dans la lumière ; la torche s'éteint. | Flow, début → fin |
+| 16 | 2 | **SANS ÊTRE TUÉ.** | Gravé dans le sol, lu à la lumière rasante. | texte animé |
+| 17 | 4 | CANDELA | Une étincelle enflamme chaque lettre ; éclair, secousse, impact. | Flow, monté |
 
-Tous les sons sont ceux du jeu (`assets/audio/`). Le jeu n'a pas de fichier de
-respiration : les pas en tiennent lieu. `weapon_reload_pistolet.wav` est presque
-muet (−63 dB en moyenne) : c'est le clic à vide qui fait le cran de l'arme.
+Le son est entièrement fait des fichiers du jeu : la basse du match entre après le
+clic de la torche, la batterie quand J2 serre son arme, tout se coupe net sur le
+coup de feu (sifflement d'oreille), puis l'impact du titre (un tir de pompe ralenti
+deux fois), l'allumage du tube et la musique d'intro du jeu.
 
 ## Ce que le jeu joue
 
 - **Un seul film**, `assets/video/intro/intro_a.ogv` : Theora 1920×1080 + Vorbis
-  stéréo, 5,3 Mo. Image ET son, tel que validé. Pourquoi un seul fichier : les
-  coupes tombent sur les temps et la musique traverse les plans ; deux lecteurs
-  qui se relaient perdent une image à chaque raccord.
+  stéréo, image ET son. Pourquoi un seul fichier : les coupes tombent sur les temps
+  et la musique traverse les plans.
 - **La musique du jeu se tait pendant le film** (`AudioManager.suspendre_musique`),
-  puis reprend où elle était : au lancement, sur son clip d'intro, qui enchaîne
-  seul sur le menu.
-- **Le repli** : si le film manque, les six images de `assets/ui/intro/`
-  (1280×720) défilent en coupes franches à la même cadence ; le texte et le logo
-  sont posés par le jeu. Muet.
+  puis reprend où elle était.
+- **Le repli** : si le film manque, seize images de `assets/ui/intro/` (1280×720,
+  une par plan, textes et titre compris) défilent en coupes franches à la même
+  cadence. Muet.
 - Inchangé : n'importe quelle touche (clavier, bouton de souris ou de manette) la
   passe, un mouvement de souris non ; jouée une fois (`intro_vue`, posé au
   démarrage), rejouable depuis l'accueil ; nœud `IntroPlanches`, signal `terminee`.
-- Les joueurs qui ont vu l'ancienne intro ne verront pas la nouvelle d'eux-mêmes
-  (Adrien, 2026-09-28 : pas de rejeu forcé) ; elle reste accessible depuis
-  l'accueil.
+  Pas de rejeu forcé pour qui a vu l'ancienne intro (Adrien, 2026-09-28).
 
 ## La fabrication
 
-Tout se refait avec **`python3 tools/monter_intro.py`** (`--repere` incruste le plan
-et le temps, pour relire). Le script dessine chaque image en PIL, mixe les sons du
-jeu avec ffmpeg (−16 LUFS, limité), encode avec `ffmpeg2theora` et écrit les
-images de repli. Ses sources vivent dans `assets/sources/intro/`, **hors dépôt**
-(voir son `.gitignore`), comme les rushes de l'ancienne intro.
+Trois outils, dans cet ordre, depuis `assets/sources/intro/` (**hors dépôt**, voir
+son `.gitignore`) :
 
-Le découpage est écrit deux fois — `plans` dans le monteur, `PLANS` dans
-`intro_planches.gd` — et `tools/test_intro_planches.gd` vérifie qu'ils sont
-d'accord, plan par plan.
+1. `python3 tools/intro_textes.py` — les quatre textes animés, fabriqués image par
+   image en Pillow (zéro crédit), sur des plaques Gemini recadrées.
+2. `python3 tools/intro_titre.py` — le titre : le clip Flow calé sur quatre mesures,
+   l'embrasement sur le troisième temps, deux images d'éclair, une secousse.
+3. `python3 tools/monter_intro.py` — le film : chaque plan prend une fenêtre de sa
+   source et la cale sur sa durée ; mixage des sons du jeu (−16 LUFS, limité) ;
+   encodage `ffmpeg2theora` ; les images de repli. `--repere` incruste plan et temps.
 
-### Les images (Gemini)
+### Les outils de génération, comparés (2026-09-29)
 
-Treize images générées dans l'appli Gemini, toujours avec des références jointes,
-toujours relues avant d'être gardées. Le bloc de prompt commun exige le mannequin
-à tête cubique sans visage en armure gris-bleu sombre, 85 % de noir d'encre et une
-seule source de lumière nommée. Les images retenues passent ensuite par **une même
-courbe (gamma 1,35)** : 83 à 95 % de pixels sous 30/255, pour une cible de 85 %.
-Une courbe commune a été plus fiable que des relances, comme en DA6.6.
-
-⚠️ L'envoi à Gemini d'illustrations du dépôt a été refusé une fois par le garde-fou
-de Claude Code (« exfiltration ») : Adrien a tranché que seules des images déjà
-produites par Gemini servent de référence.
-
-### Les clips (Google Flow, Veo 3.1 Fast)
-
-Image-vers-vidéo depuis les images-clés, 16:9, 720p (le 1080p n'est pas offert
-pour ce modèle ; Adrien : « 720p ça va »). **200 crédits sur 1 050** (cinq envois à
-40 crédits, deux sorties chacun ; deux envois ratés n'ont rien coûté). Runway :
-rien.
-
-Ce que Veo a fait, et qu'on ne voit qu'image par image :
-
-- **Il peut ignorer l'image de départ.** Les deux essais « propres » du plan 2 ont
-  changé de décor, de style et d'armure dès la première image. Le retenu est un
-  essai lancé par erreur avec le seul bloc commun : il est fidèle. **Contrôle
-  obligatoire : comparer la première image du clip à l'image-clé.**
-- **Il dédouble un objet en mouvement.** Plan 5 : deux pistolets superposés
-  pendant la montée du bras. 0,45 → 0,85 s sont retirés ; l'arme monte à mi-course
-  puis se retrouve pointée d'un coup sec.
-- **Il dérive après 3 s** : torche qui flotte (plan 3), torche qui se redresse
-  (plan 8). Chaque plan n'utilise que les 1,4 à 2,8 premières secondes.
+- **Gemini** (images) : le storyboard, les images de début et de fin, les plaques.
+  Toujours avec des références déjà produites par Gemini (Adrien, 2026-09-28 : les
+  illustrations du dépôt ne partent pas).
+- **Google Flow, Veo 3.1 Fast** : 40 crédits l'envoi de deux clips de 8 s en 720p.
+  Aussi bon que Kling sur les mêmes plans : c'est l'outil principal.
+- **Runway** : Kling 3 Pro, 60 crédits le clip de 5 s ; Seedance 2 en 1080p, 200
+  crédits le clip (à ne pas refaire). Un envoi Kling est resté bloqué à 98 % :
+  débité, jamais livré.
+- Dépensé pour la seconde version : 290 crédits Flow (solde 560), 380 Runway
+  (solde 235). Pour la première : 200 Flow.
 
 ## L'ancienne intro (DA6.6, 2026-09-09 → 2026-09-28)
 
@@ -108,9 +114,8 @@ Six planches (« la descente », « le seuil », « la dotation », « l'allumag
 prix », « l'extinction ») : un homme arrive dans un lieu souterrain, s'équipe,
 allume sa torche. Les illustrations `ill_intro_*.png` montraient des mannequins,
 mais les six clips Veo en avaient fait **un homme réaliste en sweat à capuche** —
-la première raison du « plus du tout dans le thème ». Et le récit ne montrait ni
-adversaire, ni tir, ni vue de jeu. Ses six `.ogv` et `tools/convert_intro_videos.sh`
-sont retirés.
+la première raison du « plus du tout dans le thème ». Ses six `.ogv` et
+`tools/convert_intro_videos.sh` sont retirés.
 
 ⚠️ **Restent au dépôt, et ne servent plus à l'intro** : les six `ill_intro_*.png`
 (20 Mo en tout). `ill_intro_allumage.png` illustre encore l'entrée « rejouer l'intro » de
