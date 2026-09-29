@@ -125,6 +125,13 @@ func _en_jeu() -> void:
 		_check("la vue iso est allumée", false)
 		return
 	var classes := _classes(main)
+	# Une seule portée pour tous les modes : en écran scindé, le plancher est celui de la VUE UNIQUE (Q15 révisée :
+	# les deux écrans n'ont plus le même zoom — la portée, elle, ne doit pas suivre l'écran).
+	var plancher_scinde := WeaponData.portee_plancher
+	var attendu_vu := PorteeEcran.portee_minimale(PorteeEcran.VUE_UNIQUE, float(reglages.call("zoom_de_la_vue_unique")),
+		float(reglages.decalage_visee), CameraIso.TANGAGE_DEG)
+	_check("écran scindé : le plancher est celui de la vue unique (%.1f px)" % plancher_scinde,
+		is_equal_approx(plancher_scinde, attendu_vu))
 	# Le joueur ne vise plus tout seul (la souris du headless tirerait sa visée) ; on la pose.
 	for p in [main.p1, main.p2]:
 		(p as Node).set_physics_process(false)
@@ -152,6 +159,8 @@ func _en_jeu() -> void:
 	main._accorder_rendu_aux_vues()
 	for i in 4:
 		await process_frame
+	_check("passer à la vue unique ne change pas la portée (%.1f px, %.1f en écran scindé)" % [WeaponData.portee_plancher,
+		plancher_scinde], is_equal_approx(WeaponData.portee_plancher, plancher_scinde))
 	await _mesurer(main, pres, 0, classes, "vue unique")
 
 

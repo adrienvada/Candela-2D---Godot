@@ -6,9 +6,9 @@
 > aller au bout de l'écran de chaque joueur » ; **Q46** le point lumineux visible seulement si la source l'est (« si son
 > corps est devant, on ne voit pas le point lumineux »). Trois étapes, dans l'ordre, chacune prouvée avant la suivante.
 > **État : L1 faite (`1a1bfe1`), L1bis faite (`3f18dea`)** (les faisceaux concentrés, demandés par Adrien à 15:26 après la
-> planche de L1), **L2 faite (`74bce8d`), L3 faite**.
+> planche de L1), **L2 faite (`74bce8d`), L3 faite (`48c3136`)**, puis le plancher calé sur la vue unique (Q15 révisée).
 >
-> ⚠️ **La fusion de la 0.8.0 (`24abbfc`, Q15 et Q42) dans cette branche n'est PAS faite** : demandée par la session
+> ⚠️ **La fusion de la 0.8.0 (`24abbfc`, puis `14f02da`) dans cette branche n'est PAS faite** : demandée par la session
 > coordinatrice (ordre 457), elle a été **refusée par les permissions de cette session** (« Modify Shared Resources »). Je
 > ne l'ai pas contournée et je ne peux pas écrire à la coordinatrice (cette session cloud n'a pas le droit d'envoyer de
 > messages) : **il faut qu'Adrien autorise la fusion ici**, ou qu'elle se fasse autrement selon sa décision. En attendant,
@@ -248,6 +248,37 @@ gardes celui-ci (hors de ma tâche, signalé).
 **Preuve** : `tools/test_point_lumineux.gd` (20 vérifications : défaut, drapeau de débogage, shader = formule GDScript,
 de face / profil / dos pour les caméras de J1 et J2, équité miroir à 0,000000, le point posé au bout du fût de chaque
 joueur à l'énergie de la lampe, éteint avec elle, sans effet sur les lumières 2D).
+
+## Le plancher, calé sur la vue unique (Q15 révisée)
+
+Adrien a revu Q15 à 15:50 (« zoom 1,25 en écran scindé et 1,5 en écran seul », sur la 0.8.0 à `14f02da`). Le plancher lisait
+le zoom de l'écran en cours : après la fusion, l'écran scindé aurait porté à 873 px et la vue unique à 728 — le contraire
+de la règle « une seule portée pour tous les modes ». Il se calcule désormais sur `GameSettings.zoom_de_la_vue_unique()` ;
+**sur cette base les deux écrans ont le même zoom, et cette fonction rend `zoom_duel` : à la fusion, elle doit rendre le
+zoom de la vue unique (`ZOOM_VUE_UNIQUE`)**. `test_portee_ecran` rougit si l'écran scindé change la portée. La portée
+retenue reste donc **728 px pour tous les modes**. (Les images de L1bis ont été prises à ×1,25 dans les deux écrans, portée
+873 px : elles montrent l'ouverture, pas la portée de la 0.8.0.)
+
+## Le coût de L2 et L3
+
+Sous Mesa, L1bis → L2 + L3 (zoom ×1,25, deux séries alternées, médianes en ms) : écran scindé 622 / 618 → 648 / 619
+(**×1,02**), vue unique 588 / 552 → 589 / 564 (**×1,01**) — dans le bruit. Déplacer la lampe ne coûte rien ; le point, ce
+sont deux petits quads par torche allumée.
+
+## Les suites
+
+`GODOT=$(which godot) ./tools/run_suites.sh`, Godot 4.7 officiel sous Linux, à chaque étape : **tout passe, sans erreur de
+script** — état final : **127 suites headless + 9 scénarios à deux instances, 661 s** (dont `test_portee_ecran` 41,
+`test_faisceaux_concentres` 56, `test_lampe_modele` 13, `test_point_lumineux` 20 vérifications). Référence avant le
+chantier : tout passait aussi (682 s).
+
+## Ce qui reste à faire ailleurs
+
+- **La fusion de la 0.8.0** dans cette branche (refusée ici par permission), puis `zoom_de_la_vue_unique()` à brancher sur
+  `ZOOM_VUE_UNIQUE`, et la suite complète.
+- **La cadence sur le Mac** : L1 (le faisceau visible de Q41 est ce qui coûte), L1bis, L2 + L3.
+- **Le suivi de projet** (artefact) : cette session ne peut ni republier ni écrire aux autres sessions ; à reporter par la
+  coordinatrice.
 
 ## Questions pour Adrien
 

@@ -29602,6 +29602,16 @@ k = ln 6 / ln 12 ≈ 0,721 : les deux bornes exactes, chaque rapport entre deux 
   doublon avec ce point : à retirer si Adrien garde celui-ci.
 - **Preuve** : `tools/test_point_lumineux.gd` (20 vérifications) ; l'occultation au pixel, par le banc
   (`tools/banc_lumieres.gd --plans=l3`) — rien n'est rastérisé en headless.
+
+- **Coût de L2 + L3** (Mesa, relatif) : ×1,02 en écran scindé, ×1,01 en vue unique — dans le bruit.
+
+### Le plancher sur la vue unique (Q15 révisée, 2026-09-29 15:50)
+
+Adrien : « zoom 1,25 en écran scindé et 1,5 en écran seul ». Le plancher lisait le zoom de l'écran en cours : il aurait
+porté plus loin en écran scindé qu'en ligne. Il se calcule sur `GameSettings.zoom_de_la_vue_unique()` — sur cette base
+égal à `zoom_duel` ; **à la fusion de la 0.8.0, elle doit rendre `ZOOM_VUE_UNIQUE`**, et `test_portee_ecran` rougit si
+l'écran scindé change la portée. 728 px pour tous les modes. **La fusion de la 0.8.0 dans `claude/lumieres-080` n'est pas
+faite** : refusée par les permissions de la session cloud qui tient la branche (rapport).
 ---
 
 ## Jalons humains — ce qui ne peut pas être automatisé

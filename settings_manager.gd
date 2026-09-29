@@ -373,7 +373,7 @@ func accorder_au_mode(en_ligne: bool) -> void:
 	facteur_portee = v[2]
 	WeaponData.facteur_portee = facteur_portee
 	WeaponData.portee_plancher = plancher_de_portee(portee_ecran_du_duel(en_ligne, _portee_ecran_locale),
-		zoom_duel, decalage_visee)
+		zoom_de_la_vue_unique(), decalage_visee)
 	var l := lacet_du_duel(en_ligne, _lacet_local, _option_lacet_locale)
 	lacet_duel = l[0]
 	option_lacet = l[1]
@@ -424,6 +424,16 @@ static func valeurs_du_duel(en_ligne: bool, zoom_local: float, decalage_local: f
 	if en_ligne:
 		return [ZOOM_DUEL_DEFAUT, DECALAGE_VISEE_DEFAUT, FACTEUR_PORTEE_DEFAUT]
 	return [zoom_local, decalage_local, facteur_local]
+
+## L1 — le zoom sur lequel se calcule le plancher de portée : celui de la VUE UNIQUE (le cadrage du jeu en ligne), QUEL
+## QUE SOIT L'ÉCRAN — une seule portée pour tous les modes (question posée à Adrien, Q57 à la coordination). Sur cette
+## base, la vue unique et l'écran scindé ont le même zoom (`zoom_duel`). ⚠️ **Q15 révisée par Adrien le 2026-09-29 à 15:50**
+## (« zoom 1,25 en écran scindé et 1,5 en écran seul », sur `claude/unrailed-isometric-feasibility-44klgh` à `14f02da`) :
+## À LA FUSION, cette fonction doit rendre le zoom de la vue unique (`ZOOM_VUE_UNIQUE` en ligne, la valeur locale de la vue
+## unique sinon), jamais celui de l'écran en cours — sans quoi l'écran scindé porterait à 873 px et la vue unique à 728.
+## `tools/test_portee_ecran.gd` rougit si l'écran scindé change la portée.
+func zoom_de_la_vue_unique() -> float:
+	return zoom_duel
 
 ## L1 — la règle du bord de l'écran vaut-elle ? Toujours EN LIGNE (les deux machines la même) ; ailleurs, le choix local.
 static func portee_ecran_du_duel(en_ligne: bool, locale: bool) -> bool:
