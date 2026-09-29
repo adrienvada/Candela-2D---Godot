@@ -29508,7 +29508,8 @@ salle, plus l'arc est large et léger. Plus on se déplace lentement, moins on f
 - `AudioManager.son_localise` : chaque son positionnel s'annonce **avant** qu'une voix soit prise — le liseré raconte le
   monde, pas ce que seize voix ont pu mixer. Paramètre `emetteur` (le `player_id` du corps d'où part le son) sur
   l'entonnoir et les points d'entrée ; `play_percuteur` rejoint les autres ; la combustion de la fusée (voix dédiée)
-  s'annonce par `annoncer_son_2d`, toutes les 0,6 s. Rien ne s'annonce sans écouteur.
+  s'annonce par `annoncer_son_2d`, toutes les 0,6 s, en source continue (période et identité de la fusée). Rien ne
+  s'annonce sans écouteur. L'événement porte aussi le fichier réellement joué et le pitch final (voir « La forme d'onde »).
 - `GameState` : un appareil par vue rendue (`son_visible_vue.gd`, `SonsVue1`/`SonsVue2`, couche 5), logé par
   `_loger_appareil_de_vue` — **extrait tel quel de l'accord du brouillage** plutôt que recopié : deux copies de « où vit
   l'écran de J2 » finiraient par diverger, et l'erreur ne se voit qu'à deux joueurs. Ouvert seulement quand le jeu est
@@ -29527,6 +29528,13 @@ chaque ancre : présence par paliers (accroupi 0,2 ; pas de course 0,7 ; tir 1),
 le fondu, cœur en plateau sur 55 % de la largeur (la salle et les murs le mangent). Le banc fige chaque liseré au sommet de
 sa vie pour la photo : sous Xvfb, une image dure plus longtemps que ce sommet.
 
+**La VIE d'un liseré se photographie aussi** (forme d'onde, 2026-09-29) : `--seulement=vies` prend huit instants d'un même
+liseré (un tir en hangar et en sas, un pas de course, un pas accroupi, un rechargement) et écrit `vies.json` ; `--seulement=video`
+en écrit les images à 60 par seconde. Le banc n'écrit que des captures brutes, dans `--sortie=` (jamais dans le dépôt) ;
+`tools/planches_son_visible.py` (Pillow et numpy ; la vidéo veut `imageio_ffmpeg`) en fait ce qu'on regarde : une planche par
+vie (huit instants + la courbe présence / largeur), l'avant / après du mélange sur une fusillade éparpillée et sur une dense,
+un liseré seul sur quatre fonds, et une vidéo à vitesse réelle et au quart de vitesse.
+
 ### S6 — les bruits de corps de l'hôte, chez le client
 
 En ligne, l'hôte simule les deux joueurs et entendait les rechargements et les frôlements du client ; le client, qui
@@ -29536,20 +29544,111 @@ Tir, douille, pas, enjambement et souffle étaient déjà symétriques. Neuf sui
 pour prouver que leur effet visuel ne touche pas au fil (corps, masque, killcam, gadgets, rouge de la fusée) : elles
 passent à 19 — le fil a bougé pour S6, pas pour elles, et c'est ce qu'elles vérifient désormais.
 
+### La forme d'onde — le liseré suit le son (2026-09-29)
+
+> « Il faudrait que les liserés s'animent en fonction du son (de la forme d'onde plus ou moins) des sons : un long son très
+> réverbéré doit durer autant que le son, et un son très court et étouffé doit durer très peu. » — Adrien
+
+*Écrit sur la branche `claude/v080-son-forme-onde` (départ `23869064`), non poussée ; le protocole n'a pas bougé.*
+
+**Pourquoi.** Un liseré durait `DUREE[sorte]`, une constante : un tir 0,9 s qu'il claque sec ou roule, un pas 0,45 s alors que
+le coup sourd en dure un dixième. Il vit désormais **tant que son niveau perçu reste au-dessus de `NIVEAU_SEUIL_DB`** —
+raisonné en dB, jamais en fraction d'une durée : un son faible (pas accroupi, derrière un mur) franchit le seuil plus tôt, un
+tir en grande salle dure le son plus sa traîne (plafond 3 s). **Le pic ne bouge pas** : mêmes ancres 10° / 180°, mêmes
+paliers de présence (`etat()` rend au pic exactement ce que `percevoir` avait rendu, et une suite le vérifie).
+
+**Le précalcul, et pourquoi.** Les 96 WAV sont importés en QOA (`AudioStreamWAV.data` n'est pas du PCM lisible) et un export
+ne contient pas les sources : le jeu ne peut pas lire la forme d'onde, elle se calcule **hors ligne**.
+`tools/enveloppes_sons.py` (Python 3, `wave` — 8 à 32 bits entiers ou flottants, mono ou stéréo ; `--verifier`, `--autotest`)
+écrit `enveloppes_sons.gd` : un **script**, toujours exporté, là où un JSON ne l'aurait pas été sans filtre d'export et serait
+devenu un repli muet de plus. RMS par fenêtres de 20 ms toutes les 10 ms, en dB sous le pic du fichier (le niveau absolu reste
+`NIVEAU_RELATIF`, seul dosage) : 60 sons, 3 283 valeurs. **`test_enveloppes_sons`** échoue si un WAV positionnel n'a pas
+d'entrée (l'ensemble des fichiers doit égaler la table, dans les deux sens), si une source a changé (taille + SHA-256 :
+« régénérer avec tools/enveloppes_sons.py »), ou si la durée de la table n'est pas celle du flux que le moteur charge.
+`AudioManager._annoncer` transmet `chemin` (`stream.resource_path` ; une clé passe par `SOUNDS`) et le `pitch` final ;
+`DUREE` reste le repli d'un flux sans enveloppe, et `repli_compte` de la vue le rend visible.
+
+**Le modèle** (`son_visible.gd`, « LA FORME D'ONDE »). À chaque pas de 10 ms ÷ pitch, le niveau perçu est le plus fort de deux
+étages : **le direct** — le pic plus l'enveloppe, lissée en VU-mètre (attaque immédiate, relâchement de 50 ms, soit 174 dB/s :
+un rechargement montre ses clics sans clignoter ; le VU continue de retomber après la fin du fichier) — et **la salle** :
+chaque instant du direct l'excite à `20·log10(wet × RESONANCE)` sous lui, et elle le rend en déclinant de 60 dB en
+`rt60_de(room_size, damping)` (0,6 s dans un sas, 1,5 s dans un hangar). Un mur retire au direct toute sa pénalité, à la salle
+40 % seulement (`TRAINE_OCCLUSION`) : la part directe baisse plus que la traîne. **La traîne élargit** : quand la salle
+rattrape le direct (marge de 4 dB), la largeur glisse vers 180° et le bord vers le dégradé, en fondu de 100 ms. Une source
+continue (la combustion, 0,6 s) est **plate** — un peu plus que sa période — et l'annonce suivante de la même fusée
+(`source`) REMPLACE la précédente : deux liserés plats l'un sur l'autre feraient une bosse à chaque période.
+**Ce que ça donne**, avant / après, à 200 px (150 px pour un pas de course, 110 px accroupi), dans un sas / la salle par défaut /
+un hangar. Avant, la durée fixe rallongée par la salle : tir 1,12 / 1,22 / 1,28 s, impact de mur 0,87 / 0,94 / 0,99 s, pas
+0,47 / 0,48 / 0,49 s (debout comme accroupi). Après, en plage sur les variantes de fichier et les pitchs de 0,96 à 1,04 :
+pistolet 0,40–0,66 / 0,50–0,66 / 0,60–0,73 s, fusil 0,48–0,82 s, fusil à pompe 0,68–1,19 / 0,82–1,19 / 0,96–1,23 s (un long son
+dure autant que lui), impact de mur 0,19 / 0,33 / 0,47 s, pas de course 0,20–0,23 s (les fichiers de pas ont ~100 ms de silence
+avant le coup : le liseré l'attend, comme l'oreille), pas accroupi 0,15–0,18 s. L'impact est ce que la salle brouille le plus :
+sa bande reste à 11° dans un sas, passe de 11° à 125° en 0,3 s dans la salle par défaut et à 164° en 0,4 s dans un hangar
+(« la reverb des sons d'impact peut rendre plus flous les liserés ») ; un tir n'ouvre la sienne qu'à la fin (134° à 0,6 s dans
+un hangar, 11° tout du long dans un sas). Un rechargement dure 0,9 s mais n'apparaît qu'en deux clics — pas le froissement,
+45 dB plus bas.
+
+**Q52 : l'addition des liserés tire vers le blanc, décision d'Adrien** (« Il faudrait que l'addition de bruits brouille, ou
+change la couleur : on additionne les liserés en couleur pour qu'ils virent au blanc ? »). La toile est en mélange ADDITIF
+(`CanvasItemMaterial.BLEND_MODE_ADD`, gardé par `test_son_visible_jeu` : la toile porte ce mélange, et `repli_compte` reste à 0).
+Mesuré au banc sur un liseré SEUL (`tools/planches_son_visible.py`, `liseres_seuls_chiffres.txt`) : **sur du noir, rien ne
+change** — `dessous + couleur × alpha` avec un dessous nul redonne le mélange normal, à 2/255 près sur 6 044, 19 671 et
+21 035 pixels (un tir, un pas accroupi, un pas derrière un mur) ; **sur une zone éclairée il est plus clair de
+`dessous × alpha`** : sur un béton à 13 % le tir gagne +12,7 en luminance moyenne, son cœur passe de (228, 212, 186) à
+(255, 238, 208) et sature en rouge (61 pixels contre 0) ; le pas accroupi gagne +3 (cœur 64 → 70), le pas derrière un mur
++5 ; sous une simple lueur de 3 %, +3 / +1 / +1. **Aucune réduction d'alpha nécessaire** : un tir seul sur le noir de l'arène
+culmine à (225, 209, 183), loin du blanc. Là où plusieurs liserés se recouvrent, la somme par canal les tire vers le blanc, et
+la couleur de la sorte s'y perd — c'est ce qu'Adrien demande (« brouille, ou change la couleur »), pas un défaut : sur une
+fusillade éparpillée autour de J1 (57 119 pixels de liseré) la luminance moyenne passe de 51 à 54 et 74 pixels deviennent
+quasi blancs ; sur une fusillade DENSE (un tir, cinq impacts, deux ricochets, un coup au but dans un secteur de 40°, 23 106
+pixels) de 102 à 136, la saturation de 0,66 à 0,60 et **1 615 pixels quasi blancs contre 0**. Vérifié sous Mesa (Xvfb),
+pas sur le pilote d'Apple. `poser_melange(false)` rend l'ancien mélange (le banc s'en sert pour l'avant/après).
+
+**Ce que les images ont corrigé.** (1) Le premier jet mesurait la part de salle à ce que le direct valait au sommet : une baisse
+de deux décibels dans l'enveloppe d'un tir élargissait la bande de 13° à 24° au milieu du coup, puis la refermait — elle
+**respirait avec le son**. Depuis : la salle doit RATTRAPER le direct (marge de 4 dB) et l'ouverture est lissée. (2) Un fondu
+sur les 120 dernières ms mordait le pic d'un pas de 200 ms : il ne sert plus qu'à un liseré coupé par le plafond. (3) Le premier
+tableau chiffré de l'addition prenait pour « cœur » le pixel le plus clair de toute l'image — un tireté de visée à 62/255 — et
+annonçait sur du noir un pas accroupi plus clair de 9 en addition : c'était le tireté, pas le liseré. On ne compte désormais
+que les pixels dont le fond est l'aplat lui-même.
+**Piège de banc** : le pitch d'une voix se multiplie par `Engine.time_scale` — un son émis pendant qu'on fige le temps (pour que
+l'arène ne bouge pas entre deux photos) dure vingt fois plus. Le banc émet à temps réel, PUIS fige, et pose l'âge des traces à
+la main ; l'arène se fige aussi par `--led-murs-fige=0.3` (le bandeau LED respire sinon d'une photo à l'autre).
+
+**Mesuré dans le moteur, hors périmètre** (`AudioEffectReverb` aux réglages du bus SFX, réponse impulsionnelle capturée) : la
+réverbération seule tombe de 60 dB en 0,48 s (petite salle) à 0,66 s (grande) ; avec le retour du prédélai (150 ms, 0,4 — les
+défauts du bus, jamais réglés) la queue mesure **1,2 s quelle que soit la salle**, et `room_size` / `damping` n'y changent
+presque rien à l'oreille. `RT60_MIN_S` / `RT60_MAX_S` sont donc des points de départ pris entre les deux mesures, pas une mesure.
+**Autre constat de la même lecture des fichiers, à signaler et non corrigé** : les niveaux absolus des WAV ne sont pas
+homogènes (`edit/normalize=false` partout) — `weapon_reload_pistolet.wav` culmine à -30,5 dBFS (RMS -47), fusil et pompe à
+-13 dBFS, quand les tirs et les pas sont à 0 / -4 dBFS. `NIVEAU_RELATIF` (-8 dB pour un rechargement) dose PAR-DESSUS ces
+niveaux : l'oreille entend le rechargement du pistolet très bas, alors que le liseré, qui lit le dosage et normalise la forme au
+pic, le montre net. Le liseré dit ce que le dosage DEVRAIT donner, pas ce que le fichier donne.
+
 ### Preuves
 
-`test_son_visible` (le modèle, 246 contrôles) et `test_son_visible_jeu` (58 : couverture des familles, ancres liées,
-entonnoir, **équité miroir à 45° B** — J1 entendant J2 à +d et J2 entendant J1 à -d voient le même liseré, même angle à
-l'écran mesuré par la caméra de chacun —, S6, killcam, décompte, vue unique). Lot complet vert.
+`test_son_visible` (le modèle, 354 contrôles : le VU, le RT60, la traîne, le pic exact, la vie en dB, court/étouffé contre
+long/réverbéré, l'élargissement, le mur, le pitch, la source continue, le repli, le plafond, les vrais fichiers),
+`test_son_visible_jeu` (96 : couverture des familles, ancres liées, entonnoir, **équité miroir à 45° B** — J1 entendant J2 à
++d et J2 entendant J1 à -d voient le même liseré, même angle à l'écran mesuré par la caméra de chacun —, **le même événement
+donne la même vie dans les deux vues**, chaque point d'entrée du jeu annonce un fichier connu de la table, la salle allonge le
+même tir, la combustion plate et remplacée, le mélange additif, S6, killcam, décompte, vue unique) et `test_enveloppes_sons`
+(13). **Lot complet vert** : 124 suites headless, le démarrage et 9 scénarios à deux instances, en 722 s, aucune erreur de
+script. **Coût** : la vie d'un liseré se calcule en 0,02 à 0,08 ms par événement (26 à 160 pas de 10 ms), une fois, à son
+arrivée ; elle se relit en 5 µs par trace et par image.
 
 ### Ce qui reste
 
-1. **Le dosage avec Adrien**, sur les images puis en jouant : toutes les valeurs sont des points de départ.
+1. **Le dosage avec Adrien**, sur les images puis en jouant : toutes les valeurs sont des points de départ. En premier,
+   **la forme d'onde** : le pas accroupi n'est plus qu'un éclair de ~50 ms à 16 % d'opacité (un coup de 20 ms à -22 dB) — c'est
+   ce que demande « un son très court et étouffé doit durer très peu », mais c'est peut-être trop discret pour servir. Les
+   leviers, dans l'ordre : `RELACHEMENT_VU_S`, `PRESENCE_FLOU`, `NIVEAU_SEUIL_DB`. Et `RT60_*`, `TRAINE_OCCLUSION`,
+   `MARGE_DIFFUSION_DB` : posés à l'œil, à juger sur `vies.json` et ses planches.
 2. **Tranché par Adrien le 2026-09-29** (Décisions actées) : Q50 le mode furtif très lent reste ; Q51 le liseré est le
-   même pour tous ; Q52 l'ambiance muette, la combustion continue, les liserés en addition vers le blanc (en cours, avec
-   l'animation par la forme d'onde, demandée le même jour : « un long son très réverbéré doit durer autant que le son, et
-   un son très court et étouffé doit durer très peu ») ; Q54 fait — `Player._clic_a_vide` sépare le son du monde du retour
-   de refus, prouvé par `tools/test_clic_a_vide.gd` (qui rougit avec l'ancienne garde).
+   même pour tous ; Q52 l'ambiance muette, la combustion continue, les liserés en addition vers le blanc — **fait**, avec
+   l'animation par la forme d'onde demandée le même jour (« un long son très réverbéré doit durer autant que le son, et un
+   son très court et étouffé doit durer très peu », voir « La forme d'onde ») ; Q54 fait — `Player._clic_a_vide` sépare le
+   son du monde du retour de refus, prouvé par `tools/test_clic_a_vide.gd` (qui rougit avec l'ancienne garde).
 3. La publication : `config/version` 0.8.0 (le fil a bougé), avec Q15 et Q42.
 
 ---

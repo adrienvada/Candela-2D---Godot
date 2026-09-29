@@ -225,6 +225,8 @@ PLAFOND_SUITE=${PLAFOND_SUITE:-120}
 SUITES+=(test_drapeaux)
 # Chantier SON VISIBLE (0.8.0, 2026-09-29) : le modèle du liseré, sans scène. Hors de la liste, même raison.
 SUITES+=(test_son_visible test_son_visible_jeu test_clic_a_vide)
+# Le liseré suit la forme d'onde du son (2026-09-29) : la table d'enveloppes précalculées suit les WAV.
+SUITES+=(test_enveloppes_sons)
 
 # Q42 (2026-09-29) — le corps ignore sa propre ombre : l'étoile de chaque corps vit dans SA canvas, que les capteurs de ce corps
 # ne comptent pas. Posé ici, comme la ligne du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.

@@ -26,6 +26,28 @@ extends Node
 ## - tout ce qui arrive hors du jeu vivant — killcam, fin de manche, décompte :
 ##   c'est `GameState` qui ouvre et ferme (`ouvert`), et une fermeture EFFACE, pour
 ##   qu'aucun liseré d'avant ne traîne sur la killcam.
+##
+## ## Chaque liseré suit son son (Adrien, 2026-09-29)
+##
+## Une trace porte sa `vie` (`SonVisible.animer`) : le niveau perçu à chaque instant,
+## tiré de la forme d'onde du fichier joué puis de la traîne de la salle. À chaque image
+## `SonVisible.etat` en tire l'opacité, l'épaisseur, la largeur et le bord ; la trace
+## s'éteint quand son niveau repasse sous le seuil, pas au bout d'un temps fixe. Une
+## source continue (la combustion) est plate, et son annonce REMPLACE la précédente de la
+## même source. Sans enveloppe connue, la trace retombe sur la durée par sorte
+## (`repli_compte` le dit : un repli doit se voir).
+##
+## ## Les liserés s'ADDITIONNENT (Q52, Adrien, 2026-09-29)
+##
+## > « Il faudrait que l'addition de bruits brouille, ou change la couleur : on additionne
+## > les liserés en couleur pour qu'ils virent au blanc ? »
+##
+## La toile est en mélange ADDITIF : plusieurs sons au même endroit ajoutent leurs
+## couleurs et tirent vers le blanc — le brouillage d'une fusillade devient visible, et
+## on ne distingue plus les sortes quand tout se mélange. **Sur du noir, un liseré seul
+## est inchangé** (`dessous + couleur × alpha`, avec un dessous nul) ; sur une zone
+## éclairée il est PLUS CLAIR qu'en mélange normal (le mélange normal écrasait le
+## dessous de `alpha`, l'addition le garde et lui ajoute).
 
 const SonVisible := preload("res://son_visible.gd")
 
@@ -54,9 +76,14 @@ const HAUTEUR_REFERENCE := 1080.0
 var _couche: CanvasLayer
 var _toile: Control
 var _regardeur: Node2D
-## Chaque trace : angle (rad, à l'écran), largeur (deg), alpha, epaisseur,
-## duree, douceur, couleur, age.
+## Chaque trace : angle (rad, à l'écran), et au pic largeur (deg), alpha, epaisseur,
+## douceur ; duree (s), couleur, age, `vie` (l'animation, voir `SonVisible.animer`, ou `{}`
+## pour le repli), `cle` et `source` (qui distinguent une source continue d'une autre).
 var _traces: Array[Dictionary] = []
+## Combien de liserés sont retombés sur la durée par sorte faute d'enveloppe connue. Un
+## son du jeu n'y tombe jamais (`tools/test_enveloppes_sons.gd`) : ce compteur dit à qui
+## l'ouvre qu'un son est arrivé qu'on ne sait pas animer.
+var repli_compte := 0
 
 
 func _ready() -> void:
@@ -71,7 +98,28 @@ func _ready() -> void:
 	_toile.visibility_layer = couche_vue
 	_toile.draw.connect(_dessiner)
 	_couche.add_child(_toile)
+	poser_melange(true)
 	set_process(false)
+
+
+## Le mélange de la toile : ADDITIF (Q52) ou le mélange normal d'avant. Le banc d'images
+## s'en sert pour montrer une fusillade avant et après ; le jeu, jamais.
+func poser_melange(additif: bool) -> void:
+	if _toile == null:
+		return
+	if additif:
+		var materiau := CanvasItemMaterial.new()
+		materiau.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		_toile.material = materiau
+	else:
+		_toile.material = null
+
+
+func melange_additif() -> bool:
+	if _toile == null:
+		return false
+	var materiau := _toile.material as CanvasItemMaterial
+	return materiau != null and materiau.blend_mode == CanvasItemMaterial.BLEND_MODE_ADD
 
 
 ## Combien de liserés sont vivants — pour les suites et le panneau F3.
@@ -116,17 +164,37 @@ func recevoir(evenement: Dictionary, regardeur: Node2D, part_occultee: float) ->
 	if is_nan(angle):
 		return {}
 	_regardeur = regardeur
+	# La vie du liseré : la forme d'onde du fichier joué, puis la traîne de la salle. Vide si
+	# on ne connaît pas ce son — la trace retombe alors sur la durée par sorte.
+	var vie := SonVisible.animer(categorie, p, evenement, part_occultee)
+	if vie.is_empty():
+		repli_compte += 1
 	var trace := {
+		# Au pic : ce que `percevoir` a décidé, et ce que les suites lisent.
 		"angle": angle,
 		"largeur": float(p["largeur"]),
 		"alpha": float(p["alpha"]),
 		"epaisseur": float(p["epaisseur"]),
-		"duree": float(p["duree"]),
 		"douceur": float(p["douceur"]),
 		"couleur": SonVisible.couleur(categorie),
 		"categorie": categorie,
+		# Et sa vie : combien de temps, et comment.
+		"duree": float(vie["duree"]) if not vie.is_empty() else float(p["duree"]),
+		"vie": vie,
 		"age": 0.0,
+		"cle": String(evenement.get("cle", "")),
+		"source": int(evenement.get("source", 0)),
 	}
+	# Une source continue REMPLACE sa propre annonce précédente : deux liserés plats l'un sur
+	# l'autre, avec l'addition, feraient une bosse à chaque période.
+	if bool(vie.get("continu", false)):
+		for i in _traces.size():
+			var autre: Dictionary = _traces[i]
+			if bool(autre["vie"].get("continu", false)) \
+					and autre["cle"] == trace["cle"] and autre["source"] == trace["source"]:
+				_traces[i] = trace
+				set_process(true)
+				return trace
 	if _traces.size() >= TRACES_MAX:
 		_traces.remove_at(0)
 	_traces.append(trace)
@@ -173,11 +241,13 @@ func _dessiner() -> void:
 	var echelle := cadre.size.y / HAUTEUR_REFERENCE
 	var toile_rid := _toile.get_canvas_item()
 	for t in _traces:
-		var enveloppe := SonVisible.enveloppe(float(t["age"]), float(t["duree"]))
-		if enveloppe <= 0.001:
+		# Ce que la trace montre À CET ÂGE : sa présence suit le son, sa largeur s'ouvre avec
+		# la salle. Au pic, c'est exactement ce que `percevoir` avait rendu.
+		var etat := SonVisible.etat(t, float(t["age"]))
+		if etat.is_empty() or float(etat["alpha"]) <= 0.001:
 			continue
-		var b := SonVisible.bande(origine, float(t["angle"]), float(t["largeur"]), cadre,
-			float(t["epaisseur"]) * echelle, float(t["douceur"]))
+		var b := SonVisible.bande(origine, float(t["angle"]), float(etat["largeur"]), cadre,
+			float(etat["epaisseur"]) * echelle, float(etat["douceur"]))
 		var bords: PackedVector2Array = b["bords"]
 		var milieu: PackedVector2Array = b["milieu"]
 		var dedans: PackedVector2Array = b["dedans"]
@@ -186,7 +256,7 @@ func _dessiner() -> void:
 		if n < 2:
 			continue
 		var couleur: Color = t["couleur"]
-		var alpha := float(t["alpha"]) * enveloppe
+		var alpha := float(etat["alpha"])
 		# Deux rubans de quadrilatères : du bord au milieu la couleur reste pleine
 		# (à peine adoucie), du milieu à l'intérieur elle fond au transparent. Un
 		# seul appel par liseré, des triangles explicites — un polygone à

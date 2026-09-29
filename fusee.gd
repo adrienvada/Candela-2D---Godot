@@ -382,7 +382,11 @@ func _annoncer_combustion(delta: float) -> void:
 	if _avant_annonce > 0.0:
 		return
 	_avant_annonce = PERIODE_ANNONCE_COMBUSTION
-	AudioManager.annoncer_son_2d("fusee_combustion", global_position)
+	# La période et l'identité : le liseré de la combustion est PLAT de la durée d'une
+	# période, et l'annonce suivante de CETTE fusée remplace la précédente — sans creux
+	# ni bosse entre deux (Adrien, 2026-09-29 : le son rendu visible suit le son).
+	AudioManager.annoncer_son_2d("fusee_combustion", global_position, -1, 0.0, 1.0,
+		PERIODE_ANNONCE_COMBUSTION, get_instance_id())
 
 
 ## Un pas de vol : avance, rebondit sur les murs, se freine, se pose à bout

@@ -49,8 +49,22 @@ extends RefCounted
 ##
 ## Ce fichier ne référence **aucun autoload** : il se `preload` sans danger depuis
 ## une suite lancée en `--script` (`tools/test_son_visible.gd`).
+##
+## ## La vie d'un liseré suit le son (Adrien, 2026-09-29)
+##
+## > « Il faudrait que les liserés s'animent en fonction du son (de la forme d'onde
+## > plus ou moins) des sons : un long son très réverbéré doit durer autant que le
+## > son, et un son très court et étouffé doit durer très peu. »
+##
+## Tout ce qui précède dit CE QUE le liseré montre au pic (largeur, présence, couleur) ;
+## la section « LA FORME D'ONDE » plus bas dit COMBIEN DE TEMPS et COMMENT il vit : il
+## suit l'enveloppe du fichier joué, puis la traîne de la salle, et s'éteint quand son
+## niveau perçu repasse sous `NIVEAU_SEUIL_DB`. Le pic, lui, ne bouge pas.
 
 const Charte := preload("res://charte.gd")
+## L'enveloppe RMS de chaque WAV positionnel, GÉNÉRÉE par `tools/enveloppes_sons.py` :
+## les WAV sont importés en QOA (illisibles au jeu) et un export ne les contient pas.
+const Enveloppes := preload("res://enveloppes_sons.gd")
 
 # =============================================================================
 # LES SORTES DE SONS — ce que le liseré raconte, et sa couleur
@@ -178,6 +192,13 @@ const RESONANCE: Dictionary = {
 ## Combien de temps un liseré reste à l'écran, en secondes, avant la traîne de
 ## la salle. Court pour ce qui se répète (un pas toutes les 170 ms en courant),
 ## long pour ce qui est rare et lourd.
+##
+## **Ce n'est plus que le REPLI** (chantier « forme d'onde », 2026-09-29) : un liseré
+## vit désormais aussi longtemps que le fichier joué et que sa traîne (voir « LA FORME
+## D'ONDE »). Cette table ne sert qu'à un flux sans enveloppe connue — un
+## `AudioStream` sans chemin, un fichier que `tools/enveloppes_sons.py` n'a pas vu —,
+## et `tools/test_enveloppes_sons.gd` échoue plutôt que de laisser un son du jeu y
+## tomber en silence.
 const DUREE: Dictionary = {
 	Categorie.TIR: 0.90,
 	Categorie.FUSEE: 0.80,
@@ -323,6 +344,11 @@ static func presence_de(niveau_percu: float) -> float:
 ## L'opacité d'un liseré au fil de sa vie : une attaque brève, puis la courbe
 ## d'extinction de la charte (vite au début, une traîne ensuite — comme une
 ## réverbération). `age` et `duree` en secondes.
+##
+## **C'est désormais le REPLI**, pour un flux dont on ne connaît pas la forme d'onde
+## (un `AudioStream` sans chemin, un fichier absent de `enveloppes_sons.gd`) : sa durée
+## est alors celle de la table `DUREE`, allongée par la salle. Tout son du jeu passe
+## par `etat()` et sa propre enveloppe — voir « LA FORME D'ONDE ».
 const ATTAQUE_S := Charte.D_COURT
 
 static func enveloppe(age: float, duree: float) -> float:
@@ -352,6 +378,306 @@ static func profil(x: float, douceur: float) -> float:
 	if ax <= plein:
 		return 1.0
 	return 1.0 - smoothstep(0.0, 1.0, (ax - plein) / (1.0 - plein))
+
+# =============================================================================
+# LA FORME D'ONDE — le liseré suit le son, puis la salle
+# =============================================================================
+
+## Un liseré vit **aussi longtemps que son niveau perçu reste au-dessus du seuil** — et
+## ce niveau, à chaque instant, est le pic (`percevoir`) plus ce que le fichier joué
+## fait ENSUITE. Deux étages, et un seul niveau (le plus fort des deux) :
+##
+## 1. **Le direct.** Pendant le son — sa durée divisée par le `pitch` tiré au sort —, le
+##    niveau suit l'enveloppe RMS du fichier (fenêtres de 20 ms, en dB sous le pic du
+##    fichier, précalculée dans `enveloppes_sons.gd`), lissée comme un VU-mètre :
+##    **attaque immédiate, relâchement de `RELACHEMENT_VU_S`** (50 ms). Sans lissage, un
+##    rechargement clignoterait entre ses clics ; avec, on voit chaque clic, et la bande
+##    ne retombe pas à zéro entre deux. Un tir claque puis décroît, un pas est un bref
+##    coup sourd (les fichiers de pas ont ~100 ms de silence avant le coup : le liseré
+##    l'attend, comme l'oreille).
+## 2. **La salle.** Chaque instant du direct excite la salle, qui garde ce niveau MOINS
+##    `traine_db()` (fixé par le `wet` de la carte et la `RESONANCE` de la sorte) et le
+##    rend en déclinant de 60 dB en `rt60_de()` secondes. Tant que le direct domine, on ne
+##    la voit pas ; quand il retombe — la fin du fichier, un son court —, c'est elle qui
+##    tient le liseré : **la traîne**. Un pas la touche à peine (0,2), un tir la fait
+##    sonner (1).
+##
+## **La traîne élargit** : la réverbération fait perdre la direction (Adrien : « la reverb
+## des sons d'impact peut rendre plus flous les liserés »). La part de la salle dans ce
+## qu'on entend (`diffus`, de 0 à 1) fait glisser la largeur du pic vers `LARGEUR_MAX_DEG`
+## — géométriquement, comme le reste du modèle — et le bord vers le dégradé.
+##
+## **Le mur** retire au DIRECT toute sa pénalité (`PERTE_OCCLUSION_DB`), à la salle une
+## part seulement : `TRAINE_OCCLUSION`. Derrière un mur ce qui reste est le champ
+## réverbéré (le bus `SFX_Occlus` retire le direct et garde la pièce) : la part directe
+## baisse plus que la traîne.
+##
+## ⚠️ **Le niveau au pic ne change pas** : mêmes ancres (10° / 180°), mêmes paliers de
+## présence (`presence_de`). Le fichier n'apporte que la FORME autour du pic, jamais son
+## niveau — `AudioManager.NIVEAU_RELATIF` reste le seul dosage.
+
+## « Rien », en dB : le direct d'un son fini. Une sentinelle, jamais stockée.
+const AUCUN_DB := -200.0
+## Le plus bas niveau qu'une vie garde : à plus de 80 dB sous le seuil, l'écart ne se voit plus.
+const PLANCHER_VIE_DB := -120.0
+
+## Le relâchement du « VU-mètre » : la constante de temps de la retombée, en secondes.
+const RELACHEMENT_VU_S := 0.05
+## 20 / ln(10) : une retombée exponentielle de constante τ perd 8,69 dB par τ.
+const DB_PAR_TAU := 8.685889638
+
+## Aucun liseré ne dure plus que ça, quel que soit le son : un plafond raisonnable, pas
+## un réglage — le plus long fichier du jeu positionnel (hors la combustion, continue)
+## tient en 1,6 s.
+const DUREE_MAX_S := 3.0
+## Sur ses dernières fractions de seconde, la présence s'efface : un liseré coupé par le
+## plafond n'est pas un liseré qui claque.
+const FONDU_FIN_S := 0.12
+
+## La salle : `AudioManager.calculer_reverb_carte` donne `room_size` de 0,06 (un sas de
+## 15×15) à 0,35 (un hangar de 45×45) et un amortissement de 0,18 à 0,35. **Recopiés de
+## `AudioManager`, et `test_son_visible_jeu` vérifie qu'ils en sont le miroir.**
+const ROOM_SIZE_MIN := 0.06
+const ROOM_SIZE_MAX := 0.35
+## `room_size` du bus tant qu'aucune carte ne l'a réglé (`default_bus_layout.tres`).
+const ROOM_SIZE_DEFAUT := 0.15
+const DAMPING_REF := 0.22
+
+## Le temps de réverbération (60 dB de déclin), en secondes, de la plus petite à la plus
+## grande salle. **Un point de départ à doser avec Adrien sur les images, pas une mesure
+## du bus.** Mesuré dans le moteur (`AudioEffectReverb`, réglages du bus SFX) : la
+## réverbération seule tombe de 60 dB en 0,48 s (petite salle) à 0,66 s (grande) ; avec le
+## retour du prédélai (150 ms, 0,4 — les défauts du bus, jamais réglés), la queue mesure
+## 1,2 s quelle que soit la salle. Le liseré prend la fourchette qui laisse voir le
+## caractère de la salle, et la borne haute d'un sas reste dans les 0,6 s.
+const RT60_MIN_S := 0.6
+const RT60_MAX_S := 1.5
+
+## Le niveau de la traîne SOUS le direct, en dB : `20·log10(wet × résonance)`. Un tir dans
+## le hangar (wet 0,42) : -7,5 dB ; dans le sas (0,24) : -12,4 dB ; un pas (0,2) : -22 à
+## -26 dB, sous le seuil du plus fort des pas — la salle ne le prolonge pas.
+const TRAINE_PLAFOND_DB := -3.0
+const TRAINE_PLANCHER_DB := -60.0
+## La part de la pénalité du mur que la traîne subit (le direct, lui, la subit en entier).
+const TRAINE_OCCLUSION := 0.4
+## **La salle ne brouille la direction que lorsqu'elle RATTRAPE le direct.** Tant que la
+## salle reste à plus de `MARGE_DIFFUSION_DB` sous lui, la bande garde la largeur de son
+## pic ; elle s'ouvre tout à fait quand la salle l'égale ou le dépasse (le direct est fini).
+## Sans cette marge, le premier jet mesurait l'écart à ce que le direct valait à son
+## sommet : une baisse de deux décibels dans l'enveloppe d'un tir — banale — élargissait la
+## bande de 13° à 24° au milieu du coup, puis la refermait : elle RESPIRAIT avec le son.
+## Un pas, dont la salle démarre 22 dB plus bas, ne l'atteint jamais avant de s'éteindre :
+## sa bande ne s'étale pas.
+const MARGE_DIFFUSION_DB := 4.0
+## Et la bande s'ouvre en fondu, pas d'un coup : le direct d'un tir plonge de 10 dB en 80 ms
+## à la fin du fichier, et sans ce lissage la bande passerait de 15° à 180° en cinq images.
+const LISSAGE_DIFFUSION_S := 0.10
+
+## Une source CONTINUE (la combustion de la fusée) : une enveloppe PLATE de la durée de sa
+## période. Elle vit un peu plus que la période (`TOLERANCE_CONTINU`) : l'annonce suivante
+## arrive avec la gigue d'une image de physique, et un liseré qui s'éteindrait un instant
+## avant clignoterait — c'est la suivante qui REMPLACE celle-ci (voir
+## `son_visible_vue.gd`), jamais qui s'y ajoute.
+const PERIODE_CONTINU_DEFAUT := 0.6
+const TOLERANCE_CONTINU := 1.25
+
+## Le temps de réverbération de la carte, en secondes. Croît avec la taille de la salle
+## (`room_size`), se raccourcit avec ce que ses murs absorbent (`damping`, en racine :
+## l'absorption pèse moins que le volume). Pure.
+static func rt60_de(room_size: float, damping: float) -> float:
+	var t := clampf(inverse_lerp(ROOM_SIZE_MIN, ROOM_SIZE_MAX, room_size), 0.0, 1.0)
+	return lerpf(RT60_MIN_S, RT60_MAX_S, t) * sqrt(DAMPING_REF / clampf(damping, 0.1, 0.6))
+
+## De combien de dB la traîne d'une sorte démarre sous son direct. Toujours négatif : la
+## salle rend moins fort que le son qui l'excite. Pure.
+static func traine_db(wet: float, categorie: int) -> float:
+	var amplitude := maxf(wet, 0.0) * float(RESONANCE.get(categorie, 0.5))
+	if amplitude <= 0.0:
+		return TRAINE_PLANCHER_DB
+	return clampf(linear_to_db(amplitude), TRAINE_PLANCHER_DB, TRAINE_PLAFOND_DB)
+
+## Lisse une enveloppe en dB comme un VU-mètre : elle monte d'un coup, et ne retombe qu'à
+## `relachement_s` (8,69 dB par constante de temps). Ne descend jamais sous l'entrée, donc
+## ne coupe jamais un pic. `pas_s` est l'écart entre deux valeurs.
+static func lisser_vu(db: Array, pas_s: float, relachement_s: float = RELACHEMENT_VU_S) -> PackedFloat32Array:
+	var sortie := PackedFloat32Array()
+	sortie.resize(db.size())
+	var descente := DB_PAR_TAU * pas_s / maxf(relachement_s, 0.001)
+	var y := AUCUN_DB
+	for i in db.size():
+		y = maxf(float(db[i]), y - descente)
+		sortie[i] = y
+	return sortie
+
+## L'entrée de `enveloppes_sons.gd` pour ce chemin `res://`, ou `{}` si le son n'y est pas.
+static func forme_d_onde(chemin: String) -> Dictionary:
+	var table: Dictionary = Enveloppes.ENVELOPPES
+	return table[chemin] if table.has(chemin) else {}
+
+static var _vu_par_chemin: Dictionary = {}
+
+## L'enveloppe lissée d'un fichier (dB sous son pic), gardée d'un liseré à l'autre : la
+## même vingtaine de fichiers revient des centaines de fois par manche. Vide si le son
+## n'a pas d'enveloppe — c'est alors le repli.
+static func courbe_vu(chemin: String) -> PackedFloat32Array:
+	if _vu_par_chemin.has(chemin):
+		return _vu_par_chemin[chemin]
+	var forme := forme_d_onde(chemin)
+	if forme.is_empty():
+		return PackedFloat32Array()
+	var vu := lisser_vu(forme["db"], Enveloppes.PAS_S)
+	_vu_par_chemin[chemin] = vu
+	return vu
+
+## La vie d'un liseré animé par son fichier : le niveau perçu (dB) et la part de la salle,
+## à chaque pas de `Enveloppes.PAS_S` DIVISÉ PAR LE PITCH (un son joué plus vite dure moins
+## longtemps ; on échantillonne à la grille même de la table, donc le pic n'est jamais
+## sauté entre deux pas), et la durée : le dernier pas au-dessus du seuil, plafonnée. Le
+## VU-mètre ne s'arrête pas net avec le fichier : un son qui finit fort (un frôlement de
+## mur coupé) retombe à sa pente de relâchement au lieu de disparaître d'un coup.
+##
+## - `percu` : ce que `percevoir` a rendu — le pic (`niveau_percu`) ;
+## - `vu` : l'enveloppe lissée du fichier (`courbe_vu`) ; renormalisée à son propre pic,
+##   donc sûre même pour une enveloppe qui ne touche pas 0 dB ;
+## - `part_occultee`, `wet`, `rt60` : le mur et la salle.
+##
+## Déterministe : mêmes entrées, mêmes tableaux — les deux vues d'un duel voient la même
+## animation. Rend `{}` si l'enveloppe est vide (repli).
+static func vie_de(categorie: int, percu: Dictionary, vu: PackedFloat32Array, pitch: float,
+		part_occultee: float, wet: float, rt60: float) -> Dictionary:
+	if vu.is_empty() or percu.is_empty():
+		return {}
+	var pic := float(percu["niveau_percu"])
+	var pas := Enveloppes.PAS_S / maxf(pitch, 0.05)
+	var n_son := vu.size()
+	var sommet := vu[0]
+	for v in vu:
+		sommet = maxf(sommet, v)
+	var part := clampf(part_occultee, 0.0, 1.0)
+	# L'écart entre le direct et la salle qu'il excite : la traîne, moins la part de la
+	# pénalité du mur que la salle ne subit pas.
+	var ecart := traine_db(wet, categorie) - PERTE_OCCLUSION_DB * part * (1.0 - TRAINE_OCCLUSION)
+	# Ce que vaut la part de la salle à l'instant même du pic : nul dans tout le jeu (la salle y
+	# est toujours à plus de 4 dB sous son direct), mais retranché par sûreté — le pic garde
+	# EXACTEMENT sa largeur, quelle que soit la salle qu'on lui donne.
+	var base := clampf((ecart + MARGE_DIFFUSION_DB) / MARGE_DIFFUSION_DB, 0.0, 0.99)
+	var lissage := 1.0 - exp(-pas / LISSAGE_DIFFUSION_S)
+	var diffusion := 0.0
+	var descente := 60.0 / maxf(rt60, 0.05) * pas
+	# Le VU-mètre ne s'arrête pas net avec le fichier : il continue de retomber à sa pente.
+	var chute_vu := DB_PAR_TAU * Enveloppes.PAS_S / RELACHEMENT_VU_S
+	var n_max := int(ceil(DUREE_MAX_S / pas)) + 1
+	var niveaux := PackedFloat32Array()
+	var diffus := PackedFloat32Array()
+	var salle := AUCUN_DB
+	var dernier := -1
+	for k in n_max:
+		var direct := pic + vu[k] - sommet if k < n_son \
+			else pic + vu[n_son - 1] - sommet - chute_vu * float(k - n_son + 1)
+		direct = maxf(direct, AUCUN_DB)
+		salle = maxf(salle - descente, direct + ecart)
+		var total := maxf(direct, salle)
+		# La part de la salle : nulle tant que le direct la domine de plus de `MARGE_DIFFUSION_DB`,
+		# entière quand elle le rattrape ou qu'il a disparu — puis lissée.
+		var brut := clampf(((salle - direct + MARGE_DIFFUSION_DB) / MARGE_DIFFUSION_DB - base) / (1.0 - base), 0.0, 1.0)
+		diffusion += (brut - diffusion) * lissage
+		niveaux.append(maxf(total, PLANCHER_VIE_DB))
+		diffus.append(diffusion)
+		if total > NIVEAU_SEUIL_DB:
+			dernier = k
+		if k >= n_son and total <= NIVEAU_SEUIL_DB:
+			break
+	if dernier < 0:
+		return {}
+	return {
+		"pas": pas,
+		"niveaux": niveaux,
+		"diffus": diffus,
+		"duree": minf(float(dernier + 1) * pas, DUREE_MAX_S),
+		# Le fondu ne sert qu'à un liseré COUPÉ par le plafond : un son qui s'éteint de lui-même
+		# arrive à zéro sans aide, et un fondu sur les 120 dernières ms mordrait le pic d'un
+		# son de 200 ms (un pas).
+		"fondu": FONDU_FIN_S if dernier >= n_max - 1 else 0.0,
+		"niveau_pic": pic,
+	}
+
+## La vie d'une source continue : plate à son niveau, de la durée de sa période (et un peu
+## plus, `TOLERANCE_CONTINU`), sans attaque ni fondu — deux annonces qui se suivent ne
+## doivent faire ni creux ni bosse.
+static func vie_continue(percu: Dictionary, periode: float) -> Dictionary:
+	if percu.is_empty():
+		return {}
+	var p := maxf(periode, 0.05)
+	var pic := float(percu["niveau_percu"])
+	return {
+		"pas": p,
+		"niveaux": PackedFloat32Array([pic, pic]),
+		"diffus": PackedFloat32Array([0.0, 0.0]),
+		"duree": p * TOLERANCE_CONTINU,
+		"fondu": 0.0,
+		"niveau_pic": pic,
+		"continu": true,
+	}
+
+## La vie d'un liseré à partir de l'événement que `AudioManager` a annoncé : `chemin`
+## (le fichier réellement joué), `pitch` (le pitch final), `wet`/`room_size`/`damping` (la
+## salle), `continu`/`periode` (une source qui ne s'éteint pas). `{}` : pas d'enveloppe
+## connue, le liseré retombe sur `DUREE` et `enveloppe()`.
+static func animer(categorie: int, percu: Dictionary, evenement: Dictionary, part_occultee: float) -> Dictionary:
+	if bool(evenement.get("continu", false)):
+		return vie_continue(percu, float(evenement.get("periode", PERIODE_CONTINU_DEFAUT)))
+	var vu := courbe_vu(String(evenement.get("chemin", "")))
+	if vu.is_empty():
+		return {}
+	var rt60 := rt60_de(float(evenement.get("room_size", ROOM_SIZE_DEFAUT)),
+		float(evenement.get("damping", DAMPING_REF)))
+	return vie_de(categorie, percu, vu, float(evenement.get("pitch", 1.0)), part_occultee,
+		float(evenement.get("wet", 0.0)), rt60)
+
+static func _lire(tableau: PackedFloat32Array, x: float) -> float:
+	var n := tableau.size()
+	if n == 0:
+		return 0.0
+	if x <= 0.0:
+		return tableau[0]
+	var i := int(x)
+	if i >= n - 1:
+		return tableau[n - 1]
+	return lerpf(tableau[i], tableau[i + 1], x - float(i))
+
+## Ce que montre une trace à l'âge `age` (s) : `alpha`, `epaisseur` (px à 1080p), `largeur`
+## (deg), `douceur`, plus `niveau` (dB) et `diffus` pour qui veut les lire. `{}` quand elle
+## est finie. **Au pic, c'est exactement ce que `percevoir` a rendu** ; avant et après, la
+## présence est celle du niveau de l'instant (`presence_de`, mêmes paliers). Une trace sans
+## `vie` (repli) suit l'enveloppe fixe de la charte.
+static func etat(trace: Dictionary, age: float) -> Dictionary:
+	var duree := float(trace.get("duree", 0.0))
+	if age < 0.0 or duree <= 0.0 or age >= duree:
+		return {}
+	var largeur := float(trace.get("largeur", LARGEUR_MAX_DEG))
+	var douceur := float(trace.get("douceur", 0.0))
+	var vie: Dictionary = trace.get("vie", {})
+	if vie.is_empty():
+		return {"alpha": float(trace.get("alpha", 0.0)) * enveloppe(age, duree),
+			"epaisseur": float(trace.get("epaisseur", EPAISSEUR_MIN_PX)),
+			"largeur": largeur, "douceur": douceur}
+	var x := age / float(vie["pas"])
+	var niveau := _lire(vie["niveaux"], x)
+	var g := _lire(vie["diffus"], x)
+	var presence := presence_de(niveau)
+	var fondu := float(vie.get("fondu", 0.0))
+	if fondu > 0.0:
+		presence *= smoothstep(0.0, fondu, duree - age)
+	return {
+		"alpha": ALPHA_MAX * presence,
+		"epaisseur": lerpf(EPAISSEUR_MIN_PX, EPAISSEUR_MAX_PX, presence),
+		# Géométrique, comme le reste : chaque décibel de salle multiplie la largeur du
+		# même facteur, à 10° comme à 100°.
+		"largeur": pow(largeur, 1.0 - g) * pow(LARGEUR_MAX_DEG, g),
+		"douceur": lerpf(douceur, 1.0, g),
+		"niveau": niveau,
+		"diffus": g,
+	}
 
 # =============================================================================
 # LA GÉOMÉTRIE — du monde au bord de l'écran
