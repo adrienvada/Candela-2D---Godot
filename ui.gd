@@ -4358,9 +4358,9 @@ func _build_hub_screens() -> void:
 
 	# --- S'entraîner ----------------------------------------------------------
 	_entree_preparer[SCREEN_TRAINING] = hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
-		"Seul, contre une cible fixe, sur la carte par défaut. La classe se "
-		+ "choisit à droite, et le bouton qui lance est dessous. Rien n'est "
-		+ "enregistré ni classé. Échap pour revenir.",
+		"Seul, contre une cible fixe, sur la carte sélectionnée — celle de "
+		+ "l'affiche. La classe se choisit à droite, et le bouton qui lance "
+		+ "est dessous. Rien n'est enregistré ni classé. Échap pour revenir.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON)
 	entrainement.add_child(_entree_preparer[SCREEN_TRAINING])
 	entrainement.add_child(hub.make_entry("CIBLE",
