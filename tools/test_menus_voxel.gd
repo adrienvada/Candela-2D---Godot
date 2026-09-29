@@ -11,7 +11,7 @@
 ##   0,90) ; c'est la ligne `k_pied *= clamp(1.0 - torch_light, 0.0, 1.0)` ;
 ## - hors de la torche, le pied existe encore — le texte posé dessus reste lisible — mais il commence
 ##   plus bas (0,72 contre 0,55) et pèse moins (encre 0,55 et flou 0,15 de l'ancien) ;
-## - les valeurs voxel vivent DANS le shader : `menu_hub.gd` et `intro_planches.gd` posent `pied_debut`,
+## - les valeurs voxel vivent DANS le shader : `menu_hub.gd` (seul depuis l'intro v2) pose `pied_debut`,
 ##   `pied_fin` et `ambient_exposure` pour l'ancien art, et les y mettre les ferait écraser ;
 ## - l'identité du menu ne bouge pas : sombre par défaut (`ambient_exposure` inchangé), révélé par la
 ##   torche, effets asservis à la luminance (`k_highlight`), aucun uniforme retiré.
@@ -122,8 +122,19 @@ func _l_identite(texte: String) -> void:
 
 
 func _le_cablage() -> void:
-	print("\n[Le câblage : les deux endroits qui construisent le matériau]")
-	for chemin in ["res://menu_hub.gd", "res://intro_planches.gd"]:
+	# Tous les scripts qui chargent le shader, et non une liste écrite à la main :
+	# il y en avait deux (le hub et l'intro en planches) jusqu'à l'intro v2 du
+	# 2026-09-28, qui joue un film et ne construit plus de matériau. Une liste
+	# figée aurait gardé un fichier qui ne charge plus rien — ou oublié le suivant.
+	print("\n[Le câblage : chaque script qui construit le matériau]")
+	var constructeurs: Array[String] = []
+	for fichier in DirAccess.get_files_at("res://"):
+		if fichier.ends_with(".gd") and FileAccess.get_file_as_string("res://" + fichier) \
+				.contains("load(\"res://menu_artwork.gdshader\")"):
+			constructeurs.append("res://" + fichier)
+	_check("au moins un script construit le matériau (le hub)", constructeurs.has("res://menu_hub.gd"),
+		str(constructeurs))
+	for chemin in constructeurs:
 		var s := FileAccess.get_file_as_string(chemin)
 		_check("%s pose le réglage de l'art" % chemin.get_file(),
 			s.contains("mat.set_shader_parameter(\"reglage_art\", MenuArtwork.reglage_art())"))

@@ -1,5 +1,11 @@
 # Fiche de Génération Google Flow (Veo 3.1 & Imagen 4) — Candela 2D
 
+> ⚠️ **Cette fiche décrit l'ancienne intro (DA6.6), remplacée le 2026-09-28 puis
+> le 2026-09-29.** Ses planches `ill_intro_*` sont retirées du dépôt, sauf
+> `ill_intro_allumage`. La fabrication de l'intro actuelle, ses prompts et les
+> pièges de Flow sont dans [INTRO_PLANCHES.md](INTRO_PLANCHES.md). Gardée pour
+> l'histoire.
+
 *Documentation technique pour la génération ou l'enrichissement vidéo IA de l'introduction narrative.*
 
 Ce guide fournit la suite de prompts et réglages de caméra prête pour **Google Flow** (`flow.google`), s'appuyant sur les modèles **Veo 3.1** (mouvement vidéo cinématique) et **Imagen 4** (génération d'images haute cohérence).

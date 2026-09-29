@@ -1,0 +1,23 @@
+# Sources de l'intro v2, récit A « Qui allume se montre » (2026-09-28, refaite le 2026-09-29).
+#
+# Ce que les trois outils lisent et écrivent (voir docs/INTRO_PLANCHES.md) :
+#
+#   clips/     → les clips vidéo générés (Veo 3.1 Fast par Google Flow, Kling 3 Pro
+#                par Runway), 720p, 5 à 8 s ; `f_titre.mp4` est le titre.
+#   plaques/   → les plaques Gemini des textes animés (mur, sol, image du tir),
+#                recadrées et aplaties.
+#   textes/    → sortie de tools/intro_textes.py, lue par tools/monter_intro.py.
+#   titre/     → sortie de tools/intro_titre.py, lue par tools/monter_intro.py.
+#   intro_a_maitre.mp4 → le film en H.264 avant l'encodage Theora.
+#   cles/, jeu/, clips/p5_arme.mp4 → restes de la première version (2026-09-28).
+#
+# ⚠️ **Rien n'est versionné ici, et c'est la règle déjà suivie par les rushes de
+# la première intro** (`/assets/video/intro/*.mp4`, DA6.6) : des dizaines de Mo de
+# sources pour un film de quelques Mo, reconstructibles depuis Flow, Runway et
+# Gemini. Le jeu ne lit que `assets/video/intro/intro_a.ogv` et
+# `assets/ui/intro/*.jpg`. `.gdignore` empêche Godot de les importer (et donc de
+# les exporter). Elles vivent dans ce worktree : les recopier dans l'arbre
+# principal avant de supprimer le worktree `intro-v2`.
+*
+!.gitignore
+!.gdignore

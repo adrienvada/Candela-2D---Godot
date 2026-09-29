@@ -10,8 +10,9 @@ extends "res://tools/photographe.gd"
 ##   carte        — CHANGER DE CARTE (la vignette de la galerie, `MapGallery._on_tile_pressed`), puis REJOUER (le bouton du
 ##                  cadre, `panel_launch`) : la manche suivante sur une autre carte ;
 ##   revanche     — REJOUER seul : la même carte, la tache de sang de la manche d'avant au sol ;
-##   entrainement — le retour de la liste (`MenuHub.back`, l'accueil sans repasser par le menu principal), puis
-##                  ENTRAÎNEMENT (`_on_hub_action("entrainement")`) : la carte par défaut ;
+##   entrainement — le retour de la liste (`MenuHub.back`, l'accueil sans repasser par le menu principal), la carte
+##                  d'arrivée prise (l'arène standard : l'entraînement joue la carte SÉLECTIONNÉE, Adrien, 2026-09-29),
+##                  puis ENTRAÎNEMENT (`_on_hub_action("entrainement")`) ;
 ##   direct       — la carte d'arrivée choisie dans le menu, puis JOUER : la référence, sans écran de fin.
 ## `--depart=<id>` (par défaut le Cloître, `map_001`) et `--arrivee=<id>` (par défaut la Croisée, `map_003`).
 ##
@@ -135,6 +136,9 @@ func _ready() -> void:
 				_ui.hub.back()
 				await _attendre_images(5)
 				_journal("retour à l'accueil (écran du hub : %s)" % _ui.hub.current_id())
+				# L'entraînement joue la carte sélectionnée : sans ce choix il rejouerait la carte de départ, et le chemin
+				# ne changerait plus de carte — c'est la carte par défaut qu'il imposait avant la décision de Q38.
+				MapData.select_map(arrivee)
 				_ui._on_hub_action("entrainement")
 				await _attendre(func() -> bool: return _main.training_mode and _main.sandbox_mode, 30.0)
 		if not await _manche_prete():

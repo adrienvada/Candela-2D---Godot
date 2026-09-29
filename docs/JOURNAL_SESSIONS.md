@@ -6045,6 +6045,74 @@ d'Adrien (réversible ; leurs branches et rapports restent sur GitHub).
 **Ce que la 0.7.0 n'a pas** : une mesure de cadence de l'ensemble sur le Mac (la série courte suit la publication) ; une
 preuve sous le pilote d'Apple de ce qui est prouvé sous Mesa ; les réponses à Q15, Q37, Q38 et Q42.
 
+### 2026-09-28 (soir) — L'intro refaite : récit A « Qui allume se montre » (session « Candela intro redesign », branche `intro-v2`)
+
+Brief de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui ne pilote pas Chrome ; demande d'Adrien du jour :
+« Il faut qu'on refasse toute l'intro, elle est nulle et plus du tout dans le thème. » Quatre étapes, un arrêt à chacune,
+une page de travail : https://claude.ai/artifact/QCqBo76ASmSLR8GCZH7xkP.
+
+1. **Récits** (19:00-20:55) : quatre récits storyboardés, 35 plans, dix images Gemini et des captures du photographe
+   0.7.0. Adrien choisit A, sans rejeu forcé pour qui a vu l'ancienne intro.
+2. **Animatique** (21:30-22:30) : trois images-clés refaites, montage minuté sur les mesures (170 BPM) avec les sons du
+   jeu. Le plan en jeu est une capture au zoom 4 de la vraie caméra (net, pas un agrandissement).
+3. **Vidéos** (22:40-23:10) : quatre clips Veo 3.1 Fast dans Flow, 200 crédits sur 1 050, relus image par image (voir
+   « Pièges connus », 2026-09-28 : Veo peut ignorer l'image de départ).
+4. **Intégration** (23:15-23:45) : un film Theora de 5,3 Mo, image et son ; `intro_planches.gd` réécrit, gardes de
+   `test_intro_planches.gd` réécrites (preuve par mutation : un plan allongé d'une mesure rougit deux contrôles).
+
+**En propre :** `intro_planches.gd`, `tools/test_intro_planches.gd`, `tools/monter_intro.py` (créé), `docs/INTRO_PLANCHES.md`,
+`assets/video/intro/`, `assets/ui/intro/` (créé), `assets/sources/intro/` (créé, hors dépôt sauf ses deux fichiers de règles).
+**Retirés :** les six `.ogv` de DA6.6, `tools/convert_intro_videos.sh`.
+**Partagés, touchés par insertion :** `audio_manager.gd` (domaine « game feel » : une fonction, `suspendre_musique`),
+`tools/test_menus_voxel.gd` (sa garde listait `intro_planches.gd` parmi les scripts qui construisent le matériau des
+menus ; elle les cherche désormais elle-même).
+
+Le Mac : trois lancements de Godot, chacun sous le verrou et avec l'accord d'Adrien (photographe à 20:50 et 22:08, import
+et lot complet à 23:28). Lot complet vert, 454 s.
+
+**Ce qui n'est pas prouvé** : le film n'a pas été vu JOUER dans le jeu, fenêtre ouverte — ni l'image, ni le son Vorbis
+par le `VideoStreamPlayer`, ni la reprise de la musique après la pause. Les suites le chargent et le lancent en headless,
+où rien n'est rendu ni entendu.
+
+### 2026-09-29 — L'intro refaite une seconde fois (session « Candela intro redesign », branche `intro-v2`)
+
+Adrien a rejeté le film de `51d4ecc9` dans la nuit (« pas du tout réaliste », puis « même style graphique mais les
+animations ne sont pas réalistes pas cohérentes ; ne mets pas de screen de jeu »). Même récit, redécoupé : un
+storyboard de dix-sept plans validé, puis les vidéos, puis le montage, puis l'intégration. Page de travail :
+https://claude.ai/artifact/BW1JypN6UdyKX5ahhWqkG7.
+
+- **Images** : quinze images Gemini (storyboard, images de début et de fin, plaques), toutes relues ; une refaite trois
+  fois (un cône de lumière partait de la main du caché, qui n'en a jamais).
+- **Vidéos** : Flow (Veo 3.1 Fast) et Runway (Kling 3 Pro, Seedance 2) comparés sur les mêmes plans ; Flow égale Kling
+  pour environ trois fois moins cher. 290 crédits Flow, 380 Runway, dont 60 pour un envoi Kling bloqué à 98 % et jamais
+  livré.
+- **Titre** : trois versions montées (Kling, Seedance, Flow) ; Adrien a choisi Flow.
+- **Intégration** : film Theora 9,2 Mo ; `intro_planches.gd` au nouveau découpage, repli à une image par plan ;
+  gardes de `test_intro_planches.gd` réécrites (dix-sept plans, vingt-cinq mesures, les quatre mots de la règle et
+  aucun autre, le même découpage que le monteur).
+
+**En propre :** `intro_planches.gd`, `tools/test_intro_planches.gd`, `tools/monter_intro.py`, `tools/intro_textes.py`
+et `tools/intro_titre.py` (créés), `docs/INTRO_PLANCHES.md`, `assets/video/intro/`, `assets/ui/intro/`,
+`assets/sources/intro/` (hors dépôt sauf ses deux fichiers de règles).
+
+**Incident** : l'application a été quittée pendant le premier passage du monteur (tué au plan 7). L'extraction des
+sources en PNG à 120 images/s avait déjà rempli 4 Go ; elle passe en JPEG à 60 images/s.
+
+**Ce qui n'est pas prouvé** : le film n'a toujours pas été vu JOUER dans le jeu, fenêtre ouverte (image, son Vorbis,
+reprise de la musique). Les sources de `assets/sources/intro/` n'existent que dans ce worktree.
+
+**Même jour, après le commit `e5f4a32d`** (Adrien : « 1 Pousse / 2 oui ») : `intro-v2` poussée sur `origin`, puis cinq
+des six planches de l'ancienne intro retirées (`ill_intro_descente`, `_seuil`, `_dotation`, `_prix`, `_extinction`,
+environ 17 Mo par téléchargement). **Partagés, touchés par retrait** : `menu_artwork.gd` et `menu_particles_ambiance.gd`
+(domaine « menus » : dix entrées de table, celles de ces cinq images) ; `docs/CAPSULE.md` et
+`docs/GOOGLE_FLOW_PROMPTS.md` (une mention chacun). `ill_intro_allumage` reste : l'accueil l'affiche.
+
+**Essai fenêtre ouverte** (14:25, Mac libéré par Adrien, verrou passé par « ISO7 Gadgets et lumière Opus ») : le film
+joue en entier (35,23 s), le son sort sur `Master` (crêtes de −8 à −5 dB) pendant que la musique du jeu est en pause,
+et la musique reprend à la fin. Mais une image relevée à 2,5 s montrait encore l'étoile d'éclair du plan 2, que toutes
+les relectures avaient laissée passer : coupe mesurée image par image et corrigée (voir « Pièges connus », 2026-09-29).
+Scène d'essai temporaire, supprimée, non versionnée.
+
 ## 2026-09-29 — Le son rendu visible, et une 0.7.1 qui ne touche pas au fil (session « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/unrailed-isometric-feasibility-44klgh`)
 
 Adrien, le matin : « je veux que le bruit ne soit pas seulement sonore […] un liseré sur les bords de l'écran », puis, sur

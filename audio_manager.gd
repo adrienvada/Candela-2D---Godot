@@ -2137,6 +2137,16 @@ func switch_music_clip(clip_name: String) -> void:
 			return
 	play_music(clip_name)
 
+## Met la musique en pause, ou l'en sort, sans la redémarrer.
+##
+## Pour l'intro v2 (2026-09-28) : son film porte sa PROPRE bande son (musique et
+## bruitages mixés, calés sur ses coupes). La musique du jeu, lancée dès `_ready`
+## de GameState, jouerait par-dessous. Une pause et non un `stop()` : à la reprise
+## le flux interactif repart exactement où il était — au lancement, sur son clip
+## d'intro, qui enchaîne seul sur le menu (voir `demarrer_musique_au_lancement`).
+func suspendre_musique(suspendre: bool) -> void:
+	music_player.stream_paused = suspendre
+
 # --- LOGIQUE VERTICALE (INTENSITE DE MATCH) ---
 var match_sync_stream: AudioStreamSynchronized = null
 var music_intensity_tweens: Dictionary = {}

@@ -39,7 +39,8 @@ grand est une capsule ratée.
 
 Conséquence directe : **la capsule n'est pas une illustration réduite.** Elle se
 compose à part — un cône, un wordmark, du noir. La planche 4 de l'intro
-(`ill_intro_allumage`) et la planche 5 (`ill_intro_prix`) sont les deux seules
+(`ill_intro_allumage`) et la planche 5 (`ill_intro_prix` — retirée du dépôt le
+2026-09-29 avec l'intro v2, récupérable dans l'historique git) sont les deux seules
 sources dont la composition survive au recadrage, parce que leur sujet occupe
 une bande étroite et que tout le reste est noir. **Le noir se recadre ;
 un décor ne se recadre pas.**

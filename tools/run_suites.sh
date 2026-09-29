@@ -205,7 +205,7 @@ SUITES=(test_liaisons test_icones_editeur
         test_mise_a_jour test_charte test_habillage test_bandeau_fatal test_autoloads test_torches test_torche_bouton test_lumieres test_viseur test_marche test_sprites
         test_dosage_audio test_planche_marche test_fusee test_fusee_rouge_sang test_munitions_recharge test_sang_au_sol test_bilan_de_soiree
         test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting test_hud_style
-        test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte test_traces_carte
+        test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte test_traces_carte test_entrainement_carte test_traces_rencontre
         test_telemetrie_gadgets test_murs_bas test_murs_bas_rendu
         test_proto_iso test_voxel_corps test_voxel_objets test_banc_iso test_iso_geometrie test_iso_equite test_iso_camera test_iso_vues test_iso_corps test_iso_murs_bas test_iso_objets test_iso_killcam test_killcam_calme test_iso_beaute test_iso_gadgets test_masque_formes test_iso_torches3d test_corps_portraits test_corps_mannequin test_menus_voxel test_iso_usure test_corps_detail test_corps_soi_sombre test_passe_unique test_corps_soi_fondu test_pochoirs test_gris_egaux test_iso_peinture_carte)
 
