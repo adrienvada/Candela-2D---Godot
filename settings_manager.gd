@@ -160,6 +160,13 @@ const FACTEUR_PORTEE_DEFAUT := 0.75
 const FACTEUR_PORTEE_MIN := 0.5
 const FACTEUR_PORTEE_MAX := 1.5
 const DRAPEAU_TORCHE := "--torche="
+## Chantier des lumières de la 0.8.0, L1 — la portée des torches atteint au moins le bord de l'écran (Q45, Adrien,
+## 2026-09-29). ALLUMÉE par défaut ; `--sans-portee-ecran` rend les portées d'avant, en build de DÉBOGAGE seulement et
+## hors ligne : EN LIGNE elle vaut pour les deux machines (`portee_ecran_du_duel`), comme le zoom et le décalage.
+## La portée se DÉRIVE du cadrage qui s'applique (`zoom_duel`, `decalage_visee`) : voir `PorteeEcran` et
+## `WeaponData.portee_plancher`.
+const DRAPEAU_SANS_PORTEE_ECRAN := "--sans-portee-ecran"
+var _portee_ecran_locale := true
 ## ISO14 — le LACET du duel (Q14, Adrien, 2026-09-24 vers 01:19 : « on passe à 45° ce sera plus intéressant »).
 ## ALLUMÉ par défaut à 45°, option B, depuis Q28 = A (Adrien, 2026-09-25 10:28 : « le 45° par défaut, prix connu »),
 ## EN LIGNE compris : `lacet_du_duel` y impose ces mêmes constantes, sur les deux machines. `--lacet=X` tourne la
@@ -189,6 +196,9 @@ var _facteur_local := FACTEUR_PORTEE_DEFAUT
 var decalage_visee := DECALAGE_VISEE_DEFAUT
 var _zoom_duel_choisi := ZOOM_DUEL_DEFAUT
 var _zoom_duel_regle := false
+## Le dernier mode accordé (`accorder_au_mode`) était-il en ligne ? Lu par `zoom_de_la_vue_unique` : en ligne, le plancher
+## de portée se calcule sur la constante, comme le zoom.
+var _accorde_en_ligne := false
 
 ## ISO2 — la taille de la lightmap, la cible 2D que la vue iso projette : `1080p`, l'aire
 ## logique de la vue (ce que le jeu rendait avant le chantier R), ou `plein`, les pixels de
@@ -280,6 +290,9 @@ func _ready() -> void:
 	_zoom_local = zoom_applique(_zoom_duel_choisi, _arguments_de_reglage())
 	_decalage_local = decalage_applique(_arguments_de_reglage())
 	_facteur_local = facteur_portee_applique(_arguments_de_reglage())
+	_portee_ecran_locale = not (OS.is_debug_build() and _arguments().has(DRAPEAU_SANS_PORTEE_ECRAN))
+	if not _portee_ecran_locale:
+		print("[portée écran] éteinte (%s) — hors ligne seulement" % DRAPEAU_SANS_PORTEE_ECRAN)
 	_lacet_local = lacet_applique(_arguments_de_reglage())
 	_option_lacet_locale = option_lacet_appliquee(_arguments_de_reglage())
 	# Hors match, les valeurs locales ; `GameState` accorde au mode à chaque départ (`accorder_au_mode`).
@@ -378,6 +391,7 @@ static func zoom_applique(choisi: float, args: PackedStringArray) -> float:
 ## Q15 revue — `ecran_scinde` dit l'écran : le zoom local par défaut en dépend (`zoom_par_defaut`). Un zoom réglé au
 ## débogage, ou `--zoom=`, l'emporte toujours hors ligne ; en ligne, rien ne l'emporte sur `ZOOM_VUE_UNIQUE`.
 func accorder_au_mode(en_ligne: bool, ecran_scinde: bool = false) -> void:
+	_accorde_en_ligne = en_ligne
 	var choisi := _zoom_duel_choisi if _zoom_duel_regle else zoom_par_defaut(ecran_scinde)
 	_zoom_local = zoom_applique(choisi, _arguments_de_reglage())
 	var v := valeurs_du_duel(en_ligne, _zoom_local, _decalage_local, _facteur_local)
@@ -385,6 +399,8 @@ func accorder_au_mode(en_ligne: bool, ecran_scinde: bool = false) -> void:
 	decalage_visee = v[1]
 	facteur_portee = v[2]
 	WeaponData.facteur_portee = facteur_portee
+	WeaponData.portee_plancher = plancher_de_portee(portee_ecran_du_duel(en_ligne, _portee_ecran_locale),
+		zoom_de_la_vue_unique(), decalage_visee)
 	var l := lacet_du_duel(en_ligne, _lacet_local, _option_lacet_locale)
 	lacet_duel = l[0]
 	option_lacet = l[1]
@@ -439,6 +455,35 @@ static func valeurs_du_duel(en_ligne: bool, zoom_local: float, decalage_local: f
 	if en_ligne:
 		return [ZOOM_DUEL_DEFAUT, DECALAGE_VISEE_DEFAUT, FACTEUR_PORTEE_DEFAUT]
 	return [zoom_local, decalage_local, facteur_local]
+
+## L1 — le zoom sur lequel se calcule le plancher de portée : celui de la VUE UNIQUE (le cadrage du jeu en ligne), QUEL
+## QUE SOIT L'ÉCRAN — une seule portée pour tous les modes (Q57). **Depuis Q15 révisée** (Adrien, 2026-09-29 vers 15:50 :
+## « zoom 1,25 en écran scindé et 1,5 en écran seul »), les deux écrans n'ont plus le même zoom : lire `zoom_duel` ferait
+## porter la torche à 873 px en écran scindé et à 728 en vue unique. En ligne, la constante (`ZOOM_VUE_UNIQUE`, la même
+## sur les deux machines) ; hors ligne, le zoom qu'aurait ici la vue unique — le réglage du joueur s'il en a posé un, sinon
+## le défaut de la vue unique, puis `--zoom=` en débogage —, jamais celui de l'écran scindé. Branché à la fusion du chantier
+## des lumières dans la 0.8.0, comme la session « Lumières 0.8.0 » l'avait demandé ; `tools/test_portee_ecran.gd` rougit si
+## l'écran scindé change la portée.
+func zoom_de_la_vue_unique() -> float:
+	if _accorde_en_ligne:
+		return ZOOM_VUE_UNIQUE
+	var choisi := _zoom_duel_choisi if _zoom_duel_regle else ZOOM_VUE_UNIQUE
+	return zoom_applique(choisi, _arguments_de_reglage())
+
+## L1 — la règle du bord de l'écran vaut-elle ? Toujours EN LIGNE (les deux machines la même) ; ailleurs, le choix local.
+static func portee_ecran_du_duel(en_ligne: bool, locale: bool) -> bool:
+	return true if en_ligne else locale
+
+## L1 — le plancher de portée des torches, en pixels de monde : la plus petite portée qui atteint le bord de l'écran
+## de la VUE UNIQUE dans toutes les directions (`PorteeEcran.portee_minimale`), 0 si la règle ne vaut pas. **Une
+## seule portée pour tous les modes** : l'écran scindé, plus étroit, est couvert par la même valeur — la portée est une
+## règle de jeu (l'éblouissement la lit), elle ne change pas avec la façon de regarder. Le tangage est celui de la
+## caméra iso, même sous la vue de dessus de débogage : une vue de débogage ne change pas une règle. Calcul pur,
+## vérifié en `--script` par `tools/test_portee_ecran.gd`.
+static func plancher_de_portee(active: bool, zoom: float, decalage: float) -> float:
+	if not active:
+		return 0.0
+	return PorteeEcran.portee_minimale(PorteeEcran.VUE_UNIQUE, zoom, decalage, CameraIso.TANGAGE_DEG)
 
 ## ISO8 — les drapeaux `--zoom=`, `--decalage=` et `--torche=` ne valent qu'en build de DÉBOGAGE : un export
 ## release les ignore, comme `--eos-ephemeral` (`network_manager.gd`). Sans quoi un joueur lancerait sa partie

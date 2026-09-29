@@ -3277,6 +3277,15 @@ Le carton de fin (`affiche_de_fin.gd`) posait un fond `MOUSE_FILTER_STOP` — «
 
 « Revenir de l'éditeur de cartes rejoue l'allumage « CANDELA » : ce n'est pas voulu » (Adrien). `GameState._ready()` ouvre le menu puis joue l'allumage (DA6.5) ou, au tout premier lancement, l'intro. Mais `_ready()` n'est pas « le lancement du jeu » : c'est l'entrée dans `main.tscn`, et l'éditeur de cartes en revient par `change_scene_to_file("res://main.tscn")`. La musique avait déjà sa parade (`demarrer_musique_au_lancement` vit dans un autoload, qui survit au changement de scène) ; les cérémonies n'en avaient aucune. **Le marqueur est `GameState._deja_demarre`, un `static var`** : il survit au rechargement de la scène, repart à faux avec le processus, et n'est posé qu'à UN endroit — au premier `_ready()`, quelle cérémonie ait joué. ⚠️ Une marque posée par l'allumage seul aurait laissé le premier lancement (où l'intro joue et l'allumage non) le déclencher au premier retour de l'éditeur : `test_allumage_unique` garde ce cas à part, et prend le VRAI chemin — l'éditeur monté, `_go_back()` — plutôt que deux montages successifs. Un `static var` se rebaisse depuis une suite par `script.set("_deja_demarre", false)` : c'est ce qui permet de rejouer un lancement neuf sans en démarrer un autre.
 
+### Une direction lue À L'ÉCRAN n'est pas une direction du sol : la profondeur y est raccourcie de sin 52° (2026-09-29)
+
+Chantier des lumières de la 0.8.0, L1. La distance du joueur au bord de son écran se calcule au sol, dans les axes de la
+caméra ; la première garde lui donnait la direction de la visée telle que la caméra la projette à l'écran, et trouvait la
+formule fausse de 26 px. La formule était juste : à l'écran, la composante de profondeur d'une direction est multipliée par
+sin θ (0,79 à 52°), donc une visée en biais s'y lit plus couchée qu'elle n'est. **Toute direction mesurée à l'écran se
+redresse (`y / sin θ`) avant d'entrer dans un calcul au sol** ; l'écart est nul à l'horizontale et à la verticale de l'écran,
+ce qui le cache à qui ne teste que les axes.
+
 ### Un modèle juste peut dessiner un indicateur invisible : le juger à l'image, pas aux nombres (2026-09-29)
 
 Chantier SON VISIBLE. Toutes les suites passaient — largeurs, ancres, équité miroir — et le premier tirage du banc
@@ -29735,6 +29744,149 @@ arrivée ; elle se relit en 5 µs par trace et par image.
    son du monde du retour de refus, prouvé par `tools/test_clic_a_vide.gd` (qui rougit avec l'ancienne garde).
 3. La publication : `config/version` 0.8.0 (le fil a bougé), avec Q15 et Q42.
 
+---
+
+## Chantier — les lumières de la 0.8.0 (inscrit le 2026-09-29)
+
+**Tenu par la session cloud « Lumières 0.8.0 »**, branche `claude/lumieres-080` (partie de
+`claude/unrailed-isometric-feasibility-44klgh`, `2386906`). Rapport, images et questions pour Adrien :
+`docs/iso/cloud/lumieres-080/RAPPORT.md`. Décisions d'Adrien du 2026-09-29 : « Je veux augmenter la portée de chaque
+lumière. Il faudrait que la source de chaque lumière soit attachée au modèle 3D de chaque personnage avec un point lumineux
+là où la source part » ; Q45 : « ça doit au moins aller au bout de l'écran de chaque joueur » ; Q46 : le point lumineux
+visible seulement si la source l'est (« si son corps est devant, on ne voit pas le point lumineux »). Trois étapes, chacune
+prouvée avant la suivante.
+
+**Intégré dans la 0.8.0 le 2026-09-29 vers 19:00 par la session coordinatrice** (L1, L1bis, L2, L3 et le plancher sur la
+vue unique, jusqu'à `c210166`). La session « Lumières 0.8.0 » n'a pas pu fusionner la 0.8.0 dans sa branche — ses
+permissions l'ont refusé (« Modify Shared Resources »), elle ne l'a pas contourné et l'a écrit dans son rapport — : sa
+branche a donc été fusionnée DANS la 0.8.0, qu'elle ne suivait pas. Deux gestes de fusion, que la branche seule ne pouvait
+pas faire. (1) **Le plancher lit le zoom de la VUE UNIQUE** : `zoom_de_la_vue_unique()` rendait `zoom_duel` sur sa base,
+où les deux écrans avaient le même zoom ; depuis Q15 révisée, il rend `ZOOM_VUE_UNIQUE` en ligne et, hors ligne, le zoom
+qu'aurait la vue unique ici (le réglage du joueur, sinon le défaut de la vue unique, puis `--zoom=` en débogage). Sans cela
+la torche porterait à 873 px en écran scindé et à 728 en vue unique, contre Q57. Saboté (le retour à `zoom_duel`),
+`test_portee_ecran` rougit : « passer à la vue unique ne change pas la portée (727,6 px, 873,2 en écran scindé) ».
+(2) **`test_portee_ecran` pose le zoom par le RÉGLAGE du joueur** (`_zoom_duel_choisi`), plus par `_zoom_local` :
+`accorder_au_mode` recalcule désormais le zoom local depuis le réglage et l'écran, et écrasait la valeur posée par la garde.
+Même intention (la portée suit le zoom de la vue unique, 873 px à ×1,25 réglé), chemin du jeu.
+
+### L1 — la portée atteint au moins le bord de l'écran
+
+- **Un plancher de portée, DÉRIVÉ du cadrage** (`PorteeEcran`, `WeaponData.portee_plancher`, posé par
+  `GameSettings.accorder_au_mode`) : la plus petite portée qui atteint, dans toutes les directions, le bord de l'écran de
+  la vue unique — le coin : `|demi-empreinte au sol| + décalage × profondeur`. **Jamais un nombre calé sur le zoom du
+  jour** : Q15 (×1,25, à l'essai sur `claude/v080-q15-q42`) ferait d'une constante une portée trop courte sans que rien le
+  dise. ×1,5 → 728 px ; ×1,25 → 873 px. Le lacet ne change aucune distance (J1 à 45°, J2 à 225° ont le même rectangle,
+  tourné).
+- **Un plancher plutôt qu'un facteur, une portée pour tous les modes, la torche seule** : les trois choix que la règle
+  ouvre sont des choix de jeu, posés à Adrien dans le rapport ; le jeu avance avec le plus prudent. Le facteur (tout
+  multiplier pour que le Terrassier atteigne le bord) garderait l'écart entre classes mais pousserait l'arbalète à 2 547 px,
+  plus de trois écrans, et multiplierait le coût des lumières. La portée par mode ferait jouer l'écran scindé autrement
+  que le jeu en ligne — or la portée est une règle (l'éblouissement la lit), pas un cadrage. ⚠️ **Conséquence de jeu** : au
+  zoom d'aujourd'hui, les dix classes portent à 728 px (toutes étaient en dessous, de 192 à 672) : l'écart de PORTÉE entre
+  classes disparaît, leur identité tient à l'ouverture, à la luminosité et à la matière du cookie ; et l'éblouissement
+  (`Vision`, qui lit le cookie à l'échelle de la lampe) porte aussi loin que la lumière.
+- **En ligne**, zoom et décalage sont les constantes du duel sur les deux machines : le plancher aussi, sans rien sur le
+  fil ; `--sans-portee-ecran` (débogage, hors ligne) rend le jeu d'avant.
+- **Ce que la règle ne couvre pas** : la caméra arrêtée au bord de la carte (`RegardDuel.centre_du_regard`) ; le joueur y
+  peut viser un bord d'écran plus lointain, jusqu'à la largeur entière. Question à Adrien.
+- **Preuve** : `tools/test_portee_ecran.gd` — la formule, la règle, et EN JEU sur les vraies caméras iso (écran scindé à
+  45° B, J1 et J2 ; ×1,5 et ×1,25 ; vue unique), huit visées, dix classes : la lumière posée (`texture_scale` × cookie)
+  va au moins jusqu'au point du sol où la visée sort de l'écran, et la formule dit cette distance à 0,00 px. Images
+  avant/après et recensement des quinze lumières : le rapport.
+- **Le coût n'est pas gratuit** : sous Mesa (rendu logiciel, relatif seulement), une image coûte ×1,50 en écran scindé et
+  ×1,85 en vue unique, deux torches allumées. À mesurer sur le Mac avant de publier : la cible « 1 % bas ≥ 60 » passait de
+  deux images par seconde. Quinze lumières : au plus 10 par quadrant avant comme après dans la scène mesurée ; chaque
+  torche touche désormais jusqu'à 3 × 3 quadrants (+2 lumières, +3 avec une torche fantôme, là où elle n'entrait pas).
+- **D'où vient le surcoût** (décomposition sous Mesa, même scène) : sans le faisceau visible de Q41, L1 ne coûte que
+  ×1,08 en écran scindé et ×1,12 en vue unique. **C'est le faisceau dans l'air qui paie** : ses couches sont posées sur la
+  texture de la lampe à son échelle (`IsoVolumes._suivre_faisceau_air`), donc leur surface suit le carré de la portée.
+  La lumière 3D miroir n'y est pour rien : elle est éteinte par défaut en jeu.
+
+### L1bis — des faisceaux plus concentrés (Adrien, 2026-09-29, après la planche de L1)
+
+« Il faut que les faisceaux des lumières soient plus concentrés. Faisons en sorte que tu gardes les mêmes rapports
+d'angle, mais tu adaptes pour que le plus petit fasse 10° et le plus grand 60° par exemple. » En ouverture totale (celle
+de la fiche de classe) : 10°-120° → 10°-60°. « Les mêmes rapports » et « 10 à 60 » ne tiennent pas ensemble (rapport 12
+contre 6) : **loi de puissance** (retenue par la session coordinatrice) — `ouverture' = 10° × (ouverture / 10°)^k`,
+k = ln 6 / ln 12 ≈ 0,721 : les deux bornes exactes, chaque rapport entre deux classes élevé à la même puissance
+(`WeaponData.ouverture_concentree`). Braconnier (arbalète) 10°, Sentinelle 14,0°, Illusionniste (fusil) 16,5°, Spectre
+27,2°, Occulteur 31,9°, Fumiste 36,4°, Parasite (pistolet) 40,7°, Incendiaire 44,8°, Allumeur 48,8°, Terrassier (pompe)
+60°. Non faites : tout diviser par deux (5° à 60°, rapports exacts) ; linéaire de 10° à 60°.
+
+- **Les cookies RESSERRÉS, pas recuits** (`tools/concentrer_cookies.gd`) : le demi-angle est cuit dans le cookie, mais
+  les curseurs de la cuisson retenue (`bis04`) ne sont consignés nulle part — recuire aurait changé la matière au hasard.
+  Une déformation polaire exacte du cookie livré (l'écart à l'axe × avant / neuf à la lecture) garde portée, profil,
+  matière et luminosité ; le fondu du bord et le halo court de l'émetteur se resserrent dans la même proportion. L'outil
+  MESURE le demi-angle cuit (`Torches.demi_angle_cuit`, à 0,3° près) et refuse de resserrer deux fois.
+- **Toute la chaîne suit d'elle-même**, parce que tout lit `torch_angle_deg` ou le cookie : l'éblouissement (qui lit le
+  cookie), la fiche de classe, le mannequin, les doubles de killcam, la torche fantôme. La lumière 3D miroir couvre
+  toujours le cône (plancher de 75°, bien au-dessus de 30° + 5°) : rien à y changer.
+- **Preuve** : `tools/test_faisceaux_concentres.gd` — la loi (bornes, puissance), la table des cookies et le catalogue
+  réel (l'image de l'ancien angle), le demi-angle mesuré dans chaque cookie livré, l'ordre des classes gardé,
+  l'éblouissement qui verse dans le cône resserré et plus rien à 3° hors de lui ; `test_torches` et `test_iso_torches3d`
+  lisent la table neuve.
+- **Le halo court de l'émetteur est GARDÉ** (20 % de la portée, 80° à la cuisson) : le premier resserrage le resserrait
+  avec le cône, et « quelqu'un de collé à une torche allumée EST vu, même hors du faisceau » cessait d'être vrai —
+  `test_vision` l'a vu. Deux gardes épinglaient l'ancien angle pour une raison qui tient toujours et sont adaptées
+  (`test_vision` : la cible en plein dans la flaque du pompe passe de 40° à 20° de l'axe ; `test_iso_camera` : le
+  pistolet à 20,34°).
+- **Coût** (Mesa, relatif, zoom ×1,25) : ×0,89 en écran scindé, ×0,91 en vue unique par rapport à L1 — moins, mais peu :
+  les rectangles des lumières et les couches du faisceau visible sont des carrés dont la taille suit la PORTÉE, pas
+  l'ouverture.
+
+### L2 — la lumière part de la lampe tenue par le modèle 3D
+
+- **La lampe 2D (la lightmap, donc tout ce que le jeu éclaire) part du bout du fût de la torche voxel** :
+  `Player.LENTILLE_LAMPE`, 16,1 px devant et 4,55 px à gauche (la main qui n'engage pas la visée), **dérivée du squelette**
+  (`VoxelCatalogue.SQUELETTE` : `avant_main` + longueur de la torche, `ecart_main`), où la torche est « du matériel
+  standard, identique pour les dix classes ». Elle valait (30, 0). **Rien sur le fil** : les deux machines la calculent de
+  la position et de la visée qu'elles ont déjà ; `Protocol.VERSION` reste 19.
+- **Le recul contre les murs garde sa règle** (Adrien, 2026-09-11 : « si on est collé à un mur, on peut éclairer
+  derrière ») : le rayon mène désormais du centre du corps à la lentille, et la lampe recule SUR ce rayon ; la
+  rétrodiffusion garde sa place et son recul d'avant (droit devant, 18 px), avec son propre rayon — deux rayons par image
+  et par joueur, torche allumée.
+- **La lumière 3D miroir** (`lumieres_iso.gd`) prend la hauteur de la lentille (`VoxelCorps.pointe_torche`, pose
+  courante : 19,1 px debout, au-dessus du muret de 14, sous le canon de jeu de 35) ; au sol, elle part déjà du même point
+  que la 2D. ⚠️ **Elle est éteinte par défaut en jeu** (`Presentation3D.poser_lumiere_3d`, que seuls les bancs appellent) :
+  ce changement ne se voit qu'avec elle. Le faisceau visible de Q41 part de la lampe 2D, donc de la lentille aussi.
+- **Ce qui ne bouge pas** : l'éblouissement se mesure toujours depuis le centre du corps (`_lumiere_recue`) — l'écart
+  entre le point d'où il se mesure et celui d'où la lumière part passe de 30 à 16,7 px ; le flash de tir reste au canon.
+- **Preuve** : `tools/test_lampe_modele.gd` — la lentille dérivée du squelette, la même pour les dix classes ; en jeu,
+  écran scindé à 45° B, J1 et J2 dans huit visées : lampe 2D et bout du fût voxel au même point (écart 0,000 px) ; en vue
+  unique, lumière 3D à la lentille au sol et en hauteur ; face à un mur, recul sur le rayon, jamais dans le mur ;
+  `Protocol.VERSION` inchangé.
+
+### L3 — le point lumineux à la lentille (Q46)
+
+- **Deux lueurs** (un cœur franc de 5 px, un halo doux de 16 px au tiers de sa force) au bout du fût voxel
+  (`IsoVolumes._suivre_lentilles_des_joueurs`), à l'énergie de SA lampe : éteinte, grésillante, le point suit — le noir
+  absolu tient. C'est la source même, que la lumière 2D ne dessine pas. Allumé par défaut ; `--sans-point-lumineux` en
+  débogage seulement. **Aucune lumière nouvelle** : une image (lueur 3D non éclairée), rien ne l'entend — ni la
+  simulation, ni l'éblouissement, ni les capteurs, ni les masques d'ombre.
+- **Visible seulement si la lentille l'est, depuis la caméra de CE joueur** — deux conditions, chacune jugée là où elle
+  se juge : le verre regarde-t-il la caméra (le shader `halo_iso.gdshaderinc` pèse la lueur par l'orientation de la
+  lentille face à la caméra QUI DESSINE, `lentille_orientee` : de face plein, de profil un filet, de dos rien — en écran
+  scindé chaque vue juge pour elle, J2 à 225° compris) ; quelque chose est-il devant (la profondeur : le corps voxel, le
+  fût, les murs 3D le cachent). La formule, recopiée en GDScript (`IsoVolumes.visibilite_lentille`), est comparée au shader.
+- **Mesuré à l'image** (écran scindé, point basculé sur place, bruit de fond de la respiration du corps mesuré à part) :
+  J1 visant vers le bas de son écran, +204 à +213/255 dans sa vue ; vers le haut, +1 (bruit 8) ; la vue de J2 donne
+  l'inverse (+174 à +230 quand J1 vise vers le haut de son écran). De profil, un filet (+41 à +61).
+- **L'éblouissement et le faisceau visible ne bougent pas** : le halo d'éblouissement est une couche d'écran posée
+  au-dessus de la 3D, centrée sur l'émetteur — ébloui, on voit le halo par-dessus le point, les deux disent « une lampe
+  est là » ; le faisceau de Q41 part de la même lentille. Le « cœur chaud à la lampe » d'ISO13 (`--faisceau`, éteint) fait
+  doublon avec ce point : à retirer si Adrien garde celui-ci.
+- **Preuve** : `tools/test_point_lumineux.gd` (20 vérifications) ; l'occultation au pixel, par le banc
+  (`tools/banc_lumieres.gd --plans=l3`) — rien n'est rastérisé en headless.
+
+- **Coût de L2 + L3** (Mesa, relatif) : ×1,02 en écran scindé, ×1,01 en vue unique — dans le bruit.
+
+### Le plancher sur la vue unique (Q15 révisée, 2026-09-29 15:50)
+
+Adrien : « zoom 1,25 en écran scindé et 1,5 en écran seul ». Le plancher lisait le zoom de l'écran en cours : il aurait
+porté plus loin en écran scindé qu'en ligne. Il se calcule sur `GameSettings.zoom_de_la_vue_unique()` — sur cette base
+égal à `zoom_duel` ; **à la fusion de la 0.8.0, elle doit rendre `ZOOM_VUE_UNIQUE`**, et `test_portee_ecran` rougit si
+l'écran scindé change la portée. 728 px pour tous les modes. **La fusion de la 0.8.0 dans `claude/lumieres-080` n'est pas
+faite** : refusée par les permissions de la session cloud qui tient la branche (rapport).
 ---
 
 ## Jalons humains — ce qui ne peut pas être automatisé

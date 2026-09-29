@@ -239,10 +239,12 @@ func _test_intensite_texture() -> void:
 	# **Le cône vient de l'arme, sans qu'on le lui demande.** À 40° de l'axe et à
 	# la même fraction de portée : en plein dans la flaque du pompe, hors du
 	# trait de l'arbalète. Aucune constante n'intervient — c'est le pixel.
+	# L1bis (faisceaux concentrés, 2026-09-29) : le pompe ouvre 60° au total, soit 30° de demi-angle — la cible passe de
+	# 40° à 20° de l'axe, toujours en plein dans sa flaque et hors du trait de l'arbalète (5°).
 	var d_pompe: float = pompe.portee_torche() * 0.5
-	var c_pompe := Vector2.RIGHT.rotated(deg_to_rad(40.0)) * d_pompe
-	var c_arb := Vector2.RIGHT.rotated(deg_to_rad(40.0)) * mi_arb
-	_check("le faisceau large du pompe éblouit à 40° de son axe",
+	var c_pompe := Vector2.RIGHT.rotated(deg_to_rad(20.0)) * d_pompe
+	var c_arb := Vector2.RIGHT.rotated(deg_to_rad(20.0)) * mi_arb
+	_check("le faisceau large du pompe éblouit à 20° de son axe",
 		Vision.intensite_texture(img_pompe, avant, o, c_pompe, pompe.echelle_torche()) > 0.0)
 	_check("le trait de l'arbalète, non",
 		is_zero_approx(Vision.intensite_texture(img_arb, avant, o, c_arb,

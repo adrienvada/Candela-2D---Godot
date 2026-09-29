@@ -542,6 +542,25 @@ func pointe_arme() -> Dictionary:
 	}
 
 
+## Chantier des lumières de la 0.8.0, L2 — la LENTILLE de la torche tenue : le bout du fût, là où la lumière part.
+## Même discipline que `pointe_arme()` : recalculée depuis le pivot réel, donc la pose courante (respiration, hanche
+## accroupie, contre-rotation du buste). Repère GLOBAL de ce nœud ; `direction` : l'avant de la torche. Dictionnaire
+## vide si la torche n'est pas construite ou pas montrée (lampe éteinte, `poser()`), jamais une position inventée.
+##
+## Le jeu en tire deux choses : la lumière 2D part du même point au sol (`Player.LENTILLE_LAMPE`, dérivée des mêmes
+## constantes du squelette, que les deux machines connaissent) et la lumière 3D miroir prend la HAUTEUR de ce point
+## (`lumieres_iso.gd`) ; le point lumineux de L3 s'y pose.
+func pointe_torche() -> Dictionary:
+	if _torche_mesh == null or not _torche_mesh.visible or _fiche.is_empty():
+		return {}
+	var ft: Dictionary = _fiche.get("torche", {})
+	var pointe_locale := Vector3(0.0, 0.0, -float(ft.get("longueur", 0.0)))
+	return {
+		"position": _torche_pivot.to_global(pointe_locale),
+		"direction": (_torche_pivot.global_transform.basis * Vector3.FORWARD).normalized(),
+	}
+
+
 ## ISO3 vague 4 — l'empreinte au sol RÉELLE de la pose courante : la plus
 ## grande distance, en tuiles, entre l'origine du corps et un coin de l'une
 ## de ses boîtes, projetée sur le plan XZ. Recalculée depuis le maillage réel

@@ -495,7 +495,7 @@ func _ready():
 	weapon_fusil.max_bounces = 2
 	weapon_fusil.damages_shooter = true
 	weapon_fusil.torch_cookie = "fusil"
-	weapon_fusil.torch_angle_deg = 10.0
+	weapon_fusil.torch_angle_deg = 8.24  # 10 avant L1bis (faisceaux concentrés, `WeaponData.ouverture_concentree`)
 	# 3,5 auparavant. Portées arbitrées par Adrien le 2026-08-24 : chaque joueur
 	# voit 480 unités devant lui, et seule l'arbalète a le droit d'éclairer plus
 	# loin que ce qu'elle montre. Le fusil tombe à 0,96 écran, le pistolet à 0,85.
@@ -517,7 +517,7 @@ func _ready():
 	weapon_pompe.projectile_count = 5
 	weapon_pompe.spread_angles_deg = [0.0, 20.0, -20.0, 60.0, -60.0]
 	weapon_pompe.torch_cookie = "pompe"
-	weapon_pompe.torch_angle_deg = 60.0
+	weapon_pompe.torch_angle_deg = 30.0  # 60 avant L1bis : le plus large ouvre 60° au total
 	weapon_pompe.torch_scale = 1.0
 	
 	weapon_arbalete = ClassData.new()
@@ -535,7 +535,7 @@ func _ready():
 	weapon_arbalete.damages_shooter = false
 	weapon_arbalete.emits_light = false
 	weapon_arbalete.torch_cookie = "arbalete"
-	weapon_arbalete.torch_angle_deg = 5.0 # Très fin
+	weapon_arbalete.torch_angle_deg = 5.0 # Très fin — le plus étroit, inchangé par L1bis (10° au total)
 	weapon_arbalete.torch_scale = 3.5     # Aussi loin que le fusil
 	# 0,6 et non plus 0,3 depuis le 2026-09-11 (Adrien : « double leur puissance,
 	# je les vois pas assez »). Cuite dans l'alpha du cookie, donc l'éblouissement
@@ -4694,7 +4694,7 @@ func _batir_catalogue() -> void:
 	# catalogue les déclare quand même, et `ClassData.assets_presents()` dit
 	# lesquelles sont jouables. Rien ne les équipe tant que l'étape 3 n'a pas
 	# rebranché la table — donc rien ne crie, et rien ne se tait non plus.
-	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
+	var fumiste := _classe("fumiste", "Le Fumiste", 2, 18.2, 1.5)  # demi-angle 30 avant L1bis
 	fumiste.name = "Pistolet lourd"
 	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un nuage de suie où l'on disparaît — mais qu'une lampe allume tout entier."
 	fumiste.cooldown = 0.3333  # 2,38 → 3,00 tirs/s (doublé, PLAFONNÉ)
@@ -4709,7 +4709,7 @@ func _batir_catalogue() -> void:
 	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie",
 		"Un nuage de suie : on n'y voit personne, et une lampe l'allume tout entier.")
 
-	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
+	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 22.39, 1.4)  # demi-angle 40 avant L1bis
 	incendiaire.name = "Fusil de détresse"
 	incendiaire.description = "Le feu au rang du feu. Deux cartouches paraboliques, deux fusées incendiaires, et un sol qu'on ne traverse plus."
 	incendiaire.cooldown = 0.3333  # 1,82 → 3,00 tirs/s (doublé, PLAFONNÉ)
@@ -4723,7 +4723,7 @@ func _batir_catalogue() -> void:
 	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises",
 		"Des braises au sol qui brûlent qui s'y attarde.", true)
 
-	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
+	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 7.02, 2.6)  # demi-angle 8 avant L1bis
 	sentinelle.name = "Fusil à verrou"
 	sentinelle.description = "Elle ne cherche pas : elle veille. Perforant à longue portée, une fusée qui dure, et une poudre qui écrit les pas de qui passe."
 	sentinelle.cooldown = 0.425  # 1,18 → 2,35 tirs/s (doublé)
@@ -4737,7 +4737,7 @@ func _batir_catalogue() -> void:
 	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact",
 		"Une poudre où chaque pas luit un moment dans le noir, puis s'éteint.")
 
-	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
+	var occulteur := _classe("occulteur", "L'Occulteur", 8, 15.96, 1.3)  # demi-angle 25 avant L1bis
 	occulteur.name = "Pistolet-mitrailleur"
 	occulteur.description = "Il masque la lumière au lieu d'en faire. Rafale courte, et une découpe d'acier qui projette l'ombre d'un homme qui n'existe pas."
 	occulteur.cooldown = 0.09
@@ -4756,7 +4756,7 @@ func _batir_catalogue() -> void:
 	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée",
 		"Une découpe d'acier qui projette l'ombre d'un homme absent.")
 
-	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
+	var allumeur := _classe("allumeur", "L'Allumeur", 9, 24.38, 1.2)  # demi-angle 45 avant L1bis
 	allumeur.name = "Carabine double"
 	allumeur.description = "Il allume — la mine, les cartouches vives, les deux fusées. La lumière maximale, celle qui ne laisse aucune ombre où se mettre."
 	allumeur.cooldown = 0.20
@@ -4770,7 +4770,7 @@ func _batir_catalogue() -> void:
 	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium",
 		"Une mine qui n'explose pas : elle aveugle et révèle.", true)
 
-	var spectre := _classe("spectre", "Le Spectre", 10, 20.0, 1.4)
+	var spectre := _classe("spectre", "Le Spectre", 10, 13.59, 1.4)  # demi-angle 20 avant L1bis
 	spectre.name = "Pistolet silencieux"
 	spectre.description = "Au sommet de l'échelle de la lumière, celui qui n'en émet aucune. Zéro fusée, zéro flash, et une bâche qui arrête les rayons sans arrêter les balles."
 	spectre.cooldown = 0.22

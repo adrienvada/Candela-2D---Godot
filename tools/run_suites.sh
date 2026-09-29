@@ -245,6 +245,10 @@ SUITES+=(test_point_braise test_usine_symetrie)
 # conflit avec la liste.
 SUITES+=(test_carton_de_fin test_carton_transition test_allumage_unique)
 
+# Chantier des lumières de la 0.8.0 (2026-09-29) : L1, la portée jusqu'au bord de l'écran ; L1bis, les faisceaux de 10° à 60° ;
+# L2, la lumière qui part de la lampe du modèle ; L3, le point lumineux (Q46). Hors de la liste, même raison.
+SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_point_lumineux)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

@@ -76,7 +76,10 @@ func slug() -> String:
 ## ⚠️ **DEMI-angle**, pas l'ouverture totale : la comparaison est
 ## `abs(dir.angle()) <= deg_to_rad(torch_angle_deg)`, donc 60° ouvre un cône de
 ## 120°. Cuit dans le cookie — le changer oblige à recuire.
-@export var torch_angle_deg: float = 35.0
+##
+## ⚠️ **L1bis (Adrien, 2026-09-29 : « des faisceaux plus concentrés […] le plus petit fait 10° et le plus grand 60° »)** :
+## chaque valeur du catalogue est l'image de l'ancienne par `ouverture_concentree` — 35° → 20,34° pour le pistolet.
+@export var torch_angle_deg: float = 20.34
 @export var torch_scale: float = 1.6
 @export var torch_brightness: float = 1.0
 
@@ -117,7 +120,7 @@ var _torch_image: Image
 ## mentaient, et c'est ainsi qu'on hérite d'un nombre que plus personne n'ose
 ## toucher. Une seule constante porte désormais cette unité.
 func portee_torche() -> float:
-	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee
+	return maxf(TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee, portee_plancher)
 
 ## ISO8 — la portée de TOUTES les torches, en un seul facteur (brief de la session cloud, 2026-09-15 12:50,
 ## sur mandat d'Adrien de 12:20 : « réduire la taille des cônes de lumière pour le rendre plus
@@ -130,6 +133,46 @@ func portee_torche() -> float:
 ## `WeaponData` se charge dans les suites `--script`, qui compilent avant les autoloads : lire `GameSettings`
 ## d'ici casserait leur compilation. Le demi-angle n'est pas touché (« l'ouverture est une identité de classe »).
 static var facteur_portee := 1.0
+
+## Chantier des lumières de la 0.8.0, L1 — LE PLANCHER DE PORTÉE : aucune torche ne porte moins loin que le bord de
+## l'écran de son porteur (Q45, Adrien, 2026-09-29 : « ça doit au moins aller au bout de l'écran de chaque joueur »).
+## En pixels de monde ; 0 : pas de plancher (le jeu d'avant, `--sans-portee-ecran` en build de débogage).
+##
+## **Un plancher, pas un facteur** : les classes qui portaient moins loin que le bord y montent, celles qui portaient
+## plus loin gardent leur portée. C'est l'option la plus prudente des deux qu'ouvre la règle — l'autre, tout multiplier
+## pour que la plus courte (le Terrassier) atteigne le bord, garde l'écart entre classes mais pousse l'arbalète à
+## plus de trois écrans et multiplie le coût des lumières (`docs/iso/cloud/lumieres-080/RAPPORT.md`, question à
+## Adrien). ⚠️ Le plancher efface donc l'écart de PORTÉE entre les classes qui y montent : leur identité tient à
+## l'ouverture, à la luminosité et à la matière du cookie, qui ne bougent pas.
+##
+## Posé par `GameSettings.accorder_au_mode` depuis le cadrage (`PorteeEcran`), statique pour la même raison que
+## `facteur_portee`. EN LIGNE, zoom et décalage sont les constantes du duel sur les deux machines : le plancher aussi,
+## sans rien sur le fil.
+static var portee_plancher := 0.0
+
+## Chantier des lumières de la 0.8.0, L1bis — LES FAISCEAUX PLUS CONCENTRÉS (Adrien, 2026-09-29, après la planche de L1 :
+## « Il faut que les faisceaux des lumières soient plus concentrés. Faisons en sorte que tu gardes les mêmes rapports
+## d'angle, mais tu adaptes pour que le plus petit fasse 10° et le plus grand 60° »). En OUVERTURE TOTALE (`torch_angle_deg`
+## × 2, celle de la fiche de classe) : de 10°-120° (rapport 12) à 10°-60° (rapport 6).
+##
+## « Les mêmes rapports » et « de 10 à 60 » ne tiennent pas ensemble (60 / 10 = 6, pas 12) : la LOI DE PUISSANCE retenue par
+## la session coordinatrice garde les deux bornes exactes et élève chaque rapport entre deux classes à la même puissance
+## k = ln 6 / ln 12 ≈ 0,721 — l'ordre et les proportions relatives au mieux. Les deux autres lectures, non faites : tout
+## diviser par deux (5° à 60°, rapports exacts) ; linéaire de 10° à 60°.
+##
+## Les demi-angles du catalogue (`game_state.gd`, `tools/torches.gd`) sont écrits EN CLAIR, l'ancienne valeur en
+## commentaire : c'est la forme que `tools/test_torches.gd` sait lire ; `tools/test_faisceaux_concentres.gd` vérifie que
+## chacun est bien l'image de l'ancien par cette fonction, et que le cookie cuit a ce demi-angle.
+const OUVERTURE_MIN_DEG := 10.0
+const OUVERTURE_MAX_AVANT_DEG := 120.0
+const OUVERTURE_MAX_DEG := 60.0
+
+
+## L'ouverture totale concentrée, depuis celle d'avant L1bis : 10° × (ouverture / 10°)^k.
+static func ouverture_concentree(ouverture_avant_deg: float) -> float:
+	var k := log(OUVERTURE_MAX_DEG / OUVERTURE_MIN_DEG) / log(OUVERTURE_MAX_AVANT_DEG / OUVERTURE_MIN_DEG)
+	return OUVERTURE_MIN_DEG * pow(ouverture_avant_deg / OUVERTURE_MIN_DEG, k)
+
 
 ## Demi-angle du faisceau, en radians.
 ##
@@ -196,10 +239,12 @@ const TAILLE_COOKIE_REFERENCE := 512.0
 ## côté, c'était garantir qu'un seul serait corrigé.
 func echelle_torche() -> float:
 	var tex := get_torch_texture()
-	# ISO8 — le facteur de portée global, ici comme dans `portee_torche()` (voir `facteur_portee`).
+	# ISO8 — le facteur de portée global, et L1 son plancher : l'échelle se DÉRIVE de `portee_torche()`, pour qu'un
+	# seul endroit dise jusqu'où la torche porte (sans plancher, c'est `torch_scale × facteur_portee`, comme avant).
+	var echelle := portee_torche() / (TAILLE_COOKIE_REFERENCE * 0.5)
 	if tex == null or tex.get_width() <= 0:
-		return torch_scale * facteur_portee
-	return torch_scale * facteur_portee * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
+		return echelle
+	return echelle * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
 
 
 ## L'image du faisceau, celle-là même que la lumière projette — pour que
