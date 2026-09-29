@@ -439,6 +439,21 @@ static func orienter_camera_2d(cam: Camera2D, lacet_deg: float) -> void:
 	cam.ignore_rotation = lacet_deg == 0.0
 	cam.rotation = -deg_to_rad(lacet_deg)
 
+## Le jeu a-t-il déjà démarré dans CE processus ?
+##
+## ⚠️ **`_ready()` n'est pas « le lancement du jeu ».** C'est l'entrée dans `main.tscn`, et la scène se
+## recharge : `map_editor.gd` en revient par `change_scene_to_file("res://main.tscn")`. L'allumage
+## « CANDELA » (DA6.5) se jouait donc à CHAQUE retour de l'éditeur de cartes — Adrien, 2026-09-29 :
+## « Revenir de l'éditeur de cartes rejoue l'allumage « CANDELA » : ce n'est pas voulu ». Ce sont des
+## cérémonies de LANCEMENT — l'histoire une fois, l'allumage à chaque lancement, l'une OU l'autre —, et
+## elles n'ont lieu qu'à la première entrée du processus, quelle qu'ait été celle qui a joué.
+##
+## Un `static var`, donc au niveau du SCRIPT : il survit au rechargement de la scène, comme la musique
+## survit dans son autoload (`demarrer_musique_au_lancement`), et il repart à faux avec le processus
+## suivant — un vrai lancement rejoue l'allumage. Il n'est posé QU'ICI : une cérémonie qui en dépendrait
+## en propre laisserait le premier lancement (où l'intro joue et l'allumage non) le rejouer au retour.
+static var _deja_demarre := false
+
 func _ready():
 	add_to_group("game_state")
 	# MURS BAS, MB3c : la zone morte se pousse aux matériaux JUSTE AVANT le dessin,
@@ -599,8 +614,16 @@ func _ready():
 	# l'écran entier au démarrage, et se passent toutes deux à la première
 	# touche. Les jouer ensemble — ce que la fusion a produit sans le moindre
 	# conflit textuel — donne un premier lancement illisible. L'une OU l'autre.
-	if not _ouvrir_sur_intro_ou_menu():
-		_allumage()
+	#
+	# ⚠️ **Et l'une comme l'autre ne se jouent qu'au LANCEMENT**, pas à chaque entrée dans la scène :
+	# au retour de l'éditeur de cartes, le menu s'ouvre sec (voir `_deja_demarre`). L'intro rejouée
+	# à la demande passe, elle, par `_on_intro_requested`, qui ne recharge rien.
+	if _deja_demarre:
+		ui.show_main_menu()
+	else:
+		_deja_demarre = true
+		if not _ouvrir_sur_intro_ou_menu():
+			_allumage()
 
 ## DA6.6 — l'intro en planches précède le menu, au premier lancement seulement.
 ##
@@ -4178,8 +4201,15 @@ func _do_end_round(winner_id: int):
 ## DA6.1 — les faits du match qui vient de finir, tels que l'affiche les montre.
 ##
 ## Rassemblés ici parce que `game_state` est le seul à tous les avoir : la carte
-## vient de `MapData`, les armes des joueurs, la durée du chrono, le score de
+## vient de `MapData`, les classes des joueurs, la durée du chrono, le score de
 ## session et la série de cet objet, la marge du dernier coup de `V2.9`.
+##
+## ⚠️ **La CLASSE des deux joueurs, pas leur arme** (Adrien, 2026-09-29). Ce dictionnaire portait
+## `arme_j1` et `arme_j2`, lus dans `WeaponData.name` : le nom de l'ARME — « Pistolet », « Pompe » —,
+## pas la classe choisie au salon (« Le Parasite ») ; deux Parasites se lisaient « PISTOLET / PISTOLET ».
+## Chaque machine lit les deux joueurs dans SON état — `p1` et `p2` sont équipés des deux côtés du lien
+## par le même `_do_start_round(w1_idx, w2_idx)` —, donc l'hôte et le client affichent la même ligne,
+## J1 puis J2.
 func _poser_affiche_de_fin(winner_id: int) -> void:
 	var carte: Dictionary = MapData.get_selected()
 	_affiche_de_fin = AfficheDeFin.poser(self, {
@@ -4187,8 +4217,8 @@ func _poser_affiche_de_fin(winner_id: int) -> void:
 		"local_idx": _local_player_index(),
 		"carte": String(carte.get("name", "")),
 		"duree": round_time - time_left,
-		"arme_j1": p1.current_weapon.name if is_instance_valid(p1) and p1.current_weapon else "",
-		"arme_j2": p2.current_weapon.name if is_instance_valid(p2) and p2.current_weapon else "",
+		"classe_j1": libelle_de_classe(p1),
+		"classe_j2": libelle_de_classe(p2),
 		"mode": _mode_label(),
 		"session_j1": p1_session_wins,
 		"session_j2": p2_session_wins,
@@ -4288,6 +4318,18 @@ func _slug_de_classe(joueur: Node) -> String:
 		return ""
 	var classe := joueur.current_weapon as ClassData
 	return String(classe.slug()) if classe != null else ""
+
+## Le LIBELLÉ de la classe d'un joueur — « Le Parasite » —, ou une chaîne vide.
+##
+## Le même repli que `_slug_de_classe`, pour la même raison : **jamais un nom inventé.** Un joueur dont
+## l'arme n'est pas une classe (un `WeaponData.new()` de banc) n'a pas de libellé, et l'affiche de fin se
+## tait plutôt que de lui prêter le nom de son arme. Public : les bancs qui posent l'affiche la nomment de
+## la même façon que le jeu (`tools/photographe.gd`).
+func libelle_de_classe(joueur: Node) -> String:
+	if joueur == null or not is_instance_valid(joueur):
+		return ""
+	var classe := joueur.current_weapon as ClassData
+	return String(classe.libelle) if classe != null else ""
 
 ## Le slug du GADGET d'un joueur, ou une chaîne vide — jamais un repli (étape 28,
 ## lot E), pour la raison de `_slug_de_classe`.
@@ -5092,10 +5134,11 @@ func _enter_hosted_game() -> void:
 
 func _on_replay_requested():
 	# L'affiche de victoire/défaite est opaque et devrait déjà avaler le clic —
-	# mais elle se congédie sur N'IMPORTE QUEL geste (`AfficheDeFin._unhandled_input`),
-	# donc un joueur qui clique EN MÊME TEMPS la referme et presse REJOUER dans le
-	# même geste si les deux réagissent au même événement. Ce garde est la
-	# deuxième porte : tant qu'elle est visible, REJOUER ne fait rien.
+	# mais elle se congédie sur N'IMPORTE QUEL appui (`AfficheDeFin._input`, qui
+	# passe AVANT l'interface et consomme le geste), donc un joueur pressé qui
+	# appuie EN MÊME TEMPS la referme et presse REJOUER dans le même geste si les
+	# deux réagissent au même événement. Ce garde est la deuxième porte : tant
+	# qu'elle est visible, REJOUER ne fait rien.
 	if is_instance_valid(_affiche_de_fin) and _affiche_de_fin.est_active():
 		return
 	if ui._is_main_menu:

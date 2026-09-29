@@ -21,7 +21,10 @@
 #      sprite ou viseur absent). Même angle mort que dans `run_suites.sh`,
 #      corrigé le même jour : la signature est `at: push_error (`, PAS
 #      `ERROR:`, que Godot imprime aussi pour son propre bruit de fin ;
-#   4. l'échec dit DE QUEL CÔTÉ il vient, sans quoi il n'apprend rien.
+#   4. l'échec dit DE QUEL CÔTÉ il vient, sans quoi il n'apprend rien ;
+#   5. (scénario nominal) l'hôte et le client lisent la MÊME ligne de classes sur le
+#      carton de fin, J1 puis J2 — le client y joue une autre classe que l'hôte, pour
+#      qu'il y ait un ordre à lire (Adrien, 2026-09-29).
 #
 # Lancer : ./tools/run_duo.sh
 set -uo pipefail
@@ -356,6 +359,29 @@ if [ "$MODE_HOTE" = "--host" ]; then
     echec=1
   else
     echo "TÉLÉMÉTRIE OK — les deux archives disent la même chose"
+  fi
+fi
+
+# Le carton de fin (Adrien, 2026-09-29) — l'hôte et le client lisent la MÊME ligne de classes, J1 puis J2 : chaque instance a
+# équipé les deux joueurs par `rpc_start_round(w1, w2)` et imprime `CLASSES_AFFICHE: ` d'après son propre état. Scénario
+# nominal seulement (`--host`), comme la télémétrie : c'est lui où le client joue une autre classe que l'hôte, ce qui
+# donne un ordre à lire. Comparée sur les deux lignes imprimées, et l'attendu (« LE PARASITE / LE SPECTRE ») est écrit
+# à la main dans le banc, jamais relu dans le jeu.
+if [ "$MODE_HOTE" = "--host" ]; then
+  cl_hote="$(grep -m1 '^CLASSES_AFFICHE: ' "$HOTE_LOG" || true)"
+  cl_client="$(grep -m1 '^CLASSES_AFFICHE: ' "$CLIENT_LOG" || true)"
+  if [ -z "$cl_hote" ] || [ -z "$cl_client" ]; then
+    echo "CARTON ÉCHEC — une instance n'a rien imprimé"
+    echo "    hôte   : ${cl_hote:-(rien)}"
+    echo "    client : ${cl_client:-(rien)}"
+    echec=1
+  elif [ "$cl_hote" != "$cl_client" ]; then
+    echo "CARTON ÉCHEC — les deux machines nomment des classes différentes"
+    echo "    hôte   : $cl_hote"
+    echo "    client : $cl_client"
+    echec=1
+  else
+    echo "CARTON OK — l'hôte et le client lisent la même ligne : ${cl_hote#CLASSES_AFFICHE: }"
   fi
 fi
 

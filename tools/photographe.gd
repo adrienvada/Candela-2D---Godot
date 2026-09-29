@@ -1176,8 +1176,10 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 			"local_idx": 0,
 			"carte": String(MapData.get_selected().get("name", "")),
 			"duree": _main.round_time - _main.time_left,
-			"arme_j1": _main.p1.current_weapon.name if is_instance_valid(_main.p1) and _main.p1.current_weapon else "",
-			"arme_j2": _main.p2.current_weapon.name if is_instance_valid(_main.p2) and _main.p2.current_weapon else "",
+			# La CLASSE des deux joueurs, comme `GameState._poser_affiche_de_fin` (Adrien, 2026-09-29), par le
+			# même accesseur : un banc qui recomposerait le nom à sa façon finirait par photographier autre chose.
+			"classe_j1": _main.libelle_de_classe(_main.p1),
+			"classe_j2": _main.libelle_de_classe(_main.p2),
 			"mode": _main._mode_label(),
 			"session_j1": _main.p1_session_wins,
 			"session_j2": _main.p2_session_wins,
