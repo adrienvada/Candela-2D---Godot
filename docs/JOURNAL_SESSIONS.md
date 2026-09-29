@@ -6098,3 +6098,9 @@ sources en PNG à 120 images/s avait déjà rempli 4 Go ; elle passe en JPEG à 
 
 **Ce qui n'est pas prouvé** : le film n'a toujours pas été vu JOUER dans le jeu, fenêtre ouverte (image, son Vorbis,
 reprise de la musique). Les sources de `assets/sources/intro/` n'existent que dans ce worktree.
+
+**Même jour, après le commit `e5f4a32d`** (Adrien : « 1 Pousse / 2 oui ») : `intro-v2` poussée sur `origin`, puis cinq
+des six planches de l'ancienne intro retirées (`ill_intro_descente`, `_seuil`, `_dotation`, `_prix`, `_extinction`,
+environ 17 Mo par téléchargement). **Partagés, touchés par retrait** : `menu_artwork.gd` et `menu_particles_ambiance.gd`
+(domaine « menus » : dix entrées de table, celles de ces cinq images) ; `docs/CAPSULE.md` et
+`docs/GOOGLE_FLOW_PROMPTS.md` (une mention chacun). `ill_intro_allumage` reste : l'accueil l'affiche.

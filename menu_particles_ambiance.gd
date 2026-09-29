@@ -49,12 +49,8 @@ const PROFILE_MAP: Dictionary = {
 	"ill_rejoindre": Profile.RADIO_BEACON,
 	"ill_rejoindre_local": Profile.AIRLOCK_EMERALD,
 	# DA6.6 — mêmes profils que les menus, pour la même raison que les effets.
-	"ill_intro_descente": Profile.ATMOSPHERIC_DUST,
-	"ill_intro_seuil": Profile.ABYSS_GOLD,
-	"ill_intro_dotation": Profile.WORKBENCH_AMBER,
+	# Seule la planche de l'entrée « rejouer l'intro » reste (2026-09-29).
 	"ill_intro_allumage": Profile.ATMOSPHERIC_DUST,
-	"ill_intro_prix": Profile.ATMOSPHERIC_DUST,
-	"ill_intro_extinction": Profile.DYING_EMBERS,
 	"ill_retour": Profile.ABYSS_GOLD,
 }
 

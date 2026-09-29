@@ -108,6 +108,34 @@ son `.gitignore`) :
 - Dépensé pour la seconde version : 290 crédits Flow (solde 560), 380 Runway
   (solde 235). Pour la première : 200 Flow.
 
+### Le bloc de prompt commun (Gemini)
+
+Recopié **mot pour mot** en tête de chaque prompt d'image, avec une à trois
+références jointes : la formulation fait partie du procédé (décision du
+2026-08-24), et c'est ce bloc qui a tenu le mannequin sur toutes les images.
+`CAPSULE.md` y renvoie.
+
+> Illustration de roman graphique à l'encre, exactement dans le style des images
+> de référence jointes : encrage noir franc, hachures lourdes et serrées, arêtes
+> géométriques du béton brutaliste. Format paysage 16:9, pleine page, sans bordure
+> ni marge. NOIR ABSOLU : au moins 85 % de l'image est un noir d'encre pur, quasi
+> #000000 — pas de gris sombre, pas de brume claire, pas de fond éclairé, pas
+> d'ambiance tamisée générale. Une seule source de lumière, nommée ci-dessous ;
+> tout ce qu'elle n'atteint pas reste noir. Décor : bunker souterrain brutaliste
+> (béton ébréché, douilles au sol, sang séché). Personnages : exactement comme dans
+> les références — mannequins articulés à tête parfaitement CUBIQUE, SANS VISAGE
+> (ni yeux, ni bouche, ni aucun trait), armure segmentée gris-bleu ardoise très
+> sombre aux arêtes gris perle. JAMAIS d'humain réaliste : ni peau, ni cheveux, ni
+> capuche, ni visage. Aucun texte, aucune lettre, aucun logo ajouté, sauf le pochoir
+> précisé dans la scène. Palette : noir d'encre, gris béton désaturé, et SEULEMENT
+> la couleur de lumière nommée dans la scène (ambre #F5B03D pour le joueur 1, bleu
+> froid #4DA3FF pour le joueur 2, rouge #E02020 pour la fusée, blanc chaud pour un
+> tir).
+
+Pour une image de fin, on retouche l'image de début : « Modifie l'image jointe en
+gardant EXACTEMENT le même cadrage, le même décor, le même style d'encre et la même
+lumière. Change seulement ceci : … », puis le bloc ci-dessus.
+
 ## L'ancienne intro (DA6.6, 2026-09-09 → 2026-09-28)
 
 Six planches (« la descente », « le seuil », « la dotation », « l'allumage », « le
@@ -117,8 +145,8 @@ mais les six clips Veo en avaient fait **un homme réaliste en sweat à capuche*
 la première raison du « plus du tout dans le thème ». Ses six `.ogv` et
 `tools/convert_intro_videos.sh` sont retirés.
 
-⚠️ **Restent au dépôt, et ne servent plus à l'intro** : les six `ill_intro_*.png`
-(20 Mo en tout). `ill_intro_allumage.png` illustre encore l'entrée « rejouer l'intro » de
-l'accueil (`ui.gd`) ; les cinq autres ne sont plus lus que par les tables de
-`menu_artwork.gd` et `menu_particles_ambiance.gd`. Les retirer allégerait chaque
-téléchargement d’environ 17 Mo — décision laissée à Adrien.
+**Ses planches sont retirées elles aussi** (Adrien, 2026-09-29), avec leurs
+entrées dans `menu_artwork.gd` et `menu_particles_ambiance.gd` : environ 17 Mo de
+moins dans chaque téléchargement. Sauf `ill_intro_allumage.png`, qui illustre
+encore l'entrée « rejouer l'intro » de l'accueil (`ui.gd`). Les autres restent
+dans l'historique git.
