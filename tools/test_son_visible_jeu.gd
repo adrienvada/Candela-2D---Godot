@@ -308,6 +308,10 @@ func _en_jeu(audio: Node) -> void:
 	p1.rpc_bruit_de_corps(int(genres["FROLEMENT"]), "", a)
 	_check("le frôlement de J1 reçu : J2 le voit",
 		vues[1].traces_vivantes() == 2 and vues[1].traces()[1]["couleur"] == SV.couleur(SV.Categorie.FROLEMENT))
+	# Q54 — le clic à vide de l'hôte, relayé comme les autres bruits de corps.
+	p1.rpc_bruit_de_corps(int(genres["PERCUTEUR"]), "pistolet", a + Vector2(20, 0))
+	_check("le clic à vide de J1 reçu : J2 le voit (Q54)",
+		vues[1].traces_vivantes() == 3 and vues[1].traces()[2]["couleur"] == SV.couleur(SV.Categorie.PERCUTEUR))
 
 	# Fermé : décompte, puis killcam.
 	_vider(vues)

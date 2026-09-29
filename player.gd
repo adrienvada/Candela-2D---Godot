@@ -2074,14 +2074,10 @@ func _physics_process(delta):
 			# plusieurs images. Le second garde absorbe ce bruit sans rien
 			# retirer au geste : un vrai relâchement-répression reste à plus
 			# de 220 ms, largement au-dessus de tout tremblement de capteur.
-			if not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici():
-				tir_a_sec = 0.22
-				_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
-				if current_weapon:
-					AudioManager.play_percuteur(current_weapon.slug(),
-						muzzle.global_position, player_id)
+			if not _detente_pressee and _clic_a_sec <= 0.0:
+				_clic_a_vide()
 			start_reload()
-	elif can_move and presse and not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici() \
+	elif can_move and presse and not _detente_pressee and _clic_a_sec <= 0.0 \
 			and (current_ammo <= 0 or (is_reloading and not recharge_interruptible())):
 		# ⚠️ Semi-automatique (2026-09-10) : le clic « trop tôt » ne sonne plus
 		# quand il reste des munitions. L'appui n'est pas perdu, il part au terme
@@ -2089,16 +2085,12 @@ func _physics_process(delta):
 		# mentirait. Il ne reste que pour ce qui refuse VRAIMENT : chargeur vide,
 		# ou recharge d'un bloc qu'on ne peut pas interrompre.
 		# Front montant ET fenêtre de 220 ms écoulée — voir le garde ci-dessus.
-		tir_a_sec = 0.22
 		# V4.4 — le percuteur. Positionnel a la bouche : un clic a vide est un
 		# evenement du monde, et dans ce jeu il RACONTE quelque chose de cher —
 		# « je suis desarme, et je suis la ». Il ne compte pas comme un tir pour
 		# le pool (voir `AudioManager.est_un_tir`), sans quoi il ferait reculer
 		# les pas de l'adversaire au moment ou l'on ne tire justement pas.
-		_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
-		if current_weapon:
-			AudioManager.play_percuteur(current_weapon.slug(),
-				muzzle.global_position, player_id)
+		_clic_a_vide()
 	# Le root de RAFALE : il ne tombe pas coup par coup mais au relâchement, ou
 	# quand le chargeur se vide. Sans ce bloc, l'Occulteur n'aurait aucun root du
 	# tout — un manque qui ne lèverait rien et ne se verrait qu'en jouant.
@@ -2111,6 +2103,8 @@ func _physics_process(delta):
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
+	if _clic_a_sec > 0.0:
+		_clic_a_sec = maxf(0.0, _clic_a_sec - delta)
 	# Étape 28, point 5 — ⚠️ AVANT les blocs de lancer et de pose, sur l'état d'AVANT
 	# l'appui : placé après, la dernière fusée lancée se lirait comme un refus (la
 	# réserve vient de tomber à zéro), et une bobine éteinte batterie basse aussi.
@@ -2189,17 +2183,18 @@ func _physics_process(delta):
 ##
 ## Le joueur de l'hôte (`player_id` 0) envoie donc ces bruits au client ; celui du
 ## client n'a rien à envoyer : le client le prédit, et l'hôte le simule.
-enum BruitDeCorps { RECHARGE, FROLEMENT }
+enum BruitDeCorps { RECHARGE, FROLEMENT, PERCUTEUR }
 
 ## Pure : ce bruit doit-il partir vers le client ? Seulement en ligne, chez l'hôte,
 ## pour son propre joueur.
 static func bruit_a_repliquer(mode: int, pid: int, pair_present: bool) -> bool:
 	return pair_present and mode == NetworkManager.GameMode.ONLINE_HOST and pid == 0
 
-func _bruit_de_corps(genre: int, arme: String = "") -> void:
-	_jouer_bruit_de_corps(genre, arme, global_position)
+func _bruit_de_corps(genre: int, arme: String = "", ou: Variant = null) -> void:
+	var pos: Vector2 = global_position if ou == null else ou
+	_jouer_bruit_de_corps(genre, arme, pos)
 	if bruit_a_repliquer(NetworkManager.current_mode, player_id, multiplayer.has_multiplayer_peer()):
-		rpc_bruit_de_corps.rpc(genre, arme, global_position)
+		rpc_bruit_de_corps.rpc(genre, arme, pos)
 
 ## [Client] Un bruit de corps de l'hôte, joué à la position où l'hôte l'a fait.
 @rpc("authority", "call_remote", "reliable")
@@ -2212,6 +2207,31 @@ func _jouer_bruit_de_corps(genre: int, arme: String, pos: Vector2) -> void:
 			AudioManager.play_weapon_reload(arme, pos, player_id)
 		BruitDeCorps.FROLEMENT:
 			AudioManager.play_wall_brush(pos, player_id)
+		BruitDeCorps.PERCUTEUR:
+			AudioManager.play_percuteur(arme, pos, player_id)
+
+## Q54 (Adrien, 2026-09-29 : « oui on le rend audible ») — le clic à vide, SÉPARÉ
+## de son retour.
+##
+## ⚠️ **Le son était rangé derrière la garde du retour de refus** (`_percu_ici`,
+## « chez le seul joueur qui a pressé ») : juste pour la vibration et le tremblement
+## de la cartouche, qui ne parlent qu'à celui qui appuie — mais le SON, lui, est un
+## événement du monde (V4.4 : « je suis désarmé, et je suis là »). En ligne, personne
+## n'entendait donc le clic de l'autre ; en écran partagé, les deux l'entendaient.
+## Équitable parce que muet des deux côtés, et contraire à ce que le son devait dire.
+##
+## Désormais : le son part partout où ce joueur est simulé ou prédit (l'hôte entend
+## le clic du client, le client le sien), et l'hôte envoie le clic de SON joueur au
+## client (S6) ; le retour reste à celui qui a pressé. Deux fenêtres de 220 ms
+## distinctes : `_clic_a_sec` pour le monde, `tir_a_sec` pour le HUD, que l'hôte ne
+## doit pas faire trembler pour le client — il apprendrait l'essai hors de portée.
+func _clic_a_vide() -> void:
+	_clic_a_sec = 0.22
+	if current_weapon:
+		_bruit_de_corps(BruitDeCorps.PERCUTEUR, current_weapon.slug(), muzzle.global_position)
+	if _percu_ici() and tir_a_sec <= 0.0:
+		tir_a_sec = 0.22
+		_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
 
 func _percu_ici() -> bool:
 	var local := _index_joueur_local()
@@ -2285,6 +2305,9 @@ func _update_aim_line() -> void:
 
 ## V4.4 — temps restant du tremblement de refus, lu par le HUD.
 var tir_a_sec: float = 0.0
+## Q54 — la fenêtre de 220 ms du clic à vide ENTENDU, pour tous les pairs qui simulent
+## ce joueur (voir `_clic_a_vide`).
+var _clic_a_sec: float = 0.0
 ## Étape 28, point 5 (2026-09-11) — temps restant du tremblement de refus de la
 ## FUSÉE et du GADGET, lus par le HUD comme `tir_a_sec`. Locaux à qui a pressé :
 ## jamais répliqués, jamais lus par la simulation.
