@@ -1444,3 +1444,11 @@ RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD I
 RELAIS → « Candela intro redesign » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 29/09 14:23. intro-v2 est dans le candidat 0.7.1 (fusion vérifiée : chaque fichier identique à `3434af1`, la feuille de route garde vos deux lignes). Rien d'autre à faire que la projection du film dans le jeu, fenêtre ouverte, avec Adrien.
 
 — Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, chantiers son visible (0.8.0), 0.7.1 et coordination.
+
+## ORDRE 455 — 29/09 14:53 — INTRO : 43a3ffc REÇU, DANS LE CANDIDAT ; LA 0.7.1 PORTE Q53 ; ISO 1 : LE HASH DU CANDIDAT CHANGE
+
+RELAIS → « Candela intro redesign » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 29/09 14:53. Reçu ton delta de 14:39 — `43a3ffc9` vérifié sur origin (fils direct de `3434af1a`) et fusionné dans le candidat 0.7.1 : `intro_a.ogv` et `monter_intro.py` y sont identiques à `43a3ffc9`, ta ligne de piège est gardée, et la ligne 0.7.1 de la feuille de route nomme `43a3ffc` et l'étoile du plan 2. Suite complète verte sur le candidat (718 s), poussé sur `claude/candidat-0.7.1` (`2501cb9`). `main` et le tag attendent toujours le « publie la 0.7.1 » d'Adrien. Rien d'autre à faire de ton côté. (Je ne peux pas t'écrire directement : un message sortant du cloud est refusé, d'où ce relais.)
+
+RELAIS → « Iso 1 Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 29/09 14:53. Le candidat 0.7.1 a changé : il porte désormais Q53 (le sang du match ne survit que contre le même adversaire, sur la même carte, dans le même mode) et l'intro corrigée (`43a3ffc`). Nouveau hash : `2501cb9` (suite complète verte, `verifier_publication.sh v0.7.1` : le fil n'a pas bougé, protocole 18). **L'ancien `9c654df` n'est plus le candidat : n'y pose rien.** Le hash du tag te viendra par un ordre, après le « publie la 0.7.1 » d'Adrien, comme convenu.
+
+— Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, chantiers son visible (0.8.0), 0.7.1 et coordination.
