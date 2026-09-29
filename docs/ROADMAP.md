@@ -29535,6 +29535,19 @@ en écrit les images à 60 par seconde. Le banc n'écrit que des captures brutes
 vie (huit instants + la courbe présence / largeur), l'avant / après du mélange sur une fusillade éparpillée et sur une dense,
 un liseré seul sur quatre fonds, et une vidéo à vitesse réelle et au quart de vitesse.
 
+⚠️ **Le banc photographiait l'intro sur le Mac d'Adrien** (Gadgets, 2026-09-29 après-midi) : il monte `main.tscn` sans
+dire « intro vue », et un poste qui ne l'a jamais vue la joue par-dessus le duel. Troisième paiement du piège « Un banc qui
+monte `main.tscn` dans un foyer neuf photographie l'intro » — le photographe et le banc iso l'avaient payé avant lui, et le
+geste qui l'évite existait déjà dans `tools/photographe.gd`. Corrigé par le même geste (« intro vue » en mémoire le temps du
+`_ready()`, rien d'écrit dans `settings.cfg`), vérifié sous Xvfb dans un `XDG_DATA_HOME` neuf : neuf plans du duel, et le
+profil neuf sort du banc sans `settings.cfg`. **Tout outil qui instancie `main.tscn` le fait ; aucun n'y échappe parce
+qu'il tourne ailleurs que sur le Mac.**
+
+**Le banc de cadence dit si le son visible dessinait** : une ligne « Son visible » avant le verdict — `coupé
+(--sans-son-visible)`, ou `actif — N liserés reçus pendant la mesure (J1 a, J2 b)`, par un compteur de chaque vue
+(`recus_compte`). Sans elle, une prise « avec liserés » où aucun son localisé n'aurait sonné ne se distinguait pas d'une prise
+sans (demande de Gadgets, 2026-09-29) ; ses appuis sont dans `preconditions_manquantes`, donc vérifiés par `test_banc`.
+
 ### S6 — les bruits de corps de l'hôte, chez le client
 
 En ligne, l'hôte simule les deux joueurs et entendait les rechargements et les frôlements du client ; le client, qui

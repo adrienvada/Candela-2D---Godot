@@ -69,8 +69,17 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(_sortie)
 	await process_frame
 	_audio = root.get_node("AudioManager")
+	# ⚠️ Sans cela, sur un poste qui n'a jamais vu l'intro, le banc photographie l'intro
+	# (constaté par Gadgets sur le Mac d'Adrien le 2026-09-29, comme le photographe avant
+	# lui). « Intro vue » EN MÉMOIRE seulement le temps du `_ready()` de `main.tscn`, puis
+	# la valeur est rendue : rien n'est écrit dans `user://settings.cfg`. Même geste que
+	# `tools/photographe.gd` et `tools/planche_q42.gd`.
+	var reglages := root.get_node("GameSettings")
+	var intro_vue_avant: bool = reglages.intro_vue
+	reglages.intro_vue = true
 	_main = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(_main)
+	reglages.intro_vue = intro_vue_avant
 	await process_frame
 	await process_frame
 	var reseau := root.get_node("NetworkManager")

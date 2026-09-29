@@ -132,6 +132,8 @@ var _pire_echauffement := 0.0
 ## se compare aux premiers allumages du miroir de lumière (`LumieresIso.premiers_allumages`), sur la même horloge.
 var _samples_us: Array[int] = []
 var _debut_mesure_us := 0
+## Liserés du son visible déjà reçus au départ de la mesure, par vue (voir `_liseres_recus`).
+var _liseres_au_depart: Array = []
 ## ISO12 — `--chauffe-couverture` : la chauffe allume une fois CHAQUE sorte de lampe à l'écran avant le chronomètre, au lieu
 ## de seulement durer (complément de la session cloud, 02:05 : trois secondes de torche ne compilent ni la fusée ni ce que la
 ## torche éteinte laisse). Sans ce drapeau, la chauffe reste par durée — c'est la comparaison demandée.
@@ -470,6 +472,7 @@ func _ready() -> void:
 	if _temps_par_vue:
 		_armer_temps_par_vue()
 	_recenser_les_ombres_2d()
+	_liseres_au_depart = _liseres_recus()
 	_debut_mesure_us = Time.get_ticks_usec()
 	await _stress(_seconds, true)
 	_report()
@@ -1254,6 +1257,38 @@ func _un_pour_cent_bas_apres(depuis_s: float) -> Array:
 	return [float(lents) / somme, lents]
 
 
+## Combien de liserés chaque vue du son visible a reçus depuis sa création (J1, J2).
+func _liseres_recus() -> Array:
+	var recus := []
+	if not is_instance_valid(_main):
+		return recus
+	for vue in _main.get("_sons_vues"):
+		recus.append(int(vue.get("recus_compte")) if is_instance_valid(vue) else 0)
+	return recus
+
+
+## Le son visible pendant la mesure : actif ou coupé, et combien de liserés il a dessinés.
+## Posée AVANT le verdict, comme la ligne des torches : c'est une charge, et une prise
+## « avec liserés » qui n'en aurait reçu aucun (aucun son localisé, ou le drapeau
+## `--sans-son-visible`) ne mesure pas ce qu'elle annonce (demande de Gadgets, 2026-09-29).
+func _rapporter_le_son_visible() -> void:
+	if not bool(_main.get("son_visible_actif")):
+		print("  Son visible      : coupé (--sans-son-visible) — aucun liseré dessiné")
+		return
+	var fin := _liseres_recus()
+	var parts := PackedStringArray()
+	var total := 0
+	for i in fin.size():
+		var n := int(fin[i]) - (int(_liseres_au_depart[i]) if i < _liseres_au_depart.size() else 0)
+		if n < 0:
+			# Les vues ont été recréées pendant la mesure (nouvelle manche) : leur compteur est reparti de zéro.
+			n = int(fin[i])
+		total += n
+		parts.append("J%d %d" % [i + 1, n])
+	print("  Son visible      : actif — %d liserés reçus pendant la mesure (%s)"
+		% [total, ", ".join(parts) if not parts.is_empty() else "aucune vue montée"])
+
+
 func _report() -> void:
 	if _samples.is_empty():
 		printerr("✗ aucun échantillon")
@@ -1354,6 +1389,7 @@ func _report() -> void:
 			print("    dont %d image(s) mesurées pendant le décompte de départ, où le jeu"
 				% _torches_decompte)
 			print("    éteint les torches lui-même — non comptées comme désaccord")
+		_rapporter_le_son_visible()
 	print("  Verdict %.0f fps   : %s  (sur le 1 %% bas hors des %.0f premières secondes)" % [CIBLE_1_POURCENT_BAS,
 		"TENU" if low1_regime >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas hors 10 s à %.0f)" % low1_regime,
 		TRANSITOIRE_VERDICT_SEC])
@@ -1434,6 +1470,14 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		absents.append("GameState._do_spawn_gadget() a disparu (variante --gadgets)")
 	if not "countdown_left" in main:
 		absents.append("GameState.countdown_left a disparu (contrôle des torches)")
+	# La ligne « Son visible » du relevé (`_rapporter_le_son_visible`).
+	for prop in ["son_visible_actif", "_sons_vues"]:
+		if not prop in main:
+			absents.append("GameState.%s a disparu (ligne « Son visible » du relevé)" % prop)
+	# Lu sur le script, sans l'instancier : une vue créée ici ne serait jamais libérée.
+	var proprietes_vue: Array = (load("res://son_visible_vue.gd") as GDScript).get_script_property_list()
+	if not proprietes_vue.any(func(d: Dictionary) -> bool: return d["name"] == "recus_compte"):
+		absents.append("son_visible_vue.gd n'expose plus recus_compte (ligne « Son visible » du relevé)")
 	# `tenir_la_torche()` ne sait allumer que par la gâchette : sans ces actions,
 	# il ne ferait rien, et le banc mesurerait torches éteintes.
 	for action in ["p1_torch", "p2_torch"]:

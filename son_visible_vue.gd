@@ -84,6 +84,11 @@ var _traces: Array[Dictionary] = []
 ## son du jeu n'y tombe jamais (`tools/test_enveloppes_sons.gd`) : ce compteur dit à qui
 ## l'ouvre qu'un son est arrivé qu'on ne sait pas animer.
 var repli_compte := 0
+## Combien de liserés cette vue a reçus depuis sa création (une source continue qui remplace
+## sa propre annonce compte aussi). Lu par `tools/bench_framerate.gd` : une prise de cadence
+## doit dire si le son visible dessinait pendant qu'elle mesurait, sans quoi « avec liserés »
+## et « sans » ne se distinguent pas après coup (relevé par Gadgets, 2026-09-29).
+var recus_compte := 0
 
 
 func _ready() -> void:
@@ -193,11 +198,13 @@ func recevoir(evenement: Dictionary, regardeur: Node2D, part_occultee: float) ->
 			if bool(autre["vie"].get("continu", false)) \
 					and autre["cle"] == trace["cle"] and autre["source"] == trace["source"]:
 				_traces[i] = trace
+				recus_compte += 1
 				set_process(true)
 				return trace
 	if _traces.size() >= TRACES_MAX:
 		_traces.remove_at(0)
 	_traces.append(trace)
+	recus_compte += 1
 	set_process(true)
 	return trace
 

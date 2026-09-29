@@ -464,9 +464,14 @@ func _en_jeu(audio: Node) -> void:
 	var a := p1.global_position
 	p2.global_position = a + Vector2(180, -60)
 	_vider(vues)
+	var recus_avant: Array = [int(vues[0].recus_compte), int(vues[1].recus_compte)]
 	audio.play_footstep(p2.global_position, Vector2i(0, 0), false, 1.0, 1)
 	_check("J1 voit le pas de J2", vues[0].traces_vivantes() == 1, str(vues[0].traces_vivantes()))
 	_check("J2 ne voit pas son propre pas", vues[1].traces_vivantes() == 0)
+	# Le compteur que lit la ligne « Son visible » du banc de cadence : un liseré reçu, un compté.
+	_check("le compteur des liserés reçus suit : +1 chez J1, rien chez J2",
+		int(vues[0].recus_compte) == recus_avant[0] + 1 and int(vues[1].recus_compte) == recus_avant[1],
+		"J1 %d → %d, J2 %d → %d" % [recus_avant[0], vues[0].recus_compte, recus_avant[1], vues[1].recus_compte])
 	audio.play_footstep(p1.global_position, Vector2i(0, 0), false, 1.0, 0)
 	_check("J2 voit le pas de J1", vues[1].traces_vivantes() == 1, str(vues[1].traces_vivantes()))
 	_check("J1 ne voit pas son propre pas", vues[0].traces_vivantes() == 1)
