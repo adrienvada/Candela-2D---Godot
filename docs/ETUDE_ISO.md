@@ -593,7 +593,7 @@ clavier, la torche suit la souris, un clic tire un flash ; quatre préréglages 
 caméra (`1` à `4`), hauteur des murs, angle et portée de la torche, perspective
 ou orthographie. Le décodage v3 est celui de `map_codec.gd` (vérifié contre un
 décodeur indépendant : 348 murs sur `default`, 220 sur l'Arène Circulaire, 372
-sur le Cloître et l'Usine, 360 sur la Croisée, 312 sur le Bunker) ; la règle
+sur le Cloître, 376 sur l'Usine — 372 avant sa correction du 2026-09-29 —, 360 sur la Croisée, 312 sur le Bunker) ; la règle
 de solidité est celle de `map_geometry.gd`. Douze captures et une planche
 (`docs/iso/planche_iso.jpg`) ; touches et paramètres d'URL dans
 [iso/README_PROTO.md](iso/README_PROTO.md).

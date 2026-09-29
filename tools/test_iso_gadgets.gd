@@ -430,8 +430,14 @@ func _la_fusee_en_iso(main: Node, p: Node) -> void:
 ## `--fusee-rouge-long`, la couleur que le halo du point pose au cœur de son disque. En mélange à couverture pleine au cœur,
 ## c'est la couleur à l'image, sur le noir comme sur le sol éclairé. Avant : jaune pâle dès la braise (D1, la couleur de la
 ## lumière additionnée au sol orange), et blanc 0,5 s de trop (D3, le blanc suivait l'énergie relative).
+##
+## **2026-09-29 (Adrien : « Le point rouge : oui, dans la 0.8.0 ») — la règle de luminance, lue sur le vrai halo** : à chaque âge après
+## le plein feu, la couleur que le halo écrit au cœur vaut au moins la lumière de la fusée PLUS ce que l'ancien point y ajoutait,
+## dans la limite du rouge (`IsoVolumes.PLANCHER_ECLAT_PAR_ENERGIE` ; la règle, ses raisons et sa suite sans fenêtre :
+## `tools/test_point_braise.gd`). Jamais plus sombre qu'avant ; inchangé au braise (énergie ≥ 1,2) ; et l'égalité du mélange avec
+## l'additif sur le noir tient à l'éclat du jeu. Les âges comptent le résidu (16 s, l'âge de la demande) et le creux de l'agonie.
 func _le_point_par_acte(main: Node, p: Node) -> void:
-	print("\n[Le point de braise, acte par acte — Q34 = C, défaut et rouge long]")
+	print("\n[Le point de braise, acte par acte — Q34 = C, défaut et rouge long ; luminance : 2026-09-29]")
 	var miroirs: Node = p.get("_miroirs")
 	var volumes: IsoVolumes = miroirs.get("volumes")
 	var f: Node2D = (load("res://fusee.gd") as GDScript).new()
@@ -455,12 +461,29 @@ func _le_point_par_acte(main: Node, p: Node) -> void:
 		# Les sursauts d'agonie (énergie 2,5, relative 0,83) : l'ancien blanc les suivait.
 		for fe: Array in fenetres:
 			ages.append(ag + (float(fe[0]) + float(fe[1])) * 0.5)
+		# Le résidu à 16 s (l'âge de la demande d'Adrien) et le creux de l'agonie (le quasi-noir entre deux sursauts) : là où le point
+		# se perdait.
+		ages.append(re + 1.0)
+		var creux := ag + 1.0
+		var e_creux := INF
+		var t_creux := ag
+		while t_creux < re:
+			var e_t := FuseeModele.energie_a(t_creux, fenetres)
+			if e_t < e_creux:
+				e_creux = e_t
+				creux = t_creux
+			t_creux += pas
+		ages.append(creux)
 		var blancs_hors_plein_feu: Array = []
 		var plein_feu_pas_blanc: Array = []
 		var pas_rouges: Array = []
 		var eclat_change: Array = []
+		var trop_sombres: Array = []
+		var plus_sombres_qu_avant: Array = []
+		var change_au_braise: Array = []
 		var mauvais_melange := 0
 		var sursaut_vu := false
+		var ages_de_la_regle := 0
 		for age: float in ages:
 			f.call("forcer_age", age)
 			p.call("_suivre")
@@ -476,17 +499,34 @@ func _le_point_par_acte(main: Node, p: Node) -> void:
 			var lumiere := f.get_node("Halo") as Light2D
 			var energie := lumiere.energy if lumiere.enabled else 0.0
 			var opacite := (f.get_node("Coeur") as CanvasItem).modulate.a
-			var eclat := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)
+			var eclat_avant := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)   # l'éclat d'avant le plancher
+			var eclat := IsoVolumes.eclat_coeur_fusee(energie, opacite)
 			if FuseeModele.acte_a(age) == FuseeModele.Acte.AGONIE and energie > 2.0:
 				sursaut_vu = true
-			# Sur le noir, l'image d'avant (additive, `couleur × clamp(forme × éclat)`) : le même facteur, à chaque forme.
+			# Sur le noir, l'image de l'additif (`couleur × clamp(forme × éclat)`) : le même facteur, à chaque forme, à l'éclat du jeu.
 			for forme: float in [1.0, 0.6, 0.25, 0.05]:
 				var avant := clampf(forme * eclat, 0.0, 1.0)
 				var apres := minf(eclat, 1.0) * clampf(forme * i, 0.0, 1.0) if eclat > 0.002 else 0.0
 				if absf(avant - apres) > 1e-5:
 					eclat_change.append("%.3f s, forme %.2f : %.4f → %.4f" % [age, forme, avant, apres])
+			if eclat < eclat_avant - 1e-9:
+				plus_sombres_qu_avant.append("%.3f s : %.4f contre %.4f" % [age, eclat, eclat_avant])
+			if energie >= FuseeModele.ENERGIE_BRAISE and absf(eclat - eclat_avant) > 1e-9:
+				change_au_braise.append("%.3f s : %.4f contre %.4f" % [age, eclat, eclat_avant])
 			if eclat <= 0.002:
 				continue
+			# La règle de luminance, sur la couleur que le vrai halo écrit au cœur (couverture pleine : c'est la couleur à l'image) :
+			# au moins luma(lumière) × (min(énergie, 1) + min(éclat d'avant, 1)), borné par ce que le rouge du point peut porter.
+			if FuseeModele.acte_a(age) != FuseeModele.Acte.PLEIN_FEU and energie > 0.005:
+				ages_de_la_regle += 1
+				var luma_lumiere := 0.2126 * lumiere.color.r + 0.7152 * lumiere.color.g + 0.0722 * lumiere.color.b
+				var rouge := IsoVolumes.COULEUR_COEUR_ROUGE
+				var requis := minf(luma_lumiere * (minf(energie, 1.0) + minf(eclat_avant, 1.0)),
+					0.2126 * rouge.r + 0.7152 * rouge.g + 0.0722 * rouge.b)
+				var vaut := 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+				if vaut < requis - 1e-5:
+					trop_sombres.append("%.3f s (%s), énergie %.3f : %.4f pour %.4f requis" % [age,
+						FuseeModele.Acte.keys()[FuseeModele.acte_a(age)], energie, vaut, requis])
 			# Au cœur (forme 1), la couverture est pleine (intensité ≥ 1) : ce qui s'affiche est `couleur`, sur tout fond.
 			var brut := Color(c.r / minf(eclat, 1.0), c.g / minf(eclat, 1.0), c.b / minf(eclat, 1.0))
 			var teinte := fposmod(brut.h * 360.0, 360.0)
@@ -506,8 +546,14 @@ func _le_point_par_acte(main: Node, p: Node) -> void:
 			blancs_hors_plein_feu.is_empty() and (sursaut_vu or fenetres.is_empty()), str(blancs_hors_plein_feu))
 		_check("%s : rouge à tous les actes suivants, jusqu'au résidu — teinte 350° à 15°, saturation ≥ 0,6 (D1)" % nom,
 			pas_rouges.is_empty(), str(pas_rouges))
-		_check("%s : sur le noir, le même éclat qu'avant au pixel près (couverture × couleur)" % nom,
+		_check("%s : sur le noir, le mélange pose au pixel près ce que l'additif poserait à l'éclat du jeu (couverture × couleur)" % nom,
 			eclat_change.is_empty(), str(eclat_change.slice(0, 3)))
+		_check("%s : à chaque âge après le plein feu (%d relevés, dont le résidu à 16 s et le creux de l'agonie), le point vaut au moins "
+			% [nom, ages_de_la_regle] + "sa lumière plus l'ancien point, dans la limite du rouge (luminance de Rec. 709)",
+			trop_sombres.is_empty() and ages_de_la_regle >= 10, str(trop_sombres.slice(0, 3)))
+		_check("%s : jamais plus sombre qu'avant, et le braise (énergie ≥ %.1f) ne change pas" % [nom, FuseeModele.ENERGIE_BRAISE],
+			plus_sombres_qu_avant.is_empty() and change_au_braise.is_empty(),
+			str(plus_sombres_qu_avant.slice(0, 2)) + str(change_au_braise.slice(0, 2)))
 		_check("%s : le point est en MÉLANGE (il couvre le sol au lieu de s'y additionner)" % nom, mauvais_melange == 0)
 	FuseeModele.poser_rouge_long(false)
 	# La lumière 2D ne change pas : toujours le rouge de détresse vers l'ambre, par la température (FU2.1).
@@ -1018,13 +1064,17 @@ func _le_coeur_de_la_fusee() -> void:
 		src.contains("\tif coeur_fusee > 0:\n\t\t_suivre_coeur_fusee(f, lumiere, energie, vus)"))
 	_check("le cœur posé a la taille et l'éclat de celui de la comète : 10 px, à bord franc, énergie / 0,8",
 		is_equal_approx(IsoVolumes.TAILLE_COEUR_FUSEE, 10.0) and src.contains("_poser_halo(e, 0, p, 10.0, couleur, eclat, 1)")
-		and src.contains("var eclat := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)")
+		and src.contains("var eclat := eclat_coeur_fusee(energie, opacite)")
+		and src.contains("var ancien := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)")
 		and src.contains("TAILLE_COEUR_FUSEE,\n\t\tcouleur, maxf(eclat, 1.0) if eclat > 0.002 else 0.0, 1)")
 		and IsoVolumes.HAUTEUR_COEUR_FUSEE_PX > (VoxelObjet.FUSEE_BRAISE_Y0 + VoxelObjet.FUSEE_BRAISE.y) * IsoVolumes.TUILE)
 	# Parité avec la 2D (session cloud, 21:54) : l'éclat ne tombe jamais sous l'opacité du point de braise 2D — au résidu, la
 	# formule de la comète (énergie / 0,8 × opacité) l'effaçait (0,02) là où la 2D le montre encore.
+	# Depuis le 2026-09-29 il ne tombe pas non plus sous le plancher de sa lumière (`PLANCHER_ECLAT_PAR_ENERGIE`) : la garde de la règle
+	# est `_le_point_par_acte` (le vrai halo) et `tools/test_point_braise.gd` (à chaque pas).
 	_check("l'éclat du cœur ne tombe jamais sous l'opacité du cœur 2D (lisible au résidu, comme en 2D)",
-		src.contains("var opacite := coeur.modulate.a if coeur != null else 1.0"))
+		src.contains("var opacite := coeur.modulate.a if coeur != null else 1.0")
+		and IsoVolumes.eclat_coeur_fusee(0.2, 0.1667) >= 0.1667 and IsoVolumes.eclat_coeur_fusee(0.05, 0.0417) >= 0.0417)
 	# Session cloud « fusée-point » (2026-09-27) : le blanc suit l'ACTE, plus l'énergie relative (D3) ; le rouge est celui
 	# de détresse, plus la couleur de la lumière (D1). La garde à l'usage est `_le_point_par_acte`.
 	_check("le presque-blanc ne vient qu'au plein feu (par l'acte), le rouge de détresse ensuite",

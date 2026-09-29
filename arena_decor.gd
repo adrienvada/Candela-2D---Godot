@@ -58,8 +58,8 @@ var _est_copie := false
 ## Une peinture SOMBRE : le sol assombri sous la lettre, jamais éclairci — noire dans le noir comme le sol, lisible dans la
 ## lumière. Une carte absente de la table (cartes des joueurs) n'en porte aucun.
 const DRAPEAU_POCHOIRS := "--pochoirs-essai"
-## [texte, centre (cases, x puis y ; x,5 = entre deux cases : l'axe d'une carte de largeur paire), rotation en degrés]. L'Usine n'a pas de symétrie exacte (son bloc central est décalé d'une
-## case) : traitée en miroir gauche-droite.
+## [texte, centre (cases, x puis y ; x,5 = entre deux cases : l'axe d'une carte de largeur paire), rotation en degrés]. L'Usine, symétrique en miroir gauche-droite depuis le
+## 2026-09-29 (ses blocs centraux de 3 cases, décalés d'une colonne, passés à 4 : `tools/test_usine_symetrie.gd`), est traitée comme les autres cartes en miroir.
 const POCHOIRS_ESSAI := {
 	"00000002": [["DEATHMATCH", Vector2(11.5, 4.5), 0.0], ["DEATHMATCH", Vector2(11.5, 19.5), 0.0],
 		["ZONE 1", Vector2(4, 18), 0.0], ["ZONE 2", Vector2(19, 18), 0.0]],

@@ -181,6 +181,23 @@ const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
 ## `Fusee.COULEUR_DETRESSE`, recopié et non nommé — `fusee.gd` nomme des autoloads, et le nommer ici empêcherait ce script
 ## de compiler sous `--script` (les suites). `test_iso_gadgets` garde l'égalité des deux.
 const COULEUR_COEUR_ROUGE := Color(0.96, 0.293, 0.334)
+## LE PLANCHER de l'éclat du point (Adrien, 2026-09-29 : « Le point rouge : oui, dans la 0.8.0 », à la question « le point rouge de la
+## fusée, quand elle retombe en braise, est 3,6 fois moins lumineux que l'ancien point orange, et le repère se perd : le rendre aussi
+## lumineux que sa lumière, en gardant le rouge ? »). Depuis Q34 = C le point est du rouge de détresse, en MÉLANGE, à l'éclat de la
+## lumière (`énergie / 0,8 × opacité du cœur 2D`) : au résidu (16 s, énergie 0,2) il valait 0,167 du rouge — (39, 10, 12) à l'image,
+## plus sombre que le sol qu'éclaire la fusée et trois à quatre fois moins clair que l'ancien point orange, qui s'ADDITIONNAIT au sol.
+## Son éclat ne descend donc plus sous `PLANCHER_ECLAT_PAR_ENERGIE × l'énergie de la lumière` (borné à 1 : un rouge ne porte pas plus
+## que lui-même). **La règle** : à chaque âge après le plein feu, le point vaut au moins sa lumière PLUS ce que l'ancien point y
+## ajoutait — `luma(lumière) × (min(énergie, 1) + min(éclat d'avant, 1))` — dans la limite de ce que le rouge peut porter. Un sol n'est
+## jamais plus clair que la lumière qui le frappe et l'ancien point s'y ajoutait : un point qui COUVRE le sol et vaut cette somme n'est
+## plus sombre que l'ancien sur aucun sol. Au résidu (l'ambre, 0,715 ; l'éclat d'avant valant énergie / 1,2), la somme est
+## 1,633 × (1 + 1/1,2) = 2,994 fois l'énergie en éclat du point ; 3,5 laisse 17 % de marge.
+## **Ce qui ne bouge pas** : le plein feu (presque blanc, éclat 1,5) et le braise (énergie ≥ 1,2 : éclat plein, le rouge à son maximum
+## — c'est là que la lumière, l'ambre × 1,2, est plus claire que ne peut l'être un rouge saturé, et « en gardant le rouge » l'emporte) ;
+## la lumière du jeu (le point n'éclaire rien) ; la couleur du point (rouge à tout éclat : teinte 356°, saturation ≥ 0,69).
+## Preuves : `tools/test_point_braise.gd` (la règle, à chaque pas, sans fenêtre), `tools/test_iso_gadgets.gd` (le vrai halo), et à
+## l'image `tools/planche_braise.gd` — `docs/iso/braise/`.
+const PLANCHER_ECLAT_PAR_ENERGIE := 3.5
 ## La taille du cœur posé : celle du cœur de la comète (`_suivre_comete`), en pixels de monde.
 const TAILLE_COEUR_FUSEE := 10.0
 ## Sa hauteur : au sommet de la braise du voxel (`VoxelObjet.FUSEE_BRAISE_Y0` + sa hauteur), un peu au-dessus. À la hauteur de
@@ -369,23 +386,36 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 ##   vert montait (le mécanisme de la lueur au sol, ISO10 1c). Il est désormais du rouge de détresse, et en MÉLANGE.
 ## - D3, le blanc débordait d'environ 0,5 s : il suivait l'énergie relative (`smoothstep(0.6, 0.95, relative)`), qui
 ##   glisse 1,5 s dans la braise, et remontait même sur les sursauts d'agonie (2,5 / 3 = 0,83). Il suit l'ACTE.
-## Le mélange est dosé pour que, sur le NOIR, l'image soit celle d'avant au pixel près : la couverture est
+## Le mélange est dosé pour que, sur le NOIR, l'image soit celle de l'additif : la couverture est
 ## `max(éclat, 1)` et la couleur `rouge × min(éclat, 1)`, et comme la forme reste dans [0, 1],
 ## `rouge × min(é, 1) × clamp(forme × max(é, 1))` = `rouge × clamp(forme × é)`, ce que l'additif posait sur un fond noir.
-## Même éclat, même taille, même repère à distance ; seul change ce qu'il fait au sol éclairé : il le couvre au lieu de
-## s'y ajouter, et reste rouge (à l'agonie et au résidu, un point rouge sombre, de l'éclat du cœur 2D).
+## Même taille, même repère à distance ; ce qu'il fait au sol éclairé : il le couvre au lieu de s'y ajouter, et reste rouge.
+##
+## **2026-09-29 (Adrien : « Le point rouge : oui, dans la 0.8.0 ») — l'éclat a un PLANCHER** (`eclat_coeur_fusee`) : à l'agonie et
+## au résidu le point rouge, de l'éclat du cœur 2D, valait trois à quatre fois moins que l'ancien point orange et se perdait. Il vaut
+## maintenant au moins sa lumière plus ce que l'ancien point y ajoutait, dans la limite de ce que le rouge peut porter
+## (`PLANCHER_ECLAT_PAR_ENERGIE`). Le plein feu et le braise ne bougent pas.
 func _suivre_coeur_fusee(f: Node2D, lumiere: Light2D, energie: float, vus: Dictionary) -> void:
 	var c := _entree(f, "coeur", vus, 2)
 	_halos(c, 1, SHADER_HALO_MELANGE)
 	var coeur := f.get_node_or_null(^"Coeur") as CanvasItem
 	var opacite := coeur.modulate.a if coeur != null else 1.0
-	var eclat := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)
+	var eclat := eclat_coeur_fusee(energie, opacite)
 	var acte := FuseeModele.acte_a(float(f.call("age_combustion"))) if f.has_method("age_combustion") \
 		else FuseeModele.Acte.BRAISE
 	var couleur := couleur_coeur_fusee(coeur_fusee, acte, lumiere.color if lumiere != null else Color.WHITE)
 	couleur = Color(couleur.r * minf(eclat, 1.0), couleur.g * minf(eclat, 1.0), couleur.b * minf(eclat, 1.0))
 	_poser_halo(c, 0, Vector3(f.global_position.x, HAUTEUR_COEUR_FUSEE_PX, f.global_position.y), TAILLE_COEUR_FUSEE,
 		couleur, maxf(eclat, 1.0) if eclat > 0.002 else 0.0, 1)
+
+
+## L'éclat du point de braise (`_suivre_coeur_fusee` le prend d'ici) : l'ancien éclat — l'énergie de la lumière / 0,8 × l'opacité du
+## cœur 2D, jamais sous cette opacité (parité avec la 2D) —, ou le plancher `PLANCHER_ECLAT_PAR_ENERGIE × énergie` (borné à 1), le plus
+## grand des deux. `energie` vaut 0 quand la lumière est éteinte : le plancher tombe avec elle, et le point ne reste pas allumé sans sa
+## lumière. Pure, pour la garde de la suite (`tools/test_point_braise.gd`).
+static func eclat_coeur_fusee(energie: float, opacite: float) -> float:
+	var ancien := maxf(clampf(energie / 0.8, 0.0, 1.5) * opacite, opacite)
+	return maxf(ancien, clampf(PLANCHER_ECLAT_PAR_ENERGIE * energie, 0.0, 1.0))
 
 
 ## La couleur du point de braise, avant l'éclat : pure, pour la garde de la suite. Variante 2 (défaut, Q34 = C) : le
