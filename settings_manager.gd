@@ -134,7 +134,17 @@ const MODE_RENDU_DESSUS := "dessus"
 ## de 35 px de monde passe de 52 à 44 px de la vue logique. La règle d'équité ne bouge pas : c'est le défaut COMPILÉ, le
 ## même pour tous en ligne (`valeurs_du_duel`), pour la killcam (`killcam_cadrage.gd`, qui repart de lui), et pour tout
 ## `settings.cfg` sans zoom réglé. Revenir à ×1,5 : cette ligne.
-const ZOOM_DUEL_DEFAUT := 1.25
+##
+## ⚠️ **Q15 revue — le zoom dépend de l'écran** (Adrien, 2026-09-29 vers 15:50, après l'essai : « En fait faisons zoom 1,25
+## en écran scindé et 1,5 en écran seul »). L'écran scindé ne donne à chaque joueur qu'une demi-largeur (957 px) : ×1,25 lui
+## rend de la carte ; la vue unique (en ligne, entraînement) garde le ×1,5 d'ISO11. L'équité ne bouge pas : dans un même
+## match, les deux joueurs ont toujours le même écran, donc le même zoom — et en ligne, où les deux machines sont en vue
+## unique, c'est la constante `ZOOM_VUE_UNIQUE` qui s'impose (`valeurs_du_duel`). Le mode se dit à `accorder_au_mode`.
+const ZOOM_ECRAN_SCINDE := 1.25
+const ZOOM_VUE_UNIQUE := 1.5
+## Le zoom quand l'écran n'est pas encore connu (au démarrage, dans les bancs, hors match) : celui de la vue unique, le
+## seul qui vaille en ligne. La killcam, elle, repart du zoom qui s'appliquait (`zoom_duel`).
+const ZOOM_DUEL_DEFAUT := ZOOM_VUE_UNIQUE
 ## Q17 = B (Adrien, 2026-09-25 10:28) : le décalage vers la visée passe de 0,25 à 0,15 de la hauteur visible, le même
 ## pour tous en ligne (`valeurs_du_duel`) ; `--decalage=0.25` rend l'ancien cadrage en build de débogage.
 const DECALAGE_VISEE_DEFAUT := 0.15
@@ -364,7 +374,12 @@ static func zoom_applique(choisi: float, args: PackedStringArray) -> float:
 ## ISO8 — les valeurs du duel pour ce mode : les constantes EN LIGNE, quoi que disent les drapeaux ou
 ## `settings.cfg` ; les valeurs locales en écran scindé et à l'entraînement. Aucun état réseau : ce sont les mêmes
 ## constantes dans le même code, sur les deux machines, et `Protocol.VERSION` ne bouge pas.
-func accorder_au_mode(en_ligne: bool) -> void:
+##
+## Q15 revue — `ecran_scinde` dit l'écran : le zoom local par défaut en dépend (`zoom_par_defaut`). Un zoom réglé au
+## débogage, ou `--zoom=`, l'emporte toujours hors ligne ; en ligne, rien ne l'emporte sur `ZOOM_VUE_UNIQUE`.
+func accorder_au_mode(en_ligne: bool, ecran_scinde: bool = false) -> void:
+	var choisi := _zoom_duel_choisi if _zoom_duel_regle else zoom_par_defaut(ecran_scinde)
+	_zoom_local = zoom_applique(choisi, _arguments_de_reglage())
 	var v := valeurs_du_duel(en_ligne, _zoom_local, _decalage_local, _facteur_local)
 	zoom_duel = v[0]
 	decalage_visee = v[1]
@@ -414,6 +429,10 @@ static func option_lacet_appliquee(args: PackedStringArray) -> String:
 		push_warning("GameSettings : %s%s inconnu, option %s" % [DRAPEAU_LACET_J2, arg, OPTION_LACET_DEFAUT])
 		return OPTION_LACET_DEFAUT
 	return arg
+
+## Q15 revue — le zoom par défaut de l'écran : ×1,25 en écran scindé, ×1,5 en vue unique. Calcul pur.
+static func zoom_par_defaut(ecran_scinde: bool) -> float:
+	return ZOOM_ECRAN_SCINDE if ecran_scinde else ZOOM_VUE_UNIQUE
 
 ## `[zoom, décalage, facteur de portée]` — calcul pur, vérifié en `--script` par `test_iso_camera`.
 static func valeurs_du_duel(en_ligne: bool, zoom_local: float, decalage_local: float, facteur_local: float) -> Array:

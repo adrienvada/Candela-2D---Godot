@@ -5804,8 +5804,9 @@ func _restore_viewports():
 		# n'avait jamais été placée.
 		ui.disposer_hud(true)
 		cam1.global_position = p1.global_position
-		# ISO8 — le zoom du duel, pas 1,0 ; l'entraînement est local : les valeurs de la machine s'appliquent.
-		GameSettings.accorder_au_mode(false)
+		# ISO8 — le zoom du duel, pas 1,0 ; l'entraînement est local : les valeurs de la machine s'appliquent. Une seule
+		# vue : le zoom de la vue unique (Q15 revue).
+		GameSettings.accorder_au_mode(false, false)
 		cam1.zoom = Vector2.ONE * GameSettings.zoom_duel
 		cam2.zoom = Vector2.ONE * GameSettings.zoom_duel
 		return
@@ -5825,9 +5826,11 @@ func _restore_viewports():
 	ui.disposer_hud()
 	# ISO8 — le zoom du duel (`GameSettings.zoom_duel`), pas 1,0 : c'est aussi d'où la killcam repart. EN LIGNE,
 	# zoom, décalage et portée valent les constantes, des deux côtés (`accorder_au_mode`, décision de 13:58) :
-	# le cadrage fait partie de l'information.
+	# le cadrage fait partie de l'information. Q15 revue (Adrien, 2026-09-29) : le zoom dépend de l'écran — ×1,25 en
+	# écran scindé, ×1,5 en vue unique ; les deux joueurs d'un même match ont toujours le même écran.
 	GameSettings.accorder_au_mode(NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
-		or NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT)
+		or NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT,
+		NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN)
 	cam1.zoom = Vector2.ONE * GameSettings.zoom_duel
 	cam2.zoom = Vector2.ONE * GameSettings.zoom_duel
 	cam1.global_position = p1.global_position

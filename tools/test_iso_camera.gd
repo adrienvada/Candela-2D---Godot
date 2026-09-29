@@ -213,11 +213,30 @@ func _regard_du_duel() -> void:
 	var args := OS.get_cmdline_user_args() + OS.get_cmdline_args()
 	# ISO8, étape 2 — les défauts choisis par la session cloud sur la planche des variantes (12:50).
 	if Script.valeur_par_argument(args, "--zoom=").is_empty():
-		# ISO11, L3 — ×1,8 → ×1,5, amendé par Adrien au test 1 (« un peu moins zoomée »). Q15 (2026-09-29) — ×1,5 → ×1,25,
-		# « tentons 1.25 » : un essai qu'Adrien jugera en jouant, donc épinglé sur la constante et sur la valeur qu'il a dite.
-		_check("zoom du duel ×1,25 par défaut (Q15, « tentons 1.25 »)", is_equal_approx(reglages.zoom_duel, 1.25))
-		_check("et c'est la constante du jeu, celle qui vaut aussi en ligne et pour la killcam",
-			is_equal_approx(reglages.zoom_duel, Script.ZOOM_DUEL_DEFAUT) and is_equal_approx(Script.ZOOM_DUEL_DEFAUT, 1.25))
+		# ISO11, L3 — ×1,8 → ×1,5, amendé par Adrien au test 1 (« un peu moins zoomée »). Q15 (2026-09-29) — « tentons 1.25 »,
+		# puis, revue le même jour après l'essai : « zoom 1,25 en écran scindé et 1,5 en écran seul ». Épinglé sur les deux
+		# valeurs qu'il a dites ; au démarrage, l'écran n'est pas encore connu : c'est la vue unique, la seule qui vaille en ligne.
+		_check("zoom du duel ×1,5 au démarrage : celui de la vue unique (Q15 revue)", is_equal_approx(reglages.zoom_duel, 1.5))
+		_check("Q15 revue : ×1,25 en écran scindé, ×1,5 en vue unique, et le défaut sans écran est la vue unique",
+			is_equal_approx(Script.ZOOM_ECRAN_SCINDE, 1.25) and is_equal_approx(Script.ZOOM_VUE_UNIQUE, 1.5)
+			and is_equal_approx(Script.ZOOM_DUEL_DEFAUT, Script.ZOOM_VUE_UNIQUE))
+		_check("zoom_par_defaut : l'écran scindé ×1,25, la vue unique ×1,5",
+			is_equal_approx(Script.zoom_par_defaut(true), 1.25) and is_equal_approx(Script.zoom_par_defaut(false), 1.5))
+		# La règle posée là où le jeu la pose : `accorder_au_mode`, à chaque départ de manche. Une instance neuve, jamais
+		# réglée au débogage ; le facteur de portée global qu'elle réécrit est rendu après.
+		var par_ecran: Node = Script.new()
+		var facteur_ecran_avant: float = WeaponData.facteur_portee
+		par_ecran.accorder_au_mode(false, true)
+		var z_scinde: float = par_ecran.zoom_duel
+		par_ecran.accorder_au_mode(false, false)
+		var z_unique: float = par_ecran.zoom_duel
+		par_ecran.accorder_au_mode(true, true)
+		var z_ligne: float = par_ecran.zoom_duel
+		WeaponData.facteur_portee = facteur_ecran_avant
+		par_ecran.free()
+		_check("accorder_au_mode : écran scindé ×1,25, vue unique (entraînement) ×1,5",
+			is_equal_approx(z_scinde, 1.25) and is_equal_approx(z_unique, 1.5), "%s / %s" % [z_scinde, z_unique])
+		_check("… et EN LIGNE, la vue unique s'impose quoi que dise l'appel (×1,5)", is_equal_approx(z_ligne, 1.5), str(z_ligne))
 	if Script.valeur_par_argument(args, "--decalage=").is_empty():
 		# Q17 = B (Adrien, 2026-09-25) : 0,25 → 0,15.
 		_check("décalage de visée de 0,15 de la hauteur visible par défaut (Q17)", is_equal_approx(reglages.decalage_visee, 0.15))
@@ -238,8 +257,8 @@ func _regard_du_duel() -> void:
 		Script.decalage_applique(PackedStringArray([])),
 		Script.facteur_portee_applique(PackedStringArray(["--torche=1.0"]))]
 	var en_ligne: Array = Script.valeurs_du_duel(true, locales[0], locales[1], locales[2])
-	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,25 (Q15), décalage 0,15 (Q17), portée ×0,75 — les défauts",
-		is_equal_approx(en_ligne[0], 1.25) and is_equal_approx(en_ligne[1], 0.15) and is_equal_approx(en_ligne[2], 0.75),
+	_check("EN LIGNE avec --zoom=1.0 --torche=1.0 : zoom ×1,5 (vue unique, Q15 revue), décalage 0,15 (Q17), portée ×0,75 — les défauts",
+		is_equal_approx(en_ligne[0], 1.5) and is_equal_approx(en_ligne[1], 0.15) and is_equal_approx(en_ligne[2], 0.75),
 		str(en_ligne))
 	var en_local: Array = Script.valeurs_du_duel(false, locales[0], locales[1], locales[2])
 	_check("en écran scindé local, les mêmes drapeaux s'appliquent (zoom 1,0, portée 1,0)",
@@ -253,7 +272,7 @@ func _regard_du_duel() -> void:
 	var facteur_global_avant: float = WeaponData.facteur_portee
 	reglages_ligne.accorder_au_mode(true)
 	_check("accorder_au_mode(en ligne) pose aussi le facteur sur WeaponData",
-		is_equal_approx(reglages_ligne.zoom_duel, 1.25) and is_equal_approx(WeaponData.facteur_portee, 0.75))
+		is_equal_approx(reglages_ligne.zoom_duel, 1.5) and is_equal_approx(WeaponData.facteur_portee, 0.75))
 	WeaponData.facteur_portee = facteur_global_avant
 	reglages_ligne.free()
 	var pistolet := WeaponData.new()
@@ -582,6 +601,35 @@ func _simulation_inchangee() -> void:
 		reglages.accorder_au_mode(false)
 		for i in 3:
 			await process_frame
+
+	# Q15 revue (Adrien, 2026-09-29 : « zoom 1,25 en écran scindé et 1,5 en écran seul ») — sur les vraies caméras du duel,
+	# posées par le jeu à chaque départ : l'entraînement (une seule vue) à ×1,5, un match en écran scindé à ×1,25.
+	var args_zoom := OS.get_cmdline_user_args() + OS.get_cmdline_args()
+	if (load("res://settings_manager.gd") as GDScript).valeur_par_argument(args_zoom, "--zoom=").is_empty():
+		main._on_training_requested()
+		for i in 4:
+			await physics_frame
+		_check("Q15 revue — entraînement (vue unique) : zoom ×1,5 sur la caméra du duel",
+			is_equal_approx(reglages.zoom_duel, 1.5) and is_equal_approx((main.cam1 as Camera2D).zoom.x, 1.5),
+			"%s / %s" % [reglages.zoom_duel, (main.cam1 as Camera2D).zoom.x])
+		var reseau := root.get_node("NetworkManager")
+		var mode_avant: int = reseau.current_mode
+		main.ui._intended_mode = int(reseau.get_script().get_script_constant_map()["GameMode"]["LOCAL_SPLITSCREEN"])
+		main._on_replay_requested()
+		var fin_depart := Time.get_ticks_msec() + 5000
+		while not bool(main.round_active) and Time.get_ticks_msec() < fin_depart:
+			await physics_frame
+		for i in 2:
+			await physics_frame
+		_check("Q15 revue — écran scindé : zoom ×1,25 sur les deux caméras du duel",
+			is_equal_approx(reglages.zoom_duel, 1.25) and is_equal_approx((main.cam1 as Camera2D).zoom.x, 1.25)
+			and is_equal_approx((main.cam2 as Camera2D).zoom.x, 1.25),
+			"%s / %s / %s" % [reglages.zoom_duel, (main.cam1 as Camera2D).zoom.x, (main.cam2 as Camera2D).zoom.x])
+		reseau.current_mode = mode_avant
+		# Retour à l'entraînement : l'extinction qui suit se juge en vue unique, rendue par la racine.
+		main._on_training_requested()
+		for i in 4:
+			await physics_frame
 
 	# L'extinction : on retire le réglage, la vue doit tout rendre.
 	reglages.mode_iso = false
