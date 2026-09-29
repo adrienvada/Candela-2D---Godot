@@ -12,7 +12,13 @@ extends SceneTree
 ## - en écran scindé à 45° B, J1 voit les sons de J2 et jamais les siens, et
 ##   inversement ; **à situation miroir, les deux liserés sont identiques** —
 ##   largeur, force, et angle à l'écran, mesuré par la caméra de CHAQUE vue ;
-## - rien pendant la killcam ni le décompte ; en vue unique, un seul liseré.
+## - rien pendant la killcam ni le décompte ; en vue unique, un seul liseré ;
+## - la FORME D'ONDE (Adrien, 2026-09-29) : l'événement porte le fichier réellement joué
+##   et le pitch final, chaque son que le jeu joue a son enveloppe (aucun repli), un tir
+##   vit plus longtemps qu'un pas, la salle allonge le même son, les deux vues voient la
+##   même animation, une source continue est plate et sa nouvelle annonce REMPLACE la
+##   précédente ;
+## - Q52 : la toile des liserés est en mélange ADDITIF.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_son_visible_jeu.gd
 
@@ -94,6 +100,19 @@ func _ancres_liees(consts: Dictionary) -> void:
 		is_equal_approx(float(consts["OCCLUSION_PENTE_DB"]), SV.PERTE_OCCLUSION_DB))
 	_check("le pas lent debout reste au-dessus du pas accroupi (Q47)",
 		SV.PAS_LENT_DB > float(consts["PAS_ACCROUPI_DB"]))
+	# La salle du liseré est le miroir de celle de l'audio : recopiée, donc gardée.
+	_check("la plus petite salle du liseré est celle de l'audio",
+		is_equal_approx(SV.ROOM_SIZE_MIN, float(consts["REVERB_ROOM_SIZE_MIN"])))
+	_check("la plus grande aussi",
+		is_equal_approx(SV.ROOM_SIZE_MAX, float(consts["REVERB_ROOM_SIZE_MAX"])))
+	_check("l'amortissement de référence aussi",
+		is_equal_approx(SV.DAMPING_REF, float(consts["REVERB_DAMPING_DEFAUT"])))
+	# La fusée se lit à l'exécution : la nommer dans ce fichier la compilerait avant les
+	# autoloads (`NetworkManager` est introuvable à ce moment-là).
+	var fusee: Dictionary = (load("res://fusee.gd") as GDScript).get_script_constant_map()
+	_check("la période d'une source continue est celle que la fusée annonce",
+		is_equal_approx(SV.PERIODE_CONTINU_DEFAUT, float(consts["PERIODE_ANNONCE_CONTINUE"]))
+		and is_equal_approx(SV.PERIODE_CONTINU_DEFAUT, float(fusee["PERIODE_ANNONCE_COMBUSTION"])))
 
 
 # --- L'entonnoir annonce ce que l'oreille reçoit ----------------------------------------
@@ -122,6 +141,18 @@ func _entonnoir(audio: Node, consts: Dictionary) -> void:
 			_check("la voix joue au niveau annoncé (ni mur ni fumée ici)",
 				is_equal_approx(voix.volume_db, float(ev["niveau_db"])), "%s / %s" % [voix.volume_db, ev["niveau_db"]])
 			_check("la voix porte à la portée annoncée", is_equal_approx(voix.max_distance, float(ev["portee"])))
+			# La forme d'onde : le fichier RÉELLEMENT joué et le pitch FINAL de la voix.
+			_check("l'événement porte le fichier réellement joué (%s)" % String(ev["chemin"]).get_file(),
+				String(ev["chemin"]) == voix.stream.resource_path and String(ev["chemin"]).begins_with("res://assets/audio/sfx/footstep_"),
+				str(ev["chemin"]))
+			_check("… et le pitch final de la voix (%.3f)" % float(ev["pitch"]),
+				is_equal_approx(float(ev["pitch"]), voix.pitch_scale), "%s / %s" % [ev["pitch"], voix.pitch_scale])
+			_check("… ce fichier a son enveloppe", not SV.forme_d_onde(String(ev["chemin"])).is_empty())
+		var salle: Dictionary = audio.reverb_courante()
+		_check("l'événement porte la salle : wet, room_size, damping",
+			is_equal_approx(float(ev["wet"]), float(salle["wet"])) and is_equal_approx(float(ev["room_size"]), float(salle["room_size"]))
+			and is_equal_approx(float(ev["damping"]), float(salle["damping"])))
+		_check("… et ne dit pas « continu » : un pas n'est pas une boucle", not bool(ev["continu"]))
 
 	_recus.clear()
 	var bas: AudioStreamPlayer2D = audio.play_footstep(pos, Vector2i(1, 0), true, 1.0, 1)
@@ -154,10 +185,26 @@ func _entonnoir(audio: Node, consts: Dictionary) -> void:
 		not ev.is_empty() and String(ev["famille"]) == "weapon_dry" and int(ev["emetteur"]) == 0)
 
 	_recus.clear()
-	audio.play_weapon_shot("pistolet", pos, 0)
+	var tir: AudioStreamPlayer2D = audio.play_weapon_shot("pistolet", pos, 0)
 	ev = _dernier()
 	_check("le tir s'annonce au plus fort", not ev.is_empty() and String(ev["famille"]) == "shoot"
 		and is_equal_approx(float(ev["niveau_db"]), SV.NIVEAU_FORT_DB))
+	if tir != null and not ev.is_empty():
+		_check("le tir porte le fichier de SA variante tirée au sort (%s)" % String(ev["chemin"]).get_file(),
+			String(ev["chemin"]) == tir.stream.resource_path
+			and String(ev["chemin"]).begins_with("res://assets/audio/weapons/weapon_pistolet_"))
+		_check("… et son pitch (tiré à ±4 %%) : %.3f" % float(ev["pitch"]),
+			is_equal_approx(float(ev["pitch"]), tir.pitch_scale) and absf(float(ev["pitch"]) - 1.0) <= 0.04 + 0.0001)
+	# Une CLÉ passe par le dictionnaire des sons : c'est le chemin du fichier qui est annoncé.
+	_recus.clear()
+	var touche: AudioStreamPlayer2D = audio.play_sfx_2d("hit_center", pos, 1.0, 0.0, "SFX", 1)
+	ev = _dernier()
+	_check("une clé (« hit_center ») s'annonce sous le chemin du fichier qu'elle désigne",
+		not ev.is_empty() and String(ev["chemin"]) == String(consts["SOUNDS"]["hit_center"])
+		and (touche == null or String(ev["chemin"]) == touche.stream.resource_path), str(ev.get("chemin")))
+
+	# Tout ce que le jeu joue en positionnel a son enveloppe : un repli ne se produit pas en silence.
+	_chaque_son_a_son_enveloppe(audio)
 	_recus.clear()
 	audio.play_footstep(pos, Vector2i(0, 0), false, 1.0, 1)
 	ev = _dernier()
@@ -171,6 +218,32 @@ func _entonnoir(audio: Node, consts: Dictionary) -> void:
 	_check("la combustion (voix dédiée) s'annonce par sa propre porte",
 		not ev.is_empty() and String(ev["famille"]) == "fusee_combustion" and int(ev["emetteur"]) == -1
 		and is_equal_approx(float(ev["niveau_db"]), float(consts["NIVEAU_RELATIF"]["fusee_combustion"])))
+	_check("… comme une source CONTINUE, à la période de la combustion",
+		not ev.is_empty() and bool(ev["continu"]) and is_equal_approx(float(ev["periode"]), 0.6))
+	_recus.clear()
+	audio.annoncer_son_2d("fusee_combustion", pos, -1, 0.0, 1.0, 0.45, 4242)
+	ev = _dernier()
+	_check("… dont l'appelant dit la période et l'identité",
+		not ev.is_empty() and is_equal_approx(float(ev["periode"]), 0.45) and int(ev["source"]) == 4242)
+	# La fusée elle-même, hors de l'arbre : sa combustion s'annonce sous SON identité et à SA période
+	# (deux fusées allumées ensemble restent deux liserés ; une seule se remplace elle-même).
+	var fusee: Node2D = (load("res://fusee.gd") as GDScript).new()
+	fusee.position = pos
+	var braise := AudioStreamPlayer2D.new()
+	braise.stream = audio.get_audio_stream("fusee_combustion")
+	root.add_child(braise)
+	braise.play()
+	fusee._combustion = braise
+	_recus.clear()
+	fusee._annoncer_combustion(0.001)
+	ev = _dernier()
+	var fusee_consts: Dictionary = (fusee.get_script() as GDScript).get_script_constant_map()
+	_check("la fusée annonce sa combustion en source continue, à sa période, sous SON identité",
+		not ev.is_empty() and bool(ev["continu"]) and int(ev["source"]) == fusee.get_instance_id()
+		and is_equal_approx(float(ev["periode"]), float(fusee_consts["PERIODE_ANNONCE_COMBUSTION"])),
+		str(ev))
+	fusee.free()
+	braise.queue_free()
 
 	# Pool plein de sons plus prioritaires : le pas n'a pas de voix, mais il a eu lieu.
 	for i in 16:
@@ -179,9 +252,55 @@ func _entonnoir(audio: Node, consts: Dictionary) -> void:
 	var sans_voix: AudioStreamPlayer2D = audio.play_footstep(pos, Vector2i(0, 0), false, 1.0, 1)
 	if sans_voix == null:
 		_check("pool plein : le pas sans voix s'annonce quand même", _recus.size() == 1)
+		_check("… avec son fichier et son pitch : la forme d'onde ne dépend pas de la voix",
+			_recus.size() == 1 and String(_recus[0]["chemin"]) != "" and float(_recus[0]["pitch"]) > 0.9)
 	else:
 		print("  (pool jamais plein ici : le cas « sans voix » n'a pas pu être joué)")
 	audio.son_localise.disconnect(_noter)
+
+
+## Chaque point d'entrée du jeu s'annonce sous un fichier que la table d'enveloppes connaît.
+## Sinon le liseré retombe sur la durée par sorte — sans une erreur, et on jugerait « la forme
+## d'onde » sur un son qui ne l'a pas. (Le lien de la table aux WAV, lui, est gardé par
+## `test_enveloppes_sons.gd`.)
+func _chaque_son_a_son_enveloppe(audio: Node) -> void:
+	print("\n--- Chaque son que le jeu joue a son enveloppe ---")
+	var pos := Vector2(300, 300)
+	var jeux: Array = [
+		["pas (damier A)", func(): audio.play_footstep(pos, Vector2i(0, 0), false, 1.0, 1)],
+		["pas (damier B)", func(): audio.play_footstep(pos, Vector2i(1, 0), false, 1.0, 1)],
+		["pas accroupi", func(): audio.play_footstep(pos, Vector2i(0, 0), true, 1.0, 1)],
+		["frôlement", func(): audio.play_wall_brush(pos, 1)],
+		["enjambement", func(): audio.play_enjambement(pos, 1)],
+		["ricochet", func(): audio.play_ricochet(pos)],
+		["douille", func(): audio.play_shell(pos, 1)],
+		["impact de mur", func(): audio.play_wall_impact(pos)],
+		["coup au centre", func(): audio.play_hit(pos, 0.1, 1)],
+		["coup au bord", func(): audio.play_hit(pos, 0.9, 1)],
+		["souffle coupé", func(): audio.play_breath_hit(pos, 1)],
+		["carreau", func(): audio.play_bolt_flight(pos, 1)],
+		["combustion", func(): audio.annoncer_son_2d("fusee_combustion", pos)],
+	]
+	for slug in ["pistolet", "fusil", "pompe", "arbalete"]:
+		jeux.append(["tir (%s)" % slug, func(): audio.play_weapon_shot(slug, pos, 1)])
+		jeux.append(["percuteur (%s)" % slug, func(): audio.play_percuteur(slug, pos, 1)])
+		jeux.append(["rechargement (%s)" % slug, func(): audio.play_weapon_reload(slug, pos, 1)])
+	for cle in ["fusee_lancer", "fusee_atterrit", "fusee_rebond", "fusee_eteinte"]:
+		jeux.append([cle, func(): audio.play_sfx_2d_random_pitch(cle, pos)])
+	var sans: Array = []
+	var essais := 0
+	for jeu in jeux:
+		# Les variantes se tirent au hasard : plusieurs essais pour les voir passer.
+		for i in 6:
+			_recus.clear()
+			(jeu[1] as Callable).call()
+			essais += 1
+			var ev := _dernier()
+			if ev.is_empty() or String(ev["chemin"]) == "" or SV.forme_d_onde(String(ev["chemin"])).is_empty():
+				sans.append("%s → %s" % [jeu[0], ev.get("chemin", "aucun événement")])
+				break
+	_check("chacun des %d points d'entrée annonce un fichier connu de la table (%d essais)" % [jeux.size(), essais],
+		sans.is_empty(), str(sans))
 
 
 # --- En jeu : deux vues, deux joueurs -------------------------------------------------
@@ -208,6 +327,113 @@ func _depart_fini(main: Node) -> bool:
 func _vider(vues: Array) -> void:
 	for v in vues:
 		v.vider()
+
+
+## La forme d'onde vue de l'écran : les durées, la salle, l'équité des deux vues, la source
+## continue, le mélange additif. Deux joueurs vivants, écran scindé.
+func _forme_d_onde_en_jeu(audio: Node, main: Node, vues: Array) -> void:
+	print("\n--- La forme d'onde, en jeu : deux vues ---")
+	var p1: Node2D = main.p1
+	var p2: Node2D = main.p2
+	var a := p1.global_position
+	p2.global_position = a + Vector2(600, 0)
+	var loin := a + Vector2(300, 0)
+
+	# Un tir vit plus longtemps qu'un pas : vrais fichiers, vrais pitchs, vraie salle.
+	_vider(vues)
+	audio.play_weapon_shot("pistolet", loin, 1)
+	audio.play_footstep(loin, Vector2i(0, 0), false, 1.0, 1)
+	var traces: Array = vues[0].traces()
+	_check("J1 voit le tir ET le pas de J2", traces.size() == 2, str(traces.size()))
+	if traces.size() == 2:
+		var tir: Dictionary = traces[0]
+		var pas: Dictionary = traces[1]
+		_check("chacun est animé par son fichier (aucun repli)", not tir["vie"].is_empty() and not pas["vie"].is_empty())
+		_check("un tir vit plus longtemps qu'un pas (%.2f s contre %.2f s)" % [tir["duree"], pas["duree"]],
+			float(tir["duree"]) > 1.5 * float(pas["duree"]))
+		_check("le pas est un bref coup sourd (%.2f s)" % float(pas["duree"]), float(pas["duree"]) < 0.4)
+		_check("le tir dure autant que sa détonation (%.2f s)" % float(tir["duree"]), float(tir["duree"]) > 0.35)
+
+	# La salle allonge le même son : même fichier, même pitch, deux salles.
+	var chemin: String = audio.chemin_tir("pistolet", 1)
+	var garde: Dictionary = audio.reverb_courante().duplicate()
+	var durees := {}
+	for nom in ["sas", "hangar"]:
+		var grille := Vector2i(15, 15) if nom == "sas" else Vector2i(45, 45)
+		audio.appliquer_reverb_carte(audio.calculer_reverb_carte(grille, CandelaTileSet.TILE_SIZE))
+		_vider(vues)
+		audio.play_sfx_2d(chemin, loin, 1.0, 0.0, "SFX", 1)
+		durees[nom] = float(vues[0].traces()[0]["duree"]) if vues[0].traces_vivantes() == 1 else -1.0
+	audio.appliquer_reverb_carte(garde)
+	_check("le même tir dure plus dans le hangar que dans le sas (%.2f s contre %.2f s)" % [durees["hangar"], durees["sas"]],
+		durees["sas"] > 0.0 and durees["hangar"] > durees["sas"] + 0.05)
+
+	# Un même événement, la même animation dans les deux vues (J1 et J2, à 45° B).
+	p2.global_position = a + Vector2(400, 0)
+	var milieu := (a + p2.global_position) * 0.5
+	_vider(vues)
+	audio.play_weapon_shot("fusil", milieu, -1)
+	if vues[0].traces_vivantes() == 1 and vues[1].traces_vivantes() == 1:
+		var t1: Dictionary = vues[0].traces()[0]
+		var t2: Dictionary = vues[1].traces()[0]
+		_check("équité : le même son, la même vie (%d pas, %.2f s)" % [t1["vie"]["niveaux"].size(), t1["duree"]],
+			t1["vie"]["niveaux"] == t2["vie"]["niveaux"] and t1["vie"]["diffus"] == t2["vie"]["diffus"]
+			and is_equal_approx(float(t1["duree"]), float(t2["duree"])))
+		var identiques := true
+		var duree := float(t1["duree"])
+		# Des âges pris sur SA durée : la variante de fusil tirée au sort va de 0,5 à 0,9 s.
+		for age in [0.0, 0.25 * duree, 0.5 * duree, 0.75 * duree, duree - 0.02]:
+			var e1 := SV.etat(t1, age)
+			var e2 := SV.etat(t2, age)
+			identiques = identiques and not e1.is_empty() and not e2.is_empty() \
+				and is_equal_approx(float(e1["alpha"]), float(e2["alpha"])) \
+				and is_equal_approx(float(e1["largeur"]), float(e2["largeur"]))
+		_check("équité : à tout âge, même opacité et même largeur dans les deux vues", identiques)
+	else:
+		_check("un son du monde, à égale distance des deux joueurs, dessine dans les deux vues", false)
+
+	# La combustion : plate, et chaque annonce REMPLACE la précédente de sa source.
+	_vider(vues)
+	var feu := a + Vector2(250, 0)
+	audio.annoncer_son_2d("fusee_combustion", feu, -1, 0.0, 1.0, 0.6, 77)
+	_check("la combustion dessine un liseré", vues[0].traces_vivantes() == 1)
+	if vues[0].traces_vivantes() == 1:
+		var f: Dictionary = vues[0].traces()[0]
+		_check("… animé comme une source continue", bool(f["vie"].get("continu", false)))
+		var a0 := float(SV.etat(f, 0.0)["alpha"])
+		var plat := true
+		for age in [0.2, 0.45, 0.6, 0.7]:
+			var e := SV.etat(f, age)
+			plat = plat and not e.is_empty() and absf(float(e["alpha"]) - a0) < 0.0001
+		_check("… plat sur toute sa période (alpha %.2f)" % a0, plat and a0 > 0.1)
+		vues[0]._process(0.5)
+		audio.annoncer_son_2d("fusee_combustion", feu, -1, 0.0, 1.0, 0.6, 77)
+		_check("l'annonce suivante de la même fusée REMPLACE la précédente (un seul liseré)", vues[0].traces_vivantes() == 1)
+		_check("… et repart de zéro : pas de creux entre deux", float(vues[0].traces()[0]["age"]) < 0.001)
+		audio.annoncer_son_2d("fusee_combustion", feu + Vector2(0, 90), -1, 0.0, 1.0, 0.6, 78)
+		_check("une AUTRE fusée reste un autre liseré", vues[0].traces_vivantes() == 2)
+		vues[0]._process(0.7)
+		_check("tant qu'aucune annonce ne vient, le liseré vit un peu plus que la période (%d)" % vues[0].traces_vivantes(),
+			vues[0].traces_vivantes() == 2)
+		vues[0]._process(0.1)
+		_check("… puis s'éteint : une fusée éteinte ne laisse pas de liseré", vues[0].traces_vivantes() == 0)
+
+	# Q52 : les liserés s'ADDITIONNENT — la toile est en mélange additif.
+	for i in vues.size():
+		var toile: Control = vues[i]._toile
+		var materiau := toile.material as CanvasItemMaterial
+		_check("Q52 : la toile du liseré de J%d porte un mélange additif" % (i + 1),
+			materiau != null and materiau.blend_mode == CanvasItemMaterial.BLEND_MODE_ADD and bool(vues[i].melange_additif()))
+	vues[0].poser_melange(false)
+	_check("… et `poser_melange(false)` rend le mélange normal (le banc d'images s'en sert)",
+		not bool(vues[0].melange_additif()) and vues[0]._toile.material == null)
+	vues[0].poser_melange(true)
+	_check("… et le rétablit", bool(vues[0].melange_additif()))
+
+	# Aucun son du jeu n'est tombé sur la durée par sorte.
+	_check("aucun liseré n'est retombé sur la durée par sorte (J1 : %d, J2 : %d)" % [vues[0].repli_compte, vues[1].repli_compte],
+		vues[0].repli_compte == 0 and vues[1].repli_compte == 0)
+	_vider(vues)
 
 
 func _en_jeu(audio: Node) -> void:
@@ -284,6 +510,8 @@ func _en_jeu(audio: Node) -> void:
 	audio.play_footstep(p2.global_position + Vector2(200, 200), Vector2i(0, 0), false, 1.0, 1)
 	await process_frame
 	await process_frame
+
+	await _forme_d_onde_en_jeu(audio, main, vues)
 
 	# S6 — les bruits de corps de l'hôte, tels que le client les reçoit.
 	print("\n--- S6 : les bruits de corps de l'hôte arrivent chez le client ---")

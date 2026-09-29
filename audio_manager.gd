@@ -9,7 +9,13 @@ extends Node
 ## Le dictionnaire : `cle`, `famille`, `pos`, `emetteur` (le `player_id` du corps
 ## d'où part le son, -1 pour le monde), `niveau_db` (à la source : famille,
 ## écart demandé, duck sous le tir), `portee` (px, déjà réduite pour un pas
-## accroupi), `fumee_db`, `wet` (la réverbération de la salle), `diagonale` (px).
+## accroupi), `fumee_db`, `wet`, `room_size` et `damping` (la réverbération de la
+## salle), `diagonale` (px).
+##
+## Et, pour que le liseré suive la FORME D'ONDE du son (Adrien, 2026-09-29) : `chemin`
+## (le fichier réellement joué, `res://…`, ou `""` pour un flux anonyme), `pitch` (le
+## pitch final de la voix), et pour une source continue `continu`, `periode` (s) et
+## `source` (son identité).
 signal son_localise(evenement: Dictionary)
 
 const Charte := preload("res://charte.gd")
@@ -1621,8 +1627,11 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# FU4 — s'ajoute a l'occlusion des murs, ne la remplace pas : voir la section
 	# plus haut sur pourquoi ce n'est pas le meme bus.
 	var fumee_db := etouffement_fumee_db(occultation_fumee(pos))
-	_annoncer(stream_or_key, pos, niveau_source, portee_source, fumee_db, emetteur)
-	
+	# Le fichier RÉELLEMENT joué et le pitch FINAL : c'est d'eux que le liseré tire sa
+	# forme d'onde et sa durée (un son tiré à 1,04 dure 4 % de moins).
+	_annoncer(stream_or_key, pos, niveau_source, portee_source, fumee_db, emetteur,
+		(stream as AudioStream).resource_path, final_pitch)
+
 	var prio := priorite_de(stream_or_key)
 	var voie := choisir_voix(_occupations(sfx_players_2d), _sfx_prio_2d, _sfx_debut_2d, prio)
 	if voie < 0:
@@ -1708,32 +1717,60 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 ## des sons sans `GameState`, et fabriquer un dictionnaire par son pour personne
 ## coûterait à chaque pas. Le tri (killcam, fin de manche, sa propre source) est
 ## celui de `GameState` : ce fichier ne connaît pas l'état du jeu.
+##
+## `chemin` et `pitch` : le fichier réellement joué (`stream.resource_path` — une CLÉ
+## comme `hit_center` est déjà passée par le dictionnaire des sons) et le pitch final,
+## celui qu'a la voix. Le liseré en tire la forme d'onde et la durée du son
+## (`enveloppes_sons.gd`) ; un flux sans chemin (`""`) retombe sur la durée par sorte.
+## `continu` et `periode` : une source qui ne s'éteint pas (la combustion) — plate, de la
+## durée de sa période ; `source` la distingue d'une autre du même nom, pour qu'une
+## annonce REMPLACE la précédente au lieu de s'y ajouter.
 func _annoncer(stream_or_key: Variant, pos: Vector2, niveau_db: float, portee: float,
-		fumee_db: float, emetteur: int) -> void:
+		fumee_db: float, emetteur: int, chemin: String = "", pitch: float = 1.0,
+		continu: bool = false, periode: float = 0.0, source: int = 0) -> void:
 	if not son_localise.has_connections():
 		return
 	son_localise.emit({
 		"cle": String(stream_or_key) if stream_or_key is String else "<flux>",
 		"famille": famille_de(stream_or_key),
+		"chemin": chemin,
+		"pitch": pitch,
 		"pos": pos,
 		"emetteur": emetteur,
 		"niveau_db": niveau_db,
 		"portee": portee,
 		"fumee_db": fumee_db,
 		"wet": float(_reverb_courante.get("wet", 0.0)),
+		"room_size": float(_reverb_courante.get("room_size", SonVisible.ROOM_SIZE_DEFAUT)),
+		"damping": float(_reverb_courante.get("damping", REVERB_DAMPING_DEFAUT)),
 		"diagonale": _portee_carte,
+		"continu": continu,
+		"periode": periode,
+		"source": source,
 	})
+
+## Le rythme auquel une source continue s'annonce, tant que l'appelant n'en dit pas un
+## autre : celui de la combustion de la fusée (`Fusee.PERIODE_ANNONCE_COMBUSTION`).
+const PERIODE_ANNONCE_CONTINUE := 0.6
 
 ## SON VISIBLE — une source CONTINUE qui ne passe pas par le pool (la combustion
 ## de la fusée a sa voix dédiée) s'annonce par ici, à son propre rythme. Mêmes
 ## nombres que l'entonnoir : niveau de sa famille, portée par carte, fumée.
+##
+## **Elle ne suit pas la forme d'onde du fichier** : c'est une boucle, l'annonce se répète
+## toutes les `periode` secondes et le liseré est plat entre deux, sans clignoter. `source`
+## (l'identité de l'émetteur, par exemple `get_instance_id()`) fait qu'une annonce remplace
+## la précédente de la MÊME source ; deux fusées allumées ensemble restent deux liserés.
 func annoncer_son_2d(cle: String, pos: Vector2, emetteur: int = -1, volume_db: float = 0.0,
-		facteur_portee: float = 1.0) -> void:
+		facteur_portee: float = 1.0, periode: float = PERIODE_ANNONCE_CONTINUE,
+		source: int = 0) -> void:
 	if not son_localise.has_connections():
 		return
 	var niveau := volume_db + float(_niveau_dose.get(famille_de(cle), niveau_relatif_de(cle)))
+	var flux := get_audio_stream(cle)
 	_annoncer(cle, pos, niveau, portee_courante(cle) * facteur_portee,
-		etouffement_fumee_db(occultation_fumee(pos)), emetteur)
+		etouffement_fumee_db(occultation_fumee(pos)), emetteur,
+		flux.resource_path if flux != null else "", 1.0, true, periode, source)
 
 ## Le coup de feu d'une arme, tiré au sort parmi ses quatre variantes.
 ##
