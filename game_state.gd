@@ -318,6 +318,17 @@ var _rendu_racine := false
 ## que le rendu : dans les `SubViewport` en écran scindé, dans la RACINE en vue
 ## unique — où les `SubViewport` sont arrêtés et n'ont plus rien à porter.
 var _brouillages: Array = []
+
+## SON VISIBLE (0.8.0, décisions d'Adrien du 2026-09-29) — le liseré de chaque vue
+## qui rend un joueur : index 0 = la vue de J1, 1 = celle de J2. Même logement que
+## les appareils de brouillage (`_loger_appareil_de_vue`), pour la même raison :
+## la conversion monde → écran reste celle de la vue qui rend.
+var _sons_vues: Array = []
+## `--sans-son-visible` (build de débogage seulement) : le jeu d'avant, pour
+## comparer. Jamais écrit dans les réglages.
+const DRAPEAU_SANS_SON_VISIBLE := "--sans-son-visible"
+var son_visible_actif: bool = not (OS.is_debug_build() \
+	and DrapeauxDeLancement.present(DRAPEAU_SANS_SON_VISIBLE))
 ## Interrupteur du chantier R, public et volontairement simple.
 ##
 ## À `false`, la vue unique repasse par son `SubViewport` comme avant le
@@ -3849,7 +3860,7 @@ func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,
 	# --- REPLAY / KILLCAM AUDIO ---
 	# Joue le son du tir lors du rejeu d'une balle pendant la Killcam.
 	# AudioManager applique automatiquement le ralenti dynamique basé sur Engine.time_scale (ex: 0.03x pendant le bullet time).
-	AudioManager.play_weapon_shot(weapon.slug() if weapon else "pistolet", pos)
+	AudioManager.play_weapon_shot(weapon.slug() if weapon else "pistolet", pos, shooter_id)
 
 func player_died(dead_id: int, _killer_id: int):
 	if not round_active: return
@@ -5349,6 +5360,7 @@ func _accorder_rendu_aux_vues() -> void:
 
 	_accorder_la_peinture_de_la_racine()
 	_accorder_brouillage_aux_vues()
+	_accorder_sons_aux_vues()
 	_accorder_calques_joueurs()
 
 
@@ -5521,10 +5533,11 @@ func _accorder_la_peinture_de_la_racine() -> void:
 ## l'arbre partent avec leur parent ; seuls les orphelins sont libérés ici.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
-		for app in _brouillages:
+		for app in _brouillages + _sons_vues:
 			if is_instance_valid(app) and (app as Node).get_parent() == null:
 				(app as Node).free()
 		_brouillages.clear()
+		_sons_vues.clear()
 
 
 ## Chaque appareil de brouillage rejoint la vue qui le rend.
@@ -5541,27 +5554,95 @@ func _accorder_brouillage_aux_vues() -> void:
 			app.name = "BrouillageVue%d" % (i + 1)
 			_brouillages.append(app)
 	for i in 2:
-		var app: Node = _brouillages[i]
-		var vue: SubViewport = vp1 if i == 0 else vp2
-		var conteneur := vue.get_parent() as Control
-		var regardee: bool = conteneur != null and conteneur.visible
-		if not regardee:
-			if app.get_parent() != null:
-				app.get_parent().remove_child(app)
+		_loger_appareil_de_vue(_brouillages[i], i)
+
+
+## Loge un appareil d'écran de la vue `i` là où cette vue se REND, lui pose son
+## projecteur, et rend `false` (appareil retiré de l'arbre) si la vue n'est pas
+## regardée. Extrait tel quel de `_accorder_brouillage_aux_vues` quand le son rendu
+## visible en a eu besoin : deux copies de la règle « où vit l'écran de J2 »
+## finiraient par diverger, et le défaut — un effet posé avec la caméra de l'autre
+## joueur — ne se voit qu'à deux joueurs et un œil.
+func _loger_appareil_de_vue(app: Node, i: int) -> bool:
+	var vue: SubViewport = vp1 if i == 0 else vp2
+	var conteneur := vue.get_parent() as Control
+	var regardee: bool = conteneur != null and conteneur.visible
+	if not regardee:
+		if app.get_parent() != null:
+			app.get_parent().remove_child(app)
+		return false
+	var parent: Node = self if _rendu_racine else vue
+	# Chantier ISO, étape ISO2 — dans la vue iso, l'appareil vit dans le viewport 3D
+	# du joueur et projette le monde par sa caméra (`projecteur`) ; hors iso le
+	# projecteur est invalide et il garde la transformation de canevas de sa vue.
+	var iso := Presentation3D.instance()
+	var ecran: Node = iso.parent_ecran(i) if iso != null else null
+	if ecran != null:
+		parent = ecran
+	app.set("projecteur", iso.projecteur_ecran(i) if ecran != null else Callable())
+	if app.get_parent() != parent:
+		if app.get_parent() != null:
+			app.get_parent().remove_child(app)
+		parent.add_child(app)
+	return true
+
+
+## SON VISIBLE — chaque liseré rejoint la vue qui le rend ; une vue qui cesse
+## d'être regardée perd ses liserés (retirés de l'arbre ET vidés : revenir sur une
+## vue ne doit pas y rallumer des sons d'il y a une minute).
+func _accorder_sons_aux_vues() -> void:
+	if not son_visible_actif:
+		return
+	if _sons_vues.is_empty():
+		for i in 2:
+			var app: Node = preload("res://son_visible_vue.gd").new()
+			app.name = "SonsVue%d" % (i + 1)
+			app.set("regardeur_id", i)
+			app.set("couche_vue", GadgetBase.couche_de_vue(i))
+			app.set("ouvert", _sons_ouverts)
+			_sons_vues.append(app)
+		if not AudioManager.son_localise.is_connected(_sur_son_localise):
+			AudioManager.son_localise.connect(_sur_son_localise)
+	for i in 2:
+		var app: Node = _sons_vues[i]
+		if not _loger_appareil_de_vue(app, i):
+			app.call("vider")
+
+
+## Le jeu est-il VIVANT, au sens du son rendu visible ? Ni décompte, ni killcam
+## (elle rejoue des tirs et des impacts : leurs liserés mentiraient sur le
+## présent), ni séquence de fin, ni match terminé.
+func _sons_ouverts() -> bool:
+	return (round_active or sandbox_mode) and not ReplaySystem.playing_back \
+		and not _end_sequence_active and not game_over and countdown_left <= 0.0
+
+
+## Un son localisé vient de partir : chaque vue rendue le reçoit pour SON joueur.
+##
+## ⚠️ **La part occultée se calcule pour chaque joueur, écran partagé compris**,
+## par la géométrie même de l'audio (`AudioManager.part_occultee_entre`). En
+## écran partagé l'audio n'occulte rien — deux joueurs, une paire de
+## haut-parleurs (décision d'Adrien du 2026-08-25) ; le liseré, lui, est propre à
+## chaque écran, et un mur entre J2 et le son n'est pas un mur entre J1 et lui.
+## Hors d'une image de physique on ne sonde pas (même règle que l'audio) : le
+## doute joue « dégagé ».
+func _sur_son_localise(evenement: Dictionary) -> void:
+	if not son_visible_actif or not _sons_ouverts():
+		return
+	for i in _sons_vues.size():
+		var app: Node = _sons_vues[i]
+		if not is_instance_valid(app) or app.get_parent() == null:
 			continue
-		var parent: Node = self if _rendu_racine else vue
-		# Chantier ISO, étape ISO2 — dans la vue iso, l'appareil vit dans le viewport 3D
-		# du joueur et projette le monde par sa caméra (`projecteur`) ; hors iso le
-		# projecteur est invalide et il garde la transformation de canevas de sa vue.
-		var iso := Presentation3D.instance()
-		var ecran: Node = iso.parent_ecran(i) if iso != null else null
-		if ecran != null:
-			parent = ecran
-		app.set("projecteur", iso.projecteur_ecran(i) if ecran != null else Callable())
-		if app.get_parent() != parent:
-			if app.get_parent() != null:
-				app.get_parent().remove_child(app)
-			parent.add_child(app)
+		var regardeur: Node2D = p1 if i == 0 else p2
+		if not is_instance_valid(regardeur) or not regardeur.is_inside_tree():
+			continue
+		var part := 0.0
+		if Engine.is_in_physics_frame():
+			var monde := regardeur.get_world_2d()
+			if monde != null:
+				part = AudioManager.part_occultee_entre(monde.direct_space_state,
+					evenement.get("pos", Vector2.ZERO), regardeur.global_position)
+		app.call("recevoir", evenement, regardeur, part)
 
 
 ## Rend le duel directement dans le viewport racine, à la résolution de la

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-28
+> Dernière mise à jour : 2026-09-29
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2434,6 +2434,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le son rendu visible, en 0.8.0** (2026-09-29, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « je veux que le bruit ne soit pas seulement sonore, je veux qu'il soit indiqué par un liseré […] sur les bords de l'écran […] d'autant plus étendu que le son est loin / faible » ; « quand ils sont accroupis […] un liseré très très très léger […] une direction très approximative à 180° » ; « le liseré le plus précis doit faire à peu près 10° […] lorsque le joueur ennemi marche rapidement près du joueur » ; Q47 « on garde le clavier au maximum de bruit en normal » ; Q48 « TOUS les bruits localisés […] un code couleur légèrement différent pour tout […] trop de sons peuvent perturber l'écoute et la localisation. La reverb des sons d'impact peut rendre plus flous les liserés » ; Q49 « on passera en 0.8 ») | Chantier « Le son rendu visible » plus bas. **Deux cas donnés, pas une courbe** : le modèle pose 10° sur le niveau du pas de course et 180° sur celui du pas accroupi, déjà jugés au banc audio, et en dérive la perte de distance et le seuil — rien d'autre n'est inventé. **0.8.0 et non 0.7.x** : le liseré change l'information de chacun ; un joueur en 0.7 contre un joueur en 0.8 ne sauraient pas la même chose, et seule une version mineure (protocole 19) sépare les deux populations. |
+| **Les réponses du 29/09 et leur version : Q38 en 0.7.1, Q15 et Q42 en 0.8.0, Q46 pour le chantier des lumières** (2026-09-29, vers 12:45, Adrien : « Q46 : le point lumineux doit être visible si la source de la lumière est visible dans la vue du joueur […] Si son corps est devant, on ne voit pas le point lumineux. Q42 : le corps ignore sa propre ombre. Q15 : tentons 1.25. Q38 : non, l'entraînement doit se dérouler dans la carte sélectionnée par le joueur. Pas de mémoire des taches de sang : à chaque changement de carte, les taches de sang sont effacées ») | **Le critère de version est l'équité, pas la taille du changement.** Le zoom (Q15) et l'ombre propre (Q42) changent ce que voit chaque joueur de l'autre : servis dans une 0.7.1 au protocole inchangé, un joueur à jour et un joueur en 0.7.0 se rencontreraient sans voir la même chose — ils partent donc dans la 0.8.0, et le point de braise de la fusée (petit choix en attente) suit la même règle. Q38 ne touche que l'entraînement, hors ligne : 0.7.1, avec l'intro v2. Q46 dit le rendu du point lumineux de la lampe (occulté par le corps quand il est devant) : il attend le chantier des lumières, après le son. Q15, Q38 et Q42 sont chacune sur leur branche (`claude/v080-q15-q42`, `claude/v071-q38-entrainement`), avec leur ligne ici. |
 | **Les réponses d'Adrien avant la 0.7.0 : Q35 oui, Q31 le masque le plus léger, Q39 le corps sombre, Q36 le rouge de l'illustration, Q40 l'ocre, Q41 le faisceau visible, pas d'essai Metal** (2026-09-28, vers 15:30, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Avant du publier 0.7 : Q35 : oui / Q31 : peu importe prends le plus leger / Q39 : sombre / Q40 : j'aime bien l'ocre / Q41 : faisceau visible dans l'air / Q36 : le rouge le plus proche de l'illustration / Pas d'essaie metal pour l'instant ») | Arrivées quand `main` portait déjà la version (`57abe96`) mais AVANT le tag : la 0.7.0 n'était pas partie, donc elles y entrent. **Q35** : le plein feu de 4 s devient le défaut (`FuseeModele`) ; c'est l'horloge publique de la fusée, que les deux pairs doivent partager — elle entre sous le protocole 18, qu'aucun tag n'avait figé, et `--sans-fusee-rouge-long` ne vaut qu'en build de débogage. **Q31** : le masque de la fumée allumé, dans la forme qui fait le moins de travail, V5 « le juge ajusté » (même image que le pochoir) ; `--sans-fumee-masque` en débogage seulement, parce qu'éteint il allume des pixels hors de la lumière. **Q39 = A** (« sombre ») : le corps de soi sombre à liseré, pour la vue du joueur sur lui-même ; l'adversaire le voit comme avant, au pixel ; la variante B (« fondu ») reste à l'essai. **Q36** : le rouge de l'essai `--fusee-rouge-sang`, la teinte de l'illustration à luminance égale ; le rouge vraiment sombre de l'illustration n'est pas celui-ci (il montrerait moins) et n'a pas été proposé. **Q40** : l'ocre reste ; la lampe crème reste un essai éteint. **Q41** : l'exception à « rien de plus clair que la surface » est accordée pour le faisceau seul — un effet d'air qui n'éclaire rien, sous le masque pochoir (jamais sur du noir), sous les murets, chaque vue lisant sa lightmap. Ses couches passent du mélange à l'AJOUT (`FAISCEAU_LUMINEUX`, `blend_add`), densité **1,20** choisie à l'image (0,70 se devinait à peine, 2,0 lavait la tache) ; son juge garde une marge de 16/255 au point noir, sans quoi l'ajout allumait la lisière de l'écran scindé (« Pièges connus », 2026-09-28) ; `--sans-faisceau-air` en débogage seulement. **Metal** : pas d'essai pour l'instant. Prix de cadence de l'ensemble : à mesurer sur le Mac, par version (décision du 2026-09-28, 06:35) ; seul Q35 l'a été isolément (1,024). |
 | **La 0.7.0 est publiée depuis le cloud, avec tout ce qui était fini** (2026-09-28, vers 14:00, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Termine l'intégralité de tous les travaux en cours, et fais en sorte qu'on publie la version 0.7.0 du jeu avec toutes les nouveautés ») | Ce qu'elle porte : `a30a407` (l'intégration d'Iso 1), les fusions d'`iso11-menus` (`0568441`) et d'`iso12-corps` (`cef9d93`) telles que l'intégration à blanc du cloud les a résolues (`244cb88`, suite verte), les quatre corrections du jeu par défaut (`b6f41a9` `cd5b300` `b678553` `dd14620` `baf4ca1`) et huit corrections de la répétition (D3, E1, E2, E3, C4, 7a, 7b, D2), cueillies avec `-x`. **D4 n'est pas reprise** : `a30a407` pose déjà le même garde, par un autre chemin — deux correctifs du même défaut se seraient empilés. **La lecture de la demande, dite plutôt que supposée** : « toutes les nouveautés » = tout ce qui était fini et prouvé ; les essais restent éteints derrière leurs drapeaux et les questions ouvertes (Q15, Q31, Q35 à Q42) gardent le défaut d'aujourd'hui — les allumer sans sa réponse aurait été trancher à sa place. « Termine les travaux en cours » vaut oui aux quatre corrections proposées le matin, qui n'attendaient que sa réponse. **Pourquoi depuis le cloud** : aucune session du Mac ne répondait depuis le matin (Iso 1 attend une réponse d'Adrien depuis 05:23). Le candidat est monté dans un worktree du cloud, sans toucher à `integration-iso14`, qui reste à Iso 1 : c'est à lui d'y fusionner `main`. `main` avance en avance rapide depuis `76fe78f` ; la demande d'Adrien vaut pour CET envoi et ce tag, comme Q8 valait pour un envoi. |
 | **Le suivi de projet devient une seule page légère** (2026-09-28, Adrien : « Simplifie TOUS les artefacts de suivi du projet. […] Allège au maximum. Je dois voir les décisions à prendre facilement, et quelles sont les éventuelles prochaines étapes. ») | Quatre blocs et rien d'autre : l'état de la version, les décisions à prendre (une ligne chacune, l'avis quand on en a un, un lien vers les images), les gestes que seul Adrien peut faire, la suite. La page d'avant (cartes de chantier, frise, galerie, journal — 6 Mo) disait tout, et c'est ce qui noyait les décisions. L'histoire vit dans cette feuille de route et dans le journal des sessions, qui sont versionnés ; les autres pages de suivi renvoient au tableau. Protocole à jour dans [README.md](../README.md#republier-le-suivi). |
@@ -3220,6 +3222,15 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un réglage posé sur la voix APRÈS l'entonnoir échappe à tout ce qui lit l'entonnoir (2026-09-29)
+
+Chantier SON VISIBLE. Le pas accroupi (MB2) recevait son écart de niveau et sa portée réduite **sur la voix rendue**, après
+`play_sfx_2d` : juste pour l'oreille, invisible pour tout ce qui écoute l'entonnoir lui-même. Le son rendu visible s'y
+annonce ; il aurait dessiné le pas accroupi au niveau d'un pas debout — 180° promis, 10° livrés, sans une erreur. Et un pas
+qu'aucune voix ne joue (pool plein) n'avait même plus de voix à retoucher. L'écart passe désormais PAR l'entonnoir
+(`volume_db`, `facteur_portee`), et `test_son_visible_jeu` compare ce qui est annoncé à ce que joue la voix. **Tout écart
+d'un son se donne à l'entonnoir, jamais à ce qu'il rend.**
 
 ### Un masque de silence juste pour une couche MÉLANGÉE ne l'est plus pour une couche AJOUTÉE (2026-09-28)
 
@@ -29371,6 +29382,69 @@ matériel. Code de partage de la carte d'essai : `docs/MURS_BAS.md` § 9.
 
 Le chantier est **fusionné dans `main`** (avance rapide vers `f9c6af4`, 2026-09-14 à
 23 h 25, à la demande d'Adrien), non poussé.
+
+---
+
+## Chantier — le son rendu visible (inscrit le 2026-09-29, version 0.8.0)
+
+**Tenu par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED »**, branche `claude/unrailed-isometric-feasibility-44klgh`.
+Décisions d'Adrien du 2026-09-29 : voir « Décisions actées ». Chaque son localisé qu'entend un joueur dessine, au bord de
+SON écran, un arc coloré dans la direction du son ; plus le son est faible, lointain, derrière un mur ou noyé dans la
+salle, plus l'arc est large et léger. Plus on se déplace lentement, moins on fait de bruit.
+
+### Le modèle — `son_visible.gd`, pur, sans autoload
+
+- **Deux ancres, et tout en descend.** Le pas de course à sa source (-13 dB, `NIVEAU_RELATIF`, jugé au banc par Adrien)
+  fait 10° ; le pas accroupi (-13 - 9 dB, `PAS_ACCROUPI_DB`) fait 180°. La distance coûte exactement l'écart entre les deux
+  sur toute la portée du son (un pas de course perd toute précision au bout de sa portée) ; le seuil est l'ancre floue
+  moins cette perte (un pas accroupi s'efface au bout de sa portée, déjà moitié moindre). La largeur s'interpole
+  géométriquement : chaque décibel multiplie la largeur par le même facteur, à 10° comme à 150°.
+- **Le niveau est celui que l'oreille reçoit** : famille, allure, posture, duck sous le tir, fumée. La seule divergence est
+  la perte de distance : l'atténuation audio (courbe 0,40, Adrien) est presque plate et ne pourrait pas dire la distance à
+  l'œil. `test_son_visible_jeu` vérifie que les ancres SONT les niveaux de l'audio, pas une copie.
+- **Un mur** coûte la pente de l'audio (-5 dB, `OCCLUSION_PENTE_DB`) et élargit (le son contourne) ; **la salle** élargit
+  selon sa réverbération × la distance rapportée à la diagonale × la résonance de la sorte (1 pour tir, impact, ricochet ;
+  0,2 pour un pas) — près de la source le direct domine. Elle allonge aussi la traîne.
+- **Le code couleur (Q48)**, formules sur la charte : tir `HALOGENE` ; pas `PAPIER`, frôlement `BETON_CLAIR` ; ricochet
+  `AMBRE`, impact ambre rouillé, douille laiton ; corps touché rose, fusée rouge de flamme ; percuteur et rechargement
+  acier, gadgets `DIM`. Jamais `BLEU` (« soi »), jamais `VERT` (règle 3), jamais le `ROUGE` du voile de dégâts. Écart
+  minimal entre deux sortes vérifié.
+- **L'allure (Q47)** : la vitesse moyenne du dernier pas, rapportée à `Player.speed`, mesurée sur la trajectoire — donc la
+  même pour le joueur simulé et l'adversaire interpolé. Debout, l'écart va de 0 à `PAS_LENT_DB` (-6 dB, point de départ) ;
+  accroupi, la posture est le minimum et l'allure n'ajoute rien. Le clavier marche toujours à 1.
+
+### Le branchement
+
+- `AudioManager.son_localise` : chaque son positionnel s'annonce **avant** qu'une voix soit prise — le liseré raconte le
+  monde, pas ce que seize voix ont pu mixer. Paramètre `emetteur` (le `player_id` du corps d'où part le son) sur
+  l'entonnoir et les points d'entrée ; `play_percuteur` rejoint les autres ; la combustion de la fusée (voix dédiée)
+  s'annonce par `annoncer_son_2d`, toutes les 0,6 s. Rien ne s'annonce sans écouteur.
+- `GameState` : un appareil par vue rendue (`son_visible_vue.gd`, `SonsVue1`/`SonsVue2`, couche 5), logé par
+  `_loger_appareil_de_vue` — **extrait tel quel de l'accord du brouillage** plutôt que recopié : deux copies de « où vit
+  l'écran de J2 » finiraient par diverger, et l'erreur ne se voit qu'à deux joueurs. Ouvert seulement quand le jeu est
+  vivant (`_sons_ouverts` : ni décompte, ni killcam, ni fin) ; une fermeture efface.
+- **La part occultée se calcule pour chaque joueur, écran partagé compris** (`part_occultee_entre`, la géométrie de
+  l'audio). La décision du 2026-08-25 (pas d'occlusion en écran partagé) porte sur le mixage — deux joueurs, une paire de
+  haut-parleurs ; le liseré est propre à chaque écran.
+- `--sans-son-visible` (débogage seulement) rend le jeu d'avant.
+
+### Preuves
+
+`test_son_visible` (le modèle, 237 contrôles) et `test_son_visible_jeu` (51 : couverture des familles, ancres liées,
+entonnoir, **équité miroir à 45° B** — J1 entendant J2 à +d et J2 entendant J1 à -d voient le même liseré, même angle à
+l'écran mesuré par la caméra de chacun —, killcam, décompte, vue unique). Suites audio, vues, fusée, accroupi et netcode
+vertes.
+
+### Ce qui reste
+
+1. **Les images pour Adrien** (banc sous Xvfb) et le dosage à l'œil : toutes les valeurs sont des points de départ.
+2. **À trancher par Adrien** : (a) sous 30 px/s (un stick à 11 %), aucun pas ne se déclenche — debout comme accroupi,
+   `player.gd` ignore les déplacements de moins de 0,5 px par image ; c'était vrai avant, le liseré en fait un mode
+   furtif ; (b) le liseré se coupe-t-il dans les réglages (confort) ou est-il le même pour tous (monde) — défaut : le même
+   pour tous ; (c) les sons de la salle ne dessinent rien, la combustion de la fusée dessine en continu.
+3. **Une asymétrie d'avant, que le liseré rend visible** : en ligne, le client n'entend ni les rechargements, ni les
+   percuteurs, ni les frôlements de l'hôte (non répliqués), quand l'hôte entend ceux du client. À corriger dans la 0.8.0.
+4. Le protocole 19 à la publication.
 
 ---
 

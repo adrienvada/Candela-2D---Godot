@@ -300,7 +300,8 @@ func _ready() -> void:
 		_combustion.attenuation = AudioManager.courbe_distance
 		_combustion.volume_db = AudioManager.niveau_relatif_de("fusee_combustion")
 		add_child(_combustion)
-		AudioManager.play_sfx_2d_random_pitch("fusee_lancer", depart)
+		AudioManager.play_sfx_2d_random_pitch("fusee_lancer", depart, 0.92, 1.08, 0.0,
+			AudioManager.BUS_SFX, shooter_id)
 	else:
 		# La killcam pilote l'âge et la position elle-même, image par image.
 		_atterrie = true
@@ -361,9 +362,27 @@ func _physics_process(delta: float) -> void:
 		_voler(delta)
 	else:
 		_age_combustion += delta
+		_annoncer_combustion(delta)
 	_appliquer_age(_age_combustion)
 	if FuseeModele.acte_a(_age_combustion) == FuseeModele.Acte.MORTE:
 		queue_free()
+
+
+## SON VISIBLE (0.8.0) — la combustion est un son localisé comme un autre, mais sa
+## voix est dédiée et ne passe pas par l'entonnoir du pool : elle s'annonce donc
+## ici, à un rythme de pas, tant qu'elle joue vraiment. Le liseré qui en sort est
+## le grésillement qu'on entend : une présence continue vers la fusée.
+const PERIODE_ANNONCE_COMBUSTION := 0.6
+var _avant_annonce := 0.0
+
+func _annoncer_combustion(delta: float) -> void:
+	if _combustion == null or not _combustion.playing:
+		return
+	_avant_annonce -= delta
+	if _avant_annonce > 0.0:
+		return
+	_avant_annonce = PERIODE_ANNONCE_COMBUSTION
+	AudioManager.annoncer_son_2d("fusee_combustion", global_position)
 
 
 ## Un pas de vol : avance, rebondit sur les murs, se freine, se pose à bout

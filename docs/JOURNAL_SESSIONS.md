@@ -6036,8 +6036,10 @@ gardant la preuve de l'état éteint (`bc6e8fb`).
 Q41 demandait du travail neuf : sous « rien de plus clair que la surface », le rayon ne pouvait qu'assombrir la tache.
 Une session cloud (« faisceau-visible ») a fait passer ses couches du mélange à l'ajout, choisi la densité à l'image
 (1,20) et trouvé en route le piège du jour — un masque juste pour un mélange ne l'est pas pour un ajout (« Pièges
-connus »). Cueilli ici avec ses gardes, sans les images de sa planche : elles restent sur sa branche, `res://docs` étant
-exporté avec le jeu. Pendant l'attente, les trente et une sessions cloud terminées ont été archivées, à la demande
+connus »). Cueilli ici avec ses gardes, sans les images de sa planche : elles restent sur sa branche. (⚠️ Corrigé le 2026-09-29 : cette phrase disait
+« `res://docs` étant exporté avec le jeu » — c'est faux. `docs/iso/` porte un `.gdignore` : Godot n'en importe ni n'en
+exporte rien, et les présélections d'export n'incluent aucun fichier de `docs/`. La seule raison valable était le poids du
+dépôt.) Pendant l'attente, les trente et une sessions cloud terminées ont été archivées, à la demande
 d'Adrien (réversible ; leurs branches et rapports restent sur GitHub).
 
 **Ce que la 0.7.0 n'a pas** : une mesure de cadence de l'ensemble sur le Mac (la série courte suit la publication) ; une

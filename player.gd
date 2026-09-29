@@ -513,6 +513,9 @@ var aim_cast: RayCast2D
 var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
 var step_distance_accumulated: float = 0.0
+## SON VISIBLE — le temps passé à marcher depuis le dernier pas (seules les images
+## où l'on s'est vraiment déplacé comptent), pour en tirer l'allure du pas.
+var _temps_du_pas: float = 0.0
 
 ## ## Le roulis de marche (DA2.4)
 ##
@@ -1205,7 +1208,7 @@ func start_reload() -> void:
 	is_reloading = true
 	reload_time_left = current_weapon.duree_etape_recharge()
 	var slug: String = current_weapon.slug() if current_weapon.has_method("slug") else "pistolet"
-	AudioManager.play_weapon_reload(slug, global_position)
+	AudioManager.play_weapon_reload(slug, global_position, player_id)
 	# Éjection de douille d'atelier au sol lors du rechargement
 	if slug != "arbalete":
 		var gs = get_tree().get_first_node_in_group("game_state")
@@ -1536,7 +1539,7 @@ func _guetter_enjambement() -> void:
 		MursBas.murs_de_la_manche)
 	if dessus and not _sur_muret_avant:
 		enjambements += 1
-		AudioManager.play_enjambement(global_position)
+		AudioManager.play_enjambement(global_position, player_id)
 	_sur_muret_avant = dessus
 
 ## La posture — MB2. Un seul point d'écriture, pour que la silhouette ne puisse
@@ -1789,13 +1792,21 @@ func _physics_process(delta):
 	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
 	if step_moved > 0.5 and step_moved < 100.0:
 		step_distance_accumulated += step_moved
+		_temps_du_pas += delta
 		# ⚠️ **Une seule distance, et surtout pas une branche.** Le seuil doit
 		# être le même pour le joueur simulé et pour l'adversaire interpolé : un
 		# pas qui se déclenche plus tôt d'un côté que de l'autre rend
 		# l'information asymétrique — l'un entend et piste, l'autre pas.
 		var step_dist := 45.0
 		if step_distance_accumulated >= step_dist:
+			# SON VISIBLE (Q47) — l'allure du pas : la vitesse MOYENNE sur ce pas,
+			# rapportée à la vitesse de marche. Mesurée sur la distance parcourue et
+			# non lue sur l'entrée, pour la même raison que le pas lui-même :
+			# l'adversaire interpolé n'a pas d'entrée, mais il a une trajectoire, et
+			# les deux pairs doivent entendre le même pas au même niveau.
+			var allure := step_distance_accumulated / maxf(_temps_du_pas, 0.001) / maxf(speed, 1.0)
 			step_distance_accumulated = 0.0
+			_temps_du_pas = 0.0
 			# Fourchette fixe : rien ne module la hauteur du pas. **Un facteur
 			# qui ne varie jamais suggère une modulation qui n'existe pas** — il
 			# coûte une relecture à chaque passage, et il en promet une.
@@ -1812,13 +1823,13 @@ func _physics_process(delta):
 			var case := Vector2i((global_position / float(CandelaTileSet.TILE_SIZE.x)).floor())
 			# MB2 — accroupi, le pas s'étouffe. Hors du bloc `can_move` comme le
 			# reste : l'adversaire interpolé étouffe les siens de la même façon.
-			AudioManager.play_footstep(global_position, case, accroupi)
+			AudioManager.play_footstep(global_position, case, accroupi, allure, player_id)
 			# V5.11 — le frolement, au meme rythme que le pas et jamais seul :
 			# on ne frole un mur qu'en s'y deplacant. Le lier au pas plutot qu'a
 			# un minuteur evite le crepitement d'un joueur immobile colle a une
 			# paroi, qui trahirait une position sans qu'aucun geste soit fait.
 			if get_slide_collision_count() > 0:
-				AudioManager.play_wall_brush(global_position)
+				AudioManager.play_wall_brush(global_position, player_id)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
 			_foot_side = -_foot_side
@@ -2026,7 +2037,7 @@ func _physics_process(delta):
 				else:
 					reload_time_left = current_weapon.duree_etape_recharge()
 					AudioManager.play_weapon_reload(
-						current_weapon.slug(), global_position)
+						current_weapon.slug(), global_position, player_id)
 			else:
 				is_reloading = false
 				if current_weapon:
@@ -2068,9 +2079,8 @@ func _physics_process(delta):
 				tir_a_sec = 0.22
 				_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
 				if current_weapon:
-					AudioManager.play_sfx_2d(
-						AudioManager.chemin_percuteur(current_weapon.slug()),
-						muzzle.global_position)
+					AudioManager.play_percuteur(current_weapon.slug(),
+						muzzle.global_position, player_id)
 			start_reload()
 	elif can_move and presse and not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici() \
 			and (current_ammo <= 0 or (is_reloading and not recharge_interruptible())):
@@ -2088,9 +2098,8 @@ func _physics_process(delta):
 		# les pas de l'adversaire au moment ou l'on ne tire justement pas.
 		_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
 		if current_weapon:
-			AudioManager.play_sfx_2d(
-				AudioManager.chemin_percuteur(current_weapon.slug()),
-				muzzle.global_position)
+			AudioManager.play_percuteur(current_weapon.slug(),
+				muzzle.global_position, player_id)
 	# Le root de RAFALE : il ne tombe pas coup par coup mais au relâchement, ou
 	# quand le chargeur se vide. Sans ce bloc, l'Occulteur n'aurait aucun root du
 	# tout — un manque qui ne lèverait rien et ne se verrait qu'en jouant.
@@ -2562,7 +2571,7 @@ func trigger_shoot_visuals():
 			Charte.Courbe.EXTINCTION)
 	
 	var _slug := current_weapon.slug() if current_weapon else "pistolet"
-	AudioManager.play_weapon_shot(_slug, muzzle.global_position)
+	AudioManager.play_weapon_shot(_slug, muzzle.global_position, player_id)
 	# V4.10 — **le carreau ne sonne PAS au canon**, et c'est une decision
 	# d'Adrien (2026-08-28) : joue ici, il se confondrait avec le coup et
 	# n'apprendrait rien. Il sonne la ou il FROLE sa cible — voir
@@ -2733,7 +2742,7 @@ func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 		var gs = get_tree().get_first_node_in_group("game_state")
 		if gs and gs.has_method("camera_hit_kick"):
 			gs.camera_hit_kick(player_id)
-		AudioManager.play_breath_hit(global_position)
+		AudioManager.play_breath_hit(global_position, player_id)
 	# Étape 28, lot E — la télémétrie des gadgets. ICI : c'est la seule ligne que les
 	# DEUX pairs exécutent pour chaque PV perdu, et elle doit précéder `die()`, qui
 	# archive le match de façon synchrone chez l'hôte et en local. `hp` y vaut encore
@@ -2792,7 +2801,7 @@ func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 func _tinter_la_douille() -> void:
 	await get_tree().create_timer(randf_range(0.30, 0.50)).timeout
 	if is_instance_valid(self) and not dead:
-		AudioManager.play_shell(global_position)
+		AudioManager.play_shell(global_position, player_id)
 
 func die(killer: Node2D):
 	if dead: return

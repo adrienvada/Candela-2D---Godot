@@ -1,5 +1,17 @@
 extends Node
 
+## Chantier SON VISIBLE (0.8.0, décision d'Adrien du 2026-09-29) — chaque son
+## POSITIONNEL s'annonce ici, qu'une voix du pool l'ait joué ou non : le liseré
+## raconte ce qui s'est passé dans le monde, pas ce que seize voix ont pu mixer.
+## `GameState` l'écoute, trie (killcam, fin de manche, sa propre source) et le
+## confie aux liserés des vues qui rendent un joueur. Voir `son_visible.gd`.
+##
+## Le dictionnaire : `cle`, `famille`, `pos`, `emetteur` (le `player_id` du corps
+## d'où part le son, -1 pour le monde), `niveau_db` (à la source : famille,
+## écart demandé, duck sous le tir), `portee` (px, déjà réduite pour un pas
+## accroupi), `fumee_db`, `wet` (la réverbération de la salle), `diagonale` (px).
+signal son_localise(evenement: Dictionary)
+
 const Charte := preload("res://charte.gd")
 
 # Cartographie des sons vers leurs chemins d'accès
@@ -1152,7 +1164,20 @@ func part_occultee(pos: Vector2) -> float:
 	var espace := monde.direct_space_state
 	if espace == null:
 		return 0.0
-	var vers := _oreille.global_position
+	return part_occultee_entre(espace, pos, _oreille.global_position)
+
+## La part occultée entre une source et UNE oreille quelconque — la géométrie de
+## `part_occultee`, sans ses gardes d'écoute. Le son rendu visible la pose pour
+## chaque joueur dont une vue est rendue, **y compris en écran partagé**, où
+## l'oreille audio n'a pas d'occlusion (une seule paire de haut-parleurs pour
+## deux joueurs) mais où chaque liseré a son propre écran : la décision d'Adrien
+## du 2026-08-25 porte sur le MIXAGE, pas sur ce que chacun voit.
+##
+## Une seule géométrie pour les deux usages : deux modèles pour un même mur
+## finiraient par diverger (même leçon que la fumée, plus bas).
+static func part_occultee_entre(espace: PhysicsDirectSpaceState2D, pos: Vector2, vers: Vector2) -> float:
+	if espace == null:
+		return 0.0
 	# ⚠️ **UN SON TROP PROCHE NE SE SONDE PAS, ET C'EST GEOMETRIQUE.**
 	#
 	# Les trois rayons sont PARALLELES, ecartes de ±24 px : le couloir sonde fait
@@ -1556,7 +1581,7 @@ func play_sfx_random_pitch(stream_or_key: Variant, min_pitch: float = 0.92, max_
 	return play_sfx(stream_or_key, pitch, volume_db, bus_name)
 
 # --- JOUER DES SFX 2D POSITIONNELS ---
-func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0, volume_db: float = 0.0, bus_name: String = "SFX") -> AudioStreamPlayer2D:
+func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0, volume_db: float = 0.0, bus_name: String = "SFX", emetteur: int = -1, facteur_portee: float = 1.0) -> AudioStreamPlayer2D:
 	var stream = get_audio_stream(stream_or_key)
 	if not stream:
 		return null
@@ -1585,6 +1610,18 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	elif famille_de(stream_or_key).begins_with("footstep") \
 			and maintenant - _dernier_tir < DUCK_TIR_S:
 		volume_final += DUCK_TIR_DB
+	# Le niveau et la portée du son À SA SOURCE, connus avant qu'une voix soit
+	# prise : le son rendu visible les annonce même quand le pool est plein.
+	# **Mêmes nombres que la voix** — le niveau par son s'AJOUTE au volume demandé
+	# (le duck reste un écart), la portée se pose par son et par carte.
+	var niveau_source := volume_final + float(
+		_niveau_dose.get(famille_de(stream_or_key),
+			niveau_relatif_de(stream_or_key)))
+	var portee_source := portee_courante(stream_or_key) * facteur_portee
+	# FU4 — s'ajoute a l'occlusion des murs, ne la remplace pas : voir la section
+	# plus haut sur pourquoi ce n'est pas le meme bus.
+	var fumee_db := etouffement_fumee_db(occultation_fumee(pos))
+	_annoncer(stream_or_key, pos, niveau_source, portee_source, fumee_db, emetteur)
 	
 	var prio := priorite_de(stream_or_key)
 	var voie := choisir_voix(_occupations(sfx_players_2d), _sfx_prio_2d, _sfx_debut_2d, prio)
@@ -1602,16 +1639,14 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# construction du pool : le pool est partage, la voix qui joue un pas vient
 	# de jouer un tir, et une portee posee a `_ready()` serait celle du dernier
 	# son qui l'a occupee.
-	player.max_distance = portee_courante(stream_or_key)
+	player.max_distance = portee_source
 	player.attenuation = courbe_distance
 	# Le niveau par son s'AJOUTE au volume demande, il ne le remplace pas : le
 	# duck des pas sous le tir (V4.15) reste un ecart, pas une valeur absolue.
 	# Meme correction que `portee_courante` : la SEANCE se cherche sous la
 	# famille, sinon la molette du banc reste muette sur tout son joue par
 	# chemin — c'est-a-dire sur la moitie du jeu depuis V4.1.
-	player.volume_db = volume_final + float(
-		_niveau_dose.get(famille_de(stream_or_key),
-			niveau_relatif_de(stream_or_key)))
+	player.volume_db = niveau_source
 	# S3 — le bus se choisit ici, au seul instant ou l'on connait a la fois la
 	# position du son et celle de l'oreille. La PART occultee adoucit en plus le
 	# bord : un son occulte au tiers part sur le bus etouffe, mais n'y perd qu'un
@@ -1620,9 +1655,7 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.bus = bus_pour(bus_name, part > 0.0)
 	if part > 0.0:
 		player.volume_db += OCCLUSION_PENTE_DB * part
-	# FU4 — s'ajoute a l'occlusion des murs, ne la remplace pas : voir la section
-	# plus haut sur pourquoi ce n'est pas le meme bus.
-	player.volume_db += etouffement_fumee_db(occultation_fumee(pos))
+	player.volume_db += fumee_db
 	player.play()
 	# ⚠️ **LE TEMOIN, et il repond a la seule question que le graphe ne repond
 	# pas : ce son avait-il une chance d'etre entendu ?**
@@ -1669,6 +1702,39 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 		}
 	return player
 
+## SON VISIBLE — annonce un son positionnel à qui veut le montrer.
+##
+## ⚠️ **Rien ne s'annonce sans écouteur** : un banc, une suite ou le menu jouent
+## des sons sans `GameState`, et fabriquer un dictionnaire par son pour personne
+## coûterait à chaque pas. Le tri (killcam, fin de manche, sa propre source) est
+## celui de `GameState` : ce fichier ne connaît pas l'état du jeu.
+func _annoncer(stream_or_key: Variant, pos: Vector2, niveau_db: float, portee: float,
+		fumee_db: float, emetteur: int) -> void:
+	if not son_localise.has_connections():
+		return
+	son_localise.emit({
+		"cle": String(stream_or_key) if stream_or_key is String else "<flux>",
+		"famille": famille_de(stream_or_key),
+		"pos": pos,
+		"emetteur": emetteur,
+		"niveau_db": niveau_db,
+		"portee": portee,
+		"fumee_db": fumee_db,
+		"wet": float(_reverb_courante.get("wet", 0.0)),
+		"diagonale": _portee_carte,
+	})
+
+## SON VISIBLE — une source CONTINUE qui ne passe pas par le pool (la combustion
+## de la fusée a sa voix dédiée) s'annonce par ici, à son propre rythme. Mêmes
+## nombres que l'entonnoir : niveau de sa famille, portée par carte, fumée.
+func annoncer_son_2d(cle: String, pos: Vector2, emetteur: int = -1, volume_db: float = 0.0,
+		facteur_portee: float = 1.0) -> void:
+	if not son_localise.has_connections():
+		return
+	var niveau := volume_db + float(_niveau_dose.get(famille_de(cle), niveau_relatif_de(cle)))
+	_annoncer(cle, pos, niveau, portee_courante(cle) * facteur_portee,
+		etouffement_fumee_db(occultation_fumee(pos)), emetteur)
+
 ## Le coup de feu d'une arme, tiré au sort parmi ses quatre variantes.
 ##
 ## Le pitch reste, mais resserré : ±4 % au lieu de ±8 %. La variation large
@@ -1681,11 +1747,11 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 ## le coup de feu est le seul son qui porte une INFORMATION DE JEU — il dit
 ## qu'on vient de tirer, et où. Le taire changerait l'équilibre, pas seulement
 ## l'ambiance.
-func play_weapon_shot(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
+func play_weapon_shot(slug: String, pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var chemin := chemin_tir(slug, randi_range(1, VARIANTES_TIR))
 	if get_audio_stream(chemin) == null:
-		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08)
-	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
+		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08, 0.0, BUS_SFX, emetteur)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04, 0.0, BUS_SFX, emetteur)
 
 ## ============================================================================
 ## LES SONS DE LA LIVRAISON DU 2026-08-27
@@ -1709,20 +1775,28 @@ func play_weapon_shot(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
 ##
 ## `etouffe` (chantier MURS BAS, MB2) : le pas d'un joueur accroupi. Règle d'Adrien,
 ## 2026-09-14 : « l'accroupi étouffe les pas ». Un écart de niveau et une portée
-## réduite, posés APRÈS le calcul ordinaire — le duck sous le tir, l'occlusion par
-## les murs et la fumée continuent de s'appliquer par-dessus, rien n'est remplacé.
-func play_footstep(pos: Vector2, cellule: Vector2i, etouffe: bool = false) -> AudioStreamPlayer2D:
+## réduite, qui s'AJOUTENT au calcul ordinaire — le duck sous le tir, l'occlusion
+## par les murs et la fumée continuent de s'appliquer, rien n'est remplacé.
+##
+## `allure` (chantier SON VISIBLE, 2026-09-29) : la vitesse du dernier pas,
+## rapportée à la vitesse de marche. Q47 d'Adrien : « plus on se déplace
+## lentement, moins on fait de bruit » — au stick seulement, le clavier marche
+## toujours à 1. Debout, l'écart va de 0 dB à `SonVisible.PAS_LENT_DB` ;
+## accroupi, la posture est déjà le minimum et l'allure n'ajoute rien.
+##
+## ⚠️ **Écart et portée passent PAR l'entonnoir, plus après lui.** Ils étaient
+## posés sur la voix rendue, après coup : le son rendu visible, annoncé dans
+## l'entonnoir, aurait vu un pas accroupi au niveau d'un pas debout — et un pas
+## qu'aucune voix ne joue (pool plein) n'aurait même pas eu de voix à retoucher.
+func play_footstep(pos: Vector2, cellule: Vector2i, etouffe: bool = false,
+		allure: float = 1.0, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var famille := "footstep_a" if (cellule.x + cellule.y) % 2 == 0 else "footstep_b"
 	var chemin := chemin_variante_au_hasard(famille)
-	var lecteur: AudioStreamPlayer2D
+	var ecart := PAS_ACCROUPI_DB if etouffe else SonVisible.ecart_allure_db(allure)
+	var portee := PAS_ACCROUPI_PORTEE if etouffe else 1.0
 	if chemin == "" or get_audio_stream(chemin) == null:
-		lecteur = play_sfx_2d_random_pitch("footstep", pos, 0.95, 1.05)
-	else:
-		lecteur = play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
-	if etouffe and lecteur != null:
-		lecteur.volume_db += PAS_ACCROUPI_DB
-		lecteur.max_distance *= PAS_ACCROUPI_PORTEE
-	return lecteur
+		return play_sfx_2d_random_pitch("footstep", pos, 0.95, 1.05, ecart, BUS_SFX, emetteur, portee)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04, ecart, BUS_SFX, emetteur, portee)
 
 ## Le pas accroupi, en ÉCART au pas debout (MB2). Proposition de la note de
 ## conception (`docs/MURS_BAS.md` § 2) : −22 dB au lieu de −13, portée 0,30 au lieu
@@ -1759,18 +1833,18 @@ func play_ricochet(pos: Vector2) -> AudioStreamPlayer2D:
 
 ## V4.8 — la douille, apres le tir. Le retard est dans l'appelant : c'est un
 ## fait de mise en scene, pas de mixage.
-func play_shell(pos: Vector2) -> AudioStreamPlayer2D:
+func play_shell(pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var chemin := chemin_variante_au_hasard("shell")
 	if chemin == "" or get_audio_stream(chemin) == null:
 		return null
-	return play_sfx_2d_random_pitch(chemin, pos, 0.92, 1.08)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.92, 1.08, 0.0, BUS_SFX, emetteur)
 
 ## V5.11 — le frolement d'un mur.
-func play_wall_brush(pos: Vector2) -> AudioStreamPlayer2D:
+func play_wall_brush(pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var chemin := chemin_variante_au_hasard("wall_brush")
 	if chemin == "" or get_audio_stream(chemin) == null:
 		return null
-	return play_sfx_2d_random_pitch(chemin, pos, 0.94, 1.06)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.94, 1.06, 0.0, BUS_SFX, emetteur)
 
 ## MB3b — enjamber un mur bas, « en faisant du bruit » (règle d'Adrien). Le
 ## frôlement de mur, plus fort et plus grave : le même geste du corps contre la
@@ -1778,11 +1852,11 @@ func play_wall_brush(pos: Vector2) -> AudioStreamPlayer2D:
 ## banc audio comme celui du pas accroupi.
 const ENJAMBEMENT_DB := 6.0
 
-func play_enjambement(pos: Vector2) -> AudioStreamPlayer2D:
+func play_enjambement(pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var chemin := chemin_variante_au_hasard("wall_brush")
 	if chemin == "" or get_audio_stream(chemin) == null:
 		return null
-	return play_sfx_2d_random_pitch(chemin, pos, 0.80, 0.88, ENJAMBEMENT_DB)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.80, 0.88, ENJAMBEMENT_DB, BUS_SFX, emetteur)
 
 ## V4.2 — le coup au but, selon qu'il touche au centre ou au bord.
 ##
@@ -1795,29 +1869,29 @@ func play_enjambement(pos: Vector2) -> AudioStreamPlayer2D:
 ## Repli sur `flesh_impact`, le claquement unique d'avant V4.2.
 const SEUIL_COUP_AU_CENTRE: float = 0.5
 
-func play_hit(pos: Vector2, proximite_bord: float) -> AudioStreamPlayer2D:
+func play_hit(pos: Vector2, proximite_bord: float, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var cle := "hit_center" if proximite_bord <= SEUIL_COUP_AU_CENTRE else "hit_edge"
 	if get_audio_stream(cle) == null:
-		return play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
-	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
+		return play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08, 0.0, BUS_SFX, emetteur)
+	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04, 0.0, BUS_SFX, emetteur)
 
 ## V2.9 — l'impact d'une balle sur un mur plein (béton brut).
 func play_wall_impact(pos: Vector2) -> AudioStreamPlayer2D:
 	return play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
 
 ## 0.2.1 — le rechargement mécanique d'une arme.
-func play_weapon_reload(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
+func play_weapon_reload(slug: String, pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var cle := "weapon_reload_" + slug
 	if get_audio_stream(cle) == null:
 		return null
-	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
+	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04, 0.0, BUS_SFX, emetteur)
 
 ## V4.9 — souffle coupé et compression d'impact corporel organique (6 variantes).
-func play_breath_hit(pos: Vector2) -> AudioStreamPlayer2D:
+func play_breath_hit(pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	var chemin := chemin_variante_au_hasard("breath_hit")
 	if chemin == "" or get_audio_stream(chemin) == null:
 		return null
-	return play_sfx_2d_random_pitch(chemin, pos, 0.95, 1.05)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.95, 1.05, 0.0, BUS_SFX, emetteur)
 
 ## V4.10 — le carreau d'arbalete en vol.
 ##
@@ -1838,10 +1912,17 @@ func play_breath_hit(pos: Vector2) -> AudioStreamPlayer2D:
 ## definit ; ne pas le faire laisse une arme dont on ne sait jamais qu'on l'a
 ## evitee. **Aucune des deux reponses n'est evidente, et c'est pourquoi elle
 ## revient a Adrien.**
-func play_bolt_flight(pos: Vector2) -> AudioStreamPlayer2D:
+func play_bolt_flight(pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
 	if get_audio_stream("bolt_flight") == null:
 		return null
-	return play_sfx_2d_random_pitch("bolt_flight", pos, 0.97, 1.03)
+	return play_sfx_2d_random_pitch("bolt_flight", pos, 0.97, 1.03, 0.0, BUS_SFX, emetteur)
+
+## V4.4 — le percuteur à vide, à la bouche de l'arme. Un point d'entrée comme les
+## autres (SON VISIBLE, 2026-09-29) : il était joué par `play_sfx_2d` en direct
+## depuis `player.gd`, seul événement de jeu sans le sien — et le seul qui aurait
+## dû y répéter l'émetteur à la main, après quatre paramètres positionnels.
+func play_percuteur(slug: String, pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
+	return play_sfx_2d(chemin_percuteur(slug), pos, 1.0, 0.0, BUS_SFX, emetteur)
 
 ## V3.3 — le decompte. Non positionnel : il s'adresse au joueur, pas au monde.
 func play_count(seconde: int) -> AudioStreamPlayer:
@@ -1991,9 +2072,9 @@ func jouer_acouphene_mort() -> void:
 	_tween_etouffement.tween_property(f, "cutoff_hz", SFX_COUPURE_OUVERTE_HZ,
 		ETOUFFEMENT_MORT_S).set_ease(Tween.EASE_OUT)
 
-func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX") -> AudioStreamPlayer2D:
+func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX", emetteur: int = -1, facteur_portee: float = 1.0) -> AudioStreamPlayer2D:
 	var pitch = randf_range(min_pitch, max_pitch)
-	return play_sfx_2d(stream_or_key, pos, pitch, volume_db, bus_name)
+	return play_sfx_2d(stream_or_key, pos, pitch, volume_db, bus_name, emetteur, facteur_portee)
 
 # --- MUSIQUE INTERACTIVE & AUDIOSTREAMPLAYER ---
 func play_music(stream_or_key: Variant) -> void:
