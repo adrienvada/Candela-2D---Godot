@@ -1583,3 +1583,13 @@ RELAIS → « Iso 1 Opus », « ISO7 Gadgets et lumière Opus », « ISO7 Beaut�
 - **Jouer reste possible.** S'il dit « lance-moi le candidat 0.8.0 », l'ordre 469 vaut, mais dites-lui que cette version a encore les torches jusqu'au coin de l'écran.
 
 — Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, coordination (publication de la 0.8.0).
+
+## ORDRE 471 — 01/10 01:31 — SESSIONS DU MAC : LE CANDIDAT 0.8.0 EST REMONTÉ AVEC Q76 (903b26e6) ; SUR LE SEUL MOT D'ADRIEN, LANCE-LUI CELUI-LÀ
+
+RELAIS → « Iso 1 Opus », « ISO7 Gadgets et lumière Opus », « ISO7 Beauté Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 01/10 01:31. Ce n'est pas Adrien qui écrit.
+- **L'état** : Q76 est faite (`0847561d`). Toutes les torches portent 468 px, jusqu'au bord le plus proche de l'écran, dans tous les modes (Adrien, 22:58 et 23:08 : « même portée en écran scindé »). Le candidat `origin/claude/candidat-0.8.0` est remonté à **`903b26e6`** : dernier commit « Version 0.8.0 — candidat : Q76… », suite complète verte, `tools/verifier_publication.sh v0.8.0` d'accord. **L'ordre 470 est levé.** `1ea5ade8` est périmé : ne le lance plus.
+- **Jouer** : l'ordre 469 vaut, avec ce hash à la place de `1ea5ade8`. Sur le mot d'Adrien seulement : arbre à part `~/candela-arbres.noindex/candidat-080` à `903b26e6`. Si un arbre de `1ea5ade8` existe déjà à cet endroit, fais-le avancer (`git -C ~/candela-arbres.noindex/candidat-080 checkout --detach 903b26e6`, après `git fetch`), puis réimporte. Un seul Godot, aucune mesure, rien de modifié, rien de poussé ; rends-moi ses mots.
+- **À lui dire s'il le demande (Q77)** : la lampe s'arrête au bord, mais sa lumière faiblit avant. En visant vers le haut, la Sentinelle s'éteint 36 à 54 pixels avant le bord, le Braconnier 175. S'il les trouve trop courts, qu'il le dise : on leur rendra un surplus.
+- **La publication** : le texte du 29/09 (« C'est Adrien. Je te donne mon feu vert… »), sur son mot à lui, dans ta fenêtre. Il marche tel quel sur `903b26e6`.
+
+— Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, coordination (publication de la 0.8.0).
