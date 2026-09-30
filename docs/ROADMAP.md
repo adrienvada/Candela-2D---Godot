@@ -2435,7 +2435,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Les gadgets plus en 3D, dans la langue du voxel — la fumée d'abord, À L'ESSAI, éteinte par défaut** (2026-09-30, vers 12:10, Adrien, relayé par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « J'aimerais également que tous les gadgets (je me souviens de la fumée occultante) soient davantage en 3D. Là on est pris entre le graphisme BD et la 3D voxel. Il faut quelque chose de plus uniforme avec le nouveau graphisme. » ; puis vers 13:09 : « J'en ai marre de faire tout le temps de mesures. » ; chantier GV, posé par un sous-agent de cette session, branche `claude/v090-gadgets-volume`, après la 0.8.0) | **GV0** : l'inventaire, gadget par gadget (voir « Chantier — les gadgets en volume ») — les objets durs sont déjà des voxels, ce sont les MATIÈRES (fumées, nappes, éclats, lueurs) qui restent entre la BD et la 3D. **GV1** : la suie, la poussière et la fumée de la fusée en cubes, derrière `--fumee-voxel-essai` (`=fin` pour la variante d'un huitième de tuile) ; sans le drapeau, le jeu est celui d'avant et une suite le prouve (`test_fumee_voxel`, lancée deux fois par `run_suites.sh`). Noir absolu tenu dans le monde (la lightmap seule, assombrie) et à l'écran (le masque de la fumée, pochoir) ; jamais plus caché (avant les corps, sans profondeur) ; J1 et J2 à égalité ; killcam comprise. **Le coût tenu par construction et prouvé dans le cloud** (faces cachées, grille en dôme, sortie avant la densité) : en voxels « gros », 41 à 59 % de la surface couverte des couches, 4 à 6 appels de dessin de moins par image, 3 à 8 % de temps d'image en moins sous llvmpipe, sur la fusée, la suie et la poussière, écran scindé ; « fin » coûte jusqu'à un tiers de plus que les couches (la fusée). Noir à l'écran : aucune fuite au-delà de 2/255 sur seize relevés, le détecteur éprouvé par un témoin. **Aucune mesure n'est demandée sur le Mac** ; ce que le cloud ne peut pas dire (le pilote d'Apple : le temps d'image réel, le hoquet de compilation du shader au premier nuage) est écrit comme une limite. Recommandation : la variante « gros » ; le défaut reste à Adrien (Q67), sur les planches. `Protocol.VERSION` et `config/version` ne bougent pas (rendu local). |
+| **Q67 à Q70 — la fumée est EN VOXELS « gros » par défaut, avec l'encre du roman graphique SUR les cubes et le relief tiré de la clarté des volutes du dessin ; l'aplat reste** (2026-09-30, vers 15:50, Adrien, sur les planches de GV1, relayé par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Q67 : Oui la fumée en gros. Mais trouve un moyen de la rendre quand même un peu avec des traits sombres comme le faisait le style roman graphique. Qui peuvent évoluer lentement peut-être, je sais pas. Les bords des cubes ? Je sais pas. » ; « Q68 : pourquoi ? » ; « Q69 : oui, mais peut-être évolutives aussi » ; « Q70 : oui » — coquilles de frappe corrigées ; GV1bis, posé par un sous-agent de cette session, branche `claude/v090-gadgets-volume`) | **Q67, le défaut** : la suie, la poussière et la fumée de la fusée sont des tas de cubes d'un quart de tuile dans toutes les parties ; `--fumee-couches` rend les couches d'avant et `--fumee-voxels=fin` la taille fine, pour les bancs et les suites. **Q67, l'encre** : trois variantes sur les mêmes planches — les ARÊTES (le contour des paliers, « les bords des cubes »), les VOLUTES (les traits du dessin reportés sur les faces), les HACHURES (des traits qui dosent l'ombre et glissent) ; le défaut est la recommandation, les VOLUTES — la seule qui rende le trait du dessin du jeu au lieu d'en inventer un, et qui se lit « roman graphique » à la taille de l'écran ; Adrien tranche sur les planches (Q73). L'encre n'est qu'un ASSOMBRISSEMENT, peint par le cube et non couché au sol (le masque du noir ne la troue plus), sous la règle des murs « allumé reste allumé ». **Q68** : Adrien a demandé pourquoi ; la coordinatrice lui a répondu (l'encre du dessin, couchée au sol, se voyait en trous à travers les cubes, le masque du noir refusant — à raison — de peindre sur un trait noir) ; l'aplat reste sauf avis contraire — et le trait revient désormais PAR les cubes. **Q69** : le relief vient de la clarté des volutes du dessin (une bouffée claire monte, un trait creuse ; la fusée : les volutes de son voile), et il ÉVOLUE LENTEMENT, comme l'encre, à l'horloge du nuage — son âge, le même dans les deux vues, rejoué par la killcam ; aucune graine tirée d'un identifiant d'instance. **Q70** : l'ordre de la suite est accepté (les nappes, puis les éclats, puis la toile et les anneaux) ; GV2 attend l'ordre de la coordinatrice. Présentation seule : `Protocol.VERSION` et `config/version` ne bougent pas. |
+| **Les gadgets plus en 3D, dans la langue du voxel — la fumée d'abord, ~~À L'ESSAI, éteinte par défaut~~** **— le défaut depuis GV1bis (Q67, ligne du dessus)** (2026-09-30, vers 12:10, Adrien, relayé par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « J'aimerais également que tous les gadgets (je me souviens de la fumée occultante) soient davantage en 3D. Là on est pris entre le graphisme BD et la 3D voxel. Il faut quelque chose de plus uniforme avec le nouveau graphisme. » ; puis vers 13:09 : « J'en ai marre de faire tout le temps de mesures. » ; chantier GV, posé par un sous-agent de cette session, branche `claude/v090-gadgets-volume`, après la 0.8.0) | **GV0** : l'inventaire, gadget par gadget (voir « Chantier — les gadgets en volume ») — les objets durs sont déjà des voxels, ce sont les MATIÈRES (fumées, nappes, éclats, lueurs) qui restent entre la BD et la 3D. **GV1** : la suie, la poussière et la fumée de la fusée en cubes, derrière `--fumee-voxel-essai` (`=fin` pour la variante d'un huitième de tuile) ; sans le drapeau, le jeu est celui d'avant et une suite le prouve (`test_fumee_voxel`, lancée deux fois par `run_suites.sh`). Noir absolu tenu dans le monde (la lightmap seule, assombrie) et à l'écran (le masque de la fumée, pochoir) ; jamais plus caché (avant les corps, sans profondeur) ; J1 et J2 à égalité ; killcam comprise. **Le coût tenu par construction et prouvé dans le cloud** (faces cachées, grille en dôme, sortie avant la densité) : en voxels « gros », 41 à 59 % de la surface couverte des couches, 4 à 6 appels de dessin de moins par image, 3 à 8 % de temps d'image en moins sous llvmpipe, sur la fusée, la suie et la poussière, écran scindé ; « fin » coûte jusqu'à un tiers de plus que les couches (la fusée). Noir à l'écran : aucune fuite au-delà de 2/255 sur seize relevés, le détecteur éprouvé par un témoin. **Aucune mesure n'est demandée sur le Mac** ; ce que le cloud ne peut pas dire (le pilote d'Apple : le temps d'image réel, le hoquet de compilation du shader au premier nuage) est écrit comme une limite. Recommandation : la variante « gros » ; le défaut reste à Adrien (Q67), sur les planches. `Protocol.VERSION` et `config/version` ne bougent pas (rendu local). |
 | **La 0.8.0 part dès que les chantiers en cours sont finis : version 0.8.0, candidat `claude/candidat-0.8.0`, publié par une session du Mac** (2026-09-29, vers 19:00, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Fais en sorte qu'on puisse pousser la 0.8.0 dès que tous les chantiers en cours sont finis. Dis-moi quoi indiquer à une session locale pour ça ») | `config/version` passe de 0.7.1 à 0.8.0 : la **mineure** monte parce que le fil a bougé (`Protocol.VERSION` 18 → 19, les bruits de corps de l'hôte relayés au client, S6) — `tools/verifier_publication.sh v0.8.0` contre le tag `v0.7.1` : « le fil a bougé, et la mineure aussi ». Tous les chantiers de la 0.8.0 y sont : le son rendu visible et sa forme d'onde (Q52), le zoom selon l'écran (Q15 revue), Q42, Q55 et Q65 (le corps de soi et les murs), le point de braise et l'Usine, l'écran de fin et l'allumage, les lumières (L1, L1bis, L2, L3). Suite complète verte sur le candidat. **La publication suit `docs/MISE_A_JOUR.md`** (« Publier une version complète ») : `main` d'abord, en avance rapide depuis `2501cb9` (la 0.7.1), puis le tag annoté `v0.8.0` sur le même hash — gestes posés par une session du Mac sur le mot d'Adrien, dit dans sa fenêtre (le texte à lui donner est dans la conversation de la session cloud du 29/09 vers 19:15) ; la CI refait le contrôle de version, passe les suites, exporte, signe et publie ; la session cloud vérifie ensuite la signature du manifeste. **Pas une condition** : la cadence sur le Mac — la portée des torches coûte ×1,5 à ×1,85 par image sous Mesa, une prise 0.7.1 contre 0.8.0 sur l'écran interne reste conseillée, avant ou juste après. |
 | **Q65 = la rétrodiffusion de l'adversaire ne traverse plus les murs jusqu'au corps de soi** (2026-09-29, vers 19:00, Adrien : « Q65 : oui, ferme-la dans la 0.8.0 » ; posé par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/v080-q65`) | **La fuite** — celle que Q55 avait mesurée et laissée (le piège du 2026-09-29) : la rétrodiffusion de l'adversaire éclairait le capteur de soi À TRAVERS un mur, 0,667 à 70 px derrière un mur, pour J1 comme pour J2, là où le capteur du même corps vu par l'adversaire lit 0,000. Le masque d'ombre de la rétrodiffusion (`1 \| 2 \| 16 \| 32`) ne croisait le masque d'aucun capteur de soi, qui n'en recevait donc aucune ombre. **Retenu : un bit RÉCEPTEUR par joueur**, `CanauxLumiere.recepteur_retro(id)` (128 pour J1, 256 pour J2), porté par le capteur de soi de `id` (`masque_de_soi` = `JOUEUR_LOCAL \| couche_ombre_corps(id) \| recepteur_retro(id)`) et mis dans le masque d'ombre de la rétrodiffusion de l'ADVERSAIRE seulement (`player.gd`, une ligne). Deux bits neufs plutôt que la couche d'ombre du corps adverse, la voie de Q55 pour la torche : celle de J2 est le 4, qui est aussi `JOUEUR_LOCAL` — le bit que porte SON capteur de soi —, donc la rétrodiffusion de J2 aurait ombré son propre corps par son propre torse sur son propre capteur : la lumière propre qui baisse, et une asymétrie de plus. Un bit par joueur, dans le masque de l'adversaire seul, ne croise jamais le capteur de son propre corps. Aucun occluder ne porte ces bits et aucune lumière ne les a dans sa portée (`test_ombre_propre` le garde, dans l'arbre d'une manche comme dans les sources) : rien ne s'éclaire de plus, et rien ne s'ombre de plus que ce capteur-là. Le leurre vu par son poseur porte le même masque. **Écartée** : ne compter que les murs pour le capteur de soi, en retirant les disques de torse de sa vue par l'artifice de Q42 (une canvas de plus par corps) — pour garder 0,93 à 45 px ; à reprendre si Adrien préfère. **Mesuré** (`tools/planche_q42.gd`, Xvfb + llvmpipe ; avant = `c5c227cf`) : la rétrodiffusion adverse seule, un mur, à 70 px : le capteur de soi lisait 0,667 chez J1 et chez J2, il lit 0,000 chez les deux, comme le capteur croisé ; en vue unique de J1 puis de J2, pareil. **La lumière propre ne bouge pas** : la rétrodiffusion de la cible seule (l'adversaire hors de sa portée, à 200 px) lit 0,914 avant comme après ; les deux torches allumées derrière un mur, 0,914 ; sans mur, 1,000. **Le seul effet visible hors mur, dit** : à moins de 128 px (la portée de la rétrodiffusion), le capteur de soi reçoit maintenant les ombres de la rétrodiffusion d'en face comme le capteur croisé — les disques de torse comptent avec les murs : rétrodiffusion seule 0,787-0,801 → 0,498-0,506 à 45 px, 0,667 → 0,427 à 70 px (égal au capteur croisé, J1 = J2) ; toutes lumières allumées à 45 px, 0,93-0,94 → 0,76-0,77. Au-delà de 128 px, rien. **Rien d'autre ne bouge** : la torche (0,4646 sans mur, 0,000 avec un mur), la torche seule et le halo seul à 45 px, le capteur croisé (identique au pixel dans les quatre images du banc), les lightmaps des deux vues (≤ 1/255 sur ≤ 0,07 % des pixels — le bruit de deux passes du même arbre), la vue de dessus (17 images, même bruit). **La garde** : `test_ombre_propre` passe de 124 à 154 vérifications et rougit si le capteur de soi de J1 OU de J2 laisse passer la rétrodiffusion d'un mur — écran scindé, vue unique de J1 puis de J2, leurre vu par son poseur — ; quatre sabotages la font rougir : le capteur de soi sans son bit (12 vérifications rouges), la rétrodiffusion sans le bit de l'adversaire (14), avec celui de son propre joueur (20), une portée qui porte un bit récepteur (2). **Non mesuré** : le rendu sous Metal (Mac), une partie en ligne réelle. Part dans la 0.8.0 ; `Protocol.VERSION` ne bouge pas (rendu local, rien ne transite). |
 | **Le zoom dépend de l'écran : ×1,25 en écran scindé, ×1,5 en vue unique (Q15 revue)** (2026-09-29, vers 15:50, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », après l'essai de Q15 : « En fait faisons zoom 1,25 en écran scindé et 1,5 en écran seul ») | L'écran scindé ne donne à chaque joueur qu'une demi-largeur (957 px) : ×1,25 lui rend de la carte ; la vue unique (en ligne, entraînement) garde le ×1,5 d'ISO11. Deux constantes (`ZOOM_ECRAN_SCINDE`, `ZOOM_VUE_UNIQUE`) et `accorder_au_mode(en_ligne, ecran_scinde)`, que `GameState` appelle à chaque départ selon le mode ; `ZOOM_DUEL_DEFAUT` vaut désormais la vue unique (au démarrage, avant tout match, et dans les bancs qui n'ont pas d'écran). **L'équité ne bouge pas** : dans un même match les deux joueurs ont toujours le même écran, donc le même zoom ; en ligne les deux machines sont en vue unique et la constante s'y impose, quoi que dise l'appel. Un zoom réglé au débogage, ou `--zoom=`, l'emporte hors ligne comme avant. Gardes : `test_iso_camera` — la règle pure, `accorder_au_mode` par écran, et les VRAIES caméras du duel, à l'entraînement (×1,5) puis dans un match en écran scindé (×1,25 sur les deux) ; trois contrôles rougissent si l'écran est ignoré. Conséquence pour les lumières (L1, plancher de portée dérivé du cadrage, une portée pour tous les modes) : le coin de la vue unique à ×1,5 (728 px) redevient le plus exigeant des deux (écran scindé à ×1,25 : 656 px). |
@@ -3240,6 +3241,45 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une preuve par différence d'images se prend l'arbre EN PAUSE : filtrer le scintillement ne suffit pas (2026-09-30)
+
+Gadgets en volume, GV1bis. Pour prouver que l'encre des cubes n'éteint aucun pixel éclairé, le banc compare la même
+image de jeu sans l'encre et avec. Premier passage : deux prises successives, 5 à 17 pixels « éteints », jusqu'à 0/255,
+dans la seule vue de la torche. Aucun n'était l'encre : la scène « figée » par le banc SCINTILLE (un pixel sur huit
+diffère d'une image à l'autre autour de la suie, près d'un sur trois autour de la fusée). Deuxième passage : quatre puis
+cinq prises, un pixel jugé seulement s'il est stable dans chaque paire (sans encre, sans encre ; avec, avec) — encore
+trois « éteints », dans une seule vue d'une seule scène : un scintillement EN PHASE dans chaque paire (espacée de douze
+images) et pas d'une paire à l'autre (quatre). Le troisième prend les cinq images L'ARBRE EN PAUSE : rien ne bouge, seul
+l'uniforme de l'encre change sur les matériaux des cubes. Arbre en pause, tous les pixels sont stables d'une prise à
+l'autre, et plus aucun « éteint » : zéro sur vingt-quatre relevés, contre 26 901 pour le témoin sans plancher (2 à 9 844
+par relevé). Ce qui bouge encore sous l'âge tenu (quelque chose du jeu ou de la présentation, puisque la pause l'arrête)
+n'a pas été cherché : hors du chantier. **Une différence entre deux images ne prouve quelque chose que si rien d'autre
+n'a pu bouger entre elles : on fige la scène, on ne filtre pas son bruit.**
+
+### Une planche de 2048 px lue au sommet d'un cube ne donne qu'un texel par case (2026-09-30)
+
+Gadgets en volume, GV1bis. La densité de la fumée de la fusée se lit, sommet par sommet, dans les planches de ses nappes
+(2048 px pour 500 px de monde : quatre texels par pixel). Un sommet n'a pas de dérivées et ces planches n'ont pas de
+mipmaps : chaque case lisait UN texel d'un dessin aux mèches fines — une densité qui saute d'une case à sa voisine, et
+d'une image à l'autre quand les nappes tournent. Le nuage lit désormais une copie RÉDUITE à
+256 px (`IsoNuageVoxel.planche` : moyennes de moitié en moitié sur l'image prémultipliée, puis rendue à ses couleurs — sans
+la prémultiplication, le gris des texels transparents (0,5 à 0,8) déborde sur les bords), faite une fois au lancement.
+**Au sommet, une texture se lit à la finesse de la grille qui la lit, jamais à la sienne.**
+
+### Au lacet 45°, une diagonale du monde est un axe de l'écran (2026-09-30)
+
+Gadgets en volume, GV1bis. Les hachures des cubes étaient tracées « en diagonale » dans le repère du monde (x + z) : à 45°
+de lacet, c'est l'horizontale de l'écran — elles sortaient en rayures horizontales, sans rien de la gravure. Sur un dessus,
+elles suivent désormais la diagonale de L'ÉCRAN (la droite de la caméra plus son avant, au sol), la même règle dans les deux
+vues. **Une direction « à 45° » se dit par rapport à la caméra, pas au monde, dans une vue elle-même tournée de 45°.**
+
+### Un rendu devenu le défaut rend muets les réglages de l'ancien (2026-09-30)
+
+Gadgets en volume, GV1bis. La fumée est en voxels par défaut : `IsoVolumes.couches_fusee` (`bench_framerate --fusee-couches
+N`) ne règle plus que les COUCHES, qui ne sont plus dessinées sans `--fumee-couches`. Rien ne le dit à l'exécution : un
+relevé « à N couches » pris sans ce drapeau mesure les voxels. Écrit à côté du réglage ; le banc de cadence n'est pas
+touché (hors du chantier). **Quand un défaut change, relire les réglages qui ne parlent qu'à l'ancien.**
+
 ### Un fragment écrit à 0,05 n'ajoute que 7,5/255 : un compteur additif s'étalonne sur place (2026-09-30)
 
 Gadgets en volume, GV1. Pour mesurer la SURFACE COUVERTE par un nuage (les fragments qu'il fait rastériser), le banc
@@ -3260,8 +3300,9 @@ lightmap, un trait d'encre est un pixel NOIR — et le masque de la fumée (Q31,
 pixel montre du noir. Posés sur le dessin, les cubes laissaient donc voir l'encre à travers eux, en rangées de trous ; lue
 au point, la lightmap faisait en plus de chaque trait une rangée de cubes noirs. Le « entre la BD et la 3D » d'Adrien, à
 l'état pur. Deux gestes : la lumière d'un cube est LISSÉE comme celle des couches (la lumière du nuage, pas son dessin), et,
-sous l'essai, la masse passe en APLAT (sa couleur moyenne sous le même alpha) tant que ses cubes vivent. **Un volume ne
-recouvre pas un dessin encré : ce que le masque protège, c'est justement l'encre.**
+sous les cubes (à l'essai, puis par défaut depuis GV1bis), la masse passe en APLAT (sa couleur moyenne sous le même alpha)
+tant que ses cubes vivent. **Un volume ne recouvre pas un dessin encré : ce que le masque protège, c'est justement
+l'encre.** (GV1bis rend le trait autrement : PEINT par les cubes, qui assombrissent leurs faces.)
 
 ### Une grille de cubes à moitié opaques se peint dans l'ordre de SA caméra : une grille par vue (2026-09-30)
 
@@ -29973,10 +30014,11 @@ faut quelque chose de plus uniforme avec le nouveau graphisme. » Puis, vers 13:
 de mesures. » — **aucune mesure n'est demandée sur le Mac** : le coût se tient par construction et se prouve dans le
 cloud ; ce que le cloud ne peut pas dire (le pilote d'Apple) est écrit comme une limite, pas comme une étape.
 
-Deux étapes faites : **GV0**, l'inventaire ; **GV1**, la fumée en voxels, À L'ESSAI et éteinte par défaut. Rien d'autre ne
-bouge : aucun fil (`Protocol.VERSION` inchangé), aucune simulation, aucune lumière 2D, aucun capteur, `config/version` reste
-0.8.0. Planches et relevés : `docs/iso/gadgets_volume/`. Le banc : `tools/banc_gadgets_volume.gd` (écran scindé, lacet
-45° B, J1 à l'ouest torche allumée, J2 au sud ; `--mode=avant|nuages|noir|cout`).
+Trois étapes faites : **GV0**, l'inventaire ; **GV1**, la fumée en voxels, à l'essai ; **GV1bis**, la fumée en voxels
+PAR DÉFAUT, avec l'encre du roman graphique sur les cubes et le relief tiré du dessin (Q67 à Q70). Rien d'autre ne bouge :
+aucun fil (`Protocol.VERSION` inchangé), aucune simulation, aucune lumière 2D, aucun capteur, `config/version` reste 0.8.0.
+Planches et relevés : `docs/iso/gadgets_volume/`. Le banc : `tools/banc_gadgets_volume.gd` (écran scindé, lacet 45° B, J1
+à l'ouest torche allumée, J2 au sud ; `--mode=avant|nuages|noir|cout`).
 
 ### GV0 — l'inventaire : ce qui est déjà en volume, ce qui est encore à plat
 
@@ -30122,27 +30164,185 @@ sommets des cubes au pilote d'Apple (llvmpipe les calcule sur le processeur, un 
 première compilation du shader, au premier nuage de la partie (le pilote compile au premier dessin). Ce n'est pas une
 étape demandée : c'est la limite de la preuve.
 
-**Ce qui reste.**
-- Le défaut (Q67), sur les planches. Tant qu'Adrien n'a pas tranché, l'essai reste éteint et le jeu inchangé.
+**Ce qui restait** (repris par GV1bis, plus bas).
+- ~~Le défaut (Q67), sur les planches.~~ Tranché : les voxels « gros » (GV1bis).
 - Un liseré de l'aplat au pied du tas, côté caméra, là où l'image de la masse a encore un peu d'alpha sans cube au-dessus.
-- Non éprouvé : une partie en ligne réelle sous le drapeau (le chemin est le même, les graines viennent du centre du nuage).
+- Non éprouvé : une partie en ligne réelle (le chemin est le même, les graines viennent du centre du nuage).
 - La suite des gadgets (GV2 et au-delà, Q70) : les nappes (braises, poudre), les éclats (mine, comète, lentille), la toile
   du voile et les anneaux de pose — chacun derrière son drapeau, avec la même preuve.
 
-**Questions pour Adrien** (numérotées à partir de Q67) :
+### GV1bis — la fumée en voxels par défaut, l'encre du roman graphique, le relief du dessin (Q67 à Q70)
+
+**Les réponses d'Adrien** (2026-09-30 vers 15:50, sur les planches de GV1 ; voir « Décisions actées ») : Q67 « Oui la fumée
+en gros. Mais trouve un moyen de la rendre quand même un peu avec des traits sombres comme le faisait le style roman
+graphique. Qui peuvent évoluer lentement peut-être, je sais pas. Les bords des cubes ? Je sais pas. » ; Q68 « pourquoi ? »
+(la coordinatrice a répondu ; l'aplat reste) ; Q69 « oui, mais peut-être évolutives aussi » ; Q70 « oui ».
+
+**Le défaut.** Sans drapeau, la suie, la poussière et la fumée de la fusée sont des tas de cubes d'un quart de tuile, au
+relief du dessin, à l'encre des VOLUTES (la recommandation, plus bas). Les drapeaux, pour les bancs et les suites, lus par
+la porte commune des drapeaux (`test_drapeaux` les tient des deux côtés de `--`) : `--fumee-couches` (les couches d'avant
+— rien des voxels ne se charge), `--fumee-voxels=fin` (un huitième de tuile), `--fumee-encre=aretes|volutes|hachures|
+cotes|aucune` (`cotes` : le trait clair de GV1), `--fumee-relief=dessin|bruit` (`bruit` : celui de GV1). Le jeu imprime ce
+qu'il dessine, dans les deux états. Les bancs basculent par `poser_fumee_voxel(actif, taille, encre, relief)`, sur place
+(l'encre et le relief sans refaire le nuage). Le préchauffage (shader, aplats, reliefs, planches réduites) se fait une fois
+par processus, à la naissance de la présentation iso, en 0,2 à 0,4 s.
+
+**Le relief du dessin (Q69).** Les bosses du tas sont celles du DESSIN : pour la suie et la poussière, la luminance de leur
+image BD moyennée sur 8 × 8 pixels puis étirée entre ses 10e et 90e centiles (`IsoNuageVoxel.relief`, canal rouge) — une
+bouffée claire du dessin monte, un trait d'encre creuse (sur le dessin opaque, 237 contre 45 sur 255 pour la suie, 174 contre
+34 pour la poussière) ; pour la fusée, qui n'a pas de dessin encré, la clarté des volutes de son voile (le bruit qui les fait
+en 2D, mêmes graines, même dérive). Il ÉVOLUE LENTEMENT, à l'horloge du nuage : le dessin d'un gadget ONDULE — un
+déplacement borné (± 6 % du rayon : 5,5 px pour la suie, 10 pour la poussière) dont le champ glisse avec l'âge —, les
+volutes du voile dérivent comme en 2D. Le relief et les traits lisent le même point dérivé : ils ondulent ensemble.
+
+**L'encre (Q67) : trois variantes**, toutes peintes PAR le cube — le masque du noir ne les troue plus : ce qu'il trouait,
+c'était l'encre couchée au sol —, toutes des assombrissements :
+- **les ARÊTES** — « les bords des cubes », en contour : une arête n'est encrée que là où la surface du tas se rompt d'une
+  case entière (le bord d'un palier, une marche, le pied du tas au sol), jamais entre deux dessus de même hauteur, ni sur
+  une demi-marche, ni autour des petits cubes du bord qui se dissipe (tracés, ils faisaient un labyrinthe et un treillis de
+  losanges : premiers passages du banc). Le trait, 1,5 px de monde, tremble lentement : sa largeur suit un bruit du lieu qui
+  glisse avec l'âge. Il lit ses voisins au sommet, pour les seules faces vues ;
+- **les VOLUTES** — les traits noirs du dessin 2D (`relief`, canal vert : 1 sous 0,04 de luminance, 0 au-dessus de 0,12 —
+  31 % de l'image de la suie, 10 % de celle de la poussière), reportés sur les faces et DRAPÉS sur le tas : projetés d'en
+  haut sur un dessus, dépliés sur un côté depuis le bord de son palier (un trait qui passe le bord descend la marche) ; ils
+  ondulent avec le dessin. La fusée trace deux lignes de niveau des volutes de son voile — le contour des bouffées de son
+  relief (le bord des paliers de ses nappes, essayé d'abord, faisait une côte découpée qui tournait vite) ;
+- **les HACHURES** — deux familles de traits parallèles au pas de 5 px de monde, en diagonale de l'écran, sur les faces à
+  demi éclairées seulement (d'autant plus serrées que la face est sombre, croisées plus bas) ; le champ qui les dose respire
+  et les traits glissent d'un pas toutes les dix secondes.
+
+**« Allumé reste allumé ».** Le trait obéit à la règle des murs et des corps : `pate_matiere_et_encre` au plancher des murs
+(`ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée) et au reste de l'encre d'essai des murs (0,12). Sur un trait, une face
+claire descend au plus au plancher (~71/255 écrits, avant la transparence du cube) ; une face plus sombre que lui n'a pas de
+trait du tout. C'est ce qui fait un trait GRAPHITE plutôt que noir d'encre, et qui l'efface dans la pénombre : dans un jeu
+dont la seule information est la lumière, un trait ne doit pas éteindre la lueur faible d'un nuage (Q74).
+
+**L'horloge et l'équité.** Tout ce qui bouge — respiration, relief, traits, hachures — suit l'ÂGE du nuage (`age()` d'un
+gadget, `age_combustion` d'une fusée) : le même dans les deux vues, rejoué par la killcam (une copie de killcam prend l'âge
+rejoué — la suite le vérifie) ; jamais TIME. Les graines viennent du centre du nuage (ou de la graine de la fusée, qui passe
+le fil), jamais d'un identifiant d'instance. Les deux vues reçoivent tous les mêmes réglages, au choix de leur vue près (la
+suite compare chaque uniforme) ; chacune voit le tas de son côté, sous la même règle d'encre.
+
+**Les planches de la fusée, RÉDUITES.** Sous GV1bis, la densité de la fusée se lit dans une copie de 256 px de chaque planche
+de nappe (`IsoNuageVoxel.planche`) : lue au sommet, la planche de 2048 px ne donnait qu'un texel par case (« Pièges
+connus »). Le rendu de GV1 (`--fumee-encre=cotes --fumee-relief=bruit`) garde les planches entières.
+
+**Les preuves.**
+- **La suite** `tools/test_fumee_voxel.gd`, lancée TROIS fois par `run_suites.sh` : sans drapeau (135 vérifications — le
+  défaut, puis les couches, chaque encre et chaque relief par la bascule des bancs, une copie de killcam à âge rejoué, l'équité
+  uniforme par uniforme, « allumé reste allumé » sur le miroir de la pâte (369 lumières × faces), le relief et l'encre tirés
+  du dessin, les planches réduites), sous `--fumee-couches` (141 : le jeu d'avant, le shader des voxels jamais chargé) et
+  sous `--fumee-voxels=fin --fumee-encre=hachures --fumee-relief=bruit` (134). `test_drapeaux` tient les quatre drapeaux
+  des deux côtés de `--`, `test_iso_gadgets` suit le nouveau défaut. **La suite complète passe** (`run_suites.sh`,
+  166 lignes : « tout passe, sans erreur de script (906 s) »). **Vue rouge par sabotage, deux fois** : l'encre sans son
+  plancher dans le shader (`pate_facteur` au lieu de `pate_matiere_et_encre`) — la garde « allumé reste allumé » rougit ;
+  l'horloge de la vue de J2 décalée d'une demi-seconde (`_suivre_gadget_en_voxels`) — cinq vérifications rougissent :
+  l'équité de la suie et de la poussière (l'uniforme `age`), leur horloge, la copie de killcam. Les fichiers rendus à
+  l'identique, les 135 vérifications reverdissent.
+- **Le noir à l'écran** (`--mode=noir`, `releves_gv1bis_noir.txt`, `planche_gv1bis_noir.jpg`) — les quatre scènes de GV1
+  (la suie à 2,5 s, la poussière à 2 s, le panache 0,35 s après l'extinction, la fusée à la braise sa lumière coupée ; le
+  cône de J1 à travers le nuage, les corps cachés), les deux vues, sous chaque encre et en taille fine : **aucune fuite
+  au-delà de 2/255 sur les 32 relevés** (quatre scènes × les trois encres et la taille fine × deux vues), et aucun résidu à
+  1 ou 2/255 sous les cubes (les couches du jeu en laissent jusqu'à 7 dans la même image, au bord de la lampe de J1) ; le
+  TÉMOIN (des cubes qui s'allumeraient partout) est vu en fuite sur 2 057 756 pixels ; masque coupé, zéro au-delà de
+  2/255. Trois passages, trois fois zéro fuite (les deux premiers ont rougi au point suivant, sur le scintillement).
+- **« Allumé reste allumé » à l'écran** (même mode) — cinq prises, L'ARBRE EN PAUSE (rien ne bouge, seul l'uniforme de
+  l'encre change sur les cubes) : sans encre, avec, le TÉMOIN (la même encre sans son plancher ni sa lumière), sans encre
+  encore, avec encore ; un pixel n'est jugé que s'il est stable dans les deux paires. **Aucun pixel éclairé éteint, sur
+  24 relevés** (quatre scènes × trois encres × deux vues), sur 100 % de pixels stables (435 600 par vue pour les gadgets) ;
+  l'encre assombrit 292 765 pixels au total, dont 78 seulement sous le plancher à l'écran (des bords anticrénelés d'une face
+  claire à peine couverte), contre 44 740 pour le témoin sans plancher, qui éteint aussi jusqu'à 9 844 pixels par vue. Le
+  pixel le plus sombre que l'encre laisse à un pixel qu'elle assombrit : 13/255 (hachures sur la poussière, J2). Deux
+  passages sans pause avaient compté des « éteints » : c'était le scintillement de la scène (« Pièges connus ») — sans pause,
+  un pixel sur huit bouge d'une image à l'autre autour de la suie, près d'un sur trois autour de la fusée ; en pause, aucun.
+- **Le coût** (`--mode=cout`, `releves_gv1bis_cout.txt`) — la méthode de GV1 (même scène figée, surface couverte comptée par
+  le GPU au compteur étalonné sur place, temps médian de 60 images sous llvmpipe, deux tours entrelacés), sous le verrou de
+  mesure de la session ; la fusée à la braise, la suie pleine, la poussière pleine, en écran scindé :
+
+  | Scène | Rendu | Appels de dessin (image) | Surface couverte J1 + J2 (fragments) | Temps médian llvmpipe (2 tours) |
+  |---|---|---|---|---|
+  | Fusée à la braise | sans le nuage | 174 | — | 556 / 554 ms |
+  | | couches (aujourd'hui) | 184 | 2 898 845 | 692 / 688 ms |
+  | | voxels de GV1 | 178 | 1 177 027 (× 0,41) | 659 / 645 ms (× 0,95) |
+  | | arêtes | 178 | 1 166 325 (× 0,40) | 638 / 645 ms (× 0,93) |
+  | | **volutes** | **178** | **1 166 417 (× 0,40)** | **637 / 630 ms (× 0,92)** |
+  | | hachures | 178 | 1 166 082 (× 0,40) | 621 / 640 ms (× 0,91) |
+  | | fins, volutes (surface seule) | — | 1 224 211 (× 0,42) | — |
+  | Suie pleine | sans le nuage | 156 | — | 474 / 464 ms |
+  | | couches | 166 | 594 771 | 496 / 498 ms |
+  | | voxels de GV1 | 160 | 348 074 (× 0,59) | 492 / 493 ms (× 0,99) |
+  | | arêtes | 160 | 358 420 (× 0,60) | 496 / 510 ms (× 1,01) |
+  | | **volutes** | **160** | **358 980 (× 0,60)** | **488 / 524 ms (× 1,02)** |
+  | | hachures | 160 | 358 970 (× 0,60) | 486 / 503 ms (× 1,00) |
+  | | fins, volutes (surface seule) | — | 352 144 (× 0,59) | — |
+  | Poussière pleine | sans le nuage | 156 | — | 504 / 483 ms |
+  | | couches | 164 | 1 474 172 | 548 / 538 ms |
+  | | voxels de GV1 | 160 | 834 761 (× 0,57) | 524 / 524 ms (× 0,96) |
+  | | arêtes | 160 | 857 101 (× 0,58) | 531 / 519 ms (× 0,97) |
+  | | **volutes** | **160** | **856 778 (× 0,58)** | **515 / 529 ms (× 0,96)** |
+  | | hachures | 160 | 856 732 (× 0,58) | 517 / 546 ms (× 0,98) |
+  | | fins, volutes (surface seule) | — | 794 132 (× 0,54) | — |
+
+  Ce que dit le tableau. **Les trois encres coûtent ce que coûtent les voxels de GV1** : même géométrie, mêmes cubes et mêmes
+  primitives, même surface à 3 % près (le relief du dessin déplace quelques faces) ; le trait est un calcul par fragment (les
+  arêtes lisent leurs voisins au sommet, pour les seules faces vues). **Donc moins que les couches** : 4 à 6 appels de dessin
+  de moins par image, 40 à 60 % de leur surface couverte, un temps d'image de 7 à 9 % sous elles sur la fusée et de 2 à 4 %
+  sous elles sur la poussière. Sur la suie, le plus petit des trois nuages, les trois encres sont au temps des couches à
+  ± 2 % — dans l'écart d'un tour à l'autre (jusqu'à 36 ms pour les volutes), que le banc ne départage pas ; la surface y
+  reste à 60 % de la leur.
+- **Les images** : `planche_gv1bis_cartouche_suie.jpg` (0,5, 2,5, 5 et 7,3 s : la naissance, pleine, pleine deux secondes
+  plus tard — la dérive —, la dissipation), `planche_gv1bis_poussiere.jpg` (0,4, 2, 4 et 5,9 s), `planche_gv1bis_fusee.jpg`
+  (plein feu, braise, sillage de J2, résidu, panache) — la MÊME image de jeu sous six rendus (les couches d'aujourd'hui, les
+  voxels gros de GV1, ceux de GV1bis sans encre, puis sous chaque encre), même cadrage, J1 puis J2 sous la lampe, J1 et J2
+  dans le noir ; et `planche_gv1bis_detail.jpg`, une région de chaque nuage sans réduction — le trait ne se juge qu'à la
+  taille de l'écran.
+
+**Recommandation : les VOLUTES** (le défaut). C'est le trait du jeu — celui du dessin BD de la suie et de la poussière, pas
+un motif inventé : à la taille de l'écran, le tas se lit comme la volute qu'il était, en volume ; le relief creuse sous les
+traits, et les traits cernent les bouffées. C'est le plus « roman graphique » des trois sur les planches, et il évolue de
+lui-même (le dessin ondule) sans rien montrer qui ne soit dans le dessin. Les ARÊTES disent le mieux le cube, mais tracent
+un plan d'architecte — des contours à angle droit sur un nuage bas ; les HACHURES font une gravure qui ombre bien les côtés,
+mais tramée partout où la lumière baisse, elle se lit comme une texture plus que comme un trait. Son coût est celui des
+deux autres : le trait ne se choisit pas au coût. Adrien tranche (Q73).
+
+**Ce que le cloud ne peut pas dire.** Comme en GV1 : le temps d'image du pilote d'Apple et le hoquet de la première
+compilation du shader, plus gros d'un peu (trois encres et leurs voisins dans le même programme). C'est la limite de la
+preuve, pas une étape demandée.
+
+**Ce qui reste.**
+- Le choix de l'encre (Q73) et du noir du trait (Q74).
+- Le liseré de l'aplat au pied du tas (GV1), toujours là.
+- Non éprouvé : une partie en ligne réelle (le chemin est le même ; horloge et graines passent par l'âge et le centre).
+- GV2 (les nappes), sur l'ordre de la coordinatrice seulement.
+
+**Questions pour Adrien** (numérotées à partir de Q67 ; Q67 à Q70 répondues le 2026-09-30 vers 15:50 — « Décisions
+actées » ; Q71 et Q72 sont les deux premiers signalements plus bas, posés à Adrien par la coordinatrice et corrigés par
+la 0.8.0 — d'où Q73 et Q74) :
 - **Q67 — La fumée en voxels par défaut ?** Proposition : oui, en variante « gros », si les planches
   (`planche_gv1_*.jpg`, surtout `planche_gv1_detail.jpg`) disent ce qu'Adrien attend — moins cher que les couches, noir tenu
-  à l'écran, rien du jeu ne change. Le jeu ne bouge pas avant sa réponse.
+  à l'écran, rien du jeu ne change. Le jeu ne bouge pas avant sa réponse. → **Oui, en gros, avec des traits sombres** :
+  GV1bis.
 - **Q68 — Sous les cubes, la masse en aplat ?** Sous l'essai, l'image BD de la suie et de la poussière devient sa couleur
   moyenne (même forme, même alpha) : sans cela, l'encre du dessin se voit en trous à travers les cubes. Autres voies : ôter
   la masse de la lightmap (les cubes prendraient la couleur du sol éclairé — on perd la couleur de la fumée), ou garder le
-  dessin (l'encre en trous). Avis : l'aplat.
+  dessin (l'encre en trous). Avis : l'aplat. → **« pourquoi ? »** — la coordinatrice a répondu ; l'aplat reste sauf avis
+  contraire, et le trait revient par les cubes (GV1bis).
 - **Q69 — Le relief des bouffées est inventé** (un bruit attaché au nuage, qui tourne avec lui) : le garder, ou le tirer
   du dessin (la clarté des volutes BD donnerait la hauteur des colonnes, les bosses du dessin deviendraient celles du tas) ?
-  Avis : garder celui-ci pour juger, essayer l'autre si le relief ne plaît pas.
+  Avis : garder celui-ci pour juger, essayer l'autre si le relief ne plaît pas. → **« oui, mais peut-être évolutives
+  aussi »** : le relief du dessin, qui ondule lentement (GV1bis).
 - **Q70 — La suite, dans quel ordre ?** Proposition : (1) les nappes au sol — les braises en petits cubes rougeoyants qui
   scintillent, les traces de poudre en grains ; (2) les éclats — la gerbe de l'éclair de la mine, la traînée de la comète,
   la lentille de la torche fantôme ; (3) la toile du voile en rangée de voxels minces, les anneaux de pose en cubes plats.
+  → **Oui** ; GV2 (les nappes) attend l'ordre de la coordinatrice.
+- **Q73 — Quelle encre ?** Les trois sont sur les mêmes planches (`planche_gv1bis_*.jpg`, surtout
+  `planche_gv1bis_detail.jpg`, à la taille de l'écran) : les ARÊTES (le contour des paliers), les VOLUTES (les traits du
+  dessin, drapés), les HACHURES (l'ombre en traits). Proposition : les VOLUTES, le défaut dès GV1bis ; `--fumee-encre=`
+  montre les autres en jeu.
+- **Q74 — Un trait plus noir ?** Le trait est GRAPHITE plutôt que noir d'encre : la règle des murs « allumé reste allumé »
+  l'arrête au plancher (16/255 en valeur affichée) et l'efface sur une face plus sombre. Plus noir, il faudrait baisser ce
+  plancher pour la fumée seule — et la lueur faible d'un nuage, qui est une information, disparaîtrait sous un trait. Avis :
+  garder la règle.
 
 **Signalé en passant — hors périmètre, non corrigé.**
 - **La fusée de killcam éclaire avec l'empreinte du VOL** (lu dans le code ; le banc de GV0 l'a rencontré en posant une
@@ -30151,10 +30351,13 @@ première compilation du shader, au premier nuage de la partie (le pilote compil
   `_atterrir` qui pose l'empreinte du sol (`EMPREINTE_LUMIERE`, 440 px), le masque d'ombre et la hauteur de source d'une
   fusée posée. En killcam, une fusée posée garde donc l'empreinte du vol (`EMPREINTE_VOL`, 160 px) : sa lumière couvre
   moins que dans la partie qu'on rejoue. Le banc de GV passe par `_atterrir` pour ne pas photographier ce défaut.
+  → **Devenu Q72** — « corrige aussi » (Adrien, 2026-09-30) : corrigé dans la 0.8.0, sur la branche
+  `claude/v080-allegement` (chantier « Q71 et Q72 »), pas ici.
 - **Le modelé des corps assombrit la face SUD du monde, pas celle que la caméra voit** : `modele_du_corps(normale_monde)`
   (`corps_iso.gdshader`) met 0,9 sur `n.z > 0,5`, alors que son commentaire le dit « tenu par la caméra ». Au lacet 45° B,
   J1 voit cette face et J2 jamais (il voit la face nord) : l'écart de modelé n'existe que dans la vue de J1 (beauté
   allumée, le défaut). Lu dans le code, non mesuré à l'image. Le mannequin d'ISO13, lui, lit déjà `INV_VIEW_MATRIX`.
+  → **Devenu Q71** — « corrige » (Adrien, 2026-09-30) : corrigé dans la 0.8.0, même branche, même chantier.
 - **La graine du bruit des couches d'un gadget vient de son identifiant d'instance** (`g.get_instance_id() % 97`,
   `_suivre_gadget`) : elle diffère d'une machine à l'autre, donc le grain des couches d'une même suie aussi, en ligne. Sans
   effet d'équité (chacun voit la sienne, et la densité n'en dépend pas) ; les cubes, eux, tirent leurs graines du centre.

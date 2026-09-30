@@ -94,6 +94,8 @@ var lueurs_actives := true
 ## `couches_fusee` ≥ 0 : le nombre de couches du volume de la fusée, plafonné à `VOLUME_FUSEE["couches"]` ; −1 : le défaut.
 ## ⚠️ `_couches()` ne fait que CRÉER, jamais détruire : à poser AVANT que la fusée soit suivie (ou suivi d'un `vider()`), et à ne
 ## jamais changer en cours de relevé — un volume déjà construit garderait ses couches, sans rien dire.
+## ⚠️ Depuis GV1bis, la fumée de la fusée est en VOXELS par défaut : ce réglage (`bench_framerate --fusee-couches N`) n'agit
+## que sous `--fumee-couches`.
 var couches_fusee := -1
 ## ISO13, lot E — éteint par défaut, comme tout drapeau d'un lot en cours.
 var faisceaux_actifs := false
@@ -132,14 +134,17 @@ var forme_masque := 5
 ## 0 : `--sans-fusee-coeur`, le choix d'ISO3/ISO4. La règle « jamais de blanc » (`fusee.gd`, FU2.1) reste entière pour la
 ## LUMIÈRE : l'exception ne vaut que pour ce point, qui n'éclaire rien. La vue de dessus garde son point rouge.
 var coeur_fusee := 2
-## Chantier « Gadgets en volume », GV1 — LA FUMÉE EN VOXELS, À L'ESSAI, ÉTEINTE PAR DÉFAUT (Adrien, 2026-09-30 : « tous les
-## gadgets […] davantage en 3D ») : la suie, la poussière et la fumée de la fusée deviennent un tas de cubes
-## (`IsoNuageVoxel`, `nuage_voxel_iso.gdshader`) au lieu de leurs couches. `--fumee-voxel-essai` l'allume (voxels d'un quart
-## de tuile), `--fumee-voxel-essai=fin` en huitièmes. Sans le drapeau, rien de ce chemin ne s'exécute ni ne se charge : les
-## couches, telles quelles. Adrien décide du défaut sur les planches et les relevés du cloud (ROADMAP, chantier GV). Les
-## bancs basculent par `poser_fumee_voxel`.
-var fumee_voxel := false
+## Chantier « Gadgets en volume » — LA FUMÉE EN VOXELS, LE DÉFAUT DEPUIS GV1bis (Adrien, 2026-09-30 : « tous les gadgets
+## […] davantage en 3D » ; puis, Q67 : « Oui la fumée en gros ») : la suie, la poussière et la fumée de la fusée sont un tas
+## de cubes (`IsoNuageVoxel`, `nuage_voxel_iso.gdshader`) au lieu de leurs couches, en voxels d'un quart de tuile, avec
+## l'encre du roman graphique (`encre_voxel`) et le relief tiré du dessin (`relief_voxel`). Les drapeaux, pour les bancs et
+## les suites : `--fumee-couches` (les couches d'avant : rien de ce chemin ne s'exécute ni ne se charge),
+## `--fumee-voxels=fin` (voxels d'un huitième), `--fumee-encre=<aretes|volutes|hachures|cotes|aucune>`,
+## `--fumee-relief=<dessin|bruit>`. Les bancs basculent par `poser_fumee_voxel`, jamais en écrivant ces variables.
+var fumee_voxel := true
 var variante_voxel := IsoNuageVoxel.VARIANTE_PAR_DEFAUT
+var encre_voxel := IsoNuageVoxel.ENCRE_PAR_DEFAUT
+var relief_voxel := IsoNuageVoxel.RELIEF_PAR_DEFAUT
 ## GV1 — les vues de l'image en cours et la présentation (pour la caméra de chaque vue), posées par `suivre`.
 var _vues: Array = []
 var _presentation: Node = null
@@ -190,8 +195,12 @@ const PRIORITE_JUGE := PRIORITE_VOLUME - 1
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
 const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
 const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"
-## GV1 — la fumée en voxels, à l'essai (`fumee_voxel`) ; `=fin` ou `=gros` choisit la taille du voxel.
-const DRAPEAU_FUMEE_VOXEL := "--fumee-voxel-essai"
+## GV1bis — la fumée en voxels est le défaut (`fumee_voxel`) : `--fumee-couches` rend les couches d'avant ; `=fin` ou
+## `=gros` choisit la taille du voxel, `--fumee-encre=` l'encre, `--fumee-relief=` le relief.
+const DRAPEAU_FUMEE_COUCHES := "--fumee-couches"
+const DRAPEAU_FUMEE_VOXELS := "--fumee-voxels"
+const DRAPEAU_FUMEE_ENCRE := "--fumee-encre"
+const DRAPEAU_FUMEE_RELIEF := "--fumee-relief"
 ## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
 ## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
 const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
@@ -253,19 +262,29 @@ func _init() -> void:
 			coeur_fusee = 2
 		elif arg == DRAPEAU_SANS_COEUR_FUSEE:
 			coeur_fusee = 0
-		elif arg == DRAPEAU_FUMEE_VOXEL:
-			fumee_voxel = true
-		elif arg.begins_with(DRAPEAU_FUMEE_VOXEL + "="):
-			fumee_voxel = true
-			variante_voxel = arg.trim_prefix(DRAPEAU_FUMEE_VOXEL + "=")
+		elif arg == DRAPEAU_FUMEE_COUCHES:
+			fumee_voxel = false
+		elif arg.begins_with(DRAPEAU_FUMEE_VOXELS + "="):
+			variante_voxel = arg.trim_prefix(DRAPEAU_FUMEE_VOXELS + "=")
+		elif arg.begins_with(DRAPEAU_FUMEE_ENCRE + "="):
+			encre_voxel = arg.trim_prefix(DRAPEAU_FUMEE_ENCRE + "=")
+		elif arg.begins_with(DRAPEAU_FUMEE_RELIEF + "="):
+			relief_voxel = arg.trim_prefix(DRAPEAU_FUMEE_RELIEF + "=")
+	# Une valeur inconnue retombe sur le défaut, en le disant.
+	for choix: Array in [["variante_voxel", IsoNuageVoxel.VARIANTES, IsoNuageVoxel.VARIANTE_PAR_DEFAUT],
+			["encre_voxel", IsoNuageVoxel.ENCRES, IsoNuageVoxel.ENCRE_PAR_DEFAUT],
+			["relief_voxel", IsoNuageVoxel.RELIEFS, IsoNuageVoxel.RELIEF_PAR_DEFAUT]]:
+		if not (choix[1] as Dictionary).has(get(String(choix[0]))):
+			push_warning("[fumée voxel] « %s » inconnu pour %s : « %s »" % [get(String(choix[0])), choix[0], choix[2]])
+			set(String(choix[0]), choix[2])
+	# La preuve de ce qu'une prise dessine : ce que le JEU dit, jamais la commande — les deux états.
 	if fumee_voxel:
-		# La preuve qu'une prise porte l'essai : ce que le JEU dit, jamais la commande.
-		if not IsoNuageVoxel.VARIANTES.has(variante_voxel):
-			variante_voxel = IsoNuageVoxel.VARIANTE_PAR_DEFAUT
-		print("[fumée voxel] essai allumé — voxels « %s » de %.2f px (%s de tuile) : suie, poussière et fumée de la fusée"
+		print("[fumée voxel] voxels « %s » de %.2f px (%s de tuile), encre « %s », relief « %s » : suie, poussière et fumée de la fusée"
 			% [variante_voxel, IsoNuageVoxel.cote_voxel(variante_voxel),
-			"un quart" if variante_voxel == "gros" else "un huitième"])
+			"un quart" if variante_voxel == "gros" else "un huitième", encre_voxel, relief_voxel])
 		IsoNuageVoxel.prechauffer()
+	else:
+		print("[fumée voxel] éteinte (%s) — les couches d'avant" % DRAPEAU_FUMEE_COUCHES)
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
 	# Les deux états s'impriment : une prise prouve le sien par ce que le JEU dit, jamais par la commande.
@@ -803,20 +822,24 @@ func _suivre_toile(g: Node2D, vus: Dictionary) -> void:
 
 
 # ---------------------------------------------------------------------------
-# LA FUMÉE EN VOXELS — chantier « Gadgets en volume », GV1, à l'essai
+# LA FUMÉE EN VOXELS — chantier « Gadgets en volume », GV1 puis GV1bis (le défaut)
 # ---------------------------------------------------------------------------
 
 ## La suie ou la poussière en voxels : la même lecture que ses couches (l'image de la masse, tournée comme elle, son rayon,
-## son opacité rendue — la vie), posée sur la grille de cubes de chaque vue.
+## son opacité rendue — la vie), posée sur la grille de cubes de chaque vue. La forme, le relief et l'encre viennent du
+## DESSIN d'origine (`IsoNuageVoxel.relief` : son alpha, la clarté de ses volutes, ses traits), l'horloge de l'âge du gadget
+## (`age()`, que la killcam rejoue sur sa copie).
 func _suivre_gadget_en_voxels(g: Node2D, slug: String, vus: Dictionary) -> void:
 	var visuel := g.get_node_or_null(^"Visuel") as Sprite2D
 	var e := _entree(g, "nuage_voxel", vus)
-	# La masse passe en aplat tant que ses cubes vivent (`IsoNuageVoxel.aplat` dit pourquoi) ; `_retirer` rend son image.
+	# La masse passe en aplat tant que ses cubes vivent (`IsoNuageVoxel.aplat` dit pourquoi — Q68 : l'aplat reste) ;
+	# `_retirer` rend son image.
 	if visuel != null and not e.has("aplat"):
 		e["aplat"] = visuel
 		e["texture_origine"] = visuel.texture
 		visuel.texture = IsoNuageVoxel.aplat(visuel.texture)
 	var tex: Texture2D = visuel.texture if visuel != null else null
+	var dessin: Texture2D = IsoNuageVoxel.relief(e.get("texture_origine") as Texture2D) if visuel != null else null
 	var demi := float(g.get("rayon")) if "rayon" in g else 60.0
 	if tex != null:
 		demi = maxf(tex.get_width() * absf(visuel.global_scale.x), tex.get_height() * absf(visuel.global_scale.y)) * 0.5
@@ -824,7 +847,7 @@ func _suivre_gadget_en_voxels(g: Node2D, slug: String, vus: Dictionary) -> void:
 	var hauteur := float((VOLUMES[slug] as Dictionary)["hauteur"])
 	e = _suivre_nuage_voxel(g, slug, hauteur, vus)
 	for m: ShaderMaterial in e["mats"]:
-		IsoNuageVoxel.poser_gadget(m, slug, g.global_position, demi, tex, visuel.global_rotation if visuel != null else 0.0,
+		IsoNuageVoxel.poser_gadget(m, slug, g.global_position, demi, dessin, visuel.global_rotation if visuel != null else 0.0,
 			vie, float(g.call("age")) if g.has_method("age") else 0.0)
 	_afficher_nuage(e, vie > 0.0)
 	_poser_juge_nuage(e, g.global_position, demi, vie > 0.0)
@@ -842,7 +865,8 @@ func _suivre_fusee_en_voxels(f: Node2D, vus: Dictionary) -> void:
 	var voile := f.get_node_or_null(^"Voile") as Sprite2D
 	for m: ShaderMaterial in e["mats"]:
 		IsoNuageVoxel.poser_fusee(m, f.global_position, rayon, voile, nappes,
-			maxf(float(f.call("age_combustion")), 0.0) if f.has_method("age_combustion") else 0.0)
+			maxf(float(f.call("age_combustion")), 0.0) if f.has_method("age_combustion") else 0.0,
+			not IsoNuageVoxel.est_gv1(encre_voxel, relief_voxel))
 	_afficher_nuage(e, true)
 	_poser_juge_nuage(e, f.global_position, rayon, true)
 
@@ -872,12 +896,15 @@ func _suivre_nuage_voxel(source: Node2D, type: String, hauteur_tuiles: float, vu
 			mmi.name = "NuageVoxel%d_%d" % [int(id) + 1, source.get_instance_id()]
 			mmi.layers = Presentation3D._calque_de(int(id))
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			var mat := IsoNuageVoxel.materiau(type, int(id), voxel, hauteur_px, PRIORITE_VOLUME)
+			var mat := IsoNuageVoxel.materiau(type, int(id), voxel, hauteur_px, PRIORITE_VOLUME, encre_voxel, relief_voxel)
 			mmi.material_override = mat
 			add_child(mmi)
 			e["noeuds"].append(mmi)
 			e["mats"].append(mat)
 			e["cotes"].append(Vector2i(9, 9))
+	# L'encre et le relief, à chaque image : une bascule des bancs s'applique à l'image suivante, sans refaire le nuage.
+	for m: ShaderMaterial in e["mats"]:
+		IsoNuageVoxel.poser_style(m, encre_voxel, relief_voxel)
 	var origine := IsoNuageVoxel.origine(source.global_position, voxel)
 	for k in (e["noeuds"] as Array).size():
 		var cote := IsoNuageVoxel.cote_camera(_avant_de_la_vue(int(e["vues"][k])))
@@ -945,12 +972,17 @@ func _poser_juge_nuage(e: Dictionary, centre: Vector2, rayon: float, visible: bo
 	m.set_shader_parameter("juge_hauteurs", Vector4(0.0, haut / 3.0, 2.0 * haut / 3.0, haut))
 
 
-## GV1 — la bascule des bancs : la fumée en voxels allumée ou éteinte, et sa variante, sur place. Les nuages déjà suivis se
-## refont à l'image suivante (leur genre ou leur variante a changé) : couches et voxels se comparent dans la même partie.
-func poser_fumee_voxel(actif: bool, variante := "") -> void:
+## GV1 et GV1bis — la bascule des bancs : la fumée en voxels ou en couches, sa taille de voxel, son encre et son relief, sur
+## place. Les nuages déjà suivis se refont à l'image suivante (leur genre ou leur taille a changé), ou changent d'encre et
+## de relief sans se refaire : couches, voxels et encres se comparent dans la même image de jeu. Un nom vide garde le choix.
+func poser_fumee_voxel(actif: bool, variante := "", encre := "", relief := "") -> void:
 	fumee_voxel = actif
 	if variante != "" and IsoNuageVoxel.VARIANTES.has(variante):
 		variante_voxel = variante
+	if encre != "" and IsoNuageVoxel.ENCRES.has(encre):
+		encre_voxel = encre
+	if relief != "" and IsoNuageVoxel.RELIEFS.has(relief):
+		relief_voxel = relief
 
 
 # ---------------------------------------------------------------------------

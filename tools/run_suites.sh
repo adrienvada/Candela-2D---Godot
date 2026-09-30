@@ -249,9 +249,10 @@ SUITES+=(test_carton_de_fin test_carton_transition test_allumage_unique)
 # L2, la lumière qui part de la lampe du modèle ; L3, le point lumineux (Q46). Hors de la liste, même raison.
 SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_point_lumineux)
 
-# Chantier « Gadgets en volume », GV1 (2026-09-30, Adrien : « tous les gadgets […] davantage en 3D ») : la fumée en voxels, À
-# L'ESSAI et éteinte par défaut. Sans drapeau : le jeu d'avant (les couches, aucun nœud de voxels, le shader jamais chargé),
-# puis l'essai par la bascule des bancs. La même suite repasse plus bas SOUS le drapeau, lu au lancement. Hors de la liste,
+# Chantier « Gadgets en volume » (2026-09-30, Adrien : « tous les gadgets […] davantage en 3D ») : la fumée en VOXELS, LE
+# DÉFAUT depuis GV1bis (Q67 : « Oui la fumée en gros »). Sans drapeau : les voxels « gros », au relief du dessin et à
+# l'encre du roman graphique, puis les couches et chaque encre par la bascule des bancs. La même suite repasse plus bas
+# sous `--fumee-couches` (le jeu d'avant, lu au lancement) et sous les trois choix lus au lancement. Hors de la liste,
 # même raison que les lignes du dessus.
 SUITES+=(test_fumee_voxel)
 
@@ -419,9 +420,11 @@ done
 # la vue de dessus, relus un par un — jamais pour faire taire un défaut de l'iso.
 SUITES_2D=(test_tir_et_reserves)
 for t in "${SUITES_2D[@]}"; do run "$t" --script "res://tools/$t.gd" -- --2d; done
-# GV1 — la fumée en voxels SOUS son drapeau, en variante fine : lu par la porte commune des drapeaux au lancement, et non
-# basculé par un banc (la variante d'un nuage né sous le drapeau est celle du drapeau).
-run test_fumee_voxel_drapeau --script "res://tools/test_fumee_voxel.gd" -- --fumee-voxel-essai=fin
+# GV1bis — la fumée SOUS ses drapeaux, lus par la porte commune des drapeaux au lancement et non basculés par un banc :
+# le retour aux couches d'avant (le shader des voxels jamais chargé), puis la taille fine, les hachures et le relief du
+# bruit ensemble (le choix d'un nuage né sous un drapeau est celui du drapeau).
+run test_fumee_voxel_couches --script "res://tools/test_fumee_voxel.gd" -- --fumee-couches
+run test_fumee_voxel_drapeaux --script "res://tools/test_fumee_voxel.gd" -- --fumee-voxels=fin --fumee-encre=hachures --fumee-relief=bruit
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).

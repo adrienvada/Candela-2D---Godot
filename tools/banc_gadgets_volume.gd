@@ -21,15 +21,17 @@
 ## - `avant` (GV0) — les dix gadgets posés par le VRAI chemin (`GameState._do_spawn_gadget`, par J2), plus la fusée en
 ##   vol, au plein feu, en braise, au résidu et en panache ; chacun sous la torche de J1 (ses propres lumières gardées),
 ##   puis dans le noir (toutes les lumières éteintes). Deux vignettes par prise : la vue de J1 et celle de J2.
-## - `nuages` (GV1) — suie, poussière et fumée de fusée à plusieurs instants de leur vie, chacun rendu trois fois dans la
-##   MÊME image de jeu (temps figé) : couches d'aujourd'hui, voxels gros, voxels fins.
-## - `noir` (GV1) — la preuve du noir À L'ÉCRAN : le nuage dont une moitié est sous la torche et l'autre dans le noir, pris
-##   sans voxels, avec, puis sans encore (temps figé, LED coupées, corps cachés) ; un pixel noir sans le volume, sous
-##   l'emprise des cubes, et allumé avec, est une fuite. Le même relevé masque COUPÉ doit en trouver quelque part (sinon le
-##   zéro est vide).
-## - `cout` (GV1) — couches contre voxels, sur la même scène figée (fusée posée, suie, poussière) : la SURFACE COUVERTE
-##   (les fragments que rastérisent les images du nuage, comptés par le GPU, dans chaque vue de l'écran scindé), les appels
-##   de dessin, les primitives et le temps d'image médian.
+## - `nuages` (GV1, GV1bis) — suie, poussière et fumée de fusée à plusieurs instants de leur vie, chacun rendu dans la
+##   MÊME image de jeu (temps figé) sous chaque rendu de `RENDUS` : les couches d'aujourd'hui, les voxels gros de GV1, ceux
+##   de GV1bis sans encre, puis sous chacune des trois encres du roman graphique (arêtes, volutes, hachures).
+## - `noir` (GV1, GV1bis) — la preuve du noir À L'ÉCRAN : le nuage dont une moitié est sous la torche et l'autre dans le
+##   noir, pris sans voxels, avec, puis sans encore (temps figé, LED coupées, corps cachés) ; un pixel noir sans le volume,
+##   sous l'emprise des cubes, et allumé avec, est une fuite. Un témoin (des cubes qui s'allumeraient partout) prouve que le
+##   détecteur n'est pas aveugle. Et « ALLUMÉ RESTE ALLUMÉ » (GV1bis) : chaque encre contre les mêmes cubes sans encre —
+##   aucun pixel éclairé éteint —, contre un témoin sans plancher.
+## - `cout` (GV1, GV1bis) — couches contre voxels, sur la même scène figée (fusée posée, suie, poussière) : la SURFACE
+##   COUVERTE (les fragments que rastérisent les images du nuage, comptés par le GPU, dans chaque vue de l'écran scindé),
+##   les appels de dessin, les primitives et le temps d'image médian, pour chaque rendu de `RENDUS_COUT`.
 ##
 ## Relevés : lignes `BANC_GV …` au journal et `releves.txt` dans le dossier des prises (`--captures <dossier>`, défaut
 ## `user://gadgets_volume`). Planches : `docs/iso/gadgets_volume/planche_gv.py`.
@@ -264,14 +266,30 @@ func _traverser(g: Node2D, rayon: float) -> void:
 
 # ─── GV1 : les nuages, couches contre voxels ─────────────────────────────────
 
-## Les rendus comparés, dans la MÊME image de jeu : les couches d'aujourd'hui, puis les deux variantes de voxels.
-const RENDUS := [["couches", false, ""], ["gros", true, "gros"], ["fin", true, "fin"]]
+## Les rendus comparés, dans la MÊME image de jeu : [nom, voxels ?, taille, encre, relief]. Les couches d'aujourd'hui ;
+## les voxels gros de GV1 (le trait clair des côtés, le relief du bruit) ; ceux de GV1bis (le relief du dessin), sans encre
+## puis sous chacune des trois encres du roman graphique.
+const RENDUS := [["couches", false, "", "", ""], ["gv1", true, "gros", "cotes", "bruit"],
+	["sans_encre", true, "gros", "aucune", "dessin"], ["aretes", true, "gros", "aretes", "dessin"],
+	["volutes", true, "gros", "volutes", "dessin"], ["hachures", true, "gros", "hachures", "dessin"]]
+## La preuve du noir : chaque encre de GV1bis, et la taille fine sous l'encre par défaut.
+const RENDUS_NOIR := [["aretes", true, "gros", "aretes", "dessin"], ["volutes", true, "gros", "volutes", "dessin"],
+	["hachures", true, "gros", "hachures", "dessin"], ["fin", true, "fin", IsoNuageVoxel.ENCRE_PAR_DEFAUT, "dessin"]]
+## Le coût : les couches, GV1, les trois encres de GV1bis ; la taille fine pour la surface seulement.
+const RENDUS_COUT := [["couches", false, "", "", ""], ["gv1", true, "gros", "cotes", "bruit"],
+	["aretes", true, "gros", "aretes", "dessin"], ["volutes", true, "gros", "volutes", "dessin"],
+	["hachures", true, "gros", "hachures", "dessin"], ["fin", true, "fin", IsoNuageVoxel.ENCRE_PAR_DEFAUT, "dessin"]]
+
+
+func _poser_rendu(rendu: Array) -> void:
+	_volumes.poser_fumee_voxel(bool(rendu[1]), String(rendu[2]), String(rendu[3]), String(rendu[4]))
 
 
 func _nuages() -> void:
-	# La suie (9 s de vie) et la poussière (7,5 s) : la naissance (montée sur 12 % de la vie), pleine, la dissipation.
-	for nuage: Array in [["cartouche_suie", [0.45, 2.5, 7.3, 8.4], COTE_NUAGE, DISTANCE_J1, DISTANCE_J2],
-			["poussiere", [0.4, 2.0, 5.9, 6.9], COTE_NUAGE + 140.0, 215.0, 215.0]]:
+	# La suie (9 s de vie) et la poussière (7,5 s) : la naissance (montée sur 12 % de la vie), pleine, pleine deux secondes plus
+	# tard (la dérive lente du relief et du trait, à nuage égal), la dissipation.
+	for nuage: Array in [["cartouche_suie", [0.45, 2.5, 5.0, 7.3], COTE_NUAGE, DISTANCE_J1, DISTANCE_J2],
+			["poussiere", [0.4, 2.0, 4.0, 5.9], COTE_NUAGE + 140.0, 215.0, 215.0]]:
 		var slug: String = nuage[0]
 		if _seulement != "" and _seulement != slug:
 			continue
@@ -352,7 +370,7 @@ func _prendre_rendus(nom: String, cote: float, sujets: Array, tenir := Callable(
 		# Dans le noir, une seconde : la lueur de la suie (lissée sur 0,1 s) retombe, comme en jeu.
 		await _tenir_images(30 if _torche else 60, tenir)
 		for rendu: Array in RENDUS:
-			_volumes.poser_fumee_voxel(bool(rendu[1]), String(rendu[2]))
+			_poser_rendu(rendu)
 			await _tenir_images(5, tenir)
 			var img := get_viewport().get_texture().get_image()
 			for pid in 2:
@@ -394,8 +412,14 @@ func _noir() -> void:
 		_caches_fixes.append(corps)
 	var total_sans_masque := 0
 	var total_temoin := 0
+	var total_assombris := 0
+	var total_sombres_assombris := 0
+	var total_temoin_encre := 0
 	for c: Array in cas:
 		var nom: String = c[0]
+		# `--seulement=<cas>` : un seul cas (le préfixe de son nom), pour un essai rapide.
+		if _seulement != "" and not nom.begins_with(_seulement):
+			continue
 		_placer_les_joueurs(float(c[3]), float(c[4]))
 		_visee = _lieu + (c[2] as Vector2)
 		await _images(90)
@@ -441,8 +465,9 @@ func _noir() -> void:
 			_sauver(m["b"], "noir_%s_couches_avec_j%d" % [nom, pid + 1])
 			_sauver(m["a"], "noir_%s_couches_sans_j%d" % [nom, pid + 1])
 			_sauver(m["carte"], "noir_%s_couches_fuites_j%d" % [nom, pid + 1])
-		for variante in ["gros", "fin"]:
-			_volumes.poser_fumee_voxel(true, variante)
+		for rendu: Array in RENDUS_NOIR:
+			var variante := String(rendu[0])
+			_poser_rendu(rendu)
 			await _tenir_images(6, tenir)
 			var avec := await _sandwich(tenir)
 			var emprise := await _emprise(tenir)
@@ -481,6 +506,36 @@ func _noir() -> void:
 				if int(m["fuites_2"]) > 0:
 					_echouer("%s %s J%d : %d fuites au-delà de 2/255 (pixels noirs allumés par les cubes)" % [nom, variante,
 						pid + 1, m["fuites_2"]])
+			# « ALLUMÉ RESTE ALLUMÉ » — même géométrie (la taille grosse), seule l'encre change. Cinq prises, L'ARBRE EN PAUSE
+			# (`_prises_encre_figees`) : SANS encre, AVEC, le TÉMOIN (la même encre sans son plancher ni sa lumière : un trait
+			# noir d'encre pure), SANS encre encore, AVEC encore. Un pixel n'est jugé que s'il est STABLE d'une prise sans encre
+			# à l'autre ET d'une prise avec encre à l'autre. Aucun pixel éclairé (8/255 et plus) ne doit tomber sous 8/255 en
+			# perdant 3/255 au moins ; les pixels SOMBRES (sous le plancher à l'écran) que l'encre assombrit encore se comptent
+			# contre le témoin.
+			if String(rendu[2]) == "gros":
+				var prises := await _prises_encre_figees(variante, tenir)
+				var sans1: Image = prises[0]
+				var avec_encre: Image = prises[1]
+				var noire: Image = prises[2]
+				var sans2: Image = prises[3]
+				var avec2: Image = prises[4]
+				_poser_rendu(rendu)
+				await _tenir_images(4, tenir)
+				for pid in 2:
+					var cote := COTE_FUSEE if nom.begins_with("fusee") else COTE_NUAGE + 140.0
+					var al := _allumes_eteints(sans1, avec_encre, sans2, avec2, pid, cote)
+					# Le témoin n'a qu'une prise : il n'est tenu que par la stabilité des prises sans encre.
+					var tn := _allumes_eteints(sans1, noire, sans2, noire, pid, cote)
+					_releve("allume cas=%s variante=%s vue=J%d stables=%d eclaires=%d assombris=%d eteints=%d sombres=%d sombres_assombris=%d plus_sombre=%d | temoin_sans_plancher: eteints=%d sombres_assombris=%d" % [
+						nom, variante, pid + 1, al["stables"], al["eclaires"], al["assombris"], al["eteints"], al["sombres"],
+						al["sombres_assombris"], al["plus_sombre"], tn["eteints"], tn["sombres_assombris"]])
+					total_assombris += int(al["assombris"])
+					total_sombres_assombris += int(al["sombres_assombris"])
+					total_temoin_encre += int(tn["sombres_assombris"])
+					if pid == 0:
+						_sauver(_recadrer(avec_encre, _lieu, pid, cote), "allume_%s_%s_avec_j1" % [nom, variante])
+					if int(al["eteints"]) > 0:
+						_echouer("%s %s J%d : %d pixels allumés éteints par l'encre" % [nom, variante, pid + 1, al["eteints"]])
 		_volumes.poser_fumee_voxel(false)
 		_torche = false
 		_visee = Vector2.ZERO
@@ -493,6 +548,12 @@ func _noir() -> void:
 	_releve("noir total_masque_coupe_fuites_sup2=%d total_temoin_fuites_sup2=%d" % [total_sans_masque, total_temoin])
 	if total_temoin == 0:
 		_echouer("le témoin ne montre aucune fuite : le détecteur serait aveugle, la preuve vide")
+	_releve("allume total_assombris=%d total_sombres_assombris=%d total_temoin_sombres_assombris=%d" % [total_assombris,
+		total_sombres_assombris, total_temoin_encre])
+	if total_assombris == 0:
+		_echouer("aucune encre n'a assombri un pixel : la preuve « allumé reste allumé » serait vide")
+	if total_temoin_encre <= total_sombres_assombris:
+		_echouer("le témoin sans plancher n'assombrit pas plus de pixels sombres que l'encre : le détecteur serait aveugle")
 
 
 ## L'EMPRISE des cubes : la même image de jeu, les cubes dessinés au COMPTEUR (sans pochoir, en addition : voir `_compteur`).
@@ -588,6 +649,97 @@ func _fuites(images: Array, pid: int, cote: float, emprise: Image) -> Dictionary
 		"instables": instables, "fuites": fuites, "fuites_2": fuites_2, "fuites_8": fuites_8}
 
 
+## Les cinq prises de « allumé reste allumé », L'ARBRE EN PAUSE : ni le jeu ni la présentation ne bougent d'une prise à
+## l'autre, seul l'uniforme de l'encre change sur les matériaux des cubes — sans encre, avec, le TÉMOIN (sans plancher ni
+## lumière), sans encre encore, avec encore. ⚠️ Deux passages sans pause ont compté des « éteints » qui n'étaient pas de
+## l'encre : le premier comparait deux images (la scène scintille : un pixel sur cinq d'une image à l'autre, jusqu'à un sur
+## quatre autour de la fusée) ; le second, qui ne jugeait que les pixels stables dans chaque paire de prises, en a encore
+## trouvé trois dans une seule vue d'une seule scène — un scintillement en phase dans chaque paire (espacée de douze images)
+## et pas d'une paire à l'autre (quatre images). Arbre en pause, les deux prises sans encre sont identiques au pixel près.
+func _prises_encre_figees(encre: String, tenir: Callable) -> Array:
+	_poser_rendu(["prise", true, "gros", encre, "dessin"])
+	await _tenir_images(6, tenir)
+	var mats := _materiaux_des_cubes()
+	var style := int(IsoNuageVoxel.ENCRES[encre])
+	var arbre := get_tree()
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	arbre.paused = true
+	var out := []
+	for prise: Array in [[-1, false], [style, false], [style, true], [-1, false], [style, false]]:
+		for m in mats:
+			var sm := m as ShaderMaterial
+			sm.set_shader_parameter("encre_style", int(prise[0]))
+			sm.set_shader_parameter("trait_plancher", 0.0 if bool(prise[1]) else IsoMateriaux.ENCRE_PLANCHER_AFFICHE)
+			sm.set_shader_parameter("trait_reste", 0.0 if bool(prise[1]) else IsoNuageVoxel.TRAIT_RESTE)
+		await _images(3)
+		out.append(get_viewport().get_texture().get_image())
+	arbre.paused = false
+	return out
+
+
+## Les SOMBRES de « allumé reste allumé » : éclairés sous `SOMBRE_ECRAN` — sous le plancher de l'encre à l'écran (16/255 en
+## valeur affichée : ~71/255 écrit, × l'opacité d'un cube, 0,7 au moins), une face n'a pas de trait ; ceux que l'encre
+## assombrit quand même ne sont que des bords anticrénelés (une face claire à peine couverte), et le témoin sans plancher
+## doit en assombrir bien plus.
+const SOMBRE_ECRAN := 48
+
+
+## « ALLUMÉ RESTE ALLUMÉ » dans la vue `pid` : entre les prises SANS encre (`sans1`, `sans2`) et les prises AVEC (`avec`,
+## `avec2` : la même image de jeu, les mêmes cubes — seule l'encre change, donc seuls les pixels des cubes peuvent
+## différer). Un pixel n'est jugé que s'il est le même dans `sans1` et `sans2` ET dans `avec` et `avec2` : un pixel qui
+## scintille n'est pas jugé. Les pixels éclairés (8/255 et plus sur un canal, sans encre), ceux que l'encre assombrit (de
+## 3/255 au moins), ceux qu'elle ÉTEINT (assombris ET sous 8/255 avec elle), et la plus sombre valeur qu'elle laisse à un
+## pixel qu'elle assombrit.
+func _allumes_eteints(sans1: Image, avec: Image, sans2: Image, avec2: Image, pid: int, cote: float) -> Dictionary:
+	var a := _recadrer(sans1, _lieu, pid, cote)
+	var b := _recadrer(avec, _lieu, pid, cote)
+	var a2 := _recadrer(sans2, _lieu, pid, cote)
+	var b2 := _recadrer(avec2, _lieu, pid, cote)
+	for im in [a, b, a2, b2]:
+		(im as Image).convert(Image.FORMAT_RGB8)
+	var da := a.get_data()
+	var db := b.get_data()
+	var da2 := a2.get_data()
+	var db2 := b2.get_data()
+	var stables := 0
+	var eclaires := 0
+	var assombris := 0
+	var eteints := 0
+	var sombres := 0
+	var sombres_assombris := 0
+	var plus_sombre := 255
+	for k in range(0, mini(mini(da.size(), db.size()), mini(da2.size(), db2.size())), 3):
+		if da[k] != da2[k] or da[k + 1] != da2[k + 1] or da[k + 2] != da2[k + 2]:
+			continue
+		if db[k] != db2[k] or db[k + 1] != db2[k + 1] or db[k + 2] != db2[k + 2]:
+			continue
+		stables += 1
+		var ma := maxi(da[k], maxi(da[k + 1], da[k + 2]))
+		if ma < 8:
+			continue
+		eclaires += 1
+		var mb := maxi(db[k], maxi(db[k + 1], db[k + 2]))
+		if mb + 3 <= ma:
+			assombris += 1
+			plus_sombre = mini(plus_sombre, mb)
+			if mb < 8:
+				eteints += 1
+		if ma < SOMBRE_ECRAN:
+			sombres += 1
+			if mb + 3 <= ma:
+				sombres_assombris += 1
+	return {"stables": stables, "eclaires": eclaires, "assombris": assombris, "eteints": eteints, "sombres": sombres,
+		"sombres_assombris": sombres_assombris, "plus_sombre": plus_sombre}
+
+
+func _materiaux_des_cubes() -> Array:
+	var out := []
+	for c in _volumes.get_children():
+		if c is MultiMeshInstance3D and not c.is_queued_for_deletion():
+			out.append((c as MultiMeshInstance3D).material_override)
+	return out
+
+
 # ─── GV1 : le coût ───────────────────────────────────────────────────────────
 
 ## LE COÛT, sur la même scène figée pour tous les rendus (le sujet à son âge, les deux corps immobiles, les caméras posées,
@@ -632,8 +784,8 @@ func _cout() -> void:
 		_lumieres_gardees = _lumieres_des([sujet])
 		await _tenir_images(40, tenir)
 		# 1. La surface couverte, rendu par rendu.
-		for rendu: Array in RENDUS:
-			_volumes.poser_fumee_voxel(bool(rendu[1]), String(rendu[2]))
+		for rendu: Array in RENDUS_COUT:
+			_poser_rendu(rendu)
 			await _tenir_images(10, tenir)
 			var mesure := await _surface(sujet, tenir)
 			for pid in 2:
@@ -655,8 +807,9 @@ func _cout() -> void:
 		_lumieres_gardees = _lumieres_des([sujet])
 		await _tenir_images(30, tenir)
 		for tour in 2:
-			for rendu: Array in [["sans_le_nuage", false, ""]] + RENDUS:
-				_volumes.poser_fumee_voxel(bool(rendu[1]), String(rendu[2]))
+			for rendu: Array in [["sans_le_nuage", false, "", "", ""]] + RENDUS_COUT.filter(
+					func(r): return String(r[0]) != "fin"):
+				_poser_rendu(rendu)
 				await _tenir_images(20, tenir)
 				# La référence : la même image sans le nuage — ses couches et son juge cachés juste avant chaque rendu, tout le
 				# reste (les autres images de la présentation, la lightmap) inchangé.

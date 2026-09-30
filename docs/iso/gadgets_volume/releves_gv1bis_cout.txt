@@ -1,0 +1,83 @@
+etalon vue=J1 aire=16061 somme=68980 unite=4.295 mode_des_ecarts=4
+etalon vue=J2 aire=16061 somme=64244 unite=4.000 mode_des_ecarts=4
+surface scene=fusee rendu=couches vue=J1 fragments=1398150 images=1077201 juge=320949 empreinte=336677 aire_couches=1112726 cubes=0 histogramme=[43792,40833,42220,209701,42,1,0,88]
+compteur scene=fusee vue=J1 mesure/aire=0.968
+surface scene=fusee rendu=couches vue=J2 fragments=1500695 images=1155964 juge=344731 empreinte=334977 aire_couches=1113137 cubes=0 histogramme=[45672,35348,37670,216287,0,0,0,0]
+compteur scene=fusee vue=J2 mesure/aire=1.038
+surface scene=fusee rendu=gv1 vue=J1 fragments=567880 images=167777 juge=400103 empreinte=140494 aire_couches=0 cubes=18272 histogramme=[112612,23047,4145,547,50,1,5,87]
+surface scene=fusee rendu=gv1 vue=J2 fragments=609147 images=178056 juge=431091 empreinte=143100 aire_couches=0 cubes=18272 histogramme=[110443,27506,4624,502,25,0,0,0]
+surface scene=fusee rendu=aretes vue=J1 fragments=563358 images=163286 juge=400072 empreinte=138680 aire_couches=0 cubes=18272 histogramme=[115207,18053,3861,1309,164,2,3,81]
+surface scene=fusee rendu=aretes vue=J2 fragments=602967 images=171876 juge=431091 empreinte=140455 aire_couches=0 cubes=18272 histogramme=[111575,23939,4204,699,38,0,0,0]
+surface scene=fusee rendu=volutes vue=J1 fragments=563450 images=163229 juge=400221 empreinte=138687 aire_couches=0 cubes=18272 histogramme=[115209,18052,3866,1309,166,5,8,72]
+surface scene=fusee rendu=volutes vue=J2 fragments=602967 images=171876 juge=431091 empreinte=140455 aire_couches=0 cubes=18272 histogramme=[111575,23939,4204,699,38,0,0,0]
+surface scene=fusee rendu=hachures vue=J1 fragments=563115 images=162998 juge=400117 empreinte=138674 aire_couches=0 cubes=18272 histogramme=[115211,18052,3862,1310,183,6,6,44]
+surface scene=fusee rendu=hachures vue=J2 fragments=602967 images=171876 juge=431091 empreinte=140455 aire_couches=0 cubes=18272 histogramme=[111575,23939,4204,699,38,0,0,0]
+surface scene=fusee rendu=fin vue=J1 fragments=590632 images=199980 juge=390652 empreinte=147482 aire_couches=0 cubes=138400 histogramme=[114619,20436,6624,2947,1708,790,282,76]
+surface scene=fusee rendu=fin vue=J2 fragments=633579 images=212777 juge=420802 empreinte=151404 aire_couches=0 cubes=138400 histogramme=[107439,29437,7735,4415,1717,470,121,70]
+cout scene=fusee tour=1 rendu=sans_le_nuage appels=174 primitives=11408 image_ms_mediane=556.1 image_ms_p90=611.7 cubes=0
+cout scene=fusee tour=1 rendu=couches appels=184 primitives=11456 image_ms_mediane=691.6 image_ms_p90=726.0 cubes=0
+cout scene=fusee tour=1 rendu=gv1 appels=178 primitives=121072 image_ms_mediane=659.3 image_ms_p90=726.8 cubes=18272
+cout scene=fusee tour=1 rendu=aretes appels=178 primitives=121072 image_ms_mediane=638.4 image_ms_p90=690.9 cubes=18272
+cout scene=fusee tour=1 rendu=volutes appels=178 primitives=121072 image_ms_mediane=637.4 image_ms_p90=674.3 cubes=18272
+cout scene=fusee tour=1 rendu=hachures appels=178 primitives=121072 image_ms_mediane=621.0 image_ms_p90=649.9 cubes=18272
+cout scene=fusee tour=2 rendu=sans_le_nuage appels=174 primitives=11408 image_ms_mediane=554.1 image_ms_p90=601.3 cubes=0
+cout scene=fusee tour=2 rendu=couches appels=184 primitives=11456 image_ms_mediane=688.2 image_ms_p90=734.9 cubes=0
+cout scene=fusee tour=2 rendu=gv1 appels=178 primitives=121072 image_ms_mediane=645.3 image_ms_p90=706.7 cubes=18272
+cout scene=fusee tour=2 rendu=aretes appels=178 primitives=121072 image_ms_mediane=644.7 image_ms_p90=701.2 cubes=18272
+cout scene=fusee tour=2 rendu=volutes appels=178 primitives=121072 image_ms_mediane=629.6 image_ms_p90=665.0 cubes=18272
+cout scene=fusee tour=2 rendu=hachures appels=178 primitives=121072 image_ms_mediane=640.4 image_ms_p90=684.6 cubes=18272
+pose=cartouche_suie noeud=GadgetJ2_9680
+surface scene=suie rendu=couches vue=J1 fragments=287543 images=212404 juge=75139 empreinte=67104 aire_couches=214503 cubes=0 histogramme=[9481,8750,8033,40706,33,4,2,95]
+compteur scene=suie vue=J1 mesure/aire=0.990
+surface scene=suie rendu=couches vue=J2 fragments=307228 images=226646 juge=80582 empreinte=67314 aire_couches=214503 cubes=0 histogramme=[9498,8777,7907,41132,0,0,0,0]
+compteur scene=suie vue=J2 mesure/aire=1.057
+surface scene=suie rendu=gv1 vue=J1 fragments=167764 images=55932 juge=111832 empreinte=49294 aire_couches=0 cubes=2248 histogramme=[40351,8450,476,0,17,0,0,0]
+surface scene=suie rendu=gv1 vue=J2 fragments=180310 images=60125 juge=120185 empreinte=49530 aire_couches=0 cubes=2248 histogramme=[38756,9994,766,14,0,0,0,0]
+surface scene=suie rendu=aretes vue=J1 fragments=173491 images=61329 juge=112162 empreinte=49278 aire_couches=0 cubes=2248 histogramme=[36016,11760,1416,41,42,0,0,3]
+surface scene=suie rendu=aretes vue=J2 fragments=184929 images=64744 juge=120185 empreinte=49135 aire_couches=0 cubes=2248 histogramme=[34634,12523,1897,81,0,0,0,0]
+surface scene=suie rendu=volutes vue=J1 fragments=174051 images=62105 juge=111946 empreinte=49337 aire_couches=0 cubes=2248 histogramme=[36019,11757,1412,31,32,0,1,85]
+surface scene=suie rendu=volutes vue=J2 fragments=184929 images=64744 juge=120185 empreinte=49135 aire_couches=0 cubes=2248 histogramme=[34634,12523,1897,81,0,0,0,0]
+surface scene=suie rendu=hachures vue=J1 fragments=174041 images=61973 juge=112068 empreinte=49331 aire_couches=0 cubes=2248 histogramme=[36020,11759,1411,29,34,0,6,72]
+surface scene=suie rendu=hachures vue=J2 fragments=184929 images=64744 juge=120185 empreinte=49135 aire_couches=0 cubes=2248 histogramme=[34634,12523,1897,81,0,0,0,0]
+surface scene=suie rendu=fin vue=J1 fragments=169997 images=64900 juge=105097 empreinte=49776 aire_couches=0 cubes=15488 histogramme=[36596,10202,2376,519,71,12,0,0]
+surface scene=suie rendu=fin vue=J2 fragments=182147 images=69443 juge=112704 empreinte=49817 aire_couches=0 cubes=15488 histogramme=[34129,11258,3372,935,118,5,0,0]
+cout scene=suie tour=1 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=473.6 image_ms_p90=506.2 cubes=0
+cout scene=suie tour=1 rendu=couches appels=166 primitives=11284 image_ms_mediane=495.8 image_ms_p90=520.4 cubes=0
+cout scene=suie tour=1 rendu=gv1 appels=160 primitives=24756 image_ms_mediane=492.4 image_ms_p90=523.7 cubes=2248
+cout scene=suie tour=1 rendu=aretes appels=160 primitives=24756 image_ms_mediane=496.1 image_ms_p90=521.1 cubes=2248
+cout scene=suie tour=1 rendu=volutes appels=160 primitives=24756 image_ms_mediane=488.3 image_ms_p90=537.0 cubes=2248
+cout scene=suie tour=1 rendu=hachures appels=160 primitives=24756 image_ms_mediane=485.5 image_ms_p90=524.4 cubes=2248
+cout scene=suie tour=2 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=464.1 image_ms_p90=495.9 cubes=0
+cout scene=suie tour=2 rendu=couches appels=166 primitives=11284 image_ms_mediane=498.0 image_ms_p90=553.1 cubes=0
+cout scene=suie tour=2 rendu=gv1 appels=160 primitives=24756 image_ms_mediane=493.0 image_ms_p90=521.7 cubes=2248
+cout scene=suie tour=2 rendu=aretes appels=160 primitives=24756 image_ms_mediane=509.8 image_ms_p90=546.5 cubes=2248
+cout scene=suie tour=2 rendu=volutes appels=160 primitives=24756 image_ms_mediane=523.9 image_ms_p90=589.4 cubes=2248
+cout scene=suie tour=2 rendu=hachures appels=160 primitives=24756 image_ms_mediane=503.4 image_ms_p90=560.0 cubes=2248
+pose=poussiere noeud=GadgetJ2_9681
+surface scene=poussiere rendu=couches vue=J1 fragments=711899 images=527225 juge=184674 empreinte=221176 aire_couches=537364 cubes=0 histogramme=[46149,40063,134864,8,58,17,3,14]
+compteur scene=poussiere vue=J1 mesure/aire=0.981
+surface scene=poussiere rendu=couches vue=J2 fragments=762273 images=564356 juge=197917 empreinte=220561 aire_couches=537363 cubes=0 histogramme=[45240,39537,135784,0,0,0,0,0]
+compteur scene=poussiere vue=J2 mesure/aire=1.050
+surface scene=poussiere rendu=gv1 vue=J1 fragments=403206 images=149769 juge=253437 empreinte=152162 aire_couches=0 cubes=4352 histogramme=[145784,6183,54,5,34,4,3,95]
+surface scene=poussiere rendu=gv1 vue=J2 fragments=431555 images=159459 juge=272096 empreinte=152742 aire_couches=0 cubes=4352 histogramme=[145029,7639,74,0,0,0,0,0]
+surface scene=poussiere rendu=aretes vue=J1 fragments=414189 images=160524 juge=253665 empreinte=151644 aire_couches=0 cubes=4352 histogramme=[135210,15353,952,6,32,4,8,79]
+surface scene=poussiere rendu=aretes vue=J2 fragments=442912 images=170820 juge=272092 empreinte=151708 aire_couches=0 cubes=4352 histogramme=[131981,18385,1342,0,0,0,0,0]
+surface scene=poussiere rendu=volutes vue=J1 fragments=413865 images=160411 juge=253454 empreinte=151642 aire_couches=0 cubes=4352 histogramme=[135213,15352,955,4,40,4,8,66]
+surface scene=poussiere rendu=volutes vue=J2 fragments=442913 images=170820 juge=272093 empreinte=151708 aire_couches=0 cubes=4352 histogramme=[131981,18385,1342,0,0,0,0,0]
+surface scene=poussiere rendu=hachures vue=J1 fragments=413819 images=160301 juge=253518 empreinte=151637 aire_couches=0 cubes=4352 histogramme=[135213,15356,953,2,48,6,7,52]
+surface scene=poussiere rendu=hachures vue=J2 fragments=442913 images=170820 juge=272093 empreinte=151708 aire_couches=0 cubes=4352 histogramme=[131981,18385,1342,0,0,0,0,0]
+surface scene=poussiere rendu=fin vue=J1 fragments=383562 images=162212 juge=221350 empreinte=155710 aire_couches=0 cubes=24088 histogramme=[141830,13235,560,0,53,13,5,14]
+surface scene=poussiere rendu=fin vue=J2 fragments=410570 images=173327 juge=237243 empreinte=156059 aire_couches=0 cubes=24088 histogramme=[136776,18187,1093,3,0,0,0,0]
+cout scene=poussiere tour=1 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=504.2 image_ms_p90=565.0 cubes=0
+cout scene=poussiere tour=1 rendu=couches appels=164 primitives=11280 image_ms_mediane=548.4 image_ms_p90=593.4 cubes=0
+cout scene=poussiere tour=1 rendu=gv1 appels=160 primitives=37380 image_ms_mediane=524.2 image_ms_p90=564.0 cubes=4352
+cout scene=poussiere tour=1 rendu=aretes appels=160 primitives=37380 image_ms_mediane=531.3 image_ms_p90=576.0 cubes=4352
+cout scene=poussiere tour=1 rendu=volutes appels=160 primitives=37380 image_ms_mediane=515.4 image_ms_p90=557.5 cubes=4352
+cout scene=poussiere tour=1 rendu=hachures appels=160 primitives=37380 image_ms_mediane=516.9 image_ms_p90=569.1 cubes=4352
+cout scene=poussiere tour=2 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=483.2 image_ms_p90=506.6 cubes=0
+cout scene=poussiere tour=2 rendu=couches appels=164 primitives=11280 image_ms_mediane=538.2 image_ms_p90=577.4 cubes=0
+cout scene=poussiere tour=2 rendu=gv1 appels=160 primitives=37380 image_ms_mediane=523.8 image_ms_p90=579.3 cubes=4352
+cout scene=poussiere tour=2 rendu=aretes appels=160 primitives=37380 image_ms_mediane=519.3 image_ms_p90=564.1 cubes=4352
+cout scene=poussiere tour=2 rendu=volutes appels=160 primitives=37380 image_ms_mediane=528.8 image_ms_p90=572.0 cubes=4352
+cout scene=poussiere tour=2 rendu=hachures appels=160 primitives=37380 image_ms_mediane=546.0 image_ms_p90=599.3 cubes=4352
+VERDICT=OK echecs=0

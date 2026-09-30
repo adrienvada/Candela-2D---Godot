@@ -22,7 +22,9 @@ const SONDE := "--sonde-drapeaux"
 const DRAPEAUX := ["--sans-usure", "--sans-beaute", "--encre-essai", "--pochoirs-essai",
 	"--sans-fusee-rouge-long", "--mannequin", "--corps-detaille", "--corps=portraits",
 	"--menus=ancien", "--sans-led-murs", "--faisceau", "--sans-fumee-masque", "--lacet=0",
-	"--sans-corps-soi-sombre", "--sans-fusee-rouge-sang"]
+	"--sans-corps-soi-sombre", "--sans-fusee-rouge-sang",
+	# GV1bis — la fumée : le retour aux couches, la taille fine, le trait de GV1 (jamais le défaut), le relief du bruit.
+	"--fumee-couches", "--fumee-voxels=fin", "--fumee-encre=cotes", "--fumee-relief=bruit"]
 
 var _failures := 0
 
@@ -56,6 +58,10 @@ func _sonder() -> void:
 		"led": MurLed.est_actif(),
 		"faisceau": volumes.faisceaux_actifs,
 		"fumee_masque": volumes.masque_fumee,
+		"fumee_voxel": volumes.fumee_voxel,
+		"fumee_taille": volumes.variante_voxel,
+		"fumee_encre": volumes.encre_voxel,
+		"fumee_relief": volumes.relief_voxel,
 		"soi_sombre": VoxelCatalogue.soi_sombre_actif(),
 		"rouge_sang": load("res://fusee_couleur.gd").rouge_sang,
 		"lacet": load("res://settings_manager.gd").lacet_applique(DrapeauxDeLancement.arguments()),

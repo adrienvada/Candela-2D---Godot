@@ -366,6 +366,20 @@ func _poser(main: Node, pid: int, pos: Vector2, slug: String, numero: int) -> No
 func _le_volume(main: Node, volumes: IsoVolumes, g: Node, slug: String) -> void:
 	var e: Dictionary = volumes.suivi_de(g)
 	var spec: Dictionary = IsoVolumes.VOLUMES[slug]
+	# GV1bis (Q67) — la suie et la poussière sont en VOXELS par défaut : leur grille de cubes par vue, lue sur la lightmap
+	# de chaque vue (`tools/test_fumee_voxel.gd` les vérifie en détail) ; les couches ne reviennent que sous
+	# `--fumee-couches`. Les nappes (braises, poudre) gardent leurs couches.
+	if volumes.fumee_voxel and IsoNuageVoxel.NUAGES.has(slug):
+		var en_voxels: bool = not e.is_empty() and e["genre"] == "nuage_voxel" and (e["noeuds"] as Array).size() == 2 \
+			and (e["noeuds"] as Array).all(func(n): return n is MultiMeshInstance3D)
+		_check("« %s » est un nuage de voxels, une grille par vue (le défaut depuis GV1bis)" % slug, en_voxels)
+		if en_voxels:
+			var mv: ShaderMaterial = e["mats"][0]
+			_check("« %s » : ses cubes passent avant les corps et lisent la lightmap de J1" % slug,
+				mv.render_priority == IsoVolumes.PRIORITE_VOLUME and mv.render_priority < 0
+				and mv.get_shader_parameter("lumiere_1") == main.vp1.get_texture()
+				and (mv.get_shader_parameter("canevas_1_x") as Vector2).is_equal_approx(main.vp1.canvas_transform.x))
+		return
 	var n := int(spec["couches"])
 	var ok: bool = not e.is_empty() and e["genre"] == "volume" and (e["noeuds"] as Array).size() == n
 	_check("« %s » est un volume de %d couches" % [slug, n], ok)
@@ -406,8 +420,11 @@ func _la_fusee_en_iso(main: Node, p: Node) -> void:
 	_check("posée, elle a son voxel, qui tient son cœur hors des lightmaps",
 		miroirs.miroir_de(f) != null and coeur.visibility_layer == Presentation3D.COUCHE_HORS_VUE)
 	var fumee: Dictionary = volumes.suivi_de(f)
-	_check("posée, sa fumée est un volume de %d couches" % int(IsoVolumes.VOLUME_FUSEE["couches"]),
-		float(f.call("alpha_fumee")) <= 0.0 or (not fumee.is_empty() and fumee["genre"] == "fumee"),
+	# GV1bis (Q67) : en voxels par défaut ; en couches sous `--fumee-couches`.
+	var genre_attendu := "nuage_voxel" if volumes.fumee_voxel else "fumee"
+	_check("posée, sa fumée est %s" % ("un nuage de voxels (le défaut depuis GV1bis)" if volumes.fumee_voxel
+		else "un volume de %d couches" % int(IsoVolumes.VOLUME_FUSEE["couches"])),
+		float(f.call("alpha_fumee")) <= 0.0 or (not fumee.is_empty() and fumee["genre"] == genre_attendu),
 		"alpha %.2f" % float(f.call("alpha_fumee")))
 	var lueur: Dictionary = volumes.suivi_de(f, 1)
 	_check("posée et allumée, sa lueur basse brûle",

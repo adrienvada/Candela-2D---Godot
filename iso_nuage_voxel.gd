@@ -1,17 +1,20 @@
 class_name IsoNuageVoxel
 extends RefCounted
 
-## Les nuages en voxels de la vue iso — chantier « Gadgets en volume » (GV1), À L'ESSAI (`--fumee-voxel-essai`).
+## Les nuages en voxels de la vue iso — chantier « Gadgets en volume ». GV1 (2026-09-30) : à l'essai ; GV1bis (le même
+## jour, Q67) : LE RENDU PAR DÉFAUT de la suie, de la poussière et de la fumée de la fusée, en voxels « gros », avec l'encre
+## du roman graphique et le relief tiré du dessin. `--fumee-couches` rend les couches d'avant (`volume_iso.gdshader`).
 ##
 ## Adrien, 2026-09-30 : « J'aimerais également que tous les gadgets (je me souviens de la fumée occultante) soient
 ## davantage en 3D. Là on est pris entre le graphisme BD et la 3D voxel. Il faut quelque chose de plus uniforme avec le
-## nouveau graphisme. » Premier chantier : la fumée occultante — la suie du Fumiste, la poussière du Terrassier, la fumée de
-## la fusée. Aujourd'hui des couches horizontales qui recopient la lightmap (`volume_iso.gdshader`) ; à l'essai, un tas de
-## cubes (`nuage_voxel_iso.gdshader`, où tout est expliqué : densité, noir absolu, ordre de dessin).
+## nouveau graphisme. » Puis, vers 15:50 (Q67) : « Oui la fumée en gros. Mais trouve un moyen de la rendre quand même un peu
+## avec des traits sombres comme le faisait le style roman graphique. » Le shader (`nuage_voxel_iso.gdshader`) explique tout :
+## densité, relief, encre, noir absolu, ordre de dessin.
 ##
-## Ce fichier ne fait que la GÉOMÉTRIE et les RÉGLAGES : la grille de cellules d'un nuage, rangée pour une caméra, et les
-## uniformes lus sur le nuage 2D à chaque image. `IsoVolumes` décide quand un nuage est en voxels (le drapeau) et tient ses
-## nœuds, comme ceux des couches ; le juge du masque est le sien.
+## Ce fichier ne fait que la GÉOMÉTRIE, les RÉGLAGES et les IMAGES DÉRIVÉES : la grille de cellules d'un nuage, rangée pour
+## une caméra ; les uniformes lus sur le nuage 2D à chaque image ; l'aplat, le relief et l'encre d'un dessin, les planches
+## réduites de la fusée. `IsoVolumes` décide quand un nuage est en voxels (les drapeaux) et tient ses nœuds, comme ceux des
+## couches ; le juge du masque est le sien.
 ##
 ## ## Une grille par TYPE de nuage, par taille de voxel et par côté de caméra — partagée
 ##
@@ -24,8 +27,9 @@ extends RefCounted
 ## compile la présentation avant eux (piège d'ISO4). Tout se lit par propriété.
 
 const TUILE := 35.0
-## Les deux variantes à l'essai : des voxels d'un quart de tuile (8,75 px : la tête, le torse d'un corps) ou d'un huitième
-## (4,4 px : un bras, une jambe). Le premier a été choisi comme défaut du drapeau — voir la ROADMAP, section GV.
+## Les deux tailles de voxel : un quart de tuile (8,75 px : la tête, le torse d'un corps) ou un huitième (4,4 px : un bras,
+## une jambe). « gros » est le défaut, décidé par Adrien (Q67, 2026-09-30 : « Oui la fumée en gros ») ; « fin » reste pour
+## les bancs (`--fumee-voxels=fin`).
 const VARIANTES := {"gros": TUILE / 4.0, "fin": TUILE / 8.0}
 const VARIANTE_PAR_DEFAUT := "gros"
 ## Par nuage : sa densité de voxels (× la densité lue), l'opacité d'un cube, et son rayon MAXIMAL en pixels de monde (la
@@ -47,6 +51,33 @@ const FACE_DESSUS := 1.0
 const FACE_GAUCHE := 0.8
 const FACE_DROITE := 0.62
 const ENCRE_RESTE := 0.55
+## GV1bis — L'ENCRE du roman graphique sur les cubes (`encre_style` du shader) : trois variantes proposées à Adrien, le trait
+## de GV1 et « aucune » pour les bancs. Voir `nuage_voxel_iso.gdshader`.
+const ENCRES := {"aretes": 1, "volutes": 2, "hachures": 3, "cotes": 0, "aucune": -1}
+## Les trois variantes du roman graphique, dans l'ordre des planches.
+const ENCRES_GV1BIS := ["aretes", "volutes", "hachures"]
+const ENCRE_PAR_DEFAUT := "volutes"
+## GV1bis — LE RELIEF des bouffées (`relief_style`) : la clarté des volutes du dessin (Q69) ou le bruit de GV1.
+const RELIEFS := {"dessin": 1, "bruit": 0}
+const RELIEF_PAR_DEFAUT := "dessin"
+## Le trait du roman graphique : plus large que celui des corps (0,9 px) — un nuage de 184 px de large, pas un bras —, aussi
+## noir que l'encre d'essai des murs (`IsoMateriaux.ENCRE_ARETE_RESTE_ESSAI`, 0,12), sous LEUR plancher (« allumé reste
+## allumé » : `IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée).
+const TRAIT_PX := 1.5
+const TRAIT_RESTE := 0.12
+## La dérive lente du dessin (relief et volutes) : ± 6 % du rayon (5,5 px pour la suie, 10 pour la poussière).
+const DERIVE_DESSIN := 0.06
+## Le pas des hachures : 5 px de monde (à 3,5, une trame fine qui se lisait comme une toile).
+const HACHURE_PAS_PX := 5.0
+## L'encre d'un dessin : 1 sous 0,04 de luminance (le noir des traits), 0 au-dessus de 0,12 (le gris le plus sombre des
+## fonds de la suie). Mesuré sur les deux dessins : 31 % de l'image de la suie est de l'encre, 10 % de celle de la poussière.
+const ENCRE_LUM_BAS := 0.04
+const ENCRE_LUM_HAUT := 0.12
+## Le relief d'un dessin : sa luminance moyennée sur 8 × 8 pixels (trois réductions de moitié) — les bouffées du dessin
+## (20 à 40 px) survivent, le trait d'encre (2 à 4 px) se fond en creux.
+const RELIEF_REDUCTIONS := 3
+## Les planches des nappes de la fusée, réduites à 256 px au plus (≈ 2 px de monde par texel).
+const PLANCHE_PX := 256
 const SEUIL_TAILLE := 0.1
 ## La densité où un cube remplit sa case : au-delà, les cubes du corps du nuage sont pleins et jointifs (voir le shader).
 const PLEIN_TAILLE := 0.45
@@ -121,16 +152,147 @@ static func aplat(tex: Texture2D) -> Texture2D:
 	return t
 
 
-## Sous le drapeau, au lancement : le shader, sa variante de la fusée et les deux aplats, pour qu'aucun ne se prépare au
-## premier nuage (une masse de 336 px se repeint en ~0,1 s de GDScript : un à-coup pile au moment où l'on pose la fumée).
-## Le shader, lui, se COMPILE à son premier dessin, dans le pilote : ce coût-là n'est pas pris ici, et ce qu'il vaut sur le
-## pilote d'Apple, le cloud (llvmpipe) ne peut pas le dire.
+## GV1bis — LE RELIEF ET L'ENCRE d'un dessin de masse (Q69, Q67) : une image de la taille et de l'ALPHA du dessin (la forme
+## du nuage ne bouge pas), qui porte en ROUGE la clarté de ses volutes — sa luminance (les poids de la pâte) moyennée sur
+## 8 × 8 pixels, puis étirée entre ses 10e et 90e centiles sur le dessin opaque : une bouffée claire monte, un trait d'encre
+## creuse — et en VERT son encre (le noir de ses traits, `ENCRE_LUM_BAS` à `ENCRE_LUM_HAUT`). Le shader lit l'alpha pour la
+## densité, le rouge pour le sommet des colonnes, le vert pour les volutes. Le dessin d'origine, jamais l'aplat : c'est le
+## dessin qui a des volutes. Une fois par texture et par processus (le cache se clé sur la TEXTURE — pas une graine).
+static var _reliefs := {}
+
+
+static func relief(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var cle := tex.get_instance_id()
+	if _reliefs.has(cle):
+		return _reliefs[cle]
+	var img := tex.get_image()
+	if img == null:
+		return tex
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var w := img.get_width()
+	var h := img.get_height()
+	var d := img.get_data()
+	var n := w * h
+	# 1. Au pixel : la luminance, prémultipliée par l'alpha (rouge) avec l'alpha (vert), pour la moyenne ; l'encre.
+	var pm := PackedByteArray()
+	pm.resize(n * 4)
+	var encre := PackedByteArray()
+	encre.resize(n)
+	var pente := 1.0 / (ENCRE_LUM_HAUT - ENCRE_LUM_BAS)
+	for i in n:
+		var k := i * 4
+		var a := d[k + 3]
+		var lum := (0.2126 * d[k] + 0.7152 * d[k + 1] + 0.0722 * d[k + 2]) / 255.0
+		pm[k] = roundi(lum * a)
+		pm[k + 1] = a
+		pm[k + 3] = 255
+		if a >= 128:
+			encre[i] = roundi(255.0 * (1.0 - clampf((lum - ENCRE_LUM_BAS) * pente, 0.0, 1.0)))
+	# 2. La moyenne : trois réductions de moitié (8 × 8 pixels), remontées en bicubique.
+	var flou := Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, pm)
+	for k in RELIEF_REDUCTIONS:
+		flou.shrink_x2()
+	flou.resize(w, h, Image.INTERPOLATE_CUBIC)
+	var fd := flou.get_data()
+	# 3. La clarté moyenne (la luminance moyenne ÷ l'alpha moyen), et ses centiles sur le dessin opaque.
+	var clarte := PackedFloat32Array()
+	clarte.resize(n)
+	var opaques := PackedFloat32Array()
+	for i in n:
+		var k := i * 4
+		var c := float(fd[k]) / float(fd[k + 1]) if fd[k + 1] > 12 else 0.0
+		clarte[i] = c
+		if d[k + 3] >= 128:
+			opaques.append(c)
+	opaques.sort()
+	var bas := opaques[int(opaques.size() * 0.1)] if not opaques.is_empty() else 0.0
+	var haut := opaques[int(opaques.size() * 0.9)] if not opaques.is_empty() else 1.0
+	var echelle := 255.0 / maxf(haut - bas, 0.01)
+	var sortie := PackedByteArray()
+	sortie.resize(n * 4)
+	for i in n:
+		var k := i * 4
+		sortie[k] = clampi(roundi((clarte[i] - bas) * echelle), 0, 255)
+		sortie[k + 1] = encre[i]
+		sortie[k + 3] = d[k + 3]
+	var t := ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, sortie))
+	_reliefs[cle] = t
+	return t
+
+
+## GV1bis — une PLANCHE de nappe de la fusée RÉDUITE à `PLANCHE_PX` (moyennes de moitié en moitié, sur l'image prémultipliée
+## puis rendue à ses couleurs) : lue au pas d'un voxel, la planche de 2048 px ne donnait qu'un texel par case — la densité
+## sautait d'une case à l'autre, et les paliers ne se traçaient pas. Même forme, mêmes paliers, à la finesse du voxel.
+static var _planches := {}
+
+
+static func planche(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var cle := tex.get_instance_id()
+	if _planches.has(cle):
+		return _planches[cle]
+	var img := tex.get_image()
+	if img == null:
+		return tex
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	if img.get_width() <= PLANCHE_PX:
+		_planches[cle] = tex
+		return tex
+	img.premultiply_alpha()
+	while img.get_width() > PLANCHE_PX:
+		img.shrink_x2()
+	var d := img.get_data()
+	for k in range(0, d.size(), 4):
+		var a := d[k + 3]
+		if a > 0 and a < 255:
+			var f := 255.0 / float(a)
+			d[k] = mini(255, roundi(d[k] * f))
+			d[k + 1] = mini(255, roundi(d[k + 1] * f))
+			d[k + 2] = mini(255, roundi(d[k + 2] * f))
+	var t := ImageTexture.create_from_image(Image.create_from_data(img.get_width(), img.get_height(), false,
+		Image.FORMAT_RGBA8, d))
+	_planches[cle] = t
+	return t
+
+
+## Au lancement (la fumée en voxels est le défaut) : le shader, sa variante de la fusée, les aplats et les reliefs des deux
+## dessins, les planches réduites de la fusée — pour qu'aucun ne se prépare au premier nuage (une masse de 336 px se
+## repeint en ~0,1 s de GDScript : un à-coup pile au moment où l'on pose la fumée). Le shader, lui, se COMPILE à son premier
+## dessin, dans le pilote : ce coût-là n'est pas pris ici, et ce qu'il vaut sur le pilote d'Apple, le cloud (llvmpipe) ne
+## peut pas le dire.
 static func prechauffer() -> void:
+	if _prechauffe:
+		return
+	_prechauffe = true
+	var debut := Time.get_ticks_usec()
 	shader(false)
 	for nom in ["cartouche_suie", "poussiere"]:
 		var chemin := "res://assets/sprites/gadget_%s.png" % nom
 		if ResourceLoader.exists(chemin):
-			aplat(load(chemin) as Texture2D)
+			var dessin := load(chemin) as Texture2D
+			aplat(dessin)
+			relief(dessin)
+	for chemin in PLANCHES_FUSEE:
+		if ResourceLoader.exists(chemin):
+			planche(load(chemin) as Texture2D)
+	# Ce que coûte le préchauffage, une fois par processus : une prise le lit dans le journal.
+	print("[fumée voxel] préchauffé en %d ms (shader, aplats, reliefs, planches réduites)"
+		% roundi(float(Time.get_ticks_usec() - debut) / 1000.0))
+
+
+static var _prechauffe := false
+
+
+## Les planches que `fusee.gd` peut poser sur ses nappes (`_texture_nappe`) : réduites au lancement.
+const PLANCHES_FUSEE := ["res://assets/sprites/fusee_volute_2.png", "res://assets/sprites/fusee_volute_3.png",
+	"res://assets/sprites/fusee_volute_1.png", "res://assets/sprites/fusee_volute.png"]
 
 
 ## Le shader des voxels a-t-il été chargé dans ce processus ? Faux tant qu'aucun nuage en voxels n'a été posé : sans le
@@ -255,8 +417,10 @@ static func origine(centre: Vector2, voxel: float) -> Vector3:
 	return Vector3(roundf(centre.x / voxel) * voxel, 0.0, roundf(centre.y / voxel) * voxel)
 
 
-## Un matériau de nuage pour une vue : le shader (fusée ou gadget), la vue, les constantes du type.
-static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float, priorite: int) -> ShaderMaterial:
+## Un matériau de nuage pour une vue : le shader (fusée ou gadget), la vue, les constantes du type ; l'encre et le relief
+## (`poser_style`).
+static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float, priorite: int,
+		encre: String = ENCRE_PAR_DEFAUT, relief_de: String = RELIEF_PAR_DEFAUT) -> ShaderMaterial:
 	var spec: Dictionary = NUAGES[type]
 	var mat := ShaderMaterial.new()
 	mat.shader = shader(type == "fusee")
@@ -274,11 +438,33 @@ static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float,
 	mat.set_shader_parameter("face_droite", FACE_DROITE)
 	mat.set_shader_parameter("encre_px", IsoMateriaux.ENCRE_VOXEL_PX if IsoMateriaux.beaute_active() else 0.0)
 	mat.set_shader_parameter("encre_reste", ENCRE_RESTE)
+	mat.set_shader_parameter("trait_px", TRAIT_PX)
+	mat.set_shader_parameter("trait_reste", TRAIT_RESTE)
+	mat.set_shader_parameter("trait_plancher", IsoMateriaux.ENCRE_PLANCHER_AFFICHE)
+	mat.set_shader_parameter("derive_dessin", DERIVE_DESSIN)
+	mat.set_shader_parameter("hachure_pas_px", HACHURE_PAS_PX)
 	mat.set_shader_parameter("temperature", IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
+	poser_style(mat, encre, relief_de)
 	return mat
 
 
-## Les réglages d'un nuage de GADGET (suie, poussière), lus sur sa masse 2D : son image et son angle, son rayon, sa vie.
+## L'encre et le relief d'un matériau de nuage, sur place (les bancs basculent d'une variante à l'autre dans la même
+## image). L'encre suit la beauté, comme celle des murs et des corps : `--sans-beaute`, aucune.
+static func poser_style(mat: ShaderMaterial, encre: String, relief_de: String) -> void:
+	mat.set_shader_parameter("encre_style", int(ENCRES.get(encre, ENCRES[ENCRE_PAR_DEFAUT]))
+		if IsoMateriaux.beaute_active() else int(ENCRES["aucune"]))
+	mat.set_shader_parameter("relief_style", int(RELIEFS.get(relief_de, RELIEFS[RELIEF_PAR_DEFAUT])))
+
+
+## Le rendu de GV1 tel qu'il a été planché (le trait clair des côtés, le relief du bruit, les planches entières de la
+## fusée) : ce que la planche de GV1bis met à côté des encres, et le retour possible.
+static func est_gv1(encre: String, relief_de: String) -> bool:
+	return encre == "cotes" and relief_de == "bruit"
+
+
+## Les réglages d'un nuage de GADGET (suie, poussière), lus sur sa masse 2D : son image (`masque` : le relief de son dessin,
+## `relief`, dont l'alpha est celui de la masse) et son angle, son rayon, sa vie, son âge (l'horloge : `age()` du gadget,
+## que la killcam rejoue).
 static func poser_gadget(mat: ShaderMaterial, type: String, centre: Vector2, rayon: float, masque: Texture2D, angle: float,
 		vie: float, age: float) -> void:
 	mat.set_shader_parameter("nuage_centre", centre)
@@ -300,8 +486,10 @@ const VOILE_PREFIXE := {"alpha_globale": "voile_alpha_globale", "graine": "voile
 
 ## Les réglages de la fumée d'une FUSÉE, lus sur ce qu'elle peint en 2D à cette image : son voile (volutes, masses, trous,
 ## tunnels) et ses nappes (planche, rotation, taille, opacité). `voile` : son `Sprite2D` « Voile » ; `nappes` : les siens.
+##
+## `reduites` (GV1bis) : chaque nappe prend sa planche RÉDUITE (`planche`) au lieu de la planche entière.
 static func poser_fusee(mat: ShaderMaterial, centre: Vector2, rayon: float, voile: Sprite2D, nappes: Array,
-		age: float) -> void:
+		age: float, reduites: bool = true) -> void:
 	mat.set_shader_parameter("nuage_centre", centre)
 	mat.set_shader_parameter("nuage_rayon", rayon)
 	mat.set_shader_parameter("lissage_px", maxf(rayon * LISSAGE, float(mat.get_shader_parameter("voxel_px"))))
@@ -323,7 +511,7 @@ static func poser_fusee(mat: ShaderMaterial, centre: Vector2, rayon: float, voil
 		var nappe := s as Sprite2D
 		if nappe == null or nappe.texture == null or not nappe.is_visible_in_tree() or n >= 3:
 			continue
-		mat.set_shader_parameter("nappe_%d" % (n + 1), nappe.texture)
+		mat.set_shader_parameter("nappe_%d" % (n + 1), planche(nappe.texture) if reduites else nappe.texture)
 		reglages[n] = Vector3(nappe.global_rotation, float(nappe.texture.get_width()) * absf(nappe.global_scale.x),
 			Presentation3D.opacite_rendue(nappe))
 		n += 1

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Planches du chantier « Gadgets en volume » (GV0 et GV1).
+"""Planches du chantier « Gadgets en volume » (GV0, GV1, GV1bis).
 
 Usage :
-    python3 docs/iso/gadgets_volume/planche_gv.py --avant DIR --nuages DIR --noir DIR [--sortie DIR]
+    python3 docs/iso/gadgets_volume/planche_gv.py --avant DIR --nuages DIR --noir DIR [--sortie DIR] [--etape gv1|gv1bis]
 
 Lit les vignettes et les relevés de `tools/banc_gadgets_volume.gd` (un dossier par mode) et compose, dans
 `docs/iso/gadgets_volume/` par défaut :
@@ -15,6 +15,15 @@ Lit les vignettes et les relevés de `tools/banc_gadgets_volume.gd` (un dossier 
   MÊME image de jeu pour les trois rendus ;
 - planche_gv1_detail.jpg — une région de chaque nuage sans réduction (la matière des cubes) ;
 - planche_gv1_noir.jpg — la preuve du noir à l'écran : sans les cubes, avec, masque coupé, et la carte des fuites.
+
+Avec `--etape gv1bis` (le défaut), les mêmes prises du banc de GV1bis donnent :
+
+- planche_gv1bis_<nuage>.jpg — à chaque instant de la vie du nuage, la MÊME image de jeu sous six rendus : les couches
+  d'aujourd'hui, les voxels gros de GV1, ceux de GV1bis (relief du dessin) sans encre, puis sous chacune des trois encres
+  du roman graphique ; J1 puis J2 sous la lampe, puis J1 et J2 dans le noir, en petit ;
+- planche_gv1bis_detail.jpg — une région de chaque nuage sans réduction, sous les six rendus : le trait ne se juge qu'à la
+  taille de l'écran ;
+- planche_gv1bis_noir.jpg — la preuve du noir à l'écran pour chaque encre, contre les couches, et « allumé reste allumé ».
 
 ⚠️ Une vignette noire est affichée telle quelle : un noir tenu est un carré noir. Le verdict est le chiffre du banc.
 Dépendance : Pillow.
@@ -262,21 +271,184 @@ def noir(dossier, sortie):
                 os.path.join(sortie, "planche_gv1_noir.jpg"), legende_ligne=230)
 
 
+# ─── GV1bis : les encres du roman graphique ───────────────────────────────────
+
+RENDUS_BIS = [("couches", "AVANT (couches)"), ("gv1", "GV1 : voxels gros"), ("sans_encre", "GV1bis, sans encre"),
+              ("aretes", "encre : ARÊTES"), ("volutes", "encre : VOLUTES"), ("hachures", "encre : HACHURES")]
+COTE_BIS = 190
+COTE_NOIR_BIS = 90
+
+
+def planche_mixte(titre, sous_titre, entetes, lignes, fichier, colonnes=6, cote=COTE_BIS, legende_ligne=190):
+    """`lignes` : [(libellé, [vignettes], [textes], côté)] — une ligne a le côté de ses vignettes (les grandes sous la
+    lampe, deux fois plus de petites dans le noir, sur la même largeur)."""
+    marge, entete, bas = 10, 118, 20
+    largeur = legende_ligne + colonnes * (cote + marge) + marge
+    hauteur = entete + sum(c + bas + marge for _, _, _, c in lignes) + marge
+    p = Image.new("RGB", (largeur, hauteur), FOND)
+    d = ImageDraw.Draw(p)
+    d.text((marge, 10), titre, fill=ENCRE, font=police(22, True))
+    mots, lignes_st, ligne_st = sous_titre.split(" "), [], ""
+    for m in mots:
+        if d.textlength((ligne_st + " " + m).strip(), font=police(13)) > largeur - 2 * marge:
+            lignes_st.append(ligne_st)
+            ligne_st = m
+        else:
+            ligne_st = (ligne_st + " " + m).strip()
+    lignes_st.append(ligne_st)
+    d.text((marge, 40), "\n".join(lignes_st[:3]), fill=GRIS, font=police(13))
+    for i, e in enumerate(entetes):
+        d.text((legende_ligne + marge + i * (cote + marge), entete - 20), e, fill=ENCRE, font=police(13, True))
+    y = entete
+    for libelle, ims, textes, c in lignes:
+        mots, ligne_txt, lignes_txt = libelle.split(" "), "", []
+        for m in mots:
+            if ligne_txt and d.textlength(ligne_txt + " " + m, font=police(14, True)) > legende_ligne - marge - 4:
+                lignes_txt.append(ligne_txt)
+                ligne_txt = m
+            else:
+                ligne_txt = (ligne_txt + " " + m).strip()
+        lignes_txt.append(ligne_txt)
+        d.text((marge, y + 4), "\n".join(lignes_txt), fill=ENCRE, font=police(14, True))
+        pas = (colonnes * (cote + marge)) / max(len(ims), 1)
+        for i, im in enumerate(ims):
+            x = int(legende_ligne + marge + i * pas)
+            p.paste(im, (x, y))
+            if i < len(textes) and textes[i]:
+                d.text((x + 2, y + c + 2), textes[i], fill=GRIS, font=police(10))
+        y += c + bas + marge
+    p.save(fichier, quality=84, optimize=True)
+    print("écrit", fichier, p.size, "%.0f Ko" % (os.path.getsize(fichier) / 1024))
+
+
+def gv1bis(dossier, sortie):
+    stats = {}
+    for l in releves(dossier, "nuages"):
+        c = champs(l)
+        if "prise" in c and "rendu" in c:
+            stats[(c["prise"], c["lumiere"], c["rendu"], c["vue"])] = c
+    noms = "|".join(r for r, _ in RENDUS_BIS)
+    fichiers = sorted(f[:-4] for f in os.listdir(dossier) if f.startswith("gv1_") and f.endswith(".png"))
+    prises = sorted({re.sub(r"_(lampe|noir)_(%s)_j[12]$" % noms, "", f) for f in fichiers})
+    for nuage, titre in [("cartouche_suie", "la suie du Fumiste"), ("poussiere", "la poussière du Terrassier"),
+                         ("fusee", "la fumée de la fusée")]:
+        lignes = []
+        for prise in [p for p in prises if p.startswith("gv1_" + nuage)]:
+            instant = libelle_instant(prise.replace("gv1_%s_" % nuage, ""))
+            for vue in (1, 2):
+                ims = [vignette(dossier, "%s_lampe_%s_j%d" % (prise, r, vue), COTE_BIS) for r, _ in RENDUS_BIS]
+                lignes.append(("%s — J%d, sous la lampe" % (instant, vue), ims, [], COTE_BIS))
+            ims, textes = [], []
+            for r, _ in RENDUS_BIS:
+                for vue in (1, 2):
+                    ims.append(vignette(dossier, "%s_noir_%s_j%d" % (prise, r, vue), COTE_NOIR_BIS))
+                    textes.append("J%d max %s" % (vue, stats.get((prise, "noir", r, "J%d" % vue), {}).get("max", "?")))
+            lignes.append(("%s — dans le noir, J1 | J2" % instant, ims, textes, COTE_NOIR_BIS))
+        if not lignes:
+            continue
+        planche_mixte("GV1bis — %s : l'encre du roman graphique sur les cubes" % titre,
+                      "La MÊME image de jeu pour les six rendus (âge tenu, temps figé), même cadrage. AVANT : les couches "
+                      "d'aujourd'hui. GV1 : les voxels gros tels que planchés (trait clair des côtés, relief du bruit). "
+                      "GV1bis : les voxels gros au relief du DESSIN (Q69), sans encre puis sous chacune des trois encres "
+                      "(Q67). Sous la lampe : torche de J1 et lumière propre du nuage ; dans le noir : tout éteint — max, "
+                      "la plus claire valeur de la vignette sur 255, est la silhouette de soi, qui reste par dessein.",
+                      [e for _, e in RENDUS_BIS], lignes, os.path.join(sortie, "planche_gv1bis_%s.jpg" % nuage))
+
+
+# Les régions du détail de GV1bis, par vue : la poussière est brûlée par la torche au centre de la vignette, ses traits se
+# lisent sur son bord le moins éclairé — qui n'est pas au même endroit dans les deux vues.
+DETAILS_BIS = [("gv1_cartouche_suie_02.5", "suie, 2,5 s", (0.5, 0.5), (0.5, 0.5)),
+               ("gv1_poussiere_02.0", "poussière, 2 s", (0.68, 0.62), (0.36, 0.42)),
+               ("gv1_fusee_2_braise", "fusée, braise (6 s)", (0.62, 0.62), (0.62, 0.62))]
+
+
+def detail_bis(dossier, sortie, cote=250):
+    lignes = []
+    for prise, libelle, pos1, pos2 in DETAILS_BIS:
+        for vue in (1, 2):
+            fx, fy = pos1 if vue == 1 else pos2
+            ims = []
+            for rendu, _ in RENDUS_BIS:
+                chemin = os.path.join(dossier, "%s_lampe_%s_j%d.png" % (prise, rendu, vue))
+                fond = Image.new("RGB", (cote, cote), FOND)
+                if os.path.exists(chemin):
+                    im = Image.open(chemin).convert("RGB")
+                    x = max(0, min(im.width - cote, int(im.width * fx) - cote // 2))
+                    y = max(0, min(im.height - cote, int(im.height * fy) - cote // 2))
+                    fond.paste(im.crop((x, y, x + cote, y + cote)), (0, 0))
+                ims.append(fond)
+            lignes.append(("%s — J%d, sous la lampe, pixel pour pixel" % (libelle, vue), ims, [], cote))
+    planche_mixte("GV1bis — le détail : le trait sur les cubes, sans réduction",
+                  "Une région de chaque prise à sa taille d'écran (écran scindé, 1920 × 1080), la même pour les six rendus. "
+                  "Le trait ne se juge qu'ici : à la taille des planches, il disparaît.",
+                  [e for _, e in RENDUS_BIS], lignes, os.path.join(sortie, "planche_gv1bis_detail.jpg"), cote=cote)
+
+
+def noir_bis(dossier, sortie, cote=180):
+    stats = {}
+    allume = {}
+    for l in releves(dossier, "noir"):
+        if l.startswith("noir cas="):
+            c = champs(l.split("|")[0])
+            stats[(c["cas"], c["variante"], c["vue"])] = l
+        elif l.startswith("allume cas="):
+            # Avant le premier « | » : la suite de la ligne (le témoin) répète « eteints= ».
+            c = champs(l.split("|")[0])
+            allume[(c["cas"], c["variante"], c["vue"])] = c
+    cas = sorted({k[0] for k in stats})
+    colonnes = [("sans", "couches", "sans images (couches)")] + [("avec", v, e) for v, e in
+                                                             [("couches", "couches (réf.)"), ("aretes", "arêtes"),
+                                                              ("volutes", "volutes"), ("hachures", "hachures")]]
+    lignes = []
+    for c in cas:
+        for vue in (1, 2):
+            ims, textes = [], []
+            for quoi, v, _ in colonnes:
+                ims.append(vignette(dossier, "noir_%s_%s_%s_j%d" % (c, v, quoi, vue), cote))
+                l = stats.get((c, v, "J%d" % vue), "")
+                ch = champs(l.split("|")[0]) if l else {}
+                if quoi == "sans":
+                    textes.append("noir dessous : %s px" % ch.get("noirs_dessous", "?"))
+                else:
+                    a = allume.get((c, v, "J%d" % vue), {})
+                    texte = "fuites > 2/255 : %s" % ch.get("fuites_sup2", "?")
+                    if a:
+                        texte += " · éteints %s" % a.get("eteints", "?")
+                    textes.append(texte)
+            lignes.append(("%s, J%d" % (c.replace("_", " "), vue), ims, textes, cote))
+    if lignes:
+        planche_mixte("GV1bis — le noir absolu À L'ÉCRAN sous chaque encre, contre les couches d'aujourd'hui",
+                      "Sans les images du nuage, puis avec : les couches (référence), les voxels gros au relief du dessin "
+                      "sous chaque encre. Fuite : pixel stable, noir sans les images, sous leur emprise, allumé avec. "
+                      "Éteints : pixels éclairés sans l'encre (8/255 et plus) qu'elle ferait passer sous 8/255 (« allumé "
+                      "reste allumé »). Corps cachés pendant la preuve.",
+                      [e for _, _, e in colonnes], lignes, os.path.join(sortie, "planche_gv1bis_noir.jpg"),
+                      colonnes=len(colonnes), cote=cote, legende_ligne=210)
+
+
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--avant")
     a.add_argument("--nuages")
     a.add_argument("--noir")
     a.add_argument("--sortie", default=ICI)
+    a.add_argument("--etape", default="gv1bis", choices=["gv1", "gv1bis"])
     args = a.parse_args()
     os.makedirs(args.sortie, exist_ok=True)
     if args.avant:
         gv0(args.avant, args.sortie)
     if args.nuages:
-        gv1(args.nuages, args.sortie)
-        detail(args.nuages, args.sortie)
+        if args.etape == "gv1":
+            gv1(args.nuages, args.sortie)
+            detail(args.nuages, args.sortie)
+        else:
+            gv1bis(args.nuages, args.sortie)
+            detail_bis(args.nuages, args.sortie)
     if args.noir:
-        noir(args.noir, args.sortie)
+        if args.etape == "gv1":
+            noir(args.noir, args.sortie)
+        else:
+            noir_bis(args.noir, args.sortie)
 
 
 if __name__ == "__main__":
