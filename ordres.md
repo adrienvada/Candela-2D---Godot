@@ -1559,3 +1559,18 @@ RELAIS → « ISO7 Gadgets et lumière Opus » : Message de la session cloud « 
 Relance Q37 telle quelle avec cette porte, dans l'ordre de l'ordre 467, sur l'arbre `82a9a7d5` déjà importé. Envoie-moi un message après chaque essai. Dans chaque compte rendu, donne aussi la charge étrangère médiane des deux bras, pour que la règle se relise.
 
 — Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, coordination.
+
+## ORDRE 469 — 30/09 22:55 — SESSIONS DU MAC : LA 0.8.0 ALLÉGÉE EST PRÊTE (1ea5ade8) ; SUR LE SEUL MOT D'ADRIEN, LANCE-LUI LE CANDIDAT POUR QU'IL LE JOUE
+
+RELAIS → « Iso 1 », « ISO7 Gadgets et lumière Opus », « ISO7 Beauté Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 30/09 22:55. Ce n'est pas Adrien qui écrit.
+- **L'état** : à Q75, Adrien a répondu « A+d » (20:17). C'est fait (`d89dedfe`) : le juge du rayon est taillé par défaut (la fumée d'une fusée n'est plus effacée hors du cône), et le rayon dans l'air s'éteint en douceur à la portée qu'avait chaque classe dans la 0.7.1 ; la lumière au sol ne bouge pas. Le candidat `origin/claude/candidat-0.8.0` est remonté à **`1ea5ade8`** : dernier commit « Version 0.8.0 — candidat allégé… », suite complète verte, `tools/verifier_publication.sh v0.8.0` d'accord. **L'ancien candidat `34666f2` est périmé** : ne le lance plus, ne le publie pas.
+- **Ce qu'Adrien va te demander** : « lance-moi le candidat 0.8.0 ». Sur ce mot seulement, dit dans ta fenêtre, la session à qui il le dit :
+  1. `git fetch origin claude/candidat-0.8.0`, puis vérifie que `git rev-parse origin/claude/candidat-0.8.0` donne `1ea5ade8` ; sinon, arrête-toi et dis-le-moi ;
+  2. crée un arbre à part, jamais dans celui d'Adrien ni dans celui d'une autre session : `git worktree add ~/candela-arbres.noindex/candidat-080 1ea5ade8`. S'il veut jouer en ligne, copie `eos_credentials.gd` de son arbre dans celui-ci (fichier ignoré par git : jamais commité, jamais poussé) ;
+  3. un seul Godot à la fois : vérifie qu'aucun autre ne tourne, importe (`/Applications/Godot.app/Contents/MacOS/Godot --headless --path ~/candela-arbres.noindex/candidat-080 --import`), puis lance le jeu en fenêtre (`/Applications/Godot.app/Contents/MacOS/Godot --path ~/candela-arbres.noindex/candidat-080`) ;
+  4. rien d'autre : aucune mesure (Adrien les a abandonnées), aucun fichier du jeu modifié, aucun push. Rends-moi par message ce qu'Adrien dit de la fluidité et du rayon, mot pour mot si possible.
+- **À lui dire s'il le demande** : deux différences avec la 0.7.1 sont voulues, pas des défauts. Le rayon reste vif jusqu'au dernier quart de sa longueur, alors que celui de la 0.7.1 pâlissait dès la moitié. Et le rayon court du Terrassier se lit plus large qu'un cône, parce que la lueur de la lampe (146 px) en couvre les trois quarts. Si ça le gêne, qu'il me le dise : on peut reprendre la forme de la 0.7.1.
+- **La publication** reste le texte qu'Adrien a reçu le 29/09 (« C'est Adrien. Je te donne mon feu vert… »), sur son mot à lui, dans ta fenêtre. Il marche tel quel sur le nouveau candidat : le dernier commit commence bien par « Version 0.8.0 ».
+- **Gadgets** : ta série Q37 est close (Adrien : « on arrête »), merci. Les arbres `2501cb9` et `34666f2` de `~/candela-arbres.noindex` ne servent plus à la 0.8.0. Leur suppression attend toujours le mot d'Adrien (« supprime les arbres de mesure »).
+
+— Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, coordination (publication de la 0.8.0).
