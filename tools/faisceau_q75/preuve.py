@@ -210,7 +210,7 @@ def planche(blocs, sortie):
             for cols in [slice(0, w // 2), slice(w // 2, w)]:
                 cells += [cellule(av[:, cols], largeur), cellule(ap[:, cols], largeur),
                           cellule(np.abs(ap[:, cols] - av[:, cols]) * 4, largeur)]
-            titre = "%s (0.7.1 : %.0f px ; portée 728 px) — %s : J1 %s, J2 %s" % (
+            titre = "%s (0.7.1 : %.0f px) — %s : J1 %s, J2 %s" % (
                 libelle, longueur, lib_lampe, "sous sa torche" if lampe == "j1" else "dans le noir",
                 "dans le noir" if lampe == "j1" else "sous sa torche")
             rangs.append((titre, cells))

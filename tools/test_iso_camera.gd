@@ -278,10 +278,13 @@ func _regard_du_duel() -> void:
 	var pistolet := WeaponData.new()
 	var facteur_avant: float = WeaponData.facteur_portee
 	WeaponData.facteur_portee = 0.75
-	# Le FACTEUR seul (ISO8) : le plancher de portée du chantier des lumières (L1, Q45) est retiré le temps de ces
-	# gardes, puis remis ; ce qu'il change est gardé juste après, et par `tools/test_portee_ecran.gd`.
+	# Le FACTEUR seul (ISO8) : les bornes de portée de la règle de l'écran (L1, Q45, puis Q76 : plancher ET plafond) sont
+	# retirées le temps de ces gardes, puis remises ; ce qu'elles changent est gardé juste après, et par
+	# `tools/test_portee_ecran.gd`.
 	var plancher_avant: float = WeaponData.portee_plancher
+	var plafond_avant: float = WeaponData.portee_plafond
 	WeaponData.portee_plancher = 0.0
+	WeaponData.portee_plafond = INF
 	_check("pistolet (1,6) : 307 px de portée au facteur 0,75, au lieu de 410",
 		is_equal_approx(pistolet.portee_torche(), 307.2), str(pistolet.portee_torche()))
 	var pompe := WeaponData.new()
@@ -292,12 +295,19 @@ func _regard_du_duel() -> void:
 		is_equal_approx(arbalete.portee_torche() / pompe.portee_torche(), 3.5))
 	_check("le demi-angle n'est pas touché (20,34° pour le pistolet depuis L1bis, 35° avant)",
 		is_equal_approx(pistolet.torch_angle_deg, 20.34))
-	# L1 (Q45) — avec le plancher du bord de l'écran, les deux classes y montent : l'écart de PORTÉE disparaît sous lui,
-	# c'est la conséquence assumée (et posée à Adrien) ; au-dessus du plancher, le facteur garde sa règle.
+	# Q76 (Adrien, 2026-09-30 vers 22:58) — plancher ET plafond au bord le plus proche de l'écran : la pompe y monte,
+	# l'arbalète y descend ; l'écart de PORTÉE disparaît, la conséquence assumée depuis L1 (Q45). Au coin de L1 (un
+	# plancher sans plafond), les deux montaient à 728.
+	WeaponData.portee_plancher = 468.0
+	WeaponData.portee_plafond = 468.0
+	_check("Q76 : au bord le plus proche, la pompe monte et l'arbalète descend à 468 px",
+		is_equal_approx(arbalete.portee_torche(), 468.0) and is_equal_approx(pompe.portee_torche(), 468.0))
 	WeaponData.portee_plancher = 728.0
-	_check("L1 : sous le plancher, arbalète et pompe portent au bord (728 px, l'écart de portée s'efface)",
+	WeaponData.portee_plafond = INF
+	_check("L1 (le coin, --portee-coin) : sous le plancher, arbalète et pompe portent au coin (728 px)",
 		is_equal_approx(arbalete.portee_torche(), 728.0) and is_equal_approx(pompe.portee_torche(), 728.0))
 	WeaponData.portee_plancher = plancher_avant
+	WeaponData.portee_plafond = plafond_avant
 	WeaponData.facteur_portee = facteur_avant
 	var Pres8: GDScript = load("res://presentation_3d.gd")
 	_check("F3 : la lightmap 1080p dans une fenêtre de 1440 px vaut 0,75 texel par pixel, quel que soit le zoom",

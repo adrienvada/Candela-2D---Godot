@@ -11,11 +11,12 @@ extends SceneTree
 ## - la règle : couches taillées, juge taillé (A) et rayon court (D) par défaut ; `--faisceau-air-carre`,
 ##   `--faisceau-juge-disque` et `--faisceau-air-long` en build de débogage seulement ; le juge taillé n'est pas réécrit par
 ##   `_poser_juge` (sinon le maillage changerait deux fois par image) ;
-## - **D, la longueur** : `WeaponData.portee_sans_plancher` rend, pour les dix classes du catalogue, la portée de la 0.7.1 relue
-##   dans son code (`torch_scale × 256 × 0,75`, de 192 à 672 px), et `portee_torche` garde le plancher (la lumière au sol ne
-##   bouge pas) ; le shader éteint la couche par un `smoothstep` sur le dernier quart de SA longueur, avant de jeter le fragment
-##   (la ligne lue dans le source) ; ce fondu ne saute jamais de plus de 5 % d'un pixel de monde au suivant, même sur la couche
-##   la plus courte de la classe la plus courte (« sans coupure nette ») ;
+## - **D, la longueur** : `WeaponData.portee_sans_ecran` rend, pour les dix classes du catalogue, la portée de la 0.7.1 relue
+##   dans son code (`torch_scale × 256 × 0,75`, de 192 à 672 px), et `portee_torche` celle de la règle de l'écran (depuis
+##   Q76, le bord le plus proche, 468 px, pour toutes) : le rayon va au plus court des deux ; le shader éteint la couche
+##   par un `smoothstep` sur le dernier quart de SA longueur, avant de jeter le fragment (la ligne lue dans le source) ; ce
+##   fondu ne saute jamais de plus de 5 % d'un pixel de monde au suivant, même sur la couche la plus courte de la classe la
+##   plus courte (« sans coupure nette ») ;
 ## - **l'enveloppe CONTIENT le cookie, au texel près**, pour les dix cookies livrés : recalculée ici TEXEL PAR TEXEL, sans le
 ##   code du jeu (chaque texel non nul, élargi du demi-texel que lit le filtre bilinéaire), aucun secteur ne va plus loin que
 ##   l'enveloppe que le jeu pose ;
@@ -25,14 +26,16 @@ extends SceneTree
 ## - le gain est réel : l'éventail couvre une petite part du carré d'avant (sinon « taillé » ne taillerait rien), et en PLAGES
 ##   de quelques degrés, pas un triangle par degré (tous se touchent à la lampe : un bloc de pixels que plusieurs triangles
 ##   recouvrent passe dans le shader une fois par triangle — à un triangle par degré, l'éventail n'allégeait rien, mesuré) ;
-## - **D, les éventails** : pour chaque cookie, à la longueur de sa classe sous le plancher de la vue unique (728 px), l'éventail
-##   des couches contient l'enveloppe arrêtée à cette longueur et s'arrête lui-même là (un point de l'axe 2 % plus loin est
-##   dehors), l'éventail du juge contient cette enveloppe dilatée de la parallaxe ;
-## - EN JEU (écran scindé, 45° B ; le Terrassier à J1, le Braconnier à J2 : les deux bouts de l'échelle des longueurs) : les
-##   dix classes gardent la portée du plancher et rendent la longueur de la 0.7.1 ; les couches portent l'éventail de leur
-##   longueur, tourné comme la lampe ; un point du cône en deçà de la longueur y tombe, un point derrière la lampe n'y tombe
-##   pas (le sens de la rotation) ; chaque couche reçoit sa longueur (la même part de son rayon : le dôme de la 0.7.1) et son
-##   fondu, et le juge — l'éventail dilaté, tourné, à l'échelle — ne juge qu'à ces longueurs ; basculés sur place :
+## - **D, les éventails** : pour chaque cookie, à la longueur de sa classe sous la portée du jeu (468 px depuis Q76),
+##   l'éventail des couches contient l'enveloppe arrêtée à cette longueur et s'arrête lui-même là (un point de l'axe 2 % plus
+##   loin est dehors) — ou, pour les classes que la 0.7.1 portait plus loin que la portée (la Sentinelle, le Braconnier),
+##   reste l'éventail entier —, et l'éventail du juge contient cette enveloppe dilatée de la parallaxe ;
+## - EN JEU (écran scindé, 45° B ; le Terrassier à J1, coupé à 192 px, le Braconnier à J2, que la portée de Q76 ne laisse
+##   plus couper) : les dix classes rendent la longueur de la 0.7.1 et portent à la portée du jeu ; les couches portent
+##   l'éventail de leur longueur, tourné comme la lampe ; un point du cône en deçà de la longueur y tombe, un point derrière
+##   la lampe n'y tombe pas (le sens de la rotation) ; chaque couche reçoit sa longueur (la même part de son rayon : le dôme
+##   de la 0.7.1) et son fondu, et le juge — l'éventail dilaté, tourné, à l'échelle — ne juge qu'à ces longueurs ; basculés
+##   sur place :
 ##   `faisceau_air_court` (le rayon long revient : longueur 1e9, éventail entier, juge à plein rayon), `faisceau_taille` (les
 ##   carrés d'avant, le rayon toujours court), `faisceau_juge_taille` (le disque d'avant, sans rotation) — puis chacun
 ##   rétabli.
@@ -51,8 +54,9 @@ const LONGUEURS_071 := {
 	"pistolet": 307.2, "fusil": 345.6, "pompe": 192.0, "arbalete": 672.0, "fumiste": 288.0, "incendiaire": 268.8,
 	"sentinelle": 499.2, "occulteur": 249.6, "allumeur": 230.4, "spectre": 268.8,
 }
-## Le plancher de L1 dans la vue unique à ×1,5 (`test_portee_ecran`) : la portée d'aujourd'hui, pour les dix classes.
-const PLANCHER_VUE_UNIQUE := 727.6
+## La portée du jeu depuis Q76 : le bord le plus proche de la vue unique à ×1,5 (`test_portee_ecran`), pour les dix classes
+## (728 px au coin, sous L1 et Q75). La garde en jeu vérifie que c'est bien celle que le jeu pose.
+const PORTEE_DU_JEU := 468.0
 ## Le saut le plus grand que le fondu du bout du rayon peut faire d'un pixel de monde au suivant (part de l'opacité).
 const SAUT_MAX_DU_FONDU := 0.05
 ## Le plus de triangles qu'un éventail de couche peut compter : des PLAGES (dix degrés au plus), pas un triangle par degré — tous
@@ -117,12 +121,13 @@ func _regles() -> void:
 ## Q75, D — la longueur, sans le jeu : la part de la portée, ses crans, l'enveloppe arrêtée, le shader et son fondu.
 func _regles_de_longueur() -> void:
 	print("\n--- Q75, D : la longueur de l'ancienne torche ---")
-	_check("le plafond : la longueur de la 0.7.1 en part de la portée (192 sur 727,6 px), 1 quand elle l'atteint ou la dépasse",
-		is_equal_approx(IsoVolumes.plafond_de_longueur(192.0, PLANCHER_VUE_UNIQUE), 192.0 / PLANCHER_VUE_UNIQUE)
-		and IsoVolumes.plafond_de_longueur(900.0, PLANCHER_VUE_UNIQUE) == 1.0
-		and IsoVolumes.plafond_de_longueur(PLANCHER_VUE_UNIQUE, PLANCHER_VUE_UNIQUE) == 1.0)
+	_check("le plafond : la longueur de la 0.7.1 en part de la portée (192 sur 468 px), 1 quand elle l'atteint ou la dépasse "
+		+ "(672 sur 468 : le rayon va jusqu'à la portée)",
+		is_equal_approx(IsoVolumes.plafond_de_longueur(192.0, PORTEE_DU_JEU), 192.0 / PORTEE_DU_JEU)
+		and IsoVolumes.plafond_de_longueur(672.0, PORTEE_DU_JEU) == 1.0
+		and IsoVolumes.plafond_de_longueur(PORTEE_DU_JEU, PORTEE_DU_JEU) == 1.0)
 	var crans_ok := true
-	for p: float in [0.001, 192.0 / PLANCHER_VUE_UNIQUE, 0.5, 672.0 / PLANCHER_VUE_UNIQUE, 0.99999, 1.0]:
+	for p: float in [0.001, 192.0 / PORTEE_DU_JEU, 0.5, 672.0 / 727.6, 0.99999, 1.0]:
 		var c := IsoVolumes.cran_de_longueur(p)
 		crans_ok = crans_ok and float(c) / float(IsoVolumes.CRANS_DE_LONGUEUR) >= p \
 			and float(c - 1) / float(IsoVolumes.CRANS_DE_LONGUEUR) < p and c <= IsoVolumes.CRANS_DE_LONGUEUR
@@ -206,8 +211,9 @@ func _enveloppes() -> void:
 		_check("%s : l'éventail couvre %.3f du carré d'avant (≤ %.2f), en %d triangles (≤ %d : des plages, pas un par degré)"
 			% [slug, aire.x, PART_MAX_DU_CARRE, int(aire.y), TRIANGLES_MAX],
 			aire.x > 0.0 and aire.x <= PART_MAX_DU_CARRE and int(aire.y) <= TRIANGLES_MAX)
-		# Le juge : l'enveloppe dilatée de la parallaxe, pour une portée au bord de l'écran (728 px) et une courte (192 px).
-		for portee: float in [728.0, 192.0]:
+		# Le juge : l'enveloppe dilatée de la parallaxe, pour la portée du coin (728 px, L1), celle du bord le plus proche
+		# (468 px, Q76) et une courte (192 px).
+		for portee: float in [728.0, PORTEE_DU_JEU, 192.0]:
 			var d := IsoVolumes.decalage_du_juge() / portee
 			var dehors := _hors_du_juge(env, IsoVolumes.eventail(IsoVolumes.enveloppe_dilatee(env, d)), d, n)
 			_check("%s : l'éventail du juge contient l'enveloppe dilatée de la parallaxe (portée %.0f px, %d point(s) dehors)"
@@ -215,13 +221,14 @@ func _enveloppes() -> void:
 		_longueur_du_cookie(slug, env, eventail, img, n)
 
 
-## Q75, D — les éventails d'un cookie à la longueur de SA classe dans la 0.7.1, sous le plancher de la vue unique : celui des
-## couches contient l'enveloppe arrêtée à cette longueur et s'arrête lui-même là ; celui du juge (bâti comme en jeu, à la
-## portée entière arrondie par défaut) contient cette enveloppe dilatée de la parallaxe.
+## Q75, D — les éventails d'un cookie à la longueur de SA classe dans la 0.7.1, sous la portée du jeu (Q76 : 468 px) : celui
+## des couches contient l'enveloppe arrêtée à cette longueur et s'arrête lui-même là — ou, si la 0.7.1 portait plus loin que
+## la portée, est l'éventail entier (rien à couper) ; celui du juge (bâti comme en jeu, à la portée entière arrondie par
+## défaut) contient cette enveloppe dilatée de la parallaxe.
 func _longueur_du_cookie(slug: String, env: PackedFloat32Array, entier: ArrayMesh, img: Image, n: int) -> void:
 	var pas := TAU / float(n)
 	var longueur := float(LONGUEURS_071.get(slug, 0.0))
-	var plafond := IsoVolumes.plafond_de_longueur(longueur, PLANCHER_VUE_UNIQUE)
+	var plafond := IsoVolumes.plafond_de_longueur(longueur, PORTEE_DU_JEU)
 	var cran := float(IsoVolumes.cran_de_longueur(plafond)) / float(IsoVolumes.CRANS_DE_LONGUEUR)
 	var env_c := IsoVolumes.enveloppe_plafonnee(env, cran)
 	var court := IsoVolumes.eventail(env_c)
@@ -245,10 +252,17 @@ func _longueur_du_cookie(slug: String, env: PackedFloat32Array, entier: ArrayMes
 	var ancien := _par_secteur(entier, n)
 	var arrete := bout.x < axe and _dans(ancien, bout * 0.5, n) and not _dans(pts, bout * 0.5, n)
 	var aires := [_aire(court).x, _aire(entier).x]
-	_check("%s : à la longueur de la 0.7.1 (%.1f px, %.4f de la portée, cran %.4f), l'éventail des couches contient l'enveloppe "
-		% [slug, longueur, plafond, cran] + "arrêtée et s'arrête là (l'axe à %.3f : dans l'éventail entier, hors du court) ; "
-		% bout.x + "aire %.4f contre %.4f" % aires, dedans and arrete and float(aires[0]) < float(aires[1]), detail)
-	var d := IsoVolumes.decalage_du_juge() / floorf(PLANCHER_VUE_UNIQUE)
+	if plafond >= 1.0:
+		# La 0.7.1 portait plus loin que la portée du jeu : rien à couper, l'éventail entier.
+		_check("%s : la 0.7.1 portait à %.1f px, au-delà de la portée (%.0f) — rien à couper, l'éventail est l'entier (aire %.4f)"
+			% [slug, longueur, PORTEE_DU_JEU, float(aires[0])], dedans and cran >= 1.0
+			and is_equal_approx(float(aires[0]), float(aires[1])), detail)
+	else:
+		_check("%s : à la longueur de la 0.7.1 (%.1f px, %.4f de la portée, cran %.4f), l'éventail des couches contient "
+			% [slug, longueur, plafond, cran] + "l'enveloppe arrêtée et s'arrête là (l'axe à %.3f : dans l'éventail entier, "
+			% bout.x + "hors du court) ; aire %.4f contre %.4f" % aires, dedans and arrete
+			and float(aires[0]) < float(aires[1]), detail)
+	var d := IsoVolumes.decalage_du_juge() / floorf(PORTEE_DU_JEU)
 	var dehors := _hors_du_juge(env_c, IsoVolumes.eventail(IsoVolumes.enveloppe_dilatee(env_c, d)), d, n)
 	_check("%s : à cette longueur, l'éventail du juge contient l'enveloppe arrêtée dilatée de la parallaxe (%d point(s) dehors)"
 		% [slug, int(dehors[0])], int(dehors[0]) == 0, String(dehors[1]))
@@ -376,7 +390,7 @@ func _aire(m: ArrayMesh) -> Vector2:
 
 
 func _en_jeu() -> void:
-	print("\n--- En jeu : écran scindé à 45° B, le Terrassier à J1, le Braconnier à J2 ---")
+	print("\n--- En jeu : écran scindé à 45° B, le Terrassier à J1 (coupé), le Braconnier à J2 (jusqu'à la portée) ---")
 	var main: Node = (load("res://main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -391,7 +405,8 @@ func _en_jeu() -> void:
 	if volumes == null:
 		_check("les volumes iso existent", false)
 		return
-	# Q75, D — les dix classes du catalogue : la longueur de la 0.7.1, et la portée d'aujourd'hui (le plancher) intacte.
+	# Q75, D — les dix classes du catalogue : la longueur de la 0.7.1 ; et la portée du jeu (Q76 : plancher et plafond au
+	# bord le plus proche) pour toutes.
 	var plancher := WeaponData.portee_plancher
 	var classes_ok := true
 	var detail := ""
@@ -399,14 +414,13 @@ func _en_jeu() -> void:
 	for c: ClassData in main.classes():
 		var attendue := float(LONGUEURS_071.get(String(c.slug()), -1.0))
 		vues += 1 if attendue > 0.0 else 0
-		if absf(c.portee_sans_plancher() - attendue) > 0.01 or not is_equal_approx(c.portee_torche(),
-				maxf(attendue, plancher)):
+		if absf(c.portee_sans_ecran() - attendue) > 0.01 or not is_equal_approx(c.portee_torche(), plancher):
 			classes_ok = false
-			detail = "%s : sans plancher %.2f (0.7.1 : %.2f), portée %.2f (plancher %.2f)" % [c.slug(),
-				c.portee_sans_plancher(), attendue, c.portee_torche(), plancher]
-	_check("les dix classes rendent la longueur de la 0.7.1 (de 192 à 672 px), et gardent la portée du plancher "
-		+ "(%.1f px : la lumière au sol va toujours au bord de l'écran)" % plancher,
-		classes_ok and vues == 10 and absf(plancher - PLANCHER_VUE_UNIQUE) < 0.5, detail)
+			detail = "%s : sans la règle %.2f (0.7.1 : %.2f), portée %.2f (bord %.2f)" % [c.slug(),
+				c.portee_sans_ecran(), attendue, c.portee_torche(), plancher]
+	_check("les dix classes rendent la longueur de la 0.7.1 (de 192 à 672 px), et portent toutes au bord le plus proche "
+		+ "(%.1f px, plancher et plafond : Q76)" % plancher, classes_ok and vues == 10
+		and absf(plancher - PORTEE_DU_JEU) < 0.5 and is_equal_approx(WeaponData.portee_plafond, plancher), detail)
 	for c: ClassData in main.classes():
 		if String(c.slug()) == "pompe":
 			main.p1.equip_weapon(c)
@@ -446,11 +460,11 @@ func _en_jeu() -> void:
 		var qui := "J%d (%s)" % [pid + 1, arme.slug()]
 		var portee := 0.5 * float(lampe.texture.get_width()) * lampe.texture_scale
 		# La longueur ATTENDUE se tire de la 0.7.1 (la table relue dans son code), jamais de la fonction du jeu : chaque
-		# vérification qui suit la compare à ce que le jeu pose.
-		var plafond := float(LONGUEURS_071[arme.slug()]) / portee
+		# vérification qui suit la compare à ce que le jeu pose. Au plus court de la 0.7.1 et de la portée (Q76).
+		var plafond := minf(1.0, float(LONGUEURS_071[arme.slug()]) / portee)
 		var du_jeu: float = volumes.call("plafond_du_faisceau", j, portee)
-		_check("%s : le rayon s'arrête à %.4f de la portée (%.1f px sur %.1f), la longueur de la 0.7.1" % [qui, du_jeu,
-			portee * du_jeu, portee], plafond < 1.0 and is_equal_approx(du_jeu, plafond))
+		_check("%s : le rayon s'arrête à %.4f de la portée (%.1f px sur %.1f), au plus court de la 0.7.1 (%.1f) et de la portée"
+			% [qui, du_jeu, portee * du_jeu, portee, float(LONGUEURS_071[arme.slug()])], is_equal_approx(du_jeu, plafond))
 		for angle in [0.9, -2.3]:
 			j.rotation = angle
 			j.set("flashlight_on", true)
@@ -482,8 +496,10 @@ func _en_jeu() -> void:
 		if carres:
 			for mi: MeshInstance3D in e2["noeuds"]:
 				var mat := mi.material_override as ShaderMaterial
+				var longueur_attendue := float(mat.get_shader_parameter("nuage_rayon")) * plafond if plafond < 1.0 \
+					else IsoVolumes.LONGUEUR_AIR_SANS_COUPURE
 				carres = carres and mi.mesh is PlaneMesh and mi.rotation == Vector3.ZERO and is_equal_approx(
-					float(mat.get_shader_parameter("longueur_air")), float(mat.get_shader_parameter("nuage_rayon")) * plafond)
+					float(mat.get_shader_parameter("longueur_air")), longueur_attendue)
 			var juge: MeshInstance3D = e2.get("juge")
 			# Le juge d'avant : le disque ajusté (forme 5, le défaut depuis la 0.7.0), sans rotation.
 			carres = carres and juge != null and juge.mesh == volumes.call("_disque") and juge.rotation == Vector3.ZERO

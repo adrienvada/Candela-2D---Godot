@@ -9,7 +9,8 @@ extends RefCounted
 ## sans le rayon (le noir de référence). Jugé par `tools/faisceau_q75/preuve.py`, qui fait aussi la planche.
 ##
 ## Les blocs, en écran scindé à 45° B (J1 à gauche, J2 à droite), pour trois classes aux deux joueurs — le Terrassier
-## (192 px dans la 0.7.1), la Sentinelle (499 px) et le Braconnier (672 px) ; la portée d'aujourd'hui est le plancher, 728 px :
+## (192 px dans la 0.7.1), la Sentinelle (499 px) et le Braconnier (672 px) ; la portée est celle de la règle de l'écran
+## (728 px au coin, à Q75 ; 468 px au bord le plus proche depuis Q76, où le rayon des deux dernières n'a plus rien à couper) :
 ## - `<classe>-j1` : la lampe de J1 seule — sa vue SOUS SA TORCHE, et celle de J2 DANS LE NOIR, qui voit le rayon adverse ;
 ## - `<classe>-j2` : la lampe de J2 seule — l'inverse ;
 ## - `fusee` (vue unique, le Terrassier) : les deux lampes et une fusée posée entre les joueurs — ce que A rend à la fumée ;
@@ -99,7 +100,7 @@ func _equiper(m: Node, slug: String) -> void:
 			m.p2.equip_weapon(c)
 	var arme: WeaponData = m.p1.current_weapon
 	print("  · %s : classe %s aux deux joueurs — longueur de la 0.7.1 %.1f px, portée %.1f px" % [ID, slug,
-		arme.portee_sans_plancher(), arme.portee_torche()])
+		arme.portee_sans_ecran(), arme.portee_torche()])
 
 
 func _poser(pos1: Vector2, pos2: Vector2, visee1: Vector2, visee2: Vector2, torche1: bool, torche2: bool) -> void:

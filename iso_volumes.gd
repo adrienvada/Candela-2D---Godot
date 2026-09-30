@@ -121,7 +121,7 @@ var faisceau_taille := true
 var faisceau_juge_taille := true
 ## Q75, D — LE RAYON DANS L'AIR GARDE LA LONGUEUR DE L'ANCIENNE TORCHE (Adrien, 2026-09-30 20:17 : « A+d ») : là où le
 ## plancher de L1 porte la lumière au sol plus loin que la 0.7.1, les couches du rayon s'éteignent en douceur à la portée
-## qu'avait la classe dans la 0.7.1 (`WeaponData.portee_sans_plancher`), et leur éventail s'y arrête. La lumière au sol va
+## qu'avait la classe dans la 0.7.1 (`WeaponData.portee_sans_ecran`), et leur éventail s'y arrête. La lumière au sol va
 ## toujours jusqu'au bord de l'écran : la portée, règle du jeu, ne bouge pas. `--faisceau-air-long` rend le rayon sur toute
 ## la portée, en build de débogage seulement (bancs et preuves). Relu à chaque image.
 var faisceau_air_court := true
@@ -623,7 +623,9 @@ static func _portee_du_faisceau(lampe: PointLight2D) -> float:
 
 
 ## Q75, D — LA LONGUEUR DU RAYON DANS L'AIR, en part de sa portée (1 : toute la portée, aucune coupure) : la portée qu'avait
-## la classe du joueur dans la 0.7.1 (`WeaponData.portee_sans_plancher`), quand le plancher de L1 porte la lampe plus loin.
+## la classe du joueur dans la 0.7.1 (`WeaponData.portee_sans_ecran`), quand la règle de l'écran porte la lampe plus loin.
+## Depuis Q76 (la portée au bord le plus proche, 468 px), les classes que la 0.7.1 portait plus loin — la Sentinelle, le
+## Braconnier — n'ont plus rien à couper : leur rayon va jusqu'à la portée, `min(longueur de la 0.7.1, portée)`.
 ## `faisceau_air_court` éteint (`--faisceau-air-long`), ou sans arme lisible : 1.
 func plafond_du_faisceau(j: Node, portee: float) -> float:
 	if not faisceau_air_court:
@@ -631,7 +633,7 @@ func plafond_du_faisceau(j: Node, portee: float) -> float:
 	var arme: Variant = j.get("current_weapon") if j != null else null
 	if not (arme is WeaponData):
 		return 1.0
-	return plafond_de_longueur((arme as WeaponData).portee_sans_plancher(), portee)
+	return plafond_de_longueur((arme as WeaponData).portee_sans_ecran(), portee)
 
 
 ## La part de la portée `portee` que garde un rayon long de `longueur` (pixels de monde) : dans ]0 ; 1], 1 quand la longueur

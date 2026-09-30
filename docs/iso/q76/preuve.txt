@@ -1,0 +1,60 @@
+# Q76 à l'image — la famille `q76` de `tools/banc_lumieres.gd` (dossier « banc3 »), jugée par `tools/portee_q76/planche.py`
+## q76_pompe_unique_j1_haut — pompe, vue unique de J1 (×1,5), visée vers le haut de l'écran
+   J1 : noirs avant 1397732 px, allumés après : 0 au bord (au plus 0/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 329028 px avant, 261515 après ; ligne la plus haute éclairée : 0 avant, 0 après (0 = le bord du haut) ; colonne la plus à droite : 1390 avant, 1380 après (sur 1920)
+   avant : J1 portée 728, bord 468, au bord 0.353, éblouissement 0.060
+   après : J1 portée 468, bord 468, au bord 0.004, éblouissement 0.060
+## q76_pompe_unique_j2_haut — pompe, vue unique de J2 (×1,5), visée vers le haut de l'écran
+   J2 : noirs avant 1399295 px, allumés après : 0 au bord (au plus 0/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 329225 px avant, 260958 après ; ligne la plus haute éclairée : 0 avant, 0 après (0 = le bord du haut) ; colonne la plus à droite : 1390 avant, 1368 après (sur 1920)
+   avant : J2 portée 728, bord 468, au bord 0.353, éblouissement 0.060
+   après : J2 portée 468, bord 468, au bord 0.004, éblouissement 0.060
+## q76_pompe_unique_j1_coin — pompe, vue unique de J1 (×1,5), visée vers le coin de l'écran
+   J1 : noirs avant 1464683 px, allumés après : 0 au bord (au plus 0/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 380163 px avant, 284866 après ; ligne la plus haute éclairée : 0 avant, 0 après (0 = le bord du haut) ; colonne la plus à droite : 1919 avant, 1680 après (sur 1920)
+   avant : J1 portée 728, bord 686, au bord 0.055, éblouissement 0.060
+   après : J1 portée 468, bord 686, au bord 0.004, éblouissement 0.060
+## q76_pompe_scinde_haut — pompe, écran scindé (×1,25), les deux visent le haut de leur écran
+   J1 : noirs avant 552703 px, allumés après : 18 au bord (au plus 55/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 410067 px avant, 295694 après ; ligne la plus haute éclairée : 0 avant, 112 après (0 = le bord du haut) ; colonne la plus à droite : 837 avant, 827 après (sur 960)
+   J2 : noirs avant 551758 px, allumés après : 20 au bord (au plus 56/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 380583 px avant, 291762 après ; ligne la plus haute éclairée : 0 avant, 62 après (0 = le bord du haut) ; colonne la plus à droite : 756 avant, 754 après (sur 960)
+   avant : J1 portée 728, bord 562, au bord 0.224, éblouissement 0.060 ; J2 portée 728, bord 562, au bord 0.224, éblouissement 0.060
+   après : J1 portée 468, bord 562, au bord 0.004, éblouissement 0.060 ; J2 portée 468, bord 562, au bord 0.004, éblouissement 0.060
+## q76_sentinelle_unique_j1_haut — sentinelle, vue unique de J1 (×1,5), visée vers le haut de l'écran
+   J1 : noirs avant 1603605 px, allumés après : 0 au bord (au plus 0/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 60840 px avant, 37435 après ; ligne la plus haute éclairée : 0 avant, 54 après (0 = le bord du haut) ; colonne la plus à droite : 1070 avant, 1061 après (sur 1920)
+   avant : J1 portée 728, bord 468, au bord 0.349, éblouissement 0.060
+   après : J1 portée 468, bord 468, au bord 0.004, éblouissement 0.060
+## q76_sentinelle_unique_j2_haut — sentinelle, vue unique de J2 (×1,5), visée vers le haut de l'écran
+   J2 : noirs avant 1603325 px, allumés après : 0 au bord (au plus 0/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 60457 px avant, 38814 après ; ligne la plus haute éclairée : 0 avant, 36 après (0 = le bord du haut) ; colonne la plus à droite : 1072 avant, 1058 après (sur 1920)
+   avant : J2 portée 728, bord 468, au bord 0.349, éblouissement 0.060
+   après : J2 portée 468, bord 468, au bord 0.004, éblouissement 0.060
+## q76_sentinelle_unique_j1_coin — sentinelle, vue unique de J1 (×1,5), visée vers le coin de l'écran
+   J1 : noirs avant 1647706 px, allumés après : 0 au bord (au plus 0/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 75743 px avant, 52821 après ; ligne la plus haute éclairée : 162 avant, 192 après (0 = le bord du haut) ; colonne la plus à droite : 1636 avant, 1605 après (sur 1920)
+   avant : J1 portée 728, bord 686, au bord 0.055, éblouissement 0.060
+   après : J1 portée 468, bord 686, au bord 0.004, éblouissement 0.060
+## q76_sentinelle_scinde_haut — sentinelle, écran scindé (×1,25), les deux visent le haut de leur écran
+   J1 : noirs avant 785577 px, allumés après : 13 au bord (au plus 18/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 86075 px avant, 47693 après ; ligne la plus haute éclairée : 0 avant, 156 après (0 = le bord du haut) ; colonne la plus à droite : 570 avant, 562 après (sur 960)
+   J2 : noirs avant 795693 px, allumés après : 19 au bord (au plus 18/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 83984 px avant, 54652 après ; ligne la plus haute éclairée : 0 avant, 99 après (0 = le bord du haut) ; colonne la plus à droite : 574 avant, 567 après (sur 960)
+   avant : J1 portée 728, bord 562, au bord 0.224, éblouissement 0.060 ; J2 portée 728, bord 562, au bord 0.224, éblouissement 0.060
+   après : J1 portée 468, bord 562, au bord 0.004, éblouissement 0.060 ; J2 portée 468, bord 562, au bord 0.004, éblouissement 0.060
+## q76_arbalete_unique_j1_haut — arbalete, vue unique de J1 (×1,5), visée vers le haut de l'écran
+   J1 : noirs avant 1639785 px, allumés après : 30 au bord (au plus 7/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 24028 px avant, 15017 après ; ligne la plus haute éclairée : 0 avant, 175 après (0 = le bord du haut) ; colonne la plus à droite : 1066 avant, 1054 après (sur 1920)
+   avant : J1 portée 728, bord 468, au bord 0.141, éblouissement 0.060
+   après : J1 portée 468, bord 468, au bord 0.000, éblouissement 0.060
+## q76_arbalete_unique_j2_haut — arbalete, vue unique de J2 (×1,5), visée vers le haut de l'écran
+   J2 : noirs avant 1637554 px, allumés après : 11 au bord (au plus 9/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 25560 px avant, 14400 après ; ligne la plus haute éclairée : 0 avant, 174 après (0 = le bord du haut) ; colonne la plus à droite : 1067 avant, 1057 après (sur 1920)
+   avant : J2 portée 728, bord 468, au bord 0.141, éblouissement 0.060
+   après : J2 portée 468, bord 468, au bord 0.000, éblouissement 0.060
+## q76_arbalete_unique_j1_coin — arbalete, vue unique de J1 (×1,5), visée vers le coin de l'écran
+   J1 : noirs avant 1670013 px, allumés après : 3 au bord (au plus 8/255), 0 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 39953 px avant, 20055 après ; ligne la plus haute éclairée : 183 avant, 232 après (0 = le bord du haut) ; colonne la plus à droite : 1610 avant, 1587 après (sur 1920)
+   avant : J1 portée 728, bord 686, au bord 0.024, éblouissement 0.060
+   après : J1 portée 468, bord 686, au bord 0.000, éblouissement 0.060
+## q76_arbalete_scinde_haut — arbalete, écran scindé (×1,25), les deux visent le haut de leur écran
+   J1 : noirs avant 828234 px, allumés après : 46 au bord (au plus 30/255), 4 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 36562 px avant, 18454 après ; ligne la plus haute éclairée : 0 avant, 262 après (0 = le bord du haut) ; colonne la plus à droite : 568 avant, 556 après (sur 960)
+      décalés par l'échelle : (131, 638) 4/0/0, (132, 638) 4/1/0, (131, 639) 9/4/0, (132, 639) 10/4/0
+   J2 : noirs avant 825929 px, allumés après : 50 au bord (au plus 20/255), 8 décalés par l'échelle, 0 fuites ; éclaircis après loin de la lumière d'avant 0 px (au plus +0/255) ; la torche éclaire 40414 px avant, 20521 après ; ligne la plus haute éclairée : 13 avant, 105 après (0 = le bord du haut) ; colonne la plus à droite : 573 avant, 561 après (sur 960)
+      décalés par l'échelle : (1094, 638) 3/0/0, (1095, 638) 3/0/0, (1093, 639) 2/0/0, (1094, 639) 10/4/0, (1095, 639) 9/4/0, (1093, 640) 6/2/0, (1094, 640) 12/6/0, (1095, 640) 11/5/0
+   avant : J1 portée 728, bord 562, au bord 0.094, éblouissement 0.060 ; J2 portée 728, bord 562, au bord 0.094, éblouissement 0.060
+   après : J1 portée 468, bord 562, au bord 0.000, éblouissement 0.060 ; J2 portée 468, bord 562, au bord 0.000, éblouissement 0.060
+## J1 = J2 — vue unique (×1,5), visée vers le haut, chacun à la même place
+   pompe : après, J1 portée 468, bord 468, au bord 0.004 — J2 portée 468, bord 468, au bord 0.004 ✓ ; ligne la plus haute éclairée J1 0, J2 0 ; la torche éclaire J1 261515 px, J2 260958 px
+   sentinelle : après, J1 portée 468, bord 468, au bord 0.004 — J2 portée 468, bord 468, au bord 0.004 ✓ ; ligne la plus haute éclairée J1 54, J2 36 ; la torche éclaire J1 37435 px, J2 38814 px
+   arbalete : après, J1 portée 468, bord 468, au bord 0.000 — J2 portée 468, bord 468, au bord 0.000 ✓ ; ligne la plus haute éclairée J1 175, J2 174 ; la torche éclaire J1 15017 px, J2 14400 px
+planche : planche_q76.jpg
+VERDICT : ✓ aucun pixel noir allumé loin de la lumière d'avant ; J1 = J2
