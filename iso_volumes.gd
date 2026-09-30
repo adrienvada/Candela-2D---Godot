@@ -132,6 +132,17 @@ var forme_masque := 5
 ## 0 : `--sans-fusee-coeur`, le choix d'ISO3/ISO4. La règle « jamais de blanc » (`fusee.gd`, FU2.1) reste entière pour la
 ## LUMIÈRE : l'exception ne vaut que pour ce point, qui n'éclaire rien. La vue de dessus garde son point rouge.
 var coeur_fusee := 2
+## Chantier « Gadgets en volume », GV1 — LA FUMÉE EN VOXELS, À L'ESSAI, ÉTEINTE PAR DÉFAUT (Adrien, 2026-09-30 : « tous les
+## gadgets […] davantage en 3D ») : la suie, la poussière et la fumée de la fusée deviennent un tas de cubes
+## (`IsoNuageVoxel`, `nuage_voxel_iso.gdshader`) au lieu de leurs couches. `--fumee-voxel-essai` l'allume (voxels d'un quart
+## de tuile), `--fumee-voxel-essai=fin` en huitièmes. Sans le drapeau, rien de ce chemin ne s'exécute ni ne se charge : les
+## couches, telles quelles. Adrien décide du défaut sur les planches et les relevés du cloud (ROADMAP, chantier GV). Les
+## bancs basculent par `poser_fumee_voxel`.
+var fumee_voxel := false
+var variante_voxel := IsoNuageVoxel.VARIANTE_PAR_DEFAUT
+## GV1 — les vues de l'image en cours et la présentation (pour la caméra de chaque vue), posées par `suivre`.
+var _vues: Array = []
+var _presentation: Node = null
 
 var miroirs: Node = null      # MiroirsIso : il tient le registre des dessins retirés des lightmaps
 var _suivis := {}             # "instance_id:cle" de la source -> Dictionary
@@ -179,6 +190,8 @@ const PRIORITE_JUGE := PRIORITE_VOLUME - 1
 const DRAPEAU_COEUR_FUSEE := "--fusee-coeur"
 const DRAPEAU_COEUR_FUSEE_BLANC := "--fusee-coeur-blanc"
 const DRAPEAU_SANS_COEUR_FUSEE := "--sans-fusee-coeur"
+## GV1 — la fumée en voxels, à l'essai (`fumee_voxel`) ; `=fin` ou `=gros` choisit la taille du voxel.
+const DRAPEAU_FUMEE_VOXEL := "--fumee-voxel-essai"
 ## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
 ## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
 const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
@@ -240,6 +253,19 @@ func _init() -> void:
 			coeur_fusee = 2
 		elif arg == DRAPEAU_SANS_COEUR_FUSEE:
 			coeur_fusee = 0
+		elif arg == DRAPEAU_FUMEE_VOXEL:
+			fumee_voxel = true
+		elif arg.begins_with(DRAPEAU_FUMEE_VOXEL + "="):
+			fumee_voxel = true
+			variante_voxel = arg.trim_prefix(DRAPEAU_FUMEE_VOXEL + "=")
+	if fumee_voxel:
+		# La preuve qu'une prise porte l'essai : ce que le JEU dit, jamais la commande.
+		if not IsoNuageVoxel.VARIANTES.has(variante_voxel):
+			variante_voxel = IsoNuageVoxel.VARIANTE_PAR_DEFAUT
+		print("[fumée voxel] essai allumé — voxels « %s » de %.2f px (%s de tuile) : suie, poussière et fumée de la fusée"
+			% [variante_voxel, IsoNuageVoxel.cote_voxel(variante_voxel),
+			"un quart" if variante_voxel == "gros" else "un huitième"])
+		IsoNuageVoxel.prechauffer()
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
 	# Les deux états s'impriment : une prise prouve le sien par ce que le JEU dit, jamais par la commande.
@@ -287,6 +313,8 @@ func suivre(main: Node, vues: Array, style: int, presentation: Node) -> void:
 	if not images_actives:
 		vider()
 		return
+	_vues = vues
+	_presentation = presentation
 	var vus := {}
 	var conteneur: Node = main.get("bullet_container")
 	if conteneur != null:
@@ -329,7 +357,9 @@ func vider() -> void:
 # ---------------------------------------------------------------------------
 
 func _suivre_gadget(g: Node2D, slug: String, vus: Dictionary) -> void:
-	if VOLUMES.has(slug):
+	if fumee_voxel and VOLUMES.has(slug) and IsoNuageVoxel.NUAGES.has(slug):
+		_suivre_gadget_en_voxels(g, slug, vus)
+	elif VOLUMES.has(slug):
 		var visuel := g.get_node_or_null(^"Visuel") as Sprite2D
 		var spec: Dictionary = VOLUMES[slug]
 		var e := _entree(g, "volume", vus)
@@ -361,7 +391,9 @@ func _suivre_fusee(f: Node2D, vus: Dictionary) -> void:
 		return
 	# Posée : la fumée en volume, et une lueur basse qui pulse avec ce qu'elle brûle.
 	var alpha := float(f.call("alpha_fumee")) if f.has_method("alpha_fumee") else 0.0
-	if volumes_actifs and alpha > 0.0:
+	if volumes_actifs and alpha > 0.0 and fumee_voxel:
+		_suivre_fusee_en_voxels(f, vus)
+	elif volumes_actifs and alpha > 0.0:
 		var e := _entree(f, "fumee", vus)
 		_couches(e, int(VOLUME_FUSEE["couches"]) if couches_fusee < 0
 			else clampi(couches_fusee, 0, int(VOLUME_FUSEE["couches"])))
@@ -771,6 +803,157 @@ func _suivre_toile(g: Node2D, vus: Dictionary) -> void:
 
 
 # ---------------------------------------------------------------------------
+# LA FUMÉE EN VOXELS — chantier « Gadgets en volume », GV1, à l'essai
+# ---------------------------------------------------------------------------
+
+## La suie ou la poussière en voxels : la même lecture que ses couches (l'image de la masse, tournée comme elle, son rayon,
+## son opacité rendue — la vie), posée sur la grille de cubes de chaque vue.
+func _suivre_gadget_en_voxels(g: Node2D, slug: String, vus: Dictionary) -> void:
+	var visuel := g.get_node_or_null(^"Visuel") as Sprite2D
+	var e := _entree(g, "nuage_voxel", vus)
+	# La masse passe en aplat tant que ses cubes vivent (`IsoNuageVoxel.aplat` dit pourquoi) ; `_retirer` rend son image.
+	if visuel != null and not e.has("aplat"):
+		e["aplat"] = visuel
+		e["texture_origine"] = visuel.texture
+		visuel.texture = IsoNuageVoxel.aplat(visuel.texture)
+	var tex: Texture2D = visuel.texture if visuel != null else null
+	var demi := float(g.get("rayon")) if "rayon" in g else 60.0
+	if tex != null:
+		demi = maxf(tex.get_width() * absf(visuel.global_scale.x), tex.get_height() * absf(visuel.global_scale.y)) * 0.5
+	var vie := Presentation3D.opacite_rendue(visuel) if visuel != null else 0.0
+	var hauteur := float((VOLUMES[slug] as Dictionary)["hauteur"])
+	e = _suivre_nuage_voxel(g, slug, hauteur, vus)
+	for m: ShaderMaterial in e["mats"]:
+		IsoNuageVoxel.poser_gadget(m, slug, g.global_position, demi, tex, visuel.global_rotation if visuel != null else 0.0,
+			vie, float(g.call("age")) if g.has_method("age") else 0.0)
+	_afficher_nuage(e, vie > 0.0)
+	_poser_juge_nuage(e, g.global_position, demi, vie > 0.0)
+
+
+## La fumée de la fusée en voxels (panache d'extinction compris) : ce qu'elle peint en 2D à cette image — son voile et ses
+## nappes, lus sur leurs sprites et leur matériau — posé sur la grille de cubes de chaque vue.
+func _suivre_fusee_en_voxels(f: Node2D, vus: Dictionary) -> void:
+	var rayon := float(f.call("rayon_fumee"))
+	var e := _suivre_nuage_voxel(f, "fusee", float(VOLUME_FUSEE["hauteur"]), vus)
+	var nappes: Array = []
+	for n in f.get_children():
+		if n is Sprite2D and String(n.name).begins_with("Nappe"):
+			nappes.append(n)
+	var voile := f.get_node_or_null(^"Voile") as Sprite2D
+	for m: ShaderMaterial in e["mats"]:
+		IsoNuageVoxel.poser_fusee(m, f.global_position, rayon, voile, nappes,
+			maxf(float(f.call("age_combustion")), 0.0) if f.has_method("age_combustion") else 0.0)
+	_afficher_nuage(e, true)
+	_poser_juge_nuage(e, f.global_position, rayon, true)
+
+
+## L'entrée d'un nuage en voxels : un `MultiMeshInstance3D` par vue projetée, sur le calque 3D de SA caméra, avec SON
+## matériau (sa lightmap) et SA grille (rangée pour elle). Refaite quand les vues ou la variante changent ; la grille est
+## rechoisie quand la caméra change de côté (un lacet de plus de 90°).
+func _suivre_nuage_voxel(source: Node2D, type: String, hauteur_tuiles: float, vus: Dictionary) -> Dictionary:
+	var e := _entree(source, "nuage_voxel", vus)
+	var voxel := IsoNuageVoxel.cote_voxel(variante_voxel)
+	var hauteur_px := hauteur_tuiles * TUILE
+	if e.get("vues", []) != _vues or String(e.get("variante", "")) != variante_voxel:
+		for mi in e["noeuds"]:
+			if is_instance_valid(mi):
+				(mi as Node).queue_free()
+		e["noeuds"] = []
+		e["mats"] = []
+		e["cotes"] = []
+		e["vues"] = _vues.duplicate()
+		e["variante"] = variante_voxel
+		e["voxel"] = voxel
+		e["haut_px"] = float(IsoNuageVoxel.rangees(hauteur_px, voxel)) * voxel
+		for id in _vues:
+			var mmi := MultiMeshInstance3D.new()
+			# Un nom par nuage et par vue : deux homonymes sous le même parent, Godot renomme le second d'après sa CLASSE
+			# (« Pièges connus »), et il échapperait à qui le cherche par son nom.
+			mmi.name = "NuageVoxel%d_%d" % [int(id) + 1, source.get_instance_id()]
+			mmi.layers = Presentation3D._calque_de(int(id))
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var mat := IsoNuageVoxel.materiau(type, int(id), voxel, hauteur_px, PRIORITE_VOLUME)
+			mmi.material_override = mat
+			add_child(mmi)
+			e["noeuds"].append(mmi)
+			e["mats"].append(mat)
+			e["cotes"].append(Vector2i(9, 9))
+	var origine := IsoNuageVoxel.origine(source.global_position, voxel)
+	for k in (e["noeuds"] as Array).size():
+		var cote := IsoNuageVoxel.cote_camera(_avant_de_la_vue(int(e["vues"][k])))
+		if e["cotes"][k] != cote:
+			e["cotes"][k] = cote
+			(e["noeuds"][k] as MultiMeshInstance3D).multimesh = IsoNuageVoxel.grille(type, hauteur_px, voxel, cote)
+		(e["noeuds"][k] as Node3D).position = origine
+	return e
+
+
+func _afficher_nuage(e: Dictionary, visible: bool) -> void:
+	for mi in e["noeuds"]:
+		(mi as Node3D).visible = visible
+
+
+## La direction de vue de la caméra qui dessine la vue `id` : lue sur la caméra de la présentation, sinon tirée de son lacet.
+func _avant_de_la_vue(id: int) -> Vector3:
+	if _presentation != null and _presentation.has_method("_camera_de"):
+		var cam: Variant = _presentation.call("_camera_de", id)
+		if cam is Camera3D and (cam as Camera3D).is_inside_tree():
+			return -(cam as Camera3D).global_transform.basis.z
+	var reglages := get_node_or_null(^"/root/GameSettings")
+	return IsoNuageVoxel.avant_de_lacet(float(reglages.call("lacet_de", id)) if reglages != null else 0.0)
+
+
+## Le juge du masque d'un nuage en voxels (le masque de la fumée, Q31, sous sa forme pochoir) : un plan au sommet des cubes,
+## dessiné juste avant eux, qui écrit 1 dans le pochoir là où ce que le pixel montre est noir. Il couvre le cylindre du nuage
+## vu depuis sa hauteur : le rayon de vue, pris du sol au sommet à quatre hauteurs, doit tomber à moins de `r` du centre, `r`
+## le rayon du nuage, plus la demi-diagonale d'un cube, plus le pas entre deux hauteurs lues. Masque coupé (débogage) : aucun
+## juge, et le pochoir vaut 0 partout.
+func _poser_juge_nuage(e: Dictionary, centre: Vector2, rayon: float, visible: bool) -> void:
+	var juge: MeshInstance3D = e.get("juge") if is_instance_valid(e.get("juge")) else null
+	if not (masque_fumee and visible):
+		if juge != null:
+			juge.visible = false
+		return
+	if juge == null:
+		juge = MeshInstance3D.new()
+		juge.name = "Juge"
+		juge.layers = CALQUE
+		juge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var mat := ShaderMaterial.new()
+		mat.shader = _variante_juge_de(e)
+		mat.render_priority = PRIORITE_JUGE
+		_formes_posees[mat.shader] = true
+		_recopier_le_mur(mat)
+		juge.material_override = mat
+		add_child(juge)
+		e["juge"] = juge
+		e["juge_forme"] = forme_masque
+	elif int(e.get("juge_forme", FORME_POCHOIR)) != forme_masque:
+		var mj := juge.material_override as ShaderMaterial
+		mj.shader = _variante_juge_de(e)
+		_formes_posees[mj.shader] = true
+		e["juge_forme"] = forme_masque
+	var haut := maxf(PLANCHER_PX, float(e["haut_px"]))
+	var r := rayon * 1.05 + float(e["voxel"]) + 0.13 * haut + 3.0
+	juge.mesh = _disque() if forme_masque >= FORME_AJUSTEE else _plan
+	juge.position = Vector3(centre.x, haut, centre.y)
+	juge.scale = Vector3(2.0 * (r + haut), 1.0, 2.0 * (r + haut))
+	juge.visible = true
+	var m := juge.material_override as ShaderMaterial
+	m.set_shader_parameter("nuage_centre", centre)
+	m.set_shader_parameter("juge_rayons", Vector4(r, r, r, r))
+	m.set_shader_parameter("juge_hauteurs", Vector4(0.0, haut / 3.0, 2.0 * haut / 3.0, haut))
+
+
+## GV1 — la bascule des bancs : la fumée en voxels allumée ou éteinte, et sa variante, sur place. Les nuages déjà suivis se
+## refont à l'image suivante (leur genre ou leur variante a changé) : couches et voxels se comparent dans la même partie.
+func poser_fumee_voxel(actif: bool, variante := "") -> void:
+	fumee_voxel = actif
+	if variante != "" and IsoNuageVoxel.VARIANTES.has(variante):
+		variante_voxel = variante
+
+
+# ---------------------------------------------------------------------------
 # LA MÉCANIQUE COMMUNE
 # ---------------------------------------------------------------------------
 
@@ -1122,6 +1305,9 @@ func _retirer(id: String) -> void:
 	var e: Dictionary = _suivis.get(id, {})
 	if e.is_empty():
 		return
+	# GV1 — la masse d'un nuage en voxels reprend son image (voir `IsoNuageVoxel.aplat`).
+	if e.has("aplat") and is_instance_valid(e["aplat"]):
+		(e["aplat"] as Sprite2D).texture = e["texture_origine"]
 	for item in e["retires"]:
 		# Un dessin que le miroir d'un objet posé a repris (le cœur d'une fusée qui vient d'atterrir)
 		# reste à lui : c'est lui qui le rendra.
@@ -1142,7 +1328,8 @@ func _pousser_lightmaps(main: Node, vues: Array, style: int) -> void:
 	for e: Dictionary in _suivis.values():
 		for m in e["mats"]:
 			var s := (m as ShaderMaterial).shader
-			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s):
+			if s == SHADER_VOLUME or (s != null and s == _shader_masque) or _formes_posees.has(s) \
+					or IsoNuageVoxel.est_un_shader_de_nuage(s):
 				mats.append(m)
 		var juge: Variant = e.get("juge")
 		if juge != null and is_instance_valid(juge) and (juge as MeshInstance3D).visible:

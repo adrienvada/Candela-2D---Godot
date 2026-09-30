@@ -1,0 +1,44 @@
+pose=cartouche_suie noeud=GadgetJ2_9650
+noir cas=cartouche_suie variante=couches vue=J1 noirs=334448 emprise=94027 noirs_dessous=20841 instables=91381 fuites=14 fuites_sup2=0 fuites_sup8=0
+noir cas=cartouche_suie variante=couches vue=J2 noirs=335272 emprise=92666 noirs_dessous=20598 instables=88953 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=cartouche_suie variante=gros vue=J1 noirs=331446 emprise=69589 noirs_dessous=397 instables=57017 fuites=11 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=290
+noir residus cas=cartouche_suie variante=gros vue=J1 cubes=11 couches=14
+noir cas=cartouche_suie variante=gros vue=J2 noirs=334847 emprise=69079 noirs_dessous=1595 instables=55978 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=1402
+noir residus cas=cartouche_suie variante=gros vue=J2 cubes=0 couches=0
+noir cas=cartouche_suie variante=fin vue=J1 noirs=331452 emprise=70416 noirs_dessous=193 instables=54679 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=126
+noir residus cas=cartouche_suie variante=fin vue=J1 cubes=0 couches=14
+noir cas=cartouche_suie variante=fin vue=J2 noirs=334847 emprise=69131 noirs_dessous=945 instables=56047 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=775
+noir residus cas=cartouche_suie variante=fin vue=J2 cubes=0 couches=0
+pose=poussiere noeud=GadgetJ2_9650
+noir cas=poussiere variante=couches vue=J1 noirs=314676 emprise=210456 noirs_dessous=126346 instables=87991 fuites=1 fuites_sup2=0 fuites_sup8=0
+noir cas=poussiere variante=couches vue=J2 noirs=304058 emprise=211302 noirs_dessous=123354 instables=90614 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=poussiere variante=gros vue=J1 noirs=311028 emprise=143975 noirs_dessous=70366 instables=89642 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=2 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=69729
+noir residus cas=poussiere variante=gros vue=J1 cubes=0 couches=1
+noir cas=poussiere variante=gros vue=J2 noirs=300317 emprise=146470 noirs_dessous=69660 instables=93615 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=69064
+noir residus cas=poussiere variante=gros vue=J2 cubes=0 couches=0
+noir cas=poussiere variante=fin vue=J1 noirs=311032 emprise=146387 noirs_dessous=72537 instables=89647 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=71899
+noir residus cas=poussiere variante=fin vue=J1 cubes=0 couches=1
+noir cas=poussiere variante=fin vue=J2 noirs=300317 emprise=149668 noirs_dessous=72119 instables=94364 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=71471
+noir residus cas=poussiere variante=fin vue=J2 cubes=0 couches=0
+noir cas=fusee_panache variante=couches vue=J1 noirs=375836 emprise=385012 noirs_dessous=302794 instables=8743 fuites=1 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_panache variante=couches vue=J2 noirs=361708 emprise=384381 noirs_dessous=300209 instables=5205 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_panache variante=gros vue=J1 noirs=375849 emprise=208292 noirs_dessous=155225 instables=6434 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=151844
+noir residus cas=fusee_panache variante=gros vue=J1 cubes=0 couches=1
+noir cas=fusee_panache variante=gros vue=J2 noirs=361708 emprise=205597 noirs_dessous=151995 instables=5175 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=148695
+noir residus cas=fusee_panache variante=gros vue=J2 cubes=0 couches=0
+noir cas=fusee_panache variante=fin vue=J1 noirs=375855 emprise=221673 noirs_dessous=163700 instables=6304 fuites=3 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=158003
+noir residus cas=fusee_panache variante=fin vue=J1 cubes=3 couches=1
+noir cas=fusee_panache variante=fin vue=J2 noirs=361708 emprise=218380 noirs_dessous=160275 instables=5268 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=154798
+noir residus cas=fusee_panache variante=fin vue=J2 cubes=0 couches=0
+noir cas=fusee_braise_lumiere_coupee variante=couches vue=J1 noirs=300651 emprise=325531 noirs_dessous=178068 instables=126473 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_braise_lumiere_coupee variante=couches vue=J2 noirs=286556 emprise=320255 noirs_dessous=172551 instables=125615 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_braise_lumiere_coupee variante=gros vue=J1 noirs=300650 emprise=157121 noirs_dessous=42785 instables=125850 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=40149
+noir residus cas=fusee_braise_lumiere_coupee variante=gros vue=J1 cubes=0 couches=0
+noir cas=fusee_braise_lumiere_coupee variante=gros vue=J2 noirs=286556 emprise=156640 noirs_dessous=42245 instables=125763 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=39633
+noir residus cas=fusee_braise_lumiere_coupee variante=gros vue=J2 cubes=0 couches=0
+noir cas=fusee_braise_lumiere_coupee variante=fin vue=J1 noirs=300646 emprise=167093 noirs_dessous=49590 instables=126199 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=44742
+noir residus cas=fusee_braise_lumiere_coupee variante=fin vue=J1 cubes=0 couches=0
+noir cas=fusee_braise_lumiere_coupee variante=fin vue=J2 noirs=286556 emprise=166926 noirs_dessous=49078 instables=125885 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=44433
+noir residus cas=fusee_braise_lumiere_coupee variante=fin vue=J2 cubes=0 couches=0
+noir total_masque_coupe_fuites_sup2=0 total_temoin_fuites_sup2=1067053
+VERDICT=OK echecs=0

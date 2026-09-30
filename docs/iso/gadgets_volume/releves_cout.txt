@@ -1,0 +1,53 @@
+etalon vue=J1 aire=16061 somme=67064 unite=4.176 mode_des_ecarts=4
+etalon vue=J2 aire=16061 somme=64244 unite=4.000 mode_des_ecarts=4
+surface scene=fusee rendu=couches vue=J1 fragments=1437976 images=1107872 juge=330104 empreinte=336679 aire_couches=1112726 cubes=0 histogramme=[43796,40831,41540,210383,36,2,5,86]
+compteur scene=fusee vue=J1 mesure/aire=0.996
+surface scene=fusee rendu=couches vue=J2 fragments=1500695 images=1155964 juge=344731 empreinte=334977 aire_couches=1113137 cubes=0 histogramme=[45672,35348,37670,216287,0,0,0,0]
+compteur scene=fusee vue=J2 mesure/aire=1.038
+surface scene=fusee rendu=gros vue=J1 fragments=584305 images=172593 juge=411712 empreinte=140486 aire_couches=0 cubes=18272 histogramme=[112613,23050,3924,739,67,3,0,90]
+surface scene=fusee rendu=gros vue=J2 fragments=609147 images=178056 juge=431091 empreinte=143100 aire_couches=0 cubes=18272 histogramme=[110443,27506,4624,502,25,0,0,0]
+surface scene=fusee rendu=fin vue=J1 fragments=627921 images=225258 juge=402663 empreinte=148696 aire_couches=0 cubes=138400 histogramme=[106034,23824,8984,6631,2424,764,31,4]
+surface scene=fusee rendu=fin vue=J2 fragments=655055 images=234253 juge=420802 empreinte=153453 aire_couches=0 cubes=138400 histogramme=[102015,29745,10928,7709,2060,768,139,89]
+cout scene=fusee tour=1 rendu=sans_le_nuage appels=174 primitives=11408 image_ms_mediane=618.1 image_ms_p90=716.0 cubes=0
+cout scene=fusee tour=1 rendu=couches appels=184 primitives=11456 image_ms_mediane=759.4 image_ms_p90=815.3 cubes=0
+cout scene=fusee tour=1 rendu=gros appels=178 primitives=121072 image_ms_mediane=687.7 image_ms_p90=755.8 cubes=18272
+cout scene=fusee tour=1 rendu=fin appels=178 primitives=841840 image_ms_mediane=1025.6 image_ms_p90=1102.8 cubes=138400
+cout scene=fusee tour=2 rendu=sans_le_nuage appels=174 primitives=11408 image_ms_mediane=615.1 image_ms_p90=659.6 cubes=0
+cout scene=fusee tour=2 rendu=couches appels=184 primitives=11456 image_ms_mediane=755.4 image_ms_p90=818.3 cubes=0
+cout scene=fusee tour=2 rendu=gros appels=178 primitives=121072 image_ms_mediane=707.4 image_ms_p90=773.2 cubes=18272
+cout scene=fusee tour=2 rendu=fin appels=178 primitives=841840 image_ms_mediane=992.9 image_ms_p90=1115.8 cubes=138400
+pose=cartouche_suie noeud=GadgetJ2_9680
+surface scene=suie rendu=couches vue=J1 fragments=295628 images=218388 juge=77240 empreinte=67099 aire_couches=214503 cubes=0 histogramme=[9478,8752,7746,40991,34,5,4,89]
+compteur scene=suie vue=J1 mesure/aire=1.018
+surface scene=suie rendu=couches vue=J2 fragments=307228 images=226646 juge=80582 empreinte=67314 aire_couches=214503 cubes=0 histogramme=[9498,8777,7907,41132,0,0,0,0]
+compteur scene=suie vue=J2 mesure/aire=1.057
+surface scene=suie rendu=gros vue=J1 fragments=172522 images=57429 juge=115093 empreinte=49241 aire_couches=0 cubes=2248 histogramme=[40326,8431,476,0,8,0,0,0]
+surface scene=suie rendu=gros vue=J2 fragments=180310 images=60125 juge=120185 empreinte=49530 aire_couches=0 cubes=2248 histogramme=[38756,9994,766,14,0,0,0,0]
+surface scene=suie rendu=fin vue=J1 fragments=169260 images=61296 juge=107964 empreinte=49958 aire_couches=0 cubes=15488 histogramme=[40714,7810,884,360,132,4,8,46]
+surface scene=suie rendu=fin vue=J2 fragments=176021 images=63317 juge=112704 empreinte=49947 aire_couches=0 cubes=15488 histogramme=[37887,10050,1291,468,159,77,10,5]
+cout scene=suie tour=1 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=543.4 image_ms_p90=584.6 cubes=0
+cout scene=suie tour=1 rendu=couches appels=166 primitives=11284 image_ms_mediane=551.8 image_ms_p90=606.2 cubes=0
+cout scene=suie tour=1 rendu=gros appels=160 primitives=24756 image_ms_mediane=534.5 image_ms_p90=603.6 cubes=2248
+cout scene=suie tour=1 rendu=fin appels=160 primitives=104196 image_ms_mediane=563.6 image_ms_p90=617.6 cubes=15488
+cout scene=suie tour=2 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=528.9 image_ms_p90=562.1 cubes=0
+cout scene=suie tour=2 rendu=couches appels=166 primitives=11284 image_ms_mediane=556.8 image_ms_p90=616.1 cubes=0
+cout scene=suie tour=2 rendu=gros appels=160 primitives=24756 image_ms_mediane=531.5 image_ms_p90=583.4 cubes=2248
+cout scene=suie tour=2 rendu=fin appels=160 primitives=104196 image_ms_mediane=583.5 image_ms_p90=636.1 cubes=15488
+pose=poussiere noeud=GadgetJ2_9681
+surface scene=poussiere rendu=couches vue=J1 fragments=731920 images=542092 juge=189828 empreinte=221151 aire_couches=537364 cubes=0 histogramme=[46152,40058,134865,9,59,0,0,8]
+compteur scene=poussiere vue=J1 mesure/aire=1.009
+surface scene=poussiere rendu=couches vue=J2 fragments=762273 images=564356 juge=197917 empreinte=220561 aire_couches=537363 cubes=0 histogramme=[45240,39537,135784,0,0,0,0,0]
+compteur scene=poussiere vue=J2 mesure/aire=1.050
+surface scene=poussiere rendu=gros vue=J1 fragments=414175 images=153007 juge=261168 empreinte=152079 aire_couches=0 cubes=4352 histogramme=[145781,6181,60,14,40,0,0,3]
+surface scene=poussiere rendu=gros vue=J2 fragments=431550 images=159459 juge=272091 empreinte=152742 aire_couches=0 cubes=4352 histogramme=[145029,7639,74,0,0,0,0,0]
+surface scene=poussiere rendu=fin vue=J1 fragments=387269 images=159121 juge=228148 empreinte=155840 aire_couches=0 cubes=24088 histogramme=[148225,7394,150,18,48,0,0,5]
+surface scene=poussiere rendu=fin vue=J2 fragments=402916 images=165678 juge=237238 empreinte=156304 aire_couches=0 cubes=24088 histogramme=[145197,10830,277,0,0,0,0,0]
+cout scene=poussiere tour=1 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=509.2 image_ms_p90=549.7 cubes=0
+cout scene=poussiere tour=1 rendu=couches appels=164 primitives=11280 image_ms_mediane=580.4 image_ms_p90=629.0 cubes=0
+cout scene=poussiere tour=1 rendu=gros appels=160 primitives=37380 image_ms_mediane=567.6 image_ms_p90=627.6 cubes=4352
+cout scene=poussiere tour=1 rendu=fin appels=160 primitives=155796 image_ms_mediane=596.9 image_ms_p90=651.5 cubes=24088
+cout scene=poussiere tour=2 rendu=sans_le_nuage appels=156 primitives=11236 image_ms_mediane=521.0 image_ms_p90=561.5 cubes=0
+cout scene=poussiere tour=2 rendu=couches appels=164 primitives=11280 image_ms_mediane=595.7 image_ms_p90=639.9 cubes=0
+cout scene=poussiere tour=2 rendu=gros appels=160 primitives=37380 image_ms_mediane=573.1 image_ms_p90=643.6 cubes=4352
+cout scene=poussiere tour=2 rendu=fin appels=160 primitives=155796 image_ms_mediane=596.7 image_ms_p90=651.7 cubes=24088
+VERDICT=OK echecs=0

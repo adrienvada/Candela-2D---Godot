@@ -1,0 +1,43 @@
+pose=mine_magnesium noeud=GadgetJ2_9500
+prise=avant_mine_magnesium vue=J1 lampe_max=227 lampe_moy=33.9 noir_max=0 noir_allumes=0
+prise=avant_mine_magnesium vue=J2 lampe_max=255 lampe_moy=35.7 noir_max=178 noir_allumes=1739
+prise=avant_mine_embrasee vue=J1 lampe_max=255 lampe_moy=145.8 noir_max=0 noir_allumes=0
+prise=avant_mine_embrasee vue=J2 lampe_max=255 lampe_moy=144.8 noir_max=0 noir_allumes=0
+pose=ombre_habitee noeud=GadgetJ2_9501
+prise=avant_ombre_habitee vue=J1 lampe_max=202 lampe_moy=14.9 noir_max=0 noir_allumes=0
+prise=avant_ombre_habitee vue=J2 lampe_max=202 lampe_moy=15.0 noir_max=0 noir_allumes=0
+pose=torche_fantome noeud=GadgetJ2_9502
+prise=avant_torche_fantome vue=J1 lampe_max=255 lampe_moy=31.4 noir_max=0 noir_allumes=0
+prise=avant_torche_fantome vue=J2 lampe_max=255 lampe_moy=31.1 noir_max=0 noir_allumes=0
+pose=voile noeud=GadgetJ2_9503
+prise=avant_voile vue=J1 lampe_max=202 lampe_moy=9.4 noir_max=0 noir_allumes=0
+prise=avant_voile vue=J2 lampe_max=201 lampe_moy=9.4 noir_max=0 noir_allumes=0
+pose=gresillement noeud=GadgetJ2_9504
+prise=avant_gresillement vue=J1 lampe_max=228 lampe_moy=33.9 noir_max=0 noir_allumes=0
+prise=avant_gresillement vue=J2 lampe_max=231 lampe_moy=33.8 noir_max=0 noir_allumes=0
+pose=leurre noeud=GadgetJ2_9505
+prise=avant_leurre vue=J1 lampe_max=220 lampe_moy=20.8 noir_max=0 noir_allumes=0
+prise=avant_leurre vue=J2 lampe_max=218 lampe_moy=21.2 noir_max=0 noir_allumes=0
+pose=nappe_braises noeud=GadgetJ2_9506
+prise=avant_nappe_braises vue=J1 lampe_max=255 lampe_moy=115.0 noir_max=255 noir_allumes=27508
+prise=avant_nappe_braises vue=J2 lampe_max=255 lampe_moy=115.5 noir_max=255 noir_allumes=28537
+pose=poudre_contact noeud=GadgetJ2_9507
+prise=avant_poudre_contact vue=J1 lampe_max=231 lampe_moy=45.0 noir_max=22 noir_allumes=528
+prise=avant_poudre_contact vue=J2 lampe_max=255 lampe_moy=47.0 noir_max=178 noir_allumes=2025
+pose=cartouche_suie noeud=GadgetJ2_9508
+prise=avant_cartouche_suie vue=J1 lampe_max=255 lampe_moy=32.2 noir_max=126 noir_allumes=17337
+prise=avant_cartouche_suie vue=J2 lampe_max=255 lampe_moy=32.6 noir_max=125 noir_allumes=17270
+pose=poussiere noeud=GadgetJ2_9509
+prise=avant_poussiere vue=J1 lampe_max=255 lampe_moy=68.7 noir_max=126 noir_allumes=321
+prise=avant_poussiere vue=J2 lampe_max=255 lampe_moy=68.9 noir_max=125 noir_allumes=325
+prise=avant_fusee_vol vue=J1 lampe_max=255 lampe_moy=57.1 noir_max=0 noir_allumes=0
+prise=avant_fusee_vol vue=J2 lampe_max=255 lampe_moy=57.2 noir_max=0 noir_allumes=0
+prise=avant_fusee_plein_feu vue=J1 lampe_max=255 lampe_moy=62.4 noir_max=255 noir_allumes=528
+prise=avant_fusee_plein_feu vue=J2 lampe_max=255 lampe_moy=62.5 noir_max=255 noir_allumes=515
+prise=avant_fusee_braise vue=J1 lampe_max=255 lampe_moy=66.0 noir_max=245 noir_allumes=516
+prise=avant_fusee_braise vue=J2 lampe_max=255 lampe_moy=66.1 noir_max=245 noir_allumes=515
+prise=avant_fusee_residu vue=J1 lampe_max=255 lampe_moy=41.1 noir_max=126 noir_allumes=507
+prise=avant_fusee_residu vue=J2 lampe_max=255 lampe_moy=41.8 noir_max=125 noir_allumes=505
+prise=avant_fusee_panache vue=J1 lampe_max=255 lampe_moy=2.6 noir_max=126 noir_allumes=333
+prise=avant_fusee_panache vue=J2 lampe_max=255 lampe_moy=3.1 noir_max=125 noir_allumes=325
+VERDICT=OK echecs=0

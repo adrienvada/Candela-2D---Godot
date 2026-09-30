@@ -249,6 +249,12 @@ SUITES+=(test_carton_de_fin test_carton_transition test_allumage_unique)
 # L2, la lumière qui part de la lampe du modèle ; L3, le point lumineux (Q46). Hors de la liste, même raison.
 SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_point_lumineux)
 
+# Chantier « Gadgets en volume », GV1 (2026-09-30, Adrien : « tous les gadgets […] davantage en 3D ») : la fumée en voxels, À
+# L'ESSAI et éteinte par défaut. Sans drapeau : le jeu d'avant (les couches, aucun nœud de voxels, le shader jamais chargé),
+# puis l'essai par la bascule des bancs. La même suite repasse plus bas SOUS le drapeau, lu au lancement. Hors de la liste,
+# même raison que les lignes du dessus.
+SUITES+=(test_fumee_voxel)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -413,6 +419,9 @@ done
 # la vue de dessus, relus un par un — jamais pour faire taire un défaut de l'iso.
 SUITES_2D=(test_tir_et_reserves)
 for t in "${SUITES_2D[@]}"; do run "$t" --script "res://tools/$t.gd" -- --2d; done
+# GV1 — la fumée en voxels SOUS son drapeau, en variante fine : lu par la porte commune des drapeaux au lancement, et non
+# basculé par un banc (la variante d'un nuage né sous le drapeau est celle du drapeau).
+run test_fumee_voxel_drapeau --script "res://tools/test_fumee_voxel.gd" -- --fumee-voxel-essai=fin
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).
