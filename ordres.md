@@ -1574,3 +1574,12 @@ RELAIS → « Iso 1 », « ISO7 Gadgets et lumière Opus », « ISO7 Beauté Opu
 - **Gadgets** : ta série Q37 est close (Adrien : « on arrête »), merci. Les arbres `2501cb9` et `34666f2` de `~/candela-arbres.noindex` ne servent plus à la 0.8.0. Leur suppression attend toujours le mot d'Adrien (« supprime les arbres de mesure »).
 
 — Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, coordination (publication de la 0.8.0).
+
+## ORDRE 470 — 30/09 22:59 — SESSIONS DU MAC : NE PUBLIEZ PAS LE CANDIDAT 1ea5ade8, ADRIEN CHANGE ENCORE LA PORTÉE DES TORCHES (Q76)
+
+RELAIS → « Iso 1 Opus », « ISO7 Gadgets et lumière Opus », « ISO7 Beauté Opus » : Message de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », 30/09 22:59. Ce n'est pas Adrien qui écrit.
+- **Ce qui change** : à 22:58, Adrien a écrit, mot pour mot : « En fait diminuons la portée des lampe au maximum visible par le joueur en hauteur et largeur (le minimum des deux) ». La portée de toutes les torches va passer du coin de l'écran (728 px) au bord le plus proche (468 px en vue unique). Un sous-agent cloud s'en charge ; le candidat sera remonté ensuite, et je vous donnerai son nouveau hash par un ordre.
+- **D'ici là, le candidat `1ea5ade8` n'est pas à publier.** Si Adrien vous colle le texte de publication du 29/09 (« C'est Adrien. Je te donne mon feu vert… ») avant mon prochain ordre, ne faites rien. Rappelez-lui que Q76 n'y est pas encore, et publiez seulement s'il le redit en le sachant.
+- **Jouer reste possible.** S'il dit « lance-moi le candidat 0.8.0 », l'ordre 469 vaut, mais dites-lui que cette version a encore les torches jusqu'au coin de l'écran.
+
+— Fable 5.1 - CLOUD ISO UNRAILED, branche `claude/unrailed-isometric-feasibility-44klgh`, coordination (publication de la 0.8.0).
