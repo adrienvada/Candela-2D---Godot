@@ -221,11 +221,17 @@ void vertex() {
 // ISO7b — le facteur de modelé d'une face de normale `n` (monde). Miroir : `IsoMateriaux.modele_du_corps`.
 // ⚠️ **Le modelé RÉPARTIT la lumière du capteur, il ne la retire pas** (session cloud, 12:30 puis 12:50) : un modelé
 // qui laissait dessus et face sud à 1 ne se voyait pas (75 → 75), la caméra au lacet 0 ne voyant QUE ces deux faces.
-float modele_du_corps(vec3 n) {
+// Q71 (Adrien, 2026-09-30 : « Q71 : corrige ») — **la face assombrie est celle qui regarde LA CAMÉRA QUI DESSINE**, plus
+// le sud du monde : `camera` est la direction horizontale (x, z du monde) vers elle, lue par l'appelant dans la matrice de
+// vue (`INV_VIEW_MATRIX[2].xz`, comme le mannequin). Au lacet 45° B, J1 (45°) et J2 (225°) regardent de deux côtés
+// opposés : la face sud ne se voyait que d'un seul — l'un voyait l'adversaire avec une face à 0,9, l'autre sans. Les mêmes
+// valeurs, pour la face dont la normale est à moins de 60° de la caméra (au lacet 0 : la face sud, le modelé d'avant).
+float modele_du_corps(vec3 n, vec2 camera) {
 	if (n.y > 0.5) {
 		return 1.15;
 	}
-	if (n.z > 0.5 && abs(n.y) <= 0.5) {
+	vec2 v = length(camera) > 0.001 ? camera / length(camera) : vec2(0.0, 1.0);
+	if (dot(n.xz, v) > 0.5 && abs(n.y) <= 0.5) {
 		return 0.9;
 	}
 	return 1.0;
@@ -315,7 +321,7 @@ void fragment() {
 	// ISO7b — le modelé : la lumière du capteur répartie sur les faces que la caméra voit. Re-plafonné à la fiche : le
 	// dessus monte à 1,15, jamais au-delà de la couleur de la classe.
 	if (modele > 0.5) {
-		c = min(pate_facteur(c, modele_du_corps(normale_monde)), couleur_fiche.rgb);
+		c = min(pate_facteur(c, modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)), couleur_fiche.rgb);
 	}
 	// ISO13 — le mannequin (`iso_corps_mannequin.gdshaderinc`) : le côté dos à la lumière qui éclaire vraiment ce corps
 	// s'assombrit, jamais rien ne s'éclaire, et rien sous le seuil de lumière. Sans `--mannequin`, rien ne change.

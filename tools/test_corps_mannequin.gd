@@ -360,7 +360,7 @@ func _les_shaders() -> void:
 		var code := sh.code
 		var i := code.find("void fragment()")
 		var frag := code.substr(i)
-		var modele := frag.find("modele_du_corps(normale_monde)")
+		var modele := frag.find("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)")
 		var cote := frag.find("c = mannequin_modeler(c, normale_monde, niveau, INV_VIEW_MATRIX[2].xz);")
 		var encre := frag.find("pate_encre_boite(local, demi, echelle, normale_locale, encre_arete, encre_reste, px_monde)")
 		var segments := frag.find("c = pate_facteur(c, mannequin_segments(")

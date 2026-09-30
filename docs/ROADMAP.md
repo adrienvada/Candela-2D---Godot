@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q71 = le modelé des corps suit la caméra qui dessine** (2026-09-30 vers 15:50, Adrien : « Q71 : corrige ») | La face assombrie à 0,9 était celle qui regarde le SUD du monde ; au lacet 45° B, J1 et J2 regardent de deux côtés opposés et un seul des deux la voyait sur son adversaire. Elle est désormais celle qui regarde la caméra de la vue qui dessine (`INV_VIEW_MATRIX[2].xz`), mêmes valeurs, même principe (le modelé répartit la lumière du capteur) ; au lacet 0, rien ne change. Prouvé à l'image (faces jumelles égales vues par J1 et par J2) ; garde `test_iso_beaute`. Chantier « Q71 et Q72 » plus bas. |
 | **La 0.8.0 ne part pas avant d'être allégée** (2026-09-30, 15:36, Adrien : « Oui allège d'abord avant de publier la 0.8 ») | La 0.8.0 ne part pas avant l'allègement ; il jugera en jouant, sans nouvelle mesure. Chantier « l'allègement de la 0.8.0 » plus bas. |
 | **Une seule série de cadence sur le Mac libre : la 0.7.1 contre le candidat 0.8.0** (2026-09-30 vers 14:25, Adrien : « Mac libre tu peux lancer une mesure si besoin ») | Une seule série (Gadgets, ordre 466), 0.7.1 contre candidat 0.8.0 (A = 0.7.1 publiée, `2501cb9a`, médianes 60 et 65, 1 % bas 50 ; B = candidat `34666f25`, médianes 50 et 51, 1 % bas 46-47 ; MacBook M3, écran interne 60 Hz, vue unique, pompe sous une fusée, règle 278 ; aucun liseré du son visible dessiné), sans verdict formel. Rapport 0,81 à 0,87. |
 | **Plus aucune mesure sur le Mac d'Adrien** (2026-09-30, Adrien, à 13:09 : « J'en ai marre de faire tout le temps de mesures » ; puis à 13:30 : « Abandonne les mesures effectivement ») | Plus aucune mesure n'est demandée sur son Mac : le liseré seul, la reprise du faisceau et Q61 sont abandonnés. La preuve de Q42 sous Metal, jamais lancée, l'est aussi. Ordre 465. |
@@ -30175,6 +30176,59 @@ qu'elles approchent 0,95 ensemble reste à prouver. **Une piste sans changer
 l'image, non faite** : que le juge ne juge, hors du cône, que là où une fumée peut lire son pochoir (les disques des volumes
 posés, passés en uniformes) — il garderait l'image exacte et rendrait une part de l'option A ; mais il touche le shader du
 juge, partagé avec la fumée, et demande sa propre preuve.
+
+## Chantier — Q71 et Q72, deux corrections de la 0.8.0 (inscrit le 2026-09-30)
+
+**Tenu par le sous-agent de l'allègement** (session cloud « Fable 5.1 - CLOUD ISO UNRAILED »), sur la même branche
+`claude/v080-allegement`, APRÈS le commit de l'allègement : décisions d'Adrien du 2026-09-30 vers 15:50, « Q71 : corrige » et
+« Q72 : corrige aussi », transmises par la session coordinatrice. Un commit par correction, la suite complète verte avant
+chacun.
+
+### Q71 — le modelé des corps suit la caméra qui dessine
+
+**Le défaut.** Le modelé d'ISO7b (`modele_du_corps`, dans `corps_iso.gdshader` et `corps_iso_eclaire.gdshader`, miroir
+`IsoMateriaux.modele_du_corps`) assombrissait à 0,9 la face qui regarde le SUD DU MONDE (`n.z > 0,5`) : la face que la
+caméra voyait au lacet 0. Depuis Q28 (45° B par défaut, en ligne compris), J1 regarde à 45° et J2 à 225° — de deux côtés
+opposés : un seul des deux voyait la face sud. L'un voyait son adversaire avec une face à 0,9, l'autre sans : une asymétrie de
+rendu sur le corps de l'ADVERSAIRE, ce que chacun lit pour savoir qui est là. (L'étude du lacet de 45° l'avait relevé et
+renvoyé à ISO7 Beauté : `docs/iso/iso14/plan_lacet_45.md`, § 5.)
+
+**La correction.** La face assombrie est celle qui regarde **la caméra qui dessine** : `modele_du_corps(n, camera)`, où
+`camera` est la direction horizontale vers elle, lue dans la matrice de vue (`INV_VIEW_MATRIX[2].xz`, comme le mannequin
+d'ISO13 le fait déjà) ; une face latérale dont la normale est à moins de 60° de cette direction (`dot(n.xz, v) > 0,5` : le
+seuil d'avant, autour du sud) vaut 0,9. **Mêmes valeurs** (dessus 1,15, face vers la caméra 0,9, les autres 1 ;
+`MODELE_FACE_SUD` devient `MODELE_FACE_CAMERA`) et **même principe** : le modelé RÉPARTIT la lumière du capteur, il ne la
+retire pas (la moyenne des faces que chacun voit reste la lumière du capteur). **Au lacet 0, rien ne change** : la caméra y
+est au sud, (0, 1), et la règle est celle d'avant, à l'arrondi près. À 45°, chaque joueur voit deux faces latérales, toutes
+deux tournées vers lui : toutes deux à 0,9, chez J1 comme chez J2.
+
+**Prouvé à l'image** (`tools/loupe_modele_q71.gd`, plan `loupe-modele-q71` ; `tools/modele_q71/mesurer.py`) : écran scindé à
+45° B, les deux joueurs de la même classe face à face, jeu en pause ; sur les deux corps, la MÊME lumière posée (capteur
+coupé, `lumiere_recue` = 0,55) ; chacun regarde l'ADVERSAIRE (le corps de soi est « sombre » chez soi, Q39, et ne se compare
+pas) — J1 voit le corps de J2 exactement comme J2 voit celui de J1, tourné d'un demi-tour avec sa caméra. Le modelé allumé
+puis coupé (leur rapport, pixel par pixel, est le facteur de la face), puis chaque corps peint de sa normale monde (quelle
+face est quel pixel). Faces jumelles (la face +z du corps de J2 vue par J1, la face −z du corps de J1 vue par J2, etc.) :
+
+| Face jumelle | Avant : facteur J1 / J2 | Avant : moyenne J1 / J2 (/255) | Après : facteur J1 / J2 | Après : moyenne J1 / J2 (/255) |
+|---|---|---|---|---|
+| le dessus | 1,093 / 1,088 | 34,83 / 34,66 | 1,092 / 1,086 | 34,82 / 34,71 |
+| la face avant (+x ↔ −x) | 1,000 / 1,000 | 25,52 / 25,33 | **0,928 / 0,925** | 23,85 / 23,66 |
+| la face de côté (+z ↔ −z) | **0,932 / 1,000** | **25,17 / 26,68** | **0,927 / 0,928** | **25,00 / 25,02** |
+
+Avant, la face « sud » (+z) du corps de J2 était assombrie chez J1 et sa jumelle ne l'était pas chez J2 (1,5/255 d'écart
+moyen) ; après, chaque face jumelle a le même facteur à 0,006 près et la même moyenne à 0,2/255 près (659 et 667 pixels de
+corps avant, 658 et 660 après). Les facteurs lus (≈ 0,93 et 1,09 au lieu de 0,9 et 1,15) sont ceux de l'image entière, la
+teinte du portrait posée après le modelé : la même chaîne pour les deux vues. Planches : `docs/iso/q71/planche_q71_avant.jpg`
+et `planche_q71_apres.jpg` (l'image | le facteur : bleu 0,9, gris 1, orange 1,15), chiffres : `mesures_avant.json`,
+`mesures_apres.json`.
+
+**La garde** : `tools/test_iso_beaute.gd` (162 vérifications) — la règle au lacet 0 (inchangée) ; au lacet du duel
+(`GameSettings.lacet_du_joueur`, 45° B), pour vingt-quatre orientations d'un corps (tous les 15°, décalées de 7,5° : aucune
+face pile sur un seuil) et chacune de ses faces, la face vue par J1 et sa jumelle vue par J2 au même facteur, et la même
+moyenne des faces vues ; le TÉMOIN (la règle d'avant, le sud en dur, donnait à J1 et J2 un modelé différent sur ce même
+calcul) ; et les deux shaders disent la même règle que le miroir. **Sabotée** (le miroir rendu au sud du monde) : 2
+vérifications rouges — « la face (0, 0, 1) vaut 0,90 chez J1, 1,00 chez J2 ». `test_corps_portraits` et
+`test_corps_mannequin` relisent l'appel sous sa nouvelle forme. `Protocol.VERSION` inchangé (rendu local).
 
 ---
 

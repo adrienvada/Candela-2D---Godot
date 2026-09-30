@@ -188,7 +188,7 @@ func _les_shaders() -> void:
 		_check("%s : le portrait n'entre que par portrait_teindre (%d usages)" % [chemin.get_file(), vus], propres and vus == attendus)
 		var teinte := frag.find("c = portrait_teindre(c, fiche, couleur_fiche.rgb);")
 		_check("%s : la pâte décide sur le gris (base = couleur_fiche…), le portrait teint en dernier, encre comprise" % chemin.get_file(),
-			teinte > frag.find("c = min(c, couleur_fiche.rgb);") and teinte > frag.find("modele_du_corps(normale_monde)), couleur_fiche.rgb);")
+			teinte > frag.find("c = min(c, couleur_fiche.rgb);") and teinte > frag.find("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)), couleur_fiche.rgb);")
 			and teinte > frag.find("pate_encre_boite(local") and frag.contains("couleur_fiche.rgb *"))
 		var lumiere := code.substr(code.find("void light()")) if code.contains("void light()") else ""
 		_check("%s : light() ne connaît pas le portrait" % chemin.get_file(), not lumiere.contains("portrait")

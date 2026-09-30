@@ -82,6 +82,8 @@ static func catalogue() -> Array[Dictionary]:
 			"Session cloud « faisceau-air » (2026-09-28) : le rayon adverse vu de J1, le sien, les deux en écran scindé, et J2 caché derrière un pilier lampe allumée — là où toutes les A sont noires, chaque B doit l'être (tools/faisceau_air/preuve.py). Voir tools/loupe_faisceau_air.gd."],
 		["loupe-faisceau-taille", "Le rayon dans l'air en carrés (A) puis taillé à son cône (B), basculé sur place, jeu en pause : A B A B A, l'option du juge taillé (J), sans rayon (S)",
 			"L'allègement de la 0.8.0 (2026-09-30) : le sien, l'adverse, les deux, l'écran scindé, une fusée entre les joueurs, J2 derrière un pilier — chaque B doit valoir ses A voisines à 1/255 près, l'arrondi de l'interpolation (tools/faisceau_taille/preuve.py) ; J se mesure. Voir tools/loupe_faisceau_taille.gd."],
+		["loupe-modele-q71", "Le modelé des corps vu par J1 puis par J2 (écran scindé, 45° B), même corps, même lumière",
+			"Q71 (Adrien, 2026-09-30 : « Q71 : corrige ») : le modelé suit la caméra qui dessine. Les deux joueurs de la même classe, dos à dos, la même lumière posée : chacun regarde l'adversaire ; le modelé allumé puis coupé, puis chaque corps peint de sa normale (tools/modele_q71/mesurer.py). Voir tools/loupe_modele_q71.gd."],
 		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
 			"ISO13, Q31 : la sortie 3D de ce renderer écrase tout canal écrit à 7/255 ou moins (rampes du 2026-09-25). Le masque de la fumée en dépend : cette garde, en fenêtre, échoue si 7 ne sort plus à 0 ou si 8 sort à 0."],
 		["loupe-torche-fantome", "La torche fantôme posée, allumée",
@@ -245,6 +247,8 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 		await (load("res://tools/loupe_faisceau_air.gd") as GDScript).new().jouer(self, plans)
 	if p._demande(plans, "loupe-faisceau-taille"):
 		await (load("res://tools/loupe_faisceau_taille.gd") as GDScript).new().jouer(self, plans)
+	if p._demande(plans, "loupe-modele-q71"):
+		await (load("res://tools/loupe_modele_q71.gd") as GDScript).new().jouer(self, plans)
 	if p._demande(plans, "loupe-torche-fantome"):
 		var lieu := Vector2.INF
 		for l in lieux:

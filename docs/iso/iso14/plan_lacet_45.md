@@ -85,6 +85,9 @@ tourner les positions du lacet avant la boîte, et tenir compte de l'étirement 
   À 45° : la règle se lit sur `dot(n.xz, direction horizontale de la caméra)` — un uniforme de plus (la direction de la vue), la
   même formule à tout lacet ; et `MANNEQUIN_REPORT` se recalcule. Ces deux fichiers sont à ISO7 Beauté : je le lui demande, je
   ne les touche pas.
+  → **Fait pour le modelé le 2026-09-30 (Q71, Adrien : « Q71 : corrige »)** : `modele_du_corps(n, camera)` lit la caméra qui
+  dessine dans la matrice de vue (`INV_VIEW_MATRIX[2].xz`, sans uniforme de plus), seuil de 60°, mêmes valeurs ;
+  `MODELE_FACE_SUD` est devenu `MODELE_FACE_CAMERA`. Voir la feuille de route, « Chantier — Q71 et Q72 ».
   - Relevé par Beauté et confirmé par la session cloud (01:49) : **le côté lumière du mannequin** (lot A) suppose une caméra qui ne
     voit que les faces sud ; à 45° elle en voit deux, et la compensation d'équité par les dessus doit suivre l'AXE DE LA CAMÉRA,
     pas +z. Même chose pour son **lot C**, sur deux faces. Poste à part entière de l'étape 2, chez Beauté.
