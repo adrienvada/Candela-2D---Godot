@@ -2,7 +2,7 @@ extends SceneTree
 
 ## L'allègement de la 0.8.0 — les éventails du rayon, pour la planche (`tools/faisceau_taille/planche_eventails.py`) : pour chacun
 ## des dix cookies livrés, l'enveloppe (`IsoVolumes.enveloppe_de_l_image`), les sommets de l'éventail des couches et de celui
-## qu'aurait le juge dans l'option du juge taillé (`faisceau_juge_taille`, éteinte : par défaut il garde son disque), à la
+## du juge taillé (`faisceau_juge_taille` : une option à l'allègement, le défaut depuis Q75 ; le rayon entier, sans Q75 D), à la
 ## portée du bord de l'écran (728 px), dans le repère du maillage (le carré d'avant y va de −0,5 à 0,5), et la part du carré
 ## que chacun couvre. Aucune règle ici : c'est le code du jeu, lu et écrit en JSON.
 ##

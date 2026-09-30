@@ -78,6 +78,16 @@ uniform float temperature = 0.0;
 // nappes, au sol, une seule fois. Le ruban (la toile du voile, debout) garde sa lecture nette. Noir absolu tenu : une
 // moyenne de lectures nulles est nulle ; jamais plus clair que la plus claire des lectures.
 uniform float lissage_rayon = 0.18;
+#ifdef FAISCEAU_LUMINEUX
+// Q75 (Adrien, 2026-09-30 20:17 : « A+d ») — LE RAYON DANS L'AIR GARDE LA LONGUEUR DE L'ANCIENNE TORCHE : la portée de la
+// 0.7.1, classe par classe (`WeaponData.portee_sans_plancher`), quand le plancher de L1 porte la lumière au sol plus loin.
+// La longueur de CETTE couche, en pixels de monde depuis la lampe (`nuage_centre`), sur son plan : la même part de son rayon
+// pour chaque couche (le dôme de la 0.7.1, où les couches hautes étaient plus courtes). Elle s'y éteint EN DOUCEUR, sur la
+// dernière part `fondu_air` de sa longueur — jamais une coupure nette. La lumière au sol n'en est pas touchée : seule la
+// couche dans l'air s'éteint. 1e9 (le défaut) : aucune coupure. Posés par `IsoVolumes._poser_longueur`.
+uniform float longueur_air = 1.0e9;
+uniform float fondu_air = 0.25;
+#endif
 #ifdef FUMEE_MASQUE
 // ISO13, Q31 — ce que le pixel montre derrière la couche (sol, face ou dessus de mur), jugé comme son propre shader le calcule.
 #include "res://volume_masque.gdshaderinc"
@@ -163,6 +173,11 @@ void fragment() {
 		// cellules de 20 px de monde grossies 2,4 fois : c'étaient les « blocs » de la fumée. Ancré
 		// dans le monde (px divisé par une constante de zoom) : il ne glisse pas avec la caméra.
 		a *= 0.7 + 0.3 * pate_bruit(px / (3.0 * px_ecran) + vec2(nuage_graine * 13.1, age * 0.35));
+#ifdef FAISCEAU_LUMINEUX
+		// Q75 — la longueur de l'ancienne torche : le rayon s'éteint en douceur de (1 − fondu) × longueur à longueur ;
+		// au-delà, l'opacité vaut zéro et le fragment se jette plus bas, avant toute lecture de lumière.
+		a *= 1.0 - smoothstep(longueur_air * (1.0 - fondu_air), longueur_air, length(px - nuage_centre));
+#endif
 	}
 	a = clamp(a, 0.0, 1.0);
 	if (a <= 0.003) {

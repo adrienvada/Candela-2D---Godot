@@ -120,7 +120,15 @@ var _torch_image: Image
 ## mentaient, et c'est ainsi qu'on hérite d'un nombre que plus personne n'ose
 ## toucher. Une seule constante porte désormais cette unité.
 func portee_torche() -> float:
-	return maxf(TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee, portee_plancher)
+	return maxf(portee_sans_plancher(), portee_plancher)
+
+
+## Q75 (Adrien, 2026-09-30 20:17 : « A+d ») — la portée de la torche SANS le plancher de L1 : celle de la 0.7.1, classe
+## par classe (`torch_scale × facteur_portee`, de 192 px pour le Terrassier, la pompe, à 672 px pour le Braconnier,
+## l'arbalète ; la 0.7.1 calculait exactement ceci, sans plancher). Le rayon dans l'AIR de Q41 s'y éteint (`IsoVolumes`) ;
+## la lumière au sol, elle, va toujours jusqu'au plancher — la portée, règle du jeu, ne bouge pas.
+func portee_sans_plancher() -> float:
+	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee
 
 ## ISO8 — la portée de TOUTES les torches, en un seul facteur (brief de la session cloud, 2026-09-15 12:50,
 ## sur mandat d'Adrien de 12:20 : « réduire la taille des cônes de lumière pour le rendre plus

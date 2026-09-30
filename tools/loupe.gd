@@ -82,6 +82,8 @@ static func catalogue() -> Array[Dictionary]:
 			"Session cloud « faisceau-air » (2026-09-28) : le rayon adverse vu de J1, le sien, les deux en écran scindé, et J2 caché derrière un pilier lampe allumée — là où toutes les A sont noires, chaque B doit l'être (tools/faisceau_air/preuve.py). Voir tools/loupe_faisceau_air.gd."],
 		["loupe-faisceau-taille", "Le rayon dans l'air en carrés (A) puis taillé à son cône (B), basculé sur place, jeu en pause : A B A B A, l'option du juge taillé (J), sans rayon (S)",
 			"L'allègement de la 0.8.0 (2026-09-30) : le sien, l'adverse, les deux, l'écran scindé, une fusée entre les joueurs, J2 derrière un pilier — chaque B doit valoir ses A voisines à 1/255 près, l'arrondi de l'interpolation (tools/faisceau_taille/preuve.py) ; J se mesure. Voir tools/loupe_faisceau_taille.gd."],
+		["loupe-faisceau-q75", "Le rayon dans l'air avant (34370f74) et après A+D (Q75), basculé sur place, jeu en pause : av ap av ap, sans rayon (s)",
+			"Q75 (Adrien, 2026-09-30 20:17 : « A+d ») : écran scindé, le Terrassier, la Sentinelle, le Braconnier, la lampe de J1 puis de J2 (sous la torche et dans le noir), une fusée entre les joueurs, et le pixel à 15/255 de l'allègement en modes de diagnostic — la planche et le noir (tools/faisceau_q75/preuve.py). Voir tools/loupe_faisceau_q75.gd."],
 		["loupe-modele-q71", "Le modelé des corps vu par J1 puis par J2 (écran scindé, 45° B), même corps, même lumière",
 			"Q71 (Adrien, 2026-09-30 : « Q71 : corrige ») : le modelé suit la caméra qui dessine. Les deux joueurs de la même classe, dos à dos, la même lumière posée : chacun regarde l'adversaire ; le modelé allumé puis coupé, puis chaque corps peint de sa normale (tools/modele_q71/mesurer.py). Voir tools/loupe_modele_q71.gd."],
 		["loupe-rampe-3d", "La courbe de la sortie 3D : une rampe connue écrite par le sol, relue à l'écran",
@@ -247,6 +249,8 @@ func famille(photographe: Node, plans: Array[Dictionary]) -> void:
 		await (load("res://tools/loupe_faisceau_air.gd") as GDScript).new().jouer(self, plans)
 	if p._demande(plans, "loupe-faisceau-taille"):
 		await (load("res://tools/loupe_faisceau_taille.gd") as GDScript).new().jouer(self, plans)
+	if p._demande(plans, "loupe-faisceau-q75"):
+		await (load("res://tools/loupe_faisceau_q75.gd") as GDScript).new().jouer(self, plans)
 	if p._demande(plans, "loupe-modele-q71"):
 		await (load("res://tools/loupe_modele_q71.gd") as GDScript).new().jouer(self, plans)
 	if p._demande(plans, "loupe-torche-fantome"):
