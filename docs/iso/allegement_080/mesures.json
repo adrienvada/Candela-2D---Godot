@@ -1,0 +1,476 @@
+{
+ "sien": {
+  "noir_A": 0,
+  "lumiere_A": 921600,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 354,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 354,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 354
+   },
+   "2b-3a": {
+    "pixels": 354,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 354,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 354
+   },
+   "4b-3a": {
+    "pixels": 354,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 354,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 354
+   },
+   "4b-5a": {
+    "pixels": 354,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 354,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 354
+   }
+  },
+  "rayon_pixels": 68706,
+  "rayon_max": 136,
+  "J": {
+   "pixels": 354,
+   "ecart_max": 1,
+   "au_dela_arrondi": 0,
+   "noirs_allumes": 0,
+   "lumiere": 354,
+   "noir": 0,
+   "lumiere_ecart_max": 1,
+   "noir_ecart_max": 0,
+   "fenêtre": 354
+  }
+ },
+ "adv": {
+  "noir_A": 497726,
+  "lumiere_A": 423874,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 250,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 250,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 250
+   },
+   "2b-3a": {
+    "pixels": 250,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 250,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 250
+   },
+   "4b-3a": {
+    "pixels": 250,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 250,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 250
+   },
+   "4b-5a": {
+    "pixels": 250,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 250,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 250
+   }
+  },
+  "rayon_pixels": 51224,
+  "rayon_max": 152,
+  "J": {
+   "pixels": 250,
+   "ecart_max": 1,
+   "au_dela_arrondi": 0,
+   "noirs_allumes": 0,
+   "lumiere": 250,
+   "noir": 0,
+   "lumiere_ecart_max": 1,
+   "noir_ecart_max": 0,
+   "fenêtre": 250
+  }
+ },
+ "deux": {
+  "noir_A": 0,
+  "lumiere_A": 921600,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 3678,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 3678,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 3678
+   },
+   "2b-3a": {
+    "pixels": 3678,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 3678,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 3678
+   },
+   "4b-3a": {
+    "pixels": 3678,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 3678,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 3678
+   },
+   "4b-5a": {
+    "pixels": 3678,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 3678,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 3678
+   }
+  },
+  "rayon_pixels": 121841,
+  "rayon_max": 188,
+  "J": {
+   "pixels": 3678,
+   "ecart_max": 1,
+   "au_dela_arrondi": 0,
+   "noirs_allumes": 0,
+   "lumiere": 3678,
+   "noir": 0,
+   "lumiere_ecart_max": 1,
+   "noir_ecart_max": 0,
+   "fenêtre": 3678
+  }
+ },
+ "s1": {
+  "noir_A": 0,
+  "lumiere_A": 921600,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 2211,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 2211,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 700,
+    "vue de J2 (droite)": 1511
+   },
+   "2b-3a": {
+    "pixels": 2211,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 2211,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 700,
+    "vue de J2 (droite)": 1511
+   },
+   "4b-3a": {
+    "pixels": 2211,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 2211,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 700,
+    "vue de J2 (droite)": 1511
+   },
+   "4b-5a": {
+    "pixels": 2211,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 2211,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 700,
+    "vue de J2 (droite)": 1511
+   }
+  },
+  "rayon_pixels": 129899,
+  "rayon_max": 134,
+  "J": {
+   "pixels": 2213,
+   "ecart_max": 15,
+   "au_dela_arrondi": 1,
+   "noirs_allumes": 0,
+   "lumiere": 2213,
+   "noir": 0,
+   "lumiere_ecart_max": 15,
+   "noir_ecart_max": 0,
+   "vue de J1 (gauche)": 700,
+   "vue de J2 (droite)": 1513,
+   "au_dela_egaux_sans_rayon": 0,
+   "au_dela_plus_clairs": 1,
+   "boite": [
+    834,
+    323,
+    834,
+    323
+   ]
+  }
+ },
+ "s2": {
+  "noir_A": 165467,
+  "lumiere_A": 756133,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 1299,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1299,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 460,
+    "vue de J2 (droite)": 839
+   },
+   "2b-3a": {
+    "pixels": 1299,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1299,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 460,
+    "vue de J2 (droite)": 839
+   },
+   "4b-3a": {
+    "pixels": 1299,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1299,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 460,
+    "vue de J2 (droite)": 839
+   },
+   "4b-5a": {
+    "pixels": 1299,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1299,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "vue de J1 (gauche)": 460,
+    "vue de J2 (droite)": 839
+   }
+  },
+  "rayon_pixels": 93973,
+  "rayon_max": 133,
+  "J": {
+   "pixels": 1299,
+   "ecart_max": 1,
+   "au_dela_arrondi": 0,
+   "noirs_allumes": 0,
+   "lumiere": 1299,
+   "noir": 0,
+   "lumiere_ecart_max": 1,
+   "noir_ecart_max": 0,
+   "vue de J1 (gauche)": 460,
+   "vue de J2 (droite)": 839
+  }
+ },
+ "fusee": {
+  "noir_A": 0,
+  "lumiere_A": 921600,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 4554,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 4554,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 4554
+   },
+   "2b-3a": {
+    "pixels": 4554,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 4554,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 4554
+   },
+   "4b-3a": {
+    "pixels": 4554,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 4554,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 4554
+   },
+   "4b-5a": {
+    "pixels": 4554,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 4554,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 4554
+   }
+  },
+  "rayon_pixels": 104720,
+  "rayon_max": 156,
+  "J": {
+   "pixels": 6363,
+   "ecart_max": 25,
+   "au_dela_arrondi": 1235,
+   "noirs_allumes": 0,
+   "lumiere": 6363,
+   "noir": 0,
+   "lumiere_ecart_max": 25,
+   "noir_ecart_max": 0,
+   "fenêtre": 6363,
+   "au_dela_egaux_sans_rayon": 1196,
+   "au_dela_plus_clairs": 1235,
+   "boite": [
+    335,
+    354,
+    437,
+    442
+   ]
+  }
+ },
+ "eq": {
+  "noir_A": 487030,
+  "lumiere_A": 434570,
+  "bruit_A": 0,
+  "B": {
+   "2b-1a": {
+    "pixels": 1453,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1453,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 1453
+   },
+   "2b-3a": {
+    "pixels": 1453,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1453,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 1453
+   },
+   "4b-3a": {
+    "pixels": 1453,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1453,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 1453
+   },
+   "4b-5a": {
+    "pixels": 1453,
+    "ecart_max": 1,
+    "au_dela_arrondi": 0,
+    "noirs_allumes": 0,
+    "lumiere": 1453,
+    "noir": 0,
+    "lumiere_ecart_max": 1,
+    "noir_ecart_max": 0,
+    "fenêtre": 1453
+   }
+  },
+  "rayon_pixels": 100848,
+  "rayon_max": 141,
+  "J": {
+   "pixels": 1453,
+   "ecart_max": 1,
+   "au_dela_arrondi": 0,
+   "noirs_allumes": 0,
+   "lumiere": 1453,
+   "noir": 0,
+   "lumiere_ecart_max": 1,
+   "noir_ecart_max": 0,
+   "fenêtre": 1453
+  }
+ }
+}

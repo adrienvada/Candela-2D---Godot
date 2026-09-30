@@ -249,6 +249,11 @@ SUITES+=(test_carton_de_fin test_carton_transition test_allumage_unique)
 # L2, la lumière qui part de la lampe du modèle ; L3, le point lumineux (Q46). Hors de la liste, même raison.
 SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_point_lumineux)
 
+# L'allègement de la 0.8.0 (Adrien, 2026-09-30 : « Oui allège d'abord avant de publier la 0.8 ») : les couches du rayon dans
+# l'air taillées à leur cône — l'enveloppe contient chaque cookie au texel près, l'éventail contient l'enveloppe, en plages,
+# tourné comme la lampe ; le juge garde son disque. Posé ici, comme les lignes du dessus, pour que ce lot se reprenne seul.
+SUITES+=(test_allegement_faisceau)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
