@@ -254,6 +254,10 @@ SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_poin
 # tourné comme la lampe ; le juge garde son disque. Posé ici, comme les lignes du dessus, pour que ce lot se reprenne seul.
 SUITES+=(test_allegement_faisceau)
 
+# Q72 (Adrien, 2026-09-30 : « Q72 : corrige aussi ») : la fusée posée de la killcam éclaire comme en match — une vraie fusée
+# lancée dans une vraie manche, puis la killcam par son propre chemin, valeur par valeur. Posé ici, comme les lignes du dessus.
+SUITES+=(test_fusee_killcam)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

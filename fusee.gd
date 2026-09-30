@@ -70,6 +70,8 @@ var _age_combustion: float = -1.0
 var _velocite := Vector2.ZERO
 var _fenetres: Array = []
 var _atterrie: bool = false
+## Q72 — la killcam a posé la lumière d'une fusée posée (`appliquer_age`) : une fois.
+var _lumiere_posee_rejouee: bool = false
 var _dernier_son_rebond: float = -1.0
 var _exclusions: Array[RID] = []
 
@@ -449,7 +451,17 @@ func age_combustion() -> float:
 
 ## La killcam applique l'âge lu dans l'instantané (la position, elle, vient
 ## aussi de l'instantané : les rebonds ne se dérivent pas de l'âge).
+##
+## Q72 (Adrien, 2026-09-30 : « Q72 : corrige aussi ») — **une fusée POSÉE de la killcam éclaire comme en match**. La killcam
+## ne rejoue pas le vol : elle construit une fusée neuve (`is_replay`) et lui applique l'âge de l'instantané, sans jamais
+## passer par `_atterrir` — sa lumière gardait l'empreinte du VOL (`EMPREINTE_VOL`, 160 px au lieu de 440) : dans la mort
+## qu'on revoit, la fusée posée éclairait un disque presque trois fois plus petit qu'en match. Dès que l'âge rejoué est celui
+## d'une fusée posée (≥ 0 : négatif en vol), la lumière posée (`_lumiere_posee`), une fois. Le masque et la hauteur, eux,
+## étaient déjà ceux d'une fusée posée (`_ready`, `is_replay`) : `_lumiere_posee` les repose à l'identique.
 func appliquer_age(age: float) -> void:
+	if is_replay and age >= 0.0 and not _lumiere_posee_rejouee:
+		_lumiere_posee_rejouee = true
+		_lumiere_posee()
 	_age_combustion = age
 	_appliquer_age(age)
 
@@ -807,13 +819,10 @@ func _maj_tunnels(age_combustion: float, diametre: float) -> void:
 
 func _atterrir() -> void:
 	_atterrie = true
-	# MB3 — posée, la fusée brûle plus bas qu'un muret : sa lueur bute dessus.
-	_lumiere.shadow_item_cull_mask = masque_ombre(true)
-	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_FUSEE_AU_SOL)
+	_lumiere_posee()
 	_age_combustion = 0.0
 	_velocite = Vector2.ZERO
 	_coeur.position = Vector2.ZERO
-	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, EMPREINTE_LUMIERE)
 	if is_replay:
 		return
 	AudioManager.play_sfx_2d_random_pitch("fusee_atterrit", global_position)
@@ -827,6 +836,16 @@ func _atterrir() -> void:
 		if part > 0.0:
 			_combustion.volume_db += AudioManager.OCCLUSION_PENTE_DB * part
 		_combustion.play()
+
+
+## LA LUMIÈRE D'UNE FUSÉE POSÉE, dite une seule fois : son masque d'ombre (MB3 — posée, elle brûle plus bas qu'un muret :
+## sa lueur bute dessus), la hauteur de sa source (au sol) et l'empreinte de sa lumière (`EMPREINTE_LUMIERE`, 440 px).
+## Appelée à l'atterrissage et, depuis Q72, par la killcam dès que l'âge rejoué est celui d'une fusée posée
+## (`appliquer_age`). L'ordre compte : `poser_hauteur_source` relit le masque qu'on vient de poser.
+func _lumiere_posee() -> void:
+	_lumiere.shadow_item_cull_mask = masque_ombre(true)
+	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_FUSEE_AU_SOL)
+	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, EMPREINTE_LUMIERE)
 
 
 func _exit_tree() -> void:

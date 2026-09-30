@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q72 = la fusée posée de la killcam éclaire comme en match** (2026-09-30 vers 15:50, Adrien : « Q72 : corrige aussi ») | La killcam reconstruit chaque fusée (`Fusee.new()` puis `appliquer_age`) sans passer par `_atterrir` : une fusée posée y gardait l'empreinte de lumière du VOL (160 px au lieu de 440). La lumière d'une fusée posée — masque, hauteur, empreinte — est dite une fois (`_lumiere_posee`), à l'atterrissage et dans la killcam dès que l'âge rejoué est celui d'une fusée posée ; en vol, rien ne change. Le masque et la hauteur étaient déjà posés (constat vérifié). Garde : `tools/test_fusee_killcam.gd`. Chantier « Q71 et Q72 » plus bas. |
 | **Q71 = le modelé des corps suit la caméra qui dessine** (2026-09-30 vers 15:50, Adrien : « Q71 : corrige ») | La face assombrie à 0,9 était celle qui regarde le SUD du monde ; au lacet 45° B, J1 et J2 regardent de deux côtés opposés et un seul des deux la voyait sur son adversaire. Elle est désormais celle qui regarde la caméra de la vue qui dessine (`INV_VIEW_MATRIX[2].xz`), mêmes valeurs, même principe (le modelé répartit la lumière du capteur) ; au lacet 0, rien ne change. Prouvé à l'image (faces jumelles égales vues par J1 et par J2) ; garde `test_iso_beaute`. Chantier « Q71 et Q72 » plus bas. |
 | **La 0.8.0 ne part pas avant d'être allégée** (2026-09-30, 15:36, Adrien : « Oui allège d'abord avant de publier la 0.8 ») | La 0.8.0 ne part pas avant l'allègement ; il jugera en jouant, sans nouvelle mesure. Chantier « l'allègement de la 0.8.0 » plus bas. |
 | **Une seule série de cadence sur le Mac libre : la 0.7.1 contre le candidat 0.8.0** (2026-09-30 vers 14:25, Adrien : « Mac libre tu peux lancer une mesure si besoin ») | Une seule série (Gadgets, ordre 466), 0.7.1 contre candidat 0.8.0 (A = 0.7.1 publiée, `2501cb9a`, médianes 60 et 65, 1 % bas 50 ; B = candidat `34666f25`, médianes 50 et 51, 1 % bas 46-47 ; MacBook M3, écran interne 60 Hz, vue unique, pompe sous une fusée, règle 278 ; aucun liseré du son visible dessiné), sans verdict formel. Rapport 0,81 à 0,87. |
@@ -3243,6 +3244,18 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une garde sous `--script` qui NOMME la classe `Fusee` casse la fusée du jeu pour tout le processus (2026-09-30)
+
+Q72. `fusee.gd` nomme des autoloads (`NetworkManager`, `AudioManager`, `GameSettings`). Une garde lancée par
+`godot --headless --script` qui écrit `Fusee.new()` ou `var f: Fusee` fait compiler la classe AVANT que les autoloads
+existent : « Identifier not found: NetworkManager », puis, pour tout le reste du processus, la fusée du JEU est cassée —
+« Nonexistent function 'prechauffer' in base 'GDScript' » au démarrage de la manche, et la garde attend son délai sans rien
+dire d'autre. (`test_fusee.gd` le disait pour lui-même : il ne teste que `fusee_modele.gd`.) **Une garde qui manipule une
+vraie fusée la charge à l'exécution** (`load("res://fusee.gd")`, après la première image), lit ses constantes dans sa table
+(`get_script_constant_map()`) et l'appelle par `call`/`get` — jamais par son nom de classe (`tools/test_fusee_killcam.gd`).
+Et elle relit la killcam AUSSITÔT l'appel : hors d'un rejeu, `GameState._process` purge les fusées de killcam à l'image
+suivante (la fin d'un rejeu), et une garde qui attend une image lit un dictionnaire vide.
 
 ### Le juge du rayon tait la fumée sur tout son disque : le pochoir « noir » est partagé, et les marges ne le sont pas (2026-09-30, signalé, non corrigé)
 
@@ -30229,6 +30242,42 @@ moyenne des faces vues ; le TÉMOIN (la règle d'avant, le sud en dur, donnait �
 calcul) ; et les deux shaders disent la même règle que le miroir. **Sabotée** (le miroir rendu au sud du monde) : 2
 vérifications rouges — « la face (0, 0, 1) vaut 0,90 chez J1, 1,00 chez J2 ». `test_corps_portraits` et
 `test_corps_mannequin` relisent l'appel sous sa nouvelle forme. `Protocol.VERSION` inchangé (rendu local).
+
+### Q72 — la fusée posée de la killcam éclaire comme en match
+
+**Le défaut.** La killcam ne rejoue pas le vol d'une fusée : `GameState._maj_fusees_killcam` en construit une neuve
+(`Fusee.new()`, `is_replay`) et lui applique l'âge lu dans l'instantané (`appliquer_age`), sans jamais passer par
+`_atterrir`. Or c'est `_atterrir` qui pose l'empreinte de la lumière d'une fusée posée (`EMPREINTE_LUMIERE`, 440 px) : la
+fusée de la killcam gardait celle du VOL (`EMPREINTE_VOL`, 160 px). Dans la mort qu'on revoit, une fusée posée éclairait un
+disque presque trois fois plus petit qu'en match — la scène que la killcam montre n'était pas celle du match. **Le constat
+d'un autre sous-agent, vérifié** (« le masque d'ombre et la hauteur de source ne sont pas posés non plus ») : ils l'étaient
+déjà, par `_ready` (branche `is_replay`) — la garde le lit valeur par valeur ; seule l'empreinte manquait.
+
+**La correction** (`fusee.gd`) : la lumière d'une fusée posée est dite une seule fois, `_lumiere_posee()` — masque d'ombre,
+hauteur de la source, empreinte, dans cet ordre (`poser_hauteur_source` relit le masque qu'on vient de poser). `_atterrir`
+l'appelle ; et `appliquer_age`, sur une fusée de killcam, l'appelle une fois dès que l'âge rejoué est celui d'une fusée posée
+(≥ 0 — il est négatif en vol). **Une fusée EN VOL dans la killcam garde l'empreinte du vol**, comme en match, et passe à
+celle du sol quand l'âge rejoué devient celui d'une fusée posée.
+
+**Prouvé** (`tools/test_fusee_killcam.gd`, 17 vérifications, dans `run_suites.sh`) sur le VRAI chemin : une vraie manche en
+écran scindé, une vraie fusée de match lancée au centre de la carte, qui vole (empreinte 160 px), rebondit et se pose ; à
+3,0 s de combustion, sa lumière ; puis la killcam par `_maj_fusees_killcam`, avec l'instantané de ce même âge et de cette
+même place. Valeur par valeur, **la même** : empreinte 440 px, texture (`retrodiffusion_corona.png`), masque d'ombre 65
+(murs hauts + murets), hauteur de source 0,15 tuile, énergie 3,0, couleur (0,96, 0,272, 0,54), allumée, portée 7, ombres.
+Et une fusée de killcam en vol (âge −1) : 160 px, comme en match ; la même, à 0,5 s : 440 px. **Avant la correction**
+(sabotée : l'appel retiré d'`appliquer_age`), la garde rougit sur exactement le défaut : 2 vérifications rouges, « empreinte : match 440, killcam 160 » et la fusée de killcam à 0,5 s restée à 160 px — le masque (65) et la hauteur (0,15) y restent égaux à ceux du match, ce qui confirme qu'ils étaient déjà posés. ⚠️ La garde relit la
+killcam AUSSITÔT l'appel, sans attendre d'image : hors d'un rejeu, `GameState._process` purge les fusées de killcam dès
+l'image suivante. Et elle ne nomme jamais la classe `Fusee` dans son code : sous `--script`, la compiler avant que les
+autoloads existent la casse pour tout le processus.
+
+**Signalé, non corrigé** (hors périmètre) :
+- **la fusée EN VOL de la killcam** porte déjà le masque et la hauteur d'une fusée POSÉE (`_ready`, `is_replay`) : en match,
+  en vol, elle éclaire par-dessus les murets, depuis sa hauteur de vol. L'instantané ne porte pas l'élan qui la donne
+  (`hauteur_de_vol(élan)`) : la corriger demande d'en enregistrer plus, donc de toucher `ReplaySystem` ;
+- **`forcer_age`, le chemin des BANCS** (`tools/loupe.gd`, les planches) : la même lacune — une fusée « posée » par un banc
+  éclaire avec l'empreinte du vol (160 px). Les mesures de bancs qui la posent ainsi (le point de braise, la fumée des
+  loupes, la preuve de l'allègement) ont été prises avec 160 px de lumière et non 440 : à savoir avant de les relire ; pas
+  corrigé ici, parce que les corriger changerait les chiffres qu'elles documentent.
 
 ---
 
