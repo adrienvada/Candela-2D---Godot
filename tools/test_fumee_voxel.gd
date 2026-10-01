@@ -108,9 +108,9 @@ func _le_drapeau() -> void:
 		and v.encre_voxel == String(_attendu["encre"]) and v.relief_voxel == String(_attendu["relief"]),
 		"%s / %s / %s / %s" % [str(v.fumee_voxel), v.variante_voxel, v.encre_voxel, v.relief_voxel])
 	if not _drapeaux:
-		_check("SANS drapeau, la fumée est EN VOXELS « gros » (Q67 : « Oui la fumée en gros »), au relief du dessin (Q69), à l'encre du roman graphique",
+		_check("SANS drapeau, la fumée est EN VOXELS « gros » (Q67 : « Oui la fumée en gros »), au relief du dessin (Q69), à l'encre des VOLUTES (Q73 : « volutes »)",
 			v.fumee_voxel and v.variante_voxel == "gros" and v.relief_voxel == "dessin"
-			and IsoNuageVoxel.ENCRES_GV1BIS.has(v.encre_voxel)
+			and v.encre_voxel == "volutes" and IsoNuageVoxel.ENCRE_PAR_DEFAUT == "volutes"
 			and is_equal_approx(IsoNuageVoxel.cote_voxel("gros"), IsoVolumes.TUILE / 4.0)
 			and is_equal_approx(IsoNuageVoxel.cote_voxel("fin"), IsoVolumes.TUILE / 8.0))
 	v.free()
@@ -395,8 +395,9 @@ func _l_encre_n_eteint_rien() -> void:
 	var mat := IsoNuageVoxel.materiau("cartouche_suie", 0, 8.75, 28.0, -2)
 	var plancher := float(mat.get_shader_parameter("trait_plancher"))
 	var reste := float(mat.get_shader_parameter("trait_reste"))
-	_check("le plancher du trait est celui des murs (`ENCRE_PLANCHER_AFFICHE`), son reste celui de l'encre d'essai des murs (0,12)",
+	_check("le plancher du trait est celui des murs (`ENCRE_PLANCHER_AFFICHE`), son reste celui de l'encre d'essai des murs (0,12) — Q74 : « on garde »",
 		is_equal_approx(plancher, IsoMateriaux.ENCRE_PLANCHER_AFFICHE) and is_equal_approx(reste, IsoNuageVoxel.TRAIT_RESTE)
+		and is_equal_approx(IsoNuageVoxel.TRAIT_RESTE, IsoMateriaux.ENCRE_ARETE_RESTE_ESSAI)
 		and plancher > 0.0 and reste > 0.0)
 	var plus_clair := 0
 	var sous_plancher := 0

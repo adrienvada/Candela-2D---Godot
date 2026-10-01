@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q73 = l'encre de la fumée en cubes est celle des VOLUTES ; Q74 = son trait reste graphite, au plancher des murs** (2026-10-01 vers 09:10, Adrien, sur les planches de GV1bis, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent des gadgets en volume : « Q73 : volutes » ; « Q74 : on garde ») | **Q73** : les traits du dessin de la suie et de la poussière, drapés sur le tas (la fusée : deux lignes de niveau des volutes de son voile) — la recommandation de GV1bis, déjà le défaut ; les arêtes et les hachures restent pour les bancs (`--fumee-encre=`). **Q74** : aucun plancher plus bas pour la fumée seule — le trait obéit à la règle des murs « allumé reste allumé » (`IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée ; le reste de l'encre d'essai des murs, 0,12) : la lueur faible d'un nuage, qui est une information, ne s'éteint pas sous un trait. Rien ne change à l'image ; la suite garde désormais les deux décisions (`test_fumee_voxel` : l'encre par défaut EST les volutes, le reste du trait EST celui des murs). Noir et équité reprouvés après la fusion de la ligne publiée (chantier GV, « Q73 et Q74 »). |
 | **La 0.8.0 est publiée et vérifiée** (2026-10-01 : tag `v0.8.0` poussé à 08:36, Release à 08:51 ; publiée par la session « Iso 1 Opus » sur le mot d'Adrien dit dans sa fenêtre — son texte du 29/09, redit vers 08:35 ; vérifiée par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ») | `main` a avancé sans fourche de `2501cb9a` (la 0.7.1) à `903b26e6`, le candidat allégé — Q75 « A+d » et Q76, la portée au bord le plus proche —, et le tag annoté `v0.8.0` (`add64427`) le nomme. La CI a passé les suites (Tests) puis exporté, signé et publié (Publication) : `Candela-macos.zip`, `Candela-windows.zip`, `manifeste.json`, `manifeste.json.sig`. **Vérifié depuis le cloud, sur ce qui a été publié et non sur ce qui devait l'être** : la signature du manifeste passe (`openssl dgst -sha256 -verify`) avec la clé publique de `update_manager.gd` tel qu'il est dans `903b26e6`, la même clé que dans la 0.7.1 — un jeu en 0.7.1 peut donc vérifier cette mise à jour ; le manifeste dit 0.8.0 et protocole 19 ; les deux archives, retéléchargées, ont exactement la taille et le SHA-256 qu'il annonce (130 960 497 et 185 128 994 octets). **Conséquence pour les joueurs** : le protocole passe de 18 à 19, un joueur en 0.7.1 ne trouve plus personne en 0.8.0 — chacun met à jour depuis l'accueil (MISE À JOUR). |
 | **Q76 = la portée des torches s'arrête au bord le plus proche de l'écran de la vue unique : 468 px, pour les dix classes et dans tous les modes** (2026-09-30 vers 22:58, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « En fait diminuons la portée des lampe au maximum visible par le joueur en hauteur et largeur (le minimum des deux) » ; puis vers 23:08, à la question de l'écran scindé : « Ok, même portée en écran scindé ») | **La règle** : le plus petit des deux demi-côtés de l'empreinte au sol de la vue unique, plus l'avance de la caméra vers la visée — `min(demi-largeur, demi-profondeur) + décalage × profondeur` = min(504,3 ; 360) + 108 = **468 px** à ×1,5 (`PorteeEcran.portee_au_bord`) : visée vers le haut de l'écran, la lampe s'arrête au bord du haut. L1 allait au coin (727,6 px). **Plancher ET plafond** (`WeaponData.portee_plafond`) : les dix classes portent exactement 468 px — contre la 0.7.1, le Terrassier gagne 276 px et les sept autres classes courtes de 122 à 238, la Sentinelle perd 31 et le Braconnier 204 ; contre la 0.8.0 d'avant (`1ea5ade8`), toutes perdent 260 px. **L'écran scindé garde la même portée, décision d'Adrien** (« Ok, même portée en écran scindé ») : la portée est une règle du jeu (l'éblouissement la lit), pas un cadrage ; en écran scindé (×1,25, 957 px de large), la lampe y dépasse les côtés de 37 px et s'arrête à 94 px sous le haut. **Pourquoi**, dans ses mots : « au maximum visible par le joueur » — avec la règle du coin, visée vers le haut, la lampe passait le bord de 260 px, sur du sol que son porteur ne voyait pas. Ce que la session y ajoute : ce qu'on ne voit pas se paie quand même, la surface d'une lampe suit le carré de sa portée (×0,41). **Rien sur le fil** : les deux machines dérivent 468 des constantes du duel ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-portee-ecran` rend les portées de la 0.7.1, `--portee-coin` la règle de L1. **Avec D (Q75)** : le rayon dans l'air garde `min(longueur de la 0.7.1, portée)` — inchangé pour les huit classes sous 468 px, arrêté à la portée pour la Sentinelle et le Braconnier. **Ce que « au bord » veut dire à l'écran** : le cookie s'éteint linéairement jusqu'à sa portée — la lampe atteint le bord, mais s'y éteint ; visée vers le haut, la lumière du Terrassier touche encore le haut de l'écran (sur les murs), celle de la Sentinelle s'éteint 36 à 54 pixels d'écran avant, celle du Braconnier 175. Aucun noir allumé (planche avant/après basculée sur place : trois classes, J1 et J2, vue unique et écran scindé) ; J1 = J2. Mesuré dans le cloud (llvmpipe, le Terrassier, 24 prises en miroir) : 1,007 de la cadence de la 0.7.1 au cadrage du banc et 0,893 au vrai cadrage de la vue unique, contre 0,941 et 0,841 pour `1ea5ade8` — 6 % du temps d'image rendu ; la Sentinelle et le Braconnier, dont Q76 raccourcit aussi le rayon, ont plus à gagner (non mesuré). Chantier « l'allègement de la 0.8.0 », § Q76. |
 | **Q75 = « A+d » : le juge du rayon taillé devient le défaut, et le rayon dans l'air garde la longueur de l'ancienne torche** (2026-09-30 20:17, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement) | **A** — l'option du juge taillé (l'éventail du cookie dilaté de la parallaxe, au lieu du disque) passe au défaut hors débogage : elle corrige le défaut du pochoir (les volutes d'une fusée tues hors du cône par la marge 16/255 du rayon) ; `--faisceau-juge-disque` rend le disque (débogage). **D** — les trois couches du rayon s'éteignent EN DOUCEUR (un `smoothstep` sur le dernier quart) à la portée qu'avait la classe dans la 0.7.1, relue dans son code (`torch_scale × 256 × 0,75`, de 192 px pour le Terrassier à 672 px pour le Braconnier), chaque couche à la même part de son rayon (le dôme de la 0.7.1) ; leurs éventails et le juge s'y arrêtent. La lumière au sol va toujours au bord de l'écran et la portée (règle du jeu, lue par l'éblouissement) ne bouge pas ; `--faisceau-air-long` rend le rayon entier (débogage). « L'ancienne torche » n'a pas d'autre sens : dans la 0.7.1, le rayon dans l'air était posé sur la texture de la lampe à cette portée même. Aucun noir allumé (planche avant/après, trois classes, J1 et J2) ; le pixel à 15/255 de l'écran scindé est légitime (le disque le taisait à moitié). Mesuré dans le cloud (llvmpipe, le Terrassier, la classe du banc) : 0,930 de la cadence de la 0.7.1 au cadrage du banc et 0,861 au vrai cadrage de la vue unique (×1,5), contre 0,722 et 0,647 pour `34370f74` — l'estimation de 0,88 à 0,9 tient entre les deux. Chantier « l'allègement de la 0.8.0 », § Q75. |
@@ -3249,6 +3250,21 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### « Allumé reste allumé » se prouve par FACE : au bord de la lumière, un pixel partagé avec le noir passe sous le seuil (2026-10-01)
+
+Gadgets en volume, Q73 et Q74, après la fusion de la ligne publiée. La preuve à l'écran de GV1bis disait « aucun pixel
+éclairé éteint par l'encre » sur vingt-quatre relevés. Rejouée sur la branche qui venait d'avaler Q75 et Q76 : UN pixel,
+reproduit au pixel près (l'arbre en pause) — la poussière, encre des arêtes, vue de J1, 10 → 7/255. Ses huit voisins,
+sans l'encre, allaient de 0 à 32 : il était sur la frontière entre la lumière et le noir, là où la torche raccourcie par
+Q76 a amené le trait d'une arête. Les vues iso sont anticrénelées ×4 (le piège suivant, le même jour, pour le pochoir) :
+un pixel au bord d'une face mêle ses échantillons — la face, que l'encre tient à son plancher (16/255 affichés), et le
+noir voisin ; le mélange passe sous 8/255 sans qu'aucune face ne descende sous son plancher. La règle tient par face (la
+suite la prouve sur le miroir de la pâte, 369 lumières × faces) ; un pixel partagé avec le noir n'est pas une face. Le
+banc compte désormais les éteints AU BORD (un voisin sous 8/255) à part, les décrit (position, valeur sans et avec
+l'encre, voisins), n'échoue que sur un éteint DEDANS — et vérifie que le témoin sans plancher en éteint dedans, sans
+quoi le critère serait aveugle. **Un critère de pixel pour une règle de face doit dire ce qu'il fait des pixels qu'une
+face ne couvre qu'en partie.**
 
 ### Le pochoir se tient par ÉCHANTILLON (anticrénelage ×4 des vues iso), le verdict du juge par FRAGMENT : un pixel d'arête peut n'être tu qu'à moitié (2026-09-30)
 
@@ -31008,21 +31024,49 @@ traits, et les traits cernent les bouffées. C'est le plus « roman graphique »
 lui-même (le dessin ondule) sans rien montrer qui ne soit dans le dessin. Les ARÊTES disent le mieux le cube, mais tracent
 un plan d'architecte — des contours à angle droit sur un nuage bas ; les HACHURES font une gravure qui ombre bien les côtés,
 mais tramée partout où la lumière baisse, elle se lit comme une texture plus que comme un trait. Son coût est celui des
-deux autres : le trait ne se choisit pas au coût. Adrien tranche (Q73).
+deux autres : le trait ne se choisit pas au coût. Adrien tranche (Q73). **Tranché le 2026-10-01 : « Q73 : volutes ».**
 
 **Ce que le cloud ne peut pas dire.** Comme en GV1 : le temps d'image du pilote d'Apple et le hoquet de la première
 compilation du shader, plus gros d'un peu (trois encres et leurs voisins dans le même programme). C'est la limite de la
 preuve, pas une étape demandée.
 
 **Ce qui reste.**
-- Le choix de l'encre (Q73) et du noir du trait (Q74).
+- ~~Le choix de l'encre (Q73) et du noir du trait (Q74).~~ Tranchés le 2026-10-01 : les volutes, et la règle des murs.
 - Le liseré de l'aplat au pied du tas (GV1), toujours là.
 - Non éprouvé : une partie en ligne réelle (le chemin est le même ; horloge et graines passent par l'âge et le centre).
-- GV2 (les nappes), sur l'ordre de la coordinatrice seulement.
+- GV2 (les nappes) : ordonné par la coordinatrice le 2026-10-01 (plus bas).
 
-**Questions pour Adrien** (numérotées à partir de Q67 ; Q67 à Q70 répondues le 2026-09-30 vers 15:50 — « Décisions
-actées » ; Q71 et Q72 sont les deux premiers signalements plus bas, posés à Adrien par la coordinatrice et corrigés par
-la 0.8.0 — d'où Q73 et Q74) :
+### Q73 et Q74 — tranchées (2026-10-01)
+
+Adrien, vers 09:10, sur les planches de GV1bis : « Q73 : volutes » ; « Q74 : on garde ». Le défaut était déjà celui-là :
+rien ne change à l'image. Ce qui change, c'est que la suite GARDE les deux décisions — `test_fumee_voxel` vérifie que
+l'encre par défaut est les volutes (et non « une des trois ») et que le reste du trait est celui de l'encre d'essai des
+murs, sous leur plancher : un trait plus noir pour la fumée seule rougirait. La branche venant d'avaler la ligne publiée
+(le juge du rayon taillé de Q75 écrit le pochoir que les cubes lisent), le noir et l'équité sont REPROUVÉS sur elle :
+- **le noir à l'écran** (`--mode=noir`, `releves_q73_q74_noir.txt`) : aucune fuite au-delà de 2/255 sur les 32 relevés
+  des cubes (quatre scènes × trois encres et la taille fine × deux vues) ; le témoin vu en fuite sur 2 408 119 pixels. Deux
+  chiffres ont bougé, et c'est Q75 qui les explique : avant la fusion, le juge du rayon EN DISQUE (marge 16/255, 728 px
+  autour de la torche) taisait les cubes sur tout le sombre autour de J1 — la bascule du masque de la fumée ne le touche
+  pas —, si bien que masque coupé rien ne fuyait et qu'aucun résidu ne restait ; taillé à son cône (Q75, A), il ne les tait
+  plus au-dehors, et seul le juge du nuage les y garde. Masque coupé, 31 259 fuites : c'est le juge du nuage qui tient le
+  noir, et il le tient ; des résidus à 1-2/255 sous les cubes, jusqu'à 18 par relevé (les couches du jeu publié, jusqu'à
+  23 dans la même image) : le juge tranche par fragment, le pochoir par échantillon (« Pièges connus »). Les COUCHES du jeu
+  publié, elles, laissent DEUX pixels au-delà de
+  8/255 dans la suie, vue de J1 — au bord d'un trait d'encre du dessin, là où le pochoir ne tait un pixel qu'à moitié (le
+  piège du juge par échantillon, « Pièges connus ») : signalé, hors du chantier ; les cubes, qui ne posent plus le dessin
+  sous eux (Q68), n'en ont pas ;
+- **« allumé reste allumé »** (l'arbre en pause) : AUCUN pixel éteint DEDANS la lumière sur 24 relevés (100 % de pixels
+  stables), aucun du tout sous les VOLUTES (8 relevés) ; un seul AU BORD — la poussière, encre des arêtes (les bancs
+  seulement), vue de J1, 10 → 7/255, ses voisins de 0 à 32 : un pixel que la face ne couvre qu'en partie, sur le bord du
+  cône (« Pièges connus », 2026-10-01) ; le témoin sans plancher en éteint 33 709 dedans. Le banc dit désormais où et
+  comment un pixel s'éteint, et sépare le bord du dedans ;
+- **l'équité J1 = J2** : la suite complète, `test_fumee_voxel` compris (chaque uniforme comparé entre les deux vues, la
+  copie de killcam à son âge rejoué), verte sur la fusion puis sur ces changements (« tout passe, sans erreur de script
+  (796 s) », 174 lignes).
+
+**Questions pour Adrien** (numérotées à partir de Q67 ; Q67 à Q70 répondues le 2026-09-30 vers 15:50, Q73 et Q74 le
+2026-10-01 vers 09:10 — « Décisions actées » ; Q71 et Q72 sont les deux premiers signalements plus bas, posés à Adrien
+par la coordinatrice et corrigés par la 0.8.0 — d'où Q73 et Q74) :
 - **Q67 — La fumée en voxels par défaut ?** Proposition : oui, en variante « gros », si les planches
   (`planche_gv1_*.jpg`, surtout `planche_gv1_detail.jpg`) disent ce qu'Adrien attend — moins cher que les couches, noir tenu
   à l'écran, rien du jeu ne change. Le jeu ne bouge pas avant sa réponse. → **Oui, en gros, avec des traits sombres** :
@@ -31043,11 +31087,11 @@ la 0.8.0 — d'où Q73 et Q74) :
 - **Q73 — Quelle encre ?** Les trois sont sur les mêmes planches (`planche_gv1bis_*.jpg`, surtout
   `planche_gv1bis_detail.jpg`, à la taille de l'écran) : les ARÊTES (le contour des paliers), les VOLUTES (les traits du
   dessin, drapés), les HACHURES (l'ombre en traits). Proposition : les VOLUTES, le défaut dès GV1bis ; `--fumee-encre=`
-  montre les autres en jeu.
+  montre les autres en jeu. → **« volutes »** (2026-10-01).
 - **Q74 — Un trait plus noir ?** Le trait est GRAPHITE plutôt que noir d'encre : la règle des murs « allumé reste allumé »
   l'arrête au plancher (16/255 en valeur affichée) et l'efface sur une face plus sombre. Plus noir, il faudrait baisser ce
   plancher pour la fumée seule — et la lueur faible d'un nuage, qui est une information, disparaîtrait sous un trait. Avis :
-  garder la règle.
+  garder la règle. → **« on garde »** (2026-10-01).
 
 **Signalé en passant — hors périmètre, non corrigé.**
 - **La fusée de killcam éclaire avec l'empreinte du VOL** (lu dans le code ; le banc de GV0 l'a rencontré en posant une

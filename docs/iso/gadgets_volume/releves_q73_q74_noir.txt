@@ -1,0 +1,102 @@
+pose=cartouche_suie noeud=GadgetJ2_9650
+noir cas=cartouche_suie variante=couches vue=J1 noirs=336924 emprise=87407 noirs_dessous=20139 instables=86459 fuites=23 fuites_sup2=2 fuites_sup8=2
+noir cas=cartouche_suie variante=couches vue=J2 noirs=337175 emprise=85914 noirs_dessous=19972 instables=85061 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=cartouche_suie variante=aretes vue=J1 noirs=334898 emprise=60993 noirs_dessous=309 instables=36758 fuites=13 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=82 fuites_sup2=74 fuites_sup8=74 | temoin: fuites_sup2=201
+noir residus cas=cartouche_suie variante=aretes vue=J1 cubes=13 couches=23
+noir cas=cartouche_suie variante=aretes vue=J2 noirs=338199 emprise=59960 noirs_dessous=1215 instables=36689 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=962 fuites_sup2=962 fuites_sup8=962 | temoin: fuites_sup2=1044
+noir residus cas=cartouche_suie variante=aretes vue=J2 cubes=0 couches=0
+allume cas=cartouche_suie variante=aretes vue=J1 stables=435600 eclaires=97831 assombris=14896 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=28919 sombres_assombris=2 plus_sombre=20 | temoin_sans_plancher: eteints=184 eteints_dedans=148 sombres_assombris=90
+allume cas=cartouche_suie variante=aretes vue=J2 stables=435600 eclaires=95548 assombris=14587 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=27325 sombres_assombris=1 plus_sombre=28 | temoin_sans_plancher: eteints=329 eteints_dedans=259 sombres_assombris=61
+noir cas=cartouche_suie variante=volutes vue=J1 noirs=334895 emprise=60121 noirs_dessous=296 instables=34713 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=77 fuites_sup2=75 fuites_sup8=75 | temoin: fuites_sup2=199
+noir residus cas=cartouche_suie variante=volutes vue=J1 cubes=0 couches=23
+noir cas=cartouche_suie variante=volutes vue=J2 noirs=338199 emprise=59993 noirs_dessous=1215 instables=36277 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=962 fuites_sup2=962 fuites_sup8=962 | temoin: fuites_sup2=1044
+noir residus cas=cartouche_suie variante=volutes vue=J2 cubes=0 couches=0
+allume cas=cartouche_suie variante=volutes vue=J1 stables=435600 eclaires=97830 assombris=18914 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=28906 sombres_assombris=1 plus_sombre=33 | temoin_sans_plancher: eteints=828 eteints_dedans=787 sombres_assombris=40
+allume cas=cartouche_suie variante=volutes vue=J2 stables=435600 eclaires=95548 assombris=18139 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=27328 sombres_assombris=0 plus_sombre=42 | temoin_sans_plancher: eteints=926 eteints_dedans=839 sombres_assombris=16
+noir cas=cartouche_suie variante=hachures vue=J1 noirs=334902 emprise=60019 noirs_dessous=293 instables=35374 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=81 fuites_sup2=75 fuites_sup8=75 | temoin: fuites_sup2=199
+noir residus cas=cartouche_suie variante=hachures vue=J1 cubes=0 couches=23
+noir cas=cartouche_suie variante=hachures vue=J2 noirs=338199 emprise=59989 noirs_dessous=1215 instables=37022 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=962 fuites_sup2=962 fuites_sup8=962 | temoin: fuites_sup2=1044
+noir residus cas=cartouche_suie variante=hachures vue=J2 cubes=0 couches=0
+allume cas=cartouche_suie variante=hachures vue=J1 stables=435600 eclaires=97831 assombris=35220 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=28916 sombres_assombris=2 plus_sombre=22 | temoin_sans_plancher: eteints=71 eteints_dedans=61 sombres_assombris=124
+allume cas=cartouche_suie variante=hachures vue=J2 stables=435600 eclaires=95548 assombris=32902 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=27347 sombres_assombris=1 plus_sombre=31 | temoin_sans_plancher: eteints=190 eteints_dedans=123 sombres_assombris=89
+noir cas=cartouche_suie variante=fin vue=J1 noirs=334905 emprise=60851 noirs_dessous=198 instables=35063 fuites=13 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=51 fuites_sup2=40 fuites_sup8=30 | temoin: fuites_sup2=123
+noir residus cas=cartouche_suie variante=fin vue=J1 cubes=13 couches=23
+noir cas=cartouche_suie variante=fin vue=J2 noirs=338199 emprise=60303 noirs_dessous=803 instables=36916 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=669 fuites_sup2=669 fuites_sup8=666 | temoin: fuites_sup2=645
+noir residus cas=cartouche_suie variante=fin vue=J2 cubes=0 couches=0
+pose=poussiere noeud=GadgetJ2_9650
+noir cas=poussiere variante=couches vue=J1 noirs=337417 emprise=209398 noirs_dessous=131943 instables=46236 fuites=1 fuites_sup2=0 fuites_sup8=0
+noir cas=poussiere variante=couches vue=J2 noirs=338990 emprise=207757 noirs_dessous=129630 instables=37632 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=poussiere variante=aretes vue=J1 noirs=333237 emprise=140549 noirs_dessous=71883 instables=38526 fuites=4 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=264 fuites_sup2=255 fuites_sup8=206 | temoin: fuites_sup2=71166
+noir residus cas=poussiere variante=aretes vue=J1 cubes=4 couches=1
+noir cas=poussiere variante=aretes vue=J2 noirs=334701 emprise=139878 noirs_dessous=70270 instables=38734 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=597 fuites_sup2=563 fuites_sup8=497 | temoin: fuites_sup2=69602
+noir residus cas=poussiere variante=aretes vue=J2 cubes=0 couches=0
+allume cas=poussiere variante=aretes vue=J1 stables=435600 eclaires=96742 assombris=5741 eteints=1 eteints_dedans=0 eteints_bord=1 sombres=17544 sombres_assombris=6 plus_sombre=7 | temoin_sans_plancher: eteints=91 eteints_dedans=67 sombres_assombris=1162
+allume eteints cas=poussiere variante=aretes vue=J1 : (199,262) 10→7 voisins 0..32 (bord)
+allume cas=poussiere variante=aretes vue=J2 stables=435600 eclaires=96002 assombris=6154 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=16651 sombres_assombris=4 plus_sombre=26 | temoin_sans_plancher: eteints=98 eteints_dedans=73 sombres_assombris=969
+noir cas=poussiere variante=volutes vue=J1 noirs=333241 emprise=140260 noirs_dessous=71877 instables=38078 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=262 fuites_sup2=255 fuites_sup8=206 | temoin: fuites_sup2=71167
+noir residus cas=poussiere variante=volutes vue=J1 cubes=0 couches=1
+noir cas=poussiere variante=volutes vue=J2 noirs=334701 emprise=139924 noirs_dessous=70270 instables=38278 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=597 fuites_sup2=563 fuites_sup8=497 | temoin: fuites_sup2=69602
+noir residus cas=poussiere variante=volutes vue=J2 cubes=0 couches=0
+allume cas=poussiere variante=volutes vue=J1 stables=435600 eclaires=96745 assombris=4949 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=17547 sombres_assombris=1 plus_sombre=41 | temoin_sans_plancher: eteints=131 eteints_dedans=90 sombres_assombris=832
+allume cas=poussiere variante=volutes vue=J2 stables=435600 eclaires=95999 assombris=5096 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=16643 sombres_assombris=5 plus_sombre=22 | temoin_sans_plancher: eteints=149 eteints_dedans=121 sombres_assombris=830
+noir cas=poussiere variante=hachures vue=J1 noirs=333237 emprise=140367 noirs_dessous=71877 instables=38004 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=270 fuites_sup2=255 fuites_sup8=206 | temoin: fuites_sup2=71167
+noir residus cas=poussiere variante=hachures vue=J1 cubes=0 couches=1
+noir cas=poussiere variante=hachures vue=J2 noirs=334701 emprise=140205 noirs_dessous=70270 instables=38193 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=597 fuites_sup2=563 fuites_sup8=497 | temoin: fuites_sup2=69602
+noir residus cas=poussiere variante=hachures vue=J2 cubes=0 couches=0
+allume cas=poussiere variante=hachures vue=J1 stables=435600 eclaires=96743 assombris=35428 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=17547 sombres_assombris=11 plus_sombre=13 | temoin_sans_plancher: eteints=563 eteints_dedans=436 sombres_assombris=4486
+allume cas=poussiere variante=hachures vue=J2 stables=435600 eclaires=95998 assombris=34580 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=16635 sombres_assombris=37 plus_sombre=11 | temoin_sans_plancher: eteints=527 eteints_dedans=430 sombres_assombris=3643
+noir cas=poussiere variante=fin vue=J1 noirs=333243 emprise=144137 noirs_dessous=74521 instables=38820 fuites=4 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=361 fuites_sup2=344 fuites_sup8=250 | temoin: fuites_sup2=73816
+noir residus cas=poussiere variante=fin vue=J1 cubes=4 couches=1
+noir cas=poussiere variante=fin vue=J2 noirs=334701 emprise=144158 noirs_dessous=73742 instables=39275 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=573 fuites_sup2=555 fuites_sup8=491 | temoin: fuites_sup2=73057
+noir residus cas=poussiere variante=fin vue=J2 cubes=0 couches=0
+noir cas=fusee_panache variante=couches vue=J1 noirs=439123 emprise=385140 noirs_dessous=365319 instables=4389 fuites=5 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_panache variante=couches vue=J2 noirs=434313 emprise=384414 noirs_dessous=365170 instables=2927 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_panache variante=aretes vue=J1 noirs=439142 emprise=203929 noirs_dessous=189567 instables=3172 fuites=18 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=10 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=185582
+noir residus cas=fusee_panache variante=aretes vue=J1 cubes=18 couches=5
+noir cas=fusee_panache variante=aretes vue=J2 noirs=434313 emprise=200409 noirs_dessous=186717 instables=2876 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=182968
+noir residus cas=fusee_panache variante=aretes vue=J2 cubes=0 couches=0
+allume cas=fusee_panache variante=aretes vue=J1 stables=460600 eclaires=15479 assombris=0 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=11367 sombres_assombris=0 plus_sombre=255 | temoin_sans_plancher: eteints=557 eteints_dedans=547 sombres_assombris=742
+allume cas=fusee_panache variante=aretes vue=J2 stables=454300 eclaires=14995 assombris=0 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=10787 sombres_assombris=0 plus_sombre=255 | temoin_sans_plancher: eteints=228 eteints_dedans=199 sombres_assombris=347
+noir cas=fusee_panache variante=volutes vue=J1 noirs=439145 emprise=203899 noirs_dessous=189570 instables=3026 fuites=18 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=13 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=185584
+noir residus cas=fusee_panache variante=volutes vue=J1 cubes=18 couches=5
+noir cas=fusee_panache variante=volutes vue=J2 noirs=434313 emprise=200334 noirs_dessous=186717 instables=2782 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=182968
+noir residus cas=fusee_panache variante=volutes vue=J2 cubes=0 couches=0
+allume cas=fusee_panache variante=volutes vue=J1 stables=460600 eclaires=15480 assombris=0 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=11365 sombres_assombris=0 plus_sombre=255 | temoin_sans_plancher: eteints=116 eteints_dedans=99 sombres_assombris=118
+allume cas=fusee_panache variante=volutes vue=J2 stables=454300 eclaires=14995 assombris=0 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=10782 sombres_assombris=0 plus_sombre=255 | temoin_sans_plancher: eteints=76 eteints_dedans=44 sombres_assombris=76
+noir cas=fusee_panache variante=hachures vue=J1 noirs=439145 emprise=203865 noirs_dessous=189570 instables=3212 fuites=18 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=17 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=185584
+noir residus cas=fusee_panache variante=hachures vue=J1 cubes=18 couches=5
+noir cas=fusee_panache variante=hachures vue=J2 noirs=434313 emprise=200421 noirs_dessous=186717 instables=2815 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=182968
+noir residus cas=fusee_panache variante=hachures vue=J2 cubes=0 couches=0
+allume cas=fusee_panache variante=hachures vue=J1 stables=460600 eclaires=15479 assombris=0 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=11362 sombres_assombris=0 plus_sombre=255 | temoin_sans_plancher: eteints=3655 eteints_dedans=3405 sombres_assombris=5485
+allume cas=fusee_panache variante=hachures vue=J2 stables=454300 eclaires=14996 assombris=0 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=10783 sombres_assombris=0 plus_sombre=255 | temoin_sans_plancher: eteints=3195 eteints_dedans=2855 sombres_assombris=4894
+noir cas=fusee_panache variante=fin vue=J1 noirs=439130 emprise=220058 noirs_dessous=204881 instables=3803 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=196388
+noir residus cas=fusee_panache variante=fin vue=J1 cubes=0 couches=5
+noir cas=fusee_panache variante=fin vue=J2 noirs=434313 emprise=215014 noirs_dessous=200287 instables=3105 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=0 fuites_sup2=0 fuites_sup8=0 | temoin: fuites_sup2=192487
+noir residus cas=fusee_panache variante=fin vue=J2 cubes=0 couches=0
+noir cas=fusee_braise_lumiere_coupee variante=couches vue=J1 noirs=344957 emprise=325005 noirs_dessous=212417 instables=48001 fuites=17 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_braise_lumiere_coupee variante=couches vue=J2 noirs=340128 emprise=319929 noirs_dessous=208223 instables=43825 fuites=0 fuites_sup2=0 fuites_sup8=0
+noir cas=fusee_braise_lumiere_coupee variante=aretes vue=J1 noirs=344975 emprise=145999 noirs_dessous=44157 instables=43479 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3175 fuites_sup2=2792 fuites_sup8=1761 | temoin: fuites_sup2=41476
+noir residus cas=fusee_braise_lumiere_coupee variante=aretes vue=J1 cubes=0 couches=17
+noir cas=fusee_braise_lumiere_coupee variante=aretes vue=J2 noirs=340128 emprise=145359 noirs_dessous=43292 instables=43208 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3529 fuites_sup2=3070 fuites_sup8=1773 | temoin: fuites_sup2=40465
+noir residus cas=fusee_braise_lumiere_coupee variante=aretes vue=J2 cubes=0 couches=0
+allume cas=fusee_braise_lumiere_coupee variante=aretes vue=J1 stables=460600 eclaires=110660 assombris=4223 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=31798 sombres_assombris=0 plus_sombre=58 | temoin_sans_plancher: eteints=531 eteints_dedans=515 sombres_assombris=2694
+allume cas=fusee_braise_lumiere_coupee variante=aretes vue=J2 stables=454300 eclaires=109982 assombris=4170 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=30628 sombres_assombris=2 plus_sombre=38 | temoin_sans_plancher: eteints=802 eteints_dedans=769 sombres_assombris=2980
+noir cas=fusee_braise_lumiere_coupee variante=volutes vue=J1 noirs=344974 emprise=146249 noirs_dessous=44158 instables=43365 fuites=2 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3177 fuites_sup2=2792 fuites_sup8=1761 | temoin: fuites_sup2=41475
+noir residus cas=fusee_braise_lumiere_coupee variante=volutes vue=J1 cubes=2 couches=17
+noir cas=fusee_braise_lumiere_coupee variante=volutes vue=J2 noirs=340128 emprise=145151 noirs_dessous=43292 instables=43616 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3529 fuites_sup2=3070 fuites_sup8=1773 | temoin: fuites_sup2=40465
+noir residus cas=fusee_braise_lumiere_coupee variante=volutes vue=J2 cubes=0 couches=0
+allume cas=fusee_braise_lumiere_coupee variante=volutes vue=J1 stables=460600 eclaires=110662 assombris=3817 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=31813 sombres_assombris=3 plus_sombre=32 | temoin_sans_plancher: eteints=594 eteints_dedans=542 sombres_assombris=989
+allume cas=fusee_braise_lumiere_coupee variante=volutes vue=J2 stables=454300 eclaires=109984 assombris=3470 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=30635 sombres_assombris=0 plus_sombre=72 | temoin_sans_plancher: eteints=390 eteints_dedans=354 sombres_assombris=666
+noir cas=fusee_braise_lumiere_coupee variante=hachures vue=J1 noirs=344979 emprise=146056 noirs_dessous=44174 instables=42961 fuites=18 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3188 fuites_sup2=2792 fuites_sup8=1761 | temoin: fuites_sup2=41475
+noir residus cas=fusee_braise_lumiere_coupee variante=hachures vue=J1 cubes=18 couches=17
+noir cas=fusee_braise_lumiere_coupee variante=hachures vue=J2 noirs=340128 emprise=145094 noirs_dessous=43292 instables=43228 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3529 fuites_sup2=3070 fuites_sup8=1773 | temoin: fuites_sup2=40465
+noir residus cas=fusee_braise_lumiere_coupee variante=hachures vue=J2 cubes=0 couches=0
+allume cas=fusee_braise_lumiere_coupee variante=hachures vue=J1 stables=460600 eclaires=110661 assombris=34124 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=31810 sombres_assombris=4 plus_sombre=35 | temoin_sans_plancher: eteints=11242 eteints_dedans=10426 sombres_assombris=24899
+allume cas=fusee_braise_lumiere_coupee variante=hachures vue=J2 stables=454300 eclaires=109982 assombris=33309 eteints=0 eteints_dedans=0 eteints_bord=0 sombres=30648 sombres_assombris=2 plus_sombre=33 | temoin_sans_plancher: eteints=11495 eteints_dedans=10520 sombres_assombris=23735
+noir cas=fusee_braise_lumiere_coupee variante=fin vue=J1 noirs=344965 emprise=158334 noirs_dessous=53862 instables=45540 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=3784 fuites_sup2=3189 fuites_sup8=1992 | temoin: fuites_sup2=47514
+noir residus cas=fusee_braise_lumiere_coupee variante=fin vue=J1 cubes=0 couches=17
+noir cas=fusee_braise_lumiere_coupee variante=fin vue=J2 noirs=340128 emprise=157298 noirs_dessous=53056 instables=45543 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites=4048 fuites_sup2=3312 fuites_sup8=1753 | temoin: fuites_sup2=46577
+noir residus cas=fusee_braise_lumiere_coupee variante=fin vue=J2 cubes=0 couches=0
+noir total_masque_coupe_fuites_sup2=31259 total_temoin_fuites_sup2=2408119
+allume total_assombris=309719 total_sombres_assombris=82 total_temoin_sombres_assombris=79967 total_eteints_bord=1 total_temoin_eteints_dedans=33709
+VERDICT=OK echecs=0

@@ -415,6 +415,8 @@ func _noir() -> void:
 	var total_assombris := 0
 	var total_sombres_assombris := 0
 	var total_temoin_encre := 0
+	var total_eteints_bord := 0
+	var total_temoin_dedans := 0
 	for c: Array in cas:
 		var nom: String = c[0]
 		# `--seulement=<cas>` : un seul cas (le préfixe de son nom), pour un essai rapide.
@@ -526,16 +528,22 @@ func _noir() -> void:
 					var al := _allumes_eteints(sans1, avec_encre, sans2, avec2, pid, cote)
 					# Le témoin n'a qu'une prise : il n'est tenu que par la stabilité des prises sans encre.
 					var tn := _allumes_eteints(sans1, noire, sans2, noire, pid, cote)
-					_releve("allume cas=%s variante=%s vue=J%d stables=%d eclaires=%d assombris=%d eteints=%d sombres=%d sombres_assombris=%d plus_sombre=%d | temoin_sans_plancher: eteints=%d sombres_assombris=%d" % [
-						nom, variante, pid + 1, al["stables"], al["eclaires"], al["assombris"], al["eteints"], al["sombres"],
-						al["sombres_assombris"], al["plus_sombre"], tn["eteints"], tn["sombres_assombris"]])
+					_releve("allume cas=%s variante=%s vue=J%d stables=%d eclaires=%d assombris=%d eteints=%d eteints_dedans=%d eteints_bord=%d sombres=%d sombres_assombris=%d plus_sombre=%d | temoin_sans_plancher: eteints=%d eteints_dedans=%d sombres_assombris=%d" % [
+						nom, variante, pid + 1, al["stables"], al["eclaires"], al["assombris"], al["eteints"], al["eteints_dedans"],
+						al["eteints_bord"], al["sombres"], al["sombres_assombris"], al["plus_sombre"], tn["eteints"],
+						tn["eteints_dedans"], tn["sombres_assombris"]])
+					total_eteints_bord += int(al["eteints_bord"])
+					total_temoin_dedans += int(tn["eteints_dedans"])
 					total_assombris += int(al["assombris"])
 					total_sombres_assombris += int(al["sombres_assombris"])
 					total_temoin_encre += int(tn["sombres_assombris"])
 					if pid == 0:
 						_sauver(_recadrer(avec_encre, _lieu, pid, cote), "allume_%s_%s_avec_j1" % [nom, variante])
 					if int(al["eteints"]) > 0:
-						_echouer("%s %s J%d : %d pixels allumés éteints par l'encre" % [nom, variante, pid + 1, al["eteints"]])
+						_releve("allume eteints cas=%s variante=%s vue=J%d : %s" % [nom, variante, pid + 1, al["details"]])
+					if int(al["eteints_dedans"]) > 0:
+						_echouer("%s %s J%d : %d pixels allumés éteints par l'encre, DEDANS la lumière" % [nom, variante,
+							pid + 1, al["eteints_dedans"]])
 		_volumes.poser_fumee_voxel(false)
 		_torche = false
 		_visee = Vector2.ZERO
@@ -548,8 +556,10 @@ func _noir() -> void:
 	_releve("noir total_masque_coupe_fuites_sup2=%d total_temoin_fuites_sup2=%d" % [total_sans_masque, total_temoin])
 	if total_temoin == 0:
 		_echouer("le témoin ne montre aucune fuite : le détecteur serait aveugle, la preuve vide")
-	_releve("allume total_assombris=%d total_sombres_assombris=%d total_temoin_sombres_assombris=%d" % [total_assombris,
-		total_sombres_assombris, total_temoin_encre])
+	_releve("allume total_assombris=%d total_sombres_assombris=%d total_temoin_sombres_assombris=%d total_eteints_bord=%d total_temoin_eteints_dedans=%d" % [
+		total_assombris, total_sombres_assombris, total_temoin_encre, total_eteints_bord, total_temoin_dedans])
+	if total_assombris > 0 and total_temoin_dedans == 0 and _seulement == "":
+		_echouer("le témoin sans plancher n'éteint aucun pixel DEDANS la lumière : le critère serait aveugle")
 	if total_assombris == 0:
 		_echouer("aucune encre n'a assombri un pixel : la preuve « allumé reste allumé » serait vide")
 	if total_temoin_encre <= total_sombres_assombris:
@@ -684,6 +694,14 @@ func _prises_encre_figees(encre: String, tenir: Callable) -> Array:
 const SOMBRE_ECRAN := 48
 
 
+## « ALLUMÉ RESTE ALLUMÉ » dans la vue `pid` — ⚠️ AU BORD et DEDANS (2026-10-01, après la fusion de la ligne publiée) : un
+## pixel « éteint » dont un des huit voisins, sans l'encre, est sous 8/255 est AU BORD de la lumière — la face ne le couvre
+## qu'en partie (l'anticrénelage mêle ses échantillons), et l'encre, tenue à son plancher sur la face, fait passer le mélange
+## sous 8/255 avec le noir voisin. Le premier vu : la poussière, arêtes, vue de J1, 10 → 7/255, ses voisins de 0 à 32 — le
+## trait d'une arête sur le bord du cône (la torche raccourcie par Q76 y a amené une arête). La règle du plancher tient par
+## FACE (la suite la prouve sur le miroir de la pâte) ; un pixel partagé avec le noir n'est pas une face. Seuls les éteints
+## DEDANS (tous leurs voisins éclairés) font échouer la preuve ; ceux du bord sont comptés et décrits.
+##
 ## « ALLUMÉ RESTE ALLUMÉ » dans la vue `pid` : entre les prises SANS encre (`sans1`, `sans2`) et les prises AVEC (`avec`,
 ## `avec2` : la même image de jeu, les mêmes cubes — seule l'encre change, donc seuls les pixels des cubes peuvent
 ## différer). Un pixel n'est jugé que s'il est le même dans `sans1` et `sans2` ET dans `avec` et `avec2` : un pixel qui
@@ -705,9 +723,14 @@ func _allumes_eteints(sans1: Image, avec: Image, sans2: Image, avec2: Image, pid
 	var eclaires := 0
 	var assombris := 0
 	var eteints := 0
+	var eteints_bord := 0
 	var sombres := 0
 	var sombres_assombris := 0
 	var plus_sombre := 255
+	# Les premiers pixels « éteints », décrits : x, y, valeur sans l'encre et avec, le plus sombre et le plus clair de leurs
+	# huit voisins sans l'encre.
+	var details: PackedStringArray = []
+	var largeur := a.get_width()
 	for k in range(0, mini(mini(da.size(), db.size()), mini(da2.size(), db2.size())), 3):
 		if da[k] != da2[k] or da[k + 1] != da2[k + 1] or da[k + 2] != da2[k + 2]:
 			continue
@@ -724,12 +747,31 @@ func _allumes_eteints(sans1: Image, avec: Image, sans2: Image, avec2: Image, pid
 			plus_sombre = mini(plus_sombre, mb)
 			if mb < 8:
 				eteints += 1
+				var x := (k / 3) % largeur
+				var y := (k / 3) / largeur
+				var vmin := 255
+				var vmax := 0
+				for dy in range(-1, 2):
+					for dx in range(-1, 2):
+						if dx == 0 and dy == 0:
+							continue
+						var kk := ((y + dy) * largeur + (x + dx)) * 3
+						if kk >= 0 and kk + 2 < da.size():
+							var v := maxi(da[kk], maxi(da[kk + 1], da[kk + 2]))
+							vmin = mini(vmin, v)
+							vmax = maxi(vmax, v)
+				if vmin < 8:
+					eteints_bord += 1
+				if details.size() < 6:
+					details.append("(%d,%d) %d→%d voisins %d..%d%s" % [x, y, ma, mb, vmin, vmax,
+						" (bord)" if vmin < 8 else " (DEDANS)"])
 		if ma < SOMBRE_ECRAN:
 			sombres += 1
 			if mb + 3 <= ma:
 				sombres_assombris += 1
-	return {"stables": stables, "eclaires": eclaires, "assombris": assombris, "eteints": eteints, "sombres": sombres,
-		"sombres_assombris": sombres_assombris, "plus_sombre": plus_sombre}
+	return {"stables": stables, "eclaires": eclaires, "assombris": assombris, "eteints": eteints,
+		"eteints_bord": eteints_bord, "eteints_dedans": eteints - eteints_bord, "sombres": sombres,
+		"sombres_assombris": sombres_assombris, "plus_sombre": plus_sombre, "details": " ; ".join(details)}
 
 
 func _materiaux_des_cubes() -> Array:

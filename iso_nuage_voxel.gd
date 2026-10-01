@@ -52,7 +52,8 @@ const FACE_GAUCHE := 0.8
 const FACE_DROITE := 0.62
 const ENCRE_RESTE := 0.55
 ## GV1bis — L'ENCRE du roman graphique sur les cubes (`encre_style` du shader) : trois variantes proposées à Adrien, le trait
-## de GV1 et « aucune » pour les bancs. Voir `nuage_voxel_iso.gdshader`.
+## de GV1 et « aucune » pour les bancs. Voir `nuage_voxel_iso.gdshader`. **Q73 (Adrien, 2026-10-01 : « Q73 : volutes »)** :
+## les VOLUTES, le trait du dessin drapé sur le tas ; les autres restent pour les bancs (`--fumee-encre=`).
 const ENCRES := {"aretes": 1, "volutes": 2, "hachures": 3, "cotes": 0, "aucune": -1}
 ## Les trois variantes du roman graphique, dans l'ordre des planches.
 const ENCRES_GV1BIS := ["aretes", "volutes", "hachures"]
@@ -62,7 +63,9 @@ const RELIEFS := {"dessin": 1, "bruit": 0}
 const RELIEF_PAR_DEFAUT := "dessin"
 ## Le trait du roman graphique : plus large que celui des corps (0,9 px) — un nuage de 184 px de large, pas un bras —, aussi
 ## noir que l'encre d'essai des murs (`IsoMateriaux.ENCRE_ARETE_RESTE_ESSAI`, 0,12), sous LEUR plancher (« allumé reste
-## allumé » : `IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée).
+## allumé » : `IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée). **Q74 (Adrien, 2026-10-01 : « Q74 : on
+## garde »)** : un trait graphite plutôt que noir d'encre — aucun plancher plus bas pour la fumée seule ; la lueur faible
+## d'un nuage, qui est une information, ne s'éteint pas sous un trait.
 const TRAIT_PX := 1.5
 const TRAIT_RESTE := 0.12
 ## La dérive lente du dessin (relief et volutes) : ± 6 % du rayon (5,5 px pour la suie, 10 pour la poussière).
