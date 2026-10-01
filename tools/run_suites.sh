@@ -258,6 +258,11 @@ SUITES+=(test_allegement_faisceau)
 # lancée dans une vraie manche, puis la killcam par son propre chemin, valeur par valeur. Posé ici, comme les lignes du dessus.
 SUITES+=(test_fusee_killcam)
 
+# Q58 (Adrien, 2026-10-01 : « il faudrait qu'à l'allumage la fusée illumine loin effectivement ») : à l'allumage, le halo de
+# la fusée porte aussi loin que les torches, puis revient avant la braise — la courbe, la règle, une vraie fusée de match et
+# la killcam à chaque âge. Posé ici, comme les lignes du dessus.
+SUITES+=(test_fusee_allumage)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

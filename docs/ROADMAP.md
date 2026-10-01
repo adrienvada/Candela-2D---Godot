@@ -2435,6 +2435,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q58 = à l'allumage, la fusée illumine loin : son halo porte aussi loin que les torches (468 px), le tient une seconde, puis revient à son empreinte habituelle avant la braise** (2026-10-01 vers 09:10, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin effectivement » — la question de la page des lumières de L1 : « La torche seule, ou toutes les lumières ? […] faut-il que le halo d'une fusée remplisse l'écran ? ») | **La courbe** (`FuseeModele.part_allumage_a`, `rayon_halo_a`), lue par la session coordinatrice et proposée par le sous-agent : à l'atterrissage — l'allumage, le début du plein feu — le rayon du halo passe de 220 px à la portée des torches (`PorteeEcran.portee_au_bord`, 468 px : le même calcul, sur le cadrage de la vue unique, dans tous les modes) ; il la TIENT le premier quart du plein feu (1 s sur 4), REVIENT par un `smoothstep` jusqu'aux trois quarts (3 s ; le bord rentre au plus de 186 px/s), et la braise (4 s) repart de l'empreinte habituelle. En vol, rien ne change. **L'énergie non plus** : le halo s'élargit, il ne brille pas davantage — l'éblouissement, qui lit l'énergie (rayon 400 px), ne bouge pas. **Rien sur le fil** : la courbe se dérive de l'âge de combustion, que les deux pairs simulent à l'identique ; la killcam la suit par le même chemin (`_appliquer_age`) ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-fusee-allumage` rend la fusée de la 0.8.0 (jamais en ligne). Le noir : rien au-delà du rayon ni derrière un mur, dans la lightmap des quatre vues, à six âges ; J1 = J2 ; l'allumage fini à 3 s, au pixel près (planches à six âges, avant/après basculés sur place). Mesuré dans le cloud pendant la bouffée (llvmpipe, la fusée tenue à 0,5 s) : 0,984 de la cadence de la 0.8.0 au cadrage du banc, 0,979 au vrai cadrage de la vue unique. Chantier « l'allègement de la 0.8.0 », § Q58. |
+| **Q77 = on garde : la portée des torches reste à 468 px pour les dix classes, sans surplus pour la Sentinelle ni le Braconnier** (2026-10-01 vers 09:10, Adrien : « Q77 : on garde » ; transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED ») | La question venait du rapport de Q76 : la lampe s'arrête au bord le plus proche de l'écran, mais son cookie s'éteint linéairement jusqu'à sa portée ; visée vers le haut en vue unique, la lumière de la Sentinelle s'éteint 36 à 54 pixels d'écran avant le bord, celle du Braconnier — le cookie le plus sombre des dix — 175. Un surplus pour ces deux classes aurait rendu leur lumière visible jusqu'au bord. Adrien garde Q76 tel quel : une portée, la même pour les dix classes, au bord le plus proche. Rien à changer dans le code. |
 | **La 0.8.0 est publiée et vérifiée** (2026-10-01 : tag `v0.8.0` poussé à 08:36, Release à 08:51 ; publiée par la session « Iso 1 Opus » sur le mot d'Adrien dit dans sa fenêtre — son texte du 29/09, redit vers 08:35 ; vérifiée par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ») | `main` a avancé sans fourche de `2501cb9a` (la 0.7.1) à `903b26e6`, le candidat allégé — Q75 « A+d » et Q76, la portée au bord le plus proche —, et le tag annoté `v0.8.0` (`add64427`) le nomme. La CI a passé les suites (Tests) puis exporté, signé et publié (Publication) : `Candela-macos.zip`, `Candela-windows.zip`, `manifeste.json`, `manifeste.json.sig`. **Vérifié depuis le cloud, sur ce qui a été publié et non sur ce qui devait l'être** : la signature du manifeste passe (`openssl dgst -sha256 -verify`) avec la clé publique de `update_manager.gd` tel qu'il est dans `903b26e6`, la même clé que dans la 0.7.1 — un jeu en 0.7.1 peut donc vérifier cette mise à jour ; le manifeste dit 0.8.0 et protocole 19 ; les deux archives, retéléchargées, ont exactement la taille et le SHA-256 qu'il annonce (130 960 497 et 185 128 994 octets). **Conséquence pour les joueurs** : le protocole passe de 18 à 19, un joueur en 0.7.1 ne trouve plus personne en 0.8.0 — chacun met à jour depuis l'accueil (MISE À JOUR). |
 | **Q76 = la portée des torches s'arrête au bord le plus proche de l'écran de la vue unique : 468 px, pour les dix classes et dans tous les modes** (2026-09-30 vers 22:58, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « En fait diminuons la portée des lampe au maximum visible par le joueur en hauteur et largeur (le minimum des deux) » ; puis vers 23:08, à la question de l'écran scindé : « Ok, même portée en écran scindé ») | **La règle** : le plus petit des deux demi-côtés de l'empreinte au sol de la vue unique, plus l'avance de la caméra vers la visée — `min(demi-largeur, demi-profondeur) + décalage × profondeur` = min(504,3 ; 360) + 108 = **468 px** à ×1,5 (`PorteeEcran.portee_au_bord`) : visée vers le haut de l'écran, la lampe s'arrête au bord du haut. L1 allait au coin (727,6 px). **Plancher ET plafond** (`WeaponData.portee_plafond`) : les dix classes portent exactement 468 px — contre la 0.7.1, le Terrassier gagne 276 px et les sept autres classes courtes de 122 à 238, la Sentinelle perd 31 et le Braconnier 204 ; contre la 0.8.0 d'avant (`1ea5ade8`), toutes perdent 260 px. **L'écran scindé garde la même portée, décision d'Adrien** (« Ok, même portée en écran scindé ») : la portée est une règle du jeu (l'éblouissement la lit), pas un cadrage ; en écran scindé (×1,25, 957 px de large), la lampe y dépasse les côtés de 37 px et s'arrête à 94 px sous le haut. **Pourquoi**, dans ses mots : « au maximum visible par le joueur » — avec la règle du coin, visée vers le haut, la lampe passait le bord de 260 px, sur du sol que son porteur ne voyait pas. Ce que la session y ajoute : ce qu'on ne voit pas se paie quand même, la surface d'une lampe suit le carré de sa portée (×0,41). **Rien sur le fil** : les deux machines dérivent 468 des constantes du duel ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-portee-ecran` rend les portées de la 0.7.1, `--portee-coin` la règle de L1. **Avec D (Q75)** : le rayon dans l'air garde `min(longueur de la 0.7.1, portée)` — inchangé pour les huit classes sous 468 px, arrêté à la portée pour la Sentinelle et le Braconnier. **Ce que « au bord » veut dire à l'écran** : le cookie s'éteint linéairement jusqu'à sa portée — la lampe atteint le bord, mais s'y éteint ; visée vers le haut, la lumière du Terrassier touche encore le haut de l'écran (sur les murs), celle de la Sentinelle s'éteint 36 à 54 pixels d'écran avant, celle du Braconnier 175. Aucun noir allumé (planche avant/après basculée sur place : trois classes, J1 et J2, vue unique et écran scindé) ; J1 = J2. Mesuré dans le cloud (llvmpipe, le Terrassier, 24 prises en miroir) : 1,007 de la cadence de la 0.7.1 au cadrage du banc et 0,893 au vrai cadrage de la vue unique, contre 0,941 et 0,841 pour `1ea5ade8` — 6 % du temps d'image rendu ; la Sentinelle et le Braconnier, dont Q76 raccourcit aussi le rayon, ont plus à gagner (non mesuré). Chantier « l'allègement de la 0.8.0 », § Q76. |
 | **Q75 = « A+d » : le juge du rayon taillé devient le défaut, et le rayon dans l'air garde la longueur de l'ancienne torche** (2026-09-30 20:17, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement) | **A** — l'option du juge taillé (l'éventail du cookie dilaté de la parallaxe, au lieu du disque) passe au défaut hors débogage : elle corrige le défaut du pochoir (les volutes d'une fusée tues hors du cône par la marge 16/255 du rayon) ; `--faisceau-juge-disque` rend le disque (débogage). **D** — les trois couches du rayon s'éteignent EN DOUCEUR (un `smoothstep` sur le dernier quart) à la portée qu'avait la classe dans la 0.7.1, relue dans son code (`torch_scale × 256 × 0,75`, de 192 px pour le Terrassier à 672 px pour le Braconnier), chaque couche à la même part de son rayon (le dôme de la 0.7.1) ; leurs éventails et le juge s'y arrêtent. La lumière au sol va toujours au bord de l'écran et la portée (règle du jeu, lue par l'éblouissement) ne bouge pas ; `--faisceau-air-long` rend le rayon entier (débogage). « L'ancienne torche » n'a pas d'autre sens : dans la 0.7.1, le rayon dans l'air était posé sur la texture de la lampe à cette portée même. Aucun noir allumé (planche avant/après, trois classes, J1 et J2) ; le pixel à 15/255 de l'écran scindé est légitime (le disque le taisait à moitié). Mesuré dans le cloud (llvmpipe, le Terrassier, la classe du banc) : 0,930 de la cadence de la 0.7.1 au cadrage du banc et 0,861 au vrai cadrage de la vue unique (×1,5), contre 0,722 et 0,647 pour `34370f74` — l'estimation de 0,88 à 0,9 tient entre les deux. Chantier « l'allègement de la 0.8.0 », § Q75. |
@@ -17123,6 +17125,10 @@ l'avait écrite.** C'est un motif qui se transmet mieux qu'il ne s'auto-détecte
 
 ## Chantier — la fusée éclairante (inscrit le 2026-09-01)
 
+> **Depuis Q58 (2026-10-01)** : à l'allumage, le halo de la fusée posée porte aussi loin que les torches (468 px de rayon au
+> lieu de 220), le tient une seconde, puis revient avant la braise — voir « Q58 » (Décisions actées, et le chantier de
+> l'allègement). Ce qui suit dit l'empreinte habituelle, 440 px de diamètre.
+
 **Demande d'Adrien, brainstormée le 2026-08-31 puis lancée le 2026-09-01 :**
 « qu'on puisse lancer quelque chose qui éclaire une partie de la pièce — mais
 que dans cette lumière il y ait de la fumée, qu'on ne distingue pas forcément
@@ -30435,7 +30441,8 @@ du Terrassier touche encore le haut de l'écran — sur les murs du haut, qu'ell
 l'écran (+7 à +11/255 sur les dix premières lignes) ; celle de la Sentinelle s'éteint à 36-54 pixels d'écran sous le bord,
 celle du Braconnier à 175. Avec la règle du coin, les trois passaient le bord avec 35 %, 35 % et 14 % de leur lumière sur
 l'axe (le faisceau y versait 0,353, 0,349 et 0,141 ; 0,004, 0,004 et 0,000 après). Qu'on voie la lumière jusqu'au bord
-demanderait une portée au-delà du bord — l'inverse de « diminuons » : à Adrien, s'il le veut, en jouant.
+demanderait une portée au-delà du bord — l'inverse de « diminuons » : à Adrien, s'il le veut, en jouant. *(Q77, 2026-10-01,
+Adrien : « on garde » — voir sa ligne.)*
 
 **La preuve à l'image** (famille `q76` de `tools/banc_lumieres.gd` ; jugement et planche `tools/portee_q76/planche.py`).
 AVANT (`--portee-coin`, la règle de L1) et APRÈS (Q76) basculés sur place à cadrage identique — les bornes posées par
@@ -30498,6 +30505,101 @@ Trois réserves, dites en face :
 - **Sous llvmpipe, pas le Mac** : rien ne dit ce que cela vaut sous Metal ; Adrien jugera en jouant.
 - C mesure 0,941 et 0,841, contre 0,930 et 0,861 pour la même version (AD) dans la série de Q75, un autre moment de la
   machine : on compare dans une même série, jamais d'une série à l'autre.
+
+### Q58 — la fusée illumine loin à l'allumage (Adrien, 2026-10-01 vers 09:10)
+
+Transmis par la session coordinatrice au même sous-agent, sur une branche neuve (`claude/fusee-allumage`, partie de la ligne
+publiée `0fc96b6b` : la 0.8.0 est `903b26e6`). Le mot d'Adrien : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin
+effectivement ». La question (page des lumières de L1, « La torche seule, ou toutes les lumières ? ») : la règle du bord de
+l'écran ne valait que pour la torche, la fusée posée gardait son halo de 220 px de rayon — « faut-il que le halo d'une fusée
+remplisse l'écran ? ». **La lecture de la session coordinatrice, appliquée** : à l'allumage (le début du plein feu, quand la
+fusée se pose), elle éclaire aussi loin que les torches (`PorteeEcran.portee_au_bord`, 468 px), puis revient en douceur à son
+halo habituel avant la braise ; en vol, rien ne change. Rien dans le code ni dans le mot ne la contredit : l'allumage EST
+l'atterrissage (`_atterrir`, âge 0, le plein feu commence), et l'âge de combustion porte déjà tout le reste de la fusée.
+
+**La courbe, proposée et posée** (`FuseeModele.part_allumage_a`, `rayon_halo_a`) : le rayon du halo est 468 px de
+l'atterrissage au quart du plein feu (1 s sur le plein feu de 4 s, le rouge long de Q35), puis un `smoothstep` jusqu'aux
+trois quarts (3 s) — le bord rentre au plus de 186 px/s, sans à-coup —, puis 220 px : la braise (4 s) part de l'empreinte
+habituelle, et la seconde qui reste au rouge est celle d'avant. Rapportée à la durée du plein feu : avec le plein feu de 2 s
+(`--sans-fusee-rouge-long`, débogage), 0,5 s tenue et retour à 1,5 s. Pourquoi une seconde : assez pour LIRE la pièce
+(le plein feu reste « un scan honnête », FU2.1), et la fumée n'est encore qu'au tiers de sa densité (elle monte sur 3 s) ;
+le retour finit quand la fumée est pleine.
+
+- **Ce qui change** : l'empreinte de la lumière posée seule (`Fusee._appliquer_age`, qui la suit à chaque image, et
+  `_lumiere_posee`, à l'atterrissage et dans la killcam), par `LightTextures.poser` — l'énergie, la couleur, le masque
+  (les trois paliers encrés, 1 / 0,667 / 0,333, éteints à 0,95 du rayon), les ombres (murs et murets) et les masques de
+  portée (les deux vues) ne bougent pas. Le halo s'élargit, il ne brille pas davantage.
+- **Ce qui ne change pas** : le vol (empreinte de 160 px) ; l'éblouissement (proximité, rayon 400 px, gain = l'énergie
+  relative, que l'allumage ne touche pas — `energie_relative` gardée) ; la fumée et ce qu'elle cache ; la lueur et le point de
+  braise de la vue iso (ils suivent l'énergie). La lueur que les volumes des gadgets prennent d'une fusée proche
+  (`GadgetVolume._lumiere_entrante`, une approximation : le rayon du volume + 160 px, linéaire) ne suit pas l'empreinte — ni
+  avant ni après : à signaler, pas corrigé.
+- **La killcam** reconstruit la fusée par son âge : même chemin (`_appliquer_age`), même courbe. ⚠️ Une fusée de killcam
+  est `_atterrie` dès `_ready`, qui lui applique l'âge 0 avant le sien : elle ne prend l'empreinte du sol qu'une fois son âge
+  rejoué devenu celui d'une fusée posée (`_lumiere_posee_rejouee`). Sans ce garde, une fusée de killcam EN VOL éclairait à
+  936 px — `test_fusee_killcam` (Q72) l'a vu rougir à la première passe.
+- **Rien sur le fil** : la courbe se dérive de l'âge, que les deux pairs simulent à l'identique depuis le RPC de spawn ; le
+  rayon d'allumage se dérive des constantes du duel sur les deux machines (`GameSettings.rayon_allumage_fusee`, posé par
+  `accorder_au_mode` comme la portée des torches) ; `Protocol.VERSION` reste 19.
+- **Débogage, hors ligne seulement** : `--sans-fusee-allumage` rend la fusée de la 0.8.0 (`fusee_allumage_du_duel` : jamais
+  en ligne). `tools/bench_framerate.gd` prend `--fusee-age S` : la fusée du banc tenue à un âge au lieu de boucler dans la
+  braise (pour mesurer l'allumage).
+- **Quinze lumières par item** : la fusée à l'allumage couvre 936 px ; dans la scène du recensement (`--plans=quinze` : deux
+  torches, un flash, la fusée à 0,8 s), au plus 10 lumières par quadrant de 560 px, comme avant.
+
+**La preuve à l'image** (famille `q58` de `tools/banc_lumieres.gd` ; jugement et planches `tools/fusee_q58/planche.py`). La
+fusée posée par le vrai chemin (`_do_spawn_fusee`), tenue à six âges (0 ; 0,5 ; 1 ; 2 ; 4 s ; 6 s, la braise) : AVANT
+(`FuseeModele.rayon_allumage` à 0, ce que fait `--sans-fusee-allumage` : la fusée de la 0.8.0) et APRÈS (Q58) basculés sur
+place à cadrage identique, puis sans sa lumière (le noir de référence) ; dans la vue unique de J1, celle de J2 (celle du
+client en ligne) et l'écran scindé à 45° B ; torches éteintes, la fusée seule éclaire ; écran nu comme pour Q76 (la fusée
+éblouit, autant avant qu'après : le banc imprime 0,730 dans les deux). Et à chaque photo, la LIGHTMAP de chaque vue — le
+monde 2D vu de dessus, que la vue iso projette — lue contre celle du noir, un pixel sur deux.
+
+- **Le noir** : dans les quatre vues (J1 et J2 en vue unique, J1 et J2 en écran scindé), à chaque âge, avant comme après,
+  **aucun** pixel éclairé par la fusée au-delà du rayon attendu à cet âge, et **aucun** derrière un mur haut vu d'elle (un
+  rayon de la fusée au point, contre les murs ; les points DANS un mur, son dessus, laissés). La lumière va au plus loin à
+  441-447 px à l'allumage (le dernier palier du masque s'éteint vers 0,95 du rayon de 468), 328-329 px à 2 s (rayon 344),
+  210 px ensuite (rayon 220) — comme la 0.8.0.
+- **La courbe** : à 4 s et à 6 s, l'après vaut l'avant — la lightmap au pixel près, l'écran à 13 pixels près (un bord qui
+  respire, en écran scindé). À l'allumage, la fusée éclaire à l'écran 4,2 fois plus de pixels qu'avant en vue unique
+  (1 484 194 contre 350 257 à 0,5 s, vue de J1) et 3,3 fois en écran scindé ; à 2 s, 2,5 et 2,1 fois.
+- **J1 = J2** : la vue unique de J1 et celle de J2, à chaque âge, le même rayon attendu ; au plus loin 441 et 447 px ; des
+  pixels de lightmap éclairés à 0,7 % près (les murs autour diffèrent : lacet 45° contre 225°).
+- Planches : `docs/iso/q58/planche_q58_unique_j1.jpg`, `planche_q58_unique_j2.jpg`, `planche_q58_scinde.jpg` (avant, après,
+  sans sa lumière et |après − avant| × 3, âge par âge) ; chiffres : `docs/iso/q58/preuve.txt`. Le son du lancer se voit
+  (le son rendu visible) : son liseré tachait le noir et l'avant du premier âge à la première passe — le banc le laisse
+  désormais s'effacer (3 s) avant les photos.
+
+**La garde** (`tools/test_fusee_allumage.gd`, 32 vérifications, dans `run_suites.sh`) : la courbe relue contre ses propres
+nombres (le rouge long et le plein feu de 2 s ; continue après l'allumage, jamais croissante ; le halo entre son empreinte
+habituelle et la portée d'allumage ; éteint, l'empreinte habituelle à tout âge) ; la règle (468 px, la portée des torches ;
+toujours en ligne ; le drapeau en débogage seulement ; posée au démarrage) ; une vraie fusée de match — en vol l'empreinte
+du vol, posée l'allumage dès sa première image, la descente au fil du match —, quinze âges de l'allumage au résidu en match
+et en killcam, l'énergie et `energie_relative` inchangées, les ombres et les masques de portée ; la killcam en vol puis
+posée. `test_fusee_killcam` (Q72) fait son « passage à l'empreinte du sol » à 3,5 s, l'allumage fini (les âges de
+l'allumage sont gardés ici). **Vues rougir, puis rétablies à l'identique** : l'allumage retiré du modèle → 9 rouges ;
+l'empreinte figée à l'atterrissage → 3, et `test_fusee_killcam` 2 ; le drapeau permis en ligne → 2 ; le garde de la killcam
+retiré → 1, et `test_fusee_killcam` 1.
+
+**La mesure — le coût de la bouffée** (séries `q58a` et `q58b`, 24 prises en miroir C Q Q C trois fois, aucune refusée par
+la porte ; même scène et même protocole que Q75 et Q76 — `--fusee --vue-unique --classe=pompe`, `--physique 8`, moyennes,
+le verrou du conteneur posé avant chaque prise et rendu juste après —, la fusée du banc TENUE à 0,5 s, `--fusee-age 0.5` :
+le halo à la portée des torches, 936 px d'empreinte contre 440, la fumée au sixième de sa densité ; les journaux le disent,
+« halo de 936 px d'empreinte » ou « de 440 »). C = la 0.8.0 publiée (`903b26e6`), avec le banc de cadence de Q58 posé
+dedans pour qu'il sache tenir l'âge — seul le jeu diffère —, Q = Q58.
+
+| Cadrage | Version | Moyennes des prises (ms) | Moyenne | Rapport à la 0.8.0 |
+|---|---|---|---|---|
+| du banc (×1,25) | C — `903b26e6` | 259,4 / 254,8 / 261,5 / 262,9 / 283,5 / 256,7 | 263,1 | 1,000 |
+| | **Q — Q58** | 260,3 / 264,5 / 267,6 / 262,8 / 280,8 / 268,6 | **267,4** | **0,984** |
+| vrai cadrage de la vue unique (×1,5, `--zoom=1.5`) | Cz — `903b26e6` | 287,9 / 279,8 / 285,0 / 286,6 / 293,9 / 288,1 | 286,9 | 1,000 |
+| | **Qz — Q58** | 288,3 / 289,6 / 294,9 / 294,8 / 290,2 / 299,7 | **292,9** | **0,979** |
+
+**Pendant la bouffée, une image coûte 1,6 % de plus au cadrage du banc (+4,3 ms) et 2,1 % au vrai cadrage de la vue unique
+(+6,1 ms)** ; bloc par bloc du miroir : 0,980, 0,989 et 0,983 ; 0,982, 0,969 et 0,987. Le halo couvre 4,5 fois la surface
+d'avant, et la mesure dit ce que cela coûte : peu. Ce n'est d'ailleurs qu'une bouffée — 1 s pleine, 2 s de retour, puis la
+fusée de la 0.8.0, au pixel près (voir la preuve). Sous llvmpipe, pas le Mac : relatif seulement, comme toujours dans le
+cloud.
 
 ## Chantier — Q71 et Q72, deux corrections de la 0.8.0 (inscrit le 2026-09-30)
 

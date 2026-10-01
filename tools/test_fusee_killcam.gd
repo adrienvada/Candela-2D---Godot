@@ -124,7 +124,9 @@ func _run() -> void:
 	var vol_k := _releve(en_vol_k.get_node("Halo") as PointLight2D) if en_vol_k != null else {}
 	_check("en vol dans la killcam, l'empreinte reste celle du vol, comme en match (%.0f px)" % _vol,
 		not vol_k.is_empty() and is_equal_approx(vol_k["empreinte"], en_vol["empreinte"]), str(vol_k))
-	snap_vol.fusees = [{"graine": GRAINE + 1, "pos": lieu, "age": 0.5, "shooter": 2}]
+	# Q58 — à 3,5 s, l'allumage est fini : l'empreinte du sol est l'habituelle. Celle des âges de l'allumage, en match comme
+	# en killcam, est gardée par `test_fusee_allumage`.
+	snap_vol.fusees = [{"graine": GRAINE + 1, "pos": lieu, "age": 3.5, "shooter": 2}]
 	main._maj_fusees_killcam(snap_vol)
 	var posee_k := _releve(en_vol_k.get_node("Halo") as PointLight2D) if en_vol_k != null else {}
 	_check("la même fusée de killcam, à l'âge d'une fusée posée, passe à l'empreinte du sol (%.0f px)" % _sol,

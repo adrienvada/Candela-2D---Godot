@@ -62,6 +62,25 @@ const ENERGIE_RESIDU := 0.25
 const ENERGIE_VOL := 0.8          # la comète : assez pour tracer l'arc, pas pour lire
 const RACCORD_PLEIN_FEU_BRAISE := 1.5 # s de glissement plein feu → braise (dans l'acte braise)
 
+# ── Q58 — l'allumage : la fusée illumine loin ───────────────────────────────
+# Adrien, 2026-10-01 vers 09:10 : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin effectivement » — la question
+# de la page des lumières (L1) : « La torche seule, ou toutes les lumières ? […] faut-il que le halo d'une fusée remplisse
+# l'écran ? ». À l'allumage (l'atterrissage, le début du plein feu), le halo porte aussi loin que les torches
+# (`rayon_allumage` : la portée au bord le plus proche de l'écran de Q76, 468 px), le tient, puis revient en douceur à son
+# empreinte habituelle AVANT la braise. En vol, rien ne change. L'énergie non plus : le halo s'élargit, il ne brille pas
+# davantage — l'éblouissement (qui lit l'énergie) ne bouge pas. Tout se dérive de l'âge de combustion : la killcam suit la
+# même courbe, et rien ne passe sur le fil.
+## La part du plein feu pendant laquelle le halo TIENT sa portée d'allumage : 0,25, soit 1 s sur le plein feu de 4 s.
+const ALLUMAGE_TENUE := 0.25
+## La part du plein feu où il a RETROUVÉ son empreinte habituelle : 0,75, soit 3 s, une seconde avant la braise. Entre les
+## deux, un `smoothstep` : le bord du halo rentre sans à-coup (au plus 186 px/s, à mi-course).
+const ALLUMAGE_FIN := 0.75
+## Le rayon du halo à l'allumage, en pixels de monde ; 0 : pas d'allumage (la fusée de la 0.8.0 : `--sans-fusee-allumage`,
+## en build de débogage et hors ligne). Posé par `GameSettings.accorder_au_mode` depuis le cadrage de la vue unique — le
+## même calcul que la portée des torches (`PorteeEcran.portee_au_bord`) —, statique comme elle (`WeaponData.portee_plafond`) :
+## la même valeur sur les deux machines, sans rien sur le fil.
+static var rayon_allumage := 0.0
+
 # ── L'agonie : des rallumages, pas un strobe ────────────────────────────────
 # Les instants de sursaut sont tirés d'une graine transmise au spawn : la liste
 # entière se régénère à l'identique n'importe où, n'importe quand — c'est ce
@@ -297,6 +316,22 @@ static func alpha_fumee_a(age: float) -> float:
 static func echelle_fumee_a(age: float) -> float:
 	var t := clampf(age / duree_combustion(), 0.0, 1.0)
 	return lerpf(1.0, FUMEE_GONFLE, t)
+
+
+## Q58 — la part de l'allumage à un âge de combustion, dans [0, 1] : 0 en vol ; 1 de l'atterrissage à `ALLUMAGE_TENUE` du
+## plein feu ; un `smoothstep` jusqu'à 0 à `ALLUMAGE_FIN` ; 0 ensuite. Continue partout sauf à l'atterrissage, qui EST
+## l'allumage. Rapportée à la durée du plein feu : le retour finit avant la braise, rouge long ou non.
+static func part_allumage_a(age: float) -> float:
+	if age < 0.0:
+		return 0.0
+	return 1.0 - smoothstep(ALLUMAGE_TENUE * duree_plein_feu, ALLUMAGE_FIN * duree_plein_feu, age)
+
+
+## Q58 — le rayon du halo d'une fusée POSÉE à cet âge, en pixels de monde : de `rayon_allumage` à `rayon_pose` (son empreinte
+## habituelle sur deux, `Fusee.EMPREINTE_LUMIERE` / 2) selon `part_allumage_a`. Jamais sous `rayon_pose` : un allumage plus
+## court que le halo ne le rapetisse pas, et l'allumage éteint (`rayon_allumage` à 0) rend `rayon_pose` à tout âge.
+static func rayon_halo_a(age: float, rayon_pose: float) -> float:
+	return lerpf(rayon_pose, maxf(rayon_allumage, rayon_pose), part_allumage_a(age))
 
 
 ## Filtre un sillage : ne garde que les points plus récents que SILLAGE_DUREE,
