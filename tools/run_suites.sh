@@ -249,6 +249,15 @@ SUITES+=(test_carton_de_fin test_carton_transition test_allumage_unique)
 # L2, la lumière qui part de la lampe du modèle ; L3, le point lumineux (Q46). Hors de la liste, même raison.
 SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_point_lumineux)
 
+# L'allègement de la 0.8.0 (Adrien, 2026-09-30 : « Oui allège d'abord avant de publier la 0.8 ») : les couches du rayon dans
+# l'air taillées à leur cône — l'enveloppe contient chaque cookie au texel près, l'éventail contient l'enveloppe, en plages,
+# tourné comme la lampe ; le juge garde son disque. Posé ici, comme les lignes du dessus, pour que ce lot se reprenne seul.
+SUITES+=(test_allegement_faisceau)
+
+# Q72 (Adrien, 2026-09-30 : « Q72 : corrige aussi ») : la fusée posée de la killcam éclaire comme en match — une vraie fusée
+# lancée dans une vraie manche, puis la killcam par son propre chemin, valeur par valeur. Posé ici, comme les lignes du dessus.
+SUITES+=(test_fusee_killcam)
+
 # Chantier « Gadgets en volume » (2026-09-30, Adrien : « tous les gadgets […] davantage en 3D ») : la fumée en VOXELS, LE
 # DÉFAUT depuis GV1bis (Q67 : « Oui la fumée en gros »). Sans drapeau : les voxels « gros », au relief du dessin et à
 # l'encre du roman graphique, puis les couches et chaque encre par la bascule des bancs. La même suite repasse plus bas

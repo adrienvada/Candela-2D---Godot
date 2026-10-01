@@ -161,12 +161,17 @@ const FACTEUR_PORTEE_MIN := 0.5
 const FACTEUR_PORTEE_MAX := 1.5
 const DRAPEAU_TORCHE := "--torche="
 ## Chantier des lumières de la 0.8.0, L1 — la portée des torches atteint au moins le bord de l'écran (Q45, Adrien,
-## 2026-09-29). ALLUMÉE par défaut ; `--sans-portee-ecran` rend les portées d'avant, en build de DÉBOGAGE seulement et
-## hors ligne : EN LIGNE elle vaut pour les deux machines (`portee_ecran_du_duel`), comme le zoom et le décalage.
-## La portée se DÉRIVE du cadrage qui s'applique (`zoom_duel`, `decalage_visee`) : voir `PorteeEcran` et
-## `WeaponData.portee_plancher`.
+## 2026-09-29) ; depuis Q76 (2026-09-30, vers 22:58), elle va EXACTEMENT au bord le plus proche (« le maximum visible par
+## le joueur en hauteur et largeur, le minimum des deux »). ALLUMÉE par défaut ; `--sans-portee-ecran` rend les portées
+## de la 0.7.1, en build de DÉBOGAGE seulement et hors ligne : EN LIGNE elle vaut pour les deux machines
+## (`portee_ecran_du_duel`), comme le zoom et le décalage. La portée se DÉRIVE du cadrage de la vue unique : voir
+## `PorteeEcran`, `bornes_de_portee` et `WeaponData.portee_plancher` / `portee_plafond`.
 const DRAPEAU_SANS_PORTEE_ECRAN := "--sans-portee-ecran"
 var _portee_ecran_locale := true
+## Q76 — `--portee-coin` rend la règle de L1 (le plancher du COIN de la vue unique, sans plafond : 728 px à ×1,5), en build
+## de DÉBOGAGE seulement et hors ligne (en ligne, jamais : `regle_du_coin`) — pour les planches avant/après et la mesure.
+const DRAPEAU_PORTEE_COIN := "--portee-coin"
+var _portee_coin_locale := false
 ## ISO14 — le LACET du duel (Q14, Adrien, 2026-09-24 vers 01:19 : « on passe à 45° ce sera plus intéressant »).
 ## ALLUMÉ par défaut à 45°, option B, depuis Q28 = A (Adrien, 2026-09-25 10:28 : « le 45° par défaut, prix connu »),
 ## EN LIGNE compris : `lacet_du_duel` y impose ces mêmes constantes, sur les deux machines. `--lacet=X` tourne la
@@ -293,6 +298,9 @@ func _ready() -> void:
 	_portee_ecran_locale = not (OS.is_debug_build() and _arguments().has(DRAPEAU_SANS_PORTEE_ECRAN))
 	if not _portee_ecran_locale:
 		print("[portée écran] éteinte (%s) — hors ligne seulement" % DRAPEAU_SANS_PORTEE_ECRAN)
+	_portee_coin_locale = OS.is_debug_build() and _arguments().has(DRAPEAU_PORTEE_COIN)
+	if _portee_coin_locale:
+		print("[portée écran] au COIN, la règle de L1 (%s) — hors ligne seulement" % DRAPEAU_PORTEE_COIN)
 	_lacet_local = lacet_applique(_arguments_de_reglage())
 	_option_lacet_locale = option_lacet_appliquee(_arguments_de_reglage())
 	# Hors match, les valeurs locales ; `GameState` accorde au mode à chaque départ (`accorder_au_mode`).
@@ -399,8 +407,10 @@ func accorder_au_mode(en_ligne: bool, ecran_scinde: bool = false) -> void:
 	decalage_visee = v[1]
 	facteur_portee = v[2]
 	WeaponData.facteur_portee = facteur_portee
-	WeaponData.portee_plancher = plancher_de_portee(portee_ecran_du_duel(en_ligne, _portee_ecran_locale),
-		zoom_de_la_vue_unique(), decalage_visee)
+	var bornes := bornes_de_portee(portee_ecran_du_duel(en_ligne, _portee_ecran_locale),
+		regle_du_coin(en_ligne, _portee_coin_locale), zoom_de_la_vue_unique(), decalage_visee)
+	WeaponData.portee_plancher = bornes.x
+	WeaponData.portee_plafond = bornes.y
 	var l := lacet_du_duel(en_ligne, _lacet_local, _option_lacet_locale)
 	lacet_duel = l[0]
 	option_lacet = l[1]
@@ -474,16 +484,29 @@ func zoom_de_la_vue_unique() -> float:
 static func portee_ecran_du_duel(en_ligne: bool, locale: bool) -> bool:
 	return true if en_ligne else locale
 
-## L1 — le plancher de portée des torches, en pixels de monde : la plus petite portée qui atteint le bord de l'écran
-## de la VUE UNIQUE dans toutes les directions (`PorteeEcran.portee_minimale`), 0 si la règle ne vaut pas. **Une
-## seule portée pour tous les modes** : l'écran scindé, plus étroit, est couvert par la même valeur — la portée est une
-## règle de jeu (l'éblouissement la lit), elle ne change pas avec la façon de regarder. Le tangage est celui de la
-## caméra iso, même sous la vue de dessus de débogage : une vue de débogage ne change pas une règle. Calcul pur,
-## vérifié en `--script` par `tools/test_portee_ecran.gd`.
-static func plancher_de_portee(active: bool, zoom: float, decalage: float) -> float:
+## Q76 — la règle du coin de L1 (`--portee-coin`) vaut-elle ? JAMAIS en ligne (les deux machines gardent la règle du
+## jeu) ; ailleurs, le choix local.
+static func regle_du_coin(en_ligne: bool, locale: bool) -> bool:
+	return false if en_ligne else locale
+
+## L1, puis Q76 — les BORNES de portée des torches, `(plancher, plafond)` en pixels de monde, sur l'écran de la VUE UNIQUE.
+## **Q76** (Adrien, 2026-09-30 vers 22:58 : « En fait diminuons la portée des lampe au maximum visible par le joueur en
+## hauteur et largeur (le minimum des deux) ») : plancher ET plafond au bord le plus proche
+## (`PorteeEcran.portee_au_bord`, 468 px à ×1,5) — chaque torche porte exactement là, les classes de la 0.7.1 plus courtes
+## y montent (Q45 : « au moins au bout de l'écran »), les plus longues y descendent (« diminuons »). **Le coin** (`coin`,
+## `--portee-coin`) : la règle de L1, un plancher au coin (`portee_minimale`, 728 px) sans plafond. **Éteinte** (`active`
+## faux, `--sans-portee-ecran`) : (0, INF), les portées de la 0.7.1. **Une seule portée pour tous les modes** : en écran
+## scindé (×1,25, 957 px de large), le bord le plus proche est à 431 px, et la torche garde les 468 de la vue unique — la
+## portée est une règle de jeu (l'éblouissement la lit), elle ne change pas avec la façon de regarder. Le tangage est celui
+## de la caméra iso, même sous la vue de dessus de débogage. Calcul pur, vérifié en `--script` par
+## `tools/test_portee_ecran.gd`.
+static func bornes_de_portee(active: bool, coin: bool, zoom: float, decalage: float) -> Vector2:
 	if not active:
-		return 0.0
-	return PorteeEcran.portee_minimale(PorteeEcran.VUE_UNIQUE, zoom, decalage, CameraIso.TANGAGE_DEG)
+		return Vector2(0.0, INF)
+	if coin:
+		return Vector2(PorteeEcran.portee_minimale(PorteeEcran.VUE_UNIQUE, zoom, decalage, CameraIso.TANGAGE_DEG), INF)
+	var bord := PorteeEcran.portee_au_bord(PorteeEcran.VUE_UNIQUE, zoom, decalage, CameraIso.TANGAGE_DEG)
+	return Vector2(bord, bord)
 
 ## ISO8 — les drapeaux `--zoom=`, `--decalage=` et `--torche=` ne valent qu'en build de DÉBOGAGE : un export
 ## release les ignore, comme `--eos-ephemeral` (`network_manager.gd`). Sans quoi un joueur lancerait sa partie

@@ -1,0 +1,49 @@
+# Q75 à l'image — user://photos/loupe (plan loupe-faisceau-q75, lancement du 2026-09-30 à 19:35 UTC, Xvfb 1920×1080, llvmpipe)
+## arbalete-j1 — scène tenue : avant contre avant 0/255, après contre après 0/255
+   J1 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 2/255) 79449 px, touchés après 0, avant 0 ; le rayon touche 5678 px avant, 5666 après — 0 coupés (la longueur), 0 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.998 (22118 / 22160)
+   J2 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 3/255) 155308 px, touchés après 0, avant 0 ; le rayon touche 4822 px avant, 4820 après — 0 coupés (la longueur), 0 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 1.000 (21035 / 21038)
+## arbalete-j2 — scène tenue : avant contre avant 0/255, après contre après 0/255
+   J1 : noir sans rayon 183185 px, fuites après 0, avant 0 ; noir sous le voile (plancher 0/255) 186229 px, touchés après 0, avant 0 ; le rayon touche 3069 px avant, 3069 après — 0 coupés (la longueur), 0 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 1.000 (11481 / 11481)
+   J2 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 2/255) 129150 px, touchés après 0, avant 0 ; le rayon touche 3110 px avant, 3111 après — 0 coupés (la longueur), 0 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 1.000 (10949 / 10948)
+## fusee — scène tenue : avant contre avant 0/255, après contre après 0/255
+   vue unique : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 9/255) 411 px, touchés après 0, avant 0 ; le rayon touche 95545 px avant, 23175 après — 70124 coupés (la longueur), 21352 atténués (le fondu), 1322 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 26/255), 86 autres ; lumière ajoutée après / avant 0.084 (218389 / 2585001)
+## pompe-j1 — scène tenue : avant contre avant 0/255, après contre après 0/255
+   J1 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 2/255) 121375 px, touchés après 0, avant 0 ; le rayon touche 65797 px avant, 14071 après — 51720 coupés (la longueur), 4895 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.199 (290723 / 1461122)
+   J2 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 3/255) 204654 px, touchés après 0, avant 0 ; le rayon touche 57915 px avant, 14850 après — 43058 coupés (la longueur), 7025 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.210 (296377 / 1409281)
+## pompe-j2 — scène tenue : avant contre avant 0/255, après contre après 0/255
+   J1 : noir sans rayon 165496 px, fuites après 0, avant 0 ; noir sous le voile (plancher 0/255) 168167 px, touchés après 0, avant 0 ; le rayon touche 48312 px avant, 15286 après — 33010 coupés (la longueur), 7239 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.310 (349394 / 1126404)
+   J2 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 3/255) 139356 px, touchés après 0, avant 0 ; le rayon touche 40036 px avant, 16281 après — 23739 coupés (la longueur), 7830 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.386 (346859 / 899301)
+## sentinelle-j1 — scène tenue : avant contre avant 0/255, après contre après 0/255
+   J1 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 2/255) 105254 px, touchés après 0, avant 0 ; le rayon touche 18444 px avant, 15905 après — 1955 coupés (la longueur), 1598 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.921 (125105 / 135843)
+   J2 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 4/255) 162621 px, touchés après 0, avant 0 ; le rayon touche 16103 px avant, 15188 après — 535 coupés (la longueur), 1485 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.954 (124685 / 130634)
+## sentinelle-j2 — scène tenue : avant contre avant 0/255, après contre après 0/255
+   J1 : noir sans rayon 181225 px, fuites après 0, avant 0 ; noir sous le voile (plancher 0/255) 184337 px, touchés après 0, avant 0 ; le rayon touche 7600 px avant, 7594 après — 0 coupés (la longueur), 1 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 0.999 (74465 / 74526)
+   J2 : noir sans rayon 0 px, fuites après 0, avant 0 ; noir sous le voile (plancher 2/255) 146000 px, touchés après 0, avant 0 ; le rayon touche 7406 px avant, 7406 après — 0 coupés (la longueur), 0 atténués (le fondu), 0 rendus à l'image sans rayon (un volume que le juge d'avant taisait, jusqu'à 0/255), 0 autres ; lumière ajoutée après / avant 1.000 (57992 / 58004)
+## pixel — le juge taillé contre le disque (rayon long, le Terrassier, lampe de J1, écran scindé)
+   la scène tenue : disque contre disque 0/255
+   pixels où le juge taillé s'écarte du disque de plus de 1/255 : 1 [(834, 323)]
+   juge taillé dilaté de 30 px contre juge taillé (J) : 0 pixel(s) au-delà de 1/255 (au plus 0)
+   sans juge, trois couches contre juge taillé (J) : 18245 pixel(s) au-delà de 1/255 (au plus 53)
+   sans juge, trois couches contre juge en disque (B de l'allègement) : 18246 pixel(s) au-delà de 1/255 (au plus 53)
+   noir sans rayon 0 px ; juge en disque (B de l'allègement) en allume 0
+   noir sans rayon 0 px ; juge taillé (J) en allume 0
+   noir sans rayon 0 px ; sans juge, trois couches en allume 0
+   noir sans rayon 0 px ; après (A+D) en allume 0
+   pixel (834, 323), vue de J2 :
+      juge en disque (B de l'allègement)     [57, 45, 26]
+      juge taillé (J)                        [71, 57, 34]
+      sans juge, trois couches               [71, 57, 34]
+      sans juge, couche 0 (basse)            [54, 43, 24]
+      sans juge, couche 1                    [55, 43, 25]
+      sans juge, couche 2 (haute)            [53, 41, 24]
+      juge taillé dilaté de 30 px            [71, 57, 34]
+      juge en disque (encore)                [57, 45, 26]
+      après (A+D)                            [52, 40, 23]
+      sans rayon                             [45, 35, 19]
+      voisinage 5×5 (canal max), juge en disque (B de l'a [[221, 199, 187, 227, 134], [212, 221, 210, 102, 34], [222, 201, 57, 51, 55], [175, 72, 50, 53, 57], [49, 51, 53, 57, 59]]
+      voisinage 5×5 (canal max), juge taillé (J)          [[221, 199, 187, 227, 134], [212, 221, 210, 102, 34], [222, 201, 71, 51, 55], [175, 72, 50, 53, 57], [49, 51, 53, 57, 59]]
+      voisinage 5×5 (canal max), sans juge, trois couches [[221, 199, 187, 227, 140], [212, 221, 210, 102, 51], [222, 201, 71, 51, 55], [175, 72, 50, 53, 57], [49, 51, 53, 57, 59]]
+      voisinage 5×5 (canal max), juge taillé dilaté de 30 [[221, 199, 187, 227, 134], [212, 221, 210, 102, 34], [222, 201, 71, 51, 55], [175, 72, 50, 53, 57], [49, 51, 53, 57, 59]]
+planche : docs/iso/q75/planche_q75.jpg
+le bout du rayon : docs/iso/q75/planche_q75_bout.jpg
+VERDICT : ✓ aucune fuite dans le noir, scènes tenues

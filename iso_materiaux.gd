@@ -578,21 +578,28 @@ static func lambert(l_0: float, l_avant: float, l_t1: float, l_t2: float, planch
 
 
 ## ISO7b — les facteurs du modelé des corps, tenus par la CAMÉRA (lacet 0 : seuls le dessus et la face sud se voient).
+## Q71 : la face « vers la caméra » est celle qui regarde la caméra QUI DESSINE (au lacet 0, la face sud).
 const MODELE_DESSUS := 1.15
-const MODELE_FACE_SUD := 0.9
+const MODELE_FACE_CAMERA := 0.9
 const MODELE_AUTRES := 1.0
 
 
-## ISO7b — miroir de `modele_du_corps` (`corps_iso.gdshader`) : le facteur de modelé d'une face de normale `n` (monde).
+## ISO7b — miroir de `modele_du_corps` (`corps_iso.gdshader`) : le facteur de modelé d'une face de normale `n` (monde),
+## vue par la caméra dont `camera` est la direction horizontale (x, z du monde) — `INV_VIEW_MATRIX[2].xz` dans le shader.
 ## ⚠️ **Aucune lecture du gradient** (décision de la session cloud, 2026-09-15 14:21) : le côté lampe à 1,25 et le dos au
 ## plancher venaient du gradient de la lightmap, qui lit le bord d'une tache de lumière et non sa source — un corps qui
-## traverse un cône voyait son côté clair sauter. Restent le dessus plus clair que la face sud, qui tiennent à la caméra ;
-## les autres faces valent 1, et la moyenne des faces vues reste la lumière du capteur.
-static func modele_du_corps(n: Vector3) -> float:
+## traverse un cône voyait son côté clair sauter. Restent le dessus plus clair que la face tournée vers la caméra ; les
+## autres faces valent 1, et la moyenne des faces vues reste la lumière du capteur.
+## ⚠️ **Q71 (Adrien, 2026-09-30 : « Q71 : corrige ») — la caméra QUI DESSINE, jamais le sud du monde** : au lacet 45° B,
+## J1 et J2 regardent de deux côtés opposés, et une face « sud » en dur ne se voyait que d'un seul — l'adversaire n'avait pas
+## le même modelé pour les deux. Une face tournée à moins de 60° de la caméra vaut `MODELE_FACE_CAMERA` ; au lacet 0 (caméra
+## au sud, (0, 1)), c'est la face sud d'avant, à l'identique.
+static func modele_du_corps(n: Vector3, camera: Vector2) -> float:
 	if n.y > 0.5:
 		return MODELE_DESSUS
-	if n.z > 0.5 and absf(n.y) <= 0.5:
-		return MODELE_FACE_SUD
+	var v := camera / camera.length() if camera.length() > 0.001 else Vector2(0.0, 1.0)
+	if Vector2(n.x, n.z).dot(v) > 0.5 and absf(n.y) <= 0.5:
+		return MODELE_FACE_CAMERA
 	return MODELE_AUTRES
 
 

@@ -1,0 +1,58 @@
+
+== sien : 1280 × 720 ; A noire sur 0 pixels, éclairée sur 921600 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 68706 pixel(s) changé(s), jusqu'à 136/255
+   ✓ 2b-1a : 354 pixel(s) à 1/255 (0.038 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 354, dans le noir 0, noirs allumés 0
+   ✓ 2b-3a : 354 pixel(s) à 1/255 (0.038 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 354, dans le noir 0, noirs allumés 0
+   ✓ 4b-3a : 354 pixel(s) à 1/255 (0.038 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 354, dans le noir 0, noirs allumés 0
+   ✓ 4b-5a : 354 pixel(s) à 1/255 (0.038 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 354, dans le noir 0, noirs allumés 0
+   option J (juge taillé) contre A : 0 pixel(s) au-delà de l'arrondi, écart max 1/255
+
+== adv : 1280 × 720 ; A noire sur 497726 pixels, éclairée sur 423874 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 51224 pixel(s) changé(s), jusqu'à 152/255
+   ✓ 2b-1a : 250 pixel(s) à 1/255 (0.027 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 250, dans le noir 0, noirs allumés 0
+   ✓ 2b-3a : 250 pixel(s) à 1/255 (0.027 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 250, dans le noir 0, noirs allumés 0
+   ✓ 4b-3a : 250 pixel(s) à 1/255 (0.027 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 250, dans le noir 0, noirs allumés 0
+   ✓ 4b-5a : 250 pixel(s) à 1/255 (0.027 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 250, dans le noir 0, noirs allumés 0
+   option J (juge taillé) contre A : 0 pixel(s) au-delà de l'arrondi, écart max 1/255
+
+== deux : 1280 × 720 ; A noire sur 0 pixels, éclairée sur 921600 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 121841 pixel(s) changé(s), jusqu'à 188/255
+   ✓ 2b-1a : 3678 pixel(s) à 1/255 (0.399 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 3678, dans le noir 0, noirs allumés 0
+   ✓ 2b-3a : 3678 pixel(s) à 1/255 (0.399 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 3678, dans le noir 0, noirs allumés 0
+   ✓ 4b-3a : 3678 pixel(s) à 1/255 (0.399 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 3678, dans le noir 0, noirs allumés 0
+   ✓ 4b-5a : 3678 pixel(s) à 1/255 (0.399 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 3678, dans le noir 0, noirs allumés 0
+   option J (juge taillé) contre A : 0 pixel(s) au-delà de l'arrondi, écart max 1/255
+
+== s1 : 1280 × 720 ; A noire sur 0 pixels, éclairée sur 921600 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 129899 pixel(s) changé(s), jusqu'à 134/255
+   ✓ 2b-1a : 2211 pixel(s) à 1/255 (0.240 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 2211, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 700 ; vue de J2 (droite) 1511
+   ✓ 2b-3a : 2211 pixel(s) à 1/255 (0.240 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 2211, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 700 ; vue de J2 (droite) 1511
+   ✓ 4b-3a : 2211 pixel(s) à 1/255 (0.240 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 2211, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 700 ; vue de J2 (droite) 1511
+   ✓ 4b-5a : 2211 pixel(s) à 1/255 (0.240 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 2211, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 700 ; vue de J2 (droite) 1511
+   option J (juge taillé) contre A : 1 pixel(s) au-delà de l'arrondi, écart max 15/255 ; dont 0 valent exactement l'image sans rayon, 1 plus clairs qu'avec les carrés
+
+== s2 : 1280 × 720 ; A noire sur 165467 pixels, éclairée sur 756133 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 93973 pixel(s) changé(s), jusqu'à 133/255
+   ✓ 2b-1a : 1299 pixel(s) à 1/255 (0.141 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1299, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 460 ; vue de J2 (droite) 839
+   ✓ 2b-3a : 1299 pixel(s) à 1/255 (0.141 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1299, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 460 ; vue de J2 (droite) 839
+   ✓ 4b-3a : 1299 pixel(s) à 1/255 (0.141 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1299, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 460 ; vue de J2 (droite) 839
+   ✓ 4b-5a : 1299 pixel(s) à 1/255 (0.141 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1299, dans le noir 0, noirs allumés 0 ; vue de J1 (gauche) 460 ; vue de J2 (droite) 839
+   option J (juge taillé) contre A : 0 pixel(s) au-delà de l'arrondi, écart max 1/255
+
+== fusee : 1280 × 720 ; A noire sur 0 pixels, éclairée sur 921600 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 104720 pixel(s) changé(s), jusqu'à 156/255
+   ✓ 2b-1a : 4554 pixel(s) à 1/255 (0.494 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 4554, dans le noir 0, noirs allumés 0
+   ✓ 2b-3a : 4554 pixel(s) à 1/255 (0.494 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 4554, dans le noir 0, noirs allumés 0
+   ✓ 4b-3a : 4554 pixel(s) à 1/255 (0.494 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 4554, dans le noir 0, noirs allumés 0
+   ✓ 4b-5a : 4554 pixel(s) à 1/255 (0.494 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 4554, dans le noir 0, noirs allumés 0
+   option J (juge taillé) contre A : 1235 pixel(s) au-delà de l'arrondi, écart max 25/255 ; dont 1196 valent exactement l'image sans rayon, 1235 plus clairs qu'avec les carrés
+
+== eq : 1280 × 720 ; A noire sur 487030 pixels, éclairée sur 434570 ; bruit entre les trois A : 0 pixel(s)
+   le rayon lui-même (A contre la prise sans rayon) : 100848 pixel(s) changé(s), jusqu'à 141/255
+   ✓ 2b-1a : 1453 pixel(s) à 1/255 (0.158 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1453, dans le noir 0, noirs allumés 0
+   ✓ 2b-3a : 1453 pixel(s) à 1/255 (0.158 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1453, dans le noir 0, noirs allumés 0
+   ✓ 4b-3a : 1453 pixel(s) à 1/255 (0.158 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1453, dans le noir 0, noirs allumés 0
+   ✓ 4b-5a : 1453 pixel(s) à 1/255 (0.158 % de l'image), 0 au-delà ; écart max 1/255 — sous la lumière 1453, dans le noir 0, noirs allumés 0
+   option J (juge taillé) contre A : 0 pixel(s) au-delà de l'arrondi, écart max 1/255
+
+✓ chaque B vaut ses A voisines à 1/255 près, aucun noir allumé, dans tous les blocs, scène immobile

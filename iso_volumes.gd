@@ -108,6 +108,29 @@ var faisceau_air := true
 var point_lumineux := true
 ## `--faisceau-air=0.3` force la densité d'une couche (au cœur, lampe à pleine énergie) ; 0 : celle de `VOLUME_FAISCEAU_AIR`.
 var densite_faisceau_air := 0.0
+## L'allègement de la 0.8.0 (Adrien, 2026-09-30, 15:36 : « Oui allège d'abord avant de publier la 0.8 ») — le rayon TAILLÉ à
+## son cône : ses couches sont des éventails autour de la lampe qui ne couvrent que là où le cookie peut dessiner, au lieu des
+## carrés posés sur toute la texture de la lampe à son échelle. La MÊME image (voir `_tailler_faisceau_air`).
+## `--faisceau-air-carre` rend les carrés d'avant, en build de débogage seulement : pour les bancs et la preuve à l'image.
+## Relu à chaque image (la preuve le bascule sur place).
+var faisceau_taille := true
+## LE JUGE du rayon taillé lui aussi — l'option A de l'allègement, LE DÉFAUT depuis Q75 (Adrien, 2026-09-30 20:17 : « A+d »).
+## Le juge écrit « noir » dans le pochoir avec la marge du rayon (16/255), plus large que celle de la fumée (8/255), et la
+## fumée ne se dessine pas là où le pochoir le dit : en disque, sur tout son disque, le juge du rayon taisait les volutes
+## d'une fusée posées sur un sol entre 8 et 16/255, hors du cône compris (preuve à l'image, 2026-09-30 : 1 235 pixels,
+## jusqu'à 25/255, dont 1 196 reviennent exactement à l'image sans rayon). Taillé, il ne les tait plus hors du cône — et
+## l'image s'allège. `--faisceau-juge-disque` rend le disque d'avant, en build de débogage seulement (bancs et preuves).
+var faisceau_juge_taille := true
+## Q75, D — LE RAYON DANS L'AIR GARDE LA LONGUEUR DE L'ANCIENNE TORCHE (Adrien, 2026-09-30 20:17 : « A+d ») : là où le
+## plancher de L1 porte la lumière au sol plus loin que la 0.7.1, les couches du rayon s'éteignent en douceur à la portée
+## qu'avait la classe dans la 0.7.1 (`WeaponData.portee_sans_ecran`), et leur éventail s'y arrête. La lumière au sol va
+## toujours jusqu'au bord de l'écran : la portée, règle du jeu, ne bouge pas. `--faisceau-air-long` rend le rayon sur toute
+## la portée, en build de débogage seulement (bancs et preuves). Relu à chaque image.
+var faisceau_air_court := true
+## L'allègement de la 0.8.0 — INSTRUMENT DE PREUVE, jamais posé en jeu, lu en UN seul endroit (`_suivre_faisceau_air`) : ≥ 0,
+## l'âge du grain du rayon, figé (secondes), pour que deux prises d'une même scène — carrés puis éventails — se comparent au
+## pixel (`tools/loupe_faisceau_taille.gd`) ; −1 : l'horloge, comme en jeu.
+var age_faisceau_fige := -1.0
 ## ISO13, Q31 voie A — le masque de la fumée : chaque couche de volume passe à la variante FUMEE_MASQUE
 ## de son shader, qui la tait là où ce que le pixel montre est affiché noir (voir `volume_iso.gdshader`). ÉTEINT PAR DÉFAUT
 ## depuis le 2026-09-26 (ordre 416 du cloud) : allumé le 2026-09-25 (Q31 : « le noir d'abord », prix 3 % au plus), il
@@ -165,6 +188,12 @@ const DRAPEAU_FAISCEAU := "--faisceau"
 const DRAPEAU_FAISCEAU_AIR := "--faisceau-air"
 ## Q41 — l'éteindre : build de débogage seulement, comme `--sans-fumee-masque` (un joueur ne choisit pas l'image de l'adversaire).
 const DRAPEAU_SANS_FAISCEAU_AIR := "--sans-faisceau-air"
+## L'allègement de la 0.8.0 — les carrés d'avant (`faisceau_taille` faux), build de débogage seulement.
+const DRAPEAU_FAISCEAU_CARRE := "--faisceau-air-carre"
+## Q75 — le juge du rayon en disque, comme avant (`faisceau_juge_taille` faux), build de débogage seulement.
+const DRAPEAU_FAISCEAU_JUGE_DISQUE := "--faisceau-juge-disque"
+## Q75 — le rayon dans l'air sur toute la portée, comme avant (`faisceau_air_court` faux), build de débogage seulement.
+const DRAPEAU_FAISCEAU_AIR_LONG := "--faisceau-air-long"
 const DRAPEAU_SANS_POINT_LUMINEUX := "--sans-point-lumineux"
 const DRAPEAU_MASQUE_FUMEE := "--fumee-masque"
 const DRAPEAU_SANS_MASQUE_FUMEE := "--sans-fumee-masque"
@@ -247,6 +276,12 @@ func _init() -> void:
 			densite_faisceau_air = maxf(0.0, float(arg.trim_prefix(DRAPEAU_FAISCEAU_AIR + "=")))
 		elif arg == DRAPEAU_SANS_FAISCEAU_AIR and OS.is_debug_build():
 			faisceau_air = false
+		elif arg == DRAPEAU_FAISCEAU_CARRE and OS.is_debug_build():
+			faisceau_taille = false
+		elif arg == DRAPEAU_FAISCEAU_JUGE_DISQUE and OS.is_debug_build():
+			faisceau_juge_taille = false
+		elif arg == DRAPEAU_FAISCEAU_AIR_LONG and OS.is_debug_build():
+			faisceau_air_court = false
 		elif arg == DRAPEAU_SANS_POINT_LUMINEUX and OS.is_debug_build():
 			point_lumineux = false
 		elif arg == DRAPEAU_MASQUE_FUMEE:
@@ -292,6 +327,14 @@ func _init() -> void:
 		print("[faisceau air] allumé — %d couches lumineuses (additives) sous %.2f tuile (murets %.2f), densité %.3f, masque pochoir forcé"
 			% [int(VOLUME_FAISCEAU_AIR["couches"]), float(VOLUME_FAISCEAU_AIR["hauteur"]), MapGeometry.HAUTEUR_MUR_BAS,
 			densite_du_faisceau_air()])
+		# L'allègement de la 0.8.0 : la forme des couches et du juge, dite par le JEU (une prise prouve son bras par cette ligne).
+		print("[faisceau air] %s" % (("taillé à son cône — couches en éventail, juge %s (allègement de la 0.8.0, Q75)"
+			% ("en éventail aussi" if faisceau_juge_taille else "en disque, comme avant (%s, build de débogage)"
+				% DRAPEAU_FAISCEAU_JUGE_DISQUE)) if faisceau_taille
+			else "en carrés, comme avant l'allègement (%s, build de débogage)" % DRAPEAU_FAISCEAU_CARRE))
+		print("[faisceau air] %s" % ("à la longueur de l'ancienne torche (Q75 : la portée de la 0.7.1, fondu sur %.0f %%)"
+			% (FONDU_AIR * 100.0) if faisceau_air_court
+			else "sur toute la portée, comme avant Q75 (%s, build de débogage)" % DRAPEAU_FAISCEAU_AIR_LONG))
 	else:
 		print("[faisceau air] éteint (%s)" % DRAPEAU_SANS_FAISCEAU_AIR)
 	if coeur_fusee != 2:
@@ -590,20 +633,422 @@ func _suivre_faisceau(j: Node2D, vus: Dictionary) -> void:
 ##   où ce que le pixel montre derrière elle s'affiche noir — c'est ce qui manquait le 24/09 (le lissage et la parallaxe
 ##   posaient le rayon sur du noir). La fumée n'en est pas touchée, et la bascule des bancs ne touche pas au rayon.
 ## La poussière est le grain que le shader applique déjà à l'alpha, animé par `age` : pas un objet de plus.
+##
+## **L'allègement de la 0.8.0** (`faisceau_taille`, défaut) : ses couches sont TAILLÉES au cône du cookie
+## (`_tailler_faisceau_air`) au lieu d'être des carrés posés sur toute la texture de la lampe à son échelle, et son juge aussi
+## (`faisceau_juge_taille`, le défaut depuis Q75). **Q75, D** (`faisceau_air_court`, défaut) : il s'arrête à la longueur de
+## l'ancienne torche (`plafond_du_faisceau`).
 func _suivre_faisceau_air(j: Node2D, vus: Dictionary) -> void:
 	var lampe := j.get_node_or_null(^"Flashlight") as PointLight2D
+	# L'allègement : l'enveloppe du cookie et les éventails se calculent dès que le joueur est là (au décompte, lampe éteinte),
+	# une fois par cookie et par longueur (et par portée pour le juge) — jamais à l'image où la lampe s'allume, où ce serait
+	# un hoquet.
+	if faisceau_taille and lampe != null and lampe.texture != null:
+		var portee := _portee_du_faisceau(lampe)
+		_eventails_du_faisceau(lampe.texture, portee, faisceau_juge_taille, plafond_du_faisceau(j, portee))
 	if lampe == null or not lampe.enabled or lampe.energy <= 0.0 or lampe.texture == null:
 		return
 	# La portée du cône, en pixels de monde : la texture, à son échelle, centrée sur la lampe.
-	var rayon := 0.5 * float(lampe.texture.get_width()) * lampe.texture_scale
+	var rayon := _portee_du_faisceau(lampe)
 	if rayon <= 1.0:
 		return
 	var part := clampf(lampe.energy / 2.5, 0.0, 1.0)
 	var e := _entree(j, "faisceau_air", vus, CLE_FAISCEAU_AIR)
 	_couches(e, int(VOLUME_FAISCEAU_AIR["couches"]), FORME_POCHOIR, true)
+	# Le juge taillé : il se pose dans `_tailler_faisceau_air`, et `_poser_juge` n'y pose alors ni son disque ni son échelle
+	# (sinon le maillage changerait deux fois par image).
+	if faisceau_taille and faisceau_juge_taille:
+		e["juge_taille"] = true
+	else:
+		e.erase("juge_taille")
 	_poser_couches(e, lampe.global_position, rayon, float(VOLUME_FAISCEAU_AIR["hauteur"]),
 		densite_du_faisceau_air() * part, lampe.texture, lampe.global_rotation,
-		float(j.get_instance_id() % 97), float(Time.get_ticks_msec()) * 0.001)
+		float(j.get_instance_id() % 97),
+		age_faisceau_fige if age_faisceau_fige >= 0.0 else float(Time.get_ticks_msec()) * 0.001)
+	_tailler_faisceau_air(e, lampe.texture, rayon, lampe.global_rotation, plafond_du_faisceau(j, rayon))
+
+
+## La portée du rayon, en pixels de monde : la demi-largeur de la texture de la lampe, à son échelle.
+static func _portee_du_faisceau(lampe: PointLight2D) -> float:
+	return 0.5 * float(lampe.texture.get_width()) * lampe.texture_scale
+
+
+## Q75, D — LA LONGUEUR DU RAYON DANS L'AIR, en part de sa portée (1 : toute la portée, aucune coupure) : la portée qu'avait
+## la classe du joueur dans la 0.7.1 (`WeaponData.portee_sans_ecran`), quand la règle de l'écran porte la lampe plus loin.
+## Depuis Q76 (la portée au bord le plus proche, 468 px), les classes que la 0.7.1 portait plus loin — la Sentinelle, le
+## Braconnier — n'ont plus rien à couper : leur rayon va jusqu'à la portée, `min(longueur de la 0.7.1, portée)`.
+## `faisceau_air_court` éteint (`--faisceau-air-long`), ou sans arme lisible : 1.
+func plafond_du_faisceau(j: Node, portee: float) -> float:
+	if not faisceau_air_court:
+		return 1.0
+	var arme: Variant = j.get("current_weapon") if j != null else null
+	if not (arme is WeaponData):
+		return 1.0
+	return plafond_de_longueur((arme as WeaponData).portee_sans_ecran(), portee)
+
+
+## La part de la portée `portee` que garde un rayon long de `longueur` (pixels de monde) : dans ]0 ; 1], 1 quand la longueur
+## atteint la portée (la lampe ne porte pas plus loin que la 0.7.1 : rien à couper).
+static func plafond_de_longueur(longueur: float, portee: float) -> float:
+	if portee <= 0.0 or longueur <= 0.0 or longueur >= portee:
+		return 1.0
+	return longueur / portee
+
+
+# ---------------------------------------------------------------------------
+# L'ALLÈGEMENT DE LA 0.8.0 — le rayon taillé à son cône
+# ---------------------------------------------------------------------------
+#
+# Adrien, 2026-09-30, 15:36 : « Oui allège d'abord avant de publier la 0.8 ». La série du Mac (Gadgets, 14:25) rendait la 0.8.0
+# 0,81 à 0,87 fois moins rapide que la 0.7.1 ; la piste était écrite depuis L1 : les couches du rayon et leur juge étaient des
+# CARRÉS posés sur la texture de la lampe à son échelle (le plan de côté 1, le disque du juge), donc leur surface suit le carré de
+# la portée — et la portée va au bord de l'écran depuis L1 : deux joueurs × (trois couches + un juge) qui couvraient tout
+# l'écran, là où le cookie n'allume qu'un cône (60° au plus depuis L1bis) et le halo court de l'émetteur (~80°, 20 % de la
+# portée). Chaque fragment hors du cône se rastérisait, payait son shader jusqu'au `discard` (opacité nulle), et le juge y payait
+# le jugement ENTIER du pochoir.
+#
+# **Ce qui change** : le MAILLAGE des couches seulement, jamais une valeur. Elles deviennent des éventails autour de la lampe,
+# tournés avec elle, qui couvrent exactement là où le cookie peut rendre une opacité non nulle (l'enveloppe, filtre bilinéaire
+# compris). **Pourquoi l'image est la même** : un fragment calcule tout depuis sa position dans le MONDE (`monde`, le cookie
+# relu par `nuage_centre`, `nuage_rayon` et `nuage_angle`), jamais depuis le maillage qui le porte ; chaque fragment gardé
+# calcule donc ce qu'il calculait (à l'arrondi près de l'interpolation, qui suit les triangles : ±1/255 sur quelques pixels),
+# et chaque fragment retiré se jetait (opacité nulle hors du cookie, `forme` nulle au-delà du disque). Preuve à l'image :
+# `tools/loupe_faisceau_taille.gd` ; garde : `tools/test_allegement_faisceau.gd`.
+#
+# ⚠️ **Le juge, taillé à son tour, ne rend pas la même image — et c'est pourquoi il l'est** (`faisceau_juge_taille`, une option
+# à l'allègement, le défaut depuis Q75 : Adrien, 2026-09-30 20:17, « A+d »). Taillé (l'enveloppe dilatée de la parallaxe), il
+# couvre toujours chaque pixel où une couche peut dessiner ; mais le pochoir qu'il écrit est lu par TOUS les volumes, et sa
+# marge (16/255) est plus large que celle de la fumée (8/255) — en disque, sur tout son disque, il taisait les volutes d'une
+# fusée posées sur un sol entre 8 et 16/255, hors du cône compris. Taillé, il ne les tait plus qu'où le rayon peut dessiner.
+#
+# **Q75, D — LE RAYON DANS L'AIR GARDE LA LONGUEUR DE L'ANCIENNE TORCHE** (`faisceau_air_court`, défaut). Depuis L1 la lampe porte
+# au bord de l'écran (728 px à ×1,5), et le rayon avec elle : ses couches suivaient la texture de la lampe. La 0.7.1 posait ses
+# couches sur la même texture, à la portée d'alors — `torch_scale × facteur_portee × 256`, de 192 px (le Terrassier) à 672 px
+# (le Braconnier), sans plancher : c'est la longueur que le rayon retrouve (`plafond_du_faisceau`, en part de la portée).
+# Chaque couche s'éteint à cette part de SON rayon, comme dans la 0.7.1 où les couches hautes étaient plus courtes dans la même
+# proportion (le dôme) ; elle s'éteint EN DOUCEUR sur le dernier quart (`FONDU_AIR`, un `smoothstep` dans `volume_iso.gdshader`),
+# jamais d'une coupure nette. Rien d'autre ne bouge : le cookie reste lu à l'échelle de la lampe (le rayon garde le cône, le halo
+# de l'émetteur et le profil de la lumière qu'il montre), la lumière au sol va toujours jusqu'au bord de l'écran, et la portée,
+# règle du jeu (l'éblouissement la lit), non plus. L'éventail des couches et celui du juge s'arrêtent à la même part (arrondie
+# par excès, `CRANS_DE_LONGUEUR`), et le juge ne juge plus qu'où une couche peut dessiner (`juge_rayons` à la même part).
+
+## Les secteurs de l'enveloppe, autour de la lampe : 1° chacun, 0° sur l'axe du cookie (celui de la lampe), vers +y de la
+## texture ensuite (le sens du shader : `local` est `d` tourné de −`nuage_angle`).
+const SECTEURS_FAISCEAU := 360
+## Les blocs de texels lus d'un coup : l'image réduite par moyennes, en flottants (`shrink_x2`), vaut non nul sur un bloc si et
+## seulement si l'un de ses texels l'est. Huit texels : l'enveloppe déborde le cône d'au plus ~2° à mi-portée.
+const BLOC_ENVELOPPE := 8
+## Le filtre bilinéaire du cookie (`masque`, `filter_linear`, sans mipmaps) lit un texel jusqu'à un demi-texel au-delà de son
+## bord ; un texel entier, pour la marge.
+const MARGE_TEXELS := 1.0
+## Le juge (à la hauteur de la couche la plus haute) voit chaque couche décalée de (haut − h) / tan(tangage), moins que
+## haut − h tant que le tangage dépasse 45° (52° aujourd'hui) — la borne du disque ajusté (`_poser_juge`) ; un pixel de monde de
+## plus, pour la marge.
+const MARGE_JUGE_PX := 1.0
+## La dilatation du juge ne lit les secteurs voisins que jusqu'à cet écart (20°) ; au-delà, ce qu'ils ajoutent tient dans le
+## disque de rayon décalage / sin(20°) autour de la lampe, posé d'office.
+const ECART_DILATATION := 0.3490658503988659
+## Les plages de l'éventail (`eventail`) : au plus dix secteurs par triangle (la corde s'écarte alors de l'arc de 0,4 % au
+## plus), d'enveloppe voisine à 10 % près — ou toutes au ras de la lampe (sous 2 % du rayon), où l'écart ne coûte rien.
+const SECTEURS_PAR_TRIANGLE := 10
+const ECART_DE_PLAGE := 0.1
+const RAYON_NEGLIGEABLE := 0.02
+## Q75, D — la part de la portée où le rayon s'éteint, arrondie PAR EXCÈS à un 1/1024 : les éventails se gardent par cran (un
+## éventail un peu plus long couvre toujours celui-ci), le shader reçoit la part exacte.
+const CRANS_DE_LONGUEUR := 1024
+## Q75, D — la dernière part de sa longueur sur laquelle une couche s'éteint (de 1 à 0, `smoothstep`) : un quart.
+const FONDU_AIR := 0.25
+## Q75, D — la longueur d'une couche qu'on ne coupe pas (`longueur_air` du shader, son défaut).
+const LONGUEUR_AIR_SANS_COUPURE := 1.0e9
+## Enveloppe par cookie (Texture2D -> PackedFloat32Array), éventail des couches par cookie et par cran de longueur
+## (Texture2D -> {cran: ArrayMesh}), éventail du juge par cookie, cran et portée entière (Texture2D -> {Vector2i(cran, portée):
+## ArrayMesh}). Une fois par processus : les cookies vivent tout le jeu (`WeaponData`), et la portée d'une torche ne change
+## qu'avec la classe ou le mode (`accorder_au_mode`).
+static var _enveloppes := {}
+static var _eventails := {}
+static var _eventails_juge := {}
+
+
+## Taille les couches du rayon (ou leur rend les carrés d'avant, `faisceau_taille` faux) et son juge (`e["juge_taille"]`, posé
+## par `_suivre_faisceau_air`), puis les arrête à `plafond` de leur rayon (Q75, D ; 1 : aucune coupure). Appelée APRÈS
+## `_poser_couches` : la position, l'échelle des couches (2 × leur rayon) et les autres uniformes restent les siens ; le juge en
+## disque, lui, vient d'y être posé par `_poser_juge`.
+func _tailler_faisceau_air(e: Dictionary, tex: Texture2D, rayon: float, angle: float, plafond := 1.0) -> void:
+	var noeuds: Array = e["noeuds"]
+	var juge: MeshInstance3D = e.get("juge") if is_instance_valid(e.get("juge")) else null
+	var juge_taille: bool = e.get("juge_taille", false)
+	_poser_longueur(e, juge, plafond)
+	if juge != null and not juge_taille and juge.rotation != Vector3.ZERO:
+		juge.rotation = Vector3.ZERO
+	if not faisceau_taille:
+		for mi: MeshInstance3D in noeuds:
+			if mi.mesh != _plan:
+				mi.mesh = _plan
+			if mi.rotation != Vector3.ZERO:
+				mi.rotation = Vector3.ZERO
+		return
+	var maillages := _eventails_du_faisceau(tex, rayon, juge_taille, plafond)
+	# Le plan de côté 1 tourné de −angle autour de la verticale : son +x va sur l'axe de la lampe, son +z sur son côté +y
+	# (d = R(angle)·local, la rotation du shader lue à l'envers). L'échelle (2 × rayon de la couche) est celle du carré.
+	var tourne := Vector3(0.0, -angle, 0.0)
+	for mi: MeshInstance3D in noeuds:
+		if mi.mesh != maillages[0]:
+			mi.mesh = maillages[0]
+		mi.rotation = tourne
+	if juge != null and juge_taille:
+		if juge.mesh != maillages[1]:
+			juge.mesh = maillages[1]
+		juge.scale = Vector3(rayon * 2.0, 1.0, rayon * 2.0)
+		juge.rotation = tourne
+
+
+## Q75, D — la longueur de chaque couche (`longueur_air`, pixels de monde : `plafond` × son rayon, le dôme de la 0.7.1) et son
+## fondu, posés à chaque image (un banc bascule `faisceau_air_court` sur place) ; et le juge ne juge plus qu'où une couche peut
+## dessiner : `juge_rayons` (que `_poser_juge` vient de poser à leur rayon) à la même part. Sans coupure : la longueur
+## d'avant (le défaut du shader), et le juge tel que `_poser_juge` l'a posé.
+func _poser_longueur(e: Dictionary, juge: MeshInstance3D, plafond: float) -> void:
+	var noeuds: Array = e["noeuds"]
+	var court := plafond < 1.0
+	var rayons := Vector4.ZERO
+	for i in noeuds.size():
+		var mat := e["mats"][i] as ShaderMaterial
+		var r := float(mat.get_shader_parameter("nuage_rayon"))
+		mat.set_shader_parameter("longueur_air", r * plafond if court else LONGUEUR_AIR_SANS_COUPURE)
+		mat.set_shader_parameter("fondu_air", FONDU_AIR)
+		if i < 4:
+			rayons[i] = r * plafond
+	if court and juge != null:
+		(juge.material_override as ShaderMaterial).set_shader_parameter("juge_rayons", rayons)
+
+
+## [éventail des couches, éventail du juge ou null] pour ce cookie et cette longueur (et cette portée, pour le juge), calculés
+## une fois.
+static func _eventails_du_faisceau(tex: Texture2D, rayon: float, juge: bool, plafond := 1.0) -> Array:
+	var env := enveloppe_du_cookie(tex)
+	var cran := cran_de_longueur(plafond)
+	var par_cran: Dictionary = _eventails.get(tex, {})
+	if not par_cran.has(cran):
+		par_cran[cran] = eventail(enveloppe_plafonnee(env, float(cran) / float(CRANS_DE_LONGUEUR)))
+		_eventails[tex] = par_cran
+	if not juge:
+		return [par_cran[cran], null]
+	var par_portee: Dictionary = _eventails_juge.get(tex, {})
+	# La portée ENTIÈRE, arrondie par défaut : un rayon plus petit dilate plus (décalage / rayon), donc l'éventail d'une portée
+	# un peu plus courte couvre toujours celle-ci.
+	var cle := Vector2i(cran, maxi(1, int(floor(rayon))))
+	if not par_portee.has(cle):
+		par_portee[cle] = eventail(enveloppe_dilatee(enveloppe_plafonnee(env, float(cran) / float(CRANS_DE_LONGUEUR)),
+			decalage_du_juge() / float(cle.y)))
+		_eventails_juge[tex] = par_portee
+	return [par_cran[cran], par_portee[cle]]
+
+
+## Q75, D — le cran de longueur d'un plafond (dans ]0 ; 1]) : arrondi PAR EXCÈS, jamais plus que `CRANS_DE_LONGUEUR` (aucune
+## coupure).
+static func cran_de_longueur(plafond: float) -> int:
+	return clampi(int(ceil(plafond * float(CRANS_DE_LONGUEUR))), 1, CRANS_DE_LONGUEUR)
+
+
+## Q75, D — l'enveloppe arrêtée à `plafond` (unités du disque de la couche) : là où la couche s'éteint, plus rien à couvrir.
+static func enveloppe_plafonnee(env: PackedFloat32Array, plafond: float) -> PackedFloat32Array:
+	if plafond >= 1.0:
+		return env
+	var sortie := env.duplicate()
+	for s in sortie.size():
+		sortie[s] = minf(sortie[s], plafond)
+	return sortie
+
+
+## Le décalage le plus grand entre une couche et son juge, vu de la caméra, en pixels de monde : haut − h de la couche la plus
+## basse (la borne du disque ajusté, `_poser_juge`), plus `MARGE_JUGE_PX`.
+static func decalage_du_juge() -> float:
+	var haut := maxf(PLANCHER_PX, float(VOLUME_FAISCEAU_AIR["hauteur"]) * TUILE)
+	var bas := maxf(PLANCHER_PX, float(VOLUME_FAISCEAU_AIR["hauteur"]) * TUILE / float(int(VOLUME_FAISCEAU_AIR["couches"])))
+	return haut - bas + MARGE_JUGE_PX
+
+
+## L'enveloppe du cookie `tex`, calculée une fois par texture et par processus (`enveloppe_de_l_image`).
+static func enveloppe_du_cookie(tex: Texture2D) -> PackedFloat32Array:
+	if _enveloppes.has(tex):
+		return _enveloppes[tex]
+	var env := enveloppe_de_l_image(tex.get_image() if tex != null else null)
+	_enveloppes[tex] = env
+	return env
+
+
+## L'ENVELOPPE d'un cookie : pour chacun des `SECTEURS_FAISCEAU` secteurs autour de son centre (la lampe), le rayon jusqu'où
+## il peut rendre une opacité non nulle, en unités du disque de la couche (1 = son rayon ; la couche se tait au-delà, `forme` y
+## est nulle). Par blocs de `BLOC_ENVELOPPE` texels (l'image réduite par moyennes en flottants : un bloc est non nul si et
+## seulement si l'un de ses texels l'est), chaque bloc non nul élargi de `MARGE_TEXELS` puis étendu à tous les secteurs qu'il
+## touche, à la distance de son coin le plus loin : une borne, jamais un manque. Sans image lisible : le disque entier
+## (aucun allègement, la même image).
+static func enveloppe_de_l_image(img: Image) -> PackedFloat32Array:
+	var env := PackedFloat32Array()
+	env.resize(SECTEURS_FAISCEAU)
+	if img == null or img.is_empty():
+		env.fill(1.0)
+		return env
+	env.fill(0.0)
+	var a := img.duplicate() as Image
+	if a.is_compressed() and a.decompress() != OK:
+		env.fill(1.0)
+		return env
+	var w := a.get_width()
+	var h := a.get_height()
+	# En flottants : une moyenne de valeurs positives n'y tombe jamais à zéro (en octets, (1 + 0 + 0 + 0 + 2) >> 2 = 0). Un
+	# format sans alpha se lit à 1 partout : l'enveloppe y vaut le disque entier, comme le shader (`texture(masque).a` = 1).
+	a.convert(Image.FORMAT_RGBAF)
+	var bloc := 1
+	while bloc < BLOC_ENVELOPPE and a.get_width() % 2 == 0 and a.get_height() % 2 == 0 and a.get_width() > 1 \
+			and a.get_height() > 1:
+		a.shrink_x2()
+		bloc *= 2
+	var aw := a.get_width()
+	var ah := a.get_height()
+	var donnees := a.get_data().to_float32_array()
+	# Un texel vaut 2 / w en unités locales (`local` va de −1 à 1 sur la texture : uv = local × 0,5 + 0,5).
+	var sx := 2.0 / float(w)
+	var sy := 2.0 / float(h)
+	for by in ah:
+		for bx in aw:
+			if donnees[(by * aw + bx) * 4 + 3] <= 0.0:
+				continue
+			_etendre(env, (float(bx * bloc) - MARGE_TEXELS) * sx - 1.0, (float(by * bloc) - MARGE_TEXELS) * sy - 1.0,
+				(float((bx + 1) * bloc) + MARGE_TEXELS) * sx - 1.0, (float((by + 1) * bloc) + MARGE_TEXELS) * sy - 1.0)
+	return env
+
+
+## Étend l'enveloppe au rectangle [x0, x1] × [y0, y1] (unités locales) : chaque secteur qu'il touche vu de la lampe va au moins
+## jusqu'à son coin le plus loin (plafonné à 1). Un rectangle qui contient la lampe touche tous les secteurs.
+static func _etendre(env: PackedFloat32Array, x0: float, y0: float, x1: float, y1: float) -> void:
+	var n := env.size()
+	var loin := minf(1.0, sqrt(maxf(x0 * x0, x1 * x1) + maxf(y0 * y0, y1 * y1)))
+	if x0 <= 0.0 and x1 >= 0.0 and y0 <= 0.0 and y1 >= 0.0:
+		for s in n:
+			env[s] = maxf(env[s], loin)
+		return
+	# Hors de la lampe, le rectangle se voit sous moins d'un demi-tour : ses coins, relus autour de la direction de son centre.
+	var axe := atan2((y0 + y1) * 0.5, (x0 + x1) * 0.5)
+	var lo := INF
+	var hi := -INF
+	for c: Vector2 in [Vector2(x0, y0), Vector2(x1, y0), Vector2(x0, y1), Vector2(x1, y1)]:
+		var d := wrapf(atan2(c.y, c.x) - axe, -PI, PI)
+		lo = minf(lo, d)
+		hi = maxf(hi, d)
+	var pas := TAU / float(n)
+	for s in range(int(floor((axe + lo) / pas)), int(floor((axe + hi) / pas)) + 1):
+		var k := posmod(s, n)
+		env[k] = maxf(env[k], loin)
+
+
+## L'enveloppe DILATÉE de `d` (unités locales) — ce que couvre l'enveloppe quand chacun de ses points peut glisser de `d` dans
+## n'importe quelle direction (la parallaxe du juge, dans les deux vues). Pour chaque secteur, le plus loin qu'y porte chaque
+## secteur voisin (`portee_dilatee`, à l'écart angulaire le plus petit entre les deux), jusqu'à `ECART_DILATATION` ; au-delà, un
+## disque de d / sin(écart), qui les contient tous.
+static func enveloppe_dilatee(env: PackedFloat32Array, d: float) -> PackedFloat32Array:
+	var n := env.size()
+	var pas := TAU / float(n)
+	var fenetre := int(ceil(ECART_DILATATION / pas)) + 1
+	var plancher := d / sin(ECART_DILATATION)
+	var sortie := PackedFloat32Array()
+	sortie.resize(n)
+	for s in n:
+		var m := plancher
+		for k in range(-fenetre, fenetre + 1):
+			var r := env[posmod(s + k, n)]
+			if r > 0.0:
+				m = maxf(m, portee_dilatee(r, maxf(0.0, float(absi(k) - 1)) * pas, d))
+		sortie[s] = m
+	return sortie
+
+
+## Le plus loin que porte, dans une direction à `ecart` (radians) d'un segment partant de la lampe et long de `r`, ce segment
+## épaissi de `d` : un disque de rayon `d` promené le long du segment. Au-delà d'un quart de tour, seul le disque de la lampe.
+static func portee_dilatee(r: float, ecart: float, d: float) -> float:
+	if ecart <= 0.0:
+		return r + d
+	if ecart >= PI * 0.5:
+		return d
+	var s := sin(ecart)
+	var c := cos(ecart)
+	if r * s <= d * c:
+		return r * c + sqrt(maxf(0.0, d * d - r * r * s * s))
+	return d / s
+
+
+## L'ÉVENTAIL qui contient l'enveloppe `env` : la lampe au centre et un triangle par PLAGE — une suite d'au plus
+## `SECTEURS_PAR_TRIANGLE` secteurs non vides d'enveloppe voisine (à `ECART_DE_PLAGE` près) —, dont les deux sommets sont au
+## plus grand rayon de la plage divisé par cos(demi-plage) : la corde reste au-delà de l'arc. Un sommet partagé par deux plages
+## prend le plus grand des deux rayons voulus, et les triangles le partagent par indice (aucune jonction en T : aucun pixel
+## dessiné deux fois, aucun oublié). Dans le repère du plan de côté 1 (`_plan`) : un rayon de 1 (celui de la couche) y vaut 0,5,
+## l'échelle du nœud reste 2 × rayon.
+##
+## ⚠️ **Des plages, pas un triangle par degré** : tous les triangles d'un éventail se touchent à la lampe, et un bloc de pixels
+## que plusieurs triangles recouvrent passe dans le shader une fois PAR triangle (le rastériseur ombre par blocs de 2 × 2 au
+## moins, dérivées obligent). À un triangle par degré, un bloc à 100 px de la lampe en chevauche trois, et l'éventail entier
+## repassait ~1,5 fois dans le shader — autant que le carré n'en gagnait (mesuré sous llvmpipe, 2026-09-30).
+static func eventail(env: PackedFloat32Array) -> ArrayMesh:
+	var n := env.size()
+	var pas := TAU / float(n)
+	# Les plages, parcourues depuis le premier secteur qui suit un secteur vide (aucune ne chevauche alors le départ) ; sans
+	# secteur vide (le juge), depuis 0 — la dernière plage s'arrête au départ.
+	var depart := 0
+	for i in n:
+		if env[i] <= 0.0:
+			depart = (i + 1) % n
+			break
+	var plages: Array[Vector3i] = []   # [premier secteur, nombre de secteurs, indice dans `hauts`]
+	var hauts := PackedFloat32Array()
+	var k := 0
+	while k < n:
+		var i := (depart + k) % n
+		if env[i] <= 0.0:
+			k += 1
+			continue
+		var lo := env[i]
+		var hi := env[i]
+		var long := 1
+		while long < SECTEURS_PAR_TRIANGLE and k + long < n:
+			var v := env[(depart + k + long) % n]
+			if v <= 0.0:
+				break
+			var nlo := minf(lo, v)
+			var nhi := maxf(hi, v)
+			# Voisines : à `ECART_DE_PLAGE` près, ou toutes sous `RAYON_NEGLIGEABLE` (au ras de la lampe).
+			if nhi > nlo * (1.0 + ECART_DE_PLAGE) and nhi > RAYON_NEGLIGEABLE:
+				break
+			lo = nlo
+			hi = nhi
+			long += 1
+		plages.append(Vector3i(i, long, hauts.size()))
+		hauts.append(hi / cos(pas * float(long) * 0.5) * 0.5)
+		k += long
+	# Un sommet par bord de plage, au plus grand rayon que lui demandent les deux plages qui s'y touchent.
+	var voulu := {}   # secteur de bord -> rayon (repère du maillage)
+	for p in plages:
+		for b in [p.x, (p.x + p.y) % n]:
+			voulu[b] = maxf(float(voulu.get(b, 0.0)), hauts[p.z])
+	var sommets := PackedVector3Array([Vector3.ZERO])
+	var indice := {}
+	for b: int in voulu:
+		indice[b] = sommets.size()
+		var a := pas * float(b)
+		sommets.append(Vector3(cos(a) * float(voulu[b]), 0.0, sin(a) * float(voulu[b])))
+	var indices := PackedInt32Array()
+	for p in plages:
+		indices.append_array([0, indice[p.x], indice[(p.x + p.y) % n]])
+	var normales := PackedVector3Array()
+	normales.resize(sommets.size())
+	normales.fill(Vector3.UP)
+	var tableaux := []
+	tableaux.resize(Mesh.ARRAY_MAX)
+	tableaux[Mesh.ARRAY_VERTEX] = sommets
+	tableaux[Mesh.ARRAY_NORMAL] = normales
+	tableaux[Mesh.ARRAY_INDEX] = indices
+	var m := ArrayMesh.new()
+	if not indices.is_empty():
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tableaux)
+	return m
 
 
 ## La densité d'une couche du rayon : celle du drapeau si on en cherche une, sinon la constante.
@@ -1252,9 +1697,12 @@ func _poser_juge(e: Dictionary, centre: Vector2, rayon: float, hauteur: float, d
 	var ajuste := forme_masque >= FORME_AJUSTEE
 	if ajuste:
 		demi = portee
-	juge.mesh = _disque() if ajuste else _plan
+	# Le juge taillé (`faisceau_juge_taille`, le défaut depuis Q75) : le rayon de Q41 pose alors SON juge, taillé à son cône
+	# (`_tailler_faisceau_air`) — ni disque ni carré ici, sans quoi le maillage changerait deux fois par image.
+	if not e.get("juge_taille", false):
+		juge.mesh = _disque() if ajuste else _plan
+		juge.scale = Vector3(demi * 2.0, 1.0, demi * 2.0)
 	juge.position = Vector3(centre.x, haut, centre.y)
-	juge.scale = Vector3(demi * 2.0, 1.0, demi * 2.0)
 	juge.visible = densite > 0.0
 	var m := juge.material_override as ShaderMaterial
 	m.set_shader_parameter("nuage_centre", centre)

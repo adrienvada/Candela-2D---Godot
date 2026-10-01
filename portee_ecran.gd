@@ -3,7 +3,9 @@ extends RefCounted
 
 ## Chantier des lumières de la 0.8.0, étape L1 — jusqu'où une torche doit porter pour atteindre le BORD DE L'ÉCRAN
 ## de son porteur (Q45, Adrien, 2026-09-29 : « Portée des lumières : ça doit au moins aller au bout de l'écran de
-## chaque joueur »).
+## chaque joueur »). L1 prenait le COIN (`portee_minimale`, 728 px en vue unique à ×1,5) ; **Q76 prend le bord le PLUS
+## PROCHE** (`portee_au_bord`, 468 px : Adrien, 2026-09-30 vers 22:58, « En fait diminuons la portée des lampe au maximum
+## visible par le joueur en hauteur et largeur (le minimum des deux) »).
 ##
 ## **Une portée DÉRIVÉE du cadrage, jamais un nombre calé sur le zoom du jour.** Q15 fait passer le zoom du duel de
 ## ×1,5 à ×1,25 à l'essai (branche `claude/v080-q15-q42`) : une constante en pixels aurait été juste un jour, puis
@@ -53,6 +55,16 @@ static func distance_au_bord(visee: Vector2, vue: Vector2, zoom: float, decalage
 	return t + decalage * vue.y / maxf(zoom, 0.01)
 
 
-## La plus petite portée qui atteint le bord de l'écran dans TOUTES les directions : celle qui va au coin.
+## La plus petite portée qui atteint le bord de l'écran dans TOUTES les directions : celle qui va au coin. La règle de L1
+## (le plancher du coin) ; depuis Q76, celle du drapeau de débogage `--portee-coin` seulement.
 static func portee_minimale(vue: Vector2, zoom: float, decalage: float, tangage_deg: float) -> float:
 	return demi_empreinte(vue, zoom, tangage_deg).length() + decalage * vue.y / maxf(zoom, 0.01)
+
+
+## Q76 — la plus grande portée qui ne sort de l'écran dans AUCUNE direction : celle qui va au bord le PLUS PROCHE, avance
+## de la caméra vers la visée comprise, soit le « maximum visible en hauteur et en largeur, le minimum des deux » —
+## `min(demi-largeur, demi-profondeur) + décalage × D`. En vue unique à ×1,5 : min(504,3 ; 360) + 108 = 468 px, le haut
+## (ou le bas) de l'écran quand on vise vers lui ; vers les côtés, le bord est à 612 px, au coin à 728.
+static func portee_au_bord(vue: Vector2, zoom: float, decalage: float, tangage_deg: float) -> float:
+	var h := demi_empreinte(vue, zoom, tangage_deg)
+	return minf(h.x, h.y) + decalage * vue.y / maxf(zoom, 0.01)

@@ -1,0 +1,88 @@
+{
+ "mesures": {
+  "J1 regarde J2": {
+   "pixels": 659,
+   "dessus": {
+    "pixels": 186,
+    "moyenne": 34.83,
+    "moyenne_sans_modele": 31.95,
+    "facteur": 1.0933
+   },
+   "+x": {
+    "pixels": 217,
+    "moyenne": 25.52,
+    "moyenne_sans_modele": 25.47,
+    "facteur": 1.0
+   },
+   "+z": {
+    "pixels": 144,
+    "moyenne": 25.17,
+    "moyenne_sans_modele": 26.63,
+    "facteur": 0.9321
+   }
+  },
+  "J2 regarde J1": {
+   "pixels": 667,
+   "dessus": {
+    "pixels": 188,
+    "moyenne": 34.66,
+    "moyenne_sans_modele": 31.87,
+    "facteur": 1.0883
+   },
+   "-x": {
+    "pixels": 234,
+    "moyenne": 25.33,
+    "moyenne_sans_modele": 25.22,
+    "facteur": 1.0
+   },
+   "-z": {
+    "pixels": 143,
+    "moyenne": 26.68,
+    "moyenne_sans_modele": 26.4,
+    "facteur": 1.0
+   }
+  }
+ },
+ "paires": [
+  {
+   "face_J2_vue_par_J1": "dessus",
+   "face_J1_vue_par_J2": "dessus",
+   "facteurs": [
+    1.0933,
+    1.0883
+   ],
+   "moyennes": [
+    34.83,
+    34.66
+   ],
+   "egales": true
+  },
+  {
+   "face_J2_vue_par_J1": "+x",
+   "face_J1_vue_par_J2": "-x",
+   "facteurs": [
+    1.0,
+    1.0
+   ],
+   "moyennes": [
+    25.52,
+    25.33
+   ],
+   "egales": true
+  },
+  {
+   "face_J2_vue_par_J1": "+z",
+   "face_J1_vue_par_J2": "-z",
+   "facteurs": [
+    0.9321,
+    1.0
+   ],
+   "moyennes": [
+    25.17,
+    26.68
+   ],
+   "egales": false
+  }
+ ],
+ "egales": false
+}

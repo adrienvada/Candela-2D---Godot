@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-30
+> Dernière mise à jour : 2026-10-01
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,11 +2435,20 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **La 0.8.0 est publiée et vérifiée** (2026-10-01 : tag `v0.8.0` poussé à 08:36, Release à 08:51 ; publiée par la session « Iso 1 Opus » sur le mot d'Adrien dit dans sa fenêtre — son texte du 29/09, redit vers 08:35 ; vérifiée par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED ») | `main` a avancé sans fourche de `2501cb9a` (la 0.7.1) à `903b26e6`, le candidat allégé — Q75 « A+d » et Q76, la portée au bord le plus proche —, et le tag annoté `v0.8.0` (`add64427`) le nomme. La CI a passé les suites (Tests) puis exporté, signé et publié (Publication) : `Candela-macos.zip`, `Candela-windows.zip`, `manifeste.json`, `manifeste.json.sig`. **Vérifié depuis le cloud, sur ce qui a été publié et non sur ce qui devait l'être** : la signature du manifeste passe (`openssl dgst -sha256 -verify`) avec la clé publique de `update_manager.gd` tel qu'il est dans `903b26e6`, la même clé que dans la 0.7.1 — un jeu en 0.7.1 peut donc vérifier cette mise à jour ; le manifeste dit 0.8.0 et protocole 19 ; les deux archives, retéléchargées, ont exactement la taille et le SHA-256 qu'il annonce (130 960 497 et 185 128 994 octets). **Conséquence pour les joueurs** : le protocole passe de 18 à 19, un joueur en 0.7.1 ne trouve plus personne en 0.8.0 — chacun met à jour depuis l'accueil (MISE À JOUR). |
+| **Q76 = la portée des torches s'arrête au bord le plus proche de l'écran de la vue unique : 468 px, pour les dix classes et dans tous les modes** (2026-09-30 vers 22:58, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « En fait diminuons la portée des lampe au maximum visible par le joueur en hauteur et largeur (le minimum des deux) » ; puis vers 23:08, à la question de l'écran scindé : « Ok, même portée en écran scindé ») | **La règle** : le plus petit des deux demi-côtés de l'empreinte au sol de la vue unique, plus l'avance de la caméra vers la visée — `min(demi-largeur, demi-profondeur) + décalage × profondeur` = min(504,3 ; 360) + 108 = **468 px** à ×1,5 (`PorteeEcran.portee_au_bord`) : visée vers le haut de l'écran, la lampe s'arrête au bord du haut. L1 allait au coin (727,6 px). **Plancher ET plafond** (`WeaponData.portee_plafond`) : les dix classes portent exactement 468 px — contre la 0.7.1, le Terrassier gagne 276 px et les sept autres classes courtes de 122 à 238, la Sentinelle perd 31 et le Braconnier 204 ; contre la 0.8.0 d'avant (`1ea5ade8`), toutes perdent 260 px. **L'écran scindé garde la même portée, décision d'Adrien** (« Ok, même portée en écran scindé ») : la portée est une règle du jeu (l'éblouissement la lit), pas un cadrage ; en écran scindé (×1,25, 957 px de large), la lampe y dépasse les côtés de 37 px et s'arrête à 94 px sous le haut. **Pourquoi**, dans ses mots : « au maximum visible par le joueur » — avec la règle du coin, visée vers le haut, la lampe passait le bord de 260 px, sur du sol que son porteur ne voyait pas. Ce que la session y ajoute : ce qu'on ne voit pas se paie quand même, la surface d'une lampe suit le carré de sa portée (×0,41). **Rien sur le fil** : les deux machines dérivent 468 des constantes du duel ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-portee-ecran` rend les portées de la 0.7.1, `--portee-coin` la règle de L1. **Avec D (Q75)** : le rayon dans l'air garde `min(longueur de la 0.7.1, portée)` — inchangé pour les huit classes sous 468 px, arrêté à la portée pour la Sentinelle et le Braconnier. **Ce que « au bord » veut dire à l'écran** : le cookie s'éteint linéairement jusqu'à sa portée — la lampe atteint le bord, mais s'y éteint ; visée vers le haut, la lumière du Terrassier touche encore le haut de l'écran (sur les murs), celle de la Sentinelle s'éteint 36 à 54 pixels d'écran avant, celle du Braconnier 175. Aucun noir allumé (planche avant/après basculée sur place : trois classes, J1 et J2, vue unique et écran scindé) ; J1 = J2. Mesuré dans le cloud (llvmpipe, le Terrassier, 24 prises en miroir) : 1,007 de la cadence de la 0.7.1 au cadrage du banc et 0,893 au vrai cadrage de la vue unique, contre 0,941 et 0,841 pour `1ea5ade8` — 6 % du temps d'image rendu ; la Sentinelle et le Braconnier, dont Q76 raccourcit aussi le rayon, ont plus à gagner (non mesuré). Chantier « l'allègement de la 0.8.0 », § Q76. |
+| **Q75 = « A+d » : le juge du rayon taillé devient le défaut, et le rayon dans l'air garde la longueur de l'ancienne torche** (2026-09-30 20:17, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement) | **A** — l'option du juge taillé (l'éventail du cookie dilaté de la parallaxe, au lieu du disque) passe au défaut hors débogage : elle corrige le défaut du pochoir (les volutes d'une fusée tues hors du cône par la marge 16/255 du rayon) ; `--faisceau-juge-disque` rend le disque (débogage). **D** — les trois couches du rayon s'éteignent EN DOUCEUR (un `smoothstep` sur le dernier quart) à la portée qu'avait la classe dans la 0.7.1, relue dans son code (`torch_scale × 256 × 0,75`, de 192 px pour le Terrassier à 672 px pour le Braconnier), chaque couche à la même part de son rayon (le dôme de la 0.7.1) ; leurs éventails et le juge s'y arrêtent. La lumière au sol va toujours au bord de l'écran et la portée (règle du jeu, lue par l'éblouissement) ne bouge pas ; `--faisceau-air-long` rend le rayon entier (débogage). « L'ancienne torche » n'a pas d'autre sens : dans la 0.7.1, le rayon dans l'air était posé sur la texture de la lampe à cette portée même. Aucun noir allumé (planche avant/après, trois classes, J1 et J2) ; le pixel à 15/255 de l'écran scindé est légitime (le disque le taisait à moitié). Mesuré dans le cloud (llvmpipe, le Terrassier, la classe du banc) : 0,930 de la cadence de la 0.7.1 au cadrage du banc et 0,861 au vrai cadrage de la vue unique (×1,5), contre 0,722 et 0,647 pour `34370f74` — l'estimation de 0,88 à 0,9 tient entre les deux. Chantier « l'allègement de la 0.8.0 », § Q75. |
 | **Q67 à Q70 — la fumée est EN VOXELS « gros » par défaut, avec l'encre du roman graphique SUR les cubes et le relief tiré de la clarté des volutes du dessin ; l'aplat reste** (2026-09-30, vers 15:50, Adrien, sur les planches de GV1, relayé par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Q67 : Oui la fumée en gros. Mais trouve un moyen de la rendre quand même un peu avec des traits sombres comme le faisait le style roman graphique. Qui peuvent évoluer lentement peut-être, je sais pas. Les bords des cubes ? Je sais pas. » ; « Q68 : pourquoi ? » ; « Q69 : oui, mais peut-être évolutives aussi » ; « Q70 : oui » — coquilles de frappe corrigées ; GV1bis, posé par un sous-agent de cette session, branche `claude/v090-gadgets-volume`) | **Q67, le défaut** : la suie, la poussière et la fumée de la fusée sont des tas de cubes d'un quart de tuile dans toutes les parties ; `--fumee-couches` rend les couches d'avant et `--fumee-voxels=fin` la taille fine, pour les bancs et les suites. **Q67, l'encre** : trois variantes sur les mêmes planches — les ARÊTES (le contour des paliers, « les bords des cubes »), les VOLUTES (les traits du dessin reportés sur les faces), les HACHURES (des traits qui dosent l'ombre et glissent) ; le défaut est la recommandation, les VOLUTES — la seule qui rende le trait du dessin du jeu au lieu d'en inventer un, et qui se lit « roman graphique » à la taille de l'écran ; Adrien tranche sur les planches (Q73). L'encre n'est qu'un ASSOMBRISSEMENT, peint par le cube et non couché au sol (le masque du noir ne la troue plus), sous la règle des murs « allumé reste allumé ». **Q68** : Adrien a demandé pourquoi ; la coordinatrice lui a répondu (l'encre du dessin, couchée au sol, se voyait en trous à travers les cubes, le masque du noir refusant — à raison — de peindre sur un trait noir) ; l'aplat reste sauf avis contraire — et le trait revient désormais PAR les cubes. **Q69** : le relief vient de la clarté des volutes du dessin (une bouffée claire monte, un trait creuse ; la fusée : les volutes de son voile), et il ÉVOLUE LENTEMENT, comme l'encre, à l'horloge du nuage — son âge, le même dans les deux vues, rejoué par la killcam ; aucune graine tirée d'un identifiant d'instance. **Q70** : l'ordre de la suite est accepté (les nappes, puis les éclats, puis la toile et les anneaux) ; GV2 attend l'ordre de la coordinatrice. Présentation seule : `Protocol.VERSION` et `config/version` ne bougent pas. |
+| **Q72 = la fusée posée de la killcam éclaire comme en match** (2026-09-30 vers 15:50, Adrien : « Q72 : corrige aussi ») | La killcam reconstruit chaque fusée (`Fusee.new()` puis `appliquer_age`) sans passer par `_atterrir` : une fusée posée y gardait l'empreinte de lumière du VOL (160 px au lieu de 440). La lumière d'une fusée posée — masque, hauteur, empreinte — est dite une fois (`_lumiere_posee`), à l'atterrissage et dans la killcam dès que l'âge rejoué est celui d'une fusée posée ; en vol, rien ne change. Le masque et la hauteur étaient déjà posés (constat vérifié). Garde : `tools/test_fusee_killcam.gd`. Chantier « Q71 et Q72 » plus bas. |
+| **Q71 = le modelé des corps suit la caméra qui dessine** (2026-09-30 vers 15:50, Adrien : « Q71 : corrige ») | La face assombrie à 0,9 était celle qui regarde le SUD du monde ; au lacet 45° B, J1 et J2 regardent de deux côtés opposés et un seul des deux la voyait sur son adversaire. Elle est désormais celle qui regarde la caméra de la vue qui dessine (`INV_VIEW_MATRIX[2].xz`), mêmes valeurs, même principe (le modelé répartit la lumière du capteur) ; au lacet 0, rien ne change. Prouvé à l'image (faces jumelles égales vues par J1 et par J2) ; garde `test_iso_beaute`. Chantier « Q71 et Q72 » plus bas. |
+| **La 0.8.0 ne part pas avant d'être allégée** (2026-09-30, 15:36, Adrien : « Oui allège d'abord avant de publier la 0.8 ») | La 0.8.0 ne part pas avant l'allègement ; il jugera en jouant, sans nouvelle mesure. Chantier « l'allègement de la 0.8.0 » plus bas. **Fait le 2026-09-30** : l'allègement (`39a90892`, le rayon dans l'air taillé à son cône, la même image), Q71 (`ae08992b`), Q72 (`34370f74`) et Q75 = « A+d » (`d89dedfe`) sont dans la ligne 0.8.0, et le candidat `claude/candidat-0.8.0` y est remonté — suite complète verte, `tools/verifier_publication.sh v0.8.0` d'accord. **Mesuré au cloud seulement** (Xvfb + llvmpipe, le Terrassier — la classe que D raccourcit le plus —, 24 prises en miroir) : 0,861 de la cadence de la 0.7.1 au vrai cadrage de la vue unique (×1,5), 0,930 au cadrage du banc, contre 0,647 et 0,722 avant l'allègement ; pour le Braconnier, il ne reste presque que A (environ 0,80). Rien ne dit ce que cela vaut sous Metal : c'est pourquoi le jeu d'Adrien reste le seul juge, et la publication un geste d'une session du Mac, sur son mot. *(Q76 — la portée au bord le plus proche de l'écran — est faite le même soir sur `claude/v080-allegement` (`0847561d`), après ce candidat : voir sa ligne. **Le candidat `claude/candidat-0.8.0` est remonté dessus le 2026-10-01 vers 01:30** — suite complète verte, `tools/verifier_publication.sh v0.8.0` d'accord : c'est lui, et non `1ea5ade8`, qu'Adrien jouera puis fera publier. Mesure cloud du Terrassier : 1,007 de la cadence de la 0.7.1 au cadrage du banc, 0,893 au vrai cadrage de la vue unique.)* |
+| **Une seule série de cadence sur le Mac libre : la 0.7.1 contre le candidat 0.8.0** (2026-09-30 vers 14:25, Adrien : « Mac libre tu peux lancer une mesure si besoin ») | Une seule série (Gadgets, ordre 466), 0.7.1 contre candidat 0.8.0 (A = 0.7.1 publiée, `2501cb9a`, médianes 60 et 65, 1 % bas 50 ; B = candidat `34666f25`, médianes 50 et 51, 1 % bas 46-47 ; MacBook M3, écran interne 60 Hz, vue unique, pompe sous une fusée, règle 278 ; aucun liseré du son visible dessiné), sans verdict formel. Rapport 0,81 à 0,87. |
+| **Plus aucune mesure sur le Mac d'Adrien** (2026-09-30, Adrien, à 13:09 : « J'en ai marre de faire tout le temps de mesures » ; puis à 13:30 : « Abandonne les mesures effectivement ») | Plus aucune mesure n'est demandée sur son Mac : le liseré seul, la reprise du faisceau et Q61 sont abandonnés. La preuve de Q42 sous Metal, jamais lancée, l'est aussi. Ordre 465. |
 | **Les gadgets plus en 3D, dans la langue du voxel — la fumée d'abord, ~~À L'ESSAI, éteinte par défaut~~** **— le défaut depuis GV1bis (Q67, ligne du dessus)** (2026-09-30, vers 12:10, Adrien, relayé par la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « J'aimerais également que tous les gadgets (je me souviens de la fumée occultante) soient davantage en 3D. Là on est pris entre le graphisme BD et la 3D voxel. Il faut quelque chose de plus uniforme avec le nouveau graphisme. » ; puis vers 13:09 : « J'en ai marre de faire tout le temps de mesures. » ; chantier GV, posé par un sous-agent de cette session, branche `claude/v090-gadgets-volume`, après la 0.8.0) | **GV0** : l'inventaire, gadget par gadget (voir « Chantier — les gadgets en volume ») — les objets durs sont déjà des voxels, ce sont les MATIÈRES (fumées, nappes, éclats, lueurs) qui restent entre la BD et la 3D. **GV1** : la suie, la poussière et la fumée de la fusée en cubes, derrière `--fumee-voxel-essai` (`=fin` pour la variante d'un huitième de tuile) ; sans le drapeau, le jeu est celui d'avant et une suite le prouve (`test_fumee_voxel`, lancée deux fois par `run_suites.sh`). Noir absolu tenu dans le monde (la lightmap seule, assombrie) et à l'écran (le masque de la fumée, pochoir) ; jamais plus caché (avant les corps, sans profondeur) ; J1 et J2 à égalité ; killcam comprise. **Le coût tenu par construction et prouvé dans le cloud** (faces cachées, grille en dôme, sortie avant la densité) : en voxels « gros », 41 à 59 % de la surface couverte des couches, 4 à 6 appels de dessin de moins par image, 3 à 8 % de temps d'image en moins sous llvmpipe, sur la fusée, la suie et la poussière, écran scindé ; « fin » coûte jusqu'à un tiers de plus que les couches (la fusée). Noir à l'écran : aucune fuite au-delà de 2/255 sur seize relevés, le détecteur éprouvé par un témoin. **Aucune mesure n'est demandée sur le Mac** ; ce que le cloud ne peut pas dire (le pilote d'Apple : le temps d'image réel, le hoquet de compilation du shader au premier nuage) est écrit comme une limite. Recommandation : la variante « gros » ; le défaut reste à Adrien (Q67), sur les planches. `Protocol.VERSION` et `config/version` ne bougent pas (rendu local). |
-| **La 0.8.0 part dès que les chantiers en cours sont finis : version 0.8.0, candidat `claude/candidat-0.8.0`, publié par une session du Mac** (2026-09-29, vers 19:00, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Fais en sorte qu'on puisse pousser la 0.8.0 dès que tous les chantiers en cours sont finis. Dis-moi quoi indiquer à une session locale pour ça ») | `config/version` passe de 0.7.1 à 0.8.0 : la **mineure** monte parce que le fil a bougé (`Protocol.VERSION` 18 → 19, les bruits de corps de l'hôte relayés au client, S6) — `tools/verifier_publication.sh v0.8.0` contre le tag `v0.7.1` : « le fil a bougé, et la mineure aussi ». Tous les chantiers de la 0.8.0 y sont : le son rendu visible et sa forme d'onde (Q52), le zoom selon l'écran (Q15 revue), Q42, Q55 et Q65 (le corps de soi et les murs), le point de braise et l'Usine, l'écran de fin et l'allumage, les lumières (L1, L1bis, L2, L3). Suite complète verte sur le candidat. **La publication suit `docs/MISE_A_JOUR.md`** (« Publier une version complète ») : `main` d'abord, en avance rapide depuis `2501cb9` (la 0.7.1), puis le tag annoté `v0.8.0` sur le même hash — gestes posés par une session du Mac sur le mot d'Adrien, dit dans sa fenêtre (le texte à lui donner est dans la conversation de la session cloud du 29/09 vers 19:15) ; la CI refait le contrôle de version, passe les suites, exporte, signe et publie ; la session cloud vérifie ensuite la signature du manifeste. **Pas une condition** : la cadence sur le Mac — la portée des torches coûte ×1,5 à ×1,85 par image sous Mesa, une prise 0.7.1 contre 0.8.0 sur l'écran interne reste conseillée, avant ou juste après. |
+| **Q62 : numpy installé ; le noir du faisceau tient à la densité livrée sous le pilote d'Apple** (2026-09-30 vers 12:10, Adrien : « on peut installer numpy ») | Gadgets a installé numpy (2.0.2) et rejoué `preuve.py` sur ses prises sous le pilote d'Apple. Le noir du faisceau tient à la densité livrée : 0 en adv, eq-est, eq-sud-ouest et s2, 1 pixel (28/255) en s1. « sien » et les densités d'essai en écran scindé ne sont pas jugeables, parce que le bandeau LED respirait pendant les prises. |
+| **La 0.8.0 part dès que les chantiers en cours sont finis : version 0.8.0, candidat `claude/candidat-0.8.0`, publié par une session du Mac** (2026-09-29, vers 19:00, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Fais en sorte qu'on puisse pousser la 0.8.0 dès que tous les chantiers en cours sont finis. Dis-moi quoi indiquer à une session locale pour ça ») | `config/version` passe de 0.7.1 à 0.8.0 : la **mineure** monte parce que le fil a bougé (`Protocol.VERSION` 18 → 19, les bruits de corps de l'hôte relayés au client, S6) — `tools/verifier_publication.sh v0.8.0` contre le tag `v0.7.1` : « le fil a bougé, et la mineure aussi ». Tous les chantiers de la 0.8.0 y sont : le son rendu visible et sa forme d'onde (Q52), le zoom selon l'écran (Q15 revue), Q42, Q55 et Q65 (le corps de soi et les murs), le point de braise et l'Usine, l'écran de fin et l'allumage, les lumières (L1, L1bis, L2, L3). Suite complète verte sur le candidat. **La publication suit `docs/MISE_A_JOUR.md`** (« Publier une version complète ») : `main` d'abord, en avance rapide depuis `2501cb9` (la 0.7.1), puis le tag annoté `v0.8.0` sur le même hash — gestes posés par une session du Mac sur le mot d'Adrien, dit dans sa fenêtre (le texte à lui donner est dans la conversation de la session cloud du 29/09 vers 19:15) ; la CI refait le contrôle de version, passe les suites, exporte, signe et publie ; la session cloud vérifie ensuite la signature du manifeste. **Pas une condition** : la cadence sur le Mac — la portée des torches coûte ×1,5 à ×1,85 par image sous Mesa, une prise 0.7.1 contre 0.8.0 sur l'écran interne reste conseillée, avant ou juste après. *(Condition changée le 2026-09-30 à 15:36 par Adrien : la 0.8.0 ne part pas avant d'être allégée — voir plus haut.)* |
 | **Q65 = la rétrodiffusion de l'adversaire ne traverse plus les murs jusqu'au corps de soi** (2026-09-29, vers 19:00, Adrien : « Q65 : oui, ferme-la dans la 0.8.0 » ; posé par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/v080-q65`) | **La fuite** — celle que Q55 avait mesurée et laissée (le piège du 2026-09-29) : la rétrodiffusion de l'adversaire éclairait le capteur de soi À TRAVERS un mur, 0,667 à 70 px derrière un mur, pour J1 comme pour J2, là où le capteur du même corps vu par l'adversaire lit 0,000. Le masque d'ombre de la rétrodiffusion (`1 \| 2 \| 16 \| 32`) ne croisait le masque d'aucun capteur de soi, qui n'en recevait donc aucune ombre. **Retenu : un bit RÉCEPTEUR par joueur**, `CanauxLumiere.recepteur_retro(id)` (128 pour J1, 256 pour J2), porté par le capteur de soi de `id` (`masque_de_soi` = `JOUEUR_LOCAL \| couche_ombre_corps(id) \| recepteur_retro(id)`) et mis dans le masque d'ombre de la rétrodiffusion de l'ADVERSAIRE seulement (`player.gd`, une ligne). Deux bits neufs plutôt que la couche d'ombre du corps adverse, la voie de Q55 pour la torche : celle de J2 est le 4, qui est aussi `JOUEUR_LOCAL` — le bit que porte SON capteur de soi —, donc la rétrodiffusion de J2 aurait ombré son propre corps par son propre torse sur son propre capteur : la lumière propre qui baisse, et une asymétrie de plus. Un bit par joueur, dans le masque de l'adversaire seul, ne croise jamais le capteur de son propre corps. Aucun occluder ne porte ces bits et aucune lumière ne les a dans sa portée (`test_ombre_propre` le garde, dans l'arbre d'une manche comme dans les sources) : rien ne s'éclaire de plus, et rien ne s'ombre de plus que ce capteur-là. Le leurre vu par son poseur porte le même masque. **Écartée** : ne compter que les murs pour le capteur de soi, en retirant les disques de torse de sa vue par l'artifice de Q42 (une canvas de plus par corps) — pour garder 0,93 à 45 px ; à reprendre si Adrien préfère. **Mesuré** (`tools/planche_q42.gd`, Xvfb + llvmpipe ; avant = `c5c227cf`) : la rétrodiffusion adverse seule, un mur, à 70 px : le capteur de soi lisait 0,667 chez J1 et chez J2, il lit 0,000 chez les deux, comme le capteur croisé ; en vue unique de J1 puis de J2, pareil. **La lumière propre ne bouge pas** : la rétrodiffusion de la cible seule (l'adversaire hors de sa portée, à 200 px) lit 0,914 avant comme après ; les deux torches allumées derrière un mur, 0,914 ; sans mur, 1,000. **Le seul effet visible hors mur, dit** : à moins de 128 px (la portée de la rétrodiffusion), le capteur de soi reçoit maintenant les ombres de la rétrodiffusion d'en face comme le capteur croisé — les disques de torse comptent avec les murs : rétrodiffusion seule 0,787-0,801 → 0,498-0,506 à 45 px, 0,667 → 0,427 à 70 px (égal au capteur croisé, J1 = J2) ; toutes lumières allumées à 45 px, 0,93-0,94 → 0,76-0,77. Au-delà de 128 px, rien. **Rien d'autre ne bouge** : la torche (0,4646 sans mur, 0,000 avec un mur), la torche seule et le halo seul à 45 px, le capteur croisé (identique au pixel dans les quatre images du banc), les lightmaps des deux vues (≤ 1/255 sur ≤ 0,07 % des pixels — le bruit de deux passes du même arbre), la vue de dessus (17 images, même bruit). **La garde** : `test_ombre_propre` passe de 124 à 154 vérifications et rougit si le capteur de soi de J1 OU de J2 laisse passer la rétrodiffusion d'un mur — écran scindé, vue unique de J1 puis de J2, leurre vu par son poseur — ; quatre sabotages la font rougir : le capteur de soi sans son bit (12 vérifications rouges), la rétrodiffusion sans le bit de l'adversaire (14), avec celui de son propre joueur (20), une portée qui porte un bit récepteur (2). **Non mesuré** : le rendu sous Metal (Mac), une partie en ligne réelle. Part dans la 0.8.0 ; `Protocol.VERSION` ne bouge pas (rendu local, rien ne transite). |
-| **Le zoom dépend de l'écran : ×1,25 en écran scindé, ×1,5 en vue unique (Q15 revue)** (2026-09-29, vers 15:50, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », après l'essai de Q15 : « En fait faisons zoom 1,25 en écran scindé et 1,5 en écran seul ») | L'écran scindé ne donne à chaque joueur qu'une demi-largeur (957 px) : ×1,25 lui rend de la carte ; la vue unique (en ligne, entraînement) garde le ×1,5 d'ISO11. Deux constantes (`ZOOM_ECRAN_SCINDE`, `ZOOM_VUE_UNIQUE`) et `accorder_au_mode(en_ligne, ecran_scinde)`, que `GameState` appelle à chaque départ selon le mode ; `ZOOM_DUEL_DEFAUT` vaut désormais la vue unique (au démarrage, avant tout match, et dans les bancs qui n'ont pas d'écran). **L'équité ne bouge pas** : dans un même match les deux joueurs ont toujours le même écran, donc le même zoom ; en ligne les deux machines sont en vue unique et la constante s'y impose, quoi que dise l'appel. Un zoom réglé au débogage, ou `--zoom=`, l'emporte hors ligne comme avant. Gardes : `test_iso_camera` — la règle pure, `accorder_au_mode` par écran, et les VRAIES caméras du duel, à l'entraînement (×1,5) puis dans un match en écran scindé (×1,25 sur les deux) ; trois contrôles rougissent si l'écran est ignoré. Conséquence pour les lumières (L1, plancher de portée dérivé du cadrage, une portée pour tous les modes) : le coin de la vue unique à ×1,5 (728 px) redevient le plus exigeant des deux (écran scindé à ×1,25 : 656 px). |
+| **Le zoom dépend de l'écran : ×1,25 en écran scindé, ×1,5 en vue unique (Q15 revue)** (2026-09-29, vers 15:50, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », après l'essai de Q15 : « En fait faisons zoom 1,25 en écran scindé et 1,5 en écran seul ») | L'écran scindé ne donne à chaque joueur qu'une demi-largeur (957 px) : ×1,25 lui rend de la carte ; la vue unique (en ligne, entraînement) garde le ×1,5 d'ISO11. Deux constantes (`ZOOM_ECRAN_SCINDE`, `ZOOM_VUE_UNIQUE`) et `accorder_au_mode(en_ligne, ecran_scinde)`, que `GameState` appelle à chaque départ selon le mode ; `ZOOM_DUEL_DEFAUT` vaut désormais la vue unique (au démarrage, avant tout match, et dans les bancs qui n'ont pas d'écran). **L'équité ne bouge pas** : dans un même match les deux joueurs ont toujours le même écran, donc le même zoom ; en ligne les deux machines sont en vue unique et la constante s'y impose, quoi que dise l'appel. Un zoom réglé au débogage, ou `--zoom=`, l'emporte hors ligne comme avant. Gardes : `test_iso_camera` — la règle pure, `accorder_au_mode` par écran, et les VRAIES caméras du duel, à l'entraînement (×1,5) puis dans un match en écran scindé (×1,25 sur les deux) ; trois contrôles rougissent si l'écran est ignoré. Conséquence pour les lumières (L1, plancher de portée dérivé du cadrage, une portée pour tous les modes) : le coin de la vue unique à ×1,5 (728 px) redevient le plus exigeant des deux (écran scindé à ×1,25 : 656 px). *(Remplacée par Q76, 2026-09-30 : la portée va au bord le plus proche de la vue unique, 468 px, pour tous les modes.)* |
 | **Le point de braise de la fusée reste rouge et ne se perd plus : son éclat a un plancher, 3,5 fois l'énergie de la lumière** (2026-09-29, Adrien : « Le point rouge : oui, dans la 0.8.0 », à la question « Le point rouge de la fusée, quand elle retombe en braise, est 3,6 fois moins lumineux que l'ancien point orange, et le repère se perd. Le rendre aussi lumineux que sa lumière, en gardant le rouge ? » ; posé par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/v080-braise-usine`) | **La cause.** Depuis Q34 = C le point est du rouge de détresse posé en MÉLANGE — il couvre le sol au lieu de s'y ajouter — à l'éclat du cœur 2D (`énergie / 0,8 × opacité du cœur`), qui tombe avec l'énergie : au résidu (16 s, énergie 0,2) le point valait un sixième de son rouge, (41, 8, 9) à l'image, luminance Y = 15,1 (Rec. 709 sur les valeurs affichées), contre (56, 34, 10), Y = 36,9 pour l'ancien point orange, qui s'ADDITIONNAIT au sol : 2,4 fois moins à 16 s, 4,4 fois à 18 s — le « 3,6 » d'Adrien est dans cette fourchette, il dépend de l'âge et du sol ; à 19 s le point n'était plus mesurable. **La règle** (`IsoVolumes.eclat_coeur_fusee`, `PLANCHER_ECLAT_PAR_ENERGIE = 3,5`) : à chaque âge, le point vaut au moins **sa lumière PLUS ce que l'ancien point y ajoutait** — `luma(lumière) × (min(énergie, 1) + min(éclat d'avant, 1))` —, dans la limite de ce que le rouge peut porter (éclat ≤ 1). Pourquoi la somme et non « sa lumière » seule : un sol n'est jamais plus clair que la lumière qui le frappe, et l'ancien point s'y ajoutait ; un point qui COUVRE le sol et vaut lumière + ancienne contribution n'est plus sombre que l'ancien sur aucun sol, alors qu'un point égal à la lumière seule se serait confondu avec un sol pleinement éclairé — le repère perdu. Au résidu (l'ambre : luma 0,715 ; le rouge : 0,438) la somme vaut 1,633 × (1 + 1/1,2) = 2,994 fois l'énergie en éclat du point ; 3,5 laisse 17 % de marge (une garde exige plus de 2,994 × 1,1). L'éclat devient `max(ancien éclat, min(1, 3,5 × énergie))`, et le plancher tombe avec la lumière éteinte (`énergie` vaut 0) : le point ne reste pas allumé sans elle. **Mesuré** (`tools/planche_braise.gd`, 1920×1080, 45° B, fusée posée, torches éteintes, point lu à l'image par différence avec / sans point ; `docs/iso/braise/mesurer.py` refait les planches et le tableau) — Y du point, avant → après (l'ancien orange), plein feu de 4 s, celui de 2 s donnant les mêmes valeurs dès 12 s : creux d'agonie 12,25 s : 9,6 → 58,0 (26,2) ; 15,5 s : 17,8 → 88,1 (44,1) ; 16 s : 15,1 → 78,0 (36,9) ; 17 s : 9,4 → 58,0 (24,7) ; 18 s : 3,6 → 37,6 (15,8) ; 19 s : invisible → 15,4 (7,3). **Toujours rouge** : teinte 356° à 357°, saturation 0,69 à 0,81, à chaque âge ; J1 et J2 donnent la même couleur à 1/255 près en écran scindé (45° B), et la vue unique (la fenêtre, sans `SubViewport`) la même que la sous-vue à 1/255 près. **Ce qui ne bouge pas** : à partir de 1,2 d'énergie — tout le plein feu et tout le braise — l'éclat est celui d'avant : le plein feu reste presque blanc, (255, 237, 237), Y = 240,8 ; le braise reste (245, 75, 85), Y = 111,9 ; la lumière de la fusée n'est pas touchée (le point n'éclaire rien) ; ni la forme, ni la taille, ni le rouge. Le rouge long (Q35, 4 s, le défaut) et le plein feu de 2 s (`--sans-fusee-rouge-long`) suivent la même règle. **Un effet à connaître** : à l'agonie, le point ne tombe plus au presque-noir dans les creux du strobe (58 au lieu de 9,6 à 12,25 s) : il pulse entre 58 et 112 au lieu de clignoter jusqu'à s'éteindre ; la lumière de la fusée, elle, clignote toujours à pleine amplitude. **Sous une torche** (`planche_braise --torches --distance=170`, le joueur près de la fusée, le sol saturé à 255 par sa torche, mesuré à 17 s) : l'ancien point additif DISPARAISSAIT (255 + x = 255) ; le point d'aujourd'hui reste un disque rouge sombre, (130, 38, 44), Y = 58 — plus sombre que le sol, mais visible : le mélange couvre. (La prise de 16 s est tombée sur une impulsion du voile d'éblouissement, 0,40 : écartée.) **La limite, dite en face** : au braise le point (Y 111,9) reste SOUS sa lumière (135 à 182) et sous l'ancien orange (214 à 254) : aucun rouge de teinte 350° à 15° et de saturation d'au moins 0,6 ne dépasse Y = 162 (le plus clair, (255, 140, 102), est un saumon), et la lumière du braise, l'ambre × 1,2, vaut 182 — « en gardant le rouge » l'emporte, et le point y est à son maximum. Un braise plus clair suppose un rouge plus pâle : à Adrien de le trancher, ce n'est pas fait. Si le point du résidu lui paraît trop présent, la constante se réduit (plancher minimal 2,994 : au-dessous, le point redevient plus sombre que l'ancien sur un sol éclairé). **Preuves** : `tools/test_point_braise.gd` (la règle à chaque pas de 1/60 s, plein feu de 2 et de 4 s, quatre graines, l'agonie à pleine et à nulle intensité ; rouge à tout éclat ; jamais plus sombre qu'avant ; inchangé à partir de 1,2 ; lumière éteinte, plancher éteint ; les témoins qui rougissent sans le plancher) et `tools/test_iso_gadgets.gd` (le vrai halo : relevés par acte, sur la couleur réelle du matériau ; rouge sans le plancher, vérifié). **Pas prouvé** : le rendu sur le Mac (Metal) — tout est mesuré sous Xvfb + llvmpipe, `gl_compatibility` ; le coût d'image (aucun appel de dessin de plus : la constante ne change que l'intensité d'un halo qui existait) ; les valeurs absolues de la demande — (82, 55, 26) et (39, 10, 12) au résidu, lues par la session « fusée-point » sur un sol de luminance 30 — ne se retrouvent pas ici ((56, 34, 10) et (41, 8, 9) à 16 s, sur un sol de luminance 4) : le sol n'est pas le même, et l'ancien point orange, additif, ajoutait sa luminance à celle du sol là où le point rouge la couvre ; la règle (lumière + ancienne contribution) vaut pour tout sol que la fusée seule éclaire. Aucune donnée de jeu, aucun message : `Protocol.VERSION` inchangé. |
 | **L'Usine devient exactement symétrique : ses deux blocs centraux passent à 4 cases de large, x de 14 à 17** (2026-09-29, Adrien : « Oui corrige l'usine » ; posé par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/v080-braise-usine`) | **Le défaut**, vu par ISO14 et « signalé, pas corrigé » (dessin de carte, hors périmètre) : la carte fait 32 × 26, son axe de symétrie tombe ENTRE les colonnes 15 et 16, et le miroir gauche-droite — celui qui échange les apparitions (5, 13) et (26, 13) — envoie x sur 31 − x. Les deux blocs centraux de 3 cases (x de 15 à 17, rangées 9-10 et 15-16) avaient pour image x de 14 à 16, jamais eux-mêmes : **quatre murs, (17, 9), (17, 10), (17, 15) et (17, 16), sans image**, et quatre cases de sol, (14, ·), dont l'image était un mur. Inégale dès la 2D, avant tout lacet : à 0°, les moitiés cachaient 9,68 % et 10,71 % du sol (écart 1,03, le critère (a) veut 1 au plus). **La correction, choix A — l'union** : les quatre sols (14, 9), (14, 10), (14, 15), (14, 16) deviennent des murs ; les blocs font 4 cases, x de 14 à 17 ; 376 murs (372 avant), 456 sols (460). Rien n'est retiré au dessin : la géométrie d'avant est incluse dans celle d'après. Identité inchangée : fichier `map_002_l_usine.json` (le slug, réservé), id `map_002`, nom « L Usine », auteur, date, apparitions (5, 13) et (26, 13), grille 32 × 26, tuile 35. Écrite au format COURANT (v4, `low_walls` vide) : c'est aujourd'hui la seule carte livrée en v4, les cinq autres sont en v3 et se migrent à la lecture — sans effet en jeu : le code de partage se construit sur la carte validée. **L'autre choix, B**, retirer les quatre murs (17, ·) pour des blocs de 2 cases (x de 15 à 16) : aussi symétrique et aussi équitable, mesuré au même banc (368 murs ; moitiés cachées 9,68 / 9,68 % à 0° et 14,67 / 14,67 à 45° B ; apparitions 12,56 / 12,86 comme A), un centre plus ouvert (13,0 % du sol caché à 45° contre 13,8) ; non retenu parce qu'il ôte à la carte ce qu'elle avait. Un bloc de largeur impaire ne se centre pas sur l'axe d'une carte de largeur paire : 2 ou 4, pas 3. **Le banc d'équité d'ISO14** (`tools/banc_equite.gd` ; `docs/iso/iso14/reference_prototype.json` refait, l'Usine seule change, les cinq autres cartes à l'identique ; « MÊME CALCUL » entre le prototype et le moteur sur les six) : à 0°, moitiés cachées 9,68 / 10,71 % → **10,71 / 10,71** ; à 45° B, 14,67 / 15,53 (écart 0,86) → **15,53 / 15,53** ; abri caché 1,04 / 1,47 → 1,47 / 1,47 ; apparitions 12,56 / 12,86 avant comme après (cet écart-là vient de la caméra B, pas de la carte : C donne 12,86 / 12,86). Verdicts à 45° inchangés : B équitable sur les six cartes, A sur aucune, C sur cinq (pas La Croisée). **Preuves** : `tools/test_usine_symetrie.gd` (29 vérifications : murs et sol symétriques par le miroir gauche-droite et par le haut-bas, apparitions échangées, identité, blocs de 4, code de partage aller-retour — et le FICHIER D'AVANT embarqué comme témoin : la garde y rougit sur exactement les quatre murs et les quatre sols) ; `tools/test_pochoirs.gd` : l'exception de l'Usine est retirée, la symétrie exacte est exigée de toutes les cartes livrées ; les copies de la carte sont à jour — `docs/iso/proto_iso.html`, qui l'embarque, et les documents qui citent son nombre de murs (`docs/iso/README_PROTO.md`, `docs/ETUDE_ISO.md`) ; l'étude `docs/iso/iso14/plan_lacet_45.md`, où ISO14 l'avait signalée, porte un renvoi daté. Les vignettes se dessinent à l'exécution (`map_thumbnail.gd`) : rien à refaire. **Les captures d'étude d'avant** (`docs/iso/captures*`) montrent l'ancienne Usine : elles datent, on ne les refait pas. **En ligne — aucun effet sur la compatibilité, `Protocol.VERSION` inchangé** : l'hôte envoie SA carte PAR SON CONTENU (`_host_map_code()` : le code de partage, joint à chaque `rpc_start_round`), le client l'adopte (`MapData.adopt_shared_map`) et REFUSE la manche s'il ne peut pas la lire — jamais par identifiant ; les deux joueurs jouent donc toujours la géométrie de l'hôte, quelle que soit la build de chacun. Le témoin de version du fil ne lit que `MapCodec.VERSION` (inchangée : 4). Seul effet : un hôte encore en 0.7.x sert l'ancienne Usine, asymétrique ; la nouvelle part avec la 0.8.0, rien n'exige de la servir plus tôt. |
 | **Q55 = les murs assombrissent le corps de soi pour les DEUX joueurs** (2026-09-29, vers 15:15, Adrien : « Q55 on suit ton avis » ; l'avis posé : « Que les murs l'assombrissent pour les deux, comme J1 aujourd'hui : la lumière ne traverse pas les murs, personne n'apprend rien à travers eux. Dans la 0.8.0. » ; posé par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », branche `claude/v080-q55`) | **Le défaut** — le piège du 2026-09-29, constaté au banc de Q42, maintenant résolu : le capteur d'un corps dans SA propre vue (`JOUEUR_LOCAL`, 4) ne recevait les ombres de la torche d'en face que chez J1. Le bit 4 est aussi la couche d'ombre du corps de J1, donc dans le masque d'ombre de la torche de J2 (`1 \| 2 \| 4`) ; celui de la torche de J1 (`1 \| 2 \| 8`) ne croisait rien chez J2, dont le capteur de soi ne recevait AUCUNE ombre, murs compris. Un mur entre la torche adverse et le corps l'assombrissait chez J1 (0,000) et pas chez J2 (0,494), en écran scindé comme en vue unique. **Retenu, la voie la plus étroite** : `CanauxLumiere.masque_de_soi(id)` = `JOUEUR_LOCAL \| couche_ombre_corps(id)`. Le capteur de soi porte aussi la couche d'ombre de SON corps, donc reçoit les ombres de tout ce qui ombre ce corps — la torche d'en face en tête —, comme le capteur du même corps vu par l'adversaire. Chez J1 le masque ne change pas (4 \| 4) ; chez J2 il gagne le bit 8 (12). Le leurre vu par son poseur est un corps de soi et suit la même règle (`MiroirsIso`). **Aucune couche renommée, aucune lumière touchée** : aucune n'a le bit 8 dans sa portée, donc rien n'éclaire de plus, et `test_ombre_propre` le garde (dans l'arbre d'une manche comme dans les sources). Le sprite de soi, lui, reste sur `JOUEUR_LOCAL` : la vue de dessus ne bouge pas. **Écartées** : mettre le 4 dans le masque d'ombre de la torche de J1 (son étoile, sur la couche 4, ombrerait la torche de J1 elle-même dans les lightmaps), et faire de `JOUEUR_LOCAL` un canal par joueur (toutes les portées et tout le 2D à toucher, pour un défaut qui ne vit que dans le capteur). **Mesuré** (`tools/planche_q42.gd`, Xvfb + llvmpipe, torche du Parasite à 154 px ; avant = `24abbfca`) : avec un mur entre la torche adverse et la cible, 40 prises (dix classes × deux orientations × deux sens), le capteur de soi lisait 0,000 chez J1 et 0,494 chez J2 ; il lit 0,000 chez les deux. En vue unique, celle de J1 puis celle de J2 : J2 passe de 0,494 à 0,000, J1 reste à 0,000. Sans mur, 60 prises (dix classes × trois orientations × deux sens) : rien ne bouge — 0,494 (maximum 0,647) avant comme après, et exactement ce que lit le capteur du même corps vu par l'adversaire (écart 0,000000), J1 et J2 en miroir. Les deux torches allumées (`--mutuel`) : la lumière PROPRE (la torche allumée et sa rétrodiffusion) éclaire le capteur de soi à elle seule (0,914 derrière un mur), la torche adverse s'y ajoute jusqu'à saturer (1,000, sans mur) — le mur ne retire donc que la part adverse ; avant Q55 il ne la retirait que chez J1 (0,914 contre 1,000 chez J2), après chez les deux (0,914 partout). **Rien d'autre ne bouge, et c'est prouvé** : les vues croisées (0,000 derrière le mur, 0,494 sans, avant comme après) ; huit lightmaps, avec et sans mur, identiques à 1/255 près sur 535 pixels au plus d'un million ; la vue de dessus (`--2d`, 17 images) identique au pixel ou à 1/255 près sur 0,012 % des pixels ; Q42 (`test_ombre_propre` reste vert, l'étoile propre reste ignorée), le leurre compris. **Les lumières qui n'éclairent que le sprite de soi restent ce qu'elles sont** (mesuré à 45 px, avant = après au dernier chiffre, pour J1 comme pour J2) : le halo n'éclaire QUE le capteur croisé (soi 0,000, croisé 0,479 — « ma lueur ne me trahit pas ») ; la rétrodiffusion éclaire les deux, mais le capteur de soi la reçoit sans les ombres (0,79 contre 0,50), parce que son masque ne croise pas le masque d'ombre de la rétrodiffusion (`1 \| 2 \| 16 \| 32`) — donc à travers un mur aussi : 0,667 à 70 px derrière un mur, pour J1 comme pour J2, avant comme après, là où le capteur croisé lit 0,000 (**signalé, non corrigé** : voir le piège du 2026-09-29) ; les lumières d'impact et d'étincelles (`1 \| 4`) n'éclairent que le sprite de soi et le décor (lu au code). **La garde** : `test_ombre_propre` passe de 89 à 124 vérifications et rougit si le capteur de soi de J1 OU de J2 ignore les murs — écran scindé, vue unique de J1 puis de J2, leurre vu par son poseur — ; avec l'ancien masque (`JOUEUR_LOCAL` seul), huit vérifications passent au rouge, toutes chez J2, et le calcul retrouve le mur ignoré. **Non mesuré** : le rendu sous Metal (Mac), une partie en ligne réelle (le chemin est le même, le pixel n'a été relevé qu'en écran scindé et en vue unique locale). Part dans la 0.8.0 ; `Protocol.VERSION` ne bouge pas (rendu local, rien ne transite). **Complétée le jour même par Q65** (ligne au-dessus) : le masque de soi porte aussi `recepteur_retro(id)`, pour les ombres de la rétrodiffusion d'en face ; le bit 8 n'est plus seul à garder hors des portées. |
@@ -3241,6 +3250,118 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Le pochoir se tient par ÉCHANTILLON (anticrénelage ×4 des vues iso), le verdict du juge par FRAGMENT : un pixel d'arête peut n'être tu qu'à moitié (2026-09-30)
+
+Q75. Le juge taillé du rayon s'écartait du juge en disque d'UN pixel, de 15/255, en écran scindé. Ni sa couverture (dilaté
+de 30 px de plus, il ne change aucun pixel), ni le noir (le pixel montre (45, 35, 19)) n'y étaient pour rien. Les vues iso
+sont anticrénelées ×4 (`Presentation3D.ANTICRENELAGE_3D`) : la profondeur et le pochoir s'y tiennent par échantillon, mais le
+shader du juge ne tourne qu'une fois par fragment — UN verdict pour tous les échantillons qu'un triangle couvre. Sur un pixel
+à cheval sur une arête (le coin d'un pilier contre son ombre au sol), sur un sol à peine plus clair que le point noir (22/255
+au plus fort de ses canaux, pour 16), deux maillages du juge peuvent rendre deux verdicts : le disque y écrivait « noir » sur
+une partie des échantillons, et le rayon n'y ajoutait que +12 au lieu de +26 — la somme d'aucune de ses couches (+9, +10,
++8), la signature d'un pixel tu à moitié. **Un écart d'un pixel entre deux juges ne se juge pas à sa valeur** : on le refait
+sans juge (ce que le rayon ajoute seul), avec un juge plus large (la couverture), et couche par couche (une valeur qui n'est
+la somme d'aucune couche est un pixel partagé entre échantillons) — le plan `loupe-faisceau-q75`, bloc `pixel`.
+
+### Une garde sous `--script` qui NOMME la classe `Fusee` casse la fusée du jeu pour tout le processus (2026-09-30)
+
+Q72. `fusee.gd` nomme des autoloads (`NetworkManager`, `AudioManager`, `GameSettings`). Une garde lancée par
+`godot --headless --script` qui écrit `Fusee.new()` ou `var f: Fusee` fait compiler la classe AVANT que les autoloads
+existent : « Identifier not found: NetworkManager », puis, pour tout le reste du processus, la fusée du JEU est cassée —
+« Nonexistent function 'prechauffer' in base 'GDScript' » au démarrage de la manche, et la garde attend son délai sans rien
+dire d'autre. (`test_fusee.gd` le disait pour lui-même : il ne teste que `fusee_modele.gd`.) **Une garde qui manipule une
+vraie fusée la charge à l'exécution** (`load("res://fusee.gd")`, après la première image), lit ses constantes dans sa table
+(`get_script_constant_map()`) et l'appelle par `call`/`get` — jamais par son nom de classe (`tools/test_fusee_killcam.gd`).
+Et elle relit la killcam AUSSITÔT l'appel : hors d'un rejeu, `GameState._process` purge les fusées de killcam à l'image
+suivante (la fin d'un rejeu), et une garde qui attend une image lit un dictionnaire vide.
+
+### Le juge du rayon tait la fumée sur tout son disque : le pochoir « noir » est partagé, et les marges ne le sont pas (2026-09-30, signalé ; corrigé par Q75 le même soir)
+
+Allègement de la 0.8.0. Le pochoir des volumes (`MASQUE_POCHOIR`) est UN : chaque juge y écrit 1 là où « ce que le pixel
+montre est noir », et toute couche de volume se tait là où il vaut 1 — le rayon comme la fumée. Le commentaire du juge dit
+« un pixel jugé en trop ne coûte que le jugement, jamais une erreur — “ce que le pixel montre est noir” ne dépend pas de
+la couche ». C'est faux dès que deux juges n'ont pas la même marge : celui du rayon juge « noir » sous 16/255
+(`FAISCEAU_LUMINEUX_JUGE`), celui de la fumée sous 8/255. Sur tout le disque du juge du rayon — 728 px de rayon depuis L1,
+autour de chaque torche allumée —, les volutes d'une fusée posées sur un sol entre 8 et 16/255 se taisent, hors du cône
+compris : la fumée d'une fusée change selon qu'une torche est allumée à moins de 728 px d'elle, sans que le rayon y soit.
+Mesuré à l'image (`loupe-faisceau-taille`, bloc « fusee », option du juge taillé) : 1 235 pixels, jusqu'à 25/255, dont 1
+196 reviennent exactement à l'image sans rayon quand le juge ne couvre plus que le cône. **L'allègement ne l'a pas
+corrigé** (il ne change pas l'image) : le juge du rayon garde son disque, et le juge taillé est une option pour Adrien.
+**Qui pose un juge ou une marge doit se demander qui d'autre lit le pochoir.** **Corrigé par Q75 (A, puis D)** : le juge
+du rayon, taillé à son cône par défaut et arrêté à la longueur du rayon, ne tait plus la fumée que là où le rayon peut
+lui-même dessiner — dans le bloc de la fusée de `loupe-faisceau-q75`, 1 322 pixels (jusqu'à 26/255) reviennent exactement
+à l'image sans rayon. La marge, elle, reste celle du rayon : là où il dessine, la fumée entre 8 et 16/255 se tait encore
+avec lui.
+
+### Une scène « tenue » par le photographe bouge encore : le voile d'éblouissement respire en pause, le chronomètre tourne, les corps respirent (2026-09-30)
+
+Allègement de la 0.8.0, preuve à l'image. Positions, visées, lampes et éblouissements tenus trente pas de suite, grain du
+rayon et bandeau LED figés : les trois prises « A » d'un même bloc différaient pourtant sur **70 à 90 % des pixels**.
+La cause de la dérive que `loupe-fusee-bord-noir` notait « sans cause établie » (2026-09-24) : le **voile d'éblouissement**
+anime son propre temps (`_voile_temps`, incrémenté par `ui._process`, et l'interface est en `PROCESS_MODE_ALWAYS` : il
+tourne même jeu en pause), et la rétrodiffusion de sa propre torche le tient à 0,06 — tout l'écran soulevé de 2 à 4/255,
+qui glisse d'une prise à l'autre. S'y ajoutent le chronomètre du HUD et la respiration des corps. **Pour comparer deux
+images au pixel** : l'arbre en pause, l'interface ARRÊTÉE (`PROCESS_MODE_DISABLED` : le voile garde ses derniers
+paramètres), et seulement ce qu'on compare suivi à la main (`tools/loupe_faisceau_taille.gd`, `_tenir_en_pause`) — laisser
+tourner toute la présentation iso laissait respirer les corps. Bruit entre les A : de 70-90 % des pixels à **zéro**.
+
+**Et le banc des lumières, qui ne met pas l'arbre en pause** (Q76, le même soir : les lampes s'y rééquipent sur place,
+`tools/banc_lumieres.gd`, famille `q76`) : trois autres sources, et une façon de s'en passer. Le voile, que le banc remettait
+à zéro à chaque image (`dazzle_amount`), remontait d'une fraction qui dépend de la cadence (1,25 par seconde × la durée de
+l'image) — des milliers de pixels « touchés » entre l'avant et l'après ; les chiffres du chronomètre passaient pour la lumière
+la plus haute de l'écran (ligne 54) ; et la **poussière du faisceau** (V5.5 : un grain semé au hasard à 40-240 px de la
+lampe, qui dérive) posait un point de 2 × 2 pixels ici ou là. Quand ce qu'on compare n'est ni le voile, ni le HUD, ni la
+poussière : **l'écran nu** (`_q76_montrer`) — ces trois calques cachés, l'éblouissement laissé à son régime (0,060, que les
+mesures impriment avant et après). Restent les corps, dont la silhouette bouge d'un pixel : ils tombent au bord de la
+lumière d'avant, que le jugement compte à part.
+
+### Un éventail d'un triangle par degré n'allège rien : près de son centre, chaque bloc de pixels passe dans le shader une fois par triangle (2026-09-30)
+
+Allègement de la 0.8.0. Les couches du rayon et leur juge, taillés à leur cône en un éventail d'UN triangle par degré (360
+triangles qui se touchent tous à la lampe : le halo de l'émetteur tient l'enveloppe non nulle tout autour), rendaient **la
+même cadence que les carrés d'avant** sous llvmpipe (508,9 contre 508,5 à 523,4 ms), pour 6,7 fois moins de surface. Un
+rastériseur ombre par blocs (2 × 2 pixels au moins, les dérivées l'exigent ; 4 × 4 sous llvmpipe) : un bloc que plusieurs
+triangles recouvrent passe dans le shader une fois PAR triangle, pixels « d'aide » compris ; à r pixels de la lampe, un
+secteur de 1° fait r/57 px de large, et un bloc de 4 px y chevauche ~1 + 229/r triangles. **En plages de dix degrés au
+plus** (49 à 53 triangles, même enveloppe, corde écartée de l'arc de 0,4 % au plus) : 424 ms, −17 % par image (couches et
+juge taillés ; les couches seules, le défaut : −8 %). Un maillage qui
+découpe une forme se mesure, il ne se déduit pas de son aire ; `test_allegement_faisceau` borne le nombre de triangles (60).
+
+### Sous llvmpipe, le banc de cadence lit 133,3 ms quelle que soit la charge : Godot retire du temps d'image les pas de physique qu'il saute (2026-09-30)
+
+Allègement de la 0.8.0. La série du Mac (`bench_framerate.tscn -- --fusee --vue-unique --classe=pompe`) rejouée telle quelle
+dans le cloud, sous Xvfb : la 0.7.1 et la 0.8.0 rendaient **toutes deux 133,3 ms de médiane et 338 images en 45 s**, au
+chiffre près — là où le Mac voyait 0,81 à 0,87. Ce n'était pas une égalité : c'était un plafond. Une image llvmpipe dure 300
+à 600 ms ; à 60 pas de physique par seconde, Godot n'en joue que huit par image (`physics/common/max_physics_steps_per_frame`)
+et **retire du delta de l'image le temps des pas qu'il saute**. `get_process_delta_time()` — ce que le banc échantillonne —
+plafonne donc à 8 × 16,7 = 133,3 ms, et les « 45 s » de mesure sont en temps plafonné : la prise en durait 4 à 5 minutes
+réelles. Signatures : un pic de durées à 133,3 ms exactement, le même nombre d'images pour deux versions, des prises qui
+durent trois fois leur annonce. **Dans le cloud, une prise de cadence se prend à `--physique 8`** (le pas dure 125 ms, le
+plafond passe à une seconde, chaque image n'en joue que deux ou trois) : 0.7.1 366,0 ms, 0.8.0 548,9 ms (0,667). C'est le
+défaut de `tools/cadence_cloud/prise.sh`. **Et la moyenne fait foi** : `physics_jitter_fix` recale le temps rapporté sur des
+multiples du pas (125 ms) — les médianes s'accrochent à 500,0 et 510,4 ms, la somme des temps reste le temps réel.
+Sur le Mac (16 à 20 ms par image, un pas), rien de tout cela.
+
+### Le `--vue-unique` du banc de cadence mesure le zoom de l'ÉCRAN SCINDÉ depuis Q15 revue (2026-09-30, signalé, non corrigé)
+
+Le banc démarre une manche « 1v1 écrans scindés » (`LOCAL_SPLITSCREEN`) puis cache la seconde vue ; or depuis Q15 revue
+(2026-09-29), `GameState` accorde le zoom au MODE (`accorder_au_mode(false, true)` → ×1,25), avant que le banc ne cache quoi
+que ce soit. La vue unique du banc se joue donc à ×1,25 (la ligne « J1 : zoom ×1.25 » du relevé le dit), un cadrage que le
+jeu ne montre jamais en vue unique (en ligne et à l'entraînement : ×1,5). La 0.7.1 n'avait qu'un zoom (×1,5). **La série du
+Mac du 2026-09-30 comparait donc la 0.7.1 à ×1,5 à la 0.8.0 à ×1,25** ; et le vrai cadrage coûte PLUS (sous llvmpipe,
++9 % : les couches du rayon et la torche couvrent 1,44 fois plus de pixels). Hors périmètre de l'allègement (un outil, pas
+le jeu) : signalé, pas corrigé ; `--zoom=1.5` rend le cadrage de la vue unique.
+
+### Un conteneur partagé : la porte d'une prise doit aussi écarter un AUTRE Godot, et ne pas se prendre elle-même pour lui (2026-09-30)
+
+Allègement de la 0.8.0, protocole du 2026-09-30 : un autre sous-agent lance ses propres prises dans le même conteneur. La
+porte (`tools/cadence_cloud/porte.py`) note désormais tout autre Godot ou Xvfb, même au repos, et `analyse.py` écarte la
+prise qu'il a chevauchée ; `serie.sh` pose le verrou `VERROU_MESURE` pendant la série. Premier essai : la porte se dénonçait
+elle-même — à la fermeture, `xvfb-run` sort avant son Xvfb, qui, rattaché à init, n'est plus un descendant de la prise et
+se notait « autre Godot » à la dernière image. Une fois des nôtres, toujours des nôtres (`connus`). **Et toute analyse
+d'images pendant une série est un processus étranger** : un `preuve.py` de quelques secondes a fait refuser une prise
+(python3 à 99 %), et un `grep -r` d'une autre session à travers tous les worktrees en a fait refuser deux (72 à 76 %).
+
 ### Une preuve par différence d'images se prend l'arbre EN PAUSE : filtrer le scintillement ne suffit pas (2026-09-30)
 
 Gadgets en volume, GV1bis. Pour prouver que l'encre des cubes n'éteint aucun pixel éclairé, le banc compare la même
@@ -3252,9 +3373,11 @@ trois « éteints », dans une seule vue d'une seule scène : un scintillement E
 images) et pas d'une paire à l'autre (quatre). Le troisième prend les cinq images L'ARBRE EN PAUSE : rien ne bouge, seul
 l'uniforme de l'encre change sur les matériaux des cubes. Arbre en pause, tous les pixels sont stables d'une prise à
 l'autre, et plus aucun « éteint » : zéro sur vingt-quatre relevés, contre 26 901 pour le témoin sans plancher (2 à 9 844
-par relevé). Ce qui bouge encore sous l'âge tenu (quelque chose du jeu ou de la présentation, puisque la pause l'arrête)
-n'a pas été cherché : hors du chantier. **Une différence entre deux images ne prouve quelque chose que si rien d'autre
-n'a pu bouger entre elles : on fige la scène, on ne filtre pas son bruit.**
+par relevé). Ce qui bouge sous l'âge tenu, le banc ne l'a pas cherché (hors du chantier) ; le piège de l'allègement
+écrit le même jour, plus haut (« Une scène “tenue” par le photographe bouge encore »), en dresse la liste — le voile
+d'éblouissement, le chronomètre, la respiration des corps, le grain et la poussière du rayon — et arrive à la même
+méthode. **Une différence entre deux images ne prouve quelque chose que si rien d'autre n'a pu bouger entre elles : on
+fige la scène, on ne filtre pas son bruit.**
 
 ### Une planche de 2048 px lue au sommet d'un cube ne donne qu'un texel par case (2026-09-30)
 
@@ -29885,7 +30008,14 @@ la torche porterait à 873 px en écran scindé et à 728 en vue unique, contre 
 `accorder_au_mode` recalcule désormais le zoom local depuis le réglage et l'écran, et écrasait la valeur posée par la garde.
 Même intention (la portée suit le zoom de la vue unique, 873 px à ×1,25 réglé), chemin du jeu.
 
-### L1 — la portée atteint au moins le bord de l'écran
+### L1 — la portée atteint au moins le bord de l'écran *(remplacée par Q76, 2026-09-30)*
+
+> ⚠️ **Remplacée par Q76** (Adrien, 2026-09-30 vers 22:58 : « En fait diminuons la portée des lampe au maximum visible par
+> le joueur en hauteur et largeur (le minimum des deux) ») : la portée ne va plus au COIN de la vue unique (728 px, un
+> plancher) mais au bord le PLUS PROCHE (468 px à ×1,5), et c'est un plancher ET un plafond — les dix classes y portent
+> exactement. Même dérivation du cadrage, même portée pour tous les modes (confirmé par Adrien vers 23:08 : « Ok, même
+> portée en écran scindé »), rien sur le fil. `--portee-coin` (débogage, hors ligne) rend la règle ci-dessous. Voir « Q76 »
+> (Décisions actées, et le chantier de l'allègement). Ce qui suit décrit L1 telle qu'elle était.
 
 - **Un plancher de portée, DÉRIVÉ du cadrage** (`PorteeEcran`, `WeaponData.portee_plancher`, posé par
   `GameSettings.accorder_au_mode`) : la plus petite portée qui atteint, dans toutes les directions, le bord de l'écran de
@@ -29916,7 +30046,8 @@ Même intention (la portée suit le zoom de la vue unique, 873 px à ×1,25 rég
 - **D'où vient le surcoût** (décomposition sous Mesa, même scène) : sans le faisceau visible de Q41, L1 ne coûte que
   ×1,08 en écran scindé et ×1,12 en vue unique. **C'est le faisceau dans l'air qui paie** : ses couches sont posées sur la
   texture de la lampe à son échelle (`IsoVolumes._suivre_faisceau_air`), donc leur surface suit le carré de la portée.
-  La lumière 3D miroir n'y est pour rien : elle est éteinte par défaut en jeu.
+  La lumière 3D miroir n'y est pour rien : elle est éteinte par défaut en jeu. **Allégé le 2026-09-30** (les couches
+  taillées à leur cône, la même image) : « Chantier — l'allègement de la 0.8.0 ».
 
 ### L1bis — des faisceaux plus concentrés (Adrien, 2026-09-29, après la planche de L1)
 
@@ -30001,14 +30132,575 @@ k = ln 6 / ln 12 ≈ 0,721 : les deux bornes exactes, chaque rapport entre deux 
 Adrien : « zoom 1,25 en écran scindé et 1,5 en écran seul ». Le plancher lisait le zoom de l'écran en cours : il aurait
 porté plus loin en écran scindé qu'en ligne. Il se calcule sur `GameSettings.zoom_de_la_vue_unique()` — sur cette base
 égal à `zoom_duel` ; **à la fusion de la 0.8.0, elle doit rendre `ZOOM_VUE_UNIQUE`**, et `test_portee_ecran` rougit si
-l'écran scindé change la portée. 728 px pour tous les modes. **La fusion de la 0.8.0 dans `claude/lumieres-080` n'est pas
-faite** : refusée par les permissions de la session cloud qui tient la branche (rapport).
+l'écran scindé change la portée. 728 px pour tous les modes *(468 depuis Q76 : le bord le plus proche, voir L1)*. **La
+fusion de la 0.8.0 dans `claude/lumieres-080` n'est pas faite** : refusée par les permissions de la session cloud qui tient
+la branche (rapport).
+## Chantier — l'allègement de la 0.8.0 (inscrit le 2026-09-30)
+
+**Tenu par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED »**, branche `claude/v080-allegement`, partie
+du candidat `34666f25`. Décision d'Adrien du 2026-09-30, 15:36 : « Oui allège d'abord avant de publier la 0.8 » — la 0.8.0
+ne part pas avant d'être allégée, et il la jugera en jouant, **sans nouvelle mesure sur son Mac** (13:09 et 13:30). Tout ce
+qui suit se prouve dans le cloud.
+
+### Pourquoi
+
+La série unique du « Mac libre » (Gadgets, ordre 466, 14:25) : MacBook M3, écran interne 60 Hz, vue unique, scène de la
+règle 278 (`bench_framerate.tscn -- --fusee --vue-unique --classe=pompe`). A = la 0.7.1 publiée (`2501cb9a`), médianes 60
+et 65, 1 % bas 50 ; B = le candidat (`34666f25`), médianes 50 et 51, 1 % bas 46-47 — rapport 0,81 à 0,87. Aucun liseré du
+son visible dessiné. La piste était écrite depuis L1 (« c'est le faisceau dans l'air qui paie ») : ses couches étaient
+posées sur la texture de la lampe à son échelle, donc leur surface suivait le CARRÉ de la portée, et la portée va au bord de
+l'écran depuis L1 (728 px au lieu de 192 à 672).
+
+### Mesurer dans le cloud : relatif, jamais le Mac
+
+Xvfb (`-screen 0 1920x1080x24`), rendu logiciel llvmpipe (Mesa 25.2, quatre cœurs), même scène, prises alternées en miroir,
+**sans `--fixed-fps`**, porte stricte (aucun processus étranger au-dessus de 20 % d'un cœur, aucun autre Godot), 45 s de
+mesure après 30 s de chauffe. Outils : `tools/cadence_cloud/` (`prise.sh`, `serie.sh`, `analyse.py`, `verdict.py`,
+`variantes.py`). **Sous llvmpipe, rien de ceci ne dit ce que voit le Mac** : une image y coûte 300 à 600 ms, et le rendu
+logiciel paie chaque fragment ombré bien plus cher qu'un GPU à tuiles — les rapports y sont plus sévères (0,667 ici contre
+0,81 à 0,87 sur le Mac, même scène).
+
+- ⚠️ **La série du Mac rejouée telle quelle ne mesure rien** : 0.7.1 et 0.8.0 y rendent toutes deux 133,3 ms et 338
+  images — un plafond de Godot, pas une égalité (« Pièges connus », 2026-09-30). Toutes les prises sont à `--physique 8`.
+- **La moyenne fait foi, pas la médiane** : sous llvmpipe, `physics_jitter_fix` recale le temps d'image rapporté sur des
+  multiples du pas (125 ms) ; la médiane s'y accroche (500,0, 510,4), la somme des temps reste le temps réel.
+- ⚠️ **Le `--vue-unique` du banc joue au zoom de l'écran scindé** (×1,25, voir « Pièges connus ») : la série du Mac
+  comparait la 0.7.1 à ×1,5 à la 0.8.0 à ×1,25. D'où deux mesures ci-dessous : au cadrage du banc (celui de la série du
+  Mac) et au vrai cadrage de la vue unique (`--zoom=1.5`).
+
+**Reproduction** (série `repro2`, A B B A) : A 363,4 / 368,6 ms, B 549,6 / 548,1 — **rapport 0,667** (B : +183 ms par
+image). Le cloud voit le même sens que le Mac, plus fort.
+
+### La décomposition : ce que coûte chaque nouveauté (série `decomp1`, 16 prises)
+
+Chaque variante est le candidat avec UNE nouveauté retirée (drapeau de débogage, ou retouche figée dans
+`tools/cadence_cloud/variantes.py`). Moyennes, ms par image ; la machine a glissé d'environ 7 % vers 14:30 (B à 545,0 avant,
+508,5 à 523,4 après) : chaque variante se lit contre le B de son moment.
+
+| Nouveauté retirée | Moyenne | B de référence | Écart | Lecture |
+|---|---|---|---|---|
+| le faisceau dans l'air (Q41, `--sans-faisceau-air`) | 376,4 | 545,0 | **−168,6 (−31 %)** | l'un des deux postes |
+| la portée au bord de l'écran (L1, `--sans-portee-ecran`) | 346,2 | 545,0 | **−198,8 (−36 %)** | l'autre, et il nourrit le premier |
+| les deux | 287,8 | 514,5 | −226,7 (−44 %) | sans la portée, le faisceau ne coûte que ~40 à 60 ms |
+| le zoom par écran (×1,5 au lieu de ×1,25) | 596,0 | 545,0 | +51,0 (+9 %) | le vrai cadrage de la vue unique coûte PLUS |
+| les faisceaux concentrés (L1bis : cookies de la 0.7.1) | 559,2 | 514,5 | +44,7 | L1bis ALLÈGE (cônes plus étroits) |
+| le point lumineux (L3) | 516,1 | 514,5 | +1,6 | bruit |
+| le son visible | 518,5 | 514,5 | +4,0 | bruit (aucun liseré dessiné) |
+| la lampe du modèle (L2) | 511,2 | 514,5 | −3,3 | bruit |
+| Q42 (l'étoile de chaque corps dans sa canvas) | 516,0 | 514,5 | +1,5 | bruit |
+| Q55 / Q65 (les masques du corps de soi) | 523,6 | 514,5 | +9,1 | bruit (les B vont de 508,5 à 523,4) |
+
+Le bruit d'une prise est d'environ ±1,5 % : tout ce qui tient sous 10 ms n'est pas séparé. **Deux postes font l'écart :
+la portée au bord de l'écran et le faisceau dans l'air**, et ils se multiplient : le faisceau coûte ~169 ms avec la portée,
+~40 à 60 sans (deux prises de part et d'autre du glissement de la machine) — la surface de ses couches suivait le carré de
+la portée.
+
+### Ce qui a été fait : les couches du rayon taillées à leur cône (`IsoVolumes._tailler_faisceau_air`)
+
+**Le MAILLAGE des couches seulement, jamais une valeur.** Les trois couches du rayon étaient des carrés (le plan de côté 1)
+posés sur la texture de la lampe à son échelle : tout le carré de 2 × 728 px se rastérisait, là où le cookie n'allume
+qu'un cône (60° au plus depuis L1bis) et le halo court de l'émetteur. Elles deviennent des ÉVENTAILS autour de la lampe,
+tournés avec elle, qui couvrent là où le cookie peut rendre une opacité non nulle :
+
+- **l'enveloppe du cookie** (`enveloppe_de_l_image`) : par secteur de 1° autour de la lampe, le rayon jusqu'où le cookie a
+  un texel non nul, par blocs de 8 texels (l'image réduite par moyennes EN FLOTTANTS — en octets, (1 + 0 + 0 + 0 + 2) >> 2
+  = 0 perdrait un texel isolé), chaque bloc élargi d'un texel (le filtre bilinéaire lit un demi-texel au-delà) ; une
+  borne, jamais un manque. Calculée une fois par cookie et par processus, **au décompte** (lampe éteinte), 12 à 33 ms en
+  headless — jamais à l'image où la lampe s'allume ;
+- **l'éventail** (`eventail`) : un triangle par PLAGE de dix secteurs au plus, d'enveloppe voisine à 10 % près, ses deux
+  sommets au plus grand rayon de la plage divisé par cos(demi-plage) — la corde reste au-delà de l'arc ; les sommets de
+  bord sont partagés par indice (aucune jonction en T : aucun pixel dessiné deux fois — le mélange est additif — ni oublié).
+  49 à 53 triangles ; du Terrassier (15,2 % du carré d'avant) au Braconnier (4,3 %). Planche :
+  `docs/iso/allegement_080/planche_eventails.jpg`. ⚠️ **Des plages, pas un triangle par degré** : le premier éventail (360
+  triangles qui se touchent à la lampe) n'allégeait rien — voir « Pièges connus », 2026-09-30.
+
+**Pourquoi l'image est la même.** Un fragment de couche calcule tout depuis sa position dans le MONDE — `monde` (le sommet
+× `MODEL_MATRIX`), le cookie relu par `nuage_centre`, `nuage_rayon` et `nuage_angle` —, jamais depuis le maillage qui le
+porte : chaque fragment gardé calcule ce qu'il calculait, à l'arrondi près de l'interpolation (qui suit les triangles) ; et
+chaque fragment retiré se jetait (opacité nulle hors du cookie, `forme` nulle au-delà du disque).
+
+⚠️ **Jusqu'à Q75 (2026-09-30 20:17), où A est devenu le défaut : voir « Q75 » plus bas.** **Le juge garde son disque** —
+et c'est une décision, pas un oubli. Taillé lui aussi (l'enveloppe dilatée de la parallaxe, 8,4 + 1 px), il NE rendait PAS
+la même image : le pochoir qu'il écrit est lu par tous les volumes, et sa marge « noir » (16/255) est plus large que celle
+de la fumée (8/255) ; sur tout son disque, le juge du rayon taisait donc les volutes d'une fusée posées sur un sol entre 8
+et 16/255, hors du cône compris. Taillé, il ne les tait plus hors du cône : la fumée y redevient celle qu'on voit sans
+rayon (preuve ci-dessous). Ce n'est pas du ressort de l'allègement : **le juge taillé est une OPTION, éteinte**
+(`faisceau_juge_taille`, `--faisceau-juge-taille` en build de débogage), chiffrée ci-dessous pour Adrien.
+
+**Ce qui ne bouge pas** : la portée (une règle de jeu, que l'éblouissement lit), le cookie, la densité, les trois hauteurs,
+le masque pochoir et sa marge, les lightmaps lues ; aucune valeur de simulation ; `Protocol.VERSION` 19 ; `config/version`
+0.8.0 ; aucune `Light3D`. **Localisé** : les fonctions du rayon dans `iso_volumes.gd` (`_suivre_faisceau_air` et une section
+neuve à sa suite), plus deux lignes gardées dans `_poser_juge` (le juge taillé de l'option n'y reprend ni son disque ni son
+échelle). `--faisceau-air-carre` (débogage) rend les carrés d'avant ; `age_faisceau_fige`, un instrument de preuve jamais
+posé en jeu, fige le grain du rayon pour comparer deux prises au pixel.
+
+### La preuve à l'image (`tools/loupe_faisceau_taille.gd`, `tools/faisceau_taille/preuve.py`)
+
+Le plan `loupe-faisceau-taille` du photographe, sous Xvfb, capture 1280 × 720 : dans un même lancement, la scène tenue puis
+le jeu EN PAUSE (l'interface arrêtée, les volumes iso suivis à la main), le rayon basculé sur place — A (carrés) B (taillé)
+A B A, puis J (l'option du juge taillé), puis S (sans rayon). Sept blocs, au Terrassier (le cône le plus large) : son propre
+rayon, le rayon adverse, les deux qui se croisent, l'écran scindé lampe de J1 puis lampe de J2 (chaque rayon vu des deux
+vues, J1 à 45°, J2 à 225°), une fusée posée entre les joueurs, et l'équité (J2 derrière un pilier). Critère écrit d'avance :
+les A identiques entre elles au pixel, chaque B à 1/255 près de ses A voisines, aucun noir qui s'allume.
+
+| Bloc | Le rayon lui-même (A contre S) | B contre A : pixels à 1/255 | au-delà de 1/255 | noirs allumés | J (option) contre A, au-delà de 1/255 |
+|---|---|---|---|---|---|
+| son rayon (vue unique) | 68 706 px, jusqu'à 136/255 | 354 (0,04 %) | 0 | 0 | 0 |
+| le rayon adverse | 51 224 px, 152/255 | 250 (0,03 %) | 0 | 0 | 0 |
+| les deux rayons | 121 841 px, 188/255 | 3 678 (0,40 %) | 0 | 0 | 0 |
+| écran scindé, lampe de J1 | 129 899 px, 134/255 | 2 211 (J1 700, J2 1 511) | 0 | 0 | 1 px (15/255) |
+| écran scindé, lampe de J2 | 93 973 px, 133/255 | 1 299 (J1 460, J2 839) | 0 | 0 | 0 |
+| une fusée entre les joueurs | 104 720 px, 156/255 | 4 554 (0,49 %) | 0 | 0 | **1 235 px, jusqu'à 25/255** |
+| l'équité (J2 derrière un pilier) | 100 848 px, 141/255 | 1 453 (0,16 %) | 0 | 0 | 0 |
+
+Bruit entre les trois A : **0 pixel** dans les sept blocs ; les deux B sont identiques entre elles. **L'image est la même, à
+1/255 près sur 0,03 à 0,49 % des pixels** (l'arrondi de l'interpolation : une même position du monde, interpolée sur un
+autre triangle, tombe à 1/255 près), sous la torche comme dans le noir, vue de J1 et vue de J2 ; aucun pixel noir ne
+s'allume. **L'option J, elle, change la fumée** : 1 235 pixels, tous plus clairs qu'avec les carrés, dont 1 196 valent
+exactement l'image sans rayon — les volutes que le juge du rayon taisait hors de son cône. Planche (A | B | |B−A|×32 | J |
+|J−A|×32) : `docs/iso/allegement_080/planche_avant_apres.jpg` ; chiffres : `mesures.json`, `preuve.txt`.
+
+**La garde** : `tools/test_allegement_faisceau.gd` (100 vérifications à l'allègement, 175 depuis Q75, dans
+`run_suites.sh`) — la règle (couches taillées, juge en disque, drapeaux de débogage) ; pour les dix cookies livrés,
+l'enveloppe recalculée TEXEL PAR TEXEL sans le code du jeu (aucun secteur ne va plus loin que celle du jeu), l'arc de
+l'enveloppe dans l'éventail, la part du carré (≤ 0,25) et le nombre de triangles (≤ 60) ; l'enveloppe dilatée dans
+l'éventail de l'option ; EN JEU (écran scindé, 45° B, J1 puis J2, deux visées) : l'éventail tourné comme la lampe (un
+point de l'axe du cône y tombe, un point derrière la lampe non), le juge en disque, les carrés rendus sur place puis les
+éventails, l'option allumée puis rendue sur place. **Sabotée** (le signe de la rotation inversé, `Vector3(0, angle, 0)`) :
+22 vérifications rouges, J1 comme J2.
+
+### Chiffres avant / après (séries `final1`, 16 prises, et `final2`, 6 prises)
+
+A = la 0.7.1 (`2501cb9a`), B = le candidat (`34666f25`), C = le candidat allégé (le défaut : couches taillées, juge en
+disque), Cj = C avec l'option du juge taillé. Moyennes, ms par image (le rapport est en cadence : temps de A / temps de X).
+
+| Version | Moyennes des prises (ms) | Moyenne | Rapport à la 0.7.1 | Δ par image | 1 % bas (ms, une image) |
+|---|---|---|---|---|---|
+| A — 0.7.1 (×1,5) | 353,7 / 343,1 / 350,4 / 339,4 | **346,6** | 1,000 | — | 425 / 448 / 436 / 376 |
+| B — candidat 0.8.0 (×1,25 du banc) | 511,0 / 510,2 / 513,3 / 504,4 | **509,7** | **0,680** | +163,1 | 585 / 583 / 648 / 553 |
+| **C — allégé, le défaut** | 467,4 / 483,5 / 468,9 / 455,8 | **468,9** | **0,739** | +122,2 | 538 / 547 / 556 / 482 |
+| Cj — option du juge taillé | 441,2 / 438,8 / 437,3 / 413,2 | **432,6** | **0,801** | +86,0 | 671 / 544 / 539 / 432 |
+
+(Série en miroir A B C Cj Cj C B A, deux fois ; quatre prises refusées par la porte et refaites — deux par un `grep` récursif
+d'une autre session, une par un `preuve.py` à moi, une par le Xvfb de la prise elle-même, pris pour un autre Godot par la
+porte d'avant sa correction.)
+
+Au vrai cadrage de la vue unique (×1,5, `--zoom=1.5`), le seul que la 0.7.1 connaissait :
+
+| Version | Moyennes des prises (ms) | Moyenne | Rapport à la 0.7.1 | Δ par image |
+|---|---|---|---|---|
+| A — 0.7.1 (×1,5) | 349,1 / 352,6 | **350,8** | 1,000 | — |
+| Bz — candidat 0.8.0 à ×1,5 | 553,9 / 561,3 | **557,6** | **0,629** | +206,8 |
+| **Cz — allégé, à ×1,5** | 500,6 / 531,1 | **515,9** | **0,680** | +165,1 |
+
+**L'allègement rend 8 % du temps d'image, à image égale** (509,7 → 468,9 ms au cadrage du banc, 557,6 → 515,9 au vrai
+cadrage) : le candidat passe de 0,680 à 0,739 de la 0.7.1 (de 0,629 à 0,680 à ×1,5). **La cible — 0,95 de la 0.7.1 — n'est
+pas atteinte sans changer l'image**, ni avec l'option du juge (0,801). Sur le Mac (0,81 à 0,87 pour le candidat), le même
+gain relatif — 8 % du temps d'image — donnerait 0,88 à 0,95 : **une extrapolation, pas une mesure** ; rien ne dit que la
+part du rayon dans l'image est la même sous Metal, où un GPU à tuiles paie bien moins cher un fragment que llvmpipe.
+Adrien jugera en jouant.
+
+### Ce qui reste, d'où ça vient, et les options (pour Adrien, aucune appliquée)
+
+**Ce qui reste, c'est le rayon dans l'air lui-même** (série `diag2`, 10 prises, référence C = 473,5 ms, arbre allégé
+et drapeaux de diagnostic — jamais commités, ils changent l'image) :
+
+| Retiré de C | Moyenne | Écart | Rapport estimé à la 0.7.1 | Ce que l'image perd |
+|---|---|---|---|---|
+| **le rayon dans l'air entier** (`--sans-faisceau-air`) | 337,6 | **−135,9** | ≈ 1,04 | Q41 disparaît |
+| dont **son juge** (le pochoir, diagnostic seulement) | 401,1 | **−72,4** | — | sans juge, le rayon se pose sur le noir : pas une option |
+| **la portée au bord de l'écran** (`--sans-portee-ecran`) | 291,0 | −182,4 | ≈ 1,20 | une RÈGLE de jeu (L1), pas une image |
+
+Le rapport estimé est 0,739 × (C / variante), dans la même série. **Sans le rayon dans l'air, la 0.8.0 allégée est au niveau
+de la 0.7.1** (au cadrage du banc) : tout l'écart restant est le rayon — son juge, qui juge « noir ou pas » chaque pixel de
+son disque de 728 px (~72 ms), et ses trois couches dans le cône (~64 ms). Le reste des nouveautés est dans le bruit, et
+L1bis allège (décomposition ci-dessus).
+
+**Les options, pour Adrien — aucune n'est appliquée, chacune change l'image** (⚠️ **A et D le sont depuis Q75**, voir plus
+bas) (mêmes séries ; le rapport est estimé à la 0.7.1, au cadrage du banc, où l'allégé vaut 0,739) :
+
+| Option | Gain par image | Rapport estimé | Ce que l'image change |
+|---|---|---|---|
+| **A. Le juge taillé** (`--faisceau-juge-taille`, mesuré en `final1` ; le défaut depuis Q75, et ce drapeau n'existe plus) | −36,3 ms (−7,7 %) | **0,801** | la fumée d'une fusée, près d'une torche allumée, n'est plus tue hors du cône : 1 235 pixels plus clairs, jusqu'à 25/255, qui reviennent à l'image sans rayon (le défaut signalé du pochoir) ; et 1 pixel (15/255) en écran scindé |
+| B. Une couche au lieu de trois (`--diag-couches=1`) | −48,6 ms | ≈ 0,82 | le rayon perd son épaisseur : une nappe à une hauteur au lieu de trois étagées |
+| C. Le rayon s'arrête à mi-portée dans l'air (`--diag-court=0.5`) | −41,9 ms | ≈ 0,81 | au-delà de 364 px, la lumière au sol reste, le rayon dans l'air non |
+| D. Le rayon à la longueur de l'ancienne torche (`--diag-court=0.264`, 192 px) | −56,8 ms | ≈ 0,84 | le rayon dans l'air ne dépasse plus la portée de la 0.7.1 ; la lumière au sol va toujours au bord de l'écran |
+| E. Sans rayon dans l'air (Q41 retiré) | −135,9 ms | ≈ 1,04 | le faisceau visible disparaît |
+| (F. La portée d'avant — L1 retiré) | −182,4 ms | ≈ 1,20 | une règle de jeu : la torche ne porte plus au bord de l'écran |
+
+Le lissage plus court (`--diag-lissage=0.0475`, 35 px au lieu de 131) ne gagne rien (+8,7 ms, dans le bruit) : pas une
+option. Les options ne sont pas mesurées ENSEMBLE, et leurs gains se recouvrent (B et D allègent les mêmes couches) :
+qu'elles approchent 0,95 ensemble reste à prouver. **Une piste sans changer
+l'image, non faite** : que le juge ne juge, hors du cône, que là où une fumée peut lire son pochoir (les disques des volumes
+posés, passés en uniformes) — il garderait l'image exacte et rendrait une part de l'option A ; mais il touche le shader du
+juge, partagé avec la fumée, et demande sa propre preuve.
+
+### Q75 — « A+d » : le juge taillé par défaut, le rayon à la longueur de l'ancienne torche (Adrien, 2026-09-30 20:17)
+
+Transmis par la session coordinatrice au même sous-agent, sur la même branche, après Q72 (`34370f74`) : parmi les options
+chiffrées ci-dessus, Adrien prend **A** (le juge taillé) et **D** (le rayon à la longueur de l'ancienne torche). Les deux
+changent l'image, et c'est leur objet. Chacune garde un drapeau de débogage qui rend le jeu de `34370f74` à l'octet près
+(`--faisceau-juge-disque`, `--faisceau-air-long` : le disque d'avant ; aucune coupure — `longueur_air` à 1e9 multiplie
+l'opacité par 1,0 exactement, et l'éventail au cran 1024 est celui d'avant) — pour les bancs et les preuves, jamais pour un
+joueur.
+
+**A — le juge taillé devient le défaut** (`faisceau_juge_taille`). Le juge du rayon porte l'éventail de son cookie dilaté de
+la parallaxe (8,4 + 1 px) au lieu du disque ajusté : il couvre toujours chaque pixel où une couche du rayon peut dessiner
+(la garde le tient, cookie par cookie), et ne juge plus « noir ou pas » tout un disque de 728 px. Ce qui change à l'image
+est le défaut du pochoir que l'allègement avait trouvé et laissé à Adrien (« Pièges connus », 2026-09-30) : le pochoir est
+lu par TOUS les volumes, et la marge du rayon (16/255) est plus large que celle de la fumée (8/255) — en disque, le juge du
+rayon taisait les volutes d'une fusée posées sur un sol entre 8 et 16/255, jusqu'à 728 px de la lampe, hors du cône
+compris. Taillé, il ne les tait plus que là où le rayon peut lui-même dessiner.
+
+**Le pixel à 15/255 de l'écran scindé (lampe de J1) est légitime : c'est le disque qui s'y trompait à moitié.** Refait au
+même cadrage (bloc `pixel` du plan `loupe-faisceau-q75`, rayon long comme alors), il revient seul, au même endroit
+((834, 323), vue de J2 : le coin d'un pilier, là où finit son bandeau LED, contre l'ombre que le pilier porte sur le sol
+éclairé par J1) : sans rayon (45, 35, 19) — il n'est pas noir —, disque (57, 45, 26), juge taillé (71, 57, 34). Quatre
+prises le tranchent. **Sans aucun juge**, les trois couches y donnent exactement la valeur du juge taillé (71, 57, 34) : le
+juge taillé n'y tait rien, comme sur les pixels de sol voisins où les deux juges laissent le rayon ajouter ses +26 à +31.
+**Le juge taillé dilaté de 30 px de plus** ne change AUCUN pixel de l'image : ce n'est pas un trou de couverture. **Les
+couches une à une, sans juge,** ajoutent +9, +10 et +8 : le +12 du disque n'est la somme d'aucune d'elles — le disque n'a
+donc tu le rayon que sur une PARTIE du pixel. Les vues iso sont anticrénelées ×4 (`ANTICRENELAGE_3D`) : le pochoir se tient
+par échantillon, mais le juge rend son verdict une fois par fragment, et ce pixel est à cheval sur l'arête du pilier et
+l'ombre au sol, un sol à peine plus clair que le point noir du rayon (22/255 au plus fort de ses canaux, pour un point noir
+à 16/255). Le verdict du disque y tombe « noir » sur une partie des quatre échantillons, celui de l'éventail non — un
+basculement au seuil, sur le seul pixel de 921 600 où les deux juges diffèrent. Ni l'un ni l'autre n'allume un pixel noir.
+**Non corrigé : ce n'est pas un défaut de A** — la valeur de A est celle du rayon sans juge, sur un pixel qui n'est pas
+noir. Voir « Pièges connus », 2026-09-30.
+
+**D — le rayon dans l'air garde la longueur de l'ancienne torche** (`faisceau_air_court`).
+
+- **Le sens, relu dans le code de la 0.7.1** (`2501cb9a`) : `portee_torche()` y valait `512 × 0,5 × torch_scale ×
+  facteur_portee`, sans plancher, `facteur_portee` à 0,75 (posé par `GameSettings` au démarrage et à chaque mode) ; les
+  `torch_scale` n'ont pas bougé depuis. Par classe : le Terrassier (pompe) **192 px**, l'Allumeur 230,4, l'Occulteur 249,6,
+  l'Incendiaire et le Spectre 268,8, le Fumiste 288, le Parasite (pistolet) 307,2, l'Illusionniste (fusil) 345,6, la
+  Sentinelle 499,2, le Braconnier (arbalète) **672 px**. Et le rayon dans l'air existait déjà dans la 0.7.1 (Q41) : ses
+  couches étaient posées sur la texture de la lampe à son échelle, donc sa longueur ÉTAIT cette portée — pour la couche
+  basse ; les deux autres à 0,89 et 0,78 d'elle (le dôme, `_poser_couches`). « L'ancienne torche » et « la portée de la
+  classe dans la 0.7.1 » disent la même chose ; aucun autre sens trouvé.
+- **Ce qui est fait** : `WeaponData.portee_sans_plancher()` (la formule de la 0.7.1 ; `portee_torche()` en est le maximum
+  avec le plancher, inchangé ; renommée `portee_sans_ecran()` par Q76, qui la borne aussi d'un plafond) ;
+  `IsoVolumes.plafond_du_faisceau` (cette longueur en part de la portée d'aujourd'hui, 1 quand elle l'atteint) ; chaque
+  couche reçoit `longueur_air`, la même part de SON rayon — le dôme de la 0.7.1 —, et s'y éteint par un `smoothstep` sur
+  le dernier quart (`FONDU_AIR` ; `volume_iso.gdshader`, sous `FAISCEAU_LUMINEUX` : le shader des autres
+  volumes est celui d'avant, octet pour octet) ; l'éventail des couches et celui du juge s'arrêtent à la même part, arrondie
+  PAR EXCÈS au 1/1024 (`cran_de_longueur`, `enveloppe_plafonnee`) ; le juge ne juge plus qu'à ces longueurs (`juge_rayons`).
+  Un fragment au-delà vaut zéro et se jette avant toute lecture de lumière, comme hors du cône.
+- **Ce qui ne bouge pas** : la lumière au sol va toujours jusqu'au bord de l'écran (la lampe garde sa texture et son
+  échelle) ; la portée, règle du jeu que l'éblouissement lit ; le cookie, lu à l'échelle de la lampe (le rayon garde le cône,
+  le halo de l'émetteur et le profil de la lumière qu'il montre) ; la densité, les hauteurs, le pochoir et sa marge.
+- **Ce que D ne rend pas de la 0.7.1, dit en face.** (1) Le rayon de la 0.7.1 s'éteignait bien avant sa longueur : son
+  cookie descend linéairement le long de l'axe (alpha 229 à 10 % de la portée, 127 à 50 %, 0 au bout) et la forme de chaque
+  couche tombe dès 45 % de son rayon ; l'opacité ET la lumière lue suivaient ce profil, et il ne se voyait plus guère au-delà
+  des trois quarts. D garde le rayon d'aujourd'hui — la lumière lue à l'échelle de 728 px, encore forte à 192 — jusqu'au
+  dernier quart, puis l'éteint : il atteint sa longueur plus visiblement que celui de la 0.7.1. (2) Le halo court de
+  l'émetteur (80°, 20 % de la portée) mesure 146 px depuis L1 : il couvre les trois quarts du rayon du Terrassier, qui se lit
+  donc plus large qu'un cône. Rendre AUSSI la forme de la 0.7.1 voudrait dire lire le cookie à l'ancienne longueur (cône et
+  halo resserrés comme alors) : le rayon et la lumière au sol n'auraient plus la même forme près de la lampe. Non fait — à
+  Adrien s'il le veut.
+- **Depuis Q76** (la portée au bord le plus proche, 468 px, plus bas) : D rend toujours `min(longueur de la 0.7.1,
+  portée)` — `plafond_de_longueur` rend 1 dès que la longueur atteint la portée. Les huit classes sous 468 px gardent la
+  longueur de leur rayon ; la Sentinelle (499,2) et le Braconnier (672) s'arrêtent à la portée, sans fondu, là où finit la
+  texture de la lampe. Le halo court de l'émetteur passe de 146 à 94 px : la réserve (2) s'amenuise (la moitié du rayon du
+  Terrassier au lieu des trois quarts).
+
+**La preuve à l'image** (plan `loupe-faisceau-q75`, `tools/loupe_faisceau_q75.gd` ; jugement et planches
+`tools/faisceau_q75/preuve.py`). Même méthode que l'allègement — scène tenue, jeu en pause, interface arrêtée, grain et LED
+figés, et AVANT (`34370f74` : juge en disque, rayon entier) / APRÈS (A+D) basculés sur place dans un même lancement, à
+cadrage identique : av ap av ap, puis sans rayon. Écran scindé à 45° B, pour le Terrassier, la Sentinelle et le Braconnier,
+la lampe de J1 puis celle de J2 (chacun sous sa torche, l'autre dans le noir) ; une fusée entre les joueurs en vue unique.
+Les jumeaux sont identiques au pixel dans les sept blocs (0/255) : la scène a tenu.
+
+| Bloc (vue) | Rayon avant → après (px) | coupés (la longueur) | atténués (le fondu) | lumière ajoutée après / avant |
+|---|---|---|---|---|
+| Terrassier, lampe de J1 (J1 sous sa torche / J2 dans le noir) | 65 797 → 14 071 / 57 915 → 14 850 | 51 720 / 43 058 | 4 895 / 7 025 | 0,199 / 0,210 |
+| Terrassier, lampe de J2 (J1 dans le noir / J2 sous sa torche) | 48 312 → 15 286 / 40 036 → 16 281 | 33 010 / 23 739 | 7 239 / 7 830 | 0,310 / 0,386 |
+| Sentinelle, lampe de J1 | 18 444 → 15 905 / 16 103 → 15 188 | 1 955 / 535 | 1 598 / 1 485 | 0,921 / 0,954 |
+| Sentinelle, lampe de J2 | 7 600 → 7 594 / 7 406 → 7 406 | 0 / 0 | 1 / 0 | 0,999 / 1,000 |
+| Braconnier, lampe de J1 | 5 678 → 5 666 / 4 822 → 4 820 | 0 / 0 | 0 / 0 | 0,998 / 1,000 |
+| Braconnier, lampe de J2 | 3 069 → 3 069 / 3 110 → 3 111 | 0 / 0 | 0 / 0 | 1,000 / 1,000 |
+| Fusée entre les joueurs (vue unique, Terrassier, deux lampes) | 95 545 → 23 175 | 70 124 | 21 352 | 0,084 |
+
+**Le noir à l'écran, aucune fuite** : dans la vue de celui qui est dans le noir (lampe éteinte), 165 496 à 183 185 pixels
+noirs (0, 0, 0) sans rayon, **aucun** allumé après (ni avant). Dans les vues qu'un voile d'éblouissement soulève (la torche
+de chacun le tient à 0,06 : aucun pixel n'y est à 0), le noir SOUS LE VOILE — les pixels au plancher de la vue sans rayon,
+2 à 4/255, 79 449 à 204 654 par vue — : **aucun** touché par le rayon d'après. **La fumée (A)** : dans le bloc de la fusée,
+1 322 pixels que le juge d'avant taisait (jusqu'à 26/255) reviennent exactement à l'image sans rayon. Le Braconnier ne
+change pas (sa longueur, 0,92 de la portée, tombe là où son cookie ne vaut presque plus rien) ; la Sentinelle perd le bout
+de son rayon ; le Terrassier en garde d'un cinquième à deux cinquièmes de la lumière, selon la vue. Planches :
+`docs/iso/q75/planche_q75.jpg` (avant, après, écart ×4, vues de J1 et de J2) et `planche_q75_bout.jpg` (le bout du rayon,
+×1,5) ; chiffres : `docs/iso/q75/preuve.txt`.
+
+**Les gardes** (`tools/test_allegement_faisceau.gd`, 175 vérifications, dans `run_suites.sh`) : la règle (couches, juge
+taillé, rayon court par défaut ; les trois drapeaux en débogage seulement) ; D sans le jeu — le plafond et ses crans (par
+excès), l'enveloppe arrêtée, la ligne du shader à sa place (après le grain, avant de jeter le fragment), `longueur_air` à
+1e9 par défaut et sous `FAISCEAU_LUMINEUX` seulement, et le fondu qui ne saute jamais de plus de 5 % d'un pixel de monde au
+suivant (4,0 % au plus, sur la couche la plus courte de la classe la plus courte : « sans coupure nette ») ; pour les dix
+cookies, à la longueur de leur classe, l'éventail des couches qui contient l'enveloppe arrêtée et s'arrête là, et celui du
+juge qui contient son dilaté ; EN JEU (écran scindé, le Terrassier à J1, le Braconnier à J2) : les dix classes rendent la
+longueur de la 0.7.1 (table relue dans son code, jamais tirée de la fonction du jeu) et gardent la portée du plancher, les
+couches et le juge à leur longueur, et `faisceau_air_court`, `faisceau_taille`, `faisceau_juge_taille` basculés sur place
+puis rétablis. **Vues rougir** : A saboté (le disque par défaut) → 7 rouges ; la ligne du fondu retirée du shader → 1 ;
+la longueur ignorée (`plafond_du_faisceau` à 1) → 62. `test_iso_gadgets` (200) passe tel quel.
+
+**La mesure** (séries `q75a` et `q75b`, 24 prises en miroir A Q AD AD Q A deux fois, aucune refusée par la porte ; mêmes
+outils et même scène que plus haut — `--fusee --vue-unique --classe=pompe`, `--physique 8`, moyennes —, chaque prise sous
+le verrou du conteneur, posé juste avant elle et rendu juste après). A = la 0.7.1 (`2501cb9a`), Q = `34370f74` (l'allégé
+avec Q71 et Q72 : le jeu d'avant Q75), AD = A+D ; les journaux disent le bras de chaque prise (« juge en disque, comme
+avant » pour Q ; « juge en éventail aussi » et « à la longueur de l'ancienne torche » pour AD).
+
+| Cadrage | Version | Moyennes des prises (ms) | Moyenne | Rapport à la 0.7.1 |
+|---|---|---|---|---|
+| du banc (×1,25 pour la 0.8.0) | A — 0.7.1 (×1,5) | 376,5 / 395,5 / 371,2 / 361,6 | 376,2 | 1,000 |
+| | Q — `34370f74` | 539,2 / 530,0 / 508,3 / 506,9 | 521,1 | 0,722 |
+| | **AD — A+D** | 446,5 / 401,5 / 380,7 / 389,9 | **404,7** | **0,930** |
+| vrai cadrage de la vue unique (×1,5, `--zoom=1.5`) | A — 0.7.1 | 371,9 / 370,1 / 363,3 / 392,3 | 374,4 | 1,000 |
+| | Qz — `34370f74` | 583,9 / 574,6 / 558,8 / 598,7 | 579,0 | 0,647 |
+| | **ADz — A+D** | 437,4 / 442,3 / 424,0 / 435,6 | **434,8** | **0,861** |
+
+**A+D rend 22 % du temps d'image au cadrage du banc (521,1 → 404,7 ms) et 25 % au vrai cadrage (579,0 → 434,8).**
+**Contre l'estimation donnée à Adrien (0,88 à 0,9)** : au vrai cadrage de la vue unique, **0,861**, un peu en dessous
+(0,843 et 0,879 sur chaque moitié du miroir) ; au cadrage du banc, **0,930**, au-dessus (0,910 et 0,951). Les séries ont
+été plus bruyantes que celles de l'allègement (le premier AD, 446,5 ms, s'écarte de 11 % du second, sans rien que la porte
+ait vu) : ces rapports se lisent à ±0,02 ou 0,03. Trois réserves, dites en face :
+- **C'est le Terrassier** — la classe du banc, et celle que D raccourcit le plus (192 px sur 728). Plus la classe porte
+  loin dans la 0.7.1, moins D retire : pour le Braconnier (672 px) il ne reste presque que A, soit à peu près le 0,80 de
+  l'option A seule mesuré à l'allègement (cadrage du banc).
+- **Sous llvmpipe, pas le Mac** : le cloud y est plus sévère (0,667 ici contre 0,81 à 0,87 sur le Mac pour le même
+  candidat, même scène) ; rien ne dit ce que A+D vaut sous Metal, et Adrien jugera en jouant.
+- Q (`34370f74`) mesure 0,722 et 0,647, un peu sous l'allégé de l'allègement (0,739 et 0,680, autre moment de la
+  machine) : on compare dans une même série, jamais d'une série à l'autre.
+
+### Q76 — la portée au bord le plus proche de l'écran (Adrien, 2026-09-30 vers 22:58 et 23:08)
+
+Transmis par la session coordinatrice au même sous-agent, sur la même branche, après Q75 (`d89dedfe`, candidat `1ea5ade8`).
+Les mots d'Adrien : « En fait diminuons la portée des lampe au maximum visible par le joueur en hauteur et largeur (le
+minimum des deux) » ; puis, à la question de l'écran scindé (« Une seule portée pour tous les modes, calculée sur la vue
+unique. En écran scindé, le bord le plus proche serait à 431 px ; les torches y porteront donc 468. Si tu préfères que
+l'écran scindé ait sa propre portée, dis-le ») : « Ok, même portée en écran scindé ».
+
+**La règle** (`PorteeEcran.portee_au_bord`, posée par `GameSettings.bornes_de_portee`) : le plus petit des deux demi-côtés
+de l'empreinte au sol de la VUE UNIQUE, plus l'avance de la caméra vers la visée — `min(demi-largeur, demi-profondeur) +
+décalage × profondeur`. À ×1,5, 52° de tangage et 0,15 de décalage : min(504,3 ; 360) + 108 = **468,0 px** — visée vers le
+haut (ou le bas) de l'écran, la lampe s'arrête au bord ; vers les côtés, le bord est à 612 px, au coin à 728. L1 posait le
+coin : √(504,3² + 360²) + 108 = 727,6 px. « Le minimum des deux » est ce `min` ; « en hauteur » se lit en profondeur au sol
+(la hauteur de l'écran, vue à 52°). Comme L1, la règle se DÉRIVE du cadrage, jamais d'un nombre (×1,25 réglé → 561,6 px),
+et le lacet ne change aucune distance (J1 à 45°, J2 à 225° : le même rectangle, tourné).
+
+- **Plancher ET plafond** (`WeaponData.portee_plancher` et `portee_plafond` ; `portee_torche()` est la portée de la 0.7.1,
+  `portee_sans_ecran()`, bornée par les deux) : les dix classes portent exactement 468 px. Celles qui portaient moins loin
+  dans la 0.7.1 montent (le plancher de Q45, « ça doit au moins aller au bout de l'écran »), celles qui portaient plus loin
+  descendent (« diminuons »). L'écart de portée entre classes, effacé depuis L1, le reste ; leur identité tient à
+  l'ouverture, à la luminosité et à la matière du cookie.
+- **Une portée pour tous les modes — la décision d'Adrien** (« Ok, même portée en écran scindé ») : la portée est une règle
+  du jeu (l'éblouissement la lit), pas un cadrage ; elle se calcule sur la vue unique, celle du jeu en ligne. En écran
+  scindé (×1,25, 957 px de large), le bord le plus proche est à 431 px (les côtés) et le haut à 561,6 : la lampe y dépasse
+  les côtés de 37 px et s'arrête à 94 px sous le haut.
+- **Rien sur le fil** : les deux machines dérivent 468 des constantes du duel (`ZOOM_VUE_UNIQUE`, `decalage_visee`,
+  `CameraIso.TANGAGE_DEG`), comme le plancher de L1 ; `Protocol.VERSION` reste 19, `config/version` 0.8.0.
+- **Débogage, hors ligne seulement** (`OS.is_debug_build()` ; `regle_du_coin` rend faux en ligne quoi qu'on demande) :
+  `--sans-portee-ecran` rend les portées de la 0.7.1, ni plancher ni plafond ; `--portee-coin` rend la règle de L1 — le coin,
+  728 px, en plancher seul — pour les planches avant/après et la mesure.
+- **Avec D (Q75)** : le rayon dans l'air garde `min(longueur de la 0.7.1, portée)` (`IsoVolumes.plafond_du_faisceau`, qui
+  rend 1 dès que la longueur de la 0.7.1 atteint la portée). Les huit classes sous 468 px gardent la longueur de leur rayon
+  (192 à 345,6 px) ; la Sentinelle (499,2) et le Braconnier (672) s'arrêtent désormais à la portée, là où finit la texture
+  de la lampe, sans le fondu de D. Et le halo court de l'émetteur (20 % de la portée) passe de 146 à 94 px.
+
+| Classe | 0.7.1 (px) | `1ea5ade8`, la règle du coin (px) | Q76 (px) | contre la 0.7.1 | rayon dans l'air (D) |
+|---|---|---|---|---|---|
+| Terrassier (pompe) | 192 | 727,6 | 468 | +276 | 192 |
+| Allumeur | 230,4 | 727,6 | 468 | +237,6 | 230,4 |
+| Occulteur | 249,6 | 727,6 | 468 | +218,4 | 249,6 |
+| Incendiaire, Spectre | 268,8 | 727,6 | 468 | +199,2 | 268,8 |
+| Fumiste | 288 | 727,6 | 468 | +180 | 288 |
+| Parasite (pistolet) | 307,2 | 727,6 | 468 | +160,8 | 307,2 |
+| Illusionniste (fusil) | 345,6 | 727,6 | 468 | +122,4 | 345,6 |
+| Sentinelle | 499,2 | 727,6 | 468 | −31,2 | 468 (499,2 avant Q76) |
+| Braconnier (arbalète) | 672 | 727,6 | 468 | −204 | 468 (672 avant Q76) |
+
+Contre `1ea5ade8`, toutes perdent 259,6 px (−35,7 %) : la surface d'une lampe — son carré — est multipliée par 0,41.
+
+**Ce qui lit la portée, et suit** — tout passe par `portee_torche()` ou `echelle_torche()`, aucune copie : la lampe du
+joueur (`player.gd`) ; la torche fantôme (`gadget_torche_fantome.gd`) ; les fantômes de la killcam (`game_state.gd`) ;
+**l'éblouissement** — `Vision` lit le cookie à l'échelle de la lampe : la carte d'éblouissement d'une torche se resserre
+autour d'elle dans le rapport des portées (ce qu'elle versait à d px, elle le verse à 0,643 d) ; la rétrodiffusion de sa
+propre torche ne bouge pas (0,06 : `_sources_eblouissantes` passe la portée en rayon, mais `Eblouissement.gain_taille`
+vaut 1, `EXPOSANT_TAILLE` = 0 — le banc l'imprime, 0,060 avant et après) ; le brouillage, qui lit l'éblouissement ; la
+lumière 3D miroir (`lumieres_iso.gd`, éteinte par défaut) ; le mannequin (`mannequin_iso.gd`) ; la fiche de classe
+(`menu_fiche_classe.gd` : toutes les barres de portée égales, comme depuis L1) ; le rayon dans l'air et son juge
+(`iso_volumes.gd`, ci-dessus). **Ne la lisent pas** : les sons (leur portée se dérive de la carte, `accorder_a_la_carte`),
+la poussière du faisceau (semée à 40-240 px de la lampe) et les capteurs du corps ; le jeu n'a pas d'adversaire piloté. Les
+outils d'aperçu des cookies (`torches.gd`, `apercu_torche.gd`) et la constante `PORTEE` d'`eventails.gd` (728, l'éventail
+mesuré à L1) ne sont pas la règle du jeu.
+
+**Ce que « au bord » veut dire à l'écran, dit en face.** Le cookie d'une lampe s'éteint LINÉAIREMENT jusqu'à sa portée
+(alpha 0,49 à mi-portée, 0,24 aux trois quarts, 0,09 à 0,9, 0 au bout ; le Braconnier, 2,5 fois plus sombre, 0,20 à
+mi-portée) : la lampe atteint le bord, mais s'y éteint. Visée vers le haut en vue unique (au seuil de 3/255), la lumière
+du Terrassier touche encore le haut de l'écran — sur les murs du haut, qu'elle éclaire en deçà de 468 px et qui montent à
+l'écran (+7 à +11/255 sur les dix premières lignes) ; celle de la Sentinelle s'éteint à 36-54 pixels d'écran sous le bord,
+celle du Braconnier à 175. Avec la règle du coin, les trois passaient le bord avec 35 %, 35 % et 14 % de leur lumière sur
+l'axe (le faisceau y versait 0,353, 0,349 et 0,141 ; 0,004, 0,004 et 0,000 après). Qu'on voie la lumière jusqu'au bord
+demanderait une portée au-delà du bord — l'inverse de « diminuons » : à Adrien, s'il le veut, en jouant.
+
+**La preuve à l'image** (famille `q76` de `tools/banc_lumieres.gd` ; jugement et planche `tools/portee_q76/planche.py`).
+AVANT (`--portee-coin`, la règle de L1) et APRÈS (Q76) basculés sur place à cadrage identique — les bornes posées par
+`GameSettings.bornes_de_portee`, les lampes rééquipées —, puis sans torche (le noir de référence). Pour le Terrassier, la
+Sentinelle et le Braconnier : la vue unique de J1 (×1,5) visée vers le haut de son écran puis vers le coin, celle de J2 (la
+vue du client en ligne) vers le haut de la sienne, et l'écran scindé (×1,25) à 45° B, les deux vers le haut de leur écran
+— 12 scènes, 15 vues. **L'écran est mis à nu pour ces photos** — ni voile d'éblouissement, ni HUD, ni poussière du faisceau
+— et l'éblouissement laissé à son régime : trois choses que la portée ne touche pas et qui bougent d'une photo à l'autre
+(« Pièges connus », « Une scène tenue par le photographe bouge encore ») ; la première passe, voile et HUD compris, voyait
+des milliers de pixels « touchés » sous le voile et prenait les chiffres du chronomètre pour la lumière la plus haute de
+l'écran.
+
+- **Le noir intact** : dans les 15 vues, **aucun** pixel noir (0, 0, 0) d'avant n'est allumé après à plus de 8 px de la
+  lumière d'avant, et aucun ne s'éclaircit loin d'elle. À 3 px au plus (le bord crénelé du cône, la silhouette des corps
+  qui respirent) : 0 à 50 pixels par vue, 56/255 au plus. Entre 3 et 8 px : 12 pixels, jusqu'à 12/255, tous dans l'écran
+  scindé du Braconnier, au pied du cône de l'adversaire — la rampe de son cookie près de l'émetteur (alpha de 20 à 72/255
+  sur ses 17 premiers texels) se rapproche de la lampe dans le rapport des portées, de 8,6 px de monde ; le même point,
+  au même endroit, dans les deux moitiés de l'écran.
+- **J1 = J2** : la vue unique de J1 et celle de J2, à la même place, même classe, visée vers le haut : portée 468, bord à
+  468 px, et le faisceau y verse la même chose (0,004, 0,004, 0,000) ; les pixels éclairés diffèrent de 0,2 à 4 % (les
+  murs autour ne sont pas les mêmes, lacet 45° contre 225°). En écran scindé, J1 et J2 portent 468, bord du haut à 562 px,
+  mêmes valeurs au bord.
+- Planche : `docs/iso/q76/planche_q76.jpg` (avant, après, sans torche, |après − avant| × 3, scène par scène, chaque titre
+  avec le bord dans la visée et ce que le faisceau y verse) ; chiffres : `docs/iso/q76/preuve.txt`.
+
+**Les gardes.** `tools/test_portee_ecran.gd` (52 vérifications) : la formule du bord (le bord le PLUS PROCHE sur 720
+directions, à ×1 à ×2) et celle du coin (le plus LOIN), les bornes (plancher = plafond = le bord ; le coin sous
+`--portee-coin`, hors ligne seulement ; `--sans-portee-ecran`), les dix classes contre la 0.7.1 relue dans son code, et EN
+JEU, sur les vraies caméras iso (vue unique, écran scindé à 45° B, J1 et J2) : la lumière des dix classes ne sort de l'écran
+dans aucune visée, et atteint le haut et le bas de la vue unique à 1 px près. `test_iso_camera` (144) : la pompe monte et
+l'arbalète descend à 468, le coin de L1 à 728 sous sa règle. `test_allegement_faisceau` (185) : la longueur de la 0.7.1 et
+la portée au bord, ensemble. **Vues rougir, puis rétablies à l'identique** : le coin remis par défaut → `test_portee_ecran`
+6 rouges, `test_allegement_faisceau` 1 ; le plafond retiré → 3, 1, et `test_iso_camera` 1 ; le coin permis en ligne →
+`test_portee_ecran` 2.
+
+**La mesure** (séries `q76a` et `q76b`, 24 prises en miroir A C Q Q C A deux fois ; mêmes outils et même scène que Q75 —
+`--fusee --vue-unique --classe=pompe`, `--physique 8`, moyennes —, chaque prise sous le verrou du conteneur, posé juste
+avant elle et rendu juste après). A = la 0.7.1 (`2501cb9a`), C = le candidat `1ea5ade8` (Q75, la portée au coin), Q = Q76.
+Une prise refusée par la porte (des processus `python3` au-dessus de 20 % d'un cœur : le jugement de la planche, lancé
+pendant la prise) et refaite ; une première `q76b`, coupée après quatre prises par le redémarrage du conteneur, mise de
+côté et refaite en entier, sans rien en mêler.
+
+| Cadrage | Version | Moyennes des prises (ms) | Moyenne | Rapport à la 0.7.1 |
+|---|---|---|---|---|
+| du banc (×1,25 pour la 0.8.0) | A — 0.7.1 (×1,5) | 369,5 / 344,2 / 336,8 / 326,9 | 344,3 | 1,000 |
+| | C — `1ea5ade8` | 404,2 / 362,4 / 350,7 / 346,8 | 366,0 | 0,941 |
+| | **Q — Q76** | 351,2 / 357,2 / 330,2 / 329,3 | **342,0** | **1,007** |
+| vrai cadrage de la vue unique (×1,5, `--zoom=1.5`) | A — 0.7.1 | 341,5 / 341,3 / 341,9 / 343,9 | 342,1 | 1,000 |
+| | Cz — `1ea5ade8` | 405,8 / 405,1 / 410,0 / 406,0 | 406,7 | 0,841 |
+| | **Qz — Q76** | 383,5 / 377,6 / 388,5 / 383,4 | **383,2** | **0,893** |
+
+**Q76 rend 6,6 % du temps d'image au cadrage du banc (366,0 → 342,0 ms : la 0.7.1, à 1,007) et 5,8 % au vrai cadrage de la
+vue unique (406,7 → 383,2 ms : 0,893 de la 0.7.1, contre 0,841).** Sur chaque moitié du miroir : 1,008 et 1,006 au cadrage
+du banc (C : 0,931 et 0,952), 0,897 et 0,888 au vrai cadrage (C : 0,842 et 0,840). La machine a accéléré pendant `q76a` (A
+de 369,5 à 326,9 ms) — le miroir le compense, et les moitiés concordent ; `q76b` est restée stable (A de 341,3 à 343,9).
+Trois réserves, dites en face :
+- **C'est le Terrassier** — la classe du banc, dont le rayon dans l'air fait 192 px avant comme après (D) : ce que Q76 lui
+  retire, c'est la lampe elle-même (son carré ×0,41 : la lumière au sol, la lightmap). Pour la Sentinelle et le Braconnier,
+  Q76 raccourcit AUSSI le rayon (499 et 672 → 468 px) : il y a plus à gagner, non mesuré.
+- **Sous llvmpipe, pas le Mac** : rien ne dit ce que cela vaut sous Metal ; Adrien jugera en jouant.
+- C mesure 0,941 et 0,841, contre 0,930 et 0,861 pour la même version (AD) dans la série de Q75, un autre moment de la
+  machine : on compare dans une même série, jamais d'une série à l'autre.
+
+## Chantier — Q71 et Q72, deux corrections de la 0.8.0 (inscrit le 2026-09-30)
+
+**Tenu par le sous-agent de l'allègement** (session cloud « Fable 5.1 - CLOUD ISO UNRAILED »), sur la même branche
+`claude/v080-allegement`, APRÈS le commit de l'allègement : décisions d'Adrien du 2026-09-30 vers 15:50, « Q71 : corrige » et
+« Q72 : corrige aussi », transmises par la session coordinatrice. Un commit par correction, la suite complète verte avant
+chacun.
+
+### Q71 — le modelé des corps suit la caméra qui dessine
+
+**Le défaut.** Le modelé d'ISO7b (`modele_du_corps`, dans `corps_iso.gdshader` et `corps_iso_eclaire.gdshader`, miroir
+`IsoMateriaux.modele_du_corps`) assombrissait à 0,9 la face qui regarde le SUD DU MONDE (`n.z > 0,5`) : la face que la
+caméra voyait au lacet 0. Depuis Q28 (45° B par défaut, en ligne compris), J1 regarde à 45° et J2 à 225° — de deux côtés
+opposés : un seul des deux voyait la face sud. L'un voyait son adversaire avec une face à 0,9, l'autre sans : une asymétrie de
+rendu sur le corps de l'ADVERSAIRE, ce que chacun lit pour savoir qui est là. (L'étude du lacet de 45° l'avait relevé et
+renvoyé à ISO7 Beauté : `docs/iso/iso14/plan_lacet_45.md`, § 5.)
+
+**La correction.** La face assombrie est celle qui regarde **la caméra qui dessine** : `modele_du_corps(n, camera)`, où
+`camera` est la direction horizontale vers elle, lue dans la matrice de vue (`INV_VIEW_MATRIX[2].xz`, comme le mannequin
+d'ISO13 le fait déjà) ; une face latérale dont la normale est à moins de 60° de cette direction (`dot(n.xz, v) > 0,5` : le
+seuil d'avant, autour du sud) vaut 0,9. **Mêmes valeurs** (dessus 1,15, face vers la caméra 0,9, les autres 1 ;
+`MODELE_FACE_SUD` devient `MODELE_FACE_CAMERA`) et **même principe** : le modelé RÉPARTIT la lumière du capteur, il ne la
+retire pas (la moyenne des faces que chacun voit reste la lumière du capteur). **Au lacet 0, rien ne change** : la caméra y
+est au sud, (0, 1), et la règle est celle d'avant, à l'arrondi près. À 45°, chaque joueur voit deux faces latérales, toutes
+deux tournées vers lui : toutes deux à 0,9, chez J1 comme chez J2.
+
+**Prouvé à l'image** (`tools/loupe_modele_q71.gd`, plan `loupe-modele-q71` ; `tools/modele_q71/mesurer.py`) : écran scindé à
+45° B, les deux joueurs de la même classe face à face, jeu en pause ; sur les deux corps, la MÊME lumière posée (capteur
+coupé, `lumiere_recue` = 0,55) ; chacun regarde l'ADVERSAIRE (le corps de soi est « sombre » chez soi, Q39, et ne se compare
+pas) — J1 voit le corps de J2 exactement comme J2 voit celui de J1, tourné d'un demi-tour avec sa caméra. Le modelé allumé
+puis coupé (leur rapport, pixel par pixel, est le facteur de la face), puis chaque corps peint de sa normale monde (quelle
+face est quel pixel). Faces jumelles (la face +z du corps de J2 vue par J1, la face −z du corps de J1 vue par J2, etc.) :
+
+| Face jumelle | Avant : facteur J1 / J2 | Avant : moyenne J1 / J2 (/255) | Après : facteur J1 / J2 | Après : moyenne J1 / J2 (/255) |
+|---|---|---|---|---|
+| le dessus | 1,093 / 1,088 | 34,83 / 34,66 | 1,092 / 1,086 | 34,82 / 34,71 |
+| la face avant (+x ↔ −x) | 1,000 / 1,000 | 25,52 / 25,33 | **0,928 / 0,925** | 23,85 / 23,66 |
+| la face de côté (+z ↔ −z) | **0,932 / 1,000** | **25,17 / 26,68** | **0,927 / 0,928** | **25,00 / 25,02** |
+
+Avant, la face « sud » (+z) du corps de J2 était assombrie chez J1 et sa jumelle ne l'était pas chez J2 (1,5/255 d'écart
+moyen) ; après, chaque face jumelle a le même facteur à 0,006 près et la même moyenne à 0,2/255 près (659 et 667 pixels de
+corps avant, 658 et 660 après). Les facteurs lus (≈ 0,93 et 1,09 au lieu de 0,9 et 1,15) sont ceux de l'image entière, la
+teinte du portrait posée après le modelé : la même chaîne pour les deux vues. Planches : `docs/iso/q71/planche_q71_avant.jpg`
+et `planche_q71_apres.jpg` (l'image | le facteur : bleu 0,9, gris 1, orange 1,15), chiffres : `mesures_avant.json`,
+`mesures_apres.json`.
+
+**La garde** : `tools/test_iso_beaute.gd` (162 vérifications) — la règle au lacet 0 (inchangée) ; au lacet du duel
+(`GameSettings.lacet_du_joueur`, 45° B), pour vingt-quatre orientations d'un corps (tous les 15°, décalées de 7,5° : aucune
+face pile sur un seuil) et chacune de ses faces, la face vue par J1 et sa jumelle vue par J2 au même facteur, et la même
+moyenne des faces vues ; le TÉMOIN (la règle d'avant, le sud en dur, donnait à J1 et J2 un modelé différent sur ce même
+calcul) ; et les deux shaders disent la même règle que le miroir. **Sabotée** (le miroir rendu au sud du monde) : 2
+vérifications rouges — « la face (0, 0, 1) vaut 0,90 chez J1, 1,00 chez J2 ». `test_corps_portraits` et
+`test_corps_mannequin` relisent l'appel sous sa nouvelle forme. `Protocol.VERSION` inchangé (rendu local).
+
+### Q72 — la fusée posée de la killcam éclaire comme en match
+
+**Le défaut.** La killcam ne rejoue pas le vol d'une fusée : `GameState._maj_fusees_killcam` en construit une neuve
+(`Fusee.new()`, `is_replay`) et lui applique l'âge lu dans l'instantané (`appliquer_age`), sans jamais passer par
+`_atterrir`. Or c'est `_atterrir` qui pose l'empreinte de la lumière d'une fusée posée (`EMPREINTE_LUMIERE`, 440 px) : la
+fusée de la killcam gardait celle du VOL (`EMPREINTE_VOL`, 160 px). Dans la mort qu'on revoit, une fusée posée éclairait un
+disque presque trois fois plus petit qu'en match — la scène que la killcam montre n'était pas celle du match. **Le constat
+d'un autre sous-agent, vérifié** (« le masque d'ombre et la hauteur de source ne sont pas posés non plus ») : ils l'étaient
+déjà, par `_ready` (branche `is_replay`) — la garde le lit valeur par valeur ; seule l'empreinte manquait.
+
+**La correction** (`fusee.gd`) : la lumière d'une fusée posée est dite une seule fois, `_lumiere_posee()` — masque d'ombre,
+hauteur de la source, empreinte, dans cet ordre (`poser_hauteur_source` relit le masque qu'on vient de poser). `_atterrir`
+l'appelle ; et `appliquer_age`, sur une fusée de killcam, l'appelle une fois dès que l'âge rejoué est celui d'une fusée posée
+(≥ 0 — il est négatif en vol). **Une fusée EN VOL dans la killcam garde l'empreinte du vol**, comme en match, et passe à
+celle du sol quand l'âge rejoué devient celui d'une fusée posée.
+
+**Prouvé** (`tools/test_fusee_killcam.gd`, 17 vérifications, dans `run_suites.sh`) sur le VRAI chemin : une vraie manche en
+écran scindé, une vraie fusée de match lancée au centre de la carte, qui vole (empreinte 160 px), rebondit et se pose ; à
+3,0 s de combustion, sa lumière ; puis la killcam par `_maj_fusees_killcam`, avec l'instantané de ce même âge et de cette
+même place. Valeur par valeur, **la même** : empreinte 440 px, texture (`retrodiffusion_corona.png`), masque d'ombre 65
+(murs hauts + murets), hauteur de source 0,15 tuile, énergie 3,0, couleur (0,96, 0,272, 0,54), allumée, portée 7, ombres.
+Et une fusée de killcam en vol (âge −1) : 160 px, comme en match ; la même, à 0,5 s : 440 px. **Avant la correction**
+(sabotée : l'appel retiré d'`appliquer_age`), la garde rougit sur exactement le défaut : 2 vérifications rouges, « empreinte : match 440, killcam 160 » et la fusée de killcam à 0,5 s restée à 160 px — le masque (65) et la hauteur (0,15) y restent égaux à ceux du match, ce qui confirme qu'ils étaient déjà posés. ⚠️ La garde relit la
+killcam AUSSITÔT l'appel, sans attendre d'image : hors d'un rejeu, `GameState._process` purge les fusées de killcam dès
+l'image suivante. Et elle ne nomme jamais la classe `Fusee` dans son code : sous `--script`, la compiler avant que les
+autoloads existent la casse pour tout le processus.
+
+**Signalé, non corrigé** (hors périmètre) :
+- **la fusée EN VOL de la killcam** porte déjà le masque et la hauteur d'une fusée POSÉE (`_ready`, `is_replay`) : en match,
+  en vol, elle éclaire par-dessus les murets, depuis sa hauteur de vol. L'instantané ne porte pas l'élan qui la donne
+  (`hauteur_de_vol(élan)`) : la corriger demande d'en enregistrer plus, donc de toucher `ReplaySystem` ;
+- **`forcer_age`, le chemin des BANCS** (`tools/loupe.gd`, les planches) : la même lacune — une fusée « posée » par un banc
+  éclaire avec l'empreinte du vol (160 px). Les mesures de bancs qui la posent ainsi (le point de braise, la fumée des
+  loupes, la preuve de l'allègement) ont été prises avec 160 px de lumière et non 440 : à savoir avant de les relire ; pas
+  corrigé ici, parce que les corriger changerait les chiffres qu'elles documentent.
+
 ---
 
 ## Chantier — les gadgets en volume (GV, inscrit le 2026-09-30, après la 0.8.0)
 
 **Tenu par un sous-agent de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED »**, branche `claude/v090-gadgets-volume`
-(partie de `34666f25`, la 0.8.0). Demande d'Adrien, 2026-09-30 vers 12:10 : « J'aimerais également que tous les gadgets
+(partie de `34666f25`, la 0.8.0 candidate ; rattrapée le 2026-10-01 sur la ligne publiée, `0fc96b6b` — la 0.8.0, son
+allègement, Q71, Q72, Q75 et Q76 —, par une fusion faite dans la branche, et vérifiée : plus bas, « La fusion du
+2026-10-01 »). Demande d'Adrien, 2026-09-30 vers 12:10 : « J'aimerais également que tous les gadgets
 (je me souviens de la fumée occultante) soient davantage en 3D. Là on est pris entre le graphisme BD et la 3D voxel. Il
 faut quelque chose de plus uniforme avec le nouveau graphisme. » Puis, vers 13:09 : « J'en ai marre de faire tout le temps
 de mesures. » — **aucune mesure n'est demandée sur le Mac** : le coût se tient par construction et se prouve dans le
@@ -30019,6 +30711,19 @@ PAR DÉFAUT, avec l'encre du roman graphique sur les cubes et le relief tiré du
 aucun fil (`Protocol.VERSION` inchangé), aucune simulation, aucune lumière 2D, aucun capteur, `config/version` reste 0.8.0.
 Planches et relevés : `docs/iso/gadgets_volume/`. Le banc : `tools/banc_gadgets_volume.gd` (écran scindé, lacet 45° B, J1
 à l'ouest torche allumée, J2 au sud ; `--mode=avant|nuages|noir|cout`).
+
+**La fusion du 2026-10-01** (la ligne publiée dans GV, `git merge` fait dans la branche par la session qui la tient).
+Trois fichiers touchés des deux côtés. `tools/run_suites.sh` et cette feuille de route : des AJOUTS de part et d'autre (les
+suites de l'allègement, de Q72 et de GV ; les décisions et les pièges), gardés tous, les décisions entrelacées par date.
+`iso_volumes.gd` : fusionné sans conflit textuel — ce qui ne prouve rien (« Pièges connus », 2026-09-09) ; vérifié ligne à
+ligne (aucune ligne d'un côté n'est absente du résultat sans que l'autre côté l'ait changée : celles du rayon et du juge
+pour la ligne, celles du suivi des nuages pour GV) et par les points d'ancrage des deux côtés, comptés avant et après
+(`_tailler_faisceau_air`, `_poser_longueur`, `plafond_du_faisceau`, `portee_sans_ecran`, `portee_au_bord`,
+`bornes_de_portee`, `portee_plafond`, `recepteur_retro`, `modele_du_corps`, `_lumiere_posee` ; `_suivre_nuage_voxel`,
+`_suivre_gadget_en_voxels`, `poser_fumee_voxel`, les drapeaux de la fumée, l'encre et le relief) : les mêmes nombres.
+**Une interaction sans conflit, à savoir** : le juge du rayon, taillé à son cône depuis Q75, écrit le pochoir que lisent
+AUSSI les cubes de la fumée ; hors du cône, il ne les tait plus (c'était le défaut que Q75 corrige, pour les couches comme
+pour les cubes). Suite complète verte sur la fusion.
 
 ### GV0 — l'inventaire : ce qui est déjà en volume, ce qui est encore à plat
 

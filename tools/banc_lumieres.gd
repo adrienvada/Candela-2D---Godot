@@ -1,6 +1,7 @@
 extends SceneTree
 
-## Le banc d'images du chantier des lumières de la 0.8.0 (L1 portée, L2 la lampe du modèle, L3 le point lumineux).
+## Le banc d'images du chantier des lumières de la 0.8.0 (L1 portée, L2 la lampe du modèle, L3 le point lumineux), et de
+## Q76 (la portée au bord le plus proche : `--plans=q76`, avant/après basculés sur place).
 ##
 ## Monte une vraie partie (vue iso, 45° B), en écran scindé puis en vue unique, pose les deux joueurs et leur visée
 ## par des marionnettes (le fournisseur d'entrées du jeu, comme le photographe), tient la scène jusqu'à ce que les
@@ -29,6 +30,11 @@ var _visee := [Vector2.RIGHT, Vector2.LEFT]
 var _torche := [true, true]
 var _accroupi := [false, false]
 var _libre := Vector2.ZERO
+## Q76 — les classes de la famille `q76` (`--q76-classes=pompe,arbalete` pour n'en refaire qu'une partie).
+var _classes_q76: PackedStringArray = ["pompe", "sentinelle", "arbalete"]
+## Q76 — vrai pendant la famille `q76` : l'écran nu (ni voile d'éblouissement, ni HUD, ni particules) et l'éblouissement
+## laissé à son régime (`_plans_q76`).
+var _q76_ecran_nu := false
 
 
 class Pantin extends InputProvider:
@@ -64,6 +70,8 @@ func _init() -> void:
 			_sortie = a.trim_prefix("--sortie=")
 		elif a.begins_with("--plans="):
 			_familles = a.trim_prefix("--plans=").split(",")
+		elif a.begins_with("--q76-classes="):
+			_classes_q76 = a.trim_prefix("--q76-classes=").split(",")
 	call_deferred("_run")
 
 
@@ -111,6 +119,8 @@ func _run() -> void:
 		await _plan_quinze()
 	if _familles.has("cadence"):
 		await _plan_cadence()
+	if _familles.has("q76"):
+		await _plans_q76()
 	var f := FileAccess.open(_sortie.path_join("plans.txt"), FileAccess.WRITE)
 	if f != null:
 		f.store_string("\n".join(_plans) + "\n")
@@ -178,6 +188,8 @@ func _classe(pid: int, slug: String) -> void:
 
 
 func _tenir_une_image() -> void:
+	if _q76_ecran_nu:
+		_q76_montrer(false)
 	for k in 2:
 		var j: Node2D = _main.p1 if k == 0 else _main.p2
 		j.global_position = _pos[k]
@@ -190,7 +202,8 @@ func _tenir_une_image() -> void:
 			Input.action_press(action)
 		else:
 			Input.action_release(action)
-		j.set("dazzle_amount", 0.0)
+		if not _q76_ecran_nu:
+			j.set("dazzle_amount", 0.0)
 
 
 ## Tient la scène jusqu'à ce que les deux caméras et les lampes ne bougent plus (trente images de suite).
@@ -206,6 +219,8 @@ func _tenir() -> void:
 		var o := [(_main.vp1 as SubViewport).canvas_transform.origin, (_main.vp2 as SubViewport).canvas_transform.origin,
 			(_main.p1.get_node(^"Flashlight") as PointLight2D).energy, (_main.p2.get_node(^"Flashlight") as PointLight2D).energy,
 			snappedf(float(_main.p1.rotation), 0.0001), snappedf(float(_main.p2.rotation), 0.0001)]
+		if _q76_ecran_nu:
+			o.append_array([snappedf(float(_main.p1.dazzle_amount), 0.0001), snappedf(float(_main.p2.dazzle_amount), 0.0001)])
 		tenues = tenues + 1 if o == reperes else 0
 		reperes = o
 	if tenues < 30:
@@ -247,8 +262,11 @@ func _mesures() -> String:
 			if absf(d[axe]) > 1e-6:
 				k = minf(k, ((taille[axe] if d[axe] > 0.0 else 0.0) - s0[axe]) / d[axe])
 		var bord := 100.0 * k
-		parts.append("J%d %s portée %.0f px, bord à %.0f px, faisceau au bord %.3f" % [pid + 1, arme.slug(),
-			arme.portee_torche(), bord, arme.lumiere_axiale(minf(bord, arme.portee_torche() - 1.0))])
+		var part := "J%d %s portée %.0f px, bord à %.0f px, faisceau au bord %.3f" % [pid + 1, arme.slug(),
+			arme.portee_torche(), bord, arme.lumiere_axiale(minf(bord, arme.portee_torche() - 1.0))]
+		if _q76_ecran_nu:
+			part += ", éblouissement %.3f" % float(j.dazzle_amount)
+		parts.append(part)
 	return " ; ".join(parts)
 
 
@@ -311,7 +329,11 @@ func _plans_l1_options() -> void:
 	_poser(_libre, _libre + Vector2(-8.0 * t, 5.0 * t), _au_sol(0, Vector2(1.0, -0.56)), _au_sol(1, Vector2(0.0, 1.0)), true, false)
 	await _photo("l1_option_a_arbalete", "OPTION A (le plancher, retenue) : l'arbalète porte à %.0f px"
 		% (_main.p1.current_weapon as WeaponData).portee_torche())
-	# Option B : tout multiplier, pour que la plus courte (le Terrassier, torch_scale 1,0) atteigne le bord.
+	# Option B : tout multiplier, pour que la plus courte (le Terrassier, torch_scale 1,0) atteigne le bord. Depuis Q76 le
+	# jeu pose aussi un PLAFOND (`portee_plafond`) : levé le temps des options, rendu à la fin.
+	var plafond: Variant = wd.get("portee_plafond")
+	if plafond != null:
+		wd.set("portee_plafond", INF)
 	wd.set("portee_plancher", 0.0)
 	wd.set("facteur_portee", plancher / (WeaponData.TAILLE_COOKIE_REFERENCE * 0.5 * 1.0))
 	for pid in 2:
@@ -335,6 +357,8 @@ func _plans_l1_options() -> void:
 	await _photo("l1_option_par_mode_scinde", "OPTION « par mode » : en écran scindé, la portée de la vue scindée (%.0f px au lieu de %.0f)"
 		% [float(wd.get("portee_plancher")), plancher])
 	wd.set("portee_plancher", plancher)
+	if plafond != null:
+		wd.set("portee_plafond", plafond)
 	for pid in 2:
 		var j: Node2D = _main.p1 if pid == 0 else _main.p2
 		j.equip_weapon(j.current_weapon)
@@ -587,3 +611,105 @@ func _plans_classes(pid: int) -> void:
 		await _photo(nom, "%s (J%d, lacet %.0f°) : ouverture %.1f°, portée %.0f px" % [c.libelle if "libelle" in c else c.slug(),
 			pid + 1, float(_main.lacet_de_la_vue(pid)), c.torch_angle_deg * 2.0, c.portee_torche()])
 	await _scinde()
+
+
+# --- Q76 : la portée au bord le plus proche ---------------------------------------------------------------------
+
+## Q76 (Adrien, 2026-09-30 vers 22:58 : « En fait diminuons la portée des lampe au maximum visible par le joueur en hauteur
+## et largeur (le minimum des deux) » ; vers 23:08 : « Ok, même portée en écran scindé ») — AVANT (la règle de L1 : le coin,
+## 728 px) contre APRÈS (le bord le plus proche, 468 px), basculés SUR PLACE à cadrage identique (les bornes posées par
+## `GameSettings.bornes_de_portee`, les lampes rééquipées), puis sans torche (le noir de référence). Pour le Terrassier, la
+## Sentinelle et le Braconnier : la vue unique de J1 (×1,5), visée vers le haut de son écran puis vers le coin haut-droit ;
+## la vue unique de J2 (celle du client en ligne), vers le haut du sien ; l'écran scindé (×1,25), les deux vers le haut du
+## leur. `_mesures` imprime, par vue, la portée, le bord dans la visée, ce que le faisceau verse encore au bord et
+## l'éblouissement du joueur. Jugé et mis en planche par `tools/portee_q76/planche.py`.
+##
+## ⚠️ **L'écran est mis à nu pour ces photos** (`_q76_montrer`) — ni voile d'éblouissement, ni HUD, ni particules — et
+## l'éblouissement laissé à son régime au lieu d'être remis à zéro à chaque image. Trois choses que la portée ne touche
+## pas, et qui bougent d'une photo à l'autre (« Pièges connus », 2026-09-30, « Une scène tenue… bouge encore ») :
+## - le VOILE : la rétrodiffusion de sa propre torche le tient à 0,06 quelle que soit la portée (`Eblouissement.gain_taille`
+##   vaut 1, `EXPOSANT_TAILLE` = 0 ; les mesures impriment le niveau, avant et après) ; mais il soulève toute la vue de 2 à
+##   6/255 — plus aucun pixel noir à juger —, il respire avec son propre temps et, remis à zéro par `_tenir`, il remontait à
+##   chaque image d'une fraction qui dépendait de la cadence : la première passe a vu des milliers de pixels « touchés » ;
+## - le HUD : le chronomètre tourne entre l'avant et l'après, et ses chiffres passaient pour la lumière la plus haute de
+##   l'écran (ligne 54) ;
+## - la POUSSIÈRE du faisceau (`player.gd`, V5.5) : un grain semé au hasard à 40-240 px de la lampe, qui dérive — un point de
+##   2 × 2 pixels, ici ou là, d'une photo à l'autre.
+## Nu, le noir se juge à 0 dans toutes les vues, et la vue de J1 se compare à celle de J2 (dont le banc n'affiche pas le
+## voile en vue unique : `ui.update_hud` tient J1 pour le joueur local).
+func _plans_q76() -> void:
+	var reglages := root.get_node("GameSettings")
+	if not reglages.has_method("bornes_de_portee"):
+		print("LUMIERES q76 : arbre d'avant Q76, rien à montrer")
+		return
+	_q76_ecran_nu = true
+	var t := MursBas.TUILE
+	var loin := _libre + Vector2(-9.0 * t, 6.0 * t)
+	for slug: String in _classes_q76:
+		_classe(0, slug)
+		_classe(1, slug)
+		await _q76_vue(0)
+		for visee: Array in [["haut", Vector2(0.0, -1.0)], ["coin", Vector2(1.0, -0.56)]]:
+			_poser(_libre, loin, _au_sol(0, visee[1]), Vector2.DOWN, true, false)
+			await _q76_trio("q76_%s_unique_j1_%s" % [slug, visee[0]],
+				"%s, vue unique de J1 (×1,5), visée vers le %s de l'écran" % [slug, visee[0]])
+		await _q76_vue(1)
+		_poser(loin, _libre, Vector2.DOWN, _au_sol(1, Vector2(0.0, -1.0)), false, true)
+		await _q76_trio("q76_%s_unique_j2_haut" % slug, "%s, vue unique de J2 (×1,5), visée vers le haut de l'écran" % slug)
+		await _q76_vue(-1)
+		_poser(_libre, _libre + Vector2(-6.0 * t, 3.0 * t), _au_sol(0, Vector2(0.0, -1.0)), _au_sol(1, Vector2(0.0, -1.0)))
+		await _q76_trio("q76_%s_scinde_haut" % slug, "%s, écran scindé (×1,25), les deux visent le haut de leur écran" % slug)
+	_q76_regle(false)
+	_q76_ecran_nu = false
+	_q76_montrer(true)
+	await _q76_vue(-1)
+
+
+## Q76 — l'écran nu (`montrer` faux) : le voile d'éblouissement, le HUD et les particules cachés ; `montrer` les rend.
+func _q76_montrer(montrer: bool) -> void:
+	(_main.ui.p1_dazzle.get_parent() as CanvasItem).visible = montrer
+	if _main.ui.match_hud != null:
+		(_main.ui.match_hud as CanvasItem).visible = montrer
+	var pool := get_first_node_in_group("particle_pool") as CanvasItem
+	if pool != null:
+		pool.visible = montrer
+
+
+## La vue du joueur `pid` seule (0 ou 1), au zoom de la vue unique, comme en ligne ; ou l'écran scindé (−1), au sien.
+func _q76_vue(pid: int) -> void:
+	var reglages := root.get_node("GameSettings")
+	(_main.vp1.get_parent() as Control).visible = pid != 1
+	(_main.vp2.get_parent() as Control).visible = pid != 0
+	_main.ui.center_line.visible = pid < 0
+	_main._accorder_rendu_aux_vues()
+	_main.ui.disposer_hud(pid >= 0)
+	reglages.accorder_au_mode(false, pid < 0)
+	for cam: Camera2D in [_main.cam1, _main.cam2]:
+		cam.zoom = Vector2.ONE * float(reglages.zoom_duel)
+	for i in 4:
+		await process_frame
+
+
+## La règle de la portée, posée sur place : le coin de L1 (`coin`) ou le bord le plus proche (Q76) ; les lampes rééquipées
+## (l'échelle du cookie se relit à l'équipement).
+func _q76_regle(coin: bool) -> void:
+	var reglages := root.get_node("GameSettings")
+	var b: Vector2 = reglages.bornes_de_portee(true, coin, float(reglages.zoom_de_la_vue_unique()),
+		float(reglages.decalage_visee))
+	var wd := load("res://weapon_data.gd") as GDScript
+	wd.set("portee_plancher", b.x)
+	wd.set("portee_plafond", b.y)
+	for j: Node in [_main.p1, _main.p2]:
+		j.equip_weapon(j.current_weapon)
+
+
+## AVANT (le coin), APRÈS (le bord le plus proche), puis sans torche : trois photos au même cadrage.
+func _q76_trio(nom: String, legende: String) -> void:
+	var torches: Array = _torche.duplicate()
+	_q76_regle(true)
+	await _photo(nom + "_1avant", legende + " — AVANT (L1 : la portée au coin)")
+	_q76_regle(false)
+	await _photo(nom + "_2apres", legende + " — APRÈS (Q76 : la portée au bord le plus proche)")
+	_torche = [false, false]
+	await _photo(nom + "_3noir", legende + " — sans torche (le noir de référence)")
+	_torche = torches

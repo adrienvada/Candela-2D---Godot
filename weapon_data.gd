@@ -119,8 +119,20 @@ var _torch_image: Image
 ## l'empreinte au sol reste `512 × torch_scale` — mais le nom et le commentaire
 ## mentaient, et c'est ainsi qu'on hérite d'un nombre que plus personne n'ose
 ## toucher. Une seule constante porte désormais cette unité.
+##
+## Q76 — la portée de la classe (`portee_sans_ecran`) ramenée entre le plancher et le plafond que la règle de l'écran pose
+## (`portee_plancher`, `portee_plafond`) : depuis Q76 les deux valent le bord le plus proche de l'écran, et chaque torche y
+## porte exactement.
 func portee_torche() -> float:
-	return maxf(TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee, portee_plancher)
+	return clampf(portee_sans_ecran(), portee_plancher, portee_plafond)
+
+
+## Q75 (Adrien, 2026-09-30 20:17 : « A+d ») — la portée de la torche SANS la règle de l'écran (ni plancher ni plafond) :
+## celle de la 0.7.1, classe par classe (`torch_scale × facteur_portee`, de 192 px pour le Terrassier, la pompe, à 672 px
+## pour le Braconnier, l'arbalète ; la 0.7.1 calculait exactement ceci). Le rayon dans l'AIR de Q41 s'éteint au plus court
+## de cette longueur et de la portée (`IsoVolumes.plafond_du_faisceau`) ; la lumière au sol va jusqu'à la portée.
+func portee_sans_ecran() -> float:
+	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale * facteur_portee
 
 ## ISO8 — la portée de TOUTES les torches, en un seul facteur (brief de la session cloud, 2026-09-15 12:50,
 ## sur mandat d'Adrien de 12:20 : « réduire la taille des cônes de lumière pour le rendre plus
@@ -138,6 +150,14 @@ static var facteur_portee := 1.0
 ## l'écran de son porteur (Q45, Adrien, 2026-09-29 : « ça doit au moins aller au bout de l'écran de chaque joueur »).
 ## En pixels de monde ; 0 : pas de plancher (le jeu d'avant, `--sans-portee-ecran` en build de débogage).
 ##
+## ⚠️ **Depuis Q76 (2026-09-30, vers 22:58), c'est le bord le PLUS PROCHE, et c'est aussi un PLAFOND** (`portee_plafond`) :
+## « diminuons la portée des lampe au maximum visible par le joueur en hauteur et largeur (le minimum des deux) ». Le
+## plancher de L1 allait au COIN (728 px en vue unique à ×1,5) : toutes les classes y montaient, et, visée vers le haut de
+## l'écran, leur lumière passait le bord de 260 px — du sol que le porteur ne voyait pas. Plancher et plafond valent
+## désormais tous deux 468 px : chaque torche porte exactement jusqu'au bord le plus proche, la Sentinelle (499 px dans la
+## 0.7.1) et le Braconnier (672) y descendent, et `--portee-coin` (débogage) rend le plancher du coin, sans plafond. Ce
+## qui suit est l'histoire de L1.
+##
 ## **Un plancher, pas un facteur** : les classes qui portaient moins loin que le bord y montent, celles qui portaient
 ## plus loin gardent leur portée. C'est l'option la plus prudente des deux qu'ouvre la règle — l'autre, tout multiplier
 ## pour que la plus courte (le Terrassier) atteigne le bord, garde l'écart entre classes mais pousse l'arbalète à
@@ -149,6 +169,11 @@ static var facteur_portee := 1.0
 ## `facteur_portee`. EN LIGNE, zoom et décalage sont les constantes du duel sur les deux machines : le plancher aussi,
 ## sans rien sur le fil.
 static var portee_plancher := 0.0
+
+## Q76 — LE PLAFOND DE PORTÉE : aucune torche ne porte plus loin que le bord le plus proche de l'écran de la vue unique
+## (voir `portee_plancher`). INF : pas de plafond (la règle éteinte, ou celle du coin de L1). Posé avec le plancher, par
+## `GameSettings.accorder_au_mode`, statique pour la même raison ; en ligne, la même valeur sur les deux machines.
+static var portee_plafond := INF
 
 ## Chantier des lumières de la 0.8.0, L1bis — LES FAISCEAUX PLUS CONCENTRÉS (Adrien, 2026-09-29, après la planche de L1 :
 ## « Il faut que les faisceaux des lumières soient plus concentrés. Faisons en sorte que tu gardes les mêmes rapports

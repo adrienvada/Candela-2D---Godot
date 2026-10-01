@@ -479,30 +479,34 @@ func _les_faces_et_le_bain() -> void:
 	IsoMateriaux.accorder_sol(sol)
 	# ISO7b — le modelé des corps, tenu par la CAMÉRA (décision de la session cloud, 2026-09-15 14:21) : plus aucune
 	# lecture du gradient — un corps qui traverse un cône ne voit pas son côté clair sauter.
-	var dessus := IsoMateriaux.modele_du_corps(Vector3(0, 1, 0))
-	var face_sud := IsoMateriaux.modele_du_corps(Vector3(0, 0, 1))
-	_check("corps : dessus 1,15 et face sud 0,9 (%.2f, %.2f)" % [dessus, face_sud],
+	# Le lacet 0 : la caméra au sud, (0, 1) — le modelé d'avant Q71, à l'identique.
+	var sud := _vers_camera(0.0)
+	_check("corps : au lacet 0, la caméra regarde du sud (%.3f, %.3f)" % [sud.x, sud.y], sud.is_equal_approx(Vector2(0.0, 1.0)))
+	var dessus := IsoMateriaux.modele_du_corps(Vector3(0, 1, 0), sud)
+	var face_sud := IsoMateriaux.modele_du_corps(Vector3(0, 0, 1), sud)
+	_check("corps : dessus 1,15 et face sud 0,9 au lacet 0 (%.2f, %.2f)" % [dessus, face_sud],
 		is_equal_approx(dessus, 1.15) and is_equal_approx(face_sud, 0.9))
 	var une_valeur := true
 	for nv: Vector3 in [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, -1), Vector3(0, -1, 0)]:
-		une_valeur = une_valeur and is_equal_approx(IsoMateriaux.modele_du_corps(nv), IsoMateriaux.MODELE_AUTRES)
+		une_valeur = une_valeur and is_equal_approx(IsoMateriaux.modele_du_corps(nv, sud), IsoMateriaux.MODELE_AUTRES)
 	_check("corps : toutes les autres faces à une seule valeur (%.2f)" % IsoMateriaux.MODELE_AUTRES, une_valeur)
 	var visibles := [Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]
 	var somme := 0.0
 	for nv: Vector3 in visibles:
-		somme += IsoMateriaux.modele_du_corps(nv)
+		somme += IsoMateriaux.modele_du_corps(nv, sud)
 	_check("corps : la moyenne des faces vues reste la lumière du capteur (%.2f ≈ 1)" % (somme / visibles.size()),
 		absf(somme / visibles.size() - 1.0) < 0.05)
-	_check("corps : la face sud ne passe jamais sous 0,7 (%.2f)" % face_sud, face_sud >= 0.7)
-	var tournee := IsoMateriaux.modele_du_corps(Vector3(0.6, 0.0, 0.8))
+	_check("corps : la face vers la caméra ne passe jamais sous 0,7 (%.2f)" % face_sud, face_sud >= 0.7)
+	var tournee := IsoMateriaux.modele_du_corps(Vector3(0.6, 0.0, 0.8), sud)
 	_check("corps : une face tournée ne prend que la valeur de sa normale (%.2f)" % tournee, is_equal_approx(tournee, 0.9))
+	_modele_q71()
 	var code_corps := (load("res://corps_iso.gdshader") as Shader).code
 	_check("corps : le modelé ne lit plus la lightmap (ni gradient, ni pas, ni gradient simulé)",
 		not code_corps.contains("lambert_du_corps") and not code_corps.contains("lambert_pas_px") and not code_corps.contains("gradient_simule"))
-	_check("corps : le modelé est re-plafonné à la fiche", code_corps.contains("modele_du_corps(normale_monde)), couleur_fiche.rgb);"))
+	_check("corps : le modelé est re-plafonné à la fiche", code_corps.contains("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)), couleur_fiche.rgb);"))
 	_check("corps : le modelé passe par pate_facteur, avant l'encre et jamais sur la silhouette",
-		code_corps.find("modele_du_corps(normale_monde)") > 0 and code_corps.find("modele_du_corps(normale_monde)") < code_corps.find("pate_encre_boite(local")
-		and code_corps.find("modele_du_corps(normale_monde)") < code_corps.find("silhouette.rgb * s"))
+		code_corps.find("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)") > 0 and code_corps.find("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)") < code_corps.find("pate_encre_boite(local")
+		and code_corps.find("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)") < code_corps.find("silhouette.rgb * s"))
 	var corps_mat := ShaderMaterial.new()
 	corps_mat.shader = load("res://corps_iso.gdshader")
 	IsoMateriaux.accorder_corps(corps_mat)
@@ -513,6 +517,85 @@ func _les_faces_et_le_bain() -> void:
 		is_equal_approx(float(mur.get_shader_parameter("lambert_plancher")), IsoMateriaux.LAMBERT_PLANCHER)
 		and float(mur.get_shader_parameter("contact_px")) > 0.0 and float(sol.get_shader_parameter("dalles")) == 1.0
 		and float(sol.get_shader_parameter("temperature_seuil_haut")) > 0.0)
+
+
+## Q71 (Adrien, 2026-09-30 : « Q71 : corrige ») — LE MODELÉ SUIT LA CAMÉRA QUI DESSINE. Au lacet 45° B, J1 (45°) et J2
+## (225°) regardent de deux côtés opposés ; la face « sud » en dur ne se voyait que d'un seul : l'un voyait l'adversaire avec
+## une face à 0,9, l'autre sans. Ce que la garde tient :
+## - la règle : pour chaque orientation d'un corps (tous les 15°) et chacune de ses faces, la face vue par J1 et sa jumelle
+##   vue par J2 — le même corps tourné du demi-tour qui échange les deux joueurs — ont le MÊME facteur, et la moyenne des
+##   faces que chacun voit est la même ;
+## - le témoin : la règle d'avant (le sud du monde en dur) rougit sur ce même calcul — sans lui, l'égalité ne prouverait rien ;
+## - le shader dit la même règle que son miroir, dans `corps_iso.gdshader` et `corps_iso_eclaire.gdshader` : la caméra lue
+##   dans `INV_VIEW_MATRIX[2].xz`, le seuil de 60° (`dot(n.xz, v) > 0.5`).
+func _modele_q71() -> void:
+	var Reglages: GDScript = load("res://settings_manager.gd")
+	var lacet: float = Reglages.LACET_DEFAUT
+	var option: String = Reglages.OPTION_LACET_DEFAUT
+	var cam := [_vers_camera(Reglages.lacet_du_joueur(0, lacet, option)), _vers_camera(Reglages.lacet_du_joueur(1, lacet, option))]
+	_check("Q71 : le duel est à 45° B — les caméras de J1 et J2 regardent de deux côtés opposés (%.3f, %.3f) / (%.3f, %.3f)"
+		% [cam[0].x, cam[0].y, cam[1].x, cam[1].y], cam[0].is_equal_approx(-cam[1]))
+	var faces := [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, -1), Vector3(0, 1, 0)]
+	var egales := true
+	var moyennes_egales := true
+	var avant_inegal := false
+	var detail := ""
+	var vues_0_9 := 0
+	# Tous les 15°, décalés de 7,5° : aucune face ne tombe pile sur un seuil (60° ou 90° de la caméra), où l'arrondi d'un
+	# flottant déciderait seul d'un côté ou de l'autre.
+	for pas in 24:
+		var phi := deg_to_rad(7.5 + 15.0 * float(pas))
+		var somme := [0.0, 0.0]
+		var vues := [0, 0]
+		for f: Vector3 in faces:
+			var n1 := f.rotated(Vector3.UP, phi)
+			var n2 := f.rotated(Vector3.UP, phi + PI)
+			var vue1 := n1.y > 0.5 or Vector2(n1.x, n1.z).dot(cam[0]) > 0.0
+			var vue2 := n2.y > 0.5 or Vector2(n2.x, n2.z).dot(cam[1]) > 0.0
+			if vue1 != vue2:
+				egales = false
+				detail = "φ %.1f° : la face %s vue par l'un, pas par l'autre" % [7.5 + 15.0 * pas, str(f)]
+			if not vue1:
+				continue
+			var f1 := IsoMateriaux.modele_du_corps(n1, cam[0])
+			var f2 := IsoMateriaux.modele_du_corps(n2, cam[1])
+			if not is_equal_approx(f1, f2):
+				egales = false
+				detail = "φ %.1f° : la face %s vaut %.2f chez J1, %.2f chez J2" % [7.5 + 15.0 * pas, str(f), f1, f2]
+			if is_equal_approx(f1, IsoMateriaux.MODELE_FACE_CAMERA):
+				vues_0_9 += 1
+			somme[0] += f1
+			somme[1] += f2
+			vues[0] += 1
+			vues[1] += 1
+			if not is_equal_approx(_modele_avant_q71(n1), _modele_avant_q71(n2)):
+				avant_inegal = true
+		moyennes_egales = moyennes_egales and is_equal_approx(somme[0] / vues[0], somme[1] / vues[1])
+	_check("Q71 : chaque face vue par J1 a sa jumelle vue par J2, au même facteur (24 orientations × 5 faces)", egales, detail)
+	_check("Q71 : la moyenne des faces que chacun voit est la même pour J1 et J2", moyennes_egales)
+	_check("Q71 : la face tournée vers la caméra est bien assombrie à 45° (%d faces vues à %.2f)" % [vues_0_9,
+		IsoMateriaux.MODELE_FACE_CAMERA], vues_0_9 > 0)
+	_check("Q71 : témoin — la règle d'avant (le sud du monde en dur) donnait à J1 et J2 un modelé différent", avant_inegal)
+	for chemin in ["res://corps_iso.gdshader", "res://corps_iso_eclaire.gdshader"]:
+		var code := (load(chemin) as Shader).code
+		_check("Q71 : %s lit la caméra qui dessine (INV_VIEW_MATRIX[2].xz) et le seuil de 60°" % chemin.get_file(),
+			code.contains("modele_du_corps(normale_monde, INV_VIEW_MATRIX[2].xz)), couleur_fiche.rgb);") and code.contains("float modele_du_corps(vec3 n, vec2 camera)")
+			and code.contains("if (dot(n.xz, v) > 0.5 && abs(n.y) <= 0.5)") and not code.contains("if (n.z > 0.5 && abs(n.y) <= 0.5)"))
+
+
+## La direction horizontale (x, z du monde) vers la caméra iso d'un lacet : l'axe z de sa base (`CameraIso.transform_pour`).
+func _vers_camera(lacet: float) -> Vector2:
+	var t := CameraIso.transform_pour(Transform2D.IDENTITY, Vector2(1920.0, 1080.0), CameraIso.TANGAGE_DEG, lacet)
+	return Vector2(t.basis.z.x, t.basis.z.z).normalized()
+
+
+## La règle d'avant Q71, le TÉMOIN : la face sud du monde en dur, quelle que soit la caméra.
+static func _modele_avant_q71(n: Vector3) -> float:
+	if n.y > 0.5:
+		return 1.15
+	if n.z > 0.5 and absf(n.y) <= 0.5:
+		return 0.9
+	return 1.0
 
 
 # ---------------------------------------------------------------------------
