@@ -1,0 +1,19 @@
+pose=poudre_contact noeud=GadgetJ2_9950
+noir_nappes cas=poudre_tas vue=J1 noirs=128039 emprise=69560 noirs_dessous=33548 instables=46447 fuites=3 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=0 | temoin: fuites_sup2=33161
+noir_nappes cas=poudre_tas vue=J2 noirs=118032 emprise=71531 noirs_dessous=28058 instables=56301 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=0 | temoin: fuites_sup2=27790
+pose=nappe_braises noeud=GadgetJ2_9950
+noir_nappes cas=braises_tas_lueur_coupee vue=J1 noirs=116575 emprise=38066 noirs_dessous=67 instables=47130 fuites=8 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=32 | temoin: fuites_sup2=20
+noir_nappes cas=braises_tas_lueur_coupee vue=J2 noirs=117377 emprise=37079 noirs_dessous=94 instables=31501 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=71 | temoin: fuites_sup2=60
+pose=nappe_braises noeud=GadgetJ2_9950
+noir_nappes cas=braises_tas_lueur vue=J1 noirs=45454 emprise=49034 noirs_dessous=100 instables=67036 fuites=10 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=8 | temoin: fuites_sup2=13
+noir_nappes cas=braises_tas_lueur vue=J2 noirs=46513 emprise=37274 noirs_dessous=20 instables=35211 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=15 | temoin: fuites_sup2=11
+pose=nappe_braises noeud=GadgetJ2_9950
+noir_nappes cas=braises_seules_lueur vue=J1 noirs=45444 emprise=37774 noirs_dessous=86 instables=66929 fuites=2 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=0 | temoin: fuites_sup2=10
+noir_nappes cas=braises_seules_lueur vue=J2 noirs=46513 emprise=19636 noirs_dessous=0 instables=35271 fuites=0 fuites_sup2=0 fuites_sup8=0 | masque_coupe: fuites_sup2=0 | temoin: fuites_sup2=0
+noir_nappes total_masque_coupe_fuites_sup2=126 total_temoin_fuites_sup2=61065
+pose=poudre_contact noeud=GadgetJ2_9960
+grains rendu=tas vue=J1 allumes_publie=970 allumes_essai=1346 hors_des_traces=0 montee_px=6.4
+grains rendu=tas vue=J2 allumes_publie=3614 allumes_essai=3985 hors_des_traces=0 montee_px=6.4
+grains rendu=braises vue=J1 allumes_publie=970 allumes_essai=1346 hors_des_traces=0 montee_px=2.9
+grains rendu=braises vue=J2 allumes_publie=3614 allumes_essai=3985 hors_des_traces=0 montee_px=2.9
+VERDICT=OK echecs=0

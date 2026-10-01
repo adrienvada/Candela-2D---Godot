@@ -439,6 +439,15 @@ func _retirer_de_la_lightmap(item: CanvasItem) -> void:
 	item.visibility_layer = Presentation3D.COUCHE_HORS_VUE
 
 
+## GV2 — les dessins retirés qui sont morts depuis (les traces de la poudre, que leur fondu libère pendant que leurs grains les
+## portent : `IsoVolumes._suivre_traces`) : leur couche d'origine n'a plus personne à qui revenir. Le premier retrait de dessins
+## qui MEURENT retirés ; sans cet oubli, le registre grossirait d'une entrée par trace, toute la partie.
+func oublier_les_disparus() -> void:
+	for id: int in _couches.keys():
+		if not is_instance_id_valid(id):
+			_couches.erase(id)
+
+
 func _rendre_a_la_lightmap(item) -> void:
 	if not is_instance_valid(item):
 		return

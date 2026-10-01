@@ -131,12 +131,14 @@ func _le_drapeau() -> void:
 	var gadget := _fonction_gd(src, "_suivre_gadget")
 	var fusee := _fonction_gd(src, "_suivre_fusee")
 	_check("le chemin des voxels n'est atteint QUE si la fumée est en voxels (suie et poussière)",
-		gadget.contains("\tif fumee_voxel and VOLUMES.has(slug) and IsoNuageVoxel.NUAGES.has(slug):\n\t\t_suivre_gadget_en_voxels(g, slug, vus)\n\telif VOLUMES.has(slug):")
+		gadget.contains("\tif fumee_voxel and VOLUMES.has(slug) and IsoNuageVoxel.NUAGES.has(slug):\n\t\t_suivre_gadget_en_voxels(g, slug, vus)\n\telif ")
+		and gadget.contains("\telif VOLUMES.has(slug):")
 		and gadget.count("_suivre_gadget_en_voxels(") == 1)
 	_check("… et pour la fumée de la fusée",
 		fusee.contains("\tif volumes_actifs and alpha > 0.0 and fumee_voxel:\n\t\t_suivre_fusee_en_voxels(f, vus)\n\telif volumes_actifs and alpha > 0.0:")
 		and fusee.count("_suivre_fusee_en_voxels(") == 1)
-	_check("aucun autre appelant des voxels dans le jeu", src.count("_suivre_nuage_voxel(") == 3
+	# GV2 : le suivi d'un nuage sert aussi les nappes à l'essai (`_suivre_nappe_en_voxels`, `tools/test_nappes_voxel.gd`).
+	_check("aucun autre appelant des voxels dans le jeu", src.count("_suivre_nuage_voxel(") == 4
 		and src.count("_suivre_gadget_en_voxels(") == 2 and src.count("_suivre_fusee_en_voxels(") == 2)
 	var nuage := FileAccess.get_file_as_string("res://iso_nuage_voxel.gd")
 	_check("le shader des voxels n'est chargé qu'au préchauffage ou au premier nuage (aucun preload, aucun chargement ailleurs)",
@@ -280,10 +282,16 @@ func _le_shader() -> void:
 		and sans.contains("v_couleur = pate_facteur(col, face);"))
 	# L'ENCRE — un assombrissement, sous la règle des murs : le trait du roman graphique est `pate_matiere_et_encre` au
 	# plancher des murs ; celui de GV1 un facteur de plus ; et le fragment ne fait que mélanger la face et son trait.
+	# GV2 : le fragment fait ensuite tendre une braise vers l'ambre (les nappes à l'essai) — `v_braise`, nul par défaut, n'est
+	# posé que de l'éclat des braises : sans braises (la fumée), il vaut 0, et le fragment ne fait que mélanger la face et son
+	# trait.
 	_check("l'encre du roman graphique obéit à « allumé reste allumé » (`pate_matiere_et_encre`, le plancher des murs) ; celle de GV1 est un facteur",
 		sans.contains("v_encre = encre_style == 0 ? pate_facteur(col, face * encre_reste)")
 		and sans.contains(": pate_matiere_et_encre(col, face, trait_reste, 1.0, trait_plancher);")
-		and sans.count("ALBEDO =") == 1 and sans.contains("ALBEDO = mix(v_couleur, v_encre, trait);")
+		and sans.count("ALBEDO =") == 2 and sans.contains("ALBEDO = mix(v_couleur, v_encre, v_braise > 0.0 ? 0.0 : trait);")
+		and sans.contains("ALBEDO = mix(ALBEDO, braises_couleur, clamp(v_braise * BRAISE_GAIN, 0.0, 1.0));")
+		and sans.count("v_braise =") == 2 and sans.contains("v_braise = 0.0;")
+		and sans.contains("v_braise = b > 0.0 ? braises_eclat * b : 0.0;")
 		and sans.count("v_encre =") == 2)
 	_check("les faces et les encres ne font qu'assombrir (facteurs ≤ 1)", IsoNuageVoxel.FACE_DESSUS <= 1.0
 		and IsoNuageVoxel.FACE_GAUCHE <= 1.0 and IsoNuageVoxel.FACE_DROITE <= 1.0 and IsoNuageVoxel.ENCRE_RESTE <= 1.0
@@ -332,7 +340,9 @@ func _le_shader() -> void:
 	_check("le dôme des couches : le rayon se resserre de 22 % en montant, et le sommet des colonnes suit la densité, le relief et la vie",
 		code.contains("float d2 = densite_2d(c.xz, 1.0 - 0.22 * f);") and code.contains("float rho = d2 * nuage_vie;")
 		and code.contains("float bosse = 0.3 + 0.9 * bouffees(c.xz);")
-		and code.contains("float sommet = nuage_hauteur_px * clamp(d2 * bosse, 0.0, 1.0) * vie;")
+		# GV2 : le grain d'une nappe (`hasard`, 1 pour un nuage : `grain` 0) multiplie le sommet après sa borne.
+		and code.contains("float sommet = nuage_hauteur_px * clamp(d2 * bosse, 0.0, 1.0) * vie * hasard;")
+		and code.contains("float hasard = grain > 0.0 ? 1.0 - grain * pate_hash(")
 		and FileAccess.get_file_as_string("res://iso_volumes.gd").contains("var r := rayon * (1.0 - 0.22 * f)"))
 	# LES ENCRES : leurs règles, dans le texte.
 	_check("les arêtes : un trait là où la surface se rompt d'une case entière, jamais entre deux dessus de même hauteur ni sur une demi-marche",

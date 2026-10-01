@@ -24,7 +24,9 @@ const DRAPEAUX := ["--sans-usure", "--sans-beaute", "--encre-essai", "--pochoirs
 	"--menus=ancien", "--sans-led-murs", "--faisceau", "--sans-fumee-masque", "--lacet=0",
 	"--sans-corps-soi-sombre", "--sans-fusee-rouge-sang",
 	# GV1bis — la fumée : le retour aux couches, la taille fine, le trait de GV1 (jamais le défaut), le relief du bruit.
-	"--fumee-couches", "--fumee-voxels=fin", "--fumee-encre=cotes", "--fumee-relief=bruit"]
+	"--fumee-couches", "--fumee-voxels=fin", "--fumee-encre=cotes", "--fumee-relief=bruit",
+	# GV2 — les nappes au sol en voxels, à l'essai, sous la variante qui n'est pas celle par défaut.
+	"--nappes-voxels=braises"]
 
 var _failures := 0
 
@@ -62,6 +64,8 @@ func _sonder() -> void:
 		"fumee_taille": volumes.variante_voxel,
 		"fumee_encre": volumes.encre_voxel,
 		"fumee_relief": volumes.relief_voxel,
+		"nappes_voxel": volumes.nappes_voxel,
+		"nappes_variante": volumes.variante_nappes,
 		"soi_sombre": VoxelCatalogue.soi_sombre_actif(),
 		"rouge_sang": load("res://fusee_couleur.gd").rouge_sang,
 		"lacet": load("res://settings_manager.gd").lacet_applique(DrapeauxDeLancement.arguments()),

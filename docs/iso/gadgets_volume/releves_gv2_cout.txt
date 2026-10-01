@@ -1,0 +1,33 @@
+etalon vue=J1 aire=16061 somme=65999 unite=4.109 mode_des_ecarts=4
+etalon vue=J2 aire=16061 somme=64244 unite=4.000 mode_des_ecarts=4
+pose=nappe_braises noeud=GadgetJ2_9980
+surface scene=braises rendu=publie vue=J1 fragments=92159 images=60114 juge=32045 empreinte=35297
+surface scene=braises rendu=publie vue=J2 fragments=93349 images=60917 juge=32432 empreinte=35578
+surface scene=braises rendu=tas vue=J1 fragments=81121 images=30674 juge=50447 empreinte=24147
+surface scene=braises rendu=tas vue=J2 fragments=81979 images=30610 juge=51369 empreinte=24376
+surface scene=braises rendu=braises vue=J1 fragments=92404 images=60401 juge=32003 empreinte=35318
+surface scene=braises rendu=braises vue=J2 fragments=93349 images=60917 juge=32432 empreinte=35578
+cout scene=braises tour=1 rendu=sans_la_nappe appels=157 primitives=11804 image_ms_mediane=274.3 image_ms_p90=324.9
+cout scene=braises tour=1 rendu=publie appels=195 primitives=11908 image_ms_mediane=262.3 image_ms_p90=294.1
+cout scene=braises tour=1 rendu=tas appels=161 primitives=30604 image_ms_mediane=274.1 image_ms_p90=313.6
+cout scene=braises tour=1 rendu=braises appels=165 primitives=30612 image_ms_mediane=274.7 image_ms_p90=323.8
+cout scene=braises tour=2 rendu=sans_la_nappe appels=157 primitives=11804 image_ms_mediane=262.8 image_ms_p90=303.1
+cout scene=braises tour=2 rendu=publie appels=195 primitives=11908 image_ms_mediane=265.1 image_ms_p90=289.8
+cout scene=braises tour=2 rendu=tas appels=161 primitives=30604 image_ms_mediane=275.3 image_ms_p90=314.4
+cout scene=braises tour=2 rendu=braises appels=165 primitives=30612 image_ms_mediane=279.0 image_ms_p90=309.9
+pose=poudre_contact noeud=GadgetJ2_9981
+surface scene=poudre rendu=publie vue=J1 fragments=228079 images=150666 juge=77413 empreinte=95823
+surface scene=poudre rendu=publie vue=J2 fragments=233848 images=154750 juge=79098 empreinte=96190
+surface scene=poudre rendu=tas vue=J1 fragments=171839 images=71301 juge=100538 empreinte=55653
+surface scene=poudre rendu=tas vue=J2 fragments=175644 images=72291 juge=103353 empreinte=55816
+surface scene=poudre rendu=braises vue=J1 fragments=231169 images=154002 juge=77167 empreinte=96282
+surface scene=poudre rendu=braises vue=J2 fragments=236205 images=157168 juge=79037 empreinte=96615
+cout scene=poudre tour=1 rendu=sans_la_nappe appels=181 primitives=11852 image_ms_mediane=255.2 image_ms_p90=293.1
+cout scene=poudre tour=1 rendu=publie appels=187 primitives=11892 image_ms_mediane=266.7 image_ms_p90=315.8
+cout scene=poudre tour=1 rendu=tas appels=163 primitives=34828 image_ms_mediane=270.0 image_ms_p90=293.7
+cout scene=poudre tour=1 rendu=braises appels=165 primitives=12708 image_ms_mediane=257.3 image_ms_p90=291.5
+cout scene=poudre tour=2 rendu=sans_la_nappe appels=181 primitives=11852 image_ms_mediane=244.4 image_ms_p90=266.7
+cout scene=poudre tour=2 rendu=publie appels=187 primitives=11892 image_ms_mediane=257.0 image_ms_p90=290.8
+cout scene=poudre tour=2 rendu=tas appels=163 primitives=34828 image_ms_mediane=264.1 image_ms_p90=285.9
+cout scene=poudre tour=2 rendu=braises appels=165 primitives=12708 image_ms_mediane=261.2 image_ms_p90=283.5
+VERDICT=OK echecs=0

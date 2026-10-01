@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Planches du chantier « Gadgets en volume » (GV0, GV1, GV1bis).
+"""Planches du chantier « Gadgets en volume » (GV0, GV1, GV1bis, GV2).
 
 Usage :
     python3 docs/iso/gadgets_volume/planche_gv.py --avant DIR --nuages DIR --noir DIR [--sortie DIR] [--etape gv1|gv1bis]
@@ -24,6 +24,15 @@ Avec `--etape gv1bis` (le défaut), les mêmes prises du banc de GV1bis donnent 
 - planche_gv1bis_detail.jpg — une région de chaque nuage sans réduction, sous les six rendus : le trait ne se juge qu'à la
   taille de l'écran ;
 - planche_gv1bis_noir.jpg — la preuve du noir à l'écran pour chaque encre, contre les couches, et « allumé reste allumé ».
+
+GV2 (`--nappes DIR` et/ou `--noir-nappes DIR`, les modes `nappes` et `noir_nappes` du banc) :
+
+- planche_gv2_braises.jpg et planche_gv2_poudre.jpg — la MÊME image de jeu sous trois rendus : le jeu publié (couches,
+  lueurs, traces au sol), l'essai « tas » (la nappe en cubes fins) et l'essai « braises » (la nappe au sol, ses braises
+  seules en cubes ; les traces en grains dans les deux) ; J1 puis J2 sous la lampe, puis sans la lampe (les lumières
+  propres de la nappe gardées) ;
+- planche_gv2_detail.jpg — chaque nappe sans réduction, sous les trois rendus ;
+- planche_gv2_noir.jpg — la preuve du noir à l'écran des nappes en cubes, et celle des grains.
 
 ⚠️ Une vignette noire est affichée telle quelle : un noir tenu est un carré noir. Le verdict est le chiffre du banc.
 Dépendance : Pillow.
@@ -426,12 +435,114 @@ def noir_bis(dossier, sortie, cote=180):
                       colonnes=len(colonnes), cote=cote, legende_ligne=210)
 
 
+RENDUS_GV2 = [("publie", "AVANT (jeu publié)"), ("tas", "ESSAI « tas »"), ("braises", "ESSAI « braises »")]
+COTE_GV2 = 300
+
+
+def libelle_braises(brut):
+    return {"00.5": "fraîche (0,5 s)", "05.0": "à mi-vie (5 s)", "09.5": "à la fin (9,5 s)"}.get(brut, brut + " s")
+
+
+def gv2(dossier, sortie):
+    stats = {}
+    for l in releves(dossier, "nappes"):
+        c = champs(l)
+        if "prise" in c and "rendu" in c:
+            stats[(c["prise"], c["lumiere"], c["rendu"], c["vue"])] = c
+    fichiers = sorted(f[:-4] for f in os.listdir(dossier) if f.startswith("gv2_") and f.endswith(".png"))
+    noms = "|".join(r for r, _ in RENDUS_GV2)
+    prises = sorted({re.sub(r"_(lampe|sans_lampe)_(%s)_j[12]$" % noms, "", f) for f in fichiers})
+    for nappe, titre in [("braises", "la nappe de braises de l'Incendiaire"),
+                         ("poudre", "la poudre de contact de la Sentinelle")]:
+        lignes = []
+        for prise in [x for x in prises if x.startswith("gv2_" + nappe)]:
+            instant = libelle_braises(prise.replace("gv2_braises_", "")) if nappe == "braises" else "douze traces"
+            for lumiere, texte in [("lampe", "sous la lampe"), ("sans_lampe", "sans la lampe")]:
+                for vue in (1, 2):
+                    ims = [vignette(dossier, "%s_%s_%s_j%d" % (prise, lumiere, r, vue), COTE_GV2) for r, _ in RENDUS_GV2]
+                    lignes.append(("%s — J%d, %s" % (instant, vue, texte), ims, [], COTE_GV2))
+        if not lignes:
+            continue
+        planche_mixte("GV2 — %s : la nappe en cubes (à l'essai)" % titre,
+                      "La MÊME image de jeu pour les trois rendus (âge tenu, temps figé). AVANT : le jeu publié (deux "
+                      "couches, les lueurs des braises, les traces au sol). « tas » : la nappe en tas bas de cubes d'un "
+                      "huitième de tuile, au relief et à l'encre (les volutes) de son dessin, ses braises des cubes qui "
+                      "rougeoient. « braises » : la nappe au sol, ses braises seules en cubes. Les traces en grains dans "
+                      "les deux. Sans la lampe : la lueur de la nappe seule.",
+                      [e for _, e in RENDUS_GV2], lignes, os.path.join(sortie, "planche_gv2_%s.jpg" % nappe),
+                      colonnes=3, cote=COTE_GV2, legende_ligne=200)
+
+
+def detail_gv2(dossier, sortie, cote=260):
+    lignes = []
+    # La nappe de braises se juge SANS la lampe (elle porte sa lueur ; sous la lampe, son cœur sort blanc dans les trois
+    # rendus) ; la poudre, sous la lampe (dans le noir, seules ses traces luisent).
+    for prise, lumiere, libelle in [("gv2_braises_05.0", "sans_lampe", "braises, à mi-vie"),
+                                    ("gv2_poudre", "lampe", "poudre et traces")]:
+        for vue in (1, 2):
+            ims = []
+            for rendu, _ in RENDUS_GV2:
+                chemin = os.path.join(dossier, "%s_%s_%s_j%d.png" % (prise, lumiere, rendu, vue))
+                fond = Image.new("RGB", (cote, cote), FOND)
+                if os.path.exists(chemin):
+                    im = Image.open(chemin).convert("RGB")
+                    x = max(0, (im.width - cote) // 2)
+                    y = max(0, (im.height - cote) // 2)
+                    fond.paste(im.crop((x, y, x + cote, y + cote)), (0, 0))
+                ims.append(fond)
+            lignes.append(("%s — J%d, %s, pixel pour pixel" % (libelle, vue, "sous la lampe" if lumiere == "lampe"
+                                                                 else "sans la lampe"), ims, [], cote))
+    planche_mixte("GV2 — le détail : les nappes sans réduction",
+                  "Le centre de chaque prise à sa taille d'écran (écran scindé, 1920 × 1080), le même pour les trois "
+                  "rendus : les cubes d'un huitième de tuile et leurs traits ne se jugent qu'ici.",
+                  [e for _, e in RENDUS_GV2], lignes, os.path.join(sortie, "planche_gv2_detail.jpg"), colonnes=3,
+                  cote=cote, legende_ligne=200)
+
+
+def noir_gv2(dossier, sortie, cote=200):
+    stats = {}
+    grains = {}
+    for l in releves(dossier, "noir_nappes"):
+        if l.startswith("noir_nappes cas="):
+            c = champs(l.split("|")[0])
+            stats[(c["cas"], c["vue"])] = c
+        elif l.startswith("grains rendu="):
+            c = champs(l)
+            grains[(c["rendu"], c["vue"])] = c
+    lignes = []
+    for cas in sorted({k[0] for k in stats}):
+        for vue in (1, 2):
+            c = stats.get((cas, "J%d" % vue), {})
+            ims = [vignette(dossier, "noir_nappes_%s_%s_j%d" % (cas, quoi, vue), cote) for quoi in ("sans", "avec", "carte")]
+            textes = ["noir dessous : %s px" % c.get("noirs_dessous", "?"), "fuites > 2/255 : %s" % c.get("fuites_sup2", "?"),
+                      "emprise : %s px" % c.get("emprise", "?")]
+            lignes.append(("%s, J%d" % (cas.replace("_", " "), vue), ims, textes, cote))
+    for vue in (1, 2):
+        ims = [vignette(dossier, "grains_publie_j%d" % vue, cote)]
+        textes = ["traces au sol : %s px" % grains.get(("tas", "J%d" % vue), {}).get("allumes_publie", "?")]
+        for rendu in ("tas", "braises"):
+            ims.append(vignette(dossier, "grains_%s_j%d" % (rendu, vue), cote))
+            g = grains.get((rendu, "J%d" % vue), {})
+            textes.append("%s : %s px, hors des traces %s" % (rendu, g.get("allumes_essai", "?"), g.get("hors_des_traces", "?")))
+        lignes.append(("les grains dans le noir, J%d" % vue, ims, textes, cote))
+    if lignes:
+        planche_mixte("GV2 — le noir absolu À L'ÉCRAN des nappes en cubes, et les grains",
+                      "Nappes : sans les cubes, avec, la carte (rouge : fuite ; gris : noir stable ; vert : noir sous les "
+                      "cubes, resté noir ; bleu : instable, hors preuve). Grains, dans le noir : le jeu publié puis chaque "
+                      "variante ; un pixel allumé par un grain doit être dans la colonne de sa trace (deux blocs de 4 px, "
+                      "la trace levée au sommet du grain). Corps cachés.",
+                      ["sans les cubes / jeu publié", "avec les cubes / « tas »", "carte / « braises »"], lignes,
+                      os.path.join(sortie, "planche_gv2_noir.jpg"), colonnes=3, cote=cote, legende_ligne=230)
+
+
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--avant")
     a.add_argument("--nuages")
     a.add_argument("--noir")
     a.add_argument("--sortie", default=ICI)
+    a.add_argument("--nappes")
+    a.add_argument("--noir-nappes")
     a.add_argument("--etape", default="gv1bis", choices=["gv1", "gv1bis"])
     args = a.parse_args()
     os.makedirs(args.sortie, exist_ok=True)
@@ -449,6 +560,11 @@ def main():
             noir(args.noir, args.sortie)
         else:
             noir_bis(args.noir, args.sortie)
+    if args.nappes:
+        gv2(args.nappes, args.sortie)
+        detail_gv2(args.nappes, args.sortie)
+    if args.noir_nappes:
+        noir_gv2(args.noir_nappes, args.sortie)
 
 
 if __name__ == "__main__":

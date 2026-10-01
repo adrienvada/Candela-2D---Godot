@@ -3251,6 +3251,22 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un banc qui ÉPARGNE une lumière ne la rallume pas : éteinte avant d'être déclarée gardée, elle le reste (2026-10-01)
+
+Gadgets en volume, GV2. Les braises de la nappe en cubes ne se voyaient sur aucune planche, et trois passages du banc ont
+cherché la faute dans le shader : le mélange au lieu de l'addition, l'ambre linéarisé, un gain sur l'éclat, le type du
+tableau des braises. Deux diagnostics ont tranché en deux prises : un shader temporaire qui colore chaque cube selon sa
+distance à la braise la plus proche (le shader trouvait bien ses seize braises, aux bons cubes) ; puis une ligne de journal
+sur l'objet vivant — la lueur de la nappe était ÉTEINTE (`enabled = false`), l'éclat des braises nul. Le banc éteint toutes
+les lumières à chaque image et en épargne certaines (« les lumières propres du sujet ») ; mais la première extinction
+tombait AVANT qu'on les déclare gardées (l'âge tenu juste après la pose), et l'épargne n'était qu'un `continue` : rien ne les
+rallumait — le jeu, lui, ne coupe jamais cette lueur. Toutes les prises des nappes avaient été faites sans elle : sans
+braises, sans les lueurs du jeu publié, et sans la lumière ambre qu'elle pose autour du tas. `_eteindre_tout` RALLUME
+désormais les lumières propres gardées. **Quand un effet ne se voit pas, imprimer d'abord l'entrée qui le pilote, sur
+l'objet vivant, avant de toucher au code qui le dessine.** Et ce qu'on a changé sous le mauvais diagnostic se rejuge, la
+cause corrigée : le mélange est resté sur son principe, le gain sur une nouvelle mesure ; la linéarisation est partie —
+elle était fausse, l'ambre sortait orange sombre (232/111/6 pour 245/176/61) ; le tableau a repris son type.
+
 ### « Allumé reste allumé » se prouve par FACE : au bord de la lumière, un pixel partagé avec le noir passe sous le seuil (2026-10-01)
 
 Gadgets en volume, Q73 et Q74, après la fusion de la ligne publiée. La preuve à l'écran de GV1bis disait « aucun pixel
@@ -30722,11 +30738,13 @@ faut quelque chose de plus uniforme avec le nouveau graphisme. » Puis, vers 13:
 de mesures. » — **aucune mesure n'est demandée sur le Mac** : le coût se tient par construction et se prouve dans le
 cloud ; ce que le cloud ne peut pas dire (le pilote d'Apple) est écrit comme une limite, pas comme une étape.
 
-Trois étapes faites : **GV0**, l'inventaire ; **GV1**, la fumée en voxels, à l'essai ; **GV1bis**, la fumée en voxels
-PAR DÉFAUT, avec l'encre du roman graphique sur les cubes et le relief tiré du dessin (Q67 à Q70). Rien d'autre ne bouge :
+Quatre étapes faites : **GV0**, l'inventaire ; **GV1**, la fumée en voxels, à l'essai ; **GV1bis**, la fumée en voxels
+PAR DÉFAUT, avec l'encre du roman graphique sur les cubes et le relief tiré du dessin (Q67 à Q70) ; **GV2**, les nappes au
+sol en voxels (les braises, la poudre et ses traces), À L'ESSAI — éteintes par défaut, en attente du mot d'Adrien (Q77,
+Q78). Rien d'autre ne bouge :
 aucun fil (`Protocol.VERSION` inchangé), aucune simulation, aucune lumière 2D, aucun capteur, `config/version` reste 0.8.0.
 Planches et relevés : `docs/iso/gadgets_volume/`. Le banc : `tools/banc_gadgets_volume.gd` (écran scindé, lacet 45° B, J1
-à l'ouest torche allumée, J2 au sud ; `--mode=avant|nuages|noir|cout`).
+à l'ouest torche allumée, J2 au sud ; `--mode=avant|nuages|noir|cout`, et pour GV2 `nappes|noir_nappes|cout_nappes`).
 
 **La fusion du 2026-10-01** (la ligne publiée dans GV, `git merge` fait dans la branche par la session qui la tient).
 Trois fichiers touchés des deux côtés. `tools/run_suites.sh` et cette feuille de route : des AJOUTS de part et d'autre (les
@@ -31034,7 +31052,7 @@ preuve, pas une étape demandée.
 - ~~Le choix de l'encre (Q73) et du noir du trait (Q74).~~ Tranchés le 2026-10-01 : les volutes, et la règle des murs.
 - Le liseré de l'aplat au pied du tas (GV1), toujours là.
 - Non éprouvé : une partie en ligne réelle (le chemin est le même ; horloge et graines passent par l'âge et le centre).
-- GV2 (les nappes) : ordonné par la coordinatrice le 2026-10-01 (plus bas).
+- ~~GV2 (les nappes)~~ : fait à l'essai le 2026-10-01 (plus bas) ; le défaut attend Adrien (Q77, Q78).
 
 ### Q73 et Q74 — tranchées (2026-10-01)
 
@@ -31064,9 +31082,138 @@ murs, sous leur plancher : un trait plus noir pour la fumée seule rougirait. La
   copie de killcam à son âge rejoué), verte sur la fusion puis sur ces changements (« tout passe, sans erreur de script
   (796 s) », 174 lignes).
 
+### GV2 — les nappes au sol en voxels, à l'essai (`--nappes-voxels`, éteint par défaut)
+
+**L'ordre** (la coordinatrice, 2026-10-01) : la suite acceptée par Adrien (Q70, 2026-09-30 : « oui ») — « les nappes au sol :
+les braises en petits cubes rougeoyants qui scintillent, les traces de poudre en grains » —, « uniforme avec la fumée en
+cubes et ses volutes », même méthode que GV1 ; **rien par défaut sans son mot**. Sans le drapeau, le jeu est celui de la
+ligne publiée, et une suite le prouve (`test_nappes_voxel`, lancée sans drapeau puis avec `--nappes-voxels=braises` par
+`run_suites.sh`).
+
+**L'état des lieux** (la ligne publiée, `0fc96b6b`) :
+- **La nappe de braises** (l'Incendiaire ; 68 px de rayon, 10 s de vie, elle brûle qui y reste) : en 2D, une image PEINTE
+  LUMINEUSE (`GadgetBase.materiau_peint_lumineux` : elle porte sa lueur, le décor ne l'éclaire pas) qui pâlit avec ce
+  qu'elle brûle (de 1 à 0,35), et une lumière ambre (`Lueur` : énergie 1,8 × la même part, ombres, au ras du sol). Dans la
+  vue iso : le dessin AU SOL (dans la lightmap, que le sol montre sous sa température graduée), DEUX COUCHES de volume, et
+  SEIZE LUEURS — des halos plats de 3 à 5 px, posés entre 1,5 et 4 px, ambre, qui scintillent à l'âge du gadget
+  (`IsoVolumes._suivre_braises`).
+- **La poudre de contact** (la Sentinelle ; 110 px de rayon, permanente) : en 2D, une image éclairée par le décor
+  (invisible dans le noir), et des TRACES — un trait de 12 × 3 px vert phosphore, additif et non éclairé (il luit dans le
+  noir, pour les deux joueurs), qui s'éteint en 8 s ; 72 au plus par nappe, enfants de l'arène, rejouées par la killcam
+  (`TracesKillcam`). Dans la vue iso : le dessin au sol, DEUX COUCHES, et les traces au sol, dans la lightmap.
+- Ce qui reste « entre la BD et la 3D » : deux dessins couchés au sol sous des couches lisses, des halos plats, des traits
+  plats — aucun volume (planche de GV0, `planche_gv0_gadgets.jpg` ; colonne « AVANT » des planches de GV2).
+
+**L'essai : deux variantes, sur les mêmes planches** (`--nappes-voxels`, ou `=tas` ; `--nappes-voxels=braises`).
+- **« tas »** (le défaut de l'essai) — chaque nappe devient un TAS BAS de cubes d'un huitième de tuile (4,4 px : des
+  charbons et des grains, pas des blocs), dans la langue de la fumée : le même chemin (`_suivre_nuage_voxel`), le même
+  shader (`nuage_voxel_iso.gdshader`), la densité de l'alpha du dessin, le relief de sa clarté, l'encre de ses traits
+  (les VOLUTES, Q73 : les fissures des braises, le liseré de la poudre), le même plancher (Q74), le noir et l'horloge des
+  nuages. Les braises montent jusqu'à un quart de tuile (deux rangées), la poudre jusqu'à un huitième (une semelle). Une
+  nappe ne COULE pas : ni respiration des cubes ni dérive du dessin ; la hauteur de ses colonnes prend une part de HASARD
+  tirée de sa case (0,35 pour les braises, 0,5 pour la poudre ; la case est calée sur le monde : le même hasard dans les
+  deux vues et sur les deux machines). Une nappe prend la **température GRADUÉE du sol** (ISO7b) et non celle d'un
+  nuage : c'est un dessin AU SOL, que le jeu publié montre par le sol. Sous le tas de POUDRE, le dessin passe en APLAT
+  FLOU (moyenné sur 8 × 8 px, sous l'alpha d'origine : ses traits fins, qui se verraient en trous à travers les cubes —
+  Q68 —, fondus ; son clair gardé). La nappe de BRAISES, peinte lumineuse, garde son dessin sous ses cubes, et chaque
+  cube le lit au pied de sa colonne sans lissage : ses charbons et ses fissures restent, et le sol chaud qu'elle laisse
+  voir en pâlissant. Les seize BRAISES sont des cubes du tas qui rougeoient (le cube du sommet de leur colonne) : les
+  mêmes points que les seize lueurs qu'elles remplacent (même graine — la position de la nappe —, même suite de tirages :
+  `IsoVolumes.braises_de`), le même ambre, le même scintillement à l'âge du gadget, et l'éclat de la lumière de la nappe
+  sous son opacité (éteinte, plus de braise) ; un cube de braise tend VERS l'ambre (en mélange : jamais au-delà), plein
+  quand cet éclat × son scintillement atteint 0,5, et n'a pas de trait.
+- **« braises »** — la nappe reste au sol (son dessin, ses deux couches) ; ses braises SEULES deviennent des cubes pleins,
+  posés sur elle (sans juge : une braise est une lueur, comme celles qu'elle remplace).
+- **Les traces de la poudre, dans les deux** : chaque trace qui luit devient trois GRAINS (des cubes de 3 × 2,2 × 3 px
+  alignés sur elle, `grain_iso.gdshader`), de sa couleur à son éclat rendu (son fondu, la charge des pieds), ADDITIFS comme
+  elle ; posés sur le tas de poudre dans la nappe (« tas »), au sol sinon. Un seul `MultiMesh` pour toutes, sur le calque
+  commun (les deux joueurs voient les traces : Adrien, 2026-09-11) ; les traces que la killcam rejoue ont leurs grains,
+  celles du présent (cachées pendant le rejeu) non. La trace 2D sort de la lightmap tant que ses grains la portent — sa
+  lueur ne se compte pas deux fois — et y revient quand l'essai s'éteint ; le registre des dessins retirés oublie les
+  traces mortes (`MiroirsIso.oublier_les_disparus` : les premiers dessins retirés qui MEURENT).
+
+**Les règles, et comment elles tiennent** — celles de la fumée en cubes, par le même shader : noir absolu dans le monde
+(un cube vaut la lightmap sous lui, assombrie par ses faces et son encre ; une braise ou un grain ne luit que de SA
+lumière, nulle lumière éteinte) ; noir à l'écran (le juge de la nappe et le pochoir) ; jamais plus caché (avant les corps,
+sans profondeur écrite) ; équité J1/J2 (les deux vues reçoivent tous les mêmes réglages ; les graines viennent de la
+position de la nappe ou de la case) ; l'horloge est l'âge du gadget, que la killcam rejoue ; rien du jeu ne change
+(aucune lumière 2D, aucun capteur — les capteurs ne rendent que leur propre disque —, aucun joueur ; `Protocol.VERSION`
+et `config/version` non plus).
+
+**Quatre passages du banc**, dont trois à chercher au mauvais endroit. Les braises en cubes ne se voyaient sur aucune
+planche ; on a changé le shader trois fois. La faute était au BANC : la lueur de la nappe y était éteinte (« Pièges
+connus », 2026-10-01). Lumière rallumée, tout s'est rejugé : le mélange vers l'ambre reste, sur son principe (jamais
+au-delà de l'ambre) ; le gain de 2 reste, remesuré (au gain 1, le poids même des lueurs, les braises du tas se
+distinguent à peine sur le cœur crème d'une nappe fraîche) ; l'ambre « linéarisé » est retiré — il était faux, il
+sortait orange sombre (232/111/6 pour 245/176/61). Et la lueur
+rallumée a montré le dernier écart : sous la température d'un nuage, l'anneau de pierre de la nappe de braises sortait
+GRIS (r/b 1,35 contre 1,85 au jeu publié, à mi-vie sans la lampe) ; sous celle du sol, il en suit la teinte à quelques
+centièmes près (1,81 contre 1,85 ; 2,13 contre 2,16 en fin de vie ; 1,52 contre 1,53 fraîche).
+
+**Les preuves** (relevés : `releves_gv2_nappes.txt`, `releves_gv2_noir.txt`, `releves_gv2_cout.txt`).
+- **Le noir à l'écran** (`--mode=noir_nappes`, la méthode de GV1 : A sans les cubes, B avec, A' sans encore ; l'emprise des
+  cubes ; le témoin — les cubes sans juge ; le masque coupé). Huit relevés — la poudre à moitié sous la torche ; la nappe de
+  braises sa lueur COUPÉE (seul son dessin peint luit) puis allumée, en « tas » ; ses braises seules ; deux vues : **aucune
+  fuite au-delà de 2/255**, et au plus 10 pixels à 1 ou 2/255 par relevé (le juge tranche par fragment, le pochoir par
+  échantillon : « Pièges connus », 2026-09-30). Le témoin voit 61 065 fuites, le masque coupé 126 : c'est le juge de la
+  nappe qui tient le noir. Sous l'emprise des cubes, de 0 à 33 548 pixels noirs par relevé : la nappe de braises allumée
+  éclaire son propre tas ; c'est la poudre, et la nappe éteinte, qui posent des cubes sur du noir.
+- **Les grains dans le noir** (toutes les lumières éteintes ; le jeu publié, puis chaque variante) : aucun pixel allumé
+  hors de la colonne de sa trace, dans les deux variantes et les deux vues (1 346 et 3 985 pixels allumés ; 970 et 3 614
+  au jeu publié). La trace du jeu publié est LEVÉE à l'écran jusqu'au sommet de ses grains (6,4 px sur le tas, 2,9 au
+  sol) : un grain posé sur le tas est plus haut que sa trace, et la caméra le montre plus haut — la parallaxe d'un objet
+  posé, pas une lueur qui déborde. Sans la levée, le haut du premier grain de chaque trace sortait de la tolérance (27 et
+  22 pixels en « tas », aucun au sol) : la première preuve l'a vu, et c'est le critère qui a été corrigé, pas les grains.
+- **L'équité J1 = J2 et la killcam** : `test_nappes_voxel` compare chaque uniforme des deux vues (« tas » et « braises »),
+  les points des braises aux seize lueurs du jeu publié (même graine, même suite de tirages), l'éclat des braises à celui
+  des lueurs, et la copie de killcam d'une nappe à son âge REJOUÉ dans les deux vues, ses braises aux mêmes points ; les
+  traces que la killcam rejoue ont leurs grains, celles du présent (cachées) non. La suite complète est verte (« tout passe, sans
+  erreur de script (814 s) », 176 lignes : les deux passes de `test_nappes_voxel` en plus).
+- **« Allumé reste allumé »** : les nappes ont l'encre (les volutes) et le plancher de la fumée, par le même shader — la
+  suite le vérifie ; la preuve au pixel de Q73 et Q74 vaut pour ce chemin, elle n'a pas été rejouée sur les nappes.
+- **Le coût** (`--mode=cout_nappes`, écran scindé, sous la lampe, les deux vues ; la nappe de braises à mi-vie, la poudre
+  et douze traces). Ce qui ne dépend pas du pilote : **moins d'appels de dessin** — la nappe de braises en coûte 38 au jeu
+  publié (deux couches, seize lueurs et un juge, par vue), 4 en « tas », 8 en « braises » ; la poudre en coûte 6 au jeu
+  publié, et l'essai en ÔTE : 18 de moins que sans la nappe en « tas », 16 en « braises » (les douze traces sortent des
+  deux lightmaps — 24 appels —, un seul maillage de grains par vue les remplace) ; **moins de surface** en « tas » — 12 %
+  de fragments de moins pour les braises (81 121 contre 92 159, vue de J1), 25 % pour la poudre (171 839 contre
+  228 079) ; « braises » est au niveau du jeu publié (+0,3 % et +1 %, les grains) ; **plus de sommets** — +18 700
+  primitives pour la nappe de braises (« tas » et « braises » : la variante « braises » porte la grille du tas entier pour
+  seize cubes), +22 900 pour la poudre en tas, +800 pour les seuls grains. Le temps d'image sous llvmpipe ne tranche pas :
+  244 à 279 ms la médiane, « sans la nappe » compris ; l'écart d'un tour à l'autre (±12 ms) couvre celui des rendus
+  (« tas » +4 % pour les braises, +1 à +3 % pour la poudre).
+
+**Les images** : `planche_gv2_braises.jpg` (la nappe fraîche, à mi-vie, à la fin ; sous la lampe, puis sans : sa lueur
+seule), `planche_gv2_poudre.jpg` (la poudre et ses douze traces, sous la lampe puis dans le noir),
+`planche_gv2_detail.jpg` (À LA TAILLE DE L'ÉCRAN : la nappe de braises sans la lampe, la poudre sous la lampe — c'est là
+que les cubes fins se jugent) et `planche_gv2_noir.jpg` (la preuve du noir et les grains). La même image de jeu pour les
+trois rendus de chaque ligne : le jeu publié, « tas », « braises ».
+
+**Recommandation** : **« tas »**, pour les deux nappes. C'est la seule variante qui réponde à la demande (« davantage en
+3D … plus uniforme avec le nouveau graphisme ») : la nappe entière parle la langue de la fumée en cubes, là où « braises »
+garde le dessin BD couché et ne lève que seize points. Elle est honnête : la même empreinte (l'alpha du dessin), les mêmes
+braises (points, ambre, scintillement, éclat qui meurt avec la nappe), le noir prouvé, J1 = J2. Elle dessine moins (appels,
+fragments) et calcule plus (sommets). Deux choses à savoir avant de trancher : ses braises se voient mieux que les lueurs
+d'aujourd'hui (Q78) ; et la poudre en tas se voit un peu plus sous la lampe — +4 % de clarté, +7 % de contraste au centre
+de la prise (le relief de ses cubes) ; dans le noir, rien ne change, seules ses traces luisent.
+
+**Ce que le cloud ne peut pas dire.** Comme en GV1 : le temps d'image sur le pilote d'Apple, et le hoquet de la première
+compilation (le shader des nuages, déjà compilé pour la fumée par défaut ; celui des grains, petit, à la première trace qui
+luit). La limite de la preuve, pas une étape demandée.
+
+**Ce qui reste.**
+- Le défaut des nappes (Q77) et la vivacité des braises (Q78) : à Adrien, sur les planches.
+- Si « braises » était retenue : sa grille porte toutes les cases du tas pour seize cubes (+18 700 primitives) — une grille
+  de seize cases l'ôterait.
+- Non éprouvé : une partie en ligne réelle (le chemin est le même ; horloge et graines passent par l'âge et la position).
+- La suite de Q70 — les éclats (mine, comète, lentille), puis la toile et les anneaux — attend l'ordre de la coordinatrice.
+
+Questions : Q77 et Q78, dans la liste du chapitre, ci-dessous.
+
 **Questions pour Adrien** (numérotées à partir de Q67 ; Q67 à Q70 répondues le 2026-09-30 vers 15:50, Q73 et Q74 le
 2026-10-01 vers 09:10 — « Décisions actées » ; Q71 et Q72 sont les deux premiers signalements plus bas, posés à Adrien
-par la coordinatrice et corrigés par la 0.8.0 — d'où Q73 et Q74) :
+par la coordinatrice et corrigés par la 0.8.0 — d'où Q73 et Q74 ; Q75 et Q76 sont prises par la ligne publiée — d'où
+Q77 et Q78, posées par GV2, à renuméroter par la coordinatrice si un autre chantier les a prises) :
 - **Q67 — La fumée en voxels par défaut ?** Proposition : oui, en variante « gros », si les planches
   (`planche_gv1_*.jpg`, surtout `planche_gv1_detail.jpg`) disent ce qu'Adrien attend — moins cher que les couches, noir tenu
   à l'écran, rien du jeu ne change. Le jeu ne bouge pas avant sa réponse. → **Oui, en gros, avec des traits sombres** :
@@ -31083,7 +31230,7 @@ par la coordinatrice et corrigés par la 0.8.0 — d'où Q73 et Q74) :
 - **Q70 — La suite, dans quel ordre ?** Proposition : (1) les nappes au sol — les braises en petits cubes rougeoyants qui
   scintillent, les traces de poudre en grains ; (2) les éclats — la gerbe de l'éclair de la mine, la traînée de la comète,
   la lentille de la torche fantôme ; (3) la toile du voile en rangée de voxels minces, les anneaux de pose en cubes plats.
-  → **Oui** ; GV2 (les nappes) attend l'ordre de la coordinatrice.
+  → **Oui** ; GV2 (les nappes) faite à l'essai le 2026-10-01, sur l'ordre de la coordinatrice (Q77, Q78).
 - **Q73 — Quelle encre ?** Les trois sont sur les mêmes planches (`planche_gv1bis_*.jpg`, surtout
   `planche_gv1bis_detail.jpg`, à la taille de l'écran) : les ARÊTES (le contour des paliers), les VOLUTES (les traits du
   dessin, drapés), les HACHURES (l'ombre en traits). Proposition : les VOLUTES, le défaut dès GV1bis ; `--fumee-encre=`
@@ -31092,6 +31239,19 @@ par la coordinatrice et corrigés par la 0.8.0 — d'où Q73 et Q74) :
   l'arrête au plancher (16/255 en valeur affichée) et l'efface sur une face plus sombre. Plus noir, il faudrait baisser ce
   plancher pour la fumée seule — et la lueur faible d'un nuage, qui est une information, disparaîtrait sous un trait. Avis :
   garder la règle. → **« on garde »** (2026-10-01).
+- **Q77 — Les nappes en voxels par défaut, et sous quelle forme ?** Les planches de GV2 (`planche_gv2_braises.jpg`,
+  `planche_gv2_poudre.jpg`, et surtout `planche_gv2_detail.jpg`, à la taille de l'écran) montrent la même image sous trois
+  rendus : le jeu publié ; « tas » — chaque nappe en tas bas de cubes fins, à l'encre de ses volutes, ses braises des cubes
+  du tas qui rougeoient, les traces de la poudre en grains ; « braises » — la nappe reste un dessin au sol, ses seize
+  braises seules en cubes, les traces en grains. Proposition : « tas », pour les deux nappes (GV2, « Recommandation » : la
+  seule qui mette la nappe entière dans la langue de la fumée en cubes ; noir prouvé, moins d'appels et de fragments, plus
+  de sommets). À savoir : la poudre en tas se voit un peu plus sous la lampe (+4 % de clarté, +7 % de contraste) ; rien ne
+  change dans le noir. Le jeu ne bouge pas avant sa réponse.
+- **Q78 — Des braises plus vives que les lueurs ?** En cubes, une braise est PLEINE (tout ambre) dès que la lumière de la
+  nappe × son scintillement atteint 0,5 — le double du poids des lueurs d'aujourd'hui : à leur poids, sur le cœur crème
+  d'une nappe fraîche, les braises du tas se distinguaient à peine. Elles se voient donc mieux que les seize points
+  actuels, et disent l'âge de la nappe de la même façon (elles s'éteignent avec elle, presque invisibles en fin de vie).
+  Rien de neuf n'est révélé : ni position, ni lumière. Avis : garder.
 
 **Signalé en passant — hors périmètre, non corrigé.**
 - **La fusée de killcam éclaire avec l'empreinte du VOL** (lu dans le code ; le banc de GV0 l'a rencontré en posant une
@@ -31110,6 +31270,12 @@ par la coordinatrice et corrigés par la 0.8.0 — d'où Q73 et Q74) :
 - **La graine du bruit des couches d'un gadget vient de son identifiant d'instance** (`g.get_instance_id() % 97`,
   `_suivre_gadget`) : elle diffère d'une machine à l'autre, donc le grain des couches d'une même suie aussi, en ligne. Sans
   effet d'équité (chacun voit la sienne, et la densité n'en dépend pas) ; les cubes, eux, tirent leurs graines du centre.
+- **La lueur des fumées près d'une fusée ne suit pas l'empreinte de la fusée** (signalé par le sous-agent de Q58, relayé par
+  la coordinatrice le 2026-10-01 ; lu dans le code, non mesuré) : `GadgetVolume._lumiere_entrante` allume la suie et la
+  poussière d'une fusée proche sur une portée FIXE — le rayon du nuage + 160 px —, quelle que soit l'empreinte réelle de la
+  fusée (160 px en vol, 440 posée ; son halo, depuis Q58, 220 → 468 → 220 px), avant comme après Q58. C'est la lueur 2D du
+  nuage, que ses cubes (GV1bis) reprennent par la lightmap. GV2 n'y touche pas : les nappes ne sont pas des
+  `GadgetVolume`, et leurs cubes lisent la lightmap, où la fusée pose sa vraie lumière.
 
 ---
 

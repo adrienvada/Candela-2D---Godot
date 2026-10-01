@@ -11,6 +11,9 @@ extends RefCounted
 ## avec des traits sombres comme le faisait le style roman graphique. » Le shader (`nuage_voxel_iso.gdshader`) explique tout :
 ## densité, relief, encre, noir absolu, ordre de dessin.
 ##
+## GV2 (2026-10-01, à l'essai, éteint par défaut) : les NAPPES AU SOL — la nappe de braises et la poudre de contact — dans
+## la même langue (`NAPPES`) : un tas bas de cubes fins, ou seulement leurs braises en cubes (`VARIANTES_NAPPES`).
+##
 ## Ce fichier ne fait que la GÉOMÉTRIE, les RÉGLAGES et les IMAGES DÉRIVÉES : la grille de cellules d'un nuage, rangée pour
 ## une caméra ; les uniformes lus sur le nuage 2D à chaque image ; l'aplat, le relief et l'encre d'un dessin, les planches
 ## réduites de la fusée. `IsoVolumes` décide quand un nuage est en voxels (les drapeaux) et tient ses nœuds, comme ceux des
@@ -43,6 +46,36 @@ const NUAGES := {
 	"poussiere": {"densite": 0.72, "alpha": 0.7, "rayon_max": 168.0},
 	"fusee": {"densite": 1.0, "alpha": 0.82, "rayon_max": 250.0},
 }
+## GV2 — LES NAPPES AU SOL EN VOXELS, À L'ESSAI (`IsoVolumes.nappes_voxel`, `--nappes-voxels` ; éteint par défaut : rien ne
+## devient le défaut sans le mot d'Adrien). La suite acceptée de Q70 (Adrien, 2026-09-30 : « oui ») — « les nappes au sol :
+## les braises en petits cubes rougeoyants qui scintillent, les traces de poudre en grains » —, dans la langue de la fumée
+## en cubes : la même grille, le même shader, la même encre (les VOLUTES de leur dessin, Q73), le même relief (la clarté du
+## dessin), la même règle du noir. Par nappe : la densité de voxels, l'opacité d'un cube (une nappe est de la MATIÈRE, pas un
+## voile : pleine), le rayon maximal (son image : 136 px pour les braises, 220 pour la poudre), la hauteur en tuiles (les
+## charbons d'un quart de tuile ; la poudre d'un huitième, la hauteur d'une semelle), le côté de ses cubes (un huitième de
+## tuile : des charbons et des grains, pas des blocs — la taille d'un bras de corps) et la part de HASARD dans la hauteur de
+## ses colonnes (`grain`, tirée de la case : la même pour les deux vues et les deux machines). `lumineuse` : la nappe est
+## une lumière PEINTE (`GadgetBase.materiau_peint_lumineux` : le décor ne l'éclaire pas, son image est sa lueur) — elle GARDE
+## son dessin sous ses cubes (pas d'aplat), et chaque cube le lit au pied de sa colonne SANS lissage (`LISSAGE_LUMINEUSE`) :
+## la couleur du jeu publié, fissures, cœur et sol chaud qu'elle laisse voir en pâlissant compris. Les deux nappes prennent
+## la température GRADUÉE du sol (ISO7b), et non celle d'un nuage : ce sont des dessins AU SOL, que le jeu publié montre par
+## le sol (`materiau`).
+const NAPPES := {
+	"nappe_braises": {"densite": 1.0, "alpha": 1.0, "rayon_max": 70.0, "hauteur": 0.25, "voxel": "fin", "grain": 0.35,
+		"lumineuse": true},
+	"poudre_contact": {"densite": 1.0, "alpha": 1.0, "rayon_max": 112.0, "hauteur": 0.125, "voxel": "fin", "grain": 0.5,
+		"lumineuse": false},
+}
+## Les deux variantes de l'essai, sur les mêmes planches : « tas » — la nappe elle-même en tas bas de cubes (sous eux, le
+## dessin de la poudre passe en APLAT FLOU, `aplat_flou` ; celui des braises reste, `lumineuse`), ses braises des cubes du
+## tas qui rougeoient ; « braises » — la nappe reste au
+## sol, son dessin et ses couches, et ses braises SEULES deviennent des cubes. Dans les deux, les traces de la poudre sont des
+## grains qui luisent (`IsoVolumes._suivre_traces`).
+const VARIANTES_NAPPES := ["tas", "braises"]
+const VARIANTE_NAPPES_PAR_DEFAUT := "tas"
+## Le nombre de braises d'une nappe : celui des lueurs qu'elles remplacent (`IsoVolumes.POINTS_BRAISES`, gardé égal par la
+## suite).
+const BRAISES_MAX := 16
 ## Le modelé des faces et l'encre des arêtes (en valeur affichée) : le dessus porte la lumière lue ; les deux côtés vus
 ## l'assombrissent, à gauche et à droite de l'écran. L'encre est celle des corps (`IsoMateriaux.ENCRE_VOXEL_PX`), plus
 ## claire — un nuage n'est pas un objet dur — et ne borde que les CÔTÉS : encré, chaque dessus dessinait son carré, et le
@@ -312,6 +345,21 @@ static func cote_voxel(variante: String) -> float:
 	return float(VARIANTES.get(variante, VARIANTES[VARIANTE_PAR_DEFAUT]))
 
 
+## Les réglages d'un type : un nuage (`NUAGES`) ou, GV2, une nappe (`NAPPES`).
+static func reglages_de(type: String) -> Dictionary:
+	return NUAGES[type] if NUAGES.has(type) else NAPPES[type]
+
+
+## GV2 — ce type est-il une nappe au sol ?
+static func est_nappe(type: String) -> bool:
+	return NAPPES.has(type)
+
+
+## Le côté du voxel d'un type : celui de la variante de la fumée pour un nuage ; le sien, toujours, pour une nappe.
+static func voxel_de(type: String, variante: String) -> float:
+	return cote_voxel(String((NAPPES[type] as Dictionary)["voxel"])) if NAPPES.has(type) else cote_voxel(variante)
+
+
 ## Le nombre de rangées de voxels d'un nuage de `hauteur_px` : au moins une, arrondi au plus proche.
 static func rangees(hauteur_px: float, voxel: float) -> int:
 	return maxi(1, roundi(hauteur_px / voxel))
@@ -354,7 +402,7 @@ static func cellules(rayon: float, rangs: int, voxel: float, cote: Vector2i) -> 
 
 ## La grille partagée d'un type de nuage, pour une taille de voxel et un côté de caméra.
 static func grille(type: String, hauteur_px: float, voxel: float, cote: Vector2i) -> MultiMesh:
-	var rayon := float((NUAGES[type] as Dictionary)["rayon_max"])
+	var rayon := float(reglages_de(type)["rayon_max"])
 	var rangs := rangees(hauteur_px, voxel)
 	var cle := "%s:%.3f:%d:%d,%d" % [type, voxel, rangs, cote.x, cote.y]
 	if _grilles.has(cle):
@@ -424,7 +472,7 @@ static func origine(centre: Vector2, voxel: float) -> Vector3:
 ## (`poser_style`).
 static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float, priorite: int,
 		encre: String = ENCRE_PAR_DEFAUT, relief_de: String = RELIEF_PAR_DEFAUT) -> ShaderMaterial:
-	var spec: Dictionary = NUAGES[type]
+	var spec := reglages_de(type)
 	var mat := ShaderMaterial.new()
 	mat.shader = shader(type == "fusee")
 	mat.render_priority = priorite
@@ -447,6 +495,21 @@ static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float,
 	mat.set_shader_parameter("derive_dessin", DERIVE_DESSIN)
 	mat.set_shader_parameter("hachure_pas_px", HACHURE_PAS_PX)
 	mat.set_shader_parameter("temperature", IsoMateriaux.TEMPERATURE if IsoMateriaux.beaute_active() else 0.0)
+	mat.set_shader_parameter("temperature_seuil_bas", 0.0)
+	mat.set_shader_parameter("temperature_seuil_haut", 0.0)
+	# GV2 — une nappe ne coule pas : ni la respiration de ses cubes, ni la dérive de son dessin ; ses colonnes prennent leur
+	# part de hasard (`grain`). Posés pour tous, nuages compris : un réglage se lit sur le matériau, jamais sur un défaut.
+	var nappe := est_nappe(type)
+	mat.set_shader_parameter("respiration", 0.0 if nappe else 1.0)
+	mat.set_shader_parameter("grain", float(spec.get("grain", 0.0)))
+	if nappe:
+		mat.set_shader_parameter("derive_dessin", 0.0)
+		# Un dessin AU SOL : la température graduée du sol (ISO7b), celle que le jeu publié lui donne — sous celle d'un nuage,
+		# l'anneau de pierre de la nappe de braises sortait gris (quatrième passage du banc de GV2).
+		var beaute := IsoMateriaux.beaute_active()
+		mat.set_shader_parameter("temperature", IsoMateriaux.TEMPERATURE_GRADUEE if beaute else 0.0)
+		mat.set_shader_parameter("temperature_seuil_bas", IsoMateriaux.TEMPERATURE_SEUIL_BAS)
+		mat.set_shader_parameter("temperature_seuil_haut", IsoMateriaux.TEMPERATURE_SEUIL_HAUT if beaute else 0.0)
 	poser_style(mat, encre, relief_de)
 	return mat
 
@@ -476,8 +539,99 @@ static func poser_gadget(mat: ShaderMaterial, type: String, centre: Vector2, ray
 	mat.set_shader_parameter("masque", masque)
 	mat.set_shader_parameter("avec_masque", masque != null)
 	mat.set_shader_parameter("nuage_angle", angle)
-	mat.set_shader_parameter("nuage_vie", clampf(vie, 0.0, 1.0) * float((NUAGES[type] as Dictionary)["densite"]))
+	mat.set_shader_parameter("nuage_vie", clampf(vie, 0.0, 1.0) * float(reglages_de(type)["densite"]))
 	mat.set_shader_parameter("age", age)
+
+
+## GV2 — LES BRAISES d'une nappe : leurs points `[Vector4(x, z au sol, phase, vitesse)]` (au plus `BRAISES_MAX`), l'éclat de
+## la lumière de la nappe (0 : lumière éteinte, braises éteintes), la couleur de la lueur, et si la nappe reste au sol (la
+## variante « braises » : ses braises SEULES sont des cubes). Le scintillement se calcule dans le shader, à l'âge du nuage.
+static func poser_braises(mat: ShaderMaterial, points: Array, eclat: float, couleur: Color, seulement: bool) -> void:
+	var tableau := PackedVector4Array()
+	tableau.resize(BRAISES_MAX)
+	var n := mini(points.size(), BRAISES_MAX)
+	for k in n:
+		tableau[k] = points[k]
+	mat.set_shader_parameter("nb_braises", n)
+	mat.set_shader_parameter("braises", tableau)
+	mat.set_shader_parameter("braises_eclat", maxf(eclat, 0.0))
+	mat.set_shader_parameter("braises_couleur", Vector3(couleur.r, couleur.g, couleur.b))
+	mat.set_shader_parameter("seulement_braises", seulement)
+
+
+## GV2 — le lissage de la lumière d'une nappe peinte lumineuse : AUCUN — chaque cube prend la lightmap au pied de sa
+## colonne, la nappe telle que le jeu publié la montre. Sous un aplat flou et lissé (la règle de la fumée), la nappe de
+## braises sortait uniforme, sans charbons ni fissures ; tirée de son dessin seul, elle perdrait le sol qu'elle laisse voir
+## en pâlissant (passages du banc de GV2).
+const LISSAGE_LUMINEUSE := 0.0
+
+
+## GV2 — L'APLAT FLOU d'une nappe en tas : son dessin moyenné sur 8 × 8 pixels (les trois réductions du relief, sur l'image
+## prémultipliée, puis rendu à ses couleurs), sous l'alpha d'ORIGINE — même forme, même présence. Sous les cubes, la lightmap
+## ne porte plus les traits fins du dessin (un trait noir sous un cube : le masque de la fumée refuse d'y peindre, le « en
+## trous » de GV1, Q68), mais elle garde sa LUMIÈRE : le clair de la poudre, que l'aplat de la fumée (une seule couleur,
+## Q68) aurait éteint. Pour la poudre seule : la nappe de braises, peinte lumineuse, garde son dessin (`NAPPES`). Une fois
+## par texture et par processus.
+static var _aplats_flous := {}
+
+
+static func aplat_flou(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var cle := tex.get_instance_id()
+	if _aplats_flous.has(cle):
+		return _aplats_flous[cle]
+	var img := tex.get_image()
+	if img == null:
+		return tex
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var w := img.get_width()
+	var h := img.get_height()
+	var flou := img.duplicate() as Image
+	flou.premultiply_alpha()
+	for k in RELIEF_REDUCTIONS:
+		flou.shrink_x2()
+	flou.resize(w, h, Image.INTERPOLATE_CUBIC)
+	var d := img.get_data()
+	var fd := flou.get_data()
+	var sortie := PackedByteArray()
+	sortie.resize(d.size())
+	for k in range(0, d.size(), 4):
+		var a := fd[k + 3]
+		if a > 0:
+			var f := 255.0 / float(a)
+			sortie[k] = mini(255, roundi(fd[k] * f))
+			sortie[k + 1] = mini(255, roundi(fd[k + 1] * f))
+			sortie[k + 2] = mini(255, roundi(fd[k + 2] * f))
+		sortie[k + 3] = d[k + 3]
+	var t := ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, sortie))
+	_aplats_flous[cle] = t
+	return t
+
+
+## GV2 — sous l'essai seulement : le shader, les aplats flous et les reliefs des deux dessins de nappes — pour qu'aucun ne se
+## prépare à la première nappe posée.
+static func prechauffer_nappes() -> void:
+	if _nappes_prechauffees:
+		return
+	_nappes_prechauffees = true
+	var debut := Time.get_ticks_usec()
+	shader(false)
+	for nom: String in NAPPES:
+		var chemin := "res://assets/sprites/gadget_%s.png" % nom
+		if ResourceLoader.exists(chemin):
+			var dessin := load(chemin) as Texture2D
+			# L'aplat flou ne sert qu'à une nappe éclairée par le décor (la poudre) : la nappe de braises garde son dessin.
+			if not bool(NAPPES[nom]["lumineuse"]):
+				aplat_flou(dessin)
+			relief(dessin)
+	print("[nappes voxel] préchauffé en %d ms (shader, aplats flous, reliefs)"
+		% roundi(float(Time.get_ticks_usec() - debut) / 1000.0))
+
+
+static var _nappes_prechauffees := false
 
 
 ## Les uniformes du voile de la fusée que le nuage recopie, sous le même nom que dans `fumee_fusee.gdshader` (sauf les trois

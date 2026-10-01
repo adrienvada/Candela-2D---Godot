@@ -79,6 +79,14 @@ const CLE_FAISCEAU_AIR := 3
 const HAUTEUR_TOILE := 0.15
 ## Les points incandescents de la nappe de braises.
 const POINTS_BRAISES := 16
+## GV2 — les GRAINS d'une trace de poudre (à l'essai, `nappes_voxel`) : trois cubes alignés sur elle (une trace fait
+## 12 × 3 px), de 3 px de côté et 2,2 de haut, au pas de 4 px ; leur entrée, sur l'arène, sous la clé `CLE_GRAINS`.
+const GRAINS_PAR_TRACE := 3
+const GRAIN_COTE_PX := 3.0
+const GRAIN_HAUT_PX := 2.2
+const GRAIN_PAS_PX := 4.0
+const CLE_GRAINS := 5
+const CHEMIN_SHADER_GRAIN := "res://grain_iso.gdshader"
 ## La lentille de la torche fantôme : là où le fût se termine (`VoxelObjet.TORCHE_TETE_Y` + demi-tête).
 const HAUTEUR_LENTILLE := 0.20
 const HAUTEUR_ECLAIR_MINE := 0.14
@@ -168,6 +176,14 @@ var fumee_voxel := true
 var variante_voxel := IsoNuageVoxel.VARIANTE_PAR_DEFAUT
 var encre_voxel := IsoNuageVoxel.ENCRE_PAR_DEFAUT
 var relief_voxel := IsoNuageVoxel.RELIEF_PAR_DEFAUT
+## GV2 — LES NAPPES AU SOL EN VOXELS, À L'ESSAI, ÉTEINT PAR DÉFAUT (rien ne devient le défaut sans le mot d'Adrien) : la nappe
+## de braises et la poudre de contact (`IsoNuageVoxel.NAPPES`), en variante « tas » (la nappe en cubes, ses braises des cubes
+## qui rougeoient) ou « braises » (la nappe reste au sol ; ses braises seules en cubes) ; dans les deux, les traces de la
+## poudre en GRAINS qui luisent. `--nappes-voxels` (la variante « tas ») ou `--nappes-voxels=<tas|braises>`, lus par la porte
+## commune des drapeaux ; les bancs basculent par `poser_nappes_voxel`, jamais en écrivant ces variables.
+var nappes_voxel := false
+var variante_nappes := IsoNuageVoxel.VARIANTE_NAPPES_PAR_DEFAUT
+static var _shader_grain: Shader = null
 ## GV1 — les vues de l'image en cours et la présentation (pour la caméra de chaque vue), posées par `suivre`.
 var _vues: Array = []
 var _presentation: Node = null
@@ -230,6 +246,8 @@ const DRAPEAU_FUMEE_COUCHES := "--fumee-couches"
 const DRAPEAU_FUMEE_VOXELS := "--fumee-voxels"
 const DRAPEAU_FUMEE_ENCRE := "--fumee-encre"
 const DRAPEAU_FUMEE_RELIEF := "--fumee-relief"
+## GV2 — les nappes au sol en voxels, à l'essai : `--nappes-voxels` ou `--nappes-voxels=<tas|braises>`.
+const DRAPEAU_NAPPES_VOXELS := "--nappes-voxels"
 ## Le cœur presque blanc de l'essai : celui de l'illustration « Créer en ligne » (254, 238, 238), mesuré par la session
 ## cloud sur l'original. La sortie 3D le plafonne à ~230 (la courbe d'écran, voir la ROADMAP).
 const COULEUR_COEUR_BLANC := Color(1.0, 0.93, 0.93)
@@ -305,6 +323,11 @@ func _init() -> void:
 			encre_voxel = arg.trim_prefix(DRAPEAU_FUMEE_ENCRE + "=")
 		elif arg.begins_with(DRAPEAU_FUMEE_RELIEF + "="):
 			relief_voxel = arg.trim_prefix(DRAPEAU_FUMEE_RELIEF + "=")
+		elif arg == DRAPEAU_NAPPES_VOXELS:
+			nappes_voxel = true
+		elif arg.begins_with(DRAPEAU_NAPPES_VOXELS + "="):
+			nappes_voxel = true
+			variante_nappes = arg.trim_prefix(DRAPEAU_NAPPES_VOXELS + "=")
 	# Une valeur inconnue retombe sur le défaut, en le disant.
 	for choix: Array in [["variante_voxel", IsoNuageVoxel.VARIANTES, IsoNuageVoxel.VARIANTE_PAR_DEFAUT],
 			["encre_voxel", IsoNuageVoxel.ENCRES, IsoNuageVoxel.ENCRE_PAR_DEFAUT],
@@ -320,6 +343,18 @@ func _init() -> void:
 		IsoNuageVoxel.prechauffer()
 	else:
 		print("[fumée voxel] éteinte (%s) — les couches d'avant" % DRAPEAU_FUMEE_COUCHES)
+	# GV2 — l'essai des nappes, dit par le jeu dans les deux états.
+	if not IsoNuageVoxel.VARIANTES_NAPPES.has(variante_nappes):
+		push_warning("[nappes voxel] variante « %s » inconnue : « %s »" % [variante_nappes,
+			IsoNuageVoxel.VARIANTE_NAPPES_PAR_DEFAUT])
+		variante_nappes = IsoNuageVoxel.VARIANTE_NAPPES_PAR_DEFAUT
+	if nappes_voxel:
+		print("[nappes voxel] à l'essai, variante « %s » : %s ; les traces de la poudre en grains" % [variante_nappes,
+			"la nappe de braises et la poudre en tas de cubes d'un huitième de tuile, leurs braises des cubes qui rougeoient"
+			if variante_nappes == "tas" else "les nappes au sol, leurs braises seules en cubes"])
+		IsoNuageVoxel.prechauffer_nappes()
+	else:
+		print("[nappes voxel] éteintes (%s pour l'essai) — les couches et les lueurs d'avant" % DRAPEAU_NAPPES_VOXELS)
 	if faisceaux_actifs:
 		print("[faisceau] allumé — le cœur chaud seul, sans rayon")
 	# Les deux états s'impriment : une prise prouve le sien par ce que le JEU dit, jamais par la commande.
@@ -392,6 +427,8 @@ func suivre(main: Node, vues: Array, style: int, presentation: Node) -> void:
 		for noeud in arene.get_children():
 			if noeud.get_script() == OndeDeMort:
 				_suivre_onde(noeud as Node2D, vus)
+		if nappes_voxel:
+			_suivre_traces(main, arene, vus)
 	_suivre_eclats(main, presentation, vus)
 	if point_lumineux:
 		_suivre_lentilles_des_joueurs(main, presentation, vus)
@@ -419,8 +456,12 @@ func vider() -> void:
 # ---------------------------------------------------------------------------
 
 func _suivre_gadget(g: Node2D, slug: String, vus: Dictionary) -> void:
+	# GV2 — une nappe à l'essai : son tas (« tas ») remplace ses couches ; ses braises en cubes, ses lueurs.
+	var nappe := nappes_voxel and IsoNuageVoxel.est_nappe(slug)
 	if fumee_voxel and VOLUMES.has(slug) and IsoNuageVoxel.NUAGES.has(slug):
 		_suivre_gadget_en_voxels(g, slug, vus)
+	elif nappe and variante_nappes == "tas":
+		_suivre_nappe_en_voxels(g, slug, vus, false)
 	elif VOLUMES.has(slug):
 		var visuel := g.get_node_or_null(^"Visuel") as Sprite2D
 		var spec: Dictionary = VOLUMES[slug]
@@ -436,7 +477,10 @@ func _suivre_gadget(g: Node2D, slug: String, vus: Dictionary) -> void:
 			float(g.call("age")) if g.has_method("age") else 0.0)
 	match slug:
 		"nappe_braises":
-			_suivre_braises(g, vus)
+			if not nappe:
+				_suivre_braises(g, vus)
+			elif variante_nappes == "braises":
+				_suivre_nappe_en_voxels(g, slug, vus, true)
 		"torche_fantome":
 			_suivre_lentille(g, vus)
 		"mine_magnesium":
@@ -1298,6 +1342,200 @@ func _suivre_gadget_en_voxels(g: Node2D, slug: String, vus: Dictionary) -> void:
 	_poser_juge_nuage(e, g.global_position, demi, vie > 0.0)
 
 
+## GV2 — UNE NAPPE AU SOL EN VOXELS, à l'essai : la nappe de braises ou la poudre en tas bas de cubes fins (variante « tas »,
+## `seulement_braises` faux : sous lui, le dessin de la poudre passe en APLAT FLOU — `IsoNuageVoxel.aplat_flou` dit
+## pourquoi, et `_retirer` le rend ; celui des braises, peinte lumineuse, reste — `IsoNuageVoxel.NAPPES`), ou seulement les
+## braises d'une nappe restée au sol (variante « braises » : une entrée à part, sous la clé de ses lueurs, à côté de ses
+## couches ; sans juge — une braise est une lueur, comme celles qu'elle remplace). Mêmes règles que la fumée : la densité
+## est l'alpha du dessin, le relief sa clarté, l'encre ses traits (les volutes) ; l'horloge son âge, que la killcam rejoue.
+func _suivre_nappe_en_voxels(g: Node2D, slug: String, vus: Dictionary, seulement_braises: bool) -> void:
+	var visuel := g.get_node_or_null(^"Visuel") as Sprite2D
+	var cle := 1 if seulement_braises else 0
+	var e := _entree(g, "nuage_voxel", vus, cle)
+	var lumineuse := bool(IsoNuageVoxel.reglages_de(slug)["lumineuse"])
+	if not seulement_braises and not lumineuse and visuel != null and not e.has("aplat"):
+		e["aplat"] = visuel
+		e["texture_origine"] = visuel.texture
+		visuel.texture = IsoNuageVoxel.aplat_flou(visuel.texture)
+	var origine: Texture2D = e["texture_origine"] if e.has("texture_origine") else (visuel.texture if visuel != null else null)
+	var dessin: Texture2D = IsoNuageVoxel.relief(origine)
+	var demi := float(g.get("rayon")) if "rayon" in g else 60.0
+	if visuel != null and visuel.texture != null:
+		demi = maxf(visuel.texture.get_width() * absf(visuel.global_scale.x),
+			visuel.texture.get_height() * absf(visuel.global_scale.y)) * 0.5
+	var vie := Presentation3D.opacite_rendue(visuel) if visuel != null else 0.0
+	e = _suivre_nuage_voxel(g, slug, float(IsoNuageVoxel.reglages_de(slug)["hauteur"]), vus, cle)
+	var age := float(g.call("age")) if g.has_method("age") else 0.0
+	var braises := slug == "nappe_braises"
+	var points: Array = braises_de(g) if braises else []
+	var eclat := eclat_des_braises(g) if braises else 0.0
+	for m: ShaderMaterial in e["mats"]:
+		IsoNuageVoxel.poser_gadget(m, slug, g.global_position, demi, dessin, visuel.global_rotation if visuel != null else 0.0,
+			vie, age)
+		# L'ambre de la lueur, tel quel (voir `braises_couleur` dans le shader).
+		IsoNuageVoxel.poser_braises(m, points, eclat, Charte.AMBRE, seulement_braises)
+		# Une nappe peinte lumineuse garde son dessin sous ses cubes, lu au pied de chaque colonne, sans lissage.
+		if lumineuse:
+			m.set_shader_parameter("lissage_px", IsoNuageVoxel.LISSAGE_LUMINEUSE)
+	if seulement_braises:
+		_afficher_nuage(e, vie > 0.0 and eclat > 0.002 and not _masques)
+		_poser_juge_nuage(e, g.global_position, demi, false)
+	else:
+		_afficher_nuage(e, vie > 0.0)
+		_poser_juge_nuage(e, g.global_position, demi, vie > 0.0)
+
+
+## GV2 — LES BRAISES d'une nappe, tirées EXACTEMENT comme les seize lueurs qu'elles remplacent (`_suivre_braises`) : même
+## graine (la position de la nappe, arrondie : la même dans les deux vues et sur les deux machines, la killcam comprise),
+## même suite de tirages — l'angle, la distance, la phase, la vitesse, puis la hauteur et la taille de la lueur, tirées et
+## jetées : la suite doit rester la même. `[Vector4(x, z au sol, phase, vitesse)]` ; `tools/test_nappes_voxel.gd` compare
+## les points aux lueurs.
+func braises_de(g: Node2D) -> Array:
+	var rayon := float(g.get("rayon")) if "rayon" in g else 68.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector2i(g.global_position.round()))
+	var out := []
+	for i in POINTS_BRAISES:
+		var a := rng.randf() * TAU
+		var r := sqrt(rng.randf()) * rayon * 0.75
+		var phase := rng.randf() * TAU
+		var vitesse := 2.0 + rng.randf() * 3.0
+		rng.randf()
+		rng.randf()
+		var p := g.global_position + Vector2(cos(a), sin(a)) * r
+		out.append(Vector4(p.x, p.y, phase, vitesse))
+	return out
+
+
+## GV2 — l'éclat des braises : celui des lueurs (`_suivre_braises`) — la part de la lumière de la nappe (son énergie / 1,8),
+## sous l'opacité rendue de la nappe ; 0 lumière éteinte.
+func eclat_des_braises(g: Node2D) -> float:
+	var lueur := g.get_node_or_null(^"Lueur") as Light2D
+	var nappe := g.get_node_or_null(^"Visuel") as CanvasItem
+	var part := 0.0
+	if lueur != null and lueur.enabled:
+		part = clampf(lueur.energy / 1.8, 0.0, 1.0)
+	return part * (Presentation3D.opacite_rendue(nappe) if nappe != null else 1.0)
+
+
+## GV2 — LES TRACES DE LA POUDRE EN GRAINS (à l'essai, les deux variantes) : chaque trace qui luit — celles du présent (le
+## groupe « traces_de_poudre ») et celles que la killcam rejoue (`TracesKillcam`), jamais une trace cachée (le présent, le
+## temps du rejeu) — devient `GRAINS_PAR_TRACE` cubes alignés sur elle, qui luisent de sa couleur à son éclat rendu (son
+## fondu, la charge des pieds) ; posés sur la poudre en tas quand la trace est sur une nappe de poudre (variante « tas »), au
+## sol sinon. Un seul `MultiMesh` pour toutes, sur le calque commun : les deux joueurs voient les mêmes traces (Adrien,
+## 2026-09-11). La trace 2D sort de la lightmap tant que ses grains la portent (`_retirer_dessin`) : sa lueur ne se compte
+## pas deux fois ; `_retirer` la rend quand l'essai s'éteint.
+func _suivre_traces(main: Node, arene: Node, vus: Dictionary) -> void:
+	var traces: Array = []
+	for m in arene.get_tree().get_nodes_in_group("traces_de_poudre"):
+		if m is Polygon2D and (m as CanvasItem).is_visible_in_tree():
+			traces.append(m)
+	var rejeu := arene.get_node_or_null(^"TracesKillcam")
+	if rejeu != null:
+		for m in rejeu.get_children():
+			if m is Polygon2D and (m as CanvasItem).is_visible_in_tree():
+				traces.append(m)
+	var e := _entree(arene, "grains", vus, CLE_GRAINS)
+	if (e["noeuds"] as Array).is_empty():
+		var neuf := MultiMeshInstance3D.new()
+		neuf.name = "GrainsPoudre"
+		neuf.layers = CALQUE
+		neuf.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var grains := MultiMesh.new()
+		grains.transform_format = MultiMesh.TRANSFORM_3D
+		grains.use_colors = true
+		var boite := BoxMesh.new()
+		boite.size = Vector3.ONE
+		grains.mesh = boite
+		neuf.multimesh = grains
+		var mat := ShaderMaterial.new()
+		if _shader_grain == null:
+			_shader_grain = load(CHEMIN_SHADER_GRAIN) as Shader
+		mat.shader = _shader_grain
+		neuf.material_override = mat
+		add_child(neuf)
+		e["noeuds"].append(neuf)
+		e["mats"].append(mat)
+		e["deja"] = {}
+	var mmi: MultiMeshInstance3D = e["noeuds"][0]
+	var mm := mmi.multimesh
+	var n := traces.size() * GRAINS_PAR_TRACE
+	if mm.instance_count < n:
+		mm.instance_count = maxi(n, maxi(mm.instance_count * 2, 48))
+	# Le tampon d'un coup (seize flottants par grain : la transformation en lignes, puis la couleur), gardé dans l'entrée :
+	# c'est ce que les suites relisent (sans fenêtre, le serveur de rendu ne rend rien de ce qu'on lui confie).
+	var tampon := PackedFloat32Array()
+	tampon.resize(mm.instance_count * 16)
+	var tas := _poudres_en_tas(main)
+	var deja: Dictionary = e["deja"]
+	var k := 0
+	for t: Polygon2D in traces:
+		var pos := t.global_position
+		var base := PLANCHER_PX
+		for nappe: Vector3 in tas:
+			if pos.distance_to(Vector2(nappe.x, nappe.y)) <= nappe.z:
+				base = float(IsoNuageVoxel.NAPPES["poudre_contact"]["hauteur"]) * TUILE
+				break
+		var sens := Vector2.from_angle(t.global_rotation)
+		var forme := Basis(Vector3.UP, -t.global_rotation) * Basis.from_scale(Vector3(GRAIN_COTE_PX, GRAIN_HAUT_PX,
+			GRAIN_COTE_PX))
+		var eclat := Presentation3D.opacite_rendue(t)
+		for j in GRAINS_PAR_TRACE:
+			var q := pos + sens * (float(j) - float(GRAINS_PAR_TRACE - 1) * 0.5) * GRAIN_PAS_PX
+			var o := k * 16
+			tampon[o] = forme.x.x
+			tampon[o + 1] = forme.y.x
+			tampon[o + 2] = forme.z.x
+			tampon[o + 3] = q.x
+			tampon[o + 4] = forme.x.y
+			tampon[o + 5] = forme.y.y
+			tampon[o + 6] = forme.z.y
+			tampon[o + 7] = base + 0.5 * GRAIN_HAUT_PX
+			tampon[o + 8] = forme.x.z
+			tampon[o + 9] = forme.y.z
+			tampon[o + 10] = forme.z.z
+			tampon[o + 11] = q.y
+			tampon[o + 12] = t.color.r
+			tampon[o + 13] = t.color.g
+			tampon[o + 14] = t.color.b
+			tampon[o + 15] = eclat
+			k += 1
+		var id := t.get_instance_id()
+		if not deja.has(id):
+			deja[id] = true
+			_retirer_dessin(e, t)
+	mm.buffer = tampon
+	mm.visible_instance_count = n
+	e["tampon"] = tampon
+	e["grains"] = n
+	mmi.visible = n > 0 and not _masques
+	# Les traces mortes (leur fondu les libère) : le registre les oublie, ici et dans celui des miroirs.
+	var retires: Array = e["retires"]
+	if retires.size() > traces.size() + 32:
+		e["retires"] = retires.filter(func(x): return is_instance_valid(x))
+		deja.clear()
+		for x in e["retires"]:
+			deja[(x as Object).get_instance_id()] = true
+		if miroirs != null and miroirs.has_method("oublier_les_disparus"):
+			miroirs.call("oublier_les_disparus")
+
+
+## Les nappes de poudre EN TAS (variante « tas » de l'essai) : leur centre et leur rayon (x, z, rayon), pour poser les grains
+## d'une trace sur le tas ; aucune sous la variante « braises », où la poudre reste au sol.
+func _poudres_en_tas(main: Node) -> Array:
+	var out := []
+	if variante_nappes != "tas":
+		return out
+	var conteneur: Node = main.get("bullet_container")
+	if conteneur == null:
+		return out
+	for g in conteneur.get_children():
+		if g is Node2D and "slug" in g and String(g.get("slug")) == "poudre_contact" and (g as CanvasItem).is_visible_in_tree():
+			out.append(Vector3((g as Node2D).global_position.x, (g as Node2D).global_position.y,
+				float(g.get("rayon")) if "rayon" in g else 110.0))
+	return out
+
+
 ## La fumée de la fusée en voxels (panache d'extinction compris) : ce qu'elle peint en 2D à cette image — son voile et ses
 ## nappes, lus sur leurs sprites et leur matériau — posé sur la grille de cubes de chaque vue.
 func _suivre_fusee_en_voxels(f: Node2D, vus: Dictionary) -> void:
@@ -1319,11 +1557,12 @@ func _suivre_fusee_en_voxels(f: Node2D, vus: Dictionary) -> void:
 ## L'entrée d'un nuage en voxels : un `MultiMeshInstance3D` par vue projetée, sur le calque 3D de SA caméra, avec SON
 ## matériau (sa lightmap) et SA grille (rangée pour elle). Refaite quand les vues ou la variante changent ; la grille est
 ## rechoisie quand la caméra change de côté (un lacet de plus de 90°).
-func _suivre_nuage_voxel(source: Node2D, type: String, hauteur_tuiles: float, vus: Dictionary) -> Dictionary:
-	var e := _entree(source, "nuage_voxel", vus)
-	var voxel := IsoNuageVoxel.cote_voxel(variante_voxel)
+func _suivre_nuage_voxel(source: Node2D, type: String, hauteur_tuiles: float, vus: Dictionary, cle := 0) -> Dictionary:
+	var e := _entree(source, "nuage_voxel", vus, cle)
+	# Le côté du voxel du TYPE : celui de la variante de la fumée pour un nuage, le sien pour une nappe (GV2).
+	var voxel := IsoNuageVoxel.voxel_de(type, variante_voxel)
 	var hauteur_px := hauteur_tuiles * TUILE
-	if e.get("vues", []) != _vues or String(e.get("variante", "")) != variante_voxel:
+	if e.get("vues", []) != _vues or not is_equal_approx(float(e.get("voxel", 0.0)), voxel):
 		for mi in e["noeuds"]:
 			if is_instance_valid(mi):
 				(mi as Node).queue_free()
@@ -1428,6 +1667,17 @@ func poser_fumee_voxel(actif: bool, variante := "", encre := "", relief := "") -
 		encre_voxel = encre
 	if relief != "" and IsoNuageVoxel.RELIEFS.has(relief):
 		relief_voxel = relief
+
+
+## GV2 — la bascule des bancs : les nappes en voxels (à l'essai) ou comme avant, et leur variante, sur place. Les nappes suivies
+## se refont à l'image suivante (leur genre ou leur clé change) ; leur dessin et leurs traces reviennent à la lightmap quand
+## l'essai s'éteint. Un nom vide garde la variante.
+func poser_nappes_voxel(actif: bool, variante := "") -> void:
+	nappes_voxel = actif
+	if variante != "" and IsoNuageVoxel.VARIANTES_NAPPES.has(variante):
+		variante_nappes = variante
+	if actif:
+		IsoNuageVoxel.prechauffer_nappes()
 
 
 # ---------------------------------------------------------------------------

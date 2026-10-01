@@ -32,6 +32,18 @@
 ## - `cout` (GV1, GV1bis) — couches contre voxels, sur la même scène figée (fusée posée, suie, poussière) : la SURFACE
 ##   COUVERTE (les fragments que rastérisent les images du nuage, comptés par le GPU, dans chaque vue de l'écran scindé),
 ##   les appels de dessin, les primitives et le temps d'image médian, pour chaque rendu de `RENDUS_COUT`.
+## - `nappes` (GV2) — la nappe de braises (à trois âges) et la poudre de contact (avec des traces, de la plus fraîche à la
+##   plus pâle, dans la nappe et au-dehors), chacune dans la MÊME image de jeu sous les trois rendus de `RENDUS_NAPPES` :
+##   le jeu publié (couches, lueurs, traces au sol), l'essai « tas » et l'essai « braises » ; sous la lampe (la torche de J1
+##   et les lumières propres de la nappe), puis sans la lampe (les lumières propres seules : une nappe de braises éclaire),
+##   dans les deux vues.
+## - `noir_nappes` (GV2) — la preuve du noir À L'ÉCRAN pour les nappes en cubes, la méthode de `noir` (A, B, A', l'emprise,
+##   le témoin, le masque coupé) : la poudre à moitié sous la torche, la nappe de braises sa lumière coupée (seul son dessin
+##   peint luit) et allumée, sous chaque variante ; et LES GRAINS : dans le noir, un pixel que les grains allument doit être
+##   à moins de deux blocs de 4 px d'un pixel qu'allumait la trace 2D du jeu publié, levée à l'écran jusqu'au sommet de ses
+##   grains — un grain ne luit que là où sa trace luisait, dans la colonne qu'il occupe au-dessus d'elle.
+## - `cout_nappes` (GV2) — le jeu publié contre les deux variantes de l'essai, sur la même scène figée (la nappe de braises,
+##   la poudre et douze traces), la méthode de `cout` : surface couverte, appels de dessin, primitives, temps d'image médian.
 ##
 ## Relevés : lignes `BANC_GV …` au journal et `releves.txt` dans le dossier des prises (`--captures <dossier>`, défaut
 ## `user://gadgets_volume`). Planches : `docs/iso/gadgets_volume/planche_gv.py`.
@@ -84,6 +96,9 @@ var _caches: Array = []
 var _caches_fixes: Array = []
 ## Où J1 braque sa torche : sur le lieu par défaut ; décalé pour la preuve du noir (une moitié du nuage dans le noir).
 var _visee := Vector2.ZERO
+## GV2 — vrai : les lumières PROPRES du sujet (`_lumieres_gardees`) restent allumées même sans la torche — la prise « sans la
+## lampe » d'une nappe de braises, qui éclaire en jeu tant qu'elle brûle.
+var _propres := false
 ## Pour itérer sans refaire toute la série : `--seulement=<nuage>` (cartouche_suie, poussiere, fusee) et `--vite` (un
 ## instant par nuage, le nuage plein).
 var _seulement := ""
@@ -166,6 +181,12 @@ func _ready() -> void:
 			await _noir()
 		"cout":
 			await _cout()
+		"nappes":
+			await _nappes()
+		"noir_nappes":
+			await _noir_nappes()
+		"cout_nappes":
+			await _cout_nappes()
 		_:
 			_echouer("mode inconnu : %s" % _mode)
 	_finir()
@@ -1135,6 +1156,390 @@ func _avant_le_rendu() -> void:
 			(c as Node3D).visible = false
 
 
+# ─── GV2 : les nappes au sol ─────────────────────────────────────────────────
+
+## Les rendus des nappes, dans la MÊME image de jeu : [nom, essai ?, variante]. Le jeu publié (couches, lueurs, traces au
+## sol) ; l'essai « tas » (les nappes en cubes, les braises des cubes qui rougeoient, les traces en grains) ; l'essai
+## « braises » (les nappes au sol, leurs braises seules en cubes, les traces en grains).
+const RENDUS_NAPPES := [["publie", false, ""], ["tas", true, "tas"], ["braises", true, "braises"]]
+## La nappe de braises vit 10 s (`GameState.IMPLEMENTATIONS`) et pâlit avec ce qu'elle brûle (0,35 à 1) : fraîche, à mi-vie,
+## à la fin.
+const AGES_BRAISES := [0.5, 5.0, 9.5]
+## Le côté des vignettes des nappes, en pixels de fenêtre (la poudre fait 220 px de large, 275 à l'écran ; les traces
+## dépassent d'un côté).
+const COTE_NAPPE := 420.0
+
+
+func _poser_rendu_nappes(rendu: Array) -> void:
+	_volumes.poser_nappes_voxel(bool(rendu[1]), String(rendu[2]))
+
+
+## Des TRACES de poudre, posées comme la poudre les pose (`GadgetPoudre.nouvelle_trace`, le groupe, l'arène) mais SANS leur
+## fondu : leur éclat est celui qu'on leur donne, tenu le temps des prises. Un chemin d'est en ouest qui traverse la nappe
+## au pas de la poudre (26 px) — les plus anciennes pâlissent —, puis les pieds poudrés au-dehors, de plus en plus pâles.
+func _des_traces_tenues(centre: Vector2) -> Array:
+	var traces := []
+	var n_dedans := 8
+	for k in n_dedans + 4:
+		var m := GadgetPoudre.nouvelle_trace()
+		var x := -95.0 + 26.0 * float(k)
+		m.global_position = centre + Vector2(x, 12.0 + 6.0 * sin(float(k) * 1.3))
+		m.rotation = 0.12 * sin(float(k) * 0.9)
+		var eclat := GadgetPoudre.LUEUR_MAX * (0.35 + 0.65 * float(k) / float(n_dedans - 1)) if k < n_dedans \
+			else GadgetPoudre.LUEUR_MAX * float(GadgetPoudre.CHARGE_MAX - (k - n_dedans)) / float(GadgetPoudre.CHARGE_MAX + 1)
+		m.modulate.a = eclat
+		m.add_to_group("traces_de_poudre")
+		_main.arena.add_child(m)
+		traces.append(m)
+	return traces
+
+
+## Les trois rendus d'une même image de nappe, sous la lampe puis sans elle (les lumières propres de la nappe gardées), dans
+## les deux vues.
+func _prendre_nappes(nom: String, cote: float, sujets: Array, tenir := Callable()) -> void:
+	for lumiere in ["lampe", "sans_lampe"]:
+		_torche = lumiere == "lampe"
+		_propres = true
+		_lumieres_gardees = _lumieres_des(sujets)
+		await _tenir_images(30, tenir)
+		for rendu: Array in RENDUS_NAPPES:
+			_poser_rendu_nappes(rendu)
+			await _tenir_images(6, tenir)
+			var img := get_viewport().get_texture().get_image()
+			for pid in 2:
+				var c := _recadrer(img, _lieu, pid, cote)
+				_sauver(c, "%s_%s_%s_j%d" % [nom, lumiere, String(rendu[0]), pid + 1])
+				_releve("prise=%s lumiere=%s rendu=%s vue=J%d max=%d moy=%.1f allumes=%d" % [nom, lumiere, String(rendu[0]),
+					pid + 1, _valeur_max(c), _moyenne(c), _allumes(c, 0)])
+	_volumes.poser_nappes_voxel(false)
+	_torche = false
+	_propres = false
+	_lumieres_gardees = []
+
+
+func _nappes() -> void:
+	if _seulement == "" or _seulement == "nappe_braises":
+		_placer_les_joueurs(DISTANCE_J1, DISTANCE_J2)
+		await _images(90)
+		var g := await _poser("nappe_braises", 9900)
+		if g != null:
+			for age: float in ([5.0] if _vite else AGES_BRAISES):
+				g.set("_age", age)
+				await _tenir_images(12, func(): g.set("_age", age))
+				await _prendre_nappes("gv2_braises_%04.1f" % age, COTE_NAPPE, [g], func(): g.set("_age", age))
+			g.queue_free()
+			await _images(4)
+	if _seulement == "" or _seulement == "poudre_contact":
+		_placer_les_joueurs(DISTANCE_J1, DISTANCE_J2)
+		await _images(90)
+		var po := await _poser("poudre_contact", 9901)
+		if po != null:
+			po.set_physics_process(false)
+			var traces := _des_traces_tenues(po.global_position)
+			await _prendre_nappes("gv2_poudre", COTE_NAPPE + 60.0, [po])
+			for t in traces:
+				(t as Node).queue_free()
+			po.queue_free()
+			await _images(4)
+
+
+## LE NOIR À L'ÉCRAN des nappes en cubes, et celui des grains.
+func _noir_nappes() -> void:
+	_caches_fixes = []
+	for corps in (_iso.get("_corps") as Array):
+		_caches_fixes.append(corps)
+	var total_temoin := 0
+	var total_sans_masque := 0
+	# [nom, slug, variante, lumière propre allumée ?, visée de J1 par rapport au lieu]
+	var cas := [
+		["poudre_tas", "poudre_contact", "tas", false, Vector2(0.0, -60.0)],
+		["braises_tas_lueur_coupee", "nappe_braises", "tas", false, Vector2(0.0, -60.0)],
+		["braises_tas_lueur", "nappe_braises", "tas", true, Vector2(0.0, -60.0)],
+		["braises_seules_lueur", "nappe_braises", "braises", true, Vector2(0.0, -60.0)],
+	]
+	for c: Array in cas:
+		var nom: String = c[0]
+		if _seulement != "" and not nom.begins_with(_seulement):
+			continue
+		_placer_les_joueurs(DISTANCE_J1, DISTANCE_J2)
+		_visee = _lieu + (c[4] as Vector2)
+		await _images(90)
+		var g := await _poser(String(c[1]), 9950)
+		if g == null:
+			continue
+		var age := 5.0
+		var tenir := func(): g.set("_age", age)
+		_torche = true
+		_propres = bool(c[3])
+		_lumieres_gardees = _lumieres_des([g]) if bool(c[3]) else []
+		_poser_rendu_nappes(["essai", true, String(c[2])])
+		await _tenir_images(40, tenir)
+		var avec := await _sandwich(tenir)
+		var emprise := await _emprise(tenir)
+		_volumes.poser_masque_fumee(false)
+		await _tenir_images(4, tenir)
+		var sans_masque := await _sandwich(tenir)
+		_volumes.poser_masque_fumee(true)
+		await _tenir_images(4, tenir)
+		for pid in 2:
+			var m := _fuites(avec, pid, COTE_NAPPE, emprise)
+			var sm := _fuites(sans_masque, pid, COTE_NAPPE, emprise)
+			var t := _fuites([avec[0], emprise, avec[2]], pid, COTE_NAPPE, emprise)
+			total_temoin += int(t["fuites_2"])
+			total_sans_masque += int(sm["fuites_2"])
+			_releve("noir_nappes cas=%s vue=J%d noirs=%d emprise=%d noirs_dessous=%d instables=%d fuites=%d fuites_sup2=%d fuites_sup8=%d | masque_coupe: fuites_sup2=%d | temoin: fuites_sup2=%d" % [
+				nom, pid + 1, m["noirs"], m["emprise"], m["noirs_emprise"], m["instables"], m["fuites"], m["fuites_2"],
+				m["fuites_8"], sm["fuites_2"], t["fuites_2"]])
+			_sauver(m["b"], "noir_nappes_%s_avec_j%d" % [nom, pid + 1])
+			_sauver(m["a"], "noir_nappes_%s_sans_j%d" % [nom, pid + 1])
+			_sauver(m["carte"], "noir_nappes_%s_carte_j%d" % [nom, pid + 1])
+			if int(m["emprise"]) == 0:
+				_echouer("%s J%d : les cubes n'ont rien rastérisé — la preuve serait vide" % [nom, pid + 1])
+			if int(m["fuites_2"]) > 0:
+				_echouer("%s J%d : %d fuites au-delà de 2/255 (pixels noirs allumés par les cubes)" % [nom, pid + 1,
+					m["fuites_2"]])
+		_volumes.poser_nappes_voxel(false)
+		_torche = false
+		_propres = false
+		_lumieres_gardees = []
+		_visee = Vector2.ZERO
+		g.queue_free()
+		await _images(4)
+	_releve("noir_nappes total_masque_coupe_fuites_sup2=%d total_temoin_fuites_sup2=%d" % [total_sans_masque, total_temoin])
+	if total_temoin == 0 and _seulement == "":
+		_echouer("le témoin ne montre aucune fuite : le détecteur serait aveugle, la preuve vide")
+	if _seulement == "" or _seulement == "grains":
+		await _noir_des_grains()
+	_caches_fixes = []
+
+
+## LES GRAINS dans le noir : la poudre et ses traces, toutes les lumières éteintes ; la prise du jeu publié (les traces au sol,
+## dans la lightmap), puis chaque variante de l'essai (les grains). Un pixel que l'essai allume (au-delà de 2/255) doit être à
+## moins de deux blocs de 4 px d'un pixel qu'allumait la trace du jeu publié (au-delà de 0), la trace LEVÉE à l'écran
+## jusqu'au sommet de ses grains (`_montee_ecran`) : un grain luit là où sa trace luisait, dans la colonne qu'il occupe au-
+## dessus d'elle, nulle part ailleurs. Posé sur le tas de poudre (variante « tas »), un grain est plus haut que sa trace, et la
+## caméra le montre plus haut — la parallaxe d'un objet posé, pas une lueur qui déborde : sans la levée, le haut du premier
+## grain de chaque trace sortait de la tolérance (27 et 22 pixels, première preuve de GV2). Et l'essai doit allumer
+## quelque chose (sinon, une preuve vide).
+func _noir_des_grains() -> void:
+	_placer_les_joueurs(DISTANCE_J1, DISTANCE_J2)
+	_visee = Vector2.ZERO
+	await _images(60)
+	var po := await _poser("poudre_contact", 9960)
+	if po == null:
+		return
+	po.set_physics_process(false)
+	var traces := _des_traces_tenues(po.global_position)
+	_torche = false
+	_propres = false
+	_lumieres_gardees = []
+	_poser_rendu_nappes(RENDUS_NAPPES[0])
+	await _tenir_images(30, Callable())
+	var publie := get_viewport().get_texture().get_image()
+	for rendu: Array in RENDUS_NAPPES.slice(1):
+		_poser_rendu_nappes(rendu)
+		await _tenir_images(10, Callable())
+		var essai := get_viewport().get_texture().get_image()
+		# Le sommet des grains : sur le tas (« tas » : la hauteur de la poudre), au ras du sol sinon (`IsoVolumes._suivre_traces`).
+		var base := float(IsoNuageVoxel.NAPPES["poudre_contact"]["hauteur"]) * IsoVolumes.TUILE if String(rendu[2]) == "tas" \
+			else IsoVolumes.PLANCHER_PX
+		for pid in 2:
+			var a := _recadrer(publie, _lieu, pid, COTE_NAPPE + 60.0)
+			var b := _recadrer(essai, _lieu, pid, COTE_NAPPE + 60.0)
+			var montee := _montee_ecran(pid, base + IsoVolumes.GRAIN_HAUT_PX, publie)
+			var r := _hors_des_traces(a, b, 4, montee)
+			_releve("grains rendu=%s vue=J%d allumes_publie=%d allumes_essai=%d hors_des_traces=%d montee_px=%.1f" % [
+				String(rendu[0]), pid + 1, r["publie"], r["essai"], r["hors"], montee])
+			_sauver(a, "grains_publie_j%d" % (pid + 1))
+			_sauver(b, "grains_%s_j%d" % [String(rendu[0]), pid + 1])
+			if int(r["essai"]) == 0:
+				_echouer("grains %s J%d : rien d'allumé — la preuve serait vide" % [String(rendu[0]), pid + 1])
+			if int(r["hors"]) > 0:
+				_echouer("grains %s J%d : %d pixels allumés loin de toute trace" % [String(rendu[0]), pid + 1, r["hors"]])
+	_volumes.poser_nappes_voxel(false)
+	for t in traces:
+		(t as Node).queue_free()
+	po.queue_free()
+	await _images(4)
+
+
+## La montée À L'ÉCRAN, en pixels de l'image de la fenêtre `img`, d'un point posé à `h` pixels de monde au-dessus du sol, au
+## lieu, dans la vue `pid` : la caméra de la vue (`CameraIso.vers_ecran`, sa hauteur), mise à l'échelle comme `_recadrer`.
+func _montee_ecran(pid: int, h: float, img: Image) -> float:
+	var cam := _iso.call("_camera_de", pid) as CameraIso
+	var vue := _iso.call("viewport_ecran", pid) as Viewport
+	var affichages: Array = _iso.get("_affichages")
+	if cam == null or vue == null or affichages.size() <= pid:
+		return 0.0
+	var taille := vue.get_visible_rect().size
+	var d := cam.vers_ecran(_lieu, taille).y - cam.vers_ecran(_lieu, taille, h).y
+	var cadre := (affichages[pid] as Control).get_global_rect()
+	var fenetre := get_viewport().get_visible_rect().size
+	return d * (cadre.size.y / taille.y) * (float(img.get_height()) / fenetre.y)
+
+
+## Les pixels allumés par `b` (au-delà de 2/255) dont aucun bloc voisin (de `bloc` pixels, à un bloc près) ne contient un pixel
+## allumé par `a` (au-delà de 0), chaque pixel de `a` LEVÉ de `montee` pixels vers le haut de l'image (la colonne d'un objet
+## posé au-dessus de lui ; 0 : au sol).
+static func _hors_des_traces(a: Image, b: Image, bloc: int, montee := 0.0) -> Dictionary:
+	var ia := a.duplicate() as Image
+	var ib := b.duplicate() as Image
+	ia.convert(Image.FORMAT_RGB8)
+	ib.convert(Image.FORMAT_RGB8)
+	var w := mini(ia.get_width(), ib.get_width())
+	var h := mini(ia.get_height(), ib.get_height())
+	var da := ia.get_data()
+	var db := ib.get_data()
+	var bw := ceili(float(w) / float(bloc))
+	var bh := ceili(float(h) / float(bloc))
+	var blocs := PackedByteArray()
+	blocs.resize(bw * bh)
+	var publie := 0
+	for y in h:
+		for x in w:
+			var k := (y * ia.get_width() + x) * 3
+			if da[k] > 0 or da[k + 1] > 0 or da[k + 2] > 0:
+				publie += 1
+				for t in range(0, ceili(maxf(montee, 0.0)) + 1, bloc):
+					var yl := maxi(y - t, 0)
+					blocs[(yl / bloc) * bw + x / bloc] = 1
+				var yh := maxi(y - ceili(maxf(montee, 0.0)), 0)
+				blocs[(yh / bloc) * bw + x / bloc] = 1
+	var essai := 0
+	var hors := 0
+	for y in h:
+		for x in w:
+			var k := (y * ib.get_width() + x) * 3
+			if maxi(db[k], maxi(db[k + 1], db[k + 2])) <= 2:
+				continue
+			essai += 1
+			var bx := x / bloc
+			var by := y / bloc
+			var proche := false
+			for dy in range(-1, 2):
+				for dx in range(-1, 2):
+					var cx := bx + dx
+					var cy := by + dy
+					if cx >= 0 and cy >= 0 and cx < bw and cy < bh and blocs[cy * bw + cx] == 1:
+						proche = true
+			if not proche:
+				hors += 1
+	return {"publie": publie, "essai": essai, "hors": hors}
+
+
+## LE COÛT des nappes : le jeu publié contre les deux variantes de l'essai, sur la même scène figée — la nappe de braises à
+## mi-vie (sa lumière allumée), la poudre et ses douze traces —, la méthode de `cout`.
+func _cout_nappes() -> void:
+	await _etalonner()
+	for scene: String in ["braises", "poudre"]:
+		if _seulement != "" and _seulement != scene:
+			continue
+		_placer_les_joueurs(DISTANCE_J1, DISTANCE_J2)
+		await _images(60)
+		var g := await _poser("nappe_braises" if scene == "braises" else "poudre_contact", 9980 + (1 if scene == "poudre" else 0))
+		if g == null:
+			continue
+		var traces := []
+		var tenir := Callable()
+		if scene == "braises":
+			tenir = func(): g.set("_age", 5.0)
+		else:
+			g.set_physics_process(false)
+			traces = _des_traces_tenues(g.global_position)
+		_torche = true
+		_propres = true
+		_lumieres_gardees = _lumieres_des([g])
+		await _tenir_images(40, tenir)
+		for rendu: Array in RENDUS_NAPPES:
+			_poser_rendu_nappes(rendu)
+			await _tenir_images(10, tenir)
+			var mesure := await _surface_nappe(g, tenir)
+			for pid in 2:
+				var m: Dictionary = mesure[pid]
+				_releve("surface scene=%s rendu=%s vue=J%d fragments=%d images=%d juge=%d empreinte=%d" % [scene, String(rendu[0]),
+					pid + 1, int(m["images"]) + int(m["juge"]), m["images"], m["juge"], m["empreinte"]])
+				if int(m["images"]) <= 0:
+					_echouer("%s %s J%d : le compteur n'a rien compté — la mesure serait vide" % [scene, String(rendu[0]), pid + 1])
+		await _tenir_images(30, tenir)
+		for tour in 2:
+			for rendu: Array in [["sans_la_nappe", false, ""]] + RENDUS_NAPPES:
+				_poser_rendu_nappes(rendu if String(rendu[0]) != "sans_la_nappe" else RENDUS_NAPPES[0])
+				await _tenir_images(20, tenir)
+				if String(rendu[0]) == "sans_la_nappe":
+					var n := _noeuds_de_la_nappe(g)
+					_caches = n["images"] + n["juges"]
+				var mesure := await _mesurer(60, tenir)
+				_caches = []
+				_releve("cout scene=%s tour=%d rendu=%s appels=%d primitives=%d image_ms_mediane=%.1f image_ms_p90=%.1f" % [
+					scene, tour + 1, String(rendu[0]), mesure["appels"], mesure["primitives"], mesure["mediane"], mesure["p90"]])
+		_volumes.poser_nappes_voxel(false)
+		_torche = false
+		_propres = false
+		_lumieres_gardees = []
+		for t in traces:
+			(t as Node).queue_free()
+		g.queue_free()
+		await _images(4)
+
+
+## Les nœuds 3D des images d'une nappe : ses couches ou ses cubes (clé 0), ses lueurs ou ses braises en cubes (clé 1), son
+## juge ; pour la poudre, les grains de toutes les traces (l'entrée de l'arène).
+func _noeuds_de_la_nappe(sujet: Object) -> Dictionary:
+	var images := []
+	var juges := []
+	for e: Dictionary in (_volumes.get("_suivis") as Dictionary).values():
+		var source: Object = (e["source"] as WeakRef).get_ref()
+		var genre := String(e["genre"])
+		if not (source == sujet and ["volume", "nuage_voxel", "braises"].has(genre)) \
+				and not (genre == "grains" and String(sujet.get("slug")) == "poudre_contact"):
+			continue
+		for n in e["noeuds"]:
+			if is_instance_valid(n) and (n as Node3D).visible:
+				images.append(n)
+		if is_instance_valid(e.get("juge")) and (e["juge"] as Node3D).visible:
+			juges.append(e["juge"])
+	return {"images": images, "juges": juges}
+
+
+## La surface couverte par les images d'une nappe (la méthode de `_surface`, sur `_noeuds_de_la_nappe`).
+func _surface_nappe(sujet: Node, tenir: Callable) -> Array:
+	var torche := _torche
+	var propres := _propres
+	var gardees := _lumieres_gardees
+	_torche = false
+	_propres = false
+	_lumieres_gardees = []
+	await _tenir_images(40, tenir)
+	var noeuds := _noeuds_de_la_nappe(sujet)
+	var tous: Array = noeuds["images"] + noeuds["juges"]
+	_caches = tous
+	await _tenir_images(4, tenir)
+	var base := _images_des_vues()
+	var comptes := []
+	for passe in ["images", "juges"]:
+		var comptes_passe: Array = noeuds[passe]
+		_caches = tous.filter(func(n): return not comptes_passe.has(n))
+		var origines := {}
+		for n in comptes_passe:
+			var gi := n as GeometryInstance3D
+			origines[gi] = gi.material_override
+			gi.material_override = _materiau_compteur(gi.material_override as ShaderMaterial)
+		await _tenir_images(4, tenir)
+		comptes.append(_images_des_vues())
+		for gi in origines:
+			(gi as GeometryInstance3D).material_override = origines[gi]
+	_caches = []
+	_torche = torche
+	_propres = propres
+	_lumieres_gardees = gardees
+	var out := []
+	for pid in 2:
+		var images := _ecarts(base[pid], comptes[0][pid], _unites[pid])
+		var juge := _ecarts(base[pid], comptes[1][pid], _unites[pid])
+		out.append({"images": images["fragments"], "juge": juge["fragments"], "empreinte": images["empreinte"]})
+	return out
+
+
 # ─── Les prises ──────────────────────────────────────────────────────────────
 
 ## Une prise « sous la lampe » (torche de J1 à 0,8 et les lumières propres du sujet) puis « dans le noir » (tout éteint),
@@ -1223,9 +1628,17 @@ func _poser(slug: String, numero: int) -> Node2D:
 
 ## Toutes les lumières du duel éteintes — le bandeau LED compris, que le jeu rallume (piège d'ISO2) —, sauf la torche de
 ## J1 quand elle est voulue (tenue à `ENERGIE_TORCHE`) et les lumières propres du sujet sous la lampe.
+##
+## GV2 — les lumières PROPRES gardées (`_propres`) sont RALLUMÉES, et pas seulement épargnées : une extinction faite avant
+## qu'on les déclare gardées (l'âge tenu juste après la pose) les éteignait, et rien ne les rallumait — le jeu ne coupe
+## jamais la lueur d'une nappe de braises. Ses braises sortaient à l'éclat 0 : invisibles dans le tas, la variante
+## « braises » cachée, et le sol sans sa lueur ambre (trois passages du banc de GV2 à chercher la faute dans le shader).
 func _eteindre_tout() -> void:
 	var lampe := _main.p1.get("flashlight") as Light2D
 	for n in _main.find_children("*", "Light2D", true, false):
+		if _propres and _lumieres_gardees.has(n):
+			(n as Light2D).enabled = true
+			continue
 		if _torche and (n == lampe or _lumieres_gardees.has(n)):
 			continue
 		(n as Light2D).enabled = false

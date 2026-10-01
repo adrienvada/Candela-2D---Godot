@@ -265,6 +265,11 @@ SUITES+=(test_fusee_killcam)
 # même raison que les lignes du dessus.
 SUITES+=(test_fumee_voxel)
 
+# GV2 (2026-10-01, ordre de la coordinatrice ; Q70 d'Adrien : « oui ») : les nappes au sol en voxels, À L'ESSAI, éteint par
+# défaut — sans drapeau, le jeu publié, puis l'essai par la bascule des bancs. La même suite repasse plus bas sous
+# `--nappes-voxels=braises` (l'essai lu au lancement). Hors de la liste, même raison que les lignes du dessus.
+SUITES+=(test_nappes_voxel)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -434,6 +439,8 @@ for t in "${SUITES_2D[@]}"; do run "$t" --script "res://tools/$t.gd" -- --2d; do
 # bruit ensemble (le choix d'un nuage né sous un drapeau est celui du drapeau).
 run test_fumee_voxel_couches --script "res://tools/test_fumee_voxel.gd" -- --fumee-couches
 run test_fumee_voxel_drapeaux --script "res://tools/test_fumee_voxel.gd" -- --fumee-voxels=fin --fumee-encre=hachures --fumee-relief=bruit
+# GV2 — les nappes à l'essai, lu au lancement (la variante « braises »).
+run test_nappes_voxel_braises --script "res://tools/test_nappes_voxel.gd" -- --nappes-voxels=braises
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).

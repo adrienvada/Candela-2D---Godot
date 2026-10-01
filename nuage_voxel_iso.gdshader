@@ -51,6 +51,26 @@
 // rejoué par la killcam) ; les graines viennent de son centre (jamais d'un identifiant d'instance, qui diffère d'une
 // machine à l'autre).
 //
+// ## GV2 — les nappes au sol, à l'essai (`--nappes-voxels`, éteint par défaut)
+//
+// La nappe de braises et la poudre de contact, dans la même langue (`IsoNuageVoxel.NAPPES`) : un tas BAS de cubes fins (un
+// huitième de tuile), la densité de l'alpha de leur dessin, le relief de sa clarté, l'encre de ses traits (les volutes,
+// Q73), le noir et l'horloge des nuages. Une nappe ne coule pas : ni respiration (`respiration` 0), ni dérive du dessin
+// (`derive_dessin` 0) ; la hauteur de ses colonnes prend une part de hasard tirée de sa case (`grain` — la case est calée sur
+// le monde : la même pour les deux vues et les deux machines) : des charbons et des grains, pas une dalle. Ses BRAISES
+// rougeoient sur le cube du sommet de leur colonne (`braise_de`) — la lueur des seize points qu'elles remplacent, de la même
+// couleur, au même éclat (celui de la lumière de la nappe : éteinte, plus de braise), au même scintillement, à l'âge du
+// nuage ; une braise n'a pas de trait. `seulement_braises` (la variante « braises ») : la nappe reste au sol, ses braises
+// SEULES sont des cubes, posés sur elle.
+// Trois règles des passages du banc. (1) Le grain agit sur le SOMMET, après la borne : sur le plateau d'un dessin clair (la
+// braise au cœur), la bosse dépassait 1 et le hasard s'y perdait — un plateau plat. (2) Une braise tend VERS l'ambre, en
+// mélange (comme la lueur au sol de la fusée posée) : jamais au-delà de sa couleur, là où une addition sur le cœur crème
+// de la nappe saturerait au blanc. (3) Une nappe prend la température GRADUÉE du sol (`temperature_seuil_bas` et `_haut`,
+// ceux d'ISO7b) et non celle d'un nuage : c'est un dessin AU SOL, que le jeu publié montre par le sol — sous la température
+// d'un nuage, l'anneau de pierre de la nappe de braises sortait gris (r/b 1,35 contre 1,85 publié, à mi-vie sans la
+// lampe). (La nappe de braises, peinte lumineuse, garde son dessin sous ses cubes, lu au pied de chaque colonne sans
+// lissage : `IsoVolumes._suivre_nappe_en_voxels`.)
+//
 // ## Le coût, tenu par construction
 //
 // Seule la PEAU du nuage rastérise : une face d'un cube plein collée à un voisin plein s'écrase (`LES FACES CACHÉES`), un
@@ -127,6 +147,10 @@ uniform float alpha_voxel = 0.85;
 uniform float age = 0.0;
 // La teinte chaude du sol et des murs (ISO7), comme les couches.
 uniform float temperature = 0.0;
+// GV2 — la température GRADUÉE du sol (ISO7b) pour une nappe, ses seuils en luminance affichée : braise dessous, teinte
+// chaude au-dessus. 0 et 0 : la température d'un nuage, celle des couches (la teinte chaude partout), inchangée.
+uniform float temperature_seuil_bas = 0.0;
+uniform float temperature_seuil_haut = 0.0;
 // Le modelé des faces, en valeur affichée : le dessus porte la lumière lue, les deux côtés que la caméra voit
 // l'assombrissent (à gauche et à droite de l'écran : la même règle dans les deux vues).
 uniform float face_dessus = 1.0;
@@ -148,6 +172,23 @@ uniform float trait_plancher = 0.0627;
 uniform float derive_dessin = 0.06;
 // Les hachures : leur pas, en pixels de monde.
 uniform float hachure_pas_px = 5.0;
+// GV2 — les nappes au sol (voir l'en-tête) : la respiration des cubes (1 : un nuage ; 0 : une nappe), la part de hasard
+// dans la hauteur des colonnes, les braises (x, z au sol ; phase et vitesse de leur scintillement), leur éclat et leur
+// couleur, et la variante « braises » (la nappe au sol, ses braises seules en cubes).
+uniform float respiration = 1.0;
+uniform float grain = 0.0;
+uniform bool seulement_braises = false;
+uniform int nb_braises = 0;
+uniform vec4 braises[16];
+uniform float braises_eclat = 0.0;
+// L'ambre de la lueur (`Charte.AMBRE`), TEL QUEL : ce shader écrit sa couleur telle qu'elle s'affiche — linéarisé, il sortait
+// orange sombre (232/111/6 mesurés pour 245/176/61 voulus, quatrième passage du banc de GV2).
+uniform vec3 braises_couleur = vec3(0.96, 0.69, 0.24);
+// Une braise est PLEINE (son cube tout entier ambre) quand la part de lumière de la nappe × son scintillement atteint 0,5 —
+// la nappe à mi-vie, au plus fort de son scintillement ; en dessous, son cube tend vers l'ambre d'autant. Au poids même des
+// lueurs (gain 1), sur le cœur crème d'une nappe fraîche, les braises du tas se distinguaient à peine (planche des gains,
+// quatrième passage du banc de GV2) ; en fin de vie, elles s'éteignent avec la nappe aux deux gains, comme les lueurs.
+const float BRAISE_GAIN = 2.0;
 
 #ifdef NUAGE_FUSEE
 // LE VOILE de la fusée (`fumee_fusee.gdshader`), mêmes noms, mêmes valeurs — recopiées depuis son matériau à chaque image.
@@ -195,6 +236,8 @@ varying flat vec3 v_normale;
 varying flat vec4 v_aretes;
 varying flat float v_sommet;
 varying flat float v_ton;
+// GV2 : l'éclat de la braise que porte ce cube (0 : aucune).
+varying flat float v_braise;
 varying vec3 v_local;
 varying vec3 v_monde;
 
@@ -394,15 +437,39 @@ vec3 lumiere_lissee(vec2 p, vec3 centre_lu) {
 	return s / 9.0;
 }
 
+// GV2 — LA BRAISE posée dans la case de centre `c` : son scintillement (0,3 à 1 — celui des lueurs qu'elle remplace :
+// 0,65 + 0,35 sin(âge × vitesse + phase)), ou −1 si aucune braise n'y tombe. Une braise tombe dans une case par son point au
+// sol (x, z), quel que soit l'étage : le cube qui la porte est choisi par l'appelant.
+float braise_de(vec3 c) {
+	float e = -1.0;
+	for (int k = 0; k < 16; k++) {
+		if (k >= nb_braises) {
+			break;
+		}
+		vec2 d = abs(braises[k].xy - c.xz);
+		if (d.x <= 0.5 * voxel_px && d.y <= 0.5 * voxel_px) {
+			e = max(e, 0.65 + 0.35 * sin(age * braises[k].w + braises[k].z));
+		}
+	}
+	return e;
+}
+
 // Ce que porte la case de centre `c` (monde) : x la taille de son cube, en fraction de la case (0 : rien) ; y sa hauteur,
 // en fraction de sa taille (le sommet de sa colonne le coupe) ; z la hauteur du sommet de sa colonne au-dessus du pied de
 // la case, en voxels (au-delà de 1,25, la colonne continue au-dessus). Le même calcul pour un cube et pour ses voisins.
 vec3 cube_de(vec3 c) {
+	// GV2, variante « braises » : la nappe reste au sol ; seules ses braises sont des cubes pleins, posés sur elle.
+	if (seulement_braises) {
+		return (c.y < voxel_px && braise_de(c) > 0.0) ? vec3(1.0) : vec3(0.0);
+	}
 	// LES BOUFFÉES : chaque colonne monte jusqu'à son SOMMET — le relief des bouffées, sous la densité (bas au bord, haut au
 	// cœur) et sous la vie (le nuage s'affaisse en se dissipant). Le cube que le sommet coupe est une marche basse, posée
 	// au fond de sa case ; sous un quart de case, il n'est plus rien. Les côtés des marches, plus sombres, disent le
 	// volume : sans elles, un nuage large et bas se lisait comme un dallage vu d'en haut (premier passage du banc).
 	float bosse = 0.3 + 0.9 * bouffees(c.xz);
+	// GV2 — le grain d'une nappe : la hauteur de chaque colonne tirée en partie au hasard de sa case, APRÈS la borne du
+	// sommet (plus bas) — sur le plateau d'un dessin clair, la bosse dépasse 1 et le hasard s'y perdrait.
+	float hasard = grain > 0.0 ? 1.0 - grain * pate_hash(floor(c.xz / max(voxel_px, 0.001)) + vec2(7.1, 3.3)) : 1.0;
 	float vie = sqrt(clamp(nuage_vie, 0.0, 1.0));
 	float bas = c.y - 0.5 * voxel_px;
 	// Au-dessus du plus haut sommet possible ici (densité pleine), aucun cube : on sort AVANT de lire la densité, la part
@@ -417,10 +484,10 @@ vec3 cube_de(vec3 c) {
 	// Une respiration par cube, de phase tirée de sa case (la même dans les deux vues et sur les deux machines).
 	vec3 cellule = floor(c / max(voxel_px, 0.001));
 	float h = pate_hash(cellule.xz + vec2(cellule.y * 17.0, cellule.y * 3.0));
-	rho *= 0.88 + 0.24 * (0.5 + 0.5 * sin(age * 1.3 + h * 6.2831853));
+	rho *= mix(1.0, 0.88 + 0.24 * (0.5 + 0.5 * sin(age * 1.3 + h * 6.2831853)), respiration);
 	float t = clamp((rho - seuil_taille) / max(plein_taille - seuil_taille, 0.001), 0.0, 1.0);
 	float s = sqrt(t);
-	float sommet = nuage_hauteur_px * clamp(d2 * bosse, 0.0, 1.0) * vie;
+	float sommet = nuage_hauteur_px * clamp(d2 * bosse, 0.0, 1.0) * vie * hasard;
 	float monte = (sommet - bas) / max(voxel_px, 0.001);
 	float haut = clamp(monte, 0.0, 1.0);
 	// Les marches, par DEMI-CASE : des colonnes voisines de hauteurs presque égales font un palier entier, et non une
@@ -528,6 +595,7 @@ void vertex() {
 	v_aretes = vec4(0.0);
 	v_sommet = c.y;
 	v_ton = 0.0;
+	v_braise = 0.0;
 	if (cachee) {
 		VERTEX = vec3(0.0);
 		v_couleur = vec3(0.0);
@@ -546,7 +614,8 @@ void vertex() {
 		// un cube pâle posé sur du noir laissait 1/255 là où le juge du masque tranche au pixel (deuxième preuve du noir).
 		vec3 col = (l <= 0.0 || pate_luminance(brute) <= 0.0) ? vec3(0.0)
 			: (style == PATE_BRUTE ? lu : pate(lu, l, style, c.xz, vec2(0.0), l, 0.1));
-		col = pate_temperature_graduee_neutre(col, temperature, 0.0, 0.0, pate_poids_neutre(brute));
+		col = pate_temperature_graduee_neutre(col, temperature, temperature_seuil_bas, temperature_seuil_haut,
+			pate_poids_neutre(brute));
 		// La face : le dessus porte la lumière ; un côté est à gauche ou à droite de l'écran selon la caméra qui dessine.
 		// NORMAL est dans le repère du modèle, qui est celui du monde (l'instance n'est qu'une échelle et une translation).
 		float face = face_dessus;
@@ -560,6 +629,12 @@ void vertex() {
 		v_encre = encre_style == 0 ? pate_facteur(col, face * encre_reste)
 			: pate_matiere_et_encre(col, face, trait_reste, 1.0, trait_plancher);
 		v_ton = pate_luminance(pate_vers_affiche(v_couleur));
+		// GV2 — une braise rougeoie sur le cube du SOMMET de sa colonne (celui que le sommet coupe ou qu'il recouvre de
+		// moins d'un quart), à l'éclat de la lumière de la nappe.
+		if (nb_braises > 0 && cube.z < 1.25) {
+			float b = braise_de(c);
+			v_braise = b > 0.0 ? braises_eclat * b : 0.0;
+		}
 		// Le sommet de la colonne (au demi-voxel, comme les marches) : là où le drapé des volutes plie.
 		v_sommet = c.y - 0.5 * voxel_px + voxel_px * floor(2.0 * cube.z + 0.5) * 0.5;
 		if (encre_style == 1) {
@@ -647,6 +722,9 @@ void fragment() {
 		float h2 = 1.0 - smoothstep(c2 - aa, c2 + aa, d2);
 		trait = max(h1 * step(0.001, c1), h2 * step(0.001, c2));
 	}
-	ALBEDO = mix(v_couleur, v_encre, trait);
-	ALPHA = v_alpha;
+	// GV2 — une braise rougeoie : pas de trait sur elle, et son cube tend VERS l'ambre à son éclat (en mélange : jamais au-delà
+	// de sa couleur) ; son cube est plein.
+	ALBEDO = mix(v_couleur, v_encre, v_braise > 0.0 ? 0.0 : trait);
+	ALBEDO = mix(ALBEDO, braises_couleur, clamp(v_braise * BRAISE_GAIN, 0.0, 1.0));
+	ALPHA = max(v_alpha, clamp(v_braise * BRAISE_GAIN, 0.0, 1.0));
 }
