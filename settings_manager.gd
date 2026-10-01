@@ -172,6 +172,12 @@ var _portee_ecran_locale := true
 ## de DÉBOGAGE seulement et hors ligne (en ligne, jamais : `regle_du_coin`) — pour les planches avant/après et la mesure.
 const DRAPEAU_PORTEE_COIN := "--portee-coin"
 var _portee_coin_locale := false
+## Q58 (Adrien, 2026-10-01 vers 09:10 : « il faudrait qu'à l'allumage la fusée illumine loin effectivement ») — à
+## l'allumage, le halo de la fusée porte aussi loin que les torches (`FuseeModele.rayon_allumage`). ALLUMÉ par défaut ;
+## `--sans-fusee-allumage` rend la fusée de la 0.8.0, en build de DÉBOGAGE seulement et hors ligne (en ligne, jamais :
+## `fusee_allumage_du_duel`) — pour les planches avant/après et la mesure.
+const DRAPEAU_SANS_FUSEE_ALLUMAGE := "--sans-fusee-allumage"
+var _fusee_allumage_locale := true
 ## ISO14 — le LACET du duel (Q14, Adrien, 2026-09-24 vers 01:19 : « on passe à 45° ce sera plus intéressant »).
 ## ALLUMÉ par défaut à 45°, option B, depuis Q28 = A (Adrien, 2026-09-25 10:28 : « le 45° par défaut, prix connu »),
 ## EN LIGNE compris : `lacet_du_duel` y impose ces mêmes constantes, sur les deux machines. `--lacet=X` tourne la
@@ -301,6 +307,10 @@ func _ready() -> void:
 	_portee_coin_locale = OS.is_debug_build() and _arguments().has(DRAPEAU_PORTEE_COIN)
 	if _portee_coin_locale:
 		print("[portée écran] au COIN, la règle de L1 (%s) — hors ligne seulement" % DRAPEAU_PORTEE_COIN)
+	_fusee_allumage_locale = not (OS.is_debug_build() and _arguments().has(DRAPEAU_SANS_FUSEE_ALLUMAGE))
+	if not _fusee_allumage_locale:
+		print("[fusée] sans l'allumage de Q58 (%s) : la fusée de la 0.8.0 — hors ligne seulement"
+			% DRAPEAU_SANS_FUSEE_ALLUMAGE)
 	_lacet_local = lacet_applique(_arguments_de_reglage())
 	_option_lacet_locale = option_lacet_appliquee(_arguments_de_reglage())
 	# Hors match, les valeurs locales ; `GameState` accorde au mode à chaque départ (`accorder_au_mode`).
@@ -411,6 +421,8 @@ func accorder_au_mode(en_ligne: bool, ecran_scinde: bool = false) -> void:
 		regle_du_coin(en_ligne, _portee_coin_locale), zoom_de_la_vue_unique(), decalage_visee)
 	WeaponData.portee_plancher = bornes.x
 	WeaponData.portee_plafond = bornes.y
+	FuseeModele.rayon_allumage = rayon_allumage_fusee(fusee_allumage_du_duel(en_ligne, _fusee_allumage_locale),
+		zoom_de_la_vue_unique(), decalage_visee)
 	var l := lacet_du_duel(en_ligne, _lacet_local, _option_lacet_locale)
 	lacet_duel = l[0]
 	option_lacet = l[1]
@@ -488,6 +500,20 @@ static func portee_ecran_du_duel(en_ligne: bool, locale: bool) -> bool:
 ## jeu) ; ailleurs, le choix local.
 static func regle_du_coin(en_ligne: bool, locale: bool) -> bool:
 	return false if en_ligne else locale
+
+## Q58 — l'allumage de la fusée vaut-il ? TOUJOURS en ligne (les deux machines voient la même fusée) ; ailleurs, le choix
+## local (`--sans-fusee-allumage`, en débogage).
+static func fusee_allumage_du_duel(en_ligne: bool, locale: bool) -> bool:
+	return true if en_ligne else locale
+
+## Q58 — le rayon du halo de la fusée à l'allumage, en pixels de monde : la portée des torches, au bord le plus proche de
+## l'écran de la VUE UNIQUE (`PorteeEcran.portee_au_bord`, 468 px à ×1,5) — le même calcul, sur le même cadrage, dans tous
+## les modes ; 0 si l'allumage ne vaut pas (`FuseeModele.rayon_halo_a` garde alors l'empreinte habituelle). Calcul pur,
+## vérifié en `--script` par `tools/test_fusee_allumage.gd`.
+static func rayon_allumage_fusee(actif: bool, zoom: float, decalage: float) -> float:
+	if not actif:
+		return 0.0
+	return PorteeEcran.portee_au_bord(PorteeEcran.VUE_UNIQUE, zoom, decalage, CameraIso.TANGAGE_DEG)
 
 ## L1, puis Q76 — les BORNES de portée des torches, `(plancher, plafond)` en pixels de monde, sur l'écran de la VUE UNIQUE.
 ## **Q76** (Adrien, 2026-09-30 vers 22:58 : « En fait diminuons la portée des lampe au maximum visible par le joueur en

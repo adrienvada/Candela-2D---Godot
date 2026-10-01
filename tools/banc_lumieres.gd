@@ -1,7 +1,8 @@
 extends SceneTree
 
-## Le banc d'images du chantier des lumières de la 0.8.0 (L1 portée, L2 la lampe du modèle, L3 le point lumineux), et de
-## Q76 (la portée au bord le plus proche : `--plans=q76`, avant/après basculés sur place).
+## Le banc d'images du chantier des lumières de la 0.8.0 (L1 portée, L2 la lampe du modèle, L3 le point lumineux), de Q76
+## (la portée au bord le plus proche : `--plans=q76`, avant/après basculés sur place) et de Q58 (la fusée qui illumine loin
+## à l'allumage : `--plans=q58`, six âges, avant/après basculés sur place, la lightmap lue).
 ##
 ## Monte une vraie partie (vue iso, 45° B), en écran scindé puis en vue unique, pose les deux joueurs et leur visée
 ## par des marionnettes (le fournisseur d'entrées du jeu, comme le photographe), tient la scène jusqu'à ce que les
@@ -32,8 +33,8 @@ var _accroupi := [false, false]
 var _libre := Vector2.ZERO
 ## Q76 — les classes de la famille `q76` (`--q76-classes=pompe,arbalete` pour n'en refaire qu'une partie).
 var _classes_q76: PackedStringArray = ["pompe", "sentinelle", "arbalete"]
-## Q76 — vrai pendant la famille `q76` : l'écran nu (ni voile d'éblouissement, ni HUD, ni particules) et l'éblouissement
-## laissé à son régime (`_plans_q76`).
+## Q76 — vrai pendant la famille `q76` (et `q58`, qui le reprend) : l'écran nu (ni voile d'éblouissement, ni HUD, ni
+## particules) et l'éblouissement laissé à son régime (`_plans_q76`).
 var _q76_ecran_nu := false
 
 
@@ -121,6 +122,8 @@ func _run() -> void:
 		await _plan_cadence()
 	if _familles.has("q76"):
 		await _plans_q76()
+	if _familles.has("q58"):
+		await _plans_q58()
 	var f := FileAccess.open(_sortie.path_join("plans.txt"), FileAccess.WRITE)
 	if f != null:
 		f.store_string("\n".join(_plans) + "\n")
@@ -713,3 +716,187 @@ func _q76_trio(nom: String, legende: String) -> void:
 	_torche = [false, false]
 	await _photo(nom + "_3noir", legende + " — sans torche (le noir de référence)")
 	_torche = torches
+
+
+# --- Q58 : la fusée illumine loin à l'allumage ---------------------------------------------------------------------
+
+## Q58 — les âges photographiés (secondes de combustion) : l'allumage, la tenue, le début et le milieu de la descente, la fin
+## du plein feu, puis la braise.
+const AGES_Q58 := [0.0, 0.5, 1.0, 2.0, 4.0, 6.0]
+## Q58 — la fusée de la famille, posée par le vrai chemin (`_do_spawn_fusee`), puis tenue à l'âge voulu (`forcer_age`,
+## physique coupée : rien ne la vieillit entre deux photos).
+var _fusee_q58: Node2D = null
+## Q58 — la portée d'allumage du jeu (`FuseeModele.rayon_allumage`), relue au début et rendue à la fin.
+var _rayon_q58 := 0.0
+## Q58 — la lightmap de chaque vue sans la lumière de la fusée (le noir de référence de l'âge en cours), par pid.
+var _noirs_q58 := {}
+
+
+## Q58 (Adrien, 2026-10-01 vers 09:10 : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin effectivement ») — la fusée
+## posée à six âges (0 ; 0,5 ; 1 ; 2 ; 4 s ; 6 s, la braise) : AVANT (la fusée de la 0.8.0 — `FuseeModele.rayon_allumage` à 0,
+## ce que fait `--sans-fusee-allumage`) et APRÈS (Q58) basculés SUR PLACE, et sans sa lumière (le noir de référence), dans la
+## vue unique de J1, celle de J2 (celle du client en ligne), puis l'écran scindé à 45° B. Torches éteintes : la fusée seule
+## éclaire. Écran nu, comme pour Q76 (`_q76_ecran_nu` : ni voile — la fusée éblouit, autant avant qu'après —, ni HUD, ni
+## particules). À chaque photo, `_q58_lightmap` lit la LIGHTMAP de chaque vue (le monde 2D vu de dessus, que la vue iso
+## projette) contre celle du noir : jusqu'où la lumière de la fusée porte, et si un pixel qu'elle éclaire est DERRIÈRE un mur
+## haut vu d'elle (un rayon de la fusée au point, contre les murs). Jugé et mis en planche par `tools/fusee_q58/planche.py`.
+func _plans_q58() -> void:
+	var modele := load("res://fusee_modele.gd") as GDScript
+	if modele == null or modele.get("rayon_allumage") == null:
+		print("LUMIERES q58 : arbre d'avant Q58, rien à montrer")
+		return
+	_rayon_q58 = float(modele.get("rayon_allumage"))
+	print("LUMIERES q58 : portée d'allumage %.1f px, empreinte habituelle 440 px" % _rayon_q58)
+	_q76_ecran_nu = true
+	var t := MursBas.TUILE
+	var loin := _libre + Vector2(-9.0 * t, 6.0 * t)
+	for pid in [0, 1, -1]:
+		await _q76_vue(pid)
+		var reglages := root.get_node("GameSettings")
+		# La fusée au centre de l'écran : la caméra avance de décalage × profondeur vers la visée.
+		var avance := float(reglages.decalage_visee) * 1080.0 / maxf(float(reglages.zoom_duel), 0.01)
+		var lieu: Vector2
+		var scene: String
+		if pid == 0:
+			_poser(_libre, loin, _au_sol(0, Vector2(0.0, -1.0)), Vector2.DOWN, false, false)
+			lieu = _trouver_libre(_libre + _au_sol(0, Vector2(0.0, -1.0)) * avance)
+			scene = "unique_j1"
+		elif pid == 1:
+			_poser(loin, _libre, Vector2.DOWN, _au_sol(1, Vector2(0.0, -1.0)), false, false)
+			lieu = _trouver_libre(_libre + _au_sol(1, Vector2(0.0, -1.0)) * avance)
+			scene = "unique_j2"
+		else:
+			var j2 := _libre + Vector2(-6.0 * t, 3.0 * t)
+			_poser(_libre, j2, _au_sol(0, Vector2(0.0, -1.0)), _au_sol(1, Vector2(0.0, -1.0)), false, false)
+			lieu = _trouver_libre((_libre + j2) * 0.5)
+			scene = "scinde"
+		await _q58_poser_fusee(lieu)
+		for age: float in AGES_Q58:
+			await _q58_trio(pid, "q58_%s_%04d" % [scene, int(roundf(age * 1000.0))],
+				"%s, la fusée posée à %.1f s" % [{0: "vue unique de J1 (×1,5)", 1: "vue unique de J2 (×1,5)",
+					-1: "écran scindé (×1,25)"}[pid], age], age)
+	modele.set("rayon_allumage", _rayon_q58)
+	if _fusee_q58 != null and is_instance_valid(_fusee_q58):
+		_fusee_q58.queue_free()
+	_q76_ecran_nu = false
+	_q76_montrer(true)
+	await _q76_vue(-1)
+
+
+## Q58 — pose la fusée de la famille par le vrai chemin du jeu, à `lieu`, et la tient (physique coupée).
+func _q58_poser_fusee(lieu: Vector2) -> void:
+	if _fusee_q58 != null and is_instance_valid(_fusee_q58):
+		_fusee_q58.queue_free()
+		await process_frame
+	_main._do_spawn_fusee(0, lieu, 0.0, 5858)
+	await process_frame
+	_fusee_q58 = _main.bullet_container.get_node_or_null(^"FuseeJ1_5858") as Node2D
+	if _fusee_q58 == null:
+		printerr("LUMIERES q58 : la fusée n'a pas été posée")
+		return
+	_fusee_q58.global_position = lieu
+	_fusee_q58.call("forcer_age", 0.0)
+	_fusee_q58.set_physics_process(false)
+	# Le son du lancer se voit (le son rendu visible, Q52) : son liseré s'efface en quelques dixièmes de seconde — on le
+	# laisse partir, sans quoi il tache le noir et l'avant du premier âge, et pas l'après (vu à la première passe).
+	var fin := Time.get_ticks_msec() + 3000
+	while Time.get_ticks_msec() < fin:
+		_tenir_une_image()
+		await process_frame
+
+
+## Q58 — le noir (la lumière de la fusée éteinte), AVANT (l'allumage éteint), APRÈS (Q58) : trois photos au même cadrage, à
+## l'âge `age`, la lightmap de chaque vue lue contre celle du noir.
+func _q58_trio(pid: int, nom: String, legende: String, age: float) -> void:
+	var modele := load("res://fusee_modele.gd") as GDScript
+	modele.set("rayon_allumage", _rayon_q58)
+	_fusee_q58.call("forcer_age", age)
+	(_fusee_q58.get_node(^"Halo") as PointLight2D).enabled = false
+	await _photo(nom + "_3noir", legende + " — sans sa lumière (le noir de référence)")
+	_noirs_q58.clear()
+	for v in _q58_vues(pid):
+		_noirs_q58[v] = _q58_image_lightmap(v)
+	modele.set("rayon_allumage", 0.0)
+	_fusee_q58.call("forcer_age", age)
+	await _photo(nom + "_1avant", legende + " — AVANT (la 0.8.0 : le halo de 440 px)")
+	_q58_lightmap(pid, nom + "_1avant", age)
+	modele.set("rayon_allumage", _rayon_q58)
+	_fusee_q58.call("forcer_age", age)
+	await _photo(nom + "_2apres", legende + " — APRÈS (Q58 : l'allumage)")
+	_q58_lightmap(pid, nom + "_2apres", age)
+
+
+## Les vues rendues : la vue `pid` seule, ou les deux en écran scindé.
+func _q58_vues(pid: int) -> Array:
+	return [0, 1] if pid < 0 else [pid]
+
+
+func _q58_image_lightmap(v: int) -> Image:
+	var vp := (_main.vp1 if v == 0 else _main.vp2) as SubViewport
+	return vp.get_texture().get_image()
+
+
+## Q58 — ce que la lumière de la fusée fait dans la LIGHTMAP de la vue `v` (le monde 2D vu de dessus, avant la projection
+## iso), contre le noir de référence : les pixels qu'elle éclaire (plus de 3/255 au-dessus du noir, un sur deux dans chaque
+## direction), le plus loin d'entre eux de la fusée, ceux qui sont au-delà du rayon attendu à cet âge
+## (`FuseeModele.rayon_halo_a`), et ceux qui sont DERRIÈRE un mur haut vu de la fusée (un rayon de la fusée au point du
+## monde, contre les murs ; les points DANS un mur — son dessus — sont laissés). Une ligne « LIGHTMAP » par vue dans
+## `plans.txt`.
+func _q58_lightmap(pid: int, nom: String, age: float) -> void:
+	var modele := load("res://fusee_modele.gd") as GDScript
+	var rayon := float(modele.call("rayon_halo_a", age, 220.0))
+	var f := _fusee_q58.global_position
+	var espace := (_main.p1 as Node2D).get_world_2d().direct_space_state
+	var exclus: Array[RID] = [(_main.p1 as CollisionObject2D).get_rid(), (_main.p2 as CollisionObject2D).get_rid()]
+	var q := PhysicsPointQueryParameters2D.new()
+	q.collision_mask = MapGeometry.WALL_LAYER
+	q.exclude = exclus
+	for v in _q58_vues(pid):
+		var vp := (_main.vp1 if v == 0 else _main.vp2) as SubViewport
+		var image := _q58_image_lightmap(v)
+		var noir: Image = _noirs_q58.get(v)
+		if noir == null or noir.get_size() != image.get_size():
+			_plans.append("LIGHTMAP\t%s\tJ%d\tnoir absent" % [nom, v + 1])
+			continue
+		var ct := vp.canvas_transform
+		var logique := Vector2(vp.size_2d_override) if vp.size_2d_override != Vector2i.ZERO else Vector2(vp.size)
+		var echelle := Vector2(image.get_size()) / logique
+		var inv := ct.affine_inverse()
+		var centre := (ct * f) * echelle
+		var r_px := (maxf(rayon, 220.0) + 80.0) * ct.x.length() * echelle.x
+		var x0 := maxi(0, int(centre.x - r_px))
+		var x1 := mini(image.get_width() - 1, int(centre.x + r_px))
+		var y0 := maxi(0, int(centre.y - r_px))
+		var y1 := mini(image.get_height() - 1, int(centre.y + r_px))
+		var eclaires := 0
+		var plus_loin := 0.0
+		var au_dela := 0
+		var derriere := 0
+		var exemples: PackedStringArray = []
+		for y in range(y0, y1 + 1, 2):
+			for x in range(x0, x1 + 1, 2):
+				var a := image.get_pixel(x, y)
+				var b := noir.get_pixel(x, y)
+				if maxf(a.r - b.r, maxf(a.g - b.g, a.b - b.b)) * 255.0 <= 3.0:
+					continue
+				eclaires += 1
+				var w: Vector2 = inv * (Vector2(x + 0.5, y + 0.5) / echelle)
+				var d := w.distance_to(f)
+				plus_loin = maxf(plus_loin, d)
+				if d > rayon + 3.0:
+					au_dela += 1
+				if d < 12.0:
+					continue
+				q.position = w
+				if not espace.intersect_point(q, 1).is_empty():
+					continue
+				var rq := PhysicsRayQueryParameters2D.create(f, w, MapGeometry.WALL_LAYER, exclus)
+				var hit := espace.intersect_ray(rq)
+				if not hit.is_empty() and f.distance_to(hit["position"]) < d - 3.0:
+					derriere += 1
+					if exemples.size() < 4:
+						exemples.append("(%.0f, %.0f) à %.0f px, mur à %.0f" % [w.x, w.y, d, f.distance_to(hit["position"])])
+		var ligne := "J%d : %d px de lightmap éclairés par la fusée (un sur deux), le plus loin à %.0f px (rayon attendu %.0f) ; au-delà %d ; derrière un mur haut %d%s" % [
+			v + 1, eclaires, plus_loin, rayon, au_dela, derriere, (" — " + ", ".join(exemples)) if exemples.size() > 0 else ""]
+		_plans.append("LIGHTMAP\t%s\t%s" % [nom, ligne])
+		print("LUMIERES lightmap %s %s" % [nom, ligne])

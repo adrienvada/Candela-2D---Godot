@@ -28,7 +28,9 @@ const COULEUR_DETRESSE := Color(0.96, 0.293, 0.334)
 
 ## Empreinte de la lumière au sol, en pixels de diamètre utile. Légèrement plus
 ## large que la fumée : la lumière déborde du nuage, la cachette vit DANS la
-## zone informée.
+## zone informée. ⚠️ Depuis Q58, c'est l'empreinte HABITUELLE de la fusée posée : à
+## l'allumage, elle s'élargit jusqu'à la portée des torches, puis y revient
+## (`FuseeModele.rayon_halo_a`, suivie par `_appliquer_age`).
 const EMPREINTE_LUMIERE := 440.0
 const EMPREINTE_VOL := 160.0
 
@@ -72,6 +74,9 @@ var _fenetres: Array = []
 var _atterrie: bool = false
 ## Q72 — la killcam a posé la lumière d'une fusée posée (`appliquer_age`) : une fois.
 var _lumiere_posee_rejouee: bool = false
+## Q58 — l'empreinte posée en dernier sur la lumière d'une fusée au sol (`_poser_empreinte`) : on ne la repose que si elle
+## change.
+var _empreinte_posee: float = -1.0
 var _dernier_son_rebond: float = -1.0
 var _exclusions: Array[RID] = []
 
@@ -662,6 +667,15 @@ func _appliquer_age(age_combustion: float) -> void:
 		clampf(energie / FuseeModele.ENERGIE_BRAISE, 0.0, 1.0))
 	if not _atterrie:
 		return # en vol : pas de fumée, la suite ne concerne que le sol
+	# Q58 — l'allumage : posée, l'empreinte de la lumière suit l'âge — la portée des torches à l'atterrissage, l'empreinte
+	# habituelle avant la braise. Ici et nulle part ailleurs : le match, la killcam (`appliquer_age`) et les bancs
+	# (`forcer_age`) passent tous par cette ligne, à un âge donné la même lumière. ⚠️ Une fusée de KILLCAM est `_atterrie`
+	# dès `_ready`, qui lui applique l'âge 0 avant que la killcam ne lui donne le sien : elle ne prend l'empreinte du sol
+	# qu'une fois son âge rejoué devenu celui d'une fusée posée (`_lumiere_posee_rejouee`, `appliquer_age`) — encore EN VOL,
+	# elle garde celle du vol, comme en match. Sans ce garde, la killcam d'une fusée en vol éclairait à 936 px (vu rougir
+	# par `test_fusee_killcam`, Q72).
+	if age_combustion >= 0.0 and (not is_replay or _lumiere_posee_rejouee):
+		_poser_empreinte(2.0 * FuseeModele.rayon_halo_a(age_combustion, EMPREINTE_LUMIERE * 0.5))
 
 	if _coeur.position != Vector2.ZERO and _velocite == Vector2.ZERO:
 		_coeur.position = Vector2.ZERO
@@ -839,13 +853,23 @@ func _atterrir() -> void:
 
 
 ## LA LUMIÈRE D'UNE FUSÉE POSÉE, dite une seule fois : son masque d'ombre (MB3 — posée, elle brûle plus bas qu'un muret :
-## sa lueur bute dessus), la hauteur de sa source (au sol) et l'empreinte de sa lumière (`EMPREINTE_LUMIERE`, 440 px).
-## Appelée à l'atterrissage et, depuis Q72, par la killcam dès que l'âge rejoué est celui d'une fusée posée
-## (`appliquer_age`). L'ordre compte : `poser_hauteur_source` relit le masque qu'on vient de poser.
+## sa lueur bute dessus), la hauteur de sa source (au sol) et l'empreinte de sa lumière — depuis Q58, celle de son âge
+## (`FuseeModele.rayon_halo_a` : la portée des torches à l'allumage, `EMPREINTE_LUMIERE` ensuite), que `_appliquer_age`
+## suit ensuite à chaque image. Appelée à l'atterrissage et, depuis Q72, par la killcam dès que l'âge rejoué est celui
+## d'une fusée posée (`appliquer_age`). L'ordre compte : `poser_hauteur_source` relit le masque qu'on vient de poser.
 func _lumiere_posee() -> void:
 	_lumiere.shadow_item_cull_mask = masque_ombre(true)
 	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_FUSEE_AU_SOL)
-	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, EMPREINTE_LUMIERE)
+	_poser_empreinte(2.0 * FuseeModele.rayon_halo_a(maxf(_age_combustion, 0.0), EMPREINTE_LUMIERE * 0.5))
+
+
+## Q58 — pose l'empreinte (diamètre, pixels de monde) de la lumière d'une fusée au sol, par `LightTextures.poser` (le seul
+## qui écrive `texture_scale`), et seulement si elle change : pendant l'allumage elle change à chaque image, ensuite plus.
+func _poser_empreinte(empreinte: float) -> void:
+	if is_equal_approx(empreinte, _empreinte_posee):
+		return
+	_empreinte_posee = empreinte
+	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, empreinte)
 
 
 func _exit_tree() -> void:

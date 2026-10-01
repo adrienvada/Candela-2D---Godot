@@ -169,6 +169,10 @@ var _fusee_sans_fumee2d := false     # --fusee-sans-fumee2d : les nappes et le v
 var _fusee_sans_volume := false      # --fusee-sans-volume : le volume de fumée iso (`IsoVolumes.volumes_actifs`)
 var _fusee_sans_lueurs := false      # --fusee-sans-lueurs : la lueur posée et celles de la comète (`IsoVolumes.lueurs_actives`)
 var _fusee_couches := -1             # --fusee-couches N : les couches du volume de la fusée (`IsoVolumes.couches_fusee`)
+## Q58 — `--fusee-age S` : la fusée du banc TENUE à cet âge de combustion (secondes) au lieu de boucler dans la braise — pour
+## mesurer l'allumage (0,5 s : le halo à la portée des torches, la fumée qui monte). Négatif (le défaut) : la boucle d'avant.
+var _fusee_age := -1.0
+var _fusee_age_annonce := false
 var _vues_mesurees: Array = []
 var _temps_vues: Dictionary = {}
 var _seconds := 15.0
@@ -317,6 +321,7 @@ func _ready() -> void:
 	_fusee_sans_volume = args.has("--fusee-sans-volume")
 	_fusee_sans_lueurs = args.has("--fusee-sans-lueurs")
 	_fusee_couches = int(_value(args, "--fusee-couches", "-1"))
+	_fusee_age = float(_value(args, "--fusee-age", "-1"))
 	_lumiere3d_echelle = float(_value(args, "--echelle", "1"))
 	if (_lumiere3d_sans_ombres or args.has("--echelle")) and not _lumiere3d:
 		printerr("✗ --sans-ombres et --echelle se prennent avec --lumiere3d")
@@ -619,8 +624,17 @@ func _stress(duration: float, sampling: bool) -> void:
 			# pleine densité en continu pendant toute la mesure.
 			var age_mis := FuseeModele.FUMEE_MONTEE \
 				+ fmod(elapsed, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5)
+			if _fusee_age >= 0.0:
+				age_mis = _fusee_age
 			_fusee_banc.appliquer_age(age_mis)
 			_poser_les_drapeaux_de_la_fusee(_fusee_banc)
+			if _fusee_age >= 0.0 and not _fusee_age_annonce:
+				# Le relevé dit ce qu'il a mesuré : l'âge tenu et l'empreinte que la lumière porte à cet âge (Q58).
+				_fusee_age_annonce = true
+				var halo := _fusee_banc.get_node_or_null(^"Halo") as PointLight2D
+				print("Fusée du banc tenue à l'âge %.2f s : halo de %.0f px d'empreinte, énergie %.2f" % [_fusee_age,
+					float(halo.texture.get_width()) * halo.texture_scale if halo != null and halo.texture != null else 0.0,
+					halo.energy if halo != null else 0.0])
 			# Le BOUCLAGE de l'âge (tous les 6,5 s) est un événement de mise en scène : l'âge saute en arrière, et le rayon du
 			# panache, l'alpha et l'échelle des nappes changent d'un coup (lecture d'ISO7 Gadgets, 2026-09-23).
 			if sampling and age_mis < _age_fusee_precedent:
