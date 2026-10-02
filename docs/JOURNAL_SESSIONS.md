@@ -6135,3 +6135,16 @@ corrigé (S6, protocole 19). Sous 30 px/s, aucun pas ne part (Q50).
 **La 0.7.1** : `intro-v2` (poussée par la session de l'intro sur le mot d'Adrien) et Q38, sur `candidat-0.7.1`, version
 0.7.1 au protocole 18 — un joueur en 0.7.0 et un en 0.7.1 se trouvent toujours. Q15, Q42 et le point de braise attendent la
 0.8.0 : tout ce qui change ce que voit un joueur de l'autre attend la version qui sépare les populations.
+
+## 2026-10-02 — Le chantier SOLO (session « candela-2d-godot-47 », branche `ccr-50a162ad-e2u8lr`)
+
+Brainstorm avec Adrien le jour même, puis : « Go. Délègue à des sous-agents Sonnet 5.5 chaque tâche. Reste juste maître du
+chantier. » Cette session conçoit, relit, fait tourner les suites et fusionne ; chaque étape (S1 à S9 de « Chantier — le
+mode solo ») est écrite par un sous-agent dans un worktree isolé, une étape à la fois.
+
+**En propre :** `profil_bot.gd`, `navigation_bot.gd`, `bot_input_provider.gd` (créés en S1), puis ce que les étapes
+suivantes créeront (perception du bot, plafonnier, moteur de l'aventure, `assets/solo/`), et leurs suites
+`tools/test_bot_*.gd`, `tools/test_entrainement_bot.gd`.
+**Partagés, touchés par insertions :** `game_state.gd` (le cran de l'entraînement, l'apparition du bot), l'écran
+d'entraînement de l'interface, `tools/run_suites.sh`. Aucune autre session n'était joignable par message au lancement
+(`ListAgents` vide) : qui tient ces fichiers sur une autre branche est prévenu par cette ligne.
