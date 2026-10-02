@@ -49,6 +49,11 @@ const POIDS_PRES_D_UN_MUR := 1.6
 ## La taille de la grille de la carte, en cases (sans la ceinture).
 var taille := Vector2i.ZERO
 
+## La carte d'où viennent ces chemins (le dictionnaire de `map_codec.gd`), gardée telle quelle : la PERCEPTION du bot (S2,
+## `PerceptionBot.monde_de_la_carte`) regarde les mêmes murs que ses chemins contournent, sans que personne relise la carte
+## une seconde fois à sa façon.
+var carte: Dictionary = {}
+
 ## `[ix][iy]` de `MapGeometry.build_solid_grid()` : décalé de `Geometrie.BORDER` sur chaque axe.
 var _solide: Array = []
 ## Les cases praticables, mémorisées : `est_praticable` est appelée à chaque voisin de chaque
@@ -73,6 +78,7 @@ static func depuis_carte(data: Dictionary) -> NavigationBot:
 
 
 func _construire(data: Dictionary) -> void:
+	carte = data
 	var grille := Codec.get_grid_size(data)
 	taille = Vector2i(clampi(grille.x, 1, Codec.MAX_GRID), clampi(grille.y, 1, Codec.MAX_GRID))
 	_solide = Geometrie.build_solid_grid(data)

@@ -283,6 +283,15 @@ SUITES+=(test_nappes_voxel)
 # dessus : ce sont des suites ordinaires, mais la seconde exige une horloge fixe et se lance donc par un `case` à part.
 SUITES+=(test_bot_navigation test_entrainement_bot)
 
+# Chantier SOLO, S2 (2026-10-02) : la PERCEPTION du bot, et la garde d'honnêteté. `test_bot_perception` (en `--script`, une carte
+# fabriquée et des corps factices, sans fenêtre) : le modèle de vue ne voit jamais PLUS que la lumière — cible dans le noir, mur entre
+# la lampe et le bot, hors du cadre de l'écran, cône de la torche, éclair, fusée, halo, murs bas —, l'ouïe ne donne jamais la place
+# exacte (une zone qui contient la vérité sans la centrer, qui grandit avec la distance et derrière un mur), la mémoire s'efface, et
+# le fournisseur d'entrées ne lit rien de la perception pour agir (S3). L'autre moitié de la preuve — le modèle contre les CAPTEURS
+# du jeu — ouvre une fenêtre et n'entre dans aucune suite : `tools/banc_perception_bot.tscn` (commande dans son en-tête), dont les
+# appuis sont vérifiés par `test_banc`. Posée ici, comme les lignes du dessus.
+SUITES+=(test_bot_perception)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

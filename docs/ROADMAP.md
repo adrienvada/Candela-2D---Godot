@@ -3259,6 +3259,29 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un capteur de corps lit la lumière REÇUE, jamais la ligne de vue : un mur entre le bot et un corps éclairé par SA lueur ne le noircit pas (2026-10-02)
+
+Chantier SOLO, S2, `tools/banc_perception_bot.gd`. Le banc compare le modèle de vue du bot au capteur du corps de la cible (`CapteurCorps`).
+Première lecture, fausse : « un mur entre eux doit noircir le capteur ». Le capteur est le disque que le shader des corps lit, éclairé par les
+lumières dont le masque croise celui du corps ; **il ne sait rien du bot.** Une cible dont la torche brûle reçoit sa propre rétrodiffusion
+(capteur 1,000) que le bot soit devant ou derrière une paroi pleine — la paroi n'est entre aucune lumière et son corps. Une famille « lampe
+derrière un mur » ne prouve donc rien du modèle : le capteur y est éclairé, le modèle ne voit pas (il exige une ligne de vue), et le banc le
+classe « manque », légitime. **Les murs ne se prouvent contre un capteur que par une lumière qui n'est PAS celle du corps** — la torche du
+bot, son halo, sa fusée — placée de l'autre côté de la paroi : là le capteur est noir (0,000), et un modèle qui oublie le mur le trahit
+(sabotage : 3 prises « malhonnêtes »). Règle : avant de croire qu'une famille de bancs juge une règle, se demander **quelle lumière** le capteur
+reçoit, et si la règle jugée est entre elle et le corps.
+
+### Une « vue unique » faite à la main garde le zoom de l'écran scindé (2026-10-02)
+
+Même banc. `GameState._apply_network_mode` pose le zoom du duel (`GameSettings.accorder_au_mode`) : ×1,25 en écran scindé, **×1,5 en vue
+unique** (Q15 revue). Un outil qui cache la vue de J1 (`photographe._vue_unique`, `planche_q42._passer_en_vue_unique`) ne change que
+l'affichage : la manche a été démarrée en écran scindé, la caméra reste à ×1,25. Le cadre du modèle, calculé pour la vue unique, s'écartait
+de l'écran réel de **145 px** à chaque coin ; trente-deux points sur le bord, douze mal classés. Remède dans le banc : après avoir caché
+l'autre vue, `GameSettings.accorder_au_mode(false, false)` puis le zoom des deux caméras — après quoi l'écart tombe à 0,08 px. **Une vue unique
+qui n'a pas accordé le mode au jeu mesure le cadrage d'un autre mode.** Mesuré sur la copie de `_passer_en_vue_unique` que ce banc avait
+d'abord faite ; `photographe._vue_unique` et `planche_q42` appellent les mêmes lignes et n'ont PAS été revérifiés — à savoir avant de
+mesurer, par elles, ce qui dépend du cadrage (la portée au bord de l'écran, le décalage vers la visée, le cadre).
+
 ### Un compteur incrémenté dans une lambda reste à zéro : une garde « jamais » peut être vide (2026-10-02)
 
 Chantier SOLO, S1. `test_bot_navigation` surveillait le bot pendant 60 s dans une lambda passée à `_simuler` : `var jamais := 0`, puis
@@ -31572,7 +31595,8 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
 
 1. **S1 — le bot se déplace** sur n'importe quelle carte (immobile, ronde, zone, libre) ; l'entraînement gagne le
    cran 2. ✅ **FAITE le 2026-10-02** — voir « S1 » ci-dessous.
-2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs.
+2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs. ✅ **FAITE le
+   2026-10-02** — voir « S2 » ci-dessous.
 3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés.
 4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
 5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot, son coût mesuré.
@@ -31665,6 +31689,155 @@ voir « Un compteur incrémenté dans une lambda reste à zéro » aux pièges.
   personne n'y mourait ; **non vérifié à l'écran**. À voir à la main.
 - `game_state.gd` et `ui.gd` sont « partagés, à demander avant d'écrire » (`docs/JOURNAL_SESSIONS.md`) : S1 y a écrit sur ordre du chantier ;
   l'entrée au journal est à tenir par la session qui le tient.
+
+### S2 — FAITE le 2026-10-02 : la perception du bot — un modèle de vue qui ne voit jamais plus que la lumière, une ouïe en zones, une mémoire
+
+**Ce qui existe.** `perception_bot.gd` (`PerceptionBot`, des fonctions pures sans autoload : le cadre de l'écran, les murs, la liste des lumières
+connues, `voir`, `ecouter`), `memoire_bot.gd` (`MemoireBot`, la dernière position connue), `perception_bot_noeud.gd` (`PerceptionBotNoeud`,
+l'état : il relit les nœuds vivants pour décrire les lumières, s'abonne à `AudioManager.son_localise` — par son chemin `/root/AudioManager`,
+jamais par le nom de l'autoload —, garde la mémoire et porte l'affichage de débogage). `profil_bot.gd` gagne l'axe perception :
+`voit` et `entend` (**faux par défaut : sourd et aveugle**, de sorte qu'un profil de S1 ne perçoit rien et que le cran « adversaire
+mobile » est inchangé), `precision_auditive` (1, le rayon de la zone est DIVISÉ par ce facteur), `delai_oubli` (6 s), et la place des
+réflexes de S3, documentée sans aucun champ (« Un champ que personne ne lit… », Pièges connus). `bot_input_provider.gd` monte le nœud
+quand le profil voit ou entend — ou sous le drapeau de débogage `--perception-bot` — et **`avancer()` ne le lit jamais** (le test le lit dans
+le texte de la fonction) ; `navigation_bot.gd` garde la carte (`carte`) pour que la perception regarde les mêmes murs que les chemins.
+Aucune ligne de `game_state.gd` ni de `ui.gd` : rien de partagé n'a été touché. `protocol.gd` n'a pas bougé, rien ne transite. Les gardes :
+`tools/test_bot_perception.gd`, et le banc `tools/banc_perception_bot.{gd,tscn}` avec sa carte `tools/cartes/perception_essai.json`.
+
+**Le modèle de vue — « voir MOINS que la lumière, jamais plus ».** `voir(bot, cible, lumieres, monde)` rend si la cible est vue, par quelles
+lumières, et **ce qui a été vu** (le centre du corps éclairé, ou la lampe — à 17 px du centre). Une cible est vue si, et seulement si, une
+lumière de la liste la révèle : un **cône** (la torche du bot : la valeur du cookie RÉEL, `WeaponData.lumiere_recue`, au moins 0,15 sur le
+point le plus éclairé du corps) ou un **disque** (le halo de proximité du bot, l'éclair de tir — celui du bot ou de la cible —, la fusée
+posée) l'éclaire SANS mur entre la lumière et le corps ET le bot a une ligne de vue sur le corps ET le corps tient ENTIER dans le cadre ;
+ou une **lampe** (la torche de la cible, quand elle brûle) est dans le cadre avec une ligne de vue du bot — « la torche trahit ». Chaque
+entrée est un dictionnaire (`lumiere_cone`, `lumiere_disque`, `lumiere_lampe`) : **un plafonnier de S5 est un disque de plus dans la
+liste, de hauteur donnée** — une garde le pose (la flaque révèle, la paroi la coupe), rien d'autre ne change.
+- **Le cadre** : ce qu'un joueur verrait depuis la place du bot en VUE UNIQUE — le rectangle de sol de `PorteeEcran.demi_empreinte`
+  (504,3 × 360 px à ×1,5, tangage 52°), avancé de 15 % de la profondeur vers la visée (`RegardDuel`), tourné du lacet (45°). Le nœud fait
+  suivre au décalage le même lissage que la caméra d'un joueur (`RegardDuel.lisser`). **Mesuré contre les vraies caméras** : les quatre
+  coins de l'écran de J2, ramenés au sol par `CameraIso.vers_sol`, tombent à 0,08 px au plus des coins du modèle (quatre visées) ; trente-deux
+  points à ±4 px du bord, bien classés par visée.
+- **Les murs** : un parcours de grille CASE PAR CASE (Amanatides et Woo, jamais des pas fixes — « Parcourir la grille case par case »)
+  sur la grille des murs HAUTS de `MapGeometry.build_grid` — **pas** la grille de solidité du bot, dont le vide hors sol est solide : une
+  fosse ne porte aucun occluder, la lumière la traverse. Exact : sur les six cartes livrées, 24 000 segments tirés au hasard, jamais
+  « dégagé » là où un rectangle fusionné coupe, et jamais coupé à tort. **Du côté du noir au moindre doute** : départ ou arrivée dans un
+  mur, passage exact par un coin.
+- **Les murs bas** — *portent-ils un occluder ?* Oui, mais seulement pour une lumière PLUS BASSE qu'eux (`COUCHE_OMBRE_MUR_BAS`, 64) : la
+  torche d'un accroupi, une fusée au sol. Une lumière debout passe par-dessus, et la zone morte finie qu'elle laisse derrière (44 px pour un
+  accroupi, 58 pour le sol) n'est pas un occluder, c'est le matériau qui la rend. Le modèle lit donc **la fonction même que la balle et
+  l'éblouissement lisent** (`MursBas.franchit_regle`), avec la hauteur de la POSTURE de la source et de la cible : debout, une tête debout se
+  voit par-dessus un mur bas ; un accroupi collé derrière non, à 50 px oui ; un bot accroupi bute ; une fusée au sol bute. Le banc l'éprouve
+  sur le capteur : cible accroupie à 20 px derrière un muret, capteur 0,000, modèle non ; à 50 px, capteur 0,624, modèle oui.
+- **Laissé HORS du modèle, et dit** : la **rétrodiffusion** (la lueur qu'une torche allumée verse sur son porteur : le modèle voit donc moins
+  dans le halo d'une torche, la torche de la cible n'étant pour lui qu'une LAMPE) ; le **faisceau dans l'air** et le sol qu'éclaire la torche ;
+  le **bandeau LED des murs** (mesuré : il n'éclaire aucun capteur de corps — la ROADMAP du chantier LED dit juste) ; une fusée **en vol** ;
+  la **fumée** (une masse sombre remplace le corps à la même place : la position reste connue) ; et les **gadgets qui bouchent ou étouffent
+  la lumière** (voile, suie, ombre, grésillement, leurre) — tant qu'UN SEUL est posé, le nœud rend le bot AVEUGLE par la lumière
+  (`monde["aveugle"]`) : il entend toujours. S9 les modélisera ; voir moins est la seule réponse honnête d'ici là.
+
+**Le modèle d'ouïe.** `ecouter(evenement, bot, monde, rng, precision)` : ses propres sons ne comptent pas (`emetteur` = son `player_id`), les
+familles muettes non plus (la salle, le clic de torche : `SonVisible.categorie_de` rend -1) ; au-delà de sa portée, rien (la portée
+de l'événement, déjà dérivée de la carte). **Le bot ne reçoit jamais la position exacte** : une ZONE, un centre décalé de la vérité de 10 à
+80 % du rayon dans une direction tirée au hasard (donc la zone contient TOUJOURS la vraie position, et ne la centre jamais) et un rayon. Le
+rayon vient de ce que le liseré dit AU JOUEUR : `SonVisible.percevoir` (les ancres d'Adrien : 10° pour un pas de course tout près, 180°
+pour un pas accroupi, un tir net partout) donne la largeur angulaire du son, et le rayon est `distance × sin(largeur / 2)`, divisé par
+`precision_auditive`, plancher 20 px. **Un joueur et un bot reçoivent ainsi la MÊME information d'un même son**, ce qui est la définition
+de l'honnêteté ; rien n'est un nombre inventé pour le bot. L'occultation est celle de l'audio, **jumelle sans physique de
+`AudioManager.part_occultee_entre` calculée depuis la place du BOT** (trois rayons parallèles de ±24 px, un mur haut les arrête ; sous 48 px
+jamais) : −5 dB et une largeur ×1,6 (`FLOU_OCCLUSION`), puis la fumée au point source de l'événement. Chiffres relevés (carte de la garde,
+distances en pixels, oreille normale) : un pas à 150 / 400 / 800 / 1 200 px → zone de 20 / 68 / 265 / 739 px ; un tir aux mêmes distances
+→ 20 / 35 / 70 / 105 px ; le même pas derrière la paroi pleine : 333 px contre 55 ; précision ×2 : 265 → 132 px. Contre le moteur : la part
+occultée du modèle égale celle des trois rayons de l'audio sur 400 couples dans le vrai espace de physique, hors les rayons PARTIS d'un mur
+— le moteur ne heurte pas la forme dont un rayon sort, le modèle la compte arrêté et étouffe donc plus, jamais moins (23 couples sur 400).
+
+**La mémoire** (`MemoireBot`). Une seule trace : la dernière position connue, son instant, sa source (VUE précise, ou OUÏE en zone), sa
+**confiance** (1 à l'instant, 0 au bout de `delai_oubli`, linéaire) et un rayon qui GRANDIT avec l'âge (60 px/s : l'adversaire a pu
+bouger). Une vue remplace toujours la trace ; un son ne la remplace que s'il n'est pas plus vague qu'elle ne l'est maintenant — un pas
+lointain n'efface pas un tir qu'on vient de situer, et efface la trace de la veille. `reinitialiser()` (réapparition) l'efface.
+
+**Les chiffres retenus, et leur statut.** *Mesurés* : le cadre (0,08 px contre la caméra réelle) ; `SEUIL_CONE` 0,15 sur la valeur du cookie
+(le capteur dépasse 0,10 dès que le cookie vaut 0,01 à l'énergie 2,5 : le seuil est bien en deçà ; 0 prise « le modèle voit, le capteur est
+noir » sur 30 prises de cône) ; `FRACTION_DISQUE` 0,6 du rayon de la texture (la tache de la fusée à l'allumage, 468 px, est NOIRE à 0,75 de
+son rayon et lit 0,667 à 0,53 ; le halo de proximité lit encore 0,333 à 0,83) — **prudent, jamais optimisé** : le banc le confirme, ne
+le règle pas. *De départ, non mesurés en jeu* : `PART_LAMPE_MIN` 0,4 (une lampe sous 40 % de sa pleine énergie ne trahit pas),
+`RAYON_ZONE_MIN` 20 px, `DECENTRAGE` 0,8 (et `DECENTRAGE_MIN` 0,1), `CROISSANCE_PX_S` 60, `precision_auditive` 1, `delai_oubli` 6 s —
+c'est S4 (les profils, réglés au banc) qui les tranchera.
+
+**Les gardes.** `tools/test_bot_perception.gd` (`--script`, une carte fabriquée 40 × 30 et des corps factices, **190 vérifications**, inscrite
+à `run_suites.sh`) : les murs sur chaque carte livrée et sur la carte fabriquée ; le cadre (ses constantes relues sur `GameSettings` vivant)
+; la vue — cible dans le noir, **torche allumée mais paroi pleine entre la lampe et le bot : rien**, en ligne de vue et dans le cadre : vue,
+hors cadre : rien, cône sans mur / avec / hors cône / hors portée, éclair derrière un mur, fusée, halo, plafonnier, murs bas et postures,
+aveugle sous gadget ; l'ouïe — propres sons, salle, un pas au-delà de sa portée, zone qui contient la vérité (3 000 tirages sur 3 000) sans
+la centrer, rayon qui grandit avec la distance et derrière un mur et rétrécit avec la précision, même graine, mêmes tirages, **éclair derrière
+un mur : pas vu mais entendu, étouffé** ; la mémoire ; l'occlusion contre le moteur ; le nœud sur des corps factices (le VRAI signal émis
+par l'audio lui parvient, il se désabonne en quittant l'arbre, un bot dans le noir, derrière un mur ou sourd n'apprend rien de la place
+de l'adversaire) ; le profil et le fournisseur (même graine, 900 pas identiques avec ou sans perception montée). `tools/test_banc.gd` y
+déclare les appuis du banc, comme pour les autres bancs à fenêtre.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** Les murs hauts ignorés (25 contrôles rouges,
+sur chaque carte) ; le cadre oublié (9) ; la place EXACTE du son donnée (6) ; ses propres sons non filtrés (3) ; les murs bas ignorés par
+la ligne de vue (6) ; la ligne de vue vers la lampe oubliée (7) ; la ligne de vue du bot vers le corps éclairé oubliée (6) ; le seuil du
+cône supprimé (6) ; le rayon d'une tache ignoré (12) ; la zone sans décentrage (6) ; la précision ignorée (3) ; l'occultation du son
+ignorée (4) ; une famille muette écoutée (3) ; l'aveuglement sous gadget retiré du modèle (3), puis du nœud (2) ; une fusée presque
+éteinte comptée (2) ; une torche presque éteinte comptée (2) ; la hauteur d'une fusée recopiée de travers (3) ; la mémoire qui ne
+s'efface pas (6) ; un son vague qui efface une trace nette (3) ; le fournisseur qui lit la perception pour agir (2). **Un sabotage est
+resté vert, et c'est instructif** : retirer la portée d'un son de `ecouter` seul — elle est gardée DEUX fois, ici et dans
+`SonVisible.percevoir` ; retirée des deux, la suite rougit (4 contrôles). Les deux gardes sont voulues (la seconde est celle du joueur) ;
+aucune n'est inutile tant que l'autre pourrait changer.
+
+**Le banc contre les capteurs** — `tools/banc_perception_bot.tscn` (en vraie fenêtre ; **il n'entre dans aucune suite headless**) :
+```
+xvfb-run -a -s "-screen 0 1920x1080x24" godot --fixed-fps 60 --path . --resolution 1920x1080 \
+  res://tools/banc_perception_bot.tscn -- --no-eos [--sortie=<dossier>] [--taille=640x360] [--familles=a,b] [--cacher=led,halos]
+```
+Il monte le vrai `main.tscn` sur sa carte d'essai (`tools/cartes/perception_essai.json`, 48 × 40, une paroi pleine, un mur bas), la vue de
+J2 SEULE au zoom de la vue unique, le nœud de perception du jeu sur J2, et compare, prise par prise, ce que le MODÈLE dit à ce que le
+CAPTEUR du corps de J1 rend dans la vue de J2 (le maximum d'un anneau de 17 px, comme `planche_q42`). **Il échoue (code 1) si le modèle voit
+là où le capteur est noir** (< 0,03) ; il rapporte le taux d'accord.
+**Résultat (2026-10-02, Mesa/llvmpipe, treize familles, 124 prises, ~15 min) : code 0. Zéro prise où le modèle voit un corps que le capteur
+laisse noir, zéro douteuse (modèle oui, capteur entre 0,03 et 0,10). Taux d'accord : 57 prises sur les 73 où le capteur éclaire le corps
+(78,1 %).** Les 16 « manques » sont tous légitimes, et le journal dit quelles lumières brûlaient autour de la cible : la lampe derrière la
+paroi (3 : le modèle exige une ligne de vue, le capteur lit la rétrodiffusion du corps) ; hors du cadre de l'écran (4) ; la fusée de l'autre
+côté de la paroi (2, voir « Signalé ») ; l'éclair de la cible derrière la paroi (1) ; la lampe d'un accroupi dans la zone morte d'un mur bas
+(1) ; le halo à 80 px (capteur 0,333 : la tache en tient 0,6 du rayon) ; quatre prises de cône (le bord du faisceau, capteur 0,102 pour un
+seuil de 0,15 ; deux flancs à 120 px que la rétrodiffusion du bot éclaire — elle est hors modèle). Par famille (prises / modèle voit /
+capteur éclaire / accord) : noir 15/0/0/0, lampe 20/20/20/20, lampe_mur 3/0/3/0, hors_cadre 8/4/8/4, cone 30/8/12/8, cone_mur 4/1/1/1,
+halo 6/3/4/3, eclair_cible 4/3/4/3, eclair_bot 3/1/1/1, fusee 16/10/10/10, fusee_mur 2/0/2/0, murs_bas 9/6/7/6, led_murs 4/1/1/1.
+**Trois sabotages du MODÈLE font rougir le banc** (code 1, prises « MALHONNÊTE ») : les murs hauts ignorés (3 prises : le cône derrière la
+paroi, capteur 0,000), le seuil du cône supprimé (7), les taches tenues pour deux fois plus larges (4) — la preuve que le banc discrimine.
+
+**Ce qui n'est pas prouvé.**
+- **Aucune partie jouée, ni vue à l'écran.** Les capteurs sont mesurés sous Mesa/llvmpipe (Xvfb), pas sous le pilote d'Apple ; le maximum
+  d'un anneau n'est pas ce qu'un œil perçoit d'un corps iso ombré.
+- Le banc n'a éprouvé que le Parasite (le cookie du pistolet) : le modèle lit le cookie de l'arme portée, donc celui des neuf autres
+  classes, mais aucune de leurs prises n'est faite. Les relevés de la fusée sont à l'allumage (0,5 s) et à la braise (6 s) ; ni l'agonie
+  ni le résidu.
+- Le cadre n'est vérifié qu'au centre de la carte : près d'un bord, la caméra s'arrête (`RegardDuel.centre_du_regard`) et montre PLUS du
+  côté de l'intérieur — le cadre du modèle y est donc contenu dans le réel (il voit moins), mais cela n'est démontré que par le raisonnement.
+- L'ouïe n'a jamais été « écoutée » : elle est prouvée contre le signal et contre le moteur d'occlusion, pas contre une partie.
+- Le bot ne distingue pas un leurre (le gadget de l'Illusionniste) d'un joueur : un faux n'est pas dans sa liste de lumières, il ne le voit
+  donc pas du tout — il ne s'y trompe pas, ce qu'un joueur fait. S9.
+
+**Signalé, pas corrigé.**
+- **La fusée éclaire un corps À TRAVERS un mur.** Son masque d'ombre est `1 | 64` (`Fusee.masque_ombre`), sans le bit `ENNEMI` (2) que porte
+  le `light_mask` du sprite adverse et du capteur (`masque_vue_adverse`) : un récepteur dont le masque ne croise pas celui de la lumière ne
+  reçoit AUCUNE ombre, murs compris (Pièges connus, Q42). Mesuré par le banc, la seule fusée allumée : le capteur du corps lit 0,333 à
+  177 px à travers la paroi pleine. Le modèle ne le suit pas (il bloque la lumière à la paroi : il voit moins) ; **ce que voit un JOUEUR à
+  l'écran, lui, n'est pas vérifié** — la 3D iso peut cacher le corps derrière le mur, la vue de dessus non. Hors périmètre.
+- `AudioManager.part_occultee_entre` compte comme dégagé un rayon qui PART de l'intérieur d'un mur (le moteur ne heurte pas la forme dont on
+  sort) : un son émis tout contre une paroi s'entend moins étouffé que le modèle ne le croit. Le modèle prend le parti du noir.
+- **Une douille se situe moins bien qu'un pas** dans le liseré d'Adrien (−16 dB contre −13, portée de 0,4 contre 0,6) : le bot en hérite.
+  Le brief de S2 attendait « une douille entre les deux » (un tir net, une douille moyenne, un pas flou) ; l'ordre du jeu est tir, pas,
+  douille. Une table de facteurs par famille le changerait en une ligne — mais ce serait donner au bot une oreille que le joueur n'a pas.
+- Le panneau F3 n'a pas reçu d'affichage de perception : `ui.gd` est « partagé, à demander avant d'écrire ». Le drapeau `--perception-bot`
+  dessine le cadre de l'écran du bot, sa ligne de vue, ses zones entendues et sa mémoire (un cercle qui s'efface) ; il est monté sans
+  coût hors drapeau. Non vérifié à l'écran (headless seulement, `_draw` n'y tourne pas).
+
+**À trancher par Adrien.** (1) Les chiffres de départ de la perception, un par un, en jouant (S4). (2) Faut-il que le bot **entende** une
+douille moins bien qu'un pas, comme le joueur ? (ou une table de familles propre au bot, qui lui retirerait la parité avec le liseré).
+(3) Le bot **aveugle sous un gadget** jusqu'à S9 : acceptable pour le Fumiste, l'Illusionniste, le Spectre qui joueraient contre lui à
+l'entraînement ? (4) Un bot qui voit **la lampe** de l'adversaire à 17 px de son corps, et non son centre : la précision d'une vue
+est de l'ordre d'un corps — voulue, ou faut-il lui retirer quelques pixels ?
 
 ### Questions
 

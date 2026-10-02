@@ -24,13 +24,17 @@ extends InputProvider
 ## y pose un point matériel et regarde où il va. En jeu, `_physics_process` l'appelle avec la place
 ## du corps qu'il pilote (son parent). Le bot s'arrête de lui-même quand ce corps est mort.
 ##
-## ## Pas de perception : la place de S2
+## ## La perception (S2) : montée à part, et jamais lue pour agir
 ##
-## Le bot ne regarde rien d'autre que sa carte. Les champs de perception et de réflexes iront dans
-## `ProfilBot` (voir son en-tête) ; ce fichier gagnera alors ses lectures, à côté de `avancer()`.
+## Quand son profil dit `voit` ou `entend` (ou sous le drapeau de débogage `--perception-bot`), le fournisseur monte un
+## enfant `PerceptionBotNoeud` qui voit par le MODÈLE (`PerceptionBot.voir`), entend `son_localise` et se souvient
+## (`MemoireBot`). **Le bot ne s'en sert pas encore** : `avancer()` ne lit rien de ce que le nœud sait — agir sur ce qu'il
+## perçoit (tourner, poursuivre, tirer) est S3. Un profil de S1 (sourd et aveugle par défaut) ne monte rien du tout :
+## son comportement, et ses tirages, restent exactement ceux de S1.
 
 const Profil := preload("res://profil_bot.gd")
 const Navigation := preload("res://navigation_bot.gd")
+const Perception := preload("res://perception_bot_noeud.gd")
 
 ## À quelle distance du centre d'une case on la tient pour atteinte, en pixels.
 ##
@@ -63,8 +67,14 @@ const LISSAGE_VISEE := 10.0
 
 var profil: ProfilBot = null
 var navigation: NavigationBot = null
+## La perception, montée en enfant quand le profil voit ou entend (S2) ; `null` sinon. Lue par les tests et, un jour, par
+## S3 — jamais par `avancer()`.
+var perception: PerceptionBotNoeud = null
 
 var _rng := RandomNumberGenerator.new()
+## La graine du bot, gardée pour semer la perception SANS tirer dans `_rng` : monter la perception ne doit changer aucune
+## cible du déplacement (même graine, même suite — ce que garde `test_bot_navigation`).
+var _graine := 0
 var _mouvement := Vector2.ZERO
 ## Direction de visée, unitaire ; nulle tant que le bot n'a jamais bougé — `player.gd` ignore alors
 ## la consigne et garde l'orientation de l'apparition (face au joueur), au lieu de se tourner vers
@@ -91,6 +101,7 @@ var blocages_total := 0
 func configurer(un_profil: ProfilBot, une_navigation: NavigationBot, graine: int = 0) -> void:
 	profil = un_profil
 	navigation = une_navigation
+	_graine = graine
 	_rng.seed = graine
 	reinitialiser()
 
@@ -106,6 +117,35 @@ func reinitialiser() -> void:
 	_temps_etape = 0.0
 	_etape_vue = 0
 	_blocages_de_suite = 0
+	# Un corps déplacé d'autorité (réapparition) ne se souvient plus : la mémoire de la manche d'avant n'est pas la sienne.
+	if perception != null:
+		perception.reinitialiser()
+
+
+func _ready() -> void:
+	_monter_la_perception()
+
+
+## Monte le nœud de perception si le profil voit ou entend — ou si le drapeau de débogage le demande, auquel cas le nœud
+## travaille sur une COPIE du profil qui voit et entend, pour l'affichage seulement : le profil du bot ne change pas.
+func _monter_la_perception() -> void:
+	if perception != null or profil == null or navigation == null:
+		return
+	var deboguer := DrapeauxDeLancement.present(Perception.DRAPEAU_DEBOGAGE)
+	if not (profil.voit or profil.entend or deboguer):
+		return
+	var corps := get_parent() as Node2D
+	if corps == null:
+		return
+	var pour_le_noeud := profil
+	if deboguer and not (profil.voit and profil.entend):
+		pour_le_noeud = profil.duplicate() as ProfilBot
+		pour_le_noeud.voit = true
+		pour_le_noeud.entend = true
+	var noeud := Perception.new()
+	noeud.configurer(pour_le_noeud, navigation.carte, corps, _graine ^ 0x5eed, deboguer)
+	perception = noeud
+	add_child(noeud)
 
 
 func _physics_process(delta: float) -> void:

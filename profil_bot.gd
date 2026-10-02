@@ -13,10 +13,11 @@ extends Resource
 ## tous deux, et l'aventure ne fait que monter dans le tableau. Deux axes indépendants.
 ##
 ##   1. **Le déplacement** — immobile, ronde répétitive, libre dans une zone, libre partout.
-##      C'est le seul axe qui existe en S1, et il est complet ci-dessous.
+##      Complet depuis S1.
 ##   2. **La perception et les réflexes** — sourd et aveugle, perçoit sans tirer, tire s'il
-##      voit ou entend, lent ou vif. **Rien n'en est écrit** : voir « La place de l'axe
-##      perception-réflexes » plus bas.
+##      voit ou entend, lent ou vif. **La perception existe depuis S2** (voit, entend, précision
+##      de l'oreille, délai d'oubli : voir « L'axe perception » plus bas) ; **les réflexes sont
+##      pour S3** et leur place est marquée en bas de cet axe.
 ##
 ## ## Sans dépendance
 ##
@@ -67,24 +68,44 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 ## torche est un bot qui a des raisons de le faire — elles viendront avec S3.
 @export var torche_allumee: bool = false
 
-## ── La place de l'axe perception-réflexes ───────────────────────────────────────────────
+## ── L'axe perception — S2 (2026-10-02) ────────────────────────────────────────────────
 ##
-## **S2 et S3 ajoutent ICI leurs champs, à la suite — rien n'est à renommer ni à déplacer.**
-## Le périmètre est celui de la ROADMAP (« Chantier — le mode solo ») : ce que le bot perçoit
-## (vue : cône et halo d'une lumière connue ; ouïe : une zone d'incertitude par famille de son),
-## puis ce qu'il en fait (délai entre percevoir et agir, erreur et lissage de visée, mémoire de
-## la dernière position connue, prudence), et enfin s'il tire.
+## **Ce que le bot PERÇOIT**, jamais ce qu'il en fait (c'est S3). Le calcul vit dans `perception_bot.gd` (fonctions pures)
+## et `perception_bot_noeud.gd` (l'état) ; ces champs ne font que les régler. Règle qui prime du chantier : **la
+## difficulté vient des réflexes, jamais de l'information** — aucun champ ci-dessous ne peut donc faire voir PLUS que la
+## lumière : `precision_auditive` resserre une zone d'incertitude autour du son (elle ne donne jamais sa position
+## exacte), `delai_oubli` règle la mémoire, et `voit` / `entend` ne font qu'ouvrir ou fermer un sens.
 ##
-## Deux règles à tenir quand ils arriveront :
-##   • **un défaut qui n'allume rien** : tout champ de perception vaut « sourd et aveugle » par
-##     défaut, de sorte qu'un profil de S1 reste, sans une ligne changée, le bot qui ne perçoit
-##     rien et ne tire jamais ;
-##   • **la difficulté vient des réflexes, jamais de l'information** (règle qui prime du
-##     chantier) : aucun champ ne doit pouvoir faire voir PLUS que la lumière.
+## **Un défaut qui n'allume rien** : sourd et aveugle. Un profil de S1 reste, sans une ligne changée, le bot qui ne perçoit
+## rien — c'est ce que garde `test_bot_perception` — et le cran « adversaire mobile » ne monte même pas le nœud de
+## perception (`BotInputProvider._monter_la_perception`).
+
+## Le bot voit-il ? Vrai : il juge ce que la lumière lui montre (torche, éclair, fusée, halo ; les plafonniers de S5
+## s'ajouteront à la même liste), selon le MODÈLE de `PerceptionBot.voir` — qui ne voit jamais que MOINS que la lumière.
+@export var voit: bool = false
+
+## Le bot entend-il ? Vrai : il écoute `AudioManager.son_localise`, et garde de chaque son une ZONE (jamais la place
+## exacte), qui grandit avec la distance et derrière un mur.
+@export var entend: bool = false
+
+## La précision de l'oreille : le rayon de la zone d'incertitude est DIVISÉ par ce facteur. 1 vaut l'oreille que décrit le
+## liseré du joueur (`SonVisible.percevoir`, les ancres d'Adrien : 10° pour un pas de course tout près, 180° pour un pas
+## accroupi) ; 2, une zone deux fois plus étroite ; 0,5, deux fois plus large. Borné : à l'infini il donnerait la place
+## exacte, ce que le bot n'a jamais le droit de recevoir (`PerceptionBot.RAYON_ZONE_MIN` plancher le rayon).
+## ⚠️ **Chiffre de départ**, non mesuré en jeu — c'est S4 (les profils, réglés au banc) qui le tranchera.
+@export_range(0.25, 4.0) var precision_auditive: float = 1.0
+
+## Combien de temps, en secondes, le bot garde une dernière position connue avant de l'oublier tout à fait : sa confiance
+## décroît de 1 à 0 sur ce délai (`MemoireBot`). Un bot qui n'a rien perçu n'a rien à oublier : ce champ ne pèse que
+## sur ce qui a été vu ou entendu. **Chiffre de départ**, non mesuré (S4).
+@export_range(0.5, 60.0) var delai_oubli: float = 6.0
+
+## ## La place des réflexes — S3 les ajoute ICI, à la suite, sans rien renommer ni déplacer
 ##
-## S1 ne définit volontairement aucun de ces champs, pas même inerte : un champ que rien ne lit
-## est une promesse que personne ne tient (voir « Un champ que personne ne lit ne se corrige
-## pas tout seul » dans les pièges connus).
+## Le délai entre percevoir et agir, l'erreur et le lissage de visée, la prudence (éteindre la torche, s'accroupir, oser
+## tirer alors que l'éclair trahit), puis tirer ou non. Même règle que ci-dessus : un défaut qui ne change rien au bot de
+## S2 (pas de tir sans S3), et jamais un champ que personne ne lit (« Un champ que personne ne lit ne se corrige pas tout
+## seul », Pièges connus) — S3 n'écrit un champ que le jour où son code le lit.
 
 
 ## Le profil du cran 2 de l'entraînement, « adversaire mobile » : il circule partout sur la
