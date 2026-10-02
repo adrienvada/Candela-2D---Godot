@@ -196,9 +196,14 @@ func _corps_vivant() -> bool:
 
 
 ## L'adversaire : l'autre joueur du groupe, présent et vivant. `null` s'il n'y en a pas (la cible immobile, hors jeu).
+##
+## **Jamais un PNJ de l'aventure** (SOLO, S6) : une salle en porte plusieurs, tous dans le groupe `players`, et « le premier autre joueur
+## du groupe » aurait pu être le voisin — un PNJ qui aurait guetté, vu et tiré sur un autre PNJ, au lieu du joueur. L'adversaire d'un
+## PNJ est le joueur humain, et lui seul ; celui du bot de l'entraînement, J1, l'est toujours (aucun des deux n'est un PNJ).
 func _adversaire() -> Node2D:
 	for n in get_tree().get_nodes_in_group("players"):
-		if n != corps and n is Node2D and is_instance_valid(n) and (n as Node2D).visible and not bool(n.get("dead")):
+		if n != corps and n is Node2D and is_instance_valid(n) and (n as Node2D).visible and not bool(n.get("dead")) \
+				and n.get("est_pnj") != true:
 			return n
 	return null
 

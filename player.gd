@@ -23,6 +23,13 @@ const BulletCasingScript := preload("res://bullet_casing.gd")
 
 @export var player_id: int = 0
 
+## Ce joueur est un PNJ de l'aventure (chantier SOLO, S6) : un vrai `Player`, piloté par un `BotInputProvider`, que `GameState` pose
+## par `AventurePartie`. Un PNJ porte `player_id` 1 — il joue, pour les lumières, les couches et les sons, le rôle d'adversaire du joueur
+## humain (J2) — et ne se distingue de lui que par ce drapeau, lu à TROIS endroits : la perception d'un bot ne vise jamais un PNJ
+## (`PerceptionBotNoeud._adversaire`), les balles d'un PNJ traversent les autres PNJ (`Bullet`), et un PNJ ne blesse pas un PNJ
+## (`take_damage`). Faux partout ailleurs : le duel, en ligne comme en local, ne le pose jamais.
+var est_pnj: bool = false
+
 ## La couche d'occluder de CE joueur, et celle de l'autre.
 ##
 ## Deux couches distinctes — 4 pour J1, 8 pour J2 — parce qu'une torche doit
@@ -2784,6 +2791,11 @@ func _loger_calque(calque: CanvasLayer) -> void:
 ## les outils n'ont rien à changer ; la nappe de braises passe `DEGATS_BRAISES`.
 func take_damage(amount: float, source_player: Node2D, cause: int = GadgetBase.DEGATS_BALLE):
 	if dead: return
+	# Les PNJ de l'aventure ne se blessent pas entre eux (SOLO, S6) : une même équipe. Le geste le plus simple, et sans effet hors de
+	# l'aventure — `est_pnj` n'y est jamais posé. (Les balles d'un PNJ traversent déjà les autres PNJ ; ceci couvre aussi ce qui
+	# ne passe pas par `Bullet` : un rebond, une nappe.)
+	if est_pnj and source_player != null and source_player.get("est_pnj") == true:
+		return
 
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 		var new_hp = max(0.0, hp - amount)
@@ -2809,7 +2821,10 @@ func take_damage(amount: float, source_player: Node2D, cause: int = GadgetBase.D
 	# `hit_sound.play()` est parti avec : `$HitSound` est un `AudioStreamPlayer`
 	# SANS FLUX dans `player.tscn` — il ne jouait rien depuis toujours. Le noeud
 	# lui-meme reste dans la scene, a la main de qui la tient.
-	AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
+	# Le battement de cœur est celui du JOUEUR : un PNJ de l'aventure blessé à 30 PV ne fait pas battre le sien (SOLO, S6) — il aurait pris
+	# `player_id` 1 et fait entendre au joueur humain un cœur qui n'est pas le sien.
+	if not est_pnj:
+		AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
 
 	
 	# Violent camera shake on hit

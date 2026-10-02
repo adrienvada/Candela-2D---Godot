@@ -3260,6 +3260,33 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un PNJ mort reste solide : `die()` ne touche pas à la collision (2026-10-02)
+
+Chantier SOLO, S6, `aventure_partie.gd`. `Player.die()` cache les sprites et éteint les lampes, **mais ne touche ni à la collision ni au groupe** : un PNJ abattu restait un cadavre
+invisible, qui arrête les balles et bloque le passage (en duel, la manche finit et l'arène est purgée, personne ne le voit). Le moteur range donc chaque mort (collision éteinte, caché).
+Garde : « un PNJ abattu n'est ni solide ni visible » (sabotage P13).
+
+### Une suite `--script` ne peut pas nommer une classe qui dépend d'un autoload (2026-10-02)
+
+Chantier SOLO, S6. Le script d'une suite se compile **avant** les autoloads : écrire `Player`, `Presentation3D`, `LocalInputProvider` ou `CapteurCorps` dans `test_aventure_partie.gd` donne
+« Identifier not found: NetworkManager » dès le chargement, avant toute vérification. On atteint ces classes à l'exécution (`load("res://….gd")`, `get_script().get_global_name()`, `get_script_constant_map()`).
+Le contrepoint vaut pour le jeu : `presentation_3d.gd` ne nomme jamais `Player` (`Array[Node2D]`), sans quoi `test_plafonniers`, qui le compile en `--script`, casse.
+
+### `bool(n.get("est_pnj"))` plante sur un nœud qui n'a pas la propriété (2026-10-02)
+
+Chantier SOLO, S6. `get()` rend `null` sur une propriété absente et `bool(null)` est « Nonexistent 'bool' constructor » : un corps factice de test (sans `est_pnj`) faisait tomber `_adversaire()` du bot.
+Écrire `n.get("est_pnj") == true` / `!= true`.
+
+### Le hub ne défile pas : une entrée hors de l'écran est perdue (2026-10-02)
+
+Chantier SOLO, S6, écran de l'aventure. Onze chapitres et dix salles sur le même écran : les salles tombaient sous le bord, inatteignables. Le hub n'a pas de `ScrollContainer` ; l'écran passe
+donc par deux niveaux (chapitres, puis salles) et regroupe les chapitres à venir en une ligne. À compter avant d'ajouter des entrées à un écran de hub : une capture le montre, la suite non.
+
+### Les corps de `Presentation3D` sont comptés au texte (2026-10-02)
+
+Chantier SOLO, S6. `test_corps_mannequin` compte, dans le texte de `presentation_3d.gd`, DEUX occurrences de la boucle qui pose l'opacité sur les matériaux d'un corps. Une troisième copie (pour les figurants)
+le faisait rougir ; la boucle des figurants est donc écrite autrement (`matieres`). Une garde de texte qui rougit après un ajout légitime se contourne en réécrivant, pas en modifiant son compte.
+
 ### `duo_apparie` peut échouer quand d'autres Godot chargent le conteneur : « la manche part à l'arrivée de l'invité » (2026-10-02, signalé)
 
 Chantier SOLO, suite complète sur S3 (`e884f5b`), lancée pendant que deux sous-agents faisaient tourner leurs propres suites sur les quatre
@@ -31697,7 +31724,8 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    « S5 » ci-dessous. **Son coût n'a PAS été mesuré** (consigne d'Adrien : aucun relevé de cadence) : l'allumage par proximité se
    tient par construction, jamais par un chiffre.
 6. **S6 — le moteur de l'aventure** : format de niveau, chargement, « tout le monde éliminé » → niveau suivant, mort →
-   on recommence la salle, progression sauvegardée, déblocage des classes solo, choix libre parmi elles.
+   on recommence la salle, progression sauvegardée, déblocage des classes solo, choix libre parmi elles. ✅ **FAITE le 2026-10-02** — voir
+   « S6 » ci-dessous. **Jamais jouée à la main, coût non mesuré** : le moteur est prouvé par des suites et des images fixes.
 7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss.
 8. **S8 — les chapitres 1 à 9**, un par lot.
 9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent).
@@ -32453,6 +32481,183 @@ morte finie) ; si Adrien veut l'ombre infinie d'un mur bas, c'est un bit dans le
 mur. (2) La **flaque** : 4 cases de rayon par défaut, l'halogène de la charte, énergie 1,2 — des chiffres de départ, à juger sur l'image (S7). (3) Le modèle du
 bot s'arrête à 70 % de la flaque que le capteur éclaire jusqu'à 90 % : **voulu** (prudence), ou la rendre au bot ? (4) Le **luminaire** : visible de loin
 comme la lampe d'une torche, ou seulement quand la flaque l'est ? (5) Adopter `masque_ombre_neutre_pour_les_corps` pour la fusée (ci-dessus).
+
+### S6 — FAITE le 2026-10-02 : le moteur de l'aventure — le format, la partie, la boucle, la progression, l'écran
+
+**Ce qui existe.** Neufs, en propre au chantier : `aventure_format.gd` (`AventureFormat` : le format, son validateur strict, le chargement et le
+catalogue des chapitres), `aventure_progression.gd` (`AventureProgression` : `user://solo.cfg`), `aventure_partie.gd` (`AventurePartie` : le moteur, un
+nœud `Aventure` enfant de `GameState`), `aventure_carton.gd` (`CartonAventure`), le chapitre d'essai `tools/aventure_essai/chapitre_00/` (trois salles,
+dont un boss) et `tools/fabrique_aventure_essai.gd` qui l'écrit, `tools/test_aventure_format.gd`, `tools/test_aventure_partie.gd`. **`assets/solo/` n'existe pas
+encore** : c'est S7 (le chapitre 0) qui l'ouvre ; le moteur le lit s'il existe, et vit sans (aucun chapitre livré, aucun cri). **Partagés, écrits sur ordre
+du chantier** — l'entrée au `docs/JOURNAL_SESSIONS.md` est à tenir par la session qui le tient : `game_state.gd` (`aventure`, `figurants`,
+`demarrer_l_aventure`, `aventure_poser_la_salle`, `aventure_finie`, `_quitter_l_aventure`, la ceinture de `_do_start_round`, le retour au menu),
+`ui.gd` (le signal, l'entrée « AVENTURE », l'écran, le verrou du râtelier), `presentation_3d.gd` (les figurants), `player.gd` (`est_pnj`, trois lignes),
+`bullet.gd` (quatre), `perception_bot_noeud.gd` (`_adversaire`), `map_data.gd` (`poser_carte_d_aventure`), `run_suites.sh`, `test_plafonniers.gd`
+(`POSEURS_AUTORISES`). **`map_codec.gd`, `protocol.gd` et `Protocol.VERSION` n'ont pas bougé** : rien ne transite, aucun RPC, aucun `if transport == …`
+(une garde le lit dans le texte des fichiers neufs).
+
+#### Le format, tel qu'il est écrit (le détail est en tête d'`aventure_format.gd`)
+
+Un chapitre est un dossier `res://assets/solo/chapitre_XX/` (lecture seule, comme `assets/maps/`) : un manifeste et un fichier par salle.
+```json
+{ "version": 1, "numero": 0, "titre": "L'initiation",
+  "classe_debloquee": "pistolet", "classe_imposee": "pistolet",
+  "niveaux": ["niveau_01.json", "niveau_02.json", "…", "niveau_10.json"] }
+```
+```json
+{ "version": 1,
+  "titre": "Le premier pas",
+  "intention": "Une silhouette immobile sous un plafonnier. Avance, vise, tire.",
+  "boss": false,
+  "carte": { "version": 4, "grid_size": {"x": 16, "y": 16}, "floor": "1,1,14;…", "walls": "0,0,16;…", "low_walls": "" },
+  "joueur": { "case": [3, 8], "orientation": 0 },
+  "plafonniers": [ { "case": [12, 8], "rayon": 4.0, "intensite": 1.2 } ],
+  "pnj": [ { "case": [12, 8], "orientation": 180, "profil": "immobile_sourd_aveugle" },
+           { "case": [14, 3], "orientation": 90, "profil": "ronde_voit_lent", "ronde": [[14, 3], [14, 10], [5, 10], [5, 3]] },
+           { "case": [12, 9], "orientation": 180, "profil": "zone_sourd_aveugle", "zone": [10, 8, 6, 4] } ] }
+```
+Pour le boss : `"boss": true`, **un seul** PNJ, `"profil": "boss"` (le `ProfilBot.boss()` : NORMAL, voit, entend, tire), `"classe"` = la classe que le chapitre débloque.
+**Le validateur est strict et ne répare rien** : chaque défaut est une phrase (`valider_niveau`, `valider_manifeste`, `valider_chapitre` rendent la liste ; `charger_chapitre`
+la crie, une ligne par défaut, et rend VIDE — le chapitre n'apparaît pas, il n'est pas joué de travers). Il refuse : une clé inconnue (une faute de frappe n'est pas une option
+ignorée), un profil inconnu (jamais un PNJ par défaut), une case hors carte ou non praticable (la définition du bot : `NavigationBot.est_praticable`, qui exclut aussi les couloirs plus
+étroits que le corps), deux PNJ sur une case ou sur celle du joueur, une ronde sans points (ou à un seul, ou aux points non praticables ou inatteignables), une zone vide, hors carte ou qui ne contient pas le PNJ, une
+`ronde` posée sur un profil qui n'en fait pas (et inversement `zone`), un plafonnier hors bornes (rayon, intensité : `Plafonnier.normaliser` les bornerait en silence, le validateur les REFUSE),
+dans la pierre ou hors carte, une carte refusée par `map_codec.gd` (embarquée, jamais un renvoi vers `assets/maps/` : aucune carte de duel n'est touchée), un `spawn_p1` qui contredit `joueur.case`
+(`spawn_p2` est écrasé : J2 n'existe pas en aventure), une salle sans PNJ, plus de huit PNJ ou plafonniers, une intention de plus de 200 signes, le profil `boss` hors du niveau de boss, un niveau de
+boss à plusieurs PNJ ou sans classe, **un chapitre dont le dernier niveau n'est pas le boss**, un boss au milieu, un boss d'une autre classe que celle que le chapitre débloque, une classe
+débloquée qui contredit l'ordre du rang, une classe offerte par le chapitre 10, un chapitre 0 qui ne prête pas le Parasite, dix salles exigées aux chapitres livrés (`niveaux_attendus`, 0 pour l'essai).
+
+**Les slugs sont ceux du CODE** (`ClassData.slug()`), pas ceux de la ROADMAP : le Parasite est `pistolet`, l'Illusionniste `fusil`, le Braconnier `arbalete`, le Terrassier `pompe`. L'ordre
+du rang, chapitre N → classe de rang N+1 : `pistolet, fumiste, fusil, arbalete, pompe, incendiaire, sentinelle, occulteur, allumeur, spectre` ; le chapitre 10 n'en offre aucune (SOLO-Q8). Une garde
+compare cette table au catalogue du jeu.
+
+#### La partie : comment les PNJ existent
+
+- **Des `Player` pour de vrai.** Chaque PNJ est un `player.tscn` instancié, nommé `PNJ_<i>` (nom explicite : un RPC de scène se route par le chemin du nœud), `player_id` 1, `est_pnj` vrai, dans
+  `Players` sous `GameState`, piloté par un `BotInputProvider` nommé `BotPNJ_<i>` au profil du catalogue (`ProfilBot.pnj_nomme`) — ou `boss()`. Il subit les règles du joueur : vitesse,
+  murs, balles, munitions, recharge. **`player_id` 1** parce que toute la machinerie de lumière, de couches, de sons et de rendu du jeu distingue « moi » et « l'autre » : un PNJ EST l'autre.
+  J2 reste là, caché et sans collision, comme un entraînement contre une cible le laisse (`_do_start_round` le remontre au départ de tout vrai match).
+- **La perception ne vise que le joueur humain.** `PerceptionBotNoeud._adversaire()` — « le premier autre joueur du groupe » (signalé par S3) — ignore désormais tout joueur `est_pnj` : l'adversaire d'un PNJ est
+  le joueur, jamais son voisin ; joueur mort ou caché, il n'en a plus (`null`), il ne se rabat pas sur un PNJ. Son ouïe ignorait déjà les PNJ (elle filtre ses propres sons par `player_id`, que tous partagent).
+- **Les PNJ ne se blessent pas entre eux — le geste le plus simple, DEUX lignes.** `Player.take_damage` refuse les dégâts d'un PNJ à un PNJ ; et `Bullet` met tous les PNJ en exception du `ShapeCast` d'une balle
+  de PNJ (elle les traverse : un PNJ ne s'abrite pas derrière un autre). Les deux ne valent que si `est_pnj` : le duel ne les voit jamais.
+- **Un PNJ abattu sort du jeu.** `Player.die()` cache ses sprites et éteint ses lampes mais NE TOUCHE PAS à sa collision : un cadavre invisible aurait arrêté les balles et bloqué le passage. Le moteur le
+  rend caché et sans collision (voir « Pièges connus »). Il ne fait pas battre le cœur du joueur (`update_low_health` sautée pour un PNJ).
+- **Les plafonniers** : `Plafonnier.poser(arene, liste)` à CHAQUE salle (idempotente : elle retire le conteneur d'avant), `Plafonnier.retirer` en sortant — et c'est `aventure_partie.gd` qui est inscrit à `POSEURS_AUTORISES`
+  (la garde de S5 vérifie aussi que chaque poseur autorisé POSE réellement). `rebuild_arena` n'a pas bougé : « signalé » en S5, contourné ici.
+- **La vue iso les montre TOUS** (le gros morceau). `Presentation3D` ne savait rendre que deux corps, en dur. `GameState.figurants` liste les `Player` en plus de J1 et J2 ; la présentation leur donne un corps voxel chacun
+  (indices 2 et suivants des tableaux `_corps`, `_voxels`, `_mat_corps`…, un POOL qui grandit et ne rétrécit pas), un capteur de lumière chacun (`_capteurs_figurants`, dans la vue de J1 seule), et une COUCHE chacun
+  (1024, 2048, … : au plus huit, hors des lightmaps comme les autres). **Un figurant se rend exactement comme J2 vu de J1** : même masque de capteur (`masque_vue_adverse(1)`, `masque_capteur` replie les indices
+  ≥ 2 sur le rôle de J2), même opacité (lue sur les sprites que `player.gd` a posés), même `capteur_1`. **Sans figurant, rien ne s'exécute** : `_accorder_les_figurants` rend la main au premier test, aucun tableau ne grandit, le
+  duel garde ses deux corps et ses quatre capteurs (la garde le compare, et la suite iso existante est restée verte). Le capteur d'un figurant ne tourne que s'il est montré et à moins de 1 300 px du joueur regardé (chiffre de prudence, non mesuré).
+  **Ce qu'un figurant n'a pas, faute d'avoir été fait** : l'ombre de contact au sol (le shader du sol n'en connaît que deux), le bout de l'arme et la lampe 3D de ses lumières (`lumieres_iso.gd`, `iso_volumes.gd`, `_accorder_le_halo_soi`,
+  `_accorder_le_pied_des_lampes` ne regardent que J1 et J2) ; seule la vue de J1 les rend (l'aventure n'a que celle-là).
+
+#### La boucle
+
+`GameState.demarrer_l_aventure(chapitre, index, classe)` → `AventurePartie.demarrer` → `_poser_la_salle` : **c'est un entraînement dont la salle vient d'un fichier** — la carte du niveau est la carte active
+(`MapData.poser_carte_d_aventure`, sans émettre `map_selected` ni toucher au catalogue), puis le départ ordinaire (`_do_start_round(…, true)`, qui remet le joueur à neuf : vie, arme, munitions, fusées), puis `sandbox_mode` et `training_mode` vrais
+(une seule vue, l'oreille sur le joueur, pas de manche, pas de chronomètre, pas de killcam, rien dans `match_history.json`, aucun forfait, rien de classé), le joueur à sa case et son orientation, les plafonniers, les PNJ.
+- **Le carton** (`CartonAventure`) couvre l'écran 2,4 s à chaque salle (la première, la suivante, la reprise) : chapitre, numéro, titre, phrase d'intention — le seul endroit où l'aventure parle. Pendant ce temps
+  `GameState.countdown_left` est positif : **comme au décompte d'une manche, plus aucun `Player` ne bouge ni ne tire** (le mécanisme existait, rien de neuf). Chaque bot repart d'une mémoire vide quand il se retire.
+- **Tous les PNJ morts → salle gagnée** (délai de 1,4 s : on voit la salle vide), notée réussie, puis le carton de la suivante. **Mourir recommence LA SALLE** (délai de 1,8 s) : des PNJ NEUFS (nœuds libérés TOUT DE SUITE —
+  `remove_child` puis `queue_free`, sans quoi ils restent dans le groupe `players` jusqu'à la fin de l'image : piège déjà payé en S3), la même carte, les mêmes plafonniers, le joueur à neuf à sa case. Si les deux tombent
+  ensemble, la salle est perdue (il n'y a pas de victoire d'un mort). **Le boss tombé** : le chapitre est fini, sa classe est débloquée et écrite, un carton de fin (3,4 s), puis retour à l'écran de l'aventure par le chemin du retour au menu.
+- **Pause → quitter** : le chemin de l'entraînement (`_on_main_menu_requested`, `_on_quit_match_requested`) démonte la partie : PNJ et plafonniers retirés à l'instant (avant la purge de l'arène, dont le `queue_free` les
+  laisserait un instant dans leurs groupes), carton parti, carte du joueur rendue. **Un duel ou un entraînement qui part, par n'importe quel chemin, démonte l'aventure** (la ceinture de `_do_start_round`, comme pour le bot de S1).
+- **Les temps sont comptés en pas de physique** (`_physics_process`) : sous `--fixed-fps 60` la suite simule la partie image par image, et la pause l'arrête sans rien de plus. Les 2,4 / 1,4 / 1,8 / 3,4 s sont des chiffres de DÉPART, jugés par personne.
+- **Le moteur refuse ce que l'écran refuserait** : une salle fermée, une classe autre que celle qu'un chapitre prête, une classe non gagnée — crié, rien de posé (les cris sont comptés : `CRIS ATTENDUS: 3`).
+
+#### La progression (`user://solo.cfg`)
+
+Un chapitre s'ouvre quand le précédent est fini (le 0 est toujours ouvert) ; dans un chapitre, une salle s'ouvre quand la précédente est réussie. **Finir un chapitre débloque SA classe**, et celle-là : on ne finit pas un chapitre fermé,
+donc les classes ne se débloquent jamais dans le désordre, et `classes_debloquees()` les rend dans l'ordre du rang quoi que le fichier dise. **Le chapitre 0 joue le Parasite prêté** (`classe_imposee`, exigée par le validateur) : il le donne au boss ;
+rejoué avec le Fumiste en poche, il se joue encore en Parasite. Le choix de la classe est libre parmi les débloquées (les chapitres qui n'imposent rien) et se note au lancement. Un `solo.cfg` absent est un joueur qui commence ; **un fichier présent mais
+illisible est crié et mis de côté (`.illisible`) AVANT de repartir à vide** — l'écraser effacerait tout ce qu'il portait. Le déblocage est propre au solo : ni `RankLoadout` ni le rang ne bougent.
+
+#### L'écran
+
+Une entrée « AVENTURE » à l'accueil du hub, sous « S'ENTRAÎNER ». **Deux écrans, parce que le hub ne défile pas** (une entrée hors de l'écran est une entrée perdue : constaté à la première capture, avec onze chapitres et dix salles sur le même écran) :
+`SCREEN_AVENTURE` liste les **chapitres**, `SCREEN_AVENTURE_SALLES` les **salles** du chapitre pris (« AVENTURE — LES SALLES », « RETOUR » au chapitre). Les deux portent le panneau du salon de l'entraînement : le râtelier de J1 et le lanceur « LANCER LA SALLE ».
+**Choix : les chapitres pas encore écrits tiennent en UNE ligne** (« CHAPITRES 2 À 10 — À VENIR », sans titre ni contenu : l'écran dit que l'aventure continue sans rien inventer) ; un chapitre écrit mais fermé dit « (FERMÉ) » et le cadre de droite dit pourquoi ; une salle est « (RÉUSSIE) » ou « (FERMÉE) ».
+À l'OUVERTURE depuis l'accueil, le choix repart du prochain à jouer (le premier chapitre ouvert non fini, sa première salle non réussie) ; revenir de la partie rouvre l'écran où l'on était. Un appui sur un chapitre ouvert le prend et DESCEND à ses salles ; sur une salle ouverte, la prend ; sur une entrée fermée, ne change rien.
+Le râtelier se verrouille d'après la progression solo (`_contexte_aventure`) : au chapitre 0 seul le Parasite est libre, ailleurs les classes gagnées, les autres grisées avec « Se gagne en finissant le chapitre N ». La description de la salle (titre, phrase, nombre à abattre, classe prêtée) prend la place de l'affiche de la carte dans la colonne du salon (la carte vient du niveau, pas de la galerie) — **en petit** : à juger à l'image. Manette, clavier, sons : des entrées de hub
+ordinaires. **Pas d'illustration neuve** : l'écran réutilise `ill_entrainement`.
+
+#### Les gardes (obligatoires)
+
+- `tools/test_aventure_format.gd` (`--script`, 124 vérifications) : le chapitre d'essai est accepté ; **un cas par règle** du validateur, chacun avec le mot qui nomme le défaut (un refus pour une autre raison que celle qu'on teste ne passe pas) ; l'ordre des classes suit le rang
+  (la table, chaque manifeste, la progression qui les rend triées) ; un chapitre sans boss final, un boss au milieu, un boss d'une autre classe sont refusés ; la progression (ouvertures, déblocages, fichier illisible, choix non gagné) ; aucune carte de duel touchée (le md5 de `assets/maps/`, le code qui n'écrit pas sous `res://`, les niveaux qui embarquent leur carte).
+- `tools/test_aventure_partie.gd` (`--fixed-fps 60`, le jeu monté, ligne `case` de `run_suites.sh`, 140 vérifications) : **le duel d'abord** (deux corps, quatre capteurs, mêmes couches 8/16/32/64 et mêmes masques 132/18/34/268 qu'avant, aucun figurant) ; les refus du moteur ; **une salle se charge** (carte du
+  niveau, plafonniers `Plafonnier_<i>` à leur case, PNJ `PNJ_<i>` de vrais `Player` à bots `BotPNJ_<i>`, joueur à sa case et son orientation, J2 sans rôle, une seule vue, l'oreille, le HUD, le carton nommé qui fige le monde — une touche appuyée n'avance pas le joueur —, puis le monde repart) ; **les PNJ** (la perception de chacun vise le joueur ; le joueur caché
+  ou mort, jamais un autre PNJ ; l'appel direct et la balle ne se blessent pas entre PNJ, la balle d'un PNJ touche le joueur) ; **la vue iso** (cinq PNJ → cinq figurants, sept corps `Corps1..7`, chacun visible, voxel, posé à la place de son PNJ, un capteur à lui — couche et masque — , des couches distinctes hors des lightmaps, des sprites 2D retirés, un PNJ abattu sans corps, la sortie qui vide tout et cache le pool) ;
+  **la boucle** (la salle 1 abattue par de VRAIES BALLES du joueur ; la suivante, sa carte, ses deux PNJ ; la progression ; une ronde qui marche et dont le corps iso suit ; la mort qui recommence LA SALLE avec des PNJ neufs remis à leur départ, la même carte, le joueur à neuf ; le boss au profil `boss()` et à la classe du chapitre ; le chapitre fini, la classe débloquée ET écrite dans le fichier relu ; les signaux ; le retour à l'écran de l'aventure, tout parti) ;
+  **la sortie** (quitter le match, l'entraînement et l'écran scindé lancés depuis l'aventure : tout est démonté, J2 est EXACTEMENT comme avant — fournisseur local de J2, visible, solide —, l'entraînement par le geste fonctionne) ; **l'écran** (l'entrée, les deux écrans — les chapitres, la ligne « À VENIR », « FERMÉ », puis les salles —, le râtelier verrouillé, la description, le lanceur, un second chapitre écrit dans un dossier temporaire pour le CHOIX LIBRE de la classe : le Parasite libre, les neuf autres verrouillées avec leur raison ; finir le chapitre 1 libère le Fumiste, qu'on lance et qui est joué ; le chapitre 0 rejoué reste en Parasite).
+  La suite isole sa progression (`user://test_aventure_partie_solo.cfg`) et vérifie que `user://solo.cfg` du joueur n'est jamais ouvert en écriture.
+- `tools/test_plafonniers.gd` : `POSEURS_AUTORISES` porte `aventure_partie.gd`, et une garde nouvelle exige que chaque poseur autorisé pose réellement.
+
+#### Sabotages (chaque garde a été vue ROUGE, puis le code restauré à l'octet — md5 identique)
+
+Joués dans une COPIE de l'arbre, jamais dans le worktree. Un sabotage qui laisse la suite verte aurait été une garde morte : **P5b l'a été à la première écriture**
+(la suite plantait sur un enfant non-`Node2D` de `bullet_container` avant d'atteindre l'assertion : rouge pour la mauvaise raison) ; la garde cherche désormais la balle par sa classe et désarme les PNJ pendant la mesure.
+
+| Sabotage | Garde qui rougit |
+|---|---|
+| F1 un profil inconnu est accepté | `test_aventure_format` (4) |
+| F2a une case non praticable est acceptée / F2b une case hors carte | `test_aventure_format` (3 / 2) |
+| F3 une ronde sans points est acceptée | `test_aventure_format` (1) |
+| F4 un chapitre sans boss final est accepté | `test_aventure_format` (1) |
+| F5 la table des classes dans le désordre | `test_aventure_format` (7) |
+| F6a les classes débloquées sortent dans l'ordre du fichier / F6b la fin du chapitre N débloque N+1 | `test_aventure_format` (1 / 7) |
+| F7 le format écrit sous `assets/maps/` | `test_aventure_format` (2) |
+| P1 la mort du joueur passe au niveau suivant | `test_aventure_partie` (3) |
+| P2 un PNJ vise un autre PNJ (`_adversaire` ne filtre plus) | `test_aventure_partie` (2) |
+| P3 un PNJ sans corps iso | `test_aventure_partie` (4) |
+| P4 les plafonniers restent à la sortie | `test_aventure_partie` (3) |
+| P5a les PNJ se blessent entre eux / P5b leurs balles s'arrêtent sur un PNJ | `test_aventure_partie` (2 / 2) |
+| P6 le carton ne fige pas le monde | `test_aventure_partie` (5) |
+| P7 la reprise garde les PNJ d'avant | `test_aventure_partie` (20) |
+| P8 le boss tombé ne termine pas le chapitre | `test_aventure_partie` (3) |
+| P9 un seul PNJ mort suffit à gagner la salle | `test_aventure_partie` (2) |
+| P10 le DUEL gagne un corps iso | `test_aventure_partie` (1) |
+| P11 la ceinture de `_do_start_round` retirée | `test_aventure_partie` (3) |
+| P12 le râtelier se verrouille sans la progression | `test_aventure_partie` (2) |
+| P13 un PNJ abattu reste solide et visible | `test_aventure_partie` (2) |
+| P14 la carte du joueur n'est pas rendue en sortant | `test_aventure_partie` (3) |
+| P15 deux figurants partagent une couche de capteur | `test_aventure_partie` (1) |
+
+La première série a été jouée AVANT que l'écran passe à deux niveaux (chapitres / salles) ; P1, P3 et P10 à P15 ont été REJOUÉS sur l'état final (tous encore rouges, restaurés à l'octet ; les nombres du tableau sont ceux de la première série, ceux de la seconde diffèrent d'un ou deux contrôles).
+
+**Le duel est rendu comme avant — prouvé par les images, pas seulement par les gardes.** Le script `prise_duel` (hors dépôt) prend le même duel en écran scindé et le même entraînement iso, graine fixée, sur l'arbre d'avant S6 et sur S6 :
+les deux écarts sont de l'ordre du BRUIT du rendu logiciel — deux exécutions du MÊME code diffèrent déjà d'environ 0,03/255 en moyenne sur 2 % des pixels (le rendu n'est pas déterministe au pixel) — et ceux de S6 contre l'avant sont dans ce bruit.
+
+**Les images d'une salle d'essai, vues (Mesa/llvmpipe, Xvfb) :** niveau 1, le PNJ voxel sous la flaque du plafonnier, le luminaire en point blanc, le cône de la torche ; niveau 2, deux PNJ (la ronde, la zone) rendus par la torche, invisibles hors du faisceau ; niveau 3, le boss lit par la torche
+entre deux luminaires (le sang et le voile rouge sont ceux de ses balles : il tire). Les captures ne sont pas versionnées.
+
+#### Non prouvé
+
+- **Jamais joué à la main.** Tout est vu par des suites (la partie simulée, de vraies balles du joueur) et des images fixes ; personne n'a tenu une manette dans une salle. La lisibilité du carton, les durées (2,4 / 1,4 / 1,8 / 3,4 s) et la difficulté des trois salles d'essai ne sont jugées par personne.
+- **Images Mesa/llvmpipe seulement**, pas le rendu d'un GPU (Metal) du poste d'Adrien.
+- **Le coût n'est pas mesuré** (consigne : aucun relevé de cadence) : un capteur 256² par PNJ montré à moins de 1 300 px, les omni des plafonniers. Les plafonds (8 PNJ, 8 plafonniers) sont des chiffres de prudence, pas de mesure.
+- Des PNJ **mobiles confrontés à un joueur qui les cherche** : la suite fait marcher une ronde, mais ne joue pas une salle entière « à la furtive ». Le boss n'est pas joué en duel complet dans la suite (il est abattu par des balles posées).
+- La **navigation à la manette** de l'écran (deux niveaux) n'a pas été testée à part : ce sont des entrées de hub ordinaires, que la suite du hub couvre en général. Le **panneau de pause** n'a pas été ouvert dans une salle (le chemin « quitter » est exercé par l'appel du signal).
+- La description de la salle, posée à la place de l'affiche de la carte, est **petite** à l'écran (voir la capture).
+- Aucun contenu de jeu : `assets/solo/` n'existe pas ; l'écran n'a jamais montré un vrai chapitre.
+
+#### Signalé, pas corrigé
+
+- **`GameState.rebuild_arena` ne purge toujours pas le conteneur « Plafonniers »** (signalé en S5) : contourné — `Plafonnier.poser` est idempotente et le moteur retire à la sortie — mais le défaut reste.
+- **`_maj_eblouissement` ne connaît que J1 et J2** : un PNJ n'éblouit pas le joueur et n'est jamais ébloui par lui (la torche dans les yeux d'un PNJ ne fait rien).
+- **Un figurant n'a ni ombre de contact au sol, ni bout d'arme, ni lampe 3D** : `lumieres_iso`, `iso_volumes`, `_accorder_le_halo_soi`, `_accorder_le_pied_des_lampes` ne regardent que J1 et J2.
+- Le **pool de corps** des figurants grandit et ne rétrécit pas (au plus huit corps de plus).
+- **`ReplaySystem` enregistre en continu pendant l'aventure**, comme à l'entraînement : rien ne l'exploite, mais il tourne.
+- **`docs/JOURNAL_SESSIONS.md` n'est pas mis à jour** (fichiers partagés touchés : à tenir par la session qui le tient).
+- **Slugs du code, pas de la ROADMAP** (pistolet = le Parasite…) : les fichiers de chapitre écrivent les premiers.
+- `_decrire()` du diagnostic iso (F3) ne liste pas les figurants : le panneau ne les nomme pas.
+- L'écran réutilise l'illustration `ill_entrainement` (pas d'illustration neuve).
+- **La republication du suivi d'Adrien** (artefact du projet) est à faire par la session centrale : delta dans le rapport de S6.
+
+**À trancher par Adrien.** (1) Les durées du carton et des délais (2,4 / 1,4 / 1,8 / 3,4 s), à juger en jouant. (2) Les chapitres pas écrits : **une ligne « À VENIR »** (choix actuel) ou **cachés** ? (3) Le chapitre 0 se joue toujours en Parasite PRÊTÉ, même quand on a des classes en poche — voulu pour l'initiation ? (4) Les slugs du code ou les noms de la ROADMAP dans les fichiers ? (5) Les PNJ sont **solidaires** (leurs balles se traversent) : un PNJ ne s'abrite pas derrière un autre. (6) Un PNJ abattu **disparaît** sans dépouille. (7) Plafonds de huit PNJ et huit plafonniers par salle. (8) Une illustration neuve pour l'écran de l'aventure.
 
 ### Questions
 

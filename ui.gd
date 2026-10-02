@@ -25,6 +25,9 @@ signal quit_match_requested
 signal join_requested
 ## Entraînement solitaire demandé. Le hub ne sait pas ce que c'est ; il demande.
 signal training_requested
+## Une salle d'aventure demandée (chantier SOLO, S6). Le hub ne sait pas ce que c'est ; il demande, et `game_state.gd` lit le choix
+## dans `aventure_choix()`.
+signal aventure_requested
 ## Le joueur quitte la fenêtre de choix : cela annule l'appariement ET la
 ## recherche. Renoncer à choisir son arme, c'est renoncer au match.
 signal pick_window_cancelled
@@ -184,6 +187,11 @@ const SCREEN_LOCAL_JOIN := "local_invite"
 const SCREEN_RANKED := "en_ligne_competitif"
 const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
+## L'aventure (chantier SOLO, S6) : ses chapitres, ses salles, la classe qu'on y joue, et le bouton qui lance.
+const SCREEN_AVENTURE := "aventure"
+## Les salles du chapitre pris : un écran à part, parce que le hub ne défile pas — onze chapitres et dix salles dans une même colonne
+## sortiraient de l'écran, et une entrée hors de l'écran est une entrée perdue (constat de la prise de vue, S6).
+const SCREEN_AVENTURE_SALLES := "aventure_salles"
 ## ⚠️ **Ces deux-là ne sont plus des écrans, ce sont des panneaux** (DA4.18) —
 ## voir `PANEL_PROFILE` et `PANEL_HISTORY`. Les constantes restent pour que
 ## `_on_hub_screen_changed` et les bancs n'aient pas à deviner un identifiant
@@ -981,6 +989,28 @@ const NOMS_DES_DIFFICULTES := ["FACILE", "NORMAL", "DIFFICILE"]
 var training_difficulte: int = DIFFICULTE_NORMALE
 var _entree_difficulte: Button = null
 
+## ── L'AVENTURE — chantier SOLO, S6 ───────────────────────────────────────────────────────────────────────────────────────────
+##
+## L'écran de l'aventure montre les chapitres (0 à 10) : ceux qui sont écrits, ouverts ou fermés, et UNE ligne « À VENIR » pour ceux qui ne
+## le sont pas — aucun contenu inventé pour eux, pas même un titre (le hub ne défile pas : onze lignes d'attente le remplissaient). Un appui
+## sur un chapitre OUVERT le prend et descend à l'écran de ses salles (`SCREEN_AVENTURE_SALLES`) ; sur un chapitre fermé ou à venir, le
+## cadre de droite dit pourquoi. À droite, sur les deux écrans : la classe parmi celles qu'on a gagnées (le chapitre 0 prête le Parasite) et
+## la description de la salle ; le bouton du cadre lance. Le choix du chapitre et de la salle ne se mémorise pas d'une ouverture à
+## l'autre : l'écran propose le prochain à jouer, et la progression (`user://solo.cfg`) dit le reste.
+var aventure_chapitre := 0
+var aventure_niveau := 0
+## Les entrées, repeintes à chaque ouverture : une par chapitre (11) et une par salle d'un chapitre (10 au plus).
+var _entrees_chapitres: Array[Button] = []
+var _entrees_niveaux: Array[Button] = []
+## La progression que l'écran lit : `user://solo.cfg`, faite à la première ouverture. Une suite y pose la sienne (un autre chemin).
+var aventure_progression: AventureProgression = null
+## L'écran du hub qu'on regardait avant celui-ci : le retour des salles aux chapitres ne remet pas le choix à zéro, l'ouverture depuis
+## l'accueil le fait.
+var _ecran_d_avant_l_aventure := ""
+## Vrai tant que l'écran de l'aventure est celui qu'on regarde : le râtelier de classes se verrouille alors d'après la progression solo
+## (et non d'après le rang en ligne, qui n'a rien à dire ici).
+var _contexte_aventure := false
+
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
 var p1_vbox: Control
@@ -1086,6 +1116,8 @@ const LANCEURS := {
 	SCREEN_FRIENDLY: ["LANCER LA RECHERCHE EN LIGNE", "chercher"],
 	SCREEN_RANKED: ["LANCER LA RECHERCHE EN LIGNE", "chercher"],
 	SCREEN_TRAINING: ["LANCER L'ENTRAÎNEMENT", "entrainement"],
+	SCREEN_AVENTURE: ["LANCER LA SALLE", "aventure"],
+	SCREEN_AVENTURE_SALLES: ["LANCER LA SALLE", "aventure"],
 }
 
 
@@ -4229,6 +4261,8 @@ func _build_hub_screens() -> void:
 	var invite_lan := hub.add_screen(SCREEN_LOCAL_JOIN, "Rejoindre — réseau local")
 	var classe := hub.add_screen(SCREEN_RANKED, "1v1 compétitif")
 	var entrainement := hub.add_screen(SCREEN_TRAINING, "S'entraîner")
+	var aventure_ecran := hub.add_screen(SCREEN_AVENTURE, "Aventure")
+	var salles_ecran := hub.add_screen(SCREEN_AVENTURE_SALLES, "Aventure — les salles")
 	var custom := hub.add_screen(SCREEN_CUSTOM, "Personnalisation")
 
 	# --- Accueil --------------------------------------------------------------
@@ -4248,6 +4282,10 @@ func _build_hub_screens() -> void:
 		"Seul, contre une cible ou un adversaire qui marche. De quoi prendre une "
 		+ "arme en main sans enjeu.",
 		SCREEN_TRAINING, COLOR_ACCENT, "", "", false, "ill_entrainement"))
+	accueil.add_child(hub.make_entry("AVENTURE",
+		"Seul, salle après salle, dans le noir : des plafonniers, des silhouettes à abattre, un adversaire au bout de chaque "
+		+ "chapitre. Chaque chapitre fini offre une classe. Rien n'est classé.",
+		SCREEN_AVENTURE, COLOR_ACCENT, "", "", false, "ill_entrainement"))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM,
 		COLOR_DIM, "", "", false, "ill_personnalisation"))
@@ -4422,6 +4460,9 @@ func _build_hub_screens() -> void:
 	entrainement.add_child(_entree_changer_carte[SCREEN_TRAINING])
 	hub.add_back_entry(SCREEN_TRAINING, "", "ill_accueil")
 
+	# --- Aventure ---------------------------------------------------------------
+	_construire_l_ecran_de_l_aventure(aventure_ecran, salles_ecran)
+
 	# --- Personnalisation -----------------------------------------------------
 	# Aucune de ces quatre entrées n'est une destination : pas de chevron, pas de
 	# descente. Chacune déplie sa page complète à droite, au survol comme à la
@@ -4529,7 +4570,7 @@ func _build_hub_screens() -> void:
 	hub.register_panel(PANEL_SALON, _build_salon_aside())
 	# Les écrans de préparation de match ont le salon en panneau par défaut.
 	for id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
-			SCREEN_LOCAL_JOIN, SCREEN_TRAINING]:
+			SCREEN_LOCAL_JOIN, SCREEN_TRAINING, SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]:
 		hub.set_screen_panel(id, PANEL_SALON)
 	# Les écrans de sélection de mode ou de sous-menu ont leur illustration dédiée.
 	hub.set_screen_panel(MenuHub.ROOT, "ill_accueil")
@@ -4551,6 +4592,8 @@ func _build_hub_screens() -> void:
 	hub.set_screen_background(SCREEN_LOCAL_JOIN, "res://assets/ui/ill_rejoindre_local.png")
 	hub.set_screen_background(SCREEN_RANKED, "res://assets/ui/ill_competitif.png")
 	hub.set_screen_background(SCREEN_TRAINING, "res://assets/ui/ill_entrainement.png")
+	hub.set_screen_background(SCREEN_AVENTURE, "res://assets/ui/ill_entrainement.png")
+	hub.set_screen_background(SCREEN_AVENTURE_SALLES, "res://assets/ui/ill_entrainement.png")
 	hub.set_screen_background(SCREEN_CUSTOM, "res://assets/ui/apercu_personnalisation.png")
 	hub.set_screen_background(SCREEN_UPDATE, "res://assets/ui/ill_mise_a_jour.png")
 
@@ -5240,6 +5283,13 @@ func set_launch_locked(vrai: bool) -> void:
 
 
 func _on_hub_action(action: String) -> void:
+	# L'aventure (S6) : un chapitre ou une salle pris par leur numéro, repeints ensuite.
+	if action.begins_with("aventure_chapitre_"):
+		_prendre_un_chapitre(int(action.get_slice("_", 2)))
+		return
+	if action.begins_with("aventure_niveau_"):
+		_prendre_une_salle(int(action.get_slice("_", 2)))
+		return
 	match action:
 		"lancer":
 			get_tree().paused = false
@@ -5255,6 +5305,9 @@ func _on_hub_action(action: String) -> void:
 		"entrainement":
 			get_tree().paused = false
 			training_requested.emit()
+		"aventure":
+			get_tree().paused = false
+			aventure_requested.emit()
 		"cran_cible":
 			_choisir_le_cran(CRAN_CIBLE_IMMOBILE)
 		"cran_mobile":
@@ -5272,6 +5325,220 @@ func _on_hub_action(action: String) -> void:
 			hub.montrer_texte("MON RANG", _my_rank_text())
 		"top10":
 			hub.montrer_texte("TOP 10", _top_ten_text())
+
+# ---------------------------------------------------------------------------
+# L'ÉCRAN DE L'AVENTURE — chantier SOLO, S6
+# ---------------------------------------------------------------------------
+
+## Les entrées de l'écran : une par chapitre, une par salle possible d'un chapitre. Leur libellé et leur présence se repeignent à
+## chaque ouverture (`_rafraichir_l_aventure`) ; leur action dit leur numéro (`aventure_chapitre_<n>`, `aventure_niveau_<i>`).
+func _construire_l_ecran_de_l_aventure(ecran: VBoxContainer, salles: VBoxContainer) -> void:
+	# Les chapitres : un appui sur un chapitre OUVERT le prend et descend à ses salles. Rien n'est enregistré ni classé, sinon la
+	# progression : les salles réussies et les classes gagnées. À droite : la classe que l'on joue — celles qu'on a gagnées, le Parasite
+	# au premier chapitre, qui le prête —, la description de la salle prise, et le bouton qui lance.
+	for n in AventureFormat.CHAPITRE_MAX + 1:
+		var e := hub.make_entry("CHAPITRE %d" % n, "Un appui prend ce chapitre, s'il est ouvert, et mène à ses salles. À droite : la classe "
+			+ "que l'on y joue — celles qu'on a gagnées, le Parasite au premier chapitre, qui le prête — et le bouton qui lance. Rien n'est "
+			+ "enregistré ni classé, sinon la progression. Échap pour revenir.", "", COLOR_ACCENT,
+			"aventure_chapitre_%d" % n, "", false, PANEL_SALON)
+		ecran.add_child(e)
+		_entrees_chapitres.append(e)
+	hub.add_back_entry(SCREEN_AVENTURE, "", "ill_accueil")
+	for i in AventureFormat.NIVEAUX_PAR_CHAPITRE:
+		var e := hub.make_entry("SALLE %d" % (i + 1), "Un appui prend cette salle, si elle est ouverte : le bouton du cadre la lance.", "",
+			COLOR_P1, "aventure_niveau_%d" % i, "", false, PANEL_SALON)
+		salles.add_child(e)
+		_entrees_niveaux.append(e)
+	hub.add_back_entry(SCREEN_AVENTURE_SALLES, "", "ill_accueil")
+
+
+## La progression que l'écran lit : celle de la machine, faite à la première ouverture.
+func progression_de_l_aventure() -> AventureProgression:
+	if aventure_progression == null:
+		aventure_progression = AventureProgression.new()
+	return aventure_progression
+
+
+## Repeint tout l'écran : le chapitre et la salle pris (le prochain à jouer, s'ils ne tiennent plus), chaque entrée, la classe.
+func _rafraichir_l_aventure() -> void:
+	if _entrees_chapitres.is_empty():
+		return
+	var chapitres: Dictionary = AventureFormat.chapitres_livres()
+	var prog := progression_de_l_aventure()
+	# Le chapitre pris doit exister ET être ouvert ; sinon le premier ouvert qui n'est pas fini, sinon le dernier ouvert.
+	if not (chapitres.has(aventure_chapitre) and prog.chapitre_ouvert(aventure_chapitre)):
+		aventure_chapitre = -1
+		var dernier_ouvert := -1
+		for n in AventureFormat.CHAPITRE_MAX + 1:
+			if chapitres.has(n) and prog.chapitre_ouvert(n):
+				dernier_ouvert = n
+				if aventure_chapitre < 0 and not prog.chapitre_termine(n):
+					aventure_chapitre = n
+		if aventure_chapitre < 0:
+			aventure_chapitre = dernier_ouvert
+		aventure_niveau = -1
+	var nombre := _nombre_de_salles(chapitres)
+	if aventure_chapitre >= 0 and (aventure_niveau < 0 or aventure_niveau >= nombre or not prog.niveau_ouvert(aventure_chapitre, aventure_niveau)):
+		aventure_niveau = prog.prochain_niveau(aventure_chapitre, nombre)
+	# Les chapitres pas encore écrits tiennent en UNE ligne, à la place du premier d'entre eux : « CHAPITRES 2 À 10 — À VENIR ».
+	var premier_a_venir := -1
+	for n in _entrees_chapitres.size():
+		var ecrit: bool = chapitres.has(n)
+		if not ecrit and premier_a_venir < 0:
+			premier_a_venir = n
+		_entrees_chapitres[n].visible = ecrit or n == premier_a_venir
+		hub.set_entry_label(_entrees_chapitres[n], _libelle_du_chapitre(n, chapitres, prog) if ecrit
+			else _libelle_des_chapitres_a_venir(n))
+	for i in _entrees_niveaux.size():
+		_entrees_niveaux[i].visible = i < nombre
+		if i < nombre:
+			hub.set_entry_label(_entrees_niveaux[i], _libelle_de_la_salle(i, chapitres, prog))
+	_refresh_weapon_locks()
+	# La classe de la dernière fois, si elle est encore à nous ; sinon celle que le chapitre dit.
+	var catalogue := _catalogue_classes()
+	var voulue := _classe_que_l_on_jouerait(chapitres, prog)
+	for idx in catalogue.size():
+		if String(catalogue[idx].slug()) == voulue:
+			set_weapon_selection(0, idx)
+	if lobby_status_label != null and hub != null and hub.current_id() in [SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]:
+		lobby_status_label.text = _description_de_la_salle()
+
+
+## La ligne des chapitres qui ne sont pas écrits, posée à la place du premier : de lui au dixième, ou lui seul s'il est le dernier.
+func _libelle_des_chapitres_a_venir(premier: int) -> String:
+	if premier >= AventureFormat.CHAPITRE_MAX:
+		return "CHAPITRE %d — À VENIR" % premier
+	return "CHAPITRES %d À %d — À VENIR" % [premier, AventureFormat.CHAPITRE_MAX]
+
+
+func _nombre_de_salles(chapitres: Dictionary) -> int:
+	if not chapitres.has(aventure_chapitre):
+		return 0
+	return (chapitres[aventure_chapitre]["niveaux"] as Array).size()
+
+
+func _libelle_du_chapitre(n: int, chapitres: Dictionary, prog: AventureProgression) -> String:
+	var titre := String(chapitres[n]["titre"]).to_upper()
+	if not prog.chapitre_ouvert(n):
+		return "CHAPITRE %d — %s (FERMÉ)" % [n, titre]
+	return "%sCHAPITRE %d — %s%s" % ["✓ " if n == aventure_chapitre else "", n, titre, " (TERMINÉ)" if prog.chapitre_termine(n) else ""]
+
+
+func _libelle_de_la_salle(i: int, chapitres: Dictionary, prog: AventureProgression) -> String:
+	var niveau: Dictionary = (chapitres[aventure_chapitre]["niveaux"] as Array)[i]
+	var titre := String(niveau["titre"]).to_upper()
+	var boss := " — BOSS" if bool(niveau["boss"]) else ""
+	if not prog.niveau_ouvert(aventure_chapitre, i):
+		return "SALLE %d — %s%s (FERMÉE)" % [i + 1, titre, boss]
+	return "%sSALLE %d — %s%s%s" % ["✓ " if i == aventure_niveau else "", i + 1, titre, boss, " (RÉUSSIE)" if prog.niveau_reussi(aventure_chapitre, i) else ""]
+
+
+## Prend un chapitre : s'il est ouvert. Fermé ou à venir, rien ne change et le cadre de droite dit pourquoi.
+func _prendre_un_chapitre(n: int) -> void:
+	var chapitres: Dictionary = AventureFormat.chapitres_livres()
+	var prog := progression_de_l_aventure()
+	if not chapitres.has(n):
+		hub.montrer_texte("CHAPITRE %d" % n, "À venir. Aucune salle n'est encore écrite pour ce chapitre.")
+		return
+	if not prog.chapitre_ouvert(n):
+		hub.montrer_texte("CHAPITRE %d — FERMÉ" % n, "Finissez le chapitre %d — abattez son adversaire — pour ouvrir celui-ci." % (n - 1))
+		return
+	if n != aventure_chapitre:
+		aventure_chapitre = n
+		aventure_niveau = -1
+	_rafraichir_l_aventure()
+	# Le chapitre est pris : on descend à ses salles (le patron du hub : un appui sur une entrée qui ouvre, descend).
+	if hub != null and hub.current_id() == SCREEN_AVENTURE:
+		hub.push(SCREEN_AVENTURE_SALLES)
+
+
+## Prend une salle : si elle est ouverte (la précédente est réussie). Fermée, rien ne change et le cadre de droite dit pourquoi.
+func _prendre_une_salle(i: int) -> void:
+	var chapitres: Dictionary = AventureFormat.chapitres_livres()
+	var prog := progression_de_l_aventure()
+	if not chapitres.has(aventure_chapitre) or i >= _nombre_de_salles(chapitres):
+		return
+	if not prog.niveau_ouvert(aventure_chapitre, i):
+		hub.montrer_texte("SALLE %d — FERMÉE" % (i + 1), "Réussissez la salle %d pour ouvrir celle-ci." % i)
+		return
+	aventure_niveau = i
+	_rafraichir_l_aventure()
+
+
+## La classe que l'on jouerait si l'on lançait maintenant : celle que le chapitre impose, sinon celle de la dernière fois, sinon la
+## première gagnée (`AventureProgression.classe_pour_jouer`).
+func _classe_que_l_on_jouerait(chapitres: Dictionary, prog: AventureProgression) -> String:
+	var imposee := String(chapitres[aventure_chapitre]["classe_imposee"]) if chapitres.has(aventure_chapitre) else ""
+	return prog.classe_pour_jouer(imposee)
+
+
+## Le chapitre pris impose-t-il une classe ? (`""` : libre.)
+func _classe_imposee_a_l_aventure() -> String:
+	var chapitres: Dictionary = AventureFormat.chapitres_livres()
+	return String(chapitres[aventure_chapitre]["classe_imposee"]) if chapitres.has(aventure_chapitre) else ""
+
+
+## Le bouton de la classe d'index `idx` est-il libre à l'aventure : celle que le chapitre impose, sinon une classe gagnée.
+func _classe_libre_a_l_aventure(idx: int) -> bool:
+	var catalogue := _catalogue_classes()
+	if idx < 0 or idx >= catalogue.size():
+		return false
+	var slug := String(catalogue[idx].slug())
+	var imposee := _classe_imposee_a_l_aventure()
+	if imposee != "":
+		return slug == imposee
+	return progression_de_l_aventure().classe_debloquee(slug)
+
+
+func _raison_du_verrou_a_l_aventure(idx: int) -> String:
+	if _classe_libre_a_l_aventure(idx):
+		return ""
+	var catalogue := _catalogue_classes()
+	if idx < 0 or idx >= catalogue.size():
+		return ""
+	if _classe_imposee_a_l_aventure() != "":
+		return "Ce chapitre se joue dans une classe prêtée."
+	var chap := AventureFormat.ORDRE_DES_CLASSES.find(String(catalogue[idx].slug()))
+	return "Se gagne en finissant le chapitre %d." % chap if chap >= 0 else ""
+
+
+## Ce que le cadre dit de la salle prise : où l'on est, sa phrase, qui s'y trouve, la classe jouée.
+func _description_de_la_salle() -> String:
+	var chapitres: Dictionary = AventureFormat.chapitres_livres()
+	if not chapitres.has(aventure_chapitre):
+		return "Aucun chapitre n'est encore écrit : les salles arrivent."
+	var chapitre: Dictionary = chapitres[aventure_chapitre]
+	if aventure_niveau < 0 or aventure_niveau >= (chapitre["niveaux"] as Array).size():
+		return ""
+	var niveau: Dictionary = (chapitre["niveaux"] as Array)[aventure_niveau]
+	var imposee := String(chapitre["classe_imposee"])
+	var texte := "CHAPITRE %d · SALLE %d / %d\n%s\n\n« %s »\n\n%d à abattre%s." % [aventure_chapitre, aventure_niveau + 1,
+		(chapitre["niveaux"] as Array).size(), String(niveau["titre"]).to_upper(), String(niveau["intention"]),
+		(niveau["pnj"] as Array).size(), " — le boss" if bool(niveau["boss"]) else ""]
+	if imposee != "":
+		texte += "\nClasse prêtée : %s." % imposee
+	return texte
+
+
+## Ce que le joueur a pris, pour `game_state.gd` : `{ chapitre, niveau, classe }` — le chapitre CHARGÉ, la salle (de 0), le slug de la
+## classe. Vide si rien n'est jouable (aucun chapitre écrit, salle fermée). Fige aussi le choix de classe dans la progression : la
+## prochaine ouverture de l'écran la reproposera. La classe d'un chapitre qui en impose une n'est pas un choix : rien n'est noté.
+func aventure_choix() -> Dictionary:
+	var chapitres: Dictionary = AventureFormat.chapitres_livres()
+	var prog := progression_de_l_aventure()
+	if not chapitres.has(aventure_chapitre) or not prog.niveau_ouvert(aventure_chapitre, aventure_niveau):
+		return {}
+	var classe := _classe_imposee_a_l_aventure()
+	if classe == "":
+		var catalogue := _catalogue_classes()
+		var idx := selected_weapon_index(0)
+		classe = String(catalogue[idx].slug()) if idx >= 0 and idx < catalogue.size() else ""
+		if not prog.classe_debloquee(classe):
+			classe = prog.classe_pour_jouer("")
+		else:
+			prog.choisir_classe(classe)
+	return {"chapitre": chapitres[aventure_chapitre], "niveau": aventure_niveau, "classe": classe}
+
 
 ## Le libellé d'un cran d'entraînement, avec la coche s'il est pris.
 func _libelle_du_cran(cran: int) -> String:
@@ -5586,16 +5853,27 @@ func _on_hub_screen_changed(id: String) -> void:
 	# `SCREEN_FRIENDLY` est dans cette liste et il a fallu l'y mettre : sans lui,
 	# passer par « compétitif » puis revenir chercher un match amical laissait le
 	# contexte à « classé », et un match sans enjeu serait remonté au classement.
+	# Le râtelier se verrouille d'après la progression solo sur l'écran de l'aventure, d'après le rang partout ailleurs : posé AVANT
+	# `_apply_queue_kind`, qui repasse les verrous.
+	_contexte_aventure = id in [SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]
+	if _contexte_aventure:
+		# À l'OUVERTURE de l'écran (depuis l'accueil, pas depuis ses salles), le choix repart du prochain à jouer : le chapitre fini la
+		# dernière fois n'est plus celui qu'on veut.
+		if id == SCREEN_AVENTURE and _ecran_d_avant_l_aventure != SCREEN_AVENTURE_SALLES:
+			aventure_chapitre = -1
+			aventure_niveau = -1
+		_rafraichir_l_aventure()
+	_ecran_d_avant_l_aventure = id
 	match id:
 		SCREEN_RANKED: _apply_queue_kind(true)
 		SCREEN_FRIENDLY, SCREEN_LOCAL, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN, \
-		SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING:
+		SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING, SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES:
 			_apply_queue_kind(false)
 	_accorder_lanceur(id)
 	# `SCREEN_TRAINING` n'y était pas : son panneau restait celui de l'écran
 	# précédent, râtelier de J2 compris. Ajouté le 2026-09-10.
 	if id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
-			SCREEN_LOCAL_JOIN, SCREEN_FRIENDLY, SCREEN_RANKED, SCREEN_TRAINING]:
+			SCREEN_LOCAL_JOIN, SCREEN_FRIENDLY, SCREEN_RANKED, SCREEN_TRAINING, SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]:
 		_refresh_map_card()
 		_refresh_lobby_block()
 		_update_weapon_panels_visibility()
@@ -5716,12 +5994,13 @@ func _refresh_weapon_locks() -> void:
 			# d'arsenal, elle, parle en index d'arme : ce sont eux qui circulent
 			# sur le fil et qui indexent le catalogue.
 			var idx := int(btn.get_meta(META_CLASSE_INDEX, place))
-			var libre := RankLoadout.is_available(idx, _weapon_context_ranked,
-				tier_du_cote)
+			# L'aventure a son propre verrou (S6) : la progression solo, jamais le rang en ligne. Seul le râtelier de J1 s'y montre.
+			var libre := _classe_libre_a_l_aventure(idx) if _contexte_aventure else RankLoadout.is_available(idx,
+				_weapon_context_ranked, tier_du_cote)
 			btn.disabled = not libre
 			btn.modulate = Color.WHITE if libre else Color(1.0, 1.0, 1.0, 0.4)
-			btn.tooltip_text = RankLoadout.reason_for(idx, _weapon_context_ranked,
-				tier_du_cote)
+			btn.tooltip_text = _raison_du_verrou_a_l_aventure(idx) if _contexte_aventure else RankLoadout.reason_for(idx,
+				_weapon_context_ranked, tier_du_cote)
 			if libre and premier_libre < 0:
 				premier_libre = place
 		# Une arme verrouillée qui reste SÉLECTIONNÉE partirait au match : le
@@ -6423,6 +6702,20 @@ func _poser_les_rangees_du_salon() -> void:
 		# **Chercher un adversaire, c'est très exactement ne pas en avoir** : ces
 		# deux écrans n'ont aucune raison d'attendre un second joueur. L'état est
 		# posé en tête de fonction, donc ce retour ne le saute plus.
+		return
+
+	# L'aventure (S6) se lance seule, comme l'entraînement — et n'a PAS de carte à montrer : la salle vient du niveau, pas de la galerie,
+	# et l'affiche du match annoncerait la carte d'un autre mode. À la place, la description de la salle, dans la colonne du salon.
+	if hub != null and hub.current_id() in [SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]:
+		map_card.hide()
+		transport_hbox.hide()
+		lobby_code_row.hide()
+		host_ip_row.hide()
+		join_box.hide()
+		lobby_players_box.hide()
+		btn_open_lobby.hide()
+		lobby_status_label.show()
+		lobby_status_label.text = _description_de_la_salle()
 		return
 
 	# L'entraînement se lance seul, sur ce poste : ni salon à ouvrir, ni code, ni
@@ -7643,7 +7936,7 @@ func _update_weapon_panels_visibility() -> void:
 	# dire ici, parce que le mode visé ne le dit pas : l'écran d'entraînement ne
 	# pose pas `_intended_mode`, et héritait donc de l'écran scindé visité avant —
 	# deux râteliers pour un joueur seul face à une cible.
-	if _is_main_menu and hub != null and hub.current_id() == SCREEN_TRAINING:
+	if _is_main_menu and hub != null and hub.current_id() in [SCREEN_TRAINING, SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]:
 		_assign_weapon_nav_owner(false)
 		_montrer_rateliers(true, false)
 		return

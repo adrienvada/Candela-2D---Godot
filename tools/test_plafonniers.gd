@@ -505,10 +505,10 @@ func _cartes_livrees() -> Dictionary:
 	return sortie
 
 
-## Les fichiers de jeu qui NOMMENT la pose. Aujourd'hui : aucun. S6 y ajoutera son moteur d'aventure — et cette liste, À LA MAIN : un
+## Les fichiers de jeu qui NOMMENT la pose. Aujourd'hui : le moteur de l'aventure (`aventure_partie.gd`, S6) — inscrit À LA MAIN : un
 ## fichier de plus qui pose des plafonniers doit être un choix, jamais un effet de bord (« il n'entre dans les cartes de duel que
 ## si Adrien le demande, avec une montée de `Protocol.VERSION` »).
-const POSEURS_AUTORISES: Array[String] = []
+const POSEURS_AUTORISES: Array[String] = ["aventure_partie.gd"]
 
 
 func _hors_des_cartes_de_duel_statique() -> void:
@@ -525,6 +525,7 @@ func _hors_des_cartes_de_duel_statique() -> void:
 	_check("le format de carte (`MapCodec`) ne sait pas les écrire : aucun nom de plafonnier dans `map_codec.gd`",
 		not FileAccess.get_file_as_string("res://map_codec.gd").to_lower().contains("plafonnier"))
 	var poseurs: Array[String] = []
+	var posent: Array[String] = []
 	var scannes := 0
 	for f in DirAccess.get_files_at("res://"):
 		if not f.ends_with(".gd") or f == "plafonnier.gd":
@@ -536,10 +537,18 @@ func _hors_des_cartes_de_duel_statique() -> void:
 			if nette.begins_with("#"):
 				continue
 			if nette.contains("Plafonnier.poser(") or nette.contains("Plafonnier.new(") or nette.contains("plafonnier.gd\").new"):
+				if not posent.has(f):
+					posent.append(f)
 				if not POSEURS_AUTORISES.has(f):
 					poseurs.append("%s : %s" % [f, nette])
 	_check("aucun fichier de jeu (%d scannés) ne pose de plafonnier : seul le solo le fera, et il s'inscrira à la main dans POSEURS_AUTORISES" % scannes,
 		scannes > 100 and poseurs.is_empty(), str(poseurs))
+	var perimes: Array[String] = []
+	for f in POSEURS_AUTORISES:
+		if not posent.has(f):
+			perimes.append(f)
+	_check("chaque poseur autorisé POSE réellement (la liste n'est pas périmée : le moteur de l'aventure appelle `Plafonnier.poser`)",
+		not POSEURS_AUTORISES.is_empty() and perimes.is_empty(), str(perimes))
 	_check("`protocol.gd` ne dit rien des plafonniers : rien ne transite sur le réseau",
 		not FileAccess.get_file_as_string("res://protocol.gd").to_lower().contains("plafonnier"))
 	var reseau := FileAccess.get_file_as_string("res://network_manager.gd").to_lower()

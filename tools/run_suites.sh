@@ -320,6 +320,16 @@ SUITES+=(test_plafonniers)
 # l'horloge fixe : le `case` plus bas la lui donne, comme à `test_bot_combat`.
 SUITES+=(test_banc_bot)
 
+# Chantier SOLO, S6 (2026-10-02) : le MOTEUR de l'aventure. `test_aventure_format` (en `--script`, sans partie) : le validateur accepte
+# le chapitre d'essai (`tools/aventure_essai/`, jamais `assets/solo/`) et refuse chaque défaut — profil inconnu, case hors carte ou non
+# praticable, ronde sans points, chapitre sans boss final… — un cas par règle ; l'ordre des classes débloquées suit le rang ; la
+# progression (`user://solo.cfg`, ici un chemin à la suite) ouvre chapitres et salles dans l'ordre ; aucune carte de duel n'est touchée.
+# `test_aventure_partie` (le jeu monté, à pas d'image fixe — `case` plus bas, comme `test_bot_combat`) : une salle se charge (arène,
+# plafonniers, joueur, PNJ `PNJ_<i>` pilotés par des bots, carton), la perception d'un PNJ ne vise que le joueur, les PNJ ne se
+# blessent pas, la vue iso les montre TOUS (et le duel est rendu comme avant), tous les PNJ morts enchaînent la salle suivante, mourir
+# recommence la salle, finir le boss débloque la classe et l'écrit, quitter rend l'entraînement et l'écran scindé intacts, l'écran.
+SUITES+=(test_aventure_format test_aventure_partie)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -471,7 +481,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

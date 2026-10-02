@@ -129,6 +129,17 @@ var training_target: TrainingTarget
 var p1: Player
 var p2: Player
 
+# L'aventure (chantier SOLO, S6) : une partie d'aventure, ses PNJ, et la façon dont on la pose et la quitte. Voir `AventurePartie`.
+## La partie d'aventure en cours, `null` hors aventure. Posée par `demarrer_l_aventure`, retirée par `_quitter_l_aventure`.
+var aventure: AventurePartie = null
+## Les joueurs que la vue iso rend EN PLUS de J1 et J2 : les PNJ de la salle d'aventure (`PNJ_<i>`, vivants ou non). Vide partout
+## ailleurs — c'est ce qui garde le duel rendu comme il l'a toujours été. `Presentation3D` leur donne un corps chacun
+## (`Presentation3D.FIGURANTS_MAX`).
+var figurants: Array[Player] = []
+## Vrai pendant que l'aventure pose une salle par `_do_start_round` : la ceinture de ce dernier (« un vrai départ de match met fin
+## à l'aventure ») ne doit pas démonter la partie qui l'appelle.
+var _aventure_en_pose := false
+
 # Les crans « adversaire mobile » (S1) et « adversaire qui tire » (S3) de l'entraînement — chantier SOLO. Voir `_poser_l_adversaire`.
 ## Vrai tant que J2 est piloté par un bot dans un entraînement, quel que soit le cran. Remis à faux par `_quitter_l_adversaire_mobile`.
 var _adversaire_mobile: bool = false
@@ -584,6 +595,7 @@ func _ready():
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
 	ui.training_requested.connect(_on_training_requested)
+	ui.aventure_requested.connect(_on_aventure_requested)
 	ui.intro_requested.connect(_on_intro_requested)
 	ui.pick_window_cancelled.connect(_on_pick_window_cancelled)
 	ui.quit_requested.connect(_on_quit_requested)
@@ -961,6 +973,9 @@ func _accueillir_le_revenant() -> void:
 ## adversaire (`balayer_les_traces_si_la_carte_change`).
 func _on_training_requested() -> void:
 	get_tree().paused = false
+	# Une aventure en cours s'arrête ICI, avant de relire la carte du catalogue juste dessous : sa salle est la carte active, et
+	# `select_map` n'en connaît aucune de ce nom (SOLO, S6).
+	_quitter_l_aventure()
 	# Avant toute chose : un match en cours doit se solder normalement, forfait
 	# compris, plutôt que de se dissoudre dans un entraînement.
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
@@ -1198,6 +1213,109 @@ func _quitter_l_adversaire_mobile(cacher_j2: bool = false) -> void:
 		p2.hide()
 		p2.set_collision_layer_value(1, false)
 		p2.set_collision_mask_value(1, false)
+
+
+## ── L'AVENTURE (chantier SOLO, S6) ───────────────────────────────────────────────────────────────────────────────────────────
+##
+## Une partie d'aventure est un ENTRAÎNEMENT dont la salle vient d'un fichier : le même chemin de départ (`_do_start_round`), le même
+## état (`sandbox_mode`, `training_mode` : une seule vue, l'oreille sur le joueur, pas de manche, pas de chronomètre, pas de killcam,
+## rien dans `match_history.json`, rien de classé), et un J2 caché qui n'a plus de rôle — les adversaires sont les PNJ que
+## `AventurePartie` pose, de vrais `Player` nommés `PNJ_<i>`. Rien ne transite sur le réseau : le lien tombe au lancement, comme à
+## l'entraînement, et aucune ligne de `protocol.gd` ne bouge.
+##
+## Le geste de l'écran (`ui.aventure_requested`) : ce que le joueur a choisi — le chapitre, la salle, la classe — se lit dans
+## `ui.aventure_choix()`.
+func _on_aventure_requested() -> void:
+	get_tree().paused = false
+	var choix: Dictionary = ui.aventure_choix()
+	if choix.is_empty():
+		return
+	# La progression de l'écran, celle qu'il vient de lire pour proposer la salle : la partie juge et note sur la même.
+	demarrer_l_aventure(choix["chapitre"], int(choix["niveau"]), String(choix["classe"]), ui.progression_de_l_aventure())
+
+
+## Commence une partie d'aventure : `chapitre` est un chapitre CHARGÉ (`AventureFormat.charger_chapitre`), `index` la salle de départ
+## (de 0), `classe_slug` la classe du joueur. `progression` : la sienne (`user://solo.cfg` par défaut). Rend faux si la salle ne se pose pas.
+func demarrer_l_aventure(chapitre: Dictionary, index: int, classe_slug: String, progression: AventureProgression = null) -> bool:
+	_quitter_l_aventure()
+	get_tree().paused = false
+	# Un match en cours se solde normalement, forfait compris, avant qu'on ne parte seul (comme `_on_training_requested`).
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		_archive_forfeit(0)
+		NetworkManager.disconnect_from_game()
+	_apply_network_mode()
+	var partie := AventurePartie.new()
+	add_child(partie)
+	aventure = partie
+	if not partie.demarrer(self, chapitre, index, classe_slug, progression):
+		_quitter_l_aventure()
+		return false
+	return true
+
+
+## Pose la salle d'un niveau — appelée par `AventurePartie` à chaque salle, suivante ou recommencée : la carte du niveau devient
+## l'arène (`MapData.poser_carte_d_aventure`), puis le départ ORDINAIRE d'une partie (`_do_start_round`, qui remet le joueur à neuf :
+## vie, arme, munitions, fusées) rend le jeu à un entraînement, et le joueur prend sa place et son orientation. Les PNJ et les
+## plafonniers sont l'affaire de la partie. `etiquette` : ce que le HUD écrit à la place du chronomètre.
+func aventure_poser_la_salle(niveau: Dictionary, classe_index: int, etiquette: String) -> bool:
+	if classe_index < 0:
+		push_error("GameState : aventure_poser_la_salle sans classe")
+		return false
+	_aventure_en_pose = true
+	MapData.poser_carte_d_aventure(niveau["carte"])
+	_matchmade_round = false
+	_matchmade_ranked = false
+	_matchmade_start_pending = false
+	game_over = false
+	ui.hide_game_over()
+	_restore_viewports()
+	# `true` : l'arène d'un entraînement (le sang d'une salle n'est pas celui d'un duel, `_empreinte_de_la_rencontre`).
+	_do_start_round(classe_index, 0, true)
+	round_active = false
+	sandbox_mode = true
+	training_mode = true
+	_restore_viewports()
+	_forfeit_pending = false
+	_match_id = ""
+	time_left = round_time
+	ui.set_countdown(0.0)
+	countdown_left = 0.0
+	ui.reinitialiser_chrono()
+	ui.time_label.text = etiquette
+	# J2 n'a aucun rôle en aventure : caché, sans collision (la posture que lui laisse l'entraînement contre une cible). Les
+	# adversaires sont les PNJ ; la cible, `_do_start_round` l'a déjà retirée.
+	p2.hide()
+	p2.set_collision_layer_value(1, false)
+	p2.set_collision_mask_value(1, false)
+	# Le joueur, à sa case et tourné où le niveau le dit (le départ ordinaire l'a posé à `spawn_p1`, tourné vers l'est).
+	p1.rotation = float(niveau["joueur"]["rotation"])
+	p1.reset_step_tracker()
+	cam1.global_position = p1.global_position
+	# L'oreille se repose ICI, quand `training_mode` est enfin vrai (voir `_on_training_requested`).
+	_accorder_oreille()
+	_aventure_en_pose = false
+	return true
+
+
+## La partie d'aventure s'achève (le chapitre est fini) : retour à l'écran de l'aventure, par le chemin du retour au menu.
+func aventure_finie() -> void:
+	_on_main_menu_requested(ui.SCREEN_AVENTURE)
+
+
+## Démonte la partie d'aventure — sans effet hors aventure : les PNJ et les plafonniers sortent, le carton part, la carte du joueur
+## est rendue (`AventurePartie.demonter`). J2 reste caché et sans collision, comme un entraînement contre une cible le laisse : le
+## prochain départ de manche (`_do_start_round`) le remontre.
+func _quitter_l_aventure() -> void:
+	if aventure == null:
+		return
+	var partie := aventure
+	aventure = null
+	partie.demonter()
+	var vide: Array[Player] = []
+	figurants = vide
+	if partie.get_parent() != null:
+		partie.get_parent().remove_child(partie)
+	partie.queue_free()
 
 
 func _on_debug_light_toggled(toggled_on: bool):
@@ -1809,6 +1927,10 @@ func _do_start_round(w1_idx: int, w2_idx: int, entrainement: bool = false):
 	# chemins de départ y passent), et ceci ne fait que remettre les drapeaux à zéro ; c'est la ceinture, pour
 	# qu'un chemin futur qui l'oublierait ne laisse jamais un bot piloter un adversaire de duel.
 	_quitter_l_adversaire_mobile()
+	# Et à l'aventure : un duel ou un entraînement qui part, c'est la partie d'aventure qui s'arrête (SOLO, S6). Sauf quand c'est
+	# l'aventure elle-même qui pose sa salle par ici.
+	if aventure != null and not _aventure_en_pose:
+		_quitter_l_aventure()
 	# Une vraie manche met fin à l'entraînement : sans cela, la vue resterait
 	# unique dans un duel en écran partagé.
 	training_mode = false
@@ -6108,6 +6230,9 @@ func _on_main_menu_requested(target_screen: String = ""):
 	NetworkManager.disconnect_from_game()
 	# Après la déconnexion : le mode est alors local, et c'est lui qui dit quel fournisseur J2 reprend.
 	_quitter_l_adversaire_mobile(true)
+	# Et l'aventure, s'il y en avait une : PNJ, plafonniers et carton partent AVANT la purge de l'arène ci-dessous (qui ne connaît pas
+	# le conteneur des plafonniers, et dont le `queue_free` les laisserait un instant dans leur groupe).
+	_quitter_l_aventure()
 
 	# DA6.3 — la soirée s'arrête ici, et nulle part ailleurs. Après le
 	# désabonnement du transport : la carte lit l'historique, pas le réseau, et
