@@ -275,6 +275,14 @@ SUITES+=(test_fumee_voxel)
 # `--nappes-voxels=braises` (l'essai lu au lancement). Hors de la liste, même raison que les lignes du dessus.
 SUITES+=(test_nappes_voxel)
 
+# Chantier SOLO, S1 (2026-10-02) : le bot se déplace, et l'entraînement gagne son cran « adversaire mobile ». Deux gardes.
+# `test_bot_navigation` (en `--script`, sans scène) : sur chaque carte livrée, des chemins qui ne traversent ni solide, ni mur
+# bas, ni coin, ni couloir plus étroit que le corps ; RONDE, ZONE, LIBRE et la graine ; le bot ne commande que de la marche.
+# `test_entrainement_bot` (le jeu monté, à pas d'image fixe — voir plus bas) : le bot avance sur un vrai corps sans jamais être
+# bloqué, ne tire pas, revient quand on l'abat, et J2 retrouve son état d'avant à l'écran scindé. Posées ici, comme les lignes du
+# dessus : ce sont des suites ordinaires, mais la seconde exige une horloge fixe et se lance donc par un `case` à part.
+SUITES+=(test_bot_navigation test_entrainement_bot)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -422,9 +430,11 @@ run() {
 # `test_iso_camera` compare deux parties pas pour pas : à pas d'image fixe, sans quoi le moment
 # où une balle éteinte quitte la scène dépend du rendu (voir `_simulation_inchangee`, et les
 # Pièges connus de la ROADMAP). Avant `--script` : c'est un argument du moteur, pas du jeu.
+# `test_entrainement_bot` y est aussi : il compte des SECONDES SIMULÉES (distance parcourue, blocage), qui ne valent que si une
+# image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

@@ -129,6 +129,27 @@ var training_target: TrainingTarget
 var p1: Player
 var p2: Player
 
+# Le cran « adversaire mobile » de l'entraînement — chantier SOLO, étape S1. Voir `_poser_l_adversaire_mobile`.
+## Vrai tant que J2 est piloté par un bot dans un entraînement. Remis à faux par `_quitter_l_adversaire_mobile`.
+var _adversaire_mobile: bool = false
+## Le fournisseur d'entrées du bot, posé sur J2 (`BotP2`) ; `null` hors du cran mobile.
+var _bot_p2: BotInputProvider = null
+## Les chemins de la carte de l'entraînement, construits au lancement du cran.
+var _navigation_bot: NavigationBot = null
+## Le tirage du bot (cibles, lieu de réapparition). Une graine négative la tire au sort ; une suite la fixe
+## pour rejouer un entraînement à l'identique.
+var graine_du_bot: int = -1
+var _bot_rng := RandomNumberGenerator.new()
+## Le compte à rebours de la réapparition du bot, en secondes ; négatif tant qu'il n'est pas mort.
+var _bot_reapparition: float = -1.0
+## Combien de secondes un bot abattu attend avant de revenir. Assez pour souffler et regarder où l'on est ;
+## trop court, ce serait une cible qui ne tombe jamais (le retour d'une mort disparaît), trop long,
+## un entraînement où l'on attend. Une valeur de départ, dite par la ROADMAP (SOLO, S1), pas un réglage éprouvé.
+const BOT_DELAI_REAPPARITION := 2.0
+## En deçà de ce nombre de cases entre J1 et le point d'apparition de J2, le bot est posé « loin » plutôt qu'au point
+## d'apparition (`MapCodec.MIN_SPAWN_DISTANCE` n'est qu'un avertissement non bloquant de l'éditeur de cartes).
+const BOT_DISTANCE_MIN_CASES := 8.0
+
 # Peer de l'unique client (0 si aucun). L'autorité réseau de P2 reste l'hôte,
 # c'est donc cet id qui sert de garde pour tout ce qui vient du client.
 var client_peer_id: int = 0
@@ -986,12 +1007,16 @@ func _on_training_requested() -> void:
 	ui.reinitialiser_chrono()
 	ui.time_label.text = "ENTRAÎNEMENT"
 
-	# J2 quitte la scène sans être détruit : il reprendra sa place au prochain
-	# vrai match, et le détruire demanderait de le reconstruire.
-	p2.hide()
-	p2.set_collision_layer_value(1, false)
-	p2.set_collision_mask_value(1, false)
-	_set_training_target_active(true)
+	if ui.selected_training_cran() == UI.CRAN_ADVERSAIRE_MOBILE:
+		# Cran 2 : la cible reste cachée (`_do_start_round` vient de la retirer), et J2 revient en jeu, piloté.
+		_poser_l_adversaire_mobile()
+	else:
+		# J2 quitte la scène sans être détruit : il reprendra sa place au prochain
+		# vrai match, et le détruire demanderait de le reconstruire.
+		p2.hide()
+		p2.set_collision_layer_value(1, false)
+		p2.set_collision_mask_value(1, false)
+		_set_training_target_active(true)
 
 	# L'oreille se repose ICI, et pas seulement dans `_do_start_round` : c'est le
 	# premier endroit de ce chemin où `training_mode` est enfin vrai. Sans ce
@@ -999,6 +1024,122 @@ func _on_training_requested() -> void:
 	# puisse doser un réglage sonore sans monter deux instances — resterait sur
 	# l'oreille fixe. Voir `_accorder_oreille`.
 	_accorder_oreille()
+
+## Le cran 2 de l'entraînement : J2 revient en jeu, piloté par un bot qui marche partout, torche éteinte.
+##
+## Chantier SOLO, étape S1. Le bot est un `InputProvider` (`BotInputProvider`) posé sur J2 : `player.gd` ne sait
+## pas d'où viennent ses commandes, et J2 est donc un VRAI joueur — corps solide, vitesse, murs, éblouissement,
+## pas qui s'entendent, balles qui le touchent et peuvent le tuer. Il ne tire jamais : S1 est le déplacement.
+##
+## ## Ce que ça ne casse pas
+##
+##   • **Rien ne transite sur le réseau.** L'entraînement tourne en `LOCAL_SPLITSCREEN` sans pair (le lien est
+##     tombé au lancement) ; `protocol.gd` et `Protocol.VERSION` ne bougent pas.
+##   • **Aucun `if transport == …`.** Le bot ne connaît que la carte et le corps qu'il pilote.
+##   • **J2 se rend EXACTEMENT comme il était** à tout départ de vrai match, d'écran scindé ou de salon :
+##     `_quitter_l_adversaire_mobile()`, appelé en tête de `_do_start_round` et au retour au menu, le
+##     remet à son fournisseur (celui que `_apply_network_mode()` donne selon le mode — jamais deviné ici) et
+##     lui laisse son état de départ de manche, que `_do_start_round` réécrit en entier.
+##   • **Le bot n'est pas « un adversaire » pour la règle du sang** (`_empreinte_de_la_rencontre`) : comme la
+##     cible, personne. L'entraînement s'empreint déjà sur son seul mode, quel que soit le cran.
+##
+## Le nœud porte un nom explicite (`BotP2`), comme tout nœud ajouté dynamiquement (CLAUDE.md, « Réseau »).
+func _poser_l_adversaire_mobile() -> void:
+	_navigation_bot = NavigationBot.depuis_carte(MapData.get_selected())
+	_bot_rng.seed = graine_du_bot if graine_du_bot >= 0 else randi()
+	var bot := BotInputProvider.new()
+	bot.name = "BotP2"
+	bot.configurer(ProfilBot.pour_entrainement_mobile(), _navigation_bot, _bot_rng.randi())
+	_set_player_input_provider(p2, bot)
+	_bot_p2 = bot
+	_adversaire_mobile = true
+	_bot_reapparition = -1.0
+	# `_do_start_round` a déjà montré J2 et rendu ses collisions ; la cible, il l'a retirée. On ne fait que
+	# l'affirmer : un entraînement relancé n'a pas à dépendre de ce que le lancement précédent a laissé.
+	p2.show()
+	p2.set_collision_layer_value(1, true)
+	p2.set_collision_mask_value(1, true)
+	_set_training_target_active(false)
+	# Posé loin du joueur : au point d'apparition de J2 s'il l'est assez, sinon sur la case praticable la plus lointaine.
+	_poser_le_bot_loin_du_joueur(true)
+
+
+## Le bot revient, ou naît : sur sa place d'apparition si elle est assez loin du joueur (`premiere_fois`), sinon sur
+## l'une des cases les plus éloignées de lui qu'il puisse ensuite parcourir.
+func _poser_le_bot_loin_du_joueur(premiere_fois: bool) -> void:
+	var tuile := Vector2(CandelaTileSet.TILE_SIZE)
+	var ou := _get_spawn_position(1)
+	var case_j2 := NavigationBot.case_du_monde(ou)
+	var assez_loin := ou.distance_to(p1.global_position) >= BOT_DISTANCE_MIN_CASES * tuile.x
+	if not (premiere_fois and assez_loin and _navigation_bot.est_praticable(case_j2)):
+		var ancre := _navigation_bot.case_praticable_proche(case_j2)
+		var loin := _navigation_bot.case_loin_de(p1.global_position, ancre, _bot_rng)
+		if loin.x >= 0:
+			ou = NavigationBot.centre_de_la_case(loin)
+	p2.global_position = ou
+	p2.velocity = Vector2.ZERO
+	p2.rotation = PI
+	# Le détecteur de pas ne doit pas voir le saut de la téléportation : un pas fantôme, son et empreinte.
+	p2.reset_step_tracker()
+	if is_instance_valid(_bot_p2):
+		_bot_p2.reinitialiser()
+
+
+## Quand le bot est abattu, il attend `BOT_DELAI_REAPPARITION` puis revient, loin du joueur, avec toute sa vie.
+## Rien d'autre ne se passe : pas de manche, pas de killcam — l'entraînement ne compte pas.
+func _maj_adversaire_mobile(delta: float) -> void:
+	if not _adversaire_mobile or not training_mode or not is_instance_valid(p2):
+		return
+	if not p2.dead:
+		_bot_reapparition = -1.0
+		return
+	if _bot_reapparition < 0.0:
+		_bot_reapparition = BOT_DELAI_REAPPARITION
+	_bot_reapparition -= delta
+	if _bot_reapparition > 0.0:
+		return
+	_bot_reapparition = -1.0
+	_reapparaitre_le_bot()
+
+
+## Les mêmes remises à zéro que la moitié J2 de `_do_start_round`, sans la manche autour : sa vie, ses yeux, ses
+## visuels que `die()` a cachés, son arme (munitions pleines), et les mémoires que la mort laisse (cran de torche,
+## posture, pas).
+func _reapparaitre_le_bot() -> void:
+	p2.hp = 100.0
+	p2.dead = false
+	p2.dazzle_amount = 0.0
+	p2.show_all_visuals()
+	for visuel in ["VisualColored", "VisualDim", "VisualReveal"]:
+		p2.get_node(visuel).show()
+	p2.equip_weapon(weapon_for_index(0))
+	_poser_le_bot_loin_du_joueur(false)
+	p2.reset_flashlight_latch()
+	p2.reset_posture()
+
+
+## Rend J2 au fournisseur d'entrées de son mode, et oublie le bot. Sans effet hors du cran mobile.
+##
+## `cacher_j2` : au retour au menu, J2 retrouve la posture d'un entraînement sans adversaire (caché, sans collision),
+## celle que la cible immobile lui laisse — « exactement son état d'avant ». Au départ d'une manche on ne le cache
+## pas : `_do_start_round` le montre aussitôt.
+func _quitter_l_adversaire_mobile(cacher_j2: bool = false) -> void:
+	if not _adversaire_mobile and _bot_p2 == null:
+		return
+	var bot := _bot_p2
+	_adversaire_mobile = false
+	_bot_p2 = null
+	_navigation_bot = null
+	_bot_reapparition = -1.0
+	# Le fournisseur n'est rendu que s'il est encore celui du bot : `_apply_network_mode()` l'a souvent déjà
+	# remplacé (un entraînement relancé, un départ de match), et le refaire jetterait ceux qu'il vient de poser.
+	if is_instance_valid(bot) and is_instance_valid(p2) and p2.input_provider == bot:
+		_apply_network_mode()
+	if cacher_j2 and is_instance_valid(p2):
+		p2.hide()
+		p2.set_collision_layer_value(1, false)
+		p2.set_collision_mask_value(1, false)
+
 
 func _on_debug_light_toggled(toggled_on: bool):
 	var mod = arena.get_node_or_null("CanvasModulate")
@@ -1604,6 +1745,11 @@ func _host_map_code() -> String:
 ## `entrainement` n'est vrai que pour `_on_training_requested`, et il ne sert qu'à la pose de l'arène (les traces au sol
 ## dépendent du mode de jeu) : `training_mode` reste écrit par l'appelant, après coup, comme avant.
 func _do_start_round(w1_idx: int, w2_idx: int, entrainement: bool = false):
+	# Une vraie manche met fin au cran « adversaire mobile » : J2 reprend le fournisseur d'entrées que son mode
+	# lui donne, AVANT que la manche ne l'adresse. Normalement `_apply_network_mode()` l'a déjà fait (tous les
+	# chemins de départ y passent), et ceci ne fait que remettre les drapeaux à zéro ; c'est la ceinture, pour
+	# qu'un chemin futur qui l'oublierait ne laisse jamais un bot piloter un adversaire de duel.
+	_quitter_l_adversaire_mobile()
 	# Une vraie manche met fin à l'entraînement : sans cela, la vue resterait
 	# unique dans un duel en écran partagé.
 	training_mode = false
@@ -1760,6 +1906,7 @@ func _process(delta):
 		_record_position_history()
 
 	_maj_brouillage()
+	_maj_adversaire_mobile(delta)
 
 	if round_active:
 		if countdown_left > 0.0:
@@ -5900,6 +6047,8 @@ func _on_main_menu_requested(target_screen: String = ""):
 		_archive_forfeit(1 - local_idx)
 
 	NetworkManager.disconnect_from_game()
+	# Après la déconnexion : le mode est alors local, et c'est lui qui dit quel fournisseur J2 reprend.
+	_quitter_l_adversaire_mobile(true)
 
 	# DA6.3 — la soirée s'arrête ici, et nulle part ailleurs. Après le
 	# désabonnement du transport : la carte lit l'historique, pas le réseau, et

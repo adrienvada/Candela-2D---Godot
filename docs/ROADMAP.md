@@ -3259,6 +3259,16 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un compteur incrémenté dans une lambda reste à zéro : une garde « jamais » peut être vide (2026-10-02)
+
+Chantier SOLO, S1. `test_bot_navigation` surveillait le bot pendant 60 s dans une lambda passée à `_simuler` : `var jamais := 0`, puis
+`jamais += 1` dans la lambda si le bot tirait. **Une lambda GDScript capture un entier PAR COPIE** : l'incrément se fait sur la copie, la
+variable de l'appelant reste à 0, et le contrôle `jamais == 0` passait quoi que fasse le bot. Rien ne le disait — pas d'erreur, pas
+d'avertissement. Ce n'est qu'en sabotant la garde (un bot qui tire dès qu'il marche) qu'elle est restée verte, seule des deux
+vérifications voisines ayant rougi. Remède : un tableau (`var jamais := [0]`, `jamais[0] += 1`), dont la lambda partage la
+référence. **Une garde de type « jamais » ne se croit qu'après l'avoir vue rougir** — c'est la règle de sabotage du dépôt, ici
+appliquée à une garde qu'on pensait écrite juste.
+
 ### Un banc qui ÉPARGNE une lumière ne la rallume pas : éteinte avant d'être déclarée gardée, elle le reste (2026-10-01)
 
 Gadgets en volume, GV2. Les braises de la nappe en cubes ne se voyaient sur aucune planche, et trois passages du banc ont
@@ -31407,7 +31417,7 @@ Adrien sous ces numéros par la coordinatrice le 2026-10-01) :
 ## Chantier — le mode solo : bot honnête, entraînement à crans, aventure (SOLO, inscrit le 2026-10-02)
 
 **Inscrit par une session cloud de brainstorm** (branche `ccr-50a162ad-e2u8lr`), sur trois échanges avec Adrien le
-2026-10-02. **Aucune ligne de code n'est écrite** : cette section consigne ce qui est tranché, l'ordre des étapes et
+2026-10-02. **Aucune ligne de code n'était écrite à l'inscription** (S1, faite le même jour, est la première : voir plus bas) : cette section consigne ce qui est tranché, l'ordre des étapes et
 les questions encore ouvertes. Les décisions elles-mêmes sont dans « Décisions actées », à la même date.
 
 **Pourquoi ce chantier.** Deux constats de « prêt à l'essai » y mènent. PE4 dit que la première minute décide de
@@ -31561,7 +31571,7 @@ choisie) dans `user://solo.cfg`.
 Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare du moteur de l'aventure.
 
 1. **S1 — le bot se déplace** sur n'importe quelle carte (immobile, ronde, zone, libre) ; l'entraînement gagne le
-   cran 2.
+   cran 2. ✅ **FAITE le 2026-10-02** — voir « S1 » ci-dessous.
 2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs.
 3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés.
 4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
@@ -31576,6 +31586,85 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
 le moteur de l'aventure et sa progression, `assets/solo/`. **Partagés, à demander avant d'écrire** (voir
 `docs/JOURNAL_SESSIONS.md`) : `game_state.gd` (le mode, l'apparition du bot), `ui.gd` et les écrans du hub (le choix du
 cran, l'aventure), `map_codec.gd`.
+
+### S1 — FAITE le 2026-10-02 : le bot se déplace, l'entraînement gagne son cran « adversaire mobile »
+
+**Ce qui existe.** `profil_bot.gd` (ressource de données ; l'axe déplacement seul : `IMMOBILE`, `RONDE`, `ZONE`, `LIBRE`, allure,
+torche — éteinte par défaut ; la place de l'axe perception-réflexes y est documentée, rien n'y est écrit), `navigation_bot.gd`
+(chemins sur la grille de cases, `AStarGrid2D`, fonctions pures), `bot_input_provider.gd` (un `InputProvider` qui ne commande que de
+la marche, une visée lissée et la torche du profil), le cran dans `ui.gd` (deux entrées à coche, « CIBLE IMMOBILE » par défaut, qui
+remplacent le placeholder « CIBLE » ; `selected_training_cran()`) et dans `game_state.gd` (`_poser_l_adversaire_mobile`,
+`_maj_adversaire_mobile`, `_quitter_l_adversaire_mobile`). **`protocol.gd` et `Protocol.VERSION` n'ont pas bougé** : rien ne transite ;
+aucun `if transport == …` ; le nœud porte un nom (`BotP2`). Le cran 3 n'a ni entrée ni texte : sa valeur d'énumération est déjà la suivante.
+
+**Pourquoi chaque choix.**
+- **La grille est celle de la collision** : `MapGeometry.build_solid_grid()`. Le bot ne relit pas la carte à sa façon ; les murs bas y
+  sont des obstacles, qu'il contourne (il ne les enjambe pas en S1).
+- **« Praticable » n'est pas « libre ».** Le polygone de collision d'un joueur est un disque de 18 px de rayon — 36 px — dans des tuiles
+  de 35. Une case libre prise en étau entre deux solides opposés (un couloir, une brèche d'une tuile) est donc infranchissable pour un
+  corps ; sans cette règle le bot s'y coincerait. **Mesuré sur le vrai corps** (P1, physique réelle, 1,5 s de poussée vers chacune) :
+  les 8 cases de ce genre de l'Usine — le tunnel d'une tuile de la rangée 11, et son jumeau de la rangée 14 — arrêtent le joueur à
+  moins de 50 px ; aucune autre carte livrée n'en a. La garde garde cette prémisse : elle rougit si un jour le corps PASSE.
+- **Pas de diagonale qui rase un coin** (`DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES`), et les cases voisines d'un mur coûtent 1,6 fois plus :
+  à chemin presque égal, le bot préfère le milieu d'une salle au pied d'un mur. Le 1,6 est un chiffre de départ, non mesuré isolément.
+- **Rayon d'arrivée de 12 px.** Le nez du joueur dépasse de 28 px alors que le centre d'une case n'est qu'à 17,5 px du mur d'en face :
+  un bot qui arrive à plein régime butte ~10,5 px avant le centre. Mesuré par sabotage : à 2 px, le bot reste coincé jusqu'à
+  16,5 s sur la Croisée (`coin_nez`, ci-dessous).
+- **L'anti-blocage mesure la distance PARCOURUE, pas le déplacement net.** Première version : déplacement net sur 0,6 s ; elle a déclaré
+  « bloqué » un corps libre — un demi-tour légitime à l'arrivée d'une cible fait un net presque nul. S'y ajoute le temps passé sur une
+  même étape (1,2 s à pleine allure). Premier blocage : replanifier ; second de suite : une autre cible.
+- **ZONE enferme les chemins**, pas seulement les cibles : une grille d'A* par rectangle, mise en cache. Un bot qui part de l'extérieur
+  n'a qu'un chemin de TRANSIT, coupé à la première case qui entre dans la zone — sans cela un chemin tracé de dehors pouvait en
+  ressortir en contournant un mur. Un rectangle de taille nulle ne contraint rien (le profil se comporte en LIBRE, pas en statue).
+- **Allure 0,7 pour le cran mobile** : à 1,0 le joueur ne rattrape jamais le bot en ligne droite. Chiffre de départ ; S4 le tranchera.
+- **Le bot revient 2 s après sa mort**, sur l'une des 15 % de cases atteignables les plus éloignées du joueur (jamais dans une poche d'où il
+  ne sortirait pas) ; au lancement, à l'apparition de J2 s'il est à 8 cases ou plus du joueur, sinon comme à la réapparition. Valeurs de départ.
+- **J2 est rendu par `_apply_network_mode()`**, jamais deviné : tout chemin de départ de match y passe ; `_do_start_round` rappelle
+  `_quitter_l_adversaire_mobile()` en ceinture, et le retour au menu recache J2 (sans collision) comme la cible immobile le laisse.
+- **Le bot n'est pas un adversaire pour la règle du sang** : l'empreinte de l'entraînement ne lit pas le cran. La garde prouve que le
+  sang d'une même carte survit au passage au cran mobile, et au retour.
+
+**Les gardes.** `tools/test_bot_navigation.gd` (`--script`, sans scène, 126 vérifications) et `tools/test_entrainement_bot.gd` (le jeu
+monté, vrai corps, vraie physique, **à pas d'image fixe** — `--fixed-fps 60`, posé par `run_suites.sh` ; sans lui les « secondes
+simulées » ne mesurent rien, et la suite le vérifie elle-même en comptant les pas de physique). Ensemble elles couvrent : mêmes cases
+libres que la collision, chemins au hasard sans solide/mur bas/coin/étau, RONDE dans l'ordre, ZONE jamais hors du rectangle, même
+graine = même suite, aucune commande autre que la marche, anti-blocage ; puis, sur les six cartes livrées, 20 s simulées par carte :
+distance parcourue, case libre sous le centre du corps à chaque image, jamais bloqué, aucune balle, torche éteinte ; la mort et le retour ;
+le tunnel de l'Usine (le bot le contourne et arrive) ; le retour à la cible ; l'écran scindé après le cran mobile, J2 EXACTEMENT comme
+avant tout entraînement (comparaison d'un instantané : fournisseur et device, visibilité, collisions, vie, rotation, position, arme,
+munitions). Mesuré le 2026-10-02, sur les six cartes : 3 602 à 3 640 px en 20 s (le maximum à 0,7 est 3 640), pire immobilité 0,08 à
+0,15 s, zéro blocage détecté. Les seuils (1 200 px, 3 s) sont donc très larges : ils ne rougissent que sur un vrai piégeage.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** Sur `test_bot_navigation` : les murs bas
+laissés passer (rouge sur chaque carte semée, « traverse un mur bas ») ; les diagonales toujours permises (« rase un coin ») ; la règle
+des étaus retirée ; les chemins de ZONE non enfermés ; les cibles de ZONE tirées hors du rectangle ; l'ordre de la RONDE changé ; la graine
+remplacée par `randomize()` ; un bot qui tire dès qu'il marche ; l'anti-blocage désactivé ; la torche allumée par défaut. Sur
+`test_entrainement_bot` : le fournisseur de J2 non restitué ; la ceinture de `_do_start_round` retirée (le départ direct d'une manche garde
+le bot) ; la cible laissée visible au cran mobile ; pas de réapparition ; réapparition à l'apparition de J2 quand le joueur s'y tient ; le
+sang lisant le cran (l'empreinte) ; J2 non recaché au retour au menu ; visuels non rendus à la réapparition ; la règle des étaus retirée
+(le bot reste au bord du tunnel) ; le rayon d'arrivée à 2 px ; un bot qui tire. **Trois fois un sabotage ou une garde n'a PAS rougi du
+premier coup, et c'est instructif** : le sabotage « sang » écrit sur un drapeau que `_do_start_round` venait de remettre à faux (il ne
+mordait pas : réécrit sur le cran de l'écran) ; la réapparition « loin du joueur » passait vraie parce que le joueur était déjà loin du
+point d'apparition (la garde place maintenant le joueur SUR ce point) ; et le contrôle « jamais tir » du premier jet était **vide** —
+voir « Un compteur incrémenté dans une lambda reste à zéro » aux pièges.
+
+**Ce qui n'est pas prouvé.**
+- **Jamais joué manette en main, ni vu en situation.** Tout est prouvé headless, à pas d'image fixe, sur le vrai corps. Une capture sous
+  Xvfb montre bien le bot, visible en iso sur la Cloître ; ni la lisibilité dans le noir, ni 0,7 comme allure, ni 2 s de réapparition n'ont
+  été jugés par quiconque.
+- RONDE et ZONE ne sont éprouvées qu'avec un point matériel (`test_bot_navigation`) et, pour la ronde, sur le tunnel de l'Usine : le vrai
+  corps ne les a pas parcourues sur toutes les cartes. LIBRE, lui, l'a été partout. S7 les exigera.
+- Aucune carte livrée ne porte de mur bas : la garde « jamais un mur bas » rejoue ses chemins sur ces cartes **semées** de murs bas (une
+  case de sol sur neuf) et sur une carte fabriquée, mais le vrai corps n'a jamais contourné un mur bas.
+- Le bot ne porte que la classe 0 (Parasite) ; son arme n'est jamais utilisée.
+
+**Signalé, pas corrigé.**
+- **Un couloir ou une brèche d'une tuile est infranchissable pour tout joueur** (corps de 36 px, tuile de 35). L'éditeur de cartes ne le
+  dit pas (`check_playable` ne le contrôle pas), et l'Usine en contient. Hors périmètre.
+- Abattre le bot déclenche les effets de mort d'un joueur (flash, bandeau « FATAL »), que l'entraînement n'avait jamais montrés puisque
+  personne n'y mourait ; **non vérifié à l'écran**. À voir à la main.
+- `game_state.gd` et `ui.gd` sont « partagés, à demander avant d'écrire » (`docs/JOURNAL_SESSIONS.md`) : S1 y a écrit sur ordre du chantier ;
+  l'entrée au journal est à tenir par la session qui le tient.
 
 ### Questions
 

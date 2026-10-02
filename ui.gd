@@ -954,6 +954,21 @@ var _entree_changer_carte: Dictionary = {}
 ## carte : choisir une carte y ENCHAÎNE (`_on_map_chosen`).
 var _entree_preparer: Dictionary = {}
 
+## Les crans de l'entraînement — chantier SOLO, étape S1. Un cran dit CONTRE QUI l'on s'entraîne :
+## la cible fixe d'avant, ou un adversaire qui marche dans le noir. Le cran 3, « adversaire qui tire s'il voit
+## ou entend » (S3), viendra à la suite : sa valeur est déjà la suivante, et son entrée n'existe pas — une
+## entrée qui promettrait un adversaire que personne n'a écrit serait le mensonge que cet écran vient de
+## retirer (le placeholder « CIBLE », qui annonçait « la cible mouvante »).
+##
+## Le défaut est la cible immobile, et **le choix ne se mémorise pas d'une session à l'autre** : le jeu
+## s'ouvre sur ce qu'il a toujours proposé. `game_state.gd` lit `selected_training_cran()` au lancement et
+## nulle part ailleurs — l'écran ne connaît pas le bot.
+const CRAN_CIBLE_IMMOBILE := 0
+const CRAN_ADVERSAIRE_MOBILE := 1
+var training_cran: int = CRAN_CIBLE_IMMOBILE
+## L'entrée de chaque cran, pour y repeindre la coche.
+var _entree_cran: Dictionary = {}
+
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
 var p1_vbox: Control
@@ -4218,7 +4233,8 @@ func _build_hub_screens() -> void:
 		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD, "", "", false,
 		"ill_competitif"))
 	accueil.add_child(hub.make_entry("S'ENTRAÎNER",
-		"Seul, contre une cible. De quoi prendre une arme en main sans enjeu.",
+		"Seul, contre une cible ou un adversaire qui marche. De quoi prendre une "
+		+ "arme en main sans enjeu.",
 		SCREEN_TRAINING, COLOR_ACCENT, "", "", false, "ill_entrainement"))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM,
@@ -4358,15 +4374,24 @@ func _build_hub_screens() -> void:
 
 	# --- S'entraîner ----------------------------------------------------------
 	_entree_preparer[SCREEN_TRAINING] = hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
-		"Seul, contre une cible fixe, sur la carte sélectionnée — celle de "
-		+ "l'affiche. La classe se choisit à droite, et le bouton qui lance "
-		+ "est dessous. Rien n'est enregistré ni classé. Échap pour revenir.",
+		"Seul, contre une cible fixe ou un adversaire qui marche — au choix, "
+		+ "juste dessous — sur la carte sélectionnée, celle de l'affiche. La "
+		+ "classe se choisit à droite, et le bouton qui lance est dessous. Rien "
+		+ "n'est enregistré ni classé. Échap pour revenir.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON)
 	entrainement.add_child(_entree_preparer[SCREEN_TRAINING])
-	entrainement.add_child(hub.make_entry("CIBLE",
-		"Réglages de la cible.", "", COLOR_DIM, "",
-		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
-		+ "réglages viendront avec la cible mouvante.", false, "ill_entrainement"))
+	# Les crans : deux entrées qui s'excluent, la coche dit laquelle est prise. Le geste est celui de toute
+	# entrée à action — un appui, un son, rien à apprendre ; la coche est celle de « ✓ PRÊT ».
+	_entree_cran[CRAN_CIBLE_IMMOBILE] = hub.make_entry(_libelle_du_cran(CRAN_CIBLE_IMMOBILE),
+		"Une cible fixe, au point d'apparition du joueur 2 : celui d'un vrai duel, pour que la distance et "
+		+ "la ligne de vue qu'on y travaille soient celles du premier échange. Elle compte les dégâts qu'elle "
+		+ "reçoit et ne bouge jamais.", "", COLOR_ACCENT, "cran_cible", "", false, "ill_entrainement")
+	entrainement.add_child(_entree_cran[CRAN_CIBLE_IMMOBILE])
+	_entree_cran[CRAN_ADVERSAIRE_MOBILE] = hub.make_entry(_libelle_du_cran(CRAN_ADVERSAIRE_MOBILE),
+		"Un adversaire qui marche dans le noir, partout sur la carte choisie — les vôtres comprises. Sa "
+		+ "torche est éteinte : on le trouve à ses pas. Il ne tire pas. Abattu, il revient au bout de deux "
+		+ "secondes, loin de vous.", "", COLOR_ACCENT, "cran_mobile", "", false, "ill_entrainement")
+	entrainement.add_child(_entree_cran[CRAN_ADVERSAIRE_MOBILE])
 	_entree_changer_carte[SCREEN_TRAINING] = hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS)
@@ -5206,6 +5231,10 @@ func _on_hub_action(action: String) -> void:
 		"entrainement":
 			get_tree().paused = false
 			training_requested.emit()
+		"cran_cible":
+			_choisir_le_cran(CRAN_CIBLE_IMMOBILE)
+		"cran_mobile":
+			_choisir_le_cran(CRAN_ADVERSAIRE_MOBILE)
 		# DA4.18 — `montrer_texte` et non `show_detail` : ces deux entrées
 		# promettent le cadre de droite dans leur propre libellé (« affichés à
 		# droite », « sans quitter cet écran »), et `show_detail` envoie à
@@ -5215,6 +5244,25 @@ func _on_hub_action(action: String) -> void:
 			hub.montrer_texte("MON RANG", _my_rank_text())
 		"top10":
 			hub.montrer_texte("TOP 10", _top_ten_text())
+
+## Le libellé d'un cran d'entraînement, avec la coche s'il est pris.
+func _libelle_du_cran(cran: int) -> String:
+	var nom := "CIBLE IMMOBILE" if cran == CRAN_CIBLE_IMMOBILE else "ADVERSAIRE MOBILE"
+	return ("✓ " if cran == training_cran else "") + nom
+
+
+## Prend un cran d'entraînement et repeint les coches. Ne lance rien : le bouton « LANCER L'ENTRAÎNEMENT »
+## reste le seul geste qui engage — choisir un cran puis en changer d'avis ne coûte aucune arène reconstruite.
+func _choisir_le_cran(cran: int) -> void:
+	training_cran = cran
+	for c in _entree_cran:
+		hub.set_entry_label(_entree_cran[c], _libelle_du_cran(c))
+
+
+## Le cran choisi à l'écran d'entraînement — ce que `game_state.gd` lit en lançant l'entraînement.
+func selected_training_cran() -> int:
+	return training_cran
+
 
 ## Ouvrir ou rejoindre un salon met fin à la recherche automatique.
 ##
