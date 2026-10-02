@@ -6148,3 +6148,9 @@ suivantes créeront (perception du bot, plafonnier, moteur de l'aventure, `asset
 **Partagés, touchés par insertions :** `game_state.gd` (le cran de l'entraînement, l'apparition du bot), l'écran
 d'entraînement de l'interface, `tools/run_suites.sh`. Aucune autre session n'était joignable par message au lancement
 (`ListAgents` vide) : qui tient ces fichiers sur une autre branche est prévenu par cette ligne.
+
+**Mise à jour du chantier SOLO, 2026-10-02 au soir.** S1 à S3 et S5 sont fusionnées sur `ccr-50a162ad-e2u8lr`. S5 (les plafonniers)
+a touché, par ajouts seulement, trois fichiers d'autres chantiers : `canaux_lumiere.gd` (`masque_ombre_neutre_pour_les_corps`),
+`lumieres_iso.gd` et `iso_volumes.gd` (le miroir 3D des plafonniers et leur luminaire). Rien de ce qu'ils faisaient ne change pour le
+duel : un plafonnier n'est posé que par le solo (garde `test_plafonniers`). Qui tient ces fichiers sur une autre branche : vérifier ces
+ajouts après sa prochaine fusion.

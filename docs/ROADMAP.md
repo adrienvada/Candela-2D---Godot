@@ -3260,6 +3260,17 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### `duo_apparie` peut échouer quand d'autres Godot chargent le conteneur : « la manche part à l'arrivée de l'invité » (2026-10-02, signalé)
+
+Chantier SOLO, suite complète sur S3 (`e884f5b`), lancée pendant que deux sous-agents faisaient tourner leurs propres suites sur les quatre
+cœurs du conteneur : `duo_apparie` a rougi une fois (« la manche n'a jamais démarré côté hôte », délai `ROUND_TIMEOUT` de 20 s de
+`tools/test_online_match.gd`). S3 ne touche à aucun chemin de départ d'un match apparié ; relancé SEUL sur le même commit
+(`./tools/run_duo.sh --apparie`), il passe trois fois sur trois, et il était vert sur S1 et S2. **Ce n'est donc pas une panne du code
+mais une fragilité du scénario sous charge** — et « flake » n'est pas une cause : la cause est le temps que met l'invité à démarrer
+quand le processeur est partagé. À retenir : une suite complète qui sert de preuve se lance sur un conteneur au repos ; un rouge de
+`duo_*` pris sous charge se relance seul avant d'être cru, et se signale. Non corrigé (hors périmètre : le scénario n'est pas du
+chantier).
+
 ### Une suite qui monte `main.tscn` ne se termine pas quand `game_state.gd` ne compile pas : elle attend, des heures (2026-10-02)
 
 Chantier SOLO, S3. Un `var cran := ui.selected_training_cran()` (`ui` est un `Node` non typé : le `:=` ne sait pas inférer) a fait échouer le
