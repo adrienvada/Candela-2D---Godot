@@ -202,7 +202,7 @@ func _salle_07() -> Dictionary:
 	var g := Grille.new(20, 20)
 	g.rect(1, 1, 12, 12, "#")
 	g.rect(17, 5, 2, 2, "#")
-	g.rect(10, 14, 2, 2, "#")
+	g.rect(10, 15, 2, 2, "#")
 	g.poser(16, 2, "J")
 	g.poser(15, 9, "1")
 	g.poser(17, 15, "2")

@@ -340,6 +340,15 @@ SUITES+=(test_aventure_format test_aventure_partie)
 # part, le corps s'accroupit et se replie). Elle exige l'horloge fixe : le `case` plus bas la lui donne, comme à `test_bot_combat`.
 SUITES+=(test_bot_equipement)
 
+# Chantier SOLO, S7 (2026-10-02) : le CONTENU du chapitre 0, « L'initiation » (`assets/solo/chapitre_00/`, écrit par
+# `tools/fabrique_chapitre_00.gd`). `test_chapitre_00` (en `--script`, sans partie) juge ce que chaque salle ENSEIGNE, mesuré sur ses
+# données avec les fonctions du jeu : chaque PNJ atteignable à pied, aucune ronde, aucun couloir d'une tuile ; 0.1 le PNJ dans la flaque
+# et en vue du départ ; 0.2 aucune lampe sur lui, le pilier le cache ; 0.3 plus de tirs que de balles au chargeur ; 0.4 un mur bas
+# entre chaque PNJ et le départ ; 0.5 hors de portée de torche du chemin du centre, tous au halo d'une fusée ; 0.6 des flaques sur le
+# chemin direct et un détour qui les évite ; 0.7 chaque tir vu d'un autre PNJ, un abri ; 0.8 aucune lampe ; 0.9 les quatre sortes de PNJ ;
+# 0.10 un duel en miroir.
+SUITES+=(test_chapitre_00)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
