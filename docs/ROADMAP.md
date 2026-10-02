@@ -2435,7 +2435,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Le mode solo : un bot HONNÊTE, trois crans d'entraînement en plus de la cible, une aventure par chapitres qui débloque les classes du solo** (2026-10-02, Adrien, à une session cloud de brainstorm, branche `ccr-50a162ad-e2u8lr` : « le mode solo doit permettre un mode d'aventure avec des niveaux de difficulté progressive, dont les premiers niveaux seraient l'initiation, mais également de jouer contre des bots en match d'entraînement » ; « l'adversaire doit être honnête : ne percevoir que les sons et la lumière » ; « il s'ajoute à l'entraînement actuel : on choisit la difficulté du bot : cible immobile, adversaire mobile, adversaire qui tire si vu ou entendu » ; puis « Oui le recalcul », « mets trois crans de difficulté en plus avec plus ou moins de réflexes », « chaque fin de chapitre débloque une classe pour le mode solo », « Le bot a pour l'instant la classe par défaut ») | **La difficulté vient des réflexes, jamais de l'information** : un bot qui verrait dans le noir trahirait la seule règle du jeu et enseignerait de mauvais réflexes. **La vue se calcule** plutôt que de relire les capteurs : leur relecture GPU→CPU à chaque image bloquerait le rendu, et un modèle se teste sans fenêtre — à condition de ne jamais voir PLUS que la lumière. **Un seul bot** à deux axes (déplacement, perception-réflexes) sert l'entraînement et l'aventure. **Le déblocage des classes du solo ne touche pas au rang** : en ligne, seul le rang débloque. Détail, étapes S1 à S7 et questions SOLO-Q1 à Q4 : « Chantier — le mode solo ». |
+| **Le solo, suite : un niveau est une salle, gagnée en éliminant tout le monde et recommencée à la mort ; des plafonniers qui ne s'éteignent pas ; dix chapitres de dix niveaux, le dixième étant un boss — le bot en difficulté normale, dans la classe que le chapitre débloque ; le chapitre 1 d'abord, écrit en données** (2026-10-02, Adrien, même session : « Oui il faut éliminer tout le monde » ; « les lumières fixes ne s'éteignent pas. Ce sont des plafonniers. Il faut les implémenter » ; « mourir on recommence la salle. La salle est un niveau » ; « prépare la structure du premier chapitre d'initiation pour l'instant. On verra ensuite : il faut faire dix chapitres, chacun contenant dix niveaux dont un boss final qui est juste un bot en mode moyen avec la classe qu'on débloque à la fin du chapitre » ; « le bot voit par le calcul ») | **Le boss est le bot de l'entraînement** (cran 3, normal) : aucun comportement de boss à écrire, et le joueur affronte au dixième niveau exactement ce qu'il retrouvera à l'entraînement. **Les plafonniers ont leur étape (S5)**, avant le moteur de l'aventure : ils servent trois fois — montrer les PNJ, trahir le joueur dans le modèle de vue du bot, porter ombre — et leur coût se mesure seul. **Le chapitre 1 est structuré niveau par niveau** (une chose nouvelle par salle, jusqu'au duel) dans « Chantier — le mode solo » ; étapes revues S1 à S9, questions ouvertes SOLO-Q5 à Q7 (ordre des classes, chapitre 10 sans classe à offrir, la ronde dès le niveau 1.9). |
+| **Le mode solo : un bot HONNÊTE, trois crans d'entraînement en plus de la cible, une aventure par chapitres qui débloque les classes du solo** (2026-10-02, Adrien, à une session cloud de brainstorm, branche `ccr-50a162ad-e2u8lr` : « le mode solo doit permettre un mode d'aventure avec des niveaux de difficulté progressive, dont les premiers niveaux seraient l'initiation, mais également de jouer contre des bots en match d'entraînement » ; « l'adversaire doit être honnête : ne percevoir que les sons et la lumière » ; « il s'ajoute à l'entraînement actuel : on choisit la difficulté du bot : cible immobile, adversaire mobile, adversaire qui tire si vu ou entendu » ; puis « Oui le recalcul », « mets trois crans de difficulté en plus avec plus ou moins de réflexes », « chaque fin de chapitre débloque une classe pour le mode solo », « Le bot a pour l'instant la classe par défaut ») | **La difficulté vient des réflexes, jamais de l'information** : un bot qui verrait dans le noir trahirait la seule règle du jeu et enseignerait de mauvais réflexes. **La vue se calcule** plutôt que de relire les capteurs : leur relecture GPU→CPU à chaque image bloquerait le rendu, et un modèle se teste sans fenêtre — à condition de ne jamais voir PLUS que la lumière. **Un seul bot** à deux axes (déplacement, perception-réflexes) sert l'entraînement et l'aventure. **Le déblocage des classes du solo ne touche pas au rang** : en ligne, seul le rang débloque. Détail, étapes S1 à S9 (revues le même jour) et questions SOLO-Q1 à Q4 : « Chantier — le mode solo ». |
 | **La 0.8.1 part : la fumée en cubes et ses volutes, la fusée qui éclaire loin à l'allumage ; candidat `claude/candidat-0.8.1`, publié par une session du Mac** (2026-10-01 vers 13:15, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Ok dis moi quoi prompter à la session locale pour mettre en ligne la version suivante ») | `config/version` passe de 0.8.0 à 0.8.1 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19) — `tools/verifier_publication.sh v0.8.1` contre le tag `v0.8.0` : « le fil n'a pas bougé : l'ancienne version peut continuer à jouer en ligne ». **Ce qui part** : les gadgets en volume — la fumée occultante en cubes « gros » par défaut (GV1, GV1bis), avec l'encre des volutes et son plancher (Q73 « volutes », Q74 « on garde ») ; Q58, la fusée qui, à l'allumage, éclaire jusqu'à la portée des torches (468 px) pendant 1 s puis revient à son halo à 3 s (Q78, la durée et la force, reste ouverte : la courbe part telle quelle, l'avis de la coordinatrice étant de la garder) ; Q77 « on garde » (468 px pour toutes les torches). **Ce qui ne part pas allumé** : GV2, les nappes au sol en cubes, reste un essai éteint par défaut (`--nappes-voxels`, débogage) tant qu'Adrien n'a pas répondu à Q79 et Q80. **La publication suit `docs/MISE_A_JOUR.md`** : `main` en avance rapide depuis `903b26e6` (la 0.8.0), puis le tag annoté `v0.8.1` sur le même hash, par une session du Mac sur le mot d'Adrien dit dans sa fenêtre ; la CI refait le contrôle, passe les suites, exporte, signe et publie ; la session cloud vérifie ensuite la signature et les archives. Suite complète verte sur le candidat. **Non mesuré sur le Mac** : la fumée en cubes coûtait 7 à 9 % de temps en moins que les couches dans le cloud (GV1bis), l'allumage de la fusée 2 % de plus pendant ses 3 s (Q58). |
 | **Q73 = l'encre de la fumée en cubes est celle des VOLUTES ; Q74 = son trait reste graphite, au plancher des murs** (2026-10-01 vers 09:10, Adrien, sur les planches de GV1bis, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent des gadgets en volume : « Q73 : volutes » ; « Q74 : on garde ») | **Q73** : les traits du dessin de la suie et de la poussière, drapés sur le tas (la fusée : deux lignes de niveau des volutes de son voile) — la recommandation de GV1bis, déjà le défaut ; les arêtes et les hachures restent pour les bancs (`--fumee-encre=`). **Q74** : aucun plancher plus bas pour la fumée seule — le trait obéit à la règle des murs « allumé reste allumé » (`IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée ; le reste de l'encre d'essai des murs, 0,12) : la lueur faible d'un nuage, qui est une information, ne s'éteint pas sous un trait. Rien ne change à l'image ; la suite garde désormais les deux décisions (`test_fumee_voxel` : l'encre par défaut EST les volutes, le reste du trait EST celui des murs). Noir et équité reprouvés après la fusion de la ligne publiée (chantier GV, « Q73 et Q74 »). |
 | **Q58 = à l'allumage, la fusée illumine loin : son halo porte aussi loin que les torches (468 px), le tient une seconde, puis revient à son empreinte habituelle avant la braise** (2026-10-01 vers 09:10, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin effectivement » — la question de la page des lumières de L1 : « La torche seule, ou toutes les lumières ? […] faut-il que le halo d'une fusée remplisse l'écran ? ») | **La courbe** (`FuseeModele.part_allumage_a`, `rayon_halo_a`), lue par la session coordinatrice et proposée par le sous-agent : à l'atterrissage — l'allumage, le début du plein feu — le rayon du halo passe de 220 px à la portée des torches (`PorteeEcran.portee_au_bord`, 468 px : le même calcul, sur le cadrage de la vue unique, dans tous les modes) ; il la TIENT le premier quart du plein feu (1 s sur 4), REVIENT par un `smoothstep` jusqu'aux trois quarts (3 s ; le bord rentre au plus de 186 px/s), et la braise (4 s) repart de l'empreinte habituelle. En vol, rien ne change. **L'énergie non plus** : le halo s'élargit, il ne brille pas davantage — l'éblouissement, qui lit l'énergie (rayon 400 px), ne bouge pas. **Rien sur le fil** : la courbe se dérive de l'âge de combustion, que les deux pairs simulent à l'identique ; la killcam la suit par le même chemin (`_appliquer_age`) ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-fusee-allumage` rend la fusée de la 0.8.0 (jamais en ligne). Le noir : rien au-delà du rayon ni derrière un mur, dans la lightmap des quatre vues, à six âges ; J1 = J2 ; l'allumage fini à 3 s, au pixel près (planches à six âges, avant/après basculés sur place). Mesuré dans le cloud pendant la bouffée (llvmpipe, la fusée tenue à 0,5 s) : 0,984 de la cadence de la 0.8.0 au cadrage du banc, 0,979 au vrai cadrage de la vue unique. Chantier « l'allègement de la 0.8.0 », § Q58. |
@@ -31447,7 +31448,7 @@ deux réglages indépendants d'un même **profil de bot** (une ressource de donn
 L'aventure monte dans ce tableau ; les crans de l'entraînement en sont quelques cases. On n'écrit qu'un bot.
 
 **Le bot porte la classe par défaut** (Adrien : « On verra ensuite pour les pimper et leur affecter de nouvelles
-classes ») : pas de gadget à lui tant que S7 n'est pas ouvert.
+classes ») : pas de gadget à lui tant que S9 n'est pas ouvert.
 
 ### L'entraînement : il s'AJOUTE à l'existant
 
@@ -31467,54 +31468,115 @@ cachés, avec de plus en plus de mouvement. Mais d'abord immobiles, ensuite mobi
 libres par zone ». Puis : « une suite de salles avec un boss final par chapitre, et chaque fin de chapitre débloque une
 classe pour le mode solo. On peut choisir librement sa classe une fois débloquée dans le mode solo. »
 
-Ébauche des chapitres (proposition, non validée salle par salle) :
+**Les règles d'un niveau** (Adrien, 2026-10-02, réponses à SOLO-Q1 à Q4) :
 
-| Chapitre | Les PNJ | Ce qu'on apprend |
-|---|---|---|
-| 1 | Immobiles, sourds et aveugles | Trouver dans le noir, la torche, tirer |
-| 2 | Immobiles qui ripostent s'ils voient | Ne pas être vu : éteindre, contourner les lumières fixes |
-| 3 | Rondes répétitives | Lire un trajet, choisir son moment |
-| 4 | Rondes, et ils entendent | S'accroupir, ralentir, ses propres douilles |
-| 5 | Libres dans une zone | Ils vont voir d'où vient un bruit, poursuivent jusqu'à la limite |
-| 6 | Libres partout, en groupe | Ils cherchent et se souviennent |
-| 7 | Duel final | Un bot complet |
+- **Un niveau = une salle.** « La salle est un niveau. »
+- **On l'emporte en éliminant tout le monde.** « Oui il faut éliminer tout le monde » : pas de sortie à atteindre, pas
+  de salle qu'on traverse sans tirer.
+- **Mourir recommence la salle**, pas le chapitre.
+- **Dix chapitres de dix niveaux.** Le dixième de chaque chapitre est le **boss** : « juste un bot en mode moyen avec
+  la classe qu'on débloque à la fin du chapitre » — le cran 3 de l'entraînement, difficulté normale, dans la classe que
+  le chapitre offre. Le boss est donc le **même bot** que l'entraînement : aucun comportement de boss à écrire.
+- **Les salles sont écrites en données par les sessions**, en commençant par le chapitre 1. L'éditeur de cartes n'est
+  pas étendu pour l'instant (« On verra ensuite »).
+
+**L'échelle des PNJ d'un chapitre à l'autre** reste celle d'Adrien — immobiles, puis rondes répétitives, puis libres
+par zone, puis libres partout —, répartie sur les dix chapitres quand on les écrira. Seul le chapitre 1 est détaillé
+ci-dessous.
+
+**L'ordre des classes, proposé et non tranché (SOLO-Q5)** : celui du rang, pour que le solo prépare à l'ordre où l'on
+débloque en ligne. Le Parasite (rang 1) est la classe par défaut ; le chapitre 1 débloque **le Fumiste** (rang 2), le 2
+l'Illusionniste, le 3 le Braconnier, le 4 le Terrassier, le 5 l'Incendiaire, le 6 la Sentinelle, le 7 l'Occulteur, le 8
+l'Allumeur, le 9 le Spectre. ⚠️ **Il y a dix chapitres et neuf classes à débloquer** : le chapitre 10 n'a pas de classe à
+offrir (SOLO-Q6).
+
+**Le boss porte sa classe, pas encore son gadget.** Un bot ne pose de gadget qu'à partir de S9 ; d'ici là le boss du
+chapitre 1 a l'arme, la torche et le root du Fumiste, sans sa fumée. Le dire au joueur serait mentir sur la classe qu'il
+gagne : S9 doit précéder la publication des chapitres, ou le boss attend.
 
 **Le déblocage des classes est propre au solo.** Il ne touche ni `RankLoadout` ni le rang : en ligne, seul le rang
 débloque (Phase 7, règle du miroir en classé). Les matchs solo n'alimentent pas l'ELO ; leur archive dans
 `match_history.json`, s'ils y vont, doit les marquer comme tels pour que le rejeu du journal (Phase 4, étape 2c) ne les
 envoie jamais.
 
-**Ce qui manque au format de carte.** Le format v3 (`map_codec.gd`) ne connaît que les cases et deux points
-d'apparition. L'aventure lui ajoute une **couche à part** — lumières fixes, PNJ (case, déplacement, points de ronde ou
-zone, profil), objectif et sortie de salle — sans toucher au code de partage des cartes de duel. ⚠️ Beaucoup de
-lumières fixes à ombres coûtent cher : n'allumer que celles proches du joueur, à mesurer dès S5 (au banc de cadence
-du cloud, sans relevé demandé sur le Mac).
+### Les plafonniers — les lumières fixes de l'aventure
+
+Adrien : « les lumières fixes ne s'éteignent pas. Ce sont des plafonniers. Il faut les implémenter. » Un plafonnier est
+une **lumière posée, permanente et indestructible**, qui dessine au sol une flaque de lumière cernée de noir. Il a trois
+rôles, qui ne valent qu'ensemble :
+
+- **il montre les PNJ** qui s'y tiennent, au joueur comme à la caméra iso ;
+- **il trahit le joueur** qui le traverse : le modèle de vue du bot (S2) le compte parmi les lumières connues, au même
+  titre que la torche ou l'éclair d'un tir ;
+- **il porte ombre** : les murs le coupent comme ils coupent la torche (la règle de `map_geometry.gd` — collision et
+  occlusion tirées des mêmes rectangles — s'applique à lui sans rien ajouter).
+
+Ce qu'il n'est pas : ni une torche (pas de cône, pas d'éblouissement — à confirmer au premier essai), ni un objet du
+duel en ligne. Il vit dans la couche aventure, et n'entre dans les cartes de duel que si Adrien le demande un jour, avec
+une montée de `Protocol.VERSION`. ⚠️ Coût : une lumière à ombres de plus par plafonnier ; n'allumer que ceux proches du
+joueur, mesuré au banc de cadence du cloud dès l'étape S5.
+
+### Le chapitre 1 — l'initiation
+
+**Ce qu'il doit faire** : amener un joueur qui n'a jamais touché le jeu à battre, au niveau 10, un bot en difficulté
+normale. Chaque niveau enseigne **une seule chose nouvelle**, et la salle la rend nécessaire plutôt que de l'expliquer :
+une phrase d'intention à l'entrée, aucune flèche, aucun texte pendant le jeu. Le joueur joue le Parasite (la seule classe
+débloquée). Salles petites (de l'ordre de 16×16 à 24×24 cases), une seule pièce chacune, sauf le boss.
+
+| Niveau | Titre provisoire | Ce qu'on apprend | La salle | Les PNJ |
+|---|---|---|---|---|
+| 1.1 | Le premier pas | Se déplacer, viser, tirer | Un plafonnier au centre, rien d'autre | 1, immobile, sourd et aveugle, sous le plafonnier, vu dès l'entrée |
+| 1.2 | La torche | La torche révèle | Aucun plafonnier près du PNJ | 1, immobile, sourd et aveugle, dans le noir derrière un pilier |
+| 1.3 | Fouiller | Chercher méthodiquement, recharger | Plusieurs recoins, un plafonnier | 3, immobiles, sourds et aveugles, dispersés ; il faut recharger avant le dernier |
+| 1.4 | Les murs bas | Enjamber, s'accroupir derrière un mur bas | Murs bas en chicane | 2, immobiles, sourds et aveugles, derrière des murs bas |
+| 1.5 | La fusée | Éclairer loin | Une grande salle sans plafonnier | 3, immobiles, sourds et aveugles, hors de portée de torche |
+| 1.6 | Il regarde | La torche trahit : s'approcher éteint, contourner les plafonniers | Deux plafonniers sur le chemin | 1, immobile, **voit et tire**, réflexes très lents |
+| 1.7 | L'éclair | Le tir trahit : changer de place après avoir tiré | Salle en L | 3, immobiles, voient et tirent, réflexes lents ; chaque tir réveille les autres |
+| 1.8 | Il écoute | S'accroupir, avancer lentement, ses douilles | Sol nu, pas de plafonnier | 2, immobiles, **entendent** et tirent, réflexes lents |
+| 1.9 | La ronde | Une cible qui bouge, choisir son moment | Un couloir éclairé que la ronde traverse | 1 en ronde répétitive, voit et entend ; 1 immobile qui entend |
+| 1.10 | Boss : le Fumiste | Le duel | Une arène de duel (32×32), deux plafonniers | 1 bot, cran 3, difficulté normale, classe Fumiste (sans gadget avant S9) |
+
+⚠️ **Le niveau 1.9 anticipe la ronde**, que l'échelle d'Adrien réserve en principe aux chapitres suivants : sans elle,
+le chapitre passe de cibles immobiles à un duel libre, sans marche intermédiaire. C'est une proposition (SOLO-Q7).
+
+**Le format d'un niveau**, proposé pour S6 et non écrit : un fichier par niveau dans `res://assets/solo/chapitre_01/`
+(en lecture seule, comme `assets/maps/`), qui porte la carte au format de `map_codec.gd` et la couche aventure — titre,
+phrase d'intention, case et orientation du joueur, plafonniers (case, rayon, intensité), PNJ (case, orientation,
+déplacement — `immobile`, `ronde` avec ses points, `zone` avec son rectangle, `libre` —, profil de perception et de
+réflexes) ; pour le boss, la classe et la difficulté. La progression (niveaux réussis, classes débloquées, classe
+choisie) dans `user://solo.cfg`.
 
 ### Les étapes
+
+Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare du moteur de l'aventure.
 
 1. **S1 — le bot se déplace** sur n'importe quelle carte (immobile, ronde, zone, libre) ; l'entraînement gagne le
    cran 2.
 2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs.
 3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés.
 4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
-5. **S5 — la couche aventure** : lumières fixes, PNJ, sorties, enchaînement des salles, progression sauvegardée
-   (`user://`), déblocage des classes solo, choix libre parmi les classes débloquées.
-6. **S6 — le chapitre 1** et son boss, puis un chapitre par étape.
-7. **S7 — le bot s'équipe** : torche maîtrisée, fusée, gadget, d'autres classes.
+5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot, son coût mesuré.
+6. **S6 — le moteur de l'aventure** : format de niveau, chargement, « tout le monde éliminé » → niveau suivant, mort →
+   on recommence la salle, progression sauvegardée, déblocage des classes solo, choix libre parmi elles.
+7. **S7 — le chapitre 1**, ses dix niveaux et son boss.
+8. **S8 — les chapitres 2 à 10**, un par lot.
+9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent).
 
-**Fichiers.** Neufs, en propre au chantier : le fournisseur d'entrées du bot, son profil, sa perception, la couche
-aventure et sa progression. **Partagés, à demander avant d'écrire** (voir `docs/JOURNAL_SESSIONS.md`) : `game_state.gd`
-(le mode, l'apparition du bot), `ui.gd` et les écrans du hub (le choix du cran, l'aventure), `map_codec.gd`.
+**Fichiers.** Neufs, en propre au chantier : le fournisseur d'entrées du bot, son profil, sa perception, le plafonnier,
+le moteur de l'aventure et sa progression, `assets/solo/`. **Partagés, à demander avant d'écrire** (voir
+`docs/JOURNAL_SESSIONS.md`) : `game_state.gd` (le mode, l'apparition du bot), `ui.gd` et les écrans du hub (le choix du
+cran, l'aventure), `map_codec.gd`.
 
-### Questions ouvertes (numérotées à part, SOLO-Q1 à Q4, pour ne pas croiser la série Q de la coordinatrice)
+### Questions
 
-- **SOLO-Q1 — l'objectif d'une salle** : neutraliser tous les PNJ, atteindre la sortie, ou selon la salle (une salle
-  qu'on traverse sans tuer personne) ?
-- **SOLO-Q2 — les lumières fixes s'éteignent-elles d'une balle ?** On fabriquerait son propre noir, mais le coup
-  s'entend.
-- **SOLO-Q3 — mourir** : on recommence la salle, ou le chapitre ?
-- **SOLO-Q4 — qui fabrique les salles** : écrites en données par une session, ou l'éditeur de cartes étendu (poser
-  lampes et PNJ, tracer les rondes) pour qu'Adrien les dessine ?
+**Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),
+SOLO-Q3 (on recommence la salle), SOLO-Q4 (écrites en données, chapitre 1 d'abord ; dix chapitres de dix niveaux, boss
+au dixième). **Ouvertes** :
+
+- **SOLO-Q5 — l'ordre des classes débloquées** : celui du rang (Fumiste au chapitre 1 … Spectre au chapitre 9) ?
+- **SOLO-Q6 — le chapitre 10** : neuf classes à débloquer pour dix chapitres. Que gagne-t-on au dernier, et quelle
+  classe porte son boss ?
+- **SOLO-Q7 — la ronde dès le niveau 1.9**, pour préparer le duel du boss ?
 
 ---
 
