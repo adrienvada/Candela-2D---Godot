@@ -385,10 +385,13 @@ func _les_profils() -> void:
 	_check("la visée tourne plus vite (%.0f < %.0f < %.0f rad/s) et tolère moins d'écart au tir" % [f.vitesse_visee, n.vitesse_visee, d.vitesse_visee],
 		f.vitesse_visee < n.vitesse_visee and n.vitesse_visee < d.vitesse_visee
 		and f.tolerance_tir_deg > n.tolerance_tir_deg and n.tolerance_tir_deg > d.tolerance_tir_deg)
-	_check("les rafales sont plus longues et les pauses plus courtes ; l'audace grandit",
-		f.tirs_par_rafale < n.tirs_par_rafale and n.tirs_par_rafale < d.tirs_par_rafale
-		and f.pause_entre_rafales > n.pause_entre_rafales and n.pause_entre_rafales > d.pause_entre_rafales
-		and f.audace_zone_px < n.audace_zone_px and n.audace_zone_px < d.audace_zone_px)
+	_check("les rafales sont plus longues et les pauses plus courtes",
+		f.tirs_par_rafale <= n.tirs_par_rafale and n.tirs_par_rafale <= d.tirs_par_rafale and f.tirs_par_rafale < d.tirs_par_rafale
+		and f.pause_entre_rafales > n.pause_entre_rafales and n.pause_entre_rafales > d.pause_entre_rafales)
+	# S4 : l'audace n'est PLUS un réflexe qui varie. « Tire si vu ou entendu » vaut pour les trois (décision d'Adrien) : la difficulté
+	# règle QUAND et AVEC QUELLE JUSTESSE, jamais SI. S3 l'avait fait varier de 40 à 140 px et FACILE ne tirait jamais sur un pas à 400 px.
+	_check("l'audace est la MÊME pour les trois difficultés (%.0f px) : la difficulté ne change pas SI le bot tire sur un son" % n.audace_zone_px,
+		is_equal_approx(f.audace_zone_px, n.audace_zone_px) and is_equal_approx(n.audace_zone_px, d.audace_zone_px) and n.audace_zone_px >= 68.0)
 	_check("une difficulté inconnue retombe sur NORMAL (le défaut de l'écran, et celui du boss de l'aventure)",
 		is_equal_approx(Profil.pour_adversaire_qui_tire(99).delai_reaction, n.delai_reaction))
 
@@ -513,7 +516,7 @@ func _la_difficulte() -> void:
 	var N := Profil.Difficulte.NORMAL
 	var D := Profil.Difficulte.DIFFICILE
 	_check("le difficile réagit plus vite que le facile (%.2f s contre %.2f s), le normal entre les deux" % [delais[D], delais[F]],
-		delais[D] + 0.25 < delais[F] and delais[D] <= delais[N] + 0.02 and delais[N] <= delais[F] + 0.02)
+		delais[D] + 0.1 < delais[F] and delais[D] <= delais[N] + 0.02 and delais[N] <= delais[F] + 0.02)
 	_check("le difficile vise plus juste que le facile (%.1f ° contre %.1f ° d'écart moyen à la vraie place)" % [erreurs[D], erreurs[F]],
 		erreurs[D] < erreurs[F] - 1.0)
 
@@ -854,23 +857,40 @@ func _enquete_recherche_oubli() -> void:
 # ---------------------------------------------------------------------------
 
 func _l_audace() -> void:
-	print("\n[La prudence : tirer sur une zone entendue, ou non]")
-	var resultats := {}
-	for d in [Profil.Difficulte.FACILE, Profil.Difficulte.DIFFICILE]:
-		var tirs_totaux := 0
+	print("\n[La prudence : tirer sur une zone entendue, ou non — la même pour les trois difficultés (S4)]")
+	var audio: Node = root.get_node("AudioManager")
+	var proche := {}
+	var lointain := {}
+	var entendus_loin := {}
+	for d in [Profil.Difficulte.FACILE, Profil.Difficulte.NORMAL, Profil.Difficulte.DIFFICILE]:
+		var tirs_proche := 0
+		var tirs_lointain := 0
+		var sons_loin := 0
 		for graine in [2, 3, 4]:
+			# Un pas à 350 px : une zone de ~55 px de rayon. « Tire si vu ou entendu » : les trois difficultés tirent dessus.
 			var r := _rig(_profil(d, {}, true), c(8, 15), c(34, 25), graine)
 			await _derouler(r, 6)
-			var audio: Node = root.get_node("AudioManager")
-			# Un pas à 350 px : une zone de ~55 px de rayon (audace du facile : 40 ; du difficile : 140).
 			audio.son_localise.emit(_evenement("footstep", c(18, 15), 0))
-			await _derouler(r, 180)
-			tirs_totaux += r.tireur.tirs.size()
+			await _derouler(r, 240)
+			tirs_proche += r.tireur.tirs.size()
 			r.liberer()
-		resultats[d] = tirs_totaux
-		print("    · difficulté %d : %d coups sur un pas entendu à 350 px (trois graines)" % [d, tirs_totaux])
-	_check("sur une zone entendue de ~55 px, le facile (audace 40 px) ne tire jamais", resultats[Profil.Difficulte.FACILE] == 0, str(resultats))
-	_check("… et le difficile (audace 140 px) tire", resultats[Profil.Difficulte.DIFFICILE] > 0, str(resultats))
+			# Un pas à ~980 px (28 cases) : une zone de plusieurs centaines de pixels, bien au-delà de l'audace : aucun ne tire dessus.
+			var l := _rig(_profil(d, {}, true), c(2, 4), c(34, 25), graine)
+			await _derouler(l, 6)
+			audio.son_localise.emit(_evenement("footstep", c(30, 4), 0))
+			await _derouler(l, 240)
+			tirs_lointain += l.tireur.tirs.size()
+			sons_loin += l.bot.perception.sons_entendus
+			l.liberer()
+		proche[d] = tirs_proche
+		lointain[d] = tirs_lointain
+		entendus_loin[d] = sons_loin
+		print("    · difficulté %d : %d coups sur un pas entendu à 350 px, %d sur un pas à ~980 px (trois graines)" % [d, tirs_proche, tirs_lointain])
+	for d in [Profil.Difficulte.FACILE, Profil.Difficulte.NORMAL, Profil.Difficulte.DIFFICILE]:
+		_check("(difficulté %d) sur un pas entendu à 350 px — « adversaire qui tire si vu ou ENTENDU » — il tire" % d, proche[d] > 0, str(proche))
+		_check("(difficulté %d) … le pas à 980 px est bel et bien ENTENDU (une zone gardée, sinon l'absence de tir ne prouverait rien)" % d,
+			entendus_loin[d] == 3, str(entendus_loin))
+		_check("(difficulté %d) … mais il ne tire pas dessus : sa zone est trop vague pour valoir de se trahir" % d, lointain[d] == 0, str(lointain))
 
 
 # ---------------------------------------------------------------------------

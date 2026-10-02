@@ -161,6 +161,22 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 ## renumérotées : `ui.gd` en garde les mêmes entiers (une garde les compare).
 enum Difficulte { FACILE, NORMAL, DIFFICILE }
 
+## Les PALIERS DE RÉFLEXES, du plus lent au plus vif — S4. Les trois difficultés de l'entraînement en sont les trois derniers ;
+## les deux premiers sont ceux des PNJ de l'initiation, qui doivent laisser à un débutant le temps de réagir. **Une seule table**
+## (`appliquer_les_reflexes`) sert l'entraînement, les PNJ et le boss : « les mêmes paliers de réflexes » d'un bout de l'aventure à
+## l'autre. ⚠️ Valeurs ajoutées en fin d'enum, jamais renumérotées : un fichier de niveau les écrira par leur entier.
+enum Palier { TRES_LENT, LENT, FACILE, NORMAL, DIFFICILE }
+
+## Ce que perçoit un PNJ — S4. Un PNJ qui ne perçoit rien (`AUCUN`) ne réagit à rien et ne tire jamais : c'est un but, pas un
+## adversaire. Les trois autres tirent « si vu ou entendu » (décision d'Adrien), chacun avec ses sens.
+enum Sens { AUCUN, VUE, OUIE, VUE_ET_OUIE }
+
+## **L'audace est la même pour tout le monde — la difficulté règle QUAND il tire et AVEC QUELLE JUSTESSE, jamais SI.** (S4 ; S3
+## l'avait fait varier de 40 à 140 px, et FACILE ne tirait alors jamais sur un pas entendu à 350-400 px, ce que la décision d'Adrien
+## — « adversaire qui tire si vu ou entendu » — interdit.) 100 px de zone : un pas entendu jusqu'à ~480 px (zone de 68 px à 400),
+## un tir jusqu'à ~1 100 px. Un bot lent qui tire sur ce qu'il a entendu manque : sa visée est large, ses rafales rares.
+const AUDACE_ZONE_PX := 100.0
+
 ## Le profil du cran 2 de l'entraînement, « adversaire mobile » : il circule partout sur la
 ## carte, torche éteinte, et ne tire jamais.
 ##
@@ -176,26 +192,94 @@ static func pour_entrainement_mobile() -> ProfilBot:
 	return p
 
 
-## Le profil du cran 3 de l'entraînement, « adversaire qui tire » — S3. Il circule comme celui du cran 2 (LIBRE, allure 0,7,
-## torche éteinte : la torche tactique est pour S9), VOIT et ENTEND, réagit et tire.
+## Règle les RÉFLEXES d'un profil sur un palier — et rien d'autre : ni la perception, ni le déplacement, ni l'audace (la même
+## partout). Le tableau est celui du banc de jeu (`tools/banc_bot_difficulte.gd`, S4) ; ses chiffres, et pourquoi, sont dans la ROADMAP.
 ##
-## **Seuls les RÉFLEXES changent d'une difficulté à l'autre.** Mêmes champs de perception (voit, entend, précision de l'oreille,
-## délai d'oubli), même déplacement, même allure : un bot facile n'est pas aveugle ni sourd, il est lent et approximatif — ce
-## qu'un joueur apprend contre lui vaut contre les deux autres.
+##                       TRES_LENT  LENT   FACILE  NORMAL  DIFFICILE
+##   délai de réaction     1,20     0,80    0,40    0,26    0,235   s
+##   erreur de visée         25       20     11      7,5      6,9    ° (au départ)
+##   … plancher              10        7      3       2      1,45    °
+##   … resserrement         4,0      3,5    2,5     1,8     1,48    s
+##   vitesse de visée        2       2,5     5       8      9,25    rad/s
+##   tolérance de tir       12       10      7      4,5     3,95    °
+##   rafale                  1        1      2       2        3     coups
+##   pause de rafale        2,5      2,0    0,9     0,55    0,49    s
 ##
-## ⚠️ **Chiffres de DÉPART, non mesurés en jeu** (S4 les réglera). L'ordre de grandeur : le délai d'un joueur humain à un signal
-## net est de l'ordre de 0,25 s ; le facile est franchement lent, le difficile à peine plus vif qu'un bon joueur.
+## ⚠️ **Plus lent n'est pas plus sûr pour qui AVANCE** : un TRÈS_LENT à 1,5 s (erreur 30° → 12°) laissait à un débutant 79 à 88 % de victoires
+## contre un PNJ qui entend, là où 1,2 s lui en laisse 98 à 100 % — tirer tard, c'est tirer sur quelqu'un qui est arrivé à bout portant.
 ##
-##                       FACILE   NORMAL   DIFFICILE
-##   délai de réaction    0,60     0,35      0,18   s
-##   erreur de visée       18       10         5     ° (au départ)
-##   … plancher            5        2,5       0,8    °
-##   … resserrement        3,0      2,0       1,2    s
-##   vitesse de visée      3        6         12     rad/s
-##   tolérance de tir      10       6         3      °
-##   rafale                1        2         3      coups
-##   pause de rafale       1,4      0,8       0,4    s
-##   audace (zone)         40       80        140    px
+## Les trois derniers paliers (FACILE, NORMAL, DIFFICILE) sont ceux de l'entraînement, réglés pour que le joueur type du banc — 0,25 s
+## de réaction — les batte environ 80 % / 55 % / 30 % du temps. Les deux premiers sont ceux de l'initiation, réglés contre un débutant.
+static func appliquer_les_reflexes(p: ProfilBot, palier: int) -> void:
+	p.audace_zone_px = AUDACE_ZONE_PX
+	match palier:
+		Palier.TRES_LENT:
+			p.delai_reaction = 1.2
+			p.erreur_visee_deg = 25.0
+			p.erreur_visee_min_deg = 10.0
+			p.duree_resserrement = 4.0
+			p.vitesse_visee = 2.0
+			p.tolerance_tir_deg = 12.0
+			p.tirs_par_rafale = 1
+			p.pause_entre_rafales = 2.5
+		Palier.LENT:
+			p.delai_reaction = 0.8
+			p.erreur_visee_deg = 20.0
+			p.erreur_visee_min_deg = 7.0
+			p.duree_resserrement = 3.5
+			p.vitesse_visee = 2.5
+			p.tolerance_tir_deg = 10.0
+			p.tirs_par_rafale = 1
+			p.pause_entre_rafales = 2.0
+		Palier.FACILE:
+			p.delai_reaction = 0.40
+			p.erreur_visee_deg = 11.0
+			p.erreur_visee_min_deg = 3.0
+			p.duree_resserrement = 2.5
+			p.vitesse_visee = 5.0
+			p.tolerance_tir_deg = 7.0
+			p.tirs_par_rafale = 2
+			p.pause_entre_rafales = 0.9
+		Palier.DIFFICILE:
+			p.delai_reaction = 0.235
+			p.erreur_visee_deg = 6.9
+			p.erreur_visee_min_deg = 1.45
+			p.duree_resserrement = 1.48
+			p.vitesse_visee = 9.25
+			p.tolerance_tir_deg = 3.95
+			p.tirs_par_rafale = 3
+			p.pause_entre_rafales = 0.49
+		_:
+			p.delai_reaction = 0.26
+			p.erreur_visee_deg = 7.5
+			p.erreur_visee_min_deg = 2.0
+			p.duree_resserrement = 1.8
+			p.vitesse_visee = 8.0
+			p.tolerance_tir_deg = 4.5
+			p.tirs_par_rafale = 2
+			p.pause_entre_rafales = 0.55
+
+
+## Le palier d'une difficulté de l'entraînement (`FACILE` → `FACILE`, `NORMAL` → `NORMAL`, `DIFFICILE` → `DIFFICILE`) ; toute valeur
+## inconnue retombe sur NORMAL — le défaut de l'écran, et le boss de l'aventure.
+static func palier_de_la_difficulte(difficulte: int) -> int:
+	match difficulte:
+		Difficulte.FACILE:
+			return Palier.FACILE
+		Difficulte.DIFFICILE:
+			return Palier.DIFFICILE
+	return Palier.NORMAL
+
+
+## Le profil du cran 3 de l'entraînement, « adversaire qui tire » — S3. Il circule comme celui du cran 2 (LIBRE, allure 0,7, torche
+## éteinte : la torche tactique est pour S9), VOIT et ENTEND, réagit et tire.
+##
+## **Seuls les RÉFLEXES changent d'une difficulté à l'autre** (`appliquer_les_reflexes`). Mêmes champs de perception (voit, entend,
+## précision de l'oreille, délai d'oubli), même déplacement, même allure, **même audace** : un bot facile n'est pas aveugle ni sourd,
+## il est lent et approximatif — ce qu'un joueur apprend contre lui vaut contre les deux autres.
+##
+## ⚠️ **Réglé au banc de jeu (S4)** contre un joueur type honnête : voir la ROADMAP, section SOLO, pour la méthode, les cibles et les
+## chiffres. Ce sont des cibles de départ, à juger par Adrien en jouant.
 static func pour_adversaire_qui_tire(difficulte: int = Difficulte.NORMAL) -> ProfilBot:
 	var p := new()
 	p.deplacement = Deplacement.LIBRE
@@ -205,35 +289,111 @@ static func pour_adversaire_qui_tire(difficulte: int = Difficulte.NORMAL) -> Pro
 	p.entend = true
 	p.agit = true
 	p.tire = true
-	match difficulte:
-		Difficulte.FACILE:
-			p.delai_reaction = 0.60
-			p.erreur_visee_deg = 18.0
-			p.erreur_visee_min_deg = 5.0
-			p.duree_resserrement = 3.0
-			p.vitesse_visee = 3.0
-			p.tolerance_tir_deg = 10.0
-			p.tirs_par_rafale = 1
-			p.pause_entre_rafales = 1.4
-			p.audace_zone_px = 40.0
-		Difficulte.DIFFICILE:
-			p.delai_reaction = 0.18
-			p.erreur_visee_deg = 5.0
-			p.erreur_visee_min_deg = 0.8
-			p.duree_resserrement = 1.2
-			p.vitesse_visee = 12.0
-			p.tolerance_tir_deg = 3.0
-			p.tirs_par_rafale = 3
-			p.pause_entre_rafales = 0.4
-			p.audace_zone_px = 140.0
-		_:
-			p.delai_reaction = 0.35
-			p.erreur_visee_deg = 10.0
-			p.erreur_visee_min_deg = 2.5
-			p.duree_resserrement = 2.0
-			p.vitesse_visee = 6.0
-			p.tolerance_tir_deg = 6.0
-			p.tirs_par_rafale = 2
-			p.pause_entre_rafales = 0.8
-			p.audace_zone_px = 80.0
+	appliquer_les_reflexes(p, palier_de_la_difficulte(difficulte))
 	return p
+
+
+## ── Le CATALOGUE des PNJ de l'aventure — S4 ───────────────────────────────────────────────────────────────────────────────
+##
+## Un PNJ est ce même bot, réglé sur les deux axes : **comment il bouge** (`Deplacement`), **ce qu'il perçoit** (`Sens`) et **à
+## quel palier de réflexes** (`Palier`). L'aventure monte dans ce tableau : l'initiation (chapitre 0) n'a que des PNJ immobiles et ne
+## fait croître que leur nombre ; les chapitres suivants ajoutent les rondes, puis la zone, puis le libre, avec les mêmes paliers.
+## **Le boss de chaque chapitre est le profil d'entraînement NORMAL** (décision d'Adrien) : `boss()`.
+##
+## Le nom d'un PNJ est `<déplacement>_<sens>_<palier>` (`immobile_voit_tres_lent`, `ronde_entend_lent`, `zone_voit_entend_normal`…) ;
+## un PNJ sourd et aveugle n'a pas de palier (`immobile_sourd_aveugle`) : il ne réagit à rien. C'est ce nom qu'un fichier de niveau
+## (S6) écrira — jamais une suite de champs. `noms_du_catalogue()` les énumère tous, `pnj_nomme()` les construit.
+##
+## Les allures, elles, sont celles d'un PNJ qui GARDE : une ronde à 0,5, une zone à 0,6, le libre à 0,7 (celle du cran 2).
+
+const _NOMS_DEPLACEMENT := {"immobile": Deplacement.IMMOBILE, "ronde": Deplacement.RONDE, "zone": Deplacement.ZONE, "libre": Deplacement.LIBRE}
+const _NOMS_SENS := {"voit": Sens.VUE, "entend": Sens.OUIE, "voit_entend": Sens.VUE_ET_OUIE}
+const _NOMS_PALIER := {"tres_lent": Palier.TRES_LENT, "lent": Palier.LENT, "facile": Palier.FACILE, "normal": Palier.NORMAL, "difficile": Palier.DIFFICILE}
+const _ALLURE_PNJ := {Deplacement.IMMOBILE: 1.0, Deplacement.RONDE: 0.5, Deplacement.ZONE: 0.6, Deplacement.LIBRE: 0.7}
+
+
+## Un PNJ : `deplacement`, `sens`, `palier`. Un PNJ `AUCUN` (sourd et aveugle) ignore le palier : il n'agit pas, ses champs de
+## réflexes restent ceux d'un profil neuf. Les points de ronde et la zone se posent ensuite, sur le profil rendu.
+static func pnj(deplacement: int, sens: int, palier: int = Palier.LENT) -> ProfilBot:
+	var p := new()
+	p.deplacement = deplacement
+	p.allure = _ALLURE_PNJ.get(deplacement, 1.0)
+	p.torche_allumee = false
+	if sens == Sens.AUCUN:
+		return p
+	p.voit = sens == Sens.VUE or sens == Sens.VUE_ET_OUIE
+	p.entend = sens == Sens.OUIE or sens == Sens.VUE_ET_OUIE
+	p.agit = true
+	p.tire = true
+	appliquer_les_reflexes(p, palier)
+	return p
+
+
+## Le nom d'un PNJ du catalogue.
+static func nom_du_pnj(deplacement: int, sens: int, palier: int = Palier.LENT) -> String:
+	var d: String = _NOMS_DEPLACEMENT.find_key(deplacement)
+	if sens == Sens.AUCUN:
+		return d + "_sourd_aveugle"
+	var s: String = _NOMS_SENS.find_key(sens)
+	var l: String = _NOMS_PALIER.find_key(palier)
+	return "%s_%s_%s" % [d, s, l]
+
+
+## Tous les noms du catalogue : pour chaque déplacement, le PNJ sourd et aveugle, puis chaque sens à chaque palier.
+static func noms_du_catalogue() -> Array[String]:
+	var noms: Array[String] = []
+	for d in _NOMS_DEPLACEMENT.values():
+		noms.append(nom_du_pnj(d, Sens.AUCUN))
+		for s in _NOMS_SENS.values():
+			for pa in _NOMS_PALIER.values():
+				noms.append(nom_du_pnj(d, s, pa))
+	return noms
+
+
+## Construit un PNJ par son nom ; `null` si le nom n'est pas du catalogue (un fichier de niveau mal écrit se voit, il ne devient
+## pas silencieusement un PNJ par défaut).
+static func pnj_nomme(nom: String) -> ProfilBot:
+	var morceaux := nom.split("_")
+	if morceaux.size() < 3 or not _NOMS_DEPLACEMENT.has(morceaux[0]):
+		return null
+	var d: int = _NOMS_DEPLACEMENT[morceaux[0]]
+	var reste := "_".join(morceaux.slice(1))
+	if reste == "sourd_aveugle":
+		return pnj(d, Sens.AUCUN)
+	for s_nom in _NOMS_SENS:
+		if reste.begins_with(s_nom + "_"):
+			var palier_nom := reste.substr(s_nom.length() + 1)
+			if _NOMS_PALIER.has(palier_nom):
+				return pnj(d, _NOMS_SENS[s_nom], _NOMS_PALIER[palier_nom])
+	return null
+
+
+## Les cinq PNJ de l'initiation (chapitre 0), nommés comme la table de la ROADMAP les décrit.
+##   0.1 à 0.5  — `pnj_immobile_sourd_aveugle` : un but, pas un adversaire (il ne perçoit rien, ne tire jamais) ;
+##   0.6        — `pnj_immobile_voit_tres_lent`   : il voit la torche, tire, réflexes TRÈS lents ;
+##   0.7        — `pnj_immobile_voit_lent`        : il voit et tire, réflexes lents (chaque tir réveille les autres) ;
+##   0.8        — `pnj_immobile_entend_lent`      : il entend et tire, réflexes lents ;
+##   0.9        — `pnj_immobile_voit_entend_lent` : il voit et entend, réflexes lents.
+static func pnj_immobile_sourd_aveugle() -> ProfilBot:
+	return pnj(Deplacement.IMMOBILE, Sens.AUCUN)
+
+
+static func pnj_immobile_voit_tres_lent() -> ProfilBot:
+	return pnj(Deplacement.IMMOBILE, Sens.VUE, Palier.TRES_LENT)
+
+
+static func pnj_immobile_voit_lent() -> ProfilBot:
+	return pnj(Deplacement.IMMOBILE, Sens.VUE, Palier.LENT)
+
+
+static func pnj_immobile_entend_lent() -> ProfilBot:
+	return pnj(Deplacement.IMMOBILE, Sens.OUIE, Palier.LENT)
+
+
+static func pnj_immobile_voit_entend_lent() -> ProfilBot:
+	return pnj(Deplacement.IMMOBILE, Sens.VUE_ET_OUIE, Palier.LENT)
+
+
+## Le BOSS de chaque chapitre : le profil d'entraînement NORMAL, rien de plus (« juste un bot en mode moyen », Adrien). Un seul bot.
+static func boss() -> ProfilBot:
+	return pour_adversaire_qui_tire(Difficulte.NORMAL)

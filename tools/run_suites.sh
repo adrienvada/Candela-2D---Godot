@@ -311,6 +311,15 @@ SUITES+=(test_bot_combat)
 # `plafonnier*`), qui ouvre une fenêtre et n'entre dans aucune suite headless.
 SUITES+=(test_plafonniers)
 
+# Chantier SOLO, S4 (2026-10-02) : les PROFILS du bot, réglés au banc de JEU. `test_banc_bot` est la forme COURTE du banc
+# (`tools/banc_bot_difficulte.gd`, qui est long et reste hors des suites) : le catalogue des PNJ de l'aventure (chaque nom se construit,
+# avec les bons axes ; le sourd et aveugle ne tire jamais ; les paliers de réflexes se rangent ; le boss est le profil NORMAL), les trois
+# difficultés (mêmes champs de perception, de déplacement ET D'AUDACE : elles tirent toutes si vu ou entendu), puis des duels SIMULÉS
+# dans le vrai jeu — déterministes par graine — où un joueur type honnête gagne plus souvent contre FACILE que contre NORMAL, plus contre
+# NORMAL que contre DIFFICILE (l'ORDRE, des bornes larges, jamais un chiffre exact), et des PNJ d'initiation dans une salle. Elle exige
+# l'horloge fixe : le `case` plus bas la lui donne, comme à `test_bot_combat`.
+SUITES+=(test_banc_bot)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -462,7 +471,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot|test_bot_combat) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

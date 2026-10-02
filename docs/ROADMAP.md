@@ -3271,6 +3271,9 @@ quand le processeur est partagé. À retenir : une suite complète qui sert de p
 `duo_*` pris sous charge se relance seul avant d'être cru, et se signale. Non corrigé (hors périmètre : le scénario n'est pas du
 chantier).
 
+**Et `duo_killcam`, le même soir**, sur S5 (`95ea71c`), pendant que le sous-agent de S4 faisait tourner ses duels : « la manche n'a
+jamais commencé côté client » — même symptôme, même cause ; relancé seul (`./tools/run_duo.sh --killcam`), trois fois sur trois vert.
+
 ### Une suite qui monte `main.tscn` ne se termine pas quand `game_state.gd` ne compile pas : elle attend, des heures (2026-10-02)
 
 Chantier SOLO, S3. Un `var cran := ui.selected_training_cran()` (`ui` est un `Node` non typé : le `:=` ne sait pas inférer) a fait échouer le
@@ -3278,6 +3281,42 @@ chargement de `game_state.gd`. `main.tscn` s'est instancié sans script, `main.u
 **la suite n'a jamais appelé `quit()`** : douze minutes de CPU à 100 % avant qu'on s'en avise, alors que la suite saine tourne en 40 s. Rien de
 rouge à l'écran, seulement un journal qui ne se termine pas. Règle : une suite à scène qui dépasse largement son temps habituel est une suite
 qui attend — lire le début de son journal (`Parse Error`), ne pas la laisser finir. Et `run_suites.sh` n'a aucun délai par suite.
+
+### Un banc déroulé plus vite que le jeu hérite de ses minuteurs à horloge MURALE : le duck des pas durait 4 s de jeu au lieu de 0,3 (2026-10-02)
+
+Chantier SOLO, S4, `tools/banc_bot_duel.gd`. `AudioManager.play_sfx_2d` étouffe les pas de 6 dB pendant `DUCK_TIR_S` (0,3 s) après un tir, et
+compare `Time.get_ticks_msec()` à l'instant du dernier tir : **l'horloge du mur, pas celle du jeu**. À pas d'image fixe, déroulé à ~700 images
+par seconde, 0,3 s de mur font ~4 s de jeu — après le moindre tir, le banc rendait les pas du duel douze fois trop discrets, et d'autant plus que
+la machine était rapide ou libre. Les premiers relevés de S4 n'étaient donc ni fidèles au jeu ni rejouables d'une machine à l'autre. Remède, dans
+le banc seul : à chaque image, le dernier tir est reculé de ce que le JEU a écoulé depuis (`AudioManager._dernier_tir`). **Tout minuteur du jeu
+qui lit `Time.get_ticks_msec()` (`audio_manager.gd` en a deux ; `game_state.gd` et `player.gd` en ont pour le réseau, hors ligne) est faux dans
+une simulation accélérée** — à chercher avant de croire un banc qui fait tourner le jeu plus vite que le jeu.
+
+### Ce qu'un duel lance sonne dans le duel suivant : la douille d'un joueur remis sur pied (2026-10-02)
+
+Même banc. `Player._tinter_la_douille` joue le tintement d'une douille 0,3 à 0,5 s après le tir, par un minuteur qui ne se vérifie que par
+`not dead`. Le banc remettait le joueur abattu sur pied au duel suivant : la douille du tir fatal sonnait alors **à sa NOUVELLE place**, au premier
+instant du duel — un bot « entendait » un son qui n'avait aucune source, selon l'instant exact du dernier tir (`son:shell` comme première
+perception du bot, 0,03 s après le départ, sur plusieurs duels de 54). Remède : **attendre, avant de toucher à quoi que ce soit, que tout ce que le duel
+d'avant a lancé s'éteigne** (60 images : le double du plus long minuteur), puis remettre. Mesuré en rejouant le même lot de 54 duels dans deux
+processus : 22 duels différents au départ, 15 une fois le duck recalé, **1 une fois l'attente posée** (puis, à une seconde mesure, 0 issue différente — il
+reste des écarts de 0,02 px sur deux duels, d'origine non trouvée, que rien n'amplifie en général). Règle : une simulation répétée **laisse mourir**
+son état avant de le remettre, elle ne le remet pas en espérant que les minuteurs en vol s'en aperçoivent.
+
+### Un étalon qui ne sait pas se cacher ne mesure pas un joueur qui change de place (2026-10-02)
+
+Même banc. Le joueur type « qui tire puis change de place » a d'abord gardé sa torche allumée pendant qu'il changeait de place : il courait en pleine
+lumière, trahi à chaque pas, et perdait **77 % de ses duels contre NORMAL** (23 % de victoires) alors qu'il en gagnait 73 % contre FACILE — vraisemblablement
+parce qu'il cessait de tirer pendant que le bot continuait (non isolé). Avec la torche allumée seulement pendant l'engagement et éteinte en chemin,
+il gagne 56 % : un joueur qui change de place dans le noir. **Un comportement de référence qui perd contre tout est un défaut de
+l'étalon, pas une information sur le bot** ; le chiffre qui paraît « trop mauvais » se regarde avant de régler quoi que ce soit.
+
+### Une seconde instance de la bibliothèque d'un banc monte un SECOND jeu (2026-10-02)
+
+Même banc. `Duel.monter()` instancie `main.tscn` s'il n'en tient pas déjà un ; une suite qui fabriquait un deuxième `Duel` pour la mise en scène de la
+salle montait un deuxième jeu à côté du premier — deux `GameState` dans l'arbre, des duels qui ne gagnaient plus jamais (0/4 pour le PNJ sourd et
+aveugle, le plus facile qui soit), sans une ligne d'erreur. Une garde qui échoue « partout, sur le plus simple » se suspecte avant le code
+qu'elle juge. Le banc de la suite est maintenant UN objet, tenu par la suite.
 
 ### Un corps libéré par `queue_free()` reste dans le groupe `players` jusqu'à la fin de l'image : le bot suivant le prend pour son adversaire (2026-10-02)
 
@@ -31652,7 +31691,8 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    2026-10-02** — voir « S2 » ci-dessous.
 3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés. ✅ **FAITE le 2026-10-02** — voir « S3 »
    ci-dessous.
-4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
+4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle. ✅ **FAITE le 2026-10-02** — voir « S4 »
+   ci-dessous (le banc de jeu, les cibles, les chiffres retenus, le catalogue des PNJ de l'aventure).
 5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot. ✅ **FAITE le 2026-10-02** — voir
    « S5 » ci-dessous. **Son coût n'a PAS été mesuré** (consigne d'Adrien : aucun relevé de cadence) : l'allumage par proximité se
    tient par construction, jamais par un chiffre.
@@ -31954,6 +31994,10 @@ Mesuré à la garde (corps factices, une cible éclairée à 5 cases en face, qu
 après la première perception, écart moyen à la vraie place **5,0° / 3,0° / 2,0°**. Sur un pas entendu à 350 px, le facile ne tire jamais,
 le difficile tire.
 
+> ⚠️ **Tout ce tableau, et cette dernière phrase, sont REMPLACÉS par S4** (même jour) : les chiffres de départ ci-dessus ont été réglés au
+> banc de jeu (voir « S4 »), et l'audace n'est plus un réflexe qui varie — elle est la même pour les trois, de sorte que FACILE tire sur
+> un pas entendu à 400 px comme les deux autres. Le tableau est gardé ici pour que le « avant » de S4 reste lisible.
+
 **Le geste à la mort du JOUEUR.** `player_died` ne fait rien hors manche, et l'entraînement n'a pas de manche : le joueur abattu par le bot
 resterait mort pour toujours, alors que le bot revient déjà. Le geste le plus simple et le plus cohérent est celui du bot, en miroir :
 **le joueur revient 2 s plus tard (`BOT_DELAI_REAPPARITION`), vie pleine, arme et munitions de l'écran, sur l'une des 15 % de cases les plus
@@ -32026,7 +32070,250 @@ poser le bot.
 **À trancher par Adrien.** (1) Les chiffres des trois difficultés, un par un, en jouant (S4). (2) Le joueur qui meurt à l'entraînement
 revient en 2 s, loin du bot : le délai et le lieu, ou une autre règle (rester mort jusqu'à un appui, revenir sur sa case de départ). (3) Un
 cran 3 dont le bot ne s'arrête qu'en combat : faut-il qu'il se poste, qu'il avance vers sa cible, qu'il se déplace en tirant ? (4) La difficulté
-FACILE ne tire jamais sur un pas entendu à 400 px (audace 40 px) : « tire si vu ou entendu » doit-il valoir pour les trois ?
+FACILE ne tire jamais sur un pas entendu à 400 px (audace 40 px) : « tire si vu ou entendu » doit-il valoir pour les trois ? —
+**tranchée par S4 : oui** (la décision d'Adrien le disait déjà ; l'audace est désormais la même pour les trois difficultés).
+
+### S4 — FAITE le 2026-10-02 : les profils, réglés au banc de JEU — la difficulté du bot, et le catalogue des PNJ de l'aventure
+
+**Ce qui existe.** `tools/banc_bot_duel.gd` (la bibliothèque : le moteur de duel, le joueur type, la salle, les statistiques),
+`tools/banc_bot_difficulte.gd` (le banc, headless, long, **hors des suites** : une commande, des options, des tableaux) et
+`tools/test_banc_bot.gd` (sa forme courte, **dans `run_suites.sh`**, à horloge fixe). `profil_bot.gd` gagne l'énumération `Palier`
+(`TRES_LENT`, `LENT`, `FACILE`, `NORMAL`, `DIFFICILE`), l'énumération `Sens` (`AUCUN`, `VUE`, `OUIE`, `VUE_ET_OUIE`), **une seule table de réflexes**
+(`appliquer_les_reflexes`) que servent l'entraînement, les PNJ et le boss, la constante `AUDACE_ZONE_PX`, et le **catalogue des PNJ**
+(`pnj()`, `pnj_nomme()`, `noms_du_catalogue()`, `nom_du_pnj()`, les cinq `pnj_immobile_*` de l'initiation, `boss()`).
+`pour_adversaire_qui_tire(difficulte)` ne fait plus que choisir le palier. `tools/test_bot_combat.gd` n'a changé que ce que la décision sur
+l'audace lui faisait changer (voir plus bas). **`game_state.gd`, `ui.gd`, `protocol.gd` n'ont pas bougé** : rien de partagé n'est touché, rien ne
+transite, aucun `if transport == …`.
+
+#### La méthode du banc
+
+**Un duel est un morceau de partie du VRAI jeu** : `main.tscn` monté en entraînement, vrais corps, vraie physique, vraies balles, vraie lumière,
+vrais sons (le signal `son_localise` de l'audio), **à pas d'image fixe** (`--fixed-fps 60`, que le banc vérifie et sans lequel il refuse de
+conclure) et **déterministe par graine**. Il s'arrête à la **première mort**. **Il ne mesure aucune cadence** (consigne d'Adrien) : il simule des
+parties. Le joueur de J1 est un joueur type ; J2 est le bot de la difficulté testée, posé et ramené comme l'entraînement le fait (`_poser_l_adversaire`).
+Les départs se tirent de la graine : le joueur sur une case atteignable au hasard, le bot à 450-1 000 px de lui — ni nez à nez ni aux deux bouts
+d'une carte (un duel dure alors quelques secondes de jeu, médiane 3,4 à 3,8 s, et se joue sur les six cartes livrées). 75 s sans mort : duel nul
+(0 à 5 % des duels). Un duel de 6 s de jeu coûte ~1 s de processus ; **1 152 duels (3 difficultés × 4 comportements × 6 cartes × 16 graines) en
+~5 min répartis sur quatre processus** (`--part=i/n`, `--brut=`, `--agreger=`), ~20 min d'un seul.
+
+**Le joueur type est HONNÊTE lui aussi.** Un étalon qui saurait où est le bot dans le noir ne mesurerait rien. `JoueurType` est donc le même
+`BotInputProvider` que le bot : **la même perception** (`PerceptionBotNoeud` : ce que la lumière lui montre, ce que ses oreilles lui donnent — une
+zone, jamais la place exacte), la même mémoire qui s'efface, la même machine à états, les mêmes règles de corps — réglé avec des **réflexes
+humains** et quatre **comportements** (il ne joue pas comme un bot : la torche, la posture, l'immobilité, le changement de place). **Temps de réaction
+humain de référence : 0,25 s** (la réponse à un signal visuel net d'un joueur entraîné, 200 à 300 ms ; ce chiffre n'est pas mesuré sur un humain de
+ce jeu), erreur de visée de 6° au premier instant qui se resserre à 1,5° en une seconde de visée, vitesse de visée 10 rad/s, tolérance de tir 5°, rafale
+de 2 coups puis 0,5 s, prudence 100 px, mémoire de 8 s. Deux étalons plus lents servent aux calibrages d'accueil : **intermédiaire** (0,35 s, 8° → 2,5°,
+rafale de 2 : « un joueur qui vient de finir l'initiation ») et **débutant** (0,5 s, 10° → 3°, un coup par rafale).
+
+| Comportement | Torche | Posture, déplacement |
+|---|---|---|
+| `avance_torche` | allumée | debout, de case en case à pleine allure |
+| `ecoute` | éteinte | immobile : il attend, il écoute |
+| `accroupi_lent` | éteinte | accroupi (le quart de la vitesse, le pas le plus discret) |
+| `tire_puis_bouge` | allumée seulement pendant l'engagement | après chaque rafale, il l'éteint et change de place dans le noir pendant 1,5 s |
+
+Un cinquième, **hors de la moyenne** (`avance_sans_torche` : torche éteinte, à pleine allure — qu'on ENTEND), ne sert qu'à prouver que le bot tire sur un son.
+
+**Les quatre grandeurs du banc, par difficulté** : le taux de victoire du joueur type (parmi les duels qui ont une issue) ; le temps moyen jusqu'au
+premier coup qu'il reçoit (et, parce que celui-ci mêle la recherche, qui ne dépend pas des réflexes, la **fenêtre** : le même temps compté depuis la
+première perception du bot) ; la part des tirs du bot déclenchés sur un son (ni vu, ni perdu de vue) ; la part de ses tirs qui touchent. S'y ajoutent
+les duels nuls, la part des duels sans aucun coup reçu et la durée.
+
+**Fidélité et déterminisme, mesurés.** (1) La vue de dessus est le défaut du banc, la vue iso (`--iso`) le jeu publié : **24 duels rejoués sous les deux
+sont identiques à l'enregistrement près** — la simulation est la même, et la vue de dessus va deux fois plus vite. (2) Deux processus, même lot de 54 duels :
+22 duels différents au départ, 15 une fois le duck des pas remis à l'heure du jeu, 1 une fois l'attente entre deux duels posée (deux pièges, plus bas), puis 0 issue différente à la
+mesure suivante — il reste des écarts de 0,02 px sur deux duels, d'origine non trouvée. Le banc est donc rejouable, **pas à l'octet près** ; la garde courte compare l'issue, les tirs et
+les touches d'un même duel rejoué dans le même processus.
+
+#### Les cibles de réglage — « cibles de départ, à juger par Adrien en jouant »
+
+Le joueur type de référence (0,25 s), moyenne des quatre comportements et des six cartes, doit gagner contre **FACILE ≈ 80 %, NORMAL ≈ 55 %, DIFFICILE ≈ 30 %**.
+Pourquoi ces trois-là : un écart de 25 points est ce qui se SENT d'un cran à l'autre (cinq duels de plus sur vingt) ; 80 % fait de FACILE un adversaire qu'un
+joueur entraîné bat quatre fois sur cinq sans qu'il soit inoffensif ; **55 % fait de NORMAL — le boss de chaque chapitre — un pile ou face pour un joueur
+entraîné, donc jamais un cadeau** ; 30 % laisse à DIFFICILE de quoi être craint sans être injouable. **NORMAL doit être battable par un joueur qui vient de
+finir l'initiation** : le joueur intermédiaire le bat une fois sur deux (voir plus bas), et une salle qui se recommence à la mort laisse plusieurs essais.
+Ces cibles sont des cibles de départ : le joueur type n'est pas un humain, et personne n'a joué contre ces bots.
+
+#### Résultats, avant et après — graines 401 à 416 (jamais vues pendant le réglage), 384 duels par difficulté
+
+« Avant » : les profils de S3, recréés par surcharge, **sur le banc corrigé** (la première mesure sur le banc non corrigé donnait 96 % / 68 % / 10 %). « Après » : les profils de S4.
+
+| | FACILE avant → après | NORMAL avant → après | DIFFICILE avant → après |
+|---|---|---|---|
+| **victoire du joueur type** (cible 80 / 55 / 30) | **97 % → 79 %** | **71 % → 54 %** | **17 % → 28 %** |
+| duels nuls | 3 % → 2 % | 1 % → 1 % | 0 % → 0 % |
+| temps moyen jusqu'au 1er coup reçu | 5,3 s → 4,1 s | 4,2 s → 3,9 s | 3,7 s → 3,8 s |
+| fenêtre : de la 1re perception du bot au 1er coup reçu | 2,2 s → 1,6 s | 1,6 s → 1,4 s | 1,2 s → 1,3 s |
+| duels où le joueur ne reçoit aucun coup | 51 % → 15 % | 11 % → 2 % | 1 % → 2 % |
+| part des tirs du bot déclenchés sur un SON | 6 % → 8 % | 7 % → 9 % | 6 % → 8 % |
+| part de ses tirs qui touchent | 26 % → 42 % | 49 % → 55 % | 76 % → 67 % |
+| durée moyenne d'un duel | 7,5 s → 6,4 s | 5,9 s → 5,6 s | 4,7 s → 5,0 s |
+
+Par comportement du joueur type, victoire (avant → après) : `avance_torche` 100 → 91 / 91 → 59 / 15 → 30 ; `ecoute` 99 → 88 / 83 → 64 / 23 → 39 ;
+`accroupi_lent` 93 → 85 / 76 → 50 / 6 → 11 ; `tire_puis_bouge` 97 → 51 / 34 → 44 / 23 → 33 (facile / normal / difficile). **Les quatre comportements se rangent dans le même ordre
+contre FACILE, NORMAL et DIFFICILE** — sauf `tire_puis_bouge`, quasi plat (51 / 44 / 33) : sans doute parce qu'un joueur qui change de place cesse de tirer pendant que le bot continue (non vérifié).
+Par carte (après, facile / normal / difficile) : Arène circulaire 81 / 56 / 36, Arène standard 81 / 50 / 38, Usine 75 / 44 / 27, Croisée 79 / 59 / 23, Bunker 79 / 53 / 12, Cloître 78 / 62 / 34 ;
+l'ordre est le même partout, l'écart du Bunker contre DIFFICILE (12 %) est le seul qui sorte de la fourchette de bruit (±6 points par case de 64 duels).
+Le réglage s'est fait sur trois autres blocs de graines (1-8, 101-116, 201-216 ; 301-316 pour un dernier contrôle : 78 % / 58 % / 25 %).
+
+**Le joueur qui vient de finir l'initiation** (même banc, graines 401-408, 192 duels par difficulté, profils finaux) :
+
+| Joueur type | FACILE | NORMAL | DIFFICILE |
+|---|---|---|---|
+| humain, 0,25 s (la référence) | 79 % | 54 % | 28 % |
+| **intermédiaire, 0,35 s** | 68 % | **50 %** | 21 % |
+| débutant, 0,5 s | 39 % | 13 % | 5 % |
+
+Le boss (NORMAL) est battu une fois sur deux par un joueur qui a fini l'initiation, treize fois sur cent par un débutant pur : « battable sans être donné » tient pour le premier, pas
+pour le second — voir « À trancher ».
+
+#### Les chiffres retenus, et pourquoi (une seule table : `ProfilBot.appliquer_les_reflexes`)
+
+| | TRES_LENT | LENT | FACILE | NORMAL | DIFFICILE |
+|---|---|---|---|---|---|
+| délai de réaction | 1,2 s | 0,8 s | 0,40 s (était 0,60) | 0,26 s (était 0,35) | 0,235 s (était 0,18) |
+| erreur de visée → plancher | 25° → 10° | 20° → 7° | 11° → 3° (18° → 5°) | 7,5° → 2° (10° → 2,5°) | 6,9° → 1,45° (5° → 0,8°) |
+| temps de resserrement | 4,0 s | 3,5 s | 2,5 s (3,0) | 1,8 s (2,0) | 1,48 s (1,2) |
+| vitesse de visée | 2 rad/s | 2,5 rad/s | 5 (3) | 8 (6) | 9,25 (12) |
+| tolérance de tir | 12° | 10° | 7° (10°) | 4,5° (6°) | 3,95° (3°) |
+| rafale, pause | 1 coup, 2,5 s | 1 coup, 2,0 s | 2 coups, 0,9 s (1 coup, 1,4 s) | 2 coups, 0,55 s (0,8 s) | 3 coups, 0,49 s (0,4 s) |
+| audace sur une zone entendue | 100 px | 100 px | 100 px (était 40) | 100 px (était 80) | 100 px (était 140) |
+
+Ce que le banc a appris, et qui ne se devinait pas :
+- **FACILE de S3 était un adversaire inoffensif (97 % de victoires), et le raccourcir n'y changeait presque rien** : à 0,5 puis 0,45 s de délai, visée et tolérance resserrées, le joueur type en gagnait encore
+  90 % puis 92 % (93 % au départ ; relevés d'exploration, graines 1-8). Ce qui l'a fait bouger : lui donner **deux coups par rafale** au lieu d'un (85 %), puis un délai de 0,40 s, une pause de 0,9 s et une visée plus étroite (80 %). Une balle fait 50 de dégâts au centre, 25 au bord, sur 100 de vie : **un duel demande
+  deux à quatre coups touchants, la puissance de feu pèse donc plus que le délai de réaction**. Régler la difficulté au délai seul, c'est régler le mauvais bouton.
+- **DIFFICILE de S3 battait chaque axe du joueur de référence à la fois** (0,18 s contre 0,25 s, 3° de tolérance, trois coups par rafale) : le joueur de référence n'en gagnait que 17 % (10 % à la première mesure).
+  Il a été ramené à 0,235 s, 3,95° et une pause un peu plus longue : 28 %.
+- **NORMAL était trop facile (71 %)** : 0,26 s au lieu de 0,35, une visée un peu plus étroite, 4,5° de tolérance : 54 %. Les quatre comportements y gagnent 44 à 64 % : la dispersion entre comportements, qui
+  était de 34 à 91 %, est tombée à 20 points.
+- NORMAL (0,26 s) et DIFFICILE (0,235 s) ne diffèrent presque plus par le délai ; **ce qui les sépare, c'est la rafale (2 ou 3 coups), la visée (7,5° contre 6,9°), la tolérance et la pause** — la même leçon que ci-dessus.
+- **Plus lent n'est pas plus sûr pour qui AVANCE** (palier TRÈS LENT, salle du catalogue) : à 1,5 s de délai, 30° → 12° d'erreur, un débutant ne battait un PNJ qui entend que 79 à 88 % du temps, contre 98 à 100 %
+  à 1,2 s. Un PNJ qui tire tard tire sur quelqu'un qui est arrivé à bout portant ; un PNJ qui tire tôt tire sur quelqu'un qui est encore loin, et manque. Le palier retenu est celui à 1,2 s.
+
+#### L'audace : la même pour les trois (point 3 de la consigne)
+
+Le cran 3 s'appelle « adversaire qui tire **si vu ou entendu** » (Adrien) et **la difficulté ne change que les réflexes** : elle règle QUAND le bot tire et AVEC QUELLE JUSTESSE, jamais SI. S3 avait fait varier
+`audace_zone_px` de 40 à 140 px, et FACILE ne tirait alors jamais sur un pas entendu à 350-400 px (zone de 55-68 px) — une cinquième dimension de difficulté que la décision n'avait pas prévue.
+**`AUDACE_ZONE_PX` = 100 px pour les trois** (et pour tous les paliers de PNJ) : un pas entendu jusqu'à ~480 px, un tir jusqu'à ~1 100 px ; au-delà, la zone est trop vague pour valoir de se trahir. Un bot lent qui
+tire sur ce qu'il a entendu **manque** : sa visée est large, ses rafales rares — c'est son tir, pas son oreille, qui est lent. Gardé de quatre façons : `test_banc_bot` compare l'audace des trois profils et celle de tous les
+paliers ; `test_bot_combat` (corps factices, vrai signal) vérifie que **les trois tirent sur un pas à 350 px (3, 6 et 9 coups sur trois graines) et aucun sur un pas à 980 px**, pourtant bel et bien entendu
+(une zone gardée : sans ce contrôle, « aucun tir » ne prouverait rien) ; `test_banc_bot` le refait dans le vrai jeu (un joueur qui marche dans le noir : 5 tirs sur 9, 4 sur 12, 4 sur 12 déclenchés sans rien voir) ;
+et les champs de perception restent identiques entre les trois (la garde de S3 compare maintenant l'audace aussi). **Mesuré : l'audace n'a presque rien changé aux taux de victoire** (profils de S3 avec l'audace à 100 :
+93 % / 67 % / 9 %, contre 96 % / 68 % / 10 % — dans le bruit) : la part des tirs du bot sur un son est de 6 à 9 % dans la matrice, parce qu'un duel s'ouvre presque toujours à la vue (la torche du joueur type, ou son halo) ;
+elle monte à 29-37 % face à un joueur qui marche dans le noir.
+
+#### Les chiffres de départ de S1 à S3, passés au banc : AUCUN n'est mauvais
+
+NORMAL, 384 duels par ligne, graines 401-416 (référence 54 %) : 
+| Réglage | victoire | 1er coup reçu | fenêtre | tirs sur un son | précision du bot | durée |
+|---|---|---|---|---|---|---|
+| **référence** (allure 0,7, oubli 6 s, précision auditive 1) | 54 % | 3,9 s | 1,4 s | 9 % | 55 % | 5,6 s |
+| allure 0,5 | 56 % | 5,6 s | 1,6 s | 13 % | 57 % | 7,3 s |
+| allure 1,0 | 58 % | 2,6 s | 1,0 s | 10 % | 51 % | 4,5 s |
+| délai d'oubli 3 s | 56 % | 3,9 s | 1,4 s | 9 % | 54 % | 5,6 s |
+| délai d'oubli 12 s | 55 % | 4,0 s | 1,4 s | 9 % | 55 % | 5,6 s |
+| précision auditive 0,5 (zone deux fois plus large) | 58 % | 4,2 s | 1,7 s | 5 % | 57 % | 5,7 s |
+| précision auditive 2 (zone deux fois plus étroite) | 55 % | 3,8 s | 1,3 s | 17 % | 49 % | 5,7 s |
+
+**Verdict : aucun de ces chiffres ne change qui gagne** (toutes les lignes sont dans le bruit, ±2,5 points) : ils sont gardés. L'allure règle QUAND le combat commence — plus le bot marche vite, plus il trouve tôt
+(premier coup reçu à 5,6 s pour 0,5 ; 3,9 s pour 0,7 ; 2,6 s pour 1,0) —, pas son issue ; **0,7 reste le bon compromis** (1,0 ne laisse aucune poursuite possible, 0,5 laisse l'entraînement s'ennuyer). La précision auditive
+règle la part de tirs sur un son, pas les victoires. **Le délai de réapparition (2 s) n'est PAS couvert** : le banc s'arrête à la première mort, et le délai d'une pause entre deux duels d'entraînement est une question de rythme qu'un
+banc de victoires ne juge pas ; il reste à juger en jouant.
+
+#### Le catalogue des PNJ de l'aventure
+
+Un PNJ est le même bot, réglé sur trois axes : **comment il bouge** (`Deplacement`), **ce qu'il perçoit** (`Sens`), **à quel palier de réflexes** (`Palier`). Son nom est `<déplacement>_<sens>_<palier>` : `immobile_voit_tres_lent`,
+`ronde_entend_lent`, `zone_voit_entend_normal`… ; un PNJ sourd et aveugle n'a pas de palier (`immobile_sourd_aveugle`) : il ne perçoit rien, n'agit pas, ne tire jamais — un but, pas un adversaire. **64 noms** (4 déplacements × [1 + 3 sens × 5 paliers]),
+tous construits par `ProfilBot.pnj_nomme(nom)` — un nom hors catalogue rend `null` (un fichier de niveau mal écrit se voit, il ne devient pas un PNJ par défaut) ; c'est ce nom que S6 écrira dans un fichier de niveau. Les allures : immobile —,
+ronde 0,5, zone 0,6, libre 0,7. **Le boss de chaque chapitre est `ProfilBot.boss()` = le profil d'entraînement NORMAL**, champ pour champ.
+
+| Niveau de l'initiation | Fonction | Axes |
+|---|---|---|
+| 0.1 à 0.5 | `pnj_immobile_sourd_aveugle()` | immobile ; ne voit pas, n'entend pas, n'agit pas, ne tire pas |
+| 0.6 | `pnj_immobile_voit_tres_lent()` | immobile ; voit ; réflexes TRÈS lents |
+| 0.7 | `pnj_immobile_voit_lent()` | immobile ; voit ; réflexes lents |
+| 0.8 | `pnj_immobile_entend_lent()` | immobile ; entend ; réflexes lents |
+| 0.9 | `pnj_immobile_voit_entend_lent()` | immobile ; voit et entend ; réflexes lents |
+| 0.10 | `boss()` | NORMAL (libre, 0,7, voit et entend) |
+
+**Réglés au banc par une mise en scène simple : un joueur qui entre dans une salle** (`--catalogue`). Une salle de 22 × 18 cases ; le joueur — **un débutant** (0,5 s), torche allumée, le pire cas : sa lampe le trahit — entre à
+l'ouest et la balaie par une ronde ; le PNJ attend à l'est, à une hauteur tirée de la graine. Deux façons de traverser : debout, ou accroupi. 24 graines par ligne.
+
+| PNJ | **debout** : le débutant gagne | perçu → 1er tir | coups reçus par duel | **accroupi** : gagne | perçu → 1er tir | coups reçus |
+|---|---|---|---|---|---|---|
+| `immobile_sourd_aveugle` | 100 % | — (ne tire jamais) | 0 | 100 % | — | 0 |
+| `immobile_voit_tres_lent` | 96 % | 1,4 s | 0,56 | 100 % | 1,3 s | 0,40 |
+| `immobile_voit_lent` | 96 % | 1,0 s | 0,79 | 100 % | 0,9 s | 0,62 |
+| `immobile_entend_tres_lent` | 100 % | 1,3 s | 0,42 | 100 % | 11,7 s | 0,10 |
+| `immobile_entend_lent` | 100 % | 1,1 s | 0,29 | 100 % | 14,5 s | 0,08 |
+| `immobile_voit_entend_tres_lent` | 98 % | 1,3 s | 0,46 | 100 % | 1,4 s | 0,40 |
+| `immobile_voit_entend_lent` | 100 % | 0,9 s | 0,54 | 100 % | 0,9 s | 0,83 |
+| `ronde_voit_entend_lent` | 100 % | 1,1 s | 0,38 | 100 % | 1,1 s | 0,46 |
+| `zone_voit_entend_lent` | 100 % | 1,2 s | 0,38 | 100 % | 1,3 s | 0,38 |
+| `libre_voit_entend_lent` | 100 % | 1,1 s | 0,29 | 100 % | 1,1 s | 0,29 |
+| `immobile_voit_facile` | 38 % | 0,5 s | 2,83 | 38 % | 0,5 s | 2,75 |
+| `immobile_entend_facile` | 96 % | 1,1 s | 0,96 | 100 % | 13,9 s | 0,42 |
+| `immobile_voit_entend_facile` | 46 % | 0,5 s | 2,67 | 17 % | 0,5 s | 3,17 |
+| `immobile_voit_normal` | 21 % | 0,4 s | 3,25 | 12 % | 0,3 s | 3,38 |
+| `immobile_entend_normal` | 96 % | 1,2 s | 1,25 | 100 % | 13,8 s | 0,33 |
+| `immobile_voit_entend_normal` | 17 % | 0,4 s | 3,25 | 12 % | 0,4 s | 3,38 |
+| `ronde_voit_entend_normal` | 8 % | 0,4 s | 3,33 | 21 % | 0,5 s | 3,08 |
+| `zone_voit_entend_normal` | 29 % | 0,4 s | 3,00 | 4 % | 0,5 s | 3,42 |
+| `libre_voit_entend_normal` | 12 % | 0,4 s | 3,21 | 17 % | 0,5 s | 3,29 |
+
+(24 graines par ligne, 48 pour les trois PNJ « très lents ».) Le même relevé avec **le joueur intermédiaire** (0,35 s, torche allumée), debout / accroupi : `immobile_voit_tres_lent` 100 % / 100 %,
+`immobile_voit_lent` 100 % / 100 %, `immobile_voit_facile` 92 % / 75 %, `immobile_voit_normal` **38 % / 12 %**, `immobile_voit_entend_facile` 96 % / 25 %, `immobile_voit_entend_normal` 42 % / 8 %,
+`immobile_entend_normal` 100 % / 100 %, `ronde_voit_entend_normal` 17 % / 42 %, `libre_voit_entend_normal` 38 % / 54 %.
+
+**Ce que ça dit.** (1) Le sourd et aveugle ne tire jamais et le débutant le bat à chaque fois. (2) **Un PNJ très lent laisse à un débutant le temps de réagir** : le PNJ met ~1,3 à 1,4 s entre le moment où il perçoit et son premier tir
+(le débutant en met 0,5 pour réagir) ; le débutant le bat 96 à 100 % du temps et reçoit 0,4 à 0,56 coup par duel ; un PNJ lent met ~1,0 s, le débutant le bat 96 à 100 % du temps (0,3 à 0,8 coup reçu). (3) **Contre un PNJ qui n'entend que,
+s'accroupir fonctionne** : le PNJ ne tire qu'après 12 à 14 s (il n'a entendu le débutant que de tout près), contre ~1,2 s debout — c'est la leçon du niveau 0.8. Contre un PNJ qui VOIT, s'accroupir torche allumée ne sert à rien (la lampe trahit, et
+l'approche est plus lente). (4) Le saut de LENT à FACILE est net — un débutant bat un PNJ facile qui voit 17 à 46 % du temps (96 % s'il n'entend que), un PNJ normal qui voit 4 à 29 % — : **LENT est le dernier palier pour un joueur qui n'a pas fini
+l'initiation** ; un joueur intermédiaire (0,35 s) bat un PNJ facile qui voit 92 % du temps debout et un PNJ normal qui voit 38 % : **FACILE convient aux premiers chapitres après l'initiation, NORMAL est la limite de ce que le joueur attend à la fin d'un chapitre.**
+Les PNJ mobiles (ronde, zone, libre) se comportent comme leurs frères immobiles : mêmes paliers, mêmes taux — leur déplacement n'a pas encore été confronté à un joueur qui les cherche (S7).
+
+#### Les gardes (obligatoires)
+
+`tools/test_banc_bot.gd` (`--fixed-fps 60`, dans `run_suites.sh`, 50 vérifications, ~1 min 30 s sur machine chargée) : le catalogue (64 noms, tous construits, les axes que le nom dit, le sourd et aveugle qui n'agit ni ne tire, les cinq PNJ de
+l'initiation, les paliers rangés, le boss), les trois difficultés (mêmes champs de perception, de déplacement et d'audace ; elles sont exactement les paliers FACILE, NORMAL, DIFFICILE de la table unique), le joueur type qui ne lit jamais l'adversaire (le texte de sa classe), le duel rejoué à l'identique, **l'ORDRE des
+difficultés** sur la Croisée et les quatre comportements (victoire du joueur type strictement décroissante, au moins 5 points d'écart, FACILE ≥ 60 %, DIFFICILE ≤ 55 %, NORMAL entre 30 % et 90 %, au plus 15 % de nuls, le bot difficile touche plus que le facile),
+les trois difficultés qui tirent sur un son dans le vrai jeu, l'absence de fuite d'un duel à l'autre, le PNJ sourd et aveugle qui ne tire jamais dans la salle, le très lent et le lent qui laissent plus de 0,8 et 0,5 s au débutant. **Des bornes larges et jamais un chiffre exact** : les chiffres
+du banc long sont des cibles à juger en jouant, pas des constantes ; le test compte 48 duels sur une carte — le banc long en compte 1 152.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié, scripté).** Chiffre = contrôles rouges, sur `test_banc_bot` puis, quand elle y mord, `test_bot_combat`.
+Les deux difficultés **inversées** (FACILE ↔ DIFFICILE) : 7 et 6, dont « L'ORDRE : 25 % > 69 % > 75 % » ; **FACILE sourd aux sons** (`entend = false`) : 3 et 5, dont « le bot tire sur un son : 0 tir sur 10 » ;
+**l'audace de FACILE remise à 40 px** (l'état de S3) : 3 et 2 ; **un PNJ sourd et aveugle qui voit, agit et tire** : 3 ; **le boss qui n'est plus NORMAL** : 1 ; **des paliers mal rangés** (LENT à 0,3 s, plus vif que FACILE) : 2 ;
+**un nom inconnu qui devient un PNJ par défaut** au lieu de `null` : 1 ; **la table unique de réflexes ignorée** (les trois difficultés identiques) : 7 et 6 ; **le très lent aussi vif que le lent** : 2 ;
+**le joueur type qui triche** (une ligne qui lit le groupe `players`) : 3 (les trois contrôles de texte) ; **l'attente entre deux duels supprimée** : 1 — la garde des fuites (« sur 60 duels, pas un ne commence par la douille du duel d'avant », 5 fuites).
+**Deux sabotages ont été verts du premier coup, et c'est instructif.** (1) *L'attente entre deux duels supprimée* : la première garde de déterminisme (le même duel rejoué dans le même processus, un autre duel entre les deux) restait
+verte — la fuite n'arrive que si le duel d'avant s'est terminé sur un tir dans les 0,5 s, et mon duel intermédiaire finissait au temps. **La garde a été remplacée par le SYMPTÔME**, cherché sur tous les duels de la suite
+(une perception « douille » dans les 0,15 s du départ ne peut être qu'une fuite : aucun tir n'a pu partir) ; elle rougit à 5 fuites sur 60. (2) *La graine du jeu (`seed()`) retirée du duel* : **toujours vert, et resté vert** — la suite
+ne distingue pas un duel qui reprend la graine d'un duel qui ne la reprend pas (les tirages du jeu — dispersion, sons — n'y changent ni l'issue, ni les tirs, ni les touches comparés). La ligne est gardée par précaution, non prouvée nécessaire.
+**Un défaut du banc lui-même n'est pas gardé** : le duck des pas remis à l'heure du jeu (voir Pièges connus) ne rougit rien s'il est retiré — son effet est sur les statistiques de sons, pas sur un contrôle.
+
+#### Ce qui n'est pas prouvé
+
+- **Rien n'est joué par un humain.** Le joueur type est un étalon stable, pas un portrait : un humain cherche mieux qu'un tirage de cases (il longe les murs, il écoute avant d'avancer) et pire qu'un bot sur d'autres points. 80 / 55 / 30 sont des cibles pour CE joueur-là.
+- Les 0,25 / 0,35 / 0,5 s sont des chiffres de référence, pas des mesures de joueurs de ce jeu.
+- **Le banc n'a éprouvé que le Parasite** et un bot sans torche, sans fusée, sans gadget : S9 changera ce que « difficile » veut dire (un bot qui allume sa torche à propos, qui lance une fusée).
+- Le banc ne juge pas la **poursuite** (allure 0,7), ni la **réapparition** (2 s), ni le rythme d'un entraînement de plusieurs minutes : un duel est une rencontre, pas une séance.
+- Les PNJ **mobiles** n'ont pas été confrontés à un joueur qui les cherche, ni plusieurs PNJ à la fois dans une même salle (la mise en scène est un contre un) : le niveau 0.9 (5 ou 6 PNJ) sera plus dur que ses chiffres un contre un ne le disent — `PerceptionBotNoeud._adversaire()` ne gère encore qu'un adversaire (S3, « Signalé »).
+- Les plafonniers (S5) ne sont pas dans la salle : les PNJ « voit » y voient la lampe du joueur, pas la lumière posée qui montrera le joueur au niveau 0.6 de l'initiation. À refaire quand S5 est fusionnée.
+- Les taux sont mesurés sous un Godot headless : la physique est celle du jeu, mais la vue de dessus remplace la vue iso (identique sur 24 duels) et l'audio ne joue pas.
+
+#### Signalé, pas corrigé
+
+- **`AudioManager` lit l'horloge MURALE pour le duck des pas** (`DUCK_TIR_S`, `play_sfx_2d`) : exact en jeu réel, faux dans toute simulation accélérée (voir Pièges connus). Un jour, une session qui voudra rejouer des parties plus vite que le jeu le retrouvera.
+- **`Player._tinter_la_douille` fait sonner la douille à la place COURANTE du joueur**, 0,3 à 0,5 s après le tir : un joueur téléporté entre-temps (réapparition, mise en scène) la fait sonner ailleurs. Inoffensif en jeu (rien ne téléporte un tireur en 0,5 s), source d'un faux son dans un banc.
+- Le **déterminisme n'est pas à l'octet près** : 0,02 px d'écart sur certains duels entre deux processus, origine non trouvée. L'issue ne change presque jamais (0 duel sur 54 à la dernière mesure, 1 sur 54 à l'avant-dernière).
+- **La `fenêtre` est plus parlante que le temps jusqu'au premier coup** : ce dernier est dominé par la recherche (3,8 à 4,1 s pour les trois difficultés) et ne se range pas ; la fenêtre, elle, se range (1,6 / 1,4 / 1,3 s). Le banc imprime les deux.
+- `docs/JOURNAL_SESSIONS.md` : aucun fichier « partagé, à demander avant d'écrire » n'a été touché ; `profil_bot.gd` est « en propre » du chantier.
+
+**À trancher par Adrien.** (1) Les cibles **80 / 55 / 30** : trop dures, trop douces ? Les chiffres se rejouent en une commande (`--surcharge-facile=…`). (2) **FACILE doit-il être gagnable par un débutant pur** ? Aujourd'hui un joueur de 0,5 s le bat 39 % du temps ; le
+régler pour 80 % chez un joueur entraîné le laisse difficile pour un premier lancement. (3) **NORMAL, boss de l'initiation** : 50 % pour un joueur qui l'a finie, 13 % pour un débutant pur — suffisant, ou faut-il un NORMAL plus doux pour le boss du chapitre 0 seul ?
+(4) Les PNJ de l'initiation partent de **LENT** pour les niveaux 0.7 à 0.9 (réflexes « lents », Adrien) : le catalogue en offre un cran de moins (TRÈS LENT) et deux de plus (FACILE, NORMAL) pour les chapitres suivants — qui y mettre, et quand ?
+(5) L'**audace commune de 100 px** : un bot FACILE qui tire sur un pas entendu à 400 px — et manque — est-il lisible pour un joueur, ou trop bavard ?
 
 ### S5 — FAITE le 2026-10-02 : les plafonniers — la lumière posée, ses ombres, sa place dans le modèle de vue du bot
 
