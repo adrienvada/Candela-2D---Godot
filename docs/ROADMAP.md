@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le solo compte onze chapitres : l'initiation (0) puis dix chapitres (1 à 10)** (2026-10-02, Adrien, même session : « Oui je veux 11 chapitres (intro + dix chapitres). On verra ensuite ce que c'est ») | Confirme la lecture de SOLO-Q8. Dix classes pour les chapitres 0 à 9 dans l'ordre du rang ; le chapitre 10 n'a pas de classe à offrir, et son contenu reste à définir — rien avant S8 n'en dépend. |
 | **Le solo débloque les classes dans l'ordre du rang en ligne ; l'initiation n'a pas de ronde, ses ennemis restent immobiles et se multiplient ; le chapitre 10 attend** (2026-10-02, Adrien, même session : « oui l'ordre en ligne » ; « Chapitre 10 on verra plus tard ce qu'on gagne » ; « Non pas de rondes, mais on peut augmenter le nombre d'ennemis immobiles ») | L'ordre du rang fait du solo une préparation au chemin en ligne : la classe qu'on gagne en solo est la prochaine qu'on gagnera en classé. Sans ronde, la difficulté de l'initiation monte par le nombre (le niveau 0.9 devient « la salle pleine », cinq ou six immobiles de toutes sortes), et le boss est le premier adversaire mobile. Le chapitre 10 est lu comme un onzième chapitre, sans classe à offrir — lecture à confirmer (SOLO-Q8). |
 | **Le chapitre d'initiation est le chapitre 0, et il débloque la classe de base (le Parasite) : dix chapitres numérotés de 0 à 9, une classe chacun** (2026-10-02, Adrien, même session : « Le chapitre d'initiation est le chapitre 0. Il débloque la classe de base. ») | Le compte tombe juste — dix chapitres, dix classes — et SOLO-Q6 (un chapitre sans classe à offrir) disparaît. Le boss de l'initiation est un duel en miroir contre un Parasite : le joueur affronte la classe qu'il tient, donc rien qu'il ne connaisse déjà. L'ordre des classes suivantes (SOLO-Q5) reste à trancher ; « Chantier — le mode solo » propose celui du rang. |
 | **Le solo, suite : un niveau est une salle, gagnée en éliminant tout le monde et recommencée à la mort ; des plafonniers qui ne s'éteignent pas ; dix chapitres de dix niveaux, le dixième étant un boss — le bot en difficulté normale, dans la classe que le chapitre débloque ; le chapitre 1 d'abord, écrit en données** (2026-10-02, Adrien, même session : « Oui il faut éliminer tout le monde » ; « les lumières fixes ne s'éteignent pas. Ce sont des plafonniers. Il faut les implémenter » ; « mourir on recommence la salle. La salle est un niveau » ; « prépare la structure du premier chapitre d'initiation pour l'instant. On verra ensuite : il faut faire dix chapitres, chacun contenant dix niveaux dont un boss final qui est juste un bot en mode moyen avec la classe qu'on débloque à la fin du chapitre » ; « le bot voit par le calcul ») | **Le boss est le bot de l'entraînement** (cran 3, normal) : aucun comportement de boss à écrire, et le joueur affronte au dixième niveau exactement ce qu'il retrouvera à l'entraînement. **Les plafonniers ont leur étape (S5)**, avant le moteur de l'aventure : ils servent trois fois — montrer les PNJ, trahir le joueur dans le modèle de vue du bot, porter ombre — et leur coût se mesure seul. **Le chapitre 1 est structuré niveau par niveau** (une chose nouvelle par salle, jusqu'au duel) dans « Chantier — le mode solo » ; étapes revues S1 à S9, questions ouvertes SOLO-Q5 à Q7 (ordre des classes, chapitre 10 sans classe à offrir, la ronde dès le niveau 1.9). |
@@ -31476,7 +31477,7 @@ classe pour le mode solo. On peut choisir librement sa classe une fois débloqu�
 - **On l'emporte en éliminant tout le monde.** « Oui il faut éliminer tout le monde » : pas de sortie à atteindre, pas
   de salle qu'on traverse sans tirer.
 - **Mourir recommence la salle**, pas le chapitre.
-- **Dix chapitres de dix niveaux.** Le dixième de chaque chapitre est le **boss** : « juste un bot en mode moyen avec
+- **Des chapitres de dix niveaux** (onze chapitres, de 0 à 10). Le dixième de chaque chapitre est le **boss** : « juste un bot en mode moyen avec
   la classe qu'on débloque à la fin du chapitre » — le cran 3 de l'entraînement, difficulté normale, dans la classe que
   le chapitre offre. Le boss est donc le **même bot** que l'entraînement : aucun comportement de boss à écrire.
 - **Les salles sont écrites en données par les sessions**, en commençant par le chapitre 0, l'initiation. L'éditeur de cartes n'est
@@ -31494,9 +31495,9 @@ sien au boss — ; puis le chapitre 1 le Fumiste, le 2 l'Illusionniste, le 3 le 
 l'Incendiaire, le 6 la Sentinelle, le 7 l'Occulteur, le 8 l'Allumeur, le 9 le Spectre. **Le chapitre 10 n'a plus de classe
 à offrir** : ce qu'on y gagne, et la classe de son boss, sont laissés à plus tard.
 
-⚠️ **Lecture de la session, à confirmer** : « chapitre 10 » se lit comme un onzième chapitre (0 à 10), l'initiation
-s'ajoutant aux dix chapitres demandés plus tôt. Si Adrien voulait dix chapitres en tout (0 à 9), le chapitre 10
-n'existe pas et rien ne reste en suspens.
+**Onze chapitres, confirmé** (Adrien, 2026-10-02 : « Oui je veux 11 chapitres (intro + dix chapitres). On verra
+ensuite ce que c'est ») : l'initiation (0), puis dix chapitres (1 à 10). Le contenu du chapitre 10 et ce qu'on y gagne
+restent à définir, sans bloquer aucune étape avant S8.
 
 **Le boss porte sa classe, pas encore son gadget.** Un bot ne pose de gadget qu'à partir de S9 ; d'ici là le boss du
 chapitre 0 a l'arme, la torche et le root du Parasite, sans son gadget. Le dire au joueur serait mentir sur la classe qu'il
@@ -31584,7 +31585,8 @@ niveaux, boss au dixième), puis SOLO-Q6 (l'initiation est le chapitre 0 et déb
 numérotés à partir de 0), SOLO-Q5 (l'ordre du rang en ligne), SOLO-Q7 (pas de ronde dans l'initiation : plus d'ennemis
 immobiles). **Ouvertes** :
 
-- **SOLO-Q8 — le chapitre 10** : existe-t-il (0 à 10), et que gagne-t-on à son terme ? « On verra plus tard. »
+- **SOLO-Q8 — le chapitre 10** : il existe (onze chapitres, tranché) ; son contenu et ce qu'on y gagne, « on verra
+  ensuite ».
 
 ---
 
