@@ -302,6 +302,15 @@ SUITES+=(test_bot_perception)
 # `test_entrainement_bot`.
 SUITES+=(test_bot_combat)
 
+# Chantier SOLO, S5 (2026-10-02) : les PLAFONNIERS, lumières posées, permanentes et indestructibles de l'aventure. `test_plafonniers`
+# (en `--script`, sans partie) : la pose depuis des données (noms, places, bornes, canaux de lumière et d'ombre conformes à
+# `canaux_lumiere.gd`, hauteur au-dessus des murets), l'allumage par proximité et son hystérésis, l'absence de toute pose dans une
+# carte de duel (les données, le code, et le vrai jeu monté sur chaque carte livrée), le modèle de vue du bot (sous un plafonnier :
+# vue ; derrière un mur haut : non ; hors de la flaque : rien ; un mur bas par la géométrie de la hauteur de la lampe) et le miroir
+# de lumières de la vue iso. L'autre moitié — la lumière réelle, lue sur les capteurs — est au banc `banc_perception_bot` (familles
+# `plafonnier*`), qui ouvre une fenêtre et n'entre dans aucune suite headless.
+SUITES+=(test_plafonniers)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.

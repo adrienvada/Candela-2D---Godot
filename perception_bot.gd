@@ -36,8 +36,8 @@ extends RefCounted
 ##      (`MursBas.franchit_regle`) : un mur bas ne porte un occluder que pour une lumière plus basse que lui (la torche
 ##      d'un accroupi), et la zone morte finie qu'il laisse derrière lui à une lumière debout est rendue par le matériau
 ##      du sol — le modèle la lit dans la même fonction que la balle et l'éblouissement, jamais dans une copie.
-##   3. **Les lumières** (`lumiere_cone`, `lumiere_disque`, `lumiere_lampe`, `voir`) : une LISTE d'entrées que S5
-##      étendra avec les plafonniers sans refonte — un plafonnier est un disque posé, de hauteur donnée.
+##   3. **Les lumières** (`lumiere_cone`, `lumiere_disque`, `lumiere_lampe`, `voir`) : une LISTE d'entrées. S5 y a posé les
+##      plafonniers sans refonte : un disque, de hauteur donnée — et déclarée (`par_hauteur`), ce qui change la règle des murs bas.
 ##   4. **L'ouïe** (`ecouter`) : une zone d'incertitude, jamais la place exacte.
 ##
 ## ## Les chiffres de ce fichier sont des chiffres de DÉPART
@@ -49,6 +49,9 @@ extends RefCounted
 const Geometrie := preload("res://map_geometry.gd")
 const Tuiles := preload("res://candela_tileset.gd")
 const Murs := preload("res://murs_bas.gd")
+## La règle de la hauteur des murs bas, celle du SHADER (`mb_dans_la_zone_morte`) : une lumière qui déclare une vraie hauteur
+## (un plafonnier) la suit, là où la règle du jeu (`Murs.franchit_regle`, « un même angle ») est celle des lumières tenues.
+const RenduMurs := preload("res://murs_bas_rendu.gd")
 const Son := preload("res://son_visible.gd")
 const Regard := preload("res://regard_duel.gd")
 const Portee := preload("res://portee_ecran.gd")
@@ -59,8 +62,8 @@ const Vision_ := preload("res://vision.gd")
 ##
 ## - `CONE` : un faisceau (la torche du bot, et un jour celle d'un PNJ) — la cible est éclairée si le cookie de l'arme
 ##   verse assez de lumière sur son corps ;
-## - `DISQUE` : une tache centrée sur un point, de rayon donné — l'éclair d'un tir, la fusée, le halo de proximité, et
-##   demain le plafonnier ;
+## - `DISQUE` : une tache centrée sur un point, de rayon donné — l'éclair d'un tir, la fusée, le halo de proximité, le
+##   plafonnier ;
 ## - `LAMPE` : une source qu'on VOIT, pas ce qu'elle éclaire — la lampe de la torche de la cible. Son porteur est trahi
 ##   quand le bot a une ligne de vue sur elle : c'est ce que dit « la torche trahit ».
 ##
@@ -88,6 +91,14 @@ const SEUIL_CONE := 0.15
 ## (`banc_perception_bot` : aucune prise où le modèle voit un capteur noir) : le masque peint tombe à zéro au bord et le
 ## capteur lit quasi 0 sur le dernier quart ; 0,6 reste dans le plein.
 const FRACTION_DISQUE := 0.6
+
+## La part du rayon de la TEXTURE d'un plafonnier (`Plafonnier.rayon_px`) que le modèle tient pour éclairée. Même masque peint que la
+## fusée (`LightTextures.RETRODIFFUSION`), donc même valeur que `FRACTION_DISQUE`, et **la même prudence, jamais optimisée**. *Mesuré*
+## (`tools/banc_perception_bot.gd`, famille `plafonnier`, 42 prises : trois énergies de 0,6 à 3,0, sept distances, deux caps) : le
+## capteur du corps éclaire encore (≥ 0,10) à 90 % du rayon à TOUTES les énergies permises — le modèle, qui s'arrête à 60 % du rayon
+## plus le bord du corps (18 px), y laisse donc une marge de plus d'un quart du rayon. Aucune prise « le modèle voit, le capteur est
+## noir ». La marge n'est pas à rendre : c'est elle qui tient quand le matériau du jeu changera.
+const FRACTION_PLAFONNIER := 0.6
 
 ## Une lampe qui brûle à moins que ça (énergie, en part de la pleine énergie de la torche) ne trahit pas : elle
 ## s'allume ou s'éteint, le grésillement la coupe, la respiration la creuse.
@@ -211,6 +222,21 @@ static func ligne_de_vue(a: Vector2, b: Vector2, h_a: float, h_b: float, monde: 
 	return Murs.franchit_regle(a, b, h_a, h_b, bas)
 
 
+## La ligne de vue d'une LUMIÈRE `l` jusqu'à un point `b` de hauteur `h_b` : les murs hauts, puis les murs bas — par la règle de
+## la hauteur de la lumière si elle en déclare une (`par_hauteur`), par celle du jeu sinon. L'œil du bot, lui, passe toujours par
+## `ligne_de_vue` : un corps ne déclare pas de hauteur de source.
+static func ligne_de_la_lumiere(l: Dictionary, b: Vector2, h_b: float, monde: Dictionary) -> bool:
+	var a: Vector2 = l["origine"]
+	if not bool(l.get("par_hauteur", false)):
+		return ligne_de_vue(a, b, float(l["hauteur"]), h_b, monde)
+	if not segment_degage(a, b, monde):
+		return false
+	var bas: Array = monde["murs_bas"]
+	if bas.is_empty():
+		return true
+	return RenduMurs.eclaire_par_hauteur(a, b, float(l["hauteur"]), h_b, Murs.forme_de_lumiere(bas), Murs.hauteur_mur())
+
+
 # ---------------------------------------------------------------------------
 # LE CADRE
 # ---------------------------------------------------------------------------
@@ -269,8 +295,15 @@ static func lumiere_cone(nom: String, origine: Vector2, avant: Vector2, hauteur:
 
 ## Une tache : `rayon` est le rayon que le modèle tient pour ÉCLAIRÉ (déjà réduit de `FRACTION_DISQUE` par l'appelant,
 ## ou fixé par lui — un plafonnier a son rayon) ; `hauteur` la hauteur de la source, en pixels.
-static func lumiere_disque(nom: String, origine: Vector2, rayon: float, hauteur: float) -> Dictionary:
-	return {"genre": Genre.DISQUE, "nom": nom, "origine": origine, "rayon": rayon, "hauteur": hauteur}
+##
+## `par_hauteur` : la lumière déclare une VRAIE hauteur (`MursBasRendu.poser_hauteur_source`, comme un plafonnier ou une fusée en
+## l'air) : un mur bas ne l'arrête alors que par la géométrie de cette hauteur (`MursBasRendu.eclaire_par_hauteur`), la fonction même
+## que lit le shader des corps. Faux (le défaut : le halo, l'éclair, la torche — des lumières TENUES, sans hauteur posée), c'est la
+## règle du jeu, « un même angle » (`MursBas.franchit_regle`). Les deux règles ne donnent pas la même zone morte : une source
+## haute en laisse moins près du mur et plus loin de lui, et employer la mauvaise ferait voir à travers la zone que le shader noircit.
+static func lumiere_disque(nom: String, origine: Vector2, rayon: float, hauteur: float, par_hauteur: bool = false) -> Dictionary:
+	return {"genre": Genre.DISQUE, "nom": nom, "origine": origine, "rayon": rayon, "hauteur": hauteur,
+		"par_hauteur": par_hauteur}
 
 
 ## Une lampe qu'on VOIT : son porteur est trahi tant que le bot a une ligne de vue sur elle, dans le cadre.
@@ -316,7 +349,7 @@ static func eclaire(l: Dictionary, pos: Vector2, h_c: float, monde: Dictionary) 
 		var proche := pos if vers.length() <= RAYON_CORPS else pos + vers.normalized() * RAYON_CORPS
 		if origine.distance_to(proche) > float(l["rayon"]):
 			return false
-		return ligne_de_vue(origine, proche, h_l, h_c, monde) and ligne_de_vue(origine, pos, h_l, h_c, monde)
+		return ligne_de_la_lumiere(l, proche, h_c, monde) and ligne_de_la_lumiere(l, pos, h_c, monde)
 	# CONE
 	if not ligne_de_vue(origine, pos, h_l, h_c, monde):
 		return false

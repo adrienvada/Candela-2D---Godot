@@ -6,6 +6,7 @@
 ## - leurs doubles de killcam (`GhostPN/Light`, `GhostPN/Flash`), pilotés par l'instantané ;
 ## - le halo des fusées (`Halo`), la lueur des braises (`Lueur`), l'embrasement de la mine (`Embrasement`) et le
 ##   faisceau de la torche fantôme (`Faisceau`).
+## - les PLAFONNIERS du solo (`Halo` de chaque nœud du groupe « plafonniers », S5) : une lumière posée, permanente — voir `_miroir_des_plafonniers`.
 ## - la RÉTRODIFFUSION : `BodyLight` de chaque joueur et le `Halo` de la torche fantôme (drapeau `retrodiffusion`).
 ##   ⚠️ Écartée au plan, rendue après la première passe du banc (2026-09-15 22:45) : sans elle, la vue 3D montrait MOINS que
 ##   la 2D — le halo qui trahit le porteur et le corps de J2 disparaissaient. La bride empêche d'en montrer plus, rien
@@ -52,13 +53,13 @@ const PORTEE_EN_PLUS := 1.15
 ## ne touchait le sol qu'à ~250 px devant la lampe : le sol entre le porteur et le mur restait noir.
 const VISEE_AU_SOL_PORTEE := 0.5
 ## Les types de source. Les énergies sont calibrées au banc (`tools/banc_lumiere3d.gd`) : une par type, pour tous.
-const TYPES := ["torche", "flash", "fusee", "braise", "mine", "torche_fantome", "retrodiffusion"]
+const TYPES := ["torche", "flash", "fusee", "braise", "mine", "torche_fantome", "retrodiffusion", "plafonnier"]
 ## Calibrées au banc le 2026-09-15. Cinquième passe rapide (bandeau de LED figé), luminance moyenne là où la 2D est éclairée,
 ## 3D sur 2D : cône de torche 1,06 à 1,29 avec 6, halo de fusée 0,77 à 0,84 avec 20, rétrodiffusion 1,10 avec 1. Puis ramenées
 ## vers 1,0 ± 0,1 (demande de la session cloud, 23:42) : torche 3,6 et fusée 52, à revérifier au banc.
 ## Les mêmes pour les deux joueurs et les deux vues : c'est de l'équité, pas un réglage.
 var energie_par_type := {"torche": 3.6, "flash": 3.6, "fusee": 52.0, "braise": 52.0, "mine": 52.0, "torche_fantome": 3.6,
-	"retrodiffusion": 0.8}
+	"retrodiffusion": 0.8, "plafonnier": 2.5}
 var retrodiffusion := true
 ## ISO12 — l'atténuation par type (`omni_attenuation` / `spot_attenuation`, 1 = inverse du carré, 0 = plat).
 ##
@@ -168,11 +169,45 @@ func suivre(main: Node, voxels: Array) -> void:
 				if retrodiffusion and halo != null and faisceau != null:
 					var ph := halo.global_position
 					_omni(halo, "retrodiffusion", Vector3(ph.x, MursBas.HAUTEUR_DEBOUT * 0.6 * TUILE, ph.y), vus)
+	_miroir_des_plafonniers(main, vus)
 	for id in _pool.keys():
 		if not vus.has(id):
 			(_pool[id] as Node).queue_free()
 			_pool.erase(id)
 	_plafonner(LAMPES_MAX)
+
+
+## S5 — les plafonniers du solo, au miroir. Une lumière 2D posée et permanente (`plafonnier.gd`) y devient une omni de plus,
+## de la HAUTEUR de la lampe 2D (`_omni` la lit : 52,5 px, le plafond) : sans elle, la 2D éclairerait la flaque (la lightmap fait
+## l'intensité) mais aucune lampe 3D ne la connaîtrait, et le relief des faces y vaudrait 1 (aplat).
+##
+## ⚠️ **Au plus `PLAFONNIERS_PAR_JOUEUR` par joueur, les plus proches.** Une omni à ombres, c'est six faces d'ombre par image ; une
+## salle en porte plusieurs, et la seule limite jusqu'ici était les huit lampes du moteur, dont les torches. Les plus proches d'un
+## joueur sont celles qu'il voit ; les autres restent éclairées en 2D (la lightmap) et n'ont que le relief en moins. **Le chiffre est
+## un choix de prudence, jamais mesuré (consigne d'Adrien : aucun relevé de cadence).** Le poids 3D du type (2,5, soit 7,5 à l'énergie
+## maximale d'un plafonnier, contre 9 pour une torche à pleine énergie, à teinte égale) fait aussi que ces lampes ne chassent jamais
+## une torche des huit places (`_plafonner`). **Ce poids n'est pas calibré au banc de lumière 3D** (`banc_lumiere3d`) : un poids entre lampes,
+## pas une luminosité — voir `energie_par_type`.
+const PLAFONNIERS_PAR_JOUEUR := 2
+
+func _miroir_des_plafonniers(main: Node, vus: Dictionary) -> void:
+	if not main.is_inside_tree():
+		return
+	var gardes := {}
+	for j in 2:
+		var joueur = main.get("p1") if j == 0 else main.get("p2")
+		if not (joueur is Node2D) or not is_instance_valid(joueur):
+			continue
+		var proches: Array = []
+		for p in main.get_tree().get_nodes_in_group("plafonniers"):
+			var halo := (p as Node).get_node_or_null(^"Halo") as Light2D if is_instance_valid(p) else null
+			if halo != null and halo.enabled:
+				proches.append([(joueur as Node2D).global_position.distance_squared_to(halo.global_position), halo])
+		proches.sort_custom(func(a, b) -> bool: return float(a[0]) < float(b[0]))
+		for k in mini(PLAFONNIERS_PAR_JOUEUR, proches.size()):
+			gardes[(proches[k][1] as Light2D).get_instance_id()] = proches[k][1]
+	for halo: Light2D in gardes.values():
+		_omni(halo, "plafonnier", null, vus)
 
 
 ## ISO12 v27 — AU PLUS HUIT LAMPES MIROIR ALLUMÉES À LA FOIS (décision de la session cloud, 2026-09-23, 03:50) : les huit plus

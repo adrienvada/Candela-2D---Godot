@@ -254,7 +254,8 @@ func _disque(nom: String, lumiere: Light2D, hauteur: float, energie_min: float) 
 ##     est une règle de l'ADVERSAIRE, le halo du bot, lui, l'éclaire — `CanauxLumiere.canal_de_vue`) ; son ÉCLAIR de tir ;
 ##   • la LAMPE de la cible, quand sa torche brûle : elle est trahie à sa lampe ; son ÉCLAIR de tir, qui éclaire son corps ;
 ##   • les FUSÉES posées et allumées ;
-##   • **demain** les plafonniers (S5) : un `lumiere_disque` de plus dans cette liste, rien d'autre à changer.
+##   • les PLAFONNIERS allumés (S5, groupe « plafonniers ») : un disque de plus, qui déclare sa vraie hauteur — un mur bas ne le
+##     coupe que par la géométrie de cette hauteur, comme le shader.
 ##
 ## ⚠️ Laissées DEHORS, pour voir moins que la lumière : la rétrodiffusion, le faisceau dans l'air, la torche de la cible
 ## sur ce qu'elle éclaire, les fusées en vol, les gadgets (le bot est alors aveugle, voir `_gadget_non_modelise`).
@@ -283,6 +284,26 @@ func _lumieres(adversaire: Node2D) -> Array:
 		if halo == null or not halo.enabled:
 			continue
 		sortie.append_array(_disque("fusee", halo, HAUTEUR_FUSEE_AU_SOL_TUILES * float(tuile), 0.0))
+	sortie.append_array(_plafonniers())
+	return sortie
+
+
+## Les plafonniers (S5) : un disque par plafonnier ALLUMÉ, de la hauteur et du rayon de la LUMIÈRE vivante — jamais de ses
+## paramètres de pose : le modèle lit ce que le moteur dessine. Un plafonnier éteint (loin de tout joueur, voir
+## `Plafonnier.doit_etre_allume`) n'éclaire personne et n'entre pas : voir moins que la lumière, jamais plus. Une énergie sous
+## `Plafonnier.INTENSITE_MIN` n'entre pas non plus : le banc n'a éprouvé le rayon retenu que sur la plage permise.
+func _plafonniers() -> Array:
+	var sortie: Array = []
+	for p in get_tree().get_nodes_in_group(Plafonnier.GROUPE):
+		if not is_instance_valid(p) or (p as Node).is_queued_for_deletion():
+			continue
+		var halo := (p as Node).get_node_or_null("Halo") as PointLight2D
+		if halo == null or not halo.enabled or halo.energy < Plafonnier.INTENSITE_MIN or halo.height <= 0.0:
+			continue
+		var r := _rayon_de(halo) * Percep.FRACTION_PLAFONNIER
+		if r <= 0.0:
+			continue
+		sortie.append(Percep.lumiere_disque(String((p as Node).name), halo.global_position, r, halo.height, true))
 	return sortie
 
 

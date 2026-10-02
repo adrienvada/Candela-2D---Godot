@@ -15,7 +15,8 @@ extends "res://tools/photographe.gd"
 ## ## Le verdict
 ##
 ##   • **ÉCHEC (code 1) : le modèle voit là où le capteur est NOIR** (maximum < `SEUIL_NOIR`) — c'est de la malhonnêteté,
-##     le bot saurait ce que la lumière lui cache ;
+##     le bot saurait ce que la lumière lui cache ; **ou** le capteur de SOI sous un plafonnier n'est pas ce que le mur commande ;
+##     **ou** une prise `plafonnier_bas` n'a pas obtenu la posture qu'elle annonce ;
 ##   • **rapporté** : le taux d'accord — de tout ce que le capteur éclaire, la part que le modèle voit aussi. Il peut
 ##     LÉGITIMEMENT être sous 100 % : le modèle ne connaît pas la rétrodiffusion, ne regarde que ce qui tient dans l'écran, et
 ##     exige une ligne de vue du bot sur le corps (un corps éclairé derrière un mur est éclairé, mais pas vu). Un taux bas
@@ -31,10 +32,17 @@ extends "res://tools/photographe.gd"
 ##   1. **LE CADRE** : les quatre coins de l'écran de la caméra de J2, ramenés au sol par `CameraIso.vers_sol`, doivent être
 ##      ceux du cadre du modèle (`PerceptionBot.cadre_de_vue`), dans quatre visées. Un cadre plus large que l'écran serait
 ##      un bot qui voit hors de l'écran.
-##   2. **LES SITUATIONS** : 124 prises en treize familles — le noir, la lampe de la cible (de face, de
-##      dos, de près, de loin), la lampe derrière un mur, hors du cadre, le cône de la torche du bot (axe, flancs, bord,
-##      portée), le cône derrière un mur, l'éclair de la cible, l'éclair du bot, la fusée (allumage, braise), la fusée derrière
-##      un mur, le halo de proximité, les murs bas (debout, accroupi) et le bandeau LED des murs.
+##   2. **LES SITUATIONS** : 124 prises en treize familles — le noir, la lampe de la cible (de face, de dos, de près, de loin), la
+##      lampe derrière un mur, hors du cadre, le cône de la torche du bot (axe, flancs, bord, portée), le cône derrière un
+##      mur, l'éclair de la cible, l'éclair du bot, la fusée (allumage, braise), la fusée derrière un mur, le halo de
+##      proximité, les murs bas (debout, accroupi) et le bandeau LED des murs.
+##   3. **LES PLAFONNIERS (S5)** : 64 prises en trois familles + 2 lectures du capteur de SOI. `plafonnier` : la flaque, de 20 à
+##      115 % de son rayon, aux trois énergies que le jeu permet — **où le capteur éclaire encore, et où le modèle s'arrête** ;
+##      `plafonnier_mur` : la paroi entre la lampe et la cible (capteur noir : le modèle est pris en faute s'il l'ignore), le
+##      témoin sans mur, le bot derrière la paroi, et le capteur de SOI du bot (son propre corps dans sa propre vue : noir
+##      derrière la paroi, éclairé sans) ; `plafonnier_bas` : la lampe haute et le mur bas (zone morte FINIE d'un accroupi, la
+##      posture RÉELLE lue et exigée). Et, sur demande seulement (`--familles=planche`), une PLANCHE de quatre images à regarder
+##      (`plafonnier_noir`, `_flaque`, `_accroupi`, `_sans_luminaire`) : l'œil juge ce que le capteur ne dit pas.
 ##
 ## ## Lancer
 ##
@@ -98,6 +106,8 @@ var _noeud: PerceptionBotNoeud
 ## La pose voulue, réappliquée à chaque image.
 var _cfg: Dictionary = {}
 var _lignes: Array[Dictionary] = []
+## S5 — le capteur de SOI du bot (J2 dans SA vue), sous un plafonnier : [nom, maximum de l'anneau, noir attendu ?].
+var _soi: Array[Dictionary] = []
 var _cadre_verdict: Dictionary = {}
 var _familles_voulues: Array = []
 var _cacher := PackedStringArray()
@@ -167,9 +177,30 @@ static func preconditions_perception(ui: Node, main: Node) -> Array[String]:
 		for methode in ["forcer_age", "est_allumee_au_sol", "energie_relative"]:
 			if not m_fusee.has(methode):
 				absents.append("Fusee.%s() a disparu" % methode)
+	# S5 — les plafonniers : le banc les pose par `Plafonnier.poser` (l'appel de S6) et lit leur lumière et leurs bornes.
+	var script_plafonnier := load("res://plafonnier.gd") as GDScript
+	if script_plafonnier == null:
+		absents.append("plafonnier.gd est introuvable")
+	else:
+		var m_plafonnier := {}
+		for m in script_plafonnier.get_script_method_list():
+			m_plafonnier[m["name"]] = true
+		for methode in ["poser", "retirer", "actualiser", "normaliser", "valider"]:
+			if not m_plafonnier.has(methode):
+				absents.append("Plafonnier.%s() a disparu" % methode)
+		var p_plafonnier := {}
+		for p in script_plafonnier.get_script_property_list():
+			p_plafonnier[p["name"]] = true
+		if not p_plafonnier.has("halo"):
+			absents.append("Plafonnier.halo a disparu")
+		var constantes := script_plafonnier.get_script_constant_map()
+		for nom in ["INTENSITE_MIN", "INTENSITE_PAR_DEFAUT", "INTENSITE_MAX", "GROUPE"]:
+			if not constantes.has(nom):
+				absents.append("Plafonnier.%s a disparu" % nom)
 	if not ResourceLoader.exists(CARTE_BANC):
 		absents.append("la carte du banc (%s) est introuvable" % CARTE_BANC)
-	for chemin in ["res://perception_bot.gd", "res://perception_bot_noeud.gd", "res://memoire_bot.gd", "res://profil_bot.gd"]:
+	for chemin in ["res://perception_bot.gd", "res://perception_bot_noeud.gd", "res://memoire_bot.gd", "res://profil_bot.gd",
+			"res://plafonnier.gd"]:
 		if not ResourceLoader.exists(chemin):
 			absents.append("%s est introuvable" % chemin)
 	return absents
@@ -524,6 +555,15 @@ func _les_familles() -> void:
 		await _famille_murs_bas()
 	if _voulue("led_murs"):
 		await _famille_led_murs()
+	if _voulue("plafonnier"):
+		await _famille_plafonnier()
+	if _voulue("plafonnier_mur"):
+		await _famille_plafonnier_mur()
+	if _voulue("plafonnier_bas"):
+		await _famille_plafonnier_bas()
+	# La planche : seulement si on la DEMANDE (`--familles=planche`) — des images, pas des mesures.
+	if _familles_voulues.has("planche"):
+		await _planche_plafonnier()
 
 
 ## Le noir : ni torche, ni éclair, ni fusée — le corps de la cible, loin du halo du bot, est noir ; le modèle ne voit rien.
@@ -732,6 +772,168 @@ func _famille_led_murs() -> void:
 		_lire("led_murs", "à %d px de la paroi" % k)
 
 
+## S5 — pose UN plafonnier par `Plafonnier.poser` (l'appel que fera S6), à `pos`, de `rayon` cases et d'énergie `energie`.
+func _poser_un_plafonnier(pos: Vector2, rayon: float, energie: float) -> Plafonnier:
+	var case := Vector2i(floori(pos.x / TUILE), floori(pos.y / TUILE))
+	var liste := Plafonnier.poser(_main.arena, [{"case": case, "rayon": rayon, "intensite": energie}])
+	if liste.is_empty():
+		printerr("✗ le plafonnier n'a pas été posé")
+		return null
+	var p: Plafonnier = liste[0]
+	# Au point demandé et non au centre de la case : la flaque se mesure à distance exacte.
+	p.global_position = pos
+	return p
+
+
+func _retirer_les_plafonniers() -> void:
+	Plafonnier.retirer(_main.arena)
+	await _tenir_images(3)
+
+
+## S5 — la FLAQUE : un plafonnier à 300 px à l'ouest du bot, la cible à `f × R` de lui (R = le rayon de la texture), au nord puis
+## au sud, aux trois énergies que le jeu permet (`INTENSITE_MIN`, le défaut, `INTENSITE_MAX`). La torche du bot est éteinte et la
+## cible ne porte rien : seul le plafonnier l'éclaire. **Ce que le banc cherche : le plus grand `f` où le modèle voit encore sans que
+## le capteur soit noir** — `FRACTION_PLAFONNIER` est choisie sous lui, jamais réglée pour que le bot « voie bien ».
+func _famille_plafonnier() -> void:
+	var rayon_cases := 5.0
+	var r_tex := rayon_cases * TUILE
+	for energie in [Plafonnier.INTENSITE_MIN, Plafonnier.INTENSITE_PAR_DEFAUT, Plafonnier.INTENSITE_MAX]:
+		var pos_p := _o + _pol(300.0, 180.0)
+		_pose(_o, Vector2.LEFT, _o + _pol(400.0, 200.0), Vector2.RIGHT)
+		var p := _poser_un_plafonnier(pos_p, rayon_cases, energie)
+		if p == null:
+			return
+		for f in [0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.15]:
+			for b in [90.0, 270.0]:
+				var t := pos_p + _pol(f * r_tex, b)
+				_pose(_o, Vector2.LEFT, t, Vector2.RIGHT)
+				await _tenir_images(IMAGES_POSE)
+				_lire("plafonnier", "énergie %.1f, à %.0f %% du rayon, cap %d°" % [energie, f * 100.0, b],
+					{"energie": energie, "fraction": f, "rayon_tex": r_tex})
+		await _retirer_les_plafonniers()
+
+
+## S5 — la FLAQUE ET LE MUR : un plafonnier (6 cases de rayon) à 40 px de la face EST de la paroi pleine, la cible de l'autre côté
+## (à l'ouest), à 100 puis 120 px de lui — dans sa flaque, le mur au milieu : le capteur est NOIR, **le modèle est pris en faute
+## s'il ignore le mur**. Puis le témoin, à 100 px du plafonnier sans mur entre eux : éclairé. Et la cible du côté du plafonnier, le
+## bot derrière la paroi : éclairée, jamais vue (le modèle exige une ligne de vue — il voit moins).
+func _famille_plafonnier_mur() -> void:
+	var pos_p := Vector2(1085.0 + 40.0, _o.y)
+	_pose(_o, Vector2.LEFT, _o + _pol(400.0, 200.0), Vector2.RIGHT)
+	var p := _poser_un_plafonnier(pos_p, 6.0, Plafonnier.INTENSITE_PAR_DEFAUT)
+	if p == null:
+		return
+	for d in [100.0, 120.0]:
+		var t := Vector2(pos_p.x - d, _o.y)
+		_pose(_o, Vector2.LEFT, t, Vector2.RIGHT)
+		await _tenir_images(IMAGES_POSE)
+		_lire("plafonnier_mur", "la paroi entre le plafonnier et la cible (à %d px de lui)" % d)
+	# Le témoin : à 100 px du plafonnier vers le nord, sans mur entre eux, dans le champ d'un bot du même côté de la paroi.
+	var t_nord := pos_p + Vector2(0.0, -100.0)
+	_pose(Vector2(1172.5, _o.y), Vector2.RIGHT, t_nord, Vector2.LEFT)
+	await _tenir_images(IMAGES_POSE)
+	_lire("plafonnier_mur", "le témoin sans mur, à 100 px du plafonnier, le bot du même côté")
+	# Le bot derrière la paroi, la cible dans la flaque : éclairée, jamais vue.
+	var t_la := pos_p + Vector2(0.0, 40.0)
+	_pose(_o, Vector2.RIGHT, t_la, Vector2.LEFT)
+	await _tenir_images(IMAGES_POSE)
+	_lire("plafonnier_mur", "la cible dans la flaque, le bot derrière la paroi")
+	# Le capteur de SOI du bot (son propre corps, dans sa propre vue : `masque_de_soi`, le bit 256 de J2) : derrière la paroi, dans la
+	# flaque du plafonnier, il doit être NOIR ; au même écart sans mur, éclairé. C'est la moitié du masque d'ombre que le capteur
+	# croisé de la cible ne mesure pas.
+	_pose(Vector2(pos_p.x - 100.0, _o.y), Vector2.LEFT, _o + _pol(400.0, 200.0), Vector2.RIGHT)
+	await _tenir_images(IMAGES_POSE)
+	_lire_soi("le bot à 100 px du plafonnier, la paroi entre eux", true)
+	_pose(pos_p + Vector2(0.0, -100.0), Vector2.LEFT, _o + _pol(400.0, 200.0), Vector2.RIGHT)
+	await _tenir_images(IMAGES_POSE)
+	_lire_soi("le bot à 100 px du plafonnier, sans mur", false)
+	await _retirer_les_plafonniers()
+
+
+## Le capteur de soi de J2 dans sa propre vue, à l'instant : consigné, jugé (noir attendu, ou éclairé).
+func _lire_soi(nom: String, noir_attendu: bool) -> void:
+	var niveau := _niveau(1, 1)
+	var m := float(niveau[1])
+	var ok := m < SEUIL_NOIR if noir_attendu else m >= SEUIL_LIT
+	_soi.append({"nom": nom, "capteur_max": snappedf(m, 0.0001), "noir_attendu": noir_attendu, "ok": ok})
+	print("  plafonnier_soi %-46s capteur de SOI max %.3f  %s" % [nom, m, "ok" if ok else "ÉCHEC (%s attendu)" % ("noir" if noir_attendu else "éclairé")])
+
+
+## S5 — la FLAQUE ET LE MUR BAS : le plafonnier (9 cases de rayon) à 127 px de la face de sortie du mur bas, la cible derrière. La
+## lampe est PLUS HAUTE que le muret : sa lumière passe par-dessus et laisse derrière lui une zone morte FINIE de `D × (h_mur − h_c)
+## / (h_lampe − h_mur)` — 35 px pour un corps accroupi à cette distance, rien pour un corps debout. Une cible accroupie dedans : le
+## capteur est NOIR (**le modèle est pris en faute s'il ignore le mur bas**) ; au-delà : éclairé. Debout : éclairé partout.
+##
+## ⚠️ Les cibles sont à 22 px et plus de la face de sortie : plus près, le CENTRE du corps est « dans la pierre » (`RAYON_DEDANS`,
+## 16 px) et `Player` ne se laisse pas accroupir (l'enjambement le tient debout) — la première version de la famille posait une cible
+## à 10 px : « ACCROUPIE » dans le journal, debout dans le jeu, capteur éclairé, et la prise suivante en gardait l'état. Le banc lit donc
+## la posture RÉELLE (`accroupi_reel`) et ÉCHOUE sur une prise qui n'est pas celle qu'il annonce.
+##
+## ⚠️ **Ce que cette famille ne peut PAS prendre en faute : un modèle qui ignorerait le mur bas pour la LUMIÈRE.** Sabotage essayé
+## (la ligne de vue de la lampe au mur bas retirée du modèle) : banc vert, zéro prise malhonnête. Dans le rayon que le modèle retient
+## (au plus 60 % de 9 cases, plus le bord du corps), la zone morte de la lampe haute d'un accroupi (au plus ~40 px) est toujours
+## INCLUSE dans celle que la règle du jeu donne à l'œil du bot (44 px) : l'œil bute déjà là où la lampe butterait, et le modèle dit
+## « non » par lui. La règle de la lampe ne se discrimine qu'avec un rayon que le jeu ne permet pas : c'est le rôle de
+## `tools/test_plafonniers.gd` (disque de 400 px), pas de ce banc.
+func _famille_plafonnier_bas() -> void:
+	var o2 := Vector2(1172.5, _o.y)
+	var pos_p := Vector2(1200.0, _o.y)
+	_pose(o2, Vector2.RIGHT, o2 + _pol(200.0, 20.0), Vector2.LEFT)
+	var p := _poser_un_plafonnier(pos_p, 9.0, Plafonnier.INTENSITE_PAR_DEFAUT)
+	if p == null:
+		return
+	for k in [22.0, 40.0, 70.0]:
+		for accroupi in [false, true]:
+			var t := Vector2(1330.0 + k, _o.y)
+			_pose(o2, Vector2.RIGHT, t, Vector2.LEFT, false, false, false, accroupi)
+			await _tenir_images(IMAGES_POSE)
+			var reel := bool(_main.p1.accroupi)
+			_lire("plafonnier_bas", "cible %s à %d px derrière le mur bas" % ["ACCROUPIE" if accroupi else "debout", k],
+				{"accroupi_reel": reel, "posture_obtenue": reel == accroupi})
+	await _retirer_les_plafonniers()
+
+
+## S5 — la PLANCHE du plafonnier, à regarder : la vue de J2 (le bot) en iso, un plafonnier à 105 px à l'ouest du mur bas et à 105 px à
+## l'est de la paroi pleine, la cible debout dans sa flaque. Quatre images dans le dossier de sortie : `plafonnier_noir.png` (rien
+## d'allumé), `plafonnier_flaque.png` (la flaque, ses ombres de murs, la zone morte du muret, le luminaire), `plafonnier_accroupi.png`
+## (la cible accroupie derrière le muret) et `plafonnier_sans_luminaire.png` (le luminaire retiré du suivi, pour juger ce qu'il ajoute).
+## Un banc qui ne se regarde pas ne prouve pas ce qu'on voit : l'œil juge ce que le capteur ne dit pas.
+func _planche_plafonnier() -> void:
+	print("\n[Planche : le plafonnier, en iso, vu du bot]")
+	var o2 := Vector2(1172.5, _o.y + 70.0)
+	var cible := Vector2(1175.0, _o.y - 60.0)
+	_pose(o2, Vector2.LEFT, cible, Vector2.DOWN)
+	await _tenir_images(IMAGES_POSE * 3)
+	await _photo("plafonnier_noir")
+	var p := _poser_un_plafonnier(Vector2(1190.0, _o.y), 6.0, Plafonnier.INTENSITE_PAR_DEFAUT)
+	if p == null:
+		return
+	await _tenir_images(IMAGES_POSE * 3)
+	await _photo("plafonnier_flaque")
+	_pose(o2, Vector2.LEFT, Vector2(1360.0, _o.y), Vector2.LEFT, false, false, false, true)
+	await _tenir_images(IMAGES_POSE * 3)
+	await _photo("plafonnier_accroupi")
+	var miroirs = _iso.get("_miroirs")
+	var volumes = miroirs.get("volumes") if miroirs != null else null
+	if volumes != null:
+		volumes.set("lueurs_actives", false)
+		_pose(o2, Vector2.LEFT, cible, Vector2.DOWN)
+		await _tenir_images(IMAGES_POSE * 3)
+		await _photo("plafonnier_sans_luminaire")
+		volumes.set("lueurs_actives", true)
+	await _retirer_les_plafonniers()
+
+
+func _photo(nom: String) -> void:
+	_au_premier_plan()
+	var img: Image = await Commun.capturer(get_tree(), 3000)
+	if img == null:
+		print("  (pas de capture pour %s)" % nom)
+		return
+	img.save_png("%s/%s.png" % [_dossier, nom])
+	print("  · %s.png (%dx%d)" % [nom, img.get_width(), img.get_height()])
+
+
 # ---------------------------------------------------------------------------
 # LE VERDICT
 # ---------------------------------------------------------------------------
@@ -763,6 +965,12 @@ func _compter(famille: String = "") -> Dictionary:
 func _echec() -> bool:
 	if _compter()["malhonnete"] > 0 or _lignes.is_empty():
 		return true
+	for l in _lignes:
+		if l.has("posture_obtenue") and not bool(l["posture_obtenue"]):
+			return true
+	for l in _soi:
+		if not bool(l["ok"]):
+			return true
 	for nom in _cadre_verdict:
 		if nom == "pire_ecart_px":
 			continue
@@ -803,11 +1011,15 @@ func _verdict() -> void:
 	if int(t["douteux"]) > 0:
 		print("    (%d prise(s) douteuse(s) : le modèle voit, le capteur est entre %.2f et %.2f — à regarder.)"
 			% [t["douteux"], SEUIL_NOIR, SEUIL_LIT])
+	if not _soi.is_empty():
+		var faux := _soi.filter(func(l: Dictionary) -> bool: return not bool(l["ok"])).size()
+		print("  LE CAPTEUR DE SOI sous un plafonnier : %d prise(s), %d hors de ce que le mur commande%s" % [_soi.size(), faux,
+			" — ÉCHEC" if faux > 0 else " — le mur noircit le corps de soi, l'absence de mur l'éclaire"])
 	# Le témoin : le banc ne vaut que s'il a vu le capteur noir ET éclairé.
 	if int(t["noir"]) + int(t["manque"]) + int(t["accord"]) + int(t["douteux"]) == 0 or int(t["capteur_lit"]) == 0:
 		print("  ✗ le capteur n'a jamais été éclairé : le banc ne discrimine rien.")
 	var f := FileAccess.open("%s/journal.json" % _dossier, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"commit": _commit(), "cadre": _cadre_verdict, "total": t, "taux_d_accord": snappedf(taux, 0.1),
-		"seuil_noir": SEUIL_NOIR, "seuil_lit": SEUIL_LIT, "prises": _lignes}, "  "))
+		"seuil_noir": SEUIL_NOIR, "seuil_lit": SEUIL_LIT, "prises": _lignes, "capteur_de_soi": _soi}, "  "))
 	f.close()
 	print("  journal : %s/journal.json" % ProjectSettings.globalize_path(_dossier))

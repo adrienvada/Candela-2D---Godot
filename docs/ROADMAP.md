@@ -3277,6 +3277,29 @@ se prennent l'une l'autre pour adversaire (le bot ne visait plus, la cible étan
 (`remove_child` puis `free`, depuis une coroutine — jamais depuis un `_physics_process`), et ne jamais faire vivre deux situations ensemble.
 Même famille : **une torche qu'on coupe met quelques images à mourir** — un bot posé devant la voit encore, et le droit lui est dû d'y réagir.
 
+### Un corps ne s'accroupit pas dans la pierre : un banc qui annonce « accroupi » doit lire la posture RÉELLE (2026-10-02)
+
+Chantier SOLO, S5, `tools/banc_perception_bot.gd`, famille `plafonnier_bas`. Première version : des cibles à 10, 20, 35 et 60 px derrière un muret, debout puis
+« ACCROUPIE ». Le journal disait « accroupie », le capteur lisait 0,667 (éclairé) à 10 et 20 px — exactement ce qu'un corps DEBOUT donne — et le modèle voyait. Aucun
+sabotage n'aurait mordu : la prise ne testait pas ce qu'elle annonçait. **`Player` ne s'accroupit pas quand son centre est « dans la pierre »** (`RAYON_DEDANS`,
+16 px : `_regler_enjambement` le tient debout, `poser_posture(is_crouch_pressed() and not enjambe)`), et l'état de la prise précédente lui survit tant que le corps ne
+sort pas. La cible à 10 px (centre à 13 px de la face de sortie) était dans la pierre ; celle à 20 px héritait de son refus. Remède : cibles à 22 px et plus, et le
+banc LIT `accroupi` sur le corps après la pose et ÉCHOUE si la prise n'est pas celle qu'il dit (`posture_obtenue`). **Une prise qui dépend d'un état du jeu lit cet état,
+jamais la commande qu'elle a posée** — même leçon que « Écrire `flashlight_on` hors de la physique n'allume pas la torche », payée une fois de plus.
+
+### Une lumière neutre que les murs doivent couper pour TOUS les corps n'a pas de masque d'ombre évident : ni `1`, ni `1 | 2 | 4` (2026-10-02)
+
+Chantier SOLO, S5, `plafonnier.gd`. Quatre récepteurs de corps (le sprite adverse et le capteur croisé, portés par `ENNEMI` ; le capteur de soi de J1 et celui de J2, portés par
+`JOUEUR_LOCAL | couche d'ombre du corps | recepteur_retro`) et un seul masque d'ombre pour une lumière qui n'est ni la torche d'un joueur ni la rétrodiffusion. **`1`**
+(la fusée posée, le plafonnier d'un premier jet) ne croise AUCUN d'eux : le corps est « éclairé en entier » à travers le mur, sans erreur ni avertissement. **`1 | 2 | 4`**
+(le patron de la torche de J2) croise tout, mais le 4 est la couche d'ombre du corps de J1 : le plafonnier aurait fait ombrer J1 — et lui seul — par sa propre étoile, et
+plongé son porteur dans son ombre sous la lumière qui l'éclaire. Le bon masque est `DECOR | ENNEMI | recepteur_retro(0) | recepteur_retro(1)` (1 | 2 | 128 | 256), que
+`CanauxLumiere.masque_ombre_neutre_pour_les_corps()` dit une seule fois : les bits 128 et 256 sont ceux que portent les capteurs de soi et qu'AUCUN occluder ne porte.
+Ils sont du côté des ombres ; la portée (`range_item_cull_mask`) reste `1 | 2 | 4`, car `test_ombre_propre` interdit 8, 128 et 256 dans une portée. **Preuve** : le banc
+`plafonnier_mur` lit le capteur de soi de J2 dans sa propre vue — 0,000 derrière la paroi, 0,667 sans —, et ses deux sabotages (ombres coupées, bits retirés) rougissent par cette
+seule lecture : « bits retirés » laisse le capteur croisé de la cible à 0,000 (le bit `ENNEMI` suffit à celui-là), et « ombres coupées » le rend éclairé (0,667) sans
+que le banc échoue, le modèle disant « non » de toute façon. Seul le capteur de soi dit que les bits 128 et 256 servent.
+
 ### Un capteur de corps lit la lumière REÇUE, jamais la ligne de vue : un mur entre le bot et un corps éclairé par SA lueur ne le noircit pas (2026-10-02)
 
 Chantier SOLO, S2, `tools/banc_perception_bot.gd`. Le banc compare le modèle de vue du bot au capteur du corps de la cible (`CapteurCorps`).
@@ -31574,7 +31597,8 @@ rôles, qui ne valent qu'ensemble :
 Ce qu'il n'est pas : ni une torche (pas de cône, pas d'éblouissement — à confirmer au premier essai), ni un objet du
 duel en ligne. Il vit dans la couche aventure, et n'entre dans les cartes de duel que si Adrien le demande un jour, avec
 une montée de `Protocol.VERSION`. ⚠️ Coût : une lumière à ombres de plus par plafonnier ; n'allumer que ceux proches du
-joueur, mesuré au banc de cadence du cloud dès l'étape S5.
+joueur. **Écrit en S5 (2026-10-02), et livré NON MESURÉ** : la consigne d'Adrien d'interdire tout relevé de cadence a retiré le
+« mesuré au banc de cadence » que cette phrase promettait — voir « S5 ».
 
 ### Le chapitre 0 — l'initiation
 
@@ -31618,7 +31642,9 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
 3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés. ✅ **FAITE le 2026-10-02** — voir « S3 »
    ci-dessous.
 4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
-5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot, son coût mesuré.
+5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot. ✅ **FAITE le 2026-10-02** — voir
+   « S5 » ci-dessous. **Son coût n'a PAS été mesuré** (consigne d'Adrien : aucun relevé de cadence) : l'allumage par proximité se
+   tient par construction, jamais par un chiffre.
 6. **S6 — le moteur de l'aventure** : format de niveau, chargement, « tout le monde éliminé » → niveau suivant, mort →
    on recommence la salle, progression sauvegardée, déblocage des classes solo, choix libre parmi elles.
 7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss.
@@ -31990,6 +32016,145 @@ poser le bot.
 revient en 2 s, loin du bot : le délai et le lieu, ou une autre règle (rester mort jusqu'à un appui, revenir sur sa case de départ). (3) Un
 cran 3 dont le bot ne s'arrête qu'en combat : faut-il qu'il se poste, qu'il avance vers sa cible, qu'il se déplace en tirant ? (4) La difficulté
 FACILE ne tire jamais sur un pas entendu à 400 px (audace 40 px) : « tire si vu ou entendu » doit-il valoir pour les trois ?
+
+### S5 — FAITE le 2026-10-02 : les plafonniers — la lumière posée, ses ombres, sa place dans le modèle de vue du bot
+
+**Ce qui existe.** `plafonnier.gd` (`Plafonnier`, sans autoload : il se charge sous `--script`), et son câblage en cinq endroits, tous des
+ajouts : `canaux_lumiere.gd` (`masque_ombre_neutre_pour_les_corps`), `perception_bot.gd` (`par_hauteur`, `ligne_de_la_lumiere`,
+`FRACTION_PLAFONNIER`), `perception_bot_noeud.gd` (`_plafonniers`, lues sur les nœuds vivants du groupe « plafonniers »), `lumieres_iso.gd`
+(le type « plafonnier » du miroir de lumières 3D, `_miroir_des_plafonniers`) et `iso_volumes.gd` (`_suivre_plafonniers` : le luminaire).
+Les gardes : `tools/test_plafonniers.gd` (152 vérifications, inscrite à `run_suites.sh`) et trois familles au banc
+`tools/banc_perception_bot` (`plafonnier`, `plafonnier_mur`, `plafonnier_bas`, plus la planche `--familles=planche`). **`protocol.gd` et
+`Protocol.VERSION` n'ont pas bougé** : rien ne transite, aucun `if transport == …`, aucun RPC ; une garde le lit dans le texte de
+`protocol.gd`, `network_manager.gd` et `plafonnier.gd`. Aucune ligne de `game_state.gd`, de `ui.gd`, de `map_codec.gd`, de `player.gd`.
+
+**L'API que S6 appellera** (le format de niveau proposé plus haut porte déjà `plafonniers (case, rayon, intensité)`) :
+```
+var poses := Plafonnier.poser(arene, [ {"case": [12, 9], "rayon": 4.0, "intensite": 1.2}, {"case": Vector2i(3, 4)} ])  # idempotente
+Plafonnier.retirer(arene)
+```
+`case` : `Vector2i` ou `[x, y]` (les flottants du JSON conviennent) — la lampe pend au centre de la case. `rayon` en CASES (4,0 par défaut,
+borné à [1,5 ; 9]) : c'est le rayon de la TEXTURE de la lumière, la flaque visible s'arrête vers les trois quarts de lui. `intensite`
+(l'énergie de la lumière, 1,2 par défaut, bornée à [0,6 ; 3,0]) ; `teinte` facultative (une `Color` ou `"#rrggbb"`), l'halogène de la charte
+par défaut. Les nœuds sont nommés `Plafonnier_<i>`, **`i` étant l'indice de l'entrée DANS la liste** (une entrée invalide est refusée à voix
+haute — un `push_error` — et son indice n'est pas réutilisé : S6 retrouve un plafonnier par sa place dans le niveau). `poser` retire d'abord
+le conteneur d'un appel précédent : changer de salle n'empile rien. ⚠️ **`GameState.rebuild_arena` ne connaît pas le conteneur « Plafonniers »**
+(sa liste de purge est fermée, et `game_state.gd` est « partagé, à demander avant d'écrire ») : S6 appelle `poser` à CHAQUE salle, ou
+`retirer` en la quittant, ou ajoute le nom à la liste de purge. **Et il inscrit son fichier à `POSEURS_AUTORISES`** dans
+`tools/test_plafonniers.gd`, vide aujourd'hui : c'est ce qui fait qu'un fichier de plus qui pose des plafonniers est un choix, jamais un effet
+de bord (« il n'entre dans les cartes de duel que si Adrien le demande, avec une montée de `Protocol.VERSION` »).
+
+**Pourquoi chaque choix.**
+- **Une lumière NEUTRE : portée `DECOR | ENNEMI | JOUEUR_LOCAL`** (1 | 2 | 4), comme la fusée. Jamais un canal de vue (16, 32), qui
+  n'éclairerait qu'un écran ; jamais l'un des bits des capteurs de soi (8, 128, 256), que `test_ombre_propre` interdit dans une portée. Tous
+  les récepteurs de deux joueurs, dans les deux vues, la reçoivent : sol et murs, sprite adverse et capteurs croisés, capteurs de soi.
+- **Le masque d'ombre : quatre bits, et chacun est là pour un récepteur** (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`). `DECOR` (1) :
+  l'occluder des murs. `ENNEMI` (2) : le canal du sprite adverse et des capteurs croisés — sans lui le corps d'en face est « éclairé en entier
+  au cœur d'un occluder » (« `shadow_item_cull_mask` filtre AUSSI les sprites », Pièges connus). `recepteur_retro(0)` et `(1)` (128, 256) : les
+  bits que portent les capteurs de SOI et qu'aucun occluder ne porte — **ce sont eux, et non le 4 ni le 8, qui donnent à chaque joueur l'ombre des
+  murs sur SON propre corps SANS le faire ombrer par sa propre étoile** (la couche 4 est celle du corps de J1, la 8 celle de J2 : mettre l'une
+  ou l'autre ferait porter ombre à un seul des deux corps). Jamais la couche d'ombre d'un corps, d'un torse, ni des murs bas (64).
+  La fusée posée a `1 | 64` : elle éclaire un corps À TRAVERS un mur (signalé par S2) ; le plafonnier ne le fait pas, et le banc le prouve.
+- **Hauteur 1,5 tuile : les murs hauts le coupent, un mur bas ne le coupe pas.** Un plafonnier est EN HAUTEUR ; la règle du jeu dit qu'un mur
+  haut arrête toute lumière quelle que soit la hauteur de sa source (une salle est une pièce fermée), et qu'un mur bas (0,4) n'arrête que les
+  lumières PLUS BASSES que lui. 1,5 est la hauteur d'une fusée au lancer, que le shader des murs bas (`mb_dans_la_zone_morte`) traite déjà :
+  `MursBasRendu.poser_hauteur_source` la pose et retire le bit 64 du masque d'ombre ; le matériau dessine alors la zone morte FINIE que cette
+  hauteur laisse derrière le muret (`D × (h_mur − h_cible) / (h_lampe − h_mur)`), et non la bande constante de la torche (« un même angle »,
+  58 px au sol). Le modèle du bot lit la MÊME fonction que le shader (`MursBasRendu.eclaire_par_hauteur`, par le drapeau `par_hauteur`).
+- **La texture est celle de la fusée** (`LightTextures.RETRODIFFUSION`), posée par `LightTextures.poser` — jamais un `texture_scale` à la main.
+  C'est le masque dont `FRACTION_DISQUE` avait déjà été confronté aux capteurs : une flaque peinte à bord adouci, que la pâte iso rend « cernée de
+  noir ».
+- **L'allumage par proximité, par construction.** Un plafonnier brûle si un joueur est à moins de `rayon + portée de vue` ; il s'éteint à
+  `+ 120 px` de plus (l'hystérésis : un joueur qui hésite sur la limite ne le fait pas clignoter). La portée de vue est celle du cadrage LE PLUS
+  LARGE que le jeu livre — le coin de l'écran scindé (×1,25), avancé vers la visée (`PorteeEcran.portee_minimale`) — plus 100 px : **973 px**.
+  Un plafonnier de 4 cases s'allume donc à 1 113 px d'un joueur et s'éteint à 1 233. Conséquence honnête : **un plafonnier éteint n'est jamais à
+  l'écran d'un joueur** (une garde le prouve pour 72 visées, aux deux zooms), mais dans une salle de 24 × 24 cases (840 px) TOUS sont à portée
+  et tous brûlent — la règle ne rapporte que sur les grandes cartes (l'arène de boss de 32 × 32). Sans aucun joueur dans le groupe, il brûle
+  (éteindre sans savoir ferait disparaître une salle qu'un banc regarde sans joueur). `Plafonnier.zoom_de_reference` se baisse si un zoom plus
+  large que ×1,25 est un jour livré (`--zoom=1.0` en débogage va jusqu'à ×1,0 : 1 191 px de portée de vue).
+- **Le modèle du bot ne lit que ce que le moteur dessine** : la lumière VIVANTE (sa place, sa hauteur, son rayon de texture), allumée, d'au moins
+  `INTENSITE_MIN`. Un plafonnier éteint n'entre pas : l'honnêteté tient quoi que fasse l'allumage. `FRACTION_PLAFONNIER` = 0,6, comme
+  `FRACTION_DISQUE` : **prudent, jamais optimisé** (voir les chiffres).
+- **La vue iso** : une omni 3D par plafonnier, À SA HAUTEUR (le plafond), sinon la lightmap 2D éclaire la flaque et aucune lampe 3D ne la connaît
+  (relief des faces aplati) ; **au plus deux par joueur, les plus proches** (une omni à ombres, c'est six faces d'ombre par image) ; son poids 3D
+  (2,5, soit 7,5 à l'énergie maximale, contre 9 pour une torche) l'empêche de chasser une torche des huit places. Et un LUMINAIRE : un point franc
+  et un halo doux à la hauteur de la lampe, de l'énergie de SA lumière (éteinte, il disparaît : le noir absolu tient) — la même image que la
+  lentille d'une torche ou l'éclair d'une mine, déjà faite par `IsoVolumes`.
+
+**Le coût : NON MESURÉ, par consigne d'Adrien (« aucun relevé de cadence »).** Ce que l'on sait sans mesure : un plafonnier allumé est une
+`PointLight2D` à ombres dures de plus (le filtre d'ombre est coupé, comme la fusée) dans chaque vue qui rend le monde, plus une omni 3D à ombres
+(deux par joueur au plus) en iso ; son nœud lit le groupe « players » à chaque pas de physique. **Les deux plafonds (deux omni par joueur, et
+« proche » = 973 px) sont des choix de prudence, pas des mesures.** Une salle de l'aventure en portera trois ou quatre, tous allumés.
+
+**Les chiffres.**
+- `test_plafonniers` : 152 vérifications, vertes. **Les 137 suites headless sont vertes** (`./tools/run_suites.sh --rapide`, 652 s, scénarios à deux instances non
+  joués), sans erreur de script ni `push_error` non déclaré (le seul, déclaré : `CRIS ATTENDUS: 1`, l'entrée invalide).
+- Banc, famille `plafonnier` — 54 prises (trois énergies de 0,6 à 3,0 × neuf distances de 20 à 115 % du rayon × deux caps), **le capteur éclaire le
+  corps (≥ 0,10) jusqu'à 90 % du rayon à TOUTES les énergies** (0,333 aux bords), 0,000 à 100 % (un cap à 0,180, légitime : le bord du masque) et au-delà. Le
+  modèle (60 % du rayon plus le bord du corps) voit jusqu'à 70 % et laisse donc **un quart du rayon de marge** : 30 accords, 15 manques
+  légitimes, 9 noirs, **zéro prise « le modèle voit, le capteur est noir »**. ⚠️ Le capteur lit EXACTEMENT les mêmes valeurs aux trois énergies
+  (0,667 puis 0,333) : il sature (`min(1, 4 × énergie × valeur)`), donc l'énergie MIN (0,6) n'est éprouvée qu'à travers cette saturation — ce
+  qu'elle prouve est que le plancher est assez haut, pas qu'un plafonnier de 0,3 le serait.
+- Banc, `plafonnier_mur` : la paroi entre la lampe et la cible (à 100 et 120 px de la lampe, dans la flaque) : **capteur 0,000, modèle non** ; le
+  témoin sans mur à 100 px : 0,667, modèle oui ; la cible dans la flaque et le bot derrière la paroi : capteur 1,000, modèle non (il voit moins,
+  légitimement). **Le capteur de SOI du bot** (son propre corps, dans sa propre vue : le bit 256 de J2) : **0,000 derrière la paroi, 0,667 sans** —
+  la moitié du masque d'ombre que le capteur croisé ne mesure pas.
+- Banc, `plafonnier_bas` : la lampe à 127 px de la face de sortie du muret : accroupi à 22 px derrière lui, **capteur 0,000** (dans la zone
+  morte finie de 35 px) ; debout à 22, 40 et 70 px : éclairé ; accroupi à 40 px : éclairé (le modèle dit non, l'œil du bot bute à 44 px) ; accroupi
+  à 70 : éclairé, vu. Total du banc, plafonniers : 64 prises, **0 malhonnête**, 0 douteuse, taux d'accord 67,3 % (35 des 52 prises où le capteur
+  éclaire) — le reste est ce que le modèle laisse dans le noir à dessein.
+- La planche (`--familles=planche`, quatre images 1920 × 1080 sous Mesa/llvmpipe) a été REGARDÉE : la flaque, cernée de noir, ses bords
+  coupés par la paroi, la zone derrière le muret, le luminaire en point blanc au-dessus d'elle, le corps de la cible lisible dans la lumière,
+  rien hors d'elle. La prise « accroupi » n'est pas exploitable (la caméra lissée n'a pas fini son déplacement) ; ce n'est pas une preuve.
+
+**Sabotages exécutés — chacun a rougi (ou, à deux endroits, NON, et c'est dit), puis a été restauré à l'identique (md5 vérifié).** Sur
+`test_plafonniers` : les ombres coupées (3 contrôles) ; le masque d'ombre sans les murs (2), sans les bits des capteurs de soi (4), avec la couche
+d'ombre des corps (2) ; la portée avec un canal de vue (4) ; la hauteur oubliée (15) ; le plafonnier absent du modèle (9) ; compté à travers
+tout mur (3), à travers les murs hauts seulement (2), à travers les murs bas (1) ; la règle de la torche pour la lampe haute (1) ; l'allumage
+par proximité désactivé (4), inversé (20), l'hystérésis retirée (2), la portée de vue réduite de moitié (3), « aucun joueur : éteint » (3) ; une
+pose de plafonnier dans un fichier de jeu (1) ; le miroir iso sans plafonnier (4), sans limite par joueur (2), à hauteur du sol (1) ; le
+luminaire allumé plafonnier éteint (2) ; les noms de nœuds par compteur (1) ; le rayon du modèle doublé (1) ; un plafonnier destructible (2) ;
+`poser` non idempotent (2) ; une entrée invalide acceptée en silence (le **lanceur** rougit : « cris émis 0 ≠ cris attendus 1 », la suite seule
+reste verte — c'est le contrat de `CRIS ATTENDUS`). Sur le banc : le modèle comptant le plafonnier à travers un mur (2 prises MALHONNÊTES, code
+1) ; le rayon du modèle doublé (9 MALHONNÊTES) ; les ombres coupées et le masque sans les bits des capteurs de soi (rouges par le seul
+capteur de SOI, 0,667 là où le mur commande 0,000 — aucune prise MALHONNÊTE, le modèle dit « non » de toute façon : sans la lecture du
+capteur de soi, ces deux sabotages seraient restés verts ; « ombres coupées » rend aussi le capteur croisé de la cible éclairé, 0,667 au lieu de
+0,000, mais c'est un « manque » que le modèle explique, qui ne fait pas échouer le banc). **Un sabotage reste vert au banc, et c'est instructif** : ignorer le mur bas pour la lumière. Dans le rayon que le modèle
+retient, la zone morte de la lampe haute d'un accroupi (≤ ~40 px) est toujours incluse dans celle que la règle du jeu donne à l'œil du bot
+(44 px) : l'œil bute déjà où la lampe butterait. La règle de la lampe ne se discrimine qu'avec un rayon que le jeu ne permet pas — c'est le
+disque de 400 px de `test_plafonniers` qui la garde (le sabotage y rougit).
+**Quatre fois une garde ou un sabotage n'a PAS rougi du premier coup** : la première famille `plafonnier_bas` posait une cible à 10 px du muret et
+annonçait « ACCROUPIE » (voir « Un corps ne s'accroupit pas dans la pierre », aux pièges) ; le premier sabotage « règle de la torche » ne
+rougissait nulle part (aucune garde ne lisait ce que le nœud passait au modèle : `par_hauteur` — ajoutée) ; « une pose dans un fichier de jeu »
+inséré avant `class_name` rougissait par erreur de syntaxe, pas par la garde (réécrit en fin de fichier) ; et un premier motif de sabotage ne
+correspondait à rien (le harnais refuse un motif absent ou multiple).
+
+**Ce qui n'est pas prouvé.**
+- **Le coût**, on l'a dit. Ni la cadence d'une salle à quatre plafonniers, ni celle de la vue iso avec ses omni à ombres.
+- **Aucune partie jouée, ni vue à l'écran par un humain.** Les images viennent de Mesa/llvmpipe (Xvfb), pas du pilote d'Apple. Le luminaire n'a été
+  vu que sur la planche, jamais en jeu ; sa taille (12 px) et son halo (40 px) sont des chiffres de départ.
+- Seule la vue de J2 est mesurée au banc (la vue unique du bot). **Le capteur de soi de J1** n'est prouvé que par le croisement des masques (`test_plafonniers`),
+  pas par une lecture ; l'écran scindé n'est mesuré nulle part avec un plafonnier. Le sprite de soi de la **vue de dessus** (`--2d`, `light_mask` 4) ne croise
+  pas le masque d'ombre : il n'y reçoit aucune ombre — comme sous la fusée, jamais regardé.
+- La **killcam** : les plafonniers sont des lumières du monde, donc rejouées sans rien ; leur allumage lit les joueurs VIVANTS du groupe, pas les
+  fantômes. Non vérifié.
+- Le banc n'a éprouvé que le Parasite (le pistolet) et une seule teinte ; les trois énergies lisent le même capteur (saturé).
+- Une salle à plus de deux plafonniers par joueur en iso : la limite des omni se lit au code, pas à l'image.
+
+**Signalé, pas corrigé.**
+- **`GameState.rebuild_arena` ne purge pas le conteneur « Plafonniers »** (voir l'API plus haut). Hors périmètre : `game_state.gd` est partagé.
+- **La fusée posée éclaire un corps à travers un mur** (signalé par S2) : `CanauxLumiere.masque_ombre_neutre_pour_les_corps()` est le remède tout prêt
+  (`1 | 64` devient ce masque plus le bit des murs bas posé selon la hauteur) — mais c'est changer la fusée du duel EN LIGNE, donc une décision d'Adrien.
+- `Plafonnier.zoom_de_reference` n'est pas relié à `GameSettings` (le fichier n'a aucun autoload) : une garde relit `ZOOM_ECRAN_SCINDE`, et rougit si le zoom le
+  plus large livré passait sous elle.
+- `test_entrainement_bot` (S1) est sorti en code 143 (délai du lanceur) dans l'un des lots `--rapide`, la machine étant chargée par un banc ; relancé seul, il
+  passe en 29 s, sans rouge.
+
+**À trancher par Adrien.** (1) **Un mur bas coupe-t-il un plafonnier ?** Décidé non (il est au plafond, 1,5 tuile : il passe par-dessus et laisse une zone
+morte finie) ; si Adrien veut l'ombre infinie d'un mur bas, c'est un bit dans le masque (64) et une hauteur ≤ 0,4 — mais alors la lampe pend plus bas qu'un
+mur. (2) La **flaque** : 4 cases de rayon par défaut, l'halogène de la charte, énergie 1,2 — des chiffres de départ, à juger sur l'image (S7). (3) Le modèle du
+bot s'arrête à 70 % de la flaque que le capteur éclaire jusqu'à 90 % : **voulu** (prudence), ou la rendre au bot ? (4) Le **luminaire** : visible de loin
+comme la lampe d'une torche, ou seulement quand la flaque l'est ? (5) Adopter `masque_ombre_neutre_pour_les_corps` pour la fusée (ci-dessus).
 
 ### Questions
 
