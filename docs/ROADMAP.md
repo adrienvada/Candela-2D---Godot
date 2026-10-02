@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-01
+> Dernière mise à jour : 2026-10-02
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le mode solo : un bot HONNÊTE, trois crans d'entraînement en plus de la cible, une aventure par chapitres qui débloque les classes du solo** (2026-10-02, Adrien, à une session cloud de brainstorm, branche `ccr-50a162ad-e2u8lr` : « le mode solo doit permettre un mode d'aventure avec des niveaux de difficulté progressive, dont les premiers niveaux seraient l'initiation, mais également de jouer contre des bots en match d'entraînement » ; « l'adversaire doit être honnête : ne percevoir que les sons et la lumière » ; « il s'ajoute à l'entraînement actuel : on choisit la difficulté du bot : cible immobile, adversaire mobile, adversaire qui tire si vu ou entendu » ; puis « Oui le recalcul », « mets trois crans de difficulté en plus avec plus ou moins de réflexes », « chaque fin de chapitre débloque une classe pour le mode solo », « Le bot a pour l'instant la classe par défaut ») | **La difficulté vient des réflexes, jamais de l'information** : un bot qui verrait dans le noir trahirait la seule règle du jeu et enseignerait de mauvais réflexes. **La vue se calcule** plutôt que de relire les capteurs : leur relecture GPU→CPU à chaque image bloquerait le rendu, et un modèle se teste sans fenêtre — à condition de ne jamais voir PLUS que la lumière. **Un seul bot** à deux axes (déplacement, perception-réflexes) sert l'entraînement et l'aventure. **Le déblocage des classes du solo ne touche pas au rang** : en ligne, seul le rang débloque. Détail, étapes S1 à S7 et questions SOLO-Q1 à Q4 : « Chantier — le mode solo ». |
 | **La 0.8.1 part : la fumée en cubes et ses volutes, la fusée qui éclaire loin à l'allumage ; candidat `claude/candidat-0.8.1`, publié par une session du Mac** (2026-10-01 vers 13:15, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Ok dis moi quoi prompter à la session locale pour mettre en ligne la version suivante ») | `config/version` passe de 0.8.0 à 0.8.1 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19) — `tools/verifier_publication.sh v0.8.1` contre le tag `v0.8.0` : « le fil n'a pas bougé : l'ancienne version peut continuer à jouer en ligne ». **Ce qui part** : les gadgets en volume — la fumée occultante en cubes « gros » par défaut (GV1, GV1bis), avec l'encre des volutes et son plancher (Q73 « volutes », Q74 « on garde ») ; Q58, la fusée qui, à l'allumage, éclaire jusqu'à la portée des torches (468 px) pendant 1 s puis revient à son halo à 3 s (Q78, la durée et la force, reste ouverte : la courbe part telle quelle, l'avis de la coordinatrice étant de la garder) ; Q77 « on garde » (468 px pour toutes les torches). **Ce qui ne part pas allumé** : GV2, les nappes au sol en cubes, reste un essai éteint par défaut (`--nappes-voxels`, débogage) tant qu'Adrien n'a pas répondu à Q79 et Q80. **La publication suit `docs/MISE_A_JOUR.md`** : `main` en avance rapide depuis `903b26e6` (la 0.8.0), puis le tag annoté `v0.8.1` sur le même hash, par une session du Mac sur le mot d'Adrien dit dans sa fenêtre ; la CI refait le contrôle, passe les suites, exporte, signe et publie ; la session cloud vérifie ensuite la signature et les archives. Suite complète verte sur le candidat. **Non mesuré sur le Mac** : la fumée en cubes coûtait 7 à 9 % de temps en moins que les couches dans le cloud (GV1bis), l'allumage de la fusée 2 % de plus pendant ses 3 s (Q58). |
 | **Q73 = l'encre de la fumée en cubes est celle des VOLUTES ; Q74 = son trait reste graphite, au plancher des murs** (2026-10-01 vers 09:10, Adrien, sur les planches de GV1bis, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent des gadgets en volume : « Q73 : volutes » ; « Q74 : on garde ») | **Q73** : les traits du dessin de la suie et de la poussière, drapés sur le tas (la fusée : deux lignes de niveau des volutes de son voile) — la recommandation de GV1bis, déjà le défaut ; les arêtes et les hachures restent pour les bancs (`--fumee-encre=`). **Q74** : aucun plancher plus bas pour la fumée seule — le trait obéit à la règle des murs « allumé reste allumé » (`IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée ; le reste de l'encre d'essai des murs, 0,12) : la lueur faible d'un nuage, qui est une information, ne s'éteint pas sous un trait. Rien ne change à l'image ; la suite garde désormais les deux décisions (`test_fumee_voxel` : l'encre par défaut EST les volutes, le reste du trait EST celui des murs). Noir et équité reprouvés après la fusion de la ligne publiée (chantier GV, « Q73 et Q74 »). |
 | **Q58 = à l'allumage, la fusée illumine loin : son halo porte aussi loin que les torches (468 px), le tient une seconde, puis revient à son empreinte habituelle avant la braise** (2026-10-01 vers 09:10, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin effectivement » — la question de la page des lumières de L1 : « La torche seule, ou toutes les lumières ? […] faut-il que le halo d'une fusée remplisse l'écran ? ») | **La courbe** (`FuseeModele.part_allumage_a`, `rayon_halo_a`), lue par la session coordinatrice et proposée par le sous-agent : à l'atterrissage — l'allumage, le début du plein feu — le rayon du halo passe de 220 px à la portée des torches (`PorteeEcran.portee_au_bord`, 468 px : le même calcul, sur le cadrage de la vue unique, dans tous les modes) ; il la TIENT le premier quart du plein feu (1 s sur 4), REVIENT par un `smoothstep` jusqu'aux trois quarts (3 s ; le bord rentre au plus de 186 px/s), et la braise (4 s) repart de l'empreinte habituelle. En vol, rien ne change. **L'énergie non plus** : le halo s'élargit, il ne brille pas davantage — l'éblouissement, qui lit l'énergie (rayon 400 px), ne bouge pas. **Rien sur le fil** : la courbe se dérive de l'âge de combustion, que les deux pairs simulent à l'identique ; la killcam la suit par le même chemin (`_appliquer_age`) ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-fusee-allumage` rend la fusée de la 0.8.0 (jamais en ligne). Le noir : rien au-delà du rayon ni derrière un mur, dans la lightmap des quatre vues, à six âges ; J1 = J2 ; l'allumage fini à 3 s, au pixel près (planches à six âges, avant/après basculés sur place). Mesuré dans le cloud pendant la bouffée (llvmpipe, la fusée tenue à 0,5 s) : 0,984 de la cadence de la 0.8.0 au cadrage du banc, 0,979 au vrai cadrage de la vue unique. Chantier « l'allègement de la 0.8.0 », § Q58. |
@@ -31396,6 +31397,124 @@ Adrien sous ces numéros par la coordinatrice le 2026-10-01) :
   fusée (160 px en vol, 440 posée ; son halo, depuis Q58, 220 → 468 → 220 px), avant comme après Q58. C'est la lueur 2D du
   nuage, que ses cubes (GV1bis) reprennent par la lightmap. GV2 n'y touche pas : les nappes ne sont pas des
   `GadgetVolume`, et leurs cubes lisent la lightmap, où la fusée pose sa vraie lumière.
+
+---
+
+## Chantier — le mode solo : bot honnête, entraînement à crans, aventure (SOLO, inscrit le 2026-10-02)
+
+**Inscrit par une session cloud de brainstorm** (branche `ccr-50a162ad-e2u8lr`), sur trois échanges avec Adrien le
+2026-10-02. **Aucune ligne de code n'est écrite** : cette section consigne ce qui est tranché, l'ordre des étapes et
+les questions encore ouvertes. Les décisions elles-mêmes sont dans « Décisions actées », à la même date.
+
+**Pourquoi ce chantier.** Deux constats de « prêt à l'essai » y mènent. PE4 dit que la première minute décide de
+tout, et aucun écran n'apprend aujourd'hui à jouer dans le noir. PE5 dit qu'avec une dizaine de testeurs la file
+d'attente sera souvent vide. L'entraînement actuel ne répond à aucun des deux : c'est un bac à sable avec une cible
+fixe (`training_target.gd`) qui compte les dégâts.
+
+### La règle qui prime : un adversaire HONNÊTE
+
+Adrien, 2026-10-02 : « l'adversaire doit être honnête : ne percevoir que les sons et la lumière, avec une précision
+plus ou moins bonne sur chaque son, et des réflexes adaptés en fonction de leur difficulté ». **La difficulté vient
+des réflexes et des décisions, jamais de l'information.** Un bot qui saurait où l'on est dans le noir trahirait le
+jeu (la seule information est la lumière) et apprendrait de mauvais réflexes au joueur, qui les paierait ensuite en
+ligne.
+
+- **Les commandes.** Le bot est un `InputProvider` de plus, à côté de `LocalInputProvider` et
+  `NetworkInputProvider` : `player.gd` ne sait pas d'où viennent ses commandes, le bot « appuie sur les touches » et
+  subit donc les mêmes règles (vitesses, root, munitions, recharge). Aucune simulation parallèle à tenir égale.
+- **L'ouïe.** Le signal `AudioManager.son_localise` (chantier « le son rendu visible ») annonce déjà chaque son
+  positionnel avec sa position, son émetteur, sa famille, sa portée et son étouffement (mur, fumée). Le bot l'écoute,
+  mais ne reçoit jamais la position exacte : une **zone d'incertitude** dont la taille dépend de la famille (un tir se
+  situe bien, un pas mal), grandit avec la distance et derrière un mur, et se resserre avec la difficulté.
+- **La vue — PAR LE CALCUL** (Adrien : « oui le recalcul »). Les capteurs (`capteur_corps.gd`) calculent sur le GPU
+  et rien ne relit leur résultat côté CPU. Le relire à chaque image bloquerait le rendu — un hoquet par image, là où
+  la cible est le 1 % bas ≥ 60 — et rien ne se testerait sans fenêtre. Le bot voit donc par un **modèle** : « la cible
+  est dans le cône ou le halo d'une lumière connue (torche, éclair de tir, fusée, lumière fixe), aucun mur entre la
+  lumière et elle, aucun entre elle et le bot ».
+  ⚠️ **Un modèle n'a le droit de se tromper que dans un sens : voir MOINS que la lumière, jamais plus.** La
+  rétrodiffusion et certains gadgets n'y entreront qu'à part, et d'abord pas du tout. Deux gardes, à écrire avec
+  l'étape : une suite headless (un bot dans le noir, derrière un mur, ne sait rien — sabotée pour la voir rougir) et un
+  banc en vraie fenêtre qui confronte le modèle aux capteurs.
+- **Les réflexes**, ce que règle la difficulté : délai entre percevoir et agir, erreur et lissage de visée, mémoire
+  de la dernière position connue qui s'efface, prudence (éteindre la torche, s'accroupir, oser tirer alors que
+  l'éclair trahit).
+
+### Deux axes, un seul bot
+
+Le **déplacement** (immobile → ronde répétitive → libre dans une zone → libre partout, il cherche) et la
+**perception et les réflexes** (sourd et aveugle → perçoit sans tirer → tire s'il voit ou entend, lent → vif) sont
+deux réglages indépendants d'un même **profil de bot** (une ressource de données, comme `flare_profile.gd`).
+L'aventure monte dans ce tableau ; les crans de l'entraînement en sont quelques cases. On n'écrit qu'un bot.
+
+**Le bot porte la classe par défaut** (Adrien : « On verra ensuite pour les pimper et leur affecter de nouvelles
+classes ») : pas de gadget à lui tant que S7 n'est pas ouvert.
+
+### L'entraînement : il s'AJOUTE à l'existant
+
+Adrien : « il s'ajoute à l'entraînement actuel : on choisit la difficulté du bot ». Trois crans, et le troisième en a
+trois lui-même (Adrien : « mets trois crans de difficulté en plus avec plus ou moins de réflexes ») :
+
+1. **Cible immobile** — la cible d'aujourd'hui, inchangée.
+2. **Adversaire mobile** — il circule sur la carte choisie, cartes de joueur comprises (il se repère sur la grille de
+   cases, `AStarGrid2D` ou équivalent), et ne tire jamais.
+3. **Adversaire qui tire s'il voit ou entend** — facile, normal ou difficile : seuls les réflexes changent, jamais ce
+   qu'il perçoit.
+
+### L'aventure : des salles, des lumières fixes, des PNJ, un boss par chapitre
+
+Adrien : « quelque chose avec des salles, des lumières fixes, des trajets dans le noir, et des PNJ plus ou moins bien
+cachés, avec de plus en plus de mouvement. Mais d'abord immobiles, ensuite mobiles avec trajets répétitifs, puis plus
+libres par zone ». Puis : « une suite de salles avec un boss final par chapitre, et chaque fin de chapitre débloque une
+classe pour le mode solo. On peut choisir librement sa classe une fois débloquée dans le mode solo. »
+
+Ébauche des chapitres (proposition, non validée salle par salle) :
+
+| Chapitre | Les PNJ | Ce qu'on apprend |
+|---|---|---|
+| 1 | Immobiles, sourds et aveugles | Trouver dans le noir, la torche, tirer |
+| 2 | Immobiles qui ripostent s'ils voient | Ne pas être vu : éteindre, contourner les lumières fixes |
+| 3 | Rondes répétitives | Lire un trajet, choisir son moment |
+| 4 | Rondes, et ils entendent | S'accroupir, ralentir, ses propres douilles |
+| 5 | Libres dans une zone | Ils vont voir d'où vient un bruit, poursuivent jusqu'à la limite |
+| 6 | Libres partout, en groupe | Ils cherchent et se souviennent |
+| 7 | Duel final | Un bot complet |
+
+**Le déblocage des classes est propre au solo.** Il ne touche ni `RankLoadout` ni le rang : en ligne, seul le rang
+débloque (Phase 7, règle du miroir en classé). Les matchs solo n'alimentent pas l'ELO ; leur archive dans
+`match_history.json`, s'ils y vont, doit les marquer comme tels pour que le rejeu du journal (Phase 4, étape 2c) ne les
+envoie jamais.
+
+**Ce qui manque au format de carte.** Le format v3 (`map_codec.gd`) ne connaît que les cases et deux points
+d'apparition. L'aventure lui ajoute une **couche à part** — lumières fixes, PNJ (case, déplacement, points de ronde ou
+zone, profil), objectif et sortie de salle — sans toucher au code de partage des cartes de duel. ⚠️ Beaucoup de
+lumières fixes à ombres coûtent cher : n'allumer que celles proches du joueur, à mesurer dès S5 (au banc de cadence
+du cloud, sans relevé demandé sur le Mac).
+
+### Les étapes
+
+1. **S1 — le bot se déplace** sur n'importe quelle carte (immobile, ronde, zone, libre) ; l'entraînement gagne le
+   cran 2.
+2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs.
+3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés.
+4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
+5. **S5 — la couche aventure** : lumières fixes, PNJ, sorties, enchaînement des salles, progression sauvegardée
+   (`user://`), déblocage des classes solo, choix libre parmi les classes débloquées.
+6. **S6 — le chapitre 1** et son boss, puis un chapitre par étape.
+7. **S7 — le bot s'équipe** : torche maîtrisée, fusée, gadget, d'autres classes.
+
+**Fichiers.** Neufs, en propre au chantier : le fournisseur d'entrées du bot, son profil, sa perception, la couche
+aventure et sa progression. **Partagés, à demander avant d'écrire** (voir `docs/JOURNAL_SESSIONS.md`) : `game_state.gd`
+(le mode, l'apparition du bot), `ui.gd` et les écrans du hub (le choix du cran, l'aventure), `map_codec.gd`.
+
+### Questions ouvertes (numérotées à part, SOLO-Q1 à Q4, pour ne pas croiser la série Q de la coordinatrice)
+
+- **SOLO-Q1 — l'objectif d'une salle** : neutraliser tous les PNJ, atteindre la sortie, ou selon la salle (une salle
+  qu'on traverse sans tuer personne) ?
+- **SOLO-Q2 — les lumières fixes s'éteignent-elles d'une balle ?** On fabriquerait son propre noir, mais le coup
+  s'entend.
+- **SOLO-Q3 — mourir** : on recommence la salle, ou le chapitre ?
+- **SOLO-Q4 — qui fabrique les salles** : écrites en données par une session, ou l'éditeur de cartes étendu (poser
+  lampes et PNJ, tracer les rondes) pour qu'Adrien les dessine ?
 
 ---
 
