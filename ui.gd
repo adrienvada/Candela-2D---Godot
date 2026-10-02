@@ -954,20 +954,32 @@ var _entree_changer_carte: Dictionary = {}
 ## carte : choisir une carte y ENCHAÎNE (`_on_map_chosen`).
 var _entree_preparer: Dictionary = {}
 
-## Les crans de l'entraînement — chantier SOLO, étape S1. Un cran dit CONTRE QUI l'on s'entraîne :
-## la cible fixe d'avant, ou un adversaire qui marche dans le noir. Le cran 3, « adversaire qui tire s'il voit
-## ou entend » (S3), viendra à la suite : sa valeur est déjà la suivante, et son entrée n'existe pas — une
-## entrée qui promettrait un adversaire que personne n'a écrit serait le mensonge que cet écran vient de
-## retirer (le placeholder « CIBLE », qui annonçait « la cible mouvante »).
+## Les crans de l'entraînement — chantier SOLO, étapes S1 et S3. Un cran dit CONTRE QUI l'on s'entraîne :
+## la cible fixe d'avant, un adversaire qui marche dans le noir (S1), ou un adversaire qui tire s'il voit ou
+## entend (S3, le cran 3, avec ses trois difficultés : il n'a reçu son entrée que le jour où quelqu'un a écrit
+## l'adversaire — une entrée qui promettrait un bot que personne n'a écrit serait le mensonge que cet écran
+## avait retiré, le placeholder « CIBLE » qui annonçait « la cible mouvante »).
 ##
 ## Le défaut est la cible immobile, et **le choix ne se mémorise pas d'une session à l'autre** : le jeu
 ## s'ouvre sur ce qu'il a toujours proposé. `game_state.gd` lit `selected_training_cran()` au lancement et
 ## nulle part ailleurs — l'écran ne connaît pas le bot.
 const CRAN_CIBLE_IMMOBILE := 0
 const CRAN_ADVERSAIRE_MOBILE := 1
+const CRAN_ADVERSAIRE_QUI_TIRE := 2
 var training_cran: int = CRAN_CIBLE_IMMOBILE
 ## L'entrée de chaque cran, pour y repeindre la coche.
 var _entree_cran: Dictionary = {}
+
+## La difficulté du cran 3 — « plus ou moins de réflexes » (Adrien). Une entrée UNIQUE qui fait tourner les trois valeurs :
+## FACILE, NORMAL, DIFFICILE, FACILE… Le libellé dit toujours laquelle est prise. ⚠️ Les entiers sont ceux de
+## `ProfilBot.Difficulte` (l'écran ne connaît pas le bot : `game_state.gd` les lui traduit) — une garde les compare.
+## Comme le cran, elle ne se mémorise pas d'une session à l'autre ; NORMAL est le défaut, celui du boss de l'aventure.
+const DIFFICULTE_FACILE := 0
+const DIFFICULTE_NORMALE := 1
+const DIFFICULTE_DIFFICILE := 2
+const NOMS_DES_DIFFICULTES := ["FACILE", "NORMAL", "DIFFICILE"]
+var training_difficulte: int = DIFFICULTE_NORMALE
+var _entree_difficulte: Button = null
 
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
@@ -4374,8 +4386,8 @@ func _build_hub_screens() -> void:
 
 	# --- S'entraîner ----------------------------------------------------------
 	_entree_preparer[SCREEN_TRAINING] = hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
-		"Seul, contre une cible fixe ou un adversaire qui marche — au choix, "
-		+ "juste dessous — sur la carte sélectionnée, celle de l'affiche. La "
+		"Seul, contre une cible fixe, un adversaire qui marche ou un adversaire qui tire — au "
+		+ "choix, juste dessous — sur la carte sélectionnée, celle de l'affiche. La "
 		+ "classe se choisit à droite, et le bouton qui lance est dessous. Rien "
 		+ "n'est enregistré ni classé. Échap pour revenir.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON)
@@ -4392,6 +4404,18 @@ func _build_hub_screens() -> void:
 		+ "torche est éteinte : on le trouve à ses pas. Il ne tire pas. Abattu, il revient au bout de deux "
 		+ "secondes, loin de vous.", "", COLOR_ACCENT, "cran_mobile", "", false, "ill_entrainement")
 	entrainement.add_child(_entree_cran[CRAN_ADVERSAIRE_MOBILE])
+	_entree_cran[CRAN_ADVERSAIRE_QUI_TIRE] = hub.make_entry(_libelle_du_cran(CRAN_ADVERSAIRE_QUI_TIRE),
+		"Un adversaire qui marche dans le noir, comme le précédent — mais qui vous voit à votre lumière (torche, éclair "
+		+ "de tir, fusée) et vous entend, et qui tire. Il ne perçoit jamais plus que ce qu'un joueur percevrait : la "
+		+ "difficulté, juste dessous, ne change que ses réflexes. Abattu, il revient au bout de deux secondes ; vous "
+		+ "aussi, si c'est lui qui gagne.", "", COLOR_ACCENT, "cran_tireur", "", false, "ill_entrainement")
+	entrainement.add_child(_entree_cran[CRAN_ADVERSAIRE_QUI_TIRE])
+	_entree_difficulte = hub.make_entry(_libelle_de_la_difficulte(),
+		"La difficulté de l'adversaire qui tire : FACILE, NORMAL ou DIFFICILE — un appui passe à la suivante. Elle ne "
+		+ "change que ses réflexes (le temps qu'il met à réagir, la justesse et la vitesse de sa visée, sa façon de "
+		+ "tirer), jamais ce qu'il voit ou entend. Sans effet contre la cible et l'adversaire qui ne tire pas.",
+		"", COLOR_ACCENT, "difficulte_tireur", "", false, "ill_entrainement")
+	entrainement.add_child(_entree_difficulte)
 	_entree_changer_carte[SCREEN_TRAINING] = hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS)
@@ -5235,6 +5259,10 @@ func _on_hub_action(action: String) -> void:
 			_choisir_le_cran(CRAN_CIBLE_IMMOBILE)
 		"cran_mobile":
 			_choisir_le_cran(CRAN_ADVERSAIRE_MOBILE)
+		"cran_tireur":
+			_choisir_le_cran(CRAN_ADVERSAIRE_QUI_TIRE)
+		"difficulte_tireur":
+			_faire_tourner_la_difficulte()
 		# DA4.18 — `montrer_texte` et non `show_detail` : ces deux entrées
 		# promettent le cadre de droite dans leur propre libellé (« affichés à
 		# droite », « sans quitter cet écran »), et `show_detail` envoie à
@@ -5247,8 +5275,24 @@ func _on_hub_action(action: String) -> void:
 
 ## Le libellé d'un cran d'entraînement, avec la coche s'il est pris.
 func _libelle_du_cran(cran: int) -> String:
-	var nom := "CIBLE IMMOBILE" if cran == CRAN_CIBLE_IMMOBILE else "ADVERSAIRE MOBILE"
+	var nom := "CIBLE IMMOBILE"
+	if cran == CRAN_ADVERSAIRE_MOBILE:
+		nom = "ADVERSAIRE MOBILE"
+	elif cran == CRAN_ADVERSAIRE_QUI_TIRE:
+		nom = "ADVERSAIRE QUI TIRE"
 	return ("✓ " if cran == training_cran else "") + nom
+
+
+## Le libellé de l'entrée de difficulté : la valeur prise, toujours visible.
+func _libelle_de_la_difficulte() -> String:
+	return "DIFFICULTÉ : " + String(NOMS_DES_DIFFICULTES[training_difficulte])
+
+
+## Passe à la difficulté suivante, et repeint l'entrée. Ne lance rien et ne change pas de cran : comme le cran, c'est « LANCER
+## L'ENTRAÎNEMENT » qui engage.
+func _faire_tourner_la_difficulte() -> void:
+	training_difficulte = (training_difficulte + 1) % NOMS_DES_DIFFICULTES.size()
+	hub.set_entry_label(_entree_difficulte, _libelle_de_la_difficulte())
 
 
 ## Prend un cran d'entraînement et repeint les coches. Ne lance rien : le bouton « LANCER L'ENTRAÎNEMENT »
@@ -5262,6 +5306,11 @@ func _choisir_le_cran(cran: int) -> void:
 ## Le cran choisi à l'écran d'entraînement — ce que `game_state.gd` lit en lançant l'entraînement.
 func selected_training_cran() -> int:
 	return training_cran
+
+
+## La difficulté choisie pour le cran 3 — lue au même moment, par le même appelant.
+func selected_training_difficulte() -> int:
+	return training_difficulte
 
 
 ## Ouvrir ou rejoindre un salon met fin à la recherche automatique.

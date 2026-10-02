@@ -292,6 +292,16 @@ SUITES+=(test_bot_navigation test_entrainement_bot)
 # appuis sont vérifiés par `test_banc`. Posée ici, comme les lignes du dessus.
 SUITES+=(test_bot_perception)
 
+# Chantier SOLO, S3 (2026-10-02) : le bot AGIT sur ce qu'il perçoit, et il tire ; l'entraînement gagne son cran 3, « adversaire qui
+# tire », avec trois difficultés. `test_bot_combat` : (1) des corps factices avec le vrai fournisseur et le vrai nœud de perception —
+# le délai de réaction, l'erreur de visée qui se resserre, le lissage, la rafale, la recharge, l'enquête, la recherche, l'oubli,
+# l'audace, la difficulté — et la garde d'HONNÊTETÉ (zéro coup vers un joueur dans le noir ou derrière un mur, aucune lecture de
+# l'adversaire dans le texte du fournisseur) ; (2) le jeu monté, à pas d'image fixe : le cran 3 et ses difficultés lus de l'interface,
+# le bot au profil choisi, des balles sur un joueur éclairé et aucune sur un joueur dans le noir, le cran 2 qui ne tire toujours
+# jamais, la mort et la réapparition du JOUEUR. Elle exige l'horloge fixe : le `case` plus bas la lui donne, comme à
+# `test_entrainement_bot`.
+SUITES+=(test_bot_combat)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -443,7 +453,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

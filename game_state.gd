@@ -129,8 +129,8 @@ var training_target: TrainingTarget
 var p1: Player
 var p2: Player
 
-# Le cran « adversaire mobile » de l'entraînement — chantier SOLO, étape S1. Voir `_poser_l_adversaire_mobile`.
-## Vrai tant que J2 est piloté par un bot dans un entraînement. Remis à faux par `_quitter_l_adversaire_mobile`.
+# Les crans « adversaire mobile » (S1) et « adversaire qui tire » (S3) de l'entraînement — chantier SOLO. Voir `_poser_l_adversaire`.
+## Vrai tant que J2 est piloté par un bot dans un entraînement, quel que soit le cran. Remis à faux par `_quitter_l_adversaire_mobile`.
 var _adversaire_mobile: bool = false
 ## Le fournisseur d'entrées du bot, posé sur J2 (`BotP2`) ; `null` hors du cran mobile.
 var _bot_p2: BotInputProvider = null
@@ -142,6 +142,9 @@ var graine_du_bot: int = -1
 var _bot_rng := RandomNumberGenerator.new()
 ## Le compte à rebours de la réapparition du bot, en secondes ; négatif tant qu'il n'est pas mort.
 var _bot_reapparition: float = -1.0
+## Le même pour le JOUEUR, abattu par le bot qui tire (S3) : l'entraînement n'a ni manche ni killcam, donc personne d'autre
+## ne le relèverait.
+var _joueur_reapparition: float = -1.0
 ## Combien de secondes un bot abattu attend avant de revenir. Assez pour souffler et regarder où l'on est ;
 ## trop court, ce serait une cible qui ne tombe jamais (le retour d'une mort disparaît), trop long,
 ## un entraînement où l'on attend. Une valeur de départ, dite par la ROADMAP (SOLO, S1), pas un réglage éprouvé.
@@ -1007,9 +1010,13 @@ func _on_training_requested() -> void:
 	ui.reinitialiser_chrono()
 	ui.time_label.text = "ENTRAÎNEMENT"
 
-	if ui.selected_training_cran() == UI.CRAN_ADVERSAIRE_MOBILE:
+	var cran: int = ui.selected_training_cran()
+	if cran == UI.CRAN_ADVERSAIRE_MOBILE:
 		# Cran 2 : la cible reste cachée (`_do_start_round` vient de la retirer), et J2 revient en jeu, piloté.
 		_poser_l_adversaire_mobile()
+	elif cran == UI.CRAN_ADVERSAIRE_QUI_TIRE:
+		# Cran 3 : le même J2 piloté, au profil de la difficulté que l'écran donne — il voit, entend, tire.
+		_poser_l_adversaire(ProfilBot.pour_adversaire_qui_tire(ui.selected_training_difficulte()))
 	else:
 		# J2 quitte la scène sans être détruit : il reprendra sa place au prochain
 		# vrai match, et le détruire demanderait de le reconstruire.
@@ -1045,15 +1052,22 @@ func _on_training_requested() -> void:
 ##
 ## Le nœud porte un nom explicite (`BotP2`), comme tout nœud ajouté dynamiquement (CLAUDE.md, « Réseau »).
 func _poser_l_adversaire_mobile() -> void:
+	_poser_l_adversaire(ProfilBot.pour_entrainement_mobile())
+
+
+## Pose J2 en jeu, piloté par un bot de ce `profil` : le geste commun des crans 2 (S1) et 3 (S3). Le cran ne change que le profil —
+## un seul bot, deux axes (décision d'Adrien, 2026-10-02) ; ni la pose, ni la réapparition, ni la sortie n'ont un chemin à part.
+func _poser_l_adversaire(profil: ProfilBot) -> void:
 	_navigation_bot = NavigationBot.depuis_carte(MapData.get_selected())
 	_bot_rng.seed = graine_du_bot if graine_du_bot >= 0 else randi()
 	var bot := BotInputProvider.new()
 	bot.name = "BotP2"
-	bot.configurer(ProfilBot.pour_entrainement_mobile(), _navigation_bot, _bot_rng.randi())
+	bot.configurer(profil, _navigation_bot, _bot_rng.randi())
 	_set_player_input_provider(p2, bot)
 	_bot_p2 = bot
 	_adversaire_mobile = true
 	_bot_reapparition = -1.0
+	_joueur_reapparition = -1.0
 	# `_do_start_round` a déjà montré J2 et rendu ses collisions ; la cible, il l'a retirée. On ne fait que
 	# l'affirmer : un entraînement relancé n'a pas à dépendre de ce que le lancement précédent a laissé.
 	p2.show()
@@ -1087,9 +1101,14 @@ func _poser_le_bot_loin_du_joueur(premiere_fois: bool) -> void:
 
 ## Quand le bot est abattu, il attend `BOT_DELAI_REAPPARITION` puis revient, loin du joueur, avec toute sa vie.
 ## Rien d'autre ne se passe : pas de manche, pas de killcam — l'entraînement ne compte pas.
+##
+## **Et le joueur, abattu par le bot qui tire (S3), fait de même** : même délai, même vie pleine, une case d'apparition loin du bot.
+## Le geste le plus simple et le plus cohérent : `player_died` ne fait rien hors manche (`round_active` faux à l'entraînement),
+## le joueur resterait donc mort pour toujours — et le bot, lui, revient déjà. Pas de score, pas de manche, pas de killcam.
 func _maj_adversaire_mobile(delta: float) -> void:
 	if not _adversaire_mobile or not training_mode or not is_instance_valid(p2):
 		return
+	_maj_reapparition_du_joueur(delta)
 	if not p2.dead:
 		_bot_reapparition = -1.0
 		return
@@ -1100,6 +1119,45 @@ func _maj_adversaire_mobile(delta: float) -> void:
 		return
 	_bot_reapparition = -1.0
 	_reapparaitre_le_bot()
+
+
+## Le joueur abattu par le bot revient au bout de `BOT_DELAI_REAPPARITION`, loin de lui (voir `_maj_adversaire_mobile`).
+func _maj_reapparition_du_joueur(delta: float) -> void:
+	if not is_instance_valid(p1) or not p1.dead:
+		_joueur_reapparition = -1.0
+		return
+	if _joueur_reapparition < 0.0:
+		_joueur_reapparition = BOT_DELAI_REAPPARITION
+	_joueur_reapparition -= delta
+	if _joueur_reapparition > 0.0:
+		return
+	_joueur_reapparition = -1.0
+	_reapparaitre_le_joueur()
+
+
+## Les mêmes remises à zéro que la moitié J1 de `_do_start_round` : sa vie, ses yeux, ses visuels que `die()` a cachés, son arme
+## — celle que l'écran d'entraînement a choisie, munitions pleines —, et les mémoires que la mort laisse. Posé sur l'une des cases
+## les plus éloignées du bot qu'il puisse parcourir, en partant de la sienne d'apparition : le bot ne revient pas sur lui.
+func _reapparaitre_le_joueur() -> void:
+	p1.hp = 100.0
+	p1.dead = false
+	p1.dazzle_amount = 0.0
+	p1.show_all_visuals()
+	for visuel in ["VisualColored", "VisualDim", "VisualReveal"]:
+		p1.get_node(visuel).show()
+	p1.equip_weapon(weapon_for_index(ui.selected_weapon_index(0)))
+	if _navigation_bot != null:
+		var ancre := _navigation_bot.case_praticable_proche(NavigationBot.case_du_monde(_get_spawn_position(0)))
+		var loin := _navigation_bot.case_loin_de(p2.global_position, ancre, _bot_rng)
+		p1.global_position = NavigationBot.centre_de_la_case(loin) if loin.x >= 0 else _get_spawn_position(0)
+	else:
+		p1.global_position = _get_spawn_position(0)
+	p1.velocity = Vector2.ZERO
+	p1.rotation = 0.0
+	p1.reset_step_tracker()
+	p1.reset_flashlight_latch()
+	p1.reset_posture()
+	AudioManager.reset_low_health()
 
 
 ## Les mêmes remises à zéro que la moitié J2 de `_do_start_round`, sans la manche autour : sa vie, ses yeux, ses
@@ -1131,6 +1189,7 @@ func _quitter_l_adversaire_mobile(cacher_j2: bool = false) -> void:
 	_bot_p2 = null
 	_navigation_bot = null
 	_bot_reapparition = -1.0
+	_joueur_reapparition = -1.0
 	# Le fournisseur n'est rendu que s'il est encore celui du bot : `_apply_network_mode()` l'a souvent déjà
 	# remplacé (un entraînement relancé, un départ de match), et le refaire jetterait ceux qu'il vient de poser.
 	if is_instance_valid(bot) and is_instance_valid(p2) and p2.input_provider == bot:

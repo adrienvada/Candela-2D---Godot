@@ -22,8 +22,8 @@
 ##   • LA MÉMOIRE — vue précise, ouïe en zone, une confiance qui s'efface, une trace vague qui n'efface pas une trace nette ;
 ##   • LE NŒUD — monté sur des corps factices : ses lumières, son aveuglement sous gadget, son abonnement au son, et
 ##     « un bot dans le noir, derrière un mur ou sourd n'apprend rien de la place de l'adversaire » ;
-##   • LE PROFIL — sourd et aveugle par défaut, le cran mobile de S1 inchangé, et le fournisseur d'entrées qui ne LIT jamais
-##     la perception pour agir (S3).
+##   • LE PROFIL — sourd et aveugle par défaut, le cran mobile de S1 inchangé, et un fournisseur d'entrées dont `avancer()` et
+##     `_decider()` ne LISENT jamais la perception (depuis S3, `_penser()` la lit — la garde en est `tools/test_bot_combat.gd`).
 ##
 ## **Sabotée famille par famille** (la règle du dépôt : une garde « jamais » ne se croit qu'après l'avoir vue rougir) — la
 ## liste est dans la ROADMAP, section SOLO, S2.
@@ -1080,11 +1080,12 @@ func _le_profil_et_le_fournisseur() -> void:
 	_check("la hauteur d'une fusée posée recopiée dans le nœud est celle du rendu des murs bas",
 		is_equal_approx(Noeud.HAUTEUR_FUSEE_AU_SOL_TUILES, float(load("res://murs_bas_rendu.gd").get_script_constant_map()["HAUTEUR_FUSEE_AU_SOL"])))
 
-	# Le fournisseur n'utilise JAMAIS la perception pour agir : `avancer` n'en dit pas un mot.
+	# `avancer()` et `_decider()` n'utilisent JAMAIS la perception : ce que le bot fait de ce qu'il perçoit (S3) vit dans `_penser()`,
+	# que seule la physique appelle — un profil qui n'agit pas (S1, S2) ne l'appelle pas du tout.
 	var debut := provider_txt.find("func avancer(")
 	var fin := provider_txt.find("\nfunc ", debut + 10)
 	var corps_avancer := provider_txt.substr(debut, fin - debut)
-	_check("`avancer()` ne lit rien de la perception (S3 seulement)", not corps_avancer.contains("perception"))
+	_check("`avancer()` ne lit rien de la perception (c'est `_penser()` qui la lit, depuis S3)", not corps_avancer.contains("perception"))
 	var decide := provider_txt.find("func _decider(")
 	var fin_d := provider_txt.find("\nfunc ", decide + 10)
 	_check("`_decider()` non plus", not provider_txt.substr(decide, fin_d - decide).contains("perception"))
@@ -1132,7 +1133,7 @@ func _le_profil_et_le_fournisseur() -> void:
 			meme = false
 			break
 	_check("la perception montée ne change pas un pas du déplacement (même graine : 900 pas identiques)", meme, "%s contre %s" % [pos_a, pos_b])
-	_check("le bot qui perçoit ne commande toujours que de la marche (ni tir, ni recharge, ni fusée)",
+	_check("le bot qui perçoit sans `agit` ne commande toujours que de la marche (ni tir, ni recharge, ni fusée)",
 		not avec.is_shoot_pressed() and not avec.is_reload_pressed() and not avec.is_flare_pressed())
 	avec.reinitialiser()
 	_check("la réapparition (`reinitialiser`) efface la mémoire de la perception",

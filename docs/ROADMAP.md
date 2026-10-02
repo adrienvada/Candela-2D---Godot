@@ -3260,6 +3260,23 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une suite qui monte `main.tscn` ne se termine pas quand `game_state.gd` ne compile pas : elle attend, des heures (2026-10-02)
+
+Chantier SOLO, S3. Un `var cran := ui.selected_training_cran()` (`ui` est un `Node` non typé : le `:=` ne sait pas inférer) a fait échouer le
+chargement de `game_state.gd`. `main.tscn` s'est instancié sans script, `main.ui` a levé une `SCRIPT ERROR` dans la coroutine de la suite, et
+**la suite n'a jamais appelé `quit()`** : douze minutes de CPU à 100 % avant qu'on s'en avise, alors que la suite saine tourne en 40 s. Rien de
+rouge à l'écran, seulement un journal qui ne se termine pas. Règle : une suite à scène qui dépasse largement son temps habituel est une suite
+qui attend — lire le début de son journal (`Parse Error`), ne pas la laisser finir. Et `run_suites.sh` n'a aucun délai par suite.
+
+### Un corps libéré par `queue_free()` reste dans le groupe `players` jusqu'à la fin de l'image : le bot suivant le prend pour son adversaire (2026-10-02)
+
+Chantier SOLO, S3, `tools/test_bot_combat.gd`. Une situation libérée puis la suivante montée dans la même image : le bot de la seconde a vu,
+à son premier pas de physique, le tireur de la première — posé à sa propre place — par son halo de proximité. Une vue de plus dans le noir, à
+chaque situation, et la garde d'honnêteté rougissait sur un bot parfaitement honnête ; deux situations vivantes en même temps, de leur côté,
+se prennent l'une l'autre pour adversaire (le bot ne visait plus, la cible étant « à 0 px »). Remède : libérer sur-le-champ
+(`remove_child` puis `free`, depuis une coroutine — jamais depuis un `_physics_process`), et ne jamais faire vivre deux situations ensemble.
+Même famille : **une torche qu'on coupe met quelques images à mourir** — un bot posé devant la voit encore, et le droit lui est dû d'y réagir.
+
 ### Un capteur de corps lit la lumière REÇUE, jamais la ligne de vue : un mur entre le bot et un corps éclairé par SA lueur ne le noircit pas (2026-10-02)
 
 Chantier SOLO, S2, `tools/banc_perception_bot.gd`. Le banc compare le modèle de vue du bot au capteur du corps de la cible (`CapteurCorps`).
@@ -31598,7 +31615,8 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    cran 2. ✅ **FAITE le 2026-10-02** — voir « S1 » ci-dessous.
 2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs. ✅ **FAITE le
    2026-10-02** — voir « S2 » ci-dessous.
-3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés.
+3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés. ✅ **FAITE le 2026-10-02** — voir « S3 »
+   ci-dessous.
 4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle.
 5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot, son coût mesuré.
 6. **S6 — le moteur de l'aventure** : format de niveau, chargement, « tout le monde éliminé » → niveau suivant, mort →
@@ -31839,6 +31857,139 @@ douille moins bien qu'un pas, comme le joueur ? (ou une table de familles propre
 (3) Le bot **aveugle sous un gadget** jusqu'à S9 : acceptable pour le Fumiste, l'Illusionniste, le Spectre qui joueraient contre lui à
 l'entraînement ? (4) Un bot qui voit **la lampe** de l'adversaire à 17 px de son corps, et non son centre : la précision d'une vue
 est de l'ordre d'un corps — voulue, ou faut-il lui retirer quelques pixels ?
+
+### S3 — FAITE le 2026-10-02 : le bot agit sur ce qu'il perçoit et il tire ; l'entraînement gagne son cran 3, « adversaire qui tire », avec trois difficultés
+
+**Ce qui existe.** `profil_bot.gd` gagne l'axe **réflexes** : `agit`, `tire`, `delai_reaction`, `erreur_visee_deg` / `erreur_visee_min_deg` /
+`duree_resserrement`, `vitesse_visee`, `tolerance_tir_deg`, `tirs_par_rafale`, `pause_entre_rafales`, `audace_zone_px`, l'énumération
+`Difficulte` et `pour_adversaire_qui_tire(difficulte)`. `bot_input_provider.gd` gagne la **machine à états** (`PATROUILLE`, `ENQUETE`,
+`RECHERCHE`, `COMBAT`) et rend enfin une gâchette (`is_shoot_pressed`) et une recharge (`is_reload_pressed`). `perception_bot_noeud.gd`
+n'a gagné qu'une méthode, `maintenant()` (l'horloge de la perception : un seul temps pour tout ce que le bot sait). `ui.gd` : l'entrée
+« ADVERSAIRE QUI TIRE » (le cran 3) et une entrée « DIFFICULTÉ : NORMAL » qui fait tourner FACILE → NORMAL → DIFFICILE ;
+`selected_training_difficulte()`. `game_state.gd` : `_poser_l_adversaire(profil)` (le geste commun des crans 2 et 3 ;
+`_poser_l_adversaire_mobile()` n'est plus qu'un appel avec le profil mobile) et la **réapparition du joueur**. `protocol.gd` et
+`Protocol.VERSION` n'ont pas bougé : rien ne transite, aucun `if transport == …`.
+
+**La machine à états — un seul fil, la mémoire.** Le bot n'agit que sur `PerceptionBotNoeud` : ce qu'il VOIT (le modèle de vue), ce qu'il
+ENTEND (une zone), ce dont il SE SOUVIENT (`MemoireBot`). Il ne lit jamais la place du joueur : le code de `bot_input_provider.gd` ne
+contient ni `get_nodes_in_group`, ni `get_tree()`, ni `"players"` (la garde le lit au texte, commentaires exclus).
+- `PATROUILLE` : le déplacement de S1, rien de changé. **Un profil sans `agit` n'en sort jamais**, et ne passe même pas par `_penser()` :
+  les profils de S1 et de S2 gardent exactement leur comportement (la garde de S2 « 900 pas identiques » est restée verte).
+- `ENQUETE` : la mémoire tient un SON. Il marche vers la case praticable la plus proche du centre de la zone entendue et la REGARDE.
+- `COMBAT` : il voit, ou vient de voir (à `delai_reaction` près, plancher 0,1 s). Il s'arrête, tourne sa visée vers ce qu'il a vu, tire,
+  recharge à vide.
+- `RECHERCHE` : il a perdu sa cible de vue ; il marche vers la dernière place connue et la regarde. La mémoire qui s'efface (6 s) le rend
+  à `PATROUILLE`.
+- **Tous les délais réels passent par `delai_reaction`** : monter d'un état (patrouille → enquête, enquête → combat) n'arrive qu'après ce
+  délai, compté depuis la première image où le bot perçoit ce qui l'y pousse ; descendre est immédiat ; si ce qui l'alarmait disparaît
+  avant le terme, le délai repart de zéro (un bruit qui s'éteint avant la réaction ne fait rien faire). Le même délai attend avant de
+  recharger un chargeur vide, et tient le combat quelques instants quand la cible disparaît (une lampe qui respire ne fait pas basculer
+  le bot en recherche). Aucun autre délai ne se cache dans le code.
+- **La visée.** La consigne tourne vers l'angle voulu à `vitesse_visee` rad/s au plus (le corps la suit à ses 18/s : un demi-tour prend du
+  temps) ; l'angle voulu est la direction de la MÉMOIRE plus une erreur tirée dans [-1, 1] × une amplitude qui passe de
+  `erreur_visee_deg` à `erreur_visee_min_deg` en `duree_resserrement` secondes de visée — un tireur qui prend son temps vise juste. L'erreur
+  est retirée à chaque coup. Elle tire dans son propre générateur (`_rng_reflexes`) : S3 ne change aucune cible de la ronde.
+- **La gâchette.** Un coup part si : le profil tire, le bot est engagé et a un angle voulu, l'arme est prête (munitions, pas en recharge,
+  cadence), la pause de rafale est finie, **le corps est à moins de `tolerance_tir_deg` de l'angle voulu** (erreur de visée comprise : c'est
+  elle qui fait manquer un bot lent), et — sur ce qu'il n'a fait qu'entendre ou qu'il vient de perdre de vue — la zone est plus étroite que
+  `audace_zone_px`. L'appui dure jusqu'au coup puis tombe (`player.gd` exige un relâchement entre deux coups d'une arme semi-automatique) ;
+  `tirs_par_rafale` coups, puis `pause_entre_rafales`. Le root après le tir, les munitions, la cadence : c'est `player.gd` qui les applique,
+  le bot « appuie sur les touches ». Il lit son PROPRE corps (munitions, recharge, cadence, orientation), comme un joueur sait combien de
+  balles il lui reste.
+- **La prudence** (`audace_zone_px`) est la forme retenue de « oser tirer alors que l'éclair trahit » : un tir trahit le tireur, tirer sur une
+  zone vague c'est se trahir pour presque rien. 0 : il ne tire que sur ce qu'il voit ; une zone d'un tir entendu à 400 px fait 35 px, celle
+  d'un pas à 400 px 68 px (S2). Sur ce qu'il voit, la prudence ne joue pas.
+
+**Les trois difficultés — chiffres de DÉPART, que S4 réglera au banc de jeu.** Mêmes champs de perception, de déplacement (LIBRE, allure
+0,7) et de torche (éteinte : la torche tactique est S9) ; seuls les réflexes diffèrent, et une garde compare les champs communs un à un.
+
+| | FACILE | NORMAL | DIFFICILE |
+|---|---|---|---|
+| délai de réaction | 0,60 s | 0,35 s | 0,18 s |
+| erreur de visée au départ → plancher | 18° → 5° | 10° → 2,5° | 5° → 0,8° |
+| temps de resserrement | 3,0 s | 2,0 s | 1,2 s |
+| vitesse de visée | 3 rad/s | 6 rad/s | 12 rad/s |
+| tolérance de tir | 10° | 6° | 3° |
+| rafale, pause | 1 coup, 1,4 s | 2 coups, 0,8 s | 3 coups, 0,4 s |
+| audace sur une zone entendue | 40 px | 80 px | 140 px |
+
+Mesuré à la garde (corps factices, une cible éclairée à 5 cases en face, quatre graines) : premier coup **0,68 s / 0,41 s / 0,24 s**
+après la première perception, écart moyen à la vraie place **5,0° / 3,0° / 2,0°**. Sur un pas entendu à 350 px, le facile ne tire jamais,
+le difficile tire.
+
+**Le geste à la mort du JOUEUR.** `player_died` ne fait rien hors manche, et l'entraînement n'a pas de manche : le joueur abattu par le bot
+resterait mort pour toujours, alors que le bot revient déjà. Le geste le plus simple et le plus cohérent est celui du bot, en miroir :
+**le joueur revient 2 s plus tard (`BOT_DELAI_REAPPARITION`), vie pleine, arme et munitions de l'écran, sur l'une des 15 % de cases les plus
+éloignées du bot qu'il puisse parcourir** (`case_loin_de`, ancrée sur sa propre case d'apparition). Pas de score, pas de manche, pas de
+killcam. Le bot, lui, garde sa mémoire : si le joueur est mort au bout d'une poursuite, il ira voir sa dernière place connue, au plus 6 s.
+
+**Les gardes.** `tools/test_bot_combat.gd` (`--fixed-fps 60`, même ligne `case` que `test_entrainement_bot`, **137 vérifications**, ~13 s). Deux
+couches. (1) *Corps factices* — le vrai fournisseur, le vrai nœud de perception (le modèle de vue, le vrai signal de son), un `FauxTireur`
+qui rejoue l'essentiel de `player.gd` (visée à 18/s, cadence, munitions, recharge, relâchement entre deux coups) : les profils, le texte du
+fournisseur (chaque champ de réflexe lu, aucune lecture de l'adversaire), le délai de réaction à l'image près (0,60 s et 0,18 s, et un
+délai nul), la difficulté (délai et justesse), le lissage (la consigne ne tourne jamais plus vite que `vitesse_visee`, un demi-tour prend
+π/v), l'erreur qui se resserre, la rafale et la pause, la tolérance, la recharge (à vide après le délai, au calme, au combat, jamais pour
+qui ne tire pas), **l'honnêteté** (joueur immobile dans le noir, torche allumée derrière une paroi pleine, lampe hors du cadre, bot en ZONE
+qui patrouille loin d'une cible dans le noir : zéro coup, patrouille, mémoire vide, pour les trois difficultés), l'enquête vers un vrai
+son, la recherche, l'oubli, l'audace, un profil de S2 qui voit sans réagir, un bot qui agit sans tirer. (2) *Le jeu monté* — le cran 3 et
+la difficulté **lus de l'interface** (l'entrée, la coche, l'entrée qui tourne, les constantes de l'écran comparées à `ProfilBot.Difficulte`),
+le bot monté au profil de chaque difficulté par le geste du joueur, zéro balle sur un joueur dans le noir ou derrière la paroi pleine, des
+balles (et le joueur touché) sur un joueur éclairé, la première balle au plus tôt un délai après la première perception, **le cran 2 qui ne
+tire toujours jamais** (même doué de vue et d'ouïe devant une torche), la recharge, la mort et la réapparition du joueur (deux fois, loin
+du bot, sur une case praticable), le retour à la cible et à l'écran scindé. `test_bot_perception` n'a changé que ses libellés : ses
+vérifications (190) sont intactes.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** Sur `test_bot_combat`, chiffre = contrôles rouges. **Honnêteté** : le modèle de vue qui rend toujours « vu » avec la VRAIE place du joueur
+(33 — le bot tire sur le joueur dans le noir et derrière la paroi, pour les trois difficultés) ; la machine à états qui part toujours du
+souhait « combat » sans lire la mémoire (19) ; le fournisseur qui va chercher le groupe `players` pour viser (11, dont les trois
+contrôles de texte « pas de `get_nodes_in_group` / `get_tree()` / `"players"` » — et 39 erreurs de script, que le sabotage produit
+de lui-même, sans qu'on ait cherché pourquoi : la garde de texte est celle qui tient). **Réflexes** : le délai de réaction supprimé (10) ; facile et
+difficile inversés (9) ; la tolérance de tir ignorée (3) ; l'audace ignorée (4) ; le lissage ignoré (3) ; l'erreur de visée qui ne se
+resserre plus (4) ; `tirs_par_rafale` ignoré (3) ; la recharge oubliée (6) ; le tir permis hors de tout engagement, c'est-à-dire en
+patrouille (10). **Le cran 2 qui tire** — son profil reçoit `voit`, `entend`, `agit` et `tire` (4, dont « le profil du cran 2 n'agit
+pas » et la balle tirée devant la torche, dans le jeu réel). **Le joueur** : sans réapparition (5) ; réapparu à 60 px du bot (2).
+**Un sabotage est resté vert, et c'est instructif** : retirer `etat == Etat.PATROUILLE` seul de la condition de tir — elle est gardée
+DEUX fois, ici et par `_a_un_angle` (faux en patrouille). Retirées toutes deux, la suite rougit (10). Les deux gardes sont voulues :
+la seconde est ce qui interdit de tirer sur un angle périmé.
+
+**Deux faux rouges de la garde elle-même, instructifs.** (1) Un `queue_free()` laisse les corps de la situation d'avant dans le groupe
+`players` jusqu'à la fin de l'image : le bot de la situation suivante les a pris pour son adversaire — un fantôme posé à sa propre place, que
+son halo « voyait ». Une vue de plus dans le noir, à la première image de chaque situation : la garde d'honnêteté rougissait sur un bot
+honnête. Remède : libérer sur-le-champ (`remove_child` + `free`). (2) Une torche qu'on coupe met quelques images à mourir : un bot posé
+devant une lampe qui s'éteint la voit encore, et il a le droit d'y réagir — la garde éteint la torche et laisse trente images avant de
+poser le bot.
+
+**Ce qui n'est pas prouvé.**
+- **Jamais joué manette en main, ni vu à l'écran.** Les trois difficultés sont des chiffres de départ, jugés par personne : « facile » l'est
+  sur le papier (0,6 s de délai, 18° d'erreur). Les effets d'un bot qui tue le joueur (flash, bandeau « FATAL », acouphène, vignette) ne
+  sont pas vérifiés à l'écran — la réapparition du joueur ne l'est qu'en état (vie, visuels, place), pas en rendu.
+- Le jeu monté n'éprouve qu'une carte (`tools/cartes/perception_essai.json`) et un bot IMMOBILE pour la mise en scène (il pense, il ne
+  marche pas) ; l'enquête et la recherche en marchant ne sont éprouvées que sur les corps factices. Un bot en ENQUETE dans le vrai jeu
+  n'a marché sur aucune carte livrée.
+- Le `FauxTireur` n'est pas `player.gd` : il en copie l'ordre et les règles, pas le dispersion (`current_spread_bloom`), le root ni la
+  physique des murs. Le jeu monté couvre ce que le faux ne couvre pas, mais seulement pour un bot immobile.
+- La prudence n'est qu'une largeur de zone : « s'accroupir », « éteindre la torche », « changer de place après avoir tiré » ne sont pas
+  faits (S9 pour la torche et le reste ; rien dans la liste de S3 ne les demandait).
+- Le bot ne tire que sur ce que le modèle de S2 lui donne : sa **rétrodiffusion** et le bandeau LED restent hors modèle, donc un joueur
+  dans le halo d'une torche allumée peut être « moins vu » qu'à l'écran. Voir moins que la lumière est le sens voulu, mais c'est
+  aussi ce qui rendra le bot parfois plus aveugle qu'on ne le croit.
+
+**Signalé, pas corrigé.**
+- **`PerceptionBotNoeud._adversaire()` prend le PREMIER autre joueur du groupe `players`** qui soit visible et vivant. Aujourd'hui il n'y en
+  a qu'un ; le jour où un bot en affronte deux (S6, une salle de cinq PNJ, ou un bot contre un bot), il faudra choisir — et l'honnêteté
+  voudrait un bot par cible perçue, pas un « adversaire » unique. Hors périmètre.
+- Un bot qui tue le joueur **continue de chercher sa dernière place connue** pendant son délai d'oubli (6 s au plus), alors que le joueur est
+  mort : un bot « honnête » saurait que sa cible est tombée (le corps tombe à la vue de tous). Le laisser chercher est inoffensif ; le lui
+  faire oublier serait un petit ajout de S4.
+- Le **cran 3 hérite du déplacement du cran 2** (LIBRE, allure 0,7, torche éteinte) : un bot qui arpente toute la carte et ne s'arrête que
+  pour tirer. Un bot qui rôde est une chasse ; l'allure et le déplacement des trois difficultés sont à juger en jouant (S4).
+- `docs/JOURNAL_SESSIONS.md` : `game_state.gd` et `ui.gd` sont « partagés, à demander avant d'écrire » — S3 y a écrit sur ordre du chantier.
+  L'entrée au journal est à tenir par la session qui le tient.
+
+**À trancher par Adrien.** (1) Les chiffres des trois difficultés, un par un, en jouant (S4). (2) Le joueur qui meurt à l'entraînement
+revient en 2 s, loin du bot : le délai et le lieu, ou une autre règle (rester mort jusqu'à un appui, revenir sur sa case de départ). (3) Un
+cran 3 dont le bot ne s'arrête qu'en combat : faut-il qu'il se poste, qu'il avance vers sa cible, qu'il se déplace en tirant ? (4) La difficulté
+FACILE ne tire jamais sur un pas entendu à 400 px (audace 40 px) : « tire si vu ou entendu » doit-il valoir pour les trois ?
 
 ### Questions
 

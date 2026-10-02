@@ -1,8 +1,9 @@
 class_name PerceptionBotNoeud
 extends Node2D
 
-## L'état de la perception d'un bot, en jeu — chantier SOLO, étape S2. **Le bot ne s'en sert pas encore pour agir** : ni
-## tourner, ni poursuivre, ni tirer. C'est S3. Ce nœud ne fait que percevoir et se souvenir, et le montrer (débogage).
+## L'état de la perception d'un bot, en jeu — chantier SOLO, étape S2. Ce nœud ne fait que percevoir et se souvenir, et le
+## montrer (débogage). **Depuis S3, `BotInputProvider` en lit `memoire` et `derniere_vue` pour agir** (tourner, enquêter, tirer) —
+## et RIEN d'autre : la frontière de l'honnêteté ci-dessous est ce qui l'autorise.
 ##
 ## Il fait trois choses, et le calcul n'est dans aucune :
 ##   1. à chaque pas de physique, il décrit à `PerceptionBot.voir` ce que la lumière montre du joueur adverse — la liste
@@ -87,6 +88,12 @@ func configurer(un_profil: ProfilBot, carte: Dictionary, le_corps: Node2D, grain
 		var m := CanvasItemMaterial.new()
 		m.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 		material = m
+
+
+## L'horloge de la perception, en secondes : celle de SA physique, le temps de la mémoire (`MemoireBot`). Le fournisseur d'entrées
+## s'y réfère pour dater ses réflexes — un seul temps pour tout ce que le bot sait.
+func maintenant() -> float:
+	return _t
 
 
 ## Oublie tout : à la mort, à la réapparition (`BotInputProvider.reinitialiser`).
