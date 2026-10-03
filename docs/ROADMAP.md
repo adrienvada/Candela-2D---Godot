@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-03 (S8, lot 1 : l'extension « equipe » du format)
+> Dernière mise à jour : 2026-10-03 (S8, lot 1 : la clé « equipe » du format et les chapitres 1 à 3)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -31818,7 +31818,7 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    « S6 » ci-dessous. **Jamais jouée à la main, coût non mesuré** : le moteur est prouvé par des suites et des images fixes.
 7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss. ✅ **FAITE le 2026-10-03** — voir « S7 » ci-dessous. **Jamais jouée à
    la main** : dix salles écrites en données, jugées par une garde qui mesure ce que chacune enseigne, et vues en images fixes.
-8. **S8 — les chapitres 1 à 9**, un par lot. **Lot 1 (chapitres 1 à 3) EN COURS le 2026-10-03** — voir « S8 » ci-dessous.
+8. **S8 — les chapitres 1 à 9**, un par lot. **Lot 1 (chapitres 1 à 3) FAIT le 2026-10-03** — voir « S8 » ci-dessous ; restent les chapitres 4 à 9 (et le 10, SOLO-Q8). **Jamais joué à la main** : trente salles en données, jugées par des gardes et par la marche du vrai corps.
 9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent). ✅ **FAITE le 2026-10-03** — voir « S9 » ci-dessous
    (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe » — réglé par S9b.
 10. **S9b — l'intégration de S6 et de S9** (née de leur écriture en parallèle) : chaque PNJ a sa réserve de fusées et de gadget, l'éblouissement vaut pour les PNJ et pour le bot, les dix boss se règlent
@@ -33235,7 +33235,7 @@ Chacune est un joueur posé pour la prise (visée donnée au stick, comme au jeu
 
 **À trancher par Adrien.** (1) Les **phrases d'intention** (ton, longueur) ; en particulier « Six cartouches » en 0.3, qui donne un chiffre. (2) ~~0.5 : un coin pour les trois PNJ ou une salle plus grande que 24×24 ?~~ **Tranché le 2026-10-03** : « toute liberté sur la taille » — 41×41, PNJ répartis ; reste à lui dire que la salle n'exige **qu'une** fusée (le troisième PNJ se trouve à la torche) et que la seconde reste possible : voulait-il la rendre obligatoire (56 s d'attente) ? (3) **0.6 : le PNJ éclairé par sa lampe** (visible de loin, la ligne droite n'est pas interdite) ou dans le noir (il faudrait alors s'approcher à la torche, donc être vu) ? (4) **0.1 à 0.5 : des PNJ sourds et aveugles qui ne tirent jamais** — le débutant ne risque rien avant 0.6 ; voulu ? (5) La **taille de l'arène** du boss (32×32) et son tracé symétrique (cinq piliers, deux murets, deux lampes face à face).
 
-### S8 — EN COURS le 2026-10-03 : les chapitres 1 à 3 (« Les rondes », « Les rondes écoutent », « Les zones »)
+### S8, lot 1 — FAITE le 2026-10-03 : les chapitres 1 à 3 (« Les rondes », « Les rondes écoutent », « Les zones ») et la clé « equipe » du format
 
 #### L'extension de format : « equipe » (faite en premier, seule)
 
@@ -33330,6 +33330,102 @@ gardiens équipés de 3.7 à 3.9 sont donc **`zone_voit_entend_facile`**, et la 
 | **3.8 Les quartiers** | 28×24 · 4 `zone_voit_entend_facile` équipées · 2 · « Quatre pièces en damier, deux lampes. Chaque gardien reste chez lui. » | quatre zones disjointes en deux colonnes et deux rangées, un seul gardien chacune ; **les deux lampes sont aux deux pièces opposées** (zones 1 et 4), les deux autres noires ; **quatre portes** (quatre seuils de 6 cases hors de toute zone), deux par zone |
 | **3.9 La salle pleine** | 44×34 · 4 `zone_voit_entend_facile` + 1 `ronde_voit_entend_facile`, tous équipés · 3 · « Un grand entrepôt. Chaque gardien a sa zone, et une ronde passe entre elles. » | quatre zones de plus de 150 cases ; **la ronde (68 cases, 18,8 s) ne passe dans aucune zone** : elle tient la bande du milieu ; piliers et bloc central ; deux lampes dans des zones, une sur le tour |
 | **3.10 Le Braconnier** | 32×32 · `boss` (classe `arbalete`) · 2 · « Un duel dans une arène. Il laisse des lampes derrière lui. » | l'arène variée (quatre piliers, des pans de mur au nord et au sud, des murets sur la voie du milieu) ; symétrique dans les deux sens ; lampes face à face |
+
+#### Les gardes de S8, en un coup d'œil
+
+| Suite | Vérifications | Ce qu'elle garde |
+|---|---|---|
+| `test_aventure_format` | 152 | la clé « equipe » (acceptée, refusée, `palier_du_nom` sur les 64 noms, profils comparés champ à champ) ; chaque dossier de `assets/solo` se charge, les numéros se suivent depuis 0 |
+| `test_aventure_partie` | 152 (140 avant) | un PNJ équipé du Fumiste pose sa suie, son voisin identique sans la clé non ; **le leurre (chapitre 2) et la torche fantôme (chapitre 3) naissent dans le vrai jeu avec la clé, jamais sans** |
+| `test_chapitre_01` / `02` / `03` | 271 / 284 / 280 | chaque salle : ce qu'elle enseigne, mesuré (tableaux ci-dessus) ; partout : tailles, PNJ de chaque sorte, rondes en boucles, zones, PNJ équipés, départ à l'abri, arène du boss |
+| `test_chapitres_marche` | 190 | **le vrai corps** parcourt chaque ronde et chaque zone (voir plus bas) |
+
+#### La marche au vrai corps — `tools/test_chapitres_marche.gd` (`--fixed-fps 60`, dans `run_suites.sh`)
+
+S1 avait écrit que RONDE et ZONE n'étaient éprouvées qu'avec un point matériel, « S7 les exigera » : le chapitre 0 n'a aucune ronde, c'est donc ici qu'on les exige. La suite monte le vrai jeu, joue chaque
+salle de ronde ou de zone des chapitres 1 à 3 (vingt-sept salles, 45 s de jeu au plus chacune, `~9 s` de processus par salle), PNJ désarmés et sourds-aveugles — ils marchent, ils ne réagissent à rien —, et
+vérifie : chaque ronde passe, de son vrai corps, par chacun de ses points et boucle ; une zone n'est jamais quittée (0,0 s dehors) et visitée pour un cinquième au moins de ses cases (de 28 % à 59 % mesurés) ;
+aucun PNJ n'est immobile plus de 3 s ; deux rondes ne se traversent pas. **Elle a trouvé un défaut de 2.8** : les quatre tours, de longueurs inégales (28 et 30 cases), se rattrapaient, et leurs corps se frôlaient
+(35 px en 150 s de jeu, un corps fait 36). Ils font maintenant 30 cases chacun, tous parcourus dans le même sens depuis leur coin nord-ouest — même longueur, donc même avance les uns sur les autres —, avec des
+départs choisis par force brute sur les 4 096 possibles : 273 px d'écart au corps réel comme au modèle cinématique de la garde du chapitre. Le modèle cinématique (`ecart_minimal_des_rondes`, vitesse constante sur
+les cases du chemin) et le vrai corps s'accordent d'ailleurs à la première mesure : 173 px des deux côtés en 1.2.
+
+#### Sabotages (chaque garde vue ROUGE, puis restaurée à l'identique — md5 vérifié par le script ; chapitres sabotés par une copie de leur fabrique et `-- --dossier=`)
+
+- **L'extension** (six) : la clé ignorée par `profil_du_pnj` (4 contrôles du format, 3 de la partie) ; le refus du sourd et aveugle retiré (3) ; le gadget non posé (2) ; l'équipement remplacé par deux champs (4) ;
+  « equipe » vrai par défaut (4) ; le refus sur le boss retiré (1).
+- **Chapitre 1** (treize) : la lampe hors du trajet (1.1) ; les rondes qui ne se croisent plus (1.2, 2 contrôles) ; une lampe sur le tour dans le noir (1.3) ; un bloc réduit, la torche voit 59 % du tour (1.3) ; le pilier du
+  guetteur retiré (1.4) ; la cloison retirée (1.5) ; les lampes qui sortent de la ligne (1.6) ; les gardes non équipés (1.7) ; le muret retiré (1.8, 2) ; l'arène asymétrique (1.10, 2) ; un couloir d'une tuile (1.1, 2) ;
+  un palier changé (1.5, 2) ; le départ sous la lampe en vue d'une ronde qui voit (1.5, 2).
+- **Chapitre 2** (quatorze) : une salle trop vaste, un pas debout ne s'entend plus de partout (2.1) ; la ronde qui longe le bord, plus d'abri accroupi (2.1, 2) ; un pilier dans la salle nue (2.2) ; les recoins sans murs (2.3, 3) ;
+  une porte trop large (2.4, 2) ; une lampe dans la salle sombre (2.4, 2) ; plus de T (2.5) ; la silhouette non gardée (2.6, 3) ; les gardes non équipés (2.7, 2) ; des tours qui ne se recouvrent plus (2.8, 6) ; un poste près du
+  départ (2.9) ; l'arène asymétrique (2.10, 2) ; une ronde de deux points (2.1, 3) ; une ronde qui voit au lieu d'entendre (2.1, 2).
+- **Chapitre 3** (seize) : deux portes (3.1) ; la lampe hors de la zone (3.1, 2) ; le joueur dans la zone (3.2, 2) ; plus de porte (3.2, 5) ; une zone qui mange le couloir (3.3, 4) ; une lampe dans le sous-sol (3.4, 2) ; la ronde qui
+  ne traverse plus les zones (3.5, 4) ; le poste loin du départ (3.6, 3) ; la lampe près du joueur (3.7, 4) ; les gardiens non équipés (3.7) ; **un gardien équipé qui n'entend pas** (3.7, 2) ; des lampes dans deux pièces voisines
+  (3.8) ; une porte de moins (3.8, 3) ; la ronde qui entre dans les zones (3.9) ; l'arène asymétrique (3.10, 2) ; une zone trop petite pour errer (3.1, 5).
+- **La marche** (deux) : la ronde qui ne passe plus au point suivant (7 contrôles) ; la zone oubliée de son rectangle (« 6,6 s dehors »).
+
+**Cinq fois une garde ou un sabotage n'a PAS rougi du premier coup, et c'est instructif.** (1) *`palier_du_nom` d'un nom `voit_entend`* : la garde l'a trouvé à sa première exécution (« voit » puis « entend_lent » lu comme un palier
+inconnu, rendu 0 = TRÈS LENT) — un bug du code, pas de la garde. (2) *« equipe » qui n'est pas un booléen* : le refus se faisait, mais en laissant « Nonexistent 'bool' constructor » dans la sortie — une erreur de script que seul
+`run_suites.sh` attrape ; corrigé dans un commit à part. (3) *2.1, le bloc agrandi* : resté VERT (0 rouge) — le bord extérieur d'un anneau reste toujours loin du trajet, un bloc plus gros ne retire aucun abri. Le sabotage qui
+rougit est celui qui change ce que la garde dit : la salle trop vaste (un pas debout ne s'entend plus de partout) ou la ronde collée au bord (plus d'abri accroupi). (4) *2.2, une ronde sur un coin* : le premier sabotage de 2.2 tombait
+dans un mur, le validateur refusait le chapitre et la garde de contenu s'arrêtait avant d'avoir regardé ; réécrit pour que la ronde reste praticable. (5) *La zone, côté code* : `prochaine_cible` de `ZONE` remplacé par une cible
+libre est resté VERT — le chemin est enfermé dans la zone, la cible hors zone n'est jamais atteinte, le PNJ ne sort donc pas ; il faut oublier le rectangle lui-même (`profil.zone = Rect2i()`) pour qu'il sorte. Deux gardes
+(la cible, le chemin) valent mieux qu'une, et c'est voulu.
+
+#### Les images (Mesa/llvmpipe sous Xvfb, 1920×1080, la torche du joueur tournée vers l'action — non versionnées)
+
+Une capture iso par salle, `salle_N_MM.png`, regardées, plus deux de l'écran de l'aventure. Les salles montrent ce qu'elles doivent : l'anneau de 1.1 avec le PNJ pris dans la torche et la flaque de la lampe sur son trajet, la croix de 1.2 et ses deux
+flaques sur les croisements, le grand tour noir de 1.3 où la torche ne suit qu'un tronçon, le guetteur de 1.4 sous sa lampe et la ronde éclairée par la torche près du pilier, les deux couloirs de 1.5, le U de 1.7, la cour de 1.8
+(le poste dans sa flaque, les piliers en blocs noirs, les murets hachurés), la porte de 2.4 entre la salle claire et la salle noire, la silhouette de 2.6 dans sa flaque au fond de la chambre. **Limites de la prise** : les PNJ de
+ronde sont posés à la main dans le cône de la torche (leur place sur le tour est celle d'un instant, pas celle d'un moment de la ronde), et sous llvmpipe, pas sous le pilote d'Apple.
+
+#### Non prouvé
+
+- **Jamais joué à la main.** Trente salles écrites en données, jugées par des gardes qui mesurent ce que chacune enseigne, par la marche du vrai corps et par des images fixes ; personne n'a tenu une manette dans l'une d'elles. Ni la
+  difficulté, ni le ton des phrases, ni la durée d'une salle ne sont jugés.
+- **Aucun banc de difficulté.** Les paliers LENT et FACILE ont été réglés par S4 contre un joueur qui ENTRE dans une salle, **un contre un, avec le Parasite**. Ici des PNJ de ces paliers portent le fusil de l'Illusionniste, l'arbalète
+  du Braconnier, le pistolet lourd du Fumiste, en nombre (jusqu'à cinq à la fois en 3.9), en ronde ou en zone — jamais confrontés à un joueur type. La suite `banc_bot_difficulte` ne sait pas jouer une salle.
+- **La torche de 468 px est celle du Parasite.** Les salles se mesurent sur elle, comme au chapitre 0 ; à partir du chapitre 1 on joue la classe qu'on veut parmi celles qu'on a gagnées (le Fumiste, l'Illusionniste…), dont la lumière
+  n'est pas la même : « aucune case ne montre le tour entier à la torche » (1.3) ou « hors de la torche » (2.6, 3.7) ne se mesurent pas pour elles.
+- **Les portées d'écoute viennent du modèle** (`PerceptionBot.ecouter`, avec les niveaux et les portées de l'audio), pas d'une partie : l'occultation par un mur y est les trois rayons de l'audio, la zone d'un pas accroupi est celle que
+  le liseré donne. Que « un tir tiré de loin appelle les rondes » (2.6) soit vrai dans le jeu n'est pas rejoué : la garde dit qu'une case de diversion existe, pas que les rondes la rejoignent.
+- **Les effets de l'équipement sur la force des PNJ** : la suie (le PNJ entre dans son nuage, aveugle 9 s), le leurre, la torche fantôme — leurs règles sont celles de S9 (« à juger en jouant »), leur pose est prouvée (le vrai jeu), pas
+  leur effet sur une salle. Le leurre d'un PNJ n'est pas reconnu comme un leurre par un autre PNJ (S2, « Non prouvé »).
+- **La marche** ne joue que 45 s de jeu par salle (150 s pour 2.8 seule, une fois) : une collision lente entre deux rondes n'est exclue que pour ces durées. Les rondes de longueurs égales qui partagent des cases (1.2, 1.6, 1.8, 2.7) s'écartent de
+  173 à 490 px ; celles de 1.9 sont à 280 px et de longueurs inégales — non éprouvées au-delà de 45 s.
+- **Images** : Mesa/llvmpipe sous Xvfb seulement, PNJ posés à la main dans le cône. **Le coût n'est pas mesuré** (consigne : aucun relevé de cadence) : 3.9 porte cinq PNJ, trois plafonniers sur 44×34 ; 3.7 est un hangar de 48 cases de long.
+
+#### Signalé, pas corrigé
+
+- **L'écran de l'aventure avec quatre chapitres** (le 0 et le 1 finis, le 2 commencé) a été regardé (`ecran_aventure_4_chapitres.png`) : les quatre entrées de chapitre, la ligne « CHAPITRES 4 À 10 — À VENIR » et « RETOUR » tiennent
+  à l'écran, la classe du Fumiste est libre, celle de l'Illusionniste grisée jusqu'à la fin du chapitre 2, la description de la salle (« 2 à abattre ») prend la place de l'affiche. Le hub ne défile pas et n'a pas à le faire jusqu'au chapitre 5 ou 6 :
+  chaque chapitre écrit ajoute une ligne, au compte des entrées. **À surveiller quand le chapitre 7 viendra.**
+- **La table d'équipement de S9 ne dit rien de LENT ni de FACILE** (« FACILE : aucun outil » ; les PNJ du catalogue n'en ont pas). C'est ce que la clé « equipe » a dû trancher (voir plus haut) ; la question (2) de S9, « quels outils pour quels
+  chapitres », est donc répondue en partie : le gadget seul aux paliers bas, tout ce que le boss du palier a à NORMAL et au-dessus. `torche_en_patrouille` n'est toujours dans aucun profil.
+- **Une zone dont le PNJ ne fait que se promener est une salle où le joueur se cache dans le noir** : aucune mesure n'impose qu'un gardien de zone enquête sur un son jusqu'à la frontière (le moteur le fait : `ZONE` enferme les chemins) ;
+  3.2 le montre par les données (un chemin sort de la zone), pas par une partie.
+- **Un PNJ de zone voit toute la pièce si elle est éclairée** : en 3.1 le gardien peut tirer sur quiconque entre sous la lampe. C'est voulu (la leçon « il voit ce qui s'éclaire »).
+- **Les arènes des trois boss reprennent le gabarit du chapitre 0** (32×32, joueur et boss à 25 cases l'un de l'autre, lampes en (10,16) et (21,16)) et ne varient que par leur mobilier.
+- **`tools/fabrique_chapitre_00.gd` garde sa propre grille** (non migrée vers `fabrique_commune.gd`) : un seul dessin de chapitre 0, régénérable à l'octet ; le toucher aurait été hors périmètre.
+- Les commits de S8 sont en français et se terminent par les deux lignes demandées ; celui du chapitre 3 dit « dix-sept sabotages » : ils sont seize (le détail ci-dessus fait foi).
+
+#### À trancher par Adrien
+
+1. **« equipe » donne le gadget à tous les paliers et le reste de l'équipement à NORMAL et au-dessus.** C'est le choix le plus étroit qui fasse poser le gadget à un PNJ LENT ou FACILE ; l'alternative est de leur donner aussi la torche tactique
+   et le repli (un PNJ de ronde qui change de place après un tir quitterait sa ronde). Ou une table d'équipement par palier, dans `profil_bot.gd`.
+2. **Les gardiens équipés du chapitre 3 entendent** (`zone_voit_entend_facile`), alors que le plan les voulait `zone_voit_facile` : la torche fantôme ne se pose qu'en enquête. Acceptable, ou faut-il que ce gadget se pose aussi sur ce qu'on voit
+   (le Braconnier jouerait alors autrement) ?
+3. **Seuls les PNJ qui bougent sont équipés** (les rondes de 1.7 à 2.9, les gardiens de 3.7 à 3.9) ; les postes immobiles gardent le Parasite. Voulu ?
+4. **La difficulté des PNJ équipés d'une autre classe**, jamais mesurée (« Non prouvé ») : un banc de salle, ou des essais à la main d'abord ?
+5. **Les phrases d'intention** (ton, longueur), et celles qui nomment le gadget (« Quand l'un est touché, la fumée monte », « Son double est tout près », « Il laisse des lampes derrière lui ») : la situation, ou déjà la leçon ?
+6. **La taille des salles** : de 22×16 à 48×16 et 44×34 ; 1.5 laisse la ronde aveugle au passage pendant 13,5 s sur 18 — assez de marge pour une salle qui enseigne « au bon moment », ou trop ?
+7. **Les chapitres 1 à 3 n'imposent aucune classe** (consigne) : le joueur arrive au chapitre 1 avec le seul Parasite, et ses salles se mesurent sur sa torche ; un joueur qui y arrive avec une autre classe n'a pas la même salle.
+
+#### Résultat des suites
+
+`GODOT=… ./tools/run_suites.sh --rapide` (le binaire 4.7.1) : **les 148 suites headless sont vertes**, en 1 113 s (machine chargée par les captures), sans erreur de script ni `push_error` non déclaré ; les scénarios à deux instances ne sont pas joués par
+`--rapide`. **Aucun relevé de cadence** (consigne).
 
 ### Questions
 
