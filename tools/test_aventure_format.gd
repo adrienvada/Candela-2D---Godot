@@ -51,6 +51,7 @@ func _run() -> void:
 	_refus_du_manifeste()
 	_refus_du_niveau()
 	_refus_du_chapitre()
+	_l_equipement_d_un_pnj()
 	_ordre_des_classes()
 	_chargement_et_catalogue()
 	_progression()
@@ -396,6 +397,125 @@ func _refus_du_chapitre() -> void:
 	_ecrire(dossier.path_join("niveau_02.json"), ns[1])
 	charge = Format.charger_chapitre(dossier, 0)
 	_check("le même dossier, réparé, est accepté", not charge.is_empty())
+
+
+# ---------------------------------------------------------------------------
+# L'ÉQUIPEMENT D'UN PNJ : la clé « equipe » (S8)
+# ---------------------------------------------------------------------------
+
+## Les propriétés de données d'un profil, par nom : de quoi comparer deux profils champ à champ sans en oublier un que S9 ajouterait.
+func _champs_du_profil(p: ProfilBot) -> Dictionary:
+	var sortie := {}
+	for prop: Dictionary in p.get_property_list():
+		if (int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0 and (int(prop["usage"]) & PROPERTY_USAGE_STORAGE) != 0:
+			sortie[String(prop["name"])] = p.get(String(prop["name"]))
+	return sortie
+
+
+## Les champs qui diffèrent entre deux profils (leurs noms), pour dire CE qui a changé.
+func _ecarts(a: ProfilBot, b: ProfilBot) -> Array[String]:
+	var ca := _champs_du_profil(a)
+	var cb := _champs_du_profil(b)
+	var sortie: Array[String] = []
+	for k in ca:
+		if ca[k] != cb.get(k):
+			sortie.append(String(k))
+	return sortie
+
+
+## Le niveau `n_niveau` de l'essai (copie), dont le PNJ `i` est posé sur le profil `nom`, avec « equipe » s'il est donné.
+func _pnj_equipe(n_niveau: int, i: int, nom: String, equipe: Variant = null) -> Dictionary:
+	var n := _niveau(n_niveau)
+	n["pnj"][i]["profil"] = nom
+	if equipe != null:
+		n["pnj"][i]["equipe"] = equipe
+	return n
+
+
+## Le palier que dit la fin d'un nom du catalogue, lu SANS `palier_du_nom` : la garde ne se sert pas de ce qu'elle juge.
+func _palier_attendu(nom: String) -> int:
+	if nom.ends_with("sourd_aveugle"):
+		return -1
+	for nom_palier: String in Profil._NOMS_PALIER:
+		if nom.ends_with("_" + nom_palier):
+			return int(Profil._NOMS_PALIER[nom_palier])
+	return -2
+
+
+func _l_equipement_d_un_pnj() -> void:
+	print("\n--- L'équipement d'un PNJ : « equipe » (S8) ---")
+	# Accepté : un PNJ qui AGIT — immobile, en ronde, en zone — peut s'équiper ; « equipe » faux (ou absent) ne change rien.
+	for cas: Array in [[1, 0, "ronde_voit_lent"], [1, 1, "zone_voit_facile"], [0, 0, "immobile_voit_entend_lent"], [1, 0, "ronde_entend_normal"]]:
+		var accepte := _pnj_equipe(cas[0], cas[1], cas[2], true)
+		_check("accepté : « equipe » vrai sur %s" % cas[2], Format.valider_niveau(accepte).is_empty(), str(Format.valider_niveau(accepte)))
+	var n := _pnj_equipe(1, 0, "ronde_voit_lent", false)
+	_check("accepté : « equipe » faux (aucun outil, comme sans la clé)", Format.valider_niveau(n).is_empty(), str(Format.valider_niveau(n)))
+	# Refusé.
+	n = _pnj_equipe(1, 0, "ronde_voit_lent", "oui")
+	_refuse_niveau("« equipe » qui n'est pas un booléen (un texte)", n, "« equipe » est vrai ou faux")
+	n = _pnj_equipe(1, 0, "ronde_voit_lent", 1)
+	_refuse_niveau("« equipe » qui n'est pas un booléen (un entier)", n, "« equipe » est vrai ou faux")
+	n = _pnj_equipe(0, 0, "immobile_sourd_aveugle", true)
+	_refuse_niveau("« equipe » sur un PNJ sourd et aveugle immobile (il n'agit pas)", n, "« equipe » est refusée sur « immobile_sourd_aveugle »")
+	n = _pnj_equipe(1, 0, "ronde_sourd_aveugle", true)
+	_refuse_niveau("« equipe » sur un PNJ sourd et aveugle en ronde", n, "un PNJ sourd et aveugle n'agit pas")
+	n = _pnj_equipe(1, 1, "zone_sourd_aveugle", true)
+	_refuse_niveau("« equipe » sur un PNJ sourd et aveugle en zone", n, "un PNJ sourd et aveugle n'agit pas")
+	n = _niveau(2)
+	n["pnj"][0]["equipe"] = true
+	_refuse_niveau("« equipe » sur le boss (son profil est déjà équipé)", n, "« equipe » est refusée sur le boss")
+	n = _pnj_equipe(1, 0, "ronde_voit_lent", true)
+	n["pnj"][0]["equipee"] = true
+	_refuse_niveau("la faute de frappe « equipee » reste une clé inconnue", n, "clé inconnue « equipee »")
+
+	# Le palier d'un nom : une seule lecture, pour les soixante-quatre noms du catalogue.
+	var palier_ok := true
+	var detail := ""
+	for nom in Profil.noms_du_catalogue():
+		var lu := Profil.palier_du_nom(nom)
+		if lu != _palier_attendu(nom):
+			palier_ok = false
+			detail += " %s:%d≠%d" % [nom, lu, _palier_attendu(nom)]
+	_check("`palier_du_nom` rend le palier de chacun des 64 noms du catalogue (-1 pour le sourd et aveugle)", palier_ok and Profil.noms_du_catalogue().size() == 64, detail)
+	_check("… et -1 pour un nom hors catalogue", Profil.palier_du_nom("bidule_voit_lent") == -1 and Profil.palier_du_nom("boss") == -1 and Profil.palier_du_nom("") == -1)
+
+	# Ce que le profil devient. Sans la clé : EXACTEMENT le PNJ du catalogue d'avant (mêmes champs, donc même graine, mêmes commandes).
+	var entree_sans: Dictionary = Format.preparer_niveau(_pnj_equipe(1, 0, "ronde_voit_lent"))["pnj"][0]
+	var sans := Format.profil_du_pnj(entree_sans)
+	var catalogue := Profil.pnj_nomme("ronde_voit_lent")
+	catalogue.points_ronde.assign(entree_sans["ronde"])
+	_check("sans la clé : le profil est EXACTEMENT celui du catalogue, champ pour champ, et n'a aucun outil",
+		_ecarts(sans, catalogue).is_empty() and not sans.est_equipe(), str(_ecarts(sans, catalogue)))
+	var entree_faux: Dictionary = Format.preparer_niveau(_pnj_equipe(1, 0, "ronde_voit_lent", false))["pnj"][0]
+	_check("« equipe » faux : le même profil, sans outil", _ecarts(Format.profil_du_pnj(entree_faux), sans).is_empty() and not bool(entree_faux["equipe"]))
+	for nom in ["immobile_sourd_aveugle", "immobile_voit_tres_lent", "immobile_entend_lent", "zone_voit_entend_facile", "libre_voit_entend_normal"]:
+		var pnj_catalogue := Profil.pnj_nomme(nom)
+		var entree := {"profil_nom": nom, "ronde": [] as Array[Vector2i], "zone": Rect2i(), "classe": "pistolet"}
+		var profil := Format.profil_du_pnj(entree)
+		_check("sans la clé, %s est le catalogue tel quel (aucun outil)" % nom, _ecarts(profil, pnj_catalogue).is_empty() and not profil.est_equipe())
+
+	# Avec la clé : le gadget, à tous les paliers ; les outils du palier, à NORMAL et au-dessus ; jamais un champ de perception, de réflexe ou de déplacement.
+	var entree_equipe: Dictionary = Format.preparer_niveau(_pnj_equipe(1, 0, "ronde_voit_lent", true))["pnj"][0]
+	_check("la clé survit à `preparer_niveau`", bool(entree_equipe["equipe"]))
+	var equipe := Format.profil_du_pnj(entree_equipe)
+	_check("avec la clé, un PNJ LENT se sert du gadget de sa classe — et de rien d'autre (la table de S9 ne dit rien du palier LENT)",
+		equipe.utilise_le_gadget and equipe.est_equipe() and not equipe.torche_tactique and equipe.repli_apres_tir_s == 0.0
+		and equipe.accroupi_pres_du_son_px == 0.0 and not equipe.lance_des_fusees)
+	_check("… et il reste exactement le même PNJ pour tout le reste : perception, réflexes, déplacement, allure, ronde",
+		_ecarts(equipe, sans) == (["utilise_le_gadget"] as Array[String]), str(_ecarts(equipe, sans)))
+	var normal := Format.profil_du_pnj({"profil_nom": "ronde_voit_entend_normal", "ronde": [] as Array[Vector2i], "zone": Rect2i(), "classe": "fusil", "equipe": true})
+	var attendu_normal := Profil.pnj_nomme("ronde_voit_entend_normal")
+	Profil.equiper_pour_le_palier(attendu_normal, Profil.Palier.NORMAL)
+	attendu_normal.utilise_le_gadget = true
+	_check("un PNJ NORMAL équipé reçoit ce que S9 donne au palier NORMAL (torche tactique, repli, gadget)",
+		normal.torche_tactique and normal.repli_apres_tir_s > 0.0 and normal.utilise_le_gadget and _ecarts(normal, attendu_normal).is_empty(), str(_ecarts(normal, attendu_normal)))
+	var difficile := Format.profil_du_pnj({"profil_nom": "zone_voit_entend_difficile", "ronde": [] as Array[Vector2i], "zone": Rect2i(0, 0, 4, 4), "classe": "fusil", "equipe": true})
+	_check("… et un PNJ DIFFICILE ce qu'elle donne au palier DIFFICILE (fusée et posture comprises)", difficile.lance_des_fusees and difficile.accroupi_pres_du_son_px > 0.0 and difficile.utilise_le_gadget)
+	var boss := Format.profil_du_pnj({"profil_nom": "boss", "ronde": [] as Array[Vector2i], "zone": Rect2i(), "classe": "fumiste", "equipe": true})
+	_check("le boss garde son profil réglé à sa classe, « equipe » n'y change rien", _ecarts(boss, Profil.boss("fumiste")).is_empty())
+	# Un profil n'est jamais partagé d'un appel à l'autre : équiper l'un n'équipe pas le suivant.
+	var apres := Format.profil_du_pnj(entree_sans)
+	_check("équiper un PNJ n'équipe pas le suivant (un profil neuf à chaque appel)", not apres.est_equipe() and apres != equipe)
 
 
 # ---------------------------------------------------------------------------

@@ -100,6 +100,7 @@ func _run() -> void:
 	await _les_refus()
 	await _une_salle_se_charge()
 	await _les_pnj_sont_honnetes_et_solidaires()
+	await _un_pnj_equipe_se_sert_de_son_gadget()
 	await _la_vue_iso_les_montre_tous()
 	await _la_boucle()
 	await _on_la_quitte_proprement()
@@ -354,6 +355,80 @@ func _les_pnj_sont_honnetes_et_solidaires() -> void:
 	main.spawn_bullet(a, a.global_position + Vector2(30.0, 0.0), 0.0, a.current_weapon)
 	await _images(60)
 	_check("la balle d'un PNJ touche, elle, le joueur (le fusil d'un PNJ n'est pas désarmé)", main.p1.hp < hp_avant or main.p1.dead, "%s → %s" % [hp_avant, main.p1.hp])
+	main._on_main_menu_requested()
+	await _images(2)
+
+
+# ---------------------------------------------------------------------------
+# UN PNJ ÉQUIPÉ (« equipe », S8)
+# ---------------------------------------------------------------------------
+
+func _gadgets_du_jeu() -> Array:
+	var sortie: Array = []
+	for g in get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and not g.is_queued_for_deletion():
+			sortie.append(g)
+	return sortie
+
+
+## Deux PNJ du MÊME profil (`immobile_voit_lent`) et de la MÊME classe (le Fumiste), l'un avec la clé « equipe », l'autre sans. Le joueur se tient sous le
+## plafonnier, les deux le voient ; touchés tous deux (la règle de la suie : « il vient d'être touché »), seul l'équipé pose sa suie — avec SA réserve.
+func _un_pnj_equipe_se_sert_de_son_gadget() -> void:
+	print("\n--- Un PNJ équipé se sert du gadget de sa classe, son voisin identique mais sans la clé non ---")
+	var lu := Format.lire_chapitre(ESSAI.path_join("chapitre_00"))
+	var niveau: Dictionary = (lu["niveaux"][0] as Dictionary).duplicate(true)
+	niveau["pnj"] = [
+		{"case": [4, 6], "orientation": 0, "profil": "immobile_voit_lent", "classe": "fumiste", "equipe": true},
+		{"case": [4, 10], "orientation": 0, "profil": "immobile_voit_lent", "classe": "fumiste"},
+	]
+	var defauts := Format.valider_niveau(niveau)
+	_check("(le niveau de deux PNJ équipé / non équipé est lui-même valide)", defauts.is_empty(), str(defauts))
+	var c := chapitre.duplicate(true)
+	c["niveaux"] = [Format.preparer_niveau(niveau)]
+	c["niveaux"][0]["fichier"] = "equipe.json"
+	main.graine_du_bot = 4242
+	main.demarrer_l_aventure(c, 0, "pistolet", prog)
+	await _images(3)
+	var partie: Node = main.aventure
+	await _jusqua(func() -> bool: return partie.phase == PH_JEU, 300)
+	var a: Node = partie.pnj[0]
+	var b: Node = partie.pnj[1]
+	var bot_a := a.input_provider as BotInputProvider
+	var bot_b := b.input_provider as BotInputProvider
+	_check("l'équipé porte le Fumiste et se sert de son gadget ; son voisin porte le Fumiste et ne s'en sert pas",
+		String(a.current_weapon.slug()) == "fumiste" and String(b.current_weapon.slug()) == "fumiste"
+		and bot_a.profil.utilise_le_gadget and not bot_b.profil.utilise_le_gadget and not bot_b.profil.est_equipe())
+	_check("… les deux ont leur réserve (places 2 et 3), le gadget disponible",
+		a.slot_de_reserve() == 2 and b.slot_de_reserve() == 3 and main.gadget_disponible(2) and main.gadget_disponible(3))
+	main.p1.hp = 100000.0
+	main.p1.global_position = NavigationBot.centre_de_la_case(Vector2i(11, 8))
+	main.p1.rotation = PI
+	await _images(2)
+	var touches := false
+	var a_pose := false
+	for _i in 900:
+		main.p1.hp = 100000.0
+		await process_frame
+		if not touches and bot_a.etat == BotInputProvider.Etat.COMBAT and bot_b.etat == BotInputProvider.Etat.COMBAT:
+			# « Il vient d'être touché » : le bot lit SA vie, comme un joueur lit sa barre.
+			a.hp = a.hp - 5.0
+			b.hp = b.hp - 5.0
+			touches = true
+		for g in _gadgets_du_jeu():
+			if String(g.slug) == "cartouche_suie":
+				a_pose = true
+		if a_pose:
+			break
+	_check("les deux PNJ voient le joueur sous le plafonnier et se battent (état COMBAT)", touches)
+	_check("l'équipé POSE sa suie (la règle du Fumiste, lue sur SA réserve)", a_pose)
+	await _images(60)
+	var suies: Array = []
+	for g in _gadgets_du_jeu():
+		if String(g.slug) == "cartouche_suie":
+			suies.append(g)
+	_check("… une seule suie dans l'arène, posée par l'équipé (place 2) et pas par son voisin (place 3 intacte)",
+		suies.size() == 1 and suies[0].slot_reserve == 2 and main.gadget_disponible(3) and bot_b.gadgets_poses == 0 and bot_a.gadgets_poses >= 1,
+		"suies %d, poses a %d b %d" % [suies.size(), bot_a.gadgets_poses, bot_b.gadgets_poses])
 	main._on_main_menu_requested()
 	await _images(2)
 

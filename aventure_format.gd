@@ -64,6 +64,9 @@ extends RefCounted
 ##   `ProfilBot.noms_du_catalogue()` — jamais une suite de champs), et selon son déplacement : une `ronde` (au moins deux cases,
 ##   toutes praticables et atteignables) ou une `zone` (`[x, y, largeur, hauteur]` en cases, qui contient la case du PNJ).
 ##   `classe` (facultatif) : le slug de sa classe — la classe par défaut, le Parasite, sinon.
+##   `equipe` (facultatif, booléen) : vrai, le PNJ s'ÉQUIPE comme un bot de son palier (`ProfilBot.equiper_un_pnj`) et se sert du gadget
+##   de la classe qu'il porte. Faux ou absent : aucun outil, comme tout PNJ du catalogue. Refusée sur un PNJ sourd et aveugle (il n'agit
+##   pas) et sur le boss (son profil est déjà équipé). Pas de clé : exactement le PNJ d'avant (S8).
 ## - `boss` : vrai pour le dernier niveau du chapitre. Il porte alors UN seul PNJ, de profil `boss` (le profil d'entraînement
 ##   NORMAL : `ProfilBot.boss()`), et sa `classe` est celle que le chapitre débloque.
 ##
@@ -109,7 +112,7 @@ const _CLES_MANIFESTE_REQUISES := ["version", "numero", "titre", "niveaux"]
 const _CLES_NIVEAU := ["version", "titre", "intention", "boss", "carte", "joueur", "plafonniers", "pnj"]
 const _CLES_NIVEAU_REQUISES := ["version", "titre", "intention", "carte", "joueur", "pnj"]
 const _CLES_JOUEUR := ["case", "orientation"]
-const _CLES_PNJ := ["case", "orientation", "profil", "classe", "ronde", "zone"]
+const _CLES_PNJ := ["case", "orientation", "profil", "classe", "equipe", "ronde", "zone"]
 const _CLES_PLAFONNIER := ["case", "rayon", "intensite", "teinte"]
 
 ## Où l'on cherche les chapitres livrés. Les suites la déplacent vers `res://tools/aventure_essai` : le chapitre d'essai n'entre
@@ -297,6 +300,8 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 		e.append("%s : « orientation » est un nombre de degrés (reçu %s)" % [ctx, str(d["orientation"])])
 	if d.has("classe") and not (d["classe"] is String and ORDRE_DES_CLASSES.has(String(d["classe"]))):
 		e.append("%s : « classe » est un slug de classe connu — %s (reçu %s)" % [ctx, ", ".join(ORDRE_DES_CLASSES), str(d["classe"])])
+	if d.has("equipe") and not (d["equipe"] is bool):
+		e.append("%s : « equipe » est vrai ou faux (reçu %s)" % [ctx, str(d["equipe"])])
 	if not d.has("profil"):
 		return
 	if not (d["profil"] is String):
@@ -307,6 +312,8 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 	if nom == PROFIL_BOSS:
 		if not boss:
 			e.append("%s : le profil « boss » n'existe que dans le niveau de boss (« boss » : true)" % ctx)
+		if d.has("equipe"):
+			e.append("%s : « equipe » est refusée sur le boss — son profil est déjà équipé (le gadget de sa classe)" % ctx)
 		deplacement = ProfilT.Deplacement.LIBRE
 	else:
 		var profil := ProfilT.pnj_nomme(nom)
@@ -314,6 +321,8 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 			e.append("%s : profil inconnu « %s » — un nom de ProfilBot.noms_du_catalogue() (immobile_sourd_aveugle, ronde_voit_lent…), ou « boss »" % [ctx, nom])
 			return
 		deplacement = profil.deplacement
+		if bool(d.get("equipe", false)) and not profil.agit:
+			e.append("%s : « equipe » est refusée sur « %s » — un PNJ sourd et aveugle n'agit pas, il n'aurait aucun usage de ses outils" % [ctx, nom])
 	# Ses points de ronde et sa zone, selon son déplacement : chacun DOIT exister quand il sert, et ne doit pas exister sinon.
 	if deplacement == ProfilT.Deplacement.RONDE:
 		_valider_ronde(d, c, ctx, navigation, e)
@@ -526,6 +535,7 @@ static func preparer_niveau(niveau: Dictionary) -> Dictionary:
 			"rotation": deg_to_rad(float(p.get("orientation", 180.0))),
 			"profil_nom": String(p["profil"]),
 			"classe": String(p.get("classe", CLASSE_PAR_DEFAUT)),
+			"equipe": bool(p.get("equipe", false)),
 			"ronde": [] as Array[Vector2i],
 			"zone": Rect2i(),
 		}
@@ -561,6 +571,9 @@ static func profil_du_pnj(entree: Dictionary) -> ProfilBot:
 	if profil == null:
 		push_error("AventureFormat : profil de PNJ inconnu « %s »" % nom)
 		return null
+	# `equipe` : ce PNJ se sert des outils de son palier et du gadget de sa classe. Sans la clé, le profil du catalogue reste exactement celui d'avant.
+	if bool(entree.get("equipe", false)) and nom != PROFIL_BOSS:
+		ProfilT.equiper_un_pnj(profil, ProfilT.palier_du_nom(nom))
 	profil.points_ronde.assign(entree["ronde"])
 	profil.zone = entree["zone"]
 	return profil

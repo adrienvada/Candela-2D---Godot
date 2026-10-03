@@ -496,6 +496,29 @@ static func pnj_nomme(nom: String) -> ProfilBot:
 	return null
 
 
+## Le palier de réflexes d'un PNJ du catalogue d'après son NOM (`immobile_voit_lent` → `LENT`), ou `-1` : un PNJ sourd et aveugle n'en a pas (il
+## n'agit pas), et un nom hors catalogue n'en a pas davantage. Ne construit rien : c'est ce que lit le format de l'aventure pour savoir quoi équiper.
+static func palier_du_nom(nom: String) -> int:
+	if pnj_nomme(nom) == null:
+		return -1
+	var reste := "_".join(nom.split("_").slice(1))
+	for s_nom in _NOMS_SENS:
+		# « voit_entend_lent » commence aussi par « voit_ » : ce n'est le bon sens que si ce qui reste est un palier (comme `pnj_nomme`).
+		if reste.begins_with(s_nom + "_") and _NOMS_PALIER.has(reste.substr(s_nom.length() + 1)):
+			return int(_NOMS_PALIER[reste.substr(s_nom.length() + 1)])
+	return -1
+
+
+## ÉQUIPE un PNJ du catalogue — la clé `"equipe": true` d'un fichier de niveau (S8). Il reçoit ce que S9 donne à un bot de son palier
+## (`equiper_pour_le_palier`), **plus le gadget de sa classe, à TOUS les paliers** : un PNJ des premiers chapitres est LENT ou FACILE, deux
+## paliers dont la table de S9 ne dit rien (« les PNJ du catalogue n'ont aucun outil »), et le but est qu'il se serve du gadget de la classe qu'il
+## porte (la suie au chapitre 1, le leurre au 2, la torche fantôme au 3). Un PNJ NORMAL ou DIFFICILE a donc aussi la torche tactique, le repli, etc. —
+## ce que le boss de son palier a. Sans effet sur un PNJ sourd et aveugle (il n'agit pas ; le validateur refuse la clé sur lui). Idempotente.
+static func equiper_un_pnj(p: ProfilBot, palier: int) -> void:
+	equiper_pour_le_palier(p, palier)
+	p.utilise_le_gadget = true
+
+
 ## Les cinq PNJ de l'initiation (chapitre 0), nommés comme la table de la ROADMAP les décrit.
 ##   0.1 à 0.5  — `pnj_immobile_sourd_aveugle` : un but, pas un adversaire (il ne perçoit rien, ne tire jamais) ;
 ##   0.6        — `pnj_immobile_voit_tres_lent`   : il voit la torche, tire, réflexes TRÈS lents ;

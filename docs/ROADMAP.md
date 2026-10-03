@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-03
+> Dernière mise à jour : 2026-10-03 (S8, lot 1 : l'extension « equipe » du format)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -31818,7 +31818,7 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    « S6 » ci-dessous. **Jamais jouée à la main, coût non mesuré** : le moteur est prouvé par des suites et des images fixes.
 7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss. ✅ **FAITE le 2026-10-03** — voir « S7 » ci-dessous. **Jamais jouée à
    la main** : dix salles écrites en données, jugées par une garde qui mesure ce que chacune enseigne, et vues en images fixes.
-8. **S8 — les chapitres 1 à 9**, un par lot.
+8. **S8 — les chapitres 1 à 9**, un par lot. **Lot 1 (chapitres 1 à 3) EN COURS le 2026-10-03** — voir « S8 » ci-dessous.
 9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent). ✅ **FAITE le 2026-10-03** — voir « S9 » ci-dessous
    (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe » — réglé par S9b.
 10. **S9b — l'intégration de S6 et de S9** (née de leur écriture en parallèle) : chaque PNJ a sa réserve de fusées et de gadget, l'éblouissement vaut pour les PNJ et pour le bot, les dix boss se règlent
@@ -33234,6 +33234,31 @@ Chacune est un joueur posé pour la prise (visée donnée au stick, comme au jeu
 - **Des recoins se devinent en diagonale** : depuis le coin sud-est de 0.3 ou 0.9, l'angle nord-ouest est en ligne de vue (très loin, hors de la torche) : la garde exige « hors de vue OU hors de portée », pas « hors de vue ».
 
 **À trancher par Adrien.** (1) Les **phrases d'intention** (ton, longueur) ; en particulier « Six cartouches » en 0.3, qui donne un chiffre. (2) ~~0.5 : un coin pour les trois PNJ ou une salle plus grande que 24×24 ?~~ **Tranché le 2026-10-03** : « toute liberté sur la taille » — 41×41, PNJ répartis ; reste à lui dire que la salle n'exige **qu'une** fusée (le troisième PNJ se trouve à la torche) et que la seconde reste possible : voulait-il la rendre obligatoire (56 s d'attente) ? (3) **0.6 : le PNJ éclairé par sa lampe** (visible de loin, la ligne droite n'est pas interdite) ou dans le noir (il faudrait alors s'approcher à la torche, donc être vu) ? (4) **0.1 à 0.5 : des PNJ sourds et aveugles qui ne tirent jamais** — le débutant ne risque rien avant 0.6 ; voulu ? (5) La **taille de l'arène** du boss (32×32) et son tracé symétrique (cinq piliers, deux murets, deux lampes face à face).
+
+### S8 — EN COURS le 2026-10-03 : les chapitres 1 à 3 (« Les rondes », « Les rondes écoutent », « Les zones »)
+
+#### L'extension de format : « equipe » (faite en premier, seule)
+
+**Pourquoi.** Le plan veut que, à partir du niveau x.7, des PNJ **portent la classe du boss et se servent de son gadget** (la suie au chapitre 1, le leurre au 2, la
+torche fantôme au 3) : on apprend ce que fait le gadget avant de l'affronter au boss. Le format acceptait déjà `"classe"` par PNJ — le PNJ porte l'arme et la réserve de la
+classe (S9b) —, mais **un PNJ du catalogue n'a aucun outil** (S9 : « les PNJ du catalogue n'ont aucun outil »), donc il ne posait jamais son gadget.
+
+**Ce qui existe.** Une clé facultative par PNJ, `"equipe": true` (`aventure_format.gd`, `ProfilBot.equiper_un_pnj`, `ProfilBot.palier_du_nom`). Elle donne au PNJ **ce que S9 donne à un bot
+de son palier** (`equiper_pour_le_palier` : torche tactique, repli, posture, fusée à NORMAL et DIFFICILE), **plus le gadget de sa classe à TOUS les paliers**. Le « plus » est le point
+qu'il a fallu trancher : un PNJ des premiers chapitres est LENT ou FACILE, deux paliers dont la table de S9 ne dit rien (elle ne s'occupe que de FACILE=aucun, NORMAL, DIFFICILE) — « équiper
+comme un bot du même palier » aurait laissé le PNJ sans gadget, c'est-à-dire sans effet. Un PNJ LENT équipé n'a donc que son gadget ; un PNJ NORMAL équipé a ce qu'a le boss de son
+palier. **Aucun champ de perception, de réflexe ni de déplacement ne bouge** (une garde compare le profil équipé à celui du catalogue, champ pour champ : seul `utilise_le_gadget` diffère).
+Le validateur : booléen ; **refusée sur un PNJ sourd et aveugle** (il n'agit pas : le gadget n'aurait aucun usage — S9, « les champs d'équipement ne pèsent qu'une fois `agit` vrai ») ;
+**refusée sur le boss** (son profil est déjà équipé : deux façons de dire la même chose se contrediraient un jour). **Sans la clé : exactement le PNJ d'avant**, champ pour champ.
+
+**Les gardes.** `tools/test_aventure_format.gd` (152 vérifications) : acceptée sur `ronde_voit_lent`, `zone_voit_facile`, `immobile_voit_entend_lent`, `ronde_entend_normal` ; refusée
+(un texte, un entier, les trois sourds et aveugles, le boss, la faute de frappe « equipee ») ; `palier_du_nom` sur les 64 noms du catalogue (lu à côté, jamais par la fonction jugée) ;
+sans la clé, cinq profils du catalogue sont champ pour champ le catalogue d'avant et sans outil ; avec la clé, LENT n'a que le gadget, NORMAL et DIFFICILE ce que S9 leur donne. Et
+`tools/test_aventure_partie.gd` (146) monte le vrai jeu : deux PNJ `immobile_voit_lent` du Fumiste, l'un équipé, l'autre non, touchés tous deux — **seul l'équipé pose sa suie, avec sa réserve (place 2)**.
+**Sabotages, tous rouges puis restaurés (md5)** : la clé ignorée par `profil_du_pnj` (4 contrôles format, 3 contrôles partie), le refus du sourd et aveugle retiré (3), le gadget non posé (2), l'équipement
+remplacé par deux champs (4), « equipe » vrai par défaut (4), le refus sur le boss retiré (1). **Un bug réel, attrapé par la garde à sa première exécution** : `palier_du_nom("immobile_voit_entend_lent")`
+lisait « voit » puis « entend_lent » comme palier inconnu et rendait 0 (TRÈS LENT) — « voit_entend » commence par « voit_ », comme dans `pnj_nomme`, qui avait le test `_NOMS_PALIER.has(…)` que
+j'avais oublié.
 
 ### Questions
 
