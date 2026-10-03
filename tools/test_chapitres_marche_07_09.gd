@@ -108,6 +108,7 @@ func _jouer(chap: int, chapitre: Dictionary, i: int) -> void:
 		var entree: Dictionary = niveau["pnj"][k]
 		var pnj: Node = partie.pnj[k]
 		var bot := pnj.input_provider as BotInputProvider
+		var allure_du_profil: float = bot.profil.allure   # lue AVANT tout : c'est l'allure du catalogue, celle qu'on exige du corps
 		bot.profil.agit = false
 		bot.profil.tire = false
 		bot.profil.voit = false
@@ -116,7 +117,7 @@ func _jouer(chap: int, chapitre: Dictionary, i: int) -> void:
 		if d == Profil.Deplacement.IMMOBILE:
 			continue
 		var m := {"k": k, "pnj": pnj, "entree": entree, "deplacement": d, "visites": {}, "retours": 0, "loin_du_depart": false, "immobile": 0.0, "immobile_max": 0.0,
-			"derniere": pnj.global_position, "cases": {}, "hors_zone": 0.0, "dernier_point": -1, "distance": 0.0, "sur_le_vide": 0, "allure": bot.profil.allure, "cote": {}}
+			"derniere": pnj.global_position, "cases": {}, "hors_zone": 0.0, "dernier_point": -1, "distance": 0.0, "sur_le_vide": 0, "allure": allure_du_profil, "cote": {}}
 		marcheurs.append(m)
 		if d == Profil.Deplacement.RONDE:
 			var longueur := 0.0
