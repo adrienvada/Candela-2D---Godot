@@ -393,7 +393,7 @@ SUITES+=(test_aventure_boss)
 # (la lumière d'une salle : flaques, ombres, noir ; les îlots ; un PNJ libre part loin du joueur et hors de toute lampe). `test_chapitre_07` — « Les chasseurs vifs »
 # (Occulteur) : un duel dans une petite arène, deux chambres et une porte, le noir complet, cinq flaques en quinconce, un poste couvrant un hall, les ombres des colonnes,
 # les îlots, un labyrinthe de murets, la meute, un duel en miroir (7.7 à 7.9 : « equipe », et un chasseur équipé VOIT).
-SUITES+=(test_chapitre_07)
+SUITES+=(test_chapitre_07 test_chapitre_08 test_chapitre_09)
 
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
