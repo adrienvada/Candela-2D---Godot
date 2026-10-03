@@ -357,7 +357,7 @@ SUITES+=(test_chapitre_00)
 # les portées d'écoute (un pas debout, un pas accroupi, un tir, une douille), des zones d'abri accroupi, la salle nue, les recoins, deux salles reliées, le T, la
 # diversion, le leurre. `test_chapitre_03` — « Les zones » (Braconnier) : chaque zone contient son gardien et assez de cases pour errer, la porte, la frontière, le
 # damier, la lampe au loin (3.7 à 3.9 : « equipe », et un gardien équipé ENTEND).
-SUITES+=(test_chapitre_01 test_chapitre_02)
+SUITES+=(test_chapitre_01 test_chapitre_02 test_chapitre_03)
 
 # Chantier SOLO, S9b (2026-10-03) : l'INTÉGRATION de S6 (le moteur de l'aventure) et de S9 (le bot équipé), écrits en parallèle. `test_aventure_boss`
 # (le jeu monté, à pas d'image fixe — `case` plus bas) : chaque PNJ a SA réserve de fusées et de gadget, semée sur SA classe (deux PNJ ne se volent

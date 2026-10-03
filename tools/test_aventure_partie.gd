@@ -101,6 +101,7 @@ func _run() -> void:
 	await _une_salle_se_charge()
 	await _les_pnj_sont_honnetes_et_solidaires()
 	await _un_pnj_equipe_se_sert_de_son_gadget()
+	await _les_gadgets_des_chapitres_2_et_3()
 	await _la_vue_iso_les_montre_tous()
 	await _la_boucle()
 	await _on_la_quitte_proprement()
@@ -431,6 +432,88 @@ func _un_pnj_equipe_se_sert_de_son_gadget() -> void:
 		"suies %d, poses a %d b %d" % [suies.size(), bot_a.gadgets_poses, bot_b.gadgets_poses])
 	main._on_main_menu_requested()
 	await _images(2)
+
+
+## Les deux autres gadgets que les chapitres 2 et 3 donnent à leurs PNJ, dans le vrai jeu : le LEURRE d'un PNJ de l'Illusionniste (palier FACILE, qui voit et entend : il se
+## pose juste après une rafale sur une cible vue sous la lampe) et la TORCHE FANTÔME d'un gardien du Braconnier (palier FACILE, qui voit et entend : il se pose en enquête sur
+## un son, à 250-450 px, sans rien voir). Chacun avec la clé « equipe » — et la même scène sans elle ne pose rien.
+func _les_gadgets_des_chapitres_2_et_3() -> void:
+	print("\n--- Le leurre (chapitre 2) et la torche fantôme (chapitre 3) d'un PNJ équipé naissent dans le vrai jeu ---")
+	var lu := Format.lire_chapitre(ESSAI.path_join("chapitre_00"))
+	# Le leurre : un PNJ immobile qui voit et entend, au palier FACILE, porte l'Illusionniste ; le joueur est sous la lampe (12, 8), à 7 cases.
+	for equipe in [true, false]:
+		var niveau: Dictionary = (lu["niveaux"][0] as Dictionary).duplicate(true)
+		niveau["pnj"] = [{"case": [5, 8], "orientation": 0, "profil": "immobile_voit_entend_facile", "classe": "fusil", "equipe": equipe}]
+		var c := chapitre.duplicate(true)
+		c["niveaux"] = [Format.preparer_niveau(niveau)]
+		c["niveaux"][0]["fichier"] = "leurre.json"
+		main.graine_du_bot = 4242
+		main.demarrer_l_aventure(c, 0, "pistolet", prog)
+		await _images(3)
+		var partie: Node = main.aventure
+		await _jusqua(func() -> bool: return partie.phase == PH_JEU, 300)
+		var pnj: Node = partie.pnj[0]
+		var bot := pnj.input_provider as BotInputProvider
+		main.p1.hp = 100000.0
+		main.p1.global_position = NavigationBot.centre_de_la_case(Vector2i(12, 8))
+		var a_pose := false
+		for _i in 900:
+			main.p1.hp = 100000.0
+			await process_frame
+			for g in _gadgets_du_jeu():
+				if String(g.slug) == "leurre":
+					a_pose = true
+			if a_pose:
+				break
+		_check("%s : un PNJ de l'Illusionniste (FACILE, voit et entend) %s son leurre" % ["avec « equipe »" if equipe else "sans « equipe »", "POSE" if equipe else "ne pose JAMAIS"],
+			String(pnj.current_weapon.slug()) == "fusil" and a_pose == equipe, "poses %d" % bot.gadgets_poses)
+		main._on_main_menu_requested()
+		await _images(2)
+	# La torche fantôme : un gardien en zone qui voit et entend, FACILE, porte le Braconnier ; un pas est entendu à 9 cases, le joueur reste dans le noir au fond.
+	for equipe in [true, false]:
+		var niveau: Dictionary = (lu["niveaux"][0] as Dictionary).duplicate(true)
+		niveau["joueur"] = {"case": [14, 14], "orientation": 180}
+		niveau["pnj"] = [{"case": [3, 8], "orientation": 0, "profil": "zone_voit_entend_facile", "classe": "arbalete", "equipe": equipe, "zone": [1, 1, 14, 14]}]
+		var defauts := Format.valider_niveau(niveau)
+		_check("(le niveau du gardien de la torche fantôme est lui-même valide)", defauts.is_empty(), str(defauts))
+		var c := chapitre.duplicate(true)
+		c["niveaux"] = [Format.preparer_niveau(niveau)]
+		c["niveaux"][0]["fichier"] = "fantome.json"
+		main.graine_du_bot = 4242
+		main.demarrer_l_aventure(c, 0, "pistolet", prog)
+		await _images(3)
+		var partie: Node = main.aventure
+		await _jusqua(func() -> bool: return partie.phase == PH_JEU, 300)
+		var pnj: Node = partie.pnj[0]
+		var bot := pnj.input_provider as BotInputProvider
+		main.p1.hp = 100000.0
+		var audio: Node = root.get_node("AudioManager")
+		var a_pose := false
+		for i in 900:
+			main.p1.hp = 100000.0
+			await process_frame
+			if i % 20 == 0 and i < 400:
+				audio.son_localise.emit(_evenement_de_pas(audio, NavigationBot.centre_de_la_case(Vector2i(12, 8))))
+			for g in _gadgets_du_jeu():
+				if String(g.slug) == "torche_fantome":
+					a_pose = true
+			if a_pose:
+				break
+		_check("%s : un gardien du Braconnier (FACILE, voit et entend) %s sa torche fantôme sur un pas entendu" % ["avec « equipe »" if equipe else "sans « equipe »", "POSE" if equipe else "ne pose JAMAIS"],
+			String(pnj.current_weapon.slug()) == "arbalete" and a_pose == equipe, "poses %d, état %d" % [bot.gadgets_poses, bot.etat])
+		main._on_main_menu_requested()
+		await _images(2)
+
+
+## Un pas entendu à `pos` : le vrai signal de l'audio, avec les niveaux et les portées de ses tables.
+func _evenement_de_pas(audio: Node, pos: Vector2) -> Dictionary:
+	var table: Dictionary = audio.get_script().get_script_constant_map()
+	var diagonale := 1583.0
+	return {
+		"cle": "footstep", "famille": "footstep", "pos": pos, "emetteur": 0, "niveau_db": float(table["NIVEAU_RELATIF"].get("footstep", 0.0)),
+		"portee": diagonale * float(table["PORTEE_RELATIVE"].get("footstep", 1.0)) * float(table["FACTEUR_PORTEE_DEFAUT"]),
+		"fumee_db": 0.0, "wet": 0.0, "diagonale": diagonale,
+	}
 
 
 # ---------------------------------------------------------------------------
