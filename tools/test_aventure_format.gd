@@ -569,8 +569,18 @@ func _chargement_et_catalogue() -> void:
 	Format.oublier_le_cache()
 	# S7 (2026-10-03) a écrit le chapitre 0, S8 les chapitres 1 et suivants : `assets/solo` livre ceux-là, et pas un de plus. Sans cri : un chapitre
 	# mal écrit ne se chargerait pas, et `CRIS ATTENDUS` resterait à sa valeur.
-	_check("`assets/solo` livre le chapitre 0 de S7 et les chapitres de S8 (1), et eux seuls, sans un cri",
-		Format.chapitres_livres().keys() == [0, 1], str(Format.chapitres_livres().keys()))
+	# Aucun chapitre n'est écarté en silence : chaque dossier `chapitre_XX` de `assets/solo` se charge, et les numéros se suivent à partir de 0 (un chapitre 5 sans 4 est un trou).
+	var dossiers := 0
+	for d in DirAccess.get_directories_at("res://assets/solo"):
+		if d.begins_with("chapitre_"):
+			dossiers += 1
+	var numeros: Array = Format.chapitres_livres().keys()
+	numeros.sort()
+	var suite := true
+	for i in numeros.size():
+		suite = suite and int(numeros[i]) == i
+	_check("`assets/solo` livre le chapitre 0 de S7 et ceux de S8 : chaque dossier se charge (%d dossiers), les numéros se suivent à partir de 0, sans un cri" % dossiers,
+		dossiers >= 1 and numeros.size() == dossiers and suite, str(numeros))
 	Format.racine = "res://tools/aventure_essai"
 	Format.niveaux_attendus = 0
 	Format.oublier_le_cache()
