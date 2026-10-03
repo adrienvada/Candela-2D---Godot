@@ -542,7 +542,11 @@ for t in "${SUITES[@]}"; do
     # `test_chapitres_marche_04_06` joue vingt-sept salles (dont neuf à chasseurs, 45 s de jeu chacune) : ~130 s au calme (132 s mesurées), plus que le plafond de 120 s des autres suites
     # (mesuré le 2026-10-03 : 38 s le chapitre 4, 45 s le 5, 61 s le 6). Il a donc son plafond, jamais plus large que ce qu'il lui faut pour sortir.
     test_chapitres_marche_04_06) PLAFOND_SUITE=420 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_banc_bot` joue ~48 duels simulés : 43 s en CI, mais 1 min 42 à 1 min 54 dans le conteneur cloud au calme (4 cœurs lents, mesuré le
+    # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
+    # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
+    test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done
