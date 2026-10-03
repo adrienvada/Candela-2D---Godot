@@ -285,13 +285,13 @@ func _rayon_de(lumiere: Light2D) -> float:
 
 
 ## Une lumière ronde allumée, en entrée du modèle — ou rien si elle ne brûle pas assez.
-func _disque(nom: String, lumiere: Light2D, hauteur: float, energie_min: float) -> Array:
+func _disque(nom: String, lumiere: Light2D, hauteur: float, energie_min: float, source_vue: bool = false) -> Array:
 	if lumiere == null or not lumiere.enabled or lumiere.energy < energie_min:
 		return []
 	var r := _rayon_de(lumiere) * Percep.FRACTION_DISQUE
 	if r <= 0.0:
 		return []
-	return [Percep.lumiere_disque(nom, lumiere.global_position, r, hauteur)]
+	return [Percep.lumiere_disque(nom, lumiere.global_position, r, hauteur, false, source_vue)]
 
 
 ## La liste des lumières que le modèle connaît, au pas de physique courant.
@@ -319,8 +319,9 @@ func _lumieres(adversaire: Node2D) -> Array:
 		if _lampe_brule(adversaire):
 			var lampe_adv := adversaire.get("flashlight") as Light2D
 			sortie.append(Percep.lumiere_lampe("lampe_de_la_cible", lampe_adv.global_position, _hauteur(adversaire)))
+		# `source_vue` : ébloui, le bot ne distingue plus le corps que cet éclair éclaire, mais il voit l'éclair (S9b).
 		sortie.append_array(_disque("eclair_de_la_cible", adversaire.get("muzzle_flash") as Light2D,
-			_hauteur(adversaire), 0.3))
+			_hauteur(adversaire), 0.3, true))
 	for f in get_tree().get_nodes_in_group("fusees"):
 		if not is_instance_valid(f) or not f.has_method("est_allumee_au_sol") or not f.est_allumee_au_sol():
 			continue

@@ -91,6 +91,7 @@ func _run() -> void:
 
 	await _chacun_sa_reserve()
 	await _un_boss_a_sa_classe()
+	await _le_boss_est_regle_a_sa_classe()
 	await _le_bot_d_entrainement_garde_sa_classe()
 	await _l_eblouissement_des_pnj()
 	await _le_bot_ebloui_voit_moins()
@@ -295,6 +296,39 @@ func _un_boss_a_sa_classe() -> void:
 	await _quitter()
 
 
+## Le boss est réglé à SA classe, dans le vrai jeu : la table de `ProfilBot.REGLAGES_BOSS` arrive jusqu'au bot et jusqu'au corps.
+func _le_boss_est_regle_a_sa_classe() -> void:
+	print("\n--- Un boss est réglé à sa classe : ses réglages et sa vie arrivent jusqu'au bot et au corps ---")
+	var niveau3: Dictionary = (brut["niveaux"][2] as Dictionary).duplicate(true)
+	for classe in ["arbalete", "pompe", "pistolet"]:
+		var pnj_boss: Dictionary = (niveau3["pnj"][0] as Dictionary).duplicate(true)
+		pnj_boss["classe"] = classe
+		var c := _chapitre_de([pnj_boss], {"case": [6, 10], "orientation": 0}, true, 2)
+		var partie: Node = await _demarrer(c)
+		var boss: Node = partie.pnj[0]
+		var profil: ProfilBot = (boss.input_provider as BotInputProvider).profil
+		var attendu := ProfilBot.boss(classe)
+		main.p1.hp = 100000.0
+		_check("« %s » : le profil du boss est celui de `boss(classe)` (délai %.2f s, rafale %d, engagement %.0f px, vie %.0f)" % [classe, attendu.delai_reaction,
+			attendu.tirs_par_rafale, attendu.distance_engagement_px, attendu.vie],
+			is_equal_approx(profil.delai_reaction, attendu.delai_reaction) and profil.tirs_par_rafale == attendu.tirs_par_rafale
+			and is_equal_approx(profil.distance_engagement_px, attendu.distance_engagement_px) and is_equal_approx(profil.vie, attendu.vie))
+		_check("« %s » : le corps du boss naît avec la vie du profil (%.0f)" % [classe, attendu.vie], is_equal_approx(boss.hp, attendu.vie), str(boss.hp))
+		if attendu.vie > 100.0:
+			boss.take_damage(100.0, main.p1)
+			_check("… cent points de dégâts ne le tuent pas (il lui reste %.0f)" % boss.hp, not boss.dead and is_equal_approx(boss.hp, attendu.vie - 100.0))
+			partie.recommencer_la_salle()
+			await _images(3)
+			await _jusqua(func() -> bool: return partie.phase == PH_JEU, 300)
+			_check("… et la salle recommencée le rend à sa vie pleine (%.0f)" % attendu.vie, is_equal_approx(partie.pnj[0].hp, attendu.vie), str(partie.pnj[0].hp))
+		await _quitter()
+	# Un PNJ du catalogue a la vie d'un joueur.
+	var c2 := _chapitre_de([{"case": [4, 8], "orientation": 0, "profil": "immobile_voit_lent"}])
+	var partie2: Node = await _demarrer(c2)
+	_check("un PNJ du catalogue a cent points de vie, comme un joueur", is_equal_approx(partie2.pnj[0].hp, 100.0))
+	await _quitter()
+
+
 # ---------------------------------------------------------------------------
 # LE BOT D'ENTRAÎNEMENT GARDE SA CLASSE
 # ---------------------------------------------------------------------------
@@ -454,7 +488,22 @@ func _le_modele() -> void:
 		and Brouillage_.opacite(seuil_vu - 0.05) >= Percep.OPACITE_MIN_CORPS, "premier niveau aveugle : %s" % seuil_vu)
 	_check("(le modèle) la lampe de la cible, elle, reste vue à n'importe quel éblouissement (le mode LAMPE : le corps s'efface, pas la source)",
 		_vu_a(0.0, bot, cible, lampe, monde) and _vu_a(0.5, bot, cible, lampe, monde) and _vu_a(1.0, bot, cible, lampe, monde))
-	_check("(le modèle) à éblouissement donné, tout ce que voit un bot ébloui, le même bot aux yeux ouverts le voit aussi (sur 5 scènes × 11 niveaux)",
+	# L'éclair d'un tir de la cible : un joueur ébloui voit encore le feu du canon. Le bot ébloui le voit comme une SOURCE — sa place, à la bouche de l'arme, jamais celle du corps.
+	var eclair := [Percep.lumiere_disque("eclair_de_la_cible", Vector2(450, 300), 120.0, 0.0, false, true)]
+	monde["ebloui"] = 0.0
+	var ouvert_eclair: Dictionary = Percep.voir(bot, cible, eclair, monde)
+	monde["ebloui"] = 0.6
+	var ebloui_eclair: Dictionary = Percep.voir(bot, cible, eclair, monde)
+	monde["ebloui"] = 0.0
+	_check("(le modèle) aux yeux ouverts, l'éclair du tir de la cible révèle son CORPS (la place exacte)",
+		bool(ouvert_eclair["vu"]) and (ouvert_eclair["position"] as Vector2).distance_to(cible["position"]) < 0.5)
+	_check("(le modèle) ébloui, il voit encore l'éclair — mais seulement la place du FEU (la bouche de l'arme, à 30 px du corps), pas celle du corps",
+		bool(ebloui_eclair["vu"]) and (ebloui_eclair["position"] as Vector2).distance_to(Vector2(450, 300)) < 0.5
+		and (ebloui_eclair["position"] as Vector2).distance_to(cible["position"]) > 20.0, str(ebloui_eclair))
+	_check("(le modèle) un éclair qui n'éclairerait pas le corps (trop loin) n'est pas vu non plus, ébloui ou non : jamais une vue de plus",
+		not _vu_a(0.6, bot, cible, [Percep.lumiere_disque("eclair_de_la_cible", Vector2(900, 900), 100.0, 0.0, false, true)], monde)
+		and not _vu_a(0.0, bot, cible, [Percep.lumiere_disque("eclair_de_la_cible", Vector2(900, 900), 100.0, 0.0, false, true)], monde))
+	_check("(le modèle) à éblouissement donné, tout ce que voit un bot ébloui, le même bot aux yeux ouverts le voit aussi (sur 6 scènes × 11 niveaux)",
 		_sous_ensemble(bot, cible, monde))
 	_check("(le modèle) la rétrodiffusion de SA torche (0,06) ne lui ferme pas les yeux", Percep.corps_distinct(0.06))
 	_check("(le modèle) un éblouissement absent de `monde` vaut zéro : un appelant qui l'ignore (une suite, un corps factice) voit comme avant",
@@ -476,6 +525,7 @@ func _sous_ensemble(bot: Dictionary, cible: Dictionary, monde: Dictionary) -> bo
 		[Percep.lumiere_lampe("l", Vector2(437, 300), 52.0)],
 		[Percep.lumiere_disque("d", Vector2(420, 300), 120.0, 0.0), Percep.lumiere_lampe("l", Vector2(437, 300), 52.0)],
 		[Percep.lumiere_disque("d", Vector2(900, 900), 100.0, 0.0)],
+		[Percep.lumiere_disque("eclair_de_la_cible", Vector2(450, 300), 120.0, 0.0, false, true), Percep.lumiere_lampe("l", Vector2(437, 300), 52.0)],
 		[],
 	]
 	var ok := true

@@ -183,7 +183,8 @@ func _creer_les_pnj(n: Dictionary) -> void:
 		jeu.inscrire_un_pnj(p)
 		p.global_position = NavigationBot.centre_de_la_case(e["case"])
 		p.rotation = float(e["rotation"])
-		p.hp = 100.0
+		# La vie du profil : 100 pour tout PNJ du catalogue, davantage pour un boss dont l'arme ne tue pas en un chargeur (`ProfilBot.vie`).
+		p.hp = float(bot.profil.vie) if bot.profil != null else 100.0
 		p.reset_step_tracker()
 		p.reset_flashlight_latch()
 		p.reset_posture()

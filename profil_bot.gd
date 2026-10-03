@@ -231,6 +231,13 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 ## La marge, en pixels, au-dessus de `distance_engagement_px` qu'il faut dépasser pour recommencer à s'approcher.
 const HYSTERESIS_ENGAGEMENT_PX := 40.0
 
+## La VIE du bot à son apparition, en points : 100 (celle d'un joueur) par défaut, plus pour un boss dont l'ARME n'a pas de quoi tuer en un chargeur —
+## l'arbalète, le pistolet-mitrailleur, le lance-fusées : le joueur type de référence, un pistolet, tue en deux coups, et aucun réflexe, aucune rafale
+## ni aucune distance n'y change que le bot doit encore tenir le temps de son rechargement (S9b : voir « Ce que le banc a appris »). Ce n'est NI une
+## information NI un réflexe : c'est ce que la ROADMAP appelle la force du boss, la seule chose qui se règle à la fin par classe. 100 : le bot
+## de S1 à S9, et le bot de l'entraînement, qui ne la lit jamais (le jeu pose 100 à sa réapparition).
+@export_range(100.0, 400.0) var vie: float = 100.0
+
 
 ## Le profil se sert-il d'au moins un outil ? Faux pour tout profil de S1 à S4 : `BotInputProvider` ne passe alors pas par `_equiper()`, et ses
 ## commandes restent exactement celles d'avant S9.
@@ -534,6 +541,34 @@ static func boss(classe: String = "") -> ProfilBot:
 ## profil NORMAL tel quel. Réglés au banc de jeu (`tools/banc_bot_difficulte.gd --boss --classe=N`, joueur type de référence) sur la cible du
 ## boss — le joueur type le bat environ 55 % du temps (±7) —, jamais à l'aveugle : la ROADMAP (S9b) donne les mesures avant et après.
 const REGLAGES_BOSS := {
+	# Le Parasite : le profil NORMAL, tel quel (c'est celui du cran 3 de l'entraînement) — il n'a pas d'entrée.
+	# L'Illusionniste (fusil, quatre balles de 60) : un pistolet un peu plus lent — un peu de vie suffit.
+	"fusil": {"vie": 108.0},
+	# Le Fumiste (pistolet lourd, trois balles de 70) : le profil NORMAL lui va trop bien (38 % au banc : sa suie et sa cadence le servent) — il vise moins juste
+	# (10° au départ, 3° au mieux, au lieu de 7,5° et 2°) et réagit un peu plus tard.
+	"fumiste": {"delai_reaction": 0.30, "erreur_visee_deg": 10.0, "erreur_visee_min_deg": 3.0},
+	# Le Terrassier (fusil à pompe) : ses plombs meurent à 180 px et n'en touchent plus qu'un au-delà de 45 — il doit COLLER le joueur. Il s'approche à 40 px,
+	# ne tire pas hors de 90 px, court (allure 1), tire large (tolérance 12°, trois coups, pas de repli : un repli l'éloigne de ce qui le sert).
+	"pompe": {"delai_reaction": 0.15, "tolerance_tir_deg": 12.0, "pause_entre_rafales": 0.2, "tirs_par_rafale": 3, "repli_apres_tir_s": 0.0,
+		"audace_zone_px": 200.0, "allure": 1.0, "distance_engagement_px": 40.0, "distance_tir_max_px": 90.0, "vie": 110.0},
+	# Le Braconnier (arbalète) : UN carreau de 80 points, 4,5 s de recharge. Un coup par « rafale » (la seconde ne partirait jamais avant la recharge), un
+	# repli de trois secondes pendant qu'il recharge, une visée serrée — et de la vie : un pistolet tue en deux coups, une arbalète en demande deux séparés de
+	# 4,5 s. Aucun réflexe n'y change rien (88 % → 83 % au mieux, mesuré avant l'éblouissement des bots) ; la vie, oui.
+	"arbalete": {"delai_reaction": 0.2, "erreur_visee_deg": 4.5, "erreur_visee_min_deg": 1.0, "tolerance_tir_deg": 3.5, "tirs_par_rafale": 1,
+		"repli_apres_tir_s": 3.0, "vie": 190.0},
+	# L'Incendiaire (deux cartouches, 3,2 s de recharge) : il tire serré, et se replie le temps de recharger.
+	"incendiaire": {"delai_reaction": 0.2, "erreur_visee_deg": 5.0, "erreur_visee_min_deg": 1.0, "duree_resserrement": 1.2, "vitesse_visee": 11.0,
+		"tolerance_tir_deg": 6.0, "repli_apres_tir_s": 3.0, "vie": 125.0},
+	# L'Occulteur (pistolet-mitrailleur, 15 points la balle, détente tenue) : huit coups par rafale — deux, c'était un pistolet —, assez près pour que la
+	# dispersion ne compte pas (150 px), et de la vie : il faut sept balles pour en tuer un.
+	"occulteur": {"delai_reaction": 0.18, "tolerance_tir_deg": 8.0, "tirs_par_rafale": 8, "pause_entre_rafales": 0.25, "repli_apres_tir_s": 0.3,
+		"allure": 0.85, "distance_engagement_px": 150.0, "vie": 158.0},
+	# La Sentinelle (fusil à verrou : deux cartouches de 75 points) et le Spectre (pistolet silencieux) : le profil NORMAL leur va presque — ils visent un peu
+	# moins juste (9° au départ, 2,8° au mieux) pour revenir au milieu de la cible.
+	"sentinelle": {"erreur_visee_deg": 9.0, "erreur_visee_min_deg": 2.8},
+	"spectre": {"erreur_visee_deg": 9.0, "erreur_visee_min_deg": 2.8},
+	# L'Allumeur (carabine double, deux cartouches) : un peu de vie.
+	"allumeur": {"vie": 120.0},
 }
 
 

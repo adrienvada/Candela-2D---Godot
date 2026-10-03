@@ -495,9 +495,13 @@ func duel(spec: Dictionary) -> Dictionary:
 	main._poser_l_adversaire(spec["profil_bot"])
 	# S9 : la CLASSE du bot (`classe`, un index du catalogue). Absente : le Parasite, comme à l'entraînement. Sa réserve de fusées et son gadget
 	# sont ceux de la classe, rendus pleins.
-	if spec.has("classe"):
-		p2.equip_weapon(main.weapon_for_index(int(spec["classe"])))
-		_rendre_les_reserves()
+	# S9b : toujours équipée — la réapparition du bot garde désormais la classe qu'il porte (elle ne rend plus l'index 0), et un duel sans
+	# `classe` doit être celui du Parasite même après un duel d'une autre classe dans le même processus.
+	p2.equip_weapon(main.weapon_for_index(int(spec.get("classe", 0))))
+	_rendre_les_reserves()
+	# `--vie=N` du banc (exploration) : la vie du bot, pour mesurer ce qu'un point de vie de plus vaut face à une arme qui n'a pas de quoi tuer en un chargeur.
+	# La vie du profil du bot (`ProfilBot.vie`, 100 sauf un boss réglé), sauf l'exploration de `--vie=N`, qui la remplace.
+	p2.hp = float(spec["vie"]) if spec.has("vie") else float((spec["profil_bot"] as ProfilBot).vie)
 	p2.global_position = placement["bot"]
 	p2.rotation = float(placement["cap_bot"])
 	p2.velocity = Vector2.ZERO

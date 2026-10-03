@@ -132,7 +132,10 @@ const TOLERANCE_OBSTACLE := 0.5
 ## que l'éblouissement atteint la moitié de son maximum, et le voile blanc couvre le reste) — et **sa lampe reste** (le mode LAMPE, choix
 ## d'Adrien : on ne perd pas la source qui éblouit). Le modèle fait de même, et jamais plus : un bot ébloui ne reconnaît plus un corps dont
 ## l'opacité, pour un joueur au même éblouissement, passerait sous `OPACITE_MIN_CORPS` ; il ne le voit donc ni par un cône, ni par un
-## disque (halo, éclair, fusée, plafonnier). Il voit toujours la lampe d'une torche qui brûle dans son cadre.
+## disque (halo, éclair, fusée, plafonnier). Il voit toujours la lampe d'une torche qui brûle dans son cadre, et **l'éclair d'un tir de la cible** (`source_vue`) quand cet
+## éclair éclairerait son corps — comme le feu d'un canon qu'un joueur ébloui voit encore —, mais alors seulement sa PLACE (la bouche de l'arme), jamais celle du corps.
+## **Première version, sans cela, mesurée au banc de la difficulté : FACILE passait de 79 % à 66 %** — le joueur type, ébloui par chaque tir qu'il reçoit de près, ne voyait plus du tout
+## le tireur, dont l'éclair était sa seule lumière dans le noir. Voir moins que la lumière ne veut pas dire ne rien voir de ce qu'un joueur voit.
 ## **0,5 : une silhouette à moitié effacée n'est plus une silhouette.** Un joueur la distingue encore ; le bot, non — voir MOINS que la
 ## lumière, jamais plus. Atteint dès ~0,09 d'éblouissement : au-dessus de la rétrodiffusion de sa propre torche (0,06, opacité 0,65), donc
 ## une torche allumée n'aveugle pas son bot, mais sous un faisceau ou un éclair de tir de près il perd le corps de la cible un instant.
@@ -362,9 +365,12 @@ static func lumiere_cone(nom: String, origine: Vector2, avant: Vector2, hauteur:
 ## que lit le shader des corps. Faux (le défaut : le halo, l'éclair, la torche — des lumières TENUES, sans hauteur posée), c'est la
 ## règle du jeu, « un même angle » (`MursBas.franchit_regle`). Les deux règles ne donnent pas la même zone morte : une source
 ## haute en laisse moins près du mur et plus loin de lui, et employer la mauvaise ferait voir à travers la zone que le shader noircit.
-static func lumiere_disque(nom: String, origine: Vector2, rayon: float, hauteur: float, par_hauteur: bool = false) -> Dictionary:
+##
+## `source_vue` (S9b) : cette tache est aussi une SOURCE qu'on voit — l'éclair d'un tir de la cible. Un bot ébloui ne distingue plus le corps qu'elle éclaire
+## (`OPACITE_MIN_CORPS`) ; il voit encore l'éclair lui-même, comme un joueur ébloui voit le feu d'un canon : sa PLACE, à la bouche de l'arme, comme celle d'une lampe.
+static func lumiere_disque(nom: String, origine: Vector2, rayon: float, hauteur: float, par_hauteur: bool = false, source_vue: bool = false) -> Dictionary:
 	return {"genre": Genre.DISQUE, "nom": nom, "origine": origine, "rayon": rayon, "hauteur": hauteur,
-		"par_hauteur": par_hauteur}
+		"par_hauteur": par_hauteur, "source_vue": source_vue}
 
 
 ## Une lampe qu'on VOIT : son porteur est trahi tant que le bot a une ligne de vue sur elle, dans le cadre.
@@ -452,10 +458,11 @@ static func voir(bot: Dictionary, cible: Dictionary, lumieres: Array, monde: Dic
 	var corps_dans_le_cadre := dans_le_cadre(pos, cadre, RAYON_CORPS)
 	res["dans_le_cadre"] = corps_dans_le_cadre
 	# S9b : un bot ébloui ne distingue plus le corps (voir `OPACITE_MIN_CORPS`) ; sa vue de la LAMPE, plus bas, ne change pas.
-	var corps_visible := corps_dans_le_cadre and corps_distinct(float(monde.get("ebloui", 0.0))) \
-		and ligne_de_vue(oeil, pos, h_oeil, h_c, monde)
+	var distinct := corps_distinct(float(monde.get("ebloui", 0.0)))
+	var corps_atteint := corps_dans_le_cadre and ligne_de_vue(oeil, pos, h_oeil, h_c, monde)
 	var par: Array = []
 	var lampe_vue := Vector2.INF
+	var eclaire_le_corps := false
 	for l in lumieres:
 		var genre: int = l["genre"]
 		if genre == Genre.LAMPE:
@@ -464,18 +471,21 @@ static func voir(bot: Dictionary, cible: Dictionary, lumieres: Array, monde: Dic
 				par.append(String(l["nom"]))
 				if lampe_vue == Vector2.INF:
 					lampe_vue = o
-		elif corps_visible and eclaire(l, pos, h_c, monde):
-			par.append(String(l["nom"]))
+		elif corps_atteint and eclaire(l, pos, h_c, monde):
+			if distinct:
+				par.append(String(l["nom"]))
+				eclaire_le_corps = true
+			elif bool(l.get("source_vue", false)):
+				# Ébloui, le bot ne distingue plus le corps — mais l'éclair d'un tir qui l'éclairerait, un joueur ébloui le voit encore comme un feu :
+				# sa PLACE, à la bouche de l'arme, jamais celle du corps. Exactement les mêmes conditions qu'aux yeux ouverts : jamais une vue de plus.
+				par.append(String(l["nom"]))
+				if lampe_vue == Vector2.INF:
+					lampe_vue = l["origine"]
 	if par.is_empty():
 		return res
 	res["vu"] = true
 	res["par"] = par
 	# Le corps éclairé donne sa place précise ; une lampe seule ne donne que la sienne.
-	var eclaire_le_corps := false
-	for l in lumieres:
-		if int(l["genre"]) != Genre.LAMPE and par.has(String(l["nom"])):
-			eclaire_le_corps = true
-			break
 	res["position"] = pos if eclaire_le_corps else lampe_vue
 	return res
 

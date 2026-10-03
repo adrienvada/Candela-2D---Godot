@@ -88,6 +88,7 @@ func _run() -> void:
 	await _le_lissage()
 	await _l_erreur_qui_se_resserre()
 	await _la_discipline_de_tir()
+	await _l_engagement()
 	await _la_recharge()
 	await _l_honnetete_des_corps_factices()
 	await _enquete_recherche_oubli()
@@ -659,6 +660,78 @@ func _la_discipline_de_tir() -> void:
 	_check("une tolérance de 0 ° ne tire presque jamais (%d coups) ; de 30 °, souvent (%d)" % [tirs_stricte, large.tireur.tirs.size()],
 		tirs_stricte < large.tireur.tirs.size() and large.tireur.tirs.size() >= 2)
 	large.liberer()
+
+
+# ---------------------------------------------------------------------------
+# L'ENGAGEMENT (S9b) : ce que l'arme demande
+# ---------------------------------------------------------------------------
+
+func _l_engagement() -> void:
+	print("\n[L'engagement : le bot dont l'arme ne porte pas jusque-là s'approche, et ne tire pas hors de sa portée]")
+	var depart := c(8, 15)
+	var cible := c(20, 15)
+	# Témoin : sans engagement (le défaut), le bot qui voit sa cible tient sa place — comme avant S9b.
+	var t0 := _rig(_profil(Profil.Difficulte.NORMAL, {"delai_reaction": 0.1}, false), depart, cible, 5)
+	await _derouler(t0, 6)
+	t0.cible.allumer_la_torche(Vector2.LEFT)
+	# Une fois le combat engagé (le bot patrouillait avant de voir), il ne bouge plus.
+	await _derouler(t0, 100)
+	var p_combat: Vector2 = t0.tireur.global_position
+	await _derouler(t0, 90)
+	_check("(témoin) sans `distance_engagement_px`, le bot qui voit sa cible tient sa place en combat (il n'avance pas : %.0f px)" % t0.tireur.global_position.distance_to(p_combat),
+		t0.bot.etat == BotInputProvider.Etat.COMBAT and t0.tireur.global_position.distance_to(p_combat) < 5.0)
+	t0.liberer()
+	# Avec : il marche vers ce qu'il voit, et s'arrête à sa distance.
+	var r := _rig(_profil(Profil.Difficulte.NORMAL, {"delai_reaction": 0.1, "distance_engagement_px": 150.0, "tire": false}, false), depart, cible, 5)
+	await _derouler(r, 6)
+	r.cible.allumer_la_torche(Vector2.LEFT)
+	await _derouler(r, 300)
+	var d_fin: float = r.tireur.global_position.distance_to(cible)
+	_check("avec `distance_engagement_px` à 150 px, le bot qui voit sa cible à 420 px s'en approche (%.0f px ensuite)" % d_fin, d_fin < 260.0)
+	_check("… et s'arrête là : à la limite (150 px), à une marge d'hystérésis près, il ne fonce pas dessus", d_fin > 110.0 and r.bot.etat == BotInputProvider.Etat.COMBAT, "%.0f px, état %d" % [d_fin, r.bot.etat])
+	var p_fin: Vector2 = r.tireur.global_position
+	await _derouler(r, 60)
+	_check("… arrivé, il reste en place (la limite tient, il ne tremble pas)", r.tireur.global_position.distance_to(p_fin) < 25.0, "%.0f px" % r.tireur.global_position.distance_to(p_fin))
+	r.liberer()
+	# La portée : hors de `distance_tir_max_px`, il ne tire pas ; dans la portée, il tire.
+	var loin := _rig(_profil(Profil.Difficulte.NORMAL, {"delai_reaction": 0.1, "distance_tir_max_px": 200.0}), depart, cible, 5)
+	await _derouler(loin, 6)
+	loin.cible.allumer_la_torche(Vector2.LEFT)
+	await _derouler(loin, 300)
+	_check("un bot dont l'arme ne porte qu'à 200 px ne tire pas sur une cible vue à 420 px (%d coups)" % loin.tireur.tirs.size(),
+		loin.bot.etat == BotInputProvider.Etat.COMBAT and loin.tireur.tirs.is_empty())
+	loin.liberer()
+	var pres := _rig(_profil(Profil.Difficulte.NORMAL, {"delai_reaction": 0.1, "distance_tir_max_px": 200.0}), c(14, 15), cible, 5)
+	await _derouler(pres, 6)
+	pres.cible.allumer_la_torche(Vector2.LEFT)
+	await _derouler(pres, 300)
+	_check("… et il tire sur la même cible vue à 210 px, dans sa portée (%d coups)" % pres.tireur.tirs.size(), pres.tireur.tirs.size() >= 1 and pres.tireur.global_position.distance_to(cible) < 230.0)
+	pres.liberer()
+	# Les deux ensemble : il s'approche, PUIS tire.
+	var duo := _rig(_profil(Profil.Difficulte.NORMAL, {"delai_reaction": 0.1, "distance_engagement_px": 120.0, "distance_tir_max_px": 170.0}, false), depart, cible, 5)
+	await _derouler(duo, 6)
+	duo.cible.allumer_la_torche(Vector2.LEFT)
+	var premier := [-1.0]
+	var distance_au_premier := [0.0]
+	for _i in 480:
+		await physics_frame
+		duo.suivre()
+		if premier[0] < 0.0 and not duo.tireur.tirs.is_empty():
+			premier[0] = duo.tireur.t
+			distance_au_premier[0] = duo.tireur.global_position.distance_to(duo.cible.global_position)
+	_check("à la fois approche et portée : il marche vers sa cible, et son premier coup part dans sa portée (%.0f px ≤ 170 + marge)" % distance_au_premier[0],
+		premier[0] > 0.0 and distance_au_premier[0] <= 190.0, "premier coup à %.0f px" % distance_au_premier[0])
+	duo.liberer()
+	_check("`avancer()` ne lit toujours rien de la perception : l'engagement est une décision de `_penser()`",
+		not _corps_de_avancer().contains("perception"))
+
+
+## Le texte de `avancer()` dans le fournisseur du bot.
+func _corps_de_avancer() -> String:
+	var texte := FileAccess.get_file_as_string("res://bot_input_provider.gd")
+	var debut := texte.find("func avancer(")
+	var fin := texte.find("\nfunc ", debut + 10)
+	return texte.substr(debut, fin - debut)
 
 
 # ---------------------------------------------------------------------------

@@ -31,6 +31,9 @@
 ##   --brut=fichier.json    écrit les enregistrements bruts d'un lot ; `--agreger=a.json,b.json` les fusionne et résume, sans jeu
 ##   --trace                ajoute à chaque enregistrement brut la trace du duel (positions, état du bot, vies), pour traquer un défaut de déterminisme
 ##   --classe=N             la classe du BOT, un index du catalogue (0 Parasite — le défaut —, 1 Illusionniste… 9 Spectre) : son gadget est celui qu'il pose (S9)
+##   --boss                 le bot est le BOSS de sa classe (`ProfilBot.boss(slug)`, réglé par classe : S9b) au lieu du profil NORMAL du cran 3 ;
+##                          à utiliser avec `--classe=N --difficultes=normal`
+##   --vie=N                (exploration) la vie du bot, 100 par défaut : mesure ce qu'un point de vie de plus vaut à une arme qui ne tue pas en un chargeur
 ##   --sans-equipement      éteint les outils du bot (torche tactique, prudence, fusée, gadget) : le bot de S4, pour comparer « avant / après »
 ##   --catalogue            joue la mise en scène du CATALOGUE des PNJ (un débutant qui entre dans une salle) au lieu des duels
 ##
@@ -129,6 +132,8 @@ func _run() -> void:
 							return
 						monte = true
 					var profil := Profil.pour_adversaire_qui_tire(NOMS_DIFFICULTE[nom_d])
+					if o.has("boss"):
+						profil = Profil.boss(String(duel.main.classes()[int(o.get("classe", "0"))].slug()))
 					if o.has("sans-equipement"):
 						Flux.sans_equipement(profil)
 					_surcharger(profil, String(o.get("surcharge", "")) + "," + String(o.get("surcharge-" + nom_d, "")))
@@ -138,6 +143,8 @@ func _run() -> void:
 					}
 					if o.has("classe"):
 						spec["classe"] = int(o["classe"])
+					if o.has("vie"):
+						spec["vie"] = float(o["vie"])
 					var trace: Array = []
 					if o.has("trace"):
 						spec["trace"] = trace

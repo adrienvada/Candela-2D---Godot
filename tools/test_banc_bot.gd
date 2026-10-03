@@ -178,6 +178,86 @@ func _le_catalogue() -> void:
 				meme = false
 				champ_different = prop["name"]
 	_check("le BOSS est le profil d'entraînement NORMAL, champ pour champ (« juste un bot en mode moyen »)", meme, champ_different)
+	_les_boss_par_classe()
+
+
+# ---------------------------------------------------------------------------
+# LES BOSS PAR CLASSE (S9b)
+# ---------------------------------------------------------------------------
+
+## Les champs que `boss(classe)` ne doit JAMAIS toucher : ce que le bot perçoit, où il va, et ce que lui dit son éventuelle prudence d'oreille. La difficulté
+## d'un boss de classe vient de ce que son ARME demande (réflexes, rafale, engagement), jamais de ce qu'il VOIT ou ENTEND — la règle qui prime, depuis S2.
+const CHAMPS_INTOUCHABLES := ["voit", "entend", "precision_auditive", "delai_oubli", "deplacement", "torche_allumee", "agit", "tire",
+	"torche_tactique", "torche_en_patrouille", "torche_rayon_fouille_px", "accroupi_pres_du_son_px", "lance_des_fusees", "utilise_le_gadget"]
+
+## Des bornes LARGES, jamais des valeurs exactes : les réglages du banc sont des cibles à juger en jouant. Une valeur qui sort d'ici n'est pas un boss, c'est
+## une faute de frappe ou un bot injouable (un bot qui réagit en 0 s, un autre qui ne tire plus).
+const BORNES_DU_BOSS := {
+	"delai_reaction": [0.10, 0.60], "erreur_visee_deg": [2.0, 15.0], "erreur_visee_min_deg": [0.5, 6.0], "duree_resserrement": [0.5, 4.0],
+	"vitesse_visee": [4.0, 14.0], "tolerance_tir_deg": [1.5, 15.0], "tirs_par_rafale": [1, 12], "pause_entre_rafales": [0.0, 1.5],
+	"repli_apres_tir_s": [0.0, 5.0], "distance_engagement_px": [0.0, 400.0], "distance_tir_max_px": [0.0, 800.0],
+	"allure": [0.5, 1.0], "audace_zone_px": [0.0, 300.0], "vie": [100.0, 300.0],
+}
+
+
+func _les_boss_par_classe() -> void:
+	print("\n[Les boss par classe : ce que l'ARME demande, jamais ce que le bot perçoit]")
+	var classes: Array = (preload("res://aventure_format.gd") as GDScript).ORDRE_DES_CLASSES
+	var normal := Profil.boss()
+	_check("les dix classes du chapitre (dans l'ordre du rang) ont un boss : `boss(classe)` existe et se construit", classes.size() == 10)
+	var champs_touches := {}
+	for slug in classes:
+		var p := Profil.boss(String(slug))
+		_check("« %s » : `boss(classe)` rend un profil de combat (voit, entend, agit, tire)" % slug, p != null and p.voit and p.entend and p.agit and p.tire)
+		var intact := ""
+		for champ in CHAMPS_INTOUCHABLES:
+			if p.get(champ) != normal.get(champ):
+				intact = champ
+		_check("« %s » : ni la perception, ni le déplacement, ni les outils ne bougent (les champs intouchables sont ceux du boss NORMAL)" % slug, intact == "", intact)
+		var hors := ""
+		for champ in BORNES_DU_BOSS:
+			var v: float = float(p.get(champ))
+			var b: Array = BORNES_DU_BOSS[champ]
+			if v < float(b[0]) or v > float(b[1]):
+				hors = "%s = %s" % [champ, p.get(champ)]
+		_check("« %s » : tous ses réglages restent dans des bornes larges (un boss, pas une faute de frappe)" % slug, hors == "", hors)
+		for prop in normal.get_property_list():
+			if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE != 0 and p.get(prop["name"]) != normal.get(prop["name"]):
+				champs_touches[prop["name"]] = true
+	var script_du_profil: GDScript = load("res://profil_bot.gd")
+	var reglage: Dictionary = script_du_profil.get_script_constant_map()["REGLAGES_BOSS"]
+	var inconnues := ""
+	for slug in reglage:
+		if not classes.has(slug):
+			inconnues = String(slug)
+	_check("`REGLAGES_BOSS` ne nomme que des classes du jeu (un slug de la ROADMAP au lieu de celui du code se voit)", inconnues == "", inconnues)
+	var ignorees := ""
+	for slug in reglage:
+		var p := Profil.boss(String(slug))
+		for champ in (reglage[slug] as Dictionary):
+			if p.get(champ) != (reglage[slug] as Dictionary)[champ]:
+				ignorees = "%s.%s" % [slug, champ]
+	_check("chaque classe réglée est bien servie à SON réglage : `boss(classe)` pose ce que la table dit, champ pour champ", ignorees == "", ignorees)
+	_check("le Parasite garde le profil NORMAL du cran 3 : « pistolet » n'est pas dans la table, `boss(\"pistolet\")` est `boss()` champ pour champ",
+		not reglage.has("pistolet") and _memes_champs(Profil.boss("pistolet"), normal))
+	_check("une classe inconnue, ou aucune, rend le profil NORMAL (la valeur par défaut ne change rien)", _memes_champs(Profil.boss("inconnue"), normal)
+		and _memes_champs(Profil.boss(""), normal))
+	# Les classes que le banc a trouvées trop faciles avec le profil NORMAL (S9 : battues 85 à 98 % du temps) sont réglées.
+	var manquantes := ""
+	for slug in ["pompe", "arbalete", "incendiaire", "occulteur"]:
+		if not reglage.has(slug):
+			manquantes = String(slug)
+	_check("les quatre classes que S9 a trouvées trop faciles (Terrassier, Braconnier, Incendiaire, Occulteur) ont un réglage", manquantes == "", manquantes)
+	var tous := champs_touches.keys()
+	tous.sort()
+	print("  (les champs que la table de boss règle : %s)" % str(tous))
+
+
+func _memes_champs(a: ProfilBot, b: ProfilBot) -> bool:
+	for prop in a.get_property_list():
+		if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE != 0 and a.get(prop["name"]) != b.get(prop["name"]):
+			return false
+	return true
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +349,9 @@ func _les_duels() -> void:
 	for cle in ["issue", "t_fin", "t_coup_recu", "t_coup_donne", "tirs_bot", "touches_bot", "tirs_joueur", "touches_joueur", "t_premier_tir_bot",
 			"poses_bot", "replis_bot"]:
 		if a[cle] != b[cle]:
+			identiques = false
+	for cle in ["t_fin", "t_coup_recu", "t_coup_donne", "t_premier_tir_bot"]:
+		if absf(float(a[cle]) - float(b[cle])) > 0.3:
 			identiques = false
 	_check("même graine, même duel : issue %s à %.2f s, %d tirs du bot, %d touches (rejoué à l'identique, un autre duel entre les deux)" % [
 		a["issue"], a["t_fin"], a["tirs_bot"], a["touches_bot"]], identiques, "%s / %s" % [str(a), str(b)])
