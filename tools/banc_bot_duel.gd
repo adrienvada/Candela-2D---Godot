@@ -17,7 +17,9 @@
 ## **Trois précautions, chacune payée une fois** (ROADMAP, Pièges connus) : le duck des pas est remis à l'heure du JEU (`AudioManager` le
 ## mesure à l'horloge murale, et le banc tourne douze fois plus vite que le jeu) ; le jeu attend, entre deux duels, que ce que le duel
 ## d'avant a lancé s'éteigne (`IMAGES_D_ATTENTE`) avant de remettre quoi que ce soit ; et UN SEUL `Duel` par processus (un second
-## monterait un second `main.tscn`). Rejouable d'un processus à l'autre, **pas à l'octet près** (des écarts de 0,02 px, origine non trouvée).
+## monterait un second `main.tscn`). Rejouable d'un processus à l'autre (les écarts de 0,02 px d'autrefois étaient le flux du tirage global : voir la quatrième précaution).
+## **Et une quatrième, payée le 2026-10-03** : le flux du `randf()`/`randi()` global est reseedé à CHAQUE IMAGE du duel (`_figer_le_tirage`) — le
+## jeu tire hors du duel, au rythme d'accumulateurs qu'aucun duel ne remet à zéro, et la graine du gadget du bot en dépend.
 ## La vue de dessus est le défaut : la simulation y est identique à la vue iso (24 duels comparés), et elle va deux fois plus vite.
 ##
 ## ## Le joueur type : honnête lui aussi
@@ -385,6 +387,46 @@ func _remettre_au_calme() -> void:
 		await arbre.physics_frame
 
 
+## Fige le TIRAGE du jeu pour ce duel : (carte, graine) doit fixer tout ce que le jeu tire au `randf()` / `randi()` GLOBAL — la dispersion
+## d'une balle, la hauteur d'une note, **la graine du gadget que pose le bot** (`GameState._poser_gadget` : `randi()`, d'où dépend la forme
+## d'onde du Parasite, donc la lumière des torches, donc l'éblouissement, donc tout le duel).
+##
+## ⚠️ **Un seul `seed()` au départ ne suffit pas** : le jeu tire AUSSI hors des événements du duel, au rythme d'accumulateurs que rien ne
+## remet à zéro d'un duel à l'autre — la poussière du faisceau (3 tirages toutes les `DUST_INTERVAL`, `Player._dust_accum`), le minuteur
+## d'ambiance (`AudioManager._ambiance_timer`, 7 à 18 s). Leur PHASE à l'entrée du duel décalait le flux de quelques tirages avant la pose
+## du gadget : même graine, graine de gadget différente (3567825414 contre 1987688319, mesuré), onde différente, duel différent. Deux
+## remèdes, qui valent ensemble : (1) remettre ces accumulateurs à neuf ici ; (2) **reseeder à chaque image** (voir `duel`), si bien
+## qu'un accumulateur qu'on ne connaît pas encore ne décale jamais que l'image où il tire, jamais tout le reste du duel.
+func _figer_le_tirage() -> void:
+	for corps in [main.p1, main.p2]:
+		corps.set("_dust_accum", 0.0)
+		corps.set("_torch_breath_t", 0.0)
+	var audio: Node = arbre.root.get_node("AudioManager")
+	var minuteur: Variant = audio.get("_ambiance_timer")
+	if minuteur != null and not (minuteur as Timer).is_stopped():
+		(minuteur as Timer).start(float((audio.get_script() as Script).get_script_constant_map()["AMBIANCE_ATTENTE_MAX"]))
+
+
+## La graine du premier gadget posé par ce corps et encore debout (-1 : aucun).
+func _graine_du_gadget(corps: Node) -> int:
+	for g in arbre.get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g.get("poseur_id") == corps.get("player_id"):
+			return int(g.get("graine"))
+	return -1
+
+
+## Remet l'ÉCHELLE d'un corps à exactement 1 et son inclinaison à 0. **Un corps qui bouge ne garde pas la sienne** : `move_and_slide`
+## réécrit sa transformation (`set_global_transform`), `Node2D` en RELIT rotation, échelle et inclinaison dans la matrice (en simple
+## précision), et chaque relecture arrondit un peu : l'échelle dérive d'un pas (mesuré : 1 → 0,99999905 → 0,9999979 sur le joueur au fil des
+## duels, 0,99999994 → 0,9999976 sur le bot dès le premier démarrage). Rien ne la remet à 1 d'un duel à l'autre : le duel rejoué ne repartait
+## donc pas du même état, et sa rotation différait d'UN ULP dès la 6e image (2,136379004 contre 2,136378765). Seul, cet écart ne change pas
+## l'issue d'un duel (mesuré : traces égales sans ce remède), mais un banc qui REJOUE ne doit pas partir d'un état qui dérive. Pas un défaut du
+## jeu qu'on corrige ici : l'écart est de l'ordre du millionième, et `rotation = 0` à chaque manche le cache.
+static func redresser_le_corps(corps: Node2D) -> void:
+	corps.scale = Vector2.ONE
+	corps.skew = 0.0
+
+
 ## Rend aux deux joueurs ce qu'une manche neuve leur rend : la recharge d'une minute du gadget, la batterie de la bobine, la réserve de fusées
 ## de leur classe (S9). Sans cela, le gadget posé dans un duel manquerait au suivant — un banc d'outils mesurerait une minute de recharge.
 func _rendre_les_reserves() -> void:
@@ -437,10 +479,16 @@ func duel(spec: Dictionary) -> Dictionary:
 	if placement.is_empty():
 		placement = placer_au_hasard(graine)
 	await _remettre_au_calme()
+	# Ce que le duel d'avant a laissé DEBOUT (gadgets posés, fusées) : doit être nul — la garde de `test_banc_bot` le lit.
+	var restes := arbre.get_nodes_in_group("gadgets").size() + arbre.get_nodes_in_group("fusees").size()
 	# Les tirages du jeu (dispersion des balles, sons) repartent de la graine : même graine, même duel.
 	seed(GRAINE_BASE + graine * 104729)
 	var p1: Node2D = main.p1
 	var p2: Node2D = main.p2
+	_figer_le_tirage()
+	# AVANT de poser les caps : un corps repart d'une échelle EXACTEMENT 1 (voir `redresser_le_corps`).
+	redresser_le_corps(p1)
+	redresser_le_corps(p2)
 	p1.global_position = placement["joueur"]
 	p1.rotation = float(placement["cap_joueur"])
 	main.graine_du_bot = GRAINE_BASE ^ (graine * 31)
@@ -480,6 +528,7 @@ func duel(spec: Dictionary) -> Dictionary:
 		"distance_depart": (placement["joueur"] as Vector2).distance_to(placement["bot"]),
 		"vues_bot": 0,
 		"fusees_bot": 0, "poses_bot": 0, "replis_bot": 0, "bascules_bot": 0,
+		"restes_au_depart": restes,
 	}
 	var hp1 := float(p1.hp)
 	var hp2 := float(p2.hp)
@@ -493,9 +542,13 @@ func duel(spec: Dictionary) -> Dictionary:
 	audio.set("_dernier_tir", -1000.0)
 	var t_dernier_tir := -1.0
 	var balles_vues := 0
+	var image := 0
 	while t < duree_max:
 		await arbre.physics_frame
 		t += PAS
+		image += 1
+		# Le tirage du jeu repart d'une graine PAR IMAGE : voir `_figer_le_tirage`.
+		seed(GRAINE_BASE + graine * 104729 + image * 7907)
 		if _balles[0] + _balles[1] != balles_vues:
 			balles_vues = _balles[0] + _balles[1]
 			t_dernier_tir = t
@@ -548,6 +601,9 @@ func duel(spec: Dictionary) -> Dictionary:
 	r["poses_bot"] = bot.gadgets_poses
 	r["replis_bot"] = bot.replis
 	r["bascules_bot"] = bot.bascules_gadget
+	# La graine du premier gadget posé par le bot, tirée au `randi()` GLOBAL du jeu : elle ne dépend que de (carte, graine) si le tirage
+	# est bien figé (voir `_figer_le_tirage`) — la garde de `test_banc_bot` la compare d'un passage à l'autre.
+	r["graine_gadget_bot"] = _graine_du_gadget(p2)
 	main.bullet_container.child_entered_tree.disconnect(compter)
 	return r
 

@@ -260,15 +260,38 @@ func _les_duels() -> void:
 	_check("le jeu se monte sur la carte « %s » (entraînement, cran 3)" % CARTE_COURTE, await duel.monter(CARTE_COURTE))
 	# Déterminisme : le même duel, deux fois, donne le même enregistrement — avec un autre duel entre les deux (rien ne fuit d'un duel à l'autre).
 	var normal := Profil.pour_adversaire_qui_tire(Profil.Difficulte.NORMAL)
-	var a := await duel.duel({"profil_bot": normal, "comportement": Duel.COMPORTEMENTS["avance_torche"], "graine": 3, "duree_max": 40.0})
-	await duel.duel({"profil_bot": Profil.pour_adversaire_qui_tire(Profil.Difficulte.FACILE), "comportement": Duel.COMPORTEMENTS["ecoute"], "graine": 9, "duree_max": 20.0})
-	var b := await duel.duel({"profil_bot": normal, "comportement": Duel.COMPORTEMENTS["avance_torche"], "graine": 3, "duree_max": 40.0})
+	var trace_a: Array = []
+	var trace_b: Array = []
+	var a := await duel.duel({"profil_bot": normal, "comportement": Duel.COMPORTEMENTS["avance_torche"], "graine": 3, "duree_max": 40.0, "trace": trace_a})
+	var milieu := await duel.duel({"profil_bot": Profil.pour_adversaire_qui_tire(Profil.Difficulte.FACILE), "comportement": Duel.COMPORTEMENTS["ecoute"], "graine": 9, "duree_max": 20.0})
+	var b := await duel.duel({"profil_bot": normal, "comportement": Duel.COMPORTEMENTS["avance_torche"], "graine": 3, "duree_max": 40.0, "trace": trace_b})
 	var identiques := true
-	for cle in ["issue", "t_fin", "t_coup_recu", "t_coup_donne", "tirs_bot", "touches_bot", "tirs_joueur", "touches_joueur", "t_premier_tir_bot"]:
+	for cle in ["issue", "t_fin", "t_coup_recu", "t_coup_donne", "tirs_bot", "touches_bot", "tirs_joueur", "touches_joueur", "t_premier_tir_bot",
+			"poses_bot", "replis_bot"]:
 		if a[cle] != b[cle]:
 			identiques = false
 	_check("même graine, même duel : issue %s à %.2f s, %d tirs du bot, %d touches (rejoué à l'identique, un autre duel entre les deux)" % [
 		a["issue"], a["t_fin"], a["tirs_bot"], a["touches_bot"]], identiques, "%s / %s" % [str(a), str(b)])
+	# LA CAUSE, pas son symptôme (CI, 2026-10-03 : le 3e duel finissait à 5,63 s au lieu de 2,18 s sur une machine où l'on ne le voyait pas
+	# ici). Le jeu tire sa graine de gadget au `randi()` GLOBAL ; que le flux soit décalé d'un seul tirage avant la pose, et l'onde du
+	# Parasite change, donc les torches, donc le duel — ou pas, selon la machine. Deux gardes qui rougissent sur toute machine :
+	# la graine du gadget (le tirage lui-même) et la TRACE entière (positions des deux corps et état du bot, toutes les six images).
+	var graine_a: int = int(a["graine_gadget_bot"])
+	var graine_b: int = int(b["graine_gadget_bot"])
+	_check("même graine, même tirage : le gadget du bot reçoit la même graine au 1er et au 3e passage (%d / %d)" % [graine_a, graine_b],
+		graine_a != -1 and graine_a == graine_b, "le flux du `randi()` global n'est pas figé d'un duel à l'autre (`Duel._figer_le_tirage`)")
+	var premiere_divergence := -1
+	for i in mini(trace_a.size(), trace_b.size()):
+		if trace_a[i] != trace_b[i]:
+			premiere_divergence = i
+			break
+	_check("même graine, même TRACE : %d relevés (corps, état du bot, PV) égaux d'un passage à l'autre" % trace_a.size(),
+		premiere_divergence == -1 and trace_a.size() == trace_b.size() and trace_a.size() > 0,
+		"1re divergence au relevé %d : %s / %s" % [premiere_divergence, str(trace_a[premiere_divergence]) if premiere_divergence >= 0 else "-",
+			str(trace_b[premiere_divergence]) if premiere_divergence >= 0 else "-"])
+	# Et rien de ce que le duel d'avant a posé ne survit au début du suivant (gadgets, fusées) : une manche neuve repart d'une arène vide.
+	_check("chaque duel démarre sans gadget ni fusée debout (restes : %d, %d, %d)" % [int(a["restes_au_depart"]), int(milieu["restes_au_depart"]), int(b["restes_au_depart"])],
+		int(a["restes_au_depart"]) == 0 and int(milieu["restes_au_depart"]) == 0 and int(b["restes_au_depart"]) == 0)
 	_check("un duel a une issue et des tirs de part et d'autre (le bot tire : %d coups ; le joueur type : %d)" % [a["tirs_bot"], a["tirs_joueur"]],
 		a["issue"] != "nul" and int(a["tirs_bot"]) + int(a["tirs_joueur"]) > 0)
 

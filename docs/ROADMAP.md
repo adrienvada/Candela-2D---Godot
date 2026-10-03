@@ -3336,6 +3336,29 @@ processus : 22 duels différents au départ, 15 une fois le duck recalé, **1 un
 reste des écarts de 0,02 px sur deux duels, d'origine non trouvée, que rien n'amplifie en général). Règle : une simulation répétée **laisse mourir**
 son état avant de le remettre, elle ne le remet pas en espérant que les minuteurs en vol s'en aperçoivent.
 
+### Le `randf()` global n'est PAS à vous : un banc qui rejoue doit le reseeder à chaque image, et la graine d'un gadget en dépend (2026-10-03)
+
+Même banc, `tools/banc_bot_duel.gd`. **La CI de `ff1076c` : « même graine, même duel » rouge** — le duel NORMAL / `avance_torche` / graine 3, joué deux fois avec un
+autre duel entre les deux, finissait à 2,18 s (2 tirs du bot) puis à 5,63 s (6 tirs), sur une machine au repos ; ici il passait toujours. **La première hypothèse (un gadget
+du 1er duel resté debout) était fausse** : `_remettre_au_calme` purge `bullet_container` (où naissent gadgets et fusées), et un duel rejoué SANS duel intermédiaire diverge
+déjà. **La vraie cause, mesurée** : `GameState._poser_gadget` tire la graine du gadget au `randi()` GLOBAL (`var graine := randi()`, ligne ~3252), et cette graine fixe l'onde de
+panne du Parasite (`gadget_gresillement.gd`), donc la lumière des torches, donc l'éblouissement, donc tout le duel. Or le jeu tire AUSSI hors des événements du duel, à la
+cadence d'accumulateurs qu'aucun duel ne remet à zéro : la poussière du faisceau (`Player._dust_accum`, trois tirages toutes les `DUST_INTERVAL`), le minuteur d'ambiance
+(`AudioManager._ambiance_timer`, 7 à 18 s), et d'autres. Leur phase à l'entrée du duel décalait le flux de quelques tirages avant la pose : **graine de gadget 3567825414 au 1er
+passage, 1987688319 au 3e** (même graine de duel), onde différente, positions du bot différentes dès l'image 74 (0,0016 px en x, 0,007 en y, puis ce que les seuils du bot en
+font). Localement l'issue restait égale par chance ; en CI, non. **Un `seed()` au départ du duel ne suffit donc pas.** Remèdes, dans le banc seul : (1) **reseeder à chaque image**
+(`seed(GRAINE_BASE + graine * 104729 + image * 7907)` en tête de boucle) — un accumulateur inconnu ne décale plus que l'image où il tire ; (2) remettre à neuf ceux qu'on connaît
+(`_figer_le_tirage` : `_dust_accum`, `_torch_breath_t`, minuteur d'ambiance), pour qu'ils ne tirent pas dans la même image qu'une pose ; (3) redresser l'échelle des deux corps
+(`redresser_le_corps`) : `move_and_slide` réécrit leur transformation et `Node2D` en relit l'échelle en simple précision, qui dérive de ~1e-6 par duel (1 → 0,99999905 →
+0,9999979) et décalait la rotation d'un ulp dès l'image 6 — cela seul ne changeait pas l'issue, mais un banc qui rejoue ne part pas d'un état qui dérive. Ablations mesurées :
+sans (1), la graine de gadget est égale mais la trace diverge au relevé 15 (1,6 s) ; sans (1) ni (2), la graine diffère ; (2) seul ne suffit pas, (1) seul suffit sur cette
+graine. **Gardes** (`test_banc_bot`, rouges sur toute machine puisqu'elles lisent le tirage et non l'issue) : même graine de gadget au 1er et au 3e passage, trace entière
+(21 relevés) égale, aucun gadget ni fusée debout au départ d'un duel. Règle : **un banc qui compare deux passages compare des flux de hasard, pas des événements** ; tout ce que le
+jeu tire au `randf()`/`randi()` global est à figer PAR IMAGE, et un test d'égalité d'issue seul laisse passer un banc non rejouable — il faut comparer ce qui précède l'issue.
+Signalé, non corrigé : le jeu lui-même tire hors événement (poussière, ambiance) dans le flux qui nourrit la graine d'un gadget ; sans effet en partie (personne ne rejoue), mais une
+graine de gadget tirée d'un `RandomNumberGenerator` propre au match serait indépendante de l'ambiance. Et l'écart de 0,02 px « d'origine non trouvée » de S4 (piège précédent) en
+était, très probablement, un cas.
+
 ### Un étalon qui ne sait pas se cacher ne mesure pas un joueur qui change de place (2026-10-02)
 
 Même banc. Le joueur type « qui tire puis change de place » a d'abord gardé sa torche allumée pendant qu'il changeait de place : il courait en pleine
@@ -32836,6 +32859,9 @@ dès que la scène lui rendait la recharge d'une minute**. Remède : rendre la r
   racine, côté moteur ou `ReplaySystem`) ; le banc d'exploration le montre par un lot incomplet (432 duels au lieu de 576), jamais par un faux résultat.
 - Le bot de l'entraînement porte toujours **le Parasite** : ses outils sont ceux de la classe 0 (la bobine). La classe du bot n'est choisie nulle part dans `ui.gd`.
 - `docs/JOURNAL_SESSIONS.md` : `game_state.gd`, `ui.gd` n'ont pas été touchés ; `perception_bot_noeud.gd` (S6) l'a été sur deux endroits (`_lire_les_gadgets`, une ligne dans `_voir`).
+- **2026-10-03, la CI de `ff1076c` rouge sur « même graine, même duel »** : le banc n'était rejouable que par chance. La graine d'un gadget est un `randi()` GLOBAL que la poussière du
+  faisceau et l'ambiance décalaient d'un duel à l'autre. Corrigé DANS LE BANC (reseed par image, accumulateurs remis à neuf, échelle des corps redressée) et gardé par trois vérifications
+  de `test_banc_bot` qui lisent le tirage et la trace, pas l'issue — voir « Pièges connus », 2026-10-03. Rien n'a changé dans le jeu.
 
 **À trancher par Adrien.** (1) **DIFFICILE à 34 % pour une cible de 30** : accepter, ou retirer un outil à DIFFICILE, ou le resserrer par ses réflexes ? (2) **Quels outils pour
 quels chapitres** : aujourd'hui FACILE n'en a aucun, NORMAL (le boss) a torche + repli + gadget, DIFFICILE tout ; les PNJ du catalogue n'en ont aucun. `torche_en_patrouille` (un bot
