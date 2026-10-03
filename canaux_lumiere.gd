@@ -179,3 +179,23 @@ static func couche_ombre_torse(id: int) -> int:
 ## distance » tient toujours. `tools/test_halo_proximite.tscn` garde les deux.
 static func masque_ombre_halo(id: int) -> int:
 	return DECOR | ENNEMI | couche_ombre_corps(1 - id)
+
+
+## Le masque d'ombre d'une lumière NEUTRE du décor qui doit être COUPÉE par les murs pour TOUS les corps — le plafonnier
+## (chantier SOLO, S5, 2026-10-02). Quatre bits, un par famille de récepteur, et aucun n'est une couche d'occluder de corps :
+##
+## - `DECOR` : l'occluder des murs hauts — ce qui coupe, et ce que le sol reçoit ;
+## - `ENNEMI` : le canal du sprite adverse ET du capteur croisé (`masque_vue_adverse`) — sans lui le corps de l'autre, vu de
+##   sa vue, est « éclairé en entier même au cœur d'un occluder » (« `shadow_item_cull_mask` filtre AUSSI les sprites », Pièges
+##   connus) ;
+## - `recepteur_retro(0)` et `recepteur_retro(1)` (128, 256) : les bits que portent les capteurs de SOI (`masque_de_soi`) et
+##   qu'aucun occluder ne porte. Ce sont eux, et non `JOUEUR_LOCAL` (4) ni la couche d'ombre du corps (4, 8), qui font recevoir
+##   à chaque joueur l'ombre des murs sur SON propre corps SANS faire ombrer ce corps par sa propre étoile : mettre 4 ou 8 ici
+##   ferait porter ombre à un seul des deux corps (la couche 4 est celle de J1, la 8 celle de J2) et plongerait le porteur dans
+##   l'ombre de son étoile sous la lumière qui l'éclaire.
+##
+## ⚠️ **Ce masque est un masque d'OMBRE, jamais de PORTÉE** : `tools/test_ombre_propre.gd` interdit 8, 128 et 256 dans la
+## `range_item_cull_mask` de toute lumière, et le plafonnier porte la sienne à part (`DECOR | ENNEMI | JOUEUR_LOCAL`, la
+## fusée). La fusée posée, elle, a `1` : elle éclaire un corps À TRAVERS un mur (signalé à S2) — le plafonnier ne doit pas.
+static func masque_ombre_neutre_pour_les_corps() -> int:
+	return DECOR | ENNEMI | recepteur_retro(0) | recepteur_retro(1)

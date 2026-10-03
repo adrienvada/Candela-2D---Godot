@@ -1,0 +1,85 @@
+{
+  "boss": false,
+  "carte": {
+    "floor": "1,1,46;1,2,46;1,3,10;13,3,13;28,3,19;1,4,10;13,4,13;28,4,19;1,5,46;1,6,46;1,7,46;1,8,46;1,9,46;1,10,46;1,11,10;13,11,13;28,11,19;1,12,10;13,12,13;28,12,19;1,13,46;1,14,46",
+    "grid_size": {
+      "x": 48,
+      "y": 16
+    },
+    "low_walls": "",
+    "name": "Les zones — La lumière qui ment",
+    "tile_size": 35,
+    "version": 4,
+    "walls": "0,0,48;0,1,1;47,1,1;0,2,1;47,2,1;0,3,1;11,3,2;26,3,2;47,3,1;0,4,1;11,4,2;26,4,2;47,4,1;0,5,1;47,5,1;0,6,1;47,6,1;0,7,1;47,7,1;0,8,1;47,8,1;0,9,1;47,9,1;0,10,1;47,10,1;0,11,1;11,11,2;26,11,2;47,11,1;0,12,1;11,12,2;26,12,2;47,12,1;0,13,1;47,13,1;0,14,1;47,14,1;0,15,48"
+  },
+  "intention": "Un long hangar, une lampe tout au fond. Toute lumière n'est pas quelqu'un.",
+  "joueur": {
+    "case": [
+      2,
+      8
+    ],
+    "orientation": 0
+  },
+  "plafonniers": [
+    {
+      "case": [
+        44,
+        8
+      ],
+      "intensite": 1.2,
+      "rayon": 4.5
+    }
+  ],
+  "pnj": [
+    {
+      "case": [
+        9,
+        8
+      ],
+      "classe": "arbalete",
+      "equipe": true,
+      "orientation": 180,
+      "profil": "zone_voit_entend_facile",
+      "zone": [
+        5,
+        1,
+        11,
+        14
+      ]
+    },
+    {
+      "case": [
+        22,
+        8
+      ],
+      "classe": "arbalete",
+      "equipe": true,
+      "orientation": 180,
+      "profil": "zone_voit_entend_facile",
+      "zone": [
+        17,
+        1,
+        14,
+        14
+      ]
+    },
+    {
+      "case": [
+        38,
+        8
+      ],
+      "classe": "arbalete",
+      "equipe": true,
+      "orientation": 180,
+      "profil": "zone_voit_entend_facile",
+      "zone": [
+        32,
+        1,
+        15,
+        14
+      ]
+    }
+  ],
+  "titre": "La lumière qui ment",
+  "version": 1
+}

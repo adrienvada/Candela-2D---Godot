@@ -23,6 +23,25 @@ const BulletCasingScript := preload("res://bullet_casing.gd")
 
 @export var player_id: int = 0
 
+## Ce joueur est un PNJ de l'aventure (chantier SOLO, S6) : un vrai `Player`, piloté par un `BotInputProvider`, que `GameState` pose
+## par `AventurePartie`. Un PNJ porte `player_id` 1 — il joue, pour les lumières, les couches et les sons, le rôle d'adversaire du joueur
+## humain (J2) — et ne se distingue de lui que par ce drapeau, lu à TROIS endroits : la perception d'un bot ne vise jamais un PNJ
+## (`PerceptionBotNoeud._adversaire`), les balles d'un PNJ traversent les autres PNJ (`Bullet`), et un PNJ ne blesse pas un PNJ
+## (`take_damage`). Faux partout ailleurs : le duel, en ligne comme en local, ne le pose jamais.
+var est_pnj: bool = false
+
+## La place de CE PNJ dans les réserves de `GameState` (fusées, gadget, batterie, recharge d'une minute) — S9b. Ces réserves sont
+## indexées par `player_id`, et tous les PNJ en portent un (1) : sans place à eux ils partageaient celle de J2, semée sur la classe de
+## J2 — un boss d'une autre classe perdait sa vraie réserve, un PNJ vidait celle d'un autre. `GameState.inscrire_un_pnj` la donne (2, 3,
+## …) ; `-1` : aucune, le joueur est lu à son `player_id`, comme avant. Jamais posée hors de l'aventure.
+var slot_reserve: int = -1
+
+
+## L'indice de CE joueur dans les réserves de `GameState` : sa place à lui s'il est un PNJ inscrit, son `player_id` sinon (le duel, en
+## ligne comme en local, n'y change rien).
+func slot_de_reserve() -> int:
+	return slot_reserve if est_pnj and slot_reserve >= 0 else player_id
+
 ## La couche d'occluder de CE joueur, et celle de l'autre.
 ##
 ## Deux couches distinctes — 4 pour J1, 8 pour J2 — parce qu'une torche doit
@@ -2149,7 +2168,7 @@ func _physics_process(delta):
 	if not fusee_presse:
 		_fusee_pressee = false
 	elif can_move and not _fusee_pressee and shoot_cooldown <= 0 \
-			and state and state.fusee_disponible(player_id):
+			and state and state.fusee_disponible(slot_de_reserve()):
 		lancer_fusee()
 		_fusee_pressee = true
 
@@ -2167,7 +2186,7 @@ func _physics_process(delta):
 	if not gadget_presse:
 		_gadget_pressee = false
 	elif can_move and not _gadget_pressee and state \
-			and state.gadget_basculable_de(player_id) != null:
+			and state.gadget_basculable_de(slot_de_reserve()) != null:
 		# ⚠️ **L'interrupteur passe AVANT la pose, et sans ses gardes.** Celui de la
 		# pose exige `shoot_cooldown <= 0` et `gadget_disponible()` : le premier est
 		# presque toujours faux chez un Parasite qui tire, le second le devient dès
@@ -2177,7 +2196,7 @@ func _physics_process(delta):
 		state.basculer_gadget(self)
 		_gadget_pressee = true
 	elif can_move and not _gadget_pressee and shoot_cooldown <= 0 \
-			and state and state.gadget_disponible(player_id):
+			and state and state.gadget_disponible(slot_de_reserve()):
 		# Étape 28 — le voile sans place se SENT ici, au moment où la pose part (un
 		# appui pris pendant le cooldown part plus tard, sans nouveau front). Le
 		# ressenti seul : la pose et le désarmement suivent, inchangés.
@@ -2288,9 +2307,9 @@ func _sentir_les_refus(state: Node, fusee_presse: bool, gadget_presse: bool,
 	_gadget_tenu = gadget_presse
 	if not can_move or state == null or not _percu_ici():
 		return
-	if front_f and not state.fusee_disponible(player_id):
+	if front_f and not state.fusee_disponible(slot_de_reserve()):
 		_ressentir_refus_fusee()
-	if front_g and state.appui_gadget_refuse(player_id):
+	if front_g and state.appui_gadget_refuse(slot_de_reserve()):
 		_ressentir_refus_gadget()
 
 ## Étape 28, point 5 — le voile SANS PLACE. La décision reste à l'hôte
@@ -2784,6 +2803,11 @@ func _loger_calque(calque: CanvasLayer) -> void:
 ## les outils n'ont rien à changer ; la nappe de braises passe `DEGATS_BRAISES`.
 func take_damage(amount: float, source_player: Node2D, cause: int = GadgetBase.DEGATS_BALLE):
 	if dead: return
+	# Les PNJ de l'aventure ne se blessent pas entre eux (SOLO, S6) : une même équipe. Le geste le plus simple, et sans effet hors de
+	# l'aventure — `est_pnj` n'y est jamais posé. (Les balles d'un PNJ traversent déjà les autres PNJ ; ceci couvre aussi ce qui
+	# ne passe pas par `Bullet` : un rebond, une nappe.)
+	if est_pnj and source_player != null and source_player.get("est_pnj") == true:
+		return
 
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 		var new_hp = max(0.0, hp - amount)
@@ -2809,7 +2833,10 @@ func take_damage(amount: float, source_player: Node2D, cause: int = GadgetBase.D
 	# `hit_sound.play()` est parti avec : `$HitSound` est un `AudioStreamPlayer`
 	# SANS FLUX dans `player.tscn` — il ne jouait rien depuis toujours. Le noeud
 	# lui-meme reste dans la scene, a la main de qui la tient.
-	AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
+	# Le battement de cœur est celui du JOUEUR : un PNJ de l'aventure blessé à 30 PV ne fait pas battre le sien (SOLO, S6) — il aurait pris
+	# `player_id` 1 et fait entendre au joueur humain un cœur qui n'est pas le sien.
+	if not est_pnj:
+		AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
 
 	
 	# Violent camera shake on hit

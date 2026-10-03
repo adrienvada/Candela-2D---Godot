@@ -16,7 +16,10 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 40 et non plus 20 (2026-10-03) : le chantier SOLO a ajouté cent salles d'aventure et leurs gardes (fabriques, marches au vrai corps,
+    # banc de duels) ; la suite complète frôle désormais les 20 minutes en CI (19 min 50 mesurées), et un passage a été coupé à la limite
+    # alors que tout y était vert.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 

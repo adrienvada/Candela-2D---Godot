@@ -385,7 +385,7 @@ func nombre_de_suivis() -> int:
 
 
 ## L'entrée suivie pour un nœud 2D, ou `{}`. Clés : `genre` (« volume », « fumee », « comete », « lueur »,
-## « braises », « lentille », « eclair », « eclat », « onde », « toile »), `noeuds` (les `MeshInstance3D`),
+## « braises », « lentille », « eclair », « eclat », « onde », « toile », « plafonnier »), `noeuds` (les `MeshInstance3D`),
 ## `mats` (leurs matériaux), `retires` (les dessins 2D sortis des lightmaps).
 ## `cle` : 0 pour l'entrée principale d'une source (volume, fumée, comète, onde, éclat), 1 pour sa lueur
 ## (lueur posée, braises, lentille, éclair), 2 pour la toile du voile.
@@ -430,6 +430,7 @@ func suivre(main: Node, vues: Array, style: int, presentation: Node) -> void:
 		if nappes_voxel:
 			_suivre_traces(main, arene, vus)
 	_suivre_eclats(main, presentation, vus)
+	_suivre_plafonniers(main, vus)
 	if point_lumineux:
 		_suivre_lentilles_des_joueurs(main, presentation, vus)
 	if faisceaux_actifs:
@@ -1108,6 +1109,34 @@ func _suivre_eclair(g: Node2D, vus: Dictionary) -> void:
 	var p := Vector3(g.global_position.x, HAUTEUR_ECLAIR_MINE * TUILE, g.global_position.y)
 	_poser_halo(e, 0, p, 70.0, Charte.HALOGENE, 0.55 * part, 0)
 	_poser_halo(e, 1, p, 12.0, Charte.HALOGENE, part, 1)
+
+
+## S5 — LE LUMINAIRE DU PLAFONNIER : un point franc et un halo doux, posés à la HAUTEUR de la lampe 2D (le plafond, 52,5 px). Une
+## source, pas un volume — la même image que la lentille d'une torche ou l'éclair d'une mine : la lumière 2D ne dessine pas sa propre
+## lampe, et sans lui la flaque n'aurait pas d'origine. **Intensité = celle de SA lumière** (`Halo`, `energy / ENERGIE_REFERENCE`) :
+## un plafonnier éteint (loin de tout joueur) n'entre pas dans le suivi, donc rien ne reste allumé sans sa lumière — le noir absolu
+## tient. Le shader teste la profondeur : un mur 3D devant le luminaire le cache. **Non vérifié à l'écran** : headless seulement.
+const TAILLE_LUMINAIRE := 12.0
+const TAILLE_HALO_LUMINAIRE := 40.0
+const INTENSITE_HALO_LUMINAIRE := 0.35
+## L'énergie de la lumière 2D à laquelle le point brille à plein (la valeur par défaut d'un plafonnier : `Plafonnier.INTENSITE_PAR_DEFAUT`).
+const ENERGIE_REFERENCE_LUMINAIRE := 1.2
+
+func _suivre_plafonniers(main: Node, vus: Dictionary) -> void:
+	if not lueurs_actives or not main.is_inside_tree():
+		return
+	for p in main.get_tree().get_nodes_in_group("plafonniers"):
+		if not is_instance_valid(p) or (p as Node).is_queued_for_deletion():
+			continue
+		var halo := (p as Node).get_node_or_null(^"Halo") as Light2D
+		if halo == null or not halo.enabled or halo.energy <= 0.0 or not halo.is_visible_in_tree():
+			continue
+		var part := clampf(halo.energy / ENERGIE_REFERENCE_LUMINAIRE, 0.0, 1.5)
+		var e := _entree(p as Object, "plafonnier", vus, 1)
+		_halos(e, 2)
+		var place := Vector3(halo.global_position.x, maxf(halo.height, PLANCHER_PX), halo.global_position.y)
+		_poser_halo(e, 0, place, TAILLE_HALO_LUMINAIRE, halo.color, INTENSITE_HALO_LUMINAIRE * part, 0)
+		_poser_halo(e, 1, place, TAILLE_LUMINAIRE, halo.color, part, 1)
 
 
 ## L'éclat de bouche au bout de l'arme du corps voxel : le dessin 2D sort des lightmaps (il y était couché

@@ -84,6 +84,11 @@ plan par plan et écrit un dossier + un manifeste + une planche HTML dans
 `run_visuel.sh`, il exige une **vraie fenêtre** et ne peut donc rejoindre aucune
 suite headless ; ses appuis sur le jeu sont vérifiés par `tools/test_banc.gd`.
 
+Pour régler la **difficulté du bot** (chantier SOLO, S4) : `tools/banc_bot_difficulte.gd`, un banc de JEU — des duels simulés
+(vrai jeu monté, headless, à pas fixe, déterministes par graine) entre le bot et un joueur type honnête ; il ne mesure aucune
+cadence. `godot --headless --path . --fixed-fps 60 --script res://tools/banc_bot_difficulte.gd -- --duels=6` (options et
+cibles dans son en-tête et dans la ROADMAP, section SOLO). Il est long : la suite `test_banc_bot` en est la forme courte.
+
 En jeu, **F3** ouvre le panneau de diagnostic (fps, ping, transport, lien
 direct/relayé, NAT, lumières, particules). Pas de linter ni de CI : la barre
 de qualité est « tous les tests headless passent » plus les checklists

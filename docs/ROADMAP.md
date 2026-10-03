@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-01
+> Dernière mise à jour : 2026-10-03 (S8 : les chapitres 1 à 9 écrits — lot 1 : la clé « equipe » et les chapitres 1 à 3 ; chapitres 4 à 6 : zones qui écoutent, groupes, chasseurs ; chapitres 7 à 9 : chasseurs vifs, grandes salles, élite)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,14 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **La 0.8.2 part : le mode solo — bot honnête, entraînement à trois crans, aventure de dix chapitres** (2026-10-03, Adrien, à la session « candela-2d-godot-47 » : « Fusionne. Version 8.2 ») | `config/version` passe de 0.8.1 à 0.8.2 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19) — `tools/verifier_publication.sh v0.8.2` : « le fil n'a pas bougé : l'ancienne version peut continuer à jouer en ligne ». Le bot, l'entraînement et l'aventure ne vivent que hors ligne. Chemin de publication : la PR #4 (`ccr-50a162ad-e2u8lr`) fusionnée dans `main`, puis le tag `v0.8.2`, qui déclenche `.github/workflows/release.yml` (suites, exports Windows et macOS, manifeste signé). **Part sans avoir été jouée à la main**, et avec les questions ouvertes du chantier SOLO (banc de salle pour les chapitres 7 à 9, vie des boss, chapitre 10). |
+| **La taille d'une salle d'aventure n'est plus bornée par celle d'un duel : 0.5, « La fusée », passe de 24×24 à 41×41, ses trois PNJ répartis** (2026-10-03, Adrien, répondant à la question que S7 lui laissait — « les trois PNJ en un coin, ou une salle plus grande que 24×24 avec les PNJ répartis ? » : « Oui toute liberté sur la taille des cartes : elles peuvent être bien plus grandes que les cartes du duel. ») | Le plan écrivait « salles de 16×16 à 24×24 » : c'était la taille d'un duel, reprise par réflexe pour une salle d'aventure. Une salle se dimensionne par ce qu'elle enseigne. 0.5 enseigne la fusée, dont la portée de lancer (450 px) ne dépasse celle de la torche (468 px) que par son halo : pour qu'un PNJ soit hors de l'une et à portée de l'autre, ailleurs que dans un angle, il faut de la place. **La garde n'a plus un côté permis mais une table** (16 à 24 par défaut, 36 à 48 pour 0.5, 32 pour l'arène du boss), toujours bornée par le format (128). La réponse d'Adrien ne disait pas combien de fusées : la salle n'en exige qu'une, la réserve du Parasite — voir « Les fusées de 0.5 », dans S7. |
+| **Le chantier SOLO se mène d'un trait jusqu'à S9, par des sous-agents, sans aucun relevé de cadence** (2026-10-02, Adrien, à la session « candela-2d-godot-47 » : « Go. Délègue à des sous-agents Sonnet 5.5 chaque tâche. Reste juste maître du chantier » ; puis : « Arrête-toi une fois tous les chantiers implémentés. Aucun test de cadence ») | La session conçoit, relit, fait tourner la suite complète et fusionne ; chaque étape est écrite par un sous-agent dans un worktree isolé. **Aucun banc de cadence** : le coût des plafonniers (S5), que la conception voulait mesurer, est livré NON MESURÉ et le dit — la règle « n'allumer que les plafonniers proches du joueur » se tient par construction, pas par un relevé. Les réglages de difficulté (S4) se font au banc de JEU (parties simulées), qui n'est pas un relevé de cadence. Le chapitre 10 reste vide, comme décidé. |
+| **Le solo compte onze chapitres : l'initiation (0) puis dix chapitres (1 à 10)** (2026-10-02, Adrien, même session : « Oui je veux 11 chapitres (intro + dix chapitres). On verra ensuite ce que c'est ») | Confirme la lecture de SOLO-Q8. Dix classes pour les chapitres 0 à 9 dans l'ordre du rang ; le chapitre 10 n'a pas de classe à offrir, et son contenu reste à définir — rien avant S8 n'en dépend. |
+| **Le solo débloque les classes dans l'ordre du rang en ligne ; l'initiation n'a pas de ronde, ses ennemis restent immobiles et se multiplient ; le chapitre 10 attend** (2026-10-02, Adrien, même session : « oui l'ordre en ligne » ; « Chapitre 10 on verra plus tard ce qu'on gagne » ; « Non pas de rondes, mais on peut augmenter le nombre d'ennemis immobiles ») | L'ordre du rang fait du solo une préparation au chemin en ligne : la classe qu'on gagne en solo est la prochaine qu'on gagnera en classé. Sans ronde, la difficulté de l'initiation monte par le nombre (le niveau 0.9 devient « la salle pleine », cinq ou six immobiles de toutes sortes), et le boss est le premier adversaire mobile. Le chapitre 10 est lu comme un onzième chapitre, sans classe à offrir — lecture à confirmer (SOLO-Q8). |
+| **Le chapitre d'initiation est le chapitre 0, et il débloque la classe de base (le Parasite) : dix chapitres numérotés de 0 à 9, une classe chacun** (2026-10-02, Adrien, même session : « Le chapitre d'initiation est le chapitre 0. Il débloque la classe de base. ») | Le compte tombe juste — dix chapitres, dix classes — et SOLO-Q6 (un chapitre sans classe à offrir) disparaît. Le boss de l'initiation est un duel en miroir contre un Parasite : le joueur affronte la classe qu'il tient, donc rien qu'il ne connaisse déjà. L'ordre des classes suivantes (SOLO-Q5) reste à trancher ; « Chantier — le mode solo » propose celui du rang. |
+| **Le solo, suite : un niveau est une salle, gagnée en éliminant tout le monde et recommencée à la mort ; des plafonniers qui ne s'éteignent pas ; dix chapitres de dix niveaux, le dixième étant un boss — le bot en difficulté normale, dans la classe que le chapitre débloque ; le chapitre 1 d'abord, écrit en données** (2026-10-02, Adrien, même session : « Oui il faut éliminer tout le monde » ; « les lumières fixes ne s'éteignent pas. Ce sont des plafonniers. Il faut les implémenter » ; « mourir on recommence la salle. La salle est un niveau » ; « prépare la structure du premier chapitre d'initiation pour l'instant. On verra ensuite : il faut faire dix chapitres, chacun contenant dix niveaux dont un boss final qui est juste un bot en mode moyen avec la classe qu'on débloque à la fin du chapitre » ; « le bot voit par le calcul ») | **Le boss est le bot de l'entraînement** (cran 3, normal) : aucun comportement de boss à écrire, et le joueur affronte au dixième niveau exactement ce qu'il retrouvera à l'entraînement. **Les plafonniers ont leur étape (S5)**, avant le moteur de l'aventure : ils servent trois fois — montrer les PNJ, trahir le joueur dans le modèle de vue du bot, porter ombre — et leur coût se mesure seul. **Le chapitre 1 est structuré niveau par niveau** (une chose nouvelle par salle, jusqu'au duel) dans « Chantier — le mode solo » ; étapes revues S1 à S9, questions ouvertes SOLO-Q5 à Q7 (ordre des classes, chapitre 10 sans classe à offrir, la ronde dès le niveau 1.9). |
+| **Le mode solo : un bot HONNÊTE, trois crans d'entraînement en plus de la cible, une aventure par chapitres qui débloque les classes du solo** (2026-10-02, Adrien, à une session cloud de brainstorm, branche `ccr-50a162ad-e2u8lr` : « le mode solo doit permettre un mode d'aventure avec des niveaux de difficulté progressive, dont les premiers niveaux seraient l'initiation, mais également de jouer contre des bots en match d'entraînement » ; « l'adversaire doit être honnête : ne percevoir que les sons et la lumière » ; « il s'ajoute à l'entraînement actuel : on choisit la difficulté du bot : cible immobile, adversaire mobile, adversaire qui tire si vu ou entendu » ; puis « Oui le recalcul », « mets trois crans de difficulté en plus avec plus ou moins de réflexes », « chaque fin de chapitre débloque une classe pour le mode solo », « Le bot a pour l'instant la classe par défaut ») | **La difficulté vient des réflexes, jamais de l'information** : un bot qui verrait dans le noir trahirait la seule règle du jeu et enseignerait de mauvais réflexes. **La vue se calcule** plutôt que de relire les capteurs : leur relecture GPU→CPU à chaque image bloquerait le rendu, et un modèle se teste sans fenêtre — à condition de ne jamais voir PLUS que la lumière. **Un seul bot** à deux axes (déplacement, perception-réflexes) sert l'entraînement et l'aventure. **Le déblocage des classes du solo ne touche pas au rang** : en ligne, seul le rang débloque. Détail, étapes S1 à S9 (revues le même jour) et questions SOLO-Q1 à Q4 : « Chantier — le mode solo ». |
 | **La 0.8.1 part : la fumée en cubes et ses volutes, la fusée qui éclaire loin à l'allumage ; candidat `claude/candidat-0.8.1`, publié par une session du Mac** (2026-10-01 vers 13:15, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED » : « Ok dis moi quoi prompter à la session locale pour mettre en ligne la version suivante ») | `config/version` passe de 0.8.0 à 0.8.1 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19) — `tools/verifier_publication.sh v0.8.1` contre le tag `v0.8.0` : « le fil n'a pas bougé : l'ancienne version peut continuer à jouer en ligne ». **Ce qui part** : les gadgets en volume — la fumée occultante en cubes « gros » par défaut (GV1, GV1bis), avec l'encre des volutes et son plancher (Q73 « volutes », Q74 « on garde ») ; Q58, la fusée qui, à l'allumage, éclaire jusqu'à la portée des torches (468 px) pendant 1 s puis revient à son halo à 3 s (Q78, la durée et la force, reste ouverte : la courbe part telle quelle, l'avis de la coordinatrice étant de la garder) ; Q77 « on garde » (468 px pour toutes les torches). **Ce qui ne part pas allumé** : GV2, les nappes au sol en cubes, reste un essai éteint par défaut (`--nappes-voxels`, débogage) tant qu'Adrien n'a pas répondu à Q79 et Q80. **La publication suit `docs/MISE_A_JOUR.md`** : `main` en avance rapide depuis `903b26e6` (la 0.8.0), puis le tag annoté `v0.8.1` sur le même hash, par une session du Mac sur le mot d'Adrien dit dans sa fenêtre ; la CI refait le contrôle, passe les suites, exporte, signe et publie ; la session cloud vérifie ensuite la signature et les archives. Suite complète verte sur le candidat. **Non mesuré sur le Mac** : la fumée en cubes coûtait 7 à 9 % de temps en moins que les couches dans le cloud (GV1bis), l'allumage de la fusée 2 % de plus pendant ses 3 s (Q58). |
 | **Q73 = l'encre de la fumée en cubes est celle des VOLUTES ; Q74 = son trait reste graphite, au plancher des murs** (2026-10-01 vers 09:10, Adrien, sur les planches de GV1bis, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent des gadgets en volume : « Q73 : volutes » ; « Q74 : on garde ») | **Q73** : les traits du dessin de la suie et de la poussière, drapés sur le tas (la fusée : deux lignes de niveau des volutes de son voile) — la recommandation de GV1bis, déjà le défaut ; les arêtes et les hachures restent pour les bancs (`--fumee-encre=`). **Q74** : aucun plancher plus bas pour la fumée seule — le trait obéit à la règle des murs « allumé reste allumé » (`IsoMateriaux.ENCRE_PLANCHER_AFFICHE`, 16/255 en valeur affichée ; le reste de l'encre d'essai des murs, 0,12) : la lueur faible d'un nuage, qui est une information, ne s'éteint pas sous un trait. Rien ne change à l'image ; la suite garde désormais les deux décisions (`test_fumee_voxel` : l'encre par défaut EST les volutes, le reste du trait EST celui des murs). Noir et équité reprouvés après la fusion de la ligne publiée (chantier GV, « Q73 et Q74 »). |
 | **Q58 = à l'allumage, la fusée illumine loin : son halo porte aussi loin que les torches (468 px), le tient une seconde, puis revient à son empreinte habituelle avant la braise** (2026-10-01 vers 09:10, Adrien, transmis par la session coordinatrice « Fable 5.1 - CLOUD ISO UNRAILED » au sous-agent de l'allègement : « Q58 : il faudrait qu'à l'allumage la fusée illumine loin effectivement » — la question de la page des lumières de L1 : « La torche seule, ou toutes les lumières ? […] faut-il que le halo d'une fusée remplisse l'écran ? ») | **La courbe** (`FuseeModele.part_allumage_a`, `rayon_halo_a`), lue par la session coordinatrice et proposée par le sous-agent : à l'atterrissage — l'allumage, le début du plein feu — le rayon du halo passe de 220 px à la portée des torches (`PorteeEcran.portee_au_bord`, 468 px : le même calcul, sur le cadrage de la vue unique, dans tous les modes) ; il la TIENT le premier quart du plein feu (1 s sur 4), REVIENT par un `smoothstep` jusqu'aux trois quarts (3 s ; le bord rentre au plus de 186 px/s), et la braise (4 s) repart de l'empreinte habituelle. En vol, rien ne change. **L'énergie non plus** : le halo s'élargit, il ne brille pas davantage — l'éblouissement, qui lit l'énergie (rayon 400 px), ne bouge pas. **Rien sur le fil** : la courbe se dérive de l'âge de combustion, que les deux pairs simulent à l'identique ; la killcam la suit par le même chemin (`_appliquer_age`) ; `Protocol.VERSION` reste 19. **Débogage, hors ligne** : `--sans-fusee-allumage` rend la fusée de la 0.8.0 (jamais en ligne). Le noir : rien au-delà du rayon ni derrière un mur, dans la lightmap des quatre vues, à six âges ; J1 = J2 ; l'allumage fini à 3 s, au pixel près (planches à six âges, avant/après basculés sur place). Mesuré dans le cloud pendant la bouffée (llvmpipe, la fusée tenue à 0,5 s) : 0,984 de la cadence de la 0.8.0 au cadrage du banc, 0,979 au vrai cadrage de la vue unique. Chantier « l'allègement de la 0.8.0 », § Q58. |
@@ -3253,6 +3261,250 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### La CI coupe le job à 20 minutes, et la suite complète les atteint depuis le chantier SOLO (2026-10-03)
+
+Sur `54fc784` (les dix chapitres), une des deux exécutions de « tests » a été marquée **annulée** : tout y était vert, jusqu'au « ✓ Tous les tests
+passent » de l'étape de fumée, mais le job atteignait la limite `timeout-minutes: 20` de `.github/workflows/tests.yml` ; l'autre exécution avait fini
+en 19 min 50. Les cent salles et leurs gardes (fabriques, marches au vrai corps, banc de duels) ont allongé la suite d'autant. La limite passe à
+40 minutes. **Une annulation n'est pas un vert** : sur une PR, lire le journal d'un job « cancelled » avant de conclure.
+
+### Une réserve indexée par `player_id` est celle de J2 pour TOUS les PNJ — et un test qui ne regarde qu'un PNJ ne le voit pas (2026-10-03)
+
+Chantier SOLO, S9b. Les réserves de `GameState` (fusées, gadget, batterie, recharge d'une minute) sont indexées par `player_id`, et tous les PNJ de l'aventure en portent un, le même (1) : ils lisaient donc la réserve de J2, semée sur la classe
+de J2 (`_do_start_round`) — le Parasite —, et se la partageaient. S6 les avait signalées (« un PNJ n'a pas de réserve à lui »), S9 aussi, et chacune avait raison de son côté : un seul PNJ, un seul Parasite, et rien ne se voit. Il faut DEUX PNJ de
+classes différentes pour le voir (le Spectre n'a aucune fusée, le Terrassier trois : `test_aventure_boss`). Le geste le plus simple n'était pas de changer `player_id` — il règle les couches, les ombres, les sons, le rendu, et n'a que deux rôles —
+mais d'indexer les réserves par une PLACE (`Player.slot_de_reserve()`). **Quatre endroits la lisaient sous un autre nom** : `_do_spawn_gadget` prenait la classe du gadget chez `p2`, `_do_spawn_fusee` nommait le nœud et le son par le tireur, « un gadget debout
+par joueur » comptait par `poseur_id` (un second PNJ qui posait le sien retirait celui du premier), et la fin de `_do_spawn_gadget` écrivait la recharge à `pid`. Chercher `p1 if pid == 0 else p2` dans `game_state.gd` : c'est la signature.
+
+### L'éblouissement de `game_state.gd` connaissait `[p1, p2]` en quatre endroits (2026-10-03)
+
+Chantier SOLO, S9b. `_maj_eblouissement` (cibles), `_sources_eblouissantes` (torches), `_flash_de_tir` (« l'autre ») et `_ligne_de_vue` (la posture d'une source, par `pid_porteur` : 1 désigne J2, caché, pas le PNJ) supposaient deux joueurs. Le PNJ le plus lumineux du jeu n'éblouissait
+personne, et la torche dans les yeux d'un PNJ ne lui faisait rien — sans erreur ni suite rouge. Même famille que les réserves : **tout ce qui a été écrit pour « J1 et J2 » est à relire quand un troisième corps existe**. `_joueurs_en_lice()` est maintenant la seule liste.
+
+### Une garde qui braque la torche d'un joueur doit aussi lui donner une visée (2026-10-03)
+
+Chantier SOLO, S9b, `tools/test_aventure_boss.gd`. Un fournisseur d'entrées de test qui ne rend que `is_flashlight_pressed()` laisse `get_aim_direction()` à `Vector2.ZERO` : `player.gd` tourne alors le corps vers 0 rad (l'est) — 3,66 rad après deux
+secondes — et la torche, braquée sur le PNJ à l'ouest, éclaire le mur. La garde « la torche du joueur éblouit un PNJ » rougissait pour la mauvaise raison (éblouissement 0,0, torche allumée, cap 3,66). Une garde qui lit un résultat nul se lit sur le cap
+avant d'accuser le code.
+
+### Ce que le banc de la difficulté ne peut pas dire d'un bot qui perd à tous les coups contre un joueur immobile (2026-10-03)
+
+Chantier SOLO, S9b. Le joueur type `ecoute` (immobile, silencieux, sans lumière) bat à 96-100 % tout bot qui n'a pas de quoi gagner la fusillade qu'il déclenche : il entend les pas du bot, tire sur la zone — et un bot armé d'une arbalète, d'un pistolet-mitrailleur
+ou d'un lance-fusées n'a pas de quoi tuer en un chargeur. **Aucun réflexe n'y change rien** : à l'extrême (0,10 s de réaction, 3° → 0,5° d'erreur, visée à 14 rad/s, allure 1, repli, fusées, accroupi) le bot au lance-fusées reste à 71 %, celui à
+l'arbalète à 83 % — alors que la **vie** déplace tout (Occulteur : 76 % à 100 points, 65 % à 130, 35 % à 180). Un banc qui règle « la force » sur les réflexes seuls promet une cible qu'il ne peut pas atteindre : mesurer d'abord ce qu'un levier peut, avec un réglage extrême, avant de le régler fin.
+
+### Modéliser l'éblouissement dans la vue d'un bot déplace TOUTE la calibration du banc — et le joueur type en paie le plus (2026-10-03)
+
+Chantier SOLO, S9b. Première version du modèle (« un bot ébloui ne distingue plus le corps ») : la matrice de S4 passe de **79 / 55 / 34 % à 66 / 61 / 36 %** (FACILE, NORMAL, DIFFICILE ; graines 401-416, 384 duels par ligne), le banc court (`test_banc_bot`) rend NORMAL plus facile que FACILE, et la garde de
+déterminisme (« même graine, même duel ») rougit. Cause, établie en rétablissant l'ancien modèle (78 / 58 : le retour est à la graine près) : **le joueur type est le premier ébloui.** Il ne voit le tireur dans le noir QUE par l'éclair de son tir — un disque de lumière qui éclaire son corps — et cet éclair
+l'éblouit au même instant (`_flash_de_tir` : un pic de 0,6 à bout portant, au-dessus du seuil dès ~500 px) : le corps éclairé par l'éclair est à demi effacé, donc, pour le modèle, invisible. Un joueur, lui, voit encore le feu du canon. Le correctif : l'éclair d'un tir de la cible reste vu comme une SOURCE (sa place, à la bouche
+de l'arme, jamais celle du corps) aux mêmes conditions qu'aux yeux ouverts — jamais une vue de plus. Matrice rétablie : **78 / 52 / 34**. **Toute modification de la perception d'un bot se rejoue sur la matrice, pas seulement sur la garde d'honnêteté** : celle-ci ne mesure que « jamais plus », pas « trop moins » — un
+modèle qui aveugle le joueur type fait croire à un bot plus fort. Et les boss réglés avant ce correctif étaient réglés sur la mauvaise perception (Braconnier : 57 % à 250 points de vie sous l'ancienne vue, 56 % à 190 sous la vue finale) : un réglage de force se refait après chaque changement du modèle de vue.
+
+### Un PNJ mort reste solide : `die()` ne touche pas à la collision (2026-10-02)
+
+Chantier SOLO, S6, `aventure_partie.gd`. `Player.die()` cache les sprites et éteint les lampes, **mais ne touche ni à la collision ni au groupe** : un PNJ abattu restait un cadavre
+invisible, qui arrête les balles et bloque le passage (en duel, la manche finit et l'arène est purgée, personne ne le voit). Le moteur range donc chaque mort (collision éteinte, caché).
+Garde : « un PNJ abattu n'est ni solide ni visible » (sabotage P13).
+
+### Une suite `--script` ne peut pas nommer une classe qui dépend d'un autoload (2026-10-02)
+
+Chantier SOLO, S6. Le script d'une suite se compile **avant** les autoloads : écrire `Player`, `Presentation3D`, `LocalInputProvider` ou `CapteurCorps` dans `test_aventure_partie.gd` donne
+« Identifier not found: NetworkManager » dès le chargement, avant toute vérification. On atteint ces classes à l'exécution (`load("res://….gd")`, `get_script().get_global_name()`, `get_script_constant_map()`).
+Le contrepoint vaut pour le jeu : `presentation_3d.gd` ne nomme jamais `Player` (`Array[Node2D]`), sans quoi `test_plafonniers`, qui le compile en `--script`, casse.
+
+### `bool(n.get("est_pnj"))` plante sur un nœud qui n'a pas la propriété (2026-10-02)
+
+Chantier SOLO, S6. `get()` rend `null` sur une propriété absente et `bool(null)` est « Nonexistent 'bool' constructor » : un corps factice de test (sans `est_pnj`) faisait tomber `_adversaire()` du bot.
+Écrire `n.get("est_pnj") == true` / `!= true`.
+
+### Le hub ne défile pas : une entrée hors de l'écran est perdue (2026-10-02)
+
+Chantier SOLO, S6, écran de l'aventure. Onze chapitres et dix salles sur le même écran : les salles tombaient sous le bord, inatteignables. Le hub n'a pas de `ScrollContainer` ; l'écran passe
+donc par deux niveaux (chapitres, puis salles) et regroupe les chapitres à venir en une ligne. À compter avant d'ajouter des entrées à un écran de hub : une capture le montre, la suite non.
+
+### Les corps de `Presentation3D` sont comptés au texte (2026-10-02)
+
+Chantier SOLO, S6. `test_corps_mannequin` compte, dans le texte de `presentation_3d.gd`, DEUX occurrences de la boucle qui pose l'opacité sur les matériaux d'un corps. Une troisième copie (pour les figurants)
+le faisait rougir ; la boucle des figurants est donc écrite autrement (`matieres`). Une garde de texte qui rougit après un ajout légitime se contourne en réécrivant, pas en modifiant son compte.
+
+### `duo_apparie` peut échouer quand d'autres Godot chargent le conteneur : « la manche part à l'arrivée de l'invité » (2026-10-02, signalé)
+
+Chantier SOLO, suite complète sur S3 (`e884f5b`), lancée pendant que deux sous-agents faisaient tourner leurs propres suites sur les quatre
+cœurs du conteneur : `duo_apparie` a rougi une fois (« la manche n'a jamais démarré côté hôte », délai `ROUND_TIMEOUT` de 20 s de
+`tools/test_online_match.gd`). S3 ne touche à aucun chemin de départ d'un match apparié ; relancé SEUL sur le même commit
+(`./tools/run_duo.sh --apparie`), il passe trois fois sur trois, et il était vert sur S1 et S2. **Ce n'est donc pas une panne du code
+mais une fragilité du scénario sous charge** — et « flake » n'est pas une cause : la cause est le temps que met l'invité à démarrer
+quand le processeur est partagé. À retenir : une suite complète qui sert de preuve se lance sur un conteneur au repos ; un rouge de
+`duo_*` pris sous charge se relance seul avant d'être cru, et se signale. Non corrigé (hors périmètre : le scénario n'est pas du
+chantier).
+
+**Et `duo_killcam`, le même soir**, sur S5 (`95ea71c`), pendant que le sous-agent de S4 faisait tourner ses duels : « la manche n'a
+jamais commencé côté client » — même symptôme, même cause ; relancé seul (`./tools/run_duo.sh --killcam`), trois fois sur trois vert.
+
+**Et `duo_ralenti` puis `duo_reconnexion_tardive`, le 2026-10-03**, sur S6 (`57514a2`), sous une charge moyenne de 11 à 12 pour quatre
+cœurs (deux sous-agents au travail) : `duo_ralenti` relancé seul passe trois fois sur trois ; `duo_reconnexion_tardive` rougit deux fois
+sur trois sous la même charge — **et une fois sur trois sur la base d'avant S6 (`f113da8`)**, ce qui le range dans la même fragilité.
+La CI GitHub, sur une machine au repos, a passé `57514a2` au vert. Règle tenue : un rouge de `duo_*` pris sous charge se compare à la
+base sous la même charge avant d'être attribué.
+
+### Une suite qui monte `main.tscn` ne se termine pas quand `game_state.gd` ne compile pas : elle attend, des heures (2026-10-02)
+
+Chantier SOLO, S3. Un `var cran := ui.selected_training_cran()` (`ui` est un `Node` non typé : le `:=` ne sait pas inférer) a fait échouer le
+chargement de `game_state.gd`. `main.tscn` s'est instancié sans script, `main.ui` a levé une `SCRIPT ERROR` dans la coroutine de la suite, et
+**la suite n'a jamais appelé `quit()`** : douze minutes de CPU à 100 % avant qu'on s'en avise, alors que la suite saine tourne en 40 s. Rien de
+rouge à l'écran, seulement un journal qui ne se termine pas. Règle : une suite à scène qui dépasse largement son temps habituel est une suite
+qui attend — lire le début de son journal (`Parse Error`), ne pas la laisser finir. Et `run_suites.sh` n'a aucun délai par suite.
+
+### Un banc déroulé plus vite que le jeu hérite de ses minuteurs à horloge MURALE : le duck des pas durait 4 s de jeu au lieu de 0,3 (2026-10-02)
+
+Chantier SOLO, S4, `tools/banc_bot_duel.gd`. `AudioManager.play_sfx_2d` étouffe les pas de 6 dB pendant `DUCK_TIR_S` (0,3 s) après un tir, et
+compare `Time.get_ticks_msec()` à l'instant du dernier tir : **l'horloge du mur, pas celle du jeu**. À pas d'image fixe, déroulé à ~700 images
+par seconde, 0,3 s de mur font ~4 s de jeu — après le moindre tir, le banc rendait les pas du duel douze fois trop discrets, et d'autant plus que
+la machine était rapide ou libre. Les premiers relevés de S4 n'étaient donc ni fidèles au jeu ni rejouables d'une machine à l'autre. Remède, dans
+le banc seul : à chaque image, le dernier tir est reculé de ce que le JEU a écoulé depuis (`AudioManager._dernier_tir`). **Tout minuteur du jeu
+qui lit `Time.get_ticks_msec()` (`audio_manager.gd` en a deux ; `game_state.gd` et `player.gd` en ont pour le réseau, hors ligne) est faux dans
+une simulation accélérée** — à chercher avant de croire un banc qui fait tourner le jeu plus vite que le jeu.
+
+### Ce qu'un duel lance sonne dans le duel suivant : la douille d'un joueur remis sur pied (2026-10-02)
+
+Même banc. `Player._tinter_la_douille` joue le tintement d'une douille 0,3 à 0,5 s après le tir, par un minuteur qui ne se vérifie que par
+`not dead`. Le banc remettait le joueur abattu sur pied au duel suivant : la douille du tir fatal sonnait alors **à sa NOUVELLE place**, au premier
+instant du duel — un bot « entendait » un son qui n'avait aucune source, selon l'instant exact du dernier tir (`son:shell` comme première
+perception du bot, 0,03 s après le départ, sur plusieurs duels de 54). Remède : **attendre, avant de toucher à quoi que ce soit, que tout ce que le duel
+d'avant a lancé s'éteigne** (60 images : le double du plus long minuteur), puis remettre. Mesuré en rejouant le même lot de 54 duels dans deux
+processus : 22 duels différents au départ, 15 une fois le duck recalé, **1 une fois l'attente posée** (puis, à une seconde mesure, 0 issue différente — il
+reste des écarts de 0,02 px sur deux duels, d'origine non trouvée, que rien n'amplifie en général). Règle : une simulation répétée **laisse mourir**
+son état avant de le remettre, elle ne le remet pas en espérant que les minuteurs en vol s'en aperçoivent.
+
+### Le `randf()` global n'est PAS à vous : un banc qui rejoue doit le reseeder à chaque image, et la graine d'un gadget en dépend (2026-10-03)
+
+Même banc, `tools/banc_bot_duel.gd`. **La CI de `ff1076c` : « même graine, même duel » rouge** — le duel NORMAL / `avance_torche` / graine 3, joué deux fois avec un
+autre duel entre les deux, finissait à 2,18 s (2 tirs du bot) puis à 5,63 s (6 tirs), sur une machine au repos ; ici il passait toujours. **La première hypothèse (un gadget
+du 1er duel resté debout) était fausse** : `_remettre_au_calme` purge `bullet_container` (où naissent gadgets et fusées), et un duel rejoué SANS duel intermédiaire diverge
+déjà. **La vraie cause, mesurée** : `GameState._poser_gadget` tire la graine du gadget au `randi()` GLOBAL (`var graine := randi()`, ligne ~3252), et cette graine fixe l'onde de
+panne du Parasite (`gadget_gresillement.gd`), donc la lumière des torches, donc l'éblouissement, donc tout le duel. Or le jeu tire AUSSI hors des événements du duel, à la
+cadence d'accumulateurs qu'aucun duel ne remet à zéro : la poussière du faisceau (`Player._dust_accum`, trois tirages toutes les `DUST_INTERVAL`), le minuteur d'ambiance
+(`AudioManager._ambiance_timer`, 7 à 18 s), et d'autres. Leur phase à l'entrée du duel décalait le flux de quelques tirages avant la pose : **graine de gadget 3567825414 au 1er
+passage, 1987688319 au 3e** (même graine de duel), onde différente, positions du bot différentes dès l'image 74 (0,0016 px en x, 0,007 en y, puis ce que les seuils du bot en
+font). Localement l'issue restait égale par chance ; en CI, non. **Un `seed()` au départ du duel ne suffit donc pas.** Remèdes, dans le banc seul : (1) **reseeder à chaque image**
+(`seed(GRAINE_BASE + graine * 104729 + image * 7907)` en tête de boucle) — un accumulateur inconnu ne décale plus que l'image où il tire ; (2) remettre à neuf ceux qu'on connaît
+(`_figer_le_tirage` : `_dust_accum`, `_torch_breath_t`, minuteur d'ambiance), pour qu'ils ne tirent pas dans la même image qu'une pose ; (3) redresser l'échelle des deux corps
+(`redresser_le_corps`) : `move_and_slide` réécrit leur transformation et `Node2D` en relit l'échelle en simple précision, qui dérive de ~1e-6 par duel (1 → 0,99999905 →
+0,9999979) et décalait la rotation d'un ulp dès l'image 6 — cela seul ne changeait pas l'issue, mais un banc qui rejoue ne part pas d'un état qui dérive. Ablations mesurées :
+sans (1), la graine de gadget est égale mais la trace diverge au relevé 15 (1,6 s) ; sans (1) ni (2), la graine diffère ; (2) seul ne suffit pas, (1) seul suffit sur cette
+graine. **Gardes** (`test_banc_bot`, rouges sur toute machine puisqu'elles lisent le tirage et non l'issue) : même graine de gadget au 1er et au 3e passage, trace entière
+(21 relevés) égale, aucun gadget ni fusée debout au départ d'un duel. Règle : **un banc qui compare deux passages compare des flux de hasard, pas des événements** ; tout ce que le
+jeu tire au `randf()`/`randi()` global est à figer PAR IMAGE, et un test d'égalité d'issue seul laisse passer un banc non rejouable — il faut comparer ce qui précède l'issue.
+Signalé, non corrigé : le jeu lui-même tire hors événement (poussière, ambiance) dans le flux qui nourrit la graine d'un gadget ; sans effet en partie (personne ne rejoue), mais une
+graine de gadget tirée d'un `RandomNumberGenerator` propre au match serait indépendante de l'ambiance. Et l'écart de 0,02 px « d'origine non trouvée » de S4 (piège précédent) en
+était, très probablement, un cas.
+
+### Un relevé pris à la FIN d'un duel ne voit que ce qui a survécu — et un duel rejoué dans un autre ordre n'est pas exactement le même (2026-10-03)
+
+Même banc, deux constats de l'intégration de S9b. **(1)** `graine_gadget_bot` était lue sur « le gadget du bot encore debout » à la fin du duel : −1 dès qu'une balle l'avait détruit, donc une garde « même graine » qui comparait
+−1 à −1 — rouge à cause de `graine_a != -1`, mais elle aurait passé en silence sans cette précaution. Ce qu'un événement a produit se relève à l'événement, pas à la fin. **(2) Signalé, non corrigé : l'issue d'un duel dépend
+encore, pour ~4 % d'entre eux, de ce qui a été joué avant sur le même processus** (mesuré : 3 duels sur 48 d'écart entre un lot joué carte après carte et le même lot joué seul ; 2 sur 48 en ne changeant que le découpage `--part`).
+Cas isolé et reproductible : la Croisée, NORMAL, `avance_torche`, graine 15 — seul, ou après la graine 14, le bot gagne en 3,03 s ; après la graine 11, le joueur gagne en 4,88 s. La trace diverge dès le premier relevé : **le joueur,
+posé en (717,5 ; 402,5) à l'image 1, est en (574,9 ; 410,5) à l'image 2** (un saut de 143 px, vitesse nulle), alors que le bot est identique. Le saut ne vient d'aucun appel de script (`print_stack` depuis la notification de
+transformation ne montre aucune trame de script) ni de `_reapparaitre_le_joueur`, ni de la killcam (`ReplaySystem.playing_back` faux), ni du placement (`distance_depart` égal) : une écriture native, non trouvée. **Conséquence** : le
+banc long est statistiquement juste (la moyenne ne bouge pas), mais deux découpages `--part` ne rendent pas les mêmes duels un à un, et la forme courte n'est reproductible QUE dans son ordre. La garde stricte (a, milieu, b) ne le voit
+pas : le saut dépend de ce qui précède, et son triplet ne le contient pas. À reprendre si un jour une garde doit comparer deux duels « isolés ».
+
+### Un étalon qui ne sait pas se cacher ne mesure pas un joueur qui change de place (2026-10-02)
+
+Même banc. Le joueur type « qui tire puis change de place » a d'abord gardé sa torche allumée pendant qu'il changeait de place : il courait en pleine
+lumière, trahi à chaque pas, et perdait **77 % de ses duels contre NORMAL** (23 % de victoires) alors qu'il en gagnait 73 % contre FACILE — vraisemblablement
+parce qu'il cessait de tirer pendant que le bot continuait (non isolé). Avec la torche allumée seulement pendant l'engagement et éteinte en chemin,
+il gagne 56 % : un joueur qui change de place dans le noir. **Un comportement de référence qui perd contre tout est un défaut de
+l'étalon, pas une information sur le bot** ; le chiffre qui paraît « trop mauvais » se regarde avant de régler quoi que ce soit.
+
+### Une seconde instance de la bibliothèque d'un banc monte un SECOND jeu (2026-10-02)
+
+Même banc. `Duel.monter()` instancie `main.tscn` s'il n'en tient pas déjà un ; une suite qui fabriquait un deuxième `Duel` pour la mise en scène de la
+salle montait un deuxième jeu à côté du premier — deux `GameState` dans l'arbre, des duels qui ne gagnaient plus jamais (0/4 pour le PNJ sourd et
+aveugle, le plus facile qui soit), sans une ligne d'erreur. Une garde qui échoue « partout, sur le plus simple » se suspecte avant le code
+qu'elle juge. Le banc de la suite est maintenant UN objet, tenu par la suite.
+
+### `has_method("occultation_pour")` est vrai de TOUS les gadgets : le socle la définit — et l'aveuglement « sous un gadget qui bouche la lumière » de S2 valait pour n'importe lequel (2026-10-03)
+
+Chantier SOLO, S9. `PerceptionBotNoeud._gadget_non_modelise()` (S2) rendait le bot aveugle si un gadget portait `occulte_la_lumiere` **ou** `has_method("facteur_de_lampe")` — que `GadgetBase` définit pour tous (elle rend 1). La ROADMAP
+disait « tant qu'UN gadget qui bouche ou étouffe la lumière est posé » ; le code disait « tant qu'un gadget quelconque est posé ». Une mine, une poudre, une bobine, jamais éteintes jusqu'à leur mort (aucune pour trois d'entre elles),
+laissaient un bot sans vue pour la manche. Aucune suite ne le voyait : la garde de S2 posait un faux gadget qui avait `occulte_la_lumiere` et rien d'autre. **Les dix classes du vrai jeu l'ont montré** (« aveugle : true » sous la mine). Le premier
+remplacement (`has_method("occultation_pour")`, pour reconnaître un volume) retombait dans le même piège : le socle la définit aussi. Un type se reconnaît à un membre que SEUL le type porte (`opacite`, pour `GadgetVolume`, qu'un fichier chargé
+en `--script` ne peut pas nommer) — et un test qui doit prouver « sauf les volumes » le prouve sur les vrais gadgets, pas sur un faux qui a juste le bon nom de méthode. Même famille : le garde `has_method()` de CLAUDE.md.
+
+### Rendre la réserve AVANT de poser le bot neuf, c'est la lui rendre à celui d'avant (2026-10-03)
+
+Chantier SOLO, S9, `tools/test_bot_equipement.gd`. Une mise en scène du vrai jeu qui remet à zéro la recharge d'une minute puis installe le bot de la classe suivante : dans les images qui séparent les deux gestes, **le bot de la scène d'avant — sa mémoire
+pleine d'une cible, sa règle toujours vraie — repose son gadget**, et la scène suivante trouve « un gadget du poseur 2 » qui n'est pas celui de sa classe (quatre scènes sur dix, sans erreur). Remède : poser le bot neuf, PUIS rendre la réserve ; éteindre la lumière de la scène d'avant
+et lui laisser quarante-cinq images avant de toucher à quoi que ce soit. Même famille : « Un corps libéré par `queue_free()` reste dans le groupe `players` ».
+
+### Un corps libéré par `queue_free()` reste dans le groupe `players` jusqu'à la fin de l'image : le bot suivant le prend pour son adversaire (2026-10-02)
+
+Chantier SOLO, S3, `tools/test_bot_combat.gd`. Une situation libérée puis la suivante montée dans la même image : le bot de la seconde a vu,
+à son premier pas de physique, le tireur de la première — posé à sa propre place — par son halo de proximité. Une vue de plus dans le noir, à
+chaque situation, et la garde d'honnêteté rougissait sur un bot parfaitement honnête ; deux situations vivantes en même temps, de leur côté,
+se prennent l'une l'autre pour adversaire (le bot ne visait plus, la cible étant « à 0 px »). Remède : libérer sur-le-champ
+(`remove_child` puis `free`, depuis une coroutine — jamais depuis un `_physics_process`), et ne jamais faire vivre deux situations ensemble.
+Même famille : **une torche qu'on coupe met quelques images à mourir** — un bot posé devant la voit encore, et le droit lui est dû d'y réagir.
+
+### Un corps ne s'accroupit pas dans la pierre : un banc qui annonce « accroupi » doit lire la posture RÉELLE (2026-10-02)
+
+Chantier SOLO, S5, `tools/banc_perception_bot.gd`, famille `plafonnier_bas`. Première version : des cibles à 10, 20, 35 et 60 px derrière un muret, debout puis
+« ACCROUPIE ». Le journal disait « accroupie », le capteur lisait 0,667 (éclairé) à 10 et 20 px — exactement ce qu'un corps DEBOUT donne — et le modèle voyait. Aucun
+sabotage n'aurait mordu : la prise ne testait pas ce qu'elle annonçait. **`Player` ne s'accroupit pas quand son centre est « dans la pierre »** (`RAYON_DEDANS`,
+16 px : `_regler_enjambement` le tient debout, `poser_posture(is_crouch_pressed() and not enjambe)`), et l'état de la prise précédente lui survit tant que le corps ne
+sort pas. La cible à 10 px (centre à 13 px de la face de sortie) était dans la pierre ; celle à 20 px héritait de son refus. Remède : cibles à 22 px et plus, et le
+banc LIT `accroupi` sur le corps après la pose et ÉCHOUE si la prise n'est pas celle qu'il dit (`posture_obtenue`). **Une prise qui dépend d'un état du jeu lit cet état,
+jamais la commande qu'elle a posée** — même leçon que « Écrire `flashlight_on` hors de la physique n'allume pas la torche », payée une fois de plus.
+
+### Une lumière neutre que les murs doivent couper pour TOUS les corps n'a pas de masque d'ombre évident : ni `1`, ni `1 | 2 | 4` (2026-10-02)
+
+Chantier SOLO, S5, `plafonnier.gd`. Quatre récepteurs de corps (le sprite adverse et le capteur croisé, portés par `ENNEMI` ; le capteur de soi de J1 et celui de J2, portés par
+`JOUEUR_LOCAL | couche d'ombre du corps | recepteur_retro`) et un seul masque d'ombre pour une lumière qui n'est ni la torche d'un joueur ni la rétrodiffusion. **`1`**
+(la fusée posée, le plafonnier d'un premier jet) ne croise AUCUN d'eux : le corps est « éclairé en entier » à travers le mur, sans erreur ni avertissement. **`1 | 2 | 4`**
+(le patron de la torche de J2) croise tout, mais le 4 est la couche d'ombre du corps de J1 : le plafonnier aurait fait ombrer J1 — et lui seul — par sa propre étoile, et
+plongé son porteur dans son ombre sous la lumière qui l'éclaire. Le bon masque est `DECOR | ENNEMI | recepteur_retro(0) | recepteur_retro(1)` (1 | 2 | 128 | 256), que
+`CanauxLumiere.masque_ombre_neutre_pour_les_corps()` dit une seule fois : les bits 128 et 256 sont ceux que portent les capteurs de soi et qu'AUCUN occluder ne porte.
+Ils sont du côté des ombres ; la portée (`range_item_cull_mask`) reste `1 | 2 | 4`, car `test_ombre_propre` interdit 8, 128 et 256 dans une portée. **Preuve** : le banc
+`plafonnier_mur` lit le capteur de soi de J2 dans sa propre vue — 0,000 derrière la paroi, 0,667 sans —, et ses deux sabotages (ombres coupées, bits retirés) rougissent par cette
+seule lecture : « bits retirés » laisse le capteur croisé de la cible à 0,000 (le bit `ENNEMI` suffit à celui-là), et « ombres coupées » le rend éclairé (0,667) sans
+que le banc échoue, le modèle disant « non » de toute façon. Seul le capteur de soi dit que les bits 128 et 256 servent.
+
+### Un capteur de corps lit la lumière REÇUE, jamais la ligne de vue : un mur entre le bot et un corps éclairé par SA lueur ne le noircit pas (2026-10-02)
+
+Chantier SOLO, S2, `tools/banc_perception_bot.gd`. Le banc compare le modèle de vue du bot au capteur du corps de la cible (`CapteurCorps`).
+Première lecture, fausse : « un mur entre eux doit noircir le capteur ». Le capteur est le disque que le shader des corps lit, éclairé par les
+lumières dont le masque croise celui du corps ; **il ne sait rien du bot.** Une cible dont la torche brûle reçoit sa propre rétrodiffusion
+(capteur 1,000) que le bot soit devant ou derrière une paroi pleine — la paroi n'est entre aucune lumière et son corps. Une famille « lampe
+derrière un mur » ne prouve donc rien du modèle : le capteur y est éclairé, le modèle ne voit pas (il exige une ligne de vue), et le banc le
+classe « manque », légitime. **Les murs ne se prouvent contre un capteur que par une lumière qui n'est PAS celle du corps** — la torche du
+bot, son halo, sa fusée — placée de l'autre côté de la paroi : là le capteur est noir (0,000), et un modèle qui oublie le mur le trahit
+(sabotage : 3 prises « malhonnêtes »). Règle : avant de croire qu'une famille de bancs juge une règle, se demander **quelle lumière** le capteur
+reçoit, et si la règle jugée est entre elle et le corps.
+
+### Une « vue unique » faite à la main garde le zoom de l'écran scindé (2026-10-02)
+
+Même banc. `GameState._apply_network_mode` pose le zoom du duel (`GameSettings.accorder_au_mode`) : ×1,25 en écran scindé, **×1,5 en vue
+unique** (Q15 revue). Un outil qui cache la vue de J1 (`photographe._vue_unique`, `planche_q42._passer_en_vue_unique`) ne change que
+l'affichage : la manche a été démarrée en écran scindé, la caméra reste à ×1,25. Le cadre du modèle, calculé pour la vue unique, s'écartait
+de l'écran réel de **145 px** à chaque coin ; trente-deux points sur le bord, douze mal classés. Remède dans le banc : après avoir caché
+l'autre vue, `GameSettings.accorder_au_mode(false, false)` puis le zoom des deux caméras — après quoi l'écart tombe à 0,08 px. **Une vue unique
+qui n'a pas accordé le mode au jeu mesure le cadrage d'un autre mode.** Mesuré sur la copie de `_passer_en_vue_unique` que ce banc avait
+d'abord faite ; `photographe._vue_unique` et `planche_q42` appellent les mêmes lignes et n'ont PAS été revérifiés — à savoir avant de
+mesurer, par elles, ce qui dépend du cadrage (la portée au bord de l'écran, le décalage vers la visée, le cadre).
+
+### Un compteur incrémenté dans une lambda reste à zéro : une garde « jamais » peut être vide (2026-10-02)
+
+Chantier SOLO, S1. `test_bot_navigation` surveillait le bot pendant 60 s dans une lambda passée à `_simuler` : `var jamais := 0`, puis
+`jamais += 1` dans la lambda si le bot tirait. **Une lambda GDScript capture un entier PAR COPIE** : l'incrément se fait sur la copie, la
+variable de l'appelant reste à 0, et le contrôle `jamais == 0` passait quoi que fasse le bot. Rien ne le disait — pas d'erreur, pas
+d'avertissement. Ce n'est qu'en sabotant la garde (un bot qui tire dès qu'il marche) qu'elle est restée verte, seule des deux
+vérifications voisines ayant rougi. Remède : un tableau (`var jamais := [0]`, `jamais[0] += 1`), dont la lambda partage la
+référence. **Une garde de type « jamais » ne se croit qu'après l'avoir vue rougir** — c'est la règle de sabotage du dépôt, ici
+appliquée à une garde qu'on pensait écrite juste.
 
 ### Un banc qui ÉPARGNE une lumière ne la rallume pas : éteinte avant d'être déclarée gardée, elle le reste (2026-10-01)
 
@@ -31396,6 +31648,2102 @@ Adrien sous ces numéros par la coordinatrice le 2026-10-01) :
   fusée (160 px en vol, 440 posée ; son halo, depuis Q58, 220 → 468 → 220 px), avant comme après Q58. C'est la lueur 2D du
   nuage, que ses cubes (GV1bis) reprennent par la lightmap. GV2 n'y touche pas : les nappes ne sont pas des
   `GadgetVolume`, et leurs cubes lisent la lightmap, où la fusée pose sa vraie lumière.
+
+---
+
+## Chantier — le mode solo : bot honnête, entraînement à crans, aventure (SOLO, inscrit le 2026-10-02)
+
+**Inscrit par une session cloud de brainstorm** (branche `ccr-50a162ad-e2u8lr`), sur trois échanges avec Adrien le
+2026-10-02. **Aucune ligne de code n'était écrite à l'inscription** (S1, faite le même jour, est la première : voir plus bas) : cette section consigne ce qui est tranché, l'ordre des étapes et
+les questions encore ouvertes. Les décisions elles-mêmes sont dans « Décisions actées », à la même date.
+
+**Pourquoi ce chantier.** Deux constats de « prêt à l'essai » y mènent. PE4 dit que la première minute décide de
+tout, et aucun écran n'apprend aujourd'hui à jouer dans le noir. PE5 dit qu'avec une dizaine de testeurs la file
+d'attente sera souvent vide. L'entraînement actuel ne répond à aucun des deux : c'est un bac à sable avec une cible
+fixe (`training_target.gd`) qui compte les dégâts.
+
+### La règle qui prime : un adversaire HONNÊTE
+
+Adrien, 2026-10-02 : « l'adversaire doit être honnête : ne percevoir que les sons et la lumière, avec une précision
+plus ou moins bonne sur chaque son, et des réflexes adaptés en fonction de leur difficulté ». **La difficulté vient
+des réflexes et des décisions, jamais de l'information.** Un bot qui saurait où l'on est dans le noir trahirait le
+jeu (la seule information est la lumière) et apprendrait de mauvais réflexes au joueur, qui les paierait ensuite en
+ligne.
+
+- **Les commandes.** Le bot est un `InputProvider` de plus, à côté de `LocalInputProvider` et
+  `NetworkInputProvider` : `player.gd` ne sait pas d'où viennent ses commandes, le bot « appuie sur les touches » et
+  subit donc les mêmes règles (vitesses, root, munitions, recharge). Aucune simulation parallèle à tenir égale.
+- **L'ouïe.** Le signal `AudioManager.son_localise` (chantier « le son rendu visible ») annonce déjà chaque son
+  positionnel avec sa position, son émetteur, sa famille, sa portée et son étouffement (mur, fumée). Le bot l'écoute,
+  mais ne reçoit jamais la position exacte : une **zone d'incertitude** dont la taille dépend de la famille (un tir se
+  situe bien, un pas mal), grandit avec la distance et derrière un mur, et se resserre avec la difficulté.
+- **La vue — PAR LE CALCUL** (Adrien : « oui le recalcul »). Les capteurs (`capteur_corps.gd`) calculent sur le GPU
+  et rien ne relit leur résultat côté CPU. Le relire à chaque image bloquerait le rendu — un hoquet par image, là où
+  la cible est le 1 % bas ≥ 60 — et rien ne se testerait sans fenêtre. Le bot voit donc par un **modèle** : « la cible
+  est dans le cône ou le halo d'une lumière connue (torche, éclair de tir, fusée, lumière fixe), aucun mur entre la
+  lumière et elle, aucun entre elle et le bot ».
+  ⚠️ **Un modèle n'a le droit de se tromper que dans un sens : voir MOINS que la lumière, jamais plus.** La
+  rétrodiffusion et certains gadgets n'y entreront qu'à part, et d'abord pas du tout. Deux gardes, à écrire avec
+  l'étape : une suite headless (un bot dans le noir, derrière un mur, ne sait rien — sabotée pour la voir rougir) et un
+  banc en vraie fenêtre qui confronte le modèle aux capteurs.
+- **Les réflexes**, ce que règle la difficulté : délai entre percevoir et agir, erreur et lissage de visée, mémoire
+  de la dernière position connue qui s'efface, prudence (éteindre la torche, s'accroupir, oser tirer alors que
+  l'éclair trahit).
+
+### Deux axes, un seul bot
+
+Le **déplacement** (immobile → ronde répétitive → libre dans une zone → libre partout, il cherche) et la
+**perception et les réflexes** (sourd et aveugle → perçoit sans tirer → tire s'il voit ou entend, lent → vif) sont
+deux réglages indépendants d'un même **profil de bot** (une ressource de données, comme `flare_profile.gd`).
+L'aventure monte dans ce tableau ; les crans de l'entraînement en sont quelques cases. On n'écrit qu'un bot.
+
+**Le bot porte la classe par défaut** (Adrien : « On verra ensuite pour les pimper et leur affecter de nouvelles
+classes ») : pas de gadget à lui tant que S9 n'est pas ouvert.
+
+### L'entraînement : il s'AJOUTE à l'existant
+
+Adrien : « il s'ajoute à l'entraînement actuel : on choisit la difficulté du bot ». Trois crans, et le troisième en a
+trois lui-même (Adrien : « mets trois crans de difficulté en plus avec plus ou moins de réflexes ») :
+
+1. **Cible immobile** — la cible d'aujourd'hui, inchangée.
+2. **Adversaire mobile** — il circule sur la carte choisie, cartes de joueur comprises (il se repère sur la grille de
+   cases, `AStarGrid2D` ou équivalent), et ne tire jamais.
+3. **Adversaire qui tire s'il voit ou entend** — facile, normal ou difficile : seuls les réflexes changent, jamais ce
+   qu'il perçoit.
+
+### L'aventure : des salles, des lumières fixes, des PNJ, un boss par chapitre
+
+Adrien : « quelque chose avec des salles, des lumières fixes, des trajets dans le noir, et des PNJ plus ou moins bien
+cachés, avec de plus en plus de mouvement. Mais d'abord immobiles, ensuite mobiles avec trajets répétitifs, puis plus
+libres par zone ». Puis : « une suite de salles avec un boss final par chapitre, et chaque fin de chapitre débloque une
+classe pour le mode solo. On peut choisir librement sa classe une fois débloquée dans le mode solo. »
+
+**Les règles d'un niveau** (Adrien, 2026-10-02, réponses à SOLO-Q1 à Q4) :
+
+- **Un niveau = une salle.** « La salle est un niveau. »
+- **On l'emporte en éliminant tout le monde.** « Oui il faut éliminer tout le monde » : pas de sortie à atteindre, pas
+  de salle qu'on traverse sans tirer.
+- **Mourir recommence la salle**, pas le chapitre.
+- **Des chapitres de dix niveaux** (onze chapitres, de 0 à 10). Le dixième de chaque chapitre est le **boss** : « juste un bot en mode moyen avec
+  la classe qu'on débloque à la fin du chapitre » — le cran 3 de l'entraînement, difficulté normale, dans la classe que
+  le chapitre offre. Le boss est donc le **même bot** que l'entraînement : aucun comportement de boss à écrire.
+- **Les salles sont écrites en données par les sessions**, en commençant par le chapitre 0, l'initiation. L'éditeur de cartes n'est
+  pas étendu pour l'instant (« On verra ensuite »).
+
+**L'échelle des PNJ d'un chapitre à l'autre** reste celle d'Adrien — immobiles, puis rondes répétitives, puis libres
+par zone, puis libres partout —, répartie sur les dix chapitres quand on les écrira. Seul le chapitre 0 est détaillé
+ci-dessous.
+
+**Une initiation, puis dix chapitres : de 0 à 10** (Adrien, 2026-10-02 : « Le chapitre d'initiation est le chapitre 0. Il
+débloque la classe de base. » ; puis, à la question du chapitre sans classe : « Chapitre 10 on verra plus tard ce qu'on
+gagne »). **L'ordre est celui du rang en ligne** (« oui l'ordre en ligne ») : le solo prépare à l'ordre où l'on débloque
+en ligne. Le chapitre 0 débloque **le Parasite** (rang 1), la classe de base — on le joue pendant l'initiation, il devient
+sien au boss — ; puis le chapitre 1 le Fumiste, le 2 l'Illusionniste, le 3 le Braconnier, le 4 le Terrassier, le 5
+l'Incendiaire, le 6 la Sentinelle, le 7 l'Occulteur, le 8 l'Allumeur, le 9 le Spectre. **Le chapitre 10 n'a plus de classe
+à offrir** : ce qu'on y gagne, et la classe de son boss, sont laissés à plus tard.
+
+**Onze chapitres, confirmé** (Adrien, 2026-10-02 : « Oui je veux 11 chapitres (intro + dix chapitres). On verra
+ensuite ce que c'est ») : l'initiation (0), puis dix chapitres (1 à 10). Le contenu du chapitre 10 et ce qu'on y gagne
+restent à définir, sans bloquer aucune étape avant S8.
+
+**Le boss porte sa classe, et son gadget depuis S9** (2026-10-03). Jusque-là le boss du chapitre 0 avait l'arme, la torche et le root
+du Parasite, sans son gadget. S9 donne au bot une règle par gadget, pour les dix : le boss (`ProfilBot.boss()`, le profil NORMAL) se sert du gadget de la classe
+qu'il porte. ⚠️ **Mais l'arme d'une autre classe n'était pas réglée** (S9, « Ce qui est mesuré par classe ») : **S9b (2026-10-03) a réglé les dix boss** — `ProfilBot.boss(classe)`,
+table `REGLAGES_BOSS`, chacun battu environ 55 % du temps par le joueur type de référence. Le Parasite garde le profil NORMAL du cran 3 ; les autres reçoivent ce que leur arme demande (une rafale, un repli, une distance
+d'engagement) et, quand ni les réflexes ni la rafale ne suffisent, **de la vie** (voir « S9b » : c'est un choix pour Adrien).
+
+**Le déblocage des classes est propre au solo.** Il ne touche ni `RankLoadout` ni le rang : en ligne, seul le rang
+débloque (Phase 7, règle du miroir en classé). Les matchs solo n'alimentent pas l'ELO ; leur archive dans
+`match_history.json`, s'ils y vont, doit les marquer comme tels pour que le rejeu du journal (Phase 4, étape 2c) ne les
+envoie jamais.
+
+### Les plafonniers — les lumières fixes de l'aventure
+
+Adrien : « les lumières fixes ne s'éteignent pas. Ce sont des plafonniers. Il faut les implémenter. » Un plafonnier est
+une **lumière posée, permanente et indestructible**, qui dessine au sol une flaque de lumière cernée de noir. Il a trois
+rôles, qui ne valent qu'ensemble :
+
+- **il montre les PNJ** qui s'y tiennent, au joueur comme à la caméra iso ;
+- **il trahit le joueur** qui le traverse : le modèle de vue du bot (S2) le compte parmi les lumières connues, au même
+  titre que la torche ou l'éclair d'un tir ;
+- **il porte ombre** : les murs le coupent comme ils coupent la torche (la règle de `map_geometry.gd` — collision et
+  occlusion tirées des mêmes rectangles — s'applique à lui sans rien ajouter).
+
+Ce qu'il n'est pas : ni une torche (pas de cône, pas d'éblouissement — à confirmer au premier essai), ni un objet du
+duel en ligne. Il vit dans la couche aventure, et n'entre dans les cartes de duel que si Adrien le demande un jour, avec
+une montée de `Protocol.VERSION`. ⚠️ Coût : une lumière à ombres de plus par plafonnier ; n'allumer que ceux proches du
+joueur. **Écrit en S5 (2026-10-02), et livré NON MESURÉ** : la consigne d'Adrien d'interdire tout relevé de cadence a retiré le
+« mesuré au banc de cadence » que cette phrase promettait — voir « S5 ».
+
+### Le chapitre 0 — l'initiation
+
+**Ce qu'il doit faire** : amener un joueur qui n'a jamais touché le jeu à battre, au niveau 10, un bot en difficulté
+normale. Chaque niveau enseigne **une seule chose nouvelle**, et la salle la rend nécessaire plutôt que de l'expliquer :
+une phrase d'intention à l'entrée, aucune flèche, aucun texte pendant le jeu. Le joueur joue le Parasite, la classe que le
+chapitre lui donne à son terme. Salles de 16×16 à 24×24 cases en général, une seule pièce chacune, sauf le boss ; **la taille d'une salle n'est plus bornée par celle d'un duel** (Adrien, 2026-10-03 : « toute liberté sur la taille des cartes ») — 0.5 en fait 41×41, et le format va jusqu'à 128.
+
+| Niveau | Titre provisoire | Ce qu'on apprend | La salle | Les PNJ |
+|---|---|---|---|---|
+| 0.1 | Le premier pas | Se déplacer, viser, tirer | Un plafonnier au centre, rien d'autre | 1, immobile, sourd et aveugle, sous le plafonnier, vu dès l'entrée |
+| 0.2 | La torche | La torche révèle | Aucun plafonnier près du PNJ | 1, immobile, sourd et aveugle, dans le noir derrière un pilier |
+| 0.3 | Fouiller | Chercher méthodiquement, recharger | Plusieurs recoins, un plafonnier | 3, immobiles, sourds et aveugles, dispersés ; il faut recharger avant le dernier |
+| 0.4 | Les murs bas | Enjamber, s'accroupir derrière un mur bas | Murs bas en chicane | 2, immobiles, sourds et aveugles, derrière des murs bas |
+| 0.5 | La fusée | Éclairer loin | Une grande salle sans plafonnier | 3, immobiles, sourds et aveugles, hors de portée de torche |
+| 0.6 | Il regarde | La torche trahit : s'approcher éteint, contourner les plafonniers | Deux plafonniers sur le chemin | 1, immobile, **voit et tire**, réflexes très lents |
+| 0.7 | L'éclair | Le tir trahit : changer de place après avoir tiré | Salle en L | 3, immobiles, voient et tirent, réflexes lents ; chaque tir réveille les autres |
+| 0.8 | Il écoute | S'accroupir, avancer lentement, ses douilles | Sol nu, pas de plafonnier | 2, immobiles, **entendent** et tirent, réflexes lents |
+| 0.9 | La salle pleine | Tout ce qui précède, à la fois | Plafonniers, recoins noirs et murs bas mêlés | 5 ou 6, immobiles : sourds et aveugles, d'autres qui voient, d'autres qui entendent, réflexes lents |
+| 0.10 | Boss : le Parasite | Le duel | Une arène de duel (32×32), deux plafonniers | 1 bot, cran 3, difficulté normale, classe Parasite — un duel en miroir (sans gadget avant S9) |
+
+**Aucune ronde dans l'initiation** (Adrien : « Non pas de rondes, mais on peut augmenter le nombre d'ennemis
+immobiles ») : tous les PNJ du chapitre 0 sont immobiles, et c'est leur **nombre** qui monte, jusqu'à la salle pleine du
+niveau 0.9. Le boss est donc le premier adversaire qui bouge que rencontre le joueur.
+
+**Le format d'un niveau**, proposé pour S6 et non écrit : un fichier par niveau dans `res://assets/solo/chapitre_00/`
+(en lecture seule, comme `assets/maps/`), qui porte la carte au format de `map_codec.gd` et la couche aventure — titre,
+phrase d'intention, case et orientation du joueur, plafonniers (case, rayon, intensité), PNJ (case, orientation,
+déplacement — `immobile`, `ronde` avec ses points, `zone` avec son rectangle, `libre` —, profil de perception et de
+réflexes) ; pour le boss, la classe et la difficulté. La progression (niveaux réussis, classes débloquées, classe
+choisie) dans `user://solo.cfg`.
+
+### Les étapes
+
+Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare du moteur de l'aventure.
+
+1. **S1 — le bot se déplace** sur n'importe quelle carte (immobile, ronde, zone, libre) ; l'entraînement gagne le
+   cran 2. ✅ **FAITE le 2026-10-02** — voir « S1 » ci-dessous.
+2. **S2 — la perception** : vue calculée, ouïe, mémoire ; la garde d'honnêteté et le banc contre les capteurs. ✅ **FAITE le
+   2026-10-02** — voir « S2 » ci-dessous.
+3. **S3 — le tir et les réflexes** ; l'entraînement gagne le cran 3 et ses trois difficultés. ✅ **FAITE le 2026-10-02** — voir « S3 »
+   ci-dessous.
+4. **S4 — les profils**, réglés au banc, jamais une constante éditée à l'aveugle. ✅ **FAITE le 2026-10-02** — voir « S4 »
+   ci-dessous (le banc de jeu, les cibles, les chiffres retenus, le catalogue des PNJ de l'aventure).
+5. **S5 — les plafonniers** : la lumière posée, ses ombres, sa place dans le modèle de vue du bot. ✅ **FAITE le 2026-10-02** — voir
+   « S5 » ci-dessous. **Son coût n'a PAS été mesuré** (consigne d'Adrien : aucun relevé de cadence) : l'allumage par proximité se
+   tient par construction, jamais par un chiffre.
+6. **S6 — le moteur de l'aventure** : format de niveau, chargement, « tout le monde éliminé » → niveau suivant, mort →
+   on recommence la salle, progression sauvegardée, déblocage des classes solo, choix libre parmi elles. ✅ **FAITE le 2026-10-02** — voir
+   « S6 » ci-dessous. **Jamais jouée à la main, coût non mesuré** : le moteur est prouvé par des suites et des images fixes.
+7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss. ✅ **FAITE le 2026-10-03** — voir « S7 » ci-dessous. **Jamais jouée à
+   la main** : dix salles écrites en données, jugées par une garde qui mesure ce que chacune enseigne, et vues en images fixes.
+8. **S8 — les chapitres 1 à 9**, un par lot. **FAITE le 2026-10-03** : lot 1 (chapitres 1 à 3) — voir « S8, lot 1 » ; chapitres 4 à 6 et chapitres 7 à 9, écrits en parallèle par deux sous-agents et intégrés par le maître du chantier — voir les deux sections « S8, lot 2 » ci-dessous (chacune nomme ses chapitres). Reste le chapitre 10 (SOLO-Q8, « on verra ensuite »). **Jamais joué à la main** : quatre-vingt-dix salles en données, jugées par des gardes et par la marche du vrai corps ; **aucun banc de difficulté de salle** — les salles pleines des chapitres 7 à 9 sont probablement très dures.
+9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent). ✅ **FAITE le 2026-10-03** — voir « S9 » ci-dessous
+   (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe » — réglé par S9b.
+10. **S9b — l'intégration de S6 et de S9** (née de leur écriture en parallèle) : chaque PNJ a sa réserve de fusées et de gadget, l'éblouissement vaut pour les PNJ et pour le bot, les dix boss se règlent
+    à leur classe. ✅ **FAITE le 2026-10-03** — voir « S9b » ci-dessous.
+
+**Fichiers.** Neufs, en propre au chantier : le fournisseur d'entrées du bot, son profil, sa perception, le plafonnier,
+le moteur de l'aventure et sa progression, `assets/solo/`. **Partagés, à demander avant d'écrire** (voir
+`docs/JOURNAL_SESSIONS.md`) : `game_state.gd` (le mode, l'apparition du bot), `ui.gd` et les écrans du hub (le choix du
+cran, l'aventure), `map_codec.gd`.
+
+### S1 — FAITE le 2026-10-02 : le bot se déplace, l'entraînement gagne son cran « adversaire mobile »
+
+**Ce qui existe.** `profil_bot.gd` (ressource de données ; l'axe déplacement seul : `IMMOBILE`, `RONDE`, `ZONE`, `LIBRE`, allure,
+torche — éteinte par défaut ; la place de l'axe perception-réflexes y est documentée, rien n'y est écrit), `navigation_bot.gd`
+(chemins sur la grille de cases, `AStarGrid2D`, fonctions pures), `bot_input_provider.gd` (un `InputProvider` qui ne commande que de
+la marche, une visée lissée et la torche du profil), le cran dans `ui.gd` (deux entrées à coche, « CIBLE IMMOBILE » par défaut, qui
+remplacent le placeholder « CIBLE » ; `selected_training_cran()`) et dans `game_state.gd` (`_poser_l_adversaire_mobile`,
+`_maj_adversaire_mobile`, `_quitter_l_adversaire_mobile`). **`protocol.gd` et `Protocol.VERSION` n'ont pas bougé** : rien ne transite ;
+aucun `if transport == …` ; le nœud porte un nom (`BotP2`). Le cran 3 n'a ni entrée ni texte : sa valeur d'énumération est déjà la suivante.
+
+**Pourquoi chaque choix.**
+- **La grille est celle de la collision** : `MapGeometry.build_solid_grid()`. Le bot ne relit pas la carte à sa façon ; les murs bas y
+  sont des obstacles, qu'il contourne (il ne les enjambe pas en S1).
+- **« Praticable » n'est pas « libre ».** Le polygone de collision d'un joueur est un disque de 18 px de rayon — 36 px — dans des tuiles
+  de 35. Une case libre prise en étau entre deux solides opposés (un couloir, une brèche d'une tuile) est donc infranchissable pour un
+  corps ; sans cette règle le bot s'y coincerait. **Mesuré sur le vrai corps** (P1, physique réelle, 1,5 s de poussée vers chacune) :
+  les 8 cases de ce genre de l'Usine — le tunnel d'une tuile de la rangée 11, et son jumeau de la rangée 14 — arrêtent le joueur à
+  moins de 50 px ; aucune autre carte livrée n'en a. La garde garde cette prémisse : elle rougit si un jour le corps PASSE.
+- **Pas de diagonale qui rase un coin** (`DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES`), et les cases voisines d'un mur coûtent 1,6 fois plus :
+  à chemin presque égal, le bot préfère le milieu d'une salle au pied d'un mur. Le 1,6 est un chiffre de départ, non mesuré isolément.
+- **Rayon d'arrivée de 12 px.** Le nez du joueur dépasse de 28 px alors que le centre d'une case n'est qu'à 17,5 px du mur d'en face :
+  un bot qui arrive à plein régime butte ~10,5 px avant le centre. Mesuré par sabotage : à 2 px, le bot reste coincé jusqu'à
+  16,5 s sur la Croisée (`coin_nez`, ci-dessous).
+- **L'anti-blocage mesure la distance PARCOURUE, pas le déplacement net.** Première version : déplacement net sur 0,6 s ; elle a déclaré
+  « bloqué » un corps libre — un demi-tour légitime à l'arrivée d'une cible fait un net presque nul. S'y ajoute le temps passé sur une
+  même étape (1,2 s à pleine allure). Premier blocage : replanifier ; second de suite : une autre cible.
+- **ZONE enferme les chemins**, pas seulement les cibles : une grille d'A* par rectangle, mise en cache. Un bot qui part de l'extérieur
+  n'a qu'un chemin de TRANSIT, coupé à la première case qui entre dans la zone — sans cela un chemin tracé de dehors pouvait en
+  ressortir en contournant un mur. Un rectangle de taille nulle ne contraint rien (le profil se comporte en LIBRE, pas en statue).
+- **Allure 0,7 pour le cran mobile** : à 1,0 le joueur ne rattrape jamais le bot en ligne droite. Chiffre de départ ; S4 le tranchera.
+- **Le bot revient 2 s après sa mort**, sur l'une des 15 % de cases atteignables les plus éloignées du joueur (jamais dans une poche d'où il
+  ne sortirait pas) ; au lancement, à l'apparition de J2 s'il est à 8 cases ou plus du joueur, sinon comme à la réapparition. Valeurs de départ.
+- **J2 est rendu par `_apply_network_mode()`**, jamais deviné : tout chemin de départ de match y passe ; `_do_start_round` rappelle
+  `_quitter_l_adversaire_mobile()` en ceinture, et le retour au menu recache J2 (sans collision) comme la cible immobile le laisse.
+- **Le bot n'est pas un adversaire pour la règle du sang** : l'empreinte de l'entraînement ne lit pas le cran. La garde prouve que le
+  sang d'une même carte survit au passage au cran mobile, et au retour.
+
+**Les gardes.** `tools/test_bot_navigation.gd` (`--script`, sans scène, 126 vérifications) et `tools/test_entrainement_bot.gd` (le jeu
+monté, vrai corps, vraie physique, **à pas d'image fixe** — `--fixed-fps 60`, posé par `run_suites.sh` ; sans lui les « secondes
+simulées » ne mesurent rien, et la suite le vérifie elle-même en comptant les pas de physique). Ensemble elles couvrent : mêmes cases
+libres que la collision, chemins au hasard sans solide/mur bas/coin/étau, RONDE dans l'ordre, ZONE jamais hors du rectangle, même
+graine = même suite, aucune commande autre que la marche, anti-blocage ; puis, sur les six cartes livrées, 20 s simulées par carte :
+distance parcourue, case libre sous le centre du corps à chaque image, jamais bloqué, aucune balle, torche éteinte ; la mort et le retour ;
+le tunnel de l'Usine (le bot le contourne et arrive) ; le retour à la cible ; l'écran scindé après le cran mobile, J2 EXACTEMENT comme
+avant tout entraînement (comparaison d'un instantané : fournisseur et device, visibilité, collisions, vie, rotation, position, arme,
+munitions). Mesuré le 2026-10-02, sur les six cartes : 3 602 à 3 640 px en 20 s (le maximum à 0,7 est 3 640), pire immobilité 0,08 à
+0,15 s, zéro blocage détecté. Les seuils (1 200 px, 3 s) sont donc très larges : ils ne rougissent que sur un vrai piégeage.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** Sur `test_bot_navigation` : les murs bas
+laissés passer (rouge sur chaque carte semée, « traverse un mur bas ») ; les diagonales toujours permises (« rase un coin ») ; la règle
+des étaus retirée ; les chemins de ZONE non enfermés ; les cibles de ZONE tirées hors du rectangle ; l'ordre de la RONDE changé ; la graine
+remplacée par `randomize()` ; un bot qui tire dès qu'il marche ; l'anti-blocage désactivé ; la torche allumée par défaut. Sur
+`test_entrainement_bot` : le fournisseur de J2 non restitué ; la ceinture de `_do_start_round` retirée (le départ direct d'une manche garde
+le bot) ; la cible laissée visible au cran mobile ; pas de réapparition ; réapparition à l'apparition de J2 quand le joueur s'y tient ; le
+sang lisant le cran (l'empreinte) ; J2 non recaché au retour au menu ; visuels non rendus à la réapparition ; la règle des étaus retirée
+(le bot reste au bord du tunnel) ; le rayon d'arrivée à 2 px ; un bot qui tire. **Trois fois un sabotage ou une garde n'a PAS rougi du
+premier coup, et c'est instructif** : le sabotage « sang » écrit sur un drapeau que `_do_start_round` venait de remettre à faux (il ne
+mordait pas : réécrit sur le cran de l'écran) ; la réapparition « loin du joueur » passait vraie parce que le joueur était déjà loin du
+point d'apparition (la garde place maintenant le joueur SUR ce point) ; et le contrôle « jamais tir » du premier jet était **vide** —
+voir « Un compteur incrémenté dans une lambda reste à zéro » aux pièges.
+
+**Ce qui n'est pas prouvé.**
+- **Jamais joué manette en main, ni vu en situation.** Tout est prouvé headless, à pas d'image fixe, sur le vrai corps. Une capture sous
+  Xvfb montre bien le bot, visible en iso sur la Cloître ; ni la lisibilité dans le noir, ni 0,7 comme allure, ni 2 s de réapparition n'ont
+  été jugés par quiconque.
+- RONDE et ZONE ne sont éprouvées qu'avec un point matériel (`test_bot_navigation`) et, pour la ronde, sur le tunnel de l'Usine : le vrai
+  corps ne les a pas parcourues sur toutes les cartes. LIBRE, lui, l'a été partout. S7 les exigera.
+- Aucune carte livrée ne porte de mur bas : la garde « jamais un mur bas » rejoue ses chemins sur ces cartes **semées** de murs bas (une
+  case de sol sur neuf) et sur une carte fabriquée, mais le vrai corps n'a jamais contourné un mur bas.
+- Le bot ne porte que la classe 0 (Parasite) ; son arme n'est jamais utilisée.
+
+**Signalé, pas corrigé.**
+- **Un couloir ou une brèche d'une tuile est infranchissable pour tout joueur** (corps de 36 px, tuile de 35). L'éditeur de cartes ne le
+  dit pas (`check_playable` ne le contrôle pas), et l'Usine en contient. Hors périmètre.
+- Abattre le bot déclenche les effets de mort d'un joueur (flash, bandeau « FATAL »), que l'entraînement n'avait jamais montrés puisque
+  personne n'y mourait ; **non vérifié à l'écran**. À voir à la main.
+- `game_state.gd` et `ui.gd` sont « partagés, à demander avant d'écrire » (`docs/JOURNAL_SESSIONS.md`) : S1 y a écrit sur ordre du chantier ;
+  l'entrée au journal est à tenir par la session qui le tient.
+
+### S2 — FAITE le 2026-10-02 : la perception du bot — un modèle de vue qui ne voit jamais plus que la lumière, une ouïe en zones, une mémoire
+
+**Ce qui existe.** `perception_bot.gd` (`PerceptionBot`, des fonctions pures sans autoload : le cadre de l'écran, les murs, la liste des lumières
+connues, `voir`, `ecouter`), `memoire_bot.gd` (`MemoireBot`, la dernière position connue), `perception_bot_noeud.gd` (`PerceptionBotNoeud`,
+l'état : il relit les nœuds vivants pour décrire les lumières, s'abonne à `AudioManager.son_localise` — par son chemin `/root/AudioManager`,
+jamais par le nom de l'autoload —, garde la mémoire et porte l'affichage de débogage). `profil_bot.gd` gagne l'axe perception :
+`voit` et `entend` (**faux par défaut : sourd et aveugle**, de sorte qu'un profil de S1 ne perçoit rien et que le cran « adversaire
+mobile » est inchangé), `precision_auditive` (1, le rayon de la zone est DIVISÉ par ce facteur), `delai_oubli` (6 s), et la place des
+réflexes de S3, documentée sans aucun champ (« Un champ que personne ne lit… », Pièges connus). `bot_input_provider.gd` monte le nœud
+quand le profil voit ou entend — ou sous le drapeau de débogage `--perception-bot` — et **`avancer()` ne le lit jamais** (le test le lit dans
+le texte de la fonction) ; `navigation_bot.gd` garde la carte (`carte`) pour que la perception regarde les mêmes murs que les chemins.
+Aucune ligne de `game_state.gd` ni de `ui.gd` : rien de partagé n'a été touché. `protocol.gd` n'a pas bougé, rien ne transite. Les gardes :
+`tools/test_bot_perception.gd`, et le banc `tools/banc_perception_bot.{gd,tscn}` avec sa carte `tools/cartes/perception_essai.json`.
+
+**Le modèle de vue — « voir MOINS que la lumière, jamais plus ».** `voir(bot, cible, lumieres, monde)` rend si la cible est vue, par quelles
+lumières, et **ce qui a été vu** (le centre du corps éclairé, ou la lampe — à 17 px du centre). Une cible est vue si, et seulement si, une
+lumière de la liste la révèle : un **cône** (la torche du bot : la valeur du cookie RÉEL, `WeaponData.lumiere_recue`, au moins 0,15 sur le
+point le plus éclairé du corps) ou un **disque** (le halo de proximité du bot, l'éclair de tir — celui du bot ou de la cible —, la fusée
+posée) l'éclaire SANS mur entre la lumière et le corps ET le bot a une ligne de vue sur le corps ET le corps tient ENTIER dans le cadre ;
+ou une **lampe** (la torche de la cible, quand elle brûle) est dans le cadre avec une ligne de vue du bot — « la torche trahit ». Chaque
+entrée est un dictionnaire (`lumiere_cone`, `lumiere_disque`, `lumiere_lampe`) : **un plafonnier de S5 est un disque de plus dans la
+liste, de hauteur donnée** — une garde le pose (la flaque révèle, la paroi la coupe), rien d'autre ne change.
+- **Le cadre** : ce qu'un joueur verrait depuis la place du bot en VUE UNIQUE — le rectangle de sol de `PorteeEcran.demi_empreinte`
+  (504,3 × 360 px à ×1,5, tangage 52°), avancé de 15 % de la profondeur vers la visée (`RegardDuel`), tourné du lacet (45°). Le nœud fait
+  suivre au décalage le même lissage que la caméra d'un joueur (`RegardDuel.lisser`). **Mesuré contre les vraies caméras** : les quatre
+  coins de l'écran de J2, ramenés au sol par `CameraIso.vers_sol`, tombent à 0,08 px au plus des coins du modèle (quatre visées) ; trente-deux
+  points à ±4 px du bord, bien classés par visée.
+- **Les murs** : un parcours de grille CASE PAR CASE (Amanatides et Woo, jamais des pas fixes — « Parcourir la grille case par case »)
+  sur la grille des murs HAUTS de `MapGeometry.build_grid` — **pas** la grille de solidité du bot, dont le vide hors sol est solide : une
+  fosse ne porte aucun occluder, la lumière la traverse. Exact : sur les six cartes livrées, 24 000 segments tirés au hasard, jamais
+  « dégagé » là où un rectangle fusionné coupe, et jamais coupé à tort. **Du côté du noir au moindre doute** : départ ou arrivée dans un
+  mur, passage exact par un coin.
+- **Les murs bas** — *portent-ils un occluder ?* Oui, mais seulement pour une lumière PLUS BASSE qu'eux (`COUCHE_OMBRE_MUR_BAS`, 64) : la
+  torche d'un accroupi, une fusée au sol. Une lumière debout passe par-dessus, et la zone morte finie qu'elle laisse derrière (44 px pour un
+  accroupi, 58 pour le sol) n'est pas un occluder, c'est le matériau qui la rend. Le modèle lit donc **la fonction même que la balle et
+  l'éblouissement lisent** (`MursBas.franchit_regle`), avec la hauteur de la POSTURE de la source et de la cible : debout, une tête debout se
+  voit par-dessus un mur bas ; un accroupi collé derrière non, à 50 px oui ; un bot accroupi bute ; une fusée au sol bute. Le banc l'éprouve
+  sur le capteur : cible accroupie à 20 px derrière un muret, capteur 0,000, modèle non ; à 50 px, capteur 0,624, modèle oui.
+- **Laissé HORS du modèle, et dit** : la **rétrodiffusion** (la lueur qu'une torche allumée verse sur son porteur : le modèle voit donc moins
+  dans le halo d'une torche, la torche de la cible n'étant pour lui qu'une LAMPE) ; le **faisceau dans l'air** et le sol qu'éclaire la torche ;
+  le **bandeau LED des murs** (mesuré : il n'éclaire aucun capteur de corps — la ROADMAP du chantier LED dit juste) ; une fusée **en vol** ;
+  la **fumée** (une masse sombre remplace le corps à la même place : la position reste connue) ; et les **gadgets qui bouchent ou étouffent
+  la lumière** (voile, suie, ombre, grésillement, leurre) — tant qu'UN SEUL est posé, le nœud rend le bot AVEUGLE par la lumière
+  (`monde["aveugle"]`) : il entend toujours. S9 les modélisera ; voir moins est la seule réponse honnête d'ici là.
+
+**Le modèle d'ouïe.** `ecouter(evenement, bot, monde, rng, precision)` : ses propres sons ne comptent pas (`emetteur` = son `player_id`), les
+familles muettes non plus (la salle, le clic de torche : `SonVisible.categorie_de` rend -1) ; au-delà de sa portée, rien (la portée
+de l'événement, déjà dérivée de la carte). **Le bot ne reçoit jamais la position exacte** : une ZONE, un centre décalé de la vérité de 10 à
+80 % du rayon dans une direction tirée au hasard (donc la zone contient TOUJOURS la vraie position, et ne la centre jamais) et un rayon. Le
+rayon vient de ce que le liseré dit AU JOUEUR : `SonVisible.percevoir` (les ancres d'Adrien : 10° pour un pas de course tout près, 180°
+pour un pas accroupi, un tir net partout) donne la largeur angulaire du son, et le rayon est `distance × sin(largeur / 2)`, divisé par
+`precision_auditive`, plancher 20 px. **Un joueur et un bot reçoivent ainsi la MÊME information d'un même son**, ce qui est la définition
+de l'honnêteté ; rien n'est un nombre inventé pour le bot. L'occultation est celle de l'audio, **jumelle sans physique de
+`AudioManager.part_occultee_entre` calculée depuis la place du BOT** (trois rayons parallèles de ±24 px, un mur haut les arrête ; sous 48 px
+jamais) : −5 dB et une largeur ×1,6 (`FLOU_OCCLUSION`), puis la fumée au point source de l'événement. Chiffres relevés (carte de la garde,
+distances en pixels, oreille normale) : un pas à 150 / 400 / 800 / 1 200 px → zone de 20 / 68 / 265 / 739 px ; un tir aux mêmes distances
+→ 20 / 35 / 70 / 105 px ; le même pas derrière la paroi pleine : 333 px contre 55 ; précision ×2 : 265 → 132 px. Contre le moteur : la part
+occultée du modèle égale celle des trois rayons de l'audio sur 400 couples dans le vrai espace de physique, hors les rayons PARTIS d'un mur
+— le moteur ne heurte pas la forme dont un rayon sort, le modèle la compte arrêté et étouffe donc plus, jamais moins (23 couples sur 400).
+
+**La mémoire** (`MemoireBot`). Une seule trace : la dernière position connue, son instant, sa source (VUE précise, ou OUÏE en zone), sa
+**confiance** (1 à l'instant, 0 au bout de `delai_oubli`, linéaire) et un rayon qui GRANDIT avec l'âge (60 px/s : l'adversaire a pu
+bouger). Une vue remplace toujours la trace ; un son ne la remplace que s'il n'est pas plus vague qu'elle ne l'est maintenant — un pas
+lointain n'efface pas un tir qu'on vient de situer, et efface la trace de la veille. `reinitialiser()` (réapparition) l'efface.
+
+**Les chiffres retenus, et leur statut.** *Mesurés* : le cadre (0,08 px contre la caméra réelle) ; `SEUIL_CONE` 0,15 sur la valeur du cookie
+(le capteur dépasse 0,10 dès que le cookie vaut 0,01 à l'énergie 2,5 : le seuil est bien en deçà ; 0 prise « le modèle voit, le capteur est
+noir » sur 30 prises de cône) ; `FRACTION_DISQUE` 0,6 du rayon de la texture (la tache de la fusée à l'allumage, 468 px, est NOIRE à 0,75 de
+son rayon et lit 0,667 à 0,53 ; le halo de proximité lit encore 0,333 à 0,83) — **prudent, jamais optimisé** : le banc le confirme, ne
+le règle pas. *De départ, non mesurés en jeu* : `PART_LAMPE_MIN` 0,4 (une lampe sous 40 % de sa pleine énergie ne trahit pas),
+`RAYON_ZONE_MIN` 20 px, `DECENTRAGE` 0,8 (et `DECENTRAGE_MIN` 0,1), `CROISSANCE_PX_S` 60, `precision_auditive` 1, `delai_oubli` 6 s —
+c'est S4 (les profils, réglés au banc) qui les tranchera.
+
+**Les gardes.** `tools/test_bot_perception.gd` (`--script`, une carte fabriquée 40 × 30 et des corps factices, **190 vérifications**, inscrite
+à `run_suites.sh`) : les murs sur chaque carte livrée et sur la carte fabriquée ; le cadre (ses constantes relues sur `GameSettings` vivant)
+; la vue — cible dans le noir, **torche allumée mais paroi pleine entre la lampe et le bot : rien**, en ligne de vue et dans le cadre : vue,
+hors cadre : rien, cône sans mur / avec / hors cône / hors portée, éclair derrière un mur, fusée, halo, plafonnier, murs bas et postures,
+aveugle sous gadget ; l'ouïe — propres sons, salle, un pas au-delà de sa portée, zone qui contient la vérité (3 000 tirages sur 3 000) sans
+la centrer, rayon qui grandit avec la distance et derrière un mur et rétrécit avec la précision, même graine, mêmes tirages, **éclair derrière
+un mur : pas vu mais entendu, étouffé** ; la mémoire ; l'occlusion contre le moteur ; le nœud sur des corps factices (le VRAI signal émis
+par l'audio lui parvient, il se désabonne en quittant l'arbre, un bot dans le noir, derrière un mur ou sourd n'apprend rien de la place
+de l'adversaire) ; le profil et le fournisseur (même graine, 900 pas identiques avec ou sans perception montée). `tools/test_banc.gd` y
+déclare les appuis du banc, comme pour les autres bancs à fenêtre.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** Les murs hauts ignorés (25 contrôles rouges,
+sur chaque carte) ; le cadre oublié (9) ; la place EXACTE du son donnée (6) ; ses propres sons non filtrés (3) ; les murs bas ignorés par
+la ligne de vue (6) ; la ligne de vue vers la lampe oubliée (7) ; la ligne de vue du bot vers le corps éclairé oubliée (6) ; le seuil du
+cône supprimé (6) ; le rayon d'une tache ignoré (12) ; la zone sans décentrage (6) ; la précision ignorée (3) ; l'occultation du son
+ignorée (4) ; une famille muette écoutée (3) ; l'aveuglement sous gadget retiré du modèle (3), puis du nœud (2) ; une fusée presque
+éteinte comptée (2) ; une torche presque éteinte comptée (2) ; la hauteur d'une fusée recopiée de travers (3) ; la mémoire qui ne
+s'efface pas (6) ; un son vague qui efface une trace nette (3) ; le fournisseur qui lit la perception pour agir (2). **Un sabotage est
+resté vert, et c'est instructif** : retirer la portée d'un son de `ecouter` seul — elle est gardée DEUX fois, ici et dans
+`SonVisible.percevoir` ; retirée des deux, la suite rougit (4 contrôles). Les deux gardes sont voulues (la seconde est celle du joueur) ;
+aucune n'est inutile tant que l'autre pourrait changer.
+
+**Le banc contre les capteurs** — `tools/banc_perception_bot.tscn` (en vraie fenêtre ; **il n'entre dans aucune suite headless**) :
+```
+xvfb-run -a -s "-screen 0 1920x1080x24" godot --fixed-fps 60 --path . --resolution 1920x1080 \
+  res://tools/banc_perception_bot.tscn -- --no-eos [--sortie=<dossier>] [--taille=640x360] [--familles=a,b] [--cacher=led,halos]
+```
+Il monte le vrai `main.tscn` sur sa carte d'essai (`tools/cartes/perception_essai.json`, 48 × 40, une paroi pleine, un mur bas), la vue de
+J2 SEULE au zoom de la vue unique, le nœud de perception du jeu sur J2, et compare, prise par prise, ce que le MODÈLE dit à ce que le
+CAPTEUR du corps de J1 rend dans la vue de J2 (le maximum d'un anneau de 17 px, comme `planche_q42`). **Il échoue (code 1) si le modèle voit
+là où le capteur est noir** (< 0,03) ; il rapporte le taux d'accord.
+**Résultat (2026-10-02, Mesa/llvmpipe, treize familles, 124 prises, ~15 min) : code 0. Zéro prise où le modèle voit un corps que le capteur
+laisse noir, zéro douteuse (modèle oui, capteur entre 0,03 et 0,10). Taux d'accord : 57 prises sur les 73 où le capteur éclaire le corps
+(78,1 %).** Les 16 « manques » sont tous légitimes, et le journal dit quelles lumières brûlaient autour de la cible : la lampe derrière la
+paroi (3 : le modèle exige une ligne de vue, le capteur lit la rétrodiffusion du corps) ; hors du cadre de l'écran (4) ; la fusée de l'autre
+côté de la paroi (2, voir « Signalé ») ; l'éclair de la cible derrière la paroi (1) ; la lampe d'un accroupi dans la zone morte d'un mur bas
+(1) ; le halo à 80 px (capteur 0,333 : la tache en tient 0,6 du rayon) ; quatre prises de cône (le bord du faisceau, capteur 0,102 pour un
+seuil de 0,15 ; deux flancs à 120 px que la rétrodiffusion du bot éclaire — elle est hors modèle). Par famille (prises / modèle voit /
+capteur éclaire / accord) : noir 15/0/0/0, lampe 20/20/20/20, lampe_mur 3/0/3/0, hors_cadre 8/4/8/4, cone 30/8/12/8, cone_mur 4/1/1/1,
+halo 6/3/4/3, eclair_cible 4/3/4/3, eclair_bot 3/1/1/1, fusee 16/10/10/10, fusee_mur 2/0/2/0, murs_bas 9/6/7/6, led_murs 4/1/1/1.
+**Trois sabotages du MODÈLE font rougir le banc** (code 1, prises « MALHONNÊTE ») : les murs hauts ignorés (3 prises : le cône derrière la
+paroi, capteur 0,000), le seuil du cône supprimé (7), les taches tenues pour deux fois plus larges (4) — la preuve que le banc discrimine.
+
+**Ce qui n'est pas prouvé.**
+- **Aucune partie jouée, ni vue à l'écran.** Les capteurs sont mesurés sous Mesa/llvmpipe (Xvfb), pas sous le pilote d'Apple ; le maximum
+  d'un anneau n'est pas ce qu'un œil perçoit d'un corps iso ombré.
+- Le banc n'a éprouvé que le Parasite (le cookie du pistolet) : le modèle lit le cookie de l'arme portée, donc celui des neuf autres
+  classes, mais aucune de leurs prises n'est faite. Les relevés de la fusée sont à l'allumage (0,5 s) et à la braise (6 s) ; ni l'agonie
+  ni le résidu.
+- Le cadre n'est vérifié qu'au centre de la carte : près d'un bord, la caméra s'arrête (`RegardDuel.centre_du_regard`) et montre PLUS du
+  côté de l'intérieur — le cadre du modèle y est donc contenu dans le réel (il voit moins), mais cela n'est démontré que par le raisonnement.
+- L'ouïe n'a jamais été « écoutée » : elle est prouvée contre le signal et contre le moteur d'occlusion, pas contre une partie.
+- Le bot ne distingue pas un leurre (le gadget de l'Illusionniste) d'un joueur : un faux n'est pas dans sa liste de lumières, il ne le voit
+  donc pas du tout — il ne s'y trompe pas, ce qu'un joueur fait. S9.
+
+**Signalé, pas corrigé.**
+- **La fusée éclaire un corps À TRAVERS un mur.** Son masque d'ombre est `1 | 64` (`Fusee.masque_ombre`), sans le bit `ENNEMI` (2) que porte
+  le `light_mask` du sprite adverse et du capteur (`masque_vue_adverse`) : un récepteur dont le masque ne croise pas celui de la lumière ne
+  reçoit AUCUNE ombre, murs compris (Pièges connus, Q42). Mesuré par le banc, la seule fusée allumée : le capteur du corps lit 0,333 à
+  177 px à travers la paroi pleine. Le modèle ne le suit pas (il bloque la lumière à la paroi : il voit moins) ; **ce que voit un JOUEUR à
+  l'écran, lui, n'est pas vérifié** — la 3D iso peut cacher le corps derrière le mur, la vue de dessus non. Hors périmètre.
+- `AudioManager.part_occultee_entre` compte comme dégagé un rayon qui PART de l'intérieur d'un mur (le moteur ne heurte pas la forme dont on
+  sort) : un son émis tout contre une paroi s'entend moins étouffé que le modèle ne le croit. Le modèle prend le parti du noir.
+- **Une douille se situe moins bien qu'un pas** dans le liseré d'Adrien (−16 dB contre −13, portée de 0,4 contre 0,6) : le bot en hérite.
+  Le brief de S2 attendait « une douille entre les deux » (un tir net, une douille moyenne, un pas flou) ; l'ordre du jeu est tir, pas,
+  douille. Une table de facteurs par famille le changerait en une ligne — mais ce serait donner au bot une oreille que le joueur n'a pas.
+- Le panneau F3 n'a pas reçu d'affichage de perception : `ui.gd` est « partagé, à demander avant d'écrire ». Le drapeau `--perception-bot`
+  dessine le cadre de l'écran du bot, sa ligne de vue, ses zones entendues et sa mémoire (un cercle qui s'efface) ; il est monté sans
+  coût hors drapeau. Non vérifié à l'écran (headless seulement, `_draw` n'y tourne pas).
+
+**À trancher par Adrien.** (1) Les chiffres de départ de la perception, un par un, en jouant (S4). (2) Faut-il que le bot **entende** une
+douille moins bien qu'un pas, comme le joueur ? (ou une table de familles propre au bot, qui lui retirerait la parité avec le liseré).
+(3) Le bot **aveugle sous un gadget** jusqu'à S9 : acceptable pour le Fumiste, l'Illusionniste, le Spectre qui joueraient contre lui à
+l'entraînement ? (4) Un bot qui voit **la lampe** de l'adversaire à 17 px de son corps, et non son centre : la précision d'une vue
+est de l'ordre d'un corps — voulue, ou faut-il lui retirer quelques pixels ?
+
+### S3 — FAITE le 2026-10-02 : le bot agit sur ce qu'il perçoit et il tire ; l'entraînement gagne son cran 3, « adversaire qui tire », avec trois difficultés
+
+**Ce qui existe.** `profil_bot.gd` gagne l'axe **réflexes** : `agit`, `tire`, `delai_reaction`, `erreur_visee_deg` / `erreur_visee_min_deg` /
+`duree_resserrement`, `vitesse_visee`, `tolerance_tir_deg`, `tirs_par_rafale`, `pause_entre_rafales`, `audace_zone_px`, l'énumération
+`Difficulte` et `pour_adversaire_qui_tire(difficulte)`. `bot_input_provider.gd` gagne la **machine à états** (`PATROUILLE`, `ENQUETE`,
+`RECHERCHE`, `COMBAT`) et rend enfin une gâchette (`is_shoot_pressed`) et une recharge (`is_reload_pressed`). `perception_bot_noeud.gd`
+n'a gagné qu'une méthode, `maintenant()` (l'horloge de la perception : un seul temps pour tout ce que le bot sait). `ui.gd` : l'entrée
+« ADVERSAIRE QUI TIRE » (le cran 3) et une entrée « DIFFICULTÉ : NORMAL » qui fait tourner FACILE → NORMAL → DIFFICILE ;
+`selected_training_difficulte()`. `game_state.gd` : `_poser_l_adversaire(profil)` (le geste commun des crans 2 et 3 ;
+`_poser_l_adversaire_mobile()` n'est plus qu'un appel avec le profil mobile) et la **réapparition du joueur**. `protocol.gd` et
+`Protocol.VERSION` n'ont pas bougé : rien ne transite, aucun `if transport == …`.
+
+**La machine à états — un seul fil, la mémoire.** Le bot n'agit que sur `PerceptionBotNoeud` : ce qu'il VOIT (le modèle de vue), ce qu'il
+ENTEND (une zone), ce dont il SE SOUVIENT (`MemoireBot`). Il ne lit jamais la place du joueur : le code de `bot_input_provider.gd` ne
+contient ni `get_nodes_in_group`, ni `get_tree()`, ni `"players"` (la garde le lit au texte, commentaires exclus).
+- `PATROUILLE` : le déplacement de S1, rien de changé. **Un profil sans `agit` n'en sort jamais**, et ne passe même pas par `_penser()` :
+  les profils de S1 et de S2 gardent exactement leur comportement (la garde de S2 « 900 pas identiques » est restée verte).
+- `ENQUETE` : la mémoire tient un SON. Il marche vers la case praticable la plus proche du centre de la zone entendue et la REGARDE.
+- `COMBAT` : il voit, ou vient de voir (à `delai_reaction` près, plancher 0,1 s). Il s'arrête, tourne sa visée vers ce qu'il a vu, tire,
+  recharge à vide.
+- `RECHERCHE` : il a perdu sa cible de vue ; il marche vers la dernière place connue et la regarde. La mémoire qui s'efface (6 s) le rend
+  à `PATROUILLE`.
+- **Tous les délais réels passent par `delai_reaction`** : monter d'un état (patrouille → enquête, enquête → combat) n'arrive qu'après ce
+  délai, compté depuis la première image où le bot perçoit ce qui l'y pousse ; descendre est immédiat ; si ce qui l'alarmait disparaît
+  avant le terme, le délai repart de zéro (un bruit qui s'éteint avant la réaction ne fait rien faire). Le même délai attend avant de
+  recharger un chargeur vide, et tient le combat quelques instants quand la cible disparaît (une lampe qui respire ne fait pas basculer
+  le bot en recherche). Aucun autre délai ne se cache dans le code.
+- **La visée.** La consigne tourne vers l'angle voulu à `vitesse_visee` rad/s au plus (le corps la suit à ses 18/s : un demi-tour prend du
+  temps) ; l'angle voulu est la direction de la MÉMOIRE plus une erreur tirée dans [-1, 1] × une amplitude qui passe de
+  `erreur_visee_deg` à `erreur_visee_min_deg` en `duree_resserrement` secondes de visée — un tireur qui prend son temps vise juste. L'erreur
+  est retirée à chaque coup. Elle tire dans son propre générateur (`_rng_reflexes`) : S3 ne change aucune cible de la ronde.
+- **La gâchette.** Un coup part si : le profil tire, le bot est engagé et a un angle voulu, l'arme est prête (munitions, pas en recharge,
+  cadence), la pause de rafale est finie, **le corps est à moins de `tolerance_tir_deg` de l'angle voulu** (erreur de visée comprise : c'est
+  elle qui fait manquer un bot lent), et — sur ce qu'il n'a fait qu'entendre ou qu'il vient de perdre de vue — la zone est plus étroite que
+  `audace_zone_px`. L'appui dure jusqu'au coup puis tombe (`player.gd` exige un relâchement entre deux coups d'une arme semi-automatique) ;
+  `tirs_par_rafale` coups, puis `pause_entre_rafales`. Le root après le tir, les munitions, la cadence : c'est `player.gd` qui les applique,
+  le bot « appuie sur les touches ». Il lit son PROPRE corps (munitions, recharge, cadence, orientation), comme un joueur sait combien de
+  balles il lui reste.
+- **La prudence** (`audace_zone_px`) est la forme retenue de « oser tirer alors que l'éclair trahit » : un tir trahit le tireur, tirer sur une
+  zone vague c'est se trahir pour presque rien. 0 : il ne tire que sur ce qu'il voit ; une zone d'un tir entendu à 400 px fait 35 px, celle
+  d'un pas à 400 px 68 px (S2). Sur ce qu'il voit, la prudence ne joue pas.
+
+**Les trois difficultés — chiffres de DÉPART, que S4 réglera au banc de jeu.** Mêmes champs de perception, de déplacement (LIBRE, allure
+0,7) et de torche (éteinte : la torche tactique est S9) ; seuls les réflexes diffèrent, et une garde compare les champs communs un à un.
+
+| | FACILE | NORMAL | DIFFICILE |
+|---|---|---|---|
+| délai de réaction | 0,60 s | 0,35 s | 0,18 s |
+| erreur de visée au départ → plancher | 18° → 5° | 10° → 2,5° | 5° → 0,8° |
+| temps de resserrement | 3,0 s | 2,0 s | 1,2 s |
+| vitesse de visée | 3 rad/s | 6 rad/s | 12 rad/s |
+| tolérance de tir | 10° | 6° | 3° |
+| rafale, pause | 1 coup, 1,4 s | 2 coups, 0,8 s | 3 coups, 0,4 s |
+| audace sur une zone entendue | 40 px | 80 px | 140 px |
+
+Mesuré à la garde (corps factices, une cible éclairée à 5 cases en face, quatre graines) : premier coup **0,68 s / 0,41 s / 0,24 s**
+après la première perception, écart moyen à la vraie place **5,0° / 3,0° / 2,0°**. Sur un pas entendu à 350 px, le facile ne tire jamais,
+le difficile tire.
+
+> ⚠️ **Tout ce tableau, et cette dernière phrase, sont REMPLACÉS par S4** (même jour) : les chiffres de départ ci-dessus ont été réglés au
+> banc de jeu (voir « S4 »), et l'audace n'est plus un réflexe qui varie — elle est la même pour les trois, de sorte que FACILE tire sur
+> un pas entendu à 400 px comme les deux autres. Le tableau est gardé ici pour que le « avant » de S4 reste lisible.
+
+**Le geste à la mort du JOUEUR.** `player_died` ne fait rien hors manche, et l'entraînement n'a pas de manche : le joueur abattu par le bot
+resterait mort pour toujours, alors que le bot revient déjà. Le geste le plus simple et le plus cohérent est celui du bot, en miroir :
+**le joueur revient 2 s plus tard (`BOT_DELAI_REAPPARITION`), vie pleine, arme et munitions de l'écran, sur l'une des 15 % de cases les plus
+éloignées du bot qu'il puisse parcourir** (`case_loin_de`, ancrée sur sa propre case d'apparition). Pas de score, pas de manche, pas de
+killcam. Le bot, lui, garde sa mémoire : si le joueur est mort au bout d'une poursuite, il ira voir sa dernière place connue, au plus 6 s.
+
+**Les gardes.** `tools/test_bot_combat.gd` (`--fixed-fps 60`, même ligne `case` que `test_entrainement_bot`, **137 vérifications**, ~13 s). Deux
+couches. (1) *Corps factices* — le vrai fournisseur, le vrai nœud de perception (le modèle de vue, le vrai signal de son), un `FauxTireur`
+qui rejoue l'essentiel de `player.gd` (visée à 18/s, cadence, munitions, recharge, relâchement entre deux coups) : les profils, le texte du
+fournisseur (chaque champ de réflexe lu, aucune lecture de l'adversaire), le délai de réaction à l'image près (0,60 s et 0,18 s, et un
+délai nul), la difficulté (délai et justesse), le lissage (la consigne ne tourne jamais plus vite que `vitesse_visee`, un demi-tour prend
+π/v), l'erreur qui se resserre, la rafale et la pause, la tolérance, la recharge (à vide après le délai, au calme, au combat, jamais pour
+qui ne tire pas), **l'honnêteté** (joueur immobile dans le noir, torche allumée derrière une paroi pleine, lampe hors du cadre, bot en ZONE
+qui patrouille loin d'une cible dans le noir : zéro coup, patrouille, mémoire vide, pour les trois difficultés), l'enquête vers un vrai
+son, la recherche, l'oubli, l'audace, un profil de S2 qui voit sans réagir, un bot qui agit sans tirer. (2) *Le jeu monté* — le cran 3 et
+la difficulté **lus de l'interface** (l'entrée, la coche, l'entrée qui tourne, les constantes de l'écran comparées à `ProfilBot.Difficulte`),
+le bot monté au profil de chaque difficulté par le geste du joueur, zéro balle sur un joueur dans le noir ou derrière la paroi pleine, des
+balles (et le joueur touché) sur un joueur éclairé, la première balle au plus tôt un délai après la première perception, **le cran 2 qui ne
+tire toujours jamais** (même doué de vue et d'ouïe devant une torche), la recharge, la mort et la réapparition du joueur (deux fois, loin
+du bot, sur une case praticable), le retour à la cible et à l'écran scindé. `test_bot_perception` n'a changé que ses libellés : ses
+vérifications (190) sont intactes.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** Sur `test_bot_combat`, chiffre = contrôles rouges. **Honnêteté** : le modèle de vue qui rend toujours « vu » avec la VRAIE place du joueur
+(33 — le bot tire sur le joueur dans le noir et derrière la paroi, pour les trois difficultés) ; la machine à états qui part toujours du
+souhait « combat » sans lire la mémoire (19) ; le fournisseur qui va chercher le groupe `players` pour viser (11, dont les trois
+contrôles de texte « pas de `get_nodes_in_group` / `get_tree()` / `"players"` » — et 39 erreurs de script, que le sabotage produit
+de lui-même, sans qu'on ait cherché pourquoi : la garde de texte est celle qui tient). **Réflexes** : le délai de réaction supprimé (10) ; facile et
+difficile inversés (9) ; la tolérance de tir ignorée (3) ; l'audace ignorée (4) ; le lissage ignoré (3) ; l'erreur de visée qui ne se
+resserre plus (4) ; `tirs_par_rafale` ignoré (3) ; la recharge oubliée (6) ; le tir permis hors de tout engagement, c'est-à-dire en
+patrouille (10). **Le cran 2 qui tire** — son profil reçoit `voit`, `entend`, `agit` et `tire` (4, dont « le profil du cran 2 n'agit
+pas » et la balle tirée devant la torche, dans le jeu réel). **Le joueur** : sans réapparition (5) ; réapparu à 60 px du bot (2).
+**Un sabotage est resté vert, et c'est instructif** : retirer `etat == Etat.PATROUILLE` seul de la condition de tir — elle est gardée
+DEUX fois, ici et par `_a_un_angle` (faux en patrouille). Retirées toutes deux, la suite rougit (10). Les deux gardes sont voulues :
+la seconde est ce qui interdit de tirer sur un angle périmé.
+
+**Deux faux rouges de la garde elle-même, instructifs.** (1) Un `queue_free()` laisse les corps de la situation d'avant dans le groupe
+`players` jusqu'à la fin de l'image : le bot de la situation suivante les a pris pour son adversaire — un fantôme posé à sa propre place, que
+son halo « voyait ». Une vue de plus dans le noir, à la première image de chaque situation : la garde d'honnêteté rougissait sur un bot
+honnête. Remède : libérer sur-le-champ (`remove_child` + `free`). (2) Une torche qu'on coupe met quelques images à mourir : un bot posé
+devant une lampe qui s'éteint la voit encore, et il a le droit d'y réagir — la garde éteint la torche et laisse trente images avant de
+poser le bot.
+
+**Ce qui n'est pas prouvé.**
+- **Jamais joué manette en main, ni vu à l'écran.** Les trois difficultés sont des chiffres de départ, jugés par personne : « facile » l'est
+  sur le papier (0,6 s de délai, 18° d'erreur). Les effets d'un bot qui tue le joueur (flash, bandeau « FATAL », acouphène, vignette) ne
+  sont pas vérifiés à l'écran — la réapparition du joueur ne l'est qu'en état (vie, visuels, place), pas en rendu.
+- Le jeu monté n'éprouve qu'une carte (`tools/cartes/perception_essai.json`) et un bot IMMOBILE pour la mise en scène (il pense, il ne
+  marche pas) ; l'enquête et la recherche en marchant ne sont éprouvées que sur les corps factices. Un bot en ENQUETE dans le vrai jeu
+  n'a marché sur aucune carte livrée.
+- Le `FauxTireur` n'est pas `player.gd` : il en copie l'ordre et les règles, pas le dispersion (`current_spread_bloom`), le root ni la
+  physique des murs. Le jeu monté couvre ce que le faux ne couvre pas, mais seulement pour un bot immobile.
+- La prudence n'est qu'une largeur de zone : « s'accroupir », « éteindre la torche », « changer de place après avoir tiré » ne sont pas
+  faits (S9 pour la torche et le reste ; rien dans la liste de S3 ne les demandait).
+- Le bot ne tire que sur ce que le modèle de S2 lui donne : sa **rétrodiffusion** et le bandeau LED restent hors modèle, donc un joueur
+  dans le halo d'une torche allumée peut être « moins vu » qu'à l'écran. Voir moins que la lumière est le sens voulu, mais c'est
+  aussi ce qui rendra le bot parfois plus aveugle qu'on ne le croit.
+
+**Signalé, pas corrigé.**
+- **`PerceptionBotNoeud._adversaire()` prend le PREMIER autre joueur du groupe `players`** qui soit visible et vivant. Aujourd'hui il n'y en
+  a qu'un ; le jour où un bot en affronte deux (S6, une salle de cinq PNJ, ou un bot contre un bot), il faudra choisir — et l'honnêteté
+  voudrait un bot par cible perçue, pas un « adversaire » unique. Hors périmètre.
+- Un bot qui tue le joueur **continue de chercher sa dernière place connue** pendant son délai d'oubli (6 s au plus), alors que le joueur est
+  mort : un bot « honnête » saurait que sa cible est tombée (le corps tombe à la vue de tous). Le laisser chercher est inoffensif ; le lui
+  faire oublier serait un petit ajout de S4.
+- Le **cran 3 hérite du déplacement du cran 2** (LIBRE, allure 0,7, torche éteinte) : un bot qui arpente toute la carte et ne s'arrête que
+  pour tirer. Un bot qui rôde est une chasse ; l'allure et le déplacement des trois difficultés sont à juger en jouant (S4).
+- `docs/JOURNAL_SESSIONS.md` : `game_state.gd` et `ui.gd` sont « partagés, à demander avant d'écrire » — S3 y a écrit sur ordre du chantier.
+  L'entrée au journal est à tenir par la session qui le tient.
+
+**À trancher par Adrien.** (1) Les chiffres des trois difficultés, un par un, en jouant (S4). (2) Le joueur qui meurt à l'entraînement
+revient en 2 s, loin du bot : le délai et le lieu, ou une autre règle (rester mort jusqu'à un appui, revenir sur sa case de départ). (3) Un
+cran 3 dont le bot ne s'arrête qu'en combat : faut-il qu'il se poste, qu'il avance vers sa cible, qu'il se déplace en tirant ? (4) La difficulté
+FACILE ne tire jamais sur un pas entendu à 400 px (audace 40 px) : « tire si vu ou entendu » doit-il valoir pour les trois ? —
+**tranchée par S4 : oui** (la décision d'Adrien le disait déjà ; l'audace est désormais la même pour les trois difficultés).
+
+### S4 — FAITE le 2026-10-02 : les profils, réglés au banc de JEU — la difficulté du bot, et le catalogue des PNJ de l'aventure
+
+**Ce qui existe.** `tools/banc_bot_duel.gd` (la bibliothèque : le moteur de duel, le joueur type, la salle, les statistiques),
+`tools/banc_bot_difficulte.gd` (le banc, headless, long, **hors des suites** : une commande, des options, des tableaux) et
+`tools/test_banc_bot.gd` (sa forme courte, **dans `run_suites.sh`**, à horloge fixe). `profil_bot.gd` gagne l'énumération `Palier`
+(`TRES_LENT`, `LENT`, `FACILE`, `NORMAL`, `DIFFICILE`), l'énumération `Sens` (`AUCUN`, `VUE`, `OUIE`, `VUE_ET_OUIE`), **une seule table de réflexes**
+(`appliquer_les_reflexes`) que servent l'entraînement, les PNJ et le boss, la constante `AUDACE_ZONE_PX`, et le **catalogue des PNJ**
+(`pnj()`, `pnj_nomme()`, `noms_du_catalogue()`, `nom_du_pnj()`, les cinq `pnj_immobile_*` de l'initiation, `boss()`).
+`pour_adversaire_qui_tire(difficulte)` ne fait plus que choisir le palier. `tools/test_bot_combat.gd` n'a changé que ce que la décision sur
+l'audace lui faisait changer (voir plus bas). **`game_state.gd`, `ui.gd`, `protocol.gd` n'ont pas bougé** : rien de partagé n'est touché, rien ne
+transite, aucun `if transport == …`.
+
+#### La méthode du banc
+
+**Un duel est un morceau de partie du VRAI jeu** : `main.tscn` monté en entraînement, vrais corps, vraie physique, vraies balles, vraie lumière,
+vrais sons (le signal `son_localise` de l'audio), **à pas d'image fixe** (`--fixed-fps 60`, que le banc vérifie et sans lequel il refuse de
+conclure) et **déterministe par graine**. Il s'arrête à la **première mort**. **Il ne mesure aucune cadence** (consigne d'Adrien) : il simule des
+parties. Le joueur de J1 est un joueur type ; J2 est le bot de la difficulté testée, posé et ramené comme l'entraînement le fait (`_poser_l_adversaire`).
+Les départs se tirent de la graine : le joueur sur une case atteignable au hasard, le bot à 450-1 000 px de lui — ni nez à nez ni aux deux bouts
+d'une carte (un duel dure alors quelques secondes de jeu, médiane 3,4 à 3,8 s, et se joue sur les six cartes livrées). 75 s sans mort : duel nul
+(0 à 5 % des duels). Un duel de 6 s de jeu coûte ~1 s de processus ; **1 152 duels (3 difficultés × 4 comportements × 6 cartes × 16 graines) en
+~5 min répartis sur quatre processus** (`--part=i/n`, `--brut=`, `--agreger=`), ~20 min d'un seul.
+
+**Le joueur type est HONNÊTE lui aussi.** Un étalon qui saurait où est le bot dans le noir ne mesurerait rien. `JoueurType` est donc le même
+`BotInputProvider` que le bot : **la même perception** (`PerceptionBotNoeud` : ce que la lumière lui montre, ce que ses oreilles lui donnent — une
+zone, jamais la place exacte), la même mémoire qui s'efface, la même machine à états, les mêmes règles de corps — réglé avec des **réflexes
+humains** et quatre **comportements** (il ne joue pas comme un bot : la torche, la posture, l'immobilité, le changement de place). **Temps de réaction
+humain de référence : 0,25 s** (la réponse à un signal visuel net d'un joueur entraîné, 200 à 300 ms ; ce chiffre n'est pas mesuré sur un humain de
+ce jeu), erreur de visée de 6° au premier instant qui se resserre à 1,5° en une seconde de visée, vitesse de visée 10 rad/s, tolérance de tir 5°, rafale
+de 2 coups puis 0,5 s, prudence 100 px, mémoire de 8 s. Deux étalons plus lents servent aux calibrages d'accueil : **intermédiaire** (0,35 s, 8° → 2,5°,
+rafale de 2 : « un joueur qui vient de finir l'initiation ») et **débutant** (0,5 s, 10° → 3°, un coup par rafale).
+
+| Comportement | Torche | Posture, déplacement |
+|---|---|---|
+| `avance_torche` | allumée | debout, de case en case à pleine allure |
+| `ecoute` | éteinte | immobile : il attend, il écoute |
+| `accroupi_lent` | éteinte | accroupi (le quart de la vitesse, le pas le plus discret) |
+| `tire_puis_bouge` | allumée seulement pendant l'engagement | après chaque rafale, il l'éteint et change de place dans le noir pendant 1,5 s |
+
+Un cinquième, **hors de la moyenne** (`avance_sans_torche` : torche éteinte, à pleine allure — qu'on ENTEND), ne sert qu'à prouver que le bot tire sur un son.
+
+**Les quatre grandeurs du banc, par difficulté** : le taux de victoire du joueur type (parmi les duels qui ont une issue) ; le temps moyen jusqu'au
+premier coup qu'il reçoit (et, parce que celui-ci mêle la recherche, qui ne dépend pas des réflexes, la **fenêtre** : le même temps compté depuis la
+première perception du bot) ; la part des tirs du bot déclenchés sur un son (ni vu, ni perdu de vue) ; la part de ses tirs qui touchent. S'y ajoutent
+les duels nuls, la part des duels sans aucun coup reçu et la durée.
+
+**Fidélité et déterminisme, mesurés.** (1) La vue de dessus est le défaut du banc, la vue iso (`--iso`) le jeu publié : **24 duels rejoués sous les deux
+sont identiques à l'enregistrement près** — la simulation est la même, et la vue de dessus va deux fois plus vite. (2) Deux processus, même lot de 54 duels :
+22 duels différents au départ, 15 une fois le duck des pas remis à l'heure du jeu, 1 une fois l'attente entre deux duels posée (deux pièges, plus bas), puis 0 issue différente à la
+mesure suivante — il reste des écarts de 0,02 px sur deux duels, d'origine non trouvée. Le banc est donc rejouable, **pas à l'octet près** ; la garde courte compare l'issue, les tirs et
+les touches d'un même duel rejoué dans le même processus.
+
+#### Les cibles de réglage — « cibles de départ, à juger par Adrien en jouant »
+
+Le joueur type de référence (0,25 s), moyenne des quatre comportements et des six cartes, doit gagner contre **FACILE ≈ 80 %, NORMAL ≈ 55 %, DIFFICILE ≈ 30 %**.
+Pourquoi ces trois-là : un écart de 25 points est ce qui se SENT d'un cran à l'autre (cinq duels de plus sur vingt) ; 80 % fait de FACILE un adversaire qu'un
+joueur entraîné bat quatre fois sur cinq sans qu'il soit inoffensif ; **55 % fait de NORMAL — le boss de chaque chapitre — un pile ou face pour un joueur
+entraîné, donc jamais un cadeau** ; 30 % laisse à DIFFICILE de quoi être craint sans être injouable. **NORMAL doit être battable par un joueur qui vient de
+finir l'initiation** : le joueur intermédiaire le bat une fois sur deux (voir plus bas), et une salle qui se recommence à la mort laisse plusieurs essais.
+Ces cibles sont des cibles de départ : le joueur type n'est pas un humain, et personne n'a joué contre ces bots.
+
+#### Résultats, avant et après — graines 401 à 416 (jamais vues pendant le réglage), 384 duels par difficulté
+
+« Avant » : les profils de S3, recréés par surcharge, **sur le banc corrigé** (la première mesure sur le banc non corrigé donnait 96 % / 68 % / 10 %). « Après » : les profils de S4.
+
+| | FACILE avant → après | NORMAL avant → après | DIFFICILE avant → après |
+|---|---|---|---|
+| **victoire du joueur type** (cible 80 / 55 / 30) | **97 % → 79 %** | **71 % → 54 %** | **17 % → 28 %** |
+| duels nuls | 3 % → 2 % | 1 % → 1 % | 0 % → 0 % |
+| temps moyen jusqu'au 1er coup reçu | 5,3 s → 4,1 s | 4,2 s → 3,9 s | 3,7 s → 3,8 s |
+| fenêtre : de la 1re perception du bot au 1er coup reçu | 2,2 s → 1,6 s | 1,6 s → 1,4 s | 1,2 s → 1,3 s |
+| duels où le joueur ne reçoit aucun coup | 51 % → 15 % | 11 % → 2 % | 1 % → 2 % |
+| part des tirs du bot déclenchés sur un SON | 6 % → 8 % | 7 % → 9 % | 6 % → 8 % |
+| part de ses tirs qui touchent | 26 % → 42 % | 49 % → 55 % | 76 % → 67 % |
+| durée moyenne d'un duel | 7,5 s → 6,4 s | 5,9 s → 5,6 s | 4,7 s → 5,0 s |
+
+Par comportement du joueur type, victoire (avant → après) : `avance_torche` 100 → 91 / 91 → 59 / 15 → 30 ; `ecoute` 99 → 88 / 83 → 64 / 23 → 39 ;
+`accroupi_lent` 93 → 85 / 76 → 50 / 6 → 11 ; `tire_puis_bouge` 97 → 51 / 34 → 44 / 23 → 33 (facile / normal / difficile). **Les quatre comportements se rangent dans le même ordre
+contre FACILE, NORMAL et DIFFICILE** — sauf `tire_puis_bouge`, quasi plat (51 / 44 / 33) : sans doute parce qu'un joueur qui change de place cesse de tirer pendant que le bot continue (non vérifié).
+Par carte (après, facile / normal / difficile) : Arène circulaire 81 / 56 / 36, Arène standard 81 / 50 / 38, Usine 75 / 44 / 27, Croisée 79 / 59 / 23, Bunker 79 / 53 / 12, Cloître 78 / 62 / 34 ;
+l'ordre est le même partout, l'écart du Bunker contre DIFFICILE (12 %) est le seul qui sorte de la fourchette de bruit (±6 points par case de 64 duels).
+Le réglage s'est fait sur trois autres blocs de graines (1-8, 101-116, 201-216 ; 301-316 pour un dernier contrôle : 78 % / 58 % / 25 %).
+
+**Le joueur qui vient de finir l'initiation** (même banc, graines 401-408, 192 duels par difficulté, profils finaux) :
+
+| Joueur type | FACILE | NORMAL | DIFFICILE |
+|---|---|---|---|
+| humain, 0,25 s (la référence) | 79 % | 54 % | 28 % |
+| **intermédiaire, 0,35 s** | 68 % | **50 %** | 21 % |
+| débutant, 0,5 s | 39 % | 13 % | 5 % |
+
+Le boss (NORMAL) est battu une fois sur deux par un joueur qui a fini l'initiation, treize fois sur cent par un débutant pur : « battable sans être donné » tient pour le premier, pas
+pour le second — voir « À trancher ».
+
+#### Les chiffres retenus, et pourquoi (une seule table : `ProfilBot.appliquer_les_reflexes`)
+
+| | TRES_LENT | LENT | FACILE | NORMAL | DIFFICILE |
+|---|---|---|---|---|---|
+| délai de réaction | 1,2 s | 0,8 s | 0,40 s (était 0,60) | 0,26 s (était 0,35) | 0,235 s (était 0,18) |
+| erreur de visée → plancher | 25° → 10° | 20° → 7° | 11° → 3° (18° → 5°) | 7,5° → 2° (10° → 2,5°) | 6,9° → 1,45° (5° → 0,8°) |
+| temps de resserrement | 4,0 s | 3,5 s | 2,5 s (3,0) | 1,8 s (2,0) | 1,48 s (1,2) |
+| vitesse de visée | 2 rad/s | 2,5 rad/s | 5 (3) | 8 (6) | 9,25 (12) |
+| tolérance de tir | 12° | 10° | 7° (10°) | 4,5° (6°) | 3,95° (3°) |
+| rafale, pause | 1 coup, 2,5 s | 1 coup, 2,0 s | 2 coups, 0,9 s (1 coup, 1,4 s) | 2 coups, 0,55 s (0,8 s) | 3 coups, 0,49 s (0,4 s) |
+| audace sur une zone entendue | 100 px | 100 px | 100 px (était 40) | 100 px (était 80) | 100 px (était 140) |
+
+Ce que le banc a appris, et qui ne se devinait pas :
+- **FACILE de S3 était un adversaire inoffensif (97 % de victoires), et le raccourcir n'y changeait presque rien** : à 0,5 puis 0,45 s de délai, visée et tolérance resserrées, le joueur type en gagnait encore
+  90 % puis 92 % (93 % au départ ; relevés d'exploration, graines 1-8). Ce qui l'a fait bouger : lui donner **deux coups par rafale** au lieu d'un (85 %), puis un délai de 0,40 s, une pause de 0,9 s et une visée plus étroite (80 %). Une balle fait 50 de dégâts au centre, 25 au bord, sur 100 de vie : **un duel demande
+  deux à quatre coups touchants, la puissance de feu pèse donc plus que le délai de réaction**. Régler la difficulté au délai seul, c'est régler le mauvais bouton.
+- **DIFFICILE de S3 battait chaque axe du joueur de référence à la fois** (0,18 s contre 0,25 s, 3° de tolérance, trois coups par rafale) : le joueur de référence n'en gagnait que 17 % (10 % à la première mesure).
+  Il a été ramené à 0,235 s, 3,95° et une pause un peu plus longue : 28 %.
+- **NORMAL était trop facile (71 %)** : 0,26 s au lieu de 0,35, une visée un peu plus étroite, 4,5° de tolérance : 54 %. Les quatre comportements y gagnent 44 à 64 % : la dispersion entre comportements, qui
+  était de 34 à 91 %, est tombée à 20 points.
+- NORMAL (0,26 s) et DIFFICILE (0,235 s) ne diffèrent presque plus par le délai ; **ce qui les sépare, c'est la rafale (2 ou 3 coups), la visée (7,5° contre 6,9°), la tolérance et la pause** — la même leçon que ci-dessus.
+- **Plus lent n'est pas plus sûr pour qui AVANCE** (palier TRÈS LENT, salle du catalogue) : à 1,5 s de délai, 30° → 12° d'erreur, un débutant ne battait un PNJ qui entend que 79 à 88 % du temps, contre 98 à 100 %
+  à 1,2 s. Un PNJ qui tire tard tire sur quelqu'un qui est arrivé à bout portant ; un PNJ qui tire tôt tire sur quelqu'un qui est encore loin, et manque. Le palier retenu est celui à 1,2 s.
+
+#### L'audace : la même pour les trois (point 3 de la consigne)
+
+Le cran 3 s'appelle « adversaire qui tire **si vu ou entendu** » (Adrien) et **la difficulté ne change que les réflexes** : elle règle QUAND le bot tire et AVEC QUELLE JUSTESSE, jamais SI. S3 avait fait varier
+`audace_zone_px` de 40 à 140 px, et FACILE ne tirait alors jamais sur un pas entendu à 350-400 px (zone de 55-68 px) — une cinquième dimension de difficulté que la décision n'avait pas prévue.
+**`AUDACE_ZONE_PX` = 100 px pour les trois** (et pour tous les paliers de PNJ) : un pas entendu jusqu'à ~480 px, un tir jusqu'à ~1 100 px ; au-delà, la zone est trop vague pour valoir de se trahir. Un bot lent qui
+tire sur ce qu'il a entendu **manque** : sa visée est large, ses rafales rares — c'est son tir, pas son oreille, qui est lent. Gardé de quatre façons : `test_banc_bot` compare l'audace des trois profils et celle de tous les
+paliers ; `test_bot_combat` (corps factices, vrai signal) vérifie que **les trois tirent sur un pas à 350 px (3, 6 et 9 coups sur trois graines) et aucun sur un pas à 980 px**, pourtant bel et bien entendu
+(une zone gardée : sans ce contrôle, « aucun tir » ne prouverait rien) ; `test_banc_bot` le refait dans le vrai jeu (un joueur qui marche dans le noir : 5 tirs sur 9, 4 sur 12, 4 sur 12 déclenchés sans rien voir) ;
+et les champs de perception restent identiques entre les trois (la garde de S3 compare maintenant l'audace aussi). **Mesuré : l'audace n'a presque rien changé aux taux de victoire** (profils de S3 avec l'audace à 100 :
+93 % / 67 % / 9 %, contre 96 % / 68 % / 10 % — dans le bruit) : la part des tirs du bot sur un son est de 6 à 9 % dans la matrice, parce qu'un duel s'ouvre presque toujours à la vue (la torche du joueur type, ou son halo) ;
+elle monte à 29-37 % face à un joueur qui marche dans le noir.
+
+#### Les chiffres de départ de S1 à S3, passés au banc : AUCUN n'est mauvais
+
+NORMAL, 384 duels par ligne, graines 401-416 (référence 54 %) : 
+| Réglage | victoire | 1er coup reçu | fenêtre | tirs sur un son | précision du bot | durée |
+|---|---|---|---|---|---|---|
+| **référence** (allure 0,7, oubli 6 s, précision auditive 1) | 54 % | 3,9 s | 1,4 s | 9 % | 55 % | 5,6 s |
+| allure 0,5 | 56 % | 5,6 s | 1,6 s | 13 % | 57 % | 7,3 s |
+| allure 1,0 | 58 % | 2,6 s | 1,0 s | 10 % | 51 % | 4,5 s |
+| délai d'oubli 3 s | 56 % | 3,9 s | 1,4 s | 9 % | 54 % | 5,6 s |
+| délai d'oubli 12 s | 55 % | 4,0 s | 1,4 s | 9 % | 55 % | 5,6 s |
+| précision auditive 0,5 (zone deux fois plus large) | 58 % | 4,2 s | 1,7 s | 5 % | 57 % | 5,7 s |
+| précision auditive 2 (zone deux fois plus étroite) | 55 % | 3,8 s | 1,3 s | 17 % | 49 % | 5,7 s |
+
+**Verdict : aucun de ces chiffres ne change qui gagne** (toutes les lignes sont dans le bruit, ±2,5 points) : ils sont gardés. L'allure règle QUAND le combat commence — plus le bot marche vite, plus il trouve tôt
+(premier coup reçu à 5,6 s pour 0,5 ; 3,9 s pour 0,7 ; 2,6 s pour 1,0) —, pas son issue ; **0,7 reste le bon compromis** (1,0 ne laisse aucune poursuite possible, 0,5 laisse l'entraînement s'ennuyer). La précision auditive
+règle la part de tirs sur un son, pas les victoires. **Le délai de réapparition (2 s) n'est PAS couvert** : le banc s'arrête à la première mort, et le délai d'une pause entre deux duels d'entraînement est une question de rythme qu'un
+banc de victoires ne juge pas ; il reste à juger en jouant.
+
+#### Le catalogue des PNJ de l'aventure
+
+Un PNJ est le même bot, réglé sur trois axes : **comment il bouge** (`Deplacement`), **ce qu'il perçoit** (`Sens`), **à quel palier de réflexes** (`Palier`). Son nom est `<déplacement>_<sens>_<palier>` : `immobile_voit_tres_lent`,
+`ronde_entend_lent`, `zone_voit_entend_normal`… ; un PNJ sourd et aveugle n'a pas de palier (`immobile_sourd_aveugle`) : il ne perçoit rien, n'agit pas, ne tire jamais — un but, pas un adversaire. **64 noms** (4 déplacements × [1 + 3 sens × 5 paliers]),
+tous construits par `ProfilBot.pnj_nomme(nom)` — un nom hors catalogue rend `null` (un fichier de niveau mal écrit se voit, il ne devient pas un PNJ par défaut) ; c'est ce nom que S6 écrira dans un fichier de niveau. Les allures : immobile —,
+ronde 0,5, zone 0,6, libre 0,7. **Le boss de chaque chapitre est `ProfilBot.boss()` = le profil d'entraînement NORMAL**, champ pour champ.
+
+| Niveau de l'initiation | Fonction | Axes |
+|---|---|---|
+| 0.1 à 0.5 | `pnj_immobile_sourd_aveugle()` | immobile ; ne voit pas, n'entend pas, n'agit pas, ne tire pas |
+| 0.6 | `pnj_immobile_voit_tres_lent()` | immobile ; voit ; réflexes TRÈS lents |
+| 0.7 | `pnj_immobile_voit_lent()` | immobile ; voit ; réflexes lents |
+| 0.8 | `pnj_immobile_entend_lent()` | immobile ; entend ; réflexes lents |
+| 0.9 | `pnj_immobile_voit_entend_lent()` | immobile ; voit et entend ; réflexes lents |
+| 0.10 | `boss()` | NORMAL (libre, 0,7, voit et entend) |
+
+**Réglés au banc par une mise en scène simple : un joueur qui entre dans une salle** (`--catalogue`). Une salle de 22 × 18 cases ; le joueur — **un débutant** (0,5 s), torche allumée, le pire cas : sa lampe le trahit — entre à
+l'ouest et la balaie par une ronde ; le PNJ attend à l'est, à une hauteur tirée de la graine. Deux façons de traverser : debout, ou accroupi. 24 graines par ligne.
+
+| PNJ | **debout** : le débutant gagne | perçu → 1er tir | coups reçus par duel | **accroupi** : gagne | perçu → 1er tir | coups reçus |
+|---|---|---|---|---|---|---|
+| `immobile_sourd_aveugle` | 100 % | — (ne tire jamais) | 0 | 100 % | — | 0 |
+| `immobile_voit_tres_lent` | 96 % | 1,4 s | 0,56 | 100 % | 1,3 s | 0,40 |
+| `immobile_voit_lent` | 96 % | 1,0 s | 0,79 | 100 % | 0,9 s | 0,62 |
+| `immobile_entend_tres_lent` | 100 % | 1,3 s | 0,42 | 100 % | 11,7 s | 0,10 |
+| `immobile_entend_lent` | 100 % | 1,1 s | 0,29 | 100 % | 14,5 s | 0,08 |
+| `immobile_voit_entend_tres_lent` | 98 % | 1,3 s | 0,46 | 100 % | 1,4 s | 0,40 |
+| `immobile_voit_entend_lent` | 100 % | 0,9 s | 0,54 | 100 % | 0,9 s | 0,83 |
+| `ronde_voit_entend_lent` | 100 % | 1,1 s | 0,38 | 100 % | 1,1 s | 0,46 |
+| `zone_voit_entend_lent` | 100 % | 1,2 s | 0,38 | 100 % | 1,3 s | 0,38 |
+| `libre_voit_entend_lent` | 100 % | 1,1 s | 0,29 | 100 % | 1,1 s | 0,29 |
+| `immobile_voit_facile` | 38 % | 0,5 s | 2,83 | 38 % | 0,5 s | 2,75 |
+| `immobile_entend_facile` | 96 % | 1,1 s | 0,96 | 100 % | 13,9 s | 0,42 |
+| `immobile_voit_entend_facile` | 46 % | 0,5 s | 2,67 | 17 % | 0,5 s | 3,17 |
+| `immobile_voit_normal` | 21 % | 0,4 s | 3,25 | 12 % | 0,3 s | 3,38 |
+| `immobile_entend_normal` | 96 % | 1,2 s | 1,25 | 100 % | 13,8 s | 0,33 |
+| `immobile_voit_entend_normal` | 17 % | 0,4 s | 3,25 | 12 % | 0,4 s | 3,38 |
+| `ronde_voit_entend_normal` | 8 % | 0,4 s | 3,33 | 21 % | 0,5 s | 3,08 |
+| `zone_voit_entend_normal` | 29 % | 0,4 s | 3,00 | 4 % | 0,5 s | 3,42 |
+| `libre_voit_entend_normal` | 12 % | 0,4 s | 3,21 | 17 % | 0,5 s | 3,29 |
+
+(24 graines par ligne, 48 pour les trois PNJ « très lents ».) Le même relevé avec **le joueur intermédiaire** (0,35 s, torche allumée), debout / accroupi : `immobile_voit_tres_lent` 100 % / 100 %,
+`immobile_voit_lent` 100 % / 100 %, `immobile_voit_facile` 92 % / 75 %, `immobile_voit_normal` **38 % / 12 %**, `immobile_voit_entend_facile` 96 % / 25 %, `immobile_voit_entend_normal` 42 % / 8 %,
+`immobile_entend_normal` 100 % / 100 %, `ronde_voit_entend_normal` 17 % / 42 %, `libre_voit_entend_normal` 38 % / 54 %.
+
+**Ce que ça dit.** (1) Le sourd et aveugle ne tire jamais et le débutant le bat à chaque fois. (2) **Un PNJ très lent laisse à un débutant le temps de réagir** : le PNJ met ~1,3 à 1,4 s entre le moment où il perçoit et son premier tir
+(le débutant en met 0,5 pour réagir) ; le débutant le bat 96 à 100 % du temps et reçoit 0,4 à 0,56 coup par duel ; un PNJ lent met ~1,0 s, le débutant le bat 96 à 100 % du temps (0,3 à 0,8 coup reçu). (3) **Contre un PNJ qui n'entend que,
+s'accroupir fonctionne** : le PNJ ne tire qu'après 12 à 14 s (il n'a entendu le débutant que de tout près), contre ~1,2 s debout — c'est la leçon du niveau 0.8. Contre un PNJ qui VOIT, s'accroupir torche allumée ne sert à rien (la lampe trahit, et
+l'approche est plus lente). (4) Le saut de LENT à FACILE est net — un débutant bat un PNJ facile qui voit 17 à 46 % du temps (96 % s'il n'entend que), un PNJ normal qui voit 4 à 29 % — : **LENT est le dernier palier pour un joueur qui n'a pas fini
+l'initiation** ; un joueur intermédiaire (0,35 s) bat un PNJ facile qui voit 92 % du temps debout et un PNJ normal qui voit 38 % : **FACILE convient aux premiers chapitres après l'initiation, NORMAL est la limite de ce que le joueur attend à la fin d'un chapitre.**
+Les PNJ mobiles (ronde, zone, libre) se comportent comme leurs frères immobiles : mêmes paliers, mêmes taux — leur déplacement n'a pas encore été confronté à un joueur qui les cherche (S7).
+
+#### Les gardes (obligatoires)
+
+`tools/test_banc_bot.gd` (`--fixed-fps 60`, dans `run_suites.sh`, 50 vérifications, ~1 min 30 s sur machine chargée) : le catalogue (64 noms, tous construits, les axes que le nom dit, le sourd et aveugle qui n'agit ni ne tire, les cinq PNJ de
+l'initiation, les paliers rangés, le boss), les trois difficultés (mêmes champs de perception, de déplacement et d'audace ; elles sont exactement les paliers FACILE, NORMAL, DIFFICILE de la table unique), le joueur type qui ne lit jamais l'adversaire (le texte de sa classe), le duel rejoué à l'identique, **l'ORDRE des
+difficultés** sur la Croisée et les quatre comportements (victoire du joueur type strictement décroissante, au moins 5 points d'écart, FACILE ≥ 60 %, DIFFICILE ≤ 55 %, NORMAL entre 30 % et 90 %, au plus 15 % de nuls, le bot difficile touche plus que le facile),
+les trois difficultés qui tirent sur un son dans le vrai jeu, l'absence de fuite d'un duel à l'autre, le PNJ sourd et aveugle qui ne tire jamais dans la salle, le très lent et le lent qui laissent plus de 0,8 et 0,5 s au débutant. **Des bornes larges et jamais un chiffre exact** : les chiffres
+du banc long sont des cibles à juger en jouant, pas des constantes ; le test compte 48 duels sur une carte — le banc long en compte 1 152.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié, scripté).** Chiffre = contrôles rouges, sur `test_banc_bot` puis, quand elle y mord, `test_bot_combat`.
+Les deux difficultés **inversées** (FACILE ↔ DIFFICILE) : 7 et 6, dont « L'ORDRE : 25 % > 69 % > 75 % » ; **FACILE sourd aux sons** (`entend = false`) : 3 et 5, dont « le bot tire sur un son : 0 tir sur 10 » ;
+**l'audace de FACILE remise à 40 px** (l'état de S3) : 3 et 2 ; **un PNJ sourd et aveugle qui voit, agit et tire** : 3 ; **le boss qui n'est plus NORMAL** : 1 ; **des paliers mal rangés** (LENT à 0,3 s, plus vif que FACILE) : 2 ;
+**un nom inconnu qui devient un PNJ par défaut** au lieu de `null` : 1 ; **la table unique de réflexes ignorée** (les trois difficultés identiques) : 7 et 6 ; **le très lent aussi vif que le lent** : 2 ;
+**le joueur type qui triche** (une ligne qui lit le groupe `players`) : 3 (les trois contrôles de texte) ; **l'attente entre deux duels supprimée** : 1 — la garde des fuites (« sur 60 duels, pas un ne commence par la douille du duel d'avant », 5 fuites).
+**Deux sabotages ont été verts du premier coup, et c'est instructif.** (1) *L'attente entre deux duels supprimée* : la première garde de déterminisme (le même duel rejoué dans le même processus, un autre duel entre les deux) restait
+verte — la fuite n'arrive que si le duel d'avant s'est terminé sur un tir dans les 0,5 s, et mon duel intermédiaire finissait au temps. **La garde a été remplacée par le SYMPTÔME**, cherché sur tous les duels de la suite
+(une perception « douille » dans les 0,15 s du départ ne peut être qu'une fuite : aucun tir n'a pu partir) ; elle rougit à 5 fuites sur 60. (2) *La graine du jeu (`seed()`) retirée du duel* : **toujours vert, et resté vert** — la suite
+ne distingue pas un duel qui reprend la graine d'un duel qui ne la reprend pas (les tirages du jeu — dispersion, sons — n'y changent ni l'issue, ni les tirs, ni les touches comparés). La ligne est gardée par précaution, non prouvée nécessaire.
+**Un défaut du banc lui-même n'est pas gardé** : le duck des pas remis à l'heure du jeu (voir Pièges connus) ne rougit rien s'il est retiré — son effet est sur les statistiques de sons, pas sur un contrôle.
+
+#### Ce qui n'est pas prouvé
+
+- **Rien n'est joué par un humain.** Le joueur type est un étalon stable, pas un portrait : un humain cherche mieux qu'un tirage de cases (il longe les murs, il écoute avant d'avancer) et pire qu'un bot sur d'autres points. 80 / 55 / 30 sont des cibles pour CE joueur-là.
+- Les 0,25 / 0,35 / 0,5 s sont des chiffres de référence, pas des mesures de joueurs de ce jeu.
+- **Le banc n'a éprouvé que le Parasite** et un bot sans torche, sans fusée, sans gadget : S9 changera ce que « difficile » veut dire (un bot qui allume sa torche à propos, qui lance une fusée).
+- Le banc ne juge pas la **poursuite** (allure 0,7), ni la **réapparition** (2 s), ni le rythme d'un entraînement de plusieurs minutes : un duel est une rencontre, pas une séance.
+- Les PNJ **mobiles** n'ont pas été confrontés à un joueur qui les cherche, ni plusieurs PNJ à la fois dans une même salle (la mise en scène est un contre un) : le niveau 0.9 (5 ou 6 PNJ) sera plus dur que ses chiffres un contre un ne le disent — `PerceptionBotNoeud._adversaire()` ne gère encore qu'un adversaire (S3, « Signalé »).
+- Les plafonniers (S5) ne sont pas dans la salle : les PNJ « voit » y voient la lampe du joueur, pas la lumière posée qui montrera le joueur au niveau 0.6 de l'initiation. À refaire quand S5 est fusionnée.
+- Les taux sont mesurés sous un Godot headless : la physique est celle du jeu, mais la vue de dessus remplace la vue iso (identique sur 24 duels) et l'audio ne joue pas.
+
+#### Signalé, pas corrigé
+
+- **`AudioManager` lit l'horloge MURALE pour le duck des pas** (`DUCK_TIR_S`, `play_sfx_2d`) : exact en jeu réel, faux dans toute simulation accélérée (voir Pièges connus). Un jour, une session qui voudra rejouer des parties plus vite que le jeu le retrouvera.
+- **`Player._tinter_la_douille` fait sonner la douille à la place COURANTE du joueur**, 0,3 à 0,5 s après le tir : un joueur téléporté entre-temps (réapparition, mise en scène) la fait sonner ailleurs. Inoffensif en jeu (rien ne téléporte un tireur en 0,5 s), source d'un faux son dans un banc.
+- Le **déterminisme n'est pas à l'octet près** : 0,02 px d'écart sur certains duels entre deux processus, origine non trouvée. L'issue ne change presque jamais (0 duel sur 54 à la dernière mesure, 1 sur 54 à l'avant-dernière).
+- **La `fenêtre` est plus parlante que le temps jusqu'au premier coup** : ce dernier est dominé par la recherche (3,8 à 4,1 s pour les trois difficultés) et ne se range pas ; la fenêtre, elle, se range (1,6 / 1,4 / 1,3 s). Le banc imprime les deux.
+- `docs/JOURNAL_SESSIONS.md` : aucun fichier « partagé, à demander avant d'écrire » n'a été touché ; `profil_bot.gd` est « en propre » du chantier.
+
+**À trancher par Adrien.** (1) Les cibles **80 / 55 / 30** : trop dures, trop douces ? Les chiffres se rejouent en une commande (`--surcharge-facile=…`). (2) **FACILE doit-il être gagnable par un débutant pur** ? Aujourd'hui un joueur de 0,5 s le bat 39 % du temps ; le
+régler pour 80 % chez un joueur entraîné le laisse difficile pour un premier lancement. (3) **NORMAL, boss de l'initiation** : 50 % pour un joueur qui l'a finie, 13 % pour un débutant pur — suffisant, ou faut-il un NORMAL plus doux pour le boss du chapitre 0 seul ?
+(4) Les PNJ de l'initiation partent de **LENT** pour les niveaux 0.7 à 0.9 (réflexes « lents », Adrien) : le catalogue en offre un cran de moins (TRÈS LENT) et deux de plus (FACILE, NORMAL) pour les chapitres suivants — qui y mettre, et quand ?
+(5) L'**audace commune de 100 px** : un bot FACILE qui tire sur un pas entendu à 400 px — et manque — est-il lisible pour un joueur, ou trop bavard ?
+
+### S5 — FAITE le 2026-10-02 : les plafonniers — la lumière posée, ses ombres, sa place dans le modèle de vue du bot
+
+**Ce qui existe.** `plafonnier.gd` (`Plafonnier`, sans autoload : il se charge sous `--script`), et son câblage en cinq endroits, tous des
+ajouts : `canaux_lumiere.gd` (`masque_ombre_neutre_pour_les_corps`), `perception_bot.gd` (`par_hauteur`, `ligne_de_la_lumiere`,
+`FRACTION_PLAFONNIER`), `perception_bot_noeud.gd` (`_plafonniers`, lues sur les nœuds vivants du groupe « plafonniers »), `lumieres_iso.gd`
+(le type « plafonnier » du miroir de lumières 3D, `_miroir_des_plafonniers`) et `iso_volumes.gd` (`_suivre_plafonniers` : le luminaire).
+Les gardes : `tools/test_plafonniers.gd` (152 vérifications, inscrite à `run_suites.sh`) et trois familles au banc
+`tools/banc_perception_bot` (`plafonnier`, `plafonnier_mur`, `plafonnier_bas`, plus la planche `--familles=planche`). **`protocol.gd` et
+`Protocol.VERSION` n'ont pas bougé** : rien ne transite, aucun `if transport == …`, aucun RPC ; une garde le lit dans le texte de
+`protocol.gd`, `network_manager.gd` et `plafonnier.gd`. Aucune ligne de `game_state.gd`, de `ui.gd`, de `map_codec.gd`, de `player.gd`.
+
+**L'API que S6 appellera** (le format de niveau proposé plus haut porte déjà `plafonniers (case, rayon, intensité)`) :
+```
+var poses := Plafonnier.poser(arene, [ {"case": [12, 9], "rayon": 4.0, "intensite": 1.2}, {"case": Vector2i(3, 4)} ])  # idempotente
+Plafonnier.retirer(arene)
+```
+`case` : `Vector2i` ou `[x, y]` (les flottants du JSON conviennent) — la lampe pend au centre de la case. `rayon` en CASES (4,0 par défaut,
+borné à [1,5 ; 9]) : c'est le rayon de la TEXTURE de la lumière, la flaque visible s'arrête vers les trois quarts de lui. `intensite`
+(l'énergie de la lumière, 1,2 par défaut, bornée à [0,6 ; 3,0]) ; `teinte` facultative (une `Color` ou `"#rrggbb"`), l'halogène de la charte
+par défaut. Les nœuds sont nommés `Plafonnier_<i>`, **`i` étant l'indice de l'entrée DANS la liste** (une entrée invalide est refusée à voix
+haute — un `push_error` — et son indice n'est pas réutilisé : S6 retrouve un plafonnier par sa place dans le niveau). `poser` retire d'abord
+le conteneur d'un appel précédent : changer de salle n'empile rien. ⚠️ **`GameState.rebuild_arena` ne connaît pas le conteneur « Plafonniers »**
+(sa liste de purge est fermée, et `game_state.gd` est « partagé, à demander avant d'écrire ») : S6 appelle `poser` à CHAQUE salle, ou
+`retirer` en la quittant, ou ajoute le nom à la liste de purge. **Et il inscrit son fichier à `POSEURS_AUTORISES`** dans
+`tools/test_plafonniers.gd`, vide aujourd'hui : c'est ce qui fait qu'un fichier de plus qui pose des plafonniers est un choix, jamais un effet
+de bord (« il n'entre dans les cartes de duel que si Adrien le demande, avec une montée de `Protocol.VERSION` »).
+
+**Pourquoi chaque choix.**
+- **Une lumière NEUTRE : portée `DECOR | ENNEMI | JOUEUR_LOCAL`** (1 | 2 | 4), comme la fusée. Jamais un canal de vue (16, 32), qui
+  n'éclairerait qu'un écran ; jamais l'un des bits des capteurs de soi (8, 128, 256), que `test_ombre_propre` interdit dans une portée. Tous
+  les récepteurs de deux joueurs, dans les deux vues, la reçoivent : sol et murs, sprite adverse et capteurs croisés, capteurs de soi.
+- **Le masque d'ombre : quatre bits, et chacun est là pour un récepteur** (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`). `DECOR` (1) :
+  l'occluder des murs. `ENNEMI` (2) : le canal du sprite adverse et des capteurs croisés — sans lui le corps d'en face est « éclairé en entier
+  au cœur d'un occluder » (« `shadow_item_cull_mask` filtre AUSSI les sprites », Pièges connus). `recepteur_retro(0)` et `(1)` (128, 256) : les
+  bits que portent les capteurs de SOI et qu'aucun occluder ne porte — **ce sont eux, et non le 4 ni le 8, qui donnent à chaque joueur l'ombre des
+  murs sur SON propre corps SANS le faire ombrer par sa propre étoile** (la couche 4 est celle du corps de J1, la 8 celle de J2 : mettre l'une
+  ou l'autre ferait porter ombre à un seul des deux corps). Jamais la couche d'ombre d'un corps, d'un torse, ni des murs bas (64).
+  La fusée posée a `1 | 64` : elle éclaire un corps À TRAVERS un mur (signalé par S2) ; le plafonnier ne le fait pas, et le banc le prouve.
+- **Hauteur 1,5 tuile : les murs hauts le coupent, un mur bas ne le coupe pas.** Un plafonnier est EN HAUTEUR ; la règle du jeu dit qu'un mur
+  haut arrête toute lumière quelle que soit la hauteur de sa source (une salle est une pièce fermée), et qu'un mur bas (0,4) n'arrête que les
+  lumières PLUS BASSES que lui. 1,5 est la hauteur d'une fusée au lancer, que le shader des murs bas (`mb_dans_la_zone_morte`) traite déjà :
+  `MursBasRendu.poser_hauteur_source` la pose et retire le bit 64 du masque d'ombre ; le matériau dessine alors la zone morte FINIE que cette
+  hauteur laisse derrière le muret (`D × (h_mur − h_cible) / (h_lampe − h_mur)`), et non la bande constante de la torche (« un même angle »,
+  58 px au sol). Le modèle du bot lit la MÊME fonction que le shader (`MursBasRendu.eclaire_par_hauteur`, par le drapeau `par_hauteur`).
+- **La texture est celle de la fusée** (`LightTextures.RETRODIFFUSION`), posée par `LightTextures.poser` — jamais un `texture_scale` à la main.
+  C'est le masque dont `FRACTION_DISQUE` avait déjà été confronté aux capteurs : une flaque peinte à bord adouci, que la pâte iso rend « cernée de
+  noir ».
+- **L'allumage par proximité, par construction.** Un plafonnier brûle si un joueur est à moins de `rayon + portée de vue` ; il s'éteint à
+  `+ 120 px` de plus (l'hystérésis : un joueur qui hésite sur la limite ne le fait pas clignoter). La portée de vue est celle du cadrage LE PLUS
+  LARGE que le jeu livre — le coin de l'écran scindé (×1,25), avancé vers la visée (`PorteeEcran.portee_minimale`) — plus 100 px : **973 px**.
+  Un plafonnier de 4 cases s'allume donc à 1 113 px d'un joueur et s'éteint à 1 233. Conséquence honnête : **un plafonnier éteint n'est jamais à
+  l'écran d'un joueur** (une garde le prouve pour 72 visées, aux deux zooms), mais dans une salle de 24 × 24 cases (840 px) TOUS sont à portée
+  et tous brûlent — la règle ne rapporte que sur les grandes cartes (l'arène de boss de 32 × 32). Sans aucun joueur dans le groupe, il brûle
+  (éteindre sans savoir ferait disparaître une salle qu'un banc regarde sans joueur). `Plafonnier.zoom_de_reference` se baisse si un zoom plus
+  large que ×1,25 est un jour livré (`--zoom=1.0` en débogage va jusqu'à ×1,0 : 1 191 px de portée de vue).
+- **Le modèle du bot ne lit que ce que le moteur dessine** : la lumière VIVANTE (sa place, sa hauteur, son rayon de texture), allumée, d'au moins
+  `INTENSITE_MIN`. Un plafonnier éteint n'entre pas : l'honnêteté tient quoi que fasse l'allumage. `FRACTION_PLAFONNIER` = 0,6, comme
+  `FRACTION_DISQUE` : **prudent, jamais optimisé** (voir les chiffres).
+- **La vue iso** : une omni 3D par plafonnier, À SA HAUTEUR (le plafond), sinon la lightmap 2D éclaire la flaque et aucune lampe 3D ne la connaît
+  (relief des faces aplati) ; **au plus deux par joueur, les plus proches** (une omni à ombres, c'est six faces d'ombre par image) ; son poids 3D
+  (2,5, soit 7,5 à l'énergie maximale, contre 9 pour une torche) l'empêche de chasser une torche des huit places. Et un LUMINAIRE : un point franc
+  et un halo doux à la hauteur de la lampe, de l'énergie de SA lumière (éteinte, il disparaît : le noir absolu tient) — la même image que la
+  lentille d'une torche ou l'éclair d'une mine, déjà faite par `IsoVolumes`.
+
+**Le coût : NON MESURÉ, par consigne d'Adrien (« aucun relevé de cadence »).** Ce que l'on sait sans mesure : un plafonnier allumé est une
+`PointLight2D` à ombres dures de plus (le filtre d'ombre est coupé, comme la fusée) dans chaque vue qui rend le monde, plus une omni 3D à ombres
+(deux par joueur au plus) en iso ; son nœud lit le groupe « players » à chaque pas de physique. **Les deux plafonds (deux omni par joueur, et
+« proche » = 973 px) sont des choix de prudence, pas des mesures.** Une salle de l'aventure en portera trois ou quatre, tous allumés.
+
+**Les chiffres.**
+- `test_plafonniers` : 152 vérifications, vertes. **Les 137 suites headless sont vertes** (`./tools/run_suites.sh --rapide`, 652 s, scénarios à deux instances non
+  joués), sans erreur de script ni `push_error` non déclaré (le seul, déclaré : `CRIS ATTENDUS: 1`, l'entrée invalide).
+- Banc, famille `plafonnier` — 54 prises (trois énergies de 0,6 à 3,0 × neuf distances de 20 à 115 % du rayon × deux caps), **le capteur éclaire le
+  corps (≥ 0,10) jusqu'à 90 % du rayon à TOUTES les énergies** (0,333 aux bords), 0,000 à 100 % (un cap à 0,180, légitime : le bord du masque) et au-delà. Le
+  modèle (60 % du rayon plus le bord du corps) voit jusqu'à 70 % et laisse donc **un quart du rayon de marge** : 30 accords, 15 manques
+  légitimes, 9 noirs, **zéro prise « le modèle voit, le capteur est noir »**. ⚠️ Le capteur lit EXACTEMENT les mêmes valeurs aux trois énergies
+  (0,667 puis 0,333) : il sature (`min(1, 4 × énergie × valeur)`), donc l'énergie MIN (0,6) n'est éprouvée qu'à travers cette saturation — ce
+  qu'elle prouve est que le plancher est assez haut, pas qu'un plafonnier de 0,3 le serait.
+- Banc, `plafonnier_mur` : la paroi entre la lampe et la cible (à 100 et 120 px de la lampe, dans la flaque) : **capteur 0,000, modèle non** ; le
+  témoin sans mur à 100 px : 0,667, modèle oui ; la cible dans la flaque et le bot derrière la paroi : capteur 1,000, modèle non (il voit moins,
+  légitimement). **Le capteur de SOI du bot** (son propre corps, dans sa propre vue : le bit 256 de J2) : **0,000 derrière la paroi, 0,667 sans** —
+  la moitié du masque d'ombre que le capteur croisé ne mesure pas.
+- Banc, `plafonnier_bas` : la lampe à 127 px de la face de sortie du muret : accroupi à 22 px derrière lui, **capteur 0,000** (dans la zone
+  morte finie de 35 px) ; debout à 22, 40 et 70 px : éclairé ; accroupi à 40 px : éclairé (le modèle dit non, l'œil du bot bute à 44 px) ; accroupi
+  à 70 : éclairé, vu. Total du banc, plafonniers : 64 prises, **0 malhonnête**, 0 douteuse, taux d'accord 67,3 % (35 des 52 prises où le capteur
+  éclaire) — le reste est ce que le modèle laisse dans le noir à dessein.
+- La planche (`--familles=planche`, quatre images 1920 × 1080 sous Mesa/llvmpipe) a été REGARDÉE : la flaque, cernée de noir, ses bords
+  coupés par la paroi, la zone derrière le muret, le luminaire en point blanc au-dessus d'elle, le corps de la cible lisible dans la lumière,
+  rien hors d'elle. La prise « accroupi » n'est pas exploitable (la caméra lissée n'a pas fini son déplacement) ; ce n'est pas une preuve.
+
+**Sabotages exécutés — chacun a rougi (ou, à deux endroits, NON, et c'est dit), puis a été restauré à l'identique (md5 vérifié).** Sur
+`test_plafonniers` : les ombres coupées (3 contrôles) ; le masque d'ombre sans les murs (2), sans les bits des capteurs de soi (4), avec la couche
+d'ombre des corps (2) ; la portée avec un canal de vue (4) ; la hauteur oubliée (15) ; le plafonnier absent du modèle (9) ; compté à travers
+tout mur (3), à travers les murs hauts seulement (2), à travers les murs bas (1) ; la règle de la torche pour la lampe haute (1) ; l'allumage
+par proximité désactivé (4), inversé (20), l'hystérésis retirée (2), la portée de vue réduite de moitié (3), « aucun joueur : éteint » (3) ; une
+pose de plafonnier dans un fichier de jeu (1) ; le miroir iso sans plafonnier (4), sans limite par joueur (2), à hauteur du sol (1) ; le
+luminaire allumé plafonnier éteint (2) ; les noms de nœuds par compteur (1) ; le rayon du modèle doublé (1) ; un plafonnier destructible (2) ;
+`poser` non idempotent (2) ; une entrée invalide acceptée en silence (le **lanceur** rougit : « cris émis 0 ≠ cris attendus 1 », la suite seule
+reste verte — c'est le contrat de `CRIS ATTENDUS`). Sur le banc : le modèle comptant le plafonnier à travers un mur (2 prises MALHONNÊTES, code
+1) ; le rayon du modèle doublé (9 MALHONNÊTES) ; les ombres coupées et le masque sans les bits des capteurs de soi (rouges par le seul
+capteur de SOI, 0,667 là où le mur commande 0,000 — aucune prise MALHONNÊTE, le modèle dit « non » de toute façon : sans la lecture du
+capteur de soi, ces deux sabotages seraient restés verts ; « ombres coupées » rend aussi le capteur croisé de la cible éclairé, 0,667 au lieu de
+0,000, mais c'est un « manque » que le modèle explique, qui ne fait pas échouer le banc). **Un sabotage reste vert au banc, et c'est instructif** : ignorer le mur bas pour la lumière. Dans le rayon que le modèle
+retient, la zone morte de la lampe haute d'un accroupi (≤ ~40 px) est toujours incluse dans celle que la règle du jeu donne à l'œil du bot
+(44 px) : l'œil bute déjà où la lampe butterait. La règle de la lampe ne se discrimine qu'avec un rayon que le jeu ne permet pas — c'est le
+disque de 400 px de `test_plafonniers` qui la garde (le sabotage y rougit).
+**Quatre fois une garde ou un sabotage n'a PAS rougi du premier coup** : la première famille `plafonnier_bas` posait une cible à 10 px du muret et
+annonçait « ACCROUPIE » (voir « Un corps ne s'accroupit pas dans la pierre », aux pièges) ; le premier sabotage « règle de la torche » ne
+rougissait nulle part (aucune garde ne lisait ce que le nœud passait au modèle : `par_hauteur` — ajoutée) ; « une pose dans un fichier de jeu »
+inséré avant `class_name` rougissait par erreur de syntaxe, pas par la garde (réécrit en fin de fichier) ; et un premier motif de sabotage ne
+correspondait à rien (le harnais refuse un motif absent ou multiple).
+
+**Ce qui n'est pas prouvé.**
+- **Le coût**, on l'a dit. Ni la cadence d'une salle à quatre plafonniers, ni celle de la vue iso avec ses omni à ombres.
+- **Aucune partie jouée, ni vue à l'écran par un humain.** Les images viennent de Mesa/llvmpipe (Xvfb), pas du pilote d'Apple. Le luminaire n'a été
+  vu que sur la planche, jamais en jeu ; sa taille (12 px) et son halo (40 px) sont des chiffres de départ.
+- Seule la vue de J2 est mesurée au banc (la vue unique du bot). **Le capteur de soi de J1** n'est prouvé que par le croisement des masques (`test_plafonniers`),
+  pas par une lecture ; l'écran scindé n'est mesuré nulle part avec un plafonnier. Le sprite de soi de la **vue de dessus** (`--2d`, `light_mask` 4) ne croise
+  pas le masque d'ombre : il n'y reçoit aucune ombre — comme sous la fusée, jamais regardé.
+- La **killcam** : les plafonniers sont des lumières du monde, donc rejouées sans rien ; leur allumage lit les joueurs VIVANTS du groupe, pas les
+  fantômes. Non vérifié.
+- Le banc n'a éprouvé que le Parasite (le pistolet) et une seule teinte ; les trois énergies lisent le même capteur (saturé).
+- Une salle à plus de deux plafonniers par joueur en iso : la limite des omni se lit au code, pas à l'image.
+
+**Signalé, pas corrigé.**
+- **`GameState.rebuild_arena` ne purge pas le conteneur « Plafonniers »** (voir l'API plus haut). Hors périmètre : `game_state.gd` est partagé.
+- **La fusée posée éclaire un corps à travers un mur** (signalé par S2) : `CanauxLumiere.masque_ombre_neutre_pour_les_corps()` est le remède tout prêt
+  (`1 | 64` devient ce masque plus le bit des murs bas posé selon la hauteur) — mais c'est changer la fusée du duel EN LIGNE, donc une décision d'Adrien.
+- `Plafonnier.zoom_de_reference` n'est pas relié à `GameSettings` (le fichier n'a aucun autoload) : une garde relit `ZOOM_ECRAN_SCINDE`, et rougit si le zoom le
+  plus large livré passait sous elle.
+- `test_entrainement_bot` (S1) est sorti en code 143 (délai du lanceur) dans l'un des lots `--rapide`, la machine étant chargée par un banc ; relancé seul, il
+  passe en 29 s, sans rouge.
+
+**À trancher par Adrien.** (1) **Un mur bas coupe-t-il un plafonnier ?** Décidé non (il est au plafond, 1,5 tuile : il passe par-dessus et laisse une zone
+morte finie) ; si Adrien veut l'ombre infinie d'un mur bas, c'est un bit dans le masque (64) et une hauteur ≤ 0,4 — mais alors la lampe pend plus bas qu'un
+mur. (2) La **flaque** : 4 cases de rayon par défaut, l'halogène de la charte, énergie 1,2 — des chiffres de départ, à juger sur l'image (S7). (3) Le modèle du
+bot s'arrête à 70 % de la flaque que le capteur éclaire jusqu'à 90 % : **voulu** (prudence), ou la rendre au bot ? (4) Le **luminaire** : visible de loin
+comme la lampe d'une torche, ou seulement quand la flaque l'est ? (5) Adopter `masque_ombre_neutre_pour_les_corps` pour la fusée (ci-dessus).
+
+### S6 — FAITE le 2026-10-02 : le moteur de l'aventure — le format, la partie, la boucle, la progression, l'écran
+
+**Ce qui existe.** Neufs, en propre au chantier : `aventure_format.gd` (`AventureFormat` : le format, son validateur strict, le chargement et le
+catalogue des chapitres), `aventure_progression.gd` (`AventureProgression` : `user://solo.cfg`), `aventure_partie.gd` (`AventurePartie` : le moteur, un
+nœud `Aventure` enfant de `GameState`), `aventure_carton.gd` (`CartonAventure`), le chapitre d'essai `tools/aventure_essai/chapitre_00/` (trois salles,
+dont un boss) et `tools/fabrique_aventure_essai.gd` qui l'écrit, `tools/test_aventure_format.gd`, `tools/test_aventure_partie.gd`. **`assets/solo/` n'existe pas
+encore** : c'est S7 (le chapitre 0) qui l'ouvre ; le moteur le lit s'il existe, et vit sans (aucun chapitre livré, aucun cri). **Partagés, écrits sur ordre
+du chantier** — l'entrée au `docs/JOURNAL_SESSIONS.md` est à tenir par la session qui le tient : `game_state.gd` (`aventure`, `figurants`,
+`demarrer_l_aventure`, `aventure_poser_la_salle`, `aventure_finie`, `_quitter_l_aventure`, la ceinture de `_do_start_round`, le retour au menu),
+`ui.gd` (le signal, l'entrée « AVENTURE », l'écran, le verrou du râtelier), `presentation_3d.gd` (les figurants), `player.gd` (`est_pnj`, trois lignes),
+`bullet.gd` (quatre), `perception_bot_noeud.gd` (`_adversaire`), `map_data.gd` (`poser_carte_d_aventure`), `run_suites.sh`, `test_plafonniers.gd`
+(`POSEURS_AUTORISES`). **`map_codec.gd`, `protocol.gd` et `Protocol.VERSION` n'ont pas bougé** : rien ne transite, aucun RPC, aucun `if transport == …`
+(une garde le lit dans le texte des fichiers neufs).
+
+#### Le format, tel qu'il est écrit (le détail est en tête d'`aventure_format.gd`)
+
+Un chapitre est un dossier `res://assets/solo/chapitre_XX/` (lecture seule, comme `assets/maps/`) : un manifeste et un fichier par salle.
+```json
+{ "version": 1, "numero": 0, "titre": "L'initiation",
+  "classe_debloquee": "pistolet", "classe_imposee": "pistolet",
+  "niveaux": ["niveau_01.json", "niveau_02.json", "…", "niveau_10.json"] }
+```
+```json
+{ "version": 1,
+  "titre": "Le premier pas",
+  "intention": "Une silhouette immobile sous un plafonnier. Avance, vise, tire.",
+  "boss": false,
+  "carte": { "version": 4, "grid_size": {"x": 16, "y": 16}, "floor": "1,1,14;…", "walls": "0,0,16;…", "low_walls": "" },
+  "joueur": { "case": [3, 8], "orientation": 0 },
+  "plafonniers": [ { "case": [12, 8], "rayon": 4.0, "intensite": 1.2 } ],
+  "pnj": [ { "case": [12, 8], "orientation": 180, "profil": "immobile_sourd_aveugle" },
+           { "case": [14, 3], "orientation": 90, "profil": "ronde_voit_lent", "ronde": [[14, 3], [14, 10], [5, 10], [5, 3]] },
+           { "case": [12, 9], "orientation": 180, "profil": "zone_sourd_aveugle", "zone": [10, 8, 6, 4] } ] }
+```
+Pour le boss : `"boss": true`, **un seul** PNJ, `"profil": "boss"` (le `ProfilBot.boss()` : NORMAL, voit, entend, tire), `"classe"` = la classe que le chapitre débloque.
+**Le validateur est strict et ne répare rien** : chaque défaut est une phrase (`valider_niveau`, `valider_manifeste`, `valider_chapitre` rendent la liste ; `charger_chapitre`
+la crie, une ligne par défaut, et rend VIDE — le chapitre n'apparaît pas, il n'est pas joué de travers). Il refuse : une clé inconnue (une faute de frappe n'est pas une option
+ignorée), un profil inconnu (jamais un PNJ par défaut), une case hors carte ou non praticable (la définition du bot : `NavigationBot.est_praticable`, qui exclut aussi les couloirs plus
+étroits que le corps), deux PNJ sur une case ou sur celle du joueur, une ronde sans points (ou à un seul, ou aux points non praticables ou inatteignables), une zone vide, hors carte ou qui ne contient pas le PNJ, une
+`ronde` posée sur un profil qui n'en fait pas (et inversement `zone`), un plafonnier hors bornes (rayon, intensité : `Plafonnier.normaliser` les bornerait en silence, le validateur les REFUSE),
+dans la pierre ou hors carte, une carte refusée par `map_codec.gd` (embarquée, jamais un renvoi vers `assets/maps/` : aucune carte de duel n'est touchée), un `spawn_p1` qui contredit `joueur.case`
+(`spawn_p2` est écrasé : J2 n'existe pas en aventure), une salle sans PNJ, plus de huit PNJ ou plafonniers, une intention de plus de 200 signes, le profil `boss` hors du niveau de boss, un niveau de
+boss à plusieurs PNJ ou sans classe, **un chapitre dont le dernier niveau n'est pas le boss**, un boss au milieu, un boss d'une autre classe que celle que le chapitre débloque, une classe
+débloquée qui contredit l'ordre du rang, une classe offerte par le chapitre 10, un chapitre 0 qui ne prête pas le Parasite, dix salles exigées aux chapitres livrés (`niveaux_attendus`, 0 pour l'essai).
+
+**Les slugs sont ceux du CODE** (`ClassData.slug()`), pas ceux de la ROADMAP : le Parasite est `pistolet`, l'Illusionniste `fusil`, le Braconnier `arbalete`, le Terrassier `pompe`. L'ordre
+du rang, chapitre N → classe de rang N+1 : `pistolet, fumiste, fusil, arbalete, pompe, incendiaire, sentinelle, occulteur, allumeur, spectre` ; le chapitre 10 n'en offre aucune (SOLO-Q8). Une garde
+compare cette table au catalogue du jeu.
+
+#### La partie : comment les PNJ existent
+
+- **Des `Player` pour de vrai.** Chaque PNJ est un `player.tscn` instancié, nommé `PNJ_<i>` (nom explicite : un RPC de scène se route par le chemin du nœud), `player_id` 1, `est_pnj` vrai, dans
+  `Players` sous `GameState`, piloté par un `BotInputProvider` nommé `BotPNJ_<i>` au profil du catalogue (`ProfilBot.pnj_nomme`) — ou `boss()`. Il subit les règles du joueur : vitesse,
+  murs, balles, munitions, recharge. **`player_id` 1** parce que toute la machinerie de lumière, de couches, de sons et de rendu du jeu distingue « moi » et « l'autre » : un PNJ EST l'autre.
+  J2 reste là, caché et sans collision, comme un entraînement contre une cible le laisse (`_do_start_round` le remontre au départ de tout vrai match).
+- **La perception ne vise que le joueur humain.** `PerceptionBotNoeud._adversaire()` — « le premier autre joueur du groupe » (signalé par S3) — ignore désormais tout joueur `est_pnj` : l'adversaire d'un PNJ est
+  le joueur, jamais son voisin ; joueur mort ou caché, il n'en a plus (`null`), il ne se rabat pas sur un PNJ. Son ouïe ignorait déjà les PNJ (elle filtre ses propres sons par `player_id`, que tous partagent).
+- **Les PNJ ne se blessent pas entre eux — le geste le plus simple, DEUX lignes.** `Player.take_damage` refuse les dégâts d'un PNJ à un PNJ ; et `Bullet` met tous les PNJ en exception du `ShapeCast` d'une balle
+  de PNJ (elle les traverse : un PNJ ne s'abrite pas derrière un autre). Les deux ne valent que si `est_pnj` : le duel ne les voit jamais.
+- **Un PNJ abattu sort du jeu.** `Player.die()` cache ses sprites et éteint ses lampes mais NE TOUCHE PAS à sa collision : un cadavre invisible aurait arrêté les balles et bloqué le passage. Le moteur le
+  rend caché et sans collision (voir « Pièges connus »). Il ne fait pas battre le cœur du joueur (`update_low_health` sautée pour un PNJ).
+- **Les plafonniers** : `Plafonnier.poser(arene, liste)` à CHAQUE salle (idempotente : elle retire le conteneur d'avant), `Plafonnier.retirer` en sortant — et c'est `aventure_partie.gd` qui est inscrit à `POSEURS_AUTORISES`
+  (la garde de S5 vérifie aussi que chaque poseur autorisé POSE réellement). `rebuild_arena` n'a pas bougé : « signalé » en S5, contourné ici.
+- **La vue iso les montre TOUS** (le gros morceau). `Presentation3D` ne savait rendre que deux corps, en dur. `GameState.figurants` liste les `Player` en plus de J1 et J2 ; la présentation leur donne un corps voxel chacun
+  (indices 2 et suivants des tableaux `_corps`, `_voxels`, `_mat_corps`…, un POOL qui grandit et ne rétrécit pas), un capteur de lumière chacun (`_capteurs_figurants`, dans la vue de J1 seule), et une COUCHE chacun
+  (1024, 2048, … : au plus huit, hors des lightmaps comme les autres). **Un figurant se rend exactement comme J2 vu de J1** : même masque de capteur (`masque_vue_adverse(1)`, `masque_capteur` replie les indices
+  ≥ 2 sur le rôle de J2), même opacité (lue sur les sprites que `player.gd` a posés), même `capteur_1`. **Sans figurant, rien ne s'exécute** : `_accorder_les_figurants` rend la main au premier test, aucun tableau ne grandit, le
+  duel garde ses deux corps et ses quatre capteurs (la garde le compare, et la suite iso existante est restée verte). Le capteur d'un figurant ne tourne que s'il est montré et à moins de 1 300 px du joueur regardé (chiffre de prudence, non mesuré).
+  **Ce qu'un figurant n'a pas, faute d'avoir été fait** : l'ombre de contact au sol (le shader du sol n'en connaît que deux), le bout de l'arme et la lampe 3D de ses lumières (`lumieres_iso.gd`, `iso_volumes.gd`, `_accorder_le_halo_soi`,
+  `_accorder_le_pied_des_lampes` ne regardent que J1 et J2) ; seule la vue de J1 les rend (l'aventure n'a que celle-là).
+
+#### La boucle
+
+`GameState.demarrer_l_aventure(chapitre, index, classe)` → `AventurePartie.demarrer` → `_poser_la_salle` : **c'est un entraînement dont la salle vient d'un fichier** — la carte du niveau est la carte active
+(`MapData.poser_carte_d_aventure`, sans émettre `map_selected` ni toucher au catalogue), puis le départ ordinaire (`_do_start_round(…, true)`, qui remet le joueur à neuf : vie, arme, munitions, fusées), puis `sandbox_mode` et `training_mode` vrais
+(une seule vue, l'oreille sur le joueur, pas de manche, pas de chronomètre, pas de killcam, rien dans `match_history.json`, aucun forfait, rien de classé), le joueur à sa case et son orientation, les plafonniers, les PNJ.
+- **Le carton** (`CartonAventure`) couvre l'écran 2,4 s à chaque salle (la première, la suivante, la reprise) : chapitre, numéro, titre, phrase d'intention — le seul endroit où l'aventure parle. Pendant ce temps
+  `GameState.countdown_left` est positif : **comme au décompte d'une manche, plus aucun `Player` ne bouge ni ne tire** (le mécanisme existait, rien de neuf). Chaque bot repart d'une mémoire vide quand il se retire.
+- **Tous les PNJ morts → salle gagnée** (délai de 1,4 s : on voit la salle vide), notée réussie, puis le carton de la suivante. **Mourir recommence LA SALLE** (délai de 1,8 s) : des PNJ NEUFS (nœuds libérés TOUT DE SUITE —
+  `remove_child` puis `queue_free`, sans quoi ils restent dans le groupe `players` jusqu'à la fin de l'image : piège déjà payé en S3), la même carte, les mêmes plafonniers, le joueur à neuf à sa case. Si les deux tombent
+  ensemble, la salle est perdue (il n'y a pas de victoire d'un mort). **Le boss tombé** : le chapitre est fini, sa classe est débloquée et écrite, un carton de fin (3,4 s), puis retour à l'écran de l'aventure par le chemin du retour au menu.
+- **Pause → quitter** : le chemin de l'entraînement (`_on_main_menu_requested`, `_on_quit_match_requested`) démonte la partie : PNJ et plafonniers retirés à l'instant (avant la purge de l'arène, dont le `queue_free` les
+  laisserait un instant dans leurs groupes), carton parti, carte du joueur rendue. **Un duel ou un entraînement qui part, par n'importe quel chemin, démonte l'aventure** (la ceinture de `_do_start_round`, comme pour le bot de S1).
+- **Les temps sont comptés en pas de physique** (`_physics_process`) : sous `--fixed-fps 60` la suite simule la partie image par image, et la pause l'arrête sans rien de plus. Les 2,4 / 1,4 / 1,8 / 3,4 s sont des chiffres de DÉPART, jugés par personne.
+- **Le moteur refuse ce que l'écran refuserait** : une salle fermée, une classe autre que celle qu'un chapitre prête, une classe non gagnée — crié, rien de posé (les cris sont comptés : `CRIS ATTENDUS: 3`).
+
+#### La progression (`user://solo.cfg`)
+
+Un chapitre s'ouvre quand le précédent est fini (le 0 est toujours ouvert) ; dans un chapitre, une salle s'ouvre quand la précédente est réussie. **Finir un chapitre débloque SA classe**, et celle-là : on ne finit pas un chapitre fermé,
+donc les classes ne se débloquent jamais dans le désordre, et `classes_debloquees()` les rend dans l'ordre du rang quoi que le fichier dise. **Le chapitre 0 joue le Parasite prêté** (`classe_imposee`, exigée par le validateur) : il le donne au boss ;
+rejoué avec le Fumiste en poche, il se joue encore en Parasite. Le choix de la classe est libre parmi les débloquées (les chapitres qui n'imposent rien) et se note au lancement. Un `solo.cfg` absent est un joueur qui commence ; **un fichier présent mais
+illisible est crié et mis de côté (`.illisible`) AVANT de repartir à vide** — l'écraser effacerait tout ce qu'il portait. Le déblocage est propre au solo : ni `RankLoadout` ni le rang ne bougent.
+
+#### L'écran
+
+Une entrée « AVENTURE » à l'accueil du hub, sous « S'ENTRAÎNER ». **Deux écrans, parce que le hub ne défile pas** (une entrée hors de l'écran est une entrée perdue : constaté à la première capture, avec onze chapitres et dix salles sur le même écran) :
+`SCREEN_AVENTURE` liste les **chapitres**, `SCREEN_AVENTURE_SALLES` les **salles** du chapitre pris (« AVENTURE — LES SALLES », « RETOUR » au chapitre). Les deux portent le panneau du salon de l'entraînement : le râtelier de J1 et le lanceur « LANCER LA SALLE ».
+**Choix : les chapitres pas encore écrits tiennent en UNE ligne** (« CHAPITRES 2 À 10 — À VENIR », sans titre ni contenu : l'écran dit que l'aventure continue sans rien inventer) ; un chapitre écrit mais fermé dit « (FERMÉ) » et le cadre de droite dit pourquoi ; une salle est « (RÉUSSIE) » ou « (FERMÉE) ».
+À l'OUVERTURE depuis l'accueil, le choix repart du prochain à jouer (le premier chapitre ouvert non fini, sa première salle non réussie) ; revenir de la partie rouvre l'écran où l'on était. Un appui sur un chapitre ouvert le prend et DESCEND à ses salles ; sur une salle ouverte, la prend ; sur une entrée fermée, ne change rien.
+Le râtelier se verrouille d'après la progression solo (`_contexte_aventure`) : au chapitre 0 seul le Parasite est libre, ailleurs les classes gagnées, les autres grisées avec « Se gagne en finissant le chapitre N ». La description de la salle (titre, phrase, nombre à abattre, classe prêtée) prend la place de l'affiche de la carte dans la colonne du salon (la carte vient du niveau, pas de la galerie) — **en petit** : à juger à l'image. Manette, clavier, sons : des entrées de hub
+ordinaires. **Pas d'illustration neuve** : l'écran réutilise `ill_entrainement`.
+
+#### Les gardes (obligatoires)
+
+- `tools/test_aventure_format.gd` (`--script`, 124 vérifications) : le chapitre d'essai est accepté ; **un cas par règle** du validateur, chacun avec le mot qui nomme le défaut (un refus pour une autre raison que celle qu'on teste ne passe pas) ; l'ordre des classes suit le rang
+  (la table, chaque manifeste, la progression qui les rend triées) ; un chapitre sans boss final, un boss au milieu, un boss d'une autre classe sont refusés ; la progression (ouvertures, déblocages, fichier illisible, choix non gagné) ; aucune carte de duel touchée (le md5 de `assets/maps/`, le code qui n'écrit pas sous `res://`, les niveaux qui embarquent leur carte).
+- `tools/test_aventure_partie.gd` (`--fixed-fps 60`, le jeu monté, ligne `case` de `run_suites.sh`, 140 vérifications) : **le duel d'abord** (deux corps, quatre capteurs, mêmes couches 8/16/32/64 et mêmes masques 132/18/34/268 qu'avant, aucun figurant) ; les refus du moteur ; **une salle se charge** (carte du
+  niveau, plafonniers `Plafonnier_<i>` à leur case, PNJ `PNJ_<i>` de vrais `Player` à bots `BotPNJ_<i>`, joueur à sa case et son orientation, J2 sans rôle, une seule vue, l'oreille, le HUD, le carton nommé qui fige le monde — une touche appuyée n'avance pas le joueur —, puis le monde repart) ; **les PNJ** (la perception de chacun vise le joueur ; le joueur caché
+  ou mort, jamais un autre PNJ ; l'appel direct et la balle ne se blessent pas entre PNJ, la balle d'un PNJ touche le joueur) ; **la vue iso** (cinq PNJ → cinq figurants, sept corps `Corps1..7`, chacun visible, voxel, posé à la place de son PNJ, un capteur à lui — couche et masque — , des couches distinctes hors des lightmaps, des sprites 2D retirés, un PNJ abattu sans corps, la sortie qui vide tout et cache le pool) ;
+  **la boucle** (la salle 1 abattue par de VRAIES BALLES du joueur ; la suivante, sa carte, ses deux PNJ ; la progression ; une ronde qui marche et dont le corps iso suit ; la mort qui recommence LA SALLE avec des PNJ neufs remis à leur départ, la même carte, le joueur à neuf ; le boss au profil `boss()` et à la classe du chapitre ; le chapitre fini, la classe débloquée ET écrite dans le fichier relu ; les signaux ; le retour à l'écran de l'aventure, tout parti) ;
+  **la sortie** (quitter le match, l'entraînement et l'écran scindé lancés depuis l'aventure : tout est démonté, J2 est EXACTEMENT comme avant — fournisseur local de J2, visible, solide —, l'entraînement par le geste fonctionne) ; **l'écran** (l'entrée, les deux écrans — les chapitres, la ligne « À VENIR », « FERMÉ », puis les salles —, le râtelier verrouillé, la description, le lanceur, un second chapitre écrit dans un dossier temporaire pour le CHOIX LIBRE de la classe : le Parasite libre, les neuf autres verrouillées avec leur raison ; finir le chapitre 1 libère le Fumiste, qu'on lance et qui est joué ; le chapitre 0 rejoué reste en Parasite).
+  La suite isole sa progression (`user://test_aventure_partie_solo.cfg`) et vérifie que `user://solo.cfg` du joueur n'est jamais ouvert en écriture.
+- `tools/test_plafonniers.gd` : `POSEURS_AUTORISES` porte `aventure_partie.gd`, et une garde nouvelle exige que chaque poseur autorisé pose réellement.
+
+#### Sabotages (chaque garde a été vue ROUGE, puis le code restauré à l'octet — md5 identique)
+
+Joués dans une COPIE de l'arbre, jamais dans le worktree. Un sabotage qui laisse la suite verte aurait été une garde morte : **P5b l'a été à la première écriture**
+(la suite plantait sur un enfant non-`Node2D` de `bullet_container` avant d'atteindre l'assertion : rouge pour la mauvaise raison) ; la garde cherche désormais la balle par sa classe et désarme les PNJ pendant la mesure.
+
+| Sabotage | Garde qui rougit |
+|---|---|
+| F1 un profil inconnu est accepté | `test_aventure_format` (4) |
+| F2a une case non praticable est acceptée / F2b une case hors carte | `test_aventure_format` (3 / 2) |
+| F3 une ronde sans points est acceptée | `test_aventure_format` (1) |
+| F4 un chapitre sans boss final est accepté | `test_aventure_format` (1) |
+| F5 la table des classes dans le désordre | `test_aventure_format` (7) |
+| F6a les classes débloquées sortent dans l'ordre du fichier / F6b la fin du chapitre N débloque N+1 | `test_aventure_format` (1 / 7) |
+| F7 le format écrit sous `assets/maps/` | `test_aventure_format` (2) |
+| P1 la mort du joueur passe au niveau suivant | `test_aventure_partie` (3) |
+| P2 un PNJ vise un autre PNJ (`_adversaire` ne filtre plus) | `test_aventure_partie` (2) |
+| P3 un PNJ sans corps iso | `test_aventure_partie` (4) |
+| P4 les plafonniers restent à la sortie | `test_aventure_partie` (3) |
+| P5a les PNJ se blessent entre eux / P5b leurs balles s'arrêtent sur un PNJ | `test_aventure_partie` (2 / 2) |
+| P6 le carton ne fige pas le monde | `test_aventure_partie` (5) |
+| P7 la reprise garde les PNJ d'avant | `test_aventure_partie` (20) |
+| P8 le boss tombé ne termine pas le chapitre | `test_aventure_partie` (3) |
+| P9 un seul PNJ mort suffit à gagner la salle | `test_aventure_partie` (2) |
+| P10 le DUEL gagne un corps iso | `test_aventure_partie` (1) |
+| P11 la ceinture de `_do_start_round` retirée | `test_aventure_partie` (3) |
+| P12 le râtelier se verrouille sans la progression | `test_aventure_partie` (2) |
+| P13 un PNJ abattu reste solide et visible | `test_aventure_partie` (2) |
+| P14 la carte du joueur n'est pas rendue en sortant | `test_aventure_partie` (3) |
+| P15 deux figurants partagent une couche de capteur | `test_aventure_partie` (1) |
+
+La première série a été jouée AVANT que l'écran passe à deux niveaux (chapitres / salles) ; P1, P3 et P10 à P15 ont été REJOUÉS sur l'état final (tous encore rouges, restaurés à l'octet ; les nombres du tableau sont ceux de la première série, ceux de la seconde diffèrent d'un ou deux contrôles).
+
+**Le duel est rendu comme avant — prouvé par les images, pas seulement par les gardes.** Le script `prise_duel` (hors dépôt) prend le même duel en écran scindé et le même entraînement iso, graine fixée, sur l'arbre d'avant S6 et sur S6 :
+les deux écarts sont de l'ordre du BRUIT du rendu logiciel — deux exécutions du MÊME code diffèrent déjà d'environ 0,03/255 en moyenne sur 2 % des pixels (le rendu n'est pas déterministe au pixel) — et ceux de S6 contre l'avant sont dans ce bruit.
+
+**Les images d'une salle d'essai, vues (Mesa/llvmpipe, Xvfb) :** niveau 1, le PNJ voxel sous la flaque du plafonnier, le luminaire en point blanc, le cône de la torche ; niveau 2, deux PNJ (la ronde, la zone) rendus par la torche, invisibles hors du faisceau ; niveau 3, le boss lit par la torche
+entre deux luminaires (le sang et le voile rouge sont ceux de ses balles : il tire). Les captures ne sont pas versionnées.
+
+#### Non prouvé
+
+- **Jamais joué à la main.** Tout est vu par des suites (la partie simulée, de vraies balles du joueur) et des images fixes ; personne n'a tenu une manette dans une salle. La lisibilité du carton, les durées (2,4 / 1,4 / 1,8 / 3,4 s) et la difficulté des trois salles d'essai ne sont jugées par personne.
+- **Images Mesa/llvmpipe seulement**, pas le rendu d'un GPU (Metal) du poste d'Adrien.
+- **Le coût n'est pas mesuré** (consigne : aucun relevé de cadence) : un capteur 256² par PNJ montré à moins de 1 300 px, les omni des plafonniers. Les plafonds (8 PNJ, 8 plafonniers) sont des chiffres de prudence, pas de mesure.
+- Des PNJ **mobiles confrontés à un joueur qui les cherche** : la suite fait marcher une ronde, mais ne joue pas une salle entière « à la furtive ». Le boss n'est pas joué en duel complet dans la suite (il est abattu par des balles posées).
+- La **navigation à la manette** de l'écran (deux niveaux) n'a pas été testée à part : ce sont des entrées de hub ordinaires, que la suite du hub couvre en général. Le **panneau de pause** n'a pas été ouvert dans une salle (le chemin « quitter » est exercé par l'appel du signal).
+- La description de la salle, posée à la place de l'affiche de la carte, est **petite** à l'écran (voir la capture).
+- Aucun contenu de jeu : `assets/solo/` n'existe pas ; l'écran n'a jamais montré un vrai chapitre.
+
+#### Signalé, pas corrigé
+
+- **`GameState.rebuild_arena` ne purge toujours pas le conteneur « Plafonniers »** (signalé en S5) : contourné — `Plafonnier.poser` est idempotente et le moteur retire à la sortie — mais le défaut reste.
+- **`_maj_eblouissement` ne connaît que J1 et J2** : un PNJ n'éblouit pas le joueur et n'est jamais ébloui par lui (la torche dans les yeux d'un PNJ ne fait rien). **Corrigé par S9b** (2026-10-03).
+- **Un figurant n'a ni ombre de contact au sol, ni bout d'arme, ni lampe 3D** : `lumieres_iso`, `iso_volumes`, `_accorder_le_halo_soi`, `_accorder_le_pied_des_lampes` ne regardent que J1 et J2.
+- Le **pool de corps** des figurants grandit et ne rétrécit pas (au plus huit corps de plus).
+- **`ReplaySystem` enregistre en continu pendant l'aventure**, comme à l'entraînement : rien ne l'exploite, mais il tourne.
+- **`docs/JOURNAL_SESSIONS.md` n'est pas mis à jour** (fichiers partagés touchés : à tenir par la session qui le tient).
+- **Slugs du code, pas de la ROADMAP** (pistolet = le Parasite…) : les fichiers de chapitre écrivent les premiers.
+- `_decrire()` du diagnostic iso (F3) ne liste pas les figurants : le panneau ne les nomme pas.
+- L'écran réutilise l'illustration `ill_entrainement` (pas d'illustration neuve).
+- **La republication du suivi d'Adrien** (artefact du projet) est à faire par la session centrale : delta dans le rapport de S6.
+
+**À trancher par Adrien.** (1) Les durées du carton et des délais (2,4 / 1,4 / 1,8 / 3,4 s), à juger en jouant. (2) Les chapitres pas écrits : **une ligne « À VENIR »** (choix actuel) ou **cachés** ? (3) Le chapitre 0 se joue toujours en Parasite PRÊTÉ, même quand on a des classes en poche — voulu pour l'initiation ? (4) Les slugs du code ou les noms de la ROADMAP dans les fichiers ? (5) Les PNJ sont **solidaires** (leurs balles se traversent) : un PNJ ne s'abrite pas derrière un autre. (6) Un PNJ abattu **disparaît** sans dépouille. (7) Plafonds de huit PNJ et huit plafonniers par salle. (8) Une illustration neuve pour l'écran de l'aventure.
+
+### S9 — FAITE le 2026-10-03 : le bot s'équipe — sa torche, sa prudence, sa fusée, le gadget de sa classe
+
+**Ce qui existe.** `equipement_bot.gd` (`EquipementBot`, des fonctions pures : les RÈGLES des outils), `profil_bot.gd` gagne l'axe **équipement**
+(`torche_tactique`, `torche_en_patrouille`, `torche_rayon_fouille_px`, `repli_apres_tir_s`, `accroupi_pres_du_son_px`, `lance_des_fusees`,
+`utilise_le_gadget`, `est_equipe()`, et la table `equiper_pour_le_palier`), `bot_input_provider.gd` gagne `_equiper()` et rend enfin
+`is_flare_pressed()`, `is_gadget_pressed()`, `is_crouch_pressed()` et une torche qui est une COMMANDE (`is_flashlight_pressed()`),
+`perception_bot.gd` / `perception_bot_noeud.gd` gagnent la **perception sous gadget** (voir plus bas). Gardes : `tools/test_bot_equipement.gd`
+(286 vérifications, inscrite à `run_suites.sh`, à pas d'image fixe) et sa bibliothèque `tools/flux_commandes_bot.gd` ; le banc de S4
+(`banc_bot_difficulte.gd`, `banc_bot_duel.gd`) gagne `--classe=N` et `--sans-equipement`, et rend la recharge d'une minute et la réserve de fusées
+entre deux duels. **`game_state.gd`, `ui.gd`, `player.gd`, `protocol.gd` n'ont pas bougé** : rien ne transite, aucun `if transport == …`. Seul
+`perception_bot_noeud.gd` (fichier de S6) est touché — la fonction `_lire_les_gadgets` et un appel ; `_adversaire()` n'est pas réécrite.
+
+**La règle qui prime : s'équiper ne donne AUCUNE information.** Chaque règle ne lit que la MÉMOIRE du bot (la place vue, ou la zone entendue —
+jamais la vraie place), son état, SON corps (cap, vie, munitions, classe), sa PROPRE réserve (fusées, gadget : un joueur les lit à son HUD) et la
+carte. **`equipement_bot.gd` ne contient ni `players`, ni `get_nodes_in_group` (sauf le groupe `game_state`, le nœud d'arbitrage : `jeu_du()`), ni
+`global_position`, ni `flashlight`** — la suite le lit au texte (code, commentaires exclus), et celui du fournisseur garde ses interdits de S3. Et ce que
+l'outil fait AU bot, il le lui fait comme à un joueur : la torche qu'il allume le trahit, la fusée qu'il lance l'éclaire aussi (d'où sa distance
+minimale), un gadget qui bouche la lumière le gêne.
+
+#### Les règles, outil par outil
+
+| Outil | Règle (chiffres de DÉPART, passés au banc) | Pourquoi |
+|---|---|---|
+| **Torche** | tactique : **éteinte tant qu'il n'a rien perçu** ; en enquête et en recherche, **éteinte pendant qu'il s'approche, allumée à moins de `torche_rayon_fouille_px` de la place qu'il fouille** (hystérésis 60 px) ; en combat **inchangée** (allumée elle reste, éteinte il ne l'allume pas) ; **éteinte en repli** | un bot prudent ne se trahit pas pour rien ; éteindre en plein tir lui ferait perdre la cible que la lampe révèle (il clignoterait de combat en recherche) |
+| **Posture** | accroupi en ENQUÊTE sur une trace d'OUÏE à moins de `accroupi_pres_du_son_px` (hystérésis 40 px) ; jamais en combat, patrouille, recherche | le pas accroupi est le plus discret du jeu (niveau 0.8) ; il avance alors au quart de sa vitesse, et son anti-blocage le sait |
+| **Repli** | après chaque rafale, `repli_apres_tir_s` secondes : il s'éloigne de 3 à 7 cases, à plus de 60° de l'axe vers sa mémoire, de préférence là où un tireur posé à cet endroit ne le verrait pas (la carte, lue comme un joueur), torche éteinte, **sans tirer** ; sans effet sur un bot IMMOBILE ni hors de sa ZONE | un tir trahit (éclair, bruit) : niveau 0.7 |
+| **Fusée** | en ENQUÊTE, sur une trace d'OUÏE nette (rayon ≤ 320 px, confiance ≥ 0,25), **à 240–470 px**, le corps tourné vers elle (≤ 10°), un chemin sans mur, **jamais si la cible est vue**, une fusée en réserve et les mains libres | elle sert à VOIR ce qu'on n'a fait qu'entendre ; 240 : elle s'allume à ~450 px et éclaire son lanceur (« on ne la lance pas à ses pieds ») ; 470 : portée libre du vol (v²/2f = 450 px) |
+| **Gadget** | une ligne par gadget (`EquipementBot.GADGETS`), une seule fonction `gadget_voulu` : voir le tableau suivant. Socle commun : jamais en patrouille, face à la place visée (≤ 25°), chemin dégagé, réserve (recharge d'une minute) lue chez `GameState`, mains libres ; un appui de 0,1 s, réessai après 1,2 s | le gadget se plante à 96 px devant lui : il se tourne d'abord ; un bot qui n'a rien perçu ne pose rien |
+
+#### Les dix gadgets, une règle chacun
+
+| Classe | Gadget | Quand (états ; distance de la place visée) | Où / ensuite | Pourquoi |
+|---|---|---|---|---|
+| Parasite | grésillement | enquête, recherche, combat ; 150–420 px | 96 px devant lui ; **la même touche l'ALLUME** quand la torche de la cible est vue à ≤ 330 px, l'éteint quand rien ne le justifie (`bobine_voulue`) | la bobine ne sert que face à une lampe ; la batterie est une réserve de 14 s |
+| Illusionniste | leurre | combat, cible VUE ; 160–600 px ; **juste après une rafale** (0,8 s) | 96 px devant lui | le faux corps prend le coup suivant pendant que le bot change de place |
+| Terrassier | poussière | enquête, recherche, **cible NON vue** ; 200–380 px | 96 px devant lui | qui s'engage dans le nuage ne voit plus loin ; en combat il boucherait sa propre vue |
+| Braconnier | torche fantôme | enquête, non vue ; 250–450 px | 96 px devant lui | un appât à distance pendant que le bot reste dans le noir |
+| Fumiste | cartouche de suie | combat, cible vue ; 120–400 px ; **il vient d'être touché** (2 s) | 96 px devant lui, **puis il entre dans son nuage** (4 s) | la suie ne cache que ceux qui s'y tiennent |
+| Incendiaire | nappe de braises | combat, cible vue ; 150–420 px | 96 px devant lui | un sol qu'on ne traverse plus, posé là où il tient sa place |
+| Sentinelle | poudre de contact | enquête, non vue ; 200–450 px | 96 px devant lui | elle veille : chaque pas qui la traverse luit |
+| Occulteur | ombre habitée | enquête, recherche, combat ; la **torche de la cible VUE** ; 150–450 px | 96 px devant lui | la plaque coupe le faisceau et projette l'ombre d'un homme absent |
+| Allumeur | mine au magnésium | enquête, recherche, non vue ; 250–450 px | 96 px devant lui, **puis il RECULE** (2,5 s, le dos à la menace) | le flash aveugle dans 460 px, poseur compris |
+| Spectre | voile | recherche, combat ; la **torche de la cible VUE** ; 150–400 px | 96 px devant lui | la bâche casse le faisceau qui le cherche (les balles la traversent) |
+
+**Aucun gadget n'a la règle « ne pas poser »** : les dix se posent. Mais trois sont sommaires, et c'est dit : la **poudre** (le bot ne lit pas
+ses traces — le modèle de vue ne les connaît pas : voir moins que la lumière), la **torche fantôme** et la **poussière** (leur effet sur le duel n'est
+pas mesuré). Les règles sont posées pour ne pas faire de mal, pas pour optimiser ; elles se jugent en jouant.
+
+#### La perception sous gadget — affinée, sans jamais voir plus que la lumière
+
+**Ce que S2 documentait était faux.** « Tant qu'UN gadget qui bouche ou étouffe la lumière est posé, le bot est aveugle » : le code testait
+`has_method("facteur_de_lampe")`, que le SOCLE de tous les gadgets définit. **Le bot était donc aveugle sous N'IMPORTE QUEL gadget — une mine, une poudre
+comprises — jusqu'à ce que le gadget meure** (jamais, pour la poudre, la bobine, le voile, l'ombre, la mine) : un bot qui posait son gadget perdait la
+vue pour la manche. Le même piège a failli se répéter pour `occultation_pour` (le socle la définit aussi) ; le test d'un volume est maintenant la présence
+d'une `opacite` (`GadgetVolume`, qu'un fichier chargé en `--script` ne peut pas nommer).
+- **Les gadgets à OCCLUDER** (voile, ombre habitée, leurre — son étoile et son torse —, torche fantôme) entrent dans `monde["obstacles"]` : leur polygone
+  d'ombre, en coordonnées du monde, est un mur mince que ni la ligne de vue du bot ni le trajet d'une lumière ne traversent (`PerceptionBot.obstacle_sur`,
+  « du côté du noir » : un point DANS le polygone, un frôlement à 0,5 px coupent). Le polygone est celui que le moteur ombre.
+- **Les gadgets qui ne touchent pas à la lumière** (mine, braises, poudre, grésillement — dont l'effet sur une lampe est déjà dans l'énergie qu'elle
+  rend, lue par `_lampe_brule`) ne changent rien.
+- **Restent AVEUGLES** : la suie et la poussière (un nuage que le modèle ne sait pas rendre : 9 s et 7,5 s), et tout gadget qui bouche la lumière sans
+  qu'on sache lire son ombre.
+- **Preuves** : 600 segments au hasard contre un échantillonnage fin (aucun manqué) ; et **contre le MOTEUR** dans le vrai jeu — 400 segments par gadget,
+  un rayon de physique qui rencontre le voile ou la plaque d'ombre est toujours un segment que le modèle tient pour coupé, et réciproquement hors frôlement.
+  **Non prouvé : le banc contre les capteurs** (`banc_perception_bot`, fenêtre réelle) n'a pas été rejoué avec un gadget posé — il ne met en scène
+  aucun gadget, et l'ombre d'un occluder sur un corps n'a été mesurée au capteur que par S5 pour un mur, jamais pour un voile. Le changement est donc gardé
+  par la géométrie et par le moteur de physique, pas par la lumière rendue.
+
+#### Le réglage au banc — avant / après
+
+Le banc de S4, **mêmes graines (401-416), mêmes cartes, mêmes quatre comportements**, 384 duels par difficulté, joueur type de référence (0,25 s) :
+
+| Victoire du joueur type | FACILE | NORMAL | DIFFICILE | cibles |
+|---|---|---|---|---|
+| S4, rejoué sur ce code avant S9 | 79 % | 54 % | 29 % | 80 / 55 / 30 |
+| **premier jet de S9** (perception aveugle sous tout gadget ; torche 300/380 px, repli 1 s partout) | 79 % | 47 % | 41 % | |
+| perception affinée, mêmes réglages | 79 % | 62 % | 37 % | |
+| **réglage retenu** | **79 %** | **55 %** | **34 %** | |
+
+Ce que le banc a appris, et qui ne se devinait pas :
+- **Le premier jet donnait DIFFICILE plus facile que prévu (41 %) et NORMAL plus dur (47 %)** : tout venait de la cécité sous gadget. Un NORMAL qui posait sa bobine ne
+  voyait plus rien (62 % de ses tirs partaient « sur un son », contre 15 % ensuite) ; affiner la perception a ramené les deux ordres de grandeur.
+- **Le repli est le bouton qui pèse** : un bot qui ne tire pas pendant son repli tire moins. NORMAL à 24 graines : repli 1,0 s → 63 %, 0,7 s → 60 %, 0,5 s → 52 %, aucun
+  → 56 % (le bot de S4). La torche tactique, la fusée, la posture accroupie et le gadget pèsent chacun dans le bruit (±3 points à 576 duels) : NORMAL sans torche 58 %,
+  DIFFICILE sans torche 33 %, sans fusée 33 %, sans gadget 34 %, sans posture 35 %.
+- **Retenu** — NORMAL : torche tactique (fouille à 300 px), repli 0,6 s, gadget ; DIFFICILE : torche tactique (300 px), repli 0,3 s, accroupi à 450 px, fusée, gadget ;
+  FACILE : aucun outil (et sa ligne n'a pas bougé d'un duel : 79 %, mêmes statistiques que S4). **DIFFICILE reste à 34 % pour une cible de 30** : l'équipement l'affaiblit
+  de ~5 points à réflexes égaux (sans équipement 29 %), et rien de ce que j'ai essayé ne le ramène sous 32 % sans retirer un outil à sa classe ; je ne l'ai pas
+  corrigé par ses réflexes (ce n'est pas ce que la consigne demandait) — voir « À trancher ».
+- Par comportement du joueur type (victoire), retenu : `avance_torche` 92 / 64 / 26, `ecoute` 88 / 58 / 57, `accroupi_lent` 85 / 65 / 31, `tire_puis_bouge` 49 / 34 / 24
+  (facile / normal / difficile). **`ecoute` contre DIFFICILE, 57 %, sort du rang** : un joueur immobile et silencieux est approché accroupi, lentement — il a le
+  temps de tirer le premier. Non corrigé.
+- **Les dix classes** (NORMAL, 8 graines, 192 duels par classe, `--classe=N`) : voir « Ce qui est mesuré par classe » plus bas.
+
+#### Ce qui est mesuré par classe
+
+NORMAL équipé, une classe pour le bot (`--classe=N`), 8 graines × 6 cartes × 4 comportements = 192 duels par ligne, victoire du joueur type (le Parasite) ; entre parenthèses, le même
+bot SANS équipement quand je l'ai relevé :
+Parasite 56 % — Illusionniste 63 % — Terrassier **85 %** (92 %) — Braconnier **90 %** (79 %, 8 % de duels nuls) — Fumiste 51 % — Incendiaire **87 %** (87 %) — Sentinelle 55 % — Occulteur **98 %** (97 %) —
+Allumeur 62 % (144 duels : un plantage du moteur, voir « Signalé ») — Spectre 54 %. Les gadgets sont posés (0,3 à 0,6 par duel, 0,9 pour la bobine) et les replis ont lieu ; **mais quatre classes sont des
+adversaires faciles AVEC ou SANS outils** : le bot tire avec les réflexes réglés pour le Parasite (S4), et un fusil à pompe, une arbalète, une carabine à parabole, un pistolet-mitrailleur à détente tenue
+n'y gagnent rien — précision de 2 à 6 % pour la pompe et le lance-fusées. **Ce n'est pas l'équipement, et ce n'est pas réglé** : les boss des chapitres 3 (Braconnier), 4 (Terrassier), 5 (Incendiaire) et 7 (Occulteur)
+seraient trop faciles tels quels. À régler au banc, par classe, avant de les publier (S8).
+
+#### Les gardes — `tools/test_bot_equipement.gd`
+
+Les règles pures (chaque condition de la fusée et de chaque gadget, refusée une à une ; les dix règles comptées CONTRE `GameState.IMPLEMENTATIONS`) ; le texte de
+`equipement_bot.gd` ; **les profils sans équipement n'ont pas changé** : le flux de commandes (840 pas : mouvement, visée, gâchette, recharge, torche, fusée, gadget,
+posture) de dix profils × deux graines égale des empreintes `md5` **relevées sur le code de S4 (`f113da8`), avant la moindre ligne de S9** (S1, FACILE/NORMAL/DIFFICILE
+sans outils, cinq PNJ du catalogue dont le sourd et aveugle, le boss sans outils) — et un profil à torche tactique n'a PAS la même empreinte ; sur des corps factices avec
+le vrai fournisseur et le vrai nœud : la torche, la posture (au quart de la vitesse, sans blocage), le repli (il change de place, ne tire pas, reprend), la fusée (vers un
+pas entendu, pas vers une cible vue, ni trop près, ni trop loin, ni à travers un mur, ni sans réserve), **chacun des dix gadgets posé une fois dans la mise en scène de
+sa règle, face à la place visée, une seule fois**, la bobine allumée puis éteinte, la mine qui recule, la suie où il entre ; **l'honnêteté** (dix classes équipées de tout,
+devant un joueur dans le noir puis derrière une paroi : ni pose, ni fusée, ni torche, ni accroupi, ni repli ; un bot en ZONE qui marche : idem ; devant un pas ENTENDU, les
+mêmes outils servent) ; puis **le vrai jeu** (vrai `Player`, vrai `GameState`, vraie fusée) : les dix gadgets NAISSENT dans l'arène, posés par le bot, à 96 px devant lui, la
+recharge d'une minute armée, un seul ; la vraie fusée naît et part vers le son ; le vrai corps s'accroupit, se replie ; ce que le nœud de perception retient de chaque gadget
+posé ; et la géométrie du voile et de la plaque contre le moteur de physique. `test_bot_combat` (S3) garde ses 145 vérifications : son `_profil` éteint les outils (un NORMAL équipé se replie après sa rafale, et le contrôle « il tient sa place en combat » rougissait) ; le fournisseur lit la vie de son corps SANS supposer qu'un corps factice la porte (`float(null)` : 14 668 erreurs de script que `run_suites.sh` a attrapées au premier passage). `test_banc_bot` reste vert (une seule retouche : son contrôle « tire sur un SON » éteint les
+outils — la fusée du DIFFICILE lui fait VOIR ce qu'il n'a fait qu'entendre, et son tir n'est plus « sur un son » ; la règle d'audace qu'il garde est inchangée).
+
+**Résultat des suites : `./tools/run_suites.sh --rapide` — les 140 suites headless sont vertes** (927 s, scénarios à deux instances non joués), sans erreur de script ni `push_error` non déclaré ; le premier passage avait attrapé un rouge (`test_bot_combat`, voir plus haut), corrigé.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié, scripté).** Chiffre = contrôles rouges de `test_bot_equipement`. **Torche** : toujours allumée (23) ; allumée en patrouille (16) ; allumée pendant le repli (1, la règle pure). **Fusée** : lancée vers une cible vue (1) ;
+sans contrôle de la réserve (1) ; à travers un mur (5). **Gadget** : jamais posé (47) ; posé sans réserve (10) ; la règle du voile retirée (2, plus 4 erreurs de script que le sabotage produit) ; la mine qui ne
+recule plus (2) ; la suie qui n'entre plus dans son nuage (2) ; la bobine jamais allumée (2). **Prudence** : repli ignoré (3) ; accroupi ignoré (4) ; le bot qui tire pendant son repli (1) ; l'anti-blocage qui
+ignore le facteur de l'accroupi (1, `blocages_total`). **Honnêteté** : un outil qui lit la VRAIE place de l'adversaire dans le fournisseur (22 — la garde de texte de `test_bot_combat` aurait aussi rougi) ;
+`equipement_bot.gd` qui lit le groupe des joueurs (3). **Perception sous gadget** : les obstacles ignorés par la ligne de vue (4, dont le contrôle contre le moteur de physique) ; un nuage qui n'aveugle plus (3) ;
+un gadget sans ombre lisible qui n'aveugle plus (1) ; **l'état d'avant S9 rétabli** — tout gadget aveugle (5). Vingt-trois sabotages, tous rouges du premier coup : aucun n'est resté vert. (Les trois gardes de
+S3 — la lecture de l'adversaire au texte — étaient déjà sabotées par S3 ; celle de `equipement_bot.gd` l'est ici.)
+
+**Deux fois une garde a trompé en l'écrivant, et c'est instructif.** (1) `has_method("occultation_pour")` : voir plus haut — le garde « un nuage aveugle » aurait été
+vrai pour TOUS les gadgets ; ce sont les dix classes du vrai jeu qui l'ont montré (le garde des corps factices passait). (2) Dans le vrai jeu, la mise en scène de la
+classe suivante trouvait « un gadget du poseur 2 » qui n'était pas celui de sa classe : le bot de la scène d'avant — sa mémoire pleine d'une cible — **reposait son gadget
+dès que la scène lui rendait la recharge d'une minute**. Remède : rendre la réserve APRÈS la pose du bot neuf, jamais avant.
+
+**Ce qui n'est pas prouvé.**
+- **Rien n'est joué par un humain.** Torche, posture, repli, fusée, gadgets : prouvés headless, en simulation, contre un joueur type. Ni leur lisibilité, ni leur plaisir.
+- **L'effet des gadgets sur la force du bot n'est mesuré que pour le Parasite** dans la matrice 80 / 55 / 30 (la classe de l'entraînement : `_reapparaitre_le_bot` remet
+  l'arme d'index 0). Les neuf autres classes sont mesurées en NORMAL seulement, 8 graines, et ne sont pas réglées.
+- **Le banc contre les capteurs n'a pas été rejoué avec un gadget** (voir « La perception sous gadget »).
+- Un bot équipé ne **se sert pas de ce que son gadget lui apprend** : il ne lit pas les traces de la poudre, ne distingue pas un leurre d'un joueur (le sien comme celui de
+  l'adversaire), ne voit pas la lumière de sa torche fantôme, de sa mine ou de ses braises (voir moins que la lumière : honnête, mais il pose sans s'en servir).
+- Le bot **n'évite pas sa propre nappe de braises** (8 points la traversent), ne se protège pas de sa propre mine au-delà de son recul, et **ignore son propre éblouissement**
+  (S2 ne l'avait jamais modélisé : un bot ébloui, par une fusée ou une mine, continue de « voir » la lumière que le joueur ne verrait plus à travers son voile — un trou de
+  S2, agrandi aujourd'hui par les mines et les fusées du bot ; **l'éblouissement est corrigé par S9b** (2026-10-03) : le modèle de vue le lit, le reste — la nappe, la mine — ne l'est pas).
+- Les replis et les poses ne sont éprouvés que sur la carte d'essai (corps factices, jeu monté) et les six cartes livrées (banc) ; jamais sur une carte de joueur.
+
+**Signalé, pas corrigé.**
+- **(Corrigé par S9b, 2026-10-03 : chaque PNJ a sa réserve, le bot d'entraînement rééquipe sa classe.)** **Le boss d'une autre classe perd sa réserve de fusées au premier duel** : `GameState._do_start_round` sème `_fusees_restantes` sur la classe de J2 À CE MOMENT (le Parasite), et
+  `_reapparaitre_le_bot()` rééquipe l'arme d'index 0. **S6** qui équipe un boss de classe N doit aussi resemer `_fusees_restantes[1]` (`_stock_fusees`) et
+  rééquiper la classe à la réapparition ; le banc et les gardes de S9 le font à la main (`_rendre_les_reserves`). Le gadget, lui, se lit sur la classe vivante : rien à resemer.
+- **Un plantage rare du moteur sous le banc** (signal 11, juste après « [REPLAY] P2 died », précédé de « The caller thread can't call the function `propagate_notification()` on
+  this node » sur `/root`) : 3 processus sur ~16 dans les relevés de 24 graines, aucun dans ceux de 16 graines ni dans les gardes. Non attribué à S9 (un thread qui notifie la
+  racine, côté moteur ou `ReplaySystem`) ; le banc d'exploration le montre par un lot incomplet (432 duels au lieu de 576), jamais par un faux résultat.
+- Le bot de l'entraînement porte toujours **le Parasite** : ses outils sont ceux de la classe 0 (la bobine). La classe du bot n'est choisie nulle part dans `ui.gd`.
+- `docs/JOURNAL_SESSIONS.md` : `game_state.gd`, `ui.gd` n'ont pas été touchés ; `perception_bot_noeud.gd` (S6) l'a été sur deux endroits (`_lire_les_gadgets`, une ligne dans `_voir`).
+- **2026-10-03, la CI de `ff1076c` rouge sur « même graine, même duel »** : le banc n'était rejouable que par chance. La graine d'un gadget est un `randi()` GLOBAL que la poussière du
+  faisceau et l'ambiance décalaient d'un duel à l'autre. Corrigé DANS LE BANC (reseed par image, accumulateurs remis à neuf, échelle des corps redressée) et gardé par trois vérifications
+  de `test_banc_bot` qui lisent le tirage et la trace, pas l'issue — voir « Pièges connus », 2026-10-03. Rien n'a changé dans le jeu.
+
+**À trancher par Adrien.** (1) **DIFFICILE à 34 % pour une cible de 30** : accepter, ou retirer un outil à DIFFICILE, ou le resserrer par ses réflexes ? (2) **Quels outils pour
+quels chapitres** : aujourd'hui FACILE n'en a aucun, NORMAL (le boss) a torche + repli + gadget, DIFFICILE tout ; les PNJ du catalogue n'en ont aucun. `torche_en_patrouille` (un bot
+qui éclaire son chemin) n'est dans aucun profil : à donner aux PNJ du début d'un chapitre ? (3) **Faut-il que le bot s'accroupisse contre un joueur immobile** (57 % pour le
+joueur contre DIFFICILE en `ecoute`) ? (4) Les **règles de gadgets** se jugent en jouant, une par une : en particulier la suie (il entre dans son nuage, aveugle 9 s), la poussière et la
+torche fantôme, dont l'effet n'est pas mesuré. (5) La **fusée du bot** éclaire le bot aussi : 240 px minimum, un chiffre de départ.
+(6) **Les armes des classes autres que le Parasite** : le bot qui porte un fusil à pompe, une arbalète, un lance-fusées ou un pistolet-mitrailleur est battu 85 à 98 % du temps, outils ou non — et c'est la classe
+du boss des chapitres 3, 4, 5 et 7. Réglage par classe (réflexes, rafale, détente tenue de l'Occulteur) à faire avant de publier ces chapitres : S8 ? **→ Fait par S9b** (2026-10-03), avec un levier de plus que ceux
+que cette question nommait : la vie du boss.
+
+
+### S9b — FAITE le 2026-10-03 : l'intégration de S6 et de S9 — chaque PNJ a sa réserve, l'éblouissement vaut pour les PNJ, les boss se règlent à leur classe
+
+**Pourquoi cette étape.** S6 (le moteur de l'aventure) et S9 (le bot équipé) ont été écrits **en parallèle**, chacun juste de son côté, et se croisaient mal à trois endroits que
+chacune avait signalés et qu'aucune ne pouvait corriger sans l'autre. Aucune étape de contenu (S7, S8) n'est publiable tant que les boss de classe N ne se battent pas comme
+ils le devraient. S9b n'ajoute aucune fonctionnalité : elle raccorde.
+
+**Ce qui existe.** Fichiers touchés : `game_state.gd` (les places de réserve, `inscrire_un_pnj`, `liberer_les_pnj`, `_slot_de`, `_joueurs_en_lice`, `_flash_de_tir`, `_plafond_de_source`),
+`player.gd` (`slot_reserve`, `slot_de_reserve()`), `gadget_base.gd` (`slot_reserve`), `aventure_partie.gd` (deux appels), `bot_input_provider.gd` (sa propre place ; l'engagement),
+`perception_bot.gd` et `perception_bot_noeud.gd` (l'éblouissement), `profil_bot.gd` (`boss(classe)`, `REGLAGES_BOSS`, `distance_engagement_px`, `distance_tir_max_px`),
+`aventure_format.gd` (une ligne : le boss est réglé à la classe de son entrée), les bancs (`banc_bot_difficulte.gd` : `--boss`, `--vie` ; `banc_bot_duel.gd`), `run_suites.sh`. Gardes :
+`tools/test_aventure_boss.gd` (neuve), `tools/test_bot_combat.gd` (l'engagement), `tools/test_banc_bot.gd` (les boss par classe). **`protocol.gd`, `Protocol.VERSION` et les RPC n'ont pas
+bougé** : aucune place de réserve >= 2 ne transite, un PNJ n'existe que hors ligne ; aucun `if transport == …`.
+
+#### 1. Les réserves des PNJ
+
+**Le défaut.** `_fusees_restantes`, `_fusees_accumulateur`, `_fusees_attente`, `_fusees_profil`, `_gadget_attente`, `_gadgets_poses_par` et `_batterie` sont indexés par `player_id`. Tous les PNJ en
+portent un — le même, 1 : ils partageaient la réserve de J2, **semée sur la classe de J2** par `_do_start_round` (le Parasite à l'entraînement et en aventure). Conséquences (que la garde revoit, rouge, quand on rétablit l'indexation par `player_id` : sabotage « réserves partagées », 8 contrôles): un boss Terrassier avait UNE fusée au lieu de trois, un boss Spectre en avait une alors que « le Spectre n'éclaire jamais », deux PNJ qui lançaient se volaient la fusée l'un de
+l'autre, la recharge d'une minute d'un PNJ valait pour tous, **la suie d'un boss Fumiste prenait les paramètres du grésillement de J2** (`_do_spawn_gadget` lisait la classe de `p2`), et un second PNJ
+qui posait son gadget **retirait celui du premier** (« un gadget debout par joueur », compté par `poseur_id`).
+
+**Le geste.** Une réserve est désormais indexée par une PLACE : 0 pour J1, 1 pour J2, **2, 3, … pour les PNJ**, une chacun. `GameState.inscrire_un_pnj(pnj)` (appelée par `AventurePartie` pour chaque
+PNJ, une fois armé) lui donne sa place et sème ses fusées, son gadget et sa batterie sur **SA classe** ; `liberer_les_pnj()` rend les places (la salle recommencée, la sortie ; `_do_start_round` le
+fait aussi, en ceinture) — des PNJ neufs reçoivent des réserves neuves, c'est ce qui « remet à neuf » à la reprise. `Player.slot_de_reserve()` dit la place d'un joueur (son `player_id` hors PNJ) ; `player.gd`,
+`GameState.spawn_fusee` / `spawn_gadget` / `basculer_gadget` et le bot (`bot_input_provider.gd`, `_equiper`) la lisent. **Seul l'indice change** : un gadget de PNJ garde `poseur_id` 1 — c'est lui que lisent
+les couches, les ombres, les sons et le rendu, qui n'ont que deux rôles — et porte en plus `slot_reserve`, que `gadget_basculable_de` et « un gadget debout par poseur » lisent. La classe du gadget posé est celle du
+**poseur** (`_joueur_de_reserve(slot)`), plus celle de J2. Le duel n'a pas bougé : J1 et J2 gardent les places 0 et 1, les tableaux n'ont que deux entrées hors aventure, aucun RPC ne porte une place >= 2.
+
+**La réapparition du bot d'entraînement.** `_reapparaitre_le_bot()` rééquipait `weapon_for_index(0)` en dur : un bot d'une autre classe redevenait Parasite à sa première mort. Il rééquipe désormais **la
+classe qu'il porte** (munitions pleines) ; au lancement d'un entraînement il porte l'index 0 : le comportement d'avant n'a pas changé. Le banc équipe maintenant TOUJOURS la classe du duel (index 0 sans `--classe`),
+la réapparition ne la lui rendant plus.
+
+#### 2. L'éblouissement des PNJ
+
+**Le défaut.** `_maj_eblouissement` bouclait sur `[p1, p2]`, `_sources_eblouissantes` aussi, `_flash_de_tir` ne connaissait que « l'autre » des deux : **la torche et l'éclair d'un PNJ n'éblouissaient pas le joueur, et la
+torche du joueur dans les yeux d'un PNJ ne faisait rien**. Et le bot — celui de l'entraînement comme les PNJ — ignorait son propre éblouissement (un trou de S2, agrandi par les mines et les fusées de S9).
+
+**Le geste.** `_joueurs_en_lice()` rend J1, J2 puis les figurants (sans figurant : exactement `[p1, p2]`) ; ils sont cibles ET sources de la torche, de l'éclair de tir, de la fusée et des gadgets.
+**Les PNJ forment une équipe** : la torche et l'éclair d'un PNJ n'éblouissent pas un autre PNJ (leurs balles se traversent déjà, ils ne se blessent pas : S6) — un choix, voir « À trancher ». La rétrodiffusion de sa propre
+torche reste celle de son porteur. La hauteur de la lumière d'un PNJ est celle de **sa** posture (`_ligne_de_vue` lisait celle de J2, `pid_porteur` valant 1).
+
+**Ce que perd un bot ébloui — traduit de l'écran d'un joueur.** Sur l'écran d'un joueur ébloui, **le corps de l'adversaire s'efface** (`Brouillage.opacite`, mode LAMPE : le contraste tombe à zéro dès que
+l'éblouissement atteint la moitié de son maximum) **et sa lampe reste** (choix d'Adrien : on ne perd pas la source qui éblouit) ; le voile blanc, lui, est de l'affichage. Le modèle de vue (`PerceptionBot.voir`) lit donc
+`monde["ebloui"]` — l'éblouissement du bot, que le nœud de perception lit sur SON corps, comme un joueur lit son écran — et **ne distingue plus le corps** quand `Brouillage.opacite(ebloui)` tombe sous
+`OPACITE_MIN_CORPS` (0,5) : ni par un cône, ni par un disque (halo, éclair, fusée, plafonnier). La lampe de la cible, elle, reste vue. **Voir moins, jamais plus** : la fonction est celle de l'écran (une seule définition),
+le seuil est pris du côté du noir (une silhouette à moitié effacée n'est plus une silhouette pour le bot ; un joueur la distingue encore), et la rétrodiffusion de sa propre torche (0,06 → opacité 0,65) ne lui ferme pas
+les yeux. À éblouissement nul le modèle est identique à l'ancien (un `monde` sans clé vaut zéro). **Atteint dès ~0,09 d'éblouissement** : sous un faisceau ou un éclair de tir de près, le bot perd le corps de sa cible un instant,
+exactement comme un joueur.
+
+#### 3. Les dix boss, réglés à leur classe
+
+**Le geste.** `ProfilBot.boss(classe)` (le profil NORMAL, plus `REGLAGES_BOSS[classe]`) ; `AventureFormat.profil_du_pnj` le sert avec le slug de la classe de l'entrée (`classe` du JSON ; sans classe, le profil NORMAL, comme avant).
+Le boss du chapitre N porte la classe de rang N+1 (le chapitre 0 : le Parasite). **Trois leviers ont été ajoutés au profil**, tous à zéro par défaut — un profil qui ne les pose pas se comporte exactement comme avant S9b :
+`distance_engagement_px` (le bot s'approche de ce qu'il voit jusqu'à cette distance, avec une hystérésis de 40 px pour ne pas trembler ; décidé dans `_penser()`, jamais dans `avancer()`, dont le texte ne contient pas « perception »),
+`distance_tir_max_px` (il ne tire pas au-delà : un fusil à pompe qui tire à 450 px gaspille ses cartouches) et **`vie`** (la vie du corps du boss à la naissance de la salle et à sa reprise, 100 à 400, 100 par défaut ; `AventurePartie` la pose
+sur le corps). Le bot d'entraînement ne lit pas `vie` : il reste à 100.
+
+**Ce que le banc a appris, dans l'ordre où il l'a appris.**
+1. **Aucun réflexe ne rend une arbalète ou un lance-fusées honnête face au joueur type.** Le joueur `ecoute` (immobile, silencieux, sans lumière) bat à 90-100 % un bot qui n'a pas de quoi gagner la fusillade qu'il déclenche. À l'extrême
+   (0,10 s de réaction, 3° → 0,5° d'erreur, visée à 14 rad/s, allure 1, repli, fusées, accroupi) l'Incendiaire reste à 71 % et le Braconnier à 83 %. La **vie** déplace tout : l'Occulteur passe de 76 % à 100 points à 65 % à 130 puis 35 % à 180.
+   D'où `vie` — un levier que ni S4 ni S9 ne nommaient (voir « À trancher »).
+2. **Le Terrassier se règle à la distance**, pas à la visée : 82 % → 77 → 70 → 60 % en lui faisant coller le joueur (engagement 40 px, tir à 90 px au plus), courir (allure 1), tirer large (12°, trois coups), sans repli (un repli l'éloigne de ce qui le sert).
+3. **Le Fumiste, lui, est trop bon** (38 % sur un bloc) : sa suie et sa cadence le servent ; il vise moins juste (10° → 3°) et réagit plus tard (0,30 s).
+4. **Modéliser l'éblouissement déplace la calibration** (voir Pièges connus) : les boss réglés avant que la perception ne soit refaite l'étaient sur une mauvaise vue. **Tous les chiffres ci-dessous sont pris sur le code final.**
+
+**Avant / après — victoire du joueur type de référence (le Parasite, 0,25 s de réaction, quatre comportements : torche, écoute, accroupi, tire en bougeant), 8 graines × 6 cartes × 4 comportements = 192 duels par ligne, cible 55 % ± 7.**
+
+| Chapitre (classe du boss) | Avant (S9, NORMAL, graines 1-8) | Après (S9b) | Réglage |
+|---|---|---|---|
+| 0 — Parasite | 56 % | **57 %** (801 : 57, 901 : 57) | aucun : le profil NORMAL du cran 3 |
+| 1 — Fumiste | 51 % | **59 %** (801 : 68, 901 : 51) | délai 0,30 s, visée 10° → 3° |
+| 2 — Illusionniste | 63 % | **61 %** (1001-1008) | vie 108 |
+| 3 — Braconnier | **90 %** | **56 %** (1001-1008) | délai 0,2 s, visée 4,5° → 1°, 3,5°, un coup, repli 3 s, **vie 190** |
+| 4 — Terrassier | **85 %** | **58 %** (801 : 58, 901 : 59) | engagement 40 px, tir ≤ 90 px, allure 1, délai 0,15 s, 12°, 3 coups, sans repli, audace 200 px, vie 110 |
+| 5 — Incendiaire | **87 %** | **58 %** (1001-1008) | délai 0,2 s, visée 5° → 1°, resserrement 1,2 s, visée 11 rad/s, 6°, repli 3 s, vie 125 |
+| 6 — Sentinelle | 55 % | **61 %** (801 : 67, 901 : 56) | visée 9° → 2,8° |
+| 7 — Occulteur | **98 %** | **52 %** (1001-1008) | délai 0,18 s, 8°, rafale de 8, pause 0,25 s, repli 0,3 s, allure 0,85, engagement 150 px, **vie 158** |
+| 8 — Allumeur | 62 % (144 duels) | **56 %** (1001-1008) | vie 120 |
+| 9 — Spectre | 54 % | **58 %** (801 : 60, 901 : 56) | visée 9° → 2,8° |
+
+⚠️ **Les étiquettes de chapitre de ce tableau ont été corrigées par le maître du chantier à l'intégration** (2026-10-03) : le rapport les numérotait dans l'ordre du catalogue (`fusil` = 1, `pompe` = 2…), pas dans celui des chapitres. Le code, lui, était juste : `AventureFormat.ORDRE_DES_CLASSES` suit le rang et `REGLAGES_BOSS` est rangé par classe. Les mesures ne changent pas.
+
+Dix boss entre 52 et 61 % ; l'écart d'avant allait de 51 à 98 %. **Lecture honnête de la précision de ces chiffres** : 192 duels donnent ±3,6 points au sens binomial, mais deux blocs de graines différentes de la MÊME classe s'écartent de 6 à 17 points
+(Fumiste : 68 puis 51 ; Sentinelle : 67 puis 56). La cible « 55 ± 7 » est donc tenue **en moyenne**, pas à chaque bloc ; les classes où je n'ai qu'un bloc (Illusionniste, Braconnier, Incendiaire, Occulteur, Allumeur : 1001-1008) peuvent y échapper d'autant en
+rejouant d'autres graines. Les blocs 801 et 901 ont été pris sur la table précédente, **identique pour les cinq classes qu'ils couvrent** (le Parasite n'a pas d'entrée).
+
+**La matrice de S4 a peu bougé** (garde de non-régression de la perception) : FACILE / NORMAL / DIFFICILE contre le joueur type, graines 401-416, 384 duels par ligne : **79 / 55 / 34 %** avant S9b, **78 / 52 / 34 %** après. Un contrôle sans l'éblouissement du bot rend 78 / 58 : NORMAL perd donc quelques points (55 → 52, mesure à 3,6 points près) parce
+que ses yeux se ferment sous un faisceau — c'est l'effet voulu —, FACILE et DIFFICILE ne bougent pas.
+
+#### Les gardes
+
+- `tools/test_aventure_boss.gd` (`--fixed-fps 60`, le jeu monté, ligne `case` de `run_suites.sh`) : **deux PNJ, deux réserves** (un Spectre et un Terrassier : zéro fusée et trois ; J2 garde la sienne, une ;
+  une fusée lancée par un PNJ entame SA réserve et pas celle de J2 ni de l'autre ; chacun pose SON gadget, leurs deux gadgets coexistent, chacun porte la place de son poseur et `poseur_id` 1 ; la recharge d'une minute
+  court sur la place du poseur seule ; la salle recommencée rend des réserves neuves à des PNJ neufs, les places restent 2 et 3 et les tableaux ne grossissent pas ; la sortie les ramène à deux entrées) ; **un boss
+  Fumiste** (sa classe, SA réserve — place 2, une fusée —, il **pose lui-même sa suie** dans le vrai jeu après avoir été touché, **le bot compte sa pose** — il lit sa place, pas celle de J2 —, sa fusée vidée la salle
+  recommencée la lui rend) ; **le bot d'entraînement** garde sa classe à la réapparition (l'Occulteur reste l'Occulteur, munitions et vie pleines) ; **l'éblouissement** (la torche d'un PNJ éblouit le joueur et la source du
+  voile est ce PNJ, la torche du joueur éblouit un PNJ, les deux éclairs de tir, rien d'un PNJ sur un autre PNJ, le duel inchangé : `figurants` vide, `_joueurs_en_lice` = J1, J2) ; **le bot ébloui voit moins** (le modèle
+  pur : monotone sur 21 niveaux, le corps disparaît quand l'opacité qu'un joueur lui verrait passe sous le seuil, la lampe reste, l'ensemble de ce que voit un bot ébloui est inclus dans ce qu'il voit aux yeux ouverts sur
+  5 scènes × 11 niveaux, la rétrodiffusion de sa torche ne lui ferme pas les yeux ; puis le vrai jeu : le PNJ qui voit le joueur sous un plafonnier cesse de le voir ébloui, le revoit les yeux rouverts).
+- `tools/test_bot_combat.gd` : **l'engagement** (le témoin sans `distance_engagement_px` tient sa place ; avec, il s'approche de ce qu'il voit et s'arrête à sa limite sans trembler ; hors de `distance_tir_max_px` il ne tire
+  pas, dedans il tire ; les deux ensemble : il s'approche puis tire ; `avancer()` ne lit toujours rien de la perception).
+- `tools/test_banc_bot.gd` : **les boss par classe** (`boss(classe)` existe pour les dix slugs du code, dans l'ordre du rang ; aucun champ de perception, de déplacement ou d'outil ne bouge ; des bornes LARGES sur
+  chaque réglage ; la table ne nomme que des classes du jeu et chaque classe est servie à son réglage ; le Parasite garde le profil NORMAL ; les classes que S9 a trouvées trop faciles sont réglées).
+
+`tools/test_banc_bot.gd` couvre en plus **`boss(classe)` pour les dix slugs** (existence, dans l'ordre du rang ; bornes LARGES sur chaque réglage : `vie`, `allure`, `audace`, délai, rafale ; la table ne nomme que des classes du jeu). La garde de
+déterminisme du banc (« même graine, même duel ») compare maintenant l'issue, les tirs et les touches **exactement**, et les instants à 0,3 s près : la perception du bot ébloui ajoute un bruit de 0,02 px dans sa marche, qui décale un premier coup de quelques
+centièmes sans changer le duel (divergence tracée à 1,3 s, dans la marche du bot).
+
+#### Sabotages S9b (chaque garde vue ROUGE, puis le code restauré à l'octet — md5 vérifié par le script)
+
+Chacun a été joué dans une COPIE de l'arbre, sur la suite qui le garde ; chiffre = contrôles rouges (hors la ligne de bilan). **Dix-sept sur dix-sept ont rougi.**
+
+| Sabotage | Suite | Rouges |
+|---|---|---|
+| Les réserves relues par `player_id` (les PNJ se partagent celle de J2) | `test_aventure_boss` | 8 |
+| La classe du gadget lue chez J2 | `test_aventure_boss` | 1 (verte du premier coup, voir ci-dessous ; rougie une fois la garde ajoutée) |
+| `liberer_les_pnj()` ne rend pas les places | `test_aventure_boss` | 1 |
+| L'éblouissement ne connaît que `[p1, p2]` | `test_aventure_boss` | 3 |
+| Un PNJ éblouit un autre PNJ (l'équipe cesse d'en être une) | `test_aventure_boss` | 2 |
+| L'éclair d'un PNJ n'éblouit pas le joueur | `test_aventure_boss` | 1 |
+| L'éclair du joueur n'éblouit pas les PNJ | `test_aventure_boss` | 1 |
+| Un bot ébloui voit comme aux yeux ouverts | `test_aventure_boss` | 3 |
+| Le nœud de perception ignore l'éblouissement de son corps | `test_aventure_boss` | 1 |
+| La table `REGLAGES_BOSS` ignorée | `test_banc_bot` | 1 |
+| Le boss perd sa classe (`ProfilT.boss()` sans argument) | `test_aventure_boss` | 8 |
+| Le bot d'entraînement réapparaît à l'index 0 | `test_aventure_boss` | 2 |
+| Le bot lit la réserve de J2 | `test_aventure_boss` | 1 |
+| `distance_engagement_px` ignorée | `test_bot_combat` | 2 |
+| `distance_tir_max_px` ignorée | `test_bot_combat` | 2 |
+| La `vie` du boss ignorée | `test_aventure_boss` | 6 |
+| L'éclair d'un tir de la cible n'est plus vu comme une source | `test_aventure_boss` | 1 |
+
+**Un sabotage est resté vert du premier coup, et c'est instructif** : « la classe du gadget lue chez J2 ». La garde « le Terrassier PNJ pose SA poussière » vérifiait le slug du gadget — que le jeu déduit d'ailleurs, pas de cette classe —
+et le Parasite de J2 et le Terrassier donnent le même résultat visible tant qu'on ne lit pas ce que la classe pose (`classe_du_poseur`, la durée de vie, l'éblouissement). Garde ajoutée (le gadget emporte la classe de son poseur, pas celle de J2), puis
+sabotage rejoué : rouge. Les sabotages du banc lui-même (S3, S4, S9 : difficultés inversées, joueur type qui triche…) ne sont pas rejoués ici ; leurs gardes n'ont pas bougé.
+
+#### L'intégration avec « le banc rejoue vraiment » (2026-10-03) — deux rouges de la suite, un seul vrai défaut
+
+S9b a été écrite sans le commit « le banc rejoue vraiment » (S4/S9) ; à la fusion, `test_banc_bot` rougissait trois fois. **(1) « même tirage » lisait −1 des deux côtés** : le relevé de la graine du gadget
+cherchait, À LA FIN du duel, un gadget du bot encore debout ; or une balle du joueur type le détruit souvent avant la fin (le duel de la garde : posé, puis détruit 70 images plus tard, avant la mort qui finit le duel). Rien
+dans S9b n'y change quoi que ce soit — la garde passait avant parce que le gadget survivait par chance. Remède, dans le banc seul : la graine est relevée À LA POSE (`child_entered_tree` du conteneur ; le gadget
+n'est pas encore dans le groupe « gadgets » à cet instant, on le reconnaît à `poseur_id`, posé avant l'entrée comme sa graine). Sabotée — ni reseed par image ni `_figer_le_tirage` —, la garde rougit avec les deux
+graines lisibles (3567825414 / 1987688319, les chiffres mêmes du piège du `randf()`). **Sabotée à moitié** (le seul reseed par image retiré), elle NE rougit PAS ici : l'accumulateur de poussière remis à neuf suffit sur cette
+graine, sur cette machine ; le reseed par image reste une ceinture que cette garde ne prouve pas seule. **(2) « L'ORDRE » (75 / 81 / 19) était du bruit, pas un recul** : le banc long sur la tête intégrée
+(1 152 duels, six cartes, graines 401-416) rend **78 / 53 / 32 %** (S9b seule : 78 / 52 / 34 ; cibles 80 / 55 / 30), avec l'ordre tenu sur chaque carte sauf la carte `00000001` (75 / 33 / 36 : NORMAL et DIFFICILE y sont
+à égalité). Le lot de la forme courte (16 duels par difficulté, la Croisée, graines 1 à 4) donnait 75 / 81 / 19 ; rejoué sur 1 152 duels des graines 1 à 16, un lot de 16 duels au hasard échoue à la garde
+« 5 points de chaque côté » dans ~15 % des cas (écart-type de la différence : ~17 points), et la Croisée entière donne 80 / 59 / 23. La forme courte part maintenant de la graine 9 (`GRAINE_ORDRE`) : 94 / 44 / 25, même
+coût (~1 min 45 s ici). **La garde de déterminisme est restée STRICTE** (trace entière égale) et n'a pas rougi : l'éblouissement des bots n'y a rien changé. La cible reste « bornes larges + ordre » ; **un ORDRE rouge sans
+autre signe se lit d'abord comme du bruit : relancer le banc long avant de toucher aux profils.**
+
+#### Non prouvé
+
+- **La cible 55 ± 7 est mesurée avec UN joueur type** (le Parasite, quatre comportements, dont deux silencieux), pas avec un joueur humain, ni avec un joueur d'une autre classe : un boss qui bat 45 % de ces duels peut être plus dur pour un humain qui tire en rafale, ou plus facile.
+  Cinq classes n'ont qu'un bloc de 192 duels sur le code final (variation entre blocs : 6 à 17 points mesurés) ; l'Illusionniste (61) et la Sentinelle (61,5 en moyenne de deux blocs) sont au bord de la bande.
+- **Le ressenti** : la vie de 190 du Braconnier est tenue par le banc, jamais regardée dans une partie. Rien ne montre au joueur qu'un boss a plus de vie (pas de barre).
+- **L'éblouissement des PNJ n'a pas été vu à l'écran** : il est mesuré (`dazzle_amount` du corps, les deux sens) et sa conséquence sur la vue du bot l'est ; pas de capture, pas de fenêtre.
+- **Le banc du capteur** (`tools/banc_perception_bot.tscn`, une vraie fenêtre) a été rejoué sous Xvfb (rendu logiciel, 17 minutes) sur le code final : sortie 0, 188 prises, **0 malhonnête**, accord 65,6 %. **Mais il ne contient aucune famille « ébloui »** : le bot y a toujours les yeux ouverts, donc il ne prouve pas le nouveau modèle, seulement qu'à éblouissement nul rien n'a changé. L'honnêteté du bot ébloui est tenue par `test_aventure_boss` (5 scènes × 11 niveaux, jamais plus qu'aux yeux ouverts), pas par le capteur réel.
+- **Aucune mesure de cadence** (non demandée). **Rien en réseau** : un PNJ n'existe que hors ligne ; `protocol.gd`, `Protocol.VERSION` et les RPC n'ont pas bougé.
+
+#### Signalé, pas corrigé
+
+- **La télémétrie** (`match_record`, killcam) compte un PNJ comme « l'adversaire » (`player_id` 1) : sans objet tant que les parties d'aventure n'alimentent rien, à revoir le jour où elles le feront.
+- **Le bot d'entraînement ignore `vie`** (toujours 100) : seuls les boss d'aventure la portent.
+- **PNJ contre PNJ : aucun éblouissement** (choix, voir « À trancher ») ; un boss ne s'éblouit donc pas avec la torche de son figurant.
+- **Un plantage rare du moteur sous le banc** (signal 134, une fois, relancé sans effet) : déjà signalé en S9 ; le banc se relance en deux moitiés.
+- **Le boss du cran 3 de l'entraînement** (Parasite, NORMAL) mesure 52-57 % selon le jeu de graines : la cible de 55 est tenue, au bruit près.
+- `docs/JOURNAL_SESSIONS.md` n'a pas été mis à jour ; **fichiers partagés touchés** : `game_state.gd`, `player.gd`, `gadget_base.gd`, `bot_input_provider.gd`, `perception_bot_noeud.gd`, `aventure_format.gd`, `aventure_partie.gd` — chacun pour une raison de la section ci-dessus.
+
+**À trancher par Adrien.** (1) **La vie comme levier de difficulté du boss.** Les réflexes seuls ne suffisaient pas (Braconnier : 83 % au mieux ; Incendiaire : 71 %) ; la vie (jusqu'à 190 pour le Braconnier) le fait. Alternatives : une variante d'arme pour le boss
+(plus de carreaux, recharge plus courte), ou accepter des boss plus faciles pour ces classes. (2) **Les PNJ forment une équipe** : ni leur torche ni leur éclair n'éblouissent un autre PNJ. Un boss dans un couloir de figurants s'éblouirait lui-même sinon ; mais un joueur pourrait tirer parti d'un
+éblouissement croisé. (3) **`OPACITE_MIN_CORPS` à 0,5** : un bot ébloui perd le corps de sa cible dès que l'écran d'un joueur lui montrerait moins d'une demi-silhouette ; plus bas, le bot est plus fort, plus haut, plus aveugle. (4) **Le boss du chapitre 0** reste le profil NORMAL du cran 3 :
+57 % au banc, pas exactement 55.
+
+**Suites.** `./tools/run_suites.sh --rapide` (le binaire 4.7.1) : **143 suites headless vertes**, aucune erreur de script, aucun `push_error` non déclaré ; les scénarios à deux instances ne sont pas joués par `--rapide`.
+
+### S7 — FAITE le 2026-10-03 : le chapitre 0, « L'initiation » — dix salles, une garde qui mesure ce que chacune enseigne
+
+**Ce qui existe.** `assets/solo/chapitre_00/` (`chapitre.json` et `niveau_01.json` … `niveau_10.json` : c'est le premier contenu livré, le moteur le lit sans
+qu'on y touche), l'outil qui les écrit (`tools/fabrique_chapitre_00.gd`) et la garde (`tools/test_chapitre_00.gd`, 176 vérifications, inscrite à `run_suites.sh`).
+**Aucun code de jeu n'a bougé** : ni `game_state.gd`, ni `ui.gd`, ni `map_codec.gd`, ni `protocol.gd`, ni le code du bot (S9 le tient). `assets/solo/` existe donc
+désormais : l'écran de l'aventure montre un vrai chapitre 0 (et « CHAPITRES 1 À 10 — À VENIR »).
+
+**La fabrique.** Une salle y est un DESSIN (rectangles de mur `#`, de mur bas `~`, repères `J` et `1`…`9`) plus ses plafonniers en clair ; le script imprime chaque
+salle (plafonniers en `*`) et écrit les JSON — les RLE ne se lisent pas, se corriger c'est se refaire. Rien n'y est tiré au hasard : relancer ne change aucun octet. Les PNJ
+font face au départ (orientation arrondie à 15°). **Le JSON est la vérité du jeu, la fabrique n'est que sa source lisible** : corriger une salle = changer une ligne
+du script et relancer. Les slugs sont ceux du code (`pistolet` = le Parasite) ; le manifeste est `chapitre.json` (le nom que lit `AventureFormat`).
+
+#### Les dix salles (taille · ce qui la rend nécessaire · PNJ · plafonniers · phrase d'intention)
+
+| Salle | Ce que la salle impose (mesuré par la garde) |
+|---|---|
+| **0.1 Le premier pas** — 16×16, nue — « Au milieu de la pièce, une silhouette sous la lampe. » | Un PNJ sourd et aveugle à 1 case de l'unique plafonnier (centre, rayon 4), à 7 cases du départ, en ligne de vue : le modèle de vue du joueur au départ le **voit** sans torche. Aucun mur ni muret à l'intérieur : rien d'autre que se déplacer, viser, tirer. |
+| **0.2 La torche** — 18×18, un pilier 2×5 — « Un pilier au milieu du noir. Quelqu'un se tient derrière. » | Le PNJ est à 229 px de la lampe la plus proche (une petite lampe d'entrée, rayon 2,5, qui éclaire le départ : sans elle la salle serait un vide) : dans **aucune** flaque, ni au sens du modèle ni au sens large. Le pilier lui coupe la ligne de vue du départ — et la garde retire les murs de l'intérieur pour prouver que c'est lui seul. Mais une case à portée de torche et en ligne de vue existe : il se trouve, à la torche. |
+| **0.3 Fouiller** — 20×20, trois recoins aux angles — « Trois recoins, une seule lampe, du noir partout ailleurs. Six cartouches. » | Trois PNJ sourds et aveugles, un par recoin, à 15 cases les uns des autres, aucun éclairé par l'unique lampe centrale (rayon 4,5), aucun à portée de torche du départ (coin sud-est), aucun en vue d'un autre à portée de torche. **Chargeur du Parasite = 6** (lu dans `game_state.gd`) ; un coup moyen fait 37 (`floor` du milieu de 50 et 25) : 3 tirs par PNJ, **9 > 6**. Au mieux, tout au centre (2 tirs par PNJ), il en faut 6 : le chargeur ne laisse AUCUNE marge, un seul raté oblige à recharger. |
+| **0.4 Les murs bas** — 20×18, trois rangées de murets en chicane — « Trois rangées de murets. Deux silhouettes derrière. » | Chaque PNJ a un mur bas (1 pour l'un, 2 pour l'autre) sur la ligne droite du départ, aucun mur plein : on le voit par-dessus. Le contourner à pied (chemins de `NavigationBot`) fait **×2,4 et ×2,8** la distance à vol d'oiseau : le muret est un raccourci, et l'enjamber la façon d'y aller. Un plafonnier éclaire la chicane, pas les PNJ. |
+| **0.5 La fusée** — 41×41 (décision d'Adrien du 2026-10-03), grande salle, 7 piliers, **aucun plafonnier** — « Une salle trop grande pour la torche. Ce qu'elle cache est loin. » | Départ au milieu du mur sud (20, 38), tourné vers le nord ; trois PNJ sourds et aveugles au bout nord, en (17, 4), (20, 4) et (9, 8). Chemin le plus court du départ au centre (20, 20) : 19 cases, tout droit ; le PNJ le plus proche en reste à **560 px, la torche en porte 468 : marge de 92 px** (exigée : 90). Le couple (17, 4)–(20, 4), à 3 cases l'un de l'autre, se montre à **UNE** fusée lancée droit devant depuis le centre (fenêtre de visée : 11°) ; le troisième, à 8,9 cases du premier, à une autre fusée — ou à la torche, une fois le couple abattu. Aucune fusée ne montre les trois : ils sont répartis (de 3,0 à 11,7 cases l'un de l'autre). **La salle n'exige qu'une fusée, la réserve du Parasite** : « Les fusées de 0.5 ». |
+| **0.6 Il regarde** — 20×20, deux piliers — « Sous la lampe, il regarde. Ce qui brille se fait voir. » | Un PNJ qui voit (très lent), sous la lampe de l'est ; une autre lampe, au centre, sur la ligne droite (rayons 3). Le plus court chemin traverse **les deux flaques**, et le PNJ y voit le joueur (modèle de vue du PNJ, torche éteinte : la lampe suffit). Un détour par le nord ou le sud (6 cases jusqu'à la case de tir, contre 15 en ligne droite) reste dans le noir, jusqu'à une case à moins de 408 px du PNJ où il **ne voit pas** le joueur — torche éteinte — et le voit torche allumée : c'est la raison de s'approcher éteint. Le joueur voit le PNJ, éclairé par sa lampe. |
+| **0.7 L'éclair** — 20×20, en L (170 cases de sol sur 324), deux piliers — « Trois silhouettes dans un coude. Un tir se voit de loin. » | Trois PNJ qui voient (lents), chacun sous sa lampe : on les voit sans torche, donc sans se trahir ; du départ, au plus deux sont en ligne de vue. Pour **chaque** PNJ, la garde trouve une case sombre d'où on le touche, où l'éclair du tir est vu d'un autre PNJ (modèle de vue, éclair de 32 px), et à six cases au plus un **abri** que les autres PNJ ne regardent pas. |
+| **0.8 Il écoute** — 20×20, **sol nu**, aucun plafonnier — « Pas une lampe. Deux silhouettes qui n'ont que leurs oreilles. » | Deux PNJ qui n'entendent que (ils ne voient pas) et tirent, lents ; aucun mur ni muret (rien n'étouffe un pas) ; chacun à plus de 488 px du départ et à douze cases de marche au moins : on les trouve à l'oreille avant de les voir. |
+| **0.9 La salle pleine** — 24×24, 3 plafonniers, 2 recoins, un pilier, 2 rangées de murets — « Des lampes, des recoins, des murets. Tout est là, et eux aussi. » | Six PNJ : **2 sourds et aveugles, 2 qui voient, 1 qui entend, 1 qui voit et entend** (tous lents). Plusieurs sous la lumière, deux dans un recoin noir hors d'atteinte du départ (dont celui qui n'entend que), un derrière un muret. |
+| **0.10 Le Parasite** — 32×32, deux plafonniers, 5 piliers, 2 rangées de murets — « Un duel dans une arène. Il voit, il entend, il tire — comme vous. » | Un seul PNJ, profil `boss`, classe `pistolet`. L'arène est symétrique d'est en ouest (murs, murets), le joueur et le boss se tiennent en miroir, les deux lampes se font face (leurs flaques ne se touchent pas), ni l'un ni l'autre ne part sous une lampe. |
+
+Tous les PNJ de 0.1 à 0.9 sont **immobiles** et de la table de S4 (`immobile_sourd_aveugle` en 0.1 à 0.5, `immobile_voit_tres_lent` en 0.6, `immobile_voit_lent` en 0.7,
+`immobile_entend_lent` en 0.8, les quatre sortes en 0.9) ; aucune ronde (Adrien) ; le boss est le seul qui bouge.
+
+#### Pourquoi ces choix
+
+- **Une salle « rend nécessaire » ce qu'elle enseigne par sa GÉOMÉTRIE, et la garde la mesure** — jamais une distance recopiée : les mêmes fonctions que le jeu (le modèle de vue du bot
+  `PerceptionBot` pour « sous la lampe », « le pilier le cache », « il voit ce joueur » ; `NavigationBot` pour « atteignable à pied » ; `PorteeEcran.portee_au_bord` pour les 468 px de la torche ;
+  la portée libre d'une fusée, 450 px, relue dans `fusee_modele.gd`, et son halo, 220 px, relu dans `fusee.gd` — qui nomme des autoloads et ne se précharge pas sous `--script`). Le chargeur est lu dans `game_state.gd` par une expression régulière : le recopier aurait
+  fait dériver la garde le jour où la valeur change.
+- **0.5 n'est plus dans un coin** (2026-10-03) : voir « Les fusées de 0.5 » ci-dessous. L'ancienne salle, 24×24, tenait les trois PNJ à deux cases les uns des autres dans un angle, à 497 px du chemin du centre pour 468 de torche : 29 px de marge, que la moindre retouche de la torche aurait effacés.
+- **Aucun couloir d'une tuile** (corps 36 px, tuile 35) : la garde cherche toute case libre non praticable ; elle en a trouvé deux à la première écriture de 0.7 (un pilier à une case du mur) — le pilier a été descendu.
+- **Les murets de 0.4 sont franchissables et contournables** : `NavigationBot` traite un mur bas comme solide, donc pour que chaque PNJ soit « atteignable à pied » le contournement existe ; c'est son allongement (×2,4 et ×2,8) qui fait de l'enjambement un raccourci. Un PNJ sourd et aveugle ne punit pas un joueur debout : ce qui est « nécessaire » ici est le raccourci, pas une peine.
+- **Les intentions** disent la situation sans nommer une touche (le ton des menus : court, constatif). « Six cartouches » en 0.3 est une donnée, pas une consigne.
+
+#### Les fusées de 0.5 — ce que le Parasite a vraiment, et ce que la salle lui en demande (2026-10-03)
+
+**Ce que le jeu donne** (lu dans `game_state.gd` et `player.gd` par la garde, jamais recopié). Le Parasite part avec **1 fusée** et en regagne **une par 60 s**
+(`PERIODE_RECHARGE_FUSEE`, « une fusée par minute », Adrien, 2026-09-10) ; la recharge ne court que fusée manquante, donc elle **commence au lancer**. Une fusée vole **450 px**
+(900 px/s, frottement 900 px/s² : toujours la même distance, le joueur ne la règle pas) et s'allume en se posant. À l'allumage (Q58) son halo porte aussi loin que la torche
+(468 px) et **y reste 1 s**, puis revient en 2 s à son empreinte, **220 px de rayon**, qu'il garde pendant le plein feu (4 s au total, rouge long) puis la braise (8 s) : **12 s**
+de lumière avant l'agonie. Le modèle de vue du bot n'en retient que **132 px** (220 × 0,6), le corps d'un PNJ comptant 18 px de plus : **la garde juge avec ce halo-là**, jamais
+avec celui de l'allumage, qui n'éclaire qu'une seconde. Le joueur marche à 260 px/s.
+
+**Ce que la salle lui en demande : une, la réserve de départ.** Les trois PNJ sont à 16 cases du centre du chemin (560 px) :
+- **la marge** — 92 px de centre à centre (exigés : 90) entre le PNJ le plus proche et toute case du chemin ; du bord du corps au bord de la case du joueur, elle en perd 35 : 57 px,
+  une case et demie. **Elle ne peut pas être de 150** (c'était la visée) : une fusée porte 450 + 132 + 18 = 600 px, la torche 468, soit **132 px au mieux, d'un lancer exact** — et
+  chaque pixel de marge est un pixel de tolérance de visée en moins. À 90, le couple garde **11° de visée** (à 450 px, un degré fait 8 px) ; à 100 il n'en garde presque plus.
+- **un couple, une fusée** — (17, 4) et (20, 4), à 3 cases l'un de l'autre, sont éclairés ensemble par une fusée lancée droit devant depuis le centre (20, 20) ; chaque PNJ l'est aussi
+  seul, sur 20° à 23° de visée, depuis une case du chemin.
+- **le troisième, ailleurs** — (9, 8), à 8,9 cases du premier du couple et 11,7 du second, n'est dans le halo d'aucun lancer qui montre le couple : aucune fusée ne montre les trois
+  (**il en faut 2 si la torche ne trouve rien**), ce qui est la définition de « répartis ». Mais la torche porte 13,4 cases : qui est allé tuer le couple voit le troisième au bord de son
+  faisceau (la garde exige moins de 10 cases d'un PNJ déjà trouvé). **Avec la torche, 1 fusée suffit** : la réserve de départ.
+- **l'attente** — nulle pour qui fouille. Pour qui voudrait la seconde fusée quand même : 60 s de recharge moins la marche entre les deux lancers (du lancer jusqu'au couple, puis du
+  couple jusqu'à la case d'où l'on montre le troisième : 4,3 s, sans compter la visée ni les tirs) = **56 s au pire**, jamais plus d'**une** période. La garde exige qu'on n'ait jamais
+  besoin de plus d'une recharge (`fusées nécessaires ≤ réserve + 1`) et que la torche seule fasse tenir la salle dans la réserve de départ (`≤ réserve`).
+
+**Pourquoi cette disposition, et pas une autre** (les trois essayées sur le papier avant de dessiner) :
+1. *Les trois dans un seul halo* : ils tiendraient dans un disque de 300 px de diamètre au bord de la portée de lancer — c'est exactement l'angle de l'ancienne salle, à peine desserré.
+2. *Un couple et un solitaire de part et d'autre du chemin* : une vraie seconde fusée, mais 1 100 px de marche entre les deux lancers (4 s) — **55 s à attendre**, sans rien à faire. Pour un
+   joueur qui débute, une salle qui lui fait attendre une minute devant un écran noir enseigne l'ennui, pas la fusée.
+3. *Trois PNJ à trois endroits* : trois fusées, **deux minutes d'attente** (la garde le refuse).
+La disposition retenue garde la seconde fusée **disponible** (le troisième est à portée d'un lancer depuis le chemin, la garde le vérifie) sans la **rendre obligatoire**.
+
+**Pourquoi 41×41.** Le chemin du centre fait 18 cases ; à 16 cases de son bout, côté nord, la salle doit encore tenir un couple, un solitaire et leurs 4 cases d'écart, plus la ceinture :
+36 est le plancher (2 × (13,4 + 2) = 31 cases de torche et de marge, plus les murs), 41 donne un centre (20, 20) et laisse le chemin tout droit. Les sept piliers habillent l'est et le sud :
+**aucun ne coupe un lancer, ni la vue d'un PNJ à l'autre**, et aucun ne laisse de couloir d'une tuile (la garde le mesure partout).
+
+**Ce que l'image a montré, et que le modèle de vue ignore : la fumée.** Le PNJ du couple à 104 px de la fusée, photographié à 0,7 s puis 1,2 s de combustion, se lit nettement (une silhouette grise dans le rose) ; à **2,5 s il n'en reste qu'un contour**, à **5 s la fumée l'a caché** (`FUMEE_MONTEE` 3 s, `RAYON_FUMEE` 200 px : le nuage monte et noie les corps qu'il entoure). La lumière dure 12 s, **la fenêtre où le PNJ se voit en dure à peu près 2**. Il est immobile : un coup d'œil suffit à savoir où il est, et c'est ce que la salle demande. Mais ce n'est pas « il reste éclairé 12 s », et la garde mesure la lumière, jamais la fumée — à dire à Adrien (voir « Signalé »). Images Mesa/llvmpipe.
+
+**Ce que cette salle ne peut pas faire, et qu'aucune salle ouverte ne pourrait : IMPOSER la fusée.** Elle ne porte que 132 px de plus que la torche. Qui marche **trois cases** au-delà du
+centre voit le couple à la torche. La salle rend la fusée **utile** (on voit loin, d'un coup, sans s'approcher, et pendant 12 s) ; elle ne la rend pas nécessaire. Seul un obstacle que la torche
+ne franchit pas et que la fusée franchit changerait cela — à étudier avec Adrien, pas à inventer ici.
+
+#### La garde
+
+`tools/test_chapitre_00.gd` (`--script`, aucune partie montée, 176 vérifications) : le chapitre se charge sans un défaut du validateur (dix salles exigées, boss dernier, classe `pistolet` donnée et prêtée) ; partout — taille (**une table par salle** : 16 à 24 par défaut, 36 à 48 pour 0.5, 32 pour l'arène ; toujours dans ce que le format sait écrire, 128), nombre de PNJ selon la table, **chaque PNJ atteignable à pied depuis le départ, une seule pièce (toute case praticable atteignable), aucune ronde, aucun couloir d'une tuile** ; puis les mesures par salle ci-dessus.
+`-- --dossier=<chemin absolu>` la lance sur une copie du chapitre : c'est ce qui permet de la saboter sans toucher aux fichiers livrés.
+
+**Sabotages exécutés — chacun a rougi** (copie du chapitre, une mutation, la garde en `--dossier=` ; le chapitre livré n'a jamais été modifié ; l'outil est hors dépôt) :
+
+| Sabotage | Ce qui rougit |
+|---|---|
+| un PNJ de 0.3 enfermé dans une poche de murs | « atteignable à pied » (la case (2, 2)) et « une seule pièce » (276 sur 294) |
+| le PNJ de 0.2 sous une lampe | « sous AUCUN plafonnier », et le modèle de vue l'y voit |
+| 0.3 avec deux PNJ au lieu de trois (chargeur suffisant) | « plus de tirs que de balles : 2 × 3 = 6 > 6 », « aucune marge », le compte de PNJ et trois autres |
+| un PNJ de 0.5 à portée de torche (en (20, 11)) | « avec 90 px de marge : le plus proche en est à 315 px » — et lui seul |
+| les trois PNJ de 0.5 regroupés en (19, 4), (20, 4), (21, 4) | « répartis : … le plus serré : 1.0 », « les deux plus éloignés … (2.0) », « aucune fusée ne les montre tous les trois : il en faut 1 » |
+| trois PNJ de 0.5 à trois endroits (20, 4), (6, 12), (34, 12) | « une seule fusée en montre 1 », « jamais plus d'une recharge : 3 fusées pour une réserve de 1 », « ne FAIT PAS attendre » |
+| le troisième PNJ à 13,6 cases du couple, (6, 12) | « ne FAIT PAS attendre : 2 fusée(s) » — seul échec : le lancer qui le montre existe, c'est la torche qui ne le trouve plus |
+| le troisième PNJ hors de portée de toute fusée, (34, 6) | « le PNJ 3 est montré par une fusée… (0°) » et les trois contrôles de réserve (impossible) |
+| la règle de taille sans l'exception de 0.5 (la table de la garde, pas les données) | « une salle de 16 à 24 cases de côté → (41, 41) » — et lui seul |
+| **la salle d'avant** (24×24, trois PNJ dans un angle) jouée sous les nouvelles règles | six échecs : la taille, la marge (497 px), « répartis » deux fois, le coin plein, « aucune fusée ne les montre tous les trois : 1 » |
+| le PNJ de 0.1 hors de la flaque | « dans la flaque » et « vu dès l'entrée » |
+| le pilier de 0.2 retiré | « le départ ne le voit pas : la ligne de vue est coupée » |
+| les murets de 0.4 retirés / la rangée centrale seule retirée | sept contrôles (×1,05 et ×1,08) / deux (×1,22 : le détour n'est plus long) |
+| 0.6 : une lampe de rayon 9 | « un détour existe qui évite les flaques » ((-1, -1) : aucune case) |
+| un plafonnier en 0.8 | « aucun plafonnier : le sol nu » |
+| 0.9 sans PNJ qui voit et entend / sans PNJ qui entend seul | « au moins un PNJ de CHAQUE sorte » (2/3/1/0 et 3/2/0/1), et « celui qui n'entend que tient un recoin » |
+| une ronde en 0.3 | « aucune ronde » et « tous sourds et aveugles » (le validateur, lui, l'accepte : c'est bien la garde de contenu qui la refuse) |
+| un couloir d'une tuile en 0.1 | « aucun couloir d'une tuile » (la case (5, 7)), « rien d'autre », la ligne de vue du départ |
+| les piliers de 0.7 retirés | l'abri des trois PNJ : « (-1, -1) → (-1, -1) » |
+| l'arène de 0.10 asymétrique | « symétrique d'est en ouest » |
+
+**Deux sabotages ont d'abord rougi pour la mauvaise raison, et c'est instructif.** (1) « PNJ muré » : en entourant un PNJ de huit murs, la garde n'a pas rougi sur « atteignable » mais sur le **validateur** (la case du PNJ, étranglée, n'était plus praticable : le chapitre ne se chargeait plus) — la garde de contenu s'arrêtait avant d'avoir regardé. Le sabotage retenu enferme le PNJ dans une poche de 6×3 cases, praticable mais fermée. (2) « PNJ de 0.5 hors du halo » placé en (1, 8) rougissait sur la torche seule ; il est maintenant au coin nord-est, hors de la torche ET du halo.
+Un contrôle que je n'ai **pas** saboté seul : le nombre de PNJ par salle — il rougit en passant (0.3 à deux PNJ). Le garde de taille, lui, l'a été (6e ligne : la table sans l'exception de 0.5).
+
+#### Les images (Mesa/llvmpipe sous Xvfb, 1920×1080, la torche du joueur tournée vers l'action — non versionnées)
+
+Chacune est un joueur posé pour la prise (visée donnée au stick, comme au jeu) : 0.1 le PNJ sous la flaque, vu du bord de la salle ; 0.2 la torche sur le PNJ derrière le pilier, la petite lampe d'entrée en haut à gauche ;
+0.3 la torche dans le recoin nord-ouest, deux autres recoins sombres de chaque côté, la lampe au centre ; 0.4 la chicane, la torche par-dessus un muret sur le PNJ ; 0.5 la fusée lancée droit devant depuis le centre éclaire (en rose) le bout nord : un PNJ du couple se lit nettement au bord du halo, le second passe sous l'intitulé de la salle, le troisième, à neuf cases, reste dans le noir ; 0.6 les deux flaques et le PNJ sous la lampe de l'est ; 0.7 le L, ses trois lampes et ses trois PNJ ; 0.8 le sol nu, la torche sur un PNJ au fond ; 0.9 les lampes, un muret et un PNJ éclairé au bout de la torche ;
+0.10 l'arène, le boss faiblement visible dans le noir (il tire : le sang et le voile rouge sont ceux de ses balles — le joueur d'une prise est invincible, et le boss y est posé à 6,5 cases de lui, ce que le jeu ne fait pas).
+**La prise de 0.5 est faite depuis (20, 18)**, après un lancer depuis le centre (20, 20), plein nord : le joueur est reculé de deux cases pour que le couple tienne à l'écran (une case plus près, il est dans l'éblouissement de la fusée), et la prise date de **1,2 s de combustion, lue sur la fusée** — pas comptée en images : sous llvmpipe une image dure plus d'un pas de jeu, et « 150 images après le lancer » a donné, la première fois, une braise quasi morte et aucun PNJ.
+
+#### Non prouvé
+
+- **Jamais joué à la main** : ni la difficulté de chaque salle, ni le ton des phrases, ni la durée d'une salle ne sont jugés par personne. La garde dit qu'une salle FAIT ce qu'elle dit, pas qu'un débutant le comprend.
+- **Une salle enseigne par sa géométrie, rien ne prouve que le joueur le voit.** Le PNJ de 0.6 est sous une lampe, donc visible de loin sans torche : un joueur qui allume sa torche y est vu (le modèle le dit) et un PNJ « très lent » lui laisse le temps de gagner. La salle récompense le détour sans jamais interdire la ligne droite — c'est voulu (S4 : le débutant bat un PNJ très lent 96 à 100 % du temps), mais la leçon n'est pas contrainte.
+- **0.7 : « chaque tir réveille les autres » est une EXISTENCE**, pas une propriété de tous les tirs : pour chaque PNJ il existe une case de tir vue d'un autre PNJ et un abri à six cases ; la garde ne dit pas la part des cases de tir qui trahissent.
+- **0.8 n'enseigne pas explicitement les douilles** : elle prouve des PNJ qui n'entendent que, loin, sur un sol nu. Que ses pas, ses tirs et ses douilles les rendent bruyants est l'affaire du jeu et de S2.
+- **0.3 : le chargeur « sans marge » est un calcul**, pas un duel joué : un tireur parfait épuise exactement ses six balles ; c'est la dispersion (4,5° de plus par tir) qui rendra la recharge probable, et personne ne l'a mesurée dans cette salle.
+- **Le coût n'est pas mesuré** (consigne : aucun relevé) : 0.9 porte six PNJ et trois plafonniers, 0.10 deux plafonniers sur 32×32 ; la règle d'allumage par proximité (S5) ne retire des lampes que sur l'arène du boss.
+- Images Mesa/llvmpipe seulement.
+
+#### Signalé, pas corrigé
+
+- **La marge de 0.5 est de 92 px, et ne peut pas monter** (voir « Les fusées de 0.5 ») : la salle est liée à la portée de torche du Parasite en vue unique, **et** à la portée de lancer d'une fusée ; la fusée ne porte que 132 px de plus que la torche. Une autre classe ne jouerait pas 0.5 comme elle est écrite — mais le chapitre 0 prête le Parasite. **Elle ne rend pas la fusée nécessaire**, seulement utile.
+- **La fumée de la fusée cache le PNJ qu'elle vient de montrer** (voir « Les fusées de 0.5 ») : visible environ 2 s sur 12 de lumière, à 104 px du point de chute. Rien à corriger ici — c'est la fusée de FU2.1, « le scan honnête puis l'ambiguïté » —, mais une salle qui compte sur la fusée doit savoir que le coup d'œil est bref. Le PNJ 1, à 148 px de la fusée (le modèle s'arrête à 150), est plus difficile encore à lire : il n'a pas été photographié seul.
+- **`AventureFormat` exige un manifeste nommé `chapitre.json`**, là où la ROADMAP parlait d'un « manifeste » sans nom : c'est le nom retenu en S6, gardé.
+- **Des recoins se devinent en diagonale** : depuis le coin sud-est de 0.3 ou 0.9, l'angle nord-ouest est en ligne de vue (très loin, hors de la torche) : la garde exige « hors de vue OU hors de portée », pas « hors de vue ».
+
+**À trancher par Adrien.** (1) Les **phrases d'intention** (ton, longueur) ; en particulier « Six cartouches » en 0.3, qui donne un chiffre. (2) ~~0.5 : un coin pour les trois PNJ ou une salle plus grande que 24×24 ?~~ **Tranché le 2026-10-03** : « toute liberté sur la taille » — 41×41, PNJ répartis ; reste à lui dire que la salle n'exige **qu'une** fusée (le troisième PNJ se trouve à la torche) et que la seconde reste possible : voulait-il la rendre obligatoire (56 s d'attente) ? (3) **0.6 : le PNJ éclairé par sa lampe** (visible de loin, la ligne droite n'est pas interdite) ou dans le noir (il faudrait alors s'approcher à la torche, donc être vu) ? (4) **0.1 à 0.5 : des PNJ sourds et aveugles qui ne tirent jamais** — le débutant ne risque rien avant 0.6 ; voulu ? (5) La **taille de l'arène** du boss (32×32) et son tracé symétrique (cinq piliers, deux murets, deux lampes face à face).
+
+### S8, lot 1 — FAITE le 2026-10-03 : les chapitres 1 à 3 (« Les rondes », « Les rondes écoutent », « Les zones ») et la clé « equipe » du format
+
+#### L'extension de format : « equipe » (faite en premier, seule)
+
+**Pourquoi.** Le plan veut que, à partir du niveau x.7, des PNJ **portent la classe du boss et se servent de son gadget** (la suie au chapitre 1, le leurre au 2, la
+torche fantôme au 3) : on apprend ce que fait le gadget avant de l'affronter au boss. Le format acceptait déjà `"classe"` par PNJ — le PNJ porte l'arme et la réserve de la
+classe (S9b) —, mais **un PNJ du catalogue n'a aucun outil** (S9 : « les PNJ du catalogue n'ont aucun outil »), donc il ne posait jamais son gadget.
+
+**Ce qui existe.** Une clé facultative par PNJ, `"equipe": true` (`aventure_format.gd`, `ProfilBot.equiper_un_pnj`, `ProfilBot.palier_du_nom`). Elle donne au PNJ **ce que S9 donne à un bot
+de son palier** (`equiper_pour_le_palier` : torche tactique, repli, posture, fusée à NORMAL et DIFFICILE), **plus le gadget de sa classe à TOUS les paliers**. Le « plus » est le point
+qu'il a fallu trancher : un PNJ des premiers chapitres est LENT ou FACILE, deux paliers dont la table de S9 ne dit rien (elle ne s'occupe que de FACILE=aucun, NORMAL, DIFFICILE) — « équiper
+comme un bot du même palier » aurait laissé le PNJ sans gadget, c'est-à-dire sans effet. Un PNJ LENT équipé n'a donc que son gadget ; un PNJ NORMAL équipé a ce qu'a le boss de son
+palier. **Aucun champ de perception, de réflexe ni de déplacement ne bouge** (une garde compare le profil équipé à celui du catalogue, champ pour champ : seul `utilise_le_gadget` diffère).
+Le validateur : booléen ; **refusée sur un PNJ sourd et aveugle** (il n'agit pas : le gadget n'aurait aucun usage — S9, « les champs d'équipement ne pèsent qu'une fois `agit` vrai ») ;
+**refusée sur le boss** (son profil est déjà équipé : deux façons de dire la même chose se contrediraient un jour). **Sans la clé : exactement le PNJ d'avant**, champ pour champ.
+
+**Les gardes.** `tools/test_aventure_format.gd` (152 vérifications) : acceptée sur `ronde_voit_lent`, `zone_voit_facile`, `immobile_voit_entend_lent`, `ronde_entend_normal` ; refusée
+(un texte, un entier, les trois sourds et aveugles, le boss, la faute de frappe « equipee ») ; `palier_du_nom` sur les 64 noms du catalogue (lu à côté, jamais par la fonction jugée) ;
+sans la clé, cinq profils du catalogue sont champ pour champ le catalogue d'avant et sans outil ; avec la clé, LENT n'a que le gadget, NORMAL et DIFFICILE ce que S9 leur donne. Et
+`tools/test_aventure_partie.gd` (146) monte le vrai jeu : deux PNJ `immobile_voit_lent` du Fumiste, l'un équipé, l'autre non, touchés tous deux — **seul l'équipé pose sa suie, avec sa réserve (place 2)**.
+**Sabotages, tous rouges puis restaurés (md5)** : la clé ignorée par `profil_du_pnj` (4 contrôles format, 3 contrôles partie), le refus du sourd et aveugle retiré (3), le gadget non posé (2), l'équipement
+remplacé par deux champs (4), « equipe » vrai par défaut (4), le refus sur le boss retiré (1). **Un bug réel, attrapé par la garde à sa première exécution** : `palier_du_nom("immobile_voit_entend_lent")`
+lisait « voit » puis « entend_lent » comme palier inconnu et rendait 0 (TRÈS LENT) — « voit_entend » commence par « voit_ », comme dans `pnj_nomme`, qui avait le test `_NOMS_PALIER.has(…)` que
+j'avais oublié.
+
+#### Les outils partagés des trois chapitres
+
+`tools/fabrique_commune.gd` (la grille de dessin, l'écriture des JSON, l'aperçu ; **un PNJ de ronde naît sur le premier point de sa ronde** — le bot saute ce point et va au suivant —,
+et le k-ième PNJ qui n'est pas de ronde tient le repère `k` du dessin) et `tools/outils_chapitre.gd` (le contexte d'une salle, le modèle de vue du bot, les chemins, **l'ouïe réelle** : un
+pas debout, un pas accroupi, un tir, une douille, mesurés avec `PerceptionBot.ecouter` et les tables de l'audio, jamais recopiés ; ce que `partout()` vérifie dans chaque salle de chaque
+chapitre ; l'arène du boss). Le chapitre 0 garde ses propres outils (une garde, un fichier), les trois suivants partagent les leurs : trois copies auraient dérivé.
+**Ce que `partout()` garde, salle par salle** : la taille, les PNJ de chaque sorte (la table des profils, nombre par nom), les plafonniers, les PNJ équipés (classe du chapitre, profil capable de
+déclencher son gadget : la suie et le leurre se posent en combat sur une cible vue, la torche fantôme en enquête sur un son — il faut donc **voir** puis **entendre**), chaque PNJ atteignable à pied,
+une seule pièce, aucun couloir d'une tuile, **chaque ronde une boucle praticable** (au moins trois points distincts, le PNJ naît sur le premier, un chemin relie chaque point au suivant et le dernier
+au premier, 20 cases et 6 à 40 s au moins par tour), **chaque zone contient son PNJ et assez de cases pour errer** (au moins 16, toutes atteignables sans sortir de la zone), et **le départ est un
+abri** (aucun PNJ qui voit ne voit le joueur à sa case, torche éteinte, où qu'il se tienne sur son tour ou dans sa zone).
+Mesuré au lancement, relu à chaque exécution : un pas debout donne une zone assez nette pour qu'un PNJ tire dessus (`AUDACE_ZONE_PX`, 100 px) jusqu'à **495 px**, un pas accroupi jusqu'à **100 px**
+seulement, un tir jusqu'à **1 145 px**, une douille jusqu'à **240 px** ; le pas debout s'entend du tout jusqu'à 1 695 px.
+
+#### Le chapitre 1, « Les rondes » (Fumiste, slug `fumiste`) — `assets/solo/chapitre_01/`, `tools/fabrique_chapitre_01.gd`, `tools/test_chapitre_01.gd`
+
+Les PNJ marchent, leurs trajets se répètent : on apprend à les lire, puis à choisir son moment. Aucune classe imposée. **1.7 à 1.9 : les rondes portent le Fumiste et sa suie** (`"equipe": true`).
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **1.1 Une ronde** | 22×16 · 1 `ronde_sourd_aveugle` · 1 · « Une silhouette fait le tour du bloc, toujours par le même chemin. Elle repasse sous la lampe. » | un tour de 52 cases (14 s) autour d'un bloc de 80 cases ; la lampe en éclaire 5 (moins d'un quart du tour) ; le joueur part à 2 cases du trajet |
+| **1.2 Le croisement** | 24×24 en croix · 2 `ronde_sourd_aveugle` · 2 · « Deux silhouettes, deux tours, un carrefour. Elles s'y croisent sous les lampes. » | deux tours de 48 cases qui partagent 4 cases (les croisements), dont 2 sous une lampe ; **les deux PNJ ne passent jamais à moins de 40 px** (173 px mesurés, tours simulés à vitesse constante) |
+| **1.3 La ronde dans le noir** | 30×20 · 1 `ronde_sourd_aveugle` · 0 · « Une silhouette marche dans le noir. On entend ses pas avant de la voir. » | un tour de 76 cases (20,5 s), aucune lampe ; **aucune case ne montre à la torche plus de la moitié du tour** (au mieux 46 %) ; on l'entend d'où qu'on soit |
+| **1.4 Le guetteur** | 22×22 · 1 `ronde_sourd_aveugle` + 1 `immobile_voit_lent` · 1 · « Elle fait le tour du pilier. Lui ne bouge pas, et il regarde passer. » | la ronde passe dans le champ du guetteur (18 cases) ; **le pilier lui en cache 19 sur 52** ; un affût existe : une case dans le noir, hors de sa vue, d'où l'on voit à la torche un point de la ronde qu'il ne voit pas |
+| **1.5 Elle regarde** | 32×16 · 1 `ronde_voit_lent` · 1 · « Deux couloirs, une cloison entre eux. Elle regarde en marchant, et la lampe éclaire le passage. » | une cloison de 88 cases ; **elle voit le passage éclairé de 18 cases de son tour sur 68, et en est aveugle 50 cases d'affilée (13,5 s)** : le passage se traverse en moins d'une seconde |
+| **1.6 Sous la lumière** | 36×15 · 2 `ronde_voit_lent` · 3 · « Trois lampes en enfilade. Deux silhouettes qui regardent y passent, chacune à son tour. » | les trois lampes sur une même ligne ; chaque ronde traverse deux flaques, la flaque du milieu est commune ; **un affût dans le noir pour chacune** (on la voit éclairée, elle ne voit pas l'affût) ; 420 px d'écart minimal |
+| **1.7 La suie** | 26×22 en U · 2 `ronde_voit_lent` équipées · 1 · « Deux gardes de part et d'autre du U, une lampe au fond. Quand l'un est touché, la fumée monte. » | un U (moins de 70 % du rectangle), un garde par bras, **aucune case commune et aucune ligne de vue entre les bras** ; chaque garde voit le fond éclairé ; la pose de la suie (120 à 400 px de la cible) est possible |
+| **1.8 La garde** | 30×24 · 3 `ronde_voit_lent` équipées + 1 `immobile_voit_lent` · 2 · « Une cour, des murets, trois rondes. Un poste ne bouge pas, tout au fond. » | 3 tours distincts autour de 3 piliers ; 3 rangées de murets (26 cases de mur bas) ; **le poste voit une part d'au moins deux des trois tours** et un muret est sur sa ligne droite depuis le départ |
+| **1.9 La salle pleine** | 40×30 · 3 `ronde_voit_lent` équipées + 2 `immobile_sourd_aveugle` · 3 · « Des colonnes, des lampes, trois rondes. Deux silhouettes ne bougent pas, dans le noir. » | 5 piliers ; trois tours de 30 cases au moins, sans case commune, **jamais à moins de 40 px** ; 2 immobiles dans le noir et loin du départ |
+| **1.10 Le Fumiste** | 32×32 · `boss` (classe `fumiste`) · 2 · « Un duel dans une arène. Il a de la suie, et il s'en sert. » | l'arène, variée (quatre piliers, un au centre, des murets courts sur la voie du milieu) : symétrique d'est en ouest ET du nord au sud, les deux lampes face à face |
+
+#### Le chapitre 2, « Les rondes écoutent » (Illusionniste, slug `fusil`) — `assets/solo/chapitre_02/`, `tools/fabrique_chapitre_02.gd`, `tools/test_chapitre_02.gd`
+
+Les rondes ENTENDENT : marcher, tirer, recharger devient un risque ; on apprend à se faire oublier (immobile, accroupi), puis à faire diversion. **2.7 à 2.9 : les rondes portent l'Illusionniste et son leurre.**
+Les salles se mesurent sur les portées d'écoute réelles (495 px pour un pas debout, **100 px pour un pas accroupi**, 1 145 px pour un tir, 240 px pour une douille), jamais sur une distance écrite.
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **2.1 Une ronde qui écoute** | 28×22 · 1 `ronde_entend_lent` · 1 · « Elle n'a pas d'yeux, elle écoute. Dans cette salle, un pas debout s'entend de partout. » | un tour de 56 cases (15 s) autour d'un bloc ; **la case la plus éloignée du trajet est à 204 px : un pas debout s'entend net de partout** (495 px) ; **84 cases sont plus loin que la portée d'un pas accroupi** (138 px avec le corps) : on y passe en s'accroupissant, et le joueur y part |
+| **2.2 Le pas de trop** | 26×20 nue · 2 `ronde_entend_lent` · 0 · « Une salle nue, deux oreilles qui font le tour. Un pas, une douille, et elles se retournent. » | aucun mur, aucun muret, aucune lampe ; tours distincts (nord, sud) ; un pas debout est net de partout (175 px au pire), **un tir est net des deux rondes où qu'elles soient** (919 px au pire, portée nette 1 145), une douille de partout ; 30 cases d'abri accroupi |
+| **2.3 Attendre** | 30×22 · 2 `ronde_entend_lent` · 1 · « Deux rondes qui écoutent, deux recoins noirs. Tant qu'on ne bouge pas, on ne s'entend pas. » | **deux recoins** (deux longs couloirs de 3 cases de large, ouverts sur le hall, à 20 cases l'un de l'autre) : dans le noir, à 2,5 cases au moins du trajet, d'où l'on voit moins d'un quart du tour (les murs étouffent le pas) ; la ronde passe à 105 px du recoin |
+| **2.4 Le bruit et la lumière** | 34×18 · 1 `ronde_voit_lent` + 1 `ronde_entend_lent` · 2 · « Deux salles, une porte. À gauche, une ronde qui voit sous les lampes. À droite, une qui écoute. » | deux salles (le tour de l'une à l'ouest, de l'autre à l'est) par **une porte de 4 cases** ; les deux lampes éclairent 10 cases du tour de la ronde qui voit, aucune de celui de la ronde qui entend ; du seuil on voit 52 % et 41 % des deux tours, la cloison coupe le reste |
+| **2.5 Les deux sens** | 30×18 en T · 1 `ronde_voit_entend_lent` · 1 · « Une salle en T. Elle voit et elle entend : le noir ne suffit plus. » | un T (54 % du rectangle) ; le tour va de la barre à la queue ; la lampe éclaire 5 cases de la queue et rien de la barre ; **98 cases des ailes sont dans le noir ET hors de portée d'un pas accroupi** ; le joueur part dans une aile, à 315 px du trajet |
+| **2.6 La diversion** | 36×18 · 2 `ronde_voit_entend_lent` + 1 `immobile_sourd_aveugle` · 1 · « Une galerie, des murets. Au fond, une silhouette immobile que deux rondes ne quittent pas. » | 21 cases de mur bas ; chaque ronde voit la silhouette d'au moins 22 points de son tour, à moins de 8 cases ; elle est sous la lampe ; **une case de diversion** (dans le noir, qui voit moins d'un tiers des tours, d'où un tir s'entend net des deux rondes, à 505 px de la silhouette, au-delà de la torche) |
+| **2.7 Le leurre** | 30×22 · 2 `ronde_voit_entend_facile` équipées · 2 · « Des piliers, deux lampes, deux rondes. Une silhouette qui ne bouge pas n'est peut-être personne. » | 5 piliers ; chaque ronde a un point de son tour d'où elle voit la flaque à 160-600 px — **la règle du leurre (`EquipementBot.GADGETS`) peut se déclencher** ; 10 cases de tour éclairées ; 490 px d'écart minimal |
+| **2.8 Le quartier** | 28×28 en croix · 4 `ronde_voit_entend_lent` équipées · 2 · « Quatre rondes, quatre bras. Leurs tours se recouvrent au carrefour. » | une croix (62 % du rectangle) ; **chaque tour en recouvre au moins deux autres**, les quatre forment un seul quartier ; **273 px d'écart minimal**, au corps réel comme au modèle (quatre tours de 30 cases parcourus dans le même sens depuis leur coin nord-ouest : même longueur, donc même avance les uns sur les autres ; départs cherchés par force brute sur les 4 096 possibles — la première disposition, aux tours de longueurs inégales, tombait à 35 px en 150 s de jeu) ; un croisement sous une lampe |
+| **2.9 La salle pleine** | 40×30 · 3 `ronde_voit_entend_facile` équipées + 2 `immobile_entend_lent` · 3 · « Une grande salle. Les rondes écoutent, et les postes aussi. » | trois tours sans case commune, jamais à moins de 40 px ; deux postes qui n'entendent que, dans le noir, loin du départ ; **un tir tiré du départ est entendu net de tous** (se battre ici appelle tout le monde) |
+| **2.10 L'Illusionniste** | 32×32 · `boss` (classe `fusil`) · 2 · « Un duel dans une arène. Son double est tout près, et ne bouge pas. » | l'arène variée (quatre piliers de 3×3 autour du centre, des pans de mur pleins, de longs murets) ; symétrique dans les deux sens ; les deux lampes face à face |
+
+#### Le chapitre 3, « Les zones » (Braconnier, slug `arbalete`) — `assets/solo/chapitre_03/`, `tools/fabrique_chapitre_03.gd`, `tools/test_chapitre_03.gd`
+
+Plus de trajet à lire : chaque gardien erre dans une **zone** (un rectangle de cases qui contient sa case de départ), va voir d'où vient un bruit, poursuit jusqu'à la limite de sa zone et pas au-delà.
+**3.7 à 3.9 : les gardiens portent le Braconnier et sa torche fantôme.**
+
+⚠️ **Un écart au plan, et pourquoi.** Le plan écrivait des gardiens `zone_voit_facile` (qui VOIENT, sans entendre) pour tout le chapitre. La torche fantôme se pose EN ENQUÊTE sur un son
+(`EquipementBot.GADGETS`) : un gardien qui n'entend pas n'enquête jamais, et « equipe » serait resté sans effet — le jeu monté le montre (`test_aventure_partie`, la scène sans l'ouïe ne pose rien). Les
+gardiens équipés de 3.7 à 3.9 sont donc **`zone_voit_entend_facile`**, et la garde exige (`GADGET_EXIGE`) qu'un PNJ équipé ait le sens que la règle de son gadget demande. 3.1 à 3.6 gardent `zone_voit_facile`.
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **3.1 Une pièce gardée** | 30×20 · 1 `zone_voit_facile` · 1 · « Une pièce, une porte. Quelqu'un y erre, sans trajet, et voit ce qui s'éclaire. » | la zone est une pièce de 266 cases ; **une seule porte** (4 cases, un seul morceau) ; le joueur part hors de la pièce ; la lampe y éclaire 37 cases (moins de la moitié) ; de l'entrée on voit 81 cases par la porte |
+| **3.2 La frontière** | 34×16 · 1 `zone_voit_facile` · 1 · « Deux pièces en enfilade. Il va jusqu'à la porte, pas au-delà. » | le joueur part dans la seconde pièce, **hors de la zone** ; **un chemin sort de la zone** (13 cases sur 22 du gardien au départ) ; le gardien ne rejoint, en restant dans la zone, que des cases de la zone (210) ; de chez soi on voit 94 cases de sa zone par la porte |
+| **3.3 Deux pièces** | 36×16 · 2 `zone_voit_facile` · 2 · « Un couloir entre deux salles, un gardien dans chacune. Chacun garde la sienne. » | deux zones disjointes, **10 cases entre elles**, le couloir (40 cases) n'est dans aucune ; pour aller de l'un à l'autre on traverse 10 cases hors des deux zones ; une lampe dans chaque zone ; le joueur part dans le couloir |
+| **3.4 La zone sombre** | 30×24 · 2 `zone_voit_facile` · 0 · « Un sous-sol sans une lampe. Ils ne voient que ce qu'une torche leur montre. » | aucune lampe, 5 piliers ; **torche éteinte, aucun gardien ne voit un joueur debout, de nulle part de sa zone** (4 099 paires examinées, 0 vue) ; **une torche allumée le trahit** (4 055 paires sur 4 099) |
+| **3.5 Zones et rondes** | 34×24 · 2 `zone_voit_facile` + 1 `ronde_voit_lent` · 2 · « Un atelier. Deux gardiens errent chez eux, une ronde passe de l'un à l'autre. » | la ronde (52 cases) **passe dans chaque zone** (10 cases) et pour moitié hors des deux ; chaque lampe éclaire le tour dans une zone ; un bloc de 64 cases au milieu ; le départ est à 299 px du tour |
+| **3.6 Le poste avancé** | 34×22 · 1 `immobile_voit_facile` + 2 `zone_voit_facile` · 2 · « Un poste, devant les zones de deux gardiens. Il regarde entre les colonnes. » | 7 piliers ; **le poste est avancé** (315 px du départ, la zone la plus proche à 526 px) et **couvre les deux zones** (55 % et 54 % de leurs cases en ligne de vue, à moins de 18 cases) ; il est sous la lampe |
+| **3.7 La lumière qui ment** | 48×16 · 3 `zone_voit_entend_facile` équipées · 1 · « Un long hangar, une lampe tout au fond. Toute lumière n'est pas quelqu'un. » | **la lampe est à 1 470 px du départ, en ligne de vue, bien au-delà de la torche** ; les trois gardiens (x = 9, 22, 38) sont entre le joueur et elle, leurs trois zones rangées d'ouest en est ; la lampe est dans la dernière ; pour chaque gardien, un point de sa zone d'où la torche fantôme se pose à 250-450 px d'un son |
+| **3.8 Les quartiers** | 28×24 · 4 `zone_voit_entend_facile` équipées · 2 · « Quatre pièces en damier, deux lampes. Chaque gardien reste chez lui. » | quatre zones disjointes en deux colonnes et deux rangées, un seul gardien chacune ; **les deux lampes sont aux deux pièces opposées** (zones 1 et 4), les deux autres noires ; **quatre portes** (quatre seuils de 6 cases hors de toute zone), deux par zone |
+| **3.9 La salle pleine** | 44×34 · 4 `zone_voit_entend_facile` + 1 `ronde_voit_entend_facile`, tous équipés · 3 · « Un grand entrepôt. Chaque gardien a sa zone, et une ronde passe entre elles. » | quatre zones de plus de 150 cases ; **la ronde (68 cases, 18,8 s) ne passe dans aucune zone** : elle tient la bande du milieu ; piliers et bloc central ; deux lampes dans des zones, une sur le tour |
+| **3.10 Le Braconnier** | 32×32 · `boss` (classe `arbalete`) · 2 · « Un duel dans une arène. Il laisse des lampes derrière lui. » | l'arène variée (quatre piliers, des pans de mur au nord et au sud, des murets sur la voie du milieu) ; symétrique dans les deux sens ; lampes face à face |
+
+#### Les gardes de S8, en un coup d'œil
+
+| Suite | Vérifications | Ce qu'elle garde |
+|---|---|---|
+| `test_aventure_format` | 152 | la clé « equipe » (acceptée, refusée, `palier_du_nom` sur les 64 noms, profils comparés champ à champ) ; chaque dossier de `assets/solo` se charge, les numéros se suivent depuis 0 |
+| `test_aventure_partie` | 152 (140 avant) | un PNJ équipé du Fumiste pose sa suie, son voisin identique sans la clé non ; **le leurre (chapitre 2) et la torche fantôme (chapitre 3) naissent dans le vrai jeu avec la clé, jamais sans** |
+| `test_chapitre_01` / `02` / `03` | 271 / 284 / 280 | chaque salle : ce qu'elle enseigne, mesuré (tableaux ci-dessus) ; partout : tailles, PNJ de chaque sorte, rondes en boucles, zones, PNJ équipés, départ à l'abri, arène du boss |
+| `test_chapitres_marche` | 190 | **le vrai corps** parcourt chaque ronde et chaque zone (voir plus bas) |
+
+#### La marche au vrai corps — `tools/test_chapitres_marche.gd` (`--fixed-fps 60`, dans `run_suites.sh`)
+
+S1 avait écrit que RONDE et ZONE n'étaient éprouvées qu'avec un point matériel, « S7 les exigera » : le chapitre 0 n'a aucune ronde, c'est donc ici qu'on les exige. La suite monte le vrai jeu, joue chaque
+salle de ronde ou de zone des chapitres 1 à 3 (vingt-sept salles, 45 s de jeu au plus chacune, `~9 s` de processus par salle), PNJ désarmés et sourds-aveugles — ils marchent, ils ne réagissent à rien —, et
+vérifie : chaque ronde passe, de son vrai corps, par chacun de ses points et boucle ; une zone n'est jamais quittée (0,0 s dehors) et visitée pour un cinquième au moins de ses cases (de 28 % à 59 % mesurés) ;
+aucun PNJ n'est immobile plus de 3 s ; deux rondes ne se traversent pas. **Elle a trouvé un défaut de 2.8** : les quatre tours, de longueurs inégales (28 et 30 cases), se rattrapaient, et leurs corps se frôlaient
+(35 px en 150 s de jeu, un corps fait 36). Ils font maintenant 30 cases chacun, tous parcourus dans le même sens depuis leur coin nord-ouest — même longueur, donc même avance les uns sur les autres —, avec des
+départs choisis par force brute sur les 4 096 possibles : 273 px d'écart au corps réel comme au modèle cinématique de la garde du chapitre. Le modèle cinématique (`ecart_minimal_des_rondes`, vitesse constante sur
+les cases du chemin) et le vrai corps s'accordent d'ailleurs à la première mesure : 173 px des deux côtés en 1.2.
+
+#### Sabotages (chaque garde vue ROUGE, puis restaurée à l'identique — md5 vérifié par le script ; chapitres sabotés par une copie de leur fabrique et `-- --dossier=`)
+
+- **L'extension** (six) : la clé ignorée par `profil_du_pnj` (4 contrôles du format, 3 de la partie) ; le refus du sourd et aveugle retiré (3) ; le gadget non posé (2) ; l'équipement remplacé par deux champs (4) ;
+  « equipe » vrai par défaut (4) ; le refus sur le boss retiré (1).
+- **Chapitre 1** (treize) : la lampe hors du trajet (1.1) ; les rondes qui ne se croisent plus (1.2, 2 contrôles) ; une lampe sur le tour dans le noir (1.3) ; un bloc réduit, la torche voit 59 % du tour (1.3) ; le pilier du
+  guetteur retiré (1.4) ; la cloison retirée (1.5) ; les lampes qui sortent de la ligne (1.6) ; les gardes non équipés (1.7) ; le muret retiré (1.8, 2) ; l'arène asymétrique (1.10, 2) ; un couloir d'une tuile (1.1, 2) ;
+  un palier changé (1.5, 2) ; le départ sous la lampe en vue d'une ronde qui voit (1.5, 2).
+- **Chapitre 2** (quatorze) : une salle trop vaste, un pas debout ne s'entend plus de partout (2.1) ; la ronde qui longe le bord, plus d'abri accroupi (2.1, 2) ; un pilier dans la salle nue (2.2) ; les recoins sans murs (2.3, 3) ;
+  une porte trop large (2.4, 2) ; une lampe dans la salle sombre (2.4, 2) ; plus de T (2.5) ; la silhouette non gardée (2.6, 3) ; les gardes non équipés (2.7, 2) ; des tours qui ne se recouvrent plus (2.8, 6) ; un poste près du
+  départ (2.9) ; l'arène asymétrique (2.10, 2) ; une ronde de deux points (2.1, 3) ; une ronde qui voit au lieu d'entendre (2.1, 2).
+- **Chapitre 3** (seize) : deux portes (3.1) ; la lampe hors de la zone (3.1, 2) ; le joueur dans la zone (3.2, 2) ; plus de porte (3.2, 5) ; une zone qui mange le couloir (3.3, 4) ; une lampe dans le sous-sol (3.4, 2) ; la ronde qui
+  ne traverse plus les zones (3.5, 4) ; le poste loin du départ (3.6, 3) ; la lampe près du joueur (3.7, 4) ; les gardiens non équipés (3.7) ; **un gardien équipé qui n'entend pas** (3.7, 2) ; des lampes dans deux pièces voisines
+  (3.8) ; une porte de moins (3.8, 3) ; la ronde qui entre dans les zones (3.9) ; l'arène asymétrique (3.10, 2) ; une zone trop petite pour errer (3.1, 5).
+- **La marche** (deux) : la ronde qui ne passe plus au point suivant (7 contrôles) ; la zone oubliée de son rectangle (« 6,6 s dehors »).
+
+**Cinq fois une garde ou un sabotage n'a PAS rougi du premier coup, et c'est instructif.** (1) *`palier_du_nom` d'un nom `voit_entend`* : la garde l'a trouvé à sa première exécution (« voit » puis « entend_lent » lu comme un palier
+inconnu, rendu 0 = TRÈS LENT) — un bug du code, pas de la garde. (2) *« equipe » qui n'est pas un booléen* : le refus se faisait, mais en laissant « Nonexistent 'bool' constructor » dans la sortie — une erreur de script que seul
+`run_suites.sh` attrape ; corrigé dans un commit à part. (3) *2.1, le bloc agrandi* : resté VERT (0 rouge) — le bord extérieur d'un anneau reste toujours loin du trajet, un bloc plus gros ne retire aucun abri. Le sabotage qui
+rougit est celui qui change ce que la garde dit : la salle trop vaste (un pas debout ne s'entend plus de partout) ou la ronde collée au bord (plus d'abri accroupi). (4) *2.2, une ronde sur un coin* : le premier sabotage de 2.2 tombait
+dans un mur, le validateur refusait le chapitre et la garde de contenu s'arrêtait avant d'avoir regardé ; réécrit pour que la ronde reste praticable. (5) *La zone, côté code* : `prochaine_cible` de `ZONE` remplacé par une cible
+libre est resté VERT — le chemin est enfermé dans la zone, la cible hors zone n'est jamais atteinte, le PNJ ne sort donc pas ; il faut oublier le rectangle lui-même (`profil.zone = Rect2i()`) pour qu'il sorte. Deux gardes
+(la cible, le chemin) valent mieux qu'une, et c'est voulu.
+
+#### Les images (Mesa/llvmpipe sous Xvfb, 1920×1080, la torche du joueur tournée vers l'action — non versionnées)
+
+Une capture iso par salle, `salle_N_MM.png`, regardées, plus deux de l'écran de l'aventure. Les salles montrent ce qu'elles doivent : l'anneau de 1.1 avec le PNJ pris dans la torche et la flaque de la lampe sur son trajet, la croix de 1.2 et ses deux
+flaques sur les croisements, le grand tour noir de 1.3 où la torche ne suit qu'un tronçon, le guetteur de 1.4 sous sa lampe et la ronde éclairée par la torche près du pilier, les deux couloirs de 1.5, le U de 1.7, la cour de 1.8
+(le poste dans sa flaque, les piliers en blocs noirs, les murets hachurés), la porte de 2.4 entre la salle claire et la salle noire, la silhouette de 2.6 dans sa flaque au fond de la chambre. **Limites de la prise** : les PNJ de
+ronde sont posés à la main dans le cône de la torche (leur place sur le tour est celle d'un instant, pas celle d'un moment de la ronde), et sous llvmpipe, pas sous le pilote d'Apple.
+
+#### Non prouvé
+
+- **Jamais joué à la main.** Trente salles écrites en données, jugées par des gardes qui mesurent ce que chacune enseigne, par la marche du vrai corps et par des images fixes ; personne n'a tenu une manette dans l'une d'elles. Ni la
+  difficulté, ni le ton des phrases, ni la durée d'une salle ne sont jugés.
+- **Aucun banc de difficulté.** Les paliers LENT et FACILE ont été réglés par S4 contre un joueur qui ENTRE dans une salle, **un contre un, avec le Parasite**. Ici des PNJ de ces paliers portent le fusil de l'Illusionniste, l'arbalète
+  du Braconnier, le pistolet lourd du Fumiste, en nombre (jusqu'à cinq à la fois en 3.9), en ronde ou en zone — jamais confrontés à un joueur type. La suite `banc_bot_difficulte` ne sait pas jouer une salle.
+- **La torche de 468 px est celle du Parasite.** Les salles se mesurent sur elle, comme au chapitre 0 ; à partir du chapitre 1 on joue la classe qu'on veut parmi celles qu'on a gagnées (le Fumiste, l'Illusionniste…), dont la lumière
+  n'est pas la même : « aucune case ne montre le tour entier à la torche » (1.3) ou « hors de la torche » (2.6, 3.7) ne se mesurent pas pour elles.
+- **Les portées d'écoute viennent du modèle** (`PerceptionBot.ecouter`, avec les niveaux et les portées de l'audio), pas d'une partie : l'occultation par un mur y est les trois rayons de l'audio, la zone d'un pas accroupi est celle que
+  le liseré donne. Que « un tir tiré de loin appelle les rondes » (2.6) soit vrai dans le jeu n'est pas rejoué : la garde dit qu'une case de diversion existe, pas que les rondes la rejoignent.
+- **Les effets de l'équipement sur la force des PNJ** : la suie (le PNJ entre dans son nuage, aveugle 9 s), le leurre, la torche fantôme — leurs règles sont celles de S9 (« à juger en jouant »), leur pose est prouvée (le vrai jeu), pas
+  leur effet sur une salle. Le leurre d'un PNJ n'est pas reconnu comme un leurre par un autre PNJ (S2, « Non prouvé »).
+- **La marche** ne joue que 45 s de jeu par salle (150 s pour 2.8 seule, une fois) : une collision lente entre deux rondes n'est exclue que pour ces durées. Les rondes de longueurs égales qui partagent des cases (1.2, 1.6, 1.8, 2.7) s'écartent de
+  173 à 490 px ; celles de 1.9 sont à 280 px et de longueurs inégales — non éprouvées au-delà de 45 s.
+- **Images** : Mesa/llvmpipe sous Xvfb seulement, PNJ posés à la main dans le cône. **Le coût n'est pas mesuré** (consigne : aucun relevé de cadence) : 3.9 porte cinq PNJ, trois plafonniers sur 44×34 ; 3.7 est un hangar de 48 cases de long.
+
+#### Signalé, pas corrigé
+
+- **L'écran de l'aventure avec quatre chapitres** (le 0 et le 1 finis, le 2 commencé) a été regardé (`ecran_aventure_4_chapitres.png`) : les quatre entrées de chapitre, la ligne « CHAPITRES 4 À 10 — À VENIR » et « RETOUR » tiennent
+  à l'écran, la classe du Fumiste est libre, celle de l'Illusionniste grisée jusqu'à la fin du chapitre 2, la description de la salle (« 2 à abattre ») prend la place de l'affiche. Le hub ne défile pas et n'a pas à le faire jusqu'au chapitre 5 ou 6 :
+  chaque chapitre écrit ajoute une ligne, au compte des entrées. **À surveiller quand le chapitre 7 viendra.**
+- **La table d'équipement de S9 ne dit rien de LENT ni de FACILE** (« FACILE : aucun outil » ; les PNJ du catalogue n'en ont pas). C'est ce que la clé « equipe » a dû trancher (voir plus haut) ; la question (2) de S9, « quels outils pour quels
+  chapitres », est donc répondue en partie : le gadget seul aux paliers bas, tout ce que le boss du palier a à NORMAL et au-dessus. `torche_en_patrouille` n'est toujours dans aucun profil.
+- **Une zone dont le PNJ ne fait que se promener est une salle où le joueur se cache dans le noir** : aucune mesure n'impose qu'un gardien de zone enquête sur un son jusqu'à la frontière (le moteur le fait : `ZONE` enferme les chemins) ;
+  3.2 le montre par les données (un chemin sort de la zone), pas par une partie.
+- **Un PNJ de zone voit toute la pièce si elle est éclairée** : en 3.1 le gardien peut tirer sur quiconque entre sous la lampe. C'est voulu (la leçon « il voit ce qui s'éclaire »).
+- **Les arènes des trois boss reprennent le gabarit du chapitre 0** (32×32, joueur et boss à 25 cases l'un de l'autre, lampes en (10,16) et (21,16)) et ne varient que par leur mobilier.
+- **`tools/fabrique_chapitre_00.gd` garde sa propre grille** (non migrée vers `fabrique_commune.gd`) : un seul dessin de chapitre 0, régénérable à l'octet ; le toucher aurait été hors périmètre.
+- Les commits de S8 sont en français et se terminent par les deux lignes demandées ; celui du chapitre 3 dit « dix-sept sabotages » : ils sont seize (le détail ci-dessus fait foi).
+
+#### À trancher par Adrien
+
+1. **« equipe » donne le gadget à tous les paliers et le reste de l'équipement à NORMAL et au-dessus.** C'est le choix le plus étroit qui fasse poser le gadget à un PNJ LENT ou FACILE ; l'alternative est de leur donner aussi la torche tactique
+   et le repli (un PNJ de ronde qui change de place après un tir quitterait sa ronde). Ou une table d'équipement par palier, dans `profil_bot.gd`.
+2. **Les gardiens équipés du chapitre 3 entendent** (`zone_voit_entend_facile`), alors que le plan les voulait `zone_voit_facile` : la torche fantôme ne se pose qu'en enquête. Acceptable, ou faut-il que ce gadget se pose aussi sur ce qu'on voit
+   (le Braconnier jouerait alors autrement) ?
+3. **Seuls les PNJ qui bougent sont équipés** (les rondes de 1.7 à 2.9, les gardiens de 3.7 à 3.9) ; les postes immobiles gardent le Parasite. Voulu ?
+4. **La difficulté des PNJ équipés d'une autre classe**, jamais mesurée (« Non prouvé ») : un banc de salle, ou des essais à la main d'abord ?
+5. **Les phrases d'intention** (ton, longueur), et celles qui nomment le gadget (« Quand l'un est touché, la fumée monte », « Son double est tout près », « Il laisse des lampes derrière lui ») : la situation, ou déjà la leçon ?
+6. **La taille des salles** : de 22×16 à 48×16 et 44×34 ; 1.5 laisse la ronde aveugle au passage pendant 13,5 s sur 18 — assez de marge pour une salle qui enseigne « au bon moment », ou trop ?
+7. **Les chapitres 1 à 3 n'imposent aucune classe** (consigne) : le joueur arrive au chapitre 1 avec le seul Parasite, et ses salles se mesurent sur sa torche ; un joueur qui y arrive avec une autre classe n'a pas la même salle.
+
+#### Résultat des suites
+
+`GODOT=… ./tools/run_suites.sh --rapide` (le binaire 4.7.1) : **les 148 suites headless sont vertes**, en 1 113 s (machine chargée par les captures), sans erreur de script ni `push_error` non déclaré ; les scénarios à deux instances ne sont pas joués par
+`--rapide`. **Aucun relevé de cadence** (consigne).
+
+### S8, lot 2 — FAITE le 2026-10-03 : les chapitres 4 à 6 (« Les zones écoutent », « Les groupes », « Les chasseurs »)
+
+Écrit par une session-fille du maître du chantier (worktree, partie de `ccr-50a162ad-e2u8lr` au commit « ROADMAP S8 : les chapitres 1 à 3 »), **pendant qu'une autre session écrit les chapitres 7 à 9** dans d'autres dossiers : les deux lots ne se touchent
+qu'en trois points, à fusionner à la main (voir « Signalé »). Même méthode que le lot 1, mêmes outils : une fabrique par chapitre sur la grille commune (`tools/fabrique_chapitre_04.gd` à `06`), un dossier `assets/solo/chapitre_0N/` (manifeste : numéro, titre, classe
+débloquée ; **aucune classe imposée**), dix salles conformes au plan, le boss au dixième dans la classe débloquée, la clé `"equipe": true` à partir du niveau x.7, une garde de contenu par chapitre, la marche du vrai corps, des sabotages, des captures.
+
+#### Ce qui s'ajoute aux outils du lot 1
+
+- **`tools/outils_chapitre_04_06.gd`** — un sous-type de `OutilsChapitre` (`partout()` et `salle_du_boss()` y restent). Quatre familles, que les trois chapitres partagent :
+  **l'ouïe d'un PNJ DERRIÈRE LES MURS** (`rayon_entendu`, `net`, `entendu`, `pire_rayon` : `PerceptionBot.ecouter` sur le monde réel de la salle, avec les niveaux et les portées de l'audio — le lot 1 ne mesurait que des portées en terrain nu) ;
+  **les petits outils de zone** (portes, cases éclairées, part en vue, morceaux) que `test_chapitre_03` portait pour lui seul ;
+  **« la règle de son gadget peut-elle se déclencher ? »** (`peut_poser` : la fenêtre de distance de `EquipementBot.GADGETS`, LUE dans la table du jeu, une case que le PNJ tient, une ligne dégagée) ;
+  **la forme d'une salle** (`cases_ouvertes` : où un disque de la taille d'un nuage tient sans toucher un mur ; `blocs_interieurs` : un anneau de couloirs = un bloc, des îlots = plusieurs ; `culs_de_sac` ; `longueur_de_la_course`).
+- **`tools/outils_chapitre.gd`** — une seule ligne touchée : `GADGET_EXIGE` gagne `pompe → entend` (la poussière se pose en enquête ou en recherche, sur un son), `incendiaire → voit` (la nappe se pose en combat, sur une cible vue) et `sentinelle → entend` (la poudre se pose en enquête).
+  `partout()` refuse donc un PNJ équipé qui n'a pas le sens que la règle de son gadget demande.
+- **`tools/test_chapitres_marche_04_06.gd`** — la marche au vrai corps, copiée de `test_chapitres_marche` plutôt qu'éditée (l'autre session fait la sienne pour 7 à 9), avec **le déplacement LIBRE en plus** (voir plus bas).
+
+#### Le chapitre 4, « Les zones écoutent » (Terrassier, slug `pompe`) — `assets/solo/chapitre_04/`
+
+Les gardiens du chapitre 3 voyaient chez eux ; ceux-ci **entendent** (`zone_entend_facile`, puis `zone_voit_entend_facile` à partir de 4.4). Un bruit les fait converger vers la frontière de leur zone. **4.7 à 4.9 : les gardiens portent le Terrassier et sa poussière** (`"equipe": true`).
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **4.1 Une pièce qui écoute** | 30×18 · 1 `zone_entend_facile` · 1 · « Il n'a pas d'yeux, il écoute. Un pas debout s'entend de la porte, un pas accroupi à peine. » | une pièce de 232 cases, **une seule porte** (4 cases) ; le départ est dans le noir, à 385 px de la pièce ; **debout, un pas du départ est entendu net d'une case de la zone, accroupi d'aucune (toutes les cases testées)** ; **un poste de tir accroupi existe** (en (11, 7) : un pas accroupi n'est entendu net de nulle part, et la torche éclaire 35 % de la pièce) |
+| **4.2 Le réveil** | 40×16 · 3 `zone_entend_facile` · 2 · « Trois pièces en ligne, un couloir qui les dessert. Un coup de feu les réveille toutes. » | trois zones disjointes rangées d'ouest en est ; **un tir du départ est entendu de chaque case des trois zones, murs compris, à 109 px près au plus (net de 347 cases sur 360) et net de chaque gardien là où il naît** ; **un pas debout du départ n'est net que du gardien du milieu** ; portes : 2, 3, 2 composantes de 6 cases au plus |
+| **4.3 Le chemin silencieux** | 38×19 · 2 `zone_entend_facile` · 1 · « Un couloir entre deux pièces qui écoutent. Chaque pas y résonne. » | un couloir de 6 cases entre deux zones de 36 cases de long ; **du départ au bout, 35 cases : debout, un pas est entendu net d'une case de zone depuis 26 d'entre elles ; accroupi, depuis AUCUNE** ; chaque zone s'ouvre par deux portes |
+| **4.4 Les deux sens** | 34×18 · 2 `zone_voit_entend_facile` · 2 · « Deux salles, un palier. Les gardiens y voient ce qui s'éclaire et y entendent le reste. » | un palier hors zones où le joueur part ; **chaque lampe n'éclaire que 21 cases sur 192** ; dans la flaque le gardien VOIT un joueur debout, dans le noir il ne le voit pas mais entend son pas net |
+| **4.5 L'appât** | 32×26 · 2 `zone_voit_entend_facile` + 1 `immobile_sourd_aveugle` · 2 · « Une salle en L. Quelqu'un attend à l'angle, immobile, sous une lampe. Les gardiens sont chacun dans un bras. » | un L (le sol remplit 66 % du rectangle) ; la silhouette est à l'angle, hors des zones, sous une lampe ; **un tir sur elle s'entend net des deux gardiens, un pas accroupi à l'angle d'aucun** ; **un poste existe (en (7, 11)) d'où l'on voit à la torche une case-frontière de chacune des deux zones** ; la case de zone la plus proche d'un bruit au poste est bien une case-frontière |
+| **4.6 La poussière** | 44×30 · 3 `zone_voit_entend_facile` · 1 · « Une carrière, du sol à perte de vue. Les gardiens y entendent loin, et y voient ce qu'on éclaire. » | 38 cases de mur plein pour 1 138 de sol ; **un nuage de 168 px de rayon (`GadgetPoussiere.RAYON`, lu) tient en 237 points** (21 % du sol) ; 37 cases éclairées ; trois zones de plus de 150 cases |
+| **4.7 Poste et zones** | 40×30 · 3 `zone_voit_entend_facile` équipés + 1 `immobile_voit_entend_facile` · 3 · « Une cour, trois ailes. Un guetteur tient la cour, les gardiens tiennent les ailes. » | le guetteur est dans la cour, sous la lampe, **à 595 px du départ : on le voit de loin, au-delà de la torche (468 px)** ; une cour de 352 cases ; **pour chaque gardien équipé, une case de sa zone d'où la poussière se pose à 200-380 px d'un son, ligne dégagée** |
+| **4.8 Le dédale** | 40×28 · 4 `zone_voit_entend_facile` équipés · 2 · « Des murets en lacets, deux côtés, quatre gardiens. Chacun garde un bout du chemin, et certains en gardent deux. » | **deux paires de zones EMBOÎTÉES** (une de chaque côté d'une cloison) ; 140 cases de mur bas ; **pour 3 gardiens sur 4 le chemin jusqu'au joueur fait au moins 1,4 fois la droite, et pour les 4 la droite traverse un muret** (le joueur enjambe, eux contournent) |
+| **4.9 La salle pleine** | 44×34 · 4 `zone_voit_entend_facile` + 1 `ronde_voit_entend_facile`, tous équipés · 3 · « Une grande halle, quatre pièces, une place. Tout le quartier écoute. » | quatre pièces d'angle de plus de 150 cases, **chacune ouverte par une seule porte** ; la ronde (62 cases) longe la place sans entrer dans une zone ; **un tir du départ est entendu de chaque case des quatre zones et du tour, à 178 px près au plus** ; la poussière peut se poser pour les cinq |
+| **4.10 Le Terrassier** | 32×32 · `boss` (classe `pompe`) · 2 · « Un duel dans une arène. Il lève la poussière, et il y voit mieux que vous. » | l'arène (éboulis de 3×3, longs pans au nord et au sud, murets au centre) symétrique dans les deux sens ; les deux lampes face à face |
+
+#### Le chapitre 5, « Les groupes » (Incendiaire, slug `incendiaire`) — `assets/solo/chapitre_05/`
+
+Les PNJ ne sont plus seuls : leurs zones se recouvrent, des rondes passent sous des gardiens, un coup de feu les appelle tous. **5.7 à 5.9 : les PNJ MOBILES portent l'Incendiaire et sa nappe de braises** (et VOIENT, la nappe se posant en combat sur une cible vue). Les deux postes immobiles (5.4, 5.8) gardent le Parasite.
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **5.1 Le binôme** | 30×18 · 2 `zone_voit_entend_facile` · 1 · « Une pièce double, deux gardiens qui se voient d'un bout à l'autre. Ce que l'un surveille, l'autre le couvre. » | **80 cases communes aux deux zones** ; les gardiens se voient de là où ils naissent ; la lampe est dans les deux zones ; **34 cases éclairées du recouvrement sont vues des deux à la fois** ; une cloison de 16 cases percée d'une ouverture de 8 |
+| **5.2 Ronde et escorte** | 28×20 · 1 `zone_voit_entend_facile` + 1 `ronde_voit_entend_facile` · 2 · « Un couloir en boucle, une ronde qui en fait le tour. Un gardien tient l'angle où elle passe. » | un seul bloc (131 cases) que le couloir contourne, un tour de 70 cases (18,8 s) ; **18 cases du tour dans la zone du gardien, 52 hors** ; le joueur part d'une niche creusée dans le bloc, à 175 px du tour |
+| **5.3 Le premier tir** | 36×26 · 3 `zone_voit_entend_facile` · 2 · « Une salle ouverte, trois gardiens en triangle. Un coup de feu, et ils sont trois. » | trois distances du départ (535, 645, 1 136 px, au moins 3 cases d'écart) ; **deux gardiens sous une lampe, un dans le noir** ; ils se voient tous trois, de là où ils naissent ; un tir du départ est net des trois |
+| **5.4 La couverture** | 40×16 · 2 `ronde_voit_entend_facile` + 1 `immobile_voit_normal` · 2 · « Une galerie, deux rondes, et au bout un poste qui regarde. Il couvre l'une mieux que l'autre. » | deux tours de 36 cases, sans case commune, à 455 px d'écart ; **le poste (réflexes NORMAUX, sous une lampe) voit 61 % du tour le plus proche et 0 % de l'autre** ; chaque tour a au moins 10 angles morts ; une lampe au milieu éclaire un bout de chaque tour |
+| **5.5 Séparer** | 40×20 · 3 `zone_voit_entend_facile` · 2 · « Deux salles. Dans la grande, deux gardiens qui se couvrent ; dans la petite, un troisième, tout seul. » | les deux premiers se recouvrent (90 cases) et se voient ; la zone du troisième mord sur la grande salle par la porte ; **il ne voit ni l'un ni l'autre ; une case existe (31, 1) d'où un pas debout n'est entendu net que de lui, alors qu'un tir y est entendu des trois** |
+| **5.6 Le passage brûlant** | 44×18 · 2 `zone_voit_entend_facile` + 1 `ronde_voit_entend_facile` · 3 · « Une forge, deux halls, un seul passage. Ce qu'on y jette le ferme d'un mur à l'autre. » | **le seul lien entre les halls : 45 cases, 15 de long sur 3 de large (105 px) ; la nappe (`GadgetBraises.RAYON` lu : 136 px de diamètre) le ferme d'un mur à l'autre** ; la ronde le traverse dans un sens puis dans l'autre (30 cases du tour dedans) ; une lampe en éclaire 15 cases |
+| **5.7 Le groupe vif** | 36×22 · 2 `zone_voit_entend_normal` équipés · 2 · « Une salle à colonnes. Deux gardiens, un seul groupe : ils tirent plus vite, et ce qu'ils sèment brûle. » | huit colonnes et une au centre ; 102 cases communes ; **réflexes NORMAUX (0,26 s contre 0,40 s) ; pour chaque gardien une case d'où la nappe se pose à 150-420 px d'une cible, ligne dégagée** ; une cible VUE existe (une case éclairée du recouvrement que le gardien voit) |
+| **5.8 Le carrefour** | 32×32 en croix · 2 `zone_voit_entend_facile` + 2 `ronde_voit_entend_facile` équipés + 1 `immobile_voit_entend_normal` · 3 · « Une croix, quatre bras, un groupe dans chacun. Au centre, un poste voit les quatre. » | une croix (46 % du rectangle) ; **deux rondes de 28 cases chacune, en miroir, à 315 px l'une de l'autre, sans case commune** ; le poste voit au moins le quart de chaque branche ; la nappe peut se poser pour les quatre équipés |
+| **5.9 La salle pleine** | 44×34 · 3 `zone_voit_entend_facile` + 2 `ronde_voit_entend_normal`, tous équipés · 4 · « Une grande halle, trois groupes. Deux gardiens avec leur ronde, un seul sans. Toucher l'un réveille ses voisins. » | trois zones de plus de 150 cases ; **deux rondes de 48 cases, en miroir, à 455 px ; la ronde de l'ouest passe dans la zone nord-ouest (33 cases), celle de l'est dans la zone nord-est (33) ; le gardien du sud est seul : aucune ronde à moins de 210 px de sa zone** |
+| **5.10 L'Incendiaire** | 32×32 · `boss` (classe `incendiaire`) · 2 · « Un duel dans une arène. Entre vous, des braises. » | l'arène (piliers de 2×5 aux coins, deux rangées de murets, deux murets de chaque côté) symétrique dans les deux sens ; les deux lampes face à face |
+
+#### Le chapitre 6, « Les chasseurs » (Sentinelle, slug `sentinelle`) — `assets/solo/chapitre_06/`
+
+Plus rien à garder : des chasseurs (`libre_…`) errent sur toute la carte, vous cherchent, se souviennent (`delai_oubli` : 6 s). **6.7 à 6.9 : les chasseurs portent la Sentinelle et sa poudre de contact** (ceux qui entendent ; les chasseurs « voit seulement » ne sont jamais équipés).
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **6.1 Le chasseur** | 24×18 · 1 `libre_voit_facile` · 1 · « Une petite carte en boucle. Quelqu'un vous cherche, et il n'a pas de poste. » | **un seul bloc (80 cases) que le couloir contourne, aucun cul-de-sac** ; le chasseur naît à 728 px du départ, le bloc entre eux (le chemin fait au moins 1,2 fois la droite) ; la lampe éclaire 21 cases |
+| **6.2 Rompre** | 40×18 · 1 `libre_voit_facile` · 1 · « Deux boucles reliées par une porte. L'une est claire, l'autre noire. » | **deux blocs (deux boucles), reliées par une seule porte de 4 cases ; l'ouest est éclairé (21 cases), l'est NOIR (0) ; 104 cases de l'est sur 224 ne sont vues d'aucune case de l'ouest ; une cachette atteignable à 26 cases du départ (3,5 s de course) pendant les 6 s du délai d'oubli ; un chasseur qui voit ne voit personne, torche éteinte, dans la boucle noire** |
+| **6.3 La meute** | 40×28 · 2 `libre_voit_facile` · 2 · « Des îlots, des couloirs, deux chasseurs qui viennent de deux côtés. » | huit blocs, aucun cul-de-sac ; les chasseurs naissent à 798 px l'un de l'autre et à plus de 20 cases du joueur ; ils viennent de deux directions (35° vus du départ) |
+| **6.4 L'embuscade** | 34×22 · 2 `libre_voit_facile` · 2 · « Une salle à trois entrées. Les seuils sont éclairés, le reste est noir. » | **trois portes dans la cloison de la salle, chacune éclairée (au moins 2 cases) et vue du départ** ; **un chasseur posté sur un seuil éclairé ne voit pas le joueur, dans le noir** ; 42 cases éclairées dans la salle sur 152 (moins de 30 %) |
+| **6.5 Le chasseur qui écoute** | 18×14 · 1 `libre_voit_entend_facile` · 1 · « Un sol nu, rien pour s'abriter. Il vous suit à vos pas. » | aucun mur, aucun muret ; **un pas debout est entendu de toute paire de places (4 032 sur 4 032), net de 90 % d'entre elles ; accroupi, net de 10 % seulement** ; la lampe éclaire 25 cases sur 192 |
+| **6.6 La poudre** | 36×28 · 2 `libre_voit_entend_facile` · 2 · « Des couloirs croisés. Quatre cases de large : ce qu'on y répand les remplit. » | **quatre carrefours de 16 cases, le reste en couloirs de 4 cases de large (352 cases, aucune autre) ; la poudre (`GadgetPoudre.RAYON` lu : 220 px de large) remplit un couloir (140 px) d'un mur à l'autre, et nulle part un disque de 110 px de rayon ne tient sans toucher un mur** ; un bloc au milieu ; deux lampes à deux carrefours |
+| **6.7 Gardes et chasseurs** | 40×30 · 2 `zone_voit_entend_facile` + 2 `libre_voit_entend_facile`, tous équipés · 3 · « Une cour, des corridors, deux postes. Les chasseurs vous poussent vers eux. » | un anneau autour de quatre masses, une cour de 120 cases où l'on part ; **la porte de chaque salle de garde est à 13 et 7 cases de chemin du départ** ; les chasseurs naissent sur l'anneau, à 1 505 px l'un de l'autre ; la poudre peut se poser pour les quatre |
+| **6.8 La traque** | 40×28 · 1 `libre_voit_entend_normal` équipé + 1 `libre_voit_facile` · 2 · « Une carte ouverte. L'un vous suit de près et ne se trompe pas ; l'autre est plus lent. » | **le vif réagit en 0,26 s contre 0,40 s, et vise à 7,5° contre 11,0°** ; 36 cases de mur plein pour 952 de sol ; 130 cases ont un disque de 168 px libre ; ils naissent à plus de 25 cases et hors de portée nette d'un pas |
+| **6.9 La salle pleine** | 44×34 · 3 `libre_voit_entend_facile` + 1 `libre_voit_entend_normal`, tous équipés · 4 · « Une grande carte, des îlots, toute une meute. L'un d'eux est plus vif que les autres. » | douze blocs, aucun cul-de-sac ; les quatre naissent à plus de 18 cases du joueur (847 px au plus près), hors de portée nette d'un pas, et à plus de 15 cases les uns des autres |
+| **6.10 La Sentinelle** | 32×32 · `boss` (classe `sentinelle`) · 2 · « Un duel dans une arène. Elle veille : chaque pas qu'on fait y reste écrit. » | l'arène (piliers de 2×3, pans étroits, quatre murets au centre) symétrique dans les deux sens ; les deux lampes face à face |
+
+#### Les écarts au plan, et pourquoi
+
+1. **Aucun écart de PNJ, de plafonnier ni de titre** : chaque salle porte les PNJ, les déplacements, les sens et les paliers du plan, aux noms exacts du catalogue (`zone_entend_facile` pour 4.1 à 4.3 ; `immobile_voit_normal` en 5.4 ; `libre_voit_entend_normal` en 6.8 et 6.9…), le nombre de plafonniers et le titre du plan. Les PNJ équipés ont tous le sens que la règle de leur gadget demande : 4.7 à 4.9 entendent (et voient), 5.7 à 5.9 voient (et entendent), 6.7 à 6.9 entendent (et voient) — le plan donnait déjà « VE » à tous les PNJ équipés, c'est ce qui rend ce lot sans la correction que le lot 1 avait dû faire en 3.7 à 3.9.
+2. **Seuls les PNJ qui bougent sont équipés** (la convention du lot 1) : les postes immobiles de 4.7 (guetteur) et 5.8 (centre) gardent le Parasite. **Dans 6.8, seul le chasseur VIF est équipé** : l'autre ne voit que, ne peut donc pas enquêter sur un son, et la poudre se pose en enquête — il n'en ferait rien. Le validateur d'`aventure_format.gd` ne refuse pas cette clé sur un PNJ qui voit seulement ; c'est la garde qui l'interdit (`GADGET_EXIGE`).
+3. **« Couloir étroit » (4.3)** : 6 cases de large, pas 4. La salle enseigne qu'un pas accroupi ne s'entend pas à moins de ~100 px (138 avec le corps) : un couloir de 4 cases met les cases de zone à 3,5 cases de l'axe, dans la portée, et le chemin silencieux disparaît. « Étroit » s'entend face aux pièces (36 cases de long).
+4. **« Les attendre sous un plafonnier » (6.4)** : lu comme « les attendre à des seuils éclairés par des plafonniers », pas « se tenir DANS la flaque » — un chasseur qui voit, voit qui est éclairé : un joueur sous une lampe est vu de loin. Ici les seuils sont sous les lampes, le joueur est dans le noir de la salle, et la garde mesure qu'on voit les trois seuils sans être vu d'un seuil.
+5. **« Zones imbriquées » (4.8)** : deux paires de zones EMBOÎTÉES (un rectangle contenu dans un autre), une de chaque côté d'une cloison pleine — pas des zones qui se recouvrent en partie. Les deux grandes zones (398 cases) sont des lacets de murets que le gardien marche au lieu de balayer (voir « Signalé »).
+6. **Les tailles du plan** (« 41×41 », « 32×32 ») : les arènes de boss reprennent le gabarit du chapitre 0 (32×32, joueur et boss en miroir à 25 cases, lampes en (10, 16) et (21, 16)), variées par leur mobilier seulement, comme au lot 1. Les autres salles vont de 18×14 (6.5, un sol nu : plus grand, un pas ne s'entendrait plus net de partout) à 44×34.
+
+#### Les gardes de S8, lot 2, en un coup d'œil
+
+| Suite | Vérifications | Ce qu'elle garde |
+|---|---|---|
+| `test_chapitre_04` | 299 | chaque salle : ce qu'elle enseigne, MESURÉ (tableau ci-dessus) ; partout : tailles, PNJ de chaque sorte, plafonniers, PNJ équipés (classe du chapitre, sens que demande la poussière), à pied, une seule pièce, aucun couloir d'une tuile, zones, rondes, départ à l'abri, arène du boss |
+| `test_chapitre_05` | 303 | idem (la nappe : un PNJ équipé VOIT) |
+| `test_chapitre_06` | 246 | idem (la poudre : un chasseur équipé ENTEND) |
+| `test_chapitres_marche_04_06` | 217 | **le vrai corps** parcourt chaque ronde, chaque zone et chaque chasseur des vingt-sept salles (voir plus bas) |
+
+#### La marche au vrai corps — `tools/test_chapitres_marche_04_06.gd` (`--fixed-fps 60`, dans `run_suites.sh`)
+
+Comme celle du lot 1 : PNJ désarmés et sourds-aveugles, la graine fixée, chaque salle jouée une fois. **Ce qu'elle ajoute : le déplacement LIBRE** — les neuf premières salles du chapitre 6 en portent, c'est la première fois que le vrai corps parcourt un chasseur dans une salle d'aventure (S1 l'avait fait avec le bot de l'entraînement, sur les six cartes de duel). Un chasseur visite au moins 80 cases distinctes en 45 s (de 110 à 216 mesurées), **dans TOUS les quarts de la carte**, et ne passe que sur du sol.
+Deux réglages, et pourquoi : **(1)** une zone se juge sur un cinquième de ses cases **plafonné à 50** — le dédale de 4.8 a des zones de 398 cases, qu'un gardien marche (4,5 cases par seconde, par les mêmes lacets) au lieu de balayer : 63 à 89 cases visitées en 40 s, soit 16 à 22 % ; le seuil du lot 1 (20 %) l'aurait fait rougir à tort. La durée d'une zone passe aussi à un dixième de seconde par case (plafonnée à 45 s). **(2)** L'écart minimal ne se compte plus **qu'entre rondes** : en 5.9 la suite lot 1 aurait lu 35 px, parce qu'une ronde qui traverse la zone d'un gardien le croise PAR CONSTRUCTION (les deux corps se touchent, aucun ne sort de son trajet) ; entre les deux rondes, 455 px, ce que le modèle cinématique de la garde du chapitre donne aussi.
+**Elle a trouvé un défaut de 4.9** : la ronde longeait la place par son bord sud, `(18, 30)` – `(25, 30)`, **à une case du joueur qui y naît** : le corps du joueur barrait le couloir, la ronde ne passait pas par un de ses points (3 sur 4 visités). Le bas du tour est remonté à `y = 27`.
+
+#### Sabotages (chaque garde vue ROUGE, puis restaurée — chapitres sabotés par une COPIE de leur fabrique qui écrit hors du dépôt, et `-- --dossier=` ; les fichiers livrés ne sont jamais touchés)
+
+- **Chapitre 4** (douze) : 4.1 la porte trop large (1), **le départ dans la porte de la pièce (1)** ; 4.2 **plus de cloison avec le couloir (1)** ; 4.3 un couloir resserré, plus de chemin silencieux (2) ; 4.4 plus de lampe (5) ; 4.5 plus de L (1) ; 4.6 une carrière encombrée de cinq blocs (2) ; 4.7 le guetteur hors de la lampe (2), les gardiens équipés qui n'ont pas la vue (2) ; 4.8 plus de murets (3) ; 4.9 la ronde qui entre dans une zone (1) ; 4.10 une arène asymétrique (1).
+- **Chapitre 5** (dix) : 5.1 des zones qui ne se recouvrent plus (3) ; 5.2 une toute petite ronde (5) ; 5.3 une lampe de plus sur le troisième (2) ; 5.4 le poste loin de la galerie (3) ; 5.5 la cloison ouverte de bout en bout (1) ; 5.6 un passage de cinq cases (3) ; 5.7 des gardiens équipés qui n'ont pas la vue (3) ; 5.8 deux rondes de longueurs inégales (2) ; 5.9 la zone du sud contre les rondes (1) ; 5.10 une arène asymétrique (1).
+- **Chapitre 6** (dix) : 6.1 la boucle coupée (3) ; 6.2 une lampe dans la boucle noire (4) ; 6.3 quatre îlots de moins (1) ; 6.4 une entrée de moins (1) ; 6.5 un mur dans le sol nu (3) ; 6.6 des couloirs de six cases (2) ; 6.7 la salle du nord-ouest sans porte (4) ; 6.8 le chasseur vif qui perd ses réflexes (3) ; 6.9 un chasseur équipé qui n'entend pas (3) ; 6.10 une arène asymétrique (1).
+- **La marche** (trois, par une modification TEMPORAIRE du jeu, restaurée à l'identique — md5 vérifié) : le déplacement libre confiné à 5×5 cases (un chasseur sur deux ne visite plus que 91 cases dans 2 quarts) ; la ronde qui saute un point sur deux (`_indice_ronde + 2` : « 3 visités » sur 4, deux rondes) ; la zone oubliée de son rectangle (`profil.zone = Rect2i()` : 11 et 19 s dehors).
+
+**Trois fois un sabotage ou une garde n'a PAS rougi du premier coup, et c'est instructif.** (1) *4.1, un départ collé à la pièce* : resté vert — **la garde échantillonnait une case de zone sur trois, et l'échantillon sautait les plus proches de la porte** ; un contrôle « d'aucune case » qui ne regarde pas toutes les cases ne peut pas voir celle qui compte. Il teste maintenant les 232 cases. (2) *4.2, la cloison retirée* : resté vert — le nombre de portes (2, 3, 2) ne change pas quand la cloison disparaît, la porte de 4 cases devient seulement un mur ouvert de bout en bout ; la garde compte maintenant des portes de 6 cases au plus. (3) *4.6, la carrière encombrée* : le premier sabotage posait un bloc sur la lampe — le validateur refusait le chapitre, rouge pour une autre raison que celle que la garde voulait montrer ; réécrit avec cinq blocs qui laissent le reste intact.
+
+#### Les images (Mesa/llvmpipe sous Xvfb, la torche du joueur tournée vers l'action — non versionnées)
+
+Une capture iso par salle, `salle_N_MM.png` (N = 4, 5, 6), regardées. Les salles montrent ce qu'elles doivent : le poste de tir de 4.1 devant la porte, le gardien dans sa flaque au fond ; les trois pièces et le couloir de 4.2 ; le palier à deux piliers de 4.4 entre deux flaques ; la carrière de 4.6 (les éboulis en cubes, une seule flaque) ; la cour de 4.7, le guetteur sous sa lampe ; les lacets de 4.8 (les murets en cases hachurées) ; les deux flaques de chaque arène de boss. Au chapitre 5 : la boucle de 5.2 et la niche creusée dans le bloc ; le passage de 5.6, trois cases entre deux flaques ; la croix de 5.8, le poste dans sa flaque et une ronde dans chaque bras. Au chapitre 6 : la boucle de 6.1 et sa lampe, les deux boucles de 6.2 (celle de l'est noire), les seuils éclairés de 6.4, le sol nu de 6.5 et sa flaque, les couloirs croisés de 6.6, les îlots de 6.9. **Limites de la prise** : les PNJ sont posés à la main, et certains tirent sur le joueur dans la prise (4.7 montre un « 25 » et du sang, la première prise de 5.8 un éblouissement et le voile de dégâts — reprise sans torche) : ce sont des artefacts de mise en scène, pas des défauts de salle ; Mesa/llvmpipe sous Xvfb ; **les trois chapitres n'ont pas la même définition** (le 4 en 1920×1080, le 5 en 1600×900, le 6 en 1280×720, 4.10, 5.8 à 5.10 aussi) parce que la machine était chargée (load de 10 à 20) et que les premières prises ont dépassé les 30 minutes de plafond d'une commande ; les prises du chapitre 6 ont été reprises avec la torche (la première série, à 100 images d'attente, était sans faisceau).
+
+#### Non prouvé
+
+- **Jamais joué à la main.** Trente salles en données, jugées par des gardes qui mesurent ce que chacune enseigne, par la marche du vrai corps et par des images fixes ; ni la difficulté, ni le ton des phrases, ni la durée d'une salle ne sont jugés.
+- **Aucun banc de difficulté** : des PNJ FACILES et NORMAUX portent le fusil à pompe du Terrassier (180 px de portée utile), les deux cartouches de l'Incendiaire, le fusil à verrou de la Sentinelle — les `REGLAGES_BOSS` de S9b ne valent que pour le boss —, en nombre (jusqu'à cinq en 4.9) ; jamais confrontés à un joueur type.
+- **La torche de 468 px est celle du Parasite**, comme aux chapitres 1 à 3 : un joueur qui arrive au chapitre 4 avec le Terrassier n'a pas le faisceau le plus large du jeu pour rien, et les salles ne sont pas mesurées pour lui.
+- **Les portées d'écoute viennent du modèle** (`PerceptionBot.ecouter` avec les niveaux et portées de l'audio, murs compris), pas d'une partie. **Les effets des trois gadgets** — le nuage qui trouble la vue, la nappe qui brûle et ferme un passage de trois cases, la poudre qui remplit un couloir de quatre — sont mesurés comme GÉOMÉTRIE (une salle où ils tiennent, une règle qui peut se déclencher), pas comme effet : leur pose est prouvée au lot 1 (le vrai jeu), pas leur effet sur une salle.
+- **6.2** : « le chasseur oublie au bout de 6 s » est lu du profil (`delai_oubli`), la cachette est une case ; **personne n'a joué la poursuite** et vu le chasseur renoncer. **4.8** : « le joueur enjambe les murets, les gardiens les contournent » suppose que le joueur franchit un mur bas (le chapitre 0 l'enseigne, 0.4) et que le bot ne le fait pas (S1) ; la garde mesure le détour, pas le franchissement.
+- **La marche** ne joue que 20 à 45 s de jeu par salle : deux chasseurs qui se croisent, un chasseur et un gardien qui se bousculent ne sont exclus que pour ces durées. Les chasseurs d'une même salle (6.3, 6.4, 6.6, 6.7, 6.9) ne sont mesurés qu'un à un, **jamais l'un contre l'autre**.
+- **Images** : Mesa/llvmpipe sous Xvfb seulement, PNJ posés à la main dans le cône. **Le coût n'est pas mesuré** (consigne : aucun relevé de cadence) : 4.9 et 5.9 portent cinq PNJ et 3 à 4 plafonniers sur 44×34.
+
+#### Signalé, pas corrigé
+
+- **Trois fusions à la main avec le lot 7 à 9 :** `tools/outils_chapitre.gd` (la ligne `GADGET_EXIGE` : l'autre session y ajoute les siennes — prendre l'union), `tools/run_suites.sh` (deux lignes `SUITES+=(…)` et la ligne du `case … --fixed-fps 60` : prendre l'union) et ce document (l'en-tête et la section). Rien d'autre n'est partagé : `outils_chapitre_04_06.gd`, `test_chapitres_marche_04_06.gd` et les dossiers 4 à 6 sont à moi seul.
+- **Un chasseur « voit seulement » ne cherche que par hasard** (6.1 à 6.4, un de 6.8) : il n'entend pas, donc n'enquête jamais ; son seul moyen de trouver le joueur est de passer là où une lumière le trahit, et la mémoire (`delai_oubli`) ne vaut qu'après qu'il l'a VU. Dans une salle où le joueur ne s'éclaire pas et ne tire pas, il ne le trouve pas. C'est la définition du plan (« V »), et la leçon de 6.2 en dépend, mais « le chasseur qui vous cherche » n'est vrai que de 6.5 à 6.9.
+- **Deux « chasseurs » ne forment pas une meute** : chacun tire sa cible au hasard sur toute la carte, sans rien savoir de l'autre (S3). 6.3 et 6.9 se jouent comme des chasseurs indépendants qui se trouvent par hasard.
+- **Les zones de 4.8 sont des lacets** : un gardien de 398 cases en visite 63 à 89 en 40 s ; il faudrait plusieurs minutes pour qu'il parcoure son côté du labyrinthe. Le joueur y passe longtemps sans être vu ni entendu. C'est l'effet cherché (« des zones emboîtées »), mais jamais éprouvé à la main.
+- **Une ronde qui traverse la zone d'un gardien le croise** (5.2, 5.9 ; 4.9 n'en a pas) : les deux corps se touchent (35 px mesurés), la physique les écarte ; aucun ne sort de son trajet ni de sa zone, mais l'un peut retenir l'autre quelques instants. À voir à la main.
+- **Un PNJ NORMAL équipé reçoit tout ce que S9 donne au boss de son palier** (`ProfilBot.equiper_un_pnj`), donc la torche tactique et le repli après un tir — pour un gardien de zone (5.7) ou une ronde normale (5.9), le repli est « de côté, dans sa zone » ; **jamais observé**.
+- **L'écran de l'aventure avec sept chapitres** : regardé (`ecran_aventure_7_chapitres.png` et `ecran_aventure_salles_chapitre_5.png`, 1600×900, les chapitres 0 à 4 finis et le 5 commencé). Les sept entrées, « CHAPITRES 7 À 10 — À VENIR » et « RETOUR » tiennent à l'écran (RETOUR vers y ≈ 680 sur 900 ; l'écran des salles, onze lignes, descend à y ≈ 784). **Un défaut vu : les libellés des chapitres 2 et 4 sont COUPÉS par le cadre** (« CHAPITRE 2 — LES RONDES ÉCOUTENT (TERMIN », « CHAPITRE 4 — LES ZONES ÉCOUTENT (TERMINÉ ») : titre et statut dépassent la largeur d'une entrée. Le plan prévoyait des titres COURTS pour la liste (« Zones à l'écoute », « Groupes », « Chasseurs ») ; le manifeste porte le titre long. **À surveiller avec le chapitre 7** : chaque chapitre ajoute une ligne de 52 px, à dix chapitres RETOUR sera vers y ≈ 840 sur 900, une ligne de plus que l'écran des salles. Le hub ne défile toujours pas.
+- **`test_aventure_format`** (« les numéros se suivent depuis 0 ») et `test_aventure_partie` n'ont pas bougé : sept chapitres se chargent, sans défaut du validateur.
+
+#### À trancher par Adrien
+
+1. **Les rondes et les gardiens qui se croisent** (5.2, 5.9) : la ronde traverse la zone d'un gardien — c'est le « groupe » du plan —, mais leurs corps se touchent. Acceptable, ou une ronde qui s'écarte (une zone qui laisse un passage, un tour décalé) ?
+2. **Les chasseurs « voit seulement »** (6.1 à 6.4, 6.8) ne cherchent pas : faut-il qu'au moins 6.1 et 6.2 entendent, pour que « il vous cherche » soit vrai dès la première salle ? (Le plan dit V ; la leçon de 6.2 — se cacher dans le noir — vaut aussi pour un chasseur qui entend, à condition de ne pas courir.)
+3. **« Étroit » en 4.3** (6 cases, et non 4) et **« les attendre sous un plafonnier » en 6.4** (des seuils éclairés, pas une flaque où l'on se tient) : deux lectures du plan que j'ai tranchées ; la première pour que le chemin silencieux existe, la seconde pour que le joueur ne soit pas vu de loin.
+4. **Les phrases qui nomment le gadget** : 4.10 (« il lève la poussière, et il y voit mieux que vous »), 5.6 (« ce qu'on y jette le ferme »), 5.7 (« ce qu'ils sèment brûle »), 5.10 (« des braises »), 6.6 (« ce qu'on y répand les remplit »), 6.10 (« chaque pas qu'on fait y reste écrit »). Des situations, ou déjà des leçons ? (Question 5 du lot 1.)
+5. **Les PNJ équipés ne sont que ceux qui bougent** (question 3 du lot 1, toujours ouverte) : le guetteur de 4.7 et le poste de 5.8 gardent le Parasite.
+6. **La difficulté des PNJ équipés d'une autre classe** (question 4 du lot 1) : toujours jamais mesurée ; avec ce lot, un fusil à pompe tenu par un gardien FACILE à 180 px est le cas le plus incertain (4.7 à 4.9).
+7. **Les chapitres 4 à 6 n'imposent aucune classe**, comme les trois d'avant : le joueur y arrive avec ce qu'il a gagné, et les salles se mesurent sur la torche du Parasite.
+
+#### Résultat des suites
+
+`GODOT=… ./tools/run_suites.sh --rapide` (le binaire 4.7.1), la machine très chargée (load de 10 à 20, plusieurs sessions et des captures sous Xvfb : **1 722 s**) : **162 lignes OK (le démarrage du jeu et 161 suites), 3 en échec, dont aucun pour une raison de contenu**. `test_killcam_calme` (« aucun saut d'une image à l'autre » : un seuil de caméra qui se lit sous charge) — relancée seule : 21 vérifications vertes. `test_banc_bot` (« bloqué » à 120 s sous charge) — relancée seule : verte, **en 112 s**, à 8 s du plafond, indépendamment de ce lot. **Ma propre `test_chapitres_marche_04_06`, « bloquée » à 120 s : elle prend 132 s au calme** (vingt-sept salles, dont neuf à chasseurs jouées 45 s de jeu) ; elle a maintenant son plafond (`PLAFOND_SUITE=420` dans son `case` de `run_suites.sh`, commenté) et passe : **217 vérifications**. Le premier lot a donc dû être relancé pour elle seule ; les autres suites du lot (`test_chapitre_04` 299, `05` 303, `06` 246, `test_aventure_format`, `test_aventure_partie`, `test_aventure_boss`) sont vertes dans le lot. Les scénarios à deux instances ne sont pas joués par `--rapide`. **Aucun relevé de cadence** (consigne).
+
+### S8, lot 2 — FAITE le 2026-10-03 : les chapitres 7 à 9 (« Les chasseurs vifs », « Les grandes salles », « L'élite »)
+
+Écrit par une session « sous-agent » en parallèle de celle qui écrit les chapitres 4 à 6 (dossiers distincts : `assets/solo/chapitre_07` à `09`, `tools/fabrique_chapitre_07` à `09`, `test_chapitre_07` à `09`). **Dans ce
+worktree, les chapitres 4 à 6 n'existent pas** : `test_aventure_format` y rougit pour cette seule raison (« les numéros de chapitres se suivent depuis 0 »), voir « Résultat des suites ». Aucun code de jeu n'a bougé : ni
+`game_state.gd`, ni `ui.gd`, ni le moteur, ni le bot. Rien de partagé n'est touché, sauf une table de classes dans `tools/outils_chapitre.gd` (deux lignes) et `tools/run_suites.sh` (voir « Signalé »).
+
+#### Les outils neufs
+
+- `tools/outils_chasseurs.gd` — ce que les chapitres à PNJ libres demandent en plus du lot 1 : la lumière d'une salle (quelles cases les lampes éclairent, **l'ombre qu'un pilier jette dans une flaque**, le noir),
+  les îlots de mur, les cloisons, les distances à pied, l'aire de la plus grande carte de duel livrée (lue dans `assets/maps/`), et `libres_partout` — **ce que vaut un PNJ libre dans CHAQUE salle** : il part loin du joueur, et
+  le départ est hors de toute lampe. Le test du lot 1 (`partout`) ne regardait que la case de naissance d'un PNJ : pour un PNJ libre, qui peut se tenir n'importe où, il faut regarder la salle entière (le modèle de vue n'a de
+  cible que par une lumière : un départ sans lampe est caché de partout ; un échantillon de 120 postes d'observation le vérifie).
+- `tools/fabrique_labyrinthe.gd` — un labyrinthe à pas de 3 (cellules de 2 × 2 cases, murs de 1 case : **aucun couloir d'une tuile**), un DFS à graine fixe puis des murs rouverts pour que la chasse ait des choix. **Les JSON restent
+  la vérité** : relancer la fabrique redonne les mêmes octets (c'est un tirage seedé, pas du hasard). Les graines (48 pour 7.8, 35 pour 9.7) sont choisies parmi soixante pour que le chemin du joueur à chaque chasseur fasse
+  au moins 1,8 et 2,5 fois la ligne droite.
+- `tools/outils_chapitre.gd` (lot 1) : `GADGET_EXIGE_CHASSEURS` — `occulteur: voit`, `allumeur: entend`, `spectre: voit` — dans une table à part pour ne pas toucher aux lignes de l'autre lot. Lu dans `EquipementBot.GADGETS` : **l'ombre habitée
+  et le voile se posent « face à la torche de la cible qu'on VOIT »** (il faut voir), **la mine se pose en enquête ou en recherche sur une place qu'on n'a PAS vue, à 250-450 px** (il faut entendre : une enquête naît d'un son).
+  Tous les PNJ équipés de ces trois chapitres voient et entendent (`*_voit_entend_*`) : la clé « equipe » a donc partout un effet — **aucun écart au plan sur ce point** (le chapitre 3 en avait un : le plan voulait des gardiens qui ne font que voir).
+
+#### Le chapitre 7, « Les chasseurs vifs » (Occulteur, slug `occulteur`) — `assets/solo/chapitre_07/`
+
+Les chasseurs sont LIBRES (`libre_voit_entend_normal`) : ni trajet ni zone, ils voient, entendent, et viennent chercher le joueur. **7.7 à 7.9 : les chasseurs portent l'Occulteur et son ombre habitée** (`"equipe": true`) ; le poste de 7.5 ne bouge
+pas, il n'est pas équipé.
+
+| Salle | Taille · PNJ · lampes · phrase | Ce que la garde mesure |
+|---|---|---|
+| **7.1 Le duelliste** | 22×22 · 1 libre · 2 · « Une arène, deux colonnes de lumière, un chasseur. Il vous cherche. » | quatre colonnes de 2×2 et un bloc ; deux flaques à part de 12 cases au moins ; ni joueur ni chasseur sous une lampe ; le chasseur à plus de 14 cases à pied ; autour du départ, au moins 10 cases à couvert et 10 en vue |
+| **7.2 Deux duels** | 36×20 · 2 libres · 2 · « Deux chambres, une porte entre elles. Un chasseur dans chacune, et vous au milieu. » | une cloison de 2 colonnes percée d'une porte de 4×2 cases ; un chasseur et une lampe par chambre ; le joueur dans l'embrasure, hors lumière ; la cloison cache un chasseur à l'autre ; un tir tiré de la porte s'entend de partout |
+| **7.3 Le noir complet** | 30×24 · 2 libres · 0 · « Pas une lampe. Deux chasseurs, et vos pas pour seule lumière. » | **torche éteinte, aucun poste ne voit nulle part** (plus de 500 paires) ; torche allumée, elle trahit ; un pas debout s'entend de toute la salle (la diagonale est sous 1 695 px), un pas accroupi de 100 px — 90 % de la salle en est hors de portée |
+| **7.4 La lumière piège** | 30×30 · 2 libres · 5 · « Cinq flaques de lumière, du noir entre elles. Qui en traverse une se montre. » | cinq flaques en quinconce, de 12 à 45 % des cases ; **le noir d'un seul tenant (≥ 90 %) contient départ et chasseurs** ; la ligne droite du joueur à chaque chasseur traverse une flaque ; une flaque trahit aussi le chasseur |
+| **7.5 Le poste et la meute** | 36×22 · 2 libres + 1 poste · 3 · « Un hall à colonnes. Deux chasseurs vont et viennent, un troisième garde le fond. » | le poste dans une niche, sous une lampe, à plus de 25 cases ; les deux chasseurs entre le joueur et lui ; **il voit au moins 35 % des cases éclairées du hall**, et le noir sous son regard existe (≥ 20 cases) |
+| **7.6 L'ombre** | 34×20 · 2 libres · 2 · « Une galerie, des colonnes autour de chaque lampe. Derrière chacune, une ombre qui cache. » | huit colonnes ; chaque lampe (rayon 8) a ≥ 10 cases de sa flaque cachées par une colonne ; **de ces cases d'ombre on voit une case éclairée : l'ombre est un affût** |
+| **7.7 Trois chasseurs** | 40×30 · 3 équipés · 3 · « Des îlots de pierre, trois lampes, trois chasseurs. À vous de choisir où l'on se bat. » | 8 îlots ; un chasseur par tiers de la salle ; trois flaques à part ; du clair (≥ 40 cases), du noir (≥ 500), de quoi s'adosser (≥ 100) ; la règle de l'ombre habitée peut se déclencher |
+| **7.8 Le dédale** | 37×28 · 3 équipés · 2 · « Un labyrinthe de murets. On voit par-dessus, on ne passe pas : il faut en faire le tour. » | **aucun mur plein à l'intérieur** (murets partout, carrefours compris) ; ≥ 80 cases de mur bas ; chaque chasseur à ≥ 1,8 fois la ligne droite à pied ; ≥ 50 % des paires de cases proches en ligne de vue, dont ≥ 20 % demandent ≥ 1,6 fois la ligne droite à pied |
+| **7.9 La salle pleine** | 50×36 · 4 équipés · 4 · « Une grande salle à colonnes, quatre lampes. Quatre chasseurs, et pas un qui reste à sa place. » | 20 colonnes en quinconce ; quatre chasseurs à plus de 15 cases les uns des autres, à plus de 20 du joueur, dans au moins trois quarts de la salle ; aucun sous une lampe |
+| **7.10 L'Occulteur** | 32×32 · boss · 2 · « Un duel dans une arène. Il pose une plaque devant la lumière, et une ombre qui n'est personne. » | l'arène variée (colonnes en carré, un bloc au centre, murets) symétrique dans les deux sens, lampes face à face (garde du lot 1) ; le boss porte de la vie en plus (`REGLAGES_BOSS`) |
+
+#### Le chapitre 8, « Les grandes salles » (Allumeur, slug `allumeur`) — `assets/solo/chapitre_08/`
+
+**Elles sont vraiment grandes, et la garde le mesure** : l'aire de chaque salle est comparée à celle de la plus grande carte de duel livrée (32 × 32 = 1 024, lue dans `assets/maps/`, jamais recopiée) — au moins 1,5 fois pour les neuf, 2,5 fois pour
+six, **7 fois pour 8.9**, qui est la plus grande du chapitre. `echelle_chapitre_8.png` (non versionnée) montre les dix salles à la même échelle, avec le carré rouge d'une carte de duel. Les rondes d'une salle ont toutes **le même tour,
+et jamais moins de 3 cases entre deux tours (de 4 à 23 cases selon la salle)** — la leçon de 2.8, jamais deux fois. **8.7 à 8.9 : tout ce qui bouge porte l'Allumeur et sa mine** ; les postes immobiles, non.
+
+| Salle | Taille · PNJ · lampes · phrase | Ce que la garde mesure |
+|---|---|---|
+| **8.1 La place** | 60×48 · 2 postes + 2 rondes · 6 · « Une place ouverte, des lampes tout autour. Il faut la traverser, et ils la regardent. » | deux tours de 104 cases, à 11 cases l'un de l'autre (au moins 8), chacun sous des lampes ; les postes sous une lampe ; **le départ rejoint le haut de la place par le noir seul** (le couloir du milieu) ; un bassin de murets |
+| **8.2 Les ailes** | 64×44 · 2 gardes + 2 rondes · 4 · « Deux ailes, un pont entre elles. Un garde au nord de chacune, une ronde au sud. » | un H (69 % du rectangle) : deux ailes de plus de 800 cases que seul le pont (192 cases, **dans le noir**) relie ; dans chaque aile un garde, une ronde, deux lampes ; zones au nord des tours |
+| **8.3 La galerie des lampes** | 90×22 · 3 rondes · 7 · « Une galerie interminable, des flaques de part et d'autre. Trois silhouettes la parcourent. » | 90 cases de long ; trois tours de 68 cases, un par tiers, ≥ 3 cases d'écart (6 cases mesurées, 910 px au plus près simulés à vitesse constante) ; **la bande du milieu reste noire à 80 %, sauf au centre où la septième lampe la ferme** |
+| **8.4 Le magnésium** | 56×50 · 2 gardes + 1 libre · 3 · « Trois chambres, deux goulets, une lampe au milieu de chacun. Le passage s'illumine. » | trois chambres de 500 cases au moins ; deux goulets de 4 cases **tout entiers sous une lampe**, aux deux bouts opposés (≥ 25 cases d'écart : on traverse chaque chambre en diagonale, ≥ 35 cases de marche entre eux) ; traverser un goulet se fait dans la lumière ; le libre part dans la chambre du joueur, à ≥ 40 cases |
+| **8.5 L'usine** | 72×48 · 2 postes + 3 rondes · 5 · « Un hangar de machines. Des silhouettes en hauteur regardent les allées, d'autres font la ronde au sol. » | vingt machines de 32 cases ; **chaque poste (au nord, sous sa lampe) voit au moins 80 % de son allée** ; trois tours de 44 cases, chacun autour d'UNE machine, ≥ 8 cases d'écart |
+| **8.6 Le cloître** | 60×60 · 2 gardes + 2 libres · 4 · « Une cour éclairée, des arcades, une galerie dans le noir tout autour. On peut tourner sans fin. » | la cour éclairée (≥ 15 %), **la galerie noire (≤ 2 % éclairée)** ; 24 piliers d'arcade ; la galerie d'un seul morceau (un anneau) ; deux gardes dans les galeries latérales ; un libre au nord, un dans la cour |
+| **8.7 Le bunker** | 54×46 · 3 gardes équipés + 2 postes sourds · 2 · « Six salles, un couloir, deux lampes aux deux bouts. Trois gardes, deux qui n'ont que leurs oreilles. » | six salles d'au moins 250 cases, **toutes noires (0 case éclairée)**, six portes de 4 cases ; chaque PNJ seul dans sa salle ; la zone d'un garde ne sort pas de sa salle ; **un pas debout s'entend de la porte jusqu'au poste, un pas accroupi non** |
+| **8.8 Le quartier** | 80×64 · 2 postes + 2 rondes + 2 libres · 6 · « Une ville, ses rues, ses carrefours éclairés. Des silhouettes l'arpentent, d'autres montent la garde. » | seize blocs de 96 cases ; deux tours de 64 cases autour d'UN bloc chacun ; **les rues forment un seul réseau d'ombre (≥ 90 %)** ; les deux libres partent à ≥ 55 cases à pied du joueur |
+| **8.9 La salle pleine** | 100×80 · 2 postes + 2 gardes + 2 rondes + 1 libre DIFFICILE · 8 · « La plus grande salle. Quatre halls, huit lampes, des postes, des rondes, des gardes — et quelqu'un qui cherche. » | **8 000 cases : 7,8 fois la plus grande carte de duel** ; quatre halls de 1 200 cases au moins, quatre portes de 6 cases, deux lampes par hall ; **l'allumage par proximité : au moins 4 lampes sur 8 sont éteintes au départ (7 le sont)** ; le libre difficile part en diagonale, à ≥ 90 cases à pied ; deux tours de 64 cases |
+| **8.10 L'Allumeur** | 32×32 · boss · 2 · « Un duel dans une arène coupée en deux. Le seul passage est un goulet, et il y pose une mine. » | une cloison de 2 colonnes percée d'un goulet de 4 cases, centré ; **joueur et boss sans ligne de vue au départ** (de part et d'autre, hors de l'axe du goulet) ; goulet non éclairé (la mine l'éclaire d'un coup) ; quatre murets autour |
+
+#### Le chapitre 9, « L'élite » (Spectre, slug `spectre`) — `assets/solo/chapitre_09/`
+
+Peu d'ennemis, les meilleurs : des chasseurs libres de niveau DIFFICILE (`libre_voit_entend_difficile`). **Une élite est plus vive qu'un chasseur normal, et la garde le lit au catalogue** (rafale, délai de réaction, vitesse de visée), jamais
+en dur ; équipée, elle a en plus tout ce que S9 donne à un bot DIFFICILE (torche tactique, repli, posture accroupie, fusées). **9.7 à 9.9 : tout ce qui bouge porte le Spectre et son voile** ; les postes, non.
+
+| Salle | Taille · PNJ · lampes · phrase | Ce que la garde mesure |
+|---|---|---|
+| **9.1 L'élite** | 24×24 · 1 élite · 2 · « Une arène, deux lampes, un seul adversaire. Il ne laisse rien au hasard. » | quatre blocs de 3×3 ; deux flaques ; le départ et l'élite hors lumière ; ≥ 16 cases à pied ; couvert et découvert autour du départ |
+| **9.2 Le noir** | 28×28 · 1 élite · 0 · « Pas une lampe. Un seul adversaire, et il écoute chacun de vos pas. » | torche éteinte, vue de nulle part ; torche allumée, elle trahit ; la diagonale sous la portée du pas debout, 90 % de la salle hors de celle du pas accroupi |
+| **9.3 La flaque** | 26×26 · 1 élite · 1 · « Une flaque de lumière au centre de l'arène, du noir tout autour. Il la contourne comme vous. » | **une seule lampe, au centre ; la ligne droite du joueur à l'élite la traverse ; le noir d'un seul tenant (≥ 95 %) les contient tous les deux** : le détour existe |
+| **9.4 Le binôme d'élite** | 36×28 · 2 élites · 2 · « Des îlots de pierre, deux lampes. Ils sont deux, et ils chassent ensemble. » | six îlots ; elles partent du dernier tiers, de 8 à 20 cases l'une de l'autre, à ≥ 25 cases à pied du joueur, hors lumière |
+| **9.5 Le voile** | 34×26 · 1 élite + 1 garde · 2 · « Des voiles tendus coupent la lumière des lampes. Derrière eux, de l'ombre, et quelqu'un. » | **trois voiles : des murs d'UNE case d'épaisseur, de 7 cases au moins** ; chaque lampe (rayon 8) à moins de 4 cases d'un voile, qui lui cache ≥ 8 cases de sa flaque ; la zone du garde est un coin noir, fermé par un voile |
+| **9.6 La garde d'élite** | 38×24 · 1 poste DIFFICILE + 2 gardes · 3 · « Un hall, deux gardes en avant, un poste au fond dans sa niche. Le poste regarde tout le hall. » | le poste dans une niche, sous une lampe, à ≥ 28 cases ; **les zones des deux gardes sont entre le joueur et lui, éclairées, et il en voit au moins 25 %** |
+| **9.7 Le dédale** | 40×31 · 2 élites équipées · 2 · « Un labyrinthe de cloisons percées de fenêtres basses. Deux élites y chassent. » | ≥ 200 cases de mur plein et 20 à 120 de mur bas (les fenêtres) ; **chaque élite à ≥ 2 fois la ligne droite à pied** ; la vue coupée (moins de 40 % des paires proches en ligne de vue, au moins 5 % : les fenêtres) |
+| **9.8 La meute d'élite** | 56×40 · 3 élites équipées · 4 · « Une grande carte, quatre lampes. Trois élites, et pas une qui renonce. » | neuf blocs de 20 cases ; trois élites de trois côtés différents, à ≥ 15 cases les unes des autres et ≥ 28 du joueur |
+| **9.9 La salle pleine** | 64×48 · 1 poste DIFFICILE + 2 gardes équipés + 2 élites équipées · 5 · « La dernière salle avant le Spectre. Des élites, des gardes, un poste, et une carte immense. » | la plus grande du chapitre (2,5 fois un duel au moins) ; **les quatre coins sont occupés, un mover chacun** ; le poste au nord, sous une lampe ; les deux élites à ≥ 40 cases l'une de l'autre |
+| **9.10 Le Spectre** | 32×32 · boss · 2 · « Un duel dans une arène. Il tend une bâche : la lumière s'arrête, les balles passent. » | quatre voiles de 7 cases laissant un passage de 2 cases sur l'axe ; **chaque lampe (rayon 7) à deux cases d'un voile qui lui cache ≥ 8 cases de sa flaque** ; symétrique dans les deux sens (les lampes se font face d'est en ouest, côté nord) |
+
+#### Les gardes de contenu
+
+| Suite | Vérifications | Ce qu'elle garde |
+|---|---|---|
+| `test_chapitre_07` | 302 | les dix salles ci-dessus ; partout : taille, PNJ de chaque sorte, équipés (la classe, un profil qui VOIT), atteignable à pied, une seule pièce, aucun couloir d'une tuile, **un PNJ libre part loin et hors lampe** |
+| `test_chapitre_08` | 453 | idem + **« grande » mesuré contre la plus grande carte de duel**, les tours de même longueur et jamais proches, les goulets, l'allumage par proximité |
+| `test_chapitre_09` | 310 | idem + une élite plus vive qu'un chasseur (lu au catalogue), les voiles, la flaque unique |
+| `test_chapitres_marche_07_09` | 291 | **la marche au vrai corps** (voir ci-dessous) |
+
+**La marche** — `tools/test_chapitres_marche_07_09.gd` **hérite** de `test_chapitres_marche` (le lot 1 n'est pas touché ; `_check`, les images, l'horloge fixe, la sortie viennent de lui) et ne redéfinit que `_run`, `_jouer`, `_juger`. Les
+30 salles (boss compris : les boss sont des PNJ libres) sont jouées à pas d'image fixe, PNJ désarmés et sourds-aveugles. Ronde et zone : comme au lot 1. **PNJ libre** : jamais immobile plus de 3 s, au moins 60 % de la distance d'une
+marche libre à l'allure du catalogue (lue avant tout réglage de la suite), 60 cases distinctes visitées, jamais hors du sol, **et il franchit la porte de 7.2, le goulet de 8.4 (la cloison sud), celui de 8.10** — il y est « vu des deux côtés » de la cloison — **et passe le voile de 9.10**
+(voir « Non prouvé » : il peut le contourner). Deux PNJ libres ne se traversent jamais (au moins 10 px : ils se frôlent à 33-37 px, un corps en fait 36). **Les rondes de 100 cases (8.1, 8.2) passent par chacun de leurs points et bouclent** — ce que
+le lot 1 n'avait éprouvé que sur 30 à 76 cases.
+**Un premier jet a rougi cinq fois**, toutes sur la même exigence : le lot 1 veut le cinquième des cases d'une zone visitées en 45 s, hors de portée d'un corps à 156 px/s dans une zone de 1 600 cases (8.9 : 114 cases visitées). Le plus petit du cinquième
+et de 60 cases est exigé ici (53 à 123 visitées sur les zones de plus de 280 cases) ; **8.7, 3ᵉ garde : 53 pour 50 exigées — peu de marge**. Ce n'est pas un défaut de marche, c'est une règle écrite pour de petites zones.
+
+#### Sabotages (chaque garde vue ROUGE ; chapitres sabotés par une copie de leur fabrique et `-- --dossier=` ; la marche par une copie de la fabrique écrite dans le dépôt puis restaurée par git)
+
+- **Chapitre 7** (douze, tous rouges pour la bonne raison) : deux flaques qui se touchent (7.1) ; une porte de 8 cases (7.2, 2) ; une lampe dans le noir complet (7.3, 2) ; le quinconce sans sa lampe centrale (7.4, 4) ; le poste dans le noir (7.5, 2) ; les colonnes retirées (7.6, 5) ;
+  les îlots retirés (7.7) ; un labyrinthe de murs pleins (7.8, 4) ; la meute en tas (7.9) ; l'arène asymétrique (7.10, 2) ; les chasseurs non équipés (7.7, 7.8 : 9) ; le départ sous une lampe (7.4, 4).
+- **Chapitre 8** (quinze) : tours inégaux (8.1) ; tours qui se touchent (8.1, 2) ; le pont éclairé (8.2, 4) ; deux tours dans le même tiers (8.3) ; la lampe centrale retirée (8.3, 3) ; un goulet à moitié éclairé (8.4) ; une zone qui déborde de sa chambre (8.4) ;
+  une machine de moins (8.5, 2) ; une lampe dans la galerie noire (8.6, 2) ; le bunker éclairé (8.7, 2) ; le garde du bunker non équipé (8.7) ; les tours du quartier inégaux (8.8) ; un libre qui n'est pas difficile (8.9) ; une porte de 3 cases (8.9) ;
+  un goulet de 2 cases (8.10, 3) ; boss et joueur en vue au départ (8.10).
+- **Chapitre 9** (treize) : des blocs trop petits (9.1) ; une lampe dans le noir (9.2, 2) ; la flaque décentrée (9.3, 3) ; deux élites empilées (9.4) ; un voile retiré (9.5, 2) ; la lampe loin de son voile (9.5) ; le poste dans le noir (9.6, 2) ; un garde équipé trop tôt (9.6, 2) ;
+  un labyrinthe de murets (9.7, 3) ; la meute en tas (9.8, 2) ; un garde de coin non équipé (9.9, 2) ; les voiles asymétriques (9.10, 6) ; le boss sous une lampe (9.10, 5).
+- **Marche** (trois) : le goulet de 8.10 fermé (rouge : « franchit la cloison x = 15 ») ; **un PNJ libre ralenti à 0,03** (trois contrôles : immobile, distance, cases — la distance exigée est celle du catalogue, lue avant) ; la zone trop grande pour le cinquième (rouge avant la correction, les cinq).
+
+**Cinq fois un sabotage n'a PAS rougi pour la bonne raison, et c'est instructif.** (1) *Une lampe posée dans la pierre* (7.3, d'abord) : le validateur a refusé le chapitre — la garde de contenu s'arrêtait avant d'avoir regardé (même piège qu'au lot 1) ; réécrit sur une case de sol.
+(2) *Une porte ouverte ailleurs* (8.4) : la lampe du goulet se retrouvait dans le mur, refusée par le validateur — remplacé par la zone qui déborde. (3) *Le départ sous une lampe* (7) : le motif apparaissait deux fois (7.4 et 7.7) ; pris avec son voisin. (4) *Fermer le passage du voile* (9.10) :
+**resté VERT** — un voile est un mur mince posé dans une salle ouverte, le boss le contourne par le nord ou le sud ; la marche prouve donc qu'il traverse la salle, pas qu'il passe l'espace de 2 cases. (5) *La porte de 7.2 fermée* : le joueur y part, case étranglée, le chapitre ne se chargeait plus.
+Et **trois défauts de salle attrapés par la garde à l'écriture** : un pilier à une case du mur de 7.3 (couloir d'une tuile) ; la colonne libre de 8.5 entre la dernière machine et le mur (couloir d'une tuile, et la ronde de droite faisait 59 cases au lieu de 44 : son chemin contournait
+la colonne) ; deux piliers de 9.10 à une case de la ceinture.
+
+#### Les images
+
+Captures iso sous Xvfb (Mesa/llvmpipe, 1920×1080, torche tournée vers l'action, PNJ posés dans le faisceau — non versionnées), `salle_N_MM.png` ; **plans** de chaque salle (`plan_N_MM.png` : murs, murets, flaques, rondes, zones, PNJ, un carré rouge de 32×32 pour l'échelle) et `echelle_chapitre_8.png`.
+Les trente prises ont été REGARDÉES (960×540, llvmpipe est trop lent pour 1920×1080 sur cette machine : une prise par minute au lieu de dix). Ce qu'elles montrent : 7.1 l'arène à quatre blocs et ses deux flaques, le bloc central cache le chasseur ; 7.3 le faisceau dans le noir
+complet ; 7.4 les flaques en quinconce, le noir entre elles ; 7.6 les colonnes autour de la lampe, l'ombre derrière chacune ; 7.8 les murets du labyrinthe vus d'en haut, la ligne de vue qui les franchit ; 8.3 une flaque de la galerie, la bande d'ombre ; 8.9 la salle de 100 × 80, le joueur
+au coin du hall sud-ouest, des blocs au loin à peine éclairés — **la salle se lit comme un immense noir** ; 8.10 la cloison, le goulet, le boss derrière un muret ; 9.5 un voile qui coupe la flaque d'une lampe, le coin noir derrière ; 9.10 deux voiles et leur ombre portée dans la flaque.
+Plusieurs prises montrent le joueur touché (hachures rouges) : les chasseurs qu'on pose dans le faisceau tirent, le joueur de la prise est invincible. **Limites** : PNJ posés à la main dans le faisceau ; une salle de 100 × 80 ne se « voit » pas d'une prise (un écran montre une dizaine de cases de large) :
+l'échelle est dans les plans (`echelle_chapitre_8.png`, les dix salles du chapitre à la même échelle, une carte de duel en rouge) plutôt que dans une capture iso.
+
+
+#### Non prouvé
+
+- **Jamais joué à la main**, et **aucun banc de difficulté** : les chasseurs NORMAL (7.7 à 7.9 : trois ou quatre en même temps, équipés) et les élites DIFFICILE (9.8 : trois) ont été réglés par S4 contre un joueur qui ENTRE dans une salle, **un contre un**.
+  Un joueur intermédiaire bat un NORMAL une fois sur deux, un DIFFICILE une fois sur quatre : **7.9, 8.9 et 9.8 sont, par ces chiffres, très dures voire injouables**, sans que rien ne le mesure. La seule garde est « la salle fait ce qu'elle dit ».
+- **Les salles de 8.x se mesurent sur la torche du Parasite** (468 px), comme celles du chapitre 0 ; un joueur arrive au chapitre 8 avec jusqu'à sept classes, dont la lumière n'est pas la même.
+- **Le coût n'est pas mesuré** (consigne) : 8.9 porte sept PNJ (sept corps iso, sept capteurs 256² dans la limite de 1 300 px) et huit lampes sur 100 × 80 cases ; l'allumage par proximité n'a été vérifié que comme règle (la moitié des lampes éteintes au départ), pas à l'image ni en cadence.
+- **Les PNJ équipés des rondes de 8.8 et 8.9** : à NORMAL et DIFFICILE, « equipe » donne le repli (« il change de place après un tir ») : une ronde équipée quitte son tour après une rafale. La marche désarme les PNJ : elle n'éprouve pas cela. (La question 1 du lot 1 le posait ; elle reste posée.)
+- **Le voile de 9.5** n'est que de la géométrie (aucun gadget avant 9.7) : « une bâche qui coupe la lumière » est un mur mince ; le gadget du Spectre, lui, se rencontre à 9.7 et au boss.
+- **Le passage de 2 cases de 9.10** n'est pas prouvé franchi par le vrai corps (le voile se contourne) ; les portes de 4 cases (7.2, 8.4, 8.10) le sont.
+- **L'écran de l'aventure avec dix chapitres** n'a pas été regardé (les chapitres 4 à 6 manquent ici) : le lot 1 avait noté « à surveiller quand le chapitre 7 viendra » — le hub ne défile pas, et **dix lignes de chapitres plus « RETOUR » ne tiennent peut-être pas**. À regarder à l'intégration.
+- Images : Mesa/llvmpipe, PNJ posés à la main. **7.1** : le chasseur est caché par le bloc central dans la prise (il se tient derrière) — la prise montre la salle, pas le duel.
+
+#### Signalé, pas corrigé
+
+- **Fichiers partagés touchés** (conflits probables à l'intégration, triviaux) : `tools/outils_chapitre.gd` (la table `GADGET_EXIGE_CHASSEURS` et `_exige_de()` : l'autre lot ajoutera ses classes à `GADGET_EXIGE`, les deux se lisent) et `tools/run_suites.sh` (un bloc `SUITES+=` après `test_aventure_boss`
+  et une ligne de `case`).
+- **`push_warning` « planche de marche incomplète pour spectre »** (`player.gd:1056`) à chaque PNJ ou boss du Spectre : la classe n'a pas sa planche de marche, le sprite statique est gardé. Sans effet ici (le PNJ marche, glisse sur son sprite fixe), à régler avec les illustrations.
+- **`test_aventure_format` rougit tant que les chapitres 4 à 6 manquent** (voir plus bas) : ni la garde ni le moteur ne sont touchés.
+- **Un PNJ libre n'a pas de point d'arrivée** : la marche le juge par le sol qu'il visite, pas par ce qu'il atteint ; deux libres se frôlent à 33-37 px (la physique les écarte).
+- **Les arènes de boss** (7.10, 8.10, 9.10) reprennent le gabarit de 32×32 du chapitre 0 mais varient franchement : colonnes, cloison percée, voiles. Joueur et boss sont toujours en miroir d'est en ouest.
+- **Un labyrinthe est un tirage seedé** : le fichier dit « rien n'y est tiré au hasard » ; c'est exact des JSON, pas du dessin d'origine — la fabrique le redonne à l'octet.
+
+#### À trancher par Adrien
+
+1. **La difficulté**, d'abord : trois chasseurs NORMAL équipés en même temps (7.7), quatre (7.9), trois élites (9.8), une salle de sept PNJ dont un DIFFICILE (8.9) — fallait-il mesurer, au banc, un joueur type contre une SALLE (un banc de salle) avant de publier ? Ou jouer d'abord ?
+2. **Les salles de 8.x sont-elles assez grandes — ou trop ?** 8.9 mesure 100 × 80 (la plus grande carte de duel : 32 × 32). Un chasseur libre qui entend un pas debout jusqu'à 1 700 px converge de presque partout : est-ce voulu dans une salle où l'on ne peut pas tout voir ?
+3. **« equipe » à NORMAL et DIFFICILE** donne tout le kit de S9 (repli, fusée) : voulu pour les rondes de 8.8 et 8.9 ? (Même question qu'au lot 1, plus pressante ici.)
+4. **Le chapitre 9 sans gadget avant 9.7** : 9.5 « Le voile » enseigne la bâche par un mur mince — ou fallait-il y mettre un vrai voile posé par un PNJ équipé, plus tôt que le plan ?
+5. **Le poste de 7.5, de 8.x et 9.6** n'est pas équipé (les postes ne bougent pas) : voulu ?
+6. Les phrases d'intention qui nomment le gadget : « Il pose une plaque devant la lumière », « il y pose une mine », « Il tend une bâche » — la situation, ou déjà la leçon ?
+
+#### Résultat des suites
+
+`PLAFOND_SUITE=600 GODOT=… ./tools/run_suites.sh --rapide` (4.7.1, 1 292 s, deux autres sessions chargeant la machine) : **164 suites vertes, une seule rouge — `test_aventure_format`, pour la seule raison attendue** : `assets/solo` livre `[0, 1, 2, 3, 7, 8, 9]`, et la garde exige que les numéros de
+chapitres se suivent depuis 0 (« le trou des chapitres 4 à 6 », écrits par l'autre session). Les 152 autres vérifications de cette suite sont vertes (`=== 152 vérifications, 1 échec(s) ===`) ; **la garde n'a PAS été affaiblie** et redeviendra verte à l'intégration. Aucune erreur de script, aucun `push_error` non déclaré ;
+les scénarios à deux instances ne sont pas joués par `--rapide`. **Aucun relevé de cadence** (consigne).
+
+**Ce que la charge a montré, et qui n'est pas de ce lot** : au plafond par défaut de 120 s par suite, `test_banc_bot` (207 s seul) et `test_chapitres_marche` du lot 1 (192 s seul) sont abattus par le chien de garde sur cette machine chargée, et passent seuls (89 et 190 vérifications, code 0). La suite
+neuve, elle, joue trente salles en 4 min 28 s : `run_suites.sh` lui donne `PLAFOND_SUITE=900` à elle seule. Un premier passage a aussi été interrompu (code 143) **parce que j'éditais `run_suites.sh` pendant qu'il tournait** — bash lit un script au fil de l'eau : on n'édite pas un lanceur en route.
+
+
+### Questions
+
+**Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),
+SOLO-Q3 (on recommence la salle), SOLO-Q4 (écrites en données, chapitre d'initiation d'abord ; dix chapitres de dix
+niveaux, boss au dixième), puis SOLO-Q6 (l'initiation est le chapitre 0 et débloque la classe de base : dix chapitres
+numérotés à partir de 0), SOLO-Q5 (l'ordre du rang en ligne), SOLO-Q7 (pas de ronde dans l'initiation : plus d'ennemis
+immobiles). **Ouvertes** :
+
+- **SOLO-Q8 — le chapitre 10** : il existe (onze chapitres, tranché) ; son contenu et ce qu'on y gagne, « on verra
+  ensuite ».
 
 ---
 

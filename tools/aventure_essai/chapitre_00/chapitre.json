@@ -1,0 +1,12 @@
+{
+  "classe_debloquee": "pistolet",
+  "classe_imposee": "pistolet",
+  "niveaux": [
+    "niveau_01.json",
+    "niveau_02.json",
+    "niveau_03.json"
+  ],
+  "numero": 0,
+  "titre": "L'initiation (essai)",
+  "version": 1
+}

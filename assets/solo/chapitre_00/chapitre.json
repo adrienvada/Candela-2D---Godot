@@ -1,0 +1,19 @@
+{
+  "classe_debloquee": "pistolet",
+  "classe_imposee": "pistolet",
+  "niveaux": [
+    "niveau_01.json",
+    "niveau_02.json",
+    "niveau_03.json",
+    "niveau_04.json",
+    "niveau_05.json",
+    "niveau_06.json",
+    "niveau_07.json",
+    "niveau_08.json",
+    "niveau_09.json",
+    "niveau_10.json"
+  ],
+  "numero": 0,
+  "titre": "L'initiation",
+  "version": 1
+}

@@ -37,6 +37,20 @@
 ## - **Pas sous les menus** : le retour au menu remontre les deux vues ; la vue iso ne
 ##   s'allume que hors du menu principal.
 ##
+## ## Les figurants — plus de deux corps (chantier SOLO, S6)
+##
+## Le duel a DEUX corps. L'aventure en a autant que de PNJ : `GameState.figurants` liste les `Player` en plus de J1 et J2, et ce nœud
+## leur donne un corps voxel chacun (indices 2 et suivants de `_corps`, `_voxels`, `_mat_corps`…), un capteur de lumière chacun, dans la
+## vue de J1 — la seule vue de l'aventure. **Un figurant se rend exactement comme J2 vu de J1** : même masque de capteur
+## (`masque_vue_adverse(1)`), même opacité (`opacite_du_corps(joueur, false)`, lue sur les sprites que `player.gd` a posés), même
+## `capteur_1`. Un PNJ porte `player_id` 1 : pour les lumières et les couches il EST l'adversaire du joueur.
+## Les corps sont un POOL qui grandit et ne rétrécit pas (une salle de cinq PNJ puis une de deux : trois corps cachés, pas
+## détruits) ; leurs capteurs ne tournent que pour un corps montré et assez proche du joueur regardé. **Sans figurant, rien de ceci ne
+## s'exécute** : aucun tableau ne grandit, aucun capteur de plus, et le duel est rendu comme avant (`tools/test_aventure_partie.gd`).
+## Ce qu'un figurant n'a PAS, faute d'avoir été fait : l'ombre de contact au sol (`contact_corps_N` du sol n'en connaît que deux), le
+## bout de l'arme et la lampe 3D de ses lumières (`lumieres_iso.gd`, `iso_volumes.gd` ne regardent que J1 et J2), la silhouette de
+## killcam (il n'y a pas de killcam en aventure).
+##
 ## ## Aller-retour
 ##
 ## Vue unique ↔ scindé ↔ 2D, en cours de partie (la killcam cache une vue) comme entre
@@ -135,11 +149,21 @@ const COUCHE_CAPTEUR := 8
 ## ISO4 : plus les couches des disques des objets et du leurre, une par vue (`MiroirsIso.couche_objets`,
 ## 128 et 256) — elles sortent des masques des lightmaps comme celles des corps.
 const COUCHES_CAPTEURS := 8 | 16 | 32 | 64 | 128 | 256
+## SOLO, S6 — les figurants (les PNJ de l'aventure) : au plus huit, un capteur chacun, dans la vue de J1 seule. Leurs couches
+## commencent au premier bit libre après la peinture (1024) : une par figurant, jamais partagée (voir « Une couche PAR capteur »
+## plus haut — le même défaut, les corps lisant les canaux les uns des autres). Retirées des lightmaps comme les autres.
+const FIGURANTS_MAX := 8
+const COUCHE_FIGURANT := 1024
+const COUCHES_FIGURANTS := ((1 << FIGURANTS_MAX) - 1) * COUCHE_FIGURANT
+## Au-delà de cette distance au joueur regardé, le capteur d'un figurant cesse de se rendre : son corps est hors de tout écran
+## (la portée de vue du cadrage le plus large est 973 px, `Plafonnier.portee_de_vue_px`) et la sous-vue de 256² coûte une image
+## sur chaque. Un chiffre de prudence, jamais mesuré (consigne d'Adrien : aucun relevé de cadence).
+const PORTEE_CAPTEUR_FIGURANT_PX := 1300.0
 ## ISO10, 1f — la couche des copies sans lumière de la peinture de la carte (`peinture_iso.gd`). Hors des lightmaps, comme
 ## les capteurs : une copie non éclairée y dessinerait l'albédo sous le `CanvasModulate` noir, par-dessus le sol éclairé.
 const COUCHE_PEINTURE := 512
 ## Tout ce que les lightmaps ne lisent pas pendant que la vue iso tient.
-const COUCHES_HORS_LIGHTMAP := COUCHES_CAPTEURS | COUCHE_PEINTURE
+const COUCHES_HORS_LIGHTMAP := COUCHES_CAPTEURS | COUCHE_PEINTURE | COUCHES_FIGURANTS
 const PeintureIsoT := preload("res://peinture_iso.gd")
 ## Les calques 3D : murs et corps sur le calque commun, le sol de chaque joueur sur le sien.
 const CALQUE_COMMUN := 1
@@ -318,6 +342,11 @@ var _cameras3d: Array[CameraIso] = []
 var _affichages: Array[TextureRect] = []
 ## `[vue_id][corps_id]` → `CapteurCorps`, ou `null` quand la vue n'est pas regardée.
 var _capteurs := [[null, null], [null, null]]
+## SOLO, S6 — les joueurs que les corps d'indice 2 et suivants rendent (`GameState.figurants`, relu à chaque image), et leurs capteurs
+## (`CapteurCorps` ou `null`), dans le même ordre : `_figurants[k]` est rendu par le corps `2 + k`, lu par `_capteurs_figurants[k]`.
+## Vides hors aventure.
+var _figurants: Array[Node2D] = []
+var _capteurs_figurants: Array = []
 ## ISO5 — par joueur, ce que son fantôme de killcam a laissé d'une image à l'autre (points de vie, éclair
 ## du tir, posture, position à l'horloge du rejeu) ; vidé dès que le fantôme n'est plus montré.
 var _etats_fantomes := [{}, {}]
@@ -718,6 +747,10 @@ func _tenir() -> void:
 			masques_reposes += 1
 	for j in [_main.p1, _main.p2]:
 		corps_recaches += _cacher_corps(j)
+	for f in _figurants:
+		# Un figurant libéré depuis la dernière image (la salle change) : `_suivre` rafraîchit la liste, juste après.
+		if is_instance_valid(f):
+			corps_recaches += _cacher_corps(f)
 
 
 ## ISO3b — la zone morte des murs bas sur les disques des capteurs. Le capteur rend au corps iso la
@@ -746,10 +779,23 @@ func _pousser_zone_morte_capteurs() -> void:
 				Rect2(Vector2.ZERO, Vector2(capteur.size)))
 			MursBasRendu.poser_corps(capteur.matiere() as ShaderMaterial, u,
 				ecran * (joueurs[j] as Node2D).global_position, bool(joueurs[j].get("accroupi")))
+	# SOLO, S6 — les capteurs des figurants : la même règle, pour la même raison (un PNJ accroupi dans la zone morte d'un muret).
+	for k in _capteurs_figurants.size():
+		var cf = _capteurs_figurants[k]
+		if cf == null or not is_instance_valid(cf) or k >= _figurants.size() or not is_instance_valid(_figurants[k]):
+			continue
+		var capteur_f := cf as CapteurCorps
+		var ecran_f := capteur_f.get_final_transform() * capteur_f.get_canvas_transform()
+		var uf := MursBasRendu.uniformes_de_vue(ecran_f * arene.global_transform, murs,
+			Rect2(Vector2.ZERO, Vector2(capteur_f.size)))
+		MursBasRendu.poser_corps(capteur_f.matiere() as ShaderMaterial, uf,
+			ecran_f * _figurants[k].global_position, bool(_figurants[k].get("accroupi")))
 
 
 func _suivre() -> void:
 	var joueurs := [_main.p1, _main.p2]
+	# SOLO, S6 — les corps des figurants suivent `GameState.figurants` (vide : rien ne change, rien ne grandit).
+	_accorder_les_figurants()
 	for m in _materiaux():
 		m.set_shader_parameter("style", style_pate)
 	for vue in _vues:
@@ -855,6 +901,7 @@ func _suivre() -> void:
 		_poser_contact(j, p, forces)
 		if not corps_voxel:
 			_corps[j].basis = Basis.looking_at(Vector3(cos(joueur.rotation), 0.0, sin(joueur.rotation)), Vector3.UP)
+	_suivre_les_figurants()
 
 
 # ---------------------------------------------------------------------------
@@ -988,14 +1035,20 @@ static func _sans_capteurs(masque: int) -> int:
 ## rétrodiffusion — Q65), ou celui d'en face (`masque_vue_adverse`) — la règle des sprites (`canaux_lumiere.gd`), sauf ces bits de
 ## plus, qui font recevoir au capteur de soi les ombres de la torche, puis de la rétrodiffusion d'en face, chez J2 comme chez J1.
 static func masque_capteur(vue_id: int, corps_id: int) -> int:
-	if vue_id == corps_id:
-		return CanauxLumiere.masque_de_soi(corps_id)
-	return CanauxLumiere.masque_vue_adverse(corps_id)
+	# SOLO, S6 — un figurant (corps 2 et suivants) a le rôle de J2 : l'adversaire du joueur humain. Sans ce repli, `1 - corps_id`
+	# serait négatif et le canal de vue d'en face un décalage de bits négatif.
+	var role := mini(corps_id, 1)
+	if vue_id == role:
+		return CanauxLumiere.masque_de_soi(role)
+	return CanauxLumiere.masque_vue_adverse(role)
 
 
 ## La couche de visibilité du capteur de la vue `vue_id` sous le corps `corps_id` : 8, 16, 32
 ## ou 64 — une par capteur (voir `COUCHE_CAPTEUR`).
 static func couche_capteur(vue_id: int, corps_id: int) -> int:
+	# SOLO, S6 — un figurant : sa couche à lui (`COUCHE_FIGURANT`, une par figurant), dans la vue de J1 seule.
+	if corps_id >= 2:
+		return COUCHE_FIGURANT << (corps_id - 2)
 	return COUCHE_CAPTEUR << (vue_id * 2 + corps_id)
 
 
@@ -1052,7 +1105,121 @@ func _poser_capteurs() -> void:
 			_mat_corps[j].set_shader_parameter("capteur_%d" % (id + 1), c.get_texture())
 
 
+# ---------------------------------------------------------------------------
+# LES FIGURANTS — plus de deux corps (chantier SOLO, S6)
+# ---------------------------------------------------------------------------
+
+## Accorde les corps sur `GameState.figurants` : le pool grandit au besoin (jamais ne rétrécit), les capteurs suivent la liste. **Sans
+## figurant, rend la main au premier test** : le duel ne paie rien.
+func _accorder_les_figurants() -> void:
+	var liste: Variant = _main.get("figurants") if is_instance_valid(_main) else null
+	# ⚠️ `Node2D`, jamais `Player` : ce fichier se charge aussi dans des suites `--script`, où le script d'un `Player` (qui nomme des
+	# autoloads) ne compile pas — « Pièges connus », 2026-08-18.
+	var voulus: Array[Node2D] = []
+	if liste is Array:
+		for f in (liste as Array):
+			if is_instance_valid(f) and f is Node2D and not (f as Node).is_queued_for_deletion():
+				voulus.append(f)
+	if voulus.is_empty() and _figurants.is_empty():
+		return
+	if voulus.size() > FIGURANTS_MAX:
+		if _figurants.size() < FIGURANTS_MAX:
+			push_error("Presentation3D : %d figurants, la vue iso en rend %d au plus" % [voulus.size(), FIGURANTS_MAX])
+		voulus.resize(FIGURANTS_MAX)
+	var change := voulus != _figurants
+	_figurants = voulus
+	if change:
+		# Les sprites des figurants partis ne se rendront pas : leurs clés ne servent plus (les nœuds sont libérés).
+		for noeud in _couches.keys():
+			if not is_instance_valid(noeud):
+				_couches.erase(noeud)
+	# Le pool de corps : un par figurant, et il reste.
+	while corps_voxel and _corps.size() < 2 + _figurants.size():
+		_ajouter_un_corps_voxel(_corps.size())
+	# Les capteurs : un par figurant, dans la vue de J1 seule ; refaits pour un figurant neuf (ou quand la vue s'est rallumée).
+	while _capteurs_figurants.size() > _figurants.size():
+		var vieux = _capteurs_figurants.pop_back()
+		_liberer_un_capteur(vieux)
+	while _capteurs_figurants.size() < _figurants.size():
+		_capteurs_figurants.append(null)
+	for k in _figurants.size():
+		var c = _capteurs_figurants[k]
+		if c != null and is_instance_valid(c) and (c as CapteurCorps).proprietaire == _figurants[k]:
+			continue
+		_liberer_un_capteur(c)
+		_capteurs_figurants[k] = _creer_le_capteur_du_figurant(k)
+
+
+func _liberer_un_capteur(c: Variant) -> void:
+	if c != null and is_instance_valid(c):
+		if (c as Node).get_parent() != null:
+			(c as Node).get_parent().remove_child(c)
+		(c as Node).queue_free()
+
+
+## Le capteur du figurant `k`, dans la vue de J1 — la seule de l'aventure. `null` si cette vue n'est pas regardée, ou si le corps manque
+## (corps grossiers, débogage).
+func _creer_le_capteur_du_figurant(k: int) -> Variant:
+	var j := 2 + k
+	if not _actif or not corps_voxel or j >= _corps.size() or not _vues.has(_main.vp1):
+		return null
+	var c := CapteurCorps.creer(0, j, _main.vp1.world_2d, couche_capteur(0, j), masque_capteur(0, j), _figurants[k])
+	add_child(c)
+	if _mat_corps[j] != null:
+		_mat_corps[j].set_shader_parameter("capteur_1", c.get_texture())
+	return c
+
+
+func _retirer_les_capteurs_des_figurants() -> void:
+	for k in _capteurs_figurants.size():
+		_liberer_un_capteur(_capteurs_figurants[k])
+		if 2 + k < _mat_corps.size() and _mat_corps[2 + k] != null:
+			_mat_corps[2 + k].set_shader_parameter("capteur_1", null)
+	_capteurs_figurants.clear()
+	# La liste s'arrête avec la vue : `GameState` libère ses PNJ en quittant, et `_suivre` ne tourne plus pour la rafraîchir.
+	_figurants = []
+
+
+## Un tour des figurants : leur corps posé et animé depuis le joueur, rendu comme J2 l'est chez J1 (opacité et silhouette lues sur les
+## sprites que `player.gd` a posés), et leur capteur suivi — ou mis au repos quand il ne servirait à personne.
+func _suivre_les_figurants() -> void:
+	if not corps_voxel:
+		return
+	var regarde: Variant = _main.p1 if is_instance_valid(_main.p1) else null
+	for k in _figurants.size():
+		var j := 2 + k
+		if j >= _corps.size():
+			break
+		var joueur = _figurants[k]
+		var montre: bool = is_instance_valid(joueur) and joueur.visible and joueur.visual.visible
+		_corps[j].visible = montre
+		var capteur = _capteurs_figurants[k] if k < _capteurs_figurants.size() else null
+		if capteur != null and is_instance_valid(capteur):
+			var proche: bool = montre and (regarde == null or (regarde as Node2D).global_position.distance_to(joueur.global_position) <= PORTEE_CAPTEUR_FIGURANT_PX)
+			(capteur as CapteurCorps).render_target_update_mode = SubViewport.UPDATE_ALWAYS if proche else SubViewport.UPDATE_DISABLED
+			(capteur as CapteurCorps).suivre(joueur.global_position, montre)
+		if not montre:
+			continue
+		_accorder_la_classe(j, joueur)
+		(_voxels[j] as VoxelCorps).poser(etat_du_corps(j, joueur))
+		_mat_corps[j].set_shader_parameter("centre", joueur.global_position)
+		var o := opacite_du_corps(joueur, false)
+		var sil := silhouette_du_corps(joueur, false)
+		# (Écrit autrement que la boucle des joueurs et des fantômes : `test_corps_mannequin` compte celle-là, au texte, deux fois.)
+		var matieres: Array = [_mat_corps[j], _mat_profondeur[j]]
+		matieres.append((_mat_corps[j] as ShaderMaterial).next_pass)
+		for vue_id in 2:
+			for mat in matieres:
+				if mat != null:
+					(mat as ShaderMaterial).set_shader_parameter("opacite_%d" % (vue_id + 1), o)
+					(mat as ShaderMaterial).set_shader_parameter("silhouette_%d" % (vue_id + 1), sil)
+	# Les corps du pool que personne ne porte : cachés.
+	for j in range(2 + _figurants.size(), _corps.size()):
+		_corps[j].visible = false
+
+
 func _retirer_capteurs() -> void:
+	_retirer_les_capteurs_des_figurants()
 	for id in 2:
 		for j in 2:
 			var c = _capteurs[id][j]
@@ -1085,22 +1252,28 @@ func _retirer_capteurs() -> void:
 ## `lightmap_de_j2(CAMERA_VISIBLE_LAYERS)`) — c'est « un corps par joueur et par vue » au sens des
 ## canaux, sans poser deux fois chaque corps par image.
 func _construire_les_corps_voxel() -> void:
-	var tuile := float(CandelaTileSet.TILE_SIZE.x)
 	for i in 2:
-		var ancre := Node3D.new()
-		ancre.name = "Corps%d" % (i + 1)
-		ancre.scale = Vector3.ONE * tuile
-		var voxel := VoxelCorps.new()
-		voxel.name = "Voxel"
-		ancre.add_child(voxel)
-		_scene.add_child(ancre)
-		_corps.append(ancre)
-		_voxels.append(voxel)
-		_mat_corps.append(null)
-		_mat_profondeur.append(null)
-		_etats_corps.append({"hp": -1.0, "recharge": 0.0, "t_tir": -100.0, "t_touche": -100.0,
-			"t_mort": -100.0, "mort": false})
-		_accorder_la_classe(i, null)
+		_ajouter_un_corps_voxel(i)
+
+
+## Un corps voxel de plus, d'indice `i` (le prochain des tableaux `_corps`, `_voxels`…) : l'ancre `Corps<i+1>`, son `VoxelCorps`, son état.
+## Les deux premiers sont ceux de J1 et J2, bâtis à la construction de la scène ; les suivants — SOLO, S6 — sont ceux des figurants.
+func _ajouter_un_corps_voxel(i: int) -> void:
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	var ancre := Node3D.new()
+	ancre.name = "Corps%d" % (i + 1)
+	ancre.scale = Vector3.ONE * tuile
+	var voxel := VoxelCorps.new()
+	voxel.name = "Voxel"
+	ancre.add_child(voxel)
+	_scene.add_child(ancre)
+	_corps.append(ancre)
+	_voxels.append(voxel)
+	_mat_corps.append(null)
+	_mat_profondeur.append(null)
+	_etats_corps.append({"hp": -1.0, "recharge": 0.0, "t_tir": -100.0, "t_touche": -100.0,
+		"t_mort": -100.0, "mort": false})
+	_accorder_la_classe(i, null)
 
 
 ## Le corps de la classe du joueur, reconstruit si la classe a changé, et ses nouveaux matériaux reliés
@@ -1137,10 +1310,14 @@ func _accorder_le_slug(j: int, slug: String) -> void:
 	if lumiere_3d:
 		_eclairer_le_corps(j)
 		_accorder_la_bride()
-	for id in 2:
-		var c = _capteurs[id][j]
-		if c != null:
-			mat.set_shader_parameter("capteur_%d" % (id + 1), (c as CapteurCorps).get_texture())
+	if j < 2:
+		for id in 2:
+			var c = _capteurs[id][j]
+			if c != null:
+				mat.set_shader_parameter("capteur_%d" % (id + 1), (c as CapteurCorps).get_texture())
+	elif j - 2 < _capteurs_figurants.size() and _capteurs_figurants[j - 2] != null:
+		# Un figurant dont la classe change entre deux salles : son nouveau matériau relit le capteur de sa vue (la vue de J1).
+		mat.set_shader_parameter("capteur_1", (_capteurs_figurants[j - 2] as CapteurCorps).get_texture())
 	# Q39 (2) — le même relais pour les lightmaps : `_activer` ne les pose qu'une fois, sur les matériaux qui existent alors.
 	# Un corps reconstruit (changement de classe, fantôme de killcam) n'en avait aucune. Aucun shader des corps ne les lit
 	# par défaut ; l'essai B (`--corps-soi-sombre=fondu`) y lit le sol autour du joueur — sans ce relais, seule la classe
@@ -1248,6 +1425,9 @@ func fantome_montre(j: int) -> Node2D:
 ## ISO10, 1d — l'ombre de contact du corps `j` sur le sol de chaque vue (`contact_corps_N` de `sol_iso.gdshader`). Sa
 ## force est l'opacité du corps DANS cette vue, jamais plus : le sol ne montre d'un corps que ce que la vue en montre.
 func _poser_contact(j: int, p: Vector2, forces: Array) -> void:
+	# Le sol ne connaît que deux ombres de contact (`contact_corps_1` et `_2`) : un figurant n'en a pas (SOLO, S6, signalé).
+	if j >= 2:
+		return
 	for vue_id in mini(_mat_sols.size(), 2):
 		_mat_sols[vue_id].set_shader_parameter("contact_corps_%d" % (j + 1), Vector3(p.x, p.y, float(forces[vue_id])))
 

@@ -40,6 +40,12 @@ extends StaticBody2D
 ## du poseur si Adrien la demande un jour.
 var poseur_id: int = -1
 
+## La place de son poseur dans les réserves de `GameState` (recharge d'une minute, batterie) — S9b. Égale à `poseur_id` pour J1 et J2 ;
+## un PNJ de l'aventure a la sienne (2, 3, …) alors que `poseur_id` reste 1 : c'est lui que lisent les couches, les ombres et les
+## sons, qui n'ont que deux rôles. Sert à retrouver « le gadget debout de CE poseur » sans le confondre avec celui d'un autre PNJ.
+## `-1` : non posée, on lit alors `poseur_id` (les gadgets fabriqués à la main par les suites).
+var slot_reserve: int = -1
+
 ## Points de vie. Tout OBJET posé est destructible à la balle : c'est le contrat
 ## commun, et c'est ce qui donne une réponse à « j'ai vu quelque chose bouger ».
 ## Les gadgets diffus en sont exclus depuis le 2026-09-11 — voir

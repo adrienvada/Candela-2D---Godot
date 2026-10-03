@@ -27,6 +27,8 @@ signal map_selected(map_id: String)
 const DEFAULT_MAP_ID := "default"
 const USER_MAPS_DIR := "user://maps"
 const BUILTIN_MAPS_DIR := "res://assets/maps"
+## L'identifiant sous lequel une salle d'aventure est la carte active (`poser_carte_d_aventure`) : celui d'aucune carte du catalogue.
+const ID_AVENTURE := "aventure"
 
 ## Carte active pour le prochain match. Persiste toute la session.
 var selected_map_id: String = DEFAULT_MAP_ID
@@ -186,6 +188,18 @@ func select_map(map_id: String) -> bool:
 	current_map_data = (entry["data"] as Dictionary).duplicate(true)
 	map_selected.emit(selected_map_id)
 	return true
+
+## Pose la carte d'une SALLE D'AVENTURE comme carte active, sans la mettre au catalogue ni l'écrire nulle part (chantier SOLO, S6).
+##
+## `rebuild_arena` lit `get_selected()` : c'est le seul chemin par lequel une carte devient une arène, et le jeu n'en a pas un
+## second — la salle d'un niveau (embarquée dans son fichier, `AventureFormat`) passe donc par lui. L'identifiant (`ID_AVENTURE`) n'est
+## celui d'aucune carte du catalogue : rien ne la retrouve par `get_map`, la galerie ne la montre pas, et `map_selected` N'EST PAS
+## émis — aucun menu n'est ouvert pendant qu'on joue, et ceux qui écoutent y chercheraient une carte qui n'existe pas. L'appelant
+## (`AventurePartie`) rend le choix du joueur en quittant : `select_map(<l'identifiant d'avant>)`.
+func poser_carte_d_aventure(data: Dictionary) -> void:
+	current_map_data = data.duplicate(true)
+	selected_map_id = ID_AVENTURE
+
 
 ## Tire une arène au hasard et la rend active. Rend l'identifiant retenu, ou une
 ## chaîne vide si le catalogue est vide.

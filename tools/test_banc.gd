@@ -208,6 +208,16 @@ func _run() -> void:
 	var vides_mb: Array[String] = MursBancs.preconditions_manquantes(null, null)
 	_check("et il sait dire quand ils manquent", not vides_mb.is_empty())
 
+	# Le banc de la VUE DU BOT contre les capteurs (SOLO S2), même raison et même remède. Il monte un vrai duel sur sa carte
+	# d'essai, pose le nœud de perception du jeu sur J2 et lit le capteur du corps de J1 dans la vue de J2 : il dépend donc des
+	# lumières du joueur, de `Presentation3D._capteurs`, de la fusée, de `CameraIso.vers_sol` et des fichiers de la perception.
+	var BancPerception: GDScript = load("res://tools/banc_perception_bot.gd")
+	var manquants_perception: Array[String] = BancPerception.preconditions_perception(ui, main)
+	_check("tous les appuis du banc de la perception du bot existent encore",
+		manquants_perception.is_empty(), "; ".join(manquants_perception))
+	var vides_perception: Array[String] = BancPerception.preconditions_perception(null, null)
+	_check("et il sait dire quand ils manquent", not vides_perception.is_empty())
+
 	# LE PHOTOGRAPHE, même raison et même remède : il ouvre une fenêtre, donc
 	# aucune suite ne peut l'exécuter — mais une suite peut lire ses hypothèses.
 	# Il en a plus que les autres parce qu'il touche à tout : les menus, une
