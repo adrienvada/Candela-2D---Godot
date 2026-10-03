@@ -211,6 +211,27 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 @export var utilise_le_gadget: bool = false
 
 
+## ── L'axe engagement — S9b (2026-10-03) ───────────────────────────────────────────────────────────────────────────────────
+##
+## **Ce que l'ARME demande.** Un bot qui tient sa place en combat et tire d'où il voit — le comportement de S3 — est un bon pistolet et un
+## mauvais fusil à pompe : les plombs du Terrassier meurent à 180 px, et un bot qui tire à 450 px ne touche jamais personne. Ces deux champs
+## ne règlent PAS ce que le bot perçoit : ils disent où il se tient quand il combat, et jusqu'où il juge que son arme porte. Ils ne lisent
+## que sa mémoire (la place vue ou entendue) et son corps — rien de plus qu'un joueur qui a l'adversaire à l'écran. Éteints (0) par défaut :
+## un profil de S1 à S9 se bat exactement comme avant.
+
+## En COMBAT, jusqu'à quelle distance de la place qu'il voit, en pixels, le bot s'approche : au-delà, il marche vers elle (le chemin de la
+## RECHERCHE, torche et visée inchangées) ; en deçà, il tient sa place comme avant. 0 : il ne s'approche jamais. Une hystérésis de
+## `HYSTERESIS_ENGAGEMENT_PX` l'empêche d'avancer et de s'arrêter sur la limite.
+@export_range(0.0, 1500.0) var distance_engagement_px: float = 0.0
+
+## Au-delà de cette distance de la place qu'il vise, en pixels, le bot ne tire pas : l'arme n'y porte pas, et un tir qui n'atteint rien trahit
+## le tireur pour rien (l'éclair, le bruit). 0 : aucune limite. Il continue de s'approcher si `distance_engagement_px` le dit.
+@export_range(0.0, 1500.0) var distance_tir_max_px: float = 0.0
+
+## La marge, en pixels, au-dessus de `distance_engagement_px` qu'il faut dépasser pour recommencer à s'approcher.
+const HYSTERESIS_ENGAGEMENT_PX := 40.0
+
+
 ## Le profil se sert-il d'au moins un outil ? Faux pour tout profil de S1 à S4 : `BotInputProvider` ne passe alors pas par `_equiper()`, et ses
 ## commandes restent exactement celles d'avant S9.
 func est_equipe() -> bool:
@@ -494,6 +515,33 @@ static func pnj_immobile_voit_entend_lent() -> ProfilBot:
 	return pnj(Deplacement.IMMOBILE, Sens.VUE_ET_OUIE, Palier.LENT)
 
 
-## Le BOSS de chaque chapitre : le profil d'entraînement NORMAL, rien de plus (« juste un bot en mode moyen », Adrien). Un seul bot.
-static func boss() -> ProfilBot:
-	return pour_adversaire_qui_tire(Difficulte.NORMAL)
+## Le BOSS de chaque chapitre : le profil d'entraînement NORMAL, rien de plus (« juste un bot en mode moyen », Adrien) — **réglé à la classe qu'il
+## porte** depuis S9b (`classe`, un slug du code : `pistolet` pour le Parasite, `fusil` pour l'Illusionniste…). Sans classe, ou pour une classe
+## que `REGLAGES_BOSS` ne nomme pas, c'est exactement le profil NORMAL du cran 3 de l'entraînement (le Parasite ne bouge pas).
+##
+## **Pourquoi par classe.** Le profil NORMAL a été réglé au banc contre le Parasite (S4, S9) : ses réflexes, sa rafale et sa distance de tir
+## sont ceux d'un pistolet. Armé d'une autre classe, le même bot était battu par le joueur type de référence de 51 % à 98 % du temps
+## (S9, « Ce qui est mesuré par classe ») : un fusil à pompe tiré à 450 px, une arbalète tirée comme un pistolet-mitrailleur… Les dix boss
+## d'un chapitre à l'autre auraient été de force très inégale. `REGLAGES_BOSS` règle donc, par classe, ce que l'ARME demande — les réflexes, la
+## rafale, la distance d'engagement —, **jamais ce que le bot perçoit** (voir, entendre, oublier : la règle qui prime).
+static func boss(classe: String = "") -> ProfilBot:
+	var p := pour_adversaire_qui_tire(Difficulte.NORMAL)
+	regler_le_boss(p, classe)
+	return p
+
+
+## Les réglages du boss, par classe : des champs de `ProfilBot` posés PAR-DESSUS le profil NORMAL. Une classe absente (ou une entrée vide) garde le
+## profil NORMAL tel quel. Réglés au banc de jeu (`tools/banc_bot_difficulte.gd --boss --classe=N`, joueur type de référence) sur la cible du
+## boss — le joueur type le bat environ 55 % du temps (±7) —, jamais à l'aveugle : la ROADMAP (S9b) donne les mesures avant et après.
+const REGLAGES_BOSS := {
+}
+
+
+## Pose sur `p` les réglages du boss de `classe` ; un champ inconnu est crié (une faute de frappe n'est pas une option ignorée).
+static func regler_le_boss(p: ProfilBot, classe: String) -> void:
+	var reglage: Dictionary = REGLAGES_BOSS.get(classe, {})
+	for champ in reglage:
+		if p.get(champ) == null:
+			push_error("ProfilBot.REGLAGES_BOSS : champ inconnu « %s » (classe « %s »)" % [champ, classe])
+			continue
+		p.set(champ, reglage[champ])

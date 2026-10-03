@@ -349,6 +349,13 @@ SUITES+=(test_bot_equipement)
 # 0.10 un duel en miroir.
 SUITES+=(test_chapitre_00)
 
+# Chantier SOLO, S9b (2026-10-03) : l'INTÉGRATION de S6 (le moteur de l'aventure) et de S9 (le bot équipé), écrits en parallèle. `test_aventure_boss`
+# (le jeu monté, à pas d'image fixe — `case` plus bas) : chaque PNJ a SA réserve de fusées et de gadget, semée sur SA classe (deux PNJ ne se volent
+# plus la leur, un boss Fumiste pose sa suie et retrouve ses réserves quand la salle recommence, le bot d'entraînement rééquipe à sa réapparition la
+# classe qu'il porte) ; l'éblouissement vaut pour les PNJ dans les deux sens (torche et éclair de tir), sauf entre eux ; un bot ébloui voit MOINS,
+# jamais plus. Les boss par classe sont gardés par `test_banc_bot` (existence, bornes larges, aucun champ de perception touché).
+SUITES+=(test_aventure_boss)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -500,7 +507,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement|test_aventure_boss) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

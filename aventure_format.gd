@@ -556,7 +556,8 @@ static func preparer_niveau(niveau: Dictionary) -> Dictionary:
 ## Neuf à chaque appel : un profil est une ressource que le bot ne doit pas partager avec la tentative d'avant.
 static func profil_du_pnj(entree: Dictionary) -> ProfilBot:
 	var nom := String(entree["profil_nom"])
-	var profil := ProfilT.boss() if nom == PROFIL_BOSS else ProfilT.pnj_nomme(nom)
+	# Le boss est réglé à SA classe (`ProfilBot.REGLAGES_BOSS`, S9b) : la même entrée dit la classe qu'il porte et le profil qui la sert.
+	var profil := ProfilT.boss(String(entree.get("classe", ""))) if nom == PROFIL_BOSS else ProfilT.pnj_nomme(nom)
 	if profil == null:
 		push_error("AventureFormat : profil de PNJ inconnu « %s »" % nom)
 		return null

@@ -178,6 +178,9 @@ func _creer_les_pnj(n: Dictionary) -> void:
 		p.set_multiplayer_authority(1)
 		var classe_pnj := _index_de_classe(String(e["classe"]))
 		p.equip_weapon(jeu.weapon_for_index(classe_pnj if classe_pnj >= 0 else 0))
+		# Sa PROPRE réserve (fusées, gadget, batterie), semée sur SA classe — après `equip_weapon`, qui dit laquelle. Sans cette place il
+		# lirait celle de J2 (`player_id` 1), semée sur la classe de J2 : un boss Fumiste n'aurait eu ni ses fusées ni son gadget (S9b).
+		jeu.inscrire_un_pnj(p)
 		p.global_position = NavigationBot.centre_de_la_case(e["case"])
 		p.rotation = float(e["rotation"])
 		p.hp = 100.0
@@ -198,6 +201,8 @@ func _retirer_les_pnj() -> void:
 	pnj.clear()
 	if jeu != null:
 		jeu.figurants = pnj
+		# Leurs réserves partent avec eux : les PNJ de la salle suivante, ou de la reprise, en reçoivent de neuves.
+		jeu.liberer_les_pnj()
 
 
 # ---------------------------------------------------------------------------

@@ -166,6 +166,9 @@ func _voir(delta: float) -> void:
 	var reglages := {"decalage_lisse": _decalage_lisse}
 	_cadre = Percep.cadre_de_vue(bot["position"], bot["visee"], reglages)
 	_lire_les_gadgets()
+	# Son propre éblouissement, comme un joueur lit son propre écran : un bot que la torche ou l'éclair d'en face aveugle voit moins (S9b).
+	var yeux: Variant = corps.get("dazzle_amount")
+	monde["ebloui"] = float(yeux) if yeux != null else 0.0
 	var adversaire := _adversaire()
 	var lumieres := _lumieres(adversaire)
 	noms_des_lumieres.clear()

@@ -169,6 +169,9 @@ var _vide_depuis := -1.0
 ## Le but de la marche d'enquête (une case) et l'instant avant lequel on ne replanifie pas.
 var _but_enquete := Vector2i(-1, -1)
 var _prochain_plan := -INF
+## S9b : le bot s'approche-t-il de ce qu'il voit, parce que son arme n'y porte pas encore (`ProfilBot.distance_engagement_px`) ? Une décision de
+## `_penser()` ; `avancer()` la suit comme un état de marche, sans rien lire d'autre.
+var _en_approche := false
 
 # --- S9 : les outils. Tout ceci est de l'état de DÉCISION, comme le reste : rien n'en sort sauf des commandes (torche, posture, fusée, gadget).
 ## Combien de temps un appui de fusée ou de gadget dure, en secondes : `player.gd` agit sur le FRONT montant, six images suffisent largement.
@@ -240,6 +243,7 @@ func reinitialiser() -> void:
 	_rafale_faite = 0
 	_pause_jusqu = -INF
 	_vide_depuis = -1.0
+	_en_approche = false
 	# S9 : les outils repartent de zéro. Une torche allumée, un accroupissement ou un repli de la manche d'avant ne sont pas ceux d'un
 	# corps qu'on vient de remettre en jeu ; la fusée et le gadget, eux, se rechargent ailleurs (`GameState`).
 	_torche = false
@@ -332,7 +336,8 @@ func avancer(delta: float, position: Vector2, vitesse: float = VITESSE_DE_MARCHE
 	# la machine à états ne le défait pas, la mémoire ne le redirige pas, et la patrouille n'en tire pas d'autre.
 	var en_repli := _repli_actif
 	# En combat le bot tient sa place : il se tourne et tire (S3). Il ne reprend la marche qu'en perdant sa cible de vue.
-	if etat == Etat.COMBAT and not en_repli:
+	# S9b : sauf s'il s'approche, parce que son arme n'y porte pas encore (`_gerer_l_engagement`) : il marche alors vers ce qu'il voit.
+	if etat == Etat.COMBAT and not en_repli and not _en_approche:
 		_mouvement = Vector2.ZERO
 		return
 	var ici := _case_de(position)
@@ -529,6 +534,7 @@ func _penser(delta: float, corps: Node2D) -> void:
 	if bool(perception.derniere_vue.get("vu", false)):
 		_derniere_vue = maintenant
 	_choisir_l_etat(corps, maintenant, memoire)
+	_gerer_l_engagement(corps, maintenant, memoire)
 	_viser(delta, corps, memoire)
 	_gerer_le_tir(corps, maintenant, memoire)
 	_gerer_la_recharge(corps, maintenant)
@@ -586,6 +592,20 @@ func _entrer_dans(nouveau: int, corps: Node2D) -> void:
 		_rafale_faite = 0
 
 
+## L'engagement (S9b) : en combat, le bot dont l'arme ne porte pas jusqu'à sa cible s'en approche, sur le chemin de la recherche, et ne s'arrête
+## qu'à `distance_engagement_px` de la place qu'il VOIT (la mémoire : jamais la vraie place). Un profil qui n'en dit rien (0) tient sa place,
+## comme avant ; hors combat, ce sont l'enquête et la recherche qui marchent.
+func _gerer_l_engagement(corps: Node2D, maintenant: float, memoire: MemoireBot) -> void:
+	if profil.distance_engagement_px <= 0.0 or etat != Etat.COMBAT or not memoire.connue(maintenant):
+		_en_approche = false
+		return
+	var distance := corps.global_position.distance_to(memoire.position)
+	if _en_approche:
+		_en_approche = distance > profil.distance_engagement_px
+	else:
+		_en_approche = distance > profil.distance_engagement_px + Profil.HYSTERESIS_ENGAGEMENT_PX
+
+
 ## Une nouvelle erreur de visée, dans [-1, 1] : au début d'un engagement et après chaque coup.
 func _tirer_l_erreur() -> void:
 	_erreur_unite = _rng_reflexes.randf_range(-1.0, 1.0)
@@ -639,6 +659,9 @@ func _gerer_le_tir(corps: Node2D, maintenant: float, memoire: MemoireBot) -> voi
 		return
 	# La prudence : sur une zone entendue ou une place perdue de vue, il ne tire que si elle est assez précise pour valoir de se trahir.
 	if etat != Etat.COMBAT and memoire.rayon_a(maintenant) > profil.audace_zone_px:
+		return
+	# S9b : hors de portée de SON arme, il ne tire pas (un tir qui n'atteint rien trahit le tireur pour rien) — il s'approche, si son profil le dit.
+	if profil.distance_tir_max_px > 0.0 and corps.global_position.distance_to(memoire.position) > profil.distance_tir_max_px:
 		return
 	if absf(angle_difference(corps.rotation, _angle_voulu)) > deg_to_rad(profil.tolerance_tir_deg):
 		return
@@ -741,7 +764,9 @@ func _equiper(delta: float, corps: Node2D, maintenant: float, memoire: MemoireBo
 
 	# La fusée et le gadget : ce que le bot lit de sa propre réserve, il le lit chez le nœud d'arbitrage, jamais chez un joueur.
 	var jeu := Equip.jeu_du(corps)
-	var pid := int(corps.get("player_id"))
+	# SA place dans les réserves : celle d'un PNJ de l'aventure (une chacun), le `player_id` sinon (S9b). Un bot qui lirait celle de J2 verrait
+	# la réserve d'un autre — et un boss d'une autre classe croirait n'avoir ni fusées ni gadget.
+	var pid := int(corps.call("slot_de_reserve")) if corps.has_method("slot_de_reserve") else int(corps.get("player_id"))
 	var attente := float(corps.get("shoot_cooldown"))
 	var mains_libres := attente <= 0.0 and not _gachette
 	var situation := {}

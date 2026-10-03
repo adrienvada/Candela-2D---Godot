@@ -1185,7 +1185,9 @@ func _reapparaitre_le_bot() -> void:
 	p2.show_all_visuals()
 	for visuel in ["VisualColored", "VisualDim", "VisualReveal"]:
 		p2.get_node(visuel).show()
-	p2.equip_weapon(weapon_for_index(0))
+	# La classe qu'il PORTE, remise à neuf (munitions pleines) — et non l'index 0 en dur, qui rendait le Parasite à un bot d'une autre classe
+	# dès sa première mort (S9b). Au lancement d'un entraînement il porte l'index 0 : le comportement d'avant n'a pas changé.
+	p2.equip_weapon(p2.current_weapon if p2.current_weapon != null else weapon_for_index(0))
 	_poser_le_bot_loin_du_joueur(false)
 	p2.reset_flashlight_latch()
 	p2.reset_posture()
@@ -2047,6 +2049,9 @@ func _do_start_round(w1_idx: int, w2_idx: int, entrainement: bool = false):
 	_pos_history.clear()
 	# Le stock de fusées repart avec la manche — exécuté chez les deux pairs,
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
+	# S9b : les places des PNJ de l'aventure disparaissent avec ce départ — `AventurePartie` les redonne à des PNJ neufs, une fois la
+	# salle posée (un duel ou un entraînement qui part n'en a aucune).
+	_pnj_slots.clear()
 	_fusees_restantes = [_stock_fusees(p1), _stock_fusees(p2)]
 	_fusees_accumulateur = [0.0, 0.0]
 	# Réserve pleine au départ : rien ne revient (étape 28, point 7).
@@ -2378,20 +2383,41 @@ func _maj_eblouissement(delta: float) -> void:
 	# est un PLAFOND, pas une intégrale — c'est ce qui l'empêche de dériver, et
 	# le max préserve strictement cette propriété : deux torches faibles ne
 	# peuvent pas aveugler à force d'être deux.
-	var gagnante := {p1: null, p2: null}
-	var plafond := {p1: 0.0, p2: 0.0}
+	#
+	# ⚠️ **Les PNJ de l'aventure sont des cibles et des sources comme J1 et J2** (SOLO, S9b) : la boucle ne connaissait que les deux
+	# joueurs, et la torche d'un PNJ n'éblouissait pas le joueur, ni la sienne un PNJ. `_joueurs_en_lice()` rend J1, J2 puis les figurants ;
+	# sans figurant, c'est exactement la liste d'avant.
+	var cibles := _joueurs_en_lice()
+	var gagnante := {}
+	var plafond := {}
+	for cible in cibles:
+		gagnante[cible] = null
+		plafond[cible] = 0.0
 	for src in _sources_eblouissantes():
-		for cible in [p1, p2]:
+		for cible in cibles:
 			var v := _plafond_de_source(espace, src, cible)
 			if v > plafond[cible]:
 				plafond[cible] = v
 				gagnante[cible] = src["noeud"]
 
 	# ── PASSE 2 : intégrer ───────────────────────────────────────────────────
-	p1.integrer_eblouissement(plafond[p1], delta)
-	p2.integrer_eblouissement(plafond[p2], delta)
-	p1.source_eblouissante = gagnante[p1]
-	p2.source_eblouissante = gagnante[p2]
+	for cible in cibles:
+		cible.integrer_eblouissement(plafond[cible], delta)
+		cible.source_eblouissante = gagnante[cible]
+
+
+## J1, J2, puis les PNJ de l'aventure encore dans l'arbre : ceux qui voient, éblouissent et sont éblouis. Vide de figurants, c'est `[p1, p2]`.
+func _joueurs_en_lice() -> Array:
+	var sortie: Array = [p1, p2]
+	for f in figurants:
+		if is_instance_valid(f):
+			sortie.append(f)
+	return sortie
+
+
+## Un PNJ de l'aventure ? (`est_pnj` faux ou absent hors de l'aventure : le duel ne le pose jamais.)
+func _est_pnj(joueur: Node) -> bool:
+	return joueur != null and joueur.get("est_pnj") == true
 
 
 ## Les sources qui peuvent éblouir, cette image.
@@ -2415,7 +2441,7 @@ func _maj_eblouissement(delta: float) -> void:
 ## garantie d'équité, et il faudra l'écrire le jour où le format bougera.
 func _sources_eblouissantes() -> Array:
 	var out: Array = []
-	for j in [p1, p2]:
+	for j in _joueurs_en_lice():
 		if _en_jeu(j) and j.flashlight_on:
 			out.append({
 				"noeud": j,
@@ -2528,6 +2554,11 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 		return 0.0
 	var noeud: Node2D = src["noeud"]
 	if not is_instance_valid(noeud):
+		return 0.0
+	# Les PNJ forment une équipe (leurs balles se traversent, ils ne se blessent pas : S6) : la torche d'un PNJ n'éblouit pas un autre PNJ.
+	# Elle éblouit toujours le joueur, et sa propre rétrodiffusion reste celle de son porteur (le cas de SOI, juste dessous).
+	var porteur_src: Variant = src["porteur"]
+	if porteur_src != null and porteur_src != cible and _est_pnj(porteur_src) and _est_pnj(cible):
 		return 0.0
 
 	# ── Le cas de SOI ────────────────────────────────────────────────────────
@@ -2692,8 +2723,12 @@ func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
 ## gouffre, décision de conception couverte par `test_vision`.
 func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 		cible: Node2D, pid_porteur: int = -1) -> bool:
+	# La hauteur de la lumière d'un PNJ est celle de SA posture : `pid_porteur` (1) désignerait J2, caché, dont la posture n'est pas la sienne (S9b).
+	var h_source := NAN
+	if _est_pnj(source):
+		h_source = MursBas.hauteur_de_posture(source.get("accroupi") == true)
 	return _ligne_de_vue_depuis(espace, source.global_position, cible,
-		source.get_rid(), pid_porteur)
+		source.get_rid(), pid_porteur, h_source)
 
 
 ## La même, depuis un POINT plutôt qu'un corps.
@@ -2807,28 +2842,38 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		return # L'hôte tranche, la valeur est répliquée.
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
 		return
-	var cible: Node2D = null
+	# Qui le flash éblouit : l'autre joueur du duel ; en aventure (S9b), le joueur quand un PNJ tire, et les PNJ quand le joueur tire — jamais
+	# un PNJ qui tire sur un autre PNJ (une équipe, voir `_plafond_de_source`).
+	var cibles: Array = []
 	if tireur == p1:
-		cible = p2
+		cibles.append(p2)
+		for f in figurants:
+			if is_instance_valid(f):
+				cibles.append(f)
 	elif tireur == p2:
-		cible = p1
-	if cible == null or not _en_jeu(cible) or not _en_jeu(tireur):
+		cibles.append(p1)
+	elif _est_pnj(tireur):
+		cibles.append(p1)
+	if cibles.is_empty() or not _en_jeu(tireur):
 		return
 	var eclat := 1.0
 	var arme: WeaponData = tireur.current_weapon
 	if arme:
 		eclat = arme.muzzle_flash_intensity
-	var pic := Eblouissement.pic_de_flash(
-		tireur.global_position.distance_to(cible.global_position), eclat)
-	if pic <= 0.0:
-		return
-	# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
-	# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
-	# l'arrête donc pas ici non plus (étape 28, lot G).
-	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible,
-			int(tireur.player_id)):
-		return
-	cible.apply_dazzle(pic)
+	for cible in cibles:
+		if not _en_jeu(cible):
+			continue
+		var pic := Eblouissement.pic_de_flash(
+			tireur.global_position.distance_to(cible.global_position), eclat)
+		if pic <= 0.0:
+			continue
+		# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
+		# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
+		# l'arrête donc pas ici non plus (étape 28, lot G).
+		if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible,
+				int(tireur.player_id)):
+			continue
+		cible.apply_dazzle(pic)
 
 ## L'index de classe d'une arme, pour le fil — les DIX, et non les quatre d'origine.
 ##
@@ -2932,6 +2977,75 @@ var _pietinement_temps: Array[float] = [0.0, 0.0]
 var _pietinement_fusee: Array = [null, null]
 var _pietinement_pos: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 
+## ── Les réserves des PNJ de l'aventure (SOLO, S9b) ──────────────────────────────────────────────────────────────────────────────
+##
+## Les réserves ci-dessous — fusées, gadget, batterie, recharge d'une minute — sont indexées par une PLACE : 0 pour J1, 1 pour J2, et
+## **2, 3, … pour les PNJ de l'aventure**, une chacun. Elles l'étaient par `player_id`, que tous les PNJ partagent (1) : un boss d'une
+## autre classe que le Parasite prenait la réserve de J2, semée sur la classe de J2 (`_do_start_round`) et non sur la sienne, et un PNJ
+## qui lançait sa fusée vidait celle des autres. Le duel n'y change rien : J1 et J2 gardent leurs places 0 et 1, et le réseau ne les voit
+## pas (aucun RPC ne porte une place ≥ 2 — l'aventure n'a pas de pair).
+##
+## `Player.slot_de_reserve()` dit la place d'un joueur (son `player_id` hors PNJ). **Seul l'indice change** : un gadget d'un PNJ garde
+## `poseur_id` 1, qui règle ses couches, ses ombres et ses sons — il n'y en a que deux rôles —, et porte en plus `slot_reserve`.
+
+## Les PNJ qui ont une place, dans l'ordre : le PNJ de la place `2 + i` est `_pnj_slots[i]`.
+var _pnj_slots: Array = []
+
+
+## Le joueur qui occupe une place de réserve, ou `null` (place vide, PNJ libéré).
+func _joueur_de_reserve(slot: int) -> Node:
+	if slot == 0:
+		return p1
+	if slot == 1:
+		return p2
+	var i := slot - 2
+	if i >= 0 and i < _pnj_slots.size() and is_instance_valid(_pnj_slots[i]):
+		return _pnj_slots[i]
+	return null
+
+
+## La place de réserve d'un joueur : celle d'un PNJ inscrit, son `player_id` sinon. Un nœud qui ne sait pas la dire (un corps factice de
+## suite) est lu à son `player_id`, comme avant S9b.
+func _slot_de(joueur: Node) -> int:
+	if joueur != null and joueur.has_method("slot_de_reserve"):
+		return int(joueur.call("slot_de_reserve"))
+	return int(joueur.get("player_id"))
+
+
+## Donne sa PROPRE réserve à un PNJ, semée sur SA classe : fusées pleines, gadget disponible, batterie pleine. À appeler une fois le PNJ armé
+## (`equip_weapon`), car la réserve se lit sur l'arme qu'il porte. Rend sa place. `AventurePartie` l'appelle pour chaque PNJ d'une salle,
+## à chaque salle ET à chaque reprise : des PNJ neufs, des réserves neuves — la salle recommencée les remet à neuf.
+func inscrire_un_pnj(pnj: Node) -> int:
+	var slot := _fusees_restantes.size()
+	_pnj_slots.append(pnj)
+	pnj.set("slot_reserve", slot)
+	_fusees_restantes.append(_stock_fusees(pnj))
+	_fusees_accumulateur.append(0.0)
+	_fusees_attente.append(-1.0)
+	_fusees_profil.append(_profil_fusees(pnj))
+	_gadgets_poses_par.append(0)
+	_gadget_attente.append(0.0)
+	_batterie.append(1.0)
+	return slot
+
+
+## Rend leurs places : les réserves reviennent à deux entrées (J1, J2). Appelée quand les PNJ s'en vont (salle recommencée, sortie) ;
+## `_do_start_round` le fait aussi, en ceinture.
+func liberer_les_pnj() -> void:
+	for pnj in _pnj_slots:
+		if is_instance_valid(pnj):
+			pnj.set("slot_reserve", -1)
+	_pnj_slots.clear()
+	if _fusees_restantes.size() > 2:
+		_fusees_restantes.resize(2)
+		_fusees_accumulateur.resize(2)
+		_fusees_attente.resize(2)
+		_fusees_profil.resize(2)
+		_gadgets_poses_par.resize(2)
+		_gadget_attente.resize(2)
+		_batterie.resize(2)
+
+
 func fusee_disponible(pid: int) -> bool:
 	if pid < 0 or pid >= _fusees_restantes.size():
 		return false
@@ -2947,7 +3061,7 @@ func fusee_disponible(pid: int) -> bool:
 	# réamorcent pas le compteur. Y compter ferait attendre une minute à zéro un
 	# hôte qui aurait tiré sa fusée pendant le match précédent.
 	if sandbox_mode and not training_mode:
-		return _stock_fusees(p1 if pid == 0 else p2) > 0
+		return _stock_fusees(_joueur_de_reserve(pid)) > 0
 	return _fusees_restantes[pid] > 0
 
 
@@ -2994,7 +3108,7 @@ func attente_fusee(pid: int) -> float:
 	# formule y rendrait toujours la période entière.
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return _fusees_attente[pid]
-	var profil = _profil_fusees(p1 if pid == 0 else p2)
+	var profil = _profil_fusees(_joueur_de_reserve(pid))
 	if profil == null:
 		return -1.0
 	return profil.attente_restante(_fusees_restantes[pid], _fusees_accumulateur[pid])
@@ -3013,8 +3127,11 @@ func _accorder_fusees(delta: float) -> void:
 		# Le client ne recharge rien ; il décompte l'attente que l'hôte lui a dite.
 		_decompter_attente_fusees(delta)
 		return
-	for pid in 2:
-		var joueur: Node = p1 if pid == 0 else p2
+	for pid in _fusees_restantes.size():
+		var joueur: Node = _joueur_de_reserve(pid)
+		# Une place de PNJ dont le corps est parti n'a plus de classe à suivre (`liberer_les_pnj` l'aura rendue).
+		if joueur == null and pid >= 2:
+			continue
 		var profil = _profil_fusees(joueur)
 		if profil != _fusees_profil[pid]:
 			# Changement de classe : on resème, y compris pendant le décompte.
@@ -3054,7 +3171,7 @@ func _decompter_attente_fusees(delta: float) -> void:
 ## ont bougé, jamais passée par l'appelant : trois sites annoncent (changement de
 ## classe, regain, lancer), un seul calcule.
 func _annoncer_stock_fusees(pid: int, stock: int) -> void:
-	var profil = _profil_fusees(p1 if pid == 0 else p2)
+	var profil = _profil_fusees(_joueur_de_reserve(pid))
 	var attente: float = profil.attente_restante(stock, _fusees_accumulateur[pid]) \
 		if profil != null else -1.0
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
@@ -3080,14 +3197,15 @@ func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 	# lui, est prédit localement par player.gd — comme le cooldown de tir.
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
-	if not fusee_disponible(shooter.player_id): return
+	# S9b : la réserve est celle de la PLACE du tireur — un PNJ n'entame pas celle de J2 (voir « Les réserves des PNJ »).
+	var pid_f: int = _slot_de(shooter)
+	if not fusee_disponible(pid_f): return
 	var graine := randi()
-	var pid_f: int = shooter.player_id
 	var avant: int = _fusees_restantes[pid_f]
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		rpc_spawn_fusee.rpc(shooter.player_id, pos, rot, graine)
 	else:
-		_do_spawn_fusee(shooter.player_id, pos, rot, graine)
+		_do_spawn_fusee(pid_f, pos, rot, graine)
 	# Étape 28, point 7 — le LANCER change la réserve, donc l'attente : depuis une
 	# réserve pleine, l'accumulateur part de zéro (`FlareProfile.avancer`) et la
 	# prochaine revient dans une période entière. Sans cet envoi, le client verrait sa
@@ -3111,13 +3229,16 @@ func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 	if (not sandbox_mode or training_mode) and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
 		_fusees_restantes[shooter_id] = maxi(0, _fusees_restantes[shooter_id] - 1)
 	var f := Fusee.new()
+	# `shooter_id` est ici une PLACE de réserve (S9b) ; la fusée, elle, ne connaît que deux rôles — le son qu'elle émet est celui de J1 ou de
+	# l'adversaire, et un PNJ est l'adversaire (`player_id` 1).
+	var role := shooter_id if shooter_id < 2 else 1
 	# Nom explicite ET unique : la graine, partagée par le RPC, l'est aussi —
 	# deux fusées en bac à sable ne se disputent jamais un nom auto-généré.
-	f.name = "FuseeJ%d_%d" % [shooter_id + 1, graine]
+	f.name = "FuseeJ%d_%d" % [role + 1, graine]
 	f.depart = pos
 	f.direction = Vector2(cos(rot), sin(rot))
 	f.graine = graine
-	f.shooter_id = shooter_id
+	f.shooter_id = role
 	f.joueurs = [p1, p2]
 	bullet_container.add_child(f)
 
@@ -3214,7 +3335,7 @@ func _stock_gadget(joueur: Node) -> int:
 func gadget_disponible(pid: int) -> bool:
 	if pid < 0 or pid >= _gadgets_poses_par.size():
 		return false
-	var stock := _stock_gadget(p1 if pid == 0 else p2)
+	var stock := _stock_gadget(_joueur_de_reserve(pid))
 	if stock <= 0:
 		return false
 	if sandbox_mode and not training_mode:
@@ -3230,7 +3351,9 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
 	var pid: int = poseur.player_id
-	if not gadget_disponible(pid):
+	# S9b : la recharge et la batterie sont celles de la PLACE du poseur ; `pid` reste son rôle (couches, ombres, noms).
+	var slot: int = _slot_de(poseur)
+	if not gadget_disponible(slot):
 		return
 	var classe := poseur.current_weapon as ClassData
 	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
@@ -3250,13 +3373,13 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 	# Tirée ICI, chez l'hôte, et portée par le RPC : deux pairs qui tireraient
 	# chacun la leur verraient deux pannes différentes.
 	var graine := randi()
-	var actif_initial := _batterie[pid] >= GadgetGresillement.SEUIL_RALLUMAGE
+	var actif_initial := _batterie[slot] >= GadgetGresillement.SEUIL_RALLUMAGE
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		rpc_spawn_gadget.rpc(pid, point, rot, classe.gadget.slug, _gadgets_poses, graine,
-			actif_initial, _batterie[pid])
+			actif_initial, _batterie[slot])
 	else:
 		_do_spawn_gadget(pid, point, rot, classe.gadget.slug, _gadgets_poses, graine,
-			actif_initial, _batterie[pid])
+			actif_initial, _batterie[slot], slot)
 
 
 ## Où un gadget de `slug` se plante, posé par `poseur` depuis `depuis` vers `rot` :
@@ -3495,10 +3618,16 @@ func rpc_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 func gadget_basculable_de(pid: int) -> Node:
 	for g in get_tree().get_nodes_in_group("gadgets"):
 		if is_instance_valid(g) and not g.is_queued_for_deletion() \
-				and g.poseur_id == pid and g.has_method("est_basculable") \
+				and _slot_du_gadget(g) == pid and g.has_method("est_basculable") \
 				and g.est_basculable():
 			return g
 	return null
+
+
+## La place de réserve de son poseur : `slot_reserve` si la pose l'a posée (S9b), `poseur_id` sinon (un gadget fabriqué à la main).
+func _slot_du_gadget(g: Node) -> int:
+	var slot := int(g.get("slot_reserve")) if g.get("slot_reserve") != null else -1
+	return slot if slot >= 0 else int(g.poseur_id)
 
 
 ## La batterie d'un joueur, pour le HUD, de 0 à 1.
@@ -3547,7 +3676,7 @@ func basculer_gadget(joueur: Node2D) -> void:
 		return
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
-	var pid: int = joueur.player_id
+	var pid: int = _slot_de(joueur)
 	var g = gadget_basculable_de(pid)
 	if g == null:
 		return
@@ -3634,7 +3763,7 @@ func rpc_detruire_gadget(nom: String, cause: int) -> void:
 func _maj_reserves_gadgets(delta: float) -> void:
 	if not round_active and not sandbox_mode:
 		return
-	for pid in 2:
+	for pid in _gadget_attente.size():
 		if _gadget_attente[pid] > 0.0:
 			_gadget_attente[pid] = maxf(0.0, _gadget_attente[pid] - delta)
 		var g = gadget_basculable_de(pid)
@@ -3648,10 +3777,14 @@ func _maj_reserves_gadgets(delta: float) -> void:
 			_annoncer_etat_gadget(pid, String(g.name), false)
 
 
+## `slot` (S9b) : la place de réserve du poseur — celle d'un PNJ (2, 3, …) ou `pid` s'il est absent (J1, J2, et tout appel de suite ou de
+## banc). Jamais portée par un RPC : un PNJ n'existe que hors ligne.
 func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int,
-		graine: int = 0, actif_initial: bool = true, batterie_poseur: float = -1.0) -> void:
+		graine: int = 0, actif_initial: bool = true, batterie_poseur: float = -1.0, slot: int = -1) -> void:
 	if not round_active and not sandbox_mode:
 		return
+	if slot < 0:
+		slot = pid
 	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
 	var chemin := String(fiche.get("script", ""))
 	if chemin.is_empty():
@@ -3672,11 +3805,14 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	g.slug = slug
 	g.name = "GadgetJ%d_%d" % [pid + 1, numero]
 	g.poseur_id = pid
+	g.slot_reserve = slot
 	g.global_position = pos
 	# `angle_pose` est posé par le constructeur de la sous-classe : on lit donc
 	# l'objet, on ne redit pas ici ce qu'il sait déjà de lui-même.
 	g.rotation = rot + g.angle_pose
-	var classe := (p1 if pid == 0 else p2).current_weapon as ClassData
+	# La classe est celle du POSEUR, pas de J2 : un boss Fumiste pose la suie du Fumiste (S9b).
+	var poseur_joueur := _joueur_de_reserve(slot)
+	var classe := (poseur_joueur.current_weapon if poseur_joueur != null else (p1 if pid == 0 else p2).current_weapon) as ClassData
 	if classe != null and classe.gadget != null:
 		# Le drapeau d'éblouissement et la durée de vie viennent du PROFIL, par
 		# instance — décision d'Adrien du 2026-09-09 : on doit pouvoir éteindre
@@ -3697,7 +3833,7 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	# toute la manche : même règle pour tous. Sans effet sur les gadgets qui durent
 	# moins d'une minute.
 	for ancien in get_tree().get_nodes_in_group("gadgets"):
-		if is_instance_valid(ancien) and ancien.poseur_id == pid:
+		if is_instance_valid(ancien) and _slot_du_gadget(ancien) == slot:
 			ancien.queue_free()
 	if "graine" in g:
 		g.set("graine", graine)
@@ -3705,8 +3841,8 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	# chez chaque pair, ils pouvaient différer — la batterie intégrée localement
 	# dérive d'un demi-aller-retour — et la bobine naissait allumée chez l'un,
 	# éteinte chez l'autre, sans rien pour les réaligner. Revue du 2026-09-10.
-	if batterie_poseur >= 0.0 and pid >= 0 and pid < _batterie.size():
-		_batterie[pid] = batterie_poseur
+	if batterie_poseur >= 0.0 and slot >= 0 and slot < _batterie.size():
+		_batterie[slot] = batterie_poseur
 	if g.est_basculable():
 		# Posée ALLUMÉE si la batterie le permet : la pose est le premier allumage.
 		g.set("actif", actif_initial)
@@ -3719,12 +3855,13 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	# Le même conteneur que les balles et les fusées : c'est lui que la manche
 	# purge, et le rejoindre suffit donc à ne pas survivre à la manche.
 	bullet_container.add_child(g)
-	if pid >= 0 and pid < _gadgets_poses_par.size():
-		_gadgets_poses_par[pid] += 1
+	if slot >= 0 and slot < _gadgets_poses_par.size():
+		_gadgets_poses_par[slot] += 1
 		# Étape 28, lot E — une bobine posée ÉTEINTE n'agit pas : pose comptée, pas
-		# d'effet. `actif_initial` est celui de l'HÔTE, porté par le RPC.
+		# d'effet. `actif_initial` est celui de l'HÔTE, porté par le RPC. (La télémétrie ne connaît que
+		# deux rôles : un PNJ y compte comme l'adversaire, et l'aventure n'archive rien.)
 		_telemetrie.pose(pid, _t_telemetrie(), not g.est_basculable() or actif_initial)
-		_gadget_attente[pid] = PERIODE_RECHARGE_GADGET
+		_gadget_attente[slot] = PERIODE_RECHARGE_GADGET
 		# ⚠️ Chez le CLIENT, une recharge RACCOURCIE d'un aller-retour. Il reçoit la
 		# pose un demi-aller-retour après l'hôte, et sa prochaine commande mettra un
 		# demi-aller-retour de plus à arriver : pour que les deux pairs jugent le
@@ -3732,7 +3869,7 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 		# aller-retour AVANT l'hôte. Sans ça, l'hôte acceptait une pose que le client
 		# n'avait pas prédite, et le désarmement manquait à sa prédiction.
 		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-			_gadget_attente[pid] = maxf(0.0,
+			_gadget_attente[slot] = maxf(0.0,
 				PERIODE_RECHARGE_GADGET - NetworkManager.rtt_ms / 1000.0)
 
 
