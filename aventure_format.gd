@@ -321,7 +321,7 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 			e.append("%s : profil inconnu « %s » — un nom de ProfilBot.noms_du_catalogue() (immobile_sourd_aveugle, ronde_voit_lent…), ou « boss »" % [ctx, nom])
 			return
 		deplacement = profil.deplacement
-		if bool(d.get("equipe", false)) and not profil.agit:
+		if (d.get("equipe", false) is bool and d.get("equipe", false)) and not profil.agit:
 			e.append("%s : « equipe » est refusée sur « %s » — un PNJ sourd et aveugle n'agit pas, il n'aurait aucun usage de ses outils" % [ctx, nom])
 	# Ses points de ronde et sa zone, selon son déplacement : chacun DOIT exister quand il sert, et ne doit pas exister sinon.
 	if deplacement == ProfilT.Deplacement.RONDE:
