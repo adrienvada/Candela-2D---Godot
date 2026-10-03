@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-02
+> Dernière mise à jour : 2026-10-03
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3301,6 +3301,12 @@ chantier).
 **Et `duo_killcam`, le même soir**, sur S5 (`95ea71c`), pendant que le sous-agent de S4 faisait tourner ses duels : « la manche n'a
 jamais commencé côté client » — même symptôme, même cause ; relancé seul (`./tools/run_duo.sh --killcam`), trois fois sur trois vert.
 
+**Et `duo_ralenti` puis `duo_reconnexion_tardive`, le 2026-10-03**, sur S6 (`57514a2`), sous une charge moyenne de 11 à 12 pour quatre
+cœurs (deux sous-agents au travail) : `duo_ralenti` relancé seul passe trois fois sur trois ; `duo_reconnexion_tardive` rougit deux fois
+sur trois sous la même charge — **et une fois sur trois sur la base d'avant S6 (`f113da8`)**, ce qui le range dans la même fragilité.
+La CI GitHub, sur une machine au repos, a passé `57514a2` au vert. Règle tenue : un rouge de `duo_*` pris sous charge se compare à la
+base sous la même charge avant d'être attribué.
+
 ### Une suite qui monte `main.tscn` ne se termine pas quand `game_state.gd` ne compile pas : elle attend, des heures (2026-10-02)
 
 Chantier SOLO, S3. Un `var cran := ui.selected_training_cran()` (`ui` est un `Node` non typé : le `:=` ne sait pas inférer) a fait échouer le
@@ -3344,6 +3350,20 @@ Même banc. `Duel.monter()` instancie `main.tscn` s'il n'en tient pas déjà un 
 salle montait un deuxième jeu à côté du premier — deux `GameState` dans l'arbre, des duels qui ne gagnaient plus jamais (0/4 pour le PNJ sourd et
 aveugle, le plus facile qui soit), sans une ligne d'erreur. Une garde qui échoue « partout, sur le plus simple » se suspecte avant le code
 qu'elle juge. Le banc de la suite est maintenant UN objet, tenu par la suite.
+
+### `has_method("occultation_pour")` est vrai de TOUS les gadgets : le socle la définit — et l'aveuglement « sous un gadget qui bouche la lumière » de S2 valait pour n'importe lequel (2026-10-03)
+
+Chantier SOLO, S9. `PerceptionBotNoeud._gadget_non_modelise()` (S2) rendait le bot aveugle si un gadget portait `occulte_la_lumiere` **ou** `has_method("facteur_de_lampe")` — que `GadgetBase` définit pour tous (elle rend 1). La ROADMAP
+disait « tant qu'UN gadget qui bouche ou étouffe la lumière est posé » ; le code disait « tant qu'un gadget quelconque est posé ». Une mine, une poudre, une bobine, jamais éteintes jusqu'à leur mort (aucune pour trois d'entre elles),
+laissaient un bot sans vue pour la manche. Aucune suite ne le voyait : la garde de S2 posait un faux gadget qui avait `occulte_la_lumiere` et rien d'autre. **Les dix classes du vrai jeu l'ont montré** (« aveugle : true » sous la mine). Le premier
+remplacement (`has_method("occultation_pour")`, pour reconnaître un volume) retombait dans le même piège : le socle la définit aussi. Un type se reconnaît à un membre que SEUL le type porte (`opacite`, pour `GadgetVolume`, qu'un fichier chargé
+en `--script` ne peut pas nommer) — et un test qui doit prouver « sauf les volumes » le prouve sur les vrais gadgets, pas sur un faux qui a juste le bon nom de méthode. Même famille : le garde `has_method()` de CLAUDE.md.
+
+### Rendre la réserve AVANT de poser le bot neuf, c'est la lui rendre à celui d'avant (2026-10-03)
+
+Chantier SOLO, S9, `tools/test_bot_equipement.gd`. Une mise en scène du vrai jeu qui remet à zéro la recharge d'une minute puis installe le bot de la classe suivante : dans les images qui séparent les deux gestes, **le bot de la scène d'avant — sa mémoire
+pleine d'une cible, sa règle toujours vraie — repose son gadget**, et la scène suivante trouve « un gadget du poseur 2 » qui n'est pas celui de sa classe (quatre scènes sur dix, sans erreur). Remède : poser le bot neuf, PUIS rendre la réserve ; éteindre la lumière de la scène d'avant
+et lui laisser quarante-cinq images avant de toucher à quoi que ce soit. Même famille : « Un corps libéré par `queue_free()` reste dans le groupe `players` ».
 
 ### Un corps libéré par `queue_free()` reste dans le groupe `players` jusqu'à la fin de l'image : le bot suivant le prend pour son adversaire (2026-10-02)
 
@@ -31650,9 +31670,9 @@ l'Incendiaire, le 6 la Sentinelle, le 7 l'Occulteur, le 8 l'Allumeur, le 9 le Sp
 ensuite ce que c'est ») : l'initiation (0), puis dix chapitres (1 à 10). Le contenu du chapitre 10 et ce qu'on y gagne
 restent à définir, sans bloquer aucune étape avant S8.
 
-**Le boss porte sa classe, pas encore son gadget.** Un bot ne pose de gadget qu'à partir de S9 ; d'ici là le boss du
-chapitre 0 a l'arme, la torche et le root du Parasite, sans son gadget. Le dire au joueur serait mentir sur la classe qu'il
-gagne : S9 doit précéder la publication des chapitres, ou le boss attend.
+**Le boss porte sa classe, et son gadget depuis S9** (2026-10-03). Jusque-là le boss du chapitre 0 avait l'arme, la torche et le root
+du Parasite, sans son gadget. S9 donne au bot une règle par gadget, pour les dix : le boss (`ProfilBot.boss()`, le profil NORMAL) se sert du gadget de la classe
+qu'il porte. ⚠️ **Mais l'arme d'une autre classe n'est pas réglée** : voir « Ce qui est mesuré par classe » (S9).
 
 **Le déblocage des classes est propre au solo.** Il ne touche ni `RankLoadout` ni le rang : en ligne, seul le rang
 débloque (Phase 7, règle du miroir en classé). Les matchs solo n'alimentent pas l'ELO ; leur archive dans
@@ -31728,7 +31748,8 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    « S6 » ci-dessous. **Jamais jouée à la main, coût non mesuré** : le moteur est prouvé par des suites et des images fixes.
 7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss.
 8. **S8 — les chapitres 1 à 9**, un par lot.
-9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent).
+9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent). ✅ **FAITE le 2026-10-03** — voir « S9 » ci-dessous
+   (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe ».
 
 **Fichiers.** Neufs, en propre au chantier : le fournisseur d'entrées du bot, son profil, sa perception, le plafonnier,
 le moteur de l'aventure et sa progression, `assets/solo/`. **Partagés, à demander avant d'écrire** (voir
@@ -32658,6 +32679,170 @@ entre deux luminaires (le sang et le voile rouge sont ceux de ses balles : il ti
 - **La republication du suivi d'Adrien** (artefact du projet) est à faire par la session centrale : delta dans le rapport de S6.
 
 **À trancher par Adrien.** (1) Les durées du carton et des délais (2,4 / 1,4 / 1,8 / 3,4 s), à juger en jouant. (2) Les chapitres pas écrits : **une ligne « À VENIR »** (choix actuel) ou **cachés** ? (3) Le chapitre 0 se joue toujours en Parasite PRÊTÉ, même quand on a des classes en poche — voulu pour l'initiation ? (4) Les slugs du code ou les noms de la ROADMAP dans les fichiers ? (5) Les PNJ sont **solidaires** (leurs balles se traversent) : un PNJ ne s'abrite pas derrière un autre. (6) Un PNJ abattu **disparaît** sans dépouille. (7) Plafonds de huit PNJ et huit plafonniers par salle. (8) Une illustration neuve pour l'écran de l'aventure.
+
+### S9 — FAITE le 2026-10-03 : le bot s'équipe — sa torche, sa prudence, sa fusée, le gadget de sa classe
+
+**Ce qui existe.** `equipement_bot.gd` (`EquipementBot`, des fonctions pures : les RÈGLES des outils), `profil_bot.gd` gagne l'axe **équipement**
+(`torche_tactique`, `torche_en_patrouille`, `torche_rayon_fouille_px`, `repli_apres_tir_s`, `accroupi_pres_du_son_px`, `lance_des_fusees`,
+`utilise_le_gadget`, `est_equipe()`, et la table `equiper_pour_le_palier`), `bot_input_provider.gd` gagne `_equiper()` et rend enfin
+`is_flare_pressed()`, `is_gadget_pressed()`, `is_crouch_pressed()` et une torche qui est une COMMANDE (`is_flashlight_pressed()`),
+`perception_bot.gd` / `perception_bot_noeud.gd` gagnent la **perception sous gadget** (voir plus bas). Gardes : `tools/test_bot_equipement.gd`
+(286 vérifications, inscrite à `run_suites.sh`, à pas d'image fixe) et sa bibliothèque `tools/flux_commandes_bot.gd` ; le banc de S4
+(`banc_bot_difficulte.gd`, `banc_bot_duel.gd`) gagne `--classe=N` et `--sans-equipement`, et rend la recharge d'une minute et la réserve de fusées
+entre deux duels. **`game_state.gd`, `ui.gd`, `player.gd`, `protocol.gd` n'ont pas bougé** : rien ne transite, aucun `if transport == …`. Seul
+`perception_bot_noeud.gd` (fichier de S6) est touché — la fonction `_lire_les_gadgets` et un appel ; `_adversaire()` n'est pas réécrite.
+
+**La règle qui prime : s'équiper ne donne AUCUNE information.** Chaque règle ne lit que la MÉMOIRE du bot (la place vue, ou la zone entendue —
+jamais la vraie place), son état, SON corps (cap, vie, munitions, classe), sa PROPRE réserve (fusées, gadget : un joueur les lit à son HUD) et la
+carte. **`equipement_bot.gd` ne contient ni `players`, ni `get_nodes_in_group` (sauf le groupe `game_state`, le nœud d'arbitrage : `jeu_du()`), ni
+`global_position`, ni `flashlight`** — la suite le lit au texte (code, commentaires exclus), et celui du fournisseur garde ses interdits de S3. Et ce que
+l'outil fait AU bot, il le lui fait comme à un joueur : la torche qu'il allume le trahit, la fusée qu'il lance l'éclaire aussi (d'où sa distance
+minimale), un gadget qui bouche la lumière le gêne.
+
+#### Les règles, outil par outil
+
+| Outil | Règle (chiffres de DÉPART, passés au banc) | Pourquoi |
+|---|---|---|
+| **Torche** | tactique : **éteinte tant qu'il n'a rien perçu** ; en enquête et en recherche, **éteinte pendant qu'il s'approche, allumée à moins de `torche_rayon_fouille_px` de la place qu'il fouille** (hystérésis 60 px) ; en combat **inchangée** (allumée elle reste, éteinte il ne l'allume pas) ; **éteinte en repli** | un bot prudent ne se trahit pas pour rien ; éteindre en plein tir lui ferait perdre la cible que la lampe révèle (il clignoterait de combat en recherche) |
+| **Posture** | accroupi en ENQUÊTE sur une trace d'OUÏE à moins de `accroupi_pres_du_son_px` (hystérésis 40 px) ; jamais en combat, patrouille, recherche | le pas accroupi est le plus discret du jeu (niveau 0.8) ; il avance alors au quart de sa vitesse, et son anti-blocage le sait |
+| **Repli** | après chaque rafale, `repli_apres_tir_s` secondes : il s'éloigne de 3 à 7 cases, à plus de 60° de l'axe vers sa mémoire, de préférence là où un tireur posé à cet endroit ne le verrait pas (la carte, lue comme un joueur), torche éteinte, **sans tirer** ; sans effet sur un bot IMMOBILE ni hors de sa ZONE | un tir trahit (éclair, bruit) : niveau 0.7 |
+| **Fusée** | en ENQUÊTE, sur une trace d'OUÏE nette (rayon ≤ 320 px, confiance ≥ 0,25), **à 240–470 px**, le corps tourné vers elle (≤ 10°), un chemin sans mur, **jamais si la cible est vue**, une fusée en réserve et les mains libres | elle sert à VOIR ce qu'on n'a fait qu'entendre ; 240 : elle s'allume à ~450 px et éclaire son lanceur (« on ne la lance pas à ses pieds ») ; 470 : portée libre du vol (v²/2f = 450 px) |
+| **Gadget** | une ligne par gadget (`EquipementBot.GADGETS`), une seule fonction `gadget_voulu` : voir le tableau suivant. Socle commun : jamais en patrouille, face à la place visée (≤ 25°), chemin dégagé, réserve (recharge d'une minute) lue chez `GameState`, mains libres ; un appui de 0,1 s, réessai après 1,2 s | le gadget se plante à 96 px devant lui : il se tourne d'abord ; un bot qui n'a rien perçu ne pose rien |
+
+#### Les dix gadgets, une règle chacun
+
+| Classe | Gadget | Quand (états ; distance de la place visée) | Où / ensuite | Pourquoi |
+|---|---|---|---|---|
+| Parasite | grésillement | enquête, recherche, combat ; 150–420 px | 96 px devant lui ; **la même touche l'ALLUME** quand la torche de la cible est vue à ≤ 330 px, l'éteint quand rien ne le justifie (`bobine_voulue`) | la bobine ne sert que face à une lampe ; la batterie est une réserve de 14 s |
+| Illusionniste | leurre | combat, cible VUE ; 160–600 px ; **juste après une rafale** (0,8 s) | 96 px devant lui | le faux corps prend le coup suivant pendant que le bot change de place |
+| Terrassier | poussière | enquête, recherche, **cible NON vue** ; 200–380 px | 96 px devant lui | qui s'engage dans le nuage ne voit plus loin ; en combat il boucherait sa propre vue |
+| Braconnier | torche fantôme | enquête, non vue ; 250–450 px | 96 px devant lui | un appât à distance pendant que le bot reste dans le noir |
+| Fumiste | cartouche de suie | combat, cible vue ; 120–400 px ; **il vient d'être touché** (2 s) | 96 px devant lui, **puis il entre dans son nuage** (4 s) | la suie ne cache que ceux qui s'y tiennent |
+| Incendiaire | nappe de braises | combat, cible vue ; 150–420 px | 96 px devant lui | un sol qu'on ne traverse plus, posé là où il tient sa place |
+| Sentinelle | poudre de contact | enquête, non vue ; 200–450 px | 96 px devant lui | elle veille : chaque pas qui la traverse luit |
+| Occulteur | ombre habitée | enquête, recherche, combat ; la **torche de la cible VUE** ; 150–450 px | 96 px devant lui | la plaque coupe le faisceau et projette l'ombre d'un homme absent |
+| Allumeur | mine au magnésium | enquête, recherche, non vue ; 250–450 px | 96 px devant lui, **puis il RECULE** (2,5 s, le dos à la menace) | le flash aveugle dans 460 px, poseur compris |
+| Spectre | voile | recherche, combat ; la **torche de la cible VUE** ; 150–400 px | 96 px devant lui | la bâche casse le faisceau qui le cherche (les balles la traversent) |
+
+**Aucun gadget n'a la règle « ne pas poser »** : les dix se posent. Mais trois sont sommaires, et c'est dit : la **poudre** (le bot ne lit pas
+ses traces — le modèle de vue ne les connaît pas : voir moins que la lumière), la **torche fantôme** et la **poussière** (leur effet sur le duel n'est
+pas mesuré). Les règles sont posées pour ne pas faire de mal, pas pour optimiser ; elles se jugent en jouant.
+
+#### La perception sous gadget — affinée, sans jamais voir plus que la lumière
+
+**Ce que S2 documentait était faux.** « Tant qu'UN gadget qui bouche ou étouffe la lumière est posé, le bot est aveugle » : le code testait
+`has_method("facteur_de_lampe")`, que le SOCLE de tous les gadgets définit. **Le bot était donc aveugle sous N'IMPORTE QUEL gadget — une mine, une poudre
+comprises — jusqu'à ce que le gadget meure** (jamais, pour la poudre, la bobine, le voile, l'ombre, la mine) : un bot qui posait son gadget perdait la
+vue pour la manche. Le même piège a failli se répéter pour `occultation_pour` (le socle la définit aussi) ; le test d'un volume est maintenant la présence
+d'une `opacite` (`GadgetVolume`, qu'un fichier chargé en `--script` ne peut pas nommer).
+- **Les gadgets à OCCLUDER** (voile, ombre habitée, leurre — son étoile et son torse —, torche fantôme) entrent dans `monde["obstacles"]` : leur polygone
+  d'ombre, en coordonnées du monde, est un mur mince que ni la ligne de vue du bot ni le trajet d'une lumière ne traversent (`PerceptionBot.obstacle_sur`,
+  « du côté du noir » : un point DANS le polygone, un frôlement à 0,5 px coupent). Le polygone est celui que le moteur ombre.
+- **Les gadgets qui ne touchent pas à la lumière** (mine, braises, poudre, grésillement — dont l'effet sur une lampe est déjà dans l'énergie qu'elle
+  rend, lue par `_lampe_brule`) ne changent rien.
+- **Restent AVEUGLES** : la suie et la poussière (un nuage que le modèle ne sait pas rendre : 9 s et 7,5 s), et tout gadget qui bouche la lumière sans
+  qu'on sache lire son ombre.
+- **Preuves** : 600 segments au hasard contre un échantillonnage fin (aucun manqué) ; et **contre le MOTEUR** dans le vrai jeu — 400 segments par gadget,
+  un rayon de physique qui rencontre le voile ou la plaque d'ombre est toujours un segment que le modèle tient pour coupé, et réciproquement hors frôlement.
+  **Non prouvé : le banc contre les capteurs** (`banc_perception_bot`, fenêtre réelle) n'a pas été rejoué avec un gadget posé — il ne met en scène
+  aucun gadget, et l'ombre d'un occluder sur un corps n'a été mesurée au capteur que par S5 pour un mur, jamais pour un voile. Le changement est donc gardé
+  par la géométrie et par le moteur de physique, pas par la lumière rendue.
+
+#### Le réglage au banc — avant / après
+
+Le banc de S4, **mêmes graines (401-416), mêmes cartes, mêmes quatre comportements**, 384 duels par difficulté, joueur type de référence (0,25 s) :
+
+| Victoire du joueur type | FACILE | NORMAL | DIFFICILE | cibles |
+|---|---|---|---|---|
+| S4, rejoué sur ce code avant S9 | 79 % | 54 % | 29 % | 80 / 55 / 30 |
+| **premier jet de S9** (perception aveugle sous tout gadget ; torche 300/380 px, repli 1 s partout) | 79 % | 47 % | 41 % | |
+| perception affinée, mêmes réglages | 79 % | 62 % | 37 % | |
+| **réglage retenu** | **79 %** | **55 %** | **34 %** | |
+
+Ce que le banc a appris, et qui ne se devinait pas :
+- **Le premier jet donnait DIFFICILE plus facile que prévu (41 %) et NORMAL plus dur (47 %)** : tout venait de la cécité sous gadget. Un NORMAL qui posait sa bobine ne
+  voyait plus rien (62 % de ses tirs partaient « sur un son », contre 15 % ensuite) ; affiner la perception a ramené les deux ordres de grandeur.
+- **Le repli est le bouton qui pèse** : un bot qui ne tire pas pendant son repli tire moins. NORMAL à 24 graines : repli 1,0 s → 63 %, 0,7 s → 60 %, 0,5 s → 52 %, aucun
+  → 56 % (le bot de S4). La torche tactique, la fusée, la posture accroupie et le gadget pèsent chacun dans le bruit (±3 points à 576 duels) : NORMAL sans torche 58 %,
+  DIFFICILE sans torche 33 %, sans fusée 33 %, sans gadget 34 %, sans posture 35 %.
+- **Retenu** — NORMAL : torche tactique (fouille à 300 px), repli 0,6 s, gadget ; DIFFICILE : torche tactique (300 px), repli 0,3 s, accroupi à 450 px, fusée, gadget ;
+  FACILE : aucun outil (et sa ligne n'a pas bougé d'un duel : 79 %, mêmes statistiques que S4). **DIFFICILE reste à 34 % pour une cible de 30** : l'équipement l'affaiblit
+  de ~5 points à réflexes égaux (sans équipement 29 %), et rien de ce que j'ai essayé ne le ramène sous 32 % sans retirer un outil à sa classe ; je ne l'ai pas
+  corrigé par ses réflexes (ce n'est pas ce que la consigne demandait) — voir « À trancher ».
+- Par comportement du joueur type (victoire), retenu : `avance_torche` 92 / 64 / 26, `ecoute` 88 / 58 / 57, `accroupi_lent` 85 / 65 / 31, `tire_puis_bouge` 49 / 34 / 24
+  (facile / normal / difficile). **`ecoute` contre DIFFICILE, 57 %, sort du rang** : un joueur immobile et silencieux est approché accroupi, lentement — il a le
+  temps de tirer le premier. Non corrigé.
+- **Les dix classes** (NORMAL, 8 graines, 192 duels par classe, `--classe=N`) : voir « Ce qui est mesuré par classe » plus bas.
+
+#### Ce qui est mesuré par classe
+
+NORMAL équipé, une classe pour le bot (`--classe=N`), 8 graines × 6 cartes × 4 comportements = 192 duels par ligne, victoire du joueur type (le Parasite) ; entre parenthèses, le même
+bot SANS équipement quand je l'ai relevé :
+Parasite 56 % — Illusionniste 63 % — Terrassier **85 %** (92 %) — Braconnier **90 %** (79 %, 8 % de duels nuls) — Fumiste 51 % — Incendiaire **87 %** (87 %) — Sentinelle 55 % — Occulteur **98 %** (97 %) —
+Allumeur 62 % (144 duels : un plantage du moteur, voir « Signalé ») — Spectre 54 %. Les gadgets sont posés (0,3 à 0,6 par duel, 0,9 pour la bobine) et les replis ont lieu ; **mais quatre classes sont des
+adversaires faciles AVEC ou SANS outils** : le bot tire avec les réflexes réglés pour le Parasite (S4), et un fusil à pompe, une arbalète, une carabine à parabole, un pistolet-mitrailleur à détente tenue
+n'y gagnent rien — précision de 2 à 6 % pour la pompe et le lance-fusées. **Ce n'est pas l'équipement, et ce n'est pas réglé** : les boss des chapitres 3 (Braconnier), 4 (Terrassier), 5 (Incendiaire) et 7 (Occulteur)
+seraient trop faciles tels quels. À régler au banc, par classe, avant de les publier (S8).
+
+#### Les gardes — `tools/test_bot_equipement.gd`
+
+Les règles pures (chaque condition de la fusée et de chaque gadget, refusée une à une ; les dix règles comptées CONTRE `GameState.IMPLEMENTATIONS`) ; le texte de
+`equipement_bot.gd` ; **les profils sans équipement n'ont pas changé** : le flux de commandes (840 pas : mouvement, visée, gâchette, recharge, torche, fusée, gadget,
+posture) de dix profils × deux graines égale des empreintes `md5` **relevées sur le code de S4 (`f113da8`), avant la moindre ligne de S9** (S1, FACILE/NORMAL/DIFFICILE
+sans outils, cinq PNJ du catalogue dont le sourd et aveugle, le boss sans outils) — et un profil à torche tactique n'a PAS la même empreinte ; sur des corps factices avec
+le vrai fournisseur et le vrai nœud : la torche, la posture (au quart de la vitesse, sans blocage), le repli (il change de place, ne tire pas, reprend), la fusée (vers un
+pas entendu, pas vers une cible vue, ni trop près, ni trop loin, ni à travers un mur, ni sans réserve), **chacun des dix gadgets posé une fois dans la mise en scène de
+sa règle, face à la place visée, une seule fois**, la bobine allumée puis éteinte, la mine qui recule, la suie où il entre ; **l'honnêteté** (dix classes équipées de tout,
+devant un joueur dans le noir puis derrière une paroi : ni pose, ni fusée, ni torche, ni accroupi, ni repli ; un bot en ZONE qui marche : idem ; devant un pas ENTENDU, les
+mêmes outils servent) ; puis **le vrai jeu** (vrai `Player`, vrai `GameState`, vraie fusée) : les dix gadgets NAISSENT dans l'arène, posés par le bot, à 96 px devant lui, la
+recharge d'une minute armée, un seul ; la vraie fusée naît et part vers le son ; le vrai corps s'accroupit, se replie ; ce que le nœud de perception retient de chaque gadget
+posé ; et la géométrie du voile et de la plaque contre le moteur de physique. `test_bot_combat` (S3) garde ses 145 vérifications : son `_profil` éteint les outils (un NORMAL équipé se replie après sa rafale, et le contrôle « il tient sa place en combat » rougissait) ; le fournisseur lit la vie de son corps SANS supposer qu'un corps factice la porte (`float(null)` : 14 668 erreurs de script que `run_suites.sh` a attrapées au premier passage). `test_banc_bot` reste vert (une seule retouche : son contrôle « tire sur un SON » éteint les
+outils — la fusée du DIFFICILE lui fait VOIR ce qu'il n'a fait qu'entendre, et son tir n'est plus « sur un son » ; la règle d'audace qu'il garde est inchangée).
+
+**Résultat des suites : `./tools/run_suites.sh --rapide` — les 140 suites headless sont vertes** (927 s, scénarios à deux instances non joués), sans erreur de script ni `push_error` non déclaré ; le premier passage avait attrapé un rouge (`test_bot_combat`, voir plus haut), corrigé.
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié, scripté).** Chiffre = contrôles rouges de `test_bot_equipement`. **Torche** : toujours allumée (23) ; allumée en patrouille (16) ; allumée pendant le repli (1, la règle pure). **Fusée** : lancée vers une cible vue (1) ;
+sans contrôle de la réserve (1) ; à travers un mur (5). **Gadget** : jamais posé (47) ; posé sans réserve (10) ; la règle du voile retirée (2, plus 4 erreurs de script que le sabotage produit) ; la mine qui ne
+recule plus (2) ; la suie qui n'entre plus dans son nuage (2) ; la bobine jamais allumée (2). **Prudence** : repli ignoré (3) ; accroupi ignoré (4) ; le bot qui tire pendant son repli (1) ; l'anti-blocage qui
+ignore le facteur de l'accroupi (1, `blocages_total`). **Honnêteté** : un outil qui lit la VRAIE place de l'adversaire dans le fournisseur (22 — la garde de texte de `test_bot_combat` aurait aussi rougi) ;
+`equipement_bot.gd` qui lit le groupe des joueurs (3). **Perception sous gadget** : les obstacles ignorés par la ligne de vue (4, dont le contrôle contre le moteur de physique) ; un nuage qui n'aveugle plus (3) ;
+un gadget sans ombre lisible qui n'aveugle plus (1) ; **l'état d'avant S9 rétabli** — tout gadget aveugle (5). Vingt-trois sabotages, tous rouges du premier coup : aucun n'est resté vert. (Les trois gardes de
+S3 — la lecture de l'adversaire au texte — étaient déjà sabotées par S3 ; celle de `equipement_bot.gd` l'est ici.)
+
+**Deux fois une garde a trompé en l'écrivant, et c'est instructif.** (1) `has_method("occultation_pour")` : voir plus haut — le garde « un nuage aveugle » aurait été
+vrai pour TOUS les gadgets ; ce sont les dix classes du vrai jeu qui l'ont montré (le garde des corps factices passait). (2) Dans le vrai jeu, la mise en scène de la
+classe suivante trouvait « un gadget du poseur 2 » qui n'était pas celui de sa classe : le bot de la scène d'avant — sa mémoire pleine d'une cible — **reposait son gadget
+dès que la scène lui rendait la recharge d'une minute**. Remède : rendre la réserve APRÈS la pose du bot neuf, jamais avant.
+
+**Ce qui n'est pas prouvé.**
+- **Rien n'est joué par un humain.** Torche, posture, repli, fusée, gadgets : prouvés headless, en simulation, contre un joueur type. Ni leur lisibilité, ni leur plaisir.
+- **L'effet des gadgets sur la force du bot n'est mesuré que pour le Parasite** dans la matrice 80 / 55 / 30 (la classe de l'entraînement : `_reapparaitre_le_bot` remet
+  l'arme d'index 0). Les neuf autres classes sont mesurées en NORMAL seulement, 8 graines, et ne sont pas réglées.
+- **Le banc contre les capteurs n'a pas été rejoué avec un gadget** (voir « La perception sous gadget »).
+- Un bot équipé ne **se sert pas de ce que son gadget lui apprend** : il ne lit pas les traces de la poudre, ne distingue pas un leurre d'un joueur (le sien comme celui de
+  l'adversaire), ne voit pas la lumière de sa torche fantôme, de sa mine ou de ses braises (voir moins que la lumière : honnête, mais il pose sans s'en servir).
+- Le bot **n'évite pas sa propre nappe de braises** (8 points la traversent), ne se protège pas de sa propre mine au-delà de son recul, et **ignore son propre éblouissement**
+  (S2 ne l'avait jamais modélisé : un bot ébloui, par une fusée ou une mine, continue de « voir » la lumière que le joueur ne verrait plus à travers son voile — un trou de
+  S2, agrandi aujourd'hui par les mines et les fusées du bot ; non corrigé).
+- Les replis et les poses ne sont éprouvés que sur la carte d'essai (corps factices, jeu monté) et les six cartes livrées (banc) ; jamais sur une carte de joueur.
+
+**Signalé, pas corrigé.**
+- **Le boss d'une autre classe perd sa réserve de fusées au premier duel** : `GameState._do_start_round` sème `_fusees_restantes` sur la classe de J2 À CE MOMENT (le Parasite), et
+  `_reapparaitre_le_bot()` rééquipe l'arme d'index 0. **S6** qui équipe un boss de classe N doit aussi resemer `_fusees_restantes[1]` (`_stock_fusees`) et
+  rééquiper la classe à la réapparition ; le banc et les gardes de S9 le font à la main (`_rendre_les_reserves`). Le gadget, lui, se lit sur la classe vivante : rien à resemer.
+- **Un plantage rare du moteur sous le banc** (signal 11, juste après « [REPLAY] P2 died », précédé de « The caller thread can't call the function `propagate_notification()` on
+  this node » sur `/root`) : 3 processus sur ~16 dans les relevés de 24 graines, aucun dans ceux de 16 graines ni dans les gardes. Non attribué à S9 (un thread qui notifie la
+  racine, côté moteur ou `ReplaySystem`) ; le banc d'exploration le montre par un lot incomplet (432 duels au lieu de 576), jamais par un faux résultat.
+- Le bot de l'entraînement porte toujours **le Parasite** : ses outils sont ceux de la classe 0 (la bobine). La classe du bot n'est choisie nulle part dans `ui.gd`.
+- `docs/JOURNAL_SESSIONS.md` : `game_state.gd`, `ui.gd` n'ont pas été touchés ; `perception_bot_noeud.gd` (S6) l'a été sur deux endroits (`_lire_les_gadgets`, une ligne dans `_voir`).
+
+**À trancher par Adrien.** (1) **DIFFICILE à 34 % pour une cible de 30** : accepter, ou retirer un outil à DIFFICILE, ou le resserrer par ses réflexes ? (2) **Quels outils pour
+quels chapitres** : aujourd'hui FACILE n'en a aucun, NORMAL (le boss) a torche + repli + gadget, DIFFICILE tout ; les PNJ du catalogue n'en ont aucun. `torche_en_patrouille` (un bot
+qui éclaire son chemin) n'est dans aucun profil : à donner aux PNJ du début d'un chapitre ? (3) **Faut-il que le bot s'accroupisse contre un joueur immobile** (57 % pour le
+joueur contre DIFFICILE en `ecoute`) ? (4) Les **règles de gadgets** se jugent en jouant, une par une : en particulier la suie (il entre dans son nuage, aveugle 9 s), la poussière et la
+torche fantôme, dont l'effet n'est pas mesuré. (5) La **fusée du bot** éclaire le bot aussi : 240 px minimum, un chiffre de départ.
+(6) **Les armes des classes autres que le Parasite** : le bot qui porte un fusil à pompe, une arbalète, un lance-fusées ou un pistolet-mitrailleur est battu 85 à 98 % du temps, outils ou non — et c'est la classe
+du boss des chapitres 3, 4, 5 et 7. Réglage par classe (réflexes, rafale, détente tenue de l'Occulteur) à faire avant de publier ces chapitres : S8 ?
 
 ### Questions
 

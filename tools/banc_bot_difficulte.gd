@@ -30,6 +30,8 @@
 ##   --part=i/n             ne joue que les duels d'indice i modulo n (pour répartir sur plusieurs processus)
 ##   --brut=fichier.json    écrit les enregistrements bruts d'un lot ; `--agreger=a.json,b.json` les fusionne et résume, sans jeu
 ##   --trace                ajoute à chaque enregistrement brut la trace du duel (positions, état du bot, vies), pour traquer un défaut de déterminisme
+##   --classe=N             la classe du BOT, un index du catalogue (0 Parasite — le défaut —, 1 Illusionniste… 9 Spectre) : son gadget est celui qu'il pose (S9)
+##   --sans-equipement      éteint les outils du bot (torche tactique, prudence, fusée, gadget) : le bot de S4, pour comparer « avant / après »
 ##   --catalogue            joue la mise en scène du CATALOGUE des PNJ (un débutant qui entre dans une salle) au lieu des duels
 ##
 ## Sortie : code 0 ; ce banc n'est pas un test (il imprime, il ne juge pas). La garde courte des suites est `test_banc_bot.gd`.
@@ -37,6 +39,7 @@ extends SceneTree
 
 const Duel := preload("res://tools/banc_bot_duel.gd")
 const Profil := preload("res://profil_bot.gd")
+const Flux := preload("res://tools/flux_commandes_bot.gd")
 
 const NOMS_DIFFICULTE := {"facile": Profil.Difficulte.FACILE, "normal": Profil.Difficulte.NORMAL, "difficile": Profil.Difficulte.DIFFICILE}
 
@@ -126,11 +129,15 @@ func _run() -> void:
 							return
 						monte = true
 					var profil := Profil.pour_adversaire_qui_tire(NOMS_DIFFICULTE[nom_d])
+					if o.has("sans-equipement"):
+						Flux.sans_equipement(profil)
 					_surcharger(profil, String(o.get("surcharge", "")) + "," + String(o.get("surcharge-" + nom_d, "")))
 					var spec := {
 						"profil_bot": profil, "reflexes": String(o.get("reflexes", "humain")),
 						"comportement": Duel.COMPORTEMENTS[comp], "graine": g, "duree_max": duree_max,
 					}
+					if o.has("classe"):
+						spec["classe"] = int(o["classe"])
 					var trace: Array = []
 					if o.has("trace"):
 						spec["trace"] = trace
@@ -160,7 +167,10 @@ func _surcharger(profil: ProfilBot, texte: String) -> void:
 			printerr("✗ surcharge inconnue : %s" % paire)
 			continue
 		var actuel: Variant = profil.get(kv[0])
-		profil.set(kv[0], int(kv[1]) if actuel is int else float(kv[1]))
+		if actuel is bool:
+			profil.set(kv[0], ["1", "true", "vrai", "oui"].has(kv[1]))
+		else:
+			profil.set(kv[0], int(kv[1]) if actuel is int else float(kv[1]))
 
 
 func _cartes_livrees() -> Array:
@@ -193,7 +203,8 @@ func _lire_brut(chemin: String) -> Array:
 func _imprimer(records: Array) -> void:
 	print("\n=== PAR DIFFICULTÉ (moyenne des comportements du joueur type et des cartes ; référence humaine : %.2f s, intermédiaire %.2f s, débutant %.2f s) ===" % [
 		Duel.REACTION_HUMAINE, Duel.REACTION_INTERMEDIAIRE, Duel.REACTION_DEBUTANT])
-	print("%-10s %6s %9s %9s %12s %10s %10s %10s %10s %8s" % ["", "duels", "victoire", "nuls", "1er coup reçu", "fenêtre", "jamais tchd", "tirs/son", "précision", "durée"])
+	print("%-10s %6s %9s %9s %12s %10s %10s %10s %10s %8s   %s" % ["", "duels", "victoire", "nuls", "1er coup reçu", "fenêtre", "jamais tchd", "tirs/son", "précision", "durée",
+		"fusées/gadgets/replis par duel"])
 	for nom_d in ["facile", "normal", "difficile"]:
 		var lot := records.filter(func(r: Dictionary) -> bool: return String(r["difficulte"]) == nom_d)
 		if lot.is_empty():
@@ -245,9 +256,9 @@ func _comportements_vus(records: Array) -> Array[String]:
 
 func _ligne(nom: String, lot: Array) -> void:
 	var s := Duel.resumer(lot)
-	print("%-10s %6d %9s %9s %12s %10s %10s %10s %10s %8s" % [nom, s["n"], Duel.pct(s["victoire"]), Duel.pct(s["nuls_part"]),
+	print("%-10s %6d %9s %9s %12s %10s %10s %10s %10s %8s   %.2f / %.2f / %.2f" % [nom, s["n"], Duel.pct(s["victoire"]), Duel.pct(s["nuls_part"]),
 		Duel.sec(s["premier_coup_recu"]), Duel.sec(s["fenetre"]), Duel.pct(s["jamais_touche"]), Duel.pct(s["tirs_sur_son"]),
-		Duel.pct(s["precision"]), Duel.sec(s["duree_moyenne"])])
+		Duel.pct(s["precision"]), Duel.sec(s["duree_moyenne"]), s["fusees"], s["poses"], s["replis"]])
 
 
 

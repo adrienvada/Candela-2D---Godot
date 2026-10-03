@@ -17,9 +17,12 @@ extends RefCounted
 ##   • la **rétrodiffusion** (la lueur qu'une torche allumée verse sur le corps de son porteur, et sur les murs près de
 ##     lui) : le modèle ne l'a pas — il voit donc moins que la lumière dans le halo d'une torche allumée ;
 ##   • le **faisceau dans l'air** (Q41) et le sol que la torche éclaire : rien de ce qu'ils montrent n'est le corps ;
-##   • les **gadgets** qui bouchent ou étouffent la lumière (voile, suie, ombre, grésillement, leurre) : tant qu'un seul
-##     est posé, le nœud rend le bot AVEUGLE par la lumière (`monde["aveugle"]`) — il entend toujours. S9 les
-##     modélisera ; d'ici là, voir moins est la seule réponse honnête ;
+##   • les **gadgets** (S9 les a modélisés autant qu'on pouvait le faire SANS voir plus que la lumière) : ceux qui portent un OCCLUDER —
+##     le voile, l'ombre habitée, le leurre, la torche fantôme — entrent dans `monde["obstacles"]` comme des murs minces (leur
+##     polygone, tel que le moteur l'ombre : `obstacle_sur`) ; ceux qui ne touchent pas à la lumière — la mine, la nappe de braises, la
+##     poudre, le grésillement, dont l'effet sur une lampe est déjà dans l'énergie qu'elle rend — ne changent rien. **Restent aveugles** :
+##     un gadget en VOLUME (suie, poussière : un nuage qui efface ce qui s'y tient, et que le modèle ne sait pas rendre) et tout gadget
+##     dont on n'a pas su lire l'ombre — le nœud rend alors le bot AVEUGLE par la lumière (`monde["aveugle"]`), il entend toujours ;
 ##   • la **fumée de fusée** : elle ne cache pas le corps (« jamais d'invisibilité dans la lumière », une masse sombre le
 ##     remplace à la même place), donc la position reste connue — mais pas l'identité ni la visée ; le bot ne les lit
 ##     de toute façon jamais ;
@@ -119,6 +122,9 @@ const OCCLUSION_DISTANCE_MIN := 2.0 * OCCLUSION_ECART_LATERAL
 
 const _EPSILON_COIN := 1.0e-9
 
+## À quelle distance, en pixels, un segment qui frôle un polygone d'ombre le coupe encore (S9) : du côté du noir.
+const TOLERANCE_OBSTACLE := 0.5
+
 
 # ---------------------------------------------------------------------------
 # LE MONDE
@@ -137,6 +143,9 @@ static func monde_de_la_carte(data: Dictionary) -> Dictionary:
 		"tuile": float(Tuiles.TILE_SIZE.x),
 		"murs_bas": Geometrie.rects_monde(data, Geometrie.Kind.LOW_WALLS),
 		"aveugle": false,
+		# S9 : les polygones d'ombre des gadgets posés (voile, ombre habitée, leurre, torche fantôme), en coordonnées du MONDE — des
+		# `PackedVector2Array`. Vide hors partie : une carte seule n'a que ses murs.
+		"obstacles": [],
 	}
 
 
@@ -208,13 +217,46 @@ static func segment_degage(a: Vector2, b: Vector2, monde: Dictionary) -> bool:
 	return true
 
 
+## Le segment `a → b` coupe-t-il l'un des OBSTACLES du monde — le polygone d'ombre d'un gadget posé (S9) ? Un point de départ ou d'arrivée
+## DANS un polygone coupe ; un segment qui ne fait que le TOUCHER, à un demi-pixel près, coupe aussi : **du côté du noir au moindre
+## doute**, comme pour les murs. Le polygone est celui que le moteur donne à l'occluder : un point est dans l'ombre d'une lumière quand
+## le segment qui l'y relie le traverse, et c'est exactement ce test.
+static func obstacle_sur(a: Vector2, b: Vector2, monde: Dictionary) -> bool:
+	var obstacles: Array = monde.get("obstacles", [])
+	for poly in obstacles:
+		if segment_coupe_polygone(a, b, poly as PackedVector2Array):
+			return true
+	return false
+
+
+## Le segment `a → b` coupe-t-il ce polygone (à `TOLERANCE_OBSTACLE` près) ?
+static func segment_coupe_polygone(a: Vector2, b: Vector2, poly: PackedVector2Array) -> bool:
+	var n := poly.size()
+	if n < 3:
+		return false
+	if Geometry2D.is_point_in_polygon(a, poly) or Geometry2D.is_point_in_polygon(b, poly):
+		return true
+	for i in n:
+		var p := poly[i]
+		var q := poly[(i + 1) % n]
+		if Geometry2D.segment_intersects_segment(a, b, p, q) != null:
+			return true
+		# Un frôlement : une extrémité de l'arête à un demi-pixel du segment, ou l'inverse (intersection manquée par un arrondi).
+		if Geometry2D.get_closest_point_to_segment(p, a, b).distance_to(p) <= TOLERANCE_OBSTACLE \
+				or Geometry2D.get_closest_point_to_segment(q, a, b).distance_to(q) <= TOLERANCE_OBSTACLE \
+				or Geometry2D.get_closest_point_to_segment(a, p, q).distance_to(a) <= TOLERANCE_OBSTACLE \
+				or Geometry2D.get_closest_point_to_segment(b, p, q).distance_to(b) <= TOLERANCE_OBSTACLE:
+			return true
+	return false
+
+
 ## Une ligne de vue, de `a` (à la hauteur `h_a`, en pixels) à `b` (hauteur `h_b`) : ni mur haut, ni mur bas qui la coupe.
 ##
 ## Les hauteurs sont celles de la POSTURE (`MursBas.hauteur_de_posture`) ou d'une source posée : debout, on voit par-dessus
 ## un mur bas ; accroupi, ou une fusée au sol, on bute dessus. `a` est la SOURCE du rayon (l'œil, la lampe), `b` ce qu'il
 ## atteint — la zone morte d'un mur bas se compte depuis sa face de sortie vers `b`.
 static func ligne_de_vue(a: Vector2, b: Vector2, h_a: float, h_b: float, monde: Dictionary) -> bool:
-	if not segment_degage(a, b, monde):
+	if not segment_degage(a, b, monde) or obstacle_sur(a, b, monde):
 		return false
 	var bas: Array = monde["murs_bas"]
 	if bas.is_empty():
@@ -229,7 +271,7 @@ static func ligne_de_la_lumiere(l: Dictionary, b: Vector2, h_b: float, monde: Di
 	var a: Vector2 = l["origine"]
 	if not bool(l.get("par_hauteur", false)):
 		return ligne_de_vue(a, b, float(l["hauteur"]), h_b, monde)
-	if not segment_degage(a, b, monde):
+	if not segment_degage(a, b, monde) or obstacle_sur(a, b, monde):
 		return false
 	var bas: Array = monde["murs_bas"]
 	if bas.is_empty():

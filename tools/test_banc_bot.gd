@@ -22,6 +22,7 @@ extends SceneTree
 
 const Duel := preload("res://tools/banc_bot_duel.gd")
 const Profil := preload("res://profil_bot.gd")
+const Flux := preload("res://tools/flux_commandes_bot.gd")
 
 var _failures := 0
 var _verifications := 0
@@ -309,7 +310,10 @@ func _les_duels() -> void:
 		var sur_un_son := 0
 		var tirs := 0
 		for g in range(1, GRAINES + 1):
-			var r := await duel.duel({"profil_bot": Profil.pour_adversaire_qui_tire(difficulte), "comportement": Duel.COMPORTEMENT_BRUYANT,
+			# ⚠️ S9 : les OUTILS éteints. Le DIFFICILE équipé lance une fusée vers ce qu'il a entendu : il le VOIT alors, et son tir n'est plus « sur un
+			# son » — c'est ce que la fusée est faite pour. Ce contrôle garde la RÈGLE d'audace (tirer sur une zone entendue, pour les trois difficultés),
+			# pas les outils : ceux-ci ont leur garde (`test_bot_equipement`).
+			var r := await duel.duel({"profil_bot": Flux.sans_equipement(Profil.pour_adversaire_qui_tire(difficulte)), "comportement": Duel.COMPORTEMENT_BRUYANT,
 				"graine": g, "duree_max": 60.0})
 			tous.append(r)
 			sur_un_son += int(r["tirs_bot_son"])

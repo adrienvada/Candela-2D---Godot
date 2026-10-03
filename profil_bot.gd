@@ -157,6 +157,66 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 @export_range(0.0, 600.0) var audace_zone_px: float = 80.0
 
 
+## ── L'axe équipement — S9 (2026-10-02) ─────────────────────────────────────────────────────────────────────────────────────
+##
+## **Ce que le bot FAIT DE SES OUTILS** : sa torche, sa prudence, sa fusée, le gadget de sa classe. Il « appuie sur les touches »
+## comme un joueur (`is_flashlight_pressed`, `is_crouch_pressed`, `is_flare_pressed`, `is_gadget_pressed`) et `player.gd` lui
+## applique les règles de tout le monde : désarmement, stock, recharge d'une minute, root, éblouissement. Les règles — QUAND il s'en
+## sert, OÙ il pose — vivent dans `equipement_bot.gd` (des fonctions pures), jamais ici : ce profil ne fait que les RÉGLER.
+##
+## ⚠️ **S'équiper ne donne AUCUNE information** (la règle qui prime, depuis S2). Chaque règle ne lit que ce que le bot perçoit — sa
+## mémoire (vue ou zone entendue), son état, SON corps (munitions, vie, posture, classe), sa propre réserve (fusées, gadget : un
+## joueur les voit au HUD) et la carte, que n'importe quel joueur a sous les yeux. Une garde (`tools/test_bot_equipement.gd`) le lit au
+## texte de `equipement_bot.gd` et au sabotage. Et ce que l'outil fait au BOT, il le lui fait comme à un joueur : une torche qu'il allume
+## le trahit, une fusée qu'il lance l'éclaire aussi, un gadget qui bouche la lumière le gêne.
+##
+## **Un défaut qui ne change rien au bot de S1 à S4** : tous les champs sont éteints. Un profil sans équipement garde donc sa torche
+## fixe (`torche_allumee`), ne s'accroupit pas, ne lance rien, ne pose rien — mêmes commandes, à la graine près (la garde le compare).
+## Les champs d'équipement ne pèsent qu'une fois `agit` vrai : un bot qui n'agit pas ne passe pas par `_penser()`.
+##
+## ⚠️ **Tous les chiffres sont des chiffres de DÉPART, passés au banc de jeu (`tools/banc_bot_difficulte.gd`)** : l'équipement change la
+## force du bot, et c'est ICI, jamais dans la perception, que le banc le ramène sur les cibles de S4 (80 / 55 / 30 %).
+
+## La torche est-elle un OUTIL ? Vrai : le bot l'allume et l'éteint selon la situation (`EquipementBot.torche_voulue`) et `torche_allumee`
+## est ignorée. Faux : la torche est fixe, comme avant S9.
+##
+## Les règles, quand elle est tactique : **jamais allumée tant qu'il n'a rien perçu** (un bot prudent ne se trahit pas pour rien) ; en
+## enquête ou en recherche, **éteinte pendant qu'il s'approche, allumée quand il est assez près de la place qu'il fouille**
+## (`torche_rayon_fouille_px`) ; éteinte en combat (il voit déjà ce qui l'a mis en alerte, la lumière ne ferait que le trahir).
+@export var torche_tactique: bool = false
+
+## Une torche tactique brûle-t-elle aussi en PATROUILLE ? Faux (le défaut) : le bot prudent. Vrai : un bot qui éclaire son chemin,
+## et que sa lampe trahit de loin — celui d'un début de chapitre, pas d'un boss.
+@export var torche_en_patrouille: bool = false
+
+## À partir de quelle distance de la place qu'il fouille — le centre de la zone entendue, ou la dernière place connue —, en pixels, le
+## bot allume sa torche. Plus grand : il éclaire de plus loin (il voit plus tôt, il se trahit plus tôt) ; 0 : il ne la rallume jamais.
+## Une hystérésis de `EquipementBot.HYSTERESIS_TORCHE_PX` l'empêche de clignoter sur la limite.
+@export_range(0.0, 1500.0) var torche_rayon_fouille_px: float = 300.0
+
+## La PRUDENCE d'après tir : combien de secondes le bot s'éloigne de sa place après avoir tiré une rafale, torche éteinte, sans tirer
+## (un tir trahit : l'éclair se voit, le coup s'entend — c'est la leçon du niveau 0.7). 0 : il reste où il est, comme avant S9.
+## Sans effet sur un bot IMMOBILE : une statue ne change pas de place.
+@export_range(0.0, 5.0) var repli_apres_tir_s: float = 0.0
+
+## La prudence d'approche : en enquête, le bot s'accroupit — le pas le plus discret du jeu, au quart de la vitesse — quand la zone qu'il
+## a entendue est à moins de cette distance, en pixels. 0 : il ne s'accroupit pas.
+@export_range(0.0, 1500.0) var accroupi_pres_du_son_px: float = 0.0
+
+## Le bot lance-t-il une fusée vers une zone qu'il a ENTENDUE sans la voir (s'il lui en reste) ? Il n'en lance jamais vers une cible
+## qu'il voit : la fusée sert à voir ce qu'on n'a fait qu'entendre. Elle éclaire le bot aussi, et il a pour cela sa distance minimale.
+@export var lance_des_fusees: bool = false
+
+## Le bot se sert-il du gadget de SA classe ? Une règle par gadget (`EquipementBot.GADGETS`) : quand le poser, vers où. Faux : il ne pose rien.
+@export var utilise_le_gadget: bool = false
+
+
+## Le profil se sert-il d'au moins un outil ? Faux pour tout profil de S1 à S4 : `BotInputProvider` ne passe alors pas par `_equiper()`, et ses
+## commandes restent exactement celles d'avant S9.
+func est_equipe() -> bool:
+	return torche_tactique or repli_apres_tir_s > 0.0 or accroupi_pres_du_son_px > 0.0 or lance_des_fusees or utilise_le_gadget
+
+
 ## Les trois difficultés du cran 3 de l'entraînement, « adversaire qui tire ». ⚠️ Valeurs ajoutées en fin d'enum, jamais
 ## renumérotées : `ui.gd` en garde les mêmes entiers (une garde les compare).
 enum Difficulte { FACILE, NORMAL, DIFFICILE }
@@ -289,8 +349,48 @@ static func pour_adversaire_qui_tire(difficulte: int = Difficulte.NORMAL) -> Pro
 	p.entend = true
 	p.agit = true
 	p.tire = true
-	appliquer_les_reflexes(p, palier_de_la_difficulte(difficulte))
+	var palier := palier_de_la_difficulte(difficulte)
+	appliquer_les_reflexes(p, palier)
+	equiper_pour_le_palier(p, palier)
 	return p
+
+
+## Règle les OUTILS d'un profil sur un palier — et rien d'autre : ni la perception, ni les réflexes, ni le déplacement (S9). **Une seule table**,
+## comme celle des réflexes : l'entraînement, et le boss de chaque chapitre (`boss()`, le profil NORMAL), s'équipent de la même façon.
+## Idempotente : elle éteint tout avant de poser ce que le palier dit.
+##
+##                       FACILE    NORMAL    DIFFICILE
+##   torche tactique      non       oui       oui
+##   … fouille à          —         ?         ?       px
+##   repli après tir      —         ?         ?       s
+##   accroupi près du son —         —         ?       px
+##   fusée sur zone       non       non       ?
+##   gadget de la classe  non       oui       oui
+##
+## ⚠️ **Les chiffres sont ceux du banc de jeu** (`tools/banc_bot_difficulte.gd`, ROADMAP S9) : l'équipement change la force du bot, et c'est ICI
+## qu'on la ramène sur les cibles de S4 (le joueur type de référence bat FACILE ~80 %, NORMAL ~55 %, DIFFICILE ~30 %) — jamais dans la perception.
+## Les paliers des PNJ (`pnj()`) n'ont aucun outil : l'initiation est celle de S4.
+static func equiper_pour_le_palier(p: ProfilBot, palier: int) -> void:
+	p.torche_tactique = false
+	p.torche_en_patrouille = false
+	p.torche_rayon_fouille_px = 300.0
+	p.repli_apres_tir_s = 0.0
+	p.accroupi_pres_du_son_px = 0.0
+	p.lance_des_fusees = false
+	p.utilise_le_gadget = false
+	match palier:
+		Palier.NORMAL:
+			p.torche_tactique = true
+			p.torche_rayon_fouille_px = 300.0
+			p.repli_apres_tir_s = 0.6
+			p.utilise_le_gadget = true
+		Palier.DIFFICILE:
+			p.torche_tactique = true
+			p.torche_rayon_fouille_px = 300.0
+			p.repli_apres_tir_s = 0.3
+			p.accroupi_pres_du_son_px = 450.0
+			p.lance_des_fusees = true
+			p.utilise_le_gadget = true
 
 
 ## ── Le CATALOGUE des PNJ de l'aventure — S4 ───────────────────────────────────────────────────────────────────────────────

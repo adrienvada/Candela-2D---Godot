@@ -330,6 +330,16 @@ SUITES+=(test_banc_bot)
 # recommence la salle, finir le boss débloque la classe et l'écrit, quitter rend l'entraînement et l'écran scindé intacts, l'écran.
 SUITES+=(test_aventure_format test_aventure_partie)
 
+# Chantier SOLO, S9 (2026-10-02) : le bot S'ÉQUIPE — sa torche (éteinte tant qu'il n'a rien perçu, allumée pour fouiller, éteinte pour
+# s'approcher), sa prudence (changer de place après un tir, s'accroupir pour approcher un son), sa fusée (vers une zone ENTENDUE, jamais
+# vers une cible vue) et le gadget de sa classe (une règle par gadget, dix gadgets comptés contre le catalogue du jeu). `test_bot_equipement` :
+# les règles pures, le texte de `equipement_bot.gd` (il ne lit jamais l'autre joueur), des corps factices avec le vrai fournisseur et le vrai
+# nœud de perception (chaque gadget posé dans la mise en scène de sa règle, la bobine, la mine qui recule, la suie où il entre), la garde
+# d'HONNÊTETÉ (équipé de tout, devant un joueur dans le noir : aucun outil), les empreintes du flux de commandes des profils SANS équipement
+# (relevées sur le code d'avant S9), puis le jeu monté (vrai `Player`, vrai `GameState` : les dix gadgets naissent dans l'arène, la fusée
+# part, le corps s'accroupit et se replie). Elle exige l'horloge fixe : le `case` plus bas la lui donne, comme à `test_bot_combat`.
+SUITES+=(test_bot_equipement)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -481,7 +491,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

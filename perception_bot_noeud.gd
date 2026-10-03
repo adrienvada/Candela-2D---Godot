@@ -165,7 +165,7 @@ func _voir(delta: float) -> void:
 	_decalage_lisse = Regard.lisser(_decalage_lisse, vise, delta)
 	var reglages := {"decalage_lisse": _decalage_lisse}
 	_cadre = Percep.cadre_de_vue(bot["position"], bot["visee"], reglages)
-	monde["aveugle"] = _gadget_non_modelise()
+	_lire_les_gadgets()
 	var adversaire := _adversaire()
 	var lumieres := _lumieres(adversaire)
 	noms_des_lumieres.clear()
@@ -208,15 +208,53 @@ func _adversaire() -> Node2D:
 	return null
 
 
-## Un gadget qui bouche ou étouffe la lumière est-il posé ? Le modèle ne sait pas le rendre : le bot est alors aveugle par
-## la lumière (il entend toujours) — voir « Ce qu'on laisse dehors » dans `perception_bot.gd`.
-func _gadget_non_modelise() -> bool:
+## Ce que le modèle sait des gadgets posés (S9) — voir « Ce qu'on laisse dehors » dans `perception_bot.gd`. Trois cas, et le doute va du côté
+## du noir :
+##   • un gadget en VOLUME (il porte une `opacite` : la suie, la poussière — `GadgetVolume`, que ce fichier ne peut pas nommer : il doit se
+##     charger en `--script`) efface ce qui s'y tient : le modèle ne sait pas le rendre, le bot est
+##     AVEUGLE par la lumière tant qu'il en est un de posé (il entend toujours) ;
+##   • un gadget qui porte un OCCLUDER (`occulte_la_lumiere` : le voile, l'ombre habitée, le leurre, la torche fantôme) est un mur mince :
+##     son polygone d'ombre, tel que le moteur le lit, entre dans `monde["obstacles"]`. S'il n'en a pas su donner un — un gadget d'un genre
+##     que ce code ne connaît pas —, le bot est AVEUGLE : voir moins que la lumière est le seul parti honnête ;
+##   • les autres (la mine, la nappe de braises, la poudre, le grésillement) ne bouchent ni n'étouffent rien : leur effet sur une lampe est
+##     déjà dans l'énergie qu'elle rend (`_lampe_brule`). Leur lumière propre (le flash, les braises), le modèle ne la connaît pas : il voit
+##     moins, jamais plus.
+func _lire_les_gadgets() -> void:
+	var aveugle := false
+	var obstacles: Array = []
 	for g in get_tree().get_nodes_in_group("gadgets"):
-		if not is_instance_valid(g):
+		if not is_instance_valid(g) or (g as Node).is_queued_for_deletion():
 			continue
-		if bool(g.get("occulte_la_lumiere")) or g.has_method("facteur_de_lampe"):
-			return true
-	return false
+		# ⚠️ Pas `has_method("occultation_pour")` : le SOCLE de tous les gadgets la définit (elle rend 0), et chaque gadget serait un volume.
+		if g.get("opacite") != null:
+			aveugle = true
+			continue
+		if not bool(g.get("occulte_la_lumiere")):
+			continue
+		var polygones := _polygones_d_ombre(g as Node)
+		if polygones.is_empty():
+			aveugle = true
+		obstacles.append_array(polygones)
+	monde["aveugle"] = aveugle
+	monde["obstacles"] = obstacles
+
+
+## Les polygones d'ombre d'un gadget, en coordonnées du MONDE : chaque `LightOccluder2D` enfant (la bande du voile, la plaque de l'ombre
+## habitée, le disque d'une torche fantôme, le disque de torse d'un leurre) et, pour le leurre, son étoile — qui n'est plus un enfant direct,
+## elle vit dans sa propre canvas (`EtoileDeCorps`) : on prend l'étoile que le leurre garde dans SON repère. Vide si rien n'est lisible.
+func _polygones_d_ombre(g: Node) -> Array:
+	var sortie: Array = []
+	var xf: Transform2D = (g as Node2D).global_transform if g is Node2D else Transform2D.IDENTITY
+	for enfant in g.get_children():
+		if enfant is LightOccluder2D and (enfant as LightOccluder2D).occluder != null:
+			var occ := enfant as LightOccluder2D
+			var poly := occ.occluder.polygon
+			if poly.size() >= 3:
+				sortie.append(occ.global_transform * poly)
+	var etoile: Variant = g.get("_etoile")
+	if etoile is PackedVector2Array and (etoile as PackedVector2Array).size() >= 3:
+		sortie.append(xf * (etoile as PackedVector2Array))
+	return sortie
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +301,7 @@ func _disque(nom: String, lumiere: Light2D, hauteur: float, energie_min: float) 
 ##     coupe que par la géométrie de cette hauteur, comme le shader.
 ##
 ## ⚠️ Laissées DEHORS, pour voir moins que la lumière : la rétrodiffusion, le faisceau dans l'air, la torche de la cible
-## sur ce qu'elle éclaire, les fusées en vol, les gadgets (le bot est alors aveugle, voir `_gadget_non_modelise`).
+## sur ce qu'elle éclaire, les fusées en vol, les gadgets en volume (le bot est alors aveugle, voir `_lire_les_gadgets`).
 func _lumieres(adversaire: Node2D) -> Array:
 	var sortie: Array = []
 	var tuile := Percep.Tuiles.TILE_SIZE.x

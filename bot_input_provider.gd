@@ -58,6 +58,8 @@ extends InputProvider
 const Profil := preload("res://profil_bot.gd")
 const Navigation := preload("res://navigation_bot.gd")
 const Perception := preload("res://perception_bot_noeud.gd")
+const Equip := preload("res://equipement_bot.gd")
+const Percep := preload("res://perception_bot.gd")
 
 ## À quelle distance du centre d'une case on la tient pour atteinte, en pixels.
 ##
@@ -168,6 +170,47 @@ var _vide_depuis := -1.0
 var _but_enquete := Vector2i(-1, -1)
 var _prochain_plan := -INF
 
+# --- S9 : les outils. Tout ceci est de l'état de DÉCISION, comme le reste : rien n'en sort sauf des commandes (torche, posture, fusée, gadget).
+## Combien de temps un appui de fusée ou de gadget dure, en secondes : `player.gd` agit sur le FRONT montant, six images suffisent largement.
+const APPUI_OUTIL_S := 0.1
+## Combien de temps on attend avant de réessayer un outil dont l'appui n'a rien produit (une pose refusée faute de place, une fusée que les
+## mains occupées ont retardée), en secondes.
+const REESSAI_OUTIL_S := 1.2
+## Un lancer de fusée désarme le tireur de ce temps au moins (`FuseeModele.DESARMEMENT`, 0,6 s) ; une pose, de 0,3 s : sous cette valeur,
+## après l'appui, le bot tient la fusée pour non partie.
+const DESARMEMENT_MINIMAL_FUSEE := 0.3
+
+## La commande de torche du bot tactique (`is_flashlight_pressed`), de posture (`is_crouch_pressed`), les appuis de fusée et de gadget.
+var _torche := false
+var _accroupi := false
+var _fusee_presse := false
+var _gadget_presse := false
+var _fusee_depuis := 0.0
+var _gadget_depuis := 0.0
+var _fusee_pret_apres := -INF
+var _gadget_pret_apres := -INF
+var _gadget_slug_appuye := ""
+var _gadget_etait_une_bascule := false
+## La visée au moment de l'appui du gadget : ce qui dit OÙ il se plante (96 px devant), pour le geste qui suit (`PUIS_DEDANS`).
+var _pose_vers := Vector2.ZERO
+## Le repli : il reste tant que `_repli_restant` n'est pas écoulé ; le chemin est celui de `_chemin`, et la machine à états ne le défait pas.
+var _repli_actif := false
+var _repli_restant := 0.0
+## La fin de la dernière rafale, et celle que le repli a déjà traitée (horloge de la perception).
+var _rafale_finie_a := -INF
+var _rafale_traitee_a := -INF
+## Le dernier coup reçu (horloge de la perception) et la vie au pas d'avant.
+var _touche_a := -INF
+var _hp_vu := -1.0
+## Un tirage à part pour les outils : monter l'équipement ne change aucune cible du déplacement ni aucune erreur de visée.
+var _rng_equipement := RandomNumberGenerator.new()
+## Ce que le bot a fait de ses outils, depuis sa création : lus par les tests, jamais par le bot.
+var fusees_lancees := 0
+var gadgets_poses := 0
+var bascules_gadget := 0
+var replis := 0
+var poses_par_gadget := {}
+
 
 ## Règle le bot. `graine` rend ses tirages reproductibles : même graine, même profil, même carte,
 ## même suite de cibles — ce qui est ce qui permet à un test de les comparer.
@@ -177,6 +220,7 @@ func configurer(un_profil: ProfilBot, une_navigation: NavigationBot, graine: int
 	_graine = graine
 	_rng.seed = graine
 	_rng_reflexes.seed = graine ^ 0x7e57
+	_rng_equipement.seed = graine ^ 0x9ad9
 	reinitialiser()
 
 
@@ -196,6 +240,20 @@ func reinitialiser() -> void:
 	_rafale_faite = 0
 	_pause_jusqu = -INF
 	_vide_depuis = -1.0
+	# S9 : les outils repartent de zéro. Une torche allumée, un accroupissement ou un repli de la manche d'avant ne sont pas ceux d'un
+	# corps qu'on vient de remettre en jeu ; la fusée et le gadget, eux, se rechargent ailleurs (`GameState`).
+	_torche = false
+	_accroupi = false
+	_fusee_presse = false
+	_gadget_presse = false
+	_fusee_pret_apres = -INF
+	_gadget_pret_apres = -INF
+	_repli_actif = false
+	_repli_restant = 0.0
+	_rafale_finie_a = -INF
+	_rafale_traitee_a = -INF
+	_touche_a = -INF
+	_hp_vu = -1.0
 
 
 ## Le chemin en cours et tout ce que l'anti-blocage en a mesuré : au changement d'état, à la réapparition.
@@ -254,6 +312,10 @@ func _physics_process(delta: float) -> void:
 	var lue: Variant = corps.get("speed")
 	if lue is float and float(lue) > 0.0:
 		vitesse = float(lue)
+	# S9 : accroupi, le corps avance au quart de sa vitesse (`Player.FACTEUR_VITESSE_ACCROUPI`) ; l'anti-blocage compare la distance
+	# parcourue à celle d'un corps à pleine marche, et jugerait bloqué un accroupi qui avance bien.
+	if _accroupi:
+		vitesse *= Equip.FACTEUR_ACCROUPI
 	# S3 : décider AVANT de marcher — l'état change ce que `avancer` fait de ce pas. Un profil qui n'agit pas ne passe pas ici.
 	if profil != null and profil.agit:
 		_penser(delta, corps)
@@ -266,15 +328,18 @@ func avancer(delta: float, position: Vector2, vitesse: float = VITESSE_DE_MARCHE
 			or profil.deplacement == Profil.Deplacement.IMMOBILE:
 		_mouvement = Vector2.ZERO
 		return
+	# S9 : un REPLI (le bot s'éloigne après un tir, recule après une mine, se met dans son nuage) suit son propre chemin, quel que soit l'état :
+	# la machine à états ne le défait pas, la mémoire ne le redirige pas, et la patrouille n'en tire pas d'autre.
+	var en_repli := _repli_actif
 	# En combat le bot tient sa place : il se tourne et tire (S3). Il ne reprend la marche qu'en perdant sa cible de vue.
-	if etat == Etat.COMBAT:
+	if etat == Etat.COMBAT and not en_repli:
 		_mouvement = Vector2.ZERO
 		return
 	var ici := _case_de(position)
 
 	_guetter_le_blocage(delta, position, ici, vitesse)
 	# Enquête et recherche : le chemin mène à la mémoire, pas à une cible tirée au hasard (S3).
-	if etat != Etat.PATROUILLE:
+	if etat != Etat.PATROUILLE and not en_repli:
 		_suivre_la_memoire(ici)
 
 	# Un chemin vide ou achevé : on décide d'où aller. Deux tours au plus, parce qu'un chemin
@@ -282,7 +347,7 @@ func avancer(delta: float, position: Vector2, vitesse: float = VITESSE_DE_MARCHE
 	# donner tout de suite le suivant plutôt qu'une image d'immobilité. **Seule la patrouille tire une cible au hasard** : un
 	# bot qui enquête et qui est arrivé reste là à regarder, jusqu'à ce que la mémoire s'efface.
 	for _tour in 2:
-		if _etape >= _chemin.size() and etat == Etat.PATROUILLE:
+		if _etape >= _chemin.size() and etat == Etat.PATROUILLE and not en_repli:
 			_decider(ici)
 		while _etape < _chemin.size() \
 				and position.distance_to(Navigation.centre_de_la_case(_chemin[_etape])) <= RAYON_ARRIVEE:
@@ -467,6 +532,9 @@ func _penser(delta: float, corps: Node2D) -> void:
 	_viser(delta, corps, memoire)
 	_gerer_le_tir(corps, maintenant, memoire)
 	_gerer_la_recharge(corps, maintenant)
+	# S9 : les outils. Un profil sans équipement ne passe pas ici : mêmes commandes, à la graine près, que le bot d'avant.
+	if profil.est_equipe():
+		_equiper(delta, corps, maintenant, memoire)
 
 
 ## Ce que le bot VEUT faire de ce qu'il sait, et s'il le fait déjà ou doit encore réagir.
@@ -502,7 +570,9 @@ func _choisir_l_etat(corps: Node2D, maintenant: float, memoire: MemoireBot) -> v
 func _entrer_dans(nouveau: int, corps: Node2D) -> void:
 	var avant := etat
 	etat = nouveau
-	_oublier_le_chemin()
+	# S9 : un repli en cours n'est pas un chemin d'enquête — changer d'état (la cible a disparu, il faut la chercher) ne le défait pas.
+	if not _repli_actif:
+		_oublier_le_chemin()
 	if avant == Etat.PATROUILLE:
 		# Début d'engagement : la consigne de visée part de là où le corps regarde déjà — jamais un demi-tour instantané.
 		_visee = Vector2.from_angle(corps.rotation)
@@ -556,10 +626,14 @@ func _gerer_le_tir(corps: Node2D, maintenant: float, memoire: MemoireBot) -> voi
 			if _rafale_faite >= profil.tirs_par_rafale:
 				_rafale_faite = 0
 				_pause_jusqu = maintenant + profil.pause_entre_rafales
+				_rafale_finie_a = maintenant
 		elif maintenant - _appui_depuis > DELAI_APPUI_MAX:
 			_gachette = false
 		return
 	if not profil.tire or etat == Etat.PATROUILLE or not _a_un_angle:
+		return
+	# S9 : pas de tir pendant un repli (« tire, puis bouge »), ni entre un appui de fusée ou de gadget et son effet (les mains sont prises).
+	if _repli_actif or _fusee_presse or _gadget_presse:
 		return
 	if bool(corps.get("is_reloading")) or munitions <= 0 or attente > 0.0 or maintenant < _pause_jusqu:
 		return
@@ -625,6 +699,166 @@ func _suivre_la_memoire(ici: Vector2i) -> void:
 
 
 # ---------------------------------------------------------------------------
+# S9 — LES OUTILS : la torche, la prudence, la fusée, le gadget de la classe
+# ---------------------------------------------------------------------------
+
+## Un pas d'outils, pour un corps vivant : décide de la torche, de la posture, de la fusée et du gadget, et enclenche les replis. **Ne lit que
+## ce que `PerceptionBotNoeud` a vu ou entendu** (la mémoire, la vue du moment), SON corps et SA réserve — les règles sont dans
+## `equipement_bot.gd`, dont le texte ne contient aucune lecture de l'adversaire (la suite le vérifie). Appelée après `_viser` et
+## `_gerer_le_tir` : un outil ne prend jamais le pas sur ce que le bot vient de décider de son arme.
+func _equiper(delta: float, corps: Node2D, maintenant: float, memoire: MemoireBot) -> void:
+	# Un coup reçu : sa vie baisse. Le bot lit SA vie, comme un joueur lit sa barre.
+	# Un corps qui ne dit pas sa vie (un corps factice) n'a jamais été touché : `-1` ne fait jamais baisser.
+	var vie: Variant = corps.get("hp")
+	var hp := float(vie) if vie != null else -1.0
+	if _hp_vu >= 0.0 and hp < _hp_vu:
+		_touche_a = maintenant
+	_hp_vu = hp
+
+	# Le repli s'écoule ; il s'achève sur place, au bout de son temps.
+	if _repli_actif:
+		_repli_restant -= delta
+		if _repli_restant <= 0.0:
+			_repli_actif = false
+			_oublier_le_chemin()
+
+	# Une rafale vient de finir : il s'éloigne d'un endroit que son tir a trahi (la prudence d'après tir).
+	if _rafale_finie_a > _rafale_traitee_a:
+		_rafale_traitee_a = _rafale_finie_a
+		if profil.repli_apres_tir_s > 0.0 and profil.deplacement != Profil.Deplacement.IMMOBILE and etat != Etat.PATROUILLE \
+				and memoire.connue(maintenant):
+			_planifier_un_repli(corps, Equip.Repli.LATERAL, profil.repli_apres_tir_s, memoire.position, Vector2.INF)
+
+	var connue := memoire.connue(maintenant)
+	var ici: Vector2 = corps.global_position
+	var distance := ici.distance_to(memoire.position) if connue else INF
+	var vu := bool(perception.derniere_vue.get("vu", false))
+
+	# La torche et la posture : des COMMANDES, que `player.gd` applique comme à un joueur.
+	if profil.torche_tactique:
+		_torche = Equip.torche_voulue(profil, etat, connue, distance, _torche, _repli_actif)
+	_accroupi = Equip.accroupi_voulu(profil, etat, memoire.source, connue, distance, _accroupi)
+
+	# La fusée et le gadget : ce que le bot lit de sa propre réserve, il le lit chez le nœud d'arbitrage, jamais chez un joueur.
+	var jeu := Equip.jeu_du(corps)
+	var pid := int(corps.get("player_id"))
+	var attente := float(corps.get("shoot_cooldown"))
+	var mains_libres := attente <= 0.0 and not _gachette
+	var situation := {}
+	if connue and etat != Etat.PATROUILLE and (profil.lance_des_fusees or profil.utilise_le_gadget):
+		var vers := memoire.position - ici
+		situation = {
+			"profil": profil, "etat": etat, "source": memoire.source, "connue": true, "distance": distance,
+			"rayon": memoire.rayon_a(maintenant), "confiance": memoire.confiance(maintenant),
+			"ecart_deg": absf(rad_to_deg(angle_difference(corps.rotation, vers.angle()))),
+			"vu": vu, "lampe_vue": (perception.derniere_vue.get("par", []) as Array).has("lampe_de_la_cible"),
+			"libre": Percep.segment_degage(ici, memoire.position, perception.monde),
+			"touche_depuis": maintenant - _touche_a, "rafale_depuis": maintenant - _rafale_finie_a,
+			"mains_libres": mains_libres,
+		}
+	_gerer_la_fusee(corps, maintenant, jeu, pid, situation)
+	_gerer_le_gadget(corps, maintenant, jeu, pid, situation, connue, distance)
+
+
+## La fusée : un appui de `APPUI_OUTIL_S`, quand `Equip.fusee_voulue` le dit. Elle part vers la zone entendue : `player.gd` la lance droit devant le
+## corps, qui est tourné vers elle (c'est une des conditions de la règle).
+func _gerer_la_fusee(corps: Node2D, maintenant: float, jeu: Node, pid: int, situation: Dictionary) -> void:
+	if _fusee_presse:
+		if maintenant - _fusee_depuis >= APPUI_OUTIL_S:
+			_fusee_presse = false
+			_fusee_pret_apres = maintenant + REESSAI_OUTIL_S
+			# Un lancer arme le désarmement du tireur : c'est le seul signe, côté bot, que la fusée est partie.
+			if float(corps.get("shoot_cooldown")) >= DESARMEMENT_MINIMAL_FUSEE:
+				fusees_lancees += 1
+		return
+	if situation.is_empty() or maintenant < _fusee_pret_apres:
+		return
+	situation["fusee_disponible"] = jeu != null and bool(jeu.call("fusee_disponible", pid))
+	if Equip.fusee_voulue(situation):
+		_fusee_presse = true
+		_fusee_depuis = maintenant
+
+
+## Le gadget : une règle par slug (`Equip.GADGETS`), l'interrupteur à part pour la bobine. Un appui de `APPUI_OUTIL_S`, puis le geste d'après
+## (`puis`) si la pose a eu lieu — le jeu a alors armé la recharge d'une minute : c'est le signe que la pose est partie.
+func _gerer_le_gadget(corps: Node2D, maintenant: float, jeu: Node, pid: int, situation: Dictionary, connue: bool, distance: float) -> void:
+	if jeu == null:
+		return
+	if _gadget_presse:
+		if maintenant - _gadget_depuis >= APPUI_OUTIL_S:
+			_gadget_presse = false
+			_gadget_pret_apres = maintenant + REESSAI_OUTIL_S
+			if _gadget_etait_une_bascule:
+				bascules_gadget += 1
+			elif not bool(jeu.call("gadget_disponible", pid)):
+				gadgets_poses += 1
+				poses_par_gadget[_gadget_slug_appuye] = int(poses_par_gadget.get(_gadget_slug_appuye, 0)) + 1
+				_commencer_le_puis(corps, _gadget_slug_appuye)
+		return
+	if not profil.utilise_le_gadget or maintenant < _gadget_pret_apres:
+		return
+	var slug := Equip.slug_du_gadget(corps)
+	if slug == "":
+		return
+	var bobine: Variant = jeu.call("gadget_basculable_de", pid)
+	if bobine != null:
+		# Le grésillement posé : la même touche l'allume et l'éteint. Elle n'occupe pas les mains.
+		var actif := bool((bobine as Object).get("actif"))
+		var lampe_vue := bool(situation.get("lampe_vue", false))
+		if Equip.bobine_voulue(etat, connue, distance, lampe_vue, actif) != actif:
+			_presser_le_gadget(maintenant, slug, true)
+		return
+	if situation.is_empty():
+		return
+	situation["gadget_disponible"] = bool(jeu.call("gadget_disponible", pid))
+	if Equip.gadget_voulu(slug, situation):
+		_pose_vers = Vector2.from_angle(corps.rotation)
+		_presser_le_gadget(maintenant, slug, false)
+
+
+func _presser_le_gadget(maintenant: float, slug: String, bascule: bool) -> void:
+	_gadget_presse = true
+	_gadget_depuis = maintenant
+	_gadget_slug_appuye = slug
+	_gadget_etait_une_bascule = bascule
+
+
+## Le geste d'après une pose : reculer (la mine aveugle à 460 px, poseur compris) ou se mettre dans son nuage (la suie ne cache que ceux qui
+## s'y tiennent). Rien pour les autres. Il part du MÊME point que le jeu — 96 px devant le poseur, dans la direction où il regardait.
+func _commencer_le_puis(corps: Node2D, slug: String) -> void:
+	var menace: Vector2 = perception.memoire.position
+	match Equip.puis_de(slug):
+		Equip.PUIS_RECUL:
+			_planifier_un_repli(corps, Equip.Repli.RECUL, Equip.DUREE_RECUL_MINE_S, menace, Vector2.INF)
+		Equip.PUIS_DEDANS:
+			var centre: Vector2 = corps.global_position + _pose_vers * 96.0
+			_planifier_un_repli(corps, Equip.Repli.VERS, Equip.DUREE_DANS_LE_NUAGE_S, menace, centre)
+
+
+## Enclenche un repli : une case où aller (`Equip.case_de_repli`, ou le point donné), un chemin qui respecte la ZONE du profil, un temps.
+## Rien ne se passe — et le bot reste où il est — si aucune case ne convient : un repli manqué se voit, il ne fige pas le bot.
+func _planifier_un_repli(corps: Node2D, mode: int, duree: float, menace: Vector2, point: Vector2) -> void:
+	var ici := _case_de(corps.global_position)
+	var cible := Vector2i(-1, -1)
+	if mode == Equip.Repli.VERS:
+		cible = navigation.case_praticable_proche(Navigation.case_du_monde(point))
+	else:
+		cible = Equip.case_de_repli(navigation, perception.monde, corps.global_position, menace, mode, _rng_equipement)
+	if cible.x < 0:
+		return
+	var ch := _chemin_vers(ici, cible)
+	if ch.size() < 2 and mode != Equip.Repli.VERS:
+		return
+	_oublier_le_chemin()
+	if ch.size() >= 2:
+		_chemin = ch
+		_cible = cible
+	_repli_actif = true
+	_repli_restant = duree
+	replis += 1
+
+
+# ---------------------------------------------------------------------------
 # Ce que `player.gd` lit. Tout ce qui n'est pas ici reste à `false`, comme dans InputProvider.
 # ---------------------------------------------------------------------------
 
@@ -637,6 +871,9 @@ func get_aim_direction(_player_global_pos: Vector2) -> Vector2:
 
 
 func is_flashlight_pressed() -> bool:
+	# S9 : une torche tactique est une COMMANDE du bot (`_torche`, posée par `_equiper`) ; sinon elle est fixe, comme avant.
+	if profil != null and profil.torche_tactique:
+		return _torche
 	return profil != null and profil.torche_allumee
 
 
@@ -648,6 +885,21 @@ func is_shoot_pressed() -> bool:
 ## La recharge (S3) : même garde, `_gerer_la_recharge`.
 func is_reload_pressed() -> bool:
 	return _recharge
+
+
+## La fusée (S9) : faux tant que `_equiper` n'a pas décidé d'en lancer une — et elle ne le décide que si le profil `lance_des_fusees`.
+func is_flare_pressed() -> bool:
+	return _fusee_presse
+
+
+## Le gadget (S9) : même garde. La même touche pose, puis allume et éteint la bobine du Parasite (`GameState.basculer_gadget`).
+func is_gadget_pressed() -> bool:
+	return _gadget_presse
+
+
+## La posture voulue (S9) : accroupi pour approcher un son, selon `accroupi_pres_du_son_px`. Faux sinon : le bot d'avant ne s'accroupissait pas.
+func is_crouch_pressed() -> bool:
+	return _accroupi
 
 
 ## Pour les tests : le chemin en cours, et la cible visée.

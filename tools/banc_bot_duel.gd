@@ -380,8 +380,21 @@ func _remettre_au_calme() -> void:
 		corps.velocity = Vector2.ZERO
 	main._bot_reapparition = -1.0
 	main._joueur_reapparition = -1.0
+	_rendre_les_reserves()
 	for _i in IMAGES_DE_CALME:
 		await arbre.physics_frame
+
+
+## Rend aux deux joueurs ce qu'une manche neuve leur rend : la recharge d'une minute du gadget, la batterie de la bobine, la réserve de fusées
+## de leur classe (S9). Sans cela, le gadget posé dans un duel manquerait au suivant — un banc d'outils mesurerait une minute de recharge.
+func _rendre_les_reserves() -> void:
+	for pid in 2:
+		var joueur: Node = main.p1 if pid == 0 else main.p2
+		main._gadget_attente[pid] = 0.0
+		main._gadgets_poses_par[pid] = 0
+		main._batterie[pid] = 1.0
+		main._fusees_restantes[pid] = main._stock_fusees(joueur)
+		main._fusees_accumulateur[pid] = 0.0
 
 
 ## Les cases d'un duel pris au hasard sur la carte montée : le joueur n'importe où, le bot à une distance de départ moyenne de lui
@@ -432,6 +445,11 @@ func duel(spec: Dictionary) -> Dictionary:
 	p1.rotation = float(placement["cap_joueur"])
 	main.graine_du_bot = GRAINE_BASE ^ (graine * 31)
 	main._poser_l_adversaire(spec["profil_bot"])
+	# S9 : la CLASSE du bot (`classe`, un index du catalogue). Absente : le Parasite, comme à l'entraînement. Sa réserve de fusées et son gadget
+	# sont ceux de la classe, rendus pleins.
+	if spec.has("classe"):
+		p2.equip_weapon(main.weapon_for_index(int(spec["classe"])))
+		_rendre_les_reserves()
 	p2.global_position = placement["bot"]
 	p2.rotation = float(placement["cap_bot"])
 	p2.velocity = Vector2.ZERO
@@ -461,6 +479,7 @@ func duel(spec: Dictionary) -> Dictionary:
 		"t_premier_tir_bot": -1.0, "t_premiere_perception_bot": -1.0, "t_premiere_perception_joueur": -1.0,
 		"distance_depart": (placement["joueur"] as Vector2).distance_to(placement["bot"]),
 		"vues_bot": 0,
+		"fusees_bot": 0, "poses_bot": 0, "replis_bot": 0, "bascules_bot": 0,
 	}
 	var hp1 := float(p1.hp)
 	var hp2 := float(p2.hp)
@@ -525,6 +544,10 @@ func duel(spec: Dictionary) -> Dictionary:
 			break
 	r["tirs_bot"] = _balles[1]
 	r["tirs_joueur"] = _balles[0]
+	r["fusees_bot"] = bot.fusees_lancees
+	r["poses_bot"] = bot.gadgets_poses
+	r["replis_bot"] = bot.replis
+	r["bascules_bot"] = bot.bascules_gadget
 	main.bullet_container.child_entered_tree.disconnect(compter)
 	return r
 
@@ -555,6 +578,9 @@ static func resumer(records: Array) -> Dictionary:
 	var somme_fin := 0.0
 	var somme_fenetre := 0.0
 	var n_fenetre := 0
+	var fusees := 0
+	var poses := 0
+	var replis := 0
 	for r in records:
 		match String(r["issue"]):
 			"joueur":
@@ -574,6 +600,9 @@ static func resumer(records: Array) -> Dictionary:
 				n_fenetre += 1
 		tirs += int(r["tirs_bot"])
 		touches += int(r["touches_bot"])
+		fusees += int(r.get("fusees_bot", 0))
+		poses += int(r.get("poses_bot", 0))
+		replis += int(r.get("replis_bot", 0))
 		son += int(r["tirs_bot_son"])
 		vue += int(r["tirs_bot_vue"])
 		perdu += int(r["tirs_bot_perdu"])
@@ -591,6 +620,7 @@ static func resumer(records: Array) -> Dictionary:
 		"tirs_sur_vue": float(vue) / float(maxi(son + vue + perdu, 1)),
 		"precision": float(touches) / float(maxi(tirs, 1)),
 		"duree_moyenne": somme_fin / float(maxi(n, 1)),
+		"fusees": float(fusees) / float(maxi(n, 1)), "poses": float(poses) / float(maxi(n, 1)), "replis": float(replis) / float(maxi(n, 1)),
 	}
 
 

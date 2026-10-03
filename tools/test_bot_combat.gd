@@ -39,6 +39,7 @@ const Codec := preload("res://map_codec.gd")
 const Son := preload("res://son_visible.gd")
 const Portee := preload("res://portee_ecran.gd")
 const Iso := preload("res://camera_iso.gd")
+const Flux := preload("res://tools/flux_commandes_bot.gd")
 
 const TUILE := 35.0
 const PAS := 1.0 / 60.0
@@ -332,7 +333,9 @@ func _derouler(r: Rig, n: int, jusqua: Callable = Callable()) -> void:
 
 ## Un profil de test : immobile (le bot ne bouge pas, il pense), au cran donné de la difficulté, modifié par `changements`.
 func _profil(difficulte: int, changements: Dictionary = {}, immobile: bool = true) -> ProfilBot:
-	var p := Profil.pour_adversaire_qui_tire(difficulte)
+	# S9 : les OUTILS éteints. Cette suite garde les RÉFLEXES de S3 (délai, visée, rafale, audace) ; un NORMAL équipé se replie après sa rafale et
+	# ne « tient plus sa place » : les outils ont leur garde (`test_bot_equipement`).
+	var p := Flux.sans_equipement(Profil.pour_adversaire_qui_tire(difficulte))
 	if immobile:
 		p.deplacement = Profil.Deplacement.IMMOBILE
 	for k in changements:
