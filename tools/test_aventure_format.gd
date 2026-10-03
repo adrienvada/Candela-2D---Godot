@@ -447,8 +447,10 @@ func _chargement_et_catalogue() -> void:
 	var racine_avant: String = Format.racine
 	var attendus_avant: int = Format.niveaux_attendus
 	Format.oublier_le_cache()
-	_check("`assets/solo` en lecture seule : aucun chapitre livré tant que S7 n'a pas écrit les salles (et aucun cri)",
-		Format.chapitres_livres().is_empty(), str(Format.chapitres_livres().keys()))
+	# S7 (2026-10-03) a écrit le chapitre 0 : `assets/solo` en livre un, et un seul (les chapitres 1 à 9 sont S8). Sans cri : un chapitre
+	# mal écrit ne se chargerait pas, et `CRIS ATTENDUS` resterait à sa valeur.
+	_check("`assets/solo` livre le chapitre 0 de S7, et lui seul, sans un cri",
+		Format.chapitres_livres().keys() == [0], str(Format.chapitres_livres().keys()))
 	Format.racine = "res://tools/aventure_essai"
 	Format.niveaux_attendus = 0
 	Format.oublier_le_cache()
@@ -556,8 +558,9 @@ func _aucune_carte_de_duel_touchee(avant: Dictionary) -> void:
 	_check("les niveaux EMBARQUENT leur carte : aucun ne renvoie vers `assets/maps`", not renvoi)
 	_check("`assets/solo` n'est écrit par aucun code : ni ce format ni la progression n'ouvrent un fichier en écriture sous `res://`",
 		not _ecrit_sous_res("res://aventure_format.gd") and not _ecrit_sous_res("res://aventure_progression.gd"))
-	_check("le chapitre d'essai vit dans `tools/`, pas dans `assets/solo/`", DirAccess.dir_exists_absolute("res://tools/aventure_essai/chapitre_00")
-		and not DirAccess.dir_exists_absolute("res://assets/solo/chapitre_00"))
+	_check("le chapitre d'essai vit dans `tools/` : le chapitre livré (`assets/solo/`) est un autre, de dix salles",
+		DirAccess.dir_exists_absolute("res://tools/aventure_essai/chapitre_00")
+		and (Format.chapitres_livres().get(0, {}) as Dictionary).get("niveaux", []).size() == 10)
 	_check("le format de carte (`map_codec.gd`) n'a pas été touché pour l'aventure : il ne nomme ni niveau ni PNJ",
 		not FileAccess.get_file_as_string("res://map_codec.gd").to_lower().contains("pnj"))
 
