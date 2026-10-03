@@ -407,12 +407,12 @@ func _figer_le_tirage() -> void:
 		(minuteur as Timer).start(float((audio.get_script() as Script).get_script_constant_map()["AMBIANCE_ATTENTE_MAX"]))
 
 
-## La graine du premier gadget posé par ce corps et encore debout (-1 : aucun).
-func _graine_du_gadget(corps: Node) -> int:
-	for g in arbre.get_nodes_in_group("gadgets"):
-		if is_instance_valid(g) and g.get("poseur_id") == corps.get("player_id"):
-			return int(g.get("graine"))
-	return -1
+## La graine du premier gadget que le bot a posé dans le duel en cours (-1 : aucun), lue À LA POSE (`compter`, dans `duel`) et non à la fin.
+## ⚠️ Lue à la fin du duel, elle valait -1 dès que le gadget n'était plus debout — et une balle du joueur type le détruit souvent avant
+## que le duel finisse : le relevé ne voyait alors plus rien, la garde « même tirage » comparait -1 à -1 et rougissait (S9b, 2026-10-03,
+## à l'intégration). Le gadget n'est pas encore dans le groupe « gadgets » quand il entre dans le conteneur (`_ready` joue après
+## `child_entered_tree`) : on le reconnaît à son `poseur_id`, que la pose lui donne AVANT l'entrée, comme sa graine.
+var _graine_gadget_bot: int = -1
 
 
 ## Remet l'ÉCHELLE d'un corps à exactement 1 et son inclinaison à 0. **Un corps qui bouge ne garde pas la sienne** : `move_and_slide`
@@ -515,7 +515,10 @@ func duel(spec: Dictionary) -> Dictionary:
 	p1.add_child(joueur)
 
 	_balles = [0, 0]
+	_graine_gadget_bot = -1
 	var compter := func(n: Node) -> void:
+		if _graine_gadget_bot == -1 and "poseur_id" in n and "graine" in n and int(n.get("poseur_id")) == int(p2.get("player_id")):
+			_graine_gadget_bot = int(n.get("graine"))
 		var src: Variant = n.get("source_player")
 		if src == p1:
 			_balles[0] += 1
@@ -606,8 +609,8 @@ func duel(spec: Dictionary) -> Dictionary:
 	r["replis_bot"] = bot.replis
 	r["bascules_bot"] = bot.bascules_gadget
 	# La graine du premier gadget posé par le bot, tirée au `randi()` GLOBAL du jeu : elle ne dépend que de (carte, graine) si le tirage
-	# est bien figé (voir `_figer_le_tirage`) — la garde de `test_banc_bot` la compare d'un passage à l'autre.
-	r["graine_gadget_bot"] = _graine_du_gadget(p2)
+	# est bien figé (voir `_figer_le_tirage`) — la garde de `test_banc_bot` la compare d'un passage à l'autre. Lue à la pose (voir plus haut).
+	r["graine_gadget_bot"] = _graine_gadget_bot
 	main.bullet_container.child_entered_tree.disconnect(compter)
 	return r
 

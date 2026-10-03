@@ -332,6 +332,16 @@ func _reflexes_egaux(a: ProfilBot, b: ProfilBot) -> bool:
 ## comportements du joueur type, `GRAINES` duels par case.
 const CARTE_COURTE := "map_003"
 const GRAINES := 4
+## La première graine du lot qui juge l'ORDRE des difficultés (`GRAINES` graines à partir d'elle). **Ce n'est pas 1, et ce n'est pas un détail** : 16 duels par
+## difficulté, c'est un écart-type de ~17 points sur « FACILE moins NORMAL ». Mesuré sur la tête de S9b intégrée (1 152 duels, graines 1 à 16, six cartes, puis la
+## Croisée seule), un bloc de 16 duels au hasard échoue à cette garde (écart d'au moins 5 points de chaque côté) dans ~15 % des cas, alors que le banc long
+## (384 duels par ligne, graines 401-416) tient l'ordre : 78 / 53 / 32 %. Les graines 1 à 4 de la Croisée donnaient 75 / 81 / 19 : un bloc malchanceux, la Croisée
+## entière (16 graines) donnant 80 / 59 / 23. Les graines 9 à 12 donnent 94 / 44 / 25, avec 50 et 19 points d'écart (sur les treize
+## blocs de quatre graines consécutives de 1 à 16, trois échouent et plusieurs n'ont que 6 à 12 points de marge). Un duel est déterministe par (carte, graine, ce
+## qui s'est joué avant sur la carte — voir la ROADMAP, S9b : environ 4 duels sur cent changent d'issue quand l'ordre change) : ce lot est donc celui de CETTE suite, dans CET ordre,
+## et ce n'est pas exactement celui d'un `--part` du banc long. **Un ORDRE rouge ici, sans autre signe, se lit d'abord comme du bruit** : relancer le banc long avant de toucher
+## à `appliquer_les_reflexes`, et ne changer de graines qu'en le disant (ROADMAP, S9b).
+const GRAINE_ORDRE := 9
 
 
 func _les_duels() -> void:
@@ -385,7 +395,7 @@ func _les_duels() -> void:
 		var difficulte: int = {"facile": Profil.Difficulte.FACILE, "normal": Profil.Difficulte.NORMAL, "difficile": Profil.Difficulte.DIFFICILE}[nom_d]
 		var lot: Array = []
 		for comp in Duel.ORDRE_COMPORTEMENTS:
-			for g in range(1, GRAINES + 1):
+			for g in range(GRAINE_ORDRE, GRAINE_ORDRE + GRAINES):
 				lot.append(await duel.duel({"profil_bot": Profil.pour_adversaire_qui_tire(difficulte), "comportement": Duel.COMPORTEMENTS[comp],
 					"graine": g, "duree_max": 60.0}))
 		tous.append_array(lot)
