@@ -53,13 +53,13 @@ const MARGE_PX := 20.0
 const COTE_MIN := 16
 const COTE_MAX := 24
 ## 0.5, « La fusée » : de 36 à 48. Le bas tient à la torche : le chemin du centre doit laisser, de chaque côté, sa portée (13,4 cases) plus la
-## marge (2), soit 31 cases, plus la ceinture — sous 36 les PNJ retombent dans un angle. Le haut tient au jeu : au-delà, ce n'est que de la marche.
+## marge (2), soit 31 cases en tout, plus la ceinture — sous 36 les PNJ retombent dans un angle. Le haut tient au jeu : au-delà, ce n'est que de la marche.
 ## 0.10, l'arène du boss : exactement 32 (l'écran scindé d'un duel, la ROADMAP la tranche).
 const COTES_PAR_SALLE := {4: [36, 48], 9: [32, 32]}
 
 ## 0.5 — la marge de torche exigée entre un PNJ et toute case du chemin, en px de centre à centre. Elle n'est pas de 150 : une fusée vole 450 px
-## et son halo (de modèle) en éclaire 132, soit 582 de portée de lancer pour 468 de torche — 114 au mieux, d'un lancer exact. À 70, le couple
-## que montre une seule fusée garde de quoi viser (`FENETRE_VISEE_MIN`).
+## et son halo (de modèle) en éclaire 132, plus 18 de corps, soit 600 de portée de lancer pour 468 de torche — 132 au mieux, d'un lancer exact.
+## À 90, le couple que montre une seule fusée garde de quoi viser (`FENETRE_VISEE_MIN`) ; à 100 il n'en garde presque plus.
 const MARGE_FUSEE_PX := 90.0
 ## 0.5 — répartis : deux PNJ à 3 cases l'un de l'autre au moins ; les deux plus éloignés à 8 cases au moins (l'ancienne salle : 2 et 2).
 const ECART_MIN_CASES := 3.0
@@ -617,8 +617,9 @@ func _salle_5() -> void:
 	var chemin := nav.chemin(ctx["depart"], centre)
 	_check("le chemin le plus court du départ au centre %s existe (%d cases)" % [str(centre), chemin.size()], not chemin.is_empty())
 	# La marge se compte centre à centre, de la case du chemin au PNJ. Le corps du PNJ (18 px) et la demi-case du joueur (17) en rognent 35 :
-	# la marge réelle est la moitié. Elle ne peut pas monter beaucoup : une fusée vole 450 px et son halo de modèle en éclaire 132, soit 582 px
-	# de portée de lancer contre 468 de torche — 114 px au mieux, et seulement d'un lancer exact. À 70, le couple garde 28 px de tolérance.
+	# la marge réelle en est amputée d'autant. Elle ne peut pas monter beaucoup : une fusée vole 450 px et son halo de modèle en éclaire 132 (plus
+	# 18 de corps), soit 600 px de portée de lancer contre 468 de torche — 132 px au mieux, et seulement d'un lancer exact. À 90, le couple garde
+	# une dizaine de degrés de visée.
 	var plus_pres := INF
 	for p: Dictionary in pnj:
 		for c in chemin:

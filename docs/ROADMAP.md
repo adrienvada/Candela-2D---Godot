@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **La taille d'une salle d'aventure n'est plus bornée par celle d'un duel : 0.5, « La fusée », passe de 24×24 à 41×41, ses trois PNJ répartis** (2026-10-03, Adrien, répondant à la question que S7 lui laissait — « les trois PNJ en un coin, ou une salle plus grande que 24×24 avec les PNJ répartis ? » : « Oui toute liberté sur la taille des cartes : elles peuvent être bien plus grandes que les cartes du duel. ») | Le plan écrivait « salles de 16×16 à 24×24 » : c'était la taille d'un duel, reprise par réflexe pour une salle d'aventure. Une salle se dimensionne par ce qu'elle enseigne. 0.5 enseigne la fusée, dont la portée de lancer (450 px) ne dépasse celle de la torche (468 px) que par son halo : pour qu'un PNJ soit hors de l'une et à portée de l'autre, ailleurs que dans un angle, il faut de la place. **La garde n'a plus un côté permis mais une table** (16 à 24 par défaut, 36 à 48 pour 0.5, 32 pour l'arène du boss), toujours bornée par le format (128). La réponse d'Adrien ne disait pas combien de fusées : la salle n'en exige qu'une, la réserve du Parasite — voir « Les fusées de 0.5 », dans S7. |
 | **Le chantier SOLO se mène d'un trait jusqu'à S9, par des sous-agents, sans aucun relevé de cadence** (2026-10-02, Adrien, à la session « candela-2d-godot-47 » : « Go. Délègue à des sous-agents Sonnet 5.5 chaque tâche. Reste juste maître du chantier » ; puis : « Arrête-toi une fois tous les chantiers implémentés. Aucun test de cadence ») | La session conçoit, relit, fait tourner la suite complète et fusionne ; chaque étape est écrite par un sous-agent dans un worktree isolé. **Aucun banc de cadence** : le coût des plafonniers (S5), que la conception voulait mesurer, est livré NON MESURÉ et le dit — la règle « n'allumer que les plafonniers proches du joueur » se tient par construction, pas par un relevé. Les réglages de difficulté (S4) se font au banc de JEU (parties simulées), qui n'est pas un relevé de cadence. Le chapitre 10 reste vide, comme décidé. |
 | **Le solo compte onze chapitres : l'initiation (0) puis dix chapitres (1 à 10)** (2026-10-02, Adrien, même session : « Oui je veux 11 chapitres (intro + dix chapitres). On verra ensuite ce que c'est ») | Confirme la lecture de SOLO-Q8. Dix classes pour les chapitres 0 à 9 dans l'ordre du rang ; le chapitre 10 n'a pas de classe à offrir, et son contenu reste à définir — rien avant S8 n'en dépend. |
 | **Le solo débloque les classes dans l'ordre du rang en ligne ; l'initiation n'a pas de ronde, ses ennemis restent immobiles et se multiplient ; le chapitre 10 attend** (2026-10-02, Adrien, même session : « oui l'ordre en ligne » ; « Chapitre 10 on verra plus tard ce qu'on gagne » ; « Non pas de rondes, mais on peut augmenter le nombre d'ennemis immobiles ») | L'ordre du rang fait du solo une préparation au chemin en ligne : la classe qu'on gagne en solo est la prochaine qu'on gagnera en classé. Sans ronde, la difficulté de l'initiation monte par le nombre (le niveau 0.9 devient « la salle pleine », cinq ou six immobiles de toutes sortes), et le boss est le premier adversaire mobile. Le chapitre 10 est lu comme un onzième chapitre, sans classe à offrir — lecture à confirmer (SOLO-Q8). |
@@ -31771,7 +31772,7 @@ joueur. **Écrit en S5 (2026-10-02), et livré NON MESURÉ** : la consigne d'Adr
 **Ce qu'il doit faire** : amener un joueur qui n'a jamais touché le jeu à battre, au niveau 10, un bot en difficulté
 normale. Chaque niveau enseigne **une seule chose nouvelle**, et la salle la rend nécessaire plutôt que de l'expliquer :
 une phrase d'intention à l'entrée, aucune flèche, aucun texte pendant le jeu. Le joueur joue le Parasite, la classe que le
-chapitre lui donne à son terme. Salles petites (de l'ordre de 16×16 à 24×24 cases), une seule pièce chacune, sauf le boss.
+chapitre lui donne à son terme. Salles de 16×16 à 24×24 cases en général, une seule pièce chacune, sauf le boss ; **la taille d'une salle n'est plus bornée par celle d'un duel** (Adrien, 2026-10-03 : « toute liberté sur la taille des cartes ») — 0.5 en fait 41×41, et le format va jusqu'à 128.
 
 | Niveau | Titre provisoire | Ce qu'on apprend | La salle | Les PNJ |
 |---|---|---|---|---|
@@ -33098,7 +33099,7 @@ autre signe se lit d'abord comme du bruit : relancer le banc long avant de touch
 ### S7 — FAITE le 2026-10-03 : le chapitre 0, « L'initiation » — dix salles, une garde qui mesure ce que chacune enseigne
 
 **Ce qui existe.** `assets/solo/chapitre_00/` (`chapitre.json` et `niveau_01.json` … `niveau_10.json` : c'est le premier contenu livré, le moteur le lit sans
-qu'on y touche), l'outil qui les écrit (`tools/fabrique_chapitre_00.gd`) et la garde (`tools/test_chapitre_00.gd`, 153 vérifications, inscrite à `run_suites.sh`).
+qu'on y touche), l'outil qui les écrit (`tools/fabrique_chapitre_00.gd`) et la garde (`tools/test_chapitre_00.gd`, 176 vérifications, inscrite à `run_suites.sh`).
 **Aucun code de jeu n'a bougé** : ni `game_state.gd`, ni `ui.gd`, ni `map_codec.gd`, ni `protocol.gd`, ni le code du bot (S9 le tient). `assets/solo/` existe donc
 désormais : l'écran de l'aventure montre un vrai chapitre 0 (et « CHAPITRES 1 À 10 — À VENIR »).
 
@@ -33115,7 +33116,7 @@ du script et relancer. Les slugs sont ceux du code (`pistolet` = le Parasite) ; 
 | **0.2 La torche** — 18×18, un pilier 2×5 — « Un pilier au milieu du noir. Quelqu'un se tient derrière. » | Le PNJ est à 229 px de la lampe la plus proche (une petite lampe d'entrée, rayon 2,5, qui éclaire le départ : sans elle la salle serait un vide) : dans **aucune** flaque, ni au sens du modèle ni au sens large. Le pilier lui coupe la ligne de vue du départ — et la garde retire les murs de l'intérieur pour prouver que c'est lui seul. Mais une case à portée de torche et en ligne de vue existe : il se trouve, à la torche. |
 | **0.3 Fouiller** — 20×20, trois recoins aux angles — « Trois recoins, une seule lampe, du noir partout ailleurs. Six cartouches. » | Trois PNJ sourds et aveugles, un par recoin, à 15 cases les uns des autres, aucun éclairé par l'unique lampe centrale (rayon 4,5), aucun à portée de torche du départ (coin sud-est), aucun en vue d'un autre à portée de torche. **Chargeur du Parasite = 6** (lu dans `game_state.gd`) ; un coup moyen fait 37 (`floor` du milieu de 50 et 25) : 3 tirs par PNJ, **9 > 6**. Au mieux, tout au centre (2 tirs par PNJ), il en faut 6 : le chargeur ne laisse AUCUNE marge, un seul raté oblige à recharger. |
 | **0.4 Les murs bas** — 20×18, trois rangées de murets en chicane — « Trois rangées de murets. Deux silhouettes derrière. » | Chaque PNJ a un mur bas (1 pour l'un, 2 pour l'autre) sur la ligne droite du départ, aucun mur plein : on le voit par-dessus. Le contourner à pied (chemins de `NavigationBot`) fait **×2,4 et ×2,8** la distance à vol d'oiseau : le muret est un raccourci, et l'enjamber la façon d'y aller. Un plafonnier éclaire la chicane, pas les PNJ. |
-| **0.5 La fusée** — 24×24, grande salle, 4 piliers, **aucun plafonnier** — « Une salle trop grande pour la torche. Ce qu'elle cache est loin. » | Départ au coin sud-est, trois PNJ sourds et aveugles dans l'angle nord-ouest. Chemin le plus court du départ au centre (12, 12) : 11 cases ; le PNJ le plus proche en reste à **497 px, la torche en porte 468** (marge exigée : 20). Une fusée lancée d'une case du chemin (la meilleure : (13, 13), 222°) vole 450 px et son halo (220 px × 0,6 pour le modèle) éclaire **les trois**. |
+| **0.5 La fusée** — 41×41 (décision d'Adrien du 2026-10-03), grande salle, 7 piliers, **aucun plafonnier** — « Une salle trop grande pour la torche. Ce qu'elle cache est loin. » | Départ au milieu du mur sud (20, 38), tourné vers le nord ; trois PNJ sourds et aveugles au bout nord, en (17, 4), (20, 4) et (9, 8). Chemin le plus court du départ au centre (20, 20) : 19 cases, tout droit ; le PNJ le plus proche en reste à **560 px, la torche en porte 468 : marge de 92 px** (exigée : 90). Le couple (17, 4)–(20, 4), à 3 cases l'un de l'autre, se montre à **UNE** fusée lancée droit devant depuis le centre (fenêtre de visée : 11°) ; le troisième, à 8,9 cases du premier, à une autre fusée — ou à la torche, une fois le couple abattu. Aucune fusée ne montre les trois : ils sont répartis (de 3,0 à 11,7 cases l'un de l'autre). **La salle n'exige qu'une fusée, la réserve du Parasite** : « Les fusées de 0.5 ». |
 | **0.6 Il regarde** — 20×20, deux piliers — « Sous la lampe, il regarde. Ce qui brille se fait voir. » | Un PNJ qui voit (très lent), sous la lampe de l'est ; une autre lampe, au centre, sur la ligne droite (rayons 3). Le plus court chemin traverse **les deux flaques**, et le PNJ y voit le joueur (modèle de vue du PNJ, torche éteinte : la lampe suffit). Un détour par le nord ou le sud (6 cases jusqu'à la case de tir, contre 15 en ligne droite) reste dans le noir, jusqu'à une case à moins de 408 px du PNJ où il **ne voit pas** le joueur — torche éteinte — et le voit torche allumée : c'est la raison de s'approcher éteint. Le joueur voit le PNJ, éclairé par sa lampe. |
 | **0.7 L'éclair** — 20×20, en L (170 cases de sol sur 324), deux piliers — « Trois silhouettes dans un coude. Un tir se voit de loin. » | Trois PNJ qui voient (lents), chacun sous sa lampe : on les voit sans torche, donc sans se trahir ; du départ, au plus deux sont en ligne de vue. Pour **chaque** PNJ, la garde trouve une case sombre d'où on le touche, où l'éclair du tir est vu d'un autre PNJ (modèle de vue, éclair de 32 px), et à six cases au plus un **abri** que les autres PNJ ne regardent pas. |
 | **0.8 Il écoute** — 20×20, **sol nu**, aucun plafonnier — « Pas une lampe. Deux silhouettes qui n'ont que leurs oreilles. » | Deux PNJ qui n'entendent que (ils ne voient pas) et tirent, lents ; aucun mur ni muret (rien n'étouffe un pas) ; chacun à plus de 488 px du départ et à douze cases de marche au moins : on les trouve à l'oreille avant de les voir. |
@@ -33131,17 +33132,53 @@ Tous les PNJ de 0.1 à 0.9 sont **immobiles** et de la table de S4 (`immobile_so
   `PerceptionBot` pour « sous la lampe », « le pilier le cache », « il voit ce joueur » ; `NavigationBot` pour « atteignable à pied » ; `PorteeEcran.portee_au_bord` pour les 468 px de la torche ;
   la portée libre d'une fusée, 450 px, relue dans `fusee_modele.gd`, et son halo, 220 px, relu dans `fusee.gd` — qui nomme des autoloads et ne se précharge pas sous `--script`). Le chargeur est lu dans `game_state.gd` par une expression régulière : le recopier aurait
   fait dériver la garde le jour où la valeur change.
-- **0.5 est dans un coin parce qu'aucun autre endroit ne tient.** Le centre d'une salle de 24×24 n'est qu'à 14,1 cases de son angle, soit 495 px : à peine plus que les 468 px de la torche. Les trois
-  PNJ tiennent donc l'angle opposé au départ, à deux cases les uns des autres, et c'est ce qui permet qu'**une** fusée (le Parasite n'en a qu'une par minute) les éclaire tous. La marge est de 29 px :
-  si la torche gagnait un jour 30 px de portée, la salle cesserait d'enseigner, et la garde rougirait. « Le centre » est la case (largeur/2, hauteur/2) ; une autre lecture (la case (11, 11)) ramènerait les PNJ dans la portée — à dire si l'on change la salle.
+- **0.5 n'est plus dans un coin** (2026-10-03) : voir « Les fusées de 0.5 » ci-dessous. L'ancienne salle, 24×24, tenait les trois PNJ à deux cases les uns des autres dans un angle, à 497 px du chemin du centre pour 468 de torche : 29 px de marge, que la moindre retouche de la torche aurait effacés.
 - **Aucun couloir d'une tuile** (corps 36 px, tuile 35) : la garde cherche toute case libre non praticable ; elle en a trouvé deux à la première écriture de 0.7 (un pilier à une case du mur) — le pilier a été descendu.
 - **Les murets de 0.4 sont franchissables et contournables** : `NavigationBot` traite un mur bas comme solide, donc pour que chaque PNJ soit « atteignable à pied » le contournement existe ; c'est son allongement (×2,4 et ×2,8) qui fait de l'enjambement un raccourci. Un PNJ sourd et aveugle ne punit pas un joueur debout : ce qui est « nécessaire » ici est le raccourci, pas une peine.
 - **Les intentions** disent la situation sans nommer une touche (le ton des menus : court, constatif). « Six cartouches » en 0.3 est une donnée, pas une consigne.
 
+#### Les fusées de 0.5 — ce que le Parasite a vraiment, et ce que la salle lui en demande (2026-10-03)
+
+**Ce que le jeu donne** (lu dans `game_state.gd` et `player.gd` par la garde, jamais recopié). Le Parasite part avec **1 fusée** et en regagne **une par 60 s**
+(`PERIODE_RECHARGE_FUSEE`, « une fusée par minute », Adrien, 2026-09-10) ; la recharge ne court que fusée manquante, donc elle **commence au lancer**. Une fusée vole **450 px**
+(900 px/s, frottement 900 px/s² : toujours la même distance, le joueur ne la règle pas) et s'allume en se posant. À l'allumage (Q58) son halo porte aussi loin que la torche
+(468 px) et **y reste 1 s**, puis revient en 2 s à son empreinte, **220 px de rayon**, qu'il garde pendant le plein feu (4 s au total, rouge long) puis la braise (8 s) : **12 s**
+de lumière avant l'agonie. Le modèle de vue du bot n'en retient que **132 px** (220 × 0,6), le corps d'un PNJ comptant 18 px de plus : **la garde juge avec ce halo-là**, jamais
+avec celui de l'allumage, qui n'éclaire qu'une seconde. Le joueur marche à 260 px/s.
+
+**Ce que la salle lui en demande : une, la réserve de départ.** Les trois PNJ sont à 16 cases du centre du chemin (560 px) :
+- **la marge** — 92 px de centre à centre (exigés : 90) entre le PNJ le plus proche et toute case du chemin ; du bord du corps au bord de la case du joueur, elle en perd 35 : 57 px,
+  une case et demie. **Elle ne peut pas être de 150** (c'était la visée) : une fusée porte 450 + 132 + 18 = 600 px, la torche 468, soit **132 px au mieux, d'un lancer exact** — et
+  chaque pixel de marge est un pixel de tolérance de visée en moins. À 90, le couple garde **11° de visée** (à 450 px, un degré fait 8 px) ; à 100 il n'en garde presque plus.
+- **un couple, une fusée** — (17, 4) et (20, 4), à 3 cases l'un de l'autre, sont éclairés ensemble par une fusée lancée droit devant depuis le centre (20, 20) ; chaque PNJ l'est aussi
+  seul, sur 20° à 23° de visée, depuis une case du chemin.
+- **le troisième, ailleurs** — (9, 8), à 8,9 cases du premier du couple et 11,7 du second, n'est dans le halo d'aucun lancer qui montre le couple : aucune fusée ne montre les trois
+  (**il en faut 2 si la torche ne trouve rien**), ce qui est la définition de « répartis ». Mais la torche porte 13,4 cases : qui est allé tuer le couple voit le troisième au bord de son
+  faisceau (la garde exige moins de 10 cases d'un PNJ déjà trouvé). **Avec la torche, 1 fusée suffit** : la réserve de départ.
+- **l'attente** — nulle pour qui fouille. Pour qui voudrait la seconde fusée quand même : 60 s de recharge moins la marche entre les deux lancers (du lancer jusqu'au couple, puis du
+  couple jusqu'à la case d'où l'on montre le troisième : 4,3 s, sans compter la visée ni les tirs) = **56 s au pire**, jamais plus d'**une** période. La garde exige qu'on n'ait jamais
+  besoin de plus d'une recharge (`fusées nécessaires ≤ réserve + 1`) et que la torche seule fasse tenir la salle dans la réserve de départ (`≤ réserve`).
+
+**Pourquoi cette disposition, et pas une autre** (les trois essayées sur le papier avant de dessiner) :
+1. *Les trois dans un seul halo* : ils tiendraient dans un disque de 300 px de diamètre au bord de la portée de lancer — c'est exactement l'angle de l'ancienne salle, à peine desserré.
+2. *Un couple et un solitaire de part et d'autre du chemin* : une vraie seconde fusée, mais 1 100 px de marche entre les deux lancers (4 s) — **55 s à attendre**, sans rien à faire. Pour un
+   joueur qui débute, une salle qui lui fait attendre une minute devant un écran noir enseigne l'ennui, pas la fusée.
+3. *Trois PNJ à trois endroits* : trois fusées, **deux minutes d'attente** (la garde le refuse).
+La disposition retenue garde la seconde fusée **disponible** (le troisième est à portée d'un lancer depuis le chemin, la garde le vérifie) sans la **rendre obligatoire**.
+
+**Pourquoi 41×41.** Le chemin du centre fait 18 cases ; à 16 cases de son bout, côté nord, la salle doit encore tenir un couple, un solitaire et leurs 4 cases d'écart, plus la ceinture :
+36 est le plancher (2 × (13,4 + 2) = 31 cases de torche et de marge, plus les murs), 41 donne un centre (20, 20) et laisse le chemin tout droit. Les sept piliers habillent l'est et le sud :
+**aucun ne coupe un lancer, ni la vue d'un PNJ à l'autre**, et aucun ne laisse de couloir d'une tuile (la garde le mesure partout).
+
+**Ce que l'image a montré, et que le modèle de vue ignore : la fumée.** Le PNJ du couple à 104 px de la fusée, photographié à 0,7 s puis 1,2 s de combustion, se lit nettement (une silhouette grise dans le rose) ; à **2,5 s il n'en reste qu'un contour**, à **5 s la fumée l'a caché** (`FUMEE_MONTEE` 3 s, `RAYON_FUMEE` 200 px : le nuage monte et noie les corps qu'il entoure). La lumière dure 12 s, **la fenêtre où le PNJ se voit en dure à peu près 2**. Il est immobile : un coup d'œil suffit à savoir où il est, et c'est ce que la salle demande. Mais ce n'est pas « il reste éclairé 12 s », et la garde mesure la lumière, jamais la fumée — à dire à Adrien (voir « Signalé »). Images Mesa/llvmpipe.
+
+**Ce que cette salle ne peut pas faire, et qu'aucune salle ouverte ne pourrait : IMPOSER la fusée.** Elle ne porte que 132 px de plus que la torche. Qui marche **trois cases** au-delà du
+centre voit le couple à la torche. La salle rend la fusée **utile** (on voit loin, d'un coup, sans s'approcher, et pendant 12 s) ; elle ne la rend pas nécessaire. Seul un obstacle que la torche
+ne franchit pas et que la fusée franchit changerait cela — à étudier avec Adrien, pas à inventer ici.
+
 #### La garde
 
-`tools/test_chapitre_00.gd` (`--script`, aucune partie montée, 153 vérifications) : le chapitre se charge sans un défaut du validateur (dix salles exigées, boss dernier, classe `pistolet` donnée et prêtée) ; partout — taille (16 à 24, 32 pour
-l'arène), nombre de PNJ selon la table, **chaque PNJ atteignable à pied depuis le départ, une seule pièce (toute case praticable atteignable), aucune ronde, aucun couloir d'une tuile** ; puis les mesures par salle ci-dessus.
+`tools/test_chapitre_00.gd` (`--script`, aucune partie montée, 176 vérifications) : le chapitre se charge sans un défaut du validateur (dix salles exigées, boss dernier, classe `pistolet` donnée et prêtée) ; partout — taille (**une table par salle** : 16 à 24 par défaut, 36 à 48 pour 0.5, 32 pour l'arène ; toujours dans ce que le format sait écrire, 128), nombre de PNJ selon la table, **chaque PNJ atteignable à pied depuis le départ, une seule pièce (toute case praticable atteignable), aucune ronde, aucun couloir d'une tuile** ; puis les mesures par salle ci-dessus.
 `-- --dossier=<chemin absolu>` la lance sur une copie du chapitre : c'est ce qui permet de la saboter sans toucher aux fichiers livrés.
 
 **Sabotages exécutés — chacun a rougi** (copie du chapitre, une mutation, la garde en `--dossier=` ; le chapitre livré n'a jamais été modifié ; l'outil est hors dépôt) :
@@ -33151,8 +33188,13 @@ l'arène), nombre de PNJ selon la table, **chaque PNJ atteignable à pied depuis
 | un PNJ de 0.3 enfermé dans une poche de murs | « atteignable à pied » (la case (2, 2)) et « une seule pièce » (276 sur 294) |
 | le PNJ de 0.2 sous une lampe | « sous AUCUN plafonnier », et le modèle de vue l'y voit |
 | 0.3 avec deux PNJ au lieu de trois (chargeur suffisant) | « plus de tirs que de balles : 2 × 3 = 6 > 6 », « aucune marge », le compte de PNJ et trois autres |
-| un PNJ de 0.5 à portée de torche (en (8, 8)) | « hors de portée : le plus proche à 198 px » et « UNE fusée les éclaire tous » |
-| un PNJ de 0.5 hors du halo (coin nord-est) | « UNE fusée les éclaire tous les trois » (le meilleur lancer en éclaire 2) |
+| un PNJ de 0.5 à portée de torche (en (20, 11)) | « avec 90 px de marge : le plus proche en est à 315 px » — et lui seul |
+| les trois PNJ de 0.5 regroupés en (19, 4), (20, 4), (21, 4) | « répartis : … le plus serré : 1.0 », « les deux plus éloignés … (2.0) », « aucune fusée ne les montre tous les trois : il en faut 1 » |
+| trois PNJ de 0.5 à trois endroits (20, 4), (6, 12), (34, 12) | « une seule fusée en montre 1 », « jamais plus d'une recharge : 3 fusées pour une réserve de 1 », « ne FAIT PAS attendre » |
+| le troisième PNJ à 13,6 cases du couple, (6, 12) | « ne FAIT PAS attendre : 2 fusée(s) » — seul échec : le lancer qui le montre existe, c'est la torche qui ne le trouve plus |
+| le troisième PNJ hors de portée de toute fusée, (34, 6) | « le PNJ 3 est montré par une fusée… (0°) » et les trois contrôles de réserve (impossible) |
+| la règle de taille sans l'exception de 0.5 (la table de la garde, pas les données) | « une salle de 16 à 24 cases de côté → (41, 41) » — et lui seul |
+| **la salle d'avant** (24×24, trois PNJ dans un angle) jouée sous les nouvelles règles | six échecs : la taille, la marge (497 px), « répartis » deux fois, le coin plein, « aucune fusée ne les montre tous les trois : 1 » |
 | le PNJ de 0.1 hors de la flaque | « dans la flaque » et « vu dès l'entrée » |
 | le pilier de 0.2 retiré | « le départ ne le voit pas : la ligne de vue est coupée » |
 | les murets de 0.4 retirés / la rangée centrale seule retirée | sept contrôles (×1,05 et ×1,08) / deux (×1,22 : le détour n'est plus long) |
@@ -33165,15 +33207,14 @@ l'arène), nombre de PNJ selon la table, **chaque PNJ atteignable à pied depuis
 | l'arène de 0.10 asymétrique | « symétrique d'est en ouest » |
 
 **Deux sabotages ont d'abord rougi pour la mauvaise raison, et c'est instructif.** (1) « PNJ muré » : en entourant un PNJ de huit murs, la garde n'a pas rougi sur « atteignable » mais sur le **validateur** (la case du PNJ, étranglée, n'était plus praticable : le chapitre ne se chargeait plus) — la garde de contenu s'arrêtait avant d'avoir regardé. Le sabotage retenu enferme le PNJ dans une poche de 6×3 cases, praticable mais fermée. (2) « PNJ de 0.5 hors du halo » placé en (1, 8) rougissait sur la torche seule ; il est maintenant au coin nord-est, hors de la torche ET du halo.
-Deux contrôles que je n'ai **pas** sabotés un à un : le garde de taille (16 à 24) et le nombre de PNJ par salle — le second rougit en passant (0.3 à deux PNJ), le premier jamais.
+Un contrôle que je n'ai **pas** saboté seul : le nombre de PNJ par salle — il rougit en passant (0.3 à deux PNJ). Le garde de taille, lui, l'a été (6e ligne : la table sans l'exception de 0.5).
 
 #### Les images (Mesa/llvmpipe sous Xvfb, 1920×1080, la torche du joueur tournée vers l'action — non versionnées)
 
 Chacune est un joueur posé pour la prise (visée donnée au stick, comme au jeu) : 0.1 le PNJ sous la flaque, vu du bord de la salle ; 0.2 la torche sur le PNJ derrière le pilier, la petite lampe d'entrée en haut à gauche ;
-0.3 la torche dans le recoin nord-ouest, deux autres recoins sombres de chaque côté, la lampe au centre ; 0.4 la chicane, la torche par-dessus un muret sur le PNJ ; 0.5 la fusée posée dans l'angle nord-ouest éclaire (en rose) deux des trois silhouettes au bord de l'écran
-(le troisième est hors cadre : un coin à 15 cases ne tient pas dans l'écran) ; 0.6 les deux flaques et le PNJ sous la lampe de l'est ; 0.7 le L, ses trois lampes et ses trois PNJ ; 0.8 le sol nu, la torche sur un PNJ au fond ; 0.9 les lampes, un muret et un PNJ éclairé au bout de la torche ;
+0.3 la torche dans le recoin nord-ouest, deux autres recoins sombres de chaque côté, la lampe au centre ; 0.4 la chicane, la torche par-dessus un muret sur le PNJ ; 0.5 la fusée lancée droit devant depuis le centre éclaire (en rose) le bout nord : un PNJ du couple se lit nettement au bord du halo, le second passe sous l'intitulé de la salle, le troisième, à neuf cases, reste dans le noir ; 0.6 les deux flaques et le PNJ sous la lampe de l'est ; 0.7 le L, ses trois lampes et ses trois PNJ ; 0.8 le sol nu, la torche sur un PNJ au fond ; 0.9 les lampes, un muret et un PNJ éclairé au bout de la torche ;
 0.10 l'arène, le boss faiblement visible dans le noir (il tire : le sang et le voile rouge sont ceux de ses balles — le joueur d'une prise est invincible, et le boss y est posé à 6,5 cases de lui, ce que le jeu ne fait pas).
-**La prise de 0.5 est faite depuis (11, 11)**, sur le chemin du centre, fusée lancée à −135°, 150 images après le lancer.
+**La prise de 0.5 est faite depuis (20, 18)**, après un lancer depuis le centre (20, 20), plein nord : le joueur est reculé de deux cases pour que le couple tienne à l'écran (une case plus près, il est dans l'éblouissement de la fusée), et la prise date de **1,2 s de combustion, lue sur la fusée** — pas comptée en images : sous llvmpipe une image dure plus d'un pas de jeu, et « 150 images après le lancer » a donné, la première fois, une braise quasi morte et aucun PNJ.
 
 #### Non prouvé
 
@@ -33187,11 +33228,12 @@ Chacune est un joueur posé pour la prise (visée donnée au stick, comme au jeu
 
 #### Signalé, pas corrigé
 
-- **La marge de 0.5 est de 29 px** (voir plus haut) : la salle est liée à la portée de torche du Parasite en vue unique. Une autre classe ne jouerait pas 0.5 comme elle est écrite — mais le chapitre 0 prête le Parasite.
+- **La marge de 0.5 est de 92 px, et ne peut pas monter** (voir « Les fusées de 0.5 ») : la salle est liée à la portée de torche du Parasite en vue unique, **et** à la portée de lancer d'une fusée ; la fusée ne porte que 132 px de plus que la torche. Une autre classe ne jouerait pas 0.5 comme elle est écrite — mais le chapitre 0 prête le Parasite. **Elle ne rend pas la fusée nécessaire**, seulement utile.
+- **La fumée de la fusée cache le PNJ qu'elle vient de montrer** (voir « Les fusées de 0.5 ») : visible environ 2 s sur 12 de lumière, à 104 px du point de chute. Rien à corriger ici — c'est la fusée de FU2.1, « le scan honnête puis l'ambiguïté » —, mais une salle qui compte sur la fusée doit savoir que le coup d'œil est bref. Le PNJ 1, à 148 px de la fusée (le modèle s'arrête à 150), est plus difficile encore à lire : il n'a pas été photographié seul.
 - **`AventureFormat` exige un manifeste nommé `chapitre.json`**, là où la ROADMAP parlait d'un « manifeste » sans nom : c'est le nom retenu en S6, gardé.
 - **Des recoins se devinent en diagonale** : depuis le coin sud-est de 0.3 ou 0.9, l'angle nord-ouest est en ligne de vue (très loin, hors de la torche) : la garde exige « hors de vue OU hors de portée », pas « hors de vue ».
 
-**À trancher par Adrien.** (1) Les **phrases d'intention** (ton, longueur) ; en particulier « Six cartouches » en 0.3, qui donne un chiffre. (2) **0.5 : un coin pour les trois PNJ** (une fusée les montre tous) ou une salle plus grande que 24×24 (les trois PNJ répartis, deux fusées — le Parasite n'en a qu'une par minute) ? (3) **0.6 : le PNJ éclairé par sa lampe** (visible de loin, la ligne droite n'est pas interdite) ou dans le noir (il faudrait alors s'approcher à la torche, donc être vu) ? (4) **0.1 à 0.5 : des PNJ sourds et aveugles qui ne tirent jamais** — le débutant ne risque rien avant 0.6 ; voulu ? (5) La **taille de l'arène** du boss (32×32) et son tracé symétrique (cinq piliers, deux murets, deux lampes face à face).
+**À trancher par Adrien.** (1) Les **phrases d'intention** (ton, longueur) ; en particulier « Six cartouches » en 0.3, qui donne un chiffre. (2) ~~0.5 : un coin pour les trois PNJ ou une salle plus grande que 24×24 ?~~ **Tranché le 2026-10-03** : « toute liberté sur la taille » — 41×41, PNJ répartis ; reste à lui dire que la salle n'exige **qu'une** fusée (le troisième PNJ se trouve à la torche) et que la seconde reste possible : voulait-il la rendre obligatoire (56 s d'attente) ? (3) **0.6 : le PNJ éclairé par sa lampe** (visible de loin, la ligne droite n'est pas interdite) ou dans le noir (il faudrait alors s'approcher à la torche, donc être vu) ? (4) **0.1 à 0.5 : des PNJ sourds et aveugles qui ne tirent jamais** — le débutant ne risque rien avant 0.6 ; voulu ? (5) La **taille de l'arène** du boss (32×32) et son tracé symétrique (cinq piliers, deux murets, deux lampes face à face).
 
 ### Questions
 
