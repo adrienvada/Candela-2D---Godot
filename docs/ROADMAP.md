@@ -33260,6 +33260,37 @@ remplacé par deux champs (4), « equipe » vrai par défaut (4), le refus sur l
 lisait « voit » puis « entend_lent » comme palier inconnu et rendait 0 (TRÈS LENT) — « voit_entend » commence par « voit_ », comme dans `pnj_nomme`, qui avait le test `_NOMS_PALIER.has(…)` que
 j'avais oublié.
 
+#### Les outils partagés des trois chapitres
+
+`tools/fabrique_commune.gd` (la grille de dessin, l'écriture des JSON, l'aperçu ; **un PNJ de ronde naît sur le premier point de sa ronde** — le bot saute ce point et va au suivant —,
+et le k-ième PNJ qui n'est pas de ronde tient le repère `k` du dessin) et `tools/outils_chapitre.gd` (le contexte d'une salle, le modèle de vue du bot, les chemins, **l'ouïe réelle** : un
+pas debout, un pas accroupi, un tir, une douille, mesurés avec `PerceptionBot.ecouter` et les tables de l'audio, jamais recopiés ; ce que `partout()` vérifie dans chaque salle de chaque
+chapitre ; l'arène du boss). Le chapitre 0 garde ses propres outils (une garde, un fichier), les trois suivants partagent les leurs : trois copies auraient dérivé.
+**Ce que `partout()` garde, salle par salle** : la taille, les PNJ de chaque sorte (la table des profils, nombre par nom), les plafonniers, les PNJ équipés (classe du chapitre, profil capable de
+déclencher son gadget : la suie et le leurre se posent en combat sur une cible vue, la torche fantôme en enquête sur un son — il faut donc **voir** puis **entendre**), chaque PNJ atteignable à pied,
+une seule pièce, aucun couloir d'une tuile, **chaque ronde une boucle praticable** (au moins trois points distincts, le PNJ naît sur le premier, un chemin relie chaque point au suivant et le dernier
+au premier, 20 cases et 6 à 40 s au moins par tour), **chaque zone contient son PNJ et assez de cases pour errer** (au moins 16, toutes atteignables sans sortir de la zone), et **le départ est un
+abri** (aucun PNJ qui voit ne voit le joueur à sa case, torche éteinte, où qu'il se tienne sur son tour ou dans sa zone).
+Mesuré au lancement, relu à chaque exécution : un pas debout donne une zone assez nette pour qu'un PNJ tire dessus (`AUDACE_ZONE_PX`, 100 px) jusqu'à **495 px**, un pas accroupi jusqu'à **100 px**
+seulement, un tir jusqu'à **1 145 px**, une douille jusqu'à **240 px** ; le pas debout s'entend du tout jusqu'à 1 695 px.
+
+#### Le chapitre 1, « Les rondes » (Fumiste, slug `fumiste`) — `assets/solo/chapitre_01/`, `tools/fabrique_chapitre_01.gd`, `tools/test_chapitre_01.gd`
+
+Les PNJ marchent, leurs trajets se répètent : on apprend à les lire, puis à choisir son moment. Aucune classe imposée. **1.7 à 1.9 : les rondes portent le Fumiste et sa suie** (`"equipe": true`).
+
+| Salle | Taille · PNJ · plafonniers · phrase | Ce que la garde mesure |
+|---|---|---|
+| **1.1 Une ronde** | 22×16 · 1 `ronde_sourd_aveugle` · 1 · « Une silhouette fait le tour du bloc, toujours par le même chemin. Elle repasse sous la lampe. » | un tour de 52 cases (14 s) autour d'un bloc de 80 cases ; la lampe en éclaire 5 (moins d'un quart du tour) ; le joueur part à 2 cases du trajet |
+| **1.2 Le croisement** | 24×24 en croix · 2 `ronde_sourd_aveugle` · 2 · « Deux silhouettes, deux tours, un carrefour. Elles s'y croisent sous les lampes. » | deux tours de 48 cases qui partagent 4 cases (les croisements), dont 2 sous une lampe ; **les deux PNJ ne passent jamais à moins de 40 px** (173 px mesurés, tours simulés à vitesse constante) |
+| **1.3 La ronde dans le noir** | 30×20 · 1 `ronde_sourd_aveugle` · 0 · « Une silhouette marche dans le noir. On entend ses pas avant de la voir. » | un tour de 76 cases (20,5 s), aucune lampe ; **aucune case ne montre à la torche plus de la moitié du tour** (au mieux 46 %) ; on l'entend d'où qu'on soit |
+| **1.4 Le guetteur** | 22×22 · 1 `ronde_sourd_aveugle` + 1 `immobile_voit_lent` · 1 · « Elle fait le tour du pilier. Lui ne bouge pas, et il regarde passer. » | la ronde passe dans le champ du guetteur (18 cases) ; **le pilier lui en cache 19 sur 52** ; un affût existe : une case dans le noir, hors de sa vue, d'où l'on voit à la torche un point de la ronde qu'il ne voit pas |
+| **1.5 Elle regarde** | 32×16 · 1 `ronde_voit_lent` · 1 · « Deux couloirs, une cloison entre eux. Elle regarde en marchant, et la lampe éclaire le passage. » | une cloison de 88 cases ; **elle voit le passage éclairé de 18 cases de son tour sur 68, et en est aveugle 50 cases d'affilée (13,5 s)** : le passage se traverse en moins d'une seconde |
+| **1.6 Sous la lumière** | 36×15 · 2 `ronde_voit_lent` · 3 · « Trois lampes en enfilade. Deux silhouettes qui regardent y passent, chacune à son tour. » | les trois lampes sur une même ligne ; chaque ronde traverse deux flaques, la flaque du milieu est commune ; **un affût dans le noir pour chacune** (on la voit éclairée, elle ne voit pas l'affût) ; 420 px d'écart minimal |
+| **1.7 La suie** | 26×22 en U · 2 `ronde_voit_lent` équipées · 1 · « Deux gardes de part et d'autre du U, une lampe au fond. Quand l'un est touché, la fumée monte. » | un U (moins de 70 % du rectangle), un garde par bras, **aucune case commune et aucune ligne de vue entre les bras** ; chaque garde voit le fond éclairé ; la pose de la suie (120 à 400 px de la cible) est possible |
+| **1.8 La garde** | 30×24 · 3 `ronde_voit_lent` équipées + 1 `immobile_voit_lent` · 2 · « Une cour, des murets, trois rondes. Un poste ne bouge pas, tout au fond. » | 3 tours distincts autour de 3 piliers ; 3 rangées de murets (26 cases de mur bas) ; **le poste voit une part d'au moins deux des trois tours** et un muret est sur sa ligne droite depuis le départ |
+| **1.9 La salle pleine** | 40×30 · 3 `ronde_voit_lent` équipées + 2 `immobile_sourd_aveugle` · 3 · « Des colonnes, des lampes, trois rondes. Deux silhouettes ne bougent pas, dans le noir. » | 5 piliers ; trois tours de 30 cases au moins, sans case commune, **jamais à moins de 40 px** ; 2 immobiles dans le noir et loin du départ |
+| **1.10 Le Fumiste** | 32×32 · `boss` (classe `fumiste`) · 2 · « Un duel dans une arène. Il a de la suie, et il s'en sert. » | l'arène, variée (quatre piliers, un au centre, des murets courts sur la voie du milieu) : symétrique d'est en ouest ET du nord au sud, les deux lampes face à face |
+
 ### Questions
 
 **Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),

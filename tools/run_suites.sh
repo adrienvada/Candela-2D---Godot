@@ -349,6 +349,16 @@ SUITES+=(test_bot_equipement)
 # 0.10 un duel en miroir.
 SUITES+=(test_chapitre_00)
 
+# Chantier SOLO, S8 (2026-10-03) : le CONTENU des chapitres 1 à 3 (`assets/solo/chapitre_01` à `03`, écrits par `tools/fabrique_chapitre_01.gd` à `03`, qui
+# partagent `tools/fabrique_commune.gd`). Chaque garde charge son chapitre par `tools/outils_chapitre.gd` (le contexte d'une salle, le modèle de vue du bot, les
+# chemins de `NavigationBot`, l'ouïe réelle de l'audio) et mesure ce que chaque salle ENSEIGNE. `test_chapitre_01` — « Les rondes » (Fumiste) : chaque ronde une boucle
+# praticable qui repasse sous une lampe, deux rondes qui se croisent sans se toucher, la ronde dans le noir qu'aucune case ne montre entière à la torche, le guetteur,
+# la ronde qui regarde, l'enfilade de trois flaques, la suie (1.7 à 1.9 : « equipe »), un duel en miroir. `test_chapitre_02` — « Les rondes écoutent » (Illusionniste) :
+# les portées d'écoute (un pas debout, un pas accroupi, un tir, une douille), des zones d'abri accroupi, la salle nue, les recoins, deux salles reliées, le T, la
+# diversion, le leurre. `test_chapitre_03` — « Les zones » (Braconnier) : chaque zone contient son gardien et assez de cases pour errer, la porte, la frontière, le
+# damier, la lampe au loin (3.7 à 3.9 : « equipe », et un gardien équipé ENTEND).
+SUITES+=(test_chapitre_01)
+
 # Chantier SOLO, S9b (2026-10-03) : l'INTÉGRATION de S6 (le moteur de l'aventure) et de S9 (le bot équipé), écrits en parallèle. `test_aventure_boss`
 # (le jeu monté, à pas d'image fixe — `case` plus bas) : chaque PNJ a SA réserve de fusées et de gadget, semée sur SA classe (deux PNJ ne se volent
 # plus la leur, un boss Fumiste pose sa suie et retrouve ses réserves quand la salle recommence, le bot d'entraînement rééquipe à sa réapparition la

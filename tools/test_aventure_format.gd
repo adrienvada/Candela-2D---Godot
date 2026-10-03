@@ -567,10 +567,10 @@ func _chargement_et_catalogue() -> void:
 	var racine_avant: String = Format.racine
 	var attendus_avant: int = Format.niveaux_attendus
 	Format.oublier_le_cache()
-	# S7 (2026-10-03) a écrit le chapitre 0 : `assets/solo` en livre un, et un seul (les chapitres 1 à 9 sont S8). Sans cri : un chapitre
+	# S7 (2026-10-03) a écrit le chapitre 0, S8 les chapitres 1 et suivants : `assets/solo` livre ceux-là, et pas un de plus. Sans cri : un chapitre
 	# mal écrit ne se chargerait pas, et `CRIS ATTENDUS` resterait à sa valeur.
-	_check("`assets/solo` livre le chapitre 0 de S7, et lui seul, sans un cri",
-		Format.chapitres_livres().keys() == [0], str(Format.chapitres_livres().keys()))
+	_check("`assets/solo` livre le chapitre 0 de S7 et les chapitres de S8 (1), et eux seuls, sans un cri",
+		Format.chapitres_livres().keys() == [0, 1], str(Format.chapitres_livres().keys()))
 	Format.racine = "res://tools/aventure_essai"
 	Format.niveaux_attendus = 0
 	Format.oublier_le_cache()
