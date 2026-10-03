@@ -328,6 +328,35 @@ func blocs_interieurs(c: Dictionary) -> Array:
 	return sortie
 
 
+## Les cases praticables qui n'ont qu'UN voisin praticable (4 voisins) ou aucun : les culs-de-sac d'une case, où un chasseur se coincerait et où l'on serait pris.
+func culs_de_sac(c: Dictionary) -> Array[Vector2i]:
+	var nav: Nav = c["nav"]
+	var sortie: Array[Vector2i] = []
+	for cc in nav.cases_praticables():
+		var voisins := 0
+		for d: Vector2i in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN]:
+			if nav.est_praticable(cc + d):
+				voisins += 1
+		if voisins < 2:
+			sortie.append(cc)
+	return sortie
+
+
+## La longueur, en cases, de la suite de cases praticables qui passe par `cc` dans la direction `axe` (`Vector2i.RIGHT` : la rangée ; `Vector2i.DOWN` : la colonne).
+func longueur_de_la_course(c: Dictionary, cc: Vector2i, axe: Vector2i) -> int:
+	var nav: Nav = c["nav"]
+	var n := 1
+	var p := cc + axe
+	while nav.est_praticable(p):
+		n += 1
+		p += axe
+	p = cc - axe
+	while nav.est_praticable(p):
+		n += 1
+		p -= axe
+	return n
+
+
 ## Les cases de sol (praticables) qui ne sont pas dans le noir : l'une des lampes de la salle les éclaire.
 func cases_claires(c: Dictionary) -> Array[Vector2i]:
 	return cases_eclairees(c, (c["nav"] as Nav).cases_praticables())
