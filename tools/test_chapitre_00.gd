@@ -13,7 +13,9 @@
 ##
 ## Salle par salle : 0.1 le PNJ est dans la flaque et en ligne de vue du départ ; 0.2 aucune lampe ne l'éclaire, le pilier le cache ;
 ## 0.3 plus de tirs nécessaires que de balles dans un chargeur ; 0.4 un mur bas entre chaque PNJ et le départ, et le contourner est plus
-## long que l'enjamber ; 0.5 aucun PNJ à portée de torche du chemin du centre, tous au halo d'UNE fusée lancée depuis ce chemin ; 0.6 le plus
+## long que l'enjamber ; 0.5 (une grande salle, 36 à 48 cases) aucun PNJ à portée de torche du chemin du centre avec 90 px de marge, chacun au halo
+## d'une fusée lancée depuis ce chemin, deux au halo d'UNE seule, aucune fusée pour les trois (ils sont répartis), et ce qu'il faut de fusées tient
+## dans la réserve du Parasite (1) et sa recharge (60 s) ; 0.6 le plus
 ## court chemin passe par les flaques et par elles seules on est vu, un détour existe qui les évite ; 0.7 chaque tir est vu d'un autre PNJ et
 ## un abri existe ; 0.8 aucune lampe, des PNJ qui n'entendent que, loin ; 0.9 les quatre sortes de PNJ, lampes, recoins et murets ; 0.10 un
 ## duel en miroir. Et partout : tout PNJ atteignable à pied, aucune ronde, aucun couloir d'une tuile, une seule pièce.
@@ -34,6 +36,7 @@ const Iso := preload("res://camera_iso.gd")
 const PlafT := preload("res://plafonnier.gd")
 const Arme := preload("res://weapon_data.gd")
 const Codec := preload("res://map_codec.gd")
+const FuseeMod := preload("res://fusee_modele.gd")
 
 const DOSSIER_LIVRE := "res://assets/solo/chapitre_00"
 
@@ -43,10 +46,28 @@ const NB_PNJ := [1, 1, 3, 2, 3, 1, 3, 2, 6, 1]
 ## La marge qu'on exige sur toute distance « hors de portée » : une case. Un PNJ à 5 px de la limite de la torche n'est pas hors de portée,
 ## il est à la limite — et le moindre arrondi de la physique le ramène dedans.
 const MARGE_PX := 20.0
-## Une salle d'initiation : de 16 à 24 cases de côté (la ROADMAP), sauf l'arène du boss.
+## Le côté d'une salle, en cases : 16 à 24 (une salle d'initiation, la ROADMAP) sauf celles qui annoncent une autre mesure, ci-dessous. Chaque
+## exception dit POURQUOI, et toute salle reste dans ce que le format sait écrire (`MapCodec.MAX_GRID`, 128). Décision d'Adrien du 2026-10-03 :
+## « toute liberté sur la taille des cartes : elles peuvent être bien plus grandes que les cartes du duel » — la taille d'une salle
+## d'aventure n'est plus bornée par celle d'un duel, elle l'est par ce qu'elle enseigne.
 const COTE_MIN := 16
 const COTE_MAX := 24
-const COTE_ARENE := 32
+## 0.5, « La fusée » : de 36 à 48. Le bas tient à la torche : le chemin du centre doit laisser, de chaque côté, sa portée (13,4 cases) plus la
+## marge (2), soit 31 cases, plus la ceinture — sous 36 les PNJ retombent dans un angle. Le haut tient au jeu : au-delà, ce n'est que de la marche.
+## 0.10, l'arène du boss : exactement 32 (l'écran scindé d'un duel, la ROADMAP la tranche).
+const COTES_PAR_SALLE := {4: [36, 48], 9: [32, 32]}
+
+## 0.5 — la marge de torche exigée entre un PNJ et toute case du chemin, en px de centre à centre. Elle n'est pas de 150 : une fusée vole 450 px
+## et son halo (de modèle) en éclaire 132, soit 582 de portée de lancer pour 468 de torche — 114 au mieux, d'un lancer exact. À 70, le couple
+## que montre une seule fusée garde de quoi viser (`FENETRE_VISEE_MIN`).
+const MARGE_FUSEE_PX := 90.0
+## 0.5 — répartis : deux PNJ à 3 cases l'un de l'autre au moins ; les deux plus éloignés à 8 cases au moins (l'ancienne salle : 2 et 2).
+const ECART_MIN_CASES := 3.0
+const ECART_MAX_MIN_CASES := 8.0
+## 0.5 — jusqu'où la torche « suit » : un PNJ à moins de 10 cases d'un PNJ qu'on est allé tuer se montre au bord du faisceau (on tue de 3 cases).
+const CHAINE_CASES := 10.0
+## 0.5 — la tolérance de visée (en degrés, au modèle de vue conservateur) d'un lancer qui montre le couple. À 450 px, un degré fait 8 px.
+const FENETRE_VISEE_MIN := 3
 
 var _failures := 0
 var _verifications := 0
@@ -55,6 +76,10 @@ var _portee_torche := 0.0
 var _portee_fusee := 0.0
 var _rayon_halo_fusee := 0.0
 var _chargeur := 0
+var _stock_fusees := 0
+var _periode_fusee := 0.0
+var _vitesse_joueur := 0.0
+var _duree_halo_fusee := 0.0
 var _hauteur := 0.0
 var _hauteur_lampe := 0.0
 
@@ -108,7 +133,7 @@ func _les_mesures_du_jeu() -> void:
 	print("\n--- Les mesures du jeu ---")
 	_portee_torche = Portee.portee_au_bord(Portee.VUE_UNIQUE, Percep.ZOOM_VUE_UNIQUE, Percep.DECALAGE_VISEE, Iso.TANGAGE_DEG)
 	_check("la torche du Parasite porte jusqu'au bord de l'écran : 468 px (13,4 cases)", is_equal_approx(_portee_torche, 468.0), str(_portee_torche))
-	_portee_fusee = float(preload("res://fusee_modele.gd").portee_libre())
+	_portee_fusee = float(FuseeMod.portee_libre())
 	# L'empreinte du halo d'une fusée posée est écrite dans `fusee.gd` (`EMPREINTE_LUMIERE`) : lue là, car ce fichier nomme des autoloads
 	# et ne se précharge pas sous `--script`.
 	var re_fusee := RegEx.create_from_string("const EMPREINTE_LUMIERE\\s*:=\\s*([0-9.]+)")
@@ -122,6 +147,17 @@ func _les_mesures_du_jeu() -> void:
 	var m := re.search(texte)
 	_chargeur = int(m.get_string(1)) if m != null else 0
 	_check("le chargeur du Parasite se lit dans game_state.gd (6 balles)", _chargeur == 6, str(_chargeur))
+	# Sa réserve de fusées et la recharge, lues LÀ aussi : `weapon_pistolet.fusees = _fusees(stock, PERIODE_RECHARGE_FUSEE)`.
+	var m_stock := RegEx.create_from_string("weapon_pistolet\\.fusees\\s*=\\s*_fusees\\((\\d+),\\s*PERIODE_RECHARGE_FUSEE\\)").search(texte)
+	var m_periode := RegEx.create_from_string("const PERIODE_RECHARGE_FUSEE\\s*:=\\s*([0-9.]+)").search(texte)
+	_stock_fusees = int(m_stock.get_string(1)) if m_stock != null else 0
+	_periode_fusee = m_periode.get_string(1).to_float() if m_periode != null else 0.0
+	_check("le Parasite part avec 1 fusée, qui revient en 60 s (game_state.gd)", _stock_fusees == 1 and is_equal_approx(_periode_fusee, 60.0), "%d, %s" % [_stock_fusees, _periode_fusee])
+	var m_vitesse := RegEx.create_from_string("@export var speed: float = ([0-9.]+)").search(FileAccess.get_file_as_string("res://player.gd"))
+	_vitesse_joueur = m_vitesse.get_string(1).to_float() if m_vitesse != null else 0.0
+	_check("le joueur marche à 260 px/s (player.gd)", is_equal_approx(_vitesse_joueur, 260.0), str(_vitesse_joueur))
+	_duree_halo_fusee = FuseeMod.duree_plein_feu + FuseeMod.duree_braise
+	_check("posée, une fusée éclaire de plein feu puis de braise : au moins 10 s avant l'agonie", _duree_halo_fusee >= 10.0, str(_duree_halo_fusee))
 	_hauteur = Murs.hauteur_de_posture(false)
 	_hauteur_lampe = Murs.en_pixels(PlafT.HAUTEUR_TUILES)
 
@@ -256,11 +292,10 @@ func _partout() -> void:
 		var nav: Nav = ctx["nav"]
 		var nom := "0.%d" % (i + 1)
 		var taille: Vector2i = ctx["taille"]
-		if i == 9:
-			_check("%s : l'arène du boss fait %d × %d" % [nom, COTE_ARENE, COTE_ARENE], taille == Vector2i(COTE_ARENE, COTE_ARENE), str(taille))
-		else:
-			_check("%s : une salle de %d à %d cases de côté" % [nom, COTE_MIN, COTE_MAX],
-				taille.x >= COTE_MIN and taille.y >= COTE_MIN and taille.x <= COTE_MAX and taille.y <= COTE_MAX, str(taille))
+		var cotes: Array = COTES_PAR_SALLE.get(i, [COTE_MIN, COTE_MAX])
+		_check("%s : une salle de %d à %d cases de côté%s" % [nom, cotes[0], cotes[1], " (une mesure annoncée, pas celle d'une salle d'initiation)" if COTES_PAR_SALLE.has(i) else ""],
+			taille.x >= cotes[0] and taille.y >= cotes[0] and taille.x <= cotes[1] and taille.y <= cotes[1], str(taille))
+		_check("%s : et dans ce que le format sait écrire (au plus %d)" % [nom, Codec.MAX_GRID], taille.x <= Codec.MAX_GRID and taille.y <= Codec.MAX_GRID, str(taille))
 		_check("%s : %d PNJ (la table de la ROADMAP)" % [nom, NB_PNJ[i]], (ctx["pnj"] as Array).size() == NB_PNJ[i], str((ctx["pnj"] as Array).size()))
 		var atteignables := _cases_du_cote(ctx)
 		var tous := true
@@ -449,42 +484,190 @@ func _salle_4() -> void:
 # 0.5 — La fusée
 # ---------------------------------------------------------------------------
 
+## Tous les lancers possibles d'une fusée depuis une case du chemin : pour chaque case et chaque degré, la fusée vole `_portee_fusee` px en
+## ligne droite (toujours la même distance : la vitesse de lancer est fixe) et se pose ; son halo éclaire quels PNJ, selon le modèle de vue ?
+## Rend `[{case, degres, masque}]` — un bit par PNJ éclairé, dans l'ordre du chemin —, sans les lancers qui n'éclairent personne.
+func _lancers_de_fusee(ctx: Dictionary, chemin: Array) -> Array:
+	var nav: Nav = ctx["nav"]
+	var sortie: Array = []
+	for c: Vector2i in chemin:
+		var origine := Nav.centre_de_la_case(c)
+		for degres in range(0, 360, 1):
+			var arrivee := origine + Vector2.from_angle(deg_to_rad(float(degres))) * _portee_fusee
+			if not nav.est_libre(Nav.case_du_monde(arrivee)) or not Percep.segment_degage(origine, arrivee, ctx["monde"]):
+				continue
+			var halo := Percep.lumiere_disque("fusee", arrivee, _rayon_halo_fusee * Percep.FRACTION_DISQUE, 7.0)
+			var masque := 0
+			for k in (ctx["pnj"] as Array).size():
+				if Percep.eclaire(halo, ctx["pnj"][k]["pos"], _hauteur, ctx["monde"]):
+					masque |= 1 << k
+			if masque != 0:
+				sortie.append({"case": c, "degres": degres, "masque": masque})
+	return sortie
+
+
+func _n_fusees(n: int) -> String:
+	return "impossible" if n < 0 else "%d fusée(s)" % n
+
+
+func _bits(masque: int) -> int:
+	var n := 0
+	for k in 8:
+		n += (masque >> k) & 1
+	return n
+
+
+## La fenêtre de visée d'un lancer qui éclaire AU MOINS `masque` : le plus long arc de degrés consécutifs, depuis une même case. C'est la
+## tolérance du joueur au modèle de vue — conservateur : il tient un halo de 132 px là où le vrai en fait 220.
+func _fenetre_de_visee(lancers: Array, masque: int) -> int:
+	var meilleure := 0
+	var courante := 0
+	var case_courante := Vector2i(-1, -1)
+	var dernier := -2
+	for l: Dictionary in lancers:
+		if (int(l["masque"]) & masque) != masque:
+			continue
+		if l["case"] == case_courante and int(l["degres"]) == dernier + 1:
+			courante += 1
+		else:
+			courante = 1
+			case_courante = l["case"]
+		dernier = int(l["degres"])
+		meilleure = maxi(meilleure, courante)
+	return meilleure
+
+
+## Les PNJ qu'on trouve À LA TORCHE en allant tuer ceux de `masque` : tout PNJ à moins de `CHAINE_CASES` d'un PNJ déjà trouvé, de proche en
+## proche. Une dizaine de cases, parce qu'on tue de près (3 cases) et que la torche porte 13,4 : de là, le suivant est au bord du faisceau.
+func _fermeture_a_la_torche(ctx: Dictionary, masque: int) -> int:
+	var pnj: Array = ctx["pnj"]
+	var trouve := masque
+	var change := true
+	while change:
+		change = false
+		for k in pnj.size():
+			if (trouve >> k) & 1:
+				continue
+			for j in pnj.size():
+				if (trouve >> j) & 1 and pnj[k]["pos"].distance_to(pnj[j]["pos"]) <= CHAINE_CASES * 35.0:
+					trouve |= 1 << k
+					change = true
+					break
+	return trouve
+
+
+## Le moins de fusées qui montrent tous les PNJ, parmi les lancers possibles (au plus 3) ; `avec_torche` ajoute ce que la torche trouve de
+## proche en proche après chaque fusée. -1 : impossible.
+func _fusees_necessaires(ctx: Dictionary, lancers: Array, avec_torche: bool) -> int:
+	var tout := (1 << (ctx["pnj"] as Array).size()) - 1
+	var masques := {}
+	for l: Dictionary in lancers:
+		masques[int(l["masque"])] = true
+	var liste: Array = masques.keys()
+	var reunions: Array = [0]
+	for n in range(1, 4):
+		var suite := {}
+		for r: int in reunions:
+			for m: int in liste:
+				suite[r | m] = true
+		reunions = suite.keys()
+		for r: int in reunions:
+			if (_fermeture_a_la_torche(ctx, r) if avec_torche else r) == tout:
+				return n
+	return -1
+
+
+## L'attente de qui voudrait la seconde fusée : une période de recharge, moins ce qu'il a marché entre les deux lancers. Le parcours est
+## celui qui ATTEND LE PLUS : lancer d'une case du chemin sur le couple, marcher jusqu'au PNJ le plus proche, puis jusqu'à la case du chemin
+## d'où l'on montre le reste — le plus court de chaque marche, sans compter ni les tirs ni la visée. Rend `{attente, marche}` en secondes.
+func _attente_au_pire(ctx: Dictionary, lancers: Array, masque_couple: int) -> Dictionary:
+	var nav: Nav = ctx["nav"]
+	var pnj: Array = ctx["pnj"]
+	var reste := ((1 << pnj.size()) - 1) & ~masque_couple
+	var cases_du_couple: Array[Vector2i] = []
+	var cases_du_reste: Array[Vector2i] = []
+	for l: Dictionary in lancers:
+		if (int(l["masque"]) & masque_couple) == masque_couple and not cases_du_couple.has(l["case"]):
+			cases_du_couple.append(l["case"])
+		if (int(l["masque"]) & reste) == reste and not cases_du_reste.has(l["case"]):
+			cases_du_reste.append(l["case"])
+	var meilleur := INF
+	for k in pnj.size():
+		if not (masque_couple >> k) & 1:
+			continue
+		var aller := INF
+		for c in cases_du_couple:
+			aller = minf(aller, _longueur(nav.chemin(c, pnj[k]["case"])))
+		var retour := INF
+		for c in cases_du_reste:
+			retour = minf(retour, _longueur(nav.chemin(pnj[k]["case"], c)))
+		meilleur = minf(meilleur, aller + retour)
+	var marche := meilleur / _vitesse_joueur if meilleur < INF else 0.0
+	return {"attente": maxf(0.0, _periode_fusee - marche), "marche": marche}
+
+
 func _salle_5() -> void:
 	print("\n--- 0.5 La fusée : éclairer loin ---")
 	var ctx := _ctx(4)
 	var nav: Nav = ctx["nav"]
 	var taille: Vector2i = ctx["taille"]
-	_check("trois PNJ sourds et aveugles, AUCUN plafonnier", (ctx["pnj"] as Array).size() == 3 and (ctx["lampes"] as Array).is_empty())
+	var pnj: Array = ctx["pnj"]
+	_check("trois PNJ sourds et aveugles, AUCUN plafonnier", pnj.size() == 3 and (ctx["lampes"] as Array).is_empty())
 	var centre := nav.case_praticable_proche(Vector2i(taille.x / 2, taille.y / 2))
 	var chemin := nav.chemin(ctx["depart"], centre)
 	_check("le chemin le plus court du départ au centre %s existe (%d cases)" % [str(centre), chemin.size()], not chemin.is_empty())
+	# La marge se compte centre à centre, de la case du chemin au PNJ. Le corps du PNJ (18 px) et la demi-case du joueur (17) en rognent 35 :
+	# la marge réelle est la moitié. Elle ne peut pas monter beaucoup : une fusée vole 450 px et son halo de modèle en éclaire 132, soit 582 px
+	# de portée de lancer contre 468 de torche — 114 px au mieux, et seulement d'un lancer exact. À 70, le couple garde 28 px de tolérance.
 	var plus_pres := INF
-	for p: Dictionary in ctx["pnj"]:
+	for p: Dictionary in pnj:
 		for c in chemin:
 			plus_pres = minf(plus_pres, Nav.centre_de_la_case(c).distance_to(p["pos"]))
-	_check("aucun PNJ n'est à portée de torche (%.0f px + %.0f) d'une case du chemin : le plus proche en est à %.0f px" % [_portee_torche, MARGE_PX, plus_pres],
-		plus_pres > _portee_torche + MARGE_PX)
-	# Une fusée lancée d'une case du chemin vole 450 px en ligne droite et se pose : son halo les éclaire-t-il tous ?
-	var meilleur := {"p": Vector2i.ZERO, "angle": 0, "ok": 0}
-	var trouve := false
-	var halo := Percep.lumiere_disque("fusee", Vector2.ZERO, 0.0, 7.0)
-	for c in chemin:
-		var origine := Nav.centre_de_la_case(c)
-		for degres in range(0, 360, 2):
-			var arrivee := origine + Vector2.from_angle(deg_to_rad(float(degres))) * _portee_fusee
-			if not nav.est_libre(Nav.case_du_monde(arrivee)) or not Percep.segment_degage(origine, arrivee, ctx["monde"]):
-				continue
-			halo = Percep.lumiere_disque("fusee", arrivee, _rayon_halo_fusee * Percep.FRACTION_DISQUE, 7.0)
-			var n_eclaires := 0
-			for p: Dictionary in ctx["pnj"]:
-				if Percep.eclaire(halo, p["pos"], _hauteur, ctx["monde"]):
-					n_eclaires += 1
-			if n_eclaires > int(meilleur["ok"]):
-				meilleur = {"p": c, "angle": degres, "ok": n_eclaires}
-			if n_eclaires == (ctx["pnj"] as Array).size():
-				trouve = true
-	_check("UNE fusée lancée d'une case du chemin les éclaire tous les trois (le modèle de vue, halo de %.0f px × %.1f) — le meilleur lancer en éclaire %d, depuis %s à %d°"
-		% [_rayon_halo_fusee, Percep.FRACTION_DISQUE, int(meilleur["ok"]), str(meilleur["p"]), int(meilleur["angle"])], trouve)
+	_check("aucun PNJ n'est à portée de torche d'une case du chemin, avec %.0f px de marge (%.0f + %.0f) : le plus proche en est à %.0f px"
+		% [MARGE_FUSEE_PX, _portee_torche, MARGE_FUSEE_PX, plus_pres], plus_pres >= _portee_torche + MARGE_FUSEE_PX)
+	# Répartis : ni collés, ni dans un même coin.
+	var ecart_min := INF
+	var ecart_max := 0.0
+	for i in pnj.size():
+		for j in range(i + 1, pnj.size()):
+			var d: float = pnj[i]["pos"].distance_to(pnj[j]["pos"]) / 35.0
+			ecart_min = minf(ecart_min, d)
+			ecart_max = maxf(ecart_max, d)
+	_check("répartis : deux PNJ ne sont jamais à moins de %.0f cases l'un de l'autre (le plus serré : %.1f)" % [ECART_MIN_CASES, ecart_min], ecart_min >= ECART_MIN_CASES)
+	_check("… et les deux plus éloignés le sont de %.0f cases au moins (%.1f) : ce n'est pas un groupe" % [ECART_MAX_MIN_CASES, ecart_max], ecart_max >= ECART_MAX_MIN_CASES)
+	var coins := [Vector2(1, 1), Vector2(taille.x - 2, 1), Vector2(1, taille.y - 2), Vector2(taille.x - 2, taille.y - 2)]
+	var coin_plein := false
+	for coin: Vector2 in coins:
+		var n_proches := 0
+		for p: Dictionary in pnj:
+			if (Vector2(p["case"]) - coin).length() <= 10.0:
+				n_proches += 1
+		coin_plein = coin_plein or n_proches == pnj.size()
+	_check("aucun coin de la salle ne tient les trois PNJ à moins de 10 cases (le défaut de la salle d'avant : un angle)", not coin_plein)
+	# Les fusées.
+	var lancers := _lancers_de_fusee(ctx, chemin)
+	for k in pnj.size():
+		var fenetre := _fenetre_de_visee(lancers, 1 << k)
+		_check("le PNJ %d est montré par une fusée lancée d'une case du chemin (fenêtre de visée : %d°)" % [k + 1, fenetre], fenetre > 0)
+	var meilleur_masque := 0
+	for l: Dictionary in lancers:
+		if _bits(int(l["masque"])) > _bits(meilleur_masque):
+			meilleur_masque = int(l["masque"])
+	var fenetre_couple := _fenetre_de_visee(lancers, meilleur_masque)
+	_check("une seule fusée en montre %d à la fois (fenêtre de visée : %d°, au moins %d° exigés)" % [_bits(meilleur_masque), fenetre_couple, FENETRE_VISEE_MIN],
+		_bits(meilleur_masque) >= 2 and fenetre_couple >= FENETRE_VISEE_MIN)
+	var strict := _fusees_necessaires(ctx, lancers, false)
+	var a_la_torche := _fusees_necessaires(ctx, lancers, true)
+	_check("aucune fusée ne les montre tous les trois : il en faut %s pour tous, si la torche ne trouvait rien (répartis, pas groupés)" % _n_fusees(strict), strict >= 2)
+	# La réserve et la recharge : le Parasite part avec `_stock_fusees` fusée(s) et en regagne une par `_periode_fusee` s.
+	_check("la salle ne demande jamais plus d'une recharge : %s pour une réserve de %d" % [_n_fusees(strict), _stock_fusees], strict >= 1 and strict <= _stock_fusees + 1)
+	_check("… et ne FAIT PAS attendre : la torche trouvant de proche en proche (au plus %d cases d'un PNJ trouvé), %s suffisent — la réserve de départ n'est pas dépassée"
+		% [CHAINE_CASES, _n_fusees(a_la_torche)], a_la_torche >= 1 and a_la_torche <= _stock_fusees)
+	var attente := _attente_au_pire(ctx, lancers, meilleur_masque)
+	_check("qui voudrait pourtant la seconde fusée attend %.0f s au pire (%.0f s de recharge moins %.1f s de marche entre les deux lancers), jamais plus d'une période"
+		% [attente["attente"], _periode_fusee, attente["marche"]], float(attente["attente"]) <= _periode_fusee)
+	print("    mesure : posée, une fusée éclaire %.0f s (plein feu %.0f s, braise %.0f s) ; à l'allumage son halo porte 1 s aussi loin que la torche"
+		% [_duree_halo_fusee, FuseeMod.duree_plein_feu, FuseeMod.duree_braise])
 
 
 # ---------------------------------------------------------------------------

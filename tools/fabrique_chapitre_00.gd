@@ -159,22 +159,28 @@ func _salle_04() -> Dictionary:
 	}
 
 
-## 0.5 — La fusée : une grande salle sans lampe. Les trois PNJ tiennent un coin que la torche n'atteint pas depuis le chemin du centre ;
-## une seule fusée lancée de ce chemin les éclaire tous les trois.
+## 0.5 — La fusée : une grande salle de 41 × 41 cases, sans lampe. Le joueur part au milieu du mur sud, tourné vers le nord, et marche vers le
+## centre. Trois PNJ tiennent le bout nord de la salle, seize cases plus loin : au-delà de la torche (13,4 cases), à la portée d'une fusée
+## lancée droit devant depuis le centre. Deux se montrent à la même fusée, le troisième, neuf cases à l'ouest, à la torche une fois les deux
+## premiers abattus (« Les fusées de 0.5 », dans la ROADMAP : le Parasite n'en a qu'UNE, qui ne revient qu'après une minute, et la salle ne
+## la fait pas attendre). Les piliers habillent l'est et le sud : aucun ne coupe un lancer, ni la vue d'un PNJ à l'autre.
 func _salle_05() -> Dictionary:
-	var g := Grille.new(24, 24)
-	g.rect(5, 14, 2, 2, "#")
-	g.rect(14, 5, 2, 2, "#")
-	g.rect(17, 10, 2, 2, "#")
-	g.rect(10, 17, 2, 2, "#")
-	g.poser(22, 22, "J")
-	g.poser(1, 1, "1")
-	g.poser(3, 1, "2")
-	g.poser(1, 3, "3")
+	var g := Grille.new(41, 41)
+	g.rect(30, 9, 2, 2, "#")
+	g.rect(36, 15, 2, 2, "#")
+	g.rect(26, 23, 2, 2, "#")
+	g.rect(33, 28, 2, 2, "#")
+	g.rect(8, 25, 2, 2, "#")
+	g.rect(13, 32, 2, 2, "#")
+	g.rect(27, 34, 2, 2, "#")
+	g.poser(20, 38, "J")
+	g.poser(17, 4, "1")
+	g.poser(20, 4, "2")
+	g.poser(9, 8, "3")
 	return {
 		"titre": "La fusée",
 		"intention": "Une salle trop grande pour la torche. Ce qu'elle cache est loin.",
-		"g": g, "orientation": -135,
+		"g": g, "orientation": -90,
 		"pnj": [{"profil": "immobile_sourd_aveugle"}, {"profil": "immobile_sourd_aveugle"}, {"profil": "immobile_sourd_aveugle"}],
 		"lampes": [],
 	}
