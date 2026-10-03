@@ -3392,6 +3392,17 @@ Signalé, non corrigé : le jeu lui-même tire hors événement (poussière, amb
 graine de gadget tirée d'un `RandomNumberGenerator` propre au match serait indépendante de l'ambiance. Et l'écart de 0,02 px « d'origine non trouvée » de S4 (piège précédent) en
 était, très probablement, un cas.
 
+### Un relevé pris à la FIN d'un duel ne voit que ce qui a survécu — et un duel rejoué dans un autre ordre n'est pas exactement le même (2026-10-03)
+
+Même banc, deux constats de l'intégration de S9b. **(1)** `graine_gadget_bot` était lue sur « le gadget du bot encore debout » à la fin du duel : −1 dès qu'une balle l'avait détruit, donc une garde « même graine » qui comparait
+−1 à −1 — rouge à cause de `graine_a != -1`, mais elle aurait passé en silence sans cette précaution. Ce qu'un événement a produit se relève à l'événement, pas à la fin. **(2) Signalé, non corrigé : l'issue d'un duel dépend
+encore, pour ~4 % d'entre eux, de ce qui a été joué avant sur le même processus** (mesuré : 3 duels sur 48 d'écart entre un lot joué carte après carte et le même lot joué seul ; 2 sur 48 en ne changeant que le découpage `--part`).
+Cas isolé et reproductible : la Croisée, NORMAL, `avance_torche`, graine 15 — seul, ou après la graine 14, le bot gagne en 3,03 s ; après la graine 11, le joueur gagne en 4,88 s. La trace diverge dès le premier relevé : **le joueur,
+posé en (717,5 ; 402,5) à l'image 1, est en (574,9 ; 410,5) à l'image 2** (un saut de 143 px, vitesse nulle), alors que le bot est identique. Le saut ne vient d'aucun appel de script (`print_stack` depuis la notification de
+transformation ne montre aucune trame de script) ni de `_reapparaitre_le_joueur`, ni de la killcam (`ReplaySystem.playing_back` faux), ni du placement (`distance_depart` égal) : une écriture native, non trouvée. **Conséquence** : le
+banc long est statistiquement juste (la moyenne ne bouge pas), mais deux découpages `--part` ne rendent pas les mêmes duels un à un, et la forme courte n'est reproductible QUE dans son ordre. La garde stricte (a, milieu, b) ne le voit
+pas : le saut dépend de ce qui précède, et son triplet ne le contient pas. À reprendre si un jour une garde doit comparer deux duels « isolés ».
+
 ### Un étalon qui ne sait pas se cacher ne mesure pas un joueur qui change de place (2026-10-02)
 
 Même banc. Le joueur type « qui tire puis change de place » a d'abord gardé sa torche allumée pendant qu'il changeait de place : il courait en pleine
@@ -33044,6 +33055,20 @@ Chacun a été joué dans une COPIE de l'arbre, sur la suite qui le garde ; chif
 **Un sabotage est resté vert du premier coup, et c'est instructif** : « la classe du gadget lue chez J2 ». La garde « le Terrassier PNJ pose SA poussière » vérifiait le slug du gadget — que le jeu déduit d'ailleurs, pas de cette classe —
 et le Parasite de J2 et le Terrassier donnent le même résultat visible tant qu'on ne lit pas ce que la classe pose (`classe_du_poseur`, la durée de vie, l'éblouissement). Garde ajoutée (le gadget emporte la classe de son poseur, pas celle de J2), puis
 sabotage rejoué : rouge. Les sabotages du banc lui-même (S3, S4, S9 : difficultés inversées, joueur type qui triche…) ne sont pas rejoués ici ; leurs gardes n'ont pas bougé.
+
+#### L'intégration avec « le banc rejoue vraiment » (2026-10-03) — deux rouges de la suite, un seul vrai défaut
+
+S9b a été écrite sans le commit « le banc rejoue vraiment » (S4/S9) ; à la fusion, `test_banc_bot` rougissait trois fois. **(1) « même tirage » lisait −1 des deux côtés** : le relevé de la graine du gadget
+cherchait, À LA FIN du duel, un gadget du bot encore debout ; or une balle du joueur type le détruit souvent avant la fin (le duel de la garde : posé, puis détruit 70 images plus tard, avant la mort qui finit le duel). Rien
+dans S9b n'y change quoi que ce soit — la garde passait avant parce que le gadget survivait par chance. Remède, dans le banc seul : la graine est relevée À LA POSE (`child_entered_tree` du conteneur ; le gadget
+n'est pas encore dans le groupe « gadgets » à cet instant, on le reconnaît à `poseur_id`, posé avant l'entrée comme sa graine). Sabotée — ni reseed par image ni `_figer_le_tirage` —, la garde rougit avec les deux
+graines lisibles (3567825414 / 1987688319, les chiffres mêmes du piège du `randf()`). **Sabotée à moitié** (le seul reseed par image retiré), elle NE rougit PAS ici : l'accumulateur de poussière remis à neuf suffit sur cette
+graine, sur cette machine ; le reseed par image reste une ceinture que cette garde ne prouve pas seule. **(2) « L'ORDRE » (75 / 81 / 19) était du bruit, pas un recul** : le banc long sur la tête intégrée
+(1 152 duels, six cartes, graines 401-416) rend **78 / 53 / 32 %** (S9b seule : 78 / 52 / 34 ; cibles 80 / 55 / 30), avec l'ordre tenu sur chaque carte sauf la carte `00000001` (75 / 33 / 36 : NORMAL et DIFFICILE y sont
+à égalité). Le lot de la forme courte (16 duels par difficulté, la Croisée, graines 1 à 4) donnait 75 / 81 / 19 ; rejoué sur 1 152 duels des graines 1 à 16, un lot de 16 duels au hasard échoue à la garde
+« 5 points de chaque côté » dans ~15 % des cas (écart-type de la différence : ~17 points), et la Croisée entière donne 80 / 59 / 23. La forme courte part maintenant de la graine 9 (`GRAINE_ORDRE`) : 94 / 44 / 25, même
+coût (~1 min 45 s ici). **La garde de déterminisme est restée STRICTE** (trace entière égale) et n'a pas rougi : l'éblouissement des bots n'y a rien changé. La cible reste « bornes larges + ordre » ; **un ORDRE rouge sans
+autre signe se lit d'abord comme du bruit : relancer le banc long avant de toucher aux profils.**
 
 #### Non prouvé
 
