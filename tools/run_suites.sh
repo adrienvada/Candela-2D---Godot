@@ -394,6 +394,13 @@ SUITES+=(test_aventure_boss)
 # (Occulteur) : un duel dans une petite arène, deux chambres et une porte, le noir complet, cinq flaques en quinconce, un poste couvrant un hall, les ombres des colonnes,
 # les îlots, un labyrinthe de murets, la meute, un duel en miroir (7.7 à 7.9 : « equipe », et un chasseur équipé VOIT).
 SUITES+=(test_chapitre_07 test_chapitre_08 test_chapitre_09)
+# `test_chapitre_08` — « Les grandes salles » (Allumeur) : « grande » se mesure contre la plus grande carte de duel livrée ; un H, une galerie de 90 cases, des goulets éclairés, vingt
+# machines, une cour et sa galerie, six salles noires, seize blocs, quatre halls ; des rondes de même tour qui ne se touchent jamais ; la mine (8.7 à 8.9 : « equipe », un PNJ
+# équipé de la mine ENTEND). `test_chapitre_09` — « L'élite » (Spectre) : une élite est plus vive qu'un chasseur normal (lu au catalogue) ; la flaque unique, les voiles qui coupent
+# la lumière, un poste de niveau difficile dans sa niche, un labyrinthe à fenêtres basses, la meute, un duel de part et d'autre de voiles (9.7 à 9.9 : « equipe », un voile).
+# `test_chapitres_marche_07_09` (le jeu monté, à pas d'image fixe — `case` plus bas ; elle HÉRITE de `test_chapitres_marche`) : le vrai corps parcourt les rondes, les zones et les
+# PNJ LIBRES des chapitres 7 à 9, franchit les goulets et les portes étroites, ne sort jamais du sol.
+SUITES+=(test_chapitres_marche_07_09)
 
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
@@ -546,6 +553,9 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
+    # `test_chapitres_marche_07_09` joue les trente salles des chapitres 7 à 9 au vrai corps, dont celles de 100×80 cases : 4 min 28 s seule
+    # dans le conteneur cloud (mesuré le 2026-10-03). Son plafond : 600 s, un peu plus de deux fois cela.
+    test_chapitres_marche_07_09) PLAFOND_SUITE=600 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     # `test_chapitres_marche_04_06` joue vingt-sept salles (dont neuf à chasseurs, 45 s de jeu chacune) : ~130 s au calme (132 s mesurées), plus que le plafond de 120 s des autres suites
     # (mesuré le 2026-10-03 : 38 s le chapitre 4, 45 s le 5, 61 s le 6). Il a donc son plafond, jamais plus large que ce qu'il lui faut pour sortir.
     test_chapitres_marche_04_06) PLAFOND_SUITE=420 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
