@@ -32979,15 +32979,17 @@ sur le corps). Le bot d'entraînement ne lit pas `vie` : il reste à 100.
 | Chapitre (classe du boss) | Avant (S9, NORMAL, graines 1-8) | Après (S9b) | Réglage |
 |---|---|---|---|
 | 0 — Parasite | 56 % | **57 %** (801 : 57, 901 : 57) | aucun : le profil NORMAL du cran 3 |
-| 1 — Illusionniste | 63 % | **61 %** (1001-1008) | vie 108 |
-| 2 — Terrassier | **85 %** | **58 %** (801 : 58, 901 : 59) | engagement 40 px, tir ≤ 90 px, allure 1, délai 0,15 s, 12°, 3 coups, sans repli, audace 200 px, vie 110 |
+| 1 — Fumiste | 51 % | **59 %** (801 : 68, 901 : 51) | délai 0,30 s, visée 10° → 3° |
+| 2 — Illusionniste | 63 % | **61 %** (1001-1008) | vie 108 |
 | 3 — Braconnier | **90 %** | **56 %** (1001-1008) | délai 0,2 s, visée 4,5° → 1°, 3,5°, un coup, repli 3 s, **vie 190** |
-| 4 — Fumiste | 51 % | **59 %** (801 : 68, 901 : 51) | délai 0,30 s, visée 10° → 3° |
+| 4 — Terrassier | **85 %** | **58 %** (801 : 58, 901 : 59) | engagement 40 px, tir ≤ 90 px, allure 1, délai 0,15 s, 12°, 3 coups, sans repli, audace 200 px, vie 110 |
 | 5 — Incendiaire | **87 %** | **58 %** (1001-1008) | délai 0,2 s, visée 5° → 1°, resserrement 1,2 s, visée 11 rad/s, 6°, repli 3 s, vie 125 |
 | 6 — Sentinelle | 55 % | **61 %** (801 : 67, 901 : 56) | visée 9° → 2,8° |
 | 7 — Occulteur | **98 %** | **52 %** (1001-1008) | délai 0,18 s, 8°, rafale de 8, pause 0,25 s, repli 0,3 s, allure 0,85, engagement 150 px, **vie 158** |
 | 8 — Allumeur | 62 % (144 duels) | **56 %** (1001-1008) | vie 120 |
 | 9 — Spectre | 54 % | **58 %** (801 : 60, 901 : 56) | visée 9° → 2,8° |
+
+⚠️ **Les étiquettes de chapitre de ce tableau ont été corrigées par le maître du chantier à l'intégration** (2026-10-03) : le rapport les numérotait dans l'ordre du catalogue (`fusil` = 1, `pompe` = 2…), pas dans celui des chapitres. Le code, lui, était juste : `AventureFormat.ORDRE_DES_CLASSES` suit le rang et `REGLAGES_BOSS` est rangé par classe. Les mesures ne changent pas.
 
 Dix boss entre 52 et 61 % ; l'écart d'avant allait de 51 à 98 %. **Lecture honnête de la précision de ces chiffres** : 192 duels donnent ±3,6 points au sens binomial, mais deux blocs de graines différentes de la MÊME classe s'écartent de 6 à 17 points
 (Fumiste : 68 puis 51 ; Sentinelle : 67 puis 56). La cible « 55 ± 7 » est donc tenue **en moyenne**, pas à chaque bloc ; les classes où je n'ai qu'un bloc (Illusionniste, Braconnier, Incendiaire, Occulteur, Allumeur : 1001-1008) peuvent y échapper d'autant en
