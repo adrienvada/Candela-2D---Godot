@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-03 (S8, lot 2 : les chapitres 4 à 6, la marche des chasseurs ; lot 1 : la clé « equipe » du format et les chapitres 1 à 3)
+> Dernière mise à jour : 2026-10-03 (S8 : les chapitres 1 à 9 écrits — lot 1 : la clé « equipe » et les chapitres 1 à 3 ; chapitres 4 à 6 : zones qui écoutent, groupes, chasseurs ; chapitres 7 à 9 : chasseurs vifs, grandes salles, élite)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -31818,7 +31818,7 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    « S6 » ci-dessous. **Jamais jouée à la main, coût non mesuré** : le moteur est prouvé par des suites et des images fixes.
 7. **S7 — le chapitre 0**, l'initiation : ses dix niveaux et son boss. ✅ **FAITE le 2026-10-03** — voir « S7 » ci-dessous. **Jamais jouée à
    la main** : dix salles écrites en données, jugées par une garde qui mesure ce que chacune enseigne, et vues en images fixes.
-8. **S8 — les chapitres 1 à 9**, un par lot. **Lot 1 (chapitres 1 à 3) FAIT le 2026-10-03** — voir « S8, lot 1 » ci-dessous ; **lot 2 (chapitres 4 à 6) FAIT le 2026-10-03** — voir « S8, lot 2 » ; restent les chapitres 7 à 9 (écrits en parallèle par une autre session) et le 10 (SOLO-Q8). **Jamais joué à la main** : soixante salles en données (chapitres 1 à 6), jugées par des gardes et par la marche du vrai corps.
+8. **S8 — les chapitres 1 à 9**, un par lot. **FAITE le 2026-10-03** : lot 1 (chapitres 1 à 3) — voir « S8, lot 1 » ; chapitres 4 à 6 et chapitres 7 à 9, écrits en parallèle par deux sous-agents et intégrés par le maître du chantier — voir les deux sections « S8, lot 2 » ci-dessous (chacune nomme ses chapitres). Reste le chapitre 10 (SOLO-Q8, « on verra ensuite »). **Jamais joué à la main** : quatre-vingt-dix salles en données, jugées par des gardes et par la marche du vrai corps ; **aucun banc de difficulté de salle** — les salles pleines des chapitres 7 à 9 sont probablement très dures.
 9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent). ✅ **FAITE le 2026-10-03** — voir « S9 » ci-dessous
    (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe » — réglé par S9b.
 10. **S9b — l'intégration de S6 et de S9** (née de leur écriture en parallèle) : chaque PNJ a sa réserve de fusées et de gadget, l'éblouissement vaut pour les PNJ et pour le bot, les dix boss se règlent
@@ -33566,6 +33566,165 @@ Une capture iso par salle, `salle_N_MM.png` (N = 4, 5, 6), regardées. Les salle
 #### Résultat des suites
 
 `GODOT=… ./tools/run_suites.sh --rapide` (le binaire 4.7.1), la machine très chargée (load de 10 à 20, plusieurs sessions et des captures sous Xvfb : **1 722 s**) : **162 lignes OK (le démarrage du jeu et 161 suites), 3 en échec, dont aucun pour une raison de contenu**. `test_killcam_calme` (« aucun saut d'une image à l'autre » : un seuil de caméra qui se lit sous charge) — relancée seule : 21 vérifications vertes. `test_banc_bot` (« bloqué » à 120 s sous charge) — relancée seule : verte, **en 112 s**, à 8 s du plafond, indépendamment de ce lot. **Ma propre `test_chapitres_marche_04_06`, « bloquée » à 120 s : elle prend 132 s au calme** (vingt-sept salles, dont neuf à chasseurs jouées 45 s de jeu) ; elle a maintenant son plafond (`PLAFOND_SUITE=420` dans son `case` de `run_suites.sh`, commenté) et passe : **217 vérifications**. Le premier lot a donc dû être relancé pour elle seule ; les autres suites du lot (`test_chapitre_04` 299, `05` 303, `06` 246, `test_aventure_format`, `test_aventure_partie`, `test_aventure_boss`) sont vertes dans le lot. Les scénarios à deux instances ne sont pas joués par `--rapide`. **Aucun relevé de cadence** (consigne).
+
+### S8, lot 2 — FAITE le 2026-10-03 : les chapitres 7 à 9 (« Les chasseurs vifs », « Les grandes salles », « L'élite »)
+
+Écrit par une session « sous-agent » en parallèle de celle qui écrit les chapitres 4 à 6 (dossiers distincts : `assets/solo/chapitre_07` à `09`, `tools/fabrique_chapitre_07` à `09`, `test_chapitre_07` à `09`). **Dans ce
+worktree, les chapitres 4 à 6 n'existent pas** : `test_aventure_format` y rougit pour cette seule raison (« les numéros de chapitres se suivent depuis 0 »), voir « Résultat des suites ». Aucun code de jeu n'a bougé : ni
+`game_state.gd`, ni `ui.gd`, ni le moteur, ni le bot. Rien de partagé n'est touché, sauf une table de classes dans `tools/outils_chapitre.gd` (deux lignes) et `tools/run_suites.sh` (voir « Signalé »).
+
+#### Les outils neufs
+
+- `tools/outils_chasseurs.gd` — ce que les chapitres à PNJ libres demandent en plus du lot 1 : la lumière d'une salle (quelles cases les lampes éclairent, **l'ombre qu'un pilier jette dans une flaque**, le noir),
+  les îlots de mur, les cloisons, les distances à pied, l'aire de la plus grande carte de duel livrée (lue dans `assets/maps/`), et `libres_partout` — **ce que vaut un PNJ libre dans CHAQUE salle** : il part loin du joueur, et
+  le départ est hors de toute lampe. Le test du lot 1 (`partout`) ne regardait que la case de naissance d'un PNJ : pour un PNJ libre, qui peut se tenir n'importe où, il faut regarder la salle entière (le modèle de vue n'a de
+  cible que par une lumière : un départ sans lampe est caché de partout ; un échantillon de 120 postes d'observation le vérifie).
+- `tools/fabrique_labyrinthe.gd` — un labyrinthe à pas de 3 (cellules de 2 × 2 cases, murs de 1 case : **aucun couloir d'une tuile**), un DFS à graine fixe puis des murs rouverts pour que la chasse ait des choix. **Les JSON restent
+  la vérité** : relancer la fabrique redonne les mêmes octets (c'est un tirage seedé, pas du hasard). Les graines (48 pour 7.8, 35 pour 9.7) sont choisies parmi soixante pour que le chemin du joueur à chaque chasseur fasse
+  au moins 1,8 et 2,5 fois la ligne droite.
+- `tools/outils_chapitre.gd` (lot 1) : `GADGET_EXIGE_CHASSEURS` — `occulteur: voit`, `allumeur: entend`, `spectre: voit` — dans une table à part pour ne pas toucher aux lignes de l'autre lot. Lu dans `EquipementBot.GADGETS` : **l'ombre habitée
+  et le voile se posent « face à la torche de la cible qu'on VOIT »** (il faut voir), **la mine se pose en enquête ou en recherche sur une place qu'on n'a PAS vue, à 250-450 px** (il faut entendre : une enquête naît d'un son).
+  Tous les PNJ équipés de ces trois chapitres voient et entendent (`*_voit_entend_*`) : la clé « equipe » a donc partout un effet — **aucun écart au plan sur ce point** (le chapitre 3 en avait un : le plan voulait des gardiens qui ne font que voir).
+
+#### Le chapitre 7, « Les chasseurs vifs » (Occulteur, slug `occulteur`) — `assets/solo/chapitre_07/`
+
+Les chasseurs sont LIBRES (`libre_voit_entend_normal`) : ni trajet ni zone, ils voient, entendent, et viennent chercher le joueur. **7.7 à 7.9 : les chasseurs portent l'Occulteur et son ombre habitée** (`"equipe": true`) ; le poste de 7.5 ne bouge
+pas, il n'est pas équipé.
+
+| Salle | Taille · PNJ · lampes · phrase | Ce que la garde mesure |
+|---|---|---|
+| **7.1 Le duelliste** | 22×22 · 1 libre · 2 · « Une arène, deux colonnes de lumière, un chasseur. Il vous cherche. » | quatre colonnes de 2×2 et un bloc ; deux flaques à part de 12 cases au moins ; ni joueur ni chasseur sous une lampe ; le chasseur à plus de 14 cases à pied ; autour du départ, au moins 10 cases à couvert et 10 en vue |
+| **7.2 Deux duels** | 36×20 · 2 libres · 2 · « Deux chambres, une porte entre elles. Un chasseur dans chacune, et vous au milieu. » | une cloison de 2 colonnes percée d'une porte de 4×2 cases ; un chasseur et une lampe par chambre ; le joueur dans l'embrasure, hors lumière ; la cloison cache un chasseur à l'autre ; un tir tiré de la porte s'entend de partout |
+| **7.3 Le noir complet** | 30×24 · 2 libres · 0 · « Pas une lampe. Deux chasseurs, et vos pas pour seule lumière. » | **torche éteinte, aucun poste ne voit nulle part** (plus de 500 paires) ; torche allumée, elle trahit ; un pas debout s'entend de toute la salle (la diagonale est sous 1 695 px), un pas accroupi de 100 px — 90 % de la salle en est hors de portée |
+| **7.4 La lumière piège** | 30×30 · 2 libres · 5 · « Cinq flaques de lumière, du noir entre elles. Qui en traverse une se montre. » | cinq flaques en quinconce, de 12 à 45 % des cases ; **le noir d'un seul tenant (≥ 90 %) contient départ et chasseurs** ; la ligne droite du joueur à chaque chasseur traverse une flaque ; une flaque trahit aussi le chasseur |
+| **7.5 Le poste et la meute** | 36×22 · 2 libres + 1 poste · 3 · « Un hall à colonnes. Deux chasseurs vont et viennent, un troisième garde le fond. » | le poste dans une niche, sous une lampe, à plus de 25 cases ; les deux chasseurs entre le joueur et lui ; **il voit au moins 35 % des cases éclairées du hall**, et le noir sous son regard existe (≥ 20 cases) |
+| **7.6 L'ombre** | 34×20 · 2 libres · 2 · « Une galerie, des colonnes autour de chaque lampe. Derrière chacune, une ombre qui cache. » | huit colonnes ; chaque lampe (rayon 8) a ≥ 10 cases de sa flaque cachées par une colonne ; **de ces cases d'ombre on voit une case éclairée : l'ombre est un affût** |
+| **7.7 Trois chasseurs** | 40×30 · 3 équipés · 3 · « Des îlots de pierre, trois lampes, trois chasseurs. À vous de choisir où l'on se bat. » | 8 îlots ; un chasseur par tiers de la salle ; trois flaques à part ; du clair (≥ 40 cases), du noir (≥ 500), de quoi s'adosser (≥ 100) ; la règle de l'ombre habitée peut se déclencher |
+| **7.8 Le dédale** | 37×28 · 3 équipés · 2 · « Un labyrinthe de murets. On voit par-dessus, on ne passe pas : il faut en faire le tour. » | **aucun mur plein à l'intérieur** (murets partout, carrefours compris) ; ≥ 80 cases de mur bas ; chaque chasseur à ≥ 1,8 fois la ligne droite à pied ; ≥ 50 % des paires de cases proches en ligne de vue, dont ≥ 20 % demandent ≥ 1,6 fois la ligne droite à pied |
+| **7.9 La salle pleine** | 50×36 · 4 équipés · 4 · « Une grande salle à colonnes, quatre lampes. Quatre chasseurs, et pas un qui reste à sa place. » | 20 colonnes en quinconce ; quatre chasseurs à plus de 15 cases les uns des autres, à plus de 20 du joueur, dans au moins trois quarts de la salle ; aucun sous une lampe |
+| **7.10 L'Occulteur** | 32×32 · boss · 2 · « Un duel dans une arène. Il pose une plaque devant la lumière, et une ombre qui n'est personne. » | l'arène variée (colonnes en carré, un bloc au centre, murets) symétrique dans les deux sens, lampes face à face (garde du lot 1) ; le boss porte de la vie en plus (`REGLAGES_BOSS`) |
+
+#### Le chapitre 8, « Les grandes salles » (Allumeur, slug `allumeur`) — `assets/solo/chapitre_08/`
+
+**Elles sont vraiment grandes, et la garde le mesure** : l'aire de chaque salle est comparée à celle de la plus grande carte de duel livrée (32 × 32 = 1 024, lue dans `assets/maps/`, jamais recopiée) — au moins 1,5 fois pour les neuf, 2,5 fois pour
+six, **7 fois pour 8.9**, qui est la plus grande du chapitre. `echelle_chapitre_8.png` (non versionnée) montre les dix salles à la même échelle, avec le carré rouge d'une carte de duel. Les rondes d'une salle ont toutes **le même tour,
+et jamais moins de 3 cases entre deux tours (de 4 à 23 cases selon la salle)** — la leçon de 2.8, jamais deux fois. **8.7 à 8.9 : tout ce qui bouge porte l'Allumeur et sa mine** ; les postes immobiles, non.
+
+| Salle | Taille · PNJ · lampes · phrase | Ce que la garde mesure |
+|---|---|---|
+| **8.1 La place** | 60×48 · 2 postes + 2 rondes · 6 · « Une place ouverte, des lampes tout autour. Il faut la traverser, et ils la regardent. » | deux tours de 104 cases, à 11 cases l'un de l'autre (au moins 8), chacun sous des lampes ; les postes sous une lampe ; **le départ rejoint le haut de la place par le noir seul** (le couloir du milieu) ; un bassin de murets |
+| **8.2 Les ailes** | 64×44 · 2 gardes + 2 rondes · 4 · « Deux ailes, un pont entre elles. Un garde au nord de chacune, une ronde au sud. » | un H (69 % du rectangle) : deux ailes de plus de 800 cases que seul le pont (192 cases, **dans le noir**) relie ; dans chaque aile un garde, une ronde, deux lampes ; zones au nord des tours |
+| **8.3 La galerie des lampes** | 90×22 · 3 rondes · 7 · « Une galerie interminable, des flaques de part et d'autre. Trois silhouettes la parcourent. » | 90 cases de long ; trois tours de 68 cases, un par tiers, ≥ 3 cases d'écart (6 cases mesurées, 910 px au plus près simulés à vitesse constante) ; **la bande du milieu reste noire à 80 %, sauf au centre où la septième lampe la ferme** |
+| **8.4 Le magnésium** | 56×50 · 2 gardes + 1 libre · 3 · « Trois chambres, deux goulets, une lampe au milieu de chacun. Le passage s'illumine. » | trois chambres de 500 cases au moins ; deux goulets de 4 cases **tout entiers sous une lampe**, aux deux bouts opposés (≥ 25 cases d'écart : on traverse chaque chambre en diagonale, ≥ 35 cases de marche entre eux) ; traverser un goulet se fait dans la lumière ; le libre part dans la chambre du joueur, à ≥ 40 cases |
+| **8.5 L'usine** | 72×48 · 2 postes + 3 rondes · 5 · « Un hangar de machines. Des silhouettes en hauteur regardent les allées, d'autres font la ronde au sol. » | vingt machines de 32 cases ; **chaque poste (au nord, sous sa lampe) voit au moins 80 % de son allée** ; trois tours de 44 cases, chacun autour d'UNE machine, ≥ 8 cases d'écart |
+| **8.6 Le cloître** | 60×60 · 2 gardes + 2 libres · 4 · « Une cour éclairée, des arcades, une galerie dans le noir tout autour. On peut tourner sans fin. » | la cour éclairée (≥ 15 %), **la galerie noire (≤ 2 % éclairée)** ; 24 piliers d'arcade ; la galerie d'un seul morceau (un anneau) ; deux gardes dans les galeries latérales ; un libre au nord, un dans la cour |
+| **8.7 Le bunker** | 54×46 · 3 gardes équipés + 2 postes sourds · 2 · « Six salles, un couloir, deux lampes aux deux bouts. Trois gardes, deux qui n'ont que leurs oreilles. » | six salles d'au moins 250 cases, **toutes noires (0 case éclairée)**, six portes de 4 cases ; chaque PNJ seul dans sa salle ; la zone d'un garde ne sort pas de sa salle ; **un pas debout s'entend de la porte jusqu'au poste, un pas accroupi non** |
+| **8.8 Le quartier** | 80×64 · 2 postes + 2 rondes + 2 libres · 6 · « Une ville, ses rues, ses carrefours éclairés. Des silhouettes l'arpentent, d'autres montent la garde. » | seize blocs de 96 cases ; deux tours de 64 cases autour d'UN bloc chacun ; **les rues forment un seul réseau d'ombre (≥ 90 %)** ; les deux libres partent à ≥ 55 cases à pied du joueur |
+| **8.9 La salle pleine** | 100×80 · 2 postes + 2 gardes + 2 rondes + 1 libre DIFFICILE · 8 · « La plus grande salle. Quatre halls, huit lampes, des postes, des rondes, des gardes — et quelqu'un qui cherche. » | **8 000 cases : 7,8 fois la plus grande carte de duel** ; quatre halls de 1 200 cases au moins, quatre portes de 6 cases, deux lampes par hall ; **l'allumage par proximité : au moins 4 lampes sur 8 sont éteintes au départ (7 le sont)** ; le libre difficile part en diagonale, à ≥ 90 cases à pied ; deux tours de 64 cases |
+| **8.10 L'Allumeur** | 32×32 · boss · 2 · « Un duel dans une arène coupée en deux. Le seul passage est un goulet, et il y pose une mine. » | une cloison de 2 colonnes percée d'un goulet de 4 cases, centré ; **joueur et boss sans ligne de vue au départ** (de part et d'autre, hors de l'axe du goulet) ; goulet non éclairé (la mine l'éclaire d'un coup) ; quatre murets autour |
+
+#### Le chapitre 9, « L'élite » (Spectre, slug `spectre`) — `assets/solo/chapitre_09/`
+
+Peu d'ennemis, les meilleurs : des chasseurs libres de niveau DIFFICILE (`libre_voit_entend_difficile`). **Une élite est plus vive qu'un chasseur normal, et la garde le lit au catalogue** (rafale, délai de réaction, vitesse de visée), jamais
+en dur ; équipée, elle a en plus tout ce que S9 donne à un bot DIFFICILE (torche tactique, repli, posture accroupie, fusées). **9.7 à 9.9 : tout ce qui bouge porte le Spectre et son voile** ; les postes, non.
+
+| Salle | Taille · PNJ · lampes · phrase | Ce que la garde mesure |
+|---|---|---|
+| **9.1 L'élite** | 24×24 · 1 élite · 2 · « Une arène, deux lampes, un seul adversaire. Il ne laisse rien au hasard. » | quatre blocs de 3×3 ; deux flaques ; le départ et l'élite hors lumière ; ≥ 16 cases à pied ; couvert et découvert autour du départ |
+| **9.2 Le noir** | 28×28 · 1 élite · 0 · « Pas une lampe. Un seul adversaire, et il écoute chacun de vos pas. » | torche éteinte, vue de nulle part ; torche allumée, elle trahit ; la diagonale sous la portée du pas debout, 90 % de la salle hors de celle du pas accroupi |
+| **9.3 La flaque** | 26×26 · 1 élite · 1 · « Une flaque de lumière au centre de l'arène, du noir tout autour. Il la contourne comme vous. » | **une seule lampe, au centre ; la ligne droite du joueur à l'élite la traverse ; le noir d'un seul tenant (≥ 95 %) les contient tous les deux** : le détour existe |
+| **9.4 Le binôme d'élite** | 36×28 · 2 élites · 2 · « Des îlots de pierre, deux lampes. Ils sont deux, et ils chassent ensemble. » | six îlots ; elles partent du dernier tiers, de 8 à 20 cases l'une de l'autre, à ≥ 25 cases à pied du joueur, hors lumière |
+| **9.5 Le voile** | 34×26 · 1 élite + 1 garde · 2 · « Des voiles tendus coupent la lumière des lampes. Derrière eux, de l'ombre, et quelqu'un. » | **trois voiles : des murs d'UNE case d'épaisseur, de 7 cases au moins** ; chaque lampe (rayon 8) à moins de 4 cases d'un voile, qui lui cache ≥ 8 cases de sa flaque ; la zone du garde est un coin noir, fermé par un voile |
+| **9.6 La garde d'élite** | 38×24 · 1 poste DIFFICILE + 2 gardes · 3 · « Un hall, deux gardes en avant, un poste au fond dans sa niche. Le poste regarde tout le hall. » | le poste dans une niche, sous une lampe, à ≥ 28 cases ; **les zones des deux gardes sont entre le joueur et lui, éclairées, et il en voit au moins 25 %** |
+| **9.7 Le dédale** | 40×31 · 2 élites équipées · 2 · « Un labyrinthe de cloisons percées de fenêtres basses. Deux élites y chassent. » | ≥ 200 cases de mur plein et 20 à 120 de mur bas (les fenêtres) ; **chaque élite à ≥ 2 fois la ligne droite à pied** ; la vue coupée (moins de 40 % des paires proches en ligne de vue, au moins 5 % : les fenêtres) |
+| **9.8 La meute d'élite** | 56×40 · 3 élites équipées · 4 · « Une grande carte, quatre lampes. Trois élites, et pas une qui renonce. » | neuf blocs de 20 cases ; trois élites de trois côtés différents, à ≥ 15 cases les unes des autres et ≥ 28 du joueur |
+| **9.9 La salle pleine** | 64×48 · 1 poste DIFFICILE + 2 gardes équipés + 2 élites équipées · 5 · « La dernière salle avant le Spectre. Des élites, des gardes, un poste, et une carte immense. » | la plus grande du chapitre (2,5 fois un duel au moins) ; **les quatre coins sont occupés, un mover chacun** ; le poste au nord, sous une lampe ; les deux élites à ≥ 40 cases l'une de l'autre |
+| **9.10 Le Spectre** | 32×32 · boss · 2 · « Un duel dans une arène. Il tend une bâche : la lumière s'arrête, les balles passent. » | quatre voiles de 7 cases laissant un passage de 2 cases sur l'axe ; **chaque lampe (rayon 7) à deux cases d'un voile qui lui cache ≥ 8 cases de sa flaque** ; symétrique dans les deux sens (les lampes se font face d'est en ouest, côté nord) |
+
+#### Les gardes de contenu
+
+| Suite | Vérifications | Ce qu'elle garde |
+|---|---|---|
+| `test_chapitre_07` | 302 | les dix salles ci-dessus ; partout : taille, PNJ de chaque sorte, équipés (la classe, un profil qui VOIT), atteignable à pied, une seule pièce, aucun couloir d'une tuile, **un PNJ libre part loin et hors lampe** |
+| `test_chapitre_08` | 453 | idem + **« grande » mesuré contre la plus grande carte de duel**, les tours de même longueur et jamais proches, les goulets, l'allumage par proximité |
+| `test_chapitre_09` | 310 | idem + une élite plus vive qu'un chasseur (lu au catalogue), les voiles, la flaque unique |
+| `test_chapitres_marche_07_09` | 291 | **la marche au vrai corps** (voir ci-dessous) |
+
+**La marche** — `tools/test_chapitres_marche_07_09.gd` **hérite** de `test_chapitres_marche` (le lot 1 n'est pas touché ; `_check`, les images, l'horloge fixe, la sortie viennent de lui) et ne redéfinit que `_run`, `_jouer`, `_juger`. Les
+30 salles (boss compris : les boss sont des PNJ libres) sont jouées à pas d'image fixe, PNJ désarmés et sourds-aveugles. Ronde et zone : comme au lot 1. **PNJ libre** : jamais immobile plus de 3 s, au moins 60 % de la distance d'une
+marche libre à l'allure du catalogue (lue avant tout réglage de la suite), 60 cases distinctes visitées, jamais hors du sol, **et il franchit la porte de 7.2, le goulet de 8.4 (la cloison sud), celui de 8.10** — il y est « vu des deux côtés » de la cloison — **et passe le voile de 9.10**
+(voir « Non prouvé » : il peut le contourner). Deux PNJ libres ne se traversent jamais (au moins 10 px : ils se frôlent à 33-37 px, un corps en fait 36). **Les rondes de 100 cases (8.1, 8.2) passent par chacun de leurs points et bouclent** — ce que
+le lot 1 n'avait éprouvé que sur 30 à 76 cases.
+**Un premier jet a rougi cinq fois**, toutes sur la même exigence : le lot 1 veut le cinquième des cases d'une zone visitées en 45 s, hors de portée d'un corps à 156 px/s dans une zone de 1 600 cases (8.9 : 114 cases visitées). Le plus petit du cinquième
+et de 60 cases est exigé ici (53 à 123 visitées sur les zones de plus de 280 cases) ; **8.7, 3ᵉ garde : 53 pour 50 exigées — peu de marge**. Ce n'est pas un défaut de marche, c'est une règle écrite pour de petites zones.
+
+#### Sabotages (chaque garde vue ROUGE ; chapitres sabotés par une copie de leur fabrique et `-- --dossier=` ; la marche par une copie de la fabrique écrite dans le dépôt puis restaurée par git)
+
+- **Chapitre 7** (douze, tous rouges pour la bonne raison) : deux flaques qui se touchent (7.1) ; une porte de 8 cases (7.2, 2) ; une lampe dans le noir complet (7.3, 2) ; le quinconce sans sa lampe centrale (7.4, 4) ; le poste dans le noir (7.5, 2) ; les colonnes retirées (7.6, 5) ;
+  les îlots retirés (7.7) ; un labyrinthe de murs pleins (7.8, 4) ; la meute en tas (7.9) ; l'arène asymétrique (7.10, 2) ; les chasseurs non équipés (7.7, 7.8 : 9) ; le départ sous une lampe (7.4, 4).
+- **Chapitre 8** (quinze) : tours inégaux (8.1) ; tours qui se touchent (8.1, 2) ; le pont éclairé (8.2, 4) ; deux tours dans le même tiers (8.3) ; la lampe centrale retirée (8.3, 3) ; un goulet à moitié éclairé (8.4) ; une zone qui déborde de sa chambre (8.4) ;
+  une machine de moins (8.5, 2) ; une lampe dans la galerie noire (8.6, 2) ; le bunker éclairé (8.7, 2) ; le garde du bunker non équipé (8.7) ; les tours du quartier inégaux (8.8) ; un libre qui n'est pas difficile (8.9) ; une porte de 3 cases (8.9) ;
+  un goulet de 2 cases (8.10, 3) ; boss et joueur en vue au départ (8.10).
+- **Chapitre 9** (treize) : des blocs trop petits (9.1) ; une lampe dans le noir (9.2, 2) ; la flaque décentrée (9.3, 3) ; deux élites empilées (9.4) ; un voile retiré (9.5, 2) ; la lampe loin de son voile (9.5) ; le poste dans le noir (9.6, 2) ; un garde équipé trop tôt (9.6, 2) ;
+  un labyrinthe de murets (9.7, 3) ; la meute en tas (9.8, 2) ; un garde de coin non équipé (9.9, 2) ; les voiles asymétriques (9.10, 6) ; le boss sous une lampe (9.10, 5).
+- **Marche** (trois) : le goulet de 8.10 fermé (rouge : « franchit la cloison x = 15 ») ; **un PNJ libre ralenti à 0,03** (trois contrôles : immobile, distance, cases — la distance exigée est celle du catalogue, lue avant) ; la zone trop grande pour le cinquième (rouge avant la correction, les cinq).
+
+**Cinq fois un sabotage n'a PAS rougi pour la bonne raison, et c'est instructif.** (1) *Une lampe posée dans la pierre* (7.3, d'abord) : le validateur a refusé le chapitre — la garde de contenu s'arrêtait avant d'avoir regardé (même piège qu'au lot 1) ; réécrit sur une case de sol.
+(2) *Une porte ouverte ailleurs* (8.4) : la lampe du goulet se retrouvait dans le mur, refusée par le validateur — remplacé par la zone qui déborde. (3) *Le départ sous une lampe* (7) : le motif apparaissait deux fois (7.4 et 7.7) ; pris avec son voisin. (4) *Fermer le passage du voile* (9.10) :
+**resté VERT** — un voile est un mur mince posé dans une salle ouverte, le boss le contourne par le nord ou le sud ; la marche prouve donc qu'il traverse la salle, pas qu'il passe l'espace de 2 cases. (5) *La porte de 7.2 fermée* : le joueur y part, case étranglée, le chapitre ne se chargeait plus.
+Et **trois défauts de salle attrapés par la garde à l'écriture** : un pilier à une case du mur de 7.3 (couloir d'une tuile) ; la colonne libre de 8.5 entre la dernière machine et le mur (couloir d'une tuile, et la ronde de droite faisait 59 cases au lieu de 44 : son chemin contournait
+la colonne) ; deux piliers de 9.10 à une case de la ceinture.
+
+#### Les images
+
+Captures iso sous Xvfb (Mesa/llvmpipe, 1920×1080, torche tournée vers l'action, PNJ posés dans le faisceau — non versionnées), `salle_N_MM.png` ; **plans** de chaque salle (`plan_N_MM.png` : murs, murets, flaques, rondes, zones, PNJ, un carré rouge de 32×32 pour l'échelle) et `echelle_chapitre_8.png`.
+Les trente prises ont été REGARDÉES (960×540, llvmpipe est trop lent pour 1920×1080 sur cette machine : une prise par minute au lieu de dix). Ce qu'elles montrent : 7.1 l'arène à quatre blocs et ses deux flaques, le bloc central cache le chasseur ; 7.3 le faisceau dans le noir
+complet ; 7.4 les flaques en quinconce, le noir entre elles ; 7.6 les colonnes autour de la lampe, l'ombre derrière chacune ; 7.8 les murets du labyrinthe vus d'en haut, la ligne de vue qui les franchit ; 8.3 une flaque de la galerie, la bande d'ombre ; 8.9 la salle de 100 × 80, le joueur
+au coin du hall sud-ouest, des blocs au loin à peine éclairés — **la salle se lit comme un immense noir** ; 8.10 la cloison, le goulet, le boss derrière un muret ; 9.5 un voile qui coupe la flaque d'une lampe, le coin noir derrière ; 9.10 deux voiles et leur ombre portée dans la flaque.
+Plusieurs prises montrent le joueur touché (hachures rouges) : les chasseurs qu'on pose dans le faisceau tirent, le joueur de la prise est invincible. **Limites** : PNJ posés à la main dans le faisceau ; une salle de 100 × 80 ne se « voit » pas d'une prise (un écran montre une dizaine de cases de large) :
+l'échelle est dans les plans (`echelle_chapitre_8.png`, les dix salles du chapitre à la même échelle, une carte de duel en rouge) plutôt que dans une capture iso.
+
+
+#### Non prouvé
+
+- **Jamais joué à la main**, et **aucun banc de difficulté** : les chasseurs NORMAL (7.7 à 7.9 : trois ou quatre en même temps, équipés) et les élites DIFFICILE (9.8 : trois) ont été réglés par S4 contre un joueur qui ENTRE dans une salle, **un contre un**.
+  Un joueur intermédiaire bat un NORMAL une fois sur deux, un DIFFICILE une fois sur quatre : **7.9, 8.9 et 9.8 sont, par ces chiffres, très dures voire injouables**, sans que rien ne le mesure. La seule garde est « la salle fait ce qu'elle dit ».
+- **Les salles de 8.x se mesurent sur la torche du Parasite** (468 px), comme celles du chapitre 0 ; un joueur arrive au chapitre 8 avec jusqu'à sept classes, dont la lumière n'est pas la même.
+- **Le coût n'est pas mesuré** (consigne) : 8.9 porte sept PNJ (sept corps iso, sept capteurs 256² dans la limite de 1 300 px) et huit lampes sur 100 × 80 cases ; l'allumage par proximité n'a été vérifié que comme règle (la moitié des lampes éteintes au départ), pas à l'image ni en cadence.
+- **Les PNJ équipés des rondes de 8.8 et 8.9** : à NORMAL et DIFFICILE, « equipe » donne le repli (« il change de place après un tir ») : une ronde équipée quitte son tour après une rafale. La marche désarme les PNJ : elle n'éprouve pas cela. (La question 1 du lot 1 le posait ; elle reste posée.)
+- **Le voile de 9.5** n'est que de la géométrie (aucun gadget avant 9.7) : « une bâche qui coupe la lumière » est un mur mince ; le gadget du Spectre, lui, se rencontre à 9.7 et au boss.
+- **Le passage de 2 cases de 9.10** n'est pas prouvé franchi par le vrai corps (le voile se contourne) ; les portes de 4 cases (7.2, 8.4, 8.10) le sont.
+- **L'écran de l'aventure avec dix chapitres** n'a pas été regardé (les chapitres 4 à 6 manquent ici) : le lot 1 avait noté « à surveiller quand le chapitre 7 viendra » — le hub ne défile pas, et **dix lignes de chapitres plus « RETOUR » ne tiennent peut-être pas**. À regarder à l'intégration.
+- Images : Mesa/llvmpipe, PNJ posés à la main. **7.1** : le chasseur est caché par le bloc central dans la prise (il se tient derrière) — la prise montre la salle, pas le duel.
+
+#### Signalé, pas corrigé
+
+- **Fichiers partagés touchés** (conflits probables à l'intégration, triviaux) : `tools/outils_chapitre.gd` (la table `GADGET_EXIGE_CHASSEURS` et `_exige_de()` : l'autre lot ajoutera ses classes à `GADGET_EXIGE`, les deux se lisent) et `tools/run_suites.sh` (un bloc `SUITES+=` après `test_aventure_boss`
+  et une ligne de `case`).
+- **`push_warning` « planche de marche incomplète pour spectre »** (`player.gd:1056`) à chaque PNJ ou boss du Spectre : la classe n'a pas sa planche de marche, le sprite statique est gardé. Sans effet ici (le PNJ marche, glisse sur son sprite fixe), à régler avec les illustrations.
+- **`test_aventure_format` rougit tant que les chapitres 4 à 6 manquent** (voir plus bas) : ni la garde ni le moteur ne sont touchés.
+- **Un PNJ libre n'a pas de point d'arrivée** : la marche le juge par le sol qu'il visite, pas par ce qu'il atteint ; deux libres se frôlent à 33-37 px (la physique les écarte).
+- **Les arènes de boss** (7.10, 8.10, 9.10) reprennent le gabarit de 32×32 du chapitre 0 mais varient franchement : colonnes, cloison percée, voiles. Joueur et boss sont toujours en miroir d'est en ouest.
+- **Un labyrinthe est un tirage seedé** : le fichier dit « rien n'y est tiré au hasard » ; c'est exact des JSON, pas du dessin d'origine — la fabrique le redonne à l'octet.
+
+#### À trancher par Adrien
+
+1. **La difficulté**, d'abord : trois chasseurs NORMAL équipés en même temps (7.7), quatre (7.9), trois élites (9.8), une salle de sept PNJ dont un DIFFICILE (8.9) — fallait-il mesurer, au banc, un joueur type contre une SALLE (un banc de salle) avant de publier ? Ou jouer d'abord ?
+2. **Les salles de 8.x sont-elles assez grandes — ou trop ?** 8.9 mesure 100 × 80 (la plus grande carte de duel : 32 × 32). Un chasseur libre qui entend un pas debout jusqu'à 1 700 px converge de presque partout : est-ce voulu dans une salle où l'on ne peut pas tout voir ?
+3. **« equipe » à NORMAL et DIFFICILE** donne tout le kit de S9 (repli, fusée) : voulu pour les rondes de 8.8 et 8.9 ? (Même question qu'au lot 1, plus pressante ici.)
+4. **Le chapitre 9 sans gadget avant 9.7** : 9.5 « Le voile » enseigne la bâche par un mur mince — ou fallait-il y mettre un vrai voile posé par un PNJ équipé, plus tôt que le plan ?
+5. **Le poste de 7.5, de 8.x et 9.6** n'est pas équipé (les postes ne bougent pas) : voulu ?
+6. Les phrases d'intention qui nomment le gadget : « Il pose une plaque devant la lumière », « il y pose une mine », « Il tend une bâche » — la situation, ou déjà la leçon ?
+
+#### Résultat des suites
+
+`PLAFOND_SUITE=600 GODOT=… ./tools/run_suites.sh --rapide` (4.7.1, 1 292 s, deux autres sessions chargeant la machine) : **164 suites vertes, une seule rouge — `test_aventure_format`, pour la seule raison attendue** : `assets/solo` livre `[0, 1, 2, 3, 7, 8, 9]`, et la garde exige que les numéros de
+chapitres se suivent depuis 0 (« le trou des chapitres 4 à 6 », écrits par l'autre session). Les 152 autres vérifications de cette suite sont vertes (`=== 152 vérifications, 1 échec(s) ===`) ; **la garde n'a PAS été affaiblie** et redeviendra verte à l'intégration. Aucune erreur de script, aucun `push_error` non déclaré ;
+les scénarios à deux instances ne sont pas joués par `--rapide`. **Aucun relevé de cadence** (consigne).
+
+**Ce que la charge a montré, et qui n'est pas de ce lot** : au plafond par défaut de 120 s par suite, `test_banc_bot` (207 s seul) et `test_chapitres_marche` du lot 1 (192 s seul) sont abattus par le chien de garde sur cette machine chargée, et passent seuls (89 et 190 vérifications, code 0). La suite
+neuve, elle, joue trente salles en 4 min 28 s : `run_suites.sh` lui donne `PLAFOND_SUITE=900` à elle seule. Un premier passage a aussi été interrompu (code 143) **parce que j'éditais `run_suites.sh` pendant qu'il tournait** — bash lit un script au fil de l'eau : on n'édite pas un lanceur en route.
+
 
 ### Questions
 
