@@ -30,7 +30,9 @@ const ALLURE_RONDE := 0.5
 const VITESSE_JOUEUR := 260.0
 ## Ce que chaque classe de gadget exige du profil du PNJ qui s'en sert : l'état où la règle de S9 le pose (`EquipementBot.GADGETS`). La suie et le
 ## leurre se posent EN COMBAT sur une cible vue — il faut VOIR ; la torche fantôme se pose EN ENQUÊTE sur un son — il faut ENTENDRE.
-const GADGET_EXIGE := {"fumiste": "voit", "fusil": "voit", "arbalete": "entend"}
+## **Lot 2 (chapitres 4 à 6)** : la poussière (`pompe`, en enquête ou en recherche, sur ce qu'on n'a PAS vu) et la poudre de contact (`sentinelle`, en enquête) demandent
+## d'ENTENDRE ; la nappe de braises (`incendiaire`, en combat sur une cible vue) demande de VOIR.
+const GADGET_EXIGE := {"fumiste": "voit", "fusil": "voit", "arbalete": "entend", "pompe": "entend", "incendiaire": "voit", "sentinelle": "entend"}
 
 var check: Callable
 var niveaux: Array = []
