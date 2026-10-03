@@ -180,7 +180,9 @@ func _salle_07() -> Dictionary:
 	}
 
 
-## 2.8 — Le quartier : quatre bras en croix, une ronde par bras. Chaque tour déborde au carrefour sur ceux de ses deux voisines : les quatre se recouvrent.
+## 2.8 — Le quartier : quatre bras en croix, une ronde par bras. Chaque tour déborde au carrefour sur ceux de ses deux voisines : les quatre se recouvrent. Les quatre
+## tours sont des rectangles de 7 × 8 cases, tous parcourus dans le même sens et chacun depuis son coin nord-ouest : de même longueur (30 cases), ils gardent la même
+## avance les uns sur les autres, et leurs croisements tombent à des instants que 273 px séparent (cherché par force brute : les 4 096 départs et sens possibles).
 func _salle_08() -> Dictionary:
 	var g := Commune.Grille.new(28, 28)
 	g.rect(1, 1, 8, 8, "#")
@@ -194,9 +196,9 @@ func _salle_08() -> Dictionary:
 		"g": g, "orientation": -90,
 		"pnj": [
 			_ronde("ronde_voit_entend_lent", [[10, 3], [17, 3], [17, 11], [10, 11]], true),
-			_ronde("ronde_voit_entend_lent", [[24, 10], [16, 10], [16, 17], [24, 17]], true),
-			_ronde("ronde_voit_entend_lent", [[17, 23], [10, 23], [10, 16], [17, 16]], true),
-			_ronde("ronde_voit_entend_lent", [[3, 17], [3, 10], [11, 10], [11, 17]], true),
+			_ronde("ronde_voit_entend_lent", [[16, 10], [24, 10], [24, 17], [16, 17]], true),
+			_ronde("ronde_voit_entend_lent", [[10, 15], [17, 15], [17, 23], [10, 23]], true),
+			_ronde("ronde_voit_entend_lent", [[3, 10], [11, 10], [11, 17], [3, 17]], true),
 		],
 		"lampes": [_lampe(13, 13, 4.0), _lampe(14, 20, 3.5)],
 	}

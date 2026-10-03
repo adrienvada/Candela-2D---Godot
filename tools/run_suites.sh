@@ -359,6 +359,12 @@ SUITES+=(test_chapitre_00)
 # damier, la lampe au loin (3.7 à 3.9 : « equipe », et un gardien équipé ENTEND).
 SUITES+=(test_chapitre_01 test_chapitre_02 test_chapitre_03)
 
+# Chantier SOLO, S8 : `test_chapitres_marche` (le jeu monté, à pas d'image fixe — `case` plus bas) joue chaque salle de ronde ou de zone des chapitres 1 à 3 avec le VRAI
+# corps (PNJ désarmés et sourds-aveugles : seul le déplacement est mesuré) : chaque ronde passe par chacun de ses points et boucle, une zone n'est jamais quittée et visitée
+# pour un cinquième au moins, aucun PNJ n'est immobile plus de trois secondes, deux rondes ne se traversent pas. S1 avait dit que RONDE et ZONE n'étaient éprouvées qu'avec
+# un point matériel : c'est ici que le vrai corps les parcourt.
+SUITES+=(test_chapitres_marche)
+
 # Chantier SOLO, S9b (2026-10-03) : l'INTÉGRATION de S6 (le moteur de l'aventure) et de S9 (le bot équipé), écrits en parallèle. `test_aventure_boss`
 # (le jeu monté, à pas d'image fixe — `case` plus bas) : chaque PNJ a SA réserve de fusées et de gadget, semée sur SA classe (deux PNJ ne se volent
 # plus la leur, un boss Fumiste pose sa suie et retrouve ses réserves quand la salle recommence, le bot d'entraînement rééquipe à sa réapparition la
@@ -517,7 +523,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement|test_aventure_boss) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done
