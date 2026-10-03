@@ -3261,6 +3261,13 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La CI coupe le job à 20 minutes, et la suite complète les atteint depuis le chantier SOLO (2026-10-03)
+
+Sur `54fc784` (les dix chapitres), une des deux exécutions de « tests » a été marquée **annulée** : tout y était vert, jusqu'au « ✓ Tous les tests
+passent » de l'étape de fumée, mais le job atteignait la limite `timeout-minutes: 20` de `.github/workflows/tests.yml` ; l'autre exécution avait fini
+en 19 min 50. Les cent salles et leurs gardes (fabriques, marches au vrai corps, banc de duels) ont allongé la suite d'autant. La limite passe à
+40 minutes. **Une annulation n'est pas un vert** : sur une PR, lire le journal d'un job « cancelled » avant de conclure.
+
 ### Une réserve indexée par `player_id` est celle de J2 pour TOUS les PNJ — et un test qui ne regarde qu'un PNJ ne le voit pas (2026-10-03)
 
 Chantier SOLO, S9b. Les réserves de `GameState` (fusées, gadget, batterie, recharge d'une minute) sont indexées par `player_id`, et tous les PNJ de l'aventure en portent un, le même (1) : ils lisaient donc la réserve de J2, semée sur la classe
