@@ -109,7 +109,7 @@ func _salle_03() -> Dictionary:
 	g.poser(7, 16, "2")
 	return {
 		"titre": "Le chemin silencieux",
-		"intention": "Un couloir entre deux pièces qui écoutent. On ne passe pas debout, on ne passe pas en courant.",
+		"intention": "Un couloir entre deux pièces qui écoutent. Chaque pas y résonne.",
 		"g": g, "orientation": 0,
 		"pnj": [_zone("zone_entend_facile", [1, 1, 36, 5]), _zone("zone_entend_facile", [1, 14, 36, 4])],
 		"lampes": [_lampe(27, 3, 4.0)],

@@ -106,7 +106,7 @@ func _salle_03() -> Dictionary:
 	g.poser(17, 19, "3")
 	return {
 		"titre": "Le premier tir",
-		"intention": "Une salle ouverte, trois gardiens en triangle. Le premier coup de feu les réveille tous : par qui commencer ?",
+		"intention": "Une salle ouverte, trois gardiens en triangle. Un coup de feu, et ils sont trois.",
 		"g": g, "orientation": -45,
 		"pnj": [
 			_zone("zone_voit_entend_facile", [1, 1, 20, 12]),
@@ -269,7 +269,7 @@ func _salle_10() -> Dictionary:
 	g.poser(28, 16, "1")
 	return {
 		"titre": "L'Incendiaire",
-		"intention": "Un duel dans une arène. Entre vous, des braises : on ne s'y attarde pas.",
+		"intention": "Un duel dans une arène. Entre vous, des braises.",
 		"boss": true,
 		"g": g, "orientation": 0,
 		"pnj": [{"profil": "boss", "classe": CLASSE}],

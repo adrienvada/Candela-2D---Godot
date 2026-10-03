@@ -128,7 +128,7 @@ func _salle_04() -> Dictionary:
 	g.poser(30, 19, "2")
 	return {
 		"titre": "L'embuscade",
-		"intention": "Une salle à trois entrées. Les seuils sont éclairés, le reste est noir. On les attend.",
+		"intention": "Une salle à trois entrées. Les seuils sont éclairés, le reste est noir.",
 		"g": g, "orientation": 0,
 		"pnj": [_chasseur("libre_voit_facile"), _chasseur("libre_voit_facile")],
 		"lampes": [_lampe(23, 7, 4.5), _lampe(10, 13, 4.0)],
