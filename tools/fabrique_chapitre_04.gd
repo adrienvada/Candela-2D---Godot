@@ -288,7 +288,7 @@ func _salle_09() -> Dictionary:
 			_zone("zone_voit_entend_facile", [28, 1, 15, 12], true),
 			_zone("zone_voit_entend_facile", [1, 21, 15, 12], true),
 			_zone("zone_voit_entend_facile", [28, 21, 15, 12], true),
-			{"profil": "ronde_voit_entend_facile", "ronde": [[18, 3], [25, 3], [25, 30], [18, 30]], "classe": CLASSE, "equipe": true},
+			{"profil": "ronde_voit_entend_facile", "ronde": [[18, 3], [25, 3], [25, 27], [18, 27]], "classe": CLASSE, "equipe": true},
 		],
 		"lampes": [_lampe(8, 6, 3.5), _lampe(35, 27, 3.5), _lampe(21, 16, 5.0)],
 	}

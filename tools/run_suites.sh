@@ -365,6 +365,22 @@ SUITES+=(test_chapitre_01 test_chapitre_02 test_chapitre_03)
 # un point matériel : c'est ici que le vrai corps les parcourt.
 SUITES+=(test_chapitres_marche)
 
+# Chantier SOLO, S8, lot 2 (2026-10-03) : le CONTENU des chapitres 4 à 6 (`assets/solo/chapitre_04` à `06`, écrits par `tools/fabrique_chapitre_04.gd` à `06`, sur la grille de
+# `fabrique_commune.gd`). Mêmes outils que le lot 1 (`tools/outils_chapitre.gd`) plus `tools/outils_chapitre_04_06.gd` : l'ouïe d'un PNJ DERRIÈRE LES MURS (`PerceptionBot.ecouter`
+# sur le monde de la salle), « la règle de son gadget peut-elle se déclencher ? » (la fenêtre de `EquipementBot.GADGETS`), la forme d'une salle (sol ouvert, blocs, culs-de-sac).
+# `test_chapitre_04` — « Les zones écoutent » (Terrassier) : un pas debout s'entend de la porte et pas un pas accroupi, un tir réveille les trois pièces, un chemin silencieux
+# accroupi, des zones moitié claires, un L et son poste, la carrière où la poussière tient, des zones emboîtées dans un dédale de murets, la poussière (4.7 à 4.9 : « equipe »).
+# `test_chapitre_05` — « Les groupes » (Incendiaire) : des zones qui se recouvrent, une ronde sous un gardien, un poste qui couvre une ronde mieux que l'autre, un bruit qui n'appelle
+# qu'un gardien, un passage de trois cases qu'une nappe de 136 px ferme, une croix à quatre groupes, la nappe (5.7 à 5.9). `test_chapitre_06` — « Les chasseurs » (Sentinelle) : des
+# boucles sans cul-de-sac, une boucle noire où se cacher, des îlots, trois seuils éclairés, un sol nu où un pas s'entend, des couloirs de 4 cases que la poudre remplit (6.7 à 6.9).
+SUITES+=(test_chapitre_04 test_chapitre_05 test_chapitre_06)
+
+# Chantier SOLO, S8, lot 2 : `test_chapitres_marche_04_06` (le jeu monté, à pas d'image fixe — `case` plus bas), sur le modèle de `test_chapitres_marche` (que l'autre session du lot
+# n'a pas à éditer, ni moi) : le VRAI corps parcourt chaque ronde, chaque zone et — pour la première fois dans une salle d'aventure — chaque CHASSEUR (déplacement libre) des
+# chapitres 4 à 6, PNJ désarmés et sourds-aveugles. Rondes : chaque point, la boucle ; zones : jamais quittées, visitées ; chasseurs : des cases distinctes, tous les quarts de carte,
+# du sol seulement ; jamais immobile plus de trois secondes ; deux rondes ne se rattrapent pas.
+SUITES+=(test_chapitres_marche_04_06)
+
 # Chantier SOLO, S9b (2026-10-03) : l'INTÉGRATION de S6 (le moteur de l'aventure) et de S9 (le bot équipé), écrits en parallèle. `test_aventure_boss`
 # (le jeu monté, à pas d'image fixe — `case` plus bas) : chaque PNJ a SA réserve de fusées et de gadget, semée sur SA classe (deux PNJ ne se volent
 # plus la leur, un boss Fumiste pose sa suie et retrouve ses réserves quand la salle recommence, le bot d'entraînement rééquipe à sa réapparition la
@@ -523,7 +539,7 @@ run() {
 # image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_banc_bot|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche|test_chapitres_marche_04_06) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done
