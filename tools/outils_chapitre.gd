@@ -33,6 +33,10 @@ const VITESSE_JOUEUR := 260.0
 ## **Lot 2 (chapitres 4 à 6)** : la poussière (`pompe`, en enquête ou en recherche, sur ce qu'on n'a PAS vu) et la poudre de contact (`sentinelle`, en enquête) demandent
 ## d'ENTENDRE ; la nappe de braises (`incendiaire`, en combat sur une cible vue) demande de VOIR.
 const GADGET_EXIGE := {"fumiste": "voit", "fusil": "voit", "arbalete": "entend", "pompe": "entend", "incendiaire": "voit", "sentinelle": "entend"}
+## Les classes des chapitres 7 à 9 (S8, lot 2), dans une table à part pour que chaque lot écrive ses lignes sans toucher à celles de l'autre. L'ombre habitée et le voile
+## se posent « face à la torche de la cible, qu'on VOIT » (états enquête, recherche, combat / recherche, combat) ; la mine se pose en enquête ou en recherche sur une place
+## qu'on n'a pas vue — il faut ENTENDRE (une enquête naît d'un son).
+const GADGET_EXIGE_CHASSEURS := {"occulteur": "voit", "allumeur": "entend", "spectre": "voit"}
 
 var check: Callable
 var niveaux: Array = []
@@ -407,12 +411,12 @@ func partout(numero: int, classe: String, table: Array) -> void:
 				continue
 			if p["equipe"]:
 				equipes += 1
-				var exige: String = GADGET_EXIGE.get(classe, "")
+				var exige: String = _exige_de(classe)
 				var peut: bool = (p["profil"].voit if exige == "voit" else p["profil"].entend) if exige != "" else false
 				equipes_bien = equipes_bien and p["classe"] == classe and p["profil"].utilise_le_gadget and peut
 			else:
 				autres_bien = autres_bien and p["classe"] == Format.CLASSE_PAR_DEFAUT and not p["profil"].utilise_le_gadget
-		_c("%s : %d PNJ équipé(s), à la classe « %s », dont le profil %s : la règle de son gadget peut se déclencher" % [nom, int(ligne["equipes"]), classe, GADGET_EXIGE.get(classe, "?")],
+		_c("%s : %d PNJ équipé(s), à la classe « %s », dont le profil %s : la règle de son gadget peut se déclencher" % [nom, int(ligne["equipes"]), classe, _exige_de(classe) if _exige_de(classe) != "" else "?"],
 			equipes == int(ligne["equipes"]) and equipes_bien)
 		_c("%s : les autres PNJ gardent la classe par défaut et n'ont aucun outil" % nom, autres_bien)
 		# L'accès : chaque PNJ à pied, une seule pièce, aucun couloir d'une tuile.
@@ -438,6 +442,11 @@ func partout(numero: int, classe: String, table: Array) -> void:
 		_les_rondes(c, nom)
 		_les_zones(c, nom)
 		_depart_a_l_abri(c, nom)
+
+
+## Ce que la règle du gadget de cette classe exige du profil du PNJ équipé : « voit » ou « entend » (`""` : classe inconnue).
+func _exige_de(classe: String) -> String:
+	return String(GADGET_EXIGE.get(classe, GADGET_EXIGE_CHASSEURS.get(classe, "")))
 
 
 func _pnj_sur(c: Dictionary, cc: Vector2i) -> bool:

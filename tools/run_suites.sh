@@ -388,6 +388,13 @@ SUITES+=(test_chapitres_marche_04_06)
 # jamais plus. Les boss par classe sont gardés par `test_banc_bot` (existence, bornes larges, aucun champ de perception touché).
 SUITES+=(test_aventure_boss)
 
+# Chantier SOLO, S8 lot 2 (2026-10-03) : le CONTENU des chapitres 7 à 9 (`assets/solo/chapitre_07` à `09`, écrits par `tools/fabrique_chapitre_07.gd` à `09`). Des PNJ LIBRES
+# (partout, sans trajet ni zone) et des salles bien plus grandes que celles d'un duel. Les gardes partagent `tools/outils_chapitre.gd` (le lot 1) et `tools/outils_chasseurs.gd`
+# (la lumière d'une salle : flaques, ombres, noir ; les îlots ; un PNJ libre part loin du joueur et hors de toute lampe). `test_chapitre_07` — « Les chasseurs vifs »
+# (Occulteur) : un duel dans une petite arène, deux chambres et une porte, le noir complet, cinq flaques en quinconce, un poste couvrant un hall, les ombres des colonnes,
+# les îlots, un labyrinthe de murets, la meute, un duel en miroir (7.7 à 7.9 : « equipe », et un chasseur équipé VOIT).
+SUITES+=(test_chapitre_07)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
