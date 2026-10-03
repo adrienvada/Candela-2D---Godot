@@ -133,10 +133,10 @@ func _salle_1() -> void:
 	_check("la pièce n'a qu'UNE porte : %d cases de la zone ouvrent sur l'extérieur, en un seul morceau (de 3 à 6)" % portes.size(), portes.size() >= 3 and portes.size() <= 6 and o.composantes(portes).size() == 1)
 	_check("le joueur part hors de la pièce, dans le noir (lampe la plus proche à %.0f px)" % o.distance_min_a(c["depart_pos"], _cases_lampes(c)), not zone.has_point(c["depart"]) and not o.sous_une_lampe(c, c["depart_pos"]))
 	# Debout, le gardien entend le départ NET ; accroupi, d'aucune case de sa zone.
-	var echantillon := _echantillon(cases, 3)
+	var echantillon := _echantillon(cases, 2)
 	_check("DEBOUT, un pas du départ est entendu NET d'une case de la zone au moins (la porte est à %.0f px)" % o.distance_min_a(c["depart_pos"], cases),
-		o.net_d_au_moins_une(c, "footstep", c["depart_pos"], echantillon, false))
-	_check("ACCROUPI, un pas du départ n'est entendu net d'AUCUNE case de la zone", not o.net_d_au_moins_une(c, "footstep", c["depart_pos"], echantillon, true))
+		o.net_d_au_moins_une(c, "footstep", c["depart_pos"], cases, false))
+	_check("ACCROUPI, un pas du départ n'est entendu net d'AUCUNE case de la zone", not o.net_d_au_moins_une(c, "footstep", c["depart_pos"], cases, true))
 	# Un poste de tir accroupi : une case hors de la zone, dans le noir, d'où un pas accroupi n'est entendu net de nulle part dans la pièce, et d'où la torche porte sur une bonne part d'elle.
 	var meilleur := Vector2i(-1, -1)
 	var meilleure_part := 0.0
@@ -199,11 +199,15 @@ func _salle_2() -> void:
 	var bouts: Array[Vector2i] = [c["pnj"][zs[0]]["case"], c["pnj"][zs[2]]["case"]]
 	_check("un PAS debout du départ est entendu net du gardien de la pièce d'en face", o.net_d_au_moins_une(c, "footstep", c["depart_pos"], milieu, false))
 	_check("… et ni de l'un ni de l'autre des deux gardiens des bouts, là où ils naissent", not o.net_d_au_moins_une(c, "footstep", c["depart_pos"], bouts, false))
-	# Chaque pièce est ouverte sur le couloir par sa porte, et sur sa voisine par une autre.
-	var portes_ok := true
+	# Chaque pièce est ouverte sur le couloir par sa porte, et sur sa voisine par une autre : deux portes aux bouts, trois au milieu — et jamais un mur ouvert de bout en bout.
+	var nb_portes: Array[int] = []
+	var portes_etroites := true
 	for k in zs:
-		portes_ok = portes_ok and o.composantes(o.portes(c, k)).size() >= 1
-	_check("chaque pièce a sa porte sur le couloir", portes_ok)
+		var comps := o.composantes(o.portes(c, k))
+		nb_portes.append(comps.size())
+		for m in comps:
+			portes_etroites = portes_etroites and (m as Array).size() <= 6
+	_check("les pièces sont séparées du couloir et les unes des autres par des cloisons percées de portes de 6 cases au plus : %s portes (deux aux bouts, trois au milieu)" % str(nb_portes), nb_portes == [2, 3, 2] and portes_etroites)
 	var lampes_dans_zone := 0
 	for l: Dictionary in c["lampes"]:
 		if o.dans_une_zone(c, l["case"]):
