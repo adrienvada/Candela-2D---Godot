@@ -193,6 +193,10 @@ func _chacun_sa_reserve() -> void:
 	var gadgets := _gadgets_du_jeu()
 	_check("le Terrassier PNJ pose SA poussière (pas le grésillement de J2) : un gadget, de la classe du poseur",
 		gadgets.size() == 1 and String(gadgets[0].slug) == "poussiere", str(gadgets.map(func(g): return String(g.slug))))
+	# `classe_du_poseur` ne vient que de la CLASSE lue chez le poseur : le slug, lui, se déduit d'ailleurs,
+	# et une classe lue chez J2 (le Parasite) passerait la ligne d'avant sans que rien ne rougisse.
+	_check("… et la classe que le gadget emporte est celle de son poseur (le Terrassier), pas celle de J2",
+		gadgets.size() == 1 and gadgets[0].classe_du_poseur == b.current_weapon and gadgets[0].classe_du_poseur != main.p2.current_weapon)
 	_check("… il porte la place de son poseur (3) et le rôle d'adversaire (`poseur_id` 1, qui règle couches, ombres et sons)",
 		gadgets.size() == 1 and gadgets[0].slot_reserve == 3 and gadgets[0].poseur_id == 1)
 	_check("… SA recharge d'une minute court (place 3), pas celle de J2 ni celle de l'autre PNJ",

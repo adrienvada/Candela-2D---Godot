@@ -3260,6 +3260,39 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une réserve indexée par `player_id` est celle de J2 pour TOUS les PNJ — et un test qui ne regarde qu'un PNJ ne le voit pas (2026-10-03)
+
+Chantier SOLO, S9b. Les réserves de `GameState` (fusées, gadget, batterie, recharge d'une minute) sont indexées par `player_id`, et tous les PNJ de l'aventure en portent un, le même (1) : ils lisaient donc la réserve de J2, semée sur la classe
+de J2 (`_do_start_round`) — le Parasite —, et se la partageaient. S6 les avait signalées (« un PNJ n'a pas de réserve à lui »), S9 aussi, et chacune avait raison de son côté : un seul PNJ, un seul Parasite, et rien ne se voit. Il faut DEUX PNJ de
+classes différentes pour le voir (le Spectre n'a aucune fusée, le Terrassier trois : `test_aventure_boss`). Le geste le plus simple n'était pas de changer `player_id` — il règle les couches, les ombres, les sons, le rendu, et n'a que deux rôles —
+mais d'indexer les réserves par une PLACE (`Player.slot_de_reserve()`). **Quatre endroits la lisaient sous un autre nom** : `_do_spawn_gadget` prenait la classe du gadget chez `p2`, `_do_spawn_fusee` nommait le nœud et le son par le tireur, « un gadget debout
+par joueur » comptait par `poseur_id` (un second PNJ qui posait le sien retirait celui du premier), et la fin de `_do_spawn_gadget` écrivait la recharge à `pid`. Chercher `p1 if pid == 0 else p2` dans `game_state.gd` : c'est la signature.
+
+### L'éblouissement de `game_state.gd` connaissait `[p1, p2]` en quatre endroits (2026-10-03)
+
+Chantier SOLO, S9b. `_maj_eblouissement` (cibles), `_sources_eblouissantes` (torches), `_flash_de_tir` (« l'autre ») et `_ligne_de_vue` (la posture d'une source, par `pid_porteur` : 1 désigne J2, caché, pas le PNJ) supposaient deux joueurs. Le PNJ le plus lumineux du jeu n'éblouissait
+personne, et la torche dans les yeux d'un PNJ ne lui faisait rien — sans erreur ni suite rouge. Même famille que les réserves : **tout ce qui a été écrit pour « J1 et J2 » est à relire quand un troisième corps existe**. `_joueurs_en_lice()` est maintenant la seule liste.
+
+### Une garde qui braque la torche d'un joueur doit aussi lui donner une visée (2026-10-03)
+
+Chantier SOLO, S9b, `tools/test_aventure_boss.gd`. Un fournisseur d'entrées de test qui ne rend que `is_flashlight_pressed()` laisse `get_aim_direction()` à `Vector2.ZERO` : `player.gd` tourne alors le corps vers 0 rad (l'est) — 3,66 rad après deux
+secondes — et la torche, braquée sur le PNJ à l'ouest, éclaire le mur. La garde « la torche du joueur éblouit un PNJ » rougissait pour la mauvaise raison (éblouissement 0,0, torche allumée, cap 3,66). Une garde qui lit un résultat nul se lit sur le cap
+avant d'accuser le code.
+
+### Ce que le banc de la difficulté ne peut pas dire d'un bot qui perd à tous les coups contre un joueur immobile (2026-10-03)
+
+Chantier SOLO, S9b. Le joueur type `ecoute` (immobile, silencieux, sans lumière) bat à 96-100 % tout bot qui n'a pas de quoi gagner la fusillade qu'il déclenche : il entend les pas du bot, tire sur la zone — et un bot armé d'une arbalète, d'un pistolet-mitrailleur
+ou d'un lance-fusées n'a pas de quoi tuer en un chargeur. **Aucun réflexe n'y change rien** : à l'extrême (0,10 s de réaction, 3° → 0,5° d'erreur, visée à 14 rad/s, allure 1, repli, fusées, accroupi) le bot au lance-fusées reste à 71 %, celui à
+l'arbalète à 83 % — alors que la **vie** déplace tout (Occulteur : 76 % à 100 points, 65 % à 130, 35 % à 180). Un banc qui règle « la force » sur les réflexes seuls promet une cible qu'il ne peut pas atteindre : mesurer d'abord ce qu'un levier peut, avec un réglage extrême, avant de le régler fin.
+
+### Modéliser l'éblouissement dans la vue d'un bot déplace TOUTE la calibration du banc — et le joueur type en paie le plus (2026-10-03)
+
+Chantier SOLO, S9b. Première version du modèle (« un bot ébloui ne distingue plus le corps ») : la matrice de S4 passe de **79 / 55 / 34 % à 66 / 61 / 36 %** (FACILE, NORMAL, DIFFICILE ; graines 401-416, 384 duels par ligne), le banc court (`test_banc_bot`) rend NORMAL plus facile que FACILE, et la garde de
+déterminisme (« même graine, même duel ») rougit. Cause, établie en rétablissant l'ancien modèle (78 / 58 : le retour est à la graine près) : **le joueur type est le premier ébloui.** Il ne voit le tireur dans le noir QUE par l'éclair de son tir — un disque de lumière qui éclaire son corps — et cet éclair
+l'éblouit au même instant (`_flash_de_tir` : un pic de 0,6 à bout portant, au-dessus du seuil dès ~500 px) : le corps éclairé par l'éclair est à demi effacé, donc, pour le modèle, invisible. Un joueur, lui, voit encore le feu du canon. Le correctif : l'éclair d'un tir de la cible reste vu comme une SOURCE (sa place, à la bouche
+de l'arme, jamais celle du corps) aux mêmes conditions qu'aux yeux ouverts — jamais une vue de plus. Matrice rétablie : **78 / 52 / 34**. **Toute modification de la perception d'un bot se rejoue sur la matrice, pas seulement sur la garde d'honnêteté** : celle-ci ne mesure que « jamais plus », pas « trop moins » — un
+modèle qui aveugle le joueur type fait croire à un bot plus fort. Et les boss réglés avant ce correctif étaient réglés sur la mauvaise perception (Braconnier : 57 % à 250 points de vie sous l'ancienne vue, 56 % à 190 sous la vue finale) : un réglage de force se refait après chaque changement du modèle de vue.
+
 ### Un PNJ mort reste solide : `die()` ne touche pas à la collision (2026-10-02)
 
 Chantier SOLO, S6, `aventure_partie.gd`. `Player.die()` cache les sprites et éteint les lampes, **mais ne touche ni à la collision ni au groupe** : un PNJ abattu restait un cadavre
@@ -31695,7 +31728,9 @@ restent à définir, sans bloquer aucune étape avant S8.
 
 **Le boss porte sa classe, et son gadget depuis S9** (2026-10-03). Jusque-là le boss du chapitre 0 avait l'arme, la torche et le root
 du Parasite, sans son gadget. S9 donne au bot une règle par gadget, pour les dix : le boss (`ProfilBot.boss()`, le profil NORMAL) se sert du gadget de la classe
-qu'il porte. ⚠️ **Mais l'arme d'une autre classe n'est pas réglée** : voir « Ce qui est mesuré par classe » (S9).
+qu'il porte. ⚠️ **Mais l'arme d'une autre classe n'était pas réglée** (S9, « Ce qui est mesuré par classe ») : **S9b (2026-10-03) a réglé les dix boss** — `ProfilBot.boss(classe)`,
+table `REGLAGES_BOSS`, chacun battu environ 55 % du temps par le joueur type de référence. Le Parasite garde le profil NORMAL du cran 3 ; les autres reçoivent ce que leur arme demande (une rafale, un repli, une distance
+d'engagement) et, quand ni les réflexes ni la rafale ne suffisent, **de la vie** (voir « S9b » : c'est un choix pour Adrien).
 
 **Le déblocage des classes est propre au solo.** Il ne touche ni `RankLoadout` ni le rang : en ligne, seul le rang
 débloque (Phase 7, règle du miroir en classé). Les matchs solo n'alimentent pas l'ELO ; leur archive dans
@@ -31773,7 +31808,9 @@ Revues le 2026-10-02 : les plafonniers ont leur étape, et le contenu se sépare
    la main** : dix salles écrites en données, jugées par une garde qui mesure ce que chacune enseigne, et vues en images fixes.
 8. **S8 — les chapitres 1 à 9**, un par lot.
 9. **S9 — le bot s'équipe** : torche maîtrisée, fusée, gadget de sa classe (que les boss attendent). ✅ **FAITE le 2026-10-03** — voir « S9 » ci-dessous
-   (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe ».
+   (les règles par outil et par gadget, le banc avant / après, la perception sous gadget). **Les boss de classe 3, 4, 5 et 7 sont trop faciles avec les réflexes de S4** : voir « Ce qui est mesuré par classe » — réglé par S9b.
+10. **S9b — l'intégration de S6 et de S9** (née de leur écriture en parallèle) : chaque PNJ a sa réserve de fusées et de gadget, l'éblouissement vaut pour les PNJ et pour le bot, les dix boss se règlent
+    à leur classe. ✅ **FAITE le 2026-10-03** — voir « S9b » ci-dessous.
 
 **Fichiers.** Neufs, en propre au chantier : le fournisseur d'entrées du bot, son profil, sa perception, le plafonnier,
 le moteur de l'aventure et sa progression, `assets/solo/`. **Partagés, à demander avant d'écrire** (voir
@@ -32692,7 +32729,7 @@ entre deux luminaires (le sang et le voile rouge sont ceux de ses balles : il ti
 #### Signalé, pas corrigé
 
 - **`GameState.rebuild_arena` ne purge toujours pas le conteneur « Plafonniers »** (signalé en S5) : contourné — `Plafonnier.poser` est idempotente et le moteur retire à la sortie — mais le défaut reste.
-- **`_maj_eblouissement` ne connaît que J1 et J2** : un PNJ n'éblouit pas le joueur et n'est jamais ébloui par lui (la torche dans les yeux d'un PNJ ne fait rien).
+- **`_maj_eblouissement` ne connaît que J1 et J2** : un PNJ n'éblouit pas le joueur et n'est jamais ébloui par lui (la torche dans les yeux d'un PNJ ne fait rien). **Corrigé par S9b** (2026-10-03).
 - **Un figurant n'a ni ombre de contact au sol, ni bout d'arme, ni lampe 3D** : `lumieres_iso`, `iso_volumes`, `_accorder_le_halo_soi`, `_accorder_le_pied_des_lampes` ne regardent que J1 et J2.
 - Le **pool de corps** des figurants grandit et ne rétrécit pas (au plus huit corps de plus).
 - **`ReplaySystem` enregistre en continu pendant l'aventure**, comme à l'entraînement : rien ne l'exploite, mais il tourne.
@@ -32847,11 +32884,11 @@ dès que la scène lui rendait la recharge d'une minute**. Remède : rendre la r
   l'adversaire), ne voit pas la lumière de sa torche fantôme, de sa mine ou de ses braises (voir moins que la lumière : honnête, mais il pose sans s'en servir).
 - Le bot **n'évite pas sa propre nappe de braises** (8 points la traversent), ne se protège pas de sa propre mine au-delà de son recul, et **ignore son propre éblouissement**
   (S2 ne l'avait jamais modélisé : un bot ébloui, par une fusée ou une mine, continue de « voir » la lumière que le joueur ne verrait plus à travers son voile — un trou de
-  S2, agrandi aujourd'hui par les mines et les fusées du bot ; non corrigé).
+  S2, agrandi aujourd'hui par les mines et les fusées du bot ; **l'éblouissement est corrigé par S9b** (2026-10-03) : le modèle de vue le lit, le reste — la nappe, la mine — ne l'est pas).
 - Les replis et les poses ne sont éprouvés que sur la carte d'essai (corps factices, jeu monté) et les six cartes livrées (banc) ; jamais sur une carte de joueur.
 
 **Signalé, pas corrigé.**
-- **Le boss d'une autre classe perd sa réserve de fusées au premier duel** : `GameState._do_start_round` sème `_fusees_restantes` sur la classe de J2 À CE MOMENT (le Parasite), et
+- **(Corrigé par S9b, 2026-10-03 : chaque PNJ a sa réserve, le bot d'entraînement rééquipe sa classe.)** **Le boss d'une autre classe perd sa réserve de fusées au premier duel** : `GameState._do_start_round` sème `_fusees_restantes` sur la classe de J2 À CE MOMENT (le Parasite), et
   `_reapparaitre_le_bot()` rééquipe l'arme d'index 0. **S6** qui équipe un boss de classe N doit aussi resemer `_fusees_restantes[1]` (`_stock_fusees`) et
   rééquiper la classe à la réapparition ; le banc et les gardes de S9 le font à la main (`_rendre_les_reserves`). Le gadget, lui, se lit sur la classe vivante : rien à resemer.
 - **Un plantage rare du moteur sous le banc** (signal 11, juste après « [REPLAY] P2 died », précédé de « The caller thread can't call the function `propagate_notification()` on
@@ -32869,7 +32906,167 @@ qui éclaire son chemin) n'est dans aucun profil : à donner aux PNJ du début d
 joueur contre DIFFICILE en `ecoute`) ? (4) Les **règles de gadgets** se jugent en jouant, une par une : en particulier la suie (il entre dans son nuage, aveugle 9 s), la poussière et la
 torche fantôme, dont l'effet n'est pas mesuré. (5) La **fusée du bot** éclaire le bot aussi : 240 px minimum, un chiffre de départ.
 (6) **Les armes des classes autres que le Parasite** : le bot qui porte un fusil à pompe, une arbalète, un lance-fusées ou un pistolet-mitrailleur est battu 85 à 98 % du temps, outils ou non — et c'est la classe
-du boss des chapitres 3, 4, 5 et 7. Réglage par classe (réflexes, rafale, détente tenue de l'Occulteur) à faire avant de publier ces chapitres : S8 ?
+du boss des chapitres 3, 4, 5 et 7. Réglage par classe (réflexes, rafale, détente tenue de l'Occulteur) à faire avant de publier ces chapitres : S8 ? **→ Fait par S9b** (2026-10-03), avec un levier de plus que ceux
+que cette question nommait : la vie du boss.
+
+
+### S9b — FAITE le 2026-10-03 : l'intégration de S6 et de S9 — chaque PNJ a sa réserve, l'éblouissement vaut pour les PNJ, les boss se règlent à leur classe
+
+**Pourquoi cette étape.** S6 (le moteur de l'aventure) et S9 (le bot équipé) ont été écrits **en parallèle**, chacun juste de son côté, et se croisaient mal à trois endroits que
+chacune avait signalés et qu'aucune ne pouvait corriger sans l'autre. Aucune étape de contenu (S7, S8) n'est publiable tant que les boss de classe N ne se battent pas comme
+ils le devraient. S9b n'ajoute aucune fonctionnalité : elle raccorde.
+
+**Ce qui existe.** Fichiers touchés : `game_state.gd` (les places de réserve, `inscrire_un_pnj`, `liberer_les_pnj`, `_slot_de`, `_joueurs_en_lice`, `_flash_de_tir`, `_plafond_de_source`),
+`player.gd` (`slot_reserve`, `slot_de_reserve()`), `gadget_base.gd` (`slot_reserve`), `aventure_partie.gd` (deux appels), `bot_input_provider.gd` (sa propre place ; l'engagement),
+`perception_bot.gd` et `perception_bot_noeud.gd` (l'éblouissement), `profil_bot.gd` (`boss(classe)`, `REGLAGES_BOSS`, `distance_engagement_px`, `distance_tir_max_px`),
+`aventure_format.gd` (une ligne : le boss est réglé à la classe de son entrée), les bancs (`banc_bot_difficulte.gd` : `--boss`, `--vie` ; `banc_bot_duel.gd`), `run_suites.sh`. Gardes :
+`tools/test_aventure_boss.gd` (neuve), `tools/test_bot_combat.gd` (l'engagement), `tools/test_banc_bot.gd` (les boss par classe). **`protocol.gd`, `Protocol.VERSION` et les RPC n'ont pas
+bougé** : aucune place de réserve >= 2 ne transite, un PNJ n'existe que hors ligne ; aucun `if transport == …`.
+
+#### 1. Les réserves des PNJ
+
+**Le défaut.** `_fusees_restantes`, `_fusees_accumulateur`, `_fusees_attente`, `_fusees_profil`, `_gadget_attente`, `_gadgets_poses_par` et `_batterie` sont indexés par `player_id`. Tous les PNJ en
+portent un — le même, 1 : ils partageaient la réserve de J2, **semée sur la classe de J2** par `_do_start_round` (le Parasite à l'entraînement et en aventure). Conséquences (que la garde revoit, rouge, quand on rétablit l'indexation par `player_id` : sabotage « réserves partagées », 8 contrôles): un boss Terrassier avait UNE fusée au lieu de trois, un boss Spectre en avait une alors que « le Spectre n'éclaire jamais », deux PNJ qui lançaient se volaient la fusée l'un de
+l'autre, la recharge d'une minute d'un PNJ valait pour tous, **la suie d'un boss Fumiste prenait les paramètres du grésillement de J2** (`_do_spawn_gadget` lisait la classe de `p2`), et un second PNJ
+qui posait son gadget **retirait celui du premier** (« un gadget debout par joueur », compté par `poseur_id`).
+
+**Le geste.** Une réserve est désormais indexée par une PLACE : 0 pour J1, 1 pour J2, **2, 3, … pour les PNJ**, une chacun. `GameState.inscrire_un_pnj(pnj)` (appelée par `AventurePartie` pour chaque
+PNJ, une fois armé) lui donne sa place et sème ses fusées, son gadget et sa batterie sur **SA classe** ; `liberer_les_pnj()` rend les places (la salle recommencée, la sortie ; `_do_start_round` le
+fait aussi, en ceinture) — des PNJ neufs reçoivent des réserves neuves, c'est ce qui « remet à neuf » à la reprise. `Player.slot_de_reserve()` dit la place d'un joueur (son `player_id` hors PNJ) ; `player.gd`,
+`GameState.spawn_fusee` / `spawn_gadget` / `basculer_gadget` et le bot (`bot_input_provider.gd`, `_equiper`) la lisent. **Seul l'indice change** : un gadget de PNJ garde `poseur_id` 1 — c'est lui que lisent
+les couches, les ombres, les sons et le rendu, qui n'ont que deux rôles — et porte en plus `slot_reserve`, que `gadget_basculable_de` et « un gadget debout par poseur » lisent. La classe du gadget posé est celle du
+**poseur** (`_joueur_de_reserve(slot)`), plus celle de J2. Le duel n'a pas bougé : J1 et J2 gardent les places 0 et 1, les tableaux n'ont que deux entrées hors aventure, aucun RPC ne porte une place >= 2.
+
+**La réapparition du bot d'entraînement.** `_reapparaitre_le_bot()` rééquipait `weapon_for_index(0)` en dur : un bot d'une autre classe redevenait Parasite à sa première mort. Il rééquipe désormais **la
+classe qu'il porte** (munitions pleines) ; au lancement d'un entraînement il porte l'index 0 : le comportement d'avant n'a pas changé. Le banc équipe maintenant TOUJOURS la classe du duel (index 0 sans `--classe`),
+la réapparition ne la lui rendant plus.
+
+#### 2. L'éblouissement des PNJ
+
+**Le défaut.** `_maj_eblouissement` bouclait sur `[p1, p2]`, `_sources_eblouissantes` aussi, `_flash_de_tir` ne connaissait que « l'autre » des deux : **la torche et l'éclair d'un PNJ n'éblouissaient pas le joueur, et la
+torche du joueur dans les yeux d'un PNJ ne faisait rien**. Et le bot — celui de l'entraînement comme les PNJ — ignorait son propre éblouissement (un trou de S2, agrandi par les mines et les fusées de S9).
+
+**Le geste.** `_joueurs_en_lice()` rend J1, J2 puis les figurants (sans figurant : exactement `[p1, p2]`) ; ils sont cibles ET sources de la torche, de l'éclair de tir, de la fusée et des gadgets.
+**Les PNJ forment une équipe** : la torche et l'éclair d'un PNJ n'éblouissent pas un autre PNJ (leurs balles se traversent déjà, ils ne se blessent pas : S6) — un choix, voir « À trancher ». La rétrodiffusion de sa propre
+torche reste celle de son porteur. La hauteur de la lumière d'un PNJ est celle de **sa** posture (`_ligne_de_vue` lisait celle de J2, `pid_porteur` valant 1).
+
+**Ce que perd un bot ébloui — traduit de l'écran d'un joueur.** Sur l'écran d'un joueur ébloui, **le corps de l'adversaire s'efface** (`Brouillage.opacite`, mode LAMPE : le contraste tombe à zéro dès que
+l'éblouissement atteint la moitié de son maximum) **et sa lampe reste** (choix d'Adrien : on ne perd pas la source qui éblouit) ; le voile blanc, lui, est de l'affichage. Le modèle de vue (`PerceptionBot.voir`) lit donc
+`monde["ebloui"]` — l'éblouissement du bot, que le nœud de perception lit sur SON corps, comme un joueur lit son écran — et **ne distingue plus le corps** quand `Brouillage.opacite(ebloui)` tombe sous
+`OPACITE_MIN_CORPS` (0,5) : ni par un cône, ni par un disque (halo, éclair, fusée, plafonnier). La lampe de la cible, elle, reste vue. **Voir moins, jamais plus** : la fonction est celle de l'écran (une seule définition),
+le seuil est pris du côté du noir (une silhouette à moitié effacée n'est plus une silhouette pour le bot ; un joueur la distingue encore), et la rétrodiffusion de sa propre torche (0,06 → opacité 0,65) ne lui ferme pas
+les yeux. À éblouissement nul le modèle est identique à l'ancien (un `monde` sans clé vaut zéro). **Atteint dès ~0,09 d'éblouissement** : sous un faisceau ou un éclair de tir de près, le bot perd le corps de sa cible un instant,
+exactement comme un joueur.
+
+#### 3. Les dix boss, réglés à leur classe
+
+**Le geste.** `ProfilBot.boss(classe)` (le profil NORMAL, plus `REGLAGES_BOSS[classe]`) ; `AventureFormat.profil_du_pnj` le sert avec le slug de la classe de l'entrée (`classe` du JSON ; sans classe, le profil NORMAL, comme avant).
+Le boss du chapitre N porte la classe de rang N+1 (le chapitre 0 : le Parasite). **Trois leviers ont été ajoutés au profil**, tous à zéro par défaut — un profil qui ne les pose pas se comporte exactement comme avant S9b :
+`distance_engagement_px` (le bot s'approche de ce qu'il voit jusqu'à cette distance, avec une hystérésis de 40 px pour ne pas trembler ; décidé dans `_penser()`, jamais dans `avancer()`, dont le texte ne contient pas « perception »),
+`distance_tir_max_px` (il ne tire pas au-delà : un fusil à pompe qui tire à 450 px gaspille ses cartouches) et **`vie`** (la vie du corps du boss à la naissance de la salle et à sa reprise, 100 à 400, 100 par défaut ; `AventurePartie` la pose
+sur le corps). Le bot d'entraînement ne lit pas `vie` : il reste à 100.
+
+**Ce que le banc a appris, dans l'ordre où il l'a appris.**
+1. **Aucun réflexe ne rend une arbalète ou un lance-fusées honnête face au joueur type.** Le joueur `ecoute` (immobile, silencieux, sans lumière) bat à 90-100 % un bot qui n'a pas de quoi gagner la fusillade qu'il déclenche. À l'extrême
+   (0,10 s de réaction, 3° → 0,5° d'erreur, visée à 14 rad/s, allure 1, repli, fusées, accroupi) l'Incendiaire reste à 71 % et le Braconnier à 83 %. La **vie** déplace tout : l'Occulteur passe de 76 % à 100 points à 65 % à 130 puis 35 % à 180.
+   D'où `vie` — un levier que ni S4 ni S9 ne nommaient (voir « À trancher »).
+2. **Le Terrassier se règle à la distance**, pas à la visée : 82 % → 77 → 70 → 60 % en lui faisant coller le joueur (engagement 40 px, tir à 90 px au plus), courir (allure 1), tirer large (12°, trois coups), sans repli (un repli l'éloigne de ce qui le sert).
+3. **Le Fumiste, lui, est trop bon** (38 % sur un bloc) : sa suie et sa cadence le servent ; il vise moins juste (10° → 3°) et réagit plus tard (0,30 s).
+4. **Modéliser l'éblouissement déplace la calibration** (voir Pièges connus) : les boss réglés avant que la perception ne soit refaite l'étaient sur une mauvaise vue. **Tous les chiffres ci-dessous sont pris sur le code final.**
+
+**Avant / après — victoire du joueur type de référence (le Parasite, 0,25 s de réaction, quatre comportements : torche, écoute, accroupi, tire en bougeant), 8 graines × 6 cartes × 4 comportements = 192 duels par ligne, cible 55 % ± 7.**
+
+| Chapitre (classe du boss) | Avant (S9, NORMAL, graines 1-8) | Après (S9b) | Réglage |
+|---|---|---|---|
+| 0 — Parasite | 56 % | **57 %** (801 : 57, 901 : 57) | aucun : le profil NORMAL du cran 3 |
+| 1 — Illusionniste | 63 % | **61 %** (1001-1008) | vie 108 |
+| 2 — Terrassier | **85 %** | **58 %** (801 : 58, 901 : 59) | engagement 40 px, tir ≤ 90 px, allure 1, délai 0,15 s, 12°, 3 coups, sans repli, audace 200 px, vie 110 |
+| 3 — Braconnier | **90 %** | **56 %** (1001-1008) | délai 0,2 s, visée 4,5° → 1°, 3,5°, un coup, repli 3 s, **vie 190** |
+| 4 — Fumiste | 51 % | **59 %** (801 : 68, 901 : 51) | délai 0,30 s, visée 10° → 3° |
+| 5 — Incendiaire | **87 %** | **58 %** (1001-1008) | délai 0,2 s, visée 5° → 1°, resserrement 1,2 s, visée 11 rad/s, 6°, repli 3 s, vie 125 |
+| 6 — Sentinelle | 55 % | **61 %** (801 : 67, 901 : 56) | visée 9° → 2,8° |
+| 7 — Occulteur | **98 %** | **52 %** (1001-1008) | délai 0,18 s, 8°, rafale de 8, pause 0,25 s, repli 0,3 s, allure 0,85, engagement 150 px, **vie 158** |
+| 8 — Allumeur | 62 % (144 duels) | **56 %** (1001-1008) | vie 120 |
+| 9 — Spectre | 54 % | **58 %** (801 : 60, 901 : 56) | visée 9° → 2,8° |
+
+Dix boss entre 52 et 61 % ; l'écart d'avant allait de 51 à 98 %. **Lecture honnête de la précision de ces chiffres** : 192 duels donnent ±3,6 points au sens binomial, mais deux blocs de graines différentes de la MÊME classe s'écartent de 6 à 17 points
+(Fumiste : 68 puis 51 ; Sentinelle : 67 puis 56). La cible « 55 ± 7 » est donc tenue **en moyenne**, pas à chaque bloc ; les classes où je n'ai qu'un bloc (Illusionniste, Braconnier, Incendiaire, Occulteur, Allumeur : 1001-1008) peuvent y échapper d'autant en
+rejouant d'autres graines. Les blocs 801 et 901 ont été pris sur la table précédente, **identique pour les cinq classes qu'ils couvrent** (le Parasite n'a pas d'entrée).
+
+**La matrice de S4 a peu bougé** (garde de non-régression de la perception) : FACILE / NORMAL / DIFFICILE contre le joueur type, graines 401-416, 384 duels par ligne : **79 / 55 / 34 %** avant S9b, **78 / 52 / 34 %** après. Un contrôle sans l'éblouissement du bot rend 78 / 58 : NORMAL perd donc quelques points (55 → 52, mesure à 3,6 points près) parce
+que ses yeux se ferment sous un faisceau — c'est l'effet voulu —, FACILE et DIFFICILE ne bougent pas.
+
+#### Les gardes
+
+- `tools/test_aventure_boss.gd` (`--fixed-fps 60`, le jeu monté, ligne `case` de `run_suites.sh`) : **deux PNJ, deux réserves** (un Spectre et un Terrassier : zéro fusée et trois ; J2 garde la sienne, une ;
+  une fusée lancée par un PNJ entame SA réserve et pas celle de J2 ni de l'autre ; chacun pose SON gadget, leurs deux gadgets coexistent, chacun porte la place de son poseur et `poseur_id` 1 ; la recharge d'une minute
+  court sur la place du poseur seule ; la salle recommencée rend des réserves neuves à des PNJ neufs, les places restent 2 et 3 et les tableaux ne grossissent pas ; la sortie les ramène à deux entrées) ; **un boss
+  Fumiste** (sa classe, SA réserve — place 2, une fusée —, il **pose lui-même sa suie** dans le vrai jeu après avoir été touché, **le bot compte sa pose** — il lit sa place, pas celle de J2 —, sa fusée vidée la salle
+  recommencée la lui rend) ; **le bot d'entraînement** garde sa classe à la réapparition (l'Occulteur reste l'Occulteur, munitions et vie pleines) ; **l'éblouissement** (la torche d'un PNJ éblouit le joueur et la source du
+  voile est ce PNJ, la torche du joueur éblouit un PNJ, les deux éclairs de tir, rien d'un PNJ sur un autre PNJ, le duel inchangé : `figurants` vide, `_joueurs_en_lice` = J1, J2) ; **le bot ébloui voit moins** (le modèle
+  pur : monotone sur 21 niveaux, le corps disparaît quand l'opacité qu'un joueur lui verrait passe sous le seuil, la lampe reste, l'ensemble de ce que voit un bot ébloui est inclus dans ce qu'il voit aux yeux ouverts sur
+  5 scènes × 11 niveaux, la rétrodiffusion de sa torche ne lui ferme pas les yeux ; puis le vrai jeu : le PNJ qui voit le joueur sous un plafonnier cesse de le voir ébloui, le revoit les yeux rouverts).
+- `tools/test_bot_combat.gd` : **l'engagement** (le témoin sans `distance_engagement_px` tient sa place ; avec, il s'approche de ce qu'il voit et s'arrête à sa limite sans trembler ; hors de `distance_tir_max_px` il ne tire
+  pas, dedans il tire ; les deux ensemble : il s'approche puis tire ; `avancer()` ne lit toujours rien de la perception).
+- `tools/test_banc_bot.gd` : **les boss par classe** (`boss(classe)` existe pour les dix slugs du code, dans l'ordre du rang ; aucun champ de perception, de déplacement ou d'outil ne bouge ; des bornes LARGES sur
+  chaque réglage ; la table ne nomme que des classes du jeu et chaque classe est servie à son réglage ; le Parasite garde le profil NORMAL ; les classes que S9 a trouvées trop faciles sont réglées).
+
+`tools/test_banc_bot.gd` couvre en plus **`boss(classe)` pour les dix slugs** (existence, dans l'ordre du rang ; bornes LARGES sur chaque réglage : `vie`, `allure`, `audace`, délai, rafale ; la table ne nomme que des classes du jeu). La garde de
+déterminisme du banc (« même graine, même duel ») compare maintenant l'issue, les tirs et les touches **exactement**, et les instants à 0,3 s près : la perception du bot ébloui ajoute un bruit de 0,02 px dans sa marche, qui décale un premier coup de quelques
+centièmes sans changer le duel (divergence tracée à 1,3 s, dans la marche du bot).
+
+#### Sabotages S9b (chaque garde vue ROUGE, puis le code restauré à l'octet — md5 vérifié par le script)
+
+Chacun a été joué dans une COPIE de l'arbre, sur la suite qui le garde ; chiffre = contrôles rouges (hors la ligne de bilan). **Dix-sept sur dix-sept ont rougi.**
+
+| Sabotage | Suite | Rouges |
+|---|---|---|
+| Les réserves relues par `player_id` (les PNJ se partagent celle de J2) | `test_aventure_boss` | 8 |
+| La classe du gadget lue chez J2 | `test_aventure_boss` | 1 (verte du premier coup, voir ci-dessous ; rougie une fois la garde ajoutée) |
+| `liberer_les_pnj()` ne rend pas les places | `test_aventure_boss` | 1 |
+| L'éblouissement ne connaît que `[p1, p2]` | `test_aventure_boss` | 3 |
+| Un PNJ éblouit un autre PNJ (l'équipe cesse d'en être une) | `test_aventure_boss` | 2 |
+| L'éclair d'un PNJ n'éblouit pas le joueur | `test_aventure_boss` | 1 |
+| L'éclair du joueur n'éblouit pas les PNJ | `test_aventure_boss` | 1 |
+| Un bot ébloui voit comme aux yeux ouverts | `test_aventure_boss` | 3 |
+| Le nœud de perception ignore l'éblouissement de son corps | `test_aventure_boss` | 1 |
+| La table `REGLAGES_BOSS` ignorée | `test_banc_bot` | 1 |
+| Le boss perd sa classe (`ProfilT.boss()` sans argument) | `test_aventure_boss` | 8 |
+| Le bot d'entraînement réapparaît à l'index 0 | `test_aventure_boss` | 2 |
+| Le bot lit la réserve de J2 | `test_aventure_boss` | 1 |
+| `distance_engagement_px` ignorée | `test_bot_combat` | 2 |
+| `distance_tir_max_px` ignorée | `test_bot_combat` | 2 |
+| La `vie` du boss ignorée | `test_aventure_boss` | 6 |
+| L'éclair d'un tir de la cible n'est plus vu comme une source | `test_aventure_boss` | 1 |
+
+**Un sabotage est resté vert du premier coup, et c'est instructif** : « la classe du gadget lue chez J2 ». La garde « le Terrassier PNJ pose SA poussière » vérifiait le slug du gadget — que le jeu déduit d'ailleurs, pas de cette classe —
+et le Parasite de J2 et le Terrassier donnent le même résultat visible tant qu'on ne lit pas ce que la classe pose (`classe_du_poseur`, la durée de vie, l'éblouissement). Garde ajoutée (le gadget emporte la classe de son poseur, pas celle de J2), puis
+sabotage rejoué : rouge. Les sabotages du banc lui-même (S3, S4, S9 : difficultés inversées, joueur type qui triche…) ne sont pas rejoués ici ; leurs gardes n'ont pas bougé.
+
+#### Non prouvé
+
+- **La cible 55 ± 7 est mesurée avec UN joueur type** (le Parasite, quatre comportements, dont deux silencieux), pas avec un joueur humain, ni avec un joueur d'une autre classe : un boss qui bat 45 % de ces duels peut être plus dur pour un humain qui tire en rafale, ou plus facile.
+  Cinq classes n'ont qu'un bloc de 192 duels sur le code final (variation entre blocs : 6 à 17 points mesurés) ; l'Illusionniste (61) et la Sentinelle (61,5 en moyenne de deux blocs) sont au bord de la bande.
+- **Le ressenti** : la vie de 190 du Braconnier est tenue par le banc, jamais regardée dans une partie. Rien ne montre au joueur qu'un boss a plus de vie (pas de barre).
+- **L'éblouissement des PNJ n'a pas été vu à l'écran** : il est mesuré (`dazzle_amount` du corps, les deux sens) et sa conséquence sur la vue du bot l'est ; pas de capture, pas de fenêtre.
+- **Le banc du capteur** (`tools/banc_perception_bot.tscn`, une vraie fenêtre) a été rejoué sous Xvfb (rendu logiciel, 17 minutes) sur le code final : sortie 0, 188 prises, **0 malhonnête**, accord 65,6 %. **Mais il ne contient aucune famille « ébloui »** : le bot y a toujours les yeux ouverts, donc il ne prouve pas le nouveau modèle, seulement qu'à éblouissement nul rien n'a changé. L'honnêteté du bot ébloui est tenue par `test_aventure_boss` (5 scènes × 11 niveaux, jamais plus qu'aux yeux ouverts), pas par le capteur réel.
+- **Aucune mesure de cadence** (non demandée). **Rien en réseau** : un PNJ n'existe que hors ligne ; `protocol.gd`, `Protocol.VERSION` et les RPC n'ont pas bougé.
+
+#### Signalé, pas corrigé
+
+- **La télémétrie** (`match_record`, killcam) compte un PNJ comme « l'adversaire » (`player_id` 1) : sans objet tant que les parties d'aventure n'alimentent rien, à revoir le jour où elles le feront.
+- **Le bot d'entraînement ignore `vie`** (toujours 100) : seuls les boss d'aventure la portent.
+- **PNJ contre PNJ : aucun éblouissement** (choix, voir « À trancher ») ; un boss ne s'éblouit donc pas avec la torche de son figurant.
+- **Un plantage rare du moteur sous le banc** (signal 134, une fois, relancé sans effet) : déjà signalé en S9 ; le banc se relance en deux moitiés.
+- **Le boss du cran 3 de l'entraînement** (Parasite, NORMAL) mesure 52-57 % selon le jeu de graines : la cible de 55 est tenue, au bruit près.
+- `docs/JOURNAL_SESSIONS.md` n'a pas été mis à jour ; **fichiers partagés touchés** : `game_state.gd`, `player.gd`, `gadget_base.gd`, `bot_input_provider.gd`, `perception_bot_noeud.gd`, `aventure_format.gd`, `aventure_partie.gd` — chacun pour une raison de la section ci-dessus.
+
+**À trancher par Adrien.** (1) **La vie comme levier de difficulté du boss.** Les réflexes seuls ne suffisaient pas (Braconnier : 83 % au mieux ; Incendiaire : 71 %) ; la vie (jusqu'à 190 pour le Braconnier) le fait. Alternatives : une variante d'arme pour le boss
+(plus de carreaux, recharge plus courte), ou accepter des boss plus faciles pour ces classes. (2) **Les PNJ forment une équipe** : ni leur torche ni leur éclair n'éblouissent un autre PNJ. Un boss dans un couloir de figurants s'éblouirait lui-même sinon ; mais un joueur pourrait tirer parti d'un
+éblouissement croisé. (3) **`OPACITE_MIN_CORPS` à 0,5** : un bot ébloui perd le corps de sa cible dès que l'écran d'un joueur lui montrerait moins d'une demi-silhouette ; plus bas, le bot est plus fort, plus haut, plus aveugle. (4) **Le boss du chapitre 0** reste le profil NORMAL du cran 3 :
+57 % au banc, pas exactement 55.
+
+**Suites.** `./tools/run_suites.sh --rapide` (le binaire 4.7.1) : **143 suites headless vertes**, aucune erreur de script, aucun `push_error` non déclaré ; les scénarios à deux instances ne sont pas joués par `--rapide`.
 
 ### S7 — FAITE le 2026-10-03 : le chapitre 0, « L'initiation » — dix salles, une garde qui mesure ce que chacune enseigne
 
