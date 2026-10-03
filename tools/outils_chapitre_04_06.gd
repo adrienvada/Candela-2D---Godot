@@ -155,6 +155,25 @@ func places_du_joueur(c: Dictionary, pas: int = 2) -> Array[Vector2]:
 	return sortie
 
 
+## Toutes les places où le joueur peut se tenir (les cases praticables, une sur `pas`), en pixels : il va où il veut, et sa torche ou ses tirs le font voir.
+func toutes_les_places(c: Dictionary, pas: int = 3) -> Array[Vector2]:
+	var sortie: Array[Vector2] = []
+	var cases: Array[Vector2i] = (c["nav"] as Nav).cases_praticables()
+	for i in range(0, cases.size(), pas):
+		sortie.append(Nav.centre_de_la_case(cases[i]))
+	return sortie
+
+
+## La part des cases d'un tour (ou de toute liste de cases) qu'une position voit : ligne de vue, à moins de `rayon` px.
+func part_des_cases_en_vue(c: Dictionary, pos: Vector2, cases: Array[Vector2i], rayon: float) -> float:
+	var n := 0
+	for cc in cases:
+		var p := Nav.centre_de_la_case(cc)
+		if p.distance_to(pos) <= rayon and ligne_de_vue(c, pos, p):
+			n += 1
+	return float(n) / float(maxi(cases.size(), 1))
+
+
 ## Le plus grand rayon de zone, en px, que donne un son de `famille` émis en `source` à un PNJ placé n'importe où parmi `cases` — `INF` si l'une d'elles ne l'entend pas du tout.
 func pire_rayon(c: Dictionary, famille: String, source: Vector2, cases: Array[Vector2i], accroupi: bool = false) -> float:
 	var pire := 0.0
