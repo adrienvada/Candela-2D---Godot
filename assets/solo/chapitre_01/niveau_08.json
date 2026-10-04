@@ -129,7 +129,8 @@
         9
       ],
       "orientation": 90,
-      "profil": "immobile_voit_lent"
+      "profil": "immobile_voit_lent",
+      "temperament": "guetteur"
     }
   ],
   "titre": "La garde",

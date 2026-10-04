@@ -69,7 +69,8 @@
         4
       ],
       "orientation": 90,
-      "profil": "immobile_voit_entend_difficile"
+      "profil": "immobile_voit_entend_difficile",
+      "temperament": "guetteur"
     },
     {
       "case": [
@@ -96,6 +97,7 @@
       "equipe": true,
       "orientation": -165,
       "profil": "zone_voit_entend_normal",
+      "temperament": "embusque",
       "zone": [
         43,
         33,
@@ -121,7 +123,8 @@
       "classe": "spectre",
       "equipe": true,
       "orientation": -105,
-      "profil": "libre_voit_entend_difficile"
+      "profil": "libre_voit_entend_difficile",
+      "temperament": "traqueur"
     }
   ],
   "titre": "La salle pleine",

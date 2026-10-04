@@ -93,7 +93,8 @@
         8
       ],
       "orientation": 180,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "guetteur"
     },
     {
       "case": [
@@ -101,7 +102,8 @@
         31
       ],
       "orientation": 180,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "embusque"
     },
     {
       "case": [
@@ -199,7 +201,8 @@
       "classe": "allumeur",
       "equipe": true,
       "orientation": 135,
-      "profil": "libre_voit_entend_difficile"
+      "profil": "libre_voit_entend_difficile",
+      "temperament": "traqueur"
     }
   ],
   "titre": "La salle pleine",

@@ -101,7 +101,8 @@
         10
       ],
       "orientation": 90,
-      "profil": "immobile_voit_entend_facile"
+      "profil": "immobile_voit_entend_facile",
+      "temperament": "guetteur"
     }
   ],
   "titre": "Poste et zones",

@@ -69,7 +69,8 @@
         3
       ],
       "orientation": 90,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "guetteur"
     },
     {
       "case": [
@@ -77,7 +78,8 @@
         3
       ],
       "orientation": 90,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "embusque"
     },
     {
       "case": [

@@ -47,7 +47,8 @@
       "classe": "sentinelle",
       "equipe": true,
       "orientation": 150,
-      "profil": "libre_voit_entend_normal"
+      "profil": "libre_voit_entend_normal",
+      "temperament": "traqueur"
     },
     {
       "case": [
