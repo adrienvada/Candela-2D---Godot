@@ -3,9 +3,10 @@ extends CanvasLayer
 
 ## Le CARTON de l'aventure — chantier SOLO, S6 : ce que le joueur lit entre deux salles.
 ##
-## Un fond noir, le numéro de la salle, son titre, sa phrase d'intention (« une phrase d'intention à l'entrée, aucune flèche, aucun
-## texte pendant le jeu » : le carton est le SEUL endroit où l'aventure parle). Il couvre l'écran pendant que la salle suivante se
-## construit derrière lui, et se retire en fondu sur son dernier instant.
+## Un fond noir, le numéro de la salle, son titre, sa phrase d'intention. Il couvre l'écran pendant que la salle suivante se
+## construit derrière lui, et se retire en fondu sur son dernier instant. Il a été « le SEUL endroit où l'aventure parle » (S6 :
+## « aucun texte pendant le jeu ») jusqu'au 2026-10-04 : depuis, `AventureHud` porte pendant le jeu les consignes de l'initiation
+## (les touches, à la demande d'Adrien), le compteur des silhouettes et le tampon de la salle réussie.
 ##
 ## Il ne décide de rien : `AventurePartie` le montre, le règle (`regler`) et le retire. Il ne touche ni au temps ni au jeu — c'est
 ## `GameState.countdown_left` qui fige les joueurs pendant qu'il est là, comme un décompte de manche.

@@ -69,7 +69,8 @@
         11
       ],
       "orientation": 180,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "guetteur"
     }
   ],
   "titre": "Le poste et la meute",

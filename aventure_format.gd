@@ -112,7 +112,7 @@ const _CLES_MANIFESTE_REQUISES := ["version", "numero", "titre", "niveaux"]
 const _CLES_NIVEAU := ["version", "titre", "intention", "boss", "carte", "joueur", "plafonniers", "pnj"]
 const _CLES_NIVEAU_REQUISES := ["version", "titre", "intention", "carte", "joueur", "pnj"]
 const _CLES_JOUEUR := ["case", "orientation"]
-const _CLES_PNJ := ["case", "orientation", "profil", "classe", "equipe", "ronde", "zone"]
+const _CLES_PNJ := ["case", "orientation", "profil", "classe", "equipe", "ronde", "zone", "temperament"]
 const _CLES_PLAFONNIER := ["case", "rayon", "intensite", "teinte"]
 
 ## Où l'on cherche les chapitres livrés. Les suites la déplacent vers `res://tools/aventure_essai` : le chapitre d'essai n'entre
@@ -302,6 +302,9 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 		e.append("%s : « classe » est un slug de classe connu — %s (reçu %s)" % [ctx, ", ".join(ORDRE_DES_CLASSES), str(d["classe"])])
 	if d.has("equipe") and not (d["equipe"] is bool):
 		e.append("%s : « equipe » est vrai ou faux (reçu %s)" % [ctx, str(d["equipe"])])
+	# Le tempérament (2026-10-04) : un nom de `ProfilBot.NOMS_TEMPERAMENT`. Refusé sur le boss (réglé au banc) et sur un PNJ qui n'agit pas.
+	if d.has("temperament") and not (d["temperament"] is String and ProfilT.NOMS_TEMPERAMENT.has(String(d["temperament"]))):
+		e.append("%s : « temperament » est l'un de %s (reçu %s)" % [ctx, ", ".join(ProfilT.NOMS_TEMPERAMENT.keys()), str(d["temperament"])])
 	if not d.has("profil"):
 		return
 	if not (d["profil"] is String):
@@ -314,6 +317,8 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 			e.append("%s : le profil « boss » n'existe que dans le niveau de boss (« boss » : true)" % ctx)
 		if d.has("equipe"):
 			e.append("%s : « equipe » est refusée sur le boss — son profil est déjà équipé (le gadget de sa classe)" % ctx)
+		if d.has("temperament"):
+			e.append("%s : « temperament » est refusé sur le boss — il est réglé au banc, tel quel" % ctx)
 		deplacement = ProfilT.Deplacement.LIBRE
 	else:
 		var profil := ProfilT.pnj_nomme(nom)
@@ -323,6 +328,8 @@ static func _valider_pnj(p: Variant, i: int, boss: bool, navigation: NavigationB
 		deplacement = profil.deplacement
 		if (d.get("equipe", false) is bool and d.get("equipe", false)) and not profil.agit:
 			e.append("%s : « equipe » est refusée sur « %s » — un PNJ sourd et aveugle n'agit pas, il n'aurait aucun usage de ses outils" % [ctx, nom])
+		if d.has("temperament") and not profil.agit:
+			e.append("%s : « temperament » est refusé sur « %s » — un PNJ sourd et aveugle n'agit pas, il n'a pas de caractère à montrer" % [ctx, nom])
 	# Ses points de ronde et sa zone, selon son déplacement : chacun DOIT exister quand il sert, et ne doit pas exister sinon.
 	if deplacement == ProfilT.Deplacement.RONDE:
 		_valider_ronde(d, c, ctx, navigation, e)
@@ -536,6 +543,7 @@ static func preparer_niveau(niveau: Dictionary) -> Dictionary:
 			"profil_nom": String(p["profil"]),
 			"classe": String(p.get("classe", CLASSE_PAR_DEFAUT)),
 			"equipe": bool(p.get("equipe", false)),
+			"temperament": String(p.get("temperament", "")),
 			"ronde": [] as Array[Vector2i],
 			"zone": Rect2i(),
 		}
@@ -574,6 +582,10 @@ static func profil_du_pnj(entree: Dictionary) -> ProfilBot:
 	# `equipe` : ce PNJ se sert des outils de son palier et du gadget de sa classe. Sans la clé, le profil du catalogue reste exactement celui d'avant.
 	if bool(entree.get("equipe", false)) and nom != PROFIL_BOSS:
 		ProfilT.equiper_un_pnj(profil, ProfilT.palier_du_nom(nom))
+	# Le tempérament APRÈS l'équipement : il décide de la torche (le guetteur l'allume, l'embusqué l'éteint), par-dessus les outils.
+	var temperament := String(entree.get("temperament", ""))
+	if temperament != "" and nom != PROFIL_BOSS:
+		ProfilT.appliquer_temperament(profil, int(ProfilT.NOMS_TEMPERAMENT[temperament]))
 	profil.points_ronde.assign(entree["ronde"])
 	profil.zone = entree["zone"]
 	return profil

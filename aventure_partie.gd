@@ -36,6 +36,7 @@ extends Node
 const FormatT := preload("res://aventure_format.gd")
 const ProgressionT := preload("res://aventure_progression.gd")
 const CartonT := preload("res://aventure_carton.gd")
+const HudT := preload("res://aventure_hud.gd")
 
 ## La salle gagnée (`chapitre`, `index` de 0), la salle recommencée, le chapitre fini — pour les suites et pour qui voudra s'y accrocher.
 signal salle_gagnee(chapitre: int, index: int)
@@ -74,6 +75,12 @@ var chapitre_fini := false
 
 var _t := 0.0
 var _carton: AventureCarton = null
+## Ce que l'aventure dit pendant le jeu : consignes de l'initiation, compteur, tampon de la salle réussie (2026-10-04).
+var _hud: AventureHud = null
+## Le temps de jeu de la salle en cours (carton exclu), pour le tampon et le record.
+var temps_de_la_salle := 0.0
+## Le record de la dernière salle réussie : vrai si son temps a battu le meilleur connu.
+var dernier_record := false
 var _rng := RandomNumberGenerator.new()
 ## La carte qui était choisie avant la partie, rendue au retour : l'aventure ne change pas le choix du joueur dans la galerie.
 var _carte_avant := ""
@@ -114,6 +121,12 @@ func demarrer(un_jeu: Node, un_chapitre: Dictionary, un_index: int, une_classe: 
 		_carte_avant = MapData.DEFAULT_MAP_ID
 	_carton = CartonT.new()
 	jeu.add_child(_carton)
+	_hud = HudT.new()
+	# Les touches se nomment comme l'écran des contrôles les nomme (`UI.libelle_du_geste`) ; sans interface (suites), le geste seul.
+	var ui = jeu.get("ui")
+	if ui != null and ui.has_method("libelle_du_geste"):
+		_hud.nommer_les_touches = Callable(ui, "libelle_du_geste")
+	jeu.add_child(_hud)
 	_rng.seed = int(jeu.graine_du_bot) if int(jeu.graine_du_bot) >= 0 else randi()
 	return _poser_la_salle()
 
@@ -148,6 +161,7 @@ func _poser_la_salle() -> bool:
 	Plafonnier.poser(jeu.arena, n["plafonniers"])
 	_creer_les_pnj(n)
 	jeu.figurants = pnj
+	_hud.entrer_dans_la_salle(int(chapitre["numero"]), index + 1, pnj.size(), jeu.p1)
 	phase = Phase.CARTON
 	_t = 0.0
 	var total := (chapitre["niveaux"] as Array).size()
@@ -185,6 +199,8 @@ func _creer_les_pnj(n: Dictionary) -> void:
 		p.rotation = float(e["rotation"])
 		# La vie du profil : 100 pour tout PNJ du catalogue, davantage pour un boss dont l'arme ne tue pas en un chargeur (`ProfilBot.vie`).
 		p.hp = float(bot.profil.vie) if bot.profil != null else 100.0
+		# Les dégâts de SES balles (`ProfilBot.degats_balle`, 10 à 20 pour un PNJ du catalogue) ; nuls pour un boss : ceux de son arme.
+		p.degats_pnj = bot.profil.degats_balle if bot.profil != null else Vector2.ZERO
 		p.reset_step_tracker()
 		p.reset_flashlight_latch()
 		p.reset_posture()
@@ -220,6 +236,8 @@ func _physics_process(delta: float) -> void:
 			if _t >= DUREE_CARTON:
 				_commencer_a_jouer()
 		Phase.JEU:
+			temps_de_la_salle += delta
+			_hud.suivre(pnj, delta)
 			_regarder_la_salle()
 		Phase.SALLE_GAGNEE:
 			if _t >= DELAI_APRES_VICTOIRE:
@@ -243,6 +261,8 @@ func _regler_le_carton(duree: float) -> void:
 func _commencer_a_jouer() -> void:
 	jeu.countdown_left = 0.0
 	_carton.cacher()
+	temps_de_la_salle = 0.0
+	_hud.commencer()
 	for p in pnj:
 		if is_instance_valid(p) and p.input_provider is BotInputProvider:
 			(p.input_provider as BotInputProvider).reinitialiser()
@@ -253,6 +273,14 @@ func _commencer_a_jouer() -> void:
 ## Un tour de garde : le joueur est-il tombé ? tous les PNJ le sont-ils ? Le joueur d'abord : s'ils tombent ensemble, la salle est
 ## perdue — il n'y a pas de victoire d'un mort.
 func _regarder_la_salle() -> void:
+	# Le peureux fuit quand il est resté seul : chaque bot sait combien des SIENS sont encore debout (lui exclu).
+	var debout := 0
+	for p in pnj:
+		if is_instance_valid(p) and not bool(p.dead):
+			debout += 1
+	for p in pnj:
+		if is_instance_valid(p) and p.input_provider is BotInputProvider:
+			(p.input_provider as BotInputProvider).allies_vivants = maxi(debout - (0 if bool(p.dead) else 1), 0)
 	if bool(jeu.p1.dead):
 		morts += 1
 		phase = Phase.JOUEUR_ABATTU
@@ -261,6 +289,8 @@ func _regarder_la_salle() -> void:
 	if _tous_morts():
 		phase = Phase.SALLE_GAGNEE
 		_t = 0.0
+		dernier_record = progression.noter_temps(int(chapitre["numero"]), index, temps_de_la_salle)
+		_hud.salle_reussie(temps_de_la_salle, essais, dernier_record)
 
 
 func _tous_morts() -> bool:
@@ -305,6 +335,7 @@ func _salle_suivante() -> void:
 	# Le boss est tombé : le chapitre est fini, sa classe est à nous.
 	progression.terminer_chapitre(chap)
 	chapitre_fini = true
+	_hud.cacher()
 	phase = Phase.CHAPITRE_FINI
 	_t = 0.0
 	var classe := FormatT.classe_du_chapitre(chap)
@@ -345,6 +376,11 @@ func demonter() -> void:
 			_carton.get_parent().remove_child(_carton)
 		_carton.queue_free()
 	_carton = null
+	if is_instance_valid(_hud):
+		if _hud.get_parent() != null:
+			_hud.get_parent().remove_child(_hud)
+		_hud.queue_free()
+	_hud = null
 	if _carte_avant != "":
 		MapData.select_map(_carte_avant)
 	if jeu != null:

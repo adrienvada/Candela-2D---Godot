@@ -6154,3 +6154,16 @@ a touché, par ajouts seulement, trois fichiers d'autres chantiers : `canaux_lum
 `lumieres_iso.gd` et `iso_volumes.gd` (le miroir 3D des plafonniers et leur luminaire). Rien de ce qu'ils faisaient ne change pour le
 duel : un plafonnier n'est posé que par le solo (garde `test_plafonniers`). Qui tient ces fichiers sur une autre branche : vérifier ces
 ajouts après sa prochaine fusion.
+
+**Mise à jour du chantier SOLO, 2026-10-04 (S10, après la 0.8.2).** Cinq demandes d'Adrien après avoir joué ; menée par cette session
+elle-même, la limite hebdomadaire des sous-agents Sonnet étant atteinte (le sous-agent du menu Solo s'est arrêté en route ; son travail,
+relu et testé, est repris tel quel). **Touche le duel, à savoir pour toute autre branche** : `player.gd` (le bandeau « FATAL » réservé au
+JcJ par `kill_entre_joueurs()`, ses fondus liés aux étiquettes ; l'enjambement retiré, `_regler_enjambement` ne garde que la sortie d'un
+corps coincé ; le bruit d'enjambement ne compte que pendant une traversée), `input_setup.gd` et l'écran des contrôles (`p1_enjamber` /
+`p2_enjamber` n'existent plus), `ui.gd` (l'écran Solo, `redescendre_vers`, `libelle_du_geste`), `game_state.gd` (le retour de match passe
+par `redescendre_vers`). `protocol.gd` inchangé. Qui tient ces fichiers ailleurs : `grep kill_entre_joueurs player.gd` et
+`grep redescendre_vers ui.gd` après sa prochaine fusion.
+
+**Mise à jour du chantier SOLO, 2026-10-04 au soir (S11, l'intelligence des PNJ).** Même session, même branche, repartie de `main` après la
+fusion de la PR #5. **Touche le duel par un seul point** : `bullet.gd` lit `Player.degats_pnj` (nul hors aventure, donc sans effet), et
+`player.gd` fait claquer la torche d'un PNJ (`est_pnj`, jamais posé hors aventure). Le reste vit dans les fichiers du solo.

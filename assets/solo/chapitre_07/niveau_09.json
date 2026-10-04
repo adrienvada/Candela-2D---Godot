@@ -63,7 +63,8 @@
       "classe": "occulteur",
       "equipe": true,
       "orientation": 165,
-      "profil": "libre_voit_entend_normal"
+      "profil": "libre_voit_entend_normal",
+      "temperament": "traqueur"
     },
     {
       "case": [
@@ -93,7 +94,8 @@
       "classe": "occulteur",
       "equipe": true,
       "orientation": -135,
-      "profil": "libre_voit_entend_normal"
+      "profil": "libre_voit_entend_normal",
+      "temperament": "peureux"
     }
   ],
   "titre": "La salle pleine",

@@ -726,6 +726,8 @@ func _la_boucle() -> void:
 	_check("à la fin du carton : retour à l'écran de l'AVENTURE (le hub, au menu), la partie démontée", main.aventure == null and ui._is_main_menu
 		and ui.hub.current_id() == ui.SCREEN_AVENTURE, "%s %s" % [str(main.aventure), ui.hub.current_id()])
 	await _images(3)
+	_check("… et RETOUR y remonte à Solo, pas à l'accueil (la pile du hub porte l'écran Solo)", Array(ui.hub._stack) == [ui.hub.ROOT, ui.SCREEN_SOLO, ui.SCREEN_AVENTURE],
+		str(ui.hub._stack))
 	_check("… PNJ, plafonniers et carton partis", main.figurants.is_empty() and get_nodes_in_group("plafonniers").is_empty()
 		and _noms_des_pnj_du_groupe().is_empty() and main.get_node_or_null("CartonAventure") == null and main.get_node_or_null("Aventure") == null)
 	_check("… et la carte du joueur est rendue", root.get_node("MapData").selected_map_id != "aventure")
@@ -827,7 +829,12 @@ func _l_ecran() -> void:
 	ui.aventure_progression = prog
 	ui.hub.reset()
 	await _images(2)
-	_check("l'accueil du hub a une entrée « AVENTURE » qui mène à l'écran de l'aventure", _entree_de_l_accueil("AVENTURE") != null)
+	# L'aventure vit sous l'écran Solo (Adrien, 2026-10-03) : l'accueil porte SOLO, et c'est Solo qui porte AVENTURE.
+	_check("l'accueil du hub n'a plus d'entrée « AVENTURE » : elle est sous « SOLO »", _entree_de_l_accueil("AVENTURE") == null
+		and _entree_de_l_accueil("SOLO") != null)
+	ui.hub.push(ui.SCREEN_SOLO)
+	_check("l'écran Solo a une entrée « AVENTURE » qui mène à l'écran de l'aventure", _entree_de("AVENTURE", ui.SCREEN_SOLO) != null)
+	ui.hub.reset()
 	ui.hub.push(ui.SCREEN_AVENTURE)
 	await _images(3)
 	_check("l'écran s'ouvre (`SCREEN_AVENTURE`), et ses salles ont leur écran (`SCREEN_AVENTURE_SALLES`)", ui.hub.current_id() == ui.SCREEN_AVENTURE
@@ -897,8 +904,10 @@ func _l_ecran() -> void:
 		and main.aventure.classe_slug == "pistolet" and main.training_mode)
 	_check("la pause « QUITTER LE MATCH » ramènerait à l'écran d'où l'on est parti (celui des salles)", ui.match_origin_screen() == ui.SCREEN_AVENTURE_SALLES,
 		ui.match_origin_screen())
-	main._on_main_menu_requested()
+	main._on_quit_match_requested()
 	await _images(3)
+	_check("« QUITTER LE MATCH » depuis une salle rouvre l'écran des salles, sous les chapitres, sous Solo",
+		Array(ui.hub._stack) == [ui.hub.ROOT, ui.SCREEN_SOLO, ui.SCREEN_AVENTURE, ui.SCREEN_AVENTURE_SALLES], str(ui.hub._stack))
 
 	# --- Le choix libre de la classe : un chapitre qui n'en impose pas. Deux chapitres écrits dans un dossier à la suite (copie du chapitre d'essai).
 	print("\n--- Le choix libre de la classe parmi les débloquées ---")
@@ -1012,7 +1021,11 @@ func _classe_de(n: Object) -> String:
 
 
 func _entree_de_l_accueil(titre: String) -> Button:
-	var liste: Control = ui.hub.list_of(ui.hub.ROOT)
+	return _entree_de(titre, ui.hub.ROOT)
+
+
+func _entree_de(titre: String, ecran: String) -> Button:
+	var liste: Control = ui.hub.list_of(ecran)
 	for e in liste.get_children():
 		if e is Button and _libelle(e) == titre:
 			return e

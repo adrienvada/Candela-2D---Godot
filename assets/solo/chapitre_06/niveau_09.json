@@ -73,7 +73,8 @@
       "classe": "sentinelle",
       "equipe": true,
       "orientation": 90,
-      "profil": "libre_voit_entend_facile"
+      "profil": "libre_voit_entend_facile",
+      "temperament": "peureux"
     },
     {
       "case": [
@@ -93,7 +94,8 @@
       "classe": "sentinelle",
       "equipe": true,
       "orientation": 150,
-      "profil": "libre_voit_entend_normal"
+      "profil": "libre_voit_entend_normal",
+      "temperament": "traqueur"
     }
   ],
   "titre": "La salle pleine",

@@ -64,6 +64,7 @@
       "equipe": true,
       "orientation": 90,
       "profil": "zone_voit_entend_facile",
+      "temperament": "embusque",
       "zone": [
         1,
         1,
@@ -96,6 +97,7 @@
       "equipe": true,
       "orientation": 165,
       "profil": "zone_voit_entend_facile",
+      "temperament": "peureux",
       "zone": [
         14,
         22,

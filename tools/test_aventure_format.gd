@@ -52,6 +52,7 @@ func _run() -> void:
 	_refus_du_niveau()
 	_refus_du_chapitre()
 	_l_equipement_d_un_pnj()
+	_le_temperament_d_un_pnj()
 	_ordre_des_classes()
 	_chargement_et_catalogue()
 	_progression()
@@ -521,6 +522,36 @@ func _l_equipement_d_un_pnj() -> void:
 # ---------------------------------------------------------------------------
 # L'ORDRE DES CLASSES
 # ---------------------------------------------------------------------------
+
+## La clé « temperament » (S11, 2026-10-04) : acceptée sur un PNJ qui agit, refusée sur le boss et sur un sourd et aveugle, refusée si le nom
+## n'est pas connu ; elle survit à `preparer_niveau`, et `profil_du_pnj` la pose sur le profil — après l'équipement, dont elle décide la torche.
+func _le_temperament_d_un_pnj() -> void:
+	print("\n--- Le tempérament d'un PNJ : « temperament » (S11) ---")
+	for nom_t: String in Profil.NOMS_TEMPERAMENT:
+		var n := _pnj_equipe(1, 0, "ronde_voit_lent")
+		n["pnj"][0]["temperament"] = nom_t
+		_check("accepté : « temperament » « %s »" % nom_t, Format.valider_niveau(n).is_empty(), str(Format.valider_niveau(n)))
+	var mauvais := _pnj_equipe(1, 0, "ronde_voit_lent")
+	mauvais["pnj"][0]["temperament"] = "lache"
+	_refuse_niveau("un tempérament inconnu", mauvais, "« temperament » est l'un de")
+	var sourd := _pnj_equipe(0, 0, "immobile_sourd_aveugle")
+	sourd["pnj"][0]["temperament"] = "guetteur"
+	_refuse_niveau("un tempérament sur un PNJ sourd et aveugle", sourd, "« temperament » est refusé sur « immobile_sourd_aveugle »")
+	var boss := _niveau(2)
+	boss["pnj"][0]["temperament"] = "peureux"
+	_refuse_niveau("un tempérament sur le boss", boss, "« temperament » est refusé sur le boss")
+	var accepte := _pnj_equipe(1, 0, "ronde_voit_normal", true)
+	accepte["pnj"][0]["temperament"] = "guetteur"
+	var prepare: Dictionary = Format.preparer_niveau(accepte)
+	var entree: Dictionary = (prepare["pnj"] as Array)[0]
+	_check("la clé survit à `preparer_niveau`", String(entree.get("temperament", "")) == "guetteur")
+	var profil := Format.profil_du_pnj(entree)
+	_check("`profil_du_pnj` pose le tempérament, APRÈS l'équipement : un NORMAL équipé (torche tactique) devenu guetteur a sa torche FIXE allumée",
+		profil.temperament == Profil.Temperament.GUETTEUR and profil.torche_allumee and not profil.torche_tactique)
+	var sans := _pnj_equipe(1, 0, "ronde_voit_normal")
+	var profil_sans := Format.profil_du_pnj((Format.preparer_niveau(sans)["pnj"] as Array)[0])
+	_check("sans la clé : aucun tempérament", profil_sans.temperament == Profil.Temperament.AUCUN)
+
 
 func _ordre_des_classes() -> void:
 	print("\n--- L'ordre des classes suit le rang ---")

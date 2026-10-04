@@ -88,6 +88,8 @@ func _run() -> void:
 	await _le_lissage()
 	await _l_erreur_qui_se_resserre()
 	await _la_discipline_de_tir()
+	await _la_mise_en_joue()
+	await _l_ia_des_pnj()
 	await _l_engagement()
 	await _la_recharge()
 	await _l_honnetete_des_corps_factices()
@@ -170,6 +172,8 @@ class FauxTireur extends Node2D:
 	var player_id := 1
 	var accroupi := false
 	var dead := false
+	## Sa vie : ce que lit le peureux (2026-10-04). Constante tant qu'un test ne la change pas.
+	var hp := 100.0
 	var speed := 260.0
 	var current_weapon: WeaponData = null
 	var current_ammo := 6
@@ -665,6 +669,285 @@ func _la_discipline_de_tir() -> void:
 # ---------------------------------------------------------------------------
 # L'ENGAGEMENT (S9b) : ce que l'arme demande
 # ---------------------------------------------------------------------------
+
+## La mise en joue (2026-10-04, Adrien : « ils voient, ils visent, puis ils tirent ») : un bot qui a dû TOURNER pour s'aligner tient
+## `mise_en_joue_s` aligné avant son premier coup ; aligné d'emblée, il tire sans l'attendre ; à 0, rien ne change.
+func _la_mise_en_joue() -> void:
+	print("\n[La mise en joue : il voit, il vise, puis il tire]")
+	var lent := Profil.pnj_nomme("immobile_voit_lent")
+	_check("un PNJ du catalogue a une mise en joue (LENT : %.2f s pour un demi-tour)" % lent.mise_en_joue_s, lent.mise_en_joue_s > 0.0)
+	_check("… plus longue au palier TRÈS LENT qu'au DIFFICILE",
+		Profil.pnj_nomme("immobile_voit_tres_lent").mise_en_joue_s > Profil.pnj_nomme("immobile_voit_difficile").mise_en_joue_s)
+	_check("le bot de l'entraînement n'en a pas (ses paliers sont réglés au banc)",
+		Profil.pour_adversaire_qui_tire(Profil.Difficulte.NORMAL).mise_en_joue_s == 0.0
+		and Profil.pour_adversaire_qui_tire(Profil.Difficulte.DIFFICILE).mise_en_joue_s == 0.0)
+	_check("les boss non plus (réglés au banc à 55 %)", Profil.boss().mise_en_joue_s == 0.0 and Profil.boss("fusil").mise_en_joue_s == 0.0)
+
+	# La cible DERRIÈRE le bot : un demi-tour avant de pouvoir tirer. On mesure l'écart entre l'alignement et le premier coup.
+	var ecarts := {}
+	for attente in [0.0, 0.5]:
+		var profil := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+			"tolerance_tir_deg": 6.0, "delai_reaction": 0.1, "mise_en_joue_s": attente})
+		var r := _rig(profil, c(20, 15), c(15, 15), 7, Vector2.RIGHT)
+		await _derouler(r, 6)
+		r.cible.allumer_la_torche(Vector2.RIGHT)
+		var aligne := -1.0
+		for _i in 240:
+			await physics_frame
+			r.suivre()
+			var vrai := (r.cible.global_position - r.tireur.global_position).angle()
+			if aligne < 0.0 and absf(angle_difference(r.tireur.rotation, vrai)) < deg_to_rad(6.0):
+				aligne = r.tireur.t
+			if not r.tireur.tirs.is_empty():
+				break
+		var premier: float = float(r.tireur.tirs[0]["t"]) if not r.tireur.tirs.is_empty() else -1.0
+		ecarts[attente] = premier - aligne if premier >= 0.0 and aligne >= 0.0 else -1.0
+		r.liberer()
+	_check("sans mise en joue, le coup part dès l'alignement (%.2f s après)" % ecarts[0.0], ecarts[0.0] >= 0.0 and ecarts[0.0] <= 0.1,
+		"%.3f s" % ecarts[0.0])
+	_check("avec 0,5 s de mise en joue, après un demi-tour : le coup attend (%.2f s après l'alignement)" % ecarts[0.5],
+		ecarts[0.5] >= 0.5 - 2.0 * PAS and ecarts[0.5] <= 0.5 + 0.15, "%.3f s" % ecarts[0.5])
+
+	# Proportionnelle à l'angle rattrapé (Adrien : « s'ils nous tournent le dos ça doit être plus long que s'ils pointent à peu près vers
+	# nous ») : la cible à 60° du canon, le même 0,5 s « pour un demi-tour » n'en coûte qu'un tiers.
+	var profil_60 := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+		"tolerance_tir_deg": 6.0, "delai_reaction": 0.1, "mise_en_joue_s": 0.5})
+	var r60 := _rig(profil_60, c(15, 15), c(15, 15) + Vector2.from_angle(PI / 3.0) * 200.0, 7, Vector2.RIGHT)
+	await _derouler(r60, 6)
+	r60.cible.allumer_la_torche(Vector2.from_angle(PI + PI / 3.0))
+	var aligne_60 := -1.0
+	for _i in 240:
+		await physics_frame
+		r60.suivre()
+		var vrai_60 := (r60.cible.global_position - r60.tireur.global_position).angle()
+		if aligne_60 < 0.0 and absf(angle_difference(r60.tireur.rotation, vrai_60)) < deg_to_rad(6.0):
+			aligne_60 = r60.tireur.t
+		if not r60.tireur.tirs.is_empty():
+			break
+	var ecart_60: float = float(r60.tireur.tirs[0]["t"]) - aligne_60 if not r60.tireur.tirs.is_empty() and aligne_60 >= 0.0 else -1.0
+	_check("à 60° du canon, la mise en joue n'en coûte qu'un tiers (%.2f s, attendu ≈ 0,17)" % ecart_60,
+		ecart_60 >= 0.5 / 3.0 - 3.0 * PAS and ecart_60 <= 0.5 / 3.0 + 0.1, "%.3f s" % ecart_60)
+	_check("… donc moins que de dos (%.2f s contre %.2f s)" % [ecart_60, ecarts[0.5]], ecart_60 >= 0.0 and ecart_60 < ecarts[0.5] - 0.2)
+	r60.liberer()
+
+	# La cible DEVANT le bot, déjà alignée : la mise en joue ne s'ajoute pas — seul le délai de réaction compte.
+	var profil_face := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+		"tolerance_tir_deg": 6.0, "delai_reaction": 0.1, "mise_en_joue_s": 0.5})
+	var rf := _rig(profil_face, c(15, 15), c(20, 15), 7, Vector2.RIGHT)
+	await _derouler(rf, 6)
+	rf.cible.allumer_la_torche(Vector2.LEFT)
+	var t0: float = rf.tireur.t
+	await _derouler(rf, 120, func() -> bool: return not rf.tireur.tirs.is_empty())
+	var delai: float = float(rf.tireur.tirs[0]["t"]) - t0 if not rf.tireur.tirs.is_empty() else -1.0
+	_check("déjà aligné, il tire sans mise en joue (%.2f s après l'allumage)" % delai, delai >= 0.0 and delai < 0.4, "%.3f s" % delai)
+	rf.liberer()
+
+
+## Un PNJ du catalogue, outils éteints (comme `_profil`), modifié par `changements`.
+func _profil_pnj(nom: String, changements: Dictionary = {}) -> ProfilBot:
+	var p := Flux.sans_equipement(Profil.pnj_nomme(nom))
+	# `sans_equipement` éteint aussi ce que S11 ajoute aux PNJ (rafales, fouille) : on le rend, sauf si le test en dit autrement.
+	var reference := Profil.pnj_nomme(nom)
+	p.poids_rafale = reference.poids_rafale.duplicate()
+	p.dispersion_rafale_deg = reference.dispersion_rafale_deg
+	p.balaie_en_fouille = reference.balaie_en_fouille
+	p.torche_en_fouille = reference.torche_en_fouille
+	p.mise_en_joue_s = reference.mise_en_joue_s
+	for k in changements:
+		p.set(k, changements[k])
+	return p
+
+
+## S11 (2026-10-04, Adrien : « Fais 1, 2, 3, 7, 8 ») : les dégâts (dans `test_aventure_tirs_pnj`), les rafales tirées au sort, l'annonce du
+## tir, la fouille, les tempéraments.
+func _l_ia_des_pnj() -> void:
+	print("\n[S11 — Les rafales tirées au sort]")
+	var catalogue := Profil.pnj_nomme("immobile_voit_lent")
+	_check("un PNJ du catalogue tire ses rafales au sort (%s), avec une dispersion (%.0f°)" % [str(catalogue.poids_rafale), catalogue.dispersion_rafale_deg],
+		catalogue.poids_rafale.size() == 3 and catalogue.dispersion_rafale_deg > 0.0)
+	_check("le bot de l'entraînement et les boss gardent leur rafale fixe", Profil.pour_adversaire_qui_tire(Profil.Difficulte.NORMAL).poids_rafale.is_empty()
+		and Profil.boss().poids_rafale.is_empty())
+	var tirage := Bot.new()
+	tirage.configurer(Profil.pnj_nomme("immobile_voit_lent"), _nav, 11)
+	var comptes := [0, 0, 0, 0]
+	for _i in 2000:
+		comptes[tirage._tirer_la_rafale()] += 1
+	tirage.free()
+	_check("sur 2000 rafales : un coup ≈ 50 %%, deux ≈ 30 %%, trois ≈ 20 %% (%d / %d / %d)" % [comptes[1], comptes[2], comptes[3]],
+		absf(comptes[1] / 2000.0 - 0.5) < 0.05 and absf(comptes[2] / 2000.0 - 0.3) < 0.05 and absf(comptes[3] / 2000.0 - 0.2) < 0.05)
+	for cas in [[[0.0, 0.0, 1.0], 3], [[1.0, 0.0, 0.0], 1]]:
+		var poids: Array[float] = []
+		poids.assign(cas[0])
+		var pr := _profil_pnj("immobile_voit_normal", {"poids_rafale": poids, "mise_en_joue_s": 0.0, "erreur_visee_deg": 0.0,
+			"erreur_visee_min_deg": 0.0, "delai_reaction": 0.1, "pause_entre_rafales": 3.0})
+		var rr := _rig(pr, c(8, 15), c(14, 15), 7, Vector2.RIGHT)
+		await _derouler(rr, 6)
+		rr.cible.allumer_la_torche(Vector2.LEFT)
+		await _derouler(rr, 90)
+		_check("rafale de %d tirée au sort : %d coup(s) avant la pause" % [cas[1], rr.tireur.tirs.size()], rr.tireur.tirs.size() == cas[1],
+			str(rr.tireur.tirs.size()))
+		rr.liberer()
+	# La dispersion : la PREMIÈRE balle part juste (erreur nulle), les suivantes s'écartent.
+	var ecart_max := 0.0
+	for graine in [3, 5, 9]:
+		var poids3: Array[float] = [0.0, 0.0, 1.0]
+		var rd := _rig(_profil_pnj("immobile_voit_normal", {"poids_rafale": poids3, "mise_en_joue_s": 0.0, "erreur_visee_deg": 0.0,
+			"erreur_visee_min_deg": 0.0, "delai_reaction": 0.1, "dispersion_rafale_deg": 8.0}), c(8, 15), c(18, 15), graine, Vector2.RIGHT)
+		await _derouler(rd, 6)
+		rd.cible.allumer_la_torche(Vector2.LEFT)
+		await _derouler(rd, 90)
+		for k in range(1, rd.tireur.tirs.size()):
+			ecart_max = maxf(ecart_max, _erreur_reelle_deg(rd, rd.tireur.tirs[k]))
+		rd.liberer()
+	_check("les coups suivants d'une rafale s'écartent (jusqu'à %.1f°), quand le premier part juste" % ecart_max, ecart_max > 1.5)
+
+	print("\n[S11 — L'annonce : la torche se braque pendant la mise en joue]")
+	for annonce in [true, false]:
+		var pa := _profil_pnj("immobile_voit_normal", {"mise_en_joue_s": 0.8, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+			"delai_reaction": 0.1, "annonce_le_tir": annonce, "vitesse_visee": 6.0})
+		var ra := _rig(pa, c(20, 15), c(15, 15), 7, Vector2.RIGHT)
+		await _derouler(ra, 6)
+		var avant: bool = ra.bot.is_flashlight_pressed()
+		ra.cible.allumer_la_torche(Vector2.RIGHT)
+		var allumee_avant_le_coup := false
+		for _i in 200:
+			await physics_frame
+			ra.suivre()
+			if ra.tireur.tirs.is_empty() and ra.bot.is_flashlight_pressed():
+				allumee_avant_le_coup = true
+			if not ra.tireur.tirs.is_empty():
+				break
+		if annonce:
+			_check("éteinte avant de voir, braquée pendant la mise en joue, avant le coup", not avant and allumee_avant_le_coup
+				and not ra.tireur.tirs.is_empty())
+		else:
+			_check("sans annonce (l'embusqué) : la torche reste éteinte jusqu'au coup", not allumee_avant_le_coup and not ra.tireur.tirs.is_empty())
+		ra.liberer()
+
+	print("\n[S11 — La fouille : il balaie la place perdue, torche allumée, sans tirer dans le vide, puis renonce]")
+	var pf := _profil_pnj("immobile_voit_normal", {"delai_reaction": 0.2, "delai_oubli": 4.0, "audace_zone_px": 600.0})
+	var rf := _rig(pf, c(8, 15), c(14, 15), 6, Vector2.RIGHT)
+	await _derouler(rf, 6)
+	rf.cible.allumer_la_torche(Vector2.LEFT)
+	await _derouler(rf, 60)
+	_check("(avant) il voit, il est en combat", rf.bot.etat == Bot.Etat.COMBAT)
+	rf.cible.eteindre_la_torche()
+	rf.cible.global_position = c(14, 27)
+	var tirs_avant := rf.tireur.tirs.size()
+	var balaye := false
+	var torche := false
+	var angle_min := INF
+	var angle_max := -INF
+	var tirs_en_fouille := 0
+	for _i in 180:
+		var coups_avant := rf.tireur.tirs.size()
+		# Le corps traite sa gâchette AVANT que le bot (son enfant) ne pense, dans la même image : un coup compté à l'image où le
+		# balayage commence a été décidé à l'image d'avant. Seul compte un coup parti quand le balayage était DÉJÀ engagé.
+		var balayait := rf.bot._balaie
+		await physics_frame
+		rf.suivre()
+		# Un coup qui part PENDANT le balayage : le combat qui s'achève (la place encore tenue, `delai_reaction` près) tire légitimement.
+		if balayait and rf.bot._balaie and rf.tireur.tirs.size() > coups_avant:
+			tirs_en_fouille += rf.tireur.tirs.size() - coups_avant
+		if rf.bot._balaie:
+			balaye = true
+			torche = torche or rf.bot.is_flashlight_pressed()
+			var a := rad_to_deg(rf.bot.get_aim_direction(Vector2.ZERO).angle())
+			angle_min = minf(angle_min, a)
+			angle_max = maxf(angle_max, a)
+	_check("(le combat qui s'achève a pu tirer : %d coup(s) avant le balayage)" % (rf.tireur.tirs.size() - tirs_avant - tirs_en_fouille), true)
+	_check("il passe en recherche et balaie (%s)" % str(rf.noms_des_etats()), balaye and rf.noms_des_etats().has(Bot.Etat.RECHERCHE))
+	_check("le balayage couvre large : %.0f° d'amplitude" % (angle_max - angle_min), angle_max - angle_min > 90.0)
+	_check("… torche allumée", torche)
+	_check("… sans tirer dans le vide (%d coup)" % tirs_en_fouille, tirs_en_fouille == 0)
+	await _derouler(rf, 300)
+	_check("la mémoire s'efface : il renonce, revient à la patrouille, torche éteinte", rf.bot.etat == Bot.Etat.PATROUILLE
+		and not rf.bot.is_flashlight_pressed() and not rf.bot._balaie)
+	rf.liberer()
+
+	print("\n[S11 — Les tempéraments]")
+	var g := Profil.pnj_nomme("ronde_voit_lent")
+	Profil.appliquer_temperament(g, Profil.Temperament.GUETTEUR)
+	_check("guetteur : torche fixe allumée, il tient son poste", g.torche_allumee and not g.torche_tactique and g.reste_a_son_poste)
+	var t := Profil.pnj_nomme("immobile_entend_lent")
+	var oubli_avant := t.delai_oubli
+	var precision_avant := t.precision_auditive
+	Profil.appliquer_temperament(t, Profil.Temperament.TRAQUEUR)
+	_check("traqueur : il entend plus juste, se souvient deux fois plus longtemps, poursuit les sons", t.poursuit_les_sons
+		and t.precision_auditive > precision_avant and is_equal_approx(t.delai_oubli, oubli_avant * 2.0))
+	var pe := Profil.pnj_nomme("immobile_voit_lent")
+	Profil.appliquer_temperament(pe, Profil.Temperament.PEUREUX)
+	_check("peureux : il fuit à mi-vie", pe.fuit_si_menace and is_equal_approx(pe.seuil_de_peur, 0.5))
+	var em := Profil.pnj_nomme("immobile_voit_lent")
+	var joue_avant := em.mise_en_joue_s
+	Profil.appliquer_temperament(em, Profil.Temperament.EMBUSQUE)
+	_check("embusqué : torche éteinte, pas d'annonce ni de fouille, il tient son poste, ne tire qu'à %.0f px, mise en joue moitié" % em.distance_tir_max_px,
+		not em.torche_allumee and not em.annonce_le_tir and not em.balaie_en_fouille and em.reste_a_son_poste
+		and em.distance_tir_max_px == Profil.PORTEE_EMBUSCADE_PX and is_equal_approx(em.mise_en_joue_s, joue_avant * 0.5))
+
+	# Le guetteur : sa torche brille même en patrouille.
+	var rg := _rig(_profil_pnj("immobile_voit_lent", {"torche_allumee": true}), c(8, 15), c(30, 25), 6)
+	Profil.appliquer_temperament(rg.bot.profil, Profil.Temperament.GUETTEUR)
+	await _derouler(rg, 10)
+	_check("guetteur : torche allumée en patrouille", rg.bot.etat == Bot.Etat.PATROUILLE and rg.bot.is_flashlight_pressed())
+	rg.liberer()
+
+	# L'embusqué : il voit à 15 cases, il ne tire pas ; à 7 cases, il tire.
+	for cas_e in [[c(23, 15), false], [c(15, 15), true]]:
+		var pemb := _profil_pnj("immobile_voit_normal", {"delai_reaction": 0.1, "mise_en_joue_s": 0.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0})
+		Profil.appliquer_temperament(pemb, Profil.Temperament.EMBUSQUE)
+		var re := _rig(pemb, c(8, 15), cas_e[0], 6, Vector2.RIGHT)
+		await _derouler(re, 6)
+		re.cible.allumer_la_torche(Vector2.LEFT)
+		await _derouler(re, 150)
+		var d := re.tireur.global_position.distance_to(re.cible.global_position)
+		if cas_e[1]:
+			_check("embusqué, cible à %.0f px : il tire" % d, not re.tireur.tirs.is_empty())
+		else:
+			_check("embusqué, cible à %.0f px : il la voit (%s) et attend, sans tirer" % [d, str(re.noms_des_etats())],
+				re.tireur.tirs.is_empty() and re.noms_des_etats().has(Bot.Etat.COMBAT))
+		re.liberer()
+
+	# Le traqueur : posé immobile, il marche vers un son ; le même PNJ sans tempérament reste où il est.
+	var parcours := {}
+	for traque in [false, true]:
+		var ptr := _profil_pnj("immobile_entend_normal", {"delai_reaction": 0.2, "audace_zone_px": 0.0})
+		if traque:
+			Profil.appliquer_temperament(ptr, Profil.Temperament.TRAQUEUR)
+		var rt := _rig(ptr, c(6, 15), c(34, 25), 5)
+		await _derouler(rt, 10)
+		var depart: Vector2 = rt.tireur.global_position
+		root.get_node("AudioManager").son_localise.emit(_evenement("footstep", c(18, 15), 0))
+		await _derouler(rt, 200)
+		parcours[traque] = rt.tireur.global_position.distance_to(depart)
+		rt.liberer()
+	_check("traqueur : posé immobile, il marche vers le son (%.0f px) ; sans tempérament, il reste (%.0f px)" % [parcours[true], parcours[false]],
+		parcours[true] > 100.0 and parcours[false] < 1.0)
+
+	# Le peureux : en combat, blessé à mi-vie, il recule et cesse de tirer ; à pleine vie mais resté seul, aussi.
+	for cause in ["blesse", "seul"]:
+		var ppe := _profil_pnj("libre_voit_normal", {"delai_reaction": 0.1, "mise_en_joue_s": 0.0})
+		Profil.appliquer_temperament(ppe, Profil.Temperament.PEUREUX)
+		var rpe := _rig(ppe, c(8, 15), c(14, 15), 6, Vector2.RIGHT)
+		await _derouler(rpe, 6)
+		rpe.cible.allumer_la_torche(Vector2.LEFT)
+		await _derouler(rpe, 40)
+		var avant_peur: float = rpe.tireur.global_position.distance_to(rpe.cible.global_position)
+		if cause == "blesse":
+			rpe.tireur.hp = 40.0
+		else:
+			rpe.bot.allies_vivants = 0
+		var en_repli := false
+		await _derouler(rpe, 20)
+		en_repli = rpe.bot._repli_actif
+		var tirs_peur := rpe.tireur.tirs.size()
+		await _derouler(rpe, 100)
+		var apres_peur: float = rpe.tireur.global_position.distance_to(rpe.cible.global_position)
+		_check("peureux (%s) : il recule (%.0f → %.0f px de la menace)" % [cause, avant_peur, apres_peur], en_repli and apres_peur > avant_peur + 40.0)
+		_check("peureux (%s) : il ne tire pas pendant qu'il recule (%d coup)" % [cause, rpe.tireur.tirs.size() - tirs_peur],
+			rpe.tireur.tirs.size() == tirs_peur or not en_repli)
+		rpe.liberer()
+
 
 func _l_engagement() -> void:
 	print("\n[L'engagement : le bot dont l'arme ne porte pas jusque-là s'approche, et ne tire pas hors de sa portée]")

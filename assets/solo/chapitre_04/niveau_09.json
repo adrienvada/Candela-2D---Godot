@@ -72,6 +72,7 @@
       "equipe": true,
       "orientation": 120,
       "profil": "zone_voit_entend_facile",
+      "temperament": "traqueur",
       "zone": [
         28,
         1,
@@ -88,6 +89,7 @@
       "equipe": true,
       "orientation": 15,
       "profil": "zone_voit_entend_facile",
+      "temperament": "embusque",
       "zone": [
         1,
         21,

@@ -53,7 +53,8 @@
         11
       ],
       "orientation": 180,
-      "profil": "immobile_voit_entend_difficile"
+      "profil": "immobile_voit_entend_difficile",
+      "temperament": "guetteur"
     },
     {
       "case": [
