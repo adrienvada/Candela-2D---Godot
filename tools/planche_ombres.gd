@@ -49,6 +49,9 @@ extends "res://tools/photographe.gd"
 ##   · `scintillement` (séries) — par paire d'images consécutives : pixels de l'écran dont la luma (Rec. 601, celle de la
 ##     mesure de l'audit) change de plus de 8 et de plus de 24 niveaux, et le saut maximal ; idem sur la lightmap ;
 ##   · `lumieres` — le recensement des lumières au sol par quadrant de 560 px (plafond moteur de 15 par item, O12) ;
+##   · `regles` (OM4, la famille du même nom) — l'étoile du PNJ (rendue ? à quelle échelle, contre celle de sa silhouette) ;
+##     `largeur_ombre_px` dans la sonde (l'ombre derrière le corps, mesurée en travers) ; pour le tir au mur, la place du
+##     flash, le sol à son pied, le sol autour du tireur (témoin) et le plus clair du sol AU-DELÀ du mur ;
 ## - `planche.html` : ce qu'on ouvre.
 ##
 ## ## Le même instant
@@ -89,9 +92,15 @@ const SONDE_DEMI_ANGLE := 60.0
 const SONDE_DEDANS := 0.75
 const SONDE_DEHORS_PX := 6.0
 ## Les familles dont chaque prise lit la sonde (torche seule) : celles où J1 éclaire le PNJ regardé.
-const FAMILLES_SONDEES := ["etoile", "classes", "mur", "plafonnier", "scintillement"]
+const FAMILLES_SONDEES := ["etoile", "classes", "mur", "plafonnier", "scintillement", "regles"]
 ## Le PNJ près d'un mur (plan `mur`) : à 30 px de la face, J1 de l'autre côté.
 const MUR_ECART_PX := 30.0
+## OM4, le tir au mur : le centre de J1 à 20 px de la face (le rayon de son corps est 18) — collé, comme
+## `test_ombres_regles._le_flash_au_mur`.
+const COLLE_AU_MUR_PX := 20.0
+## La largeur de l'ombre derrière le corps : la lightmap lue en travers, à ± 60 px de l'axe lampe → corps, pixel par pixel ;
+## « dans l'ombre » sous la moitié du sol éclairé des deux bouts.
+const OMBRE_TRAVERS_PX := 60
 
 var _iso: Presentation3D
 var _journal: Array = []
@@ -120,14 +129,26 @@ var _plan_en_cours: Dictionary = {}
 var _sans_led := false
 ## L'énergie de la torche de J1 à chaque image d'une série : la respiration et le recul de tir se lisent là, pas à l'œil.
 var _energies: Array = []
+## OM4, le tir au mur : le mur d'une case choisi (`_mur_mince_vu`) — la face, la visée, le sol au-delà.
+var _mur_du_plan: Dictionary = {}
+
+
+## La marionnette du photographe, qui sait aussi s'accroupir (OM4 : l'étoile à la posture). La simulation repose la posture à
+## chaque pas depuis `is_crouch_pressed()` : un `poser_posture(true)` direct serait défait au pas suivant.
+class MarionnetteAccroupie extends Marionnette:
+	var accroupi := false
+
+	func is_crouch_pressed() -> bool:
+		return accroupi
 
 
 ## LE CATALOGUE. Chaque plan : `id`, `famille`, `but` (ce qu'il montre, pour la planche), `salle` [chapitre, index],
 ## `cible` (le PNJ regardé), `cote` (d'où vient la torche, en degrés autour du PNJ, à partir du côté de la CAMÉRA :
 ## 0 = côté caméra, 180 = de dos, 90 = de profil), `distance` (J1 → PNJ, px), `theta` (la visée du PNJ : 0 = face à la
 ## lampe, l'arme vers elle ; 90 = de profil), et selon le plan : `classe` (la classe du PNJ), `mur`, `serie`,
-## `respiration`, `tir`, `pate` ("brute"), `plafonniers` (faux : éteints), `lampes` ("F", "H", "B"), `ebloui_par` (un PNJ
-## dont la torche vise J1).
+## `respiration`, `tir`, `pate` ("brute"), `plafonniers` (faux : éteints), `lampes` ("F", "H", "B" ; "-" : aucune), `ebloui_par`
+## (un PNJ dont la torche vise J1) ; OM4 : `accroupi` (le PNJ regardé), `tir_au_mur` (J1 collé à un mur d'une case, qui
+## tire), `torche` (faux : celle de J1 éteinte), `leds` (faux : le bandeau des murs éteint).
 static func plans() -> Array[Dictionary]:
 	var sortie: Array[Dictionary] = []
 	var base := {"salle": [0, 0], "cible": 0, "cote": 0.0, "distance": 160.0, "theta": 0.0}
@@ -173,6 +194,17 @@ static func plans() -> Array[Dictionary]:
 	# O12 — le recensement des lumières au sol, salle 0.9 au repos (chaque prise le fait aussi).
 	sortie.append(_plan_de(salle09, {"id": "lumieres-salle09", "famille": "lumieres", "cible": 1,
 		"but": "O12 — salle 0.9 au repos : combien de lumières par quadrant de 560 px (plafond moteur : 15) ?"}))
+	# OM4 — les règles d'ombre « sans décision », à l'image. La posture dans la salle 0.1, la pose des plans « etoile » (ses
+	# sondes y sont propres), debout puis accroupi ; le tir au mur dans la salle 0.9, qui a un mur d'une seule case (la colonne
+	# x = 7, dont la caméra voit la face est). La mort n'a pas de plan : en aventure, le PNJ abattu est caché avec son étoile
+	# (`AventurePartie._ranger_les_morts`), avant comme après — elle se garde sans fenêtre, en duel (`test_ombres_regles`).
+	sortie.append(_plan_de(base, {"id": "regles-debout", "famille": "regles",
+		"but": "O11 — le PNJ debout sous la torche, côté caméra : la largeur de son ombre, la référence"}))
+	sortie.append(_plan_de(base, {"id": "regles-accroupi", "famille": "regles", "accroupi": true,
+		"but": "O11 — le même PNJ accroupi : son ombre doit rétrécir avec sa silhouette (×0,8)"}))
+	sortie.append(_plan_de(salle09, {"id": "regles-tir-au-mur", "famille": "regles", "cible": 3, "tir_au_mur": true,
+		"torche": false, "lampes": "-", "plafonniers": false, "leds": false,
+		"but": "O9/O10 — J1 collé à un mur d'une case tire, seules lumières le flash et l'écho : le flash éclaire de son côté, l'écho ne passe pas le mur"}))
 	return sortie
 
 
@@ -201,12 +233,17 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	var p1 = main.get("p1")
 	if p1 != null:
 		for prop in ["noise", "flashlight", "ambient_light", "body_light", "shoot_cooldown", "dazzle_amount",
-				"source_eblouissante", "est_pnj", "visual_enemy", "_dust_accum"]:
+				"source_eblouissante", "est_pnj", "visual_enemy", "_dust_accum", "muzzle_flash", "shake_intensity", "accroupi",
+				"visual"]:
 			if not prop in p1:
 				absents.append("Player.%s a disparu" % prop)
-		for methode in ["etoile", "equip_weapon"]:
+		for methode in ["etoile", "equip_weapon", "trigger_shoot_visuals"]:
 			if not p1.has_method(methode):
 				absents.append("Player.%s() a disparu" % methode)
+	# OM4 : la marionnette qui s'accroupit répond à la question que la simulation pose à chaque pas.
+	var texte_entrees := FileAccess.get_file_as_string("res://input_provider.gd")
+	if not texte_entrees.contains("func is_crouch_pressed("):
+		absents.append("InputProvider.is_crouch_pressed() a disparu")
 	var Pres: GDScript = load("res://presentation_3d.gd")
 	var membres_pres := {}
 	for m in Pres.get_script_method_list():
@@ -384,7 +421,7 @@ func _figer_les_pnj() -> void:
 		if bot != null:
 			(bot as Node).set_process(false)
 			(bot as Node).set_physics_process(false)
-		var pantin := Marionnette.new()
+		var pantin := MarionnetteAccroupie.new()
 		pantin.name = "MarionnettePNJ"
 		pantin.visee = Vector2.from_angle(pnj.rotation)
 		_main._set_player_input_provider(pnj, pantin)
@@ -421,6 +458,9 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 	for p in _poses_pnj:
 		(p as Player).flashlight_on = false
 		((p as Player).input_provider as Marionnette).torche = false
+		var pantin_pnj := (p as Player).input_provider as MarionnetteAccroupie
+		if pantin_pnj != null:
+			pantin_pnj.accroupi = p == cible and bool(plan.get("accroupi", false))
 	if plan.has("classe"):
 		_equiper(cible, String(plan["classe"]))
 	var ancre: Vector2 = (_poses_pnj[cible] as Array)[0]
@@ -433,12 +473,25 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 		ancre = pres_du_mur
 	var direction := vers_camera.rotated(deg_to_rad(float(plan["cote"])))
 	var pos_j1 := ancre + direction * float(plan["distance"])
-	if not _place_libre(pos_j1) or _mur_entre_les_deux(pos_j1, ancre):
-		_refuser(id, "J1 ne tient pas à %.0f px du PNJ de ce côté (mur ou vide) : %s" % [float(plan["distance"]), str(pos_j1)])
-		return
-	var axe := (ancre - pos_j1).normalized()
-	_pose_j1 = [pos_j1, axe]
-	_poses_pnj[cible] = [ancre, (-axe).rotated(deg_to_rad(float(plan["theta"])))]
+	var axe := Vector2.ZERO
+	_mur_du_plan = {}
+	if bool(plan.get("tir_au_mur", false)):
+		# OM4 — J1 collé à un mur d'une case que la caméra voit, la visée sur le mur ; le PNJ reste à sa pose d'origine.
+		var mur: Variant = _mur_mince_vu(ancre, vers_camera)
+		if mur == null:
+			_refuser(id, "aucun mur d'une case, vu de la caméra, avec du sol des deux côtés, à 400 px du PNJ")
+			return
+		_mur_du_plan = mur
+		pos_j1 = _mur_du_plan["j1"]
+		axe = _mur_du_plan["visee"]
+		_pose_j1 = [pos_j1, axe]
+	else:
+		if not _place_libre(pos_j1) or _mur_entre_les_deux(pos_j1, ancre):
+			_refuser(id, "J1 ne tient pas à %.0f px du PNJ de ce côté (mur ou vide) : %s" % [float(plan["distance"]), str(pos_j1)])
+			return
+		axe = (ancre - pos_j1).normalized()
+		_pose_j1 = [pos_j1, axe]
+		_poses_pnj[cible] = [ancre, (-axe).rotated(deg_to_rad(float(plan["theta"])))]
 	# Un PNJ qui éblouit J1 (O2) : sa torche allumée, braquée sur lui.
 	if plan.has("ebloui_par"):
 		var eblouisseur := _pnj(int(plan["ebloui_par"]))
@@ -448,8 +501,18 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 		_poses_pnj[eblouisseur] = [p_e, (pos_j1 - p_e).normalized()]
 		(eblouisseur.input_provider as Marionnette).torche = true
 	_pantin_j1.visee = axe
-	_pantin_j1.torche = true
-	Input.action_press("p1_torch")
+	_pantin_j1.torche = bool(plan.get("torche", true))
+	if _pantin_j1.torche:
+		Input.action_press("p1_torch")
+	else:
+		Input.action_release("p1_torch")
+	# Le bandeau LED éteint le temps du plan (OM4, le tir au mur : le flash et l'écho seuls) ; rendu tel quel à la fin.
+	var leds := {}
+	if not bool(plan.get("leds", true)):
+		for l in get_tree().root.find_children("*", "PointLight2D", true, false):
+			if l is MurLed:
+				leds[l] = (l as Light2D).visible
+		_sans_led = true
 	# La pâte, à l'exécution : celle du plan, sinon celle du lancement (`--pate`).
 	var pate_avant := int(_iso.style_pate)
 	if String(plan.get("pate", "")) == "brute":
@@ -466,6 +529,19 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 	_plafonniers(plafonniers_avant)
 	if plan.has("classe"):
 		_equiper(cible, _classe_d_origine(cible))
+	if not bool(plan.get("leds", true)):
+		_sans_led = false
+		for l in leds:
+			if is_instance_valid(l):
+				(l as Light2D).visible = bool(leds[l])
+	if String(plan.get("lampes", "")) != "":
+		var j1 := _main.p1 as Player
+		j1.flashlight.visible = true
+		j1.ambient_light.visible = true
+		j1.body_light.visible = true
+	var pantin_cible := cible.input_provider as MarionnetteAccroupie
+	if pantin_cible != null:
+		pantin_cible.accroupi = false
 	_plans_faits += 1
 
 
@@ -507,10 +583,10 @@ func _pres_d_un_mur(ancre: Vector2, vers_camera: Vector2) -> Variant:
 
 
 ## Un disque de 20 px de sol libre (le corps de J1 y tient) : plus serré que `_sol_libre` du photographe (40 px).
-func _place_libre(p: Vector2) -> bool:
+func _place_libre(p: Vector2, rayon: float = 20.0) -> bool:
 	var espace := (_main.p1 as Node2D).get_world_2d().direct_space_state
 	var disque := CircleShape2D.new()
-	disque.radius = 20.0
+	disque.radius = rayon
 	var q := PhysicsShapeQueryParameters2D.new()
 	q.shape = disque
 	q.collision_mask = MapGeometry.WALL_LAYER
@@ -535,6 +611,108 @@ func _corps_exclus() -> Array[RID]:
 			if is_instance_valid(p):
 				rids.append((p as CollisionObject2D).get_rid())
 	return rids
+
+
+## OM4, le tir au mur — un mur d'UNE case dont la caméra voit la face, du sol des deux côtés : J1 s'y colle et tire. C'est là
+## que l'écho au sol d'avant O10 passait à travers la pierre, et que le flash d'avant O9 brûlait DANS le mur. Cherché par la
+## physique, au centre des cases à 400 px de `pres_de` (le plus proche gagne) : la case libre, le mur à une demi-case dans la
+## direction `d` (une face que la caméra voit), et la case d'après de nouveau libre, le mur ne faisant qu'une case d'épaisseur.
+## Rend la place de J1, sa visée, la face et le point lu au-delà du mur ; `null` s'il n'y en a aucun.
+func _mur_mince_vu(pres_de: Vector2, vers_camera: Vector2) -> Variant:
+	var espace := (_main.p1 as Node2D).get_world_2d().direct_space_state
+	var case := 35.0
+	var meilleur: Variant = null
+	var meilleure_d := INF
+	var centre0 := (pres_de / case).floor()
+	for dy in range(-12, 13):
+		for dx in range(-12, 13):
+			var c := (centre0 + Vector2(dx, dy) + Vector2(0.5, 0.5)) * case
+			if c.distance_to(pres_de) >= meilleure_d or not _place_libre(c, 15.0):
+				continue
+			for d in [Vector2.LEFT, Vector2.UP, Vector2.RIGHT, Vector2.DOWN]:
+				if (-d).dot(vers_camera) < 0.5:
+					continue
+				var q := PhysicsRayQueryParameters2D.create(c, c + d * case, MapGeometry.WALL_LAYER)
+				q.exclude = _corps_exclus()
+				var proche := espace.intersect_ray(q)
+				if proche.is_empty() or absf(c.distance_to(proche["position"]) - case * 0.5) > 1.0:
+					continue
+				var au_dela: Vector2 = c + d * case * 2.0
+				if not _place_libre(au_dela, 15.0) or not _dans_la_carte(au_dela):
+					continue
+				var r := PhysicsRayQueryParameters2D.create(au_dela, c, MapGeometry.WALL_LAYER)
+				r.exclude = _corps_exclus()
+				var loin := espace.intersect_ray(r)
+				if loin.is_empty() or absf(au_dela.distance_to(loin["position"]) - case * 0.5) > 1.0:
+					continue
+				var face: Vector2 = proche["position"]
+				meilleure_d = c.distance_to(pres_de)
+				meilleur = {"j1": face - d * COLLE_AU_MUR_PX, "visee": d, "face": face,
+					"outre": (loin["position"] as Vector2) + d * 5.0}
+	return meilleur
+
+
+## Un point DANS la carte : un rayon dans chacune des quatre directions bute sur un mur à moins de 2 000 px. Hors de la carte
+## (au-delà du mur d'enceinte, qui ne fait qu'une case), il n'y a plus rien — et la physique dit « libre ».
+func _dans_la_carte(p: Vector2) -> bool:
+	var espace := (_main.p1 as Node2D).get_world_2d().direct_space_state
+	for d in [Vector2.LEFT, Vector2.UP, Vector2.RIGHT, Vector2.DOWN]:
+		var q := PhysicsRayQueryParameters2D.create(p, p + d * 2000.0, MapGeometry.WALL_LAYER)
+		q.exclude = _corps_exclus()
+		if espace.intersect_ray(q).is_empty():
+			return false
+	return true
+
+
+## OM4 — le tir, au moment de la prise : le flash et l'écho au sol posés par le geste du jeu (`trigger_shoot_visuals`), la
+## secousse de caméra annulée aussitôt (l'image d'avant et celle d'après doivent se superposer au pixel).
+func _tirer() -> void:
+	var j1 := _main.p1 as Player
+	j1.trigger_shoot_visuals()
+	j1.shake_intensity = 0.0
+
+
+## OM4 — ce que les règles d'ombre changent, en chiffres : l'étoile du PNJ (rendue ? à quelle échelle, contre celle de sa
+## silhouette) ; au tir au mur, la place du flash, le sol du côté du tireur et le sol au-delà du mur.
+func _mesurer_les_regles(plan: Dictionary, cible: Player, lightmap: Image) -> Dictionary:
+	var occ: LightOccluder2D = cible.etoile()
+	var r := {"etoile_rendue": occ != null and occ.is_visible_in_tree(),
+		"echelle_etoile": snappedf(occ.scale.x, 0.001) if occ != null else -1.0,
+		"echelle_silhouette": snappedf((cible.visual as Node2D).scale.x, 0.001), "accroupi": cible.accroupi}
+	if bool(plan.get("tir_au_mur", false)) and not _mur_du_plan.is_empty():
+		var j1 := _main.p1 as Player
+		var d: Vector2 = _mur_du_plan["visee"]
+		var face: Vector2 = _mur_du_plan["face"]
+		var cote := d.orthogonal()
+		r["mur"] = {"face": _v(face), "visee": _v(d), "outre": _v(_mur_du_plan["outre"])}
+		r["flash_avance_px"] = snappedf(j1.muzzle_flash.position.x, 0.01)
+		r["flash_energie"] = snappedf(j1.muzzle_flash.energy, 0.001)
+		# Le sol au pied du mur, devant J1 — là où le flash reculé brûle (son empreinte est petite : une trentaine de px).
+		r["sol_au_flash"] = _moyenne_lue(lightmap, [face - d * 4.0, face - d * 8.0, face - d * 8.0 + cote * 5.0,
+			face - d * 8.0 - cote * 5.0])
+		# Le témoin : le sol autour de J1, hors de l'empreinte du flash — l'écho seul l'éclaire, avant comme après.
+		r["sol_autour_du_tireur"] = _moyenne_lue(lightmap, [face - d * 10.0 + cote * 30.0, face - d * 10.0 - cote * 30.0,
+			j1.global_position - d * 30.0])
+		# Le sol au-delà du mur : le plus clair de la bande de 1 à 12 px derrière sa face lointaine, sur ± 15 px — l'écho sans
+		# ombre y laissait une lueur.
+		var loin: Vector2 = (_mur_du_plan["outre"] as Vector2) - d * 5.0
+		var plus_clair := 0.0
+		for a in range(1, 13):
+			for b in range(-15, 16):
+				plus_clair = maxf(plus_clair, _luminance_au(lightmap, loin + d * float(a) + cote * float(b)))
+		r["sol_outre_mur_max"] = snappedf(plus_clair, 0.0001)
+	return r
+
+
+func _moyenne_lue(lightmap: Image, points: Array) -> float:
+	var somme := 0.0
+	var n := 0
+	for p in points:
+		var l := _luminance_au(lightmap, p)
+		if l >= 0.0:
+			somme += l
+			n += 1
+	return snappedf(somme / n, 0.0001) if n > 0 else -1.0
 
 
 ## Les plafonniers allumés ou non ; rend l'état d'avant (vrai : allumés).
@@ -717,6 +895,8 @@ func _capturer_l_image() -> Array:
 func _prise(plan: Dictionary, cible: Player) -> void:
 	var id := String(plan["id"])
 	_reposer()
+	if bool(plan.get("tir_au_mur", false)):
+		_tirer()
 	var images: Array = await _capturer_l_image()
 	var ecran: Image = images[0]
 	var lightmap: Image = images[1]
@@ -725,7 +905,7 @@ func _prise(plan: Dictionary, cible: Player) -> void:
 		lightmap.save_png("%s/%s_lightmap.png" % [_dossier, id])
 	var entree := _mesurer(plan, cible, ecran, lightmap)
 	_decouper_autour(id, cible, ecran, lightmap)
-	if String(plan["famille"]) in FAMILLES_SONDEES:
+	if String(plan["famille"]) in FAMILLES_SONDEES and not bool(plan.get("tir_au_mur", false)):
 		entree["sonde"] = await _sonde_torche_seule(cible)
 	_journal.append(entree)
 	_imprimer(entree)
@@ -745,6 +925,8 @@ func _sonde_torche_seule(cible: Player) -> Dictionary:
 	await _tenir(2)
 	_reposer()
 	var images: Array = await _capturer_l_image()
+	if _lightmaps:
+		(images[1] as Image).save_png("%s/%s_sonde_lightmap.png" % [_dossier, String(_plan_en_cours.get("id", "sonde"))])
 	var r := _sonder(images[1], cible.global_position, _etoile_au_sol(cible), (_main.p1.flashlight as Light2D).global_position)
 	r["lumieres"] = "torche seule (plafonniers et bandeau LED coupés)"
 	# Le capteur du PNJ sous la même lumière : il ne voit pas l'étoile de son corps (Q42), donc le culling de cette étoile ne
@@ -917,6 +1099,11 @@ func _mesurer(plan: Dictionary, cible: Player, ecran: Image, lightmap: Image) ->
 		"repere_lightmap": [snappedf(_main.vp1.get_canvas_transform().origin.x, 0.000001),
 			snappedf(_main.vp1.get_canvas_transform().origin.y, 0.000001)],
 		"pate": int(_iso.style_pate)}
+	# Où tombent J1 et le PNJ dans la lightmap (pixels), et sa rotation : la caméra 2D suit le lacet de la vue iso.
+	var ct_lm: Transform2D = _main.vp1.get_canvas_transform()
+	var sc_lm := Vector2(lightmap.get_size()) / Vector2(_main.vp1.size)
+	entree["lightmap_px"] = {"j1": _v((ct_lm * _main.p1.global_position) * sc_lm), "pnj": _v((ct_lm * cible.global_position) * sc_lm),
+		"rotation_deg": snappedf(rad_to_deg(ct_lm.get_rotation()), 0.01), "echelle": snappedf(ct_lm.get_scale().x * sc_lm.x, 0.0001)}
 	entree["capteur"] = _niveau_du_capteur(cible)
 	var opacites := []
 	for p in _main.aventure.pnj:
@@ -927,6 +1114,8 @@ func _mesurer(plan: Dictionary, cible: Player, ecran: Image, lightmap: Image) ->
 	entree["eblouissement_j1"] = snappedf(float(_main.p1.dazzle_amount), 0.001)
 	entree["source_eblouissante"] = String((source as Node).name) if source is Node and is_instance_valid(source) else ""
 	entree["lumieres"] = _recenser()
+	if String(plan["famille"]) == "regles":
+		entree["regles"] = _mesurer_les_regles(plan, cible, lightmap)
 	return entree
 
 
@@ -936,7 +1125,9 @@ static func _etoile_au_sol(corps: Node2D) -> PackedVector2Array:
 	var occ: LightOccluder2D = corps.call("etoile")
 	if occ == null or occ.occluder == null:
 		return PackedVector2Array()
-	return corps.global_transform * occ.occluder.polygon
+	# L'échelle du nœud de l'étoile (OM4 : la posture) — sa canvas ne recopie que la position et la rotation du corps ; à ×1
+	# (tout corps debout, et tout le code d'avant OM4), la forme d'avant.
+	return corps.global_transform * Transform2D(0.0, occ.scale, 0.0, Vector2.ZERO) * occ.occluder.polygon
 
 
 ## « Le sol dans l'étoile, côté lampe, est éclairé » — lu dans la lightmap (voir l'en-tête).
@@ -975,7 +1166,24 @@ func _sonder(lightmap: Image, centre: Vector2, etoile: PackedVector2Array, lampe
 		r["derriere"] = snappedf(l_derriere, 0.0001)
 		r["derriere_cote"] = snappedf(l_cote, 0.0001)
 		r["derriere_rapport"] = snappedf(l_derriere / maxf(l_cote, 1e-4), 0.001)
+		r["largeur_ombre_px"] = _largeur_de_l_ombre(lightmap, p_derriere, vers_lampe)
 	return r
+
+
+## La largeur de l'ombre du corps en travers de l'axe lampe → corps, au point `p` derrière lui : le nombre de pixels de monde,
+## sur ± `OMBRE_TRAVERS_PX`, où la lightmap tombe sous la moitié du sol lu aux deux bouts. −1 si les deux bouts sont noirs
+## eux aussi : rien à mesurer.
+func _largeur_de_l_ombre(lightmap: Image, p: Vector2, vers_lampe: Vector2) -> int:
+	var travers := vers_lampe.orthogonal()
+	var bouts := (_luminance_au(lightmap, p + travers * OMBRE_TRAVERS_PX)
+		+ _luminance_au(lightmap, p - travers * OMBRE_TRAVERS_PX)) * 0.5
+	if bouts <= 0.02:
+		return -1
+	var n := 0
+	for k in range(-OMBRE_TRAVERS_PX, OMBRE_TRAVERS_PX + 1):
+		if _luminance_au(lightmap, p + travers * float(k)) < bouts * 0.5:
+			n += 1
+	return n
 
 
 ## La luminance (Rec. 709, celle de la pâte) de la lightmap au point du monde `p`.
@@ -1072,7 +1280,9 @@ func _decouper_autour(id: String, cible: Player, ecran: Image, lightmap: Image) 
 	var cam := _iso._camera_de(0)
 	var logique := get_window().get_visible_rect().size
 	var taille := Vector2(ecran.get_size())
-	var c := cam.vers_ecran(cible.global_position, logique) * taille / logique
+	# Le point regardé : le PNJ — ou J1, au tir au mur (OM4), où ce qui change est autour de lui.
+	var regarde := (_main.p1 as Node2D).global_position if not _mur_du_plan.is_empty() else cible.global_position
+	var c := cam.vers_ecran(regarde, logique) * taille / logique
 	var x0 := clampi(int(c.x) - DECOUPE_PX / 2, 0, maxi(0, ecran.get_width() - DECOUPE_PX))
 	var y0 := clampi(int(c.y) - DECOUPE_PX * 2 / 3, 0, maxi(0, ecran.get_height() - DECOUPE_PX))
 	var coupe := ecran.get_region(Rect2i(x0, y0, DECOUPE_PX, DECOUPE_PX))
@@ -1093,7 +1303,7 @@ func _decouper_autour(id: String, cible: Player, ecran: Image, lightmap: Image) 
 	# La lightmap autour du PNJ, avec l'étoile (rouge) et le disque du capteur (vert).
 	var ct: Transform2D = _main.vp1.get_canvas_transform()
 	var sc := Vector2(lightmap.get_size()) / Vector2(_main.vp1.size)
-	var cl := (ct * cible.global_position) * sc
+	var cl := (ct * regarde) * sc
 	var lx0 := clampi(int(cl.x) - DECOUPE_PX / 2, 0, maxi(0, lightmap.get_width() - DECOUPE_PX))
 	var ly0 := clampi(int(cl.y) - DECOUPE_PX / 2, 0, maxi(0, lightmap.get_height() - DECOUPE_PX))
 	var lcoupe := lightmap.get_region(Rect2i(lx0, ly0, DECOUPE_PX, DECOUPE_PX))

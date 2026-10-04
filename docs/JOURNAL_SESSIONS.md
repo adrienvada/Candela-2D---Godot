@@ -6187,3 +6187,11 @@ OM6), `tools/run_suites.sh` (une ligne par suite ajoutée).
 **Demandé à :** personne n'était joignable par `ListAgents` au lancement (vide). La porteuse du suivi, « Fable 5.1 - CLOUD ISO
 UNRAILED » (cloud), reçoit le delta du chantier ; qui tient ces fichiers sur une autre branche est prévenu par cette ligne — après sa
 prochaine fusion, `grep -n "planche_ombres\|CULL_COUNTER_CLOCKWISE" tools/*.gd *.gd` dit ce qui est arrivé.
+
+**OM4a, le même jour — annoncé ici avant le commit :** `player.gd` touché par insertions — `_reculer_le_flash` (appelé en tête de
+`trigger_shoot_visuals`), les masques de `ground_flash` et de `hit_light`, l'échelle de l'étoile dans `poser_posture`,
+`_accorder_l_ombre_a_la_vie` (appelée dans `_process` juste avant `if dead: return`) et `_poser_la_visibilite_de_l_ombre` (que
+`_couper_l_ombre` appelle désormais). Nouveau, en propre : `tools/test_ombres_regles.gd` ; une ligne dans `tools/run_suites.sh`.
+Après une fusion, `grep -n "_reculer_le_flash\|_accorder_l_ombre_a_la_vie\|_poser_la_visibilite_de_l_ombre" player.gd` doit
+répondre trois fois au moins. La session s'appelle désormais `candela-2d-godot-9b` dans `ListAgents` (un redémarrage du conteneur
+l'a renommée ; même session, même branche) ; `ListAgents` toujours vide.

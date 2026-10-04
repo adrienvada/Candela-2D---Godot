@@ -324,6 +324,9 @@ var flashlight_on: bool = false
 ## socle des gadgets (`GadgetBase.SEUIL_OMBRE_MASQUEE`) : le leurre le lit aussi.
 const PART_SOI_DANS_LA_SUIE := 0.6
 var _ombre_coupee := false
+## OMBRES, O11 — l'ombre que la MORT coupe (étoile et disque de torse), à part de celle que la suie coupe : les deux se cumulent,
+## et l'une ne doit pas rendre ce que l'autre retire. Tenue par `_accorder_l_ombre_a_la_vie`, à chaque image.
+var _ombre_du_mort := false
 ## L'étoile de ce corps, dans SA canvas — Q42 : son capteur ne la voit pas (voir `EtoileDeCorps`). `null` avant `_ready()`.
 var _etoile_de_corps: EtoileDeCorps
 ## L'opacité que le brouillage donne au pointeur et aux révélations, posée en
@@ -1158,9 +1161,30 @@ func _couper_l_ombre(coupee: bool) -> void:
 	if coupee == _ombre_coupee:
 		return
 	_ombre_coupee = coupee
+	_poser_la_visibilite_de_l_ombre()
+
+
+## L'étoile et le disque de torse se voient si NI la suie NI la mort ne les coupent.
+func _poser_la_visibilite_de_l_ombre() -> void:
 	for occ in [etoile(), get_node_or_null("OccluderTorse")]:
 		if occ != null:
-			occ.visible = not coupee
+			occ.visible = not (_ombre_coupee or _ombre_du_mort)
+
+
+## OMBRES, O11 (chantier OMBRES, 2026-10-04) — un corps mort ne fait plus d'ombre et sa lueur s'éteint. `die()` cache ses
+## sprites et coupe sa torche et sa rétrodiffusion, mais laissait l'étoile, le disque de torse et le halo de proximité : l'ombre
+## d'un corps disparu restait au sol — jusqu'au retrait du PNJ en aventure, toute la killcam et l'écran de fin en duel. Lu à CHAQUE
+## image plutôt que posé dans `die()` : la vie revient par plusieurs chemins (`_do_start_round`, les réapparitions de
+## l'entraînement, le retour au menu), et une règle d'état les couvre tous sans qu'aucun ait à s'en souvenir. N'écrit que sur un
+## changement. Le halo : `enabled`, ici seulement — un mort n'éclaire rien, et le modèle de vue du bot, qui lit `enabled`
+## (`perception_bot_noeud.gd`), ne voit plus de lueur à un corps tombé.
+func _accorder_l_ombre_a_la_vie() -> void:
+	if dead == _ombre_du_mort:
+		return
+	_ombre_du_mort = dead
+	_poser_la_visibilite_de_l_ombre()
+	if ambient_light != null:
+		ambient_light.enabled = not dead
 
 
 ## L'occluder de l'étoile de ce corps : sa canvas (`EtoileDeCorps`) une fois `_ready()` passé, le nœud de la scène avant.
@@ -1277,6 +1301,8 @@ func _process(delta):
 		if AudioManager.torche_comptee(player_id, _index_joueur_local()):
 			AudioManager.set_player_torch(player_id, flashlight_on)
 
+	# OMBRES, O11 — AVANT la sortie des morts : c'est elle qui empêchait toute règle d'ombre de voir la mort.
+	_accorder_l_ombre_a_la_vie()
 	if dead: return
 
 	# V1.5 — pouls haptique sous le seuil de santé basse, calé sur le ressenti
@@ -1595,6 +1621,12 @@ func poser_posture(voulue: bool) -> void:
 	for poly in [visual, visual_dim, visual_reveal, visual_enemy, visual_reveal_enemy]:
 		if poly != null:
 			poly.scale = echelle
+	# OMBRES, O11 — l'étoile suit la silhouette : accroupi, le sprite passe à ×0,8 et l'ombre restait celle du corps debout. Posé
+	# sur le nœud de l'occluder, que `EtoileDeCorps` ne remet pas à l'échelle (son `RemoteTransform2D` ne recopie que la position
+	# et la rotation) ; la forme, elle, reste celle de la silhouette (`_accorder_occluder_a_la_silhouette` ne touche pas l'échelle).
+	var occ_etoile := etoile()
+	if occ_etoile != null:
+		occ_etoile.scale = echelle
 	# MB3a — « la torche d'un accroupi bute sur le mur » : toutes les lumières
 	# qu'il porte passent sous la hauteur d'un mur bas et en lisent les occluders
 	# pleins. Debout, elles passent par-dessus. Un seul bit, posé ou retiré.
@@ -1680,6 +1712,21 @@ func _rapprocher_la_lampe() -> void:
 		flashlight.position = lampe
 	if not is_equal_approx(body_light.position.x, retro):
 		body_light.position.x = retro
+
+
+## OMBRES, O9 (chantier OMBRES, 2026-10-04) — le flash de bouche, comme la lampe (`_rapprocher_la_lampe`) : un corps collé à un mur
+## posait son flash à 28 px devant lui, DANS le mur — et une lumière posée dans un occluder ne donne « ni ombre ni lumière mais du
+## hasard » (`charte.gd`, le disque de torse) : des ombres au hasard à chaque tir. Le flash recule sur le même rayon, à
+## `RETRAIT_LAMPE` du mur, jamais à moins de 4 px du centre. Un rayon par tir, au tir seulement. Le `Muzzle` (le canon : balles,
+## fumée, son) ne bouge pas : seule la LUMIÈRE recule — le point où le modèle de vue du bot lit l'éclair (`perception_bot_noeud`)
+## la suit, puisqu'il lit la position de cette lumière.
+func _reculer_le_flash() -> void:
+	var place := FLASH_AVANCEE
+	if is_inside_tree():
+		var d := _mur_devant(get_world_2d().direct_space_state, global_transform.x.normalized(), FLASH_AVANCEE + RETRAIT_LAMPE)
+		if d >= 0.0:
+			place = clampf(d - RETRAIT_LAMPE, 4.0, FLASH_AVANCEE)
+	muzzle_flash.position = Vector2(place, 0.0)
 
 
 ## La distance au premier mur dans `direction` (unitaire, monde), jusqu'à `longueur` ; −1 sans mur.
@@ -2611,6 +2658,7 @@ func rumble_death() -> void:
 
 func trigger_shoot_visuals():
 	add_camera_shake(15.0, 15.0)
+	_reculer_le_flash()
 	muzzle_flash.enabled = true
 	var tw = create_tween()
 	var flash_intensity = current_weapon.muzzle_flash_intensity if current_weapon else 1.0
@@ -2723,7 +2771,13 @@ func trigger_shoot_visuals():
 	LightTextures.poser(ground_flash, LightTextures.ECLAT, ECHO_AU_SOL_EMPREINTE)
 	ground_flash.color = Charte.AMBRE
 	ground_flash.energy = ECHO_AU_SOL_ENERGIE
-	ground_flash.shadow_enabled = false
+	# OMBRES, O10 (2026-10-04) — il était « sans ombre » : collé à un mur, l'écho éclairait le sol DE L'AUTRE CÔTÉ, sur 65 px, et
+	# disait à travers la pierre qu'on venait de tirer. Les murs le coupent désormais, par le masque des lumières neutres
+	# (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`) : il n'éclaire toujours que le décor (portée 1), aucun corps n'y fait
+	# d'ombre. Une ombre de 0,12 s par tir.
+	ground_flash.shadow_enabled = true
+	ground_flash.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	ground_flash.shadow_item_cull_mask = CanauxLumiere.masque_ombre_neutre_pour_les_corps()
 	ground_flash.range_item_cull_mask = 1
 	add_child(ground_flash)
 	var tw_g := create_tween()
@@ -2751,6 +2805,9 @@ const LENTILLE_LAMPE := Vector2(
 
 ## La rétrodiffusion : droit devant, au bord du corps (sa place d'avant L2, inchangée).
 const RETRO_AVANCEE := 18.0
+
+## Le flash de bouche : droit devant, au bout du canon (`MuzzleFlash` dans `player.tscn`, le même point que `Muzzle`).
+const FLASH_AVANCEE := 28.0
 
 ## Ce qu'on laisse entre la lampe et le mur qui l'arrête, en unités de monde.
 const RETRAIT_LAMPE := 3.0
@@ -2916,8 +2973,13 @@ func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 	# Curseur MONDE « Lumière d'impact » (plancher 0,4 en classé).
 	hit_light.energy = 2.0 * EffectPolicy.curseur("lumiere_impact")
 	hit_light.shadow_enabled = true
-	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
-	hit_light.shadow_item_cull_mask = 1
+	# OMBRES, O10 (2026-10-04) — le masque des lumières NEUTRES (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`), et plus `1`
+	# seul. Les murs l'arrêtaient au sol, mais sa portée (`1 | 4`) touche aussi le capteur de SOI de l'autre joueur, dont le masque
+	# (`masque_de_soi`) ne croisait pas `1` : un corps derrière un mur, à moins de 200 px d'un blessé, rougissait dans SA vue à
+	# travers la pierre (« `shadow_item_cull_mask` filtre AUSSI les sprites qui reçoivent l'ombre », Pièges connus). Les bits
+	# récepteurs du masque neutre (128, 256) lui font recevoir les murs ; aucune couche de corps n'y est — le blessé ne s'ombre
+	# pas lui-même, le patron du plafonnier (« Une lumière neutre que les murs doivent couper pour TOUS les corps »).
+	hit_light.shadow_item_cull_mask = CanauxLumiere.masque_ombre_neutre_pour_les_corps()
 	# Main blood light affects walls (1) and other stuff (4), but NOT players (2)
 	hit_light.range_item_cull_mask = 1 | 4
 	add_child(hit_light)

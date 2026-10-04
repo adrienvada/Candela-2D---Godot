@@ -232,6 +232,11 @@ SUITES+=(test_enveloppes_sons)
 # ne comptent pas. Posé ici, comme la ligne du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
 SUITES+=(test_ombre_propre)
 
+# OMBRES, OM4 (2026-10-04) — les règles d'ombre « sans décision » : le flash de bouche qui recule devant un mur, l'écho au sol et la
+# lumière de coup au masque des lumières neutres, l'étoile à la posture, l'ombre et la lueur d'un corps mort. Posé ici, comme les
+# lignes du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
+SUITES+=(test_ombres_regles)
+
 # Le point de braise de la fusée et l'Usine (0.8.0, 2026-09-29 ; Adrien : « Le point rouge : oui, dans la 0.8.0 » et « Oui corrige
 # l'usine ») : la règle de luminance du point — aussi lumineux que sa lumière, en gardant le rouge —, à chaque pas des vingt secondes de
 # la fusée, sans fenêtre ; et la symétrie de l'Usine, avec l'ancienne comme témoin sur lequel la garde rougit. Posé ici, comme les

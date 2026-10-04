@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (OMBRES : OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-04 (OMBRES : OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3270,6 +3270,15 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Hors de la carte, la physique dit « libre » (2026-10-04)
+
+Chantier OMBRES, OM4 (`planche_ombres._mur_mince_vu`). Le banc cherchait un mur d'une seule case avec du sol des deux côtés : il
+a pris le mur d'ENCEINTE. Celui qui ferme la carte ne fait qu'une case (la grille déborde d'une case, `map_geometry.gd`), et
+au-delà il n'y a plus rien — ni sol, ni « vide solide », ni collision : une forme posée là ne touche rien, un rayon tiré de là
+ne bute que sur le dos de l'enceinte. `_place_libre`, `photographe._sol_libre` et tout « est-ce libre ? » posé à la physique
+répondent OUI hors de la carte. Un outil qui cherche du sol vérifie aussi qu'il est DEDANS : un rayon dans chacune des quatre
+directions bute sur un mur (`planche_ombres._dans_la_carte`).
 
 ### Mesurer l'ombre d'un corps dans une salle d'aventure : un plafonnier l'éclaire par-dessus, et un rayon vers un PNJ touche le PNJ (2026-10-04)
 
@@ -33896,7 +33905,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | la moitié « culling » peut se préparer ; **ne se livre pas sans Q81** |
 | **OM2** | L'ombre a la forme du corps voxel | **Q82**, après OM1 | — |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | — |
-| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | **Q86, Q87** | — |
+| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | **Q86, Q87** | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
 | **OM5** | Les plafonniers | **Q88** | — |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
 | **OM7** | Plus tard : l'ombre des corps calculée dans le shader du sol | à ouvrir après OM1 à OM3 | — |
@@ -34064,7 +34073,8 @@ hauteur bornée sur les faces de murs. Réglerait O5, O7 et O8 d'un coup.
 ### OM0 — FAITE le 2026-10-04 : le banc des ombres
 
 **Ce qui existe.**
-- `tools/planche_ombres.gd` + `.tscn` : trente plans en sept familles (`--liste` les imprime) — `etoile` (O1 : la torche côté
+- `tools/planche_ombres.gd` + `.tscn` : trente plans en sept familles à la livraison d'OM0 (trente-trois en huit depuis OM4a,
+  qui ajoute `regles`) (`--liste` les imprime) — `etoile` (O1 : la torche côté
   caméra, de dos, de profil, × le PNJ face à la lampe ou de profil, plus la courte portée de 70 px), `classes` (les dix
   étoiles, arme vers la lampe), `plafonnier` (O3 : pâte D, la même image en pâte brute posée à l'exécution, plafonnier éteint),
   `mur` (O5), `scintillement` (six images consécutives : scène tenue, respiration, recul de tir ; pâte D puis brute),
@@ -34131,6 +34141,76 @@ joue pas une fusillade (O12), ni le duel en ligne.
 
 **Signalé, pas corrigé.** `photographe._mur_entre` et `_sol_libre` n'excluent que J1 et J2 : un outil qui s'en sert près d'un PNJ
 le prend pour un mur (« Pièges connus », 2026-10-04).
+
+### OM4a — FAITE le 2026-10-04 : les règles d'ombre sans décision (flash, écho, lumière de coup, posture, mort)
+
+**Ce qui change** (`player.gd` ; la liste de l'audit, O9 à O11, à laquelle aucune question d'Adrien ne s'attache).
+- **O9 — le flash de bouche recule devant un mur, comme la lampe** (`_reculer_le_flash`, appelé par `trigger_shoot_visuals`) :
+  le rayon de `_rapprocher_la_lampe`, le flash à `RETRAIT_LAMPE` (3 px) du mur, jamais à moins de 4 px du centre ; loin des
+  murs, 28 px comme avant. Collé à un mur, il brûlait DANS le mur, et une lumière posée dans un occulteur n'éclaire rien de
+  juste. **Seule la LUMIÈRE recule** : le `Muzzle` (balles, fumée, son, l'éclat dessiné) ne bouge pas, et l'éblouissement part
+  toujours du centre du tireur (`GameState`, `Eblouissement.pic_de_flash`). **Ce que le bot en voit change** : son modèle de
+  vue lit l'éclair à la position de cette lumière (`perception_bot_noeud._disque`) — désormais là où le moteur le dessine, hors
+  du mur. Comme celui de la lampe, le rayon s'arrête aussi sur un corps collé (les corps vivent sur la couche des murs).
+- **O10 — l'écho au sol a des ombres** (`ground_flash`) : le masque des lumières neutres
+  (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`), filtre `NONE`, 0,12 s par tir. Il n'éclaire toujours que le décor ; les
+  murs le coupent, aucun corps ne l'ombre.
+- **O10 — la lumière de coup** (`hit_light`) : le masque des lumières neutres au lieu de `1`. Sa portée (`1 | 4`) touche le
+  capteur de SOI des deux joueurs, dont le masque ne croisait pas `1` : un corps rougissait dans sa propre vue à travers un mur
+  (« `shadow_item_cull_mask` filtre AUSSI les sprites… », Pièges connus). Le patron du plafonnier : les bits récepteurs (128,
+  256) lui font recevoir les murs, aucune couche de corps n'y est — le blessé ne s'ombre pas lui-même.
+- **O11 — l'étoile suit la posture** : accroupi, ×0,8 comme la silhouette, posé dans `poser_posture` sur le nœud de
+  l'occulteur (sa canvas ne recopie que la position et la rotation du corps) ; un changement d'arme garde l'échelle.
+- **O11 — un corps mort ne fait plus d'ombre, et sa lueur s'éteint** : `_accorder_l_ombre_a_la_vie`, lue à CHAQUE image avant
+  la sortie des morts de `_process` — la vie revient par plusieurs chemins (`_do_start_round`, les réapparitions de
+  l'entraînement, le retour au menu), une règle d'état les couvre tous sans qu'aucun ait à s'en souvenir. L'étoile et le disque
+  de torse cachés (la suie et la mort se cumulent : `_poser_la_visibilite_de_l_ombre`), le halo `enabled = false`. **`enabled`
+  ici, et seulement ici** : OM6 interdit d'y toucher pour alléger, parce que le modèle de vue du bot le lit ; pour un mort c'est
+  la vérité, et c'est sans effet sur le bot — il ne lit que SON halo, et ne perçoit plus rien une fois mort (`_corps_vivant`).
+  La vue iso le lit aussi (`_accorder_le_halo_soi`) : un mort n'y luit plus au sol.
+
+**Où le défaut de la mort existait vraiment — constaté au banc.** En AVENTURE, rien ne change à l'image :
+`AventurePartie._ranger_les_morts` cache le PNJ abattu (`hide()`), et la canvas de son étoile part avec lui — avant OM4a déjà,
+son étoile n'était plus rendue (`is_visible_in_tree`) ; le plan « mort » du banc l'a montré, puis a été retiré du catalogue. En
+DUEL et à l'entraînement, rien ne cache le corps : son étoile, son disque de torse et sa lueur restaient au sol toute la fin de
+manche. La garde lit donc ce qui est RENDU, pas le seul drapeau du nœud.
+
+**Ce que le banc montre** (famille `regles` de `planche_ombres`, trois plans ; planche et mesures : `docs/iso/ombres/om4/`).
+- **Accroupi** (salle 0.1, torche côté caméra, 160 px, torche seule) : l'ombre derrière le corps passe de **33 à 28 px** de
+  large ; debout, 33.
+- **Tir au mur** (salle 0.9, J1 collé à la colonne d'une case, le flash et l'écho seuls allumés) : le flash passe de 28 px —
+  dans le mur — à **17 px** ; le sol à son pied, de **0,056 à 0,137** ; le plus clair du sol AU-DELÀ du mur, de **0,133 à
+  0,000** ; le témoin, le sol autour du tireur, ne bouge pas (0,039).
+
+**Les gardes.** `tools/test_ombres_regles.gd` (27 vérifications, au lot), sur les objets vivants d'une vraie manche scindée :
+la posture se pilote par l'ENTRÉE (un pantin dont `is_crouch_pressed()` répond vrai) — un `poser_posture(true)` direct est défait
+au pas suivant par la simulation. `test_banc` connaît les nouveaux appuis du banc (`trigger_shoot_visuals`, `shake_intensity`,
+`muzzle_flash`, `accroupi`, `is_crouch_pressed`).
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).** L'appel de `_reculer_le_flash` retiré :
+deux rouges (le flash à 28 px, et du mauvais côté du mur) ; l'écho sans ombre : un ; la lumière de coup au masque `1` : trois
+(le masque, les deux capteurs de soi) ; la règle de la mort retirée de `_process` : deux (l'étoile et le disque toujours rendus,
+la lueur allumée) ; l'échelle de l'étoile retirée : trois ; l'appui `is_crouch_pressed` du banc : un, dans `test_banc`.
+
+**Relancé à part avant la suite entière, vert** : `test_ombre_propre`, `test_halo_proximite`, `test_lumieres`, `test_accroupi`,
+`test_murs_bas`, `test_eblouissement`, `test_plafonniers`, `test_bot_perception`, `test_bot_combat`, `test_bot_equipement`,
+`test_aventure_tirs_pnj`, `test_banc_bot`, `test_iso_corps`, `test_iso_killcam`, `test_tir_et_reserves` (`--2d`),
+`test_corps_detail`, `test_rejeu`, `test_voxel_corps`, `test_classes`.
+
+**Version.** Ce lot change ce qu'un joueur voit de l'autre (l'ombre d'un accroupi, celle d'un mort, le flash au mur) : il part
+dans une **mineure** (la règle de Q15 et Q42). Rien ne passe sur le fil : `Protocol.VERSION` ne bouge pas, chaque machine
+calcule le recul du flash depuis ce qu'elle sait déjà (la position, la visée, les murs).
+
+**Non prouvé.** Rien sous Metal. La matrice de difficulté du bot n'a pas été rejouée (`banc_bot_difficulte`) : seule change la
+place de l'éclair que le bot voit, et seulement pour un tir à moins de 31 px d'un mur — `test_banc_bot`, sa forme courte, est
+vert. La fuite de l'écho n'a été mesurée qu'au-delà d'un mur d'une case, le plus mince qui existe.
+
+**Signalé, pas instruit.** Salle 0.9, autour du PNJ 1 (case 12,11), sous la torche SEULE de J1 : la lightmap montre des aplats
+noirs aux bords alignés sur l'ÉCRAN, pas sur la carte — une barre en travers du cône juste derrière le PNJ, des bords verticaux
+de part et d'autre. Ni un mur, ni un corps (la barre reste quand le PNJ est caché), ni les occulteurs cachés de l'arène par
+défaut (`StaticGeometry`, retirés le temps d'une image : elle reste), ni un nœud dessiné là (l'inventaire de `vp1` à 220 px n'a
+rien). Le banc a posé ses plans de posture dans la salle 0.1, où ses sondes sont propres. Visible en jeu, toutes lumières
+allumées ? Non vérifié.
 
 ### Ne pas reproposer
 
