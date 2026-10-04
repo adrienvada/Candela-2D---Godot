@@ -197,7 +197,7 @@ export CANDELA_PORT
 
 SUITES=(test_liaisons test_icones_editeur
 	test_map_codec test_map_geometry test_mur_led test_arena_build test_editor_tools
-        test_classes test_match_format test_pause_menu test_menu_hub test_comic_panel test_audio_settings
+        test_classes test_match_format test_pause_menu test_menu_hub test_menu_solo test_comic_panel test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard test_regard_hors_menu
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
@@ -328,7 +328,11 @@ SUITES+=(test_banc_bot)
 # plafonniers, joueur, PNJ `PNJ_<i>` pilotés par des bots, carton), la perception d'un PNJ ne vise que le joueur, les PNJ ne se
 # blessent pas, la vue iso les montre TOUS (et le duel est rendu comme avant), tous les PNJ morts enchaînent la salle suivante, mourir
 # recommence la salle, finir le boss débloque la classe et l'écrit, quitter rend l'entraînement et l'écran scindé intacts, l'écran.
-SUITES+=(test_aventure_format test_aventure_partie)
+# `test_aventure_restes` (2026-10-04, à pas fixe) : le bandeau « FATAL — <arme> » et sa marge sont au JcJ, et rien d'une mort ne
+# reste d'une salle à l'autre — un corps libéré avant la fin de son fondu laissait ses étiquettes dans l'arène.
+# `test_aventure_hud` (2026-10-04, à pas fixe) : les consignes de l'initiation portent les touches de l'InputMap et ne s'allument que
+# sur le geste FAIT ; le compteur suit chaque abattu ; le tampon de la salle réussie claque, le record ne tombe que s'il bat un temps.
+SUITES+=(test_aventure_format test_aventure_partie test_aventure_restes test_aventure_hud)
 
 # Chantier SOLO, S9 (2026-10-02) : le bot S'ÉQUIPE — sa torche (éteinte tant qu'il n'a rien perçu, allumée pour fouiller, éteinte pour
 # s'approcher), sa prudence (changer de place après un tir, s'accroupir pour approcher un son), sa fusée (vers une zone ENTENDUE, jamais
@@ -563,7 +567,7 @@ for t in "${SUITES[@]}"; do
     # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
     # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
     test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

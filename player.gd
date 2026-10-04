@@ -1551,19 +1551,18 @@ func _consume_prediction_error(delta: float) -> void:
 ## désormais qu'un enjambement COMMENCÉ par le geste (`enjambe` de l'image
 ## d'avant) ; seul un disque déjà dans la pierre (`RAYON_DEDANS`, un saut de
 ## correction réseau) continue sans lui. Aucun bit de plus sur le fil.
-func _regler_enjambement(input_dir: Vector2) -> void:
+func _regler_enjambement(_input_dir: Vector2) -> void:
 	# L'ENCOMBREMENT (28, le canon) et non le rayon de touche (18) : c'est la
 	# collision qu'on coupe, donc la forme de la collision qui décide.
 	var murs := MursBas.murs_de_la_manche
 	var dessus := MursBas.chevauche_cercle(global_position, MursBas.RAYON_ENCOMBREMENT, murs)
-	var pousse := false
-	if input_provider.is_climb_pressed() and input_dir.length() > 0.1:
-		var devant := global_position + input_dir.normalized() * 4.0
-		# VERS le muret : le geste tenu en s'en éloignant n'ouvre rien.
-		pousse = MursBas.chevauche_cercle(devant, MursBas.RAYON_ENCOMBREMENT, murs) \
-			and MursBas.distance_aux_murs(devant, murs) < MursBas.distance_aux_murs(global_position, murs)
+	# ⚠️ **Le GESTE d'enjamber est retiré** (Adrien, 2026-10-04 : « Supprime le fait qu'on puisse enjamber les murs c'est nul ça
+	# sert à rien ») : plus aucune poussée volontaire n'ouvre un muret. Reste le seul cas où couper la collision n'est pas un choix
+	# — un disque déjà DANS la pierre (`RAYON_DEDANS` : un saut de correction réseau, une apparition) doit pouvoir en sortir, sans
+	# quoi il y resterait coincé. `input_dir` et `is_climb_pressed()` ne servent plus ; le fil garde son bit (toujours faux), pour
+	# que `Protocol.VERSION` ne bouge pas.
 	var dedans := MursBas.chevauche_cercle(global_position, MursBas.RAYON_DEDANS, murs)
-	enjambe = pousse or dedans or (enjambe and dessus)
+	enjambe = dedans or (enjambe and dessus)
 	if enjambe:
 		collision_mask &= ~MapGeometry.LOW_WALL_LAYER
 	else:
@@ -1571,7 +1570,11 @@ func _regler_enjambement(input_dir: Vector2) -> void:
 
 ## MB3b — « en faisant du bruit » : un frôlement fort à chaque montée sur un muret.
 func _guetter_enjambement() -> void:
-	var dessus := MursBas.chevauche_cercle(global_position, MursBas.RAYON_ENCOMBREMENT,
+	# ⚠️ Seulement pendant une traversée (`enjambe`) : le cercle d'encombrement (28 px) chevauche un muret dès qu'on s'y adosse, canon
+	# tourné ailleurs. Tant que le geste existait, ce frôlement précédait presque toujours une montée ; depuis son retrait
+	# (2026-10-04), il aurait joué « on enjambe » à chaque fois qu'on se colle à un muret pour s'y cacher — relevé par
+	# `test_accroupi`. La traversée ne reste que pour sortir d'un muret où l'on se trouve déjà.
+	var dessus := enjambe and MursBas.chevauche_cercle(global_position, MursBas.RAYON_ENCOMBREMENT,
 		MursBas.murs_de_la_manche)
 	if dessus and not _sur_muret_avant:
 		enjambements += 1
@@ -2979,7 +2982,9 @@ func die(killer: Node2D):
 	flash_rect.material = mat
 	ui_layer.add_child(flash_rect)
 	
-	var tw = create_tween()
+	# Le tween vit avec le calque, pas avec le corps : un PNJ retiré avant la fin du fondu (salle suivante) laissait sinon le calque
+	# en place, comme le bandeau plus bas.
+	var tw = ui_layer.create_tween()
 	# DA4.13 — EXTINCTION, à 0,012 de l'`expo out` d'origine.
 	Charte.animer_via(tw,
 		func(val): mat.set_shader_parameter("flash_intensity", val),
@@ -3029,7 +3034,12 @@ func die(killer: Node2D):
 	# d'avant, mais chacune dans SA vue, donc le défaut d'Adrien ne peut pas
 	# revenir par cette porte-là.
 	var aucune: bool = vues[0].size == Vector2.ZERO and vues[1].size == Vector2.ZERO
+	# Le bandeau et sa marge sont des signes du JcJ, et de lui seul (Adrien, 2026-10-04 : « il ne faut pas jouer le carton rouge
+	# "pistolet" quand on est contre des PNJ. Ces mécaniques sont propres au JcJ »). Voir `kill_entre_joueurs()`.
+	var jcj := kill_entre_joueurs(killer)
 	for idx in 2:
+		if not jcj:
+			break
 		var vue: Rect2 = vues[idx]
 		if vue.size == Vector2.ZERO and not aucune:
 			continue
@@ -3055,6 +3065,20 @@ func die(killer: Node2D):
 		killer.rumble_kill()
 
 	get_tree().call_group("game_state", "player_died", player_id, killer.player_id if killer else -1)
+
+## Ce kill est-il un kill de JcJ — un joueur abattu par un autre joueur ? Le bandeau « FATAL — <arme> » et la marge du tir fatal
+## n'ont de sens que là : ils signent un duel et nourrissent le « j'y étais presque » d'une revanche. Contre la machine, ils
+## mentent (Adrien, 2026-10-04 : « ces mécaniques sont propres au JcJ »).
+##
+## Faux dès qu'un des deux corps est un PNJ de l'aventure (`est_pnj`), et partout où `game_state` est en **entraînement** — le
+## mode des deux usages solo, l'entraînement contre le bot et l'aventure, où rien ne se joue entre deux personnes. Sans
+## `game_state` (bancs isolés du bandeau), le duel est la règle : c'est le cas que ces bancs mesurent.
+func kill_entre_joueurs(killer: Node) -> bool:
+	if est_pnj or (killer != null and killer.get("est_pnj") == true):
+		return false
+	var gs := get_tree().get_first_node_in_group("game_state") if is_inside_tree() else null
+	return gs == null or gs.get("training_mode") != true
+
 
 ## BF2 — le rectangle du MONDE que montre la vue `idx`, ou un rectangle vide
 ## quand personne ne la regarde.
@@ -3234,7 +3258,10 @@ func _poser_bandeau_fatal(texte: String, settings: LabelSettings,
 
 	get_parent().add_child(lbl)
 
-	var txt_tw = create_tween().set_parallel(true)
+	# ⚠️ **Le tween appartient au BANDEAU, pas au corps qui meurt** (2026-10-04). Lié au mort par `create_tween()`, il mourait avec
+	# lui : le bandeau est posé chez le PARENT, et un corps libéré avant la fin du fondu — un PNJ de l'aventure, retiré au passage à
+	# la salle suivante — laissait « FATAL — PISTOLET » et sa marge imprimés dans l'arène pour toujours, sans aucune erreur.
+	var txt_tw = lbl.create_tween().set_parallel(true)
 	lbl.scale = Vector2.ZERO
 	# Le pivot au MILIEU : un pivot fixe à 100 px faisait grandir le bandeau
 	# depuis un point situé quelque part dans le mot, donc toujours vers la
@@ -3280,7 +3307,8 @@ func _poser_bandeau_fatal(texte: String, settings: LabelSettings,
 	# main. C'est celui qu'on oublie.
 	sub.visibility_layer = couche
 	get_parent().add_child(sub)
-	var sub_tw = create_tween().set_parallel(true)
+	# Même règle que le bandeau : le tween vit avec l'étiquette, pas avec le corps.
+	var sub_tw = sub.create_tween().set_parallel(true)
 	sub.modulate.a = 0.0
 	sub_tw.tween_property(sub, "modulate:a", 1.0, 0.2).set_delay(0.25)
 	Charte.animer(sub_tw, sub, "position", sub.position,

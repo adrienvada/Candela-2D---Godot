@@ -88,6 +88,7 @@ func _run() -> void:
 	await _le_lissage()
 	await _l_erreur_qui_se_resserre()
 	await _la_discipline_de_tir()
+	await _la_mise_en_joue()
 	await _l_engagement()
 	await _la_recharge()
 	await _l_honnetete_des_corps_factices()
@@ -665,6 +666,57 @@ func _la_discipline_de_tir() -> void:
 # ---------------------------------------------------------------------------
 # L'ENGAGEMENT (S9b) : ce que l'arme demande
 # ---------------------------------------------------------------------------
+
+## La mise en joue (2026-10-04, Adrien : « ils voient, ils visent, puis ils tirent ») : un bot qui a dû TOURNER pour s'aligner tient
+## `mise_en_joue_s` aligné avant son premier coup ; aligné d'emblée, il tire sans l'attendre ; à 0, rien ne change.
+func _la_mise_en_joue() -> void:
+	print("\n[La mise en joue : il voit, il vise, puis il tire]")
+	var lent := Profil.pnj_nomme("immobile_voit_lent")
+	_check("un PNJ du catalogue a une mise en joue (LENT : %.2f s)" % lent.mise_en_joue_s, lent.mise_en_joue_s > 0.0)
+	_check("… plus longue au palier TRÈS LENT qu'au DIFFICILE",
+		Profil.pnj_nomme("immobile_voit_tres_lent").mise_en_joue_s > Profil.pnj_nomme("immobile_voit_difficile").mise_en_joue_s)
+	_check("le bot de l'entraînement n'en a pas (ses paliers sont réglés au banc)",
+		Profil.pour_adversaire_qui_tire(Profil.Difficulte.NORMAL).mise_en_joue_s == 0.0
+		and Profil.pour_adversaire_qui_tire(Profil.Difficulte.DIFFICILE).mise_en_joue_s == 0.0)
+	_check("les boss non plus (réglés au banc à 55 %)", Profil.boss().mise_en_joue_s == 0.0 and Profil.boss("fusil").mise_en_joue_s == 0.0)
+
+	# La cible DERRIÈRE le bot : un demi-tour avant de pouvoir tirer. On mesure l'écart entre l'alignement et le premier coup.
+	var ecarts := {}
+	for attente in [0.0, 0.5]:
+		var profil := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+			"tolerance_tir_deg": 6.0, "delai_reaction": 0.1, "mise_en_joue_s": attente})
+		var r := _rig(profil, c(20, 15), c(15, 15), 7, Vector2.RIGHT)
+		await _derouler(r, 6)
+		r.cible.allumer_la_torche(Vector2.RIGHT)
+		var aligne := -1.0
+		for _i in 240:
+			await physics_frame
+			r.suivre()
+			var vrai := (r.cible.global_position - r.tireur.global_position).angle()
+			if aligne < 0.0 and absf(angle_difference(r.tireur.rotation, vrai)) < deg_to_rad(6.0):
+				aligne = r.tireur.t
+			if not r.tireur.tirs.is_empty():
+				break
+		var premier: float = float(r.tireur.tirs[0]["t"]) if not r.tireur.tirs.is_empty() else -1.0
+		ecarts[attente] = premier - aligne if premier >= 0.0 and aligne >= 0.0 else -1.0
+		r.liberer()
+	_check("sans mise en joue, le coup part dès l'alignement (%.2f s après)" % ecarts[0.0], ecarts[0.0] >= 0.0 and ecarts[0.0] <= 0.1,
+		"%.3f s" % ecarts[0.0])
+	_check("avec 0,5 s de mise en joue, après un demi-tour : le coup attend (%.2f s après l'alignement)" % ecarts[0.5],
+		ecarts[0.5] >= 0.5 - 2.0 * PAS and ecarts[0.5] <= 0.5 + 0.15, "%.3f s" % ecarts[0.5])
+
+	# La cible DEVANT le bot, déjà alignée : la mise en joue ne s'ajoute pas — seul le délai de réaction compte.
+	var profil_face := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+		"tolerance_tir_deg": 6.0, "delai_reaction": 0.1, "mise_en_joue_s": 0.5})
+	var rf := _rig(profil_face, c(15, 15), c(20, 15), 7, Vector2.RIGHT)
+	await _derouler(rf, 6)
+	rf.cible.allumer_la_torche(Vector2.LEFT)
+	var t0: float = rf.tireur.t
+	await _derouler(rf, 120, func() -> bool: return not rf.tireur.tirs.is_empty())
+	var delai: float = float(rf.tireur.tirs[0]["t"]) - t0 if not rf.tireur.tirs.is_empty() else -1.0
+	_check("déjà aligné, il tire sans mise en joue (%.2f s après l'allumage)" % delai, delai >= 0.0 and delai < 0.4, "%.3f s" % delai)
+	rf.liberer()
+
 
 func _l_engagement() -> void:
 	print("\n[L'engagement : le bot dont l'arme ne porte pas jusque-là s'approche, et ne tire pas hors de sa portée]")

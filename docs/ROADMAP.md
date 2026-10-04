@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-03 (S8 : les chapitres 1 à 9 écrits — lot 1 : la clé « equipe » et les chapitres 1 à 3 ; chapitres 4 à 6 : zones qui écoutent, groupes, chasseurs ; chapitres 7 à 9 : chasseurs vifs, grandes salles, élite)
+> Dernière mise à jour : 2026-10-04 (SOLO, S10 : l'écran Solo en tête du menu ; le bandeau « FATAL — <arme> » réservé au JcJ et plus rien d'une mort ne reste d'une salle à l'autre ; les consignes de touches de l'initiation, le compteur et le tampon de salle réussie ; l'enjambement des murets retiré ; la mise en joue des PNJ)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,11 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Un écran « Solo » en tête du menu principal ; l'aventure et l'entraînement y descendent** (2026-10-03, Adrien, à la session « candela-2d-godot-47 » : « Il faut y avoir un bouton tout en haut du menu principal redirigeant vers "Solo" ») | Le mode solo EST l'aventure plus l'entraînement contre le bot : les laisser aussi à l'accueil en ferait deux chemins pour le même endroit. Les retours de match redescendent le chemin entier (`UI.redescendre_vers`, table `PARENT_DE_L_ECRAN`) : un seul `push()` laissait l'entraînement sous l'accueil, et RETOUR sautait Solo. |
+| **Le bandeau « FATAL — <arme> » et la marge du tir fatal sont au JcJ, et à lui seul** (2026-10-04, Adrien, même session : « il ne faut pas jouer le carton rouge "pistolet" quand on est contre des PNJ. Ces mécaniques sont propres au JcJ ») | Ils signent un duel et nourrissent la revanche ; contre la machine ils n'ont rien à dire. `Player.kill_entre_joueurs()` : faux dès qu'un des deux corps est un PNJ, et partout où `GameState.training_mode` est vrai (entraînement contre le bot, aventure). Voir aussi le piège « Un tween lié au corps qui meurt ». |
+| **L'aventure parle pendant le jeu : les touches de l'initiation, un compteur de silhouettes, un tampon de salle réussie avec le temps, l'essai et le record** (2026-10-04, Adrien, même session : « il faut ensuite que chaque niveau soit hyper gratifiant, que le jeu nous indique sur quelle touche appuyer à chaque étape du didacticiel pour nous introduire les mécaniques ») | Lève la règle de S6 « aucun texte pendant le jeu » pour ce qu'Adrien demande, et rien d'autre. Une consigne s'allume sur le geste FAIT (le corps a bougé, sa torche s'est allumée), jamais sur un appui dans le vide ; les touches se lisent dans l'`InputMap`. Le compteur répond à chaque abattu maintenant que le bandeau du JcJ se tait en solo. Le record (meilleur temps par salle, `user://solo.cfg`) donne une raison de rejouer une salle. Détail : « S10 ». |
+| **L'enjambement des murets est RETIRÉ du jeu, duel compris** (2026-10-04, Adrien, même session : « Supprime le fait qu'on puisse enjamber les murs c'est nul ça sert à rien ») | Plus de touche (`p1_enjamber` / `p2_enjamber` disparaissent, et leur ligne des contrôles) ; le corps ignore le geste : un muret arrête le corps comme un mur, balles et lumière passent toujours par-dessus. Reste le seul cas qui n'est pas un choix — un corps déjà DANS la pierre (correction réseau, apparition) en sort. **Le fil garde son bit** (toujours faux) : `Protocol.VERSION` ne bouge pas. Un hôte 0.8.2 laisse encore enjamber ; un client neuf n'a plus de touche pour le faire. Le code de MB3b qui LIT `enjambe` (vues, voxels, son) reste en place, inerte hors du cas gardé. |
+| **Les PNJ se mettent en joue : s'ils ont dû tourner, ils tiennent l'alignement un moment avant de tirer** (2026-10-04, Adrien, même session : « il faut qu'il y ait un délai s'ils ont besoin de tourner leur orientation pour tirer : ils voient, ils visent, puis ils tirent. Sinon c'est trop dur ils vont trop vite ») | `ProfilBot.mise_en_joue_s`, posée sur les PNJ du catalogue seulement (0,9 s TRÈS LENT → 0,25 s DIFFICILE, chiffres de départ) : le bot de l'entraînement et les boss sont réglés au banc (80 / 55 / 30 %, boss 55 %) et la demande vise les PNJ. Un PNJ qui fait déjà face tire sans l'attendre. Les boss restent une question (SOLO-Q9). |
 | **La 0.8.2 part : le mode solo — bot honnête, entraînement à trois crans, aventure de dix chapitres** (2026-10-03, Adrien, à la session « candela-2d-godot-47 » : « Fusionne. Version 8.2 ») | `config/version` passe de 0.8.1 à 0.8.2 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19) — `tools/verifier_publication.sh v0.8.2` : « le fil n'a pas bougé : l'ancienne version peut continuer à jouer en ligne ». Le bot, l'entraînement et l'aventure ne vivent que hors ligne. Chemin de publication : la PR #4 (`ccr-50a162ad-e2u8lr`) fusionnée dans `main`, puis le tag `v0.8.2`, qui déclenche `.github/workflows/release.yml` (suites, exports Windows et macOS, manifeste signé). **Part sans avoir été jouée à la main**, et avec les questions ouvertes du chantier SOLO (banc de salle pour les chapitres 7 à 9, vie des boss, chapitre 10). |
 | **La taille d'une salle d'aventure n'est plus bornée par celle d'un duel : 0.5, « La fusée », passe de 24×24 à 41×41, ses trois PNJ répartis** (2026-10-03, Adrien, répondant à la question que S7 lui laissait — « les trois PNJ en un coin, ou une salle plus grande que 24×24 avec les PNJ répartis ? » : « Oui toute liberté sur la taille des cartes : elles peuvent être bien plus grandes que les cartes du duel. ») | Le plan écrivait « salles de 16×16 à 24×24 » : c'était la taille d'un duel, reprise par réflexe pour une salle d'aventure. Une salle se dimensionne par ce qu'elle enseigne. 0.5 enseigne la fusée, dont la portée de lancer (450 px) ne dépasse celle de la torche (468 px) que par son halo : pour qu'un PNJ soit hors de l'une et à portée de l'autre, ailleurs que dans un angle, il faut de la place. **La garde n'a plus un côté permis mais une table** (16 à 24 par défaut, 36 à 48 pour 0.5, 32 pour l'arène du boss), toujours bornée par le format (128). La réponse d'Adrien ne disait pas combien de fusées : la salle n'en exige qu'une, la réserve du Parasite — voir « Les fusées de 0.5 », dans S7. |
 | **Le chantier SOLO se mène d'un trait jusqu'à S9, par des sous-agents, sans aucun relevé de cadence** (2026-10-02, Adrien, à la session « candela-2d-godot-47 » : « Go. Délègue à des sous-agents Sonnet 5.5 chaque tâche. Reste juste maître du chantier » ; puis : « Arrête-toi une fois tous les chantiers implémentés. Aucun test de cadence ») | La session conçoit, relit, fait tourner la suite complète et fusionne ; chaque étape est écrite par un sous-agent dans un worktree isolé. **Aucun banc de cadence** : le coût des plafonniers (S5), que la conception voulait mesurer, est livré NON MESURÉ et le dit — la règle « n'allumer que les plafonniers proches du joueur » se tient par construction, pas par un relevé. Les réglages de difficulté (S4) se font au banc de JEU (parties simulées), qui n'est pas un relevé de cadence. Le chapitre 10 reste vide, comme décidé. |
@@ -3261,6 +3266,24 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un tween lié au corps qui meurt meurt avec lui — et laisse ce qu'il devait effacer (2026-10-04)
+
+Relevé par Adrien en jouant : « le tracé de la balle en killcam ainsi que la mention "Pistolet" quand on tue quelqu'un restent imprimés entre
+chaque salle ». `Player.die()` pose le bandeau « FATAL — PISTOLET » et la marge « à N px du centre » chez son **parent**, mais leur fondu — et le
+`queue_free` qui le termine — était créé par `create_tween()` du **mort** : un tween lié meurt avec son nœud. En duel le corps survit à la manche,
+et rien ne se voyait ; en aventure, le PNJ abattu est **retiré** au passage à la salle suivante, son tween part avec lui, et les deux étiquettes
+restent dans l'arène, pleinement visibles, pour toujours — sans erreur ni suite rouge. Même défaut, invisible, sur le calque du flash de mort.
+**Un tween qui libère un nœud doit appartenir à ce nœud** (`lbl.create_tween()`), jamais à celui qui l'a créé. `tools/test_aventure_restes.gd`
+le vérifie aussi sans la règle du JcJ : un corps libéré avant la fin de son fondu ne doit rien laisser.
+
+### Un banc qui vérifie qu'un geste RETIRÉ ne passe plus attrape ce que le retrait change à côté (2026-10-04)
+
+En retirant l'enjambement, `test_accroupi` (réécrit pour vérifier qu'aucun chemin ne traverse plus un muret) a trouvé ce que personne ne
+cherchait : le bruit de l'enjambement se déclenchait sur le seul **chevauchement** du cercle d'encombrement (28 px, celui du canon) avec un
+muret — ce qui arrive dès qu'on s'y adosse, canon tourné ailleurs. Tant que le geste existait, ce frôlement précédait presque toujours une
+montée ; après son retrait, il aurait joué « on enjambe » chaque fois qu'on se colle à un muret pour s'y cacher. Le bruit ne compte plus que
+pendant une vraie traversée (`enjambe`). Retirer une fonction, c'est aussi relire ce qui se déclenchait **à côté** d'elle.
 
 ### La CI coupe le job à 20 minutes, et la suite complète les atteint depuis le chantier SOLO (2026-10-03)
 
@@ -31779,7 +31802,8 @@ joueur. **Écrit en S5 (2026-10-02), et livré NON MESURÉ** : la consigne d'Adr
 
 **Ce qu'il doit faire** : amener un joueur qui n'a jamais touché le jeu à battre, au niveau 10, un bot en difficulté
 normale. Chaque niveau enseigne **une seule chose nouvelle**, et la salle la rend nécessaire plutôt que de l'expliquer :
-une phrase d'intention à l'entrée, aucune flèche, aucun texte pendant le jeu. Le joueur joue le Parasite, la classe que le
+une phrase d'intention à l'entrée, aucune flèche, aucun texte pendant le jeu — **sauf, depuis le 2026-10-04, la touche du geste que la salle
+enseigne** (« S10 »). Le joueur joue le Parasite, la classe que le
 chapitre lui donne à son terme. Salles de 16×16 à 24×24 cases en général, une seule pièce chacune, sauf le boss ; **la taille d'une salle n'est plus bornée par celle d'un duel** (Adrien, 2026-10-03 : « toute liberté sur la taille des cartes ») — 0.5 en fait 41×41, et le format va jusqu'à 128.
 
 | Niveau | Titre provisoire | Ce qu'on apprend | La salle | Les PNJ |
@@ -31787,7 +31811,7 @@ chapitre lui donne à son terme. Salles de 16×16 à 24×24 cases en général, 
 | 0.1 | Le premier pas | Se déplacer, viser, tirer | Un plafonnier au centre, rien d'autre | 1, immobile, sourd et aveugle, sous le plafonnier, vu dès l'entrée |
 | 0.2 | La torche | La torche révèle | Aucun plafonnier près du PNJ | 1, immobile, sourd et aveugle, dans le noir derrière un pilier |
 | 0.3 | Fouiller | Chercher méthodiquement, recharger | Plusieurs recoins, un plafonnier | 3, immobiles, sourds et aveugles, dispersés ; il faut recharger avant le dernier |
-| 0.4 | Les murs bas | Enjamber, s'accroupir derrière un mur bas | Murs bas en chicane | 2, immobiles, sourds et aveugles, derrière des murs bas |
+| 0.4 | Les murs bas | S'accroupir derrière un mur bas (l'enjambement est retiré du jeu le 2026-10-04) | Murs bas en chicane | 2, immobiles, sourds et aveugles, derrière des murs bas |
 | 0.5 | La fusée | Éclairer loin | Une grande salle sans plafonnier | 3, immobiles, sourds et aveugles, hors de portée de torche |
 | 0.6 | Il regarde | La torche trahit : s'approcher éteint, contourner les plafonniers | Deux plafonniers sur le chemin | 1, immobile, **voit et tire**, réflexes très lents |
 | 0.7 | L'éclair | Le tir trahit : changer de place après avoir tiré | Salle en L | 3, immobiles, voient et tirent, réflexes lents ; chaque tir réveille les autres |
@@ -33734,6 +33758,37 @@ les scénarios à deux instances ne sont pas joués par `--rapide`. **Aucun rele
 neuve, elle, joue trente salles en 4 min 28 s : `run_suites.sh` lui donne `PLAFOND_SUITE=900` à elle seule. Un premier passage a aussi été interrompu (code 143) **parce que j'éditais `run_suites.sh` pendant qu'il tournait** — bash lit un script au fil de l'eau : on n'édite pas un lanceur en route.
 
 
+### S10 — FAITE le 2026-10-04 : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, plus d'enjambement, la mise en joue des PNJ
+
+Cinq demandes d'Adrien après avoir joué la 0.8.2 (décisions datées dans « Décisions actées »). Menée par la session de pilotage elle-même : la
+limite hebdomadaire des sous-agents était atteinte.
+
+- **L'écran Solo** (`ui.gd`) : première entrée de l'accueil ; AVENTURE puis S'ENTRAÎNER dessous. `redescendre_vers(ecran)` rejoue le chemin
+  depuis l'accueil (`PARENT_DE_L_ECRAN`), et `game_state.gd` s'en sert au retour d'un match. Garde : `tools/test_menu_solo.gd` (la pile du hub
+  est l'oracle, pas l'écran courant seul — juste dans les deux cas).
+- **Le bandeau au JcJ, et rien ne reste** (`player.gd`) : `kill_entre_joueurs()` ; les fondus du bandeau, de la marge et du flash de mort
+  appartiennent à ce qu'ils effacent. Garde : `tools/test_aventure_restes.gd` (d'une vraie balle ; vu rouge sur l'ancien `player.gd`, neuf
+  échecs dont le défaut de durée de vie pris seul).
+- **Ce que l'aventure dit pendant le jeu** (`aventure_hud.gd`, `HudAventure`, calque 9 — sous l'interface, pour que le menu de pause passe
+  devant) : les consignes de l'initiation (table `CONSIGNES`, une par salle sauf 0.9, « La salle pleine », où l'on se passe d'aide), le
+  compteur « SILHOUETTES n / N », le tampon « SALLE RÉUSSIE » avec le temps, l'essai et le RECORD (`AventureProgression.meilleur_temps` /
+  `noter_temps`, `temps_<index>` dans `user://solo.cfg`). Les touches se nomment par `UI.libelle_du_geste` (clavier puis manette, comme
+  l'écran des contrôles ; « Z Q S D » sur un AZERTY). Garde : `tools/test_aventure_hud.gd` (validation sur faux joueur, d'abord NON fait puis
+  fait ; vrai jeu en 0.1 ; vue rouge sur deux validations sabotées). **Vu à l'écran sous rendu logiciel** : le compteur, d'abord posé à
+  28 px, était caché sous la plaque du titre de la salle, et une ligne faite en blanc chaud ne se distinguait pas d'une ligne à faire — il
+  descend sous la plaque, et une ligne faite passe en VERT. Aucune suite ne l'aurait dit.
+- **Plus d'enjambement** (`input_setup.gd`, `ui.gd`, `player.gd`) : voir la décision. `test_accroupi` vérifie désormais qu'aucun chemin ne
+  traverse (ni touche, ni bit du fil tenu par un client ancien, canon dans les quatre sens), et que le corps posé dans la pierre en sort.
+- **La mise en joue** (`profil_bot.gd`, `bot_input_provider.gd`) : `_suivre_l_alignement()` suit le CORPS à chaque pas de pensée, même quand la
+  gâchette ne peut rien (sinon un corps sorti puis revenu dans la tolérance pendant une recharge passerait pour n'avoir jamais tourné). À 0,
+  rien ne change : le bot de l'entraînement garde ses tirages et son déterminisme. Garde : `test_bot_combat`, « La mise en joue ».
+  Les empreintes de S4 (`test_bot_equipement`) ont rougi sur trois PNJ, et c'était juste : la mise en joue change le moment du coup.
+  `Flux.sans_equipement()` (qui rend un profil à son état de S4) la remet à zéro avec les autres ajouts postérieurs.
+
+**Non fait, et à dire** : rien n'a été joué manette en main ; les chiffres de la mise en joue et la place des consignes sont des chiffres de
+départ. Les gardes de contenu des chapitres (`test_chapitre_0x`) et les marches au vrai corps passent avec la mise en joue, mais aucun banc ne
+mesure encore ce qu'elle change au ressenti d'une salle.
+
 ### Questions
 
 **Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),
@@ -33744,6 +33799,13 @@ immobiles). **Ouvertes** :
 
 - **SOLO-Q8 — le chapitre 10** : il existe (onze chapitres, tranché) ; son contenu et ce qu'on y gagne, « on verra
   ensuite ».
+- **SOLO-Q9 — la mise en joue des boss** (2026-10-04) : posée sur les PNJ du catalogue seulement, parce que les dix boss
+  sont réglés au banc à 55 % et le seraient à nouveau. Le boss de l'initiation, s'il est lui aussi « trop vite », se règle
+  par `REGLAGES_BOSS` (« mise_en_joue_s ») et un passage du banc `--boss`.
+- **SOLO-Q10 — « hyper gratifiant », la suite** (2026-10-04) : S10 donne à chaque salle une réponse à chaque abattu
+  (compteur), un tampon de fin avec temps, essai et record. Ce qui pourrait suivre, à trancher manette en main : un
+  bilan de chapitre (temps total, morts, records), des paliers de temps par salle (or, argent, bronze), une musique
+  qui monte avec le compteur.
 
 ---
 
