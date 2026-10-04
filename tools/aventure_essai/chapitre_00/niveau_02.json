@@ -1,0 +1,67 @@
+{
+  "boss": false,
+  "carte": {
+    "floor": "1,1,16;1,2,16;1,3,16;1,4,16;1,5,16;1,6,16;1,7,16;1,8,16;1,9,16;1,10,16;1,11,16;1,12,16",
+    "grid_size": {
+      "x": 18,
+      "y": 14
+    },
+    "low_walls": "",
+    "name": "Essai — salle 18 × 14",
+    "tile_size": 35,
+    "version": 4,
+    "walls": "0,0,18;0,1,1;17,1,1;0,2,1;17,2,1;0,3,1;17,3,1;0,4,1;17,4,1;0,5,1;17,5,1;0,6,1;8,6,2;17,6,1;0,7,1;8,7,2;17,7,1;0,8,1;17,8,1;0,9,1;17,9,1;0,10,1;17,10,1;0,11,1;17,11,1;0,12,1;17,12,1;0,13,18"
+  },
+  "intention": "Une ronde autour d'un pilier, et un autre qui ne quitte pas sa zone. Aucune lumière : la torche.",
+  "joueur": {
+    "case": [
+      2,
+      7
+    ],
+    "orientation": 0
+  },
+  "pnj": [
+    {
+      "case": [
+        14,
+        3
+      ],
+      "orientation": 90,
+      "profil": "ronde_sourd_aveugle",
+      "ronde": [
+        [
+          14,
+          3
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          5,
+          10
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    },
+    {
+      "case": [
+        12,
+        9
+      ],
+      "orientation": 180,
+      "profil": "zone_sourd_aveugle",
+      "zone": [
+        10,
+        8,
+        6,
+        4
+      ]
+    }
+  ],
+  "titre": "La ronde",
+  "version": 1
+}

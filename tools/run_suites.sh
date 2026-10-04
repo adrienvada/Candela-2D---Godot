@@ -275,6 +275,133 @@ SUITES+=(test_fumee_voxel)
 # `--nappes-voxels=braises` (l'essai lu au lancement). Hors de la liste, même raison que les lignes du dessus.
 SUITES+=(test_nappes_voxel)
 
+# Chantier SOLO, S1 (2026-10-02) : le bot se déplace, et l'entraînement gagne son cran « adversaire mobile ». Deux gardes.
+# `test_bot_navigation` (en `--script`, sans scène) : sur chaque carte livrée, des chemins qui ne traversent ni solide, ni mur
+# bas, ni coin, ni couloir plus étroit que le corps ; RONDE, ZONE, LIBRE et la graine ; le bot ne commande que de la marche.
+# `test_entrainement_bot` (le jeu monté, à pas d'image fixe — voir plus bas) : le bot avance sur un vrai corps sans jamais être
+# bloqué, ne tire pas, revient quand on l'abat, et J2 retrouve son état d'avant à l'écran scindé. Posées ici, comme les lignes du
+# dessus : ce sont des suites ordinaires, mais la seconde exige une horloge fixe et se lance donc par un `case` à part.
+SUITES+=(test_bot_navigation test_entrainement_bot)
+
+# Chantier SOLO, S2 (2026-10-02) : la PERCEPTION du bot, et la garde d'honnêteté. `test_bot_perception` (en `--script`, une carte
+# fabriquée et des corps factices, sans fenêtre) : le modèle de vue ne voit jamais PLUS que la lumière — cible dans le noir, mur entre
+# la lampe et le bot, hors du cadre de l'écran, cône de la torche, éclair, fusée, halo, murs bas —, l'ouïe ne donne jamais la place
+# exacte (une zone qui contient la vérité sans la centrer, qui grandit avec la distance et derrière un mur), la mémoire s'efface, et
+# le fournisseur d'entrées ne lit rien de la perception pour agir (S3). L'autre moitié de la preuve — le modèle contre les CAPTEURS
+# du jeu — ouvre une fenêtre et n'entre dans aucune suite : `tools/banc_perception_bot.tscn` (commande dans son en-tête), dont les
+# appuis sont vérifiés par `test_banc`. Posée ici, comme les lignes du dessus.
+SUITES+=(test_bot_perception)
+
+# Chantier SOLO, S3 (2026-10-02) : le bot AGIT sur ce qu'il perçoit, et il tire ; l'entraînement gagne son cran 3, « adversaire qui
+# tire », avec trois difficultés. `test_bot_combat` : (1) des corps factices avec le vrai fournisseur et le vrai nœud de perception —
+# le délai de réaction, l'erreur de visée qui se resserre, le lissage, la rafale, la recharge, l'enquête, la recherche, l'oubli,
+# l'audace, la difficulté — et la garde d'HONNÊTETÉ (zéro coup vers un joueur dans le noir ou derrière un mur, aucune lecture de
+# l'adversaire dans le texte du fournisseur) ; (2) le jeu monté, à pas d'image fixe : le cran 3 et ses difficultés lus de l'interface,
+# le bot au profil choisi, des balles sur un joueur éclairé et aucune sur un joueur dans le noir, le cran 2 qui ne tire toujours
+# jamais, la mort et la réapparition du JOUEUR. Elle exige l'horloge fixe : le `case` plus bas la lui donne, comme à
+# `test_entrainement_bot`.
+SUITES+=(test_bot_combat)
+
+# Chantier SOLO, S5 (2026-10-02) : les PLAFONNIERS, lumières posées, permanentes et indestructibles de l'aventure. `test_plafonniers`
+# (en `--script`, sans partie) : la pose depuis des données (noms, places, bornes, canaux de lumière et d'ombre conformes à
+# `canaux_lumiere.gd`, hauteur au-dessus des murets), l'allumage par proximité et son hystérésis, l'absence de toute pose dans une
+# carte de duel (les données, le code, et le vrai jeu monté sur chaque carte livrée), le modèle de vue du bot (sous un plafonnier :
+# vue ; derrière un mur haut : non ; hors de la flaque : rien ; un mur bas par la géométrie de la hauteur de la lampe) et le miroir
+# de lumières de la vue iso. L'autre moitié — la lumière réelle, lue sur les capteurs — est au banc `banc_perception_bot` (familles
+# `plafonnier*`), qui ouvre une fenêtre et n'entre dans aucune suite headless.
+SUITES+=(test_plafonniers)
+
+# Chantier SOLO, S4 (2026-10-02) : les PROFILS du bot, réglés au banc de JEU. `test_banc_bot` est la forme COURTE du banc
+# (`tools/banc_bot_difficulte.gd`, qui est long et reste hors des suites) : le catalogue des PNJ de l'aventure (chaque nom se construit,
+# avec les bons axes ; le sourd et aveugle ne tire jamais ; les paliers de réflexes se rangent ; le boss est le profil NORMAL), les trois
+# difficultés (mêmes champs de perception, de déplacement ET D'AUDACE : elles tirent toutes si vu ou entendu), puis des duels SIMULÉS
+# dans le vrai jeu — déterministes par graine — où un joueur type honnête gagne plus souvent contre FACILE que contre NORMAL, plus contre
+# NORMAL que contre DIFFICILE (l'ORDRE, des bornes larges, jamais un chiffre exact), et des PNJ d'initiation dans une salle. Elle exige
+# l'horloge fixe : le `case` plus bas la lui donne, comme à `test_bot_combat`.
+SUITES+=(test_banc_bot)
+
+# Chantier SOLO, S6 (2026-10-02) : le MOTEUR de l'aventure. `test_aventure_format` (en `--script`, sans partie) : le validateur accepte
+# le chapitre d'essai (`tools/aventure_essai/`, jamais `assets/solo/`) et refuse chaque défaut — profil inconnu, case hors carte ou non
+# praticable, ronde sans points, chapitre sans boss final… — un cas par règle ; l'ordre des classes débloquées suit le rang ; la
+# progression (`user://solo.cfg`, ici un chemin à la suite) ouvre chapitres et salles dans l'ordre ; aucune carte de duel n'est touchée.
+# `test_aventure_partie` (le jeu monté, à pas d'image fixe — `case` plus bas, comme `test_bot_combat`) : une salle se charge (arène,
+# plafonniers, joueur, PNJ `PNJ_<i>` pilotés par des bots, carton), la perception d'un PNJ ne vise que le joueur, les PNJ ne se
+# blessent pas, la vue iso les montre TOUS (et le duel est rendu comme avant), tous les PNJ morts enchaînent la salle suivante, mourir
+# recommence la salle, finir le boss débloque la classe et l'écrit, quitter rend l'entraînement et l'écran scindé intacts, l'écran.
+SUITES+=(test_aventure_format test_aventure_partie)
+
+# Chantier SOLO, S9 (2026-10-02) : le bot S'ÉQUIPE — sa torche (éteinte tant qu'il n'a rien perçu, allumée pour fouiller, éteinte pour
+# s'approcher), sa prudence (changer de place après un tir, s'accroupir pour approcher un son), sa fusée (vers une zone ENTENDUE, jamais
+# vers une cible vue) et le gadget de sa classe (une règle par gadget, dix gadgets comptés contre le catalogue du jeu). `test_bot_equipement` :
+# les règles pures, le texte de `equipement_bot.gd` (il ne lit jamais l'autre joueur), des corps factices avec le vrai fournisseur et le vrai
+# nœud de perception (chaque gadget posé dans la mise en scène de sa règle, la bobine, la mine qui recule, la suie où il entre), la garde
+# d'HONNÊTETÉ (équipé de tout, devant un joueur dans le noir : aucun outil), les empreintes du flux de commandes des profils SANS équipement
+# (relevées sur le code d'avant S9), puis le jeu monté (vrai `Player`, vrai `GameState` : les dix gadgets naissent dans l'arène, la fusée
+# part, le corps s'accroupit et se replie). Elle exige l'horloge fixe : le `case` plus bas la lui donne, comme à `test_bot_combat`.
+SUITES+=(test_bot_equipement)
+
+# Chantier SOLO, S7 (2026-10-02) : le CONTENU du chapitre 0, « L'initiation » (`assets/solo/chapitre_00/`, écrit par
+# `tools/fabrique_chapitre_00.gd`). `test_chapitre_00` (en `--script`, sans partie) juge ce que chaque salle ENSEIGNE, mesuré sur ses
+# données avec les fonctions du jeu : chaque PNJ atteignable à pied, aucune ronde, aucun couloir d'une tuile ; 0.1 le PNJ dans la flaque
+# et en vue du départ ; 0.2 aucune lampe sur lui, le pilier le cache ; 0.3 plus de tirs que de balles au chargeur ; 0.4 un mur bas
+# entre chaque PNJ et le départ ; 0.5 hors de portée de torche du chemin du centre, tous au halo d'une fusée ; 0.6 des flaques sur le
+# chemin direct et un détour qui les évite ; 0.7 chaque tir vu d'un autre PNJ, un abri ; 0.8 aucune lampe ; 0.9 les quatre sortes de PNJ ;
+# 0.10 un duel en miroir.
+SUITES+=(test_chapitre_00)
+
+# Chantier SOLO, S8 (2026-10-03) : le CONTENU des chapitres 1 à 3 (`assets/solo/chapitre_01` à `03`, écrits par `tools/fabrique_chapitre_01.gd` à `03`, qui
+# partagent `tools/fabrique_commune.gd`). Chaque garde charge son chapitre par `tools/outils_chapitre.gd` (le contexte d'une salle, le modèle de vue du bot, les
+# chemins de `NavigationBot`, l'ouïe réelle de l'audio) et mesure ce que chaque salle ENSEIGNE. `test_chapitre_01` — « Les rondes » (Fumiste) : chaque ronde une boucle
+# praticable qui repasse sous une lampe, deux rondes qui se croisent sans se toucher, la ronde dans le noir qu'aucune case ne montre entière à la torche, le guetteur,
+# la ronde qui regarde, l'enfilade de trois flaques, la suie (1.7 à 1.9 : « equipe »), un duel en miroir. `test_chapitre_02` — « Les rondes écoutent » (Illusionniste) :
+# les portées d'écoute (un pas debout, un pas accroupi, un tir, une douille), des zones d'abri accroupi, la salle nue, les recoins, deux salles reliées, le T, la
+# diversion, le leurre. `test_chapitre_03` — « Les zones » (Braconnier) : chaque zone contient son gardien et assez de cases pour errer, la porte, la frontière, le
+# damier, la lampe au loin (3.7 à 3.9 : « equipe », et un gardien équipé ENTEND).
+SUITES+=(test_chapitre_01 test_chapitre_02 test_chapitre_03)
+
+# Chantier SOLO, S8 : `test_chapitres_marche` (le jeu monté, à pas d'image fixe — `case` plus bas) joue chaque salle de ronde ou de zone des chapitres 1 à 3 avec le VRAI
+# corps (PNJ désarmés et sourds-aveugles : seul le déplacement est mesuré) : chaque ronde passe par chacun de ses points et boucle, une zone n'est jamais quittée et visitée
+# pour un cinquième au moins, aucun PNJ n'est immobile plus de trois secondes, deux rondes ne se traversent pas. S1 avait dit que RONDE et ZONE n'étaient éprouvées qu'avec
+# un point matériel : c'est ici que le vrai corps les parcourt.
+SUITES+=(test_chapitres_marche)
+
+# Chantier SOLO, S8, lot 2 (2026-10-03) : le CONTENU des chapitres 4 à 6 (`assets/solo/chapitre_04` à `06`, écrits par `tools/fabrique_chapitre_04.gd` à `06`, sur la grille de
+# `fabrique_commune.gd`). Mêmes outils que le lot 1 (`tools/outils_chapitre.gd`) plus `tools/outils_chapitre_04_06.gd` : l'ouïe d'un PNJ DERRIÈRE LES MURS (`PerceptionBot.ecouter`
+# sur le monde de la salle), « la règle de son gadget peut-elle se déclencher ? » (la fenêtre de `EquipementBot.GADGETS`), la forme d'une salle (sol ouvert, blocs, culs-de-sac).
+# `test_chapitre_04` — « Les zones écoutent » (Terrassier) : un pas debout s'entend de la porte et pas un pas accroupi, un tir réveille les trois pièces, un chemin silencieux
+# accroupi, des zones moitié claires, un L et son poste, la carrière où la poussière tient, des zones emboîtées dans un dédale de murets, la poussière (4.7 à 4.9 : « equipe »).
+# `test_chapitre_05` — « Les groupes » (Incendiaire) : des zones qui se recouvrent, une ronde sous un gardien, un poste qui couvre une ronde mieux que l'autre, un bruit qui n'appelle
+# qu'un gardien, un passage de trois cases qu'une nappe de 136 px ferme, une croix à quatre groupes, la nappe (5.7 à 5.9). `test_chapitre_06` — « Les chasseurs » (Sentinelle) : des
+# boucles sans cul-de-sac, une boucle noire où se cacher, des îlots, trois seuils éclairés, un sol nu où un pas s'entend, des couloirs de 4 cases que la poudre remplit (6.7 à 6.9).
+SUITES+=(test_chapitre_04 test_chapitre_05 test_chapitre_06)
+
+# Chantier SOLO, S8, lot 2 : `test_chapitres_marche_04_06` (le jeu monté, à pas d'image fixe — `case` plus bas), sur le modèle de `test_chapitres_marche` (que l'autre session du lot
+# n'a pas à éditer, ni moi) : le VRAI corps parcourt chaque ronde, chaque zone et — pour la première fois dans une salle d'aventure — chaque CHASSEUR (déplacement libre) des
+# chapitres 4 à 6, PNJ désarmés et sourds-aveugles. Rondes : chaque point, la boucle ; zones : jamais quittées, visitées ; chasseurs : des cases distinctes, tous les quarts de carte,
+# du sol seulement ; jamais immobile plus de trois secondes ; deux rondes ne se rattrapent pas.
+SUITES+=(test_chapitres_marche_04_06)
+
+# Chantier SOLO, S9b (2026-10-03) : l'INTÉGRATION de S6 (le moteur de l'aventure) et de S9 (le bot équipé), écrits en parallèle. `test_aventure_boss`
+# (le jeu monté, à pas d'image fixe — `case` plus bas) : chaque PNJ a SA réserve de fusées et de gadget, semée sur SA classe (deux PNJ ne se volent
+# plus la leur, un boss Fumiste pose sa suie et retrouve ses réserves quand la salle recommence, le bot d'entraînement rééquipe à sa réapparition la
+# classe qu'il porte) ; l'éblouissement vaut pour les PNJ dans les deux sens (torche et éclair de tir), sauf entre eux ; un bot ébloui voit MOINS,
+# jamais plus. Les boss par classe sont gardés par `test_banc_bot` (existence, bornes larges, aucun champ de perception touché).
+SUITES+=(test_aventure_boss)
+
+# Chantier SOLO, S8 lot 2 (2026-10-03) : le CONTENU des chapitres 7 à 9 (`assets/solo/chapitre_07` à `09`, écrits par `tools/fabrique_chapitre_07.gd` à `09`). Des PNJ LIBRES
+# (partout, sans trajet ni zone) et des salles bien plus grandes que celles d'un duel. Les gardes partagent `tools/outils_chapitre.gd` (le lot 1) et `tools/outils_chasseurs.gd`
+# (la lumière d'une salle : flaques, ombres, noir ; les îlots ; un PNJ libre part loin du joueur et hors de toute lampe). `test_chapitre_07` — « Les chasseurs vifs »
+# (Occulteur) : un duel dans une petite arène, deux chambres et une porte, le noir complet, cinq flaques en quinconce, un poste couvrant un hall, les ombres des colonnes,
+# les îlots, un labyrinthe de murets, la meute, un duel en miroir (7.7 à 7.9 : « equipe », et un chasseur équipé VOIT).
+SUITES+=(test_chapitre_07 test_chapitre_08 test_chapitre_09)
+# `test_chapitre_08` — « Les grandes salles » (Allumeur) : « grande » se mesure contre la plus grande carte de duel livrée ; un H, une galerie de 90 cases, des goulets éclairés, vingt
+# machines, une cour et sa galerie, six salles noires, seize blocs, quatre halls ; des rondes de même tour qui ne se touchent jamais ; la mine (8.7 à 8.9 : « equipe », un PNJ
+# équipé de la mine ENTEND). `test_chapitre_09` — « L'élite » (Spectre) : une élite est plus vive qu'un chasseur normal (lu au catalogue) ; la flaque unique, les voiles qui coupent
+# la lumière, un poste de niveau difficile dans sa niche, un labyrinthe à fenêtres basses, la meute, un duel de part et d'autre de voiles (9.7 à 9.9 : « equipe », un voile).
+# `test_chapitres_marche_07_09` (le jeu monté, à pas d'image fixe — `case` plus bas ; elle HÉRITE de `test_chapitres_marche`) : le vrai corps parcourt les rondes, les zones et les
+# PNJ LIBRES des chapitres 7 à 9, franchit les goulets et les portes étroites, ne sort jamais du sol.
+SUITES+=(test_chapitres_marche_07_09)
+
 fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
@@ -422,9 +549,21 @@ run() {
 # `test_iso_camera` compare deux parties pas pour pas : à pas d'image fixe, sans quoi le moment
 # où une balle éteinte quitte la scène dépend du rendu (voir `_simulation_inchangee`, et les
 # Pièges connus de la ROADMAP). Avant `--script` : c'est un argument du moteur, pas du jeu.
+# `test_entrainement_bot` y est aussi : il compte des SECONDES SIMULÉES (distance parcourue, blocage), qui ne valent que si une
+# image fait un pas de physique ; il vérifie lui-même l'horloge et refuse de conclure sans elle.
 for t in "${SUITES[@]}"; do
   case "$t" in
-    test_iso_camera) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_chapitres_marche_07_09` joue les trente salles des chapitres 7 à 9 au vrai corps, dont celles de 100×80 cases : 4 min 28 s seule
+    # dans le conteneur cloud (mesuré le 2026-10-03). Son plafond : 600 s, un peu plus de deux fois cela.
+    test_chapitres_marche_07_09) PLAFOND_SUITE=600 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_chapitres_marche_04_06` joue vingt-sept salles (dont neuf à chasseurs, 45 s de jeu chacune) : ~130 s au calme (132 s mesurées), plus que le plafond de 120 s des autres suites
+    # (mesuré le 2026-10-03 : 38 s le chapitre 4, 45 s le 5, 61 s le 6). Il a donc son plafond, jamais plus large que ce qu'il lui faut pour sortir.
+    test_chapitres_marche_04_06) PLAFOND_SUITE=420 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_banc_bot` joue ~48 duels simulés : 43 s en CI, mais 1 min 42 à 1 min 54 dans le conteneur cloud au calme (4 cœurs lents, mesuré le
+    # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
+    # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
+    test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

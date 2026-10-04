@@ -1,0 +1,45 @@
+{
+  "boss": false,
+  "carte": {
+    "floor": "1,1,16;1,2,16;1,3,16;1,4,16;1,5,16;1,6,16;1,7,16;1,8,16;1,9,16;1,10,16;1,11,16;1,12,16",
+    "grid_size": {
+      "x": 18,
+      "y": 14
+    },
+    "low_walls": "",
+    "name": "Les chasseurs — Le chasseur qui écoute",
+    "tile_size": 35,
+    "version": 4,
+    "walls": "0,0,18;0,1,1;17,1,1;0,2,1;17,2,1;0,3,1;17,3,1;0,4,1;17,4,1;0,5,1;17,5,1;0,6,1;17,6,1;0,7,1;17,7,1;0,8,1;17,8,1;0,9,1;17,9,1;0,10,1;17,10,1;0,11,1;17,11,1;0,12,1;17,12,1;0,13,18"
+  },
+  "intention": "Un sol nu, rien pour s'abriter. Il vous suit à vos pas.",
+  "joueur": {
+    "case": [
+      2,
+      12
+    ],
+    "orientation": -45
+  },
+  "plafonniers": [
+    {
+      "case": [
+        9,
+        7
+      ],
+      "intensite": 1.2,
+      "rayon": 4.0
+    }
+  ],
+  "pnj": [
+    {
+      "case": [
+        15,
+        3
+      ],
+      "orientation": 150,
+      "profil": "libre_voit_entend_facile"
+    }
+  ],
+  "titre": "Le chasseur qui écoute",
+  "version": 1
+}

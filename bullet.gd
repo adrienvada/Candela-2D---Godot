@@ -156,6 +156,12 @@ func _ready():
 	add_child(shape_cast)
 	if source_player:
 		shape_cast.add_exception(source_player)
+		# Les balles d'un PNJ de l'aventure traversent les autres PNJ (SOLO, S6) : une même équipe, et un PNJ ne s'abrite pas derrière
+		# un autre. Sans effet hors de l'aventure : `est_pnj` n'y est jamais posé.
+		if source_player.get("est_pnj") == true:
+			for allie in get_tree().get_nodes_in_group("players"):
+				if allie.get("est_pnj") == true:
+					shape_cast.add_exception(allie)
 	if lag_target:
 		shape_cast.add_exception(lag_target)
 
