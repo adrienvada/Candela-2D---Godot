@@ -1587,7 +1587,7 @@ func play_sfx_random_pitch(stream_or_key: Variant, min_pitch: float = 0.92, max_
 	return play_sfx(stream_or_key, pitch, volume_db, bus_name)
 
 # --- JOUER DES SFX 2D POSITIONNELS ---
-func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0, volume_db: float = 0.0, bus_name: String = "SFX", emetteur: int = -1, facteur_portee: float = 1.0) -> AudioStreamPlayer2D:
+func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0, volume_db: float = 0.0, bus_name: String = "SFX", emetteur: int = -1, facteur_portee: float = 1.0, sans_occlusion: bool = false) -> AudioStreamPlayer2D:
 	var stream = get_audio_stream(stream_or_key)
 	if not stream:
 		return null
@@ -1660,7 +1660,8 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# position du son et celle de l'oreille. La PART occultee adoucit en plus le
 	# bord : un son occulte au tiers part sur le bus etouffe, mais n'y perd qu'un
 	# tiers de la penalite. Sans ca, l'angle d'un mur fait clignoter le mixage.
-	var part := part_occultee(pos)
+	# `sans_occlusion` : le tir d'un PNJ de l'aventure (voir `play_weapon_shot`) — aucun mur ne l'étouffe.
+	var part := 0.0 if sans_occlusion else part_occultee(pos)
 	player.bus = bus_pour(bus_name, part > 0.0)
 	if part > 0.0:
 		player.volume_db += OCCLUSION_PENTE_DB * part
@@ -1784,11 +1785,20 @@ func annoncer_son_2d(cle: String, pos: Vector2, emetteur: int = -1, volume_db: f
 ## le coup de feu est le seul son qui porte une INFORMATION DE JEU — il dit
 ## qu'on vient de tirer, et où. Le taire changerait l'équilibre, pas seulement
 ## l'ambiance.
-func play_weapon_shot(slug: String, pos: Vector2, emetteur: int = -1) -> AudioStreamPlayer2D:
+## Le tir d'un PNJ de l'aventure s'entend de PARTOUT dans la salle (Adrien, 2026-10-04 : « je n'entends pas les tirs de PNJ. Augmente la
+## portée des sons de tirs de PNJ au max : ça doit s'entendre de partout dans les salles »). Relevé avant la correction, salle 0.9 : la
+## portée suffisait déjà (1818 px pour une diagonale de 1188) — c'est l'OCCLUSION qui les tuait. Les salles de l'aventure sont faites de
+## recoins : presque chaque tir de PNJ partait sur `SFX_Occlus`, direct retiré, passe-bas, jusqu'à −5 dB ; même un PNJ à 175 px. D'où les
+## deux gestes : aucun mur ne l'étouffe, et sa portée est multipliée par `FACTEUR_PORTEE_TIR_PNJ` pour que la distance ne le baisse presque
+## plus. Le duel n'en est pas touché : seul `Player.est_pnj` le demande. Les bots, eux, ignorent les tirs des PNJ (même `emetteur`, 1).
+const FACTEUR_PORTEE_TIR_PNJ := 3.0
+
+func play_weapon_shot(slug: String, pos: Vector2, emetteur: int = -1, audible_partout: bool = false) -> AudioStreamPlayer2D:
 	var chemin := chemin_tir(slug, randi_range(1, VARIANTES_TIR))
+	var facteur := FACTEUR_PORTEE_TIR_PNJ if audible_partout else 1.0
 	if get_audio_stream(chemin) == null:
-		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08, 0.0, BUS_SFX, emetteur)
-	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04, 0.0, BUS_SFX, emetteur)
+		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08, 0.0, BUS_SFX, emetteur, facteur, audible_partout)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04, 0.0, BUS_SFX, emetteur, facteur, audible_partout)
 
 ## ============================================================================
 ## LES SONS DE LA LIVRAISON DU 2026-08-27
@@ -2109,9 +2119,9 @@ func jouer_acouphene_mort() -> void:
 	_tween_etouffement.tween_property(f, "cutoff_hz", SFX_COUPURE_OUVERTE_HZ,
 		ETOUFFEMENT_MORT_S).set_ease(Tween.EASE_OUT)
 
-func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX", emetteur: int = -1, facteur_portee: float = 1.0) -> AudioStreamPlayer2D:
+func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX", emetteur: int = -1, facteur_portee: float = 1.0, sans_occlusion: bool = false) -> AudioStreamPlayer2D:
 	var pitch = randf_range(min_pitch, max_pitch)
-	return play_sfx_2d(stream_or_key, pos, pitch, volume_db, bus_name, emetteur, facteur_portee)
+	return play_sfx_2d(stream_or_key, pos, pitch, volume_db, bus_name, emetteur, facteur_portee, sans_occlusion)
 
 # --- MUSIQUE INTERACTIVE & AUDIOSTREAMPLAYER ---
 func play_music(stream_or_key: Variant) -> void:

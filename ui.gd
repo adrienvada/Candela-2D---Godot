@@ -187,6 +187,10 @@ const SCREEN_LOCAL_JOIN := "local_invite"
 const SCREEN_RANKED := "en_ligne_competitif"
 const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
+## Le mode solo : un écran de navigation pure, sans bouton de lancement, qui regroupe l'aventure et l'entraînement contre le bot
+## (décision d'Adrien, 2026-10-03 : « un bouton tout en haut du menu principal redirigeant vers Solo »). C'est le PARENT des deux — voir
+## `PARENT_DE_L_ECRAN` et `redescendre_vers()`, sans quoi un retour de match sauterait cet écran.
+const SCREEN_SOLO := "solo"
 ## L'aventure (chantier SOLO, S6) : ses chapitres, ses salles, la classe qu'on y joue, et le bouton qui lance.
 const SCREEN_AVENTURE := "aventure"
 ## Les salles du chapitre pris : un écran à part, parce que le hub ne défile pas — onze chapitres et dix salles dans une même colonne
@@ -1005,7 +1009,7 @@ var _entrees_niveaux: Array[Button] = []
 ## La progression que l'écran lit : `user://solo.cfg`, faite à la première ouverture. Une suite y pose la sienne (un autre chemin).
 var aventure_progression: AventureProgression = null
 ## L'écran du hub qu'on regardait avant celui-ci : le retour des salles aux chapitres ne remet pas le choix à zéro, l'ouverture depuis
-## l'accueil le fait.
+## l'écran Solo le fait.
 var _ecran_d_avant_l_aventure := ""
 ## Vrai tant que l'écran de l'aventure est celui qu'on regarde : le râtelier de classes se verrouille alors d'après la progression solo
 ## (et non d'après le rang en ligne, qui n'a rien à dire ici).
@@ -1239,6 +1243,43 @@ var _match_origin_screen: String = MenuHub.ROOT
 ## L'écran du hub d'où le match en cours (ou le dernier joué) a été lancé.
 func match_origin_screen() -> String:
 	return _match_origin_screen
+
+
+## L'écran sous lequel chaque écran vit dans la pile du hub, quand ce n'est PAS l'accueil. Un écran absent d'ici est un enfant direct de
+## l'accueil.
+##
+## La pile du hub (`MenuHub._stack`) est la seule vérité de la navigation, et un retour de match la reconstruit de zéro : `show_main_menu()`
+## la remet à l'accueil, puis on redescend. Descendre d'un seul `push()` jusqu'à l'entraînement le laissait sous l'accueil, et RETOUR
+## sautait l'écran Solo. Cette table dit par où l'on aurait dû passer.
+const PARENT_DE_L_ECRAN := {
+	SCREEN_TRAINING: SCREEN_SOLO,
+	SCREEN_AVENTURE: SCREEN_SOLO,
+	SCREEN_AVENTURE_SALLES: SCREEN_AVENTURE,
+}
+
+## Dernier écran visé par `redescendre_vers()` : le temps de la descente, `_on_hub_screen_changed` sait qu'il ne s'agit pas d'une ouverture
+## par un appui du joueur. Vide hors descente.
+var _descente_vers := ""
+
+
+## Rejoue, depuis l'accueil, le chemin qui mène à `ecran` : ses ancêtres d'abord (`PARENT_DE_L_ECRAN`), puis lui. À appeler après
+## `show_main_menu()` — la pile est alors [accueil] — pour qu'un RETOUR remonte par où l'on serait descendu à la main. Un écran inconnu du
+## hub ou déjà courant ne change rien (`MenuHub.push()` le refuse), un écran sans parent déclaré descend d'un cran, comme avant.
+func redescendre_vers(ecran: String) -> void:
+	if hub == null:
+		return
+	var chaine: Array[String] = [ecran]
+	var parent: String = String(PARENT_DE_L_ECRAN.get(ecran, ""))
+	while parent != "":
+		chaine.push_front(parent)
+		parent = String(PARENT_DE_L_ECRAN.get(parent, ""))
+	# Un écran inconnu du hub ne doit pas laisser derrière lui des ancêtres empilés pour rien.
+	if not hub.has_screen(ecran):
+		return
+	_descente_vers = ecran
+	for id in chaine:
+		hub.push(id)
+	_descente_vers = ""
 
 # ---------------------------------------------------------------------------
 # KILLCAM
@@ -4260,12 +4301,20 @@ func _build_hub_screens() -> void:
 	var hote_lan := hub.add_screen(SCREEN_LOCAL_HOST, "Créer — réseau local")
 	var invite_lan := hub.add_screen(SCREEN_LOCAL_JOIN, "Rejoindre — réseau local")
 	var classe := hub.add_screen(SCREEN_RANKED, "1v1 compétitif")
+	var solo := hub.add_screen(SCREEN_SOLO, "Solo")
 	var entrainement := hub.add_screen(SCREEN_TRAINING, "S'entraîner")
 	var aventure_ecran := hub.add_screen(SCREEN_AVENTURE, "Aventure")
 	var salles_ecran := hub.add_screen(SCREEN_AVENTURE_SALLES, "Aventure — les salles")
 	var custom := hub.add_screen(SCREEN_CUSTOM, "Personnalisation")
 
 	# --- Accueil --------------------------------------------------------------
+	# Première entrée de l'accueil (Adrien, 2026-10-03) : le mode solo regroupe l'aventure et l'entraînement contre le bot, qui
+	# quittent l'accueil pour l'écran qu'elle ouvre. Même couleur que les autres destinations de jeu : COLOR_GOLD est réservé au
+	# classé, le seul mode où le résultat compte.
+	accueil.add_child(hub.make_entry("SOLO",
+		"Seul, contre le bot : l'aventure, salle après salle, ou l'entraînement contre une cible ou un adversaire à trois "
+		+ "difficultés. Rien n'est classé.",
+		SCREEN_SOLO, COLOR_ACCENT, "", "", false, "ill_entrainement"))
 	accueil.add_child(hub.make_entry("1V1 ÉCRANS SCINDÉS",
 		"Deux joueurs sur ce poste, écran partagé. Rien n'est en jeu : toutes les "
 		+ "armes sont accessibles.", SCREEN_LOCAL, COLOR_ACCENT, "", "", false,
@@ -4278,14 +4327,6 @@ func _build_hub_screens() -> void:
 		"Match classé : le résultat compte, et l'arsenal s'aligne sur le moins bien "
 		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD, "", "", false,
 		"ill_competitif"))
-	accueil.add_child(hub.make_entry("S'ENTRAÎNER",
-		"Seul, contre une cible ou un adversaire qui marche. De quoi prendre une "
-		+ "arme en main sans enjeu.",
-		SCREEN_TRAINING, COLOR_ACCENT, "", "", false, "ill_entrainement"))
-	accueil.add_child(hub.make_entry("AVENTURE",
-		"Seul, salle après salle, dans le noir : des plafonniers, des silhouettes à abattre, un adversaire au bout de chaque "
-		+ "chapitre. Chaque chapitre fini offre une classe. Rien n'est classé.",
-		SCREEN_AVENTURE, COLOR_ACCENT, "", "", false, "ill_entrainement"))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM,
 		COLOR_DIM, "", "", false, "ill_personnalisation"))
@@ -4313,6 +4354,19 @@ func _build_hub_screens() -> void:
 		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur "
 		+ "un mur.\n\n[b]Être vu, c'est être mort.[/b]\n\nQuitter le jeu : le bouton "
 		+ "en bas de l'écran.")
+
+	# --- Solo ---------------------------------------------------------------------
+	# Écran de navigation pure : deux destinations et le retour, aucun lanceur (`LANCEURS` ne le nomme pas). Aventure d'abord : c'est
+	# le parcours guidé ; l'entraînement est l'atelier libre.
+	solo.add_child(hub.make_entry("AVENTURE",
+		"Seul, salle après salle, dans le noir : des plafonniers, des silhouettes à abattre, un adversaire au bout de chaque "
+		+ "chapitre. Chaque chapitre fini offre une classe. Rien n'est classé.",
+		SCREEN_AVENTURE, COLOR_ACCENT, "", "", false, "ill_entrainement"))
+	solo.add_child(hub.make_entry("S'ENTRAÎNER",
+		"Seul, contre une cible ou un adversaire qui marche. De quoi prendre une "
+		+ "arme en main sans enjeu.",
+		SCREEN_TRAINING, COLOR_ACCENT, "", "", false, "ill_entrainement"))
+	hub.add_back_entry(SCREEN_SOLO, "", "ill_accueil")
 
 	# --- 1v1 écrans scindés ---------------------------------------------------
 	_entree_preparer[SCREEN_LOCAL] = hub.make_entry("PRÉPARER LE MATCH",
@@ -4574,6 +4628,7 @@ func _build_hub_screens() -> void:
 		hub.set_screen_panel(id, PANEL_SALON)
 	# Les écrans de sélection de mode ou de sous-menu ont leur illustration dédiée.
 	hub.set_screen_panel(MenuHub.ROOT, "ill_accueil")
+	hub.set_screen_panel(SCREEN_SOLO, "ill_entrainement")
 	hub.set_screen_panel(SCREEN_FRIENDLY, "ill_amical")
 	hub.set_screen_panel(SCREEN_FRIENDLY_ONLINE, "ill_amical_ligne")
 	hub.set_screen_panel(SCREEN_FRIENDLY_LOCAL, "ill_amical_local")
@@ -4591,6 +4646,7 @@ func _build_hub_screens() -> void:
 	hub.set_screen_background(SCREEN_LOCAL_HOST, "res://assets/ui/ill_creer_local.png")
 	hub.set_screen_background(SCREEN_LOCAL_JOIN, "res://assets/ui/ill_rejoindre_local.png")
 	hub.set_screen_background(SCREEN_RANKED, "res://assets/ui/ill_competitif.png")
+	hub.set_screen_background(SCREEN_SOLO, "res://assets/ui/ill_entrainement.png")
 	hub.set_screen_background(SCREEN_TRAINING, "res://assets/ui/ill_entrainement.png")
 	hub.set_screen_background(SCREEN_AVENTURE, "res://assets/ui/ill_entrainement.png")
 	hub.set_screen_background(SCREEN_AVENTURE_SALLES, "res://assets/ui/ill_entrainement.png")
@@ -5857,9 +5913,12 @@ func _on_hub_screen_changed(id: String) -> void:
 	# `_apply_queue_kind`, qui repasse les verrous.
 	_contexte_aventure = id in [SCREEN_AVENTURE, SCREEN_AVENTURE_SALLES]
 	if _contexte_aventure:
-		# À l'OUVERTURE de l'écran (depuis l'accueil, pas depuis ses salles), le choix repart du prochain à jouer : le chapitre fini la
+		# À l'OUVERTURE de l'écran (depuis Solo, pas depuis ses salles), le choix repart du prochain à jouer : le chapitre fini la
 		# dernière fois n'est plus celui qu'on veut.
-		if id == SCREEN_AVENTURE and _ecran_d_avant_l_aventure != SCREEN_AVENTURE_SALLES:
+		# Ni au retour des salles, ni sur le chemin d'une redescente qui va aux salles (`redescendre_vers()` : l'écran de l'aventure y
+		# est traversé, et le chapitre pris doit survivre au retour d'un match).
+		if id == SCREEN_AVENTURE and _ecran_d_avant_l_aventure != SCREEN_AVENTURE_SALLES \
+				and _descente_vers != SCREEN_AVENTURE_SALLES:
 			aventure_chapitre = -1
 			aventure_niveau = -1
 		_rafraichir_l_aventure()
@@ -7471,13 +7530,12 @@ const LIBELLES := {
 	"reload": "Recharger",
 	"gadget": "Gadget",
 	"accroupir": "S'accroupir",
-	"enjamber": "Enjamber",
 }
 
 ## L'ordre d'apparition : on se déplace, on vise, on tire, on recharge, on s'éclaire.
 const ORDRE := ["move_up", "move_down", "move_left", "move_right",
 	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "reload", "torch",
-	"lance_fusee", "gadget", "accroupir", "enjamber"]
+	"lance_fusee", "gadget", "accroupir"]
 
 ## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
 ## Elle s'écrit quand même — voir `_lignes_du_bloc()`.
@@ -8106,6 +8164,23 @@ func _get_keyboard_action_info(action: String) -> Dictionary:
 				MOUSE_BUTTON_WHEEL_DOWN: return {"text": "MOLETTE BAS", "icon": ""}
 				_: return {"text": "BOUTON %d" % clic.button_index, "icon": ""}
 	return {}
+
+
+## Le nom d'un GESTE pour un texte de jeu (les consignes de l'initiation, chantier SOLO, 2026-10-04) : les touches de ses actions au
+## clavier, puis la manette — « Z Q S D  ·  Stick gauche », « CLIC DROIT  ·  Gâchette L2 ». Lu dans l'`InputMap` comme l'écran des
+## contrôles, donc juste après une réassignation et dans la disposition du joueur. Les deux appareils sont montrés, pas arbitrés,
+## pour la même raison que `_get_action_btn_info()`. Une action sans clavier ni souris (la visée) se dit « SOURIS ».
+func libelle_du_geste(actions: Array) -> String:
+	var touches: Array[String] = []
+	for action: String in actions:
+		var t := String(_get_keyboard_action_info(action).get("text", ""))
+		if t != "" and not touches.has(t):
+			touches.append(t)
+	var clavier := " ".join(touches) if not touches.is_empty() else "SOURIS"
+	var manette := ""
+	if not actions.is_empty():
+		manette = String(_get_joypad_action_info(String(actions[0])).get("text", ""))
+	return clavier if manette == "" else "%s  ·  %s" % [clavier, manette]
 
 
 ## Ce que le bouton de réassignation affiche.

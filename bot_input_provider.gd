@@ -152,6 +152,12 @@ var _reaction_depuis := -1.0
 var _derniere_vue := -INF
 ## Le temps passé à viser depuis le début de l'engagement (l'erreur de visée se resserre avec lui), en secondes.
 var _t_visee := 0.0
+## La mise en joue (`ProfilBot.mise_en_joue_s`) : vrai dès que le corps a dû tourner (il est sorti de la tolérance de tir) depuis son dernier
+## coup ou le début de l'engagement ; `_aligne_depuis` dit depuis quand il est revenu dans la tolérance (-1 : il n'y est pas) ; `_ecart_rattrape`,
+## le plus grand écart (radians) entre le corps et l'angle voulu depuis — c'est lui qui dose le délai : de dos, le délai entier.
+var _a_tourne := false
+var _aligne_depuis := -1.0
+var _ecart_rattrape := 0.0
 ## L'erreur de visée du moment, dans [-1, 1] : multipliée par l'amplitude du moment, en degrés.
 var _erreur_unite := 0.0
 ## L'angle que le bot veut tenir (radians, monde), erreur comprise ; valable si `_a_un_angle`.
@@ -536,6 +542,7 @@ func _penser(delta: float, corps: Node2D) -> void:
 	_choisir_l_etat(corps, maintenant, memoire)
 	_gerer_l_engagement(corps, maintenant, memoire)
 	_viser(delta, corps, memoire)
+	_suivre_l_alignement(corps, maintenant)
 	_gerer_le_tir(corps, maintenant, memoire)
 	_gerer_la_recharge(corps, maintenant)
 	# S9 : les outils. Un profil sans équipement ne passe pas ici : mêmes commandes, à la graine près, que le bot d'avant.
@@ -585,6 +592,9 @@ func _entrer_dans(nouveau: int, corps: Node2D) -> void:
 		_t_visee = 0.0
 		_a_un_angle = false
 		_rafale_faite = 0
+		_a_tourne = false
+		_aligne_depuis = -1.0
+		_ecart_rattrape = 0.0
 		_tirer_l_erreur()
 	if nouveau == Etat.PATROUILLE:
 		_gachette = false
@@ -630,6 +640,27 @@ func _viser(delta: float, corps: Node2D, memoire: MemoireBot) -> void:
 	_visee = Vector2.from_angle(courant + clampf(angle_difference(courant, _angle_voulu), -pas, pas))
 
 
+## Suit l'alignement du CORPS (pas de la consigne) sur l'angle voulu, pour la mise en joue : à chaque pas de pensée, même quand la gâchette
+## ne peut rien (cadence, recharge) — sans quoi un corps sorti puis revenu dans la tolérance pendant une recharge passerait pour n'avoir
+## jamais tourné.
+func _suivre_l_alignement(corps: Node2D, maintenant: float) -> void:
+	if etat == Etat.PATROUILLE or not _a_un_angle:
+		_aligne_depuis = -1.0
+		return
+	var ecart := absf(angle_difference(corps.rotation, _angle_voulu))
+	if ecart > deg_to_rad(profil.tolerance_tir_deg):
+		_a_tourne = true
+		_aligne_depuis = -1.0
+		_ecart_rattrape = maxf(_ecart_rattrape, ecart)
+	elif _aligne_depuis < 0.0:
+		_aligne_depuis = maintenant
+
+
+## Le délai de mise en joue dû pour l'angle rattrapé : `mise_en_joue_s` pour un demi-tour, proportionnel en deçà.
+func delai_de_mise_en_joue() -> float:
+	return profil.mise_en_joue_s * clampf(_ecart_rattrape / PI, 0.0, 1.0)
+
+
 ## La gâchette. Un coup part quand : le profil tire, le bot est engagé et sait où viser, son arme est prête (munitions, pas en
 ## recharge, cadence), la pause de rafale est finie, la zone n'est pas trop vague pour son audace (sauf s'il VOIT), et **le corps
 ## est à moins de `tolerance_tir_deg` de l'angle voulu** — l'erreur de visée comprise : c'est elle qui fait manquer un bot lent.
@@ -665,6 +696,11 @@ func _gerer_le_tir(corps: Node2D, maintenant: float, memoire: MemoireBot) -> voi
 		return
 	if absf(angle_difference(corps.rotation, _angle_voulu)) > deg_to_rad(profil.tolerance_tir_deg):
 		return
+	# La mise en joue : il a dû tourner → il voit, il vise, PUIS il tire (`ProfilBot.mise_en_joue_s`), d'autant plus longtemps qu'il a tourné.
+	if _a_tourne and (_aligne_depuis < 0.0 or maintenant - _aligne_depuis < delai_de_mise_en_joue()):
+		return
+	_a_tourne = false
+	_ecart_rattrape = 0.0
 	_gachette = true
 	_munitions_a_l_appui = munitions
 	_appui_depuis = maintenant

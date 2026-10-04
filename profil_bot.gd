@@ -147,6 +147,15 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 ## La DISCIPLINE DE TIR. Il tire quand le corps est à moins de `tolerance_tir_deg` degrés de la direction qu'il veut tenir (erreur
 ## de visée comprise) ; il tire `tirs_par_rafale` coups, à la cadence de l'arme, puis attend `pause_entre_rafales` secondes.
 @export_range(0.0, 30.0) var tolerance_tir_deg: float = 6.0
+
+## La MISE EN JOUE (2026-10-04, Adrien : « il faut qu'il y ait un délai s'ils ont besoin de tourner leur orientation pour tirer : ils voient,
+## ils visent, puis ils tirent. Sinon c'est trop dur ils vont trop vite »). Le temps, en secondes, que le corps doit TENIR aligné — à moins de
+## `tolerance_tir_deg` — avant le premier coup, chaque fois qu'il a dû tourner pour s'aligner, **pour un demi-tour** : il est PROPORTIONNEL à
+## l'angle rattrapé (Adrien, le même jour : « d'autant plus longue qu'ils doivent tourner : s'ils nous tournent le dos ça doit être plus long
+## que s'ils pointent à peu près vers nous »). De dos (180°), le délai entier ; à 60°, son tiers. Un bot qui fait déjà face tire sans l'attendre.
+## 0 : l'ancien comportement (le coup part à l'image où le corps entre dans la tolérance). Posé sur les PNJ du catalogue (`pnj()`), PAS sur le
+## bot de l'entraînement ni sur les boss : leurs paliers sont réglés au banc (80 / 55 / 30 %, boss 55 %) et la demande vise les PNJ.
+@export_range(0.0, 3.0) var mise_en_joue_s: float = 0.0
 @export_range(1, 12) var tirs_par_rafale: int = 2
 @export_range(0.0, 5.0) var pause_entre_rafales: float = 0.8
 
@@ -454,7 +463,20 @@ static func pnj(deplacement: int, sens: int, palier: int = Palier.LENT) -> Profi
 	p.agit = true
 	p.tire = true
 	appliquer_les_reflexes(p, palier)
+	p.mise_en_joue_s = float(MISE_EN_JOUE_PNJ.get(palier, 0.0))
 	return p
+
+
+## La mise en joue des PNJ du catalogue, par palier, POUR UN DEMI-TOUR (voir `mise_en_joue_s`). Chiffres de DÉPART, jugés par personne : à régler
+## en jouant. Relevés quand le délai est devenu proportionnel à l'angle (2026-10-04) : à 0,9 s pour un demi-tour, un ajustement de 30° n'aurait plus
+## coûté que 0,15 s.
+const MISE_EN_JOUE_PNJ := {
+	Palier.TRES_LENT: 1.4,
+	Palier.LENT: 1.1,
+	Palier.FACILE: 0.8,
+	Palier.NORMAL: 0.6,
+	Palier.DIFFICILE: 0.45,
+}
 
 
 ## Le nom d'un PNJ du catalogue.

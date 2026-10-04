@@ -136,6 +136,25 @@ func reussir_niveau(chapitre: int, index: int) -> bool:
 	return sauver()
 
 
+## Le meilleur temps d'une salle, en secondes de jeu (carton exclu) ; 0 si elle n'a jamais été réussie. Il nourrit le « RECORD » du
+## tampon de la salle réussie (`AventureHud`, 2026-10-04) : rejouer une salle a un but, la battre.
+func meilleur_temps(chapitre: int, index: int) -> float:
+	return float(_cfg.get_value(_section(chapitre), "temps_%d" % index, 0.0))
+
+
+## Note un temps de salle réussie ; vrai si c'est un RECORD — il bat un meilleur temps déjà connu. Le premier passage n'en est pas un :
+## il n'a rien battu. Écrit seulement quand le temps s'améliore.
+func noter_temps(chapitre: int, index: int, secondes: float) -> bool:
+	if secondes <= 0.0:
+		return false
+	var ancien := meilleur_temps(chapitre, index)
+	if ancien > 0.0 and secondes >= ancien:
+		return false
+	_cfg.set_value(_section(chapitre), "temps_%d" % index, snappedf(secondes, 0.01))
+	sauver()
+	return ancien > 0.0
+
+
 ## Finit un chapitre — son BOSS est tombé — et débloque sa classe. Refuse (et crie) un chapitre fermé.
 func terminer_chapitre(chapitre: int) -> bool:
 	if not chapitre_ouvert(chapitre):

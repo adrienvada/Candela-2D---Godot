@@ -6467,12 +6467,14 @@ func _on_main_menu_requested(target_screen: String = ""):
 
 	ui.show_main_menu()
 	# `show_main_menu()` vient de remettre le hub à l'accueil (`hub.reset()`) —
-	# un écran voulu descend d'un cran par-dessus, APRÈS coup : `hub.push()`
-	# refuse silencieusement un identifiant inconnu ou déjà courant, donc un
-	# `target_screen` vide (tous les appelants sauf « quitter le match ») ne
-	# change rien ici.
+	# un écran voulu descend par-dessus, APRÈS coup — par `redescendre_vers()`, qui
+	# empile aussi ses ancêtres (l'écran Solo, pour l'entraînement et l'aventure) :
+	# un seul `hub.push()` laissait l'entraînement directement sous l'accueil, et
+	# RETOUR sautait Solo. `hub.push()` refuse silencieusement un identifiant
+	# inconnu ou déjà courant, donc un `target_screen` vide (tous les appelants
+	# sauf « quitter le match ») ne change rien ici.
 	if target_screen != "":
-		ui.hub.push(target_screen)
+		ui.redescendre_vers(target_screen)
 	AudioManager.play_music("music_menu")
 
 ## Retour à la pause vers « QUITTER LE MATCH » : le même abandon que MENU
