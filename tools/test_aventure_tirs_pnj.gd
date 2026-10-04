@@ -8,7 +8,8 @@
 ## - **chaque tir de PNJ part en direct** (`SFX`, aucune part occultée), à son niveau, avec une portée d'au moins trois fois la diagonale ;
 ## - **le témoin** : le MÊME tir, au même endroit, joué comme un tir ordinaire, est encore étouffé par au moins un mur — sans lui, une salle
 ##   sans recoin ferait passer ce banc sans rien prouver ;
-## - **le duel n'est pas touché** : le tir du joueur garde la portée ordinaire.
+## - **le duel n'est pas touché** : le tir du joueur garde la portée ordinaire ;
+## - **S11, les dégâts** : une balle de PNJ ôte au plus 20 points (10 au bord), quelle que soit son arme.
 ##
 ## Lancer : godot --headless --path . --fixed-fps 60 --script res://tools/test_aventure_tirs_pnj.gd
 extends SceneTree
@@ -88,6 +89,30 @@ func _run() -> void:
 	_check("le témoin : sans la règle des PNJ, au moins un de ces tirs serait étouffé par un mur (%d sur %d)" % [etouffes_sans, pnj.size()],
 		etouffes_sans >= 1)
 
+	# S11 — les dégâts : une balle de PNJ fait de 10 (bord) à 20 (centre), quelle que soit son arme. Une balle tirée droit au centre du joueur.
+	# Un PNJ qui TIRE (0.9 mêle des sourds et aveugles, qui ne tirent jamais et n'ont pas de dégâts à porter).
+	var tireur: Node2D = null
+	var tous_portent := true
+	for q in pnj:
+		var agit: bool = q.input_provider.profil.agit
+		if agit and tireur == null:
+			tireur = q
+		if agit and q.degats_pnj != Vector2(10.0, 20.0):
+			tous_portent = false
+	var cible: Node2D = main.p1
+	_check("la salle a un PNJ qui tire", tireur != null)
+	if tireur == null:
+		_sortir()
+		return
+	_check("chaque PNJ qui tire porte ses dégâts de balle : 10 au bord, 20 au centre", tous_portent)
+	cible.hp = 100.0
+	var direction: Vector2 = (cible.global_position - tireur.global_position).normalized()
+	main.spawn_bullet(tireur, cible.global_position - direction * 50.0, direction.angle(), tireur.current_weapon)
+	await _images(10)
+	var perdu: float = 100.0 - float(cible.hp)
+	_check("une balle de PNJ au centre ôte 20 points, pas les %.0f de son arme (perdu : %.0f)" % [tireur.current_weapon.damage_center, perdu],
+		perdu >= 19.0 and perdu <= 20.0, str(perdu))
+	cible.hp = 100.0
 	main.p1.current_ammo = 6
 	main.p1.shoot_cooldown = 0.0
 	main.p1.shoot()

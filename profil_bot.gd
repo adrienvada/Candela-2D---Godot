@@ -156,6 +156,37 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 ## 0 : l'ancien comportement (le coup part à l'image où le corps entre dans la tolérance). Posé sur les PNJ du catalogue (`pnj()`), PAS sur le
 ## bot de l'entraînement ni sur les boss : leurs paliers sont réglés au banc (80 / 55 / 30 %, boss 55 %) et la demande vise les PNJ.
 @export_range(0.0, 3.0) var mise_en_joue_s: float = 0.0
+
+## Les DÉGÂTS d'une balle de ce bot, quelle que soit son arme : x au bord du corps, y au centre (2026-10-04, Adrien : « que les PNJ ne
+## fassent pas plus de 10-20 dégâts par tir »). Nul : ceux de l'arme. Posé sur les PNJ du catalogue (`pnj()`), pas sur le bot de
+## l'entraînement ni sur les boss, réglés au banc avec les dégâts de leur arme.
+@export var degats_balle: Vector2 = Vector2.ZERO
+
+## Les RAFALES TIRÉES AU SORT (2026-10-04, Adrien : « que parfois ils arrivent à tirer plusieurs fois ») : à chaque rafale, un nombre de coups
+## tiré selon ces poids — `[1 coup, 2 coups, 3 coups]`. Vide : `tirs_par_rafale`, fixe (le bot de l'entraînement, les boss). Entre deux coups d'une
+## même rafale, ni tolérance ni mise en joue : le corps est déjà en ligne, et chaque coup suivant s'écarte de `dispersion_rafale_deg` de plus.
+@export var poids_rafale: Array[float] = []
+@export_range(0.0, 30.0) var dispersion_rafale_deg: float = 0.0
+
+## L'ANNONCE du tir (2026-10-04) : pendant la mise en joue, la torche se braque (`BotInputProvider`). Faux : il se met en joue dans le noir.
+@export var annonce_le_tir: bool = true
+
+## LA FOUILLE (2026-10-04, Adrien : « il va à ta dernière position connue, balaie avec sa torche, puis renonce et reprend sa ronde »). En
+## RECHERCHE — il t'a vu, il t'a perdu —, une fois sur la place que dit sa mémoire (ou s'il ne bouge pas), il balaie à ±`AMPLITUDE_FOUILLE_DEG`
+## autour d'elle, torche allumée si `torche_en_fouille`, sans tirer dans le vide. Quand la mémoire s'efface, la patrouille reprend : la ronde.
+@export var balaie_en_fouille: bool = false
+@export var torche_en_fouille: bool = false
+
+## LES TEMPÉRAMENTS (2026-10-04) : un caractère posé PAR-DESSUS le déplacement, les sens et le palier (`appliquer_temperament`).
+enum Temperament { AUCUN, GUETTEUR, TRAQUEUR, PEUREUX, EMBUSQUE }
+@export var temperament: Temperament = Temperament.AUCUN
+## Reste à son poste en enquête et en recherche : il se tourne, il ne marche pas (le guetteur, l'embusqué).
+@export var reste_a_son_poste: bool = false
+## Marche vers ce qu'il entend même s'il est posé immobile (le traqueur).
+@export var poursuit_les_sons: bool = false
+## Recule et cesse de tirer quand il est blessé à `seuil_de_peur` de sa vie, ou resté seul (le peureux).
+@export var fuit_si_menace: bool = false
+@export_range(0.0, 1.0) var seuil_de_peur: float = 0.0
 @export_range(1, 12) var tirs_par_rafale: int = 2
 @export_range(0.0, 5.0) var pause_entre_rafales: float = 0.8
 
@@ -464,7 +495,69 @@ static func pnj(deplacement: int, sens: int, palier: int = Palier.LENT) -> Profi
 	p.tire = true
 	appliquer_les_reflexes(p, palier)
 	p.mise_en_joue_s = float(MISE_EN_JOUE_PNJ.get(palier, 0.0))
+	p.degats_balle = DEGATS_BALLE_PNJ
+	p.poids_rafale = POIDS_RAFALE_PNJ.duplicate()
+	p.dispersion_rafale_deg = DISPERSION_RAFALE_PNJ_DEG
+	p.balaie_en_fouille = true
+	p.torche_en_fouille = true
 	return p
+
+
+## L'amplitude du balayage de la fouille, de part et d'autre de la place perdue, et sa vitesse (en radians de phase par seconde).
+const AMPLITUDE_FOUILLE_DEG := 70.0
+const VITESSE_FOUILLE := 1.6
+
+## Les noms des tempéraments, tels qu'un fichier de niveau les écrit (clé « temperament » d'un PNJ).
+const NOMS_TEMPERAMENT := {
+	"guetteur": Temperament.GUETTEUR,
+	"traqueur": Temperament.TRAQUEUR,
+	"peureux": Temperament.PEUREUX,
+	"embusque": Temperament.EMBUSQUE,
+}
+
+
+## Pose un tempérament sur un profil du catalogue — APRÈS l'équipement (`equipe`), parce qu'il décide de la torche :
+##   • GUETTEUR : sa torche reste allumée, il ne quitte pas son poste. Il voit loin, et on le voit de loin.
+##   • TRAQUEUR : il entend plus juste (×1,5), se souvient deux fois plus longtemps, et marche vers ce qu'il entend — même posé immobile.
+##   • PEUREUX : à mi-vie, ou resté seul, il recule et cesse de tirer le temps de se mettre à l'abri.
+##   • EMBUSQUÉ : sa torche reste éteinte, il ne s'annonce pas et ne fouille pas ; il ne quitte pas son poste et ne tire qu'à moins de
+##     `PORTEE_EMBUSCADE_PX`, d'une mise en joue deux fois plus courte — il attendait, déjà en ligne.
+static func appliquer_temperament(p: ProfilBot, t: int) -> void:
+	p.temperament = t
+	match t:
+		Temperament.GUETTEUR:
+			p.torche_tactique = false
+			p.torche_allumee = true
+			p.reste_a_son_poste = true
+		Temperament.TRAQUEUR:
+			p.precision_auditive = minf(p.precision_auditive * 1.5, 4.0)
+			p.delai_oubli = minf(p.delai_oubli * 2.0, 60.0)
+			p.poursuit_les_sons = true
+		Temperament.PEUREUX:
+			p.fuit_si_menace = true
+			p.seuil_de_peur = 0.5
+		Temperament.EMBUSQUE:
+			p.torche_tactique = false
+			p.torche_allumee = false
+			p.annonce_le_tir = false
+			p.balaie_en_fouille = false
+			p.torche_en_fouille = false
+			p.reste_a_son_poste = true
+			p.distance_tir_max_px = PORTEE_EMBUSCADE_PX
+			p.mise_en_joue_s *= 0.5
+
+
+## L'embusqué laisse venir : il ne tire qu'à moins de cette distance.
+const PORTEE_EMBUSCADE_PX := 320.0
+
+
+## Une rafale de PNJ : un coup la moitié du temps, deux trois fois sur dix, trois deux fois sur dix. Chaque coup suivant s'écarte de 5° de plus.
+const POIDS_RAFALE_PNJ: Array[float] = [0.5, 0.3, 0.2]
+const DISPERSION_RAFALE_PNJ_DEG := 5.0
+
+
+## Les dégâts d'une balle de PNJ : 10 au bord, 20 au centre — il en faut de 5 à 10 pour abattre un joueur (100 points), contre 2 à 4 au pistolet.
+const DEGATS_BALLE_PNJ := Vector2(10.0, 20.0)
 
 
 ## La mise en joue des PNJ du catalogue, par palier, POUR UN DEMI-TOUR (voir `mise_en_joue_s`). Chiffres de DÉPART, jugés par personne : à régler

@@ -199,6 +199,8 @@ func _creer_les_pnj(n: Dictionary) -> void:
 		p.rotation = float(e["rotation"])
 		# La vie du profil : 100 pour tout PNJ du catalogue, davantage pour un boss dont l'arme ne tue pas en un chargeur (`ProfilBot.vie`).
 		p.hp = float(bot.profil.vie) if bot.profil != null else 100.0
+		# Les dégâts de SES balles (`ProfilBot.degats_balle`, 10 à 20 pour un PNJ du catalogue) ; nuls pour un boss : ceux de son arme.
+		p.degats_pnj = bot.profil.degats_balle if bot.profil != null else Vector2.ZERO
 		p.reset_step_tracker()
 		p.reset_flashlight_latch()
 		p.reset_posture()
@@ -271,6 +273,14 @@ func _commencer_a_jouer() -> void:
 ## Un tour de garde : le joueur est-il tombé ? tous les PNJ le sont-ils ? Le joueur d'abord : s'ils tombent ensemble, la salle est
 ## perdue — il n'y a pas de victoire d'un mort.
 func _regarder_la_salle() -> void:
+	# Le peureux fuit quand il est resté seul : chaque bot sait combien des SIENS sont encore debout (lui exclu).
+	var debout := 0
+	for p in pnj:
+		if is_instance_valid(p) and not bool(p.dead):
+			debout += 1
+	for p in pnj:
+		if is_instance_valid(p) and p.input_provider is BotInputProvider:
+			(p.input_provider as BotInputProvider).allies_vivants = maxi(debout - (0 if bool(p.dead) else 1), 0)
 	if bool(jeu.p1.dead):
 		morts += 1
 		phase = Phase.JOUEUR_ABATTU

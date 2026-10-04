@@ -29,6 +29,9 @@ const BulletCasingScript := preload("res://bullet_casing.gd")
 ## (`PerceptionBotNoeud._adversaire`), les balles d'un PNJ traversent les autres PNJ (`Bullet`), et un PNJ ne blesse pas un PNJ
 ## (`take_damage`). Faux partout ailleurs : le duel, en ligne comme en local, ne le pose jamais.
 var est_pnj: bool = false
+## Les dégâts d'une balle de ce PNJ, quelle que soit son arme : x au bord, y au centre (`bullet.gd`, `_hit_player`). Nul : ceux de l'arme —
+## le duel, les boss. Posé par `AventurePartie` d'après `ProfilBot.degats_balle` (2026-10-04).
+var degats_pnj: Vector2 = Vector2.ZERO
 
 ## La place de CE PNJ dans les réserves de `GameState` (fusées, gadget, batterie, recharge d'une minute) — S9b. Ces réserves sont
 ## indexées par `player_id`, et tous les PNJ en portent un (1) : sans place à eux ils partageaient celle de J2, semée sur la classe de
@@ -1807,7 +1810,13 @@ func _physics_process(delta):
 		# La torche n'obéit qu'au bouton : **aucun autre état du joueur ne
 		# l'éteint.** Elle montre et elle trahit ; le moment est un choix, et il
 		# reste entier.
+		var torche_avant := flashlight_on
 		flashlight_on = input_provider.is_flashlight_pressed()
+		# Un PNJ qui allume sa torche se fait ENTENDRE (2026-10-04) : c'est l'annonce de sa mise en joue (`BotInputProvider`), et le seul
+		# claquement de torche que joue le jeu pour un autre que soi — audible de partout, comme ses tirs.
+		if est_pnj and flashlight_on and not torche_avant:
+			AudioManager.play_sfx_2d_random_pitch("torch_on", global_position, 0.95, 1.05, 0.0, AudioManager.BUS_SFX, player_id,
+				AudioManager.FACTEUR_PORTEE_TIR_PNJ, true)
 		# Chantier vibrations manettes — le clic du cran plein, à l'armement ET
 		# au désarmement du verrou (les deux sont le même geste physique : la
 		# gâchette qui touche sa butée). `is_flashlight_locked()` est déjà le

@@ -122,6 +122,10 @@ var coups_tires := 0
 var _rng := RandomNumberGenerator.new()
 ## Les tirages des RÉFLEXES (l'erreur de visée) : un générateur à part, pour que S3 ne change aucune cible du déplacement.
 var _rng_reflexes := RandomNumberGenerator.new()
+## Le tirage des rafales (`ProfilBot.poids_rafale`) : à part, pour que le bot de l'entraînement — sans poids — garde exactement ses tirages.
+var _rng_rafale := RandomNumberGenerator.new()
+## L'annonce du tir dure jusqu'à un peu après le coup : la torche ne s'éteint pas à l'image même où la balle part.
+const ANNONCE_APRES_COUP_S := 0.4
 ## La graine du bot, gardée pour semer la perception SANS tirer dans `_rng` : monter la perception ne doit changer aucune
 ## cible du déplacement (même graine, même suite — ce que garde `test_bot_navigation`).
 var _graine := 0
@@ -158,6 +162,23 @@ var _t_visee := 0.0
 var _a_tourne := false
 var _aligne_depuis := -1.0
 var _ecart_rattrape := 0.0
+## La rafale en cours : combien de coups elle compte (`ProfilBot.poids_rafale`, tirés au sort à chaque rafale ; sinon `tirs_par_rafale`).
+var _taille_rafale := 0
+## L'annonce du tir (2026-10-04) : la torche se braque pendant la mise en joue, jusqu'à cet instant (temps de la perception).
+var _annonce_jusqu := -INF
+## La fouille (2026-10-04) : vrai pendant qu'il balaie la place perdue ; la phase du balayage.
+var _balaie := false
+var _phase_fouille := 0.0
+## Le peureux : combien de PNJ de sa salle sont encore debout, lui exclu (`AventurePartie` le tient à jour ; -1 : on ne sait pas, hors
+## aventure). Il ne fuit à nouveau qu'après `_peur_pret_apres`.
+var allies_vivants := -1
+var _peur_pret_apres := -INF
+## Un repli de peur reprend après ce délai si la menace tient toujours.
+const REPRISE_PEUR_S := 3.0
+## À moins de cette distance de la place perdue, il est arrivé : il fouille.
+const DISTANCE_FOUILLE_PX := 96.0
+## Ce que dure un repli de peur.
+const DUREE_PEUR_S := 2.5
 ## L'erreur de visée du moment, dans [-1, 1] : multipliée par l'amplitude du moment, en degrés.
 var _erreur_unite := 0.0
 ## L'angle que le bot veut tenir (radians, monde), erreur comprise ; valable si `_a_un_angle`.
@@ -229,6 +250,7 @@ func configurer(un_profil: ProfilBot, une_navigation: NavigationBot, graine: int
 	_graine = graine
 	_rng.seed = graine
 	_rng_reflexes.seed = graine ^ 0x7e57
+	_rng_rafale.seed = graine ^ 0x5a1e
 	_rng_equipement.seed = graine ^ 0x9ad9
 	reinitialiser()
 
@@ -248,6 +270,11 @@ func reinitialiser() -> void:
 	_recharge = false
 	_rafale_faite = 0
 	_pause_jusqu = -INF
+	_annonce_jusqu = -INF
+	_taille_rafale = 0
+	_balaie = false
+	_phase_fouille = 0.0
+	_peur_pret_apres = -INF
 	_vide_depuis = -1.0
 	_en_approche = false
 	# S9 : les outils repartent de zéro. Une torche allumée, un accroupissement ou un repli de la manche d'avant ne sont pas ceux d'un
@@ -334,8 +361,13 @@ func _physics_process(delta: float) -> void:
 
 ## Un pas de décision : met à jour le vecteur de mouvement et la visée pour un corps en `position`.
 func avancer(delta: float, position: Vector2, vitesse: float = VITESSE_DE_MARCHE) -> void:
-	if profil == null or navigation == null \
-			or profil.deplacement == Profil.Deplacement.IMMOBILE:
+	if profil == null or navigation == null:
+		_mouvement = Vector2.ZERO
+		return
+	# Un PNJ posé immobile ne marche pas — sauf le traqueur qui va vers ce qu'il entend, et le peureux qui fuit (2026-10-04).
+	if profil.deplacement == Profil.Deplacement.IMMOBILE \
+			and not (profil.poursuit_les_sons and etat != Etat.PATROUILLE) \
+			and not (profil.fuit_si_menace and _repli_actif):
 		_mouvement = Vector2.ZERO
 		return
 	# S9 : un REPLI (le bot s'éloigne après un tir, recule après une mine, se met dans son nuage) suit son propre chemin, quel que soit l'état :
@@ -344,6 +376,10 @@ func avancer(delta: float, position: Vector2, vitesse: float = VITESSE_DE_MARCHE
 	# En combat le bot tient sa place : il se tourne et tire (S3). Il ne reprend la marche qu'en perdant sa cible de vue.
 	# S9b : sauf s'il s'approche, parce que son arme n'y porte pas encore (`_gerer_l_engagement`) : il marche alors vers ce qu'il voit.
 	if etat == Etat.COMBAT and not en_repli and not _en_approche:
+		_mouvement = Vector2.ZERO
+		return
+	# Le guetteur et l'embusqué tiennent leur poste : en enquête et en recherche, ils se tournent, ils ne marchent pas.
+	if profil.reste_a_son_poste and etat != Etat.PATROUILLE and not en_repli:
 		_mouvement = Vector2.ZERO
 		return
 	var ici := _case_de(position)
@@ -542,6 +578,8 @@ func _penser(delta: float, corps: Node2D) -> void:
 	_choisir_l_etat(corps, maintenant, memoire)
 	_gerer_l_engagement(corps, maintenant, memoire)
 	_viser(delta, corps, memoire)
+	_fouiller(delta, corps, memoire)
+	_gerer_la_peur(corps, maintenant, memoire)
 	_suivre_l_alignement(corps, maintenant)
 	_gerer_le_tir(corps, maintenant, memoire)
 	_gerer_la_recharge(corps, maintenant)
@@ -595,6 +633,7 @@ func _entrer_dans(nouveau: int, corps: Node2D) -> void:
 		_a_tourne = false
 		_aligne_depuis = -1.0
 		_ecart_rattrape = 0.0
+		_taille_rafale = _tirer_la_rafale()
 		_tirer_l_erreur()
 	if nouveau == Etat.PATROUILLE:
 		_gachette = false
@@ -633,11 +672,51 @@ func _viser(delta: float, corps: Node2D, memoire: MemoireBot) -> void:
 	_t_visee += delta
 	var amplitude := lerpf(profil.erreur_visee_deg, profil.erreur_visee_min_deg,
 		clampf(_t_visee / maxf(profil.duree_resserrement, 0.01), 0.0, 1.0))
+	# Dans une rafale tirée au sort, chaque coup suivant s'écarte un peu plus : la première balle prévient, les suivantes peuvent toucher.
+	amplitude += float(_rafale_faite) * profil.dispersion_rafale_deg
 	_angle_voulu = vers.angle() + deg_to_rad(_erreur_unite * amplitude)
 	_a_un_angle = true
 	var courant := _visee.angle() if _visee != Vector2.ZERO else corps.rotation
 	var pas := profil.vitesse_visee * delta
 	_visee = Vector2.from_angle(courant + clampf(angle_difference(courant, _angle_voulu), -pas, pas))
+
+
+## LA FOUILLE : en recherche, sur la place perdue (ou sans pouvoir y aller), il balaie autour d'elle — torche allumée si son profil le dit —
+## et ne tire pas dans le vide : `_a_un_angle` tombe, la gâchette n'a plus d'angle. S'il revoit sa cible, la machine à états repasse en combat
+## et la visée ordinaire reprend. Appelée après `_viser`, dont elle remplace la consigne le temps du balayage.
+func _fouiller(delta: float, corps: Node2D, memoire: MemoireBot) -> void:
+	_balaie = false
+	if not profil.balaie_en_fouille or etat != Etat.RECHERCHE:
+		_phase_fouille = 0.0
+		return
+	var vers := memoire.position - corps.global_position
+	var arrive := vers.length() <= DISTANCE_FOUILLE_PX or _mouvement == Vector2.ZERO
+	if not arrive:
+		return
+	_balaie = true
+	_a_un_angle = false
+	# Un appui en cours (« l'appui dure jusqu'au coup ») partirait pendant le balayage, dans le vide : relevé par la garde. Il est relâché,
+	# et la rafale close.
+	_gachette = false
+	_rafale_faite = 0
+	_phase_fouille += delta * Profil.VITESSE_FOUILLE
+	var axe := vers.angle() if vers.length() >= DISTANCE_VISEE_MIN else corps.rotation
+	_visee = Vector2.from_angle(axe + sin(_phase_fouille) * deg_to_rad(Profil.AMPLITUDE_FOUILLE_DEG))
+
+
+## LA PEUR (le peureux) : blessé à `seuil_de_peur` de sa vie, ou resté le dernier debout, il recule loin de la menace (un repli, qui lui
+## interdit de tirer) — puis recommence tant que la menace tient. Il lit SA vie et le nombre d'alliés debout, jamais le joueur.
+func _gerer_la_peur(corps: Node2D, maintenant: float, memoire: MemoireBot) -> void:
+	if not profil.fuit_si_menace or _repli_actif or maintenant < _peur_pret_apres or not memoire.connue(maintenant):
+		return
+	var vie: Variant = corps.get("hp")
+	var blesse := vie != null and float(vie) <= profil.vie * profil.seuil_de_peur
+	var seul := allies_vivants == 0
+	if not (blesse or seul):
+		return
+	_peur_pret_apres = maintenant + REPRISE_PEUR_S
+	_gachette = false
+	_planifier_un_repli(corps, Equip.Repli.RECUL, DUREE_PEUR_S, memoire.position, Vector2.INF)
 
 
 ## Suit l'alignement du CORPS (pas de la consigne) sur l'angle voulu, pour la mise en joue : à chaque pas de pensée, même quand la gâchette
@@ -647,6 +726,9 @@ func _suivre_l_alignement(corps: Node2D, maintenant: float) -> void:
 	if etat == Etat.PATROUILLE or not _a_un_angle:
 		_aligne_depuis = -1.0
 		return
+	# Au milieu d'une rafale tirée au sort, la dispersion écarte la visée exprès : ce n'est pas un corps qui a dû tourner.
+	if _en_rafale():
+		return
 	var ecart := absf(angle_difference(corps.rotation, _angle_voulu))
 	if ecart > deg_to_rad(profil.tolerance_tir_deg):
 		_a_tourne = true
@@ -654,6 +736,32 @@ func _suivre_l_alignement(corps: Node2D, maintenant: float) -> void:
 		_ecart_rattrape = maxf(_ecart_rattrape, ecart)
 	elif _aligne_depuis < 0.0:
 		_aligne_depuis = maintenant
+
+
+## Combien de coups compte la rafale en cours.
+func _taille_de_la_rafale() -> int:
+	return _taille_rafale if not profil.poids_rafale.is_empty() and _taille_rafale > 0 else profil.tirs_par_rafale
+
+
+## Une taille de rafale tirée selon `poids_rafale` (1, 2, 3 coups…) ; 0 sans poids — `tirs_par_rafale` vaut alors. Un générateur à part : le bot de
+## l'entraînement, qui n'a pas de poids, ne consomme aucun tirage de plus.
+func _tirer_la_rafale() -> int:
+	if profil == null or profil.poids_rafale.is_empty():
+		return 0
+	var total := 0.0
+	for w in profil.poids_rafale:
+		total += maxf(float(w), 0.0)
+	var t := _rng_rafale.randf() * total
+	for i in profil.poids_rafale.size():
+		t -= maxf(float(profil.poids_rafale[i]), 0.0)
+		if t <= 0.0:
+			return i + 1
+	return profil.poids_rafale.size()
+
+
+## Vrai entre deux coups d'une rafale tirée au sort.
+func _en_rafale() -> bool:
+	return not profil.poids_rafale.is_empty() and _rafale_faite > 0
 
 
 ## Le délai de mise en joue dû pour l'angle rattrapé : `mise_en_joue_s` pour un demi-tour, proportionnel en deçà.
@@ -674,8 +782,13 @@ func _gerer_le_tir(corps: Node2D, maintenant: float, memoire: MemoireBot) -> voi
 			_rafale_faite += 1
 			coups_tires += 1
 			_tirer_l_erreur()
-			if _rafale_faite >= profil.tirs_par_rafale:
+			if _rafale_faite >= _taille_de_la_rafale():
 				_rafale_faite = 0
+				_taille_rafale = _tirer_la_rafale()
+				# La rafale finie, la prochaine repart d'une mise en joue neuve : seul un corps qui devra tourner l'attendra.
+				_a_tourne = false
+				_ecart_rattrape = 0.0
+				_aligne_depuis = -1.0
 				_pause_jusqu = maintenant + profil.pause_entre_rafales
 				_rafale_finie_a = maintenant
 		elif maintenant - _appui_depuis > DELAI_APPUI_MAX:
@@ -694,11 +807,16 @@ func _gerer_le_tir(corps: Node2D, maintenant: float, memoire: MemoireBot) -> voi
 	# S9b : hors de portée de SON arme, il ne tire pas (un tir qui n'atteint rien trahit le tireur pour rien) — il s'approche, si son profil le dit.
 	if profil.distance_tir_max_px > 0.0 and corps.global_position.distance_to(memoire.position) > profil.distance_tir_max_px:
 		return
-	if absf(angle_difference(corps.rotation, _angle_voulu)) > deg_to_rad(profil.tolerance_tir_deg):
-		return
-	# La mise en joue : il a dû tourner → il voit, il vise, PUIS il tire (`ProfilBot.mise_en_joue_s`), d'autant plus longtemps qu'il a tourné.
-	if _a_tourne and (_aligne_depuis < 0.0 or maintenant - _aligne_depuis < delai_de_mise_en_joue()):
-		return
+	# Au milieu d'une rafale tirée au sort, le coup suivant part dès que l'arme est prête : ni tolérance ni mise en joue.
+	if not _en_rafale():
+		if absf(angle_difference(corps.rotation, _angle_voulu)) > deg_to_rad(profil.tolerance_tir_deg):
+			return
+		# La mise en joue : il a dû tourner → il voit, il vise, PUIS il tire (`ProfilBot.mise_en_joue_s`), d'autant plus longtemps qu'il a
+		# tourné. Il l'ANNONCE (2026-10-04) : sa torche se braque le temps de la mise en joue, et un peu au-delà du coup.
+		if _a_tourne and (_aligne_depuis < 0.0 or maintenant - _aligne_depuis < delai_de_mise_en_joue()):
+			if _aligne_depuis >= 0.0 and delai_de_mise_en_joue() > 0.0:
+				_annonce_jusqu = maxf(_annonce_jusqu, _aligne_depuis + delai_de_mise_en_joue() + ANNONCE_APRES_COUP_S)
+			return
 	_a_tourne = false
 	_ecart_rattrape = 0.0
 	_gachette = true
@@ -932,6 +1050,12 @@ func get_aim_direction(_player_global_pos: Vector2) -> Vector2:
 
 
 func is_flashlight_pressed() -> bool:
+	# L'annonce du tir (2026-10-04) : pendant la mise en joue, la torche se braque — quel que soit le reste.
+	if perception != null and perception.maintenant() < _annonce_jusqu and profil != null and profil.annonce_le_tir:
+		return true
+	# La fouille : la torche balaie avec le regard.
+	if _balaie and profil != null and profil.torche_en_fouille:
+		return true
 	# S9 : une torche tactique est une COMMANDE du bot (`_torche`, posée par `_equiper`) ; sinon elle est fixe, comme avant.
 	if profil != null and profil.torche_tactique:
 		return _torche

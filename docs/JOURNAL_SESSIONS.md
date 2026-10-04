@@ -6163,3 +6163,7 @@ corps coincé ; le bruit d'enjambement ne compte que pendant une traversée), `i
 `p2_enjamber` n'existent plus), `ui.gd` (l'écran Solo, `redescendre_vers`, `libelle_du_geste`), `game_state.gd` (le retour de match passe
 par `redescendre_vers`). `protocol.gd` inchangé. Qui tient ces fichiers ailleurs : `grep kill_entre_joueurs player.gd` et
 `grep redescendre_vers ui.gd` après sa prochaine fusion.
+
+**Mise à jour du chantier SOLO, 2026-10-04 au soir (S11, l'intelligence des PNJ).** Même session, même branche, repartie de `main` après la
+fusion de la PR #5. **Touche le duel par un seul point** : `bullet.gd` lit `Player.degats_pnj` (nul hors aventure, donc sans effet), et
+`player.gd` fait claquer la torche d'un PNJ (`est_pnj`, jamais posé hors aventure). Le reste vit dans les fichiers du solo.
