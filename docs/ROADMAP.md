@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (OMBRES : le chantier OM inscrit — l'ombre d'un PNJ qui part devant lui, les PNJ délavés, les paliers de la pâte qui bougent — et ses questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-04 (OMBRES : OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3270,6 +3270,19 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Mesurer l'ombre d'un corps dans une salle d'aventure : un plafonnier l'éclaire par-dessus, et un rayon vers un PNJ touche le PNJ (2026-10-04)
+
+Chantier OMBRES, OM0 (`tools/planche_ombres.gd`). Deux faux résultats au premier passage du banc, l'un après l'autre.
+**Le rayon** : `MapGeometry.WALL_LAYER` vaut 1, et les corps de `player.tscn` vivent sur la couche 1 ; un rayon ou une forme qui
+interroge la couche des murs touche donc aussi J1, J2 et CHAQUE PNJ. `photographe._mur_entre` et `_sol_libre` excluent J1 et J2,
+pas les PNJ : le banc a refusé tous ses plans (« J1 ne tient pas à 160 px du PNJ ») parce que le rayon de J1 au centre du PNJ
+touchait le PNJ. Un outil qui pose des PNJ exclut leurs RID (`planche_ombres._corps_exclus`). **La lumière** : un plafonnier n'est
+arrêté par AUCUN corps (son masque d'ombre est neutre, S5) — ni le bandeau LED, près d'un mur. Sous le plafonnier de la salle 0.1,
+le sol dans l'étoile du PNJ lisait 0,53 de celui d'à côté, là où la lightmap le montrait noir sous la torche : la sonde mesurait la
+flaque. **Ce qu'on prouve de l'ombre d'UNE lumière se lit sous cette lumière seule** (les autres coupées le temps d'une image, puis
+rendues), et l'image qu'on montre garde toutes les lumières. Règle voisine, déjà payée : avant de croire une famille de mesures,
+se demander QUELLE lumière éclaire ce qu'on lit (« Un capteur de corps lit la lumière REÇUE », 2026-10-02).
 
 ### Un tween lié au corps qui meurt meurt avec lui — et laisse ce qu'il devait effacer (2026-10-04)
 
@@ -33879,7 +33892,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 
 | Lot | Objet | Attend | État |
 |---|---|---|---|
-| **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | en cours |
+| **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | la moitié « culling » peut se préparer ; **ne se livre pas sans Q81** |
 | **OM2** | L'ombre a la forme du corps voxel | **Q82**, après OM1 | — |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | — |
@@ -33973,7 +33986,10 @@ Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bl
   pas un souffle (lu au code, non mesuré) : le bruit est celui de la secousse de caméra (`noise.frequency = 10`, « Fast frequency
   for impact »), lu à `t × 40` — 400 unités par seconde, un bruit blanc à la cadence de la physique que le `lerp` (8 × delta)
   lisse en un tremblement d'environ 1 %, décorrélé en un dixième de seconde ; la feuille de route le disait « Perlin lent ».
-  **Avis : la retirer.**
+  ~~Avis : la retirer.~~ **Avis révisé le même jour, par la mesure d'OM0** : elle n'y est pour rien — l'énergie ne bouge que de
+  ±0,15 %, la lightmap d'un niveau au plus, et pas un pixel du monde ne change au-delà de 8 niveaux. Ce qui fait onduler les
+  paliers, c'est le recul de tir (OM3, sans décision) et le glissement du regard sous la pâte D (Q83). La garder ou la retirer
+  n'est plus qu'une question de goût, sans effet sur O3.
 - **Q85 — Le filtre d'ombre : PCF5 avec un léger lissage sur la torche, le halo et les plafonniers, et l'atlas d'ombres à
   4096 ?** Les deux ne se valent pas. L'atlas à 4096 divise les marches par deux sans rien changer à la règle. Le PCF, lui, pose
   une pénombre : il allume à demi ce que la règle dit dans l'ombre, et assombrit à demi ce qu'elle dit éclairé — or « l'ombre au
@@ -34045,6 +34061,77 @@ PCF5 et `rendering/2d/shadow_atlas/size` à 4096 selon Q85, coût mesuré. Chaqu
 des hauteurs de la lampe, du corps et des murs : ombre finie sous une lampe haute, infinie sous une lampe plus basse que la tête,
 hauteur bornée sur les faces de murs. Réglerait O5, O7 et O8 d'un coup.
 
+### OM0 — FAITE le 2026-10-04 : le banc des ombres
+
+**Ce qui existe.**
+- `tools/planche_ombres.gd` + `.tscn` : trente plans en sept familles (`--liste` les imprime) — `etoile` (O1 : la torche côté
+  caméra, de dos, de profil, × le PNJ face à la lampe ou de profil, plus la courte portée de 70 px), `classes` (les dix
+  étoiles, arme vers la lampe), `plafonnier` (O3 : pâte D, la même image en pâte brute posée à l'exécution, plafonnier éteint),
+  `mur` (O5), `scintillement` (six images consécutives : scène tenue, respiration, recul de tir ; pâte D puis brute),
+  `brouillage` (O2, salle 0.9), `lumieres` (O12). Le catalogue entier : **2 min 23 s** sous Xvfb + llvmpipe, en 1920×1080.
+- Les mesures, au journal (`journal.json`) : la **sonde** — « le sol dans l'étoile, côté lampe, est éclairé », lue sur les rayons
+  de l'étoile tournés vers la lampe (± 60°), aux trois quarts du rayon puis 6 px au-delà du bord, et l'ombre DERRIÈRE contre le
+  sol de côté ; le **capteur** du PNJ (Q42 : OM1 ne doit pas le faire bouger) ; l'**opacité** de chaque PNJ et l'éblouissement de
+  J1 avec sa source ; le **scintillement** entre images consécutives — l'écran, l'écran hors des corps, la lightmap — et
+  l'**énergie de la torche** image par image ; le **recensement** des lumières par quadrant de 560 px.
+- `--correctif=etoile_ccw` (et `etoile_cw`, `disque`, `disque_ccw`) : le prototype de l'audit, posé à l'exécution, aucun code du
+  jeu touché ; `--avant=<dossier>` met deux passages côte à côte dans `planche.html`. Sorties hors du dépôt (`user://ombres` par
+  défaut) ; les planches retenues vont dans `docs/iso/ombres/` (sous le `.gdignore` de `docs/iso/`).
+- Les gardes : `test_ombre_propre` (154 → **158** vérifications : le culling attendu sur les vingt étoiles — dix classes, J1 et
+  J2 —, leur sens, le contrôle qui refuse la même étoile retournée, le leurre qui fait le même trou) ; `test_banc` (+3 : les appuis
+  du banc sur le jeu, son catalogue — salles, PNJ et classes qui existent —, ses emprunts au photographe).
+
+**Ce que le banc a établi sur le code d'aujourd'hui** (`492311a2` ; planches et mesures : `docs/iso/ombres/om0/`).
+- **O1, chiffré** : torche seule, l'intérieur de l'étoile côté lampe lit **0,000** dans les vingt-sept plans qui le sondent — dix
+  classes, trois côtés, 70 et 160 px —, contre 0,22 à 0,32 juste dehors ; l'ombre derrière, 0,000 contre 0,08 à 0,14 de côté.
+  **Le prototype `etoile_ccw`** : dedans 0,24 à 0,39 (rapport 0,84 à 1,80 fois le sol de dehors), derrière toujours 0,000 ; le capteur du PNJ
+  sous la torche seule, 0,558 (0,820 à 70 px) avant, exactement les mêmes avec le prototype.
+- **O2, reproduit** : torche de J1 seule allumée, les six PNJ de la salle 0.9 à **0,648** ; un PNJ qui braque sa torche sur J1
+  (éblouissement 0,310, source PNJ_0), les six à **0,053**.
+- **O3 — ce qui scintille vraiment** : la scène tenue ne change **aucun** pixel du monde (hors des corps, pâte D comme brute ;
+  lightmap : zéro) ; la **respiration** non plus — l'énergie de la torche va de 2,497 à 2,504 (±0,15 %), la lightmap bouge d'un
+  niveau au plus, zéro pixel au-delà de 8 hors des corps ; **le recul de tir**, lui (`randf_range(1.5, 2.0)` à chaque pas) :
+  4 440 à 21 255 pixels hors des corps au-delà de 8 niveaux, dont 27 à 8 749 au-delà de 24, en pâte D — en pâte brute, la même
+  lumière qui baisse donne 0 à 5 000 pixels au-delà de 8 et **aucun** au-delà de 24. La pâte transforme une baisse lisse en sauts.
+- **O4 — le « grésillement à scène figée » de l'audit est le glissement du regard.** Laissé au lissage (`RegardDuel.lisser`),
+  deux plans après la pose de la salle, la série tenue comptait 1 351 à 2 696 pixels de lightmap au-delà de 8 niveaux, toutes les
+  lumières bougeant et aucun mur — la signature du piège du 2026-09-25, « La caméra 2D glisse encore au temps figé » ; le
+  décalage du regard posé à sa valeur d'arrivée, zéro. Ce n'est pas qu'un piège de mesure : en jeu, la caméra glisse ainsi
+  quelques secondes après chaque changement de visée, et la pâte D en fait des paliers qui sautent — un argument pour Q83.
+- **O12** : salle 0.9 au repos, 6 lumières au plus par quadrant, 7 quand un PNJ braque sa torche. Loin des 15 ; la fusillade à
+  cinq PNJ n'est pas jouée.
+
+**Pourquoi chaque choix.**
+- **La sonde se lit sur une image à part, torche seule** (plafonniers et bandeau LED coupés le temps d'une image) : un plafonnier
+  n'est arrêté par aucun corps (masque neutre de S5), il éclaire l'intérieur de l'étoile quoi qu'il arrive — premier passage :
+  0,53 « dedans ÷ dehors » sous le plafonnier de 0.1, là où la lightmap montrait l'intérieur noir sous la torche. Près d'un mur,
+  le bandeau LED fait de même. L'image du plan, elle, garde toutes les lumières.
+- **Le regard posé à sa valeur d'arrivée à chaque image**, et le repère de la lightmap au journal à six décimales (la règle du
+  piège du 2026-09-25).
+- **Les corps comptés à part** dans le scintillement de l'écran : ils frémissent d'un pixel même tenus (piège du 2026-09-30).
+- **La luma de Rec. 601** pour le scintillement (celle de la mesure de l'audit, `PIL … convert("L")`), celle de Rec. 709 pour la
+  sonde et le capteur (celle de la pâte et des corps).
+- **Le carton de la salle passé d'un coup**, la vraie règle d'ouverture des chapitres (un chapitre s'ouvre quand le précédent est
+  TERMINÉ, son boss tombé — `terminer_chapitre` — et non ses salles réussies : c'est ce qui avait fermé le chapitre 1 à l'audit).
+- **Les corps exclus des rayons** « y a-t-il un mur » : voir « Pièges connus » (2026-10-04).
+
+**Sabotages exécutés — chacun a rougi, puis a été restauré à l'identique (md5 vérifié).**
+- `player.gd`, l'étoile en `CULL_COUNTER_CLOCKWISE` : `test_ombre_propre` rouge sur quatre vérifications (les deux formes, les
+  vingt étoiles, le leurre qui ne fait plus le même trou).
+- `charte.gd`, l'étoile retournée (`pts.reverse()`) : trois rouges — les vingt sens (aires négatives imprimées), le contrôle, le
+  leurre.
+- `gadget_leurre.gd`, le leurre seul en `CULL_COUNTER_CLOCKWISE` : un rouge.
+- `test_banc` : un plan qui nomme la salle 0.19 — le catalogue rouge ; un appui absent du jeu, injecté dans la liste du banc —
+  les appuis rouges ; un emprunt absent du photographe — les emprunts rouges. **Renommer pour de bon** une méthode dont le jeu ou le
+  photographe dépend (`CameraIso.vers_sol`, `photographe._commit`) fait échouer la COMPILATION : la suite pend, et le lanceur la
+  tue à son plafond de 120 s — rouge, mais pas par cette garde ; d'où la détection montrée par un nom absent injecté.
+
+**Non prouvé.** Rien sous Metal, et la planche n'a pas encore été vue par Adrien. Le banc tient UNE salle à un instant : il ne
+joue pas une fusillade (O12), ni le duel en ligne.
+
+**Signalé, pas corrigé.** `photographe._mur_entre` et `_sol_libre` n'excluent que J1 et J2 : un outil qui s'en sert près d'un PNJ
+le prend pour un mur (« Pièges connus », 2026-10-04).
+
 ### Ne pas reproposer
 
 L'ombre ronde pour tous (Q42 — le disque de l'audit n'est qu'une MESURE de largeur) ; la lumière jumelle (Q42) ; la lumière 3D
@@ -34054,9 +34141,10 @@ la pâte D sans Adrien : on l'adoucit, on ne la change pas.
 ### Non prouvé (à l'ouverture)
 
 - **Rien n'a été regardé sous le pilote d'Apple**, ni en partie jouée par un humain : llvmpipe n'est pas Metal. Le jugement
-  final est celui d'Adrien, en jouant (jalon H-OM ci-dessous).
-- **Le grésillement de la lightmap à scène figée** (180 à 570 px par image, tous sur les arêtes d'ombre) : cause non isolée —
-  une micro-variation de la transformée de la lampe est l'hypothèse de l'audit, non instrumentée.
+  final est celui d'Adrien, en jouant (jalon H16 ci-dessous).
+- ~~**Le grésillement de la lightmap à scène figée** (180 à 570 px par image, tous sur les arêtes d'ombre) : cause non isolée —
+  une micro-variation de la transformée de la lampe est l'hypothèse de l'audit, non instrumentée.~~ **Isolé par OM0** : c'est le
+  glissement du regard (piège du 2026-09-25) ; le décalage posé à sa valeur d'arrivée, la lightmap ne bouge plus d'un pixel.
 - **Les coûts** : des décomptes et des estimations ; aucune cadence du solo n'a jamais été relevée.
 
 ### Signalé, pas corrigé (à l'ouverture)

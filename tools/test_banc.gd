@@ -527,6 +527,35 @@ func _run() -> void:
 		perdus.is_empty(), ", ".join(perdus)
 		+ " — prévenir la session DA7 avant de renommer")
 
+	# OMBRES, OM0 — LE BANC DES OMBRES (`tools/planche_ombres.gd`, chantier OMBRES, 2026-10-04). Même raison et même remède que
+	# le photographe : il ouvre une fenêtre (Xvfb), aucune suite ne peut l'exécuter, et un outil hors couverture se périme en
+	# silence. Il pose une salle d'aventure, fige ses PNJ, relit la lightmap et les capteurs : ses appuis sont nommés ici.
+	var Ombres: GDScript = load("res://tools/planche_ombres.gd")
+	var manquants_ombres: Array[String] = Ombres.preconditions_manquantes(ui, main)
+	_check("tous les appuis du banc des ombres existent encore",
+		manquants_ombres.is_empty(), "; ".join(manquants_ombres))
+	_check("et il sait dire quand ils manquent",
+		not (Ombres.preconditions_manquantes(null, null) as Array).is_empty())
+	# Son catalogue : chaque plan nomme une salle qui existe, un PNJ que cette salle a, une classe qui existe — sans quoi le banc
+	# refuse le plan en séance, devant quelqu'un qui attendait une planche.
+	var fautes_ombres := _fautes_du_catalogue_des_ombres(Ombres.plans())
+	_check("le catalogue du banc des ombres ne nomme que des salles, des PNJ et des classes qui existent",
+		fautes_ombres.is_empty(), "; ".join(fautes_ombres))
+	_check("et la garde du catalogue sait dire quand un plan nomme une salle absente",
+		not _fautes_du_catalogue_des_ombres([{"id": "faux", "salle": [0, 99], "cible": 0}]).is_empty())
+	# Il hérite du photographe, comme le cinéaste : ces membres PRIVÉS sont son interface.
+	var empruntes_ombres: Array[String] = ["_valeur", "_drapeau", "_lire_taille", "_poser_la_fenetre", "_attendre",
+		"_attendre_disparition", "_sortir", "_commit"]
+	var perdus_ombres: Array[String] = []
+	for nom in empruntes_ombres:
+		if not connus.has(nom):
+			perdus_ombres.append(nom)
+	for motif in ["var _pantins", "class Marionnette", "var _main", "var _dossier", "var _taille", "const Commun"]:
+		if not texte.contains(motif):
+			perdus_ombres.append(motif)
+	_check("les membres dont hérite tools/planche_ombres.gd existent encore",
+		perdus_ombres.is_empty(), ", ".join(perdus_ombres) + " — prévenir le chantier OMBRES avant de renommer")
+
 	# ⚠️ **L'état que le banc DEMANDE est-il celui que le joueur GARDE ?**
 	#
 	# Le banc écrivait `p.flashlight_on = true` et annonçait « torches allumées » ;
@@ -545,6 +574,35 @@ func _run() -> void:
 	else:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	quit(1 if _failures > 0 else 0)
+
+
+## Les plans du banc des ombres qui nomment une salle absente, un PNJ que leur salle n'a pas ou une classe inconnue. Séparée de
+## son appel pour être vérifiable, comme `_collisions_de_cles`.
+static func _fautes_du_catalogue_des_ombres(plans: Array) -> Array[String]:
+	var fautes: Array[String] = []
+	var ids := {}
+	for plan in plans:
+		var id := String(plan.get("id", ""))
+		if ids.has(id):
+			fautes.append("identifiant en double : %s" % id)
+		ids[id] = true
+		var salle: Array = plan.get("salle", [])
+		if salle.size() != 2:
+			fautes.append("%s : salle illisible" % id)
+			continue
+		var chemin := "res://assets/solo/chapitre_%02d/niveau_%02d.json" % [int(salle[0]), int(salle[1]) + 1]
+		if not FileAccess.file_exists(chemin):
+			fautes.append("%s : pas de salle %d.%d (%s)" % [id, int(salle[0]), int(salle[1]) + 1, chemin])
+			continue
+		var niveau = JSON.parse_string(FileAccess.get_file_as_string(chemin))
+		var pnj: Array = (niveau as Dictionary).get("pnj", []) if niveau is Dictionary else []
+		for cle in ["cible", "ebloui_par"]:
+			if plan.has(cle) and int(plan[cle]) >= pnj.size():
+				fautes.append("%s : la salle %d.%d n'a pas de PNJ n° %d (%d en tout)" % [id, int(salle[0]),
+					int(salle[1]) + 1, int(plan[cle]), pnj.size()])
+		if plan.has("classe") and not FileAccess.file_exists("res://assets/sprites/%s_silhouette.png" % String(plan["classe"])):
+			fautes.append("%s : pas de silhouette pour la classe « %s »" % [id, String(plan["classe"])])
+	return fautes
 
 
 ## Les illustrations qui se ramènent à une même clé canonique, nommées par paires.

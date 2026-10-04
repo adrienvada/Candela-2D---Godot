@@ -28,6 +28,13 @@
 ##     l'ADVERSAIRE — et d'elle seule — porte dans son masque d'ombre : un mur l'arrête, chez J1 comme chez J2, le leurre vu par
 ##     son poseur compris ; le capteur de soi ne reçoit jamais les ombres de SA propre rétrodiffusion (la lumière propre ne
 ##     bouge pas) ; le même calcul avec le masque de Q55 retrouve la fuite ; aucune lumière n'a l'un de ces bits dans sa portée.
+##   • **OMBRES, OM0 — le culling et l'enroulement de chaque étoile** (chantier OMBRES, 2026-10-04) : pour les dix classes, chez
+##     J1 comme chez J2, et pour le leurre, l'étoile porte le mode de culling attendu (`CULL_ETOILE_ATTENDU`) et tourne dans le
+##     sens que ce culling suppose — aire signée POSITIVE dans le repère du jeu (y vers le bas), donc « anti-horaire » au sens de
+##     `Geometry2D.is_polygon_clockwise`. La combinaison n'a de sens qu'avec le bon enroulement : un culling des arêtes tournées
+##     vers la lampe fait partir l'ombre du bord arrière du corps (prouvé à l'image par `tools/planche_ombres.gd`, sonde
+##     « dedans / dehors ») ; le même culling sur une étoile tournée à l'envers cullerait les arêtes ARRIÈRE, et l'ombre
+##     partirait de nouveau devant les pieds, sans un mot. Le contrôle prouve qu'il voit un enroulement inversé.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_ombre_propre.gd
 extends SceneTree
@@ -36,6 +43,9 @@ const ORIENTATIONS := [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0]
 ## Les trois classes que le rapport `cloud-ombre-orientation` a vues noires, torche du côté de l'arme.
 const CLASSES_NOIRES := ["occulteur", "fumiste", "incendiaire"]
 const ANNEAU := 64
+## OMBRES — le mode de culling des étoiles de corps aujourd'hui : `CULL_DISABLED`, l'intérieur de l'étoile dans l'ombre. OM1 le
+## passera à `CULL_COUNTER_CLOCKWISE` (l'ombre part du bord arrière), et cette ligne avec lui.
+const CULL_ETOILE_ATTENDU := OccluderPolygon2D.CULL_DISABLED
 
 var _failures := 0
 var _verifications := 0
@@ -81,6 +91,7 @@ func _run() -> void:
 		return
 
 	_structure()
+	_culling_et_enroulement()
 	await _suivi()
 	_la_regle_scindee()
 	await _l_effet()
@@ -118,11 +129,63 @@ func _structure() -> void:
 		_check("J%d : la torche d'en face l'ombre toujours (couche de l'étoile dans son masque d'ombre)" % (j + 1),
 			((_main.p2 if j == 0 else _main.p1).flashlight.shadow_item_cull_mask & occ.occluder_light_mask) != 0)
 		_check("J%d : sa forme est l'étoile de 32 rayons de sa silhouette, une ressource à elle" % (j + 1),
-			occ.occluder != null and occ.occluder.polygon.size() == 32 and occ.occluder.cull_mode == OccluderPolygon2D.CULL_DISABLED)
+			occ.occluder != null and occ.occluder.polygon.size() == 32 and occ.occluder.cull_mode == CULL_ETOILE_ATTENDU)
 		var torse := joueur.get_node_or_null("OccluderTorse") as LightOccluder2D
 		_check("J%d : le disque de torse (rétrodiffusion) est resté dans le monde, à sa couche" % (j + 1),
 			torse != null and torse.get_canvas() == monde and torse.occluder_light_mask == joueur.COUCHE_TORSE)
 	_check("les deux étoiles ont chacune leur canvas", _main.p1.etoile().get_canvas() != _main.p2.etoile().get_canvas())
+
+
+## OMBRES, OM0 — le culling et l'enroulement de l'étoile, pour les dix classes, chez J1 comme chez J2. Sans rendu : ce qui se voit,
+## le banc des ombres le mesure (`tools/planche_ombres.gd`) ; ici, la combinaison que ce banc a prouvée, et qu'aucun geste ne doit
+## défaire en silence.
+func _culling_et_enroulement() -> void:
+	print("\n--- OMBRES : le culling et l'enroulement de chaque étoile (dix classes, J1 et J2) ---")
+	var classes := _classes()
+	var mauvais_cull: Array[String] = []
+	var mauvais_sens: Array[String] = []
+	for j in 2:
+		var joueur: Node2D = _main.p1 if j == 0 else _main.p2
+		for slug in classes:
+			joueur.equip_weapon(_main.weapon_for_index(_index_de(slug)))
+			var occ: LightOccluder2D = joueur.etoile()
+			if occ == null or occ.occluder == null:
+				mauvais_cull.append("J%d %s : pas d'étoile" % [j + 1, slug])
+				continue
+			var forme: PackedVector2Array = occ.occluder.polygon
+			if occ.occluder.cull_mode != CULL_ETOILE_ATTENDU:
+				mauvais_cull.append("J%d %s (%d)" % [j + 1, slug, occ.occluder.cull_mode])
+			if not _sens_attendu(forme):
+				mauvais_sens.append("J%d %s (aire %.1f)" % [j + 1, slug, _aire_signee(forme)])
+	_check("les vingt étoiles (dix classes, J1 et J2) portent le culling attendu (%d)" % CULL_ETOILE_ATTENDU,
+		mauvais_cull.is_empty(), ", ".join(mauvais_cull))
+	_check("et tournent toutes dans le sens que le culling suppose (aire signée positive, y vers le bas)",
+		mauvais_sens.is_empty(), ", ".join(mauvais_sens))
+	# Le contrôle : la même forme, retournée, doit être refusée — sans quoi « toutes dans le bon sens » ne dirait rien.
+	var forme_j1: PackedVector2Array = _main.p1.etoile().occluder.polygon
+	var retournee := forme_j1.duplicate()
+	retournee.reverse()
+	_check("le contrôle voit un enroulement inversé (la même étoile retournée est refusée)",
+		_sens_attendu(forme_j1) and not _sens_attendu(retournee))
+	_main.p1.equip_weapon(_main.weapon_for_index(_index_de("pistolet")))
+	_main.p2.equip_weapon(_main.weapon_for_index(_index_de("pistolet")))
+
+
+## L'aire signée d'un polygone (formule du lacet), dans le repère du jeu : positive quand les sommets tournent comme l'angle de
+## `Vector2.from_angle` croissant — le sens de `Charte.ombre_de_silhouette`.
+static func _aire_signee(forme: PackedVector2Array) -> float:
+	var a := 0.0
+	for i in forme.size():
+		var p := forme[i]
+		var q := forme[(i + 1) % forme.size()]
+		a += p.x * q.y - q.x * p.y
+	return a * 0.5
+
+
+## Le sens que le culling d'une étoile suppose : aire positive ET « anti-horaire » au sens de `Geometry2D` (qui compte y vers le
+## haut) — les deux lectures disent la même chose, et le moteur ne connaît que la seconde.
+static func _sens_attendu(forme: PackedVector2Array) -> bool:
+	return forme.size() >= 3 and _aire_signee(forme) > 0.0 and not Geometry2D.is_polygon_clockwise(forme)
 
 
 ## L'étoile suit son corps — position et rotation, avant le rendu — et sa visibilité.
@@ -606,6 +669,12 @@ func _le_leurre() -> void:
 		e != null and e.proprietaire == leurre and e.occluder == leurre._occluder
 		and e.occluder.occluder.polygon == _main.p1.etoile().occluder.polygon
 		and e.occluder.occluder_light_mask == _main.p1.etoile().occluder_light_mask)
+	_check("OMBRES : son étoile porte le même culling que celle d'un joueur, et tourne dans le même sens (le même trou)",
+		e != null and e.occluder.occluder.cull_mode == CULL_ETOILE_ATTENDU
+		and e.occluder.occluder.cull_mode == _main.p1.etoile().occluder.cull_mode
+		and _sens_attendu(e.occluder.occluder.polygon),
+		"cull %d, aire %.1f" % [e.occluder.occluder.cull_mode if e != null else -1,
+			_aire_signee(e.occluder.occluder.polygon) if e != null else 0.0])
 	var torse := leurre.get_node_or_null("OccluderTorse") as LightOccluder2D
 	_check("son disque de torse reste dans le monde partagé, comme celui d'un joueur",
 		torse != null and torse.get_canvas() == _main.vp1.world_2d.get_canvas())
