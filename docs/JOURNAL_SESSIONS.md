@@ -6167,3 +6167,23 @@ par `redescendre_vers`). `protocol.gd` inchangé. Qui tient ces fichiers ailleur
 **Mise à jour du chantier SOLO, 2026-10-04 au soir (S11, l'intelligence des PNJ).** Même session, même branche, repartie de `main` après la
 fusion de la PR #5. **Touche le duel par un seul point** : `bullet.gd` lit `Player.degats_pnj` (nul hors aventure, donc sans effet), et
 `player.gd` fait claquer la torche d'un PNJ (`est_pnj`, jamais posé hors aventure). Le reste vit dans les fichiers du solo.
+
+## 2026-10-04 — Le chantier OMBRES (session « Chantier OMBRES — éclairage Candela », `candela-2d-godot-d4`, branche `claude/determined-pasteur-mtrws1`)
+
+Adrien confie à cette session le chantier d'éclairage du solo **de bout en bout** — les lots OM0 à OM7 de « Chantier — les ombres et
+la lumière du solo (OM) » dans la feuille de route —, d'après l'audit qu'une session cloud a mené le même jour hors du dépôt. Elle
+travaille dans son propre conteneur cloud (un clone à elle : l'équivalent d'un worktree, personne d'autre n'y écrit), pousse SA
+branche et ouvre une PR à la fin de chaque lot vert ; jamais `main`, jamais de fusion.
+
+**En propre :** `tools/planche_ombres.gd` et `.tscn` (créés, OM0 — le banc des ombres) ; `docs/iso/ombres/` (les planches du
+chantier, à venir) ; la section « Chantier — les ombres et la lumière du solo (OM) » de la feuille de route.
+**Partagés, touchés par insertions :** `tools/test_ombre_propre.gd` (les gardes de culling et d'enroulement des étoiles) et
+`tools/test_banc.gd` (le banc épinglé, l'usage prévu de ce fichier) dès OM0. Puis, lot par lot et chacun annoncé ici avant d'y
+écrire : `player.gd` (l'étoile, le flash, `hit_light`, `ground_flash`, `die()`, la posture, l'enveloppe de tir), `charte.gd` (une
+fonction d'occulteur de corps), `gadget_leurre.gd` (la même étoile que le joueur), `brouillage.gd` (selon Q81),
+`presentation_3d.gd` et `miroirs_iso.gd` (les capteurs, OM6), `canaux_lumiere.gd` (selon Q86), `fusee.gd`, `gadget_mine.gd`,
+`gadget_braises.gd` (selon Q87), `iso_pate.gdshaderinc` et `iso_pate.gd` (selon Q83), `tools/bench_framerate.gd` (un mode solo,
+OM6), `tools/run_suites.sh` (une ligne par suite ajoutée).
+**Demandé à :** personne n'était joignable par `ListAgents` au lancement (vide). La porteuse du suivi, « Fable 5.1 - CLOUD ISO
+UNRAILED » (cloud), reçoit le delta du chantier ; qui tient ces fichiers sur une autre branche est prévenu par cette ligne — après sa
+prochaine fusion, `grep -n "planche_ombres\|CULL_COUNTER_CLOCKWISE" tools/*.gd *.gd` dit ce qui est arrivé.

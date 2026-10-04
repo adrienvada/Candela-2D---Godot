@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-04 (OMBRES : le chantier OM inscrit — l'ombre d'un PNJ qui part devant lui, les PNJ délavés, les paliers de la pâte qui bougent — et ses questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -33853,6 +33853,226 @@ immobiles). **Ouvertes** :
 
 ---
 
+## Chantier — les ombres et la lumière du solo (OM, inscrit le 2026-10-04)
+
+> **Titulaire** : la session cloud « Chantier OMBRES — éclairage Candela » (`candela-2d-godot-d4` pour les messages entre
+> sessions), branche `claude/determined-pasteur-mtrws1`, dans son propre conteneur (un clone à elle : l'équivalent d'un
+> worktree, personne d'autre n'y travaille). Adrien lui confie le chantier **de bout en bout**, de l'audit à la livraison des
+> correctifs, lot par lot, et l'autorise à pousser SA branche et à ouvrir une PR prête à relire à la fin de chaque lot vert —
+> jamais sur `main`, jamais de fusion.
+
+**D'où il vient.** Deux symptômes rapportés par Adrien en solo : « l'ombre démarre parfois avant le sprite du PNJ quand je
+l'éclaire à la torche », et des « rebonds d'ombres ». Une session cloud les a audités le 2026-10-04 **hors du dépôt, en lecture
+seule**, sur `52a29c1` (0.8.3) : défauts reproduits à l'image (Xvfb + llvmpipe, 1920×1080), correctif principal prototypé à
+l'exécution, le reste chiffré au code. Son rapport illustré — captures avant/après, mesures, inventaire, plan :
+https://claude.ai/artifact/4K1qRwJv6YFVae7Vp5TLWr . Son outil de capture (`outils/zz_claude_solo.gd`) et sa mesure de
+scintillement y sont publiés, non versionnés : OM0 les réécrit ici, aux conventions du dépôt. Rien n'avait bougé dans le code
+entre `52a29c1` et l'ouverture du chantier (`main` y était encore).
+
+**Pourquoi un chantier et pas un correctif.** Aucun des deux symptômes n'a une cause unique. L'ombre qui part devant le corps
+vient de l'occulteur 2D (O1) et, plus loin de la lampe, d'un palier de la pâte qui passe pour une ombre (O3). Les « rebonds »
+ne sont pas des rebonds de lumière — le jeu n'en calcule aucun — mais des contours qui apparaissent sans objet ou qui bougent
+sans que rien ne bouge (O3, O4), et des ombres qui manquent ou se doublent (O5 à O8). Plusieurs remèdes touchent aussi le duel,
+ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée, et des lots qui n'attendent que ce qui les concerne.
+
+### État
+
+| Lot | Objet | Attend | État |
+|---|---|---|---|
+| **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | en cours |
+| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | la moitié « culling » peut se préparer ; **ne se livre pas sans Q81** |
+| **OM2** | L'ombre a la forme du corps voxel | **Q82**, après OM1 | — |
+| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | — |
+| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | **Q86, Q87** | — |
+| **OM5** | Les plafonniers | **Q88** | — |
+| **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
+| **OM7** | Plus tard : l'ombre des corps calculée dans le shader du sol | à ouvrir après OM1 à OM3 | — |
+
+**Ce que veut dire « fini », pour chaque lot** : le code ; ses gardes, chacune vue ROUGE par un sabotage puis restaurée ;
+`run_suites.sh` vert ; la planche avant/après du banc d'OM0 (plus la mesure de scintillement pour OM3, la cadence pour OM6) ;
+cette section à jour dans le même commit (décisions, pièges, « Non prouvé », « Signalé, pas corrigé ») ; le delta envoyé au
+porteur du suivi ; un rapport court à Adrien. **Version** : tout lot qui change ce qu'un joueur voit de l'autre (OM1, OM2, OM3,
+OM4) part dans une **mineure** — la règle de Q15 et Q42 (« Le critère de version est l'équité, pas la taille du changement »),
+même quand `Protocol.VERSION` ne bouge pas.
+
+### Comment la lumière arrive à l'écran — le chemin que le chantier corrige
+
+1. **Le monde 2D, vu de dessus.** Des `PointLight2D` — la torche à la lentille `LENTILLE_LAMPE` (16,1 ; −4,55), le halo de
+   proximité (rayon 75), la rétrodiffusion à (18, 0) (rayon 128), le flash à (28, 0), les fusées, les gadgets, les plafonniers
+   — et des `LightOccluder2D` : les murs fusionnés, l'« étoile » de chaque corps, son disque de torse (rayon 12), les murets.
+   Tous les masques sont dans `canaux_lumiere.gd`.
+2. **La lightmap.** `vp1` rend ce monde : sol peint × lumière. Ombres dures (`SHADOW_FILTER_NONE`), calculées **à plat**,
+   comme si lampes et corps étaient posés au sol. L'intérieur d'un occulteur en `CULL_DISABLED` est dans l'ombre.
+3. **Les capteurs.** Une sous-vue de 256² couvrant 128 px de monde, par corps et par vue, avec un disque blanc « lumière
+   seule ». Depuis Q42, un capteur ne voit pas l'étoile de son propre corps (`EtoileDeCorps`).
+4. **La vue iso** (B-projection, `docs/ETUDE_ISO.md`). `sol_iso`, `mur_iso`, `corps_iso`, tous unshaded : ils relisent la
+   lightmap au point du monde ; une face de mur relit la lumière de son PIED (12 px devant elle) sur toute sa hauteur ; la
+   pâte D (`iso_pate.gdshaderinc`) postérise la lumière ; les corps voxel lisent leur capteur et prennent l'opacité de leur
+   sprite 2D.
+5. **La lumière 3D miroir (ISO12) est éteinte par défaut** (Q20) : elle n'explique rien de ce qu'Adrien a vu, et ce
+   chantier ne la rallume pas.
+
+Conséquence directe : **tout ce qui est faux au sol en 2D se voit tel quel en iso, et tout ce qui a une hauteur — un corps,
+une lampe au plafond, un canon tenu à hauteur de poitrine — y est écrasé au sol.**
+
+### Ce que l'audit a établi (`52a29c1` ; numéros de ligne de ce commit, à relire avant de s'y fier)
+
+| | Gravité | Ce qu'on voit | Cause | Remède prévu |
+|---|---|---|---|---|
+| **O1** | haute, **reproduit** | Une zone noire devant les pieds d'un corps éclairé, torche du côté de la caméra ; pire quand le PNJ vise J1 (son arme pointe vers la lampe) | L'étoile vient du PNG de silhouette vue de dessus, arme comprise (`Charte.ombre_de_silhouette`, posée par `Player._accorder_occluder_a_la_silhouette`) : 22,6 à 30,9 px devant le centre selon la classe, décentrée de 4-5 px côté arme, en `CULL_DISABLED` — son intérieur est noir dans la lightmap, que le sol iso relit. Le corps voxel (≈ 25 px d'un bras à l'autre, arme à hauteur de poitrine) est plus petit : l'étoile le dépasse de 6 à 8 px en moyenne devant et derrière, jusqu'à 13 px | **OM1** : la même étoile en `CULL_COUNTER_CLOCKWISE` — prototypée, l'ombre part du bord arrière et l'encoche disparaît (`CULL_CLOCKWISE` : aucun effet). Mécanisme moteur : le culling GL des arêtes extrudées (`light_update_shadow`, `rasterizer_canvas_gles3.cpp`). **OM2** : une étoile à la forme du corps voxel |
+| **O2** | haute, **mesuré** | PNJ semi-transparents ; quand UN PNJ éblouit J1, TOUS s'effacent | L'opacité du corps iso est celle de son sprite (`Presentation3D.opacite_du_corps`), que le brouillage règle à (1 − 2 × éblouissement)^3,4 (`brouillage.gd`, gain 2, courbe 3,4, mode LAMPE). Or toute torche allumée éblouit son porteur de 0,06 (`Eblouissement.RETRODIFFUSION`) : **chaque ennemi tombe à 0,648 dès que la torche de J1 est allumée, duel compris**. En solo, `player.gd` applique l'éblouissement global de J1 à TOUS les PNJ (`regardeur = state.p1`) : un PNJ qui éblouit J1 à 0,29 les fait tous tomber à 0,08 — alors que la source est connue (`source_eblouissante`, posée par `_maj_eblouissement`). Avec O1 corrigé seul, le sol éclairé transparaît à 35 % à travers le PNJ | **OM1**, selon **Q81** |
+| **O3** | haute, **mesuré** | Des coins sombres à bord net là où une flaque de plafonnier et un cône de torche se recouvrent, sans aucun occulteur (ils disparaissent en `--pate brute`) ; des contours qui ondulent, et qui clignotent pendant un tir | La pâte D (`iso_pate.gdshaderinc`, branche `PATE_LAVIS`) découpe la lumière en quatre niveaux (0 ; 0,3 ; 0,6 ; 1) à seuils e1 = 0,02 + 0,03b, e2 = 0,16 + 0,08b, e3 = 0,42 + 0,1b (b : bruit de cellules de 23 px), transitions de ±0,01 seulement. Sur l'axe d'une torche, la marche e2 divise la lumière par deux entre 134 et 283 px de la lentille : un PNJ à cette distance a cette marche juste devant lui. Toute variation d'énergie déplace ces frontières : la respiration (±3 %) et surtout `_energie_torche = randf_range(1.5, 2.0)` **à chaque pas** du recul de tir — le générateur GLOBAL, donc l'hôte et le client divergent aussi | **OM3** : enveloppe de tir déterministe (sans décision) ; pâte, respiration selon **Q83, Q84** |
+| **O4** | moyenne | Arêtes d'ombre en escalier qui grésillent ; une pointe d'arme qui se dentelle en lame | `SHADOW_FILTER_NONE` partout, atlas d'ombres 2D par défaut (≈ 512 texels par quart de tour) : marches de 1,2 à 1,8 px à 300-468 px de la lampe ; une pointe d'arme de 1 à 2 texels. Scène figée, la lightmap change encore de 180 à 570 px par image le long de ces arêtes — **cause non isolée** | **OM3** : PCF5 et atlas 4096 selon **Q85** |
+| **O5** | moyenne | L'ombre d'un PNJ qui atteint un mur y devient une bande verticale pleine hauteur | Une face relit la lumière de son pied, à 12 px, sur toute sa hauteur (`mur_iso.gdshader`) | **OM7** |
+| **O6** | moyenne | La torche d'un PNJ traverse les autres PNJ sans ombre, alors que celle de J1 les ombre tous | Tous les PNJ ont `player_id` 1 (`aventure_partie.gd`) : une étoile sur la couche 8 ; leurs lumières (torche, halo, flash) ne lisent que la couche 4, celle de J1. Aucune décision n'est écrite là-dessus | **OM4**, selon **Q86** |
+| **O7** | moyenne | Aucun corps n'a d'ombre sous un plafonnier, une fusée, une mine ou des braises ; fusée, mine et braises éclairent un corps À TRAVERS un mur | Plafonnier : masque neutre sans couche de corps (S5, voulu) — une ombre d'occulteur 2D y serait fausse, infinie, comme si la lampe était au sol. Fusée, mine, braises : masque d'ombre `1 \| 64` (`fusee.gd`, `gadget_braises.gd`, `gadget_mine.gd`), signalé en S2 et S5 ; le remède existe (`CanauxLumiere.masque_ombre_neutre_pour_les_corps()`), mais la fusée est aussi celle du duel en ligne | **OM4** selon **Q87** ; **OM5** selon **Q88** |
+| **O8** | moyenne | Trois ombres de formes et d'origines différentes pour un même corps près du joueur | La torche (étoile, depuis la lentille), le halo (étoile, depuis le centre du joueur, rayon 75), la rétrodiffusion (disque de rayon 12 depuis (18, 0), sur les capteurs seulement) | **OM2**, puis **OM7** |
+| **O9** | basse | Ombres au hasard quand un corps collé à un mur tire | Le flash de bouche (28 px devant) n'est pas reculé comme la lampe (`_rapprocher_la_lampe`) : il tombe dans l'occulteur du mur | **OM4**, sans décision |
+| **O10** | basse | Une lueur rouge sur le corps de J1 à travers un mur ; un écho de tir au sol à travers un mur | `hit_light` éclaire `1 \| 4`, ombrée par les murs seuls (`1`) ; `ground_flash` n'a aucune ombre | **OM4**, sans décision |
+| **O11** | basse | L'ombre d'un corps mort reste un instant ; l'étoile ne suit pas l'accroupi | `die()` ne coupe ni l'étoile, ni le torse, ni le halo ; `poser_posture` met les sprites à ×0,8, pas l'étoile. Et le rayon dans l'air (Q41) — trois couches à 4,2, 8,4 et 12,6 px qui relisent la lightmap à leur hauteur — dessine de fins liserés le long des arêtes d'ombre | **OM4**, sans décision |
+| **O12** | basse, conditionnelle | Une lumière coupée net sur un carré de 560 px | Le plafond moteur de 15 lumières par item (« quinze par item », Pièges connus). Mesuré en salle 0.9 au repos : 5 à 7 lumières par quadrant de sol. Le risque existe en fusillade à 5-7 PNJ, pas au repos | recensement au banc d'OM0 |
+
+**La mesure de scintillement de l'audit** (pixels de l'écran qui changent de plus de 8 niveaux entre deux images consécutives,
+scène figée, salle 0.1, 1920×1080, six images par cas) : rien ne bouge, 545 à 1 069 ; torche qui respire, 962 à 1 250 ; pendant
+un tir, **1 342 à 15 106**. Sauts maximaux : 117 à 147 niveaux en pâte D, 75 à 106 en brute — la pâte amplifie.
+
+### Ce que coûte la lumière — estimé, jamais mesuré en solo
+
+**La règle du moteur** (`renderer_viewport.cpp`, Godot 4.7) : la carte d'ombre de chaque lumière à ombres dont le rectangle
+touche un viewport est recalculée, **pour chaque viewport**, sans vérifier qu'un élément la reçoit — une lumière qui n'éclaire
+rien coûte quand même, et ces passes n'apparaissent pas dans le compte d'appels de dessin. Modèle de l'audit, calé sur le seul
+point mesuré (0,09 ms par lampe à 8 occulteurs, 2026-09-23), **à lire entre ×0,4 et ×2** : ombres 2D 1,2 à 1,5 ms en duel vue
+unique, 2,3 à 2,9 ms en écran scindé ; salle 24×24 à 6 PNJ, environ 3 ms torches de PNJ éteintes, jusqu'à 9,5 ms si toutes
+brûlent. **Ce qui ne sert à rien aujourd'hui** : le halo de chaque PNJ (portée 32, aucun récepteur dans la vue de J1 — environ
+0,9 ms sur 3) et celui de l'adversaire en vue unique ; les capteurs hors champ, en `UPDATE_ALWAYS` (J2 caché en aventure ; les
+PNJ jusqu'à 1 300 px, `PORTEE_CAPTEUR_FIGURANT_PX`). Réduire la TAILLE des capteurs ne rapporterait presque rien : leur coût est
+fixe par viewport. Tout ceci est un décompte : **OM6 mesure avant et après chaque geste** (dans le cloud ; plus aucune mesure
+n'est demandée sur le Mac d'Adrien, décision du 2026-09-30).
+
+### Les questions pour Adrien (Q81 à Q88)
+
+Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bloque que son lot.
+
+- **Q81 — Le brouillage n'efface-t-il que le corps qui éblouit, et seulement au-delà de l'auto-éblouissement de 0,06 ?**
+  Aujourd'hui, allumer sa torche suffit à rendre tout ennemi transparent à 35 % (0,648), en duel comme en solo, et un seul PNJ
+  qui éblouit efface tous les autres. Deux gestes : (a) un plancher — l'éblouissement ne brouille qu'au-delà de ce que sa propre
+  torche verse dans ses yeux (0,06) ; (b) la source — seul le corps qui éblouit s'efface (`source_eblouissante` est déjà
+  connue). **Touche le duel** : une fusée ou un gadget qui vous éblouit n'effacerait plus l'adversaire, et votre propre torche ne
+  le rendrait plus transparent. **Touche le bot** : sa perception lit la même opacité (`perception_bot.gd`, « il ne distingue plus
+  le corps sous 0,5 ») — la matrice de difficulté (78 / 52 / 34) et les boss se rejouent après. **Avis : oui aux deux.** Bloque la
+  livraison d'OM1 : le culling seul rend le sol éclairé visible à travers le PNJ.
+- **Q82 — En iso, l'ombre d'un corps prend-elle la forme du corps voxel** (le personnage, l'arme portée sans pointe au sol,
+  réduite à l'accroupi) **plutôt que celle du sprite vu de dessus ?** Ce n'est pas le disque écarté par Q42 : la forme reste
+  celle du personnage. **Avis : oui, après avoir vu OM1 à l'image.** Bloque OM2.
+- **Q83 — Pâte D : laquelle des trois variantes, sur planche ?** (a) seuils e2 et e3 sans bruit ; (b) transitions élargies ;
+  (c) e2 en rampe continue. Dans tous les cas e1 et son pochoir restent — c'est la raison du choix de D (« garder la lueur
+  faible », 2026-09-14) : on adoucit la pâte, on ne la change pas. **Avis : après la planche** (OM3 la produit, avec la mesure de
+  scintillement).
+- **Q84 — La respiration de la torche : la retirer, ou la réduire ?** À travers les paliers, ±3 % d'énergie se voient comme des
+  contours qui ondulent (+20 à 40 % de pixels qui changent d'une image à l'autre), pas comme une lumière qui respire. Et ce n'est
+  pas un souffle (lu au code, non mesuré) : le bruit est celui de la secousse de caméra (`noise.frequency = 10`, « Fast frequency
+  for impact »), lu à `t × 40` — 400 unités par seconde, un bruit blanc à la cadence de la physique que le `lerp` (8 × delta)
+  lisse en un tremblement d'environ 1 %, décorrélé en un dixième de seconde ; la feuille de route le disait « Perlin lent ».
+  **Avis : la retirer.**
+- **Q85 — Le filtre d'ombre : PCF5 avec un léger lissage sur la torche, le halo et les plafonniers, et l'atlas d'ombres à
+  4096 ?** Les deux ne se valent pas. L'atlas à 4096 divise les marches par deux sans rien changer à la règle. Le PCF, lui, pose
+  une pénombre : il allume à demi ce que la règle dit dans l'ombre, et assombrit à demi ce qu'elle dit éclairé — or « l'ombre au
+  pixel » est celle qui décide du jeu (`docs/ETUDE_ISO.md`), et le bord de l'ombre a été jugé bon le 2026-09-15. **Avis : l'atlas
+  à 4096 si le cloud le mesure sous 3 % du temps d'image** (la règle posée avec Adrien : au-delà, la question lui revient avec
+  son prix) ; **le PCF5 seulement si Adrien veut des bords doux**, en connaissant la pénombre.
+- **Q86 — Les PNJ entre eux : une couche d'étoile par emplacement de PNJ, ou une règle « équipe » écrite ?** Aujourd'hui la
+  torche d'un PNJ traverse les autres PNJ. Couches individuelles : bits libres à partir de 512, indexés comme
+  `slot_de_reserve()` ; règle « équipe » : on l'écrit et on la garde. **Avis : couches individuelles.**
+- **Q87 — Fusée, mine, braises : passer au masque neutre `masque_ombre_neutre_pour_les_corps()` (plus le bit 64 selon la
+  hauteur), en duel aussi ?** Aujourd'hui elles éclairent un corps à travers un mur — en duel aussi, et c'est une information
+  que rien n'a payée. Les corps n'y gagnent toujours pas d'ombre (aucune couche de corps dans ce masque). **Avis : oui.**
+- **Q88 — Les plafonniers : une ombre de corps finie, calculée dans le matériau (longueur D × H / (h − H)), ou aucune ombre ?**
+  Une ombre d'occulteur 2D y serait fausse (infinie). **Avis : aucune ombre jusqu'à OM7**, qui la donnerait à toutes les lampes
+  d'un coup.
+
+### Les lots
+
+**OM0 — Le banc des ombres** (sans décision, environ un jour). Avant de toucher au rendu, rendre la preuve reproductible : c'est
+elle qui jugera chaque lot.
+- `tools/planche_ombres.gd` + `.tscn`, réécrit depuis l'outil de l'audit aux conventions du dépôt (en-tête, journal JSON,
+  planche avant/après, `--sortie`, sorties non versionnées) : salles 0.1 et 0.9 ; torche côté caméra, de dos, de profil ; les dix
+  classes ; plafonnier, courte portée (70 px), mur ; respiration, tir ; `--pate brute`, `--sans-faisceau-air`.
+- Les mesures : le scintillement (écart entre images consécutives, au-delà de 8 et de 24 niveaux) et une sonde de lightmap —
+  « le sol dans l'étoile, côté lampe, est éclairé » ; plus le recensement des lumières par quadrant de 560 px (O12).
+- Les gardes headless, dans `tools/test_ombre_propre.gd` : le mode de culling et le sens d'enroulement (aire signée) de toute
+  étoile de corps, leurre compris.
+- Le banc épinglé dans `tools/test_banc.gd`, comme le photographe : ses appuis sur le jeu, vérifiés sans fenêtre.
+
+**OM1 — L'ombre part de derrière le corps** (une demi-journée, plus **Q81**). L'étoile en `CULL_COUNTER_CLOCKWISE`
+(`_accorder_occluder_a_la_silhouette`) et celle du leurre aussi (`GadgetLeurre._poser_occluder`), par une seule fonction de
+`Charte`, pour que le leurre fasse toujours le même trou ; vérifier l'enroulement d'`ombre_de_silhouette` ; mettre à jour la
+garde qui exige `CULL_DISABLED`. Puis, Q81 tranchée, le brouillage par source et au-delà de 0,06. À relancer : `test_ombre_propre`,
+`test_halo_proximite`, `test_brouillage`, `test_eblouissement`, `test_tir_et_reserves`, `test_iso_equite` ; `planche_q42` (les
+capteurs ne doivent pas bouger), `banc_perception_bot`, `banc_equite` ; la planche d'OM0, avant/après.
+
+**OM2 — L'ombre a la forme du corps voxel** (environ deux jours, **Q82**). L'étoile dérivée de l'empreinte du modèle voxel
+(`VoxelCatalogue`, épaisseur ×1,6), centrée sur l'origine du corps, à la posture ; une seule fonction pour le joueur, les PNJ,
+le leurre et tout ce qui « coupe le regard ». Le disque de torse ne change pas (il doit rester sous 18 px). Les figurants
+reçoivent l'ombre de contact que J1 et J2 ont déjà (`Presentation3D._poser_contact`).
+
+**OM3 — Une image stable** (deux à trois jours, **Q83 à Q85**). Le `randf_range` tiré à chaque pas devient une enveloppe de tir
+déterministe — un creux, puis une remontée sur la durée du recul (sans décision). Pâte D selon Q83, respiration selon Q84 ;
+PCF5 et `rendering/2d/shadow_atlas/size` à 4096 selon Q85, coût mesuré. Chaque changement se juge à la mesure de scintillement.
+
+**OM4 — Des règles pour N corps** (environ deux jours). Selon les décisions : couches des PNJ (Q86), masques des lumières posées
+(Q87). Sans décision : reculer le flash de bouche comme la lampe ; masques neutres pour `hit_light` et `ground_flash` ; couper
+étoile, torse et halo dans `die()` ; mettre l'étoile à l'échelle de la posture.
+
+**OM5 — Les plafonniers** (**Q88**). Une ombre finie calculée dans le matériau (comme la zone morte des murets), ou aucune ombre,
+écrite ici.
+
+**OM6 — Alléger** (sans décision, un à deux jours ; **mesurer chaque geste avant et après**, le solo ne l'a jamais été) :
+- les capteurs en `UPDATE_WHEN_VISIBLE` (ceux des joueurs et des figurants dans `presentation_3d.gd`, ceux des objets dans
+  `miroirs_iso.gd`) ;
+- les halos sans récepteur (PNJ, et adversaire en vue unique) : `shadow_enabled = false` — **jamais `enabled`**, que lit
+  `perception_bot_noeud.gd` ;
+- `hit_light` : couper son ombre après 0,3 à 0,5 s ;
+- les murs : leurs occulteurs tracés par contours (`map_geometry.gd`, `trace_contours`), rentrés de 3 px, validés à l'image —
+  le geste le plus risqué du lot : tout s'aligne aujourd'hui sur les rectangles rentrés (`test_map_geometry` les impose, la zone
+  morte des murets, `mur_iso`, `IsoGeometrie`, le modèle de vue du bot, « du côté du noir au moindre doute ») ; un contour qui
+  déborderait d'une case ferait voir au bot plus que la lumière ;
+- dans les grandes salles seulement : ne rattacher une étoile qu'aux capteurs proches, rendre une image sur deux les capteurs
+  lointains — à mesurer avant ;
+- le banc de cadence : un mode solo et les drapeaux `--sans-ombres-2d`, `--sans-capteurs`, `--sans-halos-pnj`. La salle 8.9
+  est le pire cas livré.
+
+**OM7 — Plus tard** (décision, à n'ouvrir qu'après OM1 à OM3). Les ombres des corps calculées dans le shader du sol, à partir
+des hauteurs de la lampe, du corps et des murs : ombre finie sous une lampe haute, infinie sous une lampe plus basse que la tête,
+hauteur bornée sur les faces de murs. Réglerait O5, O7 et O8 d'un coup.
+
+### Ne pas reproposer
+
+L'ombre ronde pour tous (Q42 — le disque de l'audit n'est qu'une MESURE de largeur) ; la lumière jumelle (Q42) ; la lumière 3D
+(Q20) ; l'essai `a = max(0,01 ; fwidth(l))` d'ISO10, annulé — il visait les anneaux de la fusée, pas ceci ; le remplacement de
+la pâte D sans Adrien : on l'adoucit, on ne la change pas.
+
+### Non prouvé (à l'ouverture)
+
+- **Rien n'a été regardé sous le pilote d'Apple**, ni en partie jouée par un humain : llvmpipe n'est pas Metal. Le jugement
+  final est celui d'Adrien, en jouant (jalon H-OM ci-dessous).
+- **Le grésillement de la lightmap à scène figée** (180 à 570 px par image, tous sur les arêtes d'ombre) : cause non isolée —
+  une micro-variation de la transformée de la lampe est l'hypothèse de l'audit, non instrumentée.
+- **Les coûts** : des décomptes et des estimations ; aucune cadence du solo n'a jamais été relevée.
+
+### Signalé, pas corrigé (à l'ouverture)
+
+- Les figurants n'ont pas d'ombre de contact (`_poser_contact` : « un figurant n'en a pas », S6) — repris par OM2.
+- La vue de dessus (`--2d`, débogage) : son sprite adverse reçoit l'ombre de la torche par son étoile (le « liseré côté lampe »,
+  2026-09-14) ; le culling d'OM1 y changera l'image. Débogage seulement : à dire, pas à garder.
+
+### Jalon humain
+
+**H16** (tableau « Jalons humains ») — jouer les salles 0.1 et 0.9, puis un duel, après OM1 : l'ombre part-elle de derrière le
+PNJ, les PNJ sont-ils pleins, l'image ondule-t-elle encore ? Aucune mesure n'est demandée sur le Mac (décision du 2026-09-30) : le
+cloud mesure, Adrien juge en jouant.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -33875,6 +34095,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 | H15 | **Décider de la vue isométrique** (étude ISO0, `docs/ETUDE_ISO.md`) | Go / no-go, ou « l'iso pour les vitrines, la vue de dessus pour le duel » ; tangage, lacet, hauteur des murs, écran scindé — après le banc ISO0.b et trois relevés de cadence au premier plan, que seul Adrien peut prendre. C'est un choix d'identité visuelle, pas une mesure. | ✅ **Tranché le 2026-09-14 : go** — tangage 52°, écran scindé en iso, caméra qui garde la profondeur, murs hauts et murs bas (mécanique neuve à instruire). Détail : section ISO, « H15 tranché » |
 | H-MB0 | **Jouer le prototype des murs bas et fixer les valeurs** (chantier MURS BAS, `docs/MURS_BAS.md`) | Aucune suite ne dit si une bande d'ombre de 3 tuiles se lit, si 1,5 tuile de cachette est juste, ni si l'accroupi à ×0,45 est jouable. Le prototype prouve les règles au pixel ; il ne dit pas si elles sont bonnes. | ✅ **Tranché le 2026-09-14** — mur bas 0,40, accroupi 0,10, α 13,5°, accroupi ×0,25 ; six règles validées ; dessin gardé ; enjambement à la vitesse accroupie ; MB1 ouverte |
+| H16 | **Jouer le solo après OM1 : l'ombre part-elle de derrière le PNJ, les PNJ sont-ils pleins ?** (chantier OMBRES) | Les planches du banc des ombres sont prises sous llvmpipe, pas sous le pilote d'Apple, et aucune suite ne dit si une ombre « se lit » ni si l'image ondule encore en jouant. Aucune mesure demandée sur le Mac (décision du 2026-09-30) : salles 0.1 et 0.9, puis un duel, et un mot. | Après OM1 (qui attend Q81) |
 
 ---
 
