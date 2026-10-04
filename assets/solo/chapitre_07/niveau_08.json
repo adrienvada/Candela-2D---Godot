@@ -67,7 +67,8 @@
       "classe": "occulteur",
       "equipe": true,
       "orientation": -90,
-      "profil": "libre_voit_entend_normal"
+      "profil": "libre_voit_entend_normal",
+      "temperament": "traqueur"
     }
   ],
   "titre": "Le dédale",

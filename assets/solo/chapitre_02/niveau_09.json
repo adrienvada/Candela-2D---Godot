@@ -137,7 +137,8 @@
         4
       ],
       "orientation": 90,
-      "profil": "immobile_entend_lent"
+      "profil": "immobile_entend_lent",
+      "temperament": "traqueur"
     },
     {
       "case": [
@@ -145,7 +146,8 @@
         15
       ],
       "orientation": 150,
-      "profil": "immobile_entend_lent"
+      "profil": "immobile_entend_lent",
+      "temperament": "embusque"
     }
   ],
   "titre": "La salle pleine",

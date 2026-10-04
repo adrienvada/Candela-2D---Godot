@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (SOLO, S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-04 (SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les tempéraments sont répartis dans les salles : 47 PNJ, 32 salles, aucun dans l'initiation ni dans les trois premières salles d'un chapitre** (2026-10-04, Adrien, même session, sur SOLO-Q11 : « Répartis-les toi-même ») | Un caractère sert le thème du chapitre : des guetteurs sur les postes fixes (le PNJ de « Le guetteur », 1.4 ; les places du chapitre 8), des embusqués dans le noir (« La zone sombre », « L'embuscade », « L'ombre »), des traqueurs chez ceux qui écoutent et chez les chasseurs (« La traque »), des peureux dans les groupes (chapitre 5, salles pleines). La table vit dans `tools/poser_temperaments.py`, qui écrit les fichiers au format exact des fabriques (vérifié identique sur les cent salles) — **à relancer après toute fabrique qui régénère un chapitre**, sans quoi ses tempéraments disparaissent. Gardes des dix chapitres et marches au vrai corps vertes. |
 | **L'intelligence des PNJ, S11 : dégâts de 10 à 20 par balle, rafales de 1 à 3 coups tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments** (2026-10-04, Adrien, même session : « Il faudrait que les PNJ ne fassent pas plus de 10-20 dégâts par tir. Que parfois ils arrivent à tirer plusieurs fois », puis, sur la liste de propositions, « Fais 1, 2, 3, 7, 8 ») | Tout se pose sur les PNJ du catalogue (`ProfilBot.pnj()`), jamais sur le bot de l'entraînement ni sur les boss, réglés au banc. **Dégâts** : `degats_balle` (10 au bord, 20 au centre) l'emporte sur l'arme — il faut 5 à 10 balles pour abattre un joueur au lieu de 2 à 4. **Rafales** : `poids_rafale` (50 / 30 / 20 %), chaque coup suivant 5° plus large, ni tolérance ni mise en joue entre deux coups. **Annonce** : la torche se braque pendant la mise en joue, et toute torche de PNJ qui s'allume claque, audible de partout. **Fouille** : en recherche, sur la place perdue, il balaie à ±70° torche allumée, sans tirer dans le vide, puis la patrouille reprend. **Tempéraments** : clé de format `temperament` (guetteur, traqueur, peureux, embusqué), refusée sur le boss et le sourd et aveugle ; l'éditeur web la propose. Les propositions 4 (voix d'état), 5 (réaction aux coups), 6 (alerte entre PNJ) et 9 (aide après plusieurs morts) attendent. Détail : « S11 ». |
 | **La 0.8.3 part : le solo S10 — l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, plus d'enjambement, la mise en joue des PNJ, leurs tirs audibles** (2026-10-04, Adrien, à la session « Iso 1 Opus » : « Publie la version 0.8.3 ») | `config/version` passe de 0.8.2 à 0.8.3 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19 ; l'enjambement retiré garde son bit) — `tools/verifier_publication.sh v0.8.3` le confirme. Chemin de publication : la PR #5 fusionnée dans `main` (`33594aa`), ce commit de version poussé d'abord sur `claude/candidat-0.8.3` pour que la CI rejoue la suite complète **hors du Mac d'Adrien** (plus aucun Godot n'y tourne sans son mot), puis `main` en avance rapide et le tag `v0.8.3`, qui déclenche `.github/workflows/release.yml`. |
 | **Un écran « Solo » en tête du menu principal ; l'aventure et l'entraînement y descendent** (2026-10-03, Adrien, à la session « candela-2d-godot-47 » : « Il faut y avoir un bouton tout en haut du menu principal redirigeant vers "Solo" ») | Le mode solo EST l'aventure plus l'entraînement contre le bot : les laisser aussi à l'accueil en ferait deux chemins pour le même endroit. Les retours de match redescendent le chemin entier (`UI.redescendre_vers`, table `PARENT_DE_L_ECRAN`) : un seul `push()` laissait l'entraînement sous l'accueil, et RETOUR sautait Solo. |
@@ -33824,9 +33825,17 @@ Menée par la session de pilotage (sous-agents indisponibles). Tout tient dans `
 **Non fait** : aucune salle livrée n'a de tempérament (SOLO-Q11) ; rien n'a été joué manette en main ; les chiffres (dégâts, poids,
 dispersion, balayage, seuil de peur, portée d'embuscade) sont de départ.
 
+### S12 — FAITE le 2026-10-04 : les tempéraments répartis dans les salles
+
+`tools/poser_temperaments.py` (table + écriture), 32 fichiers de salles réécrits. Pourquoi un script à part et en Python : la répartition
+est transversale (un caractère par thème, sur dix chapitres) et se relit d'un coup d'œil dans une table ; et le module `json` de Python
+rend les cent fichiers **octet pour octet** — l'aller-retour de Godot, lui, change les entiers en flottants (`22` → `22.0`) dans tout
+le fichier. `--verifier` dit si les fichiers diffèrent de la table. Gardes : `test_chapitre_01` à `_09`, `test_chapitres_marche*`,
+`test_aventure_format` / `_partie` / `_boss`. L'éditeur web des salles est republié avec ces salles comme « origine ».
+
 ### Questions
 
-**Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),
+**Tranchée le 2026-10-04** : SOLO-Q11 (où poser les tempéraments : « Répartis-les toi-même » — fait, S12). **Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),
 SOLO-Q3 (on recommence la salle), SOLO-Q4 (écrites en données, chapitre d'initiation d'abord ; dix chapitres de dix
 niveaux, boss au dixième), puis SOLO-Q6 (l'initiation est le chapitre 0 et débloque la classe de base : dix chapitres
 numérotés à partir de 0), SOLO-Q5 (l'ordre du rang en ligne), SOLO-Q7 (pas de ronde dans l'initiation : plus d'ennemis
@@ -33837,9 +33846,6 @@ immobiles). **Ouvertes** :
 - **SOLO-Q9 — la mise en joue des boss** (2026-10-04) : posée sur les PNJ du catalogue seulement, parce que les dix boss
   sont réglés au banc à 55 % et le seraient à nouveau. Le boss de l'initiation, s'il est lui aussi « trop vite », se règle
   par `REGLAGES_BOSS` (« mise_en_joue_s ») et un passage du banc `--boss`.
-- **SOLO-Q11 — où poser les tempéraments** (2026-10-04) : la clé existe, aucune salle livrée ne s'en sert encore. Soit Adrien
-  les pose dans l'éditeur des salles, soit une session les répartit (un guetteur par salle à plafonniers, des embusqués dans
-  les grandes salles, des traqueurs dans les chapitres des chasseurs) — c'est du contenu, que les gardes des chapitres jugeront.
 - **SOLO-Q10 — « hyper gratifiant », la suite** (2026-10-04) : S10 donne à chaque salle une réponse à chaque abattu
   (compteur), un tampon de fin avec temps, essai et record. Ce qui pourrait suivre, à trancher manette en main : un
   bilan de chapitre (temps total, morts, records), des paliers de temps par salle (or, argent, bronze), une musique

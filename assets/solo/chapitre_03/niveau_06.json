@@ -45,7 +45,8 @@
         10
       ],
       "orientation": 0,
-      "profil": "immobile_voit_facile"
+      "profil": "immobile_voit_facile",
+      "temperament": "guetteur"
     },
     {
       "case": [

@@ -77,7 +77,8 @@
         47
       ],
       "orientation": 90,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "guetteur"
     },
     {
       "case": [
@@ -151,7 +152,8 @@
       "classe": "allumeur",
       "equipe": true,
       "orientation": 90,
-      "profil": "libre_voit_entend_normal"
+      "profil": "libre_voit_entend_normal",
+      "temperament": "traqueur"
     },
     {
       "case": [

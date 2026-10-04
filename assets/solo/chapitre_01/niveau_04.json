@@ -63,7 +63,8 @@
         10
       ],
       "orientation": 180,
-      "profil": "immobile_voit_lent"
+      "profil": "immobile_voit_lent",
+      "temperament": "guetteur"
     }
   ],
   "titre": "Le guetteur",

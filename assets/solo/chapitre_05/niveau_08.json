@@ -85,7 +85,8 @@
         15
       ],
       "orientation": 90,
-      "profil": "immobile_voit_entend_normal"
+      "profil": "immobile_voit_entend_normal",
+      "temperament": "guetteur"
     },
     {
       "case": [
@@ -141,7 +142,8 @@
           29,
           18
         ]
-      ]
+      ],
+      "temperament": "peureux"
     }
   ],
   "titre": "Le carrefour",

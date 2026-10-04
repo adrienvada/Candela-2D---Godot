@@ -83,7 +83,8 @@
       "classe": "spectre",
       "equipe": true,
       "orientation": -150,
-      "profil": "libre_voit_entend_difficile"
+      "profil": "libre_voit_entend_difficile",
+      "temperament": "peureux"
     }
   ],
   "titre": "La meute d'élite",
