@@ -208,9 +208,17 @@ static func sans_equipement(p: ProfilBot) -> ProfilBot:
 			p.set(champ, false)
 	# La mise en joue des PNJ (2026-10-04) n'existait pas en S4 non plus : à zéro, le coup part comme alors, dès l'alignement. Elle a sa garde
 	# (`test_bot_combat`, « La mise en joue ») ; ici, elle ferait mentir les empreintes de S4 sans rien dire de l'équipement.
-	for champ in ["repli_apres_tir_s", "accroupi_pres_du_son_px", "mise_en_joue_s"]:
+	for champ in ["repli_apres_tir_s", "accroupi_pres_du_son_px", "mise_en_joue_s", "dispersion_rafale_deg"]:
 		if p.get(champ) != null:
 			p.set(champ, 0.0)
+	# La fouille (2026-10-04) non plus : en recherche, le bot de S4 regardait la place perdue sans la balayer.
+	for champ in ["balaie_en_fouille", "torche_en_fouille"]:
+		if p.get(champ) != null:
+			p.set(champ, false)
+	# Les rafales tirées au sort (2026-10-04) non plus : sans poids, la rafale reprend `tirs_par_rafale`, comme en S4.
+	if p.get("poids_rafale") != null:
+		var vide: Array[float] = []
+		p.set("poids_rafale", vide)
 	return p
 
 

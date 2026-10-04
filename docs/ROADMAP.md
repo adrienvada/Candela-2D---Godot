@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (SOLO, S10 : l'écran Solo en tête du menu ; le bandeau « FATAL — <arme> » réservé au JcJ et plus rien d'une mort ne reste d'une salle à l'autre ; les consignes de touches de l'initiation, le compteur et le tampon de salle réussie ; l'enjambement des murets retiré ; la mise en joue des PNJ)
+> Dernière mise à jour : 2026-10-04 (SOLO, S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **L'intelligence des PNJ, S11 : dégâts de 10 à 20 par balle, rafales de 1 à 3 coups tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments** (2026-10-04, Adrien, même session : « Il faudrait que les PNJ ne fassent pas plus de 10-20 dégâts par tir. Que parfois ils arrivent à tirer plusieurs fois », puis, sur la liste de propositions, « Fais 1, 2, 3, 7, 8 ») | Tout se pose sur les PNJ du catalogue (`ProfilBot.pnj()`), jamais sur le bot de l'entraînement ni sur les boss, réglés au banc. **Dégâts** : `degats_balle` (10 au bord, 20 au centre) l'emporte sur l'arme — il faut 5 à 10 balles pour abattre un joueur au lieu de 2 à 4. **Rafales** : `poids_rafale` (50 / 30 / 20 %), chaque coup suivant 5° plus large, ni tolérance ni mise en joue entre deux coups. **Annonce** : la torche se braque pendant la mise en joue, et toute torche de PNJ qui s'allume claque, audible de partout. **Fouille** : en recherche, sur la place perdue, il balaie à ±70° torche allumée, sans tirer dans le vide, puis la patrouille reprend. **Tempéraments** : clé de format `temperament` (guetteur, traqueur, peureux, embusqué), refusée sur le boss et le sourd et aveugle ; l'éditeur web la propose. Les propositions 4 (voix d'état), 5 (réaction aux coups), 6 (alerte entre PNJ) et 9 (aide après plusieurs morts) attendent. Détail : « S11 ». |
 | **La 0.8.3 part : le solo S10 — l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, plus d'enjambement, la mise en joue des PNJ, leurs tirs audibles** (2026-10-04, Adrien, à la session « Iso 1 Opus » : « Publie la version 0.8.3 ») | `config/version` passe de 0.8.2 à 0.8.3 : seul le **dernier chiffre** monte, parce que rien ne change sur le fil (`Protocol.VERSION` reste 19 ; l'enjambement retiré garde son bit) — `tools/verifier_publication.sh v0.8.3` le confirme. Chemin de publication : la PR #5 fusionnée dans `main` (`33594aa`), ce commit de version poussé d'abord sur `claude/candidat-0.8.3` pour que la CI rejoue la suite complète **hors du Mac d'Adrien** (plus aucun Godot n'y tourne sans son mot), puis `main` en avance rapide et le tag `v0.8.3`, qui déclenche `.github/workflows/release.yml`. |
 | **Un écran « Solo » en tête du menu principal ; l'aventure et l'entraînement y descendent** (2026-10-03, Adrien, à la session « candela-2d-godot-47 » : « Il faut y avoir un bouton tout en haut du menu principal redirigeant vers "Solo" ») | Le mode solo EST l'aventure plus l'entraînement contre le bot : les laisser aussi à l'accueil en ferait deux chemins pour le même endroit. Les retours de match redescendent le chemin entier (`UI.redescendre_vers`, table `PARENT_DE_L_ECRAN`) : un seul `push()` laissait l'entraînement sous l'accueil, et RETOUR sautait Solo. |
 | **Le bandeau « FATAL — <arme> » et la marge du tir fatal sont au JcJ, et à lui seul** (2026-10-04, Adrien, même session : « il ne faut pas jouer le carton rouge "pistolet" quand on est contre des PNJ. Ces mécaniques sont propres au JcJ ») | Ils signent un duel et nourrissent la revanche ; contre la machine ils n'ont rien à dire. `Player.kill_entre_joueurs()` : faux dès qu'un des deux corps est un PNJ, et partout où `GameState.training_mode` est vrai (entraînement contre le bot, aventure). Voir aussi le piège « Un tween lié au corps qui meurt ». |
@@ -33794,6 +33795,35 @@ limite hebdomadaire des sous-agents était atteinte.
 départ. Les gardes de contenu des chapitres (`test_chapitre_0x`) et les marches au vrai corps passent avec la mise en joue, mais aucun banc ne
 mesure encore ce qu'elle change au ressenti d'une salle.
 
+### S11 — FAITE le 2026-10-04 : l'intelligence des PNJ — dégâts, rafales, annonce, fouille, tempéraments
+
+Menée par la session de pilotage (sous-agents indisponibles). Tout tient dans `profil_bot.gd` (les réglages, posés par `pnj()` et
+`appliquer_temperament`), `bot_input_provider.gd` (les comportements), `bullet.gd` / `player.gd` (les dégâts, le claquement de torche),
+`aventure_format.gd` (la clé) et `aventure_partie.gd` (les dégâts posés sur le corps, les alliés debout).
+
+- **Dégâts** : `Player.degats_pnj`, lu par `bullet.gd` à la place de l'arme, sur le même `normalized_dist`. Garde :
+  `test_aventure_tirs_pnj` (une balle au centre ôte 20, pas les 50 du pistolet ; tout PNJ qui tire les porte — les sourds et aveugles,
+  qui ne tirent jamais, n'en ont pas).
+- **Rafales** : `_tirer_la_rafale()` sur un générateur à part (`_rng_rafale`) — le bot de l'entraînement, sans poids, ne consomme aucun
+  tirage de plus, et garde son déterminisme. Entre deux coups d'une rafale, `_en_rafale()` lève tolérance et mise en joue ; la rafale
+  finie, la mise en joue repart à neuf. Garde : `test_bot_combat` (distribution sur 2000 tirages, rafale de 3 et de 1, dispersion).
+- **Annonce** : `_annonce_jusqu` (la mise en joue, plus 0,4 s) braque la torche ; `player.gd` fait claquer toute torche de PNJ qui
+  s'allume (`torch_on`, sans occlusion, portée triplée). L'embusqué ne s'annonce pas.
+- **Fouille** : `_fouiller()`, après `_viser`. Un appui de gâchette en cours est relâché au premier balayage. ⚠️ **Le corps traite sa
+  gâchette AVANT que son bot ne pense, dans la même image** : un coup compté à l'image où le balayage commence a été décidé à l'image
+  d'avant. La garde ne compte que les coups partis quand le balayage était déjà engagé ; sans cette précision elle accusait la fouille
+  d'un coup du combat qui s'achevait.
+- **Tempéraments** : guetteur (torche fixe allumée, tient son poste), traqueur (ouïe ×1,5, mémoire ×2, marche vers les sons même posé
+  immobile), peureux (à mi-vie ou resté seul — `allies_vivants`, tenu par `AventurePartie` —, il recule et ne tire plus le temps du repli),
+  embusqué (torche éteinte, ni annonce ni fouille, tient son poste, ne tire qu'à moins de 320 px, mise en joue moitié). Appliqué APRÈS
+  `equipe` : le tempérament décide de la torche. Gardes : `test_bot_combat` (chacun dans un vrai montage), `test_aventure_format` (la clé).
+- **Les empreintes de S4** (`test_bot_equipement`) : `Flux.sans_equipement()` éteint désormais aussi rafales et fouille.
+- **L'éditeur web** accepte et propose la clé ; il ne dit plus « atteignable en enjambant un muret » mais « séparé par un muret — on le
+  tire par-dessus » (l'enjambement est retiré).
+
+**Non fait** : aucune salle livrée n'a de tempérament (SOLO-Q11) ; rien n'a été joué manette en main ; les chiffres (dégâts, poids,
+dispersion, balayage, seuil de peur, portée d'embuscade) sont de départ.
+
 ### Questions
 
 **Tranchées le 2026-10-02** : SOLO-Q1 (éliminer tout le monde), SOLO-Q2 (des plafonniers, qui ne s'éteignent pas),
@@ -33807,6 +33837,9 @@ immobiles). **Ouvertes** :
 - **SOLO-Q9 — la mise en joue des boss** (2026-10-04) : posée sur les PNJ du catalogue seulement, parce que les dix boss
   sont réglés au banc à 55 % et le seraient à nouveau. Le boss de l'initiation, s'il est lui aussi « trop vite », se règle
   par `REGLAGES_BOSS` (« mise_en_joue_s ») et un passage du banc `--boss`.
+- **SOLO-Q11 — où poser les tempéraments** (2026-10-04) : la clé existe, aucune salle livrée ne s'en sert encore. Soit Adrien
+  les pose dans l'éditeur des salles, soit une session les répartit (un guetteur par salle à plafonniers, des embusqués dans
+  les grandes salles, des traqueurs dans les chapitres des chasseurs) — c'est du contenu, que les gardes des chapitres jugeront.
 - **SOLO-Q10 — « hyper gratifiant », la suite** (2026-10-04) : S10 donne à chaque salle une réponse à chaque abattu
   (compteur), un tampon de fin avec temps, essai et record. Ce qui pourrait suivre, à trancher manette en main : un
   bilan de chapitre (temps total, morts, records), des paliers de temps par salle (or, argent, bronze), une musique

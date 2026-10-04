@@ -402,6 +402,11 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 
 	# Linear falloff based on weapon damage
 	var opp_hit_damage := floorf(lerpf(weapon.damage_center, weapon.damage_edge, normalized_dist))
+	# La balle d'un PNJ de l'aventure a SES dégâts, quelle que soit l'arme (`Player.degats_pnj` : x au bord, y au centre ; Adrien,
+	# 2026-10-04 : « que les PNJ ne fassent pas plus de 10-20 dégâts par tir »). Le même `normalized_dist` : bien viser compte encore.
+	var degats_pnj: Variant = source_player.get("degats_pnj") if is_instance_valid(source_player) else null
+	if degats_pnj is Vector2 and (degats_pnj as Vector2) != Vector2.ZERO:
+		opp_hit_damage = floorf(lerpf((degats_pnj as Vector2).y, (degats_pnj as Vector2).x, normalized_dist))
 
 	# Kill probable, jugé sur les HP visibles localement : exact chez l'hôte,
 	# prédictif chez le client — purement cosmétique dans les deux cas.
