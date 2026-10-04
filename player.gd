@@ -2679,7 +2679,8 @@ func trigger_shoot_visuals():
 			Charte.Courbe.EXTINCTION)
 	
 	var _slug := current_weapon.slug() if current_weapon else "pistolet"
-	AudioManager.play_weapon_shot(_slug, muzzle.global_position, player_id)
+	# Un PNJ de l'aventure tire « audible de partout » : ni mur ni distance ne l'éteignent (Adrien, 2026-10-04 ; voir `play_weapon_shot`).
+	AudioManager.play_weapon_shot(_slug, muzzle.global_position, player_id, est_pnj)
 	# V4.10 — **le carreau ne sonne PAS au canon**, et c'est une decision
 	# d'Adrien (2026-08-28) : joue ici, il se confondrait avec le coup et
 	# n'apprendrait rien. Il sonne la ou il FROLE sa cible — voir

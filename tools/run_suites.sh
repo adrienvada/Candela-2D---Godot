@@ -332,7 +332,9 @@ SUITES+=(test_banc_bot)
 # reste d'une salle à l'autre — un corps libéré avant la fin de son fondu laissait ses étiquettes dans l'arène.
 # `test_aventure_hud` (2026-10-04, à pas fixe) : les consignes de l'initiation portent les touches de l'InputMap et ne s'allument que
 # sur le geste FAIT ; le compteur suit chaque abattu ; le tampon de la salle réussie claque, le record ne tombe que s'il bat un temps.
-SUITES+=(test_aventure_format test_aventure_partie test_aventure_restes test_aventure_hud)
+# `test_aventure_tirs_pnj` (2026-10-04, à pas fixe) : le tir d'un PNJ part en direct, sans occlusion, à trois diagonales au moins ; le
+# même tir joué comme un tir ordinaire serait étouffé (le témoin) ; le tir du joueur garde sa portée.
+SUITES+=(test_aventure_format test_aventure_partie test_aventure_restes test_aventure_hud test_aventure_tirs_pnj)
 
 # Chantier SOLO, S9 (2026-10-02) : le bot S'ÉQUIPE — sa torche (éteinte tant qu'il n'a rien perçu, allumée pour fouiller, éteinte pour
 # s'approcher), sa prudence (changer de place après un tir, s'accroupir pour approcher un son), sa fusée (vers une zone ENTENDUE, jamais
@@ -567,7 +569,7 @@ for t in "${SUITES[@]}"; do
     # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
     # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
     test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_aventure_tirs_pnj|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

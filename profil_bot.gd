@@ -150,7 +150,9 @@ enum Deplacement { IMMOBILE, RONDE, ZONE, LIBRE }
 
 ## La MISE EN JOUE (2026-10-04, Adrien : « il faut qu'il y ait un délai s'ils ont besoin de tourner leur orientation pour tirer : ils voient,
 ## ils visent, puis ils tirent. Sinon c'est trop dur ils vont trop vite »). Le temps, en secondes, que le corps doit TENIR aligné — à moins de
-## `tolerance_tir_deg` — avant le premier coup, chaque fois qu'il a dû tourner pour s'aligner. Un bot qui fait déjà face tire sans l'attendre.
+## `tolerance_tir_deg` — avant le premier coup, chaque fois qu'il a dû tourner pour s'aligner, **pour un demi-tour** : il est PROPORTIONNEL à
+## l'angle rattrapé (Adrien, le même jour : « d'autant plus longue qu'ils doivent tourner : s'ils nous tournent le dos ça doit être plus long
+## que s'ils pointent à peu près vers nous »). De dos (180°), le délai entier ; à 60°, son tiers. Un bot qui fait déjà face tire sans l'attendre.
 ## 0 : l'ancien comportement (le coup part à l'image où le corps entre dans la tolérance). Posé sur les PNJ du catalogue (`pnj()`), PAS sur le
 ## bot de l'entraînement ni sur les boss : leurs paliers sont réglés au banc (80 / 55 / 30 %, boss 55 %) et la demande vise les PNJ.
 @export_range(0.0, 3.0) var mise_en_joue_s: float = 0.0
@@ -465,13 +467,15 @@ static func pnj(deplacement: int, sens: int, palier: int = Palier.LENT) -> Profi
 	return p
 
 
-## La mise en joue des PNJ du catalogue, par palier (voir `mise_en_joue_s`). Chiffres de DÉPART, jugés par personne : à régler en jouant.
+## La mise en joue des PNJ du catalogue, par palier, POUR UN DEMI-TOUR (voir `mise_en_joue_s`). Chiffres de DÉPART, jugés par personne : à régler
+## en jouant. Relevés quand le délai est devenu proportionnel à l'angle (2026-10-04) : à 0,9 s pour un demi-tour, un ajustement de 30° n'aurait plus
+## coûté que 0,15 s.
 const MISE_EN_JOUE_PNJ := {
-	Palier.TRES_LENT: 0.9,
-	Palier.LENT: 0.7,
-	Palier.FACILE: 0.5,
-	Palier.NORMAL: 0.35,
-	Palier.DIFFICILE: 0.25,
+	Palier.TRES_LENT: 1.4,
+	Palier.LENT: 1.1,
+	Palier.FACILE: 0.8,
+	Palier.NORMAL: 0.6,
+	Palier.DIFFICILE: 0.45,
 }
 
 

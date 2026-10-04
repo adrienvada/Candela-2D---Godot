@@ -672,7 +672,7 @@ func _la_discipline_de_tir() -> void:
 func _la_mise_en_joue() -> void:
 	print("\n[La mise en joue : il voit, il vise, puis il tire]")
 	var lent := Profil.pnj_nomme("immobile_voit_lent")
-	_check("un PNJ du catalogue a une mise en joue (LENT : %.2f s)" % lent.mise_en_joue_s, lent.mise_en_joue_s > 0.0)
+	_check("un PNJ du catalogue a une mise en joue (LENT : %.2f s pour un demi-tour)" % lent.mise_en_joue_s, lent.mise_en_joue_s > 0.0)
 	_check("… plus longue au palier TRÈS LENT qu'au DIFFICILE",
 		Profil.pnj_nomme("immobile_voit_tres_lent").mise_en_joue_s > Profil.pnj_nomme("immobile_voit_difficile").mise_en_joue_s)
 	_check("le bot de l'entraînement n'en a pas (ses paliers sont réglés au banc)",
@@ -704,6 +704,28 @@ func _la_mise_en_joue() -> void:
 		"%.3f s" % ecarts[0.0])
 	_check("avec 0,5 s de mise en joue, après un demi-tour : le coup attend (%.2f s après l'alignement)" % ecarts[0.5],
 		ecarts[0.5] >= 0.5 - 2.0 * PAS and ecarts[0.5] <= 0.5 + 0.15, "%.3f s" % ecarts[0.5])
+
+	# Proportionnelle à l'angle rattrapé (Adrien : « s'ils nous tournent le dos ça doit être plus long que s'ils pointent à peu près vers
+	# nous ») : la cible à 60° du canon, le même 0,5 s « pour un demi-tour » n'en coûte qu'un tiers.
+	var profil_60 := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
+		"tolerance_tir_deg": 6.0, "delai_reaction": 0.1, "mise_en_joue_s": 0.5})
+	var r60 := _rig(profil_60, c(15, 15), c(15, 15) + Vector2.from_angle(PI / 3.0) * 200.0, 7, Vector2.RIGHT)
+	await _derouler(r60, 6)
+	r60.cible.allumer_la_torche(Vector2.from_angle(PI + PI / 3.0))
+	var aligne_60 := -1.0
+	for _i in 240:
+		await physics_frame
+		r60.suivre()
+		var vrai_60 := (r60.cible.global_position - r60.tireur.global_position).angle()
+		if aligne_60 < 0.0 and absf(angle_difference(r60.tireur.rotation, vrai_60)) < deg_to_rad(6.0):
+			aligne_60 = r60.tireur.t
+		if not r60.tireur.tirs.is_empty():
+			break
+	var ecart_60: float = float(r60.tireur.tirs[0]["t"]) - aligne_60 if not r60.tireur.tirs.is_empty() and aligne_60 >= 0.0 else -1.0
+	_check("à 60° du canon, la mise en joue n'en coûte qu'un tiers (%.2f s, attendu ≈ 0,17)" % ecart_60,
+		ecart_60 >= 0.5 / 3.0 - 3.0 * PAS and ecart_60 <= 0.5 / 3.0 + 0.1, "%.3f s" % ecart_60)
+	_check("… donc moins que de dos (%.2f s contre %.2f s)" % [ecart_60, ecarts[0.5]], ecart_60 >= 0.0 and ecart_60 < ecarts[0.5] - 0.2)
+	r60.liberer()
 
 	# La cible DEVANT le bot, déjà alignée : la mise en joue ne s'ajoute pas — seul le délai de réaction compte.
 	var profil_face := _profil(Profil.Difficulte.NORMAL, {"vitesse_visee": 6.0, "erreur_visee_deg": 0.0, "erreur_visee_min_deg": 0.0,
