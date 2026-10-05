@@ -207,7 +207,7 @@ SUITES=(test_liaisons test_icones_editeur
         test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting test_hud_style
         test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte test_traces_carte test_entrainement_carte test_traces_rencontre
         test_telemetrie_gadgets test_murs_bas test_murs_bas_rendu
-        test_proto_iso test_voxel_corps test_voxel_objets test_banc_iso test_iso_geometrie test_iso_equite test_iso_camera test_iso_vues test_iso_corps test_iso_murs_bas test_iso_objets test_iso_killcam test_killcam_calme test_iso_beaute test_iso_gadgets test_masque_formes test_iso_torches3d test_corps_portraits test_corps_mannequin test_menus_voxel test_iso_usure test_corps_detail test_corps_soi_sombre test_passe_unique test_corps_soi_fondu test_pochoirs test_gris_egaux test_iso_peinture_carte)
+        test_proto_iso test_voxel_corps test_voxel_objets test_banc_iso test_iso_geometrie test_iso_equite test_iso_camera test_iso_vues test_iso_corps test_iso_murs_bas test_iso_objets test_iso_killcam test_killcam_calme test_iso_beaute test_rendu_rr test_iso_gadgets test_masque_formes test_iso_torches3d test_corps_portraits test_corps_mannequin test_menus_voxel test_iso_usure test_corps_detail test_corps_soi_sombre test_passe_unique test_corps_soi_fondu test_pochoirs test_gris_egaux test_iso_peinture_carte)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.
@@ -231,6 +231,27 @@ SUITES+=(test_enveloppes_sons)
 # Q42 (2026-09-29) — le corps ignore sa propre ombre : l'étoile de chaque corps vit dans SA canvas, que les capteurs de ce corps
 # ne comptent pas. Posé ici, comme la ligne du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
 SUITES+=(test_ombre_propre)
+
+# OMBRES, OM4 (2026-10-04) — les règles d'ombre « sans décision » : le flash de bouche qui recule devant un mur, l'écho au sol et la
+# lumière de coup au masque des lumières neutres, l'étoile à la posture, l'ombre et la lueur d'un corps mort. Posé ici, comme les
+# lignes du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
+SUITES+=(test_ombres_regles)
+
+# OMBRES, OM4b (2026-10-05) — des règles d'ombre pour N corps : une couche d'ombre par PNJ (Q86), et la fusée, la mine, la nappe de
+# braises au masque des lumières neutres (Q87), lues sur les objets vivants d'une vraie salle. Posé ici, même raison.
+SUITES+=(test_ombres_pnj)
+
+# OMBRES, OM5 (2026-10-05) — l'ombre finie des corps sous les plafonniers (Q88) : la règle jumelle du shader, les shaders du sol et
+# du décor, la poussée dans une vraie salle. Posé ici, même raison.
+SUITES+=(test_ombres_plafonniers)
+
+# OMBRES, OM2 (2026-10-05) — l'étoile à la forme du corps voxel (Q82) : sa forme pour les dix classes, la garde de dérive contre les
+# boîtes d'un vrai corps, le cercle provisoire qui ne l'écrase plus, et l'ombre de contact des figurants en vue iso. Même raison.
+SUITES+=(test_ombres_voxel)
+
+# OMBRES, OM6 (2026-10-05) — l'allègement : l'ombre d'un halo sans récepteur, le capteur d'un corps qu'on ne montre pas, la
+# lumière de coup partie à 1 % de son énergie — dans une vraie salle en iso. Même raison.
+SUITES+=(test_ombres_allegement)
 
 # Le point de braise de la fusée et l'Usine (0.8.0, 2026-09-29 ; Adrien : « Le point rouge : oui, dans la 0.8.0 » et « Oui corrige
 # l'usine ») : la règle de luminance du point — aussi lumineux que sa lumière, en gardant le rouge —, à chaque pas des vingt secondes de
@@ -574,6 +595,13 @@ for t in "${SUITES[@]}"; do
     # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
     # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
     test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_chapitres_marche` (chapitres 1 à 3, le vrai corps) : 115 à 141 s seule dans le conteneur cloud au calme (mesuré le 2026-10-05,
+    # chantier OMBRES, sur deux arbres dont celui d'avant le lot) — au-delà des 120 s communs, et rouge dans deux suites entières sur
+    # trois. Son plafond est donc le sien, comme celui de ses sœurs : 360 s, 2,5 fois le plus lent mesuré ; un vrai blocage reste attrapé.
+    test_chapitres_marche) PLAFOND_SUITE=360 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_ombres_pnj`, `test_ombres_plafonniers`, `test_ombres_voxel` et `test_ombres_allegement` montent une vraie salle
+    # d'aventure, comme les suites d'aventure de la ligne suivante : à pas d'image fixe.
+    test_ombres_pnj|test_ombres_plafonniers|test_ombres_voxel|test_ombres_allegement) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     test_coup_de_feu|test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_aventure_tirs_pnj|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
@@ -596,6 +624,8 @@ run test_fumee_voxel_couches --script "res://tools/test_fumee_voxel.gd" -- --fum
 run test_fumee_voxel_drapeaux --script "res://tools/test_fumee_voxel.gd" -- --fumee-voxels=fin --fumee-encre=hachures --fumee-relief=bruit
 # GV2 — les nappes à l'essai, lu au lancement (la variante « braises »).
 run test_nappes_voxel_braises --script "res://tools/test_nappes_voxel.gd" -- --nappes-voxels=braises
+# RR1 — l'essai sans encre, lu au lancement (`--sans-encre`) : l'encre part, la matière reste ; il l'emporte sur `--encre-essai`.
+run test_rendu_rr_sans_encre --script "res://tools/test_rendu_rr.gd" -- --sans-encre --encre-essai
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).

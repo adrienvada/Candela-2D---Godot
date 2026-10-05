@@ -4,6 +4,10 @@
 chaque étiquette à la référence, EN CADENCE : cadence de l'étiquette / cadence de la référence, soit temps de la référence /
 temps de l'étiquette (0,95 : 5 % moins d'images par seconde que la référence). Médiane des médianes par étiquette.
 
+Une série de SOLO (`SCENE="--solo=8.9" serie.sh …`, OM6) ajoute une colonne : les coups de PNJ tirés pendant chaque prise. La fusillade
+n'est pas rejouée à l'identique d'une prise à l'autre (les bots décident, le jeu tire au hasard) : un écart de cadence entre deux
+étiquettes ne se lit qu'à fusillades comparables, et cette colonne dit si elles le sont.
+
 Usage : verdict.py <dossier des prises> <nom de série> [<référence>=A]
 """
 import glob
@@ -42,13 +46,15 @@ if ref not in par_etiquette:
 t_ref = statistics.mean([r["moyenne_ms"] for r in par_etiquette[ref]])
 b_ref = statistics.median([r["un_pc_bas_ms"] for r in par_etiquette[ref]])
 print("Série %s — référence %s : moyenne %.1f ms (%.2f i/s), 1 %% bas %.1f ms" % (serie, ref, t_ref, 1000 / t_ref, b_ref))
-print("%-14s %-26s %-26s %-9s %-8s %-9s %s" % ("étiquette", "moyennes (ms)", "médianes (ms)", "moyenne", "rapport", "Δ ms",
-                                              "1 % bas (ms)"))
+solo = any(r.get("solo") for rs in par_etiquette.values() for r in rs)
+print("%-14s %-26s %-26s %-9s %-8s %-9s %s%s" % ("étiquette", "moyennes (ms)", "médianes (ms)", "moyenne", "rapport", "Δ ms",
+                                              "1 % bas (ms)", "   coups de PNJ" if solo else ""))
 for etiquette, rs in par_etiquette.items():
     moy = [r["moyenne_ms"] for r in rs]
     meds = [r["mediane_ms"] for r in rs]
     bas = [r["un_pc_bas_ms"] for r in rs]
     t = statistics.mean(moy)
-    print("%-14s %-26s %-26s %-9s %-8s %-9s %s" % (etiquette, " / ".join("%.1f" % x for x in moy),
+    print("%-14s %-26s %-26s %-9s %-8s %-9s %s%s" % (etiquette, " / ".join("%.1f" % x for x in moy),
           " / ".join("%.1f" % x for x in meds), "%.1f" % t, "%.3f" % (t_ref / t), "%+.1f" % (t - t_ref),
-          " / ".join("%.0f" % x for x in bas)))
+          " / ".join("%.0f" % x for x in bas),
+          ("   " + " / ".join(str(r.get("coups", "?")) for r in rs)) if solo else ""))

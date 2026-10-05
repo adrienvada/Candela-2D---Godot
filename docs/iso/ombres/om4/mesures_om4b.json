@@ -1,0 +1,108 @@
+{
+ "avant": {
+  "commit": "0bf2b46b",
+  "note": "OM3b (code d'om3b, banc d'om4b)",
+  "prises": [
+   {
+    "plan": "pnj-entre-eux",
+    "famille": "om4b",
+    "classe_pnj": "pistolet",
+    "om4b": {
+     "sol_a_cote": 0.0434,
+     "sol_derriere_l_ecran": 0.2403
+    },
+    "capteur": {
+     "maximum": 0.702,
+     "moyenne": 0.5492
+    },
+    "opacites": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "eblouissement_j1": 0.0
+   },
+   {
+    "plan": "fusee-derriere-mur",
+    "famille": "om4b",
+    "classe_pnj": "pistolet",
+    "om4b": {
+     "fusee": [
+      200.0,
+      122.5
+     ],
+     "fusee_masque_ombre": 65
+    },
+    "capteur": {
+     "maximum": 1.0,
+     "moyenne": 0.7673
+    },
+    "opacites": [
+     0.605,
+     1.0,
+     1.0,
+     0.6,
+     1.0,
+     1.0
+    ],
+    "eblouissement_j1": 0.0
+   }
+  ]
+ },
+ "om4b": {
+  "commit": "0bf2b46b",
+  "note": "OM4b : une couche par PNJ, lumières posées au masque neutre",
+  "prises": [
+   {
+    "plan": "pnj-entre-eux",
+    "famille": "om4b",
+    "classe_pnj": "pistolet",
+    "om4b": {
+     "sol_a_cote": 0.0434,
+     "sol_derriere_l_ecran": 0.0
+    },
+    "capteur": {
+     "maximum": 0.6745,
+     "moyenne": 0.1852
+    },
+    "opacites": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "eblouissement_j1": 0.0
+   },
+   {
+    "plan": "fusee-derriere-mur",
+    "famille": "om4b",
+    "classe_pnj": "pistolet",
+    "om4b": {
+     "fusee": [
+      200.0,
+      122.5
+     ],
+     "fusee_masque_ombre": 451
+    },
+    "capteur": {
+     "maximum": 0.0,
+     "moyenne": 0.0
+    },
+    "opacites": [
+     0.605,
+     1.0,
+     1.0,
+     0.6,
+     1.0,
+     1.0
+    ],
+    "eblouissement_j1": 0.0
+   }
+  ]
+ }
+}

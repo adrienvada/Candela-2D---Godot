@@ -1,0 +1,2362 @@
+{
+ "avant": {
+  "commit": "492311a2",
+  "duree_s": 134.8,
+  "correctif": "",
+  "prises": [
+   {
+    "plan": "etoile-camera-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-camera-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.289,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-dos-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2231,
+     "derriere": 0.0,
+     "derriere_cote": 0.1064,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-dos-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2481,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-profil-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2927,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-profil-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.3149,
+     "derriere": 0.0,
+     "derriere_cote": 0.091,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-courte",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 1.0,
+      "moyenne": 0.8197
+     },
+     "dedans": 0.0,
+     "dehors": 0.2349,
+     "derriere": 0.0,
+     "derriere_cote": 0.1381,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 10
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-pistolet",
+    "famille": "classes",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-fusil",
+    "famille": "classes",
+    "classe_pnj": "fusil",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2274,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-pompe",
+    "famille": "classes",
+    "classe_pnj": "pompe",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2353,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-arbalete",
+    "famille": "classes",
+    "classe_pnj": "arbalete",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.1689,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-occulteur",
+    "famille": "classes",
+    "classe_pnj": "occulteur",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2102,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-fumiste",
+    "famille": "classes",
+    "classe_pnj": "fumiste",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2225,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-incendiaire",
+    "famille": "classes",
+    "classe_pnj": "incendiaire",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2037,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-sentinelle",
+    "famille": "classes",
+    "classe_pnj": "sentinelle",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2011,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-allumeur",
+    "famille": "classes",
+    "classe_pnj": "allumeur",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2143,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-spectre",
+    "famille": "classes",
+    "classe_pnj": "spectre",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2079,
+     "derriere": 0.0,
+     "derriere_cote": 0.0986,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "plafonnier",
+    "famille": "plafonnier",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "plafonnier-brute",
+    "famille": "plafonnier",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "plafonnier-eteint",
+    "famille": "plafonnier",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 0.7216,
+     "moyenne": 0.5578
+    },
+    "lumieres_pire_quadrant": 3
+   },
+   {
+    "plan": "mur",
+    "famille": "mur",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.225,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 0.7216,
+     "moyenne": 0.5578
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "serie-fixe",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        102
+       ],
+       "au_dela_8": [
+        33,
+        370
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 65
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 0
+      }
+     },
+     "energies_torche": [
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5
+     ]
+    }
+   },
+   {
+    "plan": "serie-fixe-brute",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        39
+       ],
+       "au_dela_8": [
+        90,
+        273
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 60
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 0
+      }
+     },
+     "energies_torche": [
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5
+     ]
+    }
+   },
+   {
+    "plan": "serie-respiration",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        2,
+        43
+       ],
+       "au_dela_8": [
+        95,
+        303
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 56
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 1
+      }
+     },
+     "energies_torche": [
+      2.5034,
+      2.5033,
+      2.5005,
+      2.502,
+      2.5029,
+      2.5022
+     ]
+    }
+   },
+   {
+    "plan": "serie-respiration-brute",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2235,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        82
+       ],
+       "au_dela_8": [
+        51,
+        355
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 57
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 1
+      }
+     },
+     "energies_torche": [
+      2.4971,
+      2.5001,
+      2.5006,
+      2.5059,
+      2.5088,
+      2.5112
+     ]
+    }
+   },
+   {
+    "plan": "serie-tir",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.1715,
+     "derriere": 0.0,
+     "derriere_cote": 0.0792,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        31,
+        11845
+       ],
+       "au_dela_8": [
+        6008,
+        33297
+       ],
+       "hors_corps_24": [
+        27,
+        8749
+       ],
+       "hors_corps_8": [
+        4440,
+        21255
+       ],
+       "saut_max": 78
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        3742
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        3742
+       ],
+       "saut_max": 19
+      }
+     },
+     "energies_torche": [
+      1.6551,
+      1.7219,
+      1.6323,
+      1.9252,
+      1.5227,
+      1.5987
+     ]
+    }
+   },
+   {
+    "plan": "serie-tir-brute",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.1675,
+     "derriere": 0.0,
+     "derriere_cote": 0.0781,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        35
+       ],
+       "au_dela_8": [
+        178,
+        11591
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        5000
+       ],
+       "saut_max": 40
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        2062
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        2062
+       ],
+       "saut_max": 15
+      }
+     },
+     "energies_torche": [
+      1.5914,
+      1.6654,
+      1.9849,
+      1.8979,
+      1.6282,
+      1.58
+     ]
+    }
+   },
+   {
+    "plan": "brouillage-torche",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {},
+    "capteur_jeu": {
+     "maximum": 0.7216,
+     "moyenne": 0.5578
+    },
+    "lumieres_pire_quadrant": 6
+   },
+   {
+    "plan": "brouillage-ebloui",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053
+    ],
+    "eblouissement_j1": 0.31,
+    "source_eblouissante": "PNJ_0",
+    "sonde": {},
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 0.7564
+    },
+    "lumieres_pire_quadrant": 7
+   },
+   {
+    "plan": "lumieres-salle09",
+    "famille": "lumieres",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {},
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 6
+   }
+  ]
+ },
+ "prototype_etoile_ccw": {
+  "commit": "492311a2",
+  "duree_s": 127.9,
+  "correctif": "etoile_ccw",
+  "prises": [
+   {
+    "plan": "etoile-camera-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-camera-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2774,
+     "dehors": 0.289,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.96,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-dos-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2826,
+     "dehors": 0.2231,
+     "derriere": 0.0,
+     "derriere_cote": 0.1064,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.267,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-dos-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2727,
+     "dehors": 0.2481,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.099,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-profil-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2922,
+     "dehors": 0.2927,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.998,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-profil-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2651,
+     "dehors": 0.3149,
+     "derriere": 0.0,
+     "derriere_cote": 0.091,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.842,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "etoile-courte",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 1.0,
+      "moyenne": 0.8197
+     },
+     "dedans": 0.3863,
+     "dehors": 0.2349,
+     "derriere": 0.0,
+     "derriere_cote": 0.1381,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.645,
+     "rayons": 10
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-pistolet",
+    "famille": "classes",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-fusil",
+    "famille": "classes",
+    "classe_pnj": "fusil",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.31,
+     "dehors": 0.2274,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.363,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-pompe",
+    "famille": "classes",
+    "classe_pnj": "pompe",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2402,
+     "dehors": 0.2353,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.021,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-arbalete",
+    "famille": "classes",
+    "classe_pnj": "arbalete",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3033,
+     "dehors": 0.1689,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.796,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-occulteur",
+    "famille": "classes",
+    "classe_pnj": "occulteur",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3493,
+     "dehors": 0.2102,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.662,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-fumiste",
+    "famille": "classes",
+    "classe_pnj": "fumiste",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3438,
+     "dehors": 0.2225,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.545,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-incendiaire",
+    "famille": "classes",
+    "classe_pnj": "incendiaire",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3539,
+     "dehors": 0.2037,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.737,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-sentinelle",
+    "famille": "classes",
+    "classe_pnj": "sentinelle",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3055,
+     "dehors": 0.2011,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.519,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-allumeur",
+    "famille": "classes",
+    "classe_pnj": "allumeur",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3405,
+     "dehors": 0.2143,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.589,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "classe-spectre",
+    "famille": "classes",
+    "classe_pnj": "spectre",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.356,
+     "dehors": 0.2079,
+     "derriere": 0.0,
+     "derriere_cote": 0.0986,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.712,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "plafonnier",
+    "famille": "plafonnier",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "plafonnier-brute",
+    "famille": "plafonnier",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "plafonnier-eteint",
+    "famille": "plafonnier",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 0.7216,
+     "moyenne": 0.5578
+    },
+    "lumieres_pire_quadrant": 3
+   },
+   {
+    "plan": "mur",
+    "famille": "mur",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2362,
+     "dehors": 0.225,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.05,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 0.7216,
+     "moyenne": 0.5578
+    },
+    "lumieres_pire_quadrant": 4
+   },
+   {
+    "plan": "serie-fixe",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        57
+       ],
+       "au_dela_8": [
+        2,
+        347
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 53
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 0
+      }
+     },
+     "energies_torche": [
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5
+     ]
+    }
+   },
+   {
+    "plan": "serie-fixe-brute",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        62
+       ],
+       "au_dela_8": [
+        5,
+        315
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 48
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 0
+      }
+     },
+     "energies_torche": [
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5,
+      2.5
+     ]
+    }
+   },
+   {
+    "plan": "serie-respiration",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2227,
+     "derriere": 0.0,
+     "derriere_cote": 0.1033,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.644,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        7,
+        65
+       ],
+       "au_dela_8": [
+        174,
+        313
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 48
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 1
+      }
+     },
+     "energies_torche": [
+      2.4902,
+      2.4911,
+      2.4914,
+      2.4956,
+      2.4969,
+      2.504
+     ]
+    }
+   },
+   {
+    "plan": "serie-respiration-brute",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3674,
+     "dehors": 0.2236,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        26
+       ],
+       "au_dela_8": [
+        102,
+        280
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 40
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        0
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        0
+       ],
+       "saut_max": 1
+      }
+     },
+     "energies_torche": [
+      2.5125,
+      2.5103,
+      2.5066,
+      2.5106,
+      2.506,
+      2.507
+     ]
+    }
+   },
+   {
+    "plan": "serie-tir",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2924,
+     "dehors": 0.1748,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.673,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        100,
+        13604
+       ],
+       "au_dela_8": [
+        4681,
+        37796
+       ],
+       "hors_corps_24": [
+        18,
+        10075
+       ],
+       "hors_corps_8": [
+        3343,
+        24492
+       ],
+       "saut_max": 86
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        5970
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        5970
+       ],
+       "saut_max": 23
+      }
+     },
+     "energies_torche": [
+      1.9834,
+      1.5359,
+      1.9273,
+      1.8623,
+      1.6154,
+      1.5121
+     ]
+    }
+   },
+   {
+    "plan": "serie-tir-brute",
+    "famille": "scintillement",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.242,
+     "dehors": 0.1448,
+     "derriere": 0.0,
+     "derriere_cote": 0.0675,
+     "derriere_rapport": 0.0,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.671,
+     "rayons": 11
+    },
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 4,
+    "scintillement": {
+     "resume": {
+      "ecran": {
+       "au_dela_24": [
+        0,
+        89
+       ],
+       "au_dela_8": [
+        2,
+        4645
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        1297
+       ],
+       "saut_max": 47
+      },
+      "lightmap": {
+       "au_dela_24": [
+        0,
+        0
+       ],
+       "au_dela_8": [
+        0,
+        123
+       ],
+       "hors_corps_24": [
+        0,
+        0
+       ],
+       "hors_corps_8": [
+        0,
+        123
+       ],
+       "saut_max": 11
+      }
+     },
+     "energies_torche": [
+      1.5963,
+      1.641,
+      1.6156,
+      1.7951,
+      1.5893,
+      1.5932
+     ]
+    }
+   },
+   {
+    "plan": "brouillage-torche",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {},
+    "capteur_jeu": {
+     "maximum": 0.7216,
+     "moyenne": 0.5578
+    },
+    "lumieres_pire_quadrant": 6
+   },
+   {
+    "plan": "brouillage-ebloui",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053
+    ],
+    "eblouissement_j1": 0.31,
+    "source_eblouissante": "PNJ_0",
+    "sonde": {},
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 0.7564
+    },
+    "lumieres_pire_quadrant": 7
+   },
+   {
+    "plan": "lumieres-salle09",
+    "famille": "lumieres",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "source_eblouissante": "Player1",
+    "sonde": {},
+    "capteur_jeu": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "lumieres_pire_quadrant": 6
+   }
+  ]
+ }
+}

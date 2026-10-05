@@ -6199,3 +6199,154 @@ par `redescendre_vers`). `protocol.gd` inchangé. Qui tient ces fichiers ailleur
 **Mise à jour du chantier SOLO, 2026-10-04 au soir (S11, l'intelligence des PNJ).** Même session, même branche, repartie de `main` après la
 fusion de la PR #5. **Touche le duel par un seul point** : `bullet.gd` lit `Player.degats_pnj` (nul hors aventure, donc sans effet), et
 `player.gd` fait claquer la torche d'un PNJ (`est_pnj`, jamais posé hors aventure). Le reste vit dans les fichiers du solo.
+
+## 2026-10-04 — Le chantier OMBRES (session « Chantier OMBRES — éclairage Candela », `candela-2d-godot-d4`, branche `claude/determined-pasteur-mtrws1`)
+
+Adrien confie à cette session le chantier d'éclairage du solo **de bout en bout** — les lots OM0 à OM7 de « Chantier — les ombres et
+la lumière du solo (OM) » dans la feuille de route —, d'après l'audit qu'une session cloud a mené le même jour hors du dépôt. Elle
+travaille dans son propre conteneur cloud (un clone à elle : l'équivalent d'un worktree, personne d'autre n'y écrit), pousse SA
+branche et ouvre une PR à la fin de chaque lot vert ; jamais `main`, jamais de fusion.
+
+**En propre :** `tools/planche_ombres.gd` et `.tscn` (créés, OM0 — le banc des ombres) ; `docs/iso/ombres/` (les planches du
+chantier, à venir) ; la section « Chantier — les ombres et la lumière du solo (OM) » de la feuille de route.
+**Partagés, touchés par insertions :** `tools/test_ombre_propre.gd` (les gardes de culling et d'enroulement des étoiles) et
+`tools/test_banc.gd` (le banc épinglé, l'usage prévu de ce fichier) dès OM0. Puis, lot par lot et chacun annoncé ici avant d'y
+écrire : `player.gd` (l'étoile, le flash, `hit_light`, `ground_flash`, `die()`, la posture, l'enveloppe de tir), `charte.gd` (une
+fonction d'occulteur de corps), `gadget_leurre.gd` (la même étoile que le joueur), `brouillage.gd` (selon Q81),
+`presentation_3d.gd` et `miroirs_iso.gd` (les capteurs, OM6), `canaux_lumiere.gd` (selon Q86), `fusee.gd`, `gadget_mine.gd`,
+`gadget_braises.gd` (selon Q87), `iso_pate.gdshaderinc` et `iso_pate.gd` (selon Q83), `tools/bench_framerate.gd` (un mode solo,
+OM6), `tools/run_suites.sh` (une ligne par suite ajoutée).
+**Demandé à :** personne n'était joignable par `ListAgents` au lancement (vide). La porteuse du suivi, « Fable 5.1 - CLOUD ISO
+UNRAILED » (cloud), reçoit le delta du chantier ; qui tient ces fichiers sur une autre branche est prévenu par cette ligne — après sa
+prochaine fusion, `grep -n "planche_ombres\|CULL_COUNTER_CLOCKWISE" tools/*.gd *.gd` dit ce qui est arrivé.
+
+**OM4a, le même jour — annoncé ici avant le commit :** `player.gd` touché par insertions — `_reculer_le_flash` (appelé en tête de
+`trigger_shoot_visuals`), les masques de `ground_flash` et de `hit_light`, l'échelle de l'étoile dans `poser_posture`,
+`_accorder_l_ombre_a_la_vie` (appelée dans `_process` juste avant `if dead: return`) et `_poser_la_visibilite_de_l_ombre` (que
+`_couper_l_ombre` appelle désormais). Nouveau, en propre : `tools/test_ombres_regles.gd` ; une ligne dans `tools/run_suites.sh`.
+Après une fusion, `grep -n "_reculer_le_flash\|_accorder_l_ombre_a_la_vie\|_poser_la_visibilite_de_l_ombre" player.gd` doit
+répondre trois fois au moins. La session s'appelle désormais `candela-2d-godot-9b` dans `ListAgents` (un redémarrage du conteneur
+l'a renommée ; même session, même branche) ; `ListAgents` toujours vide.
+
+**OM3a, le même jour — annoncé ici avant le commit :** `player.gd` touché par insertions — `RECUL_CREUX`, `RECUL_SORTIE`,
+`_recul_duree`, `_recul_vu` (près de `TORCH_BREATH_AMP`), `energie_de_recul` et `_enveloppe_de_recul` (avant `_mur_devant`), et
+la ligne du recul dans le bloc de la torche de `_physics_process` (`_energie_torche = _enveloppe_de_recul()`, à la place du
+`randf_range`). Après une fusion : `grep -n "_enveloppe_de_recul\|energie_de_recul" player.gd` doit répondre trois fois au moins,
+et `grep -c "randf_range(1.5, 2.0)" player.gd` zéro.
+
+**OM1, le 2026-10-05 — annoncé ici avant le commit :** le culling préparé la veille, appliqué tel quel — `charte.gd`
+(`occulteur_d_etoile`, nouvelle), `gadget_leurre.gd` (`_poser_occluder` passe par elle), `player.gd` (les deux affectations de
+l'occulteur de l'étoile) — et le brouillage par la source (Q81, tranchée par Adrien le même jour) : `brouillage.gd` (`PLANCHER`,
+`opacite_vue`, nouvelles, après `opacite`) ; `player.gd` (`_source_du_niveau`, `_tenue_du_tir`, `TENUE_DU_TIR` sous
+`source_eblouissante` ; `apply_dazzle` prend une source ; `retenir_la_source`, `noter_la_source_du_pic`, `source_du_brouillage`
+après `integrer_eblouissement` ; le bloc du brouillage de `_physics_process` lit `opacite_vue`) ; `game_state.gd`
+(`_maj_eblouissement` ne sort plus chez le client : il y fait sa passe 1 pour son joueur ; la passe 2 appelle `retenir_la_source`
+au lieu de poser `source_eblouissante` ; `_flash_de_tir` note le tireur chez le client ; `_pic_du_flash`, nouvelle) ;
+`perception_bot.gd` (`corps_distinct` prend `est_la_source`) ; `perception_bot_noeud.gd` (`monde["ebloui_par_la_cible"]`).
+Outils : `tools/test_ombres_regles.gd` (la section OM1), `tools/test_ombre_propre.gd` (le culling attendu),
+`tools/test_aventure_boss.gd` (deux vérifications réécrites à Q81, quatre ajoutées), `tools/photographe.gd` (le plan
+« eblouissement » nomme J2). Après une fusion : `grep -n "opacite_vue\|source_du_brouillage\|retenir_la_source" *.gd` doit répondre
+dans `brouillage.gd`, `player.gd`, `game_state.gd`, `perception_bot.gd` et `perception_bot_noeud.gd`, et
+`grep -c "CULL_COUNTER_CLOCKWISE" charte.gd` au moins une fois. ⚠️ Qui écrit encore `cible.source_eblouissante = …` à la main après
+une fusion contourne la source du niveau : passer par `retenir_la_source`. La session s'appelle désormais `candela-2d-godot-40`
+dans `ListAgents` (un redémarrage de plus ; même session, même branche) ; `ListAgents` toujours vide.
+
+**OM3b, le 2026-10-05 — annoncé ici avant le commit :** `player.gd` — `TORCH_BREATH_AMP`, `_torch_breath_t` et `noise` (le
+`FastNoiseLite` du souffle, et son initialisation dans `_ready`) RETIRÉS ; la branche de repos du bloc de la torche de
+`_physics_process` lisse vers 2,5 sans souffle. `gadget_torche_fantome.gd` : `SOUFFLE` retiré. `gadget_gresillement.gd` :
+`PART_NOIR`, `PART_SURSAUT`, `PART_MAUVAIS_CONTACT`, `SURSAUT_MIN`, `SURSAUT_MAX`, `SURSAUT_NOIR_MAX`, `_sursaut` (nouveaux) ;
+`niveau_noir` et `_niveau_du_creneau` réécrits. **Outils d'autres chantiers, une ou deux lignes chacun** (ils figeaient le bruit
+du souffle pour tenir leurs images, et il n'existe plus) : `tools/planche_q42.gd`, `planche_braise.gd`, `planche_usine.gd`,
+`banc_perception_bot.gd` (sa précondition « `noise` » aussi), `banc_bot_duel.gd`, `banc_lumieres.gd`, `loupe_faisceau_air.gd`,
+`loupe_faisceau_q75.gd`, `loupe_faisceau_taille.gd` ; et `tools/planche_ombres.gd`, `tools/test_ombres_regles.gd` (en propre).
+⚠️ **Après une fusion** : toute ligne qui lit encore `.noise` d'un joueur, ou pose `_torch_breath_t`, vient d'une branche d'avant
+OM3b — `grep -rn "\.noise\b\|_torch_breath_t\|TORCH_BREATH_AMP" --include=*.gd .` doit ne rien rendre hors `addons/` ; et
+`grep -c "_sursaut" gadget_gresillement.gd` au moins trois fois. Et `tools/run_suites.sh` : une ligne du `case`, le plafond de
+`test_chapitres_marche` (360 s) — hors du lot, signalé dans la ROADMAP (section OM3b).
+
+**OM4b, le 2026-10-05 — annoncé ici avant le commit :** `canaux_lumiere.gd` (`PREMIER_BIT_PNJ`, `BITS_PNJ`, `couche_ombre_pnj`,
+`masque_des_pnj`, nouveaux ; une phrase du commentaire de `masque_ombre_neutre_pour_les_corps`) ; `player.gd` (`slot_reserve`
+devient une propriété avec un accesseur ; `couche_ombre_pnj` et `accorder_les_couches_de_pnj`, nouvelles, après
+`_accorder_occluder_a_la_silhouette`, qui pose désormais `COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()`) ; `gadget_leurre.gd` (la
+couche de l'étoile) ; `fusee.gd` (`masque_ombre`) ; `gadget_mine.gd`, `gadget_braises.gd` (une ligne chacun). Outils :
+`tools/test_ombres_pnj.gd` (nouveau) et sa ligne dans `tools/run_suites.sh` ; `tools/planche_ombres.gd` (la famille `om4b`).
+Après une fusion : `grep -n "couche_ombre_pnj\|masque_des_pnj" *.gd` doit répondre dans `canaux_lumiere.gd`, `player.gd` et
+`gadget_leurre.gd`, et `grep -n "shadow_item_cull_mask = 1 |" gadget_mine.gd gadget_braises.gd` ne plus rien rendre.
+
+**OM5, le 2026-10-05 — annoncé ici avant le commit :** `ombres_corps_zone.gdshaderinc` et `ombres_corps.gd` (`OmbresCorps`),
+nouveaux ; `murs_bas_sol.gdshader` et `murs_bas_decor.gdshader` (l'include, et leur éclairage multiplié par
+`1 − om_ombre_des_corps`) ; `game_state.gd` (`_ombres_corps_vides_poussees`, `_ombres_corps_debordement_signale` sous les
+variables de la zone morte ; un second crochet `frame_pre_draw` dans `_ready` ; `_pousser_ombres_des_corps` et
+`_corps_des_ombres`, nouvelles, juste après `_pousser_zone_morte`). Outils : `tools/test_ombres_plafonniers.gd` (nouveau) et sa
+ligne dans `tools/run_suites.sh` ; `tools/planche_ombres.gd` (la famille `om5`, trois appuis de plus :
+`_pousser_ombres_des_corps`, `_corps_des_ombres`, `_materiaux_zone_morte`) ; `docs/iso/ombres/om5/` (la planche et ses mesures). Après une fusion :
+`grep -n "ombres_corps_zone" murs_bas_sol.gdshader murs_bas_decor.gdshader` doit répondre deux fois, et
+`grep -c "_pousser_ombres_des_corps" game_state.gd` au moins quatre. ⚠️ Un `class_name` neuf (`OmbresCorps`) : sans
+`godot --headless --path . --import`, les suites en `--script` ne le trouvent pas (`run_suites.sh` le rappelle).
+
+**OM2, le 2026-10-05 — annoncé ici avant le commit :** `voxel_catalogue.gd` (`RAYONS_ETOILE`, `RAYON_ETOILE_MIN`,
+`GARDE_BRAS_REPOS`, `etoile_d_ombre`, `rectangles_au_sol`, `_rect_centre`, `_sortie_du_rayon`, nouveaux, en fin de fichier) ;
+`player.gd` (`_etoile_posee`, nouvelle ; `_accorder_occluder_a_la_silhouette` prend la classe et non plus la texture ; le cercle
+provisoire de `_ready` ne se pose plus qu'en l'absence d'étoile) ; `gadget_leurre.gd` (l'étoile de `_monter_occluder`) ;
+`presentation_3d.gd` (`CONTACTS_FIGURANTS_MAX` et `_poser_contact_figurants`, nouveaux ; `_suivre_les_figurants` recueille les
+contacts) ; `iso_volumes.gd` (`CONTACT_PAR_IMAGE`) ; `sol_iso.gdshader`, `sol_iso_eclaire.gdshader`, `volume_masque.gdshaderinc`
+(`contact_nb_figurants`, `contact_figurants[8]`, une boucle dans `contact_des_corps`). Outils : `tools/test_ombres_voxel.gd`
+(nouveau) et sa ligne dans `tools/run_suites.sh` ; `tools/test_classes.gd` et `tools/test_ombre_propre.gd` (l'étoile attendue,
+le seuil du contrôle « AVANT Q42 ») ; `docs/iso/ombres/om2/` (trois planches et leurs mesures). Après une fusion : `grep -c "etoile_d_ombre" voxel_catalogue.gd player.gd gadget_leurre.gd`
+doit répondre dans les trois fichiers, et `grep -c "contact_figurants" sol_iso.gdshader sol_iso_eclaire.gdshader
+volume_masque.gdshaderinc` au moins deux fois dans chacun. ⚠️ Un sol iso qui recevrait sa propre copie de `contact_des_corps`
+sans la boucle des figurants rendrait les PNJ sans ombre de contact sur ce sol-là — sans aucune erreur.
+
+**OM6a, le 2026-10-05 — annoncé ici avant le commit :** `canaux_lumiere.gd` (`halo_a_un_recepteur`, nouvelle, après
+`masque_ombre_halo`) ; `game_state.gd` (`figurants` reçoit un setter ; `_vues_montrees`, nouvelle ; `_accorder_rendu_aux_vues`
+relève les vues montrées ; `_accorder_les_ombres_des_halos`, nouvelle, avant `_viewport_du_joueur`) ; `presentation_3d.gd`
+(`_corps_montre`, nouvelle, avant `_suivre` ; la ligne du mode de rendu des capteurs de joueurs) ; `player.gd`
+(`FIN_LUMIERE_DE_COUP`, nouvelle, sous `_etoile_posee` ; le tween de la lumière de coup, porté par la lumière). Outils :
+`tools/bench_framerate.gd` (le mode solo et les trois interrupteurs — le travail d'un sous-agent du 2026-10-04, porté ; le temps
+d'image du solo lu à l'horloge murale), `tools/test_banc.gd`, `tools/cadence_cloud/` (`SCENE`, les prises de solo) ;
+`tools/test_ombres_allegement.gd` (nouveau) et sa ligne dans `tools/run_suites.sh` ; `docs/iso/ombres/om6/` (la planche de
+cadence, chaque prise). Après une fusion : `grep -n "_accorder_les_ombres_des_halos" game_state.gd` doit répondre au moins trois
+fois (le setter, `_accorder_rendu_aux_vues`, la fonction), et `grep -n "_corps_montre" presentation_3d.gd` deux fois.
+
+**OM6b, le 2026-10-05 — documentation seule** (la feuille de route et ce journal) : les murs par contours et les capteurs
+lointains, mesurés avant, ne sont pas faits ; aucun fichier de code touché.
+
+**Annoncé pour la suite — OM3c et Q89 préparée, sans toucher au code du jeu :** les preuves que demandent les questions encore
+ouvertes. Q83 : les trois variantes de la pâte D posées À L'EXÉCUTION par le banc des ombres (le code de la ressource
+`ShaderInclude` de `iso_pate.gdshaderinc` remplacé en mémoire, jamais le fichier) ; Q85 : l'atlas d'ombres à 4096 et le PCF5,
+deux interrupteurs de banc ; Q89 : le geste rangé en patch dans `docs/iso/ombres/`, comme OM1 préparé. Fichiers :
+`tools/planche_ombres.gd` (en propre) ; `tools/bench_framerate.gd` et `tools/test_banc.gd` (par insertions) ;
+`tools/cadence_cloud/` ; `docs/iso/ombres/om3/`. Entre deux lots, la session ne tient aucun des fichiers de jeu annoncés plus
+haut ; qui doit y écrire le dit à `candela-2d-godot-40` (`ListAgents`), pour qu'elle fusionne `main` avant son prochain lot.
+
+**OM3c, le 2026-10-05 — annoncé ici avant le commit (aucun code de jeu) :** `tools/planche_ombres.gd` (en propre : `PATE_INCLUDE`,
+`ANCRE_LAVIS`, `VARIANTES_LAVIS`, `IMAGES_BALAYAGE`, `PAS_BALAYAGE_DEG`, les familles `q83` et `q85`, `faute_de_l_ancre_du_lavis`,
+`_poser_le_lavis`, `_corps_de_la_salle`, `_noter_l_ecart_a_la_reference`, `_ecart_moyen` ; l'attente de l'allumage, en images) ;
+`tools/reglages_ombres.gd` (nouveau, en propre : les lumières de Q85, l'atlas, le filtre) ; `tools/bench_framerate.gd` (par
+insertions : `--atlas-ombres`, `--pcf5`, `refus_des_reglages`, les champs et les lignes de la classe `Interrupteurs`) ;
+`tools/test_banc.gd` (par insertions : `_verifier_les_reglages_d_ombre`, deux drapeaux communs au duel et au solo) ;
+`docs/iso/ombres/om3/` (les planches de Q83 et Q85, le coût de Q85, leurs mesures). Après une fusion : `grep -n "ANCRE_LAVIS"
+tools/planche_ombres.gd` et `grep -n "refus_des_reglages" tools/bench_framerate.gd` doivent répondre. ⚠️ Qui retouche les paliers
+e2 et e3 d'`iso_pate.gdshaderinc` met `ANCRE_LAVIS` à jour : `test_banc` rougit sinon, et c'est voulu. La session s'appelle
+désormais `candela-2d-godot-77` dans `ListAgents` (un redémarrage de plus ; même session, même branche) : son nom y change à
+chaque redémarrage du conteneur, sa branche jamais.
+
+**Q89 préparée, le 2026-10-05 — annoncé ici avant le commit (aucun code de jeu) :** `tools/planche_ombres.gd` (en propre : la
+famille `q89`, `IMAGES_EBLOUISSEMENT`, `IMAGES_REDESCENTE`, `PAS_REDESCENTE`, `_serie_redescente`, `_etat_du_brouillage` ; le voile
+gardé visible quand le plan le veut ; trois appuis de plus) ; `docs/iso/ombres/q89/` (le geste en patch, la planche, ses mesures).
+Le geste lui-même (`GameState.source_eblouissante_ou`) n'est PAS appliqué : il attend Q89.
+
+**Fusion de `main`, le 2026-10-05 — à la demande d'Adrien (« fusionne ») :** `main` (8615b3b, l'audit d'optimisation) fusionnée
+dans `claude/determined-pasteur-mtrws1`, pour que la PR du chantier se fusionne sans conflit. Un seul conflit, la ligne
+« Dernière mise à jour » de la ROADMAP : les deux mentions gardées, OMBRES puis l'audit. Vérifié après la fusion : hors de
+`docs/`, l'arbre est celui de la branche ; aucune ligne de la ROADMAP ni du journal, d'un côté ou de l'autre, n'a disparu.
+Signalé, pas corrigé : la section de l'audit cite des lignes de la ROADMAP par leur numéro (« les l. 7659-7662 », « la
+l. 22360 », « la l. 2506 ») ; déjà décalées sur `main` (le tableau de `banc_pics` y est en 22384), elles glissent encore de 5 à
+84 lignes avec cette fusion.
+
+**RR1, le 2026-10-05 — annoncé ici avant le commit (Q83 tranchée par Adrien : « brute, sans paliers » ; puis « Essayons de
+voir les graphismes en annulant, en jeu (pas dans les menus) cette pâte roman graphique ») :** le défaut de la pâte
+(`presentation_3d.gd`, `voxel_corps.gd`, `voxel_objets.gd`) ; l'essai sans encre (`iso_materiaux.gd` : `DRAPEAU_SANS_ENCRE`,
+`encre_active`, `accorder_mur`, `accorder_corps` ; `iso_nuage_voxel.gd` : `poser_style` ; `mur_encre.gd` : `_draw`) ; un
+commentaire d'OM6 (`player.gd`) ; `tools/test_rendu_rr.gd` (nouveau), `tools/test_iso_camera.gd` (le défaut tenu),
+`tools/run_suites.sh` (deux passages), `tools/planche_ombres.gd` (ses plans « D » posent D) ; `docs/iso/rr/rr1/` (les planches). Le chantier RR est inscrit à la fin de la ROADMAP.

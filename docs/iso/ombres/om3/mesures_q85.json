@@ -1,0 +1,64 @@
+{
+ "commit": "15adca72",
+ "date": "2026-10-05T12:38:27",
+ "reglages": {
+  "2048": "atlas 2048, aucun filtre — le jeu",
+  "4096": "atlas à 4096",
+  "pcf5": "PCF5, lissage léger (atlas 2048)"
+ },
+ "mesures": {
+  "arete": {
+   "2048": {
+    "ecart_a_la_reference": {
+     "reference": true
+    }
+   },
+   "4096": {
+    "ecart_a_la_reference": {
+     "au_dela_8": 1004,
+     "hors_corps_24": 82,
+     "hors_corps_8": 401,
+     "moyenne_hors_corps": 0.012,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 99
+    }
+   },
+   "pcf5": {
+    "ecart_a_la_reference": {
+     "au_dela_8": 3978,
+     "hors_corps_24": 442,
+     "hors_corps_8": 3292,
+     "moyenne_hors_corps": 0.045,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 78
+    }
+   }
+  },
+  "balayage": {
+   "2048": {
+    "allers_retours": {
+     "ecran_hors_corps_8": 3750,
+     "lightmap_8": 2658
+    },
+    "ecran_hors_corps_8_par_image": 3724,
+    "lightmap_8_par_image": 1833
+   },
+   "4096": {
+    "allers_retours": {
+     "ecran_hors_corps_8": 1377,
+     "lightmap_8": 44
+    },
+    "ecran_hors_corps_8_par_image": 3420,
+    "lightmap_8_par_image": 1536
+   },
+   "pcf5": {
+    "allers_retours": {
+     "ecran_hors_corps_8": 2438,
+     "lightmap_8": 1357
+    },
+    "ecran_hors_corps_8_par_image": 3506,
+    "lightmap_8_par_image": 1587
+   }
+  }
+ }
+}

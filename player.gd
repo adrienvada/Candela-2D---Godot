@@ -37,7 +37,13 @@ var degats_pnj: Vector2 = Vector2.ZERO
 ## indexées par `player_id`, et tous les PNJ en portent un (1) : sans place à eux ils partageaient celle de J2, semée sur la classe de
 ## J2 — un boss d'une autre classe perdait sa vraie réserve, un PNJ vidait celle d'un autre. `GameState.inscrire_un_pnj` la donne (2, 3,
 ## …) ; `-1` : aucune, le joueur est lu à son `player_id`, comme avant. Jamais posée hors de l'aventure.
-var slot_reserve: int = -1
+## OMBRES, OM4b (Q86) — la place donne aussi au PNJ SA couche d'ombre : la poser (ou la rendre) réaccorde ses masques
+## (`accorder_les_couches_de_pnj`).
+var slot_reserve: int = -1:
+	set(v):
+		slot_reserve = v
+		if is_inside_tree():
+			accorder_les_couches_de_pnj()
 
 
 ## L'indice de CE joueur dans les réserves de `GameState` : sa place à lui s'il est un PNJ inscrit, son `player_id` sinon (le duel, en
@@ -89,9 +95,43 @@ var dazzle_amount: float = 0.0
 ## pendant qu'une lumière posée brûle derrière — et rien ne le verrait, aucune
 ## suite ne teste le relèvement.
 ##
-## Posé par l'hôte dans `game_state._maj_eblouissement`. **Non répliqué** : le
-## voile n'est affiché qu'en écran scindé, où les deux joueurs sont locaux.
+## Posé par l'hôte dans `game_state._maj_eblouissement` (`retenir_la_source`). **Non
+## répliqué**.
+## OMBRES, OM1 (Q81, 2026-10-05) — et chez un CLIENT en ligne, posé pour son seul joueur
+## local, par la même passe : le client ne calcule toujours pas l'éblouissement (l'hôte le
+## réplique, `net_dazzle`), mais il en calcule la SOURCE, avec les mêmes fonctions — rien de
+## neuf ne voyage sur le fil. ⚠️ **Jusque-là le client ne la connaissait jamais** : chez lui
+## l'appareil de brouillage et le voile retombaient toujours sur l'adversaire
+## (`game_state.source_eblouissante_ou`), si bien qu'une fusée qui l'aveuglait allumait le
+## halo du brouillage sur la position de l'autre — le défaut corrigé chez l'hôte le
+## 2026-09-09, que le client gardait faute de source.
 var source_eblouissante: Node2D = null
+
+## OMBRES, OM1 (Q81) — la source qui TIENT le niveau d'éblouissement de ce joueur : c'est le corps que son brouillage efface
+## (`source_du_brouillage`). Ce n'est pas toujours la gagnante de l'image (`source_eblouissante`) :
+##   • quand l'éblouissement redescend au-dessus du plafond de l'image, ce qui reste dans ses yeux vient de celle qui l'y a mis,
+##     qu'elle se soit éteinte, détournée, ou qu'une autre tienne désormais un plafond plus bas ;
+##   • un flash de bouche (`apply_dazzle`, `noter_la_source_du_pic`) nomme son tireur : son pic passe par-dessus le plafond et
+##     s'y résorbe en un peu plus de deux dixièmes de seconde.
+## Elle ne revient à la gagnante que lorsque l'éblouissement est retombé au plafond (`retenir_la_source`). Sans cette mémoire,
+## un tireur noté une fois restait la source de toute redescente suivante : l'adversaire s'effaçait pendant que se dissipait
+## l'éblouissement d'une fusée.
+var _source_du_niveau: Node2D = null
+## OMBRES, OM2 — vrai dès que l'étoile de la classe est posée (`_accorder_occluder_a_la_silhouette`) : le cercle provisoire de
+## `_ready` ne l'écrase plus.
+var _etoile_posee := false
+## OMBRES, OM6 — l'instant (s) où la lumière de coup s'en va : sa courbe d'extinction (`Charte.Courbe.EXTINCTION`, sur une seconde)
+## ne lui laisse alors qu'1,2 % de son énergie de départ — 0,006 de luminance au plus, en son centre : 1,5/255 en pâte brute (le
+## défaut depuis Q83, 2026-10-05), qui ne coupe rien, et sous le premier seuil de la pâte D (0,02 à 0,05, `iso_pate.gdshaderinc`).
+## Voir `rpc_update_hp`.
+const FIN_LUMIERE_DE_COUP := 0.6
+## Ce qu'il reste de la tenue d'un tir noté (secondes) : pendant `TENUE_DU_TIR`, la source reste le tireur même si son pic ne
+## s'est pas encore montré. Chez le client, le tir arrive par un RPC et le pic par `net_dazzle`, synchronisé à 30 Hz : sans
+## tenue, la passe de l'image suivante rendait la source aux lampes avant que le pic n'arrive. Chez l'hôte le pic est immédiat,
+## la tenue ne change rien ; une seule règle des deux côtés.
+var _tenue_du_tir := 0.0
+## Trois intervalles de synchronisation de `net_dazzle` (30 Hz), moins que la résorption d'un pic à bout portant (0,225 s).
+const TENUE_DU_TIR := 0.1
 
 var current_ammo: int = 10
 var is_reloading: bool = false
@@ -280,7 +320,6 @@ var last_fatal_perp: float = -1.0
 
 var shake_intensity: float = 0.0
 var shake_decay: float = 5.0
-var noise: FastNoiseLite
 var shake_time: float = 0.0
 
 var vignette_mat: ShaderMaterial
@@ -297,12 +336,26 @@ var vignette_mat: ShaderMaterial
 ## rend vraiment ce joueur, et relogés à chaque accord des vues.
 var calques_ecran: Array[CanvasLayer] = []
 
-## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
-const TORCH_BREATH_AMP := 0.03
-var _torch_breath_t: float = 0.0
-## L'énergie de la torche AVANT toute atténuation : l'état lissé, celui que le
-## souffle fait vivre. `flashlight.energy` en est la présentation, une fois le
-## grésillement appliqué — voir le bloc qui les sépare, et pourquoi.
+## OMBRES, OM3 (chantier OMBRES, 2026-10-04) — l'ENVELOPPE du recul, à la place d'un tirage. Pendant le recul, la torche tirait
+## une énergie au hasard entre 1,5 et 2,0 à chaque pas de physique (`randf_range`, 60 Hz) : un papillotement que la pâte D faisait
+## sauter de palier en palier — jusqu'à 21 255 pixels hors des corps au-delà de 8 niveaux entre deux images consécutives (banc
+## d'OM0 : le seul vrai scintillement trouvé). L'enveloppe garde le geste — la lampe plonge au coup et remonte pendant le recul —
+## sans le hasard : `RECUL_CREUX` au coup, une remontée douce jusqu'à `RECUL_SORTIE` à la fin du recul, d'où le retour au souffle
+## reprend comme avant. Sa moyenne sur le recul est celle du tirage (1,75) : la lampe n'est au total ni plus sombre ni plus claire.
+## Fonction du seul temps de recul qui reste, et elle ne puise plus dans le hasard global à chaque pas.
+const RECUL_CREUX := 1.5
+const RECUL_SORTIE := 2.0
+## La durée du recul en cours, prise quand il s'arme — un tir, une fusée, un gadget : tout ce qui pose `shoot_cooldown`.
+var _recul_duree := 0.0
+## Le compteur de recul vu au dernier pas de physique torche allumée : il REMONTE quand un recul s'arme ou s'allonge.
+var _recul_vu := 0.0
+
+## L'énergie de la torche AVANT toute atténuation : l'état lissé, qui plonge au
+## coup et remonte (`_enveloppe_de_recul`) puis revient à 2,5. `flashlight.energy`
+## en est la présentation, une fois le grésillement appliqué — voir le bloc qui
+## les sépare, et pourquoi.
+## OMBRES, OM3b (Q84, Adrien, 2026-10-05 : « Retirer ») — elle ne RESPIRE plus : le
+## souffle de ±3 % sur un bruit lent (V5.4) est retiré, avec le bruit qui le portait.
 var _energie_torche: float = 2.5
 ## Le facteur de lampe APPLIQUÉ à la dernière image torche allumée — le minimum des
 ## gadgets, calculé plus bas. Lu par la killcam (étape 28, lot F) : le fantôme rejoue
@@ -324,6 +377,9 @@ var flashlight_on: bool = false
 ## socle des gadgets (`GadgetBase.SEUIL_OMBRE_MASQUEE`) : le leurre le lit aussi.
 const PART_SOI_DANS_LA_SUIE := 0.6
 var _ombre_coupee := false
+## OMBRES, O11 — l'ombre que la MORT coupe (étoile et disque de torse), à part de celle que la suie coupe : les deux se cumulent,
+## et l'une ne doit pas rendre ce que l'autre retire. Tenue par `_accorder_l_ombre_a_la_vie`, à chaque image.
+var _ombre_du_mort := false
 ## L'étoile de ce corps, dans SA canvas — Q42 : son capteur ne la voit pas (voir `EtoileDeCorps`). `null` avant `_ready()`.
 var _etoile_de_corps: EtoileDeCorps
 ## L'opacité que le brouillage donne au pointeur et aux révélations, posée en
@@ -784,11 +840,6 @@ func _ready():
 	visual.material = light_boost_mat
 	visual_ptr.material = light_boost_mat
 		
-	# Setup Camera Shake Noise
-	noise = FastNoiseLite.new()
-	noise.seed = randi()
-	noise.frequency = 10.0 # Fast frequency for impact
-	
 	# Setup Damage Vignette UI
 	var ui_layer = CanvasLayer.new()
 	ui_layer.name = "CalqueVignette"
@@ -930,8 +981,12 @@ func _ready():
 		
 	if has_node("LightOccluder2D"):
 		var main_occ = get_node("LightOccluder2D")
-		main_occ.occluder.polygon = pts
-		main_occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
+		# OMBRES, OM1 — l'occulteur de l'étoile, par la charte (culling, ressource neuve), même pour ce cercle provisoire.
+		# OMBRES, OM2 — ⚠️ **seulement si aucune étoile n'est encore posée** : `equip_weapon`, appelée plus haut dans ce même
+		# `_ready`, a déjà pu poser celle de la classe — le cercle l'écrasait alors jusqu'au changement d'arme suivant (trouvé en
+		# étudiant OM2 : un corps équipé avant d'entrer dans l'arbre gardait le cercle de 18 px).
+		if not _etoile_posee:
+			main_occ.occluder = Charte.occulteur_d_etoile(pts)
 		# Une couche par joueur : c'est ce qui permet à une torche d'ombrer
 		# l'autre corps sans ombrer le sien. Voir `flashlight.shadow_item_cull_mask`.
 		main_occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
@@ -1052,7 +1107,7 @@ func _poser_sprite(slug: String) -> bool:
 	# **l'ombre portée changerait de forme quatre fois par cycle**. L'écart entre
 	# poses vaut au plus 4 px, à l'arrière du corps : invisible dans une ombre,
 	# cher à calculer, et une ombre qui respire se lit comme un défaut.
-	_accorder_occluder_a_la_silhouette(t_sil)
+	_accorder_occluder_a_la_silhouette(slug)
 
 	_precharger_la_planche(slug)
 	return true
@@ -1153,25 +1208,53 @@ func _monter_occluder_de_torse() -> void:
 ## ombre de trente pixels dans le noir. Trente-deux rayons depuis le centre
 ## donnent une étoile qui épouse le corps ET le canon, ne peut pas produire de
 ## polygone dégénéré, et se calcule une fois par changement d'arme.
-func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
+##
+## OMBRES, OM2 (Q82, décision d'Adrien du 2026-10-05 : « Oui ») — **la silhouette est désormais celle du CORPS VOXEL**
+## (`VoxelCatalogue.etoile_d_ombre`), plus celle du sprite vu de dessus : en iso, l'ombre d'un corps prend la forme du corps qu'on
+## voit — sans l'arme ni la torche, tenues à hauteur de main, que l'étoile projetait au sol en une pointe. Même échantillonnage
+## radial, même nombre de rayons ; le leurre lit la même fonction.
+func _accorder_occluder_a_la_silhouette(slug: String) -> void:
 	var occ := etoile()
-	if occ == null or sil == null:
+	if occ == null:
 		return
-	# La forme se lit dans la charte depuis le 2026-09-11 : le leurre doit faire
-	# exactement le même trou, et une seule fonction le garantit.
-	var pts := Charte.ombre_de_silhouette(sil)
+	# Une seule fonction, pour que le leurre fasse exactement le même trou (2026-09-11 ; le corps voxel depuis OM2).
+	var pts := VoxelCatalogue.etoile_d_ombre(slug)
 	if pts.is_empty():
 		return
+	_etoile_posee = true
 	# ⚠️ **Une ressource NEUVE, jamais celle de la scène.** `player.tscn` déclare
 	# l'`OccluderPolygon2D` en sous-ressource, sans `resource_local_to_scene` : J1
 	# et J2 la PARTAGEAIENT, et dans un match entre deux classes les deux corps
 	# projetaient l'ombre de la classe équipée en dernier — le leurre, lui, celle
 	# de son poseur, et il se trahissait. Trouvé en revue (2026-09-11).
-	var poly := OccluderPolygon2D.new()
-	poly.polygon = pts
-	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
-	occ.occluder = poly
-	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
+	# OMBRES, OM1 — la ressource et son culling viennent de la charte, comme pour le leurre (`Charte.occulteur_d_etoile`).
+	occ.occluder = Charte.occulteur_d_etoile(pts)
+	# OMBRES, OM4b (Q86) — et, pour un PNJ, sa couche propre en plus de la 8.
+	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()
+
+
+## OMBRES, OM4b (Q86, Adrien, 2026-10-05 : « une couche par PNJ ») — la couche d'ombre propre à CE PNJ
+## (`CanauxLumiere.couche_ombre_pnj`), 0 pour J1, J2 et un PNJ sans place.
+func couche_ombre_pnj() -> int:
+	return CanauxLumiere.couche_ombre_pnj(slot_de_reserve()) if est_pnj else 0
+
+
+## OMBRES, OM4b (Q86) — les masques d'un PNJ selon sa place : son étoile porte sa couche (en plus de la 8), et ses trois lumières
+## qui découpent un corps — la torche, le halo de proximité, le flash de bouche — lisent celles de TOUS les autres PNJ, jamais la
+## sienne (on ne se tient pas dans sa propre ombre). Avant, la torche d'un PNJ traversait les autres PNJ, quand celle de J1 les
+## ombrait tous (O6). Seuls les bits des PNJ bougent : la posture (le bit des murs bas) et le reste du masque restent tels quels.
+## Rien ne change pour J1 et J2 : leurs lumières ne lisent aucune couche de PNJ — celles de J1 lisent la 8, que toute étoile de
+## PNJ porte toujours.
+func accorder_les_couches_de_pnj() -> void:
+	var occ := etoile()
+	if occ != null:
+		occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()
+	var tous := CanauxLumiere.masque_des_pnj()
+	var autres := (tous & ~couche_ombre_pnj()) if est_pnj else 0
+	# Chantier TIR — l'étoile de bouche suit le flash de bouche : mêmes ombres, toujours.
+	for lumiere in [flashlight, ambient_light, muzzle_flash, etoile_de_bouche]:
+		if lumiere != null:
+			(lumiere as Light2D).shadow_item_cull_mask = ((lumiere as Light2D).shadow_item_cull_mask & ~tous) | autres
 
 
 ## Au cœur de la suie, le corps cesse de faire ombre — l'ombre dirait la position
@@ -1182,9 +1265,30 @@ func _couper_l_ombre(coupee: bool) -> void:
 	if coupee == _ombre_coupee:
 		return
 	_ombre_coupee = coupee
+	_poser_la_visibilite_de_l_ombre()
+
+
+## L'étoile et le disque de torse se voient si NI la suie NI la mort ne les coupent.
+func _poser_la_visibilite_de_l_ombre() -> void:
 	for occ in [etoile(), get_node_or_null("OccluderTorse")]:
 		if occ != null:
-			occ.visible = not coupee
+			occ.visible = not (_ombre_coupee or _ombre_du_mort)
+
+
+## OMBRES, O11 (chantier OMBRES, 2026-10-04) — un corps mort ne fait plus d'ombre et sa lueur s'éteint. `die()` cache ses
+## sprites et coupe sa torche et sa rétrodiffusion, mais laissait l'étoile, le disque de torse et le halo de proximité : l'ombre
+## d'un corps disparu restait au sol — jusqu'au retrait du PNJ en aventure, toute la killcam et l'écran de fin en duel. Lu à CHAQUE
+## image plutôt que posé dans `die()` : la vie revient par plusieurs chemins (`_do_start_round`, les réapparitions de
+## l'entraînement, le retour au menu), et une règle d'état les couvre tous sans qu'aucun ait à s'en souvenir. N'écrit que sur un
+## changement. Le halo : `enabled`, ici seulement — un mort n'éclaire rien, et le modèle de vue du bot, qui lit `enabled`
+## (`perception_bot_noeud.gd`), ne voit plus de lueur à un corps tombé.
+func _accorder_l_ombre_a_la_vie() -> void:
+	if dead == _ombre_du_mort:
+		return
+	_ombre_du_mort = dead
+	_poser_la_visibilite_de_l_ombre()
+	if ambient_light != null:
+		ambient_light.enabled = not dead
 
 
 ## L'occluder de l'étoile de ce corps : sa canvas (`EtoileDeCorps`) une fois `_ready()` passé, le nœud de la scène avant.
@@ -1301,6 +1405,8 @@ func _process(delta):
 		if AudioManager.torche_comptee(player_id, _index_joueur_local()):
 			AudioManager.set_player_torch(player_id, flashlight_on)
 
+	# OMBRES, O11 — AVANT la sortie des morts : c'est elle qui empêchait toute règle d'ombre de voir la mort.
+	_accorder_l_ombre_a_la_vie()
 	if dead: return
 
 	# V1.5 — pouls haptique sous le seuil de santé basse, calé sur le ressenti
@@ -1619,10 +1725,16 @@ func poser_posture(voulue: bool) -> void:
 	for poly in [visual, visual_dim, visual_reveal, visual_enemy, visual_reveal_enemy]:
 		if poly != null:
 			poly.scale = echelle
+	# OMBRES, O11 — l'étoile suit la silhouette : accroupi, le sprite passe à ×0,8 et l'ombre restait celle du corps debout. Posé
+	# sur le nœud de l'occluder, que `EtoileDeCorps` ne remet pas à l'échelle (son `RemoteTransform2D` ne recopie que la position
+	# et la rotation) ; la forme, elle, reste celle de la silhouette (`_accorder_occluder_a_la_silhouette` ne touche pas l'échelle).
+	var occ_etoile := etoile()
+	if occ_etoile != null:
+		occ_etoile.scale = echelle
 	# MB3a — « la torche d'un accroupi bute sur le mur » : toutes les lumières
 	# qu'il porte passent sous la hauteur d'un mur bas et en lisent les occluders
 	# pleins. Debout, elles passent par-dessus. Un seul bit, posé ou retiré.
-	for lumiere in [flashlight, body_light, ambient_light, muzzle_flash]:
+	for lumiere in [flashlight, body_light, ambient_light, muzzle_flash, etoile_de_bouche]:
 		if lumiere != null:
 			if voulue:
 				lumiere.shadow_item_cull_mask |= CanauxLumiere.COUCHE_OMBRE_MUR_BAS
@@ -1704,6 +1816,40 @@ func _rapprocher_la_lampe() -> void:
 		flashlight.position = lampe
 	if not is_equal_approx(body_light.position.x, retro):
 		body_light.position.x = retro
+
+
+## OMBRES, O9 (chantier OMBRES, 2026-10-04) — le flash de bouche, comme la lampe (`_rapprocher_la_lampe`) : un corps collé à un mur
+## posait son flash à 28 px devant lui, DANS le mur — et une lumière posée dans un occluder ne donne « ni ombre ni lumière mais du
+## hasard » (`charte.gd`, le disque de torse) : des ombres au hasard à chaque tir. Le flash recule sur le même rayon, à
+## `RETRAIT_LAMPE` du mur, jamais à moins de 4 px du centre. Un rayon par tir, au tir seulement. Le `Muzzle` (le canon : balles,
+## fumée, son) ne bouge pas : seule la LUMIÈRE recule — le point où le modèle de vue du bot lit l'éclair (`perception_bot_noeud`)
+## la suit, puisqu'il lit la position de cette lumière.
+func _reculer_le_flash() -> void:
+	var place := FLASH_AVANCEE
+	if is_inside_tree():
+		var d := _mur_devant(get_world_2d().direct_space_state, global_transform.x.normalized(), FLASH_AVANCEE + RETRAIT_LAMPE)
+		if d >= 0.0:
+			place = clampf(d - RETRAIT_LAMPE, 4.0, FLASH_AVANCEE)
+	muzzle_flash.position = Vector2(place, 0.0)
+	# Chantier TIR — l'étoile de bouche recule avec lui : posée dans le mur, elle aussi donnerait des ombres au hasard.
+	if etoile_de_bouche != null:
+		etoile_de_bouche.position = muzzle_flash.position
+
+
+## OMBRES, OM3 — l'énergie de la torche à `avance` du recul (0 au coup, 1 à sa fin) : le creux, puis la remontée en douceur.
+static func energie_de_recul(avance: float) -> float:
+	return lerpf(RECUL_CREUX, RECUL_SORTIE, smoothstep(0.0, 1.0, clampf(avance, 0.0, 1.0)))
+
+
+## OMBRES, OM3 — l'enveloppe du recul en cours. Armée quand le compteur REMONTE (un tir le pose ; une fusée ou un gadget peuvent
+## l'allonger, `maxf`) : sa durée est prise à cet instant, et l'avance se lit sur ce qu'il en reste.
+func _enveloppe_de_recul() -> float:
+	if shoot_cooldown > _recul_vu + 0.0001:
+		_recul_duree = shoot_cooldown
+	_recul_vu = shoot_cooldown
+	if _recul_duree <= 0.0:
+		return RECUL_SORTIE
+	return energie_de_recul(1.0 - shoot_cooldown / _recul_duree)
 
 
 ## La distance au premier mur dans `direction` (unitaire, monde), jusqu'à `longueur` ; −1 sans mur.
@@ -1933,10 +2079,15 @@ func _physics_process(delta):
 	# `visual_enemy` est ce corps-ci tel que l'AUTRE le voit : c'est donc le
 	# dazzle de l'autre qui décide s'il le distingue. Prendre le sien inverserait
 	# l'effet — on s'effacerait soi-même en éblouissant quelqu'un.
+	#
+	# OMBRES, OM1 (Q81, décision d'Adrien, 2026-10-05) — **et seulement s'il EST la
+	# source de cet éblouissement**, de ce qui dépasse la rétrodiffusion de 0,06
+	# (`Brouillage.opacite_vue`). Avant, tout ennemi s'effaçait dès que le regardeur
+	# était ébloui, par n'importe quoi — sa propre torche comprise.
 	if state != null and visual_enemy != null:
 		var regardeur: Node = state.p2 if player_id == 0 else state.p1
 		if is_instance_valid(regardeur):
-			var a := Brouillage.opacite(float(regardeur.dazzle_amount))
+			var a := Brouillage.opacite_vue(float(regardeur.dazzle_amount), regardeur.source_du_brouillage() == self)
 			_alpha_brouillage = a
 			visual_enemy.modulate.a = a
 			if visual_enemy_ptr != null:
@@ -1999,13 +2150,15 @@ func _physics_process(delta):
 		_rapprocher_la_lampe()
 		body_light.enabled = true
 		if shoot_cooldown > 0:
-			_energie_torche = randf_range(1.5, 2.0)
+			_energie_torche = _enveloppe_de_recul()
 		else:
-			# V5.4 — la torche respire : ±3 % d'énergie sur un bruit lent,
-			# identique pour les deux joueurs — la lumière vit, sans rien dire.
-			_torch_breath_t += delta
-			var souffle := 1.0 + noise.get_noise_1d(_torch_breath_t * 40.0) * TORCH_BREATH_AMP
-			_energie_torche = lerp(_energie_torche, 2.5 * souffle, 8.0 * delta)
+			# OMBRES, OM3b (Q84, Adrien, 2026-10-05 : « Retirer ») — la torche ne respire plus. Le souffle (V5.4 : ±3 %
+			# d'énergie sur un bruit tiré à chaque pas, que ce lissage écrasait) ne faisait en pratique que quelques millièmes
+			# (2,497 à 2,504 au banc d'OM0, 2,492 à 2,502 à celui d'OM3b ; zéro pixel au-delà de huit niveaux) : rien à l'image,
+			# mais une lumière qui ne tenait jamais tout à fait la même valeur. Reste le
+			# retour, lissé, à l'énergie de repos après un recul. La fausse torche du Braconnier perd son souffle avec
+			# (`GadgetTorcheFantome`).
+			_energie_torche = lerp(_energie_torche, 2.5, 8.0 * delta)
 
 		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
 		# les lampes autour de lui : le faisceau papillote, faiblit, tombe au
@@ -2635,6 +2788,7 @@ func rumble_death() -> void:
 
 func trigger_shoot_visuals():
 	add_camera_shake(15.0, 15.0)
+	_reculer_le_flash()
 	muzzle_flash.enabled = true
 	var tw = create_tween()
 	var flash_intensity = current_weapon.muzzle_flash_intensity if current_weapon else 1.0
@@ -2741,9 +2895,12 @@ func trigger_shoot_visuals():
 		pool.emit(ParticlePool.Kind.SMOKE, muzzle.global_position + canon * 6.0,
 			Color(Charte.ACIER * 0.6, 0.28), 3, 20.0, 55.0, canon, 70.0)
 
-	# V4.14 — l'écho au sol du tir (`ground_flash`, 130 px, sans ombre) est RETIRÉ (chantier TIR, étape B,
-	# 2026-10-05). Il imitait un flash qui éclaire ; le flash éclaire désormais lui-même, avec ses ombres. Une lumière
-	# de moins par tir — c'était la seule que chaque coup CRÉAIT : la lumière de bouche, elle, existe une fois par joueur.
+	# V4.14 — l'écho au sol du tir (`ground_flash`, 130 px) est RETIRÉ (chantier TIR, étape B, 2026-10-05). Il imitait un
+	# flash qui éclaire ; le flash éclaire désormais lui-même, avec ses ombres. Une lumière de moins par tir — c'était la
+	# seule que chaque coup CRÉAIT : la lumière de bouche, elle, existe une fois par joueur.
+	# ⚠️ La règle d'OMBRES O10 (2026-10-04) qu'il portait en dernier — « collé à un mur, l'écho éclairait le sol DE
+	# L'AUTRE CÔTÉ et disait à travers la pierre qu'on venait de tirer » — reste tenue : le grand flash et l'étoile de
+	# bouche sont ombrés par les murs (`tools/test_ombres_regles.gd`, O10, le vérifie désormais sur eux).
 
 ## Où brûle la lampe, dans le repère du joueur (x vers la visée, y à sa droite), en unités de monde : **la lentille
 ## de la torche que tient le modèle 3D** (chantier des lumières de la 0.8.0, L2 — Adrien, 2026-09-29 : « il faudrait
@@ -2766,6 +2923,9 @@ const LENTILLE_LAMPE := Vector2(
 
 ## La rétrodiffusion : droit devant, au bord du corps (sa place d'avant L2, inchangée).
 const RETRO_AVANCEE := 18.0
+
+## Le flash de bouche : droit devant, au bout du canon (`MuzzleFlash` dans `player.tscn`, le même point que `Muzzle`).
+const FLASH_AVANCEE := 28.0
 
 ## Ce qu'on laisse entre la lampe et le mur qui l'arrête, en unités de monde.
 const RETRAIT_LAMPE := 3.0
@@ -2939,20 +3099,31 @@ func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 	# Curseur MONDE « Lumière d'impact » (plancher 0,4 en classé).
 	hit_light.energy = 2.0 * EffectPolicy.curseur("lumiere_impact")
 	hit_light.shadow_enabled = true
-	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
-	hit_light.shadow_item_cull_mask = 1
+	# OMBRES, O10 (2026-10-04) — le masque des lumières NEUTRES (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`), et plus `1`
+	# seul. Les murs l'arrêtaient au sol, mais sa portée (`1 | 4`) touche aussi le capteur de SOI de l'autre joueur, dont le masque
+	# (`masque_de_soi`) ne croisait pas `1` : un corps derrière un mur, à moins de 200 px d'un blessé, rougissait dans SA vue à
+	# travers la pierre (« `shadow_item_cull_mask` filtre AUSSI les sprites qui reçoivent l'ombre », Pièges connus). Les bits
+	# récepteurs du masque neutre (128, 256) lui font recevoir les murs ; aucune couche de corps n'y est — le blessé ne s'ombre
+	# pas lui-même, le patron du plafonnier (« Une lumière neutre que les murs doivent couper pour TOUS les corps »).
+	hit_light.shadow_item_cull_mask = CanauxLumiere.masque_ombre_neutre_pour_les_corps()
 	# Main blood light affects walls (1) and other stuff (4), but NOT players (2)
 	hit_light.range_item_cull_mask = 1 | 4
 	add_child(hit_light)
 	
-	var tw_l = create_tween()
+	# OMBRES, OM6 — le tween vit avec la LUMIÈRE (et non le corps) : la lumière libérée plus tôt (ci-dessous), il s'arrête avec elle.
+	var tw_l = hit_light.create_tween()
 	# Perfectly smooth, lingering fade out
 	# DA4.13 — EXTINCTION. C'était un `SINE_IN_OUT`, symétrique : la charte n'a
 	# pas de courbe symétrique et n'en veut pas, une lumière qui meurt n'ayant
 	# aucune raison de s'éteindre aussi lentement qu'elle s'est allumée.
 	Charte.animer(tw_l, hit_light, "energy", hit_light.energy, 0.0, 1.0,
 		Charte.Courbe.EXTINCTION)
-	tw_l.tween_callback(hit_light.queue_free)
+	# OMBRES, OM6 (2026-10-05) — la lumière s'en va quand il ne lui reste qu'1 % de son énergie (`FIN_LUMIERE_DE_COUP`), au lieu
+	# de la seconde entière : sa traîne n'éclairait plus rien qu'on voie, et coûtait encore une ombre — une par PLOMB, de 400 px.
+	# ⚠️ **Couper seulement son ombre, comme le proposait la feuille de route, la ferait passer à travers les murs** : à 0,3 s il
+	# lui reste 12 % de son énergie, à 0,5 s encore 3 % — le défaut même qu'OM4a a corrigé (un corps derrière un mur « rougissait
+	# à travers la pierre »).
+	tw_l.parallel().tween_callback(hit_light.queue_free).set_delay(FIN_LUMIERE_DE_COUP)
 
 ## V4.8 — le tintement de la douille, 300 a 500 ms apres le coup.
 ##
@@ -3359,8 +3530,10 @@ func add_camera_shake(intensity: float, decay: float = 5.0):
 
 ## Pic instantané — le flash de tir. Peut dépasser le plafond de la torche : le
 ## modèle le résorbe ensuite, c'est voulu.
-func apply_dazzle(amount: float):
+func apply_dazzle(amount: float, source: Node2D = null):
 	dazzle_amount = min(1.0, dazzle_amount + amount)
+	if source != null:
+		noter_la_source_du_pic(source)
 
 ## Une image d'éblouissement, appelée par `game_state` et JAMAIS d'ici.
 ##
@@ -3370,6 +3543,31 @@ func apply_dazzle(amount: float):
 ## l'un, la descente dans l'autre.
 func integrer_eblouissement(plafond: float, delta: float) -> void:
 	dazzle_amount = Eblouissement.integrer(dazzle_amount, plafond, delta)
+
+
+## OMBRES, OM1 (Q81) — après chaque image d'éblouissement, la gagnante de l'image et son plafond : appelée par
+## `game_state._maj_eblouissement`, chez l'hôte après l'intégration, chez un client en ligne sur l'éblouissement que l'hôte
+## réplique (sans y toucher). Pose `source_eblouissante` (le voile, l'appareil de brouillage), et ne rend la source du NIVEAU
+## à la gagnante que lorsque l'éblouissement est retombé à son plafond — voir `_source_du_niveau`.
+func retenir_la_source(gagnante: Node2D, plafond: float, delta: float) -> void:
+	source_eblouissante = gagnante
+	_tenue_du_tir = maxf(0.0, _tenue_du_tir - delta)
+	if _tenue_du_tir <= 0.0 and dazzle_amount <= plafond + 0.001:
+		_source_du_niveau = gagnante
+
+
+## OMBRES, OM1 (Q81) — le tireur dont le flash atteint ce joueur : chez l'hôte avec son pic (`apply_dazzle`), chez un client en
+## ligne seul (le pic arrive par `net_dazzle`).
+func noter_la_source_du_pic(tireur: Node2D) -> void:
+	_source_du_niveau = tireur
+	_tenue_du_tir = TENUE_DU_TIR
+
+
+## OMBRES, OM1 (Q81, décision d'Adrien, 2026-10-05) — le corps que l'éblouissement de CE joueur efface à ses yeux : la source
+## qui tient son niveau (`_source_du_niveau`) — un corps, une fusée, un gadget, ou lui-même (sa propre torche). Seul un corps
+## qui EST cette source s'efface (`Brouillage.opacite_vue`), et le bot n'en perd pas d'autre (`PerceptionBot.corps_distinct`).
+func source_du_brouillage() -> Node2D:
+	return _source_du_niveau if is_instance_valid(_source_du_niveau) else null
 
 func _calculate_uvs(poly: Polygon2D):
 	if poly.polygon.size() == 0: return

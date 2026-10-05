@@ -135,7 +135,14 @@ var aventure: AventurePartie = null
 ## Les joueurs que la vue iso rend EN PLUS de J1 et J2 : les PNJ de la salle d'aventure (`PNJ_<i>`, vivants ou non). Vide partout
 ## ailleurs — c'est ce qui garde le duel rendu comme il l'a toujours été. `Presentation3D` leur donne un corps chacun
 ## (`Presentation3D.FIGURANTS_MAX`).
-var figurants: Array[Player] = []
+var figurants: Array[Player] = []:
+	set(valeur):
+		figurants = valeur
+		# OMBRES, OM6 — un PNJ qui entre en scène prend la règle de l'ombre de son halo.
+		_accorder_les_ombres_des_halos()
+## OMBRES, OM6 — les vues montrées (0 : J1, 1 : J2), relues par `_accorder_rendu_aux_vues` : l'ombre d'un halo n'a de récepteur
+## que dans la vue de son porteur (`CanauxLumiere.halo_a_un_recepteur`).
+var _vues_montrees: Array = [0, 1]
 ## Vrai pendant que l'aventure pose une salle par `_do_start_round` : la ceinture de ce dernier (« un vrai départ de match met fin
 ## à l'aventure ») ne doit pas démonter la partie qui l'appelle.
 var _aventure_en_pose := false
@@ -260,6 +267,9 @@ var _materiaux_zone_morte: Array = [[], []]
 ## Carte sans mur bas : les uniformes « aucun mur » ne se poussent qu'une fois.
 var _zone_morte_vide_poussee := false
 var _zone_morte_debordement_signale := false
+## OMBRES, OM5 : sans plafonnier allumé, les uniformes « aucune lampe » ne se poussent qu'une fois (voir `_pousser_ombres_des_corps`).
+var _ombres_corps_vides_poussees := false
+var _ombres_corps_debordement_signale := false
 const LAG_COMP_MAX := 0.2
 var _pos_history: Array[Dictionary] = []
 
@@ -499,6 +509,11 @@ func _ready():
 	tree_exiting.connect(func():
 		if RenderingServer.frame_pre_draw.is_connected(_pousser_zone_morte):
 			RenderingServer.frame_pre_draw.disconnect(_pousser_zone_morte))
+	# OMBRES, OM5 : l'ombre des corps sous les plafonniers, au même moment, pour la même raison.
+	RenderingServer.frame_pre_draw.connect(_pousser_ombres_des_corps)
+	tree_exiting.connect(func():
+		if RenderingServer.frame_pre_draw.is_connected(_pousser_ombres_des_corps):
+			RenderingServer.frame_pre_draw.disconnect(_pousser_ombres_des_corps))
 	# L'intro ne se joue qu'ici, au lancement. Les retours au menu passent par
 	# `play_music`, qui bascule sans redémarrer le flux.
 	AudioManager.demarrer_musique_au_lancement()
@@ -2358,8 +2373,11 @@ func _process(delta):
 ## permanence de l'arbitrage. Prix assumé : le voile blanc arrive chez le client
 ## avec un demi aller-retour de retard, sur un effet qui dure une seconde.
 func _maj_eblouissement(delta: float) -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		return
+	# OMBRES, OM1 (Q81, 2026-10-05) — le client ne calcule toujours PAS l'éblouissement (l'hôte le réplique : il pénalise vitesse
+	# et visée, sa prédiction divergerait), mais il en calcule la SOURCE, pour son seul joueur : le brouillage n'efface plus que
+	# le corps qui éblouit, et le client doit savoir lequel sans que rien de neuf ne voyage sur le fil. La passe 1 ci-dessous,
+	# les mêmes fonctions que l'hôte ; de la passe 2, seul `retenir_la_source`, sur l'éblouissement répliqué.
+	var client := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
 		return
 	var espace := p1.get_world_2d().direct_space_state
@@ -2387,7 +2405,7 @@ func _maj_eblouissement(delta: float) -> void:
 	# ⚠️ **Les PNJ de l'aventure sont des cibles et des sources comme J1 et J2** (SOLO, S9b) : la boucle ne connaissait que les deux
 	# joueurs, et la torche d'un PNJ n'éblouissait pas le joueur, ni la sienne un PNJ. `_joueurs_en_lice()` rend J1, J2 puis les figurants ;
 	# sans figurant, c'est exactement la liste d'avant.
-	var cibles := _joueurs_en_lice()
+	var cibles: Array = [p2] if client else _joueurs_en_lice()
 	var gagnante := {}
 	var plafond := {}
 	for cible in cibles:
@@ -2400,10 +2418,17 @@ func _maj_eblouissement(delta: float) -> void:
 				plafond[cible] = v
 				gagnante[cible] = src["noeud"]
 
+	if client:
+		p2.retenir_la_source(gagnante[p2], plafond[p2], delta)
+		return
+
 	# ── PASSE 2 : intégrer ───────────────────────────────────────────────────
+	# OMBRES, OM1 (Q81) — puis retenir la source : `source_eblouissante` (la gagnante de l'image) et la source qui TIENT le
+	# niveau, celle que le brouillage efface (`Player.source_du_brouillage`) — après l'intégration, qui dit si l'éblouissement
+	# est retombé au plafond.
 	for cible in cibles:
 		cible.integrer_eblouissement(plafond[cible], delta)
-		cible.source_eblouissante = gagnante[cible]
+		cible.retenir_la_source(gagnante[cible], plafond[cible], delta)
 
 
 ## J1, J2, puis les PNJ de l'aventure encore dans l'arbre : ceux qui voient, éblouissent et sont éblouis. Vide de figurants, c'est `[p1, p2]`.
@@ -2838,9 +2863,13 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 ## Pas de cône : un canon crache dans toutes les directions. Une ligne de vue,
 ## en revanche, oui — un mur arrête un flash comme il arrête un faisceau.
 func _flash_de_tir(tireur: Node2D) -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		return # L'hôte tranche, la valeur est répliquée.
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# L'hôte tranche, la valeur est répliquée. OMBRES, OM1 (Q81) : le client note seulement QUI l'atteint, pour son
+		# brouillage — la même règle d'atteinte (`_pic_du_flash`), sans rien verser dans ses yeux.
+		if tireur != p2 and _en_jeu(p2) and _pic_du_flash(tireur, p2) > 0.0:
+			p2.noter_la_source_du_pic(tireur)
 		return
 	# Qui le flash éblouit : l'autre joueur du duel ; en aventure (S9b), le joueur quand un PNJ tire, et les PNJ quand le joueur tire — jamais
 	# un PNJ qui tire sur un autre PNJ (une équipe, voir `_plafond_de_source`).
@@ -2856,24 +2885,33 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		cibles.append(p1)
 	if cibles.is_empty() or not _en_jeu(tireur):
 		return
+	for cible in cibles:
+		if not _en_jeu(cible):
+			continue
+		var pic := _pic_du_flash(tireur, cible)
+		if pic <= 0.0:
+			continue
+		# OMBRES, OM1 (Q81) — le pic nomme son tireur : tant qu'il n'est pas résorbé, c'est lui que le brouillage efface
+		# (`Player.source_du_brouillage`).
+		cible.apply_dazzle(pic, tireur)
+
+
+## Le pic du flash de `tireur` dans les yeux de `cible` — 0 hors de portée ou sans ligne de vue. La règle d'atteinte, écrite
+## une fois pour l'hôte (qui verse le pic) et pour le client (qui en note seulement la source, OM1).
+func _pic_du_flash(tireur: Node2D, cible: Node2D) -> float:
 	var eclat := 1.0
 	var arme: WeaponData = tireur.current_weapon
 	if arme:
 		eclat = arme.muzzle_flash_intensity
-	for cible in cibles:
-		if not _en_jeu(cible):
-			continue
-		var pic := Eblouissement.pic_de_flash(
-			tireur.global_position.distance_to(cible.global_position), eclat)
-		if pic <= 0.0:
-			continue
-		# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
-		# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
-		# l'arrête donc pas ici non plus (étape 28, lot G).
-		if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible,
-				int(tireur.player_id)):
-			continue
-		cible.apply_dazzle(pic)
+	var pic := Eblouissement.pic_de_flash(tireur.global_position.distance_to(cible.global_position), eclat)
+	if pic <= 0.0:
+		return 0.0
+	# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
+	# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
+	# l'arrête donc pas ici non plus (étape 28, lot G).
+	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible, int(tireur.player_id)):
+		return 0.0
+	return pic
 
 ## L'index de classe d'une arme, pour le fil — les DIX, et non les quatre d'origine.
 ##
@@ -5908,6 +5946,13 @@ func _accorder_rendu_aux_vues() -> void:
 		var conteneur := vue.get_parent() as Control
 		if conteneur != null and conteneur.visible:
 			regardees.append(vue)
+	# OMBRES, OM6 — les vues montrées décident de l'ombre des halos des corps.
+	_vues_montrees = []
+	if vp1 in regardees:
+		_vues_montrees.append(0)
+	if vp2 in regardees:
+		_vues_montrees.append(1)
+	_accorder_les_ombres_des_halos()
 
 	# R3 (b) : une seule vue regardée ⇒ le duel se rend DANS LA RACINE.
 	if regardees.size() == 1 and rendu_racine_autorise:
@@ -5927,6 +5972,20 @@ func _accorder_rendu_aux_vues() -> void:
 	_accorder_brouillage_aux_vues()
 	_accorder_sons_aux_vues()
 	_accorder_calques_joueurs()
+
+
+## OMBRES, OM6 — l'ombre du halo de chaque corps (J1, J2, chaque PNJ) selon que la vue de son porteur est montrée : sans elle, le
+## halo n'a aucun récepteur (`CanauxLumiere.halo_a_un_recepteur`). Rappelée quand les vues changent et quand les figurants
+## changent ; `enabled` n'est jamais touché ici (le modèle de vue des bots le lit).
+func _accorder_les_ombres_des_halos() -> void:
+	var corps: Array = [p1, p2]
+	corps.append_array(figurants)
+	for j in corps:
+		if not is_instance_valid(j):
+			continue
+		var halo: Light2D = j.get("ambient_light")
+		if halo != null:
+			halo.shadow_enabled = CanauxLumiere.halo_a_un_recepteur(int(j.get("player_id")), _vues_montrees)
 
 
 ## Le viewport qui rend VRAIMENT le joueur `pid` : la racine si elle a pris sa
@@ -6008,6 +6067,63 @@ func _pousser_zone_morte() -> void:
 		if is_instance_valid(autre) and autre.visual_enemy != null:
 			MursBasRendu.poser_corps(autre.visual_enemy.material as ShaderMaterial, u,
 				ecran * autre.global_position, autre.accroupi)
+
+
+## OMBRES, OM5 (Q88, décision d'Adrien du 2026-10-05 : « Ombre ») — l'ombre FINIE des corps sous les plafonniers, poussée aux
+## matériaux du sol et du décor de chaque vue juste avant le dessin, comme la zone morte (`_pousser_zone_morte`, dont elle prend la
+## transformation) : la règle est dans le matériau (`ombres_corps_zone.gdshaderinc`), sa jumelle dans `OmbresCorps.ombre`.
+##
+## ⚠️ **Une fonction à elle, et pas trois lignes dans `_pousser_zone_morte`** : celle-ci sort tôt sur une carte sans muret, et les
+## salles de l'aventure en ont rarement — les corps n'y auraient jamais été mis à jour. Sans plafonnier allumé (le duel, une salle
+## éteinte), les matériaux apprennent « aucune lampe » une fois, puis plus rien n'est poussé.
+func _pousser_ombres_des_corps() -> void:
+	if not is_inside_tree() or arena == null:
+		return
+	var lampes := OmbresCorps.lampes_allumees(get_tree())
+	if lampes.is_empty():
+		if _ombres_corps_vides_poussees:
+			return
+		_ombres_corps_vides_poussees = true
+	else:
+		_ombres_corps_vides_poussees = false
+	for pid in 2:
+		var rendu: Node = _viewport_du_monde(pid)
+		var cible: Viewport = rendu as Viewport if rendu is Viewport else get_window()
+		if cible == null:
+			continue
+		var ecran := cible.get_final_transform() * cible.get_canvas_transform()
+		var u := OmbresCorps.uniformes_de_vue(ecran, lampes, [] if lampes.is_empty() else _corps_des_ombres(pid))
+		if u["debordement"] > 0 and not _ombres_corps_debordement_signale:
+			_ombres_corps_debordement_signale = true
+			push_warning("Ombres des corps : %d corps ou plafonniers de plus que ce qu'un matériau reçoit — leur ombre ne se dessine pas." \
+				% u["debordement"])
+		for m in _materiaux_zone_morte[pid]:
+			OmbresCorps.poser(m, u)
+
+
+## OMBRES, OM5 — les corps qui font une ombre sous un plafonnier, tels que la vue `pid` les montre : chacun en jeu (le joueur, J2 en
+## duel, les PNJ de l'aventure), à la hauteur de sa posture, et les leurres (un leurre sans ombre là où son poseur en a une se
+## trahirait). ⚠️ **La force de chacun est son opacité DANS cette vue** (`Presentation3D.opacite_du_corps`, le patron du contact au
+## sol) : un corps effacé par le brouillage ou la suie ne trahit rien par son ombre. Un mort n'en fait pas (`_en_jeu`, OM4a).
+func _corps_des_ombres(pid: int) -> Array:
+	var sortie: Array = []
+	var le_sien: Node = p1 if pid == 0 else p2
+	for j in _joueurs_en_lice():
+		if not _en_jeu(j):
+			continue
+		sortie.append({"position": (j as Node2D).global_position,
+			"hauteur": MursBas.hauteur_de_posture(j.get("accroupi") == true),
+			"force": Presentation3D.opacite_du_corps(j, j == le_sien)})
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if not (g is GadgetLeurre) or not is_instance_valid(g) or g.is_queued_for_deletion() or not g.visible:
+			continue
+		if g.est_masque_pour_rejeu():
+			continue
+		# Le leurre se montre à son poseur par `_visuel_poseur`, aux autres par `_visuel` — comme `visual` et `visual_enemy`.
+		var visuel: Variant = g.get("_visuel_poseur") if int(g.poseur_id) == pid else g.get("_visuel")
+		sortie.append({"position": (g as Node2D).global_position, "hauteur": MursBas.hauteur_de_posture(false),
+			"force": Presentation3D.opacite_rendue(visuel)})
+	return sortie
 
 
 ## Loge un calque d'écran (vignette, flash de mort) là où son joueur est rendu.

@@ -1,0 +1,214 @@
+{
+ "avant": {
+  "commit": "492311a2",
+  "duree_s": 13.6,
+  "note": "player.gd de la base (sans OM4a)",
+  "prises": [
+   {
+    "plan": "regles-debout",
+    "famille": "regles",
+    "j1": [
+     445.64,
+     410.64
+    ],
+    "pnj": [
+     332.5,
+     297.5
+    ],
+    "classe_pnj": "pistolet",
+    "regles": {
+     "accroupi": false,
+     "echelle_etoile": 1.0,
+     "echelle_silhouette": 1.0,
+     "etoile_rendue": true
+    },
+    "sonde": {
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "regles-accroupi",
+    "famille": "regles",
+    "j1": [
+     445.64,
+     410.64
+    ],
+    "pnj": [
+     332.5,
+     297.5
+    ],
+    "classe_pnj": "pistolet",
+    "regles": {
+     "accroupi": true,
+     "echelle_etoile": 1.0,
+     "echelle_silhouette": 0.8,
+     "etoile_rendue": true
+    },
+    "sonde": {
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "regles-tir-au-mur",
+    "famille": "regles",
+    "j1": [
+     300.0,
+     122.5
+    ],
+    "pnj": [
+     577.5,
+     122.5
+    ],
+    "classe_pnj": "pistolet",
+    "regles": {
+     "accroupi": false,
+     "echelle_etoile": 1.0,
+     "echelle_silhouette": 1.0,
+     "etoile_rendue": true,
+     "flash_avance_px": 28.0,
+     "flash_energie": 0.833,
+     "mur": {
+      "face": [
+       280.0,
+       122.5
+      ],
+      "outre": [
+       240.0,
+       122.5
+      ],
+      "visee": [
+       -1.0,
+       0.0
+      ]
+     },
+     "sol_au_flash": 0.0559,
+     "sol_autour_du_tireur": 0.0391,
+     "sol_outre_mur_max": 0.1326
+    },
+    "sonde": {}
+   }
+  ]
+ },
+ "apres_om4a": {
+  "commit": "492311a2",
+  "duree_s": 13.9,
+  "note": "player.gd d'OM4a (arbre de travail)",
+  "prises": [
+   {
+    "plan": "regles-debout",
+    "famille": "regles",
+    "j1": [
+     445.64,
+     410.64
+    ],
+    "pnj": [
+     332.5,
+     297.5
+    ],
+    "classe_pnj": "pistolet",
+    "regles": {
+     "accroupi": false,
+     "echelle_etoile": 1.0,
+     "echelle_silhouette": 1.0,
+     "etoile_rendue": true
+    },
+    "sonde": {
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "regles-accroupi",
+    "famille": "regles",
+    "j1": [
+     445.64,
+     410.64
+    ],
+    "pnj": [
+     332.5,
+     297.5
+    ],
+    "classe_pnj": "pistolet",
+    "regles": {
+     "accroupi": true,
+     "echelle_etoile": 0.8,
+     "echelle_silhouette": 0.8,
+     "etoile_rendue": true
+    },
+    "sonde": {
+     "dedans": 0.0,
+     "dehors": 0.2145,
+     "derriere": 0.0,
+     "derriere_cote": 0.0938,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 28,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "regles-tir-au-mur",
+    "famille": "regles",
+    "j1": [
+     300.0,
+     122.5
+    ],
+    "pnj": [
+     577.5,
+     122.5
+    ],
+    "classe_pnj": "pistolet",
+    "regles": {
+     "accroupi": false,
+     "echelle_etoile": 1.0,
+     "echelle_silhouette": 1.0,
+     "etoile_rendue": true,
+     "flash_avance_px": 17.0,
+     "flash_energie": 0.833,
+     "mur": {
+      "face": [
+       280.0,
+       122.5
+      ],
+      "outre": [
+       240.0,
+       122.5
+      ],
+      "visee": [
+       -1.0,
+       0.0
+      ]
+     },
+     "sol_au_flash": 0.1372,
+     "sol_autour_du_tireur": 0.0391,
+     "sol_outre_mur_max": 0.0
+    },
+    "sonde": {}
+   }
+  ]
+ }
+}

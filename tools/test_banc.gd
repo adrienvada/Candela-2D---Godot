@@ -171,6 +171,16 @@ func _run() -> void:
 	_check("et la variante --iso sait dire quand ils manquent",
 		not (Banc.preconditions_iso(null) as Array).is_empty())
 
+	# OM6 — le MODE SOLO du banc de cadence (`--solo=<chapitre>.<salle>`, chantier OMBRES) et ses trois interrupteurs de lumière : même
+	# raison et même remède. Il ouvre une fenêtre, donc aucune suite ne peut l'exécuter ; il pose une partie d'aventure, lit ses bots, la
+	# perception qu'ils ont de J1 et les lumières de chaque corps — beaucoup d'appuis, tous nommés ici.
+	var manquants_solo: Array[String] = Banc.preconditions_solo(ui, main)
+	_check("tous les appuis du mode solo du banc de cadence existent encore", manquants_solo.is_empty(),
+		"; ".join(manquants_solo))
+	_check("et le mode solo sait dire quand ils manquent", not (Banc.preconditions_solo(null, null) as Array).is_empty())
+	_verifier_le_solo_du_banc(Banc, main)
+	_verifier_les_reglages_d_ombre(Banc, main)
+
 	# La planche de l'éblouissement, même raison et même remède : elle ouvre une
 	# fenêtre, donc aucune suite ne peut l'exécuter — mais une suite peut lire
 	# ses hypothèses. Elle en a beaucoup plus que le banc de cadence, parce
@@ -527,6 +537,35 @@ func _run() -> void:
 		perdus.is_empty(), ", ".join(perdus)
 		+ " — prévenir la session DA7 avant de renommer")
 
+	# OMBRES, OM0 — LE BANC DES OMBRES (`tools/planche_ombres.gd`, chantier OMBRES, 2026-10-04). Même raison et même remède que
+	# le photographe : il ouvre une fenêtre (Xvfb), aucune suite ne peut l'exécuter, et un outil hors couverture se périme en
+	# silence. Il pose une salle d'aventure, fige ses PNJ, relit la lightmap et les capteurs : ses appuis sont nommés ici.
+	var Ombres: GDScript = load("res://tools/planche_ombres.gd")
+	var manquants_ombres: Array[String] = Ombres.preconditions_manquantes(ui, main)
+	_check("tous les appuis du banc des ombres existent encore",
+		manquants_ombres.is_empty(), "; ".join(manquants_ombres))
+	_check("et il sait dire quand ils manquent",
+		not (Ombres.preconditions_manquantes(null, null) as Array).is_empty())
+	# Son catalogue : chaque plan nomme une salle qui existe, un PNJ que cette salle a, une classe qui existe — sans quoi le banc
+	# refuse le plan en séance, devant quelqu'un qui attendait une planche.
+	var fautes_ombres := _fautes_du_catalogue_des_ombres(Ombres.plans())
+	_check("le catalogue du banc des ombres ne nomme que des salles, des PNJ et des classes qui existent",
+		fautes_ombres.is_empty(), "; ".join(fautes_ombres))
+	_check("et la garde du catalogue sait dire quand un plan nomme une salle absente",
+		not _fautes_du_catalogue_des_ombres([{"id": "faux", "salle": [0, 99], "cible": 0}]).is_empty())
+	# Il hérite du photographe, comme le cinéaste : ces membres PRIVÉS sont son interface.
+	var empruntes_ombres: Array[String] = ["_valeur", "_drapeau", "_lire_taille", "_poser_la_fenetre", "_attendre",
+		"_attendre_disparition", "_sortir", "_commit"]
+	var perdus_ombres: Array[String] = []
+	for nom in empruntes_ombres:
+		if not connus.has(nom):
+			perdus_ombres.append(nom)
+	for motif in ["var _pantins", "class Marionnette", "var _main", "var _dossier", "var _taille", "const Commun"]:
+		if not texte.contains(motif):
+			perdus_ombres.append(motif)
+	_check("les membres dont hérite tools/planche_ombres.gd existent encore",
+		perdus_ombres.is_empty(), ", ".join(perdus_ombres) + " — prévenir le chantier OMBRES avant de renommer")
+
 	# ⚠️ **L'état que le banc DEMANDE est-il celui que le joueur GARDE ?**
 	#
 	# Le banc écrivait `p.flashlight_on = true` et annonçait « torches allumées » ;
@@ -545,6 +584,309 @@ func _run() -> void:
 	else:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	quit(1 if _failures > 0 else 0)
+
+
+## OM6 — le MODE SOLO du banc de cadence, SANS fenêtre : la lecture de ses arguments, le poste de J1 sur la vraie salle 8.9, J1 qui tient sa
+## visée, et les trois interrupteurs de lumière joués sur des nœuds fabriqués ici. Ce que la suite ne peut pas voir : le rendu (Xvfb) et la
+## fusillade elle-même (elle demande des images, des PNJ qui tirent).
+func _verifier_le_solo_du_banc(Banc: GDScript, main: Node) -> void:
+	# 1. Les arguments : un drapeau lu de travers fait mesurer autre chose, sans un mot.
+	_check("--solo=8.9 se lit : le chapitre 8, l'index 8 (la 9e salle, niveau_09.json)", Banc.lire_la_salle("8.9") == [8, 8],
+		str(Banc.lire_la_salle("8.9")))
+	_check("--solo=0.1 est la première salle du chapitre 0", Banc.lire_la_salle("0.1") == [0, 0])
+	var mal_lues: Array[String] = []
+	for texte in ["", "8", "8.", ".9", "8.0", "8.11", "11.1", "a.b", "8.9.1", "8,9", "-1.1", " 8.9"]:
+		if not (Banc.lire_la_salle(texte) as Array).is_empty():
+			mal_lues.append("« %s »" % texte)
+	_check("une salle mal écrite ou hors du catalogue est refusée", mal_lues.is_empty(), ", ".join(mal_lues))
+	_check("la salle 8.9 est le fichier que dit la ROADMAP, et il existe",
+		Banc.chemin_de_la_salle(8, 8) == "res://assets/solo/chapitre_08/niveau_09.json" and FileAccess.file_exists(Banc.chemin_de_la_salle(8, 8)),
+		Banc.chemin_de_la_salle(8, 8))
+	_check("--solo-poste se lit en case, et refuse ce qui n'en est pas une",
+		Banc.lire_le_poste("38,20") == Vector2i(38, 20) and Banc.lire_le_poste("38") == Vector2i(-1, -1)
+		and Banc.lire_le_poste("a,b") == Vector2i(-1, -1) and Banc.lire_le_poste("-3,4") == Vector2i(-1, -1))
+	var nu: Variant = Banc.valeur_egal(PackedStringArray(["--solo=8.9", "--seconds", "20", "--solo", "--x="]), "--solo")
+	_check("un drapeau nu vaut « » (le dernier l'emporte), un drapeau absent null",
+		nu is String and String(nu) == "" and Banc.valeur_egal(PackedStringArray(["--seconds", "20"]), "--solo") == null
+		and String(Banc.valeur_egal(PackedStringArray(["--solo=1.1", "--solo=2.2"]), "--solo")) == "2.2")
+	var bons := PackedStringArray(["--solo=8.9", "--sans-ombres-2d", "--sans-capteurs", "--sans-halos-pnj", "--solo-poste=38,20",
+		"--solo-graine=7", "--seconds", "20", "--physique", "8", "--seuil-lent", "1", "--lightmap", "1080p", "--temps-par-vue"])
+	_check("--solo accepte ses réglages, ses interrupteurs et les options communes du banc",
+		(Banc.refus_du_solo(bons) as Array).is_empty(), "; ".join(Banc.refus_du_solo(bons)))
+	var acceptes_a_tort: Array[String] = []
+	for f in Banc.DRAPEAUX_DU_DUEL:
+		if (Banc.refus_du_solo(PackedStringArray(["--solo=8.9", f])) as Array).is_empty():
+			acceptes_a_tort.append(f)
+	if (Banc.refus_du_solo(PackedStringArray(["--solo=8.9", "--classe=pompe"])) as Array).is_empty():
+		acceptes_a_tort.append("--classe=")
+	_check("--solo refuse chaque drapeau du duel (les lire sans les appliquer mesurerait autre chose)", acceptes_a_tort.is_empty(),
+		", ".join(acceptes_a_tort))
+	# La liste ci-dessus se lit dans la constante qu'elle contrôle : retirer un drapeau de `DRAPEAUX_DU_DUEL` le retirerait aussi du
+	# contrôle (vu au sabotage). Ce contrôle-ci est COMPLET : tout drapeau que `_ready()` lit est accepté par le solo (la courte liste
+	# ci-dessous, ses propres drapeaux et les options communes) ou refusé par lui. Un drapeau du duel ajouté plus tard à `_ready()` sans
+	# l'être à `DRAPEAUX_DU_DUEL` serait lu par le duel et IGNORÉ par le solo, en silence.
+	var texte_ready := FileAccess.get_file_as_string("res://tools/bench_framerate.gd")
+	var i_ready := texte_ready.find("func _ready() -> void:")
+	var i_suite := texte_ready.find("\nfunc ", i_ready + 10)
+	var corps_ready := texte_ready.substr(i_ready, i_suite - i_ready)
+	var communs := ["--seconds", "--max-fps", "--physique", "--iso", "--lightmap", "--seuil-lent", "--temps-par-vue", "--solo",
+		"--solo-poste", "--solo-graine", "--sans-ombres-2d", "--sans-capteurs", "--sans-halos-pnj",
+		# OM3c (Q85) : deux réglages d'ombre, valables en duel comme en solo.
+		"--atlas-ombres", "--pcf5"]
+	var lus: Array[String] = []
+	var oublies: Array[String] = []
+	for m in RegEx.create_from_string("\"(--[a-z0-9-]+)").search_all(corps_ready):
+		var drapeau := m.get_string(1)
+		if drapeau in communs or drapeau in lus:
+			continue
+		lus.append(drapeau)
+		var essai := "--classe=pompe" if drapeau == "--classe" else drapeau
+		if (Banc.refus_du_solo(PackedStringArray(["--solo=8.9", essai])) as Array).is_empty():
+			oublies.append(drapeau)
+	_check("tout drapeau du duel que le banc lit est refusé par --solo (sinon le solo l'ignorerait en silence)",
+		oublies.is_empty() and lus.size() >= 15, "oubliés : %s ; %d drapeaux du duel lus" % [", ".join(oublies), lus.size()])
+	_check("--sans-halos-pnj, --solo-poste et --solo-graine sans --solo sont refusés : un duel n'a ni PNJ ni salle",
+		not (Banc.refus_du_solo(PackedStringArray(["--sans-halos-pnj"])) as Array).is_empty()
+		and not (Banc.refus_du_solo(PackedStringArray(["--solo-poste=3,3"])) as Array).is_empty()
+		and not (Banc.refus_du_solo(PackedStringArray(["--solo-graine=3"])) as Array).is_empty())
+	_check("une salle absente, un poste ou une graine illisibles sont refusés",
+		not (Banc.refus_du_solo(PackedStringArray(["--solo=8.99"])) as Array).is_empty()
+		and not (Banc.refus_du_solo(PackedStringArray(["--solo=8.9", "--solo-poste=x"])) as Array).is_empty()
+		and not (Banc.refus_du_solo(PackedStringArray(["--solo=8.9", "--solo-graine=x"])) as Array).is_empty())
+	_check("un duel garde ses drapeaux, et accepte --sans-ombres-2d et --sans-capteurs",
+		(Banc.refus_du_solo(PackedStringArray(["--vue-unique", "--fusee", "--classe=pompe", "--sans-ombres-2d", "--sans-capteurs"])) as Array).is_empty())
+
+	# 2. Le poste de J1, sur la vraie salle 8.9 : le modèle de vue des bots, pas une distance devinée.
+	var Format: GDScript = load("res://aventure_format.gd")
+	var brut: Variant = JSON.parse_string(FileAccess.get_file_as_string(Banc.chemin_de_la_salle(8, 8)))
+	var niveau: Dictionary = Format.preparer_niveau(brut)
+	var poste: Dictionary = Banc.choisir_le_poste(niveau)
+	_check("en 8.9, le poste de J1 est vu au départ d'au moins un PNJ qui voit et tire (sinon la salle se mesure vide)",
+		int(poste.get("vus", 0)) >= 1, str(poste))
+	_check("… et il n'est pas le coin d'où le niveau fait partir J1", poste.get("case") != niveau["joueur"]["case"], str(poste.get("case")))
+	_check("une case imposée qui est un mur est refusée, avec sa raison", Banc.choisir_le_poste(niveau, Vector2i(0, 0)).has("erreur"))
+	var rejoue: Dictionary = Banc.choisir_le_poste(niveau, poste["case"])
+	_check("une case imposée est jugée comme les autres : la même case rend le même nombre de PNJ qui la voient",
+		int(rejoue.get("vus", -1)) == int(poste["vus"]), str(rejoue))
+
+	# 3. J1 tient sa visée : un fournisseur local (le jeu y retrouve la manette et le cran de la torche) dont la visée n'est pas la souris.
+	var Poste: GDScript = Banc.get_script_constant_map()["PosteDeJ1"]
+	var fournisseur = Poste.new()
+	fournisseur.visee = Vector2(0.0, 1.0)
+	_check("J1 au poste vise là où le banc le dit, quelle que soit la souris, et reste un fournisseur local de la torche",
+		fournisseur.get_aim_direction(Vector2(500.0, 500.0)) == Vector2(0.0, 1.0) and "action_torch" in fournisseur and "device_id" in fournisseur)
+	fournisseur.free()
+
+	# 4. Les trois interrupteurs, joués sur des nœuds fabriqués ici (le balayage ne touche que ce sous-arbre).
+	var Inter: GDScript = Banc.get_script_constant_map()["Interrupteurs"]
+	var scene := Node2D.new()
+	scene.name = "EssaiInterrupteurs"
+	root.add_child(scene)
+	var existante := PointLight2D.new()
+	existante.shadow_enabled = true
+	scene.add_child(existante)
+	var ombres = Inter.new()
+	ombres.sans_ombres_2d = true
+	ombres.armer(self, [], null, null, scene)
+	_check("--sans-ombres-2d éteint l'ombre de ce qui existe — et JAMAIS `enabled`, que lit la perception des bots",
+		not existante.shadow_enabled and existante.enabled and ombres.lumieres_eteintes_au_depart == 1, "ombre %s, enabled %s"
+		% [existante.shadow_enabled, existante.enabled])
+	var nee := PointLight2D.new()
+	nee.shadow_enabled = true
+	scene.add_child(nee)
+	var nee_sans := PointLight2D.new()
+	nee_sans.shadow_enabled = false
+	scene.add_child(nee_sans)
+	_check("une lumière NÉE après l'armement est éteinte à son entrée dans l'arbre (node_added), `enabled` intact ; celle née sans ombre est comptée née, pas éteinte",
+		not nee.shadow_enabled and nee.enabled and ombres.lumieres_nees == 2 and ombres.lumieres_nees_a_ombre == 1,
+		"nées %d dont %d à ombre" % [ombres.lumieres_nees, ombres.lumieres_nees_a_ombre])
+	nee.shadow_enabled = true
+	var bilan: Dictionary = ombres.finir()
+	_check("la vérification de la fin voit une lumière qui a repris son ombre, et la rend comme un défaut",
+		(bilan["lumieres_a_ombre"] as Array).size() == 1 and not (ombres.defauts(bilan) as Array).is_empty(), str(bilan))
+	_check("… et débranche son crochet de naissance (finir)", not node_added.is_connected(Callable(ombres, "_sur_un_noeud")))
+	nee.shadow_enabled = false
+	# Un drapeau ne règle que sa lumière : --sans-capteurs ne touche à aucune ombre.
+	var seul_capteurs = Inter.new()
+	seul_capteurs.sans_capteurs = true
+	seul_capteurs.armer(self, [], null, null, scene)
+	var intacte := PointLight2D.new()
+	intacte.shadow_enabled = true
+	scene.add_child(intacte)
+	_check("--sans-capteurs ne touche à aucune lumière : chaque interrupteur ne règle que le sien",
+		intacte.shadow_enabled and seul_capteurs.lumieres_nees == 0 and seul_capteurs.lumieres_eteintes_au_depart == 0)
+	# Les capteurs : le jeu les rallume à chaque image, seul le crochet de dessin tient l'arrêt.
+	var Capteur: GDScript = load("res://capteur_corps.gd")
+	var capteur = Capteur.creer(0, 0, root.world_2d, 8, 1, null)
+	scene.add_child(capteur)
+	_check("un capteur de corps NÉ après l'armement est mis à l'arrêt à son entrée dans l'arbre",
+		capteur.render_target_update_mode == SubViewport.UPDATE_DISABLED and seul_capteurs.capteurs_nes == 1)
+	capteur.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_check("contre-test : le jeu le rallume (`Presentation3D._suivre`, à chaque image) et rien d'autre ne le rend alors à l'arrêt",
+		capteur.render_target_update_mode == SubViewport.UPDATE_ALWAYS)
+	seul_capteurs.avant_le_rendu()
+	_check("le crochet de dessin le remet à l'arrêt, et compte les fois où le jeu l'avait rallumé",
+		capteur.render_target_update_mode == SubViewport.UPDATE_DISABLED and seul_capteurs.capteurs_repris == 1)
+	capteur.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var bilan_capteurs: Dictionary = seul_capteurs.finir()
+	_check("la vérification de la fin voit un capteur resté actif, et le rend comme un défaut",
+		int(bilan_capteurs["capteurs_actifs"]) == 1 and not (seul_capteurs.defauts(bilan_capteurs) as Array).is_empty(), str(bilan_capteurs))
+	# Les halos de PNJ : ceux des PNJ seulement. J1 se fait passer pour un PNJ le temps du contrôle.
+	var j1: Node = main.p1
+	var halo: PointLight2D = j1.ambient_light
+	var halo_allume: bool = halo.enabled
+	var ombre_du_halo: bool = halo.shadow_enabled
+	halo.shadow_enabled = true
+	var pas_un_pnj = Inter.new()
+	pas_un_pnj.sans_halos_pnj = true
+	pas_un_pnj.armer(self, [j1], null, null, scene)
+	_check("--sans-halos-pnj ne touche pas le halo d'un joueur qui n'est pas un PNJ", halo.shadow_enabled and pas_un_pnj.halos_pnj.is_empty())
+	j1.est_pnj = true
+	var halos = Inter.new()
+	halos.sans_halos_pnj = true
+	halos.armer(self, [j1], null, null, scene)
+	_check("--sans-halos-pnj éteint l'ombre du halo d'un PNJ (`ambient_light`), sans toucher à `enabled`",
+		not halo.shadow_enabled and halo.enabled == halo_allume and halos.halos_pnj.size() == 1 and halos.halos_pnj_eteints == 1)
+	j1.est_pnj = false
+	halo.shadow_enabled = ombre_du_halo
+	# L'étiquette d'une lumière : les numéros effacés, les anonymes nommés « · ».
+	var pnj_3 := Node2D.new()
+	pnj_3.name = "PNJ_3"
+	scene.add_child(pnj_3)
+	var anonyme := PointLight2D.new()
+	pnj_3.add_child(anonyme)
+	var nommee := PointLight2D.new()
+	nommee.name = "Flashlight"
+	pnj_3.add_child(nommee)
+	_check("l'étiquette d'une lumière efface les numéros et nomme les lumières sans nom « · » (sept PNJ, une ligne)",
+		Inter.etiquette_de(nommee) == "PNJ_#/Flashlight" and Inter.etiquette_de(anonyme) == "PNJ_#/·",
+		"%s ; %s" % [Inter.etiquette_de(nommee), Inter.etiquette_de(anonyme)])
+	# La règle des trois : aucune écriture de `enabled` dans la classe des interrupteurs (le texte, en plus des contrôles ci-dessus).
+	var texte_banc := FileAccess.get_file_as_string("res://tools/bench_framerate.gd")
+	var debut := texte_banc.find("class Interrupteurs extends RefCounted")
+	var texte_classe := texte_banc.substr(debut) if debut >= 0 else ""
+	_check("la classe des interrupteurs n'écrit jamais `enabled` (seul `shadow_enabled` se règle)",
+		debut >= 0 and not texte_classe.contains(".enabled =") and not texte_classe.contains(".enabled="))
+	for i in [ombres, seul_capteurs, pas_un_pnj, halos]:
+		i.desarmer()
+	scene.free()
+
+## OMBRES, OM3c (Q85, Q83) — les réglages d'ombre que les deux bancs posent à l'exécution, SANS fenêtre : la lecture des arguments du
+## banc de cadence, les lumières que Q85 filtre (`tools/reglages_ombres.gd`, partagé avec le banc des ombres), le PCF5 posé puis rendu
+## sans toucher à `enabled` ni à `shadow_enabled`, sa vérification de fin ; et l'ancre des variantes de la pâte D. Ce que la suite ne
+## voit pas : l'image (Xvfb) — la planche de Q83 et Q85 la montre, et le banc refuse une variante qui ne change aucun pixel.
+func _verifier_les_reglages_d_ombre(Banc: GDScript, main: Node) -> void:
+	var Reglages: GDScript = load("res://tools/reglages_ombres.gd")
+	# 1. Les arguments : un réglage lu de travers ferait mesurer l'atlas du projet sous le nom d'un autre.
+	var bons := PackedStringArray(["--atlas-ombres=4096", "--pcf5"])
+	_check("--atlas-ombres=4096 et --pcf5 forment une prise valide (duel comme solo)",
+		(Banc.refus_des_reglages(bons) as Array).is_empty() and (Banc.refus_des_reglages(PackedStringArray(["--pcf5=1.5"])) as Array).is_empty(),
+		"; ".join(Banc.refus_des_reglages(bons)))
+	var mal_lus: Array[String] = []
+	for a in ["--atlas-ombres=abc", "--atlas-ombres=3000", "--atlas-ombres=128", "--atlas-ombres=32768", "--atlas-ombres", "--pcf5=-1",
+			"--pcf5=doux"]:
+		if (Banc.refus_des_reglages(PackedStringArray([a])) as Array).is_empty():
+			mal_lus.append(a)
+	_check("un atlas qui n'est pas une puissance de deux de 256 à 16384, ou un lissage qui n'est pas un nombre positif, est refusé",
+		mal_lus.is_empty(), ", ".join(mal_lus))
+	# Et le banc les refuse AVANT tout le reste, avec les refus du solo : une fonction juste que `_ready()` n'appelle pas ne refuse rien.
+	var texte_banc_q85 := FileAccess.get_file_as_string("res://tools/bench_framerate.gd")
+	var debut_ready := texte_banc_q85.find("func _ready() -> void:")
+	var corps_ready_q85 := texte_banc_q85.substr(debut_ready, texte_banc_q85.find("\nfunc ", debut_ready + 10) - debut_ready)
+	_check("le banc de cadence passe ses arguments par `refus_des_reglages` dans `_ready()`, avec les refus du solo",
+		corps_ready_q85.contains("refus_solo.append_array(refus_des_reglages(args))"))
+	# 2. Les lumières que Q85 filtre : la torche et le halo d'un corps, le halo d'un plafonnier — rien d'autre.
+	var j1: Node = main.p1
+	var scene := Node2D.new()
+	scene.name = "EssaiReglagesOmbres"
+	root.add_child(scene)
+	# Un VRAI plafonnier (son `_ready` le range dans son groupe et crée son halo), pas un nœud qui en imiterait les appuis.
+	var plafonnier: Node2D = (load("res://plafonnier.gd") as GDScript).new()
+	scene.add_child(plafonnier)
+	var halo_plafonnier: Variant = plafonnier.get("halo")
+	var lumieres: Array = Reglages.lumieres_de_q85(self, [j1])
+	var halos_des_plafonniers: Array = get_nodes_in_group("plafonniers").map(func(p) -> Variant: return p.get("halo"))
+	var etrangeres: Array = []
+	for l in lumieres:
+		if l != j1.flashlight and l != j1.ambient_light and not halos_des_plafonniers.has(l):
+			etrangeres.append(l)
+	_check("Q85 filtre la torche et le halo de chaque corps et le halo de chaque plafonnier — ni le flash, ni l'écho, ni la rétrodiffusion",
+		halo_plafonnier is PointLight2D and lumieres.has(j1.flashlight) and lumieres.has(j1.ambient_light) and lumieres.has(halo_plafonnier)
+		and etrangeres.is_empty() and not lumieres.has(j1.body_light) and not lumieres.has(j1.muzzle_flash),
+		"%d lumières, %d étrangère(s)" % [lumieres.size(), etrangeres.size()])
+	# 3. Le PCF5 posé par la classe des interrupteurs, puis vérifié, puis rendu ; `enabled` et `shadow_enabled` intacts.
+	var Inter: GDScript = Banc.get_script_constant_map()["Interrupteurs"]
+	var torche: PointLight2D = j1.flashlight
+	var avant := [torche.enabled, torche.shadow_enabled, torche.shadow_filter, torche.shadow_filter_smooth]
+	var filtre = Inter.new()
+	filtre.pcf5 = true
+	filtre.atlas_ombres = 4096
+	_check("les réglages d'ombre rendent les interrupteurs actifs et se lisent dans le libellé de la charge",
+		filtre.actif() and "atlas d'ombres 4096" in filtre.noms_des_retraits() and "PCF5, lissage 1.0" in filtre.noms_des_retraits(),
+		str(filtre.noms_des_retraits()))
+	filtre.armer(self, [], j1, null, scene)
+	_check("--pcf5 pose le PCF5 au lissage léger sur la torche, sans toucher à `enabled` ni à `shadow_enabled`",
+		torche.shadow_filter == PointLight2D.SHADOW_FILTER_PCF5 and is_equal_approx(torche.shadow_filter_smooth, 1.0)
+		and torche.enabled == avant[0] and torche.shadow_enabled == avant[1]
+		and (halo_plafonnier as PointLight2D).shadow_filter == PointLight2D.SHADOW_FILTER_PCF5,
+		"filtre %d, lissage %.2f" % [torche.shadow_filter, torche.shadow_filter_smooth])
+	torche.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	var bilan: Dictionary = filtre.finir()
+	_check("la vérification de la fin voit une lumière qui a perdu son PCF5, et la rend comme un défaut",
+		int(bilan["pcf5_tenues"]) == int(bilan["pcf5_vivantes"]) - 1 and not (filtre.defauts(bilan) as Array).is_empty(), str(bilan))
+	Reglages.poser_le_filtre(lumieres, false)
+	_check("rendu au jeu : aucun filtre, lissage nul (ce que `player.gd` et `plafonnier.gd` posent)",
+		torche.shadow_filter == avant[2] and is_equal_approx(torche.shadow_filter_smooth, avant[3])
+		and j1.ambient_light.shadow_filter == PointLight2D.SHADOW_FILTER_NONE)
+	Reglages.poser_l_atlas(Reglages.atlas_du_projet())
+	_check("l'atlas du projet est celui que le jeu rend (2048) et Q85 propose 4096",
+		Reglages.atlas_du_projet() == 2048 and Reglages.ATLAS_PROPOSE == 4096, str(Reglages.atlas_du_projet()))
+	scene.free()
+	# 4. Q83 — l'ancre des variantes de la pâte D : une fois et une seule dans le fichier, et la garde sait dire quand elle manque.
+	var Ombres: GDScript = load("res://tools/planche_ombres.gd")
+	var code_pate := FileAccess.get_file_as_string("res://iso_pate.gdshaderinc")
+	var ancre: String = Ombres.ANCRE_LAVIS
+	_check("l'ancre des variantes de Q83 (les paliers e2 et e3 de la pâte D) est dans iso_pate.gdshaderinc, une fois",
+		Ombres.faute_de_l_ancre_du_lavis(code_pate) == "", Ombres.faute_de_l_ancre_du_lavis(code_pate))
+	_check("… et la garde sait dire quand elle manque, ou quand elle y est deux fois",
+		Ombres.faute_de_l_ancre_du_lavis(code_pate.replace(ancre, "")) != "" and Ombres.faute_de_l_ancre_du_lavis(code_pate + ancre) != "")
+	var variantes: Dictionary = Ombres.VARIANTES_LAVIS
+	var fautes: Array[String] = []
+	for v in ["a", "b", "c"]:
+		var t := String(variantes.get(v, ""))
+		if t == "" or t == ancre or not t.contains("\tfloat q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)\n") or not t.contains("float e_3 = "):
+			fautes.append(v)
+	_check("les trois variantes remplacent les paliers e2 et e3 et gardent e1 tel quel (« dans tous les cas e1 et son pochoir restent »)",
+		fautes.is_empty() and variantes.size() == 3, ", ".join(fautes))
+
+
+## Les plans du banc des ombres qui nomment une salle absente, un PNJ que leur salle n'a pas ou une classe inconnue. Séparée de
+## son appel pour être vérifiable, comme `_collisions_de_cles`.
+static func _fautes_du_catalogue_des_ombres(plans: Array) -> Array[String]:
+	var fautes: Array[String] = []
+	var ids := {}
+	for plan in plans:
+		var id := String(plan.get("id", ""))
+		if ids.has(id):
+			fautes.append("identifiant en double : %s" % id)
+		ids[id] = true
+		var salle: Array = plan.get("salle", [])
+		if salle.size() != 2:
+			fautes.append("%s : salle illisible" % id)
+			continue
+		var chemin := "res://assets/solo/chapitre_%02d/niveau_%02d.json" % [int(salle[0]), int(salle[1]) + 1]
+		if not FileAccess.file_exists(chemin):
+			fautes.append("%s : pas de salle %d.%d (%s)" % [id, int(salle[0]), int(salle[1]) + 1, chemin])
+			continue
+		var niveau = JSON.parse_string(FileAccess.get_file_as_string(chemin))
+		var pnj: Array = (niveau as Dictionary).get("pnj", []) if niveau is Dictionary else []
+		for cle in ["cible", "ebloui_par"]:
+			if plan.has(cle) and int(plan[cle]) >= pnj.size():
+				fautes.append("%s : la salle %d.%d n'a pas de PNJ n° %d (%d en tout)" % [id, int(salle[0]),
+					int(salle[1]) + 1, int(plan[cle]), pnj.size()])
+		if plan.has("classe") and not FileAccess.file_exists("res://assets/sprites/%s_silhouette.png" % String(plan["classe"])):
+			fautes.append("%s : pas de silhouette pour la classe « %s »" % [id, String(plan["classe"])])
+	return fautes
 
 
 ## Les illustrations qui se ramènent à une même clé canonique, nommées par paires.

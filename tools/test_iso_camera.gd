@@ -561,8 +561,9 @@ func _simulation_inchangee() -> void:
 	# allumée) : F2 seule n'atteint pas le jeu sur un Mac sans `fn`.
 	var p := root.get_node_or_null("Presentation3D")
 	var Pate: GDScript = load("res://iso_pate.gd")
-	_check("pâte par défaut : D, lavis et pochoir (décision d'Adrien)",
-		p != null and int(p.style_pate) == Pate.LAVIS)
+	# D (lavis et pochoir) du 2026-09-14 au 2026-10-05 ; la brute depuis Q83 (Adrien : « brute, sans paliers »).
+	_check("pâte par défaut : la brute, sans paliers (Q83, décision d'Adrien)",
+		p != null and int(p.style_pate) == Pate.BRUTE)
 	if p != null:
 		var suite_ok := true
 		for cas in [[KEY_2, Pate.LIGNE_CLAIRE], [KEY_0, Pate.BRUTE], [KEY_F2, Pate.GRAVURE],
