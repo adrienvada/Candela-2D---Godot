@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -34122,6 +34122,9 @@ brouillage, posée à la livraison d'OM1).**
   éteindrait l'appareil au repos (sa propre torche l'allume à chaque image : une copie d'écran de plus). OM1 a posé le sien dans
   `opacite_vue`, pour le corps seulement ; si D2 est retenue, `opacite_vue` cesse de soustraire le sien — sinon il compte deux
   fois (0,12) : `test_ombres_regles` le garde (« le plancher ne compte qu'une fois »).
+  *Préparée le 2026-10-05* (voir « Q89 — préparée ») : le geste rangé en patch, la planche faite — pendant une redescente, le jeu
+  tourne aujourd'hui le voile et l'appareil vers l'adversaire ; avec le geste, vers ce qui a ébloui. Et en aventure, l'appareil ne
+  s'allume jamais (signalé).
 
 ### Les lots
 
@@ -34977,6 +34980,37 @@ ombres, signalé pour cinq autres outils ; voir « Pièges connus ».
 
 **Non prouvé.** Rien sous Metal : les coûts sont relatifs, sous llvmpipe — qui paie le remplissage d'un atlas plus large en
 processeur, quand un GPU l'avale ; l'image, elle, est celle du moteur. Adrien n'a vu ni les variantes ni l'atlas en jeu (H16).
+
+### Q89 — préparée le 2026-10-05 (le geste rangé, pas livré)
+
+Q89 demandait, avant d'être tranchée, « une planche du brouillage pendant une redescente ». **Le geste** tient en une ligne de
+`GameState.source_eblouissante_ou` : la cible lit `source_du_brouillage()` (la source qui TIENT le niveau, OM1) au lieu de
+`source_eblouissante` (la gagnante de l'image). Rangé dans `docs/iso/ombres/q89/q89_source_du_niveau.patch`, pas appliqué. La
+même fonction tourne le voile (`UI._source_du_voile`) et, en manche, l'appareil (le flou, le halo).
+
+**La planche** (`docs/iso/ombres/q89/planche_q89.jpg` ; le banc des ombres, famille `q89`, joué dans l'arbre de la branche puis dans
+un arbre où le geste est posé) : salle 0.9, le PNJ 1 éblouit J1 (0,824), puis éteint sa torche. Pendant toute la redescente — de
+0,735 à 0,068, de 17 à 267 ms après l'extinction — **le jeu tourne le voile et l'appareil vers J2**, « l'adversaire » du repli ;
+**avec le geste, vers le PNJ 1**, et ne retombe sur J2 qu'à éblouissement nul, quand plus rien ne se dessine. À l'écran, le voile
+diffère de 164 669 pixels (au-delà de 8 niveaux) à la première image de la redescente, de 89 933 à la quatrième, de 30 742 à la
+septième (`mesures_q89.json`).
+
+**Trouvé en chemin** :
+- **En aventure, l'appareil du brouillage ne s'allume jamais** : `_maj_brouillage` l'éteint hors manche (`round_active`), et
+  l'aventure est un bac à sable. Le solo n'a que le voile — voulu (seul le duel aurait une position à brouiller) ou oubli ?
+  Signalé, pas instruit. Le geste de Q89 change donc l'appareil en duel seulement ; le voile, partout.
+- En aventure, J2 caché se tient au départ du PNJ 0 (dans la salle 0.9, la même case) : la planche fait éblouir le PNJ 1, sans quoi
+  les deux cibles se confondraient à l'écran.
+
+**Ce que le geste toucherait** : le duel — ce que l'appareil et le voile montrent pendant chaque redescente, et après un tir (le
+tireur plutôt que la lampe du moment) —, pas le bot. Cinq suites jouées dans l'arbre où il est posé (`test_ombres_regles`,
+`test_brouillage`, `test_eblouissement`, `test_classes`, `test_aventure_boss`) restent vertes : **aucune garde ne tient l'ancienne
+règle, aucune ne tiendrait la nouvelle** ; livré, il demanderait la sienne (la cible pendant une redescente). Toujours à trancher
+avec la D2 de l'audit d'optimisation (le plancher de l'appareil au repos). **Avis inchangé : oui** — une seule source pour tout ce
+que l'éblouissement montre.
+
+**Les gardes du banc** : `tools/test_banc.gd` vérifie ses appuis (`preconditions_manquantes` : l'appareil de chaque joueur, sa cible,
+`source_du_brouillage`). Trois sabotages, chacun rouge puis restauré à l'identique (md5) : chaque appui nouveau du banc vérifiant un nom qui n'existe pas (`source_du_brouillage`, le flou de l'appareil, les appareils de `GameState`). **Suite entière : 187 suites vertes, aucune rouge, sans erreur de script (27 min 45 s).**
 
 **Le levier que le recensement désigne, hors de la liste d'OM6** : l'emprise des torches (LUM-04 de l'audit d'optimisation,
 `docs/audit_optimisation/V_V8.md`, fusionné dans `main` par https://github.com/adrienvada/Candela-2D---Godot/pull/9). Le carré

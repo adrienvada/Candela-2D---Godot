@@ -144,6 +144,11 @@ const PAS_BALAYAGE_DEG := 0.5
 const SEUIL_VARIANTE_SANS_EFFET := 50
 ## OM3c (Q85) — l'atlas d'ombres et le filtre PCF5 : un seul endroit dit quelles lumières Q85 filtre, partagé avec le banc de cadence.
 const ReglagesOmbres := preload("res://tools/reglages_ombres.gd")
+## Q89 — la redescente : la torche du PNJ tenue sur J1 `IMAGES_EBLOUISSEMENT` images (l'éblouissement monte à son plafond), puis
+## éteinte ; une image toutes les `PAS_REDESCENTE`, `IMAGES_REDESCENTE` en tout — la redescente dure 0,375 s au plus (22,5 images).
+const IMAGES_EBLOUISSEMENT := 40
+const IMAGES_REDESCENTE := 10
+const PAS_REDESCENTE := 3
 
 var _iso: Presentation3D
 var _journal: Array = []
@@ -330,6 +335,16 @@ static func plans() -> Array[Dictionary]:
 			propre.merge(compo[1], true)
 			propre.merge(r[1], true)
 			sortie.append(_plan_de(base, propre))
+	# Q89 (préparée le 2026-10-05) — la cible du brouillage pendant une redescente, salle 0.9 : le PNJ 1 braque sa torche sur J1
+	# (celle de J1 éteinte : rien d'autre ne l'éblouit), puis l'éteint ; la série suit la redescente. Le PNJ 1 et non le 0 : en
+	# aventure, J2 caché se tient au départ du PNJ 0 (87,5 ; 87,5 dans cette salle), et les deux cibles se confondraient à l'écran.
+	# Ce qu'on lit, image par image :
+	# vers quoi le jeu tourne l'appareil (le flou, le halo — éteints en aventure, voir `_etat_du_brouillage`) et le voile
+	# (`GameState.source_eblouissante_ou`) — le PNJ qui a ébloui, ou J2, « l'adversaire » du repli. Le voile reste visible. Joué dans
+	# un arbre où le geste de Q89 est posé (`docs/iso/ombres/q89/`), le même plan montre l'après.
+	sortie.append(_plan_de(salle09, {"id": "q89-redescente", "famille": "q89", "ebloui_par": 1, "torche": false, "voile": true,
+		"redescente": true,
+		"but": "Q89 — un PNJ éblouit J1, puis éteint sa torche : vers quoi le brouillage se tourne pendant la redescente"}))
 	return sortie
 
 
@@ -408,6 +423,17 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		absents.append("RenderingServer.canvas_set_shadow_texture_size() a disparu")
 	if not FileAccess.get_file_as_string("res://plafonnier.gd").contains("var halo"):
 		absents.append("Plafonnier.halo a disparu")
+	# Q89 : l'appareil de brouillage de chaque joueur, sa cible, ses deux parties et sa projection.
+	if not "_brouillages" in main:
+		absents.append("GameState._brouillages a disparu")
+	if not main.has_method("source_eblouissante_ou"):
+		absents.append("GameState.source_eblouissante_ou() a disparu")
+	var texte_appareil := FileAccess.get_file_as_string("res://brouillage_vue.gd")
+	for motif in ["var _flou", "var _halo"]:
+		if not texte_appareil.contains(motif):
+			absents.append("BrouillageVue : « %s » a disparu" % motif)
+	if p1 != null and not p1.has_method("source_du_brouillage"):
+		absents.append("Player.source_du_brouillage() a disparu")
 	return absents
 
 
@@ -761,7 +787,9 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 	_appliquer_le_correctif()
 	await _tenir(IMAGES_POSE)
 	var n := int(plan.get("serie", 0))
-	if n > 0:
+	if bool(plan.get("redescente", false)):
+		await _serie_redescente(plan, cible)
+	elif n > 0:
 		await _serie(plan, cible, n)
 	else:
 		await _prise(plan, cible)
@@ -1238,7 +1266,8 @@ func _poser_le_regard() -> void:
 func _ecran_nu() -> void:
 	var voile := (_main.ui.p1_dazzle as Node).get_parent() as CanvasItem
 	if voile != null:
-		voile.visible = false
+		# Q89 : le voile fait partie de ce qu'on juge (il se tourne vers la même source que l'appareil).
+		voile.visible = bool(_plan_en_cours.get("voile", false))
 	if _main.ui.match_hud != null:
 		(_main.ui.match_hud as CanvasItem).visible = false
 	var pool := get_tree().get_first_node_in_group("particle_pool") as CanvasItem
@@ -1474,6 +1503,66 @@ static func _ecart_moyen(la: PackedByteArray, lb: PackedByteArray, corps: Packed
 				hors_corps_24 += 1
 	return {"au_dela_8": au_dela_8, "hors_corps_8": hors_corps_8, "hors_corps_24": hors_corps_24, "saut_max": saut,
 		"moyenne_hors_corps": snappedf(float(somme) / float(maxi(dehors_n, 1)), 0.001), "pixels_hors_corps": dehors_n}
+
+
+## Q89 — la redescente : l'éblouissement monté par la torche du PNJ, la torche éteinte, puis une image toutes les `PAS_REDESCENTE`
+## jusqu'au bout de la redescente ; à chaque image, l'écran (voile compris) et l'état de l'appareil de brouillage de J1.
+func _serie_redescente(plan: Dictionary, cible: Player) -> void:
+	var id := String(plan["id"])
+	var eblouisseur := _pnj(int(plan["ebloui_par"]))
+	await _tenir(IMAGES_EBLOUISSEMENT)
+	var etats := []
+	var premiere: Image = null
+	for k in IMAGES_REDESCENTE:
+		if k == 1:
+			(eblouisseur.input_provider as Marionnette).torche = false
+		if k > 0:
+			await _tenir(PAS_REDESCENTE - 1)
+		_reposer()
+		var images: Array = await _capturer_l_image()
+		var ecran: Image = images[0]
+		ecran.save_png("%s/%s_%02d.png" % [_dossier, id, k])
+		if k == 0:
+			premiere = ecran
+		var etat := _etat_du_brouillage(eblouisseur)
+		etat["image"] = k
+		etat["images_depuis_l_extinction"] = 0 if k == 0 else 1 + (k - 1) * PAS_REDESCENTE
+		etats.append(etat)
+		print("    image %d : éblouissement %.3f, source de l'image %s, du niveau %s → l'appareil et le voile se tournent vers %s" % [k,
+			float(etat["eblouissement"]), etat["source_de_l_image"], etat["source_du_niveau"], etat["cible_de_l_appareil"]])
+		await get_tree().process_frame
+	premiere.save_png("%s/%s_ecran.png" % [_dossier, id])
+	var entree := _mesurer(plan, cible, premiere, (await _capturer_l_image())[1])
+	entree["q89"] = etats
+	_journal.append(entree)
+
+
+## L'éblouissement de J1 à cet instant : son niveau, la source de l'image (`source_eblouissante`) et celle du niveau
+## (`source_du_brouillage`), et la cible que le JEU donne à l'appareil de brouillage et au voile — `GameState.source_eblouissante_ou`,
+## la fonction même que le geste de Q89 change. ⚠️ En aventure, l'appareil (le flou, le halo) reste ÉTEINT : `_maj_brouillage` ne
+## l'allume qu'en manche (`round_active`, faux dans le bac à sable de l'aventure) ; on lit donc sa CIBLE, pas son dessin. Le voile, lui,
+## est là, et se tourne vers la même cible (`UI._source_du_voile`). Les positions du PNJ et de J2 disent qu'ils ne sont pas au même endroit.
+func _etat_du_brouillage(eblouisseur: Player) -> Dictionary:
+	var j1 := _main.p1 as Player
+	var j2 := _main.p2 as Node2D
+	var nom := func(n: Variant) -> String: return String((n as Node).name) if n is Node and is_instance_valid(n) else "—"
+	var etat := {"eblouissement": snappedf(float(j1.dazzle_amount), 0.001), "source_de_l_image": nom.call(j1.get("source_eblouissante")),
+		"source_du_niveau": nom.call(j1.call("source_du_brouillage")),
+		"cible_de_l_appareil": nom.call(_main.source_eblouissante_ou(j1, j2)), "pnj": String(eblouisseur.name), "j2": String(j2.name),
+		"pnj_monde": _v(eblouisseur.global_position), "j2_monde": _v(j2.global_position),
+		"pnj_a_px_de_j2": snappedf(eblouisseur.global_position.distance_to(j2.global_position), 0.1)}
+	# Où ils tombent à l'écran (la caméra iso de J1, à hauteur de poitrine) — la planche les marque.
+	var cam := _iso._camera_de(0)
+	var logique := get_window().get_visible_rect().size
+	for e in [["pnj_ecran", eblouisseur], ["j2_ecran", j2]]:
+		etat[e[0]] = _v(cam.vers_ecran((e[1] as Node2D).global_position, logique, 20.0) * Vector2(_taille) / logique)
+	var appareils: Array = _main.get("_brouillages")
+	if appareils != null and not appareils.is_empty():
+		var app: Node = appareils[0]
+		var flou: Variant = app.get("_flou")
+		var halo: Variant = app.get("_halo")
+		etat["appareil_allume"] = (flou is CanvasItem and (flou as CanvasItem).visible) or (halo is CanvasItem and (halo as CanvasItem).visible)
+	return etat
 
 
 static func _sans_cumul(e: Dictionary) -> Dictionary:
@@ -1921,6 +2010,13 @@ func _ecrire_la_planche_des_ombres() -> void:
 				html.append("<figure><img src=\"%s_%s.png\"><figcaption>%s — %s</figcaption></figure>" % [id, suffixe,
 					"APRÈS" if not avant.is_empty() else "ICI", suffixe])
 		html.append("</div>")
+		if e.has("q89"):
+			html.append("<div class=\"rang\">")
+			for etat in e["q89"]:
+				html.append("<figure><img src=\"%s_%02d.png\"><figcaption>image %d (+%d) — éblouissement %s, appareil → %s</figcaption></figure>" % [
+					id, int(etat["image"]), int(etat["image"]), int(etat["images_depuis_l_extinction"]), str(etat["eblouissement"]),
+					String(etat["cible_de_l_appareil"])])
+			html.append("</div>")
 	html.append("</body></html>")
 	var f := FileAccess.open("%s/planche.html" % _dossier, FileAccess.WRITE)
 	f.store_string("\n".join(html))

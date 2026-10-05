@@ -6298,3 +6298,8 @@ tools/planche_ombres.gd` et `grep -n "refus_des_reglages" tools/bench_framerate.
 e2 et e3 d'`iso_pate.gdshaderinc` met `ANCRE_LAVIS` à jour : `test_banc` rougit sinon, et c'est voulu. La session s'appelle
 désormais `candela-2d-godot-77` dans `ListAgents` (un redémarrage de plus ; même session, même branche) : son nom y change à
 chaque redémarrage du conteneur, sa branche jamais.
+
+**Q89 préparée, le 2026-10-05 — annoncé ici avant le commit (aucun code de jeu) :** `tools/planche_ombres.gd` (en propre : la
+famille `q89`, `IMAGES_EBLOUISSEMENT`, `IMAGES_REDESCENTE`, `PAS_REDESCENTE`, `_serie_redescente`, `_etat_du_brouillage` ; le voile
+gardé visible quand le plan le veut ; trois appuis de plus) ; `docs/iso/ombres/q89/` (le geste en patch, la planche, ses mesures).
+Le geste lui-même (`GameState.source_eblouissante_ou`) n'est PAS appliqué : il attend Q89.

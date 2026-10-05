@@ -1,0 +1,16 @@
+diff --git a/game_state.gd b/game_state.gd
+index 40c5ff38..0793b6a6 100644
+--- a/game_state.gd
++++ b/game_state.gd
+@@ -5936,7 +5936,10 @@ func _maj_brouillage() -> void:
+ func source_eblouissante_ou(victime: Node, defaut: Node) -> Node:
+ 	if victime == null:
+ 		return defaut
+-	var s = victime.get("source_eblouissante")
++	# Q89 — la source qui TIENT le niveau d'éblouissement (`Player.source_du_brouillage`, OM1), et non plus la gagnante de l'image :
++	# pendant une redescente que plus rien ne tient (une fusée éteinte, une torche détournée), le flou, le halo et le voile restent
++	# sur ce qui a ébloui au lieu de retomber sur l'adversaire ; après un tir, sur le tireur. Le repli ne joue plus qu'à niveau nul.
++	var s = victime.call("source_du_brouillage") if victime.has_method("source_du_brouillage") else victime.get("source_eblouissante")
+ 	return s if s != null and is_instance_valid(s) else defaut
+ 
+ 
