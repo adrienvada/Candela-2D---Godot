@@ -34856,11 +34856,14 @@ mesure pas dans une salle où J1 est au milieu de la fusillade. Deux gestes **me
 - les **capteurs lointains une image sur deux** : dans la salle 8.9, deux capteurs de figurant sur sept rendent (la règle des
   1 300 px arrête les autres) — un pour cent au mieux.
 
-**Le levier que le recensement désigne, hors de la liste d'OM6** : l'emprise des torches. Selon l'audit d'optimisation
-(https://github.com/adrienvada/Candela-2D---Godot/pull/9), le rectangle d'une torche est vide aux trois quarts, et c'est lui qui
-décide quelles vues, quels capteurs et quels occulteurs rejouent son ombre : le rogner retirerait 30 % (duel) à 54 % (solo) des
-dessins d'ombre — mais la portée du rayon dans l'air (`iso_volumes.gd`) en dépend et tomberait de 468 à 234 px sans
-compensation. Une décision pour Adrien, avec cet audit ; pas un geste d'OM6. La vue `PeintureIso` recense 30 lampes sans récepteur, mais ne rend que deux fois en 18 s : sans effet sur la cadence.
+La vue `PeintureIso` recense 30 lampes sans récepteur, mais ne rend que deux fois en 18 s : sans effet sur la cadence.
+
+**Le levier que le recensement désigne, hors de la liste d'OM6** : l'emprise des torches (LUM-04 de l'audit d'optimisation,
+`docs/audit_optimisation/V_V8.md`, fusionné dans `main` par https://github.com/adrienvada/Candela-2D---Godot/pull/9). Le carré
+de 936 px d'une torche est vide à plus des trois quarts, et c'est lui qui décide quelles vues, quels capteurs et quels
+occulteurs rejouent son ombre : le rogner retirerait environ 30 % (duel) à 54 % (solo) des dessins d'ombre, au modèle — mais
+la portée du rayon dans l'air (`iso_volumes.gd`) se lit sur sa largeur et tomberait de 468 à 234 px sans aucune erreur. Une
+décision pour Adrien, avec cet audit ; pas un geste d'OM6.
 
 ### Ne pas reproposer
 

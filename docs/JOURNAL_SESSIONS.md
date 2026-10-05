@@ -6275,3 +6275,14 @@ d'image du solo lu à l'horloge murale), `tools/test_banc.gd`, `tools/cadence_cl
 `tools/test_ombres_allegement.gd` (nouveau) et sa ligne dans `tools/run_suites.sh` ; `docs/iso/ombres/om6/` (la planche de
 cadence, chaque prise). Après une fusion : `grep -n "_accorder_les_ombres_des_halos" game_state.gd` doit répondre au moins trois
 fois (le setter, `_accorder_rendu_aux_vues`, la fonction), et `grep -n "_corps_montre" presentation_3d.gd` deux fois.
+
+**OM6b, le 2026-10-05 — documentation seule** (la feuille de route et ce journal) : les murs par contours et les capteurs
+lointains, mesurés avant, ne sont pas faits ; aucun fichier de code touché.
+
+**Annoncé pour la suite — OM3c et Q89 préparée, sans toucher au code du jeu :** les preuves que demandent les questions encore
+ouvertes. Q83 : les trois variantes de la pâte D posées À L'EXÉCUTION par le banc des ombres (le code de la ressource
+`ShaderInclude` de `iso_pate.gdshaderinc` remplacé en mémoire, jamais le fichier) ; Q85 : l'atlas d'ombres à 4096 et le PCF5,
+deux interrupteurs de banc ; Q89 : le geste rangé en patch dans `docs/iso/ombres/`, comme OM1 préparé. Fichiers :
+`tools/planche_ombres.gd` (en propre) ; `tools/bench_framerate.gd` et `tools/test_banc.gd` (par insertions) ;
+`tools/cadence_cloud/` ; `docs/iso/ombres/om3/`. Entre deux lots, la session ne tient aucun des fichiers de jeu annoncés plus
+haut ; qui doit y écrire le dit à `candela-2d-godot-40` (`ListAgents`), pour qu'elle fusionne `main` avant son prochain lot.
