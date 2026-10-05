@@ -135,7 +135,14 @@ var aventure: AventurePartie = null
 ## Les joueurs que la vue iso rend EN PLUS de J1 et J2 : les PNJ de la salle d'aventure (`PNJ_<i>`, vivants ou non). Vide partout
 ## ailleurs — c'est ce qui garde le duel rendu comme il l'a toujours été. `Presentation3D` leur donne un corps chacun
 ## (`Presentation3D.FIGURANTS_MAX`).
-var figurants: Array[Player] = []
+var figurants: Array[Player] = []:
+	set(valeur):
+		figurants = valeur
+		# OMBRES, OM6 — un PNJ qui entre en scène prend la règle de l'ombre de son halo.
+		_accorder_les_ombres_des_halos()
+## OMBRES, OM6 — les vues montrées (0 : J1, 1 : J2), relues par `_accorder_rendu_aux_vues` : l'ombre d'un halo n'a de récepteur
+## que dans la vue de son porteur (`CanauxLumiere.halo_a_un_recepteur`).
+var _vues_montrees: Array = [0, 1]
 ## Vrai pendant que l'aventure pose une salle par `_do_start_round` : la ceinture de ce dernier (« un vrai départ de match met fin
 ## à l'aventure ») ne doit pas démonter la partie qui l'appelle.
 var _aventure_en_pose := false
@@ -5939,6 +5946,13 @@ func _accorder_rendu_aux_vues() -> void:
 		var conteneur := vue.get_parent() as Control
 		if conteneur != null and conteneur.visible:
 			regardees.append(vue)
+	# OMBRES, OM6 — les vues montrées décident de l'ombre des halos des corps.
+	_vues_montrees = []
+	if vp1 in regardees:
+		_vues_montrees.append(0)
+	if vp2 in regardees:
+		_vues_montrees.append(1)
+	_accorder_les_ombres_des_halos()
 
 	# R3 (b) : une seule vue regardée ⇒ le duel se rend DANS LA RACINE.
 	if regardees.size() == 1 and rendu_racine_autorise:
@@ -5958,6 +5972,20 @@ func _accorder_rendu_aux_vues() -> void:
 	_accorder_brouillage_aux_vues()
 	_accorder_sons_aux_vues()
 	_accorder_calques_joueurs()
+
+
+## OMBRES, OM6 — l'ombre du halo de chaque corps (J1, J2, chaque PNJ) selon que la vue de son porteur est montrée : sans elle, le
+## halo n'a aucun récepteur (`CanauxLumiere.halo_a_un_recepteur`). Rappelée quand les vues changent et quand les figurants
+## changent ; `enabled` n'est jamais touché ici (le modèle de vue des bots le lit).
+func _accorder_les_ombres_des_halos() -> void:
+	var corps: Array = [p1, p2]
+	corps.append_array(figurants)
+	for j in corps:
+		if not is_instance_valid(j):
+			continue
+		var halo: Light2D = j.get("ambient_light")
+		if halo != null:
+			halo.shadow_enabled = CanauxLumiere.halo_a_un_recepteur(int(j.get("player_id")), _vues_montrees)
 
 
 ## Le viewport qui rend VRAIMENT le joueur `pid` : la racine si elle a pris sa

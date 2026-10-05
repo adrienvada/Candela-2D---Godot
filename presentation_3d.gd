@@ -795,6 +795,14 @@ func _pousser_zone_morte_capteurs() -> void:
 			ecran_f * _figurants[k].global_position, bool(_figurants[k].get("accroupi")))
 
 
+## OMBRES, OM6 — le corps `j` (0 : J1, 1 : J2) est-il montré ? Son fantôme pendant la killcam (`fantome_montre`), sinon le joueur
+## visible et son sprite visible — `visual.visible` porte l'état de mort que le rejeu enregistre (la règle de `_corps[j].visible`).
+func _corps_montre(j: int, joueur: Variant) -> bool:
+	if fantome_montre(j) != null:
+		return true
+	return is_instance_valid(joueur) and joueur.visible and joueur.visual.visible
+
+
 func _suivre() -> void:
 	var joueurs := [_main.p1, _main.p2]
 	# SOLO, S6 — les corps des figurants suivent `GameState.figurants` (vide : rien ne change, rien ne grandit).
@@ -809,7 +817,12 @@ func _suivre() -> void:
 		for j in 2:
 			var capteur: CapteurCorps = _capteurs[id][j]
 			if capteur != null:
-				capteur.render_target_update_mode = SubViewport.UPDATE_DISABLED if gelee \
+				# OMBRES, OM6 — un capteur ne rend que pour un corps MONTRÉ (le joueur, ou son fantôme pendant la killcam) : J2 caché
+				# (le solo, l'entraînement sans adversaire) ou un mort rendaient à chaque image les ombres de toutes les lampes de leur
+				# rectangle pour un disque que personne ne voit (recensement du banc de cadence, 2026-10-05). La règle des figurants
+				# (`_suivre_les_figurants`, S6), étendue aux joueurs ; posée avant le dessin, elle rend le capteur dès l'image où le
+				# corps reparaît.
+				capteur.render_target_update_mode = SubViewport.UPDATE_DISABLED if gelee or not _corps_montre(j, joueurs[j]) \
 					else SubViewport.UPDATE_ALWAYS
 		if _scinde:
 			_vues3d[id].render_target_update_mode = SubViewport.UPDATE_DISABLED if gelee \

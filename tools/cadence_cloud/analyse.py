@@ -3,6 +3,12 @@
 d'image médian et le 1 % bas au sens du banc (hors des dix premières secondes de mesure), plus les contrôles qui décident si
 la prise vaut : classe équipée, torches tenues, focus stable, erreurs de script ou de shader, porte stricte.
 
+Une prise de SOLO (`--solo=<chapitre>.<salle>`, OM6 : `SCENE="--solo=8.9" prise.sh …`) se reconnaît à sa ligne « Solo : salle … » et
+se juge autrement : pas de classe du pompe à tenir, mais la SALLE tenue en jeu sur toute la mesure (J1 vivant, aucune reprise), une
+FUSILLADE (au moins un coup de PNJ pendant la mesure : sans elle la prise mesure une salle au repos, pas le pire cas annoncé), et aucun
+« ✗ » dans le rapport — ni celui des interrupteurs de lumière (`--sans-ombres-2d`, `--sans-capteurs`, `--sans-halos-pnj`), qui disent
+ce qu'ils ont vérifié à la fin. Le libellé de la charge (l'en-tête du RÉSULTAT) porte les drapeaux posés : ils sont rendus dans la ligne.
+
 Usage : analyse.py <journal.log> [<journal.log> …]   — une ligne par prise, et `--json` pour la sortie machine.
 """
 import json
@@ -50,9 +56,33 @@ def analyser(chemin):
             refus.append("images datées %d ≠ images du banc %s" % (len(dts), m.group(1)))
     else:
         refus.append("pas de RÉSULTAT")
-    m = re.search(r"Manche lancée — armes : (.*?) \(slugs (\w+) / (\w+)", texte)
-    if not m or m.group(2) != "pompe" or m.group(3) != "pompe":
-        refus.append("classe non tenue")
+    solo = re.search(r"^Solo\s+:\s+salle (\d+\.\d+)", texte, re.M)
+    r["solo"] = solo.group(1) if solo else None
+    if r["solo"] is None:
+        m = re.search(r"Manche lancée — armes : (.*?) \(slugs (\w+) / (\w+)", texte)
+        if not m or m.group(2) != "pompe" or m.group(3) != "pompe":
+            refus.append("classe non tenue")
+    else:
+        # Le solo ne joue pas de manche : sa salle, sa fusillade, et ce que le banc a refusé lui-même.
+        if not re.search(r"^\s+Salle\s+:\s+\S+ .* tenue en jeu sur toute la mesure", texte, re.M):
+            refus.append("salle non tenue")
+        m = re.search(r"Fusillade\s*:\s*(\d+) coups de PNJ pendant la mesure", texte)
+        r["coups"] = int(m.group(1)) if m else 0
+        if r["coups"] == 0:
+            refus.append("aucune fusillade (aucun coup de PNJ pendant la mesure)")
+        m = re.search(r"J1\s+: poste tenu .*?touché sur (\d+) pas de physique, (\d+) PV perdus", texte)
+        r["pv_perdus"] = int(m.group(2)) if m else None
+        for l in lignes:
+            if re.match(r"^\s+✗ (SALLE|VUE ISO)", l):
+                refus.append(l.strip()[:90])
+    # Un interrupteur de lumière qui n'a pas tenu (duel comme solo) : « ✗ » sur sa ligne de fin.
+    for l in lignes:
+        if re.match(r"^\s+Interrupteurs\s+:.*✗", l):
+            refus.append("interrupteur non tenu : " + l.split("✗", 1)[1].strip()[:80])
+    m = re.search(r"=== RÉSULTAT \((.*)\) ===", texte)
+    r["charge"] = m.group(1) if m else "?"
+    m = re.search(r"\[((?:sans [^\],]+(?:, )?)+)\]", r["charge"])
+    r["interrupteurs"] = m.group(1) if m else ""
     if "Torches          : allumées sur toute la mesure" not in texte:
         refus.append("torches non tenues")
     if "Focus            : stable au premier plan" not in texte:
@@ -98,10 +128,16 @@ def analyser(chemin):
 def ligne(r):
     if "mediane_ms" not in r:
         return "%-28s REFUSÉE (%s)" % (r["journal"], "; ".join(r["refus"]))
-    return "%-28s %s médiane %.1f ms (%.2f i/s) · moyenne %.1f ms · 1 %% bas %.1f ms (%.2f i/s, %d img) · p95 %.1f · %d images · zoom ×%s · faisceau %s%s" % (
+    # Ce qui distingue une prise d'une autre dans une série : la salle de solo et les interrupteurs posés (OM6).
+    scene = ""
+    if r.get("solo"):
+        scene = " · solo %s%s · %d coups de PNJ" % (r["solo"], (" [" + r["interrupteurs"] + "]") if r.get("interrupteurs") else "", r.get("coups", 0))
+    elif r.get("interrupteurs"):
+        scene = " · [%s]" % r["interrupteurs"]
+    return "%-28s %s médiane %.1f ms (%.2f i/s) · moyenne %.1f ms · 1 %% bas %.1f ms (%.2f i/s, %d img) · p95 %.1f · %d images · zoom ×%s · faisceau %s%s%s" % (
         r["journal"], "✓" if r["valide"] else "✗", r["mediane_ms"], 1000.0 / r["mediane_ms"], r["moyenne_ms"], r.get("un_pc_bas_ms", 0.0),
         1000.0 / r.get("un_pc_bas_ms", 1e9), r.get("un_pc_bas_n", 0), r.get("p95_ms", 0.0), r["images"], r["zoom"],
-        r["faisceau_air"], "" if r["valide"] else "  REFUS : " + "; ".join(r["refus"]))
+        r["faisceau_air"], scene, "" if r["valide"] else "  REFUS : " + "; ".join(r["refus"]))
 
 
 if __name__ == "__main__":

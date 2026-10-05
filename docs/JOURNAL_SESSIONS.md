@@ -6264,3 +6264,14 @@ le seuil du contrôle « AVANT Q42 ») ; `docs/iso/ombres/om2/` (trois planches 
 doit répondre dans les trois fichiers, et `grep -c "contact_figurants" sol_iso.gdshader sol_iso_eclaire.gdshader
 volume_masque.gdshaderinc` au moins deux fois dans chacun. ⚠️ Un sol iso qui recevrait sa propre copie de `contact_des_corps`
 sans la boucle des figurants rendrait les PNJ sans ombre de contact sur ce sol-là — sans aucune erreur.
+
+**OM6a, le 2026-10-05 — annoncé ici avant le commit :** `canaux_lumiere.gd` (`halo_a_un_recepteur`, nouvelle, après
+`masque_ombre_halo`) ; `game_state.gd` (`figurants` reçoit un setter ; `_vues_montrees`, nouvelle ; `_accorder_rendu_aux_vues`
+relève les vues montrées ; `_accorder_les_ombres_des_halos`, nouvelle, avant `_viewport_du_joueur`) ; `presentation_3d.gd`
+(`_corps_montre`, nouvelle, avant `_suivre` ; la ligne du mode de rendu des capteurs de joueurs) ; `player.gd`
+(`FIN_LUMIERE_DE_COUP`, nouvelle, sous `_etoile_posee` ; le tween de la lumière de coup, porté par la lumière). Outils :
+`tools/bench_framerate.gd` (le mode solo et les trois interrupteurs — le travail d'un sous-agent du 2026-10-04, porté ; le temps
+d'image du solo lu à l'horloge murale), `tools/test_banc.gd`, `tools/cadence_cloud/` (`SCENE`, les prises de solo) ;
+`tools/test_ombres_allegement.gd` (nouveau) et sa ligne dans `tools/run_suites.sh` ; `docs/iso/ombres/om6/` (la planche de
+cadence, chaque prise). Après une fusion : `grep -n "_accorder_les_ombres_des_halos" game_state.gd` doit répondre au moins trois
+fois (le setter, `_accorder_rendu_aux_vues`, la fonction), et `grep -n "_corps_montre" presentation_3d.gd` deux fois.

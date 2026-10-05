@@ -199,6 +199,16 @@ static func masque_ombre_halo(id: int) -> int:
 	return DECOR | ENNEMI | couche_ombre_corps(1 - id)
 
 
+## OMBRES, OM6 (2026-10-05) — le halo du joueur `id` a-t-il un RÉCEPTEUR ? Il n'éclaire que le canal de SA vue (`canal_de_vue(id)`,
+## son `range_item_cull_mask`) : l'ennemi tel que `id` le voit. Sans la vue de `id` à l'écran (`vues_montrees` : 0 pour J1, 1 pour
+## J2), il n'éclaire rien — et son ombre se calculait pour rien, dans chaque vue et chaque capteur que son rectangle touche : en
+## solo, les halos des PNJ et celui de J2, caché (« n'éclaire AUCUN objet de ce viewport », recensement du banc de cadence).
+## ⚠️ C'est l'OMBRE qui en dépend (`shadow_enabled`), **jamais `enabled`** : le modèle de vue des bots lit `enabled`
+## (`perception_bot_noeud.gd`) — une lueur éteinte serait une lueur que le bot ne voit plus.
+static func halo_a_un_recepteur(id: int, vues_montrees: Array) -> bool:
+	return vues_montrees.has(id)
+
+
 ## Le masque d'ombre d'une lumière NEUTRE du décor qui doit être COUPÉE par les murs pour TOUS les corps — le plafonnier
 ## (chantier SOLO, S5, 2026-10-02). Quatre bits, un par famille de récepteur, et aucun n'est une couche d'occluder de corps :
 ##

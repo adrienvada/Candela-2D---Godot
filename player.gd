@@ -120,6 +120,10 @@ var _source_du_niveau: Node2D = null
 ## OMBRES, OM2 — vrai dès que l'étoile de la classe est posée (`_accorder_occluder_a_la_silhouette`) : le cercle provisoire de
 ## `_ready` ne l'écrase plus.
 var _etoile_posee := false
+## OMBRES, OM6 — l'instant (s) où la lumière de coup s'en va : sa courbe d'extinction (`Charte.Courbe.EXTINCTION`, sur une seconde)
+## ne lui laisse alors qu'1,2 % de son énergie de départ — 0,006 de luminance au plus, en son centre, sous le premier seuil de la
+## pâte D (0,02 à 0,05, `iso_pate.gdshaderinc`). Voir `rpc_update_hp`.
+const FIN_LUMIERE_DE_COUP := 0.6
 ## Ce qu'il reste de la tenue d'un tir noté (secondes) : pendant `TENUE_DU_TIR`, la source reste le tireur même si son pic ne
 ## s'est pas encore montré. Chez le client, le tir arrive par un RPC et le pic par `net_dazzle`, synchronisé à 30 Hz : sans
 ## tenue, la passe de l'image suivante rendait la source aux lampes avant que le pic n'arrive. Chez l'hôte le pic est immédiat,
@@ -3081,14 +3085,20 @@ func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 	hit_light.range_item_cull_mask = 1 | 4
 	add_child(hit_light)
 	
-	var tw_l = create_tween()
+	# OMBRES, OM6 — le tween vit avec la LUMIÈRE (et non le corps) : la lumière libérée plus tôt (ci-dessous), il s'arrête avec elle.
+	var tw_l = hit_light.create_tween()
 	# Perfectly smooth, lingering fade out
 	# DA4.13 — EXTINCTION. C'était un `SINE_IN_OUT`, symétrique : la charte n'a
 	# pas de courbe symétrique et n'en veut pas, une lumière qui meurt n'ayant
 	# aucune raison de s'éteindre aussi lentement qu'elle s'est allumée.
 	Charte.animer(tw_l, hit_light, "energy", hit_light.energy, 0.0, 1.0,
 		Charte.Courbe.EXTINCTION)
-	tw_l.tween_callback(hit_light.queue_free)
+	# OMBRES, OM6 (2026-10-05) — la lumière s'en va quand il ne lui reste qu'1 % de son énergie (`FIN_LUMIERE_DE_COUP`), au lieu
+	# de la seconde entière : sa traîne n'éclairait plus rien qu'on voie, et coûtait encore une ombre — une par PLOMB, de 400 px.
+	# ⚠️ **Couper seulement son ombre, comme le proposait la feuille de route, la ferait passer à travers les murs** : à 0,3 s il
+	# lui reste 12 % de son énergie, à 0,5 s encore 3 % — le défaut même qu'OM4a a corrigé (un corps derrière un mur « rougissait
+	# à travers la pierre »).
+	tw_l.parallel().tween_callback(hit_light.queue_free).set_delay(FIN_LUMIERE_DE_COUP)
 
 ## V4.8 — le tintement de la douille, 300 a 500 ms apres le coup.
 ##

@@ -7,6 +7,19 @@
 # Alterner (A B B A, ou A B C C B A) : le miroir compense une dérive régulière de la machine, pas un voisin bruyant — c'est
 # le rôle de la porte.
 #
+# Une série de SOLO (OM6, chantier OMBRES) : la scène passe par `SCENE`, que chaque prise lit (voir `prise.sh`), et le plan ne porte
+# que les drapeaux en plus. Exemple, le coût de chaque lumière de la salle 8.9 (« étiquette|arbre|drapeaux », A refait à la fin) :
+#   SCENE="--solo=8.9" serie.sh plan.txt sortie solo1      avec, dans plan.txt :
+#     A|/chemin/arbre|
+#     B|/chemin/arbre|--sans-ombres-2d
+#     C|/chemin/arbre|--sans-capteurs
+#     D|/chemin/arbre|--sans-halos-pnj
+#     D|/chemin/arbre|--sans-halos-pnj
+#     C|/chemin/arbre|--sans-capteurs
+#     B|/chemin/arbre|--sans-ombres-2d
+#     A|/chemin/arbre|
+# `verdict.py` compare chaque étiquette à la référence A, en cadence.
+#
 # `VERROU_MESURE=<fichier>` : posé (`touch`) juste avant la série, retiré juste après, quoi qu'il arrive — le signal aux
 # autres sessions du conteneur qu'une série de temps tourne (protocole du 2026-09-30 : elles attendent qu'il n'existe plus
 # ET qu'aucun Godot ne tourne avant de lancer les leurs).
