@@ -179,6 +179,7 @@ func _run() -> void:
 		"; ".join(manquants_solo))
 	_check("et le mode solo sait dire quand ils manquent", not (Banc.preconditions_solo(null, null) as Array).is_empty())
 	_verifier_le_solo_du_banc(Banc, main)
+	_verifier_les_reglages_d_ombre(Banc, main)
 
 	# La planche de l'éblouissement, même raison et même remède : elle ouvre une
 	# fenêtre, donc aucune suite ne peut l'exécuter — mais une suite peut lire
@@ -629,7 +630,9 @@ func _verifier_le_solo_du_banc(Banc: GDScript, main: Node) -> void:
 	var i_suite := texte_ready.find("\nfunc ", i_ready + 10)
 	var corps_ready := texte_ready.substr(i_ready, i_suite - i_ready)
 	var communs := ["--seconds", "--max-fps", "--physique", "--iso", "--lightmap", "--seuil-lent", "--temps-par-vue", "--solo",
-		"--solo-poste", "--solo-graine", "--sans-ombres-2d", "--sans-capteurs", "--sans-halos-pnj"]
+		"--solo-poste", "--solo-graine", "--sans-ombres-2d", "--sans-capteurs", "--sans-halos-pnj",
+		# OM3c (Q85) : deux réglages d'ombre, valables en duel comme en solo.
+		"--atlas-ombres", "--pcf5"]
 	var lus: Array[String] = []
 	var oublies: Array[String] = []
 	for m in RegEx.create_from_string("\"(--[a-z0-9-]+)").search_all(corps_ready):
@@ -767,6 +770,95 @@ func _verifier_le_solo_du_banc(Banc: GDScript, main: Node) -> void:
 	for i in [ombres, seul_capteurs, pas_un_pnj, halos]:
 		i.desarmer()
 	scene.free()
+
+## OMBRES, OM3c (Q85, Q83) — les réglages d'ombre que les deux bancs posent à l'exécution, SANS fenêtre : la lecture des arguments du
+## banc de cadence, les lumières que Q85 filtre (`tools/reglages_ombres.gd`, partagé avec le banc des ombres), le PCF5 posé puis rendu
+## sans toucher à `enabled` ni à `shadow_enabled`, sa vérification de fin ; et l'ancre des variantes de la pâte D. Ce que la suite ne
+## voit pas : l'image (Xvfb) — la planche de Q83 et Q85 la montre, et le banc refuse une variante qui ne change aucun pixel.
+func _verifier_les_reglages_d_ombre(Banc: GDScript, main: Node) -> void:
+	var Reglages: GDScript = load("res://tools/reglages_ombres.gd")
+	# 1. Les arguments : un réglage lu de travers ferait mesurer l'atlas du projet sous le nom d'un autre.
+	var bons := PackedStringArray(["--atlas-ombres=4096", "--pcf5"])
+	_check("--atlas-ombres=4096 et --pcf5 forment une prise valide (duel comme solo)",
+		(Banc.refus_des_reglages(bons) as Array).is_empty() and (Banc.refus_des_reglages(PackedStringArray(["--pcf5=1.5"])) as Array).is_empty(),
+		"; ".join(Banc.refus_des_reglages(bons)))
+	var mal_lus: Array[String] = []
+	for a in ["--atlas-ombres=abc", "--atlas-ombres=3000", "--atlas-ombres=128", "--atlas-ombres=32768", "--atlas-ombres", "--pcf5=-1",
+			"--pcf5=doux"]:
+		if (Banc.refus_des_reglages(PackedStringArray([a])) as Array).is_empty():
+			mal_lus.append(a)
+	_check("un atlas qui n'est pas une puissance de deux de 256 à 16384, ou un lissage qui n'est pas un nombre positif, est refusé",
+		mal_lus.is_empty(), ", ".join(mal_lus))
+	# Et le banc les refuse AVANT tout le reste, avec les refus du solo : une fonction juste que `_ready()` n'appelle pas ne refuse rien.
+	var texte_banc_q85 := FileAccess.get_file_as_string("res://tools/bench_framerate.gd")
+	var debut_ready := texte_banc_q85.find("func _ready() -> void:")
+	var corps_ready_q85 := texte_banc_q85.substr(debut_ready, texte_banc_q85.find("\nfunc ", debut_ready + 10) - debut_ready)
+	_check("le banc de cadence passe ses arguments par `refus_des_reglages` dans `_ready()`, avec les refus du solo",
+		corps_ready_q85.contains("refus_solo.append_array(refus_des_reglages(args))"))
+	# 2. Les lumières que Q85 filtre : la torche et le halo d'un corps, le halo d'un plafonnier — rien d'autre.
+	var j1: Node = main.p1
+	var scene := Node2D.new()
+	scene.name = "EssaiReglagesOmbres"
+	root.add_child(scene)
+	# Un VRAI plafonnier (son `_ready` le range dans son groupe et crée son halo), pas un nœud qui en imiterait les appuis.
+	var plafonnier: Node2D = (load("res://plafonnier.gd") as GDScript).new()
+	scene.add_child(plafonnier)
+	var halo_plafonnier: Variant = plafonnier.get("halo")
+	var lumieres: Array = Reglages.lumieres_de_q85(self, [j1])
+	var halos_des_plafonniers: Array = get_nodes_in_group("plafonniers").map(func(p) -> Variant: return p.get("halo"))
+	var etrangeres: Array = []
+	for l in lumieres:
+		if l != j1.flashlight and l != j1.ambient_light and not halos_des_plafonniers.has(l):
+			etrangeres.append(l)
+	_check("Q85 filtre la torche et le halo de chaque corps et le halo de chaque plafonnier — ni le flash, ni l'écho, ni la rétrodiffusion",
+		halo_plafonnier is PointLight2D and lumieres.has(j1.flashlight) and lumieres.has(j1.ambient_light) and lumieres.has(halo_plafonnier)
+		and etrangeres.is_empty() and not lumieres.has(j1.body_light) and not lumieres.has(j1.muzzle_flash),
+		"%d lumières, %d étrangère(s)" % [lumieres.size(), etrangeres.size()])
+	# 3. Le PCF5 posé par la classe des interrupteurs, puis vérifié, puis rendu ; `enabled` et `shadow_enabled` intacts.
+	var Inter: GDScript = Banc.get_script_constant_map()["Interrupteurs"]
+	var torche: PointLight2D = j1.flashlight
+	var avant := [torche.enabled, torche.shadow_enabled, torche.shadow_filter, torche.shadow_filter_smooth]
+	var filtre = Inter.new()
+	filtre.pcf5 = true
+	filtre.atlas_ombres = 4096
+	_check("les réglages d'ombre rendent les interrupteurs actifs et se lisent dans le libellé de la charge",
+		filtre.actif() and "atlas d'ombres 4096" in filtre.noms_des_retraits() and "PCF5, lissage 1.0" in filtre.noms_des_retraits(),
+		str(filtre.noms_des_retraits()))
+	filtre.armer(self, [], j1, null, scene)
+	_check("--pcf5 pose le PCF5 au lissage léger sur la torche, sans toucher à `enabled` ni à `shadow_enabled`",
+		torche.shadow_filter == PointLight2D.SHADOW_FILTER_PCF5 and is_equal_approx(torche.shadow_filter_smooth, 1.0)
+		and torche.enabled == avant[0] and torche.shadow_enabled == avant[1]
+		and (halo_plafonnier as PointLight2D).shadow_filter == PointLight2D.SHADOW_FILTER_PCF5,
+		"filtre %d, lissage %.2f" % [torche.shadow_filter, torche.shadow_filter_smooth])
+	torche.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	var bilan: Dictionary = filtre.finir()
+	_check("la vérification de la fin voit une lumière qui a perdu son PCF5, et la rend comme un défaut",
+		int(bilan["pcf5_tenues"]) == int(bilan["pcf5_vivantes"]) - 1 and not (filtre.defauts(bilan) as Array).is_empty(), str(bilan))
+	Reglages.poser_le_filtre(lumieres, false)
+	_check("rendu au jeu : aucun filtre, lissage nul (ce que `player.gd` et `plafonnier.gd` posent)",
+		torche.shadow_filter == avant[2] and is_equal_approx(torche.shadow_filter_smooth, avant[3])
+		and j1.ambient_light.shadow_filter == PointLight2D.SHADOW_FILTER_NONE)
+	Reglages.poser_l_atlas(Reglages.atlas_du_projet())
+	_check("l'atlas du projet est celui que le jeu rend (2048) et Q85 propose 4096",
+		Reglages.atlas_du_projet() == 2048 and Reglages.ATLAS_PROPOSE == 4096, str(Reglages.atlas_du_projet()))
+	scene.free()
+	# 4. Q83 — l'ancre des variantes de la pâte D : une fois et une seule dans le fichier, et la garde sait dire quand elle manque.
+	var Ombres: GDScript = load("res://tools/planche_ombres.gd")
+	var code_pate := FileAccess.get_file_as_string("res://iso_pate.gdshaderinc")
+	var ancre: String = Ombres.ANCRE_LAVIS
+	_check("l'ancre des variantes de Q83 (les paliers e2 et e3 de la pâte D) est dans iso_pate.gdshaderinc, une fois",
+		Ombres.faute_de_l_ancre_du_lavis(code_pate) == "", Ombres.faute_de_l_ancre_du_lavis(code_pate))
+	_check("… et la garde sait dire quand elle manque, ou quand elle y est deux fois",
+		Ombres.faute_de_l_ancre_du_lavis(code_pate.replace(ancre, "")) != "" and Ombres.faute_de_l_ancre_du_lavis(code_pate + ancre) != "")
+	var variantes: Dictionary = Ombres.VARIANTES_LAVIS
+	var fautes: Array[String] = []
+	for v in ["a", "b", "c"]:
+		var t := String(variantes.get(v, ""))
+		if t == "" or t == ancre or not t.contains("\tfloat q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)\n") or not t.contains("float e_3 = "):
+			fautes.append(v)
+	_check("les trois variantes remplacent les paliers e2 et e3 et gardent e1 tel quel (« dans tous les cas e1 et son pochoir restent »)",
+		fautes.is_empty() and variantes.size() == 3, ", ".join(fautes))
+
 
 ## Les plans du banc des ombres qui nomment une salle absente, un PNJ que leur salle n'a pas ou une classe inconnue. Séparée de
 ## son appel pour être vérifiable, comme `_collisions_de_cles`.

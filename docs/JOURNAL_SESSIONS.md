@@ -6286,3 +6286,15 @@ deux interrupteurs de banc ; Q89 : le geste rangé en patch dans `docs/iso/ombre
 `tools/planche_ombres.gd` (en propre) ; `tools/bench_framerate.gd` et `tools/test_banc.gd` (par insertions) ;
 `tools/cadence_cloud/` ; `docs/iso/ombres/om3/`. Entre deux lots, la session ne tient aucun des fichiers de jeu annoncés plus
 haut ; qui doit y écrire le dit à `candela-2d-godot-40` (`ListAgents`), pour qu'elle fusionne `main` avant son prochain lot.
+
+**OM3c, le 2026-10-05 — annoncé ici avant le commit (aucun code de jeu) :** `tools/planche_ombres.gd` (en propre : `PATE_INCLUDE`,
+`ANCRE_LAVIS`, `VARIANTES_LAVIS`, `IMAGES_BALAYAGE`, `PAS_BALAYAGE_DEG`, les familles `q83` et `q85`, `faute_de_l_ancre_du_lavis`,
+`_poser_le_lavis`, `_corps_de_la_salle`, `_noter_l_ecart_a_la_reference`, `_ecart_moyen` ; l'attente de l'allumage, en images) ;
+`tools/reglages_ombres.gd` (nouveau, en propre : les lumières de Q85, l'atlas, le filtre) ; `tools/bench_framerate.gd` (par
+insertions : `--atlas-ombres`, `--pcf5`, `refus_des_reglages`, les champs et les lignes de la classe `Interrupteurs`) ;
+`tools/test_banc.gd` (par insertions : `_verifier_les_reglages_d_ombre`, deux drapeaux communs au duel et au solo) ;
+`docs/iso/ombres/om3/` (les planches de Q83 et Q85, le coût de Q85, leurs mesures). Après une fusion : `grep -n "ANCRE_LAVIS"
+tools/planche_ombres.gd` et `grep -n "refus_des_reglages" tools/bench_framerate.gd` doivent répondre. ⚠️ Qui retouche les paliers
+e2 et e3 d'`iso_pate.gdshaderinc` met `ANCRE_LAVIS` à jour : `test_banc` rougit sinon, et c'est voulu. La session s'appelle
+désormais `candela-2d-godot-77` dans `ListAgents` (un redémarrage de plus ; même session, même branche) : son nom y change à
+chaque redémarrage du conteneur, sa branche jamais.

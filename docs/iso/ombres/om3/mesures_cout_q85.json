@@ -1,0 +1,547 @@
+{
+ "bras": {
+  "A": "A — le jeu (atlas 2048, aucun filtre)",
+  "B": "B — atlas à 4096",
+  "C": "C — PCF5, lissage léger"
+ },
+ "scenes": {
+  "q85solo": {
+   "titre": "Salle 8.9 (« La salle pleine »), une fusillade",
+   "prises": [
+    {
+     "rang": 1,
+     "bras": "A",
+     "fichier": "q85solo_01_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 933.9,
+     "mediane_ms": 945.5,
+     "un_pc_bas_ms": 1901.2,
+     "images": 50,
+     "coups_pnj": 109,
+     "racine": {
+      "cpu_ms": 124.96,
+      "gpu_ms": 165.5
+     }
+    },
+    {
+     "rang": 2,
+     "bras": "B",
+     "fichier": "q85solo_02_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 836.0,
+     "mediane_ms": 840.4,
+     "un_pc_bas_ms": 1190.6,
+     "images": 55,
+     "coups_pnj": 121,
+     "racine": {
+      "cpu_ms": 130.47,
+      "gpu_ms": 152.32
+     }
+    },
+    {
+     "rang": 3,
+     "bras": "C",
+     "fichier": "q85solo_03_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 900.3,
+     "mediane_ms": 897.8,
+     "un_pc_bas_ms": 1087.5,
+     "images": 50,
+     "coups_pnj": 120,
+     "racine": {
+      "cpu_ms": 115.82,
+      "gpu_ms": 155.47
+     }
+    },
+    {
+     "rang": 4,
+     "bras": "C",
+     "fichier": "q85solo_04_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 912.1,
+     "mediane_ms": 889.2,
+     "un_pc_bas_ms": 1409.6,
+     "images": 51,
+     "coups_pnj": 113,
+     "racine": {
+      "cpu_ms": 113.77,
+      "gpu_ms": 158.43
+     }
+    },
+    {
+     "rang": 5,
+     "bras": "B",
+     "fichier": "q85solo_05_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 792.1,
+     "mediane_ms": 816.1,
+     "un_pc_bas_ms": 1056.5,
+     "images": 57,
+     "coups_pnj": 117,
+     "racine": {
+      "cpu_ms": 106.11,
+      "gpu_ms": 150.42
+     }
+    },
+    {
+     "rang": 6,
+     "bras": "A",
+     "fichier": "q85solo_06_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 845.6,
+     "mediane_ms": 856.8,
+     "un_pc_bas_ms": 1102.7,
+     "images": 54,
+     "coups_pnj": 121,
+     "racine": {
+      "cpu_ms": 111.38,
+      "gpu_ms": 153.63
+     }
+    },
+    {
+     "rang": 7,
+     "bras": "A",
+     "fichier": "q85solo_07_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 821.8,
+     "mediane_ms": 825.6,
+     "un_pc_bas_ms": 1166.7,
+     "images": 56,
+     "coups_pnj": 118,
+     "racine": {
+      "cpu_ms": 107.14,
+      "gpu_ms": 152.33
+     }
+    },
+    {
+     "rang": 8,
+     "bras": "B",
+     "fichier": "q85solo_08_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 850.4,
+     "mediane_ms": 866.2,
+     "un_pc_bas_ms": 1098.4,
+     "images": 53,
+     "coups_pnj": 117,
+     "racine": {
+      "cpu_ms": 115.52,
+      "gpu_ms": 158.73
+     }
+    },
+    {
+     "rang": 9,
+     "bras": "C",
+     "fichier": "q85solo_09_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 892.6,
+     "mediane_ms": 899.9,
+     "un_pc_bas_ms": 1126.5,
+     "images": 51,
+     "coups_pnj": 115,
+     "racine": {
+      "cpu_ms": 108.29,
+      "gpu_ms": 152.04
+     }
+    },
+    {
+     "rang": 10,
+     "bras": "C",
+     "fichier": "q85solo_10_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 910.3,
+     "mediane_ms": 906.1,
+     "un_pc_bas_ms": 1741.9,
+     "images": 51,
+     "coups_pnj": 106,
+     "racine": {
+      "cpu_ms": 108.46,
+      "gpu_ms": 151.33
+     }
+    },
+    {
+     "rang": 11,
+     "bras": "B",
+     "fichier": "q85solo_11_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 781.5,
+     "mediane_ms": 789.2,
+     "un_pc_bas_ms": 898.8,
+     "images": 58,
+     "coups_pnj": 115,
+     "racine": {
+      "cpu_ms": 107.09,
+      "gpu_ms": 150.56
+     }
+    },
+    {
+     "rang": 12,
+     "bras": "A",
+     "fichier": "q85solo_12_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 778.0,
+     "mediane_ms": 792.3,
+     "un_pc_bas_ms": 961.9,
+     "images": 58,
+     "coups_pnj": 118,
+     "racine": {
+      "cpu_ms": 102.04,
+      "gpu_ms": 144.06
+     }
+    },
+    {
+     "rang": 13,
+     "bras": "A",
+     "fichier": "q85solo_13_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 849.7,
+     "mediane_ms": 843.8,
+     "un_pc_bas_ms": 1303.7,
+     "images": 54,
+     "coups_pnj": 107,
+     "racine": {
+      "cpu_ms": 113.66,
+      "gpu_ms": 155.54
+     }
+    },
+    {
+     "rang": 14,
+     "bras": "B",
+     "fichier": "q85solo_14_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 821.2,
+     "mediane_ms": 829.4,
+     "un_pc_bas_ms": 1077.9,
+     "images": 55,
+     "coups_pnj": 121,
+     "racine": {
+      "cpu_ms": 105.89,
+      "gpu_ms": 151.94
+     }
+    },
+    {
+     "rang": 15,
+     "bras": "C",
+     "fichier": "q85solo_15_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 958.1,
+     "mediane_ms": 956.3,
+     "un_pc_bas_ms": 1221.0,
+     "images": 48,
+     "coups_pnj": 109,
+     "racine": {
+      "cpu_ms": 113.42,
+      "gpu_ms": 159.02
+     }
+    },
+    {
+     "rang": 16,
+     "bras": "C",
+     "fichier": "q85solo_16_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 1153.9,
+     "mediane_ms": 1198.5,
+     "un_pc_bas_ms": 1446.9,
+     "images": 46,
+     "coups_pnj": 123,
+     "racine": {
+      "cpu_ms": 121.38,
+      "gpu_ms": 164.6
+     }
+    },
+    {
+     "rang": 17,
+     "bras": "B",
+     "fichier": "q85solo_17_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 830.7,
+     "mediane_ms": 825.3,
+     "un_pc_bas_ms": 980.0,
+     "images": 55,
+     "coups_pnj": 123,
+     "racine": {
+      "cpu_ms": 139.0,
+      "gpu_ms": 158.75
+     }
+    },
+    {
+     "rang": 18,
+     "bras": "A",
+     "fichier": "q85solo_18_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 792.7,
+     "mediane_ms": 824.1,
+     "un_pc_bas_ms": 965.3,
+     "images": 58,
+     "coups_pnj": 126,
+     "racine": {
+      "cpu_ms": 104.09,
+      "gpu_ms": 147.15
+     }
+    }
+   ],
+   "moyennes_ms": {
+    "A": 837.0,
+    "B": 818.6,
+    "C": 954.5
+   },
+   "erreur_type_ms": {
+    "A": 22.6,
+    "B": 10.9,
+    "C": 40.9
+   },
+   "cout_pct": {
+    "B": -2.2,
+    "C": 14.1
+   },
+   "racine_gpu_mediane_ms": {
+    "A": 153.0,
+    "B": 152.1,
+    "C": 156.9
+   },
+   "coups_pnj_moyens": {
+    "A": 116.5,
+    "B": 119,
+    "C": 114.3
+   }
+  },
+  "q85duel": {
+   "titre": "Duel de la règle 278 (fusée, vue unique, pompe)",
+   "prises": [
+    {
+     "rang": 1,
+     "bras": "A",
+     "fichier": "q85duel_01_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 334.1,
+     "mediane_ms": 333.3,
+     "un_pc_bas_ms": 364.1,
+     "images": 135,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 132.7,
+      "gpu_ms": 177.28
+     }
+    },
+    {
+     "rang": 2,
+     "bras": "B",
+     "fichier": "q85duel_02_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 342.8,
+     "mediane_ms": 347.2,
+     "un_pc_bas_ms": 402.7,
+     "images": 132,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 133.41,
+      "gpu_ms": 179.65
+     }
+    },
+    {
+     "rang": 3,
+     "bras": "C",
+     "fichier": "q85duel_03_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 374.9,
+     "mediane_ms": 375.0,
+     "un_pc_bas_ms": 413.2,
+     "images": 121,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 138.57,
+      "gpu_ms": 184.61
+     }
+    },
+    {
+     "rang": 4,
+     "bras": "C",
+     "fichier": "q85duel_04_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 377.1,
+     "mediane_ms": 375.0,
+     "un_pc_bas_ms": 523.7,
+     "images": 120,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 141.76,
+      "gpu_ms": 187.63
+     }
+    },
+    {
+     "rang": 5,
+     "bras": "B",
+     "fichier": "q85duel_05_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 332.1,
+     "mediane_ms": 333.3,
+     "un_pc_bas_ms": 388.0,
+     "images": 136,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 129.53,
+      "gpu_ms": 174.49
+     }
+    },
+    {
+     "rang": 6,
+     "bras": "A",
+     "fichier": "q85duel_06_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 332.0,
+     "mediane_ms": 333.3,
+     "un_pc_bas_ms": 394.8,
+     "images": 136,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 130.72,
+      "gpu_ms": 176.34
+     }
+    },
+    {
+     "rang": 7,
+     "bras": "A",
+     "fichier": "q85duel_07_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 335.2,
+     "mediane_ms": 339.0,
+     "un_pc_bas_ms": 514.5,
+     "images": 135,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 133.34,
+      "gpu_ms": 176.71
+     }
+    },
+    {
+     "rang": 8,
+     "bras": "B",
+     "fichier": "q85duel_08_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 340.6,
+     "mediane_ms": 345.8,
+     "un_pc_bas_ms": 398.4,
+     "images": 133,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 134.53,
+      "gpu_ms": 180.52
+     }
+    },
+    {
+     "rang": 9,
+     "bras": "C",
+     "fichier": "q85duel_09_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 355.8,
+     "mediane_ms": 350.0,
+     "un_pc_bas_ms": 430.2,
+     "images": 127,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 131.71,
+      "gpu_ms": 176.89
+     }
+    },
+    {
+     "rang": 10,
+     "bras": "C",
+     "fichier": "q85duel_10_C.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 367.9,
+     "mediane_ms": 364.6,
+     "un_pc_bas_ms": 452.7,
+     "images": 123,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 135.95,
+      "gpu_ms": 181.65
+     }
+    },
+    {
+     "rang": 11,
+     "bras": "B",
+     "fichier": "q85duel_11_B.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 352.1,
+     "mediane_ms": 352.0,
+     "un_pc_bas_ms": 409.3,
+     "images": 128,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 139.32,
+      "gpu_ms": 185.58
+     }
+    },
+    {
+     "rang": 12,
+     "bras": "A",
+     "fichier": "q85duel_12_A.log",
+     "valide": true,
+     "refus": [],
+     "moyenne_ms": 333.9,
+     "mediane_ms": 328.1,
+     "un_pc_bas_ms": 390.5,
+     "images": 135,
+     "coups_pnj": 0,
+     "racine": {
+      "cpu_ms": 131.16,
+      "gpu_ms": 177.18
+     }
+    }
+   ],
+   "moyennes_ms": {
+    "A": 333.8,
+    "B": 341.9,
+    "C": 368.9
+   },
+   "erreur_type_ms": {
+    "A": 0.7,
+    "B": 4.1,
+    "C": 4.8
+   },
+   "cout_pct": {
+    "B": 2.4,
+    "C": 10.5
+   },
+   "racine_gpu_mediane_ms": {
+    "A": 176.9,
+    "B": 180.1,
+    "C": 183.1
+   },
+   "coups_pnj_moyens": {
+    "A": 0,
+    "B": 0,
+    "C": 0
+   }
+  }
+ }
+}

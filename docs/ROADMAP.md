@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3275,6 +3275,21 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un banc qui attend en temps RÉEL n'attend presque rien sous llvmpipe : l'allumage « CANDELA » voilait le premier plan (2026-10-05)
+
+Chantier OMBRES, OM3c. `photographe._attendre` (donc `_attendre_disparition`) compte en millisecondes de l'horloge ; les bancs
+tournent à `--fixed-fps 60`, où le jeu avance d'un soixantième de seconde par IMAGE, quelle que soit la durée réelle de l'image.
+Sous llvmpipe, une image dure plusieurs centaines de millisecondes : les trois secondes accordées à la sortie de l'allumage
+(`PowerOn`, 0,45 s de jeu, 27 images) n'en laissent passer qu'une poignée, et l'attente rend la main avant que le mot « CANDELA »
+soit effacé. Le premier plan d'un passage le photographiait à demi transparent par-dessus la salle — vu sur la planche de Q83, où il
+faussait la RÉFÉRENCE de la pâte D (10 850 pixels d'écart attribués à la variante (a), 6 518 sans lui). Sur le Mac, à cadence réelle,
+trois secondes font 180 images : le défaut n'existe que sous llvmpipe — là même où les planches se font.
+
+Le banc des ombres attend désormais aussi en IMAGES (120 au plus), et s'arrête si l'allumage reste. **Cinq autres outils ont le même
+appel** — `photographe.gd`, `planche_q42.gd`, `planche_braise.gd`, `planche_usine.gd`, `banc_perception_bot.gd` (ce dernier ne
+compare pas d'écrans) : signalé, pas corrigé, hors du chantier. Une attente de MISE EN SCÈNE se compte dans le temps du jeu, jamais
+dans celui de l'horloge.
 
 ### Sous llvmpipe, une image plus longue que le plafond du delta se lit AU plafond — le solo se mesure à l'horloge murale (2026-10-05)
 
@@ -33951,10 +33966,10 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** (le culling et le brouillage par la source, ensemble) — voir « OM1 » plus bas ; Q89 (l'appareil de brouillage) posée à la livraison |
 | **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | ✅ **FAITE le 2026-10-05** — voir « OM2 » plus bas |
-| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts |
+| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts ; ✅ **OM3c FAITE le 2026-10-05** : leur planche et leur mesure, posées par les bancs sans toucher au jeu — voir « OM3c » plus bas |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) et ✅ **OM4b FAITE le 2026-10-05** (une couche par PNJ, les lumières posées : Q86, Q87) — voir plus bas |
 | **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** — voir « OM5 » plus bas |
-| **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | ✅ **OM6a FAITE le 2026-10-05** (le banc du solo ; halos, capteurs, lumière de coup : +9 % de cadence dans la salle 8.9) — voir « OM6a » plus bas ; murs par contours et capteurs lointains mesurés avant et pas faits (au plus 2 % et 1 %) ; capteurs d'objets : à faire |
+| **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | ✅ **OM6a FAITE le 2026-10-05** (le banc du solo ; halos, capteurs, lumière de coup : +9 % de cadence dans la salle 8.9) — voir « OM6a » plus bas ; murs par contours et capteurs lointains mesurés avant et pas faits (au plus 2 % et 1 %) ; capteurs d'objets mesurés au passage par OM3c (moins de 0,5 % chacun) et pas faits — **OM6 close** : chaque geste fait, ou mesuré et laissé |
 | **OM7** | Plus tard : l'ombre des corps calculée dans le shader du sol | à ouvrir après OM1 à OM3 | — |
 
 **Ce que veut dire « fini », pour chaque lot** : le code ; ses gardes, chacune vue ROUGE par un sabotage puis restaurée ;
@@ -34021,7 +34036,8 @@ n'est demandée sur le Mac d'Adrien, décision du 2026-09-30).
 ### Les questions pour Adrien (Q81 à Q88)
 
 Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bloque que son lot. **Tranchées le 2026-10-05 :
-Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D, après sa planche), Q85 (le filtre d'ombre) et Q89 (l'appareil de
+Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D — sa planche faite par OM3c), Q85 (le filtre d'ombre — mesuré par OM3c)
+et Q89 (l'appareil de
 brouillage, posée à la livraison d'OM1).**
 
 - **Q81 — Le brouillage n'efface-t-il que le corps qui éblouit, et seulement au-delà de l'auto-éblouissement de 0,06 ?**
@@ -34050,6 +34066,13 @@ brouillage, posée à la livraison d'OM1).**
   scintillement). *Mesuré par OM3a (2026-10-04)* : sans le tirage, une lumière qui remonte en douceur fait encore changer 2 000 à
   5 000 pixels de plus de 8 niveaux d'une image à l'autre en pâte D — dans un seul sens (zéro aller-retour), zéro en pâte brute :
   c'est le balayage des paliers que les trois variantes adoucissent, la mesure qui les départagera.
+  *La planche, par OM3c (2026-10-05, `docs/iso/ombres/om3/planche_q83.jpg`)* : les variantes chiffrées — (a) e2 = 0,20 et
+  e3 = 0,47 sans bruit, (b) ±20 % autour de e2 et e3, (c) une rampe de e1 à e3 — et posées à l'exécution. Pendant la remontée du
+  recul, la pâte D fait changer 32 263 pixels au-delà de 8 niveaux en 11 images ; (a) 33 449 (le bruit n'y est pour rien), (b)
+  3 140, (c) 15, la pâte brute 4. À l'image, (b) reste la plus proche de D (71 pixels au-delà de 24 niveaux dans la flaque du
+  plafonnier), (c) la plus loin (13 459 : le palier du milieu devient un dégradé). Aucune ne retire le papillotement d'un balayage,
+  qui vit sur les arêtes des ombres : c'est Q85. **Avis révisé : (b)** — le lavis gardé, 90 % du balayage retiré ; (c) si Adrien
+  veut un mouvement parfaitement lisse, au prix du palier du milieu.
 - **Q84 — La respiration de la torche : la retirer, ou la réduire ?** À travers les paliers, ±3 % d'énergie se voient comme des
   contours qui ondulent (+20 à 40 % de pixels qui changent d'une image à l'autre), pas comme une lumière qui respire. Et ce n'est
   pas un souffle (lu au code, non mesuré) : le bruit est celui de la secousse de caméra (`noise.frequency = 10`, « Fast frequency
@@ -34070,6 +34093,10 @@ brouillage, posée à la livraison d'OM1).**
   pixel » est celle qui décide du jeu (`docs/ETUDE_ISO.md`), et le bord de l'ombre a été jugé bon le 2026-09-15. **Avis : l'atlas
   à 4096 si le cloud le mesure sous 3 % du temps d'image** (la règle posée avec Adrien : au-delà, la question lui revient avec
   son prix) ; **le PCF5 seulement si Adrien veut des bords doux**, en connaissant la pénombre.
+  *Mesuré par OM3c (2026-10-05, `docs/iso/ombres/om3/planche_q85.jpg` et `cout_q85.png`)* : à 4096, les marches de l'arête sont
+  deux fois plus fines et le papillotement d'une ombre qui tourne tombe de 2 658 à 44 allers-retours dans la lightmap (−98 %), pour
+  un coût que le bruit ne distingue pas (−2,2 % dans la salle 8.9, +2,4 % en duel) — **la règle des 3 % est tenue**. Le PCF5 pose
+  une pénombre en paliers, ne retire que la moitié du papillotement, et coûte 10 à 14 %. **Avis : l'atlas à 4096 ; pas le PCF5.**
 - **Q86 — Les PNJ entre eux : une couche d'étoile par emplacement de PNJ, ou une règle « équipe » écrite ?** Aujourd'hui la
   torche d'un PNJ traverse les autres PNJ. Couches individuelles : bits libres à partir de 512, indexés comme
   `slot_de_reserve()` ; règle « équipe » : on l'écrit et on la garde. **Avis : couches individuelles.**
@@ -34846,9 +34873,11 @@ fil.
 **Non prouvé.** Rien sous Metal : la mesure est relative, sous llvmpipe (`cadence_cloud/prise.sh`) ; le gain sur le Mac reste à
 relever (la cible est `1 % bas ≥ 60`). Le duel n'a pas été remesuré (les gestes 1 et 2 y jouent en ligne et à l'entraînement).
 
-**Ce qui reste d'OM6 (signalé, pas fait).** Les **capteurs d'objets** (`miroirs_iso.gd`) rendent même loin de tout écran — la
+**Ce qui reste d'OM6 (mesuré, pas fait — OM6 close, le 2026-10-05).** Les **capteurs d'objets** (`miroirs_iso.gd`) rendent même loin de tout écran — la
 règle des 1 300 px des figurants leur manque (dans la salle 8.9, celui d'une fusée de PNJ portait 14 lampes) ; leur gain ne se
-mesure pas dans une salle où J1 est au milieu de la fusillade. Deux gestes **mesurés avant, et pas faits** (OM6b, 2026-10-05) :
+mesure pas dans une salle où J1 est au milieu de la fusillade — **mesuré au passage par les prises d'OM3c** (`--temps-par-vue`,
+salle 8.9) : un capteur d'objet rend en 0,5 à 0,6 ms (médiane), la vue racine en 145 à 165 ms ; moins de 0,5 % chacun, pas fait.
+Deux gestes **mesurés avant, et pas faits** (OM6b, 2026-10-05) :
 - les **murs par contours** — `MapGeometry.trace_contours` contre `merge_rects`, sur les cinquante salles des chapitres 0, 1, 4, 8
   et 9 : dans le pire cas livré, la salle 8.9, **244 → 232 arêtes d'occulteurs (−5 %), 61 → 52 occulteurs (−15 %)** ; la 9.7,
   304 → 264 arêtes. Au plus 2 % du temps d'image (les ombres 2D en pèsent 12 à 18 %), pour le geste le plus risqué du lot — un
@@ -34857,6 +34886,97 @@ mesure pas dans une salle où J1 est au milieu de la fusillade. Deux gestes **me
   1 300 px arrête les autres) — un pour cent au mieux.
 
 La vue `PeintureIso` recense 30 lampes sans récepteur, mais ne rend que deux fois en 18 s : sans effet sur la cadence.
+
+### OM3c — FAITE le 2026-10-05 : les preuves que demandent Q83 et Q85 (aucun code de jeu)
+
+Q83 attendait sa planche (« Avis : après la planche — OM3 la produit, avec la mesure de scintillement »), Q85 sa mesure (« l'atlas
+à 4096 si le cloud le mesure sous 3 % du temps d'image »). OM3c les produit sans toucher au code du jeu : tout se pose À
+L'EXÉCUTION, par les bancs.
+
+**Le banc des ombres** (`tools/planche_ombres.gd`, familles `q83` et `q85`) :
+- **les trois variantes de la pâte D, chiffrées ici** (l'audit ne les chiffrait pas) : (a) les seuils e2 et e3 sans bruit — le
+  bruit remplacé par sa moyenne, e2 = 0,20 et e3 = 0,47 ; (b) les transitions élargies — ±20 % autour de e2 et e3 au lieu de
+  ±0,01 ; (c) e2 en rampe continue — de la fin de la marche e1 au début de la marche e3. e1 et son pochoir restent dans les trois.
+  Elles se posent en remplaçant, EN MÉMOIRE, le code de la ressource `ShaderInclude` d'`iso_pate.gdshaderinc` : chaque shader qui
+  l'inclut se recompile à son signal `changed` (vérifié sous Xvfb avant d'écrire le banc). Ni uniforme ni `#define` dans le jeu,
+  donc aucun coût payé drapeau éteint — le piège qu'`ENCRE_ESSAI` évitait déjà ;
+- **l'atlas à 4096 et le PCF5 au lissage léger**, sur les lumières que nomme Q85 — la torche et le halo de chaque corps, le halo de
+  chaque plafonnier —, dites en un seul endroit (`tools/reglages_ombres.gd`) que lit aussi le banc de cadence : l'image jugée et le
+  coût mesuré sont ceux du même réglage ;
+- chaque composition est jouée d'abord telle que le jeu la rend — la RÉFÉRENCE — et chaque variante mesure son écart à elle ; une
+  variante qui change moins de 50 pixels hors des corps est refusée (elle ne s'est pas posée : voir Z11 plus bas). Le balayage : la
+  visée qui tourne de 0,5° par image, la caméra tenue.
+
+**Le banc de cadence** (`tools/bench_framerate.gd`) : deux réglages, `--atlas-ombres=<n>` et `--pcf5[=<lissage>]`, en duel comme en
+solo ; refusés s'ils sont mal écrits (un `--atlas-ombres=abc` lu par `int()` vaudrait 0 : l'atlas du projet mesuré sous le nom d'un
+autre) ; vérifiés en fin de prise (« 26 lumières en PCF5 sur 26 vivantes ✓ »).
+
+**Q83 — la planche** (`docs/iso/ombres/om3/planche_q83.jpg`, salle 0.1, 1920×1080, llvmpipe ; « > 8 » : pixels hors des corps dont
+la luma change de plus de 8 niveaux) :
+
+| | D (le jeu) | (a) sans bruit | (b) élargies | (c) rampe | brute |
+|---|---|---|---|---|---|
+| Écart à D, la torche dans la flaque du plafonnier (> 8 / > 24) | — | 6 518 / 3 399 | 9 396 / 71 | 46 702 / 13 459 | 30 357 / 26 974 |
+| Le recul qui file : changements > 8 pendant la remontée (11 images) | 32 263 | 33 449 | 3 140 | 15 | 4 |
+| Le balayage : allers-retours à l'écran | 4 241 | 4 331 | 3 636 | 3 837 | 2 849 |
+
+- **(a) ne retire rien de ce qui scintille** : le bruit ne fait pas bouger les paliers, il dessine seulement leurs bords — sans lui,
+  ils deviennent des courbes nettes, et la remontée balaie autant.
+- **(b) retire 90 % du balayage de la remontée et reste la plus proche de D** : son écart est fait de petits écarts (71 pixels
+  seulement au-delà de 24 niveaux) — les paliers restent, adoucis.
+- **(c) le retire entier** (15 changements), mais change le plus l'image : le palier du milieu devient un dégradé (46 702 pixels
+  au-delà de 8 niveaux, 13 459 au-delà de 24).
+- **Aucune ne retire le papillotement du balayage** (−14 % au mieux) : il est sur les arêtes de l'ombre du PNJ, en pâte brute comme
+  en D (2 849 allers-retours en brute ; 2 679 dans la lightmap, la même pour les cinq). C'est l'atlas — Q85.
+
+**Q85 — la planche** (`docs/iso/ombres/om3/planche_q85.jpg`, la torche seule) : à 4096, les marches de l'arête sont deux fois plus
+fines (401 pixels changent, la scène tenue) ; pendant le balayage, les allers-retours de la lumière **tombent de 2 658 à 44 dans la
+lightmap** (−98 %) et de 3 750 à 1 377 à l'écran (−63 %). Le PCF5 pose une pénombre EN PALIERS — cinq lectures de l'atlas, quatre
+gris entre l'ombre et la lumière — qui allume à demi ce que la règle dit dans l'ombre, et ne retire que la moitié du papillotement
+(lightmap 2 658 → 1 357, écran 3 750 → 2 438).
+
+**Q85 — le coût** (`docs/iso/ombres/om3/cout_q85.png` ; llvmpipe, `tools/cadence_cloud`, deux séries en miroir — A B C C B A —, toutes les prises
+valides, `--temps-par-vue` dans chacune) :
+
+| Temps d'image moyen | Salle 8.9, la fusillade (6 prises par bras) | Duel de la règle 278 (4 prises par bras) |
+|---|---|---|
+| A — le jeu (atlas 2048, aucun filtre) | 837 ms | 334 ms |
+| B — l'atlas à 4096 | 819 ms (−2,2 % ; cadence 1,022) | 342 ms (+2,4 % ; cadence 0,976) |
+| C — le PCF5, lissage léger | 954 ms (+14,1 % ; cadence 0,877) — +9,3 % sans sa prise la plus lente (1 154 ms) | 369 ms (+10,5 % ; cadence 0,905) |
+
+L'erreur type d'une moyenne vaut 11 à 41 ms dans la salle 8.9, 1 à 5 ms en duel : **l'atlas à 4096 ne se distingue pas du bruit**
+— dans la salle 8.9, il passe même devant, au hasard de la fusillade — et **passe la règle des 3 %** (0,976 en duel, au-dessus du
+seuil de 0,970) ; **le PCF5 coûte 10 à 14 % et y échoue**. Le temps de rendu de la vue racine dit la même chose, plus faiblement :
+±2 % pour l'atlas, +2,5 à +3,5 % pour le PCF5.
+
+**Avis du chantier sur Q85 : l'atlas à 4096, oui** — la règle est tenue, et il retire presque tout le papillotement d'une ombre qui
+tourne ; un seul atlas sert toutes les vues et tous les capteurs, l'équité ne bouge pas. **Le PCF5, non** : 10 à 14 % du temps
+d'image, la moitié du papillotement seulement, et une pénombre qui contredit « l'ombre au pixel ». Le geste tient en une ligne
+(`rendering/2d/shadow_atlas/size=4096` dans `project.godot`) ; il attend la décision d'Adrien, puis le relevé du Mac.
+
+**Les gardes** (`tools/test_banc.gd`) : l'ancre des variantes, une fois et une seule dans `iso_pate.gdshaderinc` (sans quoi elles ne
+se poseraient pas), et les trois variantes qui gardent e1 ; la lecture des deux réglages (`refus_des_reglages`) ; les lumières de
+Q85 — la torche, le halo, celui d'un VRAI plafonnier, ni le flash ni la rétrodiffusion ; le PCF5 posé sans toucher à `enabled` ni à
+`shadow_enabled`, sa vérification de fin, le retour au filtre du jeu ; les deux réglages déclarés communs au duel et au solo.
+
+**Onze sabotages, chacun rouge puis restauré à l'identique (md5)** : Z1 l'ancre périmée (le jeu change e2, le banc ne suit pas :
+trois contrôles rouges, dont les appuis du banc) ; Z2 la garde de l'ancre aveugle ; Z3 la variante (b) qui touche e1 ; Z4 un atlas
+mal écrit accepté ; Z5 `_ready()` qui n'appelle plus `refus_des_reglages` ; Z6 Q85 qui filtre aussi la rétrodiffusion ; Z7 Q85 qui
+oublie les plafonniers ; Z8 le réglage du filtre qui éteint l'ombre ; Z9 l'armement qui ne pose pas le PCF5 ; Z10 la fin de prise
+qui ne voit pas une lumière qui a perdu son PCF5 ; **Z11, en séance sous Xvfb : une variante de la pâte jamais posée — MUET à la
+première passe.** Le banc ne refusait qu'un écart NUL, et deux passages d'un même plan diffèrent toujours de quelques pixels (les
+corps voxel frémissent : 202, dont 2 hors des corps) ; il refuse désormais sous 50 pixels changés hors des corps
+(`SEUIL_VARIANTE_SANS_EFFET`), et la famille `q85`, la plus discrète des vraies variantes (401), repasse sans refus.
+
+**Suite entière : 187 suites vertes, aucune rouge, sans erreur de script (28 min 24 s).**
+
+**Version** : rien — aucun code de jeu ne bouge.
+
+**Trouvé en chemin** : le premier plan d'un passage photographiait l'allumage « CANDELA » à demi effacé — corrigé dans le banc des
+ombres, signalé pour cinq autres outils ; voir « Pièges connus ».
+
+**Non prouvé.** Rien sous Metal : les coûts sont relatifs, sous llvmpipe — qui paie le remplissage d'un atlas plus large en
+processeur, quand un GPU l'avale ; l'image, elle, est celle du moteur. Adrien n'a vu ni les variantes ni l'atlas en jeu (H16).
 
 **Le levier que le recensement désigne, hors de la liste d'OM6** : l'emprise des torches (LUM-04 de l'audit d'optimisation,
 `docs/audit_optimisation/V_V8.md`, fusionné dans `main` par https://github.com/adrienvada/Candela-2D---Godot/pull/9). Le carré

@@ -24,6 +24,12 @@ extends "res://tools/photographe.gd"
 ##   corps (J1, les PNJ), sans toucher au code du jeu — `etoile_ccw` est le correctif d'OM1 tel que l'audit l'a essayé.
 ##   `disque` (13 px) ne sert qu'à MESURER une largeur : Q42 a écarté « une ombre ronde pour tous ».
 ## - `--lightmaps` : écrit aussi la lightmap entière de chaque prise (lourd).
+## - OM3c (Q83, Q85 ; 2026-10-05) — les familles `q83` et `q85` posent À L'EXÉCUTION ce que ces questions proposent, sans toucher au
+##   code du jeu : les trois variantes de la pâte D (le code de la ressource `ShaderInclude` d'`iso_pate.gdshaderinc` remplacé en
+##   mémoire, jamais le fichier : voir `VARIANTES_LAVIS`), l'atlas d'ombres à 4096 et le PCF5 au lissage léger
+##   (`tools/reglages_ombres.gd`). Chaque composition est jouée d'abord telle que le jeu la rend — la RÉFÉRENCE — et chaque variante
+##   mesure son écart à elle (`ecart_a_la_reference`) ; une variante qui ne change presque rien hors des corps est refusée. Une composition se joue
+##   donc ENTIÈRE (`--famille=q83`), jamais une variante seule. Les séries y gardent aussi leur image du milieu et de la fin.
 ## - Les drapeaux du JEU passent tels quels, et le journal les recopie : `--pate brute` (sans postérisation ; ⚠️ séparé par
 ##   une espace, c'est la forme que lit `Presentation3D`), `--sans-faisceau-air` (build de débogage), `--led-murs-fige=0.5`.
 ##   Les plans « brute » du catalogue posent la pâte brute À L'EXÉCUTION (`style_pate`), pour comparer dans le même passage.
@@ -106,6 +112,38 @@ const COLLE_AU_MUR_PX := 20.0
 ## La largeur de l'ombre derrière le corps : la lightmap lue en travers, à ± 60 px de l'axe lampe → corps, pixel par pixel ;
 ## « dans l'ombre » sous la moitié du sol éclairé des deux bouts.
 const OMBRE_TRAVERS_PX := 60
+## OM3c (Q83) — la pâte D et ses trois variantes, posées À L'EXÉCUTION : le code de la ressource `ShaderInclude` d'`iso_pate.
+## gdshaderinc` remplacé en mémoire (chaque `Shader` qui l'inclut écoute son signal `changed` et se recompile), jamais le fichier.
+## `ANCRE_LAVIS` est le texte EXACT que chaque variante remplace — les paliers e2 et e3 ; e1 et son pochoir restent, « dans tous
+## les cas » (Q83). `tools/test_banc.gd` vérifie qu'il est dans le fichier une fois et une seule, sans quoi la variante ne se
+## poserait pas et la planche montrerait la pâte D sous trois noms ; en séance, le banc refuse aussi une variante qui ne change
+## aucun pixel.
+const PATE_INCLUDE := "res://iso_pate.gdshaderinc"
+const ANCRE_LAVIS := "\tfloat e_2 = 0.16 + 0.08 * b;\n\tfloat e_3 = 0.42 + 0.1 * b;\n\tfloat q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)\n\t\t+ 0.3 * smoothstep(e_2 - a, e_2 + a, l)\n\t\t+ 0.4 * smoothstep(e_3 - a, e_3 + a, l);\n"
+## Les trois variantes de Q83, chiffrées ici (l'audit ne les chiffrait pas) :
+## - (a) les seuils e2 et e3 SANS BRUIT : le bruit remplacé par sa moyenne, 0,5 — e2 = 0,20, e3 = 0,47 ; les transitions de ±0,01
+##   restent ;
+## - (b) les transitions ÉLARGIES : ±20 % autour de chaque seuil (e2 et e3) au lieu de ±0,01 — quatre fois plus large à e2, neuf
+##   fois à e3 ; le bruit reste ;
+## - (c) e2 en RAMPE CONTINUE : le palier du milieu devient une rampe linéaire, de la fin de la marche e1 au début de la marche e3 ;
+##   le bruit reste sur e1 et e3.
+## Toutes valent 0 à lumière nulle et croissent avec la lumière : le contrat du noir absolu de la pâte tient.
+const VARIANTES_LAVIS := {
+	"a": "\tfloat e_2 = 0.16 + 0.08 * 0.5;\n\tfloat e_3 = 0.42 + 0.1 * 0.5;\n\tfloat q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)\n\t\t+ 0.3 * smoothstep(e_2 - a, e_2 + a, l)\n\t\t+ 0.4 * smoothstep(e_3 - a, e_3 + a, l);\n",
+	"b": "\tfloat e_2 = 0.16 + 0.08 * b;\n\tfloat e_3 = 0.42 + 0.1 * b;\n\tfloat q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)\n\t\t+ 0.3 * smoothstep(e_2 * 0.8, e_2 * 1.2, l)\n\t\t+ 0.4 * smoothstep(e_3 * 0.8, e_3 * 1.2, l);\n",
+	"c": "\tfloat e_3 = 0.42 + 0.1 * b;\n\tfloat q = 0.3 * smoothstep(e_1 - a, e_1 + a, l)\n\t\t+ 0.3 * clamp((l - (e_1 + a)) / max((e_3 - a) - (e_1 + a), 0.001), 0.0, 1.0)\n\t\t+ 0.4 * smoothstep(e_3 - a, e_3 + a, l);\n",
+}
+## OM3c — le balayage : la visée de J1 tourne de `PAS_BALAYAGE_DEG` par image, la caméra tenue (un joueur qui ajuste son tir, 30°
+## par seconde à 60 images par seconde) ; ce que la pâte et l'atlas font d'une lumière qui glisse.
+const IMAGES_BALAYAGE := 10
+const PAS_BALAYAGE_DEG := 0.5
+## OM3c — sous ce nombre de pixels changés HORS DES CORPS, une variante n'a rien changé : elle ne s'est pas posée. Deux passages d'un
+## même plan ne sont pas identiques au pixel — les corps voxel frémissent (piège du 2026-09-30) : au sabotage d'OM3c, une variante
+## jamais posée différait de sa référence de 202 pixels, dont 2 hors des corps. Les vraies en changent de 401 (l'atlas à 4096, l'arête
+## tenue) à 46 702. La première écriture ne refusait qu'un écart NUL, et ne pouvait donc jamais refuser.
+const SEUIL_VARIANTE_SANS_EFFET := 50
+## OM3c (Q85) — l'atlas d'ombres et le filtre PCF5 : un seul endroit dit quelles lumières Q85 filtre, partagé avec le banc de cadence.
+const ReglagesOmbres := preload("res://tools/reglages_ombres.gd")
 
 var _iso: Presentation3D
 var _journal: Array = []
@@ -139,6 +177,14 @@ var _sans_led := false
 var _energies: Array = []
 ## OM4, le tir au mur : le mur d'une case choisi (`_mur_mince_vu`) — la face, la visée, le sol au-delà.
 var _mur_du_plan: Dictionary = {}
+## OM3c : la ressource de la pâte gardée vivante et son code tel que le jeu l'a chargé (rendu après chaque variante) ; la RÉFÉRENCE
+## de chaque composition (la luma de l'écran tel que le jeu le rend, et le masque des corps) ; le regard tenu et l'axe de départ
+## d'un balayage.
+var _inclusion_pate: ShaderInclude = null
+var _code_pate_d := ""
+var _references := {}
+var _regard_fige: Variant = null
+var _axe_du_balayage := Vector2.ZERO
 
 
 ## La marionnette du photographe, qui sait aussi s'accroupir (OM4 : l'étoile à la posture). La simulation repose la posture à
@@ -243,6 +289,47 @@ static func plans() -> Array[Dictionary]:
 			"accroupi": cas[1], "distance": 250.0, "torche": false, "lampes": "-", "leds": false,
 			"but": "Q88 — le PNJ %s %s d'un plafonnier : son ombre finie, au pixel, contre la règle" % [
 				"accroupi" if cas[1] else "debout", cas[3]]}))
+	# OM3c (Q83) — la pâte D et ses trois variantes, sur quatre compositions de la salle 0.1 : la torche dans la flaque du plafonnier
+	# (les coins sombres sans objet, O3), la torche seule (les paliers du cône — e2 tombe entre 134 et 283 px de la lentille), le
+	# recul qui file et un balayage lent de la visée (les paliers qui ondulent). Chaque composition d'abord en pâte D, telle que le
+	# jeu la rend — la RÉFÉRENCE de l'écart —, puis (a), (b), (c), et la pâte brute (la lumière sans paliers).
+	var compositions_q83 := [
+		["plafonnier", {}, "la torche dans la flaque du plafonnier : les coins sombres sans objet"],
+		["torche", {"plafonniers": false}, "la torche seule, plafonnier éteint : les paliers du cône"],
+		["recul", {"serie": IMAGES_RECUL, "recul": true}, "un coup, puis le recul qui file, %d images" % IMAGES_RECUL],
+		["balayage", {"serie": IMAGES_BALAYAGE, "balayage": PAS_BALAYAGE_DEG},
+			"la visée qui glisse de %s° par image, %d images, la caméra tenue" % [str(PAS_BALAYAGE_DEG), IMAGES_BALAYAGE]],
+	]
+	var noms_q83 := {"D": "D (le jeu, la référence)", "a": "D (a) : e2 et e3 sans bruit", "b": "D (b) : transitions élargies",
+		"c": "D (c) : e2 en rampe continue", "brute": "brute (la lumière sans paliers)"}
+	for compo in compositions_q83:
+		for v in ["D", "a", "b", "c", "brute"]:
+			var propre := {"id": "q83-%s-%s" % [compo[0], v], "famille": "q83", "compo": "q83-%s" % compo[0],
+				"reference": v == "D", "but": "Q83 — %s ; pâte %s" % [compo[2], noms_q83[v]]}
+			propre.merge(compo[1], true)
+			if v in ["a", "b", "c"]:
+				propre["lavis"] = v
+			elif v == "brute":
+				propre["pate"] = "brute"
+			sortie.append(_plan_de(base, propre))
+	# OM3c (Q85) — l'atlas d'ombres et le filtre, sur la torche seule (plafonnier éteint : ses ombres ne recouvrent pas celles qu'on
+	# juge) : l'arête de l'ombre du PNJ, tenue, puis le balayage qui fait ramper ses marches. Le réglage du projet d'abord (atlas 2048,
+	# aucun filtre) — la référence —, puis l'atlas à 4096, puis le PCF5 au lissage léger (atlas 2048).
+	var compositions_q85 := [
+		["arete", {}, "l'arête de l'ombre du PNJ sous la torche, tenue"],
+		["balayage", {"serie": IMAGES_BALAYAGE, "balayage": PAS_BALAYAGE_DEG},
+			"la visée qui glisse de %s° par image, %d images : les marches de l'arête rampent" % [str(PAS_BALAYAGE_DEG), IMAGES_BALAYAGE]],
+	]
+	var reglages_q85 := [["2048", {}, "atlas 2048, aucun filtre (le jeu, la référence)"],
+		["4096", {"atlas": ReglagesOmbres.ATLAS_PROPOSE}, "atlas à 4096"],
+		["pcf5", {"pcf5": ReglagesOmbres.LISSAGE_LEGER}, "PCF5, lissage léger (atlas 2048)"]]
+	for compo in compositions_q85:
+		for r in reglages_q85:
+			var propre := {"id": "q85-%s-%s" % [compo[0], r[0]], "famille": "q85", "compo": "q85-%s" % compo[0],
+				"reference": r[0] == "2048", "plafonniers": false, "but": "Q85 — %s ; %s" % [compo[2], r[2]]}
+			propre.merge(compo[1], true)
+			propre.merge(r[1], true)
+			sortie.append(_plan_de(base, propre))
 	return sortie
 
 
@@ -313,7 +400,25 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	for motif in ["func vers_ecran(", "func vers_sol("]:
 		if not texte_camera.contains(motif):
 			absents.append("CameraIso : « %s » a disparu" % motif)
+	# OM3c (Q83, Q85) : l'ancre des variantes de la pâte, l'atlas réglable à l'exécution, le halo des plafonniers.
+	var faute_lavis := faute_de_l_ancre_du_lavis(FileAccess.get_file_as_string(PATE_INCLUDE))
+	if faute_lavis != "":
+		absents.append(faute_lavis)
+	if not RenderingServer.has_method("canvas_set_shadow_texture_size"):
+		absents.append("RenderingServer.canvas_set_shadow_texture_size() a disparu")
+	if not FileAccess.get_file_as_string("res://plafonnier.gd").contains("var halo"):
+		absents.append("Plafonnier.halo a disparu")
 	return absents
+
+
+## OM3c (Q83) — la faute qui empêcherait les variantes de la pâte de se poser (« » : aucune) : l'ancre absente du code de
+## `iso_pate.gdshaderinc`, ou présente plusieurs fois. Séparée pour être vérifiable sur un texte fabriqué.
+static func faute_de_l_ancre_du_lavis(code: String) -> String:
+	var n := code.count(ANCRE_LAVIS)
+	if n == 1:
+		return ""
+	return "%s : les paliers e2 et e3 de la pâte D (l'ancre des variantes de Q83) s'y trouvent %d fois au lieu d'une — la variante ne se poserait pas" % [
+		PATE_INCLUDE, n]
 
 
 func _ready() -> void:
@@ -357,6 +462,9 @@ func _ready() -> void:
 		printerr("✗ les appuis du banc ont changé : ", "; ".join(manquants))
 		_sortir(1)
 		return
+	# OM3c : la pâte telle que le jeu l'a chargée, gardée pour être rendue après chaque variante.
+	_inclusion_pate = load(PATE_INCLUDE)
+	_code_pate_d = _inclusion_pate.code
 	# Le chemin de rendu du joueur (la racine rend la vue unique) : `vp1` reste la lightmap que l'iso relit.
 	_main.rendu_racine_autorise = true
 	_main.archiver_les_matchs = false
@@ -365,6 +473,17 @@ func _ready() -> void:
 	if allumage != null and allumage.has_method("terminer"):
 		allumage.terminer()
 		await _attendre_disparition(allumage, 3.0)
+		# ⚠️ OM3c — `_attendre` compte en temps RÉEL : sous llvmpipe, à `--fixed-fps 60`, trois secondes ne font que quelques images
+		# de JEU, et la sortie de l'allumage en dure 0,45 s (27 images). Le premier plan d'un passage photographiait donc le mot
+		# « CANDELA » à demi effacé — vu à la planche de Q83, où il faussait la référence de la pâte D. On attend aussi en IMAGES.
+		for k in 120:
+			if not is_instance_valid(allumage):
+				break
+			await get_tree().process_frame
+		if is_instance_valid(allumage):
+			printerr("✗ l'allumage « CANDELA » ne s'est pas effacé en 120 images : il voilerait les premières prises")
+			_sortir(1)
+			return
 	_prog = ProgressionT.new("user://planche_ombres_progression.cfg")
 	RenderingServer.frame_pre_draw.connect(_avant_le_rendu)
 	var debut := Time.get_ticks_msec()
@@ -629,6 +748,15 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 	var pate_avant := int(_iso.style_pate)
 	if String(plan.get("pate", "")) == "brute":
 		_iso.style_pate = IsoPate.BRUTE
+	# OM3c — la variante de la pâte D (Q83), l'atlas et le filtre (Q85), posés pour ce plan seul et rendus au jeu après lui.
+	if plan.has("lavis"):
+		_poser_le_lavis(String(plan["lavis"]))
+	if plan.has("atlas"):
+		ReglagesOmbres.poser_l_atlas(int(plan["atlas"]))
+	var filtrees: Array[Light2D] = []
+	if plan.has("pcf5"):
+		filtrees = ReglagesOmbres.lumieres_de_q85(get_tree(), _corps_de_la_salle())
+		ReglagesOmbres.poser_le_filtre(filtrees, true, float(plan["pcf5"]))
 	var plafonniers_avant := _plafonniers(bool(plan.get("plafonniers", true)))
 	_appliquer_le_correctif()
 	await _tenir(IMAGES_POSE)
@@ -638,6 +766,12 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 	else:
 		await _prise(plan, cible)
 	_iso.style_pate = pate_avant
+	if plan.has("lavis"):
+		_poser_le_lavis("")
+	if plan.has("atlas"):
+		ReglagesOmbres.poser_l_atlas(ReglagesOmbres.atlas_du_projet())
+	if not filtrees.is_empty():
+		ReglagesOmbres.poser_le_filtre(filtrees, false)
 	_plafonniers(plafonniers_avant)
 	if plan.has("classe"):
 		_equiper(cible, _classe_d_origine(cible))
@@ -658,6 +792,23 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 		_fusee_du_plan.queue_free()
 	_fusee_du_plan = null
 	_plans_faits += 1
+
+
+## OM3c (Q83) — pose la variante `v` de la pâte D (« » : la pâte du jeu) dans la ressource partagée : chaque shader qui l'inclut
+## se recompile au signal `changed` (les images tenues avant la prise lui en laissent le temps). L'ancre a été vérifiée au départ
+## (`preconditions_manquantes`) : le remplacement ne peut pas manquer en séance.
+func _poser_le_lavis(v: String) -> void:
+	var code := _code_pate_d if v == "" else _code_pate_d.replace(ANCRE_LAVIS, String(VARIANTES_LAVIS[v]))
+	if _inclusion_pate.code != code:
+		_inclusion_pate.code = code
+
+
+## Les corps de la salle : J1, J2 et chaque PNJ (les lumières que Q85 filtre sont les leurs, et celles des plafonniers).
+func _corps_de_la_salle() -> Array:
+	var corps: Array = [_main.p1, _main.p2]
+	if _main.aventure != null:
+		corps.append_array(_main.aventure.pnj)
+	return corps
 
 
 ## OM4b — une vraie fusée de J1, posée là et en plein feu (le geste du banc : `Fusee.forcer_age`), sa graine fixe.
@@ -1067,6 +1218,13 @@ func _poser_le_regard() -> void:
 	var j1 := _main.p1 as Node2D
 	if cam == null or j1 == null:
 		return
+	# OM3c — pendant un balayage, le regard reste celui du départ : la visée tourne, la caméra ne bouge pas, et ce qui change d'une
+	# image à l'autre est la lumière seule.
+	if _regard_fige != null:
+		var tenus: Array = _main.get("_regard_decalage")
+		if tenus != null and tenus.size() > 0:
+			tenus[0] = _regard_fige
+		return
 	var vue := cam.custom_viewport as Viewport
 	var vue_px := vue.get_visible_rect().size if vue != null else Vector2(1920.0, 1080.0)
 	var vise := RegardDuel.decalage_vise(Vector2.RIGHT.rotated(j1.rotation), GameSettings.decalage_visee, vue_px, cam.zoom.y)
@@ -1140,6 +1298,7 @@ func _prise(plan: Dictionary, cible: Player) -> void:
 	if _lightmaps:
 		lightmap.save_png("%s/%s_lightmap.png" % [_dossier, id])
 	var entree := _mesurer(plan, cible, ecran, lightmap)
+	_noter_l_ecart_a_la_reference(plan, entree, ecran)
 	_decouper_autour(id, cible, ecran, lightmap)
 	if String(plan["famille"]) == "om5":
 		entree["om5"] = await _mesurer_om5(id, cible, lightmap)
@@ -1185,19 +1344,38 @@ func _serie(plan: Dictionary, cible: Player, n: int) -> void:
 	var ecrans: Array[Image] = []
 	var lightmaps: Array[Image] = []
 	_energies.clear()
+	# OM3c — le balayage : la visée part de l'axe de la pose et tourne d'un pas par image ; le regard reste celui du départ.
+	var balayage := deg_to_rad(float(plan.get("balayage", 0.0)))
+	if balayage != 0.0:
+		_axe_du_balayage = _pose_j1[1]
+		var decalages: Array = _main.get("_regard_decalage")
+		_regard_fige = decalages[0] if decalages != null and decalages.size() > 0 else null
 	for k in n:
 		if k == 0 and bool(plan.get("recul", false)):
 			# Le coup : le recul armé une fois, de la durée de l'arme de J1, puis laissé au décompte du jeu.
 			var j1 := _main.p1 as Player
 			j1.shoot_cooldown = float(j1.current_weapon.cooldown) if j1.current_weapon != null else 0.16
+		if balayage != 0.0:
+			var axe := _axe_du_balayage.rotated(balayage * k)
+			_pose_j1 = [_pose_j1[0], axe]
+			_pantin_j1.visee = axe
 		_reposer()
 		var images: Array = await _capturer_l_image()
 		ecrans.append(images[0])
 		lightmaps.append(images[1])
 		_energies.append(snappedf(float((_main.p1.flashlight as Light2D).energy), 0.0001))
 		await get_tree().process_frame
+	if balayage != 0.0:
+		_pose_j1 = [_pose_j1[0], _axe_du_balayage]
+		_pantin_j1.visee = _axe_du_balayage
+		_regard_fige = null
 	ecrans[0].save_png("%s/%s_ecran.png" % [_dossier, id])
+	# Les images du milieu et de la fin d'une série OM3c : la planche de Q83 et Q85 les montre côte à côte.
+	if String(plan["famille"]) in ["q83", "q85"]:
+		ecrans[n / 2].save_png("%s/%s_ecran_milieu.png" % [_dossier, id])
+		ecrans[n - 1].save_png("%s/%s_ecran_fin.png" % [_dossier, id])
 	var entree := _mesurer(plan, cible, ecrans[0], lightmaps[0])
+	_noter_l_ecart_a_la_reference(plan, entree, ecrans[0])
 	_decouper_autour(id, cible, ecrans[0], lightmaps[0])
 	var paires: Array = []
 	var cumul_ecran := PackedByteArray()
@@ -1238,6 +1416,64 @@ func _serie(plan: Dictionary, cible: Player, n: int) -> void:
 		vis.save_png("%s/%s_diff_max.png" % [_dossier, id])
 	_journal.append(entree)
 	_imprimer(entree)
+
+
+## OM3c — l'écart de cette image à la RÉFÉRENCE de sa composition (le plan joué tel que le jeu le rend, plus tôt dans le même
+## passage : les plans d'une composition se suivent, la référence d'abord) ; la référence elle-même se garde ici. Une variante
+## qui ne change presque rien hors des corps (`SEUIL_VARIANTE_SANS_EFFET`) ne s'est pas posée : elle est refusée, et la planche le
+## dit au lieu de montrer deux fois la même image.
+func _noter_l_ecart_a_la_reference(plan: Dictionary, entree: Dictionary, ecran: Image) -> void:
+	var compo := String(plan.get("compo", ""))
+	if compo == "":
+		return
+	var luma := _luma(ecran)
+	if bool(plan.get("reference", false)):
+		_references[compo] = [luma, _masque_des_corps(ecran.get_width(), ecran.get_height())]
+		entree["ecart_a_la_reference"] = {"reference": true}
+		return
+	if not _references.has(compo):
+		entree["ecart_a_la_reference"] = {"reference": "absente de ce passage : jouer la composition entière (--famille)"}
+		return
+	var ref: Array = _references[compo]
+	var e := _ecart_moyen(ref[0], luma, ref[1])
+	entree["ecart_a_la_reference"] = e
+	print("    écart à la référence (%s), hors des corps : %d pixels > 8 niveaux, %d > 24, écart moyen %.2f niveaux" % [
+		compo, int(e["hors_corps_8"]), int(e["hors_corps_24"]), float(e["moyenne_hors_corps"])])
+	if int(e["hors_corps_8"]) < SEUIL_VARIANTE_SANS_EFFET:
+		var raison := "la variante n'a changé que %d pixel(s) hors des corps (moins de %d) : elle ne s'est pas posée" % [
+			int(e["hors_corps_8"]), SEUIL_VARIANTE_SANS_EFFET]
+		printerr("  ✗ %s : %s" % [String(plan["id"]), raison])
+		_refuses.append("%s — %s" % [String(plan["id"]), raison])
+		entree["variante_sans_effet"] = true
+
+
+## Les pixels qui changent de plus de 8 et 24 niveaux entre deux images (tous, puis hors des corps), le saut maximal, et l'écart
+## MOYEN hors des corps (en niveaux de luma) : ce qu'une variante change à l'image de référence, pas d'une image à la suivante.
+static func _ecart_moyen(la: PackedByteArray, lb: PackedByteArray, corps: PackedByteArray) -> Dictionary:
+	var n := mini(la.size(), lb.size())
+	var avec_corps := corps.size() == n
+	var au_dela_8 := 0
+	var hors_corps_8 := 0
+	var hors_corps_24 := 0
+	var somme := 0
+	var dehors_n := 0
+	var saut := 0
+	for i in n:
+		var d := absi(int(la[i]) - int(lb[i]))
+		if d > saut:
+			saut = d
+		if d > 8:
+			au_dela_8 += 1
+		if avec_corps and corps[i] != 0:
+			continue
+		dehors_n += 1
+		somme += d
+		if d > 8:
+			hors_corps_8 += 1
+			if d > 24:
+				hors_corps_24 += 1
+	return {"au_dela_8": au_dela_8, "hors_corps_8": hors_corps_8, "hors_corps_24": hors_corps_24, "saut_max": saut,
+		"moyenne_hors_corps": snappedf(float(somme) / float(maxi(dehors_n, 1)), 0.001), "pixels_hors_corps": dehors_n}
 
 
 static func _sans_cumul(e: Dictionary) -> Dictionary:
@@ -1381,6 +1617,11 @@ func _mesurer(plan: Dictionary, cible: Player, ecran: Image, lightmap: Image) ->
 		"repere_lightmap": [snappedf(_main.vp1.get_canvas_transform().origin.x, 0.000001),
 			snappedf(_main.vp1.get_canvas_transform().origin.y, 0.000001)],
 		"pate": int(_iso.style_pate)}
+	# OM3c : ce que le plan a posé à l'exécution — la variante de la pâte D (Q83), l'atlas et le filtre (Q85).
+	if String(plan["famille"]) in ["q83", "q85"]:
+		entree["om3c"] = {"compo": String(plan.get("compo", "")), "lavis": String(plan.get("lavis", "D" if String(plan.get("pate", "")) != "brute" else "brute")),
+			"atlas": int(plan.get("atlas", ReglagesOmbres.atlas_du_projet())), "pcf5": plan.get("pcf5", null),
+			"balayage_deg_par_image": plan.get("balayage", null)}
 	# Où tombent J1 et le PNJ dans la lightmap (pixels), et sa rotation : la caméra 2D suit le lacet de la vue iso.
 	var ct_lm: Transform2D = _main.vp1.get_canvas_transform()
 	var sc_lm := Vector2(lightmap.get_size()) / Vector2(_main.vp1.size)
@@ -1671,7 +1912,9 @@ func _ecrire_la_planche_des_ombres() -> void:
 		html.append("<p>%s</p>" % _but_de(id))
 		html.append(_tableau_des_mesures(e, avant.get(id, {})))
 		html.append("<div class=\"rang\">")
-		for suffixe in ["pnj_iso_reperes", "pnj_iso", "pnj_lightmap", "capteur", "diff_max"]:
+		for suffixe in ["pnj_iso_reperes", "pnj_iso", "pnj_lightmap", "capteur", "diff_max", "ecran", "ecran_milieu", "ecran_fin"]:
+			if suffixe.begins_with("ecran") and not String(e.get("famille", "")) in ["q83", "q85"]:
+				continue
 			if avant.has(id) and FileAccess.file_exists("%s/avant/%s_%s.png" % [_dossier, id, suffixe]):
 				html.append("<figure><img src=\"avant/%s_%s.png\"><figcaption>AVANT — %s</figcaption></figure>" % [id, suffixe, suffixe])
 			if FileAccess.file_exists("%s/%s_%s.png" % [_dossier, id, suffixe]):
@@ -1731,6 +1974,9 @@ func _tableau_des_mesures(e: Dictionary, avant: Dictionary) -> String:
 		["scintillement écran >24 (min, max)", func(x: Dictionary) -> String: return str(((x.get("scintillement", {}) as Dictionary).get("resume", {}) as Dictionary).get("ecran", {}).get("au_dela_24", "—")) if x.has("scintillement") else "—"],
 		["saut max écran", func(x: Dictionary) -> String: return str(((x.get("scintillement", {}) as Dictionary).get("resume", {}) as Dictionary).get("ecran", {}).get("saut_max", "—")) if x.has("scintillement") else "—"],
 		["scintillement lightmap >8 (min, max)", func(x: Dictionary) -> String: return str(((x.get("scintillement", {}) as Dictionary).get("resume", {}) as Dictionary).get("lightmap", {}).get("au_dela_8", "—")) if x.has("scintillement") else "—"],
+		["allers-retours écran hors des corps >8 (total)", func(x: Dictionary) -> String: return str(((x.get("scintillement", {}) as Dictionary).get("allers_retours_total", {}) as Dictionary).get("ecran_hors_corps_8", "—")) if x.has("scintillement") else "—"],
+		["OM3c : écart à la référence, hors des corps >8 / >24", func(x: Dictionary) -> String: return "%s / %s" % [str((x.get("ecart_a_la_reference", {}) as Dictionary).get("hors_corps_8", "—")), str((x.get("ecart_a_la_reference", {}) as Dictionary).get("hors_corps_24", "—"))] if x.has("ecart_a_la_reference") else "—"],
+		["OM3c : écart moyen à la référence (niveaux)", func(x: Dictionary) -> String: return str((x.get("ecart_a_la_reference", {}) as Dictionary).get("moyenne_hors_corps", "—")) if x.has("ecart_a_la_reference") else "—"],
 	]
 	for m in mesures:
 		var f: Callable = m[1]

@@ -37,6 +37,12 @@
 ## - `--sans-halos-pnj` (solo seulement) : le halo de proximité (`ambient_light`) de chaque PNJ sans ombre — l'item « halos sans
 ##   récepteur » d'OM6 —, `shadow_enabled` seul.
 ##
+## - OM3c (Q85, 2026-10-05) — deux RÉGLAGES, et non des retraits : `--atlas-ombres=<n>` (l'atlas d'ombres 2D à n texels,
+##   `RenderingServer.canvas_set_shadow_texture_size` ; 2048 dans le projet, Q85 propose 4096) et `--pcf5[=<lissage>]` (le filtre
+##   PCF5 sur la torche et le halo de chaque corps et sur le halo de chaque plafonnier ; lissage léger, 1, par défaut). Les lumières
+##   filtrées sont celles que nomme `tools/reglages_ombres.gd`, que le banc des ombres lit aussi : l'image jugée et le coût mesuré sont
+##   ceux du même réglage. Ni `enabled` ni `shadow_enabled` ne sont touchés. Duel et solo.
+##
 ## Un drapeau posé se lit dans la ligne « Charge », dans l'en-tête du RÉSULTAT, et dans un bloc « Interrupteurs » que le banc
 ## écrit AVANT le verdict avec ce que chacun a vraiment touché (lumières éteintes, nées pendant la mesure, capteurs repris au
 ## jeu, halos) et ce qu'il a vérifié à la fin : une prise ne dit pas « sans ombres » sans l'avoir prouvé.
@@ -417,6 +423,7 @@ func _ready() -> void:
 	# OM6 — le mode solo et les trois interrupteurs de lumière. Refusés AVANT tout le reste : un drapeau lu sans être appliqué est la
 	# forme de défaillance que ce banc a le plus payée (« ce relevé n'a pas mesuré ce qu'il annonce »).
 	var refus_solo := refus_du_solo(args)
+	refus_solo.append_array(refus_des_reglages(args))
 	if not refus_solo.is_empty():
 		for r in refus_solo:
 			printerr("✗ ", r)
@@ -425,6 +432,14 @@ func _ready() -> void:
 	_interrupteurs.sans_ombres_2d = args.has("--sans-ombres-2d")
 	_interrupteurs.sans_capteurs = args.has("--sans-capteurs")
 	_interrupteurs.sans_halos_pnj = args.has("--sans-halos-pnj")
+	var atlas: Variant = valeur_egal(args, "--atlas-ombres")
+	if atlas != null:
+		_interrupteurs.atlas_ombres = int(atlas)
+	var lissage: Variant = valeur_egal(args, "--pcf5")
+	if lissage != null:
+		_interrupteurs.pcf5 = true
+		if String(lissage) != "":
+			_interrupteurs.lissage_pcf5 = float(lissage)
 	var solo_demande: Variant = valeur_egal(args, "--solo")
 	if solo_demande != null:
 		_solo = String(solo_demande)
@@ -758,6 +773,24 @@ static func lire_le_poste(texte: String) -> Vector2i:
 		return Vector2i(-1, -1)
 	var c := Vector2i(int(morceaux[0]), int(morceaux[1]))
 	return c if c.x >= 0 and c.y >= 0 else Vector2i(-1, -1)
+
+
+## OM3c (Q85) — pourquoi les réglages d'ombre ne forment pas une prise valide ; vide s'ils en forment une. Un `--atlas-ombres=abc`
+## lu `int()` vaudrait 0, et le banc mesurerait l'atlas du projet sous le nom d'un autre, sans un mot : il est refusé, comme une taille
+## qui n'est pas une puissance de deux (le moteur l'arrondirait) ou hors de 256 à 16 384, et un lissage qui n'est pas un nombre positif.
+static func refus_des_reglages(args: PackedStringArray) -> Array[String]:
+	var raisons: Array[String] = []
+	var atlas: Variant = valeur_egal(args, "--atlas-ombres")
+	if atlas != null:
+		var texte := String(atlas)
+		var n := int(texte) if texte.is_valid_int() else 0
+		if n < 256 or n > 16384 or (n & (n - 1)) != 0:
+			raisons.append("--atlas-ombres attend une puissance de deux de 256 à 16384 (2048 : le projet ; 4096 : Q85) — reçu « %s »" % texte)
+	var lissage: Variant = valeur_egal(args, "--pcf5")
+	if lissage != null and String(lissage) != "":
+		if not String(lissage).is_valid_float() or float(lissage) < 0.0:
+			raisons.append("--pcf5=<lissage> attend un nombre positif (--pcf5 seul : le lissage léger de Q85) — reçu « %s »" % String(lissage))
+	return raisons
 
 
 ## Pourquoi ces arguments ne forment pas une prise valide ; vide s'ils en forment une. `--solo` ne se prend avec aucun drapeau du duel
@@ -2476,9 +2509,15 @@ class PosteDeJ1 extends LocalInputProvider:
 ## - **Les compteurs vivent dans des champs de cet objet, pas dans des lambdas** : une lambda ne capture un entier que par valeur, et
 ##   « un compteur incrémenté dans une lambda reste à zéro » (Pièges connus, 2026-10-02) — une garde « jamais » peut être vide.
 class Interrupteurs extends RefCounted:
+	const Reglages := preload("res://tools/reglages_ombres.gd")
 	var sans_ombres_2d := false
 	var sans_capteurs := false
 	var sans_halos_pnj := false
+	## OM3c (Q85) — deux réglages : l'atlas d'ombres (0 : celui du projet) et le PCF5 sur les lumières que nomme `reglages_ombres.gd`.
+	var atlas_ombres := 0
+	var pcf5 := false
+	var lissage_pcf5: float = Reglages.LISSAGE_LEGER
+	var lumieres_pcf5: Array = []
 
 	## Ce que `armer` a trouvé et touché, une fois.
 	var lumieres_vues_au_depart := 0
@@ -2510,7 +2549,7 @@ class Interrupteurs extends RefCounted:
 
 
 	func actif() -> bool:
-		return sans_ombres_2d or sans_capteurs or sans_halos_pnj
+		return sans_ombres_2d or sans_capteurs or sans_halos_pnj or atlas_ombres > 0 or pcf5
 
 
 	## Les drapeaux posés, dans l'ordre : ce que le libellé de la charge ajoute entre crochets.
@@ -2522,6 +2561,10 @@ class Interrupteurs extends RefCounted:
 			noms.append("sans capteurs")
 		if sans_halos_pnj:
 			noms.append("sans halos de PNJ")
+		if atlas_ombres > 0:
+			noms.append("atlas d'ombres %d" % atlas_ombres)
+		if pcf5:
+			noms.append("PCF5, lissage %s" % str(lissage_pcf5))
 		return noms
 
 
@@ -2641,6 +2684,13 @@ class Interrupteurs extends RefCounted:
 						halos_pnj.append(halo)
 						if eteindre_l_ombre(halo as Light2D):
 							halos_pnj_eteints += 1
+		if atlas_ombres > 0:
+			Reglages.poser_l_atlas(atlas_ombres)
+		if pcf5:
+			var corps: Array = [p1, p2]
+			corps.append_array(pnj)
+			lumieres_pcf5 = Reglages.lumieres_de_q85(arbre, corps)
+			Reglages.poser_le_filtre(lumieres_pcf5, true, lissage_pcf5)
 		if sans_ombres_2d or sans_capteurs:
 			arbre.node_added.connect(_sur_un_noeud)
 		if sans_capteurs:
@@ -2720,7 +2770,13 @@ class Interrupteurs extends RefCounted:
 	## La vérification de la FIN, une fois la dernière image mesurée, puis les crochets débranchés : ce qui devait être éteint l'est-il resté ?
 	## Un seul balayage, hors du chronomètre. Rend les noms des lumières encore à ombre, les halos de PNJ à ombre, les capteurs encore actifs.
 	func finir() -> Dictionary:
-		var bilan := {"lumieres_vues": 0, "lumieres_a_ombre": [], "halos_a_ombre": 0, "capteurs_vivants": 0, "capteurs_actifs": 0}
+		var bilan := {"lumieres_vues": 0, "lumieres_a_ombre": [], "halos_a_ombre": 0, "capteurs_vivants": 0, "capteurs_actifs": 0,
+			"pcf5_vivantes": 0, "pcf5_tenues": 0}
+		if pcf5:
+			for l in lumieres_pcf5:
+				if is_instance_valid(l):
+					bilan["pcf5_vivantes"] = int(bilan["pcf5_vivantes"]) + 1
+			bilan["pcf5_tenues"] = Reglages.combien_en_pcf5(lumieres_pcf5)
 		if _racine != null and sans_ombres_2d:
 			for n in _racine.find_children("*", "Light2D", true, false):
 				bilan["lumieres_vues"] = int(bilan["lumieres_vues"]) + 1
@@ -2752,6 +2808,12 @@ class Interrupteurs extends RefCounted:
 		if sans_halos_pnj:
 			lignes.append("Interrupteur  : --sans-halos-pnj : %d halo(s) de proximité de PNJ sans ombre (%d éteint(s) par ce drapeau, les autres l'étaient déjà)"
 				% [halos_pnj.size(), halos_pnj_eteints])
+		if atlas_ombres > 0:
+			lignes.append("Réglage       : --atlas-ombres=%d : l'atlas d'ombres 2D passe de %d (le projet) à %d texels (RenderingServer.canvas_set_shadow_texture_size)"
+				% [atlas_ombres, Reglages.atlas_du_projet(), atlas_ombres])
+		if pcf5:
+			lignes.append("Réglage       : --pcf5 : %d lumière(s) en PCF5, lissage %s — la torche et le halo de chaque corps, le halo de chaque plafonnier (tools/reglages_ombres.gd)"
+				% [lumieres_pcf5.size(), str(lissage_pcf5)])
 		return lignes
 
 
@@ -2774,6 +2836,13 @@ class Interrupteurs extends RefCounted:
 			lignes.append("  Interrupteurs    : --sans-halos-pnj : %d halo(s) de PNJ · en fin de mesure : %s" % [halos_pnj.size(),
 				("✗ %d encore à ombre" % int(bilan.get("halos_a_ombre", 0))) if int(bilan.get("halos_a_ombre", 0)) > 0
 				else "0 à ombre ✓"])
+		if atlas_ombres > 0:
+			lignes.append("  Réglages         : --atlas-ombres=%d (posé à l'armement ; le moteur n'en relit pas la taille)" % atlas_ombres)
+		if pcf5:
+			var vivantes := int(bilan.get("pcf5_vivantes", 0))
+			var tenues := int(bilan.get("pcf5_tenues", 0))
+			lignes.append("  Réglages         : --pcf5 : en fin de mesure, %s" % (("%d lumière(s) en PCF5 sur %d vivantes ✓" % [tenues, vivantes])
+				if tenues == vivantes and vivantes > 0 else "✗ %d en PCF5 sur %d vivantes" % [tenues, vivantes]))
 		return lignes
 
 
@@ -2789,4 +2858,7 @@ class Interrupteurs extends RefCounted:
 			d.append("--sans-halos-pnj : %d halo(s) de PNJ avaient encore une ombre en fin de mesure" % int(bilan["halos_a_ombre"]))
 		if sans_capteurs and int(bilan.get("capteurs_actifs", 0)) > 0:
 			d.append("--sans-capteurs : %d capteur(s) rendaient encore en fin de mesure" % int(bilan["capteurs_actifs"]))
+		if pcf5 and (int(bilan.get("pcf5_vivantes", 0)) == 0 or int(bilan.get("pcf5_tenues", 0)) != int(bilan.get("pcf5_vivantes", 0))):
+			d.append("--pcf5 : %d lumière(s) en PCF5 sur %d vivantes en fin de mesure" % [int(bilan.get("pcf5_tenues", 0)),
+				int(bilan.get("pcf5_vivantes", 0))])
 		return d
