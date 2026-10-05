@@ -128,6 +128,8 @@ var _classes_d_origine := {}
 ## OM4b — la fusée d'un plan « fusee-derriere-mur », et les points de sol d'un plan « pnj-entre-eux » (derrière l'écran, à côté).
 var _fusee_du_plan: Node2D = null
 var _sol_om4b: Dictionary = {}
+## OM5 — le plafonnier du plan, le côté et la distance où le PNJ se tient (`_jouer_le_plan`), pour la mesure (`_mesurer_om5`).
+var _om5: Dictionary = {}
 ## Le plan en cours (le tir, les lampes).
 var _plan_en_cours: Dictionary = {}
 ## Vrai le temps d'une sonde : le bandeau LED des murs (`MurLed`) éteint à CHAQUE image — le jeu le rallume (piège du
@@ -231,6 +233,16 @@ static func plans() -> Array[Dictionary]:
 	sortie.append(_plan_de(salle09, {"id": "fusee-derriere-mur", "famille": "om4b", "cible": 3, "fusee_derriere_mur": true,
 		"torche": false, "lampes": "-", "plafonniers": false, "leds": false,
 		"but": "Q87 — une fusée posée derrière un mur d'une case, le PNJ de l'autre côté : le mur le cache-t-il de sa lumière ?"}))
+	# OM5 (Q88) — l'ombre FINIE d'un corps sous un plafonnier : salle 0.1, le PNJ à deux tuiles de la lampe, les lumières de J1
+	# éteintes et J1 de l'autre côté de la lampe, hors de sa flaque. La prise relit la même image SANS l'ombre des corps, puis
+	# sans plafonnier, et confronte la différence, pixel par pixel, à la règle jumelle (`OmbresCorps.ombre`).
+	# Debout à deux tuiles, l'ombre (× 3 au bout) file jusqu'au bord de la flaque ; à 20 px de la lampe, son bout tombe DANS la
+	# flaque ; accroupi, elle ne dépasse guère le pied du corps.
+	for cas in [["debout", false, 70.0, "à deux tuiles"], ["debout-pres", false, 20.0, "à 20 px"], ["accroupi", true, 70.0, "à deux tuiles"]]:
+		sortie.append(_plan_de(base, {"id": "plafonnier-ombre-%s" % cas[0], "famille": "om5", "om5": cas[2],
+			"accroupi": cas[1], "distance": 250.0, "torche": false, "lampes": "-", "leds": false,
+			"but": "Q88 — le PNJ %s %s d'un plafonnier : son ombre finie, au pixel, contre la règle" % [
+				"accroupi" if cas[1] else "debout", cas[3]]}))
 	return sortie
 
 
@@ -248,11 +260,11 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		absents.append("main.tscn n'expose plus UI ou GameState")
 		return absents
 	for methode in ["demarrer_l_aventure", "_set_player_input_provider", "weapon_for_index", "_accorder_rendu_aux_vues",
-			"_do_spawn_fusee"]:
+			"_do_spawn_fusee", "_pousser_ombres_des_corps", "_corps_des_ombres"]:
 		if not main.has_method(methode):
 			absents.append("GameState.%s() a disparu" % methode)
 	for prop in ["aventure", "figurants", "p1", "p2", "vp1", "cam1", "arena", "rendu_racine_autorise", "archiver_les_matchs",
-			"bullet_container"]:
+			"bullet_container", "_materiaux_zone_morte"]:
 		if not prop in main:
 			absents.append("GameState.%s a disparu" % prop)
 	for prop in ["match_hud", "p1_dazzle", "aventure_progression"]:
@@ -520,6 +532,35 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 		pos_j1 = _mur_du_plan["j1"]
 		axe = _mur_du_plan["visee"]
 		_pose_j1 = [pos_j1, axe]
+	elif plan.has("om5"):
+		# OM5 — le PNJ à `om5` px du plafonnier le plus proche, J1 de l'autre côté de la lampe, à `distance` px d'elle (hors de sa
+		# flaque) ; le côté est le premier où le PNJ, le bout de son ombre debout et J1 tiennent sur du sol, sans mur jusqu'à la lampe.
+		_om5 = {}
+		var lampe: Variant = _plafonnier_le_plus_proche(ancre)
+		if lampe == null:
+			_refuser(id, "aucun plafonnier dans la salle")
+			return
+		var l: Vector2 = (lampe as Node2D).global_position
+		var d := float(plan["om5"])
+		var bout := d * 3.0 + OmbresCorps.RAYON_CORPS * 3.0
+		var choisi: Variant = null
+		for k in 8:
+			var u: Vector2 = vers_camera.rotated(PI + k * TAU / 8.0)
+			var p_j1: Vector2 = l - u * float(plan["distance"])
+			if _place_libre(l + u * d) and _place_libre(l + u * bout) and not _mur_entre_les_deux(l, l + u * bout) \
+					and _place_libre(p_j1) and not _mur_entre_les_deux(l, p_j1):
+				choisi = u
+				break
+		if choisi == null:
+			_refuser(id, "pas de côté libre autour du plafonnier pour le PNJ, son ombre et J1")
+			return
+		var u_l: Vector2 = choisi
+		ancre = l + u_l * d
+		pos_j1 = l - u_l * float(plan["distance"])
+		axe = u_l
+		_pose_j1 = [pos_j1, axe]
+		_poses_pnj[cible] = [ancre, -u_l]
+		_om5 = {"plafonnier": lampe, "lampe": l, "u": u_l, "d": d}
 	else:
 		if not _place_libre(pos_j1) or _mur_entre_les_deux(pos_j1, ancre):
 			_refuser(id, "J1 ne tient pas à %.0f px du PNJ de ce côté (mur ou vide) : %s" % [float(plan["distance"]), str(pos_j1)])
@@ -813,6 +854,120 @@ func _plafonniers(allumes: bool) -> bool:
 	return avant
 
 
+## OM5 — le plafonnier le plus proche d'un point, ou `null`.
+func _plafonnier_le_plus_proche(p: Vector2) -> Variant:
+	var meilleur: Node2D = null
+	for pl in get_tree().get_nodes_in_group("plafonniers"):
+		if pl is Node2D and (meilleur == null or (pl as Node2D).global_position.distance_to(p) < meilleur.global_position.distance_to(p)):
+			meilleur = pl
+	return meilleur
+
+
+## OM5 (Q88) — l'ombre des corps sous le plafonnier, au pixel. Trois images de la même scène : AVEC l'ombre des corps (la prise),
+## SANS (la poussée décrochée, `om_nb_corps` à 0), et sans plafonnier. Dans la flaque, chaque pixel que le plafonnier éclaire assez
+## pour en juger (son apport, AVEC moins SANS-PLAFONNIER, au-dessus de 0,03) est dit « dans l'ombre » s'il a perdu plus de la
+## moitié de cet apport — puis confronté à la règle jumelle (`OmbresCorps.ombre`) aux quatre coins du pixel : un pixel à cheval
+## sur le bord de l'ombre ne compte pas. Écrit `<id>_om5_avec.png`, `_om5_sans.png` (la lightmap autour de la lampe) et
+## `_om5_carte.png` (blanc : ombre d'accord ; noir : lumière d'accord ; rouge : désaccord ; gris : bord ou non jugé).
+func _mesurer_om5(id: String, cible: Player, avec: Image) -> Dictionary:
+	var m := {}
+	if _om5.is_empty():
+		return m
+	var l: Vector2 = _om5["lampe"]
+	var plafonnier: Node2D = _om5["plafonnier"]
+	var halo: Light2D = plafonnier.get("halo")
+	var source := Vector3(l.x, l.y, halo.height)
+	var corps: Array = []
+	var forces: Array = []
+	for c: Dictionary in _main._corps_des_ombres(0):
+		var q: Vector2 = c["position"]
+		corps.append(Vector4(q.x, q.y, OmbresCorps.RAYON_CORPS, float(c["hauteur"])))
+		forces.append(float(c["force"]))
+	# SANS l'ombre des corps : la poussée décrochée le temps de deux images, les matériaux à zéro corps.
+	RenderingServer.frame_pre_draw.disconnect(_main._pousser_ombres_des_corps)
+	for mat in _main._materiaux_zone_morte[0]:
+		(mat as ShaderMaterial).set_shader_parameter("om_nb_corps", 0)
+	_reposer()
+	var images_sans: Array = await _capturer_l_image()
+	var sans: Image = images_sans[1]
+	var etaient := _plafonniers(false)
+	_reposer()
+	var noire: Image = (await _capturer_l_image())[1]
+	_plafonniers(etaient)
+	RenderingServer.frame_pre_draw.connect(_main._pousser_ombres_des_corps)
+	var ct: Transform2D = _main.vp1.get_canvas_transform()
+	var echelle := Vector2(avec.get_size()) / Vector2(_main.vp1.size)
+	var inv := ct.affine_inverse()
+	var centre: Vector2 = (ct * l) * echelle
+	var r_px := float(plafonnier.get("rayon_px")) * ct.get_scale().x * echelle.x
+	var x0 := maxi(0, int(centre.x - r_px))
+	var y0 := maxi(0, int(centre.y - r_px))
+	var x1 := mini(avec.get_width() - 1, int(centre.x + r_px))
+	var y1 := mini(avec.get_height() - 1, int(centre.y + r_px))
+	var carte := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_RGB8)
+	carte.fill(Color(0.35, 0.35, 0.35))
+	var accord := 0
+	var desaccord := 0
+	var bord := 0
+	var ombre_regle := 0
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var a := _lum(avec, x, y)
+			var b := _lum(sans, x, y)
+			var apport := b - _lum(noire, x, y)
+			if apport < 0.03:
+				continue
+			var mesure := (b - a) / apport > 0.5
+			var coins: Array[bool] = []
+			for dc in [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1)]:
+				var monde: Vector2 = inv * ((Vector2(x, y) + dc) / echelle)
+				coins.append(OmbresCorps.ombre(source, monde, corps, forces) > 0.5)
+			if coins.has(true) and coins.has(false):
+				bord += 1
+				continue
+			if coins[0]:
+				ombre_regle += 1
+			if coins[0] == mesure:
+				accord += 1
+				carte.set_pixel(x - x0, y - y0, Color.WHITE if mesure else Color.BLACK)
+			else:
+				desaccord += 1
+				carte.set_pixel(x - x0, y - y0, Color.RED)
+	var zone := Rect2i(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+	avec.get_region(zone).save_png("%s/%s_om5_avec.png" % [_dossier, id])
+	sans.get_region(zone).save_png("%s/%s_om5_sans.png" % [_dossier, id])
+	carte.save_png("%s/%s_om5_carte.png" % [_dossier, id])
+	# Le PNJ à l'écran, SANS l'ombre des corps : les mêmes découpes que la prise (`<id>-sans_pnj_iso.png`…), pour l'avant / après.
+	_decouper_autour(id + "-sans", cible, images_sans[0], sans)
+	var h_corps := MursBas.hauteur_de_posture(cible.accroupi)
+	m["lampe"] = _v(l)
+	m["hauteur_lampe_px"] = halo.height
+	m["hauteur_corps_px"] = h_corps
+	m["distance_px"] = float(_om5["d"])
+	m["longueur_regle_px"] = snappedf(OmbresCorps.longueur(float(_om5["d"]), h_corps, halo.height), 0.1)
+	m["corps"] = corps.size()
+	m["pixels_juges"] = accord + desaccord
+	m["accord"] = accord
+	m["desaccord"] = desaccord
+	m["bord"] = bord
+	m["ombre_selon_la_regle_px"] = ombre_regle
+	# Le sol, sur l'axe lampe → PNJ : au milieu de l'ombre, juste avant son bout et juste après (luminance AVEC / SANS).
+	var u: Vector2 = _om5["u"]
+	var bout: float = (float(_om5["d"]) + OmbresCorps.RAYON_CORPS) * halo.height / (halo.height - h_corps)
+	var axe := {}
+	for nom_k in [["milieu", (float(_om5["d"]) + OmbresCorps.RAYON_CORPS + bout) * 0.5], ["avant_le_bout", bout - 4.0],
+			["apres_le_bout", bout + 4.0]]:
+		var q: Vector2 = l + u * float(nom_k[1])
+		axe[nom_k[0]] = [snappedf(float(nom_k[1]), 0.1), snappedf(_luminance_au(avec, q), 0.0001), snappedf(_luminance_au(sans, q), 0.0001)]
+	m["axe"] = axe
+	return m
+
+
+func _lum(img: Image, x: int, y: int) -> float:
+	var c := img.get_pixel(x, y)
+	return c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
+
+
 ## Équipe le PNJ d'une classe, par son slug (la même lecture que `planche_q42._equiper`).
 func _equiper(pnj: Player, slug: String) -> void:
 	var i := SLUGS.find(slug)
@@ -986,6 +1141,8 @@ func _prise(plan: Dictionary, cible: Player) -> void:
 		lightmap.save_png("%s/%s_lightmap.png" % [_dossier, id])
 	var entree := _mesurer(plan, cible, ecran, lightmap)
 	_decouper_autour(id, cible, ecran, lightmap)
+	if String(plan["famille"]) == "om5":
+		entree["om5"] = await _mesurer_om5(id, cible, lightmap)
 	if String(plan["famille"]) in FAMILLES_SONDEES and not bool(plan.get("tir_au_mur", false)):
 		entree["sonde"] = await _sonde_torche_seule(cible)
 	_journal.append(entree)

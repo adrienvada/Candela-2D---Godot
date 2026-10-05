@@ -260,6 +260,9 @@ var _materiaux_zone_morte: Array = [[], []]
 ## Carte sans mur bas : les uniformes « aucun mur » ne se poussent qu'une fois.
 var _zone_morte_vide_poussee := false
 var _zone_morte_debordement_signale := false
+## OMBRES, OM5 : sans plafonnier allumé, les uniformes « aucune lampe » ne se poussent qu'une fois (voir `_pousser_ombres_des_corps`).
+var _ombres_corps_vides_poussees := false
+var _ombres_corps_debordement_signale := false
 const LAG_COMP_MAX := 0.2
 var _pos_history: Array[Dictionary] = []
 
@@ -499,6 +502,11 @@ func _ready():
 	tree_exiting.connect(func():
 		if RenderingServer.frame_pre_draw.is_connected(_pousser_zone_morte):
 			RenderingServer.frame_pre_draw.disconnect(_pousser_zone_morte))
+	# OMBRES, OM5 : l'ombre des corps sous les plafonniers, au même moment, pour la même raison.
+	RenderingServer.frame_pre_draw.connect(_pousser_ombres_des_corps)
+	tree_exiting.connect(func():
+		if RenderingServer.frame_pre_draw.is_connected(_pousser_ombres_des_corps):
+			RenderingServer.frame_pre_draw.disconnect(_pousser_ombres_des_corps))
 	# L'intro ne se joue qu'ici, au lancement. Les retours au menu passent par
 	# `play_music`, qui bascule sans redémarrer le flux.
 	AudioManager.demarrer_musique_au_lancement()
@@ -6031,6 +6039,63 @@ func _pousser_zone_morte() -> void:
 		if is_instance_valid(autre) and autre.visual_enemy != null:
 			MursBasRendu.poser_corps(autre.visual_enemy.material as ShaderMaterial, u,
 				ecran * autre.global_position, autre.accroupi)
+
+
+## OMBRES, OM5 (Q88, décision d'Adrien du 2026-10-05 : « Ombre ») — l'ombre FINIE des corps sous les plafonniers, poussée aux
+## matériaux du sol et du décor de chaque vue juste avant le dessin, comme la zone morte (`_pousser_zone_morte`, dont elle prend la
+## transformation) : la règle est dans le matériau (`ombres_corps_zone.gdshaderinc`), sa jumelle dans `OmbresCorps.ombre`.
+##
+## ⚠️ **Une fonction à elle, et pas trois lignes dans `_pousser_zone_morte`** : celle-ci sort tôt sur une carte sans muret, et les
+## salles de l'aventure en ont rarement — les corps n'y auraient jamais été mis à jour. Sans plafonnier allumé (le duel, une salle
+## éteinte), les matériaux apprennent « aucune lampe » une fois, puis plus rien n'est poussé.
+func _pousser_ombres_des_corps() -> void:
+	if not is_inside_tree() or arena == null:
+		return
+	var lampes := OmbresCorps.lampes_allumees(get_tree())
+	if lampes.is_empty():
+		if _ombres_corps_vides_poussees:
+			return
+		_ombres_corps_vides_poussees = true
+	else:
+		_ombres_corps_vides_poussees = false
+	for pid in 2:
+		var rendu: Node = _viewport_du_monde(pid)
+		var cible: Viewport = rendu as Viewport if rendu is Viewport else get_window()
+		if cible == null:
+			continue
+		var ecran := cible.get_final_transform() * cible.get_canvas_transform()
+		var u := OmbresCorps.uniformes_de_vue(ecran, lampes, [] if lampes.is_empty() else _corps_des_ombres(pid))
+		if u["debordement"] > 0 and not _ombres_corps_debordement_signale:
+			_ombres_corps_debordement_signale = true
+			push_warning("Ombres des corps : %d corps ou plafonniers de plus que ce qu'un matériau reçoit — leur ombre ne se dessine pas." \
+				% u["debordement"])
+		for m in _materiaux_zone_morte[pid]:
+			OmbresCorps.poser(m, u)
+
+
+## OMBRES, OM5 — les corps qui font une ombre sous un plafonnier, tels que la vue `pid` les montre : chacun en jeu (le joueur, J2 en
+## duel, les PNJ de l'aventure), à la hauteur de sa posture, et les leurres (un leurre sans ombre là où son poseur en a une se
+## trahirait). ⚠️ **La force de chacun est son opacité DANS cette vue** (`Presentation3D.opacite_du_corps`, le patron du contact au
+## sol) : un corps effacé par le brouillage ou la suie ne trahit rien par son ombre. Un mort n'en fait pas (`_en_jeu`, OM4a).
+func _corps_des_ombres(pid: int) -> Array:
+	var sortie: Array = []
+	var le_sien: Node = p1 if pid == 0 else p2
+	for j in _joueurs_en_lice():
+		if not _en_jeu(j):
+			continue
+		sortie.append({"position": (j as Node2D).global_position,
+			"hauteur": MursBas.hauteur_de_posture(j.get("accroupi") == true),
+			"force": Presentation3D.opacite_du_corps(j, j == le_sien)})
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if not (g is GadgetLeurre) or not is_instance_valid(g) or g.is_queued_for_deletion() or not g.visible:
+			continue
+		if g.est_masque_pour_rejeu():
+			continue
+		# Le leurre se montre à son poseur par `_visuel_poseur`, aux autres par `_visuel` — comme `visual` et `visual_enemy`.
+		var visuel: Variant = g.get("_visuel_poseur") if int(g.poseur_id) == pid else g.get("_visuel")
+		sortie.append({"position": (g as Node2D).global_position, "hauteur": MursBas.hauteur_de_posture(false),
+			"force": Presentation3D.opacite_rendue(visuel)})
+	return sortie
 
 
 ## Loge un calque d'écran (vignette, flash de mort) là où son joueur est rendu.

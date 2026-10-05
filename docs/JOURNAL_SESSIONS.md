@@ -6240,3 +6240,14 @@ couche de l'étoile) ; `fusee.gd` (`masque_ombre`) ; `gadget_mine.gd`, `gadget_b
 `tools/test_ombres_pnj.gd` (nouveau) et sa ligne dans `tools/run_suites.sh` ; `tools/planche_ombres.gd` (la famille `om4b`).
 Après une fusion : `grep -n "couche_ombre_pnj\|masque_des_pnj" *.gd` doit répondre dans `canaux_lumiere.gd`, `player.gd` et
 `gadget_leurre.gd`, et `grep -n "shadow_item_cull_mask = 1 |" gadget_mine.gd gadget_braises.gd` ne plus rien rendre.
+
+**OM5, le 2026-10-05 — annoncé ici avant le commit :** `ombres_corps_zone.gdshaderinc` et `ombres_corps.gd` (`OmbresCorps`),
+nouveaux ; `murs_bas_sol.gdshader` et `murs_bas_decor.gdshader` (l'include, et leur éclairage multiplié par
+`1 − om_ombre_des_corps`) ; `game_state.gd` (`_ombres_corps_vides_poussees`, `_ombres_corps_debordement_signale` sous les
+variables de la zone morte ; un second crochet `frame_pre_draw` dans `_ready` ; `_pousser_ombres_des_corps` et
+`_corps_des_ombres`, nouvelles, juste après `_pousser_zone_morte`). Outils : `tools/test_ombres_plafonniers.gd` (nouveau) et sa
+ligne dans `tools/run_suites.sh` ; `tools/planche_ombres.gd` (la famille `om5`, trois appuis de plus :
+`_pousser_ombres_des_corps`, `_corps_des_ombres`, `_materiaux_zone_morte`) ; `docs/iso/ombres/om5/` (la planche et ses mesures). Après une fusion :
+`grep -n "ombres_corps_zone" murs_bas_sol.gdshader murs_bas_decor.gdshader` doit répondre deux fois, et
+`grep -c "_pousser_ombres_des_corps" game_state.gd` au moins quatre. ⚠️ Un `class_name` neuf (`OmbresCorps`) : sans
+`godot --headless --path . --import`, les suites en `--script` ne le trouvent pas (`run_suites.sh` le rappelle).

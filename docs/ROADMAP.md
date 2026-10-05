@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q88 = les corps ont une ombre FINIE sous les plafonniers, calculée dans le matériau** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Ombre » — contre l'avis du chantier, qui proposait d'attendre OM7 ; livrée le même jour, avec OM5) | Un plafonnier pend à 1,5 tuile : une étoile y projetterait une ombre infinie, d'où « aucune » jusque-là. La règle D · H / (h − H) se calcule dans le matériau du sol et du décor, comme la zone morte des murets, pour la lumière des plafonniers seuls ; le corps est un cylindre (0,4 tuile de rayon, la hauteur de sa posture), l'ombre suit son opacité dans la vue — un corps effacé ne se trahit pas par elle — et les leurres en ont une. Debout, elle vaut deux fois la distance du corps à la lampe : la géométrie du jeu, pas un réglage. Voir « OM5 — FAITE » (chantier OMBRES). |
 | **Q86 = une couche d'ombre par PNJ ; Q87 = la fusée, la mine et la nappe de braises coupées par les murs pour les corps, duel compris** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « une couche par PNJ » ; « Oui » ; livrées le même jour, avec OM4b) | Q86 : la torche d'un PNJ traversait les autres PNJ quand celle de J1 les ombrait tous ; chaque PNJ porte désormais une couche à lui (512 et au-delà, par sa place de réserve), en plus de la 8 que lisent les lumières de J1 — rien ne change pour J1 et J2 —, et son leurre la porte aussi, sans quoi il se trahissait au premier faisceau d'un autre PNJ. Q87 : leur masque d'ombre ne contenait que les murs, et ce masque filtre aussi les RÉCEPTEURS — aucun corps ne recevait leur ombre, elles l'éclairaient à travers un mur. Le masque des lumières neutres, celui du plafonnier ; un corps ne fait toujours pas d'ombre sous elles. Voir « OM4b — FAITE » (chantier OMBRES). |
 | **Q84 = la torche ne respire plus ; le grésillement la tient éteinte le plus souvent, et la rallume par sursauts** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent éteinte, et clignote sporadiquement » ; livré le même jour, avec OM3b) | Le souffle (±3 % nominaux, quelques millièmes mesurés aux bancs d'OM0 et d'OM3b) ne se voyait pas : c'est un goût, tranché. La fausse torche du Braconnier le perd avec la vraie — un leurre qui respirerait seul se trahirait. Le grésillement : noir trois quarts du temps au cœur de la zone au lieu d'un tiers, des sursauts de 60 à 140 ms, et **jamais plus de trois coupures franches dans une même seconde** — la borne pour les yeux tient à la fenêtre glissante, pas seulement en moyenne (le sursaut finit toujours au même point de son créneau). Voir « OM3b — FAITE » (chantier OMBRES). |
 | **Q81 = le brouillage n'efface que le corps qui éblouit, et seulement au-delà de la rétrodiffusion de 0,06 — en duel, chez le client en ligne et pour le bot** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Oui » ; livré le même jour, avec OM1) | Allumer sa torche rendait tout ennemi transparent à 35 % ; une fusée ou un gadget effaçait l'adversaire qu'ils n'avaient pas fait ; en aventure, UN PNJ qui éblouissait effaçait les six — et le culling d'OM1, seul, aurait laissé voir le sol éclairé à travers un PNJ délavé. **La source est celle qui TIENT le niveau d'éblouissement**, pas la gagnante de l'image (`Player.source_du_brouillage`) : la première écriture, qui suivait la gagnante plus un tireur jamais oublié, effaçait l'adversaire pendant la redescente d'une fusée. Le plancher se SOUSTRAIT (`Brouillage.opacite_vue`) au lieu de servir de seuil : l'opacité reste continue. Le client calcule la source lui-même — rien ne voyage de neuf —, et c'est aussi ce qui donne enfin une source à son appareil de brouillage, dont le halo retombait toujours sur l'adversaire. Voir « OM1 — FAITE » (chantier OMBRES) et le piège « Qui m'éblouit ? » du même jour. |
@@ -33933,7 +33934,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | à faire |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) et ✅ **OM4b FAITE le 2026-10-05** (une couche par PNJ, les lumières posées : Q86, Q87) — voir plus bas |
-| **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | à faire |
+| **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** — voir « OM5 » plus bas |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
 | **OM7** | Plus tard : l'ombre des corps calculée dans le shader du sol | à ouvrir après OM1 à OM3 | — |
 
@@ -34062,7 +34063,7 @@ brouillage, posée à la livraison d'OM1).**
   Une ombre d'occulteur 2D y serait fausse (infinie). **Avis : aucune ombre jusqu'à OM7**, qui la donnerait à toutes les lampes
   d'un coup.
   **✅ Décision d'Adrien, 2026-10-05 : « Ombre »** — contre l'avis : les corps ont une ombre finie sous un plafonnier, calculée
-  dans le matériau (OM5), sans attendre OM7.
+  dans le matériau (OM5), sans attendre OM7. **Livrée le même jour avec OM5.**
 - **Q89 — L'appareil de brouillage (le flou, le halo) et le voile suivent-ils, eux aussi, la source qui TIENT le niveau ?**
   *Posée le 2026-10-05, à la livraison d'OM1.* Le brouillage du corps suit désormais la source qui tient le niveau
   (`Player.source_du_brouillage`) ; l'appareil et le voile suivent encore la gagnante de l'image (`source_eblouissante`). Pendant
@@ -34612,6 +34613,77 @@ publie.
 
 **Non prouvé.** Rien sous Metal ; la planche est prise sous llvmpipe. L'effet des couches de PNJ sur la cadence (des masques plus
 larges, autant d'occulteurs) n'est pas mesuré : OM6.
+
+### OM5 — FAITE le 2026-10-05 : les corps ont une ombre FINIE sous les plafonniers
+
+**Q88 tranchée par Adrien le 2026-10-05 : « Ombre »** — contre l'avis du chantier (« aucune jusqu'à OM7 »).
+
+**Le geste.** Un plafonnier pend à 1,5 tuile, au-dessus des têtes (une tuile debout) : l'ombre d'un corps y est finie, de
+longueur D · H / (h − H) — D la distance de la lampe au corps, H sa hauteur, h celle de la lampe. Une étoile (`LightOccluder2D`)
+ne sait projeter qu'une ombre INFINIE, comme si la lampe était au sol : c'est pourquoi le plafonnier n'en avait aucune (S5). La
+règle se calcule donc dans le matériau, comme la zone morte des murets (MB3c), dont elle reprend le patron trait pour trait :
+- **`ombres_corps_zone.gdshaderinc`** (neuf) : le corps est un CYLINDRE vertical — « le corps grossier » de la présentation,
+  0,4 tuile de rayon (`Presentation3D.RAYON_CORPS_PX`, recopié dans `OmbresCorps.RAYON_CORPS`), haut de sa hauteur de posture
+  (`MursBas.hauteur_de_posture` : une tuile debout, 0,1 accroupi — celle de la règle des murets, une seule hauteur pour la
+  lumière). Le rayon qui va de la lampe au point du sol passe sous la tête sur la dernière fraction H / h de son trajet ; il touche
+  le corps si ce bout passe à moins d'un rayon de son centre. Sur l'axe, l'ombre court jusqu'à D · H / (h − H) derrière le
+  centre, et s'élargit en s'éloignant (le haut du cylindre se projette × h / (h − H), soit × 3 debout).
+- Le **sol et le décor** (`murs_bas_sol.gdshader`, `murs_bas_decor.gdshader`) retirent cette ombre de la lumière du plafonnier,
+  et d'elle seule ; les corps (capteurs, sprites) ne la reçoivent pas — le modèle de vue du bot ne la connaît pas.
+- **Les plafonniers, et eux seuls** : le shader les reconnaît à leur position à l'écran (`om_lampes`), pas à leur hauteur — une
+  fusée en vol passe par la même. La torche (z = 0), les lumières posées (Q87 : pas d'ombre de corps) ne sont pas touchées.
+- **`OmbresCorps`** (`ombres_corps.gd`, neuf) : la règle jumelle (`ombre`, `longueur`), les plafonniers allumés, les uniformes
+  d'une vue. **`GameState._pousser_ombres_des_corps`**, accrochée juste avant le dessin comme la zone morte — une fonction à elle :
+  `_pousser_zone_morte` sort tôt sur une carte sans muret, et les corps n'y auraient jamais été mis à jour. Sans plafonnier allumé
+  (le duel, une salle éteinte), « aucune lampe » se pousse une fois, puis plus rien.
+- **Les corps** (`_corps_des_ombres`) : ceux qui sont en jeu (le joueur, les PNJ ; J2 en duel), et **les leurres** — un leurre
+  sans ombre sous la lampe, là où son poseur en a une, se trahirait. ⚠️ **La force de chaque ombre est l'opacité du corps DANS la
+  vue** (`Presentation3D.opacite_du_corps`, le patron du contact au sol) : un corps effacé par le brouillage, la suie ou caché ne
+  trahit rien par son ombre ; deux ombres qui se recouvrent donnent la plus forte, jamais la somme. Un mort n'en fait pas (OM4a).
+
+**Ce que le banc mesure** (famille `om5` du banc des ombres ; planche et mesures : `docs/iso/ombres/om5/`). Salle 0.1, un PNJ sous un plafonnier, J1 de l'autre côté de la
+lampe, ses lumières éteintes : la même image SANS l'ombre des corps puis AVEC, à l'écran et dans la lightmap, et la carte
+d'accord, pixel par pixel, avec la règle jumelle (`OmbresCorps.ombre`). **Aucun désaccord** : debout à deux tuiles de la lampe,
+109 664 pixels jugés ; debout à 20 px, 109 389 ; accroupi à deux tuiles, 109 734 — seuls 192 à 536 pixels, au bord exact de
+l'ombre, ne sont pas jugés. **L'ombre est finie** : à 20 px de la lampe, sur l'axe, le sol est noir 4 px avant le bout que donne
+la règle (à 98 px de la lampe) et rendu à sa lumière 4 px après (106 px : 0,051, la valeur sans l'ombre) ; accroupi, de même à
+86 et 94 px. Debout à deux tuiles, le bout tomberait à 252 px de la lampe, au-delà de sa flaque (140 px) : l'ombre la coupe
+jusqu'au bord.
+
+**Ce que cela veut dire à l'œil, et que la règle dicte.** La lampe ne pend qu'une demi-tuile au-dessus des têtes : debout, l'ombre
+vaut deux fois la distance du corps à la lampe, et trois fois sa largeur au bout. Dès qu'un corps est à plus de 33 px de la
+lampe, elle file jusqu'au bord de la flaque — un coin noir qui coupe la lumière. Accroupi, elle ne dépasse guère son pied. C'est
+la géométrie du jeu, pas un réglage : si Adrien la trouve trop forte à l'œil (H16), le levier est la hauteur des plafonniers
+(`Plafonnier.HAUTEUR_TUILES`), qui règle aussi leur zone morte derrière les murets — à ne pas toucher sans planche.
+
+**Les gardes.** `tools/test_ombres_plafonniers.gd` (nouvelle, 39 vérifications, au pas fixe) : la règle pure (la longueur sur
+l'axe, l'ombre finie au pixel près, l'élargissement, l'accroupi, une lampe sans hauteur ou plus basse que la tête, la plus forte
+et pas la somme, une force nulle ou moitié) ; les constantes recopiées (le rayon de la présentation, des tableaux qui tiennent une
+salle) ; les shaders (le sol et le décor portent l'include et retirent l'ombre de leur lumière ; les corps ne la portent pas) ; et
+dans une vraie salle d'aventure : la poussée accrochée avant le dessin, le plafonnier et les corps arrivés au matériau à leur
+place, la posture, un PNJ qui éblouit J1 n'ayant plus que l'ombre de son opacité, un PNJ caché plus du tout, un PNJ mort non plus — même si son sprite restait visible —, le leurre une, et
+« aucune lampe » sans plafonnier. `test_banc` : les appuis du banc sur le jeu.
+
+**Sabotages exécutés — chacun restauré à l'identique (md5)** : V1 le sol qui ne retire plus l'ombre de sa lumière — un rouge ; V2 toute lampe à hauteur prise pour un plafonnier (la fusée
+en vol aussi) — un rouge ; V3 l'ombre qui ignore l'opacité du corps dans la vue — un rouge ; V4 `_en_jeu` retiré (un corps
+mort ou caché gardé) — **aucun rouge à la première passe** : `die()` cache les sprites, d'où une force nulle que la poussée
+écarte d'elle-même, et la garde ne voyait que cette seconde défense ; elle vérifie désormais un corps `dead` dont le sprite
+resterait visible (un cadavre au sol) — un rouge ; V5 les leurres sans ombre — un rouge ; V6 la poussée décrochée d'avant le
+dessin — un rouge ; V7 deux ombres qui s'additionnent — un rouge ; V8 la posture ignorée — un rouge ; V9 la tête projetée sur
+toute la longueur (l'ombre infinie d'une étoile) — deux rouges.
+
+**La suite entière** (`./tools/run_suites.sh`) : **185 suites vertes, aucune rouge** — « tout passe, sans erreur de script », en
+37 min 2 s (la machine partagée un temps avec les sabotages d'OM2).
+
+**Version** : rien ne change en duel (aucun plafonnier), ni pour le bot (la règle ne touche que le sol et le décor) ; en solo, ce
+que le joueur voit change : une **mineure**, comme le reste du chantier. Rien sur le fil.
+
+**Non prouvé.** Rien sous Metal ; le banc est pris sous llvmpipe. **Le coût n'est pas mesuré** : la règle coûte, par pixel éclairé
+d'un plafonnier, une boucle sur ses corps (au plus douze) — la torche (z = 0) sort à la première ligne. À mesurer avec le banc de
+cadence du solo (OM6). Adrien n'a pas vu l'ombre en jeu (H16).
+
+**Signalé, pas corrigé.** Les faces de murs relisent le sol à leur pied (O5) : une ombre de corps qui touche un mur y monte en
+bande, comme celles des torches aujourd'hui.
 
 ### Ne pas reproposer
 
