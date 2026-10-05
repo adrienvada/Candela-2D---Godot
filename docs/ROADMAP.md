@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q82 = l'ombre d'un corps a la forme de son corps voxel** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Oui » ; livrée le même jour, avec OM2) | En iso, l'ombre d'un corps prend la forme du corps qu'on voit — le personnage, sans l'arme ni la torche tenues à hauteur de main (« l'arme portée sans pointe au sol »), réduite à l'accroupi par l'échelle du nœud — et non plus celle du sprite vu de dessus, dont l'arme se projetait au sol en une pointe de 22 à 31 px. L'étoile est l'empreinte au sol des boîtes du corps voxel au repos (`VoxelCatalogue.etoile_d_ombre`) : une seule fonction pour le joueur, les PNJ et le leurre, et une garde qui la confronte aux boîtes d'un vrai corps. Les figurants y gagnent l'ombre de contact que seuls J1 et J2 avaient. Voir « OM2 — FAITE » (chantier OMBRES). |
 | **Q88 = les corps ont une ombre FINIE sous les plafonniers, calculée dans le matériau** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Ombre » — contre l'avis du chantier, qui proposait d'attendre OM7 ; livrée le même jour, avec OM5) | Un plafonnier pend à 1,5 tuile : une étoile y projetterait une ombre infinie, d'où « aucune » jusque-là. La règle D · H / (h − H) se calcule dans le matériau du sol et du décor, comme la zone morte des murets, pour la lumière des plafonniers seuls ; le corps est un cylindre (0,4 tuile de rayon, la hauteur de sa posture), l'ombre suit son opacité dans la vue — un corps effacé ne se trahit pas par elle — et les leurres en ont une. Debout, elle vaut deux fois la distance du corps à la lampe : la géométrie du jeu, pas un réglage. Voir « OM5 — FAITE » (chantier OMBRES). |
 | **Q86 = une couche d'ombre par PNJ ; Q87 = la fusée, la mine et la nappe de braises coupées par les murs pour les corps, duel compris** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « une couche par PNJ » ; « Oui » ; livrées le même jour, avec OM4b) | Q86 : la torche d'un PNJ traversait les autres PNJ quand celle de J1 les ombrait tous ; chaque PNJ porte désormais une couche à lui (512 et au-delà, par sa place de réserve), en plus de la 8 que lisent les lumières de J1 — rien ne change pour J1 et J2 —, et son leurre la porte aussi, sans quoi il se trahissait au premier faisceau d'un autre PNJ. Q87 : leur masque d'ombre ne contenait que les murs, et ce masque filtre aussi les RÉCEPTEURS — aucun corps ne recevait leur ombre, elles l'éclairaient à travers un mur. Le masque des lumières neutres, celui du plafonnier ; un corps ne fait toujours pas d'ombre sous elles. Voir « OM4b — FAITE » (chantier OMBRES). |
 | **Q84 = la torche ne respire plus ; le grésillement la tient éteinte le plus souvent, et la rallume par sursauts** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent éteinte, et clignote sporadiquement » ; livré le même jour, avec OM3b) | Le souffle (±3 % nominaux, quelques millièmes mesurés aux bancs d'OM0 et d'OM3b) ne se voyait pas : c'est un goût, tranché. La fausse torche du Braconnier le perd avec la vraie — un leurre qui respirerait seul se trahirait. Le grésillement : noir trois quarts du temps au cœur de la zone au lieu d'un tiers, des sursauts de 60 à 140 ms, et **jamais plus de trois coupures franches dans une même seconde** — la borne pour les yeux tient à la fenêtre glissante, pas seulement en moyenne (le sursaut finit toujours au même point de son créneau). Voir « OM3b — FAITE » (chantier OMBRES). |
@@ -33931,7 +33932,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 |---|---|---|---|
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** (le culling et le brouillage par la source, ensemble) — voir « OM1 » plus bas ; Q89 (l'appareil de brouillage) posée à la livraison |
-| **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | à faire |
+| **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | ✅ **FAITE le 2026-10-05** — voir « OM2 » plus bas |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) et ✅ **OM4b FAITE le 2026-10-05** (une couche par PNJ, les lumières posées : Q86, Q87) — voir plus bas |
 | **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** — voir « OM5 » plus bas |
@@ -34024,7 +34025,7 @@ brouillage, posée à la livraison d'OM1).**
 - **Q82 — En iso, l'ombre d'un corps prend-elle la forme du corps voxel** (le personnage, l'arme portée sans pointe au sol,
   réduite à l'accroupi) **plutôt que celle du sprite vu de dessus ?** Ce n'est pas le disque écarté par Q42 : la forme reste
   celle du personnage. **Avis : oui, après avoir vu OM1 à l'image.** Bloque OM2.
-  **✅ Décision d'Adrien, 2026-10-05 : « Oui ».** Débloque OM2.
+  **✅ Décision d'Adrien, 2026-10-05 : « Oui ».** Débloque OM2. **Livrée le même jour avec OM2.**
 - **Q83 — Pâte D : laquelle des trois variantes, sur planche ?** (a) seuils e2 et e3 sans bruit ; (b) transitions élargies ;
   (c) e2 en rampe continue. Dans tous les cas e1 et son pochoir restent — c'est la raison du choix de D (« garder la lueur
   faible », 2026-09-14) : on adoucit la pâte, on ne la change pas. **Avis : après la planche** (OM3 la produit, avec la mesure de
@@ -34684,6 +34685,84 @@ cadence du solo (OM6). Adrien n'a pas vu l'ombre en jeu (H16).
 
 **Signalé, pas corrigé.** Les faces de murs relisent le sol à leur pied (O5) : une ombre de corps qui touche un mur y monte en
 bande, comme celles des torches aujourd'hui.
+
+### OM2 — FAITE le 2026-10-05 : l'ombre d'un corps a la forme de son corps voxel, et les figurants ont leur ombre de contact
+
+**Q82 tranchée par Adrien le 2026-10-05 : « Oui »** — en iso, l'ombre d'un corps prend la forme du corps voxel (le personnage,
+l'arme portée sans pointe au sol, réduite à l'accroupi) plutôt que celle du sprite vu de dessus.
+
+1. **L'étoile du corps voxel** (`VoxelCatalogue.etoile_d_ombre`, neuve) : l'empreinte au sol, vue de dessus, des boîtes que
+   `VoxelCorps._construire_squelette` bâtit au repos — les jambes, le torse, la tête, les bras (relevés de `GARDE_BRAS`, comme au
+   repos), le gadget dans le dos, et la bouteille des six classes qui la portent —, échantillonnée comme l'était la silhouette :
+   32 rayons depuis le centre, angle croissant, aire signée positive (celle que le culling d'OM1 attend). Une seule fonction pour
+   le joueur, chaque PNJ et le leurre (`GadgetLeurre._monter_occluder`) : le leurre fait toujours le même trou que son poseur.
+   - **Ni l'arme ni la torche** — la lecture de « l'arme portée sans pointe au sol ». Tenues à hauteur de main, à 0,30 tuile devant
+     le torse, minces : l'étoile du sprite les projetait au sol en une pointe de 22 à 31 px devant le corps, la « pointe au sol »
+     de l'audit (O1). La torche, en plus, suit `flashlight_on` dans la vue iso : l'étoile aurait trahi l'état de la lampe. *Si
+     Adrien voulait l'arme dans l'ombre, le geste est d'ajouter sa boîte aux rectangles (une ligne) — sa pointe reviendrait.*
+   - **La bouteille** lue sur la donnée de la CLASSE (`PORTRAITS`), jamais sur le drapeau d'apparence (`tenue()`) : l'ombre d'un
+     corps ne change pas avec l'habillage que l'un des deux joueurs a choisi.
+   - **La posture** garde l'échelle du nœud (× 0,8 accroupi, OM4a) : la vraie pose accroupie des boîtes (torse et tête penchés en
+     avant) donnerait une empreinte PLUS grande — l'inverse de « réduite à l'accroupi ».
+   - Ce que cela donne, en pixels (tuile de 35, épaisseur × 1,6) : devant, la tête (5 à 6 px) au lieu de la pointe de l'arme (22
+     à 31) ; sur les côtés, le bord des bras (12 à 14 px) ; derrière, le gadget ou la bouteille (8 à 9 px). Les dix classes ont
+     dix formes distinctes (gabarit, gadget, bouteille).
+   - **Au banc des ombres** (familles `etoile`, `classes` et `regles`, rejouées sur OM5 puis sur OM2 ; planches et mesures :
+     `docs/iso/ombres/om2/`) : la pointe de l'étoile — son plus long rayon — passe de 23 à 31,5 px à **12,5 à 14,2 px** selon la
+     classe, son aire de 561 à 695 px² à **231 à 275** ; l'ombre derrière le corps reste noire dans les vingt plans (0,000 avant
+     comme après) ; de profil, elle est deux fois moins large (46 → 23 px : l'arme ne la barre plus) ; le capteur du corps ne
+     bouge pas (Q42 : 0,558 → 0,558, les dix classes). Le sol dans l'étoile, côté lampe, reste éclairé (0,73 à 1,16 du sol
+     voisin, contre 0,84 à 1,80 : l'étoile plus petite pose la sonde contre le pied). Pour trois classes (pompe, arbalète,
+     occulteur), la largeur de l'ombre n'est plus lue (−1) : la sonde, placée derrière le dos de l'étoile, s'est rapprochée du
+     corps, et ses deux bouts (± 60 px) tombent hors du cône de la torche — l'ombre y est, noire.
+2. **Un défaut trouvé en chemin, corrigé** : le cercle provisoire de 18 px que `Player._ready` posait sur l'occulteur s'écrivait
+   APRÈS le premier `equip_weapon` du même `_ready` — un corps équipé avant d'entrer dans l'arbre gardait le cercle jusqu'au
+   changement d'arme suivant. Il ne se pose plus qu'en l'absence d'étoile (`_etoile_posee`).
+3. **L'ombre de contact des figurants** (le reste d'OM2, « signalé » par SOLO, S6) : le sol iso ne connaissait que deux ombres de
+   contact, celles de J1 et J2 (`contact_corps_1`, `_2`). Les PNJ ont désormais la leur — un tableau à part (`contact_figurants[8]`,
+   les deux places des joueurs inchangées), dans les trois matériaux qui la lisent (`sol_iso`, `sol_iso_eclaire`,
+   `volume_masque`), recopié aux volumes à chaque image (`IsoVolumes.CONTACT_PAR_IMAGE`). Sa force est l'opacité du figurant dans
+   la vue, la règle d'ISO10 : le sol ne montre d'un corps que ce que la vue en montre (`Presentation3D._poser_contact_figurants`).
+
+**Ce que le bot en voit.** Il ne lit pas l'étoile des corps (`RAYON_CORPS`), mais celle du LEURRE : ses obstacles et
+`coupe_le_regard` (l'éblouissement). Le boss Illusionniste (son gadget est le leurre), rejoué sur
+les mêmes graines avant et après (deux blocs, 384 duels, NORMAL) : **60,2 % → 59,9 %** de victoires du joueur type — trois
+issues changent sur 384 (deux vers le bot), le leurre posé 110 puis 111 fois ; dans la bande de 55 ± 7.
+
+**Ce que la planche montre aussi, avec OM5.** Sous un plafonnier presque à l'aplomb du PNJ, la torche de J1 en face, deux
+aplats noirs paraissent à côté des jambes dans la vue iso (`docs/iso/ombres/om2/planche_om2_avec_om5.jpg`) : le sol que ni le
+plafonnier — coupé par le cylindre d'OM5, 0,4 tuile de rayon — ni la torche — coupée par l'étoile, désormais plus étroite que
+ce cylindre sur les côtés — n'atteignent. Avec l'étoile du sprite, plus grande, la torche éclairait l'intérieur de l'étoile
+(OM1) et en couvrait la plus grande part ; l'ombre d'OM5 décrochée, ils disparaissent (essai sur le même plan). Pas une erreur
+de calcul : deux modèles grossiers qui se rencontrent. Le levier, s'il gêne à l'œil (H16) : tirer l'ombre du plafonnier de
+l'étoile voxel plutôt que d'un cylindre — une question pour Adrien, pas un réglage.
+
+**Les gardes.** `tools/test_ombres_voxel.gd` (nouvelle, 18 vérifications, au pas fixe) : la forme des dix étoiles (32 rayons, aire
+positive, pas de pointe d'arme, les bras, le gadget ou la bouteille), dix formes distinctes, une classe inconnue sans cri ;
+**la garde de dérive** — les rectangles de l'étoile sont exactement les boîtes d'un vrai `VoxelCorps` au repos, vues de dessus
+dans son repère local (à 0,01 tuile : le gadget de deux classes a un geste au repos), et l'angle des bras celui du corps ; le
+cercle provisoire ; et, dans une vraie salle en iso, les trois PNJ ont leur ombre de contact à leur pied et à leur opacité, un PNJ
+caché n'en a plus, un PNJ qui éblouit J1 n'a plus que l'ombre de son opacité (Q81). `test_ombre_propre` : l'étoile du joueur est celle de son corps voxel ; le contrôle « AVANT Q42 » voit
+toujours le défaut, à 61-67 % au lieu de 44-50 (l'étoile, plus petite, ombre moins de l'anneau) — seuil porté de 60 à 80 %.
+`test_classes` : le leurre porte l'étoile voxel de sa classe.
+
+**Sabotages exécutés — chacun restauré à l'identique (md5)** : W1 le joueur qui garde l'étoile du sprite — cinq rouges (`test_ombre_propre`, `test_classes`) ; W2 l'arme rentrée dans
+l'étoile (la pointe revient) — un rouge, la garde de dérive ; W3 les bras pendants (la garde du repos oubliée) — un rouge, la
+garde de dérive ; W4 la bouteille oubliée — deux rouges ; W5 le cercle provisoire qui écrase de nouveau l'étoile — un rouge ;
+W6 les figurants sans ombre de contact — **à la première passe, une erreur de script et aucun rouge** : la garde lisait un
+uniforme jamais posé (`int(null)`), et la fonction s'arrêtait avant ses contrôles (`run_suites.sh` l'aurait comptée en échec,
+mais pour une autre raison) ; la lecture tolère désormais l'uniforme absent — trois rouges ; W7 l'ombre de contact d'un
+figurant qui ignore son opacité — un rouge ; W8 les volumes qui ne recopient plus le contact des figurants — un rouge ; W9 le
+leurre qui garde l'étoile du sprite — quatre rouges.
+
+**La suite entière** (`./tools/run_suites.sh`) : **186 suites vertes, aucune rouge** — « tout passe, sans erreur de script », en
+37 min 8 s.
+
+**Version** : l'ombre de chaque corps change de forme, en duel aussi : **mineure**. Rien sur le fil (la classe de chaque corps est
+connue des deux pairs).
+
+**Non prouvé.** Rien sous Metal ; Adrien n'a pas vu la nouvelle ombre en jeu (H16). En vue de dessus (`--2d`, débogage), l'étoile
+ne suit plus le sprite — elle suit le corps qu'on ne voit pas.
 
 ### Ne pas reproposer
 

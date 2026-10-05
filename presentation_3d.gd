@@ -178,6 +178,9 @@ const APPUIS_JOUEUR := ["visual", "visual_ptr", "visual_reveal", "visual_reveal_
 const PIED_PX := 8.0
 ## Le corps grossier du banc : 0,4 tuile de rayon, une tuile de haut.
 const RAYON_CORPS_PX := 14.0
+## OMBRES, OM2 — les places du tableau d'ombres de contact des figurants (`contact_figurants[8]` des matériaux du sol) : autant
+## que de figurants.
+const CONTACTS_FIGURANTS_MAX := FIGURANTS_MAX
 const HAUTEUR_CORPS_PX := 35.0
 
 ## Les tailles de lightmap, la question qu'H15 a laissée ouverte : `1080p` est l'aire
@@ -1186,6 +1189,8 @@ func _suivre_les_figurants() -> void:
 	if not corps_voxel:
 		return
 	var regarde: Variant = _main.p1 if is_instance_valid(_main.p1) else null
+	# OMBRES, OM2 — l'ombre de contact de chaque figurant montré, à la force de son opacité dans la vue (`_poser_contact_figurants`).
+	var contacts := PackedVector3Array()
 	for k in _figurants.size():
 		var j := 2 + k
 		if j >= _corps.size():
@@ -1205,6 +1210,8 @@ func _suivre_les_figurants() -> void:
 		_mat_corps[j].set_shader_parameter("centre", joueur.global_position)
 		var o := opacite_du_corps(joueur, false)
 		var sil := silhouette_du_corps(joueur, false)
+		if contacts.size() < CONTACTS_FIGURANTS_MAX:
+			contacts.append(Vector3(joueur.global_position.x, joueur.global_position.y, o))
 		# (Écrit autrement que la boucle des joueurs et des fantômes : `test_corps_mannequin` compte celle-là, au texte, deux fois.)
 		var matieres: Array = [_mat_corps[j], _mat_profondeur[j]]
 		matieres.append((_mat_corps[j] as ShaderMaterial).next_pass)
@@ -1216,6 +1223,20 @@ func _suivre_les_figurants() -> void:
 	# Les corps du pool que personne ne porte : cachés.
 	for j in range(2 + _figurants.size(), _corps.size()):
 		_corps[j].visible = false
+	_poser_contact_figurants(contacts)
+
+
+## OMBRES, OM2 (2026-10-05) — l'ombre de contact des figurants, sur le sol de chaque vue (`contact_figurants` de
+## `sol_iso.gdshader`) : celle que J1 et J2 ont depuis ISO10 (`_poser_contact`), qu'un PNJ n'avait pas (« le sol ne connaît que
+## deux ombres de contact », SOLO, S6, signalé). Sa force est l'opacité du figurant DANS la vue — la même règle que pour un
+## joueur : le sol ne montre d'un corps que ce que la vue en montre. Un tableau à part, de `CONTACTS_FIGURANTS_MAX` places.
+func _poser_contact_figurants(contacts: PackedVector3Array) -> void:
+	var n := contacts.size()
+	var tableau := contacts.duplicate()
+	tableau.resize(CONTACTS_FIGURANTS_MAX)
+	for vue_id in mini(_mat_sols.size(), 2):
+		_mat_sols[vue_id].set_shader_parameter("contact_nb_figurants", n)
+		_mat_sols[vue_id].set_shader_parameter("contact_figurants", tableau)
 
 
 func _retirer_capteurs() -> void:
@@ -1425,7 +1446,7 @@ func fantome_montre(j: int) -> Node2D:
 ## ISO10, 1d — l'ombre de contact du corps `j` sur le sol de chaque vue (`contact_corps_N` de `sol_iso.gdshader`). Sa
 ## force est l'opacité du corps DANS cette vue, jamais plus : le sol ne montre d'un corps que ce que la vue en montre.
 func _poser_contact(j: int, p: Vector2, forces: Array) -> void:
-	# Le sol ne connaît que deux ombres de contact (`contact_corps_1` et `_2`) : un figurant n'en a pas (SOLO, S6, signalé).
+	# Les deux places des joueurs (`contact_corps_1` et `_2`) ; les figurants ont les leurs depuis OM2 (`_poser_contact_figurants`).
 	if j >= 2:
 		return
 	for vue_id in mini(_mat_sols.size(), 2):

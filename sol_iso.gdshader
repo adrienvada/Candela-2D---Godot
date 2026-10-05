@@ -64,6 +64,10 @@ uniform vec3 contact_corps_1 = vec3(0.0);
 uniform vec3 contact_corps_2 = vec3(0.0);
 uniform float contact_corps_rayon_px = 0.0;
 uniform float contact_corps_reste : hint_range(0.0, 1.0) = 1.0;
+// OMBRES, OM2 (2026-10-05) — l'ombre de contact des FIGURANTS de l'aventure (les PNJ), la même que celle de J1 et J2 : xy le
+// pied, z sa force dans cette vue. Un tableau à part : les deux emplacements des joueurs ne changent pas.
+uniform int contact_nb_figurants = 0;
+uniform vec3 contact_figurants[8];
 
 varying vec3 monde;
 
@@ -116,6 +120,14 @@ float contact_des_corps(vec2 p) {
 		}
 		float d = length(p - corps.xy) / contact_corps_rayon_px;
 		f *= mix(1.0, contact_corps_reste, clamp(corps.z, 0.0, 1.0) * (1.0 - smoothstep(0.35, 1.0, d)));
+	}
+	for (int k = 0; k < contact_nb_figurants; k++) {
+		vec3 figurant = contact_figurants[k];
+		if (figurant.z <= 0.0) {
+			continue;
+		}
+		float d = length(p - figurant.xy) / contact_corps_rayon_px;
+		f *= mix(1.0, contact_corps_reste, clamp(figurant.z, 0.0, 1.0) * (1.0 - smoothstep(0.35, 1.0, d)));
 	}
 	return f;
 }

@@ -128,8 +128,10 @@ func _structure() -> void:
 			and (joueur.COUCHE_OCCLUDER_ADVERSE != joueur.COUCHE_OCCLUDER_SIENNE))
 		_check("J%d : la torche d'en face l'ombre toujours (couche de l'étoile dans son masque d'ombre)" % (j + 1),
 			((_main.p2 if j == 0 else _main.p1).flashlight.shadow_item_cull_mask & occ.occluder_light_mask) != 0)
-		_check("J%d : sa forme est l'étoile de 32 rayons de sa silhouette, une ressource à elle" % (j + 1),
-			occ.occluder != null and occ.occluder.polygon.size() == 32 and occ.occluder.cull_mode == CULL_ETOILE_ATTENDU)
+		# OMBRES, OM2 (Q82) — l'étoile du CORPS VOXEL de sa classe (`VoxelCatalogue.etoile_d_ombre`), plus la silhouette du sprite.
+		_check("J%d : sa forme est l'étoile de 32 rayons de son corps voxel, une ressource à elle" % (j + 1),
+			occ.occluder != null and occ.occluder.polygon.size() == 32 and occ.occluder.cull_mode == CULL_ETOILE_ATTENDU
+			and occ.occluder.polygon == VoxelCatalogue.etoile_d_ombre(joueur.current_weapon.slug()))
 		var torse := joueur.get_node_or_null("OccluderTorse") as LightOccluder2D
 		_check("J%d : le disque de torse (rétrodiffusion) est resté dans le monde, à sa couche" % (j + 1),
 			torse != null and torse.get_canvas() == monde and torse.occluder_light_mask == joueur.COUCHE_TORSE)
@@ -393,8 +395,10 @@ func _l_effet() -> void:
 	# Le contrôle : le même calcul, avec les étoiles dans le monde, VOIT le défaut. Sans lui, « 100 % » ne prouverait rien.
 	# ⚠️ Son seuil suit le culling des étoiles (OM1) : quand chaque arête jetait son ombre, le corps qui voyait sa propre étoile
 	# tombait sous 5 % ; sous `CULL_COUNTER_CLOCKWISE`, l'avant de l'anneau reste éclairé et seule la moitié arrière tombe dans
-	# l'ombre — 44 à 50 % pour les trois classes. Toujours un défaut net contre les 100 % exigés : sous 60 %.
-	var seuil_avant := 0.05 if CULL_ETOILE_ATTENDU == OccluderPolygon2D.CULL_DISABLED else 0.6
+	# l'ombre — 44 à 50 % pour les trois classes. Puis OM2 (Q82, 2026-10-05) : l'étoile est celle du CORPS VOXEL, sans l'arme,
+	# plus petite que celle du sprite — l'anneau ne tombe plus qu'à 61-67 % pour les trois classes (mesuré). Toujours un défaut
+	# net contre les 100 % exigés : sous 80 %.
+	var seuil_avant := 0.05 if CULL_ETOILE_ATTENDU == OccluderPolygon2D.CULL_DISABLED else 0.8
 	for porteur in 2:
 		for slug in CLASSES_NOIRES:
 			var v: float = pires_avant["J%d porte / %s" % [porteur + 1, slug]]

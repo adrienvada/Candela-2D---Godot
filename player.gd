@@ -117,6 +117,9 @@ var source_eblouissante: Node2D = null
 ## un tireur noté une fois restait la source de toute redescente suivante : l'adversaire s'effaçait pendant que se dissipait
 ## l'éblouissement d'une fusée.
 var _source_du_niveau: Node2D = null
+## OMBRES, OM2 — vrai dès que l'étoile de la classe est posée (`_accorder_occluder_a_la_silhouette`) : le cercle provisoire de
+## `_ready` ne l'écrase plus.
+var _etoile_posee := false
 ## Ce qu'il reste de la tenue d'un tir noté (secondes) : pendant `TENUE_DU_TIR`, la source reste le tireur même si son pic ne
 ## s'est pas encore montré. Chez le client, le tir arrive par un RPC et le pic par `net_dazzle`, synchronisé à 30 Hz : sans
 ## tenue, la passe de l'image suivante rendait la source aux lampes avant que le pic n'arrive. Chez l'hôte le pic est immédiat,
@@ -972,7 +975,11 @@ func _ready():
 	if has_node("LightOccluder2D"):
 		var main_occ = get_node("LightOccluder2D")
 		# OMBRES, OM1 — l'occulteur de l'étoile, par la charte (culling, ressource neuve), même pour ce cercle provisoire.
-		main_occ.occluder = Charte.occulteur_d_etoile(pts)
+		# OMBRES, OM2 — ⚠️ **seulement si aucune étoile n'est encore posée** : `equip_weapon`, appelée plus haut dans ce même
+		# `_ready`, a déjà pu poser celle de la classe — le cercle l'écrasait alors jusqu'au changement d'arme suivant (trouvé en
+		# étudiant OM2 : un corps équipé avant d'entrer dans l'arbre gardait le cercle de 18 px).
+		if not _etoile_posee:
+			main_occ.occluder = Charte.occulteur_d_etoile(pts)
 		# Une couche par joueur : c'est ce qui permet à une torche d'ombrer
 		# l'autre corps sans ombrer le sien. Voir `flashlight.shadow_item_cull_mask`.
 		main_occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
@@ -1071,7 +1078,7 @@ func _poser_sprite(slug: String) -> bool:
 	# **l'ombre portée changerait de forme quatre fois par cycle**. L'écart entre
 	# poses vaut au plus 4 px, à l'arrière du corps : invisible dans une ombre,
 	# cher à calculer, et une ombre qui respire se lit comme un défaut.
-	_accorder_occluder_a_la_silhouette(t_sil)
+	_accorder_occluder_a_la_silhouette(slug)
 
 	_precharger_la_planche(slug)
 	return true
@@ -1172,15 +1179,20 @@ func _monter_occluder_de_torse() -> void:
 ## ombre de trente pixels dans le noir. Trente-deux rayons depuis le centre
 ## donnent une étoile qui épouse le corps ET le canon, ne peut pas produire de
 ## polygone dégénéré, et se calcule une fois par changement d'arme.
-func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
+##
+## OMBRES, OM2 (Q82, décision d'Adrien du 2026-10-05 : « Oui ») — **la silhouette est désormais celle du CORPS VOXEL**
+## (`VoxelCatalogue.etoile_d_ombre`), plus celle du sprite vu de dessus : en iso, l'ombre d'un corps prend la forme du corps qu'on
+## voit — sans l'arme ni la torche, tenues à hauteur de main, que l'étoile projetait au sol en une pointe. Même échantillonnage
+## radial, même nombre de rayons ; le leurre lit la même fonction.
+func _accorder_occluder_a_la_silhouette(slug: String) -> void:
 	var occ := etoile()
-	if occ == null or sil == null:
+	if occ == null:
 		return
-	# La forme se lit dans la charte depuis le 2026-09-11 : le leurre doit faire
-	# exactement le même trou, et une seule fonction le garantit.
-	var pts := Charte.ombre_de_silhouette(sil)
+	# Une seule fonction, pour que le leurre fasse exactement le même trou (2026-09-11 ; le corps voxel depuis OM2).
+	var pts := VoxelCatalogue.etoile_d_ombre(slug)
 	if pts.is_empty():
 		return
+	_etoile_posee = true
 	# ⚠️ **Une ressource NEUVE, jamais celle de la scène.** `player.tscn` déclare
 	# l'`OccluderPolygon2D` en sous-ressource, sans `resource_local_to_scene` : J1
 	# et J2 la PARTAGEAIENT, et dans un match entre deux classes les deux corps

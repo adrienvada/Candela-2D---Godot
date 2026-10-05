@@ -747,3 +747,125 @@ static func fiche(slug: String, epaisseur: String = EPAISSEUR_PAR_DEFAUT) -> Dic
 	push_error("VoxelCatalogue : classe inconnue « %s » (connues : %s)"
 		% [slug, ", ".join(slugs())])
 	return {}
+
+
+# -----------------------------------------------------------------------------
+# OMBRES, OM2 — L'ÉTOILE DU CORPS VOXEL
+# -----------------------------------------------------------------------------
+
+## OMBRES, OM2 (Q82, décision d'Adrien du 2026-10-05 : « Oui ») — l'ÉTOILE d'un corps à la forme de son corps voxel, au lieu de
+## la silhouette vue de dessus du sprite : l'empreinte au sol des boîtes que `VoxelCorps._construire_squelette` bâtit au repos —
+## les jambes, le torse, la tête, les bras, le gadget dans le dos —, échantillonnée comme l'était la silhouette
+## (`Charte.ombre_de_silhouette` : `RAYONS_ETOILE` rayons depuis le centre, angle croissant, d'où une aire signée POSITIVE, celle
+## que le culling d'OM1 attend). En pixels de monde, dans le repère du corps : l'avant en +x, la droite en +y.
+##
+## ⚠️ **Ni l'arme ni la torche** — « l'arme portée sans pointe au sol » (Q82). Tenues à hauteur de main, à 0,30 tuile devant le
+## torse, minces : l'étoile les projetait au sol en une pointe devant le corps, la « pointe au sol » de l'audit. La torche, en plus,
+## suit `flashlight_on` dans la vue iso : l'étoile trahirait l'état de la lampe.
+## La **bouteille** des six classes qui la portent (`PORTRAITS`) en est, comme dans la tenue du jeu par défaut — lue sur la donnée
+## de la CLASSE, jamais sur le drapeau d'apparence (`tenue()`) : l'ombre d'un corps ne change pas avec l'habillage que l'un des
+## deux joueurs a choisi.
+## La posture garde l'échelle du nœud (× 0,8 accroupi, OM4a) : l'étoile ne se recalcule pas — la vraie pose accroupie des boîtes
+## (torse et tête penchés en avant) donnerait une empreinte PLUS grande, l'inverse de « réduite à l'accroupi ».
+##
+## Une seule fonction pour le joueur, chaque PNJ et le leurre (`GadgetLeurre._monter_occluder`), qui fait donc toujours le même trou
+## que son poseur. Mise en cache par classe et épaisseur. Une classe inconnue rend une étoile vide.
+const RAYONS_ETOILE := 32
+## Le plus petit rayon d'une branche, en pixels (celui de `Charte.ombre_de_silhouette`).
+const RAYON_ETOILE_MIN := 3.0
+## Les bras au repos, relevés de cet angle autour de l'épaule (`VoxelCorps.GARDE_BRAS`, posé par `_poser_repos`) — recopié et non
+## lu : le corps voxel précharge ce catalogue. `tools/test_ombres_voxel.gd` vérifie l'égalité.
+const GARDE_BRAS_REPOS := 0.14
+static var _etoiles := {}
+
+
+static func etoile_d_ombre(slug: String, epaisseur: String = EPAISSEUR_PAR_DEFAUT) -> PackedVector2Array:
+	var cle := "%s|%s" % [slug, epaisseur]
+	if _etoiles.has(cle):
+		return _etoiles[cle]
+	if not slugs().has(slug) or not EPAISSEUR_REGLAGES.has(epaisseur):
+		return PackedVector2Array()
+	var rects := rectangles_au_sol(fiche(slug, epaisseur))
+	var tuile := float(CandelaTileSet.TILE_SIZE.x)
+	var pts := PackedVector2Array()
+	for i in RAYONS_ETOILE:
+		var a := float(i) / float(RAYONS_ETOILE) * TAU
+		var d := Vector2(cos(a), sin(a))
+		var r := 0.0
+		for rc: Rect2 in rects:
+			r = maxf(r, _sortie_du_rayon(d, rc))
+		pts.append(d * maxf(r * tuile, RAYON_ETOILE_MIN))
+	_etoiles[cle] = pts
+	return pts
+
+
+## Les boîtes du corps au repos, vues de dessus, en TUILES : `Rect2` dans le repère (avant, droite) — 3D → 2D : avant = −z,
+## droite = x (`VoxelCorps._construire_squelette`, que cette liste doit suivre ; `tools/test_ombres_voxel.gd` la confronte aux
+## boîtes d'un vrai `VoxelCorps`). Les jambes, le torse, la tête et les bras suivent `echelle` ; le gadget, non.
+static func rectangles_au_sol(s: Dictionary) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	if s.is_empty():
+		return rects
+	var e: float = s["echelle"]
+	var l_jambe: float = float(s["largeur_jambe"]) * e
+	var p_jambe: float = float(s["profondeur_jambe"]) * e
+	var ecart: float = float(s["ecart_jambe"]) * e
+	for cote in [-1.0, 1.0]:
+		rects.append(_rect_centre(Vector2(0.0, cote * ecart), Vector2(p_jambe, l_jambe)))
+	var l_torse: float = float(s["largeur_torse"]) * e
+	var p_torse: float = float(s["profondeur_torse"]) * e
+	rects.append(_rect_centre(Vector2.ZERO, Vector2(p_torse, l_torse)))
+	var c_tete: float = float(s["cote_tete"]) * e
+	rects.append(_rect_centre(Vector2.ZERO, Vector2(c_tete, c_tete)))
+	# Les bras pendent de l'épaule, relevés au repos de `GARDE_BRAS_REPOS` autour de l'axe x : vus de dessus, leur boîte déborde un
+	# peu sur l'avant et l'arrière (de 0,144 à 0,179 tuile de profondeur à l'épaisseur par défaut).
+	var l_bras: float = float(s["largeur_bras"]) * e
+	var x_epaule := l_torse * 0.5 + l_bras * 0.5
+	var long_bras: float = s["longueur_bras"]
+	var angle := -GARDE_BRAS_REPOS
+	var z_min := INF
+	var z_max := -INF
+	for y in [-long_bras, 0.0]:
+		for z in [-l_bras * 0.5, l_bras * 0.5]:
+			var zr: float = y * sin(angle) + z * cos(angle)
+			z_min = minf(z_min, zr)
+			z_max = maxf(z_max, zr)
+	for cote in [-1.0, 1.0]:
+		rects.append(Rect2(Vector2(-z_max, cote * x_epaule - l_bras * 0.5), Vector2(z_max - z_min, l_bras)))
+	var fg: Dictionary = s["gadget"]
+	var arriere: float = s["arriere_gadget"]
+	rects.append(_rect_centre(Vector2(-(arriere + float(fg["longueur"]) * 0.5), 0.0),
+		Vector2(float(fg["longueur"]), float(fg["largeur"]))))
+	# La bouteille, couchée en travers du haut du dos, collée au torse (`VoxelCorps._habiller_en_portrait`).
+	var portrait: Dictionary = PORTRAITS.get(String(s.get("slug", "")), {})
+	if bool(portrait.get("bouteille", false)):
+		var p_bouteille := float(BOUTEILLE["profondeur"]) * e
+		rects.append(_rect_centre(Vector2(-(p_torse * 0.5 + p_bouteille * 0.5), 0.0),
+			Vector2(p_bouteille, float(BOUTEILLE["largeur"]) * e)))
+	return rects
+
+
+static func _rect_centre(centre: Vector2, taille: Vector2) -> Rect2:
+	return Rect2(centre - taille * 0.5, taille)
+
+
+## La distance où le rayon parti de l'origine, de direction unitaire `d`, QUITTE le rectangle `r` ; 0 s'il ne le touche pas.
+## (La méthode des dalles, comme `MursBas.sortie_du_rect`.)
+static func _sortie_du_rayon(d: Vector2, r: Rect2) -> float:
+	var te := -INF
+	var ts := INF
+	for axe in 2:
+		var v := d.x if axe == 0 else d.y
+		var lo := r.position.x if axe == 0 else r.position.y
+		var hi := r.end.x if axe == 0 else r.end.y
+		if absf(v) < 1e-9:
+			if 0.0 < lo or 0.0 > hi:
+				return 0.0
+			continue
+		var t1 := lo / v
+		var t2 := hi / v
+		te = maxf(te, minf(t1, t2))
+		ts = minf(ts, maxf(t1, t2))
+	if te > ts or ts <= 0.0:
+		return 0.0
+	return ts

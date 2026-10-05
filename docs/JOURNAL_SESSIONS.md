@@ -6251,3 +6251,16 @@ ligne dans `tools/run_suites.sh` ; `tools/planche_ombres.gd` (la famille `om5`, 
 `grep -n "ombres_corps_zone" murs_bas_sol.gdshader murs_bas_decor.gdshader` doit répondre deux fois, et
 `grep -c "_pousser_ombres_des_corps" game_state.gd` au moins quatre. ⚠️ Un `class_name` neuf (`OmbresCorps`) : sans
 `godot --headless --path . --import`, les suites en `--script` ne le trouvent pas (`run_suites.sh` le rappelle).
+
+**OM2, le 2026-10-05 — annoncé ici avant le commit :** `voxel_catalogue.gd` (`RAYONS_ETOILE`, `RAYON_ETOILE_MIN`,
+`GARDE_BRAS_REPOS`, `etoile_d_ombre`, `rectangles_au_sol`, `_rect_centre`, `_sortie_du_rayon`, nouveaux, en fin de fichier) ;
+`player.gd` (`_etoile_posee`, nouvelle ; `_accorder_occluder_a_la_silhouette` prend la classe et non plus la texture ; le cercle
+provisoire de `_ready` ne se pose plus qu'en l'absence d'étoile) ; `gadget_leurre.gd` (l'étoile de `_monter_occluder`) ;
+`presentation_3d.gd` (`CONTACTS_FIGURANTS_MAX` et `_poser_contact_figurants`, nouveaux ; `_suivre_les_figurants` recueille les
+contacts) ; `iso_volumes.gd` (`CONTACT_PAR_IMAGE`) ; `sol_iso.gdshader`, `sol_iso_eclaire.gdshader`, `volume_masque.gdshaderinc`
+(`contact_nb_figurants`, `contact_figurants[8]`, une boucle dans `contact_des_corps`). Outils : `tools/test_ombres_voxel.gd`
+(nouveau) et sa ligne dans `tools/run_suites.sh` ; `tools/test_classes.gd` et `tools/test_ombre_propre.gd` (l'étoile attendue,
+le seuil du contrôle « AVANT Q42 ») ; `docs/iso/ombres/om2/` (trois planches et leurs mesures). Après une fusion : `grep -c "etoile_d_ombre" voxel_catalogue.gd player.gd gadget_leurre.gd`
+doit répondre dans les trois fichiers, et `grep -c "contact_figurants" sol_iso.gdshader sol_iso_eclaire.gdshader
+volume_masque.gdshaderinc` au moins deux fois dans chacun. ⚠️ Un sol iso qui recevrait sa propre copie de `contact_des_corps`
+sans la boucle des figurants rendrait les PNJ sans ombre de contact sur ce sol-là — sans aucune erreur.

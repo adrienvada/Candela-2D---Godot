@@ -11,8 +11,8 @@ extends GadgetBase
 ## Dans ce jeu, on ne voit jamais l'homme : **on voit le trou qu'il fait dans la
 ## lumière.** Un leurre convaincant n'a donc pas à ressembler à un joueur — il
 ## doit faire *le même trou* et porter *la même silhouette*. C'est ce qu'il fait,
-## littéralement : l'ombre en étoile que le joueur tire de sa silhouette
-## (`Charte.ombre_de_silhouette`), et la texture de cette silhouette.
+## littéralement : l'ombre en étoile que le joueur tire de son corps
+## (`VoxelCatalogue.etoile_d_ombre` depuis OM2 ; la silhouette du sprite avant), et la texture de cette silhouette.
 ##
 ## ⚠️ **Il projetait un DISQUE jusqu'au 2026-09-11**, et c'est ce qu'Adrien voyait :
 ## « un cercle comme actuellement ». L'étape 15 avait lu `18.0 is exactly the
@@ -96,8 +96,8 @@ func _silhouette() -> Texture2D:
 ## L'ombre : les DEUX occluders que porte un joueur, aux mêmes couches que les
 ## siens — l'étoile de la silhouette, et le disque de torse.
 ##
-## ⚠️ Recalculée depuis la silhouette, jamais copiée sur l'occluder du poseur : une
-## seule vérité, `Charte.ombre_de_silhouette`, que le joueur lit aussi. L'occluder
+## ⚠️ Recalculée depuis la classe, jamais copiée sur l'occluder du poseur : une
+## seule vérité, `VoxelCatalogue.etoile_d_ombre` (OM2), que le joueur lit aussi. L'occluder
 ## du joueur a d'ailleurs été, jusqu'au 2026-09-11, une ressource PARTAGÉE entre
 ## les deux corps — voir `player._accorder_occluder_a_la_silhouette()`.
 ##
@@ -134,7 +134,15 @@ func _monter_occluder() -> void:
 		regard_par_la_forme = false
 		super()
 		return
-	_etoile = Charte.ombre_de_silhouette(tex)
+	# OMBRES, OM2 (Q82) — l'étoile du CORPS VOXEL de la classe du poseur, la même fonction que celle du joueur
+	# (`Player._accorder_occluder_a_la_silhouette`) : le leurre fait exactement le même trou que son poseur. La silhouette (`tex`)
+	# reste celle du corps qu'il dessine. Une classe sans corps voxel (aucune des dix) garderait le disque, comme sans silhouette.
+	_etoile = VoxelCatalogue.etoile_d_ombre(classe_du_poseur.slug())
+	if _etoile.is_empty():
+		push_error("GadgetLeurre : aucune étoile voxel pour la classe « %s »" % classe_du_poseur.slug())
+		regard_par_la_forme = false
+		super()
+		return
 	# OMBRES, OM4b (Q86) — posé par un PNJ, le leurre porte aussi la couche propre de son poseur (`couche_ombre_pnj`, par sa
 	# place de réserve) : la torche d'un AUTRE PNJ s'y arrête comme sur le poseur ; sans elle, elle le traversait, et le leurre se
 	# trahissait au premier faisceau. Pour J1 et J2, cette couche vaut 0 : rien ne change.

@@ -1,0 +1,1314 @@
+{
+ "avant": {
+  "commit": "9731071a",
+  "arbre": "OM5 (l'étoile du sprite)"
+ },
+ "apres": {
+  "commit": "9731071a",
+  "arbre": "OM2 (l'étoile du corps voxel)"
+ },
+ "prises": [
+  {
+   "plan": "etoile-camera-face",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2706,
+     "dehors": 0.2962,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.913,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "etoile-camera-profil",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2774,
+     "dehors": 0.289,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.96,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2481,
+     "dehors": 0.3103,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 23,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.8,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "etoile-dos-face",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2826,
+     "dehors": 0.2231,
+     "derriere": 0.0,
+     "derriere_cote": 0.1064,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 32,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.267,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.28,
+     "dehors": 0.2504,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.118,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "etoile-dos-profil",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2727,
+     "dehors": 0.2481,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.099,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2872,
+     "dehors": 0.2499,
+     "derriere": 0.0,
+     "derriere_cote": 0.1064,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 23,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.15,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "etoile-profil-face",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2922,
+     "dehors": 0.2927,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 32,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.998,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2776,
+     "dehors": 0.2806,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.989,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "etoile-profil-profil",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2651,
+     "dehors": 0.3149,
+     "derriere": 0.0,
+     "derriere_cote": 0.091,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.842,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2578,
+     "dehors": 0.3513,
+     "derriere": 0.0,
+     "derriere_cote": 0.0986,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 23,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.734,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "etoile-courte",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 1.0,
+      "moyenne": 0.8197
+     },
+     "dedans": 0.3863,
+     "dehors": 0.2349,
+     "derriere": 0.0,
+     "derriere_cote": 0.1381,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.645,
+     "rayons": 10
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 1.0,
+      "moyenne": 0.8197
+     },
+     "dedans": 0.3592,
+     "dehors": 0.3106,
+     "derriere": 0.0,
+     "derriere_cote": 0.0,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.156,
+     "rayons": 10
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-pistolet",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2706,
+     "dehors": 0.2962,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.913,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-fusil",
+   "classe": "fusil",
+   "etoile": {
+    "avant": {
+     "pointe_px": 31.5,
+     "creux_px": 6.5,
+     "aire_px2": 647
+    },
+    "apres": {
+     "pointe_px": 13.1,
+     "creux_px": 5.6,
+     "aire_px2": 239
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.31,
+     "dehors": 0.2274,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.363,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3295,
+     "dehors": 0.296,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 36,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.113,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-pompe",
+   "classe": "pompe",
+   "etoile": {
+    "avant": {
+     "pointe_px": 31.5,
+     "creux_px": 7.5,
+     "aire_px2": 623
+    },
+    "apres": {
+     "pointe_px": 14.2,
+     "creux_px": 6.1,
+     "aire_px2": 270
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2402,
+     "dehors": 0.2353,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.021,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3189,
+     "dehors": 0.283,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.127,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-arbalete",
+   "classe": "arbalete",
+   "etoile": {
+    "avant": {
+     "pointe_px": 27.0,
+     "creux_px": 5.0,
+     "aire_px2": 603
+    },
+    "apres": {
+     "pointe_px": 13.1,
+     "creux_px": 5.6,
+     "aire_px2": 231
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3033,
+     "dehors": 0.1689,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 38,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.796,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3295,
+     "dehors": 0.296,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.113,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-occulteur",
+   "classe": "occulteur",
+   "etoile": {
+    "avant": {
+     "pointe_px": 25.0,
+     "creux_px": 7.0,
+     "aire_px2": 630
+    },
+    "apres": {
+     "pointe_px": 12.5,
+     "creux_px": 5.3,
+     "aire_px2": 235
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3493,
+     "dehors": 0.2102,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.662,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2646,
+     "dehors": 0.2962,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.893,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-fumiste",
+   "classe": "fumiste",
+   "etoile": {
+    "avant": {
+     "pointe_px": 30.0,
+     "creux_px": 7.0,
+     "aire_px2": 695
+    },
+    "apres": {
+     "pointe_px": 13.8,
+     "creux_px": 5.9,
+     "aire_px2": 252
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3438,
+     "dehors": 0.2225,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.545,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3274,
+     "dehors": 0.2817,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 37,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.162,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-incendiaire",
+   "classe": "incendiaire",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 7.5,
+     "aire_px2": 655
+    },
+    "apres": {
+     "pointe_px": 13.4,
+     "creux_px": 5.7,
+     "aire_px2": 270
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3539,
+     "dehors": 0.2037,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.737,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3295,
+     "dehors": 0.296,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 36,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.113,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-sentinelle",
+   "classe": "sentinelle",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 7.5,
+     "aire_px2": 592
+    },
+    "apres": {
+     "pointe_px": 12.9,
+     "creux_px": 5.5,
+     "aire_px2": 249
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3055,
+     "dehors": 0.2011,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.519,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2706,
+     "dehors": 0.2963,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.913,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-allumeur",
+   "classe": "allumeur",
+   "etoile": {
+    "avant": {
+     "pointe_px": 30.5,
+     "creux_px": 7.5,
+     "aire_px2": 611
+    },
+    "apres": {
+     "pointe_px": 13.5,
+     "creux_px": 5.8,
+     "aire_px2": 275
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3405,
+     "dehors": 0.2143,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.589,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3295,
+     "dehors": 0.2913,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 38,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.131,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "classe-spectre",
+   "classe": "spectre",
+   "etoile": {
+    "avant": {
+     "pointe_px": 23.0,
+     "creux_px": 7.0,
+     "aire_px2": 561
+    },
+    "apres": {
+     "pointe_px": 12.6,
+     "creux_px": 5.4,
+     "aire_px2": 239
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.356,
+     "dehors": 0.2079,
+     "derriere": 0.0,
+     "derriere_cote": 0.0986,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.712,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2706,
+     "dehors": 0.2962,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.913,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "regles-debout",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.643,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2706,
+     "dehors": 0.2962,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.913,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "regles-accroupi",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 19.6,
+     "creux_px": 5.2,
+     "aire_px2": 377
+    },
+    "apres": {
+     "pointe_px": 10.2,
+     "creux_px": 4.3,
+     "aire_px2": 156
+    }
+   },
+   "sonde": {
+    "avant": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2871,
+     "dehors": 0.2145,
+     "derriere": 0.0,
+     "derriere_cote": 0.0938,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 28,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 1.339,
+     "rayons": 11
+    },
+    "apres": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2587,
+     "dehors": 0.2885,
+     "derriere": 0.0,
+     "derriere_cote": 0.1101,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 29,
+     "lumieres": "torche seule (plafonniers et bandeau LED coupés)",
+     "rapport": 0.897,
+     "rayons": 11
+    }
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    },
+    "apres": {
+     "maximum": 1.0,
+     "moyenne": 1.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0
+    ],
+    "apres": [
+     1.0
+    ]
+   }
+  },
+  {
+   "plan": "regles-tir-au-mur",
+   "classe": "pistolet",
+   "etoile": {
+    "avant": {
+     "pointe_px": 24.5,
+     "creux_px": 6.5,
+     "aire_px2": 589
+    },
+    "apres": {
+     "pointe_px": 12.7,
+     "creux_px": 5.4,
+     "aire_px2": 244
+    }
+   },
+   "sonde": {
+    "avant": {},
+    "apres": {}
+   },
+   "capteur_jeu": {
+    "avant": {
+     "maximum": 0.0,
+     "moyenne": 0.0
+    },
+    "apres": {
+     "maximum": 0.0,
+     "moyenne": 0.0
+    }
+   },
+   "opacites": {
+    "avant": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "apres": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   }
+  }
+ ]
+}

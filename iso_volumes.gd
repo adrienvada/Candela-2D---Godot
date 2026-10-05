@@ -1812,7 +1812,7 @@ const PARAMETRES_DU_SOL := {"texture_sol": "sol_texture_sol", "periode_sol_px": 
 const TEMPERATURE_DU_MUR := {"temperature": "mur_temperature", "temperature_seuil_bas": "mur_temperature_seuil_bas",
 	"temperature_seuil_haut": "mur_temperature_seuil_haut", "neutre_avant_pate": "mur_neutre_avant_pate"}
 ## Le contact des corps bouge à chaque image : recopié par `_pousser_lightmaps`.
-const CONTACT_PAR_IMAGE := ["contact_corps_1", "contact_corps_2"]
+const CONTACT_PAR_IMAGE := ["contact_corps_1", "contact_corps_2", "contact_nb_figurants", "contact_figurants"]
 ## L'USURE, quand elle est allumée : l'interrupteur et la proximité des murs viennent du SOL ; les impacts viennent du MUR, qui
 ## les reçoit à chaque éclat — recopiés à chaque image avec le contact.
 const USURE_DU_SOL := ["usure", "usure_proximite"]
