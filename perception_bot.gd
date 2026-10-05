@@ -142,10 +142,15 @@ const TOLERANCE_OBSTACLE := 0.5
 ## *Départ*, non mesuré au capteur : le banc rejoue le modèle contre `Brouillage.opacite`, la fonction même de l'écran.
 const OPACITE_MIN_CORPS := 0.5
 
-## Le bot, à cet éblouissement (0 à 1), distingue-t-il encore le corps de l'adversaire ? Lu sur `Brouillage.opacite`, la fonction que
-## l'écran applique à la silhouette ; à éblouissement nul, toujours vrai (`opacite(0)` vaut 1).
-static func corps_distinct(ebloui: float) -> bool:
-	return Brouillage_.opacite(clampf(ebloui, 0.0, 1.0)) >= OPACITE_MIN_CORPS
+## Le bot, à cet éblouissement (0 à 1), distingue-t-il encore le corps de l'adversaire ? Lu sur `Brouillage.opacite_vue`, la
+## fonction que l'écran applique à la silhouette ; à éblouissement nul, toujours vrai.
+##
+## OMBRES, OM1 (Q81, décision d'Adrien, 2026-10-05) — `est_la_source` : comme pour un joueur, l'éblouissement n'efface un corps
+## que si CE corps éblouit le bot, et seulement de ce qui dépasse la rétrodiffusion (0,06). Une fusée ou un gadget qui aveugle
+## le bot ne lui cache plus la cible ; sa propre torche non plus. Les seuils annoncés plus haut (« atteint dès ~0,09 ») se
+## lisent désormais au-delà du plancher : le corps se perd vers 0,15 d'éblouissement venu de lui.
+static func corps_distinct(ebloui: float, est_la_source: bool = true) -> bool:
+	return Brouillage_.opacite_vue(clampf(ebloui, 0.0, 1.0), est_la_source) >= OPACITE_MIN_CORPS
 
 
 # ---------------------------------------------------------------------------
@@ -436,7 +441,9 @@ static func eclaire(l: Dictionary, pos: Vector2, h_c: float, monde: Dictionary) 
 ##   `cible`  : `position`, `accroupi` ;
 ##   `lumieres` : la liste des lumières connues (`lumiere_cone`, `lumiere_disque`, `lumiere_lampe`) ;
 ##   `monde`  : `monde_de_la_carte` ; `monde["aveugle"]` vrai ne laisse rien voir (gadget qu'on ne sait pas modéliser) ;
-##              `monde["ebloui"]` (0 à 1, absent : 0) : l'éblouissement du bot — au-delà de `OPACITE_MIN_CORPS` il ne voit plus le corps, que la lampe.
+##              `monde["ebloui"]` (0 à 1, absent : 0) : l'éblouissement du bot — au-delà de `OPACITE_MIN_CORPS` il ne voit plus le corps, que la lampe ;
+##              `monde["ebloui_par_la_cible"]` (absent : vrai) : la cible est-elle la SOURCE de cet éblouissement (OM1, Q81) — sinon il ne lui
+##              cache pas le corps.
 ##
 ## **Une cible est vue si, et seulement si**, l'une des lumières la révèle :
 ##   • un `CONE` ou un `DISQUE` l'éclaire (`eclaire`) ET le bot a une ligne de vue sur son corps ET son corps tient
@@ -458,7 +465,7 @@ static func voir(bot: Dictionary, cible: Dictionary, lumieres: Array, monde: Dic
 	var corps_dans_le_cadre := dans_le_cadre(pos, cadre, RAYON_CORPS)
 	res["dans_le_cadre"] = corps_dans_le_cadre
 	# S9b : un bot ébloui ne distingue plus le corps (voir `OPACITE_MIN_CORPS`) ; sa vue de la LAMPE, plus bas, ne change pas.
-	var distinct := corps_distinct(float(monde.get("ebloui", 0.0)))
+	var distinct := corps_distinct(float(monde.get("ebloui", 0.0)), bool(monde.get("ebloui_par_la_cible", true)))
 	var corps_atteint := corps_dans_le_cadre and ligne_de_vue(oeil, pos, h_oeil, h_c, monde)
 	var par: Array = []
 	var lampe_vue := Vector2.INF

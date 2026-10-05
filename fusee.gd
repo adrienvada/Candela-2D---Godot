@@ -508,8 +508,16 @@ func est_allumee_au_sol() -> bool:
 ## la torche d'un accroupi (`CanauxLumiere.COUCHE_OMBRE_MUR_BAS`). Les murs hauts
 ## arrêtent sa lumière dans les deux cas : elle ricoche sur eux, elle ne les
 ## survole pas.
+##
+## OMBRES, OM4b (Q87, Adrien, 2026-10-05 : « Oui », duel compris) — et ils l'arrêtent
+## pour les CORPS aussi : le masque des lumières neutres
+## (`CanauxLumiere.masque_ombre_neutre_pour_les_corps`), celui du plafonnier. Avec
+## les seuls murs (`1`), aucun corps ne recevait d'ombre de la fusée — le
+## `shadow_item_cull_mask` filtre aussi les récepteurs — : posée derrière un mur,
+## elle éclairait un corps de l'autre côté, sprite et capteur. Aucune couche de corps
+## n'y entre : un corps ne fait toujours pas d'ombre sous une fusée.
 static func masque_ombre(atterrie: bool) -> int:
-	return 1 | (CanauxLumiere.COUCHE_OMBRE_MUR_BAS if atterrie else 0)
+	return CanauxLumiere.masque_ombre_neutre_pour_les_corps() | (CanauxLumiere.COUCHE_OMBRE_MUR_BAS if atterrie else 0)
 
 
 ## Gadgets et lumières (2026-09-15) — la hauteur RÉELLE du vol, en tuiles, selon l'élan

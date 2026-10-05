@@ -1,0 +1,162 @@
+{
+ "duel": {
+  "cadre": [
+   467,
+   197,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   19185,
+   18115,
+   18193
+  ],
+  "ecart_D_brute": 6801,
+  "ecart_brute_sans_encre": 2358,
+  "moyenne_luma_allumee": [
+   49.0,
+   36.6,
+   35.8
+  ]
+ },
+ "torche": {
+  "cadre": [
+   515,
+   168,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   14964,
+   14187,
+   11091
+  ],
+  "ecart_D_brute": 2860,
+  "ecart_brute_sans_encre": 4059,
+  "moyenne_luma_allumee": [
+   39.9,
+   30.8,
+   34.2
+  ]
+ },
+ "volume": {
+  "cadre": [
+   428,
+   143,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   63846,
+   56234,
+   90972
+  ],
+  "ecart_D_brute": 13930,
+  "ecart_brute_sans_encre": 6902,
+  "moyenne_luma_allumee": [
+   45.1,
+   36.5,
+   25.7
+  ]
+ },
+ "retrodiffusion": {
+  "cadre": [
+   208,
+   147,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   162072,
+   159031,
+   162343
+  ],
+  "ecart_D_brute": 22123,
+  "ecart_brute_sans_encre": 6530,
+  "moyenne_luma_allumee": [
+   37.9,
+   30.6,
+   29.1
+  ]
+ },
+ "flash-de-tir": {
+  "cadre": [
+   474,
+   160,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   155065,
+   152933,
+   150447
+  ],
+  "ecart_D_brute": 88519,
+  "ecart_brute_sans_encre": 107715,
+  "moyenne_luma_allumee": [
+   34.4,
+   30.4,
+   28.4
+  ]
+ },
+ "fusee": {
+  "cadre": [
+   454,
+   211,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   259886,
+   258658,
+   256923
+  ],
+  "ecart_D_brute": 42991,
+  "ecart_brute_sans_encre": 6179,
+  "moyenne_luma_allumee": [
+   42.4,
+   31.3,
+   30.6
+  ]
+ },
+ "sang": {
+  "cadre": [
+   444,
+   186,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   66481,
+   62535,
+   61207
+  ],
+  "ecart_D_brute": 14618,
+  "ecart_brute_sans_encre": 3979,
+  "moyenne_luma_allumee": [
+   32.8,
+   29.6,
+   29.6
+  ]
+ },
+ "impacts": {
+  "cadre": [
+   482,
+   293,
+   760,
+   427
+  ],
+  "allumes_au_dessus_de_8": [
+   30421,
+   32450,
+   30334
+  ],
+  "ecart_D_brute": 8700,
+  "ecart_brute_sans_encre": 4110,
+  "moyenne_luma_allumee": [
+   40.2,
+   32.5,
+   31.9
+  ]
+ }
+}

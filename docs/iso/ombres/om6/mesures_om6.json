@@ -1,0 +1,263 @@
+{
+ "scene": "salle 8.9 « La salle pleine », SCENE=--solo=8.9, --physique 8, 45 s par prise, llvmpipe (relatif seulement)",
+ "bras": {
+  "A": "/home/user/om6-livraison (OM2 + le banc)",
+  "G": "/home/user/om6-gestes (les trois gestes)"
+ },
+ "moyennes_ms": {
+  "A": 898.3,
+  "G": 821.8
+ },
+ "un_pc_bas_median_ms": {
+  "A": 1178.0,
+  "G": 1032.2
+ },
+ "coups_pnj_moyens": {
+  "A": 114.6,
+  "G": 116.9
+ },
+ "prises": [
+  {
+   "serie": "solo2",
+   "fichier": "solo2_01_A.log",
+   "bras": "A",
+   "moyenne_ms": 901.8,
+   "mediane_ms": 900.4,
+   "un_pc_bas_ms": 1155.1,
+   "images": 51,
+   "coups_pnj": 120,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_02_G.log",
+   "bras": "G",
+   "moyenne_ms": 809.2,
+   "mediane_ms": 816.4,
+   "un_pc_bas_ms": 1019.7,
+   "images": 56,
+   "coups_pnj": 112,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_03_G.log",
+   "bras": "G",
+   "moyenne_ms": 809.3,
+   "mediane_ms": 801.6,
+   "un_pc_bas_ms": 1475.2,
+   "images": 57,
+   "coups_pnj": 121,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_04_A.log",
+   "bras": "A",
+   "moyenne_ms": 840.0,
+   "mediane_ms": 839.3,
+   "un_pc_bas_ms": 1193.9,
+   "images": 55,
+   "coups_pnj": 117,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_05_A.log",
+   "bras": "A",
+   "moyenne_ms": 871.7,
+   "mediane_ms": 895.7,
+   "un_pc_bas_ms": 1076.4,
+   "images": 52,
+   "coups_pnj": 111,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_06_G.log",
+   "bras": "G",
+   "moyenne_ms": 865.8,
+   "mediane_ms": 877.4,
+   "un_pc_bas_ms": 1027.8,
+   "images": 52,
+   "coups_pnj": 122,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_07_G.log",
+   "bras": "G",
+   "moyenne_ms": 866.1,
+   "mediane_ms": 863.3,
+   "un_pc_bas_ms": 1183.5,
+   "images": 53,
+   "coups_pnj": 121,
+   "valide": true
+  },
+  {
+   "serie": "solo2",
+   "fichier": "solo2_08_A.log",
+   "bras": "A",
+   "moyenne_ms": 908.7,
+   "mediane_ms": 889.5,
+   "un_pc_bas_ms": 1159.2,
+   "images": 51,
+   "coups_pnj": 119,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_01_G.log",
+   "bras": "G",
+   "moyenne_ms": 819.7,
+   "mediane_ms": 821.2,
+   "un_pc_bas_ms": 1023.1,
+   "images": 55,
+   "coups_pnj": 117,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_02_A.log",
+   "bras": "A",
+   "moyenne_ms": 880.8,
+   "mediane_ms": 886.9,
+   "un_pc_bas_ms": 1217.0,
+   "images": 52,
+   "coups_pnj": 114,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_03_A.log",
+   "bras": "A",
+   "moyenne_ms": 958.6,
+   "mediane_ms": 936.0,
+   "un_pc_bas_ms": 1162.0,
+   "images": 48,
+   "coups_pnj": 111,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_04_G.log",
+   "bras": "G",
+   "moyenne_ms": 807.3,
+   "mediane_ms": 808.0,
+   "un_pc_bas_ms": 1104.5,
+   "images": 56,
+   "coups_pnj": 112,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_05_G.log",
+   "bras": "G",
+   "moyenne_ms": 819.1,
+   "mediane_ms": 823.6,
+   "un_pc_bas_ms": 954.0,
+   "images": 55,
+   "coups_pnj": 118,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_06_A.log",
+   "bras": "A",
+   "moyenne_ms": 903.1,
+   "mediane_ms": 911.5,
+   "un_pc_bas_ms": 1227.8,
+   "images": 51,
+   "coups_pnj": 116,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_07_A.log",
+   "bras": "A",
+   "moyenne_ms": 922.0,
+   "mediane_ms": 903.7,
+   "un_pc_bas_ms": 1356.0,
+   "images": 51,
+   "coups_pnj": 109,
+   "valide": true
+  },
+  {
+   "serie": "solo3",
+   "fichier": "solo3_08_G.log",
+   "bras": "G",
+   "moyenne_ms": 778.1,
+   "mediane_ms": 770.5,
+   "un_pc_bas_ms": 1036.6,
+   "images": 58,
+   "coups_pnj": 112,
+   "valide": true
+  }
+ ],
+ "plafonds_une_prise_chacun": [
+  {
+   "fichier": "om6_serie1/solo1_01_A_r2.log",
+   "cote_du_redemarrage": "avant",
+   "interrupteurs": "",
+   "moyenne_ms": 1188.0,
+   "mediane_ms": 1184.7,
+   "coups_pnj": 100
+  },
+  {
+   "fichier": "om6_serie1/solo1_02_B.log",
+   "cote_du_redemarrage": "avant",
+   "interrupteurs": "sans ombres 2D",
+   "moyenne_ms": 974.5,
+   "mediane_ms": 983.6,
+   "coups_pnj": 110
+  },
+  {
+   "fichier": "om6_serie1/solo1_03_C.log",
+   "cote_du_redemarrage": "avant",
+   "interrupteurs": "sans capteurs",
+   "moyenne_ms": 1116.7,
+   "mediane_ms": 1094.0,
+   "coups_pnj": 103
+  },
+  {
+   "fichier": "om6_serie1/solo1b_01_D.log",
+   "cote_du_redemarrage": "après",
+   "interrupteurs": "sans halos de PNJ",
+   "moyenne_ms": 896.7,
+   "mediane_ms": 844.4,
+   "coups_pnj": 118
+  },
+  {
+   "fichier": "om6_serie1/solo1b_02_D.log",
+   "cote_du_redemarrage": "après",
+   "interrupteurs": "sans halos de PNJ",
+   "moyenne_ms": 951.3,
+   "mediane_ms": 939.4,
+   "coups_pnj": 113
+  },
+  {
+   "fichier": "om6_serie1/solo1b_03_C.log",
+   "cote_du_redemarrage": "après",
+   "interrupteurs": "sans capteurs",
+   "moyenne_ms": 903.4,
+   "mediane_ms": 893.0,
+   "coups_pnj": 114
+  },
+  {
+   "fichier": "om6_serie1/solo1b_04_B.log",
+   "cote_du_redemarrage": "après",
+   "interrupteurs": "sans ombres 2D",
+   "moyenne_ms": 1021.6,
+   "mediane_ms": 800.9,
+   "coups_pnj": 112
+  },
+  {
+   "fichier": "om6_serie1/solo1b_05_A.log",
+   "cote_du_redemarrage": "après",
+   "interrupteurs": "",
+   "moyenne_ms": 914.6,
+   "mediane_ms": 912.5,
+   "coups_pnj": 128
+  }
+ ]
+}

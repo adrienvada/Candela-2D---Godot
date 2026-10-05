@@ -454,11 +454,28 @@ func _le_bot_ebloui_voit_moins() -> void:
 	main.p1.hp = 100000.0
 	var vu := await _jusqua(func() -> bool: return bool(bot.perception.derniere_vue.get("vu", false)), 300)
 	_check("(le PNJ qui voit voit le joueur debout sous le plafonnier — la salle de la mesure est la bonne)", vu)
+	# OMBRES, OM1 (Q81, décision d'Adrien, 2026-10-05) : l'éblouissement n'efface que le corps qui éblouit — au bot comme à un
+	# joueur. La source se pose comme la passe de `GameState._maj_eblouissement` la pose (`retenir_la_source`), à la main : le
+	# joueur n'a pas de torche braquée ici, et la passe de l'image suivante la reprendrait — `_voir` est appelé aussitôt.
 	pnj.dazzle_amount = 0.6
+	pnj.retenir_la_source(main.p1, 0.6, 0.0)
 	bot.perception._voir(1.0 / 60.0)
-	_check("ébloui (0,6), le même PNJ, à la même place, devant le même joueur sous la même lumière, NE LE VOIT PLUS",
+	_check("ébloui (0,6) PAR LE JOUEUR, le même PNJ, à la même place, devant le même joueur sous la même lumière, NE LE VOIT PLUS",
 		not bool(bot.perception.derniere_vue.get("vu", false)), str(bot.perception.derniere_vue))
+	var fusee := Node2D.new()
+	fusee.name = "FuseeFactice"
+	partie.add_child(fusee)
+	pnj.retenir_la_source(fusee, 0.6, 0.0)
+	bot.perception._voir(1.0 / 60.0)
+	_check("… ébloui autant par AUTRE CHOSE (une lumière posée), il le voit encore (Q81 : seul le corps qui éblouit s'efface)",
+		bool(bot.perception.derniere_vue.get("vu", false)) and not bool(bot.perception.monde.get("ebloui_par_la_cible", true)),
+		str(bot.perception.derniere_vue))
+	pnj.retenir_la_source(pnj, 0.6, 0.0)
+	bot.perception._voir(1.0 / 60.0)
+	_check("… et par sa propre torche, aussi", bool(bot.perception.derniere_vue.get("vu", false)))
+	fusee.queue_free()
 	pnj.dazzle_amount = 0.0
+	pnj.retenir_la_source(null, 0.0, 0.0)
 	bot.perception._voir(1.0 / 60.0)
 	_check("… les yeux rouverts, il le revoit", bool(bot.perception.derniere_vue.get("vu", false)))
 	_check("… le nœud de perception lit SON éblouissement (`monde[\"ebloui\"]`), pas celui du joueur",
@@ -487,9 +504,17 @@ func _le_modele() -> void:
 	_check("(le modèle) à éblouissement nul, le corps éclairé par un disque est vu", true if _vu_a(0.0, bot, cible, disque, monde) else false)
 	monde["ebloui"] = 0.0
 	_check("(le modèle) plus l'éblouissement monte, MOINS le bot voit : jamais l'inverse (courbe monotone sur 21 niveaux)", monotone)
+	# OM1 (Q81) : « l'opacité qu'un joueur lui verrait », c'est désormais celle du corps qui l'éblouit, au-delà de la rétrodiffusion
+	# de 0,06 (`Brouillage.opacite_vue`) — le premier niveau aveugle passe de 0,10 à 0,20 sur ce pas de 0,05.
 	_check("(le modèle) le corps disparaît quand l'opacité qu'un joueur lui verrait, au même niveau, passe sous le seuil (%.2f)" % Percep.OPACITE_MIN_CORPS,
-		seuil_vu > 0.0 and seuil_vu <= 0.15 and Brouillage_.opacite(seuil_vu) < Percep.OPACITE_MIN_CORPS
-		and Brouillage_.opacite(seuil_vu - 0.05) >= Percep.OPACITE_MIN_CORPS, "premier niveau aveugle : %s" % seuil_vu)
+		seuil_vu > 0.0 and seuil_vu <= 0.2 and Brouillage_.opacite_vue(seuil_vu, true) < Percep.OPACITE_MIN_CORPS
+		and Brouillage_.opacite_vue(seuil_vu - 0.05, true) >= Percep.OPACITE_MIN_CORPS, "premier niveau aveugle : %s" % seuil_vu)
+	var vu_par_ailleurs := true
+	monde["ebloui_par_la_cible"] = false
+	for k in 21:
+		vu_par_ailleurs = vu_par_ailleurs and _vu_a(float(k) / 20.0, bot, cible, disque, monde)
+	monde.erase("ebloui_par_la_cible")
+	_check("(le modèle, Q81) ébloui par autre chose que la cible, le bot voit son corps à tout niveau (21 niveaux)", vu_par_ailleurs)
 	_check("(le modèle) la lampe de la cible, elle, reste vue à n'importe quel éblouissement (le mode LAMPE : le corps s'efface, pas la source)",
 		_vu_a(0.0, bot, cible, lampe, monde) and _vu_a(0.5, bot, cible, lampe, monde) and _vu_a(1.0, bot, cible, lampe, monde))
 	# L'éclair d'un tir de la cible : un joueur ébloui voit encore le feu du canon. Le bot ébloui le voit comme une SOURCE — sa place, à la bouche de l'arme, jamais celle du corps.

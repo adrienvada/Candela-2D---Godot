@@ -519,6 +519,10 @@ static func materiau(type: String, vue_id: int, voxel: float, hauteur_px: float,
 static func poser_style(mat: ShaderMaterial, encre: String, relief_de: String) -> void:
 	mat.set_shader_parameter("encre_style", int(ENCRES.get(encre, ENCRES[ENCRE_PAR_DEFAUT]))
 		if IsoMateriaux.beaute_active() else int(ENCRES["aucune"]))
+	# Chantier RR, RR1 — l'essai sans encre (`--sans-encre`, `IsoMateriaux.encre_active`) : aucune, quelle que soit l'encre
+	# demandée. À part, et après : la ligne du dessus est celle que `test_fumee_voxel` garde.
+	if not IsoMateriaux.encre_active():
+		mat.set_shader_parameter("encre_style", int(ENCRES["aucune"]))
 	mat.set_shader_parameter("relief_style", int(RELIEFS.get(relief_de, RELIEFS[RELIEF_PAR_DEFAUT])))
 
 

@@ -7,11 +7,14 @@
 shader_type canvas_item;
 
 #include "res://murs_bas_zone.gdshaderinc"
+// OMBRES, OM5 (Q88) — l'ombre finie des corps sous les plafonniers.
+#include "res://ombres_corps_zone.gdshaderinc"
 
 void light() {
 	if (mb_dans_la_zone_morte(LIGHT_POSITION, LIGHT_VERTEX)) {
 		LIGHT = vec4(0.0);
 	} else {
-		LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb * LIGHT_ENERGY, LIGHT_COLOR.a);
+		LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb * LIGHT_ENERGY
+			* (1.0 - om_ombre_des_corps(LIGHT_POSITION, LIGHT_VERTEX)), LIGHT_COLOR.a);
 	}
 }

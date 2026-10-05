@@ -99,7 +99,27 @@ const CONTOUR_PX_EPAIS := 2.0
 
 
 static func encre_essai_active() -> bool:
-	return DrapeauxDeLancement.present(DRAPEAU_ENCRE_ESSAI)
+	return DrapeauxDeLancement.present(DRAPEAU_ENCRE_ESSAI) and encre_active()
+
+
+## Chantier RR, étape RR1 — L'ESSAI SANS ENCRE (`--sans-encre`, éteint par défaut ; Adrien, 2026-10-05 : « Essayons de voir
+## les graphismes en annulant, en jeu […] cette pâte roman graphique »). Retire l'ENCRE du rendu en jeu : les traits noirs —
+## les arêtes des murs et le bord des murets (`encre_arete_reste` à 1, un trait qui n'assombrit plus rien — la largeur seule
+## ne suffit pas, le muret la relève à un pixel), les arêtes des corps, des objets et du leurre (`encre_arete` à 0), le trait
+## de la fumée (encre « aucune », `IsoNuageVoxel`) — et le trait halogène des masses de murs (`MurEncre`, lu par la lightmap ;
+## « les murs au trait », refonte roman graphique, 2026-09-11). ⚠️ **Ce dernier n'est pas qu'un style** : clair, il est le
+## seul à prendre la lumière des bandeaux LED loin de la torche — sans lui, le contour des murs ne se voit plus dans le noir
+## (planche de RR1, plan « torche » : 2 845 pixels éteints à plus de 120 px de toute lumière vive, luma 12 en moyenne).
+## Garde la matière, la température, le contact, le liseré du sommet (la lumière de la face, pas un trait), le lavis au pied
+## des murs (une ombre de contact), les joints des dalles, les liserés de lisibilité des corps (tenue `sombre3`, corps de soi)
+## et les bandeaux LED eux-mêmes. Posé dans les `accorder_*`, jamais après coup : les volumes recopient les réglages des murs
+## à leur création, et `accorder_corps` est rejoué à chaque reconstruction d'un corps. L'emporte sur `--encre-essai`. Lu à
+## l'exécution, jamais écrit dans un réglage : ce n'est pas un choix du joueur.
+const DRAPEAU_SANS_ENCRE := "--sans-encre"
+
+
+static func encre_active() -> bool:
+	return not DrapeauxDeLancement.present(DRAPEAU_SANS_ENCRE)
 
 
 ## Les variantes des shaders iso compilées avec un `#define` d'essai, une par shader d'origine et par drapeau.
@@ -215,8 +235,9 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 	materiau.set_shader_parameter("texture_face", TEXTURE_FACE_MUR)
 	materiau.set_shader_parameter("periode_face_px", PERIODE_FACE_MUR_PX)
 	materiau.set_shader_parameter("force_matiere", FORCE_MATIERE_MUR if active else 0.0)
-	materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX if active else 0.0)
-	materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE)
+	var encre := active and encre_active()
+	materiau.set_shader_parameter("encre_arete_px", ENCRE_ARETE_PX if encre else 0.0)
+	materiau.set_shader_parameter("encre_arete_reste", ENCRE_ARETE_RESTE if encre_active() else 1.0)
 	materiau.set_shader_parameter("encre_plancher_affiche", ENCRE_PLANCHER_AFFICHE)
 	materiau.set_shader_parameter("lisere_sommet_px", LISERE_SOMMET_PX if active else 0.0)
 	materiau.set_shader_parameter("temperature", (TEMPERATURE_GRADUEE if active else 0.0))
@@ -241,7 +262,7 @@ static func accorder_mur(materiau: ShaderMaterial) -> void:
 ## rien avant que la session ISO Corps n'ait branché `pate_encre_boite` (contrat du 2026-09-15).
 static func accorder_corps(materiau: ShaderMaterial) -> void:
 	var active := beaute_active()
-	materiau.set_shader_parameter("encre_arete", ENCRE_VOXEL_PX if active else 0.0)
+	materiau.set_shader_parameter("encre_arete", ENCRE_VOXEL_PX if active and encre_active() else 0.0)
 	materiau.set_shader_parameter("encre_reste", ENCRE_VOXEL_RESTE)
 	# ISO7b — le modelé des corps : par la caméra, jamais par le gradient (voir `modele_du_corps`).
 	materiau.set_shader_parameter("modele", 1.0 if active else 0.0)

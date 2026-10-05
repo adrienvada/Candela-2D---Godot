@@ -1910,10 +1910,12 @@ func _test_leurre() -> void:
 	# ⚠️ **Son OMBRE est celle d'un joueur : l'étoile de la silhouette, pas un
 	# disque.** Adrien le 2026-09-11 : « un cercle comme actuellement ». L'étape 15
 	# avait copié le cercle provisoire du joueur, que l'étoile écrase à l'équipement.
+	# OMBRES, OM2 (Q82, 2026-10-05) — l'étoile du CORPS VOXEL de sa classe (`VoxelCatalogue.etoile_d_ombre`), plus celle de la
+	# silhouette du sprite : celle que lit aussi le joueur.
 	var occ_l: LightOccluder2D = leurre.etoile()
-	var etoile := Charte.ombre_de_silhouette(load("res://assets/sprites/fusil_silhouette.png"))
-	_check("son ombre est l'étoile de la silhouette de sa classe",
-		occ_l != null and etoile.size() == 32 and occ_l.occluder.polygon == etoile,
+	var etoile := VoxelCatalogue.etoile_d_ombre("fusil")
+	_check("son ombre est l'étoile du corps voxel de sa classe",
+		occ_l != null and etoile.size() == VoxelCatalogue.RAYONS_ETOILE and occ_l.occluder.polygon == etoile,
 		"%d sommets" % (occ_l.occluder.polygon.size() if occ_l else -1))
 	var occ_j: LightOccluder2D = gs.p1.etoile()
 	_check("exactement celle d'un joueur de la même classe",

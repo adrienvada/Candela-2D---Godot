@@ -400,7 +400,6 @@ func _remettre_au_calme() -> void:
 func _figer_le_tirage() -> void:
 	for corps in [main.p1, main.p2]:
 		corps.set("_dust_accum", 0.0)
-		corps.set("_torch_breath_t", 0.0)
 	var audio: Node = arbre.root.get_node("AudioManager")
 	var minuteur: Variant = audio.get("_ambiance_timer")
 	if minuteur != null and not (minuteur as Timer).is_stopped():

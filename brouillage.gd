@@ -588,6 +588,29 @@ static func opacite(dazzle: float, force: float = GAIN,
 	var t := _dose(dazzle, force)
 	return lerpf(ALPHA_CONTRASTE, 1.0, pow(1.0 - t, maxf(courbe, 0.01)))
 
+
+## Le plancher du brouillage : la rétrodiffusion de sa propre torche (`Eblouissement.RETRODIFFUSION`), lue là où elle est
+## décidée — une seule vérité.
+const _Eblouissement := preload("res://eblouissement.gd")
+const PLANCHER: float = _Eblouissement.RETRODIFFUSION
+
+## Q81 (décision d'Adrien, 2026-10-05) — l'opacité d'UN corps tel qu'un regardeur ébloui le voit : il ne s'efface que s'il est
+## LA SOURCE de cet éblouissement (`est_la_source`), et seulement de ce qui dépasse le plancher.
+##
+## Avant, l'effacement suivait l'éblouissement du regardeur, d'où qu'il vienne : allumer sa propre torche rendait tout ennemi
+## transparent à 35 % (0,648 — la rétrodiffusion de 0,06 suffisait), une fusée ou un gadget effaçait l'adversaire qu'ils
+## n'avaient pas fait, et en aventure UN seul PNJ qui éblouissait le joueur effaçait les six (banc des ombres, OM0). Le
+## brouillage dit désormais une chose, et une seule : « ce corps-là t'aveugle ». Sous le culling d'OM1, c'est aussi ce qui
+## garde un PNJ plein sur le sol éclairé devant ses pieds, au lieu d'un délavé qui laisserait voir le sol à travers lui.
+##
+## Le plancher se SOUSTRAIT (`dazzle - PLANCHER`) plutôt que de servir de seuil : un seuil ferait sauter l'opacité de 1 à
+## 0,648 en franchissant 0,06 ; la soustraction part de 1 et reste continue.
+static func opacite_vue(dazzle: float, est_la_source: bool, force: float = GAIN,
+		courbe: float = COURBE_CONTRASTE) -> float:
+	if not est_la_source:
+		return 1.0
+	return opacite(maxf(0.0, dazzle - PLANCHER), force, courbe)
+
 ## Le GAIN du brouillage : de combien l'éblouissement est multiplié avant de
 ## devenir une dose. **2,0, choisi par Adrien au banc le 2026-08-25** (« effet
 ## à 2 »).

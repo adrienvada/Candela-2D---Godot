@@ -12,6 +12,40 @@
 ## fenêtre. Il n'est jamais lancé par le jeu.
 ##
 ## Lancer : godot --path . res://tools/bench_framerate.tscn -- [--seconds 15] [--max-fps 0]
+##
+## ## OM6 — le MODE SOLO et les trois INTERRUPTEURS DE LUMIÈRE (chantier OMBRES, 2026-10-04)
+##
+## Le coût de la lumière EN SOLO n'avait jamais été relevé : ce banc ne savait mesurer qu'un duel. Deux ajouts, et le duel n'est
+## pas touché (sans ces drapeaux, rien de ce qui suit ne tourne ni ne s'imprime).
+##
+## - `--solo=<chapitre>.<salle>` (`--solo=8.9` : le chapitre 8, sa 9e salle, `assets/solo/chapitre_08/niveau_09.json`) : au lieu du
+##   duel, la salle d'aventure, en vue iso comme le jeu, VIVANTE. J1 est posté là où le plus de PNJ le voient (le modèle de vue des
+##   bots lui-même), torche tenue, immobile (et non en balayage : voir `_poster_j1`), il ne tire pas ; les PNJ le voient, allument
+##   leurs torches et TIRENT — une fusillade, le pire cas des lumières (flashs, échos au sol, lumières de coup). Sa vie est remise à
+##   plein à chaque pas de physique (voir
+##   `SOLO_PV_DE_J1`) : s'il tombait, la salle se recommencerait et la charge changerait. Si la salle se termine quand même, le
+##   banc le DIT et refuse le chiffre. Réglages du solo : `--solo-poste=<x>,<y>` (la case de J1, par défaut celle que le modèle
+##   choisit) et `--solo-graine=<n>` (la graine des PNJ, 4242 par défaut : deux prises jouent les mêmes bots).
+##   `--solo` ne se prend avec aucun drapeau du duel (`DRAPEAUX_DU_DUEL`) : les lire sans les appliquer serait mesurer autre chose.
+## - `--sans-ombres-2d` : toute `Light2D` sans ombre (`shadow_enabled` — JAMAIS `enabled`, que lit la perception des bots), y
+##   compris celles qui naissent pendant la mesure (flash de bouche, écho au sol, lumière de coup, fusées…), prises par
+##   `SceneTree.node_added` et non par un balayage à chaque image.
+## - `--sans-capteurs` : les capteurs de corps (`CapteurCorps`, des sous-vues de 256² par corps et par objet) ne rendent plus
+##   (`UPDATE_DISABLED`). ⚠️ **Le jeu les rallume à CHAQUE image** (`Presentation3D._suivre` et `_suivre_les_figurants` écrivent
+##   `UPDATE_ALWAYS`) : un arrêt posé une fois serait annulé à l'image suivante, sans rien dire. Le banc les remet à l'arrêt à
+##   `RenderingServer.frame_pre_draw`, après tous les `_process` et avant le dessin — l'entrée que le jeu laisse.
+## - `--sans-halos-pnj` (solo seulement) : le halo de proximité (`ambient_light`) de chaque PNJ sans ombre — l'item « halos sans
+##   récepteur » d'OM6 —, `shadow_enabled` seul.
+##
+## - OM3c (Q85, 2026-10-05) — deux RÉGLAGES, et non des retraits : `--atlas-ombres=<n>` (l'atlas d'ombres 2D à n texels,
+##   `RenderingServer.canvas_set_shadow_texture_size` ; 2048 dans le projet, Q85 propose 4096) et `--pcf5[=<lissage>]` (le filtre
+##   PCF5 sur la torche et le halo de chaque corps et sur le halo de chaque plafonnier ; lissage léger, 1, par défaut). Les lumières
+##   filtrées sont celles que nomme `tools/reglages_ombres.gd`, que le banc des ombres lit aussi : l'image jugée et le coût mesuré sont
+##   ceux du même réglage. Ni `enabled` ni `shadow_enabled` ne sont touchés. Duel et solo.
+##
+## Un drapeau posé se lit dans la ligne « Charge », dans l'en-tête du RÉSULTAT, et dans un bloc « Interrupteurs » que le banc
+## écrit AVANT le verdict avec ce que chacun a vraiment touché (lumières éteintes, nées pendant la mesure, capteurs repris au
+## jeu, halos) et ce qu'il a vérifié à la fin : une prise ne dit pas « sans ombres » sans l'avoir prouvé.
 extends Node
 
 ## La cible, en un seul endroit — le verdict la lit, il ne la réécrit pas.
@@ -247,6 +281,69 @@ var _torches_decompte := 0
 ## Le compteur de pas de physique à la dernière image vue EN décompte.
 var _pas_du_decompte := -1
 
+# ---------------------------------------------------------------------------
+# OM6 — LE MODE SOLO ET LES INTERRUPTEURS DE LUMIÈRE (voir l'en-tête du fichier)
+# ---------------------------------------------------------------------------
+
+## La vie de J1 en solo, remise à CHAQUE PAS DE PHYSIQUE (`physics_frame`, avant que le pas ne simule) — et non à 100 ni à chaque
+## image. Deux raisons. **Le pas, pas l'image** : sous llvmpipe (ou à 20 images par seconde) plusieurs pas de physique passent entre
+## deux images, et une remise « par image » laisserait les coups s'additionner jusqu'à la mort. **Plus que 100** : une salve de
+## pompe (huit plombs de 10 à 20) tombe en UN pas, et aucune remise entre deux pas n'y peut rien. J1 ne doit JAMAIS mourir : sa mort
+## recommence la salle (nouveaux PNJ, carton, bots à mémoire vide) et la charge mesurée n'est plus celle qu'on annonce. Rien du
+## jeu ne lit cette valeur autrement que par seuils (le cœur qui bat à 30, la barre de vie, qui plafonne) ; les coups encaissés, eux,
+## se comptent ici, et le rapport les dit.
+const SOLO_PV_DE_J1 := 1000.0
+## Le fichier de progression du banc : à lui, JAMAIS `user://solo.cfg` (la vraie progression du joueur). Effacé avant d'être écrit et
+## dès que la salle est posée (la partie garde la progression en mémoire) : il ne reste rien sur le poste.
+const SOLO_PROGRESSION := "user://bench_framerate_progression.cfg"
+## La graine des PNJ par défaut (`GameState.graine_du_bot` : sans elle, chaque prise sème ses bots au hasard et deux prises ne
+## jouent pas la même salle). ⚠️ Cela ne rend pas deux prises identiques : le jeu tire aussi au `randf()` global (poussière,
+## ambiance — « Pièges connus », 2026-10-03).
+const SOLO_GRAINE_PAR_DEFAUT := 4242
+## Le poste de J1 se cherche sur une case sur `SOLO_POSTE_PAS` (en x et en y) : assez fin pour trouver le coin d'où l'on voit, assez
+## large pour que la recherche tienne en moins d'une seconde sur une carte de 100 × 80.
+const SOLO_POSTE_PAS := 3
+## Et il ne se pose jamais à moins de cette distance (px) du départ d'un PNJ : J1 ne naît pas dans un corps.
+const SOLO_POSTE_ECART_MIN_PX := 80.0
+## Les drapeaux du DUEL, que `--solo` refuse : ils règlent une scène que le solo ne joue pas, et les lire sans les appliquer ferait
+## mesurer autre chose que ce qu'on croit (le mode de défaillance de la journée du 2026-09-14). `--classe=` est un préfixe.
+const DRAPEAUX_DU_DUEL := ["--fusee", "--gadgets", "--une-vue", "--sans-torches", "--sans-shaders", "--vue-unique", "--sans-racine",
+	"--menus", "--2d", "--lumiere3d", "--sans-ombres", "--echelle", "--chauffe-couverture", "--lampe-dominante",
+	"--ombres-spots-seules", "--fusee-sans-lumiere2d", "--fusee-sans-ombre2d", "--fusee-sans-fumee2d", "--fusee-sans-volume",
+	"--fusee-sans-lueurs", "--fusee-couches", "--fusee-age"]
+## `--solo=<chapitre>.<salle>`, tel que reçu ; vide hors solo.
+var _solo := ""
+## [chapitre, index de la salle (de 0)] : « 8.9 » → [8, 8].
+var _solo_salle: Array = []
+var _solo_graine := SOLO_GRAINE_PAR_DEFAUT
+## La case de J1 imposée par `--solo-poste=<x>,<y>` ; (-1, -1) : celle que le modèle choisit.
+var _solo_poste_force := Vector2i(-1, -1)
+## Le niveau préparé de la salle (`AventureFormat.preparer_niveau`), son titre, et la progression du banc.
+var _solo_niveau: Dictionary = {}
+var _solo_titre := ""
+var _prog: AventureProgression
+## Le poste de J1 : `case`, `centre` (px), `visee` (unitaire), `vus` (combien de PNJ le voient au départ), `candidats`.
+var _solo_poste: Dictionary = {}
+## Vrai pendant la MESURE (pas pendant l'échauffement) : ce que le pas de physique compte des coups reçus.
+var _solo_en_mesure := false
+## Les PV de J1 perdus pendant la mesure, et le nombre de pas de physique où il en a perdu.
+var _solo_pv_perdus := 0.0
+var _solo_pas_touches := 0
+## Le plus grand écart de J1 à son poste (px) : il ne doit pas bouger.
+var _solo_derive_max := 0.0
+## Les coups tirés par les bots de la salle au départ de la mesure : instance → coups.
+var _solo_coups_au_depart: Dictionary = {}
+## Par image mesurée : combien de PNJ en combat, torche allumée, flash de bouche allumé.
+var _solo_combat: Array[int] = []
+var _solo_torches_pnj: Array[int] = []
+var _solo_flashs_pnj: Array[int] = []
+## Non vide si la salle a quitté la phase de jeu : `phase`, `a` (s depuis le début de la boucle), `mesure` (vrai : dans la mesure),
+## `raison`. Le banc s'arrête alors — la charge n'est plus celle qu'on annonce — et le dit.
+var _solo_perdue: Dictionary = {}
+## Les trois interrupteurs de lumière (`--sans-ombres-2d`, `--sans-capteurs`, `--sans-halos-pnj`), et ce qu'ils ont vérifié à la fin.
+var _interrupteurs := Interrupteurs.new()
+var _interrupteurs_verifies: Dictionary = {}
+
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -323,6 +420,38 @@ func _ready() -> void:
 	_fusee_couches = int(_value(args, "--fusee-couches", "-1"))
 	_fusee_age = float(_value(args, "--fusee-age", "-1"))
 	_lumiere3d_echelle = float(_value(args, "--echelle", "1"))
+	# OM6 — le mode solo et les trois interrupteurs de lumière. Refusés AVANT tout le reste : un drapeau lu sans être appliqué est la
+	# forme de défaillance que ce banc a le plus payée (« ce relevé n'a pas mesuré ce qu'il annonce »).
+	var refus_solo := refus_du_solo(args)
+	refus_solo.append_array(refus_des_reglages(args))
+	if not refus_solo.is_empty():
+		for r in refus_solo:
+			printerr("✗ ", r)
+		_sortir(2)
+		return
+	_interrupteurs.sans_ombres_2d = args.has("--sans-ombres-2d")
+	_interrupteurs.sans_capteurs = args.has("--sans-capteurs")
+	_interrupteurs.sans_halos_pnj = args.has("--sans-halos-pnj")
+	var atlas: Variant = valeur_egal(args, "--atlas-ombres")
+	if atlas != null:
+		_interrupteurs.atlas_ombres = int(atlas)
+	var lissage: Variant = valeur_egal(args, "--pcf5")
+	if lissage != null:
+		_interrupteurs.pcf5 = true
+		if String(lissage) != "":
+			_interrupteurs.lissage_pcf5 = float(lissage)
+	var solo_demande: Variant = valeur_egal(args, "--solo")
+	if solo_demande != null:
+		_solo = String(solo_demande)
+		_solo_salle = lire_la_salle(_solo)
+		var poste_demande: Variant = valeur_egal(args, "--solo-poste")
+		if poste_demande != null:
+			_solo_poste_force = lire_le_poste(String(poste_demande))
+		var graine_demandee: Variant = valeur_egal(args, "--solo-graine")
+		if graine_demandee != null:
+			_solo_graine = int(String(graine_demandee))
+		# Le solo est TOUJOURS en vue unique (une salle, un joueur) : `_vue_iso_tenue()` attend une vue iso non scindée.
+		_vue_unique = true
 	if (_lumiere3d_sans_ombres or args.has("--echelle")) and not _lumiere3d:
 		printerr("✗ --sans-ombres et --echelle se prennent avec --lumiere3d")
 		_sortir(2)
@@ -357,6 +486,10 @@ func _ready() -> void:
 	# ligne « Cadence : » imprimée au départ de la mesure.
 	print("Plafond: %s | vsync: désactivé" % ("aucun" if Engine.max_fps == 0 else str(Engine.max_fps)))
 
+	if _solo != "":
+		# Pour cette exécution seulement (`GameSettings` ne sauvegarde pas une simple écriture) : sans lui, l'intro dessinée recouvre
+		# la salle — le duel du banc s'en passe parce que `settings.cfg` le dit déjà, un foyer neuf ne le dit pas (`prise.sh` l'écrit).
+		GameSettings.intro_vue = true
 	_main = preload("res://main.tscn").instantiate()
 	add_child(_main)
 	await get_tree().process_frame
@@ -369,7 +502,7 @@ func _ready() -> void:
 	# rien mesurer**. Il a fallu le tuer à la main, le jour où on avait besoin du
 	# chiffre. Un banc qui échoue doit le dire et sortir.
 	var manquants := preconditions_menus(_ui) if _menus \
-		else preconditions_manquantes(_ui, _main)
+		else (preconditions_solo(_ui, _main) if _solo != "" else preconditions_manquantes(_ui, _main))
 	if not manquants.is_empty():
 		printerr("✗ le banc ne peut pas démarrer — le jeu a changé sous lui :")
 		for m in manquants:
@@ -380,6 +513,9 @@ func _ready() -> void:
 
 	if _menus:
 		await _mesurer_menus()
+		return
+	if _solo != "":
+		await _mesurer_solo()
 		return
 
 	# Écran partagé : les DEUX vues rendent, chacune avec son jeu de lumières et
@@ -449,6 +585,9 @@ func _ready() -> void:
 		print("Préchauffage lumière 3D : 3 s, pire image %.1f ms" % (_pire_echauffement * 1000.0))
 		if _chauffe_couverture:
 			await _chauffer_par_couverture()
+	# OM6 — les interrupteurs de lumière, armés AVANT l'échauffement : les shaders et les passes d'ombre qui compilent à la chauffe
+	# sont ceux de la charge mesurée. Sans drapeau, rien n'est branché ni imprimé : le duel reste ce qu'il était.
+	_armer_les_interrupteurs([])
 	_poser_les_drapeaux_des_volumes()
 	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
@@ -478,8 +617,10 @@ func _ready() -> void:
 		_armer_temps_par_vue()
 	_recenser_les_ombres_2d()
 	_liseres_au_depart = _liseres_recus()
+	_interrupteurs.commencer_la_mesure()
 	_debut_mesure_us = Time.get_ticks_usec()
 	await _stress(_seconds, true)
+	_finir_les_interrupteurs()
 	_report()
 	_sortir(0)
 
@@ -589,6 +730,647 @@ static func preconditions_menus(ui: Node) -> Array[String]:
 		# menu amputé de l'effet le plus coûteux de la navigation.
 		absents.append("MenuHub.noter_geste() a disparu — l'encre ne coulerait pas")
 	return absents
+
+
+# ---------------------------------------------------------------------------
+# OM6 — LE MODE SOLO : une salle de l'aventure, vivante, en vue iso
+# ---------------------------------------------------------------------------
+
+## La valeur de `<nom>=<valeur>` dans les arguments : `""` pour `<nom>` seul, `null` si le drapeau n'y est pas. Le dernier l'emporte,
+## comme dans la lecture de `--classe=`. Statique : `tools/test_banc.gd` la vérifie sans fenêtre.
+static func valeur_egal(args: PackedStringArray, nom: String) -> Variant:
+	var trouve: Variant = null
+	for a in args:
+		if a == nom:
+			trouve = ""
+		elif a.begins_with(nom + "="):
+			trouve = a.trim_prefix(nom + "=")
+	return trouve
+
+
+## « 8.9 » → [8, 8] : le chapitre 8, sa 9e salle — l'index part de 0 et les fichiers de 01 (`niveau_09.json`), comme le catalogue du banc
+## des ombres. `[]` si le texte n'est pas une salle de l'aventure.
+static func lire_la_salle(texte: String) -> Array:
+	var m := RegEx.create_from_string("^([0-9]+)\\.([0-9]+)$").search(texte)
+	if m == null:
+		return []
+	var chapitre := int(m.get_string(1))
+	var salle := int(m.get_string(2))
+	if chapitre > AventureFormat.CHAPITRE_MAX or salle < 1 or salle > AventureFormat.NIVEAUX_PAR_CHAPITRE:
+		return []
+	return [chapitre, salle - 1]
+
+
+## Le fichier de la salle `index` (de 0) du chapitre `chapitre`.
+static func chemin_de_la_salle(chapitre: int, index: int) -> String:
+	return AventureFormat.racine.path_join("chapitre_%02d" % chapitre).path_join("niveau_%02d.json" % (index + 1))
+
+
+## « 38,20 » → la case (38, 20) ; (-1, -1) si le texte n'en est pas une.
+static func lire_le_poste(texte: String) -> Vector2i:
+	var morceaux := texte.split(",")
+	if morceaux.size() != 2 or not morceaux[0].strip_edges().is_valid_int() or not morceaux[1].strip_edges().is_valid_int():
+		return Vector2i(-1, -1)
+	var c := Vector2i(int(morceaux[0]), int(morceaux[1]))
+	return c if c.x >= 0 and c.y >= 0 else Vector2i(-1, -1)
+
+
+## OM3c (Q85) — pourquoi les réglages d'ombre ne forment pas une prise valide ; vide s'ils en forment une. Un `--atlas-ombres=abc`
+## lu `int()` vaudrait 0, et le banc mesurerait l'atlas du projet sous le nom d'un autre, sans un mot : il est refusé, comme une taille
+## qui n'est pas une puissance de deux (le moteur l'arrondirait) ou hors de 256 à 16 384, et un lissage qui n'est pas un nombre positif.
+static func refus_des_reglages(args: PackedStringArray) -> Array[String]:
+	var raisons: Array[String] = []
+	var atlas: Variant = valeur_egal(args, "--atlas-ombres")
+	if atlas != null:
+		var texte := String(atlas)
+		var n := int(texte) if texte.is_valid_int() else 0
+		if n < 256 or n > 16384 or (n & (n - 1)) != 0:
+			raisons.append("--atlas-ombres attend une puissance de deux de 256 à 16384 (2048 : le projet ; 4096 : Q85) — reçu « %s »" % texte)
+	var lissage: Variant = valeur_egal(args, "--pcf5")
+	if lissage != null and String(lissage) != "":
+		if not String(lissage).is_valid_float() or float(lissage) < 0.0:
+			raisons.append("--pcf5=<lissage> attend un nombre positif (--pcf5 seul : le lissage léger de Q85) — reçu « %s »" % String(lissage))
+	return raisons
+
+
+## Pourquoi ces arguments ne forment pas une prise valide ; vide s'ils en forment une. `--solo` ne se prend avec aucun drapeau du duel
+## (`DRAPEAUX_DU_DUEL`), ses réglages ne se prennent qu'avec lui, et `--sans-halos-pnj` n'a de PNJ à éteindre qu'en solo. Statique,
+## pour `tools/test_banc.gd`.
+static func refus_du_solo(args: PackedStringArray) -> Array[String]:
+	var raisons: Array[String] = []
+	var solo: Variant = valeur_egal(args, "--solo")
+	if solo == null:
+		for f in ["--solo-poste", "--solo-graine"]:
+			if valeur_egal(args, f) != null:
+				raisons.append("%s se prend avec --solo=<chapitre>.<salle>" % f)
+		if args.has("--sans-halos-pnj"):
+			raisons.append("--sans-halos-pnj : un duel n'a pas de PNJ — il se prend avec --solo=<chapitre>.<salle>")
+		return raisons
+	var salle := lire_la_salle(String(solo))
+	if salle.is_empty():
+		raisons.append("--solo attend <chapitre>.<salle> (--solo=8.9 : le chapitre 8, sa 9e salle ; chapitres 0 à %d, salles 1 à %d) — reçu « %s »"
+			% [AventureFormat.CHAPITRE_MAX, AventureFormat.NIVEAUX_PAR_CHAPITRE, String(solo)])
+	elif not FileAccess.file_exists(chemin_de_la_salle(int(salle[0]), int(salle[1]))):
+		raisons.append("--solo=%s : pas de salle, %s n'existe pas" % [String(solo), chemin_de_la_salle(int(salle[0]), int(salle[1]))])
+	var interdits: Array[String] = []
+	for f in DRAPEAUX_DU_DUEL:
+		if args.has(f):
+			interdits.append(f)
+	if valeur_egal(args, "--classe") != null:
+		interdits.append("--classe=")
+	if not interdits.is_empty():
+		raisons.append("--solo ne se prend pas avec %s : des drapeaux du duel, que le solo ne lit pas — les passer mesurerait autre chose que ce qu'on croit"
+			% ", ".join(interdits))
+	var poste: Variant = valeur_egal(args, "--solo-poste")
+	if poste != null and lire_le_poste(String(poste)) == Vector2i(-1, -1):
+		raisons.append("--solo-poste attend une case <x>,<y> (ex. --solo-poste=38,20) — reçu « %s »" % String(poste))
+	var graine: Variant = valeur_egal(args, "--solo-graine")
+	if graine != null and not String(graine).is_valid_int():
+		raisons.append("--solo-graine attend un entier — reçu « %s »" % String(graine))
+	return raisons
+
+
+## Les noms (propriétés, méthodes, constantes) qu'un script déclare, lus SANS l'instancier — une instance créée ici ne serait jamais
+## libérée —, et une constante de ce script par son nom (une énumération), `null` si elle n'y est pas.
+static func _membres_du_script(chemin: String) -> Dictionary:
+	var membres := {}
+	var script := load(chemin) as GDScript
+	if script == null:
+		return membres
+	for d in script.get_script_property_list():
+		membres[String(d["name"])] = true
+	for d in script.get_script_method_list():
+		membres[String(d["name"])] = true
+	for nom in script.get_script_constant_map():
+		membres[String(nom)] = true
+	return membres
+
+
+static func _constante_du_script(chemin: String, nom: String) -> Variant:
+	var script := load(chemin) as GDScript
+	return script.get_script_constant_map().get(nom) if script != null else null
+
+
+## Les appuis du MODE SOLO sur le jeu, nommés une fois et vérifiables sans fenêtre (`tools/test_banc.gd`), comme ceux du duel : le banc
+## n'est dans aucune suite, et un outil hors couverture se périme en silence. Le solo en a plus que le duel — il pose une partie
+## d'aventure, lit ses bots, la perception qu'ils ont de J1 et les lumières de chaque corps. Séparés des appuis du duel : une liste
+## commune se plaindrait de la disparition d'une fusée dans un banc qui n'en lance aucune.
+static func preconditions_solo(ui: Node, main: Node) -> Array[String]:
+	var absents: Array[String] = []
+	if ui == null or main == null:
+		absents.append("main.tscn n'expose plus UI ou GameState")
+		return absents
+	for methode in ["demarrer_l_aventure", "_set_player_input_provider"]:
+		if not main.has_method(methode):
+			absents.append("GameState.%s() a disparu" % methode)
+	for prop in ["aventure", "figurants", "graine_du_bot", "archiver_les_matchs", "countdown_left", "p1", "p2", "cam1", "particle_pool",
+			"bullet_container", "son_visible_actif", "_sons_vues"]:
+		if not prop in main:
+			absents.append("GameState.%s a disparu" % prop)
+	if not "aventure_progression" in ui:
+		absents.append("UI.aventure_progression a disparu")
+	var j1: Variant = main.get("p1")
+	if j1 != null:
+		for prop in ["est_pnj", "ambient_light", "flashlight", "muzzle_flash", "hp", "dead", "input_provider", "current_weapon"]:
+			if not prop in j1:
+				absents.append("Player.%s a disparu" % prop)
+		if not (j1 as Object).has_method("reset_step_tracker"):
+			absents.append("Player.reset_step_tracker() a disparu")
+	# `tenir_la_torche()` ne sait allumer que par la gâchette : sans cette action, J1 resterait éteint et personne ne le verrait.
+	if not InputMap.has_action("p1_torch"):
+		absents.append("action p1_torch absente de l'Input Map (tenir_la_torche)")
+	# Ce que le banc lit ou appelle dans les scripts du solo.
+	var attendus := {
+		"res://aventure_partie.gd": ["phase", "pnj", "_t", "essais", "morts", "salles_gagnees", "Phase"],
+		"res://aventure_format.gd": ["charger_chapitre", "preparer_niveau", "profil_du_pnj", "CHAPITRE_MAX", "NIVEAUX_PAR_CHAPITRE", "CLASSE_PAR_DEFAUT"],
+		"res://aventure_progression.gd": ["niveau_reussi", "reussir_niveau", "chapitre_termine", "terminer_chapitre"],
+		"res://bot_input_provider.gd": ["etat", "coups_tires", "Etat"],
+		"res://navigation_bot.gd": ["depuis_carte", "cases_praticables", "est_praticable", "centre_de_la_case"],
+		"res://perception_bot.gd": ["monde_de_la_carte", "cadre_de_vue", "dans_le_cadre", "segment_degage"],
+		"res://profil_bot.gd": ["voit", "tire"],
+		"res://local_input_provider.gd": ["get_aim_direction", "action_torch"],
+		"res://capteur_corps.gd": ["proprietaire", "corps_id", "vue_id", "creer"],
+	}
+	for chemin in attendus:
+		var membres := _membres_du_script(String(chemin))
+		if membres.is_empty():
+			absents.append("%s ne se charge plus" % String(chemin).get_file())
+			continue
+		for nom in (attendus[chemin] as Array):
+			if not membres.has(String(nom)):
+				absents.append("%s ne déclare plus « %s »" % [String(chemin).get_file(), String(nom)])
+	var phases: Variant = _constante_du_script("res://aventure_partie.gd", "Phase")
+	for nom in ["CARTON", "JEU", "SALLE_GAGNEE", "JOUEUR_ABATTU", "CHAPITRE_FINI"]:
+		if not (phases is Dictionary and (phases as Dictionary).has(nom)):
+			absents.append("AventurePartie.Phase.%s a disparu" % nom)
+	var etats: Variant = _constante_du_script("res://bot_input_provider.gd", "Etat")
+	for nom in ["PATROUILLE", "COMBAT"]:
+		if not (etats is Dictionary and (etats as Dictionary).has(nom)):
+			absents.append("BotInputProvider.Etat.%s a disparu" % nom)
+	return absents
+
+
+## Le poste de J1 : la case d'où le plus de PNJ de la salle le VOIENT à leur départ, par le modèle de vue des bots eux-mêmes
+## (`PerceptionBot` : le cadre de leur écran, puis une ligne de vue sans mur haut) et non par une distance devinée. Sans cela, J1 reste
+## là où le niveau le dit — le coin d'où l'on entre, loin de tous — et la salle 8.9 (3500 × 2800 px, sept PNJ aux quatre coins) se
+## mesure vide : aucune fusillade, le contraire du pire cas qu'on veut chiffrer. Seuls comptent les PNJ qui VOIENT et TIRENT (`voit`,
+## `tire` de leur profil). Les ex æquo vont au poste le plus proche de ses tireurs (des coups qui portent), puis à la première case.
+## `impose` : la case demandée (`--solo-poste`), évaluée comme une autre. Rend `case`, `centre` (px), `visee` (unitaire, vers les PNJ
+## qui le voient), `vus`, `tireurs` (PNJ qui voient ET tirent, au total), `candidats` ; `erreur` si la case imposée n'est pas praticable.
+static func choisir_le_poste(niveau: Dictionary, impose: Vector2i = Vector2i(-1, -1)) -> Dictionary:
+	var carte: Dictionary = niveau["carte"]
+	var navigation := NavigationBot.depuis_carte(carte)
+	var monde: Dictionary = PerceptionBot.monde_de_la_carte(carte)
+	var departs: Array[Vector2] = []
+	var yeux: Array[Vector2] = []
+	var cadres: Array[Dictionary] = []
+	for e: Dictionary in niveau["pnj"]:
+		var oeil := NavigationBot.centre_de_la_case(e["case"])
+		departs.append(oeil)
+		var profil := AventureFormat.profil_du_pnj(e)
+		if profil != null and profil.voit and profil.tire:
+			yeux.append(oeil)
+			cadres.append(PerceptionBot.cadre_de_vue(oeil, Vector2.from_angle(float(e["rotation"]))))
+	var candidates: Array[Vector2i] = []
+	if impose != Vector2i(-1, -1):
+		if not navigation.est_praticable(impose):
+			return {"erreur": "la case %s n'est pas praticable (mur, vide ou étau)" % str(impose)}
+		candidates.append(impose)
+	else:
+		for c in navigation.cases_praticables():
+			if c.x % SOLO_POSTE_PAS == 0 and c.y % SOLO_POSTE_PAS == 0:
+				candidates.append(c)
+	var meilleur: Dictionary = {}
+	var meilleurs_vus := -1
+	var meilleure_somme := INF
+	for c in candidates:
+		var p := NavigationBot.centre_de_la_case(c)
+		if impose == Vector2i(-1, -1):
+			var trop_pres := false
+			for d in departs:
+				if d.distance_to(p) < SOLO_POSTE_ECART_MIN_PX:
+					trop_pres = true
+					break
+			if trop_pres:
+				continue
+		var vus := 0
+		var somme := 0.0
+		var barycentre := Vector2.ZERO
+		for k in yeux.size():
+			if PerceptionBot.dans_le_cadre(p, cadres[k]) and PerceptionBot.segment_degage(yeux[k], p, monde):
+				vus += 1
+				somme += yeux[k].distance_to(p)
+				barycentre += yeux[k]
+		if vus > meilleurs_vus or (vus == meilleurs_vus and vus > 0 and somme < meilleure_somme):
+			meilleurs_vus = vus
+			meilleure_somme = somme
+			var visee := Vector2.from_angle(float(niveau["joueur"]["rotation"]))
+			if vus > 0 and (barycentre / float(vus)).distance_to(p) > 1.0:
+				visee = (barycentre / float(vus) - p).normalized()
+			meilleur = {"case": c, "centre": p, "visee": visee, "vus": vus, "tireurs": yeux.size(), "candidats": candidates.size()}
+	if meilleur.is_empty() or (impose == Vector2i(-1, -1) and meilleurs_vus <= 0):
+		# Personne ne voit nulle part (une salle de pure initiation) : J1 reste où le niveau le met, et le banc le dira.
+		var c: Vector2i = niveau["joueur"]["case"]
+		meilleur = {"case": c, "centre": NavigationBot.centre_de_la_case(c), "visee": Vector2.from_angle(float(niveau["joueur"]["rotation"])),
+			"vus": 0, "tireurs": yeux.size(), "candidats": candidates.size()}
+	return meilleur
+
+
+## Le nombre de salles d'un chapitre, lu dans son manifeste seul : marquer les chapitres d'avant comme finis n'exige pas de les
+## charger et de les valider (une grille de navigation par salle).
+static func _nombre_de_salles(chapitre: int) -> int:
+	var texte := FileAccess.get_file_as_string(AventureFormat.racine.path_join("chapitre_%02d" % chapitre).path_join("chapitre.json"))
+	var manifeste: Variant = JSON.parse_string(texte)
+	if manifeste is Dictionary and (manifeste as Dictionary).get("niveaux") is Array:
+		return ((manifeste as Dictionary)["niveaux"] as Array).size()
+	return AventureFormat.NIVEAUX_PAR_CHAPITRE
+
+
+## Pose la salle demandée : la VRAIE règle d'ouverture de l'aventure (`planche_ombres._poser_la_salle`) — un chapitre s'ouvre quand le
+## précédent est TERMINÉ (son boss tombé : `terminer_chapitre`, pas seulement ses salles réussies), une salle quand la précédente est
+## réussie —, le départ ordinaire (`demarrer_l_aventure`), J1 à son poste, puis le carton passé d'un coup. Rend faux si elle ne se pose pas.
+func _poser_la_salle_solo() -> bool:
+	var c: int = _solo_salle[0]
+	var i: int = _solo_salle[1]
+	var chapitre: Dictionary = AventureFormat.charger_chapitre(AventureFormat.racine.path_join("chapitre_%02d" % c), -1)
+	if chapitre.is_empty() or i >= (chapitre["niveaux"] as Array).size():
+		printerr("✗ --solo=%s : le chapitre %d ne se charge pas (ses défauts sont criés plus haut) ou n'a pas de salle %d" % [_solo, c, i + 1])
+		return false
+	_solo_niveau = (chapitre["niveaux"] as Array)[i]
+	_solo_titre = String(_solo_niveau["titre"])
+	# La progression du banc : un fichier à lui (jamais `user://solo.cfg`, celle du joueur), repartie de zéro à chaque prise.
+	_effacer_la_progression_du_banc()
+	_prog = AventureProgression.new(SOLO_PROGRESSION)
+	for k in c:
+		for n in _nombre_de_salles(k):
+			if not _prog.niveau_reussi(k, n):
+				_prog.reussir_niveau(k, n)
+		if not _prog.chapitre_termine(k):
+			_prog.terminer_chapitre(k)
+	for n in i:
+		if not _prog.niveau_reussi(c, n):
+			_prog.reussir_niveau(c, n)
+	_ui.aventure_progression = _prog
+	var classe := String(chapitre["classe_imposee"])
+	if classe == "":
+		classe = AventureFormat.CLASSE_PAR_DEFAUT
+	# Les bots semés : deux prises jouent les mêmes PNJ (voir `SOLO_GRAINE_PAR_DEFAUT`). Le départ ordinaire de l'aventure lit la graine.
+	_main.graine_du_bot = _solo_graine
+	_main.archiver_les_matchs = false
+	if not _main.demarrer_l_aventure(chapitre, i, classe, _prog):
+		printerr("✗ la salle %s ne se pose pas (`demarrer_l_aventure` a refusé : voir plus haut)" % _solo)
+		return false
+	var poste := choisir_le_poste(_solo_niveau, _solo_poste_force)
+	if poste.has("erreur"):
+		printerr("✗ --solo-poste : %s" % String(poste["erreur"]))
+		return false
+	_solo_poste = poste
+	_poster_j1(poste)
+	# Le carton passé d'un coup, et J1 déjà à son poste : à son retrait, chaque bot repart d'une mémoire vide et voit J1 là où il est.
+	_main.aventure.set("_t", 1.0e6)
+	var en_jeu := await _await(func() -> bool:
+		return _main.aventure != null and int(_main.aventure.phase) == AventurePartie.Phase.JEU, 60.0)
+	_effacer_la_progression_du_banc()
+	if not en_jeu:
+		printerr("✗ la salle %s n'est jamais passée en jeu" % _solo)
+		return false
+	return true
+
+
+func _effacer_la_progression_du_banc() -> void:
+	if FileAccess.file_exists(SOLO_PROGRESSION):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SOLO_PROGRESSION))
+
+
+## J1 à son poste : immobile, la visée tenue, la torche par la gâchette (voir `PosteDeJ1`), la vie remise à plein à chaque pas.
+##
+## **Immobile, et non en balayage lent — le choix et ses raisons.** (1) Ce qu'on chiffre dépend de l'EMPRISE des lumières, pas de l'endroit
+## où leur cône éclaire : la carte d'ombre d'une lumière se recalcule pour son rectangle et les occulteurs qu'il touche
+## (`_recenser_les_ombres_2d`) ; tourner la torche ne fait varier cette emprise que de la marge d'un carré qui pivote (jusqu'à ×1,4 de
+## côté), et ne change ni les capteurs ni les halos. Un balayage n'apporterait donc rien à la mesure. (2) Il ne change pas non plus qui ouvre le
+## feu : le modèle de vue des bots voit la LAMPE de J1 (« la torche trahit »), où qu'elle regarde. (3) En revanche il ferait glisser la
+## caméra (le décalage vers la visée) et glisser le regard sous la pâte (piège du 2026-09-25), donc changer d'une prise à l'autre ce qui
+## est dans le champ — et deux prises A/B ne joueraient plus la même scène : une visée tenue est la seule qui se rejoue. (4) Un J1
+## immobile est la cible la plus facile : plus de coups au but, donc plus de lumières de coup — le pire cas de cette lumière-là.
+func _poster_j1(poste: Dictionary) -> void:
+	var j1: Player = _main.p1
+	var centre: Vector2 = poste["centre"]
+	var visee: Vector2 = poste["visee"]
+	var fournisseur := PosteDeJ1.new()
+	fournisseur.name = "PosteDeJ1"
+	fournisseur.visee = visee
+	_main._set_player_input_provider(j1, fournisseur, 0)
+	j1.global_position = centre
+	j1.velocity = Vector2.ZERO
+	j1.global_rotation = visee.angle()
+	j1.reset_step_tracker()
+	j1.hp = SOLO_PV_DE_J1
+	_main.cam1.global_position = centre
+	_main.cam1.reset_smoothing()
+	get_tree().physics_frame.connect(_remettre_j1_a_plein)
+
+
+## Avant CHAQUE pas de physique (`physics_frame` part avant que le pas ne simule) : ce que J1 a perdu au pas d'avant se compte, puis sa
+## vie revient à plein. Voir `SOLO_PV_DE_J1` pour le pourquoi du pas et de la valeur.
+func _remettre_j1_a_plein() -> void:
+	var j1: Player = _main.p1 if is_instance_valid(_main) else null
+	if j1 == null or j1.dead:
+		return
+	var perdu := SOLO_PV_DE_J1 - j1.hp
+	if perdu > 0.0:
+		if _solo_en_mesure:
+			_solo_pv_perdus += perdu
+			_solo_pas_touches += 1
+		j1.hp = SOLO_PV_DE_J1
+
+
+## La salle est-elle encore celle qu'on mesure ? Vide si oui, sinon la raison. Rien ne se mesure dans un autre état que le jeu en
+## cours, J1 vivant, la première fois : une salle recommencée a de nouveaux PNJ (bots à mémoire vide, carton) et une autre charge.
+func _etat_de_la_salle() -> String:
+	var a: AventurePartie = _main.aventure if is_instance_valid(_main) else null
+	if a == null:
+		return "la partie d'aventure n'existe plus"
+	if int(a.phase) != AventurePartie.Phase.JEU:
+		return "la partie a quitté la phase JEU pour %s" % String(AventurePartie.Phase.find_key(int(a.phase)))
+	if _main.p1.dead:
+		return "J1 est mort"
+	if a.morts > 0 or a.essais > 1:
+		return "la salle a été recommencée (%d mort(s), essai %d)" % [a.morts, a.essais]
+	if a.salles_gagnees > 0:
+		return "la salle a été gagnée"
+	return ""
+
+
+## Une charge de solo : J1 tient sa torche au poste, les PNJ jouent (leurs bots les mènent, rien n'est piloté d'ici), et le banc compte
+## ce qui se passe. **Le bloc d'échantillonnage est celui de `_stress()`, recopié** : la boucle du duel n'est pas touchée, pour que ses
+## séries restent comparables d'une version à l'autre du banc. Sort dès que la salle cesse d'être la salle annoncée (`_solo_perdue`) :
+## continuer mesurerait autre chose, et durerait pour rien.
+func _stress_solo(duration: float, sampling: bool) -> void:
+	var elapsed := 0.0
+	var precedent_us := Time.get_ticks_usec()
+	while elapsed < duration:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		elapsed += dt
+		# ⚠️ **Le temps d'une image se lit à l'HORLOGE MURALE, pas au delta du jeu.** Le delta plafonne à
+		# `max_physics_steps_per_frame` pas de physique (8 × 1/8 s = 1 s sous `--physique 8`), et la salle 8.9 dépasse ce plafond
+		# sous llvmpipe : la première prise (2026-10-05) a « mesuré » 21 images de 940 à 1 060 ms, toutes collées au plafond — un
+		# chiffre qui ne pouvait pas bouger. Baisser la physique pour relever le plafond change la scène (à `--physique 2`, 11 coups
+		# de PNJ au lieu de 60 : ce n'est plus la fusillade annoncée). Le temps de JEU (`elapsed`), lui, reste le delta : la durée
+		# d'une prise se compte en jeu, comme dans le duel.
+		var maintenant_us := Time.get_ticks_usec()
+		var dt_mur := float(maintenant_us - precedent_us) / 1.0e6
+		precedent_us = maintenant_us
+		var raison := _etat_de_la_salle()
+		if raison != "":
+			_solo_perdue = {"raison": raison, "a": elapsed, "mesure": sampling}
+			return
+		# Par la GÂCHETTE, comme le duel (voir `tenir_la_torche`) : J1 tient son faisceau, c'est lui que les PNJ voient.
+		tenir_la_torche(_main.p1, true)
+		_solo_derive_max = maxf(_solo_derive_max, (_main.p1 as Node2D).global_position.distance_to(_solo_poste["centre"] as Vector2))
+		if sampling and _iso:
+			var iso := Presentation3D.instance()
+			if iso == null or not bool(iso.get("_actif")):
+				_images_hors_iso += 1
+		if not sampling:
+			_pire_echauffement = maxf(_pire_echauffement, dt_mur)
+			continue
+		if dt_mur > 0.0:
+			_samples.append(dt_mur)
+			_samples_t.append(elapsed)
+			_samples_us.append(maintenant_us)
+			if dt_mur > 0.05:
+				print("  hoquet %.1f ms à %.2f s — lampes : %s" % [dt_mur * 1000.0, elapsed, _etat_des_lampes()])
+			if _seuil_lent_ms > 0.0 and dt_mur * 1000.0 > _seuil_lent_ms:
+				_lentes.append([maintenant_us, dt_mur, elapsed])
+			if _temps_par_vue:
+				_relever_temps_par_vue()
+		if not get_window().has_focus():
+			_images_hors_focus += 1
+		_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
+		_peak_bullets = maxi(_peak_bullets, _main.bullet_container.get_child_count())
+		_relever_rendu()
+		_rendu_t.append(elapsed)
+		_relever_torches_solo()
+		_recenser_la_fusillade()
+
+
+## La lampe de J1 suit-elle la demande, à CETTE image ? Le même contrôle que `_relever_torches()` (voir son piège du décompte), pour J1
+## seul : J2 est garé et caché en aventure, et celles des PNJ sont à leurs bots.
+func _relever_torches_solo() -> void:
+	if _main.countdown_left > 0.0:
+		_pas_du_decompte = Engine.get_physics_frames()
+	if _main.countdown_left > 0.0 or Engine.get_physics_frames() == _pas_du_decompte:
+		_torches_decompte += 1
+		return
+	if not _main.p1.flashlight.enabled:
+		_torches_desaccord += 1
+
+
+## Qui fait la fusillade, à cette image : les PNJ en combat, ceux dont la torche est allumée, ceux dont le flash de bouche brûle.
+func _recenser_la_fusillade() -> void:
+	var combat := 0
+	var torches := 0
+	var flashs := 0
+	var partie: AventurePartie = _main.aventure
+	for p: Player in partie.pnj:
+		if not is_instance_valid(p) or p.dead:
+			continue
+		if p.flashlight.enabled:
+			torches += 1
+		if p.muzzle_flash.enabled:
+			flashs += 1
+		var bot := p.input_provider as BotInputProvider
+		if bot != null and bot.etat == BotInputProvider.Etat.COMBAT:
+			combat += 1
+	_solo_combat.append(combat)
+	_solo_torches_pnj.append(torches)
+	_solo_flashs_pnj.append(flashs)
+
+
+## Les coups tirés par les bots de la salle : instance du PNJ → `BotInputProvider.coups_tires`.
+func _coups_des_bots() -> Dictionary:
+	var coups := {}
+	var partie: AventurePartie = _main.aventure
+	for p: Player in partie.pnj:
+		if is_instance_valid(p) and p.input_provider is BotInputProvider:
+			coups[p.get_instance_id()] = (p.input_provider as BotInputProvider).coups_tires
+	return coups
+
+
+func _commencer_la_mesure_solo() -> void:
+	_solo_en_mesure = true
+	_solo_pv_perdus = 0.0
+	_solo_pas_touches = 0
+	_solo_derive_max = 0.0
+	_solo_combat.clear()
+	_solo_torches_pnj.clear()
+	_solo_flashs_pnj.clear()
+	_solo_coups_au_depart = _coups_des_bots()
+	_interrupteurs.commencer_la_mesure()
+
+
+## La mesure d'une salle d'aventure : la salle posée, la vue iso tenue, les interrupteurs armés, l'échauffement (le temps que les PNJ voient
+## J1 et ouvrent le feu), puis la mesure — le même squelette que le duel, la même sortie (`_report`).
+func _mesurer_solo() -> void:
+	if not await _poser_la_salle_solo():
+		_sortir(1)
+		return
+	if _iso and not await _vue_iso_tenue():
+		_sortir(1)
+		return
+	# Ce que la salle porte AVANT qu'un interrupteur n'y touche : le dénominateur de ce que chacun retire.
+	var avant := {
+		"lumieres": Interrupteurs.recenser_les_lumieres(get_tree()),
+		"capteurs": Interrupteurs.recenser_les_capteurs(get_tree(), _main.p1, _main.p2, _main.aventure.pnj),
+	}
+	_annoncer_le_solo(avant)
+	_armer_les_interrupteurs(_main.aventure.pnj)
+	_conditions()
+	print("Échauffement %.0f s (chargement des shaders, remplissage du pool — et le temps que les PNJ voient J1 et ouvrent le feu)…" % WARMUP_SEC)
+	_pire_echauffement = 0.0
+	await _stress_solo(WARMUP_SEC, false)
+	print("  pire image de l'échauffement : %.1f ms" % (_pire_echauffement * 1000.0))
+	if _solo_perdue.is_empty():
+		print("Mesure sur %.0f s…" % _seconds)
+		print("  temps d'image lus à l'horloge murale (le delta du jeu plafonne à %d pas × 1/%d s = %.2f s : voir `_stress_solo`)" % [
+			Engine.max_physics_steps_per_frame, Engine.physics_ticks_per_second,
+			float(Engine.max_physics_steps_per_frame) / float(Engine.physics_ticks_per_second)])
+		_annoncer_le_rendu_solo()
+		if _temps_par_vue:
+			_armer_temps_par_vue()
+		_recenser_les_ombres_2d()
+		_liseres_au_depart = _liseres_recus()
+		_commencer_la_mesure_solo()
+		_debut_mesure_us = Time.get_ticks_usec()
+		await _stress_solo(_seconds, true)
+	_solo_en_mesure = false
+	_finir_les_interrupteurs()
+	if _samples.is_empty():
+		# `_report()` ne dirait que « aucun échantillon » : la raison est ici.
+		_rapporter_le_solo()
+		_rapporter_les_interrupteurs()
+		_sortir(1)
+		return
+	_report()
+	_sortir(1 if not _refus_solo().is_empty() else 0)
+
+
+## Ce que le solo annonce AVANT de mesurer : la salle, J1 et son poste, les PNJ, les lumières et les capteurs qu'elle porte.
+func _annoncer_le_solo(avant: Dictionary) -> void:
+	var a: AventurePartie = _main.aventure
+	var n := _solo_niveau
+	var carte: Dictionary = n["carte"]
+	var grille: Variant = carte.get("grid_size")
+	var taille_de_la_grille := "%d×%d" % [int(grille["x"]), int(grille["y"])] if grille is Dictionary else str(grille)
+	print("Solo          : salle %s « %s » — chapitre « %s », %d PNJ, %d plafonnier(s), carte de %s cases de %d px" % [_solo, _solo_titre,
+		String(a.chapitre["titre"]), (n["pnj"] as Array).size(), (n["plafonniers"] as Array).size(), taille_de_la_grille,
+		int(carte.get("tile_size", 0))])
+	var pnj: PackedStringArray = []
+	for k in (n["pnj"] as Array).size():
+		var e: Dictionary = (n["pnj"] as Array)[k]
+		pnj.append("PNJ_%d %s %s%s" % [k, String(e["classe"]), String(e["profil_nom"]),
+			(" " + String(e["temperament"])) if String(e["temperament"]) != "" else ""])
+	print("Solo · PNJ    : %s" % " ; ".join(pnj))
+	var poste := _solo_poste
+	print("Solo · J1     : classe %s, poste case %s (%.0f, %.0f px) %s, visée %.0f°, immobile, torche tenue par la gâchette, ne tire pas ;"
+		% [String(_main.p1.current_weapon.slug()), str(poste["case"]), (poste["centre"] as Vector2).x, (poste["centre"] as Vector2).y,
+		"imposé (--solo-poste)" if _solo_poste_force != Vector2i(-1, -1) else "choisi par le modèle de vue des bots",
+		rad_to_deg((poste["visee"] as Vector2).angle()) + 0.0])
+	print("                vu au départ par %d des %d PNJ qui voient et tirent (parmi %d postes essayés) ; vie remise à %.0f à chaque pas de physique"
+		% [int(poste["vus"]), int(poste["tireurs"]), int(poste["candidats"]), SOLO_PV_DE_J1])
+	if int(poste["vus"]) == 0:
+		print("                ⚠ AUCUN PNJ ne voit ce poste au départ : la fusillade ne viendra que s'ils se croisent (`--solo-poste=<x>,<y>` pour en choisir un)")
+	print("Solo · graine : PNJ semés à %d (`--solo-graine=<n>` pour une autre) — le jeu tire aussi au `randf()` global : deux prises ne rejouent pas le même combat à l'image près"
+		% _solo_graine)
+	var j2: Player = _main.p2
+	print("Solo · J2     : %s ; sa lumière de proximité %s, son flash de bouche %s, sa torche %s (le jeu le gare sous le premier PNJ)"
+		% ["caché" if not j2.visible else "VISIBLE", "allumée" if j2.ambient_light.enabled else "éteinte",
+		"allumé" if j2.muzzle_flash.enabled else "éteint", "allumée" if j2.flashlight.enabled else "éteinte"])
+	var lum: Dictionary = avant["lumieres"]
+	print("Lumières 2D   : %d dans la scène, %d à ombre (avant tout interrupteur) — %s" % [int(lum["total"]), int(lum["a_ombre"]),
+		Interrupteurs.decrire(lum["par_etiquette"])])
+	var cap: Dictionary = avant["capteurs"]
+	print("Capteurs      : %d de corps, %d actifs à cet instant — %s" % [int(cap["total"]), int(cap["rendus"]), Interrupteurs.decrire(cap["par_genre"], "actif")])
+
+
+## « Rendu » et « Cadence » au départ de la mesure : RECOPIÉS de `_ready()`, dont le duel n'est pas touché (voir `_stress_solo`).
+func _annoncer_le_rendu_solo() -> void:
+	var cams := []
+	for nom in ["cam1", "cam2"]:
+		var c = _main.get(nom) if is_instance_valid(_main) else null
+		cams.append("%.1f°" % (rad_to_deg((c as Camera2D).rotation) + 0.0) if c is Camera2D else "absente")
+	print("Rendu : %s · caméras 2D J1 %s, J2 %s" % [GameSettings.mode_rendu(), cams[0], cams[1]])
+	var ecran := DisplayServer.window_get_current_screen()
+	print("Cadence : max_fps %d · vsync %d (relu ; 0 désactivée, 1 activée, 2 adaptative, 3 mailbox) · physique %d/s · plafond_effectif %d · pilotage_externe %s · écran %d/%d, %s px, %.0f Hz"
+		% [Engine.max_fps, DisplayServer.window_get_vsync_mode(), Engine.physics_ticks_per_second, GameSettings.plafond_effectif(),
+		GameSettings.pilotage_externe, ecran + 1, DisplayServer.get_screen_count(), DisplayServer.screen_get_size(ecran),
+		DisplayServer.screen_get_refresh_rate(ecran)])
+
+
+## Pourquoi cette prise de solo ne vaut pas (vide : elle vaut). Ce que `_report()` imprime déjà de son côté (torches) y figure aussi, pour
+## le code de sortie.
+func _refus_solo() -> Array[String]:
+	var raisons: Array[String] = []
+	if not _solo_perdue.is_empty():
+		raisons.append("la salle n'est plus celle qu'on mesure : %s" % String(_solo_perdue["raison"]))
+	if _images_hors_iso > 0:
+		raisons.append("la vue iso était éteinte sur %d image(s) mesurée(s)" % _images_hors_iso)
+	if _torches_desaccord > 0:
+		raisons.append("la torche de J1 n'a pas suivi la demande du banc sur %d image(s)" % _torches_desaccord)
+	for defaut in _interrupteurs.defauts(_interrupteurs_verifies):
+		raisons.append(defaut)
+	return raisons
+
+
+## Ce que le solo a vraiment joué, imprimé AVANT le verdict : la salle, la fusillade, J1. Ce qui invalide la prise est écrit « ✗ … chiffre
+## refusé » ; ce qui la rend douteuse sans l'invalider, « ⚠ ».
+func _rapporter_le_solo() -> void:
+	var a: AventurePartie = _main.aventure
+	if not _solo_perdue.is_empty():
+		print("  ✗ SALLE            : %s, à %.1f s de %s — la charge n'est plus la salle annoncée : chiffre refusé"
+			% [String(_solo_perdue["raison"]), float(_solo_perdue["a"]), "la mesure" if bool(_solo_perdue["mesure"]) else "l'échauffement"])
+	else:
+		var debout := 0
+		for p: Player in a.pnj:
+			if is_instance_valid(p) and not p.dead:
+				debout += 1
+		print("  Salle            : %s « %s » tenue en jeu sur toute la mesure (phase JEU, J1 vivant, 0 reprise ; %d PNJ debout sur %d)"
+			% [_solo, _solo_titre, debout, a.pnj.size()])
+	if _images_hors_iso > 0:
+		print("  ✗ VUE ISO          : éteinte sur %d image(s) mesurée(s) — chiffre refusé" % _images_hors_iso)
+	if _solo_combat.is_empty():
+		return
+	var apres := _coups_des_bots()
+	var coups := 0
+	var tireurs := 0
+	for id in apres:
+		var fait := int(apres[id]) - int(_solo_coups_au_depart.get(id, 0))
+		coups += maxi(fait, 0)
+		if fait > 0:
+			tireurs += 1
+	var duree := 0.0
+	for s in _samples:
+		duree += s
+	var avec_flash := 0
+	var pic_flash := 0
+	for f in _solo_flashs_pnj:
+		if f > 0:
+			avec_flash += 1
+		pic_flash = maxi(pic_flash, f)
+	var pic_combat := 0
+	for f in _solo_combat:
+		pic_combat = maxi(pic_combat, f)
+	var pic_torches := 0
+	for f in _solo_torches_pnj:
+		pic_torches = maxi(pic_torches, f)
+	print("  Fusillade        : %d coups de PNJ pendant la mesure (%.1f par seconde), tirés par %d PNJ sur %d · en combat : médiane %d, pic %d · torches de PNJ allumées : médiane %d, pic %d · flash de bouche de PNJ : %.0f %% des images, pic %d à la fois"
+		% [coups, float(coups) / maxf(duree, 0.001), tireurs, a.pnj.size(), _mediane_int(_solo_combat), pic_combat,
+		_mediane_int(_solo_torches_pnj), pic_torches, 100.0 * float(avec_flash) / float(_solo_flashs_pnj.size()), pic_flash])
+	if coups == 0:
+		print("  ⚠ AUCUN TIR DE PNJ pendant la mesure : ce n'est pas une fusillade — personne n'a ouvert le feu sur J1 (poste, graine, durée d'échauffement ; `--solo-poste=<x>,<y>` pour en choisir un autre)")
+	print("  J1               : poste tenu (écart maximal %.1f px) · touché sur %d pas de physique, %.0f PV perdus (remis à %.0f avant chaque pas) · jamais mort"
+		% [_solo_derive_max, _solo_pas_touches, _solo_pv_perdus, SOLO_PV_DE_J1])
 
 
 ## Sortir par la porte du jeu, et non par `get_tree().quit()`.
@@ -1007,6 +1789,13 @@ func _dater_les_pires(ordre: Array) -> void:
 func _libelle_charge() -> String:
 	if _variante == "--menus":
 		return "menus"
+	# OM6 — le solo dit sa salle (son titre quand elle est posée) ; les interrupteurs, entre crochets : le libellé est ce que lit
+	# l'en-tête du RÉSULTAT, et une prise ne doit jamais perdre le drapeau qui la distingue d'une autre.
+	if _solo != "":
+		var solo := "solo %s" % _solo
+		if _solo_titre != "":
+			solo += " « %s »" % _solo_titre
+		return solo + _suffixe_des_interrupteurs() + " — VUE ISO, lightmap %s" % (_lightmap if _lightmap != "" else "1080p")
 	var retires: Array[String] = []
 	if _sans_vue: retires.append("sans 2e vue")
 	if _sans_torches: retires.append("sans torches")
@@ -1022,11 +1811,13 @@ func _libelle_charge() -> String:
 		libelle += " + fusée éclairante"
 	if _gadgets:
 		libelle += " + gadgets (torche fantôme, poudre et ses traces)"
+	libelle += _suffixe_des_interrupteurs()
 	if _iso:
 		libelle += " — VUE ISO, lightmap %s" % (_lightmap if _lightmap != "" else "1080p")
 	else:
 		libelle += " — VUE DE DESSUS (--2d)"
 	return libelle
+
 
 func _appliquer_variante() -> void:
 	# **La vue unique se pose en cachant le conteneur, pas en arretant le rendu.**
@@ -1404,6 +2195,11 @@ func _report() -> void:
 				% _torches_decompte)
 			print("    éteint les torches lui-même — non comptées comme désaccord")
 		_rapporter_le_son_visible()
+		if _solo != "":
+			_rapporter_le_solo()
+	# OM6 — ce que les interrupteurs de lumière ont touché et vérifié : AVANT le verdict, comme la ligne des torches. Une prise
+	# « sans ombres » dont une lumière a gardé la sienne ne mesure pas ce qu'elle annonce, et le dit ici, pas après le chiffre.
+	_rapporter_les_interrupteurs()
 	print("  Verdict %.0f fps   : %s  (sur le 1 %% bas hors des %.0f premières secondes)" % [CIBLE_1_POURCENT_BAS,
 		"TENU" if low1_regime >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas hors 10 s à %.0f)" % low1_regime,
 		TRANSITOIRE_VERDICT_SEC])
@@ -1650,3 +2446,419 @@ static func _mediane_int(valeurs: Array[int]) -> int:
 	var tri := valeurs.duplicate()
 	tri.sort()
 	return tri[tri.size() / 2]
+
+
+# ---------------------------------------------------------------------------
+# OM6 — LES TROIS INTERRUPTEURS DE LUMIÈRE, et J1 au poste
+# ---------------------------------------------------------------------------
+
+## Armés avant l'échauffement (les shaders et les passes d'ombre qui compilent à la chauffe sont ceux de la charge mesurée),
+## vérifiés à la fin. Sans drapeau, rien n'est branché ni imprimé.
+func _armer_les_interrupteurs(pnj: Array) -> void:
+	if not _interrupteurs.actif():
+		return
+	_interrupteurs.armer(get_tree(), pnj, _main.p1, _main.p2)
+	for ligne in _interrupteurs.lignes_au_depart():
+		print(ligne)
+
+
+## La vérification de la fin, faite une fois la dernière image mesurée : un balayage unique, hors de ce qu'on chronomètre.
+func _finir_les_interrupteurs() -> void:
+	if _interrupteurs.actif():
+		_interrupteurs_verifies = _interrupteurs.finir()
+
+
+## « [sans ombres 2D, sans capteurs] » : ce que le libellé de la charge ajoute (rien sans drapeau).
+func _suffixe_des_interrupteurs() -> String:
+	var retraits := _interrupteurs.noms_des_retraits()
+	return (" [%s]" % ", ".join(retraits)) if not retraits.is_empty() else ""
+
+
+func _rapporter_les_interrupteurs() -> void:
+	if not _interrupteurs.actif():
+		return
+	for ligne in _interrupteurs.lignes_de_fin(_interrupteurs_verifies):
+		print(ligne)
+
+
+## J1 en solo : le VRAI fournisseur local — sa gâchette de torche passe par les actions de l'Input Map, comme `tenir_la_torche()` la
+## presse dans le duel du banc, et le jeu y retrouve ce qu'il lui demande (la manette, le cran de la torche) —, sauf sa VISÉE, tenue.
+## Le fournisseur local vise à la souris : sous Xvfb elle ne bouge jamais, sur un poste elle est où l'on l'a laissée, et la visée de J1
+## (donc sa torche, donc ce qu'il éclaire et ce que les PNJ voient) dériverait vers elle à chaque pas de physique
+## (`Player` : `rotation = lerp_angle(rotation, aim_dir.angle(), …)`).
+class PosteDeJ1 extends LocalInputProvider:
+	var visee := Vector2.RIGHT
+
+	func get_aim_direction(_position_du_joueur: Vector2) -> Vector2:
+		return visee
+
+
+## OM6 — LES TROIS INTERRUPTEURS DE LUMIÈRE, d'un seul tenant : une classe à part pour que `tools/test_banc.gd` la joue sans fenêtre
+## (elle ne dépend que de nœuds qu'une suite sait fabriquer). Quatre règles, chacune payée ailleurs dans ce fichier :
+##
+## - **Elle ne touche JAMAIS `enabled`** : `perception_bot_noeud.gd` lit celui des halos, des torches et des flashs pour décider ce que
+##   les bots voient, et couper `enabled` mesurerait des PNJ aveugles — une autre charge, sans un mot. `eteindre_l_ombre()` est le seul
+##   endroit qui écrit, et il n'écrit que `shadow_enabled`.
+## - **Les lumières nées pendant la mesure sont prises à leur naissance** (`SceneTree.node_added`), jamais par un balayage de l'arbre à
+##   chaque image : un `find_children` par image est un coût CPU de plus dans la mesure qu'il prétend lire. Le seul balayage est celui du
+##   départ (ce qui existe déjà) et celui de la fin (la vérification), tous deux hors du chronomètre.
+## - **Le jeu réécrit les capteurs à chaque image** : `Presentation3D._suivre` et `_suivre_les_figurants` posent `UPDATE_ALWAYS` à chaque
+##   passage, et un arrêt posé une fois serait annulé à l'image suivante, sans rien dire (le piège des trois premiers drapeaux de la
+##   fusée, plus haut). Les capteurs sont donc remis à l'arrêt à `RenderingServer.frame_pre_draw` — après tous les `_process`, avant le
+##   dessin — : l'entrée honnête, que `Presentation3D` utilise lui-même pour la zone morte de ses capteurs. Aucun code du jeu n'est touché.
+## - **Les compteurs vivent dans des champs de cet objet, pas dans des lambdas** : une lambda ne capture un entier que par valeur, et
+##   « un compteur incrémenté dans une lambda reste à zéro » (Pièges connus, 2026-10-02) — une garde « jamais » peut être vide.
+class Interrupteurs extends RefCounted:
+	const Reglages := preload("res://tools/reglages_ombres.gd")
+	var sans_ombres_2d := false
+	var sans_capteurs := false
+	var sans_halos_pnj := false
+	## OM3c (Q85) — deux réglages : l'atlas d'ombres (0 : celui du projet) et le PCF5 sur les lumières que nomme `reglages_ombres.gd`.
+	var atlas_ombres := 0
+	var pcf5 := false
+	var lissage_pcf5: float = Reglages.LISSAGE_LEGER
+	var lumieres_pcf5: Array = []
+
+	## Ce que `armer` a trouvé et touché, une fois.
+	var lumieres_vues_au_depart := 0
+	var lumieres_eteintes_au_depart := 0
+	var capteurs_suivis_au_depart := 0
+	var halos_pnj: Array = []
+	var halos_pnj_eteints := 0
+	## Ce qui s'est passé depuis (remis à zéro par `commencer_la_mesure`) : nœuds vus entrer dans l'arbre, lumières 2D nées — et, parmi
+	## elles, celles qui portaient une ombre à leur naissance —, capteurs nés, passages du crochet de dessin et capteurs que le jeu avait
+	## rallumés et que le crochet a remis à l'arrêt.
+	var noeuds_vus := 0
+	var lumieres_nees := 0
+	var lumieres_nees_a_ombre := 0
+	var nees_par_etiquette: Dictionary = {}
+	var capteurs_nes := 0
+	## Les capteurs nés depuis l'armement, échauffement compris (celui d'une fusée lancée par un PNJ naît n'importe quand) : ne se remet pas à zéro.
+	var capteurs_nes_depuis_l_armement := 0
+	var appels_du_crochet := 0
+	var capteurs_repris := 0
+	## Les capteurs de corps suivis (`CapteurCorps`) : ceux du départ et ceux qui naissent.
+	var capteurs: Array = []
+	var _arbre: SceneTree = null
+	## Où l'on balaie au départ et à la fin : la racine de l'arbre (le jeu), ou un sous-arbre (une suite, qui ne touche pas au reste).
+	var _racine: Node = null
+	var _joueurs: Array = []
+	var _pnj: Array = []
+	var _branche := false
+	static var _chiffres: RegEx = null
+
+
+	func actif() -> bool:
+		return sans_ombres_2d or sans_capteurs or sans_halos_pnj or atlas_ombres > 0 or pcf5
+
+
+	## Les drapeaux posés, dans l'ordre : ce que le libellé de la charge ajoute entre crochets.
+	func noms_des_retraits() -> PackedStringArray:
+		var noms: PackedStringArray = []
+		if sans_ombres_2d:
+			noms.append("sans ombres 2D")
+		if sans_capteurs:
+			noms.append("sans capteurs")
+		if sans_halos_pnj:
+			noms.append("sans halos de PNJ")
+		if atlas_ombres > 0:
+			noms.append("atlas d'ombres %d" % atlas_ombres)
+		if pcf5:
+			noms.append("PCF5, lissage %s" % str(lissage_pcf5))
+		return noms
+
+
+	## L'ombre d'une lumière 2D éteinte — la SEULE écriture de cette classe sur une lumière, et jamais `enabled`. Vrai si elle en avait une.
+	static func eteindre_l_ombre(lumiere: Light2D) -> bool:
+		if not lumiere.shadow_enabled:
+			return false
+		lumiere.shadow_enabled = false
+		return true
+
+
+	## « PNJ_3/Flashlight » → « PNJ_#/Flashlight » : le parent et le nom, les numéros effacés (sept PNJ, une ligne), un nœud sans nom
+	## (`@PointLight2D@1273` : le halo, l'écho au sol et la lumière de coup n'en ont pas) devenu « · ».
+	static func etiquette_de(noeud: Node) -> String:
+		if _chiffres == null:
+			_chiffres = RegEx.create_from_string("[0-9]+")
+		var nom := String(noeud.name)
+		var parent := noeud.get_parent()
+		var nom_parent := String(parent.name) if parent != null else "·"
+		if nom.begins_with("@"):
+			nom = "·"
+		if nom_parent.begins_with("@"):
+			nom_parent = "·"
+		return _chiffres.sub(nom_parent + "/" + nom, "#", true)
+
+
+	## « A ×12 (3 à ombre), B ×4 (0 à ombre) » : un recensement `étiquette → [n, k]`, du plus nombreux au moins nombreux, douze lignes au plus.
+	static func decrire(par: Dictionary, mot: String = "à ombre") -> String:
+		if par.is_empty():
+			return "aucune"
+		var lignes: Array = []
+		for etiquette in par:
+			lignes.append([int((par[etiquette] as Array)[0]), "%s ×%d (%d %s)" % [etiquette, int((par[etiquette] as Array)[0]),
+				int((par[etiquette] as Array)[1]), mot]])
+		lignes.sort_custom(func(x, y) -> bool: return int(x[0]) > int(y[0]))
+		var morceaux: PackedStringArray = []
+		for k in mini(lignes.size(), 12):
+			morceaux.append(String(lignes[k][1]))
+		return ", ".join(morceaux) + (" …" if lignes.size() > 12 else "")
+
+
+	## Toutes les `Light2D` de l'arbre : combien, combien à ombre, par étiquette. Un seul balayage, au départ — hors du chronomètre.
+	static func recenser_les_lumieres(arbre: SceneTree) -> Dictionary:
+		var total := 0
+		var a_ombre := 0
+		var par_etiquette := {}
+		for n in arbre.root.find_children("*", "Light2D", true, false):
+			var lumiere := n as Light2D
+			var etiquette := etiquette_de(lumiere)
+			var e: Array = par_etiquette.get(etiquette, [0, 0])
+			e[0] += 1
+			total += 1
+			if lumiere.shadow_enabled:
+				e[1] += 1
+				a_ombre += 1
+			par_etiquette[etiquette] = e
+		return {"total": total, "a_ombre": a_ombre, "par_etiquette": par_etiquette}
+
+
+	## À qui est ce capteur : J1, J2, un figurant (un PNJ), un leurre — ou un objet posé, qui n'a pas de propriétaire.
+	static func genre_de_capteur(capteur: CapteurCorps, p1: Node, p2: Node, pnj: Array) -> String:
+		var corps: Variant = capteur.proprietaire
+		if corps == null or not is_instance_valid(corps):
+			return "objet posé"
+		if corps == p1:
+			return "J1"
+		if corps == p2:
+			return "J2"
+		if pnj.has(corps):
+			return "figurant"
+		return "leurre"
+
+
+	## Tous les capteurs de corps de l'arbre : combien, combien rendent à cet instant, par genre.
+	static func recenser_les_capteurs(arbre: SceneTree, p1: Node, p2: Node, pnj: Array) -> Dictionary:
+		var total := 0
+		var rendus := 0
+		var par_genre := {}
+		for n in arbre.root.find_children("*", "SubViewport", true, false):
+			var capteur := n as CapteurCorps
+			if capteur == null:
+				continue
+			var genre := genre_de_capteur(capteur, p1, p2, pnj)
+			var e: Array = par_genre.get(genre, [0, 0])
+			e[0] += 1
+			total += 1
+			if capteur.render_target_update_mode != SubViewport.UPDATE_DISABLED:
+				e[1] += 1
+				rendus += 1
+			par_genre[genre] = e
+		return {"total": total, "rendus": rendus, "par_genre": par_genre}
+
+
+	## Branche les crochets et traite ce qui existe déjà. `pnj` : les PNJ de la salle (leurs halos, pour `--sans-halos-pnj`) ; `p1`, `p2` :
+	## pour dire à qui est chaque capteur ; `racine` : le sous-arbre à balayer (toute la scène par défaut). Les crochets, eux, écoutent
+	## l'arbre entier — c'est ce qui prend une lumière née n'importe où.
+	func armer(arbre: SceneTree, pnj: Array = [], p1: Node = null, p2: Node = null, racine: Node = null) -> void:
+		_arbre = arbre
+		_racine = racine if racine != null else arbre.root
+		_joueurs = [p1, p2]
+		_pnj = pnj
+		if sans_ombres_2d:
+			for n in _racine.find_children("*", "Light2D", true, false):
+				lumieres_vues_au_depart += 1
+				if eteindre_l_ombre(n as Light2D):
+					lumieres_eteintes_au_depart += 1
+		if sans_capteurs:
+			for n in _racine.find_children("*", "SubViewport", true, false):
+				if n is CapteurCorps:
+					_suivre_un_capteur(n as CapteurCorps)
+					capteurs_suivis_au_depart += 1
+		if sans_halos_pnj:
+			for p in pnj:
+				if is_instance_valid(p) and bool(p.get("est_pnj")):
+					var halo: Variant = p.get("ambient_light")
+					if halo is Light2D:
+						halos_pnj.append(halo)
+						if eteindre_l_ombre(halo as Light2D):
+							halos_pnj_eteints += 1
+		if atlas_ombres > 0:
+			Reglages.poser_l_atlas(atlas_ombres)
+		if pcf5:
+			var corps: Array = [p1, p2]
+			corps.append_array(pnj)
+			lumieres_pcf5 = Reglages.lumieres_de_q85(arbre, corps)
+			Reglages.poser_le_filtre(lumieres_pcf5, true, lissage_pcf5)
+		if sans_ombres_2d or sans_capteurs:
+			arbre.node_added.connect(_sur_un_noeud)
+		if sans_capteurs:
+			RenderingServer.frame_pre_draw.connect(avant_le_rendu)
+		_branche = true
+
+
+	func desarmer() -> void:
+		if not _branche or _arbre == null:
+			return
+		if _arbre.node_added.is_connected(_sur_un_noeud):
+			_arbre.node_added.disconnect(_sur_un_noeud)
+		if RenderingServer.frame_pre_draw.is_connected(avant_le_rendu):
+			RenderingServer.frame_pre_draw.disconnect(avant_le_rendu)
+		_branche = false
+
+
+	## Chaque nœud qui entre dans l'arbre, de n'importe où (un sous-viewport compris). Une lumière 2D est éteinte à sa naissance : les
+	## sites du jeu posent tous `shadow_enabled` AVANT `add_child` (`hit_light`, la fusée, le plafonnier, les gadgets), donc la
+	## valeur qu'on lit ici est la dernière — et la vérification de la fin le contrôle sur ce qui survit.
+	func _sur_un_noeud(noeud: Node) -> void:
+		noeuds_vus += 1
+		if noeud is Light2D:
+			if sans_ombres_2d:
+				_lumiere_nee(noeud as Light2D)
+		elif noeud is CapteurCorps:
+			if sans_capteurs:
+				_suivre_un_capteur(noeud as CapteurCorps)
+				capteurs_nes += 1
+				capteurs_nes_depuis_l_armement += 1
+
+
+	func _lumiere_nee(lumiere: Light2D) -> void:
+		lumieres_nees += 1
+		var avait_une_ombre := eteindre_l_ombre(lumiere)
+		var etiquette := etiquette_de(lumiere)
+		var e: Array = nees_par_etiquette.get(etiquette, [0, 0])
+		e[0] += 1
+		if avait_une_ombre:
+			e[1] += 1
+			lumieres_nees_a_ombre += 1
+		nees_par_etiquette[etiquette] = e
+
+
+	func _suivre_un_capteur(capteur: CapteurCorps) -> void:
+		if not capteurs.has(capteur):
+			capteurs.append(capteur)
+		capteur.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+	## À `RenderingServer.frame_pre_draw` : chaque capteur que le jeu a rallumé pendant l'image est remis à l'arrêt, un capteur libéré est
+	## oublié. Vingt capteurs au plus : quelques microsecondes, et seulement avec `--sans-capteurs`.
+	func avant_le_rendu() -> void:
+		appels_du_crochet += 1
+		var i := capteurs.size() - 1
+		while i >= 0:
+			var capteur: Variant = capteurs[i]
+			if not is_instance_valid(capteur):
+				capteurs.remove_at(i)
+			elif (capteur as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED:
+				(capteur as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED
+				capteurs_repris += 1
+			i -= 1
+
+
+	## La mesure commence : ce qui s'est passé pendant l'échauffement n'est pas ce qui se rapporte.
+	func commencer_la_mesure() -> void:
+		noeuds_vus = 0
+		lumieres_nees = 0
+		lumieres_nees_a_ombre = 0
+		nees_par_etiquette = {}
+		capteurs_nes = 0
+		appels_du_crochet = 0
+		capteurs_repris = 0
+
+
+	## La vérification de la FIN, une fois la dernière image mesurée, puis les crochets débranchés : ce qui devait être éteint l'est-il resté ?
+	## Un seul balayage, hors du chronomètre. Rend les noms des lumières encore à ombre, les halos de PNJ à ombre, les capteurs encore actifs.
+	func finir() -> Dictionary:
+		var bilan := {"lumieres_vues": 0, "lumieres_a_ombre": [], "halos_a_ombre": 0, "capteurs_vivants": 0, "capteurs_actifs": 0,
+			"pcf5_vivantes": 0, "pcf5_tenues": 0}
+		if pcf5:
+			for l in lumieres_pcf5:
+				if is_instance_valid(l):
+					bilan["pcf5_vivantes"] = int(bilan["pcf5_vivantes"]) + 1
+			bilan["pcf5_tenues"] = Reglages.combien_en_pcf5(lumieres_pcf5)
+		if _racine != null and sans_ombres_2d:
+			for n in _racine.find_children("*", "Light2D", true, false):
+				bilan["lumieres_vues"] = int(bilan["lumieres_vues"]) + 1
+				if (n as Light2D).shadow_enabled:
+					(bilan["lumieres_a_ombre"] as Array).append(etiquette_de(n))
+		if sans_halos_pnj:
+			for h in halos_pnj:
+				if is_instance_valid(h) and (h as Light2D).shadow_enabled:
+					bilan["halos_a_ombre"] = int(bilan["halos_a_ombre"]) + 1
+		if sans_capteurs:
+			for c in capteurs:
+				if is_instance_valid(c):
+					bilan["capteurs_vivants"] = int(bilan["capteurs_vivants"]) + 1
+					if (c as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED:
+						bilan["capteurs_actifs"] = int(bilan["capteurs_actifs"]) + 1
+		desarmer()
+		return bilan
+
+
+	## Ce que `armer` a fait, une ligne par drapeau.
+	func lignes_au_depart() -> PackedStringArray:
+		var lignes: PackedStringArray = []
+		if sans_ombres_2d:
+			lignes.append("Interrupteur  : --sans-ombres-2d : %d lumières 2D vues, %d mises sans ombre (%d l'étaient déjà) ; celles qui naissent ensuite sont prises à leur entrée dans l'arbre (SceneTree.node_added), pas par un balayage à chaque image"
+				% [lumieres_vues_au_depart, lumieres_eteintes_au_depart, lumieres_vues_au_depart - lumieres_eteintes_au_depart])
+		if sans_capteurs:
+			lignes.append("Interrupteur  : --sans-capteurs : %d capteurs de corps mis à l'arrêt (UPDATE_DISABLED) ; le jeu les rallume à chaque image, ils sont donc remis à l'arrêt à chaque image, juste avant le dessin (frame_pre_draw)"
+				% capteurs_suivis_au_depart)
+		if sans_halos_pnj:
+			lignes.append("Interrupteur  : --sans-halos-pnj : %d halo(s) de proximité de PNJ sans ombre (%d éteint(s) par ce drapeau, les autres l'étaient déjà)"
+				% [halos_pnj.size(), halos_pnj_eteints])
+		if atlas_ombres > 0:
+			lignes.append("Réglage       : --atlas-ombres=%d : l'atlas d'ombres 2D passe de %d (le projet) à %d texels (RenderingServer.canvas_set_shadow_texture_size)"
+				% [atlas_ombres, Reglages.atlas_du_projet(), atlas_ombres])
+		if pcf5:
+			lignes.append("Réglage       : --pcf5 : %d lumière(s) en PCF5, lissage %s — la torche et le halo de chaque corps, le halo de chaque plafonnier (tools/reglages_ombres.gd)"
+				% [lumieres_pcf5.size(), str(lissage_pcf5)])
+		return lignes
+
+
+	## Ce que chaque drapeau a touché PENDANT la mesure et ce que la vérification de la fin a trouvé. Un « ✗ » est un défaut (`defauts`).
+	func lignes_de_fin(bilan: Dictionary) -> PackedStringArray:
+		var lignes: PackedStringArray = []
+		if sans_ombres_2d:
+			var restantes: Array = bilan.get("lumieres_a_ombre", [])
+			lignes.append("  Interrupteurs    : --sans-ombres-2d : %d lumière(s) 2D née(s) pendant la mesure, dont %d avec une ombre (éteintes à leur naissance) — %s ; %d nœuds vus entrer dans l'arbre · en fin de mesure : %s"
+				% [lumieres_nees, lumieres_nees_a_ombre, decrire(nees_par_etiquette, "à ombre à la naissance"), noeuds_vus,
+				("✗ %d lumière(s) 2D ont gardé ou repris une ombre : %s" % [restantes.size(), ", ".join(PackedStringArray(restantes))])
+				if not restantes.is_empty() else "0 lumière 2D à ombre sur %d vues ✓" % int(bilan.get("lumieres_vues", 0))])
+		if sans_capteurs:
+			lignes.append("  Interrupteurs    : --sans-capteurs : %d capteur(s) suivi(s) en tout (%d au départ, %d nés ensuite dont %d pendant la mesure) ; le jeu en a rallumé %d fois en %d images de dessin (chaque fois remis à l'arrêt) · en fin de mesure : %s"
+				% [capteurs_suivis_au_depart + capteurs_nes_depuis_l_armement, capteurs_suivis_au_depart, capteurs_nes_depuis_l_armement,
+				capteurs_nes, capteurs_repris, appels_du_crochet,
+				("✗ %d capteur(s) actifs sur %d" % [int(bilan.get("capteurs_actifs", 0)), int(bilan.get("capteurs_vivants", 0))])
+				if int(bilan.get("capteurs_actifs", 0)) > 0 else "0 actif sur %d ✓" % int(bilan.get("capteurs_vivants", 0))])
+		if sans_halos_pnj:
+			lignes.append("  Interrupteurs    : --sans-halos-pnj : %d halo(s) de PNJ · en fin de mesure : %s" % [halos_pnj.size(),
+				("✗ %d encore à ombre" % int(bilan.get("halos_a_ombre", 0))) if int(bilan.get("halos_a_ombre", 0)) > 0
+				else "0 à ombre ✓"])
+		if atlas_ombres > 0:
+			lignes.append("  Réglages         : --atlas-ombres=%d (posé à l'armement ; le moteur n'en relit pas la taille)" % atlas_ombres)
+		if pcf5:
+			var vivantes := int(bilan.get("pcf5_vivantes", 0))
+			var tenues := int(bilan.get("pcf5_tenues", 0))
+			lignes.append("  Réglages         : --pcf5 : en fin de mesure, %s" % (("%d lumière(s) en PCF5 sur %d vivantes ✓" % [tenues, vivantes])
+				if tenues == vivantes and vivantes > 0 else "✗ %d en PCF5 sur %d vivantes" % [tenues, vivantes]))
+		return lignes
+
+
+	## Les défauts de la vérification de la fin : ce qu'un interrupteur dit avoir fait et n'a pas tenu. Vide si tout tient.
+	func defauts(bilan: Dictionary) -> Array[String]:
+		var d: Array[String] = []
+		if bilan.is_empty():
+			return d
+		var restantes: Array = bilan.get("lumieres_a_ombre", [])
+		if sans_ombres_2d and not restantes.is_empty():
+			d.append("--sans-ombres-2d : %d lumière(s) 2D avaient encore une ombre en fin de mesure" % restantes.size())
+		if sans_halos_pnj and int(bilan.get("halos_a_ombre", 0)) > 0:
+			d.append("--sans-halos-pnj : %d halo(s) de PNJ avaient encore une ombre en fin de mesure" % int(bilan["halos_a_ombre"]))
+		if sans_capteurs and int(bilan.get("capteurs_actifs", 0)) > 0:
+			d.append("--sans-capteurs : %d capteur(s) rendaient encore en fin de mesure" % int(bilan["capteurs_actifs"]))
+		if pcf5 and (int(bilan.get("pcf5_vivantes", 0)) == 0 or int(bilan.get("pcf5_tenues", 0)) != int(bilan.get("pcf5_vivantes", 0))):
+			d.append("--pcf5 : %d lumière(s) en PCF5 sur %d vivantes en fin de mesure" % [int(bilan.get("pcf5_tenues", 0)),
+				int(bilan.get("pcf5_vivantes", 0))])
+		return d

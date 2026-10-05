@@ -234,7 +234,9 @@ func _monter_lueur() -> void:
 	_lumiere.energy = ENERGIE
 	_lumiere.shadow_enabled = true
 	# MB3a — une nappe au sol bute sur un mur bas (couche d'ombre des murs bas).
-	_lumiere.shadow_item_cull_mask = 1 | CanauxLumiere.COUCHE_OMBRE_MUR_BAS
+	# OMBRES, OM4b (Q87) — et les murs l'arrêtent pour les CORPS aussi : le masque des
+	# lumières neutres, comme la fusée (`Fusee.masque_ombre`, qui dit pourquoi).
+	_lumiere.shadow_item_cull_mask = CanauxLumiere.masque_ombre_neutre_pour_les_corps() | CanauxLumiere.COUCHE_OMBRE_MUR_BAS
 	# Gadgets et lumières — sa hauteur de source : au ras du sol, sous le muret. Elle
 	# y bute comme avant ; la hauteur le DIT, pour la lightmap et pour la vue iso.
 	MursBasRendu.poser_hauteur_source(_lumiere, MursBasRendu.HAUTEUR_AU_RAS_DU_SOL)

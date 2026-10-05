@@ -170,6 +170,13 @@ func _voir(delta: float) -> void:
 	var yeux: Variant = corps.get("dazzle_amount")
 	monde["ebloui"] = float(yeux) if yeux != null else 0.0
 	var adversaire := _adversaire()
+	# OMBRES, OM1 (Q81) — l'éblouissement ne cache au bot que le corps qui l'éblouit (`Player.source_du_brouillage`), comme à un joueur.
+	# Lu comme le reste de ce nœud lit le corps, sans exiger un `Player` : les corps factices des suites n'ont ni éblouissement
+	# (lu à 0 plus haut) ni source, et sans éblouissement la question ne se pose pas. ⚠️ Ce repli ne doit pas cacher la disparition
+	# de la méthode chez un vrai joueur : `test_ombres_regles` (OM1) vérifie, sur un vrai corps, qu'un bot ébloui par sa cible le
+	# sait et par une vraie fusée non ; `test_aventure_boss`, qu'il en perd alors le corps — et pas ébloui par autre chose.
+	var source_vue: Variant = corps.call("source_du_brouillage") if corps.has_method("source_du_brouillage") else null
+	monde["ebloui_par_la_cible"] = adversaire != null and source_vue == adversaire
 	var lumieres := _lumieres(adversaire)
 	noms_des_lumieres.clear()
 	for l in lumieres:

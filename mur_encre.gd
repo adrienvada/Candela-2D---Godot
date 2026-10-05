@@ -126,6 +126,11 @@ func _duplicate_for_player(parent: Node2D, player_idx: int, vis_mask: int, lt_ma
 func _draw() -> void:
 	for boucle in _boucles:
 		_dessiner_lavis(boucle)
+	# Chantier RR, RR1 — l'essai sans encre (`--sans-encre`, voir `IsoMateriaux.encre_active`) : pas de trait. Le lavis au
+	# pied reste, c'est une ombre de contact. ⚠️ Le trait est aussi ce que les bandeaux LED allument dans le noir : sans lui,
+	# le contour des murs ne se voit plus loin de la torche (voir `IsoMateriaux.DRAPEAU_SANS_ENCRE`). Pensé pour la vue iso.
+	if not IsoMateriaux.encre_active():
+		return
 	for boucle in _boucles:
 		_dessiner_trait(boucle)
 	for boucle in _boucles_bas:

@@ -1,0 +1,371 @@
+{
+ "commit": "15adca72",
+ "date": "2026-10-05T12:38:27",
+ "variantes": {
+  "D": "D — le jeu",
+  "a": "(a) e2, e3 sans bruit",
+  "b": "(b) transitions élargies",
+  "c": "(c) e2 en rampe",
+  "brute": "brute — sans paliers"
+ },
+ "mesures": {
+  "plafonnier": {
+   "D": {
+    "ecart_a_D": {
+     "reference": true
+    }
+   },
+   "a": {
+    "ecart_a_D": {
+     "au_dela_8": 8507,
+     "hors_corps_24": 3399,
+     "hors_corps_8": 6518,
+     "moyenne_hors_corps": 0.117,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 72
+    }
+   },
+   "b": {
+    "ecart_a_D": {
+     "au_dela_8": 12525,
+     "hors_corps_24": 71,
+     "hors_corps_8": 9396,
+     "moyenne_hors_corps": 0.099,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 88
+    }
+   },
+   "c": {
+    "ecart_a_D": {
+     "au_dela_8": 58882,
+     "hors_corps_24": 13459,
+     "hors_corps_8": 46702,
+     "moyenne_hors_corps": 0.623,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 49
+    }
+   },
+   "brute": {
+    "ecart_a_D": {
+     "au_dela_8": 41905,
+     "hors_corps_24": 26974,
+     "hors_corps_8": 30357,
+     "moyenne_hors_corps": 1.092,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 106
+    }
+   }
+  },
+  "torche": {
+   "D": {
+    "ecart_a_D": {
+     "reference": true
+    }
+   },
+   "a": {
+    "ecart_a_D": {
+     "au_dela_8": 2619,
+     "hors_corps_24": 648,
+     "hors_corps_8": 1505,
+     "moyenne_hors_corps": 0.028,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 91
+    }
+   },
+   "b": {
+    "ecart_a_D": {
+     "au_dela_8": 3332,
+     "hors_corps_24": 0,
+     "hors_corps_8": 2298,
+     "moyenne_hors_corps": 0.028,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 39
+    }
+   },
+   "c": {
+    "ecart_a_D": {
+     "au_dela_8": 19283,
+     "hors_corps_24": 4348,
+     "hors_corps_8": 12919,
+     "moyenne_hors_corps": 0.284,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 40
+    }
+   },
+   "brute": {
+    "ecart_a_D": {
+     "au_dela_8": 13163,
+     "hors_corps_24": 7152,
+     "hors_corps_8": 7876,
+     "moyenne_hors_corps": 0.463,
+     "pixels_hors_corps": 2041196,
+     "saut_max": 93
+    }
+   }
+  },
+  "recul": {
+   "D": {
+    "par_paire_hors_corps_8": [
+     59800,
+     21,
+     2203,
+     4416,
+     5193,
+     5158,
+     4497,
+     3199,
+     745,
+     3193,
+     2029,
+     1139,
+     491
+    ],
+    "remontee_hors_corps_8": 32263,
+    "allers_retours": 21,
+    "energies_torche": [
+     2.5,
+     1.5,
+     1.5187,
+     1.5685,
+     1.6401,
+     1.7239,
+     1.8105,
+     1.8905,
+     1.9545,
+     1.993,
+     2.0606,
+     2.1192,
+     2.17,
+     2.214
+    ]
+   },
+   "a": {
+    "par_paire_hors_corps_8": [
+     59772,
+     4,
+     2852,
+     4679,
+     5049,
+     4949,
+     4683,
+     3247,
+     454,
+     2767,
+     2669,
+     1414,
+     686
+    ],
+    "remontee_hors_corps_8": 33449,
+    "allers_retours": 4,
+    "energies_torche": [
+     2.5,
+     1.5,
+     1.5187,
+     1.5685,
+     1.6401,
+     1.7239,
+     1.8105,
+     1.8905,
+     1.9545,
+     1.993,
+     2.0606,
+     2.1192,
+     2.17,
+     2.214
+    ]
+   },
+   "b": {
+    "par_paire_hors_corps_8": [
+     60295,
+     0,
+     42,
+     504,
+     896,
+     856,
+     690,
+     76,
+     0,
+     70,
+     6,
+     0,
+     0
+    ],
+    "remontee_hors_corps_8": 3140,
+    "allers_retours": 0,
+    "energies_torche": [
+     2.5,
+     1.5,
+     1.5187,
+     1.5685,
+     1.6401,
+     1.7239,
+     1.8105,
+     1.8905,
+     1.9545,
+     1.993,
+     2.0606,
+     2.1192,
+     2.17,
+     2.214
+    ]
+   },
+   "c": {
+    "par_paire_hors_corps_8": [
+     69521,
+     1,
+     0,
+     1,
+     3,
+     4,
+     2,
+     0,
+     2,
+     1,
+     1,
+     0,
+     1
+    ],
+    "remontee_hors_corps_8": 15,
+    "allers_retours": 1,
+    "energies_torche": [
+     2.5,
+     1.5,
+     1.5187,
+     1.5685,
+     1.6401,
+     1.7239,
+     1.8105,
+     1.8905,
+     1.9545,
+     1.993,
+     2.0606,
+     2.1192,
+     2.17,
+     2.214
+    ]
+   },
+   "brute": {
+    "par_paire_hors_corps_8": [
+     47675,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     2,
+     0,
+     0,
+     0,
+     0,
+     1
+    ],
+    "remontee_hors_corps_8": 4,
+    "allers_retours": 0,
+    "energies_torche": [
+     2.5,
+     1.5,
+     1.5187,
+     1.5685,
+     1.6401,
+     1.7239,
+     1.8105,
+     1.8905,
+     1.9545,
+     1.993,
+     2.0606,
+     2.1192,
+     2.17,
+     2.214
+    ]
+   }
+  },
+  "balayage": {
+   "D": {
+    "par_paire_hors_corps_8": [
+     6789,
+     6564,
+     6352,
+     6497,
+     6315,
+     6881,
+     6655,
+     6956,
+     6765
+    ],
+    "allers_retours": {
+     "ecran_hors_corps_8": 4241,
+     "lightmap_8": 2679
+    }
+   },
+   "a": {
+    "par_paire_hors_corps_8": [
+     6734,
+     6312,
+     6093,
+     6129,
+     6116,
+     6570,
+     6334,
+     6549,
+     6315
+    ],
+    "allers_retours": {
+     "ecran_hors_corps_8": 4331,
+     "lightmap_8": 2679
+    }
+   },
+   "b": {
+    "par_paire_hors_corps_8": [
+     7414,
+     7226,
+     6920,
+     7071,
+     7083,
+     7498,
+     7316,
+     7788,
+     7762
+    ],
+    "allers_retours": {
+     "ecran_hors_corps_8": 3636,
+     "lightmap_8": 2679
+    }
+   },
+   "c": {
+    "par_paire_hors_corps_8": [
+     7957,
+     7858,
+     7561,
+     7473,
+     7326,
+     7577,
+     7267,
+     7566,
+     7031
+    ],
+    "allers_retours": {
+     "ecran_hors_corps_8": 3837,
+     "lightmap_8": 2679
+    }
+   },
+   "brute": {
+    "par_paire_hors_corps_8": [
+     3356,
+     3159,
+     3021,
+     3036,
+     3065,
+     3319,
+     3127,
+     3412,
+     2962
+    ],
+    "allers_retours": {
+     "ecran_hors_corps_8": 2849,
+     "lightmap_8": 2679
+    }
+   }
+  }
+ }
+}

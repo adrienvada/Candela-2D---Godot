@@ -1,0 +1,572 @@
+{
+ "avant": {
+  "commit": "b71a45bf",
+  "etats": [
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.824,
+    "image": 0,
+    "images_depuis_l_extinction": 0,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "PNJ_1",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.735,
+    "image": 1,
+    "images_depuis_l_extinction": 1,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.601,
+    "image": 2,
+    "images_depuis_l_extinction": 4,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.468,
+    "image": 3,
+    "images_depuis_l_extinction": 7,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.335,
+    "image": 4,
+    "images_depuis_l_extinction": 10,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.201,
+    "image": 5,
+    "images_depuis_l_extinction": 13,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.068,
+    "image": 6,
+    "images_depuis_l_extinction": 16,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.0,
+    "image": 7,
+    "images_depuis_l_extinction": 19,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "—"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.0,
+    "image": 8,
+    "images_depuis_l_extinction": 22,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "—"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.0,
+    "image": 9,
+    "images_depuis_l_extinction": 25,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "—"
+   }
+  ]
+ },
+ "apres": {
+  "commit": "b71a45bf",
+  "etats": [
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.824,
+    "image": 0,
+    "images_depuis_l_extinction": 0,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "PNJ_1",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.735,
+    "image": 1,
+    "images_depuis_l_extinction": 1,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.601,
+    "image": 2,
+    "images_depuis_l_extinction": 4,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.468,
+    "image": 3,
+    "images_depuis_l_extinction": 7,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.335,
+    "image": 4,
+    "images_depuis_l_extinction": 10,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.201,
+    "image": 5,
+    "images_depuis_l_extinction": 13,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "PNJ_1",
+    "eblouissement": 0.068,
+    "image": 6,
+    "images_depuis_l_extinction": 16,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "PNJ_1"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.0,
+    "image": 7,
+    "images_depuis_l_extinction": 19,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "—"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.0,
+    "image": 8,
+    "images_depuis_l_extinction": 22,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "—"
+   },
+   {
+    "appareil_allume": false,
+    "cible_de_l_appareil": "Player2",
+    "eblouissement": 0.0,
+    "image": 9,
+    "images_depuis_l_extinction": 25,
+    "j2": "Player2",
+    "j2_ecran": [
+     960.0,
+     214.68
+    ],
+    "j2_monde": [
+     87.5,
+     87.5
+    ],
+    "pnj": "PNJ_1",
+    "pnj_a_px_de_j2": 93.7,
+    "pnj_ecran": [
+     1123.77,
+     270.37
+    ],
+    "pnj_monde": [
+     174.59,
+     52.92
+    ],
+    "source_de_l_image": "—",
+    "source_du_niveau": "—"
+   }
+  ]
+ }
+}

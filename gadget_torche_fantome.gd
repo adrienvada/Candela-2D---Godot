@@ -61,17 +61,16 @@ const VITESSE_BALAYAGE := 1.0
 const TREMBLEMENT := [0.012, 0.009]
 const FREQ_TREMBLEMENT := [3.1, 5.3]
 
-## L'énergie du faisceau : celle d'une torche de joueur, 2,5, AVEC son souffle de
-## ±3 % (`player.gd`, `TORCH_BREATH_AMP`). ⚠️ Cette note disait jusqu'au 2026-09-11
-## que la torche réelle ne respirait pas : c'était faux, et la fausse était la
-## seule des deux à ne pas respirer. Un leurre se trahit par ce qu'il a EN MOINS
-## autant que par ce qu'il a en plus.
+## L'énergie du faisceau : celle d'une torche de joueur, 2,5 — et, comme elle, SANS
+## souffle depuis OM3b (Q84, Adrien, 2026-10-05 : la respiration est retirée). Du
+## 2026-09-11 à OM3b, la fausse respirait de ±3 % parce que la vraie respirait : un
+## leurre se trahit par ce qu'il a EN MOINS autant que par ce qu'il a en plus — et,
+## la vraie ne respirant plus, par ce qu'il aurait en plus.
 ##
 ## La « puissance » doublée par Adrien le 2026-09-11 n'est PAS ici : elle est dans
 ## l'alpha du cookie de l'arbalète, qu'elle emprunte (`torch_brightness` 0,6).
 ## Doubler `energy` en aurait fait la seule lampe plus forte que le vrai Braconnier.
 const ENERGIE := 2.5
-const SOUFFLE := 0.03
 
 ## La graine de l'hôte, posée par `GameState._do_spawn_gadget` avant l'entrée dans
 ## l'arbre. ⚠️ **Sans cette variable, la graine serait jetée sans un bruit** : le
@@ -190,7 +189,7 @@ func _physics_process(delta: float) -> void:
 		# facteur, chez l'hôte (`GameState._lumiere_recue`).
 		var gs = get_tree().get_first_node_in_group("game_state")
 		var lampe: float = gs.facteur_de_lampe_a(global_position) if gs != null else 1.0
-		_lumiere.energy = ENERGIE * lampe * (1.0 + SOUFFLE * sin(age() * 1.7 + float(graine % 97)))
+		_lumiere.energy = ENERGIE * lampe
 	# Le trépied est posé au sol : il ne balaie pas. Sa rotation compense celle du
 	# nœud, qui porte la tête et le faisceau.
 	if _pied != null:
