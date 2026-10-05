@@ -1,0 +1,76 @@
+--- a/ui.gd
++++ b/ui.gd
+@@ -1650,5 +1650,5 @@
+ 	elif connecting:
+ 		tint = Charte.ETAT_ATTENTION
+-	network_status_label.add_theme_color_override("font_color", tint)
++	_couleur_si_change(network_status_label, "font_color", tint)
+ 
+ 	# Le format technique n'est plus lisible que par un développeur : il reste
+@@ -1735,5 +1735,5 @@
+ 
+ 	ping_label.text = "● %d ms" % rtt
+-	ping_label.add_theme_color_override("font_color", tint)
++	_couleur_si_change(ping_label, "font_color", tint)
+ 	ping_label.show()
+ 
+@@ -3166,5 +3166,5 @@
+ 	# zéro s'écrit « 0 », et le tiret est réservé au Spectre.
+ 	lbl_f.text = "FUSÉES —" if plafond <= 0 else "FUSÉES %d" % n
+-	lbl_f.add_theme_color_override("font_color",
++	_couleur_si_change(lbl_f, "font_color",
+ 		COLOR_LUMIERE if n > 0 else COLOR_DIM)
+ 
+@@ -3244,5 +3244,5 @@
+ 	var lbl_g: Label = res["gadget"]
+ 	lbl_g.text = texte_g
+-	lbl_g.add_theme_color_override("font_color",
++	_couleur_si_change(lbl_g, "font_color",
+ 		COLOR_LUMIERE if vif else COLOR_DIM)
+ 
+@@ -3357,4 +3357,18 @@
+ ## pâte : une plaque un peu plus claire, et la couleur du joueur — ici portée par
+ ## la lumière du bloc plutôt que par une bordure.
++## RETOUCHE DE MESURE (audit M, garde_theme ; V2 B1 / HUD-02) : lecture avant écriture. Une surcharge de thème écrite avec la valeur
++## qu'elle porte déjà notifie quand même le nœud (refaçonnage, tri différé du conteneur) : on ne l'écrit que si elle change.
++func _couleur_si_change(c: Control, nom: StringName, v: Color) -> void:
++	if c.has_theme_color_override(nom) and c.get_theme_color(nom) == v:
++		return
++	c.add_theme_color_override(nom, v)
++
++
++func _style_si_change(c: Control, nom: StringName, s: StyleBox) -> void:
++	if c.has_theme_stylebox_override(nom) and c.get_theme_stylebox(nom) == s:
++		return
++	c.add_theme_stylebox_override(nom, s)
++
++
+ func _plaques_de_cartouche(panel: PanelContainer, active: bool, player_color: Color) -> StyleBox:
+ 	if panel.get_meta("bloc_teinte", Color.TRANSPARENT) != player_color:
+@@ -3373,10 +3387,10 @@
+ 		# c'est le seul endroit du HUD où l'habillage dit littéralement ce que le
+ 		# jeu fait. Éteinte, elle retombe dans l'ombre, neutre.
+-		panel.add_theme_stylebox_override("panel", _plaques_de_cartouche(panel, active, player_color))
++		_style_si_change(panel, "panel", _plaques_de_cartouche(panel, active, player_color))
+ 		var hb := panel.get_child(0).get_child(0)
+ 		var lb := hb.get_child(1) as Label
+ 		# Le libellé garde EXACTEMENT ses deux couleurs d'origine : la plaque
+ 		# reste sombre dans les deux états, donc rien ne justifie de l'inverser.
+-		lb.add_theme_color_override("font_color",
++		_couleur_si_change(lb, "font_color",
+ 			COLOR_LUMIERE if active else Charte.PATE_TEXTE_SECOND)
+ 		var v := panel.find_child("Verrou", true, false) as Control
+@@ -3437,5 +3451,5 @@
+ ## d'habillage.
+ func _habiller_la_reserve(panel: PanelContainer, active: bool, player_color: Color) -> void:
+-	panel.add_theme_stylebox_override("panel", _plaques_de_cartouche(panel, active, player_color))
++	_style_si_change(panel, "panel", _plaques_de_cartouche(panel, active, player_color))
+ 	var marge := panel.get_child(0)
+ 	if marge.get_child_count() == 0:
+@@ -3444,5 +3458,5 @@
+ 	var label: Label = hbox.get_node_or_null("Label")
+ 	if label != null:
+-		label.add_theme_color_override("font_color",
++		_couleur_si_change(label, "font_color",
+ 			COLOR_LUMIERE if active else Charte.PATE_TEXTE_SECOND)
+ 	var icon: TextureRect = hbox.get_node_or_null("Icon")

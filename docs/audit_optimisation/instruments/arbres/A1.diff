@@ -1,0 +1,10 @@
+--- a/brouillage_vue.gd
++++ b/brouillage_vue.gd
+@@ -192,4 +192,7 @@
+ 		return
+ 	var dazzle := float(regardeur.get("dazzle_amount"))
++	# RETOUCHE DE MESURE (audit M, plancher_flou) : le plancher de la rétrodiffusion de sa propre torche (0,06) vaut 0 ici.
++	if dazzle <= 0.0601:
++		dazzle = 0.0
+ 	var vue := get_viewport()
+ 	if vue == null:
