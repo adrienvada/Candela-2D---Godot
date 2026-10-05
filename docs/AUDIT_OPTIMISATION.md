@@ -379,7 +379,8 @@ Adrien le rognage des cookies de torche (LUM-04) comme constat de l'audit ; les 
 
 **Fichiers que l'audit propose de toucher et qu'OMBRES touche aussi** : `map_geometry.gd` (mémo de `build_grid`, lot 3),
 `presentation_3d.gd` (`_suivre` et les uniformes, ISO-04), `game_state.gd` (`_accorder_rendu_aux_vues`, lot 7),
-`brouillage*.gd` (plancher de Q81). Rien n'y sera écrit sans accord de la session qui les tient.
+`brouillage*.gd` (plancher de l'appareil, Q89 : `BrouillageVue.maj` ; OM1 a touché `brouillage.gd`). Rien n'y sera écrit
+sans accord de la session qui les tient.
 
 ---
 
