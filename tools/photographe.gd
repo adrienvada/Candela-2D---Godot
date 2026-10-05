@@ -343,7 +343,7 @@ static func catalogue() -> Array[Dictionary]:
 		# rend : c'est ici qu'on le juge, et au pixel.
 		{"id": "leurre", "famille": "jeu", "source": "vue", "ancre": [0.5, 0.5],
 		 "titre": "Le leurre et le corps",
-		 "pourquoi": "Un leurre de J2 et le vrai J2, à même distance sous la torche de J1 : ils doivent sortir identiques. Variante : le leurre et J2 derrière J1, à 60 px, torche de J1 éteinte, et J1 tire (l'écho au sol n'éclaire aucun corps)."},
+		 "pourquoi": "Un leurre de J2 et le vrai J2, à même distance sous la torche de J1 : ils doivent sortir identiques. Variante : le leurre et J2 derrière J1, à 60 px, torche de J1 éteinte, et J1 tire : son flash (800 px, ombré, chantier TIR) les éclaire, et doit les éclairer à l'identique."},
 		# `ecran` et en écran scindé : le repère ne vit que sur la vue de son poseur,
 		# et c'est la moitié d'en face qui prouve qu'il n'y est pas.
 		{"id": "repere", "famille": "jeu", "source": "ecran",
@@ -1495,8 +1495,10 @@ func _plan_repere(plans: Array[Dictionary]) -> void:
 ## Le leurre : posé par J2 (l'Illusionniste), le vrai J2 à même distance de J1 de
 ## l'autre côté de son axe, torche éteinte ; J1 regarde, torche allumée. Les deux
 ## doivent sortir identiques. Puis leurre et corps passent DERRIÈRE J1, à 60 px de
-## part et d'autre, torche de J1 éteinte, et J1 tire : l'écho au sol de son tir
-## (couche 1 seule, sans ombre) n'éclaire aucun corps — et plus le leurre.
+## part et d'autre, torche de J1 éteinte, et J1 tire. Jusqu'au 2026-10-05, seul
+## l'écho au sol éclairait (couche 1, sans ombre) et ne devait toucher aucun corps ;
+## depuis le chantier TIR, le flash de bouche les éclaire tous deux (800 px), et
+## doit les éclairer à l'identique.
 func _plan_leurre(plans: Array[Dictionary]) -> void:
 	var avant = _main.p2.current_weapon
 	var illusionniste = _classe_du_gadget("leurre")
@@ -1542,7 +1544,9 @@ func _plan_leurre(plans: Array[Dictionary]) -> void:
 	print("  MESURE rotations corps %.4f leurre %.4f" % [_main.p2.rotation,
 		leurre.rotation if leurre != null else NAN])
 
-	# Le tir : l'ÉCHO AU SOL seul. C'est une lueur de 200 px de DIAMÈTRE
+	# Le tir. ⚠️ Ce qui suit décrit l'ÉCHO AU SOL, retiré le 2026-10-05 (chantier TIR) : c'est
+	# désormais le flash de bouche, 800 px et ombré, qui éclaire les deux. Les positions restent.
+	# C'était une lueur de 200 px de DIAMÈTRE
 	# (`ground_flash`, sans ombre, couche 1 seule) qui s'éteint en 0,12 s : à 180 px
 	# il ne restait rien à voir (0,0 avant ET après le lot, premier passage) ; à 70 px
 	# DEVANT, la gerbe de l'éclat de bouche recouvrait le corps (second passage). Les
@@ -1564,7 +1568,7 @@ func _plan_leurre(plans: Array[Dictionary]) -> void:
 		await get_tree().physics_frame
 	_main.p1.shoot()
 	await _prendre(_derive(plans, "leurre", "tir",
-		"J1, torche éteinte, tire : le leurre et J2 sont derrière lui, à 60 px. L'écho au sol de son tir ne doit éclairer ni l'un ni l'autre."),
+		"J1, torche éteinte, tire : le leurre et J2 sont derrière lui, à 60 px. Le flash de son tir les éclaire : ils doivent sortir identiques."),
 		tenir, 0.0)
 	_consigner("leurre_J2_tir", p_leurre, "vue")
 	_consigner("corps_J2_tir", p_corps, "vue")

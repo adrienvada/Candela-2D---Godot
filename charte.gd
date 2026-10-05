@@ -128,7 +128,26 @@ const CARMIN := Color(0.551, 0.1682, 0.1914)
 ## d'un trait jaune. La teinte reste exactement celle de l'ambre — seule
 ## l'intensité déborde —, sans quoi la balle serait la seule chose du jeu à
 ## brûler d'une autre couleur que le feu.
+##
+## ⚠️ **Plus aucune balle ne la porte depuis l'aiguille** (chantier TIR, étape A,
+## 2026-10-05) : sa couleur vit dans `assets/decals/aiguille.png`, cuite le long de
+## `feu()`. Restent l'illustration du menu (`menu_artwork.gd`) et le défaut de
+## `WeaponData.bullet_color`, que seule lit désormais une arme sans lumière.
 const AMBRE_INCANDESCENT := Color(2.496, 1.794, 0.624)
+
+## Un métal qui refroidit : `chaleur` 1 donne l'`HALOGENE`, 0,5 l'`AMBRE`, 0 le
+## `CARMIN` — trois couleurs de la charte et rien entre elles qu'une interpolation.
+##
+## Une rampe et non une couleur, parce que l'aiguille de balle (chantier TIR) se
+## refroidit le long de son trait — blanche à la tête, carmin à la queue — et que le
+## fil du tir fatal refroidit dans le temps. **Les deux lisent cette fonction** :
+## la fabrique de la planche (`tools/fabrique_aiguille.gd`) et `bullet.gd`. Deux
+## rampes « équivalentes » finiraient par diverger.
+static func feu(chaleur: float) -> Color:
+	var c := clampf(chaleur, 0.0, 1.0)
+	if c >= 0.5:
+		return AMBRE.lerp(HALOGENE, (c - 0.5) * 2.0)
+	return CARMIN.lerp(AMBRE, c * 2.0)
 
 ## `ACIER * 0.70` — texte secondaire, entrées inactives, unités.
 const DIM := Color(0.49, 0.532, 0.574)

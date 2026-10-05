@@ -6136,6 +6136,26 @@ corrigé (S6, protocole 19). Sous 30 px/s, aucun pas ne part (Q50).
 0.7.1 au protocole 18 — un joueur en 0.7.0 et un en 0.7.1 se trouvent toujours. Q15, Q42 et le point de braise attendent la
 0.8.0 : tout ce qui change ce que voit un joueur de l'autre attend la version qui sépare les populations.
 
+## 2026-10-05 — Le coup de feu, chantier TIR (session « Rendu de balle percussif », `candela-2d-godot-ec`, branche `claude/blissful-wozniak-meh1ts`)
+
+Demande d'Adrien le jour même : le rendu des balles (« un gros rond, lumineux, inélégant »), puis un flash de bouche « qui se voit
+et qui éclaire ». Proposition sur maquette, réponse : « Oui pour A et B, rayon du flash 400, persistance 28 ms, sillage 48 %, balle
+sans lumière ». Entrée placée ici, avant celle de l'audit, pour la même raison que l'audit avant SOLO : ne pas croiser les ajouts
+de fin de fichier d'une autre branche.
+
+**En propre (créés) :** `assets/decals/aiguille.png` (+ `.import`), `tools/fabrique_aiguille.gd`, `tools/test_coup_de_feu.gd`.
+**Touchés :** `bullet.gd` (l'aura devient l'aiguille, la traçante le sillage, le fil du tir fatal, les traits au rebond),
+`player.gd` (`trigger_shoot_visuals` et le bloc de la lumière de bouche dans `_ready` : le grand flash, l'étoile de bouche, l'écho
+au sol retiré, `PIC_DU_FLASH`, `_poser_le_flash`, `EMPREINTE_ECLAT_DESSINE` à 120), `light_textures.gd` (`EMPREINTE_FLASH` à 800,
+`EMPREINTE_ETOILE`), `charte.gd` (`feu()`, et une note sur `AMBRE_INCANDESCENT`), `tools/test_lumieres.gd` (la liste des lumières
+peintes), `tools/photographe.gd` (deux légendes et un commentaire du plan « leurre », qui parlaient de l'écho au sol),
+`tools/run_suites.sh` (la suite, à pas fixe). **Pas touché, mais concerné** : `miroirs_iso.gd` et `iso_volumes.gd` lisent
+`Aura`, `Core`, `MuzzleFlash` et `EclatDessine` par leur nom — noms gardés ; `perception_bot_noeud.gd` lit le rayon vivant du flash.
+
+**Pour qui tient `player.gd` ailleurs** (le chantier OMBRES vise la lumière de coup, l'audit l'atlas des lumières) : après sa
+prochaine fusion, `grep etoile_de_bouche player.gd` et `grep _poser_le_flash player.gd`. Le grand flash porte `ECLAT` : il
+n'ajoute aucune texture à l'atlas.
+
 ## 2026-10-05 — L'audit d'optimisation (session « Audit d'optimisation du jeu », `candela-2d-godot-86`, branche `ccr-7f4baeb9-fzg310`)
 
 Demande d'Adrien du 2026-10-04 : « Délègue à des sous-agents Sonnet 5.5 chaque tâche. Fais un audit complet d'optimisation

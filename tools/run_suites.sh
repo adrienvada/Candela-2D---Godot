@@ -254,6 +254,11 @@ SUITES+=(test_portee_ecran test_faisceaux_concentres test_lampe_modele test_poin
 # tourné comme la lampe ; le juge garde son disque. Posé ici, comme les lignes du dessus, pour que ce lot se reprenne seul.
 SUITES+=(test_allegement_faisceau)
 
+# Chantier TIR (Adrien, 2026-10-05 : « Oui pour A et B, rayon du flash 400, persistance 28 ms, sillage 48 %, balle sans
+# lumière ») : l'aiguille et le sillage de la balle, le flash de bouche qui éclaire. À pas fixe : il compte ses longueurs en pas
+# de physique. Posé ici, comme les lignes du dessus, pour que ce lot se reprenne seul.
+SUITES+=(test_coup_de_feu)
+
 # Q72 (Adrien, 2026-09-30 : « Q72 : corrige aussi ») : la fusée posée de la killcam éclaire comme en match — une vraie fusée
 # lancée dans une vraie manche, puis la killcam par son propre chemin, valeur par valeur. Posé ici, comme les lignes du dessus.
 SUITES+=(test_fusee_killcam)
@@ -569,7 +574,7 @@ for t in "${SUITES[@]}"; do
     # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
     # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
     test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
-    test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_aventure_tirs_pnj|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    test_coup_de_feu|test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_aventure_tirs_pnj|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac
 done

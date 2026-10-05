@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (le chantier TIR, étapes A et B : la balle devient une aiguille, le flash de bouche éclaire — section « Chantier — le coup de feu », une décision actée, deux pièges ; plus tôt le même jour, l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2506,6 +2506,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Les étincelles d'impact n'éclairent plus ; l'écho au sol du tir et la lumière de coup restent** (2026-09-15, 12:05, session cloud qui décide pour Adrien, second volet de la décision ci-dessous : « c'est le même mal que celui qu'Adrien a nommé ») | Recensées au banc pendant une rafale près d'une fusée : 60 lumières sur 63 étaient des étincelles d'impact (douze par impact de mur, énergie 1,5) ; éteintes, il en reste 9 et le halo de la fusée revient à sa rondeur seule (0,88). Leur dessin additif non éclairé reste : on les voit toujours jaillir dans le noir. **Gardés, et pourquoi** : l'écho au sol du tir (`ground_flash`, 0,12 s, sans ombre) prolonge le flash de bouche et dit d'où l'on tire — 7 au plus pendant la rafale, sous le plafond ; la lumière de coup (`hit_light`) ne s'allume qu'une fois par coup reçu, dit qui est touché, et porte son propre réglage joueur (« Lumière d'impact », dans `ui.gd`) qu'une suppression laisserait sans effet. Ni l'une ni l'autre n'était allumée en nombre au relevé. |
 | **L'iso est le jeu par défaut ; la vue de dessus passe derrière un drapeau de débogage** (2026-09-15 vers 11:00, ISO6, session « Iso 1 Opus » en relève d'ISO5, sur le brief `briefs/iso6_releve.md` de la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », qui décide pour Adrien jusqu'au test final ; décision d'Adrien du 2026-09-14 à 23:33 : l'iso devient la vue du jeu) | `GameSettings.mode_iso` vaut vrai par défaut. `--2d` (une exécution) ou le réglage `debogage/vue_de_dessus` (proposé en build de débogage seulement) ramènent la vue de dessus, gardée jusqu'à ISO9 : elle reste le moteur de lumière que l'iso projette. `--iso` reste accepté, sans effet sauf sur un réglage de débogage oublié. **L'ancienne clé `video/mode_iso` n'est plus lue** : chaque `settings.cfg` d'avant ISO6 la porte à `false`, et la relire aurait gardé la vue de dessus chez tous les joueurs existants. F3, F6, `ConditionsDeMatch` (v2) et le manifeste du photographe disent `mode_rendu`. Les suites de référence 2D tournent sous `--2d` (`SUITES_2D` de `run_suites.sh`). |
 | **La balle n'est plus une source de lumière** (2026-09-15 vers 10:55, Adrien, réveillé, à la session cloud : « Supprimons le fait que la balle soit une source de lumière. Cela fait saturer le nombre de lumières possibles du moteur et fait buguer lors de tirs vifs avec une source comme une fusée éclairante. » ; faite par « ISO7 Gadgets et lumière Opus », branche `balle-sans-lumiere`) | Godot n'applique jamais plus de quinze lumières à un même `CanvasItem`, tout ou rien, les plus récentes en premier, et un quadrant de sol est un item (« Pièges connus », « quinze par item ») ; chaque balle portait une `PointLight2D` à ombres (`TrailLight`), étirée jusqu'à 800 px — une rafale près d'une fusée coupait son halo. **Conséquence de jeu, acceptée** : une balle qui passe près d'un corps ne le révèle plus, et elle n'éclaire plus ni mur ni sol. L'information de tir reste le flash de bouche (`MuzzleFlash`, inchangé) et le trait de la balle — sa traçante et son aura, non éclairées, visibles dans le noir. `WeaponData.emits_light` et `bullet_light_energy` restent (données de classe, index d'arme sur le fil) et ne pilotent plus que l'aura et la traçante : l'arbalète garde sa balle sans aura. |
+| **Le tir : la balle devient une aiguille, le flash de bouche éclaire, la balle reste sans lumière** (2026-10-05, Adrien, session cloud « Rendu de balle percussif » : « Je n'aime pas le rendu des balles. Cela fait un gros rond, lumineux, inélégant », « Elle doit être plus subtile aussi », « Il faudrait surtout qu'il y ait un muzzle flash qui se voit et qui éclaire je pense aussi » ; puis, sur la maquette comparative : « Oui pour A et B, rayon du flash 400, persistance 28 ms, sillage 48 %, balle sans lumière ») | **Le rond était l'aura** : un disque peint de 192 px sur une balle de 4 px de rayon, la forme la plus grande et la plus claire du tir — et la balle avance de 167 à 267 px par pas de physique, si bien que le disque était tamponné en perles. L'aura devient une **aiguille** (`assets/decals/aiguille.png`, étirée sur `vitesse × 28 ms` : elle couvre un pas de physique entier, la balle file au lieu de sauter, et sa longueur dit l'arme) ; la traçante devient un **sillage** de 1,5 px à 48 %, à la géométrie d'avant. **La lumière qui révèle passe au canon**, pas sur la balle : le flash de bouche passe de 64 à 800 px d'empreinte, ombré : une lumière qui existait déjà, une par joueur, quand une balle éclairante en coûtait une par balle (la décision du 2026-09-15 tient pour la même raison : quinze lumières par élément de sol). **Conséquences de jeu, acceptées** : tirer expose davantage et éclaire l'adversaire proche (le « tir pour voir » existe désormais sous 400 px) ; le trait qui pointe vers le tireur est plus discret. L'éblouissement ne change pas (`Eblouissement.pic_de_flash` a sa propre portée). Détail : « Chantier — le coup de feu ». |
 | **« Livre-moi le jeu dans une version grand budget aboutie en mode isométrique » ; les relevés avec les tests humains** (2026-09-15 à 05:00 et 05:13, Adrien, à la session cloud « Fable 5.1 - CLOUD ISO UNRAILED », rapporté par `briefs/socle.md` de la branche-signal `claude/reveil`) | 05:00 : « Si tu peux décaler encore davantage les tests humains, t'assurer que le jeu est beau, que les gadgets sont bien implémentés, que les fumées et les lumières diffuses de fusées etc. ont une lumière 3D qui éclaire par-dessus les murs bas etc. […] livre-moi le jeu dans une version grand budget aboutie en mode isométrique. Tu reporteras tous les tests possibles à la fin, fais confiance à ton intuition. » Puis : « Tu régénéreras tous les sprites que tu juges utiles. […] tu peux prendre toutes les décisions jusqu'à m'offrir un jeu qui s'approche de la qualité technique des visuels générés comme prévisualisation par Gemini. » 05:13 : « tant pis pour les relevés, on les fera en même temps que les tests humains quand je serai devant la machine ». **La session cloud décide donc à la place d'Adrien jusqu'au test final** ; chaque session de la vague prouve elle-même ce que son œil aurait vu (suite sabotée une fois, banc en vraie fenêtre, planche), et aucune ne prend de relevé de cadence. |
 | **Une source de lumière a une hauteur, qui décide de ce qu'un muret lui cache — sauf les lampes du joueur et ce qui les imite, qui gardent la règle « d'un même angle »** (2026-09-15, session « ISO7 Gadgets et lumière Opus », sur le brief de la session cloud qui décide pour Adrien jusqu'au test final ; demande d'Adrien de 05:00 : « que les fumées et les lumières diffuses de fusées etc. aient une lumière 3D qui éclaire par-dessus les murs bas ») | La fusée en vol éclaire par-dessus un muret avec une zone morte `D × 0,40 / (h − 0,40)`, courte quand elle est haute et qui s'allonge quand elle redescend, puis elle bute ; braises, mine et fusée posée butent (elles le faisaient déjà). La hauteur vit dans la lightmap 2D (`Light2D.height`), identique pour les deux joueurs. La torche, la rétrodiffusion, le halo, le flash, la lumière de coup et la torche fantôme gardent la bande constante d'ISO3b : c'est la règle que la balle et l'éblouissement font payer (`MursBas.franchit`), et une torche à hauteur dessinerait « vu, pas touché » ou « touché, pas vu », ce qu'Adrien a fait supprimer après H-MB1. Détail : section « Gadgets et lumières en iso ». |
 | **Les volumes iso sont des couches horizontales qui recopient la lightmap sous elles, dessinées avant les corps** (2026-09-15, même session) | Noir absolu et équité tiennent par construction (la couche vaut la lumière que la vue de dessus dessine là, lue dans la lightmap de la caméra qui la dessine), et un nuage ne cache jamais un corps plus que la vue de dessus, où l'effacement passe par l'opacité du corps. Pas de lueur sur le corps touché : elle dévoilerait un corps que la vue de dessus laisse noir. |
@@ -3270,6 +3271,28 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### En iso, l'étoile du tir n'était pas l'éclat dessiné : c'était la lumière de bouche, couchée au sol (2026-10-05)
+
+`player.gd` dessine au canon un éclat d'encre (`EclatDessine`, lot 1 de la refonte roman graphique), et tout le dépôt le
+présente comme « la forme du coup ». **En vue iso, ce sprite n'est jamais montré** : `IsoVolumes._suivre_eclats` le sort des
+lightmaps et pose à sa place deux lueurs rondes au bout de l'arme du corps voxel. L'étoile qu'on voyait au tir, en iso,
+c'était la **lumière** de bouche elle-même — 64 px, portant les trois images d'encre de DA2.3 —, projetée au sol avec la
+lightmap. Le chantier TIR l'a d'abord remplacée par le grand flash (masque `ECLAT`, 800 px) ; les captures prises sous Xvfb
+ont montré l'étoile disparue, sans qu'aucune suite ne bronche. Elle est rendue sous le nom d'**étoile de bouche**
+(`Player.etoile_de_bouche`), une seconde lumière créée une fois par joueur, et `tools/test_coup_de_feu.gd` la garde.
+**Avant de toucher à un dessin 2D, vérifier ce que l'iso en montre** : beaucoup de dessins y sont retirés ou remplacés
+(`_retirer_dessin`), et ce qu'on prend pour eux à l'écran est parfois autre chose.
+
+### Le photographe ne tient pas sous rendu logiciel — et sans pas fixe, il rate tout ce qui dure moins d'une image (2026-10-05)
+
+Dans le conteneur cloud (Xvfb + llvmpipe), une image du duel iso prend plusieurs centaines de millisecondes. Lancé tel quel,
+le photographe tourne, mais le flash de bouche (0,1 s) est fini avant la prise : on photographie la pièce éteinte. Lancé à
+`--fixed-fps 60` (une image = 1/60 s de jeu, quelle que soit la durée réelle), il refuse : « le décompte n'a jamais fini »,
+parce que `_attendre` plafonne ses attentes en temps **réel** (20 s), soit moins de 180 images ici. Ce qui a marché : une
+sous-classe hors du dépôt (`extends "res://tools/photographe.gd"`) qui multiplie ce plafond, lancée par un `--script` qui
+l'ajoute à l'arbre, sous `xvfb-run` et `--fixed-fps 60`. Le photographe lui-même n'a pas été modifié : son comportement
+sur le Mac d'Adrien est le bon.
 
 ### Un tween lié au corps qui meurt meurt avec lui — et laisse ce qu'il devait effacer (2026-10-04)
 
@@ -31041,6 +31064,82 @@ dedans pour qu'il sache tenir l'âge — seul le jeu diffère —, Q = Q58.
 d'avant, et la mesure dit ce que cela coûte : peu. Ce n'est d'ailleurs qu'une bouffée — 1 s pleine, 2 s de retour, puis la
 fusée de la 0.8.0, au pixel près (voir la preuve). Sous llvmpipe, pas le Mac : relatif seulement, comme toujours dans le
 cloud.
+
+## Chantier — le coup de feu (TIR, inscrit le 2026-10-05)
+
+> **Tenu par** la session cloud « Rendu de balle percussif » (`candela-2d-godot-ec` pour les messages entre sessions),
+> branche `claude/blissful-wozniak-meh1ts`. Demande d'Adrien du 2026-10-05 : « Je n'aime pas le rendu des balles. Cela fait
+> un gros rond, lumineux, inélégant. Propose moi le top du rendu d'une balle pour qu'il soit percussif, rapide, satisfaisant,
+> dangereux. » Puis, pendant la proposition : « Elle doit être plus subtile aussi », « Et peut-être révéler quelque chose quand
+> elle éclaire si elle éclaire mais c'est même pas sûr », « Il faudrait surtout qu'il y ait un muzzle flash qui se voit et qui
+> éclaire je pense aussi ».
+
+**La proposition** est une maquette comparative publiée en artefact (privé, à Adrien) : https://claude.ai/artifact/QWq5ZRmRfrJF6gpgNeEoWj
+— le même tir rendu deux fois, au ralenti possible, avec les vrais masques de la balle d'alors. Trois gestes : **A** l'aiguille,
+**B** le flash qui éclaire, **C** une balle qui éclaire (déconseillée : le plafond de quinze lumières par élément qui a motivé la
+décision du 2026-09-15 n'a pas bougé). **Réponse d'Adrien** : « Oui pour A et B, rayon du flash 400, persistance 28 ms, sillage
+48 %, balle sans lumière. »
+
+**Pourquoi c'était un rond.** L'`Aura` de `bullet.gd` était un disque peint de 192 px (`trainee.png` × 1,5), centré sur une
+balle de 4 px de rayon : la forme la plus grande et la plus claire du tir. Et la balle avance de 167 à 267 px par pas de
+physique (10 000 à 16 000 px/s, 60 Hz, sans interpolation) : le disque était tamponné à trois ou quatre endroits successifs.
+La traçante, elle, gardait 5 px de large et sa pleine intensité jusqu'à 800 px. Et le flash de bouche n'éclairait presque
+rien : 64 px d'empreinte, six fois moins que la lumière de coup (400 px) qu'il provoque.
+
+### A — FAITE le 2026-10-05 : l'aiguille et le sillage
+
+- **L'aiguille** (`Aura`, nom gardé : le miroir iso cherche ce nœud par son nom) : la planche `assets/decals/aiguille.png`,
+  cuite par `tools/fabrique_aiguille.gd`, étirée derrière la tête sur `vitesse × 0,028 s` — 336 px au pistolet, 420 au fusil,
+  448 à la Sentinelle, 168 à l'Incendiaire. Tête de 2,3 px blanche, gaine ambrée de 6,8 px au plus, effilée ; le refroidissement
+  est DANS la planche (`Charte.feu()` : halogène, ambre, carmin), parce qu'un `modulate` ne donne qu'une teinte par objet.
+  ⚠️ **Posée par `position`, jamais par `offset`** : `MiroirsIso._poser_rect` lit la position globale, la rotation et l'échelle
+  du sprite, pas l'offset. ⚠️ **La planche est encrée** en trois paliers d'opacité (0,18 / 0,34 / 1, `encrer_masques`), comme
+  tout masque de jeu depuis la refonte roman graphique : la première cuisson, en dégradé lisse, a fait rougir `test_encrage`
+  (part molle 0,84 pour 0,25 permis). La couleur garde son dégradé de feu ; seul l'alpha est en paliers.
+  Plus courte que sa longueur (au départ, à l'enfoncement), elle est **compressée**, pas coupée : une
+  découpe passerait par `region_rect`, que le miroir ignore. ⚠️ **Un texel transparent sur tout le pourtour de la planche** : le
+  miroir iso échantillonne en `repeat_enable`, et la tête blanche baverait sur la queue.
+- **La longueur couvre toujours un pas de physique** : c'est l'invariant qui fait filer la balle. `tools/test_coup_de_feu.gd`
+  le vérifie pour chaque classe qui émet de la lumière.
+- **Le sillage** (`Core`) : la géométrie de la traçante d'avant (ancrée au départ ou au dernier rebond, 800 px au plus,
+  extinction de 80 ms), en fil de 1,5 px, ambre à 48 %.
+- **À l'impact, l'aiguille s'enfonce** dans le point touché en 48 ms (courbe `SORTIE` : elle part quelque part) au lieu de
+  s'éteindre sur place ; le sillage, lui, s'éteint comme avant.
+- **Le tir fatal** : au lieu d'une traçante triplée, le **fil** — le sillage s'allume à blanc en 2 px, l'aiguille reste plantée,
+  et les deux refroidissent ensemble en 0,35 s le long de `Charte.feu()`. C'est l'image que le gel de l'instant fatal fige.
+- **Au rebond, les traits repartent du rebond dès l'image du rebond.** Avant, ils gardaient une image leur longueur, le long de
+  la NOUVELLE direction : la traçante traversait le mur derrière le point de rebond sur 800 px, une image durant. Corrigé en
+  passant, parce que l'aiguille l'aurait refait.
+- **L'arbalète ne change pas** : pas d'aiguille, son carreau d'acier éclairé, sa largeur triplée au tir fatal. Elle est la seule
+  à lire encore `WeaponData.bullet_color` et `bullet_width`.
+- `LightTextures.TRAINEE` (`trainee.png`) n'est plus lu par aucun fichier du jeu ; le fichier reste, pour un retour arrière.
+
+### B — FAITE le 2026-10-05 : le flash qui éclaire
+
+- **La lumière de bouche** (`MuzzleFlash`) porte le masque `ECLAT` sur `LightTextures.EMPREINTE_FLASH` = **800 px** (rayon 400),
+  ombrée comme avant, à l'énergie `intensité de l'arme × 1,8 × (1 − k)²`, halogène au coup puis ambre dès 40 % de la durée.
+  `ECLAT` parce que l'atlas des textures de lumière se reconstruit à chaque texture inédite (audit, V8 « D1 ») et qu'elle y
+  est déjà tenue par le pool de particules : le grand flash n'en ajoute aucune.
+- **L'étoile de bouche** (`Player.etoile_de_bouche`) : la lumière de bouche d'AVANT, gardée telle quelle (64 px, les trois
+  images d'encre de DA2.3, descente droite). Retirée puis rendue le même jour : voir « Pièges connus », l'étoile du tir en iso.
+- **L'éclat dessiné** passe de 96 à 120 px (il n'est montré qu'en `--2d` : l'iso le remplace par ses deux lueurs à l'arme).
+- **L'écho au sol** (`ground_flash`, V4.14) est retiré : il imitait un flash qui éclaire. C'était la seule lumière que chaque
+  coup CRÉAIT ; un tir n'en crée plus aucune.
+- Ce qui suit sans une ligne de plus : la lampe 3D du flash en iso (`LumieresIso._omni` dérive sa portée de l'empreinte), le
+  fantôme de la killcam (`GhostP1/Flash`, dupliqué de `MuzzleFlash` : il éclaire comme en match), et **la perception du bot**,
+  qui lit le rayon vivant de la lumière (`PerceptionBotNoeud._disque`, « eclair_du_bot ») : le bot voit désormais ce que son
+  flash éclaire, jusqu'à 400 px × `FRACTION_DISQUE`. C'est honnête (il ne voit que ce que la lumière montre), mais **la
+  difficulté du bot a été réglée avec l'ancien flash** : `test_banc_bot` passe ; un relevé de `banc_bot_difficulte` reste à
+  faire si Adrien trouve le bot plus vif au contact.
+
+### Ce qui reste à Adrien
+
+- **Juger à l'écran.** Les captures prises dans le conteneur (Xvfb + llvmpipe, vue iso) sont jointes à la PR : avant / après
+  image par image, et le flash. Les deux réglages les plus probables à reprendre : `Player.PIC_DU_FLASH` (1,8, posé sur un masque
+  en paliers et non sur le dégradé de la maquette) et `Bullet.SILLAGE_OPACITE` (0,48).
+- **La cadence au moment du tir** : un flash de 800 px ombré tombe à l'instant précis où le 1 % bas compte. Jamais mesuré ici
+  (aucun relevé de cadence dans le cloud n'a de valeur absolue) ; à prendre au banc sur le Mac.
+- **Non fait, laissé en option** : l'aiguille pliée au ricochet du fusil (elle demanderait au miroir iso plusieurs segments).
 
 ## Chantier — l'audit d'optimisation (AO, inscrit le 2026-10-05)
 
