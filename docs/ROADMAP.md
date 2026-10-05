@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (OMBRES : OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -33902,7 +33902,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | Lot | Objet | Attend | État |
 |---|---|---|---|
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
-| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | la moitié « culling » peut se préparer ; **ne se livre pas sans Q81** |
+| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | 🟡 **PRÉPARÉ le 2026-10-04** (le culling, ses gardes, ses planches : `docs/iso/ombres/om1/`) — voir « OM1 » plus bas ; **ne se livre pas sans Q81** |
 | **OM2** | L'ombre a la forme du corps voxel | **Q82**, après OM1 | — |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) — voir « OM3a » plus bas ; OM3b (pâte D, respiration, filtre) attend Q83 à Q85 |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | **Q86, Q87** | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
@@ -33982,7 +33982,11 @@ Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bl
   connue). **Touche le duel** : une fusée ou un gadget qui vous éblouit n'effacerait plus l'adversaire, et votre propre torche ne
   le rendrait plus transparent. **Touche le bot** : sa perception lit la même opacité (`perception_bot.gd`, « il ne distingue plus
   le corps sous 0,5 ») — la matrice de difficulté (78 / 52 / 34) et les boss se rejouent après. **Avis : oui aux deux.** Bloque la
-  livraison d'OM1 : le culling seul rend le sol éclairé visible à travers le PNJ.
+  livraison d'OM1 : le culling seul rend le sol éclairé visible à travers le PNJ. *Mesuré avec OM1 préparé (2026-10-04,
+  `docs/iso/ombres/om1/planche_brouillage.jpg`)* : torche seule (0,648), le PNJ se tient sur un sol éclairé qui transparaît à
+  travers lui — le délavé annoncé ; ébloui (0,053), l'encoche noire de son étoile le TRAHISSAIT encore aujourd'hui alors que son
+  corps est effacé — avec le culling elle disparaît, et l'éblouissement efface vraiment. Le culling rend donc l'éblouissement plus
+  fort qu'aujourd'hui : un argument de plus pour (b), la source.
 - **Q82 — En iso, l'ombre d'un corps prend-elle la forme du corps voxel** (le personnage, l'arme portée sans pointe au sol,
   réduite à l'accroupi) **plutôt que celle du sprite vu de dessus ?** Ce n'est pas le disque écarté par Q42 : la forme reste
   celle du personnage. **Avis : oui, après avoir vu OM1 à l'image.** Bloque OM2.
@@ -34143,6 +34147,33 @@ joue pas une fusillade (O12), ni le duel en ligne.
 
 **Signalé, pas corrigé.** `photographe._mur_entre` et `_sol_libre` n'excluent que J1 et J2 : un outil qui s'en sert près d'un PNJ
 le prend pour un mur (« Pièges connus », 2026-10-04).
+
+### OM1 — PRÉPARÉ le 2026-10-04, pas livré : l'ombre part de derrière le corps (attend Q81)
+
+**Ce qui est prêt** : le correctif, ses gardes et ses planches, dans `docs/iso/ombres/om1/` — `om1_culling.patch` (à appliquer
+avec `git apply`, sur `7ae8575c` ou après), `planche_culling.jpg`, `planche_brouillage.jpg`, `mesures.json`. **Aucun code du jeu
+de cette branche ne le porte** : sans Q81, le sol désormais éclairé transparaît à travers un PNJ délavé (la planche le montre).
+- `Charte.occulteur_d_etoile(forme)` : l'étoile dans une ressource neuve, en `CULL_COUNTER_CLOCKWISE` — la seule fonction par
+  laquelle passent l'étoile du joueur (`_accorder_occluder_a_la_silhouette`, et le cercle provisoire d'avant le premier
+  `equip_weapon`) et celle du leurre (`GadgetLeurre._poser_occluder`, qui garde `CULL_DISABLED` pour le disque de torse, comme un
+  joueur). Le leurre fait toujours le même trou.
+- `test_ombre_propre` : `CULL_ETOILE_ATTENDU` passe à `CULL_COUNTER_CLOCKWISE` ; le modèle CPU de l'ombre (`_ombre`) apprend le
+  culling — une arête que le moteur écarte ne jette plus d'ombre (la règle mesurée au banc : pour une étoile d'aire signée
+  positive, `CULL_COUNTER_CLOCKWISE` écarte les arêtes tournées vers la lampe) ; le contrôle « AVANT Q42 » (un corps qui verrait
+  sa propre étoile) voit le défaut à 44–50 % au lieu de moins de 5 % — l'avant de l'anneau reste éclairé sous le culling —, son
+  seuil passe à 60 %, toujours net contre les 100 % exigés. 158 vérifications, vertes.
+- La suite entière, correctif appliqué (sur `7ae8575c`) : verte en 23 min 49 s — « tout passe, sans erreur de script ».
+- Sabotages, correctif appliqué, restaurés à l'identique (md5) : la charte qui rend `CULL_DISABLED` — quatre rouges (les deux formes, les vingt étoiles, le leurre) ; le leurre hors de la charte — un rouge. Le modèle CPU du culling, lui, n'a pas de garde qui rougirait sans lui : c'est une fidélité au moteur, pas une règle de jeu.
+- **Mesuré au banc, code réel** (pas le prototype) : le sol DANS l'étoile côté lampe, de 0,000 à **0,24–0,39** dans les
+  dix-sept plans sondés (sept poses, dix classes) ; l'ombre derrière le corps, 0,000 avant comme après, de la même largeur
+  (32 à 46 px) ; le capteur du PNJ, **0,558 avant comme après** (0,820 à 70 px) — Q42 tient.
+- **Ce que le culling fait au brouillage**, sans y toucher (opacités inchangées, 0,648 et 0,053) : torche seule, le PNJ se tient
+  sur un sol éclairé qui transparaît à travers lui ; ébloui, l'encoche noire de son étoile — qui le trahissait encore alors que
+  son corps était effacé — disparaît. Le culling rend l'éblouissement plus fort qu'aujourd'hui : voir Q81.
+- **Pour livrer, Q81 tranchée** : appliquer le correctif, écrire le brouillage selon la réponse, relancer ce que la liste
+  d'OM1 nomme (`test_ombre_propre`, `test_halo_proximite`, `test_brouillage`, `test_eblouissement`, `test_tir_et_reserves`,
+  `test_iso_equite` ; `planche_q42`, `banc_perception_bot`, `banc_equite` ; la planche d'OM0), et la matrice du bot si Q81 touche
+  sa perception.
 
 ### OM3a — FAITE le 2026-10-04 : l'enveloppe du recul (la torche ne tire plus au hasard)
 

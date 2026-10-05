@@ -1,0 +1,894 @@
+{
+ "avant": {
+  "commit": "7ae8575c",
+  "note": "code d'OM4a, étoiles en CULL_DISABLED",
+  "prises": [
+   {
+    "plan": "etoile-camera-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-camera-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.289,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-dos-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2231,
+     "derriere": 0.0,
+     "derriere_cote": 0.1064,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 32,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-dos-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2481,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-profil-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2927,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 32,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-profil-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.3149,
+     "derriere": 0.0,
+     "derriere_cote": 0.091,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-courte",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 1.0,
+      "moyenne": 0.8197
+     },
+     "dedans": 0.0,
+     "dehors": 0.2349,
+     "derriere": 0.0,
+     "derriere_cote": 0.1381,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "rapport": 0.0,
+     "rayons": 10
+    }
+   },
+   {
+    "plan": "classe-pistolet",
+    "famille": "classes",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-fusil",
+    "famille": "classes",
+    "classe_pnj": "fusil",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2274,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-pompe",
+    "famille": "classes",
+    "classe_pnj": "pompe",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2353,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-arbalete",
+    "famille": "classes",
+    "classe_pnj": "arbalete",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.1689,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 38,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-occulteur",
+    "famille": "classes",
+    "classe_pnj": "occulteur",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2102,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-fumiste",
+    "famille": "classes",
+    "classe_pnj": "fumiste",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2225,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-incendiaire",
+    "famille": "classes",
+    "classe_pnj": "incendiaire",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2037,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-sentinelle",
+    "famille": "classes",
+    "classe_pnj": "sentinelle",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2011,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-allumeur",
+    "famille": "classes",
+    "classe_pnj": "allumeur",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2143,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-spectre",
+    "famille": "classes",
+    "classe_pnj": "spectre",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.0,
+     "dehors": 0.2079,
+     "derriere": 0.0,
+     "derriere_cote": 0.0986,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 0.0,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "brouillage-torche",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {}
+   },
+   {
+    "plan": "brouillage-ebloui",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 0,
+    "opacites": [
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053
+    ],
+    "eblouissement_j1": 0.31,
+    "sonde": {}
+   }
+  ]
+ },
+ "om1_prepare": {
+  "commit": "7ae8575c",
+  "note": "Charte.occulteur_d_etoile, CULL_COUNTER_CLOCKWISE (non livré : attend Q81)",
+  "prises": [
+   {
+    "plan": "etoile-camera-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 1.643,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-camera-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2774,
+     "dehors": 0.289,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "rapport": 0.96,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-dos-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2826,
+     "dehors": 0.2231,
+     "derriere": 0.0,
+     "derriere_cote": 0.1064,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 32,
+     "rapport": 1.267,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-dos-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2727,
+     "dehors": 0.2481,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "rapport": 1.099,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-profil-face",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2922,
+     "dehors": 0.2927,
+     "derriere": 0.0,
+     "derriere_cote": 0.0821,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 32,
+     "rapport": 0.998,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-profil-profil",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2651,
+     "dehors": 0.3149,
+     "derriere": 0.0,
+     "derriere_cote": 0.091,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 46,
+     "rapport": 0.842,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "etoile-courte",
+    "famille": "etoile",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 1.0,
+      "moyenne": 0.8197
+     },
+     "dedans": 0.3863,
+     "dehors": 0.2349,
+     "derriere": 0.0,
+     "derriere_cote": 0.1381,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": -1,
+     "rapport": 1.645,
+     "rayons": 10
+    }
+   },
+   {
+    "plan": "classe-pistolet",
+    "famille": "classes",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3661,
+     "dehors": 0.2228,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 1.643,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-fusil",
+    "famille": "classes",
+    "classe_pnj": "fusil",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.31,
+     "dehors": 0.2274,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 1.363,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-pompe",
+    "famille": "classes",
+    "classe_pnj": "pompe",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.2402,
+     "dehors": 0.2353,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "rapport": 1.021,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-arbalete",
+    "famille": "classes",
+    "classe_pnj": "arbalete",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3033,
+     "dehors": 0.1689,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 38,
+     "rapport": 1.796,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-occulteur",
+    "famille": "classes",
+    "classe_pnj": "occulteur",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3493,
+     "dehors": 0.2102,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 1.662,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-fumiste",
+    "famille": "classes",
+    "classe_pnj": "fumiste",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3438,
+     "dehors": 0.2225,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 33,
+     "rapport": 1.545,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-incendiaire",
+    "famille": "classes",
+    "classe_pnj": "incendiaire",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3539,
+     "dehors": 0.2037,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 35,
+     "rapport": 1.737,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-sentinelle",
+    "famille": "classes",
+    "classe_pnj": "sentinelle",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3055,
+     "dehors": 0.2011,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 1.519,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-allumeur",
+    "famille": "classes",
+    "classe_pnj": "allumeur",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.3405,
+     "dehors": 0.2143,
+     "derriere": 0.0,
+     "derriere_cote": 0.1061,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 1.589,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "classe-spectre",
+    "famille": "classes",
+    "classe_pnj": "spectre",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {
+     "capteur": {
+      "maximum": 0.7216,
+      "moyenne": 0.5578
+     },
+     "dedans": 0.356,
+     "dehors": 0.2079,
+     "derriere": 0.0,
+     "derriere_cote": 0.0986,
+     "derriere_rapport": 0.0,
+     "largeur_ombre_px": 34,
+     "rapport": 1.712,
+     "rayons": 11
+    }
+   },
+   {
+    "plan": "brouillage-torche",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648,
+     0.648
+    ],
+    "eblouissement_j1": 0.06,
+    "sonde": {}
+   },
+   {
+    "plan": "brouillage-ebloui",
+    "famille": "brouillage",
+    "classe_pnj": "pistolet",
+    "cull_mode_etoile": 2,
+    "opacites": [
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053,
+     0.053
+    ],
+    "eblouissement_j1": 0.31,
+    "sonde": {}
+   }
+  ]
+ }
+}
