@@ -69,7 +69,7 @@
 
 | # | Question | Pourquoi maintenant | Avis de l'audit |
 |---|---|---|---|
-| **D1** | **La machine minimale (jalon H13)** | La feuille de route le demande « avant toute optimisation » : la cible « 1 % bas ≥ 60 » ne décrit que le M3. Les grandes salles du solo dépassent déjà la cible en CPU seul sur un Xeon de serveur | Nommer une machine (même approximative : « un portable Intel de 2019 à iGPU ») ; tout le plan s'ordonne autrement selon qu'elle est lente en CPU ou en GPU |
+| **D1** | **La machine minimale (jalon H13)** | La feuille de route le demande « avant toute optimisation » : la cible « 1 % bas ≥ 60 » ne décrit que le M3. Les grandes salles du solo dépassent déjà la cible en CPU seul sur un Xeon de serveur. Et la lightmap iso ne descend jamais sous 1920×1080 : à 1280×720, l'ajuster à la fenêtre retirerait **55,6 % des pixels 2D** (ISO-01, PROUVÉ ; temps jamais mesuré), sans toucher à l'équité (masques, champ, éblouissement lus hors de sa taille ; seuls les contours de seuil bougent d'un demi-texel au plus) — mais le défaut, le réglage enregistré et le plancher de netteté sont à Adrien (`settings_manager.gd:214-217` : « ce n'est pas une décision d'agent ») | Nommer une machine (même approximative : « un portable Intel de 2019 à iGPU ») ; tout le plan s'ordonne autrement selon qu'elle est lente en CPU ou en GPU, et la taille de la lightmap en découle |
 | **D2** | **Q81 du chantier OMBRES a un argument de performance** | Au repos, la propre torche éblouit son porteur de 0,06 ; ×2 de gain, cela dépasse le seuil du brouillage, dont le flou, la copie d'écran et le halo restent donc **allumés à chaque image** dès que la torche brûle (LUM-01). **PROUVÉ sans GPU par l'agent de mesure** : torche allumée au repos, l'arbre porte en permanence un `BackBufferCopy` et un nœud qui relit l'écran ; un plancher posé dans `Brouillage._dose` les retire et ramène l'état « torche allumée » à celui d'une torche éteinte. Coût ESTIMÉ 0,1-0,4 ms sur GPU à tuiles (une copie d'écran coupe la passe) | Oui au plancher, posé dans `_dose`. Le voile plein écran, lui, lit une autre variable (`dazzle_amount`, `ui.gd:2536`) : l'éteindre au repos ferait passer un noir de 2-4/255 à 0 — décision d'image distincte |
 | **D3** | **Six classes sur dix rechargent et claquent à vide sans aucun son ni liseré** (AUD-07, PROUVÉ) | Équité d'information : pistolet, fusil, pompe et arbalète s'entendent et se voient au bord de l'écran adverse ; les six autres non. Leurs tirs, eux, ont le son générique. Aucune suite ne le garde | Fournir les sons, ou à défaut un repli générique pour la recharge et le clic à vide |
 | **D4** | **Chez le client, le flou et le halo de repos du brouillage se poseraient sur l'adversaire** (V8, « D2 ») | `source_eblouissante` n'est écrite que chez l'hôte (`game_state.gd:2406`) et n'est pas répliquée. Lu dans le code, **jamais vu à l'image** | Faire vérifier à l'image (deux instances dans le cloud) avant toute décision ; c'est une question d'équité hôte/client |
@@ -105,6 +105,7 @@ le cloud** : compteurs indépendants du matériel, temps CPU headless à `--fixe
 | Écrire le journal des matchs et préparer le rapport **après** l'`await` de fin de manche | ETA-01 (= CAR-04, GAD-10, MEN-12, RES-03, DEM-06) | ≈ 40 ms au plafond de 200 fiches, sortis de l'image du coup fatal | deux suites épinglent le texte de `game_state.gd` : les adapter |
 | `filter_linear` au lieu de `filter_linear_mipmap` sur les textures d'écran du voile et de la killcam | LUM-06 = SHA-07 | 0,1-0,4 ms pendant les éblouissements forts et la killcam (le moteur régénère 5-6 passes de mipmaps à chaque copie) | image quasi identique (LOD 0,03-0,05) : planche avant/après |
 | Panneau F3 : `_decrire` paresseux, `hauteur_mur_haut()` en cache | ISO-10, GEO-12 | 15-35 µs/image | — |
+| Onde de mort : la retrouver par un groupe au lieu de parcourir chaque image les ≈ 660-700 enfants de l'arène | ISO-03 | 0,05-0,15 ms/image en iso, croissant avec les traces | `test_nappes_voxel.gd:109-110` épingle le texte de `suivre()` : garder le bloc `if nappes_voxel:` à l'indentation exacte |
 
 ### Lot 2 — Le préchauffage (M, aucune décision)
 
@@ -309,6 +310,9 @@ build exporté **n'est pas mesuré** ici (seulement celui du projet lancé depui
   et des coûts unitaires divisés par 2 à 5 pour CAR-03, BOT-04, BOT-05, JOU-08, CAR-02.
 - **« 5 µs par trace » du liseré** (ROADMAP) : ne couvre que la lecture de la vie de la trace, pas son dessin ; et la série
   « son visible +4,0 ms » n'avait aucun liseré dessiné.
+- **Rogner les colonnes de la lightmap que la caméra iso ne lit jamais** (ISO-02 : 21,2 % de colonnes, PROUVÉ) : à ne pas
+  faire sans mesure — rogner `size_2d_override` change `get_visible_rect()`, donc les bornes du champ de `RegardDuel` près
+  des murs, et réécrit `test_iso_vues`, pour un gain jamais établi.
 - **`hit_light` « une fois par coup »** (ROADMAP l. 2506) : faux pour la pompe, une par plomb.
 
 ---
@@ -425,7 +429,7 @@ headless sans `--fixed-fps`, `OS::add_frame_delay` dort ~6,9 ms par image.
   164 constats, dont les CRITIQUES, MAJEURS et les doublons croisés ont tous été soumis à la vérification ;
 - **9 lecteurs de la ROADMAP** : le document (2,9 Mo, 34 455 lignes) ne tient pas dans un seul contexte ; il a été lu
   **en entier**, par tronçons, pour en extraire mesures, décisions, pièges, invariants et pistes de performance ;
-- **9 vérificateurs contradictoires** : chacun chargé de RÉFUTER un groupe de constats (code relu, appelants remontés,
+- **10 vérificateurs contradictoires** : chacun chargé de RÉFUTER un groupe de constats (code relu, appelants remontés,
   sources du moteur 4.7.1 et de l'addon EOSG lues quand il le fallait, croisement avec la ROADMAP et le chantier OMBRES) ;
 - **1 agent de mesure**, seul à lancer Godot (4.7.1 officiel), dans un worktree isolé.
 
