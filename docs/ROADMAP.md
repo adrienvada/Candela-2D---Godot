@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -33902,11 +33902,11 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | Lot | Objet | Attend | État |
 |---|---|---|---|
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
-| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | 🟡 **PRÉPARÉ le 2026-10-04** (le culling, ses gardes, ses planches : `docs/iso/ombres/om1/`) — voir « OM1 » plus bas ; **ne se livre pas sans Q81** |
-| **OM2** | L'ombre a la forme du corps voxel | **Q82**, après OM1 | — |
-| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) — voir « OM3a » plus bas ; OM3b (pâte D, respiration, filtre) attend Q83 à Q85 |
-| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | **Q86, Q87** | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
-| **OM5** | Les plafonniers | **Q88** | — |
+| **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | 🟡 **PRÉPARÉ le 2026-10-04** (le culling, ses gardes, ses planches : `docs/iso/ombres/om1/`) — voir « OM1 » plus bas ; Q81 tranchée le 2026-10-05 : **en livraison** (le culling et le brouillage par la source, ensemble) |
+| **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | à faire |
+| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) — voir « OM3a » plus bas ; OM3b (pâte D, respiration, filtre) attend Q83 à Q85 |
+| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
+| **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | à faire |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
 | **OM7** | Plus tard : l'ombre des corps calculée dans le shader du sol | à ouvrir après OM1 à OM3 | — |
 
@@ -33973,7 +33973,8 @@ n'est demandée sur le Mac d'Adrien, décision du 2026-09-30).
 
 ### Les questions pour Adrien (Q81 à Q88)
 
-Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bloque que son lot.
+Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bloque que son lot. **Tranchées le 2026-10-05 :
+Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D, après sa planche) et Q85 (le filtre d'ombre).**
 
 - **Q81 — Le brouillage n'efface-t-il que le corps qui éblouit, et seulement au-delà de l'auto-éblouissement de 0,06 ?**
   Aujourd'hui, allumer sa torche suffit à rendre tout ennemi transparent à 35 % (0,648), en duel comme en solo, et un seul PNJ
@@ -33987,9 +33988,12 @@ Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bl
   travers lui — le délavé annoncé ; ébloui (0,053), l'encoche noire de son étoile le TRAHISSAIT encore aujourd'hui alors que son
   corps est effacé — avec le culling elle disparaît, et l'éblouissement efface vraiment. Le culling rend donc l'éblouissement plus
   fort qu'aujourd'hui : un argument de plus pour (b), la source.
+  **✅ Décision d'Adrien, 2026-10-05 : « Oui »** — aux deux gestes : n'effacer que le corps qui éblouit, et seulement au-delà
+  de l'auto-éblouissement de 0,06. Débloque OM1 ; le duel et le bot changent avec (la matrice de difficulté se rejoue).
 - **Q82 — En iso, l'ombre d'un corps prend-elle la forme du corps voxel** (le personnage, l'arme portée sans pointe au sol,
   réduite à l'accroupi) **plutôt que celle du sprite vu de dessus ?** Ce n'est pas le disque écarté par Q42 : la forme reste
   celle du personnage. **Avis : oui, après avoir vu OM1 à l'image.** Bloque OM2.
+  **✅ Décision d'Adrien, 2026-10-05 : « Oui ».** Débloque OM2.
 - **Q83 — Pâte D : laquelle des trois variantes, sur planche ?** (a) seuils e2 et e3 sans bruit ; (b) transitions élargies ;
   (c) e2 en rampe continue. Dans tous les cas e1 et son pochoir restent — c'est la raison du choix de D (« garder la lueur
   faible », 2026-09-14) : on adoucit la pâte, on ne la change pas. **Avis : après la planche** (OM3 la produit, avec la mesure de
@@ -34005,6 +34009,10 @@ Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bl
   ±0,15 %, la lightmap d'un niveau au plus, et pas un pixel du monde ne change au-delà de 8 niveaux. Ce qui fait onduler les
   paliers, c'est le recul de tir (OM3, sans décision) et le glissement du regard sous la pâte D (Q83). La garder ou la retirer
   n'est plus qu'une question de goût, sans effet sur O3.
+  **✅ Décision d'Adrien, 2026-10-05 : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent
+  éteinte, et clignote sporadiquement. »** La respiration part ; et le grésillement du Parasite (`gadget_gresillement.gd`) fait
+  davantage : la lampe prise dans son rayon passe plus de temps éteinte, et clignote par à-coups — un geste de jeu, pas
+  seulement d'image, qui se mesure au banc des gadgets et se garde comme le reste.
 - **Q85 — Le filtre d'ombre : PCF5 avec un léger lissage sur la torche, le halo et les plafonniers, et l'atlas d'ombres à
   4096 ?** Les deux ne se valent pas. L'atlas à 4096 divise les marches par deux sans rien changer à la règle. Le PCF, lui, pose
   une pénombre : il allume à demi ce que la règle dit dans l'ombre, et assombrit à demi ce qu'elle dit éclairé — or « l'ombre au
@@ -34014,12 +34022,16 @@ Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bl
 - **Q86 — Les PNJ entre eux : une couche d'étoile par emplacement de PNJ, ou une règle « équipe » écrite ?** Aujourd'hui la
   torche d'un PNJ traverse les autres PNJ. Couches individuelles : bits libres à partir de 512, indexés comme
   `slot_de_reserve()` ; règle « équipe » : on l'écrit et on la garde. **Avis : couches individuelles.**
+  **✅ Décision d'Adrien, 2026-10-05 : « une couche par PNJ ».**
 - **Q87 — Fusée, mine, braises : passer au masque neutre `masque_ombre_neutre_pour_les_corps()` (plus le bit 64 selon la
   hauteur), en duel aussi ?** Aujourd'hui elles éclairent un corps à travers un mur — en duel aussi, et c'est une information
   que rien n'a payée. Les corps n'y gagnent toujours pas d'ombre (aucune couche de corps dans ce masque). **Avis : oui.**
+  **✅ Décision d'Adrien, 2026-10-05 : « Oui »** — duel compris.
 - **Q88 — Les plafonniers : une ombre de corps finie, calculée dans le matériau (longueur D × H / (h − H)), ou aucune ombre ?**
   Une ombre d'occulteur 2D y serait fausse (infinie). **Avis : aucune ombre jusqu'à OM7**, qui la donnerait à toutes les lampes
   d'un coup.
+  **✅ Décision d'Adrien, 2026-10-05 : « Ombre »** — contre l'avis : les corps ont une ombre finie sous un plafonnier, calculée
+  dans le matériau (OM5), sans attendre OM7.
 
 ### Les lots
 
