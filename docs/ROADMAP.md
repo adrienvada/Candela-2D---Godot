@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (OMBRES : OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-04 (OMBRES : OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -33904,7 +33904,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | **Q81** | la moitié « culling » peut se préparer ; **ne se livre pas sans Q81** |
 | **OM2** | L'ombre a la forme du corps voxel | **Q82**, après OM1 | — |
-| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | — |
+| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | **Q83, Q84, Q85** | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) — voir « OM3a » plus bas ; OM3b (pâte D, respiration, filtre) attend Q83 à Q85 |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | **Q86, Q87** | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
 | **OM5** | Les plafonniers | **Q88** | — |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
@@ -33989,7 +33989,9 @@ Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bl
 - **Q83 — Pâte D : laquelle des trois variantes, sur planche ?** (a) seuils e2 et e3 sans bruit ; (b) transitions élargies ;
   (c) e2 en rampe continue. Dans tous les cas e1 et son pochoir restent — c'est la raison du choix de D (« garder la lueur
   faible », 2026-09-14) : on adoucit la pâte, on ne la change pas. **Avis : après la planche** (OM3 la produit, avec la mesure de
-  scintillement).
+  scintillement). *Mesuré par OM3a (2026-10-04)* : sans le tirage, une lumière qui remonte en douceur fait encore changer 2 000 à
+  5 000 pixels de plus de 8 niveaux d'une image à l'autre en pâte D — dans un seul sens (zéro aller-retour), zéro en pâte brute :
+  c'est le balayage des paliers que les trois variantes adoucissent, la mesure qui les départagera.
 - **Q84 — La respiration de la torche : la retirer, ou la réduire ?** À travers les paliers, ±3 % d'énergie se voient comme des
   contours qui ondulent (+20 à 40 % de pixels qui changent d'une image à l'autre), pas comme une lumière qui respire. Et ce n'est
   pas un souffle (lu au code, non mesuré) : le bruit est celui de la secousse de caméra (`noise.frequency = 10`, « Fast frequency
@@ -34074,7 +34076,7 @@ hauteur bornée sur les faces de murs. Réglerait O5, O7 et O8 d'un coup.
 
 **Ce qui existe.**
 - `tools/planche_ombres.gd` + `.tscn` : trente plans en sept familles à la livraison d'OM0 (trente-trois en huit depuis OM4a,
-  qui ajoute `regles`) (`--liste` les imprime) — `etoile` (O1 : la torche côté
+  qui ajoute `regles` ; trente-cinq depuis OM3a, qui ajoute `serie-recul` et sa version brute) (`--liste` les imprime) — `etoile` (O1 : la torche côté
   caméra, de dos, de profil, × le PNJ face à la lampe ou de profil, plus la courte portée de 70 px), `classes` (les dix
   étoiles, arme vers la lampe), `plafonnier` (O3 : pâte D, la même image en pâte brute posée à l'exécution, plafonnier éteint),
   `mur` (O5), `scintillement` (six images consécutives : scène tenue, respiration, recul de tir ; pâte D puis brute),
@@ -34141,6 +34143,55 @@ joue pas une fusillade (O12), ni le duel en ligne.
 
 **Signalé, pas corrigé.** `photographe._mur_entre` et `_sol_libre` n'excluent que J1 et J2 : un outil qui s'en sert près d'un PNJ
 le prend pour un mur (« Pièges connus », 2026-10-04).
+
+### OM3a — FAITE le 2026-10-04 : l'enveloppe du recul (la torche ne tire plus au hasard)
+
+**Ce qui change** (`player.gd`). Pendant le recul (`shoot_cooldown > 0`), la torche tirait son énergie au hasard entre 1,5 et 2,0
+à chaque pas de physique (`randf_range`, 60 Hz) — le seul vrai scintillement qu'OM0 ait trouvé. Elle suit maintenant une
+**enveloppe** (`Player.energie_de_recul`, `_enveloppe_de_recul`) : `RECUL_CREUX` (1,5) au coup, une remontée en `smoothstep`
+jusqu'à `RECUL_SORTIE` (2,0) à la fin du recul, d'où le retour au souffle reprend comme avant.
+- **Pourquoi ces valeurs** : les bornes du tirage, et sa moyenne — l'enveloppe vaut 1,75 en moyenne sur le recul, comme le
+  tirage : pendant un recul, la lampe n'est au total ni plus sombre ni plus claire ; seul le hasard part. Le geste reste — la
+  lampe plonge au coup et remonte —, c'est le correctif de l'audit, sans décision.
+- **Armée quand le compteur REMONTE** : un tir le pose, une fusée ou un gadget l'allongent (`maxf`) ; sa durée est prise à cet
+  instant, et l'avance se lit sur ce qu'il en reste. Une fusée lancée en plein recul fait donc replonger la lampe, avec le geste.
+  ⚠️ Le compteur se décompte à l'IMAGE (`_process`), la torche se règle au PAS de physique (`_physics_process`) : l'enveloppe
+  lit le compteur que voit CE pas (`_recul_vu`) — une garde qui comparerait l'énergie au compteur lu à l'image se tromperait.
+- **Le hasard global n'est plus puisé** à chaque pas de recul. Aucun banc de bot n'en dépendait (les bots tirent dans leurs
+  propres générateurs, `BotInputProvider._rng*`), mais tout ce qui lit `randf()` sans graine voyait sa suite décalée par chaque
+  tir.
+
+**Ce que le banc mesure** (famille `scintillement` ; planche et mesures : `docs/iso/ombres/om3/`). Deux plans neufs,
+`serie-recul` et `serie-recul-brute` : un coup, puis le recul laissé à son décompte, quatorze images (les `serie-tir` d'OM0 le
+tiennent armé à chaque image : ils n'en montraient que le premier pas). Et une mesure neuve, les **allers-retours** : les pixels
+dont la luma monte puis redescend (ou l'inverse) de plus de 8 niveaux sur trois images consécutives — la signature d'un
+papillotement, qu'une lumière qui monte en douceur n'a pas ; `<id>_allers_retours.png` montre où. Chaque plan part désormais
+d'une lampe au repos (recul nul, énergie 2,5) : le plan d'avant laissait un recul qui filait encore.
+- un coup, le recul qui file, pâte D : **28 941 allers-retours → 3 438**, tous sur le triplet du coup (descendre au coup,
+  remonter ensuite : le geste lui-même) ; lightmap 26 → 0 ;
+- pâte brute : **11 769 → 0** ; lightmap 2 929 → 0 ;
+- le recul tenu armé : 13 990 → 0 (pâte D), 3 113 → 0 (brute) ; la scène tenue, témoin : 0 → 0.
+- Les « avant » varient d'un passage à l'autre (c'était un tirage : 21 257 puis 28 941 sur le même plan) ; les « après », non.
+
+**Ce qui reste, et à qui.** Pendant la remontée, en pâte D, 2 000 à 5 000 pixels changent encore de plus de 8 niveaux d'une
+image à l'autre — chacun dans le MÊME sens : les paliers de la pâte balaient le sol à mesure que la lampe remonte. Ce n'est plus
+un papillotement, c'est le dessin de la pâte : Q83 (en pâte brute, zéro).
+
+**Les gardes** : `test_ombres_regles` (+10 vérifications, 37 en tout) — la forme de l'enveloppe (le creux, la sortie, toujours
+croissante, la moyenne de 1,75), puis sur J1 vivant, torche tenue : chaque pas du recul égal à l'enveloppe du recul qu'il a vu
+(écart 0,000000), le premier pas au creux, la remontée pas après pas, le réarmement par un recul allongé.
+
+**Sabotages exécutés — restaurés à l'identique (md5).** Le tirage remis À LA PLACE de l'enveloppe : trois rouges, mais pour une
+raison faible (l'état de l'enveloppe n'étant plus tenu, la garde ne lisait plus rien). D'où le second, le vrai : l'enveloppe
+tenue, l'énergie de nouveau tirée au hasard — trois rouges (l'écart à l'enveloppe, 0,498 ; le premier pas à 1,998 ; la remontée
+qui redescend).
+
+**Version** : ce que chacun voit de sa lampe — et de celle de l'autre, là où son recul est simulé — pendant un recul change :
+mineure (Q15, Q42). Rien sur le fil.
+
+**Non prouvé.** Rien sous Metal ; Adrien n'a pas vu le geste en jeu (la planche n'en montre que quatorze images). La lampe de
+l'ADVERSAIRE chez le client suit la même condition qu'avant (`shoot_cooldown > 0`) : ce lot n'y change rien, et n'a pas relu si
+ce compteur y est simulé.
 
 ### OM4a — FAITE le 2026-10-04 : les règles d'ombre sans décision (flash, écho, lumière de coup, posture, mort)
 
@@ -34209,8 +34260,12 @@ vert. La fuite de l'écho n'a été mesurée qu'au-delà d'un mur d'une case, le
 noirs aux bords alignés sur l'ÉCRAN, pas sur la carte — une barre en travers du cône juste derrière le PNJ, des bords verticaux
 de part et d'autre. Ni un mur, ni un corps (la barre reste quand le PNJ est caché), ni les occulteurs cachés de l'arène par
 défaut (`StaticGeometry`, retirés le temps d'une image : elle reste), ni un nœud dessiné là (l'inventaire de `vp1` à 220 px n'a
-rien). Le banc a posé ses plans de posture dans la salle 0.1, où ses sondes sont propres. Visible en jeu, toutes lumières
-allumées ? Non vérifié.
+rien). **Ce n'est même pas une ombre** (relevé du même soir) : chaque famille d'occulteurs retirée à tour de rôle — corps,
+murs, murets, le reste —, puis la torche SANS ombres, puis sa portée ouverte à tous les bits, la barre lit toujours 0,000 ; et
+aucun objet visible n'est hors de la portée de la torche. La torche n'éclaire simplement pas ce bout de sol, que la flaque du
+plafonnier éclaire dans l'image complète. Dans la salle 0.1, à la même pose, le cône est net. Le banc a posé ses plans de
+posture dans la salle 0.1, où ses sondes sont propres. Visible en jeu, toutes lumières allumées ? Non vérifié — une enquête à
+ouvrir, pas une décision.
 
 ### Ne pas reproposer
 

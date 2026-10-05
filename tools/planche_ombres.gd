@@ -35,7 +35,8 @@ extends "res://tools/photographe.gd"
 ##   le contour de son étoile au sol (rouge), le disque de son capteur (vert) et son centre (bleu) ;
 ## - `<id>_pnj_lightmap.png` : la lightmap (`vp1`, la vue de dessus que l'iso relit) autour du PNJ, avec les mêmes repères ;
 ## - `<id>_capteur.png` : le capteur du PNJ (ce que son corps voxel lit) ;
-## - pour une série (scintillement) : `<id>_diff_max.png`, l'écart maximal entre images consécutives, ×4 ;
+## - pour une série (scintillement) : `<id>_diff_max.png`, l'écart maximal entre images consécutives, ×4 ; et
+##   `<id>_allers_retours.png` (OM3), les pixels qui ont papilloté — monté puis redescendu, ou l'inverse — au moins une fois ;
 ## - `journal.json` : pour chaque prise, les poses, la lampe, l'étoile au sol, et les MESURES :
 ##   · `sonde` — **« le sol dans l'étoile, côté lampe, est éclairé »** : la lightmap lue sur les rayons de l'étoile tournés
 ##     vers la lampe (± 60°), aux trois quarts du rayon (DANS l'étoile) puis à 6 px au-delà de son bord (dehors) ; `rapport`
@@ -47,7 +48,8 @@ extends "res://tools/photographe.gd"
 ##   · `opacites` — l'opacité de CHAQUE PNJ telle que le corps iso la prend (`Presentation3D.opacite_du_corps`), et
 ##     l'éblouissement de J1 avec sa source (O2) ;
 ##   · `scintillement` (séries) — par paire d'images consécutives : pixels de l'écran dont la luma (Rec. 601, celle de la
-##     mesure de l'audit) change de plus de 8 et de plus de 24 niveaux, et le saut maximal ; idem sur la lightmap ;
+##     mesure de l'audit) change de plus de 8 et de plus de 24 niveaux, et le saut maximal ; idem sur la lightmap ; et par
+##     triplet (OM3), les ALLERS-RETOURS au-delà de 8 niveaux — le papillotement, qu'un balayage en douceur ne fait pas ;
 ##   · `lumieres` — le recensement des lumières au sol par quadrant de 560 px (plafond moteur de 15 par item, O12) ;
 ##   · `regles` (OM4, la famille du même nom) — l'étoile du PNJ (rendue ? à quelle échelle, contre celle de sa silhouette) ;
 ##     `largeur_ombre_px` dans la sonde (l'ombre derrière le corps, mesurée en travers) ; pour le tir au mur, la place du
@@ -83,6 +85,9 @@ const LOUPE := 3
 const IMAGES_POSE := 12
 ## Une série de scintillement : six images CONSÉCUTIVES, comme la mesure de l'audit.
 const IMAGES_SERIE := 6
+## OM3 — le recul qui file : quatorze images, de l'image d'avant le coup au début du retour au souffle (le recul d'une arme dure
+## de 0,1 à 0,2 s, six à douze pas à 60 Hz).
+const IMAGES_RECUL := 14
 const SEUILS_SCINTILLEMENT := [8, 24]
 ## Un quadrant de `TileMapLayer` : 16 tuiles de 35 px (« quinze par item », Pièges connus).
 const QUADRANT_PX := 560.0
@@ -146,7 +151,7 @@ class MarionnetteAccroupie extends Marionnette:
 ## `cible` (le PNJ regardé), `cote` (d'où vient la torche, en degrés autour du PNJ, à partir du côté de la CAMÉRA :
 ## 0 = côté caméra, 180 = de dos, 90 = de profil), `distance` (J1 → PNJ, px), `theta` (la visée du PNJ : 0 = face à la
 ## lampe, l'arme vers elle ; 90 = de profil), et selon le plan : `classe` (la classe du PNJ), `mur`, `serie`,
-## `respiration`, `tir`, `pate` ("brute"), `plafonniers` (faux : éteints), `lampes` ("F", "H", "B" ; "-" : aucune), `ebloui_par`
+## `respiration`, `tir`, `recul` (OM3 : le recul armé une fois, puis laissé filer), `pate` ("brute"), `plafonniers` (faux : éteints), `lampes` ("F", "H", "B" ; "-" : aucune), `ebloui_par`
 ## (un PNJ dont la torche vise J1) ; OM4 : `accroupi` (le PNJ regardé), `tir_au_mur` (J1 collé à un mur d'une case, qui
 ## tire), `torche` (faux : celle de J1 éteinte), `leds` (faux : le bandeau des murs éteint).
 static func plans() -> Array[Dictionary]:
@@ -185,6 +190,13 @@ static func plans() -> Array[Dictionary]:
 				"but": "O3/O4 — six images consécutives, %s, pâte %s : ce qui change sans que rien ne bouge" % [
 					{"fixe": "scène tenue", "respiration": "la torche respire", "tir": "pendant le recul de tir"}[cas[0]],
 					"brute" if pate == "brute" else "D"]}))
+	# OM3 — le recul tel qu'il se joue : armé UNE fois, puis laissé filer (les plans `serie-tir` le tiennent armé à chaque image,
+	# ce qui ne montre que son premier pas). Le coup, le recul entier, le début du retour au souffle ; pâte D, puis brute.
+	for pate in ["", "brute"]:
+		sortie.append(_plan_de(base, {"id": "serie-recul%s" % ("" if pate == "" else "-brute"), "famille": "scintillement",
+			"serie": IMAGES_RECUL, "recul": true, "pate": pate,
+			"but": "OM3 — un coup, puis le recul qui file, %d images, pâte %s : ce que la torche fait vraiment après un tir" % [
+				IMAGES_RECUL, "brute" if pate == "brute" else "D"]}))
 	# O2 — le brouillage, salle 0.9 (six PNJ) : la torche de J1 seule, puis un PNJ qui éblouit J1.
 	var salle09 := {"salle": [0, 8], "cible": 0, "cote": 0.0, "distance": 160.0, "theta": 0.0}
 	sortie.append(_plan_de(salle09, {"id": "brouillage-torche", "famille": "brouillage",
@@ -449,6 +461,11 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 		_refuser(id, "la salle ne se pose pas")
 		return
 	_plan_en_cours = plan
+	# Chaque plan part d'une lampe au repos (OM3) : un recul laissé par le plan d'avant — les séries « tir » le tiennent armé —
+	# filerait encore pendant les premières images de celui-ci, et la torche n'aurait pas fini de remonter.
+	var j1_repos := _main.p1 as Player
+	j1_repos.shoot_cooldown = 0.0
+	j1_repos.set("_energie_torche", 2.5)
 	var cible := _pnj(int(plan["cible"]))
 	if cible == null:
 		_refuser(id, "aucun PNJ dans la salle")
@@ -948,6 +965,10 @@ func _serie(plan: Dictionary, cible: Player, n: int) -> void:
 	var lightmaps: Array[Image] = []
 	_energies.clear()
 	for k in n:
+		if k == 0 and bool(plan.get("recul", false)):
+			# Le coup : le recul armé une fois, de la durée de l'arme de J1, puis laissé au décompte du jeu.
+			var j1 := _main.p1 as Player
+			j1.shoot_cooldown = float(j1.current_weapon.cooldown) if j1.current_weapon != null else 0.16
 		_reposer()
 		var images: Array = await _capturer_l_image()
 		ecrans.append(images[0])
@@ -970,8 +991,23 @@ func _serie(plan: Dictionary, cible: Player, n: int) -> void:
 		cumul_ecran = e["cumul"]
 		var l := _ecart(lumas_l[k], lumas_l[k + 1], PackedByteArray(), PackedByteArray())
 		paires.append({"ecran": _sans_cumul(e), "lightmap": _sans_cumul(l)})
+	# OM3 — les allers-retours, sur chaque triplet d'images : le papillotement, que ne fait pas une lumière qui monte en douceur.
+	var allers_retours := []
+	var carte_ar := PackedByteArray()
+	for k in range(1, n - 1):
+		var ar_e := _allers_retours(lumas_e[k - 1], lumas_e[k], lumas_e[k + 1], corps, SEUILS_SCINTILLEMENT[0], carte_ar)
+		carte_ar = ar_e["marque"]
+		var ar_l := _allers_retours(lumas_l[k - 1], lumas_l[k], lumas_l[k + 1], PackedByteArray(), SEUILS_SCINTILLEMENT[0],
+			PackedByteArray())
+		allers_retours.append({"ecran_hors_corps_8": int(ar_e["compte"]), "lightmap_8": int(ar_l["compte"])})
+	if not carte_ar.is_empty():
+		Image.create_from_data(ecrans[0].get_width(), ecrans[0].get_height(), false, Image.FORMAT_L8, carte_ar).save_png(
+			"%s/%s_allers_retours.png" % [_dossier, id])
 	entree["scintillement"] = {"images": n, "paires": paires, "resume": _resume_des_paires(paires),
-		"energies_torche": _energies.duplicate()}
+		"energies_torche": _energies.duplicate(), "allers_retours": allers_retours,
+		"allers_retours_total": {
+			"ecran_hors_corps_8": allers_retours.reduce(func(a: int, t: Dictionary) -> int: return a + int(t["ecran_hors_corps_8"]), 0),
+			"lightmap_8": allers_retours.reduce(func(a: int, t: Dictionary) -> int: return a + int(t["lightmap_8"]), 0)}}
 	if String(plan["famille"]) in FAMILLES_SONDEES:
 		entree["sonde"] = await _sonde_torche_seule(cible)
 	if not cumul_ecran.is_empty():
@@ -1023,6 +1059,31 @@ static func _ecart(la: PackedByteArray, lb: PackedByteArray, cumul: PackedByteAr
 			cumul[i] = mini(d * 4, 255)
 	return {"au_dela_8": au_dela_8, "au_dela_24": au_dela_24, "saut_max": maxi, "cumul": cumul,
 		"hors_corps_8": hors_corps_8, "hors_corps_24": hors_corps_24}
+
+
+## OM3 — les ALLERS-RETOURS : les pixels (hors des corps, si un masque est donné) dont la luma monte puis redescend — ou
+## l'inverse — de plus de `seuil` niveaux sur trois images consécutives. C'est la signature d'un papillotement ; une lumière qui
+## monte en douceur peut faire changer des milliers de pixels d'une image à l'autre sous la pâte D (les paliers balaient le sol),
+## mais chacun dans le même sens.
+## Rend `{compte, marque}` : la marque (255 là où un aller-retour a eu lieu, cumulée d'un triplet à l'autre) devient
+## `<id>_allers_retours.png` — OÙ la lumière papillote.
+static func _allers_retours(la: PackedByteArray, lb: PackedByteArray, lc: PackedByteArray, corps: PackedByteArray,
+		seuil: int, marque: PackedByteArray) -> Dictionary:
+	var n := mini(la.size(), mini(lb.size(), lc.size()))
+	var avec_corps := corps.size() == n
+	if marque.size() != n:
+		marque = PackedByteArray()
+		marque.resize(n)
+	var compte := 0
+	for i in n:
+		if avec_corps and corps[i] != 0:
+			continue
+		var d1 := int(lb[i]) - int(la[i])
+		var d2 := int(lc[i]) - int(lb[i])
+		if (d1 > seuil and d2 < -seuil) or (d1 < -seuil and d2 > seuil):
+			compte += 1
+			marque[i] = 255
+	return {"compte": compte, "marque": marque}
 
 
 ## Les pixels de l'écran que couvrent les corps (J1 et les PNJ) : un disque de 70 px autour de chaque corps projeté, et de 40 px

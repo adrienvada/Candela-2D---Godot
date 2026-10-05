@@ -6195,3 +6195,9 @@ prochaine fusion, `grep -n "planche_ombres\|CULL_COUNTER_CLOCKWISE" tools/*.gd *
 Après une fusion, `grep -n "_reculer_le_flash\|_accorder_l_ombre_a_la_vie\|_poser_la_visibilite_de_l_ombre" player.gd` doit
 répondre trois fois au moins. La session s'appelle désormais `candela-2d-godot-9b` dans `ListAgents` (un redémarrage du conteneur
 l'a renommée ; même session, même branche) ; `ListAgents` toujours vide.
+
+**OM3a, le même jour — annoncé ici avant le commit :** `player.gd` touché par insertions — `RECUL_CREUX`, `RECUL_SORTIE`,
+`_recul_duree`, `_recul_vu` (près de `TORCH_BREATH_AMP`), `energie_de_recul` et `_enveloppe_de_recul` (avant `_mur_devant`), et
+la ligne du recul dans le bloc de la torche de `_physics_process` (`_energie_torche = _enveloppe_de_recul()`, à la place du
+`randf_range`). Après une fusion : `grep -n "_enveloppe_de_recul\|energie_de_recul" player.gd` doit répondre trois fois au moins,
+et `grep -c "randf_range(1.5, 2.0)" player.gd` zéro.

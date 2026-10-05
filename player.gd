@@ -297,6 +297,20 @@ var vignette_mat: ShaderMaterial
 ## rend vraiment ce joueur, et relogés à chaque accord des vues.
 var calques_ecran: Array[CanvasLayer] = []
 
+## OMBRES, OM3 (chantier OMBRES, 2026-10-04) — l'ENVELOPPE du recul, à la place d'un tirage. Pendant le recul, la torche tirait
+## une énergie au hasard entre 1,5 et 2,0 à chaque pas de physique (`randf_range`, 60 Hz) : un papillotement que la pâte D faisait
+## sauter de palier en palier — jusqu'à 21 255 pixels hors des corps au-delà de 8 niveaux entre deux images consécutives (banc
+## d'OM0 : le seul vrai scintillement trouvé). L'enveloppe garde le geste — la lampe plonge au coup et remonte pendant le recul —
+## sans le hasard : `RECUL_CREUX` au coup, une remontée douce jusqu'à `RECUL_SORTIE` à la fin du recul, d'où le retour au souffle
+## reprend comme avant. Sa moyenne sur le recul est celle du tirage (1,75) : la lampe n'est au total ni plus sombre ni plus claire.
+## Fonction du seul temps de recul qui reste, et elle ne puise plus dans le hasard global à chaque pas.
+const RECUL_CREUX := 1.5
+const RECUL_SORTIE := 2.0
+## La durée du recul en cours, prise quand il s'arme — un tir, une fusée, un gadget : tout ce qui pose `shoot_cooldown`.
+var _recul_duree := 0.0
+## Le compteur de recul vu au dernier pas de physique torche allumée : il REMONTE quand un recul s'arme ou s'allonge.
+var _recul_vu := 0.0
+
 ## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
 const TORCH_BREATH_AMP := 0.03
 var _torch_breath_t: float = 0.0
@@ -1729,6 +1743,22 @@ func _reculer_le_flash() -> void:
 	muzzle_flash.position = Vector2(place, 0.0)
 
 
+## OMBRES, OM3 — l'énergie de la torche à `avance` du recul (0 au coup, 1 à sa fin) : le creux, puis la remontée en douceur.
+static func energie_de_recul(avance: float) -> float:
+	return lerpf(RECUL_CREUX, RECUL_SORTIE, smoothstep(0.0, 1.0, clampf(avance, 0.0, 1.0)))
+
+
+## OMBRES, OM3 — l'enveloppe du recul en cours. Armée quand le compteur REMONTE (un tir le pose ; une fusée ou un gadget peuvent
+## l'allonger, `maxf`) : sa durée est prise à cet instant, et l'avance se lit sur ce qu'il en reste.
+func _enveloppe_de_recul() -> float:
+	if shoot_cooldown > _recul_vu + 0.0001:
+		_recul_duree = shoot_cooldown
+	_recul_vu = shoot_cooldown
+	if _recul_duree <= 0.0:
+		return RECUL_SORTIE
+	return energie_de_recul(1.0 - shoot_cooldown / _recul_duree)
+
+
 ## La distance au premier mur dans `direction` (unitaire, monde), jusqu'à `longueur` ; −1 sans mur.
 func _mur_devant(espace: PhysicsDirectSpaceState2D, direction: Vector2, longueur: float) -> float:
 	var q := PhysicsRayQueryParameters2D.create(global_position, global_position + direction * longueur,
@@ -2022,7 +2052,7 @@ func _physics_process(delta):
 		_rapprocher_la_lampe()
 		body_light.enabled = true
 		if shoot_cooldown > 0:
-			_energie_torche = randf_range(1.5, 2.0)
+			_energie_torche = _enveloppe_de_recul()
 		else:
 			# V5.4 — la torche respire : ±3 % d'énergie sur un bruit lent,
 			# identique pour les deux joueurs — la lumière vit, sans rien dire.

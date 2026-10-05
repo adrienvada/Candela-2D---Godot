@@ -14,6 +14,9 @@
 ##   • **O11, la posture** : accroupi, la silhouette passe à ×0,8 ; l'étoile suit, et un changement d'arme accroupi la garde.
 ##   • **O11, la mort** : un corps mort ne fait plus d'ombre (étoile, disque de torse) et sa lueur (le halo de proximité)
 ##     s'éteint ; relevé, il retrouve les trois. En dernier : la mort ouvre la fin de manche.
+##   • **OM3, l'enveloppe du recul** (O3) : la torche ne tire plus son énergie au hasard à chaque image pendant le recul ; elle
+##     plonge au coup et remonte, fonction du seul temps de recul (`Player.energie_de_recul`). Sa forme, puis, sur J1 vivant, chaque
+##     image du recul égale à l'enveloppe — ce qu'aucun tirage ne peut faire.
 ## Ce que ces règles changent À L'IMAGE se voit au banc des ombres (`tools/planche_ombres.gd`), sous Xvfb.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_ombres_regles.gd
@@ -53,6 +56,8 @@ func _run() -> void:
 	await _le_flash_au_mur()
 	_l_echo_et_la_lumiere_de_coup()
 	await _la_posture()
+	await _le_recul()
+	# En dernier : la mort ouvre la fin de manche, et une manche finie ne lit plus les entrées.
 	await _la_mort()
 	_sortir()
 
@@ -200,6 +205,78 @@ func _la_mort() -> void:
 
 
 # ---------------------------------------------------------------------------
+# OM3 — L'ENVELOPPE DU RECUL
+# ---------------------------------------------------------------------------
+
+func _le_recul() -> void:
+	print("\n--- OM3 : la torche plonge au coup et remonte pendant le recul — une enveloppe, plus un tirage ---")
+	var P: GDScript = load("res://player.gd")
+	var creux: float = P.get_script_constant_map()["RECUL_CREUX"]
+	var sortie: float = P.get_script_constant_map()["RECUL_SORTIE"]
+	_check("au coup, le creux (%.2f)" % creux, is_equal_approx(P.energie_de_recul(0.0), creux))
+	_check("à la fin du recul, la sortie (%.2f), d'où le souffle reprend" % sortie, is_equal_approx(P.energie_de_recul(1.0), sortie))
+	var monte := true
+	var somme := 0.0
+	var avant: float = P.energie_de_recul(0.0)
+	for i in 1001:
+		var e: float = P.energie_de_recul(float(i) / 1000.0)
+		monte = monte and e >= avant - 1e-9
+		avant = e
+		somme += e
+	_check("elle ne fait que remonter", monte)
+	_check("sa moyenne sur le recul est celle de l'ancien tirage (1,75 ; %.4f) : la lampe n'est ni plus sombre ni plus claire" % (
+		somme / 1001.0), absf(somme / 1001.0 - 1.75) < 0.002)
+	# Sur J1 vivant, torche tenue : le recul armé à la main (le tir lui-même passerait par l'arbitrage de l'hôte), puis lu à chaque
+	# pas de physique — c'est là que la torche se règle, alors que le compteur de recul se décompte à l'image (`_process`). Chaque
+	# énergie doit être celle de l'enveloppe pour le recul que CE pas a vu (`_recul_vu`), quelle que soit la cadence des images.
+	var j1: Node2D = _main.p1
+	var pantin := Pantin.new()
+	pantin.torche = true
+	pantin.visee = Vector2.RIGHT
+	_main._set_player_input_provider(j1, pantin)
+	for i in 4:
+		await process_frame
+	_check("la torche de J1 est allumée", bool(j1.flashlight_on))
+	var duree: float = maxf(float(j1.current_weapon.cooldown), 0.15)
+	j1.shoot_cooldown = duree
+	await physics_frame
+	await physics_frame
+	var energies: Array[float] = []
+	var ecart_max := 0.0
+	var pas := 0
+	var fin := Time.get_ticks_msec() + 3000
+	while Time.get_ticks_msec() < fin:
+		var vu: float = float(j1.get("_recul_vu"))
+		if float(j1.shoot_cooldown) <= 0.0 or vu <= 0.0:
+			break
+		var e: float = float(j1.get("_energie_torche"))
+		energies.append(e)
+		var attendue: float = P.energie_de_recul(1.0 - vu / float(j1.get("_recul_duree")))
+		ecart_max = maxf(ecart_max, absf(e - attendue))
+		pas += 1
+		await physics_frame
+	_check("le recul a duré plusieurs pas (%d)" % pas, pas >= 3)
+	_check("chaque pas du recul est l'enveloppe du recul qu'il a vu (écart max %.6f)" % ecart_max, pas >= 3 and ecart_max < 1e-5)
+	_check("le premier pas plonge au creux (%.3f)" % (energies[0] if not energies.is_empty() else -1.0),
+		not energies.is_empty() and energies[0] < creux + 0.1)
+	var croissante := true
+	for i in range(1, energies.size()):
+		croissante = croissante and energies[i] >= energies[i - 1] - 1e-6
+	_check("puis l'énergie ne fait que remonter, pas après pas", croissante)
+	# Une fusée lancée en plein recul l'allonge (`maxf`) : l'enveloppe se réarme — la lampe replonge avec le geste.
+	j1.shoot_cooldown = duree
+	for i in 6:
+		await physics_frame
+	j1.shoot_cooldown = maxf(float(j1.shoot_cooldown), duree * 3.0)
+	await physics_frame
+	await physics_frame
+	_check("un recul allongé en cours de route se réarme : la lampe replonge (%.3f)" % float(j1.get("_energie_torche")),
+		float(j1.get("_energie_torche")) < creux + 0.1)
+	j1.shoot_cooldown = 0.0
+	pantin.torche = false
+
+
+# ---------------------------------------------------------------------------
 # OUTILS
 # ---------------------------------------------------------------------------
 
@@ -265,6 +342,7 @@ func _tenir_la_visee(j1: Node2D, dir: Vector2) -> void:
 class Pantin extends InputProvider:
 	var visee := Vector2.RIGHT
 	var accroupi := false
+	var torche := false
 
 	func get_movement_vector() -> Vector2:
 		return Vector2.ZERO
@@ -274,6 +352,9 @@ class Pantin extends InputProvider:
 
 	func is_crouch_pressed() -> bool:
 		return accroupi
+
+	func is_flashlight_pressed() -> bool:
+		return torche
 
 
 func _sortir() -> void:
