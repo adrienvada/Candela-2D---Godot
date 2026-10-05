@@ -1,0 +1,11 @@
+--- a/ui.gd
++++ b/ui.gd
+@@ -2535,4 +2535,8 @@
+ 	if victime != null:
+ 		niveau = clampf(float(victime.dazzle_amount), 0.0, 1.0)
++	# RETOUCHE DE MESURE (audit M, plancher_voile_quad) : un niveau au plancher de la rétrodiffusion (0,06) vaut 0 ; le voile reste
++	# DESSINÉ (le quad plein écran, shader calme à niveau 0) — la lecture de V8 : « corps calme moins quad vide ».
++	if niveau <= 0.0601:
++		niveau = 0.0
+ 	# ISO10, 1a — **le voile plein seulement quand l'aberration peut exister.** La rétrodiffusion de sa propre
+ 	# torche tient le niveau à 0,06 en permanence : le voile plein lisait alors l'écran, et une copie plein

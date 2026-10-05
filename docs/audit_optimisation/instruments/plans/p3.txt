@@ -1,0 +1,7 @@
+# P3 : les torches et la vue de dessus (le coût de la couche iso sous llvmpipe). A = depot ; sanstorches = torches éteintes ; vuededessus = --2d. Miroir.
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+sanstorches|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --sans-torches
+vuededessus|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --2d
+vuededessus|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --2d
+sanstorches|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --sans-torches
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30

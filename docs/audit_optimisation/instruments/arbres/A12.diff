@@ -1,0 +1,24 @@
+--- a/brouillage_vue.gd
++++ b/brouillage_vue.gd
+@@ -192,4 +192,7 @@
+ 		return
+ 	var dazzle := float(regardeur.get("dazzle_amount"))
++	# RETOUCHE DE MESURE (audit M, plancher_flou) : le plancher de la rétrodiffusion de sa propre torche (0,06) vaut 0 ici.
++	if dazzle <= 0.0601:
++		dazzle = 0.0
+ 	var vue := get_viewport()
+ 	if vue == null:
+
+--- a/ui.gd
++++ b/ui.gd
+@@ -2535,4 +2535,10 @@
+ 	if victime != null:
+ 		niveau = clampf(float(victime.dazzle_amount), 0.0, 1.0)
++	# RETOUCHE DE MESURE (audit M, plancher_voile) : un niveau au plancher de la rétrodiffusion (0,06) vaut 0, et le ColorRect
++	# n'est plus dessiné (modulate.a = 0 : le moteur écarte l'item, mais il garde sa place dans le HBoxContainer).
++	var au_repos := niveau <= 0.0601
++	rect.modulate.a = 0.0 if au_repos else 1.0
++	if au_repos:
++		niveau = 0.0
+ 	# ISO10, 1a — **le voile plein seulement quand l'aberration peut exister.** La rétrodiffusion de sa propre
+ 	# torche tient le niveau à 0,06 en permanence : le voile plein lisait alors l'écran, et une copie plein

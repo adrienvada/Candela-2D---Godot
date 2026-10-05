@@ -1,0 +1,10 @@
+# D1 (V8) : l'atlas des textures de lumiere. A0 = depot ; bascule = une lumiere eteinte alterne FLASH[1]/FLASH[2] a chaque image, textures NON tenues (reconstruction d'atlas par image) ;
+# basculetenu = la meme bascule, textures tenues par deux lumieres eteintes (reference) ; tient = FLASH[1] et FLASH[2] tenues, les vrais tirs du banc. Miroir.
+A0|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+bascule|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --v-bascule-flash
+basculetenu|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --v-bascule-flash-tenu
+tient|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --v-tient-flash
+tient|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --v-tient-flash
+basculetenu|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --v-bascule-flash-tenu
+bascule|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --v-bascule-flash
+A0|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30

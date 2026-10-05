@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-04 (SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3280,6 +3280,30 @@ et rien ne se voyait ; en aventure, le PNJ abattu est **retiré** au passage à 
 restent dans l'arène, pleinement visibles, pour toujours — sans erreur ni suite rouge. Même défaut, invisible, sur le calque du flash de mort.
 **Un tween qui libère un nœud doit appartenir à ce nœud** (`lbl.create_tween()`), jamais à celui qui l'a créé. `tools/test_aventure_restes.gd`
 le vérifie aussi sans la règle du JcJ : un corps libéré avant la fin de son fondu ne doit rien laisser.
+
+### Six pièges relevés par l'audit d'optimisation (2026-10-05)
+
+Relevés en vérifiant les constats de l'audit ([docs/AUDIT_OPTIMISATION.md](AUDIT_OPTIMISATION.md)), chacun établi dans le
+code du jeu ou dans les sources du moteur 4.7.1 — le détail est dans les vérifications annexées (`docs/audit_optimisation/V_*.md`) :
+
+- **`Performance.TIME_PROCESS` et `TIME_PHYSICS_PROCESS` ne sont pas un coût par image.** Rafraîchis une fois par seconde, ils
+  valent le MAXIMUM de la seconde écoulée (`main.cpp`) : leur moyenne est une moyenne de pires images (2,5 à 3 fois l'image
+  moyenne, mesuré). Un coût par image se lit dans l'écart `Time.get_ticks_usec()` entre deux `process_frame`.
+- **En headless sans `--fixed-fps`, chaque image dort ~6,9 ms** (`OS::add_frame_delay`) : un temps d'image headless ne se
+  mesure qu'à pas fixe, sinon on mesure le sommeil.
+- **Une surcharge de thème coûte même à valeur identique.** `add_theme_*_override` notifie `THEME_CHANGED` sans tester
+  l'égalité ; un `Label` notifié se refaçonne, même caché, et son conteneur se retrie. Même chose pour une `StyleBox`
+  PARTAGÉE modifiée à chaque image : chaque contrôle qui l'utilise est notifié. Le HUD en réécrivait quinze par image,
+  et la galerie de cartes, cachée, notifiait toutes ses tuiles pendant le duel. Lire avant d'écrire.
+- **Un cache indexé par `get_instance_id()` d'une ressource qui meurt ne garde rien** : la clé meurt avec la ressource. C'est
+  ce qui rendait inopérant le préchauffage des nuages de suie et de poussière — chaque pose de poussière refaisait quatre
+  boucles par pixel en GDScript, ≈ 0,1 s d'image figée chez chaque pair (mesuré).
+- **Sur EOS, un paquet ne porte pas plus de 1 164 octets de charge Godot, et l'addon EOSG ne fragmente pas** : il refuse
+  l'envoi, et le moteur ignore le refus — le RPC est perdu sans aucune erreur. `rpc_start_round` porte la carte : au-delà
+  de ~1 100 caractères de code, la manche ne démarre jamais chez le client.
+- **Sous llvmpipe, la « coupure de passe » d'un GPU à tuiles n'existe pas** : un écart nul dans le cloud n'infirme pas le
+  coût d'une passe plein cadre (copie d'écran, flou) sur le Mac ; il faut alors une preuve indépendante du matériel
+  (l'effet est-il dessiné ? combien de copies ?).
 
 ### Un banc qui vérifie qu'un geste RETIRÉ ne passe plus attrape ce que le retrait change à côté (2026-10-04)
 
@@ -31017,6 +31041,59 @@ dedans pour qu'il sache tenir l'âge — seul le jeu diffère —, Q = Q58.
 d'avant, et la mesure dit ce que cela coûte : peu. Ce n'est d'ailleurs qu'une bouffée — 1 s pleine, 2 s de retour, puis la
 fusée de la 0.8.0, au pixel près (voir la preuve). Sous llvmpipe, pas le Mac : relatif seulement, comme toujours dans le
 cloud.
+
+## Chantier — l'audit d'optimisation (AO, inscrit le 2026-10-05)
+
+> **Tenu par** la session cloud « Audit d'optimisation du jeu » (`candela-2d-godot-86` pour les messages entre sessions),
+> branche `ccr-7f4baeb9-fzg310`. Demande d'Adrien du 2026-10-04 : « Délègue à des sous-agents Sonnet 5.5 chaque tâche.
+> Fais un audit complet d'optimisation du jeu. » **En lecture seule** : aucun fichier du jeu n'a changé. Rapport :
+> [docs/AUDIT_OPTIMISATION.md](AUDIT_OPTIMISATION.md) ; annexes (rapports par domaine, vérifications, mesures,
+> instruments) : `docs/audit_optimisation/`.
+
+**Pourquoi maintenant.** La cadence du build actuel n'était mesurée nulle part : la 0.7.0 est partie sans relevé sur le
+Mac, ISO a renoncé aux relevés par étape, SOLO s'est mené « sans aucun relevé de cadence », et Adrien ne mesure plus rien
+sur son Mac depuis le 2026-09-30. Il fallait savoir où va le temps avant de choisir quoi alléger.
+
+**Comment.** 14 auditeurs de domaine (164 constats) ; 9 lecteurs qui ont lu cette feuille de route EN ENTIER, par
+tronçons, parce qu'elle ne tient plus dans un seul contexte ; 10 vérificateurs chargés de RÉFUTER (tous les constats
+majeurs leur sont passés ; les coûts estimés ont été divisés par 2 à 5 presque partout) ; un agent de mesure, seul à
+lancer Godot 4.7.1 dans le cloud (headless à `--fixed-fps 60`, Xvfb + llvmpipe). Tous des sous-agents Sonnet 5.5.
+
+**Ce que l'audit établit** (le détail et les sources sont dans le rapport) :
+- Suites vertes sur `52a29c1` ; aucune fuite sur une manche de 5 min (nœuds, orphelins et mémoire plafonnent).
+- **Chaque pose de poussière fige ≈ 0,1 s (suie ≈ 0,03 s) chez chaque pair** : le préchauffage d'`IsoNuageVoxel` relâche
+  les textures qui servent de clé à son cache. MESURÉ ; une ligne le supprime (100 → 3 ms).
+- La couche iso coûte 1,6 à 2,1 ms de CPU par image, sans aucun rendu (MESURÉ) ; les grandes salles du solo dépassent la
+  cible en CPU seul (p99 20,9 ms au chapitre 8, 18,8 au chapitre 7, sur un Xeon).
+- Le HUD réécrit quinze surcharges de thème par image à valeur identique, la galerie de cartes cachée est notifiée à
+  chaque image pendant le duel : « lire avant d'écrire », appliqué à une copie du jeu, retire 0,67 ms par image (−32 % de
+  l'image de repos), la galerie en coûte 0,24 à 0,39 (MESURÉ, headless).
+- L'image du tir est celle de l'impact : +8 à 8,6 ms pour une volée de pompe au mur, +18 ms au contact d'un corps (MESURÉ,
+  headless, Xeon), les particules en tête : la meilleure piste pour les pics du 1 % bas, que `banc_pics` ne pouvait pas
+  écarter.
+- Le départ d'une manche fige ≈ 0,5 s (MESURÉ, pendant le décompte) ; le premier allumage de torche compile en plein duel.
+- Au hub, l'arène est encore rendue deux fois derrière le rideau : l'arrêter retire un tiers du temps d'image du menu
+  sous llvmpipe (MESURÉ, rapport) ; torche allumée au repos, le brouillage entretient une copie d'écran à chaque image
+  (PROUVÉ sans GPU), et le voile « calme » pèse 13 à 16 % de l'image sous llvmpipe.
+- Réseau : sur EOS, une carte dont le code dépasse ~1 100 caractères ne démarre jamais chez le client (RES-01, PROUVÉ) ;
+  l'ordre de pompage d'EOS coûte une image de latence par sens (RES-02, ≈ 23 à 29 ms de RTT à 60 i/s, ESTIMÉ).
+- Robustesse : un code de carte de 12 Ko décode 134 millions de cases et fige chaque démarrage (CAR-07, PROUVÉ par calcul).
+- Build : 31,75 Mo d'images sans lecteur dans le PCK ; chaque mise à jour laisse 131 à 185 Mo d'archive sur le disque.
+
+**État.** Rien n'est corrigé. Le rapport propose huit lots (§ 3) et sept décisions à Adrien (§ 2), dont la machine
+minimale (H13) et un argument de performance pour la Q89 du chantier OMBRES : Q81, tranchée le 2026-10-05 et livrée par OM1
+(PR #8), ne couvre que le corps ; l'appareil du brouillage (flou, copie d'écran, halo) reste allumé au repos dès que la
+torche brûle. Son plancher, s'il est retenu, va dans `BrouillageVue.maj`, jamais dans `Brouillage._dose` (il y doublerait
+celui d'OM1). Le lot 1 — des gestes d'une ligne, au gain mesuré ou sûr — ne demande aucune décision.
+
+**Recoupe le chantier OMBRES** : les capteurs, les halos sans récepteur, la lumière de coup et les murs par contours sont
+à son lot OM6 ; l'audit n'y touche pas et lui transmet des faits (§ 7 du rapport). Fichiers que les deux visent :
+`map_geometry.gd`, `presentation_3d.gd`, `game_state.gd` (`_accorder_rendu_aux_vues`), `brouillage*.gd`.
+
+**Signalé, pas corrigé** (documentation) : `CLAUDE.md` dit la vue unique rendue par la racine — vrai en `--2d` seulement,
+l'iso (défaut) force le `SubViewport` (`rendu_racine_autorise = false`) ; les l. 7659-7662 de cette feuille de route
+(l'autoload de `godot_ai` serait exporté) sont fausses ; la l. 22360 (« `banc_pics` a écarté les particules ») est
+excessive ; la l. 2506 (une `hit_light` par coup) est fausse pour la pompe, qui en pose une par plomb.
 
 ## Chantier — Q71 et Q72, deux corrections de la 0.8.0 (inscrit le 2026-09-30)
 

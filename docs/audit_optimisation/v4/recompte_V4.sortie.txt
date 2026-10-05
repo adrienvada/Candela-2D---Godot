@@ -1,0 +1,35 @@
+== BOT-01 : recompte de chapitres_livres() (100 salles) ==
+salles                         : 100
+cases de grille (L+2)(H+2)     : 123,951
+cases de sol / mur / mur bas   : 87,656 / 23,135 / 789
+runs RLE decodes par chaine    : 12,065
+cases praticables              : 86,867
+est_libre dans _construire     : 295,424
+est_libre dans _fabriquer_astar: 581,350  (66 % du total)
+build_grid de validation       : 3 par salle = 300 ; cellules decodees+inserees : 334,740
+salles avec ronde (=> _numeroter_les_composantes a la validation) : 32
+
+-- modele de cout (ms) : 'rapide' = calibre M3 release ; 'lent' = x2,2 --
+rapide : construire  133 + A*  285 + build_solid_grid  188 + check_playable  18 =   624 ms (hors composantes)
+lent   : construire  292 + A*  627 + build_solid_grid  414 + check_playable  39 =  1373 ms (hors composantes)
+
+== BOT-03 : cases praticables par salle ==
+mediane 596 ; > 1000 : 21 salles ; > 2000 : 7 salles ; max 7148
+
+== BOT-02 : modele 15 us + 3 us/plafonnier par PNJ qui voit, par pas ==
+us par pas de physique : mediane 42, p90 120, max 273
+
+== GEO-02 : pixels visites par image_proximite_usure (8 blend_rect plein cadre) ==
+carte                  cases  opaque       Mpx 8 passes Mpx
+arene_circulaire.json    784     42%      0.96       7.7
+default.json            1296     38%      1.59      12.7
+map_001_le_cloitre.json  1156     44%      1.42      11.3
+map_002_l_usine.json    1080     47%      1.32      10.6
+map_003_la_croisee.json  1024     47%      1.25      10.0
+map_004_le_bunker.json   900     48%      1.10       8.8
+solo 8.9                8736     14%     10.70      85.6
+100 salles solo : mediane 1.27 Mpx, 10 salles >= 3 Mpx, max 10.70 Mpx
+
+== CAR-03 / BOT-04 : build_grid par depart ==
+duel (iso, LED, usure par defaut) : 3 (build_collisions) + 1 (rects_monde) + 4 (MurLed) + 2 (MurEncre) + 2 (IsoGeometrie) + 2 (accorder_grille mur) + 2 (image_proximite_usure) + 4 (2 sols x 2) = 20 ; 14 avec --sans-usure
+salle 8.9 : 20 + 3 (NavigationBot) + 2 x 7 (perception) = 37 build_grid, grille 102x82
