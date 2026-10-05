@@ -37,7 +37,13 @@ var degats_pnj: Vector2 = Vector2.ZERO
 ## indexées par `player_id`, et tous les PNJ en portent un (1) : sans place à eux ils partageaient celle de J2, semée sur la classe de
 ## J2 — un boss d'une autre classe perdait sa vraie réserve, un PNJ vidait celle d'un autre. `GameState.inscrire_un_pnj` la donne (2, 3,
 ## …) ; `-1` : aucune, le joueur est lu à son `player_id`, comme avant. Jamais posée hors de l'aventure.
-var slot_reserve: int = -1
+## OMBRES, OM4b (Q86) — la place donne aussi au PNJ SA couche d'ombre : la poser (ou la rendre) réaccorde ses masques
+## (`accorder_les_couches_de_pnj`).
+var slot_reserve: int = -1:
+	set(v):
+		slot_reserve = v
+		if is_inside_tree():
+			accorder_les_couches_de_pnj()
 
 
 ## L'indice de CE joueur dans les réserves de `GameState` : sa place à lui s'il est un PNJ inscrit, son `player_id` sinon (le duel, en
@@ -1182,7 +1188,31 @@ func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 	# de son poseur, et il se trahissait. Trouvé en revue (2026-09-11).
 	# OMBRES, OM1 — la ressource et son culling viennent de la charte, comme pour le leurre (`Charte.occulteur_d_etoile`).
 	occ.occluder = Charte.occulteur_d_etoile(pts)
-	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
+	# OMBRES, OM4b (Q86) — et, pour un PNJ, sa couche propre en plus de la 8.
+	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()
+
+
+## OMBRES, OM4b (Q86, Adrien, 2026-10-05 : « une couche par PNJ ») — la couche d'ombre propre à CE PNJ
+## (`CanauxLumiere.couche_ombre_pnj`), 0 pour J1, J2 et un PNJ sans place.
+func couche_ombre_pnj() -> int:
+	return CanauxLumiere.couche_ombre_pnj(slot_de_reserve()) if est_pnj else 0
+
+
+## OMBRES, OM4b (Q86) — les masques d'un PNJ selon sa place : son étoile porte sa couche (en plus de la 8), et ses trois lumières
+## qui découpent un corps — la torche, le halo de proximité, le flash de bouche — lisent celles de TOUS les autres PNJ, jamais la
+## sienne (on ne se tient pas dans sa propre ombre). Avant, la torche d'un PNJ traversait les autres PNJ, quand celle de J1 les
+## ombrait tous (O6). Seuls les bits des PNJ bougent : la posture (le bit des murs bas) et le reste du masque restent tels quels.
+## Rien ne change pour J1 et J2 : leurs lumières ne lisent aucune couche de PNJ — celles de J1 lisent la 8, que toute étoile de
+## PNJ porte toujours.
+func accorder_les_couches_de_pnj() -> void:
+	var occ := etoile()
+	if occ != null:
+		occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()
+	var tous := CanauxLumiere.masque_des_pnj()
+	var autres := (tous & ~couche_ombre_pnj()) if est_pnj else 0
+	for lumiere in [flashlight, ambient_light, muzzle_flash]:
+		if lumiere != null:
+			(lumiere as Light2D).shadow_item_cull_mask = ((lumiere as Light2D).shadow_item_cull_mask & ~tous) | autres
 
 
 ## Au cœur de la suie, le corps cesse de faire ombre — l'ombre dirait la position

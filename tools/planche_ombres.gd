@@ -125,6 +125,9 @@ var _poses_pnj := {}
 var _poses_origine := {}
 ## La classe de chaque PNJ à la pose de la salle : rendue après un plan « classes ».
 var _classes_d_origine := {}
+## OM4b — la fusée d'un plan « fusee-derriere-mur », et les points de sol d'un plan « pnj-entre-eux » (derrière l'écran, à côté).
+var _fusee_du_plan: Node2D = null
+var _sol_om4b: Dictionary = {}
 ## Le plan en cours (le tir, les lampes).
 var _plan_en_cours: Dictionary = {}
 ## Vrai le temps d'une sonde : le bandeau LED des murs (`MurLed`) éteint à CHAQUE image — le jeu le rallume (piège du
@@ -218,6 +221,16 @@ static func plans() -> Array[Dictionary]:
 	sortie.append(_plan_de(salle09, {"id": "regles-tir-au-mur", "famille": "regles", "cible": 3, "tir_au_mur": true,
 		"torche": false, "lampes": "-", "plafonniers": false, "leds": false,
 		"but": "O9/O10 — J1 collé à un mur d'une case tire, seules lumières le flash et l'écho : le flash éclaire de son côté, l'écho ne passe pas le mur"}))
+	# OM4b — des règles pour N corps, à l'image ; les lumières de J1 éteintes, plafonniers et bandeau coupés : la seule lumière est
+	# celle qu'on mesure. Q86 : la torche du PNJ 1, braquée sur le PNJ 2 à travers le PNJ 0 posé entre les deux — le sol derrière
+	# l'écran, contre le sol à côté, à même distance de la lampe. Q87 : une fusée posée derrière un mur d'une case, le PNJ 3 de
+	# l'autre côté — ce que lit son capteur.
+	sortie.append(_plan_de(salle09, {"id": "pnj-entre-eux", "famille": "om4b", "cible": 2, "porteur": 1, "ecran": 0,
+		"torche": false, "lampes": "-", "plafonniers": false, "leds": false,
+		"but": "O6/Q86 — la torche du PNJ 1 sur le PNJ 2, à travers le PNJ 0 : le PNJ du milieu fait-il ombre ?"}))
+	sortie.append(_plan_de(salle09, {"id": "fusee-derriere-mur", "famille": "om4b", "cible": 3, "fusee_derriere_mur": true,
+		"torche": false, "lampes": "-", "plafonniers": false, "leds": false,
+		"but": "Q87 — une fusée posée derrière un mur d'une case, le PNJ de l'autre côté : le mur le cache-t-il de sa lumière ?"}))
 	return sortie
 
 
@@ -234,10 +247,12 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	if ui == null or main == null:
 		absents.append("main.tscn n'expose plus UI ou GameState")
 		return absents
-	for methode in ["demarrer_l_aventure", "_set_player_input_provider", "weapon_for_index", "_accorder_rendu_aux_vues"]:
+	for methode in ["demarrer_l_aventure", "_set_player_input_provider", "weapon_for_index", "_accorder_rendu_aux_vues",
+			"_do_spawn_fusee"]:
 		if not main.has_method(methode):
 			absents.append("GameState.%s() a disparu" % methode)
-	for prop in ["aventure", "figurants", "p1", "p2", "vp1", "cam1", "arena", "rendu_racine_autorise", "archiver_les_matchs"]:
+	for prop in ["aventure", "figurants", "p1", "p2", "vp1", "cam1", "arena", "rendu_racine_autorise", "archiver_les_matchs",
+			"bullet_container"]:
 		if not prop in main:
 			absents.append("GameState.%s a disparu" % prop)
 	for prop in ["match_hud", "p1_dazzle", "aventure_progression"]:
@@ -279,6 +294,9 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	for methode in ["reussir_niveau", "terminer_chapitre"]:
 		if not membres_prog.has(methode):
 			absents.append("AventureProgression.%s() a disparu" % methode)
+	# OM4b : la fusée posée à la main, en plein feu.
+	if not FileAccess.get_file_as_string("res://fusee.gd").contains("func forcer_age("):
+		absents.append("Fusee.forcer_age() a disparu")
 	var texte_camera := FileAccess.get_file_as_string("res://camera_iso.gd")
 	for motif in ["func vers_ecran(", "func vers_sol("]:
 		if not texte_camera.contains(motif):
@@ -517,6 +535,42 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 			p_e = ancre
 		_poses_pnj[eblouisseur] = [p_e, (pos_j1 - p_e).normalized()]
 		(eblouisseur.input_provider as Marionnette).torche = true
+	# OM4b (Q86) — le porteur et l'écran : la cible reste à sa pose ; l'écran à 45 px d'elle, le porteur à 170 px, sur un côté
+	# libre perpendiculaire à l'axe de la caméra (que la caméra voit de profil), sa torche braquée sur la cible.
+	_sol_om4b = {}
+	if plan.has("porteur"):
+		var porteur := _pnj(int(plan["porteur"]))
+		var ecran_pnj := _pnj(int(plan["ecran"]))
+		var cote_libre: Variant = null
+		for signe in [1.0, -1.0]:
+			var d: Vector2 = vers_camera.rotated(signe * PI * 0.5)
+			if _place_libre(ancre + d * 45.0) and _place_libre(ancre + d * 170.0) and not _mur_entre_les_deux(ancre + d * 170.0, ancre):
+				cote_libre = d
+				break
+		if cote_libre == null or porteur == null or ecran_pnj == null:
+			_refuser(id, "pas de côté libre pour le porteur et l'écran autour de la cible")
+			return
+		var d_l: Vector2 = cote_libre
+		_poses_pnj[ecran_pnj] = [ancre + d_l * 45.0, -d_l]
+		_poses_pnj[porteur] = [ancre + d_l * 170.0, -d_l]
+		(porteur.input_provider as Marionnette).torche = true
+		# Le sol mesuré : à mi-chemin entre l'écran et la cible (dans l'ombre de l'écran, s'il en fait), et le même point décalé
+		# de 40 px de côté — à même distance de la lampe, hors de cette ombre, encore dans le faisceau.
+		var milieu: Vector2 = ancre + d_l * 22.0
+		_sol_om4b = {"derriere": milieu, "a_cote": milieu + d_l.orthogonal() * 40.0}
+	# OM4b (Q87) — la fusée derrière un mur d'une case : la cible à 30 px de sa face, la fusée à 40 px de l'autre côté.
+	if bool(plan.get("fusee_derriere_mur", false)):
+		var mur: Variant = _mur_mince_vu(ancre, vers_camera)
+		if mur == null:
+			_refuser(id, "aucun mur d'une case, vu de la caméra, avec du sol des deux côtés, près du PNJ")
+			return
+		var face: Vector2 = mur["face"]
+		var vers_mur: Vector2 = mur["visee"]
+		_poses_pnj[cible] = [face - vers_mur * 30.0, vers_mur]
+		_fusee_du_plan = _poser_une_fusee((mur["outre"] as Vector2) + vers_mur * 40.0)
+		if _fusee_du_plan == null:
+			_refuser(id, "la fusée ne se pose pas")
+			return
 	_pantin_j1.visee = axe
 	_pantin_j1.torche = bool(plan.get("torche", true))
 	if _pantin_j1.torche:
@@ -559,7 +613,22 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 	var pantin_cible := cible.input_provider as MarionnetteAccroupie
 	if pantin_cible != null:
 		pantin_cible.accroupi = false
+	if _fusee_du_plan != null and is_instance_valid(_fusee_du_plan):
+		_fusee_du_plan.queue_free()
+	_fusee_du_plan = null
 	_plans_faits += 1
+
+
+## OM4b — une vraie fusée de J1, posée là et en plein feu (le geste du banc : `Fusee.forcer_age`), sa graine fixe.
+func _poser_une_fusee(pos: Vector2) -> Node2D:
+	var graine := 90917
+	_main._do_spawn_fusee(0, pos, 0.0, graine)
+	var f := _main.bullet_container.get_node_or_null("FuseeJ1_%d" % graine) as Node2D
+	if f == null:
+		return null
+	f.global_position = pos
+	f.call("forcer_age", 1.0)
+	return f
 
 
 func _refuser(id: String, raison: String) -> void:
@@ -1172,6 +1241,16 @@ func _mesurer(plan: Dictionary, cible: Player, ecran: Image, lightmap: Image) ->
 	entree["lumieres"] = _recenser()
 	if String(plan["famille"]) == "regles":
 		entree["regles"] = _mesurer_les_regles(plan, cible, lightmap)
+	if String(plan["famille"]) == "om4b":
+		var m := {}
+		if not _sol_om4b.is_empty():
+			m["sol_derriere_l_ecran"] = snappedf(_luminance_au(lightmap, _sol_om4b["derriere"]), 0.0001)
+			m["sol_a_cote"] = snappedf(_luminance_au(lightmap, _sol_om4b["a_cote"]), 0.0001)
+		if _fusee_du_plan != null and is_instance_valid(_fusee_du_plan):
+			m["fusee"] = _v(_fusee_du_plan.global_position)
+			var lueur = _fusee_du_plan.get("_lumiere")
+			m["fusee_masque_ombre"] = int((lueur as Light2D).shadow_item_cull_mask) if lueur is Light2D else -1
+		entree["om4b"] = m
 	return entree
 
 

@@ -125,6 +125,24 @@ static func recepteur_retro(id: int) -> int:
 static func couche_ombre_corps(id: int) -> int:
 	return 4 << id
 
+## OMBRES, OM4b (Q86, Adrien, 2026-10-05 : « une couche par PNJ ») — la couche d'ombre PROPRE au PNJ de la place `slot`
+## (`Player.slot_de_reserve` : 2, 3, … ; J1 et J2 ont 0 et 1 et n'en ont pas, 0). Son étoile la porte EN PLUS de la couche 8 :
+## les lumières de J1 lisent la 8 et ombrent toujours tous les PNJ ; celles d'un PNJ lisent les couches des AUTRES PNJ, jamais
+## la sienne. Avant, tous les PNJ partageaient la 8 et la torche de l'un traversait les autres.
+## Les onze bits libres au-dessus de 256 (512 à 524 288 : le moteur a vingt bits de masque). Au-delà de onze PNJ dans une salle,
+## la place reprend au premier bit : deux PNJ partageraient leur couche et ne s'ombreraient pas l'un l'autre — l'état d'avant.
+const PREMIER_BIT_PNJ := 9
+const BITS_PNJ := 11
+
+static func couche_ombre_pnj(slot: int) -> int:
+	if slot < 2:
+		return 0
+	return 1 << (PREMIER_BIT_PNJ + (slot - 2) % BITS_PNJ)
+
+## Toutes les couches propres aux PNJ — de quoi les retirer d'un masque, ou les y mettre toutes.
+static func masque_des_pnj() -> int:
+	return ((1 << BITS_PNJ) - 1) << PREMIER_BIT_PNJ
+
 ## La couche d'ombre des MURS BAS — chantier MURS BAS, étape MB1 (2026-09-14).
 ##
 ## Les occluders d'un mur bas vivent ici, et non sur `DECOR` : un mur bas n'arrête
@@ -196,6 +214,7 @@ static func masque_ombre_halo(id: int) -> int:
 ##
 ## ⚠️ **Ce masque est un masque d'OMBRE, jamais de PORTÉE** : `tools/test_ombre_propre.gd` interdit 8, 128 et 256 dans la
 ## `range_item_cull_mask` de toute lumière, et le plafonnier porte la sienne à part (`DECOR | ENNEMI | JOUEUR_LOCAL`, la
-## fusée). La fusée posée, elle, a `1` : elle éclaire un corps À TRAVERS un mur (signalé à S2) — le plafonnier ne doit pas.
+## fusée). Depuis OM4b (Q87, Adrien, 2026-10-05), la fusée, la mine et la nappe de braises le portent aussi : avec `1` seul,
+## elles éclairaient un corps À TRAVERS un mur (signalé à S2).
 static func masque_ombre_neutre_pour_les_corps() -> int:
 	return DECOR | ENNEMI | recepteur_retro(0) | recepteur_retro(1)

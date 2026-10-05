@@ -135,8 +135,11 @@ func _monter_occluder() -> void:
 		super()
 		return
 	_etoile = Charte.ombre_de_silhouette(tex)
+	# OMBRES, OM4b (Q86) — posé par un PNJ, le leurre porte aussi la couche propre de son poseur (`couche_ombre_pnj`, par sa
+	# place de réserve) : la torche d'un AUTRE PNJ s'y arrête comme sur le poseur ; sans elle, elle le traversait, et le leurre se
+	# trahissait au premier faisceau. Pour J1 et J2, cette couche vaut 0 : rien ne change.
 	_occluder = _poser_occluder("Occluder", _etoile,
-		CanauxLumiere.couche_ombre_corps(poseur_id), true)
+		CanauxLumiere.couche_ombre_corps(poseur_id) | CanauxLumiere.couche_ombre_pnj(slot_reserve), true)
 	# Q42 — comme celle d'un joueur, l'étoile du leurre vit dans SA canvas : le capteur du leurre ne la voit pas (un corps ne
 	# s'ombre pas lui-même, et le leurre doit se comporter en tout comme le corps qu'il imite), le joueur qu'il imite et la
 	# lightmap oui. Le disque de torse, lui, reste dans le monde, comme celui d'un joueur.

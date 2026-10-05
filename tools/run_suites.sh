@@ -237,6 +237,10 @@ SUITES+=(test_ombre_propre)
 # lignes du dessus, pour que ce lot se reprenne seul sans conflit avec la liste.
 SUITES+=(test_ombres_regles)
 
+# OMBRES, OM4b (2026-10-05) — des règles d'ombre pour N corps : une couche d'ombre par PNJ (Q86), et la fusée, la mine, la nappe de
+# braises au masque des lumières neutres (Q87), lues sur les objets vivants d'une vraie salle. Posé ici, même raison.
+SUITES+=(test_ombres_pnj)
+
 # Le point de braise de la fusée et l'Usine (0.8.0, 2026-09-29 ; Adrien : « Le point rouge : oui, dans la 0.8.0 » et « Oui corrige
 # l'usine ») : la règle de luminance du point — aussi lumineux que sa lumière, en gardant le rouge —, à chaque pas des vingt secondes de
 # la fusée, sans fenêtre ; et la symétrie de l'Usine, avec l'ancienne comme témoin sur lequel la garde rougit. Posé ici, comme les
@@ -578,6 +582,8 @@ for t in "${SUITES[@]}"; do
     # chantier OMBRES, sur deux arbres dont celui d'avant le lot) — au-delà des 120 s communs, et rouge dans deux suites entières sur
     # trois. Son plafond est donc le sien, comme celui de ses sœurs : 360 s, 2,5 fois le plus lent mesuré ; un vrai blocage reste attrapé.
     test_chapitres_marche) PLAFOND_SUITE=360 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_ombres_pnj` monte une vraie salle d'aventure, comme les suites d'aventure de la ligne suivante : à pas d'image fixe.
+    test_ombres_pnj) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_aventure_tirs_pnj|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac

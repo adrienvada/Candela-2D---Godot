@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q86 = une couche d'ombre par PNJ ; Q87 = la fusée, la mine et la nappe de braises coupées par les murs pour les corps, duel compris** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « une couche par PNJ » ; « Oui » ; livrées le même jour, avec OM4b) | Q86 : la torche d'un PNJ traversait les autres PNJ quand celle de J1 les ombrait tous ; chaque PNJ porte désormais une couche à lui (512 et au-delà, par sa place de réserve), en plus de la 8 que lisent les lumières de J1 — rien ne change pour J1 et J2 —, et son leurre la porte aussi, sans quoi il se trahissait au premier faisceau d'un autre PNJ. Q87 : leur masque d'ombre ne contenait que les murs, et ce masque filtre aussi les RÉCEPTEURS — aucun corps ne recevait leur ombre, elles l'éclairaient à travers un mur. Le masque des lumières neutres, celui du plafonnier ; un corps ne fait toujours pas d'ombre sous elles. Voir « OM4b — FAITE » (chantier OMBRES). |
 | **Q84 = la torche ne respire plus ; le grésillement la tient éteinte le plus souvent, et la rallume par sursauts** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent éteinte, et clignote sporadiquement » ; livré le même jour, avec OM3b) | Le souffle (±3 % nominaux, quelques millièmes mesurés aux bancs d'OM0 et d'OM3b) ne se voyait pas : c'est un goût, tranché. La fausse torche du Braconnier le perd avec la vraie — un leurre qui respirerait seul se trahirait. Le grésillement : noir trois quarts du temps au cœur de la zone au lieu d'un tiers, des sursauts de 60 à 140 ms, et **jamais plus de trois coupures franches dans une même seconde** — la borne pour les yeux tient à la fenêtre glissante, pas seulement en moyenne (le sursaut finit toujours au même point de son créneau). Voir « OM3b — FAITE » (chantier OMBRES). |
 | **Q81 = le brouillage n'efface que le corps qui éblouit, et seulement au-delà de la rétrodiffusion de 0,06 — en duel, chez le client en ligne et pour le bot** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Oui » ; livré le même jour, avec OM1) | Allumer sa torche rendait tout ennemi transparent à 35 % ; une fusée ou un gadget effaçait l'adversaire qu'ils n'avaient pas fait ; en aventure, UN PNJ qui éblouissait effaçait les six — et le culling d'OM1, seul, aurait laissé voir le sol éclairé à travers un PNJ délavé. **La source est celle qui TIENT le niveau d'éblouissement**, pas la gagnante de l'image (`Player.source_du_brouillage`) : la première écriture, qui suivait la gagnante plus un tireur jamais oublié, effaçait l'adversaire pendant la redescente d'une fusée. Le plancher se SOUSTRAIT (`Brouillage.opacite_vue`) au lieu de servir de seuil : l'opacité reste continue. Le client calcule la source lui-même — rien ne voyage de neuf —, et c'est aussi ce qui donne enfin une source à son appareil de brouillage, dont le halo retombait toujours sur l'adversaire. Voir « OM1 — FAITE » (chantier OMBRES) et le piège « Qui m'éblouit ? » du même jour. |
 | **Les tempéraments sont répartis dans les salles : 47 PNJ, 32 salles, aucun dans l'initiation ni dans les trois premières salles d'un chapitre** (2026-10-04, Adrien, même session, sur SOLO-Q11 : « Répartis-les toi-même ») | Un caractère sert le thème du chapitre : des guetteurs sur les postes fixes (le PNJ de « Le guetteur », 1.4 ; les places du chapitre 8), des embusqués dans le noir (« La zone sombre », « L'embuscade », « L'ombre »), des traqueurs chez ceux qui écoutent et chez les chasseurs (« La traque »), des peureux dans les groupes (chapitre 5, salles pleines). La table vit dans `tools/poser_temperaments.py`, qui écrit les fichiers au format exact des fabriques (vérifié identique sur les cent salles) — **à relancer après toute fabrique qui régénère un chapitre**, sans quoi ses tempéraments disparaissent. Gardes des dix chapitres et marches au vrai corps vertes. |
@@ -33931,7 +33932,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** (le culling et le brouillage par la source, ensemble) — voir « OM1 » plus bas ; Q89 (l'appareil de brouillage) posée à la livraison |
 | **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | à faire |
 | **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts |
-| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
+| **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) et ✅ **OM4b FAITE le 2026-10-05** (une couche par PNJ, les lumières posées : Q86, Q87) — voir plus bas |
 | **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | à faire |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
 | **OM7** | Plus tard : l'ombre des corps calculée dans le shader du sol | à ouvrir après OM1 à OM3 | — |
@@ -34052,11 +34053,11 @@ brouillage, posée à la livraison d'OM1).**
 - **Q86 — Les PNJ entre eux : une couche d'étoile par emplacement de PNJ, ou une règle « équipe » écrite ?** Aujourd'hui la
   torche d'un PNJ traverse les autres PNJ. Couches individuelles : bits libres à partir de 512, indexés comme
   `slot_de_reserve()` ; règle « équipe » : on l'écrit et on la garde. **Avis : couches individuelles.**
-  **✅ Décision d'Adrien, 2026-10-05 : « une couche par PNJ ».**
+  **✅ Décision d'Adrien, 2026-10-05 : « une couche par PNJ ».** **Livrée le même jour avec OM4b.**
 - **Q87 — Fusée, mine, braises : passer au masque neutre `masque_ombre_neutre_pour_les_corps()` (plus le bit 64 selon la
   hauteur), en duel aussi ?** Aujourd'hui elles éclairent un corps à travers un mur — en duel aussi, et c'est une information
   que rien n'a payée. Les corps n'y gagnent toujours pas d'ombre (aucune couche de corps dans ce masque). **Avis : oui.**
-  **✅ Décision d'Adrien, 2026-10-05 : « Oui »** — duel compris.
+  **✅ Décision d'Adrien, 2026-10-05 : « Oui »** — duel compris. **Livrée le même jour avec OM4b.**
 - **Q88 — Les plafonniers : une ombre de corps finie, calculée dans le matériau (longueur D × H / (h − H)), ou aucune ombre ?**
   Une ombre d'occulteur 2D y serait fausse (infinie). **Avis : aucune ombre jusqu'à OM7**, qui la donnerait à toutes les lampes
   d'un coup.
@@ -34462,7 +34463,8 @@ lampe RENDUE est morte 82 % du temps, se rallume, deux coupures au plus par seco
 T4 la fin du sursaut tirée au sort, la première écriture — un rouge (deux coupures à 0,210 s) ; T5 le sursaut sans le créneau
 noir qui le précède — deux rouges (quatre coupures dans une seconde, deux à 0,280 s) ; T6 plus de sursaut du tout — un rouge.
 
-**La suite entière** (`./tools/run_suites.sh`, deux fois, la seconde au calme) : 204 suites vertes, et une rouge, la même les deux
+**La suite entière** (`./tools/run_suites.sh`, deux fois, la seconde au calme) : 182 suites vertes (« 204 », écrit d'abord, comptait
+aussi les lignes « HÔTE OK » et « CLIENT OK » des matchs à deux instances — corrigé avec OM4b), et une rouge, la même les deux
 fois — `test_chapitres_marche` (chantier SOLO, S8), « n'est pas sorti en 120 s ». **Ce n'est pas ce lot** : seule, au calme, elle
 dure 141 s sur l'arbre d'OM1 et 140 s sur celui d'OM3b (115 s une heure plus tôt) — elle était passée dans la suite d'OM1 par
 chance. Ses deux sœurs (`_04_06`, `_07_09`) ont leur plafond ; **elle reçoit le sien, 360 s** (2,5 fois le plus lent mesuré, la
@@ -34553,6 +34555,63 @@ aucun objet visible n'est hors de la portée de la torche. La torche n'éclaire 
 plafonnier éclaire dans l'image complète. Dans la salle 0.1, à la même pose, le cône est net. Le banc a posé ses plans de
 posture dans la salle 0.1, où ses sondes sont propres. Visible en jeu, toutes lumières allumées ? Non vérifié — une enquête à
 ouvrir, pas une décision.
+
+### OM4b — FAITE le 2026-10-05 : une couche d'ombre par PNJ, et des lumières posées que les murs coupent pour les corps
+
+**Q86 et Q87 tranchées par Adrien le 2026-10-05** : « une couche par PNJ » ; « Oui » (duel compris).
+
+1. **Une couche par PNJ** (O6, Q86). Tous les PNJ ont `player_id` 1 : une étoile sur la couche 8, celle de J2, et des lumières
+   (torche, halo de proximité, flash de bouche) qui ne lisaient que la couche 4, celle de J1 — la torche d'un PNJ TRAVERSAIT les
+   autres PNJ, quand celle de J1 les ombrait tous. Chaque PNJ porte désormais, EN PLUS de la 8, une couche à lui
+   (`CanauxLumiere.couche_ombre_pnj`, 512 et au-delà, par sa place de réserve `slot_de_reserve()`), et ses trois lumières lisent
+   celles de tous les autres PNJ, jamais la sienne (`Player.accorder_les_couches_de_pnj`, rappelée quand la place est posée ou
+   rendue). Les lumières de J1 ne changent pas : elles lisent la 8, que toute étoile de PNJ porte toujours. **Son leurre aussi**
+   (`GadgetLeurre`, par la place de son poseur) : sans elle, la torche d'un autre PNJ le traversait quand elle s'arrêtait sur le
+   poseur — le leurre se trahissait au premier faisceau. Onze bits libres (512 à 524 288) ; au-delà de onze PNJ dans une salle, la
+   place reprend au premier bit, et deux PNJ partagent leur couche — l'état d'avant, entre ces deux-là seulement.
+2. **Les lumières posées, coupées par les murs pour les corps** (Q87). La fusée, la mine et la nappe de braises n'avaient que les
+   murs dans leur masque d'ombre (`1`, plus les murs bas au sol). Or ce masque filtre aussi les RÉCEPTEURS : aucun corps — sprite
+   ni capteur — ne recevait leur ombre, et posées derrière un mur, elles éclairaient un corps de l'autre côté, en duel aussi. Le
+   masque des lumières neutres, celui du plafonnier (`masque_ombre_neutre_pour_les_corps`), plus les murs bas au sol
+   (`Fusee.masque_ombre`, `GadgetMine`, `GadgetBraises`). Aucune couche de corps n'y entre : un corps ne fait toujours pas
+   d'ombre sous elles.
+
+**Ce que le banc mesure** (famille `om4b` du banc des ombres, deux plans neufs ; planche et mesures : `docs/iso/ombres/om4/`).
+`docs/iso/ombres/om4/planche_om4b.jpg` et `mesures_om4b.json` (OM3b puis OM4b, salle 0.9) :
+- **« pnj-entre-eux »** — la torche d'un PNJ porteur braquée sur un PNJ écran, un PNJ cible derrière lui : le sol derrière
+  l'écran passe de 0,240 à **0,000** (l'écran ombre enfin la torche d'un autre PNJ), le sol à côté, témoin, ne bouge pas
+  (0,043) ; le capteur de la cible, de 0,549 à **0,185** en moyenne (son maximum, 0,70 → 0,67 : le bord qui dépasse de l'ombre).
+- **« fusee-derriere-mur »** — une fusée posée derrière un mur, un PNJ de l'autre côté : son capteur passe de 0,767 (maximum
+  1,0) à **0,000** ; le masque d'ombre de la fusée, de 65 (les murs, les murs bas) à 451 (le masque neutre, les murs bas). Le sol,
+  lui, était déjà dans l'ombre du mur : seul le corps recevait la lumière à travers — le défaut même. Les opacités des six PNJ
+  sont identiques avant et après dans les deux plans.
+
+**Les gardes.** `tools/test_ombres_pnj.gd` (nouvelle, 25 vérifications, au pas fixe, une vraie salle d'aventure) : les onze
+couches (un bit chacune, au-dessus des couches du jeu, J1 et J2 sans) ; trois PNJ, chacun sa couche portée par son étoile avec la
+8 ; leurs torche, halo et flash lisent les deux autres et jamais la leur ; la règle du moteur sur les masques posés (l'étoile d'un
+PNJ ombre la torche d'un autre — avant, non —, et pas celle de son propre corps) ; rien pour J1 ; la posture n'ajoute que le bit
+des murs bas ; un changement de classe garde la couche ; le leurre d'un PNJ porte celle de son poseur, arrête la torche d'un
+autre PNJ et pas la sienne ; la salle quittée, plus de couche. Puis la fusée (en vol, posée), une vraie mine allumée et une vraie
+nappe : le masque neutre, et chaque famille de récepteur — le sprite adverse, les capteurs croisés, les capteurs de soi de J1 et
+de J2 — reçoit l'ombre de leurs murs (avant : aucune), sans couche de corps.
+
+**Sabotages exécutés — chacun restauré à l'identique (md5)** : U1 l'étoile d'un PNJ sans sa couche propre — deux rouges (sa couche, et l'ombre qu'il fait à la torche d'un autre) ; U2 les
+lumières d'un PNJ lisant aussi SA couche — trois rouges ; U3 la place posée sans réaccorder les masques — quatre rouges (les
+lumières des PNJ restent à `1 | 2 | 4`, et le leurre se trahit) ; U4 le leurre sans la couche de son poseur — deux rouges ; U5 la
+fusée revenue aux murs seuls — trois rouges (aucun récepteur ne reçoit plus son ombre) ; U6 la mine revenue aux murs seuls — deux
+rouges.
+
+**La suite entière** (`./tools/run_suites.sh`) : **184 suites vertes, aucune rouge** — « tout passe, sans erreur de script », en
+35 min 32 s (la machine partagée un temps avec les gardes d'OM2) ; `test_chapitres_marche`, sous le plafond posé par OM3b,
+verte.
+
+**Version** : ce que chacun voit de l'autre change sous une fusée, une mine ou des braises (un corps derrière un mur n'en est plus
+éclairé), duel compris : **mineure**. Rien sur le fil ; et le rendu est local à chaque pair — un client d'avant éclairerait
+encore à travers le mur ce qu'un client à jour cache : la même remarque qu'OM1 pour `Protocol.VERSION`, que pose la session qui
+publie.
+
+**Non prouvé.** Rien sous Metal ; la planche est prise sous llvmpipe. L'effet des couches de PNJ sur la cadence (des masques plus
+larges, autant d'occulteurs) n'est pas mesuré : OM6.
 
 ### Ne pas reproposer
 

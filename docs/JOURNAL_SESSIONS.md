@@ -6231,3 +6231,12 @@ du souffle pour tenir leurs images, et il n'existe plus) : `tools/planche_q42.gd
 OM3b — `grep -rn "\.noise\b\|_torch_breath_t\|TORCH_BREATH_AMP" --include=*.gd .` doit ne rien rendre hors `addons/` ; et
 `grep -c "_sursaut" gadget_gresillement.gd` au moins trois fois. Et `tools/run_suites.sh` : une ligne du `case`, le plafond de
 `test_chapitres_marche` (360 s) — hors du lot, signalé dans la ROADMAP (section OM3b).
+
+**OM4b, le 2026-10-05 — annoncé ici avant le commit :** `canaux_lumiere.gd` (`PREMIER_BIT_PNJ`, `BITS_PNJ`, `couche_ombre_pnj`,
+`masque_des_pnj`, nouveaux ; une phrase du commentaire de `masque_ombre_neutre_pour_les_corps`) ; `player.gd` (`slot_reserve`
+devient une propriété avec un accesseur ; `couche_ombre_pnj` et `accorder_les_couches_de_pnj`, nouvelles, après
+`_accorder_occluder_a_la_silhouette`, qui pose désormais `COUCHE_OCCLUDER_SIENNE | couche_ombre_pnj()`) ; `gadget_leurre.gd` (la
+couche de l'étoile) ; `fusee.gd` (`masque_ombre`) ; `gadget_mine.gd`, `gadget_braises.gd` (une ligne chacun). Outils :
+`tools/test_ombres_pnj.gd` (nouveau) et sa ligne dans `tools/run_suites.sh` ; `tools/planche_ombres.gd` (la famille `om4b`).
+Après une fusion : `grep -n "couche_ombre_pnj\|masque_des_pnj" *.gd` doit répondre dans `canaux_lumiere.gd`, `player.gd` et
+`gadget_leurre.gd`, et `grep -n "shadow_item_cull_mask = 1 |" gadget_mine.gd gadget_braises.gd` ne plus rien rendre.
