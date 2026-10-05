@@ -21,6 +21,9 @@
 ##     éblouit, et seulement de ce qui dépasse la rétrodiffusion de 0,06. La règle pure, puis J1 et J2 face à face : la torche de
 ##     J1, sa redescente, un tir, une vraie fusée qui brûle et un tir par-dessus, sa redescente ; le client en ligne (qui calcule la
 ##     source sans toucher à l'éblouissement) ; et le bot (`PerceptionBotNoeud` monté sur J2, comme le fait `BotInputProvider`).
+##   • **OM3b, la respiration et le grésillement** (Q84 — décision d'Adrien, 2026-10-05) : la torche au repos ne respire plus, la
+##     fausse torche du Braconnier non plus ; le grésillement tient la lampe éteinte le plus souvent, la rallume par sursauts, et
+##     ne coupe jamais plus de trois fois dans une même seconde — l'onde pure sur six graines, puis une vraie bobine au pied de J1.
 ## Ce que ces règles changent À L'IMAGE se voit au banc des ombres (`tools/planche_ombres.gd`), sous Xvfb.
 ##
 ## Lancer : godot --headless --path . --script res://tools/test_ombres_regles.gd
@@ -62,6 +65,7 @@ func _run() -> void:
 	await _la_posture()
 	await _le_recul()
 	await _le_brouillage_par_la_source()
+	await _la_respiration_et_le_gresillement()
 	# En dernier : la mort ouvre la fin de manche, et une manche finie ne lit plus les entrées.
 	await _la_mort()
 	_sortir()
@@ -461,6 +465,159 @@ func _le_brouillage_par_la_source() -> void:
 	_check("G. la fusée éteinte, J2 rouvre les yeux en %d pas, et J1 reste plein à chaque pas (le dernier tireur ne revient pas)" % pas_g,
 		pas_g >= 3 and j1_plein)
 	_ranger_le_brouillage(pantin1, pantin2, noeud, f)
+
+
+# ---------------------------------------------------------------------------
+# OM3b — LA TORCHE NE RESPIRE PLUS, LE GRÉSILLEMENT LA TIENT ÉTEINTE (Q84)
+# ---------------------------------------------------------------------------
+
+## Les graines de l'onde pure, et celle de la vraie bobine (posée à la main après la pose : la pose tire la sienne au hasard).
+const GRAINES_ONDE := [12345, 67890, 2024, 777, 31337, 4242]
+const GRAINE_BOBINE := 4242
+
+func _la_respiration_et_le_gresillement() -> void:
+	print("\n--- OM3b (Q84) : la torche ne respire plus ; le grésillement la tient éteinte, la rallume par sursauts, jamais plus de trois coupures par seconde ---")
+	var j1: Node2D = _main.p1
+	var j2: Node2D = _main.p2
+	var pantin1 := Pantin.new()
+	var pantin2 := Pantin.new()
+	_main._set_player_input_provider(j1, pantin1)
+	_main._set_player_input_provider(j2, pantin2)
+
+	# A. La torche au repos, hors de toute bobine, son recul fini : plus aucun souffle.
+	j1.shoot_cooldown = 0.0
+	pantin1.torche = true
+	await _pas(90)
+	var e_min := INF
+	var e_max := -INF
+	for i in 120:
+		var e: float = float(j1.flashlight.energy)
+		e_min = minf(e_min, e)
+		e_max = maxf(e_max, e)
+		await physics_frame
+	_check("A. la torche allumée au repos, deux secondes : son énergie ne bouge plus (écart %.6f ; le souffle : quelques millièmes, mesurés à OM0 et OM3b)" % (
+		e_max - e_min), e_max - e_min < 1e-4 and absf(e_max - 2.5) < 0.01, "min %.4f, max %.4f" % [e_min, e_max])
+	pantin1.torche = false
+
+	# B. La fausse torche du Braconnier, posée par J2 : sans souffle non plus — une fausse qui respirerait seule se trahirait.
+	_equiper(j2, "arbalete")
+	_main._gadgets_poses_par.fill(0)
+	_main._gadget_attente.fill(0.0)
+	_main.spawn_gadget(j2, j2.global_position + Vector2(0.0, 40.0), 0.0)
+	await _pas(2)
+	var fausse: Node = null
+	for c in _main.bullet_container.get_children():
+		if c is GadgetTorcheFantome:
+			fausse = c
+	_check("(la fausse torche du Braconnier est posée)", fausse != null)
+	if fausse != null:
+		var lumiere := fausse.get("_lumiere") as Light2D
+		var f_min := INF
+		var f_max := -INF
+		for i in 90:
+			f_min = minf(f_min, lumiere.energy)
+			f_max = maxf(f_max, lumiere.energy)
+			await physics_frame
+		_check("B. son énergie ne bouge plus non plus (écart %.6f, %.3f)" % [f_max - f_min, f_max], f_max - f_min < 1e-4)
+		fausse.queue_free()
+
+	# C. L'onde pure : six graines, deux minutes chacune, au pas de 2 ms.
+	var GG: Dictionary = (load("res://gadget_gresillement.gd") as GDScript).get_script_constant_map()
+	var creneau: float = GG["CRENEAU"]
+	var bobine := GadgetGresillement.new()
+	var noir := 0
+	var plein := 0
+	var total := 0
+	var max_fenetre := 0
+	var ecart_min := INF
+	var sursauts := 0
+	var sursauts_justes := true
+	for graine in GRAINES_ONDE:
+		bobine.graine = graine
+		var coupures: Array[float] = []
+		var etait_noir := false
+		var t := 0.0
+		while t < 120.0:
+			var v: float = bobine.niveau_noir(t)
+			total += 1
+			if v > 0.98:
+				noir += 1
+			if v < 0.02:
+				plein += 1
+			var est_noir := v > 0.98
+			if est_noir and not etait_noir:
+				coupures.append(t)
+			etait_noir = est_noir
+			t += 0.002
+		var j := 0
+		for i in coupures.size():
+			while coupures[j] < coupures[i] - 1.0:
+				j += 1
+			max_fenetre = maxi(max_fenetre, i - j + 1)
+			if i > 0:
+				ecart_min = minf(ecart_min, coupures[i] - coupures[i - 1])
+		for k in int(120.0 / creneau):
+			var s: Dictionary = bobine.call("_sursaut", k)
+			if s.is_empty():
+				continue
+			sursauts += 1
+			var milieu: float = float(k) * creneau + float(s["debut"]) + float(s["duree"]) * 0.5
+			sursauts_justes = sursauts_justes and float(s["duree"]) >= float(GG["SURSAUT_MIN"]) - 1e-6 \
+				and float(s["duree"]) <= float(GG["SURSAUT_MAX"]) + 1e-6 and bobine.niveau_noir(milieu) <= float(GG["SURSAUT_NOIR_MAX"]) + 1e-6
+	bobine.free()
+	_check("C. au cœur de la zone, la lampe est morte au moins deux tiers du temps (%.1f %% ; avant OM3b, 32 %%)" % (100.0 * noir / total),
+		float(noir) / total >= 0.66)
+	_check("… et revient encore à pleine valeur, rarement (%.1f %% du temps ; avant, 29 %%)" % (100.0 * plein / total),
+		float(plein) / total > 0.02 and float(plein) / total < 0.2)
+	_check("… des sursauts : elle se rallume un instant au milieu du noir (%d en douze minutes), 60 à 140 ms, aux deux tiers au moins" % sursauts,
+		sursauts > 100 and sursauts_justes)
+	_check("… jamais plus de trois coupures franches dans une même seconde, quelle qu'elle soit (au plus %d)" % max_fenetre, max_fenetre <= 3)
+	_check("… deux coupures toujours séparées d'un créneau au moins (%.3f s)" % ecart_min, ecart_min >= creneau - 0.01)
+
+	# D. Une vraie bobine au pied de J1 (le Parasite), sa graine posée à la main : la lampe RENDUE suit l'onde.
+	_equiper(j1, "pistolet")
+	_main._gadgets_poses_par.fill(0)
+	_main._gadget_attente.fill(0.0)
+	pantin1.torche = true
+	_main.spawn_gadget(j1, j1.global_position, 0.0)
+	await _pas(1)
+	var vraie: Node = null
+	for c in _main.bullet_container.get_children():
+		if c is GadgetGresillement:
+			vraie = c
+	_check("(une bobine posée par J1, allumée)", vraie != null and bool(vraie.get("actif")))
+	if vraie == null:
+		pantin1.torche = false
+		return
+	vraie.set("graine", GRAINE_BOBINE)
+	vraie.set("_temps_actif", 0.0)
+	var images := 0
+	var eteintes := 0
+	var rallumee := false
+	var coupures_j: Array[float] = []
+	var etait := false
+	for i in 360:
+		await physics_frame
+		var e: float = float(j1.flashlight.energy)
+		images += 1
+		var morte := e < 0.05
+		if morte:
+			eteintes += 1
+		if morte and not etait:
+			coupures_j.append(float(i) / 60.0)
+		if e > 1.5:
+			rallumee = true
+		etait = morte
+	var fenetre_j := 0
+	var a := 0
+	for i in coupures_j.size():
+		while coupures_j[a] < coupures_j[i] - 1.0:
+			a += 1
+		fenetre_j = maxi(fenetre_j, i - a + 1)
+	_check("D. six secondes au pied de la bobine : la lampe de J1 est morte %.0f %% du temps, se rallume, et ne coupe jamais plus de trois fois dans une seconde (%d)" % [
+		100.0 * eteintes / images, fenetre_j], float(eteintes) / images >= 0.5 and rallumee and fenetre_j <= 3)
+	pantin1.torche = false
+	vraie.queue_free()
 
 
 ## L'opacité que le brouillage donne à `corps` aux yeux de l'autre (`Player._alpha_brouillage`).

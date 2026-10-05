@@ -180,8 +180,6 @@ func _ready() -> void:
 		printerr("✗ volumes iso introuvables")
 		_sortir(1)
 		return
-	for j in [_main.p1, _main.p2]:
-		(j.noise as FastNoiseLite).frequency = 0.0
 	RenderingServer.frame_pre_draw.connect(_avant_le_rendu)
 
 	var grille := Vector2(MapCodec.get_grid_size(MapData.current_map_data)) * Vector2(CandelaTileSet.TILE_SIZE)

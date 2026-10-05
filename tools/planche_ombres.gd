@@ -60,7 +60,7 @@ extends "res://tools/photographe.gd"
 ## Les précautions de `planche_q42` et du piège « Une scène “tenue” par le photographe bouge encore » (2026-09-30) : les PNJ
 ## ne pensent plus (leur bot arrêté, une marionnette à sa place), J1 et chaque PNJ sont reposés à CHAQUE image (position,
 ## visée, vitesse nulle, vie pleine), les corps voxel reposés juste avant le rendu à leur pose exacte, sans respiration
-## (`frame_pre_draw`) ; la respiration des torches est coupée (`noise.frequency = 0`) sauf dans les plans qui la mesurent ;
+## (`frame_pre_draw`) ; la respiration des torches n'existe plus (OM3b : retirée du jeu, et le bruit qui la portait avec) ;
 ## la poussière du faisceau est coupée ; les caméras sans lissage ; le bandeau LED tenu par `--led-murs-fige=0.5`. Le carton
 ## de la salle est passé d'un coup : le banc ne le photographie pas.
 ##
@@ -125,9 +125,7 @@ var _poses_pnj := {}
 var _poses_origine := {}
 ## La classe de chaque PNJ à la pose de la salle : rendue après un plan « classes ».
 var _classes_d_origine := {}
-## La fréquence du bruit de respiration de la torche de J1, lue avant de la couper (le jeu : 10).
-var _frequence_souffle := 10.0
-## Le plan en cours (pour la respiration, le tir, les lampes).
+## Le plan en cours (le tir, les lampes).
 var _plan_en_cours: Dictionary = {}
 ## Vrai le temps d'une sonde : le bandeau LED des murs (`MurLed`) éteint à CHAQUE image — le jeu le rallume (piège du
 ## 2026-09-14, « Un capteur de lumière ne s'éteignait pas sous le `CanvasModulate` noir »).
@@ -183,12 +181,15 @@ static func plans() -> Array[Dictionary]:
 	sortie.append(_plan_de(base, {"id": "mur", "famille": "mur", "mur": true,
 		"but": "O5 — le PNJ près d'un mur, torche côté caméra : son ombre devient-elle une bande pleine hauteur ?"}))
 	# O3/O4 — le scintillement : six images consécutives, scène tenue ; la respiration ; le recul de tir. Pâte D, puis brute.
+	# OM3b : la torche ne respire plus — les plans `serie-respiration` gardent leur nom, pour se comparer à un passage d'avant
+	# (`--avant`), et montrent désormais la torche au repos, sans rien figer : elle doit tenir comme la scène tenue.
 	for cas in [["fixe", false, false], ["respiration", true, false], ["tir", false, true]]:
 		for pate in ["", "brute"]:
 			sortie.append(_plan_de(base, {"id": "serie-%s%s" % [cas[0], "" if pate == "" else "-brute"], "famille": "scintillement",
 				"serie": IMAGES_SERIE, "respiration": cas[1], "tir": cas[2], "pate": pate,
 				"but": "O3/O4 — six images consécutives, %s, pâte %s : ce qui change sans que rien ne bouge" % [
-					{"fixe": "scène tenue", "respiration": "la torche respire", "tir": "pendant le recul de tir"}[cas[0]],
+					{"fixe": "scène tenue", "respiration": "la torche au repos (elle respirait avant OM3b)",
+						"tir": "pendant le recul de tir"}[cas[0]],
 					"brute" if pate == "brute" else "D"]}))
 	# OM3 — le recul tel qu'il se joue : armé UNE fois, puis laissé filer (les plans `serie-tir` le tiennent armé à chaque image,
 	# ce qui ne montre que son premier pas). Le coup, le recul entier, le début du retour au souffle ; pâte D, puis brute.
@@ -244,7 +245,7 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 			absents.append("UI.%s a disparu" % prop)
 	var p1 = main.get("p1")
 	if p1 != null:
-		for prop in ["noise", "flashlight", "ambient_light", "body_light", "shoot_cooldown", "dazzle_amount",
+		for prop in ["flashlight", "ambient_light", "body_light", "shoot_cooldown", "dazzle_amount",
 				"source_eblouissante", "est_pnj", "visual_enemy", "_dust_accum", "muzzle_flash", "shake_intensity", "accroupi",
 				"visual"]:
 			if not prop in p1:
@@ -440,7 +441,6 @@ func _figer_les_pnj() -> void:
 		_poses_origine[pnj] = [pnj.global_position, Vector2.from_angle(pnj.rotation)]
 		_classes_d_origine[pnj] = _slug(pnj)
 	_poses_pnj = _poses_origine.duplicate(true)
-	_frequence_souffle = float((_main.p1.noise as FastNoiseLite).frequency)
 
 
 func _pnj(k: int) -> Player:
@@ -804,10 +804,6 @@ func _reposer() -> void:
 	j1.global_rotation = (_pose_j1[1] as Vector2).angle()
 	j1.hp = 100.0
 	j1.set("_dust_accum", -1.0e9)
-	if not bool(_plan_en_cours.get("respiration", false)):
-		(j1.noise as FastNoiseLite).frequency = 0.0
-	else:
-		(j1.noise as FastNoiseLite).frequency = _frequence_souffle
 	if bool(_plan_en_cours.get("tir", false)):
 		j1.shoot_cooldown = 0.2
 	var lampes := String(_plan_en_cours.get("lampes", ""))
@@ -826,7 +822,6 @@ func _reposer() -> void:
 		(pnj.input_provider as Marionnette).visee = pose[1]
 		pnj.hp = 100.0
 		pnj.set("_dust_accum", -1.0e9)
-		(pnj.noise as FastNoiseLite).frequency = 0.0
 	_poser_le_regard()
 	for cam in [_main.cam1, _main.cam2]:
 		if is_instance_valid(cam):

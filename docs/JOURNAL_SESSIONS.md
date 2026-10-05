@@ -6218,3 +6218,16 @@ dans `brouillage.gd`, `player.gd`, `game_state.gd`, `perception_bot.gd` et `perc
 `grep -c "CULL_COUNTER_CLOCKWISE" charte.gd` au moins une fois. ⚠️ Qui écrit encore `cible.source_eblouissante = …` à la main après
 une fusion contourne la source du niveau : passer par `retenir_la_source`. La session s'appelle désormais `candela-2d-godot-40`
 dans `ListAgents` (un redémarrage de plus ; même session, même branche) ; `ListAgents` toujours vide.
+
+**OM3b, le 2026-10-05 — annoncé ici avant le commit :** `player.gd` — `TORCH_BREATH_AMP`, `_torch_breath_t` et `noise` (le
+`FastNoiseLite` du souffle, et son initialisation dans `_ready`) RETIRÉS ; la branche de repos du bloc de la torche de
+`_physics_process` lisse vers 2,5 sans souffle. `gadget_torche_fantome.gd` : `SOUFFLE` retiré. `gadget_gresillement.gd` :
+`PART_NOIR`, `PART_SURSAUT`, `PART_MAUVAIS_CONTACT`, `SURSAUT_MIN`, `SURSAUT_MAX`, `SURSAUT_NOIR_MAX`, `_sursaut` (nouveaux) ;
+`niveau_noir` et `_niveau_du_creneau` réécrits. **Outils d'autres chantiers, une ou deux lignes chacun** (ils figeaient le bruit
+du souffle pour tenir leurs images, et il n'existe plus) : `tools/planche_q42.gd`, `planche_braise.gd`, `planche_usine.gd`,
+`banc_perception_bot.gd` (sa précondition « `noise` » aussi), `banc_bot_duel.gd`, `banc_lumieres.gd`, `loupe_faisceau_air.gd`,
+`loupe_faisceau_q75.gd`, `loupe_faisceau_taille.gd` ; et `tools/planche_ombres.gd`, `tools/test_ombres_regles.gd` (en propre).
+⚠️ **Après une fusion** : toute ligne qui lit encore `.noise` d'un joueur, ou pose `_torch_breath_t`, vient d'une branche d'avant
+OM3b — `grep -rn "\.noise\b\|_torch_breath_t\|TORCH_BREATH_AMP" --include=*.gd .` doit ne rien rendre hors `addons/` ; et
+`grep -c "_sursaut" gadget_gresillement.gd` au moins trois fois. Et `tools/run_suites.sh` : une ligne du `case`, le plafond de
+`test_chapitres_marche` (360 s) — hors du lot, signalé dans la ROADMAP (section OM3b).

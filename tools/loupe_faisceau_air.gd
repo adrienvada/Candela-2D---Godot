@@ -98,9 +98,6 @@ func _tenir() -> void:
 	m.p1.global_position = _pos[0]
 	m.p2.global_position = _pos[1]
 	for k in 2:
-		# La respiration de la torche (±3 %, `TORCH_BREATH_AMP`) sur une horloge figée : sans quoi l'énergie de la lampe ne se
-		# tient jamais, et deux A diffèrent tout le long du bord du cône (premier lancement : la scène jamais tenue).
-		(m.p1 if k == 0 else m.p2).set("_torch_breath_t", 0.0)
 		p._viser(k, _visee[k])
 		if k < p._pantins.size():
 			p._pantins[k].torche = _torche[k]

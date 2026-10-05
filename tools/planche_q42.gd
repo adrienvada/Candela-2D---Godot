@@ -165,8 +165,6 @@ func _ready() -> void:
 		printerr("✗ --dessus : la vue iso est allumée malgré mode_iso = faux")
 		_sortir(1)
 		return
-	for j in [_main.p1, _main.p2]:
-		(j.noise as FastNoiseLite).frequency = 0.0
 	_equiper(0, "pistolet")
 	_equiper(1, "pistolet")
 	_portee = float(_main.p1.current_weapon.portee_torche())

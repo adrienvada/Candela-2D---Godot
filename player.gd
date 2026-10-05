@@ -306,7 +306,6 @@ var last_fatal_perp: float = -1.0
 
 var shake_intensity: float = 0.0
 var shake_decay: float = 5.0
-var noise: FastNoiseLite
 var shake_time: float = 0.0
 
 var vignette_mat: ShaderMaterial
@@ -337,12 +336,12 @@ var _recul_duree := 0.0
 ## Le compteur de recul vu au dernier pas de physique torche allumée : il REMONTE quand un recul s'arme ou s'allonge.
 var _recul_vu := 0.0
 
-## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
-const TORCH_BREATH_AMP := 0.03
-var _torch_breath_t: float = 0.0
-## L'énergie de la torche AVANT toute atténuation : l'état lissé, celui que le
-## souffle fait vivre. `flashlight.energy` en est la présentation, une fois le
-## grésillement appliqué — voir le bloc qui les sépare, et pourquoi.
+## L'énergie de la torche AVANT toute atténuation : l'état lissé, qui plonge au
+## coup et remonte (`_enveloppe_de_recul`) puis revient à 2,5. `flashlight.energy`
+## en est la présentation, une fois le grésillement appliqué — voir le bloc qui
+## les sépare, et pourquoi.
+## OMBRES, OM3b (Q84, Adrien, 2026-10-05 : « Retirer ») — elle ne RESPIRE plus : le
+## souffle de ±3 % sur un bruit lent (V5.4) est retiré, avec le bruit qui le portait.
 var _energie_torche: float = 2.5
 ## Le facteur de lampe APPLIQUÉ à la dernière image torche allumée — le minimum des
 ## gadgets, calculé plus bas. Lu par la killcam (étape 28, lot F) : le fantôme rejoue
@@ -825,11 +824,6 @@ func _ready():
 	visual.material = light_boost_mat
 	visual_ptr.material = light_boost_mat
 		
-	# Setup Camera Shake Noise
-	noise = FastNoiseLite.new()
-	noise.seed = randi()
-	noise.frequency = 10.0 # Fast frequency for impact
-	
 	# Setup Damage Vignette UI
 	var ui_layer = CanvasLayer.new()
 	ui_layer.name = "CalqueVignette"
@@ -2083,11 +2077,13 @@ func _physics_process(delta):
 		if shoot_cooldown > 0:
 			_energie_torche = _enveloppe_de_recul()
 		else:
-			# V5.4 — la torche respire : ±3 % d'énergie sur un bruit lent,
-			# identique pour les deux joueurs — la lumière vit, sans rien dire.
-			_torch_breath_t += delta
-			var souffle := 1.0 + noise.get_noise_1d(_torch_breath_t * 40.0) * TORCH_BREATH_AMP
-			_energie_torche = lerp(_energie_torche, 2.5 * souffle, 8.0 * delta)
+			# OMBRES, OM3b (Q84, Adrien, 2026-10-05 : « Retirer ») — la torche ne respire plus. Le souffle (V5.4 : ±3 %
+			# d'énergie sur un bruit tiré à chaque pas, que ce lissage écrasait) ne faisait en pratique que quelques millièmes
+			# (2,497 à 2,504 au banc d'OM0, 2,492 à 2,502 à celui d'OM3b ; zéro pixel au-delà de huit niveaux) : rien à l'image,
+			# mais une lumière qui ne tenait jamais tout à fait la même valeur. Reste le
+			# retour, lissé, à l'énergie de repos après un recul. La fausse torche du Braconnier perd son souffle avec
+			# (`GadgetTorcheFantome`).
+			_energie_torche = lerp(_energie_torche, 2.5, 8.0 * delta)
 
 		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
 		# les lampes autour de lui : le faisceau papillote, faiblit, tombe au

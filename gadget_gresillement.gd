@@ -18,7 +18,9 @@ extends GadgetBase
 ##     `SEUIL_RALLUMAGE`. C'est ce qui donne un sens à l'interrupteur : de courtes
 ##     rafales au moment où l'adversaire entre, plutôt qu'une zone allumée toute
 ##     la manche ;
-##   • elle éteint les torches **jusqu'au noir absolu**, de façon aléatoire ;
+##   • elle éteint les torches **jusqu'au noir absolu**, de façon aléatoire — et, depuis
+##     OM3b (Q84, 2026-10-05), elle les tient éteintes le plus souvent : trois quarts du
+##     temps au cœur de la zone, au lieu d'un tiers, avec des sursauts de lumière ;
 ##   • et une torche qu'elle a éteinte **n'éblouit plus**.
 ##
 ## ## Elle entre dans la SIMULATION, et c'est une décision
@@ -74,6 +76,25 @@ const CRENEAU := 0.34
 ## La rampe entre deux niveaux : un changement n'est jamais une marche d'escalier,
 ## ce qui adoucit l'éclat sans rien retirer au noir.
 const RAMPE := 0.03
+
+## OMBRES, OM3b (Q84, Adrien, 2026-10-05 : « Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent éteinte,
+## et clignote sporadiquement ») — le tirage de chaque créneau, le NOIR d'abord :
+##   • NOIR (`PART_NOIR`) : la lampe est morte ;
+##   • SURSAUT (`PART_SURSAUT`) : morte aussi, mais elle se rallume un instant (`SURSAUT_MIN` à `SURSAUT_MAX`) — le clignotement
+##     sporadique. Seulement après un créneau noir, et il FINIT toujours au même point de son créneau (`_sursaut`) : deux
+##     coupures franches sont donc toujours séparées d'un créneau au moins, et la borne pour les yeux tient, à la fenêtre près —
+##     jamais plus de trois dans une seconde, quelle qu'elle soit ;
+##   • MAUVAIS CONTACT (`PART_MAUVAIS_CONTACT`) : la lampe faiblit, de 45 à 85 % de noir ;
+##   • NORMAL (le reste) : elle revient — rarement, mais il le faut, sans quoi on s'y habituerait.
+## Avant OM3b : 34 % de noir, 36 % de mauvais contact, 30 % de retour — la lampe morte un tiers du temps.
+const PART_NOIR := 0.64
+const PART_SURSAUT := 0.18
+const PART_MAUVAIS_CONTACT := 0.10
+## La durée d'un sursaut, en secondes : assez pour se voir, trop peu pour éclairer une pièce.
+const SURSAUT_MIN := 0.06
+const SURSAUT_MAX := 0.14
+## Le noir qui reste pendant un sursaut : de 0 (la lampe entière) à `SURSAUT_NOIR_MAX`.
+const SURSAUT_NOIR_MAX := 0.35
 
 ## Allumée ou éteinte. Posé par `GameState` chez les deux pairs, jamais d'ici.
 var actif: bool = false
@@ -136,24 +157,59 @@ func facteur_de_lampe(pos: Vector2) -> float:
 ## Le niveau de panne, entre 0 (lampe intacte) et 1 (noir absolu) : une fonction
 ## pure de la graine et du temps, rien d'autre.
 func niveau_noir(t: float) -> float:
-	var k := int(floor(maxf(t, 0.0) / CRENEAU))
+	var t0 := maxf(t, 0.0)
+	var k := int(floor(t0 / CRENEAU))
+	var dans := t0 - float(k) * CRENEAU
 	var courant := _niveau_du_creneau(k)
-	var dans := t - float(k) * CRENEAU
-	if k <= 0 or dans >= RAMPE:
-		return courant
-	return lerpf(_niveau_du_creneau(k - 1), courant, dans / RAMPE)
+	var niveau := courant
+	if k > 0 and dans < RAMPE:
+		niveau = lerpf(_niveau_du_creneau(k - 1), courant, dans / RAMPE)
+	# OM3b — le sursaut : la lampe revient un instant au milieu d'un créneau noir, avec ses rampes. Il tient tout entier dans
+	# son créneau (`_sursaut` le pose après la rampe d'entrée, et finit une rampe avant le créneau suivant).
+	var s := _sursaut(k)
+	if s.is_empty():
+		return niveau
+	var debut: float = s["debut"]
+	var fin: float = debut + float(s["duree"])
+	var bas: float = s["noir"]
+	if dans < debut - RAMPE or dans > fin + RAMPE:
+		return niveau
+	if dans < debut:
+		return lerpf(niveau, bas, (dans - (debut - RAMPE)) / RAMPE)
+	if dans <= fin:
+		return bas
+	return lerpf(bas, niveau, (dans - fin) / RAMPE)
 
 
-## Trois états, tirés au sort par créneau : la coupure franche, le mauvais contact
-## qui fait faiblir la lampe, et le retour à la normale — sans lequel on s'y
-## habituerait en trois secondes.
+## Le niveau de fond d'un créneau, tiré au sort : le noir (le NOIR et le SURSAUT, dont le fond est noir), le mauvais contact
+## qui fait faiblir la lampe, et le retour à la normale — sans lequel on s'y habituerait. Voir `PART_NOIR`.
 func _niveau_du_creneau(k: int) -> float:
 	var r := _hasard(k, 0)
-	if r < 0.34:
+	if r < PART_NOIR + PART_SURSAUT:
 		return 1.0
-	if r < 0.70:
+	if r < PART_NOIR + PART_SURSAUT + PART_MAUVAIS_CONTACT:
 		return 0.45 + 0.40 * _hasard(k, 1)
 	return 0.0
+
+
+## OM3b — le sursaut du créneau `k` (`debut` et `duree` en secondes dans le créneau, `noir` pendant), ou rien. Seulement dans un
+## créneau tiré SURSAUT qui suit un créneau au fond noir : sans coupure à son entrée, son retour et sa coupure sont la seule
+## paire du créneau. Après un créneau éclairé, le tirage SURSAUT reste un créneau noir, sans sursaut.
+##
+## ⚠️ **Il finit toujours au même point du créneau** (`CRENEAU - 2 × RAMPE`) : seuls son DÉBUT et sa durée sont tirés. Une fin
+## tirée au sort aussi laissait deux sursauts de créneaux voisins couper à 0,15 s l'un de l'autre — quatre coupures franches
+## dans une même seconde au pire, au-delà de la borne pour les yeux (mesuré sur douze graines, dix minutes chacune, avant de
+## l'écrire). Fin fixe : deux coupures sont toujours séparées d'un créneau au moins (0,34 s), donc jamais plus de trois dans une
+## seconde, quelle que soit la seconde.
+func _sursaut(k: int) -> Dictionary:
+	var r := _hasard(k, 0)
+	if r < PART_NOIR or r >= PART_NOIR + PART_SURSAUT:
+		return {}
+	if k <= 0 or _niveau_du_creneau(k - 1) < 1.0:
+		return {}
+	var duree := lerpf(SURSAUT_MIN, SURSAUT_MAX, _hasard(k, 2))
+	var fin := CRENEAU - 2.0 * RAMPE
+	return {"debut": fin - duree, "duree": duree, "noir": SURSAUT_NOIR_MAX * _hasard(k, 4)}
 
 
 ## Un nombre de [0, 1[ déterminé par la graine, le créneau et un sel.

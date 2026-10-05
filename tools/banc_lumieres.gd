@@ -196,7 +196,6 @@ func _tenir_une_image() -> void:
 	for k in 2:
 		var j: Node2D = _main.p1 if k == 0 else _main.p2
 		j.global_position = _pos[k]
-		j.set("_torch_breath_t", 0.0)
 		_pantins[k].visee = _visee[k]
 		_pantins[k].torche = _torche[k]
 		_pantins[k].accroupi = _accroupi[k]

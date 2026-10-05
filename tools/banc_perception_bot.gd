@@ -146,7 +146,7 @@ static func preconditions_perception(ui: Node, main: Node) -> Array[String]:
 		for p in script_joueur.get_script_property_list():
 			propres[p["name"]] = true
 		for prop in ["flashlight", "body_light", "ambient_light", "muzzle_flash", "muzzle", "accroupi", "dead",
-				"flashlight_on", "current_weapon", "player_id", "noise"]:
+				"flashlight_on", "current_weapon", "player_id"]:
 			if not propres.has(prop):
 				absents.append("Player.%s a disparu" % prop)
 	var script_iso := load("res://presentation_3d.gd") as GDScript
@@ -276,7 +276,6 @@ func _ready() -> void:
 		_sortir(1)
 		return
 	for j in [_main.p1, _main.p2]:
-		(j.noise as FastNoiseLite).frequency = 0.0
 		_equiper(j, "pistolet")
 	# Le nœud de perception du jeu, monté sur J2 comme `BotInputProvider` le fait : il relit les nœuds vivants.
 	var profil := Profil.new()

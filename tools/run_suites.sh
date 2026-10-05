@@ -574,6 +574,10 @@ for t in "${SUITES[@]}"; do
     # 2026-10-03), à quelques secondes du plafond de 120 s — et au-delà dès que la machine est chargée (« n'est pas sorti en 120s »). Son plafond est
     # donc le sien : 300 s, soit 2,5 fois le plus lent mesuré au calme ; un vrai blocage reste attrapé.
     test_banc_bot) PLAFOND_SUITE=300 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
+    # `test_chapitres_marche` (chapitres 1 à 3, le vrai corps) : 115 à 141 s seule dans le conteneur cloud au calme (mesuré le 2026-10-05,
+    # chantier OMBRES, sur deux arbres dont celui d'avant le lot) — au-delà des 120 s communs, et rouge dans deux suites entières sur
+    # trois. Son plafond est donc le sien, comme celui de ses sœurs : 360 s, 2,5 fois le plus lent mesuré ; un vrai blocage reste attrapé.
+    test_chapitres_marche) PLAFOND_SUITE=360 run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     test_iso_camera|test_entrainement_bot|test_bot_combat|test_aventure_partie|test_aventure_restes|test_aventure_hud|test_aventure_tirs_pnj|test_bot_equipement|test_aventure_boss|test_chapitres_marche) run "$t" --fixed-fps 60 --script "res://tools/$t.gd" ;;
     *) run "$t" --script "res://tools/$t.gd" ;;
   esac

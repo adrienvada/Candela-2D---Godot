@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (OMBRES : OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q84 = la torche ne respire plus ; le grésillement la tient éteinte le plus souvent, et la rallume par sursauts** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent éteinte, et clignote sporadiquement » ; livré le même jour, avec OM3b) | Le souffle (±3 % nominaux, quelques millièmes mesurés aux bancs d'OM0 et d'OM3b) ne se voyait pas : c'est un goût, tranché. La fausse torche du Braconnier le perd avec la vraie — un leurre qui respirerait seul se trahirait. Le grésillement : noir trois quarts du temps au cœur de la zone au lieu d'un tiers, des sursauts de 60 à 140 ms, et **jamais plus de trois coupures franches dans une même seconde** — la borne pour les yeux tient à la fenêtre glissante, pas seulement en moyenne (le sursaut finit toujours au même point de son créneau). Voir « OM3b — FAITE » (chantier OMBRES). |
 | **Q81 = le brouillage n'efface que le corps qui éblouit, et seulement au-delà de la rétrodiffusion de 0,06 — en duel, chez le client en ligne et pour le bot** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Oui » ; livré le même jour, avec OM1) | Allumer sa torche rendait tout ennemi transparent à 35 % ; une fusée ou un gadget effaçait l'adversaire qu'ils n'avaient pas fait ; en aventure, UN PNJ qui éblouissait effaçait les six — et le culling d'OM1, seul, aurait laissé voir le sol éclairé à travers un PNJ délavé. **La source est celle qui TIENT le niveau d'éblouissement**, pas la gagnante de l'image (`Player.source_du_brouillage`) : la première écriture, qui suivait la gagnante plus un tireur jamais oublié, effaçait l'adversaire pendant la redescente d'une fusée. Le plancher se SOUSTRAIT (`Brouillage.opacite_vue`) au lieu de servir de seuil : l'opacité reste continue. Le client calcule la source lui-même — rien ne voyage de neuf —, et c'est aussi ce qui donne enfin une source à son appareil de brouillage, dont le halo retombait toujours sur l'adversaire. Voir « OM1 — FAITE » (chantier OMBRES) et le piège « Qui m'éblouit ? » du même jour. |
 | **Les tempéraments sont répartis dans les salles : 47 PNJ, 32 salles, aucun dans l'initiation ni dans les trois premières salles d'un chapitre** (2026-10-04, Adrien, même session, sur SOLO-Q11 : « Répartis-les toi-même ») | Un caractère sert le thème du chapitre : des guetteurs sur les postes fixes (le PNJ de « Le guetteur », 1.4 ; les places du chapitre 8), des embusqués dans le noir (« La zone sombre », « L'embuscade », « L'ombre »), des traqueurs chez ceux qui écoutent et chez les chasseurs (« La traque »), des peureux dans les groupes (chapitre 5, salles pleines). La table vit dans `tools/poser_temperaments.py`, qui écrit les fichiers au format exact des fabriques (vérifié identique sur les cent salles) — **à relancer après toute fabrique qui régénère un chapitre**, sans quoi ses tempéraments disparaissent. Gardes des dix chapitres et marches au vrai corps vertes. |
 | **L'intelligence des PNJ, S11 : dégâts de 10 à 20 par balle, rafales de 1 à 3 coups tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments** (2026-10-04, Adrien, même session : « Il faudrait que les PNJ ne fassent pas plus de 10-20 dégâts par tir. Que parfois ils arrivent à tirer plusieurs fois », puis, sur la liste de propositions, « Fais 1, 2, 3, 7, 8 ») | Tout se pose sur les PNJ du catalogue (`ProfilBot.pnj()`), jamais sur le bot de l'entraînement ni sur les boss, réglés au banc. **Dégâts** : `degats_balle` (10 au bord, 20 au centre) l'emporte sur l'arme — il faut 5 à 10 balles pour abattre un joueur au lieu de 2 à 4. **Rafales** : `poids_rafale` (50 / 30 / 20 %), chaque coup suivant 5° plus large, ni tolérance ni mise en joue entre deux coups. **Annonce** : la torche se braque pendant la mise en joue, et toute torche de PNJ qui s'allume claque, audible de partout. **Fouille** : en recherche, sur la place perdue, il balaie à ±70° torche allumée, sans tirer dans le vide, puis la patrouille reprend. **Tempéraments** : clé de format `temperament` (guetteur, traqueur, peureux, embusqué), refusée sur le boss et le sourd et aveugle ; l'éditeur web la propose. Les propositions 4 (voix d'état), 5 (réaction aux coups), 6 (alerte entre PNJ) et 9 (aide après plusieurs morts) attendent. Détail : « S11 ». |
@@ -3271,6 +3272,16 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une borne de photosensibilité se vérifie à la fenêtre glissante, jamais en moyenne (2026-10-05)
+
+Chantier OMBRES, OM3b (`gadget_gresillement.gd`). La borne pour les yeux — pas plus de trois coupures franches dans une seconde —
+était gardée par `test_classes` en moyenne sur soixante secondes. Une onde peut la tenir en moyenne et la crever par instants :
+la première écriture du grésillement renforcé tirait au sort la fin de chaque sursaut, et deux sursauts de créneaux voisins
+coupaient alors à 0,15 s l'un de l'autre — quatre coupures dans une même seconde, 0,875 par seconde en moyenne. Mesuré avant
+d'écrire dans le jeu, sur l'onde portée à l'identique en Python (le mélange entier de la bobine est déterministe : douze graines
+de dix minutes en quelques secondes). La garde compte désormais les coupures dans TOUTE fenêtre d'une seconde, et l'écart entre
+deux coupures : c'est l'écart qui a rougi au sabotage, la fenêtre seule ayant passé sur les graines de la garde.
 
 ### « Qui m'éblouit ? » a deux réponses — et un correctif d'écran calculé chez l'hôte n'atteint pas le client (2026-10-05)
 
@@ -33919,7 +33930,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** (le culling et le brouillage par la source, ensemble) — voir « OM1 » plus bas ; Q89 (l'appareil de brouillage) posée à la livraison |
 | **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | à faire |
-| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) — voir « OM3a » plus bas ; OM3b (pâte D, respiration, filtre) attend Q83 à Q85 |
+| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) — voir « OM4a » plus bas ; OM4b (couches des PNJ, lumières posées) attend Q86 et Q87 |
 | **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | à faire |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | — |
@@ -34027,6 +34038,7 @@ brouillage, posée à la livraison d'OM1).**
   ±0,15 %, la lightmap d'un niveau au plus, et pas un pixel du monde ne change au-delà de 8 niveaux. Ce qui fait onduler les
   paliers, c'est le recul de tir (OM3, sans décision) et le glissement du regard sous la pâte D (Q83). La garder ou la retirer
   n'est plus qu'une question de goût, sans effet sur O3.
+  **Livrée le 2026-10-05 avec OM3b** — voir « OM3b — FAITE ».
   **✅ Décision d'Adrien, 2026-10-05 : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent
   éteinte, et clignote sporadiquement. »** La respiration part ; et le grésillement du Parasite (`gadget_gresillement.gd`) fait
   davantage : la lampe prise dans son rayon passe plus de temps éteinte, et clignote par à-coups — un geste de jeu, pas
@@ -34396,6 +34408,77 @@ mineure (Q15, Q42). Rien sur le fil.
 **Non prouvé.** Rien sous Metal ; Adrien n'a pas vu le geste en jeu (la planche n'en montre que quatorze images). La lampe de
 l'ADVERSAIRE chez le client suit la même condition qu'avant (`shoot_cooldown > 0`) : ce lot n'y change rien, et n'a pas relu si
 ce compteur y est simulé.
+
+### OM3b — FAITE le 2026-10-05 : la torche ne respire plus, et le grésillement la tient éteinte
+
+**Q84 tranchée par Adrien le 2026-10-05** : « Retirer. Augmenter l'effet du gadget grésillement pour qu'elle soit plus souvent
+éteinte, et clignote sporadiquement. »
+
+1. **La respiration retirée** (`player.gd`) : le souffle de ±3 % (V5.4), tiré à chaque pas sur un bruit que le lissage de
+   l'énergie écrasait — quelques millièmes en pratique (2,497 à 2,504 au banc d'OM0, 2,492 à 2,502 à celui d'OM3b, zéro
+   pixel au-delà de huit niveaux : rien ne se voyait) — et le `FastNoiseLite` qui le portait, que rien d'autre ne lisait. C'est la décision d'Adrien, pas un défaut mesuré :
+   la torche au repos tient désormais 2,5 exactement ; après un recul, elle y revient par le même lissage. **La fausse torche du Braconnier perd son souffle avec**
+   (`GadgetTorcheFantome`) : elle respirait depuis le 2026-09-11 parce que la vraie respirait — un leurre se trahit par ce qu'il a
+   en plus autant que par ce qu'il a en moins. Les bancs qui figeaient ce bruit pour tenir leurs images (`planche_ombres`,
+   `planche_q42`, `planche_braise`, `planche_usine`, `banc_perception_bot`, `banc_bot_duel`, `banc_lumieres`, trois loupes du
+   faisceau) n'ont plus rien à figer : ces lignes partent, et la précondition « `noise` » de deux d'entre eux avec.
+2. **Le grésillement renforcé** (`gadget_gresillement.gd`). Chaque créneau de 0,34 s tire NOIR (64 %), SURSAUT (18 % : noir,
+   mais la lampe revient de 60 à 140 ms, à 65–100 % — le clignotement sporadique), MAUVAIS CONTACT (10 %) ou le retour (8 %). Au
+   cœur de la zone, la lampe est noire **74 % du temps au lieu de 34 %**, pleine 8 % au lieu de 29 % ; 0,86 coupure franche par
+   seconde au lieu de 0,69. La batterie, le rayon, la décroissance au bord et l'éblouissement (une lampe que le grésillement
+   éteint n'éblouit pas) ne changent pas.
+   - ⚠️ **La borne pour les yeux tient à la fenêtre près, pas en moyenne.** La première écriture tirait aussi la FIN du
+     sursaut : deux sursauts voisins pouvaient couper à 0,15 s l'un de l'autre, et une même seconde en contenir quatre — mesuré
+     avant de l'écrire dans le jeu, sur l'onde portée à l'identique en Python (le mélange entier de la bobine), douze graines
+     de dix minutes. `test_classes` ne l'aurait pas vu : il compte les coupures en moyenne sur soixante secondes. Le sursaut finit
+     désormais toujours au même point de son créneau, et ne suit qu'un créneau noir : deux coupures sont séparées d'un créneau
+     au moins (0,340 s mesuré), jamais plus de trois dans une seconde, quelle qu'elle soit.
+
+**Ce que les bancs mesurent.** `docs/iso/ombres/om3/planche_gresillement.png` : la lampe au cœur d'un grésillement, dix
+secondes, trois graines, avant et après (l'onde portée à l'identique en Python). `docs/iso/ombres/om3/planche_respiration.png` (le banc des ombres, famille « scintillement », OM1 puis OM3b) : la torche au
+repos tenait de 2,4917 à 2,5002 (pâte D) et de 2,4988 à 2,5022 (pâte brute) sur six images consécutives ; elle tient **2,5
+exactement**. Zéro aller-retour au-delà de huit niveaux, avant comme après — la respiration ne se voyait pas, et sa disparition
+non plus : c'est la décision d'Adrien, pas un défaut corrigé. Le recul ne change pas (ses quatorze énergies identiques au
+dix-millième) ; ses allers-retours en pâte D, 3 441 → 3 465, tous sur l'image du coup comme avant — un écart dans le bruit du
+banc (3 438 au passage d'OM3a, sur le même recul).
+
+**La matrice du bot** — le Parasite, classe du bot de référence, pose le grésillement : la matrice de S4 rejouée sur les graines d'OM1 (401 à 416, 1 152 duels), **appariée à OM1** : **78 / 53 / 30 % → 78 / 51 / 32 %**
+(cibles 80 / 55 / 30). En FACILE, où le bot ne pose aucun gadget, 383 duels sur 384 sont identiques au pas près et aucun ne
+change d'issue — le souffle retiré ne décide de rien. En NORMAL et en DIFFICILE, où il pose son grésillement 0,9 et 0,8 fois par
+duel, 67 duels changent d'issue — **33 vers le bot, 33 vers le joueur type**, un nul — et 134 de durée seule : un rebrassage, pas
+un glissement (NORMAL −2, DIFFICILE +2, dans l'écart d'une ligne de 384 duels). Le boss Parasite, sur ses deux blocs de S9b
+(801 et 901, 384 duels) : **56,0 → 56,5 %** de victoire du joueur type (22 duels vers le bot, 24 vers le joueur), dans la bande de
+55 ± 7.
+
+**Les gardes.** `test_ombres_regles` (+10 vérifications, 81 en tout) : **A** la torche allumée au repos, deux secondes, écart
+0,000000 ; **B** une fausse torche posée par J2 (le Braconnier), écart 0,000000 ; **C** l'onde pure, six graines de deux minutes :
+noire 74,2 % (≥ 66 % exigés), pleine 7,8 %, 304 sursauts tous de 60 à 140 ms et aux deux tiers au moins, jamais plus de trois
+coupures dans une seconde, deux coupures à 0,340 s au moins ; **D** une vraie bobine posée au pied de J1, sa graine fixée : la
+lampe RENDUE est morte 82 % du temps, se rallume, deux coupures au plus par seconde. `test_classes` reste vert sans changement
+(le noir absolu, le retour à pleine valeur, un mauvais contact, trois coupures par seconde au plus en moyenne).
+
+**Sabotages exécutés — chacun restauré à l'identique (md5)** : T1 le souffle de la torche remis — un rouge (A : écart 0,138) ; T2 le souffle de la fausse torche remis — un rouge (B :
+écart 0,071) ; T3 l'ancien tirage (un tiers de noir) — trois rouges (33,7 % de noir, 28,6 % de pleine lampe, aucun sursaut) ;
+T4 la fin du sursaut tirée au sort, la première écriture — un rouge (deux coupures à 0,210 s) ; T5 le sursaut sans le créneau
+noir qui le précède — deux rouges (quatre coupures dans une seconde, deux à 0,280 s) ; T6 plus de sursaut du tout — un rouge.
+
+**La suite entière** (`./tools/run_suites.sh`, deux fois, la seconde au calme) : 204 suites vertes, et une rouge, la même les deux
+fois — `test_chapitres_marche` (chantier SOLO, S8), « n'est pas sorti en 120 s ». **Ce n'est pas ce lot** : seule, au calme, elle
+dure 141 s sur l'arbre d'OM1 et 140 s sur celui d'OM3b (115 s une heure plus tôt) — elle était passée dans la suite d'OM1 par
+chance. Ses deux sœurs (`_04_06`, `_07_09`) ont leur plafond ; **elle reçoit le sien, 360 s** (2,5 fois le plus lent mesuré, la
+règle de `test_banc_bot`), une ligne du `case` de `run_suites.sh`, la liste commune intacte. Rejouée seule : verte. *Hors du lot,
+corrigé parce qu'il bloquait la barre « tout vert », et signalé* : la session qui tient SOLO le saura par le suivi.
+
+**Version** : ce que chacun voit de la lampe de l'autre change (plus de souffle ; sous un grésillement, une autre panne),
+l'éblouissement avec : **mineure**. Et le grésillement est une règle que les deux pairs PARTAGENT — le client dessine l'onde que
+l'hôte arbitre (l'éblouissement d'une torche grésillée) : un joueur à jour et un joueur en 0.8.x ne verraient pas la même panne,
+et l'hôte éblouirait selon une onde que l'autre ne dessine pas. C'est le cas exact de la v17 (la torche fantôme, « un client v16
+dessinerait allumée une fausse torche que l'hôte v17 étouffe ») : **`Protocol.VERSION` doit monter à la publication** — posé par
+la session qui publie, comme pour OM1.
+
+**Non prouvé.** Rien sous Metal. Adrien n'a pas vu le grésillement en jeu — la planche n'est qu'une courbe : l'œil dira si le
+rythme (0,4 sursaut par seconde) est « sporadique ». La photosensibilité est bornée par le compte des coupures, jamais mesurée en
+luminance d'écran.
 
 ### OM4a — FAITE le 2026-10-04 : les règles d'ombre sans décision (flash, écho, lumière de coup, posture, mort)
 

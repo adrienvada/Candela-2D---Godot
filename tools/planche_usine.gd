@@ -94,8 +94,6 @@ func _ready() -> void:
 	print("  carte « %s » %d×%d, %d murs ; J1 en %s, J2 en %s ; lacet %s %s, zoom %s ; ambiance de débogage %.2f" % [
 		String(donnees.get("name", "?")), grille.x, grille.y, MapCodec.get_wall_cells(donnees).size(), str(_positions[0]),
 		str(_positions[1]), str(GameSettings.lacet_duel), GameSettings.option_lacet, str(_main.cam1.zoom), _ambiance])
-	for j in [_main.p1, _main.p2]:
-		(j.noise as FastNoiseLite).frequency = 0.0
 	Engine.time_scale = 4.0
 	await _laisser_passer(IMAGES_STABILISATION)
 	Engine.time_scale = 1.0
