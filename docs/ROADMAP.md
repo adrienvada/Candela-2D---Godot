@@ -31072,6 +31072,9 @@ lancer Godot 4.7.1 dans le cloud (headless à `--fixed-fps 60`, Xvfb + llvmpipe)
   headless, Xeon), les particules en tête : la meilleure piste pour les pics du 1 % bas, que `banc_pics` ne pouvait pas
   écarter.
 - Le départ d'une manche fige ≈ 0,5 s (MESURÉ, pendant le décompte) ; le premier allumage de torche compile en plein duel.
+- Au hub, l'arène est encore rendue deux fois derrière le rideau : l'arrêter retire un tiers du temps d'image du menu
+  sous llvmpipe (MESURÉ, rapport) ; torche allumée au repos, le brouillage entretient une copie d'écran à chaque image
+  (PROUVÉ sans GPU), et le voile « calme » pèse 13 à 16 % de l'image sous llvmpipe.
 - Réseau : sur EOS, une carte dont le code dépasse ~1 100 caractères ne démarre jamais chez le client (RES-01, PROUVÉ) ;
   l'ordre de pompage d'EOS coûte une image de latence par sens (RES-02, ≈ 23 à 29 ms de RTT à 60 i/s, ESTIMÉ).
 - Robustesse : un code de carte de 12 Ko décode 134 millions de cases et fige chaque démarrage (CAR-07, PROUVÉ par calcul).

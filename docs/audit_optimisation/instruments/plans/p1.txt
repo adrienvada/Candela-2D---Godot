@@ -1,0 +1,11 @@
+# P1 : plancher d'auto-eblouissement (Q81) — A = depot ; A12 = flou + voile ; A1 = flou seul ; A2 = voile non dessine ; A2q = voile niveau 0 mais dessine. Miroir.
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A12|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A12|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A1|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A1|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A2|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A2|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A2q|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A2q|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A2q|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A2q|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A2|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A2|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A1|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A1|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A12|/tmp/claude-0/-home-user-Candela-2D---Godot/7ff0bf4a-bff5-52d4-8682-f6c15d6916d8/scratchpad/arbres/A12|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30

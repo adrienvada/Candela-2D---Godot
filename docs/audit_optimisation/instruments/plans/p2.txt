@@ -1,0 +1,13 @@
+# P2 : la fusee et sa fumee (en bloc, puis ses morceaux). A = depot (fusee en jeu) ; sansfusee = banc sans la fusee ; puis chaque morceau retire seul. Miroir.
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30
+sansfusee|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --M-sans-fusee
+fuseevolume|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-volume
+fuseeombre|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-ombre2d
+fuseefumee|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-fumee2d
+fuseelumiere|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-lumiere2d
+fuseelumiere|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-lumiere2d
+fuseefumee|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-fumee2d
+fuseeombre|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-ombre2d
+fuseevolume|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --fusee-sans-volume
+sansfusee|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30 --M-sans-fusee
+A|/home/user/Candela-2D---Godot/.claude/worktrees/agent-a26bf5b2f4d2b80a3|--zoom=1.5 --sonde --sonde-depuis 0 --sonde-pas 0.4 --sonde-palier 30

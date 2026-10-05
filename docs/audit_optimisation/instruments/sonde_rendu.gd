@@ -15,6 +15,12 @@ var dt_ms: Array[float] = []
 var proc_ms: Array[float] = []
 var phys_ms: Array[float] = []
 var _t_prec := -1
+## Par image mesurée : combien de `BackBufferCopy` VISIBLES, et combien de `CanvasItem` visibles dont le shader lit l'écran (`hint_screen_texture`).
+var bbc_n: Array[int] = []
+var lecteurs_n: Array[int] = []
+var _bbc_cache: Array = []
+var _lecteurs_cache: Array = []
+var _k := 0
 var _arbre: SceneTree = null
 
 
@@ -55,6 +61,24 @@ func image() -> void:
 			for t in 3:
 				for i in 3:
 					(r["%d_%d" % [t, i]] as Array).append(RenderingServer.viewport_get_render_info(e["rid"], t, i))
+		_k += 1
+		if _k % 10 == 1:
+			_bbc_cache = _arbre.root.find_children("*", "BackBufferCopy", true, false)
+			_lecteurs_cache.clear()
+			for n in _arbre.root.find_children("*", "CanvasItem", true, false):
+				var m: Material = (n as CanvasItem).material
+				if m is ShaderMaterial and (m as ShaderMaterial).shader != null and (m as ShaderMaterial).shader.code.contains("hint_screen_texture"):
+					_lecteurs_cache.append(n)
+		var nb := 0
+		for b in _bbc_cache:
+			if is_instance_valid(b) and (b as CanvasItem).is_visible_in_tree():
+				nb += 1
+		bbc_n.append(nb)
+		var nl := 0
+		for c in _lecteurs_cache:
+			if is_instance_valid(c) and (c as CanvasItem).is_visible_in_tree() and (c as CanvasItem).modulate.a >= 0.007:
+				nl += 1
+		lecteurs_n.append(nl)
 	_t_prec = maintenant
 
 
@@ -108,6 +132,8 @@ func rapport(main: Node) -> String:
 		Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0, Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), int(Performance.get_monitor(Performance.OBJECT_COUNT)),
 		int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)), int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))])
+	l.append("[M] PAR IMAGE — BackBufferCopy visibles : moyenne %.2f (min %d, max %d) · CanvasItem visibles qui lisent l'écran (hint_screen_texture) : moyenne %.2f (min %d, max %d)" % [
+		moy(bbc_n), int(mini_(bbc_n)), int(maxi_(bbc_n)), moy(lecteurs_n), int(mini_(lecteurs_n)), int(maxi_(lecteurs_n))])
 	l.append_array(_recensement(main))
 	l.append_array(_tableau_des_vues())
 	l.append_array(_lumieres_allumees())

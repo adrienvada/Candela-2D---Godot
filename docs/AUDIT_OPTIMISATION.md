@@ -32,13 +32,16 @@
    chaque pose refait donc quatre boucles par pixel en GDScript. **Une ligne le supprime : 100 ms → 3 ms (MESURÉ).**
 3. **Le CPU pèse plus qu'on ne le croyait.** Sans aucun rendu, la couche iso coûte **1,6 à 2,1 ms de CPU par image**
    (PvP : 3,8-4,3 ms en iso contre 2,2 en vue de dessus — MESURÉ), dont 0,47 ms pour le seul `Presentation3D._process`,
-   et au moins 80 % de l'image CPU est du `_process`, pas de la physique. **Dans les grandes salles du solo, le CPU seul dépasse la cible** : p99 de 20,9 ms au chapitre 8
-   et 18,8 ms au chapitre 7 sur le Xeon (≈ 10-14 ms ESTIMÉ sur le M3, sans marge).
+   et au moins 80 % de l'image CPU est du `_process`, pas de la physique. **Dans les grandes salles du solo, le CPU seul
+   dépasse la cible** : p99 de 20,9 ms au chapitre 8 et 18,8 ms au chapitre 7 sur le Xeon (≈ 10-14 ms ESTIMÉ sur le M3,
+   sans marge).
 4. **L'interface travaille pour rien à chaque image** : 15 surcharges de thème réécrites à valeur identique (Godot
    notifie sans tester l'égalité : chaque `Label` visé se refaçonne, même caché), la galerie de cartes notifiée à chaque
    image pendant le duel, le panneau de l'adversaire nourri alors qu'il est caché — **23 notifications `theme_changed` par
    image** (MESURÉ). Le correctif « lire avant d'écrire », appliqué à une copie du jeu, **retire 0,67 ms par image (−32 % de
    l'image de repos)** et la galerie cachée en coûte 0,24 à 0,39 : ≈ 0,9 à 1,1 ms récupérables sur 2,1 (MESURÉ, headless).
+   Au menu, l'arène est encore rendue deux fois derrière le rideau : l'arrêter retire **un tiers du temps d'image du hub**
+   sous llvmpipe (MESURÉ, rapport).
 5. **L'image d'impact est la meilleure piste pour les pics du 1 % bas**, que personne n'a jamais expliqués. MESURÉ : l'image
    du tir et celle de l'impact sont **la même image** ; elle coûte **+3,2 ms pour un plomb au mur, +8 à 8,6 ms pour cinq,
    +18 ms pour une volée de contact sur un corps**, puis une traîne qui double le total sur dix images. Les particules en font
@@ -70,12 +73,12 @@
 | # | Question | Pourquoi maintenant | Avis de l'audit |
 |---|---|---|---|
 | **D1** | **La machine minimale (jalon H13)** | La feuille de route le demande « avant toute optimisation » : la cible « 1 % bas ≥ 60 » ne décrit que le M3. Les grandes salles du solo dépassent déjà la cible en CPU seul sur un Xeon de serveur. Et la lightmap iso ne descend jamais sous 1920×1080 : à 1280×720, l'ajuster à la fenêtre retirerait **55,6 % des pixels 2D** (ISO-01, PROUVÉ ; temps jamais mesuré), sans toucher à l'équité (masques, champ, éblouissement lus hors de sa taille ; seuls les contours de seuil bougent d'un demi-texel au plus) — mais le défaut, le réglage enregistré et le plancher de netteté sont à Adrien (`settings_manager.gd:214-217` : « ce n'est pas une décision d'agent ») | Nommer une machine (même approximative : « un portable Intel de 2019 à iGPU ») ; tout le plan s'ordonne autrement selon qu'elle est lente en CPU ou en GPU, et la taille de la lightmap en découle |
-| **D2** | **Q81 du chantier OMBRES a un argument de performance** | Au repos, la propre torche éblouit son porteur de 0,06 ; ×2 de gain, cela dépasse le seuil du brouillage, dont le flou, la copie d'écran et le halo restent donc **allumés à chaque image** dès que la torche brûle (LUM-01). **PROUVÉ sans GPU par l'agent de mesure** : torche allumée au repos, l'arbre porte en permanence un `BackBufferCopy` et un nœud qui relit l'écran ; un plancher posé dans `Brouillage._dose` les retire et ramène l'état « torche allumée » à celui d'une torche éteinte. Coût ESTIMÉ 0,1-0,4 ms sur GPU à tuiles (une copie d'écran coupe la passe) | Oui au plancher, posé dans `_dose`. Le voile plein écran, lui, lit une autre variable (`dazzle_amount`, `ui.gd:2536`) : l'éteindre au repos ferait passer un noir de 2-4/255 à 0 — décision d'image distincte |
+| **D2** | **Q81 du chantier OMBRES a un argument de performance** | Au repos, la propre torche éblouit son porteur de 0,06 ; ×2 de gain, cela dépasse le seuil du brouillage, dont le flou, la copie d'écran et le halo restent donc **allumés à chaque image** dès que la torche brûle (LUM-01). **PROUVÉ sans GPU par l'agent de mesure** : torche allumée au repos, l'arbre porte en permanence un `BackBufferCopy` et un nœud qui relit l'écran ; un plancher posé dans `Brouillage._dose` les retire et ramène l'état « torche allumée » à celui d'une torche éteinte. Coût ESTIMÉ 0,1-0,4 ms sur GPU à tuiles (une copie d'écran coupe la passe) | Oui au plancher, posé dans `_dose`. Le voile plein écran, lui, lit une autre variable (`dazzle_amount`, `ui.gd:2536`) : ne plus le dessiner au repos retire 13 à 16 % du temps d'image sous llvmpipe (MESURÉ, rapport ; bien moins sur le GPU du Mac, ESTIMÉ 0,05-0,7 ms), mais ferait passer un noir de 2-4/255 à 0 — décision d'image distincte |
 | **D3** | **Six classes sur dix rechargent et claquent à vide sans aucun son ni liseré** (AUD-07, PROUVÉ) | Équité d'information : pistolet, fusil, pompe et arbalète s'entendent et se voient au bord de l'écran adverse ; les six autres non. Leurs tirs, eux, ont le son générique. Aucune suite ne le garde | Fournir les sons, ou à défaut un repli générique pour la recharge et le clic à vide |
 | **D4** | **Chez le client, le flou et le halo de repos du brouillage se poseraient sur l'adversaire** (V8, « D2 ») | `source_eblouissante` n'est écrite que chez l'hôte (`game_state.gd:2406`) et n'est pas répliquée. Lu dans le code, **jamais vu à l'image** | Faire vérifier à l'image (deux instances dans le cloud) avant toute décision ; c'est une question d'équité hôte/client |
 | **D5** | **Les cartes trop grandes pour EOS** (RES-01) | Les six cartes livrées passent (≤ 644 caractères) ; une carte de joueur 48×48 à dix pièces (1 124) ne part jamais chez le client, au premier départ comme en revanche ou au tirage classé | À court terme, une garde (refuser à l'éditeur ou à l'appariement ce qui ne passe pas) ; à terme, découper l'envoi — nouvelle forme de RPC, donc `Protocol.VERSION` 20 et une mineure |
 | **D6** | **Corriger l'ordre de pompage EOS** (RES-02) | −23 à −29 ms de RTT à 60 i/s (ESTIMÉ, borne −33) ; −4 à −10 à 144 i/s. Le correctif tient en un sondage manuel en fin de `_process`, mais la compensation de tir se recale | Oui, avec un essai à deux machines (jalon H1) avant publication |
-| **D7** | **Ordre des lots du § 3**, et lesquels confier à quelle session | Les lots 1, 3 et 5 ne demandent aucune décision ; le lot 7 touche des fichiers du chantier OMBRES | Commencer par le lot 1 (gestes d'une ligne, gain mesuré ou sûr) |
+| **D7** | **Ordre des lots du § 3**, et lesquels confier à quelle session | Les lots 1, 2, 3 et 5 ne demandent aucune décision ; le lot 7 touche des fichiers du chantier OMBRES | Commencer par le lot 1 (gestes d'une ligne, gain mesuré ou sûr) |
 
 Optionnel, pour plus tard : rogner les cookies des torches (LUM-04 : −30 % de dessins d'ombre en duel, −54 % en solo,
 effort L, à faire **après** les mesures d'OM6) ; remplacer le hachage de la pâte (SHA-13 : ne gagne rien, change l'image) ;
@@ -93,7 +96,7 @@ le cloud** : compteurs indépendants du matériel, temps CPU headless à `--fixe
 
 | Geste | Constat | Gain | Preuve |
 |---|---|---|---|
-| Tenir les textures sources de la suie et de la poussière dans une variable statique de `IsoNuageVoxel.prechauffer()` | V1b-N1 | **−97 ms par pose de poussière, −28 ms par pose de suie (MESURÉ)** ; fin d'une fuite de 0,87 Mo par pose | `tools/mesure_nuage.gd` (annexe) ; `test_fumee_voxel` exige « aucun `preload(` et un seul `load(CHEMIN_SHADER)` » : rester dans ce cadre |
+| Tenir les textures sources de la suie et de la poussière dans une variable statique de `IsoNuageVoxel.prechauffer()` | V1b-N1 | **−97 ms par pose de poussière, −28 ms par pose de suie (MESURÉ)** ; fin d'une fuite de 0,87 Mo par pose | `instruments/mesure_nuage.gd` (annexe) ; `test_fumee_voxel` exige « aucun `preload(` et un seul `load(CHEMIN_SHADER)` » : rester dans ce cadre |
 | Lire avant d'écrire sur les sites de surcharges de thème du HUD (V2 en compte 9 ; la mesure en a retouché 8 : `ui.gd` 1652, 1737, 3168, 3246, 3375, 3380, 3439, 3446) | HUD-02 (= ETA-03, GAD-08, MEN-11, DEM-14) | **−0,67 ms par image, −32 % de l'image de repos (MESURÉ** sur une copie retouchée, `instruments/arbres/H1.diff` : 23 → 8 notifications par image) | banc « UI cachée » (`instruments/banc_ui_cachee.gd`) ; deux suites lisent le texte de `ui.gd` (`test_tir_et_reserves`, `test_habillage`) : la retouche n'a pas encore été jouée contre elles |
 | `MapGallery` : `set_process(is_visible_in_tree())` sur `visibility_changed` | HUD-03 = CAR-01 | **0,24-0,39 ms par image (MESURÉ**, 6 cartes), linéaire en N | idem |
 | Garder le bloc J2 de `update_hud` derrière `hud_panneau_p2.is_visible_in_tree()` (pas derrière `match_hud.visible`, qui figerait le voile) | HUD-01 | 0,09-0,3 ms/image en ligne | idem |
@@ -179,13 +182,15 @@ se verraient à l'écran : c'est à Adrien d'en juger, planche à l'appui.
   la fumée (ROADMAP l. 4203), et llvmpipe ne le verra probablement pas — preuve à l'octet par le protocole du levier 1
   (`banc_lumiere3d.gd` + `docs/iso/iso13/levier1/compare_ab.py`).
 - **Ne plus rendre l'arène derrière le menu** (MEN-04 = ISO-07 = DEM-08) : vp1 et vp2 rendent en `UPDATE_ALWAYS` sous un
-  rideau à 96 % ; ≈ 3 ms/image au menu (ESTIMÉ), 0 en duel. Dans `_accorder_rendu_aux_vues`, rappelé après
-  `show_main_menu` — à coordonner avec la session OMBRES.
+  rideau à 96 % ; **−33,7 % du temps d'image du hub sous llvmpipe** (MESURÉ ; −72 % d'objets, −75 % de primitives), 0 en
+  duel. Dans `_accorder_rendu_aux_vues`, rappelé après `show_main_menu`, les deux vues rallumées dans la même image au
+  retour en jeu — à coordonner avec la session OMBRES. Les 4 % encore visibles derrière le rideau deviendraient une image
+  figée : à montrer à Adrien.
 - **Le plancher de Q81** (D2) éteint le brouillage au repos (LUM-01).
 
 ### Lot 8 — Le solo (mesure d'abord)
 
-Les grandes salles dépassent la cible en CPU seul (§ 6). **Où va ce temps n'est pas attribué** : avant tout correctif, un
+Les grandes salles dépassent la cible en CPU seul (§ 8). **Où va ce temps n'est pas attribué** : avant tout correctif, un
 banc par soustraction (perception des PNJ, peinture iso de 39 Mo en 100×80, lumières, traces), dans le banc solo prévu par
 OM6. Candidats déjà vérifiés : BOT-02 (15-50 µs par PNJ et par pas), BOT-03 (0,3-3 ms par repli, au moment du tir),
 BOT-05 (latent), SHA-08 b (deux niveaux sur cent à 37-44 murets : +4 ms MESURÉS en écran scindé). ⚠️ Les bancs de
@@ -229,12 +234,12 @@ rapport `V_*` cité.
 | ≈ 270 `set_shader_parameter` par image dont 40-55 % constants ; recherche dans 2 Ko de code shader par appel | CONFIRMÉ avec réserve | MINEUR | 0,1-0,35 ms (0,06-0,2 récupérables) | ISO-04 = SHA-09 ; V2 |
 | Liseré du son visible reconstruit trace par trace à chaque image | CONFIRMÉ avec réserve | MINEUR (MAJEUR si > 1,5 ms au micro-banc) | 0 hors échange ; 0,5-2,6 ms pendant une rafale (ESTIMÉ ×2) | AUD-01 ; V5 |
 | Traces au plafond : le coût d'image monte avec elles | MESURÉ (dérive) | MINEUR | ≈ 1-2 µs par groupe de traces et par image (ESTIMÉ sur la dérive) | `00_M_mesures.md` § 4.1 |
-| Brouillage au repos : flou + copie + halo allumés dès que la torche brûle | CONFIRMÉ (mécanisme) | MINEUR (MAJEUR si ≥ 0,3 ms) | 0,1-0,4 ms GPU (ESTIMÉ) | LUM-01 ; V8 |
-| Voile « calme » plein écran torche allumée (12 lectures + ≈ 55 `sin/cos` par pixel) | CONFIRMÉ | MINEUR, à mesurer | 0,05-0,7 ms GPU à 1440p | LUM-02 = HUD-04 = SHA-03 ; V2, V8 |
+| Brouillage au repos : flou + copie + halo allumés dès que la torche brûle | CONFIRMÉ, présence PROUVÉE sans GPU | MINEUR (MAJEUR si ≥ 0,3 ms) | 0,1-0,4 ms sur GPU à tuiles (ESTIMÉ) ; nul sous llvmpipe, qui n'a pas de coupure de passe | LUM-01 ; V8 ; `00_M_mesures.md` § 6a |
+| Voile « calme » plein écran torche allumée (12 lectures + ≈ 55 `sin/cos` par pixel) | CONFIRMÉ, MESURÉ (rapport) | MINEUR sur le Mac, décision d'image | **13 à 16 % du temps d'image sous llvmpipe** ; 0,05-0,7 ms GPU à 1440p (ESTIMÉ) | LUM-02 = HUD-04 = SHA-03 ; V2, V8 ; § 6a |
 | Habillage du sol et des murs payé sur les pixels noirs | CONFIRMÉ avec réserve | MAJEUR présumé | 0,3-1,4 ms GPU (ESTIMÉ) | SHA-04 ; V9 |
 | Passe d'ombre rejouée dans chaque capteur de corps | CONFIRMÉ avec réserve | MAJEUR présumé | 0,3-1,9 ms (duel), 0,6-2,0 (solo) ESTIMÉS | LUM-03 ; V8 — **levier : OM6** |
 | Fumée de fusée | CONNU-OUVERT | MAJEUR potentiel | 3,39 ms/fusée mesurés en couches (M3) ; ≈ 2 ms ESTIMÉ en voxels, jamais mesuré sur M3 | GAD-01 ; V5 |
-| Sous le menu, l'arène rendue derrière un rideau à 96 % | CONFIRMÉ | MINEUR (0 en duel) | ≈ 3 ms/image au menu (ESTIMÉ) | MEN-04 = ISO-07 = DEM-08 ; V2 |
+| Sous le menu, l'arène rendue derrière un rideau à 96 % | CONFIRMÉ, MESURÉ (rapport) | MINEUR (0 en duel) | **un tiers du temps d'image du hub sous llvmpipe** (−33,7 %) ; ≈ 3 ms/image au menu sur le Mac (ESTIMÉ) | MEN-04 = ISO-07 = DEM-08 ; V2 ; § 6c |
 
 ### 4.3 L'image d'impact — la piste des pics
 
@@ -256,8 +261,8 @@ au banc qu'il proposait (headless, iso, Xeon ; surcoût de l'image par rapport a
 l'image, 43 % sur dix images ; liserés du son visible 11 % ; couche iso 19 % ; plafonds de traces atteints +14 % ; rayons
 d'occlusion ≈ 0 ; 47 % non attribués (impacts de mur et leurs copies, sons, plombs, fondus). Une particule coûte 20-34 µs à
 l'émission et **10-19 µs par image tant qu'elle vit** (intégration des `RigidBody2D` de la réserve) : 200 gouttes actives,
-le plafond, ≈ 2,8 ms par image en continu. Constats : JOU-01 (particules, MAJEUR à confirmer), JOU-02 (traces au plafond en iso, MAJEUR), JOU-03,
-JOU-04, JOU-06 = ETA-08, JOU-08, AUD-03 (MINEURS), LUM-10 (une `hit_light` à ombre **par plomb** : la prémisse « une fois
+le plafond, ≈ 2,8 ms par image en continu. Constats : JOU-01 (particules, MAJEUR, CONFIRMÉ par la mesure), JOU-02
+(traces au plafond en iso, MAJEUR), JOU-03, JOU-04, JOU-06 = ETA-08, JOU-08, AUD-03 (MINEURS), LUM-10 (une `hit_light` à ombre **par plomb** : la prémisse « une fois
 par coup » de la ROADMAP l. 2506 est fausse pour la pompe — levier OM4/OM6). Sur le verdict de `banc_pics` : le banc
 corrélait le STOCK de particules, dont la dent de scie ne pouvait dépasser ≈ +12 % pour un seuil de 25 % — il ne pouvait
 pas conclure ; la ROADMAP l. 2999 est prudente, la l. 22360 (« a écarté ») excessive.
@@ -327,7 +332,7 @@ build exporté **n'est pas mesuré** ici (seulement celui du projet lancé depui
 | Brouillage de repos ancré sur l'adversaire chez le client (lu, non vu) | à vérifier | V8 « D2 » |
 | `hp` doublement répliqué ; témoin de protocole incomplet | MINEUR | RES-05, RES-04 ; V6 |
 | Miniature de carte jamais invalidée après l'éditeur (vignette périmée) | MINEUR, non vérifié | CAR-08 |
-| `bench_framerate --menus` : identifiants d'écran périmés, le banc ne traverse plus aucun écran | MINEUR (outil) | MEN-09 |
+| `bench_framerate --menus` : identifiants d'écran peut-être périmés (le banc retombe sur `hub.reset()`) | MINEUR (outil), non vérifié | MEN-09 |
 
 **Documentation à corriger** (par qui tient ces fichiers) :
 - **`CLAUDE.md`** affirme qu'« en vue unique, le duel n'est plus rendu par un `SubViewport` du tout ». C'est vrai en vue de
@@ -396,7 +401,28 @@ de fin 86-121 ms (394 ms la première fois).
 rafraîchis qu'une fois par seconde et valent le **maximum** de la seconde (`main.cpp`) — jamais un coût par image. Et en
 headless sans `--fixed-fps`, `OS::add_frame_delay` dort ~6,9 ms par image.
 
-<!-- MESURES-SUITE -->
+**Compteurs de rendu** (iso, vue unique, charge de référence du projet, 1920×1080 ; indépendants du matériel, à la
+réserve du pilote) : **188 appels de dessin, 1 403 objets, 61 556 primitives dont 91 % dans la seule passe 3D** de la racine ;
+9 viewports dont **6 rendent, 5,76 Mpx cumulés** (2,8 fois l'écran : racine, lightmap 1920×1080, peinture iso 1190², trois
+capteurs 256²) ; 282 Mo de mémoire vidéo ; 254 `PointLight2D` dans l'arbre, dont 8 allumées et **7 à ombre**, pour
+**792 arêtes d'ombre par image**, dont 14 couples lampe-viewport qui « n'éclairent rien » (les 7 lampes dans la peinture iso,
+4 dans le capteur de la fusée) — LUM-03, compté ici par le banc lui-même. Écran scindé et vue de dessus : non mesurés.
+
+**Décomposition sous llvmpipe** (rapports d'une même série, prises en miroir, porte stricte ; rien ne dit ce que voit le M3) :
+
+| Variante | Effet sur le temps d'image | Lecture |
+|---|---|---|
+| Plancher d'auto-éblouissement sur le flou, sa copie d'écran et le halo du brouillage (A1) | **−0,3 %** (nul) | attendu : la coupure de passe d'un GPU à tuiles n'existe pas sous llvmpipe ; la PRÉSENCE de la copie et de la lecture d'écran à chaque image est, elle, PROUVÉE sans GPU (et retirée par A1) |
+| Le voile « calme » plus dessiné au repos (A2, `modulate.a = 0` sous le plancher) | **−13 à −16 %** (−46 à −51 ms sur 314) | le shader plein écran du voile est lourd au pixel ; sur le Mac le gain serait bien moindre (ESTIMÉ 0,05-0,7 ms) — c'est une décision d'image (noir de 2-4/255 → 0) |
+| Les trois ensemble (A12) | **−13,8 %** | |
+| **L'arène plus rendue sous le menu du hub** (vp1/vp2 en `UPDATE_DISABLED`) | **−33,7 %** (167 → 111 ms ; −72 % d'objets, −75 % de primitives, 4,14 → 2,07 Mpx, −16 Mo de mémoire vidéo) | l'arène est rendue deux fois, puis recouverte à 96 % ; la couper figerait les 4 % visibles : petite décision d'aspect |
+
+Aussi mesuré : la fusée coûte ≈ 0,8 ms de CPU par image ; l'écran scindé ajoute 0,2 à 0,9 ms.
+
+**Non mesuré** (commande de chacun au § 8 de `00_M_mesures.md`) : le GPU à tuiles du M3 (prix réel d'une coupure de passe,
+du voile, des deux vues) ; la fumée de fusée sous llvmpipe ; la reconstruction de l'atlas des lumières (V8, « D1 ») ; la
+décomposition générale (torches, faisceau, ombres 2D, capteurs) ; trois configurations sur quatre des compteurs de rendu ;
+l'attribution du coût du solo, PNJ par PNJ.
 
 ---
 

@@ -22,6 +22,7 @@ ref = args[2] if len(args) > 2 else "A"
 RE_GLOBAL = re.compile(r"appels de dessin (\d+) / (\d+) / (\d+) · objets (\d+) / (\d+) / (\d+) · primitives (\d+) / (\d+) / (\d+)")
 RE_PROC = re.compile(r"TIME_PROCESS \(scripts\+process, sans rendu\) : moyenne ([0-9.]+) ms · TIME_PHYSICS_PROCESS : moyenne ([0-9.]+) ms")
 RE_LUM = re.compile(r"lumières 2D allumées \(médiane / max\) : (\d+) / (\d+) dont à ombre (\d+) / (\d+)")
+RE_BBC = re.compile(r"PAR IMAGE — BackBufferCopy visibles : moyenne ([0-9.]+) \(min (\d+), max (\d+)\) · CanvasItem visibles qui lisent l'écran \(hint_screen_texture\) : moyenne ([0-9.]+)")
 RE_VUES = re.compile(r"viewports recensés : (\d+), dont qui rendent \(mode ≠ DISABLED\) : (\d+), pour ([0-9.]+) Mpx")
 
 par_rang = {}
@@ -42,6 +43,9 @@ for f in sorted(glob.glob(os.path.join(dossier, "%s_*.log" % serie))):
     ml = RE_LUM.search(texte)
     if ml:
         r["lum"], r["lum_omb"] = int(ml.group(1)), int(ml.group(3))
+    mb = RE_BBC.search(texte)
+    if mb:
+        r["bbc"], r["lecteurs"] = float(mb.group(1)), float(mb.group(4))
     mv = RE_VUES.search(texte)
     if mv:
         r["vues"], r["vues_actives"], r["mpx"] = int(mv.group(1)), int(mv.group(2)), float(mv.group(3))
@@ -63,7 +67,7 @@ if ref not in par_etiquette:
 
 t_ref = statistics.mean([r["moyenne_ms"] for _, r in par_etiquette[ref]])
 ent = ["Poste retiré (étiquette)", "Prises (rang : moyenne ms)", "Moyenne (ms)", "Δ vs A (ms)", "Δ (%)", "Rapport (cadence)", "appels de dessin", "objets",
-       "primitives", "lumières à ombre", "script+physique (ms)"]
+       "primitives", "lumières à ombre", "TIME_PROCESS (image entière hors attente, ms)", "BackBufferCopy visibles / image", "lecteurs d'écran visibles / image"]
 lignes = []
 for e in ordre:
     rs = par_etiquette[e]
@@ -74,9 +78,12 @@ for e in ordre:
     pr = [r["prim"] for _, r in rs if "prim" in r]
     lo = [r["lum_omb"] for _, r in rs if "lum_omb" in r]
     sp = [r["proc"] + r["phys"] for _, r in rs if "proc" in r]
+    bb = [r["bbc"] for _, r in rs if "bbc" in r]
+    lc = [r["lecteurs"] for _, r in rs if "lecteurs" in r]
     lignes.append([e, detail, "%.1f" % moy, "%+.1f" % (moy - t_ref), "%+.1f %%" % (100.0 * (moy - t_ref) / t_ref), "%.3f" % (t_ref / moy),
                    "%d" % statistics.median(dc) if dc else "—", "%d" % statistics.median(ob) if ob else "—", "%d" % statistics.median(pr) if pr else "—",
-                   "%d" % statistics.median(lo) if lo else "—", "%.1f" % statistics.mean(sp) if sp else "—"])
+                   "%d" % statistics.median(lo) if lo else "—", "%.1f" % statistics.mean(sp) if sp else "—",
+                   "%.2f" % statistics.mean(bb) if bb else "—", "%.2f" % statistics.mean(lc) if lc else "—"])
 if md:
     print("| " + " | ".join(ent) + " |")
     print("|" + "|".join(["---"] * len(ent)) + "|")
@@ -85,4 +92,4 @@ if md:
 else:
     print("Série %s — référence %s : moyenne %.1f ms (%.2f i/s)" % (serie, ref, t_ref, 1000.0 / t_ref))
     for l in lignes:
-        print("  %-14s %-44s moy %7s  Δ %8s (%8s)  rapport %s  dc %s obj %s prim %s lum.ombre %s script+phys %s" % tuple(l))
+        print("  %-14s %-44s moy %7s  Δ %8s (%8s)  rapport %s  dc %s obj %s prim %s lum.ombre %s TIME_PROCESS %s BBC %s lecteurs %s" % tuple(l))
