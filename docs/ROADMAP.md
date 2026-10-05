@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-10-05 (OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
+> Dernière mise à jour : 2026-10-05 (RR1 — Q83 tranchée, « brute, sans paliers » : la pâte brute devient le défaut en jeu, les menus ne changent pas ; l'essai sans encre (`--sans-encre`) ; le chantier RR inscrit — un rendu en jeu plus réaliste, plus fluide, plus oppressant, Hadès pour référence ; OMBRES : Q89 préparée — le geste rangé en patch, la planche faite : pendant une redescente, le jeu tourne le voile et l'appareil vers l'adversaire, avec le geste vers ce qui a ébloui ; trouvé en chemin, l'appareil du brouillage ne s'allume jamais en aventure ; OM3c — les preuves de Q83 et Q85, posées par les bancs sans toucher au jeu : la pâte (b) retire 90 % du balayage des paliers en gardant le lavis, (c) le retire entier en perdant le palier du milieu ; l'atlas à 4096 retire 98 % du papillotement d'une ombre qui tourne pour un coût indiscernable du bruit, le PCF5 coûte 10 à 14 % ; trouvé en chemin, l'allumage « CANDELA » qui voilait le premier plan des planches sous llvmpipe ; OM6 close — les capteurs d'objets, mesurés au passage, coûtent moins de 0,5 % chacun ; OM6b mesuré avant, pas fait — les murs par contours ne retireraient que 5 % des arêtes d'occulteurs de la salle 8.9, au plus 2 % du temps d'image, pour le geste le plus risqué du lot ; OM6a LIVRÉ — le banc de cadence du solo, et trois gestes mesurés dans la salle 8.9 : +9 % de cadence sous llvmpipe (l'ombre d'un halo sans récepteur, le capteur d'un corps caché, la lumière de coup partie à 1 % de son énergie) ; OM2 LIVRÉ — l'ombre d'un corps a la forme de son corps voxel, l'arme ne pointe plus au sol, et les PNJ ont leur ombre de contact ; OM5 LIVRÉ — sous un plafonnier, un corps a une ombre finie, calculée dans le matériau du sol et du décor (D · H / (h − H)), à la force de son opacité dans la vue ; OM4b LIVRÉ — une couche d'ombre par PNJ (la torche de l'un ne traverse plus les autres), et la fusée, la mine, les braises coupées par les murs pour les corps ; OM3b LIVRÉ — la torche ne respire plus, le grésillement la tient noire trois quarts du temps au lieu d'un tiers, avec des sursauts, jamais plus de trois coupures dans une seconde ; OM1 LIVRÉ — l'étoile en culling et le brouillage par la source au-delà de 0,06 : seul le corps qui éblouit s'efface, sa propre torche n'efface plus personne, le client en ligne connaît enfin la source de son éblouissement (son halo retombait sur l'adversaire), le bot avec ; Q89 posée ; Adrien tranche Q81, Q82, Q84, Q86, Q87 et Q88 — le brouillage par la source et au-delà de 0,06, l'ombre voxel, la respiration retirée et le grésillement renforcé, une couche par PNJ, le masque neutre pour fusée, mine et braises, une ombre finie sous les plafonniers ; Q83 et Q85 restent ouvertes ; OM1 PRÉPARÉ, pas livré — le culling des étoiles, ses gardes et ses planches rangés dans `docs/iso/ombres/om1/`, en attente de Q81 ; OM3a, l'enveloppe du recul — la torche ne tire plus au hasard pendant un recul, les allers-retours de la pâte D tombent de 28 941 à 3 438, tous sur l'image du coup ; OM4a, les règles d'ombre sans décision — le flash de bouche qui recule devant un mur, l'écho au sol et la lumière de coup au masque neutre, l'étoile à la posture, l'ombre et la lueur d'un mort en duel ; OM0, le banc des ombres — l'encoche noire chiffrée sur les dix classes, le prototype de culling qui l'efface sans toucher aux capteurs, le seul vrai scintillement trouvé dans le recul de tir ; le chantier OM inscrit le même jour, questions Q81 à Q88 ; l'audit d'optimisation, en lecture seule : rapport `docs/AUDIT_OPTIMISATION.md`, section « Chantier — l'audit d'optimisation », six pièges ajoutés ; la veille, SOLO, S12 : les tempéraments répartis dans 32 salles ; S11 : l'intelligence des PNJ — dégâts de 10 à 20, rafales tirées au sort, tir annoncé, fouille de la place perdue, quatre tempéraments ; S10 la veille : l'écran Solo, le bandeau au JcJ, les consignes de l'initiation, l'enjambement retiré, la mise en joue)
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Q83 = la pâte brute en jeu, sans paliers ; et la direction qui suit : un rendu en jeu plus réaliste, plus fluide, plus oppressant, Hadès I et II pour référence — les menus gardent leur roman graphique** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Q83, je préfère "brute, sans paliers" » — contre l'avis du chantier, qui proposait (b) ; puis « Essayons de voir les graphismes en annulant, en jeu (pas dans les menus) cette pâte roman graphique : visons un style plus réaliste. Plus fluide. Plus oppressant » ; « Style de rendu de référence : Hadès I et II en guise d'inspiration » ; livrée le même jour avec RR1) | La pâte D (lavis et pochoir, jalon H-ISO1, 2026-09-14) range la lumière en trois paliers qui balaient l'image pendant un recul (OM3c : 32 263 pixels en 11 images, 4 en brute). La brute est la lumière telle que la vue de dessus la montre : rien n'y est relevé ni coupé — plus sombre (20 à 27 % de pixels allumés en moins en solo, là où D relevait la pénombre), sans rien montrer que la vue de dessus cache. Rien de ce que lit la simulation ne change : ni le bot, ni le classé. Le reste — l'encre, la couleur, l'atmosphère — s'essaie sur planche puis en jeu : le chantier RR. |
 | **Q82 = l'ombre d'un corps a la forme de son corps voxel** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Oui » ; livrée le même jour, avec OM2) | En iso, l'ombre d'un corps prend la forme du corps qu'on voit — le personnage, sans l'arme ni la torche tenues à hauteur de main (« l'arme portée sans pointe au sol »), réduite à l'accroupi par l'échelle du nœud — et non plus celle du sprite vu de dessus, dont l'arme se projetait au sol en une pointe de 22 à 31 px. L'étoile est l'empreinte au sol des boîtes du corps voxel au repos (`VoxelCatalogue.etoile_d_ombre`) : une seule fonction pour le joueur, les PNJ et le leurre, et une garde qui la confronte aux boîtes d'un vrai corps. Les figurants y gagnent l'ombre de contact que seuls J1 et J2 avaient. Voir « OM2 — FAITE » (chantier OMBRES). |
 | **Q88 = les corps ont une ombre FINIE sous les plafonniers, calculée dans le matériau** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « Ombre » — contre l'avis du chantier, qui proposait d'attendre OM7 ; livrée le même jour, avec OM5) | Un plafonnier pend à 1,5 tuile : une étoile y projetterait une ombre infinie, d'où « aucune » jusque-là. La règle D · H / (h − H) se calcule dans le matériau du sol et du décor, comme la zone morte des murets, pour la lumière des plafonniers seuls ; le corps est un cylindre (0,4 tuile de rayon, la hauteur de sa posture), l'ombre suit son opacité dans la vue — un corps effacé ne se trahit pas par elle — et les leurres en ont une. Debout, elle vaut deux fois la distance du corps à la lampe : la géométrie du jeu, pas un réglage. Voir « OM5 — FAITE » (chantier OMBRES). |
 | **Q86 = une couche d'ombre par PNJ ; Q87 = la fusée, la mine et la nappe de braises coupées par les murs pour les corps, duel compris** (2026-10-05, Adrien, à la session « Candela Chantier OMBRES — éclairage » : « une couche par PNJ » ; « Oui » ; livrées le même jour, avec OM4b) | Q86 : la torche d'un PNJ traversait les autres PNJ quand celle de J1 les ombrait tous ; chaque PNJ porte désormais une couche à lui (512 et au-delà, par sa place de réserve), en plus de la 8 que lisent les lumières de J1 — rien ne change pour J1 et J2 —, et son leurre la porte aussi, sans quoi il se trahissait au premier faisceau d'un autre PNJ. Q87 : leur masque d'ombre ne contenait que les murs, et ce masque filtre aussi les RÉCEPTEURS — aucun corps ne recevait leur ombre, elles l'éclairaient à travers un mur. Le masque des lumières neutres, celui du plafonnier ; un corps ne fait toujours pas d'ombre sous elles. Voir « OM4b — FAITE » (chantier OMBRES). |
@@ -34043,7 +34044,7 @@ ou une décision d'Adrien : d'où huit questions (Q81 à Q88), posées d'emblée
 | **OM0** | Le banc des ombres : planche avant/après, scintillement, sonde de lightmap, gardes headless | — | ✅ **FAITE le 2026-10-04** — voir « OM0 » plus bas |
 | **OM1** | L'ombre part de derrière le corps (culling de l'étoile), et le brouillage par source | Q81 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** (le culling et le brouillage par la source, ensemble) — voir « OM1 » plus bas ; Q89 (l'appareil de brouillage) posée à la livraison |
 | **OM2** | L'ombre a la forme du corps voxel | Q82 ✅ (2026-10-05), après OM1 | ✅ **FAITE le 2026-10-05** — voir « OM2 » plus bas |
-| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅ (2026-10-05) ; **Q83, Q85** ouvertes | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; la pâte D (Q83) et le filtre d'ombre (Q85) restent ouverts ; ✅ **OM3c FAITE le 2026-10-05** : leur planche et leur mesure, posées par les bancs sans toucher au jeu — voir « OM3c » plus bas |
+| **OM3** | Une image stable : enveloppe de tir déterministe (sans décision) ; pâte D, respiration, filtre d'ombre | Q84 ✅, Q83 ✅ (2026-10-05 : la brute) ; **Q85** ouverte | ✅ **OM3a FAITE le 2026-10-04** (l'enveloppe du recul) et ✅ **OM3b FAITE le 2026-10-05** (la respiration et le grésillement, Q84) — voir plus bas ; le filtre d'ombre (Q85) reste ouvert ; Q83 tranchée — la brute — et livrée par RR1 (chantier RR) ; ✅ **OM3c FAITE le 2026-10-05** : leur planche et leur mesure, posées par les bancs sans toucher au jeu — voir « OM3c » plus bas |
 | **OM4** | Des règles pour N corps : couches des PNJ, lumières posées (décisions) ; flash, `hit_light`, `ground_flash`, mort, posture (sans décision) | Q86 ✅, Q87 ✅ (2026-10-05) | ✅ **OM4a FAITE le 2026-10-04** (les règles sans décision) et ✅ **OM4b FAITE le 2026-10-05** (une couche par PNJ, les lumières posées : Q86, Q87) — voir plus bas |
 | **OM5** | Les plafonniers : une ombre de corps finie, dans le matériau | Q88 ✅ (2026-10-05) | ✅ **FAITE le 2026-10-05** — voir « OM5 » plus bas |
 | **OM6** | Alléger : capteurs, halos sans récepteur, lumière de coup, murs par contours, banc de cadence solo | — | ✅ **OM6a FAITE le 2026-10-05** (le banc du solo ; halos, capteurs, lumière de coup : +9 % de cadence dans la salle 8.9) — voir « OM6a » plus bas ; murs par contours et capteurs lointains mesurés avant et pas faits (au plus 2 % et 1 %) ; capteurs d'objets mesurés au passage par OM3c (moins de 0,5 % chacun) et pas faits — **OM6 close** : chaque geste fait, ou mesuré et laissé |
@@ -34113,7 +34114,7 @@ n'est demandée sur le Mac d'Adrien, décision du 2026-09-30).
 ### Les questions pour Adrien (Q81 à Q88)
 
 Posées le 2026-10-04, toutes d'emblée, avec l'avis du chantier ; chacune ne bloque que son lot. **Tranchées le 2026-10-05 :
-Q81, Q82, Q84, Q86, Q87, Q88. Ouvertes : Q83 (la pâte D — sa planche faite par OM3c), Q85 (le filtre d'ombre — mesuré par OM3c)
+Q81, Q82, Q84, Q86, Q87, Q88 ; Q83 le soir même (la brute, livrée par RR1). Ouvertes : Q85 (le filtre d'ombre — mesuré par OM3c)
 et Q89 (l'appareil de
 brouillage, posée à la livraison d'OM1).**
 
@@ -34150,6 +34151,8 @@ brouillage, posée à la livraison d'OM1).**
   plafonnier), (c) la plus loin (13 459 : le palier du milieu devient un dégradé). Aucune ne retire le papillotement d'un balayage,
   qui vit sur les arêtes des ombres : c'est Q85. **Avis révisé : (b)** — le lavis gardé, 90 % du balayage retiré ; (c) si Adrien
   veut un mouvement parfaitement lisse, au prix du palier du milieu.
+  **Tranchée par Adrien le 2026-10-05 : « brute, sans paliers »** — ni (a), ni (b), ni (c) : la pâte entière quitte le jeu, et
+  la direction s'élargit (« visons un style plus réaliste. Plus fluide. Plus oppressant ») : le chantier RR, dont RR1 la livre.
 - **Q84 — La respiration de la torche : la retirer, ou la réduire ?** À travers les paliers, ±3 % d'énergie se voient comme des
   contours qui ondulent (+20 à 40 % de pixels qui changent d'une image à l'autre), pas comme une lumière qui respire. Et ce n'est
   pas un souffle (lu au code, non mesuré) : le bruit est celui de la secousse de caméra (`noise.frequency = 10`, « Fast frequency
@@ -35726,3 +35729,134 @@ que ces deux fichiers ont bougé sur `main` avant son prochain rebase.
 | 2026-08-16 (fin) | Même réseau | **Tout fonctionne** : commandes, tirs, dégâts, killcam des deux côtés. Phase 3 close. |
 | 2026-09-09 | Deux machines, **recherche automatique** (le premier essai de ce chemin) | Elles se trouvent, mais **une seule entre en match** : l'hôte attend un joueur 2 qui reste dans son menu. Aucune erreur console. Cause : `match_ready` est émis avant que le lien soit établi, l'hôte partait donc seul en bac à sable — voir « Ouvrir un lien n'est pas l'établir » dans les Pièges connus. Corrigé, et couvert par deux bancs. **Reste à rejouer à deux machines.** |
 | 2026-09-09 (rejoué) | Deux machines, **match amical apparié** | Les deux se trouvent, la fenêtre de choix de dix secondes s'ouvre, les deux appuient sur PRÊT — **la manche ne part que côté hôte**, l'invité reste planté sur son décompte jusqu'à dix. Aucune erreur console. Cause : l'abrègement par « prêt » ne collapse le décompte que localement, côté hôte (`_process()`) — rien n'en informe le client. Voir « Deux prêts, un seul départ » aux Pièges connus. **Corrigé en retirant la fenêtre du chemin amical** (elle reste au classé) : Adrien a tranché à cette occasion que l'amical choisit son arme avant la recherche, garde un décompte de trois secondes commun aux deux côtés, et joue sur la carte par défaut plutôt qu'une carte tirée au sort. **Reste à rejouer.** |
+
+## Chantier — un rendu en jeu plus réaliste, plus fluide, plus oppressant (RR, inscrit le 2026-10-05)
+
+**La demande d'Adrien, le 2026-10-05**, à la session « Candela Chantier OMBRES — éclairage », en tranchant Q83 :
+*« Q83, je préfère "brute, sans paliers". D'où vient le style avec les paliers ? D'où vient cette pâte D ? »* — puis :
+*« Essayons de voir les graphismes en annulant, en jeu (pas dans les menus) cette pâte roman graphique : visons un style plus
+réaliste. Plus fluide. Plus oppressant »* — et : *« Style de rendu de référence : Hadès I et II en guise d'inspiration. »*
+
+### D'où vient le style qu'on quitte
+
+Trois décisions, chacune prise sur planche, et aucune à tort — le chantier ne les défait pas, il en essaie l'inverse :
+1. **Le roman graphique** naît du chantier direction artistique (2026-08-19, « sortir du look généré » : « ça fait généré par
+   IA » ; les « dégradés radiaux mathématiquement parfaits » y sont cités parmi les signes du procédural par défaut). Adrien
+   devient l'artiste unique (DA1.5, 2026-08-24) ; les matières générées prennent un « esprit roman graphique brutaliste ».
+2. **Les paliers** viennent de la refonte roman graphique des effets en jeu (2026-09-10, demandée par Adrien après un bilan des
+   effets) : tout masque en jeu — halos, sang, impacts, traçante, flash — passe en deux ou trois paliers d'alpha, et
+   `test_encrage` le garde (« part molle » sous 0,25). La feuille de route cite pour ce lot : « un dégradé mou est un style,
+   celui de la photo ».
+3. **La pâte D** vient de la vue iso (ISO1, 2026-09-14) : quatre « pâtes de roman graphique » proposées par la session —
+   gravure, ligne claire, trame, lavis —, la brute pour comparer. Adrien choisit D, « lavis et pochoir », au jalon H-ISO1, sur
+   la recommandation de la session : des quatre, c'était la seule à garder la lueur faible au niveau de la vue de dessus (27,1 %
+   des pixels au-dessus de 8/255, la brute 26,8 %). Ses trois marches (vers 0,02, 0,16 et 0,42 de lumière, au bord tremblé par
+   un bruit), son grain et sa désaturation de 35 % sont le « lavis » ; ce sont elles qui balaient l'image pendant un recul (OM3c).
+   L'encre des arêtes (murs, objets, corps voxel) s'y est ajoutée avec ISO7.
+
+### Ce qui ne bouge pas
+
+- **Le noir absolu.** Tout ce qu'une étape ajoute MULTIPLIE la lumière reçue : rien n'éclaire un pixel que la lightmap laisse
+  noir. Une lueur ne naît que d'une lumière qui se voit déjà.
+- **L'information.** La lueur faible reste lisible au niveau de la vue de dessus — la mesure qui avait choisi D (part des pixels
+  au-dessus de 8/255) départage aussi les essais d'ici.
+- **Les menus**, leurs illustrations et leur roman graphique : la vue iso ne s'y allume pas.
+- **Le bot et le classé** : rien de ce chantier n'est lu par la simulation — la pâte et l'encre ne vivent que dans les
+  matériaux d'affichage ; les capteurs et la perception du bot lisent la lumière 2D.
+- **La cadence** : la règle des 3 % du chantier OMBRES, mesurée au banc comme OM6a.
+
+### Hadès, ce qu'on en prend
+
+Une lumière **continue et peinte** : des flaques qui retombent sans marche, un cœur presque blanc qui vire à l'ambre puis au
+rouge sombre avant le noir ; des sources qui **rayonnent** au-delà de leur forme (le feu, les armes, les sorts) ; des bords
+d'écran qui s'enfoncent ; la matière visible partout où la lumière tombe. **Ce qu'on n'en prend pas** : sa pénombre jamais
+noire — ici le noir est l'information. **Ce qui reste à juger** : son trait noir autour des personnages est de l'encre — l'essai
+sans encre dira si on le garde.
+
+### Les étapes (chacune sur planche, puis en jeu ; aucune ne commence sans la demande d'Adrien)
+
+| Étape | Objet | État |
+|---|---|---|
+| **RR1** | Q83 en jeu (la pâte brute par défaut) ; l'essai sans encre (`--sans-encre`) ; la planche des trois rendus | ✅ **FAITE le 2026-10-05** — voir plus bas |
+| **RR2** | La lumière peinte : une courbe de tons continue — le cœur qui blanchit, la pénombre qui vire à l'ambre —, la couleur ; multiplicative | proposée |
+| **RR3** | L'oppression : les bords qui s'enfoncent, le contraste, la portée de la torche, la poussière dans les faisceaux (dans la lumière seulement) | proposée |
+| **RR4** | Les lueurs : les sources qui rayonnent (flash, fusée, braises, LED), au banc de cadence, noir absolu vérifié | proposée |
+| **RR5** | Les effets en jeu — sang, impacts, flash de mort, traçante — du palier au fondu (rouvre, en jeu seulement, la règle d'encrage de la refonte) | proposée |
+
+« Plus fluide » tient aussi à Q85 (OMBRES) : l'atlas d'ombres à 4096 retire 98 % du papillotement d'une ombre qui tourne.
+
+### RR1 — FAITE le 2026-10-05 : la pâte brute en jeu (Q83), et l'essai sans encre
+
+**Q83, livrée.** La brute devient le défaut en jeu : `Presentation3D.PATE_PAR_DEFAUT`, et les deux défauts qui le doublent avant
+la première image d'un corps ou d'un objet neuf (`VoxelCorps.STYLE_PAR_DEFAUT`, `VoxelObjet.STYLE_PAR_DEFAUT`). `--pate D` — ou la
+touche 4 en build de débogage — remet le rendu d'avant ; la touche 0 revient à la brute. Les menus ne changent pas : la vue iso
+ne s'y allume pas.
+
+**L'essai sans encre** (`--sans-encre`, `IsoMateriaux.encre_active`, éteint par défaut) retire l'encre du rendu en jeu : les
+arêtes des murs et le bord des murets (`encre_arete_reste` à 1 — la largeur seule ne suffit pas, le muret la relève à un
+pixel), celles des corps, des objets et du leurre, le trait de la fumée, le trait halogène des masses de murs (`MurEncre`).
+Il garde la matière, la température, le contact, le liseré du sommet (la lumière de la face), le lavis au pied des murs (une
+ombre de contact), les joints des dalles, les liserés de lisibilité des corps (tenue `sombre3`, corps de soi), les bandeaux LED.
+Posé dans les `accorder_*`, jamais après coup : les volumes recopient les murs à leur création, un corps est réaccordé à chaque
+reconstruction. Il l'emporte sur `--encre-essai`.
+
+**Les planches** (`docs/iso/rr/rr1/`, trois rendus par plan — D avec encre, brute avec encre, brute sans encre ; 1920×1080,
+llvmpipe) : le duel (`planche_rr1_duel.jpg`, le photographe : duel, torche, volume, rétrodiffusion, tir, fusée, sang, impacts),
+la loupe (`planche_rr1_loupe.jpg` : pilier, sol, les deux corps), le solo (`planche_rr1_solo.jpg`, le banc des ombres, LED
+figées : salle 0.1 sous son plafonnier, salle 0.9, le brouillage) ; leurs mesures en `mesures_rr1_*.json`.
+- **La brute est continue** : les cônes et les flaques retombent sans marche ; le halo de la fusée devient un dégradé au lieu
+  d'un pavé posterisé.
+- **Elle est plus sombre** : D relevait la pénombre (`/ max(l, 0,25)`, puis trois marches) ; la brute la laisse où la vue de
+  dessus la met. Pixels allumés au-dessus de 8/255, de D à la brute : en solo −21 % (0.1), −20 % (0.9), −27 % (le brouillage) ;
+  au duel de −12 % à +7 % ; à la loupe de 0 à −20 %.
+- **Elle est stable** : deux prises du même plan, au même réglage, à quelques minutes d'écart (le photographe tire en temps
+  réel, LED non figées), diffèrent de 67 706 pixels en pâte D — la lueur des LED franchit ou non le premier seuil sur de
+  grandes plages — et de 79 en brute.
+- **Sans encre**, les arêtes des murs et des corps s'adoucissent (au plan « volume », la face de mur gagne 62 % de pixels
+  allumés : l'encre y quadrillait chaque bloc). ⚠️ **Mais le contour des murs disparaît dans le noir** : le trait halogène était
+  seul à prendre la lumière des bandeaux LED loin de la torche (plan « torche » : 2 845 pixels éteints à plus de 120 px de
+  toute lumière vive, luma 12 en moyenne). Plus oppressant, moins lisible : Q90.
+
+**Les gardes** : `tools/test_rendu_rr.gd` (20 vérifications, jouée deux fois par la suite : sans drapeau, puis avec
+`--sans-encre --encre-essai`) ; `test_iso_camera` tient le nouveau défaut. **Treize sabotages, chacun rouge puis restauré
+(md5) :** un défaut en retard (corps, objets, présentation : trois), les murs qui gardent leur encre (dont la largeur seule, que le
+muret relève), les corps, la fumée, la garde de `MurEncre` retirée puis passée après le trait, le drapeau inversé, l'encre
+renforcée qui ne cède plus, l'essai qui couperait aussi la matière, puis le liseré.
+
+**Trouvé en chemin** :
+- une garde de `test_fumee_voxel` lit le texte exact de `IsoNuageVoxel.poser_style` : l'essai s'y ajoute en ligne à part, après
+  celle qu'elle garde — la garde d'un autre chantier n'a pas bougé ;
+- `trait` est un mot réservé de GDScript 4.7 : `var trait := …` ne s'analyse pas ;
+- **des réglages calés sur la pâte D**, à revoir avec RR2 : la température des murs (0,8) compensait sa désaturation de 35 % ;
+  l'exposant 2,2 du halo de la fusée le plaçait sous ses seuils (`iso_materiaux.gd`) ;
+- le défaut de l'uniform `style` dans `iso_pate.gdshaderinc` vaut 0 — la gravure : un volume créé pendant un gel de vue
+  l'afficherait une image (relevé à la lecture, non vérifié ; antérieur à RR1). Signalé.
+- **le banc des ombres supposait la pâte D par défaut** : ses plans « D » (le plafonnier, les séries de scintillement, toute la
+  famille `q83`) se seraient joués en brute, et les variantes de Q83 refusées « sans effet ». Ils posent désormais la pâte D
+  eux-mêmes (`tools/planche_ombres.gd`) ; vérifié en vraie fenêtre : « plafonnier » à 538 pixels de la prise faite sous
+  `--pate D`, à 42 551 de la brute.
+
+**Suite entière : 189 suites vertes, aucune rouge, sans erreur de script (26 min 14 s)** — les deux passages de `test_rendu_rr` compris ; puis, le banc des ombres retouché (ci-dessus), les six suites qui le chargent rejouées vertes (`test_banc`, `test_ombre_propre`, `test_ombres_regles`, `test_ombres_plafonniers`, `test_ombres_pnj`, `test_ombres_voxel`).
+
+**Version** : ce que les joueurs voient change pour tous de la même façon — mineure ; rien sur le fil, `Protocol.VERSION`
+inchangé ; rien de ce que lisent le bot et le classé.
+
+**Non prouvé** : rien sous Metal (les pénombres du Mac peuvent différer de llvmpipe) ; Adrien n'a vu ni la brute ni l'essai en
+jeu (H17).
+
+#### Q90 — le contour des murs dans le noir, sans encre
+
+**Q90 — Sans le trait, comment les murs se lisent-ils dans le noir ?** (a) garder le trait halogène — le seul élément du roman
+graphique qui informe ; (b) le remplacer par la lueur réelle des bandeaux LED sur le pied et la face des murs (RR3) ; (c)
+l'accepter : un mur ne se voit qu'éclairé. **Avis : (b)** — le monde dit lui-même où sont les murs, comme une LED réelle ; c'est
+aussi ce que fait Hadès, dont les bords lumineux sont des sources.
+
+#### Jalon H17 — ce qui attend Adrien
+
+1. Ouvrir la branche dans un arbre à part, depuis le clone du Mac :
+   `cd "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d" && git fetch origin claude/determined-pasteur-mtrws1 && git worktree add "../candela-rr1" origin/claude/determined-pasteur-mtrws1`
+2. Jouer les trois rendus (le premier lancement importe les ressources) :
+   `/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-rr1"` (la brute),
+   puis la même ligne suivie de `-- --sans-encre` (l'essai), puis de `-- --pate D` (le rendu d'avant). En partie, les touches 0
+   et 4 basculent entre la brute et D.
+3. Dire : la brute se garde-t-elle (Q83, livrée) ? l'encre — Q90 ? et la suite — RR2 à RR5 —, dans quel ordre ?

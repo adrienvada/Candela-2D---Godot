@@ -75,10 +75,11 @@ const ShaderCorpsIso := preload("res://corps_iso.gdshader")
 const ShaderCorpsIsoProfondeur := preload("res://corps_iso_profondeur.gdshader")
 const IsoPateT := preload("res://iso_pate.gd")
 
-## Même choix que `VoxelCorps.STYLE_PAR_DEFAUT`, même raison : LAVIS, pas
-## GRAVURE — voir son en-tête pour le détail (une pâte hachurée sur une
-## période plus grande qu'un petit objet devient une loterie noir/clair).
-const STYLE_PAR_DEFAUT := IsoPateT.LAVIS
+## Même choix que `VoxelCorps.STYLE_PAR_DEFAUT`, même raison : jamais GRAVURE
+## — voir son en-tête pour le détail (une pâte hachurée sur une période plus
+## grande qu'un petit objet devient une loterie noir/clair). La BRUTE depuis
+## le 2026-10-05 (Q83), comme le jeu ; LAVIS avant.
+const STYLE_PAR_DEFAUT := IsoPateT.BRUTE
 
 ## Marge tolérée sur l'empreinte au sol, recopiée de `VoxelCatalogueObjets`
 ## pour que la suite compare à la MÊME valeur que ce nœud applique — jamais

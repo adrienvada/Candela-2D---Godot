@@ -121,8 +121,9 @@ var _source_du_niveau: Node2D = null
 ## `_ready` ne l'écrase plus.
 var _etoile_posee := false
 ## OMBRES, OM6 — l'instant (s) où la lumière de coup s'en va : sa courbe d'extinction (`Charte.Courbe.EXTINCTION`, sur une seconde)
-## ne lui laisse alors qu'1,2 % de son énergie de départ — 0,006 de luminance au plus, en son centre, sous le premier seuil de la
-## pâte D (0,02 à 0,05, `iso_pate.gdshaderinc`). Voir `rpc_update_hp`.
+## ne lui laisse alors qu'1,2 % de son énergie de départ — 0,006 de luminance au plus, en son centre : 1,5/255 en pâte brute (le
+## défaut depuis Q83, 2026-10-05), qui ne coupe rien, et sous le premier seuil de la pâte D (0,02 à 0,05, `iso_pate.gdshaderinc`).
+## Voir `rpc_update_hp`.
 const FIN_LUMIERE_DE_COUP := 0.6
 ## Ce qu'il reste de la tenue d'un tir noté (secondes) : pendant `TENUE_DU_TIR`, la source reste le tireur même si son pic ne
 ## s'est pas encore montré. Chez le client, le tir arrive par un RPC et le pic par `net_dazzle`, synchronisé à 30 Hz : sans

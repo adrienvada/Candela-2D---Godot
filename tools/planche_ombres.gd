@@ -32,7 +32,9 @@ extends "res://tools/photographe.gd"
 ##   donc ENTIÈRE (`--famille=q83`), jamais une variante seule. Les séries y gardent aussi leur image du milieu et de la fin.
 ## - Les drapeaux du JEU passent tels quels, et le journal les recopie : `--pate brute` (sans postérisation ; ⚠️ séparé par
 ##   une espace, c'est la forme que lit `Presentation3D`), `--sans-faisceau-air` (build de débogage), `--led-murs-fige=0.5`.
-##   Les plans « brute » du catalogue posent la pâte brute À L'EXÉCUTION (`style_pate`), pour comparer dans le même passage.
+##   Les plans « brute » du catalogue posent la pâte brute À L'EXÉCUTION (`style_pate`), pour comparer dans le même passage ;
+##   les plans « D » — ce qu'ils comparent à la brute, et toute la famille `q83` — posent la pâte D : depuis Q83 (RR1,
+##   2026-10-05), la brute est le défaut du jeu, et un plan sans pâte montre le jeu tel qu'il est.
 ##
 ## ## Ce qu'il écrit, par prise
 ## - `<id>_ecran.png` : la fenêtre entière, l'écran « nu » (voile d'éblouissement, HUD et particules cachés : ce qu'on
@@ -227,7 +229,7 @@ static func plans() -> Array[Dictionary]:
 		sortie.append(_plan_de(base, {"id": "classe-%s" % slug, "famille": "classes", "classe": slug,
 			"but": "O1 — l'étoile de la classe %s, torche côté caméra, arme vers la lampe" % slug}))
 	# O3 — la torche traverse la flaque du plafonnier : des coins sombres sans occulteur en pâte D, lisses en brute.
-	sortie.append(_plan_de(base, {"id": "plafonnier", "famille": "plafonnier",
+	sortie.append(_plan_de(base, {"id": "plafonnier", "famille": "plafonnier", "pate": "D",
 		"but": "O3 — la torche dans la flaque du plafonnier, pâte D : les paliers dessinent-ils des ombres sans objet ?"}))
 	sortie.append(_plan_de(base, {"id": "plafonnier-brute", "famille": "plafonnier", "pate": "brute",
 		"but": "O3 — la même image en pâte brute : ce qui disparaît ici n'était pas une ombre"}))
@@ -240,8 +242,8 @@ static func plans() -> Array[Dictionary]:
 	# OM3b : la torche ne respire plus — les plans `serie-respiration` gardent leur nom, pour se comparer à un passage d'avant
 	# (`--avant`), et montrent désormais la torche au repos, sans rien figer : elle doit tenir comme la scène tenue.
 	for cas in [["fixe", false, false], ["respiration", true, false], ["tir", false, true]]:
-		for pate in ["", "brute"]:
-			sortie.append(_plan_de(base, {"id": "serie-%s%s" % [cas[0], "" if pate == "" else "-brute"], "famille": "scintillement",
+		for pate in ["D", "brute"]:
+			sortie.append(_plan_de(base, {"id": "serie-%s%s" % [cas[0], "" if pate == "D" else "-brute"], "famille": "scintillement",
 				"serie": IMAGES_SERIE, "respiration": cas[1], "tir": cas[2], "pate": pate,
 				"but": "O3/O4 — six images consécutives, %s, pâte %s : ce qui change sans que rien ne bouge" % [
 					{"fixe": "scène tenue", "respiration": "la torche au repos (elle respirait avant OM3b)",
@@ -249,8 +251,8 @@ static func plans() -> Array[Dictionary]:
 					"brute" if pate == "brute" else "D"]}))
 	# OM3 — le recul tel qu'il se joue : armé UNE fois, puis laissé filer (les plans `serie-tir` le tiennent armé à chaque image,
 	# ce qui ne montre que son premier pas). Le coup, le recul entier, le début du retour au souffle ; pâte D, puis brute.
-	for pate in ["", "brute"]:
-		sortie.append(_plan_de(base, {"id": "serie-recul%s" % ("" if pate == "" else "-brute"), "famille": "scintillement",
+	for pate in ["D", "brute"]:
+		sortie.append(_plan_de(base, {"id": "serie-recul%s" % ("" if pate == "D" else "-brute"), "famille": "scintillement",
 			"serie": IMAGES_RECUL, "recul": true, "pate": pate,
 			"but": "OM3 — un coup, puis le recul qui file, %d images, pâte %s : ce que la torche fait vraiment après un tir" % [
 				IMAGES_RECUL, "brute" if pate == "brute" else "D"]}))
@@ -312,10 +314,10 @@ static func plans() -> Array[Dictionary]:
 			var propre := {"id": "q83-%s-%s" % [compo[0], v], "famille": "q83", "compo": "q83-%s" % compo[0],
 				"reference": v == "D", "but": "Q83 — %s ; pâte %s" % [compo[2], noms_q83[v]]}
 			propre.merge(compo[1], true)
+			# La référence et ses variantes sont DES pâtes D : la brute est le défaut du jeu depuis Q83 (RR1).
+			propre["pate"] = "brute" if v == "brute" else "D"
 			if v in ["a", "b", "c"]:
 				propre["lavis"] = v
-			elif v == "brute":
-				propre["pate"] = "brute"
 			sortie.append(_plan_de(base, propre))
 	# OM3c (Q85) — l'atlas d'ombres et le filtre, sur la torche seule (plafonnier éteint : ses ombres ne recouvrent pas celles qu'on
 	# juge) : l'arête de l'ombre du PNJ, tenue, puis le balayage qui fait ramper ses marches. Le réglage du projet d'abord (atlas 2048,
@@ -772,8 +774,12 @@ func _jouer_le_plan(plan: Dictionary) -> void:
 		_sans_led = true
 	# La pâte, à l'exécution : celle du plan, sinon celle du lancement (`--pate`).
 	var pate_avant := int(_iso.style_pate)
-	if String(plan.get("pate", "")) == "brute":
+	var pate_du_plan := String(plan.get("pate", ""))
+	if pate_du_plan == "brute":
 		_iso.style_pate = IsoPate.BRUTE
+	elif pate_du_plan == "D":
+		# RR1 — la brute est le défaut du jeu depuis Q83 : un plan qui compare à la pâte D la pose lui-même.
+		_iso.style_pate = IsoPate.LAVIS
 	# OM3c — la variante de la pâte D (Q83), l'atlas et le filtre (Q85), posés pour ce plan seul et rendus au jeu après lui.
 	if plan.has("lavis"):
 		_poser_le_lavis(String(plan["lavis"]))

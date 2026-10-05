@@ -96,7 +96,10 @@ const IsoPateT := preload("res://iso_pate.gd")
 ## (`PATE_PAR_DEFAUT` dans `presentation_3d.gd`) — repris ici pour la même
 ## raison, pas réinventé. `definir_style()` reste le point d'entrée pour qui
 ## veut trancher autrement (jalon H-ISO1, planche).
-const STYLE_PAR_DEFAUT := IsoPateT.LAVIS
+## **Depuis le 2026-10-05 : la BRUTE** (Q83, Adrien : « brute, sans paliers ») — le défaut du
+## jeu, suivi ici. Elle n'a pas de période : la loterie de GRAVURE ne la concerne pas. La
+## présentation pousse sa pâte à chaque image ; ce défaut ne vaut qu'avant la première.
+const STYLE_PAR_DEFAUT := IsoPateT.BRUTE
 
 # --- Geste de gadget (ISO4, finition) ---------------------------------------
 #

@@ -1,0 +1,82 @@
+{
+ "loupe-pilier": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "allumes_au_dessus_de_8": [
+   92195,
+   92523,
+   89760
+  ],
+  "ecart_D_brute": 2158,
+  "ecart_brute_sans_encre": 1534,
+  "moyenne_luma_allumee": [
+   15.7,
+   14.4,
+   14.2
+  ]
+ },
+ "loupe-sol": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "allumes_au_dessus_de_8": [
+   123955,
+   99233,
+   91585
+  ],
+  "ecart_D_brute": 4793,
+  "ecart_brute_sans_encre": 4773,
+  "moyenne_luma_allumee": [
+   15.6,
+   15.0,
+   14.4
+  ]
+ },
+ "loupe-corps-j1": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "allumes_au_dessus_de_8": [
+   194088,
+   168499,
+   151133
+  ],
+  "ecart_D_brute": 7671,
+  "ecart_brute_sans_encre": 4914,
+  "moyenne_luma_allumee": [
+   19.6,
+   15.7,
+   14.3
+  ]
+ },
+ "loupe-corps-j2": {
+  "cadre": [
+   0,
+   0,
+   800,
+   450
+  ],
+  "allumes_au_dessus_de_8": [
+   203492,
+   176812,
+   157578
+  ],
+  "ecart_D_brute": 7957,
+  "ecart_brute_sans_encre": 5220,
+  "moyenne_luma_allumee": [
+   19.5,
+   15.6,
+   14.2
+  ]
+ }
+}

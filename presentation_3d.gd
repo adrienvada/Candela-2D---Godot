@@ -200,10 +200,15 @@ const LIGHTMAPS := ["1080p", "plein"]
 ## de l'Input Map ni aucun script du jeu ne la prend.
 const TOUCHE_PATE := KEY_F2
 const TOUCHES_DIRECTES := {KEY_1: 0, KEY_2: 1, KEY_3: 2, KEY_4: 3, KEY_0: -1}
-## **D, lavis et pochoir — décision d'Adrien, 2026-09-14** (jalon H-ISO1), sur la planche
-## et la mesure de fidélité : la seule pâte qui garde la lueur faible au niveau de la vue
-## de dessus.
-const PATE_PAR_DEFAUT := IsoPate.LAVIS
+## **La brute — décision d'Adrien, 2026-10-05 (Q83 : « brute, sans paliers »).** La lumière telle
+## que la vue de dessus la montre : elle garde la lueur faible au même niveau que D (26,8 % des
+## pixels au-dessus de 8/255, D 27,1 %), et ses paliers ne balaient plus l'image pendant un recul
+## (OM3c : 32 263 pixels changés en 11 images en pâte D, 4 en brute). Avant, **D, lavis et
+## pochoir** (jalon H-ISO1, 2026-09-14) : `--pate D`, ou la touche 4 en build de débogage, la
+## remet pour comparer. Chantier RR (ROADMAP) : un rendu en jeu plus réaliste, plus fluide, plus
+## oppressant. ⚠️ Le même défaut est écrit dans `VoxelCorps` et `VoxelObjets`
+## (`STYLE_PAR_DEFAUT`, avant la première image) : `tools/test_rendu_rr.gd` les tient d'accord.
+const PATE_PAR_DEFAUT := IsoPate.BRUTE
 const DRAPEAU_PATE := "--pate"
 
 static var _instance: Presentation3D

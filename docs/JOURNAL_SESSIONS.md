@@ -6323,3 +6323,10 @@ dans `claude/determined-pasteur-mtrws1`, pour que la PR du chantier se fusionne 
 Signalé, pas corrigé : la section de l'audit cite des lignes de la ROADMAP par leur numéro (« les l. 7659-7662 », « la
 l. 22360 », « la l. 2506 ») ; déjà décalées sur `main` (le tableau de `banc_pics` y est en 22384), elles glissent encore de 5 à
 84 lignes avec cette fusion.
+
+**RR1, le 2026-10-05 — annoncé ici avant le commit (Q83 tranchée par Adrien : « brute, sans paliers » ; puis « Essayons de
+voir les graphismes en annulant, en jeu (pas dans les menus) cette pâte roman graphique ») :** le défaut de la pâte
+(`presentation_3d.gd`, `voxel_corps.gd`, `voxel_objets.gd`) ; l'essai sans encre (`iso_materiaux.gd` : `DRAPEAU_SANS_ENCRE`,
+`encre_active`, `accorder_mur`, `accorder_corps` ; `iso_nuage_voxel.gd` : `poser_style` ; `mur_encre.gd` : `_draw`) ; un
+commentaire d'OM6 (`player.gd`) ; `tools/test_rendu_rr.gd` (nouveau), `tools/test_iso_camera.gd` (le défaut tenu),
+`tools/run_suites.sh` (deux passages), `tools/planche_ombres.gd` (ses plans « D » posent D) ; `docs/iso/rr/rr1/` (les planches). Le chantier RR est inscrit à la fin de la ROADMAP.

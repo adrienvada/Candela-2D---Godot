@@ -207,7 +207,7 @@ SUITES=(test_liaisons test_icones_editeur
         test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting test_hud_style
         test_menus_finitions test_conditions_de_match test_encrage test_curseurs_branches test_calques_joueur test_fusee_eteinte test_traces_carte test_entrainement_carte test_traces_rencontre
         test_telemetrie_gadgets test_murs_bas test_murs_bas_rendu
-        test_proto_iso test_voxel_corps test_voxel_objets test_banc_iso test_iso_geometrie test_iso_equite test_iso_camera test_iso_vues test_iso_corps test_iso_murs_bas test_iso_objets test_iso_killcam test_killcam_calme test_iso_beaute test_iso_gadgets test_masque_formes test_iso_torches3d test_corps_portraits test_corps_mannequin test_menus_voxel test_iso_usure test_corps_detail test_corps_soi_sombre test_passe_unique test_corps_soi_fondu test_pochoirs test_gris_egaux test_iso_peinture_carte)
+        test_proto_iso test_voxel_corps test_voxel_objets test_banc_iso test_iso_geometrie test_iso_equite test_iso_camera test_iso_vues test_iso_corps test_iso_murs_bas test_iso_objets test_iso_killcam test_killcam_calme test_iso_beaute test_rendu_rr test_iso_gadgets test_masque_formes test_iso_torches3d test_corps_portraits test_corps_mannequin test_menus_voxel test_iso_usure test_corps_detail test_corps_soi_sombre test_passe_unique test_corps_soi_fondu test_pochoirs test_gris_egaux test_iso_peinture_carte)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.
@@ -619,6 +619,8 @@ run test_fumee_voxel_couches --script "res://tools/test_fumee_voxel.gd" -- --fum
 run test_fumee_voxel_drapeaux --script "res://tools/test_fumee_voxel.gd" -- --fumee-voxels=fin --fumee-encre=hachures --fumee-relief=bruit
 # GV2 — les nappes à l'essai, lu au lancement (la variante « braises »).
 run test_nappes_voxel_braises --script "res://tools/test_nappes_voxel.gd" -- --nappes-voxels=braises
+# RR1 — l'essai sans encre, lu au lancement (`--sans-encre`) : l'encre part, la matière reste ; il l'emporte sur `--encre-essai`.
+run test_rendu_rr_sans_encre --script "res://tools/test_rendu_rr.gd" -- --sans-encre --encre-essai
 run test_netcode res://tools/test_netcode.tscn
 # Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
 # --script ne déclare pas à la compilation (voir l'en-tête du test).
